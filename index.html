@@ -1960,23 +1960,38 @@
     const stripped = s => words(String(s).replace(/\(.*?\)/g, " "));
     const mExact = new Map(), mSet = new Map(), mStrip = new Map();
     PH_KD_SEED.forEach(([c, n]) => {
-      const kd = "KD" + c.slice(1);
-      [[mExact, words(n)], [mSet, sorted(n)], [mStrip, stripped(n)]].forEach(([m, k]) => { if (k && !m.has(k)) m.set(k, kd); });
+      const code = c;   // Koda codes are K### — no D (her ask 2026-08-10 dropped it)
+      [[mExact, words(n)], [mSet, sorted(n)], [mStrip, stripped(n)]].forEach(([m, k]) => { if (k && !m.has(k)) m.set(k, code); });
     });
     let n = 0;
     PHARMACY.herbs.forEach(h => {
       const base = (h.name || "").split("/")[0];
-      const kd = mExact.get(words(base)) || mSet.get(sorted(base)) || mStrip.get(stripped(base));
-      const hasKd = /^KD\d{3}$/.test(h.code || "");
-      if (kd) {
-        if (h.code === kd) return;
-        if (!hasKd && h.code) h.galcott = h.code;   // first coding for this herb — Galcott code keeps working in search
-        h.code = kd; n++;
-      } else if (hasKd) {
+      const code = mExact.get(words(base)) || mSet.get(sorted(base)) || mStrip.get(stripped(base));
+      const hasKoda = /^K\d{3}$/.test(h.code || "");
+      if (code) {
+        if (h.code === code) return;
+        if (!hasKoda && h.code) h.galcott = h.code;   // first coding for this herb — Galcott code keeps working in search
+        h.code = code; n++;
+      } else if (hasKoda) {
         h.code = h.galcott || "";                    // an earlier pass coded it, v2 says no match — hand the Galcott code back
         delete h.galcott;
         n++;
       }
+    });
+    if (n) savePharmacy();
+    try { localStorage.setItem(FLAG, "1"); } catch (e) {}
+  })();
+  // "drop the D" (her ask 2026-08-10): KD### was the original Koda format;
+  // she's since decided it should just be K### everywhere, matching what
+  // PH_KD_SEED itself stores. attachKdCodes() above is gated to run only
+  // once per browser, so any store that already has KD### codes from an
+  // earlier run needs its own one-time pass here.
+  (function dropKdD() {
+    const FLAG = "daybook-ph-kd-dropd";
+    try { if (localStorage.getItem(FLAG)) return; } catch (e) {}
+    let n = 0;
+    PHARMACY.herbs.forEach(h => {
+      if (/^KD\d{3}$/.test(h.code || "")) { h.code = "K" + h.code.slice(2); n++; }
     });
     if (n) savePharmacy();
     try { localStorage.setItem(FLAG, "1"); } catch (e) {}
