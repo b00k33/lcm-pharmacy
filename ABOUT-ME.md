@@ -2,11 +2,12 @@
 
 ## How I work with you
 - I'm newer to coding — explain in plain, simple language, step by step.
-- Publishing: I confirmed on 2026-08-04 that pharmacy pushes need my explicit
-  go-ahead each time — don't push live automatically, even after finishing and
-  verifying a change. Do all the work, verify it, then ask before the push
-  that makes it live. (This is different from my other app, Book33, which
-  does auto-publish — that rule does not apply here.)
+- Publishing: 2026-08-10 — this app now deploys via GitHub Pages
+  (b00k33/lcm-pharmacy), not Netlify, and pushes are automatic: do the work,
+  verify it, then commit + push straight to both GitHub repos without
+  waiting for a separate go-ahead. (Superseded the 2026-08-04 ask-first
+  rule — that used to differ from Book33's auto-publish behaviour; it
+  doesn't anymore.)
 - Only pause to confirm before deleting my data.
 - I notice small visual details and care a lot about polish.
 - Fix root causes, not symptoms — and when a bug has happened before, guard against it
