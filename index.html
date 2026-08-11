@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260811-185850">
+<meta name="lcm-build" content="20260811-192839">
 <script>
   // self-update check (her ask 2026-08-11, "still not collapsing/working" --
   // both were already fixed and shipped; she was just looking at a GitHub
@@ -1661,6 +1661,21 @@
     cursor: col-resize; touch-action: none; user-select: none; z-index: 2;
   }
   #pharmacyPage .ph-col-grip:hover { background: color-mix(in srgb, var(--ph-green) 30%, transparent); border-radius: 3px; }
+  /* STEP 8h: drag a header to reorder columns (Inventory + To order) --
+     the column being lifted fades everywhere it appears, the header itself
+     gets a small shadow, and a line shows where it'll land */
+  #pharmacyPage [data-ph-col-drag] { cursor: grab; }
+  #pharmacyPage [data-ph-col-drag]:active { cursor: grabbing; }
+  #pharmacyPage .ph-col-lift { opacity: .5; }
+  #pharmacyPage th[data-ph-col-drag].ph-col-drag-active,
+  #pharmacyPage .ph-order-head-row [data-ph-col-drag].ph-col-drag-active {
+    box-shadow: 0 3px 10px color-mix(in srgb, var(--ph-ink) 25%, transparent);
+    background: var(--ph-paper); border-radius: 6px; position: relative; z-index: 3;
+  }
+  .ph-col-insert-line {
+    position: fixed; width: 3px; border-radius: 2px;
+    background: var(--ph-green-deep); pointer-events: none; z-index: 999;
+  }
   /* frozen-width mode sizes the table to the SUM of its columns (JS sets the
      px) — width:100% used to hand any leftover to the last column, which made
      it look unaligned (her catch) */
@@ -2878,7 +2893,7 @@
       return;
     }
     const arrow = k => phSort === k ? (phSortDir === 1 ? " ▲" : " ▼") : "";
-    const th = (k, label, hint) => `<th data-col="${k}"${hint ? ` title="${hint}"` : ""}><button type="button" class="ph-th-sort${phSort === k ? " on" : ""}" data-ph-sort="${k}">${label}${arrow(k)}</button></th>`;
+    const th = (k, label, hint) => `<th data-col="${k}"${hint ? ` title="${hint}"` : ""}${PH_INV_COL_DRAG_ORDER.includes(k) ? ` data-ph-col-drag="inv:${k}"` : ""}><button type="button" class="ph-th-sort${phSort === k ? " on" : ""}" data-ph-sort="${k}">${label}${arrow(k)}</button></th>`;
     // (the per-column filter row under the headers was removed 2026-07-23, her
     //  call — the search box and Status popover carry the filtering)
     const visibleIds = phBulkMode ? PHARMACY.herbs.filter(phRowPasses).map(h => h.id) : [];
@@ -2886,11 +2901,29 @@
     // her ask (2026-08-01): the table can be too wide on a narrow screen —
     // every column but Name can be hidden, set stuck per table like colW
     const hideCls = [...phHiddenCols("inv")].map(k => `ph-hide-${k}`).join(" ");
+    // STEP 8h: Code and Name stay pinned first (their current fixed order,
+    // unchanged), Actions stays pinned last -- everything between is a
+    // drag-to-reorder set, rendered in her saved order (or the default above).
+    const invColHtml = {
+      kind: th("kind", "Kind"),
+      supplier: th("supplier", "Supplier"),
+      cost: th("cost", "Cost $/g", "Cost per gram — what it costs you"),
+      costFlag: th("costFlag", "Sell $/g", "Sell per gram — $/g rounded up to the nearest 10c"),
+      bottleCost: th("bottleCost", "Bottle $"),
+      qty: th("qty", "Stock (g)"),
+      level: th("level", "Level"),
+      low: th("low", "Low at"),
+      status: th("status", "Status"),
+      usedByHH: `<th data-col="usedByHH" data-ph-col-drag="inv:usedByHH" title="Used by HH">HH</th>`,
+      cart: `<th data-col="cart" data-ph-col-drag="inv:cart">🛒</th>`,
+      note: th("note", "Notes"),
+    };
+    const invColsOrdered = phColOrder("inv").map(k => invColHtml[k]).join("");
     document.getElementById("phStock").innerHTML = `
       <div class="rtn-table-wrap${phStatusMenuFor ? " ph-menu-room" : ""}"><table class="rtn-table ph-table${hideCls ? " " + hideCls : ""}" data-ph-resize="inv">
         <thead>
           <tr>
-            ${phBulkMode ? `<th data-col="sel"><input type="checkbox" id="phBulkSelAll" aria-label="Select all visible rows"${allVisSelected ? " checked" : ""}></th>` : ""}${th("code", "Codes")}${th("name", "Name")}${th("kind", "Kind")}${th("supplier", "Supplier")}${th("cost", "Cost $/g", "Cost per gram — what it costs you")}${th("costFlag", "Sell $/g", "Sell per gram — $/g rounded up to the nearest 10c")}${th("bottleCost", "Bottle $")}${th("qty", "Stock (g)")}${th("level", "Level")}${th("low", "Low at")}${th("status", "Status")}<th data-col="usedByHH" title="Used by HH">HH</th><th data-col="cart">🛒</th>${th("note", "Notes")}<th data-col="actions"></th>
+            ${phBulkMode ? `<th data-col="sel"><input type="checkbox" id="phBulkSelAll" aria-label="Select all visible rows"${allVisSelected ? " checked" : ""}></th>` : ""}${th("code", "Codes")}${th("name", "Name")}${invColsOrdered}<th data-col="actions"></th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -2902,6 +2935,30 @@
   // Columns ▾ popover: which columns to show, per table (persisted like colW).
   // Name always shows -- everything else is optional.
   const PH_INV_COL_OPTS = [["code", "Codes"], ["kind", "Kind"], ["supplier", "Supplier"], ["cost", "Cost $/g"], ["costFlag", "Sell $/g"], ["bottleCost", "Bottle $"], ["qty", "In stock"], ["level", "Level"], ["low", "Low at"], ["status", "Status"], ["usedByHH", "Used by HH"], ["cart", "🛒"], ["note", "Notes"]];
+  // STEP 8h: drag-to-reorder is a separate, independent setting from show/hide
+  // above -- Code and Name (the identity pair) and Actions stay pinned, like
+  // sel/actions always have; everything else can move. Restock's To-order row
+  // uses CSS `order` on its grid items (same key set, no drag on Herb/×).
+  const PH_INV_COL_DRAG_ORDER = ["kind", "supplier", "cost", "costFlag", "bottleCost", "qty", "level", "low", "status", "usedByHH", "cart", "note"];
+  const PH_RESTOCK_COL_OPTS = [["sup", "Supplier"], ["level", "Level"], ["size", "Size"], ["x", "×"], ["bottle", "Bottle $"], ["total", "Total"], ["status", "Status"]];
+  const PH_RESTOCK_COL_DRAG_ORDER = PH_RESTOCK_COL_OPTS.map(o => o[0]);
+  const PH_COL_DRAG_DEFAULTS = { inv: PH_INV_COL_DRAG_ORDER, restock: PH_RESTOCK_COL_DRAG_ORDER };
+  // her saved order may be stale against these defaults (a column renamed or
+  // dropped since) -- keep only keys that still exist, then tack on any
+  // default key she's never seen (new column) at the end, in its default spot
+  function phColOrder(table) {
+    const defaults = PH_COL_DRAG_DEFAULTS[table];
+    const saved = (PHARMACY.colOrder || {})[table];
+    if (!saved || !saved.length) return defaults.slice();
+    const valid = new Set(defaults);
+    const order = saved.filter(k => valid.has(k));
+    defaults.forEach(k => { if (!order.includes(k)) order.push(k); });
+    return order;
+  }
+  function phResetColOrder(table) {
+    if (PHARMACY.colOrder) delete PHARMACY.colOrder[table];
+    savePharmacy();
+  }
   let phColsPopOpen = false;
   const phHiddenCols = table => new Set((PHARMACY.hiddenCols || {})[table] || []);
   function renderPhColsPop() {
@@ -2913,9 +2970,11 @@
     btn.setAttribute("aria-expanded", phColsPopOpen ? "true" : "false");
     pop.hidden = !phColsPopOpen;
     if (!phColsPopOpen) { pop.innerHTML = ""; return; }
+    const reordered = !!(PHARMACY.colOrder && PHARMACY.colOrder.inv && PHARMACY.colOrder.inv.length);
     pop.innerHTML = `
       ${PH_INV_COL_OPTS.map(([k, label]) => `<label class="ph-status-opt"><input type="checkbox" data-ph-col-opt="${k}" ${hidden.has(k) ? "" : "checked"}> ${label}</label>`).join("")}
-      <button type="button" class="ph-load-btn ph-status-clear" data-ph-col-clear="1" ${hidden.size ? "" : "disabled"}>Show every column again</button>`;
+      <button type="button" class="ph-load-btn ph-status-clear" data-ph-col-clear="1" ${hidden.size ? "" : "disabled"}>Show every column again</button>
+      <button type="button" class="ph-load-btn ph-status-clear" data-ph-col-order-reset="inv" ${reordered ? "" : "disabled"} title="Put dragged columns back in their default order">↺ Reset column order</button>`;
   }
 
   // ---- adjustable column widths, every pharmacy table (her ask) ----
@@ -2986,6 +3045,108 @@
     [...table.tHead.rows[0].cells].forEach(c => { c.style.width = ""; });
     e.preventDefault();
   });
+  // STEP 8h: drag a header to reorder columns (Inventory + To order) --
+  // desktop mouse only, her explicit allowance: fine if this is simply off
+  // on a touch screen rather than fighting a horizontal scroll. Same
+  // document-bound pointer pattern as the width-resize grip above, just
+  // horizontal instead of a rail; a small movement threshold tells a real
+  // drag apart from a plain click so the sort-header button underneath still
+  // works normally when she isn't dragging.
+  let phColReorderDrag = null;   // { table, key, headerRow, startX, startY, moved, handle, targetKey, before }
+  function phColInsertLine() {
+    let el = document.getElementById("phColInsertLine");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "phColInsertLine";
+      el.className = "ph-col-insert-line";
+      el.hidden = true;
+      document.body.appendChild(el);
+    }
+    return el;
+  }
+  // "the column I'm dragging lifts" — every place that key appears, not just
+  // the header: every <td data-col> in Inventory, every .ph-order-col-X in
+  // Restock (both sections, if she's dragging while both are on screen)
+  function phColLiftSet(table, key, on) {
+    const scope = table === "inv"
+      ? document.querySelectorAll(`#phStock [data-col="${key}"]`)
+      : document.querySelectorAll(`.ph-order-col-${key}`);
+    scope.forEach(el => el.classList.toggle("ph-col-lift", on));
+  }
+  document.addEventListener("pointerdown", e => {
+    if (e.pointerType !== "mouse") return;
+    const handle = e.target.closest ? e.target.closest("[data-ph-col-drag]") : null;
+    if (!handle || (e.target.closest && e.target.closest(".ph-col-grip"))) return;
+    const [table, key] = handle.dataset.phColDrag.split(":");
+    const headerRow = table === "inv" ? handle.closest("tr") : handle.closest(".ph-order-head-row");
+    if (!headerRow) return;
+    phColReorderDrag = { table, key, headerRow, startX: e.clientX, startY: e.clientY, moved: false, handle: null, targetKey: null, before: false };
+  });
+  document.addEventListener("pointermove", e => {
+    const d = phColReorderDrag;
+    if (!d) return;
+    if (!d.moved) {
+      if (Math.abs(e.clientX - d.startX) < 6 && Math.abs(e.clientY - d.startY) < 6) return;
+      d.moved = true;
+      d.handle = d.headerRow.querySelector(`[data-ph-col-drag="${d.table}:${d.key}"]`);
+      if (d.handle) d.handle.classList.add("ph-col-drag-active");
+      phColLiftSet(d.table, d.key, true);
+    }
+    const els = Array.from(d.headerRow.querySelectorAll("[data-ph-col-drag]"));
+    if (!els.length) return;
+    // these headers all sit on one row -- hit-test by X alone
+    let over = els.find(el => {
+      const r = el.getBoundingClientRect();
+      return e.clientX >= r.left && e.clientX <= r.right;
+    });
+    if (!over) {
+      const first = els[0].getBoundingClientRect();
+      over = e.clientX < first.left ? els[0] : els[els.length - 1];
+    }
+    const r = over.getBoundingClientRect();
+    const before = e.clientX < r.left + r.width / 2;
+    d.targetKey = over.dataset.phColDrag.split(":")[1];
+    d.before = before;
+    // the line spans the whole table (Inventory) or the whole order card
+    // (Restock) -- a header-height sliver wouldn't read as a column boundary
+    const spanEl = (d.table === "inv" ? d.headerRow.closest("table") : d.headerRow.closest(".ph-order-card")) || d.headerRow;
+    const sr = spanEl.getBoundingClientRect();
+    const line = phColInsertLine();
+    line.hidden = false;
+    line.style.left = Math.round(before ? r.left : r.right) - 1 + "px";
+    line.style.top = Math.round(sr.top) + "px";
+    line.style.height = Math.round(sr.height) + "px";
+  });
+  document.addEventListener("pointerup", () => {
+    const d = phColReorderDrag;
+    if (!d) return;
+    phColReorderDrag = null;
+    if (d.handle) d.handle.classList.remove("ph-col-drag-active");
+    phColLiftSet(d.table, d.key, false);
+    phColInsertLine().hidden = true;
+    if (!d.moved) return;
+    // a real drag still fires a click on release (browsers don't suppress it
+    // by distance moved) -- swallow exactly that one click next, or a drag
+    // that lands back on its own header would also trigger a sort. One-shot
+    // and purely event-driven (not a timer) so it can never linger and
+    // wrongly eat some LATER, unrelated header click -- it fires on the very
+    // next click, whenever that naturally arrives, then removes itself.
+    document.addEventListener("click", function phColSwallowClick(e) {
+      document.removeEventListener("click", phColSwallowClick, true);
+      if (e.target.closest && e.target.closest("[data-ph-col-drag]")) { e.preventDefault(); e.stopPropagation(); }
+    }, { capture: true, once: true });
+    if (!d.targetKey || d.targetKey === d.key) return;
+    const order = phColOrder(d.table);
+    const from = order.indexOf(d.key);
+    if (from !== -1) order.splice(from, 1);
+    const to = order.indexOf(d.targetKey);
+    if (to === -1) order.push(d.key);
+    else order.splice(d.before ? to : to + 1, 0, d.key);
+    PHARMACY.colOrder = PHARMACY.colOrder || {};
+    PHARMACY.colOrder[d.table] = order;
+    savePharmacy();
+    if (d.table === "inv") renderPhStock(); else renderPhRestock();
+  });
   // press-and-hold on a settled Arrived chip (her ask 2026-08-04) opens the
   // correction popover -- a plain tap must do nothing, so fixing a mistake has
   // to be a deliberate hold (the ⋯ button next to the chip is the same door
@@ -3037,6 +3198,9 @@
     const rows = PHARMACY.herbs.filter(phRowPasses).sort(phCompareRows);
     document.getElementById("phCount").textContent =
       rows.length === PHARMACY.herbs.length ? `${PHARMACY.herbs.length} herbs` : `${rows.length} of ${PHARMACY.herbs.length} herbs`;
+    // STEP 8h: same order every row, computed once -- Code and Name stay
+    // pinned first (matching the header), Actions stays pinned last
+    const colOrder = phColOrder("inv");
     tbody.innerHTML = rows.map(h => {
       const k = phHerbStatusKey(h);
       const rowCls = k === "stopped" ? "ph-row-stopped" : k === "phaseout" ? "ph-row-phaseout" : "";
@@ -3061,6 +3225,29 @@
       // h.suppliers[] -- edit them from the Supplier cell instead. This Codes
       // cell now carries only the two fields that aren't tied to a specific
       // supplier: KPC (universal) and Jing Shen (herb-only).
+      const tdMap = {
+        kind: `<td class="ph-kind-cell" data-col="kind">${phIsFormula(h)
+          ? `🫙 Formula<span class="ph-kind-tag" title="${phMadeInHouse(h) ? "made in house" : "premade (supplier)"} — ${h.source ? "her setting (✎ Kind)" : "read off the Formula Refill list; ✎ Kind overrides"}">${phMadeInHouse(h) ? "in house" : "premade"}</span>`
+          : `🌿 Herb`}</td>`,
+        supplier: `<td class="ph-sup-cell" data-col="supplier">${phCellEdit && phCellEdit.id === h.id && phCellEdit.field === "supplierPanel"
+          ? phSupplierPanelHtml(h)
+          : (() => {
+              const active = phActiveSupplier(h);
+              const cheapest = phCheapestSupplierName(h);
+              const cheaperElsewhere = cheapest && active && cheapest !== active.name;
+              return `<button type="button" class="ph-qty-lock ph-sup-btn" data-ph-unlock="${h.id}:supplierPanel" title="Suppliers &amp; pricing for ${esc(h.name)} — tap to see every option">${h.supplier ? esc(h.supplier) : "—"}${active && active.code ? `<div class="ph-sub">${esc(active.code)}</div>` : ""}${cheaperElsewhere ? `<div class="ph-sub ph-sup-cheaper-hint">cheaper available</div>` : ""}${h.suppliers && h.suppliers.length > 1 ? `<span class="ph-sup-more">+${h.suppliers.length - 1}</span>` : ""}</button>`;
+            })()}</td>`,
+        cost: `<td class="ph-num" data-col="cost"><span title="Cost per gram of ${esc(h.name)} — set the Bottle $ to change it">${h.cost ? "$" + h.cost : "—"}</span>${priceMore}</td>`,
+        costFlag: `<td class="ph-num" data-col="costFlag"><span title="$/g rounded up to the nearest 10c">${h.cost ? "$" + phRound2(phRoundUp10c(h.cost)) : "—"}</span></td>`,
+        bottleCost: `<td class="ph-num" data-col="bottleCost">${bottleCell}</td>`,
+        qty: `<td data-col="qty"><input type="text" inputmode="decimal" class="ph-qty-input" data-ph-edit="${h.id}:qty" value="${h.qty == null ? "" : h.qty}" placeholder="—" aria-label="Stock of ${esc(h.name)}"></td>`,
+        level: `<td data-col="level">${phStockBarPct(h.qty, h.low)}</td>`,
+        low: `<td class="ph-num" data-col="low">${lock("low", h.low != null ? h.low : "—", `Reorder point of ${esc(h.name)}`)}</td>`,
+        status: `<td class="ph-status-cell" data-col="status">${phStatusPills(h)}${phStatusMenuFor === h.id ? phStatusMenuHtml(h) : ""}</td>`,
+        usedByHH: `<td class="ph-cart-cell" data-col="usedByHH"><input type="checkbox" data-ph-hh-toggle="${h.id}"${h.usedByHH ? " checked" : ""} aria-label="${esc(h.name)} used by HH"></td>`,
+        cart: `<td class="ph-cart-cell" data-col="cart">${h.stopped ? "" : `<button class="ph-cart" data-ph-order="${h.id}" aria-pressed="${!!h.order}" title="${h.order ? "Un-flag for ordering" : "Flag for ordering"}" aria-label="Flag ${esc(h.name)} for ordering">🛒</button>`}</td>`,
+        note: `<td class="ph-note-cell" data-col="note" title="${esc(h.note || "")}">${lock("note", h.note ? esc(h.note.split("\n")[0]) : "—", `Notes for ${esc(h.name)}`)}</td>`,
+      };
       return `<tr data-ph-row="${h.id}"${rowCls ? ` class="${rowCls}"` : ""}>
         ${phBulkMode ? `<td class="ph-bulk-cell" data-col="sel"><input type="checkbox" data-ph-bulk-sel="${h.id}" aria-label="Select ${esc(h.name)}"${phSelected.has(h.id) ? " checked" : ""}></td>` : ""}
         <td class="ph-code" data-col="code">${phCellEdit && phCellEdit.id === h.id && phCellEdit.field === "code"
@@ -3068,27 +3255,7 @@
              ${!phIsFormula(h) ? `<input type="text" class="ph-qty-input ph-code-input" data-ph-edit="${h.id}:jingShenCode" value="${esc(h.jingShenCode || "")}" placeholder="Jing Shen code" aria-label="Jing Shen code of ${esc(h.name)}">` : ""}`
           : `<button type="button" class="ph-qty-lock" data-ph-unlock="${h.id}:code" title="Click to edit">${h.kpcCode ? esc(h.kpcCode) : "—"}${!phIsFormula(h) && h.jingShenCode ? `<div class="ph-sub">Jing Shen ${esc(h.jingShenCode)}</div>` : ""}</button>`}</td>
         <td class="ph-name" data-col="name">${esc(phDispName(h.name, phIsFormula(h)))}${phIsFormula(h) && phFormulaAbbr(h) ? ` <span class="ph-pres-abbr">${esc(phFormulaAbbr(h))}</span>` : ""}</td>
-        <td class="ph-kind-cell" data-col="kind">${phIsFormula(h)
-          ? `🫙 Formula<span class="ph-kind-tag" title="${phMadeInHouse(h) ? "made in house" : "premade (supplier)"} — ${h.source ? "her setting (✎ Kind)" : "read off the Formula Refill list; ✎ Kind overrides"}">${phMadeInHouse(h) ? "in house" : "premade"}</span>`
-          : `🌿 Herb`}</td>
-        <td class="ph-sup-cell" data-col="supplier">${phCellEdit && phCellEdit.id === h.id && phCellEdit.field === "supplierPanel"
-          ? phSupplierPanelHtml(h)
-          : (() => {
-              const active = phActiveSupplier(h);
-              const cheapest = phCheapestSupplierName(h);
-              const cheaperElsewhere = cheapest && active && cheapest !== active.name;
-              return `<button type="button" class="ph-qty-lock ph-sup-btn" data-ph-unlock="${h.id}:supplierPanel" title="Suppliers &amp; pricing for ${esc(h.name)} — tap to see every option">${h.supplier ? esc(h.supplier) : "—"}${active && active.code ? `<div class="ph-sub">${esc(active.code)}</div>` : ""}${cheaperElsewhere ? `<div class="ph-sub ph-sup-cheaper-hint">cheaper available</div>` : ""}${h.suppliers && h.suppliers.length > 1 ? `<span class="ph-sup-more">+${h.suppliers.length - 1}</span>` : ""}</button>`;
-            })()}</td>
-        <td class="ph-num" data-col="cost"><span title="Cost per gram of ${esc(h.name)} — set the Bottle $ to change it">${h.cost ? "$" + h.cost : "—"}</span>${priceMore}</td>
-        <td class="ph-num" data-col="costFlag"><span title="$/g rounded up to the nearest 10c">${h.cost ? "$" + phRound2(phRoundUp10c(h.cost)) : "—"}</span></td>
-        <td class="ph-num" data-col="bottleCost">${bottleCell}</td>
-        <td data-col="qty"><input type="text" inputmode="decimal" class="ph-qty-input" data-ph-edit="${h.id}:qty" value="${h.qty == null ? "" : h.qty}" placeholder="—" aria-label="Stock of ${esc(h.name)}"></td>
-        <td data-col="level">${phStockBarPct(h.qty, h.low)}</td>
-        <td class="ph-num" data-col="low">${lock("low", h.low != null ? h.low : "—", `Reorder point of ${esc(h.name)}`)}</td>
-        <td class="ph-status-cell" data-col="status">${phStatusPills(h)}${phStatusMenuFor === h.id ? phStatusMenuHtml(h) : ""}</td>
-        <td class="ph-cart-cell" data-col="usedByHH"><input type="checkbox" data-ph-hh-toggle="${h.id}"${h.usedByHH ? " checked" : ""} aria-label="${esc(h.name)} used by HH"></td>
-        <td class="ph-cart-cell" data-col="cart">${h.stopped ? "" : `<button class="ph-cart" data-ph-order="${h.id}" aria-pressed="${!!h.order}" title="${h.order ? "Un-flag for ordering" : "Flag for ordering"}" aria-label="Flag ${esc(h.name)} for ordering">🛒</button>`}</td>
-        <td class="ph-note-cell" data-col="note" title="${esc(h.note || "")}">${lock("note", h.note ? esc(h.note.split("\n")[0]) : "—", `Notes for ${esc(h.name)}`)}</td>
+        ${colOrder.map(k => tdMap[k]).join("")}
         <td class="rtn-actions" data-col="actions">
           <button class="del" data-ph-herb-edit="${h.id}" aria-label="Edit ${esc(h.name)}">✎</button>
           <button class="del" data-ph-herb-del="${h.id}" aria-label="Delete ${esc(h.name)}">×</button>
@@ -3983,6 +4150,13 @@
         PHARMACY.hiddenCols = PHARMACY.hiddenCols || {};
         PHARMACY.hiddenCols.inv = [];
         savePharmacy(); renderPhColsPop(); renderPhStock(); return;
+      }
+      const colOrderReset = e.target.closest("[data-ph-col-order-reset]");
+      if (colOrderReset) {
+        const t = colOrderReset.dataset.phColOrderReset;
+        phResetColOrder(t);
+        if (t === "inv") { renderPhColsPop(); renderPhStock(); } else { renderPhRestock(); }
+        return;
       }
       if (phColsPopOpen && !e.target.closest(".ph-cols-wrap")) {
         phColsPopOpen = false;
@@ -5302,16 +5476,19 @@
       </div>
       ${map[sup].map(orderRow).join("")}`;
     }).join("");
+    // STEP 8h: the grid's tracks are fixed (grid-template-columns, in the
+    // CSS) but which key lands in which track is just CSS `order` on each
+    // item -- Herb and the trailing × stay pinned (order 0 / 99), the seven
+    // named columns fall in her saved order, same key set both here and in
+    // orderRow so a reorder always moves head + every data row together.
+    const restockColOrder = phColOrder("restock");
+    const restockOrderIdx = {};
+    restockColOrder.forEach((k, i) => { restockOrderIdx[k] = i + 1; });
+    const restockColLabel = { sup: "Supplier", level: "Level", size: "Size", x: "×", bottle: "Bottle $", total: "Total", status: "Status" };
     const orderHeadRow = `<div class="ph-order-head-row">
-          <span class="ph-order-col-nm">Herb</span>
-          <span class="ph-order-col-sup">Supplier</span>
-          <span class="ph-order-col-level">Level</span>
-          <span class="ph-order-col-size">Size</span>
-          <span class="ph-order-col-x">×</span>
-          <span class="ph-order-col-bottle">Bottle $</span>
-          <span class="ph-order-col-total">Total</span>
-          <span class="ph-order-col-status">Status</span>
-          <span></span>
+          <span class="ph-order-col-nm" style="order:0">Herb</span>
+          ${restockColOrder.map(k => `<span class="ph-order-col-${k}" style="order:${restockOrderIdx[k]}" data-ph-col-drag="restock:${k}">${restockColLabel[k]}</span>`).join("")}
+          <span style="order:99"></span>
         </div>`;
     // one merged status chip per row instead of a checkbox + a separate pill --
     // To order -> Ordered <date> -> Arrived <date> (settled; press-and-hold, or
@@ -5357,12 +5534,13 @@
           ).join("")}
           ${h.supplier && !inSupList ? `<option value="${esc(h.supplier)}" selected>${esc(h.supplier)}</option>` : ""}
         </select>`;
+      const ord = k => ` style="order:${restockOrderIdx[k]}"`;
       return `<div class="ph-order-row">
         <div class="ph-order-line2">
-          <span class="ph-order-col-nm">${esc(phHerbLabel(h))}</span>
-          <span class="ph-order-col-sup">${supPick}</span>
-          <span class="ph-order-col-level">${phStockBarPct(h.qty, h.low)}</span>
-          <span class="ph-order-col-size">
+          <span class="ph-order-col-nm" style="order:0">${esc(phHerbLabel(h))}</span>
+          <span class="ph-order-col-sup"${ord("sup")}>${supPick}</span>
+          <span class="ph-order-col-level"${ord("level")}>${phStockBarPct(h.qty, h.low)}</span>
+          <span class="ph-order-col-size"${ord("size")}>
             <select class="ph-qty-input field-bare" data-ph-order-pack="${h.id}" title="Bottle size for this order" aria-label="Bottle size for this order of ${esc(h.name)}">
               <option value="${PH_PACK_HERB}"${!packIsCustom && pack === PH_PACK_HERB ? " selected" : ""}>${PH_PACK_HERB}g</option>
               <option value="${PH_PACK_FORMULA}"${!packIsCustom && pack === PH_PACK_FORMULA ? " selected" : ""}>${PH_PACK_FORMULA}g</option>
@@ -5370,13 +5548,13 @@
             </select>
             ${packIsCustom ? `<input type="number" class="ph-qty-input ph-order-col-size-custom" data-ph-order-pack-custom="${h.id}" value="${pack}" min="1" step="1" placeholder="g" title="Custom bottle size (grams)" aria-label="Custom bottle size in grams for ${esc(h.name)}">` : ""}
           </span>
-          <input type="number" class="ph-qty-input ph-order-col-x" data-ph-order-qty="${h.id}" value="${qty}" min="1" step="1" title="How many of that bottle" aria-label="Number of bottles to order for ${esc(h.name)}">
+          <input type="number" class="ph-qty-input ph-order-col-x"${ord("x")} data-ph-order-qty="${h.id}" value="${qty}" min="1" step="1" title="How many of that bottle" aria-label="Number of bottles to order for ${esc(h.name)}">
           ${phCellEdit && phCellEdit.id === h.id && phCellEdit.field === "restockBottle"
-            ? `<input type="text" inputmode="decimal" class="ph-qty-input ph-order-col-bottle" data-ph-edit="${h.id}:restockBottle" value="${h.bottleCost != null ? h.bottleCost : ""}" placeholder="—" aria-label="Cost of restocked bottle for ${esc(h.name)}${h.supplier ? ` from ${esc(h.supplier)}` : ""}">`
-            : `<button type="button" class="ph-qty-lock ph-order-col-bottle" data-ph-unlock="${h.id}:restockBottle" title="${h.supplier ? esc(h.supplier) + "’s price — click to edit" : "Click to edit"}">${h.bottleCost != null ? "$" + h.bottleCost : "—"}</button>`}
-          <span class="ph-order-col-total" title="Bottle $ × ×">${lineTotal != null ? phMoney(lineTotal) : "—"}</span>
-          <span class="ph-order-col-status">${stage}</span>
-          <button class="del" data-ph-order="${h.id}" title="Take off the order list" aria-label="Take ${esc(h.name)} off the order list">×</button>
+            ? `<input type="text" inputmode="decimal" class="ph-qty-input ph-order-col-bottle"${ord("bottle")} data-ph-edit="${h.id}:restockBottle" value="${h.bottleCost != null ? h.bottleCost : ""}" placeholder="—" aria-label="Cost of restocked bottle for ${esc(h.name)}${h.supplier ? ` from ${esc(h.supplier)}` : ""}">`
+            : `<button type="button" class="ph-qty-lock ph-order-col-bottle"${ord("bottle")} data-ph-unlock="${h.id}:restockBottle" title="${h.supplier ? esc(h.supplier) + "’s price — click to edit" : "Click to edit"}">${h.bottleCost != null ? "$" + h.bottleCost : "—"}</button>`}
+          <span class="ph-order-col-total"${ord("total")} title="Bottle $ × ×">${lineTotal != null ? phMoney(lineTotal) : "—"}</span>
+          <span class="ph-order-col-status"${ord("status")}>${stage}</span>
+          <button class="del" style="order:99" data-ph-order="${h.id}" title="Take off the order list" aria-label="Take ${esc(h.name)} off the order list">×</button>
         </div>
       </div>`;
     };
@@ -5412,7 +5590,7 @@
       </div>
       ${!toOrder.length ? `<div class="fam-empty" style="margin:16px 0"><span class="ph-stage-btn arrived" style="display:inline-flex;margin-bottom:8px">✓ All arrived</span><br>Flag a herb with 🛒 in the inventory — or straight from the low list below — and it lines up here.</div>` : ""}
       ${stillToOrder.length ? `<div class="ph-order-card">
-        <div class="section-head"><h2>🛒 To order (${stillToOrder.length})</h2><span class="rule"></span></div>
+        <div class="section-head"><h2>🛒 To order (${stillToOrder.length})</h2><span class="rule"></span>${PHARMACY.colOrder && PHARMACY.colOrder.restock && PHARMACY.colOrder.restock.length ? `<button type="button" class="ph-load-btn" data-ph-col-order-reset="restock" title="Put dragged columns back in their default order">↺ Reset columns</button>` : ""}</div>
         ${orderHeadRow}
         ${renderSupGroups(bySupToOrder)}
       </div>` : ""}
