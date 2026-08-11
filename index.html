@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260811-210049">
+<meta name="lcm-build" content="20260811-221556">
 <script>
   // self-update check (her ask 2026-08-11, "still not collapsing/working" --
   // both were already fixed and shipped; she was just looking at a GitHub
@@ -2829,6 +2829,27 @@
     if (n) savePharmacy();
     try { localStorage.setItem(FLAG, "1"); } catch (e) {}
   })();
+  (function fixColWPositionKeys20260811() {
+    // STEP 8h drag-reorder + the column-width freeze used to share the same
+    // table but not the same key: widths were saved by POSITION ("0","1"...),
+    // reorder moves columns between positions, so a frozen width would land
+    // on whatever column ended up in that slot, not the one she actually
+    // resized -- this is the "glitchy dragging" she reported 2026-08-11.
+    // Width is now keyed by column id (data-col) instead; any old
+    // position-keyed save can't be trusted, so drop it -- the columns fall
+    // back to their natural width and can simply be re-dragged.
+    const FLAG = "daybook-ph-colw-keyed-20260811";
+    try { if (localStorage.getItem(FLAG)) return; } catch (e) {}
+    let changed = false;
+    if (PHARMACY.colW) {
+      Object.keys(PHARMACY.colW).forEach(table => {
+        const keys = Object.keys(PHARMACY.colW[table] || {});
+        if (keys.some(k => /^\d+$/.test(k))) { delete PHARMACY.colW[table]; changed = true; }
+      });
+    }
+    if (changed) savePharmacy();
+    try { localStorage.setItem(FLAG, "1"); } catch (e) {}
+  })();
   // status filter is a SET now — she can look at low + zero + stopping in one
   // view. Default (2026-07-31, her ask): Stocked/Low/Out of stock/Phase-out
   // only — Untracked and Temporarily Stopping clutter the everyday view and
@@ -3161,7 +3182,13 @@
         g.title = "Drag to set the column width — double-click to reset the table";
         c.appendChild(g);
       }
-      if (saved && saved[i] != null) { c.style.width = saved[i] + "px"; total += saved[i]; }
+      // keyed by column identity (data-col) where the table has one, not by
+      // position -- a table that also drag-reorders (Inventory) shuffles
+      // WHICH column sits at a given position, and a position-keyed width
+      // used to land on whatever column ended up there instead of the one
+      // she actually resized ("glitchy" columns -- her report 2026-08-11)
+      const w = saved && saved[c.dataset.col != null ? c.dataset.col : i];
+      if (w != null) { c.style.width = w + "px"; total += w; }
     });
     table.classList.toggle("ph-colw", !!saved);
     // the table is exactly as wide as its columns — never stretches the last one
@@ -3194,16 +3221,23 @@
     phColDrag.th.style.width = Math.max(36, phColDrag.w + (e.clientX - phColDrag.x)) + "px";
     phColSyncTableW(phColDrag.table);
   });
-  document.addEventListener("pointerup", () => {
+  // pointerup AND pointercancel -- a resize that gets interrupted (window loses
+  // focus, the OS grabs the gesture, the pointer leaves the page) must still let
+  // go cleanly, or the very next unrelated mouse move keeps resizing the column
+  // ("glitchy" columns that seem to resize themselves -- her report 2026-08-11)
+  function phColDragEnd() {
     if (!phColDrag) return;
     const { table } = phColDrag;
     phColDrag = null;
     const o = {};
-    [...table.tHead.rows[0].cells].forEach((c, i) => { o[i] = Math.round(parseFloat(c.style.width) || c.getBoundingClientRect().width); });
+    [...table.tHead.rows[0].cells].forEach((c, i) => {
+      o[c.dataset.col != null ? c.dataset.col : i] = Math.round(parseFloat(c.style.width) || c.getBoundingClientRect().width);
+    });
     PHARMACY.colW = PHARMACY.colW || {};
     PHARMACY.colW[table.dataset.phResize] = o;
     savePharmacy();
-  });
+  }
+  ["pointerup", "pointercancel"].forEach(ev => document.addEventListener(ev, phColDragEnd));
   document.addEventListener("dblclick", e => {
     const g = e.target.closest ? e.target.closest(".ph-col-grip") : null;
     if (!g) return;
@@ -3286,7 +3320,12 @@
     line.style.top = Math.round(sr.top) + "px";
     line.style.height = Math.round(sr.height) + "px";
   });
-  document.addEventListener("pointerup", () => {
+  // pointerup AND pointercancel -- same reason as the width-resize grip above:
+  // an interrupted drag (focus loss, the OS grabbing the gesture, the pointer
+  // leaving the page) has to let go, or the faded/lifted column and the green
+  // insertion line are left stuck on screen until the page is reloaded
+  // ("glitchy" dragging -- her report 2026-08-11)
+  function phColReorderEnd() {
     const d = phColReorderDrag;
     if (!d) return;
     phColReorderDrag = null;
@@ -3315,7 +3354,8 @@
     PHARMACY.colOrder[d.table] = order;
     savePharmacy();
     if (d.table === "inv") renderPhStock(); else renderPhRestock();
-  });
+  }
+  ["pointerup", "pointercancel"].forEach(ev => document.addEventListener(ev, phColReorderEnd));
   // press-and-hold on a settled Arrived chip (her ask 2026-08-04) opens the
   // correction popover -- a plain tap must do nothing, so fixing a mistake has
   // to be a deliberate hold (the ⋯ button next to the chip is the same door
