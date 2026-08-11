@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260811-195116">
+<meta name="lcm-build" content="20260811-210049">
 <script>
   // self-update check (her ask 2026-08-11, "still not collapsing/working" --
   // both were already fixed and shipped; she was just looking at a GitHub
@@ -764,6 +764,23 @@
   .ph-recent-arrived .ph-order-nm { color: var(--ph-soft); font-weight: 500; }
   /* (the ⚗️ Making-Herbs mixer left the inventory page 2026-07-23, her call —
      its build/pick CSS went with it; making lives in 🏺 Formula Refill) */
+  /* root cause of the "Add herb"/"Cancel"/"+ Add herb" buttons rendering as
+     bare, tiny browser-default controls (found 2026-08-11 while relocating
+     the Add-herb button per her ask): every context that uses .btn-save/
+     .btn-cancel/.add-btn only ever set colour, never shape -- several
+     contexts (.ph-confirm-strip, .ph-bulk-bar, .ph-actions-chunky) already
+     layer their OWN padding/radius on top, proving a shared base was always
+     the intent; it just never got written, so anywhere without one of those
+     overrides fell back to the browser's unstyled button chrome (2px outset
+     border, ~21px tall) -- failing the 44px tap-target rule everywhere it
+     showed up. One pill-shaped base, matching the rest of the component
+     system; existing per-context overrides above still refine size/radius. */
+  #pharmacyPage .btn-save, #pharmacyPage .btn-cancel, #pharmacyPage .add-btn {
+    font-family: var(--font-body); font-size: 13px; font-weight: 700; letter-spacing: 0.01em;
+    border: 1px solid transparent; border-radius: 999px; padding: 10px 18px; min-height: 44px;
+    box-sizing: border-box; cursor: pointer; line-height: 1.2;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  }
   #pharmacyPage .btn-save { background: var(--ph-green-deep); border-color: var(--ph-green-deep); color: var(--ph-cream); }
   #pharmacyPage .btn-save:hover { background: var(--ph-green-press); box-shadow: inset 0 0 0 1px var(--margin-rule, #E3C87A); }
   /* 💾 Save & Log greys out once it's actually logged (her ask 2026-08-01) —
@@ -860,25 +877,40 @@
      Supplier form (.add-form) or any other pharmacy surface. Visual + layout
      only; every field keeps its id, so the existing JS reads/writes exactly
      the same data as before. ---- */
+  /* STEP 3 (her ask 2026-08-11): "remove the big inline add box" -- was a
+     card sitting always in-flow below the table (display:block, margin-top,
+     max-width:720). Now a fixed right-side drawer over a dimmed backdrop:
+     position:fixed + flex-column so the green head and the Cancel/Save
+     footer stay pinned while only ph-hf-body scrolls, matching the rulebook
+     ("scrolls inside itself, never cut off"). Every field keeps its id, so
+     none of the read/write JS below needed to change. */
+  #pharmacyPage .ph-drawer-backdrop {
+    position: fixed; inset: 0; z-index: 400; background: rgba(14,45,27,0.35);
+  }
   #pharmacyPage .ph-herbform {
     /* was its own bespoke light-clinical palette (literal hex); now points at
        the app's one shared --ph-* token set so this form can never drift from
        the rest of the app again -- change --ph-green etc. and this follows. */
     --bg: var(--ph-green-tint); --surface: var(--ph-white); --raised: var(--ph-paper); --ink: var(--ph-ink); --muted: var(--ph-soft); --faint: var(--ph-faint);
     --clinic: var(--ph-green); --clinic-deep: var(--ph-green-deep); --border: var(--ph-line); --line: var(--ph-line); --star: var(--margin-rule, #E3C87A); --star-soft: var(--ph-gold-tint);
-    display: block; max-width: 720px; margin-top: 10px; padding: 0;
-    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
-    box-shadow: 0 1px 2px rgba(20,40,25,0.06), 0 10px 28px rgba(20,40,25,0.10);
-    overflow: hidden;
+    position: fixed; top: 0; right: 0; bottom: 0; z-index: 401;
+    width: min(480px, 100vw); margin: 0; padding: 0;
+    display: flex; flex-direction: column;
+    background: var(--surface); border: none; border-left: 1px solid var(--border); border-radius: 0;
+    box-shadow: -18px 0 48px -18px rgba(0,0,0,0.35);
+    animation: phSlideInX 0.22s ease-out;
   }
   /* the real bug behind "it doesn't minimise" (her report 2026-08-11, twice):
      this rule's own `display: block` above outranks the browser's default
      [hidden] { display: none } -- any author rule beats a UA one regardless
      of specificity, so setting .hidden = true in JS was never enough on its
      own. The earlier fix (scrollIntoView) treated the symptom; this is the
-     actual cause -- the form was never visually hidden at all. */
+     actual cause -- the form was never visually hidden at all. Still needed
+     now that the base rule sets display:flex for the drawer layout -- any
+     author display rule outranks [hidden] regardless of what value it sets. */
   #pharmacyPage .ph-herbform[hidden] { display: none; }
   #pharmacyPage .ph-herbform .ph-hf-head {
+    flex: 0 0 auto;
     padding: 14px 22px; background: linear-gradient(135deg, var(--clinic), var(--clinic-deep));
     color: #fff; font-family: var(--font-body); font-size: 15px; font-weight: 700; letter-spacing: 0.01em;
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
@@ -891,7 +923,7 @@
     cursor: pointer; transition: background .15s;
   }
   #pharmacyPage .ph-herbform .ph-hf-close:hover { background: rgba(255,255,255,0.28); }
-  #pharmacyPage .ph-herbform .ph-hf-body { padding: 18px 22px 2px; }
+  #pharmacyPage .ph-herbform .ph-hf-body { flex: 1 1 auto; overflow-y: auto; padding: 18px 22px 2px; }
   #pharmacyPage .ph-herbform .ph-hf-section { padding: 14px 0 16px; border-top: 1px solid var(--line); }
   #pharmacyPage .ph-herbform .ph-hf-section:first-child { padding-top: 0; border-top: none; }
   #pharmacyPage .ph-herbform .ph-hf-label {
@@ -905,6 +937,42 @@
   }
   #pharmacyPage .ph-herbform .ph-hf-hint { font-size: 11px; color: var(--muted); margin: -6px 0 10px; }
   #pharmacyPage .ph-herbform .ph-hf-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 18px; }
+  /* advanced sections, closed by default (her ask) -- native <details> so
+     open/close state needs zero JS; .ph-hf-label above already gives the
+     accent bar + caps styling, this just adds the click affordance + chevron */
+  #pharmacyPage .ph-herbform .ph-hf-adv { padding: 14px 0 16px; border-top: 1px solid var(--line); }
+  #pharmacyPage .ph-herbform .ph-hf-adv summary {
+    list-style: none; cursor: pointer; margin: 0; min-height: 44px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  #pharmacyPage .ph-herbform .ph-hf-adv summary::-webkit-details-marker { display: none; }
+  #pharmacyPage .ph-herbform .ph-hf-adv summary::after {
+    content: "▾"; font-size: 10px; color: var(--muted); transition: transform 0.15s ease;
+  }
+  #pharmacyPage .ph-herbform .ph-hf-adv[open] summary::after { transform: rotate(180deg); }
+  #pharmacyPage .ph-herbform .ph-hf-adv[open] summary { margin-bottom: 12px; }
+  #pharmacyPage .ph-herbform .ph-hf-adv > .ph-hf-row2,
+  #pharmacyPage .ph-herbform .ph-hf-adv > .ph-hf-hint,
+  #pharmacyPage .ph-herbform .ph-hf-adv > #phHerbSuppliersRows { margin-top: 0; }
+  /* Kind as a segmented control (her ask) -- the real <select> stays the
+     source of truth (kept off-screen, not display:none, so it's still
+     reachable for .value reads/writes and dispatched change events exactly
+     like before); these two buttons just present + drive it */
+  #pharmacyPage .ph-visually-hidden {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
+  #pharmacyPage .ph-seg {
+    display: flex; gap: 4px; background: var(--raised); border: 1px solid var(--border);
+    border-radius: 999px; padding: 4px; width: fit-content;
+  }
+  #pharmacyPage .ph-seg-opt {
+    font-family: var(--font-body); font-size: 13px; font-weight: 600; color: var(--muted);
+    border: none; background: none; border-radius: 999px; padding: 9px 16px; min-height: 36px;
+    cursor: pointer; transition: background 0.15s, color 0.15s;
+  }
+  #pharmacyPage .ph-seg-opt:hover:not(.on) { background: var(--bg); color: var(--clinic-deep); }
+  #pharmacyPage .ph-seg-opt.on { background: var(--clinic-deep); color: #fff; }
   #pharmacyPage .ph-herbform .field label { color: var(--muted); }
   #pharmacyPage .ph-herbform .field label span { color: var(--faint); }
   #pharmacyPage .ph-herbform .field input,
@@ -934,7 +1002,7 @@
   }
   #pharmacyPage .ph-herbform #phHerbSupplierAddRow:hover { background: color-mix(in oklab, var(--bg) 60%, var(--star-soft)); border-color: var(--clinic); }
   #pharmacyPage .ph-herbform .form-actions {
-    padding: 14px 22px 18px; margin: 0; border-top: 1px solid var(--line);
+    flex: 0 0 auto; padding: 14px 22px 18px; margin: 0; border-top: 1px solid var(--line);
   }
   #pharmacyPage .ph-herbform .btn-save { background: var(--clinic); border-color: var(--clinic); color: #fff; }
   #pharmacyPage .ph-herbform .btn-save:hover { background: var(--clinic-deep); box-shadow: none; }
@@ -943,6 +1011,10 @@
   }
   #pharmacyPage .ph-herbform .btn-cancel:hover { background: var(--line); color: var(--ink); }
   @media (max-width: 640px) {
+    /* "on a narrow phone it becomes a full-height sheet" (her ask) -- same
+       fixed drawer, just claiming the whole width instead of peeking the
+       page behind it */
+    #pharmacyPage .ph-herbform { width: 100vw; border-left: none; }
     #pharmacyPage .ph-herbform .ph-hf-row2 { grid-template-columns: 1fr; }
     #pharmacyPage .ph-herbform .ph-hf-head { padding: 12px 16px; font-size: 14px; }
     #pharmacyPage .ph-herbform .ph-hf-body { padding: 14px 16px 2px; }
@@ -1008,6 +1080,17 @@
   #pharmacyPage .ph-table tbody tr:hover td { background: var(--ph-green-tint); }
   /* status colouring must outrank the zebra and the hover */
   #pharmacyPage .ph-table tbody tr.ph-row-phaseout td { background: var(--ph-gold-tint); }
+  /* STEP 5 (her ask 2026-08-11): highlight the whole row when HH is ticked --
+     independent of stock status (a row can be both phaseout AND HH-used), so
+     it's a SEPARATE class, not folded into the status one above. Same
+     gold-tint wash as phaseout (one source of truth for "gold" in this app,
+     rulebook: no off-palette one-offs) but a left edge in --margin-rule is
+     the thing phaseout never has -- that's the "reads as its own kind of
+     flag" distinction she asked for, not a different colour family. */
+  #pharmacyPage .ph-table tbody tr.ph-row-hh td { background: var(--ph-gold-tint); }
+  #pharmacyPage .ph-table tbody tr.ph-row-hh td:first-child {
+    box-shadow: inset 3px 0 0 var(--margin-rule, #E3C87A);
+  }
   #pharmacyPage .ph-pres-table tbody tr.short td { background: var(--ph-zero-tint); }
   /* the prescriptions search finally dresses like the inventory one */
   #presSearch {
@@ -1028,6 +1111,7 @@
   .ph-load-btn:active, .ph-print-btn:active, .ph-add-order:active, .ph-flash .ph-undo-btn:active { transform: translateY(1px); }
   /* confirms and flashes slide in instead of popping */
   @keyframes phSlideIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: none; } }
+  @keyframes phSlideInX { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
   .ph-flash, .ph-confirm-strip { animation: phSlideIn 0.22s ease-out; }
   /* empty states become quiet dashed plaques instead of floating italics */
   #pharmacyPage .fam-empty {
@@ -1454,6 +1538,16 @@
       border: 1px solid var(--ph-line); border-radius: 12px;
       padding: 12px 14px; margin-bottom: 8px; background: var(--ph-paper);
     }
+    /* STEP 5, card layout: tr is a real block here (no longer a table row),
+       so the highlight moves from individual td backgrounds onto the card
+       itself -- one solid wash + edge instead of a striped look across the
+       stacked fields. Same look/behaviour as desktop, just a different
+       element carries it at this width. */
+    #pharmacyPage #phStock tbody tr.ph-row-hh {
+      background: var(--ph-gold-tint);
+      box-shadow: inset 3px 0 0 var(--margin-rule, #E3C87A);
+    }
+    #pharmacyPage #phStock tbody tr.ph-row-hh td { background: transparent; }
     #pharmacyPage #phStock td { display: block; padding: 2px 0; border: none; text-align: left !important; white-space: normal; }
     #pharmacyPage #phStock td[data-col="code"],
     #pharmacyPage #phStock td[data-col="kind"],
@@ -1745,6 +1839,15 @@
      else numeric is a locked button, already right-aligned via .ph-num) --
      match it so every number in the grid reads the same direction */
   #pharmacyPage #phStock td[data-col="qty"] .ph-qty-input { text-align: right; }
+  /* STEP 4 (her ask 2026-08-11): "more compact... without cramping the text"
+     -- the row height was mostly the inline-edit controls (lock buttons,
+     qty inputs), not the cell padding, so trimming those is what actually
+     shows. Scoped to #phStock only -- Restock/Refill share these same
+     .ph-qty-lock/.ph-qty-input classes and weren't asked to change. */
+  #pharmacyPage #phStock .rtn-table th,
+  #pharmacyPage #phStock .rtn-table td { padding: 3px 8px; }
+  #pharmacyPage #phStock .ph-qty-lock { padding: 2px 6px; }
+  #pharmacyPage #phStock .ph-qty-input { padding: 3px 6px; }
   /* her ask (2026-08-05): "put the recent refills in the right of the page" --
      a two-column layout so the log uses the space that used to sit empty next
      to the maker/recipes column on a wide screen. Collapses to one column
@@ -1903,6 +2006,7 @@
       <div class="ph-widget-head">
         <h2>🌿 Herbal Inventory</h2>
         <input type="search" id="phSearch" placeholder="Search code, name or notes…" title="Separate with commas to look up several herbs at once" autocomplete="off" aria-label="Search herbs — separate with commas for several at once">
+        <button class="add-btn" id="phHerbAddBtn" type="button">+ Add herb</button>
         <select id="phKindSel" aria-label="Herbs or formulas">
           <option value="all">Herbs &amp; formulas</option>
           <option value="herb">🌿 Herbs only</option>
@@ -1925,48 +2029,47 @@
       <div id="phBulkBar"></div>
       <div id="phBulkConfirmZone"></div>
       <div id="phStock"></div>
-      <div class="add-row" id="phHerbAddRow">
-        <button class="add-btn" id="phHerbAddBtn" type="button">✎ Add a herb</button>
-      </div>
-      <!-- light clinical restyle (her ask 2026-08-06): sectioned card with a
-           dark-green header band, replacing the old flat 2-col field grid.
-           Every field keeps its id -- layout + styling only, same data. -->
+      <!-- STEP 2/3 (her ask 2026-08-11): the old always-on-page add-row +
+           inline card moved to a slide-over drawer opened from the toolbar's
+           "+ Add herb" button above -- the backdrop dims/closes it, Escape
+           and the header band still close it too (closePhHerbForm, unchanged). -->
+      <div class="ph-drawer-backdrop" id="phHerbBackdrop" hidden></div>
+      <!-- light clinical restyle (her ask 2026-08-06); STEP 3 (2026-08-11)
+           reorganised into essentials + collapsible <details> sections and
+           repointed the CSS at a fixed right-side drawer. Every field keeps
+           its id -- the JS that reads/writes them is untouched either way. -->
       <form class="add-form ph-herbform" id="phHerbForm" hidden>
         <div class="ph-hf-head">
           <span id="phHerbFormTitle">🌿 Add a herb</span>
           <button type="button" class="ph-hf-close" id="phHerbMinimiseBtn" title="Minimise" aria-label="Minimise the herb form">▲</button>
         </div>
         <div class="ph-hf-body">
+          <!-- STEP 3 (her ask 2026-08-11): essentials up front, un-collapsed --
+               name, Kind, the fields Kind depends on, then costing/stock. Every
+               field keeps its id; only the grouping + order changed. -->
           <div class="ph-hf-section">
-            <div class="ph-hf-label">Identity</div>
+            <div class="ph-hf-label">Essentials</div>
             <div class="ph-hf-row2">
-              <div class="field">
-                <label for="phHerbKpcCode">KPC code <span style="text-transform:none;letter-spacing:0">(optional)</span></label>
-                <input type="text" id="phHerbKpcCode" placeholder="e.g. KPC-201" autocomplete="off">
-              </div>
-              <!-- code rules (her ask 2026-08-11): Jing Shen is herb-only --
-                   data-ph-kindonly is toggled by phHerbApplyKindVisibility() on
-                   every Kind change / form open. Koda/Evergreen/GMP/LYT/HH/MIC
-                   moved out of here in STEP 8g (2026-08-11): those six were
-                   always really "that supplier's code for this herb", so they
-                   now live per-row in Suppliers & pricing below, next to that
-                   supplier's own Bottle $ -- not as flat fields up here. -->
-              <div class="field" data-ph-kindonly="herb">
-                <label for="phHerbJingShenCode">Jing Shen code <span style="text-transform:none;letter-spacing:0">(optional)</span></label>
-                <input type="text" id="phHerbJingShenCode" placeholder="e.g. JS-201" autocomplete="off">
-              </div>
               <div class="field full">
                 <label for="phHerbName">Herb</label>
                 <input type="text" id="phHerbName" placeholder="e.g. Bai Zhu (Chao)/ Largehead Atractylodes" autocomplete="off" required>
               </div>
-              <div class="field">
-                <label for="phHerbKind">Kind</label>
-                <!-- no "Auto" category (her call) — the form always shows Herb or
-                     Formula; Tang/San/Wan names arrive pre-set to Formula -->
-                <select id="phHerbKind">
+              <div class="field full">
+                <label id="phHerbKindLabel">Kind</label>
+                <!-- a real select still drives every existing behaviour
+                     (visibility, pack size, search) untouched -- these two
+                     buttons just present it as a segmented control and keep
+                     it in sync (phHerbApplyKindVisibility syncs the "on"
+                     state on every call, from every code path that sets
+                     Kind: her tap, the Tang/San/Wan auto-detect, edit-populate) -->
+                <select id="phHerbKind" class="ph-visually-hidden" aria-labelledby="phHerbKindLabel">
                   <option value="herb">🌿 Herb</option>
                   <option value="formula">🏺 Formula</option>
                 </select>
+                <div class="ph-seg" role="group" aria-label="Kind">
+                  <button type="button" class="ph-seg-opt" data-ph-kind-seg="herb">🌿 Single herb</button>
+                  <button type="button" class="ph-seg-opt" data-ph-kind-seg="formula">🫙 Formula</button>
+                </div>
               </div>
               <div class="field">
                 <label for="phHerbSource">Formula source <span style="text-transform:none;letter-spacing:0">(formulas only)</span></label>
@@ -1976,11 +2079,6 @@
                   <option value="onsite">Made manually (on site)</option>
                 </select>
               </div>
-            </div>
-          </div>
-          <div class="ph-hf-section">
-            <div class="ph-hf-label">Costing &amp; stock</div>
-            <div class="ph-hf-row2">
               <div class="field">
                 <label for="phHerbCost">Cost per gram ($)</label>
                 <input type="number" id="phHerbCost" min="0" step="any" placeholder="e.g. 0.275" autocomplete="off">
@@ -2003,14 +2101,37 @@
               </div>
             </div>
           </div>
-          <div class="ph-hf-section">
-            <div class="ph-hf-label">Suppliers &amp; pricing</div>
+          <!-- advanced, tucked away and closed by default (her ask) — native
+               <details> so it's keyboard/screen-reader friendly for free,
+               no extra JS state to keep in sync -->
+          <details class="ph-hf-adv">
+            <summary class="ph-hf-label">Codes</summary>
+            <div class="ph-hf-row2">
+              <div class="field">
+                <label for="phHerbKpcCode">KPC code <span style="text-transform:none;letter-spacing:0">(optional)</span></label>
+                <input type="text" id="phHerbKpcCode" placeholder="e.g. KPC-201" autocomplete="off">
+              </div>
+              <!-- code rules (her ask 2026-08-11): Jing Shen is herb-only --
+                   data-ph-kindonly is toggled by phHerbApplyKindVisibility() on
+                   every Kind change / form open. Koda/Evergreen/GMP/LYT/HH/MIC
+                   moved out of here in STEP 8g (2026-08-11): those six were
+                   always really "that supplier's code for this herb", so they
+                   now live per-row in Suppliers & pricing below, next to that
+                   supplier's own Bottle $ -- not as flat fields up here. -->
+              <div class="field" data-ph-kindonly="herb">
+                <label for="phHerbJingShenCode">Jing Shen code <span style="text-transform:none;letter-spacing:0">(optional)</span></label>
+                <input type="text" id="phHerbJingShenCode" placeholder="e.g. JS-201" autocomplete="off">
+              </div>
+            </div>
+          </details>
+          <details class="ph-hf-adv">
+            <summary class="ph-hf-label">Suppliers &amp; pricing</summary>
             <div class="ph-hf-hint">Their code for this herb, and Bottle $ — ★ marks the active one (drives the Inventory Supplier column and $/g); the cheapest option is flagged</div>
             <div id="phHerbSuppliersRows"></div>
             <button type="button" class="tab-link" id="phHerbSupplierAddRow">+ Add supplier</button>
-          </div>
-          <div class="ph-hf-section">
-            <div class="ph-hf-label">Brand prices &amp; notes</div>
+          </details>
+          <details class="ph-hf-adv">
+            <summary class="ph-hf-label">Brand prices &amp; notes</summary>
             <div class="ph-hf-row2">
               <div class="field">
                 <label for="phHerbPrices">Other brand prices <span style="text-transform:none;letter-spacing:0">(one per line: brand — $/g; Cost above is the price used for costing)</span></label>
@@ -2021,7 +2142,7 @@
                 <textarea id="phHerbNote" rows="3" placeholder="TCM function, source, price notes — anything worth keeping with the herb"></textarea>
               </div>
             </div>
-          </div>
+          </details>
         </div>
         <div class="form-actions">
           <button type="button" class="btn-cancel" id="phHerbCancelBtn">Cancel</button>
@@ -3251,7 +3372,13 @@
     const colOrder = phColOrder("inv");
     tbody.innerHTML = rows.map(h => {
       const k = phHerbStatusKey(h);
-      const rowCls = k === "stopped" ? "ph-row-stopped" : k === "phaseout" ? "ph-row-phaseout" : "";
+      // STEP 5 (her ask 2026-08-11): HH is independent of stock status --
+      // a row can be phaseout AND HH-used at once, so it's a second class,
+      // not folded into the ternary above (which is genuinely one-or-none)
+      const rowCls = [
+        k === "stopped" ? "ph-row-stopped" : k === "phaseout" ? "ph-row-phaseout" : "",
+        h.usedByHH ? "ph-row-hh" : "",
+      ].filter(Boolean).join(" ");
       // every editable number (and the note) is locked until clicked —
       // no spinners, no wheel accidents, no stray keystrokes over real stock
       const lock = (field, display, aria) => phCellEdit && phCellEdit.id === h.id && phCellEdit.field === field
@@ -4709,7 +4836,8 @@
         // edit form lives on Inventory, so hop there first
         if (PHARMACY.activeTab !== "inventory") { PHARMACY.activeTab = "inventory"; savePharmacy(); renderPharmacy(); }
         phHerbEditId = h.id;
-        document.getElementById("phHerbAddBtn").hidden = true; phHerbForm.hidden = false;
+        document.getElementById("phHerbAddBtn").hidden = true;
+        phHerbForm.hidden = false; phHerbBackdrop.hidden = false;
         document.getElementById("phHerbKpcCode").value = h.kpcCode || "";
         document.getElementById("phHerbJingShenCode").value = h.jingShenCode || "";
         document.getElementById("phHerbName").value = h.name;
@@ -4730,7 +4858,8 @@
         document.getElementById("phHerbNote").value = h.note || "";
         document.getElementById("phHerbSubmitBtn").textContent = "Save changes";
         document.getElementById("phHerbFormTitle").textContent = "🌿 Edit herb";
-        phHerbForm.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        // it's a fixed overlay drawer now (STEP 3) -- always fully on-screen
+        // the instant .hidden flips, no page-scroll needed to bring it into view
         document.getElementById("phHerbName").focus();
         return;
       }
@@ -4827,25 +4956,25 @@
       // them (editing a herb/supplier from the inventory grid) keep working.
     /* ---- herbal pharmacy ---- */
     var phHerbForm = document.getElementById("phHerbForm");
+    var phHerbBackdrop = document.getElementById("phHerbBackdrop");
     var phSupplierForm = document.getElementById("phSupplierForm");
     var phHerbEditId = null, phSupEditId = null;
 
     function closePhHerbForm() {
-      phHerbForm.hidden = true; document.getElementById("phHerbAddBtn").hidden = false;
+      phHerbForm.hidden = true; phHerbBackdrop.hidden = true;
+      document.getElementById("phHerbAddBtn").hidden = false;
       phHerbForm.reset();
       renderPhHerbSupplierRows([]);
       phHerbEditId = null; phHerbKindTouched = false;
       document.getElementById("phHerbSubmitBtn").textContent = "Add herb";
       document.getElementById("phHerbFormTitle").textContent = "🌿 Add a herb";
-      // the form can run long (Identity/Costing/Suppliers/Notes) -- closing it
-      // while scrolled deep inside collapses the page out from under her,
-      // stranding the viewport over blank space below. Snap back to the pill
-      // so minimising visibly does something (her report 2026-08-11: "it
-      // doesn't minimise" -- it did, she just couldn't see it happen).
-      // behavior:"smooth" here silently no-ops in some browser contexts
-      // (verified: an animated scrollIntoView never fires, a plain one does)
-      // -- instant is also the more honest confirmation anyway.
-      document.getElementById("phHerbAddBtn").scrollIntoView({ block: "nearest" });
+      // STEP 3 (2026-08-11): now a fixed overlay drawer, not an inline card,
+      // so there's no page scroll position left for closing to strand her
+      // in (the root cause the scrollIntoView hack here used to work around).
+      // Just reset the drawer's OWN internal scroll for next time it opens,
+      // so editing a herb never silently reopens scrolled deep into the last
+      // one's Advanced section.
+      document.querySelector("#phHerbForm .ph-hf-body").scrollTop = 0;
     }
     function closePhSupplierForm() {
       phSupplierForm.hidden = true; document.getElementById("phSupplierAddBtn").hidden = false;
@@ -4853,10 +4982,27 @@
       document.getElementById("phSupplierSubmitBtn").textContent = "Add supplier";
     }
     document.getElementById("phHerbAddBtn").addEventListener("click", () => {
-      document.getElementById("phHerbAddBtn").hidden = true; phHerbForm.hidden = false;
+      document.getElementById("phHerbAddBtn").hidden = true;
+      phHerbForm.hidden = false; phHerbBackdrop.hidden = false;
       renderPhHerbSupplierRows([]);
       phHerbApplyKindVisibility();
       document.getElementById("phHerbName").focus();
+    });
+    // tap the dimmed backdrop = close, same as Escape or the header band
+    phHerbBackdrop.addEventListener("click", closePhHerbForm);
+    // Kind segmented control (her ask) -- drives the real <select> so every
+    // existing behaviour (visibility, pack size, search) reads it unchanged;
+    // phHerbApplyKindVisibility() below syncs the "on" state back onto these
+    // two buttons, so it stays correct from ANY path that sets Kind (this
+    // click, the Tang/San/Wan name auto-detect, or opening an existing herb).
+    document.querySelectorAll('#phHerbForm [data-ph-kind-seg]').forEach(btn => {
+      btn.addEventListener("click", () => {
+        const sel = document.getElementById("phHerbKind");
+        if (sel.value === btn.dataset.phKindSeg) return;
+        sel.value = btn.dataset.phKindSeg;
+        phHerbKindTouched = true;
+        sel.dispatchEvent(new Event("change", { bubbles: true }));
+      });
     });
     document.getElementById("phHerbSupplierAddRow").addEventListener("click", () => {
       document.getElementById("phHerbSuppliersRows").insertAdjacentHTML("beforeend", phHerbSupplierRowHtml("", "", false));
@@ -4909,6 +5055,12 @@
         const show = field.dataset.phKindonly === (isFormula ? "formula" : "herb");
         field.hidden = !show;
         if (!show && blankHidden) { const inp = field.querySelector("input"); if (inp) inp.value = ""; }
+      });
+      // keep the segmented control's "on" state true to the real <select> --
+      // every path that sets Kind (her tap, the name auto-detect, opening an
+      // existing herb) already calls this function, so one sync here covers all
+      document.querySelectorAll('#phHerbForm [data-ph-kind-seg]').forEach(btn => {
+        btn.classList.toggle("on", btn.dataset.phKindSeg === (isFormula ? "formula" : "herb"));
       });
     }
     // Kind also decides pack size (herb 100g flat vs a formula's per-supplier
@@ -5391,7 +5543,13 @@
       const hhToggle = e.target.closest("[data-ph-hh-toggle]");
       if (hhToggle) {
         const h = PHARMACY.herbs.find(x => x.id === hhToggle.dataset.phHhToggle);
-        if (h) { h.usedByHH = hhToggle.checked; savePharmacy(); }
+        if (h) {
+          h.usedByHH = hhToggle.checked; savePharmacy();
+          // STEP 5: highlight updates live -- same "rows stay put" pattern as
+          // Select above, just toggling one class instead of a full re-render
+          const row = hhToggle.closest("tr");
+          if (row) row.classList.toggle("ph-row-hh", h.usedByHH);
+        }
         return;
       }
       if (e.target.id === "presSpoon") {
