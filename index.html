@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260813-225959">
+<meta name="lcm-build" content="20260814-085321">
 <script>
   // self-update check (her ask 2026-08-11, "still not collapsing/working" --
   // both were already fixed and shipped; she was just looking at a GitHub
@@ -84,6 +84,8 @@
     --ph-phaseout-tint: #F5E6D8;
     --ph-stopped: #6B7B72;      /* temporarily stopping -- neutral grey */
     --ph-stopped-tint: #E3E9E5;
+    --ph-snooze-deep: #4B5FA6;  /* snoozed -- calm blue-violet, distinct from the alert colours */
+    --ph-snooze-tint: #ECEEFA;
     --ph-green-press: #0A3A20;  /* deepest green -- hover/press states and the dark accent band */
     --ph-gold-tint: #FFFBE2;    /* pale gold wash, pairs with --margin-rule */
     /* the page itself is the white sheet — dark ink and deep greens only ever
@@ -131,6 +133,8 @@
   .ph-flag.stopped:hover { background: color-mix(in oklab, var(--ph-stopped-tint) 60%, white); }
   .ph-flag.phaseout { background: var(--ph-phaseout-tint); color: var(--ph-phaseout-deep); }
   .ph-flag.phaseout:hover { background: color-mix(in oklab, var(--ph-phaseout-tint) 60%, white); }
+  .ph-flag.snoozed { background: var(--ph-snooze-tint); color: var(--ph-snooze-deep); }
+  .ph-flag.snoozed:hover { background: color-mix(in oklab, var(--ph-snooze-tint) 60%, white); }
   .ph-stockbar { display: inline-block; position: relative; width: 100%; max-width: 72px; height: 5px; border-radius: 3px; background: var(--ph-stopped-tint); overflow: hidden; margin-top: 3px; vertical-align: middle; }
   .ph-stockbar-fill { display: block; height: 100%; border-radius: 3px; }
   .ph-stockbar.zero .ph-stockbar-fill, .ph-stockbar.crit .ph-stockbar-fill { background: var(--ph-zero); }
@@ -298,8 +302,16 @@
     margin: 10px 0 0; padding: 9px 12px; border-radius: 10px; font-size: 12.5px;
     background: var(--ph-cream); border: 1px solid color-mix(in oklab, var(--ph-green-deep) 35%, transparent);
   }
-  .ph-bulk-bar .btn-save, .ph-bulk-bar .btn-cancel, .ph-bulk-bar.ph-load-btn { padding: 6px 12px; }
   .ph-bulk-count { font-weight: 600; color: var(--ph-ink); margin-right: 2px; }
+  /* Clear is a dismiss, not a bulk action -- plain text link, pushed off the
+     action group so it never reads as a 4th peer button (her ask 2026-08-13) */
+  .ph-bulk-clear {
+    margin-left: auto; background: none; border: none; padding: 6px 4px;
+    font-family: var(--font-body); font-size: 12.5px; font-weight: 600;
+    color: var(--ph-soft); cursor: pointer; border-radius: var(--field-radius-sm);
+  }
+  .ph-bulk-clear:hover:not(:disabled) { color: var(--ph-green-deep); text-decoration: underline; }
+  .ph-bulk-clear:disabled { opacity: 0.5; cursor: default; }
   .ph-bulk-cell { text-align: center; width: 30px; }
   .ph-flash .ph-undo-btn {
     margin-left: 10px; padding: 3px 12px; border-radius: 999px; cursor: pointer;
@@ -2231,16 +2243,10 @@
             <button type="button" class="tab-link" id="phHerbSupplierAddRow">+ Add supplier</button>
           </details>
           <details class="ph-hf-adv">
-            <summary class="ph-hf-label">Brand prices &amp; notes</summary>
-            <div class="ph-hf-row2">
-              <div class="field">
-                <label for="phHerbPrices">Other brand prices <span style="text-transform:none;letter-spacing:0">(one per line: brand — $/g; Cost above is the price used for costing)</span></label>
-                <textarea id="phHerbPrices" rows="3" placeholder="Sun Ten — 0.28&#10;KPC — 0.31"></textarea>
-              </div>
-              <div class="field">
-                <label for="phHerbNote">Notes <span style="text-transform:none;letter-spacing:0">(function, ingredients, price…)</span></label>
-                <textarea id="phHerbNote" rows="3" placeholder="TCM function, source, price notes — anything worth keeping with the herb"></textarea>
-              </div>
+            <summary class="ph-hf-label">Notes</summary>
+            <div class="field">
+              <label for="phHerbNote">Notes <span style="text-transform:none;letter-spacing:0">(function, ingredients, price…)</span></label>
+              <textarea id="phHerbNote" rows="3" placeholder="TCM function, source, price notes — anything worth keeping with the herb"></textarea>
             </div>
           </details>
         </div>
@@ -2670,8 +2676,19 @@
   // formula she mixes herself -- not an outside company, so it never gets a
   // code or a Bottle $. Reserved name, checked by value everywhere a supplier
   // row's identity matters.
+  // her ask (2026-08-14): the generic label was never precise enough -- she
+  // has THREE named in-house sources (Huang Huang/Mick/Lyttleton, her old
+  // HH/MIC/LYT recipe codes). They price like "In house" (the formula's own
+  // mixed-in cost, never a Bottle $) but, unlike it, still carry a real code
+  // -- so phIsInHouseSup covers all four for pricing/ordering purposes, while
+  // PH_IN_HOUSE_SUP alone still marks the one that hides its code too. The
+  // generic option stays available (not retired) so nothing she's already
+  // recorded silently disappears while she reassigns it to a specific name.
   const PH_IN_HOUSE_SUP = "In house";
-  const phSupDisplayName = name => name === PH_IN_HOUSE_SUP ? `<span class="ph-sup-inhouse">🏠 In house</span>` : esc(name);
+  const PH_NAMED_INHOUSE_SUPS = ["Huang Huang", "Mick", "Lyttleton"];
+  const PH_IN_HOUSE_SUPS = [PH_IN_HOUSE_SUP, ...PH_NAMED_INHOUSE_SUPS];
+  const phIsInHouseSup = name => PH_IN_HOUSE_SUPS.includes(name);
+  const phSupDisplayName = name => phIsInHouseSup(name) ? `<span class="ph-sup-inhouse">🏠 ${esc(name)}</span>` : esc(name);
   // $/g a GIVEN option would cost, using THAT option's own pack size (a formula's
   // grams/bottle can differ by supplier -- Evergreen vs everyone else -- so
   // comparing raw Bottle $ across options would be misleading; per-gram is the
@@ -2679,7 +2696,7 @@
   // IS the formula's own $/g, which Formula Refill (refRecipeCostPerG) already
   // keeps current from what's actually mixed in.
   const phSupplierPerGram = (h, s) => !s ? null
-    : s.name === PH_IN_HOUSE_SUP ? (h.cost || null)
+    : phIsInHouseSup(s.name) ? (h.cost || null)
     : s.bottleCost != null ? s.bottleCost / phPackForSupplierName(h, s.name) : null;
   const phCheapestSupplierName = h => {
     let best = null, bestG = Infinity;
@@ -2733,7 +2750,7 @@
     // she actually replenishes it.
     const active = phActiveSupplier(h);
     let lastLine = "";
-    if (active && active.name === PH_IN_HOUSE_SUP) {
+    if (active && phIsInHouseSup(active.name)) {
       const lastMade = PHARMACY.log.find(e => e.kind === "refill" && e.targetId === h.id);
       lastLine = lastMade
         ? `<div class="ph-sup-panel-last">Last made ${esc(phShortDate(lastMade.date))} · +${phFmtG(lastMade.madeGrams)}g</div>`
@@ -2786,7 +2803,7 @@
   // her ask (2026-08-13): a formula made in-house is never ordered from
   // anyone, so it can never sit on the To-order list even if it was flagged
   // 🛒 before she switched its active supplier to In house.
-  const herbNeedsOrder = h => !!h.order && !h.stopped && (phActiveSupplier(h) || {}).name !== PH_IN_HOUSE_SUP;
+  const herbNeedsOrder = h => !!h.order && !h.stopped && !phIsInHouseSup((phActiveSupplier(h) || {}).name);
   // the Recently arrived group self-cleans (her ask 2026-08-04): once stock is
   // comfortably back above the reorder line, a herb quietly drops out of that
   // group on its own — "comfortably" = 30% clear of "low at", not just barely over
@@ -3155,6 +3172,34 @@
     if (n) savePharmacy();
     try { localStorage.setItem(FLAG, "1"); } catch (e) {}
   })();
+  // her ask (2026-08-14): HH/MIC/LYT were never outside purchasing suppliers
+  // -- they're her three in-house formula sources (Huang Huang/Mick/
+  // Lyttleton). The fold-in above stored them under their short codes, and
+  // the directory backfill just above then added those same short codes to
+  // the outside-supplier directory as if they were real companies. One-time
+  // fix: rename the herb-side rows to their full names (the code field they
+  // carry is her real recipe/reference number for that herb -- left exactly
+  // as typed), and drop the short-code entries the backfill wrongly added to
+  // the outside directory.
+  (function inHouseNamedSources20260814() {
+    const FLAG = "daybook-ph-inhouse-named-20260814";
+    try { if (localStorage.getItem(FLAG)) return; } catch (e) {}
+    const RENAME = { hh: "Huang Huang", mic: "Mick", lyt: "Lyttleton" };
+    let n = 0;
+    PHARMACY.herbs.forEach(h => {
+      (h.suppliers || []).forEach(s => {
+        const full = RENAME[(s.name || "").trim().toLowerCase()];
+        if (full) { s.name = full; n++; }
+      });
+      const fullSupplier = RENAME[(h.supplier || "").trim().toLowerCase()];
+      if (fullSupplier) h.supplier = fullSupplier;
+    });
+    const before = (PHARMACY.suppliers || []).length;
+    PHARMACY.suppliers = (PHARMACY.suppliers || []).filter(s => !RENAME[(s.name || "").trim().toLowerCase()]);
+    if ((PHARMACY.suppliers || []).length !== before) n++;
+    if (n) savePharmacy();
+    try { localStorage.setItem(FLAG, "1"); } catch (e) {}
+  })();
   (function fixColWPositionKeys20260811() {
     // STEP 8h drag-reorder + the column-width freeze used to share the same
     // table but not the same key: widths were saved by POSITION ("0","1"...),
@@ -3248,18 +3293,23 @@
   const phHerbSupplierRowHtml = (name, price, isDefault, code) => {
     const known = PHARMACY.suppliers || [];
     const isKnown = name && known.some(s => s.name.trim().toLowerCase() === name.trim().toLowerCase());
-    const isInHouse = name === PH_IN_HOUSE_SUP;
+    const isInHouseAny = phIsInHouseSup(name);
+    // the generic "In house" hides its code (there's nothing to record) --
+    // her three NAMED sources still carry a real recipe/reference number, so
+    // only THEY keep the code input visible (her ask 2026-08-14)
+    const hideCode = name === PH_IN_HOUSE_SUP;
     return `<div class="ph-hsup-row">
       <select class="ph-hsup-name field-bare" aria-label="Supplier">
         <option value="">— choose supplier —</option>
-        <option value="${PH_IN_HOUSE_SUP}"${isInHouse ? " selected" : ""}>🏠 In house</option>
+        <option value="${PH_IN_HOUSE_SUP}"${name === PH_IN_HOUSE_SUP ? " selected" : ""}>🏠 In house</option>
+        ${PH_NAMED_INHOUSE_SUPS.map(n => `<option value="${esc(n)}"${n === name ? " selected" : ""}>🏠 ${esc(n)}</option>`).join("")}
         ${known.map(s => `<option value="${esc(s.name)}"${s.name === name ? " selected" : ""}>${esc(s.name)}</option>`).join("")}
-        <option value="__new__"${name && !isKnown && !isInHouse ? " selected" : ""}>+ New supplier…</option>
+        <option value="__new__"${name && !isKnown && !isInHouseAny ? " selected" : ""}>+ New supplier…</option>
       </select>
-      <input type="text" class="ph-hsup-new field-bare"${name && !isKnown && !isInHouse ? "" : " hidden"} placeholder="Supplier name" value="${name && !isKnown && !isInHouse ? esc(name) : ""}" aria-label="New supplier name">
-      <input type="text" class="ph-hsup-code field-bare"${isInHouse ? " hidden" : ""} placeholder="Their code" value="${code ? esc(code) : ""}" aria-label="This supplier's code for this herb" title="This supplier's own code for this herb">
-      <input type="text" inputmode="decimal" class="ph-hsup-price field-bare"${isInHouse ? " hidden" : ""} placeholder="Bottle $" value="${price !== "" && price != null ? price : ""}" aria-label="Bottle price from this supplier">
-      <span class="ph-hsup-inhouse-note"${isInHouse ? "" : " hidden"}>priced from what you mix in — see 🏺 Formula Refill</span>
+      <input type="text" class="ph-hsup-new field-bare"${name && !isKnown && !isInHouseAny ? "" : " hidden"} placeholder="Supplier name" value="${name && !isKnown && !isInHouseAny ? esc(name) : ""}" aria-label="New supplier name">
+      <input type="text" class="ph-hsup-code field-bare"${hideCode ? " hidden" : ""} placeholder="Their code" value="${code ? esc(code) : ""}" aria-label="This supplier's code for this herb" title="This supplier's own code for this herb">
+      <input type="text" inputmode="decimal" class="ph-hsup-price field-bare"${isInHouseAny ? " hidden" : ""} placeholder="Bottle $" value="${price !== "" && price != null ? price : ""}" aria-label="Bottle price from this supplier">
+      <span class="ph-hsup-inhouse-note"${isInHouseAny ? "" : " hidden"}>priced from what you mix in — see 🏺 Formula Refill</span>
       <span class="ph-hsup-pergram" aria-live="polite"></span>
       <label class="ph-hsup-def" title="Use this supplier's price right now"><input type="radio" name="phHerbSupplierDefault"${isDefault ? " checked" : ""}> ★</label>
       <button type="button" class="del ph-hsup-del" aria-label="Remove this supplier">×</button>
@@ -3291,7 +3341,7 @@
     const editH = typeof phHerbEditId !== "undefined" && phHerbEditId ? PHARMACY.herbs.find(x => x.id === phHerbEditId) : null;
     const perGram = rows.map(row => {
       const sel = row.querySelector(".ph-hsup-name").value;
-      if (sel === PH_IN_HOUSE_SUP) return editH ? (editH.cost || null) : null;
+      if (phIsInHouseSup(sel)) return editH ? (editH.cost || null) : null;
       const priceRaw = row.querySelector(".ph-hsup-price").value.trim();
       const price = priceRaw === "" ? null : Math.max(0, parseFloat(priceRaw) || 0);
       if (price == null) return null;
@@ -3316,11 +3366,14 @@
     const out = rows.map(row => {
       const sel = row.querySelector(".ph-hsup-name").value;
       const name = sel === "__new__" ? row.querySelector(".ph-hsup-new").value.trim() : sel;
-      // "In house" never carries a code or a typed Bottle $ -- its price is
-      // the herb's own computed $/g, not something stored on the row
-      if (name === PH_IN_HOUSE_SUP) {
+      // in-house sources never carry a typed Bottle $ -- price is the herb's
+      // own computed $/g, not something stored on the row. The generic "In
+      // house" has no code either; her three NAMED sources keep whatever
+      // recipe/reference code she typed (her ask 2026-08-14).
+      if (phIsInHouseSup(name)) {
         const isDefault = row.querySelector('input[name="phHerbSupplierDefault"]').checked;
-        return { name, bottleCost: null, code: "", isDefault };
+        const code = name === PH_IN_HOUSE_SUP ? "" : row.querySelector(".ph-hsup-code").value.trim();
+        return { name, bottleCost: null, code, isDefault };
       }
       const priceRaw = row.querySelector(".ph-hsup-price").value.trim();
       const bottleCost = priceRaw === "" ? null : Math.max(0, parseFloat(priceRaw) || 0);
@@ -3801,7 +3854,7 @@
         low: `<td class="ph-num" data-col="low">${lock("low", h.low != null ? h.low : "—", `Reorder point of ${esc(h.name)}`)}</td>`,
         status: `<td class="ph-status-cell" data-col="status">${phStatusPills(h)}${phStatusMenuFor === h.id ? phStatusMenuHtml(h) : ""}</td>`,
         usedByHH: `<td class="ph-cart-cell" data-col="usedByHH"><input type="checkbox" data-ph-hh-toggle="${h.id}"${h.usedByHH ? " checked" : ""} aria-label="${esc(h.name)} used by HH"></td>`,
-        cart: `<td class="ph-cart-cell" data-col="cart">${h.stopped || (phActiveSupplier(h) || {}).name === PH_IN_HOUSE_SUP ? "" : `<button class="ph-cart" data-ph-order="${h.id}" aria-pressed="${!!h.order}" title="${h.order ? "Un-flag for ordering" : "Flag for ordering"}" aria-label="Flag ${esc(h.name)} for ordering">🛒</button>`}</td>`,
+        cart: `<td class="ph-cart-cell" data-col="cart">${h.stopped || phIsInHouseSup((phActiveSupplier(h) || {}).name) ? "" : `<button class="ph-cart" data-ph-order="${h.id}" aria-pressed="${!!h.order}" title="${h.order ? "Un-flag for ordering" : "Flag for ordering"}" aria-label="Flag ${esc(h.name)} for ordering">🛒</button>`}</td>`,
         note: `<td class="ph-note-cell" data-col="note" title="${esc(h.note || "")}">${lock("note", h.note ? esc(h.note.split("\n")[0]) : "—", `Notes for ${esc(h.name)}`)}</td>`,
       };
       return `<tr data-ph-row="${h.id}"${rowCls ? ` class="${rowCls}"` : ""}>
@@ -3843,7 +3896,7 @@
       <button type="button" class="ph-load-btn" data-ph-bulk-invert="1" title="Flip selected/unselected among the rows the current search and filters show">⇄ Invert (visible)</button>
       <button type="button" class="btn-save" data-ph-bulk-stop="1"${n ? "" : " disabled"}>⏸ Stop selected</button>
       <button type="button" class="ph-load-btn" data-ph-bulk-activate="1"${n ? "" : " disabled"}>▶ Activate selected</button>
-      <button type="button" class="btn-cancel" data-ph-bulk-clear="1"${n ? "" : " disabled"}>Clear</button>
+      <button type="button" class="ph-bulk-clear" data-ph-bulk-clear="1"${n ? "" : " disabled"}>Clear</button>
     </div>`;
   }
   // the open status menu is position:fixed — clamp it under its pill and inside
@@ -3894,7 +3947,15 @@
   const phLowHerbs = () => PHARMACY.herbs.filter(h => !h.stopped && h.qty != null && h.qty > 0 && h.low != null && h.qty <= h.low);
   const phStoppedHerbs = () => PHARMACY.herbs.filter(h => phHerbStatusKey(h) === "stopped");
   const phPhaseOutHerbs = () => PHARMACY.herbs.filter(h => phHerbStatusKey(h) === "phaseout");
-  let phListingOpen = null;   // null | "zero" | "low" | "stopped" | "phaseout"
+  // Snoozing (her ask 2026-08-14): stop a herb nagging her from the Zero/Low
+  // listings and Restock's "running low, not listed" for 7 days. Real stock
+  // and status never change -- phZeroHerbs/phLowHerbs above stay the true
+  // count (Stock Statistics reads them unfiltered); the snooze filter is
+  // applied only where the herb would otherwise sit in one of those lists.
+  const phIsSnoozed = h => !!(h.snoozedUntil && h.snoozedUntil > keyOf(TODAY));
+  const phNotSnoozed = h => !phIsSnoozed(h);
+  const phSnoozedHerbs = () => PHARMACY.herbs.filter(phIsSnoozed);
+  let phListingOpen = null;   // null | "zero" | "low" | "stopped" | "phaseout" | "snoozed"
 
   // her rule: the Formula Refill list IS the made-in-house register — a
   // formula jar with a linked recipe there is made on site, one without is
@@ -3947,32 +4008,41 @@
   };
 
   function renderPhFlags() {
-    const zero = phZeroHerbs(), low = phLowHerbs(), stopped = phStoppedHerbs(), phaseout = phPhaseOutHerbs();
+    const zero = phZeroHerbs().filter(phNotSnoozed), low = phLowHerbs().filter(phNotSnoozed);
+    const stopped = phStoppedHerbs(), phaseout = phPhaseOutHerbs(), snoozed = phSnoozedHerbs();
     if (phListingOpen === "stopped" && !stopped.length) phListingOpen = null;   // last one resumed
     if (phListingOpen === "phaseout" && !phaseout.length) phListingOpen = null; // last one sold down
+    if (phListingOpen === "snoozed" && !snoozed.length) phListingOpen = null;   // last one unsnoozed/returned
     document.getElementById("phFlagRow").innerHTML = `
       <button type="button" class="ph-flag zero" data-ph-listing="zero" aria-pressed="${phListingOpen === "zero"}">Zero Inventory: ${zero.length}</button>
       <button type="button" class="ph-flag low" data-ph-listing="low" aria-pressed="${phListingOpen === "low"}">Low Inventory: ${low.length}</button>
       ${phaseout.length ? `<button type="button" class="ph-flag phaseout" data-ph-listing="phaseout" aria-pressed="${phListingOpen === "phaseout"}">Phasing out: ${phaseout.length}</button>` : ""}
-      ${stopped.length ? `<button type="button" class="ph-flag stopped" data-ph-listing="stopped" aria-pressed="${phListingOpen === "stopped"}">Temporarily stopping: ${stopped.length}</button>` : ""}`;
+      ${stopped.length ? `<button type="button" class="ph-flag stopped" data-ph-listing="stopped" aria-pressed="${phListingOpen === "stopped"}">Temporarily stopping: ${stopped.length}</button>` : ""}
+      ${snoozed.length ? `<button type="button" class="ph-flag snoozed" data-ph-listing="snoozed" aria-pressed="${phListingOpen === "snoozed"}">😴 Snoozed: ${snoozed.length}</button>` : ""}`;
     const el = document.getElementById("phListing");
     if (!phListingOpen) { el.innerHTML = ""; return; }
-    const list = { zero, low, stopped, phaseout }[phListingOpen];
+    const list = { zero, low, stopped, phaseout, snoozed }[phListingOpen];
     const title = { zero: "Zero Inventory Listing", low: "Low Inventory Listing",
-      stopped: "Temporarily Stopping", phaseout: "Phasing Out — sell stock down to 0" }[phListingOpen];
+      stopped: "Temporarily Stopping", phaseout: "Phasing Out — sell stock down to 0",
+      snoozed: "😴 Snoozed — back on their own" }[phListingOpen];
     // each row carries its triage: order-list toggle + pause on the alert rows;
-    // resume on the paused rows; resume-or-write-off on the phase-out rows
+    // resume on the paused rows; resume-or-write-off on the phase-out rows;
+    // unsnooze on the snoozed rows
     const actions = h => phListingOpen === "stopped"
       ? `<button type="button" class="ph-add-order" data-ph-set-status="${h.id}:active">▶ Resume</button>`
       : phListingOpen === "phaseout"
       ? `<button type="button" class="ph-add-order" data-ph-set-status="${h.id}:active">▶ Resume</button>
          <button type="button" class="ph-add-order mut" data-ph-set-status="${h.id}:stopped" title="Write the remaining stock off to 0">⏸ Stop now</button>`
-      : `${(phActiveSupplier(h) || {}).name === PH_IN_HOUSE_SUP ? "" : `<button type="button" class="ph-add-order" data-ph-order="${h.id}" aria-pressed="${!!h.order}">${h.order ? "✓ On order list" : "🛒 Add to order"}</button>`}
+      : phListingOpen === "snoozed"
+      ? `<button type="button" class="ph-add-order" data-ph-unsnooze="${h.id}">↩ Unsnooze</button>`
+      : `${phIsInHouseSup((phActiveSupplier(h) || {}).name) ? "" : `<button type="button" class="ph-add-order" data-ph-order="${h.id}" aria-pressed="${!!h.order}">${h.order ? "✓ On order list" : "🛒 Add to order"}</button>`}
          ${phIsFormula(h) ? `<button type="button" class="ph-add-order" data-ph-make="${h.id}" aria-pressed="${!!h.toMake}" title="Queue this formula in 🏺 Formula Refill to make from raws">${h.toMake ? "✓ On make list" : "🏺 Add to make"}</button>` : ""}
+         <button type="button" class="ph-add-order" data-ph-snooze="${h.id}" title="Stop nagging about this one for 7 days — stock and status stay exactly as they are">⏰ Snooze 1 week</button>
          <button type="button" class="ph-add-order mut" data-ph-set-status="${h.id}:stopped" title="Temporarily stopping — hide from these alerts">⏸</button>`;
     const rowClass = h => phHerbStatusKey(h) === "stopped" ? ` class="ph-lrow-stopped"` : phHerbStatusKey(h) === "phaseout" ? ` class="ph-lrow-phaseout"` : "";
     // the name is the way in: one click opens the herb's ✎ edit form (her ask)
-    const row = h => `<tr${rowClass(h)}><td>${phHerbCode(h) ? esc(phHerbCode(h)) : "—"}</td><td><button type="button" class="ph-lrow-edit" data-ph-herb-edit="${h.id}" title="Open ${esc(h.name)} in the edit form">${esc(phDispName(h.name, phIsFormula(h)))}</button></td><td class="n">${phFmtG(h.qty)}${phStockBarHtml(h.qty, h.low)}</td><td class="n">${h.low != null ? h.low : "—"}</td><td class="act">${actions(h)}</td></tr>`;
+    const lastCol = h => phListingOpen === "snoozed" ? `<td class="n">${esc(phShortDate(h.snoozedUntil))}</td>` : `<td class="n">${h.low != null ? h.low : "—"}</td>`;
+    const row = h => `<tr${rowClass(h)}><td>${phHerbCode(h) ? esc(phHerbCode(h)) : "—"}</td><td><button type="button" class="ph-lrow-edit" data-ph-herb-edit="${h.id}" title="Open ${esc(h.name)} in the edit form">${esc(phDispName(h.name, phIsFormula(h)))}</button></td><td class="n">${phFmtG(h.qty)}${phStockBarHtml(h.qty, h.low)}</td>${lastCol(h)}<td class="act">${actions(h)}</td></tr>`;
     // zero/low read in her stocktake order: single herbs, then the formulas
     // split by where they come from (refill list = made in house, else premade)
     const grouped = phListingOpen === "zero" || phListingOpen === "low";
@@ -3981,9 +4051,10 @@
       ["🏺 Formulas — made in house", list.filter(h => phIsFormula(h) && phMadeInHouse(h))],
       ["🏺 Formulas — premade (supplier)", list.filter(h => phIsFormula(h) && !phMadeInHouse(h))],
     ].filter(g => g[1].length) : [["", list]];
+    const lastHead = phListingOpen === "snoozed" ? "Returns" : "Low Inv.";
     el.innerHTML = `<div class="ph-listing">
-      <h3>${title}<button type="button" class="ph-print-btn" data-ph-print="${phListingOpen}">🖨 Print</button></h3>
-      ${list.length ? `<table><thead><tr><th>Herb Code</th><th>Herb Name</th><th style="text-align:right">Inventory</th><th style="text-align:right">Low Inv.</th><th></th></tr></thead>
+      <h3>${title}${phListingOpen === "snoozed" ? "" : `<button type="button" class="ph-print-btn" data-ph-print="${phListingOpen}">🖨 Print</button>`}</h3>
+      ${list.length ? `<table><thead><tr><th>Herb Code</th><th>Herb Name</th><th style="text-align:right">Inventory</th><th style="text-align:right">${lastHead}</th><th></th></tr></thead>
         <tbody>${groups.map(([g, l]) => `${g ? `<tr class="ph-group-row"><td colspan="5">${g} · ${l.length}</td></tr>` : ""}${l.map(row).join("")}`).join("")}</tbody></table>`
         : `<div class="fam-empty">Nothing here — good news.</div>`}
     </div>`;
@@ -4736,6 +4807,24 @@
         if (h) { phSetStatus(h, status); phStatusMenuFor = null; savePharmacy(); renderPharmacy(); }
         return;
       }
+      // snooze/unsnooze: one tap, no confirmation (her ask -- reversible,
+      // low-stakes). Real stock/status never touched, just snoozedUntil.
+      const snoozeBtn = e.target.closest("[data-ph-snooze]");
+      if (snoozeBtn) {
+        const h = PHARMACY.herbs.find(x => x.id === snoozeBtn.dataset.phSnooze);
+        if (h) {
+          const d = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() + 7);
+          h.snoozedUntil = keyOf(d);
+          savePharmacy(); renderPharmacy();
+        }
+        return;
+      }
+      const unsnoozeBtn = e.target.closest("[data-ph-unsnooze]");
+      if (unsnoozeBtn) {
+        const h = PHARMACY.herbs.find(x => x.id === unsnoozeBtn.dataset.phUnsnooze);
+        if (h) { delete h.snoozedUntil; savePharmacy(); renderPharmacy(); }
+        return;
+      }
       // one-touch status editing: tap the pill, pick one of the three states
       const statusPill = e.target.closest("[data-ph-status-menu]");
       if (statusPill) {
@@ -5200,6 +5289,11 @@
         savePharmacy(); renderPhRestock();
         return;
       }
+      if (e.target.closest("[data-ph-restock-snooze-toggle]")) {
+        phRestockSnoozeOpen = !phRestockSnoozeOpen;
+        renderPhRestock();
+        return;
+      }
       // 🏺 flag a formula to make (from the zero/low listings) → the Formula Refill make queue
       const makeToggle = e.target.closest("[data-ph-make]");
       if (makeToggle) {
@@ -5249,7 +5343,6 @@
         // a code from before this Kind rule existed, and an edit shouldn't
         // silently erase it just by opening the form
         phHerbApplyKindVisibility(false);
-        document.getElementById("phHerbPrices").value = (h.prices || []).map(p => `${p.brand} — ${p.price}`).join("\n");
         document.getElementById("phHerbNote").value = h.note || "";
         document.getElementById("phHerbSubmitBtn").textContent = "Save changes";
         document.getElementById("phHerbFormTitle").textContent = "🌿 Edit herb";
@@ -5421,16 +5514,19 @@
     document.getElementById("phHerbSuppliersRows").addEventListener("change", e => {
       if (e.target.classList.contains("ph-hsup-name")) {
         const row = e.target.closest(".ph-hsup-row");
-        const isInHouse = e.target.value === PH_IN_HOUSE_SUP;
+        const isInHouseAny = phIsInHouseSup(e.target.value);
+        const hideCode = e.target.value === PH_IN_HOUSE_SUP;
         const newInput = row.querySelector(".ph-hsup-new");
         newInput.hidden = e.target.value !== "__new__";
         if (!newInput.hidden) newInput.focus();
-        // "In house" has no code or Bottle $ to type -- swap those inputs for
-        // the explanatory note instead of just leaving them sitting empty
-        row.querySelector(".ph-hsup-code").hidden = isInHouse;
-        row.querySelector(".ph-hsup-price").hidden = isInHouse;
-        row.querySelector(".ph-hsup-inhouse-note").hidden = !isInHouse;
-        if (isInHouse) { row.querySelector(".ph-hsup-code").value = ""; row.querySelector(".ph-hsup-price").value = ""; }
+        // generic "In house" has no code or Bottle $ to type; her three named
+        // sources still keep the code (a real recipe/reference number for
+        // her), just never a Bottle $ -- swap price for the explanatory note
+        row.querySelector(".ph-hsup-code").hidden = hideCode;
+        row.querySelector(".ph-hsup-price").hidden = isInHouseAny;
+        row.querySelector(".ph-hsup-inhouse-note").hidden = !isInHouseAny;
+        if (hideCode) row.querySelector(".ph-hsup-code").value = "";
+        if (isInHouseAny) row.querySelector(".ph-hsup-price").value = "";
       }
       if (e.target.classList.contains("ph-hsup-name") || e.target.classList.contains("ph-hsup-price")) phHerbSupplierRowsRecalc();
     });
@@ -5515,10 +5611,6 @@
           const k = document.getElementById("phHerbKind").value;
           return (k === "formula") === phAutoFormulaName(name) ? "" : k;
         })(),
-        // extra brand prices, "Brand — 0.28" per line; the Cost field stays the costing price
-        prices: document.getElementById("phHerbPrices").value.split("\n")
-          .map(l => { const m = l.trim().match(/^(.+?)[\s,:–—-]+\$?([\d.]+)$/); return m ? { brand: m[1].trim(), price: parseFloat(m[2]) } : null; })
-          .filter(Boolean),
         note: document.getElementById("phHerbNote").value.trim(),
       };
       // her ask (2026-08-06): a herb can carry several suppliers, each with
@@ -5527,10 +5619,10 @@
       // every existing read site keeps working unchanged
       const supplierRows = phHerbSupplierRowsRead();
       supplierRows.forEach(s => {
-        // "In house" is a built-in option, never a real company -- it must
-        // never land in the global Suppliers registry (that list is for
+        // in-house sources are built-in options, never real companies -- they
+        // must never land in the global Suppliers registry (that list is for
         // outside companies with their own contact/ordering info)
-        if (s.name === PH_IN_HOUSE_SUP) return;
+        if (phIsInHouseSup(s.name)) return;
         const known = (PHARMACY.suppliers || []).some(x => x.name.trim().toLowerCase() === s.name.trim().toLowerCase());
         if (!known) { PHARMACY.suppliers = PHARMACY.suppliers || []; PHARMACY.suppliers.push({ id: uid(), name: s.name, contact: "", note: "" }); }
       });
@@ -6045,6 +6137,7 @@
      deliveries that landed. Same data attributes as before, so the arrival
      lifecycle handlers didn't move an inch. ---- */
   let phArrEditId = null, phArrUndoConfirm = null;
+  let phRestockSnoozeOpen = false;   // her 😴 Snoozed tile — expands the snoozed list inline
   // which order rows currently have the Custom pack-size field open (her ask
   // 2026-08-06) -- not persisted, just so picking "Custom" doesn't snap back
   // to "100g"/"200g" the instant she types a value that happens to match one
@@ -6059,8 +6152,11 @@
     const onTheWay = toOrder.filter(h => h.ordered);
     const unflagged = herbs.filter(h => !h.stopped && !h.order && h.qty != null
       && (h.qty <= 0 || (h.low != null && h.qty <= h.low))
-      && (phActiveSupplier(h) || {}).name !== PH_IN_HOUSE_SUP)
+      && !phIsInHouseSup((phActiveSupplier(h) || {}).name)
+      && phNotSnoozed(h))
       .sort((a, b) => (a.qty || 0) - (b.qty || 0));
+    const snoozed = phSnoozedHerbs();
+    if (!snoozed.length) phRestockSnoozeOpen = false;
     const arrMonth = PHARMACY.log.filter(e => {
       if (e.kind !== "arrival") return false;
       const d = parseKey(e.date);
@@ -6140,11 +6236,11 @@
       // A legacy h.supplier that somehow isn't in h.suppliers yet still gets
       // its own option so the picker never silently shows blank over real data.
       const inSupList = h.supplier && (h.suppliers || []).some(s => s.name === h.supplier);
-      // "In house" is never orderable-from, so it's left out of this picker
-      // even when it's one of the herb's recorded price options
+      // in-house sources are never orderable-from, so they're left out of this
+      // picker even when they're one of the herb's recorded price options
       const supPick = `<select class="ph-order-sup-pick field-bare" data-ph-order-sup="${h.id}" aria-label="Which supplier to order ${esc(h.name)} from">
           <option value=""${h.supplier ? "" : " selected"}>— no supplier —</option>
-          ${(h.suppliers || []).filter(s => s.name !== PH_IN_HOUSE_SUP).map(s =>
+          ${(h.suppliers || []).filter(s => !phIsInHouseSup(s.name)).map(s =>
             `<option value="${esc(s.name)}"${s.name === h.supplier ? " selected" : ""}>${esc(s.name)}${s.code ? ` (${esc(s.code)})` : ""}${s.bottleCost != null ? ` — $${s.bottleCost}` : ""}</option>`
           ).join("")}
           ${h.supplier && !inSupList ? `<option value="${esc(h.supplier)}" selected>${esc(h.supplier)}</option>` : ""}
@@ -6214,6 +6310,19 @@
         ${orderHeadRow}
         ${renderSupGroups(bySupOrdered)}
       </div>` : ""}
+      ${snoozed.length ? `<div class="ph-flag-row" style="margin:16px 0 0">
+        <button type="button" class="ph-flag snoozed" data-ph-restock-snooze-toggle="1" aria-pressed="${phRestockSnoozeOpen}">😴 Snoozed: ${snoozed.length}</button>
+      </div>` : ""}
+      ${phRestockSnoozeOpen && snoozed.length ? `<div class="ph-order-card">
+        <div class="section-head"><h2>😴 Snoozed — back on their own (${snoozed.length})</h2><span class="rule"></span></div>
+        ${snoozed.map(h => `<div class="ph-order-row">
+          <div class="ph-unflag-line">
+            <span class="ph-order-nm">${esc(phHerbLabel(h))}</span>
+            <span class="ph-order-stock">Returns ${esc(phShortDate(h.snoozedUntil))}</span>
+            <button type="button" class="ph-add-order" data-ph-unsnooze="${h.id}">↩ Unsnooze</button>
+          </div>
+        </div>`).join("")}
+      </div>` : ""}
       ${unflagged.length ? `<div class="ph-order-card">
         <div class="section-head"><h2>⚠ Running low, not on the list (${unflagged.length})</h2><span class="rule"></span></div>
         ${unflagged.map(h => `<div class="ph-order-row">
@@ -6221,6 +6330,7 @@
             <span class="ph-order-nm">${esc(phHerbLabel(h))}</span>
             <span class="ph-order-stock">${h.qty <= 0 ? "empty" : `${phFmtG(h.qty)}g`}${h.low != null ? ` · low at ${h.low}` : ""}${h.supplier ? ` · ${esc(h.supplier)}` : ""}</span>
             <button type="button" class="ph-add-order" data-ph-order="${h.id}" title="Onto the order list">🛒 Add to order</button>
+            <button type="button" class="ph-add-order" data-ph-snooze="${h.id}" title="Stop nagging about this one for 7 days — stock and status stay exactly as they are">⏰ Snooze 1 week</button>
           </div>
         </div>`).join("")}
       </div>` : ""}
@@ -7868,6 +7978,11 @@
         if (row.isDefault) jar.supplier = PH_IN_HOUSE_SUP;
       }
     }
+    // her ask (2026-08-14): each batch is its own record of when/how much she
+    // mixed, tagged with which in-house source it was -- snapshot whichever
+    // supplier is active on the jar right now, so a later supplier switch on
+    // the herb never retroactively relabels a past batch
+    if (jar) entry.source = jar.supplier || null;
     if (jar) {
       jar.qty = phQty((jar.qty == null ? 0 : jar.qty) + entry.madeGrams);   // the finished batch restocks the formula bottle
       entry.targetId = jar.id;                                              // so undo/delete drains the made grams back out
