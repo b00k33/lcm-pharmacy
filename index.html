@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260813-195216">
+<meta name="lcm-build" content="20260813-220831">
 <script>
   // self-update check (her ask 2026-08-11, "still not collapsing/working" --
   // both were already fixed and shipped; she was just looking at a GitHub
@@ -387,6 +387,15 @@
     display: inline-block; margin-left: 5px; padding: 1px 6px; border-radius: 999px;
     font-size: 9.5px; letter-spacing: 0.02em; color: var(--ph-faint); background: var(--ph-stopped-tint);
   }
+  /* her ask (2026-08-13): "In house" must never read as "no supplier set" --
+     a distinct green-tinted pill, same family as the other status/kind tags,
+     wherever a supplier name is shown (Inventory column, Suppliers & pricing
+     panel, the herb-form row's per-gram note) */
+  .ph-sup-inhouse {
+    display: inline-block; padding: 1px 6px; border-radius: 999px;
+    font-size: 10.5px; font-weight: 600; color: var(--ph-green-deep); background: var(--ph-green-tint);
+  }
+  .ph-hsup-inhouse-note { flex: 1 1 140px; font-size: 11px; color: var(--ph-faint); font-style: italic; }
   .ph-widget-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 10px; }
   /* same pill/green family as the Status, Columns and Select buttons --
      one filter-control look, not a separate pale-square dropdown style */
@@ -2643,11 +2652,21 @@
   // she's since switched her active supplier).
   const phHerbCode = h => (phActiveSupplier(h) || {}).code || "";
   const phHerbCodes = h => (h.suppliers || []).map(s => s.code).filter(Boolean);
+  // her ask (2026-08-13): "In house" is a built-in pseudo-supplier for a
+  // formula she mixes herself -- not an outside company, so it never gets a
+  // code or a Bottle $. Reserved name, checked by value everywhere a supplier
+  // row's identity matters.
+  const PH_IN_HOUSE_SUP = "In house";
+  const phSupDisplayName = name => name === PH_IN_HOUSE_SUP ? `<span class="ph-sup-inhouse">🏠 In house</span>` : esc(name);
   // $/g a GIVEN option would cost, using THAT option's own pack size (a formula's
   // grams/bottle can differ by supplier -- Evergreen vs everyone else -- so
   // comparing raw Bottle $ across options would be misleading; per-gram is the
-  // only fair comparison)
-  const phSupplierPerGram = (h, s) => s && s.bottleCost != null ? s.bottleCost / phPackForSupplierName(h, s.name) : null;
+  // only fair comparison). "In house" has no bottle/pack at all -- its price
+  // IS the formula's own $/g, which Formula Refill (refRecipeCostPerG) already
+  // keeps current from what's actually mixed in.
+  const phSupplierPerGram = (h, s) => !s ? null
+    : s.name === PH_IN_HOUSE_SUP ? (h.cost || null)
+    : s.bottleCost != null ? s.bottleCost / phPackForSupplierName(h, s.name) : null;
   const phCheapestSupplierName = h => {
     let best = null, bestG = Infinity;
     (h.suppliers || []).forEach(s => {
@@ -2688,18 +2707,31 @@
       ? list.map(s => {
           const g = phSupplierPerGram(h, s);
           const isCheapest = cheapest && s.name === cheapest && list.length > 1;
-          const inner = `<span class="ph-sup-panel-nm">${s.isDefault ? "★ " : ""}${esc(s.name)}</span>${s.code ? `<span class="ph-sub">${esc(s.code)}</span>` : ""}<span class="ph-sup-panel-g${isCheapest ? " cheapest" : ""}">${g != null ? `${phMoney(g)}/g` : "—"}</span>`;
+          const inner = `<span class="ph-sup-panel-nm">${s.isDefault ? "★ " : ""}${phSupDisplayName(s.name)}</span>${s.code ? `<span class="ph-sub">${esc(s.code)}</span>` : ""}<span class="ph-sup-panel-g${isCheapest ? " cheapest" : ""}">${g != null ? `${phMoney(g)}/g` : "—"}</span>`;
           return s.isDefault
             ? `<div class="ph-sup-panel-row active">${inner}</div>`
             : `<button type="button" class="ph-sup-panel-row" data-ph-sup-activate="${esc(s.name)}" title="Make ${esc(s.name)} the active supplier">${inner}</button>`;
         }).join("")
       : `<div class="ph-sup-panel-empty">No suppliers on file yet</div>`;
-    // her ask: "so I can see who I last bought each herb from and at what
-    // price" -- the most recent phArrive() restock-history entry, in her words
-    const last = (h.restockHistory || [])[0];
-    const lastLine = last
-      ? `<div class="ph-sup-panel-last">Last restocked ${esc(phShortDate(last.date))}${last.supplier ? ` from ${esc(last.supplier)}` : ""}${last.bottleCost != null ? ` at $${last.bottleCost}` : ""} · +${phFmtG(last.grams)}g</div>`
-      : "";
+    // her ask (2026-08-13): "In house" isn't bought, so "last restocked ...
+    // from" makes no sense for it -- show the last batch MADE instead (the
+    // most recent refill-log entry that restocked this jar), matching how
+    // she actually replenishes it.
+    const active = phActiveSupplier(h);
+    let lastLine = "";
+    if (active && active.name === PH_IN_HOUSE_SUP) {
+      const lastMade = PHARMACY.log.find(e => e.kind === "refill" && e.targetId === h.id);
+      lastLine = lastMade
+        ? `<div class="ph-sup-panel-last">Last made ${esc(phShortDate(lastMade.date))} · +${phFmtG(lastMade.madeGrams)}g</div>`
+        : `<div class="ph-sup-panel-last">Not made yet — batch it from 🏺 Formula Refill</div>`;
+    } else {
+      // her ask: "so I can see who I last bought each herb from and at what
+      // price" -- the most recent phArrive() restock-history entry, in her words
+      const last = (h.restockHistory || [])[0];
+      lastLine = last
+        ? `<div class="ph-sup-panel-last">Last restocked ${esc(phShortDate(last.date))}${last.supplier ? ` from ${esc(last.supplier)}` : ""}${last.bottleCost != null ? ` at $${last.bottleCost}` : ""} · +${phFmtG(last.grams)}g</div>`
+        : "";
+    }
     return `<div class="ph-sup-panel">${rows}${lastLine}<div class="ph-sup-panel-foot"><button type="button" class="tab-link" data-ph-herb-edit="${h.id}">✎ Edit</button><button type="button" class="tab-link" data-ph-unlock-close="1">Close</button></div></div>`;
   };
 
@@ -2737,7 +2769,10 @@
   const herbIsLow = h => h.qty != null && h.qty <= (h.low != null ? h.low : 0);
   // the order list is hand-picked: only 🛒-flagged herbs, added from the zero/low
   // listings or the stock table. Temporarily-stopping herbs never nag.
-  const herbNeedsOrder = h => !!h.order && !h.stopped;
+  // her ask (2026-08-13): a formula made in-house is never ordered from
+  // anyone, so it can never sit on the To-order list even if it was flagged
+  // 🛒 before she switched its active supplier to In house.
+  const herbNeedsOrder = h => !!h.order && !h.stopped && (phActiveSupplier(h) || {}).name !== PH_IN_HOUSE_SUP;
   // the Recently arrived group self-cleans (her ask 2026-08-04): once stock is
   // comfortably back above the reorder line, a herb quietly drops out of that
   // group on its own — "comfortably" = 30% clear of "low at", not just barely over
@@ -3199,15 +3234,18 @@
   const phHerbSupplierRowHtml = (name, price, isDefault, code) => {
     const known = PHARMACY.suppliers || [];
     const isKnown = name && known.some(s => s.name.trim().toLowerCase() === name.trim().toLowerCase());
+    const isInHouse = name === PH_IN_HOUSE_SUP;
     return `<div class="ph-hsup-row">
       <select class="ph-hsup-name field-bare" aria-label="Supplier">
         <option value="">— choose supplier —</option>
+        <option value="${PH_IN_HOUSE_SUP}"${isInHouse ? " selected" : ""}>🏠 In house</option>
         ${known.map(s => `<option value="${esc(s.name)}"${s.name === name ? " selected" : ""}>${esc(s.name)}</option>`).join("")}
-        <option value="__new__"${name && !isKnown ? " selected" : ""}>+ New supplier…</option>
+        <option value="__new__"${name && !isKnown && !isInHouse ? " selected" : ""}>+ New supplier…</option>
       </select>
-      <input type="text" class="ph-hsup-new field-bare"${name && !isKnown ? "" : " hidden"} placeholder="Supplier name" value="${name && !isKnown ? esc(name) : ""}" aria-label="New supplier name">
-      <input type="text" class="ph-hsup-code field-bare" placeholder="Their code" value="${code ? esc(code) : ""}" aria-label="This supplier's code for this herb" title="This supplier's own code for this herb">
-      <input type="text" inputmode="decimal" class="ph-hsup-price field-bare" placeholder="Bottle $" value="${price !== "" && price != null ? price : ""}" aria-label="Bottle price from this supplier">
+      <input type="text" class="ph-hsup-new field-bare"${name && !isKnown && !isInHouse ? "" : " hidden"} placeholder="Supplier name" value="${name && !isKnown && !isInHouse ? esc(name) : ""}" aria-label="New supplier name">
+      <input type="text" class="ph-hsup-code field-bare"${isInHouse ? " hidden" : ""} placeholder="Their code" value="${code ? esc(code) : ""}" aria-label="This supplier's code for this herb" title="This supplier's own code for this herb">
+      <input type="text" inputmode="decimal" class="ph-hsup-price field-bare"${isInHouse ? " hidden" : ""} placeholder="Bottle $" value="${price !== "" && price != null ? price : ""}" aria-label="Bottle price from this supplier">
+      <span class="ph-hsup-inhouse-note"${isInHouse ? "" : " hidden"}>priced from what you mix in — see 🏺 Formula Refill</span>
       <span class="ph-hsup-pergram" aria-live="polite"></span>
       <label class="ph-hsup-def" title="Use this supplier's price right now"><input type="radio" name="phHerbSupplierDefault"${isDefault ? " checked" : ""}> ★</label>
       <button type="button" class="del ph-hsup-del" aria-label="Remove this supplier">×</button>
@@ -3232,11 +3270,17 @@
     if (!wrap) return;
     const isFormula = document.getElementById("phHerbKind").value === "formula";
     const rows = Array.from(wrap.querySelectorAll(".ph-hsup-row"));
+    // "In house" isn't priced from this row's Bottle $ input at all -- it
+    // reads the herb's own $/g, which Formula Refill keeps current from what
+    // was actually mixed in (refRecipeCostPerG). Editing an existing formula
+    // shows its current cost; a brand-new one has none yet to show.
+    const editH = typeof phHerbEditId !== "undefined" && phHerbEditId ? PHARMACY.herbs.find(x => x.id === phHerbEditId) : null;
     const perGram = rows.map(row => {
+      const sel = row.querySelector(".ph-hsup-name").value;
+      if (sel === PH_IN_HOUSE_SUP) return editH ? (editH.cost || null) : null;
       const priceRaw = row.querySelector(".ph-hsup-price").value.trim();
       const price = priceRaw === "" ? null : Math.max(0, parseFloat(priceRaw) || 0);
       if (price == null) return null;
-      const sel = row.querySelector(".ph-hsup-name").value;
       const name = sel === "__new__" ? row.querySelector(".ph-hsup-new").value.trim() : sel;
       const pack = isFormula ? phFormulaPackForSupplierName(name) : PH_PACK_HERB;
       return price / pack;
@@ -3258,6 +3302,12 @@
     const out = rows.map(row => {
       const sel = row.querySelector(".ph-hsup-name").value;
       const name = sel === "__new__" ? row.querySelector(".ph-hsup-new").value.trim() : sel;
+      // "In house" never carries a code or a typed Bottle $ -- its price is
+      // the herb's own computed $/g, not something stored on the row
+      if (name === PH_IN_HOUSE_SUP) {
+        const isDefault = row.querySelector('input[name="phHerbSupplierDefault"]').checked;
+        return { name, bottleCost: null, code: "", isDefault };
+      }
       const priceRaw = row.querySelector(".ph-hsup-price").value.trim();
       const bottleCost = priceRaw === "" ? null : Math.max(0, parseFloat(priceRaw) || 0);
       const code = row.querySelector(".ph-hsup-code").value.trim();
@@ -3727,7 +3777,7 @@
               const active = phActiveSupplier(h);
               const cheapest = phCheapestSupplierName(h);
               const cheaperElsewhere = cheapest && active && cheapest !== active.name;
-              return `<button type="button" class="ph-qty-lock ph-sup-btn" data-ph-unlock="${h.id}:supplierPanel" title="Suppliers &amp; pricing for ${esc(h.name)} — tap to see every option">${h.supplier ? esc(h.supplier) : "—"}${active && active.code ? `<div class="ph-sub">${esc(active.code)}</div>` : ""}${cheaperElsewhere ? `<div class="ph-sub ph-sup-cheaper-hint">cheaper available</div>` : ""}${h.suppliers && h.suppliers.length > 1 ? `<span class="ph-sup-more">+${h.suppliers.length - 1}</span>` : ""}</button>`;
+              return `<button type="button" class="ph-qty-lock ph-sup-btn" data-ph-unlock="${h.id}:supplierPanel" title="Suppliers &amp; pricing for ${esc(h.name)} — tap to see every option">${h.supplier ? phSupDisplayName(h.supplier) : "—"}${active && active.code ? `<div class="ph-sub">${esc(active.code)}</div>` : ""}${cheaperElsewhere ? `<div class="ph-sub ph-sup-cheaper-hint">cheaper available</div>` : ""}${h.suppliers && h.suppliers.length > 1 ? `<span class="ph-sup-more">+${h.suppliers.length - 1}</span>` : ""}</button>`;
             })()}</td>`,
         cost: `<td class="ph-num" data-col="cost"><span title="Cost per gram of ${esc(h.name)} — set the Bottle $ to change it">${h.cost ? "$" + h.cost : "—"}</span>${priceMore}</td>`,
         costFlag: `<td class="ph-num" data-col="costFlag"><span title="$/g rounded up to the nearest 10c">${h.cost ? "$" + phRound2(phRoundUp10c(h.cost)) : "—"}</span></td>`,
@@ -3737,7 +3787,7 @@
         low: `<td class="ph-num" data-col="low">${lock("low", h.low != null ? h.low : "—", `Reorder point of ${esc(h.name)}`)}</td>`,
         status: `<td class="ph-status-cell" data-col="status">${phStatusPills(h)}${phStatusMenuFor === h.id ? phStatusMenuHtml(h) : ""}</td>`,
         usedByHH: `<td class="ph-cart-cell" data-col="usedByHH"><input type="checkbox" data-ph-hh-toggle="${h.id}"${h.usedByHH ? " checked" : ""} aria-label="${esc(h.name)} used by HH"></td>`,
-        cart: `<td class="ph-cart-cell" data-col="cart">${h.stopped ? "" : `<button class="ph-cart" data-ph-order="${h.id}" aria-pressed="${!!h.order}" title="${h.order ? "Un-flag for ordering" : "Flag for ordering"}" aria-label="Flag ${esc(h.name)} for ordering">🛒</button>`}</td>`,
+        cart: `<td class="ph-cart-cell" data-col="cart">${h.stopped || (phActiveSupplier(h) || {}).name === PH_IN_HOUSE_SUP ? "" : `<button class="ph-cart" data-ph-order="${h.id}" aria-pressed="${!!h.order}" title="${h.order ? "Un-flag for ordering" : "Flag for ordering"}" aria-label="Flag ${esc(h.name)} for ordering">🛒</button>`}</td>`,
         note: `<td class="ph-note-cell" data-col="note" title="${esc(h.note || "")}">${lock("note", h.note ? esc(h.note.split("\n")[0]) : "—", `Notes for ${esc(h.name)}`)}</td>`,
       };
       return `<tr data-ph-row="${h.id}"${rowCls ? ` class="${rowCls}"` : ""}>
@@ -3903,7 +3953,7 @@
       : phListingOpen === "phaseout"
       ? `<button type="button" class="ph-add-order" data-ph-set-status="${h.id}:active">▶ Resume</button>
          <button type="button" class="ph-add-order mut" data-ph-set-status="${h.id}:stopped" title="Write the remaining stock off to 0">⏸ Stop now</button>`
-      : `<button type="button" class="ph-add-order" data-ph-order="${h.id}" aria-pressed="${!!h.order}">${h.order ? "✓ On order list" : "🛒 Add to order"}</button>
+      : `${(phActiveSupplier(h) || {}).name === PH_IN_HOUSE_SUP ? "" : `<button type="button" class="ph-add-order" data-ph-order="${h.id}" aria-pressed="${!!h.order}">${h.order ? "✓ On order list" : "🛒 Add to order"}</button>`}
          ${phIsFormula(h) ? `<button type="button" class="ph-add-order" data-ph-make="${h.id}" aria-pressed="${!!h.toMake}" title="Queue this formula in 🏺 Formula Refill to make from raws">${h.toMake ? "✓ On make list" : "🏺 Add to make"}</button>` : ""}
          <button type="button" class="ph-add-order mut" data-ph-set-status="${h.id}:stopped" title="Temporarily stopping — hide from these alerts">⏸</button>`;
     const rowClass = h => phHerbStatusKey(h) === "stopped" ? ` class="ph-lrow-stopped"` : phHerbStatusKey(h) === "phaseout" ? ` class="ph-lrow-phaseout"` : "";
@@ -5357,9 +5407,16 @@
     document.getElementById("phHerbSuppliersRows").addEventListener("change", e => {
       if (e.target.classList.contains("ph-hsup-name")) {
         const row = e.target.closest(".ph-hsup-row");
+        const isInHouse = e.target.value === PH_IN_HOUSE_SUP;
         const newInput = row.querySelector(".ph-hsup-new");
         newInput.hidden = e.target.value !== "__new__";
         if (!newInput.hidden) newInput.focus();
+        // "In house" has no code or Bottle $ to type -- swap those inputs for
+        // the explanatory note instead of just leaving them sitting empty
+        row.querySelector(".ph-hsup-code").hidden = isInHouse;
+        row.querySelector(".ph-hsup-price").hidden = isInHouse;
+        row.querySelector(".ph-hsup-inhouse-note").hidden = !isInHouse;
+        if (isInHouse) { row.querySelector(".ph-hsup-code").value = ""; row.querySelector(".ph-hsup-price").value = ""; }
       }
       if (e.target.classList.contains("ph-hsup-name") || e.target.classList.contains("ph-hsup-price")) phHerbSupplierRowsRecalc();
     });
@@ -5456,6 +5513,10 @@
       // every existing read site keeps working unchanged
       const supplierRows = phHerbSupplierRowsRead();
       supplierRows.forEach(s => {
+        // "In house" is a built-in option, never a real company -- it must
+        // never land in the global Suppliers registry (that list is for
+        // outside companies with their own contact/ordering info)
+        if (s.name === PH_IN_HOUSE_SUP) return;
         const known = (PHARMACY.suppliers || []).some(x => x.name.trim().toLowerCase() === s.name.trim().toLowerCase());
         if (!known) { PHARMACY.suppliers = PHARMACY.suppliers || []; PHARMACY.suppliers.push({ id: uid(), name: s.name, contact: "", note: "" }); }
       });
@@ -5983,7 +6044,8 @@
     const stillToOrder = toOrder.filter(h => !h.ordered);
     const onTheWay = toOrder.filter(h => h.ordered);
     const unflagged = herbs.filter(h => !h.stopped && !h.order && h.qty != null
-      && (h.qty <= 0 || (h.low != null && h.qty <= h.low)))
+      && (h.qty <= 0 || (h.low != null && h.qty <= h.low))
+      && (phActiveSupplier(h) || {}).name !== PH_IN_HOUSE_SUP)
       .sort((a, b) => (a.qty || 0) - (b.qty || 0));
     const arrMonth = PHARMACY.log.filter(e => {
       if (e.kind !== "arrival") return false;
@@ -6064,9 +6126,11 @@
       // A legacy h.supplier that somehow isn't in h.suppliers yet still gets
       // its own option so the picker never silently shows blank over real data.
       const inSupList = h.supplier && (h.suppliers || []).some(s => s.name === h.supplier);
+      // "In house" is never orderable-from, so it's left out of this picker
+      // even when it's one of the herb's recorded price options
       const supPick = `<select class="ph-order-sup-pick field-bare" data-ph-order-sup="${h.id}" aria-label="Which supplier to order ${esc(h.name)} from">
           <option value=""${h.supplier ? "" : " selected"}>— no supplier —</option>
-          ${(h.suppliers || []).map(s =>
+          ${(h.suppliers || []).filter(s => s.name !== PH_IN_HOUSE_SUP).map(s =>
             `<option value="${esc(s.name)}"${s.name === h.supplier ? " selected" : ""}>${esc(s.name)}${s.code ? ` (${esc(s.code)})` : ""}${s.bottleCost != null ? ` — $${s.bottleCost}` : ""}</option>`
           ).join("")}
           ${h.supplier && !inSupList ? `<option value="${esc(h.supplier)}" selected>${esc(h.supplier)}</option>` : ""}
@@ -7557,6 +7621,29 @@
     if (n) savePharmacy();
     try { localStorage.setItem(FLAG, "1"); } catch (e) {}
   })();
+  // one-time backfill (her ask 2026-08-13): "In house" as a real supplier
+  // option, so existing made-in-house formulas show it in the Supplier
+  // column NOW rather than only after their next refMake() batch. Only
+  // becomes ACTIVE if the formula has no active supplier yet -- a formula
+  // she's deliberately kept sourced from a real supplier keeps that choice,
+  // "In house" just joins its list as a switchable option.
+  (function inHouseSupplierBackfill() {
+    const FLAG = "daybook-ph-inhouse-sup-1";
+    try { if (localStorage.getItem(FLAG)) return; } catch (e) {}
+    let n = 0;
+    PHARMACY.herbs.forEach(h => {
+      if (!phIsFormula(h) || !phMadeInHouse(h)) return;
+      h.suppliers = h.suppliers || [];
+      if (h.suppliers.some(s => s.name === PH_IN_HOUSE_SUP)) return;
+      const hasActive = h.suppliers.some(s => s.isDefault);
+      const row = { name: PH_IN_HOUSE_SUP, bottleCost: null, code: "", isDefault: !hasActive };
+      h.suppliers.push(row);
+      if (row.isDefault) h.supplier = PH_IN_HOUSE_SUP;
+      n++;
+    });
+    if (n) savePharmacy();
+    try { localStorage.setItem(FLAG, "1"); } catch (e) {}
+  })();
   // one-time backfill (her ask 2026-08-02): bottle prices + Mandarin/common
   // names sourced from her Ko Da 2023 practitioner price list, matched by
   // K-code. Only the 211 codes verified to still point at the SAME herb or
@@ -7754,6 +7841,19 @@
     const jar = refJarForRecipe(recipe);
     const perG = jar && phMadeInHouse(jar) ? refRecipeCostPerG(recipe) : null;
     if (perG != null) jar.cost = perG;
+    // her ask (2026-08-13): the first time a formula is actually made, make
+    // sure "In house" is on its supplier list -- as the ACTIVE one only if
+    // nothing else is already active, so a formula she deliberately keeps
+    // sourced from a real supplier isn't silently switched under her
+    if (perG != null && jar) {
+      jar.suppliers = jar.suppliers || [];
+      if (!jar.suppliers.some(s => s.name === PH_IN_HOUSE_SUP)) {
+        const hasActive = jar.suppliers.some(s => s.isDefault);
+        const row = { name: PH_IN_HOUSE_SUP, bottleCost: null, code: "", isDefault: !hasActive };
+        jar.suppliers.push(row);
+        if (row.isDefault) jar.supplier = PH_IN_HOUSE_SUP;
+      }
+    }
     if (jar) {
       jar.qty = phQty((jar.qty == null ? 0 : jar.qty) + entry.madeGrams);   // the finished batch restocks the formula bottle
       entry.targetId = jar.id;                                              // so undo/delete drains the made grams back out
