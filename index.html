@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260813-144347">
+<meta name="lcm-build" content="20260813-152230">
 <script>
   // self-update check (her ask 2026-08-11, "still not collapsing/working" --
   // both were already fixed and shipped; she was just looking at a GitHub
@@ -7832,6 +7832,15 @@
 
   var sb = null, ready = false, suppress = false, pushTimer = null, lastPushed = "";
   var switching = false, myEmail = "", menuOpen = false;
+  // her report 2026-08-13 (two devices, computer + phone): a phone tab left
+  // in the background gets suspended by the OS and misses realtime updates;
+  // when she next touches it, it was about to push its now-stale copy over
+  // the cloud and wipe whatever she'd added on the computer meanwhile. These
+  // track that condition so a backgrounded tab can't push until it's caught up.
+  var staleTab = false, pendingPushWhileStale = false, gateInFlight = false;
+  var curAccessToken = "";                                 // kept in sync for the pagehide/keepalive flush, which can't await getSession()
+  var lastSavedAt = null;                                  // ISO string, for the "Last saved to cloud" label
+  var HIST_COL_OK = null, histCheckedDate = null, lastNoteMsg = "";
 
   /* ---- config ---------------------------------------------------------- */
   // Connection baked in (the anon/publishable key is public by design — safe to embed;
@@ -7872,32 +7881,171 @@
     });
   }
 
+  /* ---- section-aware merge (her report 2026-08-13: two devices) --------
+     Old behaviour: the whole snapshot (herbs + log + prescriptions, all of
+     it) synced as ONE blob, last-write-wins. With two devices that's a real
+     problem, not just a theoretical one -- a phone tab left in the
+     background gets suspended by the OS and stops receiving updates; when
+     she next touches it, it pushes its now-stale copy over the cloud and
+     wipes whatever she added on the computer in between. And because
+     everything shared one blob, an edit to ANY part (even just the
+     dispensing log) could carry a stale copy of everything else along
+     with it.
+
+     Fix: split the data into three sections she can genuinely edit
+     independently -- her stock/herb list, the dispensing log, and her
+     prescriptions -- and merge each one on its own, the same way git merges
+     two branches: compare against the last version BOTH sides agreed on
+     (the "base"). If only one side changed a section, take that side. If
+     neither changed it, nothing to do. If BOTH changed the same section
+     since they last agreed (rare -- the two-device scenario above changes
+     DIFFERENT sections, not the same one), keep what's on screen right now
+     rather than silently overwriting an edit she might be mid-typing, and
+     let cloud history (see appendHistoryMaybe) hold the version that lost
+     so nothing is ever truly gone.
+  ------------------------------------------------------------------------ */
+  var BASE_KEY = "lcm-sync-base";      // NOT daybook-prefixed -- our own bookkeeping, never swept into gather()/pushed as app data
+  var SECTIONS = ["pharmacy_core", "pharmacy_log", "prescriptions"];
+
+  function hashStr(s) {                // cheap content fingerprint -- only needs to detect "did this change", not be cryptographic
+    if (s == null) return "0:0";
+    var h = 2166136261;
+    for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = (h * 16777619) >>> 0; }
+    return h.toString(36) + ":" + s.length;
+  }
+  // split the one daybook-pharmacy blob into "everything except the log" and
+  // "just the log" -- they share a localStorage key, but shouldn't share a
+  // sync fate: a log entry on one device must never carry a stale herb list
+  // along with it and clobber a stock edit made on another device, or vice versa.
+  // Also strips activeTab (which tab is open) out of the comparison entirely --
+  // it's saved locally so a reload reopens the same tab, but it's not real data,
+  // and syncing it would mean two devices simply looking at different tabs count
+  // as a "conflict" on every push. applyMerged() below re-attaches THIS device's
+  // own current tab afterward, so it's never lost, just never fought over.
+  function splitPharmacy(rawStr) {
+    var obj; try { obj = JSON.parse(rawStr); } catch (e) { obj = null; }
+    if (!obj || typeof obj !== "object" || Array.isArray(obj)) obj = {};
+    var log = Array.isArray(obj.log) ? obj.log : [];
+    var core = {};
+    Object.keys(obj).forEach(function (k) { if (k !== "log" && k !== "activeTab") core[k] = obj[k]; });
+    return { core: core, log: log };
+  }
+  // build the three section strings from a {daybook-pharmacy, daybook-prescriptions}
+  // pair -- works on both the local pair and a fetched cloud row's `data`
+  function sectionsFrom(dataObj) {
+    var ph = splitPharmacy(dataObj[PH_KEY]);
+    return {
+      pharmacy_core: JSON.stringify(ph.core),
+      pharmacy_log: JSON.stringify(ph.log),
+      prescriptions: dataObj[PR_KEY] == null ? "null" : String(dataObj[PR_KEY])
+    };
+  }
+  function localSnapshotObj() {
+    var o = {}; o[PH_KEY] = localStorage.getItem(PH_KEY); o[PR_KEY] = localStorage.getItem(PR_KEY); return o;
+  }
+  function sectionLen(name, str) {
+    try {
+      if (name === "pharmacy_log") { var l = JSON.parse(str); return Array.isArray(l) ? l.length : null; }
+      if (name === "pharmacy_core") { var c = JSON.parse(str); return c && Array.isArray(c.herbs) ? c.herbs.length : null; }
+      if (name === "prescriptions") { var p = JSON.parse(str); return p && Array.isArray(p.items) ? p.items.length : null; }
+    } catch (e) {}
+    return null;
+  }
+  // requirement 4: never let empty win just because it's "newer" -- a section
+  // that had a healthy amount of content and suddenly drops by more than half
+  // is almost certainly a bad read somewhere upstream, not real mass deletion
+  function sectionLooksEmptier(name, fromStr, toStr) {
+    var a = sectionLen(name, fromStr), b = sectionLen(name, toStr);
+    return a != null && a >= 10 && b != null && b < a * 0.5;
+  }
+  function loadBase() { try { var b = JSON.parse(localStorage.getItem(BASE_KEY)); return b && typeof b === "object" ? b : {}; } catch (e) { return {}; } }
+  function saveBase(b) { try { _setItem.call(localStorage, BASE_KEY, JSON.stringify(b)); } catch (e) {} }
+
+  // the 3-way merge itself. localData/cloudData are {daybook-pharmacy,
+  // daybook-prescriptions} string pairs (same shape gather() produces).
+  function mergeSections(localData, cloudData) {
+    var L = sectionsFrom(localData), C = sectionsFrom(cloudData), base = loadBase();
+    var out = {}, changed = false, conflicts = [], emptyGuarded = [];
+    SECTIONS.forEach(function (name) {
+      var l = L[name], c = C[name], b = base[name];
+      var localChanged = hashStr(l) !== b, cloudChanged = hashStr(c) !== b;
+      var pick;
+      if (!localChanged && !cloudChanged) {
+        pick = l;
+      } else if (localChanged && !cloudChanged) {
+        // only this device touched it -- push it on, UNLESS it just went
+        // suspiciously empty, in which case trust the (unchanged) cloud copy
+        if (sectionLooksEmptier(name, c, l)) { pick = c; emptyGuarded.push(name); } else pick = l;
+      } else if (!localChanged && cloudChanged) {
+        // only the cloud moved -- adopt it, UNLESS it looks suspiciously
+        // empty next to what's already here
+        if (sectionLooksEmptier(name, l, c)) { pick = l; emptyGuarded.push(name); } else pick = c;
+      } else {
+        // both sides touched this section since they last agreed. Never
+        // silently yank an edit out from under her while she might be
+        // looking at it -- keep what's on screen, and let cloud history
+        // hold the losing side so it's a one-click restore if this guessed
+        // wrong. The empty-guard still overrides even here.
+        conflicts.push(name);
+        if (sectionLooksEmptier(name, c, l)) { pick = c; emptyGuarded.push(name); } else pick = l;
+      }
+      if (pick !== l) changed = true;
+      out[name] = pick;
+    });
+    return { sections: out, changed: changed, conflicts: conflicts, emptyGuarded: emptyGuarded };
+  }
+  // rebuild the two real localStorage strings from merged section strings
+  function assembleFromSections(sections) {
+    var core; try { core = JSON.parse(sections.pharmacy_core); } catch (e) { core = {}; }
+    var log; try { log = JSON.parse(sections.pharmacy_log); } catch (e) { log = []; }
+    core.log = log;
+    var out = {}; out[PH_KEY] = JSON.stringify(core); out[PR_KEY] = sections.prescriptions;
+    return out;
+  }
+  function setBaseFrom(sections) {
+    var b = {}; SECTIONS.forEach(function (name) { b[name] = hashStr(sections[name]); });
+    saveBase(b);
+  }
+  function showSyncNote(msg) {
+    if (msg === lastNoteMsg && document.getElementById("lcmNote")) return;
+    lastNoteMsg = msg;
+    var w = document.getElementById("lcmNote");
+    if (!w) {
+      w = document.createElement("div");
+      w.id = "lcmNote";
+      w.style.cssText = "position:fixed;right:12px;bottom:34px;max-width:280px;background:#183f32;border:1px solid #3a7d66;border-radius:10px;padding:10px 12px;font:500 12.5px -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#eef5f1;box-shadow:0 8px 24px rgba(0,0,0,.3);z-index:2147483100";
+      document.documentElement.appendChild(w);
+    }
+    w.innerHTML = esc(msg) + '<div style="margin-top:6px;text-align:right"><button id="lcmNoteOk" style="background:transparent;border:none;color:#d8b979;font-size:11.5px;cursor:pointer;padding:2px 4px">Dismiss</button></div>';
+    document.getElementById("lcmNoteOk").onclick = function () { w.remove(); lastNoteMsg = ""; };
+  }
+
   /* ---- push (app saved → cloud) --------------------------------------- */
   var _setItem = Storage.prototype.setItem;
   Storage.prototype.setItem = function (k, v) {
     _setItem.call(this, k, v);
     if (ready && !suppress && this === window.localStorage && String(k).indexOf("daybook") === 0) schedulePush();
   };
-  function schedulePush() { clearTimeout(pushTimer); pushTimer = setTimeout(pushNow, 1400); }
+  // requirement 2 (her spec 2026-08-13): a backgrounded tab is stale by
+  // definition -- it can't have seen anything another device saved while it
+  // was hidden. Hold its pushes until it's re-synced on return to the
+  // foreground (see reconcileGate below) instead of letting it push blind.
+  function schedulePush() {
+    if (staleTab) { pendingPushWhileStale = true; return; }
+    clearTimeout(pushTimer); pushTimer = setTimeout(pushNow, 1400);
+  }
   var pushRetryTimer = null, pushFailStreak = 0;
   // her report 2026-08-13: this used to set lastPushed = json BEFORE the
   // network call even started, and its failure handler only dimmed the dot --
   // a save that failed (network blip, dropped connection) was marked "sent"
-  // anyway, so it was never retried. The cloud row went stale, and the NEXT
-  // sync (this device or another) could hand back that stale, smaller
-  // snapshot and look exactly like data had vanished. Now lastPushed only
-  // updates on a CONFIRMED save, and a failed one retries with backoff.
+  // anyway, so it was never retried. Now lastPushed only updates on a
+  // CONFIRMED save, and a failed one retries with backoff.
   function pushNow() {
     if (!sb || !ready || switching) return;
-    var snap = gather(), json = JSON.stringify(snap);
+    if (staleTab) { pendingPushWhileStale = true; return; }
+    var json = JSON.stringify(gather());
     if (json === lastPushed) return;                       // nothing new
-    sb.from("settings").upsert({ data: snap }, { onConflict: "owner" }).select("updated_at").then(function (r) {
-      if (r.error) return onPushFail(json);
-      lastPushed = json;
-      pushFailStreak = 0;
-      if (r.data && r.data[0]) sessionStorage.setItem(APPLIED, r.data[0].updated_at);
-      setLive(true);
-    }, function () { onPushFail(json); });
+    pullMergePush(true);
   }
   function onPushFail(json) {
     setLive(false);
@@ -7906,7 +8054,7 @@
     clearTimeout(pushRetryTimer);
     var wait = Math.min(30000, 2000 * Math.pow(2, Math.min(pushFailStreak, 4)));
     pushRetryTimer = setTimeout(function () {
-      if (ready && !switching && json === JSON.stringify(gather())) pushNow();
+      if (ready && !switching && !staleTab && json === JSON.stringify(gather())) pushNow();
     }, wait);
   }
 
@@ -7924,45 +8072,72 @@
       return r.data || null;
     });
   }
-  function arrLen(dataObj, key, field) {
-    if (!dataObj || dataObj[key] == null) return null;
-    try {
-      var v = typeof dataObj[key] === "string" ? JSON.parse(dataObj[key]) : dataObj[key];
-      var a = v && v[field];
-      return Array.isArray(a) ? a.length : null;
-    } catch (e) { return null; }
+
+  /* ---- unified pull + merge + push cycle --------------------------------
+     Requirement 1 (pull-before-push): every push AND every pull go through
+     THIS one function -- fetch the cloud row, merge it against local
+     section-by-section (mergeSections, above), write the merged result
+     locally, and only then push if this device still has something the
+     cloud doesn't already have. That's what makes "never blind-overwrite"
+     true everywhere at once, instead of two separate code paths (push vs.
+     realtime-pull) that could quietly drift apart from each other.
+  ------------------------------------------------------------------------- */
+  function pullMergePush(pushAfter) {
+    if (!sb || !ready || switching) return Promise.resolve();
+    return fetchCloud().then(function (row) {
+      if (switching) return;                                // a location switch started mid-fetch -- abandon this cycle
+      var cloudData = (row && row.data) || {};
+      var isOwnEcho = row && row.updated_at && sessionStorage.getItem(APPLIED) === row.updated_at;
+      var res = mergeSections(localSnapshotObj(), cloudData);
+      if (row && row.updated_at) { lastSavedAt = row.updated_at; renderSavedAt(); }
+      if (res.emptyGuarded.length) {
+        showSyncNote("⚠ " + res.emptyGuarded.join(", ").replace(/_/g, " ") + " looked emptied out on one side of the sync — kept the fuller copy instead. Worth a quick check.");
+      } else if (res.conflicts.length && !isOwnEcho) {
+        showSyncNote("Merged an edit made on another device (" + res.conflicts.join(", ").replace(/_/g, " ") + "). If something looks off, use 🕐 Cloud history.");
+      }
+      if (res.changed) { applyMerged(res.sections); } else { setBaseFrom(res.sections); }
+      var finalSnap = assembleFromSections(res.sections);
+      var finalJson = JSON.stringify(finalSnap);
+      if (!pushAfter || finalJson === lastPushed) { setLive(true); return; }
+      return doUpsert(finalSnap, finalJson);
+    }, function () {
+      // couldn't reach the cloud to pull first -- fall back to a plain push
+      // of what's here now; the existing retry/backoff in onPushFail covers
+      // a genuine network failure either way
+      if (pushAfter) { var snap = gather(); return doUpsert(snap, JSON.stringify(snap)); }
+      setLive(false);
+    });
   }
-  // never let an incoming snapshot that's suspiciously EMPTIER than what's
-  // already here quietly win -- a herb list or prescription list that drops
-  // by more than half in one sync is almost certainly a bad write somewhere
-  // upstream (an empty save that slipped through), not real mass deletion
-  function looksEmptier(incoming) {
-    var localSnap = { }; localSnap[PH_KEY] = localStorage.getItem(PH_KEY); localSnap[PR_KEY] = localStorage.getItem(PR_KEY);
-    var checks = [[PH_KEY, "herbs"], [PR_KEY, "items"]];
-    for (var i = 0; i < checks.length; i++) {
-      var key = checks[i][0], field = checks[i][1];
-      var localN = arrLen(localSnap, key, field), inN = arrLen(incoming, key, field);
-      if (localN != null && localN >= 10 && inN != null && inN < localN * 0.5) return true;
-    }
-    return false;
+  function applyMerged(sections) {
+    var assembled = assembleFromSections(sections);
+    try {
+      var curLocal = JSON.parse(localStorage.getItem(PH_KEY));
+      if (curLocal && curLocal.activeTab != null) {
+        var merged = JSON.parse(assembled[PH_KEY]);
+        merged.activeTab = curLocal.activeTab;
+        assembled[PH_KEY] = JSON.stringify(merged);
+      }
+    } catch (e) {}
+    apply(assembled);
+    refreshApp();
+    setBaseFrom(sections);
+  }
+  function doUpsert(snap, json) {
+    return maybeWithHistory(snap).then(function (payload) {
+      return sb.from("settings").upsert(payload, { onConflict: "owner" }).select("updated_at").then(function (r) {
+        if (r.error) return onPushFail(json);
+        lastPushed = json;
+        pushFailStreak = 0;
+        lastSavedAt = (r.data && r.data[0] && r.data[0].updated_at) || new Date().toISOString();
+        if (r.data && r.data[0]) sessionStorage.setItem(APPLIED, r.data[0].updated_at);
+        setLive(true); renderSavedAt();
+      }, function () { onPushFail(json); });
+    });
   }
   function reconcile(row) {
-    if (switching) return;                                 // never adopt across a location switch
-    if (!row || !row.data) return;
-    if (row.updated_at && sessionStorage.getItem(APPLIED) === row.updated_at) return;   // already have it (our own echo)
-    var incoming = row.data;
-    if (JSON.stringify(incoming[PH_KEY]) === JSON.stringify(localStorage.getItem(PH_KEY)) &&
-        JSON.stringify(incoming[PR_KEY]) === JSON.stringify(localStorage.getItem(PR_KEY))) return; // no visible change
-    if (looksEmptier(incoming)) {
-      setLive(false);
-      var d = document.getElementById("lcmLive");
-      if (d) d.title = "Paused — the cloud copy looks much smaller than what's on this device. Not syncing automatically; use Restore from backup if you need to check it.";
-      return;
-    }
-    apply(incoming);
-    lastPushed = JSON.stringify(gather());                 // adopting, don't bounce it back
-    if (row.updated_at) sessionStorage.setItem(APPLIED, row.updated_at);
-    refreshApp();
+    if (switching) return;
+    if (row && row.updated_at && sessionStorage.getItem(APPLIED) === row.updated_at) return;   // our own echo
+    pullMergePush(false);
   }
   function subscribe() {
     sb.channel("lcm-settings")
@@ -7970,6 +8145,76 @@
         reconcile(p.new || null);
       })
       .subscribe(function (st) { setLive(st === "SUBSCRIBED"); });
+  }
+
+  /* ---- requirement 2: re-sync on focus, before accepting new pushes ---- */
+  function reconcileGate() {
+    if (!ready || switching || gateInFlight) return;
+    gateInFlight = true;
+    pullMergePush(false).then(finish, finish);
+    function finish() {
+      gateInFlight = false; staleTab = false;
+      if (pendingPushWhileStale) { pendingPushWhileStale = false; schedulePush(); }
+    }
+  }
+  /* ---- requirement 3: flush a pending save before the tab actually closes
+     or backgrounds -- a change made just before that must still reach the
+     cloud, so this uses fetch(keepalive:true), which (unlike the normal
+     supabase-js call) is specifically designed to survive page unload. */
+  function flushOnHide() {
+    clearTimeout(pushTimer);
+    if (!sb || !ready || switching) return;
+    var snap = gather(), json = JSON.stringify(snap);
+    if (json === lastPushed) return;
+    var cfg = loadCfg(); if (!cfg) return;
+    try {
+      fetch(cfg.url + "/rest/v1/settings?on_conflict=owner", {
+        method: "POST", keepalive: true,
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": cfg.key,
+          "Authorization": "Bearer " + (curAccessToken || cfg.key),
+          "Prefer": "resolution=merge-duplicates,return=minimal"
+        },
+        body: JSON.stringify([{ data: snap }])
+      });
+      lastPushed = json;   // optimistic -- a keepalive request's result can't be awaited from here;
+                            // a genuine failure just means the usual retry-on-next-foreground catches it
+    } catch (e) {}
+  }
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) { staleTab = true; flushOnHide(); } else { reconcileGate(); }
+  });
+  window.addEventListener("focus", reconcileGate);
+  window.addEventListener("pagehide", flushOnHide);
+
+  /* ---- requirement 6: dated cloud backups -------------------------------
+     Piggybacks on the SAME upsert that already pushes `data`, never a
+     separate write -- so there's no way a history-only save could touch
+     the live data column. Capped at 7 daily snapshots rather than her
+     original ask of 30: a month of full copies (stock + log + prescriptions)
+     would mean a multi-MB download every time the history screen opens,
+     including on her phone's data plan. A week still covers the actual goal
+     -- catching a bad merge before it's forgotten -- without that cost.
+     Needs one extra column that only SHE can add (no DDL access from here);
+     until she does, this degrades to a no-op with no other effect. */
+  var HIST_CAP = 7;
+  function isMissingColumn(err) { return !!err && (err.code === "42703" || /column .* does not exist/i.test(err.message || "")); }
+  function maybeWithHistory(snap) {
+    var payload = { data: snap };
+    if (HIST_COL_OK === false) return Promise.resolve(payload);
+    var today = new Date().toISOString().slice(0, 10);
+    if (histCheckedDate === today) return Promise.resolve(payload);
+    return sb.from("settings").select("history").maybeSingle().then(function (r) {
+      if (r.error) { if (isMissingColumn(r.error)) HIST_COL_OK = false; return payload; }
+      HIST_COL_OK = true;
+      var hist = Array.isArray(r.data && r.data.history) ? r.data.history : [];
+      if (!hist.length || String(hist[0].at || "").slice(0, 10) !== today) {
+        payload.history = [{ at: new Date().toISOString(), data: snap }].concat(hist).slice(0, HIST_CAP);
+      }
+      histCheckedDate = today;
+      return payload;
+    }, function () { return payload; });
   }
 
   /* ---- little live indicator ------------------------------------------ */
@@ -7984,6 +8229,22 @@
     b.id = "lcmLive";
     b.style.cssText = "position:fixed;right:12px;bottom:12px;width:11px;height:11px;border-radius:50%;background:#c98b6b;z-index:2147483000;box-shadow:0 0 0 3px rgba(0,0,0,.12)";
     document.documentElement.appendChild(b);
+  }
+  // requirement 7: "show me the state" -- a plain-language timestamp next to
+  // the dot, so she can confirm a save actually landed before closing the tab
+  function renderSavedAt() {
+    var w = document.getElementById("lcmSaved");
+    if (!w) {
+      w = document.createElement("div");
+      w.id = "lcmSaved";
+      w.style.cssText = "position:fixed;right:28px;bottom:10px;font:500 10.5px -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#87a99c;z-index:2147483000;pointer-events:none;white-space:nowrap";
+      document.documentElement.appendChild(w);
+    }
+    if (!lastSavedAt) { w.textContent = ""; return; }
+    var d = new Date(lastSavedAt);
+    if (isNaN(d.getTime())) { w.textContent = ""; return; }
+    var hh = String(d.getHours()).padStart(2, "0"), mm = String(d.getMinutes()).padStart(2, "0");
+    w.textContent = "Saved " + hh + ":" + mm;
   }
   /* ---- location switcher ----------------------------------------------------
      Each location is its own login (own data, walled off by row-level security).
@@ -8009,6 +8270,7 @@
     if (!sb) return;
     sb.auth.getSession().then(function (r) {
       var s = r && r.data && r.data.session; if (!s || !s.user) return;
+      curAccessToken = s.access_token || curAccessToken;   // kept for the pagehide/keepalive flush, which can't await this call
       myEmail = s.user.email || myEmail;
       var reg = loadReg(), lbl = currentLocationLabel() || s.user.email, hit = null;
       for (var i = 0; i < reg.length; i++) { if (reg[i].email === s.user.email) { hit = reg[i]; break; } }
@@ -8118,6 +8380,7 @@
       menu = '<div style="' + SW.menu + '">' +
                '<div style="' + SW.hdr + '">Switch location</div>' + items +
                '<div style="' + SW.sep + '"></div>' +
+               '<button data-sw="__hist" style="' + SW.item + '">🕐 Cloud history</button>' +
                '<button data-sw="__add" style="' + SW.item + '">＋ Add another location</button>' +
                '<button data-sw="__out" style="' + SW.item + ';color:#e0a58f">⎋ Sign out of this device</button>' +
              '</div>';
@@ -8129,6 +8392,7 @@
         var v = btn.getAttribute("data-sw"); menuOpen = false;
         if (v === "__out") return doSignOut();
         if (v === "__add") return doAddLocation();
+        if (v === "__hist") return screenCloudHistory();
         var e = loadReg().filter(function (x) { return x.email === v; })[0];
         if (e) switchTo(e);
       };
@@ -8273,6 +8537,71 @@
   }
 
   /* ---- flow ------------------------------------------------------------ */
+  /* ---- requirement 6: "Restore a previous cloud version" screen -------- */
+  function phFmtTs(iso) {
+    try {
+      var d = new Date(iso);
+      return d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) +
+        ", " + d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+    } catch (e) { return iso || ""; }
+  }
+  function downloadSafetyCopy() {
+    try {
+      var blob = new Blob([JSON.stringify({ app: "LCM Pharmacy", exported: new Date().toISOString(), data: gather() }, null, 1)], { type: "application/json" });
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "LCM-pharmacy-before-restore-" + new Date().toISOString().slice(0, 10) + ".json";
+      document.body.appendChild(a); a.click(); a.remove();
+    } catch (e) {}
+  }
+  function screenCloudHistory() {
+    var closeBtn = '<button id="lcmHistClose" style="' + F.btn + '">Close</button>';
+    function wireClose() { var b = document.getElementById("lcmHistClose"); if (b) b.onclick = function () { hideOverlay(); }; }
+    overlay('<p style="color:#bcd6cb;font-size:14px;margin:2px 0 4px">Restore a previous cloud version.</p><p style="' + F.note + '">Loading…</p>');
+    sb.from("settings").select("history").maybeSingle().then(function (r) {
+      if (r.error) {
+        if (isMissingColumn(r.error)) {
+          overlay('<p style="color:#bcd6cb;font-size:14px;margin:2px 0 4px">Restore a previous cloud version.</p>' +
+            '<p style="' + F.note + '">Not set up on this database yet. Run this once in Supabase → SQL Editor (safe, additive, doesn\'t touch existing data):</p>' +
+            '<pre style="background:#12352a;border:1px solid #2c6350;border-radius:8px;padding:10px;font-size:11px;color:#9fd8bb;overflow:auto;white-space:pre-wrap;user-select:all">alter table settings add column if not exists history jsonb not null default \'[]\'::jsonb;</pre>' + closeBtn);
+        } else {
+          overlay('<p style="color:#bcd6cb;font-size:14px;margin:2px 0 4px">Restore a previous cloud version.</p><div style="' + F.err + '">' + esc(r.error.message || "Couldn't load history.") + '</div>' + closeBtn);
+        }
+        return wireClose();
+      }
+      var hist = Array.isArray(r.data && r.data.history) ? r.data.history : [];
+      var rows = hist.map(function (h, i) {
+        return '<button data-hi="' + i + '" style="' + SW.item + ';border:1px solid #2c6350;margin-bottom:6px;border-radius:8px;display:block;width:100%">' + esc(phFmtTs(h.at)) + '</button>';
+      }).join("");
+      overlay('<p style="color:#bcd6cb;font-size:14px;margin:2px 0 4px">Restore a previous cloud version.</p>' +
+        (hist.length ? rows : '<p style="' + F.note + '">No snapshots yet — one is kept automatically, up to once a day, as edits happen.</p>') + closeBtn);
+      Array.prototype.forEach.call(document.querySelectorAll("[data-hi]"), function (btn) {
+        btn.onclick = function () { var h = hist[+btn.getAttribute("data-hi")]; if (h) confirmRestoreHistory(h); };
+      });
+      wireClose();
+    }, function () {
+      overlay('<p style="color:#bcd6cb;font-size:14px;margin:2px 0 4px">Restore a previous cloud version.</p><div style="' + F.err + '">Couldn\'t reach the database.</div>' + closeBtn);
+      wireClose();
+    });
+  }
+  function confirmRestoreHistory(h) {
+    overlay('<p style="color:#bcd6cb;font-size:14px;margin:2px 0 4px">Restore this version?</p>' +
+      '<p style="' + F.note + '">From <b>' + esc(phFmtTs(h.at)) + '</b>. This replaces what\'s here now, on every device. A safety copy of what\'s here right now downloads automatically first.</p>' +
+      '<button id="lcmHistYes" style="' + F.btn + '">Yes, restore this version</button>' +
+      '<button id="lcmHistNo" style="' + F.btn + ';margin-top:10px;color:#d8b979;background:transparent;border:1px solid #3a7d66">Cancel</button>');
+    document.getElementById("lcmHistNo").onclick = function () { screenCloudHistory(); };
+    document.getElementById("lcmHistYes").onclick = function () {
+      downloadSafetyCopy();
+      apply(h.data);
+      refreshApp();
+      setBaseFrom(sectionsFrom(h.data));
+      sb.from("settings").upsert({ data: h.data }, { onConflict: "owner" }).select("updated_at").then(function (r) {
+        if (r.data && r.data[0]) sessionStorage.setItem(APPLIED, r.data[0].updated_at);
+        location.reload();
+      }, function () { location.reload(); });
+    };
+  }
+
   // her report 2026-08-13: a genuine fetch failure here used to be
   // indistinguishable from "this is a brand-new account" (see the fetchCloud
   // fix above) -- it landed on the SAME "set up from a backup" screen, and a
@@ -8304,9 +8633,11 @@
   }
   function go() {
     ready = true; lastPushed = JSON.stringify(gather());
-    hideOverlay(); badge(); renderSwitcher(); recordSession(); subscribe();
-    // catch up on anything that changed while this device was away
-    fetchCloud().then(function (row) { if (row) reconcile(row); }, function () {});
+    // seed the merge "base" with what we're booting on, so the first merge
+    // cycle compares against "what THIS device already has" rather than nothing
+    setBaseFrom(sectionsFrom(localSnapshotObj()));
+    hideOverlay(); badge(); renderSwitcher(); recordSession(); subscribe(); renderSavedAt();
+    pullMergePush(false);   // catch up on anything that changed while this device was away
   }
 
   function boot() {
@@ -8315,10 +8646,12 @@
     try { sb = window.supabase.createClient(cfg.url, cfg.key, { auth: { persistSession: true, autoRefreshToken: true } }); }
     catch (e) { return screenConfig("That URL/key didn't work — check them."); }
     sb.auth.getSession().then(function (r) {
-      if (r.data && r.data.session) afterAuth(); else screenAuth();
+      var s = r && r.data && r.data.session; if (s) curAccessToken = s.access_token || curAccessToken;
+      if (s) afterAuth(); else screenAuth();
     });
     sb.auth.onAuthStateChange(function (_e, s) {
       if (!s) { if (!switching) { ready = false; screenAuth(); } return; }
+      curAccessToken = s.access_token || curAccessToken;
       myEmail = (s.user && s.user.email) || myEmail;
       if (_e === "TOKEN_REFRESHED" || _e === "SIGNED_IN") recordSession();
     });
