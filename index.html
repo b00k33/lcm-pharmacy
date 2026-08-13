@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260813-164607">
+<meta name="lcm-build" content="20260813-165536">
 <script>
   // self-update check (her ask 2026-08-11, "still not collapsing/working" --
   // both were already fixed and shipped; she was just looking at a GitHub
@@ -4460,6 +4460,10 @@
           PHARMACY.locName = (document.getElementById("phLocNameInput").value || "").trim();
           PHARMACY.locAddress = (document.getElementById("phLocAddrInput").value || "").trim();
           savePharmacy(); phLocEditing = false; renderPhLocBar();
+          // her ask 2026-08-13: this one, unlike most edits, pushes right
+          // away instead of riding the normal debounce -- absent on the
+          // offline build, where there's no cloud to push to
+          if (window.__lcmPushNow) window.__lcmPushNow();
         }
       });
     }
@@ -7973,6 +7977,32 @@
   function loadBase() { try { var b = JSON.parse(localStorage.getItem(BASE_KEY)); return b && typeof b === "object" ? b : {}; } catch (e) { return {}; } }
   function saveBase(b) { try { _setItem.call(localStorage, BASE_KEY, JSON.stringify(b)); } catch (e) {} }
 
+  // requirement 8 (her spec 2026-08-13): the location name/address she typed
+  // in by hand must never be silently blanked by an older/different sync
+  // payload winning the whole pharmacy_core section -- that section is
+  // compared and merged as one blob (herbs, prices, etc. all together), so a
+  // real conflict elsewhere in it (or just a device that never had a name
+  // set yet) could pick a version with an empty locName even while another
+  // available copy has the real one. Treat name/address as their own
+  // never-let-empty-win field, independent of whichever way the rest of the
+  // section resolved: after `pick` is chosen for pharmacy_core, if it's
+  // missing a name/address that's set on either side being compared, keep
+  // the set one.
+  function preserveLocationField(pickStr, lStr, cStr) {
+    var pick, l, c;
+    try { pick = JSON.parse(pickStr); } catch (e) { return pickStr; }
+    try { l = JSON.parse(lStr); } catch (e) { l = null; }
+    try { c = JSON.parse(cStr); } catch (e) { c = null; }
+    var changedIt = false;
+    ["locName", "locAddress"].forEach(function (f) {
+      if (!((pick[f] || "").trim())) {
+        var fallback = (l && (l[f] || "").trim()) ? l[f] : (c && (c[f] || "").trim()) ? c[f] : null;
+        if (fallback) { pick[f] = fallback; changedIt = true; }
+      }
+    });
+    return changedIt ? JSON.stringify(pick) : pickStr;
+  }
+
   // the 3-way merge itself. localData/cloudData are {daybook-pharmacy,
   // daybook-prescriptions} string pairs (same shape gather() produces).
   function mergeSections(localData, cloudData) {
@@ -8001,6 +8031,7 @@
         conflicts.push(name);
         if (sectionLooksEmptier(name, c, l)) { pick = c; emptyGuarded.push(name); } else pick = l;
       }
+      if (name === "pharmacy_core") pick = preserveLocationField(pick, l, c);
       if (pick !== l) changed = true;
       // cloudStale: the truth we just landed on isn't what the cloud row
       // holds, so the cloud needs a push -- REGARDLESS of why this merge
@@ -8192,6 +8223,10 @@
   window.__lcmFlushBeforeReload = function () {
     return ready ? pullMergePush(true) : Promise.resolve();
   };
+  // requirement 8 (her spec 2026-08-13): "when I set it, save and push it
+  // immediately" -- for a field she'd notice missing right away (unlike most
+  // edits, which are fine riding the normal ~1.4s debounce), skip the wait.
+  window.__lcmPushNow = window.__lcmFlushBeforeReload;
   /* ---- requirement 3: flush a pending save before the tab actually closes
      or backgrounds -- a change made just before that must still reach the
      cloud, so this uses fetch(keepalive:true), which (unlike the normal
@@ -8665,6 +8700,10 @@
       if (row && row.data && (row.data[PH_KEY] || row.data[PR_KEY])) {
         var localHas = !!localStorage.getItem(PH_KEY);
         if (localHas && sessionStorage.getItem(APPLIED) === row.updated_at) { go(); return; }
+        // this cold-boot adopt bypasses mergeSections entirely, so it needs
+        // its own copy of the same requirement-8 guard: don't let a cloud
+        // copy with no location name/address wipe one already set here.
+        if (row.data[PH_KEY] && localHas) row.data[PH_KEY] = preserveLocationField(row.data[PH_KEY], localStorage.getItem(PH_KEY), null);
         apply(row.data);
         sessionStorage.setItem(APPLIED, row.updated_at || "");
         location.reload();                                  // clean boot on the adopted data
