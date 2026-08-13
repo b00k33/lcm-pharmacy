@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260813-220831">
+<meta name="lcm-build" content="20260813-222050">
 <script>
   // self-update check (her ask 2026-08-11, "still not collapsing/working" --
   // both were already fixed and shipped; she was just looking at a GitHub
@@ -8263,7 +8263,7 @@
   // Also strips activeTab (which tab is open) out of the comparison entirely --
   // it's saved locally so a reload reopens the same tab, but it's not real data,
   // and syncing it would mean two devices simply looking at different tabs count
-  // as a "conflict" on every push. applyMerged() below re-attaches THIS device's
+  // as a "conflict" on every push. applyMergedLocal() below re-attaches THIS device's
   // own current tab afterward, so it's never lost, just never fought over.
   function splitPharmacy(rawStr) {
     var obj; try { obj = JSON.parse(rawStr); } catch (e) { obj = null; }
@@ -8493,7 +8493,10 @@
       } else if (res.conflicts.length && !isOwnEcho) {
         showSyncNote("Merged an edit made on another device (" + res.conflicts.join(", ").replace(/_/g, " ") + "). If something looks off, use 🕐 Cloud history.");
       }
-      if (res.changed) { applyMerged(res.sections); } else { setBaseFrom(res.sections); }
+      // writing the decided result into localStorage is always safe to do
+      // right away -- it's only the BASE bookkeeping (below) that has to
+      // wait for a real push to actually land.
+      if (res.changed) applyMergedLocal(res.sections);
       var finalSnap = assembleFromSections(res.sections);
       var finalJson = JSON.stringify(finalSnap);
       // push whenever the cloud doesn't already match what this merge just
@@ -8502,14 +8505,24 @@
       // "local wins" (a restore, an edit made just before closing last
       // time), and that has to reach the cloud right away or the next pull
       // anywhere quietly reverts it.
-      if (!(pushAfter || res.cloudStale) || finalJson === lastPushed) { setLive(true); return; }
-      // item 7 (her data-safety spec 2026-08-13): optimistic concurrency.
-      // row.updated_at is what THIS merge was computed against -- pass it
-      // through so doUpsert can check, right before writing, that nobody
-      // else's push landed in the gap between this fetch and now. That gap
-      // is normally milliseconds, but two devices saving within the same
-      // second is exactly the scenario she asked this to cover.
-      return doUpsert(finalSnap, finalJson, row && row.updated_at);
+      var needsPush = (pushAfter || res.cloudStale) && finalJson !== lastPushed;
+      if (!needsPush) { setBaseFrom(res.sections); setLive(true); return; }
+      // her report 2026-08-13 ("ticking the HH box gets undone a few seconds
+      // later"): base used to advance to match "local wins" BEFORE the push
+      // to Supabase was actually confirmed. In that gap -- normally under a
+      // second, but real -- her very next click (or the realtime echo of
+      // THIS push) could run another merge cycle that saw local already ==
+      // base (nothing new to send) while the cloud row it just fetched was
+      // still the OLD value (hadn't caught up yet), and misread that lag as
+      // "the cloud moved forward", reverting straight back to the stale
+      // copy. Base now only advances once doUpsert CONFIRMS the write --
+      // .then(ok => ok && ...) below. A failed or superseded push leaves
+      // base exactly where it was, so the next cycle still correctly sees
+      // local as ahead and keeps retrying the same content instead of
+      // mistaking a lagging cloud for a real remote change.
+      return doUpsert(finalSnap, finalJson, row && row.updated_at).then(function (ok) {
+        if (ok) setBaseFrom(res.sections);
+      });
     }, function () {
       // couldn't reach the cloud to pull first -- fall back to a plain push
       // of what's here now; the existing retry/backoff in onPushFail covers
@@ -8518,7 +8531,7 @@
       setLive(false);
     });
   }
-  function applyMerged(sections) {
+  function applyMergedLocal(sections) {
     var assembled = assembleFromSections(sections);
     try {
       var curLocal = JSON.parse(localStorage.getItem(PH_KEY));
@@ -8530,19 +8543,22 @@
     } catch (e) {}
     apply(assembled);
     refreshApp();
-    setBaseFrom(sections);
   }
+  // resolves true only when THIS exact snap/json is confirmed saved -- the
+  // caller uses that to know whether it's safe to advance base to match it
+  // (see the 2026-08-13 fix note in pullMergePush above).
   function doUpsert(snap, json, expectedVersion) {
     function write() {
       return maybeWithHistory(snap).then(function (payload) {
         return sb.from("settings").upsert(payload, { onConflict: "owner" }).select("updated_at").then(function (r) {
-          if (r.error) return onPushFail(json);
+          if (r.error) { onPushFail(json); return false; }
           lastPushed = json;
           pushFailStreak = 0;
           lastSavedAt = (r.data && r.data[0] && r.data[0].updated_at) || new Date().toISOString();
           if (r.data && r.data[0]) sessionStorage.setItem(APPLIED, r.data[0].updated_at);
           setLive(true); renderSavedAt();
-        }, function () { onPushFail(json); });
+          return true;
+        }, function () { onPushFail(json); return false; });
       });
     }
     if (expectedVersion == null) return write();
@@ -8551,10 +8567,13 @@
     // merge was computed from and right now -- a changed updated_at means
     // another device saved in that window, so re-run the whole pull+merge
     // cycle against the NEW cloud row instead of blindly writing over it.
+    // That recursive cycle owns its own base bookkeeping, so THIS call
+    // resolves false either way -- the original (now-stale) snap must never
+    // also get to set base.
     return sb.from("settings").select("updated_at").maybeSingle().then(function (r) {
       if (r.error) return write();               // couldn't check -- write anyway rather than lose the save entirely
       var nowVersion = r.data && r.data.updated_at;
-      if (nowVersion && nowVersion !== expectedVersion) return pullMergePush(true);
+      if (nowVersion && nowVersion !== expectedVersion) return pullMergePush(true).then(function () { return false; });
       return write();
     }, function () { return write(); });
   }
