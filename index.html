@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260813-163450">
+<meta name="lcm-build" content="20260813-164607">
 <script>
   // self-update check (her ask 2026-08-11, "still not collapsing/working" --
   // both were already fixed and shipped; she was just looking at a GitHub
@@ -7665,7 +7665,19 @@
       Object.keys(data).forEach(k => {
         if (data[k] != null) localStorage.setItem(k, typeof data[k] === "string" ? data[k] : JSON.stringify(data[k]));
       });
-      location.reload();
+      // on the synced build, push this to the cloud BEFORE reloading, and
+      // actually wait for it -- the "flush on tab-hide" safety net (fired by
+      // the reload below) sends its copy via a size-capped keepalive fetch
+      // that silently fails to even send a data set this size (confirmed
+      // 2026-08-13: it threw "Failed to fetch" on every attempt, unheard
+      // because nothing was listening for that rejection), so a restore
+      // would land locally, then get silently reverted the moment anything
+      // next talked to the cloud, which still held the old copy. Pushing
+      // through the normal (uncapped) sync path first, and only reloading
+      // once that's confirmed, means the cloud is already correct before
+      // any of that can happen.
+      (window.__lcmFlushBeforeReload ? window.__lcmFlushBeforeReload() : Promise.resolve())
+        .then(() => location.reload(), () => location.reload());
     });
   }
   function phRenderRestorePanel() {
@@ -8173,6 +8185,13 @@
       if (pendingPushWhileStale) { pendingPushWhileStale = false; schedulePush(); }
     }
   }
+  // called by the main app right before a restore reloads the page -- pushes
+  // through the normal (uncapped) path and actually waits for it, instead of
+  // relying on flushOnHide's pagehide flush, whose keepalive body limit a
+  // real data set always blows past (see flushOnHide above).
+  window.__lcmFlushBeforeReload = function () {
+    return ready ? pullMergePush(true) : Promise.resolve();
+  };
   /* ---- requirement 3: flush a pending save before the tab actually closes
      or backgrounds -- a change made just before that must still reach the
      cloud, so this uses fetch(keepalive:true), which (unlike the normal
@@ -8184,6 +8203,15 @@
     if (json === lastPushed) return;
     var cfg = loadCfg(); if (!cfg) return;
     try {
+      // her data is well past Chrome's ~64KB keepalive body cap, so this
+      // reliably REJECTS (not sends) for a data set this size -- confirmed
+      // 2026-08-13 via "TypeError: Failed to fetch" on every single close.
+      // Kept as a best-effort for small payloads / other devices, but
+      // .catch() so a guaranteed-to-fail send doesn't spam the console, and
+      // lastPushed is deliberately NOT updated here -- restore/edit flows
+      // that need a guaranteed send now push through the normal (uncapped)
+      // path first and await it (see window.__lcmFlushBeforeReload) instead
+      // of relying on this.
       fetch(cfg.url + "/rest/v1/settings?on_conflict=owner", {
         method: "POST", keepalive: true,
         headers: {
@@ -8193,9 +8221,7 @@
           "Prefer": "resolution=merge-duplicates,return=minimal"
         },
         body: JSON.stringify([{ data: snap }])
-      });
-      lastPushed = json;   // optimistic -- a keepalive request's result can't be awaited from here;
-                            // a genuine failure just means the usual retry-on-next-foreground catches it
+      }).then(function () { lastPushed = json; }, function () {});
     } catch (e) {}
   }
   document.addEventListener("visibilitychange", function () {
