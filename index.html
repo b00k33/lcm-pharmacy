@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260814-085321">
+<meta name="lcm-build" content="20260814-091319">
 <script>
   // self-update check (her ask 2026-08-11, "still not collapsing/working" --
   // both were already fixed and shipped; she was just looking at a GitHub
@@ -3943,6 +3943,11 @@
   // at/below its reorder point. Disjoint on purpose so the badges add up.
   // Stopped (write-offs) sit in their own gray count; phase-outs (sell-down
   // stock) in a yellow one — neither pollutes the reorder alerts.
+  // her ask (2026-08-14): every herb-listing table reads alphabetically, not
+  // by qty/insertion order — one comparator, reused everywhere a herb array
+  // gets sorted for display (formulas' stored names sort fine case-insensitive
+  // even though they DISPLAY all-caps via phDispName)
+  const phByName = (a, b) => (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base", numeric: true });
   const phZeroHerbs = () => PHARMACY.herbs.filter(h => !h.stopped && h.qty != null && h.qty <= 0);
   const phLowHerbs = () => PHARMACY.herbs.filter(h => !h.stopped && h.qty != null && h.qty > 0 && h.low != null && h.qty <= h.low);
   const phStoppedHerbs = () => PHARMACY.herbs.filter(h => phHerbStatusKey(h) === "stopped");
@@ -4008,8 +4013,8 @@
   };
 
   function renderPhFlags() {
-    const zero = phZeroHerbs().filter(phNotSnoozed), low = phLowHerbs().filter(phNotSnoozed);
-    const stopped = phStoppedHerbs(), phaseout = phPhaseOutHerbs(), snoozed = phSnoozedHerbs();
+    const zero = phZeroHerbs().filter(phNotSnoozed).sort(phByName), low = phLowHerbs().filter(phNotSnoozed).sort(phByName);
+    const stopped = phStoppedHerbs().sort(phByName), phaseout = phPhaseOutHerbs().sort(phByName), snoozed = phSnoozedHerbs().sort(phByName);
     if (phListingOpen === "stopped" && !stopped.length) phListingOpen = null;   // last one resumed
     if (phListingOpen === "phaseout" && !phaseout.length) phListingOpen = null; // last one sold down
     if (phListingOpen === "snoozed" && !snoozed.length) phListingOpen = null;   // last one unsnoozed/returned
@@ -6148,14 +6153,14 @@
     // her ask (2026-08-04): "To order" should count what's STILL to be ordered,
     // not everything flagged regardless of stage -- that was double-counting
     // against "On the way"
-    const stillToOrder = toOrder.filter(h => !h.ordered);
-    const onTheWay = toOrder.filter(h => h.ordered);
+    const stillToOrder = toOrder.filter(h => !h.ordered).sort(phByName);
+    const onTheWay = toOrder.filter(h => h.ordered).sort(phByName);
     const unflagged = herbs.filter(h => !h.stopped && !h.order && h.qty != null
       && (h.qty <= 0 || (h.low != null && h.qty <= h.low))
       && !phIsInHouseSup((phActiveSupplier(h) || {}).name)
       && phNotSnoozed(h))
-      .sort((a, b) => (a.qty || 0) - (b.qty || 0));
-    const snoozed = phSnoozedHerbs();
+      .sort(phByName);
+    const snoozed = phSnoozedHerbs().sort(phByName);
     if (!snoozed.length) phRestockSnoozeOpen = false;
     const arrMonth = PHARMACY.log.filter(e => {
       if (e.kind !== "arrival") return false;
@@ -6428,6 +6433,7 @@
     const q = phLogSearch.trim().toLowerCase();
     const hit = e => !q
       || (e.what || "").toLowerCase().includes(q)
+      || (e.formula || "").toLowerCase().includes(q)
       || (e.patient || "").toLowerCase().includes(q)
       || (Array.isArray(e.items) && e.items.some(i => ((i.name || "") + " " + (i.code || "")).toLowerCase().includes(q)))
       || (Array.isArray(e.added) && e.added.some(a => (a.name || "").toLowerCase().includes(q)));
@@ -6441,8 +6447,8 @@
       const date = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
       const open = phLogOpen === e.id;
       const label = e.kind === "refill" ? `🏺 Refill — ${phDispName(e.what, true)}`
-        : e.kind === "arrival" ? "📦 Order arrived" : phDispName(e.what);
-      const patient = (!e.kind || e.kind === "dispense") && e.patient && e.patient !== e.what ? phTitle(e.patient) : "";
+        : e.kind === "arrival" ? "📦 Order arrived" : (e.formula || phDispName(e.what));
+      const patient = (!e.kind || e.kind === "dispense") && e.patient ? phTitle(e.patient) : "";
       return `<tr>
         <td class="ph-log-exp"><button type="button" class="ph-log-toggle${open ? " on" : ""}" data-ph-log-open="${e.id}" aria-expanded="${open}" aria-label="${open ? "Close" : "Show"} the details">${open ? "−" : "+"}</button></td>
         <td class="ph-name">${esc(label)}</td>
@@ -7603,12 +7609,18 @@
     if (!gp || !t.ingredients.length) return;
     const { items, cost, price, method } = presCalcNumbers(t, gp);
     const now = new Date();
+    // patient-type templates store the patient's name in t.name, not a formula
+    // name (see presPatientFor) — "what" must never just echo t.name for those,
+    // or the log ends up with e.what === e.patient and the summary row can't
+    // tell which is which (her 2026-08-14 report: formula column showed the
+    // patient's name, patient column went blank)
+    const formulaLabel = presIsFormula(t) ? "" : ((document.getElementById("presFormulaText") || {}).value || t.formula || "").trim();
     const entry = {
       id: uid(), kind: "dispense", date: keyOf(TODAY), at: now.getTime(),
       patient: presPatientFor(t), method,
-      formula: presIsFormula(t) ? "" : ((document.getElementById("presFormulaText") || {}).value || t.formula || "").trim(),
+      formula: formulaLabel,
       dosage: [presDosageText(), presInstructionText()].filter(Boolean).join(" · "),
-      what: t.name, grams: gp, cost: phRound2(cost), price: phRound2(price),
+      what: presIsFormula(t) ? t.name : (formulaLabel || t.name), grams: gp, cost: phRound2(cost), price: phRound2(price),
       useBefore: presUseBeforeStr(now),
       items: items.map(x => ({ code: x.code, name: x.name, grams: x.grams })),
       deducted: presPending[t.id] || [],
