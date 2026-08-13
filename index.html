@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260813-184614">
+<meta name="lcm-build" content="20260813-192339">
 <script>
   // self-update check (her ask 2026-08-11, "still not collapsing/working" --
   // both were already fixed and shipped; she was just looking at a GitHub
@@ -4632,11 +4632,16 @@
       const logDateUnlock = e.target.closest("[data-ph-log-date-unlock]");
       if (logDateUnlock) {
         // her ask 2026-08-13: this same date-edit control now also renders
-        // inside the Prescriptions page's Dispense history (renderPresLog),
-        // not just the 📜 Log page (renderPhLogRows) -- re-render through the
-        // tab-aware renderPharmacy() so it lands back on whichever of those
-        // is actually on screen, instead of hard-coding one of them
+        // inside the Prescriptions page's Dispense history (renderPresLog)
+        // and an open patient's History card, not just the 📜 Log page
+        // (renderPhLogRows) -- re-render through the tab-aware
+        // renderPharmacy() so it lands back on whichever is on screen.
+        // Src pins the input to the ONE table she clicked in; without it the
+        // same entry showing in two tables would open two inputs whose
+        // auto-focus blur each other shut (see phLogDateEditSrc's comment).
         phLogDateEdit = logDateUnlock.dataset.phLogDateUnlock;
+        phLogDateEditSrc = logDateUnlock.closest("#presLog") ? "preslog"
+          : logDateUnlock.closest(".ph-pres-history") ? "hist" : "log";
         renderPharmacy(); return;
       }
       const ingDel = e.target.closest("[data-pres-ing-del]");
@@ -5555,7 +5560,7 @@
           if (pt && entry.at) { pt.lastDispensedAt = entry.at; savePresc(); }
           savePharmacy();
         }
-        phLogDateEdit = null;
+        phLogDateEdit = null; phLogDateEditSrc = null;
         renderPharmacy();
         return;
       }
@@ -6073,8 +6078,15 @@
   // her ask (2026-08-06): prescriptions log automatically with today's date,
   // but a backdated entry (a dispense she forgot to log at the time) needs a
   // way to fix the date afterward — click-to-unlock, same pattern as the
-  // Inventory grid's cell edits, id of the log entry currently unlocked
-  let phLogDateEdit = null;
+  // Inventory grid's cell edits, id of the log entry currently unlocked.
+  // phLogDateEditSrc pins WHICH table the unlock happened in ("log" /
+  // "preslog" / "hist") — the same entry can render in two tables at once
+  // on the Prescriptions page (an open patient's History card AND the
+  // Dispense history list), and if both swapped in an input, each table's
+  // auto-focus would blur the other's input, firing the focusout save
+  // handler and instantly closing the editor she just opened (her bug
+  // report 2026-08-13: "clicking date does nothing").
+  let phLogDateEdit = null, phLogDateEditSrc = null;
   // one expanded prescription, her Galcott card shape: identity lines, the
   // ingredient list at its grams, cost, price (incl. GST), dosage
   function phLogDetailHtml(e) {
@@ -6160,7 +6172,7 @@
         <td class="ph-log-exp"><button type="button" class="ph-log-toggle${open ? " on" : ""}" data-ph-log-open="${e.id}" aria-expanded="${open}" aria-label="${open ? "Close" : "Show"} the details">${open ? "−" : "+"}</button></td>
         <td class="ph-name">${esc(label)}</td>
         <td>${esc(patient)}</td>
-        <td class="ph-num">${phLogDateEdit === e.id
+        <td class="ph-num">${phLogDateEdit === e.id && phLogDateEditSrc === "log"
           ? `<input type="date" class="ph-qty-input" data-ph-log-date-edit="${e.id}" value="${e.date}" aria-label="Date for ${esc(label)}">`
           : `<button type="button" class="ph-qty-lock" data-ph-log-date-unlock="${e.id}" title="Click to edit the date">${date}</button>`}</td>
         <td class="ph-pres-actions"><button class="del" data-ph-log-del="${e.id}" aria-label="Delete entry and reverse its stock movement">×</button></td>
@@ -6344,7 +6356,7 @@
           // 📜 Log page's Rx Date column (renderPhLogRows) -- same markup,
           // same phLogDateEdit state, same save logic (bound once, shared)
           return `<tr>
-            <td style="white-space:nowrap">${phLogDateEdit === e.id
+            <td style="white-space:nowrap">${phLogDateEdit === e.id && phLogDateEditSrc === "preslog"
               ? `<input type="date" class="ph-qty-input" data-ph-log-date-edit="${e.id}" value="${e.date}" aria-label="Date for ${esc(e.patient ? phTitle(e.patient) : phDispName(e.what))}">`
               : `<button type="button" class="ph-qty-lock" data-ph-log-date-unlock="${e.id}" title="Click to edit the date">${d.getDate()} ${MON_SHORT[d.getMonth()]} ${d.getFullYear()}</button>`}</td>
             <td><b>${e.patient ? esc(phTitle(e.patient)) : "—"}</b></td>
@@ -6586,7 +6598,7 @@
         // and the Dispense history list -- same phLogDateEdit state, same
         // save logic (bound once, shared), just a third place it renders
         return `<tr>
-          <td class="ph-hist-date">${phLogDateEdit === e.id
+          <td class="ph-hist-date">${phLogDateEdit === e.id && phLogDateEditSrc === "hist"
             ? `<input type="date" class="ph-qty-input" data-ph-log-date-edit="${e.id}" value="${e.date}" aria-label="Date for ${esc(phDispName(e.what))}">`
             : `<button type="button" class="ph-qty-lock" data-ph-log-date-unlock="${e.id}" title="Click to edit the date">${d.getDate()} ${MON_SHORT[d.getMonth()]} ${d.getFullYear()}</button>${e.at ? `<span class="ph-hist-time">${presTimeStr(new Date(e.at))}</span>` : ""}`}</td>
           <td class="ph-name"><b>${esc(phDispName(e.what))}</b>${e.grams ? ` · ${phFmtG(e.grams)}g` : ""}${ings}${e.dosage ? `<div class="ph-log-deduct">${esc(e.dosage)}</div>` : ""}</td>
