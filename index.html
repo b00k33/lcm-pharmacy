@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260813-192339">
+<meta name="lcm-build" content="20260813-195216">
 <script>
   // self-update check (her ask 2026-08-11, "still not collapsing/working" --
   // both were already fixed and shipped; she was just looking at a GitHub
@@ -2297,8 +2297,43 @@
   const PH_DAILY_KEY  = "lcmbak-daily";        // one per calendar day, kept 30 days
   const PH_EXPORT_AT_KEY = "lcmbak-last-export";
   let PH_DATA_WARNING = null;   // set during boot if a load had to recover from a backup
+  // items 1+2 of her data-safety spec (2026-08-13). phSavedCounts is the
+  // last size of each store that's KNOWN to match what's really written on
+  // disk -- set by the loaders from what they actually parsed out of
+  // storage, refreshed on every successful save. savePharmacy/savePresc
+  // compare against it so a suddenly-halved store (the signature of a bad
+  // load, never of real work) is refused instead of written.
+  let phSavedCounts = { herbs: null, log: null, items: null };
   function phReadJsonArray(key) {
     try { const v = JSON.parse(localStorage.getItem(key)); return Array.isArray(v) ? v : []; } catch (e) { return []; }
+  }
+  // item 1: before recovering from a corrupt read, park the raw broken string
+  // under its own key so nothing is ever simply thrown away. Deliberately NOT
+  // daybook-prefixed -- the sync layer pushes every daybook* key to the
+  // cloud, and a corrupt blob must never ride along. Keeps the 3 newest.
+  function phQuarantineCorrupt(key, raw) {
+    try {
+      const ts = new Date().toISOString().replace(/[:.]/g, "-");
+      localStorage.setItem("lcmbak-corrupt-" + key + "-" + ts, raw);
+      const mine = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.indexOf("lcmbak-corrupt-" + key + "-") === 0) mine.push(k);
+      }
+      mine.sort().slice(0, -3).forEach(k => localStorage.removeItem(k));
+    } catch (e) {}
+  }
+  // item 2: a save that fails must be LOUD -- a fixed banner that stays until
+  // dismissed, so a quiet catch{} can never again make a lost write look fine
+  function phShowSaveError(msg) {
+    let b = document.getElementById("phSaveError");
+    if (!b) {
+      b = document.createElement("div");
+      b.id = "phSaveError";
+      b.style.cssText = "position:fixed;left:12px;right:12px;top:12px;z-index:2147483500;background:#8a1f14;color:#fff;padding:12px 16px;border-radius:12px;font:600 13px/1.45 system-ui,sans-serif;box-shadow:0 8px 30px rgba(0,0,0,.35)";
+      document.documentElement.appendChild(b);
+    }
+    b.innerHTML = "⚠ " + msg + ' <button onclick="this.parentNode.remove()" style="float:right;background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;padding:4px 10px;cursor:pointer;font:600 12px system-ui">OK</button>';
   }
   // only ever back up data that actually parses and has real content -- a
   // backup of empty/broken data would defeat the whole point of a safety net
@@ -2359,6 +2394,9 @@
         const st = { ...empty, ...v };
         // one-time seed for a store created before the import existed
         if (!st.seeded && !st.herbs.length) { st.herbs = seedHerbs(); st.seeded = true; }
+        // what's really on disk right now -- the baseline the save-time
+        // shrink guard compares against (items 1+2, 2026-08-13)
+        phSavedCounts.herbs = st.herbs.length; phSavedCounts.log = (st.log || []).length;
         return st;
       }
       throw new Error("unexpected shape");   // parsed, but not an object -- treat like unreadable below
@@ -2372,11 +2410,13 @@
       // is real corruption, and only then do we reach for a backup instead of
       // quietly reseeding -- restore the newest one, keep her real data.
       if (raw != null) {
+        phQuarantineCorrupt(PHARMACY_KEY, raw);   // item 1: park the broken copy first, never discard it
         const bak = phLatestBackup();
         if (bak) {
           try {
             const st = { ...empty, ...JSON.parse(bak.ph) };
             PH_DATA_WARNING = { kind: "pharmacy", at: bak.ts };
+            phSavedCounts.herbs = st.herbs.length; phSavedCounts.log = (st.log || []).length;
             return st;
           } catch (e2) {}
         }
@@ -2390,8 +2430,28 @@
   // until she's actually restored something, so a routine autosave elsewhere
   // in the app can never quietly pave over it first
   function savePharmacy() {
-    if (PH_DATA_WARNING && PH_DATA_WARNING.kind === "pharmacy-unrecoverable") return;
-    try { localStorage.setItem(PHARMACY_KEY, JSON.stringify(PHARMACY)); phMaybeBackup(); } catch (e) {}
+    if (PH_DATA_WARNING && PH_DATA_WARNING.kind === "pharmacy-unrecoverable") return false;
+    // shrink guard (items 1+2, 2026-08-13): a store that suddenly halves in
+    // one write is the signature of a bad load (today's wipes: 301 herbs
+    // kept, log and prescriptions gone), never of real pharmacy work --
+    // refuse the write and say so. Genuine restores don't come through here
+    // (they write localStorage directly, then reload).
+    const drop = (was, now) => was != null && was >= 10 && now < was * 0.5;
+    if (drop(phSavedCounts.herbs, PHARMACY.herbs.length) || drop(phSavedCounts.log, PHARMACY.log.length)) {
+      phShowSaveError("Blocked a suspicious save: the app tried to overwrite " + phSavedCounts.herbs + " herbs / " + phSavedCounts.log +
+        " log entries with " + PHARMACY.herbs.length + " / " + PHARMACY.log.length + ". Nothing was saved — reload this page to get the good copy back, and tell Claude this happened.");
+      return false;
+    }
+    try {
+      localStorage.setItem(PHARMACY_KEY, JSON.stringify(PHARMACY));
+      phSavedCounts.herbs = PHARMACY.herbs.length; phSavedCounts.log = PHARMACY.log.length;
+      phMaybeBackup();
+      return true;
+    } catch (e) {
+      phShowSaveError("NOT saved — this device's storage is full or blocked (" + ((e && e.name) || "error") +
+        "). The change is still on screen but NOT stored. Free up space or close other tabs, then redo the edit.");
+      return false;
+    }
   }
   let PHARMACY = loadPharmacy();
 
@@ -2725,6 +2785,7 @@
       if (v && typeof v === "object" && !Array.isArray(v)) {
         const st = { ...empty, ...v };
         if (!st.seeded && !st.items.length && PRES_SEED.length) { st.items = seedItems(); st.seeded = true; }
+        phSavedCounts.items = st.items.length;   // save-time shrink-guard baseline (items 1+2)
         return st;
       }
       throw new Error("unexpected shape");
@@ -2736,11 +2797,13 @@
       // corrupted string itself is left untouched in storage either way
       // (loadPresc never writes) -- see the eager-save note below.
       if (raw != null) {
+        phQuarantineCorrupt(PRESC_KEY, raw);   // item 1: park the broken copy first, never discard it
         const bak = phLatestBackup();
         if (bak && bak.pr != null) {
           try {
             const st = { ...empty, ...JSON.parse(bak.pr) };
             if (!PH_DATA_WARNING) PH_DATA_WARNING = { kind: "prescriptions", at: bak.ts };
+            phSavedCounts.items = st.items.length;
             return st;
           } catch (e2) {}
         }
@@ -2750,8 +2813,23 @@
     return { ...empty, items: seedItems(), seeded: PRES_SEED.length > 0 };
   }
   function savePresc() {
-    if (PH_DATA_WARNING && PH_DATA_WARNING.kind === "prescriptions-unrecoverable") return;
-    try { localStorage.setItem(PRESC_KEY, JSON.stringify(PRESC)); phMaybeBackup(); } catch (e) {}
+    if (PH_DATA_WARNING && PH_DATA_WARNING.kind === "prescriptions-unrecoverable") return false;
+    // same shrink guard + loud-failure rules as savePharmacy (items 1+2)
+    if (phSavedCounts.items != null && phSavedCounts.items >= 10 && PRESC.items.length < phSavedCounts.items * 0.5) {
+      phShowSaveError("Blocked a suspicious save: the app tried to overwrite " + phSavedCounts.items + " prescriptions with " +
+        PRESC.items.length + ". Nothing was saved — reload this page to get the good copy back, and tell Claude this happened.");
+      return false;
+    }
+    try {
+      localStorage.setItem(PRESC_KEY, JSON.stringify(PRESC));
+      phSavedCounts.items = PRESC.items.length;
+      phMaybeBackup();
+      return true;
+    } catch (e) {
+      phShowSaveError("NOT saved — this device's storage is full or blocked (" + ((e && e.name) || "error") +
+        "). The change is still on screen but NOT stored. Free up space or close other tabs, then redo the edit.");
+      return false;
+    }
   }
   let PRESC = loadPresc();
   // persist the first seeding right away so template ids stay stable across
@@ -2778,14 +2856,23 @@
   // debounced re-render (or save) that reads it never ran.
   const phTimers = {};
   const phDefer = (key, fn, ms) => {
-    clearTimeout(phTimers[key]);
-    phTimers[key] = setTimeout(() => { phTimers[key] = null; fn(); }, ms);
+    if (phTimers[key]) clearTimeout(phTimers[key].t);
+    phTimers[key] = { fn, t: setTimeout(() => { phTimers[key] = null; fn(); }, ms) };
   };
-  // a queued prescription write must not die with the tab
-  window.addEventListener("pagehide", () => {
-    if (phTimers.savePresc) { clearTimeout(phTimers.savePresc); phTimers.savePresc = null; savePresc(); }
-    if (phTimers.presTmpl) { clearTimeout(phTimers.presTmpl); phTimers.presTmpl = null; presFlushTemplate(); }
-  });
+  // item 4 (her data-safety spec 2026-08-13): EVERYTHING still waiting in a
+  // debounce window runs NOW when the tab closes or backgrounds -- a save
+  // sitting 200ms out must not die with the tab. This replaces the old
+  // handler that flushed only two hand-picked timers; a render flushed
+  // alongside a save is just harmless extra work.
+  const phFlushDeferred = () => {
+    Object.keys(phTimers).forEach(k => {
+      const p = phTimers[k]; if (!p) return;
+      clearTimeout(p.t); phTimers[k] = null;
+      try { p.fn(); } catch (e) {}
+    });
+  };
+  window.addEventListener("pagehide", phFlushDeferred);
+  document.addEventListener("visibilitychange", () => { if (document.hidden) phFlushDeferred(); });
   const phRound2 = n => Math.round(n * 100) / 100;
   // her rule (2026-08-01): $/g rounds UP to the nearest 10c across ALL
   // inventory, herbs included, not just computed made-in-house/restock
@@ -7221,7 +7308,18 @@
     // just stayed open through the deduct/save. Collapse it back here so
     // dispensing always ends on the same clean, collapsed state.
     presLabelOpen = false;
-    savePharmacy(); renderPharmacy();
+    // item 3 (her data-safety spec 2026-08-13): the deduction is only real if
+    // it actually reached storage -- on a failed save, put every gram back so
+    // the shelf numbers on screen never drift from what's genuinely stored
+    if (!savePharmacy()) {
+      deducted.forEach(d => {
+        const h = PHARMACY.herbs.find(hh => hh.id === d.herbId);
+        if (h) { h.qty = phRound2((h.qty || 0) + d.grams); phAfterQtyChange(h); }
+      });
+      delete presPending[t.id];
+      phFlash = "⚠ Nothing was deducted — the save failed, so the stock change was rolled back.";
+    }
+    renderPharmacy();
   }
   // 💾 Save & Log: writes the record (📖 History / 📜 Log) with the
   // dispense date + time and Use Before, folding in whatever the last Dispense
@@ -7327,6 +7425,15 @@
       items: items.map(x => ({ code: x.code, name: x.name, grams: x.grams })),
       deducted: presPending[t.id] || [],
     };
+    // item 3 (her data-safety spec 2026-08-13): the log entry (pharmacy
+    // store) and the "✓ Dispensed" stamp (prescriptions store) are two
+    // different localStorage writes -- do them as one unit. Remember what's
+    // being changed, save the BIG store first (the likelier one to fail),
+    // then the stamp; if either write fails, unwind both in memory and
+    // re-save whichever half already landed, so a stamp can never exist
+    // without its log entry (or vice versa).
+    const prevStamp = { at: t.lastDispensedAt, g: t.lastDispensedGrams, id: t.lastDispenseLogId };
+    const pendingWas = presPending[t.id] || [];
     delete presPending[t.id];
     PHARMACY.log.unshift(entry);
     // her ask (2026-08-04): a toast that fades is no proof anything happened --
@@ -7334,10 +7441,20 @@
     // Dispensed · <date> <time>" marker every time she reopens this script,
     // not just for the rest of this visit
     t.lastDispensedAt = entry.at; t.lastDispensedGrams = gp; t.lastDispenseLogId = entry.id;
-    savePresc();
+    const okPh = savePharmacy();
+    const okPr = okPh ? savePresc() : false;
+    if (!okPh || !okPr) {
+      PHARMACY.log = PHARMACY.log.filter(x => x.id !== entry.id);
+      t.lastDispensedAt = prevStamp.at; t.lastDispensedGrams = prevStamp.g; t.lastDispenseLogId = prevStamp.id;
+      presPending[t.id] = pendingWas;
+      if (okPh) savePharmacy();   // the log write landed but the stamp didn't -- take the log entry back out of storage too
+      phFlash = "⚠ NOT logged — the save failed, so nothing was recorded and nothing changed.";
+      renderPharmacy();
+      return;
+    }
     phFlash = `Prescription logged${entry.patient ? ` for <b>${esc(phTitle(entry.patient))}</b>` : ""} — ${phFmtG(gp)}g · ${presTimeStr(now)} · in 📖 History and 📜 Log <button type="button" class="ph-undo-btn" data-ph-undo="${entry.id}">↩ Undo</button>`;
     presLabelOpen = false;   // see the note on presDispense — collapse the label preview once the record's logged
-    savePharmacy(); renderPharmacy();
+    renderPharmacy();
   }
 
   /* ============================================================
@@ -7708,23 +7825,83 @@
     const d = new Date(ts);
     return isNaN(d) ? String(ts) : d.toLocaleString(undefined, { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" });
   }
+  // ---- item 11 (her data-safety spec 2026-08-13): section-aware restore --
+  // ONE canonical definition of what "restore only prescriptions / only
+  // inventory / only the log" means, shared with the sync layer's cloud-
+  // history restore via window.__lcmSections so the two can never drift.
+  window.__lcmSections = {
+    counts(pair) {
+      const out = { herbs: null, log: null, presc: null };
+      try { const p = JSON.parse(pair[PHARMACY_KEY]); out.herbs = (p.herbs || []).length; out.log = (p.log || []).length; } catch (e) {}
+      try { const r = JSON.parse(pair[PRESC_KEY]); out.presc = ((r && r.items) || []).length; } catch (e) {}
+      return out;
+    },
+    compose(cur, bak, ch) {
+      const parse = s => { try { const v = JSON.parse(s); return v && typeof v === "object" && !Array.isArray(v) ? v : {}; } catch (e) { return {}; } };
+      const curPh = parse(cur[PHARMACY_KEY]), bakPh = parse(bak[PHARMACY_KEY]);
+      const core = ch.inventory ? bakPh : curPh;      // "inventory" = everything in the pharmacy store except the log
+      const o = {};
+      Object.keys(core).forEach(k => { if (k !== "log") o[k] = core[k]; });
+      o.log = ch.log ? (Array.isArray(bakPh.log) ? bakPh.log : []) : (Array.isArray(curPh.log) ? curPh.log : []);
+      if (curPh.activeTab != null) o.activeTab = curPh.activeTab;   // which tab is open stays this device's business
+      const out = {};
+      out[PHARMACY_KEY] = JSON.stringify(o);
+      out[PRESC_KEY] = ch.prescriptions ? (bak[PRESC_KEY] != null ? bak[PRESC_KEY] : cur[PRESC_KEY]) : cur[PRESC_KEY];
+      return out;
+    }
+  };
+  let phPendingRestore = null;    // {data, norm, label} awaiting her section choice in the panel
   function phApplyRestoredData(data, sourceLabel) {
-    if (!confirm(`Restore from ${sourceLabel}?\n\nThis replaces everything currently in the app with that saved copy. What's here now will be downloaded first, just in case.`)) return;
+    // no more one-shot full overwrite behind a confirm() -- stage it, and let
+    // the panel show WHAT changes per section before anything is touched
+    const norm = {};
+    Object.keys(data).forEach(k => { const v = data[k]; if (v != null) norm[k] = typeof v === "string" ? v : JSON.stringify(v); });
+    phPendingRestore = { norm, label: sourceLabel };
+    phRenderRestorePanel();
+  }
+  function phRestoreChooserHtml() {
+    if (!phPendingRestore) return "";
+    const cur = { [PHARMACY_KEY]: localStorage.getItem(PHARMACY_KEY), [PRESC_KEY]: localStorage.getItem(PRESC_KEY) };
+    const a = window.__lcmSections.counts(cur), b = window.__lcmSections.counts(phPendingRestore.norm);
+    const row = (id, label, now, bak) =>
+      `<label class="ph-restore-row" style="gap:8px;cursor:pointer"><input type="checkbox" id="${id}" checked> <span style="flex:1">${label}</span><span style="color:var(--ph-soft);font-size:12px">${now == null ? "—" : now} now → ${bak == null ? "—" : bak} in backup</span></label>`;
+    return `<div style="border-top:2px solid var(--ph-line);margin-top:10px;padding-top:8px">
+      <h4 style="margin:0 0 6px">Restore from ${esc(phPendingRestore.label)}</h4>
+      <div style="font-size:12px;color:var(--ph-soft);margin-bottom:6px">Tick what to bring back — anything unticked stays exactly as it is now. A safety copy of the current data downloads first.</div>
+      ${row("phRestSecPresc", "Prescriptions", a.presc, b.presc)}
+      ${row("phRestSecInv", "Inventory &amp; settings", a.herbs == null ? null : a.herbs + " herbs", b.herbs == null ? null : b.herbs + " herbs")}
+      ${row("phRestSecLog", "Dispense/stock log", a.log, b.log)}
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button type="button" id="phRestGo" class="ph-restore-close" style="flex:1">Restore ticked sections</button>
+        <button type="button" id="phRestCancel" class="ph-restore-close" style="flex:1">Cancel</button>
+      </div></div>`;
+  }
+  function phDoSectionRestore() {
+    const ch = {
+      prescriptions: !!(document.getElementById("phRestSecPresc") || {}).checked,
+      inventory: !!(document.getElementById("phRestSecInv") || {}).checked,
+      log: !!(document.getElementById("phRestSecLog") || {}).checked,
+    };
+    const pending = phPendingRestore; phPendingRestore = null;
+    if (!pending || (!ch.prescriptions && !ch.inventory && !ch.log)) { phRenderRestorePanel(); return; }
     phDownloadBackupFile("before-restore").then(() => {
-      Object.keys(data).forEach(k => {
-        if (data[k] != null) localStorage.setItem(k, typeof data[k] === "string" ? data[k] : JSON.stringify(data[k]));
-      });
-      // on the synced build, push this to the cloud BEFORE reloading, and
-      // actually wait for it -- the "flush on tab-hide" safety net (fired by
-      // the reload below) sends its copy via a size-capped keepalive fetch
-      // that silently fails to even send a data set this size (confirmed
-      // 2026-08-13: it threw "Failed to fetch" on every attempt, unheard
-      // because nothing was listening for that rejection), so a restore
-      // would land locally, then get silently reverted the moment anything
-      // next talked to the cloud, which still held the old copy. Pushing
-      // through the normal (uncapped) sync path first, and only reloading
-      // once that's confirmed, means the cloud is already correct before
-      // any of that can happen.
+      if (ch.prescriptions && ch.inventory && ch.log) {
+        // everything ticked = the old full restore, including any extra
+        // daybook keys (column widths etc.) the backup carries
+        Object.keys(pending.norm).forEach(k => localStorage.setItem(k, pending.norm[k]));
+      } else {
+        const cur = { [PHARMACY_KEY]: localStorage.getItem(PHARMACY_KEY), [PRESC_KEY]: localStorage.getItem(PRESC_KEY) };
+        const composed = window.__lcmSections.compose(cur, pending.norm, ch);
+        if (composed[PHARMACY_KEY] != null) localStorage.setItem(PHARMACY_KEY, composed[PHARMACY_KEY]);
+        if (composed[PRESC_KEY] != null) localStorage.setItem(PRESC_KEY, composed[PRESC_KEY]);
+      }
+      // a restore may legitimately shrink a section -- tell the sync layer's
+      // shrink bodyguard this ONE push is deliberate, not a bad read
+      window.__lcmAllowShrinkOnce = true;
+      // push to the cloud BEFORE reloading and actually wait for it (the
+      // pagehide keepalive flush can't carry a data set this size -- see the
+      // 2026-08-13 keepalive-cap incident) so the cloud is already correct
+      // before anything else can pull it
       (window.__lcmFlushBeforeReload ? window.__lcmFlushBeforeReload() : Promise.resolve())
         .then(() => location.reload(), () => location.reload());
     });
@@ -7745,6 +7922,7 @@
         <div style="margin-bottom:8px;color:var(--ph-soft);font-size:12.5px">Or load a backup .json file (from ⬇ Back up data, on any device):</div>
         <button type="button" id="phRestoreFilePick">⬆ Choose a backup file…</button>
       </div>
+      ${phRestoreChooserHtml()}
       <button type="button" class="ph-restore-close" id="phRestoreCloseBtn">Close</button>`;
     panel.querySelectorAll("[data-ph-restore-bak]").forEach(btn => {
       btn.addEventListener("click", () => {
@@ -7752,10 +7930,14 @@
         if (b) phApplyRestoredData({ [PHARMACY_KEY]: b.ph, [PRESC_KEY]: b.pr }, `the ${phFmtBackupTs(b.ts)} backup`);
       });
     });
+    const goBtn = document.getElementById("phRestGo");
+    if (goBtn) goBtn.addEventListener("click", phDoSectionRestore);
+    const cancelBtn = document.getElementById("phRestCancel");
+    if (cancelBtn) cancelBtn.addEventListener("click", () => { phPendingRestore = null; phRenderRestorePanel(); });
     const pickBtn = document.getElementById("phRestoreFilePick");
     if (pickBtn) pickBtn.addEventListener("click", () => document.getElementById("phRestoreFileInput").click());
     const closeBtn = document.getElementById("phRestoreCloseBtn");
-    if (closeBtn) closeBtn.addEventListener("click", () => { panel.hidden = true; phRenderRestorePanel(); });
+    if (closeBtn) closeBtn.addEventListener("click", () => { panel.hidden = true; phPendingRestore = null; phRenderRestorePanel(); });
   }
   const phRestoreBtn = document.getElementById("phRestoreBtn");
   if (phRestoreBtn) phRestoreBtn.addEventListener("click", () => {
@@ -8017,7 +8199,12 @@
   // is almost certainly a bad read somewhere upstream, not real mass deletion
   function sectionLooksEmptier(name, fromStr, toStr) {
     var a = sectionLen(name, fromStr), b = sectionLen(name, toStr);
-    return a != null && a >= 10 && b != null && b < a * 0.5;
+    // a candidate that's MISSING or unparseable counts as empty (0), it
+    // doesn't get a free pass -- before this, a brand-new device with no
+    // local data yet compared as "unknown" instead of "empty", slipped past
+    // this guard, and could win a merge against a full cloud copy
+    if (b == null) b = 0;
+    return a != null && a >= 10 && b < a * 0.5;
   }
   function loadBase() { try { var b = JSON.parse(localStorage.getItem(BASE_KEY)); return b && typeof b === "object" ? b : {}; } catch (e) { return {}; } }
   function saveBase(b) { try { _setItem.call(localStorage, BASE_KEY, JSON.stringify(b)); } catch (e) {} }
@@ -8053,6 +8240,15 @@
   function mergeSections(localData, cloudData) {
     var L = sectionsFrom(localData), C = sectionsFrom(cloudData), base = loadBase();
     var out = {}, changed = false, cloudStale = false, conflicts = [], emptyGuarded = [];
+    // item 11's loose end (her data-safety spec 2026-08-13): a deliberate
+    // section-restore (e.g. "inventory only") can legitimately make a section
+    // SMALLER than the cloud's copy on purpose. Without this, the very next
+    // sync would see that shrink, mistake it for a bad read, and silently
+    // revert the restore before she ever saw it happen. phDoSectionRestore
+    // sets this flag right before its pre-reload push; consume it once here
+    // so it can't also mask a real, unrelated accidental-shrink later.
+    var allowShrink = !!window.__lcmAllowShrinkOnce;
+    window.__lcmAllowShrinkOnce = false;
     SECTIONS.forEach(function (name) {
       var l = L[name], c = C[name], b = base[name];
       var localChanged = hashStr(l) !== b, cloudChanged = hashStr(c) !== b;
@@ -8062,7 +8258,7 @@
       } else if (localChanged && !cloudChanged) {
         // only this device touched it -- push it on, UNLESS it just went
         // suspiciously empty, in which case trust the (unchanged) cloud copy
-        if (sectionLooksEmptier(name, c, l)) { pick = c; emptyGuarded.push(name); } else pick = l;
+        if (!allowShrink && sectionLooksEmptier(name, c, l)) { pick = c; emptyGuarded.push(name); } else pick = l;
       } else if (!localChanged && cloudChanged) {
         // only the cloud moved -- adopt it, UNLESS it looks suspiciously
         // empty next to what's already here
@@ -8074,7 +8270,7 @@
         // hold the losing side so it's a one-click restore if this guessed
         // wrong. The empty-guard still overrides even here.
         conflicts.push(name);
-        if (sectionLooksEmptier(name, c, l)) { pick = c; emptyGuarded.push(name); } else pick = l;
+        if (!allowShrink && sectionLooksEmptier(name, c, l)) { pick = c; emptyGuarded.push(name); } else pick = l;
       }
       if (name === "pharmacy_core") pick = preserveLocationField(pick, l, c);
       if (pick !== l) changed = true;
@@ -8130,7 +8326,11 @@
   // foreground (see reconcileGate below) instead of letting it push blind.
   function schedulePush() {
     if (staleTab) { pendingPushWhileStale = true; return; }
-    clearTimeout(pushTimer); pushTimer = setTimeout(pushNow, 1400);
+    // item 5 (her data-safety spec 2026-08-13): save to the cloud
+    // immediately -- the old 1.4s wait was a window where closing the tab
+    // could lose the edit. 150ms is only there to fold one action's burst of
+    // setItem calls into a single push, not to delay it in any human sense.
+    clearTimeout(pushTimer); pushTimer = setTimeout(pushNow, 150);
   }
   var pushRetryTimer = null, pushFailStreak = 0;
   // her report 2026-08-13: this used to set lastPushed = json BEFORE the
@@ -8203,12 +8403,18 @@
       // time), and that has to reach the cloud right away or the next pull
       // anywhere quietly reverts it.
       if (!(pushAfter || res.cloudStale) || finalJson === lastPushed) { setLive(true); return; }
-      return doUpsert(finalSnap, finalJson);
+      // item 7 (her data-safety spec 2026-08-13): optimistic concurrency.
+      // row.updated_at is what THIS merge was computed against -- pass it
+      // through so doUpsert can check, right before writing, that nobody
+      // else's push landed in the gap between this fetch and now. That gap
+      // is normally milliseconds, but two devices saving within the same
+      // second is exactly the scenario she asked this to cover.
+      return doUpsert(finalSnap, finalJson, row && row.updated_at);
     }, function () {
       // couldn't reach the cloud to pull first -- fall back to a plain push
       // of what's here now; the existing retry/backoff in onPushFail covers
       // a genuine network failure either way
-      if (pushAfter) { var snap = gather(); return doUpsert(snap, JSON.stringify(snap)); }
+      if (pushAfter) { var snap = gather(); return doUpsert(snap, JSON.stringify(snap), null); }
       setLive(false);
     });
   }
@@ -8226,17 +8432,31 @@
     refreshApp();
     setBaseFrom(sections);
   }
-  function doUpsert(snap, json) {
-    return maybeWithHistory(snap).then(function (payload) {
-      return sb.from("settings").upsert(payload, { onConflict: "owner" }).select("updated_at").then(function (r) {
-        if (r.error) return onPushFail(json);
-        lastPushed = json;
-        pushFailStreak = 0;
-        lastSavedAt = (r.data && r.data[0] && r.data[0].updated_at) || new Date().toISOString();
-        if (r.data && r.data[0]) sessionStorage.setItem(APPLIED, r.data[0].updated_at);
-        setLive(true); renderSavedAt();
-      }, function () { onPushFail(json); });
-    });
+  function doUpsert(snap, json, expectedVersion) {
+    function write() {
+      return maybeWithHistory(snap).then(function (payload) {
+        return sb.from("settings").upsert(payload, { onConflict: "owner" }).select("updated_at").then(function (r) {
+          if (r.error) return onPushFail(json);
+          lastPushed = json;
+          pushFailStreak = 0;
+          lastSavedAt = (r.data && r.data[0] && r.data[0].updated_at) || new Date().toISOString();
+          if (r.data && r.data[0]) sessionStorage.setItem(APPLIED, r.data[0].updated_at);
+          setLive(true); renderSavedAt();
+        }, function () { onPushFail(json); });
+      });
+    }
+    if (expectedVersion == null) return write();
+    // item 7 (her data-safety spec 2026-08-13): optimistic concurrency check.
+    // Confirm nobody else's push landed in the gap between the fetch this
+    // merge was computed from and right now -- a changed updated_at means
+    // another device saved in that window, so re-run the whole pull+merge
+    // cycle against the NEW cloud row instead of blindly writing over it.
+    return sb.from("settings").select("updated_at").maybeSingle().then(function (r) {
+      if (r.error) return write();               // couldn't check -- write anyway rather than lose the save entirely
+      var nowVersion = r.data && r.data.updated_at;
+      if (nowVersion && nowVersion !== expectedVersion) return pullMergePush(true);
+      return write();
+    }, function () { return write(); });
   }
   function reconcile(row) {
     if (switching) return;
@@ -8305,7 +8525,16 @@
     } catch (e) {}
   }
   document.addEventListener("visibilitychange", function () {
-    if (document.hidden) { staleTab = true; flushOnHide(); } else { reconcileGate(); }
+    // her spec item 5, other half: backgrounding a tab (switching apps,
+    // locking the phone, alt-tabbing) does NOT tear the page down -- JS keeps
+    // running fine, so a normal push has time to actually finish. That's the
+    // real everyday "closed the tab on me" case on a phone, and it doesn't
+    // need the size-capped keepalive path at all -- use the same full,
+    // uncapped push a manual save would use, so the whole snapshot lands,
+    // not just what fits in 64KB. flushOnHide's keepalive attempt stays as a
+    // backup net underneath it in case the tab is killed outright (some
+    // mobile browsers do that on background) before this finishes.
+    if (document.hidden) { staleTab = true; pullMergePush(true); flushOnHide(); } else { reconcileGate(); }
   });
   window.addEventListener("focus", reconcileGate);
   window.addEventListener("pagehide", flushOnHide);
@@ -8706,18 +8935,52 @@
       wireClose();
     });
   }
+  // item 11 (her data-safety spec 2026-08-13): make cloud-history restore
+  // section-aware too, the same as the on-device backup restore in the main
+  // app -- share ONE definition (window.__lcmSections, defined in LCM
+  // Pharmacy.html) of what "prescriptions only / inventory only / log only"
+  // means, so the two restore screens can never drift apart or disagree.
   function confirmRestoreHistory(h) {
-    overlay('<p style="color:#bcd6cb;font-size:14px;margin:2px 0 4px">Restore this version?</p>' +
-      '<p style="' + F.note + '">From <b>' + esc(phFmtTs(h.at)) + '</b>. This replaces what\'s here now, on every device. A safety copy of what\'s here right now downloads automatically first.</p>' +
-      '<button id="lcmHistYes" style="' + F.btn + '">Yes, restore this version</button>' +
+    var LS = window.__lcmSections;
+    var cur = {}; cur[PH_KEY] = localStorage.getItem(PH_KEY); cur[PR_KEY] = localStorage.getItem(PR_KEY);
+    var bak = {}; bak[PH_KEY] = (h.data || {})[PH_KEY]; bak[PR_KEY] = (h.data || {})[PR_KEY];
+    var a = LS ? LS.counts(cur) : {}, b = LS ? LS.counts(bak) : {};
+    function row(id, label, now, bakN) {
+      return '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px 0;border-bottom:1px solid #2c6350">' +
+        '<input type="checkbox" id="' + id + '" checked> <span style="flex:1;color:#eef5f1;font-size:13.5px">' + label + '</span>' +
+        '<span style="color:#87a99c;font-size:11.5px">' + (now == null ? "—" : now) + ' now → ' + (bakN == null ? "—" : bakN) + ' in backup</span></label>';
+    }
+    var chooser = LS ? (
+      row("lcmHRPresc", "Prescriptions", a.presc, b.presc) +
+      row("lcmHRInv", "Inventory &amp; settings", a.herbs == null ? null : a.herbs + " herbs", b.herbs == null ? null : b.herbs + " herbs") +
+      row("lcmHRLog", "Dispense/stock log", a.log, b.log)
+    ) : "";
+    overlay('<p style="color:#bcd6cb;font-size:14px;margin:2px 0 4px">Restore from ' + esc(phFmtTs(h.at)) + '</p>' +
+      '<p style="' + F.note + '">Tick what to bring back — anything unticked stays exactly as it is now, on every device. A safety copy of what\'s here right now downloads first.</p>' +
+      chooser +
+      '<button id="lcmHistYes" style="' + F.btn + '">Restore ticked sections</button>' +
       '<button id="lcmHistNo" style="' + F.btn + ';margin-top:10px;color:#d8b979;background:transparent;border:1px solid #3a7d66">Cancel</button>');
     document.getElementById("lcmHistNo").onclick = function () { screenCloudHistory(); };
     document.getElementById("lcmHistYes").onclick = function () {
+      var ch = LS ? {
+        prescriptions: !!(document.getElementById("lcmHRPresc") || {}).checked,
+        inventory: !!(document.getElementById("lcmHRInv") || {}).checked,
+        log: !!(document.getElementById("lcmHRLog") || {}).checked
+      } : { prescriptions: true, inventory: true, log: true };
+      if (!ch.prescriptions && !ch.inventory && !ch.log) return;
       downloadSafetyCopy();
-      apply(h.data);
+      // everything ticked, or the section helper isn't available for some
+      // reason -- fall back to the old whole-snapshot replace so this screen
+      // always at least does SOMETHING safe rather than silently no-op
+      var composed = (LS && !(ch.prescriptions && ch.inventory && ch.log)) ? LS.compose(cur, bak, ch) : bak;
+      // this restore may deliberately shrink a section (e.g. restoring
+      // inventory-only from a day when it had fewer herbs) -- tell the
+      // merge guard this ONE write is expected, not a bad read
+      window.__lcmAllowShrinkOnce = true;
+      apply(composed);
       refreshApp();
-      setBaseFrom(sectionsFrom(h.data));
-      sb.from("settings").upsert({ data: h.data }, { onConflict: "owner" }).select("updated_at").then(function (r) {
+      setBaseFrom(sectionsFrom(composed));
+      sb.from("settings").upsert({ data: composed }, { onConflict: "owner" }).select("updated_at").then(function (r) {
         if (r.data && r.data[0]) sessionStorage.setItem(APPLIED, r.data[0].updated_at);
         location.reload();
       }, function () { location.reload(); });
