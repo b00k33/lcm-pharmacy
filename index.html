@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260814-091319">
+<meta name="lcm-build" content="20260814-093934">
 <script>
   // self-update check (her ask 2026-08-11, "still not collapsing/working" --
   // both were already fixed and shipped; she was just looking at a GitHub
@@ -691,17 +691,31 @@
   .ph-order-row:first-of-type { border-top: none; }
   .ph-order-nm { font-family: var(--font-body); color: var(--ph-ink); font-weight: 600; margin-bottom: 3px; }
   .ph-order-stock { font-size: 11px; color: var(--ph-soft); font-variant-numeric: tabular-nums; }
-  /* "Running low, not on the list" (her ask 2026-08-10: "more compact,
-     tesselated, less dead space", then "i liked that the second line was on
-     the right instead of a second line") -- was a generic .rtn-table that
-     fell back to a full padded card per herb on any narrow screen (name,
-     then two stacked stat lines, then a full-width button, each with its
-     own margin). Name, stock info and the Add button now share ONE row --
-     wraps to a second line only if the row is too narrow to fit all three. */
-  .ph-unflag-line { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; }
-  #pharmacyPage .ph-unflag-line .ph-order-nm { flex: 0 1 auto; margin-bottom: 0; }
-  #pharmacyPage .ph-unflag-line .ph-order-stock { flex: 1 1 auto; }
-  .ph-unflag-line .ph-add-order { flex: 0 0 auto; margin-left: auto; }
+  /* "Running low, not on the list" + Snoozed (her ask 2026-08-14, again --
+     the 2026-08-10 pass above fixed a different symptom and this one
+     regressed back to dead space): real Herb/Stock/Level columns, reusing
+     the To-order table's own .ph-order-col-nm/.ph-order-col-level styling,
+     sized to fit their content instead of stretching -- a block-level card
+     defaults to 100% of its parent no matter how little its grid tracks
+     actually use, so ph-order-card-snug shrinks the CARD itself, not just
+     the row inside it. Herb is a fixed track (not max-content, which would
+     size every row's grid off its own name and break column alignment down
+     the page), wide enough for a genuinely long name on one line; min-width:
+     0 makes the ellipsis fallback actually fire instead of the grid item
+     just forcing the column wider than its track. */
+  .ph-order-card-snug { width: fit-content; max-width: 100%; }
+  .ph-unflag-row {
+    display: grid; grid-template-columns: 380px 56px 70px max-content;
+    align-items: center; column-gap: 12px;
+  }
+  .ph-unflag-row .ph-order-col-nm { min-width: 0; }
+  .ph-order-col-stock { font-size: 11px; color: var(--ph-soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .ph-unflag-actions { display: flex; align-items: center; gap: 8px; }
+  .ph-snoozed-row {
+    display: grid; grid-template-columns: 380px max-content max-content;
+    align-items: center; column-gap: 12px;
+  }
+  .ph-snoozed-row .ph-order-col-nm { min-width: 0; }
   .ph-order-col-level .ph-level-cell { justify-content: center; }
   .ph-order-col-level .ph-stockbar { max-width: 38px; }
   .ph-order-line2 .ph-qty-input {
@@ -1570,6 +1584,16 @@
     #pharmacyPage .ph-order-col-total { flex: 0 0 auto; width: auto; }
     #pharmacyPage .ph-order-col-status { flex: 1 1 100%; }
     #pharmacyPage .ph-stage-btn { width: auto; }
+    /* Running low / Snoozed rows (same breakpoint, same reasoning as the
+       To-order reflow just above): the fixed-width desktop grid has no room
+       to lay out below this width, so drop back to a wrapping flex row and
+       let the card return to full width to give it room to wrap in. */
+    #pharmacyPage .ph-order-card-snug { width: auto; max-width: none; }
+    #pharmacyPage .ph-unflag-row, #pharmacyPage .ph-snoozed-row {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px;
+    }
+    #pharmacyPage .ph-unflag-row .ph-order-col-nm,
+    #pharmacyPage .ph-snoozed-row .ph-order-col-nm { flex: 1 1 100%; overflow: visible; white-space: normal; }
 
     /* Prescriptions patient list (her ask 2026-07-31): the 6-column table
        forced a horizontal swipe just to reach the Open button. Recast each
@@ -6318,24 +6342,27 @@
       ${snoozed.length ? `<div class="ph-flag-row" style="margin:16px 0 0">
         <button type="button" class="ph-flag snoozed" data-ph-restock-snooze-toggle="1" aria-pressed="${phRestockSnoozeOpen}">😴 Snoozed: ${snoozed.length}</button>
       </div>` : ""}
-      ${phRestockSnoozeOpen && snoozed.length ? `<div class="ph-order-card">
+      ${phRestockSnoozeOpen && snoozed.length ? `<div class="ph-order-card ph-order-card-snug">
         <div class="section-head"><h2>😴 Snoozed — back on their own (${snoozed.length})</h2><span class="rule"></span></div>
         ${snoozed.map(h => `<div class="ph-order-row">
-          <div class="ph-unflag-line">
-            <span class="ph-order-nm">${esc(phHerbLabel(h))}</span>
-            <span class="ph-order-stock">Returns ${esc(phShortDate(h.snoozedUntil))}</span>
+          <div class="ph-snoozed-row">
+            <span class="ph-order-col-nm">${esc(phHerbLabel(h))}</span>
+            <span class="ph-order-col-stock">Returns ${esc(phShortDate(h.snoozedUntil))}</span>
             <button type="button" class="ph-add-order" data-ph-unsnooze="${h.id}">↩ Unsnooze</button>
           </div>
         </div>`).join("")}
       </div>` : ""}
-      ${unflagged.length ? `<div class="ph-order-card">
+      ${unflagged.length ? `<div class="ph-order-card ph-order-card-snug">
         <div class="section-head"><h2>⚠ Running low, not on the list (${unflagged.length})</h2><span class="rule"></span></div>
         ${unflagged.map(h => `<div class="ph-order-row">
-          <div class="ph-unflag-line">
-            <span class="ph-order-nm">${esc(phHerbLabel(h))}</span>
-            <span class="ph-order-stock">${h.qty <= 0 ? "empty" : `${phFmtG(h.qty)}g`}${h.low != null ? ` · low at ${h.low}` : ""}${h.supplier ? ` · ${esc(h.supplier)}` : ""}</span>
-            <button type="button" class="ph-add-order" data-ph-order="${h.id}" title="Onto the order list">🛒 Add to order</button>
-            <button type="button" class="ph-add-order" data-ph-snooze="${h.id}" title="Stop nagging about this one for 7 days — stock and status stay exactly as they are">⏰ Snooze 1 week</button>
+          <div class="ph-unflag-row">
+            <span class="ph-order-col-nm">${esc(phHerbLabel(h))}</span>
+            <span class="ph-order-col-stock">${h.qty <= 0 ? "empty" : `${phFmtG(h.qty)}g`}</span>
+            <span class="ph-order-col-level">${phStockBarPct(h.qty, h.low)}</span>
+            <span class="ph-unflag-actions">
+              <button type="button" class="ph-add-order" data-ph-order="${h.id}" title="Onto the order list">🛒 Add to order</button>
+              <button type="button" class="ph-add-order" data-ph-snooze="${h.id}" title="Stop nagging about this one for 7 days — stock and status stay exactly as they are">⏰ Snooze 1 week</button>
+            </span>
           </div>
         </div>`).join("")}
       </div>` : ""}
