@@ -2,27 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260815-105700">
-<script>
-  // self-update check (her ask 2026-08-11, "still not collapsing/working" --
-  // both were already fixed and shipped; she was just looking at a GitHub
-  // Pages/browser cache of the page from before those fixes, and telling
-  // her to hard-refresh wasn't landing). On every load, quietly re-fetch
-  // this same page bypassing cache; if its build stamp differs from the one
-  // that's currently running, reload once from network so she's never stuck
-  // on stale code again. Silent no-op offline/file:///on any fetch failure;
-  // sessionStorage guards against a reload loop.
-  (function () {
-    if (!/^https?:$/.test(location.protocol)) return;
-    if (sessionStorage.getItem("lcm-build-checked")) return;
-    sessionStorage.setItem("lcm-build-checked", "1");
-    var mine = document.querySelector('meta[name="lcm-build"]').content;
-    fetch(location.pathname, { cache: "no-store" }).then(function (r) { return r.text(); }).then(function (text) {
-      var m = text.match(/<meta name="lcm-build" content="([^"]+)">/);
-      if (m && m[1] && m[1] !== mine) location.replace(location.pathname + "?v=" + encodeURIComponent(m[1]));
-    }).catch(function () {});
-  })();
-</script>
+<meta name="lcm-build" content="20260815-112958">
+<!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
+     2026-08-15. It swapped the running app out from under her mid-session, which
+     is exactly when data got lost. Detection now runs in phUpdateCheck() and only
+     ever offers the "Update available" button -- see phDoControlledUpdate(). -->
 <title>LCM Pharmacy</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0F2A22">
@@ -88,6 +72,8 @@
     --ph-snooze-tint: #ECEEFA;
     --ph-green-press: #0A3A20;  /* deepest green -- hover/press states and the dark accent band */
     --ph-gold-tint: #FFFBE2;    /* pale gold wash, pairs with --margin-rule */
+    --ph-gold: #C9A227;         /* brass accent -- update-available, never status/error */
+    --ph-gold-deep: #8A6D1A;    /* readable brass text on the pale tint */
     /* the page itself is the white sheet — dark ink and deep greens only ever
        sit on this, never on the app's starry dark ground */
     background: var(--ph-white); color: var(--ph-ink);
@@ -1297,6 +1283,42 @@
     }
     #pharmacyPage #phRestoreBtn .ph-restore-label { display: none; }
   }
+  /* Update-available -- her ask 2026-08-15, STEP 0a: same button family (height,
+     radius, weight, padding) as Back up data / Restore, but in the brass/gold
+     accent so it reads as "something to notice" without looking like an error.
+     Hidden until a real newer build is actually detected. */
+  #pharmacyPage #phUpdateBtn { position: static; display: block; width: fit-content; margin: 6px 0 0 8px; font-family: inherit; font-size: 12px; letter-spacing: .02em; cursor: pointer; background: var(--ph-gold-tint); color: var(--ph-gold-deep); border: 1px solid color-mix(in oklab, var(--ph-gold) 45%, var(--ph-line)); border-radius: 8px; padding: 7px 13px; font-weight: 600; }
+  #pharmacyPage #phUpdateBtn:hover { border-color: var(--ph-gold); background: color-mix(in oklab, var(--ph-gold-tint) 55%, white); }
+  #pharmacyPage #phUpdateBtn[hidden] { display: none; }
+  @media (max-width: 640px) {
+    /* a third floating circle beside the centred title collides with the
+       title glyphs at 360px (measured: text right edge 192px vs circle left
+       edge 187px) -- so on mobile this is a normal-flow gold pill under the
+       title instead, full label kept, 44px tap height */
+    #pharmacyPage #phUpdateBtn {
+      position: static; display: block; margin: 8px auto 0;
+      min-height: 44px; padding: 11px 16px; border-radius: 8px; font-size: 13px;
+    }
+    #pharmacyPage #phUpdateBtn[hidden] { display: none; }
+  }
+  #pharmacyPage .ph-version-line { font-size: 10.5px; color: var(--ph-faint); margin: 4px 0 0; letter-spacing: .01em; }
+  @media (max-width: 640px) { #pharmacyPage .ph-version-line { margin: 2px 0 0; } }
+  /* the controlled-update progress panel -- her requirement "show me each step
+     as it happens": one line per step, ticking off live, not a single flash
+     message that overwrites itself. Lives on <body> (like the save-error
+     banner) so a re-render can never pull it out from under her mid-update. */
+  #phUpdatePanel { position: fixed; left: 12px; right: 12px; top: 12px; z-index: 2147483600; background: var(--ph-white); color: var(--ph-ink); border: 1px solid var(--ph-gold); border-radius: 12px; padding: 16px; font: 500 13px/1.5 var(--font-body), system-ui, sans-serif; box-shadow: 0 8px 32px rgba(0,0,0,.32); max-width: 400px; margin: 0 auto; }
+  #phUpdatePanel h4 { margin: 0 0 12px; font-size: 14px; font-weight: 700; color: var(--ph-gold-deep); }
+  #phUpdatePanel .ph-update-step { display: flex; align-items: flex-start; gap: 8px; padding: 4px 0; color: var(--ph-faint); }
+  #phUpdatePanel .ph-update-step .ic { flex: 0 0 16px; text-align: center; }
+  #phUpdatePanel .ph-update-step .tx { flex: 1; }
+  #phUpdatePanel .ph-update-step .note { display: block; font-size: 11.5px; color: var(--ph-faint); font-weight: 400; }
+  #phUpdatePanel .ph-update-step.doing { color: var(--ph-ink); font-weight: 600; }
+  #phUpdatePanel .ph-update-step.done { color: var(--ph-green-deep); }
+  #phUpdatePanel .ph-update-step.failed { color: var(--ph-zero-deep); font-weight: 700; }
+  #phUpdatePanel .ph-update-msg { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--ph-line); font-size: 12.5px; color: var(--ph-ink); }
+  #phUpdatePanel button { margin-top: 8px; width: 100%; background: var(--ph-paper); border: 1px solid var(--ph-line); color: var(--ph-ink); border-radius: 8px; padding: 8px; cursor: pointer; font: 600 12.5px var(--font-body), system-ui, sans-serif; }
+  #phUpdatePanel button.go { background: var(--ph-gold-tint); border-color: var(--ph-gold); color: var(--ph-gold-deep); }
   /* a stuck-open banner, not a self-clearing flash -- this has to stay
      visible until she's actually dealt with it, not vanish in a few seconds
      like a normal save confirmation */
@@ -2394,6 +2416,8 @@
       <h1 id="phH1">LCM Pharmacy</h1>
       <button type="button" id="phBackup" title="Download all your pharmacy data as one backup .json — import it into the synced LCM Pharmacy, or keep it safe">⬇ Back up data</button>
       <button type="button" id="phRestoreBtn" title="Restore from an earlier automatic backup, or load a backup .json file">🕐 Restore</button>
+      <button type="button" id="phUpdateBtn" hidden title="A newer version of LCM Pharmacy is available. Tapping this saves everything, pushes it to the cloud and downloads a backup file BEFORE loading the new version.">🔄 <span class="ph-update-label">Update available</span></button>
+      <div id="phVersionLine" class="ph-version-line"></div>
     </div>
     <div id="phDataWarning" class="ph-data-warning" hidden></div>
     <div id="phRestorePanel" class="ph-restore-panel" hidden></div>
@@ -9101,6 +9125,208 @@
     }
   })();
 
+  /* ============ CONTROLLED UPDATES — her ask 2026-08-15, "STEP 0a" ==========
+     A new version must NEVER install itself behind her back. The script that
+     used to sit in <head> did exactly that: it silently swapped the running
+     app out mid-session, which is precisely when data went missing. Detection
+     is now passive — the only thing it can do is reveal a button. She decides
+     when, and her data is saved, pushed and downloaded BEFORE the new code
+     loads. If any of those fails, the update does not happen. */
+  const PH_BUILD = ((document.querySelector('meta[name="lcm-build"]') || {}).content || "dev");
+  const PH_UPD_KEY = "lcm-preupdate";        // sessionStorage: survives the reload, dies with the tab
+  let phNewBuild = null;                     // the newer stamp, once one is actually seen
+
+  // build stamps are "yyyyMMdd-HHmmss" (build-synced.ps1). "dev" = the hand-edited source.
+  function phBuildDate(stamp) {
+    const m = /^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})$/.exec(stamp || "");
+    if (!m) return null;
+    const d = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  function phBuildLabel(stamp) {
+    const d = phBuildDate(stamp);
+    return d ? `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}` : String(stamp);
+  }
+  function phAgo(d) {
+    const mins = Math.max(0, Math.round((Date.now() - d.getTime()) / 60000));
+    if (mins < 2) return "just now";
+    if (mins < 60) return mins + " minutes ago";
+    const hrs = Math.round(mins / 60);
+    if (hrs < 24) return hrs + " hour" + (hrs === 1 ? "" : "s") + " ago";
+    const days = Math.round(hrs / 24);
+    return days + " day" + (days === 1 ? "" : "s") + " ago";
+  }
+  function phRenderVersionLine() {
+    const el = document.getElementById("phVersionLine");
+    if (!el) return;
+    const d = phBuildDate(PH_BUILD);
+    el.textContent = d ? `Version ${phBuildLabel(PH_BUILD)} · updated ${phAgo(d)}`
+                       : `Version ${PH_BUILD} · local file`;
+  }
+  // Background detection. Fetches this same page bypassing cache and compares
+  // build stamps. It NEVER reloads, never applies anything -- it only unhides
+  // the button. Silent no-op offline, on file://, or on any fetch failure.
+  function phUpdateCheck() {
+    if (!/^https?:$/.test(location.protocol)) return;
+    if (phNewBuild) return;                     // already offered; don't nag again
+    fetch(location.pathname + "?probe=" + Date.now(), { cache: "no-store" })
+      .then(r => (r.ok ? r.text() : Promise.reject(new Error(r.status))))
+      .then(text => {
+        const m = text.match(/<meta name="lcm-build" content="([^"]+)">/);
+        if (!m || !m[1] || m[1] === PH_BUILD) return;
+        const mine = phBuildDate(PH_BUILD), theirs = phBuildDate(m[1]);
+        if (mine && theirs && theirs <= mine) return;   // never offer to go backwards
+        phNewBuild = m[1];
+        const btn = document.getElementById("phUpdateBtn");
+        if (btn) btn.hidden = false;
+      })
+      .catch(() => {});
+  }
+
+  /* ---- the update itself: four steps, in her exact order, each one visible,
+     and a hard stop the moment any of them fails ---- */
+  const PH_UPD_STEPS = [
+    "Saving everything on this device",
+    "Sending it to the cloud",
+    "Downloading a backup file",
+    "Loading the new version",
+  ];
+  let phUpdStates = null;
+  function phUpdPanel() {
+    let p = document.getElementById("phUpdatePanel");
+    if (!p) { p = document.createElement("div"); p.id = "phUpdatePanel"; document.body.appendChild(p); }
+    return p;
+  }
+  function phUpdDraw(title, tail) {
+    const ic = { pending: "○", doing: "⋯", done: "✓", failed: "✕" };
+    phUpdPanel().innerHTML = `<h4>${title}</h4>` + PH_UPD_STEPS.map((s, i) => {
+      const st = phUpdStates[i];
+      return `<div class="ph-update-step ${st.state}"><span class="ic">${ic[st.state]}</span><span class="tx">${esc(s)}${st.note ? `<span class="note">${st.note}</span>` : ""}</span></div>`;
+    }).join("") + (tail || "");
+  }
+  function phUpdSet(i, state, note, title, tail) {
+    phUpdStates[i] = { state, note: note || "" };
+    phUpdDraw(title || `Updating to version ${phBuildLabel(phNewBuild)}`, tail);
+  }
+  // a failure NEVER continues -- nothing is loaded, nothing is changed, and she
+  // is told exactly which step broke and what it means
+  function phUpdFail(i, what) {
+    phUpdStates[i] = { state: "failed", note: "" };
+    phUpdDraw("Update stopped — nothing was changed",
+      `<div class="ph-update-msg"><b>${esc(what)}</b><br>You are still on version ${phBuildLabel(PH_BUILD)} with all your data exactly as it was. Fix this first, then tap Update again.</div>
+       <button type="button" onclick="document.getElementById('phUpdatePanel').remove()">Close</button>`);
+    const btn = document.getElementById("phUpdateBtn");
+    if (btn) btn.disabled = false;
+  }
+  function phCurrentPair() {
+    return { [PHARMACY_KEY]: localStorage.getItem(PHARMACY_KEY), [PRESC_KEY]: localStorage.getItem(PRESC_KEY) };
+  }
+  function phDoControlledUpdate() {
+    if (!phNewBuild) return;
+    const btn = document.getElementById("phUpdateBtn");
+    if (btn) btn.disabled = true;
+    phUpdStates = PH_UPD_STEPS.map(() => ({ state: "pending", note: "" }));
+
+    // STEP 1 — force a real, immediate, synchronous full save. phFlushDeferred
+    // runs everything still sitting in a debounce window; the two explicit
+    // saves then write both stores outright and report honestly if they can't.
+    phUpdSet(0, "doing");
+    let okPh, okPr;
+    try { phFlushDeferred(); okPh = savePharmacy(); okPr = savePresc(); }
+    catch (e) { return phUpdFail(0, "Saving failed (" + ((e && e.name) || "error") + "). The update was cancelled."); }
+    if (!okPh || !okPr) {
+      return phUpdFail(0, "Your data could NOT be saved to this device — see the red message at the bottom of the screen. The update was cancelled so nothing is lost.");
+    }
+    const before = window.__lcmSections.counts(phCurrentPair());
+    phUpdSet(0, "done", `${before.herbs} herbs · ${before.presc} prescriptions · ${before.log} log entries saved`);
+
+    // STEP 2 — push it up and WAIT for the cloud to actually confirm
+    phUpdSet(1, "doing");
+    const flush = window.__lcmFlushBeforeReload ? window.__lcmFlushBeforeReload() : Promise.resolve("nosync");
+    let stage = 1;
+    flush.then(ok => {
+      if (ok === false) throw new Error("cloud");
+      phUpdSet(1, "done", ok === "nosync" ? "this copy isn't cloud-synced — skipped" : "cloud confirmed it landed");
+      // STEP 3 — a file on her computer from the moment before the update
+      stage = 2;
+      phUpdSet(2, "doing");
+      return phDownloadBackupFile("before-update");
+    }).then(fname => {
+      if (!fname) throw new Error("download");
+      phUpdSet(2, "done", esc(fname));
+      // remember what we had, so the new version can prove nothing went missing.
+      // Counts are tiny and always fit; the full copy is best-effort and only
+      // powers the one-click restore.
+      const pair = phCurrentPair();
+      try { sessionStorage.setItem(PH_UPD_KEY, JSON.stringify({ from: PH_BUILD, to: phNewBuild, file: fname, counts: before })); } catch (e) {}
+      try { sessionStorage.setItem(PH_UPD_KEY + "-data", JSON.stringify(pair)); } catch (e) {}
+      // STEP 4 — and only now, the new version
+      stage = 3;
+      phUpdSet(3, "doing");
+      setTimeout(() => location.replace(location.pathname + "?v=" + encodeURIComponent(phNewBuild)), 700);
+    }).catch(err => {
+      const why = (err && err.message) || "";
+      phUpdFail(stage,
+        why === "cloud" ? "The cloud did NOT confirm it received your data, so the update was cancelled. Check your connection and the sync dot, then try again."
+      : why === "download" ? "The backup file didn't download (it may have been blocked or cancelled), so the update was cancelled."
+      : "Something went wrong before the update (" + (why || "unknown") + "), so it was cancelled.");
+    });
+  }
+
+  /* ---- after the new version loads: prove the data survived ---- */
+  function phUpdateAfterCheck() {
+    let s = null;
+    try { s = JSON.parse(sessionStorage.getItem(PH_UPD_KEY) || "null"); } catch (e) {}
+    if (!s || !s.counts) return;
+    try { sessionStorage.removeItem(PH_UPD_KEY); } catch (e) {}
+    const now = window.__lcmSections.counts(phCurrentPair());
+    const n = v => (v == null ? "—" : v.toLocaleString());
+    const dropped = ["herbs", "presc", "log"].filter(k => s.counts[k] != null && now[k] != null && now[k] < s.counts[k]);
+    const landed = s.to === PH_BUILD;
+    const p = phUpdPanel();
+    if (!dropped.length) {
+      p.innerHTML = `<h4>✓ Update complete</h4>
+        <div class="ph-update-msg">${landed ? `Updated to <b>${phBuildLabel(PH_BUILD)}</b>` : `⚠ Still on <b>${phBuildLabel(PH_BUILD)}</b> — the new version didn't load (your browser may be holding a cached copy)`} — ${n(now.herbs)} herbs, ${n(now.presc)} prescriptions, ${n(now.log)} log entries all present.</div>
+        <button type="button" onclick="this.parentNode.remove()">Close</button>`;
+      try { sessionStorage.removeItem(PH_UPD_KEY + "-data"); } catch (e) {}   // nothing lost — let the copy go
+      setTimeout(() => { const el = document.getElementById("phUpdatePanel"); if (el) el.remove(); }, 12000);
+      return;
+    }
+    const names = { herbs: "herbs", presc: "prescriptions", log: "log entries" };
+    const hasCopy = !!sessionStorage.getItem(PH_UPD_KEY + "-data");
+    p.innerHTML = `<h4 style="color:var(--ph-zero-deep)">⚠ DATA IS MISSING after the update</h4>
+      <div class="ph-update-msg">${dropped.map(k => `<b>${names[k]}: ${n(s.counts[k])} → ${n(now[k])}</b>`).join("<br>")}
+      <br><br>A backup was taken just before this update${s.file ? `: <b>${esc(s.file)}</b>` : ""}. Put it back now.</div>
+      ${hasCopy ? `<button type="button" class="go" id="phUpdRollback">↩ Restore my data (one click)</button>` : ""}
+      <button type="button" id="phUpdOpenRestore">Open Restore and load the backup file</button>
+      <button type="button" onclick="this.parentNode.remove()">Dismiss</button>`;
+    const rb = document.getElementById("phUpdRollback");
+    if (rb) rb.onclick = () => {
+      let pair; try { pair = JSON.parse(sessionStorage.getItem(PH_UPD_KEY + "-data")); } catch (e) {}
+      if (!pair) return;
+      try {
+        if (pair[PHARMACY_KEY] != null) localStorage.setItem(PHARMACY_KEY, pair[PHARMACY_KEY]);
+        if (pair[PRESC_KEY] != null) localStorage.setItem(PRESC_KEY, pair[PRESC_KEY]);
+      } catch (e) { return phShowRestoreQuotaError(e); }
+      (window.__lcmFlushBeforeReload ? window.__lcmFlushBeforeReload() : Promise.resolve())
+        .then(() => location.reload(), () => location.reload());
+    };
+    const ob = document.getElementById("phUpdOpenRestore");
+    if (ob) ob.onclick = () => {
+      p.remove();
+      const panel = document.getElementById("phRestorePanel");
+      if (panel) { panel.hidden = false; phRenderRestorePanel(); panel.scrollIntoView({ block: "center" }); }
+    };
+  }
+
+  const phUpdateBtn = document.getElementById("phUpdateBtn");
+  if (phUpdateBtn) phUpdateBtn.addEventListener("click", phDoControlledUpdate);
+  phRenderVersionLine();
+  phUpdateAfterCheck();
+  setTimeout(phUpdateCheck, 20000);                       // first look, well off the boot path
+  setInterval(phUpdateCheck, 5 * 60 * 1000);              // and every 5 minutes after that
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) phUpdateCheck(); });
+
   renderPharmacy();
 
   // Self-check guard (her ask, 2026-08-04): the live Prescriptions search
@@ -9490,10 +9716,15 @@
      true everywhere at once, instead of two separate code paths (push vs.
      realtime-pull) that could quietly drift apart from each other.
   ------------------------------------------------------------------------- */
+  /* Resolves TRUE only when the cloud is genuinely up to date with what this
+     device holds (either it already matched, or a push was confirmed), and
+     FALSE otherwise. Her controlled-update flow (STEP 0a, 2026-08-15) refuses
+     to load a new version until this says true, so "confirmed" here has to
+     mean confirmed -- never merely "we tried". */
   function pullMergePush(pushAfter) {
-    if (!sb || !ready || switching) return Promise.resolve();
+    if (!sb || !ready || switching) return Promise.resolve(false);
     return fetchCloud().then(function (row) {
-      if (switching) return;                                // a location switch started mid-fetch -- abandon this cycle
+      if (switching) return false;                          // a location switch started mid-fetch -- abandon this cycle
       var cloudData = (row && row.data) || {};
       var isOwnEcho = row && row.updated_at && sessionStorage.getItem(APPLIED) === row.updated_at;
       var res = mergeSections(localSnapshotObj(), cloudData);
@@ -9516,7 +9747,7 @@
       // time), and that has to reach the cloud right away or the next pull
       // anywhere quietly reverts it.
       var needsPush = (pushAfter || res.cloudStale) && finalJson !== lastPushed;
-      if (!needsPush) { setBaseFrom(res.sections); setLive(true); return; }
+      if (!needsPush) { setBaseFrom(res.sections); setLive(true); return true; }
       // her report 2026-08-13 ("ticking the HH box gets undone a few seconds
       // later"): base used to advance to match "local wins" BEFORE the push
       // to Supabase was actually confirmed. In that gap -- normally under a
@@ -9532,13 +9763,18 @@
       // mistaking a lagging cloud for a real remote change.
       return doUpsert(finalSnap, finalJson, row && row.updated_at).then(function (ok) {
         if (ok) setBaseFrom(res.sections);
+        return !!ok;
       });
     }, function () {
       // couldn't reach the cloud to pull first -- fall back to a plain push
       // of what's here now; the existing retry/backoff in onPushFail covers
       // a genuine network failure either way
-      if (pushAfter) { var snap = gather(); return doUpsert(snap, JSON.stringify(snap), null); }
+      if (pushAfter) {
+        var snap = gather();
+        return doUpsert(snap, JSON.stringify(snap), null).then(function (ok) { return !!ok; });
+      }
       setLive(false);
+      return false;
     });
   }
   function applyMergedLocal(sections) {
@@ -9577,13 +9813,18 @@
     // merge was computed from and right now -- a changed updated_at means
     // another device saved in that window, so re-run the whole pull+merge
     // cycle against the NEW cloud row instead of blindly writing over it.
-    // That recursive cycle owns its own base bookkeeping, so THIS call
-    // resolves false either way -- the original (now-stale) snap must never
-    // also get to set base.
+    // That recursive cycle owns its own base bookkeeping, so THIS call must
+    // never resolve plain true -- the original (now-stale) snap must not also
+    // get to set base. It resolves "superseded" instead of false, so a caller
+    // asking the different question "is the cloud actually up to date?" (the
+    // controlled-update flow) still gets a truthful yes when the recursive
+    // cycle did land, and a truthful no when it didn't.
     return sb.from("settings").select("updated_at").maybeSingle().then(function (r) {
       if (r.error) return write();               // couldn't check -- write anyway rather than lose the save entirely
       var nowVersion = r.data && r.data.updated_at;
-      if (nowVersion && nowVersion !== expectedVersion) return pullMergePush(true).then(function () { return false; });
+      if (nowVersion && nowVersion !== expectedVersion) {
+        return pullMergePush(true).then(function (ok) { return ok ? "superseded" : false; });
+      }
       return write();
     }, function () { return write(); });
   }
@@ -9614,8 +9855,12 @@
   // through the normal (uncapped) path and actually waits for it, instead of
   // relying on flushOnHide's pagehide flush, whose keepalive body limit a
   // real data set always blows past (see flushOnHide above).
+  // Resolves TRUE = the cloud has confirmed it holds this device's data,
+  // FALSE = it did not land. Not signed in / no sync at all resolves
+  // "nosync", which callers treat as "nothing to wait for" rather than a
+  // failure -- there is no cloud copy to be out of step with.
   window.__lcmFlushBeforeReload = function () {
-    return ready ? pullMergePush(true) : Promise.resolve();
+    return ready ? pullMergePush(true) : Promise.resolve("nosync");
   };
   // requirement 8 (her spec 2026-08-13): "when I set it, save and push it
   // immediately" -- for a field she'd notice missing right away (unlike most
