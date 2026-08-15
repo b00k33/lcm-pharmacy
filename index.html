@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260815-120245">
+<meta name="lcm-build" content="20260815-122600">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -2678,9 +2678,72 @@
   // Smaller caps keep the safety net (a real one, still many recent points
   // to restore from) without it being able to crowd out the writes it
   // exists to protect.
-  const PH_ROLLING_CAP = 6;
-  const PH_DAILY_CAP = 10;
+  // 2026-08-15, second pass: the snapshots now live in IndexedDB instead of
+  // localStorage (see phIDB below), which is measured in hundreds of MB rather
+  // than the ~5MB this origin shares with Book33 -- so the caps go back UP to
+  // what they were always meant to be. The reason they had to be cut was never
+  // "too much history", it was that history was competing with her live data
+  // for the same tiny box. It isn't any more.
+  const PH_ROLLING_CAP = 20;
+  const PH_DAILY_CAP = 30;
   const PH_EXPORT_AT_KEY = "lcmbak-last-export";
+
+  /* ---- phIDB: a very small IndexedDB key/value store -----------------------
+     Why this exists (her ask 2026-08-15, "move to the cloud so it's reliable
+     and holds all your history"): her real problem was never the cloud -- that
+     has worked since July -- it was that the LOCAL copy lived in localStorage,
+     a ~5MB box this origin shares with Book33, and she was at 82% of it. The
+     single biggest thing in that box was this app's own safety-net snapshots.
+     IndexedDB has room measured in hundreds of MB and is NOT shared with
+     Book33's keys, so moving the snapshots here frees most of the 5MB for her
+     actual data and lets the backup history go back to being deep.
+     Deliberately tiny and dependency-free: one object store, get/set/del.
+     Every call resolves rather than rejects -- a browser with IndexedDB
+     blocked (private mode, locked-down profile) must degrade to "no on-device
+     history", never to a broken app. */
+  const phIDB = (function () {
+    const DB = "lcm-pharmacy", STORE = "kv";
+    let openPromise = null;
+    function db() {
+      if (openPromise) return openPromise;
+      openPromise = new Promise(resolve => {
+        let req;
+        try { req = indexedDB.open(DB, 1); } catch (e) { return resolve(null); }
+        req.onupgradeneeded = () => { try { req.result.createObjectStore(STORE); } catch (e) {} };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => resolve(null);
+        req.onblocked = () => resolve(null);
+      });
+      return openPromise;
+    }
+    function run(mode, fn) {
+      return db().then(d => {
+        if (!d) return null;
+        return new Promise(resolve => {
+          let tx;
+          try { tx = d.transaction(STORE, mode); } catch (e) { return resolve(null); }
+          const store = tx.objectStore(STORE);
+          let out = null;
+          try { const r = fn(store); if (r) r.onsuccess = () => { out = r.result; }; } catch (e) {}
+          tx.oncomplete = () => resolve(out);
+          tx.onerror = () => resolve(null);
+          tx.onabort = () => resolve(null);
+        });
+      }).catch(() => null);
+    }
+    return {
+      available: typeof indexedDB !== "undefined",
+      get(k) { return run("readonly", s => s.get(k)); },
+      set(k, v) { return run("readwrite", s => s.put(v, k)).then(() => true, () => false); },
+      del(k) { return run("readwrite", s => s.delete(k)); },
+    };
+  })();
+  // In-memory mirror of the snapshot history. Kept because the corrupt-read
+  // recovery inside loadPharmacy()/loadPresc() runs synchronously during boot,
+  // long before an IndexedDB read could answer -- so those two keep working
+  // exactly as before, and the (rare) case where a boot needs a snapshot that
+  // hasn't loaded yet is picked up by phSnapsLoaded() a few milliseconds later.
+  let PH_SNAP_ROLLING = [], PH_SNAP_DAILY = [], PH_SNAPS_READY = false;
   let PH_DATA_WARNING = null;   // set during boot if a load had to recover from a backup
   // items 1+2 of her data-safety spec (2026-08-13). phSavedCounts is the
   // last size of each store that's KNOWN to match what's really written on
@@ -2768,37 +2831,64 @@
     if (!good) return;
     phLastBackupAt = now;
     const snap = { ts: new Date().toISOString(), ph: good.ph, pr: good.pr };
-    // her report 2026-08-15: a snapshot that can't fit used to just throw and
-    // get swallowed by the empty catch below, so the backup silently stopped
-    // updating with no sign anything was wrong. Now a write that's refused
-    // for being too big backs off (fewer, then just the newest) before
-    // giving up, so this keeps SOME safety net right up to the last byte of
-    // room instead of an all-or-nothing failure.
-    function writeCapped(key, list, cap) {
-      for (let n = cap; n >= 1; n--) {
-        try { localStorage.setItem(key, JSON.stringify(list.slice(0, n))); return; }
-        catch (e) { if (n === 1) return; }
-      }
-    }
-    const rolling = phReadJsonArray(PH_BACKUP_KEY);
-    rolling.unshift(snap);
-    writeCapped(PH_BACKUP_KEY, rolling, PH_ROLLING_CAP);
-    const daily = phReadJsonArray(PH_DAILY_KEY);
+    // Written to IndexedDB, not localStorage. The old localStorage version had
+    // to back off to fewer and fewer snapshots as the quota filled (and at her
+    // real data size that meant it was silently down to one or two, not the 6
+    // and 10 the caps claimed) -- there is no such pressure here.
+    PH_SNAP_ROLLING.unshift(snap);
+    PH_SNAP_ROLLING = PH_SNAP_ROLLING.slice(0, PH_ROLLING_CAP);
+    phIDB.set(PH_BACKUP_KEY, PH_SNAP_ROLLING);
     const today = snap.ts.slice(0, 10);
-    if (!daily.length || String(daily[0].ts).slice(0, 10) !== today) {
-      daily.unshift(snap);
+    if (!PH_SNAP_DAILY.length || String(PH_SNAP_DAILY[0].ts).slice(0, 10) !== today) {
+      PH_SNAP_DAILY.unshift(snap);
       const cutoff = now - PH_DAILY_CAP * 24 * 60 * 60 * 1000;
-      writeCapped(PH_DAILY_KEY, daily.filter(d => new Date(d.ts).getTime() >= cutoff), PH_DAILY_CAP);
+      PH_SNAP_DAILY = PH_SNAP_DAILY.filter(d => new Date(d.ts).getTime() >= cutoff).slice(0, PH_DAILY_CAP);
+      phIDB.set(PH_DAILY_KEY, PH_SNAP_DAILY);
     }
   }
   function phAllBackups() {
     const seen = new Set(), out = [];
-    phReadJsonArray(PH_BACKUP_KEY).concat(phReadJsonArray(PH_DAILY_KEY)).forEach(s => {
+    PH_SNAP_ROLLING.concat(PH_SNAP_DAILY).forEach(s => {
       if (s && s.ts && !seen.has(s.ts)) { seen.add(s.ts); out.push(s); }
     });
     return out.sort((a, b) => b.ts.localeCompare(a.ts));
   }
   function phLatestBackup() { return phAllBackups()[0] || null; }
+  /* Load the snapshot history out of IndexedDB, and move any still sitting in
+     localStorage across. The old copies are deleted ONLY after IndexedDB has
+     confirmed it holds them -- if the write fails or IndexedDB isn't available,
+     the localStorage copies stay exactly where they are and the app carries on
+     using them. Nothing is ever in a state where neither store has the data. */
+  function phSnapsLoad() {
+    const lsRolling = phReadJsonArray(PH_BACKUP_KEY), lsDaily = phReadJsonArray(PH_DAILY_KEY);
+    // available synchronously right now, so a corrupt-read recovery during this
+    // same boot still has something to reach for
+    PH_SNAP_ROLLING = lsRolling; PH_SNAP_DAILY = lsDaily;
+    if (!phIDB.available) { PH_SNAPS_READY = true; return Promise.resolve(); }
+    return Promise.all([phIDB.get(PH_BACKUP_KEY), phIDB.get(PH_DAILY_KEY)]).then(([r, d]) => {
+      const byTs = list => { const m = new Map(); (list || []).forEach(s => { if (s && s.ts) m.set(s.ts, s); }); return m; };
+      const merge = (a, b, cap) => {
+        const m = byTs(a); byTs(b).forEach((v, k) => { if (!m.has(k)) m.set(k, v); });
+        return [...m.values()].sort((x, y) => y.ts.localeCompare(x.ts)).slice(0, cap);
+      };
+      PH_SNAP_ROLLING = merge(Array.isArray(r) ? r : [], lsRolling, PH_ROLLING_CAP);
+      PH_SNAP_DAILY   = merge(Array.isArray(d) ? d : [], lsDaily,   PH_DAILY_CAP);
+      PH_SNAPS_READY = true;
+      const needsMigrating = lsRolling.length || lsDaily.length;
+      return Promise.all([phIDB.set(PH_BACKUP_KEY, PH_SNAP_ROLLING), phIDB.set(PH_DAILY_KEY, PH_SNAP_DAILY)])
+        .then(([okR, okD]) => {
+          if (!needsMigrating) return;
+          if (!okR || !okD) return;                    // couldn't confirm -- leave localStorage alone
+          return Promise.all([phIDB.get(PH_BACKUP_KEY), phIDB.get(PH_DAILY_KEY)]).then(([vr, vd]) => {
+            // read back and prove it's really there before removing anything
+            if (!Array.isArray(vr) || !Array.isArray(vd)) return;
+            if (vr.length < PH_SNAP_ROLLING.length || vd.length < PH_SNAP_DAILY.length) return;
+            try { localStorage.removeItem(PH_BACKUP_KEY); localStorage.removeItem(PH_DAILY_KEY); } catch (e) {}
+            phStorageWarnCheck();
+          });
+        });
+    });
+  }
 
   function loadPharmacy() {
     const empty = { herbs: [], formulas: [], log: [], suppliers: [], markup: 100, hideStopped: false,
@@ -9040,7 +9130,11 @@
       ' <button onclick="this.parentNode.remove()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;padding:5px 10px;cursor:pointer;font:600 12px system-ui;margin-left:6px">Dismiss</button>';
     const btn = document.getElementById("phRestoreFreeSpace");
     if (btn) btn.onclick = () => {
+      // snapshots live in IndexedDB now, so this clears both homes -- the
+      // localStorage ones only still exist on a device that hasn't migrated yet
       try { localStorage.removeItem(PH_BACKUP_KEY); localStorage.removeItem(PH_DAILY_KEY); } catch (e2) {}
+      PH_SNAP_ROLLING = []; PH_SNAP_DAILY = [];
+      phIDB.del(PH_BACKUP_KEY); phIDB.del(PH_DAILY_KEY);
       b.remove();
       phFlashShow("Cleared old on-device backups. Pick a restore option again to retry.");
     };
@@ -9119,6 +9213,30 @@
     document.getElementById("phDataWarningOk").onclick = () => { PH_DATA_WARNING = null; box.hidden = true; };
   }
   phRenderDataWarning();
+  // Pull the snapshot history out of IndexedDB and migrate any older copies off
+  // localStorage. Deliberately after first paint: the app is fully usable on the
+  // localStorage copies while this runs, so nothing waits on it.
+  phSnapsLoad().then(() => {
+    const panel = document.getElementById("phRestorePanel");
+    if (panel && !panel.hidden) phRenderRestorePanel();   // it was open — show the fuller history now
+    // the rare case: boot hit a corrupt read and had no snapshot to reach for at
+    // that instant, but IndexedDB turns out to have several. Say so plainly and
+    // put her one tap from them -- without claiming anything was auto-recovered,
+    // because nothing was.
+    const bak = phLatestBackup();
+    if (PH_DATA_WARNING && /unrecoverable/.test(PH_DATA_WARNING.kind) && bak) {
+      const box = document.getElementById("phDataWarning");
+      if (box) {
+        box.hidden = false;
+        box.innerHTML = `<b>Couldn't read your saved data on this device</b> — nothing was overwritten. Good on-device backups ARE available, the newest from <b>${esc(phFmtBackupTs(bak.ts))}</b>. Open Restore and pick one.
+          <div><button type="button" id="phDataWarnRestore">🕐 Open Restore</button></div>`;
+        document.getElementById("phDataWarnRestore").onclick = () => {
+          const p = document.getElementById("phRestorePanel");
+          if (p) { p.hidden = false; phRenderRestorePanel(); p.scrollIntoView({ block: "center" }); }
+        };
+      }
+    }
+  });
   setTimeout(phStorageWarnCheck, 900);   // boot-time storage check, off the critical render path
 
   /* ---- leftovers from the Book33 key-stealing bug (found + fixed 2026-08-15) ----
