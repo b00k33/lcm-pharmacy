@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260815-160210">
+<meta name="lcm-build" content="20260815-162148">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -2688,6 +2688,18 @@
     border-radius: 999px; padding: 6px 14px; font-size: 12.5px; font-weight: 700; cursor: pointer;
   }
   .ph-app-shell #phVersionLine.ph-version-line { font-size: 11px; color: var(--ph-faint); }
+  /* her ask 2026-08-15: promote each page's primary action (New prescription,
+     Add supplier, Export CSV) up into the shared top bar, matching the
+     mockups -- rightmost/highest-priority slot, solid fill (not the quiet
+     tint every other pill in the app uses) so it doesn't get lost next to
+     the gold Update button. The underlying buttons already living inside
+     each page are untouched; this just forwards a click to them (see
+     phTopbarActionSet), so none of their existing logic is duplicated. */
+  .ph-app-shell #phTopbarAction.ph-topbar-action {
+    background: var(--ph-green-deep); color: var(--ph-cream);
+    border: none; border-radius: 999px; padding: 6px 16px; font-size: 12.5px; font-weight: 700; cursor: pointer;
+  }
+  .ph-app-shell #phTopbarAction.ph-topbar-action:hover { background: var(--ph-green-press); }
 
   .ph-shell-content { flex: 1 1 auto; padding: 24px; box-sizing: border-box; overflow-x: hidden; }
 
@@ -2715,6 +2727,18 @@
     .ph-topbar-burger { display: flex; align-items: center; }
     .ph-shell-content { padding: 16px; padding-bottom: 84px; }
     .ph-app-shell #phVersionLine.ph-version-line { display: none; }
+    /* on a phone-width topbar, the Update pill's full label plus a page
+       action button both at once can squeeze the title to nothing --
+       .ph-topbar-right never shrinks (flex:0 0 auto), so 100% of the
+       deficit lands on the title. Only compact the Update button when a
+       page action button is actually competing with it (phTopbarActionSet
+       toggles .ph-topbar-crowded on #phTopbar) -- the other six pages
+       without an action button keep the full readable label, since
+       there's no collision to avoid there. Drop-the-lower-priority-
+       content, same approach already used for narrow tables elsewhere;
+       the tooltip on the button still says what it does. */
+    .ph-app-shell .ph-topbar-crowded #phUpdateBtn.ph-topbar-update .ph-update-label { display: none; }
+    .ph-app-shell .ph-topbar-crowded #phUpdateBtn.ph-topbar-update { padding: 6px 10px; }
     .ph-mobile-tabbar {
       display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
       background: var(--ph-white); border-top: 1px solid var(--ph-line);
@@ -2828,6 +2852,7 @@
         <div class="ph-topbar-right">
           <button type="button" id="phUpdateBtn" class="ph-topbar-update" hidden title="A newer version of LCM Pharmacy is available. Tapping this saves everything, pushes it to the cloud and downloads a backup file BEFORE loading the new version.">🔄 <span class="ph-update-label">Update available</span></button>
           <div id="phVersionLine" class="ph-version-line"></div>
+          <button type="button" id="phTopbarAction" class="ph-topbar-action" hidden></button>
         </div>
       </div>
 
@@ -5932,6 +5957,37 @@
     stats: "Stock Statistics", restock: "To Order", prescriptions: "Prescriptions",
     log: "Dispense History", suppliers: "Suppliers", settings: "Settings", stocktake: "Stocktake",
   };
+  // her ask 2026-08-15: promote each page's primary action into the shared
+  // top bar (mockups 02/06/07). Rather than duplicate any add/export logic,
+  // this just forwards a click to the real, already-wired button living
+  // inside that page -- so validation, focus, scroll-into-view etc. all
+  // keep working exactly as before, with zero risk of the two copies
+  // drifting apart. Dashboard has no page of its own to forward to, so its
+  // action switches to Prescriptions first, then forwards -- both clicks
+  // are synchronous, so the second one always finds a freshly-rendered target.
+  const PH_TOPBAR_ACTIONS = {
+    prescriptions: { label: "+ New prescription", run: () => document.querySelector('[data-pres-new="1"]')?.click() },
+    suppliers: { label: "+ Add supplier", run: () => document.getElementById("phSupplierAddBtn")?.click() },
+    log: { label: "⬇ Export CSV", run: () => document.getElementById("phLogExportBtn")?.click() },
+    dashboard: {
+      label: "+ New prescription",
+      run: () => {
+        document.querySelector('[data-ph-tab="prescriptions"]')?.click();
+        document.querySelector('[data-pres-new="1"]')?.click();
+      },
+    },
+  };
+  function phTopbarActionSet(tab) {
+    const btn = document.getElementById("phTopbarAction");
+    const topbar = document.getElementById("phTopbar");
+    if (!btn) return;
+    const a = PH_TOPBAR_ACTIONS[tab];
+    if (topbar) topbar.classList.toggle("ph-topbar-crowded", !!a);
+    if (!a) { btn.hidden = true; btn.onclick = null; return; }
+    btn.hidden = false;
+    btn.textContent = a.label;
+    btn.onclick = a.run;
+  }
   function renderPhShellNav(tab) {
     if (!window.__phShellBound) {
       window.__phShellBound = true;
@@ -7669,6 +7725,7 @@
     }
     renderPhLocBar();
     renderPhShellNav(tab);
+    phTopbarActionSet(tab);
     document.getElementById("phInvWidget").hidden = tab !== "inventory";
     document.getElementById("phPresWrap").hidden = tab !== "prescriptions";
     document.getElementById("phRefillWrap").hidden = tab !== "refill";
