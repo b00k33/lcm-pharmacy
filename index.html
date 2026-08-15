@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260815-100906">
+<meta name="lcm-build" content="20260815-105700">
 <script>
   // self-update check (her ask 2026-08-11, "still not collapsing/working" --
   // both were already fixed and shipped; she was just looking at a GitHub
@@ -2690,6 +2690,31 @@
     }
     b.innerHTML = "⚠ " + msg + ' <button onclick="this.parentNode.remove()" style="float:right;background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;padding:4px 10px;cursor:pointer;font:600 12px system-ui">OK</button>';
   }
+  // her report 2026-08-15 ("this is very frustrating", 4th data loss): the
+  // browser gives this whole origin ~5MB of localStorage, SHARED with the
+  // Book33 app, and it filled to 99% without one word of warning -- at which
+  // point saves and restores started dying (loudly now, but still dying).
+  // Never let it sneak up again: measure on boot and alongside the throttled
+  // auto-backup, and put up the loud banner while there's still room to act.
+  const PH_QUOTA_CHARS = 5 * 1024 * 1024;   // observed real cap: writes began failing at 4.97M chars
+  let phQuotaWarnedAt = 0;
+  function phStorageWarnCheck() {
+    const now = Date.now();
+    if (now - phQuotaWarnedAt < 6 * 60 * 60 * 1000) return;
+    let used = 0;
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        used += k.length + (localStorage.getItem(k) || "").length;
+      }
+    } catch (e) { return; }
+    if (used > PH_QUOTA_CHARS * 0.75) {
+      phQuotaWarnedAt = now;
+      phShowSaveError("This device's app storage is " + Math.round(used / PH_QUOTA_CHARS * 100) +
+        "% full. At 100%, saves stop working — that is exactly what caused the 15 Aug data loss. " +
+        "Back up your data now, then tell Claude so the space can be cleaned up safely.");
+    }
+  }
   // only ever back up data that actually parses and has real content -- a
   // backup of empty/broken data would defeat the whole point of a safety net
   function phGoodSnapshotStrings() {
@@ -2708,6 +2733,7 @@
     // work, not 20 copies of the same edit from a debounced per-keystroke save
     const now = Date.now();
     if (now - phLastBackupAt < 120000) return;
+    phStorageWarnCheck();   // piggyback on the same throttle real saves already ride
     const good = phGoodSnapshotStrings();
     if (!good) return;
     phLastBackupAt = now;
@@ -9063,6 +9089,7 @@
     document.getElementById("phDataWarningOk").onclick = () => { PH_DATA_WARNING = null; box.hidden = true; };
   }
   phRenderDataWarning();
+  setTimeout(phStorageWarnCheck, 900);   // boot-time storage check, off the critical render path
 
   // gentle nudge if she hasn't exported a backup file in over a week — the
   // on-device rolling backups above don't help if the device itself is lost
