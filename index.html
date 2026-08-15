@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260815-112958">
+<meta name="lcm-build" content="20260815-120245">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -1332,6 +1332,11 @@
     margin-top: 8px; font: inherit; font-size: 12px; cursor: pointer; background: var(--ph-paper);
     color: var(--ph-green-deep); border: 1px solid var(--ph-line); border-radius: 8px; padding: 6px 12px;
   }
+  /* these banners carry the recovery actions (free up space, dismiss a data
+     warning) and get tapped on a phone — the rulebook's 44px minimum applies */
+  @media (max-width: 640px) {
+    #pharmacyPage .ph-data-warning button { min-height: 44px; padding: 8px 16px; font-size: 13px; }
+  }
   #pharmacyPage .ph-restore-panel {
     margin: 10px 0; padding: 14px 16px; border-radius: 12px; background: var(--ph-paper);
     border: 1px solid var(--ph-line); max-width: 480px;
@@ -2420,6 +2425,7 @@
       <div id="phVersionLine" class="ph-version-line"></div>
     </div>
     <div id="phDataWarning" class="ph-data-warning" hidden></div>
+    <div id="phLegacyBanner" class="ph-data-warning" hidden></div>
     <div id="phRestorePanel" class="ph-restore-panel" hidden></div>
     <input type="file" id="phRestoreFileInput" accept=".json,application/json" hidden>
     <div id="phLocBar" class="ph-locbar"></div>
@@ -9114,6 +9120,89 @@
   }
   phRenderDataWarning();
   setTimeout(phStorageWarnCheck, 900);   // boot-time storage check, off the critical render path
+
+  /* ---- leftovers from the Book33 key-stealing bug (found + fixed 2026-08-15) ----
+     Her calendar app, on this same origin, used to move THIS app's data under
+     "book33-pharmacy"/"book33-prescriptions" and delete the originals. Those stolen
+     copies can still be sitting on any device she opened Book33 on, taking a big
+     bite out of the ~5MB both apps share -- and a full quota is what makes saves
+     and restores fail silently. Never cleared automatically: it is her data until
+     she has seen what is in it and has a file. If the leftover copy holds MORE of
+     anything than the live app does, this refuses to offer the clear at all and
+     tells her to get it looked at instead -- the whole point is that the last copy
+     of something must never be thrown away to save space. */
+  const PH_LEGACY_KEYS = ["book33-pharmacy", "book33-prescriptions"];
+  function phLegacyPresent() {
+    return PH_LEGACY_KEYS.filter(k => { try { return localStorage.getItem(k) != null; } catch (e) { return false; } });
+  }
+  function phLegacyInfo(keys) {
+    const info = { bytes: 0, herbs: null, log: null, presc: null, loc: null };
+    keys.forEach(k => { try { info.bytes += k.length + (localStorage.getItem(k) || "").length; } catch (e) {} });
+    try {
+      const p = JSON.parse(localStorage.getItem("book33-pharmacy"));
+      if (p) { info.herbs = (p.herbs || []).length; info.log = (p.log || []).length; info.loc = p.locName || null; }
+    } catch (e) {}
+    try { const r = JSON.parse(localStorage.getItem("book33-prescriptions")); if (r) info.presc = ((r && r.items) || []).length; } catch (e) {}
+    return info;
+  }
+  function phDownloadLegacyFile() {
+    const data = {};
+    PH_LEGACY_KEYS.forEach(k => { const v = localStorage.getItem(k); if (v != null) data[k] = v; });
+    const json = JSON.stringify({ app: "LCM Pharmacy", note: "leftover book33-* copies, saved before clearing", exported: new Date().toISOString(), data }, null, 1);
+    const fname = `LCM-pharmacy-leftover-${keyOf(new Date())}.json`;
+    const dl = window.claude && window.claude.downloads;
+    if (dl) return dl.save({ filename: fname, data: json }).then(() => fname).catch(() => null);
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([json], { type: "application/json" }));
+    a.download = fname; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    return Promise.resolve(fname);
+  }
+  function phRenderLegacyBanner() {
+    const box = document.getElementById("phLegacyBanner");
+    if (!box) return;
+    const keys = phLegacyPresent();
+    if (!keys.length) { box.hidden = true; box.innerHTML = ""; return; }
+    const g = phLegacyInfo(keys);
+    const live = window.__lcmSections.counts({ [PHARMACY_KEY]: localStorage.getItem(PHARMACY_KEY), [PRESC_KEY]: localStorage.getItem(PRESC_KEY) });
+    const mb = (g.bytes / 1024 / 1024).toFixed(2);
+    const richer = [];
+    if (g.herbs != null && live.herbs != null && g.herbs > live.herbs) richer.push(`${g.herbs} herbs vs ${live.herbs} here now`);
+    if (g.presc != null && live.presc != null && g.presc > live.presc) richer.push(`${g.presc} prescriptions vs ${live.presc} here now`);
+    if (g.log != null && live.log != null && g.log > live.log) richer.push(`${g.log} log entries vs ${live.log} here now`);
+    box.hidden = false;
+    const found = `Found <b>${mb} MB</b> of leftover pharmacy data on this device, copied here by the old Book33 bug (now fixed). It holds ${g.herbs == null ? "—" : g.herbs} herbs, ${g.presc == null ? "—" : g.presc} prescriptions, ${g.log == null ? "—" : g.log} log entries${g.loc ? ` · <b>${esc(g.loc)}</b>` : ""}.`;
+    if (richer.length) {
+      box.innerHTML = `${found}<br><br>⚠ <b>Don't clear this yet</b> — the leftover copy has MORE than what's open here (${esc(richer.join("; "))}). It may be the only copy of something. Save it and show Claude before anything is deleted.
+        <div><button type="button" id="phLegacySave">⬇ Save it to this device</button></div>`;
+    } else {
+      box.innerHTML = `${found} Everything in it is already in your live data, so it's safe to remove — that frees <b>${mb} MB</b> and makes silent save failures far less likely.
+        <div><button type="button" id="phLegacyClear">⬇ Save a copy, then free ${mb} MB</button></div>`;
+    }
+    const saveBtn = document.getElementById("phLegacySave");
+    if (saveBtn) saveBtn.onclick = () => {
+      saveBtn.disabled = true; saveBtn.textContent = "Saving…";
+      phDownloadLegacyFile().then(f => phFlashShow(f ? `Saved <b>${esc(f)}</b>. Send it to Claude before clearing anything.` : "That didn't download — nothing was removed."));
+    };
+    const clearBtn = document.getElementById("phLegacyClear");
+    if (clearBtn) clearBtn.onclick = () => {
+      clearBtn.disabled = true; clearBtn.textContent = "Saving a copy first…";
+      // download must actually succeed before a single key is removed
+      phDownloadLegacyFile().then(fname => {
+        if (!fname) { clearBtn.disabled = false; clearBtn.textContent = "⬇ Save a copy, then free space"; return phShowSaveError("The safety copy didn't download, so NOTHING was removed. Try again."); }
+        try { PH_LEGACY_KEYS.forEach(k => localStorage.removeItem(k)); }
+        catch (e) { return phShowSaveError("Couldn't remove the leftover data (" + ((e && e.name) || "error") + "). Nothing else was changed."); }
+        phRenderLegacyBanner();
+        let used = 0;
+        try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); used += k.length + (localStorage.getItem(k) || "").length; } } catch (e) {}
+        // PH_QUOTA_CHARS is an ASSUMED 5MB; real browser quotas vary, so an honest
+        // reading can exceed it. Cap the display rather than show a nonsense ">100%".
+        const pct = Math.min(100, Math.round(used / PH_QUOTA_CHARS * 100));
+        phFlashShow(`Freed <b>${mb} MB</b> · saved <b>${esc(fname)}</b> first. This device is now using about ${pct}% of its storage.`);
+      });
+    };
+  }
+  phRenderLegacyBanner();
 
   // gentle nudge if she hasn't exported a backup file in over a week — the
   // on-device rolling backups above don't help if the device itself is lost
