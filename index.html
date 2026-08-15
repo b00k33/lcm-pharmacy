@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260814-235211">
+<meta name="lcm-build" content="20260815-100906">
 <script>
   // self-update check (her ask 2026-08-11, "still not collapsing/working" --
   // both were already fixed and shipped; she was just looking at a GitHub
@@ -2637,8 +2637,19 @@
   // deliberately NOT prefixed "daybook": sync.js only ever pushes daybook* keys
   // to the cloud, so these stay a genuinely independent, per-device safety net
   // that a cloud/sync bug can never also corrupt.
-  const PH_BACKUP_KEY = "lcmbak-rolling";      // up to 20 snapshots, newest first
-  const PH_DAILY_KEY  = "lcmbak-daily";        // one per calendar day, kept 30 days
+  const PH_BACKUP_KEY = "lcmbak-rolling";      // up to PH_ROLLING_CAP snapshots, newest first
+  const PH_DAILY_KEY  = "lcmbak-daily";        // one per calendar day, kept PH_DAILY_CAP days
+  // her report 2026-08-15: these were 20 and 30. Each snapshot is a FULL copy
+  // of both stores (herbs + the whole dispense log + prescriptions), and this
+  // origin's real log alone has run past 3,800 entries -- 20+30 full copies
+  // of that is easily several MB, on top of whatever else shares this
+  // origin's localStorage. That's exactly what filled the quota and made
+  // "Restore ticked sections" throw silently (see phShowRestoreQuotaError).
+  // Smaller caps keep the safety net (a real one, still many recent points
+  // to restore from) without it being able to crowd out the writes it
+  // exists to protect.
+  const PH_ROLLING_CAP = 6;
+  const PH_DAILY_CAP = 10;
   const PH_EXPORT_AT_KEY = "lcmbak-last-export";
   let PH_DATA_WARNING = null;   // set during boot if a load had to recover from a backup
   // items 1+2 of her data-safety spec (2026-08-13). phSavedCounts is the
@@ -2701,20 +2712,28 @@
     if (!good) return;
     phLastBackupAt = now;
     const snap = { ts: new Date().toISOString(), ph: good.ph, pr: good.pr };
-    try {
-      const rolling = phReadJsonArray(PH_BACKUP_KEY);
-      rolling.unshift(snap);
-      localStorage.setItem(PH_BACKUP_KEY, JSON.stringify(rolling.slice(0, 20)));
-    } catch (e) {}
-    try {
-      const daily = phReadJsonArray(PH_DAILY_KEY);
-      const today = snap.ts.slice(0, 10);
-      if (!daily.length || String(daily[0].ts).slice(0, 10) !== today) {
-        daily.unshift(snap);
-        const cutoff = now - 30 * 24 * 60 * 60 * 1000;
-        localStorage.setItem(PH_DAILY_KEY, JSON.stringify(daily.filter(d => new Date(d.ts).getTime() >= cutoff).slice(0, 30)));
+    // her report 2026-08-15: a snapshot that can't fit used to just throw and
+    // get swallowed by the empty catch below, so the backup silently stopped
+    // updating with no sign anything was wrong. Now a write that's refused
+    // for being too big backs off (fewer, then just the newest) before
+    // giving up, so this keeps SOME safety net right up to the last byte of
+    // room instead of an all-or-nothing failure.
+    function writeCapped(key, list, cap) {
+      for (let n = cap; n >= 1; n--) {
+        try { localStorage.setItem(key, JSON.stringify(list.slice(0, n))); return; }
+        catch (e) { if (n === 1) return; }
       }
-    } catch (e) {}
+    }
+    const rolling = phReadJsonArray(PH_BACKUP_KEY);
+    rolling.unshift(snap);
+    writeCapped(PH_BACKUP_KEY, rolling, PH_ROLLING_CAP);
+    const daily = phReadJsonArray(PH_DAILY_KEY);
+    const today = snap.ts.slice(0, 10);
+    if (!daily.length || String(daily[0].ts).slice(0, 10) !== today) {
+      daily.unshift(snap);
+      const cutoff = now - PH_DAILY_CAP * 24 * 60 * 60 * 1000;
+      writeCapped(PH_DAILY_KEY, daily.filter(d => new Date(d.ts).getTime() >= cutoff), PH_DAILY_CAP);
+    }
   }
   function phAllBackups() {
     const seen = new Set(), out = [];
@@ -8907,15 +8926,29 @@
     const pending = phPendingRestore; phPendingRestore = null;
     if (!pending || (!ch.prescriptions && !ch.inventory && !ch.log)) { phRenderRestorePanel(); return; }
     phDownloadBackupFile("before-restore").then(() => {
-      if (ch.prescriptions && ch.inventory && ch.log) {
-        // everything ticked = the old full restore, including any extra
-        // daybook keys (column widths etc.) the backup carries
-        Object.keys(pending.norm).forEach(k => localStorage.setItem(k, pending.norm[k]));
-      } else {
-        const cur = { [PHARMACY_KEY]: localStorage.getItem(PHARMACY_KEY), [PRESC_KEY]: localStorage.getItem(PRESC_KEY) };
-        const composed = window.__lcmSections.compose(cur, pending.norm, ch);
-        if (composed[PHARMACY_KEY] != null) localStorage.setItem(PHARMACY_KEY, composed[PHARMACY_KEY]);
-        if (composed[PRESC_KEY] != null) localStorage.setItem(PRESC_KEY, composed[PRESC_KEY]);
+      // her report 2026-08-15: this used to call localStorage.setItem() with
+      // no try/catch at all. When the on-device auto-backup keys (below) had
+      // quietly grown large enough to push this origin's storage near its
+      // quota, the write here threw QuotaExceededError, the rest of this
+      // function (including the reload) never ran, and NOTHING told her --
+      // "Restore ticked sections" just silently did nothing. Every write here
+      // is now guarded, and a failure is LOUD and offers a way out instead of
+      // vanishing into the console.
+      try {
+        if (ch.prescriptions && ch.inventory && ch.log) {
+          // everything ticked = the old full restore, including any extra
+          // daybook keys (column widths etc.) the backup carries
+          Object.keys(pending.norm).forEach(k => localStorage.setItem(k, pending.norm[k]));
+        } else {
+          const cur = { [PHARMACY_KEY]: localStorage.getItem(PHARMACY_KEY), [PRESC_KEY]: localStorage.getItem(PRESC_KEY) };
+          const composed = window.__lcmSections.compose(cur, pending.norm, ch);
+          if (composed[PHARMACY_KEY] != null) localStorage.setItem(PHARMACY_KEY, composed[PHARMACY_KEY]);
+          if (composed[PRESC_KEY] != null) localStorage.setItem(PRESC_KEY, composed[PRESC_KEY]);
+        }
+      } catch (e) {
+        phShowRestoreQuotaError(e);
+        phRenderRestorePanel();
+        return;
       }
       // a restore may legitimately shrink a section -- tell the sync layer's
       // shrink bodyguard this ONE push is deliberate, not a bad read
@@ -8927,6 +8960,34 @@
       (window.__lcmFlushBeforeReload ? window.__lcmFlushBeforeReload() : Promise.resolve())
         .then(() => location.reload(), () => location.reload());
     });
+  }
+  // her report 2026-08-15: root cause of the silent restore failure was
+  // this origin's localStorage quota nearly full, mostly from the on-device
+  // auto-backup snapshots (lcmbak-rolling/lcmbak-daily) themselves -- a
+  // safety net that had grown large enough to threaten the very writes it
+  // exists to protect. Offer the one recovery that's actually hers to make
+  // without losing anything real: clear those derived, re-creatable
+  // snapshots (never primary data) and let her retry.
+  function phShowRestoreQuotaError(e) {
+    let b = document.getElementById("phSaveError");
+    if (!b) {
+      b = document.createElement("div");
+      b.id = "phSaveError";
+      b.style.cssText = "position:fixed;left:10px;right:10px;bottom:10px;z-index:999999;background:#8a1f14;color:#fff;padding:12px 14px;border-radius:12px;font:600 12.5px/1.4 system-ui, sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.3)";
+      document.body.appendChild(b);
+    }
+    const isQuota = e && (e.name === "QuotaExceededError" || /quota/i.test(e.message || ""));
+    b.innerHTML = (isQuota
+      ? "⚠ Restore FAILED — this device's storage is full (mostly old on-device backup snapshots). Nothing was changed."
+      : "⚠ Restore FAILED (" + ((e && e.name) || "error") + "). Nothing was changed.") +
+      ' <button id="phRestoreFreeSpace" style="background:rgba(255,255,255,.18);border:none;color:#fff;border-radius:8px;padding:5px 10px;cursor:pointer;font:600 12px system-ui;margin-left:6px">Free up space &amp; retry</button>' +
+      ' <button onclick="this.parentNode.remove()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;padding:5px 10px;cursor:pointer;font:600 12px system-ui;margin-left:6px">Dismiss</button>';
+    const btn = document.getElementById("phRestoreFreeSpace");
+    if (btn) btn.onclick = () => {
+      try { localStorage.removeItem(PH_BACKUP_KEY); localStorage.removeItem(PH_DAILY_KEY); } catch (e2) {}
+      b.remove();
+      phFlashShow("Cleared old on-device backups. Pick a restore option again to retry.");
+    };
   }
   function phRenderRestorePanel() {
     const panel = document.getElementById("phRestorePanel");
@@ -10049,13 +10110,26 @@
       if (row && row.data && (row.data[PH_KEY] || row.data[PR_KEY])) {
         var localHas = !!localStorage.getItem(PH_KEY);
         if (localHas && sessionStorage.getItem(APPLIED) === row.updated_at) { go(); return; }
-        // this cold-boot adopt bypasses mergeSections entirely, so it needs
-        // its own copy of the same requirement-8 guard: don't let a cloud
-        // copy with no location name/address wipe one already set here.
-        if (row.data[PH_KEY] && localHas) row.data[PH_KEY] = preserveLocationField(row.data[PH_KEY], localStorage.getItem(PH_KEY), null);
-        apply(row.data);
-        sessionStorage.setItem(APPLIED, row.updated_at || "");
-        location.reload();                                  // clean boot on the adopted data
+        if (!localHas) {
+          // nothing here yet to protect -- a plain cold adopt is correct and simplest
+          apply(row.data);
+          sessionStorage.setItem(APPLIED, row.updated_at || "");
+          location.reload();                                // clean boot on the adopted data
+          return;
+        }
+        // her report 2026-08-15 (restore "does nothing", or data reappearing
+        // empty right after a reload): this used to always trust row.data
+        // outright on a cold boot, bypassing mergeSections entirely -- so a
+        // stale or emptier cloud row (e.g. a push from a restore that hadn't
+        // landed yet, or a second stale device/tab) could silently overwrite
+        // richer data already sitting in local storage. go() below runs the
+        // exact same section-aware pull-before-push every other reconcile
+        // uses, so an emptier cloud copy can only ever be adopted where it's
+        // genuinely newer, never blindly clobber what's already here -- and
+        // requirement 8's location-field guard already lives inside that
+        // shared path (preserveLocationField, applied per-section by
+        // mergeSections), so it doesn't need its own copy here anymore.
+        go();
       } else {
         screenImport("");                                   // cloud genuinely empty → migrate from backup
       }
