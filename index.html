@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260815-234350">
+<meta name="lcm-build" content="20260816-001230">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -723,7 +723,6 @@
   .ph-pill.phaseout { color: var(--ph-phaseout-deep); background: var(--ph-phaseout-tint); }
   .ph-pill.dispensed { color: var(--ph-green); background: var(--ph-green-tint); }
   .ph-pill.draft { color: var(--ph-low-deep); background: var(--ph-low-tint); }
-  .ph-pill.make { color: var(--ph-snooze-deep); background: var(--ph-snooze-tint); }
   .ph-pill.restock { color: var(--ph-phaseout-deep); background: var(--ph-phaseout-tint); }
   .ph-pill.stocktake { color: var(--ph-stopped); background: var(--ph-stopped-tint); }
   /* temporarily-stopping rows go grey — text, code, name, the lot */
@@ -2831,21 +2830,27 @@
        .ph-topbar-right never shrinks (flex:0 0 auto), so 100% of the
        deficit lands on the title. Only compact the Update button when a
        page action button is actually competing with it (phTopbarActionSet
-       toggles .ph-topbar-crowded on #phTopbar) -- the other six pages
-       without an action button keep the full readable label, since
-       there's no collision to avoid there. Drop-the-lower-priority-
-       content, same approach already used for narrow tables elsewhere;
-       the tooltip on the button still says what it does. */
+       toggles .ph-topbar-crowded on #phTopbar) -- pages with no action
+       button (just Stocktake now, 2026-08-16) keep the full readable
+       label, since there's no collision to avoid there. Drop-the-lower-
+       priority-content, same approach already used for narrow tables
+       elsewhere; the tooltip on the button still says what it does. */
     .ph-app-shell .ph-topbar-crowded #phUpdateBtn.ph-topbar-update .ph-update-label { display: none; }
     .ph-app-shell .ph-topbar-crowded #phUpdateBtn.ph-topbar-update { padding: 6px 10px; }
-    /* Refill's two topbar actions (found during 360px verification,
-       2026-08-15): even with the Update button already compacted above, TWO
-       full-text buttons alone are wider than the whole 360px topbar and
-       crush the title to 0. :has() scopes this to pages with a SECOND
-       action so the four single-action pages (already verified readable)
-       are untouched -- same icon+tooltip fallback as the Update button. */
-    .ph-app-shell #phTopbarActions:has(> :nth-child(2)) .ph-topbar-action-tx { display: none; }
-    .ph-app-shell #phTopbarActions:has(> :nth-child(2)) .ph-topbar-action { padding: 6px 10px; }
+    /* her mockup (2026-08-16): every page's topbar action renders as a
+       plain round icon-only circle, always -- not just when a second
+       action is competing for space (the old :has(nth-child(2)) rule,
+       which kept single-action pages like Prescriptions/Suppliers/Log/
+       Dashboard as full-text pills). Same icon+tooltip fallback as the
+       Update button; label text is still there for desktop and for the
+       tooltip, just visually hidden here. Fixed circle size keeps a
+       single-glyph icon (+/⬇/✓/🖶) and a two-glyph one (🔍) the same
+       shape -- border-radius:999px already clamps to a true circle once
+       width==height. */
+    .ph-app-shell .ph-topbar-action-tx { display: none; }
+    .ph-app-shell .ph-topbar-action {
+      width: 36px; height: 36px; padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 15px;
+    }
     .ph-mobile-tabbar {
       display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
       background: var(--ph-white); border-top: 1px solid var(--ph-line);
@@ -5908,6 +5913,30 @@
       `${title} ${phFileDate()}`);
   }
 
+  // her mockup (2026-08-16): a print icon on the To Order topbar. Same
+  // phPrintDoc engine as phPrintListing above, listing exactly what's on
+  // the page -- still-to-order and on-the-way, grouped, with the same
+  // per-row pack/qty math orderRow() uses (phOrderPackFor) so the printed
+  // quantities always match what's on screen.
+  function phPrintOrderList() {
+    const toOrder = PHARMACY.herbs.filter(herbNeedsOrder).sort(phByName);
+    const stillToOrder = toOrder.filter(h => !h.ordered);
+    const onTheWay = toOrder.filter(h => h.ordered);
+    const lineTotal = h => { const pack = phOrderPackFor(h), qty = h.orderQty != null ? h.orderQty : 1; return h.bottleCost != null ? h.bottleCost * qty : null; };
+    const row = h => { const pack = phOrderPackFor(h), qty = h.orderQty != null ? h.orderQty : 1, cost = lineTotal(h);
+      return `<tr><td>${esc(phDispName(h.name, phIsFormula(h)))}</td><td>${esc(h.supplier || "—")}</td><td class="n">${phFmtG(pack * qty)}g</td><td class="n">${cost != null ? phMoney(cost) : "—"}</td></tr>`; };
+    const section = (title, list) => list.length ? `<tr><td class="grp" colspan="4">${title} · ${list.length}</td></tr>${list.map(row).join("")}` : "";
+    const total = toOrder.reduce((sum, h) => sum + (lineTotal(h) || 0), 0);
+    phPrintDoc(`<title>Order List</title>
+      <style>body{font-family:Georgia,serif;padding:24px}h1{font-size:20px}table{border-collapse:collapse;width:100%;font-size:13px}
+      th,td{border:1px solid #999;padding:5px 8px;text-align:left}td.n{text-align:right}td.grp{background:#eee;font-weight:bold}</style>
+      <h1>Order List — ${new Date().toLocaleDateString()}</h1>
+      <table><thead><tr><th>Herb</th><th>Supplier</th><th>Order qty</th><th>Est. cost</th></tr></thead>
+      <tbody>${section("To order", stillToOrder)}${section("Ordered — on the way", onTheWay)}</tbody>
+      <tfoot><tr><td colspan="3" style="text-align:right;font-weight:bold">Total</td><td class="n" style="font-weight:bold">${phMoney(total)}</td></tr></tfoot></table>`,
+      `Order list ${phFileDate()}`);
+  }
+
   // one renderer for all three movement kinds — dispense, refill, arrival —
   // used by the pharmacy log and the prescription/refill views alike
   function phLogRowHtml(e) {
@@ -6076,12 +6105,24 @@
   // are synchronous, so the second one always finds a freshly-rendered target.
   // 2026-08-15: Formula Refill needed TWO topbar actions (Print making sheet
   // + New formula recipe, both ghost/outline per her mockup 12), so each
-  // entry became an array -- the four existing single-button pages just wrap
-  // in a 1-item array, nothing else about them changes.
+  // entry became an array -- single-action pages just wrap in a 1-item
+  // array, nothing else about them changes. 2026-08-16: Inventory/Restock
+  // gained entries too (search+add, print+mark-all-arrived) per her full
+  // app mockup; only Stocktake and Suppliers'-second-table still have none.
+  // scroll-then-focus helper for the new search-shortcut topbar icons below
+  // -- doesn't hide/collapse the page's own always-visible search box (her
+  // mockup shows both at once on Inventory), just jumps straight to it
+  const phTopbarFocus = id => { const el = document.getElementById(id); if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.focus(); } };
   const PH_TOPBAR_ACTIONS = {
     prescriptions: [{ label: "+ New prescription", run: () => document.querySelector('[data-pres-new="1"]')?.click() }],
     suppliers: [{ label: "+ Add supplier", run: () => document.getElementById("phSupplierAddBtn")?.click() }],
-    log: [{ label: "⬇ Export CSV", run: () => document.getElementById("phLogExportBtn")?.click() }],
+    // her mockup (2026-08-16) shows only a search icon here, but CSV export
+    // is a real, already-shipped feature -- keeping it rather than dropping
+    // it to match a single-icon panel, and adding search alongside it
+    log: [
+      { label: "🔍 Jump to search", run: () => phTopbarFocus("phLogSearch") },
+      { label: "⬇ Export CSV", run: () => document.getElementById("phLogExportBtn")?.click() },
+    ],
     dashboard: [{
       label: "+ New prescription",
       run: () => {
@@ -6089,6 +6130,23 @@
         document.querySelector('[data-pres-new="1"]')?.click();
       },
     }],
+    // her mockup: search + add icons on Inventory's topbar -- these don't
+    // add any new functionality, just entry points to the page's own
+    // already-existing search box and "+ Add herb" button
+    inventory: [
+      { label: "🔍 Jump to search", run: () => phTopbarFocus("phSearch") },
+      { label: "+ Add herb", run: () => document.getElementById("phHerbAddBtn")?.click() },
+    ],
+    // her mockup: print + mark-all-arrived icons on To Order's topbar.
+    // Mark-all-arrived generalizes the existing per-supplier "✓ All
+    // arrived" button (same phArrive() call, same no-confirm precedent --
+    // that button has never asked "are you sure?" either) to every
+    // supplier at once; print is new but follows phPrintListing's own
+    // pattern exactly (phPrintOrderList, defined near it above).
+    restock: [
+      { label: "🖶 Print order list", run: () => phPrintOrderList() },
+      { label: "✓ Mark all arrived", run: () => phArrive(PHARMACY.herbs.filter(herbNeedsOrder)) },
+    ],
     // no in-page button left to forward to on Refill (both moved fully into
     // the topbar per her mockup 12) — call the same functions those buttons
     // used to trigger, directly
@@ -6172,18 +6230,21 @@
   // the app -- the 🛒-flagged to-order list (herbNeedsOrder, same predicate
   // Restock uses) and the 🏺 to-make queue (Formula Refill's makeQ) -- there
   // is no existing single list that already combines them.
+  // her mockup (2026-08-16): the Dashboard's "Needs ordering" tile/card
+  // showed a different number to the nav "To order" badge and Restock's own
+  // list -- this widget used to fold formula-toMake items into the SAME
+  // count as herbNeedsOrder, so the two only agreed when nothing was
+  // flagged to make. herbNeedsOrder is also what drives the nav badge
+  // (line ~6155) and Restock's own toOrder list -- matching it here exactly
+  // is the "one definition" fix, not a second count built for this widget.
   function phDashNeedsOrderingHtml() {
-    const orderItems = PHARMACY.herbs.filter(herbNeedsOrder).map(h => ({ h, make: false }));
-    const makeItems = PHARMACY.herbs.filter(h => phIsFormula(h) && h.toMake && !h.stopped).map(h => ({ h, make: true }));
-    const all = [...orderItems, ...makeItems].sort((a, b) => {
-      const rank = x => x.make ? 2 : (x.h.qty || 0) <= 0 ? 0 : 1;   // Out, then Low, then Make
-      return rank(a) - rank(b) || phByName(a.h, b.h);
+    const items = PHARMACY.herbs.filter(herbNeedsOrder).sort((a, b) => {
+      const rank = h => (h.qty || 0) <= 0 ? 0 : 1;   // Out, then Low
+      return rank(a) - rank(b) || phByName(a, b);
     });
-    if (!all.length) return `<div class="fam-empty">Nothing needs ordering right now.</div>`;
-    return `<div class="ph-dash-list">${all.slice(0, 5).map(({ h, make }) => {
-      const chip = make ? `<span class="ph-pill make">Make</span>`
-        : (h.qty || 0) <= 0 ? `<span class="ph-pill zero">Out</span>`
-        : `<span class="ph-pill low">Low · ${phFmtG(h.qty)}g</span>`;
+    if (!items.length) return `<div class="fam-empty">Nothing needs ordering right now.</div>`;
+    return `<div class="ph-dash-list">${items.slice(0, 5).map(h => {
+      const chip = (h.qty || 0) <= 0 ? `<span class="ph-pill zero">Out</span>` : `<span class="ph-pill low">Low · ${phFmtG(h.qty)}g</span>`;
       return `<div class="ph-dash-row">
         <div class="ph-dash-row-main">${h.kpcCode ? `<span class="ph-dash-code">${esc(h.kpcCode)}</span> ` : ""}<span class="ph-dash-name">${esc(phDispName(h.name, phIsFormula(h)))}</span></div>
         ${chip}
@@ -6343,7 +6404,7 @@
     // own number and the list it opens from disagreeing with each other
     const zero = phZeroHerbs().filter(phNotSnoozed).length, low = phLowHerbs().filter(phNotSnoozed).length;
     const presCount = PRESC.items.filter(t => !presIsFormula(t)).length;
-    const needCount = PHARMACY.herbs.filter(herbNeedsOrder).length + PHARMACY.herbs.filter(h => phIsFormula(h) && h.toMake && !h.stopped).length;
+    const needCount = PHARMACY.herbs.filter(herbNeedsOrder).length;
     // a tile is a real <button> so Tab + Enter/Space opens it for free
     // through the same click delegate every other action in this app uses --
     // no separate keydown handler needed
