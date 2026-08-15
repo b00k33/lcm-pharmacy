@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260816-001230">
+<meta name="lcm-build" content="20260816-004248">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -614,6 +614,28 @@
   .ph-table.ph-hide-usedByHH [data-col="usedByHH"],
   .ph-table.ph-hide-cart [data-col="cart"],
   .ph-table.ph-hide-note [data-col="note"] { display: none; }
+  /* her mockup (2026-08-16), her words "make it mobile friendly, dont
+     change web style": Inventory's rows collapse to ONE compact
+     tap-to-open row on mobile only -- renderPhRows() picks this template
+     when window.innerWidth <= 900 (same breakpoint the app shell already
+     uses everywhere else), so desktop's click-to-edit grid above is
+     completely unaffected, header included. */
+  @media (max-width: 900px) {
+    #phStock thead { display: none; }
+  }
+  #phStock .ph-inv-compact-cell { padding: 0; }
+  .ph-inv-compact-inner { display: flex; align-items: center; gap: 10px; padding: 10px 12px; }
+  .ph-inv-compact-sel { flex: 0 0 auto; width: 18px; height: 18px; accent-color: var(--ph-green); }
+  .ph-inv-compact-tap {
+    flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px;
+    background: transparent; border: none; padding: 0; margin: 0; text-align: left; cursor: pointer;
+    font: inherit; color: inherit;
+  }
+  .ph-inv-compact-line1, .ph-inv-compact-line2 { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .ph-inv-compact-name { font-weight: 600; color: var(--ph-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ph-inv-compact-qty { flex: 0 0 auto; font-weight: 600; font-size: 13px; color: var(--ph-ink); }
+  .ph-inv-compact-line2 .ph-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ph-inv-compact-status { flex: 0 0 auto; }
   /* the grid header goes deep green — the luxury contrast layer */
   #pharmacyPage .ph-table thead tr:first-child th {
     background: var(--ph-green-deep); color: var(--ph-cream); border-bottom: none;
@@ -5210,9 +5232,44 @@
   ["pointerup", "pointercancel"].forEach(ev => document.addEventListener(ev, () => {
     if (presDispPress) { clearTimeout(presDispPress.timer); presDispPress = null; }
   }));
+  // her mockup (2026-08-16), her go-ahead: "make it mobile friendly, dont
+  // change web style" -- so this compact tap-to-open row is ONLY used when
+  // window.innerWidth <= 900 (renderPhRows below checks this once per call,
+  // re-picked on resize by the listener near renderPhShellNav). Desktop's
+  // click-to-edit grid two functions down is completely untouched. Tapping
+  // the row opens the SAME herb edit drawer the name/pencil already open on
+  // desktop (data-ph-herb-edit, the existing app-wide hook) -- editing isn't
+  // lost, it's one tap into the drawer instead of hunting for tiny per-cell
+  // unlock buttons that don't fit at 360px anyway (most of those columns
+  // are already hidden at narrow widths today). The status pill keeps its
+  // own tap target (data-ph-status-menu opens the status menu) as a
+  // SIBLING of the edit button, not nested inside it, so the two features
+  // can never fight over the same click.
+  const phInvCompactRowHtml = (h, rowCls) => {
+    const active = phActiveSupplier(h);
+    const sel = phBulkMode ? `<input type="checkbox" class="ph-inv-compact-sel" data-ph-bulk-sel="${h.id}" aria-label="Select ${esc(h.name)}"${phSelected.has(h.id) ? " checked" : ""}>` : "";
+    return `<tr data-ph-row="${h.id}"${rowCls ? ` class="${rowCls}"` : ""}>
+      <td class="ph-inv-compact-cell" colspan="99">
+        <div class="ph-inv-compact-inner">
+          ${sel}
+          <button type="button" class="ph-inv-compact-tap" data-ph-herb-edit="${h.id}" title="Open ${esc(h.name)} in the edit form">
+            <span class="ph-inv-compact-line1">
+              <span class="ph-inv-compact-name">${phHerbCode(h) ? `<span class="ph-code">${esc(phHerbCode(h))}</span> ` : ""}${esc(phDispName(h.name, phIsFormula(h)))}</span>
+              <span class="ph-inv-compact-qty">${h.qty != null ? phFmtG(h.qty) + "g" : "—"}</span>
+            </span>
+            <span class="ph-inv-compact-line2">
+              <span class="ph-sub">${active ? esc(phSupDisplayName(active.name)) : "—"}</span>
+            </span>
+          </button>
+          <span class="ph-inv-compact-status">${phStatusPills(h)}${phStatusMenuFor === h.id ? phStatusMenuHtml(h) : ""}</span>
+        </div>
+      </td>
+    </tr>`;
+  };
   function renderPhRows() {
     const tbody = document.querySelector("#phStock tbody");
     if (!tbody) { renderPhStock(); return; }
+    const mobileCompact = window.innerWidth <= 900;
     const rows = PHARMACY.herbs.filter(phRowPasses).sort(phCompareRows);
     document.getElementById("phCount").textContent =
       rows.length === PHARMACY.herbs.length ? `${PHARMACY.herbs.length} herbs` : `${rows.length} of ${PHARMACY.herbs.length} herbs`;
@@ -5235,6 +5292,7 @@
         k === "stopped" ? "ph-row-stopped" : k === "phaseout" ? "ph-row-phaseout" : "",
         h.usedByHH ? "ph-row-hh" : "",
       ].filter(Boolean).join(" ");
+      if (mobileCompact) return phInvCompactRowHtml(h, rowCls);
       // every editable number (and the note) is locked until clicked —
       // no spinners, no wheel accidents, no stray keystrokes over real stock
       const lock = (field, display, aria) => phCellEdit && phCellEdit.id === h.id && phCellEdit.field === field
@@ -5305,6 +5363,22 @@
     }
     phPlaceStatusMenu();
   }
+  // re-pick desktop-grid vs mobile-compact if resizing/rotating crosses the
+  // 900px breakpoint -- same debounced-resize idiom sync.js already uses
+  // for the status dock/location switcher, so a browser resize or a phone
+  // rotation swaps templates live instead of waiting for the next
+  // unrelated render
+  let phInvResizeMobile = window.innerWidth <= 900, phInvResizeT;
+  window.addEventListener("resize", () => {
+    clearTimeout(phInvResizeT);
+    phInvResizeT = setTimeout(() => {
+      const nowMobile = window.innerWidth <= 900;
+      if (nowMobile !== phInvResizeMobile) {
+        phInvResizeMobile = nowMobile;
+        if (PHARMACY.activeTab === "inventory") renderPhRows();
+      }
+    }, 150);
+  });
   // the bar above the grid while Select mode is on — count + the three moves:
   // Invert (flip everyone currently visible — the "keep these, stop the rest"
   // workflow), Stop selected, Activate selected. Search/filters narrow what
