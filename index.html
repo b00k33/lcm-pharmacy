@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260817-002903">
+<meta name="lcm-build" content="20260817-003812">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -4831,6 +4831,33 @@
     savePharmacy();
   }
 
+  // ---- one-time migration (2026-08-17): D-prefix codes are Doane, not Koda
+  // ------------------------------------------------------------------------
+  // Her correction: a "D" code (D11, D23, D4...) marks an in-house formula
+  // made by Doane -- a fourth named in-house source, same shape as Huang
+  // Huang/Mick/Lyttleton, not a Koda catalogue number. These three entries
+  // were sitting under supplier "Koda" only because that's where an early
+  // seed pass defaulted an unrecognised code to. Renaming the suppliers[]
+  // entry in place (same code, same bottleCost, same isDefault) -- nothing
+  // else about the herb/formula changes. Also corrects the legacy mirrored
+  // h.supplier field these three entries carry (STEP 8g's read sites --
+  // Inventory Supplier column, Restock grouping -- trust that field, not
+  // suppliers[], so leaving it at "Koda" would un-fix half the bug); done
+  // directly rather than via phQuickSetSupplier so this reads as the data
+  // correction it is, not a logged supplier-change she never made.
+  if (!PHARMACY.migratedDoaneCodes) {
+    PHARMACY.herbs.forEach(h => {
+      (h.suppliers || []).forEach(s => {
+        if (s.name === "Koda" && /^D\d/i.test(s.code || "")) {
+          s.name = "Doane";
+          if (s.isDefault && h.supplier === "Koda") h.supplier = "Doane";
+        }
+      });
+    });
+    PHARMACY.migratedDoaneCodes = true;
+    savePharmacy();
+  }
+
   // formula products (stocked granules) vs single herbs. Linh's rule
   // (2026-07-23): any name ending in Tang / San / Wan is a formula — applied
   // to the name's first segment (before any /gloss, (note), # or *). A manual
@@ -4870,15 +4897,16 @@
     "Evergreen": { formulas: true,  formulaPack: 100 },
   };
   const PH_KNOWN_SUPPLIERS = Object.keys(PH_SUPPLIER_RULES);
-  // Section D (her ask 2026-08-16): the letter-prefix on a herb's EXISTING
-  // code often already says who it's from -- these six are the ones she
-  // confirmed actually mean something (glued letter+digits catalogue codes,
-  // same shape as "K031"/"E1562"). Everything else -- a spaced code like
-  // "M D02" on a TCM pattern name, a one-off product-line code like
-  // "PropSkin1" -- is a different, unrelated numbering scheme (formula/
-  // reference-book codes) she confirmed are NOT suppliers. Never guessed,
-  // never proposed; those herbs just get listed for her to set by hand.
-  const PH_CODE_PREFIX_SUPPLIER = { K: "Koda", E: "Evergreen", EV: "Evergreen", KP: "KPC", G: "GMP", HH: "Huang Huang" };
+  // Section D (her ask 2026-08-16, D added 2026-08-17): the letter-prefix on
+  // a herb's EXISTING code often already says who it's from -- these are the
+  // ones she confirmed actually mean something (glued letter+digits
+  // catalogue codes, same shape as "K031"/"E1562"). Everything else -- a
+  // spaced code like "M D02" on a TCM pattern name, a one-off product-line
+  // code like "PropSkin1" -- is a different, unrelated numbering scheme
+  // (formula/reference-book codes) she confirmed are NOT suppliers. Never
+  // guessed, never proposed; those herbs just get listed for her to set by
+  // hand.
+  const PH_CODE_PREFIX_SUPPLIER = { K: "Koda", E: "Evergreen", EV: "Evergreen", KP: "KPC", G: "GMP", HH: "Huang Huang", D: "Doane" };
   // a herb with ANY suppliers[] entry already has an answer on file -- this
   // only ever suggests for a herb that's genuinely blank, and only reads
   // h.code (never writes it, never touches any other field).
@@ -4932,15 +4960,16 @@
   // code or a Bottle $. Reserved name, checked by value everywhere a supplier
   // row's identity matters.
   // her ask (2026-08-14): the generic label was never precise enough -- she
-  // has THREE named in-house sources (Huang Huang/Mick/Lyttleton, her old
-  // HH/MIC/LYT recipe codes). They price like "In house" (the formula's own
-  // mixed-in cost, never a Bottle $) but, unlike it, still carry a real code
-  // -- so phIsInHouseSup covers all four for pricing/ordering purposes, while
+  // has named in-house sources (Huang Huang/Mick/Lyttleton, her old
+  // HH/MIC/LYT recipe codes; Doane, her old D-prefix codes, added
+  // 2026-08-17). They price like "In house" (the formula's own mixed-in
+  // cost, never a Bottle $) but, unlike it, still carry a real code -- so
+  // phIsInHouseSup covers all five for pricing/ordering purposes, while
   // PH_IN_HOUSE_SUP alone still marks the one that hides its code too. The
   // generic option stays available (not retired) so nothing she's already
   // recorded silently disappears while she reassigns it to a specific name.
   const PH_IN_HOUSE_SUP = "In house";
-  const PH_NAMED_INHOUSE_SUPS = ["Huang Huang", "Mick", "Lyttleton"];
+  const PH_NAMED_INHOUSE_SUPS = ["Huang Huang", "Mick", "Lyttleton", "Doane"];
   const PH_IN_HOUSE_SUPS = [PH_IN_HOUSE_SUP, ...PH_NAMED_INHOUSE_SUPS];
   const phIsInHouseSup = name => PH_IN_HOUSE_SUPS.includes(name);
   const phSupDisplayName = name => phIsInHouseSup(name) ? `<span class="ph-sup-inhouse">🏠 ${esc(name)}</span>` : esc(name);
@@ -6136,7 +6165,7 @@
     const isKnown = name && (PH_KNOWN_SUPPLIERS.includes(name) || known.some(s => s.name.trim().toLowerCase() === name.trim().toLowerCase()));
     const isInHouseAny = phIsInHouseSup(name);
     // the generic "In house" hides its code (there's nothing to record) --
-    // her three NAMED sources still carry a real recipe/reference number, so
+    // her named in-house sources still carry a real recipe/reference number, so
     // only THEY keep the code input visible (her ask 2026-08-14)
     const hideCode = name === PH_IN_HOUSE_SUP;
     const extraKnown = known.filter(s => !PH_KNOWN_SUPPLIERS.includes(s.name) && ruleAllows(s.name));
@@ -6211,7 +6240,7 @@
       const name = sel === "__new__" ? row.querySelector(".ph-hsup-new").value.trim() : sel;
       // in-house sources never carry a typed Bottle $ -- price is the herb's
       // own computed $/g, not something stored on the row. The generic "In
-      // house" has no code either; her three NAMED sources keep whatever
+      // house" has no code either; her named in-house sources keep whatever
       // recipe/reference code she typed (her ask 2026-08-14).
       if (phIsInHouseSup(name)) {
         const isDefault = row.querySelector('input[name="phHerbSupplierDefault"]').checked;
@@ -7169,7 +7198,7 @@
       // data-ph-edit commit machinery this whole grid already uses, so
       // Enter/Escape/blur behave exactly like every other cell. The generic
       // "In house" pseudo-supplier never carries a code (nothing to
-      // record), so it never gets a tag -- her three NAMED in-house sources
+      // record), so it never gets a tag -- her named in-house sources
       // still do.
       const codeTags = (h.suppliers || []).filter(s => s.name !== PH_IN_HOUSE_SUP).map(s => {
         if (phCellEdit && phCellEdit.id === h.id && phCellEdit.field === "codeTag" && phCellEdit.sup === s.name) {
@@ -7195,7 +7224,7 @@
               const pick = isOpen
                 ? `<select class="field-bare ph-sup-select" data-ph-sup-select="${h.id}" aria-label="Supplier for ${esc(h.name)}">${phSupplierOptionsHtml(phIsFormula(h), active ? active.name : "")}</select>`
                 : `<button type="button" class="ph-qty-lock ph-sup-btn" data-ph-unlock="${h.id}:supplier" title="Click to set the supplier for ${esc(h.name)}">${active ? phSupDisplayName(active.name) : `<span class="ph-sup-placeholder">— set supplier</span>`}</button>`;
-              // her three NAMED in-house sources still carry a real recipe
+              // her named in-house sources still carry a real recipe
               // code (her ask 2026-08-14); only the generic "In house" has
               // nothing to record, so only it hides the field.
               const hideCode = active && active.name === PH_IN_HOUSE_SUP;
@@ -9896,7 +9925,7 @@
         const newInput = row.querySelector(".ph-hsup-new");
         newInput.hidden = e.target.value !== "__new__";
         if (!newInput.hidden) newInput.focus();
-        // generic "In house" has no code or Bottle $ to type; her three named
+        // generic "In house" has no code or Bottle $ to type; her named
         // sources still keep the code (a real recipe/reference number for
         // her), just never a Bottle $ -- swap price for the explanatory note
         row.querySelector(".ph-hsup-code").hidden = hideCode;
