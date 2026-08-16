@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260816-160329">
+<meta name="lcm-build" content="20260816-173615">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -527,6 +527,10 @@
      wrapper changed nothing here. The <=900px block turns it into a real
      horizontal scroller. */
   .ph-mchips { display: contents; }
+  /* the scroll-edge fade span only exists for the mobile chip-scroller (styled
+     in the <=900px block below) -- hidden by default so it doesn't add a
+     trailing gap after the last button in desktop's real flex row. */
+  .ph-mchips-fade { display: none; }
   /* status-chip wording: desktop keeps the full label, the phone block below
      swaps in the short one. Declared HERE, before the media query, so the
      mobile rule is the later one and wins -- putting this after it silently
@@ -668,13 +672,19 @@
   }
   .ph-inv-compact-qty { flex: 0 0 auto; font-weight: 700; white-space: nowrap; font-size: 11.5px; }
   .ph-inv-compact-status { flex: 0 0 auto; }
-  /* always rendered, even when empty: if this slot only existed on the rows
-     that are on the order list, those rows would be 6px narrower than the rest
-     and the grams column would jitter between rows instead of forming a column */
-  .ph-inv-compact-cart { flex: 0 0 13px; font-size: 11px; line-height: 1; text-align: right; }
+  /* The 🛒 slot is reserved for EVERY row on a page, or for none of them --
+     never per-row. Per-row would make the grams column jitter in and out by
+     13px between neighbours. But reserving it unconditionally was its own bug:
+     on a page where nothing is on the order list (most pages) it left ~21px of
+     dead space, so the status chip stopped short of the card edge and read as
+     "floating mid-row" instead of right-aligned. renderPhRows() now sets
+     .ph-inv-has-cart on #phStock only when a row on THIS page needs it, so the
+     column is all-or-nothing per page: aligned either way, flush when idle. */
+  .ph-inv-compact-cart { display: none; font-size: 11px; line-height: 1; text-align: right; }
+  #phStock.ph-inv-has-cart .ph-inv-compact-cart { display: block; flex: 0 0 13px; }
   /* her point 6: ONE status chip per row. A herb that is also on the order list
-     gets the small 🛒 above instead of a second full-width chip. */
-     The .ph-status-menu exclusion matters: the press-and-hold status menu also
+     gets the small 🛒 above instead of a second full-width chip. The
+     .ph-status-menu exclusion matters: the press-and-hold status menu also
      renders as a later child of this span, and hiding it would silently kill
      that feature. */
   .ph-inv-compact-status > *:not(:first-child):not(.ph-status-menu) { display: none; }
@@ -2406,7 +2416,7 @@
     #pharmacyPage .ph-mchips { position: relative; }
     #pharmacyPage .ph-mchips > * { font-size: 10.5px !important; padding: 4px 10px !important; }
     #pharmacyPage .ph-mchips-fade {
-      position: sticky; right: 0; flex: 0 0 22px; align-self: stretch; margin-left: -22px;
+      display: block; position: sticky; right: 0; flex: 0 0 22px; align-self: stretch; margin-left: -22px;
       pointer-events: none; background: linear-gradient(to right, rgba(244,247,245,0), var(--ph-paper, #F6FAF7));
     }
     /* 8 · the list sits in a white card with a pale green header band */
@@ -2427,21 +2437,42 @@
     #pharmacyPage #phSearch {
       height: 30px; padding: 0 12px; font-size: 11.5px; margin-bottom: 8px; border-radius: 999px;
     }
-    #pharmacyPage .ph-mchips { gap: 5px; margin-bottom: 9px; }
-    #pharmacyPage .ph-mchips > *, #pharmacyPage .ph-flag {
+    #pharmacyPage .ph-mchips { gap: 5px; margin-bottom: 9px; align-items: center; }
+    /* MEASURED FIX (2026-08-16): the old rule targeted `.ph-mchips > *` only.
+       Two of those children are .ph-status-wrap -- plain positioning spans that
+       hold a real .ph-load-btn plus its popover. So the chip padding landed on
+       the WRAPPER while the button inside kept its own 36px base, making those
+       two children 44px tall; every other chip then stretched to match and the
+       whole row measured 46px instead of her ~22px. Sizing the actual controls
+       (select / .ph-load-btn / .ph-flag) wherever they sit -- direct child or
+       one level down inside a wrapper -- is what makes the row her height. */
+    #pharmacyPage .ph-mchips > select,
+    #pharmacyPage .ph-mchips > .ph-load-btn,
+    #pharmacyPage .ph-mchips > * > .ph-load-btn,
+    #pharmacyPage .ph-flag {
       font-size: 10px !important; font-weight: 800; border-radius: 999px;
-      padding: 4px 9px !important; white-space: nowrap; min-height: 0;
+      padding: 4px 9px !important; white-space: nowrap; min-height: 0 !important;
+      height: auto; line-height: 1.25;
     }
+    /* the wrappers themselves contribute no box -- they only anchor the popover */
+    #pharmacyPage .ph-mchips > .ph-status-wrap { padding: 0 !important; min-height: 0; }
+    #pharmacyPage .ph-mchips > #phCount { font-size: 10px !important; padding: 0 !important; }
     /* .card / .chd */
     #pharmacyPage #phStock { border-radius: 11px; box-shadow: 0 2px 8px rgba(20,50,30,.06); margin-bottom: 10px; }
     #pharmacyPage .ph-inv-listhead { padding: 7px 11px; font-size: 11px; font-weight: 800; }
     #pharmacyPage .ph-inv-listhead .r { font-weight: 700; font-size: 9.5px; }
     /* .row */
-    /* .ph-inv-compact-tap is a <button>, so the app-wide 44px minimum tap-target
-       rule was applying to it and holding every row at 52px no matter what the
-       font sizes said. The whole ROW is comfortably over 44px tall and is itself
-       the tap target, so the button doesn't need its own floor. This is what was
-       keeping 7 herbs on screen instead of 12. */
+    /* MEASURED (2026-08-16), the real reason rows would not come down to her
+       42px: the <=800px block above sets `#pharmacyPage #phStock .rtn-table td
+       { padding: 3px 4px }`, which is MORE specific (2 ids) than the
+       `#phStock .ph-inv-compact-cell { padding: 0 }` written for this cell (1
+       id). So every compact row carried 6px of table-cell padding the row CSS
+       never mentioned: .ph-inv-compact-tap measured 26px and .ph-inv-compact-inner
+       42px -- both exactly her sizing -- while the <tr> measured 49px. The
+       earlier tap-target theory was wrong and is deleted with this note; the td
+       padding was always the whole gap. Specificity here beats the 800px rule
+       on purpose rather than relying on source order. */
+    #pharmacyPage #phStock .rtn-table td.ph-inv-compact-cell { padding: 0; }
     #pharmacyPage .ph-inv-compact-tap { min-height: 0; }
     #pharmacyPage .ph-inv-compact-inner { gap: 8px; padding: 8px 11px; font-size: 11.5px; }
     #pharmacyPage .ph-inv-compact-name { font-weight: 700; font-size: 11.5px; }
@@ -2457,11 +2488,17 @@
       background: var(--ph-gold-tint);
       box-shadow: inset 3px 0 0 var(--margin-rule, #E3C87A);
     }
-    /* the mockup's row: bold green name that truncates, muted code · supplier
-       under it, grams + status chip on the right */
-    #pharmacyPage .ph-inv-compact-name { font-size: 14px; font-weight: 700; color: var(--ph-green-deep); }
-    #pharmacyPage .ph-inv-compact-line2 .ph-sub { font-size: 11.5px; color: var(--ph-faint); }
-    #pharmacyPage .ph-inv-compact-qty { font-size: 13.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    /* PASTE-13 FIX (2026-08-16): this block used to redeclare .ph-inv-compact-name
+       at 14px and .ph-inv-compact-qty at 13.5px -- an EARLIER, larger attempt at
+       the row styling that was never deleted once her exact 11.5px/13.5px... no,
+       her exact 11.5px sizing (line ~2444/2446 above) landed. Because both rules
+       have identical specificity, source order decided the winner, and this later
+       block was winning -- undoing her exact CSS and explaining "everything is
+       still ~30% too large" even though the correct rules were RIGHT THERE a few
+       lines up. Also .ph-inv-compact-line2 never existed in the row markup (the
+       real wrapper is .ph-inv-compact-tap), so that half of the rule was dead
+       weight either way. Deleting the whole block, not just editing it, so there
+       is only ONE place that sets these sizes going forward.  */
   }
   #pharmacyPage .ph-tmpl-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
   #pharmacyPage .ph-tmpl-field label {
@@ -3540,6 +3577,10 @@
           <span class="ph-count" id="phCount"></span>
           <button type="button" class="ph-load-btn" id="phBulkToggle" aria-pressed="false">☑ Select</button>
           <button type="button" class="ph-load-btn" id="phStocktakeBtn" title="Go through your stocked herbs one at a time and record a real count">📋 Stocktake</button>
+          <!-- mockup 13 point 3: the fade at the scroll edge. The CSS for this
+               (.ph-mchips-fade, mobile-only) has existed since PASTE 2 but the
+               element itself was never added here -- so nothing ever showed. -->
+          <span class="ph-mchips-fade" aria-hidden="true"></span>
         </div>
       </div>
       <div class="ph-flag-row" id="phFlagRow"></div>
@@ -4169,6 +4210,25 @@
     savePharmacy();
   }
 
+  // ---- one-time migration (2026-08-16): clear a stuck "code" sort -----------
+  // Her report: "the list is no longer in alphabetical order... Da Chai Hu Tang,
+  // Bai Zhu (Chao), Zi Su Geng, Suan Zao Ren..." -- which is not name order and
+  // not code order either. It's INSERTION order, and here is why: the "code"
+  // sort key reads h.kpcCode, and almost no herb carries one. phCompareRows
+  // returns 0 for two blanks, Array.sort is stable, so a code sort over mostly
+  // blank codes leaves the array exactly as stored. The default sort key has
+  // been corrected to "name" (see phSort below), but a device that already has
+  // {key:"code"} persisted in PHARMACY.sort would keep the broken order for
+  // ever, so that one specific stored value is cleared once. Any sort she chose
+  // deliberately by tapping a column header is untouched -- only "code", which
+  // was never a deliberate choice, only the old faulty default. Tapping the
+  // Codes header still re-selects it and it still sticks from then on.
+  if (!PHARMACY.migratedSortDefault) {
+    if (PHARMACY.sort && PHARMACY.sort.key === "code") delete PHARMACY.sort;
+    PHARMACY.migratedSortDefault = true;
+    savePharmacy();
+  }
+
   // formula products (stocked granules) vs single herbs. Linh's rule
   // (2026-07-23): any name ending in Tang / San / Wan is a formula — applied
   // to the name's first segment (before any /gloss, (note), # or *). A manual
@@ -4785,8 +4845,13 @@
   const PH_DEFAULT_STATUSES = ["stocked", "low", "zero", "phaseout"];
   let phSearch = "", phStatusFilter = new Set(PH_DEFAULT_STATUSES), phKindFilter = "all", phStatusPopOpen = false;
   let phInvPage = 1;   // STEP 8q (2026-08-14): compact pagination -- 300+ herbs is too long for one scroll
-  // sort sticks between visits (her Galcott persisted HerbSort — she expects it)
-  let phSort = (PHARMACY.sort && PHARMACY.sort.key) || "code";
+  // sort sticks between visits (her Galcott persisted HerbSort — she expects it).
+  // BUG FIX (2026-08-16): default was "code" -- with no PHARMACY.sort saved yet
+  // (a fresh session, or anyone who's never clicked a column header) that sorted
+  // by KPC code, not name, which is what she flagged as "no longer alphabetical".
+  // Alphabetical-by-name is the correct out-of-the-box default; clicking any
+  // column header still overrides it and that choice still sticks as before.
+  let phSort = (PHARMACY.sort && PHARMACY.sort.key) || "name";
   let phSortDir = (PHARMACY.sort && PHARMACY.sort.dir) || 1;
   let phLocEditing = false;   // this location's name/address inline editor open?
   // the mix being weighed out right now — session-scoped, cleared by Make/Clear
@@ -5804,6 +5869,11 @@
     if (phInvPage > invTotalPages) phInvPage = invTotalPages;
     if (phInvPage < 1) phInvPage = 1;
     const pageRows = rows.slice((phInvPage - 1) * PH_PAGE_SIZE, phInvPage * PH_PAGE_SIZE);
+    // the 🛒 column is reserved for every row on this page or for none of them
+    // (see .ph-inv-compact-cart) -- all-or-nothing keeps the grams column from
+    // jittering, while letting the status chip sit flush right on the ordinary
+    // pages where nothing is flagged for ordering.
+    if (stockBox) stockBox.classList.toggle("ph-inv-has-cart", pageRows.some(herbNeedsOrder));
     // STEP 8h: same order every row, computed once -- Code and Name stay
     // pinned first (matching the header), Actions stays pinned last
     const colOrder = phColOrder("inv");
