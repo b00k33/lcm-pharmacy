@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260816-183843">
+<meta name="lcm-build" content="20260816-184502">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -1481,6 +1481,41 @@
      Tiles reuse .ph-stocktake-scope's white-card-with-thin-border language --
      the one other place in this app already puts a bordered white box
      directly on the page rather than nesting it inside a .ph-widget. */
+  /* ---- Dashboard: "stocktake in progress" resume banner (her ask 2026-08-16) --
+     Sits above the tiles because it is the one thing on this page that is
+     WAITING on her; everything else is a status readout. It only exists while
+     PHARMACY.stocktakeSession is unfinished, so on an ordinary day the Dashboard
+     looks exactly as it did. Green-tinted rather than red: an unfinished count
+     is a task in hand, not an error. */
+  #pharmacyPage .ph-dash-resume {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    max-width: 1072px; margin: 16px auto 0;
+    background: var(--ph-green-tint, #EAF5EE);
+    border: 1px solid color-mix(in oklab, var(--ph-green) 30%, var(--ph-line));
+    border-radius: 14px; padding: 14px 16px;
+  }
+  #pharmacyPage .ph-dash-resume-main { flex: 1 1 220px; min-width: 0; }
+  #pharmacyPage .ph-dash-resume .nm {
+    display: block; font-size: 14px; font-weight: 700; color: var(--ph-green-deep);
+  }
+  #pharmacyPage .ph-dash-resume .sub {
+    display: block; margin-top: 2px; font-size: 11.5px; color: var(--ph-soft);
+  }
+  #pharmacyPage .ph-dash-resume-bar {
+    display: block; margin-top: 8px; height: 5px; border-radius: 999px;
+    background: color-mix(in oklab, var(--ph-green) 18%, var(--ph-white));
+    overflow: hidden;
+  }
+  #pharmacyPage .ph-dash-resume-bar > span {
+    display: block; height: 100%; border-radius: 999px; background: var(--ph-green);
+  }
+  #pharmacyPage .ph-dash-resume-btn { flex: 0 0 auto; width: auto; min-width: 128px; margin: 0; }
+  @media (max-width: 900px) {
+    #pharmacyPage .ph-dash-resume { padding: 12px 13px; gap: 10px; }
+    #pharmacyPage .ph-dash-resume .nm { font-size: 12.5px; }
+    #pharmacyPage .ph-dash-resume .sub { font-size: 10.5px; }
+    #pharmacyPage .ph-dash-resume-btn { flex: 1 1 100%; min-width: 0; min-height: 38px; font-size: 12.5px; }
+  }
   #pharmacyPage .ph-dash-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; max-width: 1072px; margin: 16px auto 0; }
   /* a tile is a real <button> (mockup 11, 2026-08-15) so Tab+Enter/Space opens
      it for free through the ordinary click delegate -- font/text-align/width
@@ -7427,7 +7462,29 @@
       <span class="ph-dash-tile-top"><span class="n">${n}</span><span class="ph-dash-caret">${phDashOpen === key ? "⌃" : "⌄"}</span></span>
       <span class="l">${esc(label)}</span>
     </button>`;
+    // her ask (2026-08-16): a stocktake she started and walked away from is
+    // invisible from the Dashboard -- she'd have to remember it and go to the
+    // Stocktake page to find out. This surfaces it where she lands first.
+    // Reads the SAME PHARMACY.stocktakeSession the Stocktake page reads and
+    // reuses its data-ph-stocktake-resume hook, so there is one resume path and
+    // no new state: nothing here is written, and if she finishes or abandons
+    // the session elsewhere this banner simply stops rendering.
+    const st = PHARMACY.stocktakeSession;
+    const stResume = st && !st.finished ? (() => {
+      const done = Object.keys(st.results).length, total = st.queue.length;
+      const scope = { herb: "Herbs", formula: "Formulas", both: "Herbs & formulas" }[st.kind] || "Stocktake";
+      const pct = total ? Math.round((done / total) * 100) : 0;
+      return `<section class="ph-widget ph-dash-resume">
+        <div class="ph-dash-resume-main">
+          <span class="nm">Stocktake in progress</span>
+          <span class="sub">${esc(scope)} · ${done} of ${total} counted${st.startedAt ? ` · started ${esc(phShortDate(st.startedAt.slice(0, 10)))}` : ""}</span>
+          <span class="ph-dash-resume-bar"><span style="width:${pct}%"></span></span>
+        </div>
+        <button type="button" class="ph-stocktake-main-btn ph-dash-resume-btn" data-ph-stocktake-resume="1">Resume</button>
+      </section>`;
+    })() : "";
     wrap.innerHTML = `
+      ${stResume}
       <div class="ph-dash-tiles">
         ${tile("herbs", PHARMACY.herbs.length, "Herbs & formulas")}
         ${tile("zero", zero, "Zero inventory", "zero")}
@@ -7628,6 +7685,12 @@
         return;
       }
       if (e.target.closest("#phStocktakeBtn")) { phStocktakeOpen(); return; }
+      // Resume lives on the page-wide delegate rather than a per-page listener,
+      // because the same button now appears in TWO places: the Stocktake page
+      // and (2026-08-16) the Dashboard's in-progress banner. One branch here
+      // serves both; the old #phStocktakeWrap-scoped copy was removed so a
+      // click on the Stocktake page cannot fire phStocktakeOpen() twice.
+      if (e.target.closest("[data-ph-stocktake-resume]")) { phStocktakeOpen(); return; }
       if (e.target.closest("[data-ph-bulk-invert]")) {
         // flip selected/unselected among whatever the current search + filters show —
         // her workflow: check the ones to KEEP, Invert, Stop the rest
@@ -9082,7 +9145,7 @@
       if (stWrap) stWrap.addEventListener("click", e => {
         const scopeBtn = e.target.closest("[data-ph-stocktake-scope]");
         if (scopeBtn) { phStocktakeStart(scopeBtn.dataset.phStocktakeScope); return; }
-        if (e.target.closest("[data-ph-stocktake-resume]")) { phStocktakeOpen(); return; }
+        // (Resume moved to the page-wide delegate -- it now has two call sites)
       });
     }
     renderPhLocBar();
