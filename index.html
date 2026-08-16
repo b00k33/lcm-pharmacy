@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260817-003812">
+<meta name="lcm-build" content="20260817-010527">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6164,10 +6164,12 @@
     const ruleAllows = n => n === name || !isFormulaKind || !PH_SUPPLIER_RULES[n] || PH_SUPPLIER_RULES[n].formulas !== false;
     const isKnown = name && (PH_KNOWN_SUPPLIERS.includes(name) || known.some(s => s.name.trim().toLowerCase() === name.trim().toLowerCase()));
     const isInHouseAny = phIsInHouseSup(name);
-    // the generic "In house" hides its code (there's nothing to record) --
-    // her named in-house sources still carry a real recipe/reference number, so
-    // only THEY keep the code input visible (her ask 2026-08-14)
-    const hideCode = name === PH_IN_HOUSE_SUP;
+    // her correction (2026-08-17): the generic "In house" was assumed to
+    // never carry a code ("nothing to record") -- wrong. She hit a real
+    // "made in house" item with a real code and couldn't type it anywhere,
+    // because this field used to hide for that one name specifically. Every
+    // supplier row, generic or named, gets a code field now; only Bottle $
+    // stays in-house-specific (mixed-in cost, never a purchase price).
     const extraKnown = known.filter(s => !PH_KNOWN_SUPPLIERS.includes(s.name) && ruleAllows(s.name));
     return `<div class="ph-hsup-row">
       <select class="ph-hsup-name field-bare" aria-label="Supplier">
@@ -6179,7 +6181,7 @@
         <option value="__new__"${name && !isKnown && !isInHouseAny ? " selected" : ""}>+ New supplier…</option>
       </select>
       <input type="text" class="ph-hsup-new field-bare"${name && !isKnown && !isInHouseAny ? "" : " hidden"} placeholder="Supplier name" value="${name && !isKnown && !isInHouseAny ? esc(name) : ""}" aria-label="New supplier name">
-      <input type="text" class="ph-hsup-code field-bare"${hideCode ? " hidden" : ""} placeholder="Their code" value="${code ? esc(code) : ""}" aria-label="This supplier's code for this herb" title="This supplier's own code for this herb">
+      <input type="text" class="ph-hsup-code field-bare" placeholder="Their code" value="${code ? esc(code) : ""}" aria-label="This supplier's code for this herb" title="This supplier's own code for this herb">
       <input type="text" inputmode="decimal" class="ph-hsup-price field-bare"${isInHouseAny ? " hidden" : ""} placeholder="Bottle $" value="${price !== "" && price != null ? price : ""}" aria-label="Bottle price from this supplier">
       <span class="ph-hsup-inhouse-note"${isInHouseAny ? "" : " hidden"}>priced from what you mix in — see 🏺 Formula Refill</span>
       <span class="ph-hsup-pergram" aria-live="polite"></span>
@@ -7196,11 +7198,12 @@
       // rule); the active one is gold to match .ph-code's established
       // colour. Click a tag to edit just that entry -- the generic
       // data-ph-edit commit machinery this whole grid already uses, so
-      // Enter/Escape/blur behave exactly like every other cell. The generic
-      // "In house" pseudo-supplier never carries a code (nothing to
-      // record), so it never gets a tag -- her named in-house sources
-      // still do.
-      const codeTags = (h.suppliers || []).filter(s => s.name !== PH_IN_HOUSE_SUP).map(s => {
+      // Enter/Escape/blur behave exactly like every other cell. Was: the
+      // generic "In house" pseudo-supplier excluded here entirely, on the
+      // assumption it never carries a code -- her correction (2026-08-17,
+      // "i cant edit made in house code prefix"): it can, so it gets a tag
+      // like everything else now.
+      const codeTags = (h.suppliers || []).map(s => {
         if (phCellEdit && phCellEdit.id === h.id && phCellEdit.field === "codeTag" && phCellEdit.sup === s.name) {
           return `<input type="text" class="ph-qty-input ph-code-tag-input" data-ph-edit="${h.id}:codeTag" data-sup="${esc(s.name)}" value="${esc(s.code || "")}" placeholder="code" aria-label="${esc(s.name)}’s code for ${esc(h.name)}">`;
         }
@@ -7224,11 +7227,11 @@
               const pick = isOpen
                 ? `<select class="field-bare ph-sup-select" data-ph-sup-select="${h.id}" aria-label="Supplier for ${esc(h.name)}">${phSupplierOptionsHtml(phIsFormula(h), active ? active.name : "")}</select>`
                 : `<button type="button" class="ph-qty-lock ph-sup-btn" data-ph-unlock="${h.id}:supplier" title="Click to set the supplier for ${esc(h.name)}">${active ? phSupDisplayName(active.name) : `<span class="ph-sup-placeholder">— set supplier</span>`}</button>`;
-              // her named in-house sources still carry a real recipe
-              // code (her ask 2026-08-14); only the generic "In house" has
-              // nothing to record, so only it hides the field.
-              const hideCode = active && active.name === PH_IN_HOUSE_SUP;
-              const codeField = active && !hideCode
+              // her correction (2026-08-17): every active supplier, generic
+              // "In house" included, can carry a code -- this used to hide
+              // for the generic one on the wrong assumption it never had
+              // one to record.
+              const codeField = active
                 ? `<input type="text" class="ph-qty-input ph-sup-code-input" data-ph-edit="${h.id}:supplierCode" value="${esc(active.code || "")}" placeholder="code" aria-label="${esc(active.name)}’s code for ${esc(h.name)}">`
                 : "";
               return `${pick}${codeField}`;
@@ -9921,17 +9924,14 @@
       if (e.target.classList.contains("ph-hsup-name")) {
         const row = e.target.closest(".ph-hsup-row");
         const isInHouseAny = phIsInHouseSup(e.target.value);
-        const hideCode = e.target.value === PH_IN_HOUSE_SUP;
         const newInput = row.querySelector(".ph-hsup-new");
         newInput.hidden = e.target.value !== "__new__";
         if (!newInput.hidden) newInput.focus();
-        // generic "In house" has no code or Bottle $ to type; her named
-        // sources still keep the code (a real recipe/reference number for
-        // her), just never a Bottle $ -- swap price for the explanatory note
-        row.querySelector(".ph-hsup-code").hidden = hideCode;
+        // any in-house source, generic or named, can carry a code (her
+        // correction 2026-08-17) -- only Bottle $ stays in-house-specific,
+        // swapped for the explanatory note since that price is never typed
         row.querySelector(".ph-hsup-price").hidden = isInHouseAny;
         row.querySelector(".ph-hsup-inhouse-note").hidden = !isInHouseAny;
-        if (hideCode) row.querySelector(".ph-hsup-code").value = "";
         if (isInHouseAny) row.querySelector(".ph-hsup-price").value = "";
       }
       if (e.target.classList.contains("ph-hsup-name") || e.target.classList.contains("ph-hsup-price")) phHerbSupplierRowsRecalc();
