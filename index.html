@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260816-015545">
+<meta name="lcm-build" content="20260816-104035">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -1352,6 +1352,7 @@
     font-family: var(--font-body); font-size: 14px; font-weight: 600; color: var(--ph-ink);
     background: var(--ph-white); border: 1px solid var(--ph-line); border-radius: 14px;
     padding: 16px; cursor: pointer; margin-bottom: 12px;
+    touch-action: manipulation; -webkit-tap-highlight-color: rgba(27,122,70,.15);
   }
   #pharmacyPage .ph-stocktake-scope:hover { border-color: var(--ph-green); background: var(--ph-green-tint); }
   #pharmacyPage .ph-stocktake-scope .n { flex: 0 0 auto; font-size: 13px; font-weight: 700; color: var(--ph-green-deep); background: var(--ph-green-tint); border-radius: 999px; padding: 4px 12px; font-variant-numeric: tabular-nums; }
@@ -4658,15 +4659,24 @@
       .map(h => h.id);
   }
   function phStocktakeStart(kind) {
-    const narrow = phStocktakeNarrowChecked && phStocktakeHasNarrow();
-    const queue = phStocktakeQueue(kind, narrow);
-    if (!queue.length) return;
-    PHARMACY.stocktakeSession = { id: uid(), kind, narrow, startedAt: new Date().toISOString(), queue, pos: 0, results: {} };
-    savePharmacy();
-    // phStocktakeOpen() covers both call sites: a no-op re-render if the modal
-    // is already open (picked from inside it), or the actual open if this came
-    // from the Stocktake page's start cards (mockup 05) where it's still closed
-    phStocktakeOpen(); renderPhStocktakeBtn();
+    // never fail silently -- a tap that visibly does nothing is indistinguishable
+    // from a tap that never landed at all, and both read as "broken" to her. The
+    // scope button is already disabled when its count is 0 (so this specific
+    // branch is a rare edge, e.g. the narrow-filter checkbox), but any OTHER
+    // unexpected failure here gets a real flash instead of dead silence too.
+    try {
+      const narrow = phStocktakeNarrowChecked && phStocktakeHasNarrow();
+      const queue = phStocktakeQueue(kind, narrow);
+      if (!queue.length) { phFlashShow("Nothing to count there right now — try a different scope or clear your search/filter."); return; }
+      PHARMACY.stocktakeSession = { id: uid(), kind, narrow, startedAt: new Date().toISOString(), queue, pos: 0, results: {} };
+      savePharmacy();
+      // phStocktakeOpen() covers both call sites: a no-op re-render if the modal
+      // is already open (picked from inside it), or the actual open if this came
+      // from the Stocktake page's start cards (mockup 05) where it's still closed
+      phStocktakeOpen(); renderPhStocktakeBtn();
+    } catch (e) {
+      phFlashShow(`⚠ Starting the stocktake failed (${esc((e && e.message) || "unknown error")}). Nothing was changed — tell Claude exactly what this said.`);
+    }
   }
   // finds the next queue slot that hasn't been resolved yet, wrapping around --
   // this is what makes Skip naturally revisit a skipped herb later, with no
@@ -4759,20 +4769,27 @@
     renderPhStocktakeBtn();
   }
   function phStocktakeOpen() {
-    const s = PHARMACY.stocktakeSession;
-    if (s && !s.finished) {
-      // a herb referenced in the queue may have been deleted since this
-      // session started -- prune it out so the card screen never renders a
-      // ghost row (can only happen BETWEEN sessions, never while the modal's
-      // open, since it blocks reaching the Inventory grid underneath)
-      const before = s.queue.length;
-      s.queue = s.queue.filter(id => phHerbByIdGet().has(id));
-      if (s.queue.length !== before) { if (s.pos >= s.queue.length) s.pos = Math.max(0, s.queue.length - 1); savePharmacy(); }
+    // same never-fail-silently guard as phStocktakeStart() -- this is also
+    // reached directly from the page's own "Resume stocktake" button, not
+    // just through phStocktakeStart(), so it needs its own safety net
+    try {
+      const s = PHARMACY.stocktakeSession;
+      if (s && !s.finished) {
+        // a herb referenced in the queue may have been deleted since this
+        // session started -- prune it out so the card screen never renders a
+        // ghost row (can only happen BETWEEN sessions, never while the modal's
+        // open, since it blocks reaching the Inventory grid underneath)
+        const before = s.queue.length;
+        s.queue = s.queue.filter(id => phHerbByIdGet().has(id));
+        if (s.queue.length !== before) { if (s.pos >= s.queue.length) s.pos = Math.max(0, s.queue.length - 1); savePharmacy(); }
+      }
+      phStocktakeNarrowChecked = false;
+      document.getElementById("phStocktakeBackdrop").hidden = false;
+      document.getElementById("phStocktakeModal").hidden = false;
+      renderPhStocktakeModal();
+    } catch (e) {
+      phFlashShow(`⚠ Opening the stocktake failed (${esc((e && e.message) || "unknown error")}). Nothing was changed — tell Claude exactly what this said.`);
     }
-    phStocktakeNarrowChecked = false;
-    document.getElementById("phStocktakeBackdrop").hidden = false;
-    document.getElementById("phStocktakeModal").hidden = false;
-    renderPhStocktakeModal();
   }
   function phStocktakeClose() {
     document.getElementById("phStocktakeBackdrop").hidden = true;
