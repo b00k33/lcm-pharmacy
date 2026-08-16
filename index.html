@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260817-014254">
+<meta name="lcm-build" content="20260817-020008">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -8842,6 +8842,15 @@
   // own code for it, and the bottle price. Same active-supplier match as
   // phSupplierStatsFor, just returning the rows instead of counting them.
   let phSuppliersOpenName = null;
+  // her ask (2026-08-17): "allow direct editing in suppliers page" -- Formula
+  // restock was only reachable via the small ✎ pencil -> a whole form ->
+  // Save, and that pencil straight up didn't exist for her five real
+  // suppliers (Koda/KPC/GMP/Jing Shen/Evergreen), since they're governed by
+  // PH_SUPPLIER_RULES, not a PHARMACY.suppliers[] directory row -- dir was
+  // always null so the ✎/× buttons never rendered at all for them. Click the
+  // number itself now, same lock/unlock idiom as every other editable cell
+  // in this app; committing auto-creates the missing directory row.
+  let phSupPackEdit = null;   // name of the supplier whose Formula-restock cell is unlocked
   function phSupplierItemsFor(name) {
     const nameL = name.trim().toLowerCase();
     return PHARMACY.herbs
@@ -8866,17 +8875,21 @@
           const unknown = !rule;
           const isOpen = name === phSuppliersOpenName;
           const items = isOpen ? phSupplierItemsFor(name) : [];
+          const packEditOpen = phSupPackEdit === name;
+          const formulaCell = !doesFormulas ? `<td class="ph-num" data-col="formularestock">—</td>`
+            : packEditOpen ? `<td class="ph-num" data-col="formularestock"><input type="number" inputmode="numeric" class="ph-qty-input" data-ph-sup-pack-edit="${esc(name)}" min="1" step="1" value="${phFormulaPackForSupplierName(name)}" aria-label="Formula restock size for ${esc(name)}"></td>`
+            : `<td class="ph-num" data-col="formularestock"><button type="button" class="ph-qty-lock" data-ph-sup-pack-unlock="${esc(name)}" title="Click to edit ${esc(name)}'s formula restock size">${phFmtG(phFormulaPackForSupplierName(name))}g</button></td>`;
           return `<tr>
             <td class="ph-name" data-col="supplier"><button type="button" class="ph-name-link" data-ph-sup-view="${esc(name)}" aria-expanded="${isOpen}" title="${esc(name)} — click to see what's bought from them">${esc(name)}</button>${unknown ? ` <span class="ph-kind-tag" title="Not one of your five known suppliers -- check for a typo or an old name">not on file</span>` : ""}</td>
             <td class="ph-sub" data-col="supplies">${doesFormulas ? "Herbs + formulas" : "Herbs only"}</td>
             <td class="ph-num" data-col="herbrestock">${phFmtG(PH_PACK_HERB)}g</td>
-            <td class="ph-num" data-col="formularestock">${doesFormulas ? phFmtG(phFormulaPackForSupplierName(name)) + "g" : "—"}</td>
+            ${formulaCell}
             <td class="ph-num" data-col="herbs">${herbsN || "—"}</td>
             <td class="ph-num" data-col="formulas">${formulasN || "—"}</td>
             <td class="ph-num" data-col="onorder">${onOrder || "—"}</td>
-            <td class="rtn-actions" data-col="actions">${dir ? `
-              <button class="del" data-ph-sup-edit="${dir.id}" aria-label="Edit ${esc(name)}">✎</button>
-              <button class="del" data-ph-sup-del="${dir.id}" aria-label="Delete ${esc(name)}">×</button>` : ""}</td>
+            <td class="rtn-actions" data-col="actions">
+              <button class="del" data-ph-sup-edit="${esc(name)}" aria-label="Edit ${esc(name)}">✎</button>
+              ${dir ? `<button class="del" data-ph-sup-del="${dir.id}" aria-label="Delete ${esc(name)}">×</button>` : ""}</td>
           </tr>${isOpen ? `<tr class="ph-sup-items-row"><td colspan="8">${items.length ? `
             <table class="rtn-table ph-table ph-sup-items-table">
               <thead><tr><th>Item</th><th>Their code</th><th style="text-align:right">Bottle $</th></tr></thead>
@@ -9878,8 +9891,15 @@
       }
       const supEdit = e.target.closest("[data-ph-sup-edit]");
       if (supEdit) {
-        const s = PHARMACY.suppliers.find(x => x.id === supEdit.dataset.phSupEdit);
-        if (!s) return;
+        // her ask (2026-08-17): this used to be keyed to an existing
+        // PHARMACY.suppliers[] row and simply didn't render for her five
+        // real, rule-based suppliers (no row = no button at all). Now it's
+        // keyed by name and falls back to a blank virtual entry with no id
+        // -- phSupEditId stays null, and the submit handler's own
+        // "if (phSupEditId) update else push new" already does exactly the
+        // right thing for that: creates the row on Save, same as Add.
+        const name = supEdit.dataset.phSupEdit;
+        const s = phSupplierDirEntry(name) || { id: null, name, contact: "", note: "", formulaPackSize: null };
         phSupEditId = s.id;
         document.getElementById("phSupplierAddBtn").hidden = true; phSupplierForm.hidden = false;
         document.getElementById("phSupplierName").value = s.name;
@@ -9888,6 +9908,14 @@
         document.getElementById("phSupplierFormulaPack").value = s.formulaPackSize != null ? s.formulaPackSize : "";
         document.getElementById("phSupplierSubmitBtn").textContent = "Save changes";
         document.getElementById("phSupplierName").focus();
+        return;
+      }
+      const supPackUnlock = e.target.closest("[data-ph-sup-pack-unlock]");
+      if (supPackUnlock) {
+        phSupPackEdit = supPackUnlock.dataset.phSupPackUnlock;
+        renderPhSuppliersPage();
+        const inp = document.querySelector("[data-ph-sup-pack-edit]");
+        if (inp) { inp.focus(); inp.select(); }
         return;
       }
       const supDel = e.target.closest("[data-ph-sup-del]");
@@ -10303,6 +10331,26 @@
         if (phBulkSupOpen) { phBulkSupOpen = false; renderPhBulkBar(); }
         return;
       }
+      // Suppliers page's Formula-restock lock/unlock (her ask 2026-08-17,
+      // "allow direct editing") -- not a herb field, so it can't share
+      // phCellEdit/data-ph-edit below; commits straight to the supplier's
+      // directory row, auto-creating one if this was a rule-only supplier
+      // with none yet (same auto-create phSupplierForm's submit already does).
+      const packEdit = e.target.closest("[data-ph-sup-pack-edit]");
+      if (packEdit) {
+        const name = packEdit.dataset.phSupPackEdit;
+        if (phSupPackEdit === name && packEdit.dataset.cancel !== "1") {
+          const raw = packEdit.value.trim();
+          const v = raw === "" ? null : Math.max(1, parseInt(raw, 10) || 0) || null;
+          let s = phSupplierDirEntry(name);
+          if (!s) { s = { id: uid(), name, contact: "", note: "" }; PHARMACY.suppliers = PHARMACY.suppliers || []; PHARMACY.suppliers.push(s); }
+          if (v != null) s.formulaPackSize = v; else delete s.formulaPackSize;
+          savePharmacy();
+        }
+        phSupPackEdit = null;
+        renderPhSuppliersPage();
+        return;
+      }
       const inp = e.target.closest("[data-ph-edit]");
       if (!inp) return;
       const [id, field] = inp.dataset.phEdit.split(":");
@@ -10383,6 +10431,12 @@
       // Escape-cancels field in this app rather than needing a second action.
       if (e.target.closest("[data-ph-sup-select]") && e.key === "Escape") { e.target.blur(); return; }
       if (e.target.closest("[data-ph-bulk-sup-select]") && e.key === "Escape") { e.target.blur(); return; }
+      const packEditKey = e.target.closest("[data-ph-sup-pack-edit]");
+      if (packEditKey) {
+        if (e.key === "Enter") { e.preventDefault(); packEditKey.blur(); }
+        else if (e.key === "Escape") { packEditKey.dataset.cancel = "1"; packEditKey.blur(); }
+        return;
+      }
       const inp = e.target.closest("[data-ph-edit]");
       if (!inp) return;
       if (e.key === "Enter") { e.preventDefault(); inp.blur(); }
