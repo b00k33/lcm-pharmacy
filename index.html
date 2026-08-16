@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260816-230420">
+<meta name="lcm-build" content="20260816-234952">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -833,28 +833,36 @@
   .rtn-table td.ph-name, .ph-table td.ph-name { white-space: normal; }
   .ph-sub { font-size: 10.5px; color: var(--ph-faint); }
   .ph-num { text-align: right; font-variant-numeric: tabular-nums; color: var(--ph-soft); white-space: nowrap; }
-  /* STEP 8g: Inventory Supplier cell -- collapsed button + its expanded
-     Suppliers & pricing panel (her ask: "open from the row ... FLAG the
-     cheapest, and let me switch the active supplier in one tap") */
+  /* her spec (2026-08-16): Inventory Supplier cell -- one click opens a
+     native select in place (its own on-screen positioning and viewport-edge
+     flip are browser-native, nothing to build), picking saves immediately.
+     The code is a second, independent small field underneath -- plain text
+     until hovered/focused, same quiet language as .ph-qty-lock elsewhere in
+     this table. */
   .ph-sup-cell { position: relative; }
   .ph-sup-btn { text-align: left; display: block; }
-  .ph-sup-more { font-size: 10.5px; color: var(--ph-faint); margin-left: 3px; }
-  .ph-sup-cheaper-hint { color: var(--ph-low); }
-  .ph-sup-panel { display: flex; flex-direction: column; gap: 3px; min-width: 168px; }
-  .ph-sup-panel-row {
-    display: flex; align-items: baseline; gap: 6px; width: 100%; box-sizing: border-box;
-    border: none; border-radius: 8px; padding: 4px 7px; cursor: pointer; text-align: left;
-    background: var(--ph-paper); font-family: var(--font-body); font-size: 11.5px; color: var(--ph-ink);
+  .ph-sup-placeholder { color: var(--ph-faint); }
+  .ph-sup-select {
+    display: block; width: 100%; max-width: 100%; box-sizing: border-box;
+    height: 26px; border: 1px solid var(--ph-line); border-radius: 6px;
+    padding: 2px 4px; font-family: var(--font-body); font-size: 12px; color: var(--ph-ink);
+    background: var(--ph-white);
   }
-  .ph-sup-panel-row:hover { background: var(--ph-green-tint); }
-  .ph-sup-panel-row.active { cursor: default; background: var(--ph-gold-tint); font-weight: 700; }
-  .ph-sup-panel-row.active:hover { background: var(--ph-gold-tint); }
-  .ph-sup-panel-nm { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .ph-sup-panel-g { flex: 0 0 auto; font-variant-numeric: tabular-nums; color: var(--ph-faint); }
-  .ph-sup-panel-g.cheapest { color: var(--ph-green-deep); font-weight: 700; }
-  .ph-sup-panel-empty { font-size: 11px; color: var(--ph-faint); padding: 4px 7px; }
-  .ph-sup-panel-last { font-size: 10.5px; color: var(--ph-faint); padding: 2px 7px 0; }
-  .ph-sup-panel-foot { display: flex; gap: 10px; margin-top: 2px; padding: 0 2px; }
+  .ph-sup-select:focus-visible { outline: none; border-color: var(--ph-green); }
+  .ph-sup-code-input {
+    display: block; width: 100%; max-width: 100%; box-sizing: border-box; margin-top: 2px;
+    border: none; border-bottom: 1px dashed transparent; background: none;
+    padding: 1px 2px; font-family: var(--font-body); font-size: 10.5px; color: var(--ph-faint);
+  }
+  .ph-sup-code-input:hover, .ph-sup-code-input:focus { border-bottom-color: var(--ph-green); color: var(--ph-green-deep); }
+  .ph-sup-code-input:focus-visible { outline: none; }
+  /* the bulk bar's inline pick (Set supplier for N selected) matches its
+     sibling .ph-load-btn pills exactly, not the grid cell's taller select */
+  .ph-bulk-sup-select {
+    font-family: var(--font-body); font-size: 11px; color: var(--ph-green-deep);
+    border: 1px solid color-mix(in oklab, var(--ph-green) 35%, var(--ph-line));
+    background: var(--ph-green-tint); border-radius: 999px; padding: 2px 10px; cursor: pointer;
+  }
   .ph-note-cell { max-width: 170px; font-size: 11px; color: var(--ph-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   /* one tonal chip family for every inventory status -- soft tint + deep
      text, same shape everywhere (her ask: stocked=green, low=amber,
@@ -4907,89 +4915,58 @@
   const PH_IN_HOUSE_SUPS = [PH_IN_HOUSE_SUP, ...PH_NAMED_INHOUSE_SUPS];
   const phIsInHouseSup = name => PH_IN_HOUSE_SUPS.includes(name);
   const phSupDisplayName = name => phIsInHouseSup(name) ? `<span class="ph-sup-inhouse">🏠 ${esc(name)}</span>` : esc(name);
-  // $/g a GIVEN option would cost, using THAT option's own pack size (a formula's
-  // grams/bottle can differ by supplier -- Evergreen vs everyone else -- so
-  // comparing raw Bottle $ across options would be misleading; per-gram is the
-  // only fair comparison). "In house" has no bottle/pack at all -- its price
-  // IS the formula's own $/g, which Formula Refill (refRecipeCostPerG) already
-  // keeps current from what's actually mixed in.
-  const phSupplierPerGram = (h, s) => !s ? null
-    : phIsInHouseSup(s.name) ? (h.cost || null)
-    : s.bottleCost != null ? s.bottleCost / phPackForSupplierName(h, s.name) : null;
-  const phCheapestSupplierName = h => {
-    let best = null, bestG = Infinity;
-    (h.suppliers || []).forEach(s => {
-      const g = phSupplierPerGram(h, s);
-      if (g != null && g < bestG) { bestG = g; best = s.name; }
-    });
-    return best;
+  // her ask (2026-08-16 spec): the Inventory cell's old "open panel, Edit,
+  // Close" flow took three clicks to set one value. This is the one-click
+  // replacement -- one option list, reused by the Inventory cell, the
+  // Restock row and the bulk "Set supplier for N selected" action, so those
+  // three never drift out of sync with each other. Deliberately narrower
+  // than the herb form's own supplier picker below (no generic "In house",
+  // no "+ New supplier" escape hatch, no off-menu directory names) -- her
+  // spec names exactly five herb options and eight formula options, and nothing
+  // else, so that's exactly what this renders. `current` is kept selectable
+  // even if it falls outside that list (an old off-menu name typed in the
+  // herb form) so picking this open never silently shows the wrong value.
+  const phSupplierOptionsHtml = (isFormulaKind, current) => {
+    const known = isFormulaKind
+      ? PH_KNOWN_SUPPLIERS.filter(n => !PH_SUPPLIER_RULES[n] || PH_SUPPLIER_RULES[n].formulas !== false)
+      : PH_KNOWN_SUPPLIERS;
+    const names = isFormulaKind ? [...known, ...PH_NAMED_INHOUSE_SUPS] : known;
+    const opt = n => `<option value="${esc(n)}"${n === current ? " selected" : ""}>${phIsInHouseSup(n) ? `🏠 ${esc(n)}` : esc(n)}</option>`;
+    const offMenu = current && !names.includes(current) ? opt(current) : "";
+    return `<option value=""${current ? "" : " selected"}>— set supplier —</option>${offMenu}${names.map(opt).join("")}`;
   };
-  // makes `name` the active supplier: flips isDefault across h.suppliers, and
-  // mirrors its name/code/price onto the legacy fields everything else reads.
-  // A supplier with no recorded price yet mirrors a blank price rather than
-  // carrying over whoever was active before (her rule from the original
-  // 2026-08-06 supplier work, preserved here).
-  const phSetActiveSupplier = (h, name) => {
+  // her rule (2026-08-16 spec): "changing a supplier must not alter stock,
+  // cost or any other field." This only ever writes identity -- the
+  // suppliers[] row + isDefault + the h.supplier mirror everything else
+  // reads -- unlike the old comparison-panel/Restock-order behaviour it
+  // replaces, which deliberately followed the picked supplier's own price.
+  // An existing row's own bottleCost/code is left exactly as it was, so
+  // switching to Koda and back to Evergreen can never quietly wipe either
+  // one's recorded price. Returns the old name so callers can log the change.
+  const phQuickSetSupplier = (h, name) => {
+    const old = h.supplier || "";
+    if (old === (name || "")) return old;
     h.suppliers = h.suppliers || [];
-    let picked = h.suppliers.find(s => s.name === name);
-    if (!picked) { picked = { name, bottleCost: null, code: "", isDefault: true }; h.suppliers.push(picked); }
-    h.suppliers.forEach(s => { s.isDefault = s === picked; });
-    h.supplier = name;
-    if (picked.bottleCost != null) {
-      h.bottleCost = picked.bottleCost;
-      h.cost = picked.bottleCost / phPackForSupplierName(h, name);
-      h.restockCostComputed = true;
-    } else {
-      delete h.bottleCost;
+    h.suppliers.forEach(s => { s.isDefault = false; });
+    if (name) {
+      let picked = h.suppliers.find(s => s.name === name);
+      if (!picked) { picked = { name, bottleCost: null, code: "", isDefault: true }; h.suppliers.push(picked); }
+      else picked.isDefault = true;
     }
-  };
-  // the Inventory Supplier cell's expanded view (her ask: "open from the row
-  // ... FLAG the cheapest, and let me switch the active supplier in one tap")
-  // -- every option on file, their code, $/g, active marked with ★, cheapest
-  // highlighted; tap any non-active row to make it active. Adding a brand-new
-  // supplier or typing its price stays in the full herb form (✎ Edit, linked
-  // at the bottom) -- this panel is for comparing and switching, not entry.
-  const phSupplierPanelHtml = h => {
-    const list = h.suppliers || [];
-    const cheapest = phCheapestSupplierName(h);
-    const rows = list.length
-      ? list.map(s => {
-          const g = phSupplierPerGram(h, s);
-          const isCheapest = cheapest && s.name === cheapest && list.length > 1;
-          const inner = `<span class="ph-sup-panel-nm">${s.isDefault ? "★ " : ""}${phSupDisplayName(s.name)}</span>${s.code ? `<span class="ph-sub">${esc(s.code)}</span>` : ""}<span class="ph-sup-panel-g${isCheapest ? " cheapest" : ""}">${g != null ? `${phMoney(g)}/g` : "—"}</span>`;
-          return s.isDefault
-            ? `<div class="ph-sup-panel-row active">${inner}</div>`
-            : `<button type="button" class="ph-sup-panel-row" data-ph-sup-activate="${esc(s.name)}" title="Make ${esc(s.name)} the active supplier">${inner}</button>`;
-        }).join("")
-      : `<div class="ph-sup-panel-empty">No suppliers on file yet</div>`;
-    // her ask (2026-08-13): "In house" isn't bought, so "last restocked ...
-    // from" makes no sense for it -- show the last batch MADE instead (the
-    // most recent refill-log entry that restocked this jar), matching how
-    // she actually replenishes it.
-    const active = phActiveSupplier(h);
-    let lastLine = "";
-    if (active && phIsInHouseSup(active.name)) {
-      const lastMade = PHARMACY.log.find(e => e.kind === "refill" && e.targetId === h.id);
-      lastLine = lastMade
-        ? `<div class="ph-sup-panel-last">Last made ${esc(phShortDate(lastMade.date))} · +${phFmtG(lastMade.madeGrams)}g</div>`
-        : `<div class="ph-sup-panel-last">Not made yet — batch it from 🏺 Formula Refill</div>`;
-    } else {
-      // her ask: "so I can see who I last bought each herb from and at what
-      // price" -- the most recent phArrive() restock-history entry, in her words
-      const last = (h.restockHistory || [])[0];
-      lastLine = last
-        ? `<div class="ph-sup-panel-last">Last restocked ${esc(phShortDate(last.date))}${last.supplier ? ` from ${esc(last.supplier)}` : ""}${last.bottleCost != null ? ` at $${last.bottleCost}` : ""} · +${phFmtG(last.grams)}g</div>`
-        : "";
-    }
-    return `<div class="ph-sup-panel">${rows}${lastLine}<div class="ph-sup-panel-foot"><button type="button" class="tab-link" data-ph-herb-edit="${h.id}">✎ Edit</button><button type="button" class="tab-link" data-ph-unlock-close="1">Close</button></div></div>`;
+    h.supplier = name || "";
+    PHARMACY.log.unshift({
+      id: uid(), kind: "supplier-change", date: keyOf(TODAY),
+      herbId: h.id, name: h.name, oldSupplier: old || "(none)", newSupplier: name || "(none)",
+    });
+    return old;
   };
 
   // ===== Price review (her ask 2026-08-16) ===================================
   // "A stocktake for prices instead of quantities, organised by supplier."
   // Reuses the exact h.suppliers[] rows the supplier web already reads/writes
-  // (phSetActiveSupplier etc. above) -- a price review is just a guided,
-  // dated way of setting s.bottleCost on those same rows, never a parallel
-  // data structure. s.lastConfirmed (added below, read/written here only) is
+  // -- a price review is just a guided, dated way of setting s.bottleCost on
+  // those same rows, never a parallel data structure. s.lastConfirmed (added
+  // below, read/written here only) is
   // the one new field: which herb-AT-WHICH-supplier and when, because the
   // same herb can be "checked" for Koda today and still overdue for Evergreen.
   const PH_PRICE_REVIEW_MONTHS = 6;
@@ -5019,8 +4996,8 @@
   // recorded, else -- ONLY for the herb's current active supplier -- the
   // exact inverse of its live $/g (bottleCost = cost * pack, no rounding
   // drift; this is how every existing $/g on file was derived in the first
-  // place, per phSupplierPerGram above). A non-active row with no bottleCost
-  // truly has no price on file yet; showing "—" rather than $0 or a guess.
+  // place). A non-active row with no bottleCost truly has no price on file
+  // yet; showing "—" rather than $0 or a guess.
   const phPriceReviewOldBottle = (h, s) => s.bottleCost != null ? s.bottleCost
     : s.isDefault && h.cost ? phRound2(h.cost * phPackForSupplierName(h, s.name))
     : null;
@@ -5049,9 +5026,9 @@
   }
   // writes a new bottle $ onto ONE supplier row and stamps it confirmed today.
   // Mirrors onto the legacy h.bottleCost/h.cost fields ONLY when that row is
-  // the herb's active supplier -- same rule phSetActiveSupplier already
-  // follows, so a price review of a herb's SECONDARY supplier can never
-  // silently change what she's actually charged/costed today.
+  // the herb's active supplier, so a price review of a herb's SECONDARY
+  // supplier can never silently change what she's actually charged/costed
+  // today.
   function phPriceReviewSetCost(h, supplierName, newBottleCost) {
     h.suppliers = h.suppliers || [];
     let row = h.suppliers.find(s => s.name === supplierName);
@@ -6257,6 +6234,10 @@
   // rest — no more editing 267 rows one at a time.
   let phBulkMode = false;
   let phSelected = new Set();
+  // her spec (2026-08-16): "Set supplier for N selected" -- click reveals an
+  // inline pick right in the bulk bar; picking IS the apply (no separate
+  // yes/no gate, matching the individual cell's own "no confirm step").
+  let phBulkSupOpen = false;
   function phRowMatchesTerm(h, q) {
     // STEP 8g: Koda/Evergreen/GMP/LYT/HH/MIC moved into h.suppliers[] -- search
     // every option's name AND their code for this herb, not just the active one,
@@ -7157,13 +7138,26 @@
         kind: `<td class="ph-kind-cell" data-col="kind">${phIsFormula(h)
           ? `🫙 Formula<span class="ph-kind-tag" title="${phMadeInHouse(h) ? "made in house" : "premade (supplier)"} — ${h.source ? "her setting (✎ Kind)" : "read off the Formula Refill list; ✎ Kind overrides"}">${phMadeInHouse(h) ? "in house" : "premade"}</span>`
           : `🌿 Herb`}</td>`,
-        supplier: `<td class="ph-sup-cell" data-col="supplier">${phCellEdit && phCellEdit.id === h.id && phCellEdit.field === "supplierPanel"
-          ? phSupplierPanelHtml(h)
-          : (() => {
+        // her ask (2026-08-16 spec): one click to open, pick to save -- no
+        // Edit/Close round trip. The code field is a second, independent
+        // small input (not gated by phCellEdit at all -- "click it, type, it
+        // saves on blur or Enter" is just how a plain input already behaves)
+        // so picking a new supplier and fixing its code are two separate,
+        // uninterrupted actions rather than one popover blocking the other.
+        supplier: `<td class="ph-sup-cell" data-col="supplier">${(() => {
               const active = phActiveSupplier(h);
-              const cheapest = phCheapestSupplierName(h);
-              const cheaperElsewhere = cheapest && active && cheapest !== active.name;
-              return `<button type="button" class="ph-qty-lock ph-sup-btn" data-ph-unlock="${h.id}:supplierPanel" title="Suppliers &amp; pricing for ${esc(h.name)} — tap to see every option">${h.supplier ? phSupDisplayName(h.supplier) : "—"}${active && active.code ? `<div class="ph-sub">${esc(active.code)}</div>` : ""}${cheaperElsewhere ? `<div class="ph-sub ph-sup-cheaper-hint">cheaper available</div>` : ""}${h.suppliers && h.suppliers.length > 1 ? `<span class="ph-sup-more">+${h.suppliers.length - 1}</span>` : ""}</button>`;
+              const isOpen = phCellEdit && phCellEdit.id === h.id && phCellEdit.field === "supplier";
+              const pick = isOpen
+                ? `<select class="field-bare ph-sup-select" data-ph-sup-select="${h.id}" aria-label="Supplier for ${esc(h.name)}">${phSupplierOptionsHtml(phIsFormula(h), active ? active.name : "")}</select>`
+                : `<button type="button" class="ph-qty-lock ph-sup-btn" data-ph-unlock="${h.id}:supplier" title="Click to set the supplier for ${esc(h.name)}">${active ? phSupDisplayName(active.name) : `<span class="ph-sup-placeholder">— set supplier</span>`}</button>`;
+              // her three NAMED in-house sources still carry a real recipe
+              // code (her ask 2026-08-14); only the generic "In house" has
+              // nothing to record, so only it hides the field.
+              const hideCode = active && active.name === PH_IN_HOUSE_SUP;
+              const codeField = active && !hideCode
+                ? `<input type="text" class="ph-qty-input ph-sup-code-input" data-ph-edit="${h.id}:supplierCode" value="${esc(active.code || "")}" placeholder="code" aria-label="${esc(active.name)}’s code for ${esc(h.name)}">`
+                : "";
+              return `${pick}${codeField}`;
             })()}</td>`,
         cost: `<td class="ph-num" data-col="cost"><span title="Cost per gram of ${esc(h.name)} — set the Bottle $ to change it">${h.cost ? "$" + h.cost : "—"}</span>${priceMore}</td>`,
         costFlag: `<td class="ph-num" data-col="costFlag"><span title="$/g rounded up to the nearest 10c">${h.cost ? "$" + phRound2(phRoundUp10c(h.cost)) : "—"}</span></td>`,
@@ -7199,6 +7193,15 @@
       // just unlocked (e.g. In stock, Low at, Notes)
       const inp = tbody.querySelector(`[data-ph-edit="${phCellEdit.id}:${phCellEdit.field}"]`);
       if (inp) { inp.focus(); inp.select(); }
+      // her spec (2026-08-16): "clicking the cell opens a dropdown in place"
+      // -- showPicker() (where the browser supports it) makes that literally
+      // true in one click instead of focus-then-a-second-click-to-open; the
+      // viewport-edge flip she also asked for is native <select> behaviour,
+      // no positioning code needed here.
+      if (phCellEdit.field === "supplier") {
+        const sel = tbody.querySelector(`[data-ph-sup-select="${phCellEdit.id}"]`);
+        if (sel) { sel.focus(); if (sel.showPicker) { try { sel.showPicker(); } catch (_) {} } }
+      }
     }
     phPlaceStatusMenu();
   }
@@ -7276,18 +7279,60 @@
   // Invert (flip everyone currently visible — the "keep these, stop the rest"
   // workflow), Stop selected, Activate selected. Search/filters narrow what
   // "visible" and "Invert" mean without touching the selection itself.
+  // her spec (2026-08-16): the bulk pick is the SAME known-supplier list as
+  // the Inventory cell and the Restock row, just the union of the herb and
+  // formula sets -- a selection can mix both kinds, so a single kind-scoped
+  // list would silently hide valid options for half the selection. Applying
+  // (phBulkSupApply below) still checks each herb's own kind before writing.
+  const phBulkSupOptionsHtml = () => {
+    const opt = n => `<option value="${esc(n)}">${phIsInHouseSup(n) ? "🏠 " : ""}${esc(n)}</option>`;
+    return `<option value="" selected disabled>Set supplier…</option>${PH_KNOWN_SUPPLIERS.map(opt).join("")}${PH_NAMED_INHOUSE_SUPS.map(opt).join("")}`;
+  };
+  // her rule, applied per-item since a selection can mix herbs and formulas:
+  // in-house is formula-only, KPC/Jing Shen are herb-only (PH_SUPPLIER_RULES).
+  const phBulkSupValidFor = (h, name) => phIsInHouseSup(name) ? phIsFormula(h)
+    : !(phIsFormula(h) && PH_SUPPLIER_RULES[name] && PH_SUPPLIER_RULES[name].formulas === false);
+  function phBulkSupApply(name) {
+    let applied = 0, skipped = 0;
+    phSelected.forEach(id => {
+      const h = PHARMACY.herbs.find(x => x.id === id);
+      if (!h) return;
+      if (!phBulkSupValidFor(h, name)) { skipped++; return; }
+      const old = h.supplier || "";
+      phQuickSetSupplier(h, name);
+      if (old !== name) applied++;
+    });
+    phBulkSupOpen = false;
+    phSelected.clear();
+    phFlash = applied
+      ? `✓ Supplier set to ${esc(name)} for ${applied} herb${applied === 1 ? "" : "s"}${skipped ? ` (${skipped} skipped — not valid for their kind)` : ""}`
+      : skipped ? `Nothing changed — ${skipped} selected item${skipped === 1 ? "" : "s"} can't use ${esc(name)}` : "Nothing was selected — nothing changed";
+    savePharmacy(); renderPharmacy();
+  }
+  // the bar above the grid while Select mode is on — count + the moves:
+  // Invert (flip everyone currently visible — the "keep these, stop the rest"
+  // workflow), Stop selected, Activate selected, Set supplier. Search/filters
+  // narrow what "visible" and "Invert" mean without touching the selection.
   function renderPhBulkBar() {
     const bar = document.getElementById("phBulkBar");
     if (!bar) return;
     if (!phBulkMode) { bar.innerHTML = ""; return; }
     const n = phSelected.size;
+    if (!n) phBulkSupOpen = false;
     bar.innerHTML = `<div class="ph-bulk-bar">
       <span class="ph-bulk-count">${n} selected</span>
       <button type="button" class="ph-load-btn" data-ph-bulk-invert="1" title="Flip selected/unselected among the rows the current search and filters show">⇄ Invert (visible)</button>
       <button type="button" class="btn-save" data-ph-bulk-stop="1"${n ? "" : " disabled"}>⏸ Stop selected</button>
       <button type="button" class="ph-load-btn" data-ph-bulk-activate="1"${n ? "" : " disabled"}>▶ Activate selected</button>
+      ${phBulkSupOpen
+        ? `<select class="field-bare ph-bulk-sup-select" data-ph-bulk-sup-select="1" aria-label="Set supplier for ${n} selected">${phBulkSupOptionsHtml()}</select>`
+        : `<button type="button" class="ph-load-btn" data-ph-bulk-sup="1"${n ? "" : " disabled"}>Set supplier for ${n} selected</button>`}
       <button type="button" class="ph-bulk-clear" data-ph-bulk-clear="1"${n ? "" : " disabled"}>Clear</button>
     </div>`;
+    if (phBulkSupOpen) {
+      const sel = bar.querySelector("[data-ph-bulk-sup-select]");
+      if (sel) { sel.focus(); if (sel.showPicker) { try { sel.showPicker(); } catch (_) {} } }
+    }
   }
   // the open status menu is position:fixed — clamp it under its pill and inside
   // the viewport so the grid's horizontally-scrolling wrap can't clip it off the
@@ -8968,6 +9013,10 @@
         savePharmacy(); renderPharmacy();
         return;
       }
+      if (e.target.closest("[data-ph-bulk-sup]")) {
+        if (phSelected.size) { phBulkSupOpen = true; renderPhBulkBar(); }
+        return;
+      }
       if (e.target.closest("#phStatusBtn")) {
         phStatusPopOpen = !phStatusPopOpen;
         renderPhStatusPop(); return;
@@ -9059,19 +9108,6 @@
       }
       // STEP 8g Suppliers & pricing panel -- has no input to blur-commit
       // (it's buttons, not a text field), so it needs its own explicit close
-      if (e.target.closest("[data-ph-unlock-close]")) { phCellEdit = null; renderPhRows(); return; }
-      const supActivate = e.target.closest("[data-ph-sup-activate]");
-      if (supActivate) {
-        const row = supActivate.closest("[data-ph-row]");
-        const h = row && PHARMACY.herbs.find(x => x.id === row.dataset.phRow);
-        if (h) {
-          phSetActiveSupplier(h, supActivate.dataset.phSupActivate);
-          phCellEdit = null;
-          phKeepVisible.add(h.id);
-          savePharmacy(); renderPharmacy();
-        }
-        return;
-      }
       if (e.target.closest("#phLogExportBtn")) { phLogExportCsv(); return; }
       const logOpen = e.target.closest("[data-ph-log-open]");
       if (logOpen) {
@@ -10119,6 +10155,23 @@
         renderPharmacy();
         return;
       }
+      // her spec (2026-08-16): "Escape or clicking away closes it without
+      // changing anything." A real pick already committed on "change" (see
+      // the click-handler's data-ph-sup-select branch above) and nulled
+      // phCellEdit before this can fire -- so if the cell is STILL open by
+      // the time focus leaves, nothing was picked, and this just closes it.
+      const supSelectOut = e.target.closest("[data-ph-sup-select]");
+      if (supSelectOut) {
+        if (phCellEdit && phCellEdit.id === supSelectOut.dataset.phSupSelect && phCellEdit.field === "supplier") {
+          phCellEdit = null; renderPhRows();
+        }
+        return;
+      }
+      // same close-without-saving as above, for the bulk bar's inline pick
+      if (e.target.closest("[data-ph-bulk-sup-select]")) {
+        if (phBulkSupOpen) { phBulkSupOpen = false; renderPhBulkBar(); }
+        return;
+      }
       const inp = e.target.closest("[data-ph-edit]");
       if (!inp) return;
       const [id, field] = inp.dataset.phEdit.split(":");
@@ -10142,6 +10195,14 @@
       } else if (field === "jingShenCode") {
         const v = inp.value.trim();
         if (v) h.jingShenCode = v; else delete h.jingShenCode;
+      } else if (field === "supplierCode") {
+        // her spec (2026-08-16): "click it, type, it saves on blur or Enter"
+        // -- this small field lives on the ACTIVE supplier's own suppliers[]
+        // row (matching the existing data shape), not a flat herb field, so
+        // it never touches h.kpcCode/h.jingShenCode (a separate, unrelated
+        // pair of codes -- see the Codes cell).
+        const active = phActiveSupplier(h);
+        if (active) active.code = inp.value.trim();
       } else {
         const raw = inp.value.trim();
         const v = raw === "" ? null : Math.max(0, parseFloat(raw) || 0);
@@ -10192,6 +10253,12 @@
       if (e.target.id === "presPickGrams" && e.key === "Enter") { e.preventDefault(); presPickAdd(); return; }
       if (e.target.id === "presPickHerb" && e.key === "Escape") { presPickCloseSugg(); return; }
       if (e.target.id === "refSearch" && e.key === "Enter") { e.preventDefault(); e.target.blur(); return; }
+      // Escape on an OPEN native select just closes its options popup
+      // (browser-native) without touching focus -- force the blur too, so
+      // the same keypress also closes the cell, matching every other
+      // Escape-cancels field in this app rather than needing a second action.
+      if (e.target.closest("[data-ph-sup-select]") && e.key === "Escape") { e.target.blur(); return; }
+      if (e.target.closest("[data-ph-bulk-sup-select]") && e.key === "Escape") { e.target.blur(); return; }
       const inp = e.target.closest("[data-ph-edit]");
       if (!inp) return;
       if (e.key === "Enter") { e.preventDefault(); inp.blur(); }
@@ -10296,16 +10363,42 @@
         }
         return;
       }
+      // her spec (2026-08-16): "pick once, apply to all selected" -- same
+      // no-extra-step philosophy as the individual cell, just scoped to the
+      // whole selection (phBulkSupApply owns the per-item kind check + the
+      // "how many changed" flash).
+      const bulkSupSelect = e.target.closest("[data-ph-bulk-sup-select]");
+      if (bulkSupSelect) { phBulkSupApply(bulkSupSelect.value); return; }
+      // her spec (2026-08-16): "picking one saves immediately... no confirm
+      // step, no second click" -- committed on change (the moment an option
+      // is picked), not on blur, so there's no extra step after the pick.
+      // Escape/click-away without picking is handled by the focusout
+      // listener below, which only fires the close (no save) since a real
+      // pick already nulled phCellEdit and re-rendered this select away.
+      const supSelect = e.target.closest("[data-ph-sup-select]");
+      if (supSelect) {
+        const h = PHARMACY.herbs.find(x => x.id === supSelect.dataset.phSupSelect);
+        if (h) {
+          phQuickSetSupplier(h, supSelect.value);
+          phCellEdit = null;
+          phKeepVisible.add(h.id);
+          savePharmacy(); renderPharmacy();
+        }
+        return;
+      }
       const orderSup = e.target.closest("[data-ph-order-sup]");
       if (orderSup) {
-        // her ask (2026-08-06, rescoped STEP 8g 2026-08-11): pick who this
-        // order is with right from the Restock row -- the dropdown now only
-        // lists this herb's own recorded options, so "picking one" is a
-        // straight activate (phSetActiveSupplier owns the price/code mirror)
+        // her spec (2026-08-16): the same full known-supplier list as the
+        // Inventory cell (phSupplierOptionsHtml), not just this herb's own
+        // recorded options -- so a blank herb can be assigned straight from
+        // this row instead of only being fixable from Inventory. And per her
+        // explicit rule ("must not alter stock, cost or any other field...
+        // everywhere it appears"), picking here no longer pulls the picked
+        // supplier's own price onto the herb the way it used to -- the row's
+        // own Bottle $ cell (right next door) is still there for that.
         const h = PHARMACY.herbs.find(x => x.id === orderSup.dataset.phOrderSup);
         if (h) {
-          if (!orderSup.value) { h.supplier = ""; delete h.bottleCost; }
-          else phSetActiveSupplier(h, orderSup.value);
+          phQuickSetSupplier(h, orderSup.value);
           savePharmacy(); renderPharmacy();
         }
         return;
@@ -10638,23 +10731,15 @@
       // against the supplier's invoice
       const lineTotal = h.bottleCost != null ? phRound2(h.bottleCost * qty) : null;
       const packIsCustom = phOrderPackCustomOpen.has(h.id) || (pack !== PH_PACK_HERB && pack !== PH_PACK_FORMULA);
-      // her ask (2026-08-06 follow-up, rescoped STEP 8g 2026-08-11): "the
-      // '-- no supplier --' dropdown becomes THIS herb's supplier options" --
-      // drawn from h.suppliers (what she's actually recorded for this herb,
-      // with its own code + Bottle $), not the whole app-wide Suppliers list.
-      // Adding a brand-new option for a herb still happens in the herb form.
-      // A legacy h.supplier that somehow isn't in h.suppliers yet still gets
-      // its own option so the picker never silently shows blank over real data.
-      const inSupList = h.supplier && (h.suppliers || []).some(s => s.name === h.supplier);
-      // in-house sources are never orderable-from, so they're left out of this
-      // picker even when they're one of the herb's recorded price options
-      const supPick = `<select class="ph-order-sup-pick field-bare" data-ph-order-sup="${h.id}" aria-label="Which supplier to order ${esc(h.name)} from">
-          <option value=""${h.supplier ? "" : " selected"}>— no supplier —</option>
-          ${(h.suppliers || []).filter(s => !phIsInHouseSup(s.name)).map(s =>
-            `<option value="${esc(s.name)}"${s.name === h.supplier ? " selected" : ""}>${esc(s.name)}${s.code ? ` (${esc(s.code)})` : ""}${s.bottleCost != null ? ` — $${s.bottleCost}` : ""}</option>`
-          ).join("")}
-          ${h.supplier && !inSupList ? `<option value="${esc(h.supplier)}" selected>${esc(h.supplier)}</option>` : ""}
-        </select>`;
+      // her spec (2026-08-16): same dropdown component as the Inventory cell
+      // -- the full known-supplier list (phSupplierOptionsHtml), so a herb
+      // with nothing recorded yet can be assigned straight from this row
+      // instead of only showing "no supplier" with nowhere to go. In-house
+      // sources are never orderable-from, so herb rows simply never offer
+      // them (phSupplierOptionsHtml only adds them for formulas); a formula
+      // already made in-house is still free to switch here if she's decided
+      // to buy it in instead.
+      const supPick = `<select class="ph-order-sup-pick field-bare" data-ph-order-sup="${h.id}" aria-label="Which supplier to order ${esc(h.name)} from">${phSupplierOptionsHtml(phIsFormula(h), h.supplier || "")}</select>`;
       const ord = k => ` style="order:${restockOrderIdx[k]}"`;
       return `<div class="ph-order-row${i % 2 ? " ph-row-alt" : ""}">
         <div class="ph-order-line2">
@@ -10977,7 +11062,10 @@
     // (Change (g)/After (g)) and has no filter option for them -- surfacing
     // one here would show as a nonsense "0g change" row. They have their own
     // home: the Price Review page's own "Past price reviews" history.
-    return PHARMACY.log.filter(e => (phLogKind === "all" ? e.kind !== "price-review"
+    // supplier-change entries (2026-08-16 spec: "every change writes a log
+    // entry ... so it's traceable") are the same story -- no grams to show,
+    // no dedicated screen asked for, just traceable in the data.
+    return PHARMACY.log.filter(e => (phLogKind === "all" ? (e.kind !== "price-review" && e.kind !== "supplier-change")
       : phLogKind === "dispense" ? (!e.kind || e.kind === "dispense") : e.kind === phLogKind)
       && (!cutoff || e.date >= cutoff) && hit(e))
       .sort((a, b) => b.date > a.date ? 1 : b.date < a.date ? -1 : 0);
