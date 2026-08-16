@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260816-205411">
+<meta name="lcm-build" content="20260816-222947">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -1837,15 +1837,21 @@
     #pharmacyPage .ph-dash-tiles { grid-template-columns: repeat(2, 1fr); }
     #pharmacyPage .ph-dash-cards { grid-template-columns: 1fr; }
     /* CLAUDE.md: no table may require horizontal scrolling -- drop lower-
-       priority columns instead. Type/Restock size/On order are the least
-       essential of the 7 (Supplier/Herbs/Formulas/actions stay); same idea
-       for the in-house table's Batch size (always "200g", lowest-value column). */
-    #pharmacyPage #phSuppliers table th:nth-child(2), #pharmacyPage #phSuppliers table td:nth-child(2),
-    #pharmacyPage #phSuppliers table th:nth-child(5), #pharmacyPage #phSuppliers table td:nth-child(5),
-    #pharmacyPage #phSuppliers table th:nth-child(6), #pharmacyPage #phSuppliers table td:nth-child(6) { display: none; }
-    /* the name-link already opens edit -- the redundant ✎ button is the one
-       column still worth dropping to close the last few px at 360px */
-    #pharmacyPage #phSuppliers table .rtn-actions button[data-ph-sup-edit] { display: none; }
+       priority columns instead. Supplies/Herb restock/Formula restock are
+       reference facts, not at-a-glance numbers, so they go first; same idea
+       for the in-house table's Batch size (always "200g", lowest-value
+       column). Measured live at 360px (her ask 2026-08-16, Section C): even
+       after dropping those three, the row's own name link + Herbs/Formulas/
+       On order numbers + the now-TWO 36px touch-target action buttons
+       (✎ added back once the name click became "view items" instead of
+       "edit") still ran 48px past the edge -- On order goes too, leaving
+       Supplier/Herbs/Formulas/actions as the four that stay. data-col, not
+       nth-child: a supplier row can expand into its OWN nested item-list
+       table (Section C), and nth-child would reach into that one too. */
+    #pharmacyPage #phSuppliers table [data-col="supplies"],
+    #pharmacyPage #phSuppliers table [data-col="herbrestock"],
+    #pharmacyPage #phSuppliers table [data-col="formularestock"],
+    #pharmacyPage #phSuppliers table [data-col="onorder"] { display: none; }
     #pharmacyPage #phInHouseSources table th:nth-child(4), #pharmacyPage #phInHouseSources table td:nth-child(4) { display: none; }
   }
 
@@ -3064,6 +3070,11 @@
   .rtn-table td.rtn-actions { display: table-cell; }
   .rtn-table td.rtn-actions .del { margin-right: 2px; }
   .rtn-table td.rtn-actions .del:last-child { margin-right: 0; }
+  /* Section C (her ask 2026-08-16): a supplier row's item list reads as its
+     own nested surface, not a border-boxed panel -- colour + space, same
+     rule as everywhere else in this app (CLAUDE.md: no box inside a box). */
+  #pharmacyPage .ph-sup-items-row > td { background: var(--ph-paper); padding: 12px 16px; }
+  #pharmacyPage .ph-sup-items-table { margin: 0; }
   /* prescriptions list: keep it compact instead of sprawling across a wide screen,
      and truncate long notes so one row doesn't stretch the whole table */
   #pharmacyPage #presList table { max-width: 720px; margin: 0 auto; }
@@ -4742,6 +4753,24 @@
   };
   // standard pack sizes: what one arrived order adds to the shelf
   const PH_PACK_HERB = 100, PH_PACK_FORMULA = 200;
+  // her rules (2026-08-16 spec): what each of the five companies she actually
+  // orders from supplies, and what a restock order from them adds to the
+  // shelf. All five restock a HERB at the same 100g (PH_PACK_HERB, no
+  // per-supplier variation there) -- only the FORMULA pack size and whether
+  // formulas are offered at all differ per supplier. KPC and Jing Shen supply
+  // herbs only: a formula can never be assigned to them, so they're left out
+  // of the formula-editing supplier dropdown entirely (phHerbSupplierRowHtml)
+  // and never grouped under formulas on the Suppliers page. Drives both that
+  // page's "not on file" flag (any herb-referenced name outside this list)
+  // and the dropdown restriction -- one source, not two copies to drift.
+  const PH_SUPPLIER_RULES = {
+    "Koda":      { formulas: true,  formulaPack: 200 },
+    "KPC":       { formulas: false, formulaPack: null },
+    "GMP":       { formulas: true,  formulaPack: 200 },
+    "Jing Shen": { formulas: false, formulaPack: null },
+    "Evergreen": { formulas: true,  formulaPack: 100 },
+  };
+  const PH_KNOWN_SUPPLIERS = Object.keys(PH_SUPPLIER_RULES);
   // STEP 8g (her ask 2026-08-11): a formula's bottle size can depend on WHO it's
   // bought from (Evergreen formulas restock at 100g, everyone else at 200g) --
   // the override lives on the supplier record so it's a saved rule she can
@@ -4752,7 +4781,10 @@
   // while it's mid-edit (no settled herb object/Kind to ask phIsFormula about yet)
   const phFormulaPackForSupplierName = supName => {
     const sup = (PHARMACY.suppliers || []).find(s => s.name === supName);
-    return sup && sup.formulaPackSize != null ? sup.formulaPackSize : phFormulaPackDefault();
+    if (sup && sup.formulaPackSize != null) return sup.formulaPackSize;   // her own edited override wins
+    const rule = PH_SUPPLIER_RULES[supName];
+    if (rule && rule.formulaPack != null) return rule.formulaPack;        // else the standard rule for this supplier
+    return phFormulaPackDefault();                                        // else the old app-wide fallback
   };
   const phPackForSupplierName = (h, supName) => phIsFormula(h) ? phFormulaPackForSupplierName(supName) : PH_PACK_HERB;
   const phPackFor = h => phPackForSupplierName(h, h.supplier);
@@ -6008,18 +6040,28 @@
   // rather than diffed against render state like the rest of the app.
   const phHerbSupplierRowHtml = (name, price, isDefault, code) => {
     const known = PHARMACY.suppliers || [];
-    const isKnown = name && known.some(s => s.name.trim().toLowerCase() === name.trim().toLowerCase());
+    // the five known suppliers are always offered here, whether or not a
+    // directory entry exists for them (Section A: the directory is sparse,
+    // never the source of truth for who she can buy from). A row's OWN
+    // current name always stays on the menu even if a rule would otherwise
+    // filter it out, so switching Kind never silently drops an
+    // already-recorded (if now unusual) choice.
+    const isFormulaKind = document.getElementById("phHerbKind").value === "formula";
+    const ruleAllows = n => n === name || !isFormulaKind || !PH_SUPPLIER_RULES[n] || PH_SUPPLIER_RULES[n].formulas !== false;
+    const isKnown = name && (PH_KNOWN_SUPPLIERS.includes(name) || known.some(s => s.name.trim().toLowerCase() === name.trim().toLowerCase()));
     const isInHouseAny = phIsInHouseSup(name);
     // the generic "In house" hides its code (there's nothing to record) --
     // her three NAMED sources still carry a real recipe/reference number, so
     // only THEY keep the code input visible (her ask 2026-08-14)
     const hideCode = name === PH_IN_HOUSE_SUP;
+    const extraKnown = known.filter(s => !PH_KNOWN_SUPPLIERS.includes(s.name) && ruleAllows(s.name));
     return `<div class="ph-hsup-row">
       <select class="ph-hsup-name field-bare" aria-label="Supplier">
         <option value="">— choose supplier —</option>
         <option value="${PH_IN_HOUSE_SUP}"${name === PH_IN_HOUSE_SUP ? " selected" : ""}>🏠 In house</option>
         ${PH_NAMED_INHOUSE_SUPS.map(n => `<option value="${esc(n)}"${n === name ? " selected" : ""}>🏠 ${esc(n)}</option>`).join("")}
-        ${known.map(s => `<option value="${esc(s.name)}"${s.name === name ? " selected" : ""}>${esc(s.name)}</option>`).join("")}
+        ${PH_KNOWN_SUPPLIERS.filter(ruleAllows).map(n => `<option value="${esc(n)}"${n === name ? " selected" : ""}>${esc(n)}</option>`).join("")}
+        ${extraKnown.map(s => `<option value="${esc(s.name)}"${s.name === name ? " selected" : ""}>${esc(s.name)}</option>`).join("")}
         <option value="__new__"${name && !isKnown && !isInHouseAny ? " selected" : ""}>+ New supplier…</option>
       </select>
       <input type="text" class="ph-hsup-new field-bare"${name && !isKnown && !isInHouseAny ? "" : " hidden"} placeholder="Supplier name" value="${name && !isKnown && !isInHouseAny ? esc(name) : ""}" aria-label="New supplier name">
@@ -8504,30 +8546,83 @@
   // there is no enforced/editable prefix field on these (they're a hardcoded
   // constant, PH_NAMED_INHOUSE_SUPS, not rows in PHARMACY.suppliers)
   const PH_IN_HOUSE_PREFIX = { "Huang Huang": "HH", "Mick": "MIC", "Lyttleton": "LYT" };
+  // "Where I buy from" must reflect what the HERBS actually say, never the
+  // sparse standalone directory -- that array is consulted only for extra
+  // detail (contact/note/formulaPackSize) layered onto a name found here,
+  // never as the source of which suppliers exist. A directory entry with no
+  // matching herb still gets a row (so manually adding a supplier ahead of
+  // using it, Section C, works) -- but a herb-referenced name with no
+  // directory entry is never hidden for lack of one. In-house names are
+  // excluded; they live in the table below instead. Read-only: never writes
+  // back to a herb.
+  function phBoughtInSupplierNames() {
+    const names = new Map(); // lowercased-trimmed -> display name (first seen)
+    const add = raw => {
+      const name = (raw || "").trim();
+      if (!name || phIsInHouseSup(name)) return;
+      const k = name.toLowerCase();
+      if (!names.has(k)) names.set(k, name);
+    };
+    PHARMACY.herbs.forEach(h => {
+      add(h.supplier);
+      (h.suppliers || []).forEach(s => add(s && s.name));
+    });
+    (PHARMACY.suppliers || []).forEach(s => add(s && s.name));
+    return [...names.values()];
+  }
+  function phSupplierDirEntry(name) {
+    const nameL = name.trim().toLowerCase();
+    return (PHARMACY.suppliers || []).find(s => (s.name || "").trim().toLowerCase() === nameL) || null;
+  }
+  // Section C (her ask 2026-08-16): clicking a supplier row opens its item
+  // list inline, right below that row -- which herb/formula, THIS supplier's
+  // own code for it, and the bottle price. Same active-supplier match as
+  // phSupplierStatsFor, just returning the rows instead of counting them.
+  let phSuppliersOpenName = null;
+  function phSupplierItemsFor(name) {
+    const nameL = name.trim().toLowerCase();
+    return PHARMACY.herbs
+      .filter(h => { const a = phActiveSupplier(h); return a && a.name.trim().toLowerCase() === nameL; })
+      .map(h => { const a = phActiveSupplier(h); return { name: h.name, isFormula: phIsFormula(h), code: a.code || "", price: a.bottleCost }; })
+      .sort((a, b) => phDispName(a.name, a.isFormula).localeCompare(phDispName(b.name, b.isFormula)));
+  }
   function renderPhSuppliersPage() {
     const wrap = document.getElementById("phSuppliersWrap");
     if (!wrap) return;
-    const suppliers = PHARMACY.suppliers || [];
+    const names = phBoughtInSupplierNames();
     const countEl = document.getElementById("phSuppliersCount");
-    if (countEl) countEl.textContent = `${suppliers.length} supplier${suppliers.length === 1 ? "" : "s"}`;
-    document.getElementById("phSuppliers").innerHTML = suppliers.length ? `
+    if (countEl) countEl.textContent = `${names.length} supplier${names.length === 1 ? "" : "s"}`;
+    document.getElementById("phSuppliers").innerHTML = names.length ? `
       <div class="rtn-table-wrap"><table class="rtn-table ph-table">
-        <thead><tr><th>Supplier</th><th>Type</th><th style="text-align:right">Herbs</th><th style="text-align:right">Formulas</th><th style="text-align:right">Restock size</th><th style="text-align:right">On order</th><th></th></tr></thead>
-        <tbody>${suppliers.map(s => {
-          const { herbsN, formulasN, onOrder } = phSupplierStatsFor(s.name);
-          const type = herbsN && formulasN ? "Bought in" : formulasN ? "Bought in · formulas only" : herbsN ? "Bought in · herbs only" : "Bought in";
+        <thead><tr><th data-col="supplier">Supplier</th><th data-col="supplies">Supplies</th><th data-col="herbrestock" style="text-align:right">Herb restock</th><th data-col="formularestock" style="text-align:right">Formula restock</th><th data-col="herbs" style="text-align:right">Herbs</th><th data-col="formulas" style="text-align:right">Formulas</th><th data-col="onorder" style="text-align:right">On order</th><th data-col="actions"></th></tr></thead>
+        <tbody>${names.map(name => {
+          const dir = phSupplierDirEntry(name);
+          const { herbsN, formulasN, onOrder } = phSupplierStatsFor(name);
+          const rule = PH_SUPPLIER_RULES[name];
+          const doesFormulas = rule ? rule.formulas : formulasN > 0;
+          const unknown = !rule;
+          const isOpen = name === phSuppliersOpenName;
+          const items = isOpen ? phSupplierItemsFor(name) : [];
           return `<tr>
-            <td class="ph-name"><button type="button" class="ph-name-link" data-ph-sup-edit="${s.id}" title="Edit ${esc(s.name)}">${esc(s.name)}</button></td>
-            <td class="ph-sub">${esc(type)}</td>
-            <td class="ph-num">${herbsN || "—"}</td>
-            <td class="ph-num">${formulasN || "—"}</td>
-            <td class="ph-num">${s.formulaPackSize ? phFmtG(s.formulaPackSize) + "g" : "—"}</td>
-            <td class="ph-num">${onOrder || "—"}</td>
-            <td class="rtn-actions">
-              <button class="del" data-ph-sup-edit="${s.id}" aria-label="Edit ${esc(s.name)}">✎</button>
-              <button class="del" data-ph-sup-del="${s.id}" aria-label="Delete ${esc(s.name)}">×</button>
-            </td>
-          </tr>`;
+            <td class="ph-name" data-col="supplier"><button type="button" class="ph-name-link" data-ph-sup-view="${esc(name)}" aria-expanded="${isOpen}" title="${esc(name)} — click to see what's bought from them">${esc(name)}</button>${unknown ? ` <span class="ph-kind-tag" title="Not one of your five known suppliers -- check for a typo or an old name">not on file</span>` : ""}</td>
+            <td class="ph-sub" data-col="supplies">${doesFormulas ? "Herbs + formulas" : "Herbs only"}</td>
+            <td class="ph-num" data-col="herbrestock">${phFmtG(PH_PACK_HERB)}g</td>
+            <td class="ph-num" data-col="formularestock">${doesFormulas ? phFmtG(phFormulaPackForSupplierName(name)) + "g" : "—"}</td>
+            <td class="ph-num" data-col="herbs">${herbsN || "—"}</td>
+            <td class="ph-num" data-col="formulas">${formulasN || "—"}</td>
+            <td class="ph-num" data-col="onorder">${onOrder || "—"}</td>
+            <td class="rtn-actions" data-col="actions">${dir ? `
+              <button class="del" data-ph-sup-edit="${dir.id}" aria-label="Edit ${esc(name)}">✎</button>
+              <button class="del" data-ph-sup-del="${dir.id}" aria-label="Delete ${esc(name)}">×</button>` : ""}</td>
+          </tr>${isOpen ? `<tr class="ph-sup-items-row"><td colspan="8">${items.length ? `
+            <table class="rtn-table ph-table ph-sup-items-table">
+              <thead><tr><th>Item</th><th>Their code</th><th style="text-align:right">Bottle $</th></tr></thead>
+              <tbody>${items.map(it => `<tr>
+                <td class="ph-name">${esc(phDispName(it.name, it.isFormula))}</td>
+                <td class="ph-code">${esc(it.code || "—")}</td>
+                <td class="ph-num">${it.price != null ? phMoney(it.price) : "—"}</td>
+              </tr>`).join("")}</tbody>
+            </table>` : `<div class="fam-empty" style="padding:8px 0">Nothing on file from ${esc(name)} yet.</div>`}</td></tr>` : ""}`;
         }).join("")}</tbody>
       </table></div>`
       : `<div class="fam-empty">No suppliers yet.<br>Record where each herb comes from and the order list will group itself by supplier.</div>`;
@@ -9416,6 +9511,13 @@
         }
         return;
       }
+      const supView = e.target.closest("[data-ph-sup-view]");
+      if (supView) {
+        const name = supView.dataset.phSupView;
+        phSuppliersOpenName = phSuppliersOpenName === name ? null : name;
+        renderPhSuppliersPage();
+        return;
+      }
       const supEdit = e.target.closest("[data-ph-sup-edit]");
       if (supEdit) {
         const s = PHARMACY.suppliers.find(x => x.id === supEdit.dataset.phSupEdit);
@@ -9576,8 +9678,11 @@
       });
     }
     // Kind also decides pack size (herb 100g flat vs a formula's per-supplier
-    // size), so every Kind flip must re-run the Suppliers $/g + cheapest calc
-    document.getElementById("phHerbKind").addEventListener("change", () => { phHerbKindTouched = true; phHerbApplyKindVisibility(); phHerbSupplierRowsRecalc(); });
+    // size) AND which suppliers are even offered (KPC/Jing Shen are herbs-only,
+    // PH_SUPPLIER_RULES) -- so every Kind flip rebuilds the supplier rows from
+    // their current values, not just a recalc (renderPhHerbSupplierRows already
+    // ends with the same $/g + cheapest recalc this used to call directly).
+    document.getElementById("phHerbKind").addEventListener("change", () => { phHerbKindTouched = true; phHerbApplyKindVisibility(); renderPhHerbSupplierRows(phHerbSupplierRowsRead()); });
     document.getElementById("phHerbName").addEventListener("input", e => {
       if (!phHerbKindTouched && !phHerbEditId) {
         document.getElementById("phHerbKind").value = phAutoFormulaName(e.target.value) ? "formula" : "herb";
