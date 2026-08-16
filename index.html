@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260816-184502">
+<meta name="lcm-build" content="20260816-191134">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -1564,6 +1564,39 @@
   #pharmacyPage .ph-dash-expand .rtn-table-wrap { padding: 0 16px; }
   #pharmacyPage .ph-dash-expand .ph-table { width: 100%; }
   #pharmacyPage .ph-dash-expand .fam-empty { padding: 16px; }
+  /* the expanded card's footer: two equal halves split by a hairline (her ask
+     2026-08-16). Plain text links, no button chrome -- but each half is a full
+     44px tap target across its whole width, not just the words, which is the
+     bit that matters standing at the bench one-handed.
+     (.ph-dash-seeall below is a DIFFERENT thing and still in use: the single
+     "See all refills" link on Formula Refill. Left alone.) */
+  #pharmacyPage .ph-dash-foot {
+    display: grid; grid-template-columns: 1fr 1px 1fr;
+    border-top: 1px solid var(--ph-line);
+  }
+  #pharmacyPage .ph-dash-foot::before {
+    content: ""; grid-column: 2; background: var(--ph-line);
+  }
+  #pharmacyPage .ph-dash-foot-act {
+    grid-row: 1; min-height: 44px; width: 100%;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: none; border: none; padding: 6px 10px; cursor: pointer;
+    font-family: inherit; font-size: 12px; font-weight: 700; line-height: 1.25;
+    color: var(--ph-green-deep); text-align: center;
+  }
+  #pharmacyPage .ph-dash-foot-act:first-child { grid-column: 1; }
+  #pharmacyPage .ph-dash-foot-act:last-child { grid-column: 3; }
+  #pharmacyPage .ph-dash-foot-act:hover,
+  #pharmacyPage .ph-dash-foot-act:active { background: var(--ph-green-tint); }
+  /* when nothing is hidden there is nothing to expand -- the half stays as a
+     quiet label rather than vanishing, so the divider and the halves keep
+     their geometry and the right-hand link doesn't jump sides */
+  #pharmacyPage .ph-dash-foot-act.is-off { color: var(--ph-faint); font-weight: 600; cursor: default; }
+  #pharmacyPage .ph-dash-foot-act.is-off:hover { background: none; }
+  /* a long expanded list scrolls inside the card instead of running the page */
+  #pharmacyPage .ph-dash-expand .rtn-table-wrap.ph-dash-scroll {
+    max-height: 60vh; overflow-y: auto; overscroll-behavior: contain;
+  }
   #pharmacyPage .ph-dash-seeall { text-align: center; padding: 10px 16px 14px; }
   #pharmacyPage .ph-dash-actions-cell { white-space: nowrap; }
   #pharmacyPage .ph-dash-row-actions { display: flex; align-items: center; gap: 5px; }
@@ -7354,6 +7387,11 @@
   // one definition of "zero"/"low", never a second one built for this.
   let phDashOpen = null;   // null | "herbs" | "zero" | "low" | "pres"
   const PH_DASH_CAP = 5;
+  // "Show all N" expands the open tile's list in place. Deliberately NOT
+  // persisted and NOT part of PHARMACY: it's a way of looking at the page, not
+  // a setting, so it resets on reload and whenever a different tile opens.
+  let phDashShowAll = false;
+  const PH_DASH_SCROLL_AT = 25;   // past this, the expanded list scrolls in the card
   // shared with renderPresList() below -- a patient's most recent dispense
   // date, built once off the log so the two lists can't drift against each
   // other by scanning it two different ways
@@ -7427,7 +7465,15 @@
       list = PRESC.items.filter(t => !presIsFormula(t))
         .sort((a, b) => (lastDisp.get(b.name.trim().toLowerCase()) || 0) - (lastDisp.get(a.name.trim().toLowerCase()) || 0));
     }
-    const shown = list.slice(0, PH_DASH_CAP), capped = list.length > PH_DASH_CAP;
+    // her ask (2026-08-16): the footer's single "See all" link becomes TWO
+    // actions -- expand HERE, or leave for the full page. phDashShowAll is the
+    // in-place expansion; it is view state only (never saved, reset whenever a
+    // different tile opens) and it changes nothing about how the list is built.
+    const capped = list.length > PH_DASH_CAP;
+    const shown = phDashShowAll ? list : list.slice(0, PH_DASH_CAP);
+    // a long list (the full 301 herbs) must not expand the page past usefulness:
+    // past PH_DASH_SCROLL_AT it scrolls inside the card at ~60% of the screen
+    const scrolls = phDashShowAll && list.length > PH_DASH_SCROLL_AT;
     const table = k === "pres"
       ? (() => { const lastDisp = phPresLastDispMap(); return `<table class="rtn-table ph-table">
           <thead><tr><th>Patient</th><th>Last dispensed</th><th style="text-align:right">Herbs</th><th>Status</th><th></th></tr></thead>
@@ -7440,10 +7486,15 @@
     return `<div class="ph-dash-expand ph-dash-expand-${meta.cls}">
       <div class="ph-dash-expand-head">
         <span>${meta.icon} ${esc(meta.label)} · ${list.length} ${meta.noun}${list.length === 1 ? "" : "s"}</span>
-        <span class="ph-dash-expand-hint">${capped ? `Showing ${shown.length} of ${list.length}` : "Click the tile again to close"}</span>
+        <span class="ph-dash-expand-hint">${capped ? (phDashShowAll ? `Showing all ${list.length}` : `Showing ${shown.length} of ${list.length}`) : "Click the tile again to close"}</span>
       </div>
-      ${list.length ? `<div class="rtn-table-wrap">${table}</div>
-        <div class="ph-dash-seeall"><button type="button" class="ph-name-link" data-ph-dash-seeall="${k}">See all ${list.length} in ${k === "pres" ? "Prescriptions" : "Inventory"} →</button></div>`
+      ${list.length ? `<div class="rtn-table-wrap${scrolls ? " ph-dash-scroll" : ""}">${table}</div>
+        <div class="ph-dash-foot">
+          ${capped
+            ? `<button type="button" class="ph-dash-foot-act" data-ph-dash-showall="${k}">${phDashShowAll ? "Show less ⌃" : `Show all ${list.length} ⌄`}</button>`
+            : `<span class="ph-dash-foot-act is-off">All ${list.length} shown</span>`}
+          <button type="button" class="ph-dash-foot-act" data-ph-dash-seeall="${k}">Open in ${k === "pres" ? "Prescriptions" : "Inventory"} →</button>
+        </div>`
         : `<div class="fam-empty">Nothing here — good news.</div>`}
     </div>`;
   }
@@ -7901,6 +7952,16 @@
       if (dashTile) {
         const k = dashTile.dataset.phDashTile;
         phDashOpen = phDashOpen === k ? null : k;
+        phDashShowAll = false;   // a newly opened tile always starts at the first 5
+        renderPhDashboardPage();
+        return;
+      }
+      // "Show all N ⌄" / "Show less ⌃" -- expands the SAME list in place, no
+      // navigation, no second data path. Only the slice in phDashExpandHtml()
+      // changes; the list itself is built exactly as before.
+      const dashShowAll = e.target.closest("[data-ph-dash-showall]");
+      if (dashShowAll) {
+        phDashShowAll = !phDashShowAll;
         renderPhDashboardPage();
         return;
       }
