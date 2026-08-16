@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260817-010527">
+<meta name="lcm-build" content="20260817-014254">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -629,7 +629,11 @@
      pure inconsistency, not information. Status now stays the same ghost
      pill as Columns/Select always, active or not. */
   #pharmacyPage .ph-status-pop {
-    position: absolute; top: calc(100% + 6px); left: 0; z-index: 60; min-width: 240px;
+    /* fixed + JS-clamped into the viewport (phPlacePop, her "doesn't work in
+       mobile version" -- Status/Columns sit mid-toolbar, so a narrow phone
+       screen put this 240px-wide panel mostly or entirely off the right
+       edge; same fix as .ph-status-menu above, same root cause */
+    position: fixed; z-index: 60; min-width: 240px;
     display: flex; flex-direction: column; gap: 2px;
     background: var(--ph-paper); border: 1px solid var(--ph-line); border-left: 3px solid var(--ph-green-deep);
     border-radius: 10px; padding: 10px 12px; box-shadow: 0 10px 28px rgba(14, 45, 27, 0.18);
@@ -1478,6 +1482,22 @@
   #pharmacyPage .ph-stocktake-main-btn.adjust-down:hover { background: var(--ph-zero); }
   #pharmacyPage .ph-stocktake-main-btn.adjust-up { background: var(--ph-green); border-color: var(--ph-green); }
   #pharmacyPage .ph-stocktake-main-btn.adjust-up:hover { background: var(--ph-green-deep); }
+  /* her ask (2026-08-17): a way to Stop/Phase-out right from the stocktake
+     card. Deliberately quiet -- same tint/deep pill colours as the row-level
+     status pill (.ph-pill.stopped / .ph-pill.phaseout) so the meaning is
+     already familiar, but small and low-contrast next to the loud green
+     confirm button above, since these are rarer, more consequential actions
+     that shouldn't compete with the everyday "confirmed, matches" tap. */
+  #pharmacyPage .ph-stocktake-status-actions { display: flex; gap: 8px; margin-top: 8px; }
+  #pharmacyPage .ph-stocktake-status-btn {
+    flex: 1 1 0; font-family: var(--font-body); font-size: 12.5px; font-weight: 600;
+    border: none; border-radius: 999px; padding: 10px 8px; min-height: 44px;
+    cursor: pointer; touch-action: manipulation;
+  }
+  #pharmacyPage .ph-stocktake-status-btn[data-ph-stocktake-stop="stopped"] { color: var(--ph-stopped); background: var(--ph-stopped-tint); }
+  #pharmacyPage .ph-stocktake-status-btn[data-ph-stocktake-stop="stopped"]:hover { background: color-mix(in oklab, var(--ph-stopped-tint) 60%, white); }
+  #pharmacyPage .ph-stocktake-status-btn[data-ph-stocktake-stop="phaseout"] { color: var(--ph-phaseout-deep); background: var(--ph-phaseout-tint); }
+  #pharmacyPage .ph-stocktake-status-btn[data-ph-stocktake-stop="phaseout"]:hover { background: color-mix(in oklab, var(--ph-phaseout-tint) 60%, white); }
   #pharmacyPage .ph-stocktake-nav { flex: 0 0 auto; display: flex; gap: 10px; padding: 12px 24px 20px; border-top: 1px solid var(--ph-line); }
   #pharmacyPage .ph-stocktake-nav button {
     flex: 1 1 0; font-family: var(--font-body); font-size: 13px; font-weight: 600; color: var(--ph-green-deep);
@@ -6445,6 +6465,27 @@
     savePharmacy();
     renderPhStocktakeModal();
   }
+  // her ask (2026-08-17): mark a herb Stopped or Phasing out right from the
+  // stocktake card -- there's nothing physical left to count once it's being
+  // written off or sold down, the same reason phStocktakeEligible excludes
+  // both statuses from the queue up front. phSetStatus makes the actual
+  // change (Stop zeroes qty -- her rule -- Phase out doesn't, it sells down
+  // through normal dispensing); this only takes the herb OUT of the current
+  // session's queue so it never comes back around to be counted, rather than
+  // just skipping past it like a real pending item.
+  function phStocktakeStop(status) {
+    const s = PHARMACY.stocktakeSession;
+    if (!s) return;
+    const h = PHARMACY.herbs.find(x => x.id === s.queue[s.pos]);
+    if (!h) { phStocktakeAdvance(); return; }
+    phSetStatus(h, status);
+    s.queue.splice(s.pos, 1);
+    delete s.results[h.id];
+    savePharmacy();
+    if (!s.queue.length) { phStocktakeFinish(); return; }
+    if (s.pos >= s.queue.length) s.pos = s.queue.length - 1;
+    renderPhStocktakeModal(); renderPhStocktakeBtn();
+  }
   // matched=true -> one-tap confirm, no stock change. matched=false -> her
   // typed count becomes the new real stock, logged as an adjustment. The
   // baseline (the ORIGINAL recorded stock) is captured once and kept even if
@@ -6656,6 +6697,10 @@
         </div>
         <div class="ph-stocktake-diff" id="phStocktakeDiff"></div>
         <button type="button" class="ph-stocktake-main-btn" id="phStocktakeMainBtn" data-ph-stocktake-mode="confirm">✓ Confirmed, matches</button>
+        <div class="ph-stocktake-status-actions">
+          <button type="button" class="ph-stocktake-status-btn" data-ph-stocktake-stop="stopped">⏸ Stop — write off to 0</button>
+          <button type="button" class="ph-stocktake-status-btn" data-ph-stocktake-stop="phaseout">🟡 Phase out</button>
+        </div>
       </div>
       <div class="ph-stocktake-nav">
         <button type="button" data-ph-stocktake-back="1"${s.pos === 0 ? " disabled" : ""}>← Back</button>
@@ -6827,6 +6872,7 @@
       ${PH_INV_COL_OPTS.map(([k, label]) => `<label class="ph-status-opt"><input type="checkbox" data-ph-col-opt="${k}" ${hidden.has(k) ? "" : "checked"}> ${label}</label>`).join("")}
       <button type="button" class="ph-load-btn ph-status-clear" data-ph-col-clear="1" ${hidden.size ? "" : "disabled"}>Show every column again</button>
       <button type="button" class="ph-load-btn ph-status-clear" data-ph-col-order-reset="inv" ${reordered ? "" : "disabled"} title="Put dragged columns back in their default order">↺ Reset column order</button>`;
+    phPlacePop(btn, pop);
   }
 
   // ---- adjustable column widths, every pharmacy table (her ask) ----
@@ -7424,6 +7470,24 @@
     menu.style.left = left + "px";
     menu.style.top = top + "px";
   }
+  // her report (2026-08-17, "status and column button doesnt work in
+  // mobile version"): the Status/Columns toolbar popovers used to be
+  // position:absolute, left:0 against their own trigger -- fine on desktop
+  // where those buttons sit near the toolbar's left edge, but on a phone
+  // they're mid-toolbar, so the fixed 240px-wide panel opened mostly or
+  // fully off the right edge. Same fix, same idiom as phPlaceStatusMenu
+  // above: fixed + JS-clamped to the viewport, reused for both popovers so
+  // they can't drift apart.
+  function phPlacePop(btn, pop) {
+    if (!btn || !pop || pop.hidden) return;
+    const br = btn.getBoundingClientRect();
+    const pw = pop.offsetWidth, ph = pop.offsetHeight;
+    let left = Math.max(8, Math.min(br.left, window.innerWidth - pw - 8));
+    let top = br.bottom + 6;
+    if (top + ph > window.innerHeight - 8) top = Math.max(8, br.top - ph - 6);
+    pop.style.left = left + "px";
+    pop.style.top = top + "px";
+  }
 
   // ---- the status filter popover: check as many statuses as she likes ----
   const PH_STATUS_OPTS = [
@@ -7443,6 +7507,7 @@
     pop.innerHTML = `
       ${PH_STATUS_OPTS.map(([k, label]) => `<label class="ph-status-opt"><input type="checkbox" data-ph-status-opt="${k}" ${phStatusFilter.has(k) ? "checked" : ""}> ${label}</label>`).join("")}
       <button type="button" class="ph-load-btn ph-status-clear" data-ph-status-clear="1" ${n ? "" : "disabled"}>Show everything again</button>`;
+    phPlacePop(btn, pop);
   }
 
   // (renderPhBuild — the mixer's weigh-out list — was removed with the
@@ -10574,6 +10639,8 @@
         }
         if (e.target.closest("[data-ph-stocktake-back]")) { phStocktakeBack(); return; }
         if (e.target.closest("[data-ph-stocktake-skip]")) { phStocktakeSkip(); return; }
+        const stopBtn = e.target.closest("[data-ph-stocktake-stop]");
+        if (stopBtn) { phStocktakeStop(stopBtn.dataset.phStocktakeStop); return; }
       });
       stModal.addEventListener("input", e => { if (e.target.id === "phStocktakeCountInput") phStocktakeSyncInput(); });
       stModal.addEventListener("change", e => {
