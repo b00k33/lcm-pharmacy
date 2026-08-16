@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260816-194359">
+<meta name="lcm-build" content="20260816-205411">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -27,6 +27,21 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" href="icons/favicon-32.png" sizes="32x32">
+<!-- Price review's "read a supplier's PDF price list" mode (her ask
+     2026-08-16) needs a real PDF text reader -- pdf.js, the same engine
+     Firefox/Chrome use internally, pinned to one version rather than
+     "latest" so a future release can't silently change how a price list
+     parses. It only ships as an ES module now (pdf.js dropped the classic
+     build a while back), so this tiny module shim is the one non-classic
+     script in the app; everything it exposes lands on window.pdfjsLib for
+     the ordinary IIFE below to use like any other global. Every call site
+     checks it's actually there first (a slow/blocked network shouldn't be
+     able to throw at her) -- see phPrPdfReadFile(). -->
+<script type="module">
+  import * as pdfjsLib from "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.min.mjs";
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.worker.min.mjs";
+  window.pdfjsLib = pdfjsLib;
+</script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
   :root {
@@ -1520,6 +1535,143 @@
   @media (max-width: 900px) {
     #pharmacyPage .ph-stocktake-page { grid-template-columns: 1fr; }
   }
+  /* ===== Price review (her mockup, 2026-08-16) ==============================
+     A price stocktake, organised by supplier: pick-a-supplier + history side
+     by side (same shell as .ph-stocktake-page above), then a table she works
+     down with the real price list beside her, or a PDF she uploads instead.
+     One page, three states -- which one shows is read straight off
+     PHARMACY.priceReviewSession / the local (never-saved-until-Apply) PDF
+     state, exactly how Stocktake reads .stocktakeSession vs. .finished. */
+  #pharmacyPage .ph-pr-page { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; align-items: start; max-width: 1072px; margin: 16px auto 0; }
+  @media (max-width: 900px) { #pharmacyPage .ph-pr-page { grid-template-columns: 1fr; } }
+  /* a first, generic on/off switch (her mockup draws a real pill toggle, not
+     the plain checkbox Stocktake's own narrow-scope row uses) -- named and
+     scoped app-wide, not ph-pr-*, so the next page that needs a toggle reuses
+     this instead of a second one-off */
+  #pharmacyPage .ph-switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; font-size: 12.5px; color: var(--ph-soft); }
+  #pharmacyPage .ph-switch { position: relative; flex: 0 0 auto; width: 38px; height: 22px; display: inline-block; }
+  #pharmacyPage .ph-switch input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+  #pharmacyPage .ph-switch-track { position: absolute; inset: 0; background: var(--ph-line); border-radius: 999px; transition: background .15s; pointer-events: none; }
+  #pharmacyPage .ph-switch-track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; background: var(--ph-white); border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .15s; }
+  #pharmacyPage .ph-switch input:checked ~ .ph-switch-track { background: var(--ph-green); }
+  #pharmacyPage .ph-switch input:checked ~ .ph-switch-track::after { transform: translateX(16px); }
+  #pharmacyPage .ph-switch input:focus-visible ~ .ph-switch-track { outline: 2px solid var(--ph-green); outline-offset: 2px; }
+  #pharmacyPage .ph-pr-sup-row {
+    display: flex; align-items: center; gap: 12px; width: 100%; box-sizing: border-box;
+    text-align: left; background: var(--ph-white); border: 1px solid var(--ph-line); border-radius: 14px;
+    padding: 14px 16px; cursor: pointer; margin-bottom: 10px;
+  }
+  #pharmacyPage .ph-pr-sup-row:hover { border-color: var(--ph-green); }
+  #pharmacyPage .ph-pr-sup-row.on { border-color: var(--ph-green); background: var(--ph-green-tint); box-shadow: inset 0 0 0 1px var(--ph-green); }
+  #pharmacyPage .ph-pr-sup-row input[type="radio"] { flex: 0 0 auto; width: 18px; height: 18px; accent-color: var(--ph-green); margin: 0; }
+  #pharmacyPage .ph-pr-sup-main { flex: 1 1 auto; min-width: 0; }
+  #pharmacyPage .ph-pr-sup-nm { font-family: var(--font-body); font-size: 15px; font-weight: 700; color: var(--ph-ink); }
+  #pharmacyPage .ph-pr-sup-sub { font-size: 12px; color: var(--ph-soft); margin-top: 2px; }
+  #pharmacyPage .ph-pr-sup-side { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+  #pharmacyPage .ph-pr-sup-n { font-size: 13px; font-weight: 700; color: var(--ph-green-deep); background: var(--ph-green-tint); border-radius: 999px; padding: 4px 12px; font-variant-numeric: tabular-nums; }
+  #pharmacyPage .ph-pr-sup-badge { font-size: 10.5px; font-weight: 700; color: var(--ph-low-deep); background: var(--ph-low-tint); border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+  #pharmacyPage .ph-pr-start-btn {
+    width: 100%; box-sizing: border-box; margin-top: 6px; padding: 13px 16px;
+    font-family: var(--font-body); font-size: 14.5px; font-weight: 700; color: var(--ph-white);
+    background: var(--ph-green-deep); border: none; border-radius: 12px; cursor: pointer; text-align: center;
+  }
+  #pharmacyPage .ph-pr-start-btn:hover { background: var(--ph-green-press); }
+  #pharmacyPage .ph-pr-start-btn:disabled { opacity: .45; cursor: not-allowed; }
+  #pharmacyPage .ph-pr-hist-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 10px 0; border-top: 1px solid var(--ph-line); }
+  #pharmacyPage .ph-pr-hist-row:first-child { border-top: none; }
+  #pharmacyPage .ph-pr-hist-main .nm { font-size: 13px; font-weight: 700; color: var(--ph-ink); }
+  #pharmacyPage .ph-pr-hist-main .sub { font-size: 11.5px; color: var(--ph-soft); margin-top: 2px; }
+  #pharmacyPage .ph-pr-hist-figs { flex: 0 0 auto; font-size: 12px; color: var(--ph-soft); text-align: right; white-space: nowrap; }
+  #pharmacyPage .ph-pr-hist-figs b { color: var(--ph-zero-deep); font-weight: 700; }
+  #pharmacyPage .ph-pr-hist-figs .z { color: var(--ph-faint); font-weight: 400; }
+
+  /* the manual-review + PDF-review strip both borrow .ph-lux-strip/.ph-lux-stat
+     (the existing dark-green stats band) -- this 4th cell is new: a progress
+     bar instead of a big number, sized wider so "N OF M" + the bar both fit */
+  #pharmacyPage .ph-pr-strip-prog { flex: 1 1 180px; padding: 10px 14px 8px; border-left: 1px solid rgba(255,255,255,0.08); }
+  #pharmacyPage .ph-pr-strip-prog .l { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.09em; color: var(--margin-rule, #E3C87A); }
+  #pharmacyPage .ph-pr-strip-bar { margin-top: 6px; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.18); overflow: hidden; }
+  #pharmacyPage .ph-pr-strip-bar-fill { height: 100%; background: var(--margin-rule, #E3C87A); border-radius: 999px; }
+  #pharmacyPage .ph-pr-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  #pharmacyPage .ph-pr-head .sub { font-size: 12px; color: var(--ph-soft); }
+
+  #pharmacyPage .ph-pr-table-wrap { max-width: 100%; overflow-x: auto; margin-top: 12px; }
+  #pharmacyPage .ph-pr-table th, #pharmacyPage .ph-pr-table td { white-space: nowrap; }
+  #pharmacyPage .ph-pr-table td.nm { white-space: normal; min-width: 140px; }
+  #pharmacyPage .ph-pr-table td.n, #pharmacyPage .ph-pr-table th.n { text-align: right; }
+  #pharmacyPage .ph-pr-table tr.current td { background: color-mix(in oklab, var(--ph-green-tint) 60%, transparent); }
+  #pharmacyPage .ph-pr-table tr.flag td { background: var(--ph-low-tint); }
+  #pharmacyPage .ph-pr-price-input {
+    width: 78px; text-align: right; font-variant-numeric: tabular-nums;
+    border: 1px solid var(--ph-line); border-radius: 8px; padding: 5px 8px; font-size: 13px;
+  }
+  #pharmacyPage .ph-pr-price-input.up { border-color: var(--ph-zero-deep); background: var(--ph-zero-tint); color: var(--ph-zero-deep); }
+  #pharmacyPage .ph-pr-price-input.down { border-color: var(--ph-green); background: var(--ph-green-tint); color: var(--ph-green-deep); }
+  #pharmacyPage .ph-pr-change { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  #pharmacyPage .ph-pr-change.up { color: var(--ph-zero-deep); }
+  #pharmacyPage .ph-pr-change.down { color: var(--ph-green-deep); }
+  #pharmacyPage .ph-pr-change.flag { display: block; font-size: 10px; font-weight: 700; color: var(--ph-low-deep); margin-top: 1px; }
+  #pharmacyPage .ph-pr-check-btn {
+    width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--ph-line); background: var(--ph-white);
+    color: var(--ph-faint); display: inline-flex; align-items: center; justify-content: center; cursor: default;
+  }
+  #pharmacyPage .ph-pr-check-btn.on { border-color: var(--ph-green); background: var(--ph-green); color: var(--ph-white); }
+  #pharmacyPage .ph-pr-table-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--ph-line); }
+  #pharmacyPage .ph-pr-finish-link { font-family: var(--font-body); font-size: 13px; font-weight: 700; color: var(--ph-green-deep); background: none; border: none; cursor: pointer; padding: 0; }
+  /* rulebook: no row may need a sideways swipe on a small screen -- drop the
+     least-essential columns instead, same data-col + @media mechanism the
+     main Inventory table uses. Code/Pack/$-per-g are the ones she doesn't
+     need mid-column-of-typing; Old/Current survives as the New-price cell's
+     placeholder text so that context isn't lost, just moved. Both this
+     screen's editable table and the PDF screen's proposed-changes table
+     share .ph-pr-table, so one rule set covers both. */
+  @media (max-width: 640px) {
+    #pharmacyPage .ph-pr-table { table-layout: fixed; width: 100%; }
+    #pharmacyPage .ph-pr-table [data-col="code"],
+    #pharmacyPage .ph-pr-table [data-col="pack"],
+    #pharmacyPage .ph-pr-table [data-col="old"],
+    #pharmacyPage .ph-pr-table [data-col="g"] { display: none; }
+    /* td.nm{white-space:normal} (base rule, outside this media block) ties
+       [data-col="name"] on specificity -- adding the "td" type here, not
+       !important, so this still wins on the normal cascade (same trick as
+       the grams-field fix earlier this session, same root cause: a more
+       specific same-file rule silently winning over the intended one) */
+    #pharmacyPage .ph-pr-table td[data-col="name"] { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #pharmacyPage .ph-pr-table [data-col="new"] { width: 84px; }
+    #pharmacyPage .ph-pr-table [data-col="change"] { width: 78px; white-space: normal; }
+    #pharmacyPage .ph-pr-table [data-col="tick"] { width: 28px; }
+    #pharmacyPage .ph-pr-table th, #pharmacyPage .ph-pr-table td { padding: 6px 5px; font-size: 11.5px; }
+    #pharmacyPage .ph-pr-price-input { width: 100%; padding: 5px 4px; font-size: 12px; }
+    #pharmacyPage .ph-pr-check-btn { width: 22px; height: 22px; }
+  }
+
+  /* PDF mode */
+  #pharmacyPage .ph-pr-pdf-file { display: flex; align-items: center; gap: 12px; }
+  #pharmacyPage .ph-pr-pdf-file .icn { width: 26px; height: 26px; color: var(--ph-green-deep); flex: 0 0 auto; }
+  #pharmacyPage .ph-pr-pdf-file-main { flex: 1 1 auto; min-width: 0; }
+  #pharmacyPage .ph-pr-pdf-file-nm { font-size: 13.5px; font-weight: 700; color: var(--ph-ink); }
+  #pharmacyPage .ph-pr-pdf-file-sub { font-size: 11.5px; color: var(--ph-soft); margin-top: 2px; }
+  #pharmacyPage .ph-pr-pdf-note { font-size: 11.5px; color: var(--ph-soft); }
+  #pharmacyPage .ph-pr-pdf-drop {
+    border: 1.5px dashed var(--ph-line); border-radius: 14px; padding: 28px 16px; text-align: center;
+    background: var(--ph-paper); cursor: pointer;
+  }
+  #pharmacyPage .ph-pr-pdf-drop:hover { border-color: var(--ph-green); background: var(--ph-green-tint); }
+  #pharmacyPage .ph-pr-pdf-drop .icn { width: 28px; height: 28px; color: var(--ph-green); margin-bottom: 6px; }
+  #pharmacyPage .ph-pr-pdf-scan-warn { text-align: center; padding: 20px 16px; }
+  #pharmacyPage .ph-pr-unmatched-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--ph-line); flex-wrap: wrap; }
+  #pharmacyPage .ph-pr-unmatched-row:first-child { border-top: none; }
+  #pharmacyPage .ph-pr-unmatched-main { flex: 1 1 220px; min-width: 0; font-size: 12.5px; color: var(--ph-ink); }
+  #pharmacyPage .ph-pr-unmatched-main .p { color: var(--ph-soft); font-variant-numeric: tabular-nums; }
+  #pharmacyPage .ph-pr-unmatched-search { flex: 1 1 200px; min-width: 0; }
+  #pharmacyPage .ph-pr-unmatched-ignore { flex: 0 0 auto; font-size: 11.5px; color: var(--ph-soft); background: none; border: 1px solid var(--ph-line); border-radius: 999px; padding: 5px 10px; cursor: pointer; white-space: nowrap; }
+  #pharmacyPage .ph-pr-unmatched-ignore:hover { border-color: var(--ph-green); color: var(--ph-green-deep); }
+  #pharmacyPage .ph-pr-unmatched-row.ignored { opacity: .5; }
+  @media (max-width: 640px) {
+    #pharmacyPage .ph-pr-table th, #pharmacyPage .ph-pr-table td { padding: 5px 6px; font-size: 12px; }
+    #pharmacyPage .ph-pr-price-input { width: 64px; }
+  }
+
   /* Dashboard (PASTE 3, mockup 02): 4 stat tiles + two side-by-side cards.
      Tiles reuse .ph-stocktake-scope's white-card-with-thin-border language --
      the one other place in this app already puts a bordered white box
@@ -3721,6 +3873,7 @@
         <div class="ph-sb-group">
           <div class="ph-sb-group-label">Records</div>
           <button type="button" class="ph-nav-item" data-ph-tab="log" data-ph-tip="Dispense history"><span class="ph-nav-ic"><svg class="icn"><use href="#i-scroll"/></svg></span><span class="ph-nav-label">Dispense history</span></button>
+          <button type="button" class="ph-nav-item" data-ph-tab="pricereview" data-ph-tip="Price review"><span class="ph-nav-ic"><svg class="icn"><use href="#i-tag"/></svg></span><span class="ph-nav-label">Price review</span></button>
           <button type="button" class="ph-nav-item" data-ph-tab="suppliers" data-ph-tip="Suppliers"><span class="ph-nav-ic"><svg class="icn"><use href="#i-tag"/></svg></span><span class="ph-nav-label">Suppliers</span></button>
         </div>
         <div class="ph-sb-group">
@@ -3780,6 +3933,7 @@
     <div id="phStatsWrap" hidden></div>
     <div id="phLogWrap" hidden></div>
     <div id="phStocktakeWrap" hidden></div>
+    <div id="phPriceReviewWrap" hidden></div>
     <!-- her ask (2026-08-14): stocktake mode -- one focused card at a time,
          full-screen on mobile since it's meant to be used shelf-side.
          MUST stay a direct child of #pharmacyPage, NOT inside any page's own
@@ -4340,7 +4494,15 @@
       // switch to another device mid-count. stocktakeSession is the one
       // in-progress (or just-finished, summary-showing) run; stocktakes is the
       // permanent record of every one she's ever completed.
-      stocktakeSession: null, stocktakes: [] };
+      stocktakeSession: null, stocktakes: [],
+      // her ask (2026-08-16): Price review, a supplier-by-supplier price
+      // stocktake -- same resumable-session shape as stocktakeSession/
+      // stocktakes above, so it saves/syncs the same safe way. The per-item
+      // "when was this price last confirmed" date lives on the herb's own
+      // h.suppliers[] row (s.lastConfirmed, added where it's read/written --
+      // no top-level array needed for that part) since it's inherently a
+      // property of ONE herb-at-ONE-supplier, not the herb as a whole.
+      priceReviewSession: null, priceReviews: [] };
     const seedHerbs = () => PH_HERB_SEED.map(h => ({ id: uid(), ...h }));
     const raw = localStorage.getItem(PHARMACY_KEY);
     try {
@@ -4710,6 +4872,609 @@
     }
     return `<div class="ph-sup-panel">${rows}${lastLine}<div class="ph-sup-panel-foot"><button type="button" class="tab-link" data-ph-herb-edit="${h.id}">✎ Edit</button><button type="button" class="tab-link" data-ph-unlock-close="1">Close</button></div></div>`;
   };
+
+  // ===== Price review (her ask 2026-08-16) ===================================
+  // "A stocktake for prices instead of quantities, organised by supplier."
+  // Reuses the exact h.suppliers[] rows the supplier web already reads/writes
+  // (phSetActiveSupplier etc. above) -- a price review is just a guided,
+  // dated way of setting s.bottleCost on those same rows, never a parallel
+  // data structure. s.lastConfirmed (added below, read/written here only) is
+  // the one new field: which herb-AT-WHICH-supplier and when, because the
+  // same herb can be "checked" for Koda today and still overdue for Evergreen.
+  const PH_PRICE_REVIEW_MONTHS = 6;
+  // page-local, session-only state -- never persisted, mirrors
+  // phStocktakeNarrowChecked's exact pattern for the same reason
+  let phPrStartSelected = null;   // supplier name picked on the (not yet started) start screen
+  let phPrStartDueOnly = true;    // the "only items not confirmed in 6 months" toggle, defaults on per her mockup
+  // the WHOLE pdf-mode working state -- text read, matched/unmatched rows,
+  // ticks. Deliberately a plain variable, not on PHARMACY: her explicit ask
+  // was "nothing is saved until you press Apply", so a reload losing an
+  // un-applied upload is the correct behaviour, not a bug to fix later.
+  let phPrPdfState = null;
+  // every name she can run a review against: the named Suppliers directory
+  // PLUS every name actually used on some herb's h.suppliers[] row (her real
+  // data has 212 Koda herbs but only 2 rows in the directory -- the directory
+  // is supplementary metadata, not the authoritative "who do I buy from").
+  // In-house pseudo-suppliers never carry a bottle price, so they're excluded
+  // exactly like everywhere else in the supplier web.
+  function phPriceReviewSupplierNames() {
+    const names = new Set();
+    (PHARMACY.suppliers || []).forEach(s => { if (!phIsInHouseSup(s.name)) names.add(s.name); });
+    PHARMACY.herbs.forEach(h => (h.suppliers || []).forEach(s => { if (!phIsInHouseSup(s.name)) names.add(s.name); }));
+    return Array.from(names).sort((a, b) => a.localeCompare(b));
+  }
+  const phPriceReviewRow = (h, supplierName) => (h.suppliers || []).find(s => s.name === supplierName) || null;
+  // the bottle $ she'd see as "old": the row's own price if one was ever
+  // recorded, else -- ONLY for the herb's current active supplier -- the
+  // exact inverse of its live $/g (bottleCost = cost * pack, no rounding
+  // drift; this is how every existing $/g on file was derived in the first
+  // place, per phSupplierPerGram above). A non-active row with no bottleCost
+  // truly has no price on file yet; showing "—" rather than $0 or a guess.
+  const phPriceReviewOldBottle = (h, s) => s.bottleCost != null ? s.bottleCost
+    : s.isDefault && h.cost ? phRound2(h.cost * phPackForSupplierName(h, s.name))
+    : null;
+  const phPriceReviewSixMonthsAgoKey = () => keyOf(new Date(TODAY.getFullYear(), TODAY.getMonth() - PH_PRICE_REVIEW_MONTHS, TODAY.getDate()));
+  const phPriceReviewIsDue = s => !s.lastConfirmed || s.lastConfirmed < phPriceReviewSixMonthsAgoKey();
+  // every herb/formula with a row for this supplier, name-sorted -- optionally
+  // narrowed to rows overdue for their 6-month check. Stopped items are kept
+  // (a price review is about what's on the supplier's price list, not what's
+  // currently stocked -- unlike Stocktake, which only counts real stock).
+  function phPriceReviewQueueFor(supplierName, dueOnly) {
+    return PHARMACY.herbs
+      .filter(h => {
+        const s = phPriceReviewRow(h, supplierName);
+        return s && (!dueOnly || phPriceReviewIsDue(s));
+      })
+      .sort((a, b) => phByName(a, b));
+  }
+  function phPriceReviewCounts(supplierName) {
+    const all = phPriceReviewQueueFor(supplierName, false);
+    const due = all.filter(h => phPriceReviewIsDue(phPriceReviewRow(h, supplierName)));
+    return {
+      total: all.length, due: due.length,
+      herbs: all.filter(h => !phIsFormula(h)).length,
+      formulas: all.filter(h => phIsFormula(h)).length,
+    };
+  }
+  // writes a new bottle $ onto ONE supplier row and stamps it confirmed today.
+  // Mirrors onto the legacy h.bottleCost/h.cost fields ONLY when that row is
+  // the herb's active supplier -- same rule phSetActiveSupplier already
+  // follows, so a price review of a herb's SECONDARY supplier can never
+  // silently change what she's actually charged/costed today.
+  function phPriceReviewSetCost(h, supplierName, newBottleCost) {
+    h.suppliers = h.suppliers || [];
+    let row = h.suppliers.find(s => s.name === supplierName);
+    if (!row) { row = { name: supplierName, bottleCost: null, code: "", isDefault: false }; h.suppliers.push(row); }
+    row.bottleCost = newBottleCost;
+    row.lastConfirmed = keyOf(TODAY);
+    if (row.isDefault) {
+      h.bottleCost = newBottleCost;
+      h.cost = newBottleCost / phPackForSupplierName(h, supplierName);
+      h.restockCostComputed = true;
+    }
+    return row;
+  }
+  // one row committed (typed a number, or explicitly reaffirmed the old one).
+  // Writes the price immediately -- same "don't wait for Finish" rule
+  // Stocktake's phStocktakeCommit already established -- so a paused review
+  // never loses what she's already done. Only an ACTUAL change gets a Log
+  // entry (her words: "each PRICE CHANGE writes a log entry"); a bare
+  // reconfirmation just updates lastConfirmed, no movements-log noise.
+  // skipSave lets phPriceReviewConfirmRemaining batch hundreds of rows behind
+  // ONE save instead of one per row -- measured live against her real 301-item
+  // Koda catalogue, saving after every row took long enough to look hung.
+  function phPriceReviewCommit(herbId, newBottleCost, skipSave) {
+    const s = PHARMACY.priceReviewSession;
+    if (!s) return;
+    const h = PHARMACY.herbs.find(x => x.id === herbId);
+    if (!h) return;
+    const row = phPriceReviewRow(h, s.supplierName);
+    if (!row) return;
+    const before = phPriceReviewOldBottle(h, row);
+    const changed = before == null ? newBottleCost != null : phRound2(newBottleCost) !== phRound2(before);
+    phPriceReviewSetCost(h, s.supplierName, phRound2(newBottleCost));
+    s.results[herbId] = { old: before, new: phRound2(newBottleCost), changed, at: new Date().toISOString() };
+    if (changed) {
+      PHARMACY.log.unshift({
+        id: uid(), kind: "price-review", date: keyOf(TODAY),
+        herbId: h.id, name: h.name, supplier: s.supplierName,
+        oldCost: before, newCost: phRound2(newBottleCost), sessionId: s.id,
+      });
+    }
+    if (!skipSave) savePharmacy();
+  }
+  // "Same as last time -- confirm all remaining": every row she hasn't
+  // touched yet that DOES have an old price to reaffirm. Rows with nothing on
+  // file (old === null) are left pending -- there is no "same as last time"
+  // for a first-time entry, so this can never confirm a price that was never
+  // actually reviewed.
+  function phPriceReviewConfirmRemaining() {
+    const s = PHARMACY.priceReviewSession;
+    if (!s) return;
+    s.queue.forEach(id => {
+      if (s.results[id]) return;
+      const h = PHARMACY.herbs.find(x => x.id === id);
+      const row = h && phPriceReviewRow(h, s.supplierName);
+      const old = row && phPriceReviewOldBottle(h, row);
+      if (old != null) phPriceReviewCommit(id, old, true);
+    });
+    savePharmacy();
+    renderPhPriceReviewPage();
+  }
+  function phPriceReviewStart(supplierName, dueOnly) {
+    const queue = phPriceReviewQueueFor(supplierName, dueOnly).map(h => h.id);
+    PHARMACY.priceReviewSession = {
+      id: uid(), supplierName, dueOnly, date: keyOf(TODAY), startedAt: new Date().toISOString(),
+      queue, results: {},
+    };
+    savePharmacy();
+    renderPhPriceReviewPage();
+  }
+  // closes the session record and returns to the start screen. Nothing about
+  // what's already been committed changes -- Finish just turns the running
+  // tally into a permanent PHARMACY.priceReviews entry, same relationship
+  // phStocktakeFinish has to phStocktakeCommit.
+  function phPriceReviewFinish() {
+    const s = PHARMACY.priceReviewSession;
+    if (!s) return;
+    const results = Object.keys(s.results).map(id => ({ herbId: id, ...s.results[id] }));
+    const changes = results.filter(r => r.changed)
+      .map(r => { const h = phHerbByIdGet().get(r.herbId); return { herbId: r.herbId, name: h ? h.name : "(deleted)", old: r.old, new: r.new, diffPct: r.old ? Math.round(((r.new - r.old) / r.old) * 1000) / 10 : null }; })
+      .sort((a, b) => phByName(a, b));
+    const avgChangePct = changes.length ? Math.round((changes.reduce((sum, c) => sum + (c.diffPct || 0), 0) / changes.length) * 10) / 10 : 0;
+    PHARMACY.priceReviews.unshift({
+      id: s.id, supplierName: s.supplierName, date: s.date, finishedAt: new Date().toISOString(),
+      checked: results.length, changed: changes.length, avgChangePct, changes,
+    });
+    PHARMACY.priceReviewSession = null;
+    savePharmacy();
+    renderPhPriceReviewPage();
+  }
+  // leaves the session exactly as it is (already saved after every commit)
+  // and just stops looking at it -- Screen 1 picks the "resume" branch the
+  // moment it sees a live, unfinished session, same as Stocktake's pattern.
+  function phPriceReviewPause() { renderPhPriceReviewPage(); }
+  // a paper working copy of the currently-picked (not yet started) supplier's
+  // queue, same phPrintDoc engine every other print button in the app uses --
+  // code/name/old $ from what's on file, a blank line for the new one.
+  function phPriceReviewPrintCheckSheet() {
+    const supplierName = phPrStartSelected;
+    if (!supplierName) return;
+    const rows = phPriceReviewQueueFor(supplierName, phPrStartDueOnly);
+    const row = h => {
+      const s = phPriceReviewRow(h, supplierName);
+      const old = phPriceReviewOldBottle(h, s);
+      return `<tr><td>${esc(s.code || "")}</td><td>${esc(phDispName(h.name, phIsFormula(h)))}</td><td class="n">${old != null ? phMoney(old) : "—"}</td><td class="n">______</td></tr>`;
+    };
+    phPrintDoc(`<title>Price check sheet — ${esc(supplierName)}</title>
+      <style>body{font-family:Georgia,serif;padding:24px}h1{font-size:20px}table{border-collapse:collapse;width:100%;font-size:13px}
+      th,td{border:1px solid #999;padding:5px 8px;text-align:left}td.n,th.n{text-align:right}</style>
+      <h1>Price check sheet — ${esc(supplierName)}</h1>
+      <p>${rows.length} items · ${phShortDate(keyOf(TODAY))}</p>
+      <table><thead><tr><th>Code</th><th>Name</th><th class="n">Old $</th><th class="n">New $</th></tr></thead><tbody>${rows.map(row).join("")}</tbody></table>`,
+      `Price check sheet ${supplierName} ${phFileDate()}`);
+  }
+
+  // ---- Price review: page dispatcher + Screen 1 (start) ----
+  function renderPhPriceReviewPage() {
+    const wrap = document.getElementById("phPriceReviewWrap");
+    if (!wrap) return;
+    if (phPrPdfState) { renderPhPrPdfScreen(wrap); return; }
+    if (PHARMACY.priceReviewSession) { renderPhPrManualScreen(wrap); return; }
+    renderPhPrStartScreen(wrap);
+  }
+  function phPrHistRowHtml(r) {
+    const d = parseKey(r.date);
+    const dateLabel = `${d.getDate()} ${MON_SHORT[d.getMonth()]} ${d.getFullYear()}`;
+    return `<div class="ph-pr-hist-row">
+        <div class="ph-pr-hist-main"><div class="nm">${esc(r.supplierName)}</div><div class="sub">${dateLabel}</div></div>
+        <div class="ph-pr-hist-figs">${r.checked} checked · ${r.changed ? `<b>${r.changed} changed</b>` : `<span class="z">0 changed</span>`}</div>
+      </div>`;
+  }
+  function renderPhPrStartScreen(wrap) {
+    const names = phPriceReviewSupplierNames();
+    if (phPrStartSelected && !names.includes(phPrStartSelected)) phPrStartSelected = null;
+    if (!phPrStartSelected && names.length) phPrStartSelected = names[0];
+    const rowHtml = name => {
+      const c = phPriceReviewCounts(name);
+      const sel = name === phPrStartSelected;
+      const sub = `${c.herbs} herb${c.herbs === 1 ? "" : "s"}${c.formulas ? ` · ${c.formulas} formula${c.formulas === 1 ? "" : "s"}` : ""}`;
+      const side = c.due
+        ? `<span class="ph-pr-sup-badge">${c.due} not checked in ${PH_PRICE_REVIEW_MONTHS} months</span>`
+        : `<span class="ph-pr-sup-n">${c.total}</span>`;
+      return `<label class="ph-pr-sup-row${sel ? " on" : ""}">
+          <input type="radio" name="phPrSupplier" value="${esc(name)}"${sel ? " checked" : ""}>
+          <span class="ph-pr-sup-main"><span class="ph-pr-sup-nm">${esc(name)}</span><span class="ph-pr-sup-sub">${sub}</span></span>
+          <span class="ph-pr-sup-side">${side}</span>
+        </label>`;
+    };
+    const selCounts = phPrStartSelected ? phPriceReviewCounts(phPrStartSelected) : null;
+    const startN = selCounts ? (phPrStartDueOnly ? selCounts.due : selCounts.total) : 0;
+    wrap.innerHTML = `<div class="ph-pr-page">
+      <section class="ph-widget">
+        <div class="section-head"><h2>Whose prices am I checking?</h2><span class="rule"></span></div>
+        ${phFlashHtml()}
+        ${names.length ? names.map(rowHtml).join("") : `<div class="fam-empty">No suppliers on file yet — add one from 📇 Suppliers first.</div>`}
+        ${names.length ? `<div class="ph-switch-row">
+          <span>Only items not checked in ${PH_PRICE_REVIEW_MONTHS} months</span>
+          <span class="ph-switch"><input type="checkbox" id="phPrDueToggle"${phPrStartDueOnly ? " checked" : ""}><span class="ph-switch-track"></span></span>
+        </div>
+        <button type="button" class="ph-pr-start-btn" id="phPrStartBtn"${startN ? "" : " disabled"}>Start ${esc(phPrStartSelected || "")} price review (${startN}) →</button>
+        <button type="button" class="ph-pr-finish-link" style="display:block;margin:10px auto 0" data-ph-pr-pdf-pick="1"${phPrStartSelected ? "" : " disabled"}>Or upload ${esc(phPrStartSelected || "")}'s price list as a PDF instead →</button>
+        <input type="file" accept="application/pdf" id="phPrPdfFile" hidden>` : ""}
+      </section>
+      <section class="ph-widget">
+        <div class="section-head"><h2>📂 Past price reviews</h2><span class="rule"></span></div>
+        ${PHARMACY.priceReviews.length ? PHARMACY.priceReviews.map(phPrHistRowHtml).join("") : `<div class="fam-empty">No price reviews recorded yet.</div>`}
+      </section>
+    </div>`;
+    phTopbarActionSet("pricereview");
+  }
+
+  // ---- Price review: Screen 2 (manual) ----
+  // $/g needs a third decimal to mean anything at 100g-pack prices ($12.50
+  // becomes $0.125, not $0.13) -- her mockup shows it bare (no $), unlike
+  // phMoney elsewhere, so this stays a small local formatter rather than
+  // changing what phMoney does for every other page that already relies on it.
+  const phPrG = g => g == null ? "—" : g.toFixed(3);
+  function phPriceReviewLiveStats(s) {
+    const results = Object.keys(s.results).map(id => s.results[id]);
+    const changed = results.filter(r => r.changed);
+    const avgChangePct = changed.length
+      ? changed.reduce((sum, r) => sum + (r.old ? ((r.new - r.old) / r.old) * 100 : 0), 0) / changed.length
+      : 0;
+    return { checked: results.length, changed: changed.length, avgChangePct, total: s.queue.length };
+  }
+  function phPrDateLabel(k) { const d = parseKey(k); return `${d.getDate()} ${MON_SHORT[d.getMonth()]} ${d.getFullYear()}`; }
+  function phPrRowHtml(h, supplierName) {
+    const s = phPriceReviewRow(h, supplierName);
+    const sess = PHARMACY.priceReviewSession;
+    const old = phPriceReviewOldBottle(h, s);
+    const pack = phPackForSupplierName(h, supplierName);
+    const result = sess.results[h.id];
+    const newVal = result ? result.new : null;
+    const gNow = newVal != null ? newVal / pack : (old != null ? old / pack : null);
+    let changeHtml = "—";
+    if (result) {
+      if (result.old == null) changeHtml = `<span class="ph-pr-change">New</span>`;
+      else {
+        const pct = result.old ? ((result.new - result.old) / result.old) * 100 : 0;
+        changeHtml = Math.abs(pct) < 0.05 ? `<span class="ph-pr-change">no change</span>`
+          : `<span class="ph-pr-change ${pct > 0 ? "up" : "down"}">${pct > 0 ? "▲" : "▼"} ${Math.abs(pct).toFixed(1)}%</span>`;
+      }
+    }
+    const cls = result ? (result.old != null && result.new > result.old ? " up" : result.old != null && result.new < result.old ? " down" : "") : "";
+    return `<tr data-ph-pr-row="${h.id}">
+        <td data-col="code">${esc(s.code || "")}</td>
+        <td class="nm" data-col="name">${esc(phDispName(h.name, phIsFormula(h)))}</td>
+        <td class="n" data-col="pack">${phFmtG(pack)} g</td>
+        <td class="n" data-col="old">${old != null ? phMoney(old) : "—"}</td>
+        <td class="n" data-col="new"><input type="text" inputmode="decimal" class="ph-pr-price-input${cls}" id="phPrPrice_${h.id}" data-ph-pr-input="${h.id}" value="${newVal != null ? newVal : ""}" placeholder="${old != null ? phRound2(old) : "—"}"></td>
+        <td class="n" data-col="g">${phPrG(gNow)}</td>
+        <td class="n" data-col="change">${changeHtml}</td>
+        <td data-col="tick"><span class="ph-pr-check-btn${result ? " on" : ""}">${result ? `<svg class="icn" aria-hidden="true"><use href="#i-check"/></svg>` : ""}</span></td>
+      </tr>`;
+  }
+  function renderPhPrManualScreen(wrap) {
+    const s = PHARMACY.priceReviewSession;
+    if (!s) { renderPhPrStartScreen(wrap); return; }
+    const stats = phPriceReviewLiveStats(s);
+    const pct = stats.total ? Math.round((stats.checked / stats.total) * 100) : 0;
+    const herbs = s.queue.map(id => phHerbByIdGet().get(id)).filter(Boolean);
+    wrap.innerHTML = `<section class="ph-widget ph-pr-review">
+        ${phFlashHtml()}
+        <div class="ph-pr-head">
+          <span><b>${esc(s.supplierName)}</b> · price list dated ${phPrDateLabel(s.date)}</span>
+          <span class="sub">Tab down the New bottle $ column</span>
+        </div>
+        <div class="ph-lux-strip">
+          <div class="ph-lux-stat"><div class="n">${stats.checked}</div><div class="l">Checked</div></div>
+          <div class="ph-lux-stat"><div class="n">${stats.changed}</div><div class="l">Changed</div></div>
+          <div class="ph-lux-stat"><div class="n">${stats.changed ? (stats.avgChangePct >= 0 ? "+" : "−") + Math.abs(stats.avgChangePct).toFixed(1) : "0.0"}%</div><div class="l">Avg change</div></div>
+          <div class="ph-pr-strip-prog"><div class="l">${stats.checked} of ${stats.total}</div><div class="ph-pr-strip-bar"><div class="ph-pr-strip-bar-fill" style="width:${pct}%"></div></div></div>
+        </div>
+        <div class="ph-pr-table-wrap"><table class="rtn-table ph-table ph-pr-table">
+          <thead><tr><th data-col="code">Code</th><th data-col="name">Name</th><th class="n" data-col="pack">Pack</th><th class="n" data-col="old">Old bottle $</th><th class="n" data-col="new">New bottle $</th><th class="n" data-col="g">$/g</th><th class="n" data-col="change">Change</th><th data-col="tick"></th></tr></thead>
+          <tbody>${herbs.map(h => phPrRowHtml(h, s.supplierName)).join("")}</tbody>
+        </table></div>
+        <div class="ph-pr-table-foot">
+          <button type="button" class="ph-pr-finish-link" id="phPrConfirmRemaining">Same as last time — confirm all remaining ⌄</button>
+          <button type="button" class="ph-pr-finish-link" id="phPrFinishFoot">Finish review →</button>
+        </div>
+      </section>`;
+    phTopbarActionSet("pricereview");
+  }
+  // live-recolours ONE input as she types -- no data write, no re-render,
+  // same "patch the DOM, not the store" rule phHerbSupplierRowsRecalc uses,
+  // so a keystroke never costs her focus mid-number.
+  function phPrLiveRecolor(input) {
+    const herbId = input.dataset.phPrInput;
+    const row = input.closest("tr");
+    if (!row) return;
+    const h = phHerbByIdGet().get(herbId);
+    const s = phPriceReviewRow(h, PHARMACY.priceReviewSession.supplierName);
+    const old = phPriceReviewOldBottle(h, s);
+    const typed = input.value.trim() === "" ? null : parseFloat(input.value);
+    input.classList.remove("up", "down");
+    if (typed != null && !isNaN(typed) && old != null) {
+      if (typed > old) input.classList.add("up");
+      else if (typed < old) input.classList.add("down");
+    }
+    const pack = phPackForSupplierName(h, PHARMACY.priceReviewSession.supplierName);
+    const gCell = row.children[5];
+    if (gCell) gCell.textContent = phPrG(typed != null && !isNaN(typed) ? typed / pack : (old != null ? old / pack : null));
+  }
+  // Tab (or Enter) commits the focused row and moves to the next one -- her
+  // literal ask ("so I can work straight down"). A blank field just moves
+  // focus without committing; nothing about an unreviewed row changes.
+  function phPrCommitAndAdvance(input) {
+    const herbId = input.dataset.phPrInput;
+    const s = PHARMACY.priceReviewSession;
+    if (!s) return;
+    const typed = input.value.trim() === "" ? null : parseFloat(input.value);
+    if (typed != null && !isNaN(typed)) phPriceReviewCommit(herbId, typed);
+    const idx = s.queue.indexOf(herbId);
+    renderPhPriceReviewPage();
+    if (idx >= 0 && idx + 1 < s.queue.length) {
+      const next = document.getElementById(`phPrPrice_${s.queue[idx + 1]}`);
+      if (next) { next.focus(); next.select(); }
+    }
+  }
+
+  // ---- Price review: Screen 3 (PDF) ----
+  // her hard rule: "never guess a price, never invent a match" -- every
+  // matching step below only accepts EXACT normalised agreement (a known
+  // code as the line's own leading token, or the herb's full name contained
+  // in the line). Anything less certain falls through to unmatched, where
+  // SHE decides, rather than this code taking a confident-looking guess.
+  const PH_PR_UNUSUAL_PCT = 50;
+  async function phPrPdfReadFile(file) {
+    if (!window.pdfjsLib) throw new Error("pdfjs-not-loaded");
+    const buf = await file.arrayBuffer();
+    const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
+    const lines = [];
+    for (let p = 1; p <= pdf.numPages; p++) {
+      const page = await pdf.getPage(p);
+      const content = await page.getTextContent();
+      // pdf.js hands back individual text fragments with their own x/y --
+      // group into visual LINES by y (rounded -- two fragments on the same
+      // printed line rarely land on the exact same float), then order left
+      // to right within a line so a flattened row still reads code-name-price
+      const byY = new Map();
+      content.items.forEach(item => {
+        const y = Math.round(item.transform[5] / 2) * 2;
+        if (!byY.has(y)) byY.set(y, []);
+        byY.get(y).push(item);
+      });
+      Array.from(byY.keys()).sort((a, b) => b - a).forEach(y => {
+        const text = byY.get(y).sort((a, b) => a.transform[4] - b.transform[4]).map(i => i.str).join(" ").replace(/\s+/g, " ").trim();
+        if (text) lines.push(text);
+      });
+    }
+    return lines;
+  }
+  // code-first, name-second, exactly her words. Codes may carry an internal
+  // space in her data ("M D04"), so both sides are compared with whitespace
+  // stripped; longer codes are tried before shorter ones so a short code
+  // can never accidentally prefix-match a longer, different one.
+  function phPrPdfParseLines(lines, supplierName) {
+    const codeEntries = [];
+    const nameCands = [];
+    PHARMACY.herbs.forEach(h => {
+      const s = phPriceReviewRow(h, supplierName);
+      if (!s) return;
+      if (s.code && s.code.trim()) codeEntries.push([s.code.toUpperCase().replace(/\s+/g, ""), h.id]);
+      const norm = h.name.toUpperCase().replace(/[^A-Z0-9]+/g, " ").trim();
+      if (norm) nameCands.push({ id: h.id, norm });
+    });
+    codeEntries.sort((a, b) => b[0].length - a[0].length);
+    return lines.map(raw => {
+      const priceMatches = raw.match(/\$?\s*\d{1,5}\.\d{2}\b/g);
+      const lastPrice = priceMatches ? priceMatches[priceMatches.length - 1] : null;
+      const price = lastPrice ? parseFloat(lastPrice.replace(/[^0-9.]/g, "")) : null;
+      const withoutPrice = lastPrice ? raw.slice(0, raw.lastIndexOf(lastPrice)) : raw;
+      const flat = withoutPrice.toUpperCase().replace(/[^A-Z0-9]+/g, "");
+      let herbId = null;
+      const codeHit = codeEntries.find(([c]) => c.length >= 2 && flat.startsWith(c));
+      if (codeHit) herbId = codeHit[1];
+      if (!herbId) {
+        const norm = withoutPrice.toUpperCase().replace(/[^A-Z0-9]+/g, " ").replace(/\s+/g, " ").trim();
+        const hit = norm ? nameCands.find(c => norm === c.norm || (c.norm.length > 3 && norm.includes(c.norm))) : null;
+        if (hit) herbId = hit.id;
+      }
+      return { id: uid(), raw, price, herbId, ignored: false, ticked: true };
+    });
+  }
+  async function phPrPdfHandleFile(file) {
+    if (!file) return;
+    const supplierName = phPrStartSelected;
+    phPrPdfState = { supplierName, fileName: file.name, fileSize: file.size, loading: true, scanned: false, lines: [] };
+    renderPhPriceReviewPage();
+    try {
+      const rawLines = await phPrPdfReadFile(file);
+      const nonBlank = rawLines.join("").replace(/\s+/g, "");
+      if (nonBlank.length < 10) {
+        phPrPdfState = { supplierName, fileName: file.name, fileSize: file.size, loading: false, scanned: true, lines: [] };
+      } else {
+        const lines = phPrPdfParseLines(rawLines, supplierName);
+        // her rule: a >50% swing starts UNTICKED. flag isn't known until a
+        // line is matched against a herb's old price, so resolve it here via
+        // the same phPrPdfDerived a normal render uses, rather than a second
+        // copy of the match/diff logic that could quietly drift from it.
+        const flagged = new Set(phPrPdfDerived({ supplierName, lines }).proposed.filter(r => r.flag).map(r => r.id));
+        lines.forEach(l => { if (flagged.has(l.id)) l.ticked = false; });
+        phPrPdfState = { supplierName, fileName: file.name, fileSize: file.size, loading: false, scanned: false, lines };
+      }
+    } catch (e) {
+      phPrPdfState = null;
+      phFlashShow(e && e.message === "pdfjs-not-loaded"
+        ? "⚠ Couldn't load the PDF reader — check your connection and try again."
+        : `⚠ Couldn't read that PDF (${esc((e && e.message) || "unknown error")}). Nothing was changed — try manual review instead, or a different file.`);
+    }
+    renderPhPriceReviewPage();
+  }
+  // everything the screen shows is DERIVED from phPrPdfState.lines, computed
+  // fresh at render time -- so ticking a row, matching one by hand, or
+  // marking one ignored never has to keep a second copy of these numbers in sync
+  function phPrPdfDerived(state) {
+    const supplierName = state.supplierName;
+    const rows = state.lines.map(l => {
+      if (!l.herbId) return { ...l, kind: "unmatched" };
+      const h = phHerbByIdGet().get(l.herbId);
+      if (!h) return { ...l, kind: "unmatched" };
+      const s = phPriceReviewRow(h, supplierName);
+      const old = s ? phPriceReviewOldBottle(h, s) : null;
+      const sameAsOld = old != null && l.price != null && phRound2(old) === phRound2(l.price);
+      const diffPct = old && l.price != null ? ((l.price - old) / old) * 100 : null;
+      const flag = diffPct != null && Math.abs(diffPct) >= PH_PR_UNUSUAL_PCT;
+      const pack = phPackForSupplierName(h, supplierName);
+      return { ...l, kind: "matched", h, code: s ? s.code : "", old, diffPct, flag, sameAsOld, pack };
+    });
+    const matched = rows.filter(r => r.kind === "matched");
+    // a line can match a herb by code/name yet still carry no readable price
+    // (wrapped text, an odd layout) -- excluded here so it can never reach
+    // phMoney(null)/phPrG(null) below, and so Apply can never write a null cost
+    const proposed = matched.filter(r => !r.sameAsOld && r.price != null);
+    const unmatched = rows.filter(r => r.kind === "unmatched" && !r.ignored);
+    const avgChangePct = proposed.length ? proposed.reduce((sum, r) => sum + (r.diffPct || 0), 0) / proposed.length : 0;
+    return { rows, matched, proposed, unmatched, avgChangePct };
+  }
+  function phPrPdfTickedCount(state) {
+    if (!state) return 0;
+    return phPrPdfDerived(state).proposed.filter(r => r.ticked).length;
+  }
+  function phPrPdfToggleTick(lineId) {
+    const l = phPrPdfState && phPrPdfState.lines.find(x => x.id === lineId);
+    if (l) { l.ticked = !l.ticked; renderPhPriceReviewPage(); }
+  }
+  function phPrPdfToggleIgnore(lineId) {
+    const l = phPrPdfState && phPrPdfState.lines.find(x => x.id === lineId);
+    if (l) { l.ignored = !l.ignored; renderPhPriceReviewPage(); }
+  }
+  // her search-my-herbs box on an unmatched line -- picking a real herb from
+  // the datalist is the only way this resolves; typing text that doesn't
+  // match an option leaves it unmatched rather than half-committing a guess
+  function phPrPdfManualMatch(lineId, typedName) {
+    const l = phPrPdfState && phPrPdfState.lines.find(x => x.id === lineId);
+    if (!l) return;
+    const supplierName = phPrPdfState.supplierName;
+    const hit = PHARMACY.herbs.find(h => phDispName(h.name, phIsFormula(h)) === typedName && phPriceReviewRow(h, supplierName));
+    if (!hit) return;
+    l.herbId = hit.id;
+    // the >50%-starts-unticked rule only ran once, at initial parse, before
+    // this line had a herbId to check a price against -- a hand match needs
+    // the same check now, since the risk it guards against (a misread
+    // decimal tripling a cost) doesn't care how the herb got matched
+    const row = phPrPdfDerived(phPrPdfState).rows.find(r => r.id === l.id);
+    if (row && row.flag) l.ticked = false;
+    renderPhPriceReviewPage();
+  }
+  function phPrPdfDiscard() { phPrPdfState = null; renderPhPriceReviewPage(); }
+  // the one point any of this actually touches PHARMACY -- everything above
+  // is scratch state. Batched behind one save, same fix as confirm-remaining.
+  function phPrPdfApply() {
+    const state = phPrPdfState;
+    if (!state) return;
+    const { proposed } = phPrPdfDerived(state);
+    const applied = proposed.filter(r => r.ticked);
+    if (!applied.length) return;
+    const sessionId = uid();
+    const changes = [];
+    applied.forEach(r => {
+      const before = r.old;
+      phPriceReviewSetCost(r.h, state.supplierName, phRound2(r.price));
+      PHARMACY.log.unshift({
+        id: uid(), kind: "price-review", date: keyOf(TODAY),
+        herbId: r.h.id, name: r.h.name, supplier: state.supplierName,
+        oldCost: before, newCost: phRound2(r.price), sessionId,
+      });
+      changes.push({ herbId: r.h.id, name: r.h.name, old: before, new: phRound2(r.price), diffPct: Math.round((r.diffPct || 0) * 10) / 10 });
+    });
+    const avgChangePct = changes.length ? Math.round((changes.reduce((sum, c) => sum + (c.diffPct || 0), 0) / changes.length) * 10) / 10 : 0;
+    PHARMACY.priceReviews.unshift({
+      id: sessionId, supplierName: state.supplierName, date: keyOf(TODAY), finishedAt: new Date().toISOString(),
+      checked: applied.length, changed: applied.length, avgChangePct, changes, source: "pdf", fileName: state.fileName,
+    });
+    savePharmacy();
+    phPrPdfState = null;
+    renderPhPriceReviewPage();
+  }
+  function phPrPdfRowHtml(r) {
+    if (r.kind === "unmatched") return "";
+    const tickCls = r.ticked ? " on" : "";
+    return `<tr class="${r.flag ? "flag" : ""}">
+        <td data-col="tick"><span class="ph-pr-check-btn${tickCls}" data-ph-pr-pdf-tick="${r.id}" style="cursor:pointer">${r.ticked ? `<svg class="icn" aria-hidden="true"><use href="#i-check"/></svg>` : ""}</span></td>
+        <td data-col="code">${esc(r.code || "")}</td>
+        <td class="nm" data-col="name">${esc(phDispName(r.h.name, phIsFormula(r.h)))}</td>
+        <td class="n" data-col="old">${r.old != null ? phMoney(r.old) : "—"}</td>
+        <td class="n" data-col="new">${phMoney(r.price)}</td>
+        <td class="n" data-col="g">${phPrG(r.price / r.pack)}</td>
+        <td class="n" data-col="change">${r.diffPct == null ? "New" : `<span class="ph-pr-change ${r.diffPct > 0 ? "up" : "down"}">${r.diffPct > 0 ? "▲" : "▼"} ${Math.abs(r.diffPct).toFixed(1)}%</span>${r.flag ? `<span class="ph-pr-change flag">unusually large — check</span>` : ""}`}</td>
+      </tr>`;
+  }
+  function phPrPdfUnmatchedRowHtml(r) {
+    const opts = PHARMACY.herbs
+      .filter(h => phPriceReviewRow(h, phPrPdfState.supplierName))
+      .sort((a, b) => phByName(a, b))
+      .map(h => `<option value="${esc(phDispName(h.name, phIsFormula(h)))}">`).join("");
+    return `<div class="ph-pr-unmatched-row${r.ignored ? " ignored" : ""}">
+        <div class="ph-pr-unmatched-main">${esc(r.raw)}${r.price != null ? ` <span class="p">${phMoney(r.price)}</span>` : ""}</div>
+        ${r.ignored ? `<span class="sub" style="font-size:11.5px;color:var(--ph-soft)">Marked not a herb</span>` : `
+        <input type="text" list="phPrMatchList_${r.id}" class="ph-pr-unmatched-search field-bare" placeholder="Search my herbs…" data-ph-pr-pdf-match="${r.id}">
+        <datalist id="phPrMatchList_${r.id}">${opts}</datalist>
+        <button type="button" class="ph-pr-unmatched-ignore" data-ph-pr-pdf-ignore="${r.id}">Not a herb — ignore</button>`}
+      </div>`;
+  }
+  function renderPhPrPdfScreen(wrap) {
+    const state = phPrPdfState;
+    if (!state) { renderPhPrStartScreen(wrap); return; }
+    if (state.loading) {
+      wrap.innerHTML = `<section class="ph-widget ph-pr-pdf-scan-warn"><div class="ph-pr-pdf-note">Reading ${esc(state.fileName)}…</div></section>`;
+      phTopbarActionSet("pricereview");
+      return;
+    }
+    if (state.scanned) {
+      wrap.innerHTML = `<section class="ph-widget ph-pr-pdf-scan-warn">
+          <div class="ph-pr-sup-nm" style="margin-bottom:8px">Couldn't read any text from ${esc(state.fileName)}</div>
+          <div class="ph-pr-pdf-note">This looks like a scanned image with no text layer — nothing can be read from it safely, so nothing was matched or guessed.</div>
+          <button type="button" class="ph-pr-start-btn" style="max-width:280px;margin:16px auto 0" data-ph-pr-pdf-manual="1">Use manual review instead →</button>
+          <div style="margin-top:10px"><button type="button" class="ph-pr-finish-link" data-ph-pr-pdf-pick="1">Try a different file</button></div>
+          <input type="file" accept="application/pdf" id="phPrPdfFile" hidden>
+        </section>`;
+      phTopbarActionSet("pricereview");
+      return;
+    }
+    const d = phPrPdfDerived(state);
+    wrap.innerHTML = `<section class="ph-widget ph-pr-review">
+        ${phFlashHtml()}
+        <div class="ph-pr-pdf-file">
+          <svg class="icn" aria-hidden="true"><use href="#i-scroll"/></svg>
+          <div class="ph-pr-pdf-file-main">
+            <div class="ph-pr-pdf-file-nm">${esc(state.fileName)}</div>
+            <div class="ph-pr-pdf-file-sub">Read ${state.lines.length} lines · matched ${d.matched.length} to my herbs · ${d.proposed.length} prices differ · ${d.unmatched.length} lines I couldn't match</div>
+          </div>
+          <button type="button" class="ph-pr-finish-link" data-ph-pr-pdf-pick="1">Replace file</button>
+          <input type="file" accept="application/pdf" id="phPrPdfFile" hidden>
+        </div>
+        <div class="ph-lux-strip">
+          <div class="ph-lux-stat"><div class="n">${d.matched.length}</div><div class="l">Matched</div></div>
+          <div class="ph-lux-stat"><div class="n">${d.proposed.length}</div><div class="l">Prices differ</div></div>
+          <div class="ph-lux-stat"><div class="n">${d.unmatched.length}</div><div class="l">Unmatched</div></div>
+          <div class="ph-lux-stat"><div class="n">${d.proposed.length ? (d.avgChangePct >= 0 ? "+" : "−") + Math.abs(d.avgChangePct).toFixed(1) : "0.0"}%</div><div class="l">Avg change</div></div>
+        </div>
+        <div class="ph-pr-pdf-note" style="margin-top:10px">Nothing is saved until you press Apply. Review each change below — untick any you don't want.</div>
+        ${d.proposed.length ? `
+        <div class="ph-pr-head" style="margin-top:14px"><span><b>Proposed changes</b> · ${d.proposed.length}</span></div>
+        <div class="ph-pr-table-wrap"><table class="rtn-table ph-table ph-pr-table">
+          <thead><tr><th data-col="tick"></th><th data-col="code">Code</th><th data-col="name">Name</th><th class="n" data-col="old">Current</th><th class="n" data-col="new">In the PDF</th><th class="n" data-col="g">$/g</th><th class="n" data-col="change">Change</th></tr></thead>
+          <tbody>${d.proposed.map(phPrPdfRowHtml).join("")}</tbody>
+        </table></div>` : `<div class="fam-empty" style="margin-top:14px">No price differences found in the matched lines.</div>`}
+        ${d.unmatched.length ? `
+        <div class="ph-pr-head" style="margin-top:18px"><span><b>Couldn't match these ${d.unmatched.length} lines</b></span><span class="sub">Match by hand, or ignore</span></div>
+        <div>${d.unmatched.map(phPrPdfUnmatchedRowHtml).join("")}</div>` : ""}
+      </section>`;
+    phTopbarActionSet("pricereview");
+  }
 
   // the one place status changes, so the qty side-effects stay consistent:
   // stopping writes stock off (stashed), phase-out keeps/restores it to sell down
@@ -7141,6 +7906,23 @@
       const t = PHARMACY.herbs.find(hh => hh.id === entry.targetId);
       if (t && t.qty != null) t.qty = phQty(t.qty - (entry.madeGrams || 0));
     }
+    // a price-review entry never touched qty -- undo it by putting the OLD
+    // cost back on that one supplier row (and on the herb itself, if that
+    // supplier is its default). lastConfirmed is cleared rather than
+    // restored -- we never recorded what it was before this entry, so
+    // claiming a false confirm date would be worse than showing it as due
+    if (entry.kind === "price-review" && entry.herbId) {
+      const h = PHARMACY.herbs.find(hh => hh.id === entry.herbId);
+      const row = h && (h.suppliers || []).find(s => s.name === entry.supplier);
+      if (row) {
+        row.bottleCost = entry.oldCost;
+        delete row.lastConfirmed;
+        if (row.isDefault) {
+          h.bottleCost = entry.oldCost;
+          h.cost = entry.oldCost != null ? entry.oldCost / phPackForSupplierName(h, entry.supplier) : null;
+        }
+      }
+    }
     PHARMACY.log = PHARMACY.log.filter(x => x.id !== entry.id);
     // her ask (2026-08-04): a dispense's permanent "✓ Dispensed" marker lives on
     // the prescription itself -- every path that reverses a dispense (this one
@@ -7227,6 +8009,7 @@
     dashboard: "Dashboard", inventory: "Inventory", refill: "Formula Refill",
     stats: "Stock Statistics", restock: "To Order", prescriptions: "Prescriptions",
     log: "Dispense History", suppliers: "Suppliers", settings: "Settings", stocktake: "Stocktake",
+    pricereview: "Price Review",
   };
   // her ask 2026-08-15: promote each page's primary action into the shared
   // top bar (mockups 02/06/07). Rather than duplicate any add/export logic,
@@ -7310,12 +8093,34 @@
       { icon: "i-print", label: "Print making sheet", ghost: true, run: () => refPrintSheet() },
       { icon: "i-plus", label: "New formula recipe", ghost: true, run: () => presStartNew("formula") },
     ],
+    // her mockup (2026-08-16): three DIFFERENT topbar button sets on the same
+    // "pricereview" tab depending on what's on screen -- idle (Print check
+    // sheet), a manual review in progress (Pause / Finish review), or a PDF's
+    // proposed changes on screen (Discard / Apply N changes). Every other
+    // entry here is a static array; this is the one page whose primary
+    // action genuinely changes by internal state, not just by tab, so it's a
+    // function instead -- phTopbarActionSet below calls it fresh every
+    // render, same as it already re-evaluates each `disabled` function.
+    pricereview: () => {
+      const pdf = phPrPdfState;
+      if (pdf) return [
+        { icon: "i-x", label: "Discard", ghost: true, run: () => phPrPdfDiscard() },
+        { icon: "i-check", label: `Apply ${phPrPdfTickedCount(pdf)} changes`, run: () => phPrPdfApply(), disabled: () => !phPrPdfTickedCount(pdf), disabledTitle: "Tick at least one change to apply" },
+      ];
+      const s = PHARMACY.priceReviewSession;
+      if (s) return [
+        { icon: "i-pause", label: "Pause", ghost: true, run: () => phPriceReviewPause() },
+        { icon: "i-check", label: "Finish review", run: () => phPriceReviewFinish() },
+      ];
+      return [{ icon: "i-print", label: "Print check sheet", ghost: true, run: () => phPriceReviewPrintCheckSheet(), disabled: () => !phPrStartSelected, disabledTitle: "Pick a supplier first" }];
+    },
   };
   function phTopbarActionSet(tab) {
     const host = document.getElementById("phTopbarActions");
     const topbar = document.getElementById("phTopbar");
     if (!host) return;
-    const list = PH_TOPBAR_ACTIONS[tab] || [];
+    const raw = PH_TOPBAR_ACTIONS[tab];
+    const list = typeof raw === "function" ? raw() : (raw || []);
     if (topbar) topbar.classList.toggle("ph-topbar-crowded", !!list.length);
     // disabled is re-evaluated fresh on every render (a function, not a
     // static flag) -- e.g. Stocktake's print button flips live the moment
@@ -7752,7 +8557,7 @@
     // | Patients) — the active tab persists so she returns where she left off
     // "dashboard"/"suppliers"/"settings" (PASTE 1, 2026-08-15): placeholder
     // pages for the new sidebar -- real content is PASTE 3's job
-    const tab = ["prescriptions", "refill", "restock", "stats", "log", "dashboard", "suppliers", "settings", "stocktake"].includes(PHARMACY.activeTab) ? PHARMACY.activeTab : "inventory";
+    const tab = ["prescriptions", "refill", "restock", "stats", "log", "dashboard", "suppliers", "settings", "stocktake", "pricereview"].includes(PHARMACY.activeTab) ? PHARMACY.activeTab : "inventory";
     // hover-dropdown nav (her ask): two section parents; hovering a parent drops
     // a menu of its pages. Inventory owns stock ops; Prescriptions owns the patient side.
     const phTabGroups = [
@@ -9334,6 +10139,48 @@
         // (Resume moved to the page-wide delegate -- it now has two call sites)
       });
     }
+    if (!window.__phPriceReviewBound) {
+      window.__phPriceReviewBound = true;
+      const prWrap = document.getElementById("phPriceReviewWrap");
+      prWrap.addEventListener("click", e => {
+        if (e.target.closest("#phPrStartBtn")) { phPriceReviewStart(phPrStartSelected, phPrStartDueOnly); return; }
+        if (e.target.closest("#phPrConfirmRemaining")) { phPriceReviewConfirmRemaining(); return; }
+        if (e.target.closest("#phPrFinishFoot")) { phPriceReviewFinish(); return; }
+        if (e.target.closest("[data-ph-pr-pdf-pick]")) { document.getElementById("phPrPdfFile")?.click(); return; }
+        if (e.target.closest("[data-ph-pr-pdf-discard]")) { phPrPdfDiscard(); return; }
+        if (e.target.closest("[data-ph-pr-pdf-apply]")) { phPrPdfApply(); return; }
+        if (e.target.closest("[data-ph-pr-pdf-manual]")) { phPrPdfState = null; PHARMACY.priceReviewSession || renderPhPriceReviewPage(); return; }
+        const tick = e.target.closest("[data-ph-pr-pdf-tick]");
+        if (tick) { phPrPdfToggleTick(tick.dataset.phPrPdfTick); return; }
+        const ignore = e.target.closest("[data-ph-pr-pdf-ignore]");
+        if (ignore) { phPrPdfToggleIgnore(ignore.dataset.phPrPdfIgnore); return; }
+      });
+      prWrap.addEventListener("change", e => {
+        if (e.target.name === "phPrSupplier") { phPrStartSelected = e.target.value; renderPhPriceReviewPage(); return; }
+        if (e.target.id === "phPrDueToggle") { phPrStartDueOnly = e.target.checked; renderPhPriceReviewPage(); return; }
+        if (e.target.id === "phPrPdfFile") { phPrPdfHandleFile(e.target.files && e.target.files[0]); return; }
+        const match = e.target.closest("[data-ph-pr-pdf-match]");
+        if (match) { phPrPdfManualMatch(match.dataset.phPrPdfMatch, e.target.value); return; }
+      });
+      prWrap.addEventListener("input", e => {
+        if (e.target.dataset.phPrInput) phPrLiveRecolor(e.target);
+      });
+      // commit-and-advance fires ONLY on explicit Tab/Enter, deliberately not
+      // on blur/focusout too: a blur-delegate racing the DOM rebuild this
+      // triggers (Tab's own handler already swaps wrap.innerHTML, which
+      // fires a SECOND focusout on the now-detached input as a browser side
+      // effect) double-committed and re-rendered mid-keystroke, wiping
+      // whatever she'd already started typing into the next box. Clicking
+      // straight into any row's box still works normally (ordinary focus
+      // move, no rebuild involved) -- only leaving one half-typed and
+      // clicking away without tabbing leaves it uncommitted, same as any
+      // spreadsheet-style entry.
+      prWrap.addEventListener("keydown", e => {
+        if (!e.target.dataset.phPrInput) return;
+        if (e.key === "Enter") { e.preventDefault(); phPrCommitAndAdvance(e.target); }
+        else if (e.key === "Tab" && !e.shiftKey) { e.preventDefault(); phPrCommitAndAdvance(e.target); }
+      });
+    }
     renderPhLocBar();
     renderPhShellNav(tab);
     phTopbarActionSet(tab);
@@ -9347,6 +10194,7 @@
     document.getElementById("phSuppliersWrap").hidden = tab !== "suppliers";
     document.getElementById("phSettingsWrap").hidden = tab !== "settings";
     document.getElementById("phStocktakeWrap").hidden = tab !== "stocktake";
+    document.getElementById("phPriceReviewWrap").hidden = tab !== "pricereview";
     // each of these renders a page and returns, so the one-title-per-page pass
     // (PASTE 1) runs synchronously right here -- straight after the page's own
     // markup exists, before the browser paints. It was briefly on rAF instead,
@@ -9361,6 +10209,7 @@
     if (tab === "stocktake") { renderPhStocktakePage(); phMobileDedupeTitles(); return; }
     if (tab === "dashboard") { renderPhDashboardPage(); phMobileDedupeTitles(); return; }
     if (tab === "suppliers") { renderPhSuppliersPage(); phMobileDedupeTitles(); return; }
+    if (tab === "pricereview") { renderPhPriceReviewPage(); phMobileDedupeTitles(); return; }
     if (tab === "settings") { renderPhPlaceholderPage("phSettingsWrap", "⚙️", "Settings", "Settings are coming in a future update."); phMobileDedupeTitles(); return; }
 
     renderPhFlags();
@@ -9819,7 +10668,12 @@
     // query both the row list and CSV export call, is what actually
     // guarantees display order -- for every kind, not just the ones that
     // happen to have been inserted correctly.
-    return PHARMACY.log.filter(e => (phLogKind === "all" ? true
+    // price-review entries live in PHARMACY.log too (so phReverseEntry and the
+    // "N changed" history stat can find them), but this ledger is gram-shaped
+    // (Change (g)/After (g)) and has no filter option for them -- surfacing
+    // one here would show as a nonsense "0g change" row. They have their own
+    // home: the Price Review page's own "Past price reviews" history.
+    return PHARMACY.log.filter(e => (phLogKind === "all" ? e.kind !== "price-review"
       : phLogKind === "dispense" ? (!e.kind || e.kind === "dispense") : e.kind === phLogKind)
       && (!cutoff || e.date >= cutoff) && hit(e))
       .sort((a, b) => b.date > a.date ? 1 : b.date < a.date ? -1 : 0);
