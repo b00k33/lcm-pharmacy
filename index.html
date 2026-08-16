@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260817-020008">
+<meta name="lcm-build" content="20260817-022056">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -7123,8 +7123,9 @@
   // SIBLING of the edit button, not nested inside it, so the two features
   // can never fight over the same click.
   // The gold HH / MIC / LYT tag that replaced the yellow row wash.
-  // STRICTLY READ-ONLY: it reads the herb's already-stored active supplier name
-  // and maps it through the existing PH_IN_HOUSE_PREFIX constant. It writes
+  // STRICTLY READ-ONLY as far as the HERB is concerned: it reads the herb's
+  // already-stored active supplier name and maps it through phInHousePrefix()
+  // (her own edit, if any, else the PH_IN_HOUSE_PREFIX default). It writes
   // nothing, and it does not touch h.usedByHH or any supplier record -- her
   // instruction was explicit that those ticks were lost once and must not be
   // rewritten. Note this is deliberately the SUPPLIER, not the usedByHH tick:
@@ -7132,7 +7133,7 @@
   // different facts, and the tag names the source, so it follows the supplier.
   const phSrcTagHtml = h => {
     const nm = (phActiveSupplier(h) || {}).name;
-    const code = nm && PH_IN_HOUSE_PREFIX[nm];
+    const code = nm && phInHousePrefix(nm);
     return code ? `<span class="srctag" title="Made in house — ${esc(nm)}">${code}</span>` : "";
   };
   const phInvCompactRowHtml = (h, rowCls) => {
@@ -8805,10 +8806,20 @@
   }
   // the historical short names these three sources used before the
   // 2026-08-13 in-house rework renamed them to full names (search RENAME) --
-  // shown here only as a cosmetic code-prefix hint, matching the mockup;
-  // there is no enforced/editable prefix field on these (they're a hardcoded
-  // constant, PH_NAMED_INHOUSE_SUPS, not rows in PHARMACY.suppliers)
-  const PH_IN_HOUSE_PREFIX = { "Huang Huang": "HH", "Mick": "MIC", "Lyttleton": "LYT" };
+  // shown here as a cosmetic code-prefix hint, matching the mockup. These are
+  // the shipped defaults; phInHousePrefix() below is the real read (her own
+  // edit, if any, wins) -- Doane never got an entry here when it was added,
+  // which is why its cell rendered blank with nothing to click (her report
+  // 2026-08-17, "i cant edit doanes code").
+  const PH_IN_HOUSE_PREFIX = { "Huang Huang": "HH", "Mick": "MIC", "Lyttleton": "LYT", "Doane": "D" };
+  // PH_IN_HOUSE_PREFIX is a hardcoded constant, not a PHARMACY.suppliers[]
+  // row -- so an edit needs somewhere real to live. Same fallback shape as
+  // phFormulaPackForSupplierName: her own override, kept on PHARMACY so it
+  // persists and syncs, wins over the shipped default.
+  function phInHousePrefix(name) {
+    const override = (PHARMACY.inHousePrefixes || {})[name];
+    return override != null ? override : (PH_IN_HOUSE_PREFIX[name] || "");
+  }
   // "Where I buy from" must reflect what the HERBS actually say, never the
   // sparse standalone directory -- that array is consulted only for extra
   // detail (contact/note/formulaPackSize) layered onto a name found here,
@@ -8851,6 +8862,7 @@
   // number itself now, same lock/unlock idiom as every other editable cell
   // in this app; committing auto-creates the missing directory row.
   let phSupPackEdit = null;   // name of the supplier whose Formula-restock cell is unlocked
+  let phInHousePrefixEdit = null;   // name of the in-house source whose Code prefix cell is unlocked
   function phSupplierItemsFor(name) {
     const nameL = name.trim().toLowerCase();
     return PHARMACY.herbs
@@ -8910,9 +8922,14 @@
         <thead><tr><th>Source</th><th>Code prefix</th><th style="text-align:right">Formulas</th><th style="text-align:right">Batch size</th></tr></thead>
         <tbody>${PH_NAMED_INHOUSE_SUPS.map(name => {
           const { formulasN } = phSupplierStatsFor(name);
+          const prefix = phInHousePrefix(name);
+          const prefixEditOpen = phInHousePrefixEdit === name;
+          const prefixCell = prefixEditOpen
+            ? `<td class="ph-code"><input type="text" class="ph-qty-input" data-ph-inhouse-prefix-edit="${esc(name)}" maxlength="4" value="${esc(prefix)}" aria-label="Code prefix for ${esc(name)}"></td>`
+            : `<td class="ph-code"><button type="button" class="ph-qty-lock" data-ph-inhouse-prefix-unlock="${esc(name)}" title="Click to edit ${esc(name)}'s code prefix">${prefix ? esc(prefix) : "—"}</button></td>`;
           return `<tr>
             <td class="ph-name"><span class="ph-dash-name">${esc(name)}</span></td>
-            <td class="ph-code">${esc(PH_IN_HOUSE_PREFIX[name] || "")}</td>
+            ${prefixCell}
             <td class="ph-num">${formulasN || "—"}</td>
             <td class="ph-num">200g</td>
           </tr>`;
@@ -9918,6 +9935,17 @@
         if (inp) { inp.focus(); inp.select(); }
         return;
       }
+      // her ask (2026-08-17): "i cant edit doanes code" -- same lock/unlock
+      // idiom as the Formula-restock cell above, for the Made in house
+      // table's Code prefix column.
+      const inHousePrefixUnlock = e.target.closest("[data-ph-inhouse-prefix-unlock]");
+      if (inHousePrefixUnlock) {
+        phInHousePrefixEdit = inHousePrefixUnlock.dataset.phInhousePrefixUnlock;
+        renderPhSuppliersPage();
+        const inp = document.querySelector("[data-ph-inhouse-prefix-edit]");
+        if (inp) { inp.focus(); inp.select(); }
+        return;
+      }
       const supDel = e.target.closest("[data-ph-sup-del]");
       if (supDel) {
         PHARMACY.suppliers = PHARMACY.suppliers.filter(x => x.id !== supDel.dataset.phSupDel);
@@ -10351,6 +10379,19 @@
         renderPhSuppliersPage();
         return;
       }
+      const inHousePrefixEdit = e.target.closest("[data-ph-inhouse-prefix-edit]");
+      if (inHousePrefixEdit) {
+        const name = inHousePrefixEdit.dataset.phInhousePrefixEdit;
+        if (phInHousePrefixEdit === name && inHousePrefixEdit.dataset.cancel !== "1") {
+          const v = inHousePrefixEdit.value.trim().toUpperCase();
+          PHARMACY.inHousePrefixes = PHARMACY.inHousePrefixes || {};
+          if (v) PHARMACY.inHousePrefixes[name] = v; else delete PHARMACY.inHousePrefixes[name];
+          savePharmacy();
+        }
+        phInHousePrefixEdit = null;
+        renderPhSuppliersPage();
+        return;
+      }
       const inp = e.target.closest("[data-ph-edit]");
       if (!inp) return;
       const [id, field] = inp.dataset.phEdit.split(":");
@@ -10435,6 +10476,12 @@
       if (packEditKey) {
         if (e.key === "Enter") { e.preventDefault(); packEditKey.blur(); }
         else if (e.key === "Escape") { packEditKey.dataset.cancel = "1"; packEditKey.blur(); }
+        return;
+      }
+      const inHousePrefixEditKey = e.target.closest("[data-ph-inhouse-prefix-edit]");
+      if (inHousePrefixEditKey) {
+        if (e.key === "Enter") { e.preventDefault(); inHousePrefixEditKey.blur(); }
+        else if (e.key === "Escape") { inHousePrefixEditKey.dataset.cancel = "1"; inHousePrefixEditKey.blur(); }
         return;
       }
       const inp = e.target.closest("[data-ph-edit]");
