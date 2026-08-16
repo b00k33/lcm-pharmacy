@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260816-234952">
+<meta name="lcm-build" content="20260817-002903">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -904,12 +904,32 @@
     padding: 4px 6px; font-variant-numeric: tabular-nums;
   }
   .ph-qty-input:focus-visible { outline: 2px solid var(--ph-green); outline-offset: 1px; }
-  /* the Codes cell edits Koda/Evergreen/GMP as three separate lines -- without
-     this they're plain inline inputs that the table's white-space:nowrap
-     shoves onto one overflowing line, so only the first one is ever visible
-     (her catch: "when i click on codes i cant see the other codes") */
-  .ph-code-input { display: block; width: 92px; margin: 0 0 3px; }
-  .ph-code-input:last-child { margin-bottom: 0; }
+  /* her spec (2026-08-17): every supplier's code on this herb, as small tags
+     -- same rounded-chip geometry as .ph-pill (her rule: one chip style,
+     reused everywhere), a new colour pairing rather than a new shape. The
+     active one gets .ph-code's own established gold; the rest sit in a
+     quiet neutral tint, for reference. Several tags need room to wrap
+     without forcing the whole column wider -- see the .ph-code white-space
+     override below, matching the one .ph-name already needed for the same
+     reason. */
+  .ph-code-tag {
+    display: inline-block; font-variant-numeric: tabular-nums; font-weight: 700;
+    font-size: 10.5px; color: var(--ph-soft); background: var(--ph-stopped-tint);
+    border: none; border-radius: 999px; padding: 2px 7px; margin: 1px 3px 1px 0;
+    white-space: nowrap; cursor: pointer;
+  }
+  .ph-code-tag:hover { background: var(--ph-green-tint); color: var(--ph-green-deep); }
+  .ph-code-tag.on { color: var(--ph-gold-deep); background: var(--ph-gold-tint); }
+  /* the "add code" placeholder is a quiet empty slot, not a sentence with
+     buttons (her rule for empty states) -- dashed ghost outline invites the
+     click rather than announcing a gap */
+  .ph-code-tag-add {
+    color: var(--ph-faint); background: none; font-weight: 500;
+    border: 1px dashed var(--ph-line);
+  }
+  .ph-code-tag-add:hover { border-color: var(--ph-green); color: var(--ph-green-deep); background: none; }
+  .ph-code-tag-input { display: inline-block; width: 72px; margin: 1px 3px 1px 0; }
+  .rtn-table td.ph-code, .ph-table td.ph-code { white-space: normal; }
   /* the Log page's date-fix field (her ask 2026-08-06) needs room for a full
      dd/mm/yyyy plus the native calendar icon -- the base 62px is sized for a
      short number, not a date */
@@ -4199,26 +4219,6 @@
                <details> so it's keyboard/screen-reader friendly for free,
                no extra JS state to keep in sync -->
           <details class="ph-hf-adv">
-            <summary class="ph-hf-label">Codes</summary>
-            <div class="ph-hf-row2">
-              <div class="field">
-                <label for="phHerbKpcCode">KPC code <span style="text-transform:none;letter-spacing:0">(optional)</span></label>
-                <input type="text" id="phHerbKpcCode" placeholder="e.g. KPC-201" autocomplete="off">
-              </div>
-              <!-- code rules (her ask 2026-08-11): Jing Shen is herb-only --
-                   data-ph-kindonly is toggled by phHerbApplyKindVisibility() on
-                   every Kind change / form open. Koda/Evergreen/GMP/LYT/HH/MIC
-                   moved out of here in STEP 8g (2026-08-11): those six were
-                   always really "that supplier's code for this herb", so they
-                   now live per-row in Suppliers & pricing below, next to that
-                   supplier's own Bottle $ -- not as flat fields up here. -->
-              <div class="field" data-ph-kindonly="herb">
-                <label for="phHerbJingShenCode">Jing Shen code <span style="text-transform:none;letter-spacing:0">(optional)</span></label>
-                <input type="text" id="phHerbJingShenCode" placeholder="e.g. JS-201" autocomplete="off">
-              </div>
-            </div>
-          </details>
-          <details class="ph-hf-adv">
             <summary class="ph-hf-label">Suppliers &amp; pricing</summary>
             <div class="ph-hf-hint">Their code for this herb, and Bottle $ — ★ marks the active one (drives the Inventory Supplier column and $/g); the cheapest option is flagged</div>
             <div id="phHerbSuppliersRows"></div>
@@ -4799,6 +4799,35 @@
   if (!PHARMACY.migratedSortDefault) {
     if (PHARMACY.sort && PHARMACY.sort.key === "code") delete PHARMACY.sort;
     PHARMACY.migratedSortDefault = true;
+    savePharmacy();
+  }
+
+  // ---- one-time migration (2026-08-17): fold flat KPC/Jing Shen codes into
+  // h.suppliers[] --------------------------------------------------------
+  // Her report: the Codes column showed "—" while the correct code already
+  // sat under the Supplier cell's name -- two cells reading two different
+  // fields. STEP 8g (2026-08-11) already moved six suppliers' codes into
+  // the array and left these two flat, on the theory they were "universal"
+  // codes rather than any one company's own -- but KPC and Jing Shen are
+  // both real entries in PH_KNOWN_SUPPLIERS, so that split was never
+  // actually correct, just unfinished. A code already on file in the array
+  // wins (nothing overwritten); a blank array entry is filled from the flat
+  // value; no entry at all gets a new one -- but never marked active, so a
+  // code she never explicitly chose to buy from doesn't silently become her
+  // active supplier.
+  if (!PHARMACY.migratedFlatCodes) {
+    PHARMACY.herbs.forEach(h => {
+      [["KPC", h.kpcCode], ["Jing Shen", h.jingShenCode]].forEach(([supName, code]) => {
+        if (!code) return;
+        h.suppliers = h.suppliers || [];
+        const row = h.suppliers.find(s => s.name === supName);
+        if (!row) h.suppliers.push({ name: supName, code, bottleCost: null, isDefault: false });
+        else if (!row.code) row.code = code;
+      });
+      delete h.kpcCode;
+      delete h.jingShenCode;
+    });
+    PHARMACY.migratedFlatCodes = true;
     savePharmacy();
   }
 
@@ -6239,12 +6268,12 @@
   // yes/no gate, matching the individual cell's own "no confirm step").
   let phBulkSupOpen = false;
   function phRowMatchesTerm(h, q) {
-    // STEP 8g: Koda/Evergreen/GMP/LYT/HH/MIC moved into h.suppliers[] -- search
-    // every option's name AND their code for this herb, not just the active one,
-    // so looking up an old Koda code still finds the herb even if she's since
+    // STEP 8g, completed 2026-08-17: every supplier's code lives in
+    // h.suppliers[] now (KPC/Jing Shen included) -- search every option's
+    // name AND their code for this herb, not just the active one, so
+    // looking up an old code still finds the herb even if she's since
     // switched to a different active supplier
-    return (h.kpcCode || "").toLowerCase().includes(q) || (h.jingShenCode || "").toLowerCase().includes(q)
-      || (h.suppliers || []).some(s => (s.name || "").toLowerCase().includes(q) || (s.code || "").toLowerCase().includes(q))
+    return (h.suppliers || []).some(s => (s.name || "").toLowerCase().includes(q) || (s.code || "").toLowerCase().includes(q))
       || h.name.toLowerCase().includes(q)
       || (h.note || "").toLowerCase().includes(q) || (h.supplier || "").toLowerCase().includes(q)
       || phFormulaAbbr(h).toLowerCase().includes(q);   // "YPFS" finds the formula
@@ -6283,7 +6312,7 @@
       : k === "low" ? h.low
       : k === "name" ? h.name
       : k === "note" ? ((h.note || "").trim() || null)
-      : (h.kpcCode || null);   // default/"code" column -- KPC is the one universal code left (STEP 8g)
+      : (phHerbCode(h) || null);   // default/"code" column -- the active supplier's code (2026-08-17)
     const av = get(a), bv = get(b);
     const missA = av == null || av === "", missB = bv == null || bv === "";
     if (missA && missB) return 0;
@@ -6587,7 +6616,7 @@
       </div>
       <div class="ph-stocktake-body">
         ${already ? `<div class="ph-stocktake-already">Already recorded this session: ${phFmtG(already.old)}g → ${phFmtG(already.new)}g${already.adjusted ? ` (${already.diff > 0 ? "+" : "−"}${phFmtG(Math.abs(already.diff))}g)` : " — confirmed"}</div>` : ""}
-        <div class="ph-stocktake-code">${phIsFormula(h) ? "🫙" : "🌿"} ${esc(h.kpcCode || "")}</div>
+        <div class="ph-stocktake-code">${phIsFormula(h) ? "🫙" : "🌿"} ${esc(phHerbCode(h))}</div>
         <div class="ph-stocktake-name">${esc(phDispName(h.name, phIsFormula(h)))}</div>
         <div class="ph-stocktake-recorded"><span class="l">App has</span><span class="n">${phFmtG(recorded)}g</span></div>
         <div class="ph-stocktake-input-wrap">
@@ -7130,10 +7159,26 @@
       const bottleCell = phCellEdit && phCellEdit.id === h.id && phCellEdit.field === "bottleCost"
         ? `<input type="text" inputmode="decimal" class="ph-qty-input" data-ph-edit="${h.id}:bottleCost" value="${bottleEditVal}" placeholder="—" aria-label="Cost of the restocked bottle for ${esc(h.name)} (${phOrderPackFor(h)}g pack) — $/g recalculates from this">`
         : `<button type="button" class="ph-qty-lock" data-ph-unlock="${h.id}:bottleCost" title="Click to edit">${h.bottleCost != null ? "$" + h.bottleCost : bottleAuto != null ? `<span class="ph-cost-computed" title="Estimated from $/g x ${phOrderPackFor(h)}g pack — click to enter the real bottle price">$${bottleAuto}</span>` : "—"}</button>`;
-      // STEP 8g (2026-08-11): Koda/Evergreen/GMP/LYT/HH/MIC moved into
-      // h.suppliers[] -- edit them from the Supplier cell instead. This Codes
-      // cell now carries only the two fields that aren't tied to a specific
-      // supplier: KPC (universal) and Jing Shen (herb-only).
+      // her spec (2026-08-17): a code belongs to a supplier -- this cell and
+      // the Supplier cell both read h.suppliers[] as the one source, so they
+      // can never show two different answers the way the old flat
+      // kpcCode/jingShenCode fields did. Every supplier on file gets a tag,
+      // coded or not (a codeless one shows "add code", never "—" -- her
+      // rule); the active one is gold to match .ph-code's established
+      // colour. Click a tag to edit just that entry -- the generic
+      // data-ph-edit commit machinery this whole grid already uses, so
+      // Enter/Escape/blur behave exactly like every other cell. The generic
+      // "In house" pseudo-supplier never carries a code (nothing to
+      // record), so it never gets a tag -- her three NAMED in-house sources
+      // still do.
+      const codeTags = (h.suppliers || []).filter(s => s.name !== PH_IN_HOUSE_SUP).map(s => {
+        if (phCellEdit && phCellEdit.id === h.id && phCellEdit.field === "codeTag" && phCellEdit.sup === s.name) {
+          return `<input type="text" class="ph-qty-input ph-code-tag-input" data-ph-edit="${h.id}:codeTag" data-sup="${esc(s.name)}" value="${esc(s.code || "")}" placeholder="code" aria-label="${esc(s.name)}’s code for ${esc(h.name)}">`;
+        }
+        return s.code
+          ? `<button type="button" class="ph-code-tag${s.isDefault ? " on" : ""}" data-ph-unlock="${h.id}:codeTag" data-sup="${esc(s.name)}" title="${esc(s.name)} — click to edit">${esc(s.code)}</button>`
+          : `<button type="button" class="ph-code-tag ph-code-tag-add" data-ph-unlock="${h.id}:codeTag" data-sup="${esc(s.name)}" title="${esc(s.name)} — click to add their code">add code</button>`;
+      }).join("");
       const tdMap = {
         kind: `<td class="ph-kind-cell" data-col="kind">${phIsFormula(h)
           ? `🫙 Formula<span class="ph-kind-tag" title="${phMadeInHouse(h) ? "made in house" : "premade (supplier)"} — ${h.source ? "her setting (✎ Kind)" : "read off the Formula Refill list; ✎ Kind overrides"}">${phMadeInHouse(h) ? "in house" : "premade"}</span>`
@@ -7172,10 +7217,7 @@
       };
       return `<tr data-ph-row="${h.id}"${rowCls ? ` class="${rowCls}"` : ""}>
         ${phBulkMode ? `<td class="ph-bulk-cell" data-col="sel"><input type="checkbox" data-ph-bulk-sel="${h.id}" aria-label="Select ${esc(h.name)}"${phSelected.has(h.id) ? " checked" : ""}></td>` : ""}
-        <td class="ph-code" data-col="code">${phCellEdit && phCellEdit.id === h.id && phCellEdit.field === "code"
-          ? `<input type="text" class="ph-qty-input ph-code-input" data-ph-edit="${h.id}:kpcCode" value="${esc(h.kpcCode || "")}" placeholder="KPC code" aria-label="KPC code of ${esc(h.name)}">
-             ${!phIsFormula(h) ? `<input type="text" class="ph-qty-input ph-code-input" data-ph-edit="${h.id}:jingShenCode" value="${esc(h.jingShenCode || "")}" placeholder="Jing Shen code" aria-label="Jing Shen code of ${esc(h.name)}">` : ""}`
-          : `<button type="button" class="ph-qty-lock" data-ph-unlock="${h.id}:code" title="Click to edit">${h.kpcCode ? esc(h.kpcCode) : "—"}${!phIsFormula(h) && h.jingShenCode ? `<div class="ph-sub">Jing Shen ${esc(h.jingShenCode)}</div>` : ""}</button>`}</td>
+        <td class="ph-code" data-col="code">${codeTags}</td>
         <td class="ph-name" data-col="name"><button type="button" class="ph-name-link" data-ph-herb-edit="${h.id}" title="Open ${esc(h.name)} in the edit form">${esc(phDispName(h.name, phIsFormula(h)))}</button>${phIsFormula(h) && phFormulaAbbr(h) ? ` <span class="ph-pres-abbr">${esc(phFormulaAbbr(h))}</span>` : ""}</td>
         ${colOrder.map(k => tdMap[k]).join("")}
         <td class="rtn-actions" data-col="actions">
@@ -8419,7 +8461,7 @@
     return `<div class="ph-dash-list">${items.slice(0, 5).map(h => {
       const chip = (h.qty || 0) <= 0 ? `<span class="ph-pill zero">Out</span>` : `<span class="ph-pill low">Low · ${phFmtG(h.qty)}g</span>`;
       return `<div class="ph-dash-row">
-        <div class="ph-dash-row-main">${h.kpcCode ? `<span class="ph-dash-code">${esc(h.kpcCode)}</span> ` : ""}<span class="ph-dash-name">${esc(phDispName(h.name, phIsFormula(h)))}</span></div>
+        <div class="ph-dash-row-main">${phHerbCode(h) ? `<span class="ph-dash-code">${esc(phHerbCode(h))}</span> ` : ""}<span class="ph-dash-name">${esc(phDispName(h.name, phIsFormula(h)))}</span></div>
         ${chip}
       </div>`;
     }).join("")}</div>`;
@@ -9099,7 +9141,10 @@
       const unlock = e.target.closest("[data-ph-unlock]");
       if (unlock) {
         const [id, field] = unlock.dataset.phUnlock.split(":");
-        phCellEdit = { id, field };
+        // data-sup identifies WHICH supplier's tag this is, for the Codes
+        // cell's per-supplier edit (field === "codeTag") -- undefined and
+        // unused for every other field
+        phCellEdit = { id, field, sup: unlock.dataset.sup };
         // this same lock/unlock pattern now also covers the Restock row's
         // Bottle $ (her ask 2026-08-06: "lock it, click to edit") -- that
         // field only ever renders inside renderPhRestock, not the grid
@@ -9623,8 +9668,6 @@
         phHerbEditId = h.id;
         document.getElementById("phHerbAddBtn").hidden = true;
         phHerbForm.hidden = false; phHerbBackdrop.hidden = false;
-        document.getElementById("phHerbKpcCode").value = h.kpcCode || "";
-        document.getElementById("phHerbJingShenCode").value = h.jingShenCode || "";
         document.getElementById("phHerbName").value = h.name;
         document.getElementById("phHerbCost").value = h.cost || "";
         document.getElementById("phHerbQty").value = h.qty == null ? "" : h.qty;
@@ -9934,8 +9977,6 @@
         return isFinite(v) ? Math.max(0, v) : null;
       };
       const vals = {
-        kpcCode: document.getElementById("phHerbKpcCode").value.trim(),
-        jingShenCode: document.getElementById("phHerbJingShenCode").value.trim(),
         name,
         cost: phRoundUp10c(Math.max(0, parseFloat(document.getElementById("phHerbCost").value) || 0)),
         qty: numOrNull("phHerbQty"),
@@ -9975,16 +10016,12 @@
           // topping the qty up = the order arrived — clear the order flags
           if (vals.qty != null && (h.qty == null || vals.qty > h.qty)) { h.order = false; h.ordered = false; }
           Object.assign(h, vals);
-          if (!h.kpcCode) delete h.kpcCode;
-          if (!h.jingShenCode) delete h.jingShenCode;
           delete h.restockCostComputed;   // hand-edited in the form — no longer "computed from bottle cost"
           phSetStatus(h, status === "current" ? "active" : status);
           phAfterQtyChange(h);
         }
       } else {
         const h = { id: uid(), ...vals };
-        if (!h.kpcCode) delete h.kpcCode;
-        if (!h.jingShenCode) delete h.jingShenCode;
         phSetStatus(h, status === "current" ? "active" : status);
         PHARMACY.herbs.push(h);
       }
@@ -10178,29 +10215,23 @@
       // Restock's Bottle $ shares this lock/unlock pattern (her ask
       // 2026-08-06) but only ever renders inside renderPhRestock
       const rerender = field === "restockBottle" ? renderPhRestock : renderPhRows;
-      // the code cell holds two inputs (KPC + Jing Shen, whichever the Kind
-      // allows) — tabbing between them commits the one you left without
-      // closing the cell
-      const next = e.relatedTarget;
-      const stay = next && next.dataset && next.dataset.phEdit
-        && next.dataset.phEdit.split(":")[0] === id && next.dataset.phEdit !== inp.dataset.phEdit;
       if (inp.dataset.cancel === "1") { phCellEdit = null; rerender(); return; }
       const h = PHARMACY.herbs.find(x => x.id === id);
       if (!h) { phCellEdit = null; rerender(); return; }
       if (field === "note") {
         h.note = inp.value.trim();
-      } else if (field === "kpcCode") {
-        const v = inp.value.trim();
-        if (v) h.kpcCode = v; else delete h.kpcCode;
-      } else if (field === "jingShenCode") {
-        const v = inp.value.trim();
-        if (v) h.jingShenCode = v; else delete h.jingShenCode;
+      } else if (field === "codeTag") {
+        // her spec (2026-08-17): a code belongs to a supplier -- this tag
+        // lives on that ONE suppliers[] entry (data-sup names which), same
+        // shape the Supplier cell's own code field already writes to, so
+        // editing a code in either place always lands on the same entry.
+        const row = (h.suppliers || []).find(s => s.name === inp.dataset.sup);
+        if (row) row.code = inp.value.trim();
       } else if (field === "supplierCode") {
         // her spec (2026-08-16): "click it, type, it saves on blur or Enter"
         // -- this small field lives on the ACTIVE supplier's own suppliers[]
-        // row (matching the existing data shape), not a flat herb field, so
-        // it never touches h.kpcCode/h.jingShenCode (a separate, unrelated
-        // pair of codes -- see the Codes cell).
+        // row, the exact same entry its tag in the Codes cell (field
+        // "codeTag", above) edits -- one entry, two places to reach it.
         const active = phActiveSupplier(h);
         if (active) active.code = inp.value.trim();
       } else {
@@ -10243,7 +10274,6 @@
           }
         }
       }
-      if (stay) { savePharmacy(); return; }   // half the code cell committed; the other input is live
       phCellEdit = null;
       phKeepVisible.add(h.id);   // keep this row in view even if the edit changed its status
       savePharmacy(); renderPharmacy();
@@ -10985,7 +11015,7 @@
       const jar = e.targetId ? phHerbByIdGet().get(e.targetId) : null;
       return {
         type: "Made", pill: "make",
-        itemCode: jar ? (jar.kpcCode || "") : "",
+        itemCode: jar ? phHerbCode(jar) : "",
         itemName: phDispName(e.what, true),
         source: e.source || "—",
         change: e.madeGrams || 0,
@@ -11010,7 +11040,7 @@
       const h = phHerbByIdGet().get(e.herbId);
       return {
         type: "Stocktake", pill: "stocktake",
-        itemCode: h ? (h.kpcCode || "") : "",
+        itemCode: h ? phHerbCode(h) : "",
         itemName: phDispName(e.name),
         source: "—",
         // the ONE kind that genuinely records a historical balance
