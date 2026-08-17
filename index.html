@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260817-151133">
+<meta name="lcm-build" content="20260817-153432">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -5716,9 +5716,22 @@
   }
   const findHerbByName = name =>
     PHARMACY.herbs.find(h => h.name.trim().toLowerCase() === String(name).trim().toLowerCase());
-  const findHerbByCode = code => {
+  // her report (2026-08-17): the same supplier code sometimes covers two
+  // processing variants of one herb (e.g. Bai Shao raw vs Chao both carry
+  // Koda's "K587") -- a bare code lookup alone can't tell them apart. A
+  // caller that also knows the intended name passes it as hintName to break
+  // the tie; with no hint, or no colliding herb whose name matches the
+  // hint, this returns the first match exactly as before -- an unresolvable
+  // ambiguity falls through unchanged rather than throwing or blocking.
+  const findHerbByCode = (code, hintName) => {
     const q = String(code).trim().toLowerCase();
-    return PHARMACY.herbs.find(h => phHerbCodes(h).some(c => c.trim().toLowerCase() === q));
+    const matches = PHARMACY.herbs.filter(h => phHerbCodes(h).some(c => c.trim().toLowerCase() === q));
+    if (matches.length > 1 && hintName) {
+      const hint = String(hintName).trim().toLowerCase();
+      const byName = matches.find(h => h.name.trim().toLowerCase() === hint);
+      if (byName) return byName;
+    }
+    return matches[0];
   };
   // (findFormulaByName left with the Making-Herbs mixer, 2026-07-23)
 
@@ -7586,7 +7599,7 @@
     const jar = findHerbByName(e.what);
     if (jar) return jar;
     const items = Array.isArray(e.items) ? e.items : [];
-    if (items.length === 1) return (items[0].code && findHerbByCode(items[0].code)) || findHerbByName(items[0].name) || null;
+    if (items.length === 1) return (items[0].code && findHerbByCode(items[0].code, items[0].name)) || findHerbByName(items[0].name) || null;
     return null;
   };
   // a jar is a house blend if she says so (✎ Kind/source), or a formula the
@@ -7907,7 +7920,7 @@
     const ingCounts = new Map();
     log.filter(e => (!e.kind || e.kind === "dispense") && !phEntryIsHouseMake(e) && inRange(e))
       .forEach(e => (Array.isArray(e.items) ? e.items : []).forEach(i => {
-        const h = (i.code && findHerbByCode(i.code)) || findHerbByName(i.name);
+        const h = (i.code && findHerbByCode(i.code, i.name)) || findHerbByName(i.name);
         if (!h) return;
         let rec = ingCounts.get(h.id);
         if (!rec) ingCounts.set(h.id, rec = { h, n: 0, grams: 0 });
@@ -7927,7 +7940,7 @@
     const usageCounts = new Map();
     log.filter(e => ((!e.kind || e.kind === "dispense") || e.kind === "refill") && parseKey(e.date) >= usageFrom)
       .forEach(e => (Array.isArray(e.items) ? e.items : []).forEach(i => {
-        const h = (i.code && findHerbByCode(i.code)) || findHerbByName(i.name);
+        const h = (i.code && findHerbByCode(i.code, i.name)) || findHerbByName(i.name);
         if (!h) return;
         let rec = usageCounts.get(h.id);
         if (!rec) usageCounts.set(h.id, rec = { h, grams: 0 });
@@ -11203,7 +11216,7 @@
         });
       } else if ((!e.kind || e.kind === "dispense" || e.kind === "refill") && Array.isArray(e.items)) {
         e.items.forEach(i => {
-          const ih = (i.code && findHerbByCode(i.code)) || findHerbByName(i.name || "");
+          const ih = (i.code && findHerbByCode(i.code, i.name)) || findHerbByName(i.name || "");
           if (!ih || ih.id !== h.id) return;
           rows.push({
             e, delta: -(i.grams || 0),
@@ -11458,8 +11471,8 @@
     const codePart = t.split("—")[0].trim();
     const base = t.split(" · ")[0].trim();
     const up = base.toUpperCase();
-    const exact = findHerbByCode(codePart) || findHerbByName(t) || findHerbByName(base)
-      || findHerbByCode(t)
+    const exact = findHerbByCode(codePart, base) || findHerbByName(t) || findHerbByName(base)
+      || findHerbByCode(t, base)
       || PHARMACY.herbs.find(h => phIsFormula(h) && phFormulaAbbr(h) === up);
     if (exact) return exact;
     const contains = phResolvePickCandidates(raw);
@@ -11481,7 +11494,7 @@
      ============================================================ */
   let presSearch = "", presOpenId = null;
   let presPage = 1;   // STEP 8q (2026-08-14): compact pagination -- 799 imported templates is too long for one scroll
-  const presFindHerb = ing => (ing.code && findHerbByCode(ing.code)) || findHerbByName(ing.herb || ing.name || "");
+  const presFindHerb = ing => (ing.code && findHerbByCode(ing.code, ing.herb || ing.name)) || findHerbByName(ing.herb || ing.name || "");
   // her ask 2026-07-30, refining the earlier flat-alphabetical sort: "write in
   // alphabetical order, but organise it based on Formula, then herbs" — e.g.
   // WEN DAN TANG, ZHI ZI HOU PO TANG, then Huang Lian (formulas as a block,
