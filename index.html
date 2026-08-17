@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260817-023222">
+<meta name="lcm-build" content="20260817-141245">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -500,6 +500,16 @@
      pill off a 360px screen when this sat on its own line -- found during
      360px verification, 2026-08-15. Truncates instead of overflowing. */
   #pharmacyPage .ph-ref-found-line .ph-ref-found { display: inline-flex; max-width: 100%; overflow: hidden; text-overflow: ellipsis; box-sizing: border-box; }
+  /* her report (2026-08-17): typing a formula name that matches more than one
+     recipe must show a pick-one list, never silently resolve to the first
+     match -- reuses the exact .ph-pick-h/.ph-pick-row/etc rows already built
+     for the Prescriptions "Add a herb" suggestion box (her ask: existing
+     component styles, not a new one-off), just laid out in-flow here rather
+     than as a floating dropdown, since this page never scrolls under it. */
+  #pharmacyPage .ph-ref-pick-list {
+    background: var(--ph-white); border-radius: 12px; margin-top: 8px; padding: 4px;
+    box-shadow: 0 1px 3px rgba(14, 77, 42, 0.12);
+  }
   /* mockup 12 (2026-08-15): search + grams + Make refill, one aligned row --
      scoped to #phRefillWrap only, .ph-build-top/.ph-build-actions are reused
      class names inside the Prescriptions dose panel too (its own rule at
@@ -9788,6 +9798,16 @@
         if (h) { h.toMake = false; savePharmacy(); renderPharmacy(); }
         return;
       }
+      // her report (2026-08-17): a tap on one of the ambiguous-match rows
+      // resolves by id, not by re-parsing her typed text -- same reasoning as
+      // the Prescriptions picker's data-pick-jar/-refill/-herb rows
+      const refPick = e.target.closest("[data-ref-pick]");
+      if (refPick) {
+        refRecipeId = refPick.dataset.refPick;
+        refPickAmbiguous = []; refSearchRaw = "";
+        renderRefill();
+        return;
+      }
       const herbEdit = e.target.closest("[data-ph-herb-edit]");
       if (herbEdit) {
         const h = PHARMACY.herbs.find(x => x.id === herbEdit.dataset.phHerbEdit);
@@ -10713,9 +10733,18 @@
       // the refill search commits on change (datalist pick, Enter, blur) — typing
       // keystrokes alone never yank the field out from under her
       if (e.target.id === "refSearch") {
-        const r = refResolveRecipe(e.target.value);
-        if (r) { refRecipeId = r.id; renderRefill(); }
-        else if (!e.target.value.trim()) { refRecipeId = ""; renderRefill(); }
+        const val = e.target.value;
+        const r = refResolveRecipe(val);
+        if (r) { refRecipeId = r.id; refPickAmbiguous = []; refSearchRaw = ""; renderRefill(); }
+        else if (!val.trim()) { refRecipeId = ""; refPickAmbiguous = []; refSearchRaw = ""; renderRefill(); }
+        else {
+          // her report (2026-08-17): "Ge Gen" used to silently land on
+          // whichever formula happened to match first -- show every match so
+          // she picks, or say plainly that nothing matched at all.
+          refPickAmbiguous = refResolveRecipeCandidates(val);
+          refSearchRaw = val;
+          renderRefill();
+        }
         return;
       }
     });
@@ -11405,17 +11434,33 @@
   }
 
   // resolve whatever she typed in the herb picker — "code — name", bare code,
-  // name, or a formula's abbreviation ("YPFS"); datalist " · ABBR" suffixes strip
+  // name, or a formula's abbreviation ("YPFS"); datalist " · ABBR" suffixes strip.
+  // Auto-resolves ONLY when it's unambiguous: an exact code/name/abbr match, or
+  // a "contains" match against exactly one item. Her report (2026-08-17): typing
+  // "Bai Shao" (she has two different processings) or "Ge Gen" (matches both the
+  // single herb and GE GEN TANG) used to silently grab whichever happened to sit
+  // first — two or more "contains" matches must return null here so the caller
+  // shows her a pick-one list instead (see phResolvePickCandidates below).
   function phResolvePick(raw) {
     const t = raw.trim();
     if (!t) return null;
     const codePart = t.split("—")[0].trim();
     const base = t.split(" · ")[0].trim();
     const up = base.toUpperCase();
-    return findHerbByCode(codePart) || findHerbByName(t) || findHerbByName(base)
+    const exact = findHerbByCode(codePart) || findHerbByName(t) || findHerbByName(base)
       || findHerbByCode(t)
-      || PHARMACY.herbs.find(h => phIsFormula(h) && phFormulaAbbr(h) === up)
-      || PHARMACY.herbs.find(h => h.name.toLowerCase().includes(base.toLowerCase()));
+      || PHARMACY.herbs.find(h => phIsFormula(h) && phFormulaAbbr(h) === up);
+    if (exact) return exact;
+    const contains = phResolvePickCandidates(raw);
+    return contains.length === 1 ? contains[0] : null;
+  }
+  // every herb/formula whose name contains what she typed — the same universe
+  // phResolvePick's fallback stage searches, exposed so a caller can tell "one
+  // clear match" apart from "ambiguous, must ask her" apart from "no match"
+  function phResolvePickCandidates(raw) {
+    const base = String(raw || "").trim().split(" · ")[0].trim().toLowerCase();
+    if (!base) return [];
+    return PHARMACY.herbs.filter(h => h.name.toLowerCase().includes(base));
   }
 
   /* ============================================================
@@ -11961,6 +12006,18 @@
     if (!pick || !ta) return;
     const h = phResolvePick(pick.value);
     if (!h) {
+      // her report (2026-08-17): "Bai Shao" and "Ge Gen" used to silently add
+      // whichever item happened to match first when more than one name
+      // contained what she typed -- never guess, show the existing suggestion
+      // list (already open as she typed) so she taps the one she means.
+      // Nothing is added and nothing is cleared until she picks.
+      const amb = phResolvePickCandidates(pick.value);
+      if (amb.length > 1) {
+        presPickRenderSugg();
+        const m = document.getElementById("presEditMatch");
+        if (m) m.innerHTML = `<span class="ph-ing-warn">"${esc(pick.value.trim())}" matches ${amb.length} items — pick the one you mean below.</span>`;
+        return;
+      }
       // not a single herb — maybe a Formula Refill recipe (her ask: type the
       // formula's abbreviation/name and its herbs pour into the script)
       if (presResolvePickRecipe(pick.value)) { presPickAddRecipe(); return; }
@@ -11994,13 +12051,18 @@
      pours its single herbs into the list, scaled so they total the grams she
      typed (no grams = the recipe's own template amounts). So one script can
      hold DGSYS the premade jar AND the raws of Zhi Zi Hou Po Tang. */
+  // same "never guess between 2+ contains-matches" rule as phResolvePick --
+  // this is the identical bug shape one function over, so it gets the
+  // identical fix (her ask: root cause, not just the one symptom)
   function presFindRecipe(q) {
     const s = String(q || "").trim().toLowerCase();
     if (!s) return null;
     const up = s.toUpperCase();
-    return PRESC.items.find(r => presIsFormula(r) && r.ingredients.length
-        && ((presAbbr(r) || "").toUpperCase() === up || r.name.trim().toLowerCase() === s))
-      || PRESC.items.find(r => presIsFormula(r) && r.ingredients.length && r.name.trim().toLowerCase().includes(s));
+    const exact = PRESC.items.find(r => presIsFormula(r) && r.ingredients.length
+        && ((presAbbr(r) || "").toUpperCase() === up || r.name.trim().toLowerCase() === s));
+    if (exact) return exact;
+    const contains = PRESC.items.filter(r => presIsFormula(r) && r.ingredients.length && r.name.trim().toLowerCase().includes(s));
+    return contains.length === 1 ? contains[0] : null;
   }
   // any saved prescription that carries ingredients — a standing formula recipe
   // OR a patient's own script like "XCHT Mick" (her ask: reuse one script's
@@ -12009,9 +12071,11 @@
     const s = String(q || "").trim().toLowerCase();
     if (!s) return null;
     const up = s.toUpperCase();
-    return PRESC.items.find(t => t.ingredients && t.ingredients.length
-        && ((presAbbr(t) || "").toUpperCase() === up || t.name.trim().toLowerCase() === s))
-      || PRESC.items.find(t => t.ingredients && t.ingredients.length && t.name.trim().toLowerCase().includes(s));
+    const exact = PRESC.items.find(t => t.ingredients && t.ingredients.length
+        && ((presAbbr(t) || "").toUpperCase() === up || t.name.trim().toLowerCase() === s));
+    if (exact) return exact;
+    const contains = PRESC.items.filter(t => t.ingredients && t.ingredients.length && t.name.trim().toLowerCase().includes(s));
+    return contains.length === 1 ? contains[0] : null;
   }
   // resolve a picked value to a source script — accepts the raw abbreviation/
   // name she typed OR a datalist suggestion like "DCHT — Da Chai Hu Tang",
@@ -12607,6 +12671,13 @@
   let refRecipeId = "", refGrams = "";
   let refHowMakeOpen = false;   // her ask 2026-08-15 (mockup 12): collapsed by default, one inline link opens it
   let refRecipePage = 1;        // same shared pagination as Inventory/Log/Prescriptions (PH_PAGE_SIZE)
+  // her report (2026-08-17): typed text that matches 2+ formula recipes must
+  // show a pick-one list, never silently resolve to the first match --
+  // refPickAmbiguous holds those candidates; refSearchRaw preserves what she
+  // actually typed across the re-render (the search box's value is otherwise
+  // only ever driven by a RESOLVED recipe, so without this an ambiguous or
+  // no-match search would visibly wipe her own typing)
+  let refPickAmbiguous = [], refSearchRaw = "";
 
   // "Dang Gui Shao Yao San" → "DGSYS": her templates are often keyed by
   // initials, so the recipe suggests itself from the target's name
@@ -12774,7 +12845,11 @@
     try { localStorage.setItem(FLAG, "1"); } catch (e) {}
   })();
   // ONE search, over the formula recipes themselves: abbreviation first, then
-  // exact name, then contains — commits on change so typing is never hijacked
+  // exact name, then contains — commits on change so typing is never hijacked.
+  // Auto-resolves only when unambiguous -- same fix as phResolvePick (her
+  // report 2026-08-17): two or more "contains" matches must never silently
+  // pick the first one, so this returns null and the caller shows her a
+  // pick-one list via refResolveRecipeCandidates() instead.
   function refResolveRecipe(raw) {
     const t = String(raw || "").trim();
     if (!t) return null;
@@ -12782,11 +12857,18 @@
     const lc = t.toLowerCase();
     const up = t.toUpperCase();
     const namePart = t.split(" · ")[0].trim().toLowerCase();   // a picked "Name · ABBR" option
-    return recipes.find(r => presAbbr(r) === up)
+    const exact = recipes.find(r => presAbbr(r) === up)
       || recipes.find(r => r.name.trim().toLowerCase() === lc)
-      || recipes.find(r => r.name.trim().toLowerCase() === namePart)
-      || recipes.find(r => r.name.toLowerCase().includes(lc))
-      || null;
+      || recipes.find(r => r.name.trim().toLowerCase() === namePart);
+    if (exact) return exact;
+    const contains = refResolveRecipeCandidates(raw);
+    return contains.length === 1 ? contains[0] : null;
+  }
+  // every formula recipe whose name contains what she typed
+  function refResolveRecipeCandidates(raw) {
+    const t = String(raw || "").trim().split(" · ")[0].trim().toLowerCase();
+    if (!t) return [];
+    return PRESC.items.filter(x => presIsFormula(x) && x.ingredients.length && x.name.toLowerCase().includes(t));
   }
   function renderRefill() {
     const wrap = document.getElementById("phRefillWrap");
@@ -12810,7 +12892,7 @@
         ${makeQ.length ? `<div class="ph-make-queue"><span class="ph-make-queue-lbl">🏺 To make (${makeQ.length}):</span>${makeQ.map(h => `<span class="ph-make-chip${h.id === loadedJarId ? " on" : ""}"><button type="button" class="ph-make-chip-load" data-ph-make-load="${h.id}" title="Load ${esc(phDispName(h.name, true))} into the maker">${esc(phDispName(h.name, true))}</button><button type="button" class="ph-make-chip-x" data-ph-make-remove="${h.id}" title="Made / remove from the make list" aria-label="Remove ${esc(h.name)} from the make list">✕</button></span>`).join("")}</div>` : ""}
         <div class="ph-build-top">
           <input type="search" id="refSearch" list="phRefRecipeList" placeholder="Search formula — name or abbreviation…"
-            value="${recipe ? esc(phDispName(recipe.name, true)) : ""}" autocomplete="off" aria-label="Search the formula to make">
+            value="${recipe ? esc(phDispName(recipe.name, true)) : esc(refSearchRaw)}" autocomplete="off" aria-label="Search the formula to make">
           <datalist id="phRefRecipeList">${PRESC.items.filter(t => presIsFormula(t) && t.ingredients.length)
             .sort((a, b) => a.name.localeCompare(b.name))
             .map(t => { const ab = presAbbr(t);
@@ -12827,6 +12909,13 @@
                tap-Make-then-confirm is no longer needed. -->
           <button type="button" class="ph-name-link ph-ref-howlink" data-ref-howmake-toggle="1" title="How making works" aria-label="How making works">?</button>
         </div>
+        ${refPickAmbiguous.length ? `<div class="ph-ref-pick-list">
+          <div class="ph-pick-h">${refPickAmbiguous.length} formulas match "${esc(refSearchRaw.trim())}" — pick one</div>
+          ${refPickAmbiguous.map(r => `<div class="ph-pick-row" data-ref-pick="${r.id}" tabindex="0">
+            <span class="ph-pick-ic">🫙</span>
+            <span class="ph-pick-main"><span class="ph-pick-nm">${esc(phDispName(r.name, true))}${presAbbr(r) ? ` <span class="ph-pick-code">${esc(presAbbr(r))}</span>` : ""}</span></span>
+          </div>`).join("")}
+        </div>` : (!recipe && refSearchRaw.trim() ? `<div class="fam-empty">No formula matches "${esc(refSearchRaw.trim())}".</div>` : "")}
         ${recipe ? `<div class="ph-ref-found-line"><span class="ph-ref-found">🏺 ${esc(phDispName(recipe.name, true))}${presAbbr(recipe) ? ` · ${esc(presAbbr(recipe))}` : ""} · ${recipe.ingredients.length} herbs · recipe ${phFmtG(recipe.totalGrams || 0)}g</span></div>` : ""}
         <div id="refSummary"></div>
         ${refHowMakeOpen ? `
@@ -13822,6 +13911,29 @@
     note.style.cssText = "position:fixed;left:8px;right:8px;bottom:8px;z-index:999999;background:#8a1f14;color:#fff;padding:10px 14px;border-radius:12px;font:600 12px/1.3 system-ui, sans-serif;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.3)";
     document.body.appendChild(note);
   }
+
+  // Self-check guard (her ask, 2026-08-17): typing an ambiguous herb/formula
+  // name used to silently add whichever item happened to match first --
+  // "Bai Shao" (she has two different processings) and "Ge Gen" (matches
+  // both the single herb and GE GEN TANG) are the two real cases she
+  // reported. Re-tests both on every load; console-only, no user-facing
+  // banner needed for this one (her spec). Skips silently if her data no
+  // longer has an ambiguous pair under either name -- a different dataset
+  // can't prove or disprove the regression.
+  setTimeout(() => {
+    try {
+      ["Bai Shao", "Ge Gen"].forEach(q => {
+        const cands = phResolvePickCandidates(q);
+        if (cands.length < 2) return;
+        const resolved = phResolvePick(q);
+        if (resolved) {
+          console.warn(`Ambiguous-search self-check FAILED: typing "${q}" auto-resolved to "${resolved.name}" instead of asking her to pick one -- ${cands.length} items match. See CLAUDE.md's "NEVER break these" rule.`);
+        }
+      });
+    } catch (err) {
+      console.warn("Ambiguous-search self-check errored:", err);
+    }
+  }, 400);
 </script>
 <script>window.__LCM_SYNC = true;</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
