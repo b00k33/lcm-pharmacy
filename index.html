@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260817-145127">
+<meta name="lcm-build" content="20260817-151133">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -530,7 +530,6 @@
     padding: 8px 0 4px; font-size: 12px; color: var(--ph-soft);
   }
   #pharmacyPage .ph-ref-sum-g { font-size: 17px; font-weight: 800; color: var(--ph-green-deep); font-variant-numeric: tabular-nums; }
-  #pharmacyPage .ph-ref-sum-nm { font-size: 13px; font-weight: 700; color: var(--ph-ink); }
   #pharmacyPage .ph-ref-sum-note { font-size: 11px; color: var(--ph-faint); font-style: italic; }
   #pharmacyPage .ph-ref-sum-warn { font-size: 11px; font-weight: 700; color: var(--ph-low-deep); }
   /* the "?" that replaced the explainer paragraph -- costs no vertical space */
@@ -9683,6 +9682,15 @@
         return;
       }
       if (e.target.closest("[data-ref-make-yes]")) { refMake(); return; }
+      // the toast's own Undo -- same reversal as the app-wide data-ph-undo, plus
+      // clearing refLastMade so the toast itself actually goes away (the generic
+      // handler has no reason to know about this page's own persistent toast)
+      const refToastUndo = e.target.closest("[data-ref-toast-undo]");
+      if (refToastUndo) {
+        const id = refToastUndo.dataset.refToastUndo;
+        if (phReverseEntry(id)) { refLastMade = null; savePharmacy(); renderPharmacy(); }
+        return;
+      }
       // Cancel on the pinned bar: clears the loaded formula and the grams, so the
       // middle zone falls back to the recipe picker. It touches nothing but those
       // two view variables -- no stock, no log, no saved record.
@@ -10734,6 +10742,9 @@
       // keystrokes alone never yank the field out from under her
       if (e.target.id === "refSearch") {
         const val = e.target.value;
+        // her spec 2026-08-17: starting a new formula search is the other of the
+        // two things (besides its own Undo) that clears the "refill made" toast
+        refLastMade = null;
         const r = refResolveRecipe(val);
         if (r) { refRecipeId = r.id; refPickAmbiguous = []; refSearchRaw = ""; renderRefill(); }
         else if (!val.trim()) { refRecipeId = ""; refPickAmbiguous = []; refSearchRaw = ""; renderRefill(); }
@@ -12682,6 +12693,14 @@
   // only ever driven by a RESOLVED recipe, so without this an ambiguous or
   // no-match search would visibly wipe her own typing)
   let refPickAmbiguous = [], refSearchRaw = "";
+  // the "refill made" success message, deliberately NOT the shared one-shot
+  // phFlash (her spec 2026-08-17: "does NOT auto-fade... stays on screen...
+  // until the user either taps Undo or starts a new formula search" -- phFlash
+  // clears itself the instant its HTML is generated once, so it was already
+  // gone by the very next re-render of any kind, not just those two triggers).
+  // Cleared only by the toast's own Undo button or by #refSearch committing a
+  // new search -- never by Cancel, never by a plain re-render.
+  let refLastMade = null;
 
   // "Dang Gui Shao Yao San" → "DGSYS": her templates are often keyed by
   // initials, so the recipe suggests itself from the target's name
@@ -12892,7 +12911,7 @@
       <section class="ph-widget">
       <div class="ph-ref-top">
         <div class="ph-widget-head ph-band-head"><h2>Make a refill</h2><span class="ph-count">Blends single herbs into a formula batch</span></div>
-        ${phFlashHtml()}
+        ${refToastHtml()}${phFlashHtml()}
         ${makeQ.length ? `<div class="ph-make-queue"><span class="ph-make-queue-lbl">🏺 To make (${makeQ.length}):</span>${makeQ.map(h => `<span class="ph-make-chip${h.id === loadedJarId ? " on" : ""}"><button type="button" class="ph-make-chip-load" data-ph-make-load="${h.id}" title="Load ${esc(phDispName(h.name, true))} into the maker">${esc(phDispName(h.name, true))}</button><button type="button" class="ph-make-chip-x" data-ph-make-remove="${h.id}" title="Made / remove from the make list" aria-label="Remove ${esc(h.name)} from the make list">✕</button></span>`).join("")}</div>` : ""}
         <div class="ph-build-top">
           <input type="search" id="refSearch" list="phRefRecipeList" placeholder="Search formula — name or abbreviation…"
@@ -12911,7 +12930,7 @@
                never scroll to reach it). The bar shows exactly what will happen
                BEFORE she taps, which is why the old two-step
                tap-Make-then-confirm is no longer needed. -->
-          <button type="button" class="ph-name-link ph-ref-howlink" data-ref-howmake-toggle="1" title="How making works" aria-label="How making works">?</button>
+          <button type="button" class="ph-name-link ph-ref-howlink" data-ref-howmake-toggle="1" title="How making works" aria-label="How making works">ⓘ</button>
         </div>
         ${refPickAmbiguous.length ? `<div class="ph-ref-pick-list">
           <div class="ph-pick-h">${refPickAmbiguous.length} formulas match "${esc(refSearchRaw.trim())}" — pick one</div>
@@ -12920,7 +12939,11 @@
             <span class="ph-pick-main"><span class="ph-pick-nm">${esc(phDispName(r.name, true))}${presAbbr(r) ? ` <span class="ph-pick-code">${esc(presAbbr(r))}</span>` : ""}</span></span>
           </div>`).join("")}
         </div>` : (!recipe && refSearchRaw.trim() ? `<div class="fam-empty">No formula matches "${esc(refSearchRaw.trim())}".</div>` : "")}
-        ${recipe ? `<div class="ph-ref-found-line"><span class="ph-ref-found">🏺 ${esc(phDispName(recipe.name, true))}${presAbbr(recipe) ? ` · ${esc(presAbbr(recipe))}` : ""} · ${recipe.ingredients.length} herbs · recipe ${phFmtG(recipe.totalGrams || 0)}g</span></div>` : ""}
+        <!-- her spec 2026-08-17: the formula name belongs in exactly 2 places on
+             this card (the search field above, and the confirm bar below) -- this
+             chip shows the abbreviation only, falling back to the full name only
+             for the rare recipe with none set, so it's never blank -->
+        ${recipe ? `<div class="ph-ref-found-line"><span class="ph-ref-found">🏺 ${esc(presAbbr(recipe) || phDispName(recipe.name, true))} · ${recipe.ingredients.length} herbs · recipe ${phFmtG(recipe.totalGrams || 0)}g</span></div>` : ""}
         <div id="refSummary"></div>
         ${refHowMakeOpen ? `
         <div class="ph-howmake-panel">
@@ -13031,6 +13054,16 @@
         <div class="ph-dash-seeall"><button type="button" class="ph-name-link" data-ph-dash-seeall="refill">See all refills in Stock history</button></div>`
       : `<div class="fam-empty">No refills yet — search a formula above and make a batch.</div>`;
   }
+  // The persistent "refill made" toast -- reuses the app-wide .ph-flash/
+  // .ph-undo-btn look (her ask: existing component styles, not a new one-off)
+  // but is driven by refLastMade instead of the shared one-shot phFlash, so it
+  // survives every re-render except its own Undo or a new #refSearch commit.
+  // No formula name (her spec: the success message drops it entirely).
+  function refToastHtml() {
+    if (!refLastMade) return "";
+    const m = refLastMade;
+    return `<div class="ph-flash">✓ <b>Refill made</b>${m.jarAdded ? ` · +${phFmtG(m.madeGrams)}g to bottle` : ""} · ${m.deductedCount} herb${m.deductedCount === 1 ? "" : "s"} deducted${m.perG != null ? ` · bottle cost $${m.perG}/g` : ""} <button type="button" class="ph-undo-btn" data-ref-toast-undo="${m.logId}">↩ Undo</button></div>`;
+  }
   // The summary strip and the confirm bar live in the PINNED zones, so they are
   // rendered into their own containers rather than inline under the table. The
   // numbers are the same numbers -- presCalcNumbers(recipe, useGrams), the exact
@@ -13041,9 +13074,11 @@
     if (!recipe || !items) { el.innerHTML = ""; return; }
     const missing = items.filter(x => !x.h).length;
     const short = scaled ? items.filter(x => x.h && x.h.qty != null && x.h.qty < x.grams).length : 0;
+    // no formula name here -- the found-line chip right above already names it
+    // (her spec 2026-08-17: the name belongs in exactly 2 places, the search
+    // field and the confirm bar, not repeated in every strip on this card)
     el.innerHTML = `<div class="ph-ref-sum">
       <span class="ph-ref-sum-g">${phFmtG(useGrams)}g</span>
-      <span class="ph-ref-sum-nm">${esc(phDispName(recipe.name, true))}</span>
       <span class="ph-ref-sum-x">${items.length} single herbs</span>
       <span class="ph-ref-sum-x">herb cost <b>${phMoney(cost)}</b></span>
       ${scaled ? "" : `<span class="ph-ref-sum-note">recipe amounts — enter grams to scale</span>`}
@@ -13157,7 +13192,11 @@
       phAfterQtyChange(jar);
     }
     refGrams = "";
-    phFlash = `Made <b>${phFmtG(grams)}g of ${esc(phDispName(recipe.name, true))}</b>${jar ? ` · +${phFmtG(entry.madeGrams)}g to its bottle` : ""} · ${entry.deducted.length} single herb${entry.deducted.length === 1 ? "" : "s"} deducted${perG != null ? ` · bottle cost $${perG}/g` : ""} <button type="button" class="ph-undo-btn" data-ph-undo="${entry.id}">↩ Undo</button>`;
+    // her spec 2026-08-17: this success message names the formula nowhere --
+    // the search box above it still does that job -- and it has to survive
+    // every re-render until she taps its own Undo or starts a new search, so
+    // it's refLastMade (read by refToastHtml), not the shared one-shot phFlash.
+    refLastMade = { logId: entry.id, jarAdded: !!jar, madeGrams: entry.madeGrams, deductedCount: entry.deducted.length, perG: perG };
     savePharmacy(); renderPharmacy();
   }
   // the bench worksheet: every raw herb in the batch with the grams to weigh
