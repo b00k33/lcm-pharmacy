@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260818-201106">
+<meta name="lcm-build" content="20260818-202431">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -2240,6 +2240,13 @@
   /* ── STEP 8d (2026-08-04): the whole prescriptions screen is ONE narrow
      centred column — never stretched across a wide monitor ── */
   #pharmacyPage #phPresWrap .ph-widget { max-width: 680px; margin-left: auto; margin-right: auto; }
+  /* her ask (2026-08-18) supersedes STEP 8d above, for the patient list
+     section only -- the narrow-column call above was leaving a large empty
+     gutter on a normal desktop width. :has() picks out the Prescriptions
+     list widget specifically (it's the one that contains #presList) so the
+     Dispense history widget right below it keeps its original 680px --
+     out of scope, untouched. */
+  #pharmacyPage #phPresWrap .ph-widget:has(#presList) { max-width: 1560px; }
   /* her ask (2026-08-14): row density -- centring the TABLE inside these
      pages' cards wasn't enough on its own; the card itself (.ph-widget) still
      spanned the full page width, so a narrower centred table just floated
@@ -3212,6 +3219,13 @@
      than what it needs, no matter what got dragged in the past. */
   #pharmacyPage table[data-ph-resize="pres2"] th:nth-child(2),
   #pharmacyPage table[data-ph-resize="pres2"] td:nth-child(2) { min-width: 118px; }
+  /* same floor, same reason (her ask 2026-08-18): Herbs/Total (g) read as
+     "HERBS.." / "TOTAL (G).." when a saved drag-width squeezes them below
+     what their own header label needs. */
+  #pharmacyPage table[data-ph-resize="pres2"] th:nth-child(3),
+  #pharmacyPage table[data-ph-resize="pres2"] td:nth-child(3) { min-width: 62px; }
+  #pharmacyPage table[data-ph-resize="pres2"] th:nth-child(4),
+  #pharmacyPage table[data-ph-resize="pres2"] td:nth-child(4) { min-width: 90px; }
   .rtn-table { width: 100%; border-collapse: collapse; font-size: 13px; color: var(--ph-ink); }
   .rtn-table th {
     text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em;
@@ -3352,6 +3366,22 @@
      that was still missing it. */
   #pharmacyPage .ph-table { max-width: 1040px; margin: 0 auto; }
   #pharmacyPage #phRefillWrap .ph-table { max-width: 780px; margin: 0 auto; }
+  /* Prescriptions list (her ask 2026-08-18): the shared 1040px cap above sat
+     well inside the available page width on a wide desktop, reading as a
+     narrow column with a dead gutter beside it. Widened the wrap this table
+     lives in, NOT the shared .ph-table rule every other list still uses --
+     min-width:0 lets the wrap shrink below 1560px on its own before that
+     ever needs to scroll. The table itself drops the shared max-width +
+     auto-margin and instead shrink-wraps to its columns' real content
+     width -- margin:auto centring on a <table> is inconsistent across
+     browsers, so a flex wrapper does the centring instead. */
+  #pharmacyPage #presList .rtn-table-wrap {
+    display: flex; justify-content: center; max-width: 1560px; width: 100%;
+    min-width: 0; margin: 0 auto;
+  }
+  #pharmacyPage #presList .ph-table { max-width: none; width: auto; margin: 0; }
+  #pharmacyPage #presList .rtn-table th,
+  #pharmacyPage #presList .rtn-table td { padding: 8px 16px; }
   /* STEP 8f (her ask 2026-08-11): the main Herbal Inventory grid carries 14+
      columns -- the shared 1040px cap above left it hugging the LEFT edge of
      the page's own 1540px shell with a slab of dead space on the right,
@@ -3959,10 +3989,11 @@
     }
 
     /* ---------- PASTE 4 · Prescriptions ---------- */
-    /* the in-page "+ New prescription" duplicates the topbar's ＋ (the topbar
-       one is the same button, reached through data-pres-new). :not() keeps the
-       Dispense-history widget's own "Show all" button below untouched. */
-    #pharmacyPage #phPresWrap .ph-widget-head > button.ph-load-btn:not(#presLogToggle) { display: none; }
+    /* the in-page "+ New prescription" heading+button (duplicating the
+       topbar's) used to be hidden here on narrow screens only, leaving it
+       visible on desktop. 2026-08-18: deleted from the markup entirely
+       instead (search "presStartNew()" in PH_TOPBAR_ACTIONS.prescriptions),
+       so this mobile-only display:none is no longer needed at any width. */
     /* dosage preset + markup: folded behind the topbar's ✎ Dosage & markup
        button everywhere now (see .ph-pres-settings-pop, 2026-08-18) --
        nothing mobile-specific left to say here */
@@ -8508,7 +8539,7 @@
     // they stay exactly where they were, and this button is just a shortcut
     // that scrolls/focuses them.
     prescriptions: [
-      { icon: "i-plus", label: "New prescription", run: () => document.querySelector('[data-pres-new="1"]')?.click() },
+      { icon: "i-plus", label: "New prescription", run: () => presStartNew() },
       { icon: "i-edit", label: "Dosage & markup", ghost: true, run: () => phTogglePresSettings() },
     ],
     suppliers: [{ icon: "i-plus", label: "Add supplier", run: () => document.getElementById("phSupplierAddBtn")?.click() }],
@@ -8524,7 +8555,7 @@
       label: "New prescription",
       run: () => {
         document.querySelector('[data-ph-tab="prescriptions"]')?.click();
-        document.querySelector('[data-pres-new="1"]')?.click();
+        presStartNew();
       },
     }],
     // her mockup: search + add icons on Inventory's topbar -- these don't
@@ -9800,8 +9831,6 @@
         presPanelEl().scrollIntoView({ behavior: "smooth", block: "start" });
         return;
       }
-      const presNew = e.target.closest("[data-pres-new]");
-      if (presNew) { presStartNew(presNew.dataset.presNew); return; }
       if (e.target.closest("[data-pres-pick-add]")) { presPickAdd(); return; }
       if (e.target.closest("[data-pres-pick-recipe]")) { presPickAddRecipe(); return; }
       // STEP 8b: a suggestion row IS the pick — no re-parsing typed text, so
@@ -11781,11 +11810,14 @@
       wrap.innerHTML = `
         <section class="ph-widget">
           <div class="ph-widget-head">
-            <h2>💊 Prescriptions</h2>
+            <!-- her ask (2026-08-18): the topbar already carries the page
+                 title + solid "+ New prescription" action -- this repeated
+                 both. Deleted, not hidden: presStartNew() is now called
+                 directly from PH_TOPBAR_ACTIONS instead of proxy-clicking a
+                 button that lived here (search "presStartNew()" below). -->
             <input type="search" id="presSearch" placeholder="Search patients…" autocomplete="off" aria-label="Search prescriptions">
             <span class="ph-count" id="presCount"></span>
             <span class="ph-count" id="presDispTodayCount" title="Dispensed today"></span>
-            <button type="button" class="ph-load-btn" data-pres-new="1">+ New prescription</button>
           </div>
           <div class="ph-pres-settings-pop" id="presSettingsPop" hidden>
           <div class="ph-build-top">
@@ -12191,10 +12223,9 @@
   let presEditId = null;
   let presDraft = null;
   const presNewDraft = () => ({ id: "", name: "", notes: "", totalGrams: 0, ingredients: [] });
-  // shared by the data-pres-new click handler AND the Refill topbar's
-  // "+ New formula recipe" button (2026-08-15) — one starting-a-new-script
-  // path, not a click-forward standing in for a button that no longer exists
-  // on the Refill page body
+  // called directly from PH_TOPBAR_ACTIONS (Prescriptions' "+ New
+  // prescription", Dashboard's shortcut, Refill's "+ New formula recipe")
+  // — one starting-a-new-script path, no in-page button to click through
   function presStartNew(presType) {
     presDraft = presNewDraft();
     if (presType === "formula") presDraft.presType = "formula";
