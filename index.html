@@ -5273,6 +5273,7 @@
   // until she's actually restored something, so a routine autosave elsewhere
   // in the app can never quietly pave over it first
   function savePharmacy() {
+    phUsageCache = null;   // stock/log just changed -- recompute usage on next ask
     if (PH_DATA_WARNING && PH_DATA_WARNING.kind === "pharmacy-unrecoverable") return false;
     // shrink guard (items 1+2, 2026-08-13): a store that suddenly halves in
     // one write is the signature of a bad load (today's wipes: 301 herbs
@@ -6807,24 +6808,47 @@
   // logic or needs its own copy of it.
   const OVERSTOCK_MONTHS_THRESHOLD = 6;    // months of stock on hand before it's flagged -- open item, confirm against her real data
   const OVERSTOCK_MIN_HISTORY_MONTHS = 2;  // needs at least this much dispense history before auto-estimating -- avoids flagging from a couple of weeks of noise
-  function phEstimateMonthlyUsage(h) {
+  /* PERF (her report 2026-08-19: "when i click dashboard, it lags").
+     Root cause: this walked the WHOLE log to answer for ONE herb, and the
+     Dashboard asks for every herb (PHARMACY.herbs.filter(phIsOverstocked)).
+     Worse, the innermost line calls findHerbByName, which is itself a linear
+     scan of every herb doing trim+toLowerCase on each. So the real cost was
+     herbs x log x items x herbs -- hundreds of millions of string operations
+     on a real book before the page could paint.
+
+     Fix: ONE pass over the log totals every herb at once, cached. Same inputs,
+     same arithmetic, same results -- only the number of passes changes.
+     The cache is dropped on every savePharmacy() (below), so any dispense,
+     refill, undo or edit recomputes it; the signature guard catches anything
+     that changes the log or herb list without going through a save. */
+  let phUsageCache = null, phUsageCacheSig = "";
+  function phUsageAll() {
+    const sig = `${PHARMACY.log.length}:${PHARMACY.herbs.length}:${keyOf(TODAY)}`;
+    if (phUsageCache && phUsageCacheSig === sig) return phUsageCache;
     const from = new Date(TODAY.getFullYear(), TODAY.getMonth() - 6, TODAY.getDate());
-    let grams = 0, earliestMs = null;
+    const map = new Map();
     PHARMACY.log.forEach(e => {
       if (!((!e.kind || e.kind === "dispense") || e.kind === "refill")) return;
       const d = parseKey(e.date);
       if (d < from) return;
+      const ms = d.getTime();
       (Array.isArray(e.items) ? e.items : []).forEach(i => {
         const ih = (i.code && findHerbByCode(i.code, i.name)) || findHerbByName(i.name);
-        if (ih !== h) return;
-        grams += i.grams || 0;
-        const ms = d.getTime();
-        if (earliestMs == null || ms < earliestMs) earliestMs = ms;
+        if (!ih) return;
+        let r = map.get(ih);
+        if (!r) { r = { grams: 0, earliestMs: null }; map.set(ih, r); }
+        r.grams += i.grams || 0;
+        if (r.earliestMs == null || ms < r.earliestMs) r.earliestMs = ms;
       });
     });
-    if (!grams || earliestMs == null) return { monthly: 0, historyMonths: 0 };
-    const historyMonths = (TODAY.getTime() - earliestMs) / (1000 * 60 * 60 * 24 * 30.44);
-    return { monthly: grams / 6, historyMonths };
+    phUsageCache = map; phUsageCacheSig = sig;
+    return map;
+  }
+  function phEstimateMonthlyUsage(h) {
+    const r = phUsageAll().get(h);
+    if (!r || !r.grams || r.earliestMs == null) return { monthly: 0, historyMonths: 0 };
+    const historyMonths = (TODAY.getTime() - r.earliestMs) / (1000 * 60 * 60 * 24 * 30.44);
+    return { monthly: r.grams / 6, historyMonths };
   }
   // returns null (not overstocked) or { manual: true, over } / { manual: false, months }
   function phOverstockInfo(h) {
