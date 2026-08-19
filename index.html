@@ -2529,6 +2529,37 @@
   /* Medical history: one row per item, each a real three-state. Separated by
      space and tone, not boxes (rulebook), and the three buttons share the app's
      one pill shape. Grey = not asked, green = no, blue = yes (her mockup). */
+  /* Conditions: a grouped checklist, two columns where there is room. Rose for
+     the 20 chronic conditions, amber for "pregnant" (a current status, not a
+     condition) -- everywhere a badge or row appears. */
+  #pharmacyPage .ph-cond { margin-top: 12px; }
+  #pharmacyPage .ph-cond-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px 16px;
+  }
+  #pharmacyPage .ph-cond-group-h {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase;
+    color: var(--ph-soft); padding: 4px 0;
+  }
+  #pharmacyPage .ph-cond-row {
+    display: flex; align-items: center; gap: 8px; padding: 4px 0;
+    font-size: 12.5px; cursor: pointer; min-height: 28px;
+  }
+  #pharmacyPage .ph-cond-row.on { color: var(--ph-negative-deep); font-weight: 600; }
+  #pharmacyPage .ph-cond-row.on.preg { color: var(--ph-gold-deep); }
+  #pharmacyPage .ph-cond-row input { flex: none; margin: 0; }
+  #pharmacyPage .ph-cond-badges { display: inline-flex; flex-wrap: wrap; gap: 4px; vertical-align: middle; }
+  #pharmacyPage .ph-cond-badge {
+    font-size: 10.5px; font-weight: 700; border-radius: 999px; padding: 2px 8px;
+    background: var(--ph-negative-tint); color: var(--ph-negative-deep); white-space: nowrap;
+  }
+  #pharmacyPage .ph-cond-badge.preg { background: var(--ph-gold-tint); color: var(--ph-gold-deep); }
+  #pharmacyPage .ph-cond-badge.more {
+    border: 1px solid var(--ph-line); background: var(--ph-white); color: var(--ph-soft);
+    font-family: inherit; cursor: pointer;
+  }
+  #pharmacyPage .ph-cond-badge.more:hover { border-color: var(--ph-green); color: var(--ph-green-deep); }
+  #pharmacyPage .ph-medhx-btn.sex.on { background: var(--ph-green-tint); border-color: var(--ph-green); color: var(--ph-green-deep); }
+  #pharmacyPage .ph-sexrow { border-bottom: 1px solid var(--ph-line); }
   #pharmacyPage .ph-medhx { margin-top: 8px; }
   #pharmacyPage .ph-medhx-row {
     display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px;
@@ -10227,7 +10258,34 @@
       // set one medical-history item. Tapping the state it is ALREADY on is a
       // no-op -- she switches by tapping a different one, never by un-toggling
       // back to "unasked" by accident.
-      const medhxBtn = e.target.closest("[data-medhx-set]");
+      // patient sex -- gates the whole Conditions panel and its badges
+      // a condition checkbox. Toggled by MEMBERSHIP of conditions[], not by the
+      // box's own checked state, so a tap on the row label behaves identically
+      // to a tap on the box itself.
+      const condBox = e.target.closest("[data-cond-toggle]");
+      if (condBox) {
+        const t0 = PRESC.items.find(x => x.id === presOpenId);
+        const nm = t0 ? presPatientFor(t0) : "";
+        if (!nm) return;
+        const rec = phPatientRec(nm);
+        const k = condBox.dataset.condToggle;
+        if (!Array.isArray(rec.conditions)) rec.conditions = [];
+        const ix = rec.conditions.indexOf(k);
+        if (ix < 0) rec.conditions.push(k); else rec.conditions.splice(ix, 1);
+        savePharmacy(); renderPresPanel(); return;
+      }      const sexBtn = e.target.closest("[data-sex-set]");
+      if (sexBtn) {
+        const t0 = PRESC.items.find(x => x.id === presOpenId);
+        const nm = t0 ? presPatientFor(t0) : "";
+        if (!nm) return;
+        const rec = phPatientRec(nm);
+        const v = sexBtn.dataset.sexSet;
+        if ((rec.sex || "") === v) return;            // already on -> no-op
+        rec.sex = v || undefined;
+        savePharmacy(); renderPresPanel(); return;
+      }
+      // "+N more" opens the record's full Conditions panel
+      if (e.target.closest("[data-cond-more]")) { presThirdOpen = true; renderPresPanel(); return; }      const medhxBtn = e.target.closest("[data-medhx-set]");
       if (medhxBtn) {
         const t0 = PRESC.items.find(x => x.id === presOpenId);
         const nm = t0 ? presPatientFor(t0) : "";
@@ -12851,6 +12909,64 @@
     { k: "bleeding_disorder", label: "Bleeding disorder / blood thinners" },
     { k: "thyroid_disorder", label: "Thyroid disorder" },
   ];
+  /* Gynaecological conditions (her spec 2026-08-19). Grouped for scannability
+     only -- the stored value is the flat list. "pregnant" lives in the same
+     list but is styled amber, not rose: it is a current status, not a chronic
+     condition. That is display logic; there is no separate data field.
+     NOTE: this app had no patient sex field at all, so one was added here (her
+     call) -- the spec assumed an existing (F)/(M) notation that doesn't exist. */
+  const PH_COND_GROUPS = [
+    { g: "Cycle & bleeding", items: [
+      ["heavy_menstrual_bleeding", "Heavy menstrual bleeding"], ["dysmenorrhoea", "Dysmenorrhoea"],
+      ["irregular_menstruation", "Irregular menstruation"], ["amenorrhea", "Amenorrhea"],
+      ["pms", "PMS"], ["pmdd", "PMDD"] ] },
+    { g: "Structural", items: [
+      ["uterine_fibroids", "Uterine fibroids"], ["adenomyosis", "Adenomyosis"],
+      ["ovarian_cysts", "Ovarian cysts"], ["endometriosis", "Endometriosis"] ] },
+    { g: "Reproductive", items: [
+      ["pcos", "PCOS"], ["infertility_unexplained", "Infertility (unexplained)"],
+      ["history_of_miscarriage", "History of miscarriage"], ["pregnant", "Pregnant"] ] },
+    { g: "Infection & pain", items: [
+      ["vaginitis_vulvovaginitis", "Vaginitis / vulvovaginitis"], ["bacterial_vaginosis", "Bacterial vaginosis"],
+      ["pid", "PID"], ["pelvic_pain", "Pelvic pain"], ["hpv_infection", "HPV infection"] ] },
+    { g: "Life stage", items: [
+      ["perimenopause", "Perimenopause"], ["menopause", "Menopause"] ] },
+  ];
+  const PH_COND_LABEL = {};
+  PH_COND_GROUPS.forEach(gr => gr.items.forEach(([k, l]) => { PH_COND_LABEL[k] = l; }));
+  const PH_COND_CAP = 3;   // badges shown inline before "+N more"
+  const phCondList = rec => (rec && Array.isArray(rec.conditions)) ? rec.conditions : [];
+  const phIsFemale = rec => !!rec && rec.sex === "F";
+  // badges, capped -- one shape shared by the header and the list row
+  function phCondBadgesHtml(name) {
+    const rec = phPatientPeek(name);
+    if (!phIsFemale(rec)) return "";                 // male / unset: nothing at all
+    const list = phCondList(rec);
+    if (!list.length) return "";
+    const shown = list.slice(0, PH_COND_CAP), more = list.length - shown.length;
+    return `<span class="ph-cond-badges">${shown.map(k =>
+      `<span class="ph-cond-badge${k === "pregnant" ? " preg" : ""}">${esc(PH_COND_LABEL[k] || k)}</span>`).join("")}${
+      more > 0 ? `<button type="button" class="ph-cond-badge more" data-cond-more="1" title="Show every condition">+${more} more</button>` : ""}</span>`;
+  }
+  function presConditionsPanelHtml(t) {
+    const name = presPatientFor(t);
+    if (!name) return "";
+    const rec = phPatientPeek(name);
+    if (!phIsFemale(rec)) return "";                 // no panel for male / unset
+    const list = phCondList(rec);
+    return `<div class="ph-cond">
+      <div class="ph-tmpl-sec"><span>Conditions</span><span class="ph-tmpl-sub">${list.length || "none"} flagged</span></div>
+      <div class="ph-cond-grid">
+        ${PH_COND_GROUPS.map(gr => `<div class="ph-cond-group">
+          <div class="ph-cond-group-h">${esc(gr.g)}</div>
+          ${gr.items.map(([k, label]) => `<label class="ph-cond-row${list.includes(k) ? " on" : ""}${k === "pregnant" ? " preg" : ""}">
+            <input type="checkbox" data-cond-toggle="${k}"${list.includes(k) ? " checked" : ""}>
+            <span>${esc(label)}</span>
+          </label>`).join("")}
+        </div>`).join("")}
+      </div>
+    </div>`;
+  }
   const PH_MEDHX_STATES = [
     { v: "unasked", label: "Not asked" },
     { v: "no", label: "No" },
@@ -12885,7 +13001,7 @@
     const pregnant = conds.some(c => phPatientKey(c) === "pregnant");
     return {
       medical: rec ? PH_MEDHX.filter(m => phMedHxVal(rec, m.k) === "yes").map(m => m.label) : [],
-      conditions: conds.filter(c => phPatientKey(c) !== "pregnant"),
+      conditions: conds.filter(c => phPatientKey(c) !== "pregnant").map(c => (typeof PH_COND_LABEL !== "undefined" && PH_COND_LABEL[c]) || c),
       pregnant,
       notes: (rec && rec.medicalHistoryNotes || "").trim(),
     };
@@ -12898,7 +13014,12 @@
     const rec = phPatientPeek(name);
     const notes = (rec && rec.medicalHistoryNotes) || "";
     return `<div class="ph-medhx">
-      <div class="ph-tmpl-sec"><span>\u2695 Medical history</span></div>
+      <div class="ph-tmpl-sec"><span>\u2695 Medical history</span></div>      <div class="ph-medhx-row ph-sexrow">
+        <span class="ph-medhx-name">Sex</span>
+        <span class="ph-medhx-seg" role="radiogroup" aria-label="Patient sex">
+          ${[["F", "F"], ["M", "M"], ["", "\u2014"]].map(([v, l]) => `<button type="button" class="ph-medhx-btn sex${((rec && rec.sex) || "") === v ? " on" : ""}" data-sex-set="${v}" aria-pressed="${((rec && rec.sex) || "") === v ? "true" : "false"}">${l}</button>`).join("")}
+        </span>
+      </div>
       ${PH_MEDHX.map(m => {
         const cur = phMedHxVal(rec, m.k);
         return `<div class="ph-medhx-row">
@@ -12972,6 +13093,7 @@
         <span class="ph-band-name">${esc(phDispName(t.name, isF))}</span>
         <span class="ph-pres-type${isF ? " formula" : ""}">${isF ? "🏺 formula" : "🧍 patient"}</span>
         ${isF && ab ? `<span class="ph-pres-abbr">${esc(ab)}</span>` : ""}
+        ${!isF ? phCondBadgesHtml(presPatientFor(t)) : ""}
         <span class="ph-band-meta" id="presBandMeta">· ${bandMeta}</span>
         <button type="button" class="ph-sec-toggle ph-band-toggle" data-pres-name-toggle="1" aria-expanded="${presNameOpen ? "true" : "false"}">${presNameOpen ? "▾" : "▸"} Name &amp; type</button>
         <button type="button" class="ph-print-btn" data-pres-close="1">Close ×</button>
@@ -13083,6 +13205,7 @@
       <div class="ph-tmpl-sec"><span>History &amp; Notes</span><button type="button" class="ph-collapse-toggle" data-pres-third-toggle="1" aria-expanded="${presThirdOpen ? "true" : "false"}" title="Collapse this column">Collapse ▸</button></div>
 
       ${!isF ? presMedHxPanelHtml(t) : ""}
+      ${!isF ? presConditionsPanelHtml(t) : ""}
       ${presPatientHistoryHtml(t)}
 
       <div class="ph-sec-divider"></div>
