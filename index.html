@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260820-004512">
+<meta name="lcm-build" content="20260820-010204">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -11176,6 +11176,11 @@
         renderPharmacy();
         return;
       }
+      const schedPickedUpBtn = e.target.closest("[data-sched-confirm-pickedup]");
+      if (schedPickedUpBtn) {
+        schedConfirmPickedUp(schedPickedUpBtn.dataset.schedConfirmPickedup);
+        return;
+      }
       const schedMailedBtn = e.target.closest("[data-sched-confirm-mailed]");
       if (schedMailedBtn) {
         const trackEl = document.getElementById("schedMailedTracking");
@@ -15078,6 +15083,16 @@
   // schedRowHtml's own ⚠ chip already computes (below), just named so the
   // Dashboard's Must-go-out-today card can sort on it too
   const schedIsBlocked = s => s.method !== "pickup" && !((s.mailing && s.mailing.address || "").trim());
+  /* The middle checkpoint means "it has left my hands" -- posted for a mail-out,
+     handed over for a pickup. One helper so status, the checkpoint cell and the
+     confirm action all agree on which field that is (her spec 2026-08-19: a
+     pickup could never reach Completed before, because the only handover mark
+     was mailedAt). The `|| s.mailedAt` fallback on the pickup branch is
+     deliberate and backward-only: before this existed, the sole way to finish a
+     pickup was to tick Mailed, so any entry already closed out that way must
+     stay Completed rather than silently reopen. */
+  const schedHandoverAt = s => s.method === "pickup" ? (s.pickedUpAt || s.mailedAt) : s.mailedAt;
+  const schedHandoverLabel = s => s.method === "pickup" ? "Picked up" : "Mailed";
 
   /* ---- clinic-hours auto-defer (her spec 2026-08-19) --------------------
      Nothing still waiting to go out is allowed to sit on a date that has
@@ -15146,7 +15161,7 @@
     return `<span class="ph-formula-meta" style="display:block">→ tomorrow after ${cut.label}</span>`;
   }
   function schedStatus(s) {
-    if (s.dispensedAt && s.mailedAt && s.invoiced) return "completed";
+    if (s.dispensedAt && schedHandoverAt(s) && s.invoiced) return "completed";
     if (s.dispensedAt) return "inprogress";
     const today = keyOf(TODAY);
     const due = schedDueDate(s);
@@ -15180,7 +15195,12 @@
       id: uid(), prescriptionId, method: method === "pickup" ? "pickup" : "postage",
       targetDate: null, pickupDate: null, pickupTime: null,
       mailing: { name: presPatientFor(t) || t.name || "", address: "", postType: "standard", tracking: "" },
-      dispensedAt: null, dispenseLogId: null, mailedAt: null, invoiced: null,
+      // pickedUpAt is the pickup-side twin of mailedAt (her spec 2026-08-19):
+      // a pickup job needs its own "it left the building" mark, otherwise it
+      // could never reach Completed. Stored as a timestamp, exactly like
+      // mailedAt -- deliberately NOT a separate boolean as well, so there is
+      // only ever one field to trust for "has this been handed over".
+      dispensedAt: null, dispenseLogId: null, mailedAt: null, pickedUpAt: null, invoiced: null,
       createdAt: Date.now(),
     };
     PRESC.scheduled.push(s);
@@ -15256,6 +15276,15 @@
     savePresc();
     renderPharmacy();
   }
+  // the pickup twin of schedConfirmMailed -- same guard (never before it's
+  // actually been dispensed), same save+render, just no tracking number
+  function schedConfirmPickedUp(schedId) {
+    const s = PRESC.scheduled.find(x => x.id === schedId);
+    if (!s || !s.dispensedAt) return;
+    s.pickedUpAt = Date.now();
+    savePresc();
+    renderPharmacy();
+  }
   function schedConfirmInvoiced(schedId, amount, method) {
     const s = PRESC.scheduled.find(x => x.id === schedId);
     if (!s || !s.dispensedAt) return;
@@ -15307,7 +15336,9 @@
   let schedFormOpen = false, schedFormPresetId = null, schedFormMethod = "postage", schedFormDraft = {}, schedOpenAction = null, schedShowCompleted = false;
   let schedPrepOpenId = null;   // which scheduled entry's 🧪 Prepare panel is open, or null
   let schedPrepLabelOpen = false;   // mobile-only: is the collapsed "Label ready to copy" row expanded
-  // schedOpenAction: {id, kind:"mailed"|"invoiced", method:"phone"|"card"} | null -- method only meaningful for kind:"invoiced"
+  // schedOpenAction: {id, kind:"handover"|"invoiced", method:"phone"|"card"} | null -- method only meaningful for kind:"invoiced".
+  // "handover" only ever opens a form for a POSTAGE job (the tracking number);
+  // a pickup confirms in one tap and never sets this.
   // her ask (2026-08-18): "📅 Schedule" inside a patient's OWN prescription
   // editor opens this exact same form, preset to that patient -- so it has
   // to bring the form into view too, since #schedWidget sits at the very top
@@ -15401,21 +15432,34 @@
     </div>`;
   }
   const SCHED_PAY_LABEL = { phone: "Phone", card: "Card" };
+  // kind "handover" is the middle checkpoint: Mailed on a postage job, Picked
+  // up on a pickup one. Same slot, same rules -- only the wording, the field
+  // and (because a pickup has no tracking number to type) the confirm gesture
+  // differ. Dispensed stays read-once/act-first; nothing here can be ticked
+  // until it's dispensed, exactly as before.
   function schedCheckpointCell(s, kind) {
-    const done = kind === "dispensed" ? s.dispensedAt : kind === "mailed" ? s.mailedAt : s.invoiced && s.invoiced.at;
-    const label = kind === "dispensed" ? "Dispensed" : kind === "mailed" ? "Mailed" : "Invoiced";
+    const isPickup = s.method === "pickup";
+    const done = kind === "dispensed" ? s.dispensedAt
+      : kind === "handover" ? schedHandoverAt(s)
+      : s.invoiced && s.invoiced.at;
+    const label = kind === "dispensed" ? "Dispensed"
+      : kind === "handover" ? schedHandoverLabel(s)
+      : "Invoiced";
     if (done) {
       const sub = kind === "invoiced" ? ` · $${phRound2(s.invoiced.amount)}${s.invoiced.method ? ` · ${esc(SCHED_PAY_LABEL[s.invoiced.method] || s.invoiced.method)}` : ""}`
-        : kind === "mailed" && s.mailing.tracking ? ` · ${esc(s.mailing.tracking)}` : "";
+        : kind === "handover" && !isPickup && s.mailing.tracking ? ` · ${esc(s.mailing.tracking)}` : "";
       return `<span class="ph-stage-btn arrived" title="${esc(label)} · ${schedTimeStr(done)}">✓ ${esc(label)}${sub}</span>`;
     }
     if (kind === "dispensed") return `<button type="button" class="ph-stage-btn" data-sched-dispense="${s.id}">Confirm dispensed</button>`;
     if (!s.dispensedAt) return `<span class="ph-stage-btn" aria-disabled="true" title="Dispense first">${esc(label)}</span>`;
+    // a pickup has nothing to fill in, so it confirms in one tap rather than
+    // opening a form with a single irrelevant tracking field in it
+    if (kind === "handover" && isPickup) return `<button type="button" class="ph-stage-btn" data-sched-confirm-pickedup="${s.id}">Confirm picked up</button>`;
     return `<button type="button" class="ph-stage-btn" data-sched-open-action="${s.id}:${kind}">Confirm ${label.toLowerCase()}</button>`;
   }
   function schedActionFormHtml(s) {
     if (!schedOpenAction || schedOpenAction.id !== s.id) return "";
-    if (schedOpenAction.kind === "mailed") {
+    if (schedOpenAction.kind === "handover") {
       return `<div class="ph-arr-edit"><div class="ph-arr-edit-actions" style="flex-wrap:wrap">
         <label class="ph-inline-label">Tracking number <input type="text" id="schedMailedTracking" value="${esc(s.mailing.tracking || "")}" placeholder="optional" aria-label="Tracking number"></label>
         <button type="button" class="btn-save" data-sched-confirm-mailed="${s.id}">Confirm mailed</button>
@@ -15703,7 +15747,7 @@
       <td>${methodChip}${methodSub ? `<span class="ph-formula-meta" style="display:block">${esc(methodSub)}</span>` : ""}</td>
       <td>${schedStatusCellHtml(s)}</td>
       <td class="ph-formula-meta">${detailsCell}</td>
-      <td class="ph-sched-checkpoints">${schedCheckpointCell(s, "dispensed")}${schedCheckpointCell(s, "mailed")}${schedCheckpointCell(s, "invoiced")}</td>
+      <td class="ph-sched-checkpoints">${schedCheckpointCell(s, "dispensed")}${schedCheckpointCell(s, "handover")}${schedCheckpointCell(s, "invoiced")}</td>
       <td class="ph-pres-actions">
         ${!s.dispensedAt ? `<button type="button" class="ph-load-btn" data-sched-prep-open="${s.id}">🧪 Prepare</button>` : ""}
         ${!s.dispensedAt ? `<button type="button" class="ic" data-sched-cancel="${s.id}" title="Cancel this schedule" aria-label="Cancel this schedule"><svg class="icn" aria-hidden="true"><use href="#i-x"/></svg></button>` : ""}
