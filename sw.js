@@ -12,7 +12,7 @@
 // changes). A waiting service worker sits untouched until that same button
 // tells it to go, via postMessage({type:"SKIP_WAITING"}) -- see the
 // "message" listener below and phDoControlledUpdate's STEP 4.
-var CACHE_VERSION = "lcm-20260819-sched-pickup-hotfix2";
+var CACHE_VERSION = "lcm-20260819-nostore-nav-fetch";
 
 var SHELL = ["./", "./index.html", "./manifest.json", "./icons/icon-192.png", "./icons/icon-512.png", "./icons/apple-touch-icon.png", "./icons/favicon-32.png"];
 
@@ -70,9 +70,18 @@ self.addEventListener("fetch", function (e) {
   // must be visible the moment it's live, never masked by a stale cached
   // copy while online. Cache is a pure offline fallback, refreshed
   // opportunistically whenever the network does succeed.
+  // cache:"no-store" is required here, not optional -- plain fetch(req) is
+  // still subject to the BROWSER's ordinary HTTP cache (GitHub Pages serves
+  // this file with Cache-Control: max-age=600), so "network-first" alone
+  // could still silently hand back a same-origin disk-cached response up to
+  // 10 minutes stale even though the server already has the update. Found
+  // live (2026-08-19): a real fix was deployed and confirmed on the server,
+  // but a plain reload kept showing the old, broken page for several
+  // minutes because of exactly this gap.
   if (req.mode === "navigate") {
+    var freshReq = new Request(req, { cache: "no-store" });
     e.respondWith(
-      timeoutFetch(req, 4000).then(function (res) {
+      timeoutFetch(freshReq, 4000).then(function (res) {
         caches.open(CACHE_VERSION).then(function (c) { c.put("./", res.clone()); });
         return res;
       }).catch(function () {
