@@ -2773,6 +2773,24 @@
   #pharmacyPage .ph-ing-stockflag.zero { color: var(--ph-zero-deep); background: var(--ph-zero-tint); }
   #pharmacyPage .ph-ing-stockflag.low { color: var(--ph-low-deep); background: var(--ph-low-tint); }
   #pharmacyPage .ph-ing-stockflag.negative { color: #fff; background: var(--ph-negative); }
+  /* Clinical reference flags (her ask 2026-08-19): a quiet blue "has a note"
+     tag on any ingredient with Clinical notes written on its herb/formula
+     record, same family as the Overstock nudge; the red "clinical-match"
+     variant only fires when the note's text matches something already
+     recorded on THIS patient (pregnant / a "yes" medical-history item / a
+     ticked condition) -- string matching against her own reference text,
+     never an invented clinical rule. */
+  #pharmacyPage .ph-ing-stockflag.clinical { color: var(--ph-blue-deep); background: var(--ph-blue-tint); cursor: help; }
+  #pharmacyPage .ph-ing-stockflag.clinical-match { color: #fff; background: var(--ph-negative); cursor: help; }
+  /* aggregate, ALWAYS-open caution banner above the ingredients (her ask) --
+     unlike the collapsible history summary this is about what's on THIS
+     script right now, so it must never need a tap to be seen. Informational
+     only -- never blocks Dispense, same posture as every other flag here. */
+  #pharmacyPage .ph-clinwarn { margin: 8px 16px 0; padding: 8px 12px; border-radius: 12px; background: var(--ph-negative); color: #fff; font-size: 12px; }
+  #pharmacyPage .ph-clinwarn-lead { display: block; font-weight: 700; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 3px; }
+  #pharmacyPage .ph-clinwarn-line { padding: 2px 0; }
+  #pharmacyPage .ph-clinwarn-line b { font-weight: 700; }
+  @media (max-width: 700px) { #pharmacyPage .ph-clinwarn { margin: 8px 0 0; } }
   /* the permanent, never-a-toast record of a negative/substituted dispense
      (her ask 2026-08-18) -- sits inside the existing log-detail card, so it
      just needs its own quiet warning tone, not a whole new component */
@@ -4869,6 +4887,19 @@
             <div id="phHerbSuppliersRows"></div>
             <button type="button" class="tab-link" id="phHerbSupplierAddRow">+ Add supplier</button>
           </details>
+          <!-- Clinical reference (her ask 2026-08-19): left un-collapsed,
+               unlike Notes above -- safety-relevant text shouldn't need a tap
+               to be seen. Free text she writes herself; the app never
+               invents contraindications, it only string-matches this
+               against a patient's own recorded Sex/Medical history/
+               Conditions and flags a hit on the prescription editor. -->
+          <div class="ph-hf-section">
+            <div class="ph-hf-label">Clinical reference</div>
+            <div class="field full">
+              <label for="phHerbClinicalNotes">Cautions / contraindications <span style="text-transform:none;letter-spacing:0">(shown as a flag on any script using this)</span></label>
+              <textarea id="phHerbClinicalNotes" rows="3" placeholder="e.g. Contraindicated in pregnancy; avoid with bleeding disorders — matched against a patient's recorded history"></textarea>
+            </div>
+          </div>
           <details class="ph-hf-adv">
             <summary class="ph-hf-label">Notes</summary>
             <div class="field">
@@ -10945,6 +10976,7 @@
         // silently erase it just by opening the form
         phHerbApplyKindVisibility(false);
         document.getElementById("phHerbNote").value = h.note || "";
+        document.getElementById("phHerbClinicalNotes").value = h.clinicalNotes || "";
         document.getElementById("phHerbSubmitBtn").textContent = "Save changes";
         document.getElementById("phHerbFormTitle").textContent = "🌿 Edit herb";
         // it's a fixed overlay drawer now (STEP 3) -- always fully on-screen
@@ -11276,6 +11308,7 @@
           return (k === "formula") === phAutoFormulaName(name) ? "" : k;
         })(),
         note: document.getElementById("phHerbNote").value.trim(),
+        clinicalNotes: document.getElementById("phHerbClinicalNotes").value.trim(),
       };
       // her ask (2026-08-06): a herb can carry several suppliers, each with
       // its own bottle price — the ★ row is what Restock/display actually
@@ -13030,6 +13063,80 @@
       notes: (rec && rec.medicalHistoryNotes || "").trim(),
     };
   }
+  // Clinical reference cross-check (her ask 2026-08-19): string-matches a
+  // herb/formula's own Clinical notes text (h.clinicalNotes, free text she
+  // writes herself in the herb/formula edit form) against whatever's already
+  // recorded as "yes" on THIS patient's Medical history, a ticked Condition,
+  // or Pregnant. This never invents a clinical fact of its own -- it only
+  // searches text she already wrote for a word that matches something she
+  // already recorded. A blank Clinical notes field never flags anything.
+  const PH_CLINICAL_KEYWORDS = {
+    diabetes: ["diabet"], hypertension: ["hypertension", "high blood pressure"],
+    liver_disease: ["liver"], kidney_disease: ["kidney", "renal"],
+    heart_disease: ["heart", "cardiac"], autoimmune_disorder: ["autoimmune"],
+    bleeding_disorder: ["bleeding", "blood thinner", "anticoagul"], thyroid_disorder: ["thyroid"],
+    heavy_menstrual_bleeding: ["menstrual bleeding", "menorrhagia"], dysmenorrhoea: ["dysmenorrh", "menstrual pain"],
+    irregular_menstruation: ["irregular menst"], amenorrhea: ["amenorrh"],
+    pms: ["pms", "premenstrual"], pmdd: ["pmdd"],
+    uterine_fibroids: ["fibroid"], adenomyosis: ["adenomyosis"],
+    ovarian_cysts: ["ovarian cyst"], endometriosis: ["endometriosis"],
+    pcos: ["pcos", "polycystic"], infertility_unexplained: ["infertil"],
+    history_of_miscarriage: ["miscarriage"], pregnant: ["pregnan", "nursing", "lactation", "breastfeed"],
+    vaginitis_vulvovaginitis: ["vaginitis", "vulvovaginitis"], bacterial_vaginosis: ["bacterial vaginosis"],
+    pid: ["pelvic inflammatory"], pelvic_pain: ["pelvic pain"], hpv_infection: ["hpv"],
+    perimenopause: ["perimenopause"], menopause: ["menopause"],
+  };
+  // the active keys behind phHistorySignals' display labels -- kept separate
+  // so the keyword map above can stay keyed on the same ids as
+  // PH_MEDHX/PH_COND_GROUPS rather than re-parsing display text
+  function phActiveHistoryKeys(name) {
+    const rec = phPatientPeek(name);
+    if (!rec) return [];
+    const keys = PH_MEDHX.filter(m => phMedHxVal(rec, m.k) === "yes").map(m => m.k);
+    phCondList(rec).forEach(k => keys.push(k));
+    return keys;
+  }
+  // null (no Clinical notes at all) | {notes, matched} for one herb/formula
+  // against one patient
+  function phClinicalFlag(h, name) {
+    const notes = ((h && h.clinicalNotes) || "").trim();
+    if (!notes) return null;
+    const low = notes.toLowerCase();
+    const matched = phActiveHistoryKeys(name).some(k => (PH_CLINICAL_KEYWORDS[k] || []).some(kw => low.includes(kw)));
+    return { notes, matched };
+  }
+  // the small pill next to an ingredient's name in the editor -- blue "has a
+  // note" when the herb just carries Clinical notes, red when that text
+  // matches something already recorded on this patient
+  function presClinicalFlagHtml(h, name) {
+    const f = phClinicalFlag(h, name);
+    if (!f) return "";
+    return f.matched
+      ? ` <span class="ph-ing-stockflag clinical-match" title="${esc(f.notes)}">⚠ caution</span>`
+      : ` <span class="ph-ing-stockflag clinical" title="${esc(f.notes)}">ⓘ note</span>`;
+  }
+  // the always-open banner above the ingredients when one or more of THIS
+  // script's herbs matches something on the patient's own record --
+  // informational only, same posture as every other flag in the app (never
+  // blocks Dispense)
+  function presClinicalWarningsHtml(t) {
+    if (presIsFormula(t)) return "";
+    const name = presPatientFor(t);
+    if (!name) return "";
+    const ings = presEffectiveIngs(t);
+    const hits = [];
+    ings.forEach(i => {
+      const h = presResolveLineName(i.herb || i.name);
+      if (!h) return;
+      const f = phClinicalFlag(h, name);
+      if (f && f.matched && !hits.some(x => x.herb === h.name)) hits.push({ herb: h.name, notes: f.notes });
+    });
+    if (!hits.length) return "";
+    return `<div class="ph-clinwarn">
+      <span class="ph-clinwarn-lead">⚠ Clinical caution — matches this patient's record</span>
+      ${hits.map(x => `<div class="ph-clinwarn-line"><b>${esc(phDispName(x.herb, false))}</b> — ${esc(x.notes)}</div>`).join("")}
+    </div>`;
+  }
   // the Medical History panel on the patient's own record (the open script IS
   // that record here). Tapping the already-active state is a no-op.
   function presMedHxPanelHtml(t) {
@@ -13123,6 +13230,7 @@
         <button type="button" class="ph-print-btn" data-pres-close="1">Close ×</button>
       </div>
       ${presHistoryBannerHtml(t)}
+      ${presClinicalWarningsHtml(t)}
       <div class="ph-pres-body${presThirdOpen ? "" : " ph-pres-body-collapsed"}">
       <div class="ph-pres-col-left">
       ${!isF ? `<div class="ph-pres-dose">
@@ -13612,6 +13720,11 @@
     if (!host) return;
     let list = presIngParsed();
     if (!list.length) { host.innerHTML = ""; return; }
+    // her ask (2026-08-19): the Clinical reference cross-check only makes
+    // sense against a real patient's own record, so it's skipped for a
+    // formula recipe (no single patient) or a brand-new draft (no id yet)
+    const _presT = PRESC.items.find(x => x.id === presOpenId);
+    const _clinName = (_presT && !presIsFormula(_presT)) ? presPatientFor(_presT) : "";
     // her ask: keep the ingredients grouped Formula-then-herbs, alphabetical
     // within each group (presIngSort). Write the sorted order back to the
     // textarea so the per-row grams/delete indices stay aligned — but never
@@ -13633,7 +13746,7 @@
         const h = presResolveLineName(i.name);
         return `<tr>
           <td class="ph-code">${h && phHerbCode(h) ? esc(phHerbCode(h)) : "—"}</td>
-          <td class="ph-name">${esc(phDispName(i.name, h ? phIsFormula(h) : null))}${h ? presStockFlagHtml(h) : ` <span class="ph-sub">not in inventory</span>`}</td>
+          <td class="ph-name">${esc(phDispName(i.name, h ? phIsFormula(h) : null))}${h ? presStockFlagHtml(h) + presClinicalFlagHtml(h, _clinName) : ` <span class="ph-sub">not in inventory</span>`}</td>
           <td class="ph-num qty"><input type="number" class="ph-qty-input" data-pres-ing-g="${ix}" value="${i.grams || 0}" min="0" step="any" aria-label="Grams of ${esc(i.name)}"><span class="ph-g-suffix">g</span></td>
           <td class="lvl">${h ? phStockBarPct(h.qty, h.low) : `<span class="ph-level-cell ph-level-none">—</span>`}</td>
           <td class="ph-pres-actions"><button class="del" data-pres-ing-del="${ix}" aria-label="Remove ${esc(i.name)}">×</button></td>
