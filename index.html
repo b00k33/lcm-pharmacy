@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260819-225609">
+<meta name="lcm-build" content="20260819-230421">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -2895,6 +2895,9 @@
      app's actual alert colour rather than another soft tint */
   #pharmacyPage .ph-pill.postage-warn { color: var(--ph-zero-deep); background: var(--ph-zero-tint); }
   #pharmacyPage .ph-warn-text { color: var(--ph-zero-deep); font-weight: 700; font-size: 11.5px; }
+  /* the "closing soon" twin of .ph-warn-text -- same shape, amber instead of
+     red, for the last hour before a pickup/post cutoff */
+  #pharmacyPage .ph-cutoff-soon { color: var(--ph-low-deep); font-weight: 700; font-size: 11.5px; }
   #pharmacyPage .ph-pill.prepping { color: var(--ph-prep-deep); background: var(--ph-prep-tint); }
   /* 🧪 Prepare panel (her ask 2026-08-19) -- an inline row that opens under a
      Scheduled dispense, same idiom as the existing Mailed/Invoiced action row
@@ -14906,6 +14909,73 @@
   // schedRowHtml's own ⚠ chip already computes (below), just named so the
   // Dashboard's Must-go-out-today card can sort on it too
   const schedIsBlocked = s => s.method !== "pickup" && !((s.mailing && s.mailing.address || "").trim());
+
+  /* ---- clinic-hours auto-defer (her spec 2026-08-19) --------------------
+     Nothing still waiting to go out is allowed to sit on a date that has
+     already passed. Each method has a real-world cutoff -- 6pm for a pickup
+     (the door shuts), 5pm for a post (the mail goes) -- and once that hour
+     passes, an undispensed job rolls to the next day. Two things happen in
+     one pass, both from the same rule `effective = max(date, today)`:
+       · a date already in the past is pulled forward to today
+       · today, past its cutoff, is pushed to tomorrow
+     so the queue only ever shows a date the job could still realistically
+     make. Once dispensedAt is set the date is frozen forever -- that's real
+     history now, the same permanent-dated-mark rule the log follows.
+     Deliberately plain next-calendar-day: no weekend skipping (she hasn't
+     confirmed she wants it, and guessing her Saturdays would be worse than
+     showing a date she can move herself). */
+  const SCHED_CUTOFF = {
+    pickup:  { hour: 18, label: "6pm", reason: "6pm cutoff" },
+    postage: { hour: 17, label: "5pm", reason: "5pm post cutoff" },
+  };
+  const schedCutoff = s => SCHED_CUTOFF[s.method === "pickup" ? "pickup" : "postage"];
+  const schedTomorrowKey = () => { const d = new Date(TODAY); d.setDate(d.getDate() + 1); return keyOf(d); };
+  // Pure data pass: returns true if anything actually moved, so callers only
+  // save + re-render when there's a real change (this runs every minute).
+  function schedAutoDeferSweep() {
+    const todayKey = keyOf(TODAY), now = new Date();
+    const nowMins = now.getHours() * 60 + now.getMinutes();
+    let changed = false;
+    (PRESC.scheduled || []).forEach(s => {
+      if (s.dispensedAt) return;                 // frozen once it's gone out
+      const due = schedDueDate(s);
+      if (!due) return;                          // no date set yet -- nothing to defer
+      const cut = schedCutoff(s);
+      let eff = due < todayKey ? todayKey : due;                 // max(date, today)
+      if (eff === todayKey && nowMins >= cut.hour * 60) eff = schedTomorrowKey();
+      if (eff === due) return;
+      // overwritten, never appended -- one "why is this date not the one I
+      // typed" answer per entry, always the most recent
+      s.lastAutoMove = { from: due, to: eff, reason: cut.reason, at: Date.now() };
+      // write back to whichever field schedDueDate just read from, so a pickup
+      // with only a legacy targetDate doesn't silently grow a second date
+      if (s.method === "pickup" && s.pickupDate) s.pickupDate = eff; else s.targetDate = eff;
+      changed = true;
+    });
+    if (changed) savePresc();
+    return changed;
+  }
+  // The one-line note under the Target date. Three states, most urgent first.
+  function schedCutoffNoteHtml(s) {
+    if (s.dispensedAt) return "";
+    const due = schedDueDate(s);
+    if (!due) return "";
+    const mv = s.lastAutoMove;
+    // Shown for as long as the move is still the reason this entry sits where
+    // it does -- it clears itself the moment she picks a new date by hand or
+    // dispenses it. (Her spec left the clearing point open; tying it to
+    // mv.to === due means a job that keeps slipping keeps saying so, instead
+    // of the note quietly vanishing overnight and hiding the slip.)
+    if (mv && mv.to === due) {
+      return `<span class="ph-warn-text" style="display:block">was ${esc(schedDateStr(mv.from))} · missed cutoff</span>`;
+    }
+    if (due !== keyOf(TODAY)) return "";
+    const cut = schedCutoff(s), now = new Date();
+    const mins = cut.hour * 60 - (now.getHours() * 60 + now.getMinutes());
+    if (mins <= 0) return "";                    // sweep will move it within the minute
+    if (mins < 60) return `<span class="ph-cutoff-soon" style="display:block">⏱ ${mins}m until cutoff</span>`;
+    return `<span class="ph-formula-meta" style="display:block">→ tomorrow after ${cut.label}</span>`;
+  }
   function schedStatus(s) {
     if (s.dispensedAt && s.mailedAt && s.invoiced) return "completed";
     if (s.dispensedAt) return "inprogress";
@@ -15047,6 +15117,22 @@
     PRESC.schedMethodMigrated = true;
     savePresc();
   }
+  // Once at load, before anything paints, so the queue never shows a date
+  // that's already been overtaken -- then every minute while the app is open.
+  schedAutoDeferSweep();
+  setInterval(() => {
+    if (document.hidden) return;                 // catch up on visibilitychange instead
+    if (!schedAutoDeferSweep()) return;          // nothing moved -- don't touch the DOM
+    // never yank the page out from under her mid-edit: a defer can land at any
+    // second, including while she's typing an address into the schedule form
+    const a = document.activeElement;
+    if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
+    renderPharmacy();
+  }, 60 * 1000);
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) return;
+    if (schedAutoDeferSweep()) renderPharmacy();
+  });
   const schedDateStr = k => { const d = parseKey(k); return `${d.getDate()} ${MON_SHORT[d.getMonth()]}`; };
   const schedTimeStr = ms => new Date(ms).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
   let schedFormOpen = false, schedFormPresetId = null, schedFormMethod = "postage", schedFormDraft = {}, schedOpenAction = null, schedShowCompleted = false;
@@ -15443,7 +15529,7 @@
     const actionHtml = schedActionFormHtml(s);
     const prepHtml = schedPrepOpenId === s.id ? schedPrepPanelHtml(s) : "";
     return `<tr>
-      <td style="white-space:nowrap">${schedDateStr(schedDueDate(s))}</td>
+      <td style="white-space:nowrap">${schedDateStr(schedDueDate(s))}${schedCutoffNoteHtml(s)}</td>
       <td><b>${esc(phTitle(patient || "—"))}</b>${!t ? ` <span class="ph-formula-meta">(deleted)</span>` : ""}</td>
       <td>${methodChip}${methodSub ? `<span class="ph-formula-meta" style="display:block">${esc(methodSub)}</span>` : ""}</td>
       <td>${schedStatusCellHtml(s)}</td>
