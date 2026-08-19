@@ -2526,7 +2526,57 @@
   /* the compact Dosage & price panel — deepened from the pale app-wide tint
      (her ask 2026-08-05: "more dark green") so this, the biggest block after
      the table, actually reads as green rather than near-white */
-  #pharmacyPage .ph-pres-dose {
+  /* Medical history: one row per item, each a real three-state. Separated by
+     space and tone, not boxes (rulebook), and the three buttons share the app's
+     one pill shape. Grey = not asked, green = no, blue = yes (her mockup). */
+  #pharmacyPage .ph-medhx { margin-top: 8px; }
+  #pharmacyPage .ph-medhx-row {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px;
+    padding: 4px 0; border-bottom: 1px solid var(--ph-line);
+  }
+  #pharmacyPage .ph-medhx-row:last-of-type { border-bottom: none; }
+  #pharmacyPage .ph-medhx-name { flex: 1 1 120px; min-width: 0; font-size: 12.5px; }
+  #pharmacyPage .ph-medhx-seg { flex: none; display: inline-flex; gap: 4px; }
+  #pharmacyPage .ph-medhx-btn {
+    font-family: inherit; font-size: 11px; font-weight: 600; cursor: pointer;
+    border: 1px solid var(--ph-line); border-radius: 999px; padding: 4px 10px;
+    background: var(--ph-white); color: var(--ph-soft); min-height: 28px;
+  }
+  #pharmacyPage .ph-medhx-btn:hover { border-color: var(--ph-soft); color: var(--ph-ink); }
+  #pharmacyPage .ph-medhx-btn.unasked.on { background: var(--ph-stopped-tint); border-color: var(--ph-stopped); color: var(--ph-ink); }
+  #pharmacyPage .ph-medhx-btn.no.on { background: var(--ph-green-tint); border-color: var(--ph-green); color: var(--ph-green-deep); }
+  #pharmacyPage .ph-medhx-btn.yes.on { background: var(--ph-blue-tint); border-color: var(--ph-blue); color: var(--ph-blue-deep); }
+  #pharmacyPage .ph-medhx-notes-lbl {
+    display: block; margin: 12px 0 4px; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.07em; text-transform: uppercase; color: var(--ph-soft);
+  }
+  /* the banner across the top of the editor -- informational only */
+  #pharmacyPage .ph-hxbanner {
+    margin: 8px 16px 0; border-radius: 12px; overflow: hidden;
+    background: var(--ph-blue-tint);
+  }
+  #pharmacyPage .ph-hxbanner.preg { background: var(--ph-gold-tint); }
+  #pharmacyPage .ph-hxbanner-top {
+    width: 100%; display: flex; align-items: center; gap: 8px; text-align: left;
+    font-family: inherit; font-size: 12.5px; cursor: pointer;
+    border: none; background: none; padding: 8px 12px; color: var(--ph-ink);
+    min-height: 44px;
+  }
+  #pharmacyPage .ph-hxbanner-lead { flex: none; font-weight: 700; color: var(--ph-blue-deep); }
+  #pharmacyPage .ph-hxbanner.preg .ph-hxbanner-lead { color: var(--ph-gold-deep); }
+  #pharmacyPage .ph-hxbanner-sum { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #pharmacyPage .ph-hxbanner-caret { margin-left: auto; flex: none; color: var(--ph-soft); }
+  #pharmacyPage .ph-hxbanner-detail { padding: 0 12px 10px; font-size: 12px; }
+  #pharmacyPage .ph-hxbanner-line { padding: 2px 0; }
+  #pharmacyPage .ph-hxbanner-line b {
+    display: inline-block; min-width: 104px; font-size: 11px; letter-spacing: 0.05em;
+    text-transform: uppercase; color: var(--ph-soft);
+  }
+  @media (max-width: 700px) {
+    #pharmacyPage .ph-hxbanner { margin: 8px 0 0; }
+    #pharmacyPage .ph-medhx-name { flex: 1 1 100%; }
+    #pharmacyPage .ph-hxbanner-line b { min-width: 0; display: block; }
+  }  #pharmacyPage .ph-pres-dose {
     margin-top: 8px; padding: 8px 12px; border-radius: 12px;
     background: color-mix(in oklab, var(--ph-green) 16%, var(--ph-green-tint));
   }
@@ -10174,7 +10224,23 @@
       // toggles, no data to move, so a straight re-render is safe here (unlike the
       // autosave debounce, these only ever fire from a deliberate click)
       if (e.target.closest("[data-pres-name-toggle]")) { presNameOpen = !presNameOpen; renderPresPanel(); return; }
-      if (e.target.closest("[data-pres-notes-toggle]")) { presNotesOpen = !presNotesOpen; renderPresPanel(); return; }
+      // set one medical-history item. Tapping the state it is ALREADY on is a
+      // no-op -- she switches by tapping a different one, never by un-toggling
+      // back to "unasked" by accident.
+      const medhxBtn = e.target.closest("[data-medhx-set]");
+      if (medhxBtn) {
+        const t0 = PRESC.items.find(x => x.id === presOpenId);
+        const nm = t0 ? presPatientFor(t0) : "";
+        if (!nm) return;
+        const [key, val] = medhxBtn.dataset.medhxSet.split(":");
+        const rec = phPatientRec(nm);
+        if (phMedHxVal(rec, key) === val) return;      // already on -> no-op
+        rec.medicalHistory[key] = val;
+        savePharmacy();
+        renderPresPanel();
+        return;
+      }
+      if (e.target.closest("[data-pres-hx-toggle]")) { presHxOpen = !presHxOpen; renderPresPanel(); return; }      if (e.target.closest("[data-pres-notes-toggle]")) { presNotesOpen = !presNotesOpen; renderPresPanel(); return; }
       if (e.target.closest("[data-pres-hist-toggle]")) { presHistOpen = !presHistOpen; renderPresPanel(); return; }
       if (e.target.closest("[data-pres-third-toggle]")) { presThirdOpen = !presThirdOpen; renderPresPanel(); return; }
       // flush BEFORE clearing presOpenId — the pending write is looked up by it,
@@ -11301,7 +11367,12 @@
         presAutoSaveTemplate();
         return;
       }
-      if (e.target.id === "refGrams") { refGrams = e.target.value; phClearConfirms(); renderRefPreview(); }
+      if (e.target.id === "presMedHxNotes") {
+        const t0 = PRESC.items.find(x => x.id === presOpenId);
+        const nm = t0 ? presPatientFor(t0) : "";
+        if (nm) { phPatientRec(nm).medicalHistoryNotes = e.target.value; savePharmacy(); }
+        return;
+      }      if (e.target.id === "refGrams") { refGrams = e.target.value; phClearConfirms(); renderRefPreview(); }
     });
 
     // inline cell edits commit on blur or Enter (Escape cancels) — the input only
@@ -12758,6 +12829,118 @@
       `${phFmtG((t.ingredients || []).reduce((a, i) => a + (i.grams || 0), 0))} g`,
     ].filter(Boolean).join(" · ");
   }
+  /* ============================================================
+     MEDICAL HISTORY (her spec 2026-08-19) — a real three-state per item.
+     "unasked" (nothing recorded) is deliberately DISTINCT from "no" (asked,
+     patient confirmed they don't have it): her words, "have an option to show
+     no to hypertension so i can see that i have already asked."
+
+     This app has no patient entity — presPatientFor() is just the template's
+     name — so one history per patient lives here, keyed by the patient name,
+     inside PHARMACY. That way a patient with three scripts has ONE history
+     (not three diverging ones), and it inherits savePharmacy()'s shrink guard
+     and the existing backups instead of needing a new storage key.
+     ============================================================ */
+  const PH_MEDHX = [
+    { k: "diabetes", label: "Diabetes" },
+    { k: "hypertension", label: "Hypertension" },
+    { k: "liver_disease", label: "Liver disease" },
+    { k: "kidney_disease", label: "Kidney disease" },
+    { k: "heart_disease", label: "Heart disease" },
+    { k: "autoimmune_disorder", label: "Autoimmune disorder" },
+    { k: "bleeding_disorder", label: "Bleeding disorder / blood thinners" },
+    { k: "thyroid_disorder", label: "Thyroid disorder" },
+  ];
+  const PH_MEDHX_STATES = [
+    { v: "unasked", label: "Not asked" },
+    { v: "no", label: "No" },
+    { v: "yes", label: "Yes" },
+  ];
+  const phPatientKey = n => String(n || "").trim().toLowerCase();
+  // read-only lookup: never creates a record, so merely opening a script
+  // doesn't write an empty history for every patient in the book
+  function phPatientPeek(name) {
+    const k = phPatientKey(name);
+    return (k && PHARMACY.patients && PHARMACY.patients[k]) || null;
+  }
+  // the writable one — only called when she actually records something
+  function phPatientRec(name) {
+    const k = phPatientKey(name);
+    if (!k) return null;
+    if (!PHARMACY.patients) PHARMACY.patients = {};
+    if (!PHARMACY.patients[k]) PHARMACY.patients[k] = { medicalHistory: {}, medicalHistoryNotes: "" };
+    const r = PHARMACY.patients[k];
+    if (!r.medicalHistory) r.medicalHistory = {};
+    if (r.medicalHistoryNotes == null) r.medicalHistoryNotes = "";
+    return r;
+  }
+  const phMedHxVal = (rec, k) => (rec && rec.medicalHistory && rec.medicalHistory[k]) || "unasked";
+  // What the banner surfaces. ONLY "yes" items — "no" and "unasked" are not a
+  // contraindication signal, so they stay on the record and off the banner.
+  // conditions[] is read defensively: that feature doesn't exist in this app
+  // yet, so this stays empty until it does, and needs no change when it lands.
+  function phHistorySignals(name) {
+    const rec = phPatientPeek(name);
+    const conds = (rec && Array.isArray(rec.conditions)) ? rec.conditions.slice() : [];
+    const pregnant = conds.some(c => phPatientKey(c) === "pregnant");
+    return {
+      medical: rec ? PH_MEDHX.filter(m => phMedHxVal(rec, m.k) === "yes").map(m => m.label) : [],
+      conditions: conds.filter(c => phPatientKey(c) !== "pregnant"),
+      pregnant,
+      notes: (rec && rec.medicalHistoryNotes || "").trim(),
+    };
+  }
+  // the Medical History panel on the patient's own record (the open script IS
+  // that record here). Tapping the already-active state is a no-op.
+  function presMedHxPanelHtml(t) {
+    const name = presPatientFor(t);
+    if (!name) return "";
+    const rec = phPatientPeek(name);
+    const notes = (rec && rec.medicalHistoryNotes) || "";
+    return `<div class="ph-medhx">
+      <div class="ph-tmpl-sec"><span>\u2695 Medical history</span></div>
+      ${PH_MEDHX.map(m => {
+        const cur = phMedHxVal(rec, m.k);
+        return `<div class="ph-medhx-row">
+          <span class="ph-medhx-name">${esc(m.label)}</span>
+          <span class="ph-medhx-seg" role="radiogroup" aria-label="${esc(m.label)}">
+            ${PH_MEDHX_STATES.map(st => `<button type="button" class="ph-medhx-btn ${st.v}${cur === st.v ? " on" : ""}" data-medhx-set="${m.k}:${st.v}" aria-pressed="${cur === st.v ? "true" : "false"}">${st.label}</button>`).join("")}
+          </span>
+        </div>`;
+      }).join("")}
+      <label class="ph-medhx-notes-lbl" for="presMedHxNotes">Other / allergies / current medications</label>
+      <textarea id="presMedHxNotes" rows="2" placeholder="Anything else worth knowing before writing a script\u2026">${esc(notes)}</textarea>
+    </div>`;
+  }
+  // the banner across the top of the editor. Informational ONLY — it never
+  // checks a herb against anything, never warns, never blocks (her open item 3).
+  function presHistoryBannerHtml(t) {
+    const name = presPatientFor(t);
+    if (!name) return "";
+    const sig = phHistorySignals(name);
+    const all = (sig.pregnant ? ["Pregnant"] : []).concat(sig.medical, sig.conditions);
+    // nothing recorded at all -> no banner (rather than an empty "History:")
+    if (!all.length && !sig.notes) return "";
+    const shown = all.slice(0, 3);
+    const more = all.length - shown.length;
+    const summary = all.length
+      ? `${shown.map(esc).join(" \u00B7 ")}${more > 0 ? ` \u2014 ${more} more` : ""}`
+      : "allergies / meds noted";
+    return `<div class="ph-hxbanner${presHxOpen ? " open" : ""}${sig.pregnant ? " preg" : ""}">
+      <button type="button" class="ph-hxbanner-top" data-pres-hx-toggle="1" aria-expanded="${presHxOpen ? "true" : "false"}">
+        <span class="ph-hxbanner-lead">\u2695 History:</span>
+        <span class="ph-hxbanner-sum">${summary}</span>
+        <span class="ph-hxbanner-caret">${presHxOpen ? "\u25BE" : "\u25B8"}</span>
+      </button>
+      ${presHxOpen ? `<div class="ph-hxbanner-detail">
+        ${sig.medical.length ? `<div class="ph-hxbanner-line"><b>Medical</b> ${sig.medical.map(esc).join(" \u00B7 ")}</div>` : ""}
+        ${sig.conditions.length ? `<div class="ph-hxbanner-line"><b>Conditions</b> ${sig.conditions.map(esc).join(" \u00B7 ")}</div>` : ""}
+        ${sig.pregnant ? `<div class="ph-hxbanner-line"><b>Status</b> Pregnant</div>` : ""}
+        ${sig.notes ? `<div class="ph-hxbanner-line"><b>Allergies / meds</b> ${esc(sig.notes)}</div>` : ""}
+      </div>` : ""}
+    </div>`;
+  }
+  let presHxOpen = false;
   function renderPresPanel() {
     const el = presPanelEl();
     const other = [document.getElementById("presPanel"), document.getElementById("refPresPanel")]
@@ -12793,6 +12976,7 @@
         <button type="button" class="ph-sec-toggle ph-band-toggle" data-pres-name-toggle="1" aria-expanded="${presNameOpen ? "true" : "false"}">${presNameOpen ? "▾" : "▸"} Name &amp; type</button>
         <button type="button" class="ph-print-btn" data-pres-close="1">Close ×</button>
       </div>
+      ${presHistoryBannerHtml(t)}
       <div class="ph-pres-body${presThirdOpen ? "" : " ph-pres-body-collapsed"}">
       <div class="ph-pres-col-left">
       ${!isF ? `<div class="ph-pres-dose">
@@ -12898,6 +13082,7 @@
 
       <div class="ph-tmpl-sec"><span>History &amp; Notes</span><button type="button" class="ph-collapse-toggle" data-pres-third-toggle="1" aria-expanded="${presThirdOpen ? "true" : "false"}" title="Collapse this column">Collapse ▸</button></div>
 
+      ${!isF ? presMedHxPanelHtml(t) : ""}
       ${presPatientHistoryHtml(t)}
 
       <div class="ph-sec-divider"></div>
