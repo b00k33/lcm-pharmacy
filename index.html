@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260819-224608">
+<meta name="lcm-build" content="20260819-225609">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -9562,7 +9562,15 @@
     // drift bug this rebuild exists to fix (STEP 6's 3-vs-16 report).
     const items = PHARMACY.herbs.filter(h => {
       const k = phHerbStatusKey(h);
-      return k === "zero" || k === "low";
+      if (k !== "zero" && k !== "low") return false;
+      // her report (2026-08-19): she set GUI ZHI FU LING WAN to "Made manually
+      // (on site)" and it stayed sitting in Order these. You don't ORDER what
+      // you make -- it belongs in "Refill these formulas" instead. Same rule
+      // the rest of the app already applies: the Zero/Low listing and the
+      // Inventory cart cell both hide "Add to order" for in-house items, and
+      // herbNeedsOrder excludes them from the To-order queue. This widget was
+      // the one place that missed it.
+      return !phMadeInHouse(h);
     }).sort((a, b) => {
       const rank = h => phHerbStatusKey(h) === "zero" ? 0 : 1;   // Out, then Low
       return rank(a) - rank(b) || phByName(a, b);
@@ -9756,8 +9764,17 @@
   // formulas at/below their own reorder line -- the SAME low/zero comparison
   // phHerbStatusKey already runs, just scoped to phIsFormula(h)
   function phDashRefillList() {
-    return PHARMACY.herbs.filter(h => phIsFormula(h) && !h.stopped && h.qty != null && h.low != null && h.qty <= h.low)
-      .sort((a, b) => (a.qty / (a.low || 1)) - (b.qty / (b.low || 1)) || phByName(a, b));
+    return PHARMACY.herbs.filter(h => {
+      if (!phIsFormula(h) || h.stopped || h.qty == null) return false;
+      if (h.low != null && h.qty <= h.low) return true;
+      // Without this second branch, excluding in-house items from "Order these"
+      // (above) would make an in-house formula that has NO reorder line set
+      // vanish from the dashboard entirely -- QING FEI TANG is exactly that:
+      // made here, 0g, no "low at". Out of stock is reason enough to make more,
+      // reorder line or not. Kept narrow (in-house only) so bought formulas
+      // don't newly appear here just for hitting zero.
+      return h.qty <= 0 && phMadeInHouse(h);
+    }).sort((a, b) => (a.qty / (a.low || 1)) - (b.qty / (b.low || 1)) || phByName(a, b));
   }
   function phDashOpenRefill(herbId) {
     const h = PHARMACY.herbs.find(x => x.id === herbId);
