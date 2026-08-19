@@ -591,6 +591,28 @@
     position: absolute; right: 8px; pointer-events: none;
     font-size: 11px; font-weight: 700; color: var(--ph-faint);
   }
+  /* Quick amount chips under the grams field (her spec 2026-08-19). NOTE: the
+     grams field was already free-text and always editable -- these chips are a
+     shortcut INTO it, never the only way to set an amount. The active chip is
+     DERIVED from the field's current value at render time, so there is no
+     stored "is custom" flag that can drift. Wraps rather than overflowing at
+     360px, per the standing overflow rule. */
+  #pharmacyPage #phRefillWrap .ph-ref-amts {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px;
+  }
+  #pharmacyPage .ph-amt-chip {
+    display: inline-flex; align-items: baseline; gap: 5px;
+    font-family: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer;
+    border: 1px solid var(--ph-green-deep); border-radius: 999px;
+    background: var(--ph-cream); color: var(--ph-green-deep); padding: 3px 10px;
+  }
+  #pharmacyPage .ph-amt-chip:hover { background: #E4EFDD; }
+  #pharmacyPage .ph-amt-chip.on { background: var(--ph-green-deep); color: var(--ph-cream); }
+  #pharmacyPage .ph-amt-chip .ph-amt-g { font-weight: 400; font-size: 10.5px; opacity: .75; font-variant-numeric: tabular-nums; }
+  #pharmacyPage .ph-ref-custom {
+    font-size: 11px; font-weight: 700; color: var(--ph-soft);
+    border: 1px dashed var(--ph-line); border-radius: 999px; padding: 3px 9px;
+  }
   /* Recent refills -- one compact line per row (her ask 2026-08-15, replaces
      the wrapping multi-kind phLogRowHtml sentence layout) */
   #pharmacyPage .ph-ref-log-list { display: flex; flex-direction: column; }
@@ -10510,6 +10532,17 @@
         refRecipeId = ""; refGrams = ""; phClearConfirms(); renderRefill(); return;
       }
       if (e.target.closest("[data-ref-print]")) { refPrintSheet(); return; }
+      // A quick-amount chip just fills the grams field. There is deliberately NO
+      // separate "preset" path: refMake(), the N-of-N herb match and the
+      // insufficient-stock confirm all read refGrams, so a tapped amount and a
+      // typed one are the same thing by construction.
+      const refAmt = e.target.closest("[data-ref-amt]");
+      if (refAmt) {
+        refGrams = String(parseFloat(refAmt.dataset.refAmt));
+        phClearConfirms();
+        renderRefill();
+        return;
+      }
       if (e.target.closest("[data-ref-howmake-toggle]")) { refHowMakeOpen = !refHowMakeOpen; renderRefill(); return; }
       const loadRecipe = e.target.closest("[data-ref-load-recipe]");
       if (loadRecipe) { refRecipeId = loadRecipe.dataset.refLoadRecipe; renderRefill(); return; }
@@ -11162,7 +11195,7 @@
         presAutoSaveTemplate();
         return;
       }
-      if (e.target.id === "refGrams") { refGrams = e.target.value; phClearConfirms(); renderRefPreview(); }
+      if (e.target.id === "refGrams") { refGrams = e.target.value; phClearConfirms(); renderRefPreview(); refSyncAmtChips(); }
     });
 
     // inline cell edits commit on blur or Enter (Escape cancels) — the input only
@@ -14180,6 +14213,69 @@
      no stock target, no jars (her words: "i dont use jars").
      ============================================================ */
   let refRecipeId = "", refGrams = "";
+  // --- quick amounts (her spec 2026-08-19) -------------------------------
+  // Four fixed shortcuts into the grams field. The field itself was ALWAYS
+  // free-text; nothing here changes how a typed number behaves.
+  function refQuickAmounts(recipeTotalGrams) {
+    const t = Number(recipeTotalGrams) || 0;
+    if (!t) return [];
+    return [
+      { label: "Recipe", grams: t },
+      { label: "\u00D72", grams: t * 2 },
+      { label: "\u00D73", grams: t * 3 },
+      { label: "\u00D74", grams: t * 4 },
+    ];
+  }
+  // Highlight is DERIVED from the field's value, never stored -- so typing 380
+  // for a 190g recipe lights the x2 chip exactly as tapping it would, and no
+  // "is custom" flag exists to fall out of sync. Tolerance covers the rounding
+  // phFmtG already applies when it prints the chip's own gram figure.
+  function refAmtMatch(gramsValue, quicks) {
+    const v = parseFloat(gramsValue);
+    if (!isFinite(v) || v <= 0) return null;
+    return quicks.find(q => Math.abs(q.grams - v) < 0.005) || null;
+  }
+  function refAmtsHtml(recipe) {
+    if (!recipe) return "";
+    const quicks = refQuickAmounts(recipe.totalGrams);
+    if (!quicks.length) return "";
+    const hit = refAmtMatch(refGrams, quicks);
+    const typed = parseFloat(refGrams);
+    const chips = quicks.map(q => {
+      const on = hit && hit.label === q.label;
+      return `<button type="button" class="ph-amt-chip${on ? " on" : ""}" data-ref-amt="${q.grams}" aria-pressed="${on ? "true" : "false"}">${esc(q.label)}<span class="ph-amt-g">${phFmtG(q.grams)}g</span></button>`;
+    }).join("");
+    const custom = (!hit && isFinite(typed) && typed > 0)
+      ? `<span class="ph-ref-custom" title="Not one of the quick amounts \u2014 typed in by hand">\u270E Custom</span>` : "";
+    return `<div class="ph-ref-amts">${chips}${custom}</div>`;
+  }
+  // Typing must NOT re-render zone 1 -- that would rebuild #refGrams under her
+  // caret mid-keystroke -- so the chip row is updated in place instead. Still
+  // fully derived from the field's current value (same refAmtMatch compare as
+  // the initial render), so tapping and typing cannot disagree.
+  function refSyncAmtChips() {
+    const row = document.querySelector("#phRefillWrap .ph-ref-amts");
+    if (!row) return;
+    const chips = [...row.querySelectorAll(".ph-amt-chip")];
+    const hit = refAmtMatch(refGrams, chips.map(c => ({ label: c.dataset.refAmt, grams: parseFloat(c.dataset.refAmt) })));
+    chips.forEach(c => {
+      const on = !!hit && parseFloat(c.dataset.refAmt) === hit.grams;
+      c.classList.toggle("on", on);
+      c.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+    const typed = parseFloat(refGrams);
+    const want = !hit && isFinite(typed) && typed > 0;
+    let flag = row.querySelector(".ph-ref-custom");
+    if (want && !flag) {
+      flag = document.createElement("span");
+      flag.className = "ph-ref-custom";
+      flag.title = "Not one of the quick amounts \u2014 typed in by hand";
+      flag.textContent = "\u270E Custom";
+      row.appendChild(flag);
+    } else if (!want && flag) {
+      flag.remove();
+    }
+  }
   let refHowMakeOpen = false;   // her ask 2026-08-15 (mockup 12): collapsed by default, one inline link opens it
   let refRecipePage = 1;        // same shared pagination as Inventory/Log/Prescriptions (PH_PAGE_SIZE)
   // her report (2026-08-17): typed text that matches 2+ formula recipes must
@@ -14428,6 +14524,7 @@
                tap-Make-then-confirm is no longer needed. -->
           <button type="button" class="ph-name-link ph-ref-howlink" data-ref-howmake-toggle="1" title="How making works" aria-label="How making works">ⓘ</button>
         </div>
+        ${refAmtsHtml(recipe)}
         ${refPickAmbiguous.length ? `<div class="ph-ref-pick-list">
           <div class="ph-pick-h">${refPickAmbiguous.length} formulas match "${esc(refSearchRaw.trim())}" — pick one</div>
           ${refPickAmbiguous.map(r => `<div class="ph-pick-row" data-ref-pick="${r.id}" tabindex="0">
