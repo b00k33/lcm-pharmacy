@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260820-233000">
+<meta name="lcm-build" content="20260820-234500">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -2817,6 +2817,7 @@
   #pharmacyPage .ph-gd-detail-figs { display: flex; flex-direction: column; align-items: center; flex: 0 0 auto; }
   #pharmacyPage .ph-gd-detail-figs .ph-fig-svg { width: 72px; height: auto; }
   #pharmacyPage .ph-gd-detail-figs .ph-eye-svg { width: 88px; height: auto; margin-top: -6px; }
+  #pharmacyPage .ph-gd-fig-caption { margin-top: 4px; font-size: 10.5px; font-style: italic; color: var(--ph-soft); text-align: center; max-width: 96px; }
   #pharmacyPage .ph-gd-detail-title { flex: 1 1 auto; min-width: 160px; }
   #pharmacyPage .ph-gd-detail-title h3 { margin: 0; font-size: 18px; font-weight: 600; color: var(--ph-green-deep); }
   #pharmacyPage .ph-gd-detail-title h3 .cn { font-weight: 400; color: var(--ph-soft); font-size: 15px; }
@@ -12719,7 +12720,7 @@
       }
       const gdAxis = e.target.closest("[data-gd-build-axis]");
       if (gdAxis && phGdDraft) {
-        if (!phGdDraft.build) phGdDraft.build = { shoulder: 5, chest: 5, waist: 5, hip: 5, limb: 5 };
+        if (!phGdDraft.build) phGdDraft.build = Object.assign({}, PH_BUILD_DEFAULT);
         phGdDraft.build[gdAxis.dataset.gdBuildAxis] = parseFloat(gdAxis.value);
         const p = document.querySelector(".ph-gd-fig-preview");
         if (p) p.innerHTML = phBodyFigureSvg(phGdDraft.build, {});
@@ -14958,31 +14959,39 @@
   ];
   // presets = quick-fill starting points for the five build sliders, not a
   // closed set — every field stays a plain editable number afterward
-  // ("presets OR nudged", her STEP 2 wording)
+  // ("presets OR nudged", her STEP 2 wording). Values are literal half-width
+  // units in the figure's own 100-wide viewBox (see phBodyFigurePath below),
+  // not an abstract 0-10 scale -- lifted directly from her Visual diagnosis
+  // spec (2026-08-20), which names these exact numbers per seeded type. The
+  // "average"/neutral tuple (26·24·20·25·7) is also what she calls the
+  // stand-in figure for "build: not described" -- same numbers, two names.
+  const PH_BUILD_DEFAULT = { shoulder: 26, chest: 24, waist: 20, hip: 25, limb: 7 };
   const PH_BUILD_PRESETS = [
     ["notdescribed", "Not described", null],
-    ["average", "Average", { shoulder: 5, chest: 5, waist: 5, hip: 5, limb: 5 }],
-    ["thin", "Thin", { shoulder: 3.5, chest: 3, waist: 3, hip: 3.5, limb: 2.5 }],
-    ["verythin", "Very thin / delicate", { shoulder: 2.5, chest: 2, waist: 2, hip: 2.5, limb: 1.5 }],
-    ["bigger", "Bigger", { shoulder: 7.5, chest: 8, waist: 7, hip: 7, limb: 6.5 }],
-    ["hipwaistbutt", "Hip / waist / butt figure", { shoulder: 4, chest: 4.5, waist: 5, hip: 8, limb: 4 }],
-    ["roundmiddle", "Round middle, thin limbs", { shoulder: 4.5, chest: 6.5, waist: 8, hip: 6.5, limb: 2 }],
+    ["average", "Average / not described", Object.assign({}, PH_BUILD_DEFAULT)],
+    ["thin", "Thin", { shoulder: 22, chest: 19, waist: 15, hip: 19, limb: 5 }],
+    ["verythin", "Very thin / delicate", { shoulder: 19, chest: 16, waist: 13, hip: 16, limb: 4, head: 12 }],
+    ["bigger", "Bigger", { shoulder: 33, chest: 32, waist: 29, hip: 32, limb: 10, head: 15 }],
+    ["hipwaistbutt", "Hip / waist / butt figure", { shoulder: 25, chest: 23, waist: 22, hip: 35, limb: 7 }],
+    ["roundmiddle", "Round middle, thin limbs", { shoulder: 26, chest: 28, waist: 31, hip: 29, limb: 5 }],
   ];
   const phBuildVal = (build, axis, dflt) => (build && typeof build[axis] === "number" ? build[axis] : dflt);
 
   // ---- figure SVG: schematic only, drawn from the shape numbers on the
-  // record — her explicit STEP 5 ask, "NOT photographs, NOT clip art" ----
+  // record — her explicit STEP 5 ask, "NOT photographs, NOT clip art".
+  // Every axis is used as a literal viewBox coordinate now (her 2026-08-20
+  // Visual diagnosis spec gives exact per-type numbers) -- no hidden
+  // multiplier between the stored number and the drawn width. ----
   function phBodyFigurePath(build) {
-    const hw = v => 9 + v * 3.4;
-    const S = hw(phBuildVal(build, "shoulder", 5)), C = hw(phBuildVal(build, "chest", 5)),
-      W = hw(phBuildVal(build, "waist", 5)), H = hw(phBuildVal(build, "hip", 5));
+    const S = phBuildVal(build, "shoulder", PH_BUILD_DEFAULT.shoulder), C = phBuildVal(build, "chest", PH_BUILD_DEFAULT.chest),
+      W = phBuildVal(build, "waist", PH_BUILD_DEFAULT.waist), H = phBuildVal(build, "hip", PH_BUILD_DEFAULT.hip);
     const cx = 50, ySh = 34, yCh = 57, yWa = 83, yHip = 104;
     return `M ${cx - S} ${ySh} L ${cx - C} ${yCh} L ${cx - W} ${yWa} L ${cx - H} ${yHip} `
       + `L ${cx + H} ${yHip} L ${cx + W} ${yWa} L ${cx + C} ${yCh} L ${cx + S} ${ySh} Z`;
   }
   function phLegsPaths(build) {
-    const H = 9 + phBuildVal(build, "hip", 5) * 3.4;
-    const legW = 2.5 + phBuildVal(build, "limb", 5) * 1.7;
+    const H = phBuildVal(build, "hip", PH_BUILD_DEFAULT.hip);
+    const legW = phBuildVal(build, "limb", PH_BUILD_DEFAULT.limb);
     const cx = 50, yHip = 103, yFoot = 158;
     return [-1, 1].map(side => {
       const lx = cx + side * H * 0.5;
@@ -14990,9 +14999,9 @@
     });
   }
   function phArmsPaths(build) {
-    const S = 9 + phBuildVal(build, "shoulder", 5) * 3.4;
-    const W = 9 + phBuildVal(build, "waist", 5) * 3.4;
-    const armW = 2 + phBuildVal(build, "limb", 5) * 1.5;
+    const S = phBuildVal(build, "shoulder", PH_BUILD_DEFAULT.shoulder);
+    const W = phBuildVal(build, "waist", PH_BUILD_DEFAULT.waist);
+    const armW = phBuildVal(build, "limb", PH_BUILD_DEFAULT.limb) * 0.85;
     const cx = 50, ySh = 36, yWa = 81;
     return [-1, 1].map(side => {
       const sx = cx + side * (S - armW * 0.3);
@@ -15009,9 +15018,10 @@
     const legs = phLegsPaths(build).map(d => `<path d="${d}" class="ph-fig-leg"/>`).join("");
     const torso = `<path d="${phBodyFigurePath(build)}" class="ph-fig-torso"/>`;
     const ghost = opts.ghost ? `<path d="${phBodyFigurePath(null)}" class="ph-fig-ghost"/>` : "";
+    const headR = phBuildVal(build, "head", 13);
     return `<svg viewBox="0 0 100 170" class="ph-fig-svg" aria-hidden="true">`
       + ghost
-      + `<circle cx="50" cy="18" r="13" class="ph-fig-head"/>`
+      + `<circle cx="50" cy="18" r="${headR}" class="ph-fig-head"/>`
       + arms + torso + legs
       + `</svg>`;
   }
@@ -15121,7 +15131,9 @@
     if (!bt) return `<div class="ph-gd-empty">Select a body type to see its detail.</div>`;
     return `<div class="ph-gd-detail">
       <div class="ph-gd-detail-head">
-        <div class="ph-gd-detail-figs">${phBodyFigureSvg(bt.build, {})}${phEyePairSvg(bt.eyes, bt.doubleEyelid)}</div>
+        <div class="ph-gd-detail-figs">${phBodyFigureSvg(bt.build, {})}${phEyePairSvg(bt.eyes, bt.doubleEyelid)}
+          <div class="ph-gd-fig-caption">Build: ${esc(bt.buildCaption || "not described")}</div>
+        </div>
         <div class="ph-gd-detail-title">
           <h3>${esc(bt.name)}${bt.cn ? ` <span class="cn">${esc(bt.cn)}</span>` : ""}</h3>
           ${bt.desc ? `<p class="ph-gd-detail-desc">${esc(bt.desc)}</p>` : ""}
@@ -15158,7 +15170,9 @@
     const belongsTo = phGdBodyTypesForFormula(fp.name);
     return `<div class="ph-gd-detail">
       <div class="ph-gd-detail-head">
-        <div class="ph-gd-detail-figs">${phBodyFigureSvg(fp.build, {})}${phEyePairSvg(fp.eyes, fp.doubleEyelid)}</div>
+        <div class="ph-gd-detail-figs">${phBodyFigureSvg(fp.build, {})}${phEyePairSvg(fp.eyes, fp.doubleEyelid)}
+          <div class="ph-gd-fig-caption">Build: ${esc(fp.buildCaption || "not described")}</div>
+        </div>
         <div class="ph-gd-detail-title">
           <h3>${esc(fp.name)}${fp.cn ? ` <span class="cn">${esc(fp.cn)}</span>` : ""}</h3>
           ${phGdStockChip(fp.name)}
@@ -15276,11 +15290,12 @@
     phGdDraft = existing ? {
       kind: "bt", id: existing.id, name: existing.name, cn: existing.cn || "", desc: existing.desc || "",
       eyes: existing.eyes || "notdescribed", doubleEyelid: !!existing.doubleEyelid, build: existing.build || null,
+      buildCaption: existing.buildCaption || "",
       signsText: (existing.signs || []).join("\n"), familyText: (existing.family || []).join("\n"),
       sources: (existing.sources || []).map(s => Object.assign({}, s)),
     } : {
       kind: "bt", id: "new", name: "", cn: "", desc: "", eyes: "notdescribed", doubleEyelid: false, build: null,
-      signsText: "", familyText: "", sources: [],
+      buildCaption: "", signsText: "", familyText: "", sources: [],
     };
     document.getElementById("phGdModalBackdrop").hidden = false;
     document.getElementById("phGdModal").hidden = false;
@@ -15291,11 +15306,12 @@
     phGdDraft = existing ? {
       kind: "fp", id: existing.id, name: existing.name, cn: existing.cn || "", bing: existing.bing || "",
       eyes: existing.eyes || "notdescribed", doubleEyelid: !!existing.doubleEyelid, build: existing.build || null,
+      buildCaption: existing.buildCaption || "",
       signsText: (existing.signs || []).join("\n"),
       sources: (existing.sources || []).map(s => Object.assign({}, s)),
     } : {
       kind: "fp", id: "new", name: "", cn: "", bing: "", eyes: "notdescribed", doubleEyelid: false, build: null,
-      signsText: "", sources: [],
+      buildCaption: "", signsText: "", sources: [],
     };
     document.getElementById("phGdModalBackdrop").hidden = false;
     document.getElementById("phGdModal").hidden = false;
@@ -15314,11 +15330,11 @@
     const sources = d.sources.filter(s => (s.who && s.who.trim()) || (s.quote && s.quote.trim()));
     if (d.kind === "bt") {
       const family = d.familyText.split("\n").map(s => s.trim()).filter(Boolean);
-      const fields = { name: d.name.trim(), cn: d.cn.trim(), desc: d.desc.trim(), eyes: d.eyes, doubleEyelid: d.doubleEyelid, build: d.build, signs, family, sources, updatedAt: Date.now() };
+      const fields = { name: d.name.trim(), cn: d.cn.trim(), desc: d.desc.trim(), eyes: d.eyes, doubleEyelid: d.doubleEyelid, build: d.build, buildCaption: d.buildCaption.trim(), signs, family, sources, updatedAt: Date.now() };
       if (d.id === "new") { const rec = Object.assign({ id: uid() }, fields); phBtList().push(rec); phGdSelectedBt = rec.id; }
       else Object.assign(phBtById(d.id), fields);
     } else {
-      const fields = { name: d.name.trim(), cn: d.cn.trim(), bing: d.bing.trim(), eyes: d.eyes, doubleEyelid: d.doubleEyelid, build: d.build, signs, sources, updatedAt: Date.now() };
+      const fields = { name: d.name.trim(), cn: d.cn.trim(), bing: d.bing.trim(), eyes: d.eyes, doubleEyelid: d.doubleEyelid, build: d.build, buildCaption: d.buildCaption.trim(), signs, sources, updatedAt: Date.now() };
       if (d.id === "new") { const rec = Object.assign({ id: uid() }, fields); phFpList().push(rec); phGdSelectedFp = rec.id; }
       else Object.assign(phFpById(d.id), fields);
     }
@@ -15359,10 +15375,11 @@
           </div>
           <div class="ph-gd-eye-preview">${phEyePairSvg(d.eyes, d.doubleEyelid)}</div>
         </div>
+        <label class="ph-gd-field"><span>Build caption</span><input type="text" data-gd-f="buildCaption" class="field-bare" value="${esc(d.buildCaption)}" placeholder="e.g. thin, or not described"></label>
         <div class="ph-gd-field">
           <span>Build</span>
           <div class="ph-gd-preset-row">${PH_BUILD_PRESETS.map(([k, l]) => `<button type="button" class="ph-gd-preset-btn" data-gd-preset="${k}">${esc(l)}</button>`).join("")}</div>
-          ${d.build ? `<div class="ph-gd-sliders">${["shoulder", "chest", "waist", "hip", "limb"].map(ax => `<label class="ph-gd-slider"><span>${ax}</span><input type="range" min="0" max="10" step="0.5" data-gd-build-axis="${ax}" value="${d.build[ax]}"></label>`).join("")}</div>` : `<div class="ph-gd-empty-inline">Not described</div>`}
+          ${d.build ? `<div class="ph-gd-sliders">${["shoulder", "chest", "waist", "hip", "limb", "head"].map(ax => `<label class="ph-gd-slider"><span>${ax}</span><input type="range" min="0" max="40" step="1" data-gd-build-axis="${ax}" value="${phBuildVal(d.build, ax, ax === "head" ? 13 : PH_BUILD_DEFAULT[ax])}"></label>`).join("")}</div>` : `<div class="ph-gd-empty-inline">Not described</div>`}
           <div class="ph-gd-fig-preview">${phBodyFigureSvg(d.build, {})}</div>
         </div>
         <div class="ph-gd-field">
@@ -19188,44 +19205,44 @@
   // .formulaPres / .tongueNotes ONCE, guarded below -- after that it's
   // ordinary data, editable/deletable like anything else she adds herself. ----
   const PH_FBR_SEED_BODY_TYPES = [
-    { name: "Ban Xia", cn: "半夏", eyes: "round", doubleEyelid: true, build: null,
+    { name: "Ban Xia", cn: "半夏", eyes: "round", doubleEyelid: true, build: null, buildCaption: "not described",
       signs: ["Round eyes", "Double eyelid", "Blinky / anxious", "Digestive issues", "Plum-stone throat", "Reflux", "Two lines on tongue"],
       family: ["Ban Xia Xie Xin Tang", "Ban Xia Hou Po Tang", "Xiao Ban Xia Tang", "Wen Dan Tang"],
       sources: [{ type: "mick", who: "Mick", date: "2024-06-28", quote: "Ban xia — round eyes, double eye lid, digestive issues, or plum stone throat, reflux, ban xia can have 2 lines on tongue, blinky (nervous system issues/anxious)." }] },
-    { name: "Chai Hu", cn: "柴胡", eyes: "downturned", doubleEyelid: false, build: { shoulder: 3.5, chest: 3, waist: 3, hip: 3.5, limb: 2.5 },
+    { name: "Chai Hu", cn: "柴胡", eyes: "downturned", doubleEyelid: false, build: { shoulder: 22, chest: 19, waist: 15, hip: 19, limb: 5 }, buildCaption: "thin",
       signs: ["Thin build", "Introvert", "Depression picture", "Auto-immune", "Viral", "Skin issues", "Poor appetite", "Irritability", "Hot flushes", "Hot and cold"],
       family: ["Xiao Chai Hu Tang", "Da Chai Hu Tang", "Chai Hu Jia Long Gu Mu Li Tang", "Chai Hu Gui Zhi Tang", "Chai Hu Gui Zhi Gan Jiang Tang"],
       sources: [
         { type: "mick", who: "Mick", date: "2024-06-28", quote: "I know for sure that ch — introvert." },
         { type: "mick", who: "Mick", date: "2024-11-05", quote: "Ren: Skinny body type (eyes — sad cat face). Bing — auto immune, viral, skin issues, poor appetite, irritability, hot flushes, hot and cold." },
       ] },
-    { name: "Gui Zhi", cn: "桂枝", eyes: "notdescribed", doubleEyelid: false, build: { shoulder: 2.5, chest: 2, waist: 2, hip: 2.5, limb: 1.5 },
+    { name: "Gui Zhi", cn: "桂枝", eyes: "notdescribed", doubleEyelid: false, build: { shoulder: 19, chest: 16, waist: 13, hip: 16, limb: 4, head: 12 }, buildCaption: "very thin / delicate — “the skinny twig”",
       signs: ["Skinny / delicate", "Bright eyes", "Tongue dull at heart region, or pale overall"],
       family: ["Gui Zhi Tang", "Gui Zhi Fu Ling Wan"],
       sources: [
         { type: "mick", who: "Mick", date: "2024-06-28", quote: "He can be either a chai hu or a Gui Zhi — the skinny twig." },
         { type: "mick", who: "Mick", date: "2024-11-19", quote: "When using gz — tongue must have dark/dull colour on the ht region of tongue or the entire tongue is pale." },
       ] },
-    { name: "Da Huang", cn: "大黄", eyes: "notdescribed", doubleEyelid: false, build: { shoulder: 7.5, chest: 8, waist: 7, hip: 7, limb: 6.5 },
+    { name: "Da Huang", cn: "大黄", eyes: "notdescribed", doubleEyelid: false, build: { shoulder: 33, chest: 32, waist: 29, hip: 32, limb: 10, head: 15 }, buildCaption: "bigger",
       signs: ["Bigger build", "Louder"],
       family: [],
       sources: [{ type: "mick", who: "Mick", date: "2024-06-28", quote: "Da huang would be bigger and louder." }] },
-    { name: "Ma Huang", cn: "麻黄", eyes: "notdescribed", doubleEyelid: false, build: null,
+    { name: "Ma Huang", cn: "麻黄", eyes: "notdescribed", doubleEyelid: false, build: null, buildCaption: "not described",
       signs: [],
       family: [],
       sources: [{ type: "mick", who: "Mick", date: "2024-06-28", quote: "You can have a ban xia personality but a ma huang body constitution." }] },
   ];
   const PH_FBR_SEED_FORMULA_PRES = [
-    { name: "Wu Ling San", cn: "五苓散", eyes: "notdescribed", doubleEyelid: false, build: { shoulder: 4, chest: 4.5, waist: 5, hip: 8, limb: 4 }, bing: "",
+    { name: "Wu Ling San", cn: "五苓散", eyes: "notdescribed", doubleEyelid: false, build: { shoulder: 25, chest: 23, waist: 22, hip: 35, limb: 7 }, buildCaption: "hip / waist / butt figure", bing: "",
       signs: ["Hip / waist / butt figure", "Brain fog", "Alternating stools"],
       sources: [{ type: "mick", who: "Mick", date: "2025-05-19", quote: "If someone got a wuling san hip waist butt figure, but the tongue is not a fat tongue, but got brain fog, alternate bowl stool — can we still give them wulingsan?" }] },
-    { name: "Ban Xia Xie Xin Tang", cn: "半夏泻心汤", eyes: "round", doubleEyelid: false, build: { shoulder: 4.5, chest: 6.5, waist: 8, hip: 6.5, limb: 2 }, bing: "",
+    { name: "Ban Xia Xie Xin Tang", cn: "半夏泻心汤", eyes: "round", doubleEyelid: false, build: { shoulder: 26, chest: 28, waist: 31, hip: 29, limb: 5 }, buildCaption: "round middle, thin limbs", bing: "",
       signs: ["Round build", "Round face", "Skinny arms and legs", "Greasy tongue", "Sticky stools", "Hot and cold tummy", "Red lips", "Yellow greasy coat at root"],
       sources: [
         { type: "own", who: "my case notes", date: "2025-06-27", quote: "overweight, round in middle, skinny arms and legs… greasy tongue, sticky poo" },
         { type: "mick", who: "Mick", date: "2024-09-20", quote: "Bxxxt is for loose stools, strong odor and sticky, rebellious stomach, greasy yellow coat at the root of tongue." },
       ] },
-    { name: "Wen Dan Tang", cn: "温胆汤", eyes: "big", doubleEyelid: false, build: null, bing: "",
+    { name: "Wen Dan Tang", cn: "温胆汤", eyes: "big", doubleEyelid: false, build: null, buildCaption: "not described", bing: "",
       signs: ["Big eyes", "Blinky", "Nervous system issues", "Scared", "Motion sickness", "Fear of heights"],
       sources: [{ type: "mick", who: "Mick", date: "2026-07-07", quote: "Wdt — big eyes, blinky, nervous system issues, scared, motion sickness, fear of heights." }] },
   ];
@@ -19269,6 +19286,28 @@
     savePharmacy();
     // no console.log here, deliberately -- her STEP 11 privacy ask covers this
     // whole feature ("no console logging"), not just the quote text itself
+  })();
+  // ---- V2 (her Visual diagnosis spec, 2026-08-20): the exact figure-number
+  // scale + build captions for the 8 seeded types, matched by name -- V1
+  // above already ran once and can't reseed (it's guarded), so this patches
+  // ONLY build/buildCaption on the known seed records, leaving anything she
+  // may have since edited (signs, eyes, sources, family) completely alone.
+  // Three of the eight numbers conflicted with what's already live (Chai
+  // Hu's "Viral" sign, Gui Zhi's eyes, BXXXT's eyes) -- she confirmed keeping
+  // what's live for all three, so only the drawing numbers move here, never
+  // eyes/signs.
+  (function phSeedFbrBuildV2() {
+    if (PHARMACY.fbrBuildV2) return;
+    const byName = list => Object.fromEntries(list.map(r => [r.name, { build: r.build, buildCaption: r.buildCaption }]));
+    const patch = Object.assign({}, byName(PH_FBR_SEED_BODY_TYPES), byName(PH_FBR_SEED_FORMULA_PRES));
+    (PHARMACY.bodyTypes || []).concat(PHARMACY.formulaPres || []).forEach(rec => {
+      const p = patch[rec.name];
+      if (!p) return;
+      rec.build = p.build ? Object.assign({}, p.build) : null;
+      rec.buildCaption = p.buildCaption;
+    });
+    PHARMACY.fbrBuildV2 = true;
+    savePharmacy();
   })();
 
   renderPharmacy();
