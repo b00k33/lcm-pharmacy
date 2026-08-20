@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260820-183000">
+<meta name="lcm-build" content="20260820-190500">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -11274,6 +11274,12 @@
         renderPharmacy();
         return;
       }
+      // Schedule-with-Rx step 1 (her ask 2026-08-20 pt.2): a suggestion row
+      // picks that patient -- picking is the ONLY thing that commits a name
+      // (see schedReadFormDraft's guard below), so a click is the sole path,
+      // same reasoning as the herb picker having no blur-commit either
+      const schedPatientPickBtn = e.target.closest("[data-sched-patient-pick]");
+      if (schedPatientPickBtn) { schedPatientPick(schedPatientPickBtn.dataset.schedPatientPick); return; }
       // Schedule-with-Rx step 2: Use existing <-> Build new
       const schedRxMode = e.target.closest("[data-sched-rx-mode]");
       if (schedRxMode) {
@@ -12188,6 +12194,9 @@
         if (presPickLocked && presPickLocked.text !== e.target.value) presPickLocked = null;
         presPickRenderSugg(); return;
       }
+      // Schedule-with-Rx step 1 (her ask 2026-08-20 pt.2): same live-suggestions
+      // idiom, searching patient names instead of herbs
+      if (e.target.id === "schedFormPatient") { schedPatientRenderSugg(); return; }
       // Schedule-with-Rx Build-new picker: same live-suggestions idiom as
       // presPickHerb above, its own host so the two never collide
       if (e.target.id === "schedRxHerb") { schedRxRenderSugg(); return; }
@@ -12435,6 +12444,20 @@
       if (!e.target.closest || !e.target.closest("#pharmacyPage")) return;
       if (e.target.id === "presPickGrams" && e.key === "Enter") { e.preventDefault(); presPickAdd(); return; }
       if (e.target.id === "presPickHerb" && e.key === "Escape") { presPickCloseSugg(); return; }
+      // Schedule-with-Rx step 1: same shortcuts as the herb pickers -- Enter
+      // takes the top match (a real pick, same as clicking it), Escape just
+      // closes the list without touching whatever was already committed
+      if (e.target.id === "schedFormPatient" && e.key === "Enter") {
+        e.preventDefault();
+        const m = schedPatientMatches(e.target.value);
+        if (m.length) schedPatientPick(m[0]);
+        return;
+      }
+      if (e.target.id === "schedFormPatient" && e.key === "Escape") {
+        const host = document.getElementById("schedFormPatientSugg");
+        if (host) { host.innerHTML = ""; host.hidden = true; }
+        return;
+      }
       // Schedule-with-Rx Build-new picker: same two shortcuts as presPick above
       if ((e.target.id === "schedRxGrams" || e.target.id === "schedRxHerb") && e.key === "Enter") {
         e.preventDefault();
@@ -12475,17 +12498,12 @@
 
     document.addEventListener("change", e => {
       if (!e.target.closest || !e.target.closest("#pharmacyPage")) return;
-      // Schedule-with-Rx step 1: a new patient invalidates the downstream
-      // picks (their prescriptions, their saved addresses), so those reset
-      // while everything else typed so far survives via the draft
-      if (e.target.id === "schedFormPatient") {
-        schedFormDraft = schedReadFormDraft();
-        delete schedFormDraft.presId;
-        delete schedFormDraft.addrPick;
-        schedFormDraft.rxHerbs = [];
-        renderPharmacy();
-        return;
-      }
+      // step 1 used to be a <select>, whose native "change" only ever fired
+      // with a real option value -- now it's a search box (2026-08-20 pt.2),
+      // and a picked-then-re-rendered click handler already owns the reset
+      // (schedPatientPick above); a native change/blur on this field must
+      // NOT also fire it, or picking a suggestion races its own blur into
+      // re-rendering the form out from under the click that was about to land
       if (e.target.id === "schedFormPresPick") { schedFormDraft.presId = e.target.value; return; }
       const dcPick = e.target.closest("[data-dispcheck-sub-pick]");
       if (dcPick && phDispCheck) {
@@ -15693,7 +15711,15 @@
     // per-patient "📅 Schedule" button pins schedFormPresetId instead and
     // never shows these pickers at all)
     if (v("schedFormPres") !== undefined) d.patientId = v("schedFormPres");
-    if (v("schedFormPatient") !== undefined) d.patientName = v("schedFormPatient");
+    // step 1 is a search box now, not a <select> (2026-08-20 pt.2) -- its raw
+    // text is mid-search far more often than it's a real name, so only an
+    // EXACT match (i.e. an actual pick -- see schedPatientPick) ever commits;
+    // anything else leaves d.patientName exactly as it already was
+    if (v("schedFormPatient") !== undefined) {
+      const typed = v("schedFormPatient");
+      const hit = schedPatientNames().find(n => phPatientKey(n) === phPatientKey(typed));
+      if (hit) d.patientName = hit;
+    }
     if (v("schedFormPresPick") !== undefined) d.presId = v("schedFormPresPick");
     // Build-new rows keep grams in the DOM until captured here (typing in a
     // grams box deliberately does NOT re-render, so focus never jumps)
@@ -15733,6 +15759,44 @@
       seen.add(k); names.push(n);
     });
     return names;
+  }
+  // her ask 2026-08-20 pt.2 ("allow for searchbar to search patient"): step
+  // 1's plain <select> doesn't scale once there are hundreds of patients --
+  // same search+pick pattern as the herb picker below, just matching names.
+  function schedPatientMatches(q) {
+    const s = String(q || "").trim().toLowerCase();
+    const names = schedPatientNames();
+    if (!s) return names.slice(0, 8);
+    return names.filter(n => phTitle(n).toLowerCase().includes(s)).slice(0, 8);
+  }
+  function schedPatientRenderSugg() {
+    const host = document.getElementById("schedFormPatientSugg");
+    const inp = document.getElementById("schedFormPatient");
+    if (!host || !inp) return;
+    const html = schedPatientMatches(inp.value).map(n =>
+      `<button type="button" class="ph-pick-row" data-sched-patient-pick="${esc(n)}">
+        <span class="ph-pick-ic">🧍</span>
+        <span class="ph-pick-main"><span class="ph-pick-nm">${esc(phTitle(n))}</span></span>
+      </button>`).join("");
+    host.innerHTML = html;
+    host.hidden = !html;
+  }
+  // a pick is the only path that ever commits step 1's name (the guard in
+  // schedReadFormDraft below refuses anything that isn't an exact match) --
+  // set the field to the picked name's exact form first so that guard passes
+  function schedPatientPick(name) {
+    const hit = schedPatientNames().find(n => phPatientKey(n) === phPatientKey(name));
+    if (!hit) return;
+    const inp = document.getElementById("schedFormPatient");
+    if (inp) inp.value = hit;
+    const prevKey = phPatientKey(schedFormDraft.patientName);
+    schedFormDraft = schedReadFormDraft();
+    if (phPatientKey(hit) !== prevKey) {
+      delete schedFormDraft.presId;
+      delete schedFormDraft.addrPick;
+      schedFormDraft.rxHerbs = [];
+    }
+    renderPharmacy();
   }
   function schedPresForPatient(name) {
     const k = phPatientKey(name);
@@ -15822,17 +15886,12 @@
         <span class="ph-inline-label">Patient <b>${esc(phTitle(presPatientFor(preset)))}</b><input type="hidden" id="schedFormPres" value="${preset.id}"></span>
       </div>`;
     } else {
-      const names = schedPatientNames();
       const patPres = schedPresForPatient(patientName);
       const rxList = d.rxHerbs || [];
       topHtml = `<div class="ph-tmpl-sec"><span>1 · Patient</span></div>
-      <div class="ph-build-top">
-        <label class="ph-inline-label">Patient
-          <select id="schedFormPatient" aria-label="Which patient">
-            <option value="">Choose a patient…</option>
-            ${names.map(n => `<option value="${esc(n)}"${phPatientKey(d.patientName) === phPatientKey(n) && d.patientName ? " selected" : ""}>${esc(phTitle(n))}</option>`).join("")}
-          </select>
-        </label>
+      <div class="ph-build-add ph-patient-pick-wrap">
+        <input type="text" id="schedFormPatient" value="${esc(d.patientName ? phTitle(d.patientName) : "")}" placeholder="Search patient…" autocomplete="off" aria-label="Search patient">
+        <div id="schedFormPatientSugg" class="ph-pick-sugg" hidden></div>
       </div>
       <div class="ph-tmpl-sec"><span>2 · Prescription</span></div>
       <div class="ph-sched-method-pick ph-sched-method-pick-sm" role="group" aria-label="Use an existing prescription or build a new one">
