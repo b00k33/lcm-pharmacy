@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260820-160026">
+<meta name="lcm-build" content="20260820-183000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -3047,10 +3047,17 @@
     font-size: 15px; padding: 4px 6px; min-width: 28px; min-height: 28px; border-radius: 8px;
   }
   #pharmacyPage .ph-addr-defbtn:hover { background: var(--ph-green-tint); }
+  /* the Default row's own indicator isn't a control -- her spec: the ★/set-default
+     action only makes sense on the OTHER rows, so it's a plain glyph here, not a button */
+  #pharmacyPage .ph-addr-defbtn-static {
+    display: inline-flex; align-items: center; justify-content: center; color: var(--ph-green);
+    font-size: 15px; padding: 4px 6px; min-width: 28px; min-height: 28px;
+  }
   #pharmacyPage .ph-addr-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
   #pharmacyPage .ph-addr-lbl { font-size: 11px; font-weight: 700; color: var(--ph-green-deep); }
   #pharmacyPage .ph-addr-lbl em { font-style: normal; font-weight: 600; color: var(--ph-faint); text-transform: uppercase; font-size: 10px; letter-spacing: 0.04em; }
   #pharmacyPage .ph-addr-txt { font-size: 12.5px; color: var(--ph-ink); overflow-wrap: anywhere; }
+  #pharmacyPage .ph-addr-auto { font-size: 10.5px; color: var(--ph-faint); font-style: italic; }
   #pharmacyPage .ph-addr-act {
     border: none; background: none; color: var(--ph-faint); cursor: pointer;
     font-size: 13px; padding: 4px 6px; min-width: 28px; min-height: 28px; border-radius: 8px;
@@ -10885,6 +10892,8 @@
             label: (lblEl && lblEl.value.trim()) || `Address ${rec.addresses.length + 1}`,
             text: txt,
             isDefault: rec.addresses.length === 0,
+            addedAt: Date.now(),
+            source: "manual",
           });
           savePharmacy();
         }
@@ -10925,12 +10934,27 @@
       }
       const addrDelBtn = e.target.closest("[data-addr-del]");
       if (addrDelBtn) {
+        // her spec (2026-08-20 formal doc): confirm first, same inline-strip
+        // idiom as data-pres-edit-del above -- deleting an address never
+        // touches the text already stored on any scheduled dispense entry
+        const t0 = PRESC.items.find(x => x.id === presOpenId);
+        const nm = t0 ? presPatientFor(t0) : "";
+        const rec = nm ? phPatientRec(nm) : null;
+        const a = rec && Array.isArray(rec.addresses) ? rec.addresses.find(x => x.id === addrDelBtn.dataset.addrDel) : null;
+        const zone = document.getElementById("presAddrDelZone");
+        if (a && zone) zone.innerHTML = phConfirmStrip(
+          `Remove "<b>${esc(a.label)}</b>"? Past scheduled dispenses keep their own copy of this address either way.`,
+          `data-addr-del-yes="${a.id}"`, "⚠ Yes, remove");
+        return;
+      }
+      const addrDelYes = e.target.closest("[data-addr-del-yes]");
+      if (addrDelYes) {
         const t0 = PRESC.items.find(x => x.id === presOpenId);
         const nm = t0 ? presPatientFor(t0) : "";
         const rec = nm ? phPatientRec(nm) : null;
         if (!rec || !Array.isArray(rec.addresses)) return;
-        const wasDefault = rec.addresses.some(a => a.id === addrDelBtn.dataset.addrDel && a.isDefault);
-        rec.addresses = rec.addresses.filter(a => a.id !== addrDelBtn.dataset.addrDel);
+        const wasDefault = rec.addresses.some(a => a.id === addrDelYes.dataset.addrDelYes && a.isDefault);
+        rec.addresses = rec.addresses.filter(a => a.id !== addrDelYes.dataset.addrDelYes);
         // one Default while any exist; removing the last one leaves zero, same as today
         if (wasDefault && rec.addresses.length) rec.addresses[0].isDefault = true;
         savePharmacy(); renderPresPanel(); return;
@@ -14173,10 +14197,13 @@
           <button type="button" class="btn-cancel" data-addr-edit-cancel="1">Cancel</button>
         </div>`
       : `<div class="ph-addr-row${a.isDefault ? " def" : ""}">
-          <button type="button" class="ph-addr-defbtn" data-addr-default="${a.id}" title="${a.isDefault ? "Default address" : "Make this the default"}" aria-pressed="${a.isDefault ? "true" : "false"}">${a.isDefault ? "◉" : "○"}</button>
+          ${a.isDefault
+            ? `<span class="ph-addr-defbtn ph-addr-defbtn-static" aria-hidden="true">◉</span>`
+            : `<button type="button" class="ph-addr-defbtn" data-addr-default="${a.id}" title="Make this the default" aria-pressed="false">○</button>`}
           <span class="ph-addr-main">
             <span class="ph-addr-lbl">${esc(a.label)}${a.isDefault ? ` <em>Default</em>` : ""}</span>
             <span class="ph-addr-txt">${esc(a.text)}</span>
+            ${a.source === "auto-imported" ? `<span class="ph-addr-auto">added automatically from a past scheduled dispense · ${phFmtShortDate(a.addedAt)}</span>` : ""}
           </span>
           <button type="button" class="ph-addr-act" data-addr-edit="${a.id}" aria-label="Edit ${esc(a.label)}">✎</button>
           <button type="button" class="ph-addr-act" data-addr-del="${a.id}" aria-label="Remove ${esc(a.label)}">×</button>
@@ -14184,6 +14211,7 @@
     return `<div class="ph-addrs">
       <div class="ph-tmpl-sec"><span>📮 Addresses</span></div>
       ${addrs.length ? addrs.map(rowHtml).join("") : `<div class="ph-addr-empty">No saved addresses yet — the next Postage delivery's address lands here automatically.</div>`}
+      <div id="presAddrDelZone"></div>
       ${presAddrAddOpen
         ? `<div class="ph-addr-row ph-addr-row-edit">
             <input type="text" id="presAddrNewLbl" value="" placeholder="Label — e.g. Home (optional)" aria-label="New address label">
@@ -14194,6 +14222,8 @@
         : `<button type="button" class="ph-addr-addlink" data-addr-add-open="1">+ Add address</button>`}
     </div>`;
   }
+  // her spec (2026-08-20 formal doc): d/m/y for the auto-imported provenance note
+  const phFmtShortDate = ms => { const d = new Date(ms || Date.now()); return `${d.getDate()} ${MON_SHORT[d.getMonth()]} ${d.getFullYear()}`; };
   // the patient's own trail (her ask): every formula this patient has been
   // dispensed, newest first, right inside their open prescription
   let presHistUndoId = null;   // the history dispense awaiting its ✓ before undo
@@ -15767,7 +15797,7 @@
     if (!rec) return;
     if (!Array.isArray(rec.addresses)) rec.addresses = [];
     if (rec.addresses.some(a => phAddrNorm(a.text) === phAddrNorm(clean))) return;
-    rec.addresses.push({ id: uid(), label: `Address ${rec.addresses.length + 1}`, text: clean, isDefault: rec.addresses.length === 0 });
+    rec.addresses.push({ id: uid(), label: `Address ${rec.addresses.length + 1}`, text: clean, isDefault: rec.addresses.length === 0, addedAt: Date.now(), source: "manual" });
     savePharmacy();
   }
   // which address the open Schedule form would use right now: a saved card's
@@ -15854,7 +15884,8 @@
       </div>
       ${addrPick === "custom" ? `<div class="ph-build-top">
         <label class="ph-inline-label" style="flex:1 1 100%">Postal address <input type="text" id="schedFormAddr" value="${esc(d.mailAddress ?? "")}" placeholder="street, suburb, postcode" style="min-width:280px;flex:1" aria-label="Postal address"></label>
-      </div>` : ""}`;
+      </div>
+      <div class="ph-formula-meta">A different address here will be saved as a new address for ${esc(phTitle(patientName))} — her ${esc((addrs.find(a => a.isDefault) || {}).label || "Default")} stays unchanged.</div>` : ""}`;
     return `<div class="ph-sched-form">
       ${topHtml}
       <div class="ph-sched-method-pick" role="group" aria-label="Pickup or postage">
@@ -15862,13 +15893,11 @@
         <button type="button" class="ph-method-opt${!isPickup ? " on" : ""}" data-sched-method-pick="postage" aria-pressed="${!isPickup}">📮 Postage<span>Mailed out</span></button>
       </div>
       ${isPickup ? `
+      ${preset ? "" : `<div class="ph-tmpl-sec"><span>4 · When</span></div>`}
       <div class="ph-build-top">
         <label class="ph-inline-label">Pickup date <input type="date" id="schedFormPickupDate" value="${esc(d.pickupDate ?? keyOf(TODAY))}" aria-label="Pickup date"></label>
         <label class="ph-inline-label">Pickup time <input type="time" id="schedFormPickupTime" value="${esc(d.pickupTime ?? "")}" aria-label="Pickup time"></label>
       </div>` : `
-      <div class="ph-build-top">
-        <label class="ph-inline-label">Target date <input type="date" id="schedFormDate" value="${esc(d.targetDate ?? keyOf(TODAY))}" aria-label="Target date to post"></label>
-      </div>
       <div class="ph-build-top">
         <label class="ph-inline-label">Mailing name <input type="text" id="schedFormName" value="${esc(d.mailTo ?? (patientName ? phTitle(patientName) : ""))}" placeholder="defaults to patient" aria-label="Name on the parcel"></label>
       </div>
@@ -15881,6 +15910,10 @@
           </select>
         </label>
         <label class="ph-inline-label">Tracking <input type="text" id="schedFormTracking" value="${esc(d.trackingNumber ?? "")}" placeholder="usually added once mailed" aria-label="Tracking number"></label>
+      </div>
+      ${preset ? "" : `<div class="ph-tmpl-sec"><span>4 · When</span></div>`}
+      <div class="ph-build-top">
+        <label class="ph-inline-label">Target date <input type="date" id="schedFormDate" value="${esc(d.targetDate ?? keyOf(TODAY))}" aria-label="Target date to post"></label>
       </div>`}
       <div class="ph-build-actions">
         <button type="button" class="btn-save" data-sched-form-save="1">Schedule it</button>
@@ -17507,7 +17540,8 @@
   // a device with an older blob idempotent anyway.
   (function phMigratePatientAddresses() {
     if (PHARMACY.patientAddrMigrated) return;
-    let wrote = false;
+    let imported = 0;
+    const patientsTouched = new Set();
     (PRESC.scheduled || [])
       .slice()
       .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))   // ascending: the LAST write per patient wins Default = most recent
@@ -17522,16 +17556,17 @@
         if (!Array.isArray(rec.addresses)) rec.addresses = [];
         let hit = rec.addresses.find(a => phAddrNorm(a.text) === phAddrNorm(addr));
         if (!hit) {
-          hit = { id: uid(), label: `Address ${rec.addresses.length + 1}`, text: addr, isDefault: false };
+          hit = { id: uid(), label: `Address ${rec.addresses.length + 1}`, text: addr, isDefault: false, addedAt: s.createdAt || Date.now(), source: "auto-imported" };
           rec.addresses.push(hit);
+          imported++;
         }
         rec.addresses.forEach(a => { a.isDefault = false; });
         hit.isDefault = true;
-        wrote = true;
+        patientsTouched.add(phPatientKey(name));
       });
     PHARMACY.patientAddrMigrated = true;
-    savePharmacy();   // at minimum the guard flag; wrote tracks whether any address landed
-    if (wrote) console.log("[lcm] migrated scheduled-dispense addresses onto patient records");
+    savePharmacy();   // at minimum the guard flag; imported tracks whether any address landed
+    if (imported) console.log(`[lcm] Imported ${imported} address${imported === 1 ? "" : "es"} across ${patientsTouched.size} patient${patientsTouched.size === 1 ? "" : "s"}`);
   })();
 
   renderPharmacy();
