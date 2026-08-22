@@ -3124,6 +3124,26 @@
   }
   #pharmacyPage .ph-ren-crop-labelbtn:hover { border-color: var(--ph-green); color: var(--ph-green-deep); }
   #pharmacyPage .ph-ren-crop-done { width: 100%; justify-content: center; margin-top: 16px; }
+  /* paste/drag-drop into 方病人 CONSTITUTION (her ask 2026-08-22, addendum to
+     the crop spec) -- hint reuses .ph-hx-constit-note's own type/colour so no
+     new typography is introduced; the drag-over state uses the same green
+     wash + soft corner tokens as everything else, never a hard-edged box */
+  #pharmacyPage .ph-ren-paste-hint { display: flex; align-items: center; gap: 5px; }
+  #pharmacyPage .ph-ren-confirm-preview {
+    display: flex; gap: 12px; align-items: center; margin-top: 12px;
+    padding: 12px; background: var(--ph-paper); border-radius: var(--field-radius-area, 14px);
+  }
+  #pharmacyPage .ph-ren-confirm-thumb {
+    width: 88px; height: 88px; flex: none; border-radius: 12px; overflow: hidden; background: var(--ph-white);
+  }
+  #pharmacyPage .ph-ren-confirm-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #pharmacyPage .ph-ren-confirm-meta { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  #pharmacyPage .ph-ren-confirm-dims { font-size: 12.5px; font-weight: 600; color: var(--ph-ink); }
+  #pharmacyPage .ph-ren-confirm-after { font-size: 12px; color: var(--ph-soft); }
+  #pharmacyPage .ph-hx-constit.ph-ren-dragover {
+    outline: 2px dashed var(--ph-green); outline-offset: 6px;
+    background: var(--ph-green-tint); border-radius: var(--field-radius-area, 14px);
+  }
   #pharmacyPage .ph-ren-inbox-row {
     display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 44px;
     padding: 10px 14px; border: 1px solid var(--ph-line); border-radius: 12px; background: var(--ph-white); cursor: pointer;
@@ -5577,6 +5597,16 @@
     <div class="ph-stocktake-backdrop" id="phRenCropBackdrop" hidden></div>
     <div class="ph-hx-modal" id="phRenCropModal" hidden></div>
     <input type="file" id="phRenPhotoFileInput" accept="image/*" capture="environment" hidden>
+    <!-- library picker: the SAME handler as the camera input above, minus
+         capture= (which forces the camera on a phone) -- her mobile ask
+         2026-08-22, "Take a photo / Choose from library". Desktop never
+         shows the button that opens this. -->
+    <input type="file" id="phRenPhotoLibraryInput" accept="image/*" hidden>
+    <!-- paste/drop confirm preview (her spec §3): a pasted clipboard image
+         is NOT attached until she has seen it and said yes -- a stray ⌘V
+         must never silently file the wrong image into a patient's record. -->
+    <div class="ph-stocktake-backdrop" id="phRenPasteBackdrop" hidden></div>
+    <div class="ph-hx-modal" id="phRenPasteModal" hidden></div>
     <div class="ph-stocktake-backdrop" id="phRenInboxBackdrop" hidden></div>
     <div class="ph-hx-modal" id="phRenInboxModal" hidden></div>
     <!-- new shell pages (PASTE 1, 2026-08-15): placeholders until their real
@@ -11921,6 +11951,15 @@
         if (inp) inp.click();
         return;
       }
+      // mobile only (§4) -- the camera input above forces the camera via
+      // capture=; this one has no capture, so it opens the photo library
+      if (e.target.closest("[data-ren-photo-library]")) {
+        const lib = document.getElementById("phRenPhotoLibraryInput");
+        if (lib) lib.click();
+        return;
+      }
+      if (e.target.closest("[data-ren-paste-use]")) { phRenPasteAccept(); return; }
+      if (e.target.closest("[data-ren-paste-discard]")) { phRenPasteClose(); return; }
       if (e.target.closest("[data-ren-photo-check]")) { phRenOpenInbox(); return; }
       if (e.target.closest("[data-ren-crop-close]")) { phRenCropClose(); return; }
       if (e.target.closest("[data-ren-inbox-close]")) { phRenCloseInbox(); return; }
@@ -13844,6 +13883,14 @@
         const f = e.target.files && e.target.files[0];
         e.target.value = "";
         if (f && presHxScreenName) phRenCropOpenFromFile(phPatientKey(presHxScreenName), f);
+        return;
+      }
+      // library pick (mobile, §4) -- a NEW door, so it gets the confirm
+      // preview like paste/drop do; 📷 Add photo above stays exactly as it was
+      if (e.target.id === "phRenPhotoLibraryInput") {
+        const f = e.target.files && e.target.files[0];
+        e.target.value = "";
+        if (f && presHxScreenName && !phRenPasteState) phRenPasteOpen(phPatientKey(presHxScreenName), f);
         return;
       }
       // ⚙ Settings -- Label text, STEP 7's plain-characters toggle
@@ -15806,16 +15853,18 @@
         ${phRenThumbsHtml(patientKey, PH_REN_FIELD_PHOTO_KIND[field])}
       </div>`;
     };
-    return `<div class="ph-hx-constit">
+    return `<div class="ph-hx-constit" id="phRenConstitPanel">
       <div class="ph-hx-constit-head">
         <div class="ph-tmpl-sec"><span>方病人 constitution</span></div>
         <div class="ph-hx-constit-headbtns">
           <button type="button" class="ph-ren-showtypes-btn" data-ren-photo-add="1">📷 Add photo</button>
+          ${phRenCanPaste() ? "" : `<button type="button" class="ph-ren-showtypes-btn" data-ren-photo-library="1">🖼 Choose from library</button>`}
           ${window.__LCM_SYNC ? `<button type="button" class="ph-ren-showtypes-btn" data-ren-photo-check="1">🔄 Check for photos</button>` : ""}
           <button type="button" class="ph-ren-showtypes-btn${showTypes ? " on" : ""}" data-ren-showtypes-toggle="1" aria-pressed="${showTypes ? "true" : "false"}">${showTypes ? "✓ Showing types" : "Show types"}</button>
         </div>
       </div>
       <p class="ph-hx-constit-note">Informational only, from the 方病人 Guide — never cross-checked against history above, never changes a dose.</p>
+      ${phRenCanPaste() ? `<p class="ph-hx-constit-note ph-ren-paste-hint">📋 Paste a photo here with ${phRenPasteKeyLabel()} — or drag one onto this panel.</p>` : ""}
       <div class="ph-hx-constit-row">
         ${picker("bodyConstitutionBt", rec.bodyConstitutionBt || "", "Body constitution")}
         ${picker("personalityBt", rec.personalityBt || "", "Personality / temperament")}
@@ -16128,6 +16177,171 @@
     const size = Math.round(Math.min(w, h) * 0.6);
     return { x: Math.round((w - size) / 2), y: Math.round((h - size) / 2), w: size, h: size };
   }
+  /* ---- paste & drag-drop (her spec 2026-08-22, addendum to the crop spec)
+     Two more doors into the SAME room: whatever arrives here ends up in the
+     identical crop tool the 📷 Add photo button opens, and is identical from
+     that point on. Three rules make this safe rather than dangerous:
+       1. never swallow an ordinary text paste (§2) -- the guard in
+          phRenPasteHandler, tested against the Findings textarea and the
+          Medical History note fields she types in on every patient;
+       2. never attach silently (§3) -- a clipboard can be holding a
+          screenshot of another patient's screen, so it previews first and
+          she has to say Use this photo;
+       3. never store raw bytes (§5) -- a pasted screenshot is usually a
+          multi-megabyte PNG, and she is near her storage limit, so the same
+          resize/JPEG cap the button path uses applies here too, and the
+          preview's "will save at" figure is the REAL compressed result,
+          measured, not estimated.
+     Desktop only: there is no reliable clipboard-paste into a web page on a
+     phone, so the hint is hidden and mobile gets 🖼 Choose from library
+     alongside the existing camera button instead. */
+  // "can this device actually paste from a clipboard" -- deliberately NOT
+  // (pointer: fine): a touchscreen laptop reports a coarse pointer while
+  // having a perfectly good keyboard, and would wrongly lose the paste path.
+  // Uses the app's own established mobile breakpoint (innerWidth <= 900,
+  // same as the shell/sidebar/status pill) with any-pointer:fine as a second
+  // chance, so only a genuinely phone-shaped screen falls through to §4.
+  const phRenCanPaste = () => window.innerWidth > 900 || matchMedia("(any-pointer: fine)").matches;
+  const phRenPasteKeyLabel = () => /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent || "") ? "⌘V" : "Ctrl V";
+  const PH_REN_PASTE_MAXDIM = 1280, PH_REN_PASTE_QUALITY = 0.82;
+  const phRenKb = n => n >= 1024 * 1024 ? (n / 1024 / 1024).toFixed(1) + " MB" : Math.round(n / 1024) + " KB";
+  let phRenPasteState = null;   // {patientKey, file, objectUrl, w, h, compressed}
+
+  // the ONE guard that decides whether a paste is ours at all (§2)
+  function phRenPasteIsTypingTarget(el) {
+    if (!el) return false;
+    if (el.isContentEditable) return true;
+    return ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName);
+  }
+  // first image only -- never silently queue several photos into a record (§2)
+  function phRenFirstImageFile(dt) {
+    if (!dt) return null;
+    const items = dt.items ? [...dt.items] : [];
+    for (const it of items) {
+      if (it.kind === "file" && String(it.type || "").startsWith("image/")) {
+        const f = it.getAsFile();
+        if (f) return f;
+      }
+    }
+    const files = dt.files ? [...dt.files] : [];
+    return files.find(f => String(f.type || "").startsWith("image/")) || null;
+  }
+  function phRenPasteOpen(patientKey, file) {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = async () => {
+      phRenPasteState = { patientKey, file, objectUrl: url, w: img.naturalWidth, h: img.naturalHeight, compressed: null };
+      document.getElementById("phRenPasteBackdrop").hidden = false;
+      document.getElementById("phRenPasteModal").hidden = false;
+      renderPhRenPasteModal();
+      // the "→ will save at" figure has to be the real thing, not an
+      // estimate that drifts from what's stored (§5) -- so compress now and
+      // show the measured size; Use this photo then reuses this same blob.
+      try {
+        const blob = await phRenCompressToBlob(file, PH_REN_PASTE_MAXDIM, PH_REN_PASTE_QUALITY);
+        if (phRenPasteState && phRenPasteState.objectUrl === url) { phRenPasteState.compressed = blob; renderPhRenPasteModal(); }
+        else URL.revokeObjectURL(url);
+      } catch (e) {
+        if (phRenPasteState && phRenPasteState.objectUrl === url) { phRenPasteState.compressErr = true; renderPhRenPasteModal(); }
+      }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); phFlashShow("⚠ Couldn't open that image."); };
+    img.src = url;
+  }
+  // Discard must leave NO trace (§3): nothing stored, nothing in the strip,
+  // no partial record -- only an object URL to release.
+  function phRenPasteClose() {
+    document.getElementById("phRenPasteBackdrop").hidden = true;
+    document.getElementById("phRenPasteModal").hidden = true;
+    if (phRenPasteState && phRenPasteState.objectUrl) URL.revokeObjectURL(phRenPasteState.objectUrl);
+    phRenPasteState = null;
+  }
+  // Use this photo -> straight into the existing crop tool, exactly as the
+  // 📷 Add photo button does. Hands over the ALREADY-compressed blob so the
+  // crop tool can never re-derive something bigger than the preview promised.
+  function phRenPasteAccept() {
+    if (!phRenPasteState || !phRenPasteState.compressed) return;
+    const { patientKey, compressed } = phRenPasteState;
+    phRenPasteClose();
+    phRenCropOpenFromFile(patientKey, compressed);
+  }
+  function renderPhRenPasteModal() {
+    const modal = document.getElementById("phRenPasteModal");
+    if (!modal || modal.hidden || !phRenPasteState) return;
+    const st = phRenPasteState;
+    // no compressed result = no Use this photo. Storing the raw bytes instead
+    // would be exactly the thing §5 forbids, and she is near her storage cap.
+    const after = st.compressErr ? "⚠ Couldn't prepare this image for saving — try a different one."
+      : st.compressed
+        ? `→ will save at ${PH_REN_PASTE_MAXDIM}px · about ${esc(phRenKb(st.compressed.size))}`
+        : "→ checking the saved size…";
+    modal.innerHTML = `<div class="ph-hx-card ph-ren-crop-card">
+      <div class="ph-hx-head">
+        <button type="button" class="ph-stocktake-close" data-ren-paste-discard="1" aria-label="Close">×</button>
+        <div class="ph-hx-head-name">Use this photo?</div>
+      </div>
+      <p class="ph-hx-constit-note">Check this is the right image before it goes into this patient's record.</p>
+      <div class="ph-ren-confirm-preview">
+        <div class="ph-ren-confirm-thumb"><img src="${st.objectUrl}" alt=""></div>
+        <div class="ph-ren-confirm-meta">
+          <span class="ph-ren-confirm-dims">${st.w} × ${st.h} · ${esc(phRenKb(st.file.size))}</span>
+          <span class="ph-ren-confirm-after">${after}</span>
+        </div>
+      </div>
+      <div class="ph-ren-crop-actions">
+        <button type="button" class="btn-save" data-ren-paste-use="1"${st.compressed ? "" : " disabled"}>Use this photo</button>
+        <button type="button" class="ph-ren-crop-labelbtn" data-ren-paste-discard="1">Discard</button>
+      </div>
+    </div>`;
+  }
+  // Which patient this lands on: only ever the Hx screen that's open right
+  // now. No open screen = not our paste, so it falls through untouched.
+  function phRenPasteTargetKey() {
+    const modal = document.getElementById("phHxModal");
+    if (!modal || modal.hidden || !presHxScreenName) return null;
+    // the crop tool / phone inbox are the same kind of overlay as the
+    // preview, so a paste landing while one of those is open would stack two
+    // cards on top of each other -- let it fall through untouched instead
+    const crop = document.getElementById("phRenCropModal"), inbox = document.getElementById("phRenInboxModal");
+    if ((crop && !crop.hidden) || (inbox && !inbox.hidden)) return null;
+    return phPatientKey(presHxScreenName);
+  }
+  document.addEventListener("paste", e => {
+    if (!phRenCanPaste()) return;                              // §4: no paste path on a phone
+    if (phRenPasteState) return;                               // a preview is already open
+    if (phRenPasteIsTypingTarget(document.activeElement) || phRenPasteIsTypingTarget(e.target)) return;   // §2: Findings/notes keep their normal paste
+    const key = phRenPasteTargetKey();
+    if (!key) return;
+    const file = phRenFirstImageFile(e.clipboardData);
+    if (!file) return;                                         // §2: text/URL/non-image is not our business
+    e.preventDefault();
+    phRenPasteOpen(key, file);
+  });
+  // drag-and-drop onto the constitution panel -- same handling as paste.
+  // dragover must be prevented for a drop to fire at all.
+  document.addEventListener("dragover", e => {
+    const panel = e.target.closest && e.target.closest("#phRenConstitPanel");
+    if (!panel || !phRenPasteTargetKey()) return;
+    if (!(e.dataTransfer && [...(e.dataTransfer.types || [])].includes("Files"))) return;
+    e.preventDefault();
+    panel.classList.add("ph-ren-dragover");
+  });
+  document.addEventListener("dragleave", e => {
+    const panel = e.target.closest && e.target.closest("#phRenConstitPanel");
+    if (panel && !panel.contains(e.relatedTarget)) panel.classList.remove("ph-ren-dragover");
+  });
+  document.addEventListener("drop", e => {
+    const panel = e.target.closest && e.target.closest("#phRenConstitPanel");
+    if (!panel) return;
+    panel.classList.remove("ph-ren-dragover");
+    const key = phRenPasteTargetKey();
+    if (!key) return;
+    const file = phRenFirstImageFile(e.dataTransfer);
+    if (!file) return;
+    e.preventDefault();
+    if (!phRenPasteState) phRenPasteOpen(key, file);
+  });
+
   function phRenCropOpenFromFile(patientKey, file) {
     const url = URL.createObjectURL(file);
     const img = new Image();
