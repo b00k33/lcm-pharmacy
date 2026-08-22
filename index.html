@@ -2758,6 +2758,37 @@
      difference reads even without relying on colour alone */
   #pharmacyPage .ph-hx-chip.family { background: none; border: 1px solid var(--ph-green); }
   #pharmacyPage .ph-cond-badge.family { background: none; border: 1px solid var(--ph-green); color: var(--ph-green-deep); }
+  /* condition-chip note popover (her ask 2026-08-22) -- same tap/hover
+     popover mechanic as the Ren (人) observations feature (.ph-ren-obs-tap /
+     .ph-ren-popover below), reused under its own class names so the two
+     features' open/close state never collide. Only a chip whose question
+     has a saved note gets this at all -- a no-note chip renders exactly as
+     it did before this feature existed.
+     ONE deliberate difference from the Ren popover: this opens DOWNWARD
+     (top:, not bottom:). This chip row lives in .ph-pres-band, the very
+     first thing inside .ph-pres-panel -- and .ph-pres-panel has its own
+     overflow:hidden (load-bearing: it clips the dark band's square corners
+     to the card's rounded ones). Opening upward, like Ren's popover does,
+     would have zero room above the band and be clipped invisible every
+     time; there's ample room below since the rest of the card follows. */
+  #pharmacyPage .ph-cond-badge-tap { position: relative; cursor: pointer; }
+  #pharmacyPage .ph-cond-note-dot { display: inline-block; width: 5px; height: 5px; margin-left: 4px; border-radius: 50%; background: currentColor; vertical-align: middle; }
+  #pharmacyPage .ph-cond-note-popover {
+    position: absolute; left: 0; top: calc(100% + 6px); z-index: 5; opacity: 0; visibility: hidden;
+    pointer-events: none; transition: opacity .12s; background: var(--ph-white); border: 1px solid var(--ph-line);
+    box-shadow: 0 4px 16px rgba(0,0,0,.15); border-radius: 10px; padding: 8px 10px; max-width: min(240px, 80vw);
+    white-space: normal; display: flex; flex-direction: column; gap: 4px; text-align: left;
+  }
+  #pharmacyPage .ph-cond-note-popover-group { font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ph-soft); }
+  #pharmacyPage .ph-cond-note-popover-state { font-size: 11px; font-weight: 700; color: var(--ph-negative-deep); }
+  #pharmacyPage .ph-cond-note-popover-text { font-size: 12px; font-weight: 600; color: var(--ph-ink); white-space: normal; }
+  #pharmacyPage .ph-cond-badge-tap.open .ph-cond-note-popover, #pharmacyPage .ph-cond-badge-tap:focus-within .ph-cond-note-popover { opacity: 1; visibility: visible; pointer-events: auto; }
+  @media (hover: hover) { #pharmacyPage .ph-cond-badge-tap:hover .ph-cond-note-popover { opacity: 1; visibility: visible; pointer-events: auto; } }
+  /* left:0 above overflows off the right edge of the screen when a chip
+     lands close to it (a real, measured failure at 360px, not theoretical --
+     CLAUDE.md requires every popover stay fully on-screen). phCondNotePopoverPosition()
+     below measures each chip on open/hover and adds this class when needed. */
+  #pharmacyPage .ph-cond-note-popover.flip-right { left: auto; right: 0; }
   /* ---- the full-screen modal ---- */
   #pharmacyPage .ph-hx-modal {
     position: fixed; inset: 0; z-index: 501; display: flex; align-items: center; justify-content: center; padding: 20px;
@@ -4811,7 +4842,15 @@
     transition: width .18s ease;
   }
   .ph-sb-brand { display: flex; align-items: center; gap: 10px; padding: 18px 16px 14px; flex: 0 0 auto; }
-  .ph-sb-brand-mark { font-size: 22px; line-height: 1; flex: 0 0 auto; }
+  .ph-sb-brand-mark {
+    font-size: 22px; line-height: 1; flex: 0 0 auto; position: relative;
+    background: transparent; border: none; padding: 4px; margin: 0; border-radius: 8px;
+    color: inherit; font-family: inherit; cursor: pointer;
+  }
+  /* invisible hit-area expansion to 44px min tap target -- position:absolute so it
+     never affects the row's own layout/height, only the button's own small box does */
+  .ph-sb-brand-mark::before { content: ""; position: absolute; inset: -8px; }
+  .ph-sb-brand-mark:hover { background: rgba(255,255,255,0.08); }
   .ph-sb-brand-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
   .ph-sb-eyebrow { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ph-gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ph-sb-title { font-family: var(--font-body); font-weight: 600; font-size: 17px; margin: 0; color: var(--ph-white); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -5381,7 +5420,7 @@
   <div class="ph-app-shell" id="phAppShell">
     <aside class="ph-sidebar" id="phSidebar">
       <div class="ph-sb-brand">
-        <span class="ph-sb-brand-mark">🌿</span>
+        <button type="button" class="ph-sb-brand-mark" id="phSidebarLeafBtn" title="Toggle sidebar" aria-label="Toggle sidebar">🌿</button>
         <span class="ph-sb-brand-text">
           <span class="ph-sb-eyebrow">The clinic dispensary</span>
           <h1 id="phH1" class="ph-sb-title">LCM Pharmacy</h1>
@@ -10461,6 +10500,10 @@
         const collapsed = sidebar.classList.toggle("collapsed");
         try { localStorage.setItem(SIDEBAR_KEY, collapsed ? "1" : "0"); } catch (e) {}
       });
+      // second trigger for the SAME toggle above (not a parallel mechanism) --
+      // the 🌿 leaf mark just re-fires the existing collapse button's own click
+      const leafBtn = document.getElementById("phSidebarLeafBtn");
+      if (leafBtn && collapseBtn) leafBtn.addEventListener("click", () => collapseBtn.click());
       // mobile drawer: the hamburger and the "More" tab open the SAME sidebar
       // as a slide-in overlay (not a second copy) -- backdrop tap or picking
       // a nav item closes it. Independent of desktop minimise/expand above.
@@ -11712,7 +11755,18 @@
         const i = hxSetBtn.dataset.hxSet.lastIndexOf(":");
         const k = hxSetBtn.dataset.hxSet.slice(0, i), val = hxSetBtn.dataset.hxSet.slice(i + 1);
         if (!phHxSet(rec, k, val)) return;             // already that value -> no-op
-        savePharmacy(); renderHxScreen(); return;
+        savePharmacy(); renderHxScreen();
+        // her spec 2026-08-22: a fresh Yes tap opens its own note field with
+        // the cursor already in it, no extra tap -- renderHxScreen() just
+        // rebuilt the whole modal synchronously, so the new <input> exists
+        // the moment we look for it. Re-select by data-hx-note="k" (not
+        // "the first Yes row") so this is right even mid-list. Never fires
+        // on a plain reopen -- only as a direct result of THIS click.
+        if (val === "yes") {
+          const noteEl = Array.from(document.querySelectorAll("#pharmacyPage [data-hx-note]")).find(n => n.dataset.hxNote === k);
+          if (noteEl) { noteEl.focus(); const len = noteEl.value.length; noteEl.setSelectionRange(len, len); }
+        }
+        return;
       }
       if (e.target.closest("[data-hx-notneeded]")) {
         const rec = phPatientRec(presHxScreenName);
@@ -11745,6 +11799,15 @@
       });
       const renInfoToggle = e.target.closest("[data-ren-info-toggle]");
       if (renInfoToggle) { renInfoToggle.classList.toggle("open"); return; }
+      // ---- Medical-history header chip note popover (her ask 2026-08-22) --
+      // same tap-away-closes-others / second-tap-closes-this trick as the
+      // Ren popover above, on its OWN class so the two never fight each
+      // other's open state. Only chips with a saved note carry this attr.
+      document.querySelectorAll("#pharmacyPage .ph-cond-badge-tap.open").forEach(el => {
+        if (el !== e.target.closest(".ph-cond-badge-tap")) el.classList.remove("open");
+      });
+      const hxChipNoteToggle = e.target.closest("[data-hx-chip-note-toggle]");
+      if (hxChipNoteToggle) { phCondNotePopoverPosition(hxChipNoteToggle); hxChipNoteToggle.classList.toggle("open"); return; }
       const renManage = e.target.closest("[data-ren-manage]");
       if (renManage) { phRenOpenList(renManage.dataset.renManage); return; }
       const renOptAdd = e.target.closest("[data-ren-opt-add]");
@@ -13227,6 +13290,24 @@
       // (and every other input/focusout/keydown/change bind on this
       // page -- stock-cell edits, status filters, stats ranges, etc.)
       // were dead top-level binds too.
+    // Desktop mouse hover opens the condition-chip note popover via pure CSS
+    // (:hover, no click involved), so it never runs phCondNotePopoverPosition
+    // via the click handler -- this is its only chance to flip the popover
+    // before it becomes visible if it's about to run off the right edge.
+    // mouseover (not mouseenter) because delegation needs a bubbling event;
+    // it's cheap and idempotent to call repeatedly on every mouse move.
+    document.addEventListener("mouseover", e => {
+      if (!e.target.closest || !e.target.closest("#pharmacyPage")) return;
+      const chip = e.target.closest(".ph-cond-badge-tap");
+      if (chip) phCondNotePopoverPosition(chip);
+    });
+    // same gap, keyboard path: the CSS also opens via :focus-within (tabbing
+    // onto the chip), which is likewise not a click -- focusin bubbles, focus doesn't
+    document.addEventListener("focusin", e => {
+      if (!e.target.closest || !e.target.closest("#pharmacyPage")) return;
+      const chip = e.target.closest(".ph-cond-badge-tap");
+      if (chip) phCondNotePopoverPosition(chip);
+    });
     // live search boxes — only the rows re-render, the box itself stays put.
     // Bound on DOCUMENT with an ancestor guard, NOT on the #pharmacyPage
     // element: her live session (2026-08-01 screenshots, both search boxes
@@ -15042,12 +15123,36 @@
   // shows for ANY patient with a Yes flag, not just female (General health /
   // Medication & allergies / Family history apply to anyone). "+N more"
   // opens the full Medical history screen, same as the summary block does.
+  // Measures a chip against the viewport and flips its popover to open
+  // right-aligned instead of left-aligned if left-aligned would run off the
+  // right edge -- the popover stays laid out (opacity:0) even while closed,
+  // so offsetWidth is a real measurement, not a guess. Called on both the
+  // click-toggle path and the hover path (see the mouseover listener below)
+  // since a CSS-only :hover has no other chance to run this check.
+  function phCondNotePopoverPosition(chip) {
+    const pop = chip.querySelector(".ph-cond-note-popover");
+    if (!pop) return;
+    const chipRect = chip.getBoundingClientRect();
+    const w = pop.offsetWidth || 240;
+    pop.classList.toggle("flip-right", chipRect.left + w > window.innerWidth - 8);
+  }
   function phCondBadgesHtml(name) {
     const list = phHistorySignals(name).yes;
     if (!list.length) return "";
+    // her ask 2026-08-22: a chip whose question has a saved note gets a
+    // dot + tap/hover popover (group · Yes · the note). Reads the same
+    // rec.historyNotes store phHxNote already reads for the Medical
+    // history screen -- no new data, just a second view onto it. A chip
+    // with no note renders exactly as it did before this feature existed.
+    const rec = phPatientPeek(name);
     const shown = list.slice(0, PH_COND_CAP), more = list.length - shown.length;
-    return `<span class="ph-cond-badges">${shown.map(it =>
-      `<span class="ph-cond-badge${it.k === "pregnant" ? " preg" : ""}${it.family ? " family" : ""}">${it.family ? "Family · " : ""}${esc(it.label)}</span>`).join("")}${
+    return `<span class="ph-cond-badges">${shown.map(it => {
+      const badgeClass = `ph-cond-badge${it.k === "pregnant" ? " preg" : ""}${it.family ? " family" : ""}`;
+      const label = `${it.family ? "Family · " : ""}${esc(it.label)}`;
+      const note = phHxNote(rec, it.k);
+      if (!note) return `<span class="${badgeClass}">${label}</span>`;
+      return `<span class="${badgeClass} ph-cond-badge-tap" tabindex="0" data-hx-chip-note-toggle="${esc(it.k)}">${label}<span class="ph-cond-note-dot" aria-hidden="true"></span><span class="ph-cond-note-popover"><span class="ph-cond-note-popover-group">${esc(it.group)}</span><span class="ph-cond-note-popover-state">Yes</span><span class="ph-cond-note-popover-text">${esc(note)}</span></span></span>`;
+    }).join("")}${
       more > 0 ? `<button type="button" class="ph-cond-badge more" data-hx-open="${esc(name)}" title="Open Medical history">+${more} more</button>` : ""}</span>`;
   }
   const PH_MEDHX_STATES = [
@@ -15126,10 +15231,11 @@
     if (phHxVal(rec, k) === val) return false;          // already that value -> no-op, no timestamp churn
     if (!rec.history) rec.history = {};
     if (val === "unasked") delete rec.history[k]; else rec.history[k] = val;
-    // a note only means something next to a "yes" -- flipping away from yes
-    // drops its note too, rather than leaving an orphaned note behind a
-    // question that no longer reads as a concern
-    if (val !== "yes" && rec.historyNotes) delete rec.historyNotes[k];
+    // her spec 2026-08-22: a note's INPUT only shows next to a "yes" row,
+    // but the note TEXT itself survives a flip to No/Not-asked -- it just
+    // reappears, unedited, if the row is set back to Yes later (same visit
+    // or a future one). Do NOT delete rec.historyNotes[k] here -- that used
+    // to happen and silently destroyed typed notes on a status change.
     rec.historyUpdatedAt = Date.now();
     return true;
   }
