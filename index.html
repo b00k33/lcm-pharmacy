@@ -14906,7 +14906,8 @@
     const q = presLogQ.trim().toLowerCase();
     const all = PHARMACY.log.filter(e => !e.kind || e.kind === "dispense");
     const rows = q ? all.filter(e => (e.patient || "").toLowerCase().includes(q)
-      || (e.what || "").toLowerCase().includes(q) || (e.date || "").startsWith(q)) : all;
+      || (e.what || "").toLowerCase().includes(q) || (e.date || "").startsWith(q)
+      || (e.items || []).some(x => (x.name || "").toLowerCase().includes(q))) : all;
     const shown = (presLogAll || q) ? rows : rows.slice(0, 15);
     document.getElementById("presLogCount").textContent =
       rows.length === all.length ? `${all.length} dispenses` : `${rows.length} of ${all.length} dispenses`;
@@ -14923,18 +14924,31 @@
         <thead><tr><th>Date</th><th>Patient</th><th>Dispensed</th><th style="text-align:right">g</th><th style="text-align:right">Price</th><th></th></tr></thead>
         <tbody>${shown.map(e => {
           const d = parseKey(e.date);
+          // imported history (her Galcott records, 2747 of them): bare
+          // {kind,date,items} entries with no patient/what/grams/price/id.
+          // Her report 2026-08-22: these rendered as an all-dash row (the
+          // e.patient === e.what ternary below is true when BOTH are
+          // undefined, so even the formula column came out empty), which
+          // read as "my dispense history is blank/gone". Show what they DO
+          // hold -- the formulas and a grams total -- instead of dashes.
+          const bare = !e.patient && !e.what && Array.isArray(e.items) && e.items.length;
+          const bareG = bare ? e.items.reduce((a, x) => a + (x.grams || 0), 0) : 0;
           // her ask 2026-08-13: the same click-to-edit date control as the
           // 📜 Log page's Rx Date column (renderPhLogRows) -- same markup,
           // same phLogDateEdit state, same save logic (bound once, shared)
           return `<tr>
-            <td style="white-space:nowrap">${phLogDateEdit === e.id && phLogDateEditSrc === "preslog"
-              ? `<input type="date" class="ph-qty-input" data-ph-log-date-edit="${e.id}" value="${e.date}" aria-label="Date for ${esc(e.patient ? phTitle(e.patient) : phDispName(e.what))}">`
+            <td style="white-space:nowrap">${!e.id
+              ? `${d.getDate()} ${MON_SHORT[d.getMonth()]} ${d.getFullYear()}`
+              : phLogDateEdit === e.id && phLogDateEditSrc === "preslog"
+              ? `<input type="date" class="ph-qty-input" data-ph-log-date-edit="${e.id}" value="${e.date}" aria-label="Date for ${esc(e.patient ? phTitle(e.patient) : e.what ? phDispName(e.what) : "imported entry")}">`
               : `<button type="button" class="ph-qty-lock" data-ph-log-date-unlock="${e.id}" title="Click to edit the date">${d.getDate()} ${MON_SHORT[d.getMonth()]} ${d.getFullYear()}</button>`}</td>
-            <td><b>${e.patient ? esc(phTitle(e.patient)) : "—"}</b></td>
-            <td title="${esc(dedTitle(e))}">${e.patient === e.what ? `${e.dosage ? esc(e.dosage) : ""}` : `${esc(phDispName(e.what))}${e.dosage ? `<div class="ph-sub">${esc(e.dosage)}</div>` : ""}`}</td>
-            <td style="text-align:right">${e.grams ? phFmtG(e.grams) : e.qty && e.qty !== 1 ? "× " + e.qty : "—"}</td>
+            <td>${bare ? `<span style="color:var(--ph-soft)" title="Imported history — no patient recorded">—</span>` : `<b>${e.patient ? esc(phTitle(e.patient)) : "—"}</b>`}</td>
+            ${bare
+              ? `<td title="${esc(e.items.map(x => `${x.name} ${phFmtG(x.grams || 0)}g`).join(", "))}">${esc(e.items.map(x => phDispName(x.name)).join(", "))}</td>`
+              : `<td title="${esc(dedTitle(e))}">${e.patient === e.what ? `${e.dosage ? esc(e.dosage) : ""}` : `${esc(phDispName(e.what))}${e.dosage ? `<div class="ph-sub">${esc(e.dosage)}</div>` : ""}`}</td>`}
+            <td style="text-align:right">${bare ? (bareG ? phFmtG(bareG) : "—") : e.grams ? phFmtG(e.grams) : e.qty && e.qty !== 1 ? "× " + e.qty : "—"}</td>
             <td style="text-align:right">${e.price != null ? phMoney(e.price) : "—"}</td>
-            <td class="ph-pres-actions"><button class="del" data-ph-log-del="${e.id}" aria-label="Delete entry and restore its stock">×</button></td>
+            <td class="ph-pres-actions">${e.id ? `<button class="del" data-ph-log-del="${e.id}" aria-label="Delete entry and restore its stock">×</button>` : ""}</td>
           </tr>`;
         }).join("")}</tbody>
       </table></div>
@@ -19823,7 +19837,7 @@ Dosage: {dosage}
     const a = window.__lcmSections.counts(cur), b = window.__lcmSections.counts(phPendingRestore.norm);
     const row = (id, label, now, bak) =>
       `<label class="ph-restore-row" style="gap:8px;cursor:pointer"><input type="checkbox" id="${id}" checked> <span style="flex:1">${label}</span><span style="color:var(--ph-soft);font-size:12px">${now == null ? "—" : now} now → ${bak == null ? "—" : bak} in backup</span></label>`;
-    return `<div style="border-top:2px solid var(--ph-line);margin-top:10px;padding-top:8px">
+    return `<div>
       <h4 style="margin:0 0 6px">Restore from ${esc(phPendingRestore.label)}</h4>
       <div style="font-size:12px;color:var(--ph-soft);margin-bottom:6px">Tick what to bring back — anything unticked stays exactly as it is now. A safety copy of the current data downloads first.</div>
       ${row("phRestSecPresc", "Prescriptions", a.presc, b.presc)}
@@ -19915,6 +19929,23 @@ Dosage: {dosage}
     if (!panel) return;
     if (panel.hidden) { panel.innerHTML = ""; return; }
     const backups = phAllBackups();
+    // a staged restore takes over the whole panel -- her report 2026-08-22:
+    // the chooser used to render BELOW the 20 backup rows, off-screen, so
+    // tapping "Restore this" looked like it did nothing ("restore button is
+    // not working") and she tapped it three times with no visible response.
+    // One decision at a time: chooser only, Cancel returns to the list.
+    if (phPendingRestore) {
+      panel.innerHTML = `${phRestoreChooserHtml()}
+      <button type="button" class="ph-restore-close" id="phRestoreCloseBtn">Close</button>`;
+      const goBtn2 = document.getElementById("phRestGo");
+      if (goBtn2) goBtn2.addEventListener("click", phDoSectionRestore);
+      const cancelBtn2 = document.getElementById("phRestCancel");
+      if (cancelBtn2) cancelBtn2.addEventListener("click", () => { phPendingRestore = null; phRenderRestorePanel(); });
+      const closeBtn2 = document.getElementById("phRestoreCloseBtn");
+      if (closeBtn2) closeBtn2.addEventListener("click", () => { panel.hidden = true; phPendingRestore = null; phRenderRestorePanel(); });
+      panel.scrollIntoView({ block: "nearest" });
+      return;
+    }
     panel.innerHTML = `
       <h4>Automatic on-device backups</h4>
       ${backups.length ? backups.slice(0, 20).map(b => `
@@ -19926,7 +19957,6 @@ Dosage: {dosage}
         <div style="margin-bottom:8px;color:var(--ph-soft);font-size:12.5px">Or load a backup .json file (from ⬇ Back up data, on any device):</div>
         <button type="button" id="phRestoreFilePick">⬆ Choose a backup file…</button>
       </div>
-      ${phRestoreChooserHtml()}
       <button type="button" class="ph-restore-close" id="phRestoreCloseBtn">Close</button>`;
     panel.querySelectorAll("[data-ph-restore-bak]").forEach(btn => {
       btn.addEventListener("click", () => {
