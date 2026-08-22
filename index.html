@@ -3220,7 +3220,11 @@
      compact connected timeline -- same node+line DNA as .ph-prep-step (the
      Prepare-checklist stepper), vertical instead of that one's horizontal
      4-across layout, one line per step (icon + label + a short state tag,
-     no subtext line, no separate full-width button underneath) */
+     no subtext line, no separate full-width button underneath).
+     Superseded in part by her 2026-08-22 spec: the 3 nodes are now
+     Calculate -> Dispense & copy label -> Save & log (Copy label folded
+     into Dispense; Save & log moved in from the footer below) -- the
+     timeline's own visual language (this whole CSS block) is unchanged. */
   #pharmacyPage .ph-dose-timeline { display: flex; flex-direction: column; margin-top: 4px; }
   #pharmacyPage .ph-dose-step { position: relative; display: flex; align-items: center; gap: 10px; min-height: 40px; }
   #pharmacyPage .ph-dose-step:not(:last-child)::after {
@@ -3251,10 +3255,21 @@
   }
   #pharmacyPage .ph-dose-step-link:hover { color: var(--ph-green); text-decoration: underline; }
   #pharmacyPage .ph-dose-step-menubtn { flex: none; }
-  /* Save & log + the not-yet-dispensed "⋯ Delete" menu -- real actions the
-     3-step spec doesn't name (see the comment on presDoseTimelineHtml),
-     kept as a small quiet row rather than dropped or given equal weight
-     to the 3 named steps above */
+  /* her 2026-08-22 spec: the standing "dispensed but not logged" warning --
+     amber, matching the app's other low-stock/caution tone (--ph-low), not
+     a toast, so it persists across re-renders/reopens for as long as the
+     gap is real (see the `pending` computation in presDoseTimelineHtml) */
+  #pharmacyPage .ph-dose-warn {
+    margin-top: 8px; padding: 8px 12px; border-radius: 12px;
+    background: var(--ph-low-tint); color: var(--ph-low-deep);
+    font-size: 11.5px; font-weight: 600; line-height: 1.4;
+  }
+  /* ⋯ More: ⧉ Copy label (always available, repeatable, no stock effect)
+     + the not-yet-dispensed-only "🗑 Delete" -- real actions the 3-step
+     spec doesn't name (see the comment on presDoseTimelineHtml), kept as
+     a small quiet row rather than dropped or given equal weight to the
+     3 named steps above. 💾 Save & log moved INTO the chain as its own
+     node (her 2026-08-22 spec) -- no longer lives in this row. */
   #pharmacyPage .ph-dose-extra { display: flex; align-items: center; gap: 14px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--ph-line); }
   #pharmacyPage .ph-dose-extra-link {
     border: none; background: none; cursor: pointer; font-family: inherit;
@@ -7391,6 +7406,10 @@
   // the dosage preset at the top of the prescription list (her ask) — the
   // starting dosage for any prescription that hasn't saved its own
   const phDoseDef = () => PHARMACY.presDosage || { n: 3, spoon: "spoon provided", t: 2 };
+  // her 2026-08-22 spec: same idea as the dosage preset above, for the Days
+  // (Mon–Fri / Sat & Sun) restriction — the starting value for any
+  // prescription that hasn't saved its own takeOn/takeDays/skipDays.
+  const phDaysDef = () => PHARMACY.presDays || { on: true, take: "Mon – Fri", skip: "Sat & Sun" };
   // her ask (2026-07-24): make the default preset 3 spoon provided, 2 a day —
   // set once even over any earlier value; she can still edit it in the preset row
   if (!PHARMACY.presetDose2) { PHARMACY.presDosage = { n: 3, spoon: "spoon provided", t: 2 }; PHARMACY.presetDose2 = true; savePharmacy(); }
@@ -11715,7 +11734,13 @@
         presPanelEl().scrollIntoView({ behavior: "smooth", block: "start" });
         return;
       }
-      if (e.target.closest("[data-pres-calc]")) { presLabelOpen = true; presMoreOpen = false; renderPresPanel(); return; }
+      // her 2026-08-22 spec: Calculate updates the figures and marks its
+      // node done -- that's it. It used to force presLabelOpen open too,
+      // which made the Label preview column jump every time she pressed it;
+      // renderPresCalc() (called by renderPresPanel below regardless)
+      // already refreshes the live price line whether or not the preview
+      // is open, so removing this is a pure behavior fix, not a regression.
+      if (e.target.closest("[data-pres-calc]")) { presMoreOpen = false; renderPresPanel(); return; }
       if (e.target.closest("[data-pres-label-toggle]")) { presLabelOpen = !presLabelOpen; renderPresPanel(); return; }
       if (e.target.closest("[data-pres-more-toggle]")) { presMoreOpen = !presMoreOpen; renderPresPanel(); return; }
       // clicking anywhere else closes the ⋯ menu — DOM-only, no full re-render
@@ -12112,6 +12137,7 @@
         const id = dispUndo.dataset.presDispenseUndo;
         (presPending[id] || []).forEach(x => { const h = PHARMACY.herbs.find(hh => hh.id === x.herbId); if (h) h.qty = phQty((h.qty || 0) + x.grams); });
         delete presPending[id];
+        delete presPendingAt[id];
         phFlash = "↩ Deduction undone — stock restored";
         savePharmacy(); renderPharmacy();
         return;
@@ -13929,6 +13955,18 @@
         };
         savePharmacy(); return;
       }
+      // her 2026-08-22 spec: Days preset row in the same popover, same
+      // batch-on-change pattern as the dosage preset above -- a DEFAULT, not
+      // a lock, so this only ever feeds phDaysDef()'s fallback for a
+      // prescription that hasn't saved its own takeOn/takeDays/skipDays.
+      if (["presDefDaysOn", "presDefTakeDays", "presDefSkipDays"].includes(e.target.id)) {
+        const onEl = document.getElementById("presDefDaysOn");
+        const takeEl = document.getElementById("presDefTakeDays"), skipEl = document.getElementById("presDefSkipDays");
+        if (takeEl) takeEl.disabled = !onEl.checked;
+        if (skipEl) skipEl.disabled = !onEl.checked;
+        PHARMACY.presDays = { on: onEl.checked, take: takeEl.value, skip: skipEl.value };
+        savePharmacy(); return;
+      }
       const stOpt = e.target.closest("[data-ph-status-opt]");
       if (stOpt) {
         const k = stOpt.dataset.phStatusOpt;
@@ -14828,6 +14866,7 @@
     if (!wrap.dataset.built) {
       wrap.dataset.built = "1";
       const dd = phDoseDef();
+      const days = phDaysDef();
       const mk = PHARMACY.presPricing && PHARMACY.presPricing.markup != null ? PHARMACY.presPricing.markup : 3;
       wrap.innerHTML = `
         <section class="ph-widget" id="schedWidget">
@@ -14862,6 +14901,14 @@
               × <input type="text" inputmode="decimal" id="presDefDoseT" value="${esc(dd.t)}" aria-label="Default times a day"> a day
             </span>
             <span class="ph-formula-meta">the starting dosage for every prescription that hasn't saved its own</span>
+          </div>
+          <div class="ph-build-top">
+            <span class="ph-inline-label">
+              <input type="checkbox" id="presDefDaysOn" ${days.on ? "checked" : ""} aria-label="Restrict to set days by default">
+              Days <input type="text" id="presDefTakeDays" value="${esc(days.take)}" aria-label="Default days to take the herbs" ${days.on ? "" : "disabled"}>
+              except <input type="text" id="presDefSkipDays" value="${esc(days.skip)}" aria-label="Default days not to take them" ${days.on ? "" : "disabled"}>
+            </span>
+            <span class="ph-formula-meta">the starting Days for every prescription that hasn't saved its own</span>
           </div>
           <div class="ph-build-top">
             <span class="ph-inline-label">Markup ×<input type="text" inputmode="decimal" id="presMarkupGlobal" value="${esc(mk)}" aria-label="Markup applied to every prescription's cost"></span>
@@ -16755,12 +16802,20 @@
         <label class="ph-inline-label ph-grams-label ph-gramswrap">Grams <input type="text" inputmode="decimal" id="presGrams" value="${t.totalGrams || ""}" aria-label="Grams prescribed"></label>
       </div>
       <div class="ph-build-top ph-daysline">
-        <span class="ph-inline-label">
-          <input type="checkbox" id="presTakeOn" ${t.takeOn === false ? "" : "checked"} aria-label="Restrict to set days">
+        ${(() => {
+          // her 2026-08-22 spec: the Days preset is a DEFAULT, not a lock --
+          // only feeds these fields while this script has never saved its
+          // own takeOn/takeDays/skipDays (t.takeOn == null etc.), same
+          // per-field fallback shape as the dosage preset above.
+          const dDef = phDaysDef();
+          const daysOn = t.takeOn != null ? t.takeOn : dDef.on;
+          return `<span class="ph-inline-label">
+          <input type="checkbox" id="presTakeOn" ${daysOn ? "checked" : ""} aria-label="Restrict to set days">
           Days
-          <input type="text" id="presTakeDays" value="${esc(t.takeDays != null ? t.takeDays : "Mon – Fri")}" aria-label="Days to take the herbs" ${t.takeOn === false ? "disabled" : ""}>
-          except <input type="text" id="presSkipDays" value="${esc(t.skipDays != null ? t.skipDays : "Sat & Sun")}" aria-label="Days not to take them" ${t.takeOn === false ? "disabled" : ""}>
-        </span>
+          <input type="text" id="presTakeDays" value="${esc(t.takeDays != null ? t.takeDays : dDef.take)}" aria-label="Days to take the herbs" ${daysOn ? "" : "disabled"}>
+          except <input type="text" id="presSkipDays" value="${esc(t.skipDays != null ? t.skipDays : dDef.skip)}" aria-label="Days not to take them" ${daysOn ? "" : "disabled"}>
+        </span>`;
+        })()}
       </div>
       <div class="ph-build-top ph-priceline-row">
         <span class="ph-price-method-seg" role="radiogroup" aria-label="Pricing method">
@@ -16966,6 +17021,14 @@
   // {templateId: [noteString]} -- negative-stock/substitution notes from the
   // same dispense, carried the same way into the permanent log entry
   let presPendingNotes = {};
+  // her 2026-08-22 spec: the Dose Timeline shows "dispensed, not yet logged"
+  // as a standing state, not just a transient toast -- t.lastDispensedAt is
+  // only stamped once Save & log actually commits, so a fresh Dispense
+  // (stock already out of the jars) needs its own timestamp to show on the
+  // timeline in the meantime. Cleared everywhere presPending itself is
+  // cleared: Undo deduct, a failed save's rollback, and Save & log folding
+  // the pending movement into the permanent record.
+  let presPendingAt = {};
   const presTimeStr = d => { let h = d.getHours(); const m = d.getMinutes(); const ap = h < 12 ? "am" : "pm"; h = h % 12 || 12; return `${h}:${String(m).padStart(2, "0")}${ap}`; };
   // her ask (2026-08-04): a toast that fades is no proof anything happened --
   // once Save & Log commits, the date/time it stamped IS the permanent record,
@@ -16974,26 +17037,37 @@
   // which prescription's ⋯ menu (Undo dispense / Dispense again) is open, and
   // which one is one tap into the "really undo?" confirm
   let presDispMenuId = null, presDispUndoConfirm = null;
-  // her ask 2026-08-20 pt.4: Calculate/Dispense-or-Schedule/Copy label as a
-  // compact connected timeline, same visual language as the Prepare-checklist
-  // stepper (small circular nodes, filled green once done) -- vertical here
-  // instead of that stepper's horizontal 4-across layout. Patient scripts
-  // only (isF gets its own untouched action row, see presPresPanelHtml).
-  // Every data-* attribute below is the SAME one the old buttons already
-  // used -- no new click handlers needed, this only changes what wraps them.
-  // Two real actions this spec's 3 named steps don't mention -- 💾 Save & log
-  // (a second, distinct commit path: always saves typed field edits, and
-  // additionally finalizes a pending dispense into its permanent log entry
-  // once Dispense has already deducted stock -- see the data-pres-save
-  // handler) and the not-yet-dispensed generic "⋯ Delete" menu -- are kept,
-  // not silently dropped, as a small row below the timeline rather than a
-  // 4th step, since "Do NOT change what these actions do" already rules out
-  // removing either. Flagged back to her rather than guessed which one she'd
-  // rather see gone.
+  // her ask 2026-08-20 pt.4, reworked by her 2026-08-22 spec: Calculate ->
+  // Dispense & copy label -> Save & log, as a compact connected timeline,
+  // same visual language as the Prepare-checklist stepper (small circular
+  // nodes, filled green once done) -- vertical here instead of that
+  // stepper's horizontal 4-across layout. Patient scripts only (isF gets
+  // its own untouched action row, see presPresPanelHtml). Every data-*
+  // attribute below is the SAME one the old buttons already used -- no new
+  // click handlers needed for Calculate/Dispense/Save, this only changes
+  // what wraps them (and, for Dispense, what it now ALSO does -- see
+  // presDispenseCommit's clipboard step). 💾 Save & log (a second, distinct
+  // commit path: always saves typed field edits, and additionally
+  // finalizes a pending dispense into its permanent log entry once
+  // Dispense has already deducted stock) is now node 3, not a footer
+  // extra -- it stays independently tappable even before Dispense, since a
+  // scheduled or not-yet-dispensed script may still need saving. The
+  // not-yet-dispensed generic "⋯ Delete" menu, and a plain repeatable
+  // ⧉ Copy label (no longer its own timeline node -- folded into Dispense,
+  // see §2 of her spec), live in the small "⋯ More" row below the chain.
   function presDoseTimelineHtml(t) {
     const gp = parseFloat((document.getElementById("presGrams") || {}).value) || (t.totalGrams || 0);
     const calcDone = gp > 0;
-    const dispensed = !!t.lastDispensedAt;
+    // her 2026-08-22 spec, superseding part of the 20 Aug 3-step chain:
+    // Calculate -> Dispense & copy label -> Save & log. "Dispensed" is now
+    // true the moment stock actually moves (presPending truthy), not only
+    // once it's also logged -- t.lastDispensedAt is stamped by Save & log
+    // alone, so a fresh Dispense needs presPending/presPendingAt to
+    // represent that gap on its own until then.
+    const pending = !!(presPending[t.id] && presPending[t.id].length);
+    const dispensed = pending || !!t.lastDispensedAt;
+    const logged = !!t.lastDispensedAt && !pending;
+    const dispAt = pending ? presPendingAt[t.id] : t.lastDispensedAt;
     return `<div class="ph-dose-timeline">
       <div class="ph-dose-step${calcDone ? " done" : ""}">
         <button type="button" class="ph-dose-step-main" data-pres-calc="${t.id}">
@@ -17004,35 +17078,37 @@
       </div>
       <div class="ph-dose-step${dispensed ? " done" : " pending"}">
         ${dispensed ? `
-        <span class="ph-dose-step-main ph-dose-step-static ph-pres-disp-chip" data-pres-disp-chip="${t.id}" title="Settled — press and hold, or use ⋯, to fix a mistake">
+        <span class="ph-dose-step-main ph-dose-step-static${logged ? " ph-pres-disp-chip" : ""}"${logged ? ` data-pres-disp-chip="${t.id}"` : ""} title="${logged ? "Settled — press and hold, or use ⋯, to fix a mistake" : "Stock is out — press 💾 Save & log below to record it"}">
           <span class="ph-dose-step-node" aria-hidden="true">✓</span>
-          <span class="ph-dose-step-label">Dispensed</span>
+          <span class="ph-dose-step-label">Dispensed &amp; label copied</span>
         </span>
-        <span class="ph-dose-step-tag">${esc(presDispDateTimeStr(t.lastDispensedAt))}</span>
-        <button type="button" class="ph-arr-editbtn ph-dose-step-menubtn" data-pres-disp-menu="${t.id}" title="Undo this dispense, or dispense again" aria-label="Undo or re-dispense ${esc(t.name)}">⋯</button>
+        <span class="ph-dose-step-tag">${dispAt ? esc(presDispDateTimeStr(dispAt)) : ""}</span>
+        ${logged ? `<button type="button" class="ph-arr-editbtn ph-dose-step-menubtn" data-pres-disp-menu="${t.id}" title="Undo this dispense, or dispense again" aria-label="Undo or re-dispense ${esc(t.name)}">⋯</button>` : ""}
         ` : `
         <button type="button" class="ph-dose-step-main" data-pres-dispense="${t.id}">
           <span class="ph-dose-step-node" aria-hidden="true">💊</span>
-          <span class="ph-dose-step-label">Dispense</span>
+          <span class="ph-dose-step-label">Dispense &amp; copy label</span>
         </button>
         <button type="button" class="ph-dose-step-tag ph-dose-step-link" data-sched-new="${t.id}" title="Prepare a mail-order dispense for a future date">or Schedule →</button>
         `}
       </div>
-      <div class="ph-dose-step">
-        <button type="button" class="ph-dose-step-main" data-pres-copy="${t.id}">
-          <span class="ph-dose-step-node" aria-hidden="true">🏷</span>
-          <span class="ph-dose-step-label">📋 Copy label</span>
+      <div class="ph-dose-step${logged ? " done" : " pending"}">
+        <button type="button" class="ph-dose-step-main" data-pres-save="${t.id}">
+          <span class="ph-dose-step-node" aria-hidden="true">${logged ? "✓" : "💾"}</span>
+          <span class="ph-dose-step-label">Save &amp; log</span>
         </button>
+        <span class="ph-dose-step-tag">${logged ? esc(presDispDateTimeStr(t.lastDispensedAt)) : "not logged yet"}</span>
       </div>
     </div>
+    ${pending ? `<div class="ph-dose-warn">⚠ Stock is already out of your jars, but this dispense isn't in your records until you press Save &amp; log.</div>` : ""}
     <div class="ph-dose-extra">
-      <button type="button" class="ph-dose-extra-link" data-pres-save="${t.id}">💾 Save &amp; log</button>
-      ${dispensed ? "" : `<span class="ph-pres-more-wrap">
+      <span class="ph-pres-more-wrap">
         <button type="button" class="ph-dose-extra-link" data-pres-more-toggle="1" aria-haspopup="true" aria-expanded="${presMoreOpen ? "true" : "false"}" aria-label="More actions">⋯ More</button>
         ${presMoreOpen ? `<div class="ph-pres-more-menu">
-          <button type="button" data-pres-edit-del="${t.id}">🗑 Delete</button>
+          <button type="button" data-pres-copy="${t.id}">⧉ Copy label</button>
+          ${dispensed ? "" : `<button type="button" data-pres-edit-del="${t.id}">🗑 Delete</button>`}
         </div>` : ""}
-      </span>`}
+      </span>
     </div>`;
   }
   // her rule: herbs keep 6 months from the day they're dispensed
@@ -17754,39 +17830,48 @@ Dosage: {dosage}
   // identity, ingredients, total, dosage, take-days, no letterhead
   // (redundant with her pre-printed label template either way, same STEP
   // 1/2 reasoning as the patient block, just not user-editable).
+  // one click = copied, straight to the clipboard, no pop-up window (her ask
+  // 2026-07-27). She often opens this as a local file, where the async
+  // clipboard API is blocked -- copy via a hidden textarea + execCommand
+  // FIRST (works inside the click gesture on file://), only falling back to
+  // the async API if that path is unavailable. Shared by presCopyPrescription
+  // (the plain 📋/⧉ Copy label action) AND presDispenseCommit's merged
+  // "Dispense & copy label" (her 2026-08-22 spec) -- one copy-with-fallback
+  // implementation, never a second one. onResult(true|false) reports
+  // whether the copy actually landed; execCommand resolves it synchronously
+  // in the common case, so a caller built around a single render (like the
+  // dispense banner) sees the real outcome before it renders, not a
+  // premature "copied" guess.
+  function presCopyTextToClipboard(text, onResult) {
+    let copied = false;
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text; ta.setAttribute("readonly", "");
+      ta.style.cssText = "position:absolute;left:-9999px;top:0";
+      document.body.appendChild(ta); ta.select();
+      copied = document.execCommand("copy");
+      ta.remove();
+    } catch (e) {}
+    if (copied) { onResult(true); return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => onResult(true), () => onResult(false));
+    } else onResult(false);
+  }
   function presCopyPrescription(t, btn) {
     const isF = presIsFormula(t);
     // her ask 2026-08-20 pt.4: this button's markup grew an icon-node span
     // once it moved into the Dosage & Price timeline -- flashing the WHOLE
     // button's textContent would wipe that node out along with the label.
     // Flip just the label span when it exists; a plain button (no such
-    // span, e.g. the formula actionbar's "📋 Copy") falls back to whole-
-    // button text. STEP 4: a genuine failure says so, never a false "Copied".
+    // span, e.g. the formula actionbar's "📋 Copy", or the ⋯ More menu's
+    // "⧉ Copy label") falls back to whole-button text. STEP 4: a genuine
+    // failure says so, never a false "Copied".
     const flash = msg => {
       if (!btn || !btn.isConnected) return;
       const label = btn.querySelector(".ph-dose-step-label");
       if (label) label.textContent = msg; else btn.textContent = msg;
     };
-    // one click = copied, straight to the clipboard, no pop-up window (her
-    // ask 2026-07-27). She often opens this as a local file, where the
-    // async clipboard API is blocked -- copy via a hidden textarea +
-    // execCommand FIRST (works inside the click gesture on file://), only
-    // falling back to the async API if that path is unavailable.
-    const copyText = text => {
-      let copied = false;
-      try {
-        const ta = document.createElement("textarea");
-        ta.value = text; ta.setAttribute("readonly", "");
-        ta.style.cssText = "position:absolute;left:-9999px;top:0";
-        document.body.appendChild(ta); ta.select();
-        copied = document.execCommand("copy");
-        ta.remove();
-      } catch (e) {}
-      if (copied) { flash("✓ Copied"); return; }
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(() => flash("✓ Copied"), () => flash("⚠ Copy blocked"));
-      } else flash("⚠ Copy blocked");
-    };
+    const copyText = text => presCopyTextToClipboard(text, ok => flash(ok ? "✓ Copied" : "⚠ Copy blocked"));
     if (!isF) {
       const gp = parseFloat((document.getElementById("presGrams") || {}).value) || 0;
       copyText(presLabelText(t, gp));
@@ -17961,7 +18046,7 @@ Dosage: {dosage}
     });
     presPending[t.id] = deducted;
     presPendingNotes[t.id] = notes;
-    phFlash = `Stock deducted for <b>${deducted.length}</b> ingredient${deducted.length === 1 ? "" : "s"} of ${esc(phDispName(t.name, presIsFormula(t)))} — now press <b>💾 Save &amp; Log</b> to log it <button type="button" class="ph-undo-btn" data-pres-dispense-undo="${t.id}">↩ Undo deduct</button>`;
+    presPendingAt[t.id] = Date.now();
     // her report (2026-08-06): "i dont like that the label opens after i
     // dispense a formula" -- presLabelOpen only ever gets SET by 🧮 Calculate
     // and never reset by dispensing, so if she'd checked the label first, it
@@ -17978,9 +18063,22 @@ Dosage: {dosage}
       });
       delete presPending[t.id];
       delete presPendingNotes[t.id];
+      delete presPendingAt[t.id];
       phFlash = "⚠ Nothing was deducted — the save failed, so the stock change was rolled back.";
+      renderPharmacy();
+      return;
     }
-    renderPharmacy();
+    // her 2026-08-22 spec: Dispense also copies the label in one press, using
+    // the EXACT same text presCopyPrescription()/the visible Label preview
+    // build (presLabelText()) -- never a second label-building path. The
+    // deduction above already succeeded regardless of how this lands, so
+    // the banner reports it honestly either way, never a false "copied".
+    const gp = parseFloat((document.getElementById("presGrams") || {}).value) || 0;
+    presCopyTextToClipboard(presLabelText(t, gp), ok => {
+      const copyNote = ok ? " · label copied" : ` · <span class="ph-ing-warn">⚠ label not copied — copy it from ⋯ More</span>`;
+      phFlash = `Stock deducted for <b>${deducted.length}</b> ingredient${deducted.length === 1 ? "" : "s"} of ${esc(phDispName(t.name, presIsFormula(t)))}${copyNote} — now press <b>💾 Save &amp; Log</b> to log it <button type="button" class="ph-undo-btn" data-pres-dispense-undo="${t.id}">↩ Undo deduct</button>`;
+      renderPharmacy();
+    });
   }
   // 💾 Save & Log: writes the record (📖 History / 📜 Log) with the
   // dispense date + time and Use Before, folding in whatever the last Dispense
@@ -18112,8 +18210,10 @@ Dosage: {dosage}
     const prevStamp = { at: t.lastDispensedAt, g: t.lastDispensedGrams, id: t.lastDispenseLogId };
     const pendingWas = presPending[t.id] || [];
     const pendingNotesWas = presPendingNotes[t.id] || [];
+    const pendingAtWas = presPendingAt[t.id];
     delete presPending[t.id];
     delete presPendingNotes[t.id];
+    delete presPendingAt[t.id];
     PHARMACY.log.unshift(entry);
     // her ask (2026-08-04): a toast that fades is no proof anything happened --
     // these three fields ARE the permanent record, shown as a settled "✓
@@ -18127,6 +18227,7 @@ Dosage: {dosage}
       t.lastDispensedAt = prevStamp.at; t.lastDispensedGrams = prevStamp.g; t.lastDispenseLogId = prevStamp.id;
       presPending[t.id] = pendingWas;
       presPendingNotes[t.id] = pendingNotesWas;
+      presPendingAt[t.id] = pendingAtWas;
       if (okPh) savePharmacy();   // the log write landed but the stamp didn't -- take the log entry back out of storage too
       phFlash = "⚠ NOT logged — the save failed, so nothing was recorded and nothing changed.";
       renderPharmacy();
