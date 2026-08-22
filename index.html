@@ -3294,6 +3294,27 @@
     font-size: 11px; font-weight: 600; color: var(--ph-soft); padding: 0;
   }
   #pharmacyPage .ph-dose-extra-link:hover { color: var(--ph-green-deep); }
+  /* her 2026-08-22 spec §2: the Grams tag -- quiet green while it's
+     following the ingredient total, amber once she's typed over it (same
+     tone family as the Draft chip elsewhere -- "needs a look", not an error). */
+  #pharmacyPage .ph-grams-tag { font-size: 10.5px; font-weight: 700; white-space: nowrap; }
+  #pharmacyPage .ph-grams-tag.auto { color: var(--ph-green-deep); }
+  #pharmacyPage .ph-grams-tag.manual { color: var(--ph-low-deep); }
+  #pharmacyPage .ph-grams-reset {
+    border: none; background: none; cursor: pointer; font-family: inherit;
+    font-size: 10.5px; font-weight: 700; color: inherit; padding: 0; text-decoration: underline;
+  }
+  /* her 2026-08-22 spec §1: the quiet "Last dispensed" line replacing the
+     old stale-done chain state on open -- deliberately plain, not a chip,
+     so it doesn't compete with the (currently not-done) chain below it. */
+  #pharmacyPage .ph-lastdisp-line {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    font-size: 11.5px; color: var(--ph-soft); margin-bottom: 6px;
+  }
+  #pharmacyPage .ph-lastdisp-detail {
+    margin: 0 0 8px; padding: 8px 12px; border-radius: 12px;
+    background: var(--ph-paper); font-size: 12px; line-height: 1.4;
+  }
   /* her ask (2026-08-18): the "Dosage preset / Markup" bar (previously
      always-on above the list at every width -- the comment above this block
      was wrong, it only ever collapsed on a phone) now hides everywhere and
@@ -11726,6 +11747,18 @@
         presLabelOpen = false; presMoreOpen = false;
         presNameOpen = false; presNotesOpen = false; presHistOpen = false; presThirdOpen = false; presMedHxOpen = false;
         presPickLocked = null;
+        // her 2026-08-22 spec: opening a prescription starts fresh -- the
+        // step chain must not read a stale "done" straight off a PRIOR
+        // visit's permanent dispense stamp (that's the exact bug in her
+        // Cynthia Wong screenshot: Calculate/Dispensed showed done on open,
+        // reading as "this script is already finished"). Snapshotting
+        // lastDispensedAt/lastDispenseLogId here is what presDoseTimelineHtml
+        // compares against to tell "happened before I opened this" from
+        // "happened just now" -- see its own comment for the full model.
+        { const openedT = PRESC.items.find(x => x.id === presOpenId);
+          presOpenSnapshot = openedT ? { lastDispensedAt: openedT.lastDispensedAt || null, lastDispenseLogId: openedT.lastDispenseLogId || null } : null; }
+        presCalcSessionDone = false;
+        presLastDispViewId = null;
         renderPresPanel();
         presPanelEl().scrollIntoView({ behavior: "smooth", block: "start" });
         return;
@@ -11736,7 +11769,26 @@
       // renderPresCalc() (called by renderPresPanel below regardless)
       // already refreshes the live price line whether or not the preview
       // is open, so removing this is a pure behavior fix, not a regression.
-      if (e.target.closest("[data-pres-calc]")) { presMoreOpen = false; renderPresPanel(); return; }
+      if (e.target.closest("[data-pres-calc]")) { presMoreOpen = false; presCalcSessionDone = true; renderPresPanel(); return; }
+      if (e.target.closest("[data-pres-lastdisp-view]")) {
+        const id = e.target.closest("[data-pres-lastdisp-view]").dataset.presLastdispView;
+        presLastDispViewId = presLastDispViewId === id ? null : id;
+        renderPresPanel();
+        return;
+      }
+      if (e.target.closest("[data-pres-grams-reset]")) {
+        const id = e.target.closest("[data-pres-grams-reset]").dataset.presGramsReset;
+        const t = PRESC.items.find(x => x.id === id);
+        if (t) {
+          t.gramsAuto = true;
+          t.totalGrams = phRound2(presEffectiveIngs(t).reduce((a, i) => a + (i.grams || 0), 0));
+          phDefer("savePresc", savePresc, 400);
+          const gramsEl = document.getElementById("presGrams");
+          if (gramsEl) gramsEl.value = t.totalGrams || "";
+          renderPresCalc();
+        }
+        return;
+      }
       if (e.target.closest("[data-pres-label-toggle]")) { presLabelOpen = !presLabelOpen; renderPresPanel(); return; }
       if (e.target.closest("[data-pres-more-toggle]")) { presMoreOpen = !presMoreOpen; renderPresPanel(); return; }
       // clicking anywhere else closes the ⋯ menu — DOM-only, no full re-render
@@ -13487,7 +13539,12 @@
       }
       if (e.target.id === "presGrams") {
         const t = PRESC.items.find(x => x.id === presOpenId);
-        if (t) { t.totalGrams = parseFloat(e.target.value) || 0; phDefer("savePresc", savePresc, 400); }
+        // her 2026-08-22 spec: typing here is what detaches Grams from the
+        // ingredient total -- money-critical (Mia Rankin's 100g-vs-50g-of-
+        // herbs double batch), so a typed figure must never be silently
+        // overwritten again by an ingredient edit. gramsAuto=false is the
+        // one flag presCommitTemplateFields checks before re-deriving it.
+        if (t) { t.totalGrams = parseFloat(e.target.value) || 0; t.gramsAuto = false; phDefer("savePresc", savePresc, 400); }
         phClearConfirms(); renderPresCalc(); return;
       }
       // presets live ON the prescription: dosage and preset price persist as she types
@@ -16875,6 +16932,7 @@
       </div>
       <div class="ph-build-top">
         <label class="ph-inline-label ph-grams-label ph-gramswrap">Grams <input type="text" inputmode="decimal" id="presGrams" value="${t.totalGrams || ""}" aria-label="Grams prescribed"></label>
+        <span id="presGramsTagWrap">${presGramsStateHtml(t)}</span>
       </div>
       <div class="ph-build-top ph-daysline">
         ${(() => {
@@ -16904,6 +16962,7 @@
         <span class="ph-price-gst" id="presPriceGst"></span>
         <span class="ph-price-stats" id="presPriceStats"></span>
       </div>
+      <div class="ph-formula-meta" id="presPriceWorking"></div>
       </div>` : ""}
 
       <button type="button" class="ph-sec-toggle" data-pres-label-toggle="1" aria-expanded="${presLabelOpen ? "true" : "false"}">${presLabelOpen ? "▾" : "▸"} 🏷 Label preview</button>
@@ -17104,6 +17163,24 @@
   // cleared: Undo deduct, a failed save's rollback, and Save & log folding
   // the pending movement into the permanent record.
   let presPendingAt = {};
+  // her 2026-08-22 spec ("fresh on open"): a snapshot of the permanent
+  // dispense stamp, taken the moment this ONE prescription was opened (see
+  // the data-pres-open handler). presDoseTimelineHtml compares against this,
+  // not t.lastDispensedAt directly, so a dispense from a PRIOR visit reads
+  // as "not done yet" until something actually happens in THIS open --
+  // t.lastDispensedAt only differs from the snapshot once a real Save & log
+  // has written a fresh stamp. Only one prescription panel is ever open at
+  // once, so a single scalar (not a per-id map) is enough.
+  let presOpenSnapshot = null;   // { lastDispensedAt, lastDispenseLogId } | null
+  // Calculate has no persisted field of its own to compare against (typing
+  // Grams already autosaves live, with or without pressing this) -- so
+  // "done" is purely "did she press it since this script was opened",
+  // reset alongside presOpenSnapshot above.
+  let presCalcSessionDone = false;
+  // id of the prescription whose "🕘 Last dispensed" quiet line has its
+  // read-only View expanded, or null -- reset on every open, same as the
+  // other per-open UI flags above.
+  let presLastDispViewId = null;
   const presTimeStr = d => { let h = d.getHours(); const m = d.getMinutes(); const ap = h < 12 ? "am" : "pm"; h = h % 12 || 12; return `${h}:${String(m).padStart(2, "0")}${ap}`; };
   // her ask (2026-08-04): a toast that fades is no proof anything happened --
   // once Save & Log commits, the date/time it stamped IS the permanent record,
@@ -17130,20 +17207,48 @@
   // not-yet-dispensed generic "⋯ Delete" menu, and a plain repeatable
   // ⧉ Copy label (no longer its own timeline node -- folded into Dispense,
   // see §2 of her spec), live in the small "⋯ More" row below the chain.
+  // one past dispense's detail, read from its permanent log entry -- never
+  // the live/current figures, since the log entry is what actually happened
+  // (grams/price could differ from what's on screen now if pricing or the
+  // recipe changed since). Returns null if the entry's gone missing.
+  function presLastDispRecord(t, snap) {
+    if (!snap || !snap.lastDispensedAt) return null;
+    const e = snap.lastDispenseLogId ? PHARMACY.log.find(x => x.id === snap.lastDispenseLogId) : null;
+    return {
+      at: snap.lastDispensedAt,
+      grams: e ? e.grams : t.lastDispensedGrams,
+      price: e ? e.price : null,
+      what: e ? (e.formula || e.what) : "",
+      items: e ? e.items : null,
+    };
+  }
   function presDoseTimelineHtml(t) {
-    const gp = parseFloat((document.getElementById("presGrams") || {}).value) || (t.totalGrams || 0);
-    const calcDone = gp > 0;
-    // her 2026-08-22 spec, superseding part of the 20 Aug 3-step chain:
-    // Calculate -> Dispense & copy label -> Save & log. "Dispensed" is now
-    // true the moment stock actually moves (presPending truthy), not only
-    // once it's also logged -- t.lastDispensedAt is stamped by Save & log
-    // alone, so a fresh Dispense needs presPending/presPendingAt to
-    // represent that gap on its own until then.
+    const calcDone = presCalcSessionDone;
+    // her 2026-08-22 spec ("fresh on open"): the chain shows what's happened
+    // in THIS open, not what the permanent record already carried in from a
+    // prior visit -- presOpenSnapshot (captured the moment this script was
+    // opened, see the data-pres-open handler) is the "before" to compare
+    // t.lastDispensedAt against. A dispense from a prior session leaves
+    // lastDispensedAt UNCHANGED from the snapshot, so it reads as not-yet-
+    // done here and shows instead as the quiet "Last dispensed" line below
+    // -- only a stamp that's genuinely different (a real Save & log that
+    // happened just now) flips this chain to done.
+    const dispensedFresh = !!t.lastDispensedAt && t.lastDispensedAt !== (presOpenSnapshot && presOpenSnapshot.lastDispensedAt);
     const pending = !!(presPending[t.id] && presPending[t.id].length);
-    const dispensed = pending || !!t.lastDispensedAt;
-    const logged = !!t.lastDispensedAt && !pending;
+    const dispensed = pending || dispensedFresh;
+    const logged = dispensedFresh && !pending;
     const dispAt = pending ? presPendingAt[t.id] : t.lastDispensedAt;
-    return `<div class="ph-dose-timeline">
+    const lastRec = !dispensed ? presLastDispRecord(t, presOpenSnapshot) : null;
+    return `${lastRec ? `<div class="ph-lastdisp-line">
+      <span>🕘 Last dispensed · ${esc(presDispDateTimeStr(lastRec.at))}${lastRec.grams ? ` · ${phFmtG(lastRec.grams)}g` : ""}${lastRec.price != null ? ` · ${phMoney(lastRec.price)}` : ""}</span>
+      <button type="button" class="ph-load-btn" data-pres-lastdisp-view="${t.id}" aria-expanded="${presLastDispViewId === t.id ? "true" : "false"}">${presLastDispViewId === t.id ? "Hide" : "View →"}</button>
+    </div>
+    ${presLastDispViewId === t.id ? `<div class="ph-lastdisp-detail" role="note" aria-label="Past dispense, read-only">
+      ${lastRec.what ? `<div><b>${esc(phDispName(lastRec.what))}</b></div>` : ""}
+      ${lastRec.items && lastRec.items.length ? `<div class="ph-sub">${esc(lastRec.items.map(x => `${phDispName(x.name)} ${phFmtG(x.grams || 0)}g`).join(", "))}</div>` : ""}
+      <div class="ph-formula-meta">Read-only — a settled dispense record isn't edited from here.</div>
+    </div>` : ""}` : ""}
+    <div class="ph-dose-timeline">
       <div class="ph-dose-step${calcDone ? " done" : ""}">
         <button type="button" class="ph-dose-step-main" data-pres-calc="${t.id}">
           <span class="ph-dose-step-node" aria-hidden="true">${calcDone ? "✓" : "🧮"}</span>
@@ -17181,7 +17286,7 @@
         <button type="button" class="ph-dose-extra-link" data-pres-more-toggle="1" aria-haspopup="true" aria-expanded="${presMoreOpen ? "true" : "false"}" aria-label="More actions">⋯ More</button>
         ${presMoreOpen ? `<div class="ph-pres-more-menu">
           <button type="button" data-pres-copy="${t.id}">⧉ Copy label</button>
-          ${dispensed ? "" : `<button type="button" data-pres-edit-del="${t.id}">🗑 Delete</button>`}
+          ${(pending || t.lastDispensedAt) ? "" : `<button type="button" data-pres-edit-del="${t.id}">🗑 Delete</button>`}
         </div>` : ""}
       </span>
     </div>`;
@@ -17848,6 +17953,41 @@ Dosage: {dosage}
       flash("⚠ Copy blocked — select & copy manually");
     }
   }
+  // her 2026-08-22 spec, §2: the tag + hint next to Grams -- "↻ from herbs"
+  // while it's following the ingredient total, "✎ set by you · ↻ reset"
+  // once she's typed over it. The hint states the relationship plainly
+  // (Mia Rankin's case: "you're making 2× the recipe") rather than just a
+  // bare mismatch, since that's the whole reason Grams has to stay
+  // overridable in the first place -- see the §0 money note in the spec.
+  function presGramsStateHtml(t) {
+    const gp = parseFloat((document.getElementById("presGrams") || {}).value) || (t.totalGrams || 0);
+    const ings = presEffectiveIngs(t);
+    const herbTotal = phRound2(ings.reduce((a, i) => a + (i.grams || 0), 0));
+    const attached = t.gramsAuto === true;
+    let hint;
+    if (!ings.length) hint = "Add herbs to compare against.";
+    else if (Math.abs(gp - herbTotal) < 0.005) hint = `Matches the ingredient total (${ings.length} herb${ings.length === 1 ? "" : "s"} · ${phFmtG(herbTotal)} g).`;
+    else {
+      const ratio = herbTotal > 0 ? gp / herbTotal : 0;
+      const near = Math.round(ratio);
+      hint = (near >= 2 && Math.abs(ratio - near) < 0.02)
+        ? `Herbs total ${phFmtG(herbTotal)} g — you're making ${near}× the recipe.`
+        : `Herbs total ${phFmtG(herbTotal)} g — ${gp > herbTotal ? "more" : "less"} than the recipe.`;
+    }
+    return `<span class="ph-grams-tag${attached ? " auto" : " manual"}" id="presGramsTag">${attached ? "↻ from herbs" : `✎ set by you · <button type="button" class="ph-grams-reset" data-pres-grams-reset="${t.id}">↻ reset</button>`}</span>
+      <span class="ph-formula-meta" id="presGramsHint">${hint}</span>`;
+  }
+  // called wherever totalGrams gets re-derived from the ingredient sum while
+  // attached (presCommitTemplateFields) -- never touches the field while
+  // she's actually focused in it (nothing should yank a value out from
+  // under a cursor mid-type; attached mode only ever runs from ingredient
+  // edits anyway, never from typing in #presGrams itself).
+  function presRefreshGramsFieldIfAttached(t) {
+    if (presOpenId !== t.id) return;
+    const el = document.getElementById("presGrams");
+    if (el && document.activeElement !== el) el.value = t.totalGrams || "";
+    renderPresCalc();
+  }
   function renderPresCalc() {
     const t = PRESC.items.find(x => x.id === presOpenId);
     if (!t) return;
@@ -17855,7 +17995,7 @@ Dosage: {dosage}
     // block is gone) -- fall back to its own recipe total so the label still
     // shows its real herb amounts instead of scaling everything to 0
     const gp = parseFloat((document.getElementById("presGrams") || {}).value) || (presIsFormula(t) ? (t.totalGrams || 0) : 0);
-    const { items, cost, price } = presCalcNumbers(t, gp);
+    const { items, cost, price, method } = presCalcNumbers(t, gp);
     const profitPct = cost > 0 ? phRound2(((price - cost) / cost) * 100) : null;
     const shortN = items.filter(x => x.h && x.h.qty != null && x.h.qty < x.grams).length;
     const profitStr = profitPct == null ? "—" : `${phMoney(price - cost)} · ${profitPct}%`;
@@ -17866,6 +18006,19 @@ Dosage: {dosage}
     if (gst) gst.textContent = "incl. GST";
     const stats = document.getElementById("presPriceStats");
     if (stats) stats.innerHTML = `cost ${phMoney(cost)} · profit ${profitStr}${shortN ? ` · <span class="ph-ing-warn">⚠ ${shortN} short on stock</span>` : ""}`;
+    // her 2026-08-22 spec, §3: "show how it was derived" -- only meaningful
+    // for the gram-rate method (price = grams × rate); markup pricing is
+    // cost-driven (already captioned by the cost/profit line above) and a
+    // preset price is a flat figure with no grams relationship to show.
+    // Purely additive -- doesn't touch the calculation itself.
+    const working = document.getElementById("presPriceWorking");
+    if (working) {
+      const pp = PHARMACY.presPricing || { gramPrice: 0.71 };
+      working.textContent = method === "gram" && gp > 0 ? `${phFmtG(gp)} g × ${phMoney(pp.gramPrice || 0)}` : "";
+    }
+    // her §2 tag/hint, refreshed live on every grams-relevant keystroke
+    const gramsTagWrap = document.getElementById("presGramsTagWrap");
+    if (gramsTagWrap && !presIsFormula(t)) gramsTagWrap.innerHTML = presGramsStateHtml(t);
     // the sticky footer's screen-only strip
     const fc = document.getElementById("presFootCost"), fp = document.getElementById("presFootProfit");
     if (fc) fc.textContent = phMoney(cost);
@@ -18186,19 +18339,28 @@ Dosage: {dosage}
     if (ings.length || !t.ingredients.length || (opts && opts.allowEmptyIngs)) {
       t.ingredients = ings;
       // Grams prescribed (#presGrams below) is her deliberately-typed dispense
-      // figure, not a live ingredient total -- her report (2026-08-06): "this
-      // grams box needs to not change... THIS is the final prescription
-      // quantity." Only seed it from the ingredient sum while nothing's been
-      // prescribed yet; once a real value exists, editing the ingredients/
-      // name/notes here (including every debounced autosave) must never
-      // silently revert what she typed.
+      // figure, not always a live ingredient total -- her report (2026-08-06):
+      // "this grams box needs to not change... THIS is the final prescription
+      // quantity."
+      // her 2026-08-22 spec ("Grams auto-fills from the herbs, stays
+      // overridable"): a genuinely fresh patient script (t.gramsAuto never
+      // set, totalGrams still 0 -- nothing typed into it yet) starts
+      // attached the first time it has any ingredients at all, and stays
+      // attached until she TYPES into #presGrams herself (which sets
+      // gramsAuto=false there, see that handler). While attached, every
+      // ingredient edit re-derives totalGrams live -- this is what makes it
+      // "follow the herbs" rather than the old one-time seed. An EXISTING
+      // script from before this feature (gramsAuto never set, but
+      // totalGrams already nonzero) never gets auto-attached retroactively
+      // -- no migration, exactly her "existing saved scripts are never
+      // rewritten" rule.
       // her ask 2026-08-17 (formula recipe editor rework): a formula has no
-      // separate "prescribed today" figure anymore -- its Grams/pricing box
-      // is gone -- so totalGrams IS just its own ingredient sum, always. Keep
-      // it live on every edit rather than freezing after the first save the
-      // way a patient script's deliberately-typed total does (see above).
-      if (!t.totalGrams || presIsFormula(t)) {
+      // separate "prescribed today" figure at all -- its Grams/pricing box
+      // is gone -- so totalGrams IS just its own ingredient sum, always live.
+      if (t.gramsAuto == null && !t.totalGrams && !presIsFormula(t)) t.gramsAuto = true;
+      if (presIsFormula(t) || t.gramsAuto === true) {
         t.totalGrams = phRound2(t.ingredients.reduce((a, i) => a + (i.grams || 0), 0));
+        presRefreshGramsFieldIfAttached(t);
       }
     }
     savePresc();
