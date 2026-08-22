@@ -19780,8 +19780,17 @@ Dosage: {dosage}
   // history restore via window.__lcmSections so the two can never drift.
   window.__lcmSections = {
     counts(pair) {
-      const out = { herbs: null, log: null, presc: null };
-      try { const p = JSON.parse(pair[PHARMACY_KEY]); out.herbs = (p.herbs || []).length; out.log = (p.log || []).length; } catch (e) {}
+      const out = { herbs: null, log: null, presc: null, patients: null };
+      try {
+        const p = JSON.parse(pair[PHARMACY_KEY]);
+        out.herbs = (p.herbs || []).length; out.log = (p.log || []).length;
+        // patient records (medical history) live nested in the pharmacy blob,
+        // not the prescriptions blob -- surfaced here so the "Inventory &
+        // settings" row's count doesn't hide the one thing she's most likely
+        // checking a backup FOR (her report 2026-08-22, missing history that
+        // ticking only "Prescriptions" never would have restored)
+        out.patients = p.patients && typeof p.patients === "object" ? Object.keys(p.patients).length : 0;
+      } catch (e) {}
       try { const r = JSON.parse(pair[PRESC_KEY]); out.presc = ((r && r.items) || []).length; } catch (e) {}
       return out;
     },
@@ -19818,7 +19827,7 @@ Dosage: {dosage}
       <h4 style="margin:0 0 6px">Restore from ${esc(phPendingRestore.label)}</h4>
       <div style="font-size:12px;color:var(--ph-soft);margin-bottom:6px">Tick what to bring back — anything unticked stays exactly as it is now. A safety copy of the current data downloads first.</div>
       ${row("phRestSecPresc", "Prescriptions", a.presc, b.presc)}
-      ${row("phRestSecInv", "Inventory &amp; settings", a.herbs == null ? null : a.herbs + " herbs", b.herbs == null ? null : b.herbs + " herbs")}
+      ${row("phRestSecInv", "Inventory, settings &amp; patient records", a.herbs == null ? null : `${a.herbs} herbs · ${a.patients} patient records`, b.herbs == null ? null : `${b.herbs} herbs · ${b.patients} patient records`)}
       ${row("phRestSecLog", "Dispense/stock log", a.log, b.log)}
       <div style="display:flex;gap:8px;margin-top:8px">
         <button type="button" id="phRestGo" class="ph-restore-close" style="flex:1">Restore ticked sections</button>
@@ -20910,6 +20919,18 @@ Dosage: {dosage}
     } catch (e) {}
     return null;
   }
+  // patients (medical history) live nested inside pharmacy_core.patients{},
+  // a completely separate count from .herbs -- the herb catalogue can stay
+  // exactly the same size while patients quietly empties out, so it needs
+  // its own dedicated shrink check below rather than riding on sectionLen.
+  // Found live (2026-08-22): a device's pharmacy_core with a full herb
+  // catalogue but an empty .patients sailed straight through the herbs-only
+  // guard and won merges, silently wiping recorded medical history on every
+  // sync cycle after -- including immediately re-wiping a manual Restore.
+  function corePatientsLen(str) {
+    try { var c = JSON.parse(str); return c && c.patients && typeof c.patients === "object" ? Object.keys(c.patients).length : null; }
+    catch (e) { return null; }
+  }
   // requirement 4: never let empty win just because it's "newer" -- a section
   // that had a healthy amount of content and suddenly drops by more than half
   // is almost certainly a bad read somewhere upstream, not real mass deletion
@@ -20920,7 +20941,13 @@ Dosage: {dosage}
     // local data yet compared as "unknown" instead of "empty", slipped past
     // this guard, and could win a merge against a full cloud copy
     if (b == null) b = 0;
-    return a != null && a >= 10 && b < a * 0.5;
+    if (a != null && a >= 10 && b < a * 0.5) return true;
+    if (name === "pharmacy_core") {
+      var pa = corePatientsLen(fromStr), pb = corePatientsLen(toStr);
+      if (pb == null) pb = 0;
+      if (pa != null && pa >= 3 && pb < pa * 0.5) return true;
+    }
+    return false;
   }
   function loadBase() { try { var b = JSON.parse(localStorage.getItem(BASE_KEY)); return b && typeof b === "object" ? b : {}; } catch (e) { return {}; } }
   function saveBase(b) { try { _setItem.call(localStorage, BASE_KEY, JSON.stringify(b)); } catch (e) {} }
