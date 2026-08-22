@@ -20961,6 +20961,20 @@ Dosage: {dosage}
     try { var c = JSON.parse(str); return c && c.patients && typeof c.patients === "object" ? Object.keys(c.patients).length : null; }
     catch (e) { return null; }
   }
+  // pharmacy_log's twin blind spot, found live the same day (2026-08-22,
+  // hours after the patients one): her real log and the stripped test copy
+  // were BOTH 3914 entries long, so the length check above saw no shrink
+  // while every dispense's patient/price/id content had been gutted. A
+  // successful restore was silently re-stripped by the next sync cycle this
+  // way. Count dispenses that actually carry a patient -- content, not
+  // length -- exactly like corePatientsLen does for medical history.
+  function logPatientDispenses(str) {
+    try {
+      var l = JSON.parse(str);
+      if (!Array.isArray(l)) return null;
+      return l.filter(function (e) { return e && (!e.kind || e.kind === "dispense") && e.patient; }).length;
+    } catch (e) { return null; }
+  }
   // requirement 4: never let empty win just because it's "newer" -- a section
   // that had a healthy amount of content and suddenly drops by more than half
   // is almost certainly a bad read somewhere upstream, not real mass deletion
@@ -20976,6 +20990,11 @@ Dosage: {dosage}
       var pa = corePatientsLen(fromStr), pb = corePatientsLen(toStr);
       if (pb == null) pb = 0;
       if (pa != null && pa >= 3 && pb < pa * 0.5) return true;
+    }
+    if (name === "pharmacy_log") {
+      var da = logPatientDispenses(fromStr), db = logPatientDispenses(toStr);
+      if (db == null) db = 0;
+      if (da != null && da >= 10 && db < da * 0.5) return true;
     }
     return false;
   }
