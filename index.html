@@ -12417,6 +12417,11 @@
         const t = PRESC.items.find(x => x.id === presDelYes.dataset.presEditDelYes);
         if (t) {
           PRESC.items = PRESC.items.filter(x => x.id !== t.id);
+          // delete tombstone: tells the record-by-record sync merge this was
+          // a real, deliberate delete -- without it the merge would treat the
+          // missing record as data loss and resurrect it from the other side
+          PRESC.deletedItems = PRESC.deletedItems || {};
+          PRESC.deletedItems[t.id] = Date.now();
           phFlash = `Deleted "<b>${esc(phDispName(t.name, presIsFormula(t)))}</b>"`;
           savePresc(); presEditId = null; presOpenId = null; renderPharmacy();
         }
@@ -18660,6 +18665,9 @@ Dosage: {dosage}
     const s = PRESC.scheduled.find(x => x.id === schedId);
     if (!s || s.dispensedAt) return;
     PRESC.scheduled = PRESC.scheduled.filter(x => x.id !== schedId);
+    // same tombstone rule as prescription deletes -- see data-pres-edit-del-yes
+    PRESC.deletedSched = PRESC.deletedSched || {};
+    PRESC.deletedSched[schedId] = Date.now();
     savePresc();
     renderPharmacy();
   }
@@ -18752,19 +18760,43 @@ Dosage: {dosage}
   // (Shiela Sesbreno) she resolved by hand rather than have this guess --
   // Pickup. Guarded so it only ever runs once, same pattern as
   // PRESC.abbrNamesConverted below.
-  if (!PRESC.schedMethodMigrated) {
-    (PRESC.scheduled || []).forEach(s => {
-      if (s.method) return;
-      s.method = (s.mailing && s.mailing.address && s.mailing.address.trim()) ? "postage" : "pickup";
-    });
-    PRESC.schedMethodMigrated = true;
-    savePresc();
+  /* Housekeeping that WRITES the prescriptions blob with no user action --
+     the schedMethod migration and the date-defer sweep -- must wait until
+     this device has caught up with the cloud (her wipe, 2026-08-22: a
+     stale device's boot-time housekeeping write made its 2-day-old copy
+     look locally-edited, and the sync's keep-local conflict rule then
+     pushed it over the fresh cloud copy, erasing the newest records).
+     The sync module fires "lcm-sync-caught-up" after every completed
+     pull+merge; offline / signed-out / offline-artifact builds fall back
+     to running after a short delay (no cloud to be out of step with, and
+     an unsynced taint is harmless now that the merge is record-by-record). */
+  let phHousekeepingDone = false;
+  function phRunBootHousekeeping() {
+    if (phHousekeepingDone) return;
+    phHousekeepingDone = true;
+    if (!PRESC.schedMethodMigrated) {
+      (PRESC.scheduled || []).forEach(s => {
+        if (s.method) return;
+        s.method = (s.mailing && s.mailing.address && s.mailing.address.trim()) ? "postage" : "pickup";
+      });
+      PRESC.schedMethodMigrated = true;
+      savePresc();
+    }
+    // the boot sweep, so the queue never shows a date that's already been
+    // overtaken -- now possibly after first paint, so it must re-render
+    if (schedAutoDeferSweep()) renderPharmacy();
   }
-  // Once at load, before anything paints, so the queue never shows a date
-  // that's already been overtaken -- then every minute while the app is open.
-  schedAutoDeferSweep();
+  if (!window.__LCM_SYNC) phRunBootHousekeeping();
+  else {
+    window.addEventListener("lcm-sync-caught-up", phRunBootHousekeeping, { once: true });
+    setTimeout(phRunBootHousekeeping, 20000);   // offline / not-signed-in fallback
+  }
+  // a sweep write is safe once boot housekeeping ran AND this tab isn't
+  // possibly-stale (backgrounded tabs go unfresh until their next catch-up)
+  const phSweepSafe = () => phHousekeepingDone && (!window.__LCM_SYNC || window.__lcmSyncFresh !== false);
   setInterval(() => {
     if (document.hidden) return;                 // catch up on visibilitychange instead
+    if (!phSweepSafe()) return;
     if (!schedAutoDeferSweep()) return;          // nothing moved -- don't touch the DOM
     // never yank the page out from under her mid-edit: a defer can land at any
     // second, including while she's typing an address into the schedule form
@@ -18774,7 +18806,10 @@ Dosage: {dosage}
   }, 60 * 1000);
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) return;
-    if (schedAutoDeferSweep()) renderPharmacy();
+    // a waking tab may hold a stale copy -- sweep only once it's re-synced
+    // (the sync module drops __lcmSyncFresh on hide, restores it on catch-up)
+    if (phSweepSafe()) { if (schedAutoDeferSweep()) renderPharmacy(); return; }
+    window.addEventListener("lcm-sync-caught-up", () => { if (schedAutoDeferSweep()) renderPharmacy(); }, { once: true });
   });
   const schedDateStr = k => { const d = parseKey(k); return `${d.getDate()} ${MON_SHORT[d.getMonth()]}`; };
   const schedTimeStr = ms => new Date(ms).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
@@ -21193,6 +21228,17 @@ Dosage: {dosage}
   var curAccessToken = "";                                 // kept in sync for the pagehide/keepalive flush, which can't await getSession()
   var lastSavedAt = null;                                  // ISO string, for the "Last saved to cloud" label
   var HIST_COL_OK = null, histCheckedDate = null, lastNoteMsg = "";
+  // freshness handshake with the app (her wipe, 2026-08-22): the app's
+  // boot/wake housekeeping (schedule sweep, migrations) must not WRITE the
+  // prescriptions blob until this device has reconciled against the real
+  // cloud row -- a housekeeping write on a stale copy is what disguised a
+  // 2-day-old prescription list as a deliberate edit. __lcmSyncFresh goes
+  // false whenever the tab backgrounds (it may wake stale) and true again
+  // after every completed pull+merge; the event releases anything waiting.
+  function markCaughtUp() {
+    window.__lcmSyncFresh = true;
+    try { window.dispatchEvent(new CustomEvent("lcm-sync-caught-up")); } catch (e) {}
+  }
 
   /* ---- config ---------------------------------------------------------- */
   // Connection baked in (the anon/publishable key is public by design — safe to embed;
@@ -21381,6 +21427,71 @@ Dosage: {dosage}
     return changedIt ? JSON.stringify(pick) : pickStr;
   }
 
+  /* ---- record-by-record merge for prescriptions (her wipe, 2026-08-22) --
+     The 20:40 wipe: a device that hadn't synced since Aug 19-20 booted, a
+     boot-time housekeeping write made its prescriptions section look
+     locally-edited, and the whole-blob conflict rule ("keep local") pushed
+     its 2-day-old copy over the cloud -- erasing the two newest records
+     while the untouched log section correctly adopted the fresh cloud copy.
+     A 807→805 drop sails under the 50% shrink guard, so nothing caught it.
+
+     Fix: prescriptions never merge as one take-it-or-leave-it blob again.
+     Records and scheduled entries merge record-by-record: a record missing
+     on one side SURVIVES unless a delete tombstone says she really deleted
+     it through the app's own Delete button (the two delete handlers write
+     PRESC.deletedItems / PRESC.deletedSched). A stale device can therefore
+     never make a record vanish -- the worst it can do is win a field-level
+     conflict on a record BOTH sides edited, where we keep what's on screen
+     (same philosophy as before, damage bounded to that one record).
+     Re-creating after a delete always gets a fresh uid, so a tombstone can
+     never kill a re-created record; tombstones self-prune after 90 days.
+     One-way migration flags (seeded/abbrNamesConverted/schedMethodMigrated)
+     merge as OR, so a stale device's fresh migration run no longer counts
+     as "she edited her prescriptions". A deliberate section-restore
+     (__lcmAllowShrinkOnce) still bypasses this and takes local wholesale --
+     a restore is allowed to genuinely remove records. */
+  function mergePrescTombs(a, b) {
+    var t = {};
+    [a, b].forEach(function (m) {
+      if (!m || typeof m !== "object") return;
+      Object.keys(m).forEach(function (id) { if (!t[id] || m[id] > t[id]) t[id] = m[id]; });
+    });
+    var cut = Date.now() - 90 * 86400000;
+    Object.keys(t).forEach(function (id) { if (t[id] < cut) delete t[id]; });
+    return t;
+  }
+  function mergePrescStrings(lStr, cStr, preferLocal) {
+    var l, c;
+    try { l = JSON.parse(lStr); } catch (e) { l = null; }
+    try { c = JSON.parse(cStr); } catch (e) { c = null; }
+    if (!l || !Array.isArray(l.items)) return (c && Array.isArray(c.items)) ? cStr : lStr;
+    if (!c || !Array.isArray(c.items)) return lStr;
+    var A = preferLocal ? l : c, B = preferLocal ? c : l;     // A wins per-record conflicts
+    var out = {};
+    Object.keys(B).forEach(function (k) { out[k] = B[k]; });  // unknown future fields survive
+    Object.keys(A).forEach(function (k) { out[k] = A[k]; });
+    ["seeded", "abbrNamesConverted", "schedMethodMigrated"].forEach(function (f) { out[f] = !!(l[f] || c[f]); });
+    var tombI = mergePrescTombs(l.deletedItems, c.deletedItems);
+    var tombS = mergePrescTombs(l.deletedSched, c.deletedSched);
+    out.deletedItems = tombI; out.deletedSched = tombS;
+    function unionById(primary, secondary, tomb) {
+      var res = [], seen = {};
+      (primary || []).forEach(function (x) {
+        if (x && x.id && tomb[x.id]) return;
+        res.push(x);
+        if (x && x.id) seen[x.id] = true;
+      });
+      (secondary || []).forEach(function (x) {
+        if (!x || !x.id || seen[x.id] || tomb[x.id]) return;
+        res.push(x);                       // only the other side has it → it survives
+      });
+      return res;
+    }
+    out.items = unionById(A.items, B.items, tombI);
+    out.scheduled = unionById(A.scheduled || [], B.scheduled || [], tombS);
+    return JSON.stringify(out);
+  }
+
   // the 3-way merge itself. localData/cloudData are {daybook-pharmacy,
   // daybook-prescriptions} string pairs (same shape gather() produces).
   function mergeSections(localData, cloudData) {
@@ -21399,7 +21510,15 @@ Dosage: {dosage}
       var l = L[name], c = C[name], b = base[name];
       var localChanged = hashStr(l) !== b, cloudChanged = hashStr(c) !== b;
       var pick;
-      if (!localChanged && !cloudChanged) {
+      if (name === "prescriptions" && !allowShrink && l !== c) {
+        // never pick one whole blob over the other for prescriptions -- merge
+        // record-by-record so a missing record can't be silently dropped by
+        // an older copy winning (see mergePrescStrings above). Per-record
+        // conflicts prefer the side that actually changed since base; when
+        // both did, keep what's on screen (local), same rule as before.
+        pick = mergePrescStrings(l, c, localChanged || !cloudChanged);
+        if (localChanged && cloudChanged) conflicts.push(name);
+      } else if (!localChanged && !cloudChanged) {
         pick = l;
       } else if (localChanged && !cloudChanged) {
         // only this device touched it -- push it on, UNLESS it just went
@@ -21548,6 +21667,11 @@ Dosage: {dosage}
       // right away -- it's only the BASE bookkeeping (below) that has to
       // wait for a real push to actually land.
       if (res.changed) applyMergedLocal(res.sections);
+      // this device has now genuinely reconciled against the real cloud row
+      // -- boot/wake housekeeping (the schedule sweep, migrations) waits for
+      // this signal so a stale copy can never disguise itself as an edit
+      // (her wipe, 2026-08-22)
+      markCaughtUp();
       var finalSnap = assembleFromSections(res.sections);
       var finalJson = JSON.stringify(finalSnap);
       // push whenever the cloud doesn't already match what this merge just
@@ -21576,13 +21700,13 @@ Dosage: {dosage}
         return !!ok;
       });
     }, function () {
-      // couldn't reach the cloud to pull first -- fall back to a plain push
-      // of what's here now; the existing retry/backoff in onPushFail covers
-      // a genuine network failure either way
-      if (pushAfter) {
-        var snap = gather();
-        return doUpsert(snap, JSON.stringify(snap), null).then(function (ok) { return !!ok; });
-      }
+      // couldn't reach the cloud to pull first. This used to fall back to a
+      // plain whole-snapshot push -- last-write-wins, no merge, no guards --
+      // which was the one remaining road for a stale device to clobber the
+      // cloud outright (her wipe, 2026-08-22). Never push blind: mark the
+      // save as not-landed and let onPushFail's backoff retry the full
+      // pull+merge cycle until the cloud is actually reachable.
+      if (pushAfter) onPushFail(JSON.stringify(gather()));
       setLive(false);
       return false;
     });
@@ -21723,7 +21847,7 @@ Dosage: {dosage}
     // not just what fits in 64KB. flushOnHide's keepalive attempt stays as a
     // backup net underneath it in case the tab is killed outright (some
     // mobile browsers do that on background) before this finishes.
-    if (document.hidden) { staleTab = true; pullMergePush(true); flushOnHide(); } else { reconcileGate(); }
+    if (document.hidden) { staleTab = true; window.__lcmSyncFresh = false; pullMergePush(true); flushOnHide(); } else { reconcileGate(); }
   });
   window.addEventListener("focus", reconcileGate);
   window.addEventListener("pagehide", flushOnHide);
