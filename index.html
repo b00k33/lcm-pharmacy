@@ -3026,13 +3026,19 @@
   #pharmacyPage .ph-ren-type-quiet { border: none; background: none; padding: 0; margin-left: 4px; font-size: 11px; color: var(--ph-soft); opacity: 0.7; cursor: pointer; text-decoration: underline dotted; }
   #pharmacyPage .ph-ren-obs-tap { position: relative; display: inline-flex; align-items: center; gap: 3px; cursor: pointer; border-radius: 8px; }
   #pharmacyPage .ph-ren-info-ic { font-size: 11px; color: var(--ph-green); }
-  #pharmacyPage .ph-ren-popover { position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 5; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .12s; background: var(--ph-green-deep); border-radius: 10px; white-space: nowrap; }
-  #pharmacyPage .ph-ren-popover-link { border: none; background: none; color: #fff; padding: 6px 10px; font-size: 12px; cursor: pointer; }
+  /* light card, not the dark-green accent used elsewhere -- .ph-src-chip
+     (reused verbatim below) is styled for a light background, and
+     max-width+wrapping (not nowrap) keeps this from running off-screen at
+     ~360px regardless of which edge of the screen the trigger sits near */
+  #pharmacyPage .ph-ren-popover { position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 5; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .12s; background: var(--ph-white); border: 1px solid var(--ph-line); box-shadow: 0 4px 16px rgba(0,0,0,.15); border-radius: 10px; padding: 8px 10px; max-width: min(240px, 80vw); white-space: normal; display: flex; flex-direction: column; gap: 5px; }
+  #pharmacyPage .ph-ren-popover-text { font-size: 12px; font-weight: 700; color: var(--ph-green-deep); }
   #pharmacyPage .ph-ren-obs-tap.open .ph-ren-popover, #pharmacyPage .ph-ren-obs-tap:focus-within .ph-ren-popover { opacity: 1; visibility: visible; pointer-events: auto; }
   @media (hover: hover) { #pharmacyPage .ph-ren-obs-tap:hover .ph-ren-popover { opacity: 1; visibility: visible; pointer-events: auto; } }
-  #pharmacyPage .ph-ren-optlist { display: flex; flex-direction: column; gap: 6px; }
+  #pharmacyPage .ph-ren-optlist { display: flex; flex-direction: column; gap: 10px; }
+  #pharmacyPage .ph-ren-optrow-group { display: flex; flex-direction: column; gap: 5px; padding-bottom: 8px; border-bottom: 1px solid var(--ph-line); }
   #pharmacyPage .ph-ren-optrow { display: grid; grid-template-columns: 1fr 1fr 32px; gap: 6px; align-items: center; }
-  @media (max-width: 480px) { #pharmacyPage .ph-ren-optrow { grid-template-columns: 1fr; } }
+  #pharmacyPage .ph-ren-optrow-src { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; padding-left: 4px; }
+  @media (max-width: 480px) { #pharmacyPage .ph-ren-optrow, #pharmacyPage .ph-ren-optrow-src { grid-template-columns: 1fr; } }
   #pharmacyPage .ph-pres-dose {
     margin-top: 8px; padding: 8px 12px; border-radius: 12px;
     background: color-mix(in oklab, var(--ph-green) 16%, var(--ph-green-tint));
@@ -11680,26 +11686,26 @@
         renderHxScreen();
         return;
       }
-      // guarded against the nested "→ Type Name" jump link (data-gd-bt-jump/
-      // data-gd-fp-jump, handled below) so tapping it jumps instead of just
-      // re-closing the popover it lives inside
+      // spec §4: popover closes "on tap-away or a second tap" -- close every
+      // OTHER open one on any click (cheap, scoped query), then let the
+      // specific toggle below handle the one actually being tapped, if any
+      document.querySelectorAll("#pharmacyPage .ph-ren-obs-tap.open").forEach(el => {
+        if (el !== e.target.closest(".ph-ren-obs-tap")) el.classList.remove("open");
+      });
       const renInfoToggle = e.target.closest("[data-ren-info-toggle]");
-      if (renInfoToggle && !e.target.closest("[data-gd-bt-jump], [data-gd-fp-jump]")) {
-        renInfoToggle.classList.toggle("open");
-        return;
-      }
+      if (renInfoToggle) { renInfoToggle.classList.toggle("open"); return; }
       const renManage = e.target.closest("[data-ren-manage]");
       if (renManage) { phRenOpenList(renManage.dataset.renManage); return; }
       const renOptAdd = e.target.closest("[data-ren-opt-add]");
       if (renOptAdd && phRenEditField) {
-        phRenList(phRenEditField).push({ id: uid(), word: "New option", kind: "own", ref: "" });
+        phRenList(phRenEditField).push({ id: uid(), label: "New option", possibleType: "", source: { type: "own", who: "", date: "" } });
         savePharmacy(); renderPhRenListModal(); return;
       }
       const renOptRm = e.target.closest("[data-ren-opt-rm]");
       if (renOptRm && phRenEditField) {
         const o = phRenById(phRenEditField, renOptRm.dataset.renOptRm);
         const zone = document.querySelector(`[data-ren-opt-delzone="${renOptRm.dataset.renOptRm}"]`);
-        if (o && zone) zone.innerHTML = phConfirmStrip(`Remove "<b>${esc(o.word)}</b>"? Any patient record using it just shows nothing there.`, `data-ren-opt-rm-yes="${o.id}"`, "Remove");
+        if (o && zone) zone.innerHTML = phConfirmStrip(`Remove "<b>${esc(o.label)}</b>"? Any patient record using it just shows nothing there.`, `data-ren-opt-rm-yes="${o.id}"`, "Remove");
         return;
       }
       const renOptRmYes = e.target.closest("[data-ren-opt-rm-yes]");
@@ -13209,6 +13215,14 @@
       if (hxConstitSel) {
         const rec = phPatientRec(presHxScreenName);
         if (rec) { rec[hxConstitSel.dataset.hxConstit] = hxConstitSel.value || undefined; savePharmacy(); }
+        // Eyes/Build (her ask 2026-08-22) show a live observation+ⓘ line
+        // under the select that Body constitution/Personality never had --
+        // re-render so it appears immediately instead of waiting for some
+        // unrelated redraw. Safe for a <select> (unlike the Findings
+        // textarea above/below, there's no in-progress typing/cursor to
+        // protect), and a fresh <select> still shows the just-saved value
+        // selected since renderHxScreen reads it straight back off rec.
+        renderHxScreen();
         return;
       }
       const hxConstitFindings = e.target.closest("[data-hx-constit-findings]");
@@ -13220,17 +13234,26 @@
       const renOptWord = e.target.closest("[data-ren-opt-word]");
       if (renOptWord && phRenEditField) {
         const o = phRenById(phRenEditField, renOptWord.closest("[data-ren-opt-id]").dataset.renOptId);
-        if (o) { const v = renOptWord.value; phDefer("renOptWord:" + o.id, () => { o.word = v; savePharmacy(); }, 400); }
+        if (o) { const v = renOptWord.value; phDefer("renOptWord:" + o.id, () => { o.label = v; savePharmacy(); }, 400); }
         return;
       }
       const renOptType = e.target.closest("[data-ren-opt-type]");
       if (renOptType && phRenEditField) {
         const o = phRenById(phRenEditField, renOptType.closest("[data-ren-opt-id]").dataset.renOptId);
+        if (o) { const v = renOptType.value; phDefer("renOptType:" + o.id, () => { o.possibleType = v; savePharmacy(); }, 400); }
+        return;
+      }
+      const renOptSrcField = e.target.closest("[data-ren-opt-src-type], [data-ren-opt-src-who], [data-ren-opt-src-date]");
+      if (renOptSrcField && phRenEditField) {
+        const o = phRenById(phRenEditField, renOptSrcField.closest("[data-ren-opt-id]").dataset.renOptId);
         if (o) {
-          const v = renOptType.value;
-          if (!v) { o.kind = "own"; o.ref = ""; }
-          else { const i = v.indexOf(":"); o.kind = v.slice(0, i); o.ref = v.slice(i + 1); }
-          savePharmacy();
+          if (!o.source) o.source = { type: "own", who: "", date: "" };
+          if (renOptSrcField.matches("[data-ren-opt-src-type]")) { o.source.type = renOptSrcField.value; savePharmacy(); }
+          else {
+            const isDate = renOptSrcField.matches("[data-ren-opt-src-date]");
+            const v = renOptSrcField.value;
+            phDefer("renOptSrc:" + o.id + (isDate ? ":date" : ":who"), () => { o.source[isDate ? "date" : "who"] = v; savePharmacy(); }, 400);
+          }
         }
         return;
       }
@@ -15354,11 +15377,16 @@
       const meta = phRenFieldMeta(field);
       const list = phRenList(field);
       const entry = cur ? phRenById(field, cur) : null;
-      return `<label class="ph-gd-field ph-hx-constit-field">
+      // a <div>, not <label> -- a <label> wrapping a <select> PLUS a
+      // separately-interactive manage button and ⓘ span triggers the
+      // browser's native label-click-forwarding, which double-fired a
+      // phantom click on the manage button whenever the ⓘ was tapped.
+      // multi() below never had this bug since it was already a <div>.
+      return `<div class="ph-gd-field ph-hx-constit-field">
         <span class="ph-ren-field-label">${esc(label)} <button type="button" class="ph-ren-manage-btn" data-ren-manage="${field}">✎ options</button></span>
-        <select data-hx-constit="${meta.key}"><option value="">Not recorded</option>${list.map(o => `<option value="${o.id}"${cur === o.id ? " selected" : ""}>${esc(o.word)}</option>`).join("")}</select>
+        <select data-hx-constit="${meta.recKey}"><option value="">Not recorded</option>${list.map(o => `<option value="${o.id}"${cur === o.id ? " selected" : ""}>${esc(o.label)}</option>`).join("")}</select>
         ${entry ? `<div class="ph-ren-obs-line">${phRenObsHtml(entry, showTypes)}</div>` : ""}
-      </label>`;
+      </div>`;
     };
     const multi = (field, curIds, label) => {
       const meta = phRenFieldMeta(field);
@@ -15366,7 +15394,7 @@
       const curSet = new Set(curIds || []);
       return `<div class="ph-gd-field ph-hx-constit-field">
         <span class="ph-ren-field-label">${esc(label)} <button type="button" class="ph-ren-manage-btn" data-ren-manage="${field}">✎ options</button></span>
-        <div class="ph-ren-chips">${list.length ? list.map(o => `<button type="button" class="ph-ren-chip${curSet.has(o.id) ? " on" : ""}" data-hx-constit-multi="${meta.key}" data-val="${o.id}">${esc(o.word)}</button>`).join("") : `<span class="ph-ren-obs-word">No options yet — add some with ✎ options</span>`}</div>
+        <div class="ph-ren-chips">${list.length ? list.map(o => `<button type="button" class="ph-ren-chip${curSet.has(o.id) ? " on" : ""}" data-hx-constit-multi="${meta.recKey}" data-val="${o.id}">${esc(o.label)}</button>`).join("") : `<span class="ph-ren-obs-word">No options yet — add some with ✎ options</span>`}</div>
         ${curIds && curIds.length ? `<div class="ph-ren-obs-line">${curIds.map(id => phRenObsHtml(phRenById(field, id), showTypes)).join("")}</div>` : ""}
       </div>`;
     };
@@ -15381,31 +15409,34 @@
         ${picker("personalityBt", rec.personalityBt || "", "Personality / temperament")}
       </div>
       <div class="ph-hx-constit-row">
-        ${single("eyes", rec.renEyes || "", "Eyes")}
-        ${single("build", rec.renBuild || "", "Build")}
+        ${single("eyes", rec.eyes || "", "Eyes")}
+        ${single("build", rec.build || "", "Build")}
       </div>
-      ${multi("skin", rec.renSkin, "Skin")}
-      ${multi("voice", rec.renVoice, "Voice / manner")}
+      ${multi("skin", rec.skin, "Skin")}
+      ${multi("voice", rec.voiceManner, "Voice / manner")}
       <label class="ph-gd-field"><span>Findings</span>
         <textarea data-hx-constit-findings rows="2" placeholder="Optional notes…">${esc(rec.constitutionFindings || "")}</textarea>
       </label>
     </div>`;
   }
-  // ---- Ren (人) observations -- her ask 2026-08-22. Eyes/Build/Voice-manner
-  // options are reused verbatim from the already-seeded 方病人 signs/eyes/
-  // buildCaption text (see PH_REN_SEED below) -- nothing invented. Skin is
-  // her own clinical observation, tagged kind:"own" and never source-linked.
-  // Each option optionally points at a body type ("bt") or formula
-  // presentation ("fp") by NAME (same by-name linking already used for
-  // .family on body types) -- resolved to a jump target at render time via
-  // phRenTypeJumpAttr, reusing the existing data-gd-bt-jump/data-gd-fp-jump
-  // handlers rather than inventing a third jump mechanism.
+  // ---- Ren (人) observations -- her ask 2026-08-22, per the confirmed spec
+  // (lcm-ren-observations-code.md). Eyes/Build/Voice-manner options are
+  // reused verbatim from the already-seeded 方病人 body-type/formula-
+  // presentation content (see PH_REN_SEED below) -- nothing invented. Skin
+  // is her own clinical observation (✎, dated when this shipped), never
+  // source-linked to Mick/Huang Huang.
+  //
+  // Each option is its own record: { label, possibleType, source }.
+  // possibleType is plain text, not a live pointer at a bodyTypes/
+  // formulaPres record -- per spec §4 the popover only ever STATES the
+  // possible type name + its source, it never navigates anywhere, so
+  // there's no real record to keep a link in sync with.
   function phRenFieldMeta(field) {
     return {
-      eyes: { key: "renEyes", label: "Eyes" },
-      build: { key: "renBuild", label: "Build" },
-      skin: { key: "renSkin", label: "Skin" },
-      voice: { key: "renVoice", label: "Voice / manner" },
+      eyes: { key: "renEyes", recKey: "eyes", label: "Eyes" },
+      build: { key: "renBuild", recKey: "build", label: "Build" },
+      skin: { key: "renSkin", recKey: "skin", label: "Skin" },
+      voice: { key: "renVoice", recKey: "voiceManner", label: "Voice / manner" },
     }[field];
   }
   function phRenList(field) {
@@ -15413,40 +15444,26 @@
     return PHARMACY[meta.key] || (PHARMACY[meta.key] = []);
   }
   function phRenById(field, id) { return phRenList(field).find(o => o.id === id) || null; }
-  function phRenTypeLabel(entry) { return (entry && entry.kind !== "own" && entry.ref) ? entry.ref : ""; }
-  function phRenTypeJumpAttr(entry) {
-    if (!entry || entry.kind === "own" || !entry.ref) return "";
-    if (entry.kind === "fp") return `data-gd-fp-jump="${esc(entry.ref)}"`;
-    const bt = phBtList().find(b => b.name === entry.ref);
-    return bt ? `data-gd-bt-jump="${esc(bt.id)}"` : "";
-  }
-  function phRenTypeSelectHtml(o) {
-    const cur = o && o.kind && o.kind !== "own" ? `${o.kind}:${o.ref}` : "";
-    const mkOpt = (val, label) => `<option value="${esc(val)}"${cur === val ? " selected" : ""}>${esc(label)}</option>`;
-    const bts = phBtList().map(b => mkOpt(`bt:${b.name}`, b.name + (b.cn ? " " + b.cn : ""))).join("");
-    const fps = phFpList().map(f => mkOpt(`fp:${f.name}`, f.name + (f.cn ? " " + f.cn : ""))).join("");
-    return `<option value=""${cur === "" ? " selected" : ""}>— my own observation, no type —</option>${bts}${fps}`;
-  }
-  // observed-vs-type interaction (her ask 2026-08-22, STEP 7-style toggle):
+  // observed-vs-type interaction (her ask 2026-08-22, confirmed toggle):
   // Show-types OFF -> approach A, tap/hover ⓘ popover; ON -> approach C, a
   // quiet always-visible tag. Persists per DEVICE (plain localStorage, not
   // synced PHARMACY data), never resets when a different patient opens.
   function phRenShowTypes() { return localStorage.getItem("daybook-ph-ren-showtypes") === "1"; }
   function phRenObsHtml(entry, showTypes) {
     if (!entry) return "";
-    const typeLabel = phRenTypeLabel(entry);
-    if (!typeLabel) return `<span class="ph-ren-obs-word">${esc(entry.word)}</span>`;
-    const jump = phRenTypeJumpAttr(entry);
-    if (showTypes) return `<span class="ph-ren-obs-word">${esc(entry.word)}<button type="button" class="ph-ren-type-quiet" ${jump}>${esc(typeLabel)}</button></span>`;
+    const type = (entry.possibleType || "").trim();
+    if (!type) return `<span class="ph-ren-obs-word">${esc(entry.label)}</span>`;
+    if (showTypes) return `<span class="ph-ren-obs-word">${esc(entry.label)}<span class="ph-ren-type-quiet">→ ${esc(type)}</span></span>`;
+    const srcChip = entry.source ? phSourceChipHtml(entry.source) : "";
     // tabindex/:focus-within alongside the tap+hover CSS so keyboard users can reach it too
-    return `<span class="ph-ren-obs-word ph-ren-obs-tap" tabindex="0" data-ren-info-toggle>${esc(entry.word)} <span class="ph-ren-info-ic">ⓘ</span><span class="ph-ren-popover"><button type="button" class="ph-ren-popover-link" ${jump}>→ ${esc(typeLabel)}</button></span></span>`;
+    return `<span class="ph-ren-obs-word ph-ren-obs-tap" tabindex="0" data-ren-info-toggle>${esc(entry.label)} <span class="ph-ren-info-ic">ⓘ</span><span class="ph-ren-popover"><span class="ph-ren-popover-text">→ suggests ${esc(type)}</span>${srcChip}</span></span>`;
   }
   // ---- Eyes/Build/Skin/Voice-manner option-list editor -- same "add/edit/
-  // delete herself, nothing hard-coded" rule as body types, but a much
-  // lighter record (word + optional type link) so it gets its own small
-  // modal rather than reusing the heavier bt/fp draft editor. Shares the
-  // SAME #phGdModal/#phGdModalBackdrop DOM nodes (only one of phGdDraft /
-  // phRenEditField is ever set at a time -- see phGdCloseModal).
+  // delete herself, nothing hard-coded" rule as body types (fangbingren
+  // STEP 2), but a much lighter record than a full body type so it gets its
+  // own small modal rather than reusing the heavier bt/fp draft editor.
+  // Shares the SAME #phGdModal/#phGdModalBackdrop DOM nodes (only one of
+  // phGdDraft / phRenEditField is ever set at a time -- see phGdCloseModal).
   let phRenEditField = null;
   function phRenOpenList(field) {
     phGdDraft = null;
@@ -15460,19 +15477,27 @@
     if (!modal || modal.hidden || !phRenEditField) return;
     const meta = phRenFieldMeta(phRenEditField);
     const list = phRenList(phRenEditField);
+    const srcTypeOpts = (cur) => Object.entries(PH_SOURCE_TYPES).map(([k, v]) => `<option value="${k}"${cur === k ? " selected" : ""}>${v.icon} ${esc(v.label)}</option>`).join("");
     modal.innerHTML = `<div class="ph-hx-card ph-gd-modal-card">
       <div class="ph-hx-head">
         <button type="button" class="ph-stocktake-close" data-gd-modal-close="1" aria-label="Close">×</button>
         <div class="ph-hx-head-name">${esc(meta.label)} options</div>
       </div>
       <div class="ph-gd-modal-body">
-        <p class="ph-hx-constit-note">These are the choices shown on the patient record. Add, rename, or remove them here — nothing is hard-coded.</p>
+        <p class="ph-hx-constit-note">These are the choices shown on the patient record. Add, rename, or remove them here — nothing is hard-coded. Possible type + source are optional and only ever shown via the ⓘ / Show types toggle.</p>
         <div class="ph-ren-optlist">
-          ${list.length ? list.map(o => `<div class="ph-ren-optrow" data-ren-opt-id="${o.id}">
-            <input type="text" class="field-bare" data-ren-opt-word value="${esc(o.word)}" placeholder="Word">
-            <select class="field-bare" data-ren-opt-type>${phRenTypeSelectHtml(o)}</select>
-            <button type="button" class="ph-gd-src-rm" data-ren-opt-rm="${o.id}" aria-label="Remove">×</button>
-          </div><div data-ren-opt-delzone="${o.id}"></div>`).join("") : `<p class="fam-empty">No options yet.</p>`}
+          ${list.length ? list.map(o => { const s = o.source || {}; return `<div class="ph-ren-optrow-group" data-ren-opt-id="${o.id}">
+            <div class="ph-ren-optrow">
+              <input type="text" class="field-bare" data-ren-opt-word value="${esc(o.label)}" placeholder="Observed word">
+              <input type="text" class="field-bare" data-ren-opt-type value="${esc(o.possibleType || "")}" placeholder="Possible type (optional)">
+              <button type="button" class="ph-gd-src-rm" data-ren-opt-rm="${o.id}" aria-label="Remove">×</button>
+            </div>
+            <div class="ph-ren-optrow-src">
+              <select class="field-bare" data-ren-opt-src-type>${srcTypeOpts(s.type || "own")}</select>
+              <input type="text" class="field-bare" data-ren-opt-src-who placeholder="Who" value="${esc(s.who || "")}">
+              <input type="date" class="field-bare" data-ren-opt-src-date value="${esc(s.date || "")}">
+            </div>
+          </div><div data-ren-opt-delzone="${o.id}"></div>`; }).join("") : `<p class="fam-empty">No options yet.</p>`}
         </div>
         <button type="button" class="btn-outline" data-ren-opt-add="1">+ Add option</button>
       </div>
@@ -19935,47 +19960,52 @@ Dosage: {dosage}
     // no console.log here, deliberately -- her STEP 11 privacy ask covers this
     // whole feature ("no console logging"), not just the quote text itself
   })();
-  // ---- Ren (人) observations seed content -- her ask 2026-08-22. Eyes/
-  // Build/Voice-manner options are the exact eyes/buildCaption/signs text
-  // already seeded on PH_FBR_SEED_BODY_TYPES/PH_FBR_SEED_FORMULA_PRES above
-  // (STEP 4/STEP 7 content, re-surfaced under this new field label, nothing
-  // added) -- e.g. "Round" is Ban Xia's real eyes:"round", "Skinny twig" is
-  // Gui Zhi's real buildCaption. Skin is Linh's own observation (her exact
-  // 4 words, "etc." not expanded on), tagged kind:"own", never sourced to
-  // Mick/Huang Huang. Written into PHARMACY ONCE, guarded below -- after
-  // that these are ordinary user-editable records, same as body types.
+  // ---- Ren (人) observations seed content -- confirmed spec 2026-08-22
+  // (lcm-ren-observations-code.md §3), EXACTLY that list, nothing added or
+  // padded out beyond it (Voice/manner is deliberately short -- "that's
+  // genuinely all that's described so far"). Eyes/Build/Voice-manner are
+  // reused from the already-approved 方病人 body-type/formula-presentation
+  // content; Skin is Linh's own observation (her exact 4 words, "etc." not
+  // expanded on), sourced ✎ to her, dated when this shipped -- never
+  // attributed to Mick/Huang Huang. Written into PHARMACY ONCE, guarded
+  // below -- after that these are ordinary user-editable records, same as
+  // body types.
   const PH_REN_SEED = {
     renEyes: [
-      { word: "Round", kind: "bt", ref: "Ban Xia" },
-      { word: "Sad cat", kind: "bt", ref: "Chai Hu" },
-      { word: "Big", kind: "fp", ref: "Wen Dan Tang" },
+      { label: "Round", possibleType: "Ban Xia", source: { type: "mick", who: "Mick", date: "2024-06-28" } },
+      { label: "Downturned (“sad cat”)", possibleType: "Chai Hu", source: { type: "mick", who: "Mick", date: "2024-11-05" } },
+      { label: "Almond (“bright eyes”)", possibleType: "Gui Zhi", source: { type: "mick", who: "Mick", date: "2024-06-28" } },
+      { label: "Big", possibleType: "Wen Dan Tang picture", source: { type: "mick", who: "Mick", date: "2026-07-07" } },
     ],
     renBuild: [
-      { word: "Thin", kind: "bt", ref: "Chai Hu" },
-      { word: "Skinny twig", kind: "bt", ref: "Gui Zhi" },
-      { word: "Bigger", kind: "bt", ref: "Da Huang" },
+      { label: "Thin", possibleType: "Chai Hu", source: { type: "mick", who: "Mick", date: "2024-06-28" } },
+      { label: "Skinny / delicate, “the skinny twig”", possibleType: "Gui Zhi", source: { type: "mick", who: "Mick", date: "2024-06-28" } },
+      { label: "Bigger", possibleType: "Da Huang", source: { type: "mick", who: "Mick", date: "2024-06-28" } },
+      { label: "Round middle, thin limbs", possibleType: "Ban Xia Xie Xin Tang picture", source: { type: "mick", who: "Mick", date: "2024-09-20" } },
+      { label: "Hip / waist / butt", possibleType: "Wu Ling San picture", source: { type: "mick", who: "Mick", date: "2025-05-19" } },
     ],
     renVoice: [
-      { word: "Blinky / anxious", kind: "bt", ref: "Ban Xia" },
-      { word: "Introvert", kind: "bt", ref: "Chai Hu" },
-      { word: "Irritability", kind: "bt", ref: "Chai Hu" },
-      { word: "Louder", kind: "bt", ref: "Da Huang" },
-      { word: "Scared", kind: "fp", ref: "Wen Dan Tang" },
+      { label: "Introvert", possibleType: "Chai Hu", source: { type: "mick", who: "Mick", date: "2024-06-28" } },
+      { label: "Louder", possibleType: "Da Huang", source: { type: "mick", who: "Mick", date: "2024-06-28" } },
     ],
     renSkin: [
-      { word: "Oily", kind: "own", ref: "" },
-      { word: "Dry", kind: "own", ref: "" },
-      { word: "Spots", kind: "own", ref: "" },
-      { word: "Dark", kind: "own", ref: "" },
+      { label: "Oily", possibleType: "", source: { type: "own", who: "Linh", date: "2026-08-22" } },
+      { label: "Dry", possibleType: "", source: { type: "own", who: "Linh", date: "2026-08-22" } },
+      { label: "Spots", possibleType: "", source: { type: "own", who: "Linh", date: "2026-08-22" } },
+      { label: "Dark", possibleType: "", source: { type: "own", who: "Linh", date: "2026-08-22" } },
     ],
   };
-  (function phSeedRenV1() {
-    if (PHARMACY.renSeededV1) return;
+  // V2: the confirmed-spec content above replaces an earlier draft seed
+  // (wrong Voice/manner list, missing Eyes/Build options, no real source
+  // dates) that only ever ran in dev testing, never in her live app -- a
+  // fresh guard flag + explicit wipe-and-reseed means this corrects itself
+  // regardless of whether that draft happened to run anywhere.
+  (function phSeedRenV2() {
+    if (PHARMACY.renSeededV2) return;
     Object.keys(PH_REN_SEED).forEach(key => {
-      if (!PHARMACY[key]) PHARMACY[key] = [];
-      PH_REN_SEED[key].forEach(o => PHARMACY[key].push(Object.assign({ id: uid() }, o)));
+      PHARMACY[key] = PH_REN_SEED[key].map(o => Object.assign({ id: uid() }, o));
     });
-    PHARMACY.renSeededV1 = true;
+    PHARMACY.renSeededV2 = true;
     savePharmacy();
   })();
   // ---- V2 (her Visual diagnosis spec, 2026-08-20): the exact figure-number
