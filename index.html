@@ -12341,7 +12341,7 @@
         const pickedType = document.getElementById("presEditType").value;
         t.presType = presIsFormula({ name: t.name, abbr: t.abbr }) === (pickedType === "formula") ? "" : pickedType;
         { const abbrEl = document.getElementById("presEditAbbr"); if (abbrEl) t.abbr = abbrEl.value.trim().toUpperCase(); }
-        t.notes = document.getElementById("presEditNotes").value.trim();
+        t.notes = presSanitizeNoteText(document.getElementById("presEditNotes").value.trim());
         t.ingredients = ings;
         t.totalGrams = phRound2(t.ingredients.reduce((a, i) => a + (i.grams || 0), 0));
         savePresc(); presEditId = null; presDraft = null;
@@ -13556,7 +13556,7 @@
       if (e.target.id === "presMedHxNotes") {
         const t0 = PRESC.items.find(x => x.id === presOpenId);
         const nm = t0 ? presPatientFor(t0) : "";
-        if (nm) { phPatientRec(nm).medicalHistoryNotes = e.target.value; savePharmacy(); }
+        if (nm) { phPatientRec(nm).medicalHistoryNotes = presSanitizeNoteText(e.target.value); savePharmacy(); }
         return;
       }      if (e.target.id === "refGrams") { refGrams = e.target.value; phClearConfirms(); renderRefPreview(); }
     });
@@ -15300,9 +15300,28 @@
     rec.historyUpdatedAt = Date.now();
     return true;
   }
+  // her report 2026-08-22: raw Word/HTML clipboard markup (mso-* styles,
+  // literal &quot; entities) turned up stored inside two note fields, traced
+  // to the one-time 2026-07-23 Galcott import -- not something typed or
+  // pasted through THIS app (a plain <textarea> already can't carry rich
+  // formatting through a browser paste, and there's no paste handler here
+  // to intercept one). This is belt-and-braces against any future import
+  // or paste path doing the same: strip the two kinds of text that can
+  // NEVER be real typed prose -- literal HTML tags and HTML entity codes.
+  // Nothing else is touched -- a real note that happens to mention "font"
+  // or a colour is untouched, character for character.
+  function presSanitizeNoteText(text) {
+    if (!text) return text;
+    return text
+      .replace(/<[^>]*>/g, "")
+      .replace(/&quot;/gi, '"').replace(/&apos;/gi, "'").replace(/&#39;/g, "'")
+      .replace(/&nbsp;/gi, " ").replace(/&lt;/gi, "<").replace(/&gt;/gi, ">")
+      .replace(/&amp;/gi, "&")
+      .trim();
+  }
   function phHxSetNote(rec, k, note) {
     if (!rec.historyNotes) rec.historyNotes = {};
-    const v = String(note || "").trim();
+    const v = presSanitizeNoteText(String(note || "").trim());
     if (v) rec.historyNotes[k] = v; else delete rec.historyNotes[k];
     rec.historyUpdatedAt = Date.now();
   }
