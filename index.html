@@ -2700,7 +2700,11 @@
      the table, actually reads as green rather than near-white */
   /* Conditions: rose for the 20 chronic conditions, amber for "pregnant" (a
      current status, not a condition) -- everywhere a badge appears. */
-  #pharmacyPage .ph-cond-badges { display: inline-flex; flex-wrap: wrap; gap: 4px; vertical-align: middle; }
+  /* the whole row is the target now (her ask 2026-08-23). Cursor + the tint
+     already used elsewhere; height, layout and spacing are untouched. */
+  #pharmacyPage tr.ph-pres-rowlink { cursor: pointer; }
+  #pharmacyPage tr.ph-pres-rowlink:hover td { background: var(--ph-green-tint); }
+  #pharmacyPage tr.ph-pres-rowlink:focus-visible { outline: 2px solid var(--ph-green); outline-offset: -2px; }  #pharmacyPage .ph-cond-badges { display: inline-flex; flex-wrap: wrap; gap: 4px; vertical-align: middle; }
   #pharmacyPage .ph-cond-badge {
     font-size: 10.5px; font-weight: 700; border-radius: 999px; padding: 2px 8px;
     background: var(--ph-negative-tint); color: var(--ph-negative-deep); white-space: nowrap;
@@ -6218,6 +6222,27 @@
   // left of whatever was there before -- block every save (not just the load)
   // until she's actually restored something, so a routine autosave elsewhere
   // in the app can never quietly pave over it first
+  // press-to-release travel, so a drag that selects a name never counts as a click
+  let phRowDragMoved = false, phRowDragStart = null;
+  document.addEventListener("mousedown", e => {
+    phRowDragMoved = false;
+    const r = e.target.closest && e.target.closest("[data-pres-row-open]");
+    phRowDragStart = r ? { x: e.clientX, y: e.clientY } : null;
+  }, true);
+  document.addEventListener("mouseup", e => {
+    if (!phRowDragStart) return;
+    phRowDragMoved = Math.abs(e.clientX - phRowDragStart.x) > 4 || Math.abs(e.clientY - phRowDragStart.y) > 4;
+    phRowDragStart = null;
+  }, true);
+  // a clickable <tr> is not a real button, so Enter/Space must be given back
+  document.addEventListener("keydown", e => {
+    if (e.key !== "Enter" && e.key !== " " && e.key !== "Spacebar") return;
+    const r = e.target.closest && e.target.closest("[data-pres-row-open]");
+    if (!r || r !== e.target) return;
+    e.preventDefault();
+    const btn = r.querySelector("[data-pres-open]");
+    if (btn) btn.click();
+  });
   function savePharmacy() {
     phUsageCache = null;   // stock/log just changed -- recompute usage on next ask
     if (PH_DATA_WARNING && PH_DATA_WARNING.kind === "pharmacy-unrecoverable") return false;
@@ -11766,7 +11791,25 @@
         savePharmacy(); renderPharmacy();
         return;
       }
-      const presOpen = e.target.closest("[data-pres-open]");
+      // Clicking anywhere on a prescription row opens that patient (her ask
+      // 2026-08-23: the pencil is a small target to aim at hundreds of times).
+      // Deliberately generic: ANY button/link/field inside the row does its own
+      // job and stops there, so a control added later can never start opening
+      // patients by accident. An allow-nothing-interactive test, not a list of
+      // known buttons to special-case one at a time.
+      // NOTE: this must not `return` when the click landed on a control -- that
+      // would swallow the event before the button's own handler below ever ran.
+      // It only takes the branch for a genuine bare-row click; everything else
+      // simply falls through to the handlers that already exist.
+      const presRow = e.target.closest("[data-pres-row-open]");
+      if (presRow
+          && !e.target.closest('button, a, input, select, textarea, label, [role="button"]:not([data-pres-row-open])')
+          && !phRowDragMoved
+          && !(window.getSelection && String(window.getSelection()).trim().length)) {
+        // call the one way in that already exists -- same function, same screen
+        const btn = presRow.querySelector("[data-pres-open]");
+        if (btn) { btn.click(); return; }
+      }      const presOpen = e.target.closest("[data-pres-open]");
       if (presOpen) {
         // same reason as Close: a pending autosave is resolved against presOpenId,
         // so it has to land on the script she was actually editing, not the new one
@@ -15239,7 +15282,7 @@
           // §4 "both, split": name stays inert, the two icon buttons below
           // are the only way into the (one, existing) prescription editor --
           // same data-pres-open navigation as before, never a write.
-          return `<tr>
+          return `<tr class="ph-pres-rowlink" data-pres-row-open="${t.id}" role="button" tabindex="0" aria-label="Open ${esc(phTitle(t.name))}">
           <td class="ph-pres-patient"><span class="ph-pres-patient-nm">${esc(phTitle(t.name))}</span>${phCondBadgesHtml(t.name) || `<span class="ph-pres-nocond">no conditions recorded</span>`}</td>
           <td style="text-align:right" class="${stale ? "ph-pres-stale" : ""}">${ms
             ? `<span class="ph-pres-relative">${phRelTime(ms)}</span><span class="ph-pres-lastdate">${(d => `${d.getDate()} ${MON_SHORT[d.getMonth()]} ${d.getFullYear()}`)(new Date(ms))}</span>`
