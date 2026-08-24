@@ -2522,6 +2522,28 @@
   }
   #pharmacyPage .ph-shell-titlebar h1 { margin: 0; font-size: 20px; font-weight: 700; color: #fff; font-family: var(--font-body); }
   #pharmacyPage .ph-shell-titlebar-meta { font-size: var(--fs-meta); color: var(--ph-struct-lbl); margin-left: auto; }
+  /* her "say each thing once" job (2026-08-24): the one solid button that
+     moved into Dashboard's header (previously the old topbar's "+ New
+     prescription"). Same tokens the header already uses for contrast --
+     --ph-struct-link's 7.4:1 ratio is against #0E4D2A text on this exact
+     background, matching the comment above ".ph-shell-topblock". */
+  #pharmacyPage .ph-shell-titlebar-action {
+    align-self: center; background: var(--ph-struct-link); color: var(--ph-green-deep);
+    border: none; border-radius: 999px; padding: 8px 18px; font-size: 13px; font-weight: 700;
+    cursor: pointer; white-space: nowrap; min-height: 44px;
+  }
+  #pharmacyPage .ph-shell-titlebar-action:hover { background: color-mix(in oklab, var(--ph-struct-link) 85%, black); }
+  /* Dashboard-scoped only (".ph-dash-active" -- see renderPhShellNav): the
+     other 11 pages' titlebars have no action button and much shorter meta
+     text, so their layout is untouched at this width. Title + button share
+     the first line; the longer date-plus-version meta text drops to its
+     own full-width line beneath rather than squeezing either. */
+  @media (max-width: 700px) {
+    .ph-app-shell.ph-dash-active #pharmacyPage .ph-shell-titlebar { flex-wrap: wrap; row-gap: 6px; }
+    .ph-app-shell.ph-dash-active #pharmacyPage .ph-shell-titlebar h1 { order: 1; flex: 1 1 auto; min-width: 0; }
+    .ph-app-shell.ph-dash-active #pharmacyPage .ph-shell-titlebar-action { order: 2; margin-left: auto; }
+    .ph-app-shell.ph-dash-active #pharmacyPage .ph-shell-titlebar-meta { order: 3; flex: 1 1 100%; margin-left: 0; }
+  }
   /* STEP 4: her spec's "four even columns" generalised to "however many cells
      this page has, in one even row" -- her later call (2026-08-24) was to
      keep every existing number rather than force-fit 4, so --ph-shell-cols is
@@ -5898,8 +5920,21 @@
     gap: 12px; padding: max(14px, env(safe-area-inset-top)) 24px 14px; position: sticky; top: 0; z-index: 20;
   }
   .ph-topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
-  .ph-topbar-title { font-family: var(--font-body); font-weight: 700; font-size: 19px; margin: 0; color: var(--ph-green-deep); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* her "say each thing once" job (2026-08-24): every real page now has its
+     own title in the dark phShellHead() header (or, on Refill, its own
+     in-page heading) -- this text was always a second copy of that, on
+     every page, at every width. Kept in the DOM (still set per-tab by
+     renderPhShellNav) since phShellFooter/other code may still read it;
+     just never shown. */
+  .ph-topbar-title { display: none; }
   .ph-topbar-right { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+  /* Dashboard's dark header now carries its own title, version line and
+     primary action (search "ph-dash-active" in renderPhShellNav) -- nothing
+     is meant to sit above it, so the whole old bar (burger aside, handled
+     by the sidebar drawer regardless) is hidden while Dashboard is active.
+     Every other page keeps this bar exactly as before, for its Update
+     button, version line and per-page action(s). */
+  .ph-app-shell.ph-dash-active #phTopbar { display: none; }
   .ph-topbar-burger {
     display: none; background: transparent; border: none; font-size: 20px; line-height: 1; cursor: pointer;
     color: var(--ph-green-deep); padding: 4px 6px; border-radius: 8px; flex: 0 0 auto;
@@ -6084,11 +6119,6 @@
       margin-top: 6px; min-height: 0; padding: 2px 0; background: none; border: none;
       color: var(--ph-green-deep); font-size: 12px; font-weight: 700; text-decoration: underline; cursor: pointer;
     }
-
-    /* --- 1. one title per page ---
-       phMobileDedupeTitles() tags any in-page heading that just repeats the top
-       bar title; CSS hides it here so desktop is untouched. */
-    #pharmacyPage .ph-m-dupe-title { display: none !important; }
 
     /* --- 3. headings capped, one line ---
        Were rendering at 22-24px on a 360px screen and wrapping to two lines. */
@@ -9085,9 +9115,13 @@
   // title + optional meta line (date, "121 herbs & formulas", etc) + an
   // already-built strip (or none, for a page with nothing worth counting --
   // Settings, Suppliers, Guide, Stocktake, Refill all pass stripHtml="").
-  function phShellHead(title, meta, stripHtml) {
+  // actionHtml (2026-08-24, her "say each thing once" job): an optional
+  // pre-built button in the titlebar row itself -- currently only Dashboard
+  // uses it, for "+ New prescription". Every other caller omits it, so
+  // nothing about those 11 other pages changes.
+  function phShellHead(title, meta, stripHtml, actionHtml) {
     return `<div class="ph-shell-topblock">
-      <div class="ph-shell-titlebar"><h1>${esc(title)}</h1>${meta ? `<span class="ph-shell-titlebar-meta">${meta}</span>` : ""}</div>
+      <div class="ph-shell-titlebar"><h1>${esc(title)}</h1>${meta ? `<span class="ph-shell-titlebar-meta">${meta}</span>` : ""}${actionHtml || ""}</div>
       ${stripHtml || ""}
     </div>`;
   }
@@ -10164,7 +10198,7 @@
     if (!last) return { known: false };
     const due = new Date(parseKey(last.date));
     due.setMonth(due.getMonth() + STOCKTAKE_DUE_MONTHS);
-    return { known: true, overdue: due < TODAY, dueKey: keyOf(due) };
+    return { known: true, overdue: due < TODAY, dueKey: keyOf(due), lastDate: last.date };
   }
   // her mockup (2026-08-16), her answer once asked "what should print?":
   // the last completed stocktake's results, for her records -- not a blank
@@ -12070,6 +12104,15 @@
   // -- doesn't hide/collapse the page's own always-visible search box (her
   // mockup shows both at once on Inventory), just jumps straight to it
   const phTopbarFocus = id => { const el = document.getElementById(id); if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.focus(); } };
+  // Dashboard has no page of its own to forward to, so its primary action
+  // switches to Prescriptions first, then starts a new one -- named here
+  // (2026-08-24) so the dark header's own copy of this button (her "say each
+  // thing once" job) calls the exact same function as the old topbar's,
+  // rather than a second hand-written copy that could drift from it.
+  function phDashNewPrescription() {
+    document.querySelector('[data-ph-tab="prescriptions"]')?.click();
+    presStartNew();
+  }
   const PH_TOPBAR_ACTIONS = {
     // ⚙ (PASTE 4): the dosage-preset + markup settings used to sit inline above
     // the patient list, wrapping over six lines before she reached a single
@@ -12088,14 +12131,7 @@
       { icon: "i-search", label: "Jump to search", run: () => phTopbarFocus("phLogSearch") },
       { icon: "i-print", label: "Export CSV", run: () => document.getElementById("phLogExportBtn")?.click() },
     ],
-    dashboard: [{
-      icon: "i-plus",
-      label: "New prescription",
-      run: () => {
-        document.querySelector('[data-ph-tab="prescriptions"]')?.click();
-        presStartNew();
-      },
-    }],
+    dashboard: [{ icon: "i-plus", label: "New prescription", run: phDashNewPrescription }],
     // her mockup: search + add icons on Inventory's topbar -- these don't
     // add any new functionality, just entry points to the page's own
     // already-existing search box and "+ Add herb" button
@@ -12228,26 +12264,17 @@
   document.addEventListener("click", e => {
     if (!e.target.closest('#presSettingsPop') && !e.target.closest('[title="Dosage & markup"]')) phClosePresSettings();
   });
-  function phMobileNormTitle(s) {
-    return (s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-  }
+  // her "say each thing once" job (2026-08-24): this used to also tag any
+  // in-page heading that repeated the old topbar's title, so mobile CSS
+  // could hide the duplicate -- see ".ph-m-dupe-title" (now removed). That
+  // whole mechanism is retired: the old topbar's title is hidden outright
+  // now, app-wide (".ph-topbar-title { display: none }"), so there is
+  // nothing left for an in-page heading to duplicate against. The function
+  // stays (every page-render path still calls it once) purely for its other
+  // job: taking the Refill page's pinned-height class back off when she
+  // navigates away.
   function phMobileDedupeTitles() {
-    // every page-render path calls this exactly once, which makes it the one
-    // reliable place to take the Refill page's pinned-height class OFF again
-    // when she navigates away (each tab returns early from renderPharmacy, so
-    // there is no shared tail to hang it on)
     phPinRefillZones();
-    const page = document.getElementById("pharmacyPage");
-    const titleEl = document.getElementById("phTopbarTitle");
-    if (!page || !titleEl) return;
-    const want = phMobileNormTitle(titleEl.textContent);
-    if (!want) return;
-    page.querySelectorAll("h1, h2").forEach(h => {
-      // only ever consider headings on the page SHE'S looking at -- a hidden
-      // page's markup is still in the DOM and must not be tagged for later
-      if (!h.offsetParent && h.closest("[hidden]")) return;
-      h.classList.toggle("ph-m-dupe-title", phMobileNormTitle(h.textContent) === want);
-    });
   }
   function renderPhShellNav(tab) {
     if (!window.__phShellBound) {
@@ -12290,6 +12317,11 @@
     }
     const title = document.getElementById("phTopbarTitle");
     if (title) title.textContent = PH_TAB_TITLES[tab] || "LCM Pharmacy";
+    // her "say each thing once" job (2026-08-24): Dashboard's dark header now
+    // carries its own title/version line/primary action, so the old topbar
+    // -- title already hidden app-wide, see ".ph-topbar-title { display:
+    // none }" -- is hidden in full here rather than leaving an empty sliver.
+    document.getElementById("phAppShell")?.classList.toggle("ph-dash-active", tab === "dashboard");
     document.querySelectorAll(".ph-nav-item[data-ph-tab]").forEach(el => el.classList.toggle("on", el.dataset.phTab === tab));
     document.querySelectorAll(".ph-mtab[data-ph-tab]").forEach(el => el.classList.toggle("on", el.dataset.phTab === tab));
     const need = (PHARMACY.herbs || []).filter(herbNeedsOrder).length;
@@ -12594,19 +12626,23 @@
       ${btnHtml}
     </div>`;
   }
+  // her ask 2026-08-24: a job appears once, as a card OR a tile, never both.
+  // Stocktake is the only one of these four with an actual in-progress
+  // state (a real session object) -- Formula refills/Overstock review/Order
+  // planning are always just today's count, no session, so they can never
+  // collide with a card the way Stocktake could. When Stocktake IS in
+  // progress it's already a card under Needs action now, so its tile is
+  // dropped from this row entirely (three tiles, not a gap to fill) rather
+  // than drawn twice with the same progress bar and Resume button.
   function phDashMondayBandHtml() {
     const st = PHARMACY.stocktakeSession;
     const inProgress = st && !st.finished;
-    let job1Stat, job1Btn;
-    if (inProgress) {
-      const done = Object.keys(st.results).length, total = st.queue.length;
-      const pct = total ? Math.round((done / total) * 100) : 0;
-      job1Stat = `<b>${done} of ${total} counted</b><span class="ph-dash-resume-bar"><span style="width:${pct}%"></span></span>${st.startedAt ? `<span class="sub">started ${esc(phShortDate(st.startedAt.slice(0, 10)))}</span>` : ""}`;
-      job1Btn = `<button type="button" class="ph-load-btn" data-ph-stocktake-resume="1">Resume</button>`;
-    } else {
+    let job1Html = "";
+    if (!inProgress) {
       const due = phStocktakeNextDueInfo();
-      job1Stat = `<b>${due.known ? (due.overdue ? "Overdue" : `Due ${esc(phShortDate(due.dueKey))}`) : "Never done yet"}</b>`;
-      job1Btn = `<button type="button" class="ph-load-btn" data-ph-tab="stocktake">Start stocktake</button>`;
+      const job1Stat = `<b>${due.known ? `Last counted ${esc(phShortDate(due.lastDate))}` : "Never counted yet"}</b>`;
+      const job1Btn = `<button type="button" class="ph-load-btn" data-ph-tab="stocktake">Start a stocktake</button>`;
+      job1Html = phDashMondayJobHtml("🔢", "Stocktake", job1Stat, job1Btn);
     }
     const refillList = phDashRefillList();
     const thisMonth = PHARMACY.log.filter(e => e.kind === "refill" && parseKey(e.date).getFullYear() === TODAY.getFullYear() && parseKey(e.date).getMonth() === TODAY.getMonth()).length;
@@ -12619,7 +12655,7 @@
     const zeroNow = plan.filter(h => h.qty <= 0).length;
     const job4Stat = `<b>${plan.length} item${plan.length === 1 ? "" : "s"} under 2mo cover</b><span class="sub">${zeroNow} already at zero</span>`;
     return `<div class="ph-dash-monday-band">
-      ${phDashMondayJobHtml("🔢", "Stocktake", job1Stat, job1Btn)}
+      ${job1Html}
       ${phDashMondayJobHtml("🏺", "Formula refills", job2Stat, `<button type="button" class="ph-load-btn" data-ph-tab="refill">Start refills</button>`)}
       ${phDashMondayJobHtml("📦", "Overstock review", job3Stat, `<button type="button" class="ph-load-btn" data-ph-dash-scrollto="phDashSitLong">Review overstock</button>`)}
       ${phDashMondayJobHtml("📊", "Order planning", job4Stat, `<button type="button" class="ph-load-btn" data-ph-dash-scrollto="phDashOrderPlan">Plan the order</button>`)}
@@ -12718,17 +12754,21 @@
   }
 
   // ---- §1 "Needs action now" task cards -----------------------------------
+  // her ask 2026-08-24: the card says LESS than the strip, not the same --
+  // the strip already states "N of M counted" and the bar already shows it,
+  // so the card's own words are just scope + start date now.
   function phDashTaskStocktakeHtml() {
     const st = PHARMACY.stocktakeSession;
     if (!st || st.finished) return "";
     const done = Object.keys(st.results).length, total = st.queue.length;
     const scope = { herb: "Herbs", formula: "Formulas", both: "Herbs & formulas" }[st.kind] || "Stocktake";
     const pct = total ? Math.round((done / total) * 100) : 0;
+    const sub = st.startedAt ? `${esc(scope)} · started ${esc(phShortDate(st.startedAt.slice(0, 10)))}` : esc(scope);
     return `<section class="ph-dash-task">
       <span class="ph-dash-task-ic"><svg class="icn" aria-hidden="true"><use href="#i-clipboard"/></svg></span>
       <div class="ph-dash-task-main">
         <span class="nm">Stocktake in progress</span>
-        <span class="sub">${esc(scope)} · ${done} of ${total} counted</span>
+        <span class="sub">${sub}</span>
         <span class="ph-dash-resume-bar"><span style="width:${pct}%"></span></span>
       </div>
       <button type="button" class="ph-load-btn ph-dash-task-btn" data-ph-stocktake-resume="1">Resume</button>
@@ -12765,12 +12805,14 @@
       <button type="button" class="btn-cancel" data-ph-dash-fixaddr-cancel="1">Cancel</button>
     </div>` : ""}`;
   }
+  // her ask 2026-08-24: the whole section vanishes when there's nothing in
+  // it -- no heading, no empty box, no "all clear" message. Content starts
+  // at the tile row instead.
   function phDashNeedsActionHtml() {
     const cards = [phDashTaskStocktakeHtml(), ...phDashMustGoToday().map(phDashTaskMustGoHtml)].filter(Boolean);
+    if (!cards.length) return "";
     return `<div class="ph-dash-secthead"><h2>Needs action now</h2><span class="rule"></span></div>
-      ${cards.length
-        ? `<div class="ph-dash-tasks">${cards.join("")}</div>`
-        : `<div class="ph-dash-tasks"><div class="fam-empty" style="flex:1 1 100%">Nothing has to go out today — you're clear. 🌿</div></div>`}`;
+      <div class="ph-dash-tasks">${cards.join("")}</div>`;
   }
 
   function phDashStripHtml() {
@@ -12839,8 +12881,17 @@
     // the title bar and the strip are joined by a hairline so the two read
     // as ONE dark block, not two stacked bars -- via the shared phShellHead()
     // every other page now uses too, not a Dashboard-only builder.
+    // her "say each thing once" job (2026-08-24): the old white topbar sat
+    // ABOVE this dark block duplicating its title, plus its own version line
+    // and "+ New prescription" action -- both of those move in here (meta
+    // line gets the version text appended, same #9CC4AC colour as the date
+    // already used; actionHtml is the new solid button), and #phTopbar is
+    // hidden outright while Dashboard is the active tab (search
+    // "ph-dash-active"). Nothing sits above this block on Dashboard now.
+    const dashMeta = `${esc(phFuDateLabel(keyOf(TODAY)))} · ${esc(phVersionLineText())}`;
+    const dashAction = `<button type="button" class="ph-shell-titlebar-action" data-ph-dash-newpres="1">+ New prescription</button>`;
     wrap.innerHTML = `
-      ${phShellHead("Dashboard", esc(phFuDateLabel(keyOf(TODAY))), phDashTodayStripHtml())}
+      ${phShellHead("Dashboard", dashMeta, phDashTodayStripHtml(), dashAction)}
       ${phDashNeedsActionHtml()}
       ${monday ? phDashMondayBandHtml() : ""}
       ${monday ? phDashMondayReviewHtml() : ""}
@@ -13233,6 +13284,11 @@
       // serves both; the old #phStocktakeWrap-scoped copy was removed so a
       // click on the Stocktake page cannot fire phStocktakeOpen() twice.
       if (e.target.closest("[data-ph-stocktake-resume]")) { phStocktakeOpen(); return; }
+      // her "say each thing once" job (2026-08-24): "+ New prescription" now
+      // lives in Dashboard's own dark header instead of the old topbar --
+      // same delegated pattern as Resume above, same function the topbar
+      // action used to call directly.
+      if (e.target.closest("[data-ph-dash-newpres]")) { phDashNewPrescription(); return; }
       if (e.target.closest("[data-ph-bulk-invert]")) {
         // flip selected/unselected among whatever the current search + filters show —
         // her workflow: check the ones to KEEP, Invert, Stop the rest
@@ -23387,12 +23443,18 @@ Dosage: {dosage}
     const days = Math.round(hrs / 24);
     return days + " day" + (days === 1 ? "" : "s") + " ago";
   }
+  // pulled out of phRenderVersionLine so Dashboard's own dark-header copy
+  // (2026-08-24, her "say each thing once" job) reads the exact same text,
+  // not a second hand-written copy that could drift from this one.
+  function phVersionLineText() {
+    const d = phBuildDate(PH_BUILD);
+    return d ? `Version ${phBuildLabel(PH_BUILD)} · updated ${phAgo(d)}`
+             : `Version ${PH_BUILD} · local file`;
+  }
   function phRenderVersionLine() {
     const el = document.getElementById("phVersionLine");
     if (!el) return;
-    const d = phBuildDate(PH_BUILD);
-    el.textContent = d ? `Version ${phBuildLabel(PH_BUILD)} · updated ${phAgo(d)}`
-                       : `Version ${PH_BUILD} · local file`;
+    el.textContent = phVersionLineText();
   }
   // Background detection. Fetches this same page bypassing cache and compares
   // build stamps. It NEVER reloads, never applies anything -- it only unhides
