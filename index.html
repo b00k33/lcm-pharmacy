@@ -2116,6 +2116,8 @@
   #pharmacyPage .ph-stocktake-hist-main .nm { font-size: 13px; font-weight: 600; color: var(--ph-ink); }
   #pharmacyPage .ph-stocktake-hist-main .sub { font-size: 11.5px; color: var(--ph-soft); margin-top: 2px; }
   #pharmacyPage .ph-stocktake-hist-adj { font-size: 13px; font-weight: 700; color: var(--ph-green-deep); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  #pharmacyPage .ph-stocktake-hist-abandoned { font-size: 11px; font-weight: 600; color: var(--ph-faint); }
+  #pharmacyPage .ph-stocktake-hist-note { font-size: 11px; color: var(--ph-faint); margin-top: 4px; line-height: 1.4; }
   @media (max-width: 900px) {
     #pharmacyPage .ph-stocktake-page { grid-template-columns: 1fr; }
   }
@@ -9710,7 +9712,25 @@
   }
   // Abandon: close the session. Counted items stay counted (their adjustments
   // are already in the movements log); nothing is re-queued.
+  //
+  // Her report 2026-08-24: abandoning used to just null the session and walk
+  // away -- the real corrections were always safe (they wrote to stock/log
+  // the moment she pressed the button, same as Finish), but there was never
+  // any TRACE that the session happened. History only ever got a row from
+  // Finish, so an abandoned session -- even one with real work in it -- read
+  // as if nothing had been done. Now it leaves the same kind of record
+  // Finish does, honestly labelled abandoned rather than complete, built by
+  // the exact same phStocktakeBuildRecord Finish uses -- so the two can never
+  // describe "what happened in this session" two different ways.
+  //
+  // Only written if something was actually checked -- a session opened and
+  // immediately abandoned (a misclick, second thoughts) has nothing to
+  // report, and shouldn't leave a tombstone in her history for it.
   function phStocktakeAbandon() {
+    const s = PHARMACY.stocktakeSession;
+    if (s && Object.keys(s.results).length) {
+      phStocktakeSaveRecord(phStocktakeBuildRecord(s, { abandoned: true }));
+    }
     PHARMACY.stocktakeSession = null;
     phStocktakeRestartArmed = false;
     savePharmacy();
@@ -9777,32 +9797,40 @@
     phStocktakeAdvance();
     savePharmacy();
   }
-  function phStocktakeFinish() {
-    const s = PHARMACY.stocktakeSession;
-    if (!s) return;
+  // shared by Finish and Abandon (her ask 2026-08-24) -- one place builds the
+  // record so the two can never drift into two different shapes of "what a
+  // stocktake session looked like"
+  function phStocktakeBuildRecord(s, extra) {
     const adjustments = Object.keys(s.results)
       .map(id => ({ herbId: id, ...s.results[id] }))
       .filter(r => r.adjusted)
       .map(r => { const h = phHerbByIdGet().get(r.herbId); return { herbId: r.herbId, name: h ? h.name : "(deleted)", old: r.old, new: r.new, diff: r.diff }; })
       .sort((a, b) => phByName(a, b));
-    const record = {
+    return {
       id: s.id, kind: s.kind, date: keyOf(TODAY), finishedAt: new Date().toISOString(),
       checked: Object.keys(s.results).length, adjusted: adjustments.length, adjustments,
       // her §3: what she chose NOT to count is part of the honest record of the
       // day, not a silent gap between "checked" and the shelf
       ignored: phStocktakeIgnoredCount(s),
+      queueTotal: s.queue.length,
       // her §5: a restarted session must never read as two sessions. The
       // restarts ride the ONE record, keeping s.id, so history shows a single
       // stocktake that was restarted rather than a session that began twice.
       ...(s.restarts && s.restarts.length ? { restarts: s.restarts.slice() } : {}),
+      ...extra,
     };
-    // Restart clears s.finished, which re-opens a door that could not previously
-    // be reached: finishing the same session id twice would unshift a second
-    // record with a duplicate id, and phStocktakeSummaryHtml looks a record up
-    // BY id. One record per session id, always.
-    const existing = PHARMACY.stocktakes.findIndex(r => r.id === s.id);
+  }
+  // one record per session id, always -- a restart or a second finish must
+  // never unshift a duplicate. phStocktakeSummaryHtml looks a record up BY id.
+  function phStocktakeSaveRecord(record) {
+    const existing = PHARMACY.stocktakes.findIndex(r => r.id === record.id);
     if (existing >= 0) PHARMACY.stocktakes.splice(existing, 1);
     PHARMACY.stocktakes.unshift(record);
+  }
+  function phStocktakeFinish() {
+    const s = PHARMACY.stocktakeSession;
+    if (!s) return;
+    phStocktakeSaveRecord(phStocktakeBuildRecord(s));
     s.finished = true;
     savePharmacy();
     renderPhStocktakeModal(); renderPhStocktakeBtn();
@@ -10108,10 +10136,14 @@
       const d = parseKey(r.date);
       const dateLabel = `${d.getDate()} ${MON_SHORT[d.getMonth()]} ${d.getFullYear()}`;
       const kindLabel = r.kind === "herb" ? "🌿 Herbs stocktake" : r.kind === "formula" ? "🫙 Formulas stocktake" : "🌿🫙 Full stocktake (both)";
+      // her ask 2026-08-24: an abandoned session shows the honest "of the
+      // queue" figure when it's known, so it reads as partial, not complete
+      const checkedTxt = r.queueTotal ? `${r.checked} of ${r.queueTotal} checked` : `${r.checked} checked`;
       return `<div class="ph-stocktake-hist-row">
         <div class="ph-stocktake-hist-main">
-          <div class="nm">${esc(kindLabel)}</div>
-          <div class="sub">${dateLabel} · ${r.checked} checked${r.ignored ? ` · ${r.ignored} ignored` : ""}</div>
+          <div class="nm">${esc(kindLabel)}${r.abandoned ? ` <span class="ph-stocktake-hist-abandoned">⏸ Abandoned partway</span>` : ""}</div>
+          <div class="sub">${dateLabel} · ${checkedTxt}${r.ignored ? ` · ${r.ignored} ignored` : ""}</div>
+          ${r.reconstructed ? `<div class="ph-stocktake-hist-note">Rebuilt from the log after this session was abandoned before this record existed — the checked figure is a minimum; some confirmed-but-unchanged items may be missing from it.</div>` : ""}
         </div>
         <div class="ph-stocktake-hist-adj">${r.adjusted} adjusted</div>
       </div>`;
