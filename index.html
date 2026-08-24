@@ -1678,6 +1678,57 @@
     text-align: center; font-size: 12.5px; color: var(--ph-soft); background: var(--ph-paper);
     border: 1px dashed var(--ph-line); border-radius: 10px; padding: 8px 12px; margin-bottom: 16px;
   }
+  /* ---- the unlogged-script leave guard (her spec 2026-08-24) --------------
+     Amber heading band, white body. Amber here is MEANING, not structure --
+     #87651A, the measured 5.4:1 token, never the structural deep green. */
+  #pharmacyPage #presGuardWrap[hidden] { display: none; }
+  #pharmacyPage .ph-presguard-backdrop { position: fixed; inset: 0; z-index: 600; background: rgba(14,45,27,0.45); }
+  #pharmacyPage .ph-presguard-modal {
+    position: fixed; inset: 0; z-index: 601;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  #pharmacyPage .ph-presguard-card {
+    width: min(460px, 100%); max-height: calc(100dvh - 40px); overflow-y: auto;
+    background: var(--ph-white); border-radius: 16px; overflow-x: hidden;
+    box-shadow: 0 24px 60px rgba(8,30,17,0.35);
+  }
+  #pharmacyPage .ph-presguard-head { background: var(--ph-verdict-low); padding: 14px 20px; }
+  #pharmacyPage .ph-presguard-head h3 { margin: 0; font-size: 15px; font-weight: 700; color: #FFFFFF; }
+  #pharmacyPage .ph-presguard-body { padding: 16px 20px 20px; }
+  #pharmacyPage .ph-presguard-lead { margin: 0 0 12px; font-size: 13px; line-height: 1.55; color: var(--ph-ink); }
+  #pharmacyPage .ph-presguard-list { margin: 0 0 20px; padding-left: 20px; }
+  #pharmacyPage .ph-presguard-list li { font-size: 13px; line-height: 1.55; color: var(--ph-ink); margin-bottom: 6px; }
+  #pharmacyPage .ph-presguard-acts { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  #pharmacyPage .ph-presguard-log {
+    font: inherit; font-size: 14px; font-weight: 700; color: var(--ph-cream);
+    background: var(--ph-green-deep); border: 1px solid var(--ph-green-deep); border-radius: 10px;
+    padding: 12px 18px; min-height: 44px; cursor: pointer; touch-action: manipulation;
+  }
+  #pharmacyPage .ph-presguard-log:hover { background: var(--ph-green-press); }
+  #pharmacyPage .ph-presguard-stay {
+    font: inherit; font-size: 13px; font-weight: 600; color: var(--ph-green-deep);
+    background: var(--ph-white); border: 1px solid var(--ph-green); border-radius: 10px;
+    padding: 12px 16px; min-height: 44px; cursor: pointer; touch-action: manipulation;
+  }
+  #pharmacyPage .ph-presguard-stay:hover { background: var(--ph-green-tint); }
+  /* least prominent of the three, and off to the right */
+  #pharmacyPage .ph-presguard-leave {
+    margin-left: auto; font: inherit; font-size: 12px; color: var(--ph-soft);
+    background: none; border: none; text-decoration: underline;
+    padding: 12px 2px; min-height: 44px; cursor: pointer; text-align: right;
+  }
+  #pharmacyPage .ph-presguard-leave:hover { color: var(--ph-ink); }
+  /* the stamp left on the panel afterwards -- quiet, grey, states only the
+     fact the app actually witnessed */
+  #pharmacyPage .ph-pres-unlogged-stamp {
+    font-size: 11.5px; color: var(--ph-faint); margin: 6px 0 0;
+  }
+  @media (max-width: 640px) {
+    #pharmacyPage .ph-presguard-acts { display: block; }
+    #pharmacyPage .ph-presguard-log { display: block; width: 100%; box-sizing: border-box; }
+    #pharmacyPage .ph-presguard-stay { display: block; width: 100%; box-sizing: border-box; margin-top: 8px; }
+    #pharmacyPage .ph-presguard-leave { display: block; width: 100%; margin-left: 0; margin-top: 8px; text-align: center; }
+  }
   #pharmacyPage .ph-stocktake-start-h { font-family: var(--font-body); font-size: 20px; font-weight: 600; color: var(--ph-green-deep); text-align: center; margin: 0 0 6px; }
   #pharmacyPage .ph-stocktake-start-note { font-size: 12.5px; color: var(--ph-soft); text-align: center; margin: 0 0 22px; }
   /* ---- stocktake side list (her spec 2026-08-24) --------------------------
@@ -12975,6 +13026,7 @@
   function renderPharmacy() {
     const { herbs, formulas, log, suppliers } = PHARMACY;
     phAbbrMap = null; phHerbById = null; phInHouseSet = null; phBlendNames = null;   // abbrs / jar links / herbs may have changed — rebuild lazily
+    presGuardInstall();   // self-guarding, binds once
 
     // one pharmacy, three internal tabs (her Galcott model: Herbs | Prescriptions
     // | Patients) — the active tab persists so she returns where she left off
@@ -19591,6 +19643,7 @@
       </div>
     </div>
     ${pending ? `<div class="ph-dose-warn">⚠ Stock is already out of your jars, but this dispense isn't in your records until you press Save &amp; log.</div>` : ""}
+    ${t.leftUnloggedOn ? `<div class="ph-pres-unlogged-stamp">Left unlogged on ${esc(presUnloggedStampStr(t.leftUnloggedOn))}</div>` : ""}
     <div class="ph-dose-extra">
       <span class="ph-pres-more-wrap">
         <button type="button" class="ph-dose-extra-link" data-pres-more-toggle="1" aria-haspopup="true" aria-expanded="${presMoreOpen ? "true" : "false"}" aria-label="More actions">⋯ More</button>
@@ -19609,10 +19662,169 @@
   let presEditId = null;
   let presDraft = null;
   const presNewDraft = () => ({ id: "", name: "", notes: "", totalGrams: 0, ingredients: [] });
+  // ---- the leave guard (her spec 2026-08-24) -------------------------------
+  // ONE warning, at ONE moment: she is walking away from a script whose stock
+  // is already out of the jars with nothing written down. It adds a question
+  // in FRONT of leaving -- it changes nothing about what Dispense or Save &
+  // log themselves do.
+  //
+  // The trigger is presPending[id]: that map is populated by presDispense (the
+  // step that actually deducts) and emptied by presSavePrescription (the step
+  // that actually logs). Non-empty therefore means exactly "stock is out, no
+  // record" -- the one state worth interrupting for. A script she only
+  // calculated has no presPending entry, so the guard cannot fire on it.
+  const presUnloggedStampStr = key => {
+    try { const d = parseKey(key); return `${d.getDate()} ${MON_SHORT[d.getMonth()]}`; } catch (e) { return String(key || ""); }
+  };
+  let presGuardResume = null;    // what she was trying to do when we stopped her
+  let presGuardBypass = false;   // set while we replay that action for real
+  let presGuardFor = null;       // the script the open dialog is about
+  function presGuardScript() {
+    if (!presOpenId) return null;
+    const t = PRESC.items.find(x => x.id === presOpenId);
+    if (!t) return null;
+    if (!(presPending[t.id] || []).length) return null;   // nothing dispensed -- nothing to warn about
+    if (t.leftUnloggedOn) return null;                    // she was asked and answered (her §5)
+    return t;
+  }
+  // Every number in the warning is the real one from the script in front of
+  // her. grams/herbs come from what was ACTUALLY deducted, not from the form.
+  function presGuardFacts(t) {
+    const lines = presPending[t.id] || [];
+    const gp = parseFloat((document.getElementById("presGrams") || {}).value) || t.totalGrams || 0;
+    let price = null;
+    try { price = presCalcNumbers(t, gp).price; } catch (e) { price = null; }
+    return {
+      grams: lines.reduce((n, x) => n + (x.grams || 0), 0),
+      herbs: lines.length,
+      at: presPendingAt[t.id] || null,
+      patient: presPatientFor(t) || t.name || "",
+      price,
+    };
+  }
+  function presGuardEl() {
+    let el = document.getElementById("presGuardWrap");
+    if (el) return el;
+    const host = document.getElementById("pharmacyPage");
+    if (!host) return null;
+    el = document.createElement("div");
+    el.id = "presGuardWrap";
+    el.hidden = true;
+    host.appendChild(el);
+    return el;
+  }
+  function presGuardShow(t) {
+    const el = presGuardEl();
+    if (!el) return;
+    presGuardFor = t.id;
+    const f = presGuardFacts(t);
+    const timeTxt = f.at ? presTimeStr(new Date(f.at)) : "";
+    // Q1, checked in the code: "Dispense & copy label" is the step that
+    // deducts. So the herbs are ALREADY off the shelf -- the opposite problem
+    // from stock sitting untouched, and it needs the opposite sentence.
+    return el.hidden = false, el.innerHTML = `
+      <div class="ph-presguard-backdrop" data-pres-guard-stay="1"></div>
+      <div class="ph-presguard-modal" role="alertdialog" aria-modal="true" aria-labelledby="presGuardH">
+        <div class="ph-presguard-card">
+          <div class="ph-presguard-head"><h3 id="presGuardH">This script hasn't been logged</h3></div>
+          <div class="ph-presguard-body">
+            <p class="ph-presguard-lead">You dispensed <b>${phFmtG(f.grams)} g</b>${f.patient ? ` for <b>${esc(phTitle(f.patient))}</b>` : ""}${timeTxt ? ` at <b>${esc(timeTxt)}</b>` : ""} and copied the label, but never pressed Save &amp; log. If you leave now:</p>
+            <ul class="ph-presguard-list">
+              <li><b>${phFmtG(f.grams)} g</b> across <b>${f.herbs}</b> herb${f.herbs === 1 ? "" : "s"} has already come off the shelf, with no record of why</li>
+              <li>there's no dated record that this went out</li>
+              ${f.price != null ? `<li><b>${phMoney(f.price)}</b> isn't counted</li>` : ""}
+            </ul>
+            <div class="ph-presguard-acts">
+              <button type="button" class="ph-presguard-log" data-pres-guard-log="1">Log it now</button>
+              <button type="button" class="ph-presguard-stay" data-pres-guard-stay="1">Stay on this script</button>
+              <button type="button" class="ph-presguard-leave" data-pres-guard-leave="1">Leave without logging — mark it not logged</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }
+  function presGuardClose() {
+    const el = document.getElementById("presGuardWrap");
+    if (el) { el.hidden = true; el.innerHTML = ""; }
+    presGuardFor = null;
+  }
+  // replay the exact thing she was trying to do, with the guard stood down
+  function presGuardGo() {
+    const go = presGuardResume;
+    presGuardResume = null;
+    presGuardClose();
+    if (!go) return;
+    presGuardBypass = true;
+    try { go(); } finally { presGuardBypass = false; }
+  }
+  // her §5: this records the decision she made and NOTHING else. It does not
+  // claim the herbs weren't dispensed -- the app doesn't know that. It knows
+  // she was asked and said leave it, which is the only fact it witnessed. No
+  // stock change, no dispense-log entry: nothing moved, so nothing belongs in
+  // the record of things that moved.
+  function presGuardMarkUnlogged() {
+    const t = PRESC.items.find(x => x.id === presGuardFor);
+    if (t) { t.leftUnloggedOn = keyOf(TODAY); savePresc(); }
+    presGuardGo();
+  }
+  // "exactly what Save & log does" -- so it presses the actual button rather
+  // than calling presSavePrescription directly. The button's handler commits
+  // the template edits first (presCommitTemplateFields) and handles the
+  // no-grams case; calling the save function alone would quietly skip both.
+  function presGuardLogNow() {
+    const id = presGuardFor;
+    const btn = document.querySelector(`[data-pres-save="${id}"]`);
+    if (btn) {
+      presGuardBypass = true;
+      try { btn.click(); } finally { presGuardBypass = false; }
+    } else {
+      const t = PRESC.items.find(x => x.id === id);
+      if (t) presSavePrescription(t);
+    }
+    presGuardGo();
+  }
+  // Leaving = any of the four ways out. The click cases are caught once, in
+  // the capture phase, so a new route out of the panel is covered without
+  // finding and patching its handler; presStartNew guards itself because the
+  // topbar calls it directly with no element to intercept.
+  const PRES_GUARD_LEAVE_SEL = "[data-ph-tab], [data-pres-open], [data-pres-close], [data-ph-dash-pres-open], [data-fu-open], [data-pres-edit]";
+  function presGuardInstall() {
+    if (window.__presGuardBound) return;
+    window.__presGuardBound = true;
+    document.addEventListener("click", e => {
+      if (presGuardBypass) return;
+      if (e.target.closest("#presGuardWrap")) return;         // the dialog's own buttons
+      const el = e.target.closest(PRES_GUARD_LEAVE_SEL);
+      if (!el) return;
+      const t = presGuardScript();
+      if (!t) return;
+      if (el.dataset.presOpen === t.id) return;               // re-opening the SAME script isn't leaving it
+      e.preventDefault(); e.stopPropagation();
+      presGuardResume = () => el.click();
+      presGuardShow(t);
+    }, true);
+    document.addEventListener("keydown", e => {
+      if (e.key !== "Escape" || !presGuardFor) return;
+      e.preventDefault();                                     // Escape = Stay, the safe answer
+      presGuardResume = null; presGuardClose();
+    }, true);
+    // the dialog's own three buttons (plus the scrim, which means Stay)
+    document.addEventListener("click", e => {
+      if (!presGuardFor) return;
+      if (e.target.closest("[data-pres-guard-log]")) { presGuardLogNow(); return; }
+      if (e.target.closest("[data-pres-guard-leave]")) { presGuardMarkUnlogged(); return; }
+      if (e.target.closest("[data-pres-guard-stay]")) { presGuardResume = null; presGuardClose(); return; }
+    });
+  }
   // called directly from PH_TOPBAR_ACTIONS (Prescriptions' "+ New
   // prescription", Dashboard's shortcut, Refill's "+ New formula recipe")
   // — one starting-a-new-script path, no in-page button to click through
   function presStartNew(presType) {
+    // starting a new script is one of the four ways of leaving the old one.
+    // Guarded here rather than at the click, because the topbar calls this
+    // function directly -- there is no element to intercept.
+    const guard = presGuardScript();
+    if (guard) { presGuardResume = () => presStartNew(presType); presGuardShow(guard); return; }
     presDraft = presNewDraft();
     if (presType === "formula") presDraft.presType = "formula";
     presEditId = "__new__"; presOpenId = null;
@@ -20796,6 +21008,11 @@ Dosage: {dosage}
     presPending[t.id] = deducted;
     presPendingNotes[t.id] = notes;
     presPendingAt[t.id] = Date.now();
+    // A fresh dispense is a NEW episode. The old "left unlogged" stamp recorded
+    // a decision about the PREVIOUS one, so it can't speak for this one -- and
+    // leaving it in place would keep the guard silent while stock walks out
+    // again. Cleared here so the guard is live for every dispense.
+    delete t.leftUnloggedOn;
     // her report (2026-08-06): "i dont like that the label opens after i
     // dispense a formula" -- presLabelOpen only ever gets SET by 🧮 Calculate
     // and never reset by dispensing, so if she'd checked the label first, it
@@ -20978,6 +21195,11 @@ Dosage: {dosage}
     // Dispensed · <date> <time>" marker every time she reopens this script,
     // not just for the rest of this visit
     t.lastDispensedAt = entry.at; t.lastDispensedGrams = gp; t.lastDispenseLogId = entry.id;
+    // her §5: pressing Save & log on a script she'd previously left unlogged
+    // clears the stamp and logs normally. Remembered so the unwind below can
+    // put it back if either write fails.
+    const prevLeftUnlogged = t.leftUnloggedOn;
+    delete t.leftUnloggedOn;
     const okPh = savePharmacy();
     const okPr = okPh ? savePresc() : false;
     if (!okPh || !okPr) {
