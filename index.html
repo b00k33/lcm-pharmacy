@@ -606,6 +606,44 @@
     display: inline-flex; align-items: center; justify-content: center; min-height: 0;
   }
   #pharmacyPage .ph-ref-howlink:hover { border-color: var(--ph-green); background: var(--ph-green-tint); }
+  /* ===== whole-gram batch sizes (her spec 2026-08-25) ===================== */
+  #pharmacyPage .ph-ref-mult-wrap { display: inline-flex; align-items: center; gap: 8px; flex: 1 1 240px; min-width: 0; }
+  #pharmacyPage .ph-ref-mult-lbl { font-size: 12.5px; font-weight: 700; color: var(--ph-green-deep); flex: 0 0 auto; }
+  #pharmacyPage .ph-ref-mult {
+    flex: 1 1 auto; min-width: 0; font: inherit; font-size: 14px; font-weight: 700;
+    min-height: 54px; padding: 0 10px; border: 1px solid var(--ph-line); border-radius: 10px;
+    background: var(--ph-white); color: var(--ph-ink); cursor: pointer;
+  }
+  #pharmacyPage .ph-ref-mult option:disabled { color: var(--ph-faint); }
+  /* §4: the confirmation band -- grams big on the left, the multiple quietly
+     beside it, the tick on the right. Pink when the batch is not a whole
+     multiple, which is the state her scale can't weigh. */
+  #pharmacyPage .ph-ref-band {
+    display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px;
+    background: var(--ph-green-tint); border-radius: 10px; padding: 8px 12px; margin: 8px 0;
+  }
+  #pharmacyPage .ph-ref-band .g { font-size: 20px; font-weight: 800; color: var(--ph-green-deep); font-variant-numeric: tabular-nums; }
+  #pharmacyPage .ph-ref-band .mult { font-size: 12px; color: var(--ph-soft); }
+  #pharmacyPage .ph-ref-band .tick { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--ph-green-deep); }
+  #pharmacyPage .ph-ref-band.bad { background: #FBE9E7; }
+  #pharmacyPage .ph-ref-band.bad .g, #pharmacyPage .ph-ref-band.bad .tick { color: var(--ph-verdict-zero); }
+  #pharmacyPage .ph-ref-fix { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 8px; }
+  #pharmacyPage .ph-ref-fix .ph-load-btn { min-height: 44px; }
+  #pharmacyPage .ph-ref-fix-note { font-size: 11px; color: var(--ph-faint); }
+  /* §5: Weigh out is the number she reads with her hands full */
+  #pharmacyPage .ph-ref-weigh { font-size: 17px; font-weight: 800; color: var(--ph-ink); font-variant-numeric: tabular-nums; }
+  #pharmacyPage .ph-ref-weigh.bad { color: var(--ph-verdict-zero); }
+  #pharmacyPage .ph-ref-quiet { color: var(--ph-faint); font-variant-numeric: tabular-nums; }
+  #pharmacyPage .ph-ref-left { font-variant-numeric: tabular-nums; color: var(--ph-soft); }
+  #pharmacyPage .ph-ref-left.neg { color: var(--ph-verdict-zero); font-weight: 700; }
+  /* §7: below 640px drop Recipe and In stock rather than clip -- they are
+     context, not the job. Herb / Weigh out / Left after survive. */
+  @media (max-width: 640px) {
+    #pharmacyPage .ph-ref-herbs .col-recipe, #pharmacyPage .ph-ref-herbs .col-stock { display: none; }
+    #pharmacyPage .ph-ref-mult-wrap { flex: 1 1 100%; }
+    #pharmacyPage .ph-ref-mult { width: 100%; }
+    #pharmacyPage .ph-ref-band .tick { margin-left: 0; flex: 1 1 100%; }
+  }
   /* the pinned confirm bar */
   #pharmacyPage .ph-ref-bar {
     display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px;
@@ -15014,6 +15052,18 @@
         refRecipeId = ""; refGrams = ""; phClearConfirms(); renderRefill(); return;
       }
       if (e.target.closest("[data-ref-print]")) { refPrintSheet(); return; }
+      // her §6: the one-tap nudge to the nearest whole multiple. It sets the
+      // same grams field; nothing is rounded per-herb, ever.
+      {
+        const useMult = e.target.closest("[data-ref-use-mult]");
+        if (useMult) {
+          refGrams = useMult.dataset.refUseMult;
+          const gEl = document.getElementById("refGrams");
+          if (gEl) gEl.value = refGrams;
+          phClearConfirms(); renderRefPreview();
+          return;
+        }
+      }
       if (e.target.closest("[data-ref-howmake-toggle]")) { refHowMakeOpen = !refHowMakeOpen; renderRefill(); return; }      // --- Follow-ups page (her spec 2026-08-23) ---
       const fuFilter = e.target.closest("[data-fu-filter]");
       if (fuFilter) { phFuFilter = fuFilter.dataset.fuFilter; phFuNoteOpen = null; renderPhFollowupsPage(); return; }
@@ -15892,6 +15942,17 @@
         if (nm) { phPatientRec(nm).medicalHistoryNotes = presSanitizeNoteText(e.target.value); savePharmacy(); }
         return;
       }      if (e.target.id === "refGrams") { refGrams = e.target.value; phClearConfirms(); renderRefPreview(); }
+      // the batch-size dropdown writes the SAME field the grams box does, so
+      // choosing × 12 is byte-identical to typing 612 (her §9)
+      if (e.target.id === "refMultSel") {
+        const v = e.target.value;
+        if (!v) return;                       // the "not a whole multiple" placeholder
+        refGrams = v;
+        const gEl = document.getElementById("refGrams");
+        if (gEl) gEl.value = v;
+        phClearConfirms(); renderRefPreview();
+        return;
+      }
     });
 
     // inline cell edits commit on blur or Enter (Escape cancels) — the input only
@@ -23481,6 +23542,10 @@ Dosage: {dosage}
                replaced by an inline "g" suffix inside the field, so the pair
                fits one line at 360px. -->
           <span class="ph-grams-field"><input type="text" inputmode="decimal" id="refGrams" value="${esc(refGrams)}" placeholder="0" aria-label="Grams to make"><span class="ph-grams-suffix" aria-hidden="true">g</span></span>
+          <!-- her 2026-08-25 spec §2: a real <select>, so a phone gives the
+               native picker. It only ever writes into #refGrams above, which
+               is what makes "× 12" and "type 612" the same code path. -->
+          <span id="refMultWrap" class="ph-ref-mult-wrap"></span>
           <!-- the "Make refill" button that used to live here has moved into the
                pinned confirm bar at the bottom of the screen (her ask 2026-08-16:
                never scroll to reach it). The bar shows exactly what will happen
@@ -23667,6 +23732,80 @@ Dosage: {dosage}
       </span>
     </div>`;
   }
+  /* ---- whole-gram batch sizes (her spec 2026-08-25) ---------------------
+     Her scale reads whole grams. A batch has to be a WHOLE multiple of the
+     recipe, because the recipe amounts are whole grams and a whole multiple
+     keeps every herb whole. Typing 200 into a 51 g recipe is ×3.92 and asks
+     her to weigh 35.29 g, which she cannot do.
+     Verified against her own data before building: of 7,056 herb weights
+     inside 1,048 refills, 7,010 (99.3%) are already whole grams. The 46 that
+     aren't come from 12 non-multiple batches -- the largest being the 404 g
+     XCHT Mick batch (×7.92) that produced 71.29 / 95.06 / 23.76 / 47.53 g.
+     Nothing here changes how a refill is calculated or made: the dropdown
+     only ever writes a number into the SAME refGrams box she types into, so
+     picking ×12 and typing 612 take the identical code path. */
+  const REF_MAX_BATCH = 1000;      // the last multiple offered is the last one UNDER this
+  function refRecipeSum(recipe) {
+    return (recipe && recipe.ingredients || []).reduce((a, i) => a + (i.grams || 0), 0);
+  }
+  // largest multiple her stock covers: for each herb stock ÷ recipe amount,
+  // take the smallest, round down. Also names the herb that limits it.
+  function refStockCeiling(recipe) {
+    let ceiling = Infinity, limiter = null;
+    (recipe && recipe.ingredients || []).forEach(i => {
+      if (!i.grams || i.grams <= 0) return;
+      const h = presFindHerb(i);
+      if (!h || h.qty == null) return;                 // untracked herbs never limit
+      const can = Math.floor((h.qty || 0) / i.grams);
+      if (can < ceiling) { ceiling = can; limiter = h.name || i.herb; }
+    });
+    return { ceiling: isFinite(ceiling) ? ceiling : Infinity, limiter };
+  }
+  // the multiple nearest her LAST refill of this formula (her §2), or 1
+  function refLastMultiple(recipe, sum) {
+    if (!recipe || !sum) return 1;
+    const name = (recipe.name || "").trim().toLowerCase();
+    const prior = (PHARMACY.log || []).filter(e => e.kind === "refill"
+      && ((e.targetId && e.targetId === recipe.id) || String(e.what || "").trim().toLowerCase() === name));
+    if (!prior.length) return 1;
+    const last = prior[prior.length - 1];
+    const g = last.madeGrams || (last.items || []).reduce((a, i) => a + (i.grams || 0), 0);
+    return Math.max(1, Math.round((g || sum) / sum));
+  }
+  const refIsWholeMultiple = (grams, sum) => sum > 0 && grams > 0 && Math.abs(grams / sum - Math.round(grams / sum)) < 1e-9;
+  function renderRefMultiplier(recipe) {
+    const host = document.getElementById("refMultWrap");
+    if (!host) return;
+    const sum = phRound2(refRecipeSum(recipe));
+    if (!recipe || !sum) { host.innerHTML = ""; return; }
+    const { ceiling, limiter } = refStockCeiling(recipe);
+    const typed = parseFloat(refGrams) || 0;
+    const lastN = refLastMultiple(recipe, sum);
+    const maxN = Math.max(1, Math.floor((REF_MAX_BATCH - 0.0001) / sum));
+    // which line is selected: whatever whole multiple she's actually on; if
+    // she has typed a free number, none of them is.
+    const curN = refIsWholeMultiple(typed, sum) ? Math.round(typed / sum) : (typed ? 0 : lastN);
+    let opts = "";
+    for (let n = 1; n <= maxN; n++) {
+      const g = phRound2(sum * n);
+      const over = n > ceiling;
+      // her §3: over-stock multiples STAY in the list, greyed, and say which
+      // herb runs out -- so she can see how far she could go with a new bag
+      opts += `<option value="${g}"${n === curN ? " selected" : ""}${over ? " disabled" : ""}>× ${n} · ${phFmtG(g)} g${over && limiter ? ` — not enough ${phDispName(limiter, false)}` : ""}</option>`;
+    }
+    host.innerHTML = `<label class="ph-ref-mult-lbl" for="refMultSel">Make</label>
+      <select id="refMultSel" class="ph-ref-mult" aria-label="Batch size as a whole multiple of the recipe">
+        ${typed && !curN ? `<option value="" selected>— ${phFmtG(typed)} g (not a whole multiple)</option>` : ""}
+        ${opts}
+      </select>`;
+    // opening on the nearest-to-last multiple only applies before she has
+    // typed anything -- once refGrams holds a value, that value wins
+    if (!typed && lastN >= 1 && lastN <= maxN) {
+      refGrams = String(phRound2(sum * Math.min(lastN, maxN)));
+      const gEl = document.getElementById("refGrams");
+      if (gEl && document.activeElement !== gEl) gEl.value = refGrams;
+    }
+  }
   function renderRefPreview() {
     const el = document.getElementById("refPreview");
     if (!el) return;
@@ -23694,12 +23833,60 @@ Dosage: {dosage}
     // same numbers, same single presCalcNumbers() call, different containers
     renderRefSummary(recipe, useGrams, items, cost, scaled);
     renderRefBar(recipe, grams, items);
-    el.innerHTML = `
-      <table class="ph-pres-table ph-ref-herbs"><thead><tr><th>Single herb</th><th style="text-align:right">Use</th><th style="text-align:right">In stock</th></tr></thead>
+    renderRefMultiplier(recipe);
+    // her §4/§6: is this batch a whole multiple of the recipe? Everything
+    // below reads from this one answer -- the band's colour and wording, the
+    // weigh-out column's colour and decimals, and whether the nudge appears.
+    const sum = phRound2(refRecipeSum(recipe));
+    const whole = refIsWholeMultiple(useGrams, sum);
+    const mult = sum > 0 ? useGrams / sum : 0;
+    const nearest = sum > 0 ? Math.max(1, Math.round(mult)) : 1;
+    const nearestG = phRound2(sum * nearest);
+    const band = `<div class="ph-ref-band${whole ? "" : " bad"}">
+      <span class="g">${phFmtG(useGrams)} g</span>
+      <span class="mult">${whole ? `× ${Math.round(mult)} of the ${phFmtG(sum)} g recipe` : `× ${mult.toFixed(2)} of the ${phFmtG(sum)} g recipe`}</span>
+      <span class="tick">${whole ? "✓ every weight a whole gram" : "✗ your scale can't weigh these"}</span>
+    </div>
+    ${whole ? "" : `<div class="ph-ref-fix"><button type="button" class="ph-load-btn on" data-ref-use-mult="${nearestG}">Use × ${nearest} — ${phFmtG(nearestG)} g</button>
+      <span class="ph-ref-fix-note">Nothing is rounded for you — the weights below are exactly what ${phFmtG(useGrams)} g asks for.</span></div>`}`;
+    el.innerHTML = band + `
+      <table class="ph-pres-table ph-ref-herbs"><thead><tr>
+        <th>Single herb</th>
+        <th class="n col-recipe">Recipe</th>
+        <th class="n col-weigh">Weigh out</th>
+        <th class="n col-stock">In stock</th>
+        <th class="n">Left after</th>
+      </tr></thead>
       <tbody>${items.map(x => {
-        const short = scaled && x.h && x.h.qty != null && x.h.qty < x.grams;
-        return `<tr${short ? ` class="short"` : ""}><td>${esc(phDispName(x.name, x.h ? phIsFormula(x.h) : null))}</td><td class="n">${phFmtG(x.grams)}</td><td class="n">${x.h ? (x.h.qty == null ? "untracked" : phFmtG(x.h.qty) + "g" + phStockBarHtml(x.h.qty, x.h.low)) : "not in inventory"}</td></tr>`;
-      }).join("")}</tbody></table>
+        // presCalcNumbers SORTS its rows (formula-then-herbs, alphabetical),
+        // so items[ix] is NOT recipe.ingredients[ix] -- indexing by position
+        // printed each row's Recipe against the wrong herb (caught while
+        // checking ×4 against her own figures: Chai Hu read 3 g, not 9 g).
+        // Match on the herb instead.
+        const src = (recipe.ingredients || []).find(i =>
+          (i.herb || i.name) === x.name || (i.code && x.code && i.code === x.code));
+        const rG = src ? (src.grams || 0) : null;
+        const stock = x.h && x.h.qty != null ? x.h.qty : null;
+        const left = stock == null ? null : phRound2(stock - x.grams);
+        const short = scaled && stock != null && stock < x.grams;
+        // her §5: no decimal point at all on a whole multiple -- this is the
+        // number she reads with her hands full
+        const weigh = whole ? String(Math.round(x.grams)) : phFmtG(x.grams);
+        return `<tr${short ? ` class="short"` : ""}>
+          <td>${esc(phDispName(x.name, x.h ? phIsFormula(x.h) : null))}</td>
+          <td class="n col-recipe ph-ref-quiet">${rG == null ? "—" : phFmtG(rG)}</td>
+          <td class="n col-weigh ph-ref-weigh${whole ? "" : " bad"}">${weigh}</td>
+          <td class="n col-stock ph-ref-quiet">${stock == null ? (x.h ? "untracked" : "not in inventory") : phFmtG(stock) + "g"}</td>
+          <td class="n ph-ref-left${left != null && left < 0 ? " neg" : ""}">${left == null ? "—" : (left < 0 ? `${phFmtG(Math.abs(left))} g short` : phFmtG(left) + "g")}</td>
+        </tr>`;
+      }).join("")}</tbody>
+      <tfoot><tr>
+        <td>Total</td>
+        <td class="n col-recipe ph-ref-quiet">${phFmtG(sum)}</td>
+        <td class="n col-weigh ph-ref-weigh${whole ? "" : " bad"}">${whole ? String(Math.round(useGrams)) : phFmtG(useGrams)}</td>
+        <td class="n col-stock"></td>
+        <td class="n"></td>
+      </tr></tfoot></table>
       ${items.some(x => !x.h) ? `<div class="ph-ing-warn">⚠ ${items.filter(x => !x.h).length} single herb${items.filter(x => !x.h).length === 1 ? " isn't" : "s aren't"} in the inventory — on the making sheet, but won't deduct stock.</div>` : ""}`;
   }
   function refMake() {
