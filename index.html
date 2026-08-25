@@ -3058,6 +3058,21 @@
     padding: var(--sp-2) var(--sp-5); font-size: var(--fs-body); min-height: 0;
   }
   #pharmacyPage .ph-sig-hero .ph-load-btn::before { content: ""; position: absolute; inset: -6px; }
+  /* her ask (2026-08-27): a formula tile's second action ("order the herbs
+     instead of scheduling a batch") -- the group, not the button, is what
+     takes over margin-left:auto/align-self:center from the rule above (the
+     button alone no longer sits directly in .ph-sig-hero's flex row once
+     it has a sibling link), so both stay pinned to the same right edge the
+     single button used to occupy. */
+  #pharmacyPage .ph-sig-verbgroup { margin-left: auto; align-self: center; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  #pharmacyPage .ph-sig-verbgroup .ph-load-btn {
+    margin-left: 0; align-self: auto; position: relative;
+    padding: var(--sp-2) var(--sp-5); font-size: var(--fs-body); min-height: 0;
+  }
+  #pharmacyPage .ph-sig-verbgroup .ph-load-btn::before { content: ""; position: absolute; inset: -6px; }
+  /* a quiet second link, not a second CTA -- CLAUDE.md's 44px floor still
+     applies to the tap target even though the visible text is small */
+  #pharmacyPage .ph-sig-verb-alt { font-size: var(--fs-micro); font-weight: 600; min-height: 44px; display: inline-flex; align-items: center; padding: 0 2px; }
   /* stock bar against the refill line -- existing rule: stock / "low at",
      capped at 100%, so the tick IS the refill point at the track's end */
   #pharmacyPage .ph-sig-bar { display: flex; flex-direction: column; gap: var(--sp-1); }
@@ -9566,8 +9581,17 @@
     // the SAME data-ph-order flag phDashOrderPlanRowHtml toggles, a formula's
     // is the SAME data-ph-dash-refill-open phDashRefillNeededHtml opens.
     // Nothing new to keep in sync, just a new place they're offered from.
+    // her ask (2026-08-27): a formula tile only ever offered "schedule a
+    // batch" -- the OTHER real fix for a low/empty formula bottle is to just
+    // reorder whichever single herbs behind it are themselves short, no
+    // making involved. Same data-ph-refill-ordershort logic the Refill plan
+    // table's own "🛒 Order short" button already runs, reached from a new
+    // place -- a quiet second link, not a second CTA fighting the first.
     const verb = c.board === "formula"
-      ? `<button type="button" class="ph-load-btn" data-ph-dash-refill-open="${h.id}">Refill →</button>`
+      ? `<span class="ph-sig-verbgroup">
+          <button type="button" class="ph-load-btn" data-ph-dash-refill-open="${h.id}">Refill →</button>
+          <button type="button" class="ph-name-link ph-sig-verb-alt" data-ph-dash-order-herbs="${h.id}">or order herbs</button>
+        </span>`
       : `<button type="button" class="ph-load-btn" data-ph-order="${h.id}" aria-pressed="${!!h.order}">${h.order ? "✓ On order" : "Add to order →"}</button>`;
     // Days of cover, derived from the SAME phSigCover the "about N days left"
     // wording already uses -- not a second formula that could drift from it.
@@ -15486,6 +15510,26 @@
       }
       const dashRefillOpen = e.target.closest("[data-ph-dash-refill-open]");
       if (dashRefillOpen) { phDashOpenRefill(dashRefillOpen.dataset.phDashRefillOpen); return; }
+      // her ask (2026-08-27): the Most Urgent formula tile's second action --
+      // order whichever single herbs behind this formula are themselves
+      // short, without scheduling a batch. Same shortfall logic and the same
+      // phRefillOrderShorts() the Refill plan table's own "🛒 Order short"
+      // button runs -- reused, not reimplemented. A formula's own bottle
+      // being Empty/Low doesn't guarantee its herbs are short too (they're
+      // tracked separately), so this says so plainly rather than a silent
+      // no-op when there's nothing to add.
+      const dashOrderHerbs = e.target.closest("[data-ph-dash-order-herbs]");
+      if (dashOrderHerbs) {
+        const h = PHARMACY.herbs.find(x => x.id === dashOrderHerbs.dataset.phDashOrderHerbs);
+        const recipe = h && phRefillRecipe(h);
+        if (!recipe) { phFlashShow(`${esc(phDispName(h.name, true))} has no recipe yet — nothing to order by ingredient.`); renderPharmacy(); return; }
+        const res = phRefillCanMake(h, phRefillBatchFor(h, recipe));
+        if (res.noRecipe || !res.shorts.length) { phFlashShow(`Every herb in ${esc(phDispName(h.name, true))}'s recipe is already in stock.`); renderPharmacy(); return; }
+        const n = phRefillOrderShorts(res.shorts);
+        phFlashShow(`Added ${n} herb${n === 1 ? "" : "s"} to the order list.`);
+        renderPharmacy();
+        return;
+      }
       const dashScrollTo = e.target.closest("[data-ph-dash-scrollto]");
       if (dashScrollTo) {
         const el = document.getElementById(dashScrollTo.dataset.phDashScrollto);
@@ -15741,6 +15785,15 @@
         if (h) phOpenHerbEditDrawer(h);
         return;
       }
+      // her ask (2026-08-27): a Formula recipe with no matching Inventory
+      // jar had no way to become one from this page -- same fixed-overlay
+      // drawer as above, safe from any tab, just pre-filled from the recipe
+      const recipeAddInv = e.target.closest("[data-ph-recipe-add-inventory]");
+      if (recipeAddInv) {
+        const t = PRESC.items.find(x => x.id === recipeAddInv.dataset.phRecipeAddInventory);
+        if (t) phOpenHerbAddDrawerForRecipe(t);
+        return;
+      }
       const herbDel = e.target.closest("[data-ph-herb-del]");
       if (herbDel) {
         PHARMACY.herbs = PHARMACY.herbs.filter(x => x.id !== herbDel.dataset.phHerbDel);
@@ -15941,6 +15994,20 @@
       // (editing), hidden by the "+ Add herb" opener below
       document.getElementById("phHerbHistorySection").hidden = false;
       renderPhHerbHistory(h);
+    }
+    // her ask (2026-08-27): a Formula recipe with no matching jar in
+    // Inventory -- opens the exact "+ Add herb" flow (same drawer, same
+    // click the blank button itself would trigger), pre-filled with the
+    // recipe's own name and Kind: formula so it links back to this recipe
+    // (refJarForRecipe matches by name) the moment she saves. She still
+    // sets qty/low/supplier/cost herself on the way through, same as any
+    // other new herb -- this doesn't create a record on its own.
+    function phOpenHerbAddDrawerForRecipe(t) {
+      document.getElementById("phHerbAddBtn").click();
+      document.getElementById("phHerbName").value = phDispName(t.name, true);
+      const kindSel = document.getElementById("phHerbKind");
+      kindSel.value = "formula";
+      kindSel.dispatchEvent(new Event("change", { bubbles: true }));
     }
     function closePhHerbForm() {
       phHerbForm.hidden = true; phHerbBackdrop.hidden = true;
@@ -24609,12 +24676,20 @@ Dosage: {dosage}
           // existing reverse of the jar->recipe lookup renderRefBar already
           // trusts). No matching jar -> nothing to flag, so no button.
           const jar = refJarForRecipe(t);
+          // her ask (2026-08-27): a recipe with no matching jar had nothing
+          // in this slot at all -- no way to flag/track it without leaving
+          // this page to hand-create a herb record with the exact right
+          // name. Opens the SAME "+ Add herb" drawer Inventory uses, just
+          // pre-filled (name + Kind: formula) -- she still reviews qty/low/
+          // supplier/cost herself before it's created, same as any other
+          // new herb, rather than a silent stub record.
+          const addInvBtn = `<button type="button" class="ph-load-btn" data-ph-recipe-add-inventory="${t.id}">+ Add to inventory</button>`;
           return `<tr>
           <td>${ab ? `<span class="ph-pres-abbr" title="Links to the ${esc(ab)} formula in the inventory">${esc(ab)}</span>` : ""}</td>
           <td><b>${esc(phDispName(t.name, true))}</b></td>
           <td style="text-align:right">${t.ingredients.length || "—"}</td>
           <td style="text-align:right">${t.totalGrams ? phFmtG(t.totalGrams) : "—"}</td>
-          <td class="ph-pres-actions">${jar ? phRefillMenuHtml(jar) : ""}<button type="button" class="ic" data-pres-open="${t.id}" title="Edit ${esc(phTitle(t.name))}" aria-label="Edit ${esc(phTitle(t.name))}"><svg class="icn" aria-hidden="true"><use href="#i-edit"/></svg></button><button type="button" class="ic solid" data-ref-load-recipe="${t.id}" title="Make ${esc(phTitle(t.name))}" aria-label="Make ${esc(phTitle(t.name))}"><svg class="icn" aria-hidden="true"><use href="#i-jar"/></svg></button></td>
+          <td class="ph-pres-actions">${jar ? phRefillMenuHtml(jar) : addInvBtn}<button type="button" class="ic" data-pres-open="${t.id}" title="Edit ${esc(phTitle(t.name))}" aria-label="Edit ${esc(phTitle(t.name))}"><svg class="icn" aria-hidden="true"><use href="#i-edit"/></svg></button><button type="button" class="ic solid" data-ref-load-recipe="${t.id}" title="Make ${esc(phTitle(t.name))}" aria-label="Make ${esc(phTitle(t.name))}"><svg class="icn" aria-hidden="true"><use href="#i-jar"/></svg></button></td>
         </tr>`; }).join("")}</tbody>
       </table></div>
       <!-- STEP 5: the phone gets the SAME one-line .row component as Inventory
@@ -24630,7 +24705,7 @@ Dosage: {dosage}
             <span class="ph-lm-name">${ab ? `<span class="srctag">${esc(ab)}</span>` : ""}${esc(phDispName(t.name, true))}</span>
             <span class="ph-sub">${t.ingredients.length || 0} herbs · ${t.totalGrams ? phFmtG(t.totalGrams) : 0} g</span>
           </button>
-          ${jar ? phRefillMenuHtml(jar) : ""}
+          ${jar ? phRefillMenuHtml(jar) : `<button type="button" class="ph-load-btn" data-ph-recipe-add-inventory="${t.id}">+ Add to inventory</button>`}
           <button type="button" class="ic" data-pres-open="${t.id}" aria-label="Edit ${esc(phTitle(t.name))}"><svg class="icn" aria-hidden="true"><use href="#i-edit"/></svg></button>
           <button type="button" class="ic solid" data-ref-load-recipe="${t.id}" aria-label="Make ${esc(phTitle(t.name))}"><svg class="icn" aria-hidden="true"><use href="#i-jar"/></svg></button>
         </div></div>`; }).join("")}</div>`;
