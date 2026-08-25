@@ -3969,6 +3969,21 @@
      "5.6 days" figure and the empty date share ONE line, the date pushed
      right (her §2), instead of the figure owning a block of its own. */
   #pharmacyPage .ph-fu-block { margin-top: var(--sp-3); }
+  /* her 2026-08-25 spec §4.2: collapsed by default -- the summary button IS
+     the section header now (no separate ph-tmpl-sec line above it), so this
+     saves the ~120px the full block used to cost every time. */
+  #pharmacyPage .ph-fu-summary {
+    display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3);
+    width: 100%; text-align: left; background: none; border: none; padding: var(--sp-2) 0;
+    font: inherit; font-size: var(--fs-body); font-weight: 700; color: var(--ph-ink); cursor: pointer;
+    min-height: 32px;
+  }
+  #pharmacyPage .ph-fu-summary:hover { color: var(--ph-green-deep); }
+  #pharmacyPage .ph-fu-summary-arrow { flex: 0 0 auto; color: var(--ph-soft); transition: transform 0.15s ease; }
+  #pharmacyPage .ph-fu-summary-arrow.open { transform: rotate(180deg); }
+  #pharmacyPage .ph-fu-summary-sub { font-size: var(--fs-micro); color: var(--ph-faint); margin-top: -2px; }
+  #pharmacyPage .ph-fu-body { margin-top: var(--sp-1); }
+  @media (max-width: 640px) { #pharmacyPage .ph-fu-summary { min-height: 40px; } }
   #pharmacyPage .ph-fu-hero-row { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: var(--sp-1) var(--sp-5); margin-bottom: var(--sp-1); }
   #pharmacyPage .ph-fu-hero { font-size: var(--fs-meta); color: var(--ph-soft); }
   #pharmacyPage .ph-fu-hero b { font-size: 16px; color: var(--ph-ink); font-variant-numeric: tabular-nums; }
@@ -4130,12 +4145,32 @@
     font-size: 11px; font-weight: 600; color: var(--ph-soft); padding: 0;
   }
   #pharmacyPage .ph-dose-extra-link:hover { color: var(--ph-green-deep); }
-  /* her 2026-08-22 spec §2: the Grams tag -- quiet green while it's
-     following the ingredient total, amber once she's typed over it (same
-     tone family as the Draft chip elsewhere -- "needs a look", not an error). */
-  #pharmacyPage .ph-grams-tag { font-size: 10.5px; font-weight: 700; white-space: nowrap; }
-  #pharmacyPage .ph-grams-tag.auto { color: var(--ph-green-deep); }
-  #pharmacyPage .ph-grams-tag.manual { color: var(--ph-low-deep); }
+  /* her 2026-08-25 spec §1 (replaces the 2026-08-22 attach/detach tag above):
+     the 26px segmented ×1/×2/×3/✎ control sits ON the Grams row, right-
+     aligned -- reuses .ph-days-opt verbatim (Days, a few rows below) rather
+     than inventing a second segment style, so the two read as one family
+     and the existing 640px "grow to 40px" rule already covers it too. */
+  #pharmacyPage .ph-pres-dose #presGramsSegWrap { margin-left: auto; }
+  /* ×1/×2/×3/✎ are far shorter labels than Days' "Every day"/"Mon – Fri",
+     so they take the tighter padding -- measured 2026-08-25: at 360px this
+     row is only 276px wide, and the Days-width segment (143px) + the Grams
+     label (124px) + the 14px gap came to 281px, wrapping the control onto
+     its own line. 6px padding brings the segment to ~111px so the whole row
+     holds one line, her §11. Height is untouched, so the 40px mobile tap
+     target the shared .ph-days-opt rule gives it still stands. */
+  #pharmacyPage .ph-grams-seg .ph-days-opt { padding: 0 var(--sp-2); min-width: 32px; }
+  /* the fact-line UNDER the row -- green-soft while a multiple is driving
+     the number, amber-soft once she's typed over it (same tone family as
+     the Draft chip elsewhere -- "needs a look", not an error). Attached/
+     detached are opposite states and must never both be claimed (her
+     2026-08-23 bug report, still the rule): this is always exactly one or
+     the other, never both. */
+  #pharmacyPage .ph-grams-hint {
+    font-size: var(--fs-micro); border-radius: 7px; padding: 3px var(--sp-3); margin-top: var(--sp-1);
+    display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap;
+  }
+  #pharmacyPage .ph-grams-hint.multiple { background: var(--ph-green-tint); color: var(--ph-green-deep); }
+  #pharmacyPage .ph-grams-hint.manual { background: var(--ph-low-tint); color: var(--ph-low-deep); }
   #pharmacyPage .ph-grams-reset {
     border: none; background: none; cursor: pointer; font-family: inherit;
     font-size: 10.5px; font-weight: 700; color: inherit; padding: 0; text-decoration: underline;
@@ -13494,7 +13529,7 @@
         if (phTimers.presTmpl) { clearTimeout(phTimers.presTmpl); phTimers.presTmpl = null; presFlushTemplate(); }
         PHARMACY.activeTab = "prescriptions";
         presOpenId = dashPresOpen.dataset.phDashPresOpen;
-        presLabelOpen = false; presMoreOpen = false;
+        presLabelOpen = false; presMoreOpen = false; presFuOpen = false;
         presNameOpen = false; presNotesOpen = false; presHistOpen = false; presThirdOpen = false; presMedHxOpen = false;
         presPickLocked = null;
         savePharmacy(); renderPharmacy();
@@ -13559,7 +13594,7 @@
         presOpenId = presOpen.dataset.presOpen;
         // each opened script starts fully collapsed (her ask 2026-07-30) — an
         // earlier click on a DIFFERENT patient's sections has no bearing here
-        presLabelOpen = false; presMoreOpen = false;
+        presLabelOpen = false; presMoreOpen = false; presFuOpen = false;
         presNameOpen = false; presNotesOpen = false; presHistOpen = false; presThirdOpen = false; presMedHxOpen = false;
         presPickLocked = null;
         // her 2026-08-22 spec: opening a prescription starts fresh -- the
@@ -13595,12 +13630,38 @@
         const id = e.target.closest("[data-pres-grams-reset]").dataset.presGramsReset;
         const t = PRESC.items.find(x => x.id === id);
         if (t) {
-          t.gramsAuto = true;
+          t.gramsMode = "multiple"; t.gramsMultiple = 1;
           t.totalGrams = phRound2(presEffectiveIngs(t).reduce((a, i) => a + (i.grams || 0), 0));
           phDefer("savePresc", savePresc, 400);
           const gramsEl = document.getElementById("presGrams");
           if (gramsEl) gramsEl.value = t.totalGrams || "";
-          renderPresCalc();
+          renderPresCalc(); presFuRefresh();
+        }
+        return;
+      }
+      // her 2026-08-25 spec §1: ×1/×2/×3 pick a multiple of the herb total;
+      // ✎ switches to manual and hands focus to the field for typing --
+      // "manual" isn't a value to pick, it's what typing directly IS.
+      if (e.target.closest("[data-pres-grams-mult]")) {
+        const btn = e.target.closest("[data-pres-grams-mult]");
+        const val = btn.dataset.presGramsMult;
+        const t = PRESC.items.find(x => x.id === presOpenId);
+        if (t) {
+          if (val === "manual") {
+            t.gramsMode = "manual";
+            phDefer("savePresc", savePresc, 400);
+            renderPresCalc();
+            const el = document.getElementById("presGrams");
+            if (el) { el.focus(); el.select(); }
+          } else {
+            const n = parseFloat(val);
+            t.gramsMode = "multiple"; t.gramsMultiple = n;
+            t.totalGrams = phRound2(presEffectiveIngs(t).reduce((a, i) => a + (i.grams || 0), 0) * n);
+            phDefer("savePresc", savePresc, 400);
+            const el = document.getElementById("presGrams");
+            if (el) el.value = t.totalGrams || "";
+            renderPresCalc(); presFuRefresh();
+          }
         }
         return;
       }
@@ -13619,6 +13680,7 @@
       }
       if (e.target.closest("[data-pres-label-toggle]")) { presLabelOpen = !presLabelOpen; renderPresPanel(); return; }
       if (e.target.closest("[data-pres-more-toggle]")) { presMoreOpen = !presMoreOpen; renderPresPanel(); return; }
+      if (e.target.closest("[data-pres-fu-toggle]")) { presFuOpen = !presFuOpen; renderPresPanel(); return; }
       // Done just closes -- every field in the preset popover already saved
       // itself the moment it changed (there has never been a Save button here).
       if (e.target.closest("[data-pres-settings-done]")) { phClosePresSettings(); return; }
@@ -14021,7 +14083,7 @@
       // so closing the panel mid-debounce would otherwise drop the last keystrokes
       if (e.target.closest("[data-pres-close]")) {
         if (phTimers.presTmpl) { clearTimeout(phTimers.presTmpl); phTimers.presTmpl = null; presFlushTemplate(); }
-        presOpenId = null; presLabelOpen = false; presMoreOpen = false; renderPresPanel(); return;
+        presOpenId = null; presLabelOpen = false; presMoreOpen = false; presFuOpen = false; renderPresPanel(); return;
       }
       if (e.target.closest("[data-ph-confirm-cancel]")) { phClearConfirms(); return; }
       // stock movers: dispensing is immediate (her ask 2026-08-01, see below) —
@@ -14193,7 +14255,7 @@
       const presEd = e.target.closest("[data-pres-edit]");
       if (presEd) {
         presOpenId = presEd.dataset.presEdit; presEditId = null;
-        presLabelOpen = false; presMoreOpen = false;
+        presLabelOpen = false; presMoreOpen = false; presFuOpen = false;
         presNameOpen = false; presNotesOpen = false; presHistOpen = false; presThirdOpen = false; presMedHxOpen = false;
         presPickLocked = null;
         renderPresPanel();
@@ -15440,12 +15502,13 @@
       }
       if (e.target.id === "presGrams") {
         const t = PRESC.items.find(x => x.id === presOpenId);
-        // her 2026-08-22 spec: typing here is what detaches Grams from the
-        // ingredient total -- money-critical (Mia Rankin's 100g-vs-50g-of-
-        // herbs double batch), so a typed figure must never be silently
-        // overwritten again by an ingredient edit. gramsAuto=false is the
-        // one flag presCommitTemplateFields checks before re-deriving it.
-        if (t) { t.totalGrams = parseFloat(e.target.value) || 0; t.gramsAuto = false; phDefer("savePresc", savePresc, 400); }
+        // her 2026-08-22 spec, extended 2026-08-25: typing here is what
+        // switches Grams to manual mode -- money-critical (Mia Rankin's
+        // 100g-vs-50g-of-herbs double batch, now a proper ×2 button instead),
+        // so a typed figure must never be silently overwritten again by an
+        // ingredient edit. gramsMode="manual" is the one flag
+        // presCommitTemplateFields checks before re-deriving it.
+        if (t) { t.totalGrams = parseFloat(e.target.value) || 0; t.gramsMode = "manual"; phDefer("savePresc", savePresc, 400); }
         phClearConfirms(); renderPresCalc(); presFuRefresh(); return;
       }
       if (e.target.id === "presFuNote") {
@@ -19440,8 +19503,9 @@
       </div>
       <div class="ph-build-top">
         <label class="ph-inline-label ph-grams-label ph-gramswrap">Grams <input type="text" inputmode="decimal" id="presGrams" value="${t.totalGrams || ""}" aria-label="Grams prescribed"></label>
-        <span id="presGramsTagWrap">${presGramsStateHtml(t)}</span>
+        <span id="presGramsSegWrap">${presGramsSegHtml(t)}</span>
       </div>
+      <div id="presGramsHintWrap">${presGramsHintHtml(t)}</div>
       <div class="ph-build-top ph-daysline">
         <span class="ph-inline-label ph-days-lbl">Days</span>
         ${presDaysRowHtml(t)}
@@ -20033,37 +20097,59 @@
   // Live preview only until Save & log actually creates the real record
   // (phFuCreateFromDispense) -- so a draft script never puts anything on the
   // Follow-ups page, exactly her rule.
+  // her 2026-08-25 spec §4.2: the section header is gone -- the summary
+  // button IS the header now, always shown; the full block below only
+  // renders (and only sits in the DOM at all) while presFuOpen is true, so
+  // an already-tight panel never pays for markup she can't see. The body
+  // content itself, once open, is byte-identical to before this job.
+  function presFollowupSummaryHtml(t, calc) {
+    const main = !calc.ok
+      ? `⏰ Follow-up · can’t calculate`
+      : `⏰ Follow-up · lasts ${calc.lastsDays.toFixed(1)} days · review ${esc(phFuDateLabel(t.fuReviewDate || keyOf(calc.reviewOn)))}`;
+    const sub = !calc.ok
+      ? (calc.reason === "unrecognized-days" ? "the Days wording here isn’t one this can read automatically" : `no gram weight set for “${esc(calc.unit || t.doseSpoon || "")}”`)
+      : "tap to set the review date or add a note";
+    return `<button type="button" class="ph-fu-summary" data-pres-fu-toggle="1" aria-expanded="${presFuOpen ? "true" : "false"}">
+      <span class="ph-fu-summary-main">${main}</span>
+      <span class="ph-fu-summary-arrow${presFuOpen ? " open" : ""}" aria-hidden="true">⌄</span>
+    </button>
+    <div class="ph-fu-summary-sub">${sub}</div>`;
+  }
   function presFollowupBlockHtml(t) {
     const gp = parseFloat((document.getElementById("presGrams") || {}).value) || t.totalGrams || 0;
     const calc = phFollowupCalc(t, keyOf(TODAY), gp);
     const patient = presPatientFor(t);
     const isFirst = patient ? phFuIsFirstDispense(patient, Date.now() + 1) : false;
-    if (!calc.ok) {
-      // her §2 fallback: no guessing, but a review date can still be typed
-      return `<div class="ph-tmpl-sec"><span>\u23F0 Follow-up</span></div>
-        <div class="ph-fu-cant">Can\u2019t calculate \u2014 ${calc.reason === "unrecognized-days" ? "the Days wording here isn\u2019t one this can read automatically" : `no gram weight set for \u201C${esc(calc.unit || t.doseSpoon || "")}\u201D`}</div>
-        <div class="ph-fu-row"><span class="ph-fu-lbl">Review on</span><input type="date" id="presFuReviewDate" class="ph-fu-date" value="${esc(t.fuReviewDate || "")}" aria-label="Review date"></div>
-        <textarea id="presFuNote" class="ph-fu-note" rows="1" placeholder="Review note \u2014 what to check next time\u2026">${esc(t.fuReviewNote || "")}</textarea>`;
+    let body = "";
+    if (presFuOpen) {
+      if (!calc.ok) {
+        // her §2 fallback: no guessing, but a review date can still be typed
+        body = `<div class="ph-fu-cant">Can’t calculate — ${calc.reason === "unrecognized-days" ? "the Days wording here isn’t one this can read automatically" : `no gram weight set for “${esc(calc.unit || t.doseSpoon || "")}”`}</div>
+          <div class="ph-fu-row"><span class="ph-fu-lbl">Review on</span><input type="date" id="presFuReviewDate" class="ph-fu-date" value="${esc(t.fuReviewDate || "")}" aria-label="Review date"></div>
+          <textarea id="presFuNote" class="ph-fu-note" rows="1" placeholder="Review note — what to check next time…">${esc(t.fuReviewNote || "")}</textarea>`;
+      } else {
+        const checkInWanted = isFirst && t.fuCheckInSkip !== true;
+        const checkInOn = t.fuCheckInDate || keyOf(calc.checkInOn);
+        const reviewOn = t.fuReviewDate || keyOf(calc.reviewOn);
+        const collapse = checkInWanted && phFuIsCollapsed(checkInOn, reviewOn);
+        const emptyKey = keyOf(calc.emptyOn);
+        const inner = collapse
+          ? `<div class="ph-fu-row"><span class="ph-fu-lbl">Check in &amp; review on</span><input type="date" id="presFuComboDate" class="ph-fu-date" value="${checkInOn < reviewOn ? checkInOn : reviewOn}" aria-label="Check in and review date"></div>
+            <div class="ph-fu-sub">Short script — one contact instead of two.</div>`
+          : `${isFirst ? `<div class="ph-fu-row"><label class="ph-fu-chk"><input type="checkbox" id="presFuCheckInOn"${checkInWanted ? " checked" : ""}> Check in on</label><input type="date" id="presFuCheckInDate" class="ph-fu-date" value="${keyOf(calc.checkInOn)}"${checkInWanted ? "" : " disabled"} aria-label="Check-in date"></div>
+            <div class="ph-fu-sub">Day ${PH_FU_CHECKIN_DOSING_DAY}. Ticked automatically because they’ve never been dispensed before — untick to skip.</div>` : ""}
+            <div class="ph-fu-row"><span class="ph-fu-lbl">Review on</span><input type="date" id="presFuReviewDate" class="ph-fu-date" value="${reviewOn}" aria-label="Review date"></div>
+            <div class="ph-fu-sub">${PH_FU_REVIEW_LEAD_DOSING_DAYS} days before empty, so there’s time to make the next script.</div>`;
+        body = `<div class="ph-fu-hero-row">
+          <span class="ph-fu-hero"><b>${calc.lastsDays.toFixed(1)}</b> days</span>
+          <span class="ph-fu-empty">Empty on <b>${phFuDateLabel(emptyKey)}</b></span>
+        </div>
+        ${inner}
+        <textarea id="presFuNote" class="ph-fu-note" rows="1" placeholder="Review note — what to check next time…">${esc(t.fuReviewNote || "")}</textarea>`;
+      }
     }
-    const checkInWanted = isFirst && t.fuCheckInSkip !== true;
-    const checkInOn = t.fuCheckInDate || keyOf(calc.checkInOn);
-    const reviewOn = t.fuReviewDate || keyOf(calc.reviewOn);
-    const collapse = checkInWanted && phFuIsCollapsed(checkInOn, reviewOn);
-    const emptyKey = keyOf(calc.emptyOn);
-    const body = collapse
-      ? `<div class="ph-fu-row"><span class="ph-fu-lbl">Check in &amp; review on</span><input type="date" id="presFuComboDate" class="ph-fu-date" value="${checkInOn < reviewOn ? checkInOn : reviewOn}" aria-label="Check in and review date"></div>
-        <div class="ph-fu-sub">Short script \u2014 one contact instead of two.</div>`
-      : `${isFirst ? `<div class="ph-fu-row"><label class="ph-fu-chk"><input type="checkbox" id="presFuCheckInOn"${checkInWanted ? " checked" : ""}> Check in on</label><input type="date" id="presFuCheckInDate" class="ph-fu-date" value="${keyOf(calc.checkInOn)}"${checkInWanted ? "" : " disabled"} aria-label="Check-in date"></div>
-        <div class="ph-fu-sub">Day ${PH_FU_CHECKIN_DOSING_DAY}. Ticked automatically because they\u2019ve never been dispensed before \u2014 untick to skip.</div>` : ""}
-        <div class="ph-fu-row"><span class="ph-fu-lbl">Review on</span><input type="date" id="presFuReviewDate" class="ph-fu-date" value="${reviewOn}" aria-label="Review date"></div>
-        <div class="ph-fu-sub">${PH_FU_REVIEW_LEAD_DOSING_DAYS} days before empty, so there\u2019s time to make the next script.</div>`;
-    return `<div class="ph-tmpl-sec"><span>\u23F0 Follow-up</span></div>
-      <div class="ph-fu-hero-row">
-        <span class="ph-fu-hero"><b>${calc.lastsDays.toFixed(1)}</b> days</span>
-        <span class="ph-fu-empty">Empty on <b>${phFuDateLabel(emptyKey)}</b></span>
-      </div>
-      ${body}
-      <textarea id="presFuNote" class="ph-fu-note" rows="1" placeholder="Review note \u2014 what to check next time\u2026">${esc(t.fuReviewNote || "")}</textarea>`;
+    return `${presFollowupSummaryHtml(t, calc)}
+      <div class="ph-fu-body"${presFuOpen ? "" : " hidden"}>${body}</div>`;
   }
   // her §2: the note starts at one row and grows with what she types, instead
   // of reserving two blank rows. Height is set from scrollHeight after a reset
@@ -20378,6 +20464,11 @@
   // no Calculate gate. The label preview collapses by default (so the herb
   // list isn't on screen twice); 🧮 Calculate in the ⋯ menu just expands it.
   let presLabelOpen = false, presMoreOpen = false;
+  // her 2026-08-25 spec §4.2: Follow-up collapses to one summary line by
+  // default, same "expanded state remembered for the current editing
+  // session only" rule as presLabelOpen above -- cleared at every one of
+  // its five reset sites alongside it, never persisted to the record.
+  let presFuOpen = false;
   // Which script currently has its Days "Custom" boxes revealed (an id, not a
   // bool, so it expires by itself when a different script opens -- no reset
   // needed at each of the five places presLabelOpen/presMoreOpen are cleared).
@@ -20820,37 +20911,72 @@ Dosage: {dosage}
     if (wrap) wrap.innerHTML = presDefDaysRowHtml();
     presPresetSumsRefresh();
   }
-  function presGramsStateHtml(t) {
-    const gp = parseFloat((document.getElementById("presGrams") || {}).value) || (t.totalGrams || 0);
+  // her 2026-08-25 spec ("Grams multiplier"): replaces the old boolean
+  // attach/detach (gramsAuto) with a 3-state model -- multiple×N or manual.
+  // One array constant (her §0.1) so adding a multiple she actually uses
+  // (×1.5, ×4, whatever her dispense history turns out to want) is one line.
+  const PH_GRAMS_MULTIPLES = [1, 2, 3];
+  // read-only: never writes gramsMode back just from being opened, same
+  // "existing saved scripts are never rewritten" rule the old gramsAuto
+  // bootstrap already followed (search "no migration" a few screens down).
+  // A script that predates BOTH fields (gramsAuto never set either) reads as
+  // manual, unchanged from what it always displayed.
+  function presGramsStateOf(t) {
+    if (t.gramsMode === "manual") return { mode: "manual" };
+    if (t.gramsMode === "multiple") return { mode: "multiple", multiple: t.gramsMultiple || 1 };
+    if (t.gramsAuto === true) return { mode: "multiple", multiple: 1 };
+    return { mode: "manual" };
+  }
+  // her §3: once a script has actually been dispensed it is a record, not a
+  // formula -- its stored grams stop following the herb list. See the fuller
+  // note at the presCommitTemplateFields guard that reads this.
+  const presGramsFrozen = t => !!t.lastDispensedAt;
+  // the 26px segmented control on the Grams row (her §1) -- same segment
+  // language as .ph-days-opt (Days, a few rows below) on purpose, so the two
+  // controls in this panel read as one family. Reusing that exact class also
+  // means the existing 640px "grow to 40px for a thumb" rule already covers
+  // it -- nothing new to add there.
+  function presGramsSegHtml(t) {
+    const st = presGramsStateOf(t);
+    const opt = (val, label, on) =>
+      `<button type="button" class="ph-days-opt${on ? " on" : ""}" data-pres-grams-mult="${val}" role="radio" aria-checked="${on}">${label}</button>`;
+    return `<span class="ph-days-seg ph-grams-seg" role="radiogroup" aria-label="Grams multiplier">
+      ${PH_GRAMS_MULTIPLES.map(n => opt(n, `×${n}`, st.mode === "multiple" && st.multiple === n)).join("")}
+      ${opt("manual", "✎", st.mode === "manual")}
+    </span>`;
+  }
+  // the hint line UNDER the Grams row (her §1 table) -- green-soft while a
+  // multiple is driving the number, amber-soft once she's typed over it.
+  // Attached/detached are opposite states and must never both be claimed
+  // (her 2026-08-23 bug report, still true here): multiple mode states the
+  // arithmetic as a fact, manual states the herb total as a fact to compare
+  // against, never a claim that the two agree.
+  function presGramsHintHtml(t) {
     const ings = presEffectiveIngs(t);
     const herbTotal = phRound2(ings.reduce((a, i) => a + (i.grams || 0), 0));
-    const attached = t.gramsAuto === true;
-    // her bug report (2026-08-23): the panel showed "✎ set by you · ↻ reset"
-    // AND "Matches the ingredient total" at once. Attached and detached are
-    // opposite states and must never both be claimed. While ATTACHED, Grams
-    // follows the herb sum by construction -- matching isn't news, so the tag
-    // says it alone and there is no comparison hint. While DETACHED the herb
-    // total is stated as a plain fact to compare against, never as a claim
-    // that the two agree (equal values there are coincidence, not a state).
-    let hint;
-    if (attached) hint = "";
-    else if (!ings.length) hint = "Add herbs to compare against.";
-    else if (Math.abs(gp - herbTotal) < 0.005) hint = `herb total ${phFmtG(herbTotal)} g`;
-    else {
-      const ratio = herbTotal > 0 ? gp / herbTotal : 0;
-      const near = Math.round(ratio);
-      hint = (near >= 2 && Math.abs(ratio - near) < 0.02)
-        ? `herb total ${phFmtG(herbTotal)} g — ${near}× the recipe`
-        : `herb total ${phFmtG(herbTotal)} g — ${gp > herbTotal ? "more" : "less"} than the recipe`;
+    const herbWord = `${ings.length} herb${ings.length === 1 ? "" : "s"}`;
+    const st = presGramsStateOf(t);
+    if (st.mode === "multiple") {
+      // her §3: a dispensed script's grams stopped following the herb list.
+      // If the two have since diverged, SAY so -- a stale "= 2 × 100 g" over
+      // a field reading 100 would be the app claiming arithmetic it didn't
+      // do. The button re-applies the multiple deliberately.
+      const expected = phRound2(herbTotal * st.multiple);
+      if (presGramsFrozen(t) && ings.length && Math.abs((t.totalGrams || 0) - expected) >= 0.005) {
+        return `<div class="ph-grams-hint manual" id="presGramsHint">as dispensed · ${st.multiple} × ${phFmtG(herbTotal)} g herb total would be ${phFmtG(expected)} g <button type="button" class="ph-grams-reset" data-pres-grams-mult="${st.multiple}">↻ update to ×${st.multiple}</button></div>`;
+      }
+      const body = ings.length ? `= ${st.multiple} × ${phFmtG(herbTotal)} g herb total · ${herbWord}` : "Add herbs to calculate the total";
+      return `<div class="ph-grams-hint multiple" id="presGramsHint">${body}</div>`;
     }
-    return `<span class="ph-grams-tag${attached ? " auto" : " manual"}" id="presGramsTag">${attached ? "↻ from herbs" : `✎ set by you · <button type="button" class="ph-grams-reset" data-pres-grams-reset="${t.id}">↻ reset</button>`}</span>
-      <span class="ph-formula-meta" id="presGramsHint">${hint}</span>`;
+    const body = ings.length ? `✎ set by you · herb total is ${phFmtG(herbTotal)} g` : "✎ set by you · add herbs to compare";
+    return `<div class="ph-grams-hint manual" id="presGramsHint">${body} <button type="button" class="ph-grams-reset" data-pres-grams-reset="${t.id}">↻ back to ×1</button></div>`;
   }
-  // called wherever totalGrams gets re-derived from the ingredient sum while
-  // attached (presCommitTemplateFields) -- never touches the field while
-  // she's actually focused in it (nothing should yank a value out from
-  // under a cursor mid-type; attached mode only ever runs from ingredient
-  // edits anyway, never from typing in #presGrams itself).
+  // called wherever totalGrams gets re-derived from the ingredient sum in
+  // multiple mode (presCommitTemplateFields) -- never touches the field
+  // while she's actually focused in it (nothing should yank a value out
+  // from under a cursor mid-type; this only ever runs from ingredient edits
+  // anyway, never from typing in #presGrams itself). Name kept as-is --
+  // "attached" was the old model's word, this is the same function.
   function presRefreshGramsFieldIfAttached(t) {
     if (presOpenId !== t.id) return;
     const el = document.getElementById("presGrams");
@@ -20885,9 +21011,13 @@ Dosage: {dosage}
       const pp = PHARMACY.presPricing || { gramPrice: 0.71 };
       working.textContent = method === "gram" && gp > 0 ? `${phFmtG(gp)} g × ${phMoney(pp.gramPrice || 0)}` : "";
     }
-    // her §2 tag/hint, refreshed live on every grams-relevant keystroke
-    const gramsTagWrap = document.getElementById("presGramsTagWrap");
-    if (gramsTagWrap && !presIsFormula(t)) gramsTagWrap.innerHTML = presGramsStateHtml(t);
+    // the multiplier segment + its hint line, refreshed live on every
+    // grams-relevant keystroke (her 2026-08-25 spec) -- two separate nodes
+    // now: the segment sits ON the Grams row, the hint sits under it.
+    const gramsSegWrap = document.getElementById("presGramsSegWrap");
+    if (gramsSegWrap && !presIsFormula(t)) gramsSegWrap.innerHTML = presGramsSegHtml(t);
+    const gramsHintWrap = document.getElementById("presGramsHintWrap");
+    if (gramsHintWrap && !presIsFormula(t)) gramsHintWrap.innerHTML = presGramsHintHtml(t);
     // the sticky footer's screen-only strip
     const fc = document.getElementById("presFootCost"), fp = document.getElementById("presFootProfit");
     if (fc) fc.textContent = phMoney(cost);
@@ -21217,24 +21347,44 @@ Dosage: {dosage}
       // "this grams box needs to not change... THIS is the final prescription
       // quantity."
       // her 2026-08-22 spec ("Grams auto-fills from the herbs, stays
-      // overridable"): a genuinely fresh patient script (t.gramsAuto never
-      // set, totalGrams still 0 -- nothing typed into it yet) starts
-      // attached the first time it has any ingredients at all, and stays
-      // attached until she TYPES into #presGrams herself (which sets
-      // gramsAuto=false there, see that handler). While attached, every
-      // ingredient edit re-derives totalGrams live -- this is what makes it
-      // "follow the herbs" rather than the old one-time seed. An EXISTING
-      // script from before this feature (gramsAuto never set, but
-      // totalGrams already nonzero) never gets auto-attached retroactively
-      // -- no migration, exactly her "existing saved scripts are never
-      // rewritten" rule.
+      // overridable"), replaced by the 2026-08-25 multiplier spec: a
+      // genuinely fresh patient script (t.gramsMode/gramsAuto never set,
+      // totalGrams still 0 -- nothing typed into it yet) starts at ×1 the
+      // first time it has any ingredients at all, and stays in multiple mode
+      // until she TYPES into #presGrams herself (which sets gramsMode=
+      // "manual" there, see that handler) or picks ✎. While in multiple
+      // mode, every ingredient edit re-derives totalGrams as multiple ×
+      // herb-total live -- this is what makes it "follow the herbs" rather
+      // than a one-time seed. An EXISTING script from before either feature
+      // (gramsMode and gramsAuto both never set, but totalGrams already
+      // nonzero) never gets auto-attached retroactively -- no migration,
+      // exactly her "existing saved scripts are never rewritten" rule.
       // her ask 2026-08-17 (formula recipe editor rework): a formula has no
       // separate "prescribed today" figure at all -- its Grams/pricing box
-      // is gone -- so totalGrams IS just its own ingredient sum, always live.
-      if (t.gramsAuto == null && !t.totalGrams && !presIsFormula(t)) t.gramsAuto = true;
-      if (presIsFormula(t) || t.gramsAuto === true) {
+      // is gone -- so totalGrams IS just its own ingredient sum, always
+      // live, and never touches gramsMode/gramsMultiple at all.
+      if (t.gramsMode == null && t.gramsAuto == null && !t.totalGrams && !presIsFormula(t)) { t.gramsMode = "multiple"; t.gramsMultiple = 1; }
+      if (presIsFormula(t)) {
         t.totalGrams = phRound2(t.ingredients.reduce((a, i) => a + (i.grams || 0), 0));
         presRefreshGramsFieldIfAttached(t);
+      } else {
+        const st = presGramsStateOf(t);
+        // her 2026-08-25 spec §3, the rule that must not be got wrong: "a
+        // saved or dispensed script never re-derives its grams". §2 scopes
+        // the live recalculation to "an unsaved or IN-PROGRESS script", so
+        // the two agree -- once this script has actually gone out the door
+        // it is a RECORD, and editing the formula later must not silently
+        // move what it says was dispensed. Verified 2026-08-25 against
+        // Mia Rankin's real ×2 script: without this guard, editing her herb
+        // list from 50 g to 100 g moved her stored grams 100 -> 200.
+        // She can still change it deliberately -- tapping a multiple or
+        // typing re-applies immediately -- and presGramsHintHtml calls the
+        // divergence out rather than hiding it.
+        if (st.mode === "multiple" && !presGramsFrozen(t)) {
+          const herbTotal = phRound2(t.ingredients.reduce((a, i) => a + (i.grams || 0), 0));
+          t.totalGrams = phRound2(herbTotal * st.multiple);
+          presRefreshGramsFieldIfAttached(t);
+        }
       }
     }
     savePresc();
