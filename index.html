@@ -2146,6 +2146,19 @@
   #pharmacyPage #phSettingsWrap .ph-widget { max-width: 680px; margin-left: auto; margin-right: auto; }
   #pharmacyPage .ph-settings-sec h3 { margin: 0 0 6px; font-size: 15px; color: var(--ph-green-deep); }
   #pharmacyPage .ph-settings-hint { margin: 0 0 12px; font-size: 12.5px; color: var(--ph-soft); line-height: 1.5; }
+  /* her 2026-08-25 §5: the storage figure, on the same status-colour scale
+     the inventory pills already use -- green under 75%, amber past it, red
+     past 90%, so "filling up" reads at a glance rather than needing maths. */
+  #pharmacyPage .ph-store-row { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; margin-bottom: var(--sp-3); }
+  #pharmacyPage .ph-store-n { font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--ph-green-deep); }
+  #pharmacyPage .ph-store-n.low { color: var(--ph-low-deep); }
+  #pharmacyPage .ph-store-n.zero { color: var(--ph-verdict-zero); }
+  #pharmacyPage .ph-store-of { font-size: var(--fs-meta); color: var(--ph-soft); }
+  #pharmacyPage .ph-store-bar { flex: 1 1 120px; max-width: 260px; height: 8px; border-radius: 4px; background: var(--ph-green-tint); overflow: hidden; }
+  #pharmacyPage .ph-store-bar-fill { display: block; height: 100%; background: var(--ph-green); }
+  #pharmacyPage .ph-store-bar-fill.low { background: var(--ph-low-deep); }
+  #pharmacyPage .ph-store-bar-fill.zero { background: var(--ph-verdict-zero); }
+  #pharmacyPage .ph-store-pct { font-size: var(--fs-meta); font-weight: 700; color: var(--ph-soft); font-variant-numeric: tabular-nums; }
   #pharmacyPage .ph-settings-field-label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ph-soft); margin-bottom: 4px; }
   #pharmacyPage .ph-label-template-input {
     width: 100%; box-sizing: border-box; resize: vertical;
@@ -6547,12 +6560,16 @@
          a direct child of #pharmacyPage. -->
     <div class="ph-stocktake-backdrop" id="phRenCropBackdrop" hidden></div>
     <div class="ph-hx-modal" id="phRenCropModal" hidden></div>
-    <input type="file" id="phRenPhotoFileInput" accept="image/*" capture="environment" hidden>
-    <!-- library picker: the SAME handler as the camera input above, minus
-         capture= (which forces the camera on a phone) -- her mobile ask
-         2026-08-22, "Take a photo / Choose from library". Desktop never
-         shows the button that opens this. -->
-    <input type="file" id="phRenPhotoLibraryInput" accept="image/*" hidden>
+    <!-- her report 2026-08-25: "Add photo goes straight to the camera. It
+         never offers my gallery." capture="environment" was the cause -- it
+         tells the phone to skip its own chooser and open the camera direct.
+         Removed, so ONE button now raises the phone's native sheet (Photo
+         Library / Take Photo / Browse), her explicit ask. accept="image/*"
+         stays deliberately wide so an iPhone HEIC is selectable rather than
+         greyed out; a narrow png/jpeg list would look like the same bug.
+         The separate 🖼 Choose from library input+button this replaced is
+         gone -- one button, the phone's own menu. -->
+    <input type="file" id="phRenPhotoFileInput" accept="image/*" hidden>
     <!-- paste/drop confirm preview (her spec §3): a pasted clipboard image
          is NOT attached until she has seen it and said yes -- a stray ⌘V
          must never silently file the wrong image into a patient's record. -->
@@ -12403,7 +12420,43 @@
           </tbody></table>
         </div>
       </div>
+      ${phSettingsStorageHtml()}
     </section>`;
+    phSettingsStoragePhotoFill();
+  }
+  // her 2026-08-25 spec §5: "show me my current usage somewhere sensible, so
+  // I can see it filling up". Two separate stores, said plainly, because the
+  // difference is the whole point: the ~5 MB ceiling she measured applies to
+  // the TEXT data only. Photos are in IndexedDB, which is a different, far
+  // larger allowance -- so a photo can't push her saved data over the line.
+  function phSettingsStorageHtml() {
+    const mb = phRenStorageBytes() / 1048576;
+    const pct = Math.min(100, Math.round((mb / 5) * 100));
+    const tone = pct >= 90 ? "zero" : pct >= 75 ? "low" : "ok";
+    return `<div class="ph-settings-sec">
+      <h3>💾 Storage</h3>
+      <p class="ph-settings-hint">Herbs, prescriptions, the log and every setting are saved as text in this browser, which allows about 5 MB in total. Photos do not count towards this — they are kept separately, with a much larger allowance.</p>
+      <div class="ph-store-row">
+        <span class="ph-store-n ${tone}">${mb.toFixed(2)} MB</span>
+        <span class="ph-store-of">of about 5 MB</span>
+        <span class="ph-store-bar"><span class="ph-store-bar-fill ${tone}" style="width:${pct}%"></span></span>
+        <span class="ph-store-pct">${pct}%</span>
+      </div>
+      <div class="ph-settings-hint" id="phStorePhotoLine">Photos: counting…</div>
+    </div>`;
+  }
+  // photo count/size is an async IndexedDB read, so it fills in after the
+  // page paints rather than holding the whole Settings render up
+  async function phSettingsStoragePhotoFill() {
+    const el = document.getElementById("phStorePhotoLine");
+    if (!el) return;
+    try {
+      const recs = await phRenPhotoGetAll();
+      const kb = recs.reduce((a, r) => a + ((r.blob && r.blob.size) || 0), 0) / 1024;
+      el.textContent = recs.length
+        ? `Photos: ${recs.length} stored, ${kb >= 1024 ? (kb / 1024).toFixed(1) + " MB" : Math.round(kb) + " KB"} — kept separately, not part of the figure above.`
+        : "Photos: none stored yet — they are kept separately, not part of the figure above.";
+    } catch (e) { el.textContent = "Photos: kept separately, not part of the figure above."; }
   }
   // live "unknown placeholder" warning as she types -- updates just this one
   // small element, never the textarea's own innerHTML/value, so her cursor
@@ -13844,13 +13897,6 @@
       if (e.target.closest("[data-ren-photo-add]")) {
         const inp = document.getElementById("phRenPhotoFileInput");
         if (inp) inp.click();
-        return;
-      }
-      // mobile only (§4) -- the camera input above forces the camera via
-      // capture=; this one has no capture, so it opens the photo library
-      if (e.target.closest("[data-ren-photo-library]")) {
-        const lib = document.getElementById("phRenPhotoLibraryInput");
-        if (lib) lib.click();
         return;
       }
       if (e.target.closest("[data-ren-paste-use]")) { phRenPasteAccept(); return; }
@@ -15809,14 +15855,6 @@
         const f = e.target.files && e.target.files[0];
         e.target.value = "";
         if (f && presHxScreenName) phRenCropOpenFromFile(phPatientKey(presHxScreenName), f);
-        return;
-      }
-      // library pick (mobile, §4) -- a NEW door, so it gets the confirm
-      // preview like paste/drop do; 📷 Add photo above stays exactly as it was
-      if (e.target.id === "phRenPhotoLibraryInput") {
-        const f = e.target.files && e.target.files[0];
-        e.target.value = "";
-        if (f && presHxScreenName && !phRenPasteState) phRenPasteOpen(phPatientKey(presHxScreenName), f);
         return;
       }
       // ⚙ Settings -- Label text, STEP 7's plain-characters toggle
@@ -18199,7 +18237,6 @@
         <div class="ph-tmpl-sec"><span>方病人 constitution</span></div>
         <div class="ph-hx-constit-headbtns">
           <button type="button" class="ph-ren-showtypes-btn" data-ren-photo-add="1">📷 Add photo</button>
-          ${phRenCanPaste() ? "" : `<button type="button" class="ph-ren-showtypes-btn" data-ren-photo-library="1">🖼 Choose from library</button>`}
           ${window.__LCM_SYNC ? `<button type="button" class="ph-ren-showtypes-btn" data-ren-photo-check="1">🔄 Check for photos</button>` : ""}
           <button type="button" class="ph-ren-showtypes-btn${showTypes ? " on" : ""}" data-ren-showtypes-toggle="1" aria-pressed="${showTypes ? "true" : "false"}">${showTypes ? "✓ Showing types" : "Show types"}</button>
         </div>
@@ -18397,11 +18434,16 @@
   // crops a NATURAL-pixel rect out of an already-loaded <img>, own
   // compression pass (crops are close-ups, don't need the full photo's max
   // dimension)
-  function phRenCropToBlob(img, rect, quality) {
+  function phRenCropToBlob(img, rect, quality, maxDim) {
     return new Promise((resolve, reject) => {
+      let w = Math.max(1, Math.round(rect.w)), h = Math.max(1, Math.round(rect.h));
+      // her §4: a crop taken out of a 4000px phone photo is itself still a
+      // big image, so the same longest-side cap applies here -- without it
+      // this was the one photo path with no dimension limit at all.
+      if (maxDim && Math.max(w, h) > maxDim) { const s = maxDim / Math.max(w, h); w = Math.round(w * s); h = Math.round(h * s); }
       const c = document.createElement("canvas");
-      c.width = Math.max(1, Math.round(rect.w)); c.height = Math.max(1, Math.round(rect.h));
-      c.getContext("2d").drawImage(img, rect.x, rect.y, rect.w, rect.h, 0, 0, c.width, c.height);
+      c.width = w; c.height = h;
+      c.getContext("2d").drawImage(img, rect.x, rect.y, rect.w, rect.h, 0, 0, w, h);
       c.toBlob(b => b ? resolve(b) : reject(new Error("crop failed")), "image/jpeg", quality);
     });
   }
@@ -18544,7 +18586,29 @@
   // chance, so only a genuinely phone-shaped screen falls through to §4.
   const phRenCanPaste = () => window.innerWidth > 900 || matchMedia("(any-pointer: fine)").matches;
   const phRenPasteKeyLabel = () => /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent || "") ? "⌘V" : "Ctrl V";
-  const PH_REN_PASTE_MAXDIM = 1280, PH_REN_PASTE_QUALITY = 0.82;
+  // her 2026-08-25 spec §4: ONE pair of numbers for every photo that gets
+  // stored, whichever door it came in by (📷 Add photo, paste, drag-drop,
+  // phone->desktop relay). Longest side 1280px, JPEG 0.7. Was 1280/0.82 for
+  // paste and 1600/0.82 for a full save -- two different answers to the same
+  // question. Change these two numbers and every path follows.
+  const PH_REN_PHOTO_MAXDIM = 1280, PH_REN_PHOTO_QUALITY = 0.7;
+  // her §5: "show me my current usage somewhere sensible, so I can see it
+  // filling up." Measures the SAME way she did -- characters stored across
+  // every localStorage key on this origin (shared with Book33, which is why
+  // her own figure counts everything, not just daybook-*). Photos are NOT
+  // counted here because they are not in localStorage at all -- see the
+  // phRenPhotoDbOpen comment above; they live in IndexedDB.
+  function phRenStorageBytes() {
+    let n = 0;
+    try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); n += k.length + (localStorage.getItem(k) || "").length; } } catch (e) {}
+    return n;
+  }
+  function phRenStorageLine() {
+    const mb = phRenStorageBytes() / 1048576;
+    return `Your saved data is at ${mb.toFixed(2)} MB of about 5 MB.`;
+  }
+  // kept as aliases so the paste-preview code below reads the same values
+  const PH_REN_PASTE_MAXDIM = PH_REN_PHOTO_MAXDIM, PH_REN_PASTE_QUALITY = PH_REN_PHOTO_QUALITY;
   const phRenKb = n => n >= 1024 * 1024 ? (n / 1024 / 1024).toFixed(1) + " MB" : Math.round(n / 1024) + " KB";
   let phRenPasteState = null;   // {patientKey, file, objectUrl, w, h, compressed}
 
@@ -18787,32 +18851,42 @@
       await phRenRelayDelete(p);
     }
   }
+  // her §5: a save that runs out of room must SAY so and leave everything as
+  // it was -- never a write that quietly does nothing. IndexedDB throws the
+  // same QuotaExceededError localStorage does, so the message names the real
+  // cause and quotes the real figure instead of a generic "try again".
+  // §6: the photo itself never appears here -- only its size in KB.
+  function phRenSaveErrorText(e, what) {
+    const quota = e && (e.name === "QuotaExceededError" || /quota|exceeded|full/i.test((e && e.message) || ""));
+    if (!quota) return `⚠ Couldn't save that ${what} — ${esc((e && e.name) || "error")}. Nothing was changed.`;
+    return `⚠ That photo didn't fit — this device's storage is full. Nothing was changed. ${esc(phRenStorageLine())}`;
+  }
   async function phRenCropDoSave(kind) {
     if (!phRenCropState) return;
     const st = phRenCropState;
     try {
-      const blob = await phRenCropToBlob(st.img, st.rect, 0.85);
+      const blob = await phRenCropToBlob(st.img, st.rect, PH_REN_PHOTO_QUALITY, PH_REN_PHOTO_MAXDIM);
       await phRenPhotoPut({ id: uid(), patientKey: st.patientKey, kind, blob, mime: "image/jpeg", createdAt: Date.now() });
       await phRenCropFinishSave();
       await phRenLoadPhotosFor(st.patientKey);
       phFlashShow(`Saved ${PH_REN_CROP_LABEL[kind]} crop · ${Math.round(blob.size / 1024)} KB.`);
       if (phRenCropState) { phRenCropState.rect = phRenDefaultRect(st.img.naturalWidth, st.img.naturalHeight); renderPhRenCropModal(); }
     } catch (e) {
-      phFlashShow(`⚠ Couldn't save that crop — ${esc((e && e.message) || "try again")}`);
+      phFlashShow(phRenSaveErrorText(e, "crop"));
     }
   }
   async function phRenCropDoSaveFull() {
     if (!phRenCropState) return;
     const st = phRenCropState;
     try {
-      const blob = await phRenCompressToBlob(st.sourceBlob, 1600, 0.82);
+      const blob = await phRenCompressToBlob(st.sourceBlob, PH_REN_PHOTO_MAXDIM, PH_REN_PHOTO_QUALITY);
       await phRenPhotoPut({ id: uid(), patientKey: st.patientKey, kind: "full", blob, mime: "image/jpeg", createdAt: Date.now() });
       await phRenCropFinishSave();
       await phRenLoadPhotosFor(st.patientKey);
       phFlashShow(`Saved to Reference photos on file · ${Math.round(blob.size / 1024)} KB.`);
       if (phRenCropState) renderPhRenCropModal();
     } catch (e) {
-      phFlashShow(`⚠ Couldn't save that photo — ${esc((e && e.message) || "try again")}`);
+      phFlashShow(phRenSaveErrorText(e, "photo"));
     }
   }
   async function phRenCropDoSendToDesktop() {
@@ -18820,7 +18894,7 @@
     const st = phRenCropState;
     phFlashShow("Sending to desktop…");
     try {
-      const blob = await phRenCompressToBlob(st.sourceBlob, 1600, 0.85);
+      const blob = await phRenCompressToBlob(st.sourceBlob, PH_REN_PHOTO_MAXDIM, PH_REN_PHOTO_QUALITY);
       await phRenRelayUpload(st.patientKey, blob);
       phRenCropClose();
       phFlashShow("Sent — open this patient on your desktop and tap 🔄 Check for photos.");
