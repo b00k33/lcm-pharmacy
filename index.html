@@ -14098,6 +14098,9 @@
           phRefillRowMenuFor = phRefillRowMenuFor === id ? null : id;
           phRefillMenuFor = null;
           renderRefill();
+          // same .ph-rp-menu, same .rtn-table-wrap clipping as the Plan menu
+          // just above -- this one was never wired to the fix at all
+          phRefillMenuFixPosition();
           return;
         }
         const rAdd = e.target.closest("[data-ph-refill-add]");
@@ -17414,36 +17417,40 @@
      Not flagged tab. Already flagged -> it reads "🏺 On the list" and offers
      Remove, so the same formula can never be added twice. */
   let phRefillMenuFor = null;      // the jar id whose menu is open
-  // the Dashboard's "Refill these formulas" card is overflow:hidden (its
-  // header strip needs that to clip its own corner-bleed trick to the card's
-  // border-radius -- see .ph-dash-density.ph-dash-card). A dropdown that
-  // opens below a row near the bottom of that card would get cut off there,
-  // which CLAUDE.md's dropdown rule doesn't allow. Only there: once the menu
-  // has rendered, re-point it at position:fixed with its real screen
-  // coordinates -- fixed positioning escapes an ancestor's overflow:hidden
-  // entirely (no ancestor here sets transform/filter/contain, confirmed), so
-  // it draws on top of everything instead of being clipped by the card. The
-  // menu's DOM position doesn't change, so it still closes exactly the way
-  // it already did. Inventory and the plan table have no such ancestor and
-  // are untouched -- this only ever fires for a menu inside .ph-dash-card.
+  // Once a .ph-rp-menu has rendered, re-point EVERY open one at
+  // position:fixed with its real screen coordinates -- fixed positioning
+  // escapes any ancestor's overflow (whether that's the Dashboard card's
+  // deliberate overflow:hidden, or .rtn-table-wrap's overflow-x:auto, which
+  // per the CSS spec forces overflow-y to auto too the moment only one axis
+  // is set -- clipping this menu's downward flow exactly like overflow:
+  // hidden would). Originally scoped to only fire inside .ph-dash-card
+  // (2026-08-27, the one report at the time); her follow-up report showed
+  // the identical cut-off in the Refill plan table itself, so the ancestor
+  // check is gone -- CLAUDE.md's "every dropdown must open fully on-screen"
+  // is a page-wide rule, not a Dashboard-only one. querySelectorAll, not
+  // -Selector: the same h.id can legitimately render a Plan▾ button in more
+  // than one place at once (e.g. a formula that's both in the plan table AND
+  // in the Formula recipes list below, both bound to the one shared
+  // phRefillMenuFor) -- every match that's actually open needs fixing, not
+  // just whichever happens to be first in the DOM.
   function phRefillMenuFixPosition() {
-    const open = document.querySelector(".ph-rp-menuwrap > .ph-rp-menu");
-    if (!open || !open.closest(".ph-dash-card")) return;
-    const btn = open.previousElementSibling;
-    if (!btn) return;
-    const r = btn.getBoundingClientRect();
-    // measured live (2026-08-27): the Dashboard list can put a row's button
-    // close enough to the viewport's own bottom edge that opening straight
-    // down (its only mode elsewhere) pushed the menu's bottom 160px past
-    // window.innerHeight -- invisible, not just clipped-by-card. Flip it
-    // above the button instead whenever there isn't room below.
-    const menuH = open.getBoundingClientRect().height;
-    const openUp = r.bottom + 4 + menuH > window.innerHeight;
-    open.style.position = "fixed";
-    if (openUp) { open.style.bottom = (window.innerHeight - r.top + 4) + "px"; open.style.top = "auto"; }
-    else { open.style.top = (r.bottom + 4) + "px"; open.style.bottom = "auto"; }
-    open.style.right = (window.innerWidth - r.right) + "px";
-    open.style.left = "auto";
+    document.querySelectorAll(".ph-rp-menuwrap > .ph-rp-menu").forEach(open => {
+      const btn = open.previousElementSibling;
+      if (!btn) return;
+      const r = btn.getBoundingClientRect();
+      // measured live (2026-08-27): the Dashboard list can put a row's button
+      // close enough to the viewport's own bottom edge that opening straight
+      // down (its only mode elsewhere) pushed the menu's bottom 160px past
+      // window.innerHeight -- invisible, not just clipped-by-card. Flip it
+      // above the button instead whenever there isn't room below.
+      const menuH = open.getBoundingClientRect().height;
+      const openUp = r.bottom + 4 + menuH > window.innerHeight;
+      open.style.position = "fixed";
+      if (openUp) { open.style.bottom = (window.innerHeight - r.top + 4) + "px"; open.style.top = "auto"; }
+      else { open.style.top = (r.bottom + 4) + "px"; open.style.bottom = "auto"; }
+      open.style.right = (window.innerWidth - r.right) + "px";
+      open.style.left = "auto";
+    });
   }
   // her open item 3: the second item is her making day. One constant.
   const PH_REFILL_MAKE_DAY = 1;    // 1 = Monday
