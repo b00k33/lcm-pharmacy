@@ -2641,8 +2641,8 @@
   /* ---- Dashboard: "stocktake in progress" resume banner (her ask 2026-08-16) --
      Sits above the tiles because it is the one thing on this page that is
      WAITING on her; everything else is a status readout. It only exists while
-     PHARMACY.stocktakeSession is unfinished, so on an ordinary day the Dashboard
-     looks exactly as it did. Green-tinted rather than red: an unfinished count
+     a count in PHARMACY.stocktakeSessions is unfinished, so on an ordinary day
+     the Dashboard looks exactly as it did. Green-tinted rather than red: an unfinished count
      is a task in hand, not an error. */
   #pharmacyPage .ph-dash-resume {
     display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
@@ -7702,10 +7702,14 @@
       // her ask (2026-08-14): a resumable stocktake session -- lives on PHARMACY
       // itself (not a separate localStorage key) so it saves/syncs through the
       // exact same safe path as everything else, and survives a reload or a
-      // switch to another device mid-count. stocktakeSession is the one
-      // in-progress (or just-finished, summary-showing) run; stocktakes is the
-      // permanent record of every one she's ever completed.
-      stocktakeSession: null, stocktakes: [],
+      // switch to another device mid-count. Her §1 (2026-08-26): TWO fully
+      // independent counts, a map keyed 'herbs'/'formulas' -- either can be
+      // started, paused, resumed or abandoned without touching the other. An
+      // old store's single .stocktakeSession is migrated in lazily by
+      // phStocktakeSessions() (not here -- boot runs before the helpers that
+      // migration needs are initialised). stocktakes is the permanent record
+      // of every one she's ever completed.
+      stocktakeSessions: { herbs: null, formulas: null }, stocktakes: [],
       // her ask (2026-08-16): Price review, a supplier-by-supplier price
       // stocktake -- same resumable-session shape as stocktakeSession/
       // stocktakes above, so it saves/syncs the same safe way. The per-item
@@ -9678,9 +9682,9 @@
   // the medallion number is never a mystery figure unrelated to its own rows.
   function phSigCatchAllTileHtml(picked) {
     const nextTwo = phSigNextTwo(picked);
-    const st = PHARMACY.stocktakeSession, stocktakeOpen = !!(st && !st.finished);
+    const stOpen = phStocktakeOpenSessions();
     const orderCount = PHARMACY.herbs.filter(herbNeedsOrder).length;
-    const waitingCount = nextTwo.length + (stocktakeOpen ? 1 : 0) + orderCount;
+    const waitingCount = nextTwo.length + stOpen.length + orderCount;
     // her spec 2026-08-23: this is no longer a tile. As a tile it forced the
     // whole row taller and left a large blank gap under its neighbour -- the
     // single biggest space saving here. Now a full-width slim strip BELOW the
@@ -9691,7 +9695,7 @@
       <span class="ph-sig-strip-t"><b>Also waiting</b><span>nothing here is holding up a script</span></span>
       <span class="ph-sig-strip-items">
         ${nextTwo.map(c => `<span class="ph-sig-strip-item" title="${esc(phPinyinFullLabel(c.r.h))}" data-ph-full-name="${esc(phPinyinFullLabel(c.r.h))}"><svg class="icn" aria-hidden="true"><use href="#${c.r.h.qty <= 0 ? "i-jar-empty" : "i-jar-part"}"/></svg>#${c.r.rank} ${esc(phPinyinName(c.r.h))} <b>${phFmtG(c.r.h.qty)}g</b></span>`).join("")}
-        ${stocktakeOpen ? `<span class="ph-sig-strip-item"><svg class="icn" aria-hidden="true"><use href="#i-clipboard"/></svg>Stocktake in progress</span>` : ""}
+        ${stOpen.map(o => `<span class="ph-sig-strip-item"><svg class="icn" aria-hidden="true"><use href="#i-clipboard"/></svg>${o.type === "formulas" ? "Formula" : "Herb"} count in progress</span>`).join("")}
         <span class="ph-sig-strip-item"><svg class="icn" aria-hidden="true"><use href="#i-cart"/></svg>On the order list <b>${orderCount}</b></span>
       </span>
       <button type="button" class="ph-load-btn ph-sig-strip-btn" data-ph-tab="stats">See everything \u2192</button>
@@ -9779,11 +9783,15 @@
       return c.weeks * 7 < 14 && (r.h.qty || 0) > 0;
     }).length;
     const onOrder = PHARMACY.herbs.filter(herbNeedsOrder).length;
-    const st = PHARMACY.stocktakeSession;
-    const stOpen = !!(st && !st.finished);
+    // both open counts fold into the one "counted" cell -- honest combined
+    // progress; the per-count split lives on the task cards below it
+    const stOpen = phStocktakeOpenSessions();
     return {
       emptyInUse, underFortnight, onOrder,
-      stocktake: stOpen ? { done: Object.keys(st.results).length, total: st.queue.length } : null,
+      stocktake: stOpen.length ? {
+        done: stOpen.reduce((n, o) => n + Object.keys(o.s.results).length, 0),
+        total: stOpen.reduce((n, o) => n + o.s.queue.length, 0),
+      } : null,
     };
   }
   // ============ APP-WIDE SHELL (2026-08-24): one header, one strip
@@ -10235,11 +10243,70 @@
   // Herbs/Formulas/Both scopes instead of reusing the toolbar's Herb/Formula
   // toggle, since a herb stocktake and a formula stocktake are often done at
   // different times and should read back as two distinct dated records).
-  // The whole session lives on PHARMACY itself (PHARMACY.stocktakeSession) so
-  // every mutation rides savePharmacy()'s existing safety net for free -- no
-  // separate storage key, no new plumbing. PHARMACY.stocktakes is the
-  // permanent history "last full stocktake: 14 Aug 2026, 138 checked, 6
-  // adjusted" reads from.
+  // Sessions live on PHARMACY itself (PHARMACY.stocktakeSessions) so every
+  // mutation rides savePharmacy()'s existing safety net for free -- no
+  // separate storage key, no new plumbing. Her §1 (2026-08-26): a map keyed
+  // by type ('herbs' / 'formulas'), two fully independent counts that can
+  // both be open at once, indefinitely -- a third type would be a data
+  // change, not a rewrite. PHARMACY.stocktakes is the permanent history
+  // "last full stocktake: 14 Aug 2026, 138 checked, 6 adjusted" reads from.
+  let phStocktakeActiveType = "herbs";    // which count the modal/page band is operating on right now -- UI state, never persisted
+  let phStocktakeChoosing = false;        // modal shows the type chooser instead of the active count
+  const phStocktakeTypeOf = kind => kind === "formula" ? "formulas" : "herbs";
+  // ONE accessor every read goes through. It also owns the one-time migration
+  // from the pre-§1 single .stocktakeSession -- done lazily here (first UI
+  // access, everything initialised) rather than at boot, and re-done if a
+  // stale device's cloud copy ever reintroduces the old key: a slot that's
+  // already occupied is never clobbered by a migrated-in session.
+  function phStocktakeSessions() {
+    let m = PHARMACY.stocktakeSessions;
+    if (!m || typeof m !== "object" || Array.isArray(m)) m = PHARMACY.stocktakeSessions = { herbs: null, formulas: null };
+    if (!("herbs" in m)) m.herbs = null;
+    if (!("formulas" in m)) m.formulas = null;
+    if ("stocktakeSession" in PHARMACY) {
+      const old = PHARMACY.stocktakeSession;
+      delete PHARMACY.stocktakeSession;
+      // a finished-but-not-dismissed session only powered its summary screen,
+      // and its record is already saved in PHARMACY.stocktakes -- drop it
+      if (old && typeof old === "object" && !old.finished) {
+        if (old.kind === "both") phStocktakeSplitBoth(old, m);
+        else if (!m[phStocktakeTypeOf(old.kind)]) m[phStocktakeTypeOf(old.kind)] = old;
+      }
+      savePharmacy();
+    }
+    return m;
+  }
+  // her migration answer (2026-08-26): an in-progress "both" session SPLITS
+  // into a herbs half and a formulas half, each keeping its counted items and
+  // resuming where the combined count left off -- the old current item if it
+  // landed in that half, otherwise that half's first still-pending item.
+  function phStocktakeSplitBoth(old, m) {
+    const byId = new Map(PHARMACY.herbs.map(h => [h.id, h]));
+    const half = wantFormula => {
+      const queue = old.queue.filter(id => { const h = byId.get(id); return h && phIsFormula(h) === wantFormula; });
+      if (!queue.length) return null;
+      const only = src => { const out = {}; queue.forEach(id => { if (src && src[id]) out[id] = src[id]; }); return out; };
+      // history dedupes records by id (phStocktakeSaveRecord) -- the two
+      // halves must never share one, so only the herbs half keeps old.id
+      const s = { ...old, id: wantFormula ? uid() : old.id, kind: wantFormula ? "formula" : "herb", queue, results: only(old.results), ignored: only(old.ignored) };
+      if (old.restarts) s.restarts = old.restarts.slice();
+      const cur = queue.indexOf(old.queue[old.pos]);
+      s.pos = cur >= 0 ? cur : 0;
+      if (s.results[s.queue[s.pos]] || (s.ignored && s.ignored[s.queue[s.pos]])) {
+        const next = phStocktakeNextPendingIdx(s, s.pos - 1);
+        if (next !== -1) s.pos = next;
+      }
+      return s;
+    };
+    if (!m.herbs) m.herbs = half(false);
+    if (!m.formulas) m.formulas = half(true);
+  }
+  const phStocktakeCur = () => phStocktakeSessions()[phStocktakeActiveType] || null;
+  const phStocktakeSetCur = s => { phStocktakeSessions()[phStocktakeActiveType] = s; };
+  const phStocktakeOpenSessions = () => {
+    const m = phStocktakeSessions();
+    return ["herbs", "formulas"].filter(t => m[t] && !m[t].finished).map(t => ({ type: t, s: m[t] }));
+  };
   let phStocktakeNarrowChecked = false;   // start-screen "only my current search/filter" toggle -- session-only, never persisted
   // her open item 1: "most grams used" is what actually empties a jar, so it
   // leads. ONE constant -- change this line to change the default.
@@ -10250,7 +10317,7 @@
     code: { label: "Code A–Z", queue: "code A–Z" },
   };
   let phStocktakeOrderChoice = PH_STOCKTAKE_ORDER_DEFAULT;   // start-screen choice; a STARTED session keeps its own copy (s.order)
-  let phStocktakeRestartArmed = false;    // the Restart confirm is showing (session-only UI state)
+  let phStocktakeRestartArmed = null;     // null, or which count's Restart confirm is showing: "herbs" | "formulas" (session-only UI state)
 
   // only real, on-shelf stock gets counted -- zero and phasing-out items have
   // nothing physical to verify (her explicit exclusion list).
@@ -10328,7 +10395,7 @@
   function phStocktakeQueue(kind, narrow, order) {
     const rows = PHARMACY.herbs
       .filter(phStocktakeEligible)
-      .filter(h => kind === "both" ? true : (kind === "formula") === phIsFormula(h))
+      .filter(h => (kind === "formula") === phIsFormula(h))
       .filter(h => !narrow || phStocktakeNarrowPasses(h));
     return phStocktakeOrderRows(rows, order || PH_STOCKTAKE_ORDER_DEFAULT).map(h => h.id);
   }
@@ -10345,13 +10412,20 @@
     // branch is a rare edge, e.g. the narrow-filter checkbox), but any OTHER
     // unexpected failure here gets a real flash instead of dead silence too.
     try {
+      phStocktakeActiveType = phStocktakeTypeOf(kind);
+      phStocktakeChoosing = false;
+      // this type already has a count open -- resume it, never clobber it.
+      // (The scope button doubles as Resume on the chooser, so this is a
+      // first-class path, not just a guard.)
+      const existing = phStocktakeCur();
+      if (existing && !existing.finished) { phStocktakeOpen(); renderPhStocktakeBtn(); return; }
       const narrow = phStocktakeNarrowChecked && phStocktakeHasNarrow();
       const order = phStocktakeOrderChoice;
       const queue = phStocktakeQueue(kind, narrow, order);
       if (!queue.length) { phFlashShow("Nothing to count there right now — try a different scope or clear your search/filter."); return; }
       // `order` rides the session so resuming keeps the order it STARTED with
       // -- changing it mid-count would renumber the queue under her (her §2)
-      PHARMACY.stocktakeSession = { id: uid(), kind, narrow, order, startedAt: new Date().toISOString(), queue, pos: 0, results: {}, ignored: {} };
+      phStocktakeSetCur({ id: uid(), kind, narrow, order, startedAt: new Date().toISOString(), queue, pos: 0, results: {}, ignored: {} });
       phStocktakeSideQ = ""; phStocktakeSideSheetOpen = false;
       savePharmacy();
       // phStocktakeOpen() covers both call sites: a no-op re-render if the modal
@@ -10379,7 +10453,7 @@
     return -1;
   }
   function phStocktakeAdvance() {
-    const s = PHARMACY.stocktakeSession;
+    const s = phStocktakeCur();
     if (!s) return;
     const next = phStocktakeNextPendingIdx(s, s.pos);
     if (next === -1) { phStocktakeFinish(); return; }
@@ -10387,7 +10461,7 @@
     renderPhStocktakeModal(); renderPhStocktakeBtn();
   }
   function phStocktakeSkip() {
-    const s = PHARMACY.stocktakeSession;
+    const s = phStocktakeCur();
     if (!s) return;
     // her §3: a skipped item moves to the END of the queue -- still in it, so
     // "skip" can never quietly become "never". (It used to just walk to the
@@ -10419,7 +10493,7 @@
   // Deliberately NOT built: undoing a session's adjustments. Her spec §0 rules
   // it out and says to stop and say so rather than improvise a reversal.
   function phStocktakeRestart() {
-    const s = PHARMACY.stocktakeSession;
+    const s = phStocktakeCur();
     if (!s) return;
     const counted = Object.keys(s.results).length;
     const adjusted = Object.values(s.results).filter(r => r.adjusted).length;
@@ -10432,7 +10506,7 @@
     s.queue = phStocktakeQueue(s.kind, s.narrow, s.order);
     s.pos = 0;
     s.finished = false;
-    phStocktakeRestartArmed = false;
+    phStocktakeRestartArmed = null;
     phStocktakeSideQ = ""; phStocktakeSideSheetOpen = false;
     savePharmacy();
     renderPhStocktakeModal(); renderPhStocktakeBtn(); renderPhStocktakePage();
@@ -10454,17 +10528,17 @@
   // immediately abandoned (a misclick, second thoughts) has nothing to
   // report, and shouldn't leave a tombstone in her history for it.
   function phStocktakeAbandon() {
-    const s = PHARMACY.stocktakeSession;
+    const s = phStocktakeCur();
     if (s && Object.keys(s.results).length) {
       phStocktakeSaveRecord(phStocktakeBuildRecord(s, { abandoned: true }));
     }
-    PHARMACY.stocktakeSession = null;
-    phStocktakeRestartArmed = false;
+    phStocktakeSetCur(null);
+    phStocktakeRestartArmed = null;
     savePharmacy();
     phStocktakeClose(); renderPhStocktakeBtn(); renderPhStocktakePage();
   }
   function phStocktakeBack() {
-    const s = PHARMACY.stocktakeSession;
+    const s = phStocktakeCur();
     if (!s || s.pos <= 0) return;
     s.pos -= 1;
     savePharmacy();
@@ -10479,7 +10553,7 @@
   // session's queue so it never comes back around to be counted, rather than
   // just skipping past it like a real pending item.
   function phStocktakeStop(status) {
-    const s = PHARMACY.stocktakeSession;
+    const s = phStocktakeCur();
     if (!s) return;
     const h = PHARMACY.herbs.find(x => x.id === s.queue[s.pos]);
     if (!h) { phStocktakeAdvance(); return; }
@@ -10497,7 +10571,7 @@
   // she revisits this card and edits it again, so the summary always reads
   // "what it was when this stocktake started" -> "what she finally counted"
   function phStocktakeCommit(matched, typedValue) {
-    const s = PHARMACY.stocktakeSession;
+    const s = phStocktakeCur();
     if (!s) return;
     const h = PHARMACY.herbs.find(x => x.id === s.queue[s.pos]);
     if (!h) { phStocktakeAdvance(); return; }   // herb deleted mid-session -- just move on
@@ -10555,7 +10629,7 @@
     PHARMACY.stocktakes.unshift(record);
   }
   function phStocktakeFinish() {
-    const s = PHARMACY.stocktakeSession;
+    const s = phStocktakeCur();
     if (!s) return;
     phStocktakeSaveRecord(phStocktakeBuildRecord(s));
     s.finished = true;
@@ -10563,7 +10637,7 @@
     renderPhStocktakeModal(); renderPhStocktakeBtn();
   }
   function phStocktakeDismissSummary() {
-    PHARMACY.stocktakeSession = null;
+    phStocktakeSetCur(null);
     savePharmacy();
     phStocktakeClose();
     renderPhStocktakeBtn();
@@ -10573,7 +10647,7 @@
     // reached directly from the page's own "Resume stocktake" button, not
     // just through phStocktakeStart(), so it needs its own safety net
     try {
-      const s = PHARMACY.stocktakeSession;
+      const s = phStocktakeCur();
       if (s && !s.finished) {
         // a herb referenced in the queue may have been deleted since this
         // session started -- prune it out so the card screen never renders a
@@ -10599,10 +10673,14 @@
   function renderPhStocktakeBtn() {
     const btn = document.getElementById("phStocktakeBtn");
     if (!btn) return;
-    const s = PHARMACY.stocktakeSession;
-    if (s && !s.finished) {
+    const open = phStocktakeOpenSessions();
+    if (open.length === 1) {
+      const s = open[0].s;
       btn.textContent = `Stocktake · ${Object.keys(s.results).length}/${s.queue.length}`;
       btn.title = "Resume your in-progress stocktake";
+    } else if (open.length === 2) {
+      btn.textContent = "Stocktake · 2 counts";
+      btn.title = "Two counts in progress — herbs and formulas";
     } else {
       btn.textContent = "Stocktake";
       btn.title = "Go through your stocked herbs one at a time and record a real count";
@@ -10771,7 +10849,7 @@
   function phStcSyncBand() {
     const inp = document.getElementById("phStcCount");
     const live = document.getElementById("phStcLive");
-    const s = PHARMACY.stocktakeSession;
+    const s = phStocktakeCur();
     if (!inp || !live || !s || s.finished) return;
     const h = phHerbByIdGet().get(s.queue[s.pos]);
     if (!h) return;
@@ -10810,7 +10888,7 @@
   // adjustment record, the stock change and the dated kind:"stocktake" log
   // entry are written exactly as they were before this page existed.
   function phStcSave() {
-    const s = PHARMACY.stocktakeSession;
+    const s = phStocktakeCur();
     if (!s || s.finished) return;
     const h = phHerbByIdGet().get(s.queue[s.pos]);
     if (!h) { phStocktakeAdvance(); renderPhStocktakePage(); return; }
@@ -10830,15 +10908,31 @@
       <span class="n">${count}</span>
     </button>`;
   }
-  function phStocktakeStartBodyHtml() {
+  // onlyKinds (optional): limit the scope buttons to these kinds -- the
+  // Stocktake page passes the not-yet-open ones so a count that's already
+  // running isn't offered twice (its Resume block sits right above)
+  function phStocktakeStartBodyHtml(onlyKinds) {
     const hasNarrow = phStocktakeHasNarrow();
     const narrow = phStocktakeNarrowChecked && hasNarrow;
-    const counts = { herb: phStocktakeQueue("herb", narrow).length, formula: phStocktakeQueue("formula", narrow).length, both: phStocktakeQueue("both", narrow).length };
+    const m = phStocktakeSessions();
+    // her §1: two independent counts, no "Both together" any more -- an item
+    // belongs to exactly one queue. A type with a count already open shows
+    // its progress and resumes on tap (phStocktakeStart never clobbers).
+    const scope = (kind, icon, label) => {
+      const s = m[phStocktakeTypeOf(kind)];
+      if (s && !s.finished) {
+        return `<button type="button" class="ph-stocktake-scope" data-ph-stocktake-scope="${kind}">
+          <span>${icon} ${label}<span class="s">in progress — tap to resume</span></span>
+          <span class="n">${Object.keys(s.results).length}/${s.queue.length}</span>
+        </button>`;
+      }
+      return phStocktakeScopeBtnHtml(kind, icon, label, phStocktakeQueue(kind, narrow).length);
+    };
+    const kinds = onlyKinds || ["herb", "formula"];
     return `<div class="ph-stocktake-start-h">What are you counting?</div>
-        <div class="ph-stocktake-start-note">Only stocked items (real stock &gt; 0) are included — zero and phasing-out items are skipped.</div>
-        ${phStocktakeScopeBtnHtml("herb", "🌿", "Herbs only", counts.herb)}
-        ${phStocktakeScopeBtnHtml("formula", "🫙", "Formulas only", counts.formula)}
-        ${phStocktakeScopeBtnHtml("both", "🌿🫙", "Both together", counts.both)}
+        <div class="ph-stocktake-start-note">Only stocked items (real stock &gt; 0) are included — zero and phasing-out items are skipped. Both counts can run at the same time; starting one never touches the other.</div>
+        ${kinds.includes("herb") ? scope("herb", "🌿", "Herbs") : ""}
+        ${kinds.includes("formula") ? scope("formula", "🫙", "Formulas") : ""}
         <div class="ph-stocktake-order-h">Count them in this order</div>
         <div class="ph-stocktake-order-seg" role="radiogroup" aria-label="Queue order">
           ${Object.keys(PH_STOCKTAKE_ORDERS).map(k => `<button type="button" class="ph-stocktake-order-opt${phStocktakeOrderChoice === k ? " on" : ""}" data-ph-stocktake-order="${k}" role="radio" aria-checked="${phStocktakeOrderChoice === k}">${PH_STOCKTAKE_ORDERS[k].label}</button>`).join("")}
@@ -10920,25 +11014,36 @@
   function renderPhStocktakePage() {
     const wrap = document.getElementById("phStocktakeWrap");
     if (!wrap) return;
-    const s = PHARMACY.stocktakeSession;
-    const resuming = s && !s.finished;
+    const m = phStocktakeSessions();
+    const open = phStocktakeOpenSessions();
+    // the working lists (and their Save band) write through phStocktakeCur()
+    // -- keep the active type pointed at a count that actually exists
+    if (open.length && !(m[phStocktakeActiveType] && !m[phStocktakeActiveType].finished)) phStocktakeActiveType = open[0].type;
+    const activeS = open.length ? m[phStocktakeActiveType] : null;
+    const resumeBlock = ({ type, s }) => `
+          <div class="ph-stocktake-start-note">${type === "formulas" ? "🫙" : "🌿"} <b>${type === "formulas" ? "Formulas" : "Herbs"}</b> count in progress — ${Object.keys(s.results).length} of ${s.queue.length} checked, in ${esc((PH_STOCKTAKE_ORDERS[s.order] || PH_STOCKTAKE_ORDERS[PH_STOCKTAKE_ORDER_DEFAULT]).queue)} order.</div>
+          ${phStocktakeRestartArmed === type ? phStocktakeRestartConfirmHtml(s) : ""}
+          <button type="button" class="ph-stocktake-main-btn" data-ph-stocktake-resume="${type}">Resume ${type === "formulas" ? "formulas" : "herbs"} count →</button>
+          <div class="ph-stocktake-page-acts">
+            <button type="button" class="ph-stocktake-restart-btn" data-ph-stocktake-restart="${type}">Restart</button>
+            <button type="button" class="ph-stocktake-abandon-btn" data-ph-stocktake-abandon="${type}">Abandon</button>
+          </div>`;
+    const startableKinds = ["herb", "formula"].filter(k => { const s = m[phStocktakeTypeOf(k)]; return !(s && !s.finished); });
+    // which count the lists below are showing -- only needs saying (and
+    // switching) when both are open at once
+    const typeToggle = open.length !== 2 ? "" : `<div class="ph-stocktake-order-seg" role="radiogroup" aria-label="Which count to work on">
+          ${["herbs", "formulas"].map(t => `<button type="button" class="ph-stocktake-order-opt${phStocktakeActiveType === t ? " on" : ""}" data-ph-stc-type="${t}" role="radio" aria-checked="${phStocktakeActiveType === t}">${t === "formulas" ? "🫙 Formulas" : "🌿 Herbs"} count</button>`).join("")}
+        </div>`;
     wrap.innerHTML = `
       ${phShellHead("Stocktake", `${PHARMACY.stocktakes.length} past stocktake${PHARMACY.stocktakes.length === 1 ? "" : "s"}`, "")}
       <div class="ph-stocktake-page">
         ${phFlashHtml()}
         <section class="ph-widget ph-stocktake-page-main">
           <div class="section-head"><h2>What am I counting today?</h2><span class="rule"></span></div>
-          ${resuming
-            ? `<div class="ph-stocktake-start-note">You have a stocktake in progress — ${Object.keys(s.results).length} of ${s.queue.length} checked, in ${esc((PH_STOCKTAKE_ORDERS[s.order] || PH_STOCKTAKE_ORDERS[PH_STOCKTAKE_ORDER_DEFAULT]).queue)} order.</div>
-               ${phStocktakeRestartArmed ? phStocktakeRestartConfirmHtml(s) : ""}
-               <button type="button" class="ph-stocktake-main-btn" data-ph-stocktake-resume="1">Resume stocktake →</button>
-               <div class="ph-stocktake-page-acts">
-                 <button type="button" class="ph-stocktake-restart-btn" data-ph-stocktake-restart="1">Restart</button>
-                 <button type="button" class="ph-stocktake-abandon-btn" data-ph-stocktake-abandon="1">Abandon</button>
-               </div>`
-            : phStocktakeStartBodyHtml()}
+          ${open.map(resumeBlock).join("")}
+          ${startableKinds.length ? phStocktakeStartBodyHtml(startableKinds) : ""}
         </section>
-        ${resuming ? phStocktakeListsHtml(s) : ""}
+        ${activeS ? typeToggle + phStocktakeListsHtml(activeS) : ""}
         <section class="ph-widget ph-stocktake-page-history">
           <div class="section-head"><h2>📂 Stocktake history</h2><span class="rule"></span></div>
           ${phStocktakeHistoryHtml()}
@@ -10947,7 +11052,7 @@
   }
   // ---- stocktake side list + Ignore (her spec 2026-08-24) ------------------
   // Ignore is SESSION state and nothing else: s.ignored is a plain map on
-  // PHARMACY.stocktakeSession, thrown away when the session is. There is
+  // that count's own session object, thrown away when the session is. There is
   // deliberately NO per-herb "never count" flag anywhere -- she ruled that out
   // by name. Ignoring writes nothing to h.qty, nothing to PHARMACY.log, and
   // nothing to the herb record; it only takes the item out of THIS session's
@@ -10961,7 +11066,7 @@
     return s.queue.filter(id => phStocktakeIsIgnored(s, id) && !s.results[id]).length;
   }
   function phStocktakeIgnore() {
-    const s = PHARMACY.stocktakeSession;
+    const s = phStocktakeCur();
     if (!s || s.finished) return;
     const id = s.queue[s.pos];
     if (!id) return;
@@ -10975,7 +11080,7 @@
   // already keeps the ORIGINAL baseline in s.results[id].old, so that needed no
   // change) and including an ignored one, which un-ignores it in place.
   function phStocktakeJumpTo(idx) {
-    const s = PHARMACY.stocktakeSession;
+    const s = phStocktakeCur();
     if (!s || s.finished) return;
     if (!(idx >= 0 && idx < s.queue.length)) return;
     if (s.ignored) delete s.ignored[s.queue[idx]];
@@ -11035,7 +11140,7 @@
   // typing must not re-render the modal -- that would blow away focus mid-word
   // (the same reason phStocktakeSyncInput patches the count field in place)
   function phStocktakeSideListRefresh() {
-    const s = PHARMACY.stocktakeSession;
+    const s = phStocktakeCur();
     const list = document.getElementById("phStocktakeSideList");
     if (!s || s.finished || !list) return;
     list.innerHTML = phStocktakeSideRowsHtml(s);
@@ -11076,7 +11181,7 @@
         <button type="button" class="ph-stocktake-close" data-ph-stocktake-close="1" aria-label="Pause and close">✕</button>
       </div>
       <div class="ph-stocktake-body">
-        ${phStocktakeRestartArmed ? phStocktakeRestartConfirmHtml(s) : ""}
+        ${phStocktakeRestartArmed === phStocktakeActiveType ? phStocktakeRestartConfirmHtml(s) : ""}
         ${already ? `<div class="ph-stocktake-already">Already recorded this session: ${phFmtG(already.old)}g → ${phFmtG(already.new)}g${already.adjusted ? ` (${already.diff > 0 ? "+" : "−"}${phFmtG(Math.abs(already.diff))}g)` : " — confirmed"}</div>` : ""}
         <div class="ph-stocktake-queue-note">queue: ${esc((PH_STOCKTAKE_ORDERS[s.order] || PH_STOCKTAKE_ORDERS[PH_STOCKTAKE_ORDER_DEFAULT]).queue)}</div>
         <div class="ph-stocktake-name">${esc(heading)}</div>
@@ -11129,7 +11234,9 @@
   function renderPhStocktakeModal() {
     const el = document.getElementById("phStocktakeModal");
     if (!el || el.hidden) return;
-    const s = PHARMACY.stocktakeSession;
+    // choosing = the type chooser (start screen), even while counts are open
+    // -- how she reaches the second count, or switches between the two
+    const s = phStocktakeChoosing ? null : phStocktakeCur();
     if (s && !s.finished && !s.queue.length) { phStocktakeFinish(); return; }
     const counting = !!(s && !s.finished);
     el.innerHTML = `${counting && phStocktakeSideSheetOpen ? `<div class="ph-stsl-scrim" data-ph-stocktake-queue-close="1"></div>` : ""}
@@ -11153,7 +11260,7 @@
     const btn = document.getElementById("phStocktakeMainBtn");
     const diffEl = document.getElementById("phStocktakeDiff");
     if (!inp || !btn) return;
-    const s = PHARMACY.stocktakeSession;
+    const s = phStocktakeCur();
     const h = s && phHerbByIdGet().get(s.queue[s.pos]);
     const recorded = h ? (h.qty || 0) : 0;
     const raw = inp.value.trim();
@@ -13387,8 +13494,7 @@
   // dropped from this row entirely (three tiles, not a gap to fill) rather
   // than drawn twice with the same progress bar and Resume button.
   function phDashMondayBandHtml() {
-    const st = PHARMACY.stocktakeSession;
-    const inProgress = st && !st.finished;
+    const inProgress = phStocktakeOpenSessions().length > 0;
     let job1Html = "";
     if (!inProgress) {
       const due = phStocktakeNextDueInfo();
@@ -13509,22 +13615,25 @@
   // her ask 2026-08-24: the card says LESS than the strip, not the same --
   // the strip already states "N of M counted" and the bar already shows it,
   // so the card's own words are just scope + start date now.
+  // one card PER open count (her §1: two independent counts) -- each Resume
+  // carries its type so it can never reopen the wrong one. §4's always-shown
+  // pair of cards comes later; this stays in-progress-only for now.
   function phDashTaskStocktakeHtml() {
-    const st = PHARMACY.stocktakeSession;
-    if (!st || st.finished) return "";
-    const done = Object.keys(st.results).length, total = st.queue.length;
-    const scope = { herb: "Herbs", formula: "Formulas", both: "Herbs & formulas" }[st.kind] || "Stocktake";
-    const pct = total ? Math.round((done / total) * 100) : 0;
-    const sub = st.startedAt ? `${esc(scope)} · started ${esc(phShortDate(st.startedAt.slice(0, 10)))}` : esc(scope);
-    return `<section class="ph-dash-task">
+    return phStocktakeOpenSessions().map(({ type, s: st }) => {
+      const done = Object.keys(st.results).length, total = st.queue.length;
+      const scope = type === "formulas" ? "Formulas" : "Herbs";
+      const pct = total ? Math.round((done / total) * 100) : 0;
+      const sub = st.startedAt ? `${esc(scope)} · started ${esc(phShortDate(st.startedAt.slice(0, 10)))}` : esc(scope);
+      return `<section class="ph-dash-task">
       <span class="ph-dash-task-ic"><svg class="icn" aria-hidden="true"><use href="#i-clipboard"/></svg></span>
       <div class="ph-dash-task-main">
-        <span class="nm">Stocktake in progress</span>
+        <span class="nm">${scope === "Formulas" ? "Formula" : "Herb"} count in progress</span>
         <span class="sub">${sub}</span>
         <span class="ph-dash-resume-bar"><span style="width:${pct}%"></span></span>
       </div>
-      <button type="button" class="ph-load-btn ph-dash-task-btn" data-ph-stocktake-resume="1">Resume</button>
+      <button type="button" class="ph-load-btn ph-dash-task-btn" data-ph-stocktake-resume="${type}">Resume</button>
     </section>`;
+    }).join("");
   }
   // Same fields, same data attributes and same buttons as the old list row --
   // only the shape changes. Every entry in this list is due today by
@@ -13630,9 +13739,9 @@
     if (!wrap) return;
     // her ask (2026-08-16): a stocktake she started and walked away from is
     // invisible from the Dashboard -- unchanged from before this redesign,
-    // still every day regardless of Monday -- reads the SAME
-    // PHARMACY.stocktakeSession the Stocktake page and the Monday band below
-    // both read, so there's still one resume path and no new state.
+    // still every day regardless of Monday -- reads the SAME keyed
+    // PHARMACY.stocktakeSessions map the Stocktake page and the Monday band
+    // below both read, so there's still one resume path and no new state.
     // visual pass (her spec 2026-08-20): the full-width stocktake banner and
     // the Must-go-out-today list are now compact task cards side by side under
     // one "Needs action now" header, above the stat tiles. Same data, same
@@ -14037,13 +14146,25 @@
         renderPhStock();
         return;
       }
-      if (e.target.closest("#phStocktakeBtn")) { phStocktakeOpen(); return; }
+      if (e.target.closest("#phStocktakeBtn")) {
+        // one count open -> straight back into it; none or two -> the chooser
+        const open = phStocktakeOpenSessions();
+        if (open.length === 1) { phStocktakeActiveType = open[0].type; phStocktakeChoosing = false; }
+        else phStocktakeChoosing = true;
+        phStocktakeOpen(); return;
+      }
       // Resume lives on the page-wide delegate rather than a per-page listener,
       // because the same button now appears in TWO places: the Stocktake page
       // and (2026-08-16) the Dashboard's in-progress banner. One branch here
       // serves both; the old #phStocktakeWrap-scoped copy was removed so a
       // click on the Stocktake page cannot fire phStocktakeOpen() twice.
-      if (e.target.closest("[data-ph-stocktake-resume]")) { phStocktakeOpen(); return; }
+      const stResume = e.target.closest("[data-ph-stocktake-resume]");
+      if (stResume) {
+        const t = stResume.dataset.phStocktakeResume;
+        if (t === "herbs" || t === "formulas") phStocktakeActiveType = t;
+        phStocktakeChoosing = false;
+        phStocktakeOpen(); return;
+      }
       // her "say each thing once" job (2026-08-24): "+ New prescription" now
       // lives in Dashboard's own dark header instead of the old topbar --
       // same delegated pattern as Resume above, same function the topbar
@@ -17164,17 +17285,17 @@
       // tap the dimmed backdrop = pause, same as ✕ / Escape -- every mutation
       // already rides savePharmacy() as it happens, so "pause" is just
       // closing the overlay; reopening resumes automatically because
-      // renderPhStocktakeModal() reads whatever PHARMACY.stocktakeSession says
+      // renderPhStocktakeModal() reads whatever the active count's session says
       // her §5: while the Restart confirm is up, the scrim and Escape mean
       // "Keep going" -- the SAFE default -- and only disarm the confirm. They
       // fall through to their usual pause-and-close once it isn't showing.
       stBackdrop.addEventListener("click", () => {
-        if (phStocktakeRestartArmed) { phStocktakeRestartArmed = false; renderPhStocktakeModal(); return; }
+        if (phStocktakeRestartArmed) { phStocktakeRestartArmed = null; renderPhStocktakeModal(); return; }
         phStocktakeClose();
       });
       document.addEventListener("keydown", e => {
         if (e.key !== "Escape" || stModal.hidden) return;
-        if (phStocktakeRestartArmed) { phStocktakeRestartArmed = false; renderPhStocktakeModal(); return; }
+        if (phStocktakeRestartArmed) { phStocktakeRestartArmed = null; renderPhStocktakeModal(); return; }
         // the mobile queue sheet is the innermost layer -- Escape closes it
         // first, so one press never skips past it and pauses the whole count
         if (phStocktakeSideSheetOpen) { phStocktakeSideSheetOpen = false; renderPhStocktakeModal(); return; }
@@ -17185,9 +17306,9 @@
         if (scopeBtn) { phStocktakeStart(scopeBtn.dataset.phStocktakeScope); return; }
         const orderBtn = e.target.closest("[data-ph-stocktake-order]");
         if (orderBtn) { phStocktakeOrderChoice = orderBtn.dataset.phStocktakeOrder; renderPhStocktakeModal(); renderPhStocktakePage(); return; }
-        if (e.target.closest("[data-ph-stocktake-restart]")) { phStocktakeRestartArmed = true; renderPhStocktakeModal(); return; }
-        if (e.target.closest("[data-ph-stocktake-restart-cancel]")) { phStocktakeRestartArmed = false; renderPhStocktakeModal(); return; }
-        if (e.target.closest("[data-ph-stocktake-restart-go]")) { phStocktakeRestart(); return; }
+        if (e.target.closest("[data-ph-stocktake-restart]")) { phStocktakeRestartArmed = phStocktakeActiveType; renderPhStocktakeModal(); return; }
+        if (e.target.closest("[data-ph-stocktake-restart-cancel]")) { phStocktakeRestartArmed = null; renderPhStocktakeModal(); return; }
+        if (e.target.closest("[data-ph-stocktake-restart-go]")) { if (phStocktakeRestartArmed) phStocktakeActiveType = phStocktakeRestartArmed; phStocktakeRestart(); return; }
         if (e.target.closest("[data-ph-stocktake-abandon]")) { phStocktakeAbandon(); return; }
         // queue-close before queue: distinct attributes, but keeping the more
         // specific one first means a future rename can't silently swallow it
@@ -17231,10 +17352,24 @@
         if (scopeBtn) { phStocktakeStart(scopeBtn.dataset.phStocktakeScope); return; }
         const orderBtn = e.target.closest("[data-ph-stocktake-order]");
         if (orderBtn) { phStocktakeOrderChoice = orderBtn.dataset.phStocktakeOrder; renderPhStocktakePage(); return; }
-        if (e.target.closest("[data-ph-stocktake-restart]")) { phStocktakeRestartArmed = true; renderPhStocktakePage(); return; }
-        if (e.target.closest("[data-ph-stocktake-restart-cancel]")) { phStocktakeRestartArmed = false; renderPhStocktakePage(); return; }
-        if (e.target.closest("[data-ph-stocktake-restart-go]")) { phStocktakeRestart(); return; }
-        if (e.target.closest("[data-ph-stocktake-abandon]")) { phStocktakeAbandon(); return; }
+        const restartBtn = e.target.closest("[data-ph-stocktake-restart]");
+        if (restartBtn) {
+          const t = restartBtn.dataset.phStocktakeRestart;
+          phStocktakeRestartArmed = (t === "herbs" || t === "formulas") ? t : phStocktakeActiveType;
+          renderPhStocktakePage(); return;
+        }
+        if (e.target.closest("[data-ph-stocktake-restart-cancel]")) { phStocktakeRestartArmed = null; renderPhStocktakePage(); return; }
+        if (e.target.closest("[data-ph-stocktake-restart-go]")) { if (phStocktakeRestartArmed) phStocktakeActiveType = phStocktakeRestartArmed; phStocktakeRestart(); return; }
+        const abandonBtn = e.target.closest("[data-ph-stocktake-abandon]");
+        if (abandonBtn) {
+          const t = abandonBtn.dataset.phStocktakeAbandon;
+          if (t === "herbs" || t === "formulas") phStocktakeActiveType = t;
+          phStocktakeAbandon(); return;
+        }
+        // which count the working lists are showing (only rendered when both
+        // counts are open at once) -- a view switch, it never touches state
+        const typeBtn = e.target.closest("[data-ph-stc-type]");
+        if (typeBtn) { phStocktakeActiveType = typeBtn.dataset.phStcType; renderPhStocktakePage(); return; }
         // ---- the three lists (her spec 2026-08-24) ----
         const sortBtn = e.target.closest("[data-ph-stc-sort]");
         if (sortBtn) { phStcSort = sortBtn.dataset.phStcSort; renderPhStocktakePage(); return; }
@@ -17242,7 +17377,7 @@
         // anything counted, so tapping it can't lose a count.
         const goBtn = e.target.closest("[data-ph-stc-go]");
         if (goBtn) {
-          const s2 = PHARMACY.stocktakeSession;
+          const s2 = phStocktakeCur();
           const idx = s2 ? s2.queue.indexOf(goBtn.dataset.phStcGo) : -1;
           if (idx >= 0) { s2.pos = idx; savePharmacy(); renderPhStocktakePage(); document.getElementById("phStcCount")?.focus(); }
           return;
