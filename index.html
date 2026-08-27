@@ -5360,6 +5360,36 @@
     #pharmacyPage .ph-prep-step-node,
     #pharmacyPage .ph-prep-tickall::before { animation: ph-prep-tap 180ms ease-out; }
   }
+  /* her "pin yin only on the phone" spec (2026-08-27): under 480px, herb
+     names drop the English half everywhere phNameHtml renders it -- scoped
+     to the three screens her spec names (never a blanket rule -- Inventory,
+     the Log and Restock keep both halves at every width, unchanged). The
+     Dispensing "Weigh these" list spends the room that frees up on a
+     herb-count size tier instead: fewer herbs on the script, bigger rows;
+     more herbs, denser rows, floors out and scrolls rather than shrinking
+     past readable. No such tiering existed before this -- built fresh, not
+     restored (nothing in this file ever had it). */
+  @media (max-width: 479px) {
+    #pharmacyPage .ph-ing-spec .ph-nm-lat,
+    #pharmacyPage .ph-ref-herbs .ph-nm-lat,
+    #pharmacyPage .ph-sched-prep-row-name .ph-nm-lat { display: none; }
+    #pharmacyPage .ph-sched-prep-items.tier-t1 .ph-prep-weigh-row { min-height: 89px; }
+    #pharmacyPage .ph-sched-prep-items.tier-t1 .ph-sched-prep-row-name .ph-nm-py { font-size: 22px; }
+    #pharmacyPage .ph-sched-prep-items.tier-t1 .ph-sched-prep-row-need { font-size: 26px; }
+    #pharmacyPage .ph-sched-prep-items.tier-t2 .ph-prep-weigh-row { min-height: 47px; }
+    #pharmacyPage .ph-sched-prep-items.tier-t2 .ph-sched-prep-row-name .ph-nm-py { font-size: 18px; }
+    #pharmacyPage .ph-sched-prep-items.tier-t2 .ph-sched-prep-row-need { font-size: 22px; }
+    #pharmacyPage .ph-sched-prep-items.tier-t3 .ph-prep-weigh-row,
+    #pharmacyPage .ph-sched-prep-items.tier-t4 .ph-prep-weigh-row { min-height: 36px; }
+    #pharmacyPage .ph-sched-prep-items.tier-t3 .ph-sched-prep-row-name .ph-nm-py,
+    #pharmacyPage .ph-sched-prep-items.tier-t4 .ph-sched-prep-row-name .ph-nm-py { font-size: 15px; }
+    #pharmacyPage .ph-sched-prep-items.tier-t3 .ph-sched-prep-row-need,
+    #pharmacyPage .ph-sched-prep-items.tier-t4 .ph-sched-prep-row-need { font-size: 18px; }
+    /* 19+ herbs: sizing floors out at the t3 values above and the list
+       scrolls inside itself (about ten rows tall) instead of shrinking
+       past readable or pushing the ring/label cards off-screen. */
+    #pharmacyPage .ph-sched-prep-items.tier-t4 { max-height: 360px; overflow-y: auto; }
+  }
   #pharmacyPage .ph-pres-panel .ph-pres-template-head { margin: 12px 0 7px; padding-top: 9px; }
   #pharmacyPage .ph-pres-panel .ph-price-row { margin-top: 8px; gap: 6px 14px; }
   #pharmacyPage .ph-pres-panel .ph-tmpl-grid { gap: 8px 12px; }
@@ -10201,11 +10231,19 @@
     const numHtml = o.num == null ? ""
       : `<span class="n">${esc(o.num)}</span>${o.unit ? `<span class="u">${esc(o.unit)}</span>` : ""}`;
     const cls = ["ph-c1-row", o.tier ? `tier-${o.tier}` : "", o.unranked ? "unranked" : ""].filter(Boolean).join(" ");
+    // her pin-yin-on-phone spec §4: the herb code moves off the name line
+    // (line 1) onto the meta line (line 2) -- "K587 · 70g left · refill at
+    // 280g" -- so line 1 is pin yin alone, never code+name competing for the
+    // same 13px. Reuses the same .ph-dash-code gold/800 styling, just
+    // relocated; callers pass o.code instead of folding it into nameHtml.
+    const metaHtml = (o.meta || o.code)
+      ? `<span class="ph-c1-meta">${o.code ? `<b class="ph-dash-code">${esc(o.code)}</b> · ` : ""}${o.meta ? esc(o.meta) : ""}</span>`
+      : "";
     return `<div class="${cls}">
       <span class="ph-c1-rank">${rankHtml}</span>
       <span class="ph-c1-text">
         <span class="ph-c1-name">${o.icon ? `<svg class="icn" aria-hidden="true"><use href="#${o.icon}"/></svg>` : ""}${o.nameHtml || ""}</span>
-        ${o.meta ? `<span class="ph-c1-meta">${esc(o.meta)}</span>` : ""}
+        ${metaHtml}
       </span>
       <span class="ph-c1-num${o.tier ? ` tier-${o.tier}` : ""}${o.numStyle ? ` ${o.numStyle}` : ""}">${numHtml}</span>
       <span class="ph-c1-act">${o.actionHtml || ""}</span>
@@ -10222,7 +10260,8 @@
     const pct = low ? Math.max(0, Math.min(100, ((h.qty || 0) / low) * 100)) : null;
     return phC1RowHtml({
       tier, icon: h.qty <= 0 ? "i-jar-empty" : "i-jar-part",
-      nameHtml: `<button type="button" class="ph-name-link" data-ph-dash-herb-edit="${h.id}">${phHerbCode(h) ? `<span class="ph-dash-code">${esc(phHerbCode(h))}</span>` : ""}${esc(phDispName(h.name, phIsFormula(h)))}</button>`,
+      nameHtml: `<button type="button" class="ph-name-link" data-ph-dash-herb-edit="${h.id}" title="${esc(phPinyinFullLabel(h))}" data-ph-full-name="${esc(phPinyinFullLabel(h))}">${esc(phPinyinName(h))}</button>`,
+      code: phHerbCode(h) || "",
       meta: low ? `${phFmtG(h.qty)}g left · refill at ${phFmtG(low)}g` : `${phFmtG(h.qty)}g left`,
       actionHtml: actionBtn, pct
     });
@@ -10321,7 +10360,8 @@
       : `<button type="button" class="ph-load-btn" data-ph-order="${h.id}" aria-pressed="${!!h.order}">${h.order ? "✓ On order" : "🛒 Add to order"}</button>`;
     const c1Row = phC1RowHtml({
       rank: r.rank, tier, icon: jarIcon,
-      nameHtml: `<button type="button" class="ph-name-link" data-ph-dash-herb-edit="${h.id}" title="${esc(phPinyinFullLabel(h))}" data-ph-full-name="${esc(phPinyinFullLabel(h))}">${phHerbCode(h) ? `<span class="ph-dash-code">${esc(phHerbCode(h))}</span>` : ""}${esc(phPinyinName(h))}</button>`,
+      nameHtml: `<button type="button" class="ph-name-link" data-ph-dash-herb-edit="${h.id}" title="${esc(phPinyinFullLabel(h))}" data-ph-full-name="${esc(phPinyinFullLabel(h))}">${esc(phPinyinName(h))}</button>`,
+      code: phHerbCode(h) || "",
       meta: metaTxt, num: days, unit: `day${days === 1 ? "" : "s"}`,
       actionHtml: c1Action, pct
     });
@@ -10726,7 +10766,8 @@
     const days = rec ? phSigCoverDays(rec) : null;
     const phone = phC1RowHtml({
       rank: rec ? rec.rank : null, rankSub: rec ? null : "unused", unranked: !rec, tier, icon: jarIcon,
-      nameHtml: `<button type="button" class="ph-name-link" data-ph-dash-herb-edit="${h.id}" title="${esc(phPinyinFullLabel(h))}" data-ph-full-name="${esc(phPinyinFullLabel(h))}">${phHerbCode(h) ? `<span class="ph-dash-code">${esc(phHerbCode(h))}</span>` : ""}${esc(phPinyinName(h))}</button>`,
+      nameHtml: `<button type="button" class="ph-name-link" data-ph-dash-herb-edit="${h.id}" title="${esc(phPinyinFullLabel(h))}" data-ph-full-name="${esc(phPinyinFullLabel(h))}">${esc(phPinyinName(h))}</button>`,
+      code: phHerbCode(h) || "",
       meta: low ? `${phFmtG(h.qty)}g left · refill at ${phFmtG(low)}g` : `${phFmtG(h.qty)}g left`,
       num: days, unit: days == null ? null : `day${days === 1 ? "" : "s"}`,
       actionHtml: phoneActionBtn != null ? phoneActionBtn : actionBtn, pct
@@ -26336,7 +26377,7 @@ Dosage: {dosage}
         <span>Weigh these</span>
         <button type="button" class="ph-prep-tickall${weighAllDone ? " done" : ""}" data-sched-prep-tickall="${s.id}:weigh" title="Tick all" aria-label="Tick all weighed"></button>
       </div>
-      <div class="ph-sched-prep-items">
+      <div class="ph-sched-prep-items tier-${prog.items.length <= 8 ? "t1" : prog.items.length <= 14 ? "t2" : prog.items.length <= 18 ? "t3" : "t4"}">
         ${prog.items.map(x => {
           const key = schedPrepItemKey(x);
           const on = !!p.weighed[key];
@@ -26346,7 +26387,7 @@ Dosage: {dosage}
             <input type="checkbox" class="ph-prep-toggle-input" data-sched-prep-item="${s.id}:${esc(key)}"${on ? " checked" : ""} aria-label="Weighed ${esc(x.name)}">
             <span class="ph-prep-toggle-icon" aria-hidden="true"></span>
             <span class="ph-sched-prep-row-code">${esc(x.code || "")}</span>
-            <span class="ph-sched-prep-row-name">${esc(phDispName(x.name, x.h ? phIsFormula(x.h) : null))}</span>
+            <span class="ph-sched-prep-row-name">${phNameHtml(x.name, x.h ? phIsFormula(x.h) : null)}</span>
             <span class="ph-sched-prep-row-need">${(x.grams || 0).toFixed(2)}g</span>
             <span class="ph-sched-prep-row-stock${short ? " short" : ""}">${x.h ? `${short ? "only " : ""}${phFmtG(x.h.qty)}g in stock` : "not in inventory"}</span>
             <button type="button" class="ph-arr-editbtn ph-prep-edit-btn" data-sched-prep-edit-open="${esc(editKey)}" title="Edit amount" aria-label="Edit amount for ${esc(x.name)}">✎</button>
