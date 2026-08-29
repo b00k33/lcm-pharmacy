@@ -2775,6 +2775,59 @@
   #pharmacyPage .ph-dash-reloc-txt b { color: var(--ph-ink); font-weight: 800; }
   #pharmacyPage .ph-dash-reloc-arrow { flex: 0 0 auto; color: var(--ph-faint); font-weight: 700; }
 
+  /* "This week" strip (her ask 2026-08-30): scheduled dispenses + follow-ups
+     for the next 7 days, shown before Needs action now / the stock alerts --
+     so what's coming reads before what's low. Real schedActive()/
+     phFuContactRows() data only; tapping a day opens the same
+     data-ph-dash-pres-open / data-fu-open hop the rest of the Dashboard
+     already uses -- no new navigation, no new record viewer. */
+  #pharmacyPage .ph-week-grid {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
+    max-width: 1072px; margin: 0 auto;
+  }
+  #pharmacyPage .ph-week-grid.heads { margin-bottom: 4px; }
+  #pharmacyPage .ph-week-label {
+    max-width: 1072px; margin: 8px auto 4px;
+    font-size: 10px; font-weight: 700; color: var(--ph-soft); text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+  #pharmacyPage .ph-week-cell {
+    background: var(--ph-paper); border-radius: var(--field-radius-sm);
+    min-height: 36px; padding: 4px 2px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 2px; cursor: pointer;
+    font: inherit; border: none; width: 100%;
+  }
+  #pharmacyPage .ph-week-cell.head { background: transparent; min-height: 28px; }
+  #pharmacyPage .ph-week-cell.today { background: var(--ph-green-tint); box-shadow: inset 0 0 0 1.5px var(--ph-green); }
+  #pharmacyPage .ph-week-cell.head.today { border-radius: var(--field-radius-sm) var(--field-radius-sm) 0 0; }
+  #pharmacyPage .ph-week-cell .dow { font-size: 9px; font-weight: 800; color: var(--ph-faint); }
+  #pharmacyPage .ph-week-cell .dnum { font-size: 13px; font-weight: 800; color: var(--ph-ink); line-height: 1.1; }
+  #pharmacyPage .ph-week-cell.today .dow, #pharmacyPage .ph-week-cell.today .dnum { color: var(--ph-green-deep); }
+  #pharmacyPage .ph-week-cell .icn { width: 11px; height: 11px; }
+  #pharmacyPage .ph-week-cell .who { font-size: 9px; font-weight: 700; color: var(--ph-ink); text-align: center; line-height: 1.15; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #pharmacyPage .ph-week-cell .more { font-size: 8px; font-weight: 800; color: var(--ph-faint); }
+  #pharmacyPage .ph-week-cell .dash { color: var(--ph-faint); font-size: 11px; }
+  #pharmacyPage .ph-week-cell.disp { background: var(--ph-gold-tint); }
+  #pharmacyPage .ph-week-cell.fu-checkin { background: var(--ph-zero-tint); }
+  #pharmacyPage .ph-week-cell.fu-review { background: var(--ph-blue-tint); }
+  #pharmacyPage .ph-week-cell.fu-both { background: var(--ph-gold-tint); }
+  #pharmacyPage .ph-week-hint { max-width: 1072px; margin: 4px auto 0; font-size: 10.5px; color: var(--ph-faint); text-align: center; }
+  #pharmacyPage .ph-week-detail {
+    max-width: 1072px; margin: 8px auto 0; background: var(--ph-white); border: 1px solid var(--ph-line);
+    border-radius: 14px; padding: 10px 12px;
+  }
+  #pharmacyPage .ph-week-detail .dtitle { font-size: 11px; font-weight: 800; color: var(--ph-green-deep); margin-bottom: 6px; }
+  #pharmacyPage .ph-week-detail-row {
+    display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--ph-line);
+    background: none; border-left: none; border-right: none; width: 100%;
+    font: inherit; text-align: left; cursor: pointer;
+  }
+  #pharmacyPage .ph-week-detail-row:first-of-type { border-top: none; }
+  #pharmacyPage .ph-week-detail-row .icn { width: 15px; height: 15px; flex: 0 0 auto; color: var(--ph-soft); }
+  #pharmacyPage .ph-week-detail-row b { flex: 1 1 auto; min-width: 0; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ph-green-deep); }
+  #pharmacyPage .ph-week-detail-row .meta { font-size: 10.5px; color: var(--ph-faint); flex: 0 0 auto; }
+  #pharmacyPage .ph-week-empty { font-size: 12px; color: var(--ph-faint); text-align: center; padding: 4px 0; }
+
   /* §3 restock rows: ring + row tint + name colour + tonal action button, all
      driven by ONE tier per row (phDashTier) so no two signals can disagree. */
   #pharmacyPage .ph-ring {
@@ -14376,6 +14429,9 @@
   // smallest possible add to make "Fix" mean something real: one field, the
   // exact same s.mailing.address the creation form itself writes.
   let schedFixAddrOpenId = null;
+  // which day (a keyOf date-key) has its "This week" detail panel open, or
+  // null -- one at a time, same pattern as schedFixAddrOpenId above
+  let phDashWeekOpenDay = null;
   function schedFixAddrSave(schedId, address) {
     const s = PRESC.scheduled.find(x => x.id === schedId);
     if (!s) return;
@@ -14736,6 +14792,64 @@
       ${ordered.length > PH_DASH_LIST_ROWS ? `<div class="ph-dash-seeall"><button type="button" class="ph-name-link" data-ph-tab="refill">See all ${ordered.length} →</button></div>` : ""}`;
   }
 
+  // ---- "This week" strip (her ask 2026-08-30) ------------------------------
+  // Rolling 7-day window starting today, not a fixed Mon-Sun calendar week --
+  // by Saturday half a calendar week is already gone, and what she asked for
+  // is forward planning ("so I can see what's scheduled"), not a look back.
+  function phDashWeekDays() {
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() + i);
+      days.push({ key: keyOf(d), dow: DAY_SHORT[d.getDay()], dnum: d.getDate(), today: i === 0 });
+    }
+    return days;
+  }
+  // Same real records the rest of the Dashboard reads -- schedActive() (every
+  // not-yet-completed scheduled dispense) and phFuContactRows() (every
+  // not-done follow-up) -- just bucketed by due date instead of filtered to
+  // today/overdue only.
+  function phDashWeekItemsFor(dayKey) {
+    const disp = schedActive().filter(s => schedDueDate(s) === dayKey).map(s => {
+      const t = PRESC.items.find(x => x.id === s.prescriptionId);
+      const patient = t ? presPatientFor(t) : ((s.mailing && s.mailing.name) || "");
+      return { who: phTitle(patient || "—"), method: s.method, presId: s.prescriptionId };
+    });
+    const fu = phFuContactRows().filter(r => !r.done && r.on === dayKey).map(row => ({
+      who: phTitle(row.rec.patient), kind: row.kind, presId: row.rec.presId,
+    }));
+    return { disp, fu };
+  }
+  function phDashWeekCellHtml(items, kind, day) {
+    const cls = kind === "disp" ? "disp" : `fu-${items[0] ? items[0].kind : "checkin"}`;
+    if (!items.length) return `<button type="button" class="ph-week-cell${day.today ? " today" : ""}" data-ph-dash-week-day="${day.key}"><span class="dash">–</span></button>`;
+    const first = items[0], extra = items.length - 1;
+    const icon = kind === "disp" ? (first.method === "pickup" ? "i-car" : "i-mail") : "";
+    return `<button type="button" class="ph-week-cell ${cls}${day.today ? " today" : ""}" data-ph-dash-week-day="${day.key}">
+      ${icon ? `<svg class="icn" aria-hidden="true"><use href="#${icon}"/></svg>` : ""}
+      <span class="who">${esc(first.who.split(" ")[0])}</span>${extra > 0 ? `<span class="more">+${extra}</span>` : ""}
+    </button>`;
+  }
+  function phDashWeekDetailHtml(day) {
+    const { disp, fu } = phDashWeekItemsFor(day.key);
+    const rows = [
+      ...disp.map(x => `<button type="button" class="ph-week-detail-row" data-ph-dash-pres-open="${x.presId}"><svg class="icn" aria-hidden="true"><use href="#${x.method === "pickup" ? "i-car" : "i-mail"}"/></svg><b>${esc(x.who)}</b><span class="meta">${x.method === "pickup" ? "Pickup" : "To post"}</span></button>`),
+      ...fu.map(x => `<button type="button" class="ph-week-detail-row" data-fu-open="${x.presId}"><svg class="icn" aria-hidden="true"><use href="#i-clock"/></svg><b>${esc(x.who)}</b><span class="meta">${x.kind === "checkin" ? "Check-in" : x.kind === "review" ? "Review" : "Check-in & review"}</span></button>`),
+    ];
+    return `<div class="ph-week-detail"><div class="dtitle">${esc(day.dow)} ${day.dnum}</div>${rows.length ? rows.join("") : `<div class="ph-week-empty">Nothing scheduled.</div>`}</div>`;
+  }
+  function phDashWeekHtml() {
+    const days = phDashWeekDays();
+    const heads = days.map(d => `<button type="button" class="ph-week-cell head${d.today ? " today" : ""}" data-ph-dash-week-day="${d.key}"><span class="dow">${esc(d.dow)}</span><span class="dnum">${d.dnum}</span></button>`).join("");
+    const dispRow = days.map(d => phDashWeekCellHtml(phDashWeekItemsFor(d.key).disp, "disp", d)).join("");
+    const fuRow = days.map(d => phDashWeekCellHtml(phDashWeekItemsFor(d.key).fu, "fu", d)).join("");
+    const openDay = days.find(d => d.key === phDashWeekOpenDay);
+    return `<div class="ph-dash-secthead"><h2>This week</h2><span class="rule"></span></div>
+      <div class="ph-week-grid heads">${heads}</div>
+      <div class="ph-week-label">Dispensing</div><div class="ph-week-grid">${dispRow}</div>
+      <div class="ph-week-label">Follow-ups</div><div class="ph-week-grid">${fuRow}</div>
+      <div class="ph-week-hint">Tap a day for details</div>
+      ${openDay ? phDashWeekDetailHtml(openDay) : ""}`;
+  }
   function renderPhDashboardPage() {
     const wrap = document.getElementById("phDashboardWrap");
     if (!wrap) return;
@@ -14772,6 +14886,7 @@
     const dashAction = `<button type="button" class="ph-shell-titlebar-action ph-dash-newpres-btn" data-ph-dash-newpres="1" title="New prescription" aria-label="New prescription"><svg class="icn" aria-hidden="true"><use href="#i-plus"/></svg></button>`;
     wrap.innerHTML = `
       ${phShellHead("Dashboard", dashMeta, phDashTodayStripHtml(), dashAction)}
+      ${phDashWeekHtml()}
       ${phDashNeedsActionHtml()}
       ${phDashRelocationLineHtml()}
       ${monday ? phDashMondayBandHtml() : ""}
@@ -16369,6 +16484,13 @@
         const k = presSortBtn.dataset.presSort;
         if (presSort.key === k) presSort.dir *= -1; else presSort = { key: k, dir: 1 };
         renderPresList(); return;
+      }
+      const dashWeekDay = e.target.closest("[data-ph-dash-week-day]");
+      if (dashWeekDay) {
+        const k = dashWeekDay.dataset.phDashWeekDay;
+        phDashWeekOpenDay = phDashWeekOpenDay === k ? null : k;
+        renderPhDashboardPage();
+        return;
       }
       const dashPresOpen = e.target.closest("[data-ph-dash-pres-open]");
       if (dashPresOpen) {
