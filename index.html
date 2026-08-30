@@ -2780,7 +2780,11 @@
      so what's coming reads before what's low. Real schedActive()/
      phFuContactRows() data only; tapping a day opens the same
      data-ph-dash-pres-open / data-fu-open hop the rest of the Dashboard
-     already uses -- no new navigation, no new record viewer. */
+     already uses -- no new navigation, no new record viewer.
+     Her ask 2026-08-31: this is the view she actually checks daily, so
+     Formula refills/Herbal orders (phDashPharmRefillItems/OrderItems) join
+     Dispensing/Follow-ups here as a third "Pharmacy" row -- replacing the
+     separate This Month table, removed outright rather than kept. */
   #pharmacyPage .ph-week-grid {
     display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
     max-width: 1072px; margin: 0 auto;
@@ -2811,6 +2815,10 @@
   #pharmacyPage .ph-week-cell.fu-checkin { background: var(--ph-zero-tint); }
   #pharmacyPage .ph-week-cell.fu-review { background: var(--ph-blue-tint); }
   #pharmacyPage .ph-week-cell.fu-both { background: var(--ph-gold-tint); }
+  #pharmacyPage .ph-week-cell.pharm { background: var(--ph-green-tint); }
+  #pharmacyPage .ph-week-cell.pharm.overdue { background: var(--ph-zero-tint); }
+  #pharmacyPage .ph-week-cell.pharm .who { color: var(--ph-green-deep); font-size: 11px; }
+  #pharmacyPage .ph-week-cell.pharm.overdue .who { color: var(--ph-zero-deep); }
   #pharmacyPage .ph-week-hint { max-width: 1072px; margin: 4px auto 0; font-size: 10.5px; color: var(--ph-faint); text-align: center; }
   #pharmacyPage .ph-week-detail {
     max-width: 1072px; margin: 8px auto 0; background: var(--ph-white); border: 1px solid var(--ph-line);
@@ -2827,40 +2835,6 @@
   #pharmacyPage .ph-week-detail-row b { flex: 1 1 auto; min-width: 0; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ph-green-deep); }
   #pharmacyPage .ph-week-detail-row .meta { font-size: 10.5px; color: var(--ph-faint); flex: 0 0 auto; }
   #pharmacyPage .ph-week-empty { font-size: 12px; color: var(--ph-faint); text-align: center; padding: 4px 0; }
-
-  /* "This month" strip (lcm6, her ask 2026-08-30): Formula refills / Herbal
-     orders / Stocktake, projected across the CALENDAR month (resets on the
-     1st -- her explicit choice over a rolling window, unlike This Week just
-     above) and bucketed into weeks-as-columns rather than This Week's
-     one-column-per-day -- a month is too wide to stay readable at that
-     grain. Auto-computed only, same principle as This Week: real burn-rate/
-     cover data (phDashCover, the same function Order these/Refill these
-     already run), never something she types in and has to keep in sync. */
-  #pharmacyPage .ph-month-grid {
-    display: grid; grid-template-columns: 92px repeat(var(--ph-month-cols, 5), 1fr); gap: 4px;
-    max-width: 1072px; margin: 0 auto;
-  }
-  #pharmacyPage .ph-month-grid.heads { margin-bottom: 4px; }
-  #pharmacyPage .ph-month-rowlabel { font-size: 11px; font-weight: 700; color: var(--ph-ink); display: flex; align-items: center; }
-  #pharmacyPage .ph-month-wk-head { font-size: 9px; font-weight: 700; color: var(--ph-faint); text-align: center; line-height: 1.3; padding: 2px 0; }
-  #pharmacyPage .ph-month-cell {
-    background: var(--ph-white); border: 1px solid var(--ph-line); border-radius: var(--field-radius-sm);
-    min-height: 36px; padding: 4px 2px; display: flex; align-items: center; justify-content: center;
-    cursor: pointer; font: inherit; width: 100%;
-  }
-  #pharmacyPage .ph-month-cell.has { border-color: var(--ph-green); }
-  #pharmacyPage .ph-month-cell.open { box-shadow: inset 0 0 0 1.5px var(--ph-green-deep); }
-  #pharmacyPage .ph-month-cell .badge {
-    background: var(--ph-green-tint); color: var(--ph-green-deep); font-size: 10px; font-weight: 700;
-    border-radius: 999px; padding: 2px 8px;
-  }
-  #pharmacyPage .ph-month-cell.overdue .badge { background: var(--ph-zero-tint); color: var(--ph-zero-deep); }
-  #pharmacyPage .ph-month-cell .dash { color: var(--ph-faint); font-size: 11px; }
-  #pharmacyPage .ph-month-detail {
-    max-width: 1072px; margin: 8px auto 0; background: var(--ph-white); border: 1px solid var(--ph-line);
-    border-radius: 14px; padding: 10px 12px;
-  }
-  #pharmacyPage .ph-month-detail .dtitle { font-size: 11px; font-weight: 800; color: var(--ph-green-deep); margin-bottom: 6px; }
 
   /* §3 restock rows: ring + row tint + name colour + tonal action button, all
      driven by ONE tier per row (phDashTier) so no two signals can disagree. */
@@ -14868,11 +14842,34 @@
       <span class="who">${esc(first.who.split(" ")[0])}</span>${extra > 0 ? `<span class="more">+${extra}</span>` : ""}
     </button>`;
   }
-  function phDashWeekDetailHtml(day) {
+  // her ask (2026-08-31): Formula refills/Herbal orders folded into This
+  // Week as ONE combined row -- a count, not a name (there's no single
+  // "who" the way a patient row has one), red-tinted if anything in that
+  // day's count is overdue. Stocktake stays out (her call).
+  function phDashWeekPharmCellHtml(refill, order, day) {
+    const n = refill.length + order.length;
+    if (!n) return `<button type="button" class="ph-week-cell${day.today ? " today" : ""}" data-ph-dash-week-day="${day.key}"><span class="dash">–</span></button>`;
+    const overdue = refill.some(x => x.overdue) || order.some(x => x.overdue);
+    return `<button type="button" class="ph-week-cell pharm${overdue ? " overdue" : ""}${day.today ? " today" : ""}" data-ph-dash-week-day="${day.key}">
+      <svg class="icn" aria-hidden="true"><use href="#i-jar"/></svg>
+      <span class="who">${n}</span>
+    </button>`;
+  }
+  function phDashWeekDetailHtml(day, pharmRefill, pharmOrder) {
     const { disp, fu } = phDashWeekItemsFor(day.key);
+    const dayRefill = pharmRefill.filter(x => keyOf(x.date) === day.key);
+    const dayOrder = pharmOrder.filter(x => keyOf(x.date) === day.key);
+    // her ask (2026-08-31, combined popover): Dispensing/Follow-ups and
+    // Pharmacy items all land in the ONE detail for the day. Refill ->
+    // data-ph-dash-refill-open (phDashOpenRefill: jumps into the Refill tab
+    // with the recipe loaded, same as the urgent tiles' "Refill ->" button).
+    // Order -> phOrderMenuHtml, her Plan▾ menu -- it's its own interactive
+    // control, so that row is a plain div, not a <button> (can't nest one).
     const rows = [
       ...disp.map(x => `<button type="button" class="ph-week-detail-row" data-ph-dash-pres-open="${x.presId}"><svg class="icn" aria-hidden="true"><use href="#${x.method === "pickup" ? "i-car" : "i-mail"}"/></svg><b>${esc(x.who)}</b><span class="meta">${x.method === "pickup" ? "Pickup" : "To post"}</span></button>`),
       ...fu.map(x => `<button type="button" class="ph-week-detail-row" data-fu-open="${x.presId}"><svg class="icn" aria-hidden="true"><use href="#i-clock"/></svg><b>${esc(x.who)}</b><span class="meta">${x.kind === "checkin" ? "Check-in" : x.kind === "review" ? "Review" : "Check-in & review"}</span></button>`),
+      ...dayRefill.map(x => `<button type="button" class="ph-week-detail-row" data-ph-dash-refill-open="${x.id}"><svg class="icn" aria-hidden="true"><use href="#i-jar"/></svg><b>${esc(x.label)}</b><span class="meta">Refill</span></button>`),
+      ...dayOrder.map(x => `<div class="ph-week-detail-row"><svg class="icn" aria-hidden="true"><use href="#${x.h.order ? "i-check" : "i-cart"}"/></svg><b>${esc(x.label)}</b>${phOrderMenuHtml(x.h)}</div>`),
     ];
     return `<div class="ph-week-detail"><div class="dtitle">${esc(day.dow)} ${day.dnum}</div>${rows.length ? rows.join("") : `<div class="ph-week-empty">Nothing scheduled.</div>`}</div>`;
   }
@@ -14881,51 +14878,35 @@
     const heads = days.map(d => `<button type="button" class="ph-week-cell head${d.today ? " today" : ""}" data-ph-dash-week-day="${d.key}"><span class="dow">${esc(d.dow)}</span><span class="dnum">${d.dnum}</span></button>`).join("");
     const dispRow = days.map(d => phDashWeekCellHtml(phDashWeekItemsFor(d.key).disp, "disp", d)).join("");
     const fuRow = days.map(d => phDashWeekCellHtml(phDashWeekItemsFor(d.key).fu, "fu", d)).join("");
+    const rangeEnd = parseKey(days[days.length - 1].key);
+    const pharmRefill = phDashPharmRefillItems(rangeEnd), pharmOrder = phDashPharmOrderItems(rangeEnd);
+    const pharmRow = days.map(d => phDashWeekPharmCellHtml(pharmRefill.filter(x => keyOf(x.date) === d.key), pharmOrder.filter(x => keyOf(x.date) === d.key), d)).join("");
     const openDay = days.find(d => d.key === phDashWeekOpenDay);
     return `<div class="ph-dash-secthead"><h2>This week</h2><span class="rule"></span></div>
       <div class="ph-week-grid heads">${heads}</div>
       <div class="ph-week-label">Dispensing</div><div class="ph-week-grid">${dispRow}</div>
       <div class="ph-week-label">Follow-ups</div><div class="ph-week-grid">${fuRow}</div>
+      <div class="ph-week-label">Pharmacy</div><div class="ph-week-grid">${pharmRow}</div>
       <div class="ph-week-hint">Tap a day for details</div>
-      ${openDay ? phDashWeekDetailHtml(openDay) : ""}`;
+      ${openDay ? phDashWeekDetailHtml(openDay, pharmRefill, pharmOrder) : ""}`;
   }
 
-  // ---- "This month" strip (lcm6, her ask 2026-08-30) -----------------------
-  // Formula refills / Herbal orders / Stocktake, projected across the
-  // CALENDAR month (resets on the 1st -- her explicit choice, unlike This
-  // Week's rolling 7 days above) and bucketed into weeks-as-columns rather
-  // than one column per day -- a month is too wide to stay readable at
-  // This Week's grain. Auto-computed only: real burn-rate/cover data
-  // (phDashCover, the same function Order these/Refill these already run)
-  // projected forward to the day each item is expected to cross its own
-  // reorder line, never something she types in and has to keep in sync.
-  let phDashMonthOpenWeek = null; // index into phDashMonthWeeks(), or null
-  // A month spans 5 or 6 Sun-Sat weeks depending where the 1st falls --
-  // weeks.length (not a hardcoded 5) drives --ph-month-cols below so the
-  // grid is never short a column.
-  function phDashMonthWeeks() {
-    const y = TODAY.getFullYear(), m = TODAY.getMonth();
-    const monthStart = new Date(y, m, 1), monthEnd = new Date(y, m + 1, 0);
-    const weeks = [];
-    let cur = new Date(monthStart);
-    cur.setDate(cur.getDate() - cur.getDay());
-    let idx = 0;
-    while (cur <= monthEnd) {
-      const start = new Date(cur), end = new Date(cur);
-      end.setDate(end.getDate() + 6);
-      const labelEnd = end > monthEnd ? monthEnd.getDate() : end.getDate();
-      weeks.push({ idx, start, end, label: `${start.getDate() > labelEnd ? 1 : start.getDate()}–${labelEnd} ${MON_SHORT[m]}` });
-      cur.setDate(cur.getDate() + 7);
-      idx++;
-    }
-    return weeks;
-  }
+  // ---- Pharmacy items for This Week (her ask 2026-08-31: "I typically use
+  // This Week to see what I need to do and plan. Month view is not useful
+  // for that") -- Formula refills / Herbal orders projected onto the SAME
+  // rolling 7 days This Week already shows, replacing the calendar-month
+  // table this used to feed (removed outright, her choice, not kept
+  // collapsed: "one place for this instead of two"). Stocktake stays out --
+  // her call: a ~3-month cycle isn't "this week's" business. Auto-computed
+  // only: real burn-rate/cover data (phDashCover, the same function Order
+  // these/Refill these already run) projected forward to the day each item
+  // is expected to cross its own reorder line, never something she types in.
+  //
   // Already-due formulas (phDashRefillList, the exact list "Refill these"
-  // itself uses) land in today's week; everything else is projected from
-  // its own burn rate to the day it's expected to cross its reorder line.
-  function phDashMonthRefillItems(weeks) {
+  // itself uses) land on today; everything else is projected from its own
+  // burn rate to the day it's expected to cross its reorder line.
+  function phDashPharmRefillItems(rangeEnd) {
     const already = new Set(phDashRefillList().map(h => h.id));
-    const lastEnd = weeks[weeks.length - 1].end;
     const out = [];
     PHARMACY.herbs.forEach(h => {
       if (!phIsFormula(h) || h.stopped || h.qty == null) return;
@@ -14939,7 +14920,7 @@
         const days = (h.qty - line) / (cov.monthly / 30.44);
         due = new Date(TODAY); due.setDate(due.getDate() + Math.round(days));
       }
-      if (due > lastEnd) return;
+      if (due > rangeEnd) return;
       out.push({ id: h.id, label: phDispName(h.name, true), date: due, overdue: isNow && h.qty <= 0 });
     });
     return out;
@@ -14947,65 +14928,13 @@
   // Herbs under the 2-month reorder line (phDashOrderPlan, the exact list
   // "Order these" itself uses) -- same cov.months math, solved for the day
   // each one crosses ORDER_PLAN_MONTHS instead of a flat now/not-now split.
-  function phDashMonthOrderItems(weeks) {
-    const lastEnd = weeks[weeks.length - 1].end;
+  function phDashPharmOrderItems(rangeEnd) {
     return phDashOrderPlan().map(h => {
       const cov = phDashCover(h);
       const daysOut = h.qty <= 0 ? 0 : Math.max(0, Math.round((cov.months - ORDER_PLAN_MONTHS) * 30.44));
       const due = new Date(TODAY); due.setDate(due.getDate() + daysOut);
       return { id: h.id, h, label: phDispName(h.name, phIsFormula(h)), date: due, overdue: h.qty <= 0 };
-    }).filter(x => x.date <= lastEnd);
-  }
-  // The stocktake system's own real "next due" projection
-  // (phStocktakeNextDueInfo, the same one the Monday band already shows) --
-  // one entry, not per-herb.
-  function phDashMonthStocktakeItems(weeks) {
-    const lastEnd = weeks[weeks.length - 1].end;
-    const info = phStocktakeNextDueInfo();
-    if (!info.known) return [{ id: "first", label: "First stocktake — never counted yet", date: new Date(TODAY), overdue: false }];
-    const due = parseKey(info.dueKey);
-    if (due > lastEnd && !info.overdue) return [];
-    return [{ id: "next", label: info.overdue ? "Stocktake — overdue" : "Stocktake due", date: due < TODAY ? new Date(TODAY) : due, overdue: info.overdue }];
-  }
-  function phDashMonthCellHtml(items, week) {
-    const open = phDashMonthOpenWeek === week.idx;
-    if (!items.length) return `<button type="button" class="ph-month-cell${open ? " open" : ""}" data-ph-dash-month-week="${week.idx}"><span class="dash">–</span></button>`;
-    const anyOverdue = items.some(x => x.overdue);
-    return `<button type="button" class="ph-month-cell has${anyOverdue ? " overdue" : ""}${open ? " open" : ""}" data-ph-dash-month-week="${week.idx}"><span class="badge">${items.length}</span></button>`;
-  }
-  function phDashMonthDetailHtml(week, rows) {
-    const inWeek = arr => arr.filter(x => x.date >= week.start && x.date <= week.end);
-    // Each row's action reuses the SAME real handler its own existing
-    // widget already uses -- never the generic herb editor, which just
-    // opens settings and does nothing toward actually refilling/ordering.
-    // Refill -> data-ph-dash-refill-open (phDashOpenRefill: jumps into the
-    // Refill tab with the recipe loaded, same as the urgent tiles' "Refill
-    // ->" button). Order -> her ask (2026-08-31, "how to designate herb
-    // order to a specific day?"): the row itself can't stay a <button> once
-    // it holds one -- phOrderMenuHtml is its own interactive control, and a
-    // button can't nest a button -- so this row is a plain div now, same
-    // classes, name no longer clickable on its own (Stocktake below is
-    // untouched, still the whole-row jump it always was).
-    const items = [
-      ...inWeek(rows.refill).map(x => `<button type="button" class="ph-week-detail-row" data-ph-dash-refill-open="${x.id}"><svg class="icn" aria-hidden="true"><use href="#i-jar"/></svg><b>${esc(x.label)}</b><span class="meta">Refill</span></button>`),
-      ...inWeek(rows.order).map(x => `<div class="ph-week-detail-row"><svg class="icn" aria-hidden="true"><use href="#${x.h.order ? "i-check" : "i-cart"}"/></svg><b>${esc(x.label)}</b>${phOrderMenuHtml(x.h)}</div>`),
-      ...inWeek(rows.stocktake).map(x => `<button type="button" class="ph-week-detail-row" data-ph-tab="stocktake"><svg class="icn" aria-hidden="true"><use href="#i-clipboard"/></svg><b>${esc(x.label)}</b></button>`),
-    ];
-    return `<div class="ph-month-detail"><div class="dtitle">${esc(week.label)}</div>${items.length ? items.join("") : `<div class="ph-week-empty">Nothing planned.</div>`}</div>`;
-  }
-  function phDashMonthHtml() {
-    const weeks = phDashMonthWeeks();
-    const rows = { refill: phDashMonthRefillItems(weeks), order: phDashMonthOrderItems(weeks), stocktake: phDashMonthStocktakeItems(weeks) };
-    const gridStyle = `style="--ph-month-cols:${weeks.length}"`;
-    const heads = `<div></div>${weeks.map(w => `<div class="ph-month-wk-head">${esc(w.label)}</div>`).join("")}`;
-    const rowHtml = (label, items) => `<div class="ph-month-rowlabel">${esc(label)}</div>${weeks.map(w => phDashMonthCellHtml(items.filter(x => x.date >= w.start && x.date <= w.end), w)).join("")}`;
-    const openWeek = weeks.find(w => w.idx === phDashMonthOpenWeek);
-    return `<div class="ph-dash-secthead"><h2>This month</h2><span class="rule"></span></div>
-      <div class="ph-month-grid heads" ${gridStyle}>${heads}</div>
-      <div class="ph-month-grid" ${gridStyle}>${rowHtml("Formula refills", rows.refill)}</div>
-      <div class="ph-month-grid" ${gridStyle}>${rowHtml("Herbal orders", rows.order)}</div>
-      <div class="ph-month-grid" ${gridStyle}>${rowHtml("Stocktake", rows.stocktake)}</div>
-      ${openWeek ? phDashMonthDetailHtml(openWeek, rows) : ""}`;
+    }).filter(x => x.date <= rangeEnd);
   }
 
   function renderPhDashboardPage() {
@@ -15045,7 +14974,6 @@
     wrap.innerHTML = `
       ${phShellHead("Dashboard", dashMeta, phDashTodayStripHtml(), dashAction)}
       ${phDashWeekHtml()}
-      ${phDashMonthHtml()}
       ${phDashNeedsActionHtml()}
       ${phDashRelocationLineHtml()}
       ${monday ? phDashMondayBandHtml() : ""}
@@ -16701,13 +16629,6 @@
       if (dashWeekDay) {
         const k = dashWeekDay.dataset.phDashWeekDay;
         phDashWeekOpenDay = phDashWeekOpenDay === k ? null : k;
-        renderPhDashboardPage();
-        return;
-      }
-      const dashMonthWeek = e.target.closest("[data-ph-dash-month-week]");
-      if (dashMonthWeek) {
-        const idx = Number(dashMonthWeek.dataset.phDashMonthWeek);
-        phDashMonthOpenWeek = phDashMonthOpenWeek === idx ? null : idx;
         renderPhDashboardPage();
         return;
       }
