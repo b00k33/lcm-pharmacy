@@ -2836,6 +2836,38 @@
   #pharmacyPage .ph-week-detail-row .meta { font-size: 10.5px; color: var(--ph-faint); flex: 0 0 auto; }
   #pharmacyPage .ph-week-empty { font-size: 12px; color: var(--ph-faint); text-align: center; padding: 4px 0; }
 
+  /* "This month" strip, Stocktake only (her ask 2026-08-31: "month is only
+     good for monthly stocktake"). Formula refills/Herbal orders moved into
+     This Week instead -- this is the one category where a calendar-month,
+     weeks-as-columns view still earns its place: "which week is it due" is
+     a real question for a ~3-month cycle, not for something she checks
+     daily. Same grid/cell/detail component as before, one row now. */
+  #pharmacyPage .ph-month-grid {
+    display: grid; grid-template-columns: 92px repeat(var(--ph-month-cols, 5), 1fr); gap: 4px;
+    max-width: 1072px; margin: 0 auto;
+  }
+  #pharmacyPage .ph-month-grid.heads { margin-bottom: 4px; }
+  #pharmacyPage .ph-month-rowlabel { font-size: 11px; font-weight: 700; color: var(--ph-ink); display: flex; align-items: center; }
+  #pharmacyPage .ph-month-wk-head { font-size: 9px; font-weight: 700; color: var(--ph-faint); text-align: center; line-height: 1.3; padding: 2px 0; }
+  #pharmacyPage .ph-month-cell {
+    background: var(--ph-white); border: 1px solid var(--ph-line); border-radius: var(--field-radius-sm);
+    min-height: 36px; padding: 4px 2px; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font: inherit; width: 100%;
+  }
+  #pharmacyPage .ph-month-cell.has { border-color: var(--ph-green); }
+  #pharmacyPage .ph-month-cell.open { box-shadow: inset 0 0 0 1.5px var(--ph-green-deep); }
+  #pharmacyPage .ph-month-cell .badge {
+    background: var(--ph-green-tint); color: var(--ph-green-deep); font-size: 10px; font-weight: 700;
+    border-radius: 999px; padding: 2px 8px;
+  }
+  #pharmacyPage .ph-month-cell.overdue .badge { background: var(--ph-zero-tint); color: var(--ph-zero-deep); }
+  #pharmacyPage .ph-month-cell .dash { color: var(--ph-faint); font-size: 11px; }
+  #pharmacyPage .ph-month-detail {
+    max-width: 1072px; margin: 8px auto 0; background: var(--ph-white); border: 1px solid var(--ph-line);
+    border-radius: 14px; padding: 10px 12px;
+  }
+  #pharmacyPage .ph-month-detail .dtitle { font-size: 11px; font-weight: 800; color: var(--ph-green-deep); margin-bottom: 6px; }
+
   /* §3 restock rows: ring + row tint + name colour + tonal action button, all
      driven by ONE tier per row (phDashTier) so no two signals can disagree. */
   #pharmacyPage .ph-ring {
@@ -14937,6 +14969,69 @@
     }).filter(x => x.date <= rangeEnd);
   }
 
+  // ---- "This month" strip, Stocktake only (her ask 2026-08-31: "month is
+  // only good for monthly stocktake") -- Formula refills/Herbal orders
+  // stay in This Week above (that's the view she actually checks daily);
+  // Stocktake's own ~3-month cycle is genuinely a "which week is it due"
+  // question, not a daily one, so it keeps the calendar-month, weeks-as-
+  // columns shape This Month always used. One row now, not three -- same
+  // grid component, same click/detail pattern, just narrower.
+  let phDashMonthOpenWeek = null; // index into phDashMonthWeeks(), or null
+  // A month spans 5 or 6 Sun-Sat weeks depending where the 1st falls --
+  // weeks.length (not a hardcoded 5) drives --ph-month-cols below so the
+  // grid is never short a column.
+  function phDashMonthWeeks() {
+    const y = TODAY.getFullYear(), m = TODAY.getMonth();
+    const monthStart = new Date(y, m, 1), monthEnd = new Date(y, m + 1, 0);
+    const weeks = [];
+    let cur = new Date(monthStart);
+    cur.setDate(cur.getDate() - cur.getDay());
+    let idx = 0;
+    while (cur <= monthEnd) {
+      const start = new Date(cur), end = new Date(cur);
+      end.setDate(end.getDate() + 6);
+      const labelEnd = end > monthEnd ? monthEnd.getDate() : end.getDate();
+      weeks.push({ idx, start, end, label: `${start.getDate() > labelEnd ? 1 : start.getDate()}–${labelEnd} ${MON_SHORT[m]}` });
+      cur.setDate(cur.getDate() + 7);
+      idx++;
+    }
+    return weeks;
+  }
+  // The stocktake system's own real "next due" projection
+  // (phStocktakeNextDueInfo, the same one the Monday band already shows) --
+  // one entry, not per-herb.
+  function phDashMonthStocktakeItems(weeks) {
+    const lastEnd = weeks[weeks.length - 1].end;
+    const info = phStocktakeNextDueInfo();
+    if (!info.known) return [{ id: "first", label: "First stocktake — never counted yet", date: new Date(TODAY), overdue: false }];
+    const due = parseKey(info.dueKey);
+    if (due > lastEnd && !info.overdue) return [];
+    return [{ id: "next", label: info.overdue ? "Stocktake — overdue" : "Stocktake due", date: due < TODAY ? new Date(TODAY) : due, overdue: info.overdue }];
+  }
+  function phDashMonthCellHtml(items, week) {
+    const open = phDashMonthOpenWeek === week.idx;
+    if (!items.length) return `<button type="button" class="ph-month-cell${open ? " open" : ""}" data-ph-dash-month-week="${week.idx}"><span class="dash">–</span></button>`;
+    const anyOverdue = items.some(x => x.overdue);
+    return `<button type="button" class="ph-month-cell has${anyOverdue ? " overdue" : ""}${open ? " open" : ""}" data-ph-dash-month-week="${week.idx}"><span class="badge">${items.length}</span></button>`;
+  }
+  function phDashMonthDetailHtml(week, items) {
+    const inWeek = items.filter(x => x.date >= week.start && x.date <= week.end);
+    const rows = inWeek.map(x => `<button type="button" class="ph-week-detail-row" data-ph-tab="stocktake"><svg class="icn" aria-hidden="true"><use href="#i-clipboard"/></svg><b>${esc(x.label)}</b></button>`);
+    return `<div class="ph-month-detail"><div class="dtitle">${esc(week.label)}</div>${rows.length ? rows.join("") : `<div class="ph-week-empty">Nothing planned.</div>`}</div>`;
+  }
+  function phDashMonthHtml() {
+    const weeks = phDashMonthWeeks();
+    const items = phDashMonthStocktakeItems(weeks);
+    const gridStyle = `style="--ph-month-cols:${weeks.length}"`;
+    const heads = `<div></div>${weeks.map(w => `<div class="ph-month-wk-head">${esc(w.label)}</div>`).join("")}`;
+    const rowHtml = `<div class="ph-month-rowlabel">Stocktake</div>${weeks.map(w => phDashMonthCellHtml(items.filter(x => x.date >= w.start && x.date <= w.end), w)).join("")}`;
+    const openWeek = weeks.find(w => w.idx === phDashMonthOpenWeek);
+    return `<div class="ph-dash-secthead"><h2>This month</h2><span class="rule"></span></div>
+      <div class="ph-month-grid heads" ${gridStyle}>${heads}</div>
+      <div class="ph-month-grid" ${gridStyle}>${rowHtml}</div>
+      ${openWeek ? phDashMonthDetailHtml(openWeek, items) : ""}`;
+  }
+
   function renderPhDashboardPage() {
     const wrap = document.getElementById("phDashboardWrap");
     if (!wrap) return;
@@ -14974,6 +15069,7 @@
     wrap.innerHTML = `
       ${phShellHead("Dashboard", dashMeta, phDashTodayStripHtml(), dashAction)}
       ${phDashWeekHtml()}
+      ${phDashMonthHtml()}
       ${phDashNeedsActionHtml()}
       ${phDashRelocationLineHtml()}
       ${monday ? phDashMondayBandHtml() : ""}
@@ -16629,6 +16725,13 @@
       if (dashWeekDay) {
         const k = dashWeekDay.dataset.phDashWeekDay;
         phDashWeekOpenDay = phDashWeekOpenDay === k ? null : k;
+        renderPhDashboardPage();
+        return;
+      }
+      const dashMonthWeek = e.target.closest("[data-ph-dash-month-week]");
+      if (dashMonthWeek) {
+        const idx = Number(dashMonthWeek.dataset.phDashMonthWeek);
+        phDashMonthOpenWeek = phDashMonthOpenWeek === idx ? null : idx;
         renderPhDashboardPage();
         return;
       }
