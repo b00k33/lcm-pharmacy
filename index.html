@@ -16835,8 +16835,7 @@
           presOpenSnapshot = openedT ? { lastDispensedAt: openedT.lastDispensedAt || null, lastDispenseLogId: openedT.lastDispenseLogId || null } : null; }
         presCalcSessionDone = false;
         presLastDispViewId = null;
-        renderPresPanel();
-        presPanelEl().scrollIntoView({ behavior: "smooth", block: "start" });
+        presRenderPanelSmooth();
         return;
       }
       const presTabNew = e.target.closest("[data-pres-tab-new]");
@@ -17528,8 +17527,7 @@
         presLabelOpen = false; presMoreOpen = false; presFuOpen = false;
         presNameOpen = false; presNotesOpen = false; presHistOpen = false; presThirdOpen = false; presMedHxOpen = false;
         presPickLocked = null;
-        renderPresPanel();
-        presPanelEl().scrollIntoView({ behavior: "smooth", block: "start" });
+        presRenderPanelSmooth();
         return;
       }
       if (e.target.closest("[data-pres-pick-add]")) { presPickAdd(); return; }
@@ -21641,6 +21639,32 @@
   // duplicate field ids can never coexist
   const presPanelEl = () => PHARMACY.activeTab === "refill"
     ? document.getElementById("refPresPanel") : document.getElementById("presPanel");
+  // her ask (2026-08-31): "the page not to jump... smooth flow" when opening/
+  // switching a prescription. Two separate causes were both landing under
+  // that one complaint: (1) render-then-scroll meant the panel's content
+  // swapped INSTANTLY (its own screen position never moves -- only what's
+  // below it does -- but content she was already looking at further down
+  // the page would silently slide out from under her the moment it rendered),
+  // and only after that jolt did the animated scroll correct it, so she felt
+  // two motions, not one; (2) switching tabs within an ALREADY-open panel
+  // (data-pres-open, reused by the tab strip) forced this same scroll every
+  // time even though the panel never left the screen -- a gratuitous snap
+  // for zero reason. Fix: scroll FIRST, before the content swap, so new/
+  // replaced content grows in under a viewport that's already settled where
+  // it needs to be -- and skip the scroll entirely when the panel's already
+  // in view, so a tab switch never moves the page at all.
+  function presRenderPanelSmooth() {
+    const el = presPanelEl();
+    const inView = el && (() => { const r = el.getBoundingClientRect(); return r.top > -40 && r.top < window.innerHeight * 0.4; })();
+    // scrollIntoView reads the CURRENT (pre-mutation) layout the instant it's
+    // called, and the panel's own document-top offset never moves when its
+    // own content grows/shrinks (only what comes after it does) -- so the
+    // scroll target stays valid straight through the mutation below with no
+    // need to wait a frame for it. Waiting would only risk a stall on a
+    // backgrounded/inactive tab, where rAF can be suspended entirely.
+    if (el && !inView) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    renderPresPanel();
+  }
   // her ask (2026-08-18): "N herbs · Ng" used to show once in the header band
   // and again under Ingredients -- one copy now (the band), shared here so
   // presWriteIngs can refresh it live without a full renderPresPanel() re-render.
@@ -24568,8 +24592,7 @@
     // presThirdOpen before, so a script left open earlier could otherwise
     // leak its expanded state into a brand new one
     presThirdOpen = false; presMedHxOpen = false;
-    renderPresPanel();
-    presPanelEl().scrollIntoView({ behavior: "smooth", block: "start" });
+    presRenderPanelSmooth();
   }
   // her ask (2026-08-31): "save multiple prescriptions in one patient
   // file" -- a tab per script under her name, newest first (reuses
