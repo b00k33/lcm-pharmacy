@@ -1319,6 +1319,7 @@
   .ph-pill.phaseout { color: var(--ph-phaseout-deep); background: var(--ph-phaseout-tint); }
   .ph-pill.dispensed { color: var(--ph-green); background: var(--ph-green-tint); }
   .ph-pill.draft { color: var(--ph-low-deep); background: var(--ph-low-tint); }
+  .ph-pill.count { color: var(--ph-green); background: var(--ph-green-tint); }
   .ph-pill.restock { color: var(--ph-phaseout-deep); background: var(--ph-phaseout-tint); }
   .ph-pill.stocktake { color: var(--ph-stopped); background: var(--ph-stopped-tint); }
   /* temporarily-stopping rows go grey — text, code, name, the lot */
@@ -3852,6 +3853,18 @@
     border: 1px solid rgba(255,255,255,0.45); border-radius: 999px;
   }
   #pharmacyPage .ph-pres-band .ph-band-toggle:hover { color: var(--ph-white); background: rgba(255,255,255,0.12); }
+  /* her ask (2026-08-31): a tab per script under her name -- same quiet
+     pill component as the "no history taken" filter chips (.ph-count-btn),
+     not a new visual language of its own. */
+  #pharmacyPage .ph-pres-tabs { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 16px; background: var(--ph-white); }
+  #pharmacyPage .ph-pres-tab {
+    border: 1px solid var(--ph-line); border-radius: 999px; padding: 5px 12px; min-height: 26px;
+    background: var(--ph-white); cursor: pointer; font: inherit; font-size: 11px; font-weight: 700; color: var(--ph-soft);
+  }
+  #pharmacyPage .ph-pres-tab:hover { border-color: var(--ph-green); color: var(--ph-green-deep); }
+  #pharmacyPage .ph-pres-tab.on { background: var(--ph-green-tint); border-color: var(--ph-green); color: var(--ph-green-deep); }
+  #pharmacyPage .ph-pres-tab.new { border-style: dashed; color: var(--ph-faint); }
+  #pharmacyPage .ph-pres-tab.new:hover { border-color: var(--ph-green); color: var(--ph-green-deep); }
   /* her ask (2026-08-18): three columns -- dosage/price/label/actions left,
      ingredients (add-row + table only now) middle, History & Notes right
      (her follow-up, same day: History+Notes pulled out of the ingredients
@@ -16826,6 +16839,8 @@
         presPanelEl().scrollIntoView({ behavior: "smooth", block: "start" });
         return;
       }
+      const presTabNew = e.target.closest("[data-pres-tab-new]");
+      if (presTabNew) { presStartNew(undefined, presTabNew.dataset.presTabNew); return; }
       // her 2026-08-22 spec: Calculate updates the figures and marks its
       // node done -- that's it. It used to force presLabelOpen open too,
       // which made the Label preview column jump every time she pressed it;
@@ -17566,6 +17581,13 @@
         let t;
         if (isNew) {
           if (!name && !ings.length) { presEditId = null; presDraft = null; renderPresPanel(); return; }
+          // her ask (2026-08-31): typing an existing patient's name here used
+          // to silently create a second, disconnected record -- now it asks
+          // first, so a real second script and an accidental near-duplicate
+          // name don't look identical until she notices. Skipped when the
+          // name was handed in (the tab strip's + New already knows who).
+          if (name && !(presDraft && presDraft.skipDupCheck) && schedPresForPatient(name).length
+              && !confirm(`${phTitle(name)} already has a prescription on file. Add this as another one for her?`)) return;
           t = { id: uid(), name: name || "New prescription", notes: "", totalGrams: 0, ingredients: [] };
           PRESC.items.unshift(t);
         } else {
@@ -21494,6 +21516,25 @@
     const isNoHist = t => noHistNames.has(phPatientKey(presPatientFor(t) || ""));
     if (presFilterChip === "noHist" && !noHistNames.size) presFilterChip = "all";   // nothing left to show -- quietly drop it
 
+    // her ask (2026-08-31): "save multiple prescriptions in one patient
+    // file." The data already allowed two PRESC.items rows to share a
+    // name -- nothing here forced one row per patient, this list just
+    // never grouped them. One row per PATIENT now, not per script: group
+    // by the same phPatientKey her medical-history store already keys on,
+    // "current" = group[0] (PRESC.items is newest-first end to end, so
+    // this falls out of the array order for free, same convention
+    // schedPresForPatient already relies on). Every predicate above
+    // (lastMs/isDraft/isStale/isToday/isNoHist) is keyed by NAME, not by
+    // record id, so it was already patient-wide -- computing it off
+    // "current" alone is correct, not an approximation.
+    const byPatient = new Map();
+    all.forEach(t => {
+      const k = phPatientKey(t.name);
+      if (!byPatient.has(k)) byPatient.set(k, []);
+      byPatient.get(k).push(t);
+    });
+    const patients = Array.from(byPatient.values()).map(group => ({ current: group[0], group }));
+
     // Prescriptions list rebuild (her spec 2026-08-22): the three old static
     // counters -> five single-select filter chips, exactly one active.
     const CHIP_PREDS = { all: () => true, today: isToday, drafts: isDraft, notSeen: isStale, noHist: isNoHist };
@@ -21506,29 +21547,32 @@
     ];
     const filtersEl = document.getElementById("presFilters");
     if (filtersEl) {
-      filtersEl.innerHTML = CHIP_DEFS.map(c => ({ ...c, n: all.filter(CHIP_PREDS[c.k]).length }))
+      filtersEl.innerHTML = CHIP_DEFS.map(c => ({ ...c, n: patients.filter(p => CHIP_PREDS[c.k](p.current)).length }))
         .filter(c => c.k === "all" || c.n > 0)
         .map(c => `<button type="button" class="ph-count ph-count-btn${c.alert ? " alert" : ""}${presFilterChip === c.k ? " on" : ""}" data-pres-filter="${c.k}">${c.label} · ${c.n}</button>`)
         .join("");
     }
     const presHeadEl = document.getElementById("presShellHead");
-    if (presHeadEl) presHeadEl.innerHTML = phShellHead("Prescriptions", `${all.length} patient${all.length === 1 ? "" : "s"}`, phShellStripHtml([
-      { n: all.length, label: "Total<br>patients" },
-      { n: all.filter(CHIP_PREDS.today).length, label: "Dispensed<br>today" },
-      { n: all.filter(CHIP_PREDS.drafts).length, label: "Drafts" },
-      { n: all.filter(CHIP_PREDS.notSeen).length, label: "Not seen<br>6+ months" },
+    if (presHeadEl) presHeadEl.innerHTML = phShellHead("Prescriptions", `${patients.length} patient${patients.length === 1 ? "" : "s"}`, phShellStripHtml([
+      { n: patients.length, label: "Total<br>patients" },
+      { n: patients.filter(p => CHIP_PREDS.today(p.current)).length, label: "Dispensed<br>today" },
+      { n: patients.filter(p => CHIP_PREDS.drafts(p.current)).length, label: "Drafts" },
+      { n: patients.filter(p => CHIP_PREDS.notSeen(p.current)).length, label: "Not seen<br>6+ months" },
     ]));
 
-    const rows = all
-      .filter(t => !q || presWordStartMatch(t.name, q) || presWordStartMatch(t.formula, q) || presWordStartMatch(t.notes, q))
-      .filter(CHIP_PREDS[presFilterChip] || CHIP_PREDS.all);
-    const val = t => presSort.key === "grams" ? (t.totalGrams || 0)
-      : presSort.key === "recent" ? lastMs(t)
-      : t.name.toLowerCase();
+    // her protected behaviour: search must still match live, by name, herb
+    // or notes -- now across ANY of a patient's scripts (a herb only used
+    // in an older one should still surface her), not just the current one.
+    const rows = patients
+      .filter(p => !q || p.group.some(t => presWordStartMatch(t.name, q) || presWordStartMatch(t.formula, q) || presWordStartMatch(t.notes, q)))
+      .filter(p => (CHIP_PREDS[presFilterChip] || CHIP_PREDS.all)(p.current));
+    const val = p => presSort.key === "grams" ? (p.current.totalGrams || 0)
+      : presSort.key === "recent" ? lastMs(p.current)
+      : p.current.name.toLowerCase();
     rows.sort((a, b) => {
       const x = val(a), y = val(b);
       const primary = (x < y ? -1 : x > y ? 1 : 0) * presSort.dir;
-      return primary || a.name.toLowerCase().localeCompare(b.name.toLowerCase());   // patient A→Z breaks ties
+      return primary || a.current.name.toLowerCase().localeCompare(b.current.name.toLowerCase());   // patient A→Z breaks ties
     });
     // STEP 8q (2026-08-14): compact pagination -- 799 imported templates is
     // too long for one huge scroll; clamp first (a narrower search than last
@@ -21539,19 +21583,21 @@
     const shown = rows.slice((presPage - 1) * PH_PAGE_SIZE, presPage * PH_PAGE_SIZE);
     const arrow = k => presSort.key === k ? (presSort.dir === 1 ? " ▲" : " ▼") : "";
     const th = (k, label, right) => `<th${right ? ` style="text-align:right"` : ""}><button type="button" class="ph-th-sort${presSort.key === k ? " on" : ""}" data-pres-sort="${k}">${label}${arrow(k)}</button></th>`;
-    document.getElementById("presList").innerHTML = all.length ? `
+    document.getElementById("presList").innerHTML = patients.length ? `
       <div class="rtn-table-wrap"><table class="rtn-table ph-table">
         <thead><tr>${th("name", "Patient")}${th("recent", "Last dispensed", 1)}<th>Last formula</th>${th("grams", "Total", 1)}<th></th></tr></thead>
-        <tbody>${shown.map(t => {
+        <tbody>${shown.map(p => {
+          const t = p.current;
           const ms = lastMs(t), stale = isStale(t), draft = isDraft(t);
           // her spec §0: the patient profile page doesn't exist yet, so the
           // name is deliberately inert (no button, no click) -- told her
           // this in chat, it's waiting on that separate design round.
           // §4 "both, split": name stays inert, the two icon buttons below
-          // are the only way into the (one, existing) prescription editor --
-          // same data-pres-open navigation as before, never a write.
+          // are the only way into the prescription editor -- same
+          // data-pres-open navigation as before, opening her CURRENT
+          // (most recent) script; the tab strip in there reaches the rest.
           return `<tr class="ph-pres-rowlink" data-pres-row-open="${t.id}" role="button" tabindex="0" aria-label="Open ${esc(phTitle(t.name))}">
-          <td class="ph-pres-patient"><span class="ph-pres-patient-nm">${esc(phTitle(t.name))}</span>${phCondBadgesHtml(t.name) || `<span class="ph-pres-nocond">no conditions recorded</span>`}</td>
+          <td class="ph-pres-patient"><span class="ph-pres-patient-nm">${esc(phTitle(t.name))}</span>${p.group.length > 1 ? `<span class="ph-pill count">${p.group.length} scripts</span>` : ""}${phCondBadgesHtml(t.name) || `<span class="ph-pres-nocond">no conditions recorded</span>`}</td>
           <td style="text-align:right" class="${stale ? "ph-pres-stale" : ""}">${ms
             ? `<span class="ph-pres-relative">${phRelTime(ms)}</span><span class="ph-pres-lastdate">${(d => `${d.getDate()} ${MON_SHORT[d.getMonth()]} ${d.getFullYear()}`)(new Date(ms))}</span>`
             : `<span class="ph-pres-never">never · draft only</span>`}</td>
@@ -23960,6 +24006,7 @@
         <button type="button" class="ph-sec-toggle ph-band-toggle" data-pres-name-toggle="1" aria-expanded="${presNameOpen ? "true" : "false"}">${presNameOpen ? "▾" : "▸"} Name &amp; type</button>
         <button type="button" class="ph-print-btn" data-pres-close="1">Close ×</button>
       </div>
+      ${!isF ? presTabStripHtml(t) : ""}
       ${presHistoryBannerHtml(t)}
       ${presClinicalWarningsHtml(t)}
       ${presConstitutionSuggestHtml(t)}
@@ -24499,14 +24546,23 @@
   // called directly from PH_TOPBAR_ACTIONS (Prescriptions' "+ New
   // prescription", Dashboard's shortcut, Refill's "+ New formula recipe")
   // — one starting-a-new-script path, no in-page button to click through
-  function presStartNew(presType) {
+  // presetName (her ask 2026-08-31): the "+ New" tab inside a patient's own
+  // record already knows who this is for -- no reason to make her retype
+  // the name the bare-draft form would otherwise ask for. Every other call
+  // site (topbar "+ New prescription", Dashboard shortcut, Refill's "+ New
+  // formula recipe") passes nothing, so they're unchanged.
+  function presStartNew(presType, presetName) {
     // starting a new script is one of the four ways of leaving the old one.
     // Guarded here rather than at the click, because the topbar calls this
     // function directly -- there is no element to intercept.
     const guard = presGuardScript();
-    if (guard) { presGuardResume = () => presStartNew(presType); presGuardShow(guard); return; }
+    if (guard) { presGuardResume = () => presStartNew(presType, presetName); presGuardShow(guard); return; }
     presDraft = presNewDraft();
     if (presType === "formula") presDraft.presType = "formula";
+    // skipDupCheck: this name was handed in, not typed fresh -- we already
+    // know who it's for (the tab strip's + New), so the save-time "already
+    // a patient?" check below would just be asking about herself.
+    if (presetName) { presDraft.name = presetName; presDraft.skipDupCheck = true; }
     presEditId = "__new__"; presOpenId = null;
     // her ask 2026-08-20 pt.3: "starting a new one" resets collapsed too,
     // same as opening an existing script -- this entry point never touched
@@ -24515,6 +24571,20 @@
     presThirdOpen = false; presMedHxOpen = false;
     renderPresPanel();
     presPanelEl().scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  // her ask (2026-08-31): "save multiple prescriptions in one patient
+  // file" -- a tab per script under her name, newest first (reuses
+  // schedPresForPatient, the exact list the Schedule flow's own picker
+  // already trusts), + New always alongside them so a second script is
+  // reachable without leaving this record. Tab clicks reuse the plain
+  // data-pres-open handler every other "open this script" control already
+  // uses -- same guard (PRES_GUARD_LEAVE_SEL), same reset, nothing new.
+  function presTabStripHtml(t) {
+    const scripts = schedPresForPatient(presPatientFor(t));
+    return `<div class="ph-pres-tabs">
+      ${scripts.map(s => `<button type="button" class="ph-pres-tab${s.id === t.id ? " on" : ""}" data-pres-open="${s.id}">${esc(s.formula || "Untitled")}</button>`).join("")}
+      <button type="button" class="ph-pres-tab new" data-pres-tab-new="${esc(t.name)}">+ New</button>
+    </div>`;
   }
   // resolve one typed/pasted ingredient line against the inventory: exact name
   // first, then a "CODE — name" picker label by its code part
