@@ -3715,6 +3715,34 @@
   #pharmacyPage .p-when.stale { color: var(--ph-low-deep); font-weight: 700; }
   #pharmacyPage .p-lastdate { display: block; font-size: 10.5px; color: var(--ph-faint); }
   #pharmacyPage .p-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  /* Prescriptions on the web (her ask 2026-08-31, follow-up): "i like it for
+     mobile but not for web -- do something else." Same soft-elevated-
+     container depth as the mobile cards, just wrapped once around the whole
+     table instead of per-row -- a shadow per row at this density would read
+     as noisy, not premium. Row padding stays close to her 2026-08-19 "double
+     the rows on screen" density (this is polish via the container/typography/
+     hover, not via loosening every row). */
+  #pharmacyPage .p-tablewrap {
+    max-width: 1040px; margin: 0 auto; background: var(--ph-white);
+    border: 1px solid var(--ph-line); border-radius: 16px;
+    box-shadow: 0 1px 2px rgba(14,77,42,0.06), 0 6px 16px rgba(14,77,42,0.07);
+    overflow: hidden; overflow-x: auto;
+  }
+  #pharmacyPage .p-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  #pharmacyPage .p-table th {
+    text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--ph-soft); padding: 12px 16px; border-bottom: 1px solid var(--ph-line);
+  }
+  #pharmacyPage .p-table td { padding: 12px 16px; border-bottom: 1px solid var(--ph-line); vertical-align: top; }
+  #pharmacyPage .p-table tbody tr:last-child td { border-bottom: none; }
+  #pharmacyPage .p-trow { cursor: pointer; }
+  #pharmacyPage .p-trow:hover td { background: var(--ph-green-tint); }
+  #pharmacyPage .p-trow:focus-visible { outline: 2px solid var(--ph-green); outline-offset: -2px; }
+  #pharmacyPage .p-tname-row { display: flex; align-items: center; gap: 8px; }
+  #pharmacyPage .p-tname { font-weight: 700; color: var(--ph-green-deep); font-size: 14px; }
+  #pharmacyPage .p-tbadges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+  #pharmacyPage .p-tfx { max-width: 280px; }
+  #pharmacyPage .p-ticons { display: flex; gap: 4px; justify-content: flex-end; white-space: nowrap; }
   /* widget heads get a hairline shelf so each card reads in sections */
   .ph-widget-head { padding-bottom: 12px; border-bottom: 1px solid var(--ph-line); }
   /* the open prescription panel carries a gold spine */
@@ -12839,6 +12867,10 @@
       if (nowMobile !== phInvResizeMobile) {
         phInvResizeMobile = nowMobile;
         if (PHARMACY.activeTab === "inventory") renderPhRows();
+        // her ask (2026-08-31, follow-up): cards on mobile, a table on web --
+        // resizing across this same 900px line needs to swap them live too,
+        // same idiom as Inventory just above.
+        if (PHARMACY.activeTab === "prescriptions") renderPresList();
       }
       phPinSavedPill();
       phPinRefillZones();
@@ -21539,26 +21571,30 @@
     // pill row (same .ph-count-btn component the filter chips already use --
     // one pill style, not a new one) since cards have no header row to click.
     const sortBtn = (k, label) => `<button type="button" class="ph-count-btn${presSort.key === k ? " on" : ""}" data-pres-sort="${k}">${label}${arrow(k)}</button>`;
-    document.getElementById("presList").innerHTML = patients.length ? `
-      <div class="p-sortbar"><span>Sort</span>${sortBtn("recent", "Recent")}${sortBtn("name", "Name")}${sortBtn("grams", "Total")}</div>
-      <div class="p-cardlist">${shown.map(p => {
-          const t = p.current;
-          const ms = lastMs(t), stale = isStale(t), draft = isDraft(t);
-          const badges = `${phCondBadgesHtml(t.name)}${draft ? `<span class="ph-pill draft">Draft</span>` : ""}${stale ? `<span class="ph-pill stale">Not seen 6+ months</span>` : ""}`;
-          // her spec §0: the patient's name is deliberately inert (no profile
-          // page yet) -- the whole card is still the click target (her ask
-          // 2026-08-23), same data-pres-row-open delegation as before, just
-          // on a div instead of a tr; the icon buttons open the same way too.
-          return `<div class="p-card" data-pres-row-open="${t.id}" role="button" tabindex="0" aria-label="Open ${esc(phTitle(t.name))}">
+    // her ask (2026-08-31, follow-up): "i like it for mobile but not for web
+    // -- do something else for the web." Cards work on a phone but waste a
+    // wide screen and show too few patients at once -- a table earns its
+    // density back on desktop, where there's room for it to breathe instead
+    // of feeling cramped. Same 900px line the rest of the app already
+    // switches on (see phInvResizeMobile), same underlying data either side
+    // -- only the markup for a single patient's row differs.
+    const isMobile = window.innerWidth <= 900;
+    const th = (k, label, right) => `<th${right ? ` style="text-align:right"` : ""}><button type="button" class="ph-th-sort${presSort.key === k ? " on" : ""}" data-pres-sort="${k}">${label}${arrow(k)}</button></th>`;
+    const patientRow = p => {
+      const t = p.current;
+      const ms = lastMs(t), stale = isStale(t), draft = isDraft(t);
+      const badges = `${phCondBadgesHtml(t.name)}${draft ? `<span class="ph-pill draft">Draft</span>` : ""}${stale ? `<span class="ph-pill stale">Not seen 6+ months</span>` : ""}`;
+      const countPill = p.group.length > 1 ? `<span class="ph-pill count">${p.group.length} scripts</span>` : "";
+      const dispenseBtn = `<button type="button" class="ph-arr-editbtn" data-pres-open="${t.id}" title="Dispense ${esc(phTitle(t.name))}" aria-label="Dispense ${esc(phTitle(t.name))}">💊</button>`;
+      const editBtn = `<button type="button" class="ph-arr-editbtn" data-pres-open="${t.id}" title="Edit ${esc(phTitle(t.name))}" aria-label="Edit ${esc(phTitle(t.name))}">✎</button>`;
+      // her spec §0: the patient's name is deliberately inert (no profile
+      // page yet) -- the whole row/card is still the click target (her ask
+      // 2026-08-23), same data-pres-row-open delegation as before either way;
+      // the icon buttons open the same way too.
+      if (isMobile) return `<div class="p-card" data-pres-row-open="${t.id}" role="button" tabindex="0" aria-label="Open ${esc(phTitle(t.name))}">
           <div class="p-card-top">
-            <div class="p-name-row">
-              <span class="p-name">${esc(phTitle(t.name))}</span>
-              ${p.group.length > 1 ? `<span class="ph-pill count">${p.group.length} scripts</span>` : ""}
-            </div>
-            <div class="p-icons">
-              <button type="button" class="ph-arr-editbtn" data-pres-open="${t.id}" title="Dispense ${esc(phTitle(t.name))}" aria-label="Dispense ${esc(phTitle(t.name))}">💊</button>
-              <button type="button" class="ph-arr-editbtn" data-pres-open="${t.id}" title="Edit ${esc(phTitle(t.name))}" aria-label="Edit ${esc(phTitle(t.name))}">✎</button>
-            </div>
+            <div class="p-name-row"><span class="p-name">${esc(phTitle(t.name))}</span>${countPill}</div>
+            <div class="p-icons">${dispenseBtn}${editBtn}</div>
           </div>
           <div class="p-meta-row">
             <div class="p-formula">${presLastFormulaCellHtml(t)}</div>
@@ -21571,9 +21607,30 @@
           </div>
           ${badges ? `<div class="p-badges">${badges}</div>` : ""}
         </div>`;
-        }).join("")}</div>
+      return `<tr class="p-trow" data-pres-row-open="${t.id}" role="button" tabindex="0" aria-label="Open ${esc(phTitle(t.name))}">
+          <td class="p-tpatient">
+            <div class="p-tname-row"><span class="p-tname">${esc(phTitle(t.name))}</span>${countPill}</div>
+            ${badges ? `<div class="p-tbadges">${badges}</div>` : ""}
+          </td>
+          <td style="text-align:right" class="${stale ? "p-tstale" : ""}">${ms
+            ? `<span class="p-when${stale ? " stale" : ""}">${phRelTime(ms)}</span><span class="p-lastdate">${(d => `${d.getDate()} ${MON_SHORT[d.getMonth()]} ${d.getFullYear()}`)(new Date(ms))}</span>`
+            : `<span class="p-when">never</span>`}</td>
+          <td class="p-tfx">${presLastFormulaCellHtml(t)}</td>
+          <td style="text-align:right">${t.totalGrams ? phFmtG(t.totalGrams) + "g" : "—"}</td>
+          <td class="p-ticons">${dispenseBtn}${editBtn}</td>
+        </tr>`;
+    };
+    document.getElementById("presList").innerHTML = !patients.length
+      ? `<div class="fam-empty">No prescriptions yet — "+ New prescription" starts one.</div>`
+      : isMobile
+      ? `<div class="p-sortbar"><span>Sort</span>${sortBtn("recent", "Recent")}${sortBtn("name", "Name")}${sortBtn("grams", "Total")}</div>
+      <div class="p-cardlist">${shown.map(patientRow).join("")}</div>
       ${phPaginationHtml(presPage, presTotalPages, "pres")}`
-      : `<div class="fam-empty">No prescriptions yet — "+ New prescription" starts one.</div>`;
+      : `<div class="p-tablewrap"><table class="p-table">
+        <thead><tr>${th("name", "Patient")}${th("recent", "Last dispensed", 1)}<th>Last formula</th>${th("grams", "Total", 1)}<th></th></tr></thead>
+        <tbody>${shown.map(patientRow).join("")}</tbody>
+      </table></div>
+      ${phPaginationHtml(presPage, presTotalPages, "pres")}`;
   }
   // her ask (2026-08-19): "3 weeks ago" reads faster at a glance than a bare
   // date -- the exact date still matters for real record-keeping, so it stays
