@@ -1437,7 +1437,10 @@
        Supplier. Fixed to 380px instead — same long-name-safe value already
        proven on the Running-low/Snoozed snug cards below, so a name never
        wraps to a second line and every row still shares one aligned grid. */
-    grid-template-columns: 380px 110px 70px 58px 30px 56px 52px 230px 26px;
+    /* × widened 30px -> 46px (2026-08-31, bottle-count dropdown): a native
+       <select> needs real room for its own arrow + a "Custom" option label
+       -- verified live, 30px clipped it into the Bottle $ column next door. */
+    grid-template-columns: 380px 110px 70px 58px 46px 56px 52px 230px 26px;
     align-items: center; gap: 5px;
   }
   .ph-order-head-row {
@@ -1509,7 +1512,10 @@
   }
   .ph-order-line2 .ph-qty-input::-webkit-outer-spin-button,
   .ph-order-line2 .ph-qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-  .ph-order-col-x { text-align: center; color: var(--ph-faint); font-size: 11px; }
+  .ph-order-col-x { display: flex; flex-direction: column; gap: 2px; text-align: center; color: var(--ph-faint); font-size: 11px; }
+  .ph-order-col-x select.ph-qty-input { padding: 3px 0; font-size: 11px; border-radius: var(--field-radius-sm, 8px); }
+  .ph-order-col-x-custom { margin-top: 2px; }
+  .ph-order-head-row .ph-order-col-x { display: block; }
   /* Bottle $ locked-until-click (her ask 2026-08-06) — same footprint as the
      input it replaces so the row doesn't jiggle between locked/editing.
      Pixel width, not 100% -- a <button> grid item resolved % width against
@@ -18128,9 +18134,18 @@
       if (herbEdit) {
         const h = PHARMACY.herbs.find(x => x.id === herbEdit.dataset.phHerbEdit);
         if (!h) return;
-        // ✎ works from any tab (zero/low listings, the stats value list) — the
-        // edit form lives on Inventory, so hop there first
-        if (PHARMACY.activeTab !== "inventory") { PHARMACY.activeTab = "inventory"; savePharmacy(); renderPharmacy(); }
+        // 2026-08-31 (her report: "when i click on one thing, it takes me to
+        // another page and i cant return to previous page"): this used to hop
+        // to Inventory first because the edit drawer lived inside #phInvWidget,
+        // which is display:none on every other tab. That was fixed 2026-08-16/19
+        // -- phHerbForm/phHerbBackdrop are reparented to #pharmacyPage on bind
+        // (a fixed overlay, see the IIFE just above phOpenHerbEditDrawer), the
+        // exact same fix data-ph-dash-herb-edit below already relies on to stay
+        // put. The tab-hop here was dead weight left over from before that fix
+        // -- it silently switched (and PERSISTED, via savePharmacy()) her real
+        // tab out from under her every time she opened a herb from Restock/the
+        // low list/anywhere but Inventory. Removed; same "stays put" behaviour
+        // as the Dashboard path now, everywhere.
         phOpenHerbEditDrawer(h);
         return;
       }
@@ -19299,9 +19314,26 @@
       }
       const orderQty = e.target.closest("[data-ph-order-qty]");
       if (orderQty) {
-        // how many of that bottle she's reordering -- Arrived adds pack × qty
+        // how many of that bottle she's reordering -- Arrived adds pack × qty.
+        // 2026-08-31: now a 1-6 + Custom dropdown, same "Custom" -> reveal a
+        // manual field idiom as the bottle-size picker just above.
         const h = PHARMACY.herbs.find(x => x.id === orderQty.dataset.phOrderQty);
+        if (!h) return;
+        if (orderQty.value === "custom") {
+          phOrderQtyCustomOpen.add(h.id);
+          renderPharmacy();
+          return;
+        }
+        phOrderQtyCustomOpen.delete(h.id);
         const v = parseInt(orderQty.value, 10);
+        h.orderQty = (!isNaN(v) && v > 0) ? v : 1;
+        savePharmacy(); renderPharmacy();
+        return;
+      }
+      const orderQtyCustom = e.target.closest("[data-ph-order-qty-custom]");
+      if (orderQtyCustom) {
+        const h = PHARMACY.herbs.find(x => x.id === orderQtyCustom.dataset.phOrderQtyCustom);
+        const v = parseInt(orderQtyCustom.value, 10);
         if (h) { h.orderQty = (!isNaN(v) && v > 0) ? v : 1; savePharmacy(); renderPharmacy(); }
         return;
       }
@@ -20051,6 +20083,10 @@
   // 2026-08-06) -- not persisted, just so picking "Custom" doesn't snap back
   // to "100g"/"200g" the instant she types a value that happens to match one
   const phOrderPackCustomOpen = new Set();
+  // 2026-08-31 ("make the number of bottles to order dropdown"): same idiom,
+  // one row (Custom) for a quantity outside the common 1-6 preset -- not
+  // persisted, same reason phOrderPackCustomOpen isn't.
+  const phOrderQtyCustomOpen = new Set();
   /* ============================================================
      Refill planning, merged INTO Formula refill (her spec 2026-08-26).
      There is no separate planning page and no extra sidebar entry: this is
@@ -20596,6 +20632,7 @@
       // against the supplier's invoice
       const lineTotal = h.bottleCost != null ? phRound2(h.bottleCost * qty) : null;
       const packIsCustom = phOrderPackCustomOpen.has(h.id) || (pack !== PH_PACK_HERB && pack !== PH_PACK_FORMULA);
+      const qtyIsCustom = phOrderQtyCustomOpen.has(h.id) || qty < 1 || qty > 6;
       // her spec (2026-08-16): same dropdown component as the Inventory cell
       // -- the full known-supplier list (phSupplierOptionsHtml), so a herb
       // with nothing recorded yet can be assigned straight from this row
@@ -20619,7 +20656,13 @@
             </select>
             ${packIsCustom ? `<input type="number" class="ph-qty-input ph-order-col-size-custom" data-ph-order-pack-custom="${h.id}" value="${pack}" min="1" step="1" placeholder="g" title="Custom bottle size (grams)" aria-label="Custom bottle size in grams for ${esc(h.name)}">` : ""}
           </span>
-          <input type="number" class="ph-qty-input ph-order-col-x"${ord("x")} data-ph-order-qty="${h.id}" value="${qty}" min="1" step="1" title="How many of that bottle" aria-label="Number of bottles to order for ${esc(h.name)}">
+          <span class="ph-order-col-x"${ord("x")}>
+            <select class="ph-qty-input field-bare" data-ph-order-qty="${h.id}" title="How many of that bottle" aria-label="Number of bottles to order for ${esc(h.name)}">
+              ${[1, 2, 3, 4, 5, 6].map(n => `<option value="${n}"${!qtyIsCustom && qty === n ? " selected" : ""}>${n}</option>`).join("")}
+              <option value="custom"${qtyIsCustom ? " selected" : ""}>Custom</option>
+            </select>
+            ${qtyIsCustom ? `<input type="number" class="ph-qty-input ph-order-col-x-custom" data-ph-order-qty-custom="${h.id}" value="${qty}" min="1" step="1" placeholder="×" title="Custom number of bottles" aria-label="Custom number of bottles to order for ${esc(h.name)}">` : ""}
+          </span>
           ${phCellEdit && phCellEdit.id === h.id && phCellEdit.field === "restockBottle"
             ? `<input type="text" inputmode="decimal" class="ph-qty-input ph-order-col-bottle"${ord("bottle")} data-ph-edit="${h.id}:restockBottle" value="${h.bottleCost != null ? h.bottleCost : ""}" placeholder="—" aria-label="Cost of restocked bottle for ${esc(h.name)}${h.supplier ? ` from ${esc(h.supplier)}` : ""}">`
             : `<button type="button" class="ph-qty-lock ph-order-col-bottle"${ord("bottle")} data-ph-unlock="${h.id}:restockBottle" title="${h.supplier ? esc(h.supplier) + "’s price — click to edit" : "Click to edit"}">${h.bottleCost != null ? "$" + h.bottleCost : "—"}</button>`}
