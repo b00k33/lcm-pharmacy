@@ -2843,6 +2843,29 @@
   #pharmacyPage .ph-week-detail-row b { flex: 1 1 auto; min-width: 0; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ph-green-deep); }
   #pharmacyPage .ph-week-detail-row .meta { font-size: 10.5px; color: var(--ph-faint); flex: 0 0 auto; }
   #pharmacyPage .ph-week-empty { font-size: 12px; color: var(--ph-faint); text-align: center; padding: 4px 0; }
+  /* her ask (2026-08-31, Pharmacy row "improve usefulness"): crit-badge on
+     today's pharm cell is the out-of-stock subset only, never the whole
+     count -- the real total stays untouched in .who. Mock: artifact
+     ba09cdad-4df5-4926-8267-7e1ced59e476 */
+  #pharmacyPage .ph-week-cell.pharm { position: relative; }
+  #pharmacyPage .ph-week-cell.pharm .crit-badge {
+    position: absolute; top: -4px; right: -4px; min-width: 15px; height: 15px; padding: 0 3px;
+    background: var(--ph-zero); color: var(--ph-white); border-radius: var(--field-radius);
+    font-size: 8.5px; font-weight: 800; display: flex; align-items: center; justify-content: center;
+    line-height: 1; box-shadow: 0 0 0 2px var(--ph-paper);
+  }
+  #pharmacyPage .ph-week-cell.pharm.today .crit-badge { box-shadow: 0 0 0 2px var(--ph-green-tint); }
+  #pharmacyPage .ph-stat-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  #pharmacyPage .ph-stat-chip { flex: 1 1 0; display: flex; align-items: center; gap: 6px; background: var(--ph-paper); border-radius: var(--field-radius-sm); padding: 7px 10px; }
+  #pharmacyPage .ph-stat-chip .icn { width: 14px; height: 14px; color: var(--ph-green-deep); flex: 0 0 auto; }
+  #pharmacyPage .ph-stat-chip b { font-size: 15px; color: var(--ph-green-deep); }
+  #pharmacyPage .ph-stat-chip span.lbl { font-size: 10.5px; color: var(--ph-soft); font-weight: 700; }
+  #pharmacyPage .ph-stat-chip.crit { background: var(--ph-zero-tint); }
+  #pharmacyPage .ph-stat-chip.crit b, #pharmacyPage .ph-stat-chip.crit .icn { color: var(--ph-zero-deep); }
+  #pharmacyPage .ph-week-detail-group + .ph-week-detail-group { margin-top: 10px; }
+  #pharmacyPage .ph-week-detail-grouphead { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--ph-faint); padding: 6px 0 2px; }
+  #pharmacyPage .ph-week-detail-group .ph-week-detail-row:first-of-type { border-top: none; }
+  #pharmacyPage .ph-week-detail-row .tag-crit { font-size: 9.5px; font-weight: 800; color: var(--ph-zero-deep); background: var(--ph-zero-tint); border-radius: var(--field-radius); padding: 2px 7px; flex: 0 0 auto; }
 
   /* "This month" strip, Stocktake only (her ask 2026-08-31: "month is only
      good for monthly stocktake"). Formula refills/Herbal orders moved into
@@ -14887,29 +14910,60 @@
   function phDashWeekPharmCellHtml(refill, order, day) {
     const n = refill.length + order.length;
     if (!n) return `<button type="button" class="ph-week-cell${day.today ? " today" : ""}" data-ph-dash-week-day="${day.key}"><span class="dash">–</span></button>`;
-    const overdue = refill.some(x => x.overdue) || order.some(x => x.overdue);
-    return `<button type="button" class="ph-week-cell pharm${overdue ? " overdue" : ""}${day.today ? " today" : ""}" data-ph-dash-week-day="${day.key}">
+    const crit = refill.filter(x => x.overdue).length + order.filter(x => x.overdue).length;
+    return `<button type="button" class="ph-week-cell pharm${crit ? " overdue" : ""}${day.today ? " today" : ""}" data-ph-dash-week-day="${day.key}">
+      ${crit ? `<span class="crit-badge">${crit}</span>` : ""}
       <svg class="icn" aria-hidden="true"><use href="#i-jar"/></svg>
       <span class="who">${n}</span>
     </button>`;
+  }
+  // her ask (2026-08-31, "improve this table's usefulness" / Rebecca bug
+  // report): the flat mixed list buried which of the day's items actually
+  // needed her -- grouped it under real headers instead, plus a stat row
+  // (Refill / Order / Out of stock counts) so the split reads before she
+  // taps into a single row. "Out of stock" reuses the SAME x.overdue flag
+  // (qty <= 0) phDashPharmRefillItems/phDashPharmOrderItems already compute
+  // -- not a new concept, just newly surfaced here, and shown on Order rows
+  // too since the data already carries it there as well.
+  // Mocked + approved 2026-08-31: https://claude.ai/code/artifact/ba09cdad-4df5-4926-8267-7e1ced59e476
+  const PH_WEEK_GROUP_ROWS = 4; // her mock: capped list + "See all" beats an endless popover scroll
+  function phDashWeekGroupHtml(label, rows, seeAllTab, seeAllCount) {
+    if (!rows.length) return "";
+    const shown = rows.slice(0, PH_WEEK_GROUP_ROWS);
+    const more = rows.length - shown.length;
+    return `<div class="ph-week-detail-group">
+      <div class="ph-week-detail-grouphead">${esc(label)}</div>
+      ${shown.join("")}
+      ${more > 0 ? `<button type="button" class="ph-week-detail-row" data-ph-tab="${seeAllTab}"><span class="meta" style="flex:1 1 auto;">+${more} more</span><span class="meta">See all ${seeAllCount} →</span></button>` : ""}
+    </div>`;
   }
   function phDashWeekDetailHtml(day, pharmRefill, pharmOrder) {
     const { disp, fu } = phDashWeekItemsFor(day.key);
     const dayRefill = pharmRefill.filter(x => keyOf(x.date) === day.key);
     const dayOrder = pharmOrder.filter(x => keyOf(x.date) === day.key);
-    // her ask (2026-08-31, combined popover): Dispensing/Follow-ups and
-    // Pharmacy items all land in the ONE detail for the day. Refill ->
-    // data-ph-dash-refill-open (phDashOpenRefill: jumps into the Refill tab
-    // with the recipe loaded, same as the urgent tiles' "Refill ->" button).
-    // Order -> phOrderMenuHtml, her Plan▾ menu -- it's its own interactive
-    // control, so that row is a plain div, not a <button> (can't nest one).
-    const rows = [
-      ...disp.map(x => `<button type="button" class="ph-week-detail-row" data-ph-dash-pres-open="${x.presId}"><svg class="icn" aria-hidden="true"><use href="#${x.method === "pickup" ? "i-car" : "i-mail"}"/></svg><b>${esc(x.who)}</b><span class="meta">${x.method === "pickup" ? "Pickup" : "To post"}</span></button>`),
-      ...fu.map(x => `<button type="button" class="ph-week-detail-row" data-fu-open="${x.presId}"><svg class="icn" aria-hidden="true"><use href="#i-clock"/></svg><b>${esc(x.who)}</b><span class="meta">${x.kind === "checkin" ? "Check-in" : x.kind === "review" ? "Review" : "Check-in & review"}</span></button>`),
-      ...dayRefill.map(x => `<button type="button" class="ph-week-detail-row" data-ph-dash-refill-open="${x.id}"><svg class="icn" aria-hidden="true"><use href="#i-jar"/></svg><b>${esc(x.label)}</b><span class="meta">Refill</span></button>`),
-      ...dayOrder.map(x => `<div class="ph-week-detail-row"><svg class="icn" aria-hidden="true"><use href="#${x.h.order ? "i-check" : "i-cart"}"/></svg><b>${esc(x.label)}</b>${phOrderMenuHtml(x.h)}</div>`),
-    ];
-    return `<div class="ph-week-detail"><div class="dtitle">${esc(day.dow)} ${day.dnum}</div>${rows.length ? rows.join("") : `<div class="ph-week-empty">Nothing scheduled.</div>`}</div>`;
+    const critN = dayRefill.filter(x => x.overdue).length + dayOrder.filter(x => x.overdue).length;
+    const statRow = (dayRefill.length || dayOrder.length) ? `<div class="ph-stat-row">
+      <div class="ph-stat-chip"><svg class="icn" aria-hidden="true"><use href="#i-jar"/></svg><b>${dayRefill.length}</b><span class="lbl">Refill</span></div>
+      <div class="ph-stat-chip"><svg class="icn" aria-hidden="true"><use href="#i-cart"/></svg><b>${dayOrder.length}</b><span class="lbl">Order</span></div>
+      ${critN ? `<div class="ph-stat-chip crit"><svg class="icn" aria-hidden="true"><use href="#i-x"/></svg><b>${critN}</b><span class="lbl">Out of stock</span></div>` : ""}
+    </div>` : "";
+    // Dispensing/Follow-ups -> data-ph-dash-pres-open / data-fu-open (open
+    // the record). Refill -> data-ph-dash-refill-open (phDashOpenRefill:
+    // jumps into the Refill tab with the recipe loaded, same as the urgent
+    // tiles' "Refill ->" button). Order -> phOrderMenuHtml, her Plan▾ menu --
+    // it's its own interactive control, so that row is a plain div, not a
+    // <button> (can't nest one).
+    const dispRows = disp.map(x => `<button type="button" class="ph-week-detail-row" data-ph-dash-pres-open="${x.presId}"><svg class="icn" aria-hidden="true"><use href="#${x.method === "pickup" ? "i-car" : "i-mail"}"/></svg><b>${esc(x.who)}</b><span class="meta">${x.method === "pickup" ? "Pickup" : "To post"}</span></button>`);
+    const fuRows = fu.map(x => `<button type="button" class="ph-week-detail-row" data-fu-open="${x.presId}"><svg class="icn" aria-hidden="true"><use href="#i-clock"/></svg><b>${esc(x.who)}</b><span class="meta">${x.kind === "checkin" ? "Check-in" : x.kind === "review" ? "Review" : "Check-in & review"}</span></button>`);
+    const refillRows = dayRefill.map(x => `<button type="button" class="ph-week-detail-row" data-ph-dash-refill-open="${x.id}"><svg class="icn" aria-hidden="true"><use href="#i-jar"/></svg><b>${esc(x.label)}</b>${x.overdue ? `<span class="tag-crit">Out of stock</span>` : `<span class="meta">Refill</span>`}</button>`);
+    const orderRows = dayOrder.map(x => `<div class="ph-week-detail-row"><svg class="icn" aria-hidden="true"><use href="#${x.h.order ? "i-check" : "i-cart"}"/></svg><b>${esc(x.label)}</b>${x.overdue ? `<span class="tag-crit">Out of stock</span>` : ""}${phOrderMenuHtml(x.h)}</div>`);
+    const groups = [
+      phDashWeekGroupHtml("Dispensing", dispRows, "prescriptions", disp.length),
+      phDashWeekGroupHtml("Follow-ups", fuRows, "followups", fu.length),
+      phDashWeekGroupHtml("Refill", refillRows, "refill", dayRefill.length),
+      phDashWeekGroupHtml("Order", orderRows, "restock", dayOrder.length),
+    ].join("");
+    return `<div class="ph-week-detail"><div class="dtitle">${esc(day.dow)} ${day.dnum}</div>${statRow}${groups || `<div class="ph-week-empty">Nothing scheduled.</div>`}</div>`;
   }
   function phDashWeekHtml() {
     const days = phDashWeekDays();
