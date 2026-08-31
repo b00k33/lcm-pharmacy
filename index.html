@@ -18017,6 +18017,20 @@
         phArrive(PHARMACY.herbs.filter(h => herbNeedsOrder(h) && (h.supplier || "") === sup));
         return;
       }
+      // 2026-08-31 ("batch — one supplier, several herbs at once"): the To
+      // order section's own bulk action, same shape as ✓ All arrived just
+      // above but one stage earlier -- every still-to-order item for this
+      // supplier moves to Ordered (with today's date) in one tap, instead of
+      // pressing each row's own Ordered segment individually after placing
+      // one combined order.
+      const orderedSup = e.target.closest("[data-ph-ordered-sup]");
+      if (orderedSup) {
+        const sup = orderedSup.dataset.phOrderedSup;
+        PHARMACY.herbs.filter(h => herbNeedsOrder(h) && !h.ordered && (h.supplier || "") === sup)
+          .forEach(h => { h.ordered = true; h.orderedDate = keyOf(TODAY); });
+        savePharmacy(); renderPharmacy();
+        return;
+      }
       const cart = e.target.closest("[data-ph-order]");
       if (cart) {
         const h = PHARMACY.herbs.find(x => x.id === cart.dataset.phOrder);
@@ -20580,12 +20594,26 @@
     stillToOrder.forEach(h => { (bySupToOrder[h.supplier || ""] = bySupToOrder[h.supplier || ""] || []).push(h); });
     const bySupOrdered = {};
     onTheWay.forEach(h => { (bySupOrdered[h.supplier || ""] = bySupOrdered[h.supplier || ""] || []).push(h); });
-    const renderSupGroups = map => Object.keys(map).sort((a, b) => (a || "zz").localeCompare(b || "zz")).map(sup => {
+    // 2026-08-31 (her confirmed workflow: "batch — one supplier, several
+    // herbs at once"): stage 1 already had its own bulk action ✓ All
+    // arrived, but stage 0 -> 1 (To order -> Ordered) didn't — after
+    // building a whole supplier's order she still had to tap Ordered on
+    // every row one at a time. ✓ Mark all Ordered is the same idiom, one
+    // step earlier; stageForGroup limits each button to the section it
+    // actually belongs to (a toOrder group offers "mark ordered", an
+    // ordered group offers "mark arrived" — no more mixing stage-skipping
+    // actions into the wrong section).
+    const renderSupGroups = (map, stageForGroup) => Object.keys(map).sort((a, b) => (a || "zz").localeCompare(b || "zz")).map(sup => {
       const supTotal = map[sup].reduce((sum, h) => sum + (h.bottleCost != null ? h.bottleCost * (h.orderQty != null ? h.orderQty : 1) : 0), 0);
+      const bulkBtn = map[sup].length > 1
+        ? (stageForGroup === "toOrder"
+            ? `<button type="button" class="ph-add-order" data-ph-ordered-sup="${esc(sup)}" title="The whole order was placed — every item moves to Ordered">✓ Mark all Ordered</button>`
+            : `<button type="button" class="ph-add-order" data-ph-arrived-sup="${esc(sup)}" title="The whole delivery landed — every item gets its pack">✓ All arrived</button>`)
+        : "";
       return `
       <div class="ph-order-sup">${sup ? esc(sup) : "No supplier recorded"}
         ${supTotal ? `<span class="ph-order-sup-total">${phMoney(supTotal)}</span>` : ""}
-        ${map[sup].length > 1 ? `<button type="button" class="ph-add-order" data-ph-arrived-sup="${esc(sup)}" title="The whole delivery landed — every item gets its pack">✓ All arrived</button>` : ""}
+        ${bulkBtn}
       </div>
       ${map[sup].map((h, i) => orderRow(h, i)).join("")}`;
     }).join("");
@@ -20706,12 +20734,12 @@
       ${stillToOrder.length ? `<div class="ph-order-card">
         <div class="section-head"><h2>🛒 To order (${stillToOrder.length})</h2><span class="rule"></span>${PHARMACY.colOrder && PHARMACY.colOrder.restock && PHARMACY.colOrder.restock.length ? `<button type="button" class="ph-load-btn" data-ph-col-order-reset="restock" title="Put dragged columns back in their default order">↺ Reset columns</button>` : ""}</div>
         ${orderHeadRow}
-        ${renderSupGroups(bySupToOrder)}
+        ${renderSupGroups(bySupToOrder, "toOrder")}
       </div>` : ""}
       ${onTheWay.length ? `<div class="ph-order-card">
         <div class="section-head"><h2>🚚 Ordered, not arrived (${onTheWay.length})</h2><span class="rule"></span></div>
         ${orderHeadRow}
-        ${renderSupGroups(bySupOrdered)}
+        ${renderSupGroups(bySupOrdered, "ordered")}
       </div>` : ""}
       ${snoozed.length ? `<div class="ph-flag-row" style="margin:16px 0 0">
         <button type="button" class="ph-flag snoozed" data-ph-restock-snooze-toggle="1" aria-pressed="${phRestockSnoozeOpen}">😴 Snoozed: ${snoozed.length}</button>
