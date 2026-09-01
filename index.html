@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260902-130000">
+<meta name="lcm-build" content="20260902-133000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -2898,6 +2898,11 @@
   #pharmacyPage .ph-wkt-d { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; color: var(--ph-soft); }
   #pharmacyPage .ph-wkt-cell.has .ph-wkt-d { color: var(--ph-green-deep); }
   #pharmacyPage .ph-wkt-d em { font-style: normal; color: var(--margin-rule, #B08D3E); }
+  /* per-clinic working days (2026-09-02): her day(s) at this clinic get a
+     gold underline on the day label; the appointment day chips mark them too */
+  #pharmacyPage .ph-wkt-cell.wd .ph-wkt-d { border-bottom: 2px solid var(--ph-gold, #E3C87A); padding-bottom: 1px; }
+  #pharmacyPage .ph-cap-tchip.wk:not(.on) { box-shadow: inset 0 0 0 1.5px var(--ph-gold, #E3C87A); }
+  #pharmacyPage .ph-workday-chips { display: flex; gap: 6px; flex-wrap: wrap; }
   #pharmacyPage .ph-wkt-item { font-size: 11px; font-weight: 600; color: var(--ph-ink); display: inline-flex; align-items: center; gap: 4px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #pharmacyPage .ph-wkt-item .icn { width: 11px; height: 11px; flex: none; color: var(--ph-green-deep); }
   #pharmacyPage .ph-wkt-item .crit { color: var(--ph-zero-deep, #B4483A); font-weight: 800; }
@@ -14766,6 +14771,14 @@
       ${phShellHead("Settings", "", "")}
       <section class="ph-widget ph-settings-shell">
       <div class="ph-settings-sec">
+        <h3>📍 My days at this clinic</h3>
+        <p class="ph-settings-hint">Marks your working days in This Week and points new appointment pastes at the next one — set per clinic (her Fridays-and-sometimes-Saturdays at Acupreg live in that clinic's own login). Leave all off for an every-day clinic; nothing is ever blocked on other days.</p>
+        <div class="ph-workday-chips">${[1, 2, 3, 4, 5, 6, 0].map(n => {
+          const on = (PHARMACY.clinicWorkDays || []).includes(n);
+          return `<button type="button" class="ph-cap-tchip${on ? " on" : ""}" data-ph-workday="${n}" aria-pressed="${on}">${DAY_SHORT[n]}</button>`;
+        }).join("")}</div>
+      </div>
+      <div class="ph-settings-sec">
         <h3>🏷 Label text</h3>
         <p class="ph-settings-hint">This fills in the Label text block on the open-prescription screen and the Scheduled/Prepare screen — both read from this same template. Edit it to match whatever's actually pre-printed on your label maker's template, using the placeholders below wherever you want a real value to appear.</p>
         <label class="ph-settings-field-label" for="phLabelTemplateInput">Template</label>
@@ -15435,11 +15448,12 @@
   function phDashWeekDays() {
     const start = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() - ((TODAY.getDay() + 6) % 7));
     const todayKey = keyOf(TODAY);
+    const wdays = phClinicWorkDays();
     const days = [];
     for (let i = 0; i < 7; i++) {
       const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
       const key = keyOf(d);
-      days.push({ key, dow: DAY_SHORT[d.getDay()], dnum: d.getDate(), today: key === todayKey, past: key < todayKey });
+      days.push({ key, dow: DAY_SHORT[d.getDay()], dnum: d.getDate(), today: key === todayKey, past: key < todayKey, work: !!(wdays && wdays.includes(d.getDay())) });
     }
     return days;
   }
@@ -15564,7 +15578,7 @@
       if (disp.length > 2) bits.push(`<svg class="icn" aria-hidden="true"><use href="#i-mail"/></svg> +${disp.length - 2} more`);
       if (pharmN) bits.push(`<svg class="icn" aria-hidden="true"><use href="#i-jar"/></svg> ${pharmN}${pharmCrit ? ` <b class="crit">⚠${pharmCrit}</b>` : ""}`);
       const open = phDashWeekOpenDay === d.key;
-      return `<button type="button" class="ph-wkt-cell${d.today ? " today" : ""}${bits.length ? " has" : ""}${d.past ? " past" : ""}${open ? " open" : ""}" data-ph-dash-week-day="${d.key}" aria-expanded="${open ? "true" : "false"}">
+      return `<button type="button" class="ph-wkt-cell${d.today ? " today" : ""}${bits.length ? " has" : ""}${d.past ? " past" : ""}${d.work ? " wd" : ""}${open ? " open" : ""}" data-ph-dash-week-day="${d.key}" aria-expanded="${open ? "true" : "false"}">
         <span class="ph-wkt-d">${esc(d.dow)} ${d.dnum}${d.today ? ` <em>today</em>` : ""}</span>
         ${bits.length ? bits.map(t => `<span class="ph-wkt-item">${t}</span>`).join("") : `<span class="ph-wkt-dash">—</span>`}
       </button>`;
@@ -15595,6 +15609,21 @@
   function phApptList() {
     if (!Array.isArray(PHARMACY.appointments)) PHARMACY.appointments = [];
     return PHARMACY.appointments;
+  }
+  // per-clinic working days (her ask 2026-09-02: "acupreg work is only
+  // friday... sometimes saturday too"). Each clinic login has its OWN
+  // pharmacy store, so this setting naturally belongs to one clinic --
+  // set Fri(+Sat) in the Acupreg login, leave empty for an every-day one.
+  // Set from ⚙ Settings; empty = no working-day behaviour anywhere.
+  const phClinicWorkDays = () => Array.isArray(PHARMACY.clinicWorkDays) && PHARMACY.clinicWorkDays.length ? PHARMACY.clinicWorkDays : null;
+  function phNextWorkDayKey() {
+    const days = phClinicWorkDays();
+    if (!days) return keyOf(TODAY);
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() + i);
+      if (days.includes(d.getDay())) return keyOf(d);
+    }
+    return keyOf(TODAY);
   }
   function phApptFor(dayKey) {
     return phApptList().filter(a => a.date === dayKey)
@@ -15731,7 +15760,9 @@
   // ---- the paste-import modal ----
   let phApptState = null;   // { dateKey, text }
   function phApptOpen() {
-    phApptState = { dateKey: keyOf(TODAY), text: "" };
+    // a Fridays-only clinic's paste is almost never "for today" -- start on
+    // the next day she actually works there (today when today qualifies)
+    phApptState = { dateKey: phNextWorkDayKey(), text: "" };
     document.getElementById("phApptBackdrop").hidden = false;
     document.getElementById("phApptModal").hidden = false;
     renderApptModal();
@@ -15764,10 +15795,12 @@
     const st = phApptState;
     const todayKey = keyOf(TODAY);
     const chips = [];
+    const wdays = phClinicWorkDays();
     for (let i = 0; i < 7; i++) {
       const d = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() + i);
       const k = keyOf(d);
-      chips.push(`<button type="button" class="ph-cap-tchip${st.dateKey === k ? " on" : ""}" data-ph-appt-day="${k}" aria-pressed="${st.dateKey === k}">${i === 0 ? "Today" : i === 1 ? "Tomorrow" : `${DAY_SHORT[d.getDay()]} ${d.getDate()}`}</button>`);
+      const wk = wdays && wdays.includes(d.getDay());
+      chips.push(`<button type="button" class="ph-cap-tchip${st.dateKey === k ? " on" : ""}${wk ? " wk" : ""}" data-ph-appt-day="${k}" aria-pressed="${st.dateKey === k}">${i === 0 ? "Today" : i === 1 ? "Tomorrow" : `${DAY_SHORT[d.getDay()]} ${d.getDate()}`}</button>`);
     }
     const upcoming = phApptList().filter(a => a.date >= todayKey)
       .sort((a, b) => (a.date + a.time) < (b.date + b.time) ? -1 : 1).slice(0, 20);
@@ -17845,6 +17878,15 @@
         const idx = Number(dashMonthWeek.dataset.phDashMonthWeek);
         phDashMonthOpenWeek = phDashMonthOpenWeek === idx ? null : idx;
         renderPhDashboardPage();
+        return;
+      }
+      // per-clinic working days (⚙ Settings chips, 2026-09-02)
+      const wdChip = e.target.closest("[data-ph-workday]");
+      if (wdChip) {
+        const n = +wdChip.dataset.phWorkday;
+        const cur = Array.isArray(PHARMACY.clinicWorkDays) ? PHARMACY.clinicWorkDays : [];
+        PHARMACY.clinicWorkDays = cur.includes(n) ? cur.filter(x => x !== n) : [...cur, n];
+        savePharmacy(); renderPhSettingsPage();
         return;
       }
       // ---- 📅 appointment schedule handlers (2026-09-01) ----
