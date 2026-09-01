@@ -4528,6 +4528,11 @@
   #pharmacyPage .ph-tp-addbtn:hover { border-color: var(--ph-green); color: var(--ph-green-press); }
   #pharmacyPage .ph-tp-chooser { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--ph-soft); }
 
+  /* her ask (2026-09-01, live on Rebecca So's plan): "make this wider and
+     larger" -- the shared .ph-hx-card is 640px; the plan screen holds a
+     whole phase timeline plus findings, so it gets its own wider/taller
+     modifier rather than resizing the Hx screen too. */
+  #pharmacyPage .ph-tp-card { width: min(940px, 100%); max-height: min(92vh, 100%); }
   #pharmacyPage .ph-tp-title-input {
     font-family: var(--font-body); font-size: 20px; font-weight: 600; color: var(--ph-cream); background: none;
     border: none; border-bottom: 1px solid rgba(246,243,228,0.35); padding: 2px 0 4px; width: 100%; flex: 1 1 auto;
@@ -4537,7 +4542,8 @@
   #pharmacyPage .ph-tp-patient-line { font-size: 12px; color: rgba(246,243,228,0.75); margin: 4px 0 10px; }
 
   #pharmacyPage .ph-tp-fieldgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
-  @media (max-width: 640px) { #pharmacyPage .ph-tp-fieldgrid { grid-template-columns: 1fr; } }
+  #pharmacyPage .ph-tp-examgrid { grid-template-columns: 1fr 1fr 1fr; margin-top: -6px; }
+  @media (max-width: 640px) { #pharmacyPage .ph-tp-fieldgrid, #pharmacyPage .ph-tp-examgrid { grid-template-columns: 1fr; } }
 
   #pharmacyPage .ph-tp-timeline { margin-bottom: 20px; }
   #pharmacyPage .ph-tp-phase-row { display: flex; gap: 10px; }
@@ -24031,6 +24037,12 @@
   function renderHxScreen() {
     const modal = document.getElementById("phHxModal");
     if (!modal || modal.hidden) return;
+    // same scroll-jump bug she reported on the Treatment Plan screen
+    // (2026-09-01, "if i select delete, i have to scroll down again") -- this
+    // screen shares the exact shell and rebuild-on-every-tap pattern, so a
+    // Yes/No tap deep in the question list jumped her to the top here too.
+    const prevBody = modal.querySelector(".ph-hx-body");
+    const prevScroll = prevBody ? prevBody.scrollTop : 0;
     const name = presHxScreenName;
     const rec = phPatientRec(name);   // writable -- opening the screen is a deliberate act, unlike opening a script
     const prog = phHxProgress(name);
@@ -24063,6 +24075,8 @@
       </div>
       <div class="ph-hx-body" id="phHxBody">${phHxBodyHtml(rec)}</div>
     </div>`;
+    const newBody = modal.querySelector(".ph-hx-body");
+    if (newBody) newBody.scrollTop = prevScroll;
     // §3: the timeline opens at the newest (right-hand) end, after the table
     // is in the DOM and has a real scrollWidth
     phRenTimelineScrollEnd();
@@ -24873,6 +24887,9 @@
     return {
       id: uid(), title: tpl ? tpl.name : "New treatment plan",
       diagnosis: "", goal: tpl ? tpl.goal : "", status: "active",
+      // her ask (2026-09-01): the Jing Fang exam trio, recorded on the plan
+      // itself as baseline findings -- visit-to-visit changes go in reviews
+      tongue: "", pulse: "", abdomen: "",
       createdDate: keyOf(TODAY), templateName: tpl ? tpl.name : null,
       phases: (tpl ? tpl.phases : []).map((p, i) => ({
         id: uid(), label: p.label, aim: p.aim, points: p.points || "",
@@ -24997,12 +25014,20 @@
   function renderTpScreen() {
     const modal = document.getElementById("phTpModal");
     if (!modal || modal.hidden) return;
+    // her report (2026-09-01, "if i select delete, i have to scroll down
+    // again"): innerHTML replacement below destroys the scrolled .ph-hx-body,
+    // so every tap inside the modal silently jumped her back to the top --
+    // worst at the bottom-of-screen delete link, whose confirm strip appeared
+    // where she no longer was. Capture/restore the body's scrollTop across
+    // the rebuild so every control keeps her exactly where she tapped.
+    const prevBody = modal.querySelector(".ph-hx-body");
+    const prevScroll = prevBody ? prevBody.scrollTop : 0;
     const name = phTpScreenPatient;
     const plan = phTpFindPlan(name, phTpScreenPlanId);
     if (!plan) { phTpClose(); return; }
     const st = v => phTpStatusMeta(v, PH_TP_STATUSES);
     const armingPlan = phTpDeleteArm === "plan";
-    modal.innerHTML = `<div class="ph-hx-card">
+    modal.innerHTML = `<div class="ph-hx-card ph-tp-card">
       <div class="ph-hx-head">
         <button type="button" class="ph-stocktake-close" data-tp-close="1" aria-label="Close">×</button>
         <div class="ph-hx-head-top">
@@ -25017,6 +25042,11 @@
         <div class="ph-tp-fieldgrid">
           <label class="ph-gd-field"><span>Diagnosis / pattern</span><textarea rows="2" data-tp-field="${plan.id}:diagnosis" placeholder="TCM pattern, presenting complaint…">${esc(plan.diagnosis || "")}</textarea></label>
           <label class="ph-gd-field"><span>Goal / principle</span><textarea rows="2" data-tp-field="${plan.id}:goal" placeholder="What this plan is working toward…">${esc(plan.goal || "")}</textarea></label>
+        </div>
+        <div class="ph-tp-fieldgrid ph-tp-examgrid">
+          <label class="ph-gd-field"><span>👅 Tongue</span><textarea rows="2" data-tp-field="${plan.id}:tongue" placeholder="Body, coat, moisture…">${esc(plan.tongue || "")}</textarea></label>
+          <label class="ph-gd-field"><span>🫀 Pulse</span><textarea rows="2" data-tp-field="${plan.id}:pulse" placeholder="Rate, depth, quality…">${esc(plan.pulse || "")}</textarea></label>
+          <label class="ph-gd-field"><span>🤲 Abdomen</span><textarea rows="2" data-tp-field="${plan.id}:abdomen" placeholder="Fukushin findings…">${esc(plan.abdomen || "")}</textarea></label>
         </div>
         <div class="ph-tp-timeline">
           ${plan.phases.map(ph => phTpPhaseRowHtml(plan, ph)).join("")}
@@ -25034,6 +25064,16 @@
         </div>
       </div>
     </div>`;
+    const newBody = modal.querySelector(".ph-hx-body");
+    if (newBody) newBody.scrollTop = prevScroll;
+    // a confirm strip is taller than the link/× it replaces, so at the very
+    // bottom it can still land just under the fold even with scroll kept --
+    // nudge it into view so Delete/Cancel are always on screen the moment
+    // they exist
+    if (phTpDeleteArm && newBody) {
+      const strip = newBody.querySelector(".ph-confirm-strip");
+      if (strip) strip.scrollIntoView({ block: "nearest" });
+    }
     if (phTpFormulaPickPhase) {
       const input = document.getElementById("phTpFPickInput");
       if (input) { input.focus(); document.getElementById("phTpFPickSugg").innerHTML = phTpFormulaSuggHtml(input.value); }
