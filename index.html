@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260902-110000">
+<meta name="lcm-build" content="20260902-120000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -3373,6 +3373,21 @@
     #pharmacyPage .ph-shell-strip[data-cols="5"] .ph-shell-cell:nth-child(n+4),
     #pharmacyPage .ph-shell-strip[data-cols="6"] .ph-shell-cell:nth-child(n+4) { border-top: 1px solid var(--ph-struct-line); }
   }
+  /* A (2026-09-02): the order queue unfolded inside the Dashboard card */
+  #pharmacyPage .ph-dash-oq { margin: 2px 0 12px; }
+  #pharmacyPage .ph-dash-oq-head { display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-weight: 800; color: var(--ph-green-deep); margin: 2px 0 4px; }
+  #pharmacyPage .ph-dash-oq-head .ph-name-link { font-size: 10.5px; }
+  #pharmacyPage .ph-dash-oq-sup { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ph-soft); margin: 8px 0 3px; }
+  #pharmacyPage .ph-dash-oq-row { display: flex; align-items: center; gap: 8px; padding: 5px 4px; border-top: 1px solid var(--ph-line); font-size: 12px; cursor: pointer; }
+  #pharmacyPage .ph-dash-oq-row b { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ph-green-deep); font-weight: 700; }
+  #pharmacyPage .ph-dash-oq-row .st { flex: none; font-size: 9.5px; font-weight: 700; color: var(--ph-soft); white-space: nowrap; }
+  #pharmacyPage .ph-dash-oq-row.open { background: var(--ph-green-tint); border-radius: 8px 8px 0 0; }
+  #pharmacyPage .ph-dash-oexp { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; background: var(--ph-paper); border-radius: 0 0 10px 10px; padding: 8px 10px; margin-bottom: 4px; font-size: 11px; }
+  #pharmacyPage .ph-dash-oexp select { max-width: 45%; min-width: 0; }
+  #pharmacyPage .ph-dash-oexp .tot { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--ph-soft); }
+  #pharmacyPage .ph-dash-oexp .tot b { color: var(--ph-green-deep); }
+  #pharmacyPage .ph-dash-oexp .del { flex: none; border: none; background: var(--ph-white); border-radius: 999px; width: 26px; height: 26px; color: var(--ph-soft); cursor: pointer; font-family: inherit; }
+  #pharmacyPage .ph-dash-oq-note { font-size: 10px; color: var(--ph-faint); margin-top: 6px; }
   #pharmacyPage .ph-dash-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 1072px; margin: var(--sp-6) auto 0; }
   #pharmacyPage .ph-dash-cards.ph-sup-stack { grid-template-columns: 1fr; }
   /* her spec 2026-08-23: scoped marker on just the Order-these/Refill-these/
@@ -14749,6 +14764,50 @@
   // (line ~6155) and Restock's own toOrder list -- matching it here exactly
   // is the "one definition" fix, not a second count built for this widget.
   window.__sigDebugTEMP = { boards: phSigUsageBoards, sort: phSigRankedSort, list: phDashNeedsOrderingHtml };
+  // ============ A (her pick, 2026-09-02 calibration + approved mock
+  // 7bf9f57e): on phones, ordering unfolds INSIDE the Dashboard -- the same
+  // h.order queue the To Order page carries, supplier-grouped, in her
+  // dashboard row style. Tapping a row opens its ordering controls inline
+  // (the row opening, per her continuity spec) -- the selects carry the
+  // SAME data-ph-order-* attributes the To Order page uses, so the existing
+  // delegated handlers do all the work. Desktop behaviour is untouched:
+  // the same buttons still jump to the page there. ============
+  let phDashOrderExpand = false, phDashOrderRowOpen = null, phDashRefillExpand = false;
+  function phDashOrderQueueHtml() {
+    const q = PHARMACY.herbs.filter(herbNeedsOrder);
+    const collapse = `<div class="ph-dash-oq-head"><span>On the order list · ${q.length}</span><button type="button" class="ph-name-link" data-ph-dash-collapse="order">collapse ▴</button></div>`;
+    if (!q.length) return `<div class="ph-dash-oq">${collapse}<div class="fam-empty">The order list is empty — Plan ▾ on any row below adds to it.</div></div>`;
+    const bySup = {};
+    q.forEach(h => { const s = (phActiveSupplier(h) || {}).name || h.supplier || "No supplier recorded"; (bySup[s] = bySup[s] || []).push(h); });
+    const row = h => {
+      const open = phDashOrderRowOpen === h.id;
+      const pack = h.orderPack || phPackFor(h), qty = h.orderQty != null ? h.orderQty : 1;
+      const lineTotal = h.bottleCost != null ? phMoney(phRound2(h.bottleCost * qty)) : "—";
+      const status = h.arrivedDate ? `✓ Arrived` : h.ordered ? `🚚 Ordered ${esc(phShortDate(h.orderedDate))}` : `🛒 To order`;
+      return `<div class="ph-dash-oq-row${open ? " open" : ""}" data-ph-dash-oq-row="${h.id}">
+        ${phDashRingHtml(h)}
+        ${phHerbCode(h) ? `<span class="ph-dash-code">${esc(phHerbCode(h))}</span>` : ""}
+        <b>${esc(phDispName(h.name, phIsFormula(h)))}</b>
+        <span class="st">${status}</span>
+      </div>
+      ${open ? `<div class="ph-dash-oexp">
+        <select class="field-bare" data-ph-order-sup="${h.id}" aria-label="Supplier for ${esc(h.name)}">${phSupplierOptionsHtml(phIsFormula(h), h.supplier || "")}</select>
+        <select class="field-bare" data-ph-order-pack="${h.id}" aria-label="Bottle size">
+          <option value="${PH_PACK_HERB}"${pack === PH_PACK_HERB ? " selected" : ""}>${PH_PACK_HERB}g</option>
+          <option value="${PH_PACK_FORMULA}"${pack === PH_PACK_FORMULA ? " selected" : ""}>${PH_PACK_FORMULA}g</option>
+        </select>
+        <select class="field-bare" data-ph-order-qty="${h.id}" aria-label="How many bottles">
+          ${[1, 2, 3, 4, 5, 6].map(n => `<option value="${n}"${qty === n ? " selected" : ""}>× ${n}</option>`).join("")}
+        </select>
+        <span class="tot">${h.bottleCost != null ? `$${h.bottleCost} · ` : ""}<b>${lineTotal}</b></span>
+        <button type="button" class="del" data-ph-order="${h.id}" title="Take off the order list" aria-label="Take ${esc(h.name)} off the order list">×</button>
+      </div>` : ""}`;
+    };
+    return `<div class="ph-dash-oq">${collapse}${Object.keys(bySup).sort().map(sup =>
+      `<div class="ph-dash-oq-sup">${esc(sup)} · ${bySup[sup].length}</div>${bySup[sup].sort(phByName).map(row).join("")}`).join("")}
+      <div class="ph-dash-oq-note">Ordered/Arrived stages and 📋 Copy for email stay on the desktop To Order page, as you chose.</div>
+    </div>`;
+  }
   function phDashNeedsOrderingHtml() {
     // her spec (2026-08-19): "out-of-stock first then low" -- driven by the
     // SAME canonical phHerbStatusKey the strip's own zero/low counts use
@@ -14795,8 +14854,8 @@
           ${orderBtn(h)}
         </div>`;
       }).join("")}</div></div>
-      <div class="ph-c1-phone"><div class="ph-dash-list ph-c1-card">${sorted.slice(0, PH_DASH_LIST_ROWS).map(h => phC1FallbackRowHtml(h, orderBtn(h))).join("")}</div></div>
-      ${sorted.length > PH_DASH_LIST_ROWS ? `<div class="ph-dash-seeall"><button type="button" class="ph-name-link" data-ph-dash-seeall="toorder">See all ${sorted.length} →</button></div>` : ""}${openToOrder}`;
+      <div class="ph-c1-phone"><div class="ph-dash-list ph-c1-card">${sorted.slice(0, phDashOrderExpand ? Infinity : PH_DASH_LIST_ROWS).map(h => phC1FallbackRowHtml(h, orderBtn(h))).join("")}</div></div>
+      ${sorted.length > PH_DASH_LIST_ROWS && !phDashOrderExpand ? `<div class="ph-dash-seeall"><button type="button" class="ph-name-link" data-ph-dash-expand="order" data-ph-dash-seeall="toorder">See all ${sorted.length} →</button></div>` : ""}${openToOrder}`;
     }
     // her ask (2026-08-21, STEP 7): ranked most-used first, unranked pushed
     // under a quiet divider -- same items this filter always selected, just
@@ -14806,12 +14865,12 @@
     const boardMap = new Map([...boards.herbs, ...boards.formulas].map(r => [r.h, r]));
     const { ranked, unranked } = phSigRankedSort(items, boardMap);
     const ordered = [...ranked, ...unranked];
-    const shown = ordered.slice(0, PH_DASH_LIST_ROWS);
+    const shown = ordered.slice(0, phDashOrderExpand ? Infinity : PH_DASH_LIST_ROWS);
     const dividerIdx = shown.findIndex(h => !boardMap.has(h));
     return `<div class="ph-dash-list">${shown.map((h, i) =>
       (i === dividerIdx ? phSigListDividerHtml() : "") + phSigListRowHtml(h, boardMap.get(h), orderBtn(h))
     ).join("")}</div>
-    ${ordered.length > PH_DASH_LIST_ROWS ? `<div class="ph-dash-seeall"><button type="button" class="ph-name-link" data-ph-dash-seeall="toorder">See all ${ordered.length} →</button></div>` : ""}${openToOrder}`;
+    ${ordered.length > PH_DASH_LIST_ROWS && !phDashOrderExpand ? `<div class="ph-dash-seeall"><button type="button" class="ph-name-link" data-ph-dash-expand="order" data-ph-dash-seeall="toorder">See all ${ordered.length} →</button></div>` : ""}${openToOrder}`;
   }
   // Today/Yesterday/"D Mon" for a day-only date, or a real clock time when we
   // have millisecond precision (only dispense.at and stocktake.finishedAt do)
@@ -15199,7 +15258,10 @@
   // it -- no heading, no empty box, no "all clear" message. Content starts
   // at the tile row instead.
   function phDashNeedsActionHtml() {
-    const cards = [phDashTaskStocktakeHtml(), ...phDashMustGoToday().map(phDashTaskMustGoHtml)].filter(Boolean);
+    // stocktake card moved out of the top slot (her call 2026-09-02:
+    // "stocktake/herb count doesnt need to be on top of the page") -- it
+    // renders down by This Month now, stocktake's own section
+    const cards = phDashMustGoToday().map(phDashTaskMustGoHtml).filter(Boolean);
     if (!cards.length) return "";
     // her "dashboard on a phone" spec (2026-08-27) STEP 7: this heading
     // joins "Most urgent"/"Holding up a script" in dropping to a thin
@@ -15259,19 +15321,21 @@
           ${refillBtn(h)}
         </div>`;
       }).join("")}</div></div>
-      <div class="ph-c1-phone"><div class="ph-dash-list ph-c1-card">${items.slice(0, PH_DASH_LIST_ROWS).map(h => phC1FallbackRowHtml(h, phC1PlainRefillBtn(h))).join("")}</div></div>
-        ${items.length > PH_DASH_LIST_ROWS ? `<div class="ph-dash-seeall"><button type="button" class="ph-name-link" data-ph-tab="refill">See all ${items.length} →</button></div>` : ""}`;
+      <div class="ph-c1-phone"><div class="ph-dash-list ph-c1-card" data-ph-dash-makerows="1">${items.slice(0, phDashRefillExpand ? Infinity : PH_DASH_LIST_ROWS).map(h => phC1FallbackRowHtml(h, phC1PlainRefillBtn(h))).join("")}</div></div>
+        ${items.length > PH_DASH_LIST_ROWS && !phDashRefillExpand ? `<div class="ph-dash-seeall"><button type="button" class="ph-name-link" data-ph-dash-expand="refill" data-ph-tab="refill">See all ${items.length} →</button></div>` : ""}
+        ${phDashRefillExpand ? `<div class="ph-dash-seeall"><button type="button" class="ph-name-link" data-ph-dash-collapse="refill">collapse ▴</button></div>` : ""}`;
     }
     const boards = phSigUsageBoards();
     const boardMap = new Map([...boards.herbs, ...boards.formulas].map(r => [r.h, r]));
     const { ranked, unranked } = phSigRankedSort(items, boardMap);
     const ordered = [...ranked, ...unranked];
-    const shown = ordered.slice(0, PH_DASH_LIST_ROWS);
+    const shown = ordered.slice(0, phDashRefillExpand ? Infinity : PH_DASH_LIST_ROWS);
     const dividerIdx = shown.findIndex(h => !boardMap.has(h));
-    return `<div class="ph-dash-list ph-dash-refill-list">${shown.map((h, i) =>
+    return `<div class="ph-dash-list ph-dash-refill-list" data-ph-dash-makerows="1">${shown.map((h, i) =>
       (i === dividerIdx ? phSigListDividerHtml() : "") + phSigListRowHtml(h, boardMap.get(h), refillBtn(h), phC1PlainRefillBtn(h))
     ).join("")}</div>
-      ${ordered.length > PH_DASH_LIST_ROWS ? `<div class="ph-dash-seeall"><button type="button" class="ph-name-link" data-ph-tab="refill">See all ${ordered.length} →</button></div>` : ""}`;
+      ${ordered.length > PH_DASH_LIST_ROWS && !phDashRefillExpand ? `<div class="ph-dash-seeall"><button type="button" class="ph-name-link" data-ph-dash-expand="refill" data-ph-tab="refill">See all ${ordered.length} →</button></div>` : ""}
+      ${phDashRefillExpand ? `<div class="ph-dash-seeall"><button type="button" class="ph-name-link" data-ph-dash-collapse="refill">collapse ▴</button></div>` : ""}`;
   }
 
   // ---- "This week" table (her ask 2026-08-30; rebuilt 2026-09-01) ---------
@@ -15771,7 +15835,7 @@
   function phDashActionStripHtml() {
     const toOrder = PHARMACY.herbs.filter(herbNeedsOrder).length;
     return `<div class="ph-dash-actrow">
-      <button type="button" class="ph-dash-actbtn primary" data-ph-tab="restock"><svg class="icn" aria-hidden="true"><use href="#i-cart"/></svg> To Order${toOrder ? ` <span class="cnt">${toOrder}</span>` : ""}</button>
+      <button type="button" class="ph-dash-actbtn primary" data-ph-dash-expand="order" data-ph-tab="restock"><svg class="icn" aria-hidden="true"><use href="#i-cart"/></svg> To Order${toOrder ? ` <span class="cnt">${toOrder}</span>` : ""}</button>
       <button type="button" class="ph-dash-actbtn" data-ph-tab="refill"><svg class="icn" aria-hidden="true"><use href="#i-jar"/></svg> Formula refill</button>
       <button type="button" class="ph-dash-actbtn" data-cap-open="1">📷 Patient photo</button>
     </div>`;
@@ -15889,10 +15953,12 @@
       ${monday ? phDashMondayBandHtml() : ""}
       ${monday ? phDashMondayReviewHtml() : ""}
       ${phDashWeekHtml()}
+      ${(st => st ? `<div class="ph-dash-tasks">${st}</div>` : "")(phDashTaskStocktakeHtml())}
       ${phDashMonthHtml()}
       <div class="ph-dash-cards">
         <section class="ph-widget ph-dash-card ph-dash-density">
           <div class="section-head"><h2><span class="ph-dash-emoji"><svg class="icn" aria-hidden="true"><use href="#i-cart"/></svg></span> Order these</h2><span class="rule"></span>${phSigWindowSubheadHtml("Most-used first")}</div>
+          ${phDashOrderExpand ? phDashOrderQueueHtml() : ""}
           ${phDashNeedsOrderingHtml()}
         </section>
         <section class="ph-widget ph-dash-card ph-dash-density">
@@ -17544,6 +17610,40 @@
           if (!ta.hidden) ta.focus();
         }
         return;
+      }
+      // ---- A (2026-09-02): ordering unfolds ON the Dashboard on phones.
+      // These run BEFORE the data-ph-tab handler so the same button still
+      // jumps to the page on desktop (both attrs on it; width decides). ----
+      const dashExpand = e.target.closest("[data-ph-dash-expand]");
+      if (dashExpand && window.innerWidth <= 900) {
+        if (dashExpand.dataset.phDashExpand === "order") { phDashOrderExpand = true; phDashOrderRowOpen = null; }
+        else phDashRefillExpand = true;
+        renderPhDashboardPage();
+        const t0 = document.querySelector(dashExpand.dataset.phDashExpand === "order" ? ".ph-dash-oq" : ".ph-dash-refill-list");
+        if (t0) t0.scrollIntoView({ block: "start", behavior: "smooth" });
+        return;
+      }
+      const dashCollapse = e.target.closest("[data-ph-dash-collapse]");
+      if (dashCollapse) {
+        if (dashCollapse.dataset.phDashCollapse === "order") { phDashOrderExpand = false; phDashOrderRowOpen = null; }
+        else phDashRefillExpand = false;
+        renderPhDashboardPage();
+        return;
+      }
+      const oqRow = e.target.closest("[data-ph-dash-oq-row]");
+      if (oqRow && !e.target.closest("select, button, input, label, a")) {
+        const id = oqRow.dataset.phDashOqRow;
+        phDashOrderRowOpen = phDashOrderRowOpen === id ? null : id;
+        renderPhDashboardPage();
+        return;
+      }
+      // refill rows: on phones the ROW is the make action (bench mode, her
+      // pick) -- any real control inside keeps its own job untouched
+      const makeWrap = e.target.closest("[data-ph-dash-makerows]");
+      if (makeWrap && window.innerWidth <= 900 && !e.target.closest("select, button, input, label, a")) {
+        const rowEl = e.target.closest("[data-ph-dash-makerows] > *");
+        const idBtn = rowEl && rowEl.querySelector("[data-ph-dash-herb-edit]");
+        if (idBtn) { phDashOpenRefill(idBtn.dataset.phDashHerbEdit); return; }
       }
       const phTab = e.target.closest("[data-ph-tab]");
       if (phTab) {
