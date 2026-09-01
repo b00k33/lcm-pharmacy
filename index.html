@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260902-020000">
+<meta name="lcm-build" content="20260902-023000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -4776,6 +4776,11 @@
   #pharmacyPage .ph-ltr-fnd { background: var(--ph-paper); border-radius: 11px; padding: 10px 12px; text-align: center; }
   #pharmacyPage .ph-ltr-fndsvg { width: 100px; height: 120px; }
   #pharmacyPage .ph-ltr-fndsvg.wide { width: 136px; }
+  /* real tongue photo beside the zone diagram (2026-09-02) */
+  #pharmacyPage .ph-ltr-tset { display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; }
+  #pharmacyPage .ph-ltr-tpwrap { position: relative; display: inline-flex; }
+  #pharmacyPage .ph-ltr-tphoto { height: 120px; max-width: 100px; object-fit: cover; border-radius: 11px; }
+  #pharmacyPage .ph-ltr-tpwrap i { position: absolute; bottom: 4px; left: 4px; font-style: normal; font-size: 8.5px; font-weight: 800; background: rgba(255,255,255,0.85); color: var(--ph-green-deep); border-radius: 999px; padding: 1px 6px; }
   #pharmacyPage .ph-ltr-fndt { font-size: 11.5px; line-height: 1.45; text-align: left; margin-top: 4px; }
   #pharmacyPage .ph-ltr-fndt b { display: block; font-size: 11px; color: var(--ph-green-deep); margin-bottom: 2px; }
   #pharmacyPage .ph-ltr-fndt .bc { display: flex; gap: 6px; align-items: center; margin-bottom: 3px; }
@@ -26173,6 +26178,32 @@
     </svg>`;
   }
   const phLtrZoneNames = diag => [...phLtrZoneMarks].filter(k => k.startsWith(diag + ":")).map(k => PH_LTR_ZONES[diag === "pulse" ? "pulse" : diag].zones[k.split(":")[1]].label);
+  // real tongue photo beside the diagram (her yes 2026-09-02, layout approved
+  // in the letter mock): the patient's LATEST tongue photo, automatic, no
+  // add-button -- no photo on file just means the diagram stands alone. Held
+  // as a data URL (not the cache's blob objectUrl) so the same string works
+  // in the printed-PDF popup too; loaded async right after the letter opens.
+  let phLtrTongueDataUrl = null, phLtrTongueDate = null, phLtrTongueReqId = 0;
+  async function phLtrEnsureTonguePhoto(pk) {
+    const req = ++phLtrTongueReqId;
+    if (!phRenPhotosFor(pk)) { try { await phRenLoadPhotosFor(pk); } catch (e) {} }
+    if (req !== phLtrTongueReqId) return;   // a different letter opened meanwhile
+    const p = (phRenPhotosFor(pk) || []).filter(x => phRenTypeOf(x) === "tongue")
+      .sort((a, b) => phRenDateKeyOf(b).localeCompare(phRenDateKeyOf(a)) || (b.createdAt || 0) - (a.createdAt || 0))[0];
+    if (!p || !p.blob) return;
+    const fr = new FileReader();
+    fr.onload = () => {
+      if (req !== phLtrTongueReqId) return;
+      phLtrTongueDataUrl = fr.result; phLtrTongueDate = phRenDateKeyOf(p);
+      // don't yank her cursor if she's already typing -- the photo joins on
+      // the next natural re-render instead (the PDF has it either way)
+      const modal = document.getElementById("phLtrModal");
+      const ae = document.activeElement;
+      if (modal && !modal.hidden && ae && modal.contains(ae) && (ae.isContentEditable || ae.tagName === "INPUT")) return;
+      renderLtrScreen();
+    };
+    fr.readAsDataURL(p.blob);
+  }
   function phLtrFindingsHtml(ctx, interactive) {
     const f = phLtrFnd;
     const fld = (key, ph) => interactive
@@ -26184,9 +26215,14 @@
     const quals = interactive
       ? `<div class="ph-ltr-quals">${PH_LTR_QUALS.map(q => `<button type="button" class="ph-ltr-qual${phLtrQualMarks.has(q.id) ? " on" : ""}" data-ltr-qual="${q.id}">${q.label}</button>`).join("")}</div>`
       : (phLtrQualMarks.size ? `<div class="ph-ltr-fndnote-s">${[...phLtrQualMarks].map(id => (PH_LTR_QUALS.find(q => q.id === id) || {}).label).filter(Boolean).join(" · ")}</div>` : "");
+    // photo dated other than today gets a small honest date tag -- the
+    // letter reads as "today", the picture might be from a prior visit
+    const photo = phLtrTongueDataUrl
+      ? `<span class="ph-ltr-tpwrap"><img class="ph-ltr-tphoto" src="${phLtrTongueDataUrl}" alt="Tongue photo">${phLtrTongueDate && phLtrTongueDate !== keyOf(TODAY) ? `<i>${esc(phShortDate(phLtrTongueDate))}</i>` : ""}</span>`
+      : "";
     return `<div class="ph-ltr-findings">
       <div class="ph-ltr-fnd">
-        ${phLtrTongueSvg(interactive)}
+        ${photo ? `<div class="ph-ltr-tset">${photo}${phLtrTongueSvg(interactive)}</div>` : phLtrTongueSvg(interactive)}
         ${quals}
         <div class="ph-ltr-fndt"><b>👅 Tongue</b>
           <span class="bc"><i>Body</i>${fld("tongueBody", "e.g. pale, slightly swollen")}</span>
@@ -26370,6 +26406,9 @@
     phLtrScriptId = scriptId; phLtrRecId = null; phLtrTmplSaveOpen = false;
     phLtrOff = new Set(); phLtrEdits = {}; phLtrSeeded = new Set();
     phLtrFnd = {}; phLtrZoneMarks = new Set(); phLtrQualMarks = new Set();
+    // latest tongue photo joins the findings automatically (her yes 2026-09-02)
+    phLtrTongueDataUrl = null; phLtrTongueDate = null;
+    phLtrEnsureTonguePhoto(phPatientKey(presPatientFor(t) || t.name));
     // her "both" (findings source): pre-fill from the plan's last known trio
     // -- the latest review carrying one, else the plan's baseline fields
     const rec0 = phPatientPeek(presPatientFor(t) || t.name);
@@ -26456,6 +26495,10 @@
       .ph-ltr-findings{display:flex;gap:14px;flex-wrap:wrap}
       .ph-ltr-fnd{flex:1 1 170px;background:#F6FAF7;border-radius:11px;padding:10px 12px;text-align:center}
       .ph-ltr-fndsvg{width:100px;height:120px}.ph-ltr-fndsvg.wide{width:136px}
+      .ph-ltr-tset{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap}
+      .ph-ltr-tpwrap{position:relative;display:inline-flex}
+      .ph-ltr-tphoto{height:120px;max-width:100px;object-fit:cover;border-radius:11px}
+      .ph-ltr-tpwrap i{position:absolute;bottom:4px;left:4px;font-style:normal;font-size:8.5px;font-weight:bold;background:rgba(255,255,255,.85);color:#0E4D2A;border-radius:999px;padding:1px 6px}
       .ph-ltr-fndt{font-size:11.5px;line-height:1.45;text-align:left;margin-top:4px}
       .ph-ltr-fndt b{display:block;font-size:11px;color:#0E4D2A;margin-bottom:2px}
       .ph-ltr-fndt .bc{display:flex;gap:6px;margin-bottom:3px}
