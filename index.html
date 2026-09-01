@@ -4594,6 +4594,11 @@
   #pharmacyPage .ph-tp-review-note { flex: 1; font-size: 12.5px; color: var(--ph-ink, #16281D); line-height: 1.5; }
   #pharmacyPage .ph-tp-review-add { display: flex; gap: 8px; margin-top: 8px; }
   #pharmacyPage .ph-tp-review-add input { flex: 1; padding: 8px 10px; border: 1px solid var(--ph-line); border-radius: var(--field-radius-sm, 8px); font: inherit; font-size: 12.5px; }
+  /* her yes (2026-09-01): tongue/pulse/abdomen snapshot on every review */
+  #pharmacyPage .ph-tp-review-examrow { display: flex; gap: 8px; margin-top: 6px; }
+  #pharmacyPage .ph-tp-review-examrow input { flex: 1; min-width: 0; padding: 6px 10px; border: 1px solid var(--ph-line); border-radius: var(--field-radius-sm, 8px); font: inherit; font-size: 11.5px; }
+  #pharmacyPage .ph-tp-review-exam { display: block; font-size: 11.5px; color: var(--ph-soft); margin-top: 2px; }
+  #pharmacyPage .ph-tp-glance { margin-top: 6px; }
   #pharmacyPage .ph-tp-delzone { padding-top: 14px; border-top: 1px solid var(--ph-line); display: flex; align-items: center; gap: 14px; }
   #pharmacyPage .ph-tp-delzone > .tab-link { color: var(--ph-negative, #B4483A); font-size: 12px; margin-left: auto; }
   /* patient-letter view (2026-09-01 follow-up push, approved mock tab 3) */
@@ -14257,14 +14262,14 @@
       { icon: "i-search", label: "Jump to search", run: () => phTopbarFocus("phSearch") },
       { icon: "i-plus", label: "Add herb", run: () => document.getElementById("phHerbAddBtn")?.click() },
     ],
-    // her mockup: print + mark-all-arrived icons on To Order's topbar.
-    // Mark-all-arrived generalizes the existing per-supplier "✓ All
-    // arrived" button (same phArrive() call, same no-confirm precedent --
-    // that button has never asked "are you sure?" either) to every
-    // supplier at once; print is new but follows phPrintListing's own
-    // pattern exactly (phPrintOrderList, defined near it above).
+    // her mockup: mark-all-arrived icon on To Order's topbar -- generalizes
+    // the existing per-supplier "✓ All arrived" button (same phArrive()
+    // call, same no-confirm precedent) to every supplier at once. The
+    // "Print order list" button that sat beside it was removed 2026-09-01
+    // at her direct yes -- she never prints orders ("i dont print. allow me
+    // to copy list for email"); each supplier band's 📋 Copy for email is
+    // the real workflow. phPrintOrderList itself stays defined, unused.
     restock: [
-      { icon: "i-print", label: "Print order list", run: () => phPrintOrderList() },
       { icon: "i-check", label: "Mark all arrived", run: () => phArrive(PHARMACY.herbs.filter(herbNeedsOrder)) },
     ],
     // her ask (2026-08-16, "when i press stocktake, nothing happens"): she
@@ -17311,9 +17316,19 @@
       if (tpReviewAdd) {
         const input = document.getElementById("phTpReviewInput");
         const note = (input && input.value || "").trim();
-        if (!note) return;
+        const fld = id => ((document.getElementById(id) || {}).value || "").trim();
+        const tongue = fld("phTpReviewTongue"), pulse = fld("phTpReviewPulse"), abdomen = fld("phTpReviewAbdomen");
+        // findings without a note are still a real review (her yes 2026-09-01)
+        if (!note && !tongue && !pulse && !abdomen) return;
         const plan = phTpFindPlan(phTpScreenPatient, tpReviewAdd.dataset.tpReviewAdd);
-        if (plan) { plan.reviews.push({ id: uid(), date: keyOf(TODAY), note }); savePharmacy(); renderTpScreen(); }
+        if (plan) {
+          const r = { id: uid(), date: keyOf(TODAY), note };
+          if (tongue) r.tongue = tongue;
+          if (pulse) r.pulse = pulse;
+          if (abdomen) r.abdomen = abdomen;
+          plan.reviews.push(r);
+          savePharmacy(); renderTpScreen();
+        }
         return;
       }
       const tpReviewDel = e.target.closest("[data-tp-review-del]");
@@ -22858,8 +22873,20 @@
         }).join("")}</span>` : ""}
       </button>`;
     }
+    // her yes (2026-09-01): plans visible at a glance HERE, not only inside
+    // the expanded History card -- active plan's name + current phase, one
+    // tap straight into it. Same quiet row shape as the history row above.
+    // No plans -> no row at all (a "no plans yet" line on 700+ patients
+    // would be noise, and + New treatment plan lives in the History card).
+    const plans = phTpPlans(name);
+    const activePlan = plans.find(p => p.status === "active") || plans[0];
+    const planRowHtml = activePlan ? `<button type="button" class="ph-hx-row hasanswers ph-tp-glance" data-tp-plan-open="${esc(name)}|${activePlan.id}">
+        <span class="ph-hx-lead">\ud83d\uddc2 ${esc(activePlan.title || "Treatment plan")}${(pc => pc ? ` \u2014 ${esc(pc.label)}` : "")(phTpPlanCurrentPhase(activePlan))}</span>
+        <span class="ph-hx-action">${plans.length > 1 ? `${plans.length} plans` : "Open"}</span>
+      </button>` : "";
     return `<div class="ph-hx-summary">
       ${rowHtml}
+      ${planRowHtml}
       <label class="ph-medhx-notes-lbl" for="presMedHxNotes">Other / allergies / current medications</label>
       <textarea id="presMedHxNotes" rows="2" placeholder="Anything else worth knowing before writing a script\u2026">${esc(notes)}</textarea>
     </div>`;
@@ -25046,9 +25073,12 @@
   }
   function phTpReviewRowHtml(plan, r) {
     const arming = phTpDeleteArm === r.id;
+    // her yes (2026-09-01): each review carries its own tongue/pulse/abdomen
+    // snapshot alongside the note -- shown as one quiet findings line
+    const exam = [r.tongue && `👅 ${esc(r.tongue)}`, r.pulse && `🫀 ${esc(r.pulse)}`, r.abdomen && `🤲 ${esc(r.abdomen)}`].filter(Boolean).join(" · ");
     return `<div class="ph-tp-review-row">
       <span class="ph-tp-review-date">${esc(phShortDate(r.date))}</span>
-      <span class="ph-tp-review-note">${esc(r.note)}</span>
+      <span class="ph-tp-review-note">${esc(r.note)}${exam ? `<span class="ph-tp-review-exam">${exam}</span>` : ""}</span>
       ${arming ? "" : `<button type="button" class="del" data-tp-review-del="${plan.id}:${r.id}" title="Delete this note" aria-label="Delete note">×</button>`}
       ${arming ? `<div class="ph-confirm-strip"><span>Delete this note?</span><button type="button" class="btn-save" data-tp-review-del-yes="${plan.id}:${r.id}">Delete</button><button type="button" class="btn-cancel" data-tp-review-del-no="1">Cancel</button></div>` : ""}
     </div>`;
@@ -25059,6 +25089,11 @@
   // diagnosis, tongue/pulse/abdomen, review notes, prices -- clinical
   // internals, not letter content. ----
   const phTpFirstName = name => phTitle(String(name || "").trim().split(/\s+/)[0] || "");
+  // her yes (2026-09-01): fertility plans (from the Cycle & IVF template)
+  // also get the "after your pregnancy test" section, the one structural
+  // idea kept from her reference letter -- rewritten in her voice, never
+  // that clinic's own content. Generic plans skip it entirely.
+  const phTpIsFertilityPlan = plan => plan.templateName === "Cycle & IVF Protocol";
   function phTpLetterText(name, plan) {
     const cur = phTpPlanCurrentPhase(plan);
     const lines = (plan.phases || []).map(p =>
@@ -25067,6 +25102,9 @@
       + `Here's the treatment plan we've put together for you. Let me know if anything doesn't make sense, or if anything changes for you along the way.\n\n`
       + (cur ? `Where you are right now: ${cur.label}\n\n` : "")
       + `Your plan, stage by stage:\n\n${lines.join("\n\n")}\n\n`
+      + (phTpIsFertilityPlan(plan)
+        ? `After your pregnancy test:\nPlease book a longer review appointment once you've tested, so we can go through the result properly together.\n• If it's positive — we'll move into weekly support for early pregnancy and talk through what to expect.\n• If it's negative — we'll go through this cycle in detail and adjust the plan before the next one.\n\n`
+        : "")
       + `Warmly,\n`;
   }
   function phTpLetterDocHtml(name, plan) {
@@ -25093,6 +25131,10 @@
       <h2>Your plan, stage by stage</h2>
       <table class="plan"><thead><tr><th>Stage</th><th>What we're doing</th><th>What it's for</th></tr></thead>
       <tbody>${(plan.phases || []).map(p => `<tr><td><b>${esc(p.label)}</b></td><td>${p.formulaName ? esc(p.formulaName) : "As discussed"}</td><td>${esc(p.aim || "")}</td></tr>`).join("")}</tbody></table>
+      ${phTpIsFertilityPlan(plan) ? `<h2>After your pregnancy test</h2>
+      <p>Please book a longer review appointment once you've tested, so we can go through the result properly together.</p>
+      <p><b>If it's positive</b> — we'll move into weekly support for early pregnancy and talk through what to expect.<br>
+      <b>If it's negative</b> — we'll go through this cycle in detail and adjust the plan before the next one.</p>` : ""}
       <p class="sig">Warmly,</p>`;
   }
   let phTpLetterOpen = false;
@@ -25128,6 +25170,10 @@
         <div class="ph-tp-lh">Your plan, stage by stage</div>
         <table class="ph-tp-ltable"><thead><tr><th>Stage</th><th>What we're doing</th><th>What it's for</th></tr></thead>
         <tbody>${(plan.phases || []).map(p => `<tr><td><b>${esc(p.label)}</b></td><td>${p.formulaName ? esc(p.formulaName) : "As discussed"}</td><td>${esc(p.aim || "")}</td></tr>`).join("")}</tbody></table>
+        ${phTpIsFertilityPlan(plan) ? `<div class="ph-tp-lh">After your pregnancy test</div>
+        <p>Please book a longer review appointment once you've tested, so we can go through the result properly together.</p>
+        <p><b>If it's positive</b> — we'll move into weekly support for early pregnancy and talk through what to expect.<br>
+        <b>If it's negative</b> — we'll go through this cycle in detail and adjust the plan before the next one.</p>` : ""}
         <p style="margin-top:20px">Warmly,</p>
         <p class="ph-tp-lnote">Generated fresh from the plan — clinical notes, findings and reviews stay out of it. Copy it into an email, or export a PDF to attach.</p>
       </div>`;
@@ -25178,6 +25224,11 @@
           <div class="ph-tp-section-head"><b>Review notes</b></div>
           ${plan.reviews.slice().sort((a, b) => (b.date || "").localeCompare(a.date || "")).map(r => phTpReviewRowHtml(plan, r)).join("") || `<div class="ph-hx-constit-note">Nothing logged yet.</div>`}
           <div class="ph-tp-review-add"><input type="text" id="phTpReviewInput" placeholder="Add a review note…" aria-label="New review note"><button type="button" class="ph-load-btn on" data-tp-review-add="${plan.id}">Add</button></div>
+          <div class="ph-tp-review-examrow">
+            <input type="text" id="phTpReviewTongue" placeholder="👅 Tongue" aria-label="Tongue findings for this review">
+            <input type="text" id="phTpReviewPulse" placeholder="🫀 Pulse" aria-label="Pulse findings for this review">
+            <input type="text" id="phTpReviewAbdomen" placeholder="🤲 Abdomen" aria-label="Abdomen findings for this review">
+          </div>
         </div>
         <div class="ph-tp-delzone">
           <button type="button" class="ph-load-btn on" data-tp-letter-open="1">✉ Patient letter</button>
