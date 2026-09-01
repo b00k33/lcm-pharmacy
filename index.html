@@ -4004,7 +4004,8 @@
     display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px;
     padding: 8px 16px; background: var(--ph-green-deep); color: var(--ph-cream);
   }
-  #pharmacyPage .ph-pres-band .ph-band-name { font-size: 16px; font-weight: 700; color: var(--ph-white); }
+  #pharmacyPage .ph-pres-band .ph-band-name { font-size: 16px; font-weight: 700; color: var(--ph-white); background: none; border: none; padding: 0; font-family: inherit; cursor: pointer; text-align: left; }
+  #pharmacyPage .ph-pres-band .ph-band-name:hover { text-decoration: underline dotted; text-underline-offset: 3px; }
   #pharmacyPage .ph-pres-band .ph-pres-type { background: transparent; color: var(--ph-cream); border-color: rgba(255,255,255,0.45); }
   #pharmacyPage .ph-pres-band .ph-band-meta { font-size: 12px; color: color-mix(in oklab, var(--ph-cream) 78%, var(--ph-green-deep)); }
   #pharmacyPage .ph-pres-band .ph-print-btn { background: transparent; border-color: rgba(255,255,255,0.45); }
@@ -16997,6 +16998,24 @@
         const inp = document.getElementById("presEditName");
         document.getElementById("presNameLock").hidden = true;
         inp.hidden = false; inp.focus(); inp.select();
+        const t0 = PRESC.items.find(x => x.id === presOpenId);
+        presNameEditFrom = t0 ? t0.name : null;   // the "before" for the history-safe rename below
+        return;
+      }
+      // her ask (2026-09-01, code7 "make it easier to edit the name"): the
+      // band name itself is the tap target now -- one tap opens Name & type
+      // with the input already unlocked, focused and selected, instead of
+      // toggle → find ✎ edit → click again.
+      const nameJump = e.target.closest("[data-pres-name-jump]");
+      if (nameJump) {
+        const t0 = PRESC.items.find(x => x.id === presOpenId);
+        presNameOpen = true;
+        renderPresPanel();
+        const inp = document.getElementById("presEditName");
+        const lock = document.getElementById("presNameLock");
+        if (lock) lock.hidden = true;
+        if (inp) { inp.hidden = false; inp.focus(); inp.select(); }
+        presNameEditFrom = t0 ? t0.name : null;
         return;
       }
       const rawTog = e.target.closest("[data-pres-raw-toggle]");
@@ -19749,6 +19768,17 @@
       if (e.target.id === "phLogKindSel") { phLogKind = e.target.value; phLogPage = 1; renderPhLogRows(); return; }
       if (e.target.id === "phLogRangeSel") { phLogRange = e.target.value; phLogPage = 1; renderPhLogRows(); return; }
       if (e.target.id === "presEditType") { presAutoSaveTemplate(); return; }
+      // history-safe rename commit boundary (change fires on blur/Enter with
+      // a real modification — never mid-typing). Flush the debounced template
+      // save FIRST (same clearTimeout+flush idiom as the panel-close handler)
+      // so t.name really holds the new spelling before reconciling everything
+      // else still keyed by the old one.
+      if (e.target.id === "presEditName") {
+        if (phTimers.presTmpl) { clearTimeout(phTimers.presTmpl); phTimers.presTmpl = null; }
+        presFlushTemplate();
+        presNameRenameReconcile(PRESC.items.find(x => x.id === presOpenId));
+        return;
+      }
       // #presTakeOn's own change handler is gone: the checkbox is no longer
       // user-facing (2026-08-23 -- the Every day | Mon – Fri | Custom switch
       // replaced it and writes t.takeOn directly). It stays in the DOM, hidden,
@@ -24742,7 +24772,7 @@
     const bandMeta = presBandMetaText(t, isF);
     el.innerHTML = `<div class="ph-listing ph-pres-panel">
       <div class="ph-pres-band">
-        <span class="ph-band-name">${esc(phDispName(t.name, isF))}</span>
+        <button type="button" class="ph-band-name" data-pres-name-jump="1" title="Tap to edit the name">${esc(phDispName(t.name, isF))}</button>
         <span class="ph-pres-type${isF ? " formula" : ""}">${isF ? "🏺 formula" : "🧍 patient"}</span>
         ${isF && ab ? `<span class="ph-pres-abbr">${esc(ab)}</span>` : ""}
         ${!isF ? phCondBadgesHtml(presPatientFor(t)) : ""}
@@ -25362,27 +25392,45 @@
     }
     return prev[n];
   }
-  // conservative near-identical pairs: same after stripping spaces/punct, or
-  // edit distance 1 (2 for long names). Guards keep 800×800 comparisons fast.
+  // near-identical pairs, three rules:
+  //   1. same BASE name once her parenthetical tags are stripped -- her real
+  //      convention ("Sylvia Lai" / "Sylvia Lai (L)" / "Sylvia Lai (Imm)"
+  //      are usually one person; her 2026-09-01 report caught v1 missing
+  //      exactly this, because a length guard skipped the pair before the
+  //      tag was ever considered)
+  //   2. same after stripping spaces/punct
+  //   3. edit distance 1 (2 for long names)
+  // Still a REVIEW list, never auto-merged -- two different people
+  // deliberately disambiguated by tags stay her call to leave alone.
   function phPatientDupePairs() {
-    const all = Array.from(phMergeAllPatients().entries()).map(([k, disp]) => ({ k, disp, norm: k.replace(/[^a-z0-9]/g, "") }));
+    const all = Array.from(phMergeAllPatients().entries()).map(([k, disp]) => ({
+      k, disp,
+      norm: k.replace(/[^a-z0-9]/g, ""),
+      base: k.replace(/\([^)]*\)/g, " ").replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim(),
+    }));
     const pairs = [];
     for (let i = 0; i < all.length; i++) {
       for (let j = i + 1; j < all.length; j++) {
         const a = all[i], b = all[j];
-        if (Math.abs(a.k.length - b.k.length) > 2) continue;
-        const maxD = Math.min(a.k, b.k).length >= 10 ? 2 : 1;
-        if (a.norm === b.norm || phLevenshtein(a.k, b.k) <= maxD) pairs.push([a, b]);
+        const sameBase = !!a.base && a.base === b.base;
+        if (!sameBase && Math.abs(a.k.length - b.k.length) > 2) continue;
+        const maxD = Math.min(a.k.length, b.k.length) >= 10 ? 2 : 1;
+        if (sameBase || a.norm === b.norm || phLevenshtein(a.k, b.k) <= maxD) pairs.push([a, b]);
       }
     }
     return pairs;
   }
-  async function phPatientMerge(fromName, intoName) {
+  async function phPatientMerge(fromName, intoName, opts) {
     const fromKey = phPatientKey(fromName), intoKey = phPatientKey(intoName);
     if (!fromKey || !intoKey || fromKey === intoKey) return null;
-    // requirement-6: the safety copy lands FIRST; a cancelled save cancels the merge
-    const fname = await phDownloadBackupFile("before-merge");
-    if (!fname) return false;
+    // requirement-6: the safety copy lands FIRST; a cancelled save cancels
+    // the merge. skipBackup is ONLY for the pure-relabel rename path (new
+    // spelling belongs to nobody else -- nothing can collide or be lost,
+    // and renaming back reverses it completely).
+    if (!(opts && opts.skipBackup)) {
+      const fname = await phDownloadBackupFile("before-merge");
+      if (!fname) return false;
+    }
     // the kept spelling: the kept patient's own newest script's name wins
     const canonical = (PRESC.items.find(t => !presIsFormula(t) && phPatientKey(presPatientFor(t)) === intoKey) || {}).name || phTitle(intoName);
     PRESC.items.forEach(t => { if (!presIsFormula(t) && phPatientKey(presPatientFor(t)) === fromKey) t.name = canonical; });
@@ -25428,6 +25476,42 @@
     PHARMACY.log.unshift({ id: uid(), kind: "patient-merge", date: keyOf(TODAY), name: canonical, mergedFrom: fromName, mergedInto: canonical });
     savePharmacy(); savePresc();
     return canonical;
+  }
+  // ---- history-safe rename (her ask 2026-09-01, code7): renaming a patient
+  // script used to rename ONLY that script -- the dispense trail, sibling
+  // scripts, medical history and plans all stayed under the old spelling,
+  // quietly creating the exact split-patient problem merge exists to fix.
+  // presNameEditFrom captures the name at unlock; on the input's CHANGE
+  // (commit boundary -- never per keystroke, a half-typed name must not
+  // trigger rewrites) the old identity is reconciled:
+  //   new spelling belongs to nobody else -> silent full carry-over
+  //   new spelling IS an existing patient  -> her confirmed merge flow,
+  //                                           backup and all
+  let presNameEditFrom = null;
+  function presNameRenameReconcile(t) {
+    const from = presNameEditFrom;
+    presNameEditFrom = null;
+    if (!t || !from || presIsFormula(t)) return;
+    const fromKey = phPatientKey(from), toKey = phPatientKey(t.name);
+    if (!fromKey || !toKey || fromKey === toKey) return;
+    const remains = phMergeStats(fromKey);
+    const oldRec = PHARMACY.patients && PHARMACY.patients[fromKey];
+    if (!remains.scripts && !remains.dispenses && !oldRec) return;   // old name held nothing else
+    const target = phMergeStats(toKey);
+    const targetRec = PHARMACY.patients && PHARMACY.patients[toKey];
+    if (target.scripts > 1 || target.dispenses > 0 || targetRec) {
+      // the new name is already a real patient -- that's a merge, and merges
+      // go through her confirmed flow (summary + backup), never silently
+      phMergeOpen(from);
+      phMergeTarget = t.name;
+      renderMergeScreen();
+    } else {
+      phPatientMerge(from, t.name, { skipBackup: true }).then(kept => {
+        if (!kept) return;
+        phFlash = `✎ Renamed to <b>${esc(phTitle(kept))}</b> — dispense history, scripts and records all came along.`;
+        renderPharmacy();
+      });
+    }
   }
   // ---- merge UI: one modal, two ways in (⋯ More / History card = single
   // patient pre-filled; Prescriptions topbar = the duplicates finder) ----
