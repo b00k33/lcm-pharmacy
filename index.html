@@ -18188,6 +18188,17 @@
         savePharmacy(); renderPharmacy();
         return;
       }
+      // her ask (2026-09-01): copy one supplier's list as plain text, ready
+      // to paste into an email -- read-only, nothing saved, so no
+      // savePharmacy/renderPharmacy call needed, just the button's own flash.
+      const copySup = e.target.closest("[data-ph-copy-sup]");
+      if (copySup) {
+        const sup = copySup.dataset.phCopySup, stage = copySup.dataset.phCopyStage;
+        const list = PHARMACY.herbs.filter(h => herbNeedsOrder(h) && (h.supplier || "") === sup
+          && (stage === "ordered" ? h.ordered : !h.ordered)).sort(phByName);
+        phRestockCopySupplier(copySup, sup, list);
+        return;
+      }
       const cart = e.target.closest("[data-ph-order]");
       if (cart) {
         const h = PHARMACY.herbs.find(x => x.id === cart.dataset.phOrder);
@@ -20732,6 +20743,38 @@
       </div>` : ""}
     </section>`;
   }
+  // her ask (2026-09-01, code7 "smooth workflow"): "make the list, email the
+  // list ... use the list to verify order" -- she never prints, so this
+  // copies one supplier's order as plain text ready to paste into an email.
+  // Same copy idiom as presLabelCopy (execCommand first, Clipboard API
+  // fallback, flash on the button itself, never claim success if both fail).
+  function phRestockCopyText(sup, list) {
+    const lines = list.map(h => {
+      const pack = phOrderPackFor(h), qty = h.orderQty != null ? h.orderQty : 1;
+      return `${h.name} — ${pack}g × ${qty}`;
+    });
+    const total = list.reduce((sum, h) => sum + (h.bottleCost != null ? h.bottleCost * (h.orderQty != null ? h.orderQty : 1) : 0), 0);
+    return `${sup || "Order"} — ${phShortDate(keyOf(TODAY))}\n\n${lines.join("\n")}${total ? `\n\nTotal: ${phMoney(total)}` : ""}`;
+  }
+  function phRestockCopySupplier(btn, sup, list) {
+    if (!list.length) return;
+    const text = phRestockCopyText(sup, list);
+    const flash = msg => { if (btn) { const orig = btn.textContent; btn.textContent = msg; setTimeout(() => { if (btn.isConnected) btn.textContent = orig; }, 1600); } };
+    let copied = false;
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text; ta.setAttribute("readonly", ""); ta.style.cssText = "position:fixed;left:-9999px;top:0";
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      copied = document.execCommand("copy");
+      ta.remove();
+    } catch (e) {}
+    if (copied) { flash("✓ Copied"); return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => flash("✓ Copied"), () => flash("⚠ Copy blocked"));
+    } else {
+      flash("⚠ Copy blocked");
+    }
+  }
   function renderPhRestock() {
     const herbs = PHARMACY.herbs;
     const toOrder = herbs.filter(herbNeedsOrder);
@@ -20782,10 +20825,15 @@
             ? `<button type="button" class="ph-add-order" data-ph-ordered-sup="${esc(sup)}" title="The whole order was placed — every item moves to Ordered">✓ Mark all Ordered</button>`
             : `<button type="button" class="ph-add-order" data-ph-arrived-sup="${esc(sup)}" title="The whole delivery landed — every item gets its pack">✓ All arrived</button>`)
         : "";
+      // her ask (2026-09-01): "i dont print. allow me to copy list for
+      // email" -- every supplier group gets this, not just multi-item ones,
+      // since even a single-herb order still needs emailing.
+      const copyBtn = `<button type="button" class="ph-add-order" data-ph-copy-sup="${esc(sup)}" data-ph-copy-stage="${stageForGroup}" title="Copy this list to paste into an email">📋 Copy for email</button>`;
       return `
       <div class="ph-order-sup">${sup ? esc(sup) : "No supplier recorded"}
         <span class="ph-order-sup-count">${map[sup].length} item${map[sup].length === 1 ? "" : "s"}</span>
         ${supTotal ? `<span class="ph-order-sup-total">${phMoney(supTotal)}</span>` : ""}
+        ${copyBtn}
         ${bulkBtn}
       </div>
       ${map[sup].map((h, i) => orderRow(h, i)).join("")}`;
@@ -20847,7 +20895,20 @@
       // (line ~12892), just not wired in here before. Pre-fills the price
       // she probably still wants instead of blank, still fully editable,
       // still saved as a real confirmed price the moment she touches it.
-      const bottleAuto = h.cost ? phRound2(h.cost * pack) : null;
+      // her follow-up (2026-09-01, "smooth workflow"): "some suppliers have
+      // better prices" -- switching the Supplier picker used to leave this
+      // estimate on the generic h.cost rate (whatever supplier she paid
+      // last), so a deliberate switch to a cheaper supplier still showed the
+      // OLD supplier's price. h.suppliers[] already remembers each
+      // supplier's own last confirmed bottleCost (the price-review feature
+      // writes it) -- prefer THAT row when it has one, so the picked
+      // supplier's own real price shows immediately. Read-only: this never
+      // writes anything, so it doesn't touch her 2026-08-16 rule that
+      // picking a supplier here "must not alter stock, cost or any other
+      // field" -- h.bottleCost still stays null until she actually clicks.
+      const supPriceRow = h.supplier ? (h.suppliers || []).find(s => s.name === h.supplier) : null;
+      const bottleAuto = (supPriceRow && supPriceRow.bottleCost != null) ? supPriceRow.bottleCost
+        : h.cost ? phRound2(h.cost * pack) : null;
       const bottleEditVal = h.bottleCost != null ? h.bottleCost : (bottleAuto != null ? bottleAuto : "");
       const packIsCustom = phOrderPackCustomOpen.has(h.id) || (pack !== PH_PACK_HERB && pack !== PH_PACK_FORMULA);
       const qtyIsCustom = phOrderQtyCustomOpen.has(h.id) || qty < 1 || qty > 6;
