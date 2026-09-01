@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260902-001500">
+<meta name="lcm-build" content="20260902-004500">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -23625,18 +23625,52 @@
   // without asking her anything. Best-effort: any failure just leaves the
   // photo local, exactly as if sync were off.
   const phCapOwnUploads = new Set();   // paths THIS device pushed -- its own auto-import skips them
-  async function phCapRelayPush(cap, blob) {
+  // offline round (her yes, 2026-09-01): a push that can't run right now
+  // queues METADATA ONLY (the blob stays in IndexedDB, read back by recId
+  // at retry time -- localStorage never carries image data, per the
+  // shared-origin quota lesson) and fires itself when connection returns.
+  const PH_CAP_QKEY = "daybook-cap-relayq";
+  const phCapQLoad = () => { try { const a = JSON.parse(localStorage.getItem(PH_CAP_QKEY)); return Array.isArray(a) ? a : []; } catch (e) { return []; } };
+  const phCapQSave = a => { try { localStorage.setItem(PH_CAP_QKEY, JSON.stringify(a)); } catch (e) {} };
+  async function phCapRelayPush(cap, blob, recId) {
     if (!window.__LCM_SYNC) return;
+    const queueIt = () => { const q = phCapQLoad(); if (!q.some(x => x.recId === recId)) { q.push({ patientKey: cap.patientKey, type: cap.type, dateKey: cap.dateKey, recId }); phCapQSave(q); } };
+    if (!navigator.onLine) { queueIt(); return; }
     try {
       const sb = phRenRelayClient();
-      if (!sb) return;
+      if (!sb) { queueIt(); return; }
       const uid0 = await phRenRelayUid(sb);
-      if (!uid0) return;
+      if (!uid0) { queueIt(); return; }
       const path = `${uid0}/${cap.patientKey}/${Date.now()}-cap_${cap.type}_${cap.dateKey}_${Math.random().toString(36).slice(2, 8)}.jpg`;
       const { error } = await sb.storage.from(PH_REN_BUCKET).upload(path, blob, { contentType: "image/jpeg" });
-      if (!error) phCapOwnUploads.add(path);
-    } catch (e) {}
+      if (error) { queueIt(); return; }
+      phCapOwnUploads.add(path);
+    } catch (e) { queueIt(); }
   }
+  // drains the queue -- called on reconnect, and once at boot for anything
+  // left over from a previous offline session. Stops (keeping the queue) on
+  // the first failure rather than hammering a still-flaky connection.
+  window.phCapRelayRetry = async function () {
+    if (!window.__LCM_SYNC || !navigator.onLine) return;
+    let q = phCapQLoad();
+    if (!q.length) return;
+    for (const item of q.slice()) {
+      try {
+        const photos = await phRenPhotoGetAllForPatient(item.patientKey);
+        const rec = photos.find(p => p.id === item.recId);
+        if (!rec || !rec.blob) { q = q.filter(x => x.recId !== item.recId); phCapQSave(q); continue; }   // photo since deleted -> drop
+        const sb = phRenRelayClient(); if (!sb) return;
+        const uid0 = await phRenRelayUid(sb); if (!uid0) return;
+        const path = `${uid0}/${item.patientKey}/${Date.now()}-cap_${item.type}_${item.dateKey}_${Math.random().toString(36).slice(2, 8)}.jpg`;
+        const { error } = await sb.storage.from(PH_REN_BUCKET).upload(path, rec.blob, { contentType: "image/jpeg" });
+        if (error) return;
+        phCapOwnUploads.add(path);
+        q = q.filter(x => x.recId !== item.recId);
+        phCapQSave(q);
+      } catch (e) { return; }
+    }
+  };
+  window.addEventListener("online", () => { setTimeout(() => { try { window.phCapRelayRetry(); } catch (e) {} }, 3000); });
   // auto-import (the receiving side): capture-tagged relay files download,
   // file themselves by the tagged type + date, then the cloud copy is
   // deleted -- ONLY after the local save succeeded (same never-lose rule as
@@ -23665,8 +23699,9 @@
     } catch (e) {}
     phCapImportBusy = false;
   }
-  // start after boot settles -- phCapAutoImport itself no-ops without sync
-  setTimeout(() => { phCapAutoImport(); setInterval(phCapAutoImport, 120000); }, 8000);
+  // start after boot settles -- phCapAutoImport itself no-ops without sync;
+  // the retry drain clears anything queued during a previous offline session
+  setTimeout(() => { phCapAutoImport(); window.phCapRelayRetry(); setInterval(phCapAutoImport, 120000); }, 8000);
 
   // ---- photo cache bridge: IndexedDB reads are async, phHxConstitutionHtml's
   // render is not -- load once per patient into this cache (minting one
@@ -23775,7 +23810,7 @@
           phCapState.savedIds.push(recId);
           renderCapSheet();
         }
-        phCapRelayPush(cap, blob);
+        phCapRelayPush(cap, blob, recId);
       }
       return true;
     } catch (e) {
@@ -31892,6 +31927,9 @@ Dosage: {dosage}
   // and renderSavedAt() need to remount correctly (on boot AND on a resize
   // that crosses the breakpoint, e.g. rotating the phone).
   function statusSlot() { return window.innerWidth <= 900 ? document.getElementById("phSidebarStatusSlot") : null; }
+  // offline mode (her 2026-09-01 round: full editing on the train, quiet
+  // status swap, everything reconciled by the ordinary merge on reconnect)
+  var offlineMode = false, syncingNow = false;
   var liveOn = false;
   function setLive(on) {
     liveOn = on;
@@ -31933,6 +31971,10 @@ Dosage: {dosage}
     w.style.cssText = onMobile ? ""
       : "position:fixed;right:28px;bottom:10px;font:500 10.5px -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#87a99c;z-index:2147483000;pointer-events:none;white-space:nowrap";
     if (w.parentElement !== document.documentElement) document.documentElement.appendChild(w);
+    // her quiet-swap pick (2026-09-01): the same chip carries the offline /
+    // syncing states -- nothing else on screen changes
+    if (offlineMode || !navigator.onLine) { w.textContent = "📴 offline — saving locally"; return; }
+    if (syncingNow) { w.textContent = "🔄 syncing…"; return; }
     if (!lastSavedAt) { w.textContent = ""; return; }
     var d = new Date(lastSavedAt);
     if (isNaN(d.getTime())) { w.textContent = ""; return; }
@@ -32446,7 +32488,23 @@ Dosage: {dosage}
       } else {
         screenImport("");                                   // cloud genuinely empty → migrate from backup
       }
-    }, function (err) { screenLoadError(err && err.message); });
+    }, function (err) {
+      // 2026-09-01 offline round: a fetch failure with real local data is
+      // the train scenario, not an error -- enter offline. The error screen
+      // stays for a device with nothing local (nothing to show).
+      if (localStorage.getItem(PH_KEY)) { goLocalOffline(); return; }
+      screenLoadError(err && err.message);
+    });
+  }
+  // offline entry (2026-09-01): signed in but the cloud is unreachable, and
+  // the pharmacy is sitting right here in local storage -- go IN on the
+  // local copy instead of the old dead-end error wall. No network calls, no
+  // base overwrite (same only-seed-if-missing rule as go()); the reconnect
+  // listener below runs the ordinary pull-merge-push when signal returns.
+  function goLocalOffline() {
+    offlineMode = true; ready = true;
+    if (!localStorage.getItem(BASE_KEY)) setBaseFrom(sectionsFrom(localSnapshotObj()));
+    hideOverlay(); badge(); renderSwitcher(); renderSavedAt(); setLive(false);
   }
   function go() {
     ready = true; lastPushed = JSON.stringify(gather());
@@ -32466,19 +32524,54 @@ Dosage: {dosage}
   function boot() {
     var cfg = loadCfg();
     if (!cfg || !cfg.url || !cfg.key) { screenConfig(); return; }
+    // 2026-09-01 offline round: the supabase-js CDN script didn't load
+    // (offline before the SW ever cached it). With local data, the app
+    // still works -- reload when connection returns picks sync back up.
+    if (!window.supabase) {
+      if (localStorage.getItem(PH_KEY)) { sb = null; goLocalOffline(); return; }
+      return screenConfig("Couldn't load the sync service — connect to the internet once, then try again.");
+    }
     try { sb = window.supabase.createClient(cfg.url, cfg.key, { auth: { persistSession: true, autoRefreshToken: true } }); }
     catch (e) { return screenConfig("That URL/key didn't work — check them."); }
     sb.auth.getSession().then(function (r) {
       var s = r && r.data && r.data.session; if (s) curAccessToken = s.access_token || curAccessToken;
-      if (s) afterAuth(); else screenAuth();
+      if (s) afterAuth();
+      // no session + offline + local data: let her in rather than an
+      // unanswerable login wall (passwords can't be checked offline)
+      else if (!navigator.onLine && localStorage.getItem(PH_KEY)) goLocalOffline();
+      else screenAuth();
     });
     sb.auth.onAuthStateChange(function (_e, s) {
-      if (!s) { if (!switching) { ready = false; screenAuth(); } return; }
+      if (!s) {
+        if (!switching) {
+          // a token refresh failing OFFLINE is not a sign-out -- stay in,
+          // flagged offline; the reconnect path re-checks properly
+          if (!navigator.onLine && localStorage.getItem(PH_KEY)) { offlineMode = true; renderSavedAt(); setLive(false); return; }
+          ready = false; screenAuth();
+        }
+        return;
+      }
       curAccessToken = s.access_token || curAccessToken;
       myEmail = (s.user && s.user.email) || myEmail;
       if (_e === "TOKEN_REFRESHED" || _e === "SIGNED_IN") recordSession();
     });
   }
+  // reconnect/disconnect (2026-09-01): the quiet chip follows the connection,
+  // and coming back online runs the ordinary pull-merge-push -- the same
+  // catch-up every boot already does, nothing bespoke
+  window.addEventListener("offline", function () { renderSavedAt(); setLive(false); });
+  window.addEventListener("online", function () {
+    if (!sb) { location.reload(); return; }     // booted without the sync lib
+    var wasOffline = offlineMode;
+    offlineMode = false;
+    if (!ready) { renderSavedAt(); return; }    // still on an auth/config screen
+    syncingNow = true; renderSavedAt();
+    if (wasOffline) { recordSession(); try { subscribe(); } catch (e) {} }
+    Promise.resolve(pullMergePush(true)).then(
+      function () { syncingNow = false; renderSavedAt(); },
+      function () { syncingNow = false; renderSavedAt(); }
+    );
+  });
 
   // cover the app immediately, then start
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
