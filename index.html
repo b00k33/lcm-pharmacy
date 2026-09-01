@@ -4599,6 +4599,17 @@
   #pharmacyPage .ph-tp-review-examrow input { flex: 1; min-width: 0; padding: 6px 10px; border: 1px solid var(--ph-line); border-radius: var(--field-radius-sm, 8px); font: inherit; font-size: 11.5px; }
   #pharmacyPage .ph-tp-review-exam { display: block; font-size: 11.5px; color: var(--ph-soft); margin-top: 2px; }
   #pharmacyPage .ph-tp-glance { margin-top: 6px; }
+  /* patient merge (2026-09-01) */
+  #pharmacyPage .ph-merge-lead { font-size: 13px; line-height: 1.55; margin: 0 0 10px; }
+  #pharmacyPage .ph-merge-note { font-size: 11.5px; color: var(--ph-soft); line-height: 1.5; margin: 0 0 12px; }
+  #pharmacyPage .ph-merge-acts { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 14px 0 8px; }
+  #pharmacyPage .ph-merge-pair { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: var(--ph-green-tint); border-radius: var(--field-radius-sm, 11px); margin-bottom: 8px; }
+  #pharmacyPage .ph-merge-pair-names { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; font-size: 13px; }
+  #pharmacyPage .ph-merge-pair-stat { font-size: 11px; color: var(--ph-soft); }
+  #pharmacyPage .ph-merge-pair-vs { flex: none; color: var(--ph-soft); font-size: 14px; }
+  #pharmacyPage .ph-merge-linkrow { margin-top: 10px; }
+  #pharmacyPage .ph-merge-linkrow .tab-link { font-size: 12px; color: var(--ph-soft); }
+  #pharmacyPage #phMergeSugg { margin-top: 8px; }
   #pharmacyPage .ph-tp-delzone { padding-top: 14px; border-top: 1px solid var(--ph-line); display: flex; align-items: center; gap: 14px; }
   #pharmacyPage .ph-tp-delzone > .tab-link { color: var(--ph-negative, #B4483A); font-size: 12px; margin-left: auto; }
   /* patient-letter view (2026-09-01 follow-up push, approved mock tab 3) */
@@ -8167,6 +8178,9 @@
          📖 History card inside their prescription panel. -->
     <div class="ph-stocktake-backdrop" id="phTpBackdrop" hidden></div>
     <div class="ph-hx-modal" id="phTpModal" hidden></div>
+    <!-- Patient merge (her ask 2026-09-01): same shell/pattern again -->
+    <div class="ph-stocktake-backdrop" id="phMergeBackdrop" hidden></div>
+    <div class="ph-hx-modal" id="phMergeModal" hidden></div>
     <div class="ph-stocktake-backdrop" id="phGdModalBackdrop" hidden></div>
     <div class="ph-hx-modal" id="phGdModal" hidden></div>
     <!-- Ren photo crop tool (her ask 2026-08-22) -- own backdrop/modal pair,
@@ -14240,6 +14254,7 @@
     prescriptions: [
       { icon: "i-plus", label: "New prescription", run: () => presStartNew() },
       { icon: "i-edit", label: "Dosage & markup", ghost: true, run: () => phTogglePresSettings() },
+      { icon: "i-search", label: "Find duplicates", ghost: true, run: () => phMergeOpenFinder() },
     ],
     suppliers: [{ icon: "i-plus", label: "Add supplier", run: () => document.getElementById("phSupplierAddBtn")?.click() }],
     // her mockup (2026-08-16) shows only a search icon here, but CSV export
@@ -17234,6 +17249,46 @@
       const hxOpenBtn = e.target.closest("[data-hx-open]");
       if (hxOpenBtn) { phHxOpen(hxOpenBtn.dataset.hxOpen); return; }
       if (e.target.closest("[data-hx-close]")) { phHxClose(); return; }
+      // ---- Patient merge handlers ----
+      const mergeOpen = e.target.closest("[data-merge-open]");
+      if (mergeOpen) { presMoreOpen = false; phMergeOpen(mergeOpen.dataset.mergeOpen); return; }
+      if (e.target.closest("[data-merge-close]")) { phMergeClose(); return; }
+      if (e.target.closest("[data-merge-back]")) {
+        // from a finder pair, back goes to the pair list; from a single-patient
+        // confirm, back goes to the search
+        if (phMergePairs) { phMergeFrom = null; }
+        phMergeTarget = null; renderMergeScreen(); return;
+      }
+      const mergePick = e.target.closest("[data-merge-pick]");
+      if (mergePick) { phMergeTarget = mergePick.dataset.mergePick; renderMergeScreen(); return; }
+      const mergeReview = e.target.closest("[data-merge-review]");
+      if (mergeReview) {
+        const i = mergeReview.dataset.mergeReview.lastIndexOf("|");
+        const a = mergeReview.dataset.mergeReview.slice(0, i), b = mergeReview.dataset.mergeReview.slice(i + 1);
+        // default: keep the side with the bigger trail
+        const sa = phMergeStats(phPatientKey(a)), sb = phMergeStats(phPatientKey(b));
+        const keepA = (sa.dispenses !== sb.dispenses) ? sa.dispenses > sb.dispenses : sa.scripts >= sb.scripts;
+        phMergeFrom = keepA ? b : a; phMergeTarget = keepA ? a : b;
+        renderMergeScreen(); return;
+      }
+      if (e.target.closest("[data-merge-swap]")) {
+        const t2 = phMergeFrom; phMergeFrom = phMergeTarget; phMergeTarget = t2;
+        renderMergeScreen(); return;
+      }
+      if (e.target.closest("[data-merge-go]")) {
+        if (phMergeBusy || !phMergeFrom || !phMergeTarget) return;
+        phMergeBusy = true; renderMergeScreen();
+        phPatientMerge(phMergeFrom, phMergeTarget).then(canonical => {
+          if (canonical === false) { phMergeBusy = false; renderMergeScreen(); phFlashShow("Merge cancelled — no backup was saved, so nothing was changed."); return; }
+          const kept = canonical;
+          phMergeClose();
+          const first = PRESC.items.find(t => !presIsFormula(t) && phPatientKey(presPatientFor(t)) === phPatientKey(kept));
+          if (first) { presOpenId = first.id; presEditId = null; }
+          phFlash = `⇄ Merged into <b>${esc(phTitle(kept))}</b> — one combined history now. The backup from just before is in your downloads.`;
+          renderPharmacy();
+        });
+        return;
+      }
       // ---- Treatment Plans: detail-screen handlers ----
       if (e.target.closest("[data-tp-close]")) { phTpClose(); return; }
       if (e.target.closest("[data-tp-letter-open]")) { phTpLetterOpen = true; renderTpScreen(); return; }
@@ -19204,6 +19259,12 @@
       if (e.target.id === "phTpFPickInput") {
         const host = document.getElementById("phTpFPickSugg");
         if (host) host.innerHTML = phTpFormulaSuggHtml(e.target.value);
+        return;
+      }
+      if (e.target.id === "phMergeSearch") {
+        phMergeQuery = e.target.value;
+        const host = document.getElementById("phMergeSugg");
+        if (host) host.innerHTML = phMergeSuggHtml();
         return;
       }
       const hxConstitSel = e.target.closest("[data-hx-constit]");
@@ -21540,7 +21601,7 @@
     // supplier-change entries (2026-08-16 spec: "every change writes a log
     // entry ... so it's traceable") are the same story -- no grams to show,
     // no dedicated screen asked for, just traceable in the data.
-    return PHARMACY.log.filter(e => (phLogKind === "all" ? (e.kind !== "price-review" && e.kind !== "supplier-change")
+    return PHARMACY.log.filter(e => (phLogKind === "all" ? (e.kind !== "price-review" && e.kind !== "supplier-change" && e.kind !== "patient-merge")
       : phLogKind === "dispense" ? (!e.kind || e.kind === "dispense") : e.kind === phLogKind)
       && (!cutoff || e.date >= cutoff) && hit(e))
       .sort((a, b) => b.date > a.date ? 1 : b.date < a.date ? -1 : 0);
@@ -24906,7 +24967,8 @@
           : ""}`;
       }).join("")}</tbody>
       </table></div>` : ""}
-      ${phTpSectionHtml(patientName, plans)}</div></div>`;
+      ${phTpSectionHtml(patientName, plans)}
+      <div class="ph-merge-linkrow"><button type="button" class="tab-link" data-merge-open="${esc(patientName)}">⇄ Merge this patient into another…</button></div></div></div>`;
   }
   // ============================================================
   // Treatment Plans (her ask 2026-09-01, code7 "make it a smooth workflow"
@@ -25253,6 +25315,195 @@
       if (input) { input.focus(); document.getElementById("phTpFPickSugg").innerHTML = phTpFormulaSuggHtml(input.value); }
     }
   }
+  // ============================================================
+  // Patient merge (her ask 2026-09-01: "how to merge same patients together
+  // to retain history of dispense?"). Everything about a patient is keyed by
+  // the exact name spelling (phPatientKey), so two spellings are two
+  // strangers -- split dispense trails, split history, and phantom Drafts.
+  // A merge rewrites every name-keyed store onto the kept spelling:
+  //   1 prescriptions (t.name)          4 follow-ups (patient/patientKey)
+  //   2 dispense log (e.patient/Key)    5 scheduled jobs (s.mailing.name)
+  //   3 PHARMACY.patients record        6 方病人 photos (IDB patientKey)
+  // Her confirmed rules: duplicate's scripts become extra tabs under the
+  // kept patient; histories combine; medical-history answers FILL GAPS but
+  // never overwrite the kept patient's existing answers; a backup file
+  // downloads before every merge (requirement-6 precedent -- no backup
+  // landed, no merge).
+  // ============================================================
+  function phMergeStats(key) {
+    const scripts = PRESC.items.filter(t => !presIsFormula(t) && phPatientKey(presPatientFor(t)) === key).length;
+    const dispenses = PHARMACY.log.filter(e => (!e.kind || e.kind === "dispense") && phPatientKey(e.patient) === key).length;
+    const rec = PHARMACY.patients && PHARMACY.patients[key];
+    return {
+      scripts, dispenses,
+      plans: (rec && rec.treatmentPlans || []).length,
+      hasHx: !!(rec && rec.historyUpdatedAt),
+    };
+  }
+  // every name the app knows a patient by, with a display spelling
+  function phMergeAllPatients() {
+    const map = new Map();   // key -> display
+    PRESC.items.forEach(t => { if (!presIsFormula(t)) { const n = presPatientFor(t); const k = phPatientKey(n); if (k && !map.has(k)) map.set(k, n); } });
+    PHARMACY.log.forEach(e => { if ((!e.kind || e.kind === "dispense") && e.patient) { const k = phPatientKey(e.patient); if (k && !map.has(k)) map.set(k, e.patient); } });
+    Object.keys(PHARMACY.patients || {}).forEach(k => { if (!map.has(k)) map.set(k, k); });
+    return map;
+  }
+  function phLevenshtein(a, b) {
+    if (a === b) return 0;
+    const m = a.length, n = b.length;
+    if (!m) return n; if (!n) return m;
+    let prev = Array.from({ length: n + 1 }, (_, i) => i);
+    for (let i = 1; i <= m; i++) {
+      const row = [i];
+      for (let j = 1; j <= n; j++) {
+        row.push(Math.min(prev[j] + 1, row[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)));
+      }
+      prev = row;
+    }
+    return prev[n];
+  }
+  // conservative near-identical pairs: same after stripping spaces/punct, or
+  // edit distance 1 (2 for long names). Guards keep 800×800 comparisons fast.
+  function phPatientDupePairs() {
+    const all = Array.from(phMergeAllPatients().entries()).map(([k, disp]) => ({ k, disp, norm: k.replace(/[^a-z0-9]/g, "") }));
+    const pairs = [];
+    for (let i = 0; i < all.length; i++) {
+      for (let j = i + 1; j < all.length; j++) {
+        const a = all[i], b = all[j];
+        if (Math.abs(a.k.length - b.k.length) > 2) continue;
+        const maxD = Math.min(a.k, b.k).length >= 10 ? 2 : 1;
+        if (a.norm === b.norm || phLevenshtein(a.k, b.k) <= maxD) pairs.push([a, b]);
+      }
+    }
+    return pairs;
+  }
+  async function phPatientMerge(fromName, intoName) {
+    const fromKey = phPatientKey(fromName), intoKey = phPatientKey(intoName);
+    if (!fromKey || !intoKey || fromKey === intoKey) return null;
+    // requirement-6: the safety copy lands FIRST; a cancelled save cancels the merge
+    const fname = await phDownloadBackupFile("before-merge");
+    if (!fname) return false;
+    // the kept spelling: the kept patient's own newest script's name wins
+    const canonical = (PRESC.items.find(t => !presIsFormula(t) && phPatientKey(presPatientFor(t)) === intoKey) || {}).name || phTitle(intoName);
+    PRESC.items.forEach(t => { if (!presIsFormula(t) && phPatientKey(presPatientFor(t)) === fromKey) t.name = canonical; });
+    PHARMACY.log.forEach(e => {
+      if (e.patient && phPatientKey(e.patient) === fromKey) { e.patient = canonical; if (e.patientKey) e.patientKey = intoKey; }
+    });
+    const from = PHARMACY.patients && PHARMACY.patients[fromKey];
+    if (from) {
+      const into = phPatientRec(canonical);
+      Object.keys(from.medicalHistory || {}).forEach(k => {
+        if (!into.medicalHistory[k] || into.medicalHistory[k] === "unasked") into.medicalHistory[k] = from.medicalHistory[k];
+      });
+      if (from.historyNotes) { into.historyNotes = into.historyNotes || {}; Object.keys(from.historyNotes).forEach(k => { if (!into.historyNotes[k]) into.historyNotes[k] = from.historyNotes[k]; }); }
+      if (from.medicalHistoryNotes) {
+        into.medicalHistoryNotes = into.medicalHistoryNotes
+          ? (into.medicalHistoryNotes.includes(from.medicalHistoryNotes) ? into.medicalHistoryNotes : into.medicalHistoryNotes + "\n" + from.medicalHistoryNotes)
+          : from.medicalHistoryNotes;
+      }
+      ["sex", "bodyConstitutionBt", "personalityBt", "eyes", "build", "constitutionFindings", "historyNotNeeded"].forEach(k => { if (from[k] && !into[k]) into[k] = from[k]; });
+      ["skin", "voiceManner"].forEach(k => { if (Array.isArray(from[k]) && from[k].length) into[k] = Array.from(new Set([...(into[k] || []), ...from[k]])); });
+      if (Array.isArray(from.addresses) && from.addresses.length) {
+        into.addresses = into.addresses || [];
+        from.addresses.forEach(a => {
+          if (!into.addresses.some(b => (b.address || "").trim().toLowerCase() === (a.address || "").trim().toLowerCase()))
+            into.addresses.push(Object.assign({}, a, { isDefault: false }));
+        });
+        if (into.addresses.length && !into.addresses.some(a => a.isDefault)) into.addresses[0].isDefault = true;
+      }
+      if (Array.isArray(from.treatmentPlans) && from.treatmentPlans.length) into.treatmentPlans = (into.treatmentPlans || []).concat(from.treatmentPlans);
+      if (from.historyUpdatedAt && (!into.historyUpdatedAt || from.historyUpdatedAt > into.historyUpdatedAt)) into.historyUpdatedAt = from.historyUpdatedAt;
+      delete PHARMACY.patients[fromKey];
+    }
+    (PHARMACY.followups || []).forEach(f => {
+      if (f.patientKey === fromKey || phPatientKey(f.patient) === fromKey) { f.patient = canonical; f.patientKey = intoKey; }
+    });
+    (PRESC.scheduled || []).forEach(s => { if (s.mailing && phPatientKey(s.mailing.name) === fromKey) s.mailing.name = canonical; });
+    try {
+      const photos = await phRenPhotoGetAllForPatient(fromKey);
+      for (const p of photos) { p.patientKey = intoKey; await phRenPhotoPut(p); }
+    } catch (e) {}
+    // traceable in the data, same as supplier-change (excluded from the
+    // gram-shaped "all" ledger view -- no grams to show)
+    PHARMACY.log.unshift({ id: uid(), kind: "patient-merge", date: keyOf(TODAY), name: canonical, mergedFrom: fromName, mergedInto: canonical });
+    savePharmacy(); savePresc();
+    return canonical;
+  }
+  // ---- merge UI: one modal, two ways in (⋯ More / History card = single
+  // patient pre-filled; Prescriptions topbar = the duplicates finder) ----
+  let phMergeFrom = null, phMergeTarget = null, phMergePairs = null, phMergeQuery = "", phMergeBusy = false;
+  function phMergeOpen(fromName) {
+    phMergeFrom = fromName || null; phMergeTarget = null; phMergePairs = null; phMergeQuery = ""; phMergeBusy = false;
+    document.getElementById("phMergeBackdrop").hidden = false;
+    document.getElementById("phMergeModal").hidden = false;
+    renderMergeScreen();
+  }
+  function phMergeOpenFinder() {
+    phMergeFrom = null; phMergeTarget = null; phMergeQuery = ""; phMergeBusy = false;
+    phMergePairs = phPatientDupePairs();
+    document.getElementById("phMergeBackdrop").hidden = false;
+    document.getElementById("phMergeModal").hidden = false;
+    renderMergeScreen();
+  }
+  function phMergeClose() {
+    document.getElementById("phMergeBackdrop").hidden = true;
+    document.getElementById("phMergeModal").hidden = true;
+    phMergeFrom = null; phMergeTarget = null; phMergePairs = null; phMergeBusy = false;
+    renderPresPanel();
+  }
+  const phMergeStatLine = key => {
+    const s = phMergeStats(key);
+    return `${s.scripts} script${s.scripts === 1 ? "" : "s"} · ${s.dispenses} dispense${s.dispenses === 1 ? "" : "s"}${s.plans ? ` · ${s.plans} plan${s.plans === 1 ? "" : "s"}` : ""}${s.hasHx ? " · has history" : ""}`;
+  };
+  function phMergeSuggHtml() {
+    const q = phMergeQuery.trim().toLowerCase();
+    if (!q) return "";
+    const fromKey = phPatientKey(phMergeFrom);
+    const rows = Array.from(phMergeAllPatients().entries())
+      .filter(([k]) => k !== fromKey && k.includes(q))
+      .slice(0, 8)
+      .map(([k, disp]) => `<div class="ph-pick-row" data-merge-pick="${esc(disp)}" tabindex="0"><span class="ph-pick-ic">🧍</span><span class="ph-pick-main"><span class="ph-pick-nm">${esc(phTitle(disp))}<span class="ph-pick-stock">${phMergeStatLine(k)}</span></span></span></div>`);
+    return rows.join("") || `<div class="ph-pick-more">No other patient matches — check the spelling</div>`;
+  }
+  function renderMergeScreen() {
+    const modal = document.getElementById("phMergeModal");
+    if (!modal || modal.hidden) return;
+    let body;
+    if (phMergeFrom && phMergeTarget) {
+      const fromKey = phPatientKey(phMergeFrom), intoKey = phPatientKey(phMergeTarget);
+      const fs = phMergeStats(fromKey);
+      body = `<p class="ph-merge-lead">Everything recorded under <b>${esc(phTitle(phMergeFrom))}</b> — ${phMergeStatLine(fromKey)} — moves under <b>${esc(phTitle(phMergeTarget))}</b> (${phMergeStatLine(intoKey)}), and <b>${esc(phTitle(phMergeFrom))}</b> disappears as a name.</p>
+        <p class="ph-merge-note">Nothing on ${esc(phTitle(phMergeTarget))} is overwritten — history answers only fill gaps, scripts become extra tabs, dispense trails combine. A backup file downloads first; cancelling the save cancels the merge.</p>
+        <div class="ph-merge-acts">
+          <button type="button" class="ph-load-btn" data-merge-swap="1" title="Keep ${esc(phTitle(phMergeFrom))} instead">⇄ Swap — keep ${esc(phTitle(phMergeFrom))}</button>
+          <button type="button" class="btn-save" data-merge-go="1"${phMergeBusy ? " disabled" : ""}>${phMergeBusy ? "Merging…" : `Merge into ${esc(phTitle(phMergeTarget))}`}</button>
+          <button type="button" class="btn-cancel" data-merge-back="1">Back</button>
+        </div>
+        ${fs.dispenses > 20 ? `<p class="ph-merge-note">⚠ ${esc(phTitle(phMergeFrom))} has a substantial trail (${fs.dispenses} dispenses) — double-check this really is the same person before merging.</p>` : ""}`;
+    } else if (phMergeFrom) {
+      body = `<p class="ph-merge-lead">Who is <b>${esc(phTitle(phMergeFrom))}</b> really? Their scripts, dispenses, history and plans move under the patient you pick.</p>
+        <input type="search" class="ph-tp-fpick-input" id="phMergeSearch" placeholder="Search the real patient…" value="${esc(phMergeQuery)}" autocomplete="off" aria-label="Search the patient to merge into">
+        <div id="phMergeSugg">${phMergeSuggHtml()}</div>`;
+    } else {
+      const pairs = phMergePairs || [];
+      body = `<p class="ph-merge-lead">${pairs.length ? `${pairs.length} possible duplicate${pairs.length === 1 ? "" : "s"} — same name with a spelling, spacing or typo difference. Review each; nothing merges without your say-so.` : "No near-identical patient names found — nothing looks like a duplicate right now."}</p>
+        ${pairs.map(([a, b]) => `<div class="ph-merge-pair">
+          <span class="ph-merge-pair-names"><b>${esc(phTitle(a.disp))}</b><span class="ph-merge-pair-stat">${phMergeStatLine(a.k)}</span></span>
+          <span class="ph-merge-pair-vs">⇄</span>
+          <span class="ph-merge-pair-names"><b>${esc(phTitle(b.disp))}</b><span class="ph-merge-pair-stat">${phMergeStatLine(b.k)}</span></span>
+          <button type="button" class="ph-load-btn on" data-merge-review="${esc(a.disp)}|${esc(b.disp)}">Review →</button>
+        </div>`).join("")}`;
+    }
+    modal.innerHTML = `<div class="ph-hx-card">
+      <div class="ph-hx-head">
+        <button type="button" class="ph-stocktake-close" data-merge-close="1" aria-label="Close">×</button>
+        <div class="ph-hx-head-top"><div class="ph-hx-head-name">${phMergeFrom ? "⇄ Merge patient" : "⇄ Possible duplicates"}</div></div>
+      </div>
+      <div class="ph-hx-body">${body}</div>
+    </div>`;
+    const s = document.getElementById("phMergeSearch");
+    if (s && phMergeQuery) { s.focus(); const len = s.value.length; s.setSelectionRange(len, len); }
+  }
   // "2 coffee teaspoons, 2 times a day" — composed from the structured dosage inputs
   function presDosageText() {
     const n = parseFloat((document.getElementById("presDoseN") || {}).value) || 0;
@@ -25410,6 +25661,7 @@
         <button type="button" class="ph-dose-extra-link" data-pres-more-toggle="1" aria-haspopup="true" aria-expanded="${presMoreOpen ? "true" : "false"}" aria-label="More actions">⋯ More</button>
         ${presMoreOpen ? `<div class="ph-pres-more-menu">
           <button type="button" data-pres-copy="${t.id}">⧉ Copy label</button>
+          <button type="button" data-merge-open="${esc(presPatientFor(t) || t.name)}">⇄ Merge into another patient…</button>
           ${(pending || t.lastDispensedAt) ? "" : `<button type="button" data-pres-edit-del="${t.id}">🗑 Delete</button>`}
         </div>` : ""}
       </span>
