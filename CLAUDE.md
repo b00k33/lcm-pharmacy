@@ -14,6 +14,10 @@ aligned, organized and calm. Follow every rule, then re-check your work.
 
 ## Fit the screen (mobile-first)
 - Design for a phone ~360px wide. Nothing wider than the screen or overflowing.
+- **Be space saving** (her standing directive, 2026-09-02): mobile screen space is
+  scarce — compact stat rows over tall tile blocks, one-line rows, tight paddings,
+  no duplicated numbers, the first screen should carry real work. Never trim real
+  data to save space (counts stay), trim the chrome around it.
 - Respect safe areas (env(safe-area-inset-top/bottom)). Nothing cut off under the
   status bar or above the phone's bottom nav.
 - Every dropdown / menu / popover / filter panel MUST open fully on-screen; if it
