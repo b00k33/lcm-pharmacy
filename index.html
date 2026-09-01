@@ -4594,8 +4594,23 @@
   #pharmacyPage .ph-tp-review-note { flex: 1; font-size: 12.5px; color: var(--ph-ink, #16281D); line-height: 1.5; }
   #pharmacyPage .ph-tp-review-add { display: flex; gap: 8px; margin-top: 8px; }
   #pharmacyPage .ph-tp-review-add input { flex: 1; padding: 8px 10px; border: 1px solid var(--ph-line); border-radius: var(--field-radius-sm, 8px); font: inherit; font-size: 12.5px; }
-  #pharmacyPage .ph-tp-delzone { padding-top: 14px; border-top: 1px solid var(--ph-line); }
-  #pharmacyPage .ph-tp-delzone > .tab-link { color: var(--ph-negative, #B4483A); font-size: 12px; }
+  #pharmacyPage .ph-tp-delzone { padding-top: 14px; border-top: 1px solid var(--ph-line); display: flex; align-items: center; gap: 14px; }
+  #pharmacyPage .ph-tp-delzone > .tab-link { color: var(--ph-negative, #B4483A); font-size: 12px; margin-left: auto; }
+  /* patient-letter view (2026-09-01 follow-up push, approved mock tab 3) */
+  #pharmacyPage .ph-tp-letter-acts { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  #pharmacyPage .ph-tp-letter { font-size: 13.5px; line-height: 1.6; color: var(--ph-ink, #16281D); max-width: 560px; }
+  #pharmacyPage .ph-tp-letter p { margin: 0 0 12px; }
+  #pharmacyPage .ph-tp-lh { font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ph-green-deep); margin: 20px 0 8px; }
+  #pharmacyPage .ph-tp-lstrip { display: flex; border-radius: var(--field-radius-sm, 11px); overflow: hidden; box-shadow: inset 0 0 0 1px var(--ph-line); margin-bottom: 4px; }
+  #pharmacyPage .ph-tp-lseg { flex: 1; text-align: center; padding: 9px 6px; background: var(--ph-cream); font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.02em; color: var(--ph-soft); }
+  #pharmacyPage .ph-tp-lseg + .ph-tp-lseg { border-left: 1px solid var(--ph-white, #fff); }
+  #pharmacyPage .ph-tp-lseg.now { background: var(--margin-rule, #E3C87A); color: var(--ph-green-press); }
+  #pharmacyPage .ph-tp-lseg.past { opacity: 0.55; }
+  #pharmacyPage .ph-tp-ltable { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  #pharmacyPage .ph-tp-ltable th { text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ph-soft); font-weight: 800; padding: 0 10px 8px 0; border-bottom: 1px solid var(--ph-line); }
+  #pharmacyPage .ph-tp-ltable td { padding: 10px 10px 10px 0; border-bottom: 1px solid var(--ph-line); vertical-align: top; }
+  #pharmacyPage .ph-tp-ltable tr:last-child td { border-bottom: none; }
+  #pharmacyPage .ph-tp-lnote { font-size: 11.5px; font-style: italic; color: var(--ph-soft); margin-top: 16px; }
 
   /* Ren (人) observations -- her ask 2026-08-22: Eyes/Build (single-select,
      same field shape as Body constitution/Personality above) and Skin/
@@ -17216,6 +17231,19 @@
       if (e.target.closest("[data-hx-close]")) { phHxClose(); return; }
       // ---- Treatment Plans: detail-screen handlers ----
       if (e.target.closest("[data-tp-close]")) { phTpClose(); return; }
+      if (e.target.closest("[data-tp-letter-open]")) { phTpLetterOpen = true; renderTpScreen(); return; }
+      if (e.target.closest("[data-tp-letter-back]")) { phTpLetterOpen = false; renderTpScreen(); return; }
+      const tpLetterCopy = e.target.closest("[data-tp-letter-copy]");
+      if (tpLetterCopy) {
+        const plan = phTpFindPlan(phTpScreenPatient, phTpScreenPlanId);
+        if (plan) phTpLetterCopy(tpLetterCopy, phTpScreenPatient, plan);
+        return;
+      }
+      if (e.target.closest("[data-tp-letter-pdf]")) {
+        const plan = phTpFindPlan(phTpScreenPatient, phTpScreenPlanId);
+        if (plan) phPrintDoc(phTpLetterDocHtml(phTpScreenPatient, plan), `Treatment plan ${phTitle(phTpScreenPatient)} ${phFileDate()}`);
+        return;
+      }
       const tpStatus = e.target.closest("[data-tp-status]");
       if (tpStatus) {
         const [planId, v] = tpStatus.dataset.tpStatus.split(":");
@@ -24960,7 +24988,7 @@
   function phTpOpen(name, planId) {
     if (!name || !planId) return;
     phTpScreenPatient = name; phTpScreenPlanId = planId;
-    phTpFormulaPickPhase = null; phTpDeleteArm = null;
+    phTpFormulaPickPhase = null; phTpDeleteArm = null; phTpLetterOpen = false;
     document.getElementById("phTpBackdrop").hidden = false;
     document.getElementById("phTpModal").hidden = false;
     renderTpScreen();
@@ -25025,6 +25053,85 @@
       ${arming ? `<div class="ph-confirm-strip"><span>Delete this note?</span><button type="button" class="btn-save" data-tp-review-del-yes="${plan.id}:${r.id}">Delete</button><button type="button" class="btn-cancel" data-tp-review-del-no="1">Cancel</button></div>` : ""}
     </div>`;
   }
+  // ---- patient letter (her ask 2026-09-01, approved mock tab 3; built as
+  // the agreed follow-up push). Generated fresh from the plan each time --
+  // phases only, in patient-facing language. Deliberately excluded:
+  // diagnosis, tongue/pulse/abdomen, review notes, prices -- clinical
+  // internals, not letter content. ----
+  const phTpFirstName = name => phTitle(String(name || "").trim().split(/\s+/)[0] || "");
+  function phTpLetterText(name, plan) {
+    const cur = phTpPlanCurrentPhase(plan);
+    const lines = (plan.phases || []).map(p =>
+      `• ${p.label}${p.formulaName ? ` — ${p.formulaName}` : ""}${p.aim ? `\n  ${p.aim}` : ""}`);
+    return `Dear ${phTpFirstName(name)},\n\n`
+      + `Here's the treatment plan we've put together for you. Let me know if anything doesn't make sense, or if anything changes for you along the way.\n\n`
+      + (cur ? `Where you are right now: ${cur.label}\n\n` : "")
+      + `Your plan, stage by stage:\n\n${lines.join("\n\n")}\n\n`
+      + `Warmly,\n`;
+  }
+  function phTpLetterDocHtml(name, plan) {
+    const cur = phTpPlanCurrentPhase(plan);
+    const strip = (plan.phases || []).map(p =>
+      `<td class="seg${p.status === "current" ? " now" : p.status === "done" ? " past" : ""}">${esc(p.label)}</td>`).join("");
+    return `<title>Treatment plan — ${esc(phTitle(name))}</title>
+      <style>body{font-family:Georgia,serif;padding:32px;max-width:640px;color:#16281D;line-height:1.6;font-size:14px}
+      h1{font-size:19px;margin:0 0 2px;color:#0E4D2A}.sub{color:#555;font-size:12px;margin-bottom:20px}
+      h2{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#0E4D2A;margin:22px 0 8px}
+      table{border-collapse:collapse;width:100%;font-size:13px}
+      table.strip{table-layout:fixed;margin:4px 0 8px}
+      .strip td{border:1px solid #ccc;padding:8px 4px;text-align:center;font-size:11px;font-weight:bold}
+      .strip td.now{background:#B08D3E;color:#fff}.strip td.past{color:#999}
+      table.plan th{font-size:10px;text-transform:uppercase;letter-spacing:.04em;text-align:left;color:#555;border-bottom:1px solid #999;padding:0 10px 6px 0}
+      table.plan td{padding:9px 10px 9px 0;border-bottom:1px solid #ddd;vertical-align:top}
+      .sig{margin-top:28px}</style>
+      <h1>Your treatment plan</h1>
+      <div class="sub">${esc(phTitle(name))} · ${new Date().toLocaleDateString()}</div>
+      <p>Dear ${esc(phTpFirstName(name))},</p>
+      <p>Here's the treatment plan we've put together for you. Let me know if anything doesn't make sense, or if anything changes for you along the way.</p>
+      ${plan.phases && plan.phases.length ? `<h2>Where you are right now</h2>
+      <table class="strip"><tr>${strip}</tr></table>` : ""}
+      <h2>Your plan, stage by stage</h2>
+      <table class="plan"><thead><tr><th>Stage</th><th>What we're doing</th><th>What it's for</th></tr></thead>
+      <tbody>${(plan.phases || []).map(p => `<tr><td><b>${esc(p.label)}</b></td><td>${p.formulaName ? esc(p.formulaName) : "As discussed"}</td><td>${esc(p.aim || "")}</td></tr>`).join("")}</tbody></table>
+      <p class="sig">Warmly,</p>`;
+  }
+  let phTpLetterOpen = false;
+  function phTpLetterCopy(btn, name, plan) {
+    const text = phTpLetterText(name, plan);
+    const flash = msg => { if (btn) { const orig = btn.textContent; btn.textContent = msg; setTimeout(() => { if (btn.isConnected) btn.textContent = orig; }, 1600); } };
+    let copied = false;
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text; ta.setAttribute("readonly", ""); ta.style.cssText = "position:fixed;left:-9999px;top:0";
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      copied = document.execCommand("copy");
+      ta.remove();
+    } catch (e) {}
+    if (copied) { flash("✓ Copied"); return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => flash("✓ Copied"), () => flash("⚠ Copy blocked"));
+    } else { flash("⚠ Copy blocked"); }
+  }
+  function phTpLetterViewHtml(name, plan) {
+    const strip = (plan.phases || []).map(p =>
+      `<span class="ph-tp-lseg${p.status === "current" ? " now" : p.status === "done" ? " past" : ""}">${esc(p.label)}</span>`).join("");
+    return `<div class="ph-tp-letter-acts">
+        <button type="button" class="ph-load-btn" data-tp-letter-back="1">← Back to plan</button>
+        <button type="button" class="ph-load-btn on" data-tp-letter-copy="1">✉ Copy for email</button>
+        <button type="button" class="ph-load-btn on" data-tp-letter-pdf="1">⬇ Export as PDF</button>
+      </div>
+      <div class="ph-tp-letter">
+        <p>Dear ${esc(phTpFirstName(name))},</p>
+        <p>Here's the treatment plan we've put together for you. Let me know if anything doesn't make sense, or if anything changes for you along the way.</p>
+        ${plan.phases && plan.phases.length ? `<div class="ph-tp-lh">Where you are right now</div>
+        <div class="ph-tp-lstrip">${strip}</div>` : ""}
+        <div class="ph-tp-lh">Your plan, stage by stage</div>
+        <table class="ph-tp-ltable"><thead><tr><th>Stage</th><th>What we're doing</th><th>What it's for</th></tr></thead>
+        <tbody>${(plan.phases || []).map(p => `<tr><td><b>${esc(p.label)}</b></td><td>${p.formulaName ? esc(p.formulaName) : "As discussed"}</td><td>${esc(p.aim || "")}</td></tr>`).join("")}</tbody></table>
+        <p style="margin-top:20px">Warmly,</p>
+        <p class="ph-tp-lnote">Generated fresh from the plan — clinical notes, findings and reviews stay out of it. Copy it into an email, or export a PDF to attach.</p>
+      </div>`;
+  }
   function renderTpScreen() {
     const modal = document.getElementById("phTpModal");
     if (!modal || modal.hidden) return;
@@ -25053,6 +25160,7 @@
         </span>
       </div>
       <div class="ph-hx-body">
+        ${phTpLetterOpen ? phTpLetterViewHtml(name, plan) : `
         <div class="ph-tp-fieldgrid">
           <label class="ph-gd-field"><span>Diagnosis / pattern</span><textarea rows="2" data-tp-field="${plan.id}:diagnosis" placeholder="TCM pattern, presenting complaint…">${esc(plan.diagnosis || "")}</textarea></label>
           <label class="ph-gd-field"><span>Goal / principle</span><textarea rows="2" data-tp-field="${plan.id}:goal" placeholder="What this plan is working toward…">${esc(plan.goal || "")}</textarea></label>
@@ -25072,10 +25180,11 @@
           <div class="ph-tp-review-add"><input type="text" id="phTpReviewInput" placeholder="Add a review note…" aria-label="New review note"><button type="button" class="ph-load-btn on" data-tp-review-add="${plan.id}">Add</button></div>
         </div>
         <div class="ph-tp-delzone">
+          <button type="button" class="ph-load-btn on" data-tp-letter-open="1">✉ Patient letter</button>
           ${armingPlan
             ? `<div class="ph-confirm-strip"><span>Delete this whole plan? This can't be undone.</span><button type="button" class="btn-save" data-tp-plan-del-yes="${plan.id}">Delete plan</button><button type="button" class="btn-cancel" data-tp-plan-del-no="1">Cancel</button></div>`
             : `<button type="button" class="tab-link" data-tp-plan-del="${plan.id}">Delete this plan</button>`}
-        </div>
+        </div>`}
       </div>
     </div>`;
     const newBody = modal.querySelector(".ph-hx-body");
