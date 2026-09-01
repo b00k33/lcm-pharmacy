@@ -368,6 +368,10 @@ intention, determine the best route, and build the experience intelligently."
 - Confirm every rule is met. Check at 360px: nothing cut off, overlapping, or
   running off-screen. Confirm every colour comes from the variables (no off-palette
   shades) and the green & white theme still looks clean and consistent.
+- **Changing an app icon = new FILENAME** (learned 2026-09-02): Android bakes the
+  launcher-tile icon in at install and only refreshes when the manifest points at
+  a NEW url — swapping bytes under the same name never reaches her home screen.
+  Rename (e.g. `-v2`), update manifest.json + link tags + the sw.js SHELL list.
 - **Every push bumps BOTH version markers**: `sw.js` `CACHE_VERSION` AND the
   `<meta name="lcm-build">` stamp in index.html. The meta stamp is what the gold
   Update button compares to detect a new version — bumping only sw.js ships code
