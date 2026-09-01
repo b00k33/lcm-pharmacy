@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260901-210000">
+<meta name="lcm-build" content="20260901-213000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -620,7 +620,7 @@
   #pharmacyPage .ph-ref-sum-bigg { font-size: 24px; font-weight: 800; color: var(--ph-ink); font-variant-numeric: tabular-nums; line-height: 1; }
   #pharmacyPage .ph-ref-sum-bigg small { font-size: 12px; font-weight: 600; color: var(--ph-soft); }
   #pharmacyPage .ph-ref-sum-tick { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--ph-green-deep); }
-  #pharmacyPage .ph-ref-onestrip.bad { background: #FBE9E7; }
+  #pharmacyPage .ph-ref-onestrip.bad { background: var(--ph-negative-tint); }
   #pharmacyPage .ph-ref-onestrip.bad .ph-ref-sum-bigg, #pharmacyPage .ph-ref-sum-tick.bad { color: var(--ph-verdict-zero); }
   /* the "?" that replaced the explainer paragraph -- costs no vertical space */
   #pharmacyPage .ph-ref-howlink {
@@ -2817,7 +2817,7 @@
   }
   #pharmacyPage .ph-dash-actbtn:hover { background: rgba(255,255,255,0.22); }
   #pharmacyPage .ph-dash-actbtn.primary { background: var(--margin-rule, #E3C87A); color: var(--ph-green-press); }
-  #pharmacyPage .ph-dash-actbtn.primary:hover { background: #EAD28A; }
+  #pharmacyPage .ph-dash-actbtn.primary:hover { background: color-mix(in oklab, var(--margin-rule, #E3C87A) 85%, white); }
   #pharmacyPage .ph-dash-actbtn .cnt { background: rgba(0,0,0,0.18); border-radius: 999px; padding: 1px 8px; font-size: 11px; }
   #pharmacyPage .ph-dash-actbtn .icn { width: 15px; height: 15px; }
   /* follow-ups due rows */
@@ -10695,50 +10695,6 @@
     phSigBoardCache = result; phSigBoardCacheSig = sig;
     return result;
   }
-  // ---- STEP 4: the top three, never more than two from one board ----------
-  // urgency = entries ÷ (weeks of cover + 1). Only ranked items are even
-  // candidates (unranked never appears here, her spec). Untracked-stock items
-  // are excluded from the score entirely -- there's no jar size to judge
-  // urgency against, and inventing one would break her "never guess" rule.
-  // Greedy walk down the sorted-by-score list, skipping a board once it has
-  // 2: this is optimal for "top N with a per-group cap", not an approximation
-  // -- swapping a picked item for a lower-scored one to satisfy the cap is
-  // never an improvement over skipping straight to the next-best candidate.
-  function phSigUrgentThree() {
-    const boards = phSigUsageBoards();
-    const candidates = [...boards.herbs, ...boards.formulas]
-      .filter(r => !r.cover.untracked)
-      .map(r => ({ r, board: phIsFormula(r.h) ? "formula" : "herb", urgency: r.entries / ((r.cover.notUsed ? Infinity : r.cover.weeks) + 1) }));
-    candidates.sort((a, b) => b.urgency - a.urgency || phByName(a.r.h, b.r.h));
-    const picked = [], boardCount = { herb: 0, formula: 0 };
-    for (const c of candidates) {
-      if (picked.length >= 3) break;
-      if (boardCount[c.board] >= 2) continue;
-      picked.push(c); boardCount[c.board]++;
-    }
-    return picked;
-  }
-  // ---- STEP 5/6: the 2x2 "Most urgent" grid, replacing the 5-count strip --
-  function phSigStateText(r) {
-    if (r.h.qty <= 0) return "Empty";
-    const weeks = r.cover.weeks;
-    if (weeks < 2) { const days = Math.max(1, Math.round(weeks * 7)); return `about ${days} day${days === 1 ? "" : "s"} left`; }
-    const wk = Math.max(1, Math.round(weeks));
-    return `about ${wk} week${wk === 1 ? "" : "s"} left`;
-  }
-  // Continues the SAME urgency-sorted list STEP 4 picked from, just past the
-  // three it already took -- so the catch-all's "next two" are genuinely the
-  // 4th and 5th most urgent things, not a second, differently-ranked list.
-  function phSigNextTwo(picked) {
-    const boards = phSigUsageBoards();
-    const pickedSet = new Set(picked.map(c => c.r.h));
-    const candidates = [...boards.herbs, ...boards.formulas]
-      .filter(r => !r.cover.untracked && !pickedSet.has(r.h))
-      .map(r => ({ r, urgency: r.entries / ((r.cover.notUsed ? Infinity : r.cover.weeks) + 1) }));
-    candidates.sort((a, b) => b.urgency - a.urgency || phByName(a.r.h, b.r.h));
-    return candidates.slice(0, 2);
-  }
-  const PH_SIG_COLS = 3;   // her spec 2026-08-23, open item 1
   const PH_DASH_LIST_ROWS = 7;   // her density spec 2026-08-23, open item 2 -- rows are
   // ~40% shorter now, so more fit in less height. One constant, easy to change.
   // ---- PART C, rebuilt for her "dashboard on a phone" spec (2026-08-27) ---
@@ -10819,214 +10775,6 @@
   // phSigListRowHtml for why a stateful menu can't safely exist in two DOM
   // copies at once.
   const phC1PlainRefillBtn = (h, days) => `<button type="button" class="ph-dash-act" data-ph-dash-refill-open="${h.id}" title="Refill ${esc(phPinyinName(h))}" aria-label="Refill ${esc(phPinyinName(h))}${phC1DaysAria(days)}"><svg class="icn" aria-hidden="true"><use href="#i-jar"/></svg></button>`;
-  function phSigTileHtml(c, size) {
-    const r = c.r, h = r.h, empty = h.qty <= 0;
-    const boards = phSigUsageBoards();
-    const boardSize = c.board === "formula" ? boards.formulaBoardSize : boards.herbBoardSize;
-    const boardWord = c.board === "formula" ? "formulas" : "herbs";
-    const jarIcon = empty ? "i-jar-empty" : "i-jar-part";
-    // Days of cover, derived from the SAME phSigCover the "about N days left"
-    // wording already uses -- not a second formula that could drift from it.
-    const days = phSigCoverDays(r);
-    // Stock bar against the refill line, using the existing rule: stock / the
-    // item's "low at", capped at 100%. The tick therefore sits at the right
-    // end of the track (that IS the refill line), so a short fill with the
-    // tick far to its right reads as "well past due" without reading a number.
-    const low = (h.low != null && h.low > 0) ? h.low : null;
-    const pct = low ? Math.max(0, Math.min(100, ((h.qty || 0) / low) * 100)) : null;
-    // her A3 (2026-08-26): the tag derives from the SAME comparison the bar
-    // shows -- stock against the refill line -- never from "this tile was
-    // picked as urgent". A tile above its line is here for its usage rate
-    // (the hero says so); stamping it "Low" contradicted its own full bar.
-    const tier = empty ? "zero" : (low != null && (h.qty || 0) <= low) ? "low" : "ok";
-    // one string, two homes: its own line on desktop, folded into the bar's
-    // left label on the phone (her B5) -- never two copies that could drift
-    const rateTxt = `${phFmtG(r.monthlyGrams)}g/mo · ${r.entries} script${r.entries === 1 ? "" : "s"}`;
-    const statusHtml = tier === "ok" ? ""
-      : `<span class="ph-sig-status tier-${tier}"><i aria-hidden="true"></i>${empty ? "Empty" : "Low"}</span>`;
-    // her spec 2026-08-28 ("plan it, make it, or order the herbs"): the
-    // can-make line + action row, formula tiles only. Every piece reused,
-    // not rebuilt -- phRefillRecipe/phRefillCanMake is the SAME calculation
-    // the Refill plan table's CAN MAKE? column runs, phRefillMenuHtml is the
-    // SAME Plan/Planned/Snoozed menu that page already uses, and
-    // data-ph-refill-ordershort / -orderall-recipe / -rowmenu are its
-    // EXISTING ordering + ⋯ menu handlers.
-    let canMakeHtml = "", actionsHtml;
-    if (c.board === "formula") {
-      const recipe = phRefillRecipe(h);
-      // her open item 1: always ×1 of the recipe, not whatever batch is
-      // currently planned -- the tile is a glance, not a planner.
-      const res = recipe ? phRefillCanMake(h, phRefillRecipeTotal(recipe)) : { noRecipe: true };
-      const canCheck = !res.noRecipe;
-      if (!canCheck) {
-        canMakeHtml = `<div class="ph-sig-canmake none">no recipe — can't check</div>`;
-      } else if (res.ok) {
-        canMakeHtml = `<div class="ph-sig-canmake ok">✓ can make ×1 now</div>`;
-      } else {
-        // up to two herbs named (her spec), pin yin + have/need -- same
-        // shape as phRefillShortNames, just capped narrower for the tile
-        const parts = res.shorts.slice(0, 2).map(s => s.stock <= 0
-          ? `${esc(phPinyinName(s.herb))} ${phFmtG(s.stock)}`
-          : `${esc(phPinyinName(s.herb))} ${phFmtG(s.stock)}/${phFmtG(s.needed)}`);
-        const more = res.shorts.length - parts.length;
-        canMakeHtml = `<div class="ph-sig-canmake short">⚠ short ${res.shorts.length} — ${parts.join(" · ")}${more > 0 ? ` <span class="ph-rp-more">+${more} more</span>` : ""}</div>`;
-      }
-      const menuOpen = phRefillRowMenuFor === h.id;
-      // her spec §2: 🛒 Order N is a real button only when something is
-      // short; ⋯ keeps "Order what's short" alongside it (so the option
-      // isn't lost if she opens ⋯ instead), plus "Order whole recipe" and
-      // "Open the formula" always. No recipe -> no order options at all,
-      // and ⋯ holds only "Open the formula".
-      const menuHtml = !menuOpen ? "" : `<div class="ph-rp-menu">
-          ${canCheck && !res.ok ? `<button type="button" class="ph-rp-mi" data-ph-refill-ordershort="${h.id}">Order what's short</button>` : ""}
-          ${canCheck ? `<button type="button" class="ph-rp-mi" data-ph-refill-orderall-recipe="${h.id}">Order whole recipe</button>` : ""}
-          <button type="button" class="ph-rp-mi" data-ph-dash-refill-open="${h.id}">Open the formula</button>
-        </div>`;
-      const dots = `<span class="ph-rp-menuwrap"><button type="button" class="ph-rp-dots" data-ph-refill-rowmenu="${h.id}" aria-haspopup="true" aria-expanded="${menuOpen}" aria-label="More for ${esc(h.name)}">⋯</button>${menuHtml}</span>`;
-      const rightAction = (canCheck && !res.ok
-        ? `<button type="button" class="ph-load-btn" data-ph-refill-ordershort="${h.id}">🛒 Order ${res.shorts.length}</button>`
-        : "") + dots;
-      actionsHtml = `<div class="ph-sig-actrow">
-        <span class="ph-sig-actleft">
-          <button type="button" class="ph-load-btn" data-ph-dash-refill-open="${h.id}">Refill →</button>
-          ${phRefillMenuHtml(h)}
-        </span>
-        <span class="ph-sig-actright">${rightAction}</span>
-      </div>`;
-    } else {
-      // her spec 2026-08-30: the SAME Plan▾ menu as Refill's above -- its own
-      // Snooze 1 week lives inside the dropdown now, so the separate generic
-      // ⏰ button (h.snoozedUntil) is dropped here too, matching the formula
-      // branch's own precedent just above.
-      actionsHtml = `<div class="ph-sig-actrow">
-        <span class="ph-sig-actleft">${phOrderMenuHtml(h)}</span>
-      </div>`;
-    }
-    // STEP 3: a 40px square icon button, not the desktop "Refill ->"/"Add to
-    // order" text pill -- phDashActBtnHtml is the app's existing icon-button
-    // builder (title+aria-label both, from the same label string), reused
-    // rather than a one-off. STEP 4: the exact days figure folds into that
-    // label so it's still reachable, even though the row itself only draws
-    // up to 4 blocks now.
-    const c1Action = c.board === "formula"
-      ? phDashActBtnHtml(tier, `data-ph-dash-refill-open="${h.id}"`, "i-jar", `Refill ${phPinyinName(h)}${phC1DaysAria(days)}`)
-      : phDashActBtnHtml(tier, `data-ph-order="${h.id}" aria-pressed="${!!h.order}"`, h.order ? "i-check" : "i-cart",
-          `${h.order ? "On the order list — tap to take" : "Add"} ${phPinyinName(h)} ${h.order ? "off it" : "to the order list"}${phC1DaysAria(days)}`, !!h.order);
-    // STEP 5: scaled to TWICE the refill line -- the fixed 50% notch marks
-    // the line itself. Desktop's own `pct` above (used by .ph-sig-bar) keeps
-    // its original 1x scale; this is a separate phone-only value.
-    const phonePct = low ? Math.max(0, Math.min(100, ((h.qty || 0) / (low * 2)) * 100)) : null;
-    const c1Row = phC1RowHtml({
-      rank: r.rank, tier,
-      nameHtml: `<button type="button" class="ph-name-link" data-ph-dash-herb-edit="${h.id}" title="${esc(phPinyinFullLabel(h))}" data-ph-full-name="${esc(phPinyinFullLabel(h))}">${esc(phPinyinName(h))}</button>`,
-      qty: h.qty || 0, low, days,
-      actionHtml: c1Action, pct: phonePct
-    });
-    const tile = `<div class="ph-sig-tile ${size} tier-${tier}">
-      <div class="ph-sig-head">
-        <svg class="icn ph-sig-head-ic" aria-hidden="true"><use href="#${jarIcon}"/></svg>
-        <span class="ph-sig-rankline">#${r.rank} of ${boardSize} ${boardWord}</span>
-        ${statusHtml}
-      </div>
-      <button type="button" class="ph-sig-name ph-name-link" data-ph-dash-herb-edit="${h.id}" title="${esc(phPinyinFullLabel(h))}" data-ph-full-name="${esc(phPinyinFullLabel(h))}">${phHerbCode(h) ? `<span class="ph-dash-code">${esc(phHerbCode(h))}</span>` : ""}${esc(phPinyinName(h))}</button>
-      <div class="ph-sig-hero">
-        <span class="n">${days}</span><span class="u">day${days === 1 ? "" : "s"} of cover</span>
-      </div>
-      ${pct != null ? `<div class="ph-sig-bar">
-        <div class="ph-sig-track"><div class="ph-sig-fill" style="width:${pct.toFixed(1)}%"></div><i class="ph-sig-tick" aria-hidden="true"></i></div>
-        <div class="ph-sig-barlabels"><span>${phFmtG(h.qty)}g left<span class="ph-sig-lbl-rate"> · ${rateTxt}</span></span><span>refill at ${phFmtG(low)}g</span></div>
-      </div>` : `<div class="ph-sig-barlabels"><span>${phFmtG(h.qty)}g left<span class="ph-sig-lbl-rate"> · ${rateTxt}</span></span><span>no refill line set</span></div>`}
-      <div class="ph-sig-rate">${rateTxt}</div>
-      ${canMakeHtml}
-      ${actionsHtml}
-    </div>`;
-    // her PART C (2026-08-26): the phone gets a 56px row instead of this
-    // card -- returned alongside it (not swapped in) so phSigGridHtml can put
-    // the three rows inside ONE shared list card, and the three tiles inside
-    // their existing per-item grid cells. Desktop markup above is unchanged.
-    return { tile, row: c1Row };
-  }
-  // "How many things are waiting" = the next two urgent items, plus an
-  // unfinished stocktake (one thing), plus everything on the to-order queue
-  // (each its own thing) -- everything this tile actually lists below, so
-  // the medallion number is never a mystery figure unrelated to its own rows.
-  function phSigCatchAllTileHtml(picked) {
-    const nextTwo = phSigNextTwo(picked);
-    const stOpen = phStocktakeOpenSessions();
-    const orderCount = PHARMACY.herbs.filter(herbNeedsOrder).length;
-    const waitingCount = nextTwo.length + stOpen.length + orderCount;
-    // her spec 2026-08-23: this is no longer a tile. As a tile it forced the
-    // whole row taller and left a large blank gap under its neighbour -- the
-    // single biggest space saving here. Now a full-width slim strip BELOW the
-    // tile row: count, title + subtitle, its items inline, link on the right.
-    // Nothing it links to or does has changed.
-    const strip = `<div class="ph-sig-strip">
-      <span class="ph-sig-strip-head"><span class="ph-sig-strip-n">${waitingCount}</span><span class="ph-sig-strip-t"><b>Also waiting</b><span>nothing here is holding up a script</span></span></span>
-      <span class="ph-sig-strip-items">
-        ${nextTwo.map(c => `<span class="ph-sig-strip-item" title="${esc(phPinyinFullLabel(c.r.h))}" data-ph-full-name="${esc(phPinyinFullLabel(c.r.h))}"><svg class="icn" aria-hidden="true"><use href="#${c.r.h.qty <= 0 ? "i-jar-empty" : "i-jar-part"}"/></svg>#${c.r.rank} ${esc(phPinyinName(c.r.h))} <b>${phFmtG(c.r.h.qty)}g</b></span>`).join("")}
-        ${stOpen.map(o => `<span class="ph-sig-strip-item"><svg class="icn" aria-hidden="true"><use href="#i-clipboard"/></svg>${o.type === "formulas" ? "Formula" : "Herb"} count in progress</span>`).join("")}
-        <span class="ph-sig-strip-item"><svg class="icn" aria-hidden="true"><use href="#i-cart"/></svg>On the order list <b>${orderCount}</b></span>
-      </span>
-      <button type="button" class="ph-load-btn ph-sig-strip-btn" data-ph-tab="stats">See everything \u2192</button>
-    </div>`;
-    // her PART C, C4, redrawn for STEP 8 (2026-08-27): "Also waiting"'s two
-    // urgent-adjacent items get the same row on the phone -- but that row no
-    // longer builds its OWN card here. phSigGridHtml below folds these rows
-    // (plus the status lines after them) straight into the SAME list as the
-    // top 3, one continuous card, one "See all" footer -- not a second
-    // strip glued underneath the first. Desktop's strip above is untouched.
-    const rowsHtml = nextTwo.map(c => {
-      const tier = phDashTier(c.r.h);
-      const low = (c.r.h.low != null && c.r.h.low > 0) ? c.r.h.low : null;
-      const pct = low ? Math.max(0, Math.min(100, ((c.r.h.qty || 0) / (low * 2)) * 100)) : null;
-      const days = phSigCoverDays(c.r);
-      return phC1RowHtml({
-        rank: c.r.rank, tier,
-        nameHtml: `<button type="button" class="ph-name-link" data-ph-dash-herb-edit="${c.r.h.id}" title="${esc(phPinyinFullLabel(c.r.h))}" data-ph-full-name="${esc(phPinyinFullLabel(c.r.h))}">${esc(phPinyinName(c.r.h))}</button>`,
-        qty: c.r.h.qty || 0, low, days, pct
-      });
-    }).join("");
-    // STEP 9: reported, not fixed -- this status line is the SAME "N count
-    // in progress" signal phDashTaskStocktakeHtml already shows under Needs
-    // action now, a genuine duplicate she asked to leave alone for now.
-    const statusHtml = `${stOpen.map(o => `<div class="ph-c1-status"><svg class="icn" aria-hidden="true"><use href="#i-clipboard"/></svg>${o.type === "formulas" ? "Formula" : "Herb"} count in progress</div>`).join("")}
-      <div class="ph-c1-status"><svg class="icn" aria-hidden="true"><use href="#i-cart"/></svg>On the order list <b>${orderCount}</b></div>`;
-    return { desktopHtml: `<div class="ph-c1-desktop">${strip}</div>`, rowsHtml, statusHtml, waitingCount };
-  }
-  function phSigGridHtml() {
-    const picked = phSigUrgentThree();
-    if (!picked.length) return `<div class="ph-dash-secthead"><h2>Most urgent</h2><span class="rule"></span></div><div class="fam-empty">Not enough dispensing history yet to rank what's urgent.</div>`;
-    // one constant, not a number sprinkled through the CSS and the JS. Three
-    // across was her spec's pick: four fits the width but crowds each tile.
-    const built = picked.slice(0, PH_SIG_COLS).map(c => phSigTileHtml(c, ""));
-    const waiting = phSigCatchAllTileHtml(picked);
-    // her "dashboard on a phone" spec (2026-08-27), STEP 7+8: "Most urgent"
-    // and "Also waiting" (two headings, two cards, two count bubbles) become
-    // ONE list on the phone -- a thin "Holding up a script \u00b7 3" label at the
-    // top (the week-of-cover legend lives directly under it, once), the top
-    // 3 rows, a second thin "Also low \u00b7 N" label marking where "holding up
-    // a script" stops being true, the next-two rows, the stocktake/order
-    // status lines, one "See all N ->" footer. Desktop is untouched: its own
-    // "Most urgent" heading + tile grid + separate "Also waiting" strip
-    // still render exactly as before, toggled by the same .ph-c1-desktop/
-    // .ph-c1-phone split every other list on this page already uses.
-    return `<div class="ph-c1-desktop"><div class="ph-dash-secthead"><h2>Most urgent</h2><span class="rule"></span></div></div>
-      <div class="ph-c1-phone">
-        <div class="ph-dash-secthead-thin">Holding up a script \u00b7 ${built.length}<span class="rule"></span></div>
-        <div class="ph-c1-weeks-legend"><span>weeks of cover \u2192</span><b>1</b><b>2</b><b>3</b><b>4</b></div>
-      </div>
-      <div class="ph-c1-desktop"><div class="ph-sig-grid" style="--ph-sig-cols:${PH_SIG_COLS}">
-        ${built.map(b => b.tile).join("")}
-      </div></div>
-      <div class="ph-c1-phone"><div class="ph-dash-list ph-c1-card">
-        ${built.map(b => b.row).join("")}
-        ${waiting.rowsHtml || waiting.statusHtml ? `<div class="ph-dash-secthead-thin mid">Also low \u00b7 ${waiting.waitingCount}<span class="rule"></span></div>` : ""}
-        ${waiting.rowsHtml}
-        ${waiting.statusHtml}
-      </div>
-      ${waiting.waitingCount ? `<div class="ph-dash-seeall"><button type="button" class="ph-name-link" data-ph-tab="stats">See all ${waiting.waitingCount} \u2192</button></div>` : ""}</div>
-      ${waiting.desktopHtml}`;
-  }
   // ---- STEP 11: not enough history yet to rank anything --------------------
   // A brand-new install (or one under 2 complete months old) must never show
   // "#1 of 1" -- a single coincidental dispense isn't real significance.
@@ -11079,36 +10827,6 @@
     const bars = arr.map(v => `<i style="height:${max > 0 ? Math.max(8, Math.round((v / max) * 100)) : 8}%"></i>`).join("");
     return `<span class="ph-sig-bars tier-${tier}" title="Last 6 months: ${arr.map(v => phFmtG(v) + "g").join(" · ")}">${bars}</span>`;
   }
-  // ---- STEP 3/4: the dark-green title bar, today strip and footer ---------
-  // Presentation only. Every figure below is READ from something that already
-  // exists -- no new maths, no new storage, nothing written.
-  function phDashTodayFigures() {
-    const boards = phSigUsageBoards();
-    const rows = [...boards.herbs, ...boards.formulas];
-    // "empty and in use" is her wording and her definition: at zero AND ranked.
-    // Deliberately NOT the raw out-of-stock count, which includes things she
-    // never reaches for.
-    const emptyInUse = rows.filter(r => (r.h.qty || 0) <= 0).length;
-    // "under a fortnight" uses the cover figure already computed on the board.
-    // untracked/notUsed/Infinity are all excluded, so nothing with no usage
-    // can masquerade as urgent.
-    const underFortnight = rows.filter(r => {
-      const c = r.cover;
-      if (!c || c.untracked || c.notUsed || !isFinite(c.weeks)) return false;
-      return c.weeks * 7 < 14 && (r.h.qty || 0) > 0;
-    }).length;
-    const onOrder = PHARMACY.herbs.filter(herbNeedsOrder).length;
-    // both open counts fold into the one "counted" cell -- honest combined
-    // progress; the per-count split lives on the task cards below it
-    const stOpen = phStocktakeOpenSessions();
-    return {
-      emptyInUse, underFortnight, onOrder,
-      stocktake: stOpen.length ? {
-        done: stOpen.reduce((n, o) => n + Object.keys(o.s.results).length, 0),
-        total: stOpen.reduce((n, o) => n + o.s.queue.length, 0),
-      } : null,
-    };
-  }
   // ============ APP-WIDE SHELL (2026-08-24): one header, one strip
   // builder, one footer -- every page calls these three instead of writing
   // its own. Presentation only; every number handed in still comes from
@@ -11148,22 +10866,6 @@
     const n = cells.length;
     const cell = c => `<div class="ph-shell-cell"><div class="ph-shell-n">${c.n}</div><div class="ph-shell-l${c.labelShort ? " has-short" : ""}">${c.label}</div>${c.labelShort ? `<div class="ph-shell-l is-short">${c.labelShort}</div>` : ""}${c.linkText ? `<button type="button" class="ph-shell-link" ${c.linkAttrs || ""}>${c.linkText}</button>` : ""}</div>`;
     return `<div class="ph-shell-strip" data-cols="${n}" style="--ph-shell-cols:${n}">${cells.map(cell).join("")}</div>`;
-  }
-  function phDashTodayStripHtml() {
-    const f = phDashTodayFigures();
-    const cells = [
-      { n: f.emptyInUse, label: "empty and<br>in use", labelShort: "empty, in use" },
-      { n: f.underFortnight, label: "under a<br>fortnight", labelShort: "under 2 wks" },
-      { n: f.onOrder, label: "on the order<br>list", labelShort: "to order" },
-    ];
-    // a finished stocktake drops its whole column rather than reading "121 of 121".
-    // No "Resume" link here -- an open session already gets its own Resume
-    // button in "Needs action now" every day, and on Mondays a third one in
-    // the weekly job band; this cell just needs to be a glance figure like
-    // its three siblings, not a fourth place to click the same action.
-    // "38/88", not "38 of 88" -- her B3.
-    if (f.stocktake) cells.push({ n: `${f.stocktake.done}/${f.stocktake.total}`, label: "counted", labelShort: "counted" });
-    return phShellStripHtml(cells);
   }
   // STEP 5: identical figures on every page. Lives OUTSIDE #pharmacyPage --
   // see phShellFooterEl() below -- so it's built once and reused across every
@@ -14073,29 +13775,6 @@
       `${title} ${phFileDate()}`);
   }
 
-  // her mockup (2026-08-16): a print icon on the To Order topbar. Same
-  // phPrintDoc engine as phPrintListing above, listing exactly what's on
-  // the page -- still-to-order and on-the-way, grouped, with the same
-  // per-row pack/qty math orderRow() uses (phOrderPackFor) so the printed
-  // quantities always match what's on screen.
-  function phPrintOrderList() {
-    const toOrder = PHARMACY.herbs.filter(herbNeedsOrder).sort(phByName);
-    const stillToOrder = toOrder.filter(h => !h.ordered);
-    const onTheWay = toOrder.filter(h => h.ordered);
-    const lineTotal = h => { const pack = phOrderPackFor(h), qty = h.orderQty != null ? h.orderQty : 1; return h.bottleCost != null ? h.bottleCost * qty : null; };
-    const row = h => { const pack = phOrderPackFor(h), qty = h.orderQty != null ? h.orderQty : 1, cost = lineTotal(h);
-      return `<tr><td>${esc(phDispName(h.name, phIsFormula(h)))}</td><td>${esc(h.supplier || "—")}</td><td class="n">${phFmtG(pack * qty)}g</td><td class="n">${cost != null ? phMoney(cost) : "—"}</td></tr>`; };
-    const section = (title, list) => list.length ? `<tr><td class="grp" colspan="4">${title} · ${list.length}</td></tr>${list.map(row).join("")}` : "";
-    const total = toOrder.reduce((sum, h) => sum + (lineTotal(h) || 0), 0);
-    phPrintDoc(`<title>Order List</title>
-      <style>body{font-family:Georgia,serif;padding:24px}h1{font-size:20px}table{border-collapse:collapse;width:100%;font-size:13px}
-      th,td{border:1px solid #999;padding:5px 8px;text-align:left}td.n{text-align:right}td.grp{background:#eee;font-weight:bold}</style>
-      <h1>Order List — ${new Date().toLocaleDateString()}</h1>
-      <table><thead><tr><th>Herb</th><th>Supplier</th><th>Order qty</th><th>Est. cost</th></tr></thead>
-      <tbody>${section("To order", stillToOrder)}${section("Ordered — on the way", onTheWay)}</tbody>
-      <tfoot><tr><td colspan="3" style="text-align:right;font-weight:bold">Total</td><td class="n" style="font-weight:bold">${phMoney(total)}</td></tr></tfoot></table>`,
-      `Order list ${phFileDate()}`);
-  }
 
   // one renderer for all three movement kinds — dispense, refill, arrival —
   // used by the pharmacy log and the prescription/refill views alike
@@ -14367,7 +14046,7 @@
     // "Print order list" button that sat beside it was removed 2026-09-01
     // at her direct yes -- she never prints orders ("i dont print. allow me
     // to copy list for email"); each supplier band's 📋 Copy for email is
-    // the real workflow. phPrintOrderList itself stays defined, unused.
+    // the real workflow. (phPrintOrderList deleted at her audit yes 2026-09-01.)
     restock: [
       { icon: "i-check", label: "Mark all arrived", run: () => phArrive(PHARMACY.herbs.filter(herbNeedsOrder)) },
     ],
@@ -15030,12 +14709,6 @@
       ? `<span class="ph-ring arc" style="--pct:${pct}" title="${esc(title)}"><span>${pct}%</span></span>`
       : `<span class="ph-ring solid ${tier}" title="${esc(title)}"><span>${pct}%</span></span>`;
   }
-  // icon-only action button; keeps the exact data-attribute the existing
-  // handler already listens for, so the action itself is untouched
-  function phDashActBtnHtml(tier, attr, icon, label, pressed) {
-    return `<button type="button" class="ph-dash-act tier-${tier}" ${attr}${pressed == null ? "" : ` aria-pressed="${!!pressed}"`} title="${esc(label)}" aria-label="${esc(label)}"><svg class="icn" aria-hidden="true"><use href="#${icon}"/></svg></button>`;
-  }
-
   // ---- §1 "Needs action now" task cards -----------------------------------
   // her ask 2026-08-24: the card says LESS than the strip, not the same --
   // the strip already states "N of M counted" and the bar already shows it,
@@ -15222,30 +14895,6 @@
       who: phTitle(row.rec.patient), kind: row.kind, presId: row.rec.presId,
     }));
     return { disp, fu };
-  }
-  function phDashWeekCellHtml(items, kind, day) {
-    const cls = kind === "disp" ? "disp" : `fu-${items[0] ? items[0].kind : "checkin"}`;
-    if (!items.length) return `<button type="button" class="ph-week-cell${day.today ? " today" : ""}" data-ph-dash-week-day="${day.key}"><span class="dash">–</span></button>`;
-    const first = items[0], extra = items.length - 1;
-    const icon = kind === "disp" ? (first.method === "pickup" ? "i-car" : "i-mail") : "";
-    return `<button type="button" class="ph-week-cell ${cls}${day.today ? " today" : ""}" data-ph-dash-week-day="${day.key}">
-      ${icon ? `<svg class="icn" aria-hidden="true"><use href="#${icon}"/></svg>` : ""}
-      <span class="who">${esc(first.who.split(" ")[0])}</span>${extra > 0 ? `<span class="more">+${extra}</span>` : ""}
-    </button>`;
-  }
-  // her ask (2026-08-31): Formula refills/Herbal orders folded into This
-  // Week as ONE combined row -- a count, not a name (there's no single
-  // "who" the way a patient row has one), red-tinted if anything in that
-  // day's count is overdue. Stocktake stays out (her call).
-  function phDashWeekPharmCellHtml(refill, order, day) {
-    const n = refill.length + order.length;
-    if (!n) return `<button type="button" class="ph-week-cell${day.today ? " today" : ""}" data-ph-dash-week-day="${day.key}"><span class="dash">–</span></button>`;
-    const crit = refill.filter(x => x.overdue).length + order.filter(x => x.overdue).length;
-    return `<button type="button" class="ph-week-cell pharm${crit ? " overdue" : ""}${day.today ? " today" : ""}" data-ph-dash-week-day="${day.key}">
-      ${crit ? `<span class="crit-badge">${crit}</span>` : ""}
-      <svg class="icn" aria-hidden="true"><use href="#i-jar"/></svg>
-      <span class="who">${n}</span>
-    </button>`;
   }
   // her ask (2026-08-31, "improve this table's usefulness" / Rebecca bug
   // report): the flat mixed list buried which of the day's items actually
@@ -15451,8 +15100,9 @@
   // for clear days, tap expands the existing detail; denser overall.
   // Every number moved to where its work lives (order count on the button,
   // counted-progress on the stocktake card, empty-count on Urgent stock's
-  // header) -- phDashTodayStripHtml and phSigGridHtml stay defined but
-  // uncalled here, replaced by the two builders below. ============
+  // header). The old builders (phDashTodayStripHtml, phSigGridHtml and
+  // their tile/strip helpers) were DELETED at her audit yes 2026-09-01 --
+  // git history has them if ever wanted back. ============
   function phDashActionStripHtml() {
     const toOrder = PHARMACY.herbs.filter(herbNeedsOrder).length;
     return `<div class="ph-dash-actrow">
@@ -15461,8 +15111,9 @@
     </div>`;
   }
   // follow-ups due, as one-line rows with elapsed time + a Review action --
-  // replaces the two-name summary strip on this page (phFuDashStripHtml
-  // still serves any other caller)
+  // replaces the two-name summary strip this page used to show
+  // (phFuDashStripHtml -- deleted at her audit yes 2026-09-01, no other
+  // caller existed)
   function phDashFuRowsHtml() {
     const todayKey = keyOf(TODAY);
     const due = phFuContactRows().filter(r => !r.done && r.on <= todayKey).sort((a, b) => a.on < b.on ? -1 : 1);
@@ -21943,22 +21594,6 @@
     return `<span class="ph-fu-badge ${done ? "done" : kind}">${label}</span>`;
   }
   function phFuNoteText(rec) { return (rec.review && rec.review.note) || ""; }
-  // Dashboard strip (her §5): overdue + today ONLY -- a follow-up four days
-  // out is not "due" and must not inflate the count. Absent entirely when
-  // there are none; no empty state on the Dashboard.
-  function phFuDashStripHtml() {
-    const todayKey = keyOf(TODAY);
-    const due = phFuContactRows().filter(r => !r.done && r.on <= todayKey).sort((a, b) => a.on < b.on ? -1 : 1);
-    if (!due.length) return "";
-    const soonest = due.slice(0, 2);
-    return `<div class="ph-sig-strip ph-fu-strip">
-      <span class="ph-sig-strip-head"><span class="ph-sig-strip-n">${due.length}</span><span class="ph-sig-strip-t"><b>Follow-ups due</b><span>patients to check in on or review</span></span></span>
-      <span class="ph-sig-strip-items">
-        ${soonest.map(row => `<span class="ph-sig-strip-item">${phFuBadgeHtml(row.kind, false)} ${esc(phTitle(row.rec.patient))} \u2014 ${phFuRelDay(row.on)}</span>`).join("")}
-      </span>
-      <button type="button" class="ph-load-btn ph-sig-strip-btn" data-ph-tab="followups">See all \u2192</button>
-    </div>`;
-  }
   function phFuRowsFiltered() {
     const all = phFuContactRows();
     if (phFuFilter === "done") return all.filter(r => r.done).sort((a, b) => a.on < b.on ? -1 : 1);
