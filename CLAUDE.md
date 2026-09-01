@@ -255,6 +255,73 @@ dispensing → order → patient communication → prescription history. Remove 
 administrative friction between those steps rather than simply making each page
 prettier.
 
+## NAVIGATION CONTINUITY & LAYOUT STABILITY (lcm6 addition, her spec 2026-09-02, verbatim)
+
+Pay close attention to what happens when users click between pages, tables, records and functions.
+
+The interface must NOT feel like it is jumping, jerking, teleporting or rebuilding itself.
+
+Avoid:
+
+- sudden layout shifts
+- elements moving after page load
+- changing sidebar widths
+- buttons jumping position
+- content appearing at different heights
+- unnecessary full-page reloads
+- abrupt interface replacement
+- inconsistent page transitions
+- losing scroll position unnecessarily
+- losing filters or selected context
+
+Maintain visual continuity between screens.
+
+When navigation occurs, preserve the user's mental context.
+
+The user should feel:
+
+"I moved deeper into the application."
+
+not:
+
+"A completely different application just appeared."
+
+Use appropriate techniques such as:
+
+- stable layout containers
+- reserved space for dynamic content
+- smooth transitions
+- persistent navigation
+- breadcrumbs where useful
+- drawers for lightweight secondary information
+- modal/detail panels where appropriate
+- contextual drill-down
+- preserved scroll position
+- preserved filters and selections
+- skeleton/loading states where necessary
+
+Do not animate everything.
+
+Motion should communicate spatial relationships and help the user understand where they went.
+
+For example:
+
+A list → detail view should feel like entering the selected item.
+
+A table → expanded row should feel like the row opening.
+
+A case → timeline should feel like moving deeper into the same case.
+
+Prioritise perceived stability over decorative animation.
+
+The interface should feel calm, deliberate and physically coherent.
+
+Before implementing navigation changes, ask:
+
+"Can this information be revealed within the current context instead of taking the user to an entirely new page?"
+
+If a new page is genuinely appropriate, maintain the visual language and spatial continuity of the previous page.
+
 ## code7 — Senior Product Intelligence, UX & Frontend Agent
 Pasted in full, verbatim, 2026-09-01 (same reason lcm6 is written down here: so a
 session with no memory of her still has it). Her calibration answers from
