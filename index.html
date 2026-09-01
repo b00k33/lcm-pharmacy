@@ -4536,7 +4536,18 @@
     padding: 9px 12px; cursor: pointer; font-family: inherit; margin-top: 4px;
   }
   #pharmacyPage .ph-tp-addbtn:hover { border-color: var(--ph-green); color: var(--ph-green-press); }
-  #pharmacyPage .ph-tp-chooser { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--ph-soft); }
+  /* start-mode template cards (2026-09-01 "make it easier") */
+  #pharmacyPage .ph-tp-tmplcard-wrap { display: flex; align-items: flex-start; gap: 8px; }
+  #pharmacyPage .ph-tp-tmplcard-wrap .ph-tp-tmplcard { flex: 1; min-width: 0; }
+  #pharmacyPage .ph-tp-tmplcard {
+    display: flex; flex-direction: column; gap: 2px; width: 100%; text-align: left;
+    background: var(--ph-green-tint); border: none; border-radius: var(--field-radius-sm, 11px);
+    padding: 12px 16px; margin-bottom: 8px; cursor: pointer; font-family: inherit;
+  }
+  #pharmacyPage .ph-tp-tmplcard:hover { background: color-mix(in oklab, var(--ph-green-tint) 70%, var(--ph-green)); }
+  #pharmacyPage .ph-tp-tmplcard-title { font-size: 14px; font-weight: 800; color: var(--ph-green-deep); }
+  #pharmacyPage .ph-tp-tmplcard-mine { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--gold-deep, #B08D3E); background: rgba(227,200,122,0.22); border-radius: 999px; padding: 2px 8px; margin-left: 6px; vertical-align: middle; }
+  #pharmacyPage .ph-tp-tmplcard-sub { font-size: 11.5px; color: var(--ph-soft); }
 
   /* her ask (2026-09-01, live on Rebecca So's plan): "make this wider and
      larger" -- the shared .ph-hx-card is 640px; the plan screen holds a
@@ -17818,14 +17829,34 @@
         phTpOpen(tpPlanOpen.dataset.tpPlanOpen.slice(0, i), tpPlanOpen.dataset.tpPlanOpen.slice(i + 1));
         return;
       }
-      if (e.target.closest("[data-tp-new]")) { phTpNewChooserFor = e.target.closest("[data-tp-new]").dataset.tpNew; renderPresPanel(); return; }
-      if (e.target.closest("[data-tp-new-cancel]")) { phTpNewChooserFor = null; renderPresPanel(); return; }
-      const tpNewBlank = e.target.closest("[data-tp-new-blank]");
-      if (tpNewBlank) { phTpCreate(tpNewBlank.dataset.tpNewBlank, null); return; }
-      const tpNewTmpl = e.target.closest("[data-tp-new-tmpl]");
-      if (tpNewTmpl) {
-        const i = tpNewTmpl.dataset.tpNewTmpl.lastIndexOf(":");
-        phTpCreate(tpNewTmpl.dataset.tpNewTmpl.slice(0, i), tpNewTmpl.dataset.tpNewTmpl.slice(i + 1));
+      if (e.target.closest("[data-tp-new]")) { phTpOpenNew(e.target.closest("[data-tp-new]").dataset.tpNew); return; }
+      const tpCreate = e.target.closest("[data-tp-create]");
+      if (tpCreate && phTpScreenPatient) {
+        const id = tpCreate.dataset.tpCreate;
+        phTpCreate(phTpScreenPatient, id === "blank" ? null : id);
+        return;
+      }
+      const tpTmplDel = e.target.closest("[data-tp-tmpl-del]");
+      if (tpTmplDel) { phTpDeleteArm = "tmpl:" + tpTmplDel.dataset.tpTmplDel; renderTpScreen(); return; }
+      const tpTmplDelYes = e.target.closest("[data-tp-tmpl-del-yes]");
+      if (tpTmplDelYes) {
+        PHARMACY.tpTemplates = phTpUserTemplates().filter(t => t.id !== tpTmplDelYes.dataset.tpTmplDelYes);
+        phTpDeleteArm = null; savePharmacy(); renderTpScreen();
+        return;
+      }
+      const tpSaveTmpl = e.target.closest("[data-tp-save-tmpl]");
+      if (tpSaveTmpl) {
+        const plan = phTpFindPlan(phTpScreenPatient, tpSaveTmpl.dataset.tpSaveTmpl);
+        if (plan) {
+          phTpUserTemplates().push({
+            id: uid(), name: plan.title || "Untitled protocol", goal: plan.goal || "",
+            phases: plan.phases.map(p => ({ label: p.label, aim: p.aim || "", points: p.points || "", suggestFormula: p.formulaName || p.suggestFormula || "" })),
+          });
+          savePharmacy();
+          const orig = tpSaveTmpl.textContent;
+          tpSaveTmpl.textContent = "✓ Saved as template";
+          setTimeout(() => { if (tpSaveTmpl.isConnected) tpSaveTmpl.textContent = orig; }, 1600);
+        }
         return;
       }
       if (e.target.closest("[data-pres-third-toggle]")) { presThirdOpen = !presThirdOpen; renderPresPanel(); return; }
@@ -22971,10 +23002,16 @@
     // would be noise, and + New treatment plan lives in the History card).
     const plans = phTpPlans(name);
     const activePlan = plans.find(p => p.status === "active") || plans[0];
+    // her ask (2026-09-01, "make it easier to do treatment plans"): starting
+    // one is now a resting-screen tap too, not just opening an existing one
+    // -- the no-plans row stays as quiet as the not-started history row
     const planRowHtml = activePlan ? `<button type="button" class="ph-hx-row hasanswers ph-tp-glance" data-tp-plan-open="${esc(name)}|${activePlan.id}">
         <span class="ph-hx-lead">\ud83d\uddc2 ${esc(activePlan.title || "Treatment plan")}${(pc => pc ? ` \u2014 ${esc(pc.label)}` : "")(phTpPlanCurrentPhase(activePlan))}</span>
         <span class="ph-hx-action">${plans.length > 1 ? `${plans.length} plans` : "Open"}</span>
-      </button>` : "";
+      </button>` : `<button type="button" class="ph-hx-row notstarted ph-tp-glance" data-tp-new="${esc(name)}">
+        <span class="ph-hx-lead">\ud83d\uddc2 Treatment plan \u2014 none yet</span>
+        <span class="ph-hx-action">+ Start one</span>
+      </button>`;
     return `<div class="ph-hx-summary">
       ${rowHtml}
       ${planRowHtml}
@@ -25043,8 +25080,17 @@
       ],
     },
   ];
-  function phTpNewPlan(templateId) {
-    const tpl = PH_TP_TEMPLATES.find(x => x.id === templateId) || null;
+  // her own saved templates (her ask 2026-09-01 "make it easier to do
+  // treatment plans"): any plan can be saved as a reusable template, stored
+  // here alongside the built-in Cycle & IVF one
+  const phTpUserTemplates = () => PHARMACY.tpTemplates || (PHARMACY.tpTemplates = []);
+  const phTpAllTemplates = () => [...PH_TP_TEMPLATES, ...phTpUserTemplates()];
+  function phTpNewPlan(templateId, ctx) {
+    const tpl = phTpAllTemplates().find(x => x.id === templateId) || null;
+    // a blank plan isn't empty any more -- one starter phase, with the
+    // patient's own current formula pre-SUGGESTED (never auto-linked: a
+    // wrong link on a real plan is worse than a suggestion chip)
+    const phases = tpl ? tpl.phases : [{ label: "Phase 1", aim: "", points: "", suggestFormula: (ctx && ctx.suggestFormula) || "" }];
     return {
       id: uid(), title: tpl ? tpl.name : "New treatment plan",
       diagnosis: "", goal: tpl ? tpl.goal : "", status: "active",
@@ -25052,7 +25098,7 @@
       // itself as baseline findings -- visit-to-visit changes go in reviews
       tongue: "", pulse: "", abdomen: "",
       createdDate: keyOf(TODAY), templateName: tpl ? tpl.name : null,
-      phases: (tpl ? tpl.phases : []).map((p, i) => ({
+      phases: phases.map((p, i) => ({
         id: uid(), label: p.label, aim: p.aim, points: p.points || "",
         formulaId: null, formulaName: "", suggestFormula: p.suggestFormula || "",
         status: i === 0 ? "current" : "upcoming",
@@ -25078,25 +25124,20 @@
           <span class="ph-tp-pc-chev">›</span>
         </button>`;
       }).join("")}
-      ${phTpNewChooserFor === name ? phTpNewChooserHtml(name) : `<button type="button" class="ph-tp-addbtn" data-tp-new="${esc(name)}">+ New treatment plan</button>`}
+      <button type="button" class="ph-tp-addbtn" data-tp-new="${esc(name)}">+ New treatment plan</button>
     </div>`;
   }
-  // ---- new-plan chooser (blank vs template) -- a tiny inline strip, not its own screen ----
-  let phTpNewChooserFor = null;   // patient name currently showing the chooser
-  function phTpNewChooserHtml(name) {
-    return `<div class="ph-tp-chooser">
-      <span>Start this plan —</span>
-      <button type="button" class="ph-load-btn" data-tp-new-blank="${esc(name)}">Blank</button>
-      ${PH_TP_TEMPLATES.map(t => `<button type="button" class="ph-load-btn on" data-tp-new-tmpl="${esc(name)}:${t.id}">${esc(t.name)} template</button>`).join("")}
-      <button type="button" class="ph-load-btn" data-tp-new-cancel="1">Cancel</button>
-    </div>`;
-  }
+  // 2026-09-01 "make it easier": the old inline blank/template chooser strip
+  // is gone -- + New now opens the plan modal in start mode (phTpOpenNew),
+  // one consistent creation screen from every entry point.
   function phTpCreate(name, templateId) {
     const rec = phPatientRec(name);
     if (!rec) return;
-    const plan = phTpNewPlan(templateId);
+    // infer the suggestion from the patient's own current script -- what the
+    // app already knows, offered not asked (code7)
+    const cur = PRESC.items.find(t => !presIsFormula(t) && phPatientKey(presPatientFor(t)) === phPatientKey(name));
+    const plan = phTpNewPlan(templateId, { suggestFormula: (cur && (cur.formula || "").trim()) || "" });
     rec.treatmentPlans.push(plan);
-    phTpNewChooserFor = null;
     savePharmacy(); renderPresPanel();
     phTpOpen(name, plan.id);
   }
@@ -25107,6 +25148,16 @@
   function phTpOpen(name, planId) {
     if (!name || !planId) return;
     phTpScreenPatient = name; phTpScreenPlanId = planId;
+    phTpFormulaPickPhase = null; phTpDeleteArm = null; phTpLetterOpen = false;
+    document.getElementById("phTpBackdrop").hidden = false;
+    document.getElementById("phTpModal").hidden = false;
+    renderTpScreen();
+  }
+  // start mode: the modal opens with template cards instead of a plan --
+  // one tap on a card creates the plan and drops straight into editing it
+  function phTpOpenNew(name) {
+    if (!name) return;
+    phTpScreenPatient = name; phTpScreenPlanId = null;
     phTpFormulaPickPhase = null; phTpDeleteArm = null; phTpLetterOpen = false;
     document.getElementById("phTpBackdrop").hidden = false;
     document.getElementById("phTpModal").hidden = false;
@@ -25282,6 +25333,37 @@
     const prevBody = modal.querySelector(".ph-hx-body");
     const prevScroll = prevBody ? prevBody.scrollTop : 0;
     const name = phTpScreenPatient;
+    // start mode (no plan id yet): template cards, one tap each
+    if (!phTpScreenPlanId) {
+      const userTpls = phTpUserTemplates();
+      modal.innerHTML = `<div class="ph-hx-card">
+        <div class="ph-hx-head">
+          <button type="button" class="ph-stocktake-close" data-tp-close="1" aria-label="Close">×</button>
+          <div class="ph-hx-head-top"><div class="ph-hx-head-name">🗂 New plan — ${esc(phTitle(name))}</div></div>
+        </div>
+        <div class="ph-hx-body">
+          <button type="button" class="ph-tp-tmplcard" data-tp-create="blank">
+            <span class="ph-tp-tmplcard-title">Blank plan</span>
+            <span class="ph-tp-tmplcard-sub">One starter phase — build it as you go${(() => { const cur = PRESC.items.find(t => !presIsFormula(t) && phPatientKey(presPatientFor(t)) === phPatientKey(name)); return cur && (cur.formula || "").trim() ? `, their current formula already suggested` : ""; })()}</span>
+          </button>
+          ${PH_TP_TEMPLATES.map(t => `<button type="button" class="ph-tp-tmplcard" data-tp-create="${t.id}">
+            <span class="ph-tp-tmplcard-title">${esc(t.name)}</span>
+            <span class="ph-tp-tmplcard-sub">${t.phases.length} phases, aims and points pre-filled</span>
+          </button>`).join("")}
+          ${userTpls.map(t => `<div class="ph-tp-tmplcard-wrap">
+            <button type="button" class="ph-tp-tmplcard" data-tp-create="${t.id}">
+              <span class="ph-tp-tmplcard-title">${esc(t.name)} <span class="ph-tp-tmplcard-mine">yours</span></span>
+              <span class="ph-tp-tmplcard-sub">${t.phases.length} phase${t.phases.length === 1 ? "" : "s"}</span>
+            </button>
+            ${phTpDeleteArm === "tmpl:" + t.id
+              ? `<div class="ph-confirm-strip"><span>Delete this template? Plans made from it are untouched.</span><button type="button" class="btn-save" data-tp-tmpl-del-yes="${t.id}">Delete</button><button type="button" class="btn-cancel" data-tp-review-del-no="1">Cancel</button></div>`
+              : `<button type="button" class="del" data-tp-tmpl-del="${t.id}" title="Delete this template" aria-label="Delete template ${esc(t.name)}">×</button>`}
+          </div>`).join("")}
+          <p class="ph-hx-constit-note">Any plan can be saved as a template from inside it — build your protocols once, reuse them here.</p>
+        </div>
+      </div>`;
+      return;
+    }
     const plan = phTpFindPlan(name, phTpScreenPlanId);
     if (!plan) { phTpClose(); return; }
     const st = v => phTpStatusMeta(v, PH_TP_STATUSES);
@@ -25324,6 +25406,7 @@
         </div>
         <div class="ph-tp-delzone">
           <button type="button" class="ph-load-btn on" data-tp-letter-open="1">✉ Patient letter</button>
+          <button type="button" class="ph-load-btn" data-tp-save-tmpl="${plan.id}">📌 Save as template</button>
           ${armingPlan
             ? `<div class="ph-confirm-strip"><span>Delete this whole plan? This can't be undone.</span><button type="button" class="btn-save" data-tp-plan-del-yes="${plan.id}">Delete plan</button><button type="button" class="btn-cancel" data-tp-plan-del-no="1">Cancel</button></div>`
             : `<button type="button" class="tab-link" data-tp-plan-del="${plan.id}">Delete this plan</button>`}
