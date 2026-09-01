@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260901-220000">
+<meta name="lcm-build" content="20260901-223000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -4718,6 +4718,24 @@
   #pharmacyPage .ph-ltr-autosaved { margin-left: auto; font-size: 10.5px; font-style: italic; color: var(--ph-soft); }
   #pharmacyPage .ph-ltr-savetmpl { display: inline-flex; gap: 6px; align-items: center; }
   #pharmacyPage .ph-ltr-savetmpl input { padding: 6px 10px; border: 1px solid var(--ph-line); border-radius: var(--field-radius-sm, 8px); font: inherit; font-size: 12px; width: 200px; }
+  /* findings diagrams (comprehensive round, 2026-09-01) */
+  #pharmacyPage .ph-ltr-findings { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 4px 0 10px; }
+  #pharmacyPage .ph-ltr-fnd { background: var(--ph-paper); border-radius: 11px; padding: 10px 12px; text-align: center; }
+  #pharmacyPage .ph-ltr-fndsvg { width: 100px; height: 120px; }
+  #pharmacyPage .ph-ltr-fndsvg.wide { width: 136px; }
+  #pharmacyPage .ph-ltr-fndt { font-size: 11.5px; line-height: 1.45; text-align: left; margin-top: 4px; }
+  #pharmacyPage .ph-ltr-fndt b { display: block; font-size: 11px; color: var(--ph-green-deep); margin-bottom: 2px; }
+  #pharmacyPage .ph-ltr-fndt .bc { display: flex; gap: 6px; align-items: center; margin-bottom: 3px; }
+  #pharmacyPage .ph-ltr-fndt .bc i { font-style: normal; font-size: 9.5px; font-weight: 800; text-transform: uppercase; color: var(--ph-soft); width: 34px; flex: none; }
+  #pharmacyPage .ph-ltr-fndinput { flex: 1; min-width: 0; padding: 4px 8px; border: 1px solid var(--ph-line); border-radius: var(--field-radius-sm, 8px); font: inherit; font-size: 11.5px; }
+  #pharmacyPage .ph-ltr-fndnote { font-size: 11px; color: var(--ph-soft); border-radius: 6px; padding: 2px 4px; margin: 2px -4px 0; }
+  #pharmacyPage .ph-ltr-fndnote:hover { background: var(--ph-green-tint); cursor: text; }
+  #pharmacyPage .ph-ltr-fndnote:focus { outline: 2px dashed var(--margin-rule, #B08D3E); outline-offset: 1px; background: none; }
+  #pharmacyPage .ph-ltr-fndnote-s { font-size: 11px; color: var(--ph-soft); margin-top: 2px; text-align: left; }
+  #pharmacyPage .ph-ltr-quals { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; margin: 4px 0 2px; }
+  #pharmacyPage .ph-ltr-qual { font-size: 9px; font-weight: 700; border: none; border-radius: 999px; padding: 3px 9px; background: none; box-shadow: inset 0 0 0 1px var(--ph-line); color: var(--ph-soft); cursor: pointer; font-family: inherit; }
+  #pharmacyPage .ph-ltr-qual.on { background: var(--margin-rule, #E3C87A); color: var(--ph-green-press); box-shadow: none; }
+  @media (max-width: 640px) { #pharmacyPage .ph-ltr-findings { grid-template-columns: 1fr; } }
   #pharmacyPage .ph-tp-delzone { padding-top: 14px; border-top: 1px solid var(--ph-line); display: flex; align-items: center; gap: 14px; }
   #pharmacyPage .ph-tp-delzone > .tab-link { color: var(--ph-negative, #B4483A); font-size: 12px; margin-left: auto; }
   /* patient-letter view (2026-09-01 follow-up push, approved mock tab 3) */
@@ -17145,6 +17163,21 @@
       const presLtr = e.target.closest("[data-pres-letter]");
       if (presLtr) { phLtrOpen(presLtr.dataset.presLetter); return; }
       if (e.target.closest("[data-ltr-close]")) { phLtrClose(); return; }
+      // tap-to-mark diagram zones + tongue quality markers (her yes)
+      const ltrZone = e.target.closest("[data-ltr-zone]");
+      if (ltrZone) {
+        const k = ltrZone.dataset.ltrZone;
+        if (phLtrZoneMarks.has(k)) phLtrZoneMarks.delete(k); else phLtrZoneMarks.add(k);
+        renderLtrScreen();
+        return;
+      }
+      const ltrQual = e.target.closest("[data-ltr-qual]");
+      if (ltrQual) {
+        const k = ltrQual.dataset.ltrQual;
+        if (phLtrQualMarks.has(k)) phLtrQualMarks.delete(k); else phLtrQualMarks.add(k);
+        renderLtrScreen();
+        return;
+      }
       const ltrTmplBtn = e.target.closest("[data-ltr-tmpl]");
       if (ltrTmplBtn) {
         phLtrTmplId = ltrTmplBtn.dataset.ltrTmpl;
@@ -19258,6 +19291,17 @@
       const ltrEditSec = e.target.closest && e.target.closest("[data-ltr-editsec]");
       if (ltrEditSec) {
         phLtrEdits[phLtrKey(ltrEditSec.dataset.ltrEditsec)] = ltrEditSec.innerText;
+        phDefer("ltrAutosave", () => {
+          const t0 = PRESC.items.find(x => x.id === phLtrScriptId);
+          if (t0) phLtrAutosave(t0);
+        }, 600);
+        return;
+      }
+      // findings fields + meaning lines (inputs AND contenteditable share
+      // one attribute; same no-re-render rule)
+      const ltrFnd = e.target.closest && e.target.closest("[data-ltr-fnd]");
+      if (ltrFnd) {
+        phLtrFnd[ltrFnd.dataset.ltrFnd] = ltrFnd.matches("input") ? ltrFnd.value : ltrFnd.innerText;
         phDefer("ltrAutosave", () => {
           const t0 = PRESC.items.find(x => x.id === phLtrScriptId);
           if (t0) phLtrAutosave(t0);
@@ -25392,12 +25436,173 @@
     const doseTxt = presDosageText() || "";
     const daysTxt = (presInstructionText() || "").replace(/^Take\s+/i, "") || "Every day";
     const calc = phFollowupCalc(t, keyOf(TODAY), gp);
+    // TCM context (her 2026-09-01 findings round): the plan's diagnosis/goal
+    // and the 方病人 constitution already on the record feed the Pattern &
+    // approach / Your constitution sections -- read, never retyped
+    const rec = phPatientPeek(name);
+    const plans = (rec && rec.treatmentPlans) || [];
+    const activePlan = plans.find(p => p.status === "active") || plans[0] || null;
+    const bt = rec && rec.bodyConstitutionBt ? (phBtList().find(b => b.id === rec.bodyConstitutionBt) || null) : null;
     return {
       name, first, gp, formulaLine: formulaLine || phDispName(t.name, false), mainName,
       doseTxt, daysTxt,
       lastsTxt: calc.ok ? `about ${calc.lastsDays.toFixed(1)} days` : "",
       reviewTxt: (t.fuReviewDate || (calc.ok && calc.reviewOn)) ? phFuDateLabel(t.fuReviewDate || keyOf(calc.reviewOn)) : "",
+      planDiagnosis: (activePlan && (activePlan.diagnosis || "").trim()) || "",
+      planGoal: (activePlan && (activePlan.goal || "").trim()) || "",
+      constitutionName: bt ? bt.name : "",
     };
+  }
+  // ---- the findings diagrams (her "more comprehensive" round, all four
+  // answers): full tongue organ map + quality markers + Body/Coat split,
+  // BOTH wrists with the six organ positions, the classic fukushin abdomen
+  // map, and tap-to-mark zones whose gold marks save with the letter and
+  // print in the PDF. One builder draws both the interactive screen version
+  // and the static PDF version, so they can never disagree. ----
+  const PH_LTR_ZONES = {
+    tongue: { vb: "0 0 110 132", zones: {
+      root: { label: "root (Kid)", cx: 55, cy: 26, rx: 20, ry: 11 },
+      sideL: { label: "left side (Liv/GB)", cx: 26, cy: 64, rx: 9, ry: 26 },
+      sideR: { label: "right side (Liv/GB)", cx: 84, cy: 64, rx: 9, ry: 26 },
+      centre: { label: "centre (Sp/St)", cx: 55, cy: 62, rx: 17, ry: 11 },
+      lung: { label: "lung area", cx: 55, cy: 92, rx: 16, ry: 9 },
+      tip: { label: "tip (Heart)", cx: 55, cy: 113, rx: 12, ry: 8 },
+    } },
+    pulse: { vb: "0 0 150 132", zones: {
+      lcun: { label: "left cun (Ht)", cx: 40, cy: 44, rx: 9, ry: 9 },
+      lguan: { label: "left guan (Liv)", cx: 40, cy: 72, rx: 9, ry: 9 },
+      lchi: { label: "left chi (Kid)", cx: 40, cy: 100, rx: 9, ry: 9 },
+      rcun: { label: "right cun (Lu)", cx: 110, cy: 44, rx: 9, ry: 9 },
+      rguan: { label: "right guan (Sp)", cx: 110, cy: 72, rx: 9, ry: 9 },
+      rchi: { label: "right chi (Kid-yang)", cx: 110, cy: 100, rx: 9, ry: 9 },
+    } },
+    abd: { vb: "0 0 110 132", zones: {
+      hypoL: { label: "left hypochondrium", cx: 37, cy: 30, rx: 12, ry: 13 },
+      hypoR: { label: "right hypochondrium", cx: 73, cy: 30, rx: 12, ry: 13 },
+      epi: { label: "epigastrium (心下)", cx: 55, cy: 40, rx: 12, ry: 9 },
+      umb: { label: "umbilical", cx: 55, cy: 70, rx: 15, ry: 12 },
+      lower: { label: "lower abdomen (小腹)", cx: 55, cy: 105, rx: 17, ry: 13 },
+    } },
+  };
+  const PH_LTR_QUALS = [
+    { id: "teethmarks", label: "teethmarks" },
+    { id: "cracks", label: "cracks" },
+    { id: "redtip", label: "red tip" },
+    { id: "thickcoat", label: "thick coat" },
+  ];
+  let phLtrFnd = {}, phLtrZoneMarks = new Set(), phLtrQualMarks = new Set();
+  const phLtrMarksEls = (diag, interactive) => Object.entries(PH_LTR_ZONES[diag].zones).map(([id, z]) => {
+    const on = phLtrZoneMarks.has(diag + ":" + id);
+    const mark = on ? `<ellipse cx="${z.cx}" cy="${z.cy}" rx="${z.rx}" ry="${z.ry}" fill="var(--margin-rule, #E3C87A)" opacity="0.5" pointer-events="none"/>` : "";
+    const hit = interactive ? `<ellipse cx="${z.cx}" cy="${z.cy}" rx="${Math.max(z.rx, 10)}" ry="${Math.max(z.ry, 10)}" fill="transparent" data-ltr-zone="${diag}:${id}" style="cursor:pointer"><title>${esc(z.label)}</title></ellipse>` : "";
+    return mark + hit;
+  }).join("");
+  function phLtrTongueSvg(interactive) {
+    const q = id => phLtrQualMarks.has(id);
+    return `<svg viewBox="${PH_LTR_ZONES.tongue.vb}" class="ph-ltr-fndsvg" aria-label="Tongue organ zones">
+      <path d="M55 8 C84 8 96 30 96 60 C96 98 74 124 55 124 C36 124 14 98 14 60 C14 30 26 8 55 8 Z" fill="none" stroke="var(--ph-green-deep)" stroke-width="2"/>
+      <path d="M22 40 C38 48 72 48 88 40" fill="none" stroke="var(--ph-line)" stroke-dasharray="3 3"/>
+      <path d="M18 74 C38 84 72 84 92 74" fill="none" stroke="var(--ph-line)" stroke-dasharray="3 3"/>
+      <path d="M30 100 C42 108 68 108 80 100" fill="none" stroke="var(--ph-line)" stroke-dasharray="3 3"/>
+      <path d="M30 24 C30 68 36 100 46 116" fill="none" stroke="var(--ph-line)" stroke-dasharray="3 3"/>
+      <path d="M80 24 C80 68 74 100 64 116" fill="none" stroke="var(--ph-line)" stroke-dasharray="3 3"/>
+      ${phLtrMarksEls("tongue", false)}
+      <text x="55" y="26" text-anchor="middle" font-size="7.5" fill="var(--ph-soft)" pointer-events="none">Kid · BL · Int</text>
+      <text x="55" y="64" text-anchor="middle" font-size="7.5" fill="var(--ph-green-deep)" font-weight="700" pointer-events="none">Sp / St</text>
+      <text x="55" y="94" text-anchor="middle" font-size="7.5" fill="var(--ph-soft)" pointer-events="none">Lung</text>
+      <text x="55" y="116" text-anchor="middle" font-size="7.5" fill="var(--ph-soft)" pointer-events="none">Heart</text>
+      <text x="21" y="66" text-anchor="middle" font-size="7" fill="var(--ph-soft)" transform="rotate(-75 21 66)" pointer-events="none">Liv / GB</text>
+      <text x="89" y="66" text-anchor="middle" font-size="7" fill="var(--ph-soft)" transform="rotate(75 89 66)" pointer-events="none">Liv / GB</text>
+      ${q("teethmarks") ? `<path d="M19 46 q4 5 0 10 q-4 5 0 10 q4 5 0 10 M91 46 q-4 5 0 10 q4 5 0 10 q-4 5 0 10" stroke="var(--ph-green)" fill="none" stroke-width="1.6" pointer-events="none"/>` : ""}
+      ${q("cracks") ? `<path d="M55 40 L53 58 L57 72 L54 86 M47 55 L44 66 M63 55 L66 66" stroke="var(--ph-soft)" fill="none" stroke-width="1.4" pointer-events="none"/>` : ""}
+      ${q("redtip") ? `<ellipse cx="55" cy="114" rx="11" ry="7" fill="var(--ph-negative, #B4483A)" opacity="0.55" pointer-events="none"/>` : ""}
+      ${q("thickcoat") ? `<ellipse cx="55" cy="58" rx="22" ry="26" fill="var(--ph-soft)" opacity="0.18" pointer-events="none"/>` : ""}
+      ${interactive ? phLtrMarksEls("tongue", true).replace(/<ellipse[^>]*opacity="0.5"[^>]*\/>/g, "") : ""}
+    </svg>`;
+  }
+  function phLtrPulseSvg(interactive) {
+    const pos = [["lcun", 40, 44, "Ht"], ["lguan", 40, 72, "Liv"], ["lchi", 40, 100, "Kid"], ["rcun", 110, 44, "Lu"], ["rguan", 110, 72, "Sp"], ["rchi", 110, 100, "Kid"]];
+    return `<svg viewBox="${PH_LTR_ZONES.pulse.vb}" class="ph-ltr-fndsvg wide" aria-label="Pulse positions, both wrists">
+      <text x="40" y="12" text-anchor="middle" font-size="8" font-weight="700" fill="var(--ph-green-deep)">LEFT</text>
+      <text x="110" y="12" text-anchor="middle" font-size="8" font-weight="700" fill="var(--ph-green-deep)">RIGHT</text>
+      <path d="M28 20 L52 20 L55 124 L25 124 Z" fill="none" stroke="var(--ph-green-deep)" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M98 20 L122 20 L125 124 L95 124 Z" fill="none" stroke="var(--ph-green-deep)" stroke-width="2" stroke-linejoin="round"/>
+      ${pos.map(([id, x, y, org]) => `
+        <circle cx="${x}" cy="${y}" r="7" fill="${phLtrZoneMarks.has("pulse:" + id) ? `var(--margin-rule, #E3C87A)` : `var(--ph-green-tint)`}" stroke="var(--ph-green)"/>
+        <text x="${x}" y="${y + 2.5}" text-anchor="middle" font-size="6.5" fill="${phLtrZoneMarks.has("pulse:" + id) ? `var(--ph-green-press)` : `var(--ph-soft)`}"${phLtrZoneMarks.has("pulse:" + id) ? ` font-weight="700"` : ""} pointer-events="none">${org}</text>`).join("")}
+      <text x="75" y="47" text-anchor="middle" font-size="7" fill="var(--ph-soft)">cun</text>
+      <text x="75" y="75" text-anchor="middle" font-size="7" fill="var(--ph-soft)">guan</text>
+      <text x="75" y="103" text-anchor="middle" font-size="7" fill="var(--ph-soft)">chi</text>
+      ${interactive ? pos.map(([id, x, y]) => `<circle cx="${x}" cy="${y}" r="11" fill="transparent" data-ltr-zone="pulse:${id}" style="cursor:pointer"><title>${esc(PH_LTR_ZONES.pulse.zones[id].label)}</title></circle>`).join("") : ""}
+    </svg>`;
+  }
+  function phLtrAbdSvg(interactive) {
+    return `<svg viewBox="${PH_LTR_ZONES.abd.vb}" class="ph-ltr-fndsvg" aria-label="Abdomen fukushin map">
+      <path d="M32 8 L78 8 C86 36 88 72 78 124 L32 124 C22 72 24 36 32 8 Z" fill="none" stroke="var(--ph-green-deep)" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M40 8 C48 22 62 22 70 8" fill="none" stroke="var(--ph-line)" stroke-dasharray="3 3"/>
+      <line x1="28" y1="52" x2="82" y2="52" stroke="var(--ph-line)" stroke-dasharray="3 3"/>
+      <line x1="27" y1="88" x2="83" y2="88" stroke="var(--ph-line)" stroke-dasharray="3 3"/>
+      <line x1="55" y1="8" x2="55" y2="52" stroke="var(--ph-line)" stroke-dasharray="3 3"/>
+      ${phLtrMarksEls("abd", false)}
+      <circle cx="55" cy="70" r="3.5" fill="var(--ph-green-deep)" pointer-events="none"/>
+      <text x="55" y="20" text-anchor="middle" font-size="7" fill="var(--ph-soft)" pointer-events="none">心下</text>
+      <text x="38" y="34" text-anchor="middle" font-size="6.5" fill="var(--ph-soft)" pointer-events="none">hypo L</text>
+      <text x="72" y="34" text-anchor="middle" font-size="6.5" fill="var(--ph-soft)" pointer-events="none">hypo R</text>
+      <text x="55" y="48" text-anchor="middle" font-size="6.5" fill="var(--ph-soft)" pointer-events="none">epigastrium</text>
+      <text x="55" y="80" text-anchor="middle" font-size="7" fill="var(--ph-soft)" pointer-events="none">umbilical</text>
+      <text x="55" y="110" text-anchor="middle" font-size="7" fill="var(--ph-soft)" pointer-events="none">lower · 小腹</text>
+      ${interactive ? phLtrMarksEls("abd", true).replace(/<ellipse[^>]*opacity="0.5"[^>]*\/>/g, "") : ""}
+    </svg>`;
+  }
+  const phLtrZoneNames = diag => [...phLtrZoneMarks].filter(k => k.startsWith(diag + ":")).map(k => PH_LTR_ZONES[diag === "pulse" ? "pulse" : diag].zones[k.split(":")[1]].label);
+  function phLtrFindingsHtml(ctx, interactive) {
+    const f = phLtrFnd;
+    const fld = (key, ph) => interactive
+      ? `<input type="text" class="ph-ltr-fndinput" data-ltr-fnd="${key}" value="${esc(f[key] || "")}" placeholder="${esc(ph)}" aria-label="${esc(ph)}">`
+      : (f[key] ? esc(f[key]) : "");
+    const note = (key, def) => interactive
+      ? `<div class="ph-ltr-fndnote" contenteditable="true" data-ltr-fnd="${key}" spellcheck="true">${esc(f[key] || def)}</div>`
+      : `<div class="ph-ltr-fndnote-s">${esc(f[key] || def)}</div>`;
+    const quals = interactive
+      ? `<div class="ph-ltr-quals">${PH_LTR_QUALS.map(q => `<button type="button" class="ph-ltr-qual${phLtrQualMarks.has(q.id) ? " on" : ""}" data-ltr-qual="${q.id}">${q.label}</button>`).join("")}</div>`
+      : (phLtrQualMarks.size ? `<div class="ph-ltr-fndnote-s">${[...phLtrQualMarks].map(id => (PH_LTR_QUALS.find(q => q.id === id) || {}).label).filter(Boolean).join(" · ")}</div>` : "");
+    return `<div class="ph-ltr-findings">
+      <div class="ph-ltr-fnd">
+        ${phLtrTongueSvg(interactive)}
+        ${quals}
+        <div class="ph-ltr-fndt"><b>👅 Tongue</b>
+          <span class="bc"><i>Body</i>${fld("tongueBody", "e.g. pale, slightly swollen")}</span>
+          <span class="bc"><i>Coat</i>${fld("tongueCoat", "e.g. thin, white")}</span>
+          ${note("tongueNote", "— what this tells us about where your system is right now.")}
+        </div>
+      </div>
+      <div class="ph-ltr-fnd">
+        ${phLtrPulseSvg(interactive)}
+        <div class="ph-ltr-fndt"><b>🫀 Pulse</b>
+          <span class="bc">${fld("pulse", "e.g. wiry at left guan")}</span>
+          ${note("pulseNote", "— what the pulse showed and what we're easing.")}
+        </div>
+      </div>
+      <div class="ph-ltr-fnd">
+        ${phLtrAbdSvg(interactive)}
+        <div class="ph-ltr-fndt"><b>🤲 Abdomen</b>
+          <span class="bc">${fld("abdomen", "e.g. tightness under the right ribs")}</span>
+          ${note("abdNote", "— what we felt and why it matters for this formula.")}
+        </div>
+      </div>
+    </div>`;
+  }
+  function phLtrFindingsText() {
+    const f = phLtrFnd;
+    const lines = [];
+    const tongueBits = [f.tongueBody && `Body: ${f.tongueBody}`, f.tongueCoat && `Coat: ${f.tongueCoat}`].filter(Boolean).join(" · ");
+    const tz = phLtrZoneNames("tongue"), qz = [...phLtrQualMarks].map(id => (PH_LTR_QUALS.find(q => q.id === id) || {}).label).filter(Boolean);
+    if (tongueBits || tz.length || qz.length) lines.push(`Tongue — ${[tongueBits, tz.length ? `zones: ${tz.join(", ")}` : "", qz.join(", ")].filter(Boolean).join(" · ")}${f.tongueNote ? `\n  ${f.tongueNote}` : ""}`);
+    const pz = phLtrZoneNames("pulse");
+    if (f.pulse || pz.length) lines.push(`Pulse — ${[f.pulse, pz.length ? `(${pz.join(", ")})` : ""].filter(Boolean).join(" ")}${f.pulseNote ? `\n  ${f.pulseNote}` : ""}`);
+    const az = phLtrZoneNames("abd");
+    if (f.abdomen || az.length) lines.push(`Abdomen — ${[f.abdomen, az.length ? `(${az.join(", ")})` : ""].filter(Boolean).join(" ")}${f.abdNote ? `\n  ${f.abdNote}` : ""}`);
+    return lines.length ? lines.join("\n") : "Findings recorded in clinic today.";
   }
   // every prose section is one text builder -- html render escapes + <br>s
   // the same string, so screen, copy and PDF can never disagree
@@ -25410,7 +25615,15 @@
       html: c => `<table class="ph-ltr-dose">${[["Dose", c.doseTxt], ["Days", c.daysTxt], ["Lasts", c.lastsTxt]].filter(r => r[1]).map(r => `<tr><td>${r[0]}</td><td>${esc(r[1])}</td></tr>`).join("")}</table>`,
       text: c => [["Dose", c.doseTxt], ["Days", c.daysTxt], ["Lasts", c.lastsTxt]].filter(r => r[1]).map(r => `${r[0]}: ${r[1]}`).join("\n") },
     purpose: { label: "What it's for", heading: "What it's for", text: () => `We've chosen this formula for the pattern we discussed today. It works gently over the course of the batch — taking it consistently matters more than any single dose.` },
-    lifestyle: { label: "Diet & lifestyle", heading: "Diet & lifestyle", text: () => `Warm, regular meals will support the herbs' work — go gently on cold or raw foods while you're on this course, and let rest be part of the treatment too.` },
+    findings: { label: "What we found today", heading: "What we found today", fixed: true,
+      html: (c, interactive) => phLtrFindingsHtml(c, !!interactive), text: () => phLtrFindingsText() },
+    pattern: { label: "Pattern & approach", heading: "Pattern & approach", text: c => c.planDiagnosis || c.planGoal
+      ? `${c.planDiagnosis ? `We're treating ${c.planDiagnosis}. ` : ""}${c.planGoal ? `Our approach: ${c.planGoal}` : ""}`.trim()
+      : `We're treating the pattern we discussed today. The approach is to harmonise rather than force — gentle, steady, over the course of the batch.` },
+    constitution: { label: "Your constitution", heading: "Your constitution", text: c => c.constitutionName
+      ? `Your underlying constitution reads as ${c.constitutionName} — it shapes how we choose and adjust your formulas over time, not just this one.`
+      : `Your underlying constitution shapes how we choose and adjust your formulas over time — we'll keep building this picture together.` },
+    seasonal: { label: "Seasonal & dietary", heading: "Seasonal & dietary", text: () => `Warm, regular meals will support the herbs' work this season — go gently on cold or raw foods while you're on this course, and let rest be part of the treatment too.` },
     stages: { label: "Stage by stage", heading: "Your plan, stage by stage", fixed: true,
       html: () => `<table class="ph-ltr-stages"><tr><th>Stage</th><th>What it's for</th></tr>${PH_TP_TEMPLATES[0].phases.map(p => `<tr><td><b>${esc(p.label)}</b></td><td>${esc(p.aim)}</td></tr>`).join("")}</table>`,
       text: () => PH_TP_TEMPLATES[0].phases.map(p => `• ${p.label} — ${p.aim}`).join("\n") },
@@ -25421,9 +25634,9 @@
     signoff: { label: "Sign-off", text: () => `Warmly,` },
   };
   const PH_LTR_TEMPLATES = [
-    { id: "course", name: "🌿 Herbal course", secs: ["greet", "formula", "dose", "purpose", "lifestyle", "nextvisit", "signoff"], off: ["lifestyle"] },
-    { id: "review", name: "🔄 Review & progress", secs: ["greetReview", "changes", "formula", "dose", "nextvisit", "signoff"], off: [] },
-    { id: "cycleivf", name: "🤍 Cycle & IVF", secs: ["greet", "stages", "formula", "dose", "nextvisit", "posttest", "signoff"], off: [] },
+    { id: "course", name: "🌿 Herbal course", secs: ["greet", "findings", "pattern", "constitution", "formula", "dose", "purpose", "seasonal", "nextvisit", "signoff"], off: ["constitution"] },
+    { id: "review", name: "🔄 Review & progress", secs: ["greetReview", "findings", "changes", "formula", "dose", "nextvisit", "signoff"], off: [] },
+    { id: "cycleivf", name: "🤍 Cycle & IVF", secs: ["greet", "findings", "stages", "pattern", "formula", "dose", "nextvisit", "posttest", "signoff"], off: [] },
   ];
   const phLtrAllTemplates = () => [...PH_LTR_TEMPLATES, ...phLtrUserTemplates()];
   let phLtrScriptId = null, phLtrTmplId = "course", phLtrOff = new Set(), phLtrEdits = {}, phLtrSeeded = new Set(), phLtrRecId = null, phLtrTmplSaveOpen = false;
@@ -25448,6 +25661,19 @@
     if (!t) return;
     phLtrScriptId = scriptId; phLtrRecId = null; phLtrTmplSaveOpen = false;
     phLtrOff = new Set(); phLtrEdits = {}; phLtrSeeded = new Set();
+    phLtrFnd = {}; phLtrZoneMarks = new Set(); phLtrQualMarks = new Set();
+    // her "both" (findings source): pre-fill from the plan's last known trio
+    // -- the latest review carrying one, else the plan's baseline fields
+    const rec0 = phPatientPeek(presPatientFor(t) || t.name);
+    const plans0 = (rec0 && rec0.treatmentPlans) || [];
+    const plan0 = plans0.find(p => p.status === "active") || plans0[0];
+    if (plan0) {
+      const revs = (plan0.reviews || []).filter(r => r.tongue || r.pulse || r.abdomen).sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+      const src = revs[0] || plan0;
+      if (src.tongue) phLtrFnd.tongueBody = src.tongue;
+      if (src.pulse) phLtrFnd.pulse = src.pulse;
+      if (src.abdomen) phLtrFnd.abdomen = src.abdomen;
+    }
     phLtrSeedOff();
     document.getElementById("phLtrBackdrop").hidden = false;
     document.getElementById("phLtrModal").hidden = false;
@@ -25472,7 +25698,25 @@
       templateId: phLtrTmplId, templateName: phLtrTmpl().name.replace(/^\S+\s/, ""),
       off: [...phLtrOff].filter(k => k.startsWith(phLtrTmplId + ":")).map(k => k.split(":")[1]),
       edits: Object.fromEntries(Object.entries(phLtrEdits).filter(([k]) => k.startsWith(phLtrTmplId + ":")).map(([k, v]) => [k.split(":")[1], v])),
+      fnd: Object.assign({}, phLtrFnd), zones: [...phLtrZoneMarks], quals: [...phLtrQualMarks],
     });
+    // her "one entry, both places": today's findings become the visit's exam
+    // record on the plan too -- a quiet plan is created if none exists.
+    // FILL, don't overwrite: this only writes the letter's own upserted
+    // review row, never touches other reviews or a baseline she typed.
+    const tongueAll = [phLtrFnd.tongueBody, phLtrFnd.tongueCoat && `coat: ${phLtrFnd.tongueCoat}`].filter(Boolean).join("; ");
+    if (tongueAll || phLtrFnd.pulse || phLtrFnd.abdomen) {
+      rec.treatmentPlans = rec.treatmentPlans || [];
+      let plan = rec.treatmentPlans.find(p => p.status === "active") || rec.treatmentPlans[0];
+      if (!plan) { plan = phTpNewPlan(null, {}); plan.title = "Treatment record"; rec.treatmentPlans.push(plan); }
+      plan.reviews = plan.reviews || [];
+      let rev = plan.reviews.find(r => r.fromLetterId === entry.id);
+      if (!rev) { rev = { id: uid(), date: keyOf(TODAY), note: "", fromLetterId: entry.id }; plan.reviews.push(rev); }
+      if (tongueAll) rev.tongue = tongueAll; if (phLtrFnd.pulse) rev.pulse = phLtrFnd.pulse; if (phLtrFnd.abdomen) rev.abdomen = phLtrFnd.abdomen;
+      if (!plan.tongue && tongueAll) plan.tongue = tongueAll;
+      if (!plan.pulse && phLtrFnd.pulse) plan.pulse = phLtrFnd.pulse;
+      if (!plan.abdomen && phLtrFnd.abdomen) plan.abdomen = phLtrFnd.abdomen;
+    }
     savePharmacy();
   }
   function phLtrLetterText(t) {
@@ -25493,13 +25737,22 @@
       return (def.heading ? `<h2>${esc(def.heading)}</h2>` : "") + body;
     }).join("");
     return `<title>Letter — ${esc(phTitle(ctx.name))}</title>
-      <style>body{font-family:Georgia,serif;padding:32px;max-width:640px;color:#16281D;line-height:1.6;font-size:14px}
+      <style>:root{--ph-green-deep:#0E4D2A;--ph-green:#1B7A46;--ph-green-tint:#EAF5EE;--ph-green-press:#0A3A20;--ph-line:#D3E2D8;--ph-soft:#4A5B50;--ph-paper:#F6FAF7;--margin-rule:#E3C87A;--ph-negative:#B4483A}
+      body{font-family:Georgia,serif;padding:32px;max-width:640px;color:#16281D;line-height:1.6;font-size:14px}
       h2{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#0E4D2A;margin:22px 0 8px}
       table{border-collapse:collapse;font-size:13px}
       table.ph-ltr-dose td{padding:4px 16px 4px 0;vertical-align:top}
       table.ph-ltr-dose td:first-child{font-weight:bold;color:#0E4D2A}
       table.ph-ltr-stages{width:100%}table.ph-ltr-stages th{font-size:10px;text-transform:uppercase;text-align:left;color:#555;border-bottom:1px solid #999;padding:0 10px 6px 0}
-      table.ph-ltr-stages td{padding:8px 10px 8px 0;border-bottom:1px solid #ddd;vertical-align:top}</style>
+      table.ph-ltr-stages td{padding:8px 10px 8px 0;border-bottom:1px solid #ddd;vertical-align:top}
+      .ph-ltr-findings{display:flex;gap:14px;flex-wrap:wrap}
+      .ph-ltr-fnd{flex:1 1 170px;background:#F6FAF7;border-radius:11px;padding:10px 12px;text-align:center}
+      .ph-ltr-fndsvg{width:100px;height:120px}.ph-ltr-fndsvg.wide{width:136px}
+      .ph-ltr-fndt{font-size:11.5px;line-height:1.45;text-align:left;margin-top:4px}
+      .ph-ltr-fndt b{display:block;font-size:11px;color:#0E4D2A;margin-bottom:2px}
+      .ph-ltr-fndt .bc{display:flex;gap:6px;margin-bottom:3px}
+      .ph-ltr-fndt .bc i{font-style:normal;font-size:9.5px;font-weight:bold;text-transform:uppercase;color:#4A5B50;width:34px;flex:none}
+      .ph-ltr-fndnote-s{font-size:11px;color:#4A5B50;margin-top:2px;text-align:left}</style>
       ${secsHtml}`;
   }
   function renderLtrScreen() {
@@ -25519,7 +25772,7 @@
     const body = tmpl.secs.filter(sec => !phLtrOff.has(phLtrKey(sec))).map(sec => {
       const def = PH_LTR_SECTIONS[sec];
       const inner = def.fixed
-        ? def.html(ctx)
+        ? def.html(ctx, true)
         : `<div class="ph-ltr-sec" contenteditable="true" data-ltr-editsec="${sec}" spellcheck="true">${esc(phLtrSecText(sec, ctx)).replace(/\n/g, "<br>")}</div>`;
       return `${def.heading ? `<div class="ph-ltr-h">${esc(def.heading)}</div>` : ""}${inner}`;
     }).join("");
