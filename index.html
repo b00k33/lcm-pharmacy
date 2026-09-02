@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260903-024500">
+<meta name="lcm-build" content="20260903-025000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -1739,6 +1739,42 @@
   #pharmacyPage .ph-ds-row .glyph .icn { width: 15px; height: 15px; }
   #pharmacyPage .ph-ds-row .date { font-size: 12.5px; font-weight: 600; color: var(--ph-soft); }
   #pharmacyPage .ph-ds-row .date.hot { color: var(--ph-low-deep); }
+  /* ---- 2026-09-02 code7 audit (Linh's screenshot of Order these / Refill these):
+     (1) the card-wide column lines showed through the 16px gap above every band
+         (between "No stocktake due" and ORDER THESE, between the last row and the
+         next band) -- the band now paints that gap white itself via ::before, so
+         the lines are covered wherever a band sits, whatever section precedes it.
+     (2) the ranked Order/Refill rows were still the old 48px .ph-sig-list-row
+         component (its own per-row grid with an auto-width action track), so
+         grams / scripts / bars drifted sideways whenever "Plan ▾" became
+         "Planned ▾", and the rhythm broke against the sheet's 32px rows. In sheet
+         mode phSigListRowHtml emits a real .ph-ds-row on the shared grid instead:
+         rank + jar · name · Level (stock bar, same as Urgent) · Cover (days) ·
+         Use (scripts + 6-month bars) · Plan ▾ -- same handlers, same 32px, and
+         the column lines now run through these sections legitimately.
+     (3) Plan ▾ / Planned ▾ / Snoozed ▾ are the same text control the Formula
+         refill sheet already uses on its rows (search ".ph-rf-acts .ph-rp-menubtn"),
+         not a bordered pill inside a 32px row. ---- */
+  #pharmacyPage .ph-ds-band::before { content: ""; position: absolute; left: 0; right: 0; bottom: 100%; height: 16px; background: var(--ph-white); }
+  #pharmacyPage .ph-ds-gridbody { position: relative; z-index: 1; }
+  #pharmacyPage .ph-ds-gridbody .ph-dash-seeall { background: var(--ph-white); }
+  /* the list's own "To order →" footer link repeats the band's "To order ↗" -- one link, in the band */
+  #pharmacyPage .ph-ds-gridbody .ph-dash-card-link { display: none; }
+  #pharmacyPage .ph-ds-row.ph-ds-sig .st { gap: 8px; }
+  #pharmacyPage .ph-ds-row.ph-ds-sig .st .ph-sig-rank { flex: none; min-width: 30px; align-items: flex-start; }
+  #pharmacyPage .ph-ds-row.ph-ds-sig .st .ph-sig-rank b { font-size: 12.5px; }
+  #pharmacyPage .ph-ds-row.ph-ds-sig .st .ph-sig-list-jar { width: 15px; height: 15px; flex: none; }
+  #pharmacyPage .ph-ds-row.ph-ds-sig .nm .ph-dash-code { color: var(--ph-gold-deep); font-weight: 600; margin-right: 6px; }
+  #pharmacyPage .ph-ds-row.ph-ds-sig .use { gap: 10px; color: var(--ph-soft); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  /* fixed-width count so the bars beside it start on one x down the column ("1 script" vs "6 scripts") */
+  #pharmacyPage .ph-ds-row.ph-ds-sig .use > span { flex: none; min-width: 62px; }
+  #pharmacyPage .ph-ds-row.ph-ds-sig .use .ph-sig-bars { height: 18px; width: 44px; flex: none; }
+  #pharmacyPage .ph-ds-row.ph-ds-sig.unranked .nm .ph-name-link, #pharmacyPage .ph-ds-row.ph-ds-sig.unranked .use { color: var(--ph-faint); }
+  #pharmacyPage .ph-ds-row .act { overflow: visible; }
+  #pharmacyPage .ph-ds-row .ph-rp-menubtn { background: none; border: none; padding: 0; min-height: 0; border-radius: 0; font-size: 12.5px; font-weight: 600; color: var(--ph-green-deep); }
+  #pharmacyPage .ph-ds-row .ph-rp-menubtn:hover { background: none; border: none; text-decoration: underline; }
+  #pharmacyPage .ph-ds-row .ph-rp-menubtn.on { background: none; border: none; color: var(--ph-gold-deep); }
+  #pharmacyPage .ph-ds-row .ph-rp-menubtn.snoozed { background: none; border: none; color: var(--ph-snooze-deep); }
   #pharmacyPage .ph-ds-pill { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; font-size: 10.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
   #pharmacyPage .ph-ds-pill.empty { background: var(--ph-zero-tint); color: var(--ph-zero-deep); }
   #pharmacyPage .ph-ds-pill.low { background: var(--ph-low-tint); color: var(--ph-low-deep); }
@@ -11810,6 +11846,10 @@
   // id end up in the DOM at once, and the menu's own position-on-open script
   // only knows how to place one of them (found live: it read the hidden
   // desktop copy's zero-sized rect and placed the menu off-screen).
+  // 2026-09-02 code7 audit: true only while phDashSheetHtml() is building the
+  // desktop Dashboard sheet -- the two ranked lists then render as .ph-ds-row
+  // rows on the sheet's shared grid (see the CSS note at .ph-ds-row.ph-ds-sig).
+  let phDsRowMode = false;
   function phSigListRowHtml(h, rec, actionBtn, phoneActionBtn) {
     const empty = h.qty <= 0;
     const jarIcon = empty ? "i-jar-empty" : "i-jar-part";
@@ -11818,6 +11858,21 @@
     const rankHtml = rec
       ? `<span class="ph-sig-rank"><b>#${rec.rank}</b></span>`
       : `<span class="ph-sig-rank unranked"><b>—</b><span>unused</span></span>`;
+    if (phDsRowMode) {
+      // the same six columns Urgent stock's rows use one band up (Status ·
+      // Item · Level · Cover · Use · Action), so the caption row at the top of
+      // the card is true for these rows too. Same data reads, same action
+      // button (Plan ▾ with all its handlers), only the shape differs.
+      const days = rec ? phSigCoverDays(rec) : 0;
+      return `<div class="ph-ds-row ph-ds-sig${rec ? "" : " unranked"}">
+        <div class="st">${rankHtml}<svg class="icn ph-sig-list-jar${empty ? " tier-zero" : ""}" aria-hidden="true"><use href="#${jarIcon}"/></svg></div>
+        <div class="nm"><button type="button" class="ph-name-link" data-ph-dash-herb-edit="${h.id}" title="${esc(phPinyinFullLabel(h))}" data-ph-full-name="${esc(phPinyinFullLabel(h))}">${phHerbCode(h) ? `<span class="ph-dash-code">${esc(phHerbCode(h))}</span>` : ""}${esc(phPinyinName(h))}</button></div>
+        <div>${phStockBarPct(h.qty, h.low)}</div>
+        <div class="cover${empty ? " zero" : days && days < 14 ? " low" : ""}">${days ? `<b>${days}</b><span>day${days === 1 ? "" : "s"}</span>` : `<span class="faint">—</span>`}</div>
+        <div class="use">${rec ? `<span>${rec.entries} script${rec.entries === 1 ? "" : "s"}</span>` : `<span>${esc(phSigListSecondLine(h, rec))}</span>`}${phDash6moBarsHtml(h, empty ? "zero" : "low")}</div>
+        <div class="act">${actionBtn}</div>
+      </div>`;
+    }
     const desktop = `<div class="ph-sig-list-row${rec ? "" : " unranked"}">
       ${rankHtml}
       <svg class="icn ph-sig-list-jar${empty ? " tier-zero" : ""}" aria-hidden="true"><use href="#${jarIcon}"/></svg>
@@ -11847,6 +11902,8 @@
     return `<div class="ph-c1-desktop">${desktop}</div><div class="ph-c1-phone">${phone}</div>`;
   }
   function phSigListDividerHtml() {
+    // sheet mode: the same quiet sub-heading Urgent stock uses for its groups
+    if (phDsRowMode) return `<div class="ph-ds-sub">You don't use these as much</div>`;
     return `<div class="ph-sig-list-divider">You don't use these as much</div>`;
   }
   // Ranked first (by usage rank), unranked pushed under the divider and
@@ -16705,7 +16762,18 @@
     const mask = html => `<div class="ph-ds-mask">${html}</div>`;
     const sec = (key, band, body) => band + (phDsCollapsed.has(key) ? "" : mask(body));
     const stock = (st => st ? `<div class="ph-dash-tasks">${st}</div>` : "")(phDashTaskStocktakeHtml());
-    const order = (phDashOrderExpand ? phDashOrderQueueHtml() : "") + phDashNeedsOrderingHtml();
+    // 2026-09-02 code7 audit: the two ranked lists render as sheet rows on the
+    // shared grid (phSigListRowHtml's phDsRowMode branch) inside a transparent
+    // body, so the column lines run through them like every other grid
+    // section -- only the sections with their own geometry (week, month,
+    // activity, the expanded order queue) keep the white .ph-ds-mask.
+    const gridBody = (key, band, body) => band + (phDsCollapsed.has(key) ? "" : `<div class="ph-ds-gridbody">${body}</div>`);
+    phDsRowMode = true;
+    let order, refill;
+    try {
+      order = (phDashOrderExpand ? mask(phDashOrderQueueHtml()) : "") + phDashNeedsOrderingHtml();
+      refill = phDashRefillNeededHtml();
+    } finally { phDsRowMode = false; }
     const todayN = PHARMACY.log.filter(e => e.date === keyOf(TODAY)).length;
     const monthName = TODAY.toLocaleDateString("en-AU", { month: "long" });
     return `<div class="ph-ds-cols"><div>Status</div><div>Item</div><div>Level</div><div>Cover</div><div>Use</div><div>Action</div></div>
@@ -16714,8 +16782,8 @@
         ${phDashUrgentSheetHtml()}
         ${sec("week", phDsBand("week", "plan", "i-cal", "This week", `<span class="sub">Mon–Sun · click a day for details</span>`, phDsLnk('data-ph-appt-open="1"', "Add appointments")), phDashWeekHtml() + stock)}
         ${sec("month", phDsBand("month", "plan", "i-clipboard", "This month", `<span class="cnt">${esc(monthName)}</span>`), phDashMonthHtml())}
-        ${sec("ord", phDsBand("ord", "ord", "i-cart", "Order these", phSigWindowSubheadHtml("Most-used first"), phDsLnk('data-ph-tab="restock"', "To order")), order)}
-        ${sec("ref", phDsBand("ref", "ref", "i-jar", "Refill these formulas", phSigWindowSubheadHtml("Most-used first"), phDsLnk('data-ph-tab="refill"', "Formula refill")), phDashRefillNeededHtml())}
+        ${gridBody("ord", phDsBand("ord", "ord", "i-cart", "Order these", phSigWindowSubheadHtml("Most-used first"), phDsLnk('data-ph-tab="restock"', "To order")), order)}
+        ${gridBody("ref", phDsBand("ref", "ref", "i-jar", "Refill these formulas", phSigWindowSubheadHtml("Most-used first"), phDsLnk('data-ph-tab="refill"', "Formula refill")), refill)}
         ${sec("act", phDsBand("act", "act", "i-clock", "Recent activity", todayN ? `<span class="cnt">${todayN} today</span>` : "", phDsLnk('data-ph-tab="log"', "Full dispense history")), phDashActivityHtml())}
       </div>`;
   }
