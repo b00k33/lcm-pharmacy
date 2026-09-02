@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260903-053000">
+<meta name="lcm-build" content="20260903-054500">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -1810,12 +1810,18 @@
      right as text links. ---- */
   /* Dispensed / Empty on carry the weekday ("Sat 15 Aug") -- measured live,
      110/156 clipped them; 134/176 fit with the grams / "weekdays only" note */
-  #phFollowupsWrap.ph-ds-polish { --ph-ds-grid: 112px minmax(0, 1fr) 142px 134px 64px 184px 130px; }
+  /* her ask 2026-09-03: the Level bar (script % left) replaces the raw Lasts
+     number (now in the bar's hover text); Empty on carries "N d left · date" */
+  #phFollowupsWrap.ph-ds-polish { --ph-ds-grid: 112px minmax(0, 1fr) 142px 134px 104px 184px 130px; }
   #phFollowupsWrap .ph-ds-vl:nth-child(1) { left: 124px; }
-  #phFollowupsWrap .ph-ds-vl:nth-child(2) { right: 666px; }
-  #phFollowupsWrap .ph-ds-vl:nth-child(3) { right: 524px; }
-  #phFollowupsWrap .ph-ds-vl:nth-child(4) { right: 390px; }
+  #phFollowupsWrap .ph-ds-vl:nth-child(2) { right: 706px; }
+  #phFollowupsWrap .ph-ds-vl:nth-child(3) { right: 564px; }
+  #phFollowupsWrap .ph-ds-vl:nth-child(4) { right: 430px; }
   #phFollowupsWrap .ph-ds-vl:nth-child(5) { right: 326px; }
+  #pharmacyPage .ph-fs-empty b { font-weight: 700; color: var(--ph-ink); }
+  #pharmacyPage .ph-fs-empty.low b { color: var(--ph-low-deep); }
+  #pharmacyPage .ph-fs-empty.zero b { color: var(--ph-zero-deep); }
+  #pharmacyPage .ph-fs-row .ph-rf-bar i { width: 40px; }
   #phFollowupsWrap .ph-ds-vl:nth-child(6) { right: 142px; }
   #pharmacyPage .ph-ds-band.over { background: var(--ph-zero-tint); color: var(--ph-zero-deep); }
   #pharmacyPage .ph-ds-band.today { background: var(--ph-gold-tint, #FFFBE2); color: var(--ph-gold-deep); }
@@ -16971,6 +16977,21 @@
     const n = PHARMACY.log.filter(e => e.date === keyOf(TODAY)).length;
     return `<button type="button" class="ph-dz-line" data-ph-tab="log">🕐 Recent activity${n ? ` — ${n} today` : ""}<span class="go">open →</span></button>`;
   }
+  // the script's own level, shared by the Dashboard follow-up rows and the
+  // Follow-ups sheet (her asks 2026-09-03): how many days are left until the
+  // patient runs out, what fraction of the script that is, and its tone
+  function phFuScriptLevel(rec) {
+    if (!rec || !rec.ok || !rec.emptyOn || !(rec.lastsDays > 0)) return null;
+    const t0 = parseKey(keyOf(TODAY));
+    const left = Math.round((parseKey(rec.emptyOn) - t0) / 86400000);
+    const pct = Math.max(0, Math.min(100, Math.round(left / rec.lastsDays * 100)));
+    const tone = left <= 0 ? "zero" : pct <= 35 ? "low" : "ok";
+    return { left, pct, tone, lasts: rec.lastsDays };
+  }
+  function phFuLevelBarHtml(lv, rec) {
+    if (!lv) return `<span class="faint">—</span>`;
+    return `<span class="ph-rf-bar ${lv.tone}" title="${lv.pct}% of the script left · lasts ${lv.lasts.toFixed(1)} d · empty ${esc(phFuDateLabel(rec.emptyOn))}"><i style="--p:${lv.pct}%"></i><b>${lv.pct}%</b></span>`;
+  }
   // the one list both the phone rows and the desktop sheet read
   function phDashFuDue() {
     const todayKey = keyOf(TODAY);
@@ -17169,18 +17190,12 @@
     // total grams dispensed with the formula (Use) -- from the same
     // follow-up record the Follow-ups page reads (dispensedDate /
     // lastsDays / emptyOn / gramsDispensed / formulaLabel)
-    const t0 = parseKey(keyOf(TODAY));
     const rows = due.slice(0, 4).map(row => {
       const rec = row.rec;
-      let lvl = `<span class="faint">—</span>`, coverCls = "", cover = `<span class="faint">—</span>`;
-      if (rec.ok && rec.emptyOn && rec.lastsDays > 0) {
-        const left = Math.round((parseKey(rec.emptyOn) - t0) / 86400000);
-        const pct = Math.max(0, Math.min(100, Math.round(left / rec.lastsDays * 100)));
-        const tone = left <= 0 ? "zero" : pct <= 35 ? "low" : "ok";
-        lvl = `<span class="ph-rf-bar ${tone}" title="${pct}% of the script left · empty ${esc(phFuDateLabel(rec.emptyOn))}"><i style="--p:${pct}%"></i><b>${pct}%</b></span>`;
-        coverCls = left <= 0 ? " zero" : pct <= 35 ? " low" : "";
-        cover = left <= 0 ? `<b>0</b><span>days · empty</span>` : `<b>${left}</b><span>day${left === 1 ? "" : "s"} left</span>`;
-      }
+      const lv = phFuScriptLevel(rec);
+      const lvl = phFuLevelBarHtml(lv, rec);
+      const coverCls = !lv ? "" : lv.tone === "zero" ? " zero" : lv.tone === "low" ? " low" : "";
+      const cover = !lv ? `<span class="faint">—</span>` : lv.left <= 0 ? `<b>0</b><span>days · empty</span>` : `<b>${lv.left}</b><span>day${lv.left === 1 ? "" : "s"} left</span>`;
       const use = rec.gramsDispensed ? `${phFmtG(rec.gramsDispensed)}g${rec.formulaLabel ? ` · ${esc(phDispName(rec.formulaLabel))}` : ""}` : "—";
       return `<div class="ph-ds-row">
         <div class="st"><span class="glyph"><svg class="icn" aria-hidden="true"><use href="#i-clock"/></svg></span><span class="date hot">${esc(phFuRelDay(row.on))}</span></div>
@@ -24476,6 +24491,7 @@
       const noteOpen = phFuNoteOpen && phFuNoteOpen.recId === rec.id && phFuNoteOpen.kind === r.kind;
       const note = phFuNoteText(rec);
       const tone = r.done ? "" : r.on < todayKey ? " hot" : r.on === todayKey ? " gold" : "";
+      const lv = phFuScriptLevel(rec);   // her ask 2026-09-03: the same level bar as the Dashboard
       const acts = `<button type="button" class="ph-os-lnk" data-fu-open="${rec.presId}">Open</button>` + (r.done
         ? `<button type="button" class="ph-os-lnk" data-fu-undo="${rec.id}" data-fu-kind="${r.kind}">Undo</button>`
         : `<button type="button" class="ph-os-lnk" data-fu-done="${rec.id}" data-fu-kind="${r.kind}"><svg class="icn" aria-hidden="true"><use href="#i-check"/></svg>Done</button>`);
@@ -24484,13 +24500,13 @@
         <div class="nm"><b>${esc(phTitle(rec.patient))}</b>${f ? `<span class="kind">${f}</span>` : ""}</div>
         <div><span class="ph-ds-pill ${r.done ? "done" : r.kind}">${kindLabel}</span>${r.collapsed ? `<span class="ph-fs-sub">short script</span>` : ""}</div>
         <div class="soft">${phFuDateLabel(rec.dispensedDate)}<span class="ph-fs-sub">${phFmtG(rec.gramsDispensed)}g</span></div>
-        <div class="soft">${rec.ok ? rec.lastsDays.toFixed(1) + " d" : "—"}</div>
-        <div class="soft">${rec.ok ? phFuDateLabel(rec.emptyOn) : "—"}${rec.weekdaysOnly ? `<span class="ph-fs-sub">weekdays only</span>` : ""}</div>
+        <div>${phFuLevelBarHtml(lv, rec)}</div>
+        <div class="soft ph-fs-empty${lv ? " " + lv.tone : ""}" title="${rec.weekdaysOnly ? "Weekdays only" : ""}">${!lv ? "—" : lv.left <= 0 ? `<b>empty</b><span class="ph-fs-sub">since ${esc(phFuDateLabel(rec.emptyOn))}</span>` : `<b>${lv.left} d left</b><span class="ph-fs-sub">${esc(phFuDateLabel(rec.emptyOn))}${rec.weekdaysOnly ? " · wkdays" : ""}</span>`}</div>
         <div class="ph-fs-acts">${acts}</div>
       </div>${noteOpen ? `<div class="ph-fs-note"><span class="k">Note</span>${note ? esc(note) : `<span class="ph-fu-sub2">No review note.</span>`}</div>` : ""}`;
     };
     const body = groups.filter(g => g.rows.length).map(g => phFsBand(g.key, g.tone, g.icon, g.label, g.rows.length, g.extra) + (phFsCollapsed.has(g.key) ? "" : g.rows.map(row).join(""))).join("");
-    return `<div class="ph-ds-cols" data-ph-dsresize="fu"><div>When</div><div>Patient</div><div>Due</div><div>Dispensed</div><div>Lasts</div><div>Empty on</div><div>Action</div></div>
+    return `<div class="ph-ds-cols" data-ph-dsresize="fu"><div>When</div><div>Patient</div><div>Due</div><div>Dispensed</div><div>Level</div><div>Empty on</div><div>Action</div></div>
       <div class="ph-ds-card"><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i>
         ${body || `<div class="fam-empty">No follow-ups due.</div>`}
       </div>`;
