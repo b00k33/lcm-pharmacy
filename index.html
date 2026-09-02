@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260903-034500">
+<meta name="lcm-build" content="20260903-040000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -9071,6 +9071,10 @@
       </div>
       <nav class="ph-sb-nav">
         <div class="ph-sb-group">
+          <!-- her ask (2026-09-03, with the desktop install): a way to go back
+               inside the app -- an installed window has no browser buttons.
+               Shows only once there is a previous page to return to. -->
+          <button type="button" id="phBackBtn" class="ph-nav-item ph-nav-back" data-ph-tip="Back" title="Back to the page you came from (Alt+← or the mouse back button)" hidden><span class="ph-nav-ic"><svg class="icn"><use href="#i-chev-l"/></svg></span><span class="ph-nav-label">Back</span></button>
           <button type="button" class="ph-nav-item" data-ph-tab="dashboard" data-ph-tip="Dashboard"><span class="ph-nav-ic"><svg class="icn"><use href="#i-home"/></svg></span><span class="ph-nav-label">Dashboard</span></button>
           <button type="button" class="ph-nav-item" data-ph-tab="prescriptions" data-ph-tip="Prescriptions"><span class="ph-nav-ic"><svg class="icn"><use href="#i-pill"/></svg></span><span class="ph-nav-label">Prescriptions</span></button>
           <button type="button" class="ph-nav-item" data-ph-tab="followups" data-ph-tip="Follow-ups"><span class="ph-nav-ic"><svg class="icn"><use href="#i-clock"/></svg></span><span class="ph-nav-label">Follow-ups</span><span class="ph-nav-badge" id="phFuNavBadge" hidden>0</span></button>
@@ -9101,6 +9105,10 @@
           <button type="button" id="phBackup" class="ph-nav-item" data-ph-tip="Back up" title="Download all your pharmacy data as one backup .json — import it into the synced LCM Pharmacy, or keep it safe"><span class="ph-nav-ic"><svg class="icn"><use href="#i-download"/></svg></span><span class="ph-nav-label">Back up</span></button>
           <button type="button" id="phRestoreBtn" class="ph-nav-item" data-ph-tip="Restore" title="Restore from an earlier automatic backup, or load a backup .json file"><span class="ph-nav-ic"><svg class="icn"><use href="#i-clock"/></svg></span><span class="ph-nav-label">Restore</span></button>
           <button type="button" class="ph-nav-item" data-ph-tab="settings" data-ph-tip="Settings"><span class="ph-nav-ic"><svg class="icn"><use href="#i-gear"/></svg></span><span class="ph-nav-label">Settings</span></button>
+          <!-- her ask (2026-09-03): "downloadable app for desktop too" -- shown
+               only when the browser offers to install (beforeinstallprompt),
+               and never once the app is already running installed -->
+          <button type="button" id="phInstallBtn" class="ph-nav-item" data-ph-tip="Install app" title="Install LCM Pharmacy as an app on this computer or phone — its own window, its own icon, works offline" hidden><span class="ph-nav-ic"><svg class="icn"><use href="#i-home"/></svg></span><span class="ph-nav-label">Install app</span></button>
         </div>
       </nav>
       <button type="button" class="ph-sb-collapse" id="phSidebarCollapseBtn" title="Minimise the sidebar" aria-label="Minimise the sidebar">
@@ -18093,9 +18101,29 @@
     renderPhCodeSuggestModal();   // renderPharmacy() never touches this modal (see its own comment) -- close it explicitly
   }
 
+  // in-app Back (her ask 2026-09-03): the pages she visited, most recent
+  // last -- every tab change through this renderer records the tab it
+  // left, so Back (sidebar item, Alt+←, the mouse back button) returns
+  // there. A Back navigation itself is not recorded (phTabBackNav).
+  const phTabHistory = [];
+  let phTabLast = null, phTabBackNav = false;
+  function phGoBack() {
+    const prev = phTabHistory.pop();
+    if (!prev) return;
+    phTabBackNav = true;
+    PHARMACY.activeTab = prev;
+    savePharmacy(); renderPharmacy();
+  }
   function renderPharmacy() {
     const { herbs, formulas, log, suppliers } = PHARMACY;
     phAbbrMap = null; phHerbById = null; phInHouseSet = null; phBlendNames = null;   // abbrs / jar links / herbs may have changed — rebuild lazily
+    {
+      const tabNow = PHARMACY.activeTab;
+      if (phTabLast && tabNow !== phTabLast && !phTabBackNav) { phTabHistory.push(phTabLast); if (phTabHistory.length > 20) phTabHistory.shift(); }
+      phTabBackNav = false; phTabLast = tabNow;
+      const bb = document.getElementById("phBackBtn");
+      if (bb) bb.hidden = !phTabHistory.length;
+    }
     presGuardInstall();   // self-guarding, binds once
 
     // one pharmacy, three internal tabs (her Galcott model: Herbs | Prescriptions
@@ -33462,6 +33490,47 @@ Dosage: {dosage}
   if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
     navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).catch(() => {});
   }
+  /* ---- Install on the computer too (her ask 2026-09-03) ----
+     Edge / Chrome offer a PWA install once the manifest + service worker
+     qualify (they already did for the phone). The browser fires
+     beforeinstallprompt when it is willing; we keep that event and reveal
+     the sidebar's "Install app" item, which replays it on click. Nothing
+     shows when the app is already running installed (standalone), and the
+     item hides again the moment the install completes. On a phone the same
+     item works; iOS Safari has no prompt API and keeps its Share → Add to
+     Home Screen route. */
+  let phInstallEvt = null;
+  const phInstallBtn = document.getElementById("phInstallBtn");
+  const phIsInstalled = () => window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  window.addEventListener("beforeinstallprompt", e => {
+    e.preventDefault();
+    phInstallEvt = e;
+    if (phInstallBtn && !phIsInstalled()) phInstallBtn.hidden = false;
+  });
+  window.addEventListener("appinstalled", () => {
+    phInstallEvt = null;
+    if (phInstallBtn) phInstallBtn.hidden = true;
+    phFlashShow("✓ Installed — LCM Pharmacy now opens in its own window from your Start menu / desktop.");
+  });
+  if (phInstallBtn) phInstallBtn.addEventListener("click", () => {
+    if (!phInstallEvt) return;
+    const evt = phInstallEvt;
+    phInstallEvt = null;
+    evt.prompt();
+    evt.userChoice.then(r => { if (!r || r.outcome !== "accepted") { phInstallEvt = evt; } });
+  });
+  // Back: the sidebar item, Alt+← (the desktop convention), and the mouse's
+  // own back button (button 3) -- all three run the same phGoBack()
+  const phBackBtn = document.getElementById("phBackBtn");
+  if (phBackBtn) phBackBtn.addEventListener("click", phGoBack);
+  document.addEventListener("keydown", e => {
+    if (e.altKey && e.key === "ArrowLeft" && !e.ctrlKey && !e.metaKey) {
+      const t = e.target;
+      if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+      e.preventDefault(); phGoBack();
+    }
+  });
+  document.addEventListener("mouseup", e => { if (e.button === 3) { e.preventDefault(); phGoBack(); } });
   // Called from inside phDoControlledUpdate, right before its own reload --
   // if a new service worker is waiting, tell it to take over so the new
   // code and the new SW activate together. A short timeout means a worker
