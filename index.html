@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260903-041500">
+<meta name="lcm-build" content="20260903-043000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -16977,12 +16977,33 @@
   function phDashFuSheetHtml() {
     const due = phDashFuDue();
     if (!due.length) return "";
-    const rows = due.slice(0, 4).map(row => `<div class="ph-ds-row">
+    // her ask (2026-09-03): the script's own level -- how much of the
+    // bottle is left (Level), how many days that lasts (Cover) and the
+    // total grams dispensed with the formula (Use) -- from the same
+    // follow-up record the Follow-ups page reads (dispensedDate /
+    // lastsDays / emptyOn / gramsDispensed / formulaLabel)
+    const t0 = parseKey(keyOf(TODAY));
+    const rows = due.slice(0, 4).map(row => {
+      const rec = row.rec;
+      let lvl = `<span class="faint">—</span>`, coverCls = "", cover = `<span class="faint">—</span>`;
+      if (rec.ok && rec.emptyOn && rec.lastsDays > 0) {
+        const left = Math.round((parseKey(rec.emptyOn) - t0) / 86400000);
+        const pct = Math.max(0, Math.min(100, Math.round(left / rec.lastsDays * 100)));
+        const tone = left <= 0 ? "zero" : pct <= 35 ? "low" : "ok";
+        lvl = `<span class="ph-rf-bar ${tone}" title="${pct}% of the script left · empty ${esc(phFuDateLabel(rec.emptyOn))}"><i style="--p:${pct}%"></i><b>${pct}%</b></span>`;
+        coverCls = left <= 0 ? " zero" : pct <= 35 ? " low" : "";
+        cover = left <= 0 ? `<b>0</b><span>days · empty</span>` : `<b>${left}</b><span>day${left === 1 ? "" : "s"} left</span>`;
+      }
+      const use = rec.gramsDispensed ? `${phFmtG(rec.gramsDispensed)}g${rec.formulaLabel ? ` · ${esc(phDispName(rec.formulaLabel))}` : ""}` : "—";
+      return `<div class="ph-ds-row">
         <div class="st"><span class="glyph"><svg class="icn" aria-hidden="true"><use href="#i-clock"/></svg></span><span class="date hot">${esc(phFuRelDay(row.on))}</span></div>
-        <div class="nm"><button type="button" class="ph-name-link" data-fu-open="${row.rec.presId}">${esc(phTitle(row.rec.patient))}</button><span class="kind">${row.kind === "checkin" ? "check-in" : row.kind === "review" ? "review" : "check-in & review"}</span></div>
-        <div></div><div></div><div></div>
-        <div><button type="button" class="ph-os-lnk" data-fu-open="${row.rec.presId}">Review</button></div>
-      </div>`).join("");
+        <div class="nm"><button type="button" class="ph-name-link" data-fu-open="${rec.presId}">${esc(phTitle(rec.patient))}</button><span class="kind">${row.kind === "checkin" ? "check-in" : row.kind === "review" ? "review" : "check-in & review"}</span></div>
+        <div>${lvl}</div>
+        <div class="cover${coverCls}">${cover}</div>
+        <div class="faint" title="${esc(use)}">${use}</div>
+        <div><button type="button" class="ph-os-lnk" data-fu-open="${rec.presId}">Review</button></div>
+      </div>`;
+    }).join("");
     return phDsBand("fu", "fu", "i-clock", "Follow-ups due", phDsCnt(due.length), phDsLnk('data-ph-tab="followups"', due.length > 4 ? `All ${due.length} follow-ups` : "All follow-ups"))
       + (phDsCollapsed.has("fu") ? "" : rows);
   }
