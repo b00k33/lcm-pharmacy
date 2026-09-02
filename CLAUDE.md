@@ -27,7 +27,10 @@ aligned, organized and calm. Follow every rule, then re-check your work.
 ## Spacing & size (one scale, no random numbers)
 - Only 4/8/12/16/24/32px for margins/padding/gaps.
 - One corner radius for cards, one for pills. One type scale (title/body/label).
-- Minimum tap target 44px.
+- (Retired 2026-09-02, her call: the old "minimum tap target 44px" rule. A day of
+  page-by-page 44px audits made every phone control too large — "remove the 44px
+  codes everywhere in lcm, its outdated". Keep controls at the compact sizes she
+  approves; don't reintroduce a tap floor without asking her.)
 
 ## Alignment & symmetry
 - Equal left/right padding, balanced top/bottom. Items share one left edge and
