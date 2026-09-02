@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260903-043000">
+<meta name="lcm-build" content="20260903-050000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -1649,6 +1649,11 @@
   #pharmacyPage .ph-osheet-head { width: calc(100% - 16px); max-width: 1024px; margin: 0 auto; border-collapse: collapse; table-layout: fixed; }
   #pharmacyPage .ph-osheet-head th { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ph-faint); text-align: left; padding: 14px 20px 8px; white-space: nowrap; }
   #pharmacyPage .ph-osheet-head th.r { text-align: right; }
+  /* resizable columns (her ask 2026-09-03): the grips need a positioned cell */
+  #pharmacyPage .ph-osheet-head th { position: relative; }
+  #pharmacyPage .ph-ds-cols > div { position: relative; }
+  #pharmacyPage .ph-ds-grip { position: absolute; top: 0; right: -6px; bottom: 0; width: 12px; cursor: col-resize; touch-action: none; user-select: none; z-index: 2; border-radius: 3px; }
+  #pharmacyPage .ph-ds-grip:hover { background: color-mix(in srgb, var(--ph-green) 30%, transparent); }
   #pharmacyPage .ph-osheet.fixed { table-layout: fixed; }
   #pharmacyPage .ph-osheet.fixed th { display: none; }
   #pharmacyPage .ph-osheet-wrap.polish { padding: 4px 8px 8px; }
@@ -13474,9 +13479,20 @@
   // Drag the hairline at a header's right edge; the set sticks (saved on the
   // pharmacy store, per table). Double-click a hairline to give the whole
   // table its automatic widths back.
+  // "mirror" tables (her ask 2026-09-03, "resize all columns and tables"):
+  // the To Order sheet is a header table + a body table sharing one
+  // <colgroup>, both table-layout:fixed -- there a column's width lives on
+  // its <col> (which beats the th under fixed layout), and the body must
+  // follow the head. data-ph-mirror on the head names the body table; the
+  // flexible name column keeps absorbing, so the table width is left alone.
+  function phColMirrorSet(table, i, px) {
+    const body = document.querySelector(table.dataset.phMirror);
+    [table, body].forEach(t => { if (!t) return; const col = t.querySelectorAll("colgroup > col")[i]; if (col) col.style.width = px == null ? (col.dataset.def ? col.dataset.def + "px" : "") : px + "px"; });
+  }
   function phApplyColW(table) {
     if (!table || !table.tHead) return;
     const saved = (PHARMACY.colW || {})[table.dataset.phResize];
+    const mirror = !!table.dataset.phMirror;
     let total = 0;
     [...table.tHead.rows[0].cells].forEach((c, i) => {
       if (!c.querySelector(".ph-col-grip")) {
@@ -13491,17 +13507,99 @@
       // used to land on whatever column ended up there instead of the one
       // she actually resized ("glitchy" columns -- her report 2026-08-11)
       const w = saved && saved[c.dataset.col != null ? c.dataset.col : i];
+      if (mirror) { phColMirrorSet(table, i, w != null ? w : null); return; }
       if (w != null) { c.style.width = w + "px"; total += w; }
     });
     table.classList.toggle("ph-colw", !!saved);
+    if (mirror) return;
     // the table is exactly as wide as its columns — never stretches the last one
     table.style.width = saved && total ? total + "px" : "";
   }
   // live sum while dragging — the table tracks its columns, edge to edge
   function phColSyncTableW(table) {
+    if (table.dataset.phMirror) return;
     const w = [...table.tHead.rows[0].cells].reduce((a, c) => a + (parseFloat(c.style.width) || c.getBoundingClientRect().width), 0);
     table.style.width = Math.round(w) + "px";
   }
+  // ---- resizable columns on the GRID sheets (Dashboard, Follow-ups,
+  // Formula refill, Dispense history) -- her ask 2026-09-03. Each .ph-ds-cols
+  // caption row tagged data-ph-dsresize="<key>" gets a grip at every fixed
+  // column's right edge (the flexible fr column has none: it takes what is
+  // left). Widths persist in PHARMACY.dsColW[key] and apply by writing
+  // --ph-ds-grid inline on the sheet's wrap; the column lines are then placed
+  // from the real caption cells, so they always sit on the true edges.
+  // Double-click a grip: that sheet returns to its default widths. ----
+  const PH_DS_WRAPS = "#phDashboardWrap, #phFollowupsWrap, #phRefillWrap, #phLogWrap";
+  const phDsTracks = wrap => getComputedStyle(wrap).getPropertyValue("--ph-ds-grid").trim().split(/\s+(?![^(]*\))/).filter(Boolean);
+  function phDsPlaceLines(cols) {
+    const wrap = cols.closest(PH_DS_WRAPS);
+    const card = wrap && wrap.querySelector(".ph-ds-card");
+    if (!card) return;
+    const vls = [...card.querySelectorAll(":scope > .ph-ds-vl")];
+    const cl = card.getBoundingClientRect().left;
+    [...cols.children].slice(1).forEach((c, i) => {
+      if (!vls[i]) return;
+      vls[i].style.left = Math.round(c.getBoundingClientRect().left - cl) + "px";
+      vls[i].style.right = "auto";
+    });
+  }
+  function phDsResizeApply() {
+    document.querySelectorAll(".ph-ds-cols[data-ph-dsresize]").forEach(cols => {
+      const key = cols.dataset.phDsresize;
+      const wrap = cols.closest(PH_DS_WRAPS);
+      if (!wrap) return;
+      wrap.style.removeProperty("--ph-ds-grid");           // defaults first
+      const tracks = phDsTracks(wrap);
+      const flex = tracks.findIndex(t => /fr/.test(t));
+      const cells = [...cols.children];
+      cells.forEach((c, i) => {
+        if (i === flex || i >= tracks.length) return;
+        if (!c.querySelector(".ph-ds-grip")) {
+          const g = document.createElement("span");
+          g.className = "ph-ds-grip";
+          g.title = "Drag to set the column width — double-click to reset this sheet";
+          c.appendChild(g);
+        }
+      });
+      const saved = (PHARMACY.dsColW || {})[key];
+      if (saved && saved.length) wrap.style.setProperty("--ph-ds-grid", tracks.map((t, i) => saved[i] != null && i !== flex ? saved[i] + "px" : t).join(" "));
+      phDsPlaceLines(cols);
+    });
+  }
+  let phDsDrag = null;
+  document.addEventListener("pointerdown", e => {
+    const g = e.target.closest ? e.target.closest(".ph-ds-grip") : null;
+    if (!g) return;
+    const cell = g.parentElement, cols = cell.closest(".ph-ds-cols"), wrap = cols.closest(PH_DS_WRAPS);
+    if (!wrap) return;
+    phDsDrag = { wrap, cols, key: cols.dataset.phDsresize, i: [...cols.children].indexOf(cell), x: e.clientX, w: cell.getBoundingClientRect().width, tracks: phDsTracks(wrap) };
+    try { g.setPointerCapture(e.pointerId); } catch (_) {}
+    e.preventDefault(); e.stopPropagation();
+  });
+  document.addEventListener("pointermove", e => {
+    if (!phDsDrag) return;
+    const d = phDsDrag;
+    d.tracks[d.i] = Math.max(44, Math.round(d.w + (e.clientX - d.x))) + "px";
+    d.wrap.style.setProperty("--ph-ds-grid", d.tracks.join(" "));
+    phDsPlaceLines(d.cols);
+  });
+  function phDsDragEnd() {
+    if (!phDsDrag) return;
+    const d = phDsDrag;
+    phDsDrag = null;
+    PHARMACY.dsColW = PHARMACY.dsColW || {};
+    PHARMACY.dsColW[d.key] = d.tracks.map(t => /^\d+(\.\d+)?px$/.test(t) ? Math.round(parseFloat(t)) : null);
+    savePharmacy();
+  }
+  ["pointerup", "pointercancel"].forEach(ev => document.addEventListener(ev, phDsDragEnd));
+  document.addEventListener("dblclick", e => {
+    const g = e.target.closest ? e.target.closest(".ph-ds-grip") : null;
+    if (!g) return;
+    const cols = g.closest(".ph-ds-cols");
+    if (PHARMACY.dsColW) { delete PHARMACY.dsColW[cols.dataset.phDsresize]; savePharmacy(); }
+    phDsResizeApply();
+    e.preventDefault();
+  });
   let phColDrag = null;
   // document-bound like every other pharmacy listener (see the __phMainBound
   // note): element-scoped binds silently never fire on the deployed build
@@ -13511,7 +13609,8 @@
     const th = g.closest("th"), table = g.closest("table");
     if (!table.classList.contains("ph-colw")) {
       // first touch of an automatic table: freeze what's on screen, then move one column
-      [...table.tHead.rows[0].cells].forEach(c => { c.style.width = c.getBoundingClientRect().width + "px"; });
+      // (a mirror table already has explicit <col> widths -- nothing to freeze)
+      if (!table.dataset.phMirror) [...table.tHead.rows[0].cells].forEach(c => { c.style.width = c.getBoundingClientRect().width + "px"; });
       table.classList.add("ph-colw");
       phColSyncTableW(table);
     }
@@ -13521,7 +13620,9 @@
   });
   document.addEventListener("pointermove", e => {
     if (!phColDrag) return;
-    phColDrag.th.style.width = Math.max(36, phColDrag.w + (e.clientX - phColDrag.x)) + "px";
+    const px = Math.max(36, phColDrag.w + (e.clientX - phColDrag.x));
+    if (phColDrag.table.dataset.phMirror) { phColMirrorSet(phColDrag.table, [...phColDrag.table.tHead.rows[0].cells].indexOf(phColDrag.th), Math.round(px)); return; }
+    phColDrag.th.style.width = px + "px";
     phColSyncTableW(phColDrag.table);
   });
   // pointerup AND pointercancel -- a resize that gets interrupted (window loses
@@ -13533,7 +13634,11 @@
     const { table } = phColDrag;
     phColDrag = null;
     const o = {};
+    const mirrorCols = table.dataset.phMirror ? [...table.querySelectorAll("colgroup > col")] : null;
     [...table.tHead.rows[0].cells].forEach((c, i) => {
+      // mirror table: the width lives on the <col>; the flexible column (no
+      // data-def) is never saved, so it keeps absorbing whatever is left
+      if (mirrorCols) { if (mirrorCols[i] && mirrorCols[i].dataset.def) o[i] = Math.round(c.getBoundingClientRect().width); return; }
       o[c.dataset.col != null ? c.dataset.col : i] = Math.round(parseFloat(c.style.width) || c.getBoundingClientRect().width);
     });
     PHARMACY.colW = PHARMACY.colW || {};
@@ -13548,7 +13653,7 @@
     if (PHARMACY.colW) { delete PHARMACY.colW[table.dataset.phResize]; savePharmacy(); }
     table.classList.remove("ph-colw");
     table.style.width = "";
-    [...table.tHead.rows[0].cells].forEach(c => { c.style.width = ""; });
+    [...table.tHead.rows[0].cells].forEach((c, i) => { c.style.width = ""; if (table.dataset.phMirror) phColMirrorSet(table, i, null); });
     e.preventDefault();
   });
   // STEP 8h: drag a header to reorder columns (Inventory + To order) --
@@ -14472,7 +14577,7 @@
     const rankTable = (rows, which, headName) => {
       const all = phProfitTopAll[which];
       const show = all ? rows : rows.slice(0, 10);
-      return `<div class="rtn-table-wrap"><table class="rtn-table ph-table">
+      return `<div class="rtn-table-wrap"><table class="rtn-table ph-table" data-ph-resize="st-profit-${which}">
         <thead><tr><th>${headName}</th><th style="text-align:right">Sales</th><th style="text-align:right">Profit</th><th style="text-align:right">Margin</th><th style="text-align:right">Scripts</th></tr></thead>
         <tbody>${show.map(r => `<tr><td>${esc(r.key)}</td><td style="text-align:right">${money(r.sales)}</td><td style="text-align:right">${money(r.profit)}</td><td style="text-align:right">${r.margin}%</td><td style="text-align:right">${r.n}</td></tr>`).join("")
           || `<tr><td colspan="5" class="fam-empty" style="border:none">No sales in this window.</td></tr>`}</tbody>
@@ -14504,7 +14609,7 @@
       <div class="ph-st-tab${tabOn("month")}">
       ${sheet ? phNetChartSvg(monthRows) : ""}
       <h3 class="ph-report-h">By month</h3>
-      <div class="rtn-table-wrap"><table class="rtn-table ph-table">
+      <div class="rtn-table-wrap"><table class="rtn-table ph-table" data-ph-resize="st-profit-month">
         <thead><tr><th>Month</th><th style="text-align:right">Sales</th><th style="text-align:right">Cost</th><th style="text-align:right">Profit</th><th style="text-align:right">Margin</th><th style="text-align:right">Restock</th><th style="text-align:right">Net</th></tr></thead>
         <tbody>${monthRows.map(m => `<tr>
           <td><b>${m.label}</b></td>
@@ -14524,7 +14629,7 @@
       <div class="ph-st-tab${tabOn("formula")}"><h3 class="ph-report-h">By formula / script</h3>
       ${rankTable(byFormula, "formula", "Formula / script")}</div>
       <div class="ph-st-tab${tabOn("method")}"><h3 class="ph-report-h">By pricing method</h3>
-      <div class="rtn-table-wrap"><table class="rtn-table ph-table">
+      <div class="rtn-table-wrap"><table class="rtn-table ph-table" data-ph-resize="st-profit-method">
         <thead><tr><th>Method</th><th style="text-align:right">Sales</th><th style="text-align:right">Profit</th><th style="text-align:right">Margin</th><th style="text-align:right">Scripts</th></tr></thead>
         <tbody>${byMethod.map(r => `<tr><td>${esc(r.key)}</td><td style="text-align:right">${money(r.sales)}</td><td style="text-align:right">${money(r.profit)}</td><td style="text-align:right">${r.margin}%</td><td style="text-align:right">${r.n}</td></tr>`).join("") || `<tr><td colspan="5" class="fam-empty" style="border:none">No sales in this window.</td></tr>`}</tbody>
       </table></div></div>
@@ -14755,7 +14860,7 @@
         <div class="ph-widget-head"><h2>Value on the shelf</h2><span class="ph-count">her rule: grams × cost per gram — ⏸ write-offs, untracked and empties don't count</span>
           <button type="button" class="ph-load-btn" data-ph-statsval-toggle="1">${phStatsValList ? "Hide the full list ▴" : "Full list — all grams counted →"}</button>${sheet ? phStChevHtml("val") : ""}</div>
         ${sheet ? '<div class="ph-st-split">' : ""}
-        <div class="rtn-table-wrap"><table class="rtn-table ph-table">
+        <div class="rtn-table-wrap"><table class="rtn-table ph-table" data-ph-resize="st-value">
           <thead><tr><th>Group</th><th style="text-align:right">Grams</th><th style="text-align:right">Value</th><th style="text-align:right">Zero</th><th style="text-align:right">Low</th></tr></thead>
           <tbody>
             ${groups.map(([label, list]) => `<tr>
@@ -14789,7 +14894,7 @@
       <section class="ph-widget${folded("six")}" data-st="six">
         <div class="ph-widget-head"><h2>The last six months</h2><span class="ph-count">sales &amp; profit from dispensing · profit = sales − herb cost · in-house makes sit with the restocks · restock cost = what the deliveries cost</span>${sheet ? phStChevHtml("six") : ""}</div>
         ${phMonthsChartSvg(months)}
-        <div class="rtn-table-wrap"><table class="rtn-table ph-table">
+        <div class="rtn-table-wrap"><table class="rtn-table ph-table" data-ph-resize="st-months">
           <thead><tr><th>Month</th><th style="text-align:right">Sold</th><th style="text-align:right">Grams out</th><th style="text-align:right">Sales</th><th style="text-align:right">Profit</th><th style="text-align:right">Restocks</th><th style="text-align:right">Restock cost</th><th style="text-align:right">Arrivals</th></tr></thead>
           <tbody>${months.map(m => `<tr>
             <td><b>${m.label}</b></td>
@@ -14812,24 +14917,24 @@
         const rankCell = (n, max) => `<div class="ph-rank-cell"><div class="ph-rank-bar"><span class="ph-rank-bar-fill" style="width:${max ? Math.max(6, Math.round(n / max * 100)) : 0}%"></span></div><span class="ph-rank-n">${n}</span></div>`;
         const herbMax = topHerbs.length ? topHerbs[0].n : 0, formulaMax = topFormulas.length ? topFormulas[0].n : 0;
         const mostHerbs = !topHerbs.length ? "" : `<div class="section-head"><h2>🌿 Single herbs</h2><span class="rule"></span>${herbsAll.length > 10 ? `<button type="button" class="ph-load-btn" data-ph-statstop="herb">${phStatsTopAll.herb ? "Top 10 ▴" : `All ${herbsAll.length} →`}</button>` : ""}</div>
-          <div class="rtn-table-wrap"><table class="rtn-table ph-table">
+          <div class="rtn-table-wrap"><table class="rtn-table ph-table" data-ph-resize="st-most-herb">
             <thead><tr><th>#</th><th>Herb</th><th style="text-align:right">Times</th><th style="text-align:right">Grams out</th></tr></thead>
             <tbody>${topHerbs.map((r, i) => `<tr><td>${i + 1}</td><td>${phNameHtml(r.h.name, false)}</td><td style="text-align:right">${rankCell(r.n, herbMax)}</td><td style="text-align:right">${phFmtG(r.grams)}</td></tr>`).join("")}</tbody>
           </table></div>`;
         const mostFormulas = !topFormulas.length ? "" : `<div class="section-head"${sheet ? "" : ' style="margin-top:20px"'}><h2>🏺 Formulas</h2><span class="rule"></span>${formulasAll.length > 10 ? `<button type="button" class="ph-load-btn" data-ph-statstop="formula">${phStatsTopAll.formula ? "Top 10 ▴" : `All ${formulasAll.length} →`}</button>` : ""}</div>
-          <div class="rtn-table-wrap"><table class="rtn-table ph-table">
+          <div class="rtn-table-wrap"><table class="rtn-table ph-table" data-ph-resize="st-most-formula">
             <thead><tr><th>#</th><th>Formula</th><th style="text-align:right">Times</th><th style="text-align:right">Grams out</th></tr></thead>
             <tbody>${topFormulas.map((r, i) => `<tr><td>${i + 1}</td><td>${phNameHtml(r.h.name, true)}</td><td style="text-align:right">${rankCell(r.n, formulaMax)}</td><td style="text-align:right">${phFmtG(r.grams)}</td></tr>`).join("")}</tbody>
           </table></div>`;
         const usageRankCell = (g, max) => `<div class="ph-rank-cell"><div class="ph-rank-bar"><span class="ph-rank-bar-fill" style="width:${max ? Math.max(6, Math.round(g / max * 100)) : 0}%"></span></div><span class="ph-rank-n">${phFmtG(g)}g</span></div>`;
         const usageHerbMax = usageTopHerbs.length ? usageTopHerbs[0].grams : 0, usageFormulaMax = usageTopFormulas.length ? usageTopFormulas[0].grams : 0;
         const usageHerbs = !usageTopHerbs.length ? "" : `<div class="section-head"><h2>🌿 Single herbs</h2><span class="rule"></span>${usageHerbsAll.length > 10 ? `<button type="button" class="ph-load-btn" data-ph-usagetop="herb">${phUsageTopAll.herb ? "Top 10 ▴" : `All ${usageHerbsAll.length} →`}</button>` : ""}</div>
-          <div class="rtn-table-wrap"><table class="rtn-table ph-table">
+          <div class="rtn-table-wrap"><table class="rtn-table ph-table" data-ph-resize="st-use-herb">
             <thead><tr><th>#</th><th>Herb</th><th style="text-align:right">Grams used</th></tr></thead>
             <tbody>${usageTopHerbs.map((r, i) => `<tr><td>${i + 1}</td><td>${phNameHtml(r.h.name, false)}</td><td style="text-align:right">${usageRankCell(r.grams, usageHerbMax)}</td></tr>`).join("")}</tbody>
           </table></div>`;
         const usageFormulas = !usageTopFormulas.length ? "" : `<div class="section-head"${sheet ? "" : ' style="margin-top:20px"'}><h2>🏺 Formulas</h2><span class="rule"></span>${usageFormulasAll.length > 10 ? `<button type="button" class="ph-load-btn" data-ph-usagetop="formula">${phUsageTopAll.formula ? "Top 10 ▴" : `All ${usageFormulasAll.length} →`}</button>` : ""}</div>
-          <div class="rtn-table-wrap"><table class="rtn-table ph-table">
+          <div class="rtn-table-wrap"><table class="rtn-table ph-table" data-ph-resize="st-use-formula">
             <thead><tr><th>#</th><th>Formula</th><th style="text-align:right">Grams used</th></tr></thead>
             <tbody>${usageTopFormulas.map((r, i) => `<tr><td>${i + 1}</td><td>${phNameHtml(r.h.name, true)}</td><td style="text-align:right">${usageRankCell(r.grams, usageFormulaMax)}</td></tr>`).join("")}</tbody>
           </table></div>`;
@@ -14869,6 +14974,9 @@
         ${!usageRanked.length ? `<div class="fam-empty">Nothing used in the last 3 months.</div>` : usageHerbs + usageFormulas}
       </section>`;
       })()}`;
+    // her ask (2026-09-03): every Stock statistics table resizable, widths
+    // remembered per table (same phApplyColW / grips as Inventory)
+    wrap.querySelectorAll("table[data-ph-resize]").forEach(phApplyColW);
   }
 
   // ---- print delivery ----
@@ -16963,6 +17071,7 @@
       ${monday ? phDashMondayBandHtml() : ""}
       ${monday ? phDashMondayReviewHtml() : ""}
       ${phDashSheetHtml()}`;
+    phDsResizeApply();
   }
   // ---- the sheet itself ----------------------------------------------------
   const phDsCollapsed = new Set();   // which bands are folded (session-only, like phOsCollapsed)
@@ -17053,7 +17162,7 @@
     } finally { phDsRowMode = false; }
     const todayN = PHARMACY.log.filter(e => e.date === keyOf(TODAY)).length;
     const monthName = TODAY.toLocaleDateString("en-AU", { month: "long" });
-    return `<div class="ph-ds-cols"><div>Status</div><div>Item</div><div>Level</div><div>Cover</div><div>Use</div><div>Action</div></div>
+    return `<div class="ph-ds-cols" data-ph-dsresize="dash"><div>Status</div><div>Item</div><div>Level</div><div>Cover</div><div>Use</div><div>Action</div></div>
       <div class="ph-ds-card"><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i>
         ${phDashFuSheetHtml()}
         ${phDashUrgentSheetHtml()}
@@ -23661,10 +23770,12 @@
     // card, not inside it. Two tables, one fixed <colgroup> each (identical
     // widths), so the header and the body line up exactly. A folded stage
     // keeps its band and drops its rows.
-    const osCols = `<colgroup><col style="width:56px"><col style="width:84px"><col><col style="width:150px"><col style="width:132px"><col style="width:128px"><col style="width:104px"><col style="width:92px"><col style="width:44px"></colgroup>`;
+    // data-def = the default each column returns to on a double-click reset
+    // (her ask 2026-09-03: every column resizable -- see phColMirrorSet)
+    const osCols = `<colgroup><col data-def="56" style="width:56px"><col data-def="84" style="width:84px"><col><col data-def="150" style="width:150px"><col data-def="132" style="width:132px"><col data-def="128" style="width:128px"><col data-def="104" style="width:104px"><col data-def="92" style="width:92px"><col data-def="44" style="width:44px"></colgroup>`;
     const fold = k => phOsCollapsed.has(k);
     const desktopHtml = `${shellHtml}
-      ${anyRows ? `<table class="ph-osheet-head">${osCols}<thead><tr><th></th><th>Status</th><th>Herb</th><th>Supplier</th><th>Level</th><th>Size × qty</th><th class="r">Bottle $</th><th class="r">Total</th><th></th></tr></thead></table>
+      ${anyRows ? `<table class="ph-osheet-head" data-ph-resize="osheet" data-ph-mirror=".ph-osheet.fixed">${osCols}<thead><tr><th></th><th>Status</th><th>Herb</th><th>Supplier</th><th>Level</th><th>Size × qty</th><th class="r">Bottle $</th><th class="r">Total</th><th></th></tr></thead></table>
       <div class="ph-osheet-wrap polish"><table class="ph-osheet fixed">${osCols}
         <tbody>
           ${stillToOrder.length ? osBand("toorder", "🛒", "To order", stillToOrder.length) + (fold("toorder") ? "" : osStage(bySupToOrder, "toOrder", "toorder")) : ""}
@@ -23729,6 +23840,9 @@
     wrapEl.innerHTML = isDesk
       ? desktopHtml.replace('<h1>', '<h1><svg class="icn" aria-hidden="true"><use href="#i-menu"/></svg>')
       : mobileHtml;
+    // her ask (2026-09-03): the sheet's columns resize too -- grips on the
+    // header table, widths mirrored onto the body table's <colgroup>
+    if (isDesk) { const h = wrapEl.querySelector(".ph-osheet-head"); if (h) phApplyColW(h); }
     if (phCellEdit && phCellEdit.field === "restockBottle") {
       const inp = document.querySelector(`[data-ph-edit="${phCellEdit.id}:restockBottle"]`);
       if (inp) { inp.focus(); inp.select(); }
@@ -24062,7 +24176,7 @@
     });
     return `${phLogUndo ? `<div class="ph-flash">✓ Deleted "<b>${esc(phDispName(phLogUndo.entry.what || phLogUndo.entry.name || "Order arrived"))}</b>" — its stock movement was reversed.
         <button type="button" class="ph-undo-btn" data-ph-log-undo="1">↩ Undo</button></div>` : ""}
-      <div class="ph-ds-cols"><div>Type</div><div>Item</div><div>Patient / Source</div><div class="r">Change</div><div class="r">After</div><div>Date</div><div></div></div>
+      <div class="ph-ds-cols" data-ph-dsresize="log"><div>Type</div><div>Item</div><div>Patient / Source</div><div class="r">Change</div><div class="r">After</div><div>Date</div><div></div></div>
       <div class="ph-ds-card"><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i>
         ${body || `<div class="fam-empty">${phLogSearch.trim() ? "Nothing in the log matches that search." : "Nothing here yet — every dispense, refill and delivery lands in this log, newest first."}</div>`}
         ${totalPages > 1 ? phPaginationHtml(phLogPage, totalPages, "log") : ""}
@@ -24229,6 +24343,7 @@
         { n: counts.done, label: "Done", icon: "check" },
       ])).replace('<h1>', '<h1><svg class="icn" aria-hidden="true"><use href="#i-clock"/></svg>')}
       ${phFuSheetHtml(all)}`;
+      phDsResizeApply();
       return;
     }
     wrap.classList.remove("ph-ds-polish");
@@ -24297,7 +24412,7 @@
       </div>${noteOpen ? `<div class="ph-fs-note"><span class="k">Note</span>${note ? esc(note) : `<span class="ph-fu-sub2">No review note.</span>`}</div>` : ""}`;
     };
     const body = groups.filter(g => g.rows.length).map(g => phFsBand(g.key, g.tone, g.icon, g.label, g.rows.length, g.extra) + (phFsCollapsed.has(g.key) ? "" : g.rows.map(row).join(""))).join("");
-    return `<div class="ph-ds-cols"><div>When</div><div>Patient</div><div>Due</div><div>Dispensed</div><div>Lasts</div><div>Empty on</div><div>Action</div></div>
+    return `<div class="ph-ds-cols" data-ph-dsresize="fu"><div>When</div><div>Patient</div><div>Due</div><div>Dispensed</div><div>Lasts</div><div>Empty on</div><div>Action</div></div>
       <div class="ph-ds-card"><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i>
         ${body || `<div class="fam-empty">No follow-ups due.</div>`}
       </div>`;
@@ -24317,6 +24432,7 @@
       document.getElementById("phLogCount").textContent =
         `${log.length}${PHARMACY.log.length !== log.length ? ` of ${PHARMACY.log.length}` : ""} movement${log.length === 1 ? "" : "s"}`;
       el.innerHTML = phLogSheetHtml(shown, log, totalPages);
+      phDsResizeApply();
       if (phLogDateEdit) { const inp = el.querySelector("[data-ph-log-date-edit]"); if (inp) inp.focus(); }
       return;
     }
@@ -32189,6 +32305,7 @@ Dosage: {dosage}
     renderPresPanel();
     renderRefRecipeList();
     renderRefLog();
+    phDsResizeApply();
     // this render just rebuilt the page's own dark bar -- re-merge the
     // mobile header cluster into it (no-op on desktop)
     phTopbarActionSet("refill");
@@ -32303,7 +32420,7 @@ Dosage: {dosage}
     const refsMonth = PHARMACY.log.filter(e => e.kind === "refill" && e.date.slice(0, 7) === keyOf(TODAY).slice(0, 7)).length;
     const sec = (key, band, body) => band + (phRfCollapsed.has(key) ? "" : `<div class="ph-ds-mask">${body}</div>`);
     return `<div id="refPresPanel"></div>
-      <div class="ph-ds-cols"><div>Can make</div><div>Formula</div><div>Jar</div><div>Recipe</div><div>When</div><div>Action</div><div></div></div>
+      <div class="ph-ds-cols" data-ph-dsresize="refill"><div>Can make</div><div>Formula</div><div>Jar</div><div>Recipe</div><div>When</div><div>Action</div><div></div></div>
       <div class="ph-ds-card"><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i>
         ${phRfBand("plan", "ref", "i-jar", "Refill plan", `<span class="ph-rf-tabs" role="radiogroup" aria-label="Which formulas">${tab("toRefill", "To refill", flagged.length)}${tab("snoozed", "Snoozed", snoozed.length)}${tab("notFlagged", "Not flagged", below.length)}</span>`)}
         ${phRfCollapsed.has("plan") ? "" : planBody}
