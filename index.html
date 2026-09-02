@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260902-180000">
+<meta name="lcm-build" content="20260902-190000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6149,19 +6149,15 @@
     #pharmacyPage .ph-prep-step-node,
     #pharmacyPage .ph-prep-tickall::before { animation: ph-prep-tap 180ms ease-out; }
   }
-  /* her "pin yin only on the phone" spec (2026-08-27): under 480px, herb
-     names drop the English half everywhere phNameHtml renders it -- scoped
-     to the three screens her spec names (never a blanket rule -- Inventory,
-     the Log and Restock keep both halves at every width, unchanged). The
-     Dispensing "Weigh these" list spends the room that frees up on a
-     herb-count size tier instead: fewer herbs on the script, bigger rows;
-     more herbs, denser rows, floors out and scrolls rather than shrinking
-     past readable. No such tiering existed before this -- built fresh, not
-     restored (nothing in this file ever had it). */
+  /* Her "pin yin only on the phone" spec (2026-08-27) used to hide the latin
+     half here, under 480px, on three screens only. Superseded 2026-09-02 by
+     her universal rule -- pin yin only everywhere, decided once inside
+     phNameHtml itself (see its comment for the two exceptions it keeps), so
+     no width-scoped hiding is needed any more. What stays here is the
+     Dispensing "Weigh these" list's herb-count size tier: fewer herbs on the
+     script, bigger rows; more herbs, denser rows, floors out and scrolls
+     rather than shrinking past readable. */
   @media (max-width: 479px) {
-    #pharmacyPage .ph-ing-spec .ph-nm-lat,
-    #pharmacyPage .ph-ref-herbs .ph-nm-lat,
-    #pharmacyPage .ph-sched-prep-row-name .ph-nm-lat { display: none; }
     #pharmacyPage .ph-sched-prep-items.tier-t1 .ph-prep-weigh-row { min-height: 89px; }
     #pharmacyPage .ph-sched-prep-items.tier-t1 .ph-sched-prep-row-name .ph-nm-py { font-size: 22px; }
     #pharmacyPage .ph-sched-prep-items.tier-t1 .ph-sched-prep-row-need { font-size: 26px; }
@@ -11373,7 +11369,9 @@
     const el = phShellFooterEl();
     if (el) el.innerHTML = phShellFooterHtml();
   }
-  // ---- pin yin only, Dashboard + Prescriptions (her spec 2026-08-23) -------
+  // ---- pin yin only (her spec 2026-08-23; made UNIVERSAL 2026-09-02) ------
+  // Started as Dashboard + Prescriptions; now the rule for every screen at
+  // every width -- phHerbLabel and phNameHtml both come through here.
   // DISPLAY ONLY. No stored name is ever edited, and search/sort/ranking/
   // matching all keep using the stored name and the code, untouched.
   //
@@ -11446,11 +11444,19 @@
     const right = cut === -1 ? "" : raw.slice(cut + 1).trim();
     return { left, right };
   }
+  // Her universal rule (2026-09-02): latin names are STORED but never SHOWN --
+  // pin yin only, on every screen at every width. This renderer is where every
+  // table name comes through, so the rule lives here, once. Same two exceptions
+  // phPinyinName already keeps: a formula keeps its whole name, and a pin yin
+  // shared by two stocked items keeps its latin half so they stay tellable
+  // apart (the "Rou Gui" case her §2 guard exists for). The full stored name
+  // is still on every row's title/aria-label, so hover/tap reveals it.
   function phNameHtml(name, isFormula) {
     const p = phNameParts(name);
     const isF = isFormula == null ? presIsFormula({ name: String(name == null ? "" : name) }) : isFormula;
+    const keepLatin = isF || phPinyinDupSet().has(phPinyinPart(name).toLowerCase());
     const leftHtml = p.left ? `<b class="ph-nm-py">${esc(phDispName(p.left, isF))}</b>` : "";
-    const rightHtml = p.right ? `<span class="ph-nm-lat">${p.left ? " / " : ""}${esc(phDispName(p.right, false))}</span>` : "";
+    const rightHtml = p.right && keepLatin ? `<span class="ph-nm-lat">${p.left ? " / " : ""}${esc(phDispName(p.right, false))}</span>` : "";
     return `${leftHtml}${rightHtml}`;
   }
   // ---- STEP 7: ranked rows shared by Order-these/Refill-these --------------
@@ -11555,7 +11561,11 @@
   const phDispName = (s, isF) =>
     (isF == null ? presIsFormula({ name: String(s == null ? "" : s) }) : isF)
       ? String(s == null ? "" : s).toUpperCase() : phTitle(s);
-  const phHerbLabel = h => { const s = phActiveSupplier(h); return `${s && s.code ? s.code + " — " : ""}${phDispName(h.name, phIsFormula(h))}`; };
+  // her universal rule (2026-09-02): latin names are STORED but never SHOWN --
+  // pin yin only, everywhere. phPinyinName is the one helper that already knows
+  // the two exceptions (formulas keep their whole name; a pin yin shared by two
+  // stocked items keeps its full name so they stay tellable apart).
+  const phHerbLabel = h => { const s = phActiveSupplier(h); return `${s && s.code ? s.code + " — " : ""}${phPinyinName(h)}`; };
   // her ask (2026-08-06, extended STEP 8g 2026-08-11): a herb can now carry
   // more than one supplier, each with its own bottle price AND their own code
   // for this herb (folded in from the old flat Koda/Evergreen/GMP/LYT/HH/MIC
