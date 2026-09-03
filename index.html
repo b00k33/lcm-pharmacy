@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260904-083000">
+<meta name="lcm-build" content="20260904-090000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -5750,6 +5750,8 @@
   #pharmacyPage .ph-wkt-navlbl b { color: var(--ph-ink); }
   #pharmacyPage .ph-wkt-navbtn { font: inherit; font-size: 16px; line-height: 1; width: 28px; height: 28px; border-radius: 999px; border: 1px solid var(--ph-line); background: var(--ph-white); color: var(--ph-green-deep); cursor: pointer; }
   #pharmacyPage .ph-appt-dayhead { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--ph-green-deep); margin: 10px 0 2px; }
+  #pharmacyPage .ph-appt-ocr { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 8px; }
+  #pharmacyPage .ph-appt-ocrhint { flex: 1 1 220px; font-size: 11.5px; color: var(--ph-soft); line-height: 1.4; }
   #pharmacyPage .ph-appt-dayhead .faint, #pharmacyPage .ph-cap-sec .faint { font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--ph-soft); }
   /* 📅 this cycle's visits (plan editor + letter) */
   #pharmacyPage .ph-cyclevisits { background: var(--ph-paper); border-radius: 9px; padding: 8px 10px; margin: 6px 0 10px; }
@@ -17177,16 +17179,30 @@
     // above most of them; Cliniko's "10:00AM — 11:00AM" never matches. ----
     const zTime = l => /^\d{1,2}:\d{2}(am|pm)-\d{1,2}:\d{2}(am|pm)$/i.test(l);
     const zBlocked = s => /^(break|lunch|unavailable|blocked|admin|busy)$/i.test(s.trim());
+    // the name usually sits directly above the time line, but a screenshot
+    // read by the OCR reader can drop in a stray blank line between them
+    // (paragraph-segmentation noise) -- skip up to 2 blank lines looking for
+    // it, but stop at once at another time line (that's the PREVIOUS
+    // appointment's line, not this one's name).
+    const nameAbove = ti => {
+      for (let k = ti - 1, steps = 0; k >= 0 && steps < 3; k--, steps++) {
+        const l = lines[k];
+        if (!l) continue;
+        if (zTime(l) || /^\d{1,2}:\d{2}$/.test(l)) return "";
+        return isPerson(l) && !zBlocked(l) ? l : "";
+      }
+      return "";
+    };
     const tIdx = lines.map((l, i) => phApptParseTime(l) ? i : -1).filter(i => i >= 0);
     const zShaped = tIdx.filter(i => zTime(lines[i])).length;
-    const zNamed = tIdx.filter(i => i > 0 && isPerson(lines[i - 1]) && !zBlocked(lines[i - 1])).length;
+    const zNamed = tIdx.filter(i => nameAbove(i)).length;
     if (tIdx.length >= 2 && zShaped >= Math.ceil(tIdx.length * 0.6) && zNamed >= Math.ceil(tIdx.length * 0.5)) {
       const outZ = [];
       let dk = fallbackDateKey;
       for (let i = 0; i < tIdx[0]; i++) { const d = phApptParseDateLine(lines[i]); if (d) dk = d; }
       tIdx.forEach((ti, n) => {
-        const name = ti > 0 && isPerson(lines[ti - 1]) ? lines[ti - 1] : "";
-        if (!name || zBlocked(name)) return;
+        const name = nameAbove(ti);
+        if (!name) return;
         const nextT = tIdx[n + 1];
         const end = nextT == null ? lines.length : (isPerson(lines[nextT - 1]) ? nextT - 1 : nextT);
         let phone = "";
@@ -17324,6 +17340,53 @@
     document.getElementById("phApptModal").hidden = true;
     phApptState = null;
   }
+  // ---- 📷 screenshot → text (her 2026-09-04 "i cant select zanda text"):
+  // Tesseract.js, loaded from the CDN the first time she uses it and run
+  // entirely in this browser -- the image never leaves the device. The
+  // recognised lines land in the paste box (appended, so several
+  // screenshots of one long day stack up) for her to eyeball before Import.
+  let phOcrLoading = null;
+  function phOcrLoad() {
+    if (window.Tesseract) return Promise.resolve();
+    if (phOcrLoading) return phOcrLoading;
+    phOcrLoading = new Promise((res, rej) => {
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
+      s.onload = () => res(); s.onerror = () => { phOcrLoading = null; rej(new Error("ocr-load")); };
+      document.head.appendChild(s);
+    });
+    return phOcrLoading;
+  }
+  // OCR reads a calendar row left-to-right, so the gutter time lands in front
+  // of the name ("9:30 Charmaine …") and icon glyphs trail the phone -- both
+  // tidied here so the ordinary parsers see clean lines
+  function phOcrTidy(text) {
+    return String(text || "").split(/\r?\n/).map(l => l
+      .replace(/[|©®™•¤§¶]+/g, " ")
+      .replace(/^\s*\d{1,2}:\d{2}\s+(?=[A-Za-z])/, "")
+      .replace(/\s*[^\w)\]\.\-–—+,'’&/%$ ]+\s*$/u, "")
+      .replace(/\s+/g, " ").trim()).join("\n");
+  }
+  async function phApptOcr(files) {
+    const st = phApptState;
+    if (!st || !files || !files.length) return;
+    const setHint = m => { st.ocr = m; const el = document.querySelector(".ph-appt-ocrhint"); if (el) el.textContent = m; };
+    try {
+      setHint("Loading the reader…");
+      await phOcrLoad();
+      const worker = await Tesseract.createWorker("eng", 1, { logger: m => { if (m.status === "recognizing text") setHint(`Reading… ${Math.round((m.progress || 0) * 100)}%`); } });
+      let got = "";
+      for (const f of files) { const r = await worker.recognize(f); got += (got ? "\n" : "") + phOcrTidy(r.data.text); }
+      await worker.terminate();
+      st.text = (st.text ? st.text.trimEnd() + "\n" : "") + got;
+      st.ocr = "";
+      renderApptModal();
+      const n = phApptParse(st.text, st.dateKey).length;
+      phFlashShow(n ? `📷 Read ${n} appointment${n === 1 ? "" : "s"} from the screenshot — check the names, then Import` : "📷 Read the screenshot but found no appointments — check the text box");
+    } catch (e) {
+      setHint("Couldn't read that image" + (e && e.message === "ocr-load" ? " — the reader needs internet the first time." : ". Try a sharper, larger screenshot."));
+    }
+  }
   function phApptPreviewHtml() {
     const st = phApptState;
     if (!st) return "";
@@ -17375,7 +17438,11 @@
         <div class="ph-tp-patient-line">copy a day, a week or a whole month from Cliniko's appointment list and paste it here — every day fills itself</div>
       </div>
       <div class="ph-hx-body">
-        <textarea class="ph-appt-paste" id="phApptPaste" placeholder="Paste the appointment list — a day, a week or a month. Times, names and dates are found wherever they sit." aria-label="Paste the appointment list">${esc(st.text)}</textarea>
+        <div class="ph-appt-ocr">
+          <label class="ph-load-btn ph-file-btn">📷 Read a screenshot<input type="file" id="phApptOcrFile" accept="image/*" multiple hidden></label>
+          <span class="ph-appt-ocrhint">${st.ocr ? esc(st.ocr) : "Zanda won't let you select text — screenshot the day and choose it here, or paste the image straight into the box (Ctrl+V). It's read on this device; check the names, then Import."}</span>
+        </div>
+        <textarea class="ph-appt-paste" id="phApptPaste" placeholder="Paste the appointment list (Cliniko or Zanda) — a day, a week or a month — or paste a screenshot here." aria-label="Paste the appointment list">${esc(st.text)}</textarea>
         <div class="ph-cap-sec">Day, if the paste has no date headings</div>
         <div class="ph-appt-dayrow">${chips.join("")}<input type="date" class="ph-appt-date" id="phApptDate" value="${st.dateKey}" aria-label="Date these appointments are for"></div>
         <div id="phApptPreview">${phApptPreviewHtml()}</div>
@@ -28569,6 +28636,21 @@
     if ((crop && !crop.hidden) || (inbox && !inbox.hidden)) return null;
     return phPatientKey(presHxScreenName);
   }
+  // 📷 appointments: a screenshot chosen from the file button, or an image
+  // pasted straight into the appointments paste box (2026-09-04)
+  document.addEventListener("change", e => {
+    if (!e.target || e.target.id !== "phApptOcrFile") return;
+    const files = [...(e.target.files || [])];
+    e.target.value = "";
+    if (files.length) phApptOcr(files);
+  });
+  document.addEventListener("paste", e => {
+    if (!e.target || e.target.id !== "phApptPaste" || !phApptState) return;
+    const items = [...((e.clipboardData && e.clipboardData.items) || [])].filter(it => it.kind === "file" && /^image\//.test(it.type));
+    if (!items.length) return;
+    e.preventDefault();
+    phApptOcr(items.map(it => it.getAsFile()).filter(Boolean));
+  });
   document.addEventListener("paste", e => {
     if (!phRenCanPaste()) return;                              // §4: no paste path on a phone
     if (phRenPasteState) return;                               // a preview is already open
