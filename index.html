@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260904-050000">
+<meta name="lcm-build" content="20260904-053000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -5136,7 +5136,10 @@
      collapsed to 257px and the table (494px) fell back to scrolling sideways
      inside its own wrap. With the floor, the third column gives up the room
      instead. It never overlapped either way; that was the other thing to check. */
-  #pharmacyPage .ph-pres-body { padding: 8px 16px; display: grid; grid-template-columns: 400px minmax(320px, 1.65fr) minmax(0, 0.95fr); gap: 0; align-items: stretch; }
+  /* her ask 2026-09-04: two columns -- the third (patient details + histories)
+     now lives under the ingredients, so the ingredients table finally gets
+     the whole right-hand side */
+  #pharmacyPage .ph-pres-body { padding: 8px 16px; display: grid; grid-template-columns: 400px minmax(320px, 1fr); gap: 0; align-items: stretch; }
   /* her ask 2026-08-19: the whole History & Notes column can collapse into a
      slim side rail so Ingredients gets the freed room -- desktop only, see
      the max-width:1180px override below which forces full content back
@@ -7622,6 +7625,14 @@
   }
   #pharmacyPage .ph-name-lock > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #pharmacyPage .ph-name-lock .tab-link { flex: none; font-size: 11.5px; }
+  /* Patient block under the ingredients (2026-09-04): name · sex · DOB · type on one row */
+  #pharmacyPage .ph-pres-patient { display: grid; grid-template-columns: minmax(160px, 2fr) auto auto minmax(140px, 1.2fr); gap: 8px 12px; align-items: end; }
+  #pharmacyPage .ph-pres-patient .ph-hx-seg { display: inline-flex; }
+  #pharmacyPage .ph-pres-patient input[type="date"] { font: inherit; font-size: 12.5px; border: 1px solid var(--ph-line); border-radius: 8px; padding: 6px 8px; background: var(--ph-white); color: var(--ph-ink); }
+  #pharmacyPage .ph-pres-patient label .faint { font-weight: 500; text-transform: none; letter-spacing: 0; }
+  #pharmacyPage .ph-pres-switches { display: flex; gap: 8px 24px; flex-wrap: wrap; }
+  #pharmacyPage .ph-pres-switches .ph-switch-row { margin-top: 8px; }
+  @media (max-width: 640px) { #pharmacyPage .ph-pres-patient { grid-template-columns: 1fr 1fr; } #pharmacyPage .ph-pres-patient-name { grid-column: 1 / -1; } }
   #pharmacyPage .ph-tmpl-sec {
     display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
     margin: 12px 0 6px; padding-top: 8px; border-top: 1px dashed var(--ph-line);
@@ -20435,6 +20446,16 @@
       if (e.target.closest("[data-pres-treat-toggle]")) { presTreatOpen = !presTreatOpen; renderPresPanel(); return; }
       if (e.target.closest("[data-pres-acu-toggle]")) { presAcuOpen = !presAcuOpen; presAcuOutcomeDraft = null; renderPresPanel(); return; }
       if (e.target.closest("[data-pres-cycle-toggle]")) { presCycleOpen = !presCycleOpen; phTpCycleEditOpen = false; renderPresPanel(); return; }
+      // Sex right on the prescription panel's Patient block (2026-09-04)
+      const presSex = e.target.closest("[data-pres-sex]");
+      if (presSex) {
+        const t = (PRESC.items || []).find(x => x.id === presOpenId);
+        const rec = t ? phPatientRec(presPatientFor(t) || t.name) : null;
+        if (!rec) return;
+        rec.sex = presSex.dataset.presSex || undefined;
+        savePharmacy(); renderPresPanel();
+        return;
+      }
       const acuOutBtn = e.target.closest("[data-pres-acu-outcome]");
       if (acuOutBtn) {
         // no re-render here (same idiom as data-tp-field debouncing above) --
@@ -26499,6 +26520,16 @@
     phLtrSetApply(tmplId, sec, next);
     savePharmacy(); renderPhSettingsPage();
   });
+  // DOB on the prescription panel's Patient block (2026-09-04)
+  document.addEventListener("change", e => {
+    const el = e.target && e.target.closest ? e.target.closest("[data-pres-dob]") : null;
+    if (!el) return;
+    const t = (PRESC.items || []).find(x => x.id === presOpenId);
+    const rec = t ? phPatientRec(presPatientFor(t) || t.name) : null;
+    if (!rec) return;
+    rec.dob = el.value || undefined;
+    savePharmacy(); renderPresPanel();
+  });
   document.addEventListener("change", e => {
     const dobEl = e.target && e.target.closest ? e.target.closest("[data-hx-dob]") : null;
     if (!dobEl) return;
@@ -29121,14 +29152,13 @@
         ${isF && ab ? `<span class="ph-pres-abbr">${esc(ab)}</span>` : ""}
         ${!isF ? phCondBadgesHtml(presPatientFor(t)) : ""}
         <span class="ph-band-meta" id="presBandMeta">· ${bandMeta}</span>
-        <button type="button" class="ph-sec-toggle ph-band-toggle" data-pres-name-toggle="1" aria-expanded="${presNameOpen ? "true" : "false"}">${presNameOpen ? "▾" : "▸"} Name &amp; type</button>
         <button type="button" class="ph-print-btn" data-pres-close="1">Close ×</button>
       </div>
       ${!isF ? presTabStripHtml(t) : ""}
       ${presHistoryBannerHtml(t)}
       ${presClinicalWarningsHtml(t)}
       ${presConstitutionSuggestHtml(t)}
-      <div class="ph-pres-body${presThirdOpen ? "" : " ph-pres-body-collapsed"}">
+      <div class="ph-pres-body">
       <div class="ph-pres-col-left">
       ${!isF ? `<div class="ph-pres-dose">
       <div class="ph-tmpl-sec"><span>Dosage &amp; price</span></div>
@@ -29211,28 +29241,18 @@
       <div class="ph-pres-col-right">
       ${presIngredientsEditorHtml(t, { showSummary: false })}
 
-      <div class="ph-pres-ing-fill"></div>
-      </div>
-
-      <div class="ph-pres-col-third${presThirdOpen ? "" : " ph-pres-col-third-collapsed"}">
-      <div class="ph-pres-third-full"${presThirdOpen ? "" : " hidden"}>
-      <div${presNameOpen ? "" : " hidden"}>${presNameTypeFieldsHtml(t)}
+      ${/* her ask 2026-09-04: no third column -- everything it held now sits
+           under the ingredients: patient details, then the two histories */ ""}
+      <div class="ph-tmpl-sec"><span>${isF ? "Formula" : "Patient"}</span></div>
+      ${presNameTypeFieldsHtml(t)}
       ${!isF ? presAddressesPanelHtml(t) : ""}
-      ${!isF ? presCycleToggleHtml(t) : ""}
-      ${!isF ? presAcuToggleHtml(t) : ""}</div>
+      ${!isF ? `<div class="ph-pres-switches">${presCycleToggleHtml(t)}${presAcuToggleHtml(t)}</div>` : ""}
 
-      <div class="ph-tmpl-sec"><span>History</span><button type="button" class="ph-collapse-toggle" data-pres-third-toggle="1" aria-expanded="${presThirdOpen ? "true" : "false"}" title="Collapse this column">Collapse ▸</button></div>
-
+      <div class="ph-tmpl-sec"><span>History</span></div>
       ${!isF ? presHistorySummaryHtml(t) : ""}
       ${presPatientHistoryHtml(t)}
 
       <div class="ph-pres-ing-fill"></div>
-      </div>
-      <div class="ph-collapse-rail"${presThirdOpen ? " hidden" : ""}>
-      <button type="button" class="ph-collapse-rail-open" data-pres-third-toggle="1" aria-expanded="${presThirdOpen ? "true" : "false"}" title="Expand History">◂</button>
-      <span class="ph-collapse-rail-label">History</span>
-      ${presThirdHasContent(t) ? `<span class="ph-collapse-rail-dot" title="Has dispense history" aria-hidden="true"></span>` : ""}
-      </div>
       </div>
       </div>
 
@@ -30635,6 +30655,9 @@
   // sign-off is picked per letter from a stable seed (script/plan + day), so
   // reopening the same letter never flips it, while letters vary overall
   const PH_SIGNATURE = "Linh Quach, BHSc MChinMed";
+  // her ask (2026-09-04): "include number 0494687362 for herbal issues or side effects"
+  const PH_CLINIC_MOBILE = "0494 687 362";
+  const PH_LTR_CONTACT_LINE = `Text or call me on ${PH_CLINIC_MOBILE} for any herbal issues or side effects.`;
   // "Sun 13 Sep" -> "Sun 13th Sep" (her wording for the next-visit line)
   const phOrdinalDate = label => String(label || "").replace(/\b(\d{1,2})\b/, (m, d) => { const n = +d, s = n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] || "th"; return n + s; });
   const phSignoffFor = seed => { let h = 0; for (const ch of String(seed || "")) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h % 2 ? "Kind Regards," : "Warmly,"; };
@@ -30680,8 +30703,8 @@
       html: () => phLtrStageTableHtml(PH_LTR_MENO_STAGES), text: () => phLtrStageTableText(PH_LTR_MENO_STAGES) },
     postnatal: { label: "After the birth", heading: "After the birth", text: () => `Around two weeks after the birth we'll check in (online is fine) — how you're recovering, how the labour went, and what support would help now. Herbs and supplements can be prescribed for energy, milk supply and recovery, matched to how you're feeling. Coming in for acupuncture from three to four weeks post-birth helps the body restore — and it's particularly worth it after a caesarean or a complicated birth, or if you're in pain, where it also supports healing and, after a caesarean, the scar.` },
     nextvisit: { label: "Your next visit", heading: "Your next visit", text: c => c.reviewTxt
-      ? `Let's review how you've gone after ${phOrdinalDate(c.reviewTxt)} — that's timed for when this batch runs out. If anything feels off before then, get in touch.`
-      : `Let's review how you've gone when this batch runs out — book in for around then. If anything feels off before that, get in touch.` },
+      ? `Let's review how you've gone after ${phOrdinalDate(c.reviewTxt)} — that's timed for when this batch runs out. If anything feels off before then, get in touch. ${PH_LTR_CONTACT_LINE}`
+      : `Let's review how you've gone when this batch runs out — book in for around then. If anything feels off before that, get in touch. ${PH_LTR_CONTACT_LINE}` },
     posttest: { label: "After your test", heading: "After your pregnancy test", text: () => `Please book a longer review appointment once you've tested, so we can go through the result properly together.\n\nIf it's positive — I'll move you into weekly support for early pregnancy and talk through what to expect.\nIf it's negative — I'll go through this cycle in detail with you and adjust the plan before the next one.` },
     signoff: { label: "Sign-off", text: () => `${phSignoffFor(`${phLtrScriptId}|${keyOf(TODAY)}`)}\n${PH_SIGNATURE}` },
   };
@@ -31618,11 +31641,23 @@
   // "+ New prescription" draft form still wants everything visible at once
   // (there's nothing to collapse on an empty record), so it calls all three in
   // their original order with no toggle.
+  // her ask (2026-09-04) "make it easier to edit patient name, gender": the
+  // name is a plain input now (saved on the same debounced autosave as every
+  // other template field -- no ✎ unlock step), with Sex and DOB right beside
+  // it. Sex/DOB write to the patient record (same fields the Medical history
+  // header edits) and drive the cycle auto-rule.
   function presNameTypeFieldsHtml(t) {
-    return `<div class="ph-tmpl-grid">
-        <div class="ph-tmpl-field"><label for="presEditName">Name</label>
-          ${t.id ? `<div class="ph-name-lock" id="presNameLock"><span>${esc(t.name)}</span><button type="button" class="tab-link" data-pres-name-unlock="1" title="Unlock to edit the name">✎ edit</button></div>` : ""}
-          <input type="text" id="presEditName" value="${esc(t.name)}"${t.id ? " hidden" : ""}></div>
+    const isF = presIsFormula(t);
+    const rec = !isF && t.id ? phPatientRec(presPatientFor(t) || t.name) : null;
+    return `<div class="ph-tmpl-grid ph-pres-patient">
+        <div class="ph-tmpl-field ph-pres-patient-name"><label for="presEditName">Name</label>
+          <input type="text" id="presEditName" value="${esc(t.name)}" autocomplete="off"></div>
+        ${rec ? `<div class="ph-tmpl-field"><label>Sex</label>
+          <span class="ph-hx-seg" role="radiogroup" aria-label="Patient sex">
+            ${[["F", "F"], ["M", "M"], ["", "—"]].map(([v, l]) => `<button type="button" class="ph-hx-sexbtn${(rec.sex || "") === v ? " on" : ""}" data-pres-sex="${v}" aria-pressed="${(rec.sex || "") === v ? "true" : "false"}">${l}</button>`).join("")}
+          </span></div>
+        <div class="ph-tmpl-field"><label for="presEditDob">DOB${phAgeOf(rec.dob) != null ? ` <span class="faint">· ${phAgeOf(rec.dob)}</span>` : ""}</label>
+          <input type="date" id="presEditDob" data-pres-dob="1" value="${esc(rec.dob || "")}"></div>` : ""}
         <div class="ph-tmpl-field"><label for="presEditType">Type</label>
           <!-- no "Auto" category (her call) — the select shows what it IS;
                Tang/San/Wan names arrive as 🏺 Herbal formula on their own -->
