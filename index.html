@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260903-200000">
+<meta name="lcm-build" content="20260903-210000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -4882,9 +4882,52 @@
   #pharmacyPage .ph-pres-history .ph-pres-template-head { margin-top: 0; padding-top: 0; border-top: none; margin-bottom: 4px; }
   #pharmacyPage .ph-hist-ings { font-size: 11.5px; color: var(--ph-soft); margin-top: 2px; }
   #pharmacyPage .ph-hist-ings > div { padding: 1px 0; }
-  #pharmacyPage .ph-hist-table td { vertical-align: top; }
-  #pharmacyPage .ph-hist-price { font-size: 11.5px; color: var(--ph-soft); white-space: nowrap; }
   #pharmacyPage .ph-hist-undo { font-size: 13px; }
+  /* round-3 redesign (2026-09-03): the old <table class="ph-hist-table"> of
+     dispenses is gone -- one card per visit, .ph-hist-ings goes 2-up so a
+     typical 5-herb formula costs 3 lines instead of a long stack, and any
+     check-in tied to that dispense (matched by followups[].logId) renders
+     right underneath it instead of in a separate list further down. */
+  #pharmacyPage .ph-hist-visit { padding: 6px 0; border-top: 1px solid var(--ph-line); }
+  #pharmacyPage .ph-hist-visit:first-child { border-top: none; padding-top: 2px; }
+  #pharmacyPage .ph-hist-visit-top { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  #pharmacyPage .ph-hist-visit-what { font-weight: 600; color: var(--ph-ink, #16281D); font-size: 12px; flex: 1 1 auto; min-width: 0; }
+  #pharmacyPage .ph-hist-visit-price { color: var(--ph-soft); font-size: 11.5px; white-space: nowrap; }
+  #pharmacyPage .ph-hist-ings.two { display: grid; grid-template-columns: 1fr 1fr; column-gap: 10px; }
+  #pharmacyPage .ph-hist-outcome {
+    margin-top: 4px; font-size: 11.5px; color: var(--ph-soft); background: var(--ph-white);
+    border-left: 2px solid var(--ph-green); border-radius: 0 8px 8px 0; padding: 3px 8px;
+  }
+  #pharmacyPage .ph-hist-outcome.same { border-left-color: var(--ph-gold-deep); }
+  #pharmacyPage .ph-hist-outcome.worse { border-left-color: var(--ph-zero-deep); }
+  #pharmacyPage .ph-hist-outcome b { color: var(--ph-green-deep); }
+  #pharmacyPage .ph-hist-outcome.same b { color: var(--ph-gold-deep); }
+  #pharmacyPage .ph-hist-outcome.worse b { color: var(--ph-zero-deep); }
+  #pharmacyPage .ph-hist-more-row { display: flex; gap: 12px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
+  #pharmacyPage .ph-hist-empty { color: var(--ph-soft); font-size: 12px; padding: 4px 0; }
+  /* Treatment plan & notes row below the whole prescription (round-3
+     redesign) -- reuses the Medical history glance row's own look
+     (.ph-hx-row) so the panel doesn't grow a second quiet-row style; opens
+     into the existing plan-card list (phTpSectionHtml, unchanged) on the
+     left and this script's Notes field on the right. Deliberately placed
+     OUTSIDE .ph-pres-body (see renderPresPanel) so it's full width and
+     immune to the grid's align-items:stretch. */
+  #pharmacyPage .ph-treat-row-wrap { padding: 0 16px 14px; }
+  #pharmacyPage .ph-treat-row { width: 100%; text-align: left; }
+  #pharmacyPage .ph-treat-outcome.better { color: var(--ph-green-deep); }
+  #pharmacyPage .ph-treat-outcome.same { color: var(--ph-gold-deep); }
+  #pharmacyPage .ph-treat-outcome.worse { color: var(--ph-zero-deep); }
+  #pharmacyPage .ph-treat-open {
+    background: var(--ph-green-tint); border-radius: 0 0 10px 10px; margin-top: -8px;
+    padding: 14px 14px 12px; display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px;
+  }
+  #pharmacyPage .ph-treat-open .ph-tp-section { margin-top: 0; padding-top: 0; border-top: none; }
+  #pharmacyPage .ph-treat-lbl {
+    font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--ph-soft); margin: 0 0 6px;
+  }
+  #pharmacyPage .ph-treat-open textarea#presEditNotes { min-height: 64px; }
+  @media (max-width: 900px) { #pharmacyPage .ph-treat-open { grid-template-columns: 1fr; } }
 
   /* ── the open prescription box, compact ─────────────────────────
      Linh 2026-07-30: "make everything in this box more narrowly compact
@@ -20148,8 +20191,20 @@
         if (wasDefault && rec.addresses.length) rec.addresses[0].isDefault = true;
         savePharmacy(); renderPresPanel(); return;
       }
-      if (e.target.closest("[data-pres-hx-toggle]")) { presHxOpen = !presHxOpen; renderPresPanel(); return; }      if (e.target.closest("[data-pres-notes-toggle]")) { presNotesOpen = !presNotesOpen; renderPresPanel(); return; }
+      if (e.target.closest("[data-pres-hx-toggle]")) { presHxOpen = !presHxOpen; renderPresPanel(); return; }
       if (e.target.closest("[data-pres-hist-toggle]")) { presHistOpen = !presHistOpen; renderPresPanel(); return; }
+      if (e.target.closest("[data-pres-hist-more]")) { presHistMoreOpen = !presHistMoreOpen; renderPresPanel(); return; }
+      // round-3 redesign: the Treatment plan & notes row below the prescription
+      if (e.target.closest("[data-pres-treat-toggle]")) { presTreatOpen = !presTreatOpen; renderPresPanel(); return; }
+      const logJump = e.target.closest("[data-pres-log-jump]");
+      if (logJump) {
+        presLogQ = logJump.dataset.presLogJump || "";
+        const inp = document.getElementById("presLogSearch");
+        if (inp) inp.value = presLogQ;
+        renderPresLog();
+        if (inp) inp.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
       // ---- Treatment Plans: entry-point handlers (open/new/chooser) ----
       const tpPlanOpen = e.target.closest("[data-tp-plan-open]");
       if (tpPlanOpen) {
@@ -25465,7 +25520,8 @@
   function presOpenScript(id) {
     presOpenId = id; presEditId = null;
     presLabelOpen = false; presMoreOpen = false; presFuOpen = false;
-    presNameOpen = false; presNotesOpen = false; presHistOpen = false; presThirdOpen = false; presMedHxOpen = false;
+    presNameOpen = false; presHistOpen = false; presThirdOpen = false; presMedHxOpen = false;
+    presTreatOpen = false; presHistMoreOpen = false;
     presPickLocked = null;
     presDispMenuId = null; presDispUndoConfirm = null;
     const t = PRESC.items.find(x => x.id === id);
@@ -26253,19 +26309,9 @@
     const next = (PH_CK_NEXT.find(x => x[0] === ck.next) || [])[1] || "";
     return [going, conc.length ? conc.join(", ") : (ck.going && ck.going !== "noreply" ? "no concerns" : ""), next, ck.note].filter(Boolean).join(" · ") || "Checked in";
   }
-  // the patient's check-in trail, inside the History card on the script
-  function phCkHistoryHtml(name) {
-    const key = phPatientKey(name); if (!key) return "";
-    const list = [];
-    (PHARMACY.followups || []).forEach(r => {
-      if ((r.patientKey || phPatientKey(r.patient)) !== key) return;
-      (r.checkins || []).forEach(ck => list.push({ ck, r }));
-    });
-    if (!list.length) return "";
-    list.sort((a, b) => (b.ck.at || 0) - (a.ck.at || 0));
-    return `<div class="ph-ck-hist"><div class="k">Check-ins · ${list.length}</div>${list.slice(0, 8).map(({ ck, r }) =>
-      `<div class="ph-ck-hist-row"><span class="d">${esc(phFuDateLabel(ck.date))}</span><span class="g ${esc(ck.going || "")}">${esc(phCkOutcomeText(ck))}</span>${r.formulaLabel ? `<span class="m">${esc(phDispName(r.formulaLabel))}</span>` : ""}</div>`).join("")}</div>`;
-  }
+  // phCkHistoryHtml (the old standalone check-in list inside the History
+  // card) retired in the round-3 redesign, 2026-09-03 -- each check-in now
+  // renders directly under the visit it belongs to, see presHistVisitCardHtml.
   function phCkDone(thenScript) {
     const row = phCkRow(); if (!row || !phCkForm) return;
     const rec = row.rec, f = phCkForm;
@@ -26622,32 +26668,11 @@
         }).join("")}</span>` : ""}
       </button>`;
     }
-    // her yes (2026-09-01): plans visible at a glance HERE, not only inside
-    // the expanded History card -- active plan's name + current phase, one
-    // tap straight into it. Same quiet row shape as the history row above.
-    // No plans -> no row at all (a "no plans yet" line on 700+ patients
-    // would be noise, and + New treatment plan lives in the History card).
-    const plans = phTpPlans(name);
-    const activePlan = plans.find(p => p.status === "active") || plans[0];
-    // letter-first (her calibration 2026-09-01): the letter is the plan's
-    // core job, so the glance row leads with it. A plan row still shows when
-    // a real plan exists; otherwise the row starts the LETTER (using this
-    // open script), latest-letter date shown once one has been made.
-    const letters = ((phPatientPeek(name) || {}).letters || []);
-    const latestLtr = letters.length ? letters.slice().sort((a, b) => (b.at || 0) - (a.at || 0))[0] : null;
-    const planRowHtml = activePlan ? `<button type="button" class="ph-hx-row hasanswers ph-tp-glance" data-tp-plan-open="${esc(name)}|${activePlan.id}">
-        <span class="ph-hx-lead">\ud83d\uddc2 ${esc(activePlan.title || "Treatment plan")}${(pc => pc ? ` \u2014 ${esc(pc.label)}` : "")(phTpPlanCurrentPhase(activePlan))}</span>
-        <span class="ph-hx-action">${plans.length > 1 ? `${plans.length} plans` : "Open"}</span>
-      </button>` : latestLtr ? `<button type="button" class="ph-hx-row hasanswers ph-tp-glance" data-pres-letter="${esc(t.id)}">
-        <span class="ph-hx-lead">\u2709 Letter \u2014 ${esc(phShortDate(latestLtr.date))} \u00b7 ${esc(latestLtr.templateName || "")}</span>
-        <span class="ph-hx-action">New letter</span>
-      </button>` : `<button type="button" class="ph-hx-row notstarted ph-tp-glance" data-pres-letter="${esc(t.id)}">
-        <span class="ph-hx-lead">\ud83d\uddc2 Treatment plan &amp; letter \u2014 none yet</span>
-        <span class="ph-hx-action">\u2709 Start with the letter</span>
-      </button>`;
+    // her round-3 redesign (2026-09-03): the plan/letter glance row that used
+    // to live here moved into presTreatmentRowHtml, the new row below the
+    // whole prescription -- this card is medical history only now.
     return `<div class="ph-hx-summary">
       ${rowHtml}
-      ${planRowHtml}
       <label class="ph-medhx-notes-lbl" for="presMedHxNotes">Other / allergies / current medications</label>
       <textarea id="presMedHxNotes" rows="2" placeholder="Anything else worth knowing before writing a script\u2026">${esc(notes)}</textarea>
     </div>`;
@@ -28791,27 +28816,25 @@
 
       <div class="ph-pres-col-third${presThirdOpen ? "" : " ph-pres-col-third-collapsed"}">
       <div class="ph-pres-third-full"${presThirdOpen ? "" : " hidden"}>
-      <div${presNameOpen ? "" : " hidden"}>${presNameTypeFieldsHtml(t)}</div>
+      <div${presNameOpen ? "" : " hidden"}>${presNameTypeFieldsHtml(t)}
+      ${!isF ? presAddressesPanelHtml(t) : ""}</div>
 
-      <div class="ph-tmpl-sec"><span>History &amp; Notes</span><button type="button" class="ph-collapse-toggle" data-pres-third-toggle="1" aria-expanded="${presThirdOpen ? "true" : "false"}" title="Collapse this column">Collapse ▸</button></div>
+      <div class="ph-tmpl-sec"><span>History</span><button type="button" class="ph-collapse-toggle" data-pres-third-toggle="1" aria-expanded="${presThirdOpen ? "true" : "false"}" title="Collapse this column">Collapse ▸</button></div>
 
       ${!isF ? presHistorySummaryHtml(t) : ""}
-      ${!isF ? presAddressesPanelHtml(t) : ""}
       ${presPatientHistoryHtml(t)}
-
-      <div class="ph-sec-divider"></div>
-      <button type="button" class="ph-sec-toggle" data-pres-notes-toggle="1" aria-expanded="${presNotesOpen ? "true" : "false"}">${presNotesOpen ? "▾" : "▸"} Notes${!presNotesOpen && t.notes ? " · noted" : ""}</button>
-      <div${presNotesOpen ? "" : " hidden"}>${presNotesFieldHtml(t)}</div>
 
       <div class="ph-pres-ing-fill"></div>
       </div>
       <div class="ph-collapse-rail"${presThirdOpen ? " hidden" : ""}>
-      <button type="button" class="ph-collapse-rail-open" data-pres-third-toggle="1" aria-expanded="${presThirdOpen ? "true" : "false"}" title="Expand History &amp; Notes">◂</button>
-      <span class="ph-collapse-rail-label">History &amp; Notes</span>
-      ${presThirdHasContent(t) ? `<span class="ph-collapse-rail-dot" title="Has notes or dispense history" aria-hidden="true"></span>` : ""}
+      <button type="button" class="ph-collapse-rail-open" data-pres-third-toggle="1" aria-expanded="${presThirdOpen ? "true" : "false"}" title="Expand History">◂</button>
+      <span class="ph-collapse-rail-label">History</span>
+      ${presThirdHasContent(t) ? `<span class="ph-collapse-rail-dot" title="Has dispense history" aria-hidden="true"></span>` : ""}
       </div>
       </div>
       </div>
+
+      ${!isF ? presTreatmentRowHtml(t) : ""}
     </div>`;
     renderPresCalc();
     presRefreshIngTable();
@@ -28824,9 +28847,16 @@
   // ---- saved addresses panel (her ask 2026-08-20) -- the patient's address
   // book: several saved addresses, exactly one Default while any exist. Lives
   // on the same PHARMACY.patients record as medical history/conditions, same
-  // savePharmacy() path, same third-column panel style. The Schedule form's
-  // Postage step reads these (Default preselected) and writes new ones when a
-  // different address is typed for a delivery -- see phPatientSaveAddress. ----
+  // savePharmacy() path. The Schedule form's Postage step reads these
+  // (Default preselected) and writes new ones when a different address is
+  // typed for a delivery -- see phPatientSaveAddress. Round-3 redesign
+  // (2026-09-03): moved from its own always-visible spot in the third
+  // column to inside "Name & type ▾" -- rarely touched while dispensing,
+  // same reasoning presNameTypeFieldsHtml was tucked behind a click for
+  // in the first place. (⇄ Merge already lived outside this card, in the
+  // left column's ⋯ More menu -- data-merge-open in presDoseTimelineHtml --
+  // so it needed no new home when the old merge-linkrow at the bottom of
+  // the History card was retired.) ----
   let presAddrEditId = null, presAddrAddOpen = false;
   function presAddressesPanelHtml(t) {
     const name = presPatientFor(t);
@@ -28870,55 +28900,70 @@
   // the patient's own trail (her ask): every formula this patient has been
   // dispensed, newest first, right inside their open prescription
   let presHistUndoId = null;   // the history dispense awaiting its ✓ before undo
+  // round-3 redesign (2026-09-03, her steer: "history stays, but shorter --
+  // last 3 visits, with how it went"): one card per dispense, replacing the
+  // old <table> row. Herbs run 2-up so a typical 5-herb formula costs 3
+  // lines instead of a long stack; a check-in that belongs to THIS dispense
+  // (matched via followups[].logId === e.id, the same link presFuCreateFromDispense
+  // writes) renders directly underneath it, replacing the old separate
+  // Check-ins list (phCkHistoryHtml, retired). Undo, the click-to-edit date
+  // and the visitTime "booked-visit" pill are all unchanged from the table.
+  function presHistVisitCardHtml(e) {
+    const d = parseKey(e.date);
+    const ings = Array.isArray(e.items) && e.items.length
+      ? `<div class="ph-hist-ings two">${e.items.slice().sort(presIngSort).map(i => `<div>${esc(phDispName(i.name))}${i.grams != null ? " " + phFmtG(i.grams) + "g" : ""}</div>`).join("")}</div>` : "";
+    const arming = presHistUndoId === e.id;
+    const fu = (PHARMACY.followups || []).find(r => r.logId === e.id);
+    const ck = fu && fu.checkins && fu.checkins.length ? fu.checkins.slice().sort((a, b) => (b.at || 0) - (a.at || 0))[0] : null;
+    const ckLabel = ck ? (PH_CK_GOING.find(x => x[0] === ck.going) || [])[1] || "Checked in" : "";
+    return `<div class="ph-hist-visit">
+      <div class="ph-hist-visit-top">
+        ${phLogDateEdit === e.id && phLogDateEditSrc === "hist"
+          ? `<input type="date" class="ph-qty-input" data-ph-log-date-edit="${e.id}" value="${e.date}" aria-label="Date for ${esc(phDispName(e.what))}">`
+          : `<button type="button" class="ph-qty-lock" data-ph-log-date-unlock="${e.id}" title="Click to edit the date">${d.getDate()} ${MON_SHORT[d.getMonth()]} ${d.getFullYear()}</button>`}
+        <span class="ph-hist-visit-what">${phNameHtml(e.what)}${e.grams ? ` · ${phFmtG(e.grams)}g` : ""}</span>
+        ${e.at ? `<span class="ph-hist-time">${presTimeStr(new Date(e.at))}</span>` : ""}
+        ${e.visitTime ? `<span class="ph-pill visit" title="Dispensed while she was booked in">${esc(phCkTime12(e.visitTime))} visit</span>` : ""}
+        <span class="ph-hist-visit-price">${e.price != null ? phMoney(e.price) : "—"}</span>
+        ${arming ? "" : `<button type="button" class="tab-link ph-hist-undo" data-pres-hist-undo="${e.id}" title="Undo this dispense">↩</button>`}
+      </div>
+      ${ings}
+      ${e.dosage ? `<div class="ph-log-deduct">${esc(e.dosage)}</div>` : ""}
+      ${ck ? `<div class="ph-hist-outcome ${esc(ck.going || "")}">↳ check-in ${esc(phFuDateLabel(ck.date))} · <b>${esc(ckLabel)}</b>${ck.note ? ` — ${esc(ck.note)}` : ""}</div>` : ""}
+      ${arming ? `<div class="ph-confirm-strip"><span>Undo <b>${esc(phDispName(e.what))}</b>? The deducted stock goes back on the shelf and it leaves the log.</span><button type="button" class="btn-save" data-pres-hist-undo-yes="${e.id}">↩ Yes, undo</button><button type="button" class="btn-cancel" data-pres-hist-undo-no="1">Cancel</button></div>` : ""}
+    </div>`;
+  }
   function presPatientHistoryHtml(t) {
     const patientName = presPatientFor(t) || "";
     const patient = patientName.trim().toLowerCase();
     if (!patient) return "";
+    // PHARMACY.log is stored oldest-first (appended at dispense time) --
+    // sorted newest-first here so "last 3 visits" genuinely means the most
+    // recent 3, not whichever happen to sit earliest in the array. Found
+    // live (2026-09-03) testing this redesign: an unsorted .slice(0, 3)
+    // silently showed the 3 OLDEST visits instead.
     const past = PHARMACY.log.filter(e => (!e.kind || e.kind === "dispense")
-      && (e.patient || "").trim().toLowerCase() === patient);
-    const plans = phTpPlans(patientName);
-    // her ask (2026-09-01): Treatment Plans lives inside this SAME card, not
-    // a new tab -- so the old dispense-only guard is gone entirely: a brand-
-    // new patient needs the (collapsed, one-row) card to exist just to reach
-    // "+ New treatment plan" at all.
-    const shown = past.slice(0, 10);
+      && (e.patient || "").trim().toLowerCase() === patient)
+      .sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.at || 0) - (a.at || 0));
     // her ask 2026-07-30: tucked away until she asks for it. The count stays
     // visible on the (now clickable) head — that's the teaser that tells her
     // there IS a trail without spending the screen on it every time she opens
-    // this patient.
+    // this patient. Round-3 (2026-09-03): only the last 3 render by default —
+    // "+N earlier visits" reveals up to the same 10-visit cap this card
+    // always had; "full log" jumps to the searchable Dispense history widget
+    // further down this same page for anything older than that.
+    const shown = past.slice(0, 3);
+    const more = past.slice(3, 10);
     return `<div class="ph-pres-history"><button type="button" class="ph-pres-template-head ph-collapse-btn" data-pres-hist-toggle="1" aria-expanded="${presHistOpen ? "true" : "false"}"><span>${presHistOpen ? "▾" : "▸"} 📖 History — ${esc(phTitle(patientName))}</span>
-        <span class="ph-formula-meta">${past.length} dispense${past.length === 1 ? "" : "s"}${plans.length ? ` · ${plans.length} plan${plans.length === 1 ? "" : "s"}` : ""}${past.length > shown.length ? ` · last ${shown.length} here — 📜 Log has the rest` : ""}</span></button>
-      <div${presHistOpen ? "" : " hidden"}>${past.length ? `<div class="rtn-table-wrap"><table class="rtn-table ph-table ph-hist-table">
-      <thead><tr><th>Date</th><th>Dispensed</th><th style="text-align:right">Price</th><th></th></tr></thead>
-      <tbody>${shown.map(e => {
-        const d = parseKey(e.date);
-        // her ask 2026-07-30: "I want the formula in history to show list
-        // instead of in a single sentence" — one herb per line, not a
-        // middot-joined run-on
-        // Grouped Formula-then-herbs like everywhere else (presIngSort) — a
-        // SORTED COPY only, e.items itself (the actual historical record) is
-        // never reordered.
-        const ings = Array.isArray(e.items) && e.items.length
-          ? `<div class="ph-hist-ings">${e.items.slice().sort(presIngSort).map(i => `<div>${esc(phDispName(i.name))}${i.grams != null ? " " + phFmtG(i.grams) + "g" : ""}</div>`).join("")}</div>` : "";
-        const arming = presHistUndoId === e.id;
-        // her ask 2026-08-13: same click-to-edit date control as the Log page
-        // and the Dispense history list -- same phLogDateEdit state, same
-        // save logic (bound once, shared), just a third place it renders
-        return `<tr>
-          <td class="ph-hist-date">${phLogDateEdit === e.id && phLogDateEditSrc === "hist"
-            ? `<input type="date" class="ph-qty-input" data-ph-log-date-edit="${e.id}" value="${e.date}" aria-label="Date for ${esc(phDispName(e.what))}">`
-            : `<button type="button" class="ph-qty-lock" data-ph-log-date-unlock="${e.id}" title="Click to edit the date">${d.getDate()} ${MON_SHORT[d.getMonth()]} ${d.getFullYear()}</button>${e.at ? `<span class="ph-hist-time">${presTimeStr(new Date(e.at))}</span>` : ""}${e.visitTime ? `<span class="ph-pill visit" title="Dispensed while she was booked in">${esc(phCkTime12(e.visitTime))} visit</span>` : ""}`}</td>
-          <td class="ph-name">${phNameHtml(e.what)}${e.grams ? ` · ${phFmtG(e.grams)}g` : ""}${ings}${e.dosage ? `<div class="ph-log-deduct">${esc(e.dosage)}</div>` : ""}</td>
-          <td class="ph-num ph-hist-price">${e.price != null ? phMoney(e.price) : "—"}</td>
-          <td class="ph-pres-actions">${arming ? "" : `<button type="button" class="tab-link ph-hist-undo" data-pres-hist-undo="${e.id}" title="Undo this dispense">↩</button>`}</td>
-        </tr>${arming
-          ? `<tr><td colspan="4"><div class="ph-confirm-strip"><span>Undo <b>${esc(phDispName(e.what))}</b>? The deducted stock goes back on the shelf and it leaves the log.</span><button type="button" class="btn-save" data-pres-hist-undo-yes="${e.id}">↩ Yes, undo</button><button type="button" class="btn-cancel" data-pres-hist-undo-no="1">Cancel</button></div></td></tr>`
-          : ""}`;
-      }).join("")}</tbody>
-      </table></div>` : ""}
-      ${phCkHistoryHtml(patientName)}
-      ${phTpSectionHtml(patientName, plans)}
-      <div class="ph-merge-linkrow"><button type="button" class="tab-link" data-merge-open="${esc(patientName)}">⇄ Merge this patient into another…</button></div></div></div>`;
+        <span class="ph-formula-meta">${past.length} dispense${past.length === 1 ? "" : "s"}${past.length > shown.length ? ` · last ${shown.length} here` : ""}</span></button>
+      <div${presHistOpen ? "" : " hidden"}>${past.length ? `
+      ${shown.map(presHistVisitCardHtml).join("")}
+      <div class="ph-hist-more-row">
+        ${more.length ? `<button type="button" class="tab-link" data-pres-hist-more="1">${presHistMoreOpen ? "▴ Show fewer" : `+ ${more.length} earlier visit${more.length === 1 ? "" : "s"} ▾`}</button>` : ""}
+        <button type="button" class="tab-link" data-pres-log-jump="${esc(patientName)}">📜 full log →</button>
+      </div>
+      ${presHistMoreOpen ? more.map(presHistVisitCardHtml).join("") : ""}
+      ` : `<div class="ph-hist-empty">No dispenses yet.</div>`}</div></div>`;
   }
   // ============================================================
   // Treatment Plans (her ask 2026-09-01, code7 "make it a smooth workflow"
@@ -28991,7 +29036,62 @@
   }
   function phTpStatusMeta(v, list) { return list.find(x => x.v === v) || list[0]; }
   function phTpPlanCurrentPhase(plan) { return (plan.phases || []).find(p => p.status === "current") || null; }
-  // ---- entry point: the section inside 📖 History (presPatientHistoryHtml) ----
+  // ============ Treatment plan & notes row (round-3 redesign, 2026-09-03,
+  // her steer: "keep history, but move the treatment notes in its own row
+  // below prescription", then "Plans + the script Notes field" when asked
+  // what "treatment notes" meant). One quiet collapsed line below the whole
+  // prescription -- reuses the Medical history glance row's own look
+  // (.ph-hx-row) so the panel doesn't grow a second quiet-row style -- that
+  // opens in place into the plan-card list (phTpSectionHtml, unchanged,
+  // just called from here now instead of from inside the History card) on
+  // the left and this script's own Notes field on the right. Carries
+  // forward the exact letter-first priority (active plan -> latest letter
+  // -> "start with the letter") that used to live in presHistorySummaryHtml's
+  // planRowHtml before this row existed. ============
+  function presTreatmentRowHtml(t) {
+    const name = presPatientFor(t);
+    if (!name) return "";
+    const plans = phTpPlans(name);
+    const activePlan = plans.find(p => p.status === "active") || plans[0];
+    const cur = activePlan ? phTpPlanCurrentPhase(activePlan) : null;
+    const letters = ((phPatientPeek(name) || {}).letters || []);
+    const latestLtr = letters.length ? letters.slice().sort((a, b) => (b.at || 0) - (a.at || 0))[0] : null;
+    // most recent check-in across every follow-up record for this patient --
+    // same aggregation the old phCkHistoryHtml did, just reduced to the one
+    // most recent instead of a list
+    const allCks = [];
+    (PHARMACY.followups || []).forEach(r => { if (phPatientKey(r.patient) === phPatientKey(name)) (r.checkins || []).forEach(ck => allCks.push(ck)); });
+    allCks.sort((a, b) => (b.at || 0) - (a.at || 0));
+    const lastCk = allCks[0] || null;
+    const noted = !!(t.notes || "").trim();
+    const bits = [];
+    if (activePlan) bits.push(`<b>${esc(activePlan.title || "Treatment plan")}</b>${cur ? ` · ${esc(cur.label)}` : ""}`);
+    else if (latestLtr) bits.push(`✉ Letter — ${esc(phShortDate(latestLtr.date))} · ${esc(latestLtr.templateName || "")}`);
+    if (t.fuReviewDate) bits.push(`review <b>${esc(phFuDateLabel(t.fuReviewDate))}</b>`);
+    if (lastCk && lastCk.going && lastCk.going !== "noreply") {
+      const goLabel = (PH_CK_GOING.find(x => x[0] === lastCk.going) || [])[1] || "";
+      bits.push(`<span class="ph-treat-outcome ${esc(lastCk.going)}">${lastCk.going === "better" ? "✓" : lastCk.going === "worse" ? "⚠" : "·"} ${esc(goLabel)} at last check-in</span>`);
+    }
+    if (noted) bits.push("noted");
+    const hasContent = !!(activePlan || latestLtr || noted);
+    const lead = `🗂 Treatment plan &amp; notes${bits.length ? ` · ${bits.join(" · ")}` : ""}`;
+    const action = hasContent ? "" : (!activePlan && !latestLtr ? "✉ Start with the letter" : "Open");
+    return `<div class="ph-treat-row-wrap">
+      <button type="button" class="ph-treat-row ph-hx-row ${hasContent ? "hasanswers" : "notstarted"}" data-pres-treat-toggle="1" aria-expanded="${presTreatOpen ? "true" : "false"}">
+        <span class="ph-hx-lead">${lead}</span>
+        ${action ? `<span class="ph-hx-action">${action}</span>` : ""}
+        <span class="ph-hx-action ph-treat-chev">${presTreatOpen ? "▾" : "▸"}</span>
+      </button>
+      ${presTreatOpen ? `<div class="ph-treat-open">
+        <div>${phTpSectionHtml(name, plans)}</div>
+        <div>
+          <div class="ph-treat-lbl">Notes on this script</div>
+          ${presNotesFieldHtml(t)}
+        </div>
+      </div>` : ""}
+    </div>`;
+  }
+  // ---- entry point: presTreatmentRowHtml above (renderPresPanel) ----
   function phTpSectionHtml(name, plans) {
     const st = v => phTpStatusMeta(v, PH_TP_STATUSES);
     return `<div class="ph-tp-section">
@@ -30429,6 +30529,7 @@
     // presThirdOpen before, so a script left open earlier could otherwise
     // leak its expanded state into a brand new one
     presThirdOpen = false; presMedHxOpen = false;
+    presTreatOpen = false; presHistMoreOpen = false;
     presRenderPanelSmooth();
   }
   // her ask (2026-08-31): "save multiple prescriptions in one patient
@@ -31034,15 +31135,24 @@
   // occupying screen the whole time. Reset to collapsed whenever a DIFFERENT
   // prescription opens (see the data-pres-open / "+ New" handlers) — a click she
   // made on one patient's history has no bearing on the next one she opens.
-  let presNameOpen = false, presNotesOpen = false, presHistOpen = false;
-  // her ask 2026-08-19: the WHOLE History & Notes column can collapse into a
+  let presNameOpen = false, presHistOpen = false;
+  // her ask 2026-08-19: the WHOLE History column can collapse into a
   // slim side rail (desktop only -- see the max-width:1180px override) to
-  // give Ingredients more room. Distinct from presNotesOpen/presHistOpen
-  // above, which toggle content WITHIN this column -- this toggles the
-  // column itself. Her ask 2026-08-20 pt.3: now always starts COLLAPSED
-  // (was expanded) -- simplest, least surprising, "start clean every time";
-  // flag to her if she'd rather it remember per-prescription instead.
+  // give Ingredients more room. Distinct from presHistOpen above, which
+  // toggles content WITHIN this column -- this toggles the column itself.
+  // Her ask 2026-08-20 pt.3: now always starts COLLAPSED (was expanded) --
+  // simplest, least surprising, "start clean every time"; flag to her if
+  // she'd rather it remember per-prescription instead.
   let presThirdOpen = false;
+  // round-3 redesign (2026-09-03, her steer: "keep history, but move the
+  // treatment notes in its own row below prescription"): presTreatOpen is
+  // the one row below the whole prescription that replaces both the old
+  // Notes toggle (presNotesOpen, retired) that used to live at the bottom
+  // of the third column AND the plan-glance row that used to lead it --
+  // see presTreatmentRowHtml. presHistMoreOpen is the "+N earlier visits"
+  // reveal inside the (now trimmed to 3) History card. Same reset points
+  // and "start clean every time" posture as presThirdOpen above.
+  let presTreatOpen = false, presHistMoreOpen = false;
   // 📋 Medical history screen (her ask 2026-08-20) -- name of the patient
   // it's open for, or null. Filter/search reset every time it opens, same
   // "start clean" posture as presThirdOpen above.
@@ -31053,7 +31163,9 @@
   // presPatientHistoryHtml's own emptiness test (PHARMACY.log.some instead
   // of .filter so it doesn't build the whole matched list just to ask "any?")
   function presThirdHasContent(t) {
-    if ((t.notes || "").trim()) return true;
+    // round-3 redesign: this column is History only now (notes moved to
+    // presTreatmentRowHtml below the prescription) -- the dot means "has
+    // dispense history".
     const patient = (presPatientFor(t) || "").trim().toLowerCase();
     if (!patient) return false;
     return PHARMACY.log.some(e => (!e.kind || e.kind === "dispense") && (e.patient || "").trim().toLowerCase() === patient);
@@ -35380,9 +35492,23 @@ Dosage: {dosage}
     if (!l || !Array.isArray(l.items)) return (c && Array.isArray(c.items)) ? cStr : lStr;
     if (!c || !Array.isArray(c.items)) return lStr;
     var A = preferLocal ? l : c, B = preferLocal ? c : l;     // A wins per-record conflicts
+    // her report (2026-09-03, "screen flashes every time I click something"):
+    // this used to build `out` by inserting B's keys first, THEN A's -- so
+    // even when B contributed nothing real, out's key ORDER came from B, not
+    // A, and JSON.stringify(out) came out byte-different from A's own
+    // original string despite identical content. mergeSections' `pick !== l`
+    // check (below) reads that harmless reordering as a genuine change on
+    // basically every prescriptions save (the section almost always differs
+    // from whatever stale copy the cloud still has at the moment this runs),
+    // firing a full applyMergedLocal()/refreshApp() re-render -- the flash --
+    // on nearly every click in Prescriptions, with no real conflict involved.
+    // Building `out` from A's own keys FIRST preserves A's original
+    // insertion order, so a genuine no-op merge (B has nothing new to add)
+    // re-serializes byte-identical to A's source string and `pick === l`
+    // holds, same as it always should have for a no-op.
     var out = {};
-    Object.keys(B).forEach(function (k) { out[k] = B[k]; });  // unknown future fields survive
     Object.keys(A).forEach(function (k) { out[k] = A[k]; });
+    Object.keys(B).forEach(function (k) { if (!(k in out)) out[k] = B[k]; });  // unknown future fields survive
     ["seeded", "abbrNamesConverted", "schedMethodMigrated"].forEach(function (f) { out[f] = !!(l[f] || c[f]); });
     var tombI = mergePrescTombs(l.deletedItems, c.deletedItems);
     var tombS = mergePrescTombs(l.deletedSched, c.deletedSched);
