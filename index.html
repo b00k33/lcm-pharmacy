@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260904-041500">
+<meta name="lcm-build" content="20260904-050000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -5846,8 +5846,23 @@
   /* findings diagrams (comprehensive round, 2026-09-01) */
   #pharmacyPage .ph-ltr-findings { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 4px 0 10px; }
   #pharmacyPage .ph-ltr-fnd { background: var(--ph-paper); border-radius: 11px; padding: 10px 12px; text-align: center; }
-  #pharmacyPage .ph-ltr-fndsvg { width: 100px; height: 120px; }
-  #pharmacyPage .ph-ltr-fndsvg.wide { width: 136px; }
+  #pharmacyPage .ph-ltr-fndsvg { width: 150px; height: 180px; }
+  #pharmacyPage .ph-ltr-fndsvg.wide { width: 204px; }
+  /* 🖼 letter images (2026-09-04): cycle bar + hormone graph, drawn jar, body map, diet icons */
+  #pharmacyPage .ph-ltr-cycle { margin: 4px 0 6px; }
+  #pharmacyPage .ph-ltr-cyclesvg { width: 100%; height: auto; display: block; }
+  #pharmacyPage .ph-ltr-cyclelegend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 10.5px; color: var(--ph-soft); margin-top: 4px; }
+  #pharmacyPage .ph-ltr-cyclelegend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; }
+  #pharmacyPage .ph-ltr-jar, #pharmacyPage .ph-ltr-bodymap { display: flex; gap: 16px; align-items: center; background: var(--ph-paper); border-radius: 11px; padding: 12px; margin: 6px 0 10px; }
+  #pharmacyPage .ph-ltr-bodymap { align-items: flex-start; }
+  #pharmacyPage .ph-ltr-jarsvg { width: 86px; height: 104px; flex: none; }
+  #pharmacyPage .ph-ltr-bodysvg { width: 90px; height: 130px; flex: none; }
+  #pharmacyPage .ph-ltr-jartxt, #pharmacyPage .ph-ltr-bodytxt { font-size: 12px; line-height: 1.5; min-width: 0; }
+  #pharmacyPage .ph-ltr-jartxt b, #pharmacyPage .ph-ltr-bodytxt b { display: block; color: var(--ph-green-deep); font-size: 13px; margin-bottom: 2px; }
+  #pharmacyPage .ph-ltr-jartxt span { display: block; color: var(--ph-soft); }
+  #pharmacyPage .ph-ltr-dieticons { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 10px; }
+  #pharmacyPage .ph-ltr-dieticons div { flex: 1 1 100px; background: var(--ph-paper); border-radius: 11px; padding: 10px 8px; text-align: center; font-size: 11px; line-height: 1.35; color: var(--ph-soft); }
+  #pharmacyPage .ph-ltr-dieticons svg { display: block; width: 40px; height: 34px; margin: 0 auto 4px; }
   /* real tongue photo beside the zone diagram (2026-09-02) */
   #pharmacyPage .ph-ltr-tset { display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; }
   #pharmacyPage .ph-ltr-tpwrap { position: relative; display: inline-flex; }
@@ -30305,6 +30320,9 @@
       constitutionName: bt ? bt.name : "",
       // 🩸 her cycle today, from the patient record (null when off / no LMP)
       cycle: rec ? phCycleComp(rec) : null,
+      // 🖼 for the drawn sections: which template, and the herbs on the jar
+      tmplId: phLtrTmplId,
+      ingredientsLine: (t.ingredients || []).map(i => phPinyinName({ name: i.herb || i.name || "" })).filter(Boolean).join(" · "),
     };
   }
   // ---- the findings diagrams (her "more comprehensive" round, all four
@@ -30491,6 +30509,127 @@
   }
   // every prose section is one text builder -- html render escapes + <br>s
   // the same string, so screen, copy and PDF can never disagree
+  // ============ 🖼 Letter images (her ask 2026-09-04 "include more images in
+  // the patient letter", calibrated: cycle bar + hormone graph on any letter
+  // for a menstruating patient; the stage TABLE stays as the timeline; a
+  // drawn formula jar (never a photo); an organ body map from the template's
+  // pattern, placed BEFORE the diet icons; diet icons chosen automatically
+  // per template; findings maps at 1.5x). Everything is inline SVG so it
+  // prints in the PDF and drops out of the plain-text copy. ============
+  const PH_LTR_SVG_FONT = `font-family="system-ui,-apple-system,Segoe UI,sans-serif"`;
+  function phLtrCycleBarSvgHtml(cy, c) {
+    if (!cy) return "";
+    const W = 320, H = 118, L = 4, R = 4, barY = 22, barH = 12;
+    const px = d => L + (W - L - R) * (d / cy.cycleLen);
+    const seg = cy.segDays;
+    const segs = [["#e6a4a4", 0, seg.period], ["#c5dccb", seg.period, seg.period + seg.foll], ["#f1cf83", seg.period + seg.foll, seg.period + seg.foll + seg.ov], ["#c7d3e8", seg.period + seg.foll + seg.ov, cy.cycleLen]];
+    const bell = (d, ctr, w) => Math.exp(-Math.pow((d - ctr) / w, 2));
+    const ov = cy.ovDay;
+    const curves = [
+      ["Oestrogen", "#8a3b5a", d => 10 + 58 * bell(d, ov - 1.2, 3.4) + 26 * bell(d, ov + 7, 5)],
+      ["LH", "#b8860b", d => 6 + 74 * bell(d, ov, 1.1)],
+      ["Progesterone", "#2b4a7a", d => 5 + 64 * bell(d, ov + 7, 4.6) * (d > ov - 1 ? 1 : 0.1)],
+      ["FSH", "#1B7A46", d => 12 + 22 * bell(d, 3, 3) + 18 * bell(d, ov, 1.4)],
+    ];
+    const gTop = 46, gH = 60;
+    const path = f => { const pts = []; for (let d = 0.5; d <= cy.cycleLen; d += 0.5) pts.push(`${px(d).toFixed(1)},${(gTop + gH - f(d) / 100 * gH).toFixed(1)}`); return `M${pts.join(" L")}`; };
+    const tx = px(Math.min(cy.day, cy.cycleLen) - 0.5);
+    const tick = d => `<text x="${px(d - 0.5).toFixed(1)}" y="${gTop + gH + 10}" ${PH_LTR_SVG_FONT} font-size="7" text-anchor="middle" fill="#4A5B50">${d}</text>`;
+    return `<div class="ph-ltr-cycle">
+      <svg class="ph-ltr-cyclesvg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Cycle day ${cy.day}, ${cy.phaseLabel}">
+        ${segs.map(([col, a, b]) => `<rect x="${px(a).toFixed(1)}" y="${barY}" width="${(px(b) - px(a)).toFixed(1)}" height="${barH}" fill="${col}"/>`).join("")}
+        ${curves.map(([n, col, f]) => `<path d="${path(f)}" fill="none" stroke="${col}" stroke-width="1.6" stroke-linejoin="round"/>`).join("")}
+        <line x1="${tx.toFixed(1)}" y1="${barY - 4}" x2="${tx.toFixed(1)}" y2="${gTop + gH}" stroke="#16281D" stroke-width="1.4"/>
+        <rect x="${Math.max(0, Math.min(W - 92, tx - 46)).toFixed(1)}" y="2" width="92" height="14" rx="4" fill="#16281D"/>
+        <text x="${Math.max(46, Math.min(W - 46, tx)).toFixed(1)}" y="12" ${PH_LTR_SVG_FONT} font-size="8.5" font-weight="700" text-anchor="middle" fill="#fff">Day ${cy.day} · ${esc(cy.phaseLabel)}</text>
+        ${[1, Math.round(cy.cycleLen / 2), cy.cycleLen].map(tick).join("")}${cy.ovDay > 2 && Math.abs(cy.ovDay - Math.round(cy.cycleLen / 2)) > 2 ? tick(cy.ovDay) : ""}
+      </svg>
+      <div class="ph-ltr-cyclelegend">
+        <span><i style="background:#e6a4a4"></i>Period</span><span><i style="background:#c5dccb"></i>Follicular</span><span><i style="background:#f1cf83"></i>Ovulation ~${esc(phShortDate(cy.ovDate))}</span><span><i style="background:#c7d3e8"></i>Two-week wait · next period ~${esc(phShortDate(cy.nextDate))}</span>
+      </div>
+      <div class="ph-ltr-cyclelegend hormones">${curves.map(([n, col]) => `<span><i style="background:${col};height:2px;border-radius:0"></i>${n}</span>`).join("")}</div>
+    </div>`;
+  }
+  const phLtrCycleBarText = cy => cy ? `Day ${cy.day} of a ~${cy.cycleLen}-day cycle · ${cy.phaseLabel} · ovulation ~${phShortDate(cy.ovDate)} · next period ~${phShortDate(cy.nextDate)}` : "";
+  function phLtrJarSvgHtml(c) {
+    const name = (c.formulaLine || "").trim() || "Your formula";
+    const line2 = [c.gp ? `${phFmtG(c.gp)} g` : "", c.doseTxt || ""].filter(Boolean).join(" · ");
+    const dots = [["#c5dccb", 24, 30], ["#e6a4a4", 34, 28], ["#f1cf83", 44, 31], ["#c7d3e8", 55, 29], ["#c5dccb", 64, 31]];
+    const short = s => s.length > 22 ? s.slice(0, 21) + "…" : s;
+    return `<div class="ph-ltr-jar">
+      <svg viewBox="0 0 86 104" class="ph-ltr-jarsvg" role="img" aria-label="${esc(name)}">
+        <rect x="22" y="4" width="42" height="14" rx="4" fill="#0E4D2A"/>
+        <path d="M14 22h58a6 6 0 0 1 6 6v64a10 10 0 0 1-10 10H18A10 10 0 0 1 8 92V28a6 6 0 0 1 6-6z" fill="#f4efe2" stroke="#c8bfa6"/>
+        ${dots.map(([col, x, y]) => `<circle cx="${x}" cy="${y}" r="2.8" fill="${col}"/>`).join("")}
+        <rect x="16" y="40" width="54" height="36" rx="4" fill="#fff" stroke="#D3E2D8"/>
+        <text x="43" y="55" ${PH_LTR_SVG_FONT} font-size="${name.length > 14 ? 6.2 : 8}" font-weight="700" text-anchor="middle" fill="#0E4D2A">${esc(short(name.toUpperCase()))}</text>
+        <text x="43" y="66" ${PH_LTR_SVG_FONT} font-size="6" text-anchor="middle" fill="#4A5B50">${esc(short(line2))}</text>
+      </svg>
+      <div class="ph-ltr-jartxt"><b>${esc(name)}</b>${c.gp ? `${phFmtG(c.gp)} g` : ""}${c.ingredientsLine ? `<span>${esc(c.ingredientsLine)}</span>` : ""}</div>
+    </div>`;
+  }
+  // organ pattern per template: which organs light up and the one-line why
+  const PH_LTR_BODY = {
+    digestion: { organs: ["spleen", "stomach"], why: "This formula strengthens the digestive centre — the Spleen and Stomach — so food is transformed properly instead of sitting heavy." },
+    stress: { organs: ["liver", "heart"], why: "Stress knots the Liver's smooth flow and unsettles the Heart — this formula loosens the knot and steadies the mind." },
+    skin: { organs: ["lung", "liver"], why: "The Lung governs the skin and the Liver drives the flare — this formula cools and clears from the inside out." },
+    sleep: { organs: ["heart", "kidney"], why: "Deep sleep needs the Heart settled and the Kidney's reserves topped up — this formula nourishes both." },
+    menstrual: { organs: ["liver", "uterus"], why: "A comfortable cycle needs the Liver moving qi and blood freely to the uterus — that's where this formula works." },
+    fertility: { organs: ["kidney", "spleen", "uterus"], why: "The Kidney holds the reserves, the Spleen makes the blood, and the uterus receives it — this formula supports all three." },
+    cycleivf: { organs: ["kidney", "spleen", "uterus"], why: "The Kidney holds the reserves, the Spleen makes the blood, and the uterus receives it — this formula supports all three through your cycle." },
+    pregnancy: { organs: ["kidney", "spleen", "uterus"], why: "A settled pregnancy leans on the Kidney and Spleen holding and nourishing the uterus — this formula supports that hold." },
+    menopause: { organs: ["kidney", "heart", "liver"], why: "The transition draws down the Kidney's reserves, which lets Heart heat flare and the Liver run rough — this formula cools and replenishes." },
+    course: { organs: ["spleen"], why: "Whatever the pattern, herbs work through the digestive centre — the Spleen — so a warm, regular stomach makes every formula work better." },
+  };
+  const PH_LTR_ORGANS = {
+    lung: { label: "Lung", shapes: `<ellipse cx="33" cy="40" rx="8" ry="11"/><ellipse cx="57" cy="40" rx="8" ry="11"/>`, lx: 66, ly: 38, col: "#c7d3e8" },
+    heart: { label: "Heart", shapes: `<ellipse cx="41" cy="44" rx="6" ry="7"/>`, lx: 4, ly: 47, col: "#e6a4a4" },
+    liver: { label: "Liver", shapes: `<ellipse cx="55" cy="60" rx="10" ry="6"/>`, lx: 66, ly: 62, col: "#f1cf83" },
+    spleen: { label: "Spleen", shapes: `<ellipse cx="33" cy="62" rx="7" ry="5"/>`, lx: 4, ly: 64, col: "#c5dccb" },
+    stomach: { label: "Stomach", shapes: `<ellipse cx="45" cy="66" rx="7" ry="6"/>`, lx: 4, ly: 74, col: "#c5dccb" },
+    kidney: { label: "Kidney", shapes: `<ellipse cx="33" cy="80" rx="4.5" ry="7"/><ellipse cx="57" cy="80" rx="4.5" ry="7"/>`, lx: 66, ly: 82, col: "#2b4a7a" },
+    uterus: { label: "Uterus", shapes: `<ellipse cx="45" cy="98" rx="9" ry="7"/>`, lx: 4, ly: 100, col: "#8a3b5a" },
+  };
+  function phLtrBodyMapHtml(c) {
+    const spec = PH_LTR_BODY[c.tmplId] || PH_LTR_BODY.course;
+    const on = new Set(spec.organs);
+    return `<div class="ph-ltr-bodymap">
+      <svg viewBox="0 0 90 130" class="ph-ltr-bodysvg" role="img" aria-label="Where this formula works">
+        <path d="M45 6a12 12 0 0 1 12 12v8l14 6v40l-8 4 4 48H23l4-48-8-4V32l14-6v-8A12 12 0 0 1 45 6z" fill="#f4efe2" stroke="#c8bfa6"/>
+        ${Object.keys(PH_LTR_ORGANS).map(k => { const o = PH_LTR_ORGANS[k], hi = on.has(k); return `<g fill="${hi ? o.col : "#e9e5da"}" opacity="${hi ? .95 : .7}" stroke="${hi ? "#16281D" : "none"}" stroke-width=".6">${o.shapes}</g>${hi ? `<text x="${o.lx}" y="${o.ly}" ${PH_LTR_SVG_FONT} font-size="6.5" font-weight="700" fill="#16281D">${o.label}</text>` : ""}`; }).join("")}
+      </svg>
+      <div class="ph-ltr-bodytxt"><b>${spec.organs.map(k => PH_LTR_ORGANS[k].label).join(" · ")}</b>${esc(spec.why)}</div>
+    </div>`;
+  }
+  const phLtrBodyMapText = c => { const spec = PH_LTR_BODY[c.tmplId] || PH_LTR_BODY.course; return `${spec.organs.map(k => PH_LTR_ORGANS[k].label).join(" · ")} — ${spec.why}`; };
+  // diet & lifestyle icons: one set per template, drawn once here
+  const PH_LTR_ICON = {
+    bowl: [`<path d="M4 15h32a16 10 0 0 1-32 0z" fill="#e6a4a4"/><path d="M12 5c-2 3 2 4 0 7M20 4c-2 3 2 4 0 7M28 5c-2 3 2 4 0 7" stroke="#8a3b5a" stroke-width="1.6" fill="none" stroke-linecap="round"/>`, "Warm, cooked meals"],
+    socks: [`<path d="M8 6h10v14a6 6 0 0 0 6 6h8v4H16a8 8 0 0 1-8-8z" fill="#c5dccb" stroke="#1B7A46"/><path d="M8 10h10" stroke="#1B7A46"/>`, "Warm feet"],
+    walk: [`<circle cx="20" cy="6" r="3" fill="#0E4D2A"/><path d="M20 9v9l-6 10M20 18l6 8M14 14l6-2 6 3" stroke="#0E4D2A" stroke-width="2" fill="none" stroke-linecap="round"/>`, "Gentle movement most days"],
+    noice: [`<rect x="6" y="6" width="28" height="20" rx="4" fill="#c7d3e8"/><path d="M10 12h20M10 18h12" stroke="#fff" stroke-width="2"/><path d="M4 30L36 4" stroke="#B4483A" stroke-width="2"/>`, "Go easy on cold drinks & raw food"],
+    heat: [`<rect x="6" y="10" width="28" height="16" rx="6" fill="#e6a4a4"/><path d="M14 6c-1 2 1 3 0 5M20 5c-1 2 1 3 0 5M26 6c-1 2 1 3 0 5" stroke="#8a3b5a" stroke-width="1.4" fill="none" stroke-linecap="round"/>`, "A heat pack is real medicine"],
+    moon: [`<path d="M26 4a12 12 0 1 0 8 20 10 10 0 0 1-8-20z" fill="#c7d3e8"/><circle cx="10" cy="8" r="1.5" fill="#2b4a7a"/><circle cx="8" cy="18" r="1" fill="#2b4a7a"/>`, "A low-light hour before bed"],
+    coffee: [`<path d="M8 10h20v10a8 8 0 0 1-8 8h-4a8 8 0 0 1-8-8z" fill="#c8bfa6"/><path d="M28 13h4a3 3 0 0 1 0 6h-4" fill="none" stroke="#c8bfa6" stroke-width="2"/><path d="M4 30L36 4" stroke="#B4483A" stroke-width="2"/>`, "Less caffeine & alcohol"],
+    water: [`<path d="M20 4c6 8 10 13 10 18a10 10 0 0 1-20 0c0-5 4-10 10-18z" fill="#c7d3e8" stroke="#2b4a7a"/>`, "Keep your fluids up"],
+    nospice: [`<path d="M14 6c-4 6-8 14-2 22 6 6 16 2 18-8 1-6-2-12-8-14-3 2-5 2-8 0z" fill="#e6a4a4" stroke="#8a3b5a"/><path d="M4 30L36 4" stroke="#B4483A" stroke-width="2"/>`, "Ease off spicy, alcohol, seafood, sugar"],
+    clock: [`<circle cx="20" cy="17" r="12" fill="#fff" stroke="#0E4D2A" stroke-width="2"/><path d="M20 9v8l5 3" stroke="#0E4D2A" stroke-width="2" fill="none" stroke-linecap="round"/>`, "Regular meals — don't skip them"],
+    early: [`<rect x="6" y="14" width="28" height="12" rx="3" fill="#c5dccb"/><path d="M10 14V9h20v5" stroke="#1B7A46" stroke-width="2" fill="none"/><circle cx="20" cy="20" r="2.5" fill="#0E4D2A"/>`, "Earlier, smaller dinner"],
+    layers: [`<path d="M8 12l12-6 12 6-12 6z" fill="#c7d3e8"/><path d="M8 18l12 6 12-6M8 24l12 6 12-6" stroke="#2b4a7a" stroke-width="1.6" fill="none"/>`, "Layers & a cool bedroom"],
+    gentle: [`<circle cx="20" cy="16" r="9" fill="#fff" stroke="#c5dccb" stroke-width="3"/><path d="M15 16c2-3 8-3 10 0" stroke="#1B7A46" stroke-width="1.6" fill="none" stroke-linecap="round"/>`, "Lukewarm water, minimal products"],
+    rest: [`<rect x="4" y="16" width="32" height="10" rx="3" fill="#c5dccb"/><rect x="6" y="10" width="10" height="7" rx="2" fill="#fff" stroke="#1B7A46"/>`, "Let rest be part of the treatment"],
+  };
+  const PH_LTR_DIET = {
+    digestion: ["bowl", "noice", "early", "clock"], stress: ["clock", "coffee", "walk", "rest"], skin: ["nospice", "water", "gentle", "bowl"],
+    sleep: ["early", "coffee", "moon", "walk"], menstrual: ["bowl", "socks", "heat", "noice"], fertility: ["bowl", "socks", "walk", "noice"],
+    cycleivf: ["bowl", "socks", "walk", "rest"], pregnancy: ["bowl", "rest", "walk", "water"], menopause: ["coffee", "nospice", "layers", "walk"],
+    course: ["bowl", "noice", "rest", "walk"],
+  };
+  function phLtrDietIconsHtml(c) {
+    const keys = PH_LTR_DIET[c.tmplId] || PH_LTR_DIET.course;
+    return `<div class="ph-ltr-dieticons">${keys.map(k => `<div><svg viewBox="0 0 40 34" aria-hidden="true">${PH_LTR_ICON[k][0]}</svg><span>${esc(PH_LTR_ICON[k][1])}</span></div>`).join("")}</div>`;
+  }
+  const phLtrDietIconsText = c => (PH_LTR_DIET[c.tmplId] || PH_LTR_DIET.course).map(k => `• ${PH_LTR_ICON[k][1]}`).join("\n");
   // her signature (2026-09-04): "have my signage as Linh Quach, BHSc
   // MChinMed, Dr TCM · vary between Kind Regards, or Warmly," -- the
   // sign-off is picked per letter from a stable seed (script/plan + day), so
@@ -30521,6 +30660,12 @@
     // 🩸 read from the patient's own cycle record (2026-09-04) -- switched
     // off automatically by phLtrSeedOff when there's no LMP to read
     cycleNow: { label: "Your cycle now", heading: "Your cycle right now", text: c => c.cycle ? phLtrCycleNowText(c.cycle) : `` },
+    // 🖼 image sections (2026-09-04) -- fixed (drawn), off automatically when
+    // there's nothing to draw (cycleBar needs a cycle; see phLtrSeedOff)
+    cycleBar: { label: "Cycle picture", heading: "Where you are in your cycle", fixed: true, html: c => phLtrCycleBarSvgHtml(c.cycle, c), text: c => phLtrCycleBarText(c.cycle) },
+    jar: { label: "Formula picture", fixed: true, html: c => phLtrJarSvgHtml(c), text: () => "" },
+    bodymap: { label: "Body map", heading: "Where this formula works", fixed: true, html: c => phLtrBodyMapHtml(c), text: c => phLtrBodyMapText(c) },
+    dietIcons: { label: "Diet icons", fixed: true, html: c => phLtrDietIconsHtml(c), text: c => phLtrDietIconsText(c) },
     // the fertility stage tables (her reference letters, 2026-09-01 and a
     // third natural-conception letter 2026-09-03, rewritten in her voice --
     // structure + clinical stages + frequency only, the source clinics'
@@ -30589,9 +30734,9 @@
   // nine built-in templates (her condition round, all wording approved in the
   // mock 2026-09-01): each condition tailors pattern / what-it's-for / diet /
   // what-to-expect via the same texts-override path her saved templates use
-  const PH_LTR_COND_SECS = ["greet", "findings", "pattern", "constitution", "formula", "dose", "purpose", "seasonal", "expect", "nextvisit", "signoff"];
+  const PH_LTR_COND_SECS = ["greet", "findings", "pattern", "cycleBar", "constitution", "formula", "jar", "dose", "purpose", "bodymap", "seasonal", "dietIcons", "expect", "nextvisit", "signoff"];
   const PH_LTR_TEMPLATES = [
-    { id: "course", name: "🌿 Herbal course", secs: ["greet", "findings", "pattern", "constitution", "formula", "dose", "purpose", "seasonal", "expect", "nextvisit", "signoff"], off: ["constitution"] },
+    { id: "course", name: "🌿 Herbal course", secs: ["greet", "findings", "pattern", "cycleBar", "constitution", "formula", "jar", "dose", "purpose", "bodymap", "seasonal", "dietIcons", "expect", "nextvisit", "signoff"], off: ["constitution"] },
     { id: "review", name: "🔄 Review & progress", secs: ["greetReview", "findings", "changes", "formula", "dose", "nextvisit", "signoff"], off: [] },
     { id: "digestion", name: "🍚 Digestion", secs: PH_LTR_COND_SECS, off: ["constitution"], texts: {
       pattern: "I'm treating your digestion at its root — strengthening the digestive centre and clearing what's been sitting in its way, rather than just settling symptoms.",
@@ -30617,21 +30762,21 @@
       seasonal: "Keep the evening light: earlier, smaller dinners, and caffeine before noon only. Screens brighten the mind the herbs are trying to settle — give yourself a low-light hour before bed when you can.",
       expect: "Sleep usually deepens in stages — falling asleep more easily comes first, often within a week or two; staying asleep and waking refreshed build over the course.",
     } },
-    { id: "menstrual", name: "🌺 Menstrual", secs: ["greet", "findings", "pattern", "cycleNow", "constitution", "formula", "dose", "purpose", "seasonal", "expect", "nextvisit", "signoff"], off: ["constitution"], texts: {
+    { id: "menstrual", name: "🌺 Menstrual", secs: ["greet", "findings", "pattern", "cycleBar", "cycleNow", "constitution", "formula", "jar", "dose", "purpose", "bodymap", "seasonal", "dietIcons", "expect", "nextvisit", "signoff"], off: ["constitution"], texts: {
       pattern: "I'm regulating the cycle at its root — smoothing the flow of qi and blood so the cycle can run on time and without a fight.",
       purpose: "This formula works with your cycle's own phases — easing the discomfort now while correcting the pattern that drives it.",
       seasonal: "Warmth is your friend, especially the week before your period — warm food, warm feet, and a heat pack is real medicine. Go gently on cold drinks and icy food around your period.",
       expect: "Cycles answer in cycles — many people notice the next period is easier, with the fuller change settling in over two to three cycles.",
     } },
-    { id: "fertility", name: "🌱 Natural fertility", secs: ["greet", "findings", "pattern", "cycleNow", "stagesNat", "constitution", "formula", "dose", "purpose", "seasonal", "expect", "nextvisit", "posttest", "signoff"], off: ["constitution"], texts: {
+    { id: "fertility", name: "🌱 Natural fertility", secs: ["greet", "findings", "pattern", "cycleBar", "cycleNow", "stagesNat", "constitution", "formula", "jar", "dose", "purpose", "bodymap", "seasonal", "dietIcons", "expect", "nextvisit", "posttest", "signoff"], off: ["constitution"], texts: {
       pattern: "I'm supporting your fertility by working with each phase of your natural cycle — building circulation to the ovaries and uterus, helping your hormones find their rhythm, and giving your body what it needs to develop a healthy lining, so conception has the best conditions to happen naturally.",
       purpose: "This formula supports the phase of your cycle you're in right now — building blood flow and hormonal balance through the first half of the cycle, easing ovulation, then steadying you through the two-week wait.",
       seasonal: "Warm, regular meals and warm feet genuinely help here — think cooked breakfasts, soups and stews, and go gently on cold drinks and raw food. Gentle movement most days beats hard training.",
       expect: "Fertility work moves in cycles, not days — most people notice their cycle becoming more comfortable and regular over two to three cycles, as hormone regulation and the lining both settle into a steadier pattern. That's the foundation conception builds on.",
     } },
-    { id: "cycleivf", name: "🤍 IVF", secs: ["greet", "findings", "cycleNow", "stages", "pattern", "formula", "dose", "nextvisit", "posttest", "signoff"], off: [] },
-    { id: "pregnancy", name: "🤰 Pregnancy", secs: ["greet", "findings", "stagesPreg", "constitution", "formula", "dose", "nextvisit", "postnatal", "signoff"], off: ["constitution"] },
-    { id: "menopause", name: "🌗 Menopause & peri", secs: ["greet", "findings", "pattern", "stagesMeno", "constitution", "formula", "dose", "purpose", "seasonal", "expect", "nextvisit", "signoff"], off: ["constitution"], texts: {
+    { id: "cycleivf", name: "🤍 IVF", secs: ["greet", "findings", "cycleBar", "cycleNow", "stages", "pattern", "formula", "jar", "dose", "bodymap", "dietIcons", "nextvisit", "posttest", "signoff"], off: [] },
+    { id: "pregnancy", name: "🤰 Pregnancy", secs: ["greet", "findings", "stagesPreg", "constitution", "formula", "jar", "dose", "bodymap", "dietIcons", "nextvisit", "postnatal", "signoff"], off: ["constitution"] },
+    { id: "menopause", name: "🌗 Menopause & peri", secs: ["greet", "findings", "pattern", "stagesMeno", "constitution", "formula", "jar", "dose", "purpose", "bodymap", "seasonal", "dietIcons", "expect", "nextvisit", "signoff"], off: ["constitution"], texts: {
       pattern: "Menopause isn't an illness — it's a transition that can run rough or smooth. I'm treating the pattern making yours rough: cooling the flaring heat, steadying mood and sleep, and nourishing the reserves this stage draws on.",
       purpose: "This formula works on the drivers of your symptoms — flushes, sweats, broken sleep, mood — while supporting the deeper reserves underneath. Herbs work alongside whatever else you're taking, HRT included — just keep me posted on any changes.",
       seasonal: "Cooling and steadying beats heating and spiking — go gently on alcohol, coffee, chilli and sugar, which all feed the flushes. Layered clothing and a cool bedroom genuinely help, and weight-bearing movement — walking counts — is real medicine for the years ahead.",
@@ -30659,11 +30804,12 @@
     if (phLtrSeeded.has(phLtrTmplId)) return;
     phLtrSeeded.add(phLtrTmplId);
     (phLtrTmpl().off || []).forEach(sec => phLtrOff.add(phLtrKey(sec)));
-    // 🩸 "Your cycle right now" only when there's a cycle to read
-    if ((phLtrTmpl().secs || []).includes("cycleNow")) {
+    // 🩸 "Your cycle right now" + the cycle picture only when there's a cycle to read
+    const secs = phLtrTmpl().secs || [];
+    if (secs.includes("cycleNow") || secs.includes("cycleBar")) {
       const t = (PRESC.items || []).find(x => x.id === phLtrScriptId);
       const rec = t ? phPatientPeek(presPatientFor(t) || t.name) : null;
-      if (!rec || !phCycleComp(rec)) phLtrOff.add(phLtrKey("cycleNow"));
+      if (!rec || !phCycleComp(rec)) { phLtrOff.add(phLtrKey("cycleNow")); phLtrOff.add(phLtrKey("cycleBar")); }
     }
   }
   function phLtrOpen(scriptId) {
@@ -30761,7 +30907,19 @@
       table.ph-ltr-stages tr.here td{background:#fbeff2}.ph-ltr-here{display:block;font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#8a3b5a;margin-top:2px}
       .ph-ltr-findings{display:flex;gap:14px;flex-wrap:wrap}
       .ph-ltr-fnd{flex:1 1 170px;background:#F6FAF7;border-radius:11px;padding:10px 12px;text-align:center}
-      .ph-ltr-fndsvg{width:100px;height:120px}.ph-ltr-fndsvg.wide{width:136px}
+      .ph-ltr-fndsvg{width:150px;height:180px}.ph-ltr-fndsvg.wide{width:204px}
+      .ph-ltr-cycle{margin:4px 0 6px}.ph-ltr-cyclesvg{width:100%;height:auto;display:block}
+      .ph-ltr-cyclelegend{display:flex;flex-wrap:wrap;gap:4px 14px;font-family:system-ui,sans-serif;font-size:10.5px;color:#4A5B50;margin-top:4px}
+      .ph-ltr-cyclelegend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+      .ph-ltr-jar{display:flex;gap:16px;align-items:center;background:#F6FAF7;border-radius:11px;padding:12px;margin:6px 0 10px}
+      .ph-ltr-jarsvg{width:86px;height:104px;flex:none}
+      .ph-ltr-jartxt{font-family:system-ui,sans-serif;font-size:12px;line-height:1.5}.ph-ltr-jartxt b{display:block;font-size:14px;color:#0E4D2A}.ph-ltr-jartxt span{display:block;color:#4A5B50}
+      .ph-ltr-bodymap{display:flex;gap:16px;align-items:flex-start;background:#F6FAF7;border-radius:11px;padding:12px;margin:6px 0 10px}
+      .ph-ltr-bodysvg{width:90px;height:130px;flex:none}
+      .ph-ltr-bodytxt{font-family:system-ui,sans-serif;font-size:12px;line-height:1.5}.ph-ltr-bodytxt b{display:block;color:#0E4D2A;margin-bottom:2px}
+      .ph-ltr-dieticons{display:flex;gap:10px;flex-wrap:wrap;margin:4px 0 10px}
+      .ph-ltr-dieticons div{flex:1 1 100px;background:#F6FAF7;border-radius:11px;padding:10px 8px;text-align:center;font-family:system-ui,sans-serif;font-size:11px;line-height:1.35;color:#4A5B50}
+      .ph-ltr-dieticons svg{display:block;width:40px;height:34px;margin:0 auto 4px}
       .ph-ltr-tset{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap}
       .ph-ltr-tpwrap{position:relative;display:inline-flex}
       .ph-ltr-tphoto{height:120px;max-width:100px;object-fit:cover;border-radius:11px}
