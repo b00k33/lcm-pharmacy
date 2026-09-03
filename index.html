@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260904-010000">
+<meta name="lcm-build" content="20260904-020000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -5663,6 +5663,23 @@
   #pharmacyPage .ph-cycle-regbadge { font-size: 10px; font-weight: 800; border-radius: 999px; padding: 3px 9px; background: var(--ph-green-tint); color: var(--ph-green-deep); }
   #pharmacyPage .ph-cycle-regbadge.irregular { background: var(--ph-zero-tint); color: var(--ph-zero-deep); }
   #pharmacyPage .ph-cycle-empty { font-size: 12px; color: var(--ph-soft); padding: 4px 0 10px; }
+  /* 🩸 cycle on the patient (2026-09-04): the panel row's slim bar + chip,
+     the same chip in the check-in panel, the "you are here" stage row */
+  #pharmacyPage .ph-cycle-chip { display: inline-block; font-size: 10.5px; font-weight: 800; border-radius: 999px; padding: 2px 8px; background: var(--ph-zero-tint); color: var(--ph-zero-deep); white-space: nowrap; vertical-align: middle; }
+  #pharmacyPage .ph-cycle-minibar { position: relative; display: flex; flex: 0 1 120px; min-width: 60px; height: 6px; border-radius: 999px; overflow: hidden; margin: 0 8px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+  #pharmacyPage .ph-cycle-minibar .p { background: var(--ph-zero); }
+  #pharmacyPage .ph-cycle-minibar .f { background: var(--ph-phaseout); }
+  #pharmacyPage .ph-cycle-minibar .o { background: var(--ph-prep-deep); }
+  #pharmacyPage .ph-cycle-minibar .l { background: var(--ph-blue); }
+  #pharmacyPage .ph-cycle-minibar .pin { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--ph-ink); }
+  #pharmacyPage .ph-cycle-rowopen { padding: 4px 12px 0; }
+  #pharmacyPage .ph-cycle-actions { display: flex; gap: 12px; flex: none; }
+  #pharmacyPage .ph-cyclemeta { flex-wrap: wrap; gap: 4px 10px; }
+  #pharmacyPage table.ph-ltr-stages tr.here td { background: var(--ph-zero-tint); }
+  #pharmacyPage .ph-ltr-here { display: block; font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--ph-zero-deep); margin-top: 2px; }
+  #pharmacyPage .ph-hx-dob { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 700; color: var(--ph-soft); text-transform: uppercase; letter-spacing: .03em; margin-left: 10px; }
+  #pharmacyPage .ph-hx-dob input { font: inherit; font-size: 12px; text-transform: none; letter-spacing: 0; border: 1px solid var(--ph-line); border-radius: 7px; padding: 3px 6px; background: var(--ph-cream); color: var(--ph-ink); }
+  #pharmacyPage .ph-hx-dob .age { font-size: 11px; color: var(--ph-ink); text-transform: none; letter-spacing: 0; }
   #pharmacyPage .ph-cycle-edit { background: var(--ph-green-tint); border-radius: 9px; padding: 10px 12px; }
   #pharmacyPage .ph-cycle-editgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; }
   #pharmacyPage .ph-cycle-editgrid label { display: flex; flex-direction: column; gap: 3px; font-size: 10.5px; font-weight: 700; color: var(--ph-soft); text-transform: uppercase; letter-spacing: .03em; }
@@ -19928,12 +19945,12 @@
         savePharmacy(); phTpClose();
         return;
       }
-      if (e.target.closest("[data-tp-cycle-edit]")) { phTpCycleEditOpen = true; phTpRerender(); return; }
-      if (e.target.closest("[data-tp-cycle-cancel]")) { phTpCycleEditOpen = false; phTpRerender(); return; }
+      if (e.target.closest("[data-tp-cycle-edit]")) { phTpCycleEditOpen = true; phCycleRerender(); return; }
+      if (e.target.closest("[data-tp-cycle-cancel]")) { phTpCycleEditOpen = false; phCycleRerender(); return; }
       if (e.target.closest("[data-tp-cycle-save]")) {
-        const plan = phTpFindPlan(phTpScreenPatient, phTpScreenPlanId);
-        if (plan) {
-          plan.cycle = {
+        const rec = phCycleTargetRec();
+        if (rec) {
+          rec.cycle = {
             lmp: (document.getElementById("phTpCycleLmp") || {}).value || "",
             cycleLen: parseInt((document.getElementById("phTpCycleLen") || {}).value, 10) || 28,
             flowDays: parseInt((document.getElementById("phTpCycleFlowDays") || {}).value, 10) || 5,
@@ -19941,9 +19958,23 @@
             pain: (document.getElementById("phTpCyclePain") || {}).value || "none",
             regular: !!(document.getElementById("phTpCycleRegular") || {}).checked,
           };
+          phCycleSyncPlans(rec);
           savePharmacy();
         }
-        phTpCycleEditOpen = false; phTpRerender();
+        phTpCycleEditOpen = false; phCycleRerender();
+        return;
+      }
+      // one tap at the visit: her period started today -> LMP = today, the
+      // rest of the record (length, flow, pain, regular) carries over
+      if (e.target.closest("[data-cycle-period-today]")) {
+        const rec = phCycleTargetRec();
+        if (rec) {
+          rec.cycle = Object.assign({ cycleLen: 28, flowDays: 5, flowIntensity: "moderate", pain: "none", regular: true }, phCycleFor(rec) || {}, { lmp: keyOf(TODAY) });
+          phCycleSyncPlans(rec);
+          savePharmacy();
+          phFlashShow("🩸 Period logged for today");
+        }
+        phTpCycleEditOpen = false; phCycleRerender();
         return;
       }
       const hxSexBtn = e.target.closest("[data-hx-sex]");
@@ -20364,6 +20395,7 @@
       if (e.target.closest("[data-pres-notes-toggle]")) { presNotesOpen = !presNotesOpen; renderPresPanel(); return; }
       if (e.target.closest("[data-pres-treat-toggle]")) { presTreatOpen = !presTreatOpen; renderPresPanel(); return; }
       if (e.target.closest("[data-pres-acu-toggle]")) { presAcuOpen = !presAcuOpen; presAcuOutcomeDraft = null; renderPresPanel(); return; }
+      if (e.target.closest("[data-pres-cycle-toggle]")) { presCycleOpen = !presCycleOpen; phTpCycleEditOpen = false; renderPresPanel(); return; }
       const acuOutBtn = e.target.closest("[data-pres-acu-outcome]");
       if (acuOutBtn) {
         // no re-render here (same idiom as data-tp-field debouncing above) --
@@ -22861,6 +22893,12 @@
       if (acuEnable) {
         const rec = phPatientRec(acuEnable.dataset.presAcuEnable);
         if (rec) { rec.acuEnabled = acuEnable.checked; savePharmacy(); renderPresPanel(); }
+        return;
+      }
+      const cycEnable = e.target.closest("[data-pres-cycle-enable]");
+      if (cycEnable) {
+        const rec = phPatientRec(cycEnable.dataset.presCycleEnable);
+        if (rec) { rec.cycleOn = cycEnable.checked; savePharmacy(); renderPresPanel(); }
         return;
       }
       // the attach/detach model (her §2, same as Grams): typing a date makes
@@ -26333,13 +26371,14 @@
     const head = rows[0].map(h => h.trim().toLowerCase());
     const col = name => head.indexOf(name.toLowerCase());
     const iFirst = col("First Name"), iLast = col("Last Name"), iPref = col("Preferred First Name"), iEmail = col("Email"),
-      iMob = col("Mobile Phones"), iHome = col("Home Phones"), iWork = col("Work Phones"), iNext = col("Next Appointment");
+      iMob = col("Mobile Phones"), iHome = col("Home Phones"), iWork = col("Work Phones"), iNext = col("Next Appointment"),
+      iDob = col("Date of Birth"), iSex = col("Sex");
     if (iFirst < 0 || iLast < 0) return { error: "That doesn't look like a Cliniko patient export — no First Name / Last Name columns." };
     const known = phClinikoKnownKeys();
     const todayKey = keyOf(TODAY);
     const m = /(\d{4})(\d{2})(\d{2})/.exec(fileName || "");
     const exportDate = m ? `${m[1]}-${m[2]}-${m[3]}` : todayKey;
-    const st = { read: 0, matched: 0, added: 0, skipped: 0, phones: 0, emails: 0, bookings: 0 };
+    const st = { read: 0, matched: 0, added: 0, skipped: 0, phones: 0, emails: 0, bookings: 0, dobs: 0, sexes: 0 };
     const appts = [];
     rows.slice(1).forEach(r => {
       const first = (r[iFirst] || "").trim(), last = (r[iLast] || "").trim(), pref = iPref >= 0 ? (r[iPref] || "").trim() : "";
@@ -26354,11 +26393,20 @@
       if (hit) st.matched++; else st.added++;
       const phone = phCkPhonePretty(phCkFirstPhone(iMob >= 0 ? r[iMob] : "") || phCkFirstPhone(iHome >= 0 ? r[iHome] : "") || phCkFirstPhone(iWork >= 0 ? r[iWork] : ""));
       const email = iEmail >= 0 ? (r[iEmail] || "").trim() : "";
-      if (phone || email) {
+      // 🩸 sex + date of birth (2026-09-04): they drive the cycle auto-rule
+      // (female & under 50). Cliniko writes DOB as YYYY-MM-DD; a hand-set
+      // value on the record is never overwritten by the export.
+      const dobRaw = iDob >= 0 ? (r[iDob] || "").trim() : "";
+      const dob = /^\d{4}-\d{2}-\d{2}/.test(dobRaw) ? dobRaw.slice(0, 10) : "";
+      const sexRaw = iSex >= 0 ? (r[iSex] || "").trim().toLowerCase() : "";
+      const sex = /^f/.test(sexRaw) ? "F" : /^m/.test(sexRaw) ? "M" : "";
+      if (phone || email || dob || sex) {
         const pr = phPatientRec(name);
         if (pr) {
           if (phone) { if (pr.phone !== phone) { pr.phone = phone; pr.phoneFrom = exportDate; pr.phoneSrc = "export"; } st.phones++; }
           if (email) { pr.email = email; st.emails++; }
+          if (dob && !pr.dob) { pr.dob = dob; st.dobs++; }
+          if (sex && !pr.sex) { pr.sex = sex; st.sexes++; }
         }
       }
       const nx = iNext >= 0 ? /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2})/.exec((r[iNext] || "").trim()) : null;
@@ -26370,6 +26418,16 @@
     if (appts.length) phApptImport(appts); else savePharmacy();
     return st;
   }
+  // 🩸 DOB on the Medical history header (2026-09-04) -- feeds the cycle
+  // auto-rule (female & under 50) and shows her age beside the field
+  document.addEventListener("change", e => {
+    const dobEl = e.target && e.target.closest ? e.target.closest("[data-hx-dob]") : null;
+    if (!dobEl) return;
+    const rec = phPatientRec(presHxScreenName);
+    if (!rec) return;
+    rec.dob = dobEl.value || undefined;
+    savePharmacy(); renderHxScreen();
+  });
   document.addEventListener("change", e => {
     if (!e.target || e.target.id !== "phClinikoCsv") return;
     const input = e.target, file = input.files && input.files[0];
@@ -26380,7 +26438,7 @@
       const st = phClinikoImport(String(reader.result || ""), includeAll, file.name);
       const el = document.getElementById("phClinikoResult");
       if (st.error) { if (el) el.textContent = st.error; phFlashShow("⚠ " + st.error); return; }
-      const summary = `${st.read} patients read · ${st.matched} matched in LCM${st.added ? ` · ${st.added} added` : ""} · ${st.phones} number${st.phones === 1 ? "" : "s"} · ${st.emails} email${st.emails === 1 ? "" : "s"} · ${st.bookings} upcoming booking${st.bookings === 1 ? "" : "s"} added${st.skipped ? ` · ${st.skipped} not in LCM, skipped` : ""}`;
+      const summary = `${st.read} patients read · ${st.matched} matched in LCM${st.added ? ` · ${st.added} added` : ""} · ${st.phones} number${st.phones === 1 ? "" : "s"} · ${st.emails} email${st.emails === 1 ? "" : "s"}${st.dobs || st.sexes ? ` · ${st.dobs} DOB${st.dobs === 1 ? "" : "s"} · ${st.sexes} sex` : ""} · ${st.bookings} upcoming booking${st.bookings === 1 ? "" : "s"} added${st.skipped ? ` · ${st.skipped} not in LCM, skipped` : ""}`;
       PHARMACY.clinikoImport = { on: keyOf(TODAY), summary };
       savePharmacy();
       if (el) el.textContent = `Imported just now: ${summary}`;
@@ -26412,6 +26470,8 @@
       scripts: past.length, lastVisit: last ? phFuDateLabel(last.date) : "",
       appt, visitLabel: appt ? `${phFuDateLabel(appt.date)} · ${phCkTime12(appt.time)}` : "",
       visit: appt ? `your visit on ${phFuDateLabel(appt.date)}` : "your next visit",
+      // 🩸 her cycle today (2026-09-04) -- to time the review to the cycle
+      cycle: pat && pat.medicalHistory ? phCycleComp(pat) : null,
     };
   }
   const phCkIos = () => /iP(hone|ad|od)/.test(navigator.userAgent);
@@ -26436,6 +26496,7 @@
           <span class="k">Empty</span><span class="v${c.left != null && c.left <= 0 ? " warn" : ""}">${c.left == null ? "—" : c.left <= 0 ? `since ${esc(c.emptyLabel)}${c.left < 0 ? ` · ${-c.left} day${c.left === -1 ? "" : "s"} ago` : " · today"}` : `${esc(c.emptyLabel)} · ${c.left} day${c.left === 1 ? "" : "s"} left`}</span>
           <span class="k">Visits</span><span class="v">${c.scripts} script${c.scripts === 1 ? "" : "s"}${c.lastVisit ? ` · last ${esc(c.lastVisit)}` : ""}</span>
           <span class="k">Booked</span><span class="v">${c.appt ? `<b>${esc(c.visitLabel)}</b> ${phApptKindHtml(c.appt.service)}${c.appt.service && c.appt.service !== "Booked (Cliniko)" ? ` <span class="faint">${esc(c.appt.service)}</span>` : ""}` : `<span class="faint">not booked</span>`}</span>
+          ${c.cycle ? `<span class="k">Cycle</span><span class="v">${phCycleChipHtml(c.cycle)} <span class="faint">· ${c.cycle.phaseKey === "luteal" || c.cycle.phaseKey === "ov" ? "" : `ovulation ~${esc(phFuDateLabel(c.cycle.ovDate))} · `}period due ~${esc(phFuDateLabel(c.cycle.nextDate))}</span></span>` : ""}
         </div>
         ${c.note ? `<div class="ph-ck-note"><b>Review note</b>${esc(c.note)}</div>` : ""}
         <div class="ph-ck-phone"><svg class="icn" aria-hidden="true"><use href="#i-phone"/></svg>${c.phone
@@ -26778,6 +26839,12 @@
     if (r.medicalHistoryNotes == null) r.medicalHistoryNotes = "";
     if (!r.treatmentPlans) r.treatmentPlans = [];
     if (!r.acuSessions) r.acuSessions = [];
+    // 2026-09-04 split: plans made from the old "Cycle & IVF Protocol" become
+    // IVF plans, and any cycle they carried moves up to the patient record
+    r.treatmentPlans.forEach(p => {
+      if (p.templateName === "Cycle & IVF Protocol") { p.templateName = "IVF Protocol"; if (p.title === "Cycle & IVF Protocol") p.title = "IVF Protocol"; }
+      if (p.cycle && p.cycle.lmp && !r.cycle) r.cycle = p.cycle;
+    });
     return r;
   }
   const phMedHxVal = (rec, k) => (rec && rec.medicalHistory && rec.medicalHistory[k]) || "unasked";
@@ -28415,6 +28482,7 @@
           <span class="ph-hx-seg" role="radiogroup" aria-label="Patient sex">
             ${[["F", "F"], ["M", "M"], ["", "—"]].map(([v, l]) => `<button type="button" class="ph-hx-sexbtn${(rec.sex || "") === v ? " on" : ""}" data-hx-sex="${v}" aria-pressed="${(rec.sex || "") === v ? "true" : "false"}">${l}</button>`).join("")}
           </span>
+          <label class="ph-hx-dob">DOB <input type="date" data-hx-dob="1" value="${esc(rec.dob || "")}" aria-label="Date of birth">${phAgeOf(rec.dob) != null ? `<span class="age">${phAgeOf(rec.dob)}</span>` : ""}</label>
         </div>
         <div class="ph-stocktake-progress-wrap">
           <div class="ph-stocktake-progress-label">${prog.answeredN} of ${prog.total} asked${prog.yesItems.length ? ` · ${prog.yesItems.length} flagged` : ""}</div>
@@ -29071,6 +29139,7 @@
       <div class="ph-pres-third-full"${presThirdOpen ? "" : " hidden"}>
       <div${presNameOpen ? "" : " hidden"}>${presNameTypeFieldsHtml(t)}
       ${!isF ? presAddressesPanelHtml(t) : ""}
+      ${!isF ? presCycleToggleHtml(t) : ""}
       ${!isF ? presAcuToggleHtml(t) : ""}</div>
 
       <div class="ph-tmpl-sec"><span>History</span><button type="button" class="ph-collapse-toggle" data-pres-third-toggle="1" aria-expanded="${presThirdOpen ? "true" : "false"}" title="Collapse this column">Collapse ▸</button></div>
@@ -29088,6 +29157,7 @@
       </div>
       </div>
 
+      ${!isF ? presCycleRowHtml(t) : ""}
       ${!isF ? presNotesRowHtml(t) : ""}
       ${!isF ? presAcuRowHtml(t) : ""}
       ${!isF ? presTreatmentRowHtml(t) : ""}
@@ -29251,29 +29321,42 @@
   // only (suggestFormula) -- never auto-linked, since a wrong auto-link on a
   // real patient's plan is worse than an empty one; she picks the real jar
   // herself via the same picker every phase uses.
+  // The 11 phases from Chapter 6 -- Treating Fertility's own PHASES list
+  // (expanded 2026-09-03, her ask "expand it to all 11 phases"; points/herbs
+  // carried over verbatim, aim text written to match). Split 2026-09-04 on
+  // her correction ("cycle and ivf is not a good plan") into three templates
+  // that each take the phases they actually run through; the cycle itself
+  // now lives on the patient (phCycleOn / phCycleFor), read by all of them.
+  const PH_TP_PHASE = {
+    menses: { label: "Menstruation", aim: "Clear the cycle cleanly and ease any cramping — a settled start for the follicle to come.", points: "SP10, SP6, SP8, LI4, ST28", suggestFormula: "Menstrual Health 1 or 2, depending on presentation" },
+    foll1: { label: "Follicular — Week 1", aim: "Support blood flow to the ovaries and uterine lining as the next follicle develops.", points: "SP4, PC6, SP6, ST36, ST29, REN4, REN6", suggestFormula: "Prepare to Conceive 1 or 2" },
+    foll2: { label: "Follicular — Week 2 (Kidney focus)", aim: "Build Kidney essence to support egg quality and a receptive lining going into ovulation.", points: "KI7, KI6, LU7, SP6, LIV3", suggestFormula: "" },
+    ov: { label: "Ovulation", aim: "Support a clean release; ease any mid-cycle spotting or cramping.", points: "SP8, LIV3, ST29, YT, DU20, PC6", suggestFormula: "" },
+    opu: { label: "Post-OPU (Egg Pickup)", aim: "Ease post-retrieval discomfort and support recovery before the transfer ahead.", points: "SP8-9 (Ashi), LU5-6 (Ashi), GB41/SJ5, SP6, LIV5/LIV3. Add-ins: GB34/LIV5 (upper abdo pain), KI14/ST29/LIV5-4/SP6 (lower abdo pain), GB34/ST36/REN9 (bloating), YT/HT7 (distressed).", suggestFormula: "" },
+    preEt: { label: "Pre-ET (Embryo Transfer)", aim: "Calm the mind and improve uterine blood flow just before transfer.", points: "PC6 (Neiguan), SP8 (Diji), LIV3 (Taichong), DU20 (Baihui), ST29 (Guilai). Add REN4/REN6 if pulse is weak, Yintang if anxious. No abdominal points.", suggestFormula: "" },
+    postEt: { label: "Post-ET", aim: "Support implantation and steady the mind in the first days after transfer.", points: "KI6 & LU7, KI7 or KI3 & KI9, plus Yintang, DU20, SSC, ST36, PC6, HT7. Add GB34 if Qi stagnation.", suggestFormula: "" },
+    tww: { label: "Two-week wait / Luteal", aim: "Steady the mind and support implantation through the wait.", points: "KI6, KI7, KI9, ST36, DU20, PC6, HT7", suggestFormula: "Early Pregnancy / Post-Ovulation herbs" },
+    early: { label: "Early Pregnancy", aim: "Support a settling pregnancy and ease first-trimester nausea or anxiety.", points: "YT, DU20, PC6, KI9, KI6, ST36, HT7. Add LIV3/GB34 if Liver Qi blocked. Nausea: KI27, KI21, KI6, PC6, ST36, REN12. Avoid abdomen/lower-back points.", suggestFormula: "Early Pregnancy Support herbs" },
+    birth: { label: "Birth Preparation", aim: "Prepare the body for labour — encourage a favourable position and an efficient start.", points: "Lying on left side: GB21L, GB41/SJ5, SP6, KI6/LI7, ST36R, ST36 (after 19wk add BL33/BL32, or earlier for sacral back pain).", suggestFormula: "Birth prep herbs and teas · Raspberry leaf from 32wk" },
+    breech: { label: "Breech Presentation", aim: "Encourage the baby to turn head-down before term.", points: "Moxa (not burned in clinic) plus acupuncture as part of birth prep. Focus on Dai Mai, Kidney, and Qi flow.", suggestFormula: "" },
+  };
   const PH_TP_TEMPLATES = [
     {
-      id: "cycle_ivf", name: "Cycle & IVF Protocol",
-      goal: "Support a full, regular cycle and a receptive lining through to a positive test.",
-      // expanded 2026-09-03 (her ask: "expand it to all 11 phases") from 5 to
-      // all 11 phases in Chapter 6 -- Treating Fertility's own PHASES list, so
-      // an IVF or pregnancy patient's plan doesn't run out partway through.
-      // The original 5 are untouched; points/herbs for the 6 new ones are
-      // carried over verbatim from that file, aim text newly written to match
-      // the existing phases' voice (Chapter 6 has no aim field of its own).
-      phases: [
-        { label: "Menstruation", aim: "Clear the cycle cleanly and ease any cramping — a settled start for the follicle to come.", points: "SP10, SP6, SP8, LI4, ST28", suggestFormula: "Menstrual Health 1 or 2, depending on presentation" },
-        { label: "Follicular — Week 1", aim: "Support blood flow to the ovaries and uterine lining as the next follicle develops.", points: "SP4, PC6, SP6, ST36, ST29, REN4, REN6", suggestFormula: "Prepare to Conceive 1 or 2" },
-        { label: "Follicular — Week 2 (Kidney focus)", aim: "Build Kidney essence to support egg quality and a receptive lining going into ovulation.", points: "KI7, KI6, LU7, SP6, LIV3", suggestFormula: "" },
-        { label: "Ovulation", aim: "Support a clean release; ease any mid-cycle spotting or cramping.", points: "SP8, LIV3, ST29, YT, DU20, PC6", suggestFormula: "" },
-        { label: "Post-OPU (Egg Pickup)", aim: "Ease post-retrieval discomfort and support recovery before the transfer ahead.", points: "SP8-9 (Ashi), LU5-6 (Ashi), GB41/SJ5, SP6, LIV5/LIV3. Add-ins: GB34/LIV5 (upper abdo pain), KI14/ST29/LIV5-4/SP6 (lower abdo pain), GB34/ST36/REN9 (bloating), YT/HT7 (distressed).", suggestFormula: "" },
-        { label: "Pre-ET (Embryo Transfer)", aim: "Calm the mind and improve uterine blood flow just before transfer.", points: "PC6 (Neiguan), SP8 (Diji), LIV3 (Taichong), DU20 (Baihui), ST29 (Guilai). Add REN4/REN6 if pulse is weak, Yintang if anxious. No abdominal points.", suggestFormula: "" },
-        { label: "Post-ET", aim: "Support implantation and steady the mind in the first days after transfer.", points: "KI6 & LU7, KI7 or KI3 & KI9, plus Yintang, DU20, SSC, ST36, PC6, HT7. Add GB34 if Qi stagnation.", suggestFormula: "" },
-        { label: "Two-week wait / Luteal", aim: "Steady the mind and support implantation through the wait.", points: "KI6, KI7, KI9, ST36, DU20, PC6, HT7", suggestFormula: "Early Pregnancy / Post-Ovulation herbs" },
-        { label: "Early Pregnancy", aim: "Support a settling pregnancy and ease first-trimester nausea or anxiety.", points: "YT, DU20, PC6, KI9, KI6, ST36, HT7. Add LIV3/GB34 if Liver Qi blocked. Nausea: KI27, KI21, KI6, PC6, ST36, REN12. Avoid abdomen/lower-back points.", suggestFormula: "Early Pregnancy Support herbs" },
-        { label: "Birth Preparation", aim: "Prepare the body for labour — encourage a favourable position and an efficient start.", points: "Lying on left side: GB21L, GB41/SJ5, SP6, KI6/LI7, ST36R, ST36 (after 19wk add BL33/BL32, or earlier for sacral back pain).", suggestFormula: "Birth prep herbs and teas · Raspberry leaf from 32wk" },
-        { label: "Breech Presentation", aim: "Encourage the baby to turn head-down before term.", points: "Moxa (not burned in clinic) plus acupuncture as part of birth prep. Focus on Dai Mai, Kidney, and Qi flow.", suggestFormula: "" },
-      ],
+      id: "natural", name: "Natural fertility",
+      goal: "Support a full, regular cycle and a receptive lining so conception can happen naturally.",
+      phases: ["menses", "foll1", "foll2", "ov", "tww", "early"].map(k => PH_TP_PHASE[k]),
+    },
+    {
+      // id kept as cycle_ivf so plans and the Settings protocol-import
+      // override (PHARMACY.tpBuiltinOverride) keep pointing at it
+      id: "cycle_ivf", name: "IVF Protocol",
+      goal: "Build blood flow and a receptive lining through stimulation, collection and transfer, to a positive test.",
+      phases: ["menses", "foll1", "foll2", "opu", "preEt", "postEt", "tww", "early"].map(k => PH_TP_PHASE[k]),
+    },
+    {
+      id: "pregnancy", name: "Pregnancy",
+      goal: "Support a settled pregnancy through to a well-prepared birth.",
+      phases: ["early", "birth", "breech"].map(k => PH_TP_PHASE[k]),
     },
   ];
   // her own saved templates (her ask 2026-09-01 "make it easier to do
@@ -29351,17 +29434,130 @@
     else if (day < ovDay) { phaseKey = "foll"; phaseLabel = "Follicular"; }
     else if (day <= ovEnd) { phaseKey = "ov"; phaseLabel = "Ovulation"; }
     const pinPct = Math.max(1.5, Math.min(98, (day - 0.5) / cycleLen * 100));
-    return { day, cycleLen, phaseKey, phaseLabel, segDays, pinPct, overdue: day > cycleLen + 3 };
+    const plusDays = n => keyOf(new Date(lmp.getFullYear(), lmp.getMonth(), lmp.getDate() + n));
+    return { day, cycleLen, flowDays, ovDay, phaseKey, phaseLabel, segDays, pinPct, overdue: day > cycleLen + 3,
+      ovDate: plusDays(ovDay - 1), nextDate: plusDays(cycleLen) };
+  }
+  // ============ 🩸 The cycle lives on the PATIENT, not on a plan (her
+  // correction 2026-09-04: "cycle and ivf is not a good plan. the cycle is in
+  // all fertility plans except menopause. cycle is also important for all
+  // menstruating female patients"). rec.cycle = {lmp, cycleLen, flowDays,
+  // flowIntensity, pain, regular}; rec.cycleOn true/false is her explicit
+  // switch, undefined = the auto rule she gave: female & under 50 (no DOB
+  // counts as under 50), or any Natural fertility / IVF plan. Old plan.cycle
+  // data moves up to the record the first time the patient is touched. ====
+  const PH_TP_FERTILITY_TEMPLATES = ["Natural fertility", "IVF Protocol", "Pregnancy", "Cycle & IVF Protocol"];
+  const PH_TP_CYCLE_TEMPLATES = ["Natural fertility", "IVF Protocol", "Cycle & IVF Protocol"];
+  function phAgeOf(dob) {
+    if (!dob) return null;
+    const d = parseKey(dob);
+    if (isNaN(d.getTime())) return null;
+    let a = TODAY.getFullYear() - d.getFullYear();
+    const m = TODAY.getMonth() - d.getMonth();
+    if (m < 0 || (m === 0 && TODAY.getDate() < d.getDate())) a--;
+    return a;
+  }
+  function phCycleFor(rec) {
+    if (!rec) return null;
+    if (!rec.cycle) {
+      const p = (rec.treatmentPlans || []).find(x => x.cycle && x.cycle.lmp);
+      if (p) rec.cycle = p.cycle;
+    }
+    return rec.cycle || null;
+  }
+  function phCycleOn(rec) {
+    if (!rec) return false;
+    if (rec.cycleOn === true || rec.cycleOn === false) return rec.cycleOn;
+    if ((rec.treatmentPlans || []).some(p => p.status !== "done" && PH_TP_CYCLE_TEMPLATES.includes(p.templateName))) return true;
+    if (rec.sex !== "F") return false;
+    const age = phAgeOf(rec.dob);
+    return age == null || age < 50;
+  }
+  const phCycleComp = rec => phCycleOn(rec) ? phTpCycleCompute(phCycleFor(rec)) : null;
+  const phCycleChipHtml = comp => comp ? `<span class="ph-cycle-chip">Day ${comp.day} · ${esc(comp.phaseLabel)}${comp.overdue ? " · late?" : ""}</span>` : "";
+  // her yes (2026-09-04): a Natural fertility plan's current phase follows
+  // the cycle day. IVF phases are calendar-driven (OPU, transfer) so they
+  // don't; a phase she moved past the two-week wait by hand (Early
+  // pregnancy…) is never pulled back.
+  const PH_CYCLE_PHASE_MATCH = {
+    period: /menstruation|period/i, foll1: /follicular.*(week 1|wk 1)|^follicular$/i,
+    foll2: /follicular.*(week 2|wk 2)|kidney/i, ov: /ovulation/i, luteal: /two-week|luteal|post-ovulation/i,
+  };
+  function phCycleSyncPlan(rec, plan) {
+    if (!plan || plan.status !== "active" || plan.templateName !== "Natural fertility") return false;
+    const comp = phCycleComp(rec);
+    if (!comp) return false;
+    const want = comp.phaseKey === "period" ? PH_CYCLE_PHASE_MATCH.period
+      : comp.phaseKey === "foll" ? (comp.day <= comp.flowDays + 7 ? PH_CYCLE_PHASE_MATCH.foll1 : PH_CYCLE_PHASE_MATCH.foll2)
+      : comp.phaseKey === "ov" ? PH_CYCLE_PHASE_MATCH.ov : PH_CYCLE_PHASE_MATCH.luteal;
+    const phases = plan.phases || [];
+    let idx = phases.findIndex(p => want.test(p.label || ""));
+    if (idx < 0 && want === PH_CYCLE_PHASE_MATCH.foll2) idx = phases.findIndex(p => PH_CYCLE_PHASE_MATCH.foll1.test(p.label || ""));
+    if (idx < 0 || phases[idx].status === "current") return false;
+    const lutealIdx = phases.findIndex(p => PH_CYCLE_PHASE_MATCH.luteal.test(p.label || ""));
+    const curIdx = phases.findIndex(p => p.status === "current");
+    if (lutealIdx >= 0 && curIdx > lutealIdx) return false;
+    phases.forEach((p, i) => { p.status = i < idx ? "done" : i === idx ? "current" : "upcoming"; });
+    return true;
+  }
+  function phCycleSyncPlans(rec) {
+    let changed = false;
+    (rec && rec.treatmentPlans || []).forEach(p => { if (phCycleSyncPlan(rec, p)) changed = true; });
+    if (changed) savePharmacy();
+    return changed;
+  }
+  // which patient a cycle edit belongs to: the full-screen plan modal's
+  // patient when it's open, else the open script's
+  function phCycleTargetRec() {
+    const modal = document.getElementById("phTpModal");
+    if (modal && !modal.hidden && phTpScreenPatient) return phPatientRec(phTpScreenPatient);
+    const t = (PRESC.items || []).find(x => x.id === presOpenId);
+    const name = t ? presPatientFor(t) : "";
+    return name ? phPatientRec(name) : null;
+  }
+  function phCycleRerender() {
+    const modal = document.getElementById("phTpModal");
+    if (modal && !modal.hidden) renderTpScreen(); else renderPresPanel();
+  }
+  // the one-line 🩸 Cycle row at the top of the prescription panel's stack
+  // (above Notes) -- collapsed it's the chip + a slim bar, open it's the
+  // full bar with LMP/ovulation/next-period dates and "New period today"
+  function presCycleRowHtml(t) {
+    const name = presPatientFor(t);
+    if (!name) return "";
+    const rec = phPatientRec(name);
+    if (!phCycleOn(rec)) return "";
+    const comp = phCycleComp(rec);
+    const lead = comp
+      ? `🩸 Cycle · ${phCycleChipHtml(comp)} · LMP ${esc(phShortDate(rec.cycle.lmp))} · ~${comp.cycleLen}d`
+      : `🩸 Cycle · no LMP yet`;
+    return `<div class="ph-treat-row-wrap">
+      <button type="button" class="ph-treat-row ph-hx-row ${comp ? "hasanswers" : "notstarted"}" data-pres-cycle-toggle="1" aria-expanded="${presCycleOpen ? "true" : "false"}">
+        <span class="ph-hx-lead">${lead}</span>
+        ${comp && !presCycleOpen ? `<span class="ph-cycle-minibar" aria-hidden="true"><span class="p" style="flex:${comp.segDays.period}"></span><span class="f" style="flex:${comp.segDays.foll}"></span><span class="o" style="flex:${comp.segDays.ov}"></span><span class="l" style="flex:${comp.segDays.luteal}"></span><span class="pin" style="left:${comp.pinPct}%"></span></span>` : ""}
+        <span class="ph-hx-action ph-treat-chev">${presCycleOpen ? "▾" : "▸"}</span>
+      </button>
+      ${presCycleOpen ? `<div class="ph-cycle-rowopen">${phCycleBarHtml(rec)}</div>` : ""}
+    </div>`;
+  }
+  function presCycleToggleHtml(t) {
+    const name = presPatientFor(t);
+    if (!name) return "";
+    const rec = phPatientRec(name);
+    return `<div class="ph-switch-row ph-acu-switchrow">
+      <span>🩸 Track her cycle${rec.cycleOn == null ? ` <span class="faint">· auto</span>` : ""}</span>
+      <span class="ph-switch"><input type="checkbox" data-pres-cycle-enable="${esc(name)}"${phCycleOn(rec) ? " checked" : ""}><span class="ph-switch-track"></span></span>
+    </div>`;
   }
   const PH_CYCLE_FLOW = [["light", "Light"], ["moderate", "Moderate"], ["heavy", "Heavy"]];
   const PH_CYCLE_PAIN = [["none", "None"], ["mild", "Mild"], ["moderate", "Moderate"], ["severe", "Severe"]];
-  function phTpCycleBarHtml(plan) {
-    if (plan.templateName !== "Cycle & IVF Protocol") return "";
-    if (phTpCycleEditOpen) return phTpCycleEditHtml(plan);
-    const c = plan.cycle;
+  function phCycleBarHtml(rec) {
+    if (!rec) return "";
+    if (phTpCycleEditOpen) return phTpCycleEditHtml(rec);
+    const c = phCycleFor(rec);
     const comp = phTpCycleCompute(c);
     if (!comp) {
-      return `<div class="ph-cycle-empty">🩸 No cycle info yet — <button type="button" class="tab-link" data-tp-cycle-edit="1">add her menstrual history</button></div>`;
+      return `<div class="ph-cycle-empty">🩸 No cycle info yet — <button type="button" class="tab-link" data-tp-cycle-edit="1">add her menstrual history</button> · <button type="button" class="tab-link" data-cycle-period-today="1">period started today</button></div>`;
     }
     const flowIcons = c.flowDays || 0;
     const flowLevel = { light: 1, moderate: 2, heavy: 3 }[c.flowIntensity] || 0;
@@ -29376,7 +29572,7 @@
         </div>
         <div class="ph-cyclepin" style="left:${comp.pinPct}%"><span class="ph-cyclepin-lbl">Day ${comp.day} · ${esc(comp.phaseLabel)}${comp.overdue ? " · late?" : ""}</span></div>
       </div>
-      <div class="ph-cyclemeta"><span>LMP <b>${esc(phShortDate(c.lmp))}</b> · typical <b>~${comp.cycleLen} day</b> cycle</span><button type="button" class="tab-link" data-tp-cycle-edit="1">Edit ✎</button></div>
+      <div class="ph-cyclemeta"><span>LMP <b>${esc(phShortDate(c.lmp))}</b> · typical <b>~${comp.cycleLen} day</b> cycle · ovulation <b>~day ${comp.ovDay} · ${esc(phShortDate(comp.ovDate))}</b> · next period <b>~${esc(phShortDate(comp.nextDate))}</b></span><span class="ph-cycle-actions"><button type="button" class="tab-link" data-cycle-period-today="1">New period today</button><button type="button" class="tab-link" data-tp-cycle-edit="1">Edit ✎</button></span></div>
       <div class="ph-cycle-introws">
         <div class="ph-cycle-introw"><span class="lbl">Flow</span><div class="ph-cycle-drops">${[1, 2, 3].map(i => `<span class="drop${i <= flowLevel ? " on" : ""}"></span>`).join("")}</div><span class="sub">${flowIcons ? `${flowIcons} days` : ""}</span></div>
         <div class="ph-cycle-introw"><span class="lbl">Pain</span><div class="ph-cycle-dots">${[1, 2, 3].map(i => `<span class="dot${i <= painLevel ? " on" : ""}"></span>`).join("")}</div><span class="sub">${esc((PH_CYCLE_PAIN.find(x => x[0] === c.pain) || [])[1] || "")}</span></div>
@@ -29384,8 +29580,8 @@
       </div>
     </div>`;
   }
-  function phTpCycleEditHtml(plan) {
-    const c = plan.cycle || {};
+  function phTpCycleEditHtml(rec) {
+    const c = phCycleFor(rec) || {};
     return `<div class="ph-cyclewrap ph-cycle-edit">
       <div class="ph-cycle-editgrid">
         <label>LMP<input type="date" id="phTpCycleLmp" value="${esc(c.lmp || "")}"></label>
@@ -29585,7 +29781,6 @@
           ${PH_TP_STATUSES.map(s => `<button type="button" class="ph-tp-inline-segbtn${plan.status === s.v ? " on" : ""}" data-tp-status="${plan.id}:${s.v}" aria-pressed="${plan.status === s.v ? "true" : "false"}">${s.label}</button>`).join("")}
         </span>
       </div>
-      ${phTpCycleBarHtml(plan)}
       <div class="ph-tp-timeline">
         ${plan.phases.map(ph => phTpPhaseRowHtml(plan, ph)).join("")}
         <button type="button" class="ph-tp-addbtn" data-tp-phase-add="${plan.id}">+ Add phase</button>
@@ -29749,7 +29944,7 @@
   // also get the "after your pregnancy test" section, the one structural
   // idea kept from her reference letter -- rewritten in her voice, never
   // that clinic's own content. Generic plans skip it entirely.
-  const phTpIsFertilityPlan = plan => plan.templateName === "Cycle & IVF Protocol";
+  const phTpIsFertilityPlan = plan => PH_TP_FERTILITY_TEMPLATES.includes(plan.templateName);
   function phTpLetterText(name, plan) {
     const cur = phTpPlanCurrentPhase(plan);
     const lines = (plan.phases || []).map(p =>
@@ -29903,7 +30098,7 @@
           <label class="ph-gd-field"><span>🫀 Pulse</span><textarea rows="2" data-tp-field="${plan.id}:pulse" placeholder="Rate, depth, quality…">${esc(plan.pulse || "")}</textarea></label>
           <label class="ph-gd-field"><span>🤲 Abdomen</span><textarea rows="2" data-tp-field="${plan.id}:abdomen" placeholder="Fukushin findings…">${esc(plan.abdomen || "")}</textarea></label>
         </div>
-        ${phTpCycleBarHtml(plan)}
+        ${PH_TP_CYCLE_TEMPLATES.includes(plan.templateName) ? phCycleBarHtml(phPatientRec(phTpScreenPatient)) : ""}
         <div class="ph-tp-timeline">
           ${plan.phases.map(ph => phTpPhaseRowHtml(plan, ph)).join("")}
           <button type="button" class="ph-tp-addbtn" data-tp-phase-add="${plan.id}">+ Add phase</button>
@@ -29984,6 +30179,8 @@
       planDiagnosis: (activePlan && (activePlan.diagnosis || "").trim()) || "",
       planGoal: (activePlan && (activePlan.goal || "").trim()) || "",
       constitutionName: bt ? bt.name : "",
+      // 🩸 her cycle today, from the patient record (null when off / no LMP)
+      cycle: rec ? phCycleComp(rec) : null,
     };
   }
   // ---- the findings diagrams (her "more comprehensive" round, all four
@@ -30189,6 +30386,9 @@
       : `Your underlying constitution shapes how we choose and adjust your formulas over time — we'll keep building this picture together.` },
     seasonal: { label: "Diet & lifestyle", heading: "Diet & lifestyle", text: () => `Warm, regular meals will support the herbs' work — go gently on cold or raw foods while you're on this course, and let rest be part of the treatment too.` },
     expect: { label: "What to expect", heading: "What to expect", text: () => `Herbal treatment builds over the course of the batch — many people notice early shifts within the first week, with the fuller change settling in as we continue.` },
+    // 🩸 read from the patient's own cycle record (2026-09-04) -- switched
+    // off automatically by phLtrSeedOff when there's no LMP to read
+    cycleNow: { label: "Your cycle now", heading: "Your cycle right now", text: c => c.cycle ? phLtrCycleNowText(c.cycle) : `` },
     // the fertility stage tables (her reference letters, 2026-09-01 and a
     // third natural-conception letter 2026-09-03, rewritten in her voice --
     // structure + clinical stages + frequency only, the source clinics'
@@ -30196,7 +30396,7 @@
     stages: { label: "IVF stages", heading: "Your plan, stage by stage", fixed: true,
       html: () => phLtrStageTableHtml(PH_LTR_IVF_STAGES), text: () => phLtrStageTableText(PH_LTR_IVF_STAGES) },
     stagesNat: { label: "Cycle stages", heading: "Your plan, through the cycle", fixed: true,
-      html: () => phLtrStageTableHtml(PH_LTR_NAT_STAGES), text: () => phLtrStageTableText(PH_LTR_NAT_STAGES) },
+      html: c => phLtrStageTableHtml(PH_LTR_NAT_STAGES, phLtrNatHereIdx(c)), text: c => phLtrStageTableText(PH_LTR_NAT_STAGES, phLtrNatHereIdx(c)) },
     stagesPreg: { label: "Pregnancy stages", heading: "Your plan, through the pregnancy", fixed: true,
       html: () => phLtrStageTableHtml(PH_LTR_PREG_STAGES), text: () => phLtrStageTableText(PH_LTR_PREG_STAGES) },
     stagesMeno: { label: "Transition stages", heading: "Your plan, through the transition", fixed: true,
@@ -30239,8 +30439,21 @@
     ["Embryo transfer", "Day of — before & after (or within 24h)", "Opening the pathways through the uterus and increasing circulation beforehand; easing cramping and calming the mind after."],
     ["Two-week wait", "Weekly · herbs", "Easing stress and anxiety and supporting relaxation, while supporting what comes next."],
   ];
-  const phLtrStageTableHtml = rows => `<table class="ph-ltr-stages"><tr><th>Stage</th><th>How often</th><th>What it's for</th></tr>${rows.map(r => `<tr><td><b>${esc(r[0])}</b></td><td>${esc(r[1])}</td><td>${esc(r[2])}</td></tr>`).join("")}</table>`;
-  const phLtrStageTableText = rows => rows.map(r => `• ${r[0]} (${r[1]}) — ${r[2]}`).join("\n");
+  // hereIdx (2026-09-04): the row the patient is in right now, from her own
+  // cycle record -- marked on screen, in the PDF and in the copied text
+  const phLtrStageTableHtml = (rows, hereIdx) => `<table class="ph-ltr-stages"><tr><th>Stage</th><th>How often</th><th>What it's for</th></tr>${rows.map((r, i) => `<tr${i === hereIdx ? ` class="here"` : ""}><td><b>${esc(r[0])}</b>${i === hereIdx ? `<span class="ph-ltr-here">you are here</span>` : ""}</td><td>${esc(r[1])}</td><td>${esc(r[2])}</td></tr>`).join("")}</table>`;
+  const phLtrStageTableText = (rows, hereIdx) => rows.map((r, i) => `• ${r[0]}${i === hereIdx ? " ◂ you are here" : ""} (${r[1]}) — ${r[2]}`).join("\n");
+  const phLtrNatHereIdx = c => !c.cycle ? -1 : c.cycle.phaseKey === "ov" ? 1 : c.cycle.phaseKey === "luteal" ? 2 : 0;
+  function phLtrCycleNowText(cy) {
+    const where = cy.phaseKey === "period" ? "your period — the cycle clearing and resetting before the next follicle develops"
+      : cy.phaseKey === "foll" ? "the follicular phase, when the lining is building and the next follicle is developing"
+      : cy.phaseKey === "ov" ? "your ovulation window — the release we're supporting this visit"
+      : "the two-week wait, when the body is holding steady and supporting what may be beginning";
+    const next = cy.phaseKey === "luteal" || cy.phaseKey === "ov"
+      ? `Your next period is due around ${phFuDateLabel(cy.nextDate)}${cy.overdue ? " — it's running late, which is worth telling me about" : ""}.`
+      : `Ovulation is expected around ${phFuDateLabel(cy.ovDate)}, and your next period around ${phFuDateLabel(cy.nextDate)}.`;
+    return `You're on day ${cy.day} of your cycle — ${where}. That's the part of the plan this formula is working on. ${next}`;
+  }
   // nine built-in templates (her condition round, all wording approved in the
   // mock 2026-09-01): each condition tailors pattern / what-it's-for / diet /
   // what-to-expect via the same texts-override path her saved templates use
@@ -30272,19 +30485,19 @@
       seasonal: "Keep the evening light: earlier, smaller dinners, and caffeine before noon only. Screens brighten the mind the herbs are trying to settle — give yourself a low-light hour before bed when you can.",
       expect: "Sleep usually deepens in stages — falling asleep more easily comes first, often within a week or two; staying asleep and waking refreshed build over the course.",
     } },
-    { id: "menstrual", name: "🌺 Menstrual", secs: PH_LTR_COND_SECS, off: ["constitution"], texts: {
+    { id: "menstrual", name: "🌺 Menstrual", secs: ["greet", "findings", "pattern", "cycleNow", "constitution", "formula", "dose", "purpose", "seasonal", "expect", "nextvisit", "signoff"], off: ["constitution"], texts: {
       pattern: "We're regulating the cycle at its root — smoothing the flow of qi and blood so the cycle can run on time and without a fight.",
       purpose: "This formula works with your cycle's own phases — easing the discomfort now while correcting the pattern that drives it.",
       seasonal: "Warmth is your friend, especially the week before your period — warm food, warm feet, and a heat pack is real medicine. Go gently on cold drinks and icy food around your period.",
       expect: "Cycles answer in cycles — many people notice the next period is easier, with the fuller change settling in over two to three cycles.",
     } },
-    { id: "fertility", name: "🌱 Fertility", secs: ["greet", "findings", "pattern", "stagesNat", "constitution", "formula", "dose", "purpose", "seasonal", "expect", "nextvisit", "posttest", "signoff"], off: ["constitution"], texts: {
+    { id: "fertility", name: "🌱 Natural fertility", secs: ["greet", "findings", "pattern", "cycleNow", "stagesNat", "constitution", "formula", "dose", "purpose", "seasonal", "expect", "nextvisit", "posttest", "signoff"], off: ["constitution"], texts: {
       pattern: "We're supporting your fertility by working with each phase of your natural cycle — building circulation to the ovaries and uterus, helping your hormones find their rhythm, and giving your body what it needs to develop a healthy lining, so conception has the best conditions to happen naturally.",
       purpose: "This formula supports the phase of your cycle you're in right now — building blood flow and hormonal balance through the first half of the cycle, easing ovulation, then steadying you through the two-week wait.",
       seasonal: "Warm, regular meals and warm feet genuinely help here — think cooked breakfasts, soups and stews, and go gently on cold drinks and raw food. Gentle movement most days beats hard training.",
       expect: "Fertility work moves in cycles, not days — most people notice their cycle becoming more comfortable and regular over two to three cycles, as hormone regulation and the lining both settle into a steadier pattern. That's the foundation conception builds on.",
     } },
-    { id: "cycleivf", name: "🤍 Cycle & IVF", secs: ["greet", "findings", "stages", "pattern", "formula", "dose", "nextvisit", "posttest", "signoff"], off: [] },
+    { id: "cycleivf", name: "🤍 IVF", secs: ["greet", "findings", "cycleNow", "stages", "pattern", "formula", "dose", "nextvisit", "posttest", "signoff"], off: [] },
     { id: "pregnancy", name: "🤰 Pregnancy", secs: ["greet", "findings", "stagesPreg", "constitution", "formula", "dose", "nextvisit", "postnatal", "signoff"], off: ["constitution"] },
     { id: "menopause", name: "🌗 Menopause & peri", secs: ["greet", "findings", "pattern", "stagesMeno", "constitution", "formula", "dose", "purpose", "seasonal", "expect", "nextvisit", "signoff"], off: ["constitution"], texts: {
       pattern: "Menopause isn't an illness — it's a transition that can run rough or smooth. We're treating the pattern making yours rough: cooling the flaring heat, steadying mood and sleep, and nourishing the reserves this stage draws on.",
@@ -30310,6 +30523,12 @@
     if (phLtrSeeded.has(phLtrTmplId)) return;
     phLtrSeeded.add(phLtrTmplId);
     (phLtrTmpl().off || []).forEach(sec => phLtrOff.add(phLtrKey(sec)));
+    // 🩸 "Your cycle right now" only when there's a cycle to read
+    if ((phLtrTmpl().secs || []).includes("cycleNow")) {
+      const t = (PRESC.items || []).find(x => x.id === phLtrScriptId);
+      const rec = t ? phPatientPeek(presPatientFor(t) || t.name) : null;
+      if (!rec || !phCycleComp(rec)) phLtrOff.add(phLtrKey("cycleNow"));
+    }
   }
   function phLtrOpen(scriptId) {
     const t = PRESC.items.find(x => x.id === scriptId);
@@ -30403,6 +30622,7 @@
       table.ph-ltr-dose td:first-child{font-weight:bold;color:#0E4D2A}
       table.ph-ltr-stages{width:100%}table.ph-ltr-stages th{font-size:10px;text-transform:uppercase;text-align:left;color:#555;border-bottom:1px solid #999;padding:0 10px 6px 0}
       table.ph-ltr-stages td{padding:8px 10px 8px 0;border-bottom:1px solid #ddd;vertical-align:top}
+      table.ph-ltr-stages tr.here td{background:#fbeff2}.ph-ltr-here{display:block;font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#8a3b5a;margin-top:2px}
       .ph-ltr-findings{display:flex;gap:14px;flex-wrap:wrap}
       .ph-ltr-fnd{flex:1 1 170px;background:#F6FAF7;border-radius:11px;padding:10px 12px;text-align:center}
       .ph-ltr-fndsvg{width:100px;height:120px}.ph-ltr-fndsvg.wide{width:136px}
@@ -31714,6 +31934,8 @@
   // in memory). Its own row between Notes and Treatment plan; same open/
   // close + "start clean every time" posture as the rows above.
   let presAcuOpen = false, presAcuOutcomeDraft = null;
+  // 🩸 Cycle row (patient-level, 2026-09-04) open/closed in the panel
+  let presCycleOpen = false;
   // 🩸 Cycle timeline bar edit state (her ask, same session) -- whether the
   // LMP/length/flow/pain/regularity edit form is showing inside whichever
   // plan view is open (inline or the full-screen modal). Only meaningful on
