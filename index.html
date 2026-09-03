@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260904-110000">
+<meta name="lcm-build" content="20260904-120000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -1947,6 +1947,8 @@
   #pharmacyPage .ph-appt-kind.acu { background: var(--ph-blue-tint); color: var(--ph-blue-deep); }
   #pharmacyPage .ph-wkt-item .ph-appt-kind { height: 14px; font-size: 9px; padding: 0 4px; margin-left: 4px; }
   #pharmacyPage .ph-ck-kv .v .ph-appt-kind { margin-left: 0; margin-right: 2px; }
+  #pharmacyPage .ph-appt-kind + .ph-appt-kind { margin-left: 3px; }
+  #pharmacyPage .ph-appt-et { display: inline-flex; align-items: center; height: 16px; padding: 0 6px; border-radius: 999px; font-size: 9.5px; font-weight: 700; letter-spacing: .03em; line-height: 1; flex: none; margin-left: 4px; vertical-align: middle; background: var(--ph-snooze-tint); color: var(--ph-snooze-deep); white-space: nowrap; }
   /* the check-in trail inside the patient's History card, and under a Done row on the Follow-ups sheet */
   #pharmacyPage .ph-ck-hist { margin: 8px 0 4px; font-size: 12.5px; }
   #pharmacyPage .ph-ck-hist .k { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ph-faint); margin-bottom: 4px; }
@@ -16979,8 +16981,8 @@
     // the name (the name is the row's flexible track; a sibling would be
     // pushed to the far edge)
     const nm = script
-      ? `<button type="button" class="nm" data-ph-dash-pres-open="${script.id}" title="Open ${esc(phTitle(a.patient))}'s script">${esc(phTitle(a.patient))}${phApptKindHtml(a.service)}</button>`
-      : `<b>${esc(phTitle(a.patient))}${phApptKindHtml(a.service)}</b>`;
+      ? `<button type="button" class="nm" data-ph-dash-pres-open="${script.id}" title="Open ${esc(phTitle(a.patient))}'s script">${esc(phTitle(a.patient))}${phApptKindHtml(a.service)}${phApptEtHtml(a)}</button>`
+      : `<b>${esc(phTitle(a.patient))}${phApptKindHtml(a.service)}${phApptEtHtml(a)}</b>`;
     return `<div class="ph-week-detail-row"><span class="tm">${esc(a.time)}</span>${nm}${bell}${prepHtml}</div>`;
   }
   function phDashWeekDetailHtml(day, pharmRefill, pharmOrder) {
@@ -17114,14 +17116,34 @@
   function phApptKind(service) {
     const s = String(service || "").toLowerCase();
     if (/\bno\s*herbs?\b|without\s+herbs?|acu(puncture)?\s*only/.test(s)) return "acu";
-    if (phApptAllHerbs()) return "chm";            // explicit "no herbs" above still wins
+    if (phApptAllHerbs()) return "both";           // acupuncture + herbs (her pick, 2026-09-04); explicit "no herbs" above still wins
     if (!s) return "";
     if (/herb|chinese\s+medicine|\bchm\b|\btcm\b/.test(s)) return "chm";
     if (/acu/.test(s)) return "acu";
     return "";
   }
-  const PH_APPT_KIND_LABEL = { chm: "CHM", acu: "ACU" };
-  const phApptKindHtml = service => { const k = phApptKind(service); return k ? `<span class="ph-appt-kind ${k}" title="${k === "chm" ? "Chinese herbal medicine" : "Acupuncture only"}">${PH_APPT_KIND_LABEL[k]}</span>` : ""; };
+  const PH_APPT_KIND_LABEL = { chm: "CHM", acu: "ACU", both: "ACU + CHM" };
+  const phApptKindHtml = service => {
+    const k = phApptKind(service);
+    if (!k) return "";
+    if (k === "both") return `<span class="ph-appt-kind acu" title="Acupuncture">ACU</span><span class="ph-appt-kind chm" title="Chinese herbal medicine">CHM</span>`;
+    return `<span class="ph-appt-kind ${k}" title="${k === "chm" ? "Chinese herbal medicine" : "Acupuncture only"}">${PH_APPT_KIND_LABEL[k]}</span>`;
+  };
+  // Same patient twice in one day at the pregnancy clinic = embryo transfer
+  // day: the earlier slot is the pre-transfer session, the later the
+  // post-transfer one (her rule, 2026-09-04). Only under the all-herbs
+  // (acupreg) default -- a double booking at CBD stays plain.
+  function phApptEtLabel(a, list) {
+    if (!a || !a.patient || !phApptAllHerbs()) return "";
+    const k = phPatientKey(a.patient);
+    const same = (list || phApptFor(a.date)).filter(x => x.date === a.date && phPatientKey(x.patient) === k)
+      .sort((x, y) => x.time < y.time ? -1 : x.time > y.time ? 1 : 0);
+    if (same.length < 2) return "";
+    if (a.time === same[0].time) return "pre";
+    if (a.time === same[same.length - 1].time) return "post";
+    return "";
+  }
+  const phApptEtHtml = (a, list) => { const s = phApptEtLabel(a, list); return s ? `<span class="ph-appt-et" title="Same patient twice today — embryo transfer day">${s} transfer</span>` : ""; };
   function phApptFor(dayKey) {
     return phApptList().filter(a => a.date === dayKey)
       .sort((a, b) => a.time < b.time ? -1 : a.time > b.time ? 1 : 0);
@@ -17482,7 +17504,7 @@
     const importBtn = `<button type="button" class="btn-save" data-ph-appt-import="1">Import ${parsed.length} appointment${parsed.length === 1 ? "" : "s"}${byDay.length > 1 ? ` across ${byDay.length} days` : ""} ✓</button>`;
     const row = en => `<div class="ph-appt-prow${wdays0 && wdays0.includes(parseKey(en.date).getDay()) ? " wk" : ""}">
         <span class="tm">${esc(phCkTime12(en.time))}</span>
-        <b>${esc(en.patient)}</b>${phApptKindHtml(en.service)}
+        <b>${esc(en.patient)}</b>${phApptKindHtml(en.service)}${phApptEtHtml(en, parsed)}
         ${en.service ? `<span class="svc" title="${esc(en.service)}">${esc(en.service)}</span>` : ""}
         <span class="match${known.has(phPatientKey(en.patient)) ? "" : " new"}" title="${known.has(phPatientKey(en.patient)) ? "Matched to an existing patient" : "Not seen before — imports fine anyway"}">${known.has(phPatientKey(en.patient)) ? "✓ matched" : "new name"}</span>
       </div>`;
@@ -17537,7 +17559,7 @@
         <div class="ph-cap-sec">Booked ahead${upcomingAll.length ? ` <span class="faint">· ${upcomingAll.length} across ${new Set(upcomingAll.map(a => a.date)).size} days${upcomingAll.length > upcoming.length ? ` · first ${upcoming.length} shown` : ""}</span>` : ""}</div>
         ${upDays.length ? upDays.map(g => `<div class="ph-appt-dayhead">${esc(phFuDateLabel(g.date))} <span class="faint">· ${g.rows.length}</span></div>${g.rows.map(a => `<div class="ph-appt-prow${(w => w && w.includes(parseKey(a.date).getDay()))(phClinicWorkDays()) ? " wk" : ""}">
           <span class="tm">${esc(phCkTime12(a.time))}</span>
-          <b>${esc(phTitle(a.patient))}</b>${phApptKindHtml(a.service)}
+          <b>${esc(phTitle(a.patient))}</b>${phApptKindHtml(a.service)}${phApptEtHtml(a)}
           ${a.service ? `<span class="svc" title="${esc(a.service)}">${esc(a.service)}</span>` : ""}
           <button type="button" class="del" data-ph-appt-del="${a.id}" title="Remove this appointment" aria-label="Remove ${esc(phTitle(a.patient))}'s appointment">×</button>
         </div>`).join("")}`).join("") : `<div class="ph-appt-note">Nothing booked ahead yet.</div>`}
@@ -25744,7 +25766,7 @@
     const script = phApptScriptFor(k);
     const done = presDispenseOnDay(k, dayKey);
     const bell = phApptFuDue(k, dayKey) ? `<span class="bell" title="Follow-up due">🔔</span>` : "";
-    const nm = `<b>${esc(phTitle(a.patient))}</b>${phApptKindHtml(a.service)}${bell}`;
+    const nm = `<b>${esc(phTitle(a.patient))}</b>${phApptKindHtml(a.service)}${phApptEtHtml(a)}${bell}`;
     // acu-only with no herb script: LCM's job is the herb side (her scoping
     // rule) -- a quiet line, no dispense controls to reach for
     if (kind === "acu" && !script) {
@@ -25823,7 +25845,8 @@
       && (presTlStatus === "all" || r.status === presTlStatus)
       && (!q || phTitle(r.a.patient).toLowerCase().includes(q) || (r.script && ((r.script.formula || "") + " " + (r.script.ingredients || []).map(i => i.herb || i.name).join(" ")).toLowerCase().includes(q))));
     const schedRows = sched.filter(s => !q || (s.patient || s.patientName || "").toLowerCase().includes(q));
-    const chmN = appts.filter(a => phApptKind(a.service) !== "acu").length, acuN = appts.length - chmN;
+    const chmN = appts.filter(a => phApptKind(a.service) !== "acu").length;
+    const acuN = appts.filter(a => { const k = phApptKind(a.service); return k === "acu" || k === "both"; }).length;   // "both" = acupuncture + herbs, counts in each
     const doneN = appts.filter(a => presDispenseOnDay(phPatientKey(a.patient), dayKey)).length;
     const scripts = appts.map(a => phApptScriptFor(phPatientKey(a.patient))).filter(Boolean);
     const herbSet = new Set(); scripts.forEach(t => (t.ingredients || []).forEach(i => herbSet.add((i.herb || i.name || "").toLowerCase())));
@@ -25841,7 +25864,7 @@
       : r.kind === "acu" ? "acupuncture only" : "no script yet";
     const rowHtml = r => `<div class="ph-tl-row${r.done ? " done" : ""}">
       <span class="ph-tl-time">${esc(phCkTime12(r.a.time))}</span>${dot(r)}
-      <div class="ph-tl-mid"><div class="l1"><b>${esc(phTitle(r.a.patient))}</b>${phApptKindHtml(r.a.service)}${phApptFuDue(r.k, dayKey) ? `<span class="bell" title="Follow-up due">🔔</span>` : ""}</div><div class="l2">${line2(r)}</div></div>
+      <div class="ph-tl-mid"><div class="l1"><b>${esc(phTitle(r.a.patient))}</b>${phApptKindHtml(r.a.service)}${phApptEtHtml(r.a)}${phApptFuDue(r.k, dayKey) ? `<span class="bell" title="Follow-up due">🔔</span>` : ""}</div><div class="l2">${line2(r)}</div></div>
       <div class="ph-tl-end">${statusChip(r)}${action(r)}</div>
     </div>`;
     const schedHtml = s => { const t = PRESC.items.find(x => x.id === s.prescriptionId); const st = schedStatus(s); return `<div class="ph-tl-row sched">
@@ -27027,7 +27050,7 @@
           <span class="k">Dispensed</span><span class="v">${esc(c.dispensedLabel)}${c.lasts ? ` · lasts ${c.lasts} days` : ""}</span>
           <span class="k">Empty</span><span class="v${c.left != null && c.left <= 0 ? " warn" : ""}">${c.left == null ? "—" : c.left <= 0 ? `since ${esc(c.emptyLabel)}${c.left < 0 ? ` · ${-c.left} day${c.left === -1 ? "" : "s"} ago` : " · today"}` : `${esc(c.emptyLabel)} · ${c.left} day${c.left === 1 ? "" : "s"} left`}</span>
           <span class="k">Visits</span><span class="v">${c.scripts} script${c.scripts === 1 ? "" : "s"}${c.lastVisit ? ` · last ${esc(c.lastVisit)}` : ""}</span>
-          <span class="k">Booked</span><span class="v">${c.appt ? `<b>${esc(c.visitLabel)}</b> ${phApptKindHtml(c.appt.service)}${c.appt.service && c.appt.service !== "Booked (Cliniko)" ? ` <span class="faint">${esc(c.appt.service)}</span>` : ""}` : `<span class="faint">not booked</span>`}</span>
+          <span class="k">Booked</span><span class="v">${c.appt ? `<b>${esc(c.visitLabel)}</b> ${phApptKindHtml(c.appt.service)}${phApptEtHtml(c.appt)}${c.appt.service && c.appt.service !== "Booked (Cliniko)" ? ` <span class="faint">${esc(c.appt.service)}</span>` : ""}` : `<span class="faint">not booked</span>`}</span>
           ${c.cycle ? `<span class="k">Cycle</span><span class="v">${phCycleChipHtml(c.cycle)} <span class="faint">· ${c.cycle.phaseKey === "luteal" || c.cycle.phaseKey === "ov" ? "" : `ovulation ~${esc(phFuDateLabel(c.cycle.ovDate))} · `}period due ~${esc(phFuDateLabel(c.cycle.nextDate))}</span></span>` : ""}
         </div>
         ${c.note ? `<div class="ph-ck-note"><b>Review note</b>${esc(c.note)}</div>` : ""}
