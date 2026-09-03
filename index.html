@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260903-163000">
+<meta name="lcm-build" content="20260903-180000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -1918,6 +1918,22 @@
   #pharmacyPage .ph-file-btn { cursor: pointer; display: inline-flex; align-items: center; }
   #pharmacyPage .ph-cliniko-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   #pharmacyPage .ph-settings-check { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ph-soft); cursor: pointer; }
+  /* bulk re-type list (her ask 2026-09-03): a plain tick list in the sheet's
+     register -- 28px rows, grouped by why, the reason beside each name */
+  #pharmacyPage .ph-rt-list { max-height: 420px; overflow: auto; margin: 4px 0 12px; border-radius: 10px; background: var(--ph-paper); padding: 4px 0 6px; }
+  #pharmacyPage .ph-rt-group { display: flex; align-items: center; gap: 8px; padding: 10px 12px 4px; font-size: 10.5px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--ph-faint); }
+  #pharmacyPage .ph-rt-group .n { font-weight: 600; letter-spacing: 0; text-transform: none; font-size: 11.5px; }
+  #pharmacyPage .ph-rt-row { display: flex; align-items: center; gap: 10px; min-height: 28px; padding: 2px 12px; font-size: 12.5px; cursor: pointer; border-radius: 6px; }
+  #pharmacyPage .ph-rt-row:hover { background: var(--ph-white); }
+  #pharmacyPage .ph-rt-row input { flex: none; margin: 0; accent-color: var(--ph-green-deep); }
+  #pharmacyPage .ph-rt-row b { flex: 0 1 auto; min-width: 0; font-weight: 700; color: var(--ph-green-deep); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #pharmacyPage .ph-rt-row .why { flex: 1 1 auto; min-width: 0; color: var(--ph-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #pharmacyPage .ph-rt-row .meta { flex: none; color: var(--ph-faint); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+  #pharmacyPage .ph-rt-row.off b, #pharmacyPage .ph-rt-row.off .why { color: var(--ph-faint); text-decoration: line-through; }
+  @media (max-width: 900px) {
+    #pharmacyPage .ph-rt-row { flex-wrap: wrap; padding: 6px 10px; }
+    #pharmacyPage .ph-rt-row .why { flex-basis: 100%; padding-left: 26px; font-size: 11.5px; }
+  }
   /* CHM / ACU appointment flag (her ask 2026-09-03): read from the Cliniko
      service line; green = herbs, blue = acupuncture only. One tiny pill,
      the same wherever an appointment is drawn. */
@@ -15902,6 +15918,7 @@
         <p class="ph-settings-hint">The name shown on the location switcher, and this clinic's address. Switching between clinics is done from the switcher itself — at the bottom of the sidebar, or in the page header on a phone.</p>
         <div id="phLocPanel"></div>
       </div>
+      ${phRetypeSectionHtml()}
       <div class="ph-settings-sec">
         <h3>📇 Patient contacts from Cliniko</h3>
         <p class="ph-settings-hint">Export your patients from Cliniko (Patients → Export → CSV) and choose the file here. LCM reads each patient's mobile (or home / work) number, email and their next booked appointment — the check-in panel then shows the number and the booking, and This Week fills in. Only patients already in LCM are updated unless you tick the box. Nothing leaves this browser.</p>
@@ -20803,6 +20820,9 @@
       if (e.target.closest("[data-ck-save-tmpl]")) { phCkSaveTemplate(); return; }
       if (e.target.closest("[data-ck-copy]")) { phCkCopy(phCkCurrentText(), "✓ Message copied"); return; }
       if (e.target.closest("[data-ck-gmsg]")) { phCkOpenMessages(); return; }
+      // bulk re-type (Settings) -- see the BULK RE-TYPE section
+      if (e.target.closest("[data-ph-retype-apply]")) { phRetypeApply(); return; }
+      if (e.target.closest("[data-ph-retype-undo]")) { phRetypeUndoApply(); return; }
       if (e.target.closest("[data-ck-copy-num]")) { const row = phCkRow(); if (row) phCkCopy(phCkContext(row).phone, "✓ Number copied"); return; }
       const ckGoing = e.target.closest("[data-ck-going]");
       if (ckGoing && phCkForm) { phCkForm.going = phCkForm.going === ckGoing.dataset.ckGoing ? null : ckGoing.dataset.ckGoing; phCkRender(); return; }
@@ -25696,6 +25716,149 @@
     Object.keys(PHARMACY.patients || {}).forEach(k => keys.add(k));
     return keys;
   }
+  // ============================================================
+  // BULK RE-TYPE: scripts filed as patients that are really formulas
+  // (her ask 2026-09-03, "yes build the bulk re-type", after a full review of
+  // all 748 patient-typed scripts found 58 that are not people).
+  //
+  // Her own confirmations that settled the two ambiguous ones:
+  //   "XCHT Mick is formula based on Mick (practitioner) ratios"
+  //   "D formulas are from Robert Doane"        <- the whole "D " series
+  //
+  // The reviewed list is the SEED, not the rule: phRetypeCandidates() also
+  // catches anything new that exactly matches a jar name or is a vowel-less
+  // all-caps abbreviation, so this stays useful after today. PH_RETYPE_NEVER
+  // holds the five odd-looking names that were checked and ARE people —
+  // "Jennifer Jennifer" is in her Cliniko export, and "Ng"/"Liong" are not
+  // valid pinyin syllables, so those names cannot be formulas.
+  //
+  // This ONLY sets presType. Names, ingredients, prices, the log and every
+  // dispense record are untouched, and one Undo puts every presType back.
+  // ============================================================
+  const PH_RETYPE_GROUPS = {
+    jar: "Also a jar you stock",
+    abbr: "Formula name or abbreviation",
+    doane: "Robert Doane series",
+    cond: "Condition template",
+    admin: "Admin",
+  };
+  const PH_RETYPE_REVIEWED = [
+    ["3 Yellows", "jar"], ["Astringents", "jar"], ["Clear Skin", "jar"], ["Cold Breakers", "jar"],
+    ["Dizziness", "jar"], ["Early Pregnancy", "jar"], ["Hair Growth", "jar"], ["SPASM", "jar"],
+    ["Yi Guan Jian", "jar"], ["Zhe Chong Yin", "jar"],
+    ["BWJYT", "abbr"], ["CHGZGJT", "abbr"], ["DGBXT", "abbr"], ["DGYZ", "abbr"], ["GCXXT", "abbr"],
+    ["GGQLT", "abbr"], ["SYGCT", "abbr"], ["THSWT", "abbr"], ["WBLXS", "abbr"], ["XGJAT", "abbr"],
+    ["XCHT  BXHPT", "abbr"], ["Clear Skin 2", "abbr"], ["Fu Fang Hong Teng", "abbr"],
+    ["Jin Shui Huan Xian", "abbr"], ["GSDHT Egg Quality Mo", "abbr"], ["GSDHT EQ Linh", "abbr"],
+    ["XCHT Mick", "abbr"], ["Refill CHQGT", "abbr"],
+    ["D Allergy Blood Stas", "doane"], ["D Allergy Chronic", "doane"], ["D Bugs", "doane"],
+    ["D Chronic Stress", "doane"], ["D Clear Heat", "doane"], ["D Diuretic", "doane"],
+    ["D Dizziness", "doane"], ["D Happy", "doane"], ["D Happy Liver", "doane"], ["D HBS 1", "doane"],
+    ["D HBS2", "doane"], ["D Hemmorhoids", "doane"], ["D Liver Detox 204", "doane"],
+    ["D Lung PH", "doane"], ["D Resolve EM", "doane"], ["D Vitality", "doane"],
+    ["Cerebral Circulation", "cond"], ["Endo 1", "cond"], ["GallStone", "cond"],
+    ["Large Intestine", "cond"], ["Migraines", "cond"], ["Miscarriage Prevent", "cond"],
+    ["Nasal Congestion", "cond"], ["Phlegm, Bloating", "cond"], ["Post Ovu ET", "cond"],
+    ["Post Surgery", "cond"], ["Reynauds", "cond"], ["Uterine Prolapse", "cond"],
+    ["WarmBreakers/Softene", "cond"], ["Inventory Correction", "admin"],
+  ];
+  // checked during the review and confirmed to be real people — never flag these
+  const PH_RETYPE_NEVER = ["jennifer jennifer", "david linh", "astrid husband", "xin yi ng", "nian ci liong"];
+  const phRetypeKey = s => String(s || "").trim().toLowerCase().replace(/\s+/g, " ");
+  const PH_RETYPE_SEED = new Map(PH_RETYPE_REVIEWED.map(([n, g]) => [phRetypeKey(n), g]));
+  let phRetypeUnticked = new Set();   // session-only: rows she has turned off
+  let phRetypeDone = null;            // { n, at } after an apply, so the strip can say what happened
+  // every patient-typed script that looks like a formula, with the reason
+  function phRetypeCandidates() {
+    const jars = new Map();
+    (PHARMACY.herbs || []).forEach(h => { if (phIsFormula(h)) jars.set(phRetypeKey(h.name), h.name); });
+    const out = [];
+    (PRESC.items || []).forEach(t => {
+      if (presIsFormula(t)) return;                       // already a formula, nothing to do
+      const k = phRetypeKey(t.name);
+      if (!k || PH_RETYPE_NEVER.includes(k)) return;
+      let group = PH_RETYPE_SEED.get(k) || "";
+      let why = "";
+      if (jars.has(k)) { group = group || "jar"; why = `same name as your “${jars.get(k)}” jar`; }
+      else if (/^[A-Z]{4,10}$/.test((t.name || "").trim()) && !/[AEIOU]{2}/.test((t.name || "").trim())) { group = group || "abbr"; why = "an all-capitals formula abbreviation"; }
+      if (!group) return;
+      if (!why) why = group === "doane" ? "part of the Robert Doane series"
+        : group === "abbr" ? "a formula name or abbreviation"
+        : group === "cond" ? "a condition or treatment name, not a person"
+        : group === "admin" ? "a stock adjustment, not a patient" : "";
+      out.push({ t, group, why, ings: (t.ingredients || []).length });
+    });
+    const order = ["jar", "abbr", "doane", "cond", "admin"];
+    return out.sort((a, b) => (order.indexOf(a.group) - order.indexOf(b.group)) || a.t.name.toLowerCase().localeCompare(b.t.name.toLowerCase()));
+  }
+  const phRetypeTicked = list => list.filter(c => !phRetypeUnticked.has(c.t.id));
+  function phRetypeSectionHtml() {
+    const list = phRetypeCandidates();
+    const undoable = (PHARMACY.retypeUndo || []).length;
+    if (!list.length) {
+      return `<div class="ph-settings-sec">
+        <h3>🧪 Formulas filed as patients</h3>
+        <p class="ph-settings-hint">${phRetypeDone ? `Re-typed ${phRetypeDone.n} script${phRetypeDone.n === 1 ? "" : "s"}. They now sit with your formulas instead of your patients.` : "Nothing to tidy — every script filed as a patient looks like a person."}</p>
+        ${undoable ? `<div class="ph-settings-actions"><button type="button" class="btn-cancel" data-ph-retype-undo="1">↺ Undo the last re-type (${undoable})</button></div>` : ""}
+      </div>`;
+    }
+    const dispensed = new Set((PHARMACY.log || []).filter(e => (!e.kind || e.kind === "dispense") && e.patient).map(e => phRetypeKey(e.patient)));
+    const ticked = phRetypeTicked(list).length;
+    let lastGroup = "";
+    const rows = list.map(c => {
+      const head = c.group === lastGroup ? "" : `<div class="ph-rt-group">${PH_RETYPE_GROUPS[c.group]}<span class="n">${list.filter(x => x.group === c.group).length}</span></div>`;
+      lastGroup = c.group;
+      const on = !phRetypeUnticked.has(c.t.id);
+      return `${head}<label class="ph-rt-row${on ? "" : " off"}">
+        <input type="checkbox" data-ph-retype-tick="${c.t.id}"${on ? " checked" : ""} aria-label="Re-type ${esc(c.t.name)} as a formula">
+        <b>${esc(c.t.name)}</b>
+        <span class="why">${esc(c.why)}</span>
+        <span class="meta">${c.ings} herb${c.ings === 1 ? "" : "s"}${dispensed.has(phRetypeKey(c.t.name)) ? "" : " · draft"}</span>
+      </label>`;
+    }).join("");
+    return `<div class="ph-settings-sec">
+      <h3>🧪 Formulas filed as patients</h3>
+      <p class="ph-settings-hint">These ${list.length} scripts are filed as patients but read as formulas, house blends, condition templates or stock adjustments. Re-typing moves them in with your formulas, takes them out of the patient list and clears their “Draft” chips. Nothing else changes — names, herbs, prices and every dispense record stay exactly as they are, and one Undo puts it all back. Untick anything you want left alone.</p>
+      <div class="ph-rt-list">${rows}</div>
+      <div class="ph-settings-actions">
+        <button type="button" class="btn-save" data-ph-retype-apply="1"${ticked ? "" : " disabled"}>Re-type ${ticked} script${ticked === 1 ? "" : "s"} as formulas</button>
+        ${undoable ? `<button type="button" class="btn-cancel" data-ph-retype-undo="1">↺ Undo the last re-type (${undoable})</button>` : ""}
+      </div>
+    </div>`;
+  }
+  // the only field this writes. Same convention presCommitTemplateFields uses:
+  // store the override only when the NAME doesn't already say formula.
+  function phRetypeApply() {
+    const list = phRetypeTicked(phRetypeCandidates());
+    if (!list.length) return;
+    const undo = [];
+    list.forEach(({ t }) => {
+      undo.push({ id: t.id, prev: t.presType == null ? null : t.presType });
+      t.presType = presIsFormula({ name: t.name, abbr: t.abbr }) ? "" : "formula";
+    });
+    PHARMACY.retypeUndo = undo;
+    phRetypeDone = { n: undo.length };
+    savePresc(); savePharmacy();
+    phFlashShow(`✓ ${undo.length} script${undo.length === 1 ? "" : "s"} re-typed as formulas`);
+    renderPharmacy();
+  }
+  function phRetypeUndoApply() {
+    const undo = PHARMACY.retypeUndo || [];
+    if (!undo.length) return;
+    let n = 0;
+    undo.forEach(u => {
+      const t = (PRESC.items || []).find(x => x.id === u.id);
+      if (!t) return;
+      if (u.prev == null) delete t.presType; else t.presType = u.prev;
+      n++;
+    });
+    PHARMACY.retypeUndo = [];
+    phRetypeDone = null;
+    phRetypeUnticked = new Set();
+    savePresc(); savePharmacy();
+    phFlashShow(`↺ ${n} script${n === 1 ? "" : "s"} put back as patients`);
+    renderPharmacy();
+  }
   function phClinikoImport(text, includeAll, fileName) {
     const rows = phCsvParse(text);
     if (rows.length < 2) return { error: "That file has no patient rows." };
@@ -25900,6 +26063,22 @@
   // a number or email typed in the panel is saved to the patient on change
   // (Enter / leaving the field) -- phoneFrom stays empty for a typed number
   document.addEventListener("change", e => {
+    // bulk re-type tick boxes: only the button count re-renders, so her scroll
+    // position and the rest of the list stay put while she works down it
+    const tick = e.target && e.target.closest ? e.target.closest("[data-ph-retype-tick]") : null;
+    if (tick) {
+      const id = tick.dataset.phRetypeTick;
+      if (tick.checked) phRetypeUnticked.delete(id); else phRetypeUnticked.add(id);
+      const row = tick.closest(".ph-rt-row");
+      if (row) row.classList.toggle("off", !tick.checked);
+      const btn = document.querySelector("[data-ph-retype-apply]");
+      if (btn) {
+        const n = phRetypeTicked(phRetypeCandidates()).length;
+        btn.textContent = `Re-type ${n} script${n === 1 ? "" : "s"} as formulas`;
+        btn.disabled = !n;
+      }
+      return;
+    }
     const inp = e.target && e.target.closest ? e.target.closest('[data-ck-input="phone"], [data-ck-input="email"]') : null;
     if (!inp) return;
     const row = phCkRow(); if (!row) return;
