@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260904-034000">
+<meta name="lcm-build" content="20260904-041500">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -4880,9 +4880,17 @@
     position: relative; z-index: 41;
   }
   #pharmacyPage .ph-pres-history .ph-pres-template-head { margin-top: 0; padding-top: 0; border-top: none; margin-bottom: 4px; }
-  #pharmacyPage .ph-hist-ings { font-size: 11.5px; color: var(--ph-soft); margin-top: 2px; }
-  #pharmacyPage .ph-hist-ings > div { padding: 1px 0; }
-  #pharmacyPage .ph-hist-undo { font-size: 13px; }
+  /* code7 fit (2026-09-04): herbs as one flowing pin-yin list -- each name
+     stays on its own line-piece (nowrap) and the list wraps as a whole, so
+     it fits a 214px column and a 450px one without a 2-column grid */
+  #pharmacyPage .ph-hist-ings { display: flex; flex-wrap: wrap; gap: 1px 10px; font-size: 11.5px; color: var(--ph-soft); margin-top: 3px; }
+  #pharmacyPage .ph-hist-ings > span { white-space: nowrap; }
+  #pharmacyPage .ph-hist-ings > span b { font-weight: 600; color: var(--ph-ink); margin-left: 3px; font-variant-numeric: tabular-nums; }
+  #pharmacyPage .ph-hist-undo { font-size: 11px; padding: 0; margin-left: auto; }
+  #pharmacyPage .ph-hist-date { font: inherit; font-size: 11.5px; font-weight: 700; color: var(--ph-green-deep); background: none; border: 0; padding: 0; cursor: pointer; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  #pharmacyPage .ph-hist-visit-g { font-size: 11.5px; font-weight: 600; color: var(--ph-ink); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  #pharmacyPage .ph-hist-visit-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 1px; font-size: 10.5px; color: var(--ph-soft); }
+  #pharmacyPage .ph-hist-visit-meta .ph-hist-time { display: inline; }
   /* round-3 redesign (2026-09-03): the old <table class="ph-hist-table"> of
      dispenses is gone -- one card per visit, .ph-hist-ings goes 2-up so a
      typical 5-herb formula costs 3 lines instead of a long stack, and any
@@ -4890,8 +4898,8 @@
      right underneath it instead of in a separate list further down. */
   #pharmacyPage .ph-hist-visit { padding: 6px 0; border-top: 1px solid var(--ph-line); }
   #pharmacyPage .ph-hist-visit:first-child { border-top: none; padding-top: 2px; }
-  #pharmacyPage .ph-hist-visit-top { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-  #pharmacyPage .ph-hist-visit-what { font-weight: 600; color: var(--ph-ink, #16281D); font-size: 12px; flex: 1 1 auto; min-width: 0; }
+  #pharmacyPage .ph-hist-visit-top { display: flex; align-items: baseline; gap: 8px; flex-wrap: nowrap; min-width: 0; }
+  #pharmacyPage .ph-hist-visit-what { font-weight: 600; color: var(--ph-ink, #16281D); font-size: 12px; flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #pharmacyPage .ph-hist-visit-price { color: var(--ph-soft); font-size: 11.5px; white-space: nowrap; }
   #pharmacyPage .ph-hist-ings.two { display: grid; grid-template-columns: 1fr 1fr; column-gap: 10px; }
   #pharmacyPage .ph-hist-outcome {
@@ -12465,6 +12473,11 @@
   // the two exceptions (formulas keep their whole name; a pin yin shared by two
   // stocked items keeps its full name so they stay tellable apart).
   const phHerbLabel = h => { const s = phActiveSupplier(h); return `${s && s.code ? s.code + " — " : ""}${phPinyinName(h)}`; };
+  // some older log text carries UTF-8 read back as Latin-1 ("Â·", "â€“") --
+  // seen in her History card 2026-09-04. Repaired at display time only; the
+  // stored record is left as it is.
+  const PH_MOJIBAKE = [["â€“", "–"], ["â€”", "—"], ["â€™", "'"], ["â€˜", "'"], ["â€œ", "“"], ["â€", "”"], ["â€¦", "…"], ["Â·", "·"], ["Â ", " "], ["Ã©", "é"]];
+  const phFixText = s => { let t = String(s == null ? "" : s); if (!/[Ââ]/.test(t)) return t; PH_MOJIBAKE.forEach(([a, b]) => { t = t.split(a).join(b); }); return t; };
   // her ask (2026-08-06, extended STEP 8g 2026-08-11): a herb can now carry
   // more than one supplier, each with its own bottle price AND their own code
   // for this herb (folded in from the old flat Koda/Evergreen/GMP/LYT/HH/MIC
@@ -29285,10 +29298,16 @@
   // writes) renders directly underneath it, replacing the old separate
   // Check-ins list (phCkHistoryHtml, retired). Undo, the click-to-edit date
   // and the visitTime "booked-visit" pill are all unchanged from the table.
+  // code7 fit (her ask 2026-09-04 "find a way to fit the history"): measured
+  // live, this column is ~214px at 1280 and ~450px on her screen, and the
+  // old card put six things in one wrapping row (79px tall at 214px) plus a
+  // 2-column grid of full latin names. Now: TWO fixed lines up top (date ·
+  // what · grams, then the quiet time · visit · price · ↩ line), herbs as
+  // one flowing pin-yin list that fits any width, dosage de-mojibaked.
   function presHistVisitCardHtml(e) {
     const d = parseKey(e.date);
     const ings = Array.isArray(e.items) && e.items.length
-      ? `<div class="ph-hist-ings two">${e.items.slice().sort(presIngSort).map(i => `<div>${esc(phDispName(i.name))}${i.grams != null ? " " + phFmtG(i.grams) + "g" : ""}</div>`).join("")}</div>` : "";
+      ? `<div class="ph-hist-ings">${e.items.slice().sort(presIngSort).map(i => `<span>${esc(phPinyinName({ name: i.name }))}${i.grams != null ? `<b>${phFmtG(i.grams)}</b>` : ""}</span>`).join("")}</div>` : "";
     const arming = presHistUndoId === e.id;
     const fu = (PHARMACY.followups || []).find(r => r.logId === e.id);
     const ck = fu && fu.checkins && fu.checkins.length ? fu.checkins.slice().sort((a, b) => (b.at || 0) - (a.at || 0))[0] : null;
@@ -29297,15 +29316,18 @@
       <div class="ph-hist-visit-top">
         ${phLogDateEdit === e.id && phLogDateEditSrc === "hist"
           ? `<input type="date" class="ph-qty-input" data-ph-log-date-edit="${e.id}" value="${e.date}" aria-label="Date for ${esc(phDispName(e.what))}">`
-          : `<button type="button" class="ph-qty-lock" data-ph-log-date-unlock="${e.id}" title="Click to edit the date">${d.getDate()} ${MON_SHORT[d.getMonth()]} ${d.getFullYear()}</button>`}
-        <span class="ph-hist-visit-what">${phNameHtml(e.what)}${e.grams ? ` · ${phFmtG(e.grams)}g` : ""}</span>
+          : `<button type="button" class="ph-hist-date" data-ph-log-date-unlock="${e.id}" title="Click to edit the date">${d.getDate()} ${MON_SHORT[d.getMonth()]}${d.getFullYear() !== TODAY.getFullYear() ? ` ${d.getFullYear()}` : ""}</button>`}
+        <span class="ph-hist-visit-what" title="${esc(phDispName(e.what))}">${phNameHtml(e.what)}</span>
+        ${e.grams ? `<span class="ph-hist-visit-g">${phFmtG(e.grams)}g</span>` : ""}
+      </div>
+      <div class="ph-hist-visit-meta">
         ${e.at ? `<span class="ph-hist-time">${presTimeStr(new Date(e.at))}</span>` : ""}
         ${e.visitTime ? `<span class="ph-pill visit" title="Dispensed while she was booked in">${esc(phCkTime12(e.visitTime))} visit</span>` : ""}
         <span class="ph-hist-visit-price">${e.price != null ? phMoney(e.price) : "—"}</span>
-        ${arming ? "" : `<button type="button" class="tab-link ph-hist-undo" data-pres-hist-undo="${e.id}" title="Undo this dispense">↩</button>`}
+        ${arming ? "" : `<button type="button" class="tab-link ph-hist-undo" data-pres-hist-undo="${e.id}" title="Undo this dispense">↩ undo</button>`}
       </div>
       ${ings}
-      ${e.dosage ? `<div class="ph-log-deduct">${esc(e.dosage)}</div>` : ""}
+      ${e.dosage ? `<div class="ph-log-deduct">${esc(phFixText(e.dosage))}</div>` : ""}
       ${ck ? `<div class="ph-hist-outcome ${esc(ck.going || "")}">↳ check-in ${esc(phFuDateLabel(ck.date))} · <b>${esc(ckLabel)}</b>${ck.note ? ` — ${esc(ck.note)}` : ""}</div>` : ""}
       ${arming ? `<div class="ph-confirm-strip"><span>Undo <b>${esc(phDispName(e.what))}</b>? The deducted stock goes back on the shelf and it leaves the log.</span><button type="button" class="btn-save" data-pres-hist-undo-yes="${e.id}">↩ Yes, undo</button><button type="button" class="btn-cancel" data-pres-hist-undo-no="1">Cancel</button></div>` : ""}
     </div>`;
