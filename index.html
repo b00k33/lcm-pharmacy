@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260903-133000">
+<meta name="lcm-build" content="20260903-150000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -1912,6 +1912,12 @@
   #pharmacyPage .ph-ds-links .ph-os-lnk { margin-left: 0; }
   #pharmacyPage .ph-ds-links + .ph-os-chev { margin-left: 4px; }   /* the chevron's own auto margin would otherwise split the space */
   #pharmacyPage a.ph-os-lnk { text-decoration: none; }
+  #pharmacyPage .ph-ck-kv .v .faint { color: var(--ph-faint); font-weight: 500; }
+  #pharmacyPage .ph-ck-phone .ph-ck-lnk.src { color: var(--ph-green-deep); text-align: left; }
+  /* Settings: the Cliniko export picker (a label styled as the shared button) */
+  #pharmacyPage .ph-file-btn { cursor: pointer; display: inline-flex; align-items: center; }
+  #pharmacyPage .ph-cliniko-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  #pharmacyPage .ph-settings-check { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ph-soft); cursor: pointer; }
   /* the check-in trail inside the patient's History card, and under a Done row on the Follow-ups sheet */
   #pharmacyPage .ph-ck-hist { margin: 8px 0 4px; font-size: 12.5px; }
   #pharmacyPage .ph-ck-hist .k { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ph-faint); margin-bottom: 4px; }
@@ -15869,6 +15875,15 @@
         <p class="ph-settings-hint">The name shown on the location switcher, and this clinic's address. Switching between clinics is done from the switcher itself — at the bottom of the sidebar, or in the page header on a phone.</p>
         <div id="phLocPanel"></div>
       </div>
+      <div class="ph-settings-sec">
+        <h3>📇 Patient contacts from Cliniko</h3>
+        <p class="ph-settings-hint">Export your patients from Cliniko (Patients → Export → CSV) and choose the file here. LCM reads each patient's mobile (or home / work) number, email and their next booked appointment — the check-in panel then shows the number and the booking, and This Week fills in. Only patients already in LCM are updated unless you tick the box. Nothing leaves this browser.</p>
+        <div class="ph-settings-actions ph-cliniko-row">
+          <label class="ph-load-btn ph-file-btn">📇 Choose the Cliniko export<input type="file" id="phClinikoCsv" accept=".csv,text/csv" hidden></label>
+          <label class="ph-settings-check"><input type="checkbox" id="phClinikoAll"> Also add patients not yet in LCM</label>
+        </div>
+        <div class="ph-settings-hint" id="phClinikoResult">${PHARMACY.clinikoImport ? `Last import ${esc(phFuDateLabel(PHARMACY.clinikoImport.on))}: ${esc(PHARMACY.clinikoImport.summary)}` : "No export imported yet."}</div>
+      </div>
       ${phSettingsStorageHtml()}
     </section>`;
     renderPhLocBar();
@@ -16786,7 +16801,7 @@
       // overwritten by a later paste unless the paste's number differs.
       if (en.phone) {
         const pr = phPatientRec(en.patient);
-        if (pr && pr.phone !== en.phone) { pr.phone = en.phone; pr.phoneFrom = en.date; }
+        if (pr && pr.phone !== en.phone) { pr.phone = en.phone; pr.phoneFrom = en.date; pr.phoneSrc = "list"; }
       }
       const dupe = list.find(a => a.date === en.date && a.time === en.time && phPatientKey(a.patient) === k);
       if (dupe) { if (en.service) dupe.service = en.service; if (en.phone) dupe.phone = en.phone; return; }
@@ -17122,7 +17137,7 @@
         <span class="ic"><svg class="icn" aria-hidden="true"><use href="#i-clock"/></svg></span>
         <button type="button" class="nm ph-name-link" data-ck-open="${row.rec.id}:${row.kind}">${esc(phTitle(row.rec.patient))}</button>
         <span class="ago">${esc(phFuRelDay(row.on))}</span>
-        <span class="meta">${row.kind === "checkin" ? "check-in" : row.kind === "review" ? "review" : "check-in & review"}${row.snoozed ? " · no reply yet" : ""}</span>
+        <span class="meta">${row.kind === "checkin" ? "check-in" : row.kind === "review" ? "review" : "check-in & review"}${row.snoozed ? " · no reply yet" : ""}${esc(phCkBookedLabel(row.rec))}</span>
         <button type="button" class="ph-load-btn" data-ck-open="${row.rec.id}:${row.kind}">${open ? "Close" : row.kind === "checkin" ? "Check in" : "Review"}</button>
       </div>${open ? phCkPanelHtml(row) : ""}`; }).join("")}
       ${due.length > shown.length ? `<div class="ph-dash-seeall"><button type="button" class="ph-name-link" data-ph-tab="followups">See all ${due.length} →</button></div>` : ""}</div>`;
@@ -17318,7 +17333,7 @@
       const open = phCkIsOpen(row);
       return `<div class="ph-ds-row${open ? " ck-open" : ""}">
         <div class="st"><span class="glyph"><svg class="icn" aria-hidden="true"><use href="#i-clock"/></svg></span><span class="date hot">${esc(phFuRelDay(row.on))}</span></div>
-        <div class="nm"><button type="button" class="ph-name-link" data-ck-open="${rec.id}:${row.kind}">${esc(phTitle(rec.patient))}</button><span class="kind">${row.kind === "checkin" ? "check-in" : row.kind === "review" ? "review" : "check-in & review"}${row.snoozed ? " · no reply yet" : ""}</span></div>
+        <div class="nm"><button type="button" class="ph-name-link" data-ck-open="${rec.id}:${row.kind}">${esc(phTitle(rec.patient))}</button><span class="kind">${row.kind === "checkin" ? "check-in" : row.kind === "review" ? "review" : "check-in & review"}${row.snoozed ? " · no reply yet" : ""}${esc(phCkBookedLabel(row.rec))}</span></div>
         <div>${lvl}</div>
         <div class="cover${coverCls}">${cover}</div>
         <div class="faint" title="${esc(use)}">${use}</div>
@@ -24655,7 +24670,7 @@
       return `<div class="ph-ds-row ph-fs-row${r.done ? " done" : ""}${open ? " ck-open" : ""}" data-fu-row-toggle="${rec.id}:${r.kind}">
         <div class="st"><span class="glyph"><svg class="icn" aria-hidden="true"><use href="#i-clock"/></svg></span><span class="date${tone}">${esc(phFuRelDay(r.on))}</span>${phFuOnWorkDay(r.on) ? `<span class="ph-fs-wk" title="Clinic day"></span>` : ""}</div>
         <div class="nm"><b>${esc(phTitle(rec.patient))}</b>${f ? `<span class="kind">${f}</span>` : ""}</div>
-        <div><span class="ph-ds-pill ${r.done ? "done" : r.kind}">${kindLabel}</span>${r.collapsed ? `<span class="ph-fs-sub">short script</span>` : r.snoozed && !r.done ? `<span class="ph-fs-sub">no reply yet</span>` : ""}</div>
+        <div><span class="ph-ds-pill ${r.done ? "done" : r.kind}">${kindLabel}</span>${r.collapsed ? `<span class="ph-fs-sub">short script</span>` : r.snoozed && !r.done ? `<span class="ph-fs-sub">no reply yet</span>` : ""}${!r.done && phCkBookedLabel(rec) ? `<span class="ph-fs-sub">${esc(phCkBookedLabel(rec).replace(" · ", ""))}</span>` : ""}</div>
         <div class="soft">${phFuDateLabel(rec.dispensedDate)}<span class="ph-fs-sub">${phFmtG(rec.gramsDispensed)}g</span></div>
         <div>${phFuLevelBarHtml(lv, rec)}</div>
         <div class="soft ph-fs-empty${lv ? " " + lv.tone : ""}" title="${rec.weekdaysOnly ? "Weekdays only" : ""}">${!lv ? "—" : lv.left <= 0 ? `<b>empty</b><span class="ph-fs-sub">since ${esc(phFuDateLabel(rec.emptyOn))}</span>` : `<b>${lv.left} d left</b><span class="ph-fs-sub">${esc(phFuDateLabel(rec.emptyOn))}${rec.weekdaysOnly ? " · wkdays" : ""}</span>`}</div>
@@ -25523,7 +25538,7 @@
   const PH_CK_ME = "Linh";  // sign-off name; the clinic name comes from Settings (PHARMACY.locName)
   const PH_CK_GOING = [["better", "Better"], ["same", "Same"], ["worse", "Worse"], ["noreply", "No reply yet"]];
   const PH_CK_CONCERNS = [["allergy", "Allergy"], ["nausea", "Nausea"], ["digestion", "Bloating / digestion"], ["sleep", "Sleep"]];
-  const PH_CK_NEXT = [["continue", "Continue as is"], ["adjust", "Adjust formula"], ["visit", "Book a visit"], ["finished", "Course finished"]];
+  const PH_CK_NEXT = [["continue", "Continue as is"], ["adjust", "Adjust formula"], ["visit", "Book a visit"], ["finished", "Course finished"], ["booked", "Already booked"]];
   const PH_CK_TMPLS = [["checkin", "Check-in"], ["review", "Review"], ["running", "Running out"], ["rebook", "Rebook"]];
   const phCkClinic = () => (PHARMACY.locName || "").trim() || "LCM";
   const phCkFirst = name => { const t = phTitle(name || "").trim(); return t.split(/\s+/)[0] || t; };
@@ -25535,15 +25550,15 @@
     if (kind === "running") return "Hi {first}, it's {me} from {clinic}. Just a reminder that your {herbs} will run out around {empty} — would you like the next batch made up so there's no gap? {me}";
     if (kind === "rebook") return "Hi {first}, it's {me} from {clinic}. It's a good time to book your next visit so we can review how you've gone on the {herbs}. Let me know which days suit you. {me}";
     const when = c.left == null || !c.emptyLabel ? "should be finishing about now" : c.left > 0 ? "will run out around {empty}" : "would have finished around {empty}";
-    return `Hi {first}, it's {me} from {clinic}. Your {herbs} ${when}. How have you been going with them — any changes, or any side effects? Let me know if you'd like the next batch made up, or we can go over it at your next visit. {me}`;
+    return `Hi {first}, it's {me} from {clinic}. Your {herbs} ${when}. How have you been going with them — any changes, or any side effects? Let me know if you'd like the next batch made up, or we can go over it at {visit}. {me}`;
   }
-  const phCkFill = (text, c) => String(text || "").replace(/\{first\}/g, c.first).replace(/\{herbs\}/g, c.herbs).replace(/\{empty\}/g, c.emptyLabel || "soon").replace(/\{clinic\}/g, c.clinic).replace(/\{me\}/g, PH_CK_ME);
+  const phCkFill = (text, c) => String(text || "").replace(/\{first\}/g, c.first).replace(/\{herbs\}/g, c.herbs).replace(/\{empty\}/g, c.emptyLabel || "soon").replace(/\{clinic\}/g, c.clinic).replace(/\{visit\}/g, c.visit || "your next visit").replace(/\{me\}/g, PH_CK_ME);
   // ＋ Save mine: her edited text with this patient's particulars turned back
   // into tokens, so the next patient's name / formula / date fill in
   function phCkTokenise(text, c) {
     let t = String(text || "");
     const swap = (val, tok) => { if (val && val.length > 1) t = t.split(val).join(tok); };
-    swap(c.first, "{first}"); swap(c.herbs, "{herbs}"); swap(c.emptyLabel, "{empty}"); swap(c.clinic, "{clinic}"); swap(PH_CK_ME, "{me}");
+    swap(c.first, "{first}"); swap(c.herbs, "{herbs}"); swap(c.emptyLabel, "{empty}"); swap(c.clinic, "{clinic}"); swap(c.visit, "{visit}"); swap(PH_CK_ME, "{me}");
     return t;
   }
   const phCkTemplate = (kind, c) => phCkFill(phCkUserTmpls()[kind] || phCkBuiltin(kind, c), c);
@@ -25571,6 +25586,124 @@
     phCkRender();
   }
   const phCkGmsgLinkHtml = () => `<a class="ph-os-lnk" href="${PH_CK_GMSG_HOME}" target="${PH_CK_GMSG_TARGET}" rel="noopener" title="Google Messages for web, in its own tab">Messages <span class="ext">↗</span></a>`;
+  // ---- "already booked" awareness (her ask 2026-09-03: "i already have this
+  // patient booked for a followup. how to auto retrieve this data from
+  // cliniko") -- the next upcoming appointment for a patient, from the same
+  // PHARMACY.appointments the day-list paste and the Cliniko export both
+  // feed. The panel shows it, the Next chip becomes "Booked ✓", the message
+  // says "your visit on Fri 4 Sep", and every follow-up row carries
+  // "· booked Fri 4 Sep" so she never chases someone who is coming in.
+  function phCkNextAppt(patientKey) {
+    if (!patientKey) return null;
+    const todayKey = keyOf(TODAY);
+    return phApptList().filter(a => a.date >= todayKey && phPatientKey(a.patient) === patientKey)
+      .sort((a, b) => (a.date + a.time) < (b.date + b.time) ? -1 : 1)[0] || null;
+  }
+  const phCkTime12 = t => { const m = /^(\d{1,2}):(\d{2})/.exec(t || ""); if (!m) return t || ""; const h = +m[1]; return `${h % 12 || 12}:${m[2]} ${h < 12 ? "am" : "pm"}`; };
+  const phCkBookedLabel = rec => { const a = phCkNextAppt(rec.patientKey || phPatientKey(rec.patient)); return a ? ` · booked ${phFuDateLabel(a.date)}` : ""; };
+  // ---- Cliniko patient export (her ask 2026-09-03: "can i upload patient
+  // phone number file to add to patient files?") -- Cliniko → Patients →
+  // Export gives a CSV with First/Last/Preferred First Name, Email, Mobile/
+  // Home/Work Phones and Next Appointment ("YYYY-MM-DD HH:MM:SS +1000"),
+  // so ONE file supplies numbers, emails AND bookings. Read entirely in the
+  // browser; by default only patients already in LCM are written (268 rows
+  // of strangers would just bloat the 5 MB store -- see the shared-origin
+  // quota note); "add everyone" is her explicit tick. ----
+  function phCsvParse(text) {
+    const rows = []; let row = [], field = "", q = false;
+    const s = String(text || "").replace(/^﻿/, "");
+    for (let i = 0; i < s.length; i++) {
+      const ch = s[i];
+      if (q) {
+        if (ch === '"') { if (s[i + 1] === '"') { field += '"'; i++; } else q = false; }
+        else field += ch;
+      } else if (ch === '"') q = true;
+      else if (ch === ",") { row.push(field); field = ""; }
+      else if (ch === "\n" || ch === "\r") {
+        if (ch === "\r" && s[i + 1] === "\n") i++;
+        row.push(field); field = "";
+        if (row.length > 1 || row[0] !== "") rows.push(row);
+        row = [];
+      } else field += ch;
+    }
+    if (field !== "" || row.length) { row.push(field); rows.push(row); }
+    return rows;
+  }
+  // "0412345678" -> "0412 345 678"; anything already spaced or international stays as typed
+  const phCkPhonePretty = p => { const s = String(p || "").trim(); const d = s.replace(/\D/g, ""); return /^0\d{9}$/.test(d) && !/\s/.test(s) ? `${d.slice(0, 4)} ${d.slice(4, 7)} ${d.slice(7)}` : s; };
+  const phCkFirstPhone = v => String(v || "").split(/[;,/|]/).map(x => x.trim()).filter(Boolean)[0] || "";
+  // every name LCM already knows -- scripts, follow-ups, the log, patient records
+  function phClinikoKnownKeys() {
+    const keys = new Set();
+    PRESC.items.forEach(t => { if (!presIsFormula(t)) { const k = phPatientKey(presPatientFor(t)); if (k) keys.add(k); } });
+    (PHARMACY.followups || []).forEach(r => { const k = r.patientKey || phPatientKey(r.patient); if (k) keys.add(k); });
+    PHARMACY.log.forEach(e => { if (e.patient) { const k = phPatientKey(e.patient); if (k) keys.add(k); } });
+    Object.keys(PHARMACY.patients || {}).forEach(k => keys.add(k));
+    return keys;
+  }
+  function phClinikoImport(text, includeAll, fileName) {
+    const rows = phCsvParse(text);
+    if (rows.length < 2) return { error: "That file has no patient rows." };
+    const head = rows[0].map(h => h.trim().toLowerCase());
+    const col = name => head.indexOf(name.toLowerCase());
+    const iFirst = col("First Name"), iLast = col("Last Name"), iPref = col("Preferred First Name"), iEmail = col("Email"),
+      iMob = col("Mobile Phones"), iHome = col("Home Phones"), iWork = col("Work Phones"), iNext = col("Next Appointment");
+    if (iFirst < 0 || iLast < 0) return { error: "That doesn't look like a Cliniko patient export — no First Name / Last Name columns." };
+    const known = phClinikoKnownKeys();
+    const todayKey = keyOf(TODAY);
+    const m = /(\d{4})(\d{2})(\d{2})/.exec(fileName || "");
+    const exportDate = m ? `${m[1]}-${m[2]}-${m[3]}` : todayKey;
+    const st = { read: 0, matched: 0, added: 0, skipped: 0, phones: 0, emails: 0, bookings: 0 };
+    const appts = [];
+    rows.slice(1).forEach(r => {
+      const first = (r[iFirst] || "").trim(), last = (r[iLast] || "").trim(), pref = iPref >= 0 ? (r[iPref] || "").trim() : "";
+      if (!first && !last) return;
+      st.read++;
+      const full = phTitle(`${first} ${last}`.trim());
+      const keys = [phPatientKey(full), pref ? phPatientKey(`${pref} ${last}`.trim()) : ""].filter(Boolean);
+      const hit = keys.find(k => known.has(k)) || "";
+      if (!hit && !includeAll) { st.skipped++; return; }
+      const name = hit && hit === keys[1] && pref ? phTitle(`${pref} ${last}`) : full;
+      const key = hit || keys[0];
+      if (hit) st.matched++; else st.added++;
+      const phone = phCkPhonePretty(phCkFirstPhone(iMob >= 0 ? r[iMob] : "") || phCkFirstPhone(iHome >= 0 ? r[iHome] : "") || phCkFirstPhone(iWork >= 0 ? r[iWork] : ""));
+      const email = iEmail >= 0 ? (r[iEmail] || "").trim() : "";
+      if (phone || email) {
+        const pr = phPatientRec(name);
+        if (pr) {
+          if (phone) { if (pr.phone !== phone) { pr.phone = phone; pr.phoneFrom = exportDate; pr.phoneSrc = "export"; } st.phones++; }
+          if (email) { pr.email = email; st.emails++; }
+        }
+      }
+      const nx = iNext >= 0 ? /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2})/.exec((r[iNext] || "").trim()) : null;
+      if (nx && nx[1] >= todayKey && !phApptList().some(a => a.date === nx[1] && a.time === nx[2] && phPatientKey(a.patient) === key)) {
+        appts.push({ date: nx[1], time: nx[2], patient: name, service: "Booked (Cliniko)", phone: "" });
+        st.bookings++;
+      }
+    });
+    if (appts.length) phApptImport(appts); else savePharmacy();
+    return st;
+  }
+  document.addEventListener("change", e => {
+    if (!e.target || e.target.id !== "phClinikoCsv") return;
+    const input = e.target, file = input.files && input.files[0];
+    if (!file) return;
+    const includeAll = !!(document.getElementById("phClinikoAll") || {}).checked;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const st = phClinikoImport(String(reader.result || ""), includeAll, file.name);
+      const el = document.getElementById("phClinikoResult");
+      if (st.error) { if (el) el.textContent = st.error; phFlashShow("⚠ " + st.error); return; }
+      const summary = `${st.read} patients read · ${st.matched} matched in LCM${st.added ? ` · ${st.added} added` : ""} · ${st.phones} number${st.phones === 1 ? "" : "s"} · ${st.emails} email${st.emails === 1 ? "" : "s"} · ${st.bookings} upcoming booking${st.bookings === 1 ? "" : "s"} added${st.skipped ? ` · ${st.skipped} not in LCM, skipped` : ""}`;
+      PHARMACY.clinikoImport = { on: keyOf(TODAY), summary };
+      savePharmacy();
+      if (el) el.textContent = `Imported just now: ${summary}`;
+      phFlashShow(`✓ ${st.matched + st.added} patient${st.matched + st.added === 1 ? "" : "s"} updated from Cliniko`);
+      renderPhDashboardPage();
+    };
+    reader.readAsText(file);
+    input.value = "";
+  });
   // everything the panel shows, read from the follow-up record + the script +
   // the patient record + the dispense log -- no second calculation anywhere
   function phCkContext(row) {
@@ -25584,12 +25717,15 @@
     const key = rec.patientKey || phPatientKey(rec.patient);
     const past = PHARMACY.log.filter(e => (!e.kind || e.kind === "dispense") && phPatientKey(e.patient) === key);
     const last = past.slice().sort((a, b) => (b.at || 0) - (a.at || 0))[0];
+    const appt = phCkNextAppt(key);
     return {
       rec, t, lv, first: phCkFirst(rec.patient), formula, herbs: formula ? `${formula} herbs` : "herbs", dose, clinic: phCkClinic(),
       dispensedLabel: phFuDateLabel(rec.dispensedDate), lasts: rec.ok && rec.lastsDays ? rec.lastsDays.toFixed(1) : "",
       emptyLabel: rec.emptyOn ? phFuDateLabel(rec.emptyOn) : "", left: lv ? lv.left : null,
-      note: phFuNoteText(rec), phone: (pat.phone || "").trim(), phoneFrom: pat.phoneFrom || "", email: (pat.email || "").trim(),
+      note: phFuNoteText(rec), phone: (pat.phone || "").trim(), phoneFrom: pat.phoneFrom || "", phoneSrc: pat.phoneSrc || "", email: (pat.email || "").trim(),
       scripts: past.length, lastVisit: last ? phFuDateLabel(last.date) : "",
+      appt, visitLabel: appt ? `${phFuDateLabel(appt.date)} · ${phCkTime12(appt.time)}` : "",
+      visit: appt ? `your visit on ${phFuDateLabel(appt.date)}` : "your next visit",
     };
   }
   const phCkIos = () => /iP(hone|ad|od)/.test(navigator.userAgent);
@@ -25613,11 +25749,12 @@
           <span class="k">Dispensed</span><span class="v">${esc(c.dispensedLabel)}${c.lasts ? ` · lasts ${c.lasts} days` : ""}</span>
           <span class="k">Empty</span><span class="v${c.left != null && c.left <= 0 ? " warn" : ""}">${c.left == null ? "—" : c.left <= 0 ? `since ${esc(c.emptyLabel)}${c.left < 0 ? ` · ${-c.left} day${c.left === -1 ? "" : "s"} ago` : " · today"}` : `${esc(c.emptyLabel)} · ${c.left} day${c.left === 1 ? "" : "s"} left`}</span>
           <span class="k">Visits</span><span class="v">${c.scripts} script${c.scripts === 1 ? "" : "s"}${c.lastVisit ? ` · last ${esc(c.lastVisit)}` : ""}</span>
+          <span class="k">Booked</span><span class="v">${c.appt ? `<b>${esc(c.visitLabel)}</b>${c.appt.service && c.appt.service !== "Booked (Cliniko)" ? ` · ${esc(c.appt.service)}` : ""}` : `<span class="faint">not booked</span>`}</span>
         </div>
         ${c.note ? `<div class="ph-ck-note"><b>Review note</b>${esc(c.note)}</div>` : ""}
         <div class="ph-ck-phone"><svg class="icn" aria-hidden="true"><use href="#i-phone"/></svg>${c.phone
-          ? `<span>${esc(c.phone)}</span><button type="button" class="ph-ck-btn ghost sm" data-ck-copy-num="1"><svg class="icn" aria-hidden="true"><use href="#i-copy"/></svg>Copy</button>${c.phoneFrom ? `<span class="src">from the Cliniko list · ${esc(phFuDateLabel(c.phoneFrom))}</span>` : ""}`
-          : `<input type="tel" class="ph-ck-other inline" placeholder="Add their number" data-ck-input="phone" aria-label="Phone number">`}</div>
+          ? `<span>${esc(c.phone)}</span><button type="button" class="ph-ck-btn ghost sm" data-ck-copy-num="1"><svg class="icn" aria-hidden="true"><use href="#i-copy"/></svg>Copy</button>${c.phoneFrom ? `<span class="src">from the Cliniko ${c.phoneSrc === "export" ? "export" : "list"} · ${esc(phFuDateLabel(c.phoneFrom))}</span>` : ""}`
+          : `<input type="tel" class="ph-ck-other inline" placeholder="Add their number" data-ck-input="phone" aria-label="Phone number"><button type="button" class="ph-ck-lnk src" data-ph-tab="settings">or import the Cliniko export in Settings →</button>`}</div>
         <div class="ph-ck-phone mail"><svg class="icn" aria-hidden="true"><use href="#i-mail"/></svg>${c.email
           ? `<span>${esc(c.email)}</span>`
           : `<input type="email" class="ph-ck-other inline" placeholder="Add their email" data-ck-input="email" aria-label="Email">`}</div>
@@ -25642,7 +25779,9 @@
         <div class="ph-ck-chips" style="margin-bottom:0">${chip("data-ck-concern", "none", "None", !f.concerns.size && !f.otherOn)}${PH_CK_CONCERNS.map(([k, l]) => chip("data-ck-concern", k, l, f.concerns.has(k))).join("")}${chip("data-ck-concern", "other", "Other…", f.otherOn)}</div>
         ${f.otherOn ? `<input type="text" class="ph-ck-other" data-ck-input="other" value="${esc(f.other)}" placeholder="What they mentioned" aria-label="Other concern">` : ""}
         <div class="ph-ck-lbl">Next</div>
-        <div class="ph-ck-next">${PH_CK_NEXT.map(([k, l]) => chip("data-ck-next", k, l, f.next === k)).join("")}</div>
+        <div class="ph-ck-next">${PH_CK_NEXT.filter(x => x[0] !== "booked").map(([k, l]) => k === "visit" && c.appt
+          ? chip("data-ck-next", "booked", `Booked ✓ ${esc(phFuDateLabel(c.appt.date))}`, f.next === "booked")
+          : chip("data-ck-next", k, l, f.next === k)).join("")}</div>
         <input type="text" class="ph-ck-other" data-ck-input="note" value="${esc(f.note)}" placeholder="A note for their history (optional)" aria-label="Note">
       </div>
       <div class="ph-ck-foot">
@@ -25662,6 +25801,9 @@
     if (phCkOpen && phCkOpen.recId === recId && phCkOpen.kind === kind) { phCkOpen = null; phCkForm = null; phCkRender(); return; }
     phCkOpen = { recId, kind };
     phCkForm = { going: null, concerns: new Set(), otherOn: false, other: "", next: null, note: "", tmpl: kind === "checkin" ? "checkin" : "review", text: null, sent: false };
+    // already booked in Cliniko -> Next starts on "Booked ✓" (she can still change it)
+    const row = phCkRow(recId, kind);
+    if (row && phCkNextAppt(row.rec.patientKey || phPatientKey(row.rec.patient))) phCkForm.next = "booked";
     phCkRender();
   }
   // both pages can show the panel; whichever is on screen re-draws
@@ -25708,7 +25850,7 @@
     const row = phCkRow(); if (!row) return;
     const v = inp.value.trim(); if (!v) return;
     const pr = phPatientRec(row.rec.patient); if (!pr) return;
-    if (inp.dataset.ckInput === "phone") { pr.phone = v; pr.phoneFrom = ""; } else pr.email = v;
+    if (inp.dataset.ckInput === "phone") { pr.phone = v; pr.phoneFrom = ""; pr.phoneSrc = ""; } else pr.email = v;
     savePharmacy(); phCkRender();
   });
   function phCkOutcomeText(ck) {
