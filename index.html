@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260903-180000">
+<meta name="lcm-build" content="20260903-200000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -1343,6 +1343,11 @@
   .ph-pill.count { color: var(--ph-green); background: var(--ph-green-tint); }
   .ph-pill.restock { color: var(--ph-phaseout-deep); background: var(--ph-phaseout-tint); }
   .ph-pill.stocktake { color: var(--ph-stopped); background: var(--ph-stopped-tint); }
+  /* a dispense made while she was booked in that day (her ask 2026-09-03,
+     the visit-link feature) -- sits under the time in History, a step
+     quieter than the gold "update available" family so it never reads as
+     a warning */
+  .ph-pill.visit { color: var(--ph-blue-deep); background: var(--ph-blue-tint); margin-top: 2px; text-transform: none; letter-spacing: 0; }
   /* temporarily-stopping rows go grey — text, code, name, the lot */
   #pharmacyPage .ph-row-stopped td,
   #pharmacyPage .ph-row-stopped .ph-name,
@@ -4748,6 +4753,28 @@
   .ph-pres-filters .ph-count-btn.alert { border-color: var(--ph-low-deep); color: var(--ph-low-deep); }
   .ph-pres-filters .ph-count-btn.alert.on { background: var(--ph-low-tint); border-color: var(--ph-low-deep); color: var(--ph-low-deep); }
   .ph-pres-nofx { color: var(--ph-faint); }
+  /* Booked-today week table (her ask 2026-09-03) -- the day card reuses
+     .ph-week-detail (the Dashboard's own day-detail card, already proven at
+     360px) and .ph-stat-row/.ph-stat-chip for the summary counts. The row
+     itself is a plain flex line that wraps rather than a fixed grid, so it
+     never overflows a phone: name+flags+bell on one line, the script/herbs
+     note under it, status+action trailing (wraps to its own line if the
+     row's too narrow to hold everything on one). */
+  #pharmacyPage .ph-pres-week-row { display: flex; align-items: flex-start; gap: 8px; padding: 7px 4px; border-top: 1px solid var(--ph-line); flex-wrap: wrap; }
+  #pharmacyPage .ph-pres-week-row:first-of-type { border-top: none; }
+  #pharmacyPage .ph-pres-week-row .tm { flex: 0 0 auto; min-width: 40px; font-size: 12px; font-weight: 800; color: var(--ph-green-deep); font-variant-numeric: tabular-nums; padding-top: 1px; }
+  #pharmacyPage .ph-pres-week-row .mid { flex: 1 1 150px; min-width: 0; }
+  #pharmacyPage .ph-pres-week-row .mid .line1 { font-size: 13.5px; font-weight: 700; color: var(--ph-green-deep); display: flex; align-items: center; flex-wrap: wrap; gap: 2px; }
+  #pharmacyPage .ph-pres-week-row .mid .line1 .bell { margin-left: 4px; font-size: 12px; }
+  #pharmacyPage .ph-pres-week-row .mid .line2 { font-size: 12px; color: var(--ph-ink); margin-top: 1px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  #pharmacyPage .ph-pres-week-row.lean .mid .line2 { font-style: italic; color: var(--ph-faint); }
+  #pharmacyPage .ph-pres-week-row .end { flex: 0 0 auto; display: flex; align-items: center; gap: 6px; margin-left: auto; }
+  #pharmacyPage .ph-pres-week-row.done .mid .line1 b, #pharmacyPage .ph-pres-week-row.done .mid .line2 { color: var(--ph-faint); }
+  #pharmacyPage .ph-pres-week-row .ph-pres-fx-main { display: inline; }
+  #pharmacyPage .ph-pres-day-tick { color: var(--ph-green-deep); font-weight: 700; font-size: 12.5px; white-space: nowrap; }
+  #pharmacyPage .ph-pres-day-note { color: var(--ph-faint); font-size: 12px; }
+  #pharmacyPage .ph-pres-week-foot { text-align: right; margin-top: 6px; }
+  #pharmacyPage .ph-pres-week-widget .ph-stat-row { margin-bottom: 6px; }
   .ph-pres-actions { display: flex; gap: 4px; justify-content: flex-end; }
   /* Prescriptions patient list (her ask 2026-08-31, "look better... some
      depth, more spacious"): row-cards instead of a table. Same green &
@@ -19241,10 +19268,7 @@
         // handler already does — Dashboard has no prescription editor of its own
         if (phTimers.presTmpl) { clearTimeout(phTimers.presTmpl); phTimers.presTmpl = null; presFlushTemplate(); }
         PHARMACY.activeTab = "prescriptions";
-        presOpenId = dashPresOpen.dataset.phDashPresOpen;
-        presLabelOpen = false; presMoreOpen = false; presFuOpen = false;
-        presNameOpen = false; presNotesOpen = false; presHistOpen = false; presThirdOpen = false; presMedHxOpen = false;
-        presPickLocked = null;
+        presOpenScript(dashPresOpen.dataset.phDashPresOpen);
         savePharmacy(); renderPharmacy();
         return;
       }
@@ -19281,6 +19305,25 @@
         savePharmacy(); renderPharmacy();
         return;
       }
+      // Booked-today week table (her ask 2026-09-03) -- same toggle-open
+      // pattern as the Dashboard's This week (data-ph-dash-week-day), its
+      // own state var so the two pages never fight over which day is open
+      const presWeekDay = e.target.closest("[data-pres-week-day]");
+      if (presWeekDay) {
+        const k = presWeekDay.dataset.presWeekDay;
+        presWeekOpenDay = presWeekOpenDay === k ? null : k;
+        renderPresWeek();
+        return;
+      }
+      const presWeekOpen = e.target.closest("[data-pres-week-open]");
+      if (presWeekOpen) {
+        if (phTimers.presTmpl) { clearTimeout(phTimers.presTmpl); phTimers.presTmpl = null; presFlushTemplate(); }
+        presOpenScript(presWeekOpen.dataset.presWeekOpen);
+        presRenderPanelSmooth();
+        return;
+      }
+      const presWeekNew = e.target.closest("[data-pres-week-newscript]");
+      if (presWeekNew) { presStartNew(undefined, presWeekNew.dataset.presWeekNewscript); return; }
       // Clicking anywhere on a prescription row opens that patient (her ask
       // 2026-08-23: the pencil is a small target to aim at hundreds of times).
       // Deliberately generic: ANY button/link/field inside the row does its own
@@ -19304,24 +19347,9 @@
         // same reason as Close: a pending autosave is resolved against presOpenId,
         // so it has to land on the script she was actually editing, not the new one
         if (phTimers.presTmpl) { clearTimeout(phTimers.presTmpl); phTimers.presTmpl = null; presFlushTemplate(); }
-        presOpenId = presOpen.dataset.presOpen;
-        // each opened script starts fully collapsed (her ask 2026-07-30) — an
-        // earlier click on a DIFFERENT patient's sections has no bearing here
-        presLabelOpen = false; presMoreOpen = false; presFuOpen = false;
-        presNameOpen = false; presNotesOpen = false; presHistOpen = false; presThirdOpen = false; presMedHxOpen = false;
-        presPickLocked = null;
-        // her 2026-08-22 spec: opening a prescription starts fresh -- the
-        // step chain must not read a stale "done" straight off a PRIOR
-        // visit's permanent dispense stamp (that's the exact bug in her
-        // Cynthia Wong screenshot: Calculate/Dispensed showed done on open,
-        // reading as "this script is already finished"). Snapshotting
-        // lastDispensedAt/lastDispenseLogId here is what presDoseTimelineHtml
-        // compares against to tell "happened before I opened this" from
-        // "happened just now" -- see its own comment for the full model.
-        { const openedT = PRESC.items.find(x => x.id === presOpenId);
-          presOpenSnapshot = openedT ? { lastDispensedAt: openedT.lastDispensedAt || null, lastDispenseLogId: openedT.lastDispenseLogId || null } : null; }
-        presCalcSessionDone = false;
-        presLastDispViewId = null;
+        // each opened script starts fully collapsed and fresh (her ask
+        // 2026-07-30 / 2026-08-22) — see presOpenScript
+        presOpenScript(presOpen.dataset.presOpen);
         presRenderPanelSmooth();
         return;
       }
@@ -19587,7 +19615,7 @@
           const kept = canonical;
           phMergeClose();
           const first = PRESC.items.find(t => !presIsFormula(t) && phPatientKey(presPatientFor(t)) === phPatientKey(kept));
-          if (first) { presOpenId = first.id; presEditId = null; }
+          if (first) presOpenScript(first.id);
           phFlash = `⇄ Merged into <b>${esc(phTitle(kept))}</b> — one combined history now. The backup from just before is in your downloads.`;
           renderPharmacy();
         });
@@ -20289,9 +20317,14 @@
       const dispAgain = e.target.closest("[data-pres-disp-again]");
       if (dispAgain) {
         const t = PRESC.items.find(x => x.id === dispAgain.dataset.presDispAgain);
+        // her fix (2026-09-03): this used to DELETE the real dispense stamp to
+        // fake a fresh timeline -- now every open already starts fresh (see
+        // presOpenScript), so all a same-session re-dispense needs is to
+        // re-baseline THIS open's snapshot to the current stamp. The
+        // permanent record (and the quiet "Last dispensed" line) is never touched.
         if (t) {
-          delete t.lastDispensedAt; delete t.lastDispensedGrams; delete t.lastDispenseLogId;
-          presDispMenuId = null; savePresc(); renderPresPanel();
+          presOpenSnapshot = { lastDispensedAt: t.lastDispensedAt || null, lastDispenseLogId: t.lastDispenseLogId || null };
+          presDispMenuId = null; renderPresPanel();
         }
         return;
       }
@@ -20340,10 +20373,7 @@
       // ✎ anywhere = the same one panel as Open: dispense on top, template below
       const presEd = e.target.closest("[data-pres-edit]");
       if (presEd) {
-        presOpenId = presEd.dataset.presEdit; presEditId = null;
-        presLabelOpen = false; presMoreOpen = false; presFuOpen = false;
-        presNameOpen = false; presNotesOpen = false; presHistOpen = false; presThirdOpen = false; presMedHxOpen = false;
-        presPickLocked = null;
+        presOpenScript(presEd.dataset.presEdit);
         presRenderPanelSmooth();
         return;
       }
@@ -20845,7 +20875,7 @@
       if (fuUndo) { phFuSetDone(fuUndo.dataset.fuUndo, fuUndo.dataset.fuKind, false); renderPhFollowupsPage(); renderPhDashboardPage(); return; }
       const fuOpen = e.target.closest("[data-fu-open]");
       if (fuOpen) {
-        presOpenId = fuOpen.dataset.fuOpen; presEditId = null;
+        presOpenScript(fuOpen.dataset.fuOpen);
         PHARMACY.activeTab = "prescriptions"; savePharmacy(); renderPharmacy();
         return;
       }
@@ -24849,6 +24879,11 @@
      (what the patient takes home) shows ONLY the Price.
      ============================================================ */
   let presSearch = "", presOpenId = null;
+  // which day of the Booked-today week table is expanded -- undefined means
+  // "not yet initialized this load" (renderPresWeek computes the real
+  // default, her call: today or the next clinic day); null means she closed
+  // it deliberately; a date key means that day is open. See renderPresWeek.
+  let presWeekOpenDay;
   // Prescriptions list rebuild (her spec 2026-08-22): the three old static
   // counters became five single-select filter chips. "all" is the default;
   // "noHist" replaces the old standalone presHistFilterOn boolean.
@@ -24913,6 +24948,103 @@
   // (formula recipes have no patient at all)
   const presPatientFor = t => presIsFormula(t) ? "" : t.name;
 
+  // ============ Booked today — a week table above the search (her ask
+  // 2026-09-03: "make the prescriptions page show patient scripts for the
+  // day"). Same Mon-Sun window as the Dashboard's This week (phDashWeekDays),
+  // opened by default on today or the next clinic day (phNextWorkDayKey) --
+  // her call. Every booking shows, CHM/ACU flagged; ACU-only with no herb
+  // script folds to one quiet line (her scoping rule: LCM is the herb side,
+  // C22 is acupuncture -- see feedback_lcm_herb_c22_acu_split). A patient
+  // with no script yet gets a one-tap "+ New script", name pre-filled
+  // (presStartNew already supports this via its presetName argument). ============
+  // a patient's dispense logged on exactly this day -- not t.lastDispensedAt
+  // (that's only ever the single most recent one across ALL time), so a past
+  // day's sheet reads correctly even for a patient dispensed again since
+  function presDispenseOnDay(patientKey, dayKey) {
+    return PHARMACY.log.find(e => (!e.kind || e.kind === "dispense") && e.date === dayKey && phPatientKey(e.patient) === patientKey) || null;
+  }
+  function presWeekCellHtml(d, todayKey) {
+    const appts = phApptFor(d.key);
+    const doneN = appts.filter(a => presDispenseOnDay(phPatientKey(a.patient), d.key)).length;
+    const open = presWeekOpenDay === d.key;
+    const names = appts.slice(0, 2).map(a => `<span class="ph-wkt-item">${esc(phTitle(a.patient).split(" ")[0])}${phApptKindHtml(a.service)}</span>`);
+    return `<button type="button" class="ph-wkt-cell${appts.length ? " has" : ""}${d.today ? " today" : ""}${d.past ? " past" : ""}${d.work ? " wd" : ""}${open ? " open" : ""}" data-pres-week-day="${d.key}" aria-expanded="${open ? "true" : "false"}">
+      <span class="ph-wkt-d">${esc(d.dow)} ${d.dnum}${d.today ? ` <em>today</em>` : ""}</span>
+      ${appts.length ? `<span class="ph-wkt-item n"><b>${appts.length} booked</b>${doneN ? ` · ${doneN} ✓` : ""}</span>${names.join("")}${appts.length > 2 ? `<span class="ph-wkt-item">+${appts.length - 2} more</span>` : ""}` : `<span class="ph-wkt-dash">—</span>`}
+    </button>`;
+  }
+  // one flex row, wraps safely at any width (no fixed grid columns -- the
+  // dense .ph-ds-row sheet grammar is desktop-only elsewhere in this app, see
+  // #phDashboardWrap.ph-ds-polish's own comment, so it's the wrong component
+  // for a widget that also has to fit a 360px phone)
+  function presWeekRowHtml(a, dayKey, todayKey) {
+    const k = phPatientKey(a.patient);
+    const kind = phApptKind(a.service);
+    const script = phApptScriptFor(k);
+    const done = presDispenseOnDay(k, dayKey);
+    const bell = phApptFuDue(k, dayKey) ? `<span class="bell" title="Follow-up due">🔔</span>` : "";
+    const nm = `<b>${esc(phTitle(a.patient))}</b>${phApptKindHtml(a.service)}${bell}`;
+    // acu-only with no herb script: LCM's job is the herb side (her scoping
+    // rule) -- a quiet line, no dispense controls to reach for
+    if (kind === "acu" && !script) {
+      return `<div class="ph-pres-week-row lean"><span class="tm">${esc(phCkTime12(a.time))}</span><div class="mid"><div class="line1">${nm}</div><div class="line2">acupuncture only</div></div></div>`;
+    }
+    const line2 = script ? presLastFormulaCellHtml(script) : `<span class="ph-pres-day-note">no script yet</span>`;
+    const isFuture = dayKey >= todayKey;
+    const lookahead = isFuture && (parseKey(dayKey) - parseKey(todayKey)) / 86400000 <= 7;
+    let statusHtml, actionHtml;
+    if (done) {
+      statusHtml = `<span class="ph-pres-day-tick">✓${done.at ? " " + esc(presTimeStr(new Date(done.at))) : ""}</span>`;
+      actionHtml = script ? `<button type="button" class="ph-name-link" data-pres-week-open="${script.id}">Open →</button>` : "";
+    } else if (script) {
+      const prep = lookahead ? phApptPrep(k) : null;
+      statusHtml = !prep ? ""
+        : prep.short.length
+          ? `<span class="ph-appt-prep">⚠ ${prep.short.length} short</span><button type="button" class="ph-load-btn" data-ph-appt-order="${a.id}">🛒 Order</button>`
+          : `<span class="ph-appt-prep ok">✓ ready</span>`;
+      actionHtml = isFuture
+        ? `<button type="button" class="ph-arr-editbtn" data-pres-week-open="${script.id}" title="Dispense ${esc(phTitle(a.patient))}" aria-label="Dispense ${esc(phTitle(a.patient))}">💊</button>`
+        : `<button type="button" class="ph-name-link" data-pres-week-open="${script.id}">Open →</button>`;
+    } else {
+      statusHtml = isFuture ? `<span class="ph-pres-day-note">new patient</span>` : "";
+      actionHtml = isFuture ? `<button type="button" class="ph-load-btn" data-pres-week-newscript="${esc(a.patient)}">+ New script</button>` : "";
+    }
+    return `<div class="ph-pres-week-row${done ? " done" : ""}">
+      <span class="tm">${esc(phCkTime12(a.time))}</span>
+      <div class="mid"><div class="line1">${nm}</div><div class="line2">${line2}</div></div>
+      <div class="end">${statusHtml}${actionHtml}</div>
+    </div>`;
+  }
+  function presWeekDayCardHtml(dayKey, todayKey) {
+    const appts = phApptFor(dayKey);
+    const d = parseKey(dayKey);
+    const chmN = appts.filter(a => phApptKind(a.service) !== "acu").length;
+    const acuN = appts.length - chmN;
+    const doneN = appts.filter(a => presDispenseOnDay(phPatientKey(a.patient), dayKey)).length;
+    const statRow = appts.length ? `<div class="ph-stat-row">
+      <div class="ph-stat-chip"><b>${appts.length}</b><span class="lbl">Booked</span></div>
+      ${chmN ? `<div class="ph-stat-chip"><b>${chmN}</b><span class="lbl">CHM</span></div>` : ""}
+      ${acuN ? `<div class="ph-stat-chip"><b>${acuN}</b><span class="lbl">ACU</span></div>` : ""}
+      ${doneN ? `<div class="ph-stat-chip"><b>${doneN}</b><span class="lbl">Dispensed</span></div>` : ""}
+    </div>` : "";
+    return `<div class="ph-week-detail">
+      <div class="dtitle">${esc(DOW_SHORT[d.getDay()])} ${d.getDate()} ${esc(MON_SHORT[d.getMonth()])}</div>
+      ${statRow}
+      ${appts.length ? appts.map(a => presWeekRowHtml(a, dayKey, todayKey)).join("") : `<div class="ph-week-empty">Nothing booked</div>`}
+      <div class="ph-pres-week-foot"><button type="button" class="ph-name-link" data-ph-appt-open="1">📅 Paste today's list</button></div>
+    </div>`;
+  }
+  function renderPresWeek() {
+    const el = document.getElementById("presWeekWrap");
+    if (!el) return;
+    if (presWeekOpenDay === undefined) presWeekOpenDay = phNextWorkDayKey();
+    const days = phDashWeekDays();
+    const todayKey = keyOf(TODAY);
+    const openDay = days.find(d => d.key === presWeekOpenDay);
+    el.innerHTML = `<div class="ph-wkt">${days.map(d => presWeekCellHtml(d, todayKey)).join("")}</div>
+      ${openDay ? presWeekDayCardHtml(openDay.key, todayKey) : ""}`;
+  }
+
   function renderPrescriptions() {
     const wrap = document.getElementById("phPresWrap");
     if (!wrap.dataset.built) {
@@ -24931,6 +25063,12 @@
           <div id="schedForm"></div>
           <div id="schedRows"></div>
           <div id="schedCompletedZone"></div>
+        </section>
+        <section class="ph-widget ph-pres-week-widget">
+          <div class="ph-widget-head">
+            <h2>📅 Booked this week</h2>
+          </div>
+          <div id="presWeekWrap"></div>
         </section>
         <section class="ph-widget">
           <div class="ph-widget-head">
@@ -25007,6 +25145,7 @@
     renderPresPanel();
     renderPresList();
     renderSchedWidget();
+    renderPresWeek();
     const patients = [...new Set(PHARMACY.log.map(e => e.patient).filter(Boolean))];
     document.getElementById("phPatientList").innerHTML = patients.map(p => `<option value="${esc(p)}">`).join("");
     renderPresLog();
@@ -25313,6 +25452,27 @@
   // replaced content grows in under a viewport that's already settled where
   // it needs to be -- and skip the scroll entirely when the panel's already
   // in view, so a tab switch never moves the page at all.
+  // her ask (2026-09-03): every way of opening a script must start fresh --
+  // not just the plain click-to-open row. Dashboard/Follow-ups/check-in
+  // "done, then open script"/✎ edit/⇄ merge/the Schedule flow's confirm-
+  // dispensed path had all stayed on the raw t.lastDispensedAt without ever
+  // snapshotting it, so a second visit's script could open already reading
+  // "Dispensed" with no way to dispense today's herbs short of the
+  // destructive ⋯ Dispense again button (see its handler below -- fixed
+  // alongside this). One function, every entry point below calls it --
+  // presOpenSnapshot is what presDoseTimelineHtml compares against, see its
+  // own comment for the full model.
+  function presOpenScript(id) {
+    presOpenId = id; presEditId = null;
+    presLabelOpen = false; presMoreOpen = false; presFuOpen = false;
+    presNameOpen = false; presNotesOpen = false; presHistOpen = false; presThirdOpen = false; presMedHxOpen = false;
+    presPickLocked = null;
+    presDispMenuId = null; presDispUndoConfirm = null;
+    const t = PRESC.items.find(x => x.id === id);
+    presOpenSnapshot = t ? { lastDispensedAt: t.lastDispensedAt || null, lastDispenseLogId: t.lastDispenseLogId || null } : null;
+    presCalcSessionDone = false;
+    presLastDispViewId = null;
+  }
   function presRenderPanelSmooth() {
     const el = presPanelEl();
     const inView = el && (() => { const r = el.getBoundingClientRect(); return r.top > -40 && r.top < window.innerHeight * 0.4; })();
@@ -26120,7 +26280,7 @@
     const presId = rec.presId, first = phCkFirst(rec.patient);
     phCkOpen = null; phCkForm = null;
     phFlashShow(`✓ Saved to ${first}'s history`);
-    if (thenScript && presId) { presOpenId = presId; presEditId = null; PHARMACY.activeTab = "prescriptions"; savePharmacy(); renderPharmacy(); return; }
+    if (thenScript && presId) { presOpenScript(presId); PHARMACY.activeTab = "prescriptions"; savePharmacy(); renderPharmacy(); return; }
     phCkRender();
   }
   function phCkSnooze() {
@@ -28747,7 +28907,7 @@
         return `<tr>
           <td class="ph-hist-date">${phLogDateEdit === e.id && phLogDateEditSrc === "hist"
             ? `<input type="date" class="ph-qty-input" data-ph-log-date-edit="${e.id}" value="${e.date}" aria-label="Date for ${esc(phDispName(e.what))}">`
-            : `<button type="button" class="ph-qty-lock" data-ph-log-date-unlock="${e.id}" title="Click to edit the date">${d.getDate()} ${MON_SHORT[d.getMonth()]} ${d.getFullYear()}</button>${e.at ? `<span class="ph-hist-time">${presTimeStr(new Date(e.at))}</span>` : ""}`}</td>
+            : `<button type="button" class="ph-qty-lock" data-ph-log-date-unlock="${e.id}" title="Click to edit the date">${d.getDate()} ${MON_SHORT[d.getMonth()]} ${d.getFullYear()}</button>${e.at ? `<span class="ph-hist-time">${presTimeStr(new Date(e.at))}</span>` : ""}${e.visitTime ? `<span class="ph-pill visit" title="Dispensed while she was booked in">${esc(phCkTime12(e.visitTime))} visit</span>` : ""}`}</td>
           <td class="ph-name">${phNameHtml(e.what)}${e.grams ? ` · ${phFmtG(e.grams)}g` : ""}${ings}${e.dosage ? `<div class="ph-log-deduct">${esc(e.dosage)}</div>` : ""}</td>
           <td class="ph-num ph-hist-price">${e.price != null ? phMoney(e.price) : "—"}</td>
           <td class="ph-pres-actions">${arming ? "" : `<button type="button" class="tab-link ph-hist-undo" data-pres-hist-undo="${e.id}" title="Undo this dispense">↩</button>`}</td>
@@ -31729,6 +31889,16 @@ Dosage: {dosage}
       // from the dispense that just happened via presPendingNotes
       stockNotes: presPendingNotes[t.id] || [],
     };
+    // her ask (2026-09-03): "record which booking it was for" -- if this
+    // patient has a Cliniko appointment on today's date, tag the entry with
+    // its time so History can tell a booked-visit dispense from a mail-out
+    // (and the Booked-today week table can tell today's done from not-done).
+    // Nothing to type -- read straight off the same PHARMACY.appointments
+    // the day-list paste and the Cliniko export both already feed.
+    if (entry.patient) {
+      const apptToday = phApptList().find(a => a.date === entry.date && phPatientKey(a.patient) === phPatientKey(entry.patient));
+      if (apptToday) { entry.visitTime = apptToday.time; entry.visitApptId = apptToday.id; }
+    }
     // item 3 (her data-safety spec 2026-08-13): the log entry (pharmacy
     // store) and the "✓ Dispensed" stamp (prescriptions store) are two
     // different localStorage writes -- do them as one unit. Remember what's
@@ -31994,7 +32164,7 @@ Dosage: {dosage}
       renderPharmacy();
       return;
     }
-    presOpenId = t.id;
+    presOpenScript(t.id);
     renderPresPanel();   // so #presGrams etc. exist for the two functions below, same as a normal click-to-open
     const before = t.lastDispenseLogId;
     // presDispense no longer always finishes synchronously (2026-08-18): a
