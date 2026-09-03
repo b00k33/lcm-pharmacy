@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260903-153000">
+<meta name="lcm-build" content="20260903-160000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -1918,6 +1918,14 @@
   #pharmacyPage .ph-file-btn { cursor: pointer; display: inline-flex; align-items: center; }
   #pharmacyPage .ph-cliniko-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   #pharmacyPage .ph-settings-check { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ph-soft); cursor: pointer; }
+  /* CHM / ACU appointment flag (her ask 2026-09-03): read from the Cliniko
+     service line; green = herbs, blue = acupuncture only. One tiny pill,
+     the same wherever an appointment is drawn. */
+  #pharmacyPage .ph-appt-kind { display: inline-flex; align-items: center; height: 16px; padding: 0 5px; border-radius: 999px; font-size: 9.5px; font-weight: 800; letter-spacing: .06em; line-height: 1; flex: none; margin-left: 6px; vertical-align: middle; }
+  #pharmacyPage .ph-appt-kind.chm { background: var(--ph-green-tint); color: var(--ph-green-deep); }
+  #pharmacyPage .ph-appt-kind.acu { background: var(--ph-blue-tint); color: var(--ph-blue-deep); }
+  #pharmacyPage .ph-wkt-item .ph-appt-kind { height: 14px; font-size: 9px; padding: 0 4px; margin-left: 4px; }
+  #pharmacyPage .ph-ck-kv .v .ph-appt-kind { margin-left: 0; margin-right: 2px; }
   /* the check-in trail inside the patient's History card, and under a Done row on the Follow-ups sheet */
   #pharmacyPage .ph-ck-hist { margin: 8px 0 4px; font-size: 12.5px; }
   #pharmacyPage .ph-ck-hist .k { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ph-faint); margin-bottom: 4px; }
@@ -16587,9 +16595,12 @@
         ? `<span class="ph-appt-prep" title="${esc(prep.short.map(x => `${x.name} — ${phFmtG(x.h.qty)}g on hand, ${phFmtG(x.grams)}g needed`).join(", "))}">⚠ ${prep.short.length} herb${prep.short.length === 1 ? "" : "s"} short</span><button type="button" class="ph-load-btn" data-ph-appt-order="${a.id}">🛒 Order</button>`
         : `<span class="ph-appt-prep ok">✓ herbs ready</span>`;
     const script = phApptScriptFor(k);
+    // the CHM/ACU flag rides inside the name element so it sits right after
+    // the name (the name is the row's flexible track; a sibling would be
+    // pushed to the far edge)
     const nm = script
-      ? `<button type="button" class="nm" data-ph-dash-pres-open="${script.id}" title="Open ${esc(phTitle(a.patient))}'s script">${esc(phTitle(a.patient))}</button>`
-      : `<b>${esc(phTitle(a.patient))}</b>`;
+      ? `<button type="button" class="nm" data-ph-dash-pres-open="${script.id}" title="Open ${esc(phTitle(a.patient))}'s script">${esc(phTitle(a.patient))}${phApptKindHtml(a.service)}</button>`
+      : `<b>${esc(phTitle(a.patient))}${phApptKindHtml(a.service)}</b>`;
     return `<div class="ph-week-detail-row"><span class="tm">${esc(a.time)}</span>${nm}${bell}${prepHtml}</div>`;
   }
   function phDashWeekDetailHtml(day, pharmRefill, pharmOrder) {
@@ -16651,7 +16662,7 @@
       const bits = [];
       // 📅 appointments lead the cell (approved mock) -- the day's shape is
       // who's walking in before what's going out
-      appt.slice(0, 2).forEach(a => bits.push(`<svg class="icn" aria-hidden="true"><use href="#i-cal"/></svg> ${esc(phTitle(a.patient).split(" ")[0])} ${esc(a.time)}`));
+      appt.slice(0, 2).forEach(a => bits.push(`<svg class="icn" aria-hidden="true"><use href="#i-cal"/></svg> ${esc(phTitle(a.patient).split(" ")[0])} ${esc(a.time)}${phApptKindHtml(a.service)}`));
       if (appt.length > 2) bits.push(`<svg class="icn" aria-hidden="true"><use href="#i-cal"/></svg> +${appt.length - 2} more`);
       fu.slice(0, 2).forEach(x => bits.push(`<svg class="icn" aria-hidden="true"><use href="#i-clock"/></svg> ${esc(x.who.split(" ")[0])}`));
       if (fu.length > 2) bits.push(`<svg class="icn" aria-hidden="true"><use href="#i-clock"/></svg> +${fu.length - 2} more`);
@@ -16706,6 +16717,23 @@
     }
     return keyOf(TODAY);
   }
+  // her ask (2026-09-03): "auto detect that when a patient appointment has
+  // with herbs, its flagged as CHM Chinese Herbal Medicine and when it says
+  // acu only it just Flags as ACU - and blue". Read off the Cliniko service
+  // line every time it's drawn (nothing stored, so old pastes get it too):
+  // "No Herbs" / "acu only" / "without herbs" -> ACU; anything mentioning
+  // herbs / Chinese medicine -> CHM; plain acupuncture -> ACU; else no flag
+  // (the export's "Booked (Cliniko)" placeholder carries no service).
+  function phApptKind(service) {
+    const s = String(service || "").toLowerCase();
+    if (!s) return "";
+    if (/\bno\s*herbs?\b|without\s+herbs?|acu(puncture)?\s*only/.test(s)) return "acu";
+    if (/herb|chinese\s+medicine|\bchm\b|\btcm\b/.test(s)) return "chm";
+    if (/acu/.test(s)) return "acu";
+    return "";
+  }
+  const PH_APPT_KIND_LABEL = { chm: "CHM", acu: "ACU" };
+  const phApptKindHtml = service => { const k = phApptKind(service); return k ? `<span class="ph-appt-kind ${k}" title="${k === "chm" ? "Chinese herbal medicine" : "Acupuncture only"}">${PH_APPT_KIND_LABEL[k]}</span>` : ""; };
   function phApptFor(dayKey) {
     return phApptList().filter(a => a.date === dayKey)
       .sort((a, b) => a.time < b.time ? -1 : a.time > b.time ? 1 : 0);
@@ -16876,7 +16904,7 @@
     return `<div class="ph-cap-sec">Read from the paste</div>
       ${parsed.map(en => `<div class="ph-appt-prow${wdays0 && wdays0.includes(parseKey(en.date).getDay()) ? " wk" : ""}">
         <span class="tm">${multiDate ? `${esc(phShortDate(en.date))} · ` : ""}${esc(en.time)}</span>
-        <b>${esc(en.patient)}</b>
+        <b>${esc(en.patient)}</b>${phApptKindHtml(en.service)}
         ${en.service ? `<span class="svc" title="${esc(en.service)}">${esc(en.service)}</span>` : ""}
         <span class="match${known.has(phPatientKey(en.patient)) ? "" : " new"}" title="${known.has(phPatientKey(en.patient)) ? "Matched to an existing patient" : "Not seen before — imports fine anyway"}">${known.has(phPatientKey(en.patient)) ? "✓ matched" : "new name"}</span>
       </div>`).join("")}
@@ -16917,7 +16945,7 @@
         <div class="ph-cap-sec">Booked ahead</div>
         ${upcoming.length ? upcoming.map(a => `<div class="ph-appt-prow${(w => w && w.includes(parseKey(a.date).getDay()))(phClinicWorkDays()) ? " wk" : ""}">
           <span class="tm">${a.date === todayKey ? "" : `${esc(phShortDate(a.date))} · `}${esc(a.time)}</span>
-          <b>${esc(phTitle(a.patient))}</b>
+          <b>${esc(phTitle(a.patient))}</b>${phApptKindHtml(a.service)}
           ${a.service ? `<span class="svc" title="${esc(a.service)}">${esc(a.service)}</span>` : ""}
           <button type="button" class="del" data-ph-appt-del="${a.id}" title="Remove this appointment" aria-label="Remove ${esc(phTitle(a.patient))}'s appointment">×</button>
         </div>`).join("") : `<div class="ph-appt-note">Nothing booked ahead yet.</div>`}
@@ -25600,7 +25628,7 @@
       .sort((a, b) => (a.date + a.time) < (b.date + b.time) ? -1 : 1)[0] || null;
   }
   const phCkTime12 = t => { const m = /^(\d{1,2}):(\d{2})/.exec(t || ""); if (!m) return t || ""; const h = +m[1]; return `${h % 12 || 12}:${m[2]} ${h < 12 ? "am" : "pm"}`; };
-  const phCkBookedLabel = rec => { const a = phCkNextAppt(rec.patientKey || phPatientKey(rec.patient)); return a ? ` · booked ${phFuDateLabel(a.date)}` : ""; };
+  const phCkBookedLabel = rec => { const a = phCkNextAppt(rec.patientKey || phPatientKey(rec.patient)); const k = a && phApptKind(a.service); return a ? ` · booked ${phFuDateLabel(a.date)}${k ? ` · ${PH_APPT_KIND_LABEL[k]}` : ""}` : ""; };
   // ---- Cliniko patient export (her ask 2026-09-03: "can i upload patient
   // phone number file to add to patient files?") -- Cliniko → Patients →
   // Export gives a CSV with First/Last/Preferred First Name, Email, Mobile/
@@ -25757,7 +25785,7 @@
           <span class="k">Dispensed</span><span class="v">${esc(c.dispensedLabel)}${c.lasts ? ` · lasts ${c.lasts} days` : ""}</span>
           <span class="k">Empty</span><span class="v${c.left != null && c.left <= 0 ? " warn" : ""}">${c.left == null ? "—" : c.left <= 0 ? `since ${esc(c.emptyLabel)}${c.left < 0 ? ` · ${-c.left} day${c.left === -1 ? "" : "s"} ago` : " · today"}` : `${esc(c.emptyLabel)} · ${c.left} day${c.left === 1 ? "" : "s"} left`}</span>
           <span class="k">Visits</span><span class="v">${c.scripts} script${c.scripts === 1 ? "" : "s"}${c.lastVisit ? ` · last ${esc(c.lastVisit)}` : ""}</span>
-          <span class="k">Booked</span><span class="v">${c.appt ? `<b>${esc(c.visitLabel)}</b>${c.appt.service && c.appt.service !== "Booked (Cliniko)" ? ` · ${esc(c.appt.service)}` : ""}` : `<span class="faint">not booked</span>`}</span>
+          <span class="k">Booked</span><span class="v">${c.appt ? `<b>${esc(c.visitLabel)}</b> ${phApptKindHtml(c.appt.service)}${c.appt.service && c.appt.service !== "Booked (Cliniko)" ? ` <span class="faint">${esc(c.appt.service)}</span>` : ""}` : `<span class="faint">not booked</span>`}</span>
         </div>
         ${c.note ? `<div class="ph-ck-note"><b>Review note</b>${esc(c.note)}</div>` : ""}
         <div class="ph-ck-phone"><svg class="icn" aria-hidden="true"><use href="#i-phone"/></svg>${c.phone

@@ -12,7 +12,7 @@
 // changes). A waiting service worker sits untouched until that same button
 // tells it to go, via postMessage({type:"SKIP_WAITING"}) -- see the
 // "message" listener below and phDoControlledUpdate's STEP 4.
-var CACHE_VERSION = "lcm-20260903-paste-phones";
+var CACHE_VERSION = "lcm-20260903-chm-acu-flags";
 
 var SHELL = ["./", "./index.html", "./manifest.json", "./icons/icon-192-v2.png", "./icons/icon-512-v2.png", "./icons/apple-touch-icon-v2.png", "./icons/favicon-32-v2.png", "./icons/favicon-32-light-v2.png"];
 
