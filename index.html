@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260904-053000">
+<meta name="lcm-build" content="20260904-060000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -5773,6 +5773,13 @@
   #pharmacyPage .ph-ltr-togs { display: flex; gap: 6px; flex-wrap: wrap; padding: 10px 20px; background: var(--ph-white); border-bottom: 1px solid var(--ph-line); flex: 0 0 auto; }
   #pharmacyPage .ph-ltr-stog { font-size: 10.5px; font-weight: 700; border: none; border-radius: 999px; padding: 4px 11px; background: var(--ph-green-tint); color: var(--ph-green-deep); cursor: pointer; font-family: inherit; }
   #pharmacyPage .ph-ltr-stog.off { background: none; box-shadow: inset 0 0 0 1px var(--ph-line); color: var(--ph-soft); text-decoration: line-through; opacity: 0.7; }
+  /* grouped chips (2026-09-04): a quiet label leads each group; groups wrap
+     as units so "Cycle" chips never split from their label */
+  #pharmacyPage .ph-ltr-chips, #pharmacyPage .ph-ltr-togs { gap: 8px 18px; }
+  #pharmacyPage .ph-ltr-group { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  #pharmacyPage .ph-ltr-glbl { font-size: 9.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--ph-faint); margin-right: 2px; flex: none; }
+  #pharmacyPage .ph-ltr-stog.pic { background: var(--ph-blue-tint); color: var(--ph-blue-deep); }
+  #pharmacyPage .ph-ltr-stog.pic.off { background: none; color: var(--ph-soft); }
   #pharmacyPage .ph-ltr-body { font-size: 13.5px; line-height: 1.6; }
   #pharmacyPage .ph-ltr-h { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ph-green-deep); margin: 16px 0 6px; }
   #pharmacyPage .ph-ltr-sec { border-radius: 8px; padding: 2px 6px; margin: 0 -6px 8px; }
@@ -30963,11 +30970,22 @@
     const tmpl = phLtrTmpl();
     const prevBody = modal.querySelector(".ph-hx-body");
     const prevScroll = prevBody ? prevBody.scrollTop : 0;
-    const chips = phLtrAllTemplates().map(x => `<button type="button" class="ph-ltr-tchip${x.id === phLtrTmplId ? " on" : ""}${x.mine ? " mine" : ""}" data-ltr-tmpl="${x.id}">${esc(x.name)}${x.mine ? ` <span class="ph-ltr-minetag">yours</span>` : ""}</button>`).join("");
-    const togs = tmpl.secs.map(sec => {
-      const off = phLtrOff.has(phLtrKey(sec));
-      return `<button type="button" class="ph-ltr-stog${off ? " off" : ""}" data-ltr-sec="${sec}" aria-pressed="${!off}">${esc(PH_LTR_SECTIONS[sec].label)}</button>`;
-    }).join("");
+    // her ask (2026-09-04 "i like these, can you organise it a bit better"):
+    // templates grouped general / conditions / women's health / mine, and
+    // the section chips grouped in the letter's own order -- opening,
+    // cycle, formula, advice, closing -- each group with a quiet label
+    const all = phLtrAllTemplates();
+    const tchip = x => `<button type="button" class="ph-ltr-tchip${x.id === phLtrTmplId ? " on" : ""}${x.mine ? " mine" : ""}" data-ltr-tmpl="${x.id}">${esc(x.name)}${x.mine ? ` <span class="ph-ltr-minetag">yours</span>` : ""}</button>`;
+    const tGroups = [["General", ["course", "review"]], ["Conditions", ["digestion", "stress", "skin", "sleep"]], ["Women's health", ["menstrual", "fertility", "cycleivf", "pregnancy", "menopause"]]]
+      .map(([lbl, ids]) => [lbl, ids.map(id => all.find(x => x.id === id)).filter(Boolean)]);
+    const mine = all.filter(x => x.mine || !tGroups.some(([, xs]) => xs.includes(x)));
+    if (mine.length) tGroups.push(["Mine", mine]);
+    const chips = tGroups.filter(([, xs]) => xs.length).map(([lbl, xs]) => `<div class="ph-ltr-group"><span class="ph-ltr-glbl">${esc(lbl)}</span>${xs.map(tchip).join("")}</div>`).join("");
+    const sGroups = [["Opening", ["greet", "greetReview", "findings", "changes", "pattern", "constitution"]], ["Cycle", ["cycleBar", "cycleNow", "stagesNat", "stages", "stagesPreg", "stagesMeno"]], ["Formula", ["formula", "jar", "dose", "purpose"]], ["Advice", ["bodymap", "seasonal", "dietIcons", "expect"]], ["Closing", ["nextvisit", "posttest", "postnatal", "signoff"]]];
+    const stog = sec => { const off = phLtrOff.has(phLtrKey(sec)); const pic = PH_LTR_SECTIONS[sec].fixed && /picture|icons|map|stages/i.test(PH_LTR_SECTIONS[sec].label); return `<button type="button" class="ph-ltr-stog${off ? " off" : ""}${pic ? " pic" : ""}" data-ltr-sec="${sec}" aria-pressed="${!off}">${pic ? "🖼 " : ""}${esc(PH_LTR_SECTIONS[sec].label)}</button>`; };
+    const placed = new Set();
+    const togs = sGroups.map(([lbl, ids]) => { const secs = tmpl.secs.filter(s => ids.includes(s)); secs.forEach(s => placed.add(s)); return secs.length ? `<div class="ph-ltr-group"><span class="ph-ltr-glbl">${esc(lbl)}</span>${secs.map(stog).join("")}</div>` : ""; }).join("")
+      + (tmpl.secs.some(s => !placed.has(s)) ? `<div class="ph-ltr-group">${tmpl.secs.filter(s => !placed.has(s)).map(stog).join("")}</div>` : "");
     const body = tmpl.secs.filter(sec => !phLtrOff.has(phLtrKey(sec))).map(sec => {
       const def = PH_LTR_SECTIONS[sec];
       const inner = def.fixed
