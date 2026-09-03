@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260904-090000">
+<meta name="lcm-build" content="20260904-100000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -17160,7 +17160,75 @@
     const d = new Date(year, mon, day);
     return d.getMonth() === mon ? keyOf(d) : null;
   }
+  // a transcribed name often carries its surname twice ("Charmaine Mari-De
+  // Leon Mari-De Leon", "Shauna Mcgrath McGrath") -- drop a trailing word
+  // group that repeats the group before it, then title-case
+  function phApptCleanName(s) {
+    const w = String(s || "").replace(/\s+/g, " ").trim().split(" ");
+    for (let n = Math.floor(w.length / 2); n >= 1; n--) {
+      const a = w.slice(-2 * n, -n).join(" ").toLowerCase(), b = w.slice(-n).join(" ").toLowerCase();
+      if (a === b) { w.splice(-n); break; }
+    }
+    return phTitle(w.join(" "));
+  }
+  // ---- table paste (her 2026-09-04 acupreg paste: a transcribed day as
+  // "Time<TAB>Patient / Event<TAB>Phone<TAB>Details" rows, "\u2014" for no phone,
+  // BREAK rows, "Cancellation Fee" in Details, an address after ";"). Also
+  // takes a markdown "| a | b |" table or a comma CSV, with or without a
+  // header row; columns are read from the header when there is one, else
+  // guessed (time first, a phone-shaped cell is the phone, the first
+  // name-shaped cell is the patient, the rest is the service). ----
+  function phApptParseTable(text, fallbackDateKey) {
+    const raw = String(text || "").replace(/[\u200B-\u200D\uFEFF\u00A0\u202A-\u202E\u2066-\u2069]/g, " ").split(/\r?\n/);
+    const cellsOf = l => {
+      let cells = null;
+      if (l.includes("\t")) cells = l.split("\t");
+      else if (/^\s*\|.*\|\s*$/.test(l)) cells = l.replace(/^\s*\|/, "").replace(/\|\s*$/, "").split("|");
+      else if ((l.match(/,/g) || []).length >= 2 && !/\d,\d/.test(l)) cells = l.split(",");
+      return cells ? cells.map(c => c.replace(/\s+/g, " ").trim()) : null;
+    };
+    const rows = raw.map(cellsOf);
+    const timeAt = cells => cells ? cells.findIndex(c => phApptParseTime(c)) : -1;
+    const dataIdx = rows.map((c, i) => c && timeAt(c) >= 0 ? i : -1).filter(i => i >= 0);
+    if (dataIdx.length < 1) return null;
+    // header row: the last cell-row above the first data row naming a time column
+    let head = null;
+    for (let i = dataIdx[0] - 1; i >= 0; i--) {
+      if (rows[i] && rows[i].some(c => /^time/i.test(c)) && rows[i].some(c => /patient|name|event|client/i.test(c))) { head = rows[i].map(c => c.toLowerCase()); break; }
+    }
+    if (dataIdx.length < 2 && !head) return null;
+    const col = re => head ? head.findIndex(c => re.test(c)) : -1;
+    const cTime = col(/^time|start/), cName = col(/patient|name|event|client/), cPhone = col(/phone|mobile|contact/), cSvc = col(/detail|service|type|appointment|note/), cDate = col(/^date|^day/);
+    const phoneRe = /^(?:\+?61|0)(?:\s?\d){9}$|^\+?\d[\d ]{6,}\d$/;
+    const blocked = s => /^(break|lunch|unavailable|blocked|admin|busy|available)$/i.test(s);
+    const isAddr = s => /\d/.test(s) && /\b(street|st|road|rd|avenue|ave|lane|drive|dr|highway|hwy|parade|pde|nsw|new south wales|vic|victoria|qld|queensland)\b/i.test(s);
+    const isName = s => /^[a-zA-Z][a-zA-Z' .()\u00C0-\u024F-]+$/.test(s) && !/\bmin\b/i.test(s);
+    const out = [];
+    let dk = fallbackDateKey;
+    raw.forEach((l, i) => {
+      const cells = rows[i];
+      if (!cells) { const d = phApptParseDateLine(l.trim()); if (d) dk = d; return; }
+      if (/^:?-{2,}:?$/.test(cells[0] || "") || !dataIdx.includes(i)) return;   // "|---|" rule, header, stray row
+      const ti = cTime >= 0 && phApptParseTime(cells[cTime] || "") ? cTime : timeAt(cells);
+      const time = phApptParseTime(cells[ti]);
+      const rest = cells.map((c, k) => k === ti ? "" : c);
+      if (cDate >= 0 && rest[cDate]) { const d = phApptParseDateLine(rest[cDate]); if (d) { dk = d; rest[cDate] = ""; } }
+      let phone = "", name = "";
+      const pk = cPhone >= 0 && (phoneRe.test(rest[cPhone] || "") || /^[\u2014\u2013-]?$/.test(rest[cPhone] || "")) ? cPhone : rest.findIndex(c => phoneRe.test(c));
+      if (pk >= 0) { if (phoneRe.test(rest[pk])) phone = phCkPhonePretty(rest[pk]); rest[pk] = ""; }
+      const nk = cName >= 0 && rest[cName] ? cName : rest.findIndex(c => c && isName(c));
+      if (nk >= 0) { name = rest[nk]; rest[nk] = ""; }
+      if (!name || blocked(name)) return;
+      let svcCells = cSvc >= 0 ? [rest[cSvc] || ""] : rest.filter(Boolean);
+      const service = svcCells.join(" ").split(/\s*;\s*/).filter(seg => seg && !isAddr(seg)).join("; ").replace(/^[\u2014\u2013-]$/, "");
+      if (/cancellation fee/i.test(service)) return;
+      out.push({ date: dk, time, patient: phApptCleanName(name), service, phone });
+    });
+    return out;
+  }
   function phApptParse(text, fallbackDateKey) {
+    const table = phApptParseTable(text, fallbackDateKey);
+    if (table && table.length) return table;
     const lines = String(text || "").replace(/[\u200B-\u200D\uFEFF\u00A0\u202A-\u202E\u2066-\u2069]/g, " ")
       .split(/\r?\n/).map(l => l.replace(/\s+/g, " ").trim()).flatMap(l => {
         // the week export runs "service<tab>0412 345 678 (Mobile)" on one
@@ -17219,7 +17287,7 @@
         });
         const service = svc.join(" ");
         if (/cancellation fee/i.test(service)) return;                   // a charge, not a visit
-        outZ.push({ date: dk, time: phApptParseTime(lines[ti]), patient: phTitle(name), service, phone });
+        outZ.push({ date: dk, time: phApptParseTime(lines[ti]), patient: phApptCleanName(name), service, phone });
       });
       return outZ;
     }
@@ -17250,7 +17318,7 @@
       // the phone line is kept now (2026-09-03) -- the check-in panel shows
       // it and the message links use it; phApptImport writes it to the patient
       const phone = phoneIdx >= 0 ? phCkPhonePretty(ls[phoneIdx].trim()) : "";
-      if (name) out.push({ date: cur.date, time: cur.time, patient: phTitle(name), service: svc, phone });
+      if (name) out.push({ date: cur.date, time: cur.time, patient: phApptCleanName(name), service: svc, phone });
       cur = null;
     };
     lines.forEach(line => {
@@ -17442,7 +17510,7 @@
           <label class="ph-load-btn ph-file-btn">📷 Read a screenshot<input type="file" id="phApptOcrFile" accept="image/*" multiple hidden></label>
           <span class="ph-appt-ocrhint">${st.ocr ? esc(st.ocr) : "Zanda won't let you select text — screenshot the day and choose it here, or paste the image straight into the box (Ctrl+V). It's read on this device; check the names, then Import."}</span>
         </div>
-        <textarea class="ph-appt-paste" id="phApptPaste" placeholder="Paste the appointment list (Cliniko or Zanda) — a day, a week or a month — or paste a screenshot here." aria-label="Paste the appointment list">${esc(st.text)}</textarea>
+        <textarea class="ph-appt-paste" id="phApptPaste" placeholder="Paste the appointment list — Cliniko or Zanda, a day, a week or a month, a Time · Patient · Phone · Details table — or paste a screenshot here." aria-label="Paste the appointment list">${esc(st.text)}</textarea>
         <div class="ph-cap-sec">Day, if the paste has no date headings</div>
         <div class="ph-appt-dayrow">${chips.join("")}<input type="date" class="ph-appt-date" id="phApptDate" value="${st.dateKey}" aria-label="Date these appointments are for"></div>
         <div id="phApptPreview">${phApptPreviewHtml()}</div>
