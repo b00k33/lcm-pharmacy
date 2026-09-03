@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260904-080000">
+<meta name="lcm-build" content="20260904-083000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -17166,11 +17166,49 @@
         const m = l.match(/^(.*?)\s*(\+?\d[\d ]{6,}\d)\s*\((?:mobile|home|work|phone)\)/i);
         return m ? [m[1], m[2]].filter(Boolean) : [l];
       });
-    const out = [];
-    let dateKey = fallbackDateKey, cur = null;
     // parentheses stay legal (her "Sylvia Lai (L)" tags); digits or duration
     // words mean a service line, not a person
     const isPerson = s => /^[a-zA-Z][a-zA-Z' .()À-ɏ-]+$/.test(s) && !/\d/.test(s) && !/\bmin\b/i.test(s);
+    // ---- Zanda day view (her screenshots 2026-09-04, the Acupuncture
+    // Pregnancy Clinic side): NAME first, then "9:30am-10:00am" (am/pm both
+    // sides, no spaces round the dash), then the phone with the service on
+    // the SAME line, sometimes an address line; gutter times ("10:00") and
+    // BREAK rows in between. Detected by that time shape + a name directly
+    // above most of them; Cliniko's "10:00AM — 11:00AM" never matches. ----
+    const zTime = l => /^\d{1,2}:\d{2}(am|pm)-\d{1,2}:\d{2}(am|pm)$/i.test(l);
+    const zBlocked = s => /^(break|lunch|unavailable|blocked|admin|busy)$/i.test(s.trim());
+    const tIdx = lines.map((l, i) => phApptParseTime(l) ? i : -1).filter(i => i >= 0);
+    const zShaped = tIdx.filter(i => zTime(lines[i])).length;
+    const zNamed = tIdx.filter(i => i > 0 && isPerson(lines[i - 1]) && !zBlocked(lines[i - 1])).length;
+    if (tIdx.length >= 2 && zShaped >= Math.ceil(tIdx.length * 0.6) && zNamed >= Math.ceil(tIdx.length * 0.5)) {
+      const outZ = [];
+      let dk = fallbackDateKey;
+      for (let i = 0; i < tIdx[0]; i++) { const d = phApptParseDateLine(lines[i]); if (d) dk = d; }
+      tIdx.forEach((ti, n) => {
+        const name = ti > 0 && isPerson(lines[ti - 1]) ? lines[ti - 1] : "";
+        if (!name || zBlocked(name)) return;
+        const nextT = tIdx[n + 1];
+        const end = nextT == null ? lines.length : (isPerson(lines[nextT - 1]) ? nextT - 1 : nextT);
+        let phone = "";
+        const svc = [];
+        lines.slice(ti + 1, end).forEach(l => {
+          if (!l || /^\d{1,2}:\d{2}$/.test(l)) return;                       // gutter time
+          // an Australian number is 0 + 9 digits (or +61 + 9) -- bounded so
+          // "0478 099 048 13F. Alexandria…" keeps its "13F." in the service
+          const m = l.match(/^((?:\+?61|0)(?:\s?\d){9})(?=\s|$)\s*(.*)$/) || l.match(/^(\+?\d[\d ]{6,}\d)\s*(.*)$/);
+          if (m && !phone) { phone = phCkPhonePretty(m[1]); if (m[2]) svc.push(m[2]); return; }
+          if (/\d{4}\b/.test(l) && /\b(street|st|road|rd|avenue|ave|lane|drive|dr|highway|hwy|parade|pde|nsw|new south wales|vic|victoria|qld|queensland)\b/i.test(l)) return;   // address
+          if (isPerson(l)) return;                                          // stray name
+          svc.push(l);
+        });
+        const service = svc.join(" ");
+        if (/cancellation fee/i.test(service)) return;                   // a charge, not a visit
+        outZ.push({ date: dk, time: phApptParseTime(lines[ti]), patient: phTitle(name), service, phone });
+      });
+      return outZ;
+    }
+    const out = [];
+    let dateKey = fallbackDateKey, cur = null;
     const flush = () => {
       if (!cur) { cur = null; return; }
       // "Appointment notes" and everything under it is the booking message,
