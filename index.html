@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260904-025000">
+<meta name="lcm-build" content="20260904-034000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -5680,6 +5680,16 @@
   #pharmacyPage .ph-hx-dob { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 700; color: var(--ph-soft); text-transform: uppercase; letter-spacing: .03em; margin-left: 10px; }
   #pharmacyPage .ph-hx-dob input { font: inherit; font-size: 12px; text-transform: none; letter-spacing: 0; border: 1px solid var(--ph-line); border-radius: 7px; padding: 3px 6px; background: var(--ph-cream); color: var(--ph-ink); }
   #pharmacyPage .ph-hx-dob .age { font-size: 11px; color: var(--ph-ink); text-transform: none; letter-spacing: 0; }
+  /* ✉ Letter templates editor (Settings) */
+  #pharmacyPage .ph-ltrset-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
+  #pharmacyPage .ph-ltrset-actions { margin-bottom: 8px; }
+  #pharmacyPage .ph-ltrset-grid { display: flex; flex-direction: column; gap: 8px; }
+  #pharmacyPage .ph-ltrset-row { background: var(--ph-green-tint); border-radius: 9px; padding: 8px 10px; }
+  #pharmacyPage .ph-ltrset-row.edited { background: var(--ph-zero-tint); }
+  #pharmacyPage .ph-ltrset-lbl { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--ph-soft); margin-bottom: 4px; }
+  #pharmacyPage .ph-ltrset-lbl .faint { font-weight: 500; text-transform: none; letter-spacing: 0; }
+  #pharmacyPage .ph-ltrset-ta { width: 100%; box-sizing: border-box; resize: vertical; }
+  #pharmacyPage .ph-settings-hint code { font-size: 11px; background: var(--ph-cream); border-radius: 4px; padding: 0 4px; }
   #pharmacyPage .ph-cycle-edit { background: var(--ph-green-tint); border-radius: 9px; padding: 10px 12px; }
   #pharmacyPage .ph-cycle-editgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; }
   #pharmacyPage .ph-cycle-editgrid label { display: flex; flex-direction: column; gap: 3px; font-size: 10.5px; font-weight: 700; color: var(--ph-soft); text-transform: uppercase; letter-spacing: .03em; }
@@ -16105,6 +16115,7 @@
         </div>
         <div class="ph-settings-hint" id="phClinikoResult">${PHARMACY.clinikoImport ? `Last import ${esc(phFuDateLabel(PHARMACY.clinikoImport.on))}: ${esc(PHARMACY.clinikoImport.summary)}` : "No export imported yet."}</div>
       </div>
+      ${phLtrTemplatesSectionHtml()}
       ${phTpProtocolSectionHtml()}
       ${phSettingsStorageHtml()}
     </section>`;
@@ -16123,14 +16134,14 @@
     const ov = PHARMACY.tpBuiltinOverride;
     const status = ov && ov.length
       ? `Using a refreshed set of ${ov.length} phase${ov.length === 1 ? "" : "s"}${PHARMACY.tpProtocolImportedOn ? `, imported ${esc(phShortDate(PHARMACY.tpProtocolImportedOn))}` : ""}.`
-      : `Using the built-in ${PH_TP_TEMPLATES[0].phases.length} phases.`;
+      : `Using the built-in ${(PH_TP_TEMPLATES.find(t => t.id === "cycle_ivf") || PH_TP_TEMPLATES[0]).phases.length} phases.`;
     return `<div class="ph-settings-sec">
-      <h3>🪡 Acupuncture protocol (Cycle &amp; IVF template)</h3>
+      <h3>🪡 Acupuncture protocol (IVF template)</h3>
       <p class="ph-settings-hint">Paste updated phase data copied from Chapter 6 — Treating Fertility to refresh the phases new treatment plans start from. Existing plans keep what they already have. Expects a JSON array of {label, aim, points, suggestFormula}.</p>
       <textarea id="phTpProtocolPaste" rows="4" class="ph-label-template-input" placeholder='[{"label":"Menstruation","aim":"…","points":"SP10, SP6…","suggestFormula":"…"}, …]' spellcheck="false"></textarea>
       <div class="ph-settings-actions">
         <button type="button" class="ph-load-btn" data-ph-tpproto-import="1">Import ✓</button>
-        ${ov && ov.length ? `<button type="button" class="btn-cancel" data-ph-tpproto-reset="1">↺ Reset to the built-in ${PH_TP_TEMPLATES[0].phases.length}</button>` : ""}
+        ${ov && ov.length ? `<button type="button" class="btn-cancel" data-ph-tpproto-reset="1">↺ Reset to the built-in ${(PH_TP_TEMPLATES.find(t => t.id === "cycle_ivf") || PH_TP_TEMPLATES[0]).phases.length}</button>` : ""}
       </div>
       <div class="ph-settings-hint" id="phTpProtocolResult">${status}</div>
     </div>`;
@@ -20700,6 +20711,29 @@
         PHARMACY.tpBuiltinOverride = null;
         savePharmacy(); renderPhSettingsPage();
         return;
+      }
+      // ✉ Letter templates editor (Settings)
+      const ltrPick = e.target.closest("[data-ltr-tpl-pick]");
+      if (ltrPick) { phLtrSetTpl = ltrPick.dataset.ltrTplPick; renderPhSettingsPage(); return; }
+      const ltrReset = e.target.closest("[data-ltr-tpl-reset]");
+      if (ltrReset) {
+        const [tmplId, sec] = ltrReset.dataset.ltrTplReset.split(":");
+        const prev = (phLtrOverrides()[tmplId] || {})[sec];
+        if (prev != null) { phLtrSetUndo.push({ tmplId, sec, prev }); phLtrSetApply(tmplId, sec, null); savePharmacy(); }
+        renderPhSettingsPage(); return;
+      }
+      const ltrResetAll = e.target.closest("[data-ltr-tpl-reset-all]");
+      if (ltrResetAll) {
+        const tmplId = ltrResetAll.dataset.ltrTplResetAll;
+        const all = phLtrOverrides()[tmplId] || {};
+        Object.keys(all).forEach(sec => phLtrSetUndo.push({ tmplId, sec, prev: all[sec] }));
+        delete phLtrOverrides()[tmplId];
+        savePharmacy(); renderPhSettingsPage(); return;
+      }
+      if (e.target.closest("[data-ltr-tpl-undo]")) {
+        const u = phLtrSetUndo.pop();
+        if (u) { phLtrSetApply(u.tmplId, u.sec, u.prev); phLtrSetTpl = u.tmplId; savePharmacy(); phFlashShow("↩ Wording put back"); }
+        renderPhSettingsPage(); return;
       }
       // ✎ anywhere = the same one panel as Open: dispense on top, template below
       const presEd = e.target.closest("[data-pres-edit]");
@@ -26119,11 +26153,11 @@
   const phCkUserTmpls = () => PHARMACY.ckTemplates || (PHARMACY.ckTemplates = {});
   // the built-in wording; {first} {herbs} {empty} {clinic} {me} fill in
   function phCkBuiltin(kind, c) {
-    if (kind === "checkin") return "Hi {first}, it's {me} from {clinic}. You're a few days into the {herbs} — how are you finding them so far? Any changes, or anything unexpected? Reply here anytime and we'll adjust if needed. {me}";
+    if (kind === "checkin") return "Hi {first}, it's {me} from {clinic}. You're a few days into the {herbs} — how are you finding them so far? Any changes, or anything unexpected? Reply here anytime and I'll adjust if needed. {me}";
     if (kind === "running") return "Hi {first}, it's {me} from {clinic}. Just a reminder that your {herbs} will run out around {empty} — would you like the next batch made up so there's no gap? {me}";
-    if (kind === "rebook") return "Hi {first}, it's {me} from {clinic}. It's a good time to book your next visit so we can review how you've gone on the {herbs}. Let me know which days suit you. {me}";
+    if (kind === "rebook") return "Hi {first}, it's {me} from {clinic}. It's a good time to book your next visit so I can review how you've gone on the {herbs}. Let me know which days suit you. {me}";
     const when = c.left == null || !c.emptyLabel ? "should be finishing about now" : c.left > 0 ? "will run out around {empty}" : "would have finished around {empty}";
-    return `Hi {first}, it's {me} from {clinic}. Your {herbs} ${when}. How have you been going with them — any changes, or any side effects? Let me know if you'd like the next batch made up, or we can go over it at {visit}. {me}`;
+    return `Hi {first}, it's {me} from {clinic}. Your {herbs} ${when}. How have you been going with them — any changes, or any side effects? Let me know if you'd like the next batch made up, or I can go over it with you at {visit}. {me}`;
   }
   const phCkFill = (text, c) => String(text || "").replace(/\{first\}/g, c.first).replace(/\{herbs\}/g, c.herbs).replace(/\{empty\}/g, c.emptyLabel || "soon").replace(/\{clinic\}/g, c.clinic).replace(/\{visit\}/g, c.visit || "your next visit").replace(/\{me\}/g, PH_CK_ME);
   // ＋ Save mine: her edited text with this patient's particulars turned back
@@ -26420,6 +26454,23 @@
   }
   // 🩸 DOB on the Medical history header (2026-09-04) -- feeds the cycle
   // auto-rule (female & under 50) and shows her age beside the field
+  // ✉ Letter templates editor: a textarea commits on change (blur), with the
+  // previous wording pushed to the undo stack first
+  document.addEventListener("change", e => {
+    const ta = e.target && e.target.closest ? e.target.closest("[data-ltr-tpl-field]") : null;
+    if (!ta) return;
+    const [tmplId, sec] = ta.dataset.ltrTplField.split(":");
+    const tmpl = phLtrAllTemplates().find(x => x.id === tmplId);
+    if (!tmpl) return;
+    const prev = (phLtrOverrides()[tmplId] || {})[sec];
+    const val = ta.value.replace(/\r\n/g, "\n").trim();
+    const next = val && val !== phLtrDefaultText(tmpl, sec).trim() ? val : null;
+    if ((prev == null ? null : prev) === next) return;
+    phLtrSetUndo.push({ tmplId, sec, prev: prev == null ? null : prev });
+    if (phLtrSetUndo.length > 50) phLtrSetUndo.shift();
+    phLtrSetApply(tmplId, sec, next);
+    savePharmacy(); renderPhSettingsPage();
+  });
   document.addEventListener("change", e => {
     const dobEl = e.target && e.target.closest ? e.target.closest("[data-hx-dob]") : null;
     if (!dobEl) return;
@@ -29950,11 +30001,11 @@
     const lines = (plan.phases || []).map(p =>
       `• ${p.label}${p.formulaName ? ` — ${p.formulaName}` : ""}${p.aim ? `\n  ${p.aim}` : ""}`);
     return `Dear ${phTpFirstName(name)},\n\n`
-      + `Here's the treatment plan we've put together for you. Let me know if anything doesn't make sense, or if anything changes for you along the way.\n\n`
+      + `Here's the treatment plan I've put together for you. Let me know if anything doesn't make sense, or if anything changes for you along the way.\n\n`
       + (cur ? `Where you are right now: ${cur.label}\n\n` : "")
       + `Your plan, stage by stage:\n\n${lines.join("\n\n")}\n\n`
       + (phTpIsFertilityPlan(plan)
-        ? `After your pregnancy test:\nPlease book a longer review appointment once you've tested, so we can go through the result properly together.\n• If it's positive — we'll move into weekly support for early pregnancy and talk through what to expect.\n• If it's negative — we'll go through this cycle in detail and adjust the plan before the next one.\n\n`
+        ? `After your pregnancy test:\nPlease book a longer review appointment once you've tested, so we can go through the result properly together.\n• If it's positive — I'll move you into weekly support for early pregnancy and talk through what to expect.\n• If it's negative — I'll go through this cycle in detail with you and adjust the plan before the next one.\n\n`
         : "")
       + `${phSignoffFor(plan.id)}\n${PH_SIGNATURE}\n`;
   }
@@ -29976,16 +30027,16 @@
       <h1>Your treatment plan</h1>
       <div class="sub">${esc(phTitle(name))} · ${new Date().toLocaleDateString()}</div>
       <p>Dear ${esc(phTpFirstName(name))},</p>
-      <p>Here's the treatment plan we've put together for you. Let me know if anything doesn't make sense, or if anything changes for you along the way.</p>
+      <p>Here's the treatment plan I've put together for you. Let me know if anything doesn't make sense, or if anything changes for you along the way.</p>
       ${plan.phases && plan.phases.length ? `<h2>Where you are right now</h2>
       <table class="strip"><tr>${strip}</tr></table>` : ""}
       <h2>Your plan, stage by stage</h2>
-      <table class="plan"><thead><tr><th>Stage</th><th>What we're doing</th><th>What it's for</th></tr></thead>
+      <table class="plan"><thead><tr><th>Stage</th><th>What I'm doing</th><th>What it's for</th></tr></thead>
       <tbody>${(plan.phases || []).map(p => `<tr><td><b>${esc(p.label)}</b></td><td>${p.formulaName ? esc(p.formulaName) : "As discussed"}</td><td>${esc(p.aim || "")}</td></tr>`).join("")}</tbody></table>
       ${phTpIsFertilityPlan(plan) ? `<h2>After your pregnancy test</h2>
       <p>Please book a longer review appointment once you've tested, so we can go through the result properly together.</p>
-      <p><b>If it's positive</b> — we'll move into weekly support for early pregnancy and talk through what to expect.<br>
-      <b>If it's negative</b> — we'll go through this cycle in detail and adjust the plan before the next one.</p>` : ""}
+      <p><b>If it's positive</b> — I'll move you into weekly support for early pregnancy and talk through what to expect.<br>
+      <b>If it's negative</b> — I'll go through this cycle in detail with you and adjust the plan before the next one.</p>` : ""}
       <p class="sig">${phSignoffFor(plan.id)}<br>${esc(PH_SIGNATURE)}</p>`;
   }
   let phTpLetterOpen = false;
@@ -30015,16 +30066,16 @@
       </div>
       <div class="ph-tp-letter">
         <p>Dear ${esc(phTpFirstName(name))},</p>
-        <p>Here's the treatment plan we've put together for you. Let me know if anything doesn't make sense, or if anything changes for you along the way.</p>
+        <p>Here's the treatment plan I've put together for you. Let me know if anything doesn't make sense, or if anything changes for you along the way.</p>
         ${plan.phases && plan.phases.length ? `<div class="ph-tp-lh">Where you are right now</div>
         <div class="ph-tp-lstrip">${strip}</div>` : ""}
         <div class="ph-tp-lh">Your plan, stage by stage</div>
-        <table class="ph-tp-ltable"><thead><tr><th>Stage</th><th>What we're doing</th><th>What it's for</th></tr></thead>
+        <table class="ph-tp-ltable"><thead><tr><th>Stage</th><th>What I'm doing</th><th>What it's for</th></tr></thead>
         <tbody>${(plan.phases || []).map(p => `<tr><td><b>${esc(p.label)}</b></td><td>${p.formulaName ? esc(p.formulaName) : "As discussed"}</td><td>${esc(p.aim || "")}</td></tr>`).join("")}</tbody></table>
         ${phTpIsFertilityPlan(plan) ? `<div class="ph-tp-lh">After your pregnancy test</div>
         <p>Please book a longer review appointment once you've tested, so we can go through the result properly together.</p>
-        <p><b>If it's positive</b> — we'll move into weekly support for early pregnancy and talk through what to expect.<br>
-        <b>If it's negative</b> — we'll go through this cycle in detail and adjust the plan before the next one.</p>` : ""}
+        <p><b>If it's positive</b> — I'll move you into weekly support for early pregnancy and talk through what to expect.<br>
+        <b>If it's negative</b> — I'll go through this cycle in detail with you and adjust the plan before the next one.</p>` : ""}
         <p style="margin-top:20px">${phSignoffFor(plan.id)}<br>${esc(PH_SIGNATURE)}</p>
         <p class="ph-tp-lnote">Generated fresh from the plan — clinical notes, findings and reviews stay out of it. Copy it into an email, or export a PDF to attach.</p>
       </div>`;
@@ -30155,6 +30206,57 @@
   // the History card for the rare deep case, just never in the way.
   // ============================================================
   const phLtrUserTemplates = () => PHARMACY.letterTemplates || (PHARMACY.letterTemplates = []);
+  // ============ ✎ Letter templates editor (her ask 2026-09-04: "give option
+  // to edit all templates somewhere in the app · include undo button") --
+  // Settings -> Letter templates. Her wording per template+section lives in
+  // PHARMACY.ltrOverrides[tmplId][sec]; phLtrSecText reads it above the
+  // template's own texts. Tokens fill in per letter. Undo = a session stack
+  // of previous values (↩ Undo last change) plus ↺ Default per section. ====
+  const phLtrOverrides = () => PHARMACY.ltrOverrides || (PHARMACY.ltrOverrides = {});
+  const PH_LTR_TOKENS = [["first", "her first name"], ["review", "review date"], ["formula", "formula name"], ["grams", "grams"], ["diagnosis", "plan diagnosis"], ["goal", "plan approach"], ["constitution", "constitution"]];
+  function phLtrFillTokens(s, c) {
+    const v = { first: c.first, review: c.reviewTxt, formula: c.formulaLine, grams: c.gp ? phFmtG(c.gp) : "", diagnosis: c.planDiagnosis, goal: c.planGoal, constitution: c.constitutionName };
+    return String(s).replace(/\{(first|review|formula|grams|diagnosis|goal|constitution)\}/g, (m, k) => v[k] || "");
+  }
+  const PH_LTR_SAMPLE_CTX = { first: "{first}", reviewTxt: "{review}", formulaLine: "{formula}", gp: 0, mainName: "", doseTxt: "", daysTxt: "", lastsTxt: "", planDiagnosis: "{diagnosis}", planGoal: "{goal}", constitutionName: "{constitution}", cycle: null };
+  // what a section says before any edit: the template's own wording, else
+  // the built-in builder run with tokens in place of the live values
+  function phLtrDefaultText(tmpl, sec) {
+    if (tmpl.texts && tmpl.texts[sec] != null) return tmpl.texts[sec];
+    const s = PH_LTR_SECTIONS[sec];
+    if (!s || s.fixed) return "";
+    try { return s.text(PH_LTR_SAMPLE_CTX) || ""; } catch (e) { return ""; }
+  }
+  let phLtrSetTpl = "course", phLtrSetUndo = [];
+  function phLtrSetApply(tmplId, sec, value) {
+    const all = phLtrOverrides();
+    if (value == null) { if (all[tmplId]) { delete all[tmplId][sec]; if (!Object.keys(all[tmplId]).length) delete all[tmplId]; } }
+    else { (all[tmplId] || (all[tmplId] = {}))[sec] = value; }
+  }
+  function phLtrTemplatesSectionHtml() {
+    const tmpls = phLtrAllTemplates();
+    const tmpl = tmpls.find(x => x.id === phLtrSetTpl) || tmpls[0];
+    const ov = phLtrOverrides()[tmpl.id] || {};
+    const secs = (tmpl.secs || []).filter(sec => PH_LTR_SECTIONS[sec] && !PH_LTR_SECTIONS[sec].fixed && phLtrDefaultText(tmpl, sec));
+    const editedN = Object.keys(ov).length;
+    const last = phLtrSetUndo[phLtrSetUndo.length - 1];
+    return `<div class="ph-settings-sec" id="phLtrSetSec">
+      <h3>✉ Letter templates</h3>
+      <p class="ph-settings-hint">Edit the wording every patient letter starts from. Changes apply to new letters from now on; letters already saved keep what they said. Fill-ins: ${PH_LTR_TOKENS.map(([k, l]) => `<code>{${k}}</code> ${l}`).join(" · ")}.</p>
+      <div class="ph-ltrset-chips">${tmpls.map(x => `<button type="button" class="ph-ck-chip${x.id === tmpl.id ? " on" : ""}" data-ltr-tpl-pick="${esc(x.id)}">${esc(x.name)}${phLtrOverrides()[x.id] && Object.keys(phLtrOverrides()[x.id]).length ? " ✎" : ""}</button>`).join("")}</div>
+      <div class="ph-settings-actions ph-ltrset-actions">
+        <button type="button" class="btn-cancel" data-ltr-tpl-undo="1"${last ? "" : " disabled"}>↩ Undo last change${last ? ` — ${esc((PH_LTR_SECTIONS[last.sec] || {}).label || last.sec)}` : ""}</button>
+        ${editedN ? `<button type="button" class="btn-cancel" data-ltr-tpl-reset-all="${esc(tmpl.id)}">↺ Reset this template (${editedN} edited)</button>` : ""}
+      </div>
+      <div class="ph-ltrset-grid">${secs.map(sec => {
+        const s = PH_LTR_SECTIONS[sec], edited = ov[sec] != null;
+        return `<div class="ph-ltrset-row${edited ? " edited" : ""}">
+          <div class="ph-ltrset-lbl"><span>${esc(s.heading || s.label)}</span>${edited ? `<button type="button" class="tab-link" data-ltr-tpl-reset="${esc(tmpl.id)}:${sec}">↺ Default</button>` : `<span class="faint">default</span>`}</div>
+          <textarea class="ph-label-template-input ph-ltrset-ta" data-ltr-tpl-field="${esc(tmpl.id)}:${sec}" rows="${Math.min(8, Math.max(2, Math.ceil((edited ? ov[sec] : phLtrDefaultText(tmpl, sec)).length / 90)))}" spellcheck="true">${esc(edited ? ov[sec] : phLtrDefaultText(tmpl, sec))}</textarea>
+        </div>`;
+      }).join("")}</div>
+    </div>`;
+  }
   function phLtrCtx(t) {
     const name = presPatientFor(t) || t.name || "";
     const first = phTpFirstName(name);
@@ -30334,21 +30436,21 @@
         <div class="ph-ltr-fndt"><b>👅 Tongue</b>
           <span class="bc"><i>Body</i>${fld("tongueBody", "e.g. pale, slightly swollen")}</span>
           <span class="bc"><i>Coat</i>${fld("tongueCoat", "e.g. thin, white")}</span>
-          ${note("tongueNote", "— what this tells us about where your system is right now.")}
+          ${note("tongueNote", "— what this tells me about where your system is right now.")}
         </div>
       </div>
       <div class="ph-ltr-fnd">
         ${phLtrPulseSvg(interactive)}
         <div class="ph-ltr-fndt"><b>🫀 Pulse</b>
           <span class="bc">${fld("pulse", "e.g. wiry at left guan")}</span>
-          ${note("pulseNote", "— what the pulse showed and what we're easing.")}
+          ${note("pulseNote", "— what the pulse showed and what I'm easing.")}
         </div>
       </div>
       <div class="ph-ltr-fnd">
         ${phLtrAbdSvg(interactive)}
         <div class="ph-ltr-fndt"><b>🤲 Abdomen</b>
           <span class="bc">${fld("abdomen", "e.g. tightness under the right ribs")}</span>
-          ${note("abdNote", "— what we felt and why it matters for this formula.")}
+          ${note("abdNote", "— what I felt and why it matters for this formula.")}
         </div>
       </div>
     </div>`;
@@ -30372,24 +30474,26 @@
   // sign-off is picked per letter from a stable seed (script/plan + day), so
   // reopening the same letter never flips it, while letters vary overall
   const PH_SIGNATURE = "Linh Quach, BHSc MChinMed";
+  // "Sun 13 Sep" -> "Sun 13th Sep" (her wording for the next-visit line)
+  const phOrdinalDate = label => String(label || "").replace(/\b(\d{1,2})\b/, (m, d) => { const n = +d, s = n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] || "th"; return n + s; });
   const phSignoffFor = seed => { let h = 0; for (const ch of String(seed || "")) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h % 2 ? "Kind Regards," : "Warmly,"; };
   const PH_LTR_SECTIONS = {
-    greet: { label: "Greeting", text: c => `Dear ${c.first},\n\nIt was lovely to see you today. Here's a summary of the herbal treatment we've started, so everything we talked about is in one place.` },
-    greetReview: { label: "Greeting", text: c => `Dear ${c.first},\n\nThank you for coming in for your review today — here's where things stand after our visit.` },
-    changes: { label: "What we noticed", heading: "What we noticed", text: () => `You've made progress since last time. We talked through what's changed, and adjusted the approach to match where you are now.` },
+    greet: { label: "Greeting", text: c => `Dear ${c.first},\n\nIt was lovely to see you today. Here's a summary of the herbal treatment I've started you on, so everything we talked about is in one place.` },
+    greetReview: { label: "Greeting", text: c => `Dear ${c.first},\n\nThank you for coming in for your review today — here's where things stand after today's visit.` },
+    changes: { label: "What I noticed", heading: "What I noticed", text: () => `You've made progress since last time. We talked through what's changed, and I've adjusted the approach to match where you are now.` },
     formula: { label: "Your formula", heading: "Your formula", text: c => `${c.formulaLine}${c.gp ? ` — a ${phFmtG(c.gp)}g blend${c.mainName ? ` of ${c.mainName}` : ""}, prepared for you today.` : "."}` },
     dose: { label: "How to take it", heading: "How to take it", fixed: true,
       html: c => `<table class="ph-ltr-dose">${[["Dose", c.doseTxt], ["Days", c.daysTxt], ["Lasts", c.lastsTxt]].filter(r => r[1]).map(r => `<tr><td>${r[0]}</td><td>${esc(r[1])}</td></tr>`).join("")}</table>`,
       text: c => [["Dose", c.doseTxt], ["Days", c.daysTxt], ["Lasts", c.lastsTxt]].filter(r => r[1]).map(r => `${r[0]}: ${r[1]}`).join("\n") },
-    purpose: { label: "What it's for", heading: "What it's for", text: () => `We've chosen this formula for the pattern we discussed today. It works gently over the course of the batch — taking it consistently matters more than any single dose.` },
-    findings: { label: "What we found today", heading: "What we found today", fixed: true,
+    purpose: { label: "What it's for", heading: "What it's for", text: () => `I've chosen this formula for the pattern we discussed today. It works gently over the course of the batch — taking it consistently matters more than any single dose.` },
+    findings: { label: "What I found today", heading: "What I found today", fixed: true,
       html: (c, interactive) => phLtrFindingsHtml(c, !!interactive), text: () => phLtrFindingsText() },
     pattern: { label: "Pattern & approach", heading: "Pattern & approach", text: c => c.planDiagnosis || c.planGoal
-      ? `${c.planDiagnosis ? `We're treating ${c.planDiagnosis}. ` : ""}${c.planGoal ? `Our approach: ${c.planGoal}` : ""}`.trim()
-      : `We're treating the pattern we discussed today. The approach is to harmonise rather than force — gentle, steady, over the course of the batch.` },
+      ? `${c.planDiagnosis ? `I'm treating ${c.planDiagnosis}. ` : ""}${c.planGoal ? `My approach: ${c.planGoal}` : ""}`.trim()
+      : `I'm treating the pattern we discussed today. The approach is to harmonise rather than force — gentle, steady, over the course of the batch.` },
     constitution: { label: "Your constitution", heading: "Your constitution", text: c => c.constitutionName
-      ? `Your underlying constitution reads as ${c.constitutionName} — it shapes how we choose and adjust your formulas over time, not just this one.`
-      : `Your underlying constitution shapes how we choose and adjust your formulas over time — we'll keep building this picture together.` },
+      ? `Your underlying constitution reads as ${c.constitutionName} — it shapes how I choose and adjust your formulas over time, not just this one.`
+      : `Your underlying constitution shapes how I choose and adjust your formulas over time — we'll keep building this picture together.` },
     seasonal: { label: "Diet & lifestyle", heading: "Diet & lifestyle", text: () => `Warm, regular meals will support the herbs' work — go gently on cold or raw foods while you're on this course, and let rest be part of the treatment too.` },
     expect: { label: "What to expect", heading: "What to expect", text: () => `Herbal treatment builds over the course of the batch — many people notice early shifts within the first week, with the fuller change settling in as we continue.` },
     // 🩸 read from the patient's own cycle record (2026-09-04) -- switched
@@ -30409,9 +30513,9 @@
       html: () => phLtrStageTableHtml(PH_LTR_MENO_STAGES), text: () => phLtrStageTableText(PH_LTR_MENO_STAGES) },
     postnatal: { label: "After the birth", heading: "After the birth", text: () => `Around two weeks after the birth we'll check in (online is fine) — how you're recovering, how the labour went, and what support would help now. Herbs and supplements can be prescribed for energy, milk supply and recovery, matched to how you're feeling. Coming in for acupuncture from three to four weeks post-birth helps the body restore — and it's particularly worth it after a caesarean or a complicated birth, or if you're in pain, where it also supports healing and, after a caesarean, the scar.` },
     nextvisit: { label: "Your next visit", heading: "Your next visit", text: c => c.reviewTxt
-      ? `We'll review how you've gone on ${c.reviewTxt} — that's timed for when this batch runs out. If anything feels off before then, get in touch.`
-      : `We'll review how you've gone when this batch runs out — book in for around then. If anything feels off before that, get in touch.` },
-    posttest: { label: "After your test", heading: "After your pregnancy test", text: () => `Please book a longer review appointment once you've tested, so we can go through the result properly together.\n\nIf it's positive — we'll move into weekly support for early pregnancy and talk through what to expect.\nIf it's negative — we'll go through this cycle in detail and adjust the plan before the next one.` },
+      ? `Let's review how you've gone after ${phOrdinalDate(c.reviewTxt)} — that's timed for when this batch runs out. If anything feels off before then, get in touch.`
+      : `Let's review how you've gone when this batch runs out — book in for around then. If anything feels off before that, get in touch.` },
+    posttest: { label: "After your test", heading: "After your pregnancy test", text: () => `Please book a longer review appointment once you've tested, so we can go through the result properly together.\n\nIf it's positive — I'll move you into weekly support for early pregnancy and talk through what to expect.\nIf it's negative — I'll go through this cycle in detail with you and adjust the plan before the next one.` },
     signoff: { label: "Sign-off", text: () => `${phSignoffFor(`${phLtrScriptId}|${keyOf(TODAY)}`)}\n${PH_SIGNATURE}` },
   };
   const PH_LTR_NAT_STAGES = [
@@ -30426,7 +30530,7 @@
   const PH_LTR_PREG_STAGES = [
     ["To 14 weeks", "Weekly", "Supporting the physiology of early pregnancy and building the body's vitality for a healthy pregnancy — easing the first-trimester load (nausea, vomiting, fatigue) and helping you settle and relax through the worry that comes with it."],
     ["14–34 weeks", "Monthly", "A re-tune and re-balance as the pregnancy grows — more often if anything unwanted shows up (back pain, poor sleep, digestion, pelvic instability, blood-sugar wobbles); just ask."],
-    ["34–40 weeks", "Weekly", "Birth preparation for mind and body — building energy for labour, encouraging cervical ripening and good positioning. If baby is breech, we start this work from 34 weeks; even if baby is head-down, pre-birth acupuncture is worth doing. We can also teach you and your partner acupressure points for birth and labour-pain relief."],
+    ["34–40 weeks", "Weekly", "Birth preparation for mind and body — building energy for labour, encouraging cervical ripening and good positioning. If baby is breech, I start this work from 34 weeks; even if baby is head-down, pre-birth acupuncture is worth doing. I can also teach you and your partner acupressure points for birth and labour-pain relief."],
     ["40+ weeks", "Twice weekly", "Birth encouragement — often the pre-birth work means this isn't needed, but when it is, treatment strongly supports blood flow and nerve activity to the uterus, with the same acupressure teaching for you both."],
   ];
   // 🌗 Menopause & peri (her round 2026-09-01, no reference letter -- drafted
@@ -30434,7 +30538,7 @@
   // stage table (her call), covering flushes/sweats, sleep/mood/fog, peri
   // cycle changes, and the works-alongside-HRT line.
   const PH_LTR_MENO_STAGES = [
-    ["Perimenopause — the lead-up years", "Weekly–fortnightly · herbs", "Cycles changing shape — flooding, irregularity, worsening PMS — plus the first heat and sleep disruptions. We steady the cycle while it's still here and cool what's starting to flare."],
+    ["Perimenopause — the lead-up years", "Weekly–fortnightly · herbs", "Cycles changing shape — flooding, irregularity, worsening PMS — plus the first heat and sleep disruptions. I steady the cycle while it's still here and cool what's starting to flare."],
     ["Menopause — around the last period", "Weekly while symptoms are loud · herbs", "The heat at its strongest — hot flushes, night sweats, broken sleep, mood swings and foggy thinking. Treatment focuses on cooling, anchoring and restoring rest."],
     ["Beyond — the years after", "Monthly re-tune", "Symptoms settle; the work turns to nourishing what the transition draws on — sleep, joints, skin and long-term steadiness."],
   ];
@@ -30453,7 +30557,7 @@
   function phLtrCycleNowText(cy) {
     const where = cy.phaseKey === "period" ? "your period — the cycle clearing and resetting before the next follicle develops"
       : cy.phaseKey === "foll" ? "the follicular phase, when the lining is building and the next follicle is developing"
-      : cy.phaseKey === "ov" ? "your ovulation window — the release we're supporting this visit"
+      : cy.phaseKey === "ov" ? "your ovulation window — the release I'm supporting this visit"
       : "the two-week wait, when the body is holding steady and supporting what may be beginning";
     const next = cy.phaseKey === "luteal" || cy.phaseKey === "ov"
       ? `Your next period is due around ${phFuDateLabel(cy.nextDate)}${cy.overdue ? " — it's running late, which is worth telling me about" : ""}.`
@@ -30468,37 +30572,37 @@
     { id: "course", name: "🌿 Herbal course", secs: ["greet", "findings", "pattern", "constitution", "formula", "dose", "purpose", "seasonal", "expect", "nextvisit", "signoff"], off: ["constitution"] },
     { id: "review", name: "🔄 Review & progress", secs: ["greetReview", "findings", "changes", "formula", "dose", "nextvisit", "signoff"], off: [] },
     { id: "digestion", name: "🍚 Digestion", secs: PH_LTR_COND_SECS, off: ["constitution"], texts: {
-      pattern: "We're treating your digestion at its root — strengthening the digestive centre and clearing what's been sitting in its way, rather than just settling symptoms.",
+      pattern: "I'm treating your digestion at its root — strengthening the digestive centre and clearing what's been sitting in its way, rather than just settling symptoms.",
       purpose: "This formula supports your digestive system's own rhythm — easing the discomfort while rebuilding the strength underneath it.",
-      seasonal: "Your digestion will do its best work with warm, cooked, regular meals — soups, stews, cooked vegetables. Go easy on cold drinks, raw salads, dairy and greasy food while we're treating, and try not to eat late at night.",
+      seasonal: "Your digestion will do its best work with warm, cooked, regular meals — soups, stews, cooked vegetables. Go easy on cold drinks, raw salads, dairy and greasy food while I'm treating you, and try not to eat late at night.",
       expect: "Digestive patterns usually respond in weeks — many people feel meals sitting more comfortably within the first batch, with steadier energy following as absorption improves.",
     } },
     { id: "stress", name: "🧘 Stress", secs: PH_LTR_COND_SECS, off: ["constitution"], texts: {
-      pattern: "We're treating the way stress has been sitting in your body — softening the tension pattern and steadying the system underneath it, so you're not just coping but actually recovering.",
-      purpose: "This formula eases the physical grip of stress — the tension we found today — while supporting the deeper reserves stress runs down.",
+      pattern: "I'm treating the way stress has been sitting in your body — softening the tension pattern and steadying the system underneath it, so you're not just coping but actually recovering.",
+      purpose: "This formula eases the physical grip of stress — the tension I found today — while supporting the deeper reserves stress runs down.",
       seasonal: "Regular meals matter more than perfect ones when you're stretched — don't skip them. Ease back on caffeine and alcohol where you can; both borrow tomorrow's energy. Small daily walks do more than occasional big workouts.",
       expect: "Most people feel the edge come off within the first week or two — sleep and shoulders usually know first. The deeper steadiness builds over the course.",
     } },
     { id: "skin", name: "🌸 Skin", secs: PH_LTR_COND_SECS, off: ["constitution"], texts: {
-      pattern: "Skin tells us what's happening underneath — we're treating the internal pattern driving it, rather than chasing the surface.",
+      pattern: "Skin tells me what's happening underneath — I'm treating the internal pattern driving it, rather than chasing the surface.",
       purpose: "This formula works on the internal drivers of your skin — clearing what's flaring it and nourishing what keeps it settled.",
-      seasonal: "While we're treating, ease off the classic flare foods — spicy food, alcohol, seafood and too much sugar — and keep your fluids up. Be gentle on the skin itself: lukewarm water, minimal products.",
+      seasonal: "While I'm treating you, ease off the classic flare foods — spicy food, alcohol, seafood and too much sugar — and keep your fluids up. Be gentle on the skin itself: lukewarm water, minimal products.",
       expect: "Skin is slow to show its wins — the itch and flare usually settle first over a few weeks, while the skin itself renews over a couple of months. Steadiness beats intensity here.",
     } },
     { id: "sleep", name: "🌙 Sleep", secs: PH_LTR_COND_SECS, off: ["constitution"], texts: {
-      pattern: "We're treating what's keeping sleep shallow — settling the mind's restlessness and nourishing what deep sleep draws on, rather than sedating you.",
+      pattern: "I'm treating what's keeping sleep shallow — settling the mind's restlessness and nourishing what deep sleep draws on, rather than sedating you.",
       purpose: "This formula helps the body remember how to descend into sleep — calming without heaviness, so mornings feel clearer, not foggier.",
       seasonal: "Keep the evening light: earlier, smaller dinners, and caffeine before noon only. Screens brighten the mind the herbs are trying to settle — give yourself a low-light hour before bed when you can.",
       expect: "Sleep usually deepens in stages — falling asleep more easily comes first, often within a week or two; staying asleep and waking refreshed build over the course.",
     } },
     { id: "menstrual", name: "🌺 Menstrual", secs: ["greet", "findings", "pattern", "cycleNow", "constitution", "formula", "dose", "purpose", "seasonal", "expect", "nextvisit", "signoff"], off: ["constitution"], texts: {
-      pattern: "We're regulating the cycle at its root — smoothing the flow of qi and blood so the cycle can run on time and without a fight.",
+      pattern: "I'm regulating the cycle at its root — smoothing the flow of qi and blood so the cycle can run on time and without a fight.",
       purpose: "This formula works with your cycle's own phases — easing the discomfort now while correcting the pattern that drives it.",
       seasonal: "Warmth is your friend, especially the week before your period — warm food, warm feet, and a heat pack is real medicine. Go gently on cold drinks and icy food around your period.",
       expect: "Cycles answer in cycles — many people notice the next period is easier, with the fuller change settling in over two to three cycles.",
     } },
     { id: "fertility", name: "🌱 Natural fertility", secs: ["greet", "findings", "pattern", "cycleNow", "stagesNat", "constitution", "formula", "dose", "purpose", "seasonal", "expect", "nextvisit", "posttest", "signoff"], off: ["constitution"], texts: {
-      pattern: "We're supporting your fertility by working with each phase of your natural cycle — building circulation to the ovaries and uterus, helping your hormones find their rhythm, and giving your body what it needs to develop a healthy lining, so conception has the best conditions to happen naturally.",
+      pattern: "I'm supporting your fertility by working with each phase of your natural cycle — building circulation to the ovaries and uterus, helping your hormones find their rhythm, and giving your body what it needs to develop a healthy lining, so conception has the best conditions to happen naturally.",
       purpose: "This formula supports the phase of your cycle you're in right now — building blood flow and hormonal balance through the first half of the cycle, easing ovulation, then steadying you through the two-week wait.",
       seasonal: "Warm, regular meals and warm feet genuinely help here — think cooked breakfasts, soups and stews, and go gently on cold drinks and raw food. Gentle movement most days beats hard training.",
       expect: "Fertility work moves in cycles, not days — most people notice their cycle becoming more comfortable and regular over two to three cycles, as hormone regulation and the lining both settle into a steadier pattern. That's the foundation conception builds on.",
@@ -30506,7 +30610,7 @@
     { id: "cycleivf", name: "🤍 IVF", secs: ["greet", "findings", "cycleNow", "stages", "pattern", "formula", "dose", "nextvisit", "posttest", "signoff"], off: [] },
     { id: "pregnancy", name: "🤰 Pregnancy", secs: ["greet", "findings", "stagesPreg", "constitution", "formula", "dose", "nextvisit", "postnatal", "signoff"], off: ["constitution"] },
     { id: "menopause", name: "🌗 Menopause & peri", secs: ["greet", "findings", "pattern", "stagesMeno", "constitution", "formula", "dose", "purpose", "seasonal", "expect", "nextvisit", "signoff"], off: ["constitution"], texts: {
-      pattern: "Menopause isn't an illness — it's a transition that can run rough or smooth. We're treating the pattern making yours rough: cooling the flaring heat, steadying mood and sleep, and nourishing the reserves this stage draws on.",
+      pattern: "Menopause isn't an illness — it's a transition that can run rough or smooth. I'm treating the pattern making yours rough: cooling the flaring heat, steadying mood and sleep, and nourishing the reserves this stage draws on.",
       purpose: "This formula works on the drivers of your symptoms — flushes, sweats, broken sleep, mood — while supporting the deeper reserves underneath. Herbs work alongside whatever else you're taking, HRT included — just keep me posted on any changes.",
       seasonal: "Cooling and steadying beats heating and spiking — go gently on alcohol, coffee, chilli and sugar, which all feed the flushes. Layered clothing and a cool bedroom genuinely help, and weight-bearing movement — walking counts — is real medicine for the years ahead.",
       expect: "Flushes and sleep usually ease within a few weeks, with the fuller settling over two to three months. Peri symptoms can wax and wane with the cycle — that's the pattern, not a failure of treatment.",
@@ -30522,7 +30626,11 @@
     const edit = phLtrEdits[phLtrKey(sec)];
     if (edit != null) return edit;
     const tmpl = phLtrTmpl();
-    if (tmpl.texts && tmpl.texts[sec] != null) return tmpl.texts[sec].replace(/\{first\}/g, ctx.first);
+    // her edited wording for this template (Settings -> Letter templates)
+    // sits between the per-letter edit and the template's own texts
+    const ov = phLtrOverrides()[tmpl.id];
+    if (ov && ov[sec] != null) return phLtrFillTokens(ov[sec], ctx);
+    if (tmpl.texts && tmpl.texts[sec] != null) return phLtrFillTokens(tmpl.texts[sec], ctx);
     return PH_LTR_SECTIONS[sec].text(ctx);
   }
   function phLtrSeedOff() {
