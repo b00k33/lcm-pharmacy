@@ -1,4 +1,4 @@
-// LCM Pharmacy service worker -- installability + offline-read app shell.
+// LCM - Linh Chinese Medicine service worker -- installability + offline-read app shell.
 // Hand-edited (no build step touches this file); bump CACHE_VERSION on any
 // meaningful change so a fresh deploy evicts the old cache. Modelled on
 // book33-app-redesign's sw.js (same project family, same GitHub Pages
@@ -12,7 +12,7 @@
 // changes). A waiting service worker sits untouched until that same button
 // tells it to go, via postMessage({type:"SKIP_WAITING"}) -- see the
 // "message" listener below and phDoControlledUpdate's STEP 4.
-var CACHE_VERSION = "lcm-20260905-intakenewpatientfix";
+var CACHE_VERSION = "lcm-20260905-rename";
 
 var SHELL = ["./", "./index.html", "./manifest.json", "./icons/icon-192-v2.png", "./icons/icon-512-v2.png", "./icons/apple-touch-icon-v2.png", "./icons/favicon-32-v2.png", "./icons/favicon-32-light-v2.png"];
 
