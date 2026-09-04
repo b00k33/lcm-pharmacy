@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260905-100000">
+<meta name="lcm-build" content="20260905-110000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -5954,6 +5954,15 @@
   #pharmacyPage .ph-cyc-in.d { padding: 3px 8px; }
   #pharmacyPage .ph-cyc-reg input { width: 14px; height: 14px; margin: 0; accent-color: var(--ph-green); }
   #pharmacyPage .ph-cycle-hist { flex-basis: 100%; font-size: 11.5px; color: var(--ph-faint); }
+  #pharmacyPage .ph-cyc-histtoggle { flex: none; padding: 0; font-size: 11.5px; }
+  #pharmacyPage .ph-cyc-histbox { flex-basis: 100%; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--ph-line); display: flex; flex-direction: column; gap: 4px; }
+  #pharmacyPage .ph-cyc-histrow { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; color: var(--ph-ink); }
+  #pharmacyPage .ph-cyc-histrow.cur { font-weight: 600; }
+  #pharmacyPage .ph-cyc-histrow .faint { font-weight: 400; color: var(--ph-faint); margin-left: 4px; }
+  #pharmacyPage .ph-cyc-histrow .del { border: none; background: none; color: var(--ph-soft); font-size: 15px; line-height: 1; cursor: pointer; padding: 2px 6px; font-family: inherit; }
+  #pharmacyPage .ph-cyc-histempty { font-size: 12px; color: var(--ph-faint); }
+  #pharmacyPage .ph-cyc-histadd { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ph-green-deep); margin-top: 4px; cursor: pointer; }
+  #pharmacyPage .ph-cyc-histadd input { font: inherit; border: 1px solid var(--ph-line); border-radius: 6px; padding: 3px 8px; background: var(--ph-white); color: var(--ph-ink); }
   #pharmacyPage .ph-tl-brief { margin-top: 4px; font-size: 11.5px; line-height: 1.4; color: var(--ph-soft); white-space: normal; display: grid; grid-template-columns: 1fr 1fr; gap: 2px 16px; }
   #pharmacyPage .ph-tl-brief span { min-width: 0; padding-left: 12px; border-left: 1px solid var(--ph-line); }
   #pharmacyPage .ph-tl-brief span:first-child { padding-left: 0; border-left: 0; }
@@ -20892,6 +20901,17 @@
         savePharmacy(); phCycleRerender();
         return;
       }
+      // her ask 2026-09-05: the "Period history" disclosure + its per-date
+      // delete -- see phCycleHistoryHtml/phCycleDeleteHistoryDate above
+      const cycHistToggle = e.target.closest("[data-cycle-hist-toggle]");
+      if (cycHistToggle) { presCycleHistOpen = !presCycleHistOpen; phCycleRerender(); return; }
+      const cycHistDel = e.target.closest("[data-cycle-hist-del]");
+      if (cycHistDel) {
+        const rec = phCycleTargetRec();
+        if (rec) phCycleDeleteHistoryDate(rec, cycHistDel.dataset.cycleHistDel);
+        phCycleRerender();
+        return;
+      }
       const hxSexBtn = e.target.closest("[data-hx-sex]");
       if (hxSexBtn) {
         const rec = phPatientRec(presHxScreenName);
@@ -29508,6 +29528,11 @@
   document.addEventListener("change", e => {
     const t = e.target;
     if (!t || !t.matches) return;
+    if (t.matches("[data-cycle-hist-add]")) {
+      const rec = phCycleTargetRec();
+      if (rec && t.value) { phCycleAddHistoryDate(rec, t.value); t.value = ""; phCycleRerender(); }
+      return;
+    }
     if (t.matches("[data-cycle-period-date]")) {
       const nm = t.dataset.cyclePeriodDate;
       const rec = nm && nm !== "1" ? phPatientRec(nm) : phCycleTargetRec();
@@ -31304,6 +31329,42 @@
   // rec.cycleLog, the average gap of the last three cycles becomes the
   // working length unless she typed one (cycle.cycleLenManual), flow / pain /
   // regular carry over untouched. Details save as she changes them. ----
+  // her ask 2026-09-05 ("does this log the periods so it keeps a history of
+  // it overtime? is there a way to input history of periods?"): rec.cycleLog
+  // WAS already the real history feeding the average -- just never visible
+  // or addable except by repeating "another day…" once per date, which is
+  // order-sensitive (whichever date gets logged LAST becomes rec.cycle.lmp,
+  // even if it isn't actually the most recent). These two make cycleLog a
+  // first-class thing: adding is order-independent (lmp always recomputed as
+  // the newest entry in the log, not "whatever was just typed"), and
+  // deleting recomputes the same way -- see phCycleHistoryHtml below.
+  function phCycleAddHistoryDate(rec, dateKey) {
+    if (!rec || !dateKey) return null;
+    rec.cycleLog = rec.cycleLog || [];
+    if (!rec.cycleLog.some(x => x.lmp === dateKey)) rec.cycleLog.push({ lmp: dateKey });
+    rec.cycleLog.sort((a, b) => a.lmp < b.lmp ? -1 : 1);
+    const newest = rec.cycleLog[rec.cycleLog.length - 1].lmp;
+    const cur = phCycleFor(rec) || {};
+    rec.cycle = Object.assign({ cycleLen: 28, flowDays: 5, flowIntensity: "moderate", pain: "none", regular: true }, cur, { lmp: newest });
+    const avg = phCycleAvgLen(rec);
+    if (avg && !rec.cycle.cycleLenManual) rec.cycle.cycleLen = avg;
+    phCycleSyncPlans(rec);
+    savePharmacy();
+    return phCycleComp(rec);
+  }
+  function phCycleDeleteHistoryDate(rec, dateKey) {
+    if (!rec || !rec.cycleLog) return null;
+    rec.cycleLog = rec.cycleLog.filter(x => x.lmp !== dateKey);
+    const cur = phCycleFor(rec) || {};
+    if (!rec.cycleLog.length) { rec.cycle = Object.assign({}, cur, { lmp: "" }); savePharmacy(); return null; }
+    const newest = rec.cycleLog[rec.cycleLog.length - 1].lmp;
+    rec.cycle = Object.assign({}, cur, { lmp: newest });
+    const avg = phCycleAvgLen(rec);
+    if (avg && !rec.cycle.cycleLenManual) rec.cycle.cycleLen = avg;
+    phCycleSyncPlans(rec);
+    savePharmacy();
+    return phCycleComp(rec);
+  }
   function phCycleGaps(rec) {
     const l = ((rec && rec.cycleLog) || []).map(x => x.lmp).filter(Boolean).sort();
     const gaps = [];
@@ -31444,8 +31505,24 @@
         <label class="ph-cycle-introw" title="Pain"><span class="ic">⚡</span><div class="ph-cycle-dots">${[1, 2, 3].map(i => `<span class="dot${i <= painLevel ? " on" : ""}"></span>`).join("")}</div>${sel("pain", PH_CYCLE_PAIN, c.pain || "none")}</label>
         <label class="ph-cycle-introw ph-cycle-reg" title="Regular cycle?"><input type="checkbox" data-cycle-field="regular"${c.regular === false ? "" : " checked"}><span class="ph-cycle-regbadge${c.regular === false ? " irregular" : ""}">${c.regular === false ? "Irregular" : "Regular"}</span></label>
         <span class="ph-cycle-hist">saves as you change it</span>
-      </div>`;
+        <button type="button" class="tab-link ph-cyc-histtoggle" data-cycle-hist-toggle="1" aria-expanded="${presCycleHistOpen}">${presCycleHistOpen ? "Hide" : "Period history"}</button>
+      </div>
+      ${presCycleHistOpen ? phCycleHistoryHtml(rec) : ""}`;
       })()}
+    </div>`;
+  }
+  // her ask 2026-09-05: a visible, editable log behind "Period history" --
+  // see phCycleAddHistoryDate/phCycleDeleteHistoryDate above. Newest last;
+  // the current/newest entry is labelled so it's clear which one drives LMP.
+  function phCycleHistoryHtml(rec) {
+    const log = ((rec && rec.cycleLog) || []).slice().sort((a, b) => a.lmp < b.lmp ? -1 : 1);
+    const curLmp = rec && rec.cycle && rec.cycle.lmp;
+    return `<div class="ph-cyc-histbox">
+      ${log.length ? log.map(x => `<div class="ph-cyc-histrow${x.lmp === curLmp ? " cur" : ""}">
+        <span>${esc(phShortDate(x.lmp))}${x.lmp === curLmp ? ` <span class="faint">current</span>` : ""}</span>
+        <button type="button" class="del" data-cycle-hist-del="${esc(x.lmp)}" title="Remove this date" aria-label="Remove ${esc(phShortDate(x.lmp))}">×</button>
+      </div>`).join("") : `<div class="ph-cyc-histempty faint">No periods logged yet.</div>`}
+      <label class="ph-cyc-histadd">+ add a past period<input type="date" data-cycle-hist-add="1" max="${keyOf(TODAY)}" aria-label="Add a past period start date"></label>
     </div>`;
   }
   function phTpCycleEditHtml(rec) {
@@ -34362,6 +34439,10 @@ Please let me know if you have any questions.`;
   let presAcuOpen = false, presAcuOutcomeDraft = null;
   // 🩸 Cycle row (patient-level, 2026-09-04) open/closed in the panel
   let presCycleOpen = false;
+  // 🩸 period history list (her ask 2026-09-05), collapsed by default so the
+  // already-dense cycle bar doesn't grow every time it's shown -- see
+  // phCycleHistoryHtml
+  let presCycleHistOpen = false;
   // 🩸 Cycle timeline bar edit state (her ask, same session) -- whether the
   // LMP/length/flow/pain/regularity edit form is showing inside whichever
   // plan view is open (inline or the full-screen modal). Only meaningful on
