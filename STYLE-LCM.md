@@ -10,6 +10,19 @@ untouched. Tokens are set on `#pharmacyPage` inside that query.
 
 ---
 
+## A patient/script panel open takes the whole screen
+
+Her ask (2026-09-05): a panel is real work, not browsing — the four-daily-verb bottom bar
+(`.ph-mobile-tabbar`) is wasted space while she's deep in one record. `body:has(#presPanel
+.ph-pres-panel)` hides the bar automatically (no JS state to keep in sync with open/close)
+and reveals `.ph-pres-fab` — one quiet circular button, bottom-right — in its place. Tapping
+it peeks the real bar back (`body.ph-mtabbar-peek`, `!important` — a deliberate override,
+see the CSS comment on why `:has()` otherwise always wins); tapping again, or closing the
+panel, tucks it away. Reuse this exact `:has()` + peek-class pattern for any future
+full-screen-while-open surface, rather than inventing a second way to do the same thing.
+
+---
+
 ## The mobile type scale — four sizes, no fifth
 
 | Token | Size | Weight | Used for |
