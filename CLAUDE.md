@@ -3,6 +3,9 @@ Also read ABOUT-ME.md before any work — build to this user's preferences.
 This is a single-page mobile web app. It must always look clean, symmetrical,
 aligned, organized and calm. Follow every rule, then re-check your work.
 
+For LCM Pharmacy, follow STYLE-LCM.md. If a request conflicts with a rule in it,
+update STYLE-LCM.md to match so future builds don't undo it.
+
 ## Theme — keep the current GREEN & WHITE look (do NOT go dark)
 - Keep the existing light theme: clean white / off-white surfaces, a soft light-green
   page background, forest-green as the primary colour, with tasteful accent colours.
