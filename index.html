@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260904-170000">
+<meta name="lcm-build" content="20260904-180000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -3592,6 +3592,15 @@
   #pharmacyPage .ph-tl-row.open { background: var(--ph-green-tint); border-radius: 8px 8px 0 0; padding-left: 8px; padding-right: 8px; margin: 0 -8px; }
   #pharmacyPage .ph-tl-panelhost { margin: 0 -8px 8px; padding: 8px 8px 0; background: var(--ph-green-tint); border-radius: 0 0 8px 8px; animation: ph-tl-drop .18s ease-out; }
   #pharmacyPage .ph-tl-panelhost > #presPanel { margin: 0; }
+  /* inside a row the editor is a guest: no 40px bleed (it ran under the Day
+     summary), no second box inside the tinted host, soft corners, and the
+     widget must not change width when it opens (her "still sucks", 2026-09-04) */
+  #pharmacyPage .ph-tl-panelhost .ph-pres-panel { --ph-pres-bleed: 0px; margin: 0; background: transparent; border: none; border-radius: 10px; padding: 4px 4px 8px; box-shadow: none; }
+  #pharmacyPage .ph-tl-panelhost .ph-pres-panel h3 { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ph-faint); font-weight: 700; margin: 4px 0 8px; }
+  #pharmacyPage .ph-tl-panelhost .ph-pres-panel .ph-tmpl-grid { grid-template-columns: minmax(220px, 360px) minmax(180px, 240px); }
+  #pharmacyPage .ph-tl-panelhost .ph-pres-panel .ph-tmpl-actions { margin-top: 12px; }
+  #pharmacyPage .ph-tl-panelhost { padding: 4px 12px 12px; }
+  #pharmacyPage #phPresWrap .ph-tl-widget:has(.ph-pres-panel) { max-width: var(--ph-sheet-w, 1240px); }
   #pharmacyPage .ph-tl-panelhost + .ph-tl-row { border-top: none; }
   /* the prescription editor's fields take the timeline's field language
      (her "make the ui consistent, code7 remember this", 2026-09-04): 12px
@@ -21301,7 +21310,7 @@
       if (e.target.closest("[data-ph-profit-clear]")) { phProfitRange = { from: "", to: "" }; renderPhStats(); return; }
       const profTop = e.target.closest("[data-ph-profit-topall]");
       if (profTop) { const w = profTop.dataset.phProfitTopall; phProfitTopAll[w] = !phProfitTopAll[w]; renderPhStats(); return; }
-      if (e.target.closest("[data-pres-edit-cancel]")) { presEditId = null; presDraft = null; renderPresPanel(); return; }
+      if (e.target.closest("[data-pres-edit-cancel]")) { presEditId = null; presDraft = null; renderPresPanel(); presTlDock = null; presPanelDock(); return; }
       const presSave = e.target.closest("[data-pres-edit-save]");
       if (presSave) {
         const isNew = !presSave.dataset.presEditSave;
@@ -25970,8 +25979,11 @@
     if (!p) return;
     document.querySelectorAll(".ph-tl-row.open").forEach(r => r.classList.remove("open"));
     const row = presTlDock && wrap ? [...wrap.querySelectorAll(".ph-tl-row[data-tl-key]")].find(r => r.dataset.tlKey === presTlDock.key) : null;
-    const key = force ? "" : presPanelCurrentKey();
-    if (!row || (key && key !== presTlDock.key)) {
+    // force = the row was just clicked (the panel is about to fill); otherwise
+    // the panel must currently show that patient -- an emptied panel
+    // (Cancel, save-and-close) means the host folds away too
+    const key = force ? presTlDock.key : presPanelCurrentKey();
+    if (!row || key !== presTlDock.key) {
       presTlDock = null; presPanelHome();
       if (wrap) wrap.querySelectorAll(".ph-tl-panelhost").forEach(h => h.remove());
       return;
@@ -32553,7 +32565,7 @@
   }
   function renderPresEditForm(el, t) {
     el.innerHTML = `<div class="ph-listing ph-pres-panel">
-      <h3>✎ ${t.name ? esc(phDispName(t.name, presIsFormula(t))) : "New prescription"}<button type="button" class="ph-print-btn" data-pres-edit-cancel="1">Cancel ×</button></h3>
+      <h3>${presTlDock && !t.id ? "New prescription" : `✎ ${t.name ? esc(phDispName(t.name, presIsFormula(t))) : "New prescription"}`}<button type="button" class="ph-print-btn" data-pres-edit-cancel="1">Cancel ×</button></h3>
       <div class="ph-tmpl">
         ${presNameTypeFieldsHtml(t)}
         ${presIngredientsEditorHtml(t)}
@@ -32561,7 +32573,7 @@
         ${presNotesFieldHtml(t)}
         <div class="ph-tmpl-actions">
           ${t.id ? `<button type="button" class="btn-cancel ph-tmpl-del" data-pres-edit-del="${t.id}">Delete</button>` : ""}
-          <button type="button" class="btn-save" data-pres-edit-save="${t.id}">✓ Save template</button>
+          <button type="button" class="btn-save" data-pres-edit-save="${t.id}">✓ Save${presIsFormula(t) ? " template" : ""}</button>
         </div>
         <div id="presDelZone"></div>
       </div>
