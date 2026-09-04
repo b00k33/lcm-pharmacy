@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260905-000500">
+<meta name="lcm-build" content="20260905-020000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -17433,19 +17433,85 @@
   // header row; columns are read from the header when there is one, else
   // guessed (time first, a phone-shaped cell is the phone, the first
   // name-shaped cell is the patient, the rest is the service). ----
+  // her report 2026-09-04 ("why is the focus and treatment goal not included
+  // in timeline. it is very important"): copying a RENDERED table -- out of a
+  // doc, a web page or a chat -- usually arrives one CELL per line, and some
+  // sources use runs of spaces instead of tabs. Measured live: the
+  // one-cell-per-line shape imported the appointments but dropped Presenting
+  // focus / Treatment goal (they were swept into the service text), and the
+  // space-separated shape imported nothing at all. This folds the
+  // one-cell-per-line shape back into real rows; returns the text untouched
+  // whenever it isn't confident, so the other parsers still get their turn.
+  function phApptTableReflow(src) {
+    const lines = src.split(/\r?\n/);
+    const hi = lines.findIndex(l => /^\s*time\s*$/i.test(l));
+    if (hi < 0) return src;
+    const head = [];
+    let i = hi;
+    for (; i < lines.length && head.length < 12; i++) {
+      const s = lines[i].trim();
+      if (!s) continue;
+      if (phApptParseTime(s)) break;                      // first data cell
+      head.push(s);
+    }
+    if (head.length < 3 || !head.some(c => /patient|name|client|event/i.test(c))) return src;
+    const n = head.length;
+    const body = lines.slice(i).map(l => l.trim()).filter(Boolean);
+    if (body.length < n) return src;
+    // a cell that wrapped onto two lines always leaves a remainder -- and if
+    // it wrapped in the LAST row every earlier row still lines up, so the 80%
+    // check below cannot see it. Refuse anything that isn't a whole number of
+    // rows (that also covers a trailing footer line)
+    if (body.length % n) return src;
+    const rows = [];
+    for (let k = 0; k + n <= body.length; k += n) rows.push(body.slice(k, k + n));
+    // a cell that itself held a line break throws the whole grid out of
+    // step -- only trust the reflow when nearly every row starts on a time
+    if (!rows.length || rows.filter(r => phApptParseTime(r[0])).length < Math.ceil(rows.length * 0.8)) return src;
+    return lines.slice(0, hi).concat([head.join("\t")], rows.map(r => r.join("\t"))).join("\n");
+  }
   function phApptParseTable(text, fallbackDateKey) {
-    const raw = String(text || "").replace(/[\u200B-\u200D\uFEFF\u00A0\u202A-\u202E\u2066-\u2069]/g, " ").split(/\r?\n/);
+    const clean = String(text || "").replace(/[\u200B-\u200D\uFEFF\u00A0\u202A-\u202E\u2066-\u2069]/g, " ");
+    const raw = phApptTableReflow(clean).split(/\r?\n/);
+    // her Cliniko/Zanda pastes run one field per LINE, not per column, so a
+    // stray OCR line that happens to have a double space in it must never be
+    // mistaken for a space-aligned table row (review finding, 2026-09-04:
+    // this used to be decided per-line and a couple of accidents anywhere in
+    // a vertical paste discarded every real appointment). A real clock time
+    // -- with a colon or am/pm, never a bare "2-3" -- must lead the row, and
+    // that has to be true across MOST of the document before the delimiter
+    // is trusted at all.
+    const realTime = c => phApptParseTime(c) && /[:.]|am|pm/i.test(c);
+    const nonBlank = raw.filter(l => l.trim()).length;
+    const spCand = raw.filter(l => !l.includes("\t") && (() => {
+      const sp = l.split(/\s{2,}/).map(c => c.trim()).filter(Boolean);
+      return sp.length >= 3 && realTime(sp[0]);
+    })());
+    const spMode = nonBlank > 0 && spCand.length >= Math.max(2, Math.ceil(nonBlank * 0.5));
     const cellsOf = l => {
       let cells = null;
       if (l.includes("\t")) cells = l.split("\t");
       else if (/^\s*\|.*\|\s*$/.test(l)) cells = l.replace(/^\s*\|/, "").replace(/\|\s*$/, "").split("|");
-      else if ((l.match(/,/g) || []).length >= 2 && !/\d,\d/.test(l)) cells = l.split(",");
+      else if (spMode) {
+        // tested BEFORE commas, because a real briefing cell is full of
+        // commas ("43yo, stage IV endo, 2nd IVF cycle") and splitting those
+        // on commas shredded the row
+        const sp = l.split(/\s{2,}/).map(c => c.trim()).filter(Boolean);
+        if (sp.length >= 3 && (realTime(sp[0]) || (sp.some(c => /^time/i.test(c)) && sp.some(c => /patient|name|client|event/i.test(c))))) cells = sp;
+      }
+      if (!cells && (l.match(/,/g) || []).length >= 2 && !/\d,\d/.test(l)) cells = l.split(",");
       return cells ? cells.map(c => c.replace(/\s+/g, " ").trim()) : null;
     };
     const rows = raw.map(cellsOf);
     const timeAt = cells => cells ? cells.findIndex(c => phApptParseTime(c)) : -1;
     const dataIdx = rows.map((c, i) => c && timeAt(c) >= 0 ? i : -1).filter(i => i >= 0);
     if (dataIdx.length < 1) return null;
+    // belt and braces: a genuine table covers most of the document's time
+    // lines. If it doesn't, something upstream mis-split it -- fall through
+    // to the Zanda/Cliniko/week/month parsers rather than return a partial,
+    // wrongly-shaped result.
+    const timeLines = raw.filter(l => realTime(l.trim())).length;
+    if (timeLines > 1 && dataIdx.length < Math.max(1, Math.ceil(timeLines * 0.6))) return null;
     // header row: the last cell-row above the first data row naming a time column
     let head = null;
     for (let i = dataIdx[0] - 1; i >= 0; i--) {
@@ -30406,6 +30472,12 @@
     early: { label: "Early Pregnancy", aim: "Support a settling pregnancy and ease first-trimester nausea or anxiety.", points: "YT, DU20, PC6, KI9, KI6, ST36, HT7. Add LIV3/GB34 if Liver Qi blocked. Nausea: KI27, KI21, KI6, PC6, ST36, REN12. Avoid abdomen/lower-back points.", suggestFormula: "Early Pregnancy Support herbs", cadence: "Weekly to 14 weeks", watch: "Nausea, fatigue, spotting — call me the same day about any bleeding" },
     birth: { label: "Birth Preparation", aim: "Prepare the body for labour — encourage a favourable position and an efficient start.", points: "Lying on left side: GB21L, GB41/SJ5, SP6, KI6/LI7, ST36R, ST36 (after 19wk add BL33/BL32, or earlier for sacral back pain).", suggestFormula: "Birth prep herbs and teas · Raspberry leaf from 32wk" },
     breech: { label: "Breech Presentation", aim: "Encourage the baby to turn head-down before term.", points: "Moxa (not burned in clinic) plus acupuncture as part of birth prep. Focus on Dai Mai, Kidney, and Qi flow.", suggestFormula: "" },
+    // her ask 2026-09-04 ("if period is detected late in cycle tracking,
+    // include Prolonged Luteal Treatment Phase") -- phCycleSyncPlan inserts
+    // this into any cycle-driven plan the moment the app flags the period
+    // late. Pregnancy test FIRST: until it is negative there is nothing on
+    // the abdomen or lower back, the same rule her preEt/early phases carry.
+    prolonged: { label: "Prolonged luteal — cycle running late", aim: "Rule out pregnancy first, then sort whether the luteal phase is genuinely long or ovulation simply came late — and treat that cause, not the delay.", points: "HT7, PC6, YT, DU20, ST36, KI3 — nothing on the abdomen or lower back until a test is negative. Then SP6, SP10, LI4, LIV3, ST29, SSC to move the cycle on. Add ST40 if PCOS-type; GB34 after stress, illness or travel.", suggestFormula: "Hold new herbs until a test is negative — then Menstrual Health 1 or 2, depending on presentation", cadence: "One visit once a test is negative, then 1×/wk until flow", watch: "Test first-morning urine now, repeat in 3–4 days if still no flow; one-sided pain or faintness — call me the same day. Log day 1 the moment it starts; GP bloods (thyroid, prolactin) if three late cycles running." },
   };
   const PH_TP_TEMPLATES = [
     {
@@ -30424,6 +30496,58 @@
       id: "pregnancy", name: "Pregnancy",
       goal: "Support a settled pregnancy through to a well-prepared birth.",
       phases: ["early", "birth", "breech"].map(k => PH_TP_PHASE[k]),
+    },
+    // ---- her ask 2026-09-04: "write treatment plans for PCOS Endo
+    // Dysmenorrhea Amenorrhea". The first three are cycle-driven (listed in
+    // PH_TP_CYCLE_SYNC, so the current phase follows her cycle day);
+    // Amenorrhoea is stage-driven and deliberately uses labels the cycle
+    // matcher cannot see, because there is no cycle to follow yet. ----
+    {
+      id: "pcos", name: "PCOS",
+      goal: "Restore ovulation and a cycle she completes on her own, treating the damp and metabolic picture underneath rather than forcing a bleed.",
+      phases: [
+        { label: "Menstruation or withdrawal bleed", aim: "Clear the bleed cleanly and note whether it came on its own or was induced — spontaneous does not always mean she ovulated.", points: "SP10, SP6, SP8, LI4, ST28. Add ST40 and SP9 if damp-phlegm signs are marked.", suggestFormula: "Menstrual Health 1 or 2, depending on presentation", cadence: "No visit needed — herbs only", watch: "Spontaneous or induced, flow and clots; log day 1 in the app — spotting is not day 1" },
+        { label: "Follicular — Week 1 onwards (Kidney and damp focus)", aim: "Move damp-phlegm and build Kidney essence so one follicle can take the lead — not a dozen that stall.", points: "KI3, SP6, SP9, ST40, ST29, REN4. Add LIV3 if she is tense or the pulse is wiry.", suggestFormula: "Prepare to Conceive 1 or 2, plus damp-resolving support", cadence: "1×/wk acupuncture · herbs", watch: "Mucus and OPKs from about day 10, testing well past day 20; intercourse every 1–2 days once mucus starts" },
+        { label: "Ovulation — if and when it comes", aim: "Support the release when a surge actually shows — and confirm it happened, rather than counting forward from day 14.", points: "SP8, LIV3, ST29, SSC, DU20, PC6", suggestFormula: "Prepare to Conceive 1 or 2, continued through the surge", cadence: "One visit in the 24–48 hours after the OPK turns", watch: "OPKs can read positive here without a real surge — confirm with a temperature rise; progesterone 7 days after the surge, not day 21" },
+        { label: "Luteal / two-week wait", aim: "Steady the luteal phase so it holds the full two weeks — a short one after a long gap is common here.", points: "KI6, KI7, KI9, ST36, DU20, PC6, HT7. Add YT if the wait is hard; no abdominal points from here.", suggestFormula: "Early Pregnancy / Post-Ovulation herbs", cadence: "Weekly acupuncture · herbs", watch: "Temperature holding past 12 days, then test 14 days after the surge, not on a set date; under 10 days suggests a weak luteal phase" },
+        // deliberately LAST and deliberately unmatchable by the cycle
+        // regexes: past ovulation the maths falls through to "luteal", so a
+        // stale LMP would otherwise park a PCOS plan here for weeks. She
+        // moves the plan into this phase by hand and the sync leaves it be.
+        { label: "Anovulatory long gap", aim: "Keep the damp and metabolic work going through the gap — the target is a follicle that matures, not a bleed on a date.", points: "SP6, SP9, ST40, ST36, REN4, SSC. Add electro SSC–ST29 if the gap runs past 8 weeks and pregnancy is excluded.", suggestFormula: "Prepare to Conceive 1, with damp-resolving and metabolic support", cadence: "1×/wk for 6 weeks, then fortnightly · herbs daily", watch: "Rule out pregnancy first; then any mucus, OPK or temperature shift, plus acne, hair and weight — GP review if there's no bleed by about 90 days" },
+      ],
+    },
+    {
+      id: "endo", name: "Endometriosis",
+      goal: "Move blood stasis through the painful half of the cycle and rebuild in the quiet weeks, so each period costs her less than the last.",
+      phases: [
+        { label: "Menstruation — pain phase", aim: "Move stasis and take the edge off the worst days — this is the bleed we are trying to change, not just sit through.", points: "SP10, SP8, SP6, LI4, LIV3, ST29, BL32. Add moxa on REN4/REN6 if pain eases with heat, LIV2 if it burns; ST25 if bowel pain comes with the bleed.", suggestFormula: "Menstrual Health 1 or 2 — the stronger moving option if clots are heavy", cadence: "Day 1–2 visit if pain is severe, otherwise herbs only", watch: "Pain score and clot size by day; bowel or bladder pain with the bleed; log day 1 in the app" },
+        { label: "Follicular — Week 1–2 (rebuild)", aim: "Rebuild blood and settle the inflammation a heavy, painful bleed leaves behind — the quiet window for the deeper work.", points: "SP6, SP10, ST36, REN4, BL17, BL20, KI3. Add local Ashi around laparoscopy scars if she feels tugging or adhesion-type pain.", suggestFormula: "Prepare to Conceive 1 or 2 if she is trying, otherwise a blood-building base between periods", cadence: "1×/wk acupuncture · herbs", watch: "Energy, pallor and dizziness in the fortnight after the bleed; iron studies with her GP if she is flat every cycle" },
+        { label: "Ovulation", aim: "Ease mid-cycle and ovulation-site pain so the second half of the cycle does not start already sore.", points: "SP8, SP6, LIV3, ST29, SSC, PC6, YT. Add LIV5 and local Ashi over the tender side; GB34 if it refers to the flank.", suggestFormula: "", cadence: "One visit in the ovulation window, timed to her usual pain day", watch: "Which side and which day the pain lands, deep pain with intercourse, mid-cycle spotting; heat and rest rather than pushing through" },
+        { label: "Premenstrual / Luteal", aim: "Get in ahead of the pain — move stasis in the days before the bleed so the period starts gentler than the last one.", points: "LIV3, SP8, SP6, ST29, REN6, GB34, BL32. If conception is possible this cycle, drop the moving work and treat the luteal phase instead: KI6, KI7, ST36, DU20, PC6, HT7.", suggestFormula: "Menstrual Health 1 or 2, started 5–7 days before the bleed is due — hold it in any cycle she may have conceived", cadence: "One visit 3–5 days before the period is due · herbs daily", watch: "The day her pain usually starts — book ahead of it; PMS, breast tenderness, bowel and bladder changes; whether this bleed began milder than the last" },
+      ],
+    },
+    {
+      id: "dysmen", name: "Dysmenorrhea",
+      goal: "Bring period pain down cycle by cycle by treating hardest in the premenstrual window, so each bleed starts easier than the last.",
+      phases: [
+        { label: "Menstruation — Days 1–3 (acute pain)", aim: "Move stagnation and settle the cramping in the first days of bleeding — relief now, while the work that changes the next bleed happens later in the cycle.", points: "SP8, SP6, LI4, LIV3, ST29, REN4. Add SP10 if flow is dark and clotted; moxa REN4 and REN6 if the pain eases with heat.", suggestFormula: "Menstrual Health 1 or 2, depending on presentation", cadence: "Herbs only — add one visit on day 1 or 2 while pain is acute", watch: "Worst pain out of 10, clots and their size, the day pain peaks; log day 1 in the app" },
+        // "Week 1-2", not "Weeks" -- the follicular matcher looks for the
+        // literal "week 1", and "Weeks 1-2" silently failed to match
+        { label: "Follicular — Week 1–2 (build Blood)", aim: "Rebuild Blood after the bleed so the next cycle has something to move — thin Blood cramps harder and aches on once the flow eases.", points: "SP6, ST36, REN4, LIV8, KI3, SP10. Add BL17 and BL20 prone if she is markedly Blood deficient.", suggestFormula: "Blood-nourishing herbs through the follicular weeks", cadence: "1×/fortnight acupuncture · herbs", watch: "Fatigue, dizziness or pale lips after the bleed; check iron studies if flow is heavy cycle after cycle" },
+        { label: "Ovulation", aim: "Keep Qi and Blood moving through the mid-cycle turn so nothing sets up for the second half.", points: "LIV3, LI4, SP8, SP6, ST29, GB34", suggestFormula: "", cadence: "One visit in the ovulation window", watch: "Mid-cycle pain or spotting; breast tenderness or irritability this early points to Liver Qi stagnation" },
+        { label: "Premenstrual / Luteal — the treating window", aim: "Move Qi and Blood and warm the uterus through the 7–10 days before the period is due — this is the window that changes the next bleed.", points: "SP8, SP6, LIV3, LI4, ST29, SSC, REN6. Add BL32 if the ache drags into the sacrum; moxa REN4 and REN6 for cold-type pain.", suggestFormula: "Menstrual Health 1 or 2, started 7–10 days before the period is due", cadence: "1–2×/wk through the 10 days before the period is due", watch: "Breast tenderness, irritability, bowel changes; heat on at the first twinge rather than once pain has set in; check she is not pregnant before strong moving points or moxa" },
+      ],
+    },
+    {
+      id: "amen", name: "Amenorrhea",
+      goal: "Find out why the bleed has stopped, rebuild enough blood and essence to have something to move, then bring the cycle back and hold it.",
+      phases: [
+        { label: "Stage 1 — Assess and rule out", aim: "Rule out pregnancy, then work out whether this is primary or secondary and what is driving it — before any moving treatment.", points: "ST36, SP6, REN4, LIV3, YT, DU20. Add HT7 if sleep and mood are poor.", suggestFormula: "", cadence: "Fortnightly acupuncture while bloods and imaging are pending", watch: "Urine hCG first, always. GP bloods — FSH, LH, oestradiol, prolactin, TSH, androgens — plus pelvic ultrasound; note weight, training load, stress." },
+        { label: "Stage 2 — Nourish and build", aim: "Build blood, yin and essence first — you cannot move a bleed that isn't there yet.", points: "REN4, REN6, ST36, SP6, KI3; alternate with BL20, BL23. Moxa REN4 and ST36 if she is cold and depleted.", suggestFormula: "Prepare to Conceive 1 or 2 — building, not moving", cadence: "1×/wk acupuncture for 4–6 weeks, then fortnightly · herbs", watch: "Energy, sleep, appetite, warm hands and feet; eating enough and training less if weight is low. Any mucus at all is progress." },
+        { label: "Stage 3 — Move and descend", aim: "Once there is something to move, guide the blood downward and invite a first bleed.", points: "SP10, SP6, SP8, LIV3, LI4, ST29, SSC. Add BL32 if the bleed feels close but won't start.", suggestFormula: "Menstrual Health 1 or 2, depending on presentation", cadence: "1–2×/wk acupuncture · herbs until she bleeds", watch: "Re-test hCG before any strong moving treatment. Breast tenderness, mucus, cramping or spotting; log day 1 the moment anything starts." },
+        { label: "Stage 4 — First cycles, stabilise", aim: "Hold the returning cycles and make each one a little more ovulatory than the last.", points: "REN4, ST36, SP6, KI3, LIV3, ST29. Add DU20 and YT if stress is the main driver.", suggestFormula: "Prepare to Conceive 1 or 2, with Menstrual Health around each bleed", cadence: "Fortnightly acupuncture · herbs through the first three cycles", watch: "Cycle length, and whether she is truly ovulating — mucus, OPKs, basal temps; move to Natural fertility once three cycles hold." },
+      ],
     },
   ];
   // her own saved templates (her ask 2026-09-01 "make it easier to do
@@ -30515,7 +30639,7 @@
   // counts as under 50), or any Natural fertility / IVF plan. Old plan.cycle
   // data moves up to the record the first time the patient is touched. ====
   const PH_TP_FERTILITY_TEMPLATES = ["Natural fertility", "IVF Protocol", "Pregnancy", "Cycle & IVF Protocol"];
-  const PH_TP_CYCLE_TEMPLATES = ["Natural fertility", "IVF Protocol", "Cycle & IVF Protocol"];
+  const PH_TP_CYCLE_TEMPLATES = ["Natural fertility", "IVF Protocol", "Cycle & IVF Protocol", "PCOS", "Endometriosis", "Dysmenorrhea"];
   function phAgeOf(dob) {
     if (!dob) return null;
     const d = parseKey(dob);
@@ -30551,21 +30675,53 @@
     period: /menstruation|period/i, foll1: /follicular.*(week 1|wk 1)|^follicular$/i,
     foll2: /follicular.*(week 2|wk 2)|kidney/i, ov: /ovulation/i, luteal: /two-week|luteal|post-ovulation/i,
   };
+  // every plan whose current phase follows the cycle day. Amenorrhoea is
+  // deliberately absent (there is no cycle to follow yet) and IVF stays
+  // calendar-driven (OPU and transfer dates, not cycle days).
+  const PH_TP_CYCLE_SYNC = ["Natural fertility", "PCOS", "Endometriosis", "Dysmenorrhea"];
+  const PH_TP_PROLONGED_RE = /prolonged luteal/i;
   function phCycleSyncPlan(rec, plan) {
-    if (!plan || plan.status !== "active" || plan.templateName !== "Natural fertility") return false;
+    if (!plan || plan.status !== "active" || !PH_TP_CYCLE_SYNC.includes(plan.templateName)) return false;
     const comp = phCycleComp(rec);
     if (!comp) return false;
+    const phases = plan.phases || [];
+    // the prolonged-luteal phase carries "luteal" in its label too, so every
+    // lookup below has to skip it or it would stand in for the real one
+    const proIdx = phases.findIndex(p => PH_TP_PROLONGED_RE.test(p.label || ""));
+    const lastMatch = re => { let n = -1; phases.forEach((p, i) => { if (i !== proIdx && re.test(p.label || "")) n = i; }); return n; };
+    // ---- her ask 2026-09-04: the period is late, so the plan gains (once)
+    // a Prolonged luteal phase, sitting straight after the luteal one, and
+    // works there until she logs a day 1 ----
+    if (comp.overdue) {
+      let pi = proIdx;
+      if (pi < 0) {
+        const after = lastMatch(PH_CYCLE_PHASE_MATCH.luteal);
+        pi = (after >= 0 ? after : phases.length - 1) + 1;
+        phases.splice(pi, 0, Object.assign({ id: uid(), formulaId: null, formulaName: "", status: "upcoming" }, PH_TP_PHASE.prolonged));
+      }
+      if (phases[pi].status === "current") return false;
+      phases[pi].lateOn = keyOf(TODAY);      // kept as this cycle's record
+      phases.forEach((p, i) => { p.status = i < pi ? "done" : i === pi ? "current" : "upcoming"; });
+      return true;
+    }
     const want = comp.phaseKey === "period" ? PH_CYCLE_PHASE_MATCH.period
       : comp.phaseKey === "foll" ? (comp.day <= comp.flowDays + 7 ? PH_CYCLE_PHASE_MATCH.foll1 : PH_CYCLE_PHASE_MATCH.foll2)
       : comp.phaseKey === "ov" ? PH_CYCLE_PHASE_MATCH.ov : PH_CYCLE_PHASE_MATCH.luteal;
-    const phases = plan.phases || [];
-    let idx = phases.findIndex(p => want.test(p.label || ""));
-    if (idx < 0 && want === PH_CYCLE_PHASE_MATCH.foll2) idx = phases.findIndex(p => PH_CYCLE_PHASE_MATCH.foll1.test(p.label || ""));
-    if (idx < 0 || phases[idx].status === "current") return false;
-    const lutealIdx = phases.findIndex(p => PH_CYCLE_PHASE_MATCH.luteal.test(p.label || ""));
+    let idx = phases.findIndex((p, i) => i !== proIdx && want.test(p.label || ""));
+    if (idx < 0 && want === PH_CYCLE_PHASE_MATCH.foll2) idx = phases.findIndex((p, i) => i !== proIdx && PH_CYCLE_PHASE_MATCH.foll1.test(p.label || ""));
+    if (idx < 0) return false;
+    const proCurrent = proIdx >= 0 && phases[proIdx].status === "current";
+    if (phases[idx].status === "current" && !proCurrent) return false;
+    const lutealIdx = lastMatch(PH_CYCLE_PHASE_MATCH.luteal);
     const curIdx = phases.findIndex(p => p.status === "current");
-    if (lutealIdx >= 0 && curIdx > lutealIdx) return false;
-    phases.forEach((p, i) => { p.status = i < idx ? "done" : i === idx ? "current" : "upcoming"; });
+    // a phase she moved past the two-week wait by hand is never pulled back
+    // -- except the prolonged one, which the period arriving is meant to end
+    if (lutealIdx >= 0 && curIdx > lutealIdx && !proCurrent) return false;
+    phases.forEach((p, i) => {
+      // her pick: once it has been used it stays in the plan, marked done
+      if (i === proIdx) { p.status = p.lateOn ? "done" : "upcoming"; return; }
+      p.status = i < idx ? "done" : i === idx ? "current" : "upcoming";
+    });
     return true;
   }
   function phCycleSyncPlans(rec) {
