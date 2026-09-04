@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260905-040000">
+<meta name="lcm-build" content="20260905-050000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -5858,6 +5858,8 @@
   #pharmacyPage .ph-cyclevisit.booked .st { background: var(--ph-green-tint); color: var(--ph-green-deep); }
   #pharmacyPage .ph-cyclevisit.past .st { background: none; color: var(--ph-faint); }
   #pharmacyPage .ph-cyclevisit.ov .dt { color: var(--ph-gold-deep); }
+  #pharmacyPage .ph-cyclevisit.iscurrent { background: var(--ph-green-tint); border-radius: 6px; padding-left: 6px; margin: 1px 0; }
+  #pharmacyPage .ph-cyclevisit.iscurrent .lb b { color: var(--ph-green-deep); }
   #pharmacyPage .ph-tp-phase-extra input { font-size: 11.5px; }
   #pharmacyPage .ph-tp-phase-cadence { flex: 0 1 200px; }
   #pharmacyPage .ph-tp-phase-watch { flex: 1 1 200px; }
@@ -30645,7 +30647,7 @@
   // counts as under 50), or any Natural fertility / IVF plan. Old plan.cycle
   // data moves up to the record the first time the patient is touched. ====
   const PH_TP_FERTILITY_TEMPLATES = ["Natural fertility", "IVF Protocol", "Pregnancy", "Cycle & IVF Protocol"];
-  const PH_TP_CYCLE_TEMPLATES = ["Natural fertility", "IVF Protocol", "Cycle & IVF Protocol", "PCOS", "Endometriosis", "Dysmenorrhea"];
+  const PH_TP_CYCLE_TEMPLATES = ["Natural fertility", "IVF Protocol", "Cycle & IVF Protocol", "PCOS", "Endometriosis", "Dysmenorrhea", "Amenorrhea"];
   function phAgeOf(dob) {
     if (!dob) return null;
     const d = parseKey(dob);
@@ -30765,6 +30767,15 @@
     add(Math.min(cy.ovDay + 13, cy.cycleLen), "Two-week wait · week 2", "luteal");
     return visits;
   }
+  // one row renderer shared by the Natural-fertility visit list below and
+  // the phase-based schedule further down -- same markup/classes either way
+  function phCycleVisitRowHtml(x) {
+    return `<div class="ph-cyclevisit ${x.phaseKey || ""}${x.past ? " past" : ""}${x.booked ? " booked" : ""}${x.current ? " iscurrent" : ""}">
+      <span class="d">${esc(x.dtag || "")}</span><span class="dt">${esc(x.dt || "")}</span>
+      <span class="lb">${x.current ? `<b>${esc(x.label)}</b>` : esc(x.label)}${x.cadenceSub ? `<br><span class="faint">${esc(x.cadenceSub)}</span>` : ""}</span>
+      <span class="st">${x.booked ? `✓ ${esc(phCkTime12(x.booked.time))}` : x.hideBook ? "" : x.past ? "—" : "book"}</span>
+    </div>`;
+  }
   function phCycleVisitsHtml(rec, plan, name) {
     if (plan && plan.templateName !== "Natural fertility") return "";
     const v = phCycleVisitPlan(rec, name);
@@ -30780,17 +30791,94 @@
     const allPast = v.every(x => x.past);
     return `<div class="ph-cyclevisits">
       <div class="ph-cyclevisits-h">📅 Cycle treatment — predicted schedule <span class="faint">from her LMP; ✓ = booked in Cliniko</span></div>
-      ${v.map(x => `<div class="ph-cyclevisit ${x.phaseKey}${x.past ? " past" : ""}${x.booked ? " booked" : ""}">
-        <span class="d">Day ${x.day}</span><span class="dt">${esc(phFuDateLabel(x.date))}</span><span class="lb">${esc(x.label)}</span>
-        <span class="st">${x.booked ? `✓ ${esc(phCkTime12(x.booked.time))}` : x.past ? "—" : "book"}</span>
-      </div>`).join("")}
+      ${v.map(x => phCycleVisitRowHtml({ dtag: `Day ${x.day}`, dt: phFuDateLabel(x.date), label: x.label, phaseKey: x.phaseKey, past: x.past, booked: x.booked })).join("")}
       ${allPast ? `<div class="ph-cyclevisits-late">${comp && comp.overdue ? "Her period is running late — this list will predict again once it's logged." : "Her period hasn't been logged yet for this cycle — log it and this list updates."}</div>` : ""}
+      ${plan ? phCycleLookAheadHtml(rec, plan, name) : ""}
     </div>`;
   }
   const phCycleVisitsText = (rec, plan, name) => {
     if (plan && plan.templateName !== "Natural fertility") return "";
     return phCycleVisitPlan(rec, name).map(x => `• ${phFuDateLabel(x.date)} (day ${x.day}) — ${x.label}${x.booked ? " ✓ booked" : ""}`).join("\n");
   };
+  // ============ 📅 Predicted phase schedule for every OTHER cycle-driven
+  // fertility plan (her ask 2026-09-05: "i want this for all treatment
+  // plans for fertility PLUS FUTURE predicted schedules ... be smart") --
+  // the visit list above is Natural-fertility-specific (hand-tuned visit
+  // cadence); this generalises to PCOS/Endo/Dysmenorrhea/Amenorrhoea/IVF by
+  // reading the PLAN'S OWN phases and reusing the exact label regexes
+  // phCycleSyncPlan already trusts to auto-advance the current phase --
+  // whatever's accurate enough to drive the plan is accurate enough to
+  // predict a date from. A phase that doesn't match one of them has no
+  // reliable cycle-day window (IVF's OPU/transfer phases are anchored to her
+  // actual procedure date, not her LMP; Amenorrhoea's Stage 1-4 aren't tied
+  // to a cycle at all -- that's the point of the plan) -- once the chain
+  // breaks on an unmatched phase, every phase after it in that plan is left
+  // undated too, so a coincidentally cycle-shaped label later on (IVF's
+  // "Two-week wait / Luteal", which only starts once she's actually
+  // transferred) never gets a fabricated LMP-based date. Those rows still
+  // show with their real cadence text, just no date.
+  // "Looking ahead" projects the same phases one cycle further by feeding
+  // the predicted next period date back into phTpCycleCompute as a virtual
+  // LMP -- no new date maths, just the existing tested function run twice.
+  // ============
+  function phCyclePhaseKeyFor(label) {
+    if (PH_TP_PROLONGED_RE.test(label || "")) return null;
+    return ["period", "foll1", "foll2", "ov", "luteal"].find(k => PH_CYCLE_PHASE_MATCH[k].test(label || "")) || null;
+  }
+  function phCyclePhaseWindow(comp, key) {
+    const ovEnd = comp.ovDay + comp.segDays.ov - 1;
+    let w;
+    if (key === "period") w = [1, comp.flowDays];
+    else if (key === "foll1") w = [comp.flowDays + 1, comp.flowDays + 7];
+    else if (key === "foll2") w = [comp.flowDays + 8, comp.ovDay - 1];
+    else if (key === "ov") w = [comp.ovDay, ovEnd];
+    else if (key === "luteal") w = [ovEnd + 1, comp.cycleLen];
+    else return null;
+    return [w[0], Math.max(w[0], w[1])];
+  }
+  function phCyclePhaseRows(comp, lmpKey, plan, appts) {
+    if (!comp || !plan) return [];
+    const base = parseKey(lmpKey);
+    const onDay = d => keyOf(new Date(base.getFullYear(), base.getMonth(), base.getDate() + d - 1));
+    const curId = (phTpPlanCurrentPhase(plan) || {}).id;
+    let broke = false;
+    return (plan.phases || []).map(p => {
+      const key = broke ? null : phCyclePhaseKeyFor(p.label);
+      if (!key) broke = true;
+      const w = key ? phCyclePhaseWindow(comp, key) : null;
+      const date = w ? onDay(w[0]) : null, dateEnd = w ? onDay(w[1]) : null;
+      const booked = date ? appts.find(a => a.date >= date && a.date <= dateEnd) : null;
+      return { day: w ? w[0] : null, date, label: p.label, cadence: p.cadence || "", phaseKey: key, current: p.id === curId, past: dateEnd ? dateEnd < keyOf(TODAY) : false, booked };
+    });
+  }
+  function phCycleLookAheadHtml(rec, plan, name) {
+    const comp = phCycleComp(rec);
+    if (!comp) return "";
+    const comp2 = phTpCycleCompute(Object.assign({}, rec.cycle, { lmp: comp.nextDate }));
+    if (!comp2) return "";
+    const k = phPatientKey(name || "");
+    const appts = k ? phApptList().filter(a => phPatientKey(a.patient) === k) : [];
+    const rows2 = phCyclePhaseRows(comp2, comp.nextDate, plan, appts).filter(x => x.date);
+    if (!rows2.length) return "";
+    return `<div class="ph-cyclevisits-h">🔭 Looking ahead <span class="faint">— next cycle, estimated from her average length</span></div>
+      ${rows2.map(x => phCycleVisitRowHtml({ dtag: phFuRelDay(x.date), dt: phShortDate(x.date), label: x.label, cadenceSub: x.cadence, phaseKey: x.phaseKey, hideBook: true })).join("")}`;
+  }
+  function phCyclePlanScheduleHtml(rec, plan, name) {
+    if (!plan || plan.templateName === "Natural fertility" || !PH_TP_CYCLE_TEMPLATES.includes(plan.templateName)) return "";
+    const comp = phCycleComp(rec);
+    if (!comp) return "";
+    const k = phPatientKey(name || "");
+    const appts = k ? phApptList().filter(a => phPatientKey(a.patient) === k) : [];
+    const rows = phCyclePhaseRows(comp, rec.cycle.lmp, plan, appts);
+    if (!rows.length) return "";
+    const noDates = rows.every(x => !x.date);
+    return `<div class="ph-cyclevisits">
+      <div class="ph-cyclevisits-h">📅 ${esc(plan.templateName)} treatment — predicted schedule <span class="faint">from her LMP; ✓ = booked in Cliniko</span></div>
+      ${rows.map(x => phCycleVisitRowHtml({ dtag: x.day ? `Day ${x.day}` : "", dt: x.date ? phFuDateLabel(x.date) : "—", label: x.label, cadenceSub: x.cadence, phaseKey: x.phaseKey, current: x.current, past: x.past, booked: x.booked, hideBook: !x.date })).join("")}
+      ${noDates ? `<div class="ph-cyclevisits-late">This plan's phases don't follow a fixed cycle day${plan.templateName === "Amenorrhea" ? " — there's no cycle to predict from yet" : " — they follow her actual procedure dates instead"}, so no dates are shown.</div>` : ""}
+      ${phCycleLookAheadHtml(rec, plan, name)}
+    </div>`;
+  }
   // which patient a cycle edit belongs to: the full-screen plan modal's
   // patient when it's open, else the open script's
   // log + tell her + refresh only the surface the tap came from (timeline
@@ -31504,7 +31592,7 @@
         </div>
         <div class="ph-tp-fndhead">Clinical findings <span class="faint">· tap a zone or a chip; it saves as you go and flows into her letter</span></div>
         ${phTpFindingsHtml(plan)}
-        ${PH_TP_CYCLE_TEMPLATES.includes(plan.templateName) ? `<div class="ph-cycle-wrap ph-cycle-modalquick">${phCycleQuickHtml("1")}</div>` + phCycleBarHtml(phPatientRec(phTpScreenPatient)) + phCycleDetailsHtml(phPatientRec(phTpScreenPatient)) + phCycleVisitsHtml(phPatientRec(phTpScreenPatient), plan, phTpScreenPatient) : ""}
+        ${PH_TP_CYCLE_TEMPLATES.includes(plan.templateName) ? `<div class="ph-cycle-wrap ph-cycle-modalquick">${phCycleQuickHtml("1")}</div>` + phCycleBarHtml(phPatientRec(phTpScreenPatient)) + phCycleDetailsHtml(phPatientRec(phTpScreenPatient)) + phCycleVisitsHtml(phPatientRec(phTpScreenPatient), plan, phTpScreenPatient) + phCyclePlanScheduleHtml(phPatientRec(phTpScreenPatient), plan, phTpScreenPatient) : ""}
         <div class="ph-tp-timeline">
           ${plan.phases.map(ph => phTpPhaseRowHtml(plan, ph)).join("")}
           <button type="button" class="ph-tp-addbtn" data-tp-phase-add="${plan.id}">+ Add phase</button>
