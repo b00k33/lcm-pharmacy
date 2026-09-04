@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260904-180000">
+<meta name="lcm-build" content="20260904-190000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -5853,6 +5853,27 @@
   #pharmacyPage .ph-cycle-regfield { flex-direction: row !important; align-items: center; gap: 7px !important; }
   #pharmacyPage .ph-cycle-regfield input { width: 16px; height: 16px; }
   #pharmacyPage .ph-cycle-editbtns { display: flex; gap: 8px; margin-top: 12px; }
+  /* one-tap period logging (2026-09-04): quick actions beside the cycle row,
+     details as a single autosaving line under the bar */
+  #pharmacyPage .ph-cycle-wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+  #pharmacyPage .ph-cycle-wrap > .ph-treat-row { flex: 1 1 320px; width: auto; }
+  #pharmacyPage .ph-cycle-quick { display: inline-flex; align-items: center; gap: 8px; flex: none; padding-right: 4px; }
+  #pharmacyPage .ph-cycle-qbtn { font: inherit; font-size: 11.5px; font-weight: 700; color: var(--ph-cream); background: var(--ph-green-deep); border: 1px solid var(--ph-green-deep); border-radius: 999px; padding: 4px 10px; cursor: pointer; white-space: nowrap; }
+  #pharmacyPage .ph-cycle-qbtn:hover { background: var(--ph-green-press); }
+  #pharmacyPage .ph-cycle-qdate { position: relative; font-size: 11.5px; color: var(--ph-soft); cursor: pointer; white-space: nowrap; }
+  #pharmacyPage .ph-cycle-qdate:hover { color: var(--ph-green-deep); }
+  #pharmacyPage .ph-cycle-qdate input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+  #pharmacyPage .ph-cycle-rowopen { flex-basis: 100%; }
+  #pharmacyPage .ph-cycle-details { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: 8px 0 4px; font-size: 12px; color: var(--ph-soft); }
+  #pharmacyPage .ph-cycle-details .f { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+  #pharmacyPage .ph-cycle-details .faint { font-size: 10.5px; }
+  #pharmacyPage .ph-cyc-in { font: inherit; font-size: 12.5px; color: var(--ph-ink); border: 1px solid var(--ph-line); border-radius: 999px; padding: 3px 9px; background: var(--ph-white); }
+  #pharmacyPage .ph-cyc-in.n { width: 56px; text-align: center; }
+  #pharmacyPage .ph-cyc-in.d { padding: 3px 8px; }
+  #pharmacyPage .ph-cyc-reg input { width: 14px; height: 14px; margin: 0; accent-color: var(--ph-green); }
+  #pharmacyPage .ph-cycle-hist { flex-basis: 100%; font-size: 11.5px; color: var(--ph-faint); }
+  #pharmacyPage .ph-tl-act.cyc { background: var(--ph-white); color: var(--ph-ink); border: 1px solid var(--ph-line); font-size: 12px; }
+  #pharmacyPage .ph-tl-act.cyc:hover { background: var(--ph-green-tint); }
   #pharmacyPage .ph-tp-timeline { margin-bottom: 20px; }
   #pharmacyPage .ph-tp-phase-row { display: flex; gap: 10px; }
   #pharmacyPage .ph-tp-phase-rail { display: flex; flex-direction: column; align-items: center; flex: none; width: 16px; padding-top: 6px; }
@@ -20470,15 +20491,13 @@
       }
       // one tap at the visit: her period started today -> LMP = today, the
       // rest of the record (length, flow, pain, regular) carries over
-      if (e.target.closest("[data-cycle-period-today]")) {
-        const rec = phCycleTargetRec();
-        if (rec) {
-          rec.cycle = Object.assign({ cycleLen: 28, flowDays: 5, flowIntensity: "moderate", pain: "none", regular: true }, phCycleFor(rec) || {}, { lmp: keyOf(TODAY) });
-          phCycleSyncPlans(rec);
-          savePharmacy();
-          phFlashShow("🩸 Period logged for today");
-        }
-        phTpCycleEditOpen = false; phCycleRerender();
+      const cycTodayBtn = e.target.closest("[data-cycle-period-today]");
+      if (cycTodayBtn) {
+        // the attribute carries the patient's name when the tap comes from a
+        // timeline row or the check-in panel; "1" (or empty) = the open script
+        const nm = cycTodayBtn.dataset.cyclePeriodToday;
+        const rec = nm && nm !== "1" ? phPatientRec(nm) : phCycleTargetRec();
+        phCycleLogFrom(cycTodayBtn, rec, keyOf(TODAY), nm && nm !== "1" ? nm : "");
         return;
       }
       const hxSexBtn = e.target.closest("[data-hx-sex]");
@@ -26040,10 +26059,12 @@
     const line2 = r => r.script
       ? `${(r.script.ingredients || []).length} herb${(r.script.ingredients || []).length === 1 ? "" : "s"}${(r.script.formula || "").trim() ? ` · <b>${esc(r.script.formula.trim())}</b>` : ""} · ${esc((r.script.ingredients || []).slice(0, 4).map(i => phPinyinName({ name: i.herb || i.name || "" })).join(", "))}${(r.script.ingredients || []).length > 4 ? "…" : ""}`
       : r.kind === "acu" ? "acupuncture only" : "no script yet";
+    // cycle-tracked patients carry their cycle day on the second line
+    const cycBit = r => { const rec = PHARMACY.patients && PHARMACY.patients[r.k]; const comp = rec && phCycleOn(rec) ? phCycleComp(rec) : null; return comp ? ` · 🩸 day ${comp.day}${comp.overdue ? " · late?" : ""}` : ""; };
     const rowHtml = r => `<div class="ph-tl-row${r.done ? " done" : ""}" data-tl-key="${esc(r.k)}">
       <span class="ph-tl-time">${esc(phCkTime12(r.a.time))}</span>${dot(r)}
-      <div class="ph-tl-mid"><div class="l1"><b>${esc(phTitle(r.a.patient))}</b>${phApptKindHtml(r.a.service)}${phApptEtHtml(r.a)}${phApptFuDue(r.k, dayKey) ? `<span class="bell" title="Follow-up due">🔔</span>` : ""}</div><div class="l2">${line2(r)}</div></div>
-      <div class="ph-tl-end">${statusChip(r)}${action(r)}</div>
+      <div class="ph-tl-mid"><div class="l1"><b>${esc(phTitle(r.a.patient))}</b>${phApptKindHtml(r.a.service)}${phApptEtHtml(r.a)}${phApptFuDue(r.k, dayKey) ? `<span class="bell" title="Follow-up due">🔔</span>` : ""}</div><div class="l2">${line2(r)}${cycBit(r)}</div></div>
+      <div class="ph-tl-end">${(rec => rec && phCycleOn(rec) ? `<button type="button" class="ph-tl-act cyc" data-cycle-period-today="${esc(r.a.patient)}" title="Period started today">🩸</button>` : "")(PHARMACY.patients && PHARMACY.patients[r.k])}${statusChip(r)}${action(r)}</div>
     </div>`;
     const schedHtml = s => { const t = PRESC.items.find(x => x.id === s.prescriptionId); const st = schedStatus(s); return `<div class="ph-tl-row sched">
       <span class="ph-tl-time">${s.targetTime ? esc(phCkTime12(s.targetTime)) : s.method === "pickup" ? "pickup" : "post"}</span><span class="ph-tl-dot sched"></span>
@@ -27236,7 +27257,7 @@
           <span class="k">Empty</span><span class="v${c.left != null && c.left <= 0 ? " warn" : ""}">${c.left == null ? "—" : c.left <= 0 ? `since ${esc(c.emptyLabel)}${c.left < 0 ? ` · ${-c.left} day${c.left === -1 ? "" : "s"} ago` : " · today"}` : `${esc(c.emptyLabel)} · ${c.left} day${c.left === 1 ? "" : "s"} left`}</span>
           <span class="k">Visits</span><span class="v">${c.scripts} script${c.scripts === 1 ? "" : "s"}${c.lastVisit ? ` · last ${esc(c.lastVisit)}` : ""}</span>
           <span class="k">Booked</span><span class="v">${c.appt ? `<b>${esc(c.visitLabel)}</b> ${phApptKindHtml(c.appt.service)}${phApptEtHtml(c.appt)}${c.appt.service && c.appt.service !== "Booked (Cliniko)" ? ` <span class="faint">${esc(c.appt.service)}</span>` : ""}` : `<span class="faint">not booked</span>`}</span>
-          ${c.cycle ? `<span class="k">Cycle</span><span class="v">${phCycleChipHtml(c.cycle)} <span class="faint">· ${c.cycle.phaseKey === "luteal" || c.cycle.phaseKey === "ov" ? "" : `ovulation ~${esc(phFuDateLabel(c.cycle.ovDate))} · `}period due ~${esc(phFuDateLabel(c.cycle.nextDate))}</span></span>` : ""}
+          ${c.cycle ? `<span class="k">Cycle</span><span class="v">${phCkCycleLineHtml(c.cycle, row.rec.patient)}</span>` : ""}
         </div>
         ${c.note ? `<div class="ph-ck-note"><b>Review note</b>${esc(c.note)}</div>` : ""}
         <div class="ph-ck-phone"><svg class="icn" aria-hidden="true"><use href="#i-phone"/></svg>${c.phone
@@ -28928,6 +28949,30 @@
   }
   // 📷 appointments: a screenshot chosen from the file button, or an image
   // pasted straight into the appointments paste box (2026-09-04)
+  // period logging + the cycle details line (save as she changes it)
+  document.addEventListener("change", e => {
+    const t = e.target;
+    if (!t || !t.matches) return;
+    if (t.matches("[data-cycle-period-date]")) {
+      const nm = t.dataset.cyclePeriodDate;
+      const rec = nm && nm !== "1" ? phPatientRec(nm) : phCycleTargetRec();
+      if (t.value) phCycleLogFrom(t, rec, t.value, nm && nm !== "1" ? nm : "");
+      return;
+    }
+    if (t.matches("[data-cycle-field]")) {
+      const rec = phCycleTargetRec();
+      if (!rec) return;
+      const f = t.dataset.cycleField;
+      if (f === "lmp") { if (t.value) phCycleLogFrom(t, rec, t.value, ""); return; }
+      rec.cycle = Object.assign({ cycleLen: 28, flowDays: 5, flowIntensity: "moderate", pain: "none", regular: true }, phCycleFor(rec) || {});
+      if (f === "cycleLen") { const n = parseInt(t.value, 10); if (n >= 14 && n <= 60) { rec.cycle.cycleLen = n; rec.cycle.cycleLenManual = true; } }
+      else if (f === "flowDays") { const n = parseInt(t.value, 10); if (n >= 1 && n <= 14) rec.cycle.flowDays = n; }
+      else if (f === "flowIntensity") rec.cycle.flowIntensity = t.value;
+      else if (f === "pain") rec.cycle.pain = t.value;
+      else if (f === "regular") rec.cycle.regular = !!t.checked;
+      phCycleSyncPlans(rec); savePharmacy(); phCycleRerender();
+    }
+  });
   document.addEventListener("change", e => {
     if (!e.target || e.target.id !== "phApptAllHerbs") return;
     PHARMACY.apptAllHerbs = !!e.target.checked;
@@ -30314,6 +30359,23 @@
   };
   // which patient a cycle edit belongs to: the full-screen plan modal's
   // patient when it's open, else the open script's
+  // log + tell her + refresh only the surface the tap came from (timeline
+  // row, check-in panel line, or the script panel / plan modal)
+  const phCkCycleLineHtml = (comp, name) => `${phCycleChipHtml(comp)} <span class="faint">· ${comp.phaseKey === "luteal" || comp.phaseKey === "ov" ? "" : `ovulation ~${esc(phFuDateLabel(comp.ovDate))} · `}period due ~${esc(phFuDateLabel(comp.nextDate))}</span> <button type="button" class="tab-link" data-cycle-period-today="${esc(name || "")}">🩸 period started today</button>`;
+  function phCycleLogFrom(el, rec, dateKey, name) {
+    if (!rec) return;
+    const comp = phCycleLogPeriod(rec, dateKey);
+    phFlashShow(comp ? `🩸 Period logged · ${dateKey === keyOf(TODAY) ? "day 1 today" : `started ${phShortDate(dateKey)}, day ${comp.day} now`} · next ~${phFuDateLabel(comp.nextDate)}` : "🩸 Period logged");
+    if (el && el.closest("#presWeekWrap")) { renderPresWeek(); return; }
+    const kv = el && el.closest(".ph-ck-kv");
+    if (kv) {   // check-in panel: rewrite just the Cycle line (update in place, never re-render the panel under her)
+      const k = [...kv.querySelectorAll(".k")].find(x => x.textContent.trim() === "Cycle");
+      const val = k && k.nextElementSibling;
+      if (val && comp) val.innerHTML = phCkCycleLineHtml(comp, name);
+      return;
+    }
+    phTpCycleEditOpen = false; phCycleRerender();
+  }
   function phCycleTargetRec() {
     const modal = document.getElementById("phTpModal");
     if (modal && !modal.hidden && phTpScreenPatient) return phPatientRec(phTpScreenPatient);
@@ -30328,6 +30390,53 @@
   // the one-line 🩸 Cycle row at the top of the prescription panel's stack
   // (above Notes) -- collapsed it's the chip + a slim bar, open it's the
   // full bar with LMP/ovulation/next-period dates and "New period today"
+  // ---- logging a period = one tap (her pick A, 2026-09-04 "improve this
+  // design to make it easy to log menses"): the previous LMP goes into
+  // rec.cycleLog, the average gap of the last three cycles becomes the
+  // working length unless she typed one (cycle.cycleLenManual), flow / pain /
+  // regular carry over untouched. Details save as she changes them. ----
+  function phCycleGaps(rec) {
+    const l = ((rec && rec.cycleLog) || []).map(x => x.lmp).filter(Boolean).sort();
+    const gaps = [];
+    for (let i = 1; i < l.length; i++) { const d = Math.round((parseKey(l[i]) - parseKey(l[i - 1])) / 86400000); if (d >= 14 && d <= 90) gaps.push(d); }
+    return gaps.slice(-3);
+  }
+  function phCycleAvgLen(rec) { const g = phCycleGaps(rec); return g.length ? Math.round(g.reduce((a, b) => a + b, 0) / g.length) : 0; }
+  function phCycleLogPeriod(rec, dateKey) {
+    if (!rec || !dateKey) return null;
+    const cur = phCycleFor(rec) || {};
+    rec.cycleLog = rec.cycleLog || [];
+    // a date within a fortnight of the current LMP is a correction of it
+    // ("no, it started Tuesday"), not a new cycle -- swap, don't stack
+    const daysApart = cur.lmp ? Math.abs((parseKey(dateKey) - parseKey(cur.lmp)) / 86400000) : 99;
+    if (cur.lmp && daysApart < 14) rec.cycleLog = rec.cycleLog.filter(x => x.lmp !== cur.lmp);
+    else if (cur.lmp && !rec.cycleLog.some(x => x.lmp === cur.lmp)) rec.cycleLog.push({ lmp: cur.lmp });
+    if (!rec.cycleLog.some(x => x.lmp === dateKey)) rec.cycleLog.push({ lmp: dateKey });
+    rec.cycleLog.sort((a, b) => a.lmp < b.lmp ? -1 : 1);
+    rec.cycle = Object.assign({ cycleLen: 28, flowDays: 5, flowIntensity: "moderate", pain: "none", regular: true }, cur, { lmp: dateKey });
+    const avg = phCycleAvgLen(rec);
+    if (avg && !rec.cycle.cycleLenManual) rec.cycle.cycleLen = avg;
+    phCycleSyncPlans(rec);
+    savePharmacy();
+    return phCycleComp(rec);
+  }
+  const phCycleQuickHtml = name => `<span class="ph-cycle-quick">
+      <button type="button" class="ph-cycle-qbtn" data-cycle-period-today="${esc(name || "")}" title="Log that her period started today">🩸 Period started today</button>
+      <label class="ph-cycle-qdate" title="Log a period that started another day">another day…<input type="date" data-cycle-period-date="${esc(name || "")}" max="${keyOf(TODAY)}" aria-label="Period started on"></label>
+    </span>`;
+  function phCycleDetailsHtml(rec) {
+    const c = phCycleFor(rec) || {};
+    const gaps = phCycleGaps(rec), avg = phCycleAvgLen(rec);
+    const sel = (id, opts, val) => `<select class="ph-cyc-in" data-cycle-field="${id}" aria-label="${id}">${opts.map(([v, l]) => `<option value="${v}"${val === v ? " selected" : ""}>${l}</option>`).join("")}</select>`;
+    return `<div class="ph-cycle-details">
+      <span class="f">LMP <input type="date" class="ph-cyc-in d" data-cycle-field="lmp" value="${esc(c.lmp || "")}" max="${keyOf(TODAY)}" aria-label="Last menstrual period"></span>
+      <span class="f">Length <input type="number" class="ph-cyc-in n" data-cycle-field="cycleLen" min="14" max="60" value="${c.cycleLen || 28}" aria-label="Cycle length in days"> d${avg && !c.cycleLenManual ? `<span class="faint">avg</span>` : ""}</span>
+      <span class="f">Flow <input type="number" class="ph-cyc-in n" data-cycle-field="flowDays" min="1" max="14" value="${c.flowDays != null ? c.flowDays : 5}" aria-label="Flow lasts, days"> d ${sel("flowIntensity", PH_CYCLE_FLOW, c.flowIntensity || "moderate")}</span>
+      <span class="f">Pain ${sel("pain", PH_CYCLE_PAIN, c.pain || "none")}</span>
+      <label class="f ph-cyc-reg"><input type="checkbox" data-cycle-field="regular"${c.regular === false ? "" : " checked"}> regular</label>
+      <span class="ph-cycle-hist">${gaps.length ? `last cycles ${gaps.join(" · ")} → avg ${avg} d${c.cycleLenManual ? " · length typed by you" : ""}` : "saves as you change it"}</span>
+    </div>`;
+  }
   function presCycleRowHtml(t) {
     const name = presPatientFor(t);
     if (!name) return "";
@@ -30337,13 +30446,14 @@
     const lead = comp
       ? `🩸 Cycle · ${phCycleChipHtml(comp)} · LMP ${esc(phShortDate(rec.cycle.lmp))} · ~${comp.cycleLen}d`
       : `🩸 Cycle · no LMP yet`;
-    return `<div class="ph-treat-row-wrap">
+    return `<div class="ph-treat-row-wrap ph-cycle-wrap">
       <button type="button" class="ph-treat-row ph-hx-row ${comp ? "hasanswers" : "notstarted"}" data-pres-cycle-toggle="1" aria-expanded="${presCycleOpen ? "true" : "false"}">
         <span class="ph-hx-lead">${lead}</span>
         ${comp && !presCycleOpen ? `<span class="ph-cycle-minibar" aria-hidden="true"><span class="p" style="flex:${comp.segDays.period}"></span><span class="f" style="flex:${comp.segDays.foll}"></span><span class="o" style="flex:${comp.segDays.ov}"></span><span class="l" style="flex:${comp.segDays.luteal}"></span><span class="pin" style="left:${comp.pinPct}%"></span></span>` : ""}
         <span class="ph-hx-action ph-treat-chev">${presCycleOpen ? "▾" : "▸"}</span>
       </button>
-      ${presCycleOpen ? `<div class="ph-cycle-rowopen">${phCycleBarHtml(rec)}</div>` : ""}
+      ${phCycleQuickHtml(name)}
+      ${presCycleOpen ? `<div class="ph-cycle-rowopen">${phCycleBarHtml(rec)}${phCycleDetailsHtml(rec)}</div>` : ""}
     </div>`;
   }
   function presCycleToggleHtml(t) {
@@ -30359,11 +30469,10 @@
   const PH_CYCLE_PAIN = [["none", "None"], ["mild", "Mild"], ["moderate", "Moderate"], ["severe", "Severe"]];
   function phCycleBarHtml(rec) {
     if (!rec) return "";
-    if (phTpCycleEditOpen) return phTpCycleEditHtml(rec);
     const c = phCycleFor(rec);
     const comp = phTpCycleCompute(c);
     if (!comp) {
-      return `<div class="ph-cycle-empty">🩸 No cycle info yet — <button type="button" class="tab-link" data-tp-cycle-edit="1">add her menstrual history</button> · <button type="button" class="tab-link" data-cycle-period-today="1">period started today</button></div>`;
+      return `<div class="ph-cycle-empty">🩸 No cycle info yet — tap <b>Period started today</b> above, pick another day, or set her LMP below.</div>`;
     }
     const flowIcons = c.flowDays || 0;
     const flowLevel = { light: 1, moderate: 2, heavy: 3 }[c.flowIntensity] || 0;
@@ -30378,7 +30487,7 @@
         </div>
         <div class="ph-cyclepin" style="left:${comp.pinPct}%"><span class="ph-cyclepin-lbl">Day ${comp.day} · ${esc(comp.phaseLabel)}${comp.overdue ? " · late?" : ""}</span></div>
       </div>
-      <div class="ph-cyclemeta"><span>LMP <b>${esc(phShortDate(c.lmp))}</b> · typical <b>~${comp.cycleLen} day</b> cycle · ovulation <b>~day ${comp.ovDay} · ${esc(phShortDate(comp.ovDate))}</b> · next period <b>~${esc(phShortDate(comp.nextDate))}</b></span><span class="ph-cycle-actions"><button type="button" class="tab-link" data-cycle-period-today="1">New period today</button><button type="button" class="tab-link" data-tp-cycle-edit="1">Edit ✎</button></span></div>
+      <div class="ph-cyclemeta"><span>LMP <b>${esc(phShortDate(c.lmp))}</b> · typical <b>~${comp.cycleLen} day</b> cycle · ovulation <b>~day ${comp.ovDay} · ${esc(phShortDate(comp.ovDate))}</b> · next period <b>~${esc(phShortDate(comp.nextDate))}</b></span></div>
       <div class="ph-cycle-introws">
         <div class="ph-cycle-introw"><span class="lbl">Flow</span><div class="ph-cycle-drops">${[1, 2, 3].map(i => `<span class="drop${i <= flowLevel ? " on" : ""}"></span>`).join("")}</div><span class="sub">${flowIcons ? `${flowIcons} days` : ""}</span></div>
         <div class="ph-cycle-introw"><span class="lbl">Pain</span><div class="ph-cycle-dots">${[1, 2, 3].map(i => `<span class="dot${i <= painLevel ? " on" : ""}"></span>`).join("")}</div><span class="sub">${esc((PH_CYCLE_PAIN.find(x => x[0] === c.pain) || [])[1] || "")}</span></div>
@@ -30911,7 +31020,7 @@
           <label class="ph-gd-field"><span>🫀 Pulse</span><textarea rows="2" data-tp-field="${plan.id}:pulse" placeholder="Rate, depth, quality…">${esc(plan.pulse || "")}</textarea></label>
           <label class="ph-gd-field"><span>🤲 Abdomen</span><textarea rows="2" data-tp-field="${plan.id}:abdomen" placeholder="Fukushin findings…">${esc(plan.abdomen || "")}</textarea></label>
         </div>
-        ${PH_TP_CYCLE_TEMPLATES.includes(plan.templateName) ? phCycleBarHtml(phPatientRec(phTpScreenPatient)) + phCycleVisitsHtml(phPatientRec(phTpScreenPatient), plan, phTpScreenPatient) : ""}
+        ${PH_TP_CYCLE_TEMPLATES.includes(plan.templateName) ? `<div class="ph-cycle-wrap ph-cycle-modalquick">${phCycleQuickHtml("1")}</div>` + phCycleBarHtml(phPatientRec(phTpScreenPatient)) + phCycleDetailsHtml(phPatientRec(phTpScreenPatient)) + phCycleVisitsHtml(phPatientRec(phTpScreenPatient), plan, phTpScreenPatient) : ""}
         <div class="ph-tp-timeline">
           ${plan.phases.map(ph => phTpPhaseRowHtml(plan, ph)).join("")}
           <button type="button" class="ph-tp-addbtn" data-tp-phase-add="${plan.id}">+ Add phase</button>
