@@ -59,6 +59,15 @@ one 1px `--ph-line` rule between rows. Nothing stacks label-above-value on mobil
 Fields sit on **white**, separated by the 1px rule. The section beneath sits on the page
 tone. Grouping is background + spacing, not 12px rounded borders everywhere.
 
+### Full width, no side margin
+Her ask (2026-09-05, "widen it completely across the screen"): white sections span edge to
+edge — `left:0` to `right:390` at 390px — same as the header already does, no rounded
+corners, no outer gutter. `.ph-pres-stage-body` itself carries **zero** side padding; the
+12px inset lives one level down, on whatever actually needs it (a section heading's own
+`padding`, a row's own `padding`) — never on the shared wrapper. Don't reintroduce an outer
+card margin/radius on a full-width section without asking; it was a deliberate removal, not
+an oversight.
+
 ### Chips
 `font-size: var(--m-fs-label); background: var(--ph-surface); border-radius: 999px; padding:
 2px 8px;` — no border. Family-history chips use a cool grey-blue tint instead of an outline,
