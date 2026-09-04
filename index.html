@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260904-210000">
+<meta name="lcm-build" content="20260904-223000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -1341,6 +1341,13 @@
   .ph-pill.draft { color: var(--ph-low-deep); background: var(--ph-low-tint); }
   .ph-pill.stale { color: var(--ph-low-deep); background: var(--ph-low-tint); }
   .ph-pill.count { color: var(--ph-green); background: var(--ph-green-tint); }
+  /* her correction 2026-09-04, "this is inacurate ... i need future
+     predictions clearly definited as prediction": ovulation date, next
+     period date and any visit date derived from them are projections from
+     the LMP + an assumed/averaged cycle length, not observed facts (unlike
+     the day count, which is real arithmetic from a real LMP) -- every place
+     one of those appears gets this tag right after it. */
+  .ph-pill.predict { color: var(--ph-blue-deep); background: var(--ph-blue-tint); }
   .ph-pill.restock { color: var(--ph-phaseout-deep); background: var(--ph-phaseout-tint); }
   .ph-pill.stocktake { color: var(--ph-stopped); background: var(--ph-stopped-tint); }
   /* a dispense made while she was booked in that day (her ask 2026-09-03,
@@ -5956,6 +5963,27 @@
   #pharmacyPage .ph-tp-formula-chip.empty:hover { color: var(--ph-green-deep); box-shadow: inset 0 0 0 1px var(--ph-green); }
   #pharmacyPage .ph-tp-phase-points { flex: 1 1 160px; min-width: 0; font-size: 11.5px; color: var(--ph-soft); border: none; background: none; padding: 4px 0; font-family: inherit; }
   #pharmacyPage .ph-tp-phase-points:focus { outline: none; }
+  /* compact phase rows (her "i like the treatment plan … make it more
+     compact", 2026-09-04): 158px → ~100px per phase. Aim grows with its
+     text (one line by default), the status pills and × shrink, cadence /
+     watch take the app's hairline pill instead of the browser's 2px box. */
+  #pharmacyPage .ph-tp-phase-body { padding-bottom: 8px; }
+  #pharmacyPage .ph-tp-phase-rail { padding-top: 5px; }
+  #pharmacyPage .ph-tp-phase-dot { width: 8px; height: 8px; }
+  #pharmacyPage .ph-tp-phase-headrow { margin-bottom: 0; gap: 6px 8px; }
+  #pharmacyPage .ph-tp-phase-name-input { font-size: 13px; padding: 2px 0; }
+  #pharmacyPage .ph-tp-phase-status-trail .ph-stage-seg { font-size: 10px; padding: 3px 8px; }
+  #pharmacyPage .ph-tp-phase-status-trail .ph-stage-seg:not(.next) { border: 1px solid transparent; }
+  #pharmacyPage .ph-tp-phase-headrow .del { border: none; background: none; color: var(--ph-faint); font-size: 15px; line-height: 1; padding: 0 4px; cursor: pointer; font-family: inherit; }
+  #pharmacyPage .ph-tp-phase-headrow .del:hover { color: var(--ph-zero); }
+  #pharmacyPage .ph-tp-phase-aim { padding: 2px 0 4px; min-height: 0; height: auto; field-sizing: content; resize: none; line-height: 1.4; border-radius: 0; overflow: hidden; }
+  #pharmacyPage .ph-tp-phase-chips { gap: 4px 8px; }
+  #pharmacyPage .ph-tp-phase-extra { margin-top: 4px; }
+  #pharmacyPage .ph-tp-formula-chip { font-size: 11px; padding: 3px 9px; }
+  #pharmacyPage .ph-tp-phase-points { padding: 3px 0; }
+  #pharmacyPage .ph-tp-phase-cadence, #pharmacyPage .ph-tp-phase-watch { font: inherit; font-size: 11.5px; color: var(--ph-ink); border: 1px solid var(--ph-line); border-radius: 999px; padding: 0 10px; height: 24px; line-height: 22px; box-sizing: border-box; background: var(--ph-white); min-width: 0; }
+  #pharmacyPage .ph-tp-phase-cadence::placeholder, #pharmacyPage .ph-tp-phase-watch::placeholder { color: var(--ph-faint); }
+  #pharmacyPage .ph-tp-phase-cadence:focus-visible, #pharmacyPage .ph-tp-phase-watch:focus-visible { outline: 2px solid var(--ph-green); outline-offset: 1px; border-color: var(--ph-green); }
   #pharmacyPage .ph-tp-fpick { position: relative; width: 100%; margin-top: 6px; }
   #pharmacyPage .ph-tp-fpick-input { width: 100%; padding: 8px 10px; border: 1px solid var(--ph-line); border-radius: var(--field-radius-sm, 8px); font: inherit; font-size: 12.5px; }
 
@@ -22804,6 +22832,7 @@
         const plan = phTpFindPlan(phTpScreenPatient, planId);
         const ph = plan && plan.phases.find(p => p.id === phaseId);
         if (ph) phDefer("tpPhaseField:" + phaseId + ":" + field, () => { ph[field] = tpPhaseField.value; savePharmacy(); }, 400);
+        if (field === "aim") { tpPhaseField.style.height = "auto"; tpPhaseField.style.height = tpPhaseField.scrollHeight + "px"; }
         return;
       }
       if (e.target.id === "phTpFPickInput") {
@@ -30147,6 +30176,7 @@
     renderPresCalc();
     presRefreshIngTable();
     presFuNoteAutoGrow(document.getElementById("presFuNote"));
+    phTpAimAutoGrowAll(el);
     if (phLogDateEdit) {
       const inp = el.querySelector("[data-ph-log-date-edit]");
       if (inp) inp.focus();
@@ -30532,7 +30562,7 @@
     const v = phCycleVisitPlan(rec, name);
     if (!v.length) return "";
     return `<div class="ph-cyclevisits">
-      <div class="ph-cyclevisits-h">📅 This cycle's visits <span class="faint">— from her LMP; ✓ = booked in Cliniko</span></div>
+      <div class="ph-cyclevisits-h">📅 This cycle's visits <span class="faint">— predicted from her LMP; ✓ = booked in Cliniko</span></div>
       ${v.map(x => `<div class="ph-cyclevisit ${x.phaseKey}${x.past ? " past" : ""}${x.booked ? " booked" : ""}">
         <span class="d">Day ${x.day}</span><span class="dt">${esc(phFuDateLabel(x.date))}</span><span class="lb">${esc(x.label)}</span>
         <span class="st">${x.booked ? `✓ ${esc(phCkTime12(x.booked.time))}` : x.past ? "—" : "book"}</span>
@@ -30547,11 +30577,11 @@
   // patient when it's open, else the open script's
   // log + tell her + refresh only the surface the tap came from (timeline
   // row, check-in panel line, or the script panel / plan modal)
-  const phCkCycleLineHtml = (comp, name) => `${phCycleChipHtml(comp)} <span class="faint">· ${comp.phaseKey === "luteal" || comp.phaseKey === "ov" ? "" : `ovulation ~${esc(phFuDateLabel(comp.ovDate))} · `}period due ~${esc(phFuDateLabel(comp.nextDate))}</span> <button type="button" class="tab-link" data-cycle-period-today="${esc(name || "")}">🩸 period started today</button>`;
+  const phCkCycleLineHtml = (comp, name) => `${phCycleChipHtml(comp)} <span class="faint">· ${comp.phaseKey === "luteal" || comp.phaseKey === "ov" ? "" : `ovulation ~${esc(phFuDateLabel(comp.ovDate))} · `}period due ~${esc(phFuDateLabel(comp.nextDate))}</span> <span class="ph-pill predict">Predicted</span> <button type="button" class="tab-link" data-cycle-period-today="${esc(name || "")}">🩸 period started today</button>`;
   function phCycleLogFrom(el, rec, dateKey, name) {
     if (!rec) return;
     const comp = phCycleLogPeriod(rec, dateKey);
-    phFlashShow(comp ? `🩸 Period logged · ${dateKey === keyOf(TODAY) ? "day 1 today" : `started ${phShortDate(dateKey)}, day ${comp.day} now`} · next ~${phFuDateLabel(comp.nextDate)}` : "🩸 Period logged");
+    phFlashShow(comp ? `🩸 Period logged · ${dateKey === keyOf(TODAY) ? "day 1 today" : `started ${phShortDate(dateKey)}, day ${comp.day} now`} · next period predicted ~${phFuDateLabel(comp.nextDate)}` : "🩸 Period logged");
     if (el && el.closest("#presWeekWrap")) { renderPresWeek(); return; }
     const kv = el && el.closest(".ph-ck-kv");
     if (kv) {   // check-in panel: rewrite just the Cycle line (update in place, never re-render the panel under her)
@@ -30673,7 +30703,7 @@
         </div>
         <div class="ph-cyclepin" style="left:${comp.pinPct}%"><span class="ph-cyclepin-lbl">Day ${comp.day} · ${esc(comp.phaseLabel)}${comp.overdue ? " · late?" : ""}</span></div>
       </div>
-      <div class="ph-cyclemeta"><span>LMP <b>${esc(phShortDate(c.lmp))}</b> · typical <b>~${comp.cycleLen} day</b> cycle · ovulation <b>~day ${comp.ovDay} · ${esc(phShortDate(comp.ovDate))}</b> · next period <b>~${esc(phShortDate(comp.nextDate))}</b></span></div>
+      <div class="ph-cyclemeta"><span>LMP <b>${esc(phShortDate(c.lmp))}</b> · typical <b>~${comp.cycleLen} day</b> cycle · ovulation <b>~day ${comp.ovDay} · ${esc(phShortDate(comp.ovDate))}</b> · next period <b>~${esc(phShortDate(comp.nextDate))}</b> <span class="ph-pill predict">Predicted</span></span></div>
       <div class="ph-cycle-introws">
         <div class="ph-cycle-introw"><span class="lbl">Flow</span><div class="ph-cycle-drops">${[1, 2, 3].map(i => `<span class="drop${i <= flowLevel ? " on" : ""}"></span>`).join("")}</div><span class="sub">${flowIcons ? `${flowIcons} days` : ""}</span></div>
         <div class="ph-cycle-introw"><span class="lbl">Pain</span><div class="ph-cycle-dots">${[1, 2, 3].map(i => `<span class="dot${i <= painLevel ? " on" : ""}"></span>`).join("")}</div><span class="sub">${esc((PH_CYCLE_PAIN.find(x => x[0] === c.pain) || [])[1] || "")}</span></div>
@@ -30997,13 +31027,24 @@
     const refillRow = r => `<div class="ph-pick-row" data-tp-pick-refill="${r.id}" tabindex="0"><span class="ph-pick-ic">🌿</span><span class="ph-pick-main"><span class="ph-pick-nm">${esc(phDispName(r.name, true))}<span class="ph-pick-badge herbs">FROM HERBS</span></span></span></div>`;
     return group("Ready-made", jars, jarRow) + group("Made from herbs", refills, refillRow);
   }
+  // field-sizing:content (the compact aim textarea's fast path) isn't
+  // supported everywhere (Safari, stable Firefox as of 2026-09) -- this
+  // reproduces the same grow-to-fit there, same trick as presFuNoteAutoGrow,
+  // so those browsers get a real growing box instead of a one-line box with
+  // a scrollbar (review finding, compact phase rows 2026-09-04).
+  function phTpAimAutoGrowAll(root) {
+    (root || document).querySelectorAll(".ph-tp-phase-aim").forEach(el => {
+      el.style.height = "auto";
+      el.style.height = el.scrollHeight + "px";
+    });
+  }
   function phTpPhaseRowHtml(plan, phase) {
     const picking = phTpFormulaPickPhase === phase.id;
     return `<div class="ph-tp-phase-row ${phase.status}">
       <div class="ph-tp-phase-rail"><span class="ph-tp-phase-dot"></span><span class="ph-tp-phase-line"></span></div>
       <div class="ph-tp-phase-body">
         <div class="ph-tp-phase-headrow">
-          <input type="text" class="ph-tp-phase-name-input" data-tp-phase-field="${plan.id}:${phase.id}:label" value="${esc(phase.label)}" placeholder="Phase name" aria-label="Phase name">
+          <input type="text" class="ph-tp-phase-name-input field-bare" data-tp-phase-field="${plan.id}:${phase.id}:label" value="${esc(phase.label)}" placeholder="Phase name" aria-label="Phase name">
           <span class="ph-tp-phase-status-trail">
             ${PH_TP_PHASE_STATUSES.map((s, si) => {
               const curI = PH_TP_PHASE_STATUSES.findIndex(x => x.v === phase.status);
@@ -31013,18 +31054,18 @@
           </span>
           <button type="button" class="del" data-tp-phase-del="${plan.id}:${phase.id}" title="Remove this phase" aria-label="Remove ${esc(phase.label)}">×</button>
         </div>
-        <textarea class="ph-tp-phase-aim" rows="2" data-tp-phase-field="${plan.id}:${phase.id}:aim" placeholder="What this phase is for…" aria-label="Aim for ${esc(phase.label)}">${esc(phase.aim || "")}</textarea>
+        <textarea class="ph-tp-phase-aim field-bare" rows="1" data-tp-phase-field="${plan.id}:${phase.id}:aim" placeholder="What this phase is for…" aria-label="Aim for ${esc(phase.label)}">${esc(phase.aim || "")}</textarea>
         <div class="ph-tp-phase-chips">
           ${phase.formulaName
-            ? `<button type="button" class="ph-name-link ph-tp-formula-chip" data-tp-formula-unlink="${plan.id}:${phase.id}" title="Click to unlink">🌿 ${esc(phase.formulaName)} ✕</button>`
+            ? `<button type="button" class="ph-tp-formula-chip" data-tp-formula-unlink="${plan.id}:${phase.id}" title="Click to unlink">🌿 ${esc(phase.formulaName)} ✕</button>`
             : `<button type="button" class="ph-tp-formula-chip empty" data-tp-formula-pick-open="${plan.id}:${phase.id}">${phase.suggestFormula ? `+ Link a formula — suggested: ${esc(phase.suggestFormula)}` : "+ Link a formula"}</button>`}
-          <input type="text" class="ph-tp-phase-points" data-tp-phase-field="${plan.id}:${phase.id}:points" value="${esc(phase.points || "")}" placeholder="Reference points (optional)" aria-label="Reference points for ${esc(phase.label)}">
-        </div>
-        ${/* her picks 2026-09-04 (Bonnie's plan): each phase also carries how
-             often she comes in and what to watch for */ ""}
-        <div class="ph-tp-phase-chips ph-tp-phase-extra">
-          <input type="text" class="ph-tp-phase-cadence" data-tp-phase-field="${plan.id}:${phase.id}:cadence" value="${esc(phase.cadence || "")}" placeholder="Visits — e.g. 1–2×/wk" aria-label="Visit cadence for ${esc(phase.label)}">
-          <input type="text" class="ph-tp-phase-watch" data-tp-phase-field="${plan.id}:${phase.id}:watch" value="${esc(phase.watch || "")}" placeholder="What to watch / advice" aria-label="What to watch for ${esc(phase.label)}">
+          <input type="text" class="ph-tp-phase-points field-bare" data-tp-phase-field="${plan.id}:${phase.id}:points" value="${esc(phase.points || "")}" placeholder="Reference points (optional)" aria-label="Reference points for ${esc(phase.label)}">
+          ${/* her picks 2026-09-04 (Bonnie's plan): each phase also carries how
+               often she comes in and what to watch for -- same row as the
+               formula and points, wrapping onto a second line only when the
+               width is short (her "more compact", same day) */ ""}
+          <input type="text" class="ph-tp-phase-cadence field-bare" data-tp-phase-field="${plan.id}:${phase.id}:cadence" value="${esc(phase.cadence || "")}" placeholder="Visits — e.g. 1–2×/wk" aria-label="Visit cadence for ${esc(phase.label)}">
+          <input type="text" class="ph-tp-phase-watch field-bare" data-tp-phase-field="${plan.id}:${phase.id}:watch" value="${esc(phase.watch || "")}" placeholder="What to watch / advice" aria-label="What to watch for ${esc(phase.label)}">
         </div>
         ${picking ? phTpPhaseFormulaPickerHtml(phase) : ""}
       </div>
@@ -31241,6 +31282,7 @@
       const input = document.getElementById("phTpFPickInput");
       if (input) { input.focus(); document.getElementById("phTpFPickSugg").innerHTML = phTpFormulaSuggHtml(input.value); }
     }
+    phTpAimAutoGrowAll(modal);
   }
   // ============================================================
   // Letter-first treatment plans (her calibration 2026-09-01, approved mock:
