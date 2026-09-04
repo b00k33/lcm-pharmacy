@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0E4D2A">
+<title>Patient Intake — LCM Pharmacy</title>
+<!-- Standalone, unauthenticated patient-facing form (her ask 2026-09-05: a
+     link she can send that blocks the patient from seeing the rest of the
+     app). Deliberately its own file, not part of index.html's single-page
+     app -- it has zero navigation into the practitioner app by construction,
+     and talks to Supabase directly with no login, through two narrow
+     SECURITY DEFINER functions (see supabase/intake_forms_setup.sql). Colour
+     tokens and the PH_HISTORY_GROUPS / PH_CYCLE_* data below are copied
+     verbatim from index.html rather than shared, matching this project's
+     existing single-file-per-app convention (see the print-view <style> in
+     index.html for the same trimmed token set this reuses). -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --ph-green-deep: #0E4D2A; --ph-green: #1B7A46; --ph-green-tint: #EAF5EE;
+    --ph-green-press: #0A3A20; --ph-line: #D3E2D8; --ph-soft: #4A5B50;
+    --ph-ink: #14231A; --ph-paper: #F6FAF7; --ph-white: #FFFFFF;
+    --ph-negative: #B4483A; --margin-rule: #E3C87A;
+    --font-serif: 'Cormorant Garamond', Georgia, serif;
+    --font-body: 'Inter', -apple-system, 'Segoe UI', sans-serif;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--ph-paper); color: var(--ph-ink); font-family: var(--font-body); }
+  body { padding-bottom: 100px; }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 0 16px; }
+  header.top { background: var(--ph-green-deep); color: #EAF5EE; padding: 22px 16px 20px; text-align: center; }
+  header.top h1 { font-family: var(--font-serif); font-weight: 600; font-size: 22px; margin: 0; letter-spacing: 0.01em; }
+  header.top p { margin: 4px 0 0; font-size: 12px; color: #B8D2C2; }
+  .card { background: var(--ph-white); border: 1px solid var(--ph-line); border-radius: 14px; padding: 16px; margin-top: 16px; }
+  .lead { font-size: 14px; line-height: 1.5; margin: 0 0 4px; }
+  .note { font-size: 12px; color: var(--ph-soft); line-height: 1.5; margin: 8px 0 0; }
+  .center { text-align: center; padding: 40px 16px; }
+  .center h2 { font-family: var(--font-serif); font-weight: 600; font-size: 20px; color: var(--ph-green-deep); margin: 0 0 8px; }
+  .center p { font-size: 14px; color: var(--ph-soft); line-height: 1.6; }
+  .err { color: var(--ph-negative); font-size: 13px; margin-top: 8px; }
+  .section-h { font-size: 12px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ph-green-deep); margin: 22px 0 8px; padding: 0 2px; }
+  .field { margin-bottom: 14px; }
+  .field label.q { display: block; font-size: 13px; font-weight: 600; color: var(--ph-ink); margin-bottom: 6px; }
+  .field .hint { font-size: 11.5px; color: var(--ph-soft); margin-top: 4px; }
+  input[type="date"], input[type="number"], input[type="text"], textarea, select {
+    width: 100%; font: inherit; font-size: 14px; color: var(--ph-ink); background: var(--ph-paper);
+    border: 1px solid var(--ph-line); border-radius: 10px; padding: 11px 12px;
+  }
+  input:focus, textarea:focus, select:focus { outline: 2px solid var(--ph-green); outline-offset: 1px; }
+  textarea { resize: vertical; min-height: 56px; font-family: inherit; }
+  .seg { display: flex; gap: 8px; }
+  .seg button { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid var(--ph-line); background: var(--ph-white); font: inherit; font-size: 14px; font-weight: 600; color: var(--ph-ink); cursor: pointer; }
+  .seg button.on { background: var(--ph-green-deep); border-color: var(--ph-green-deep); color: #fff; }
+  .hx-group { margin-bottom: 6px; }
+  .hx-group-h { font-size: 12.5px; font-weight: 700; color: var(--ph-green-deep); margin: 14px 0 6px; }
+  .hx-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 2px; border-bottom: 1px solid var(--ph-line); }
+  .hx-row:last-child { border-bottom: none; }
+  .hx-label { font-size: 13.5px; flex: 1; min-width: 0; }
+  .hx-toggle { display: flex; gap: 6px; flex: 0 0 auto; }
+  .hx-btn { padding: 7px 14px; border-radius: 999px; border: 1px solid var(--ph-line); background: var(--ph-white); font: inherit; font-size: 12.5px; font-weight: 600; color: var(--ph-soft); cursor: pointer; }
+  .hx-btn.on { background: var(--ph-green-tint); border-color: var(--ph-green); color: var(--ph-green-deep); }
+  .checkrow { display: flex; align-items: center; gap: 8px; font-size: 13.5px; padding: 4px 0; }
+  .checkrow input { width: auto; }
+  .chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 4px; }
+  .chip { padding: 7px 13px; border-radius: 999px; border: 1px solid var(--ph-line); background: var(--ph-white); font: inherit; font-size: 12.5px; color: var(--ph-soft); cursor: pointer; }
+  .chip.on { background: var(--ph-green-tint); border-color: var(--ph-green); color: var(--ph-green-deep); font-weight: 600; }
+  .cq-inline { display: flex; align-items: center; gap: 8px; }
+  .cq-inline input { width: 90px; flex: 0 0 auto; }
+  .cq-inline select { flex: 1; }
+  #cycleSec[hidden], #femaleHx[hidden] { display: none; }
+  .submitbar { position: sticky; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, var(--ph-paper) 70%, transparent); padding: 16px 0 0; margin-top: 4px; }
+  .submitbtn { width: 100%; padding: 15px; border-radius: 999px; border: none; background: var(--ph-green-deep); color: #fff; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+  .submitbtn:disabled { opacity: 0.5; cursor: default; }
+  .submitbtn:not(:disabled):active { background: var(--ph-green-press); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header class="top"><h1>LCM Pharmacy</h1><p>Patient intake</p></header>
+<div class="wrap">
+  <div id="app"><div class="center"><p>Loading your form…</p></div></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function () {
+  "use strict";
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function titleCase(s) { return String(s == null ? "" : s).toLowerCase().replace(/(^|[^a-z0-9])([a-z])/g, function (m, a, b) { return a + b.toUpperCase(); }); }
+
+  var PH_HISTORY_GROUPS = [
+    { g: "Cycle & bleeding", items: [
+      ["heavy_menstrual_bleeding", "Heavy menstrual bleeding"], ["dysmenorrhoea", "Dysmenorrhoea"],
+      ["irregular_menstruation", "Irregular menstruation"], ["amenorrhoea", "Amenorrhoea"],
+      ["pms", "PMS"], ["pmdd", "PMDD"] ] },
+    { g: "Structural", items: [
+      ["uterine_fibroids", "Uterine fibroids"], ["adenomyosis", "Adenomyosis"],
+      ["ovarian_cysts", "Ovarian cysts"], ["endometriosis", "Endometriosis"] ] },
+    { g: "Reproductive", items: [
+      ["pcos", "PCOS"], ["infertility_unexplained", "Infertility (unexplained)"],
+      ["history_of_miscarriage", "History of miscarriage"], ["pregnant", "Pregnant"],
+      ["breastfeeding", "Breastfeeding"] ] },
+    { g: "General health", items: [
+      ["diabetes", "Diabetes"], ["high_blood_pressure", "High blood pressure"],
+      ["thyroid_condition", "Thyroid condition"], ["heart_condition", "Heart condition"],
+      ["asthma_respiratory", "Asthma or respiratory condition"], ["digestive_condition", "Digestive condition"],
+      ["kidney_or_liver_condition", "Kidney or liver condition"], ["autoimmune_condition", "Autoimmune condition"],
+      ["cancer", "Cancer (current or past)"] ] },
+    { g: "Medication & allergies", items: [
+      ["taking_prescribed_medication", "Taking prescribed medication"], ["taking_supplements", "Taking supplements"],
+      ["known_drug_allergy", "Known drug allergy"], ["known_food_allergy", "Known food allergy"],
+      ["allergic_to_herbs", "Allergic to any herbs"], ["blood_thinning_medication", "Blood-thinning medication"] ] },
+    { g: "Family history", items: [
+      ["fh_diabetes", "Diabetes"], ["fh_heart_disease_stroke", "Heart disease or stroke"],
+      ["fh_high_blood_pressure", "High blood pressure"], ["fh_cancer", "Cancer"],
+      ["fh_thyroid_condition", "Thyroid condition"], ["fh_autoimmune_condition", "Autoimmune condition"],
+      ["fh_endometriosis_pcos", "Endometriosis or PCOS"], ["fh_early_menopause", "Early menopause"] ] },
+  ];
+  var PH_HX_FEMALE_GROUPS = { "Cycle & bleeding": 1, "Structural": 1, "Reproductive": 1 };
+  var PH_CYCLE_FLOW = [["light", "Light"], ["moderate", "Moderate"], ["heavy", "Heavy"]];
+  var PH_CYCLE_PAIN = [["none", "None"], ["mild", "Mild"], ["moderate", "Moderate"], ["severe", "Severe"]];
+  var PH_CYCLE_SYMPTOMS = [["cramping", "Cramping"], ["mood", "Mood changes"], ["breast", "Breast tenderness"], ["headache", "Headaches"], ["bloating", "Bloating"], ["fatigue", "Fatigue"], ["acne", "Acne"]];
+  var PH_CYCLE_CONTRACEPTION = [["none", "None"], ["pill", "Pill"], ["iud_h", "IUD (hormonal)"], ["iud_c", "IUD (copper)"], ["implant", "Implant"], ["condoms", "Condoms"], ["recent", "Recently stopped"], ["other", "Other"]];
+
+  var sb = window.supabase.createClient("https://jkpfhqaxhsiwtijxxzql.supabase.co", "sb_publishable_td_6_5ACewMZq8fVEB3Gww_KB-EDlYY");
+  var token = new URLSearchParams(location.search).get("t");
+  var app = document.getElementById("app");
+
+  function centerScreen(title, text) {
+    app.innerHTML = '<div class="center"><h2>' + esc(title) + "</h2><p>" + esc(text) + "</p></div>";
+  }
+
+  function selHtml(id, opts, defaultVal) {
+    return '<select id="' + id + '">' + opts.map(function (o) {
+      return '<option value="' + o[0] + '"' + (o[0] === defaultVal ? " selected" : "") + '>' + esc(o[1]) + "</option>";
+    }).join("") + "</select>";
+  }
+
+  function historyGroupsHtml(groups) {
+    return groups.map(function (gr) {
+      return '<div class="hx-group"><div class="hx-group-h">' + esc(gr.g) + '</div>' +
+        gr.items.map(function (it) {
+          return '<div class="hx-row" data-hx-item="' + it[0] + '"><span class="hx-label">' + esc(it[1]) + '</span>' +
+            '<div class="hx-toggle"><button type="button" class="hx-btn" data-hx-val="yes">Yes</button><button type="button" class="hx-btn" data-hx-val="no">No</button></div></div>';
+        }).join("") + "</div>";
+    }).join("");
+  }
+
+  function renderForm(name) {
+    var alwaysGroups = PH_HISTORY_GROUPS.filter(function (gr) { return !PH_HX_FEMALE_GROUPS[gr.g]; });
+    var femaleGroups = PH_HISTORY_GROUPS.filter(function (gr) { return PH_HX_FEMALE_GROUPS[gr.g]; });
+    app.innerHTML =
+      '<div class="card">' +
+        '<p class="lead">Hi ' + esc(titleCase(name)) + ' — a few questions before your visit.</p>' +
+        '<p class="note">This takes about 5 minutes. Your answers go straight to your practitioner’s private review — nothing else on this device is shared, and there’s nothing else to see here. Leave anything blank you’d rather discuss in person.</p>' +
+      '</div>' +
+      '<form id="intakeForm">' +
+        '<div class="section-h">Your details</div>' +
+        '<div class="card">' +
+          '<div class="field"><span class="q">Sex <span style="font-weight:400;color:var(--ph-soft)">(so we know which questions are relevant)</span></span>' +
+            '<div class="seg" id="sexSeg"><button type="button" class="sexbtn" data-sex="F">Female</button><button type="button" class="sexbtn" data-sex="M">Male</button></div>' +
+          '</div>' +
+          '<div class="field"><label class="q" for="fDob">Date of birth</label><input type="date" id="fDob" max="' + new Date().toISOString().slice(0, 10) + '"></div>' +
+          '<div class="field"><label class="q" for="fAddress">Address</label><textarea id="fAddress" rows="2" placeholder="Street, suburb, postcode"></textarea></div>' +
+        '</div>' +
+        '<div class="section-h">Medical history</div>' +
+        '<div class="card">' + historyGroupsHtml(alwaysGroups) + '</div>' +
+        '<div id="femaleHx" hidden><div class="section-h">Reproductive & cycle history</div><div class="card">' + historyGroupsHtml(femaleGroups) + '</div></div>' +
+        '<div id="cycleSec" hidden>' +
+          '<div class="section-h">Cycle & fertility details</div>' +
+          '<div class="card">' +
+            '<div class="field"><label class="q" for="fLmp">When did your last period start?</label><input type="date" id="fLmp" max="' + new Date().toISOString().slice(0, 10) + '"></div>' +
+            '<div class="field"><span class="q">How long is your usual cycle?</span><div class="cq-inline"><input type="number" id="fCycleLen" min="14" max="60" placeholder="e.g. 28"> <span class="note" style="margin:0">days</span></div></div>' +
+            '<div class="field"><span class="q">How many days do you bleed, and how heavy?</span><div class="cq-inline"><input type="number" id="fFlowDays" min="1" max="14" placeholder="e.g. 5">' + selHtml("fFlowIntensity", PH_CYCLE_FLOW, "moderate") + '</div></div>' +
+            '<div class="field"><label class="q" for="fPain">Any period pain?</label>' + selHtml("fPain", PH_CYCLE_PAIN, "none") + '</div>' +
+            '<div class="field"><label class="checkrow"><input type="checkbox" id="fRegular" checked> My cycle is usually regular</label></div>' +
+            '<div class="field"><label class="q" for="fMenarche">Age at first period (menarche)</label><input type="number" id="fMenarche" min="8" max="20" placeholder="e.g. 13"></div>' +
+            '<div class="field"><label class="q" for="fContraception">Current contraception</label>' + selHtml("fContraception", PH_CYCLE_CONTRACEPTION, "none") + '</div>' +
+            '<div class="field"><label class="q" for="fTtc">Trying to conceive — how long? <span style="font-weight:400;color:var(--ph-soft)">(months, if applicable)</span></label><input type="number" id="fTtc" min="0" max="240" placeholder="leave blank if not applicable"></div>' +
+            '<div class="field"><span class="q">Any typical period or PMS symptoms?</span><div class="chips" id="symptomChips">' + PH_CYCLE_SYMPTOMS.map(function (s) { return '<button type="button" class="chip" data-symptom="' + s[0] + '">' + esc(s[1]) + '</button>'; }).join("") + '</div></div>' +
+          '</div>' +
+        '</div>' +
+        '<p class="err" id="formErr" hidden></p>' +
+        '<div class="submitbar"><button type="submit" class="submitbtn" id="submitBtn" disabled>Choose your sex above to continue</button></div>' +
+      '</form>';
+
+    document.querySelectorAll(".hx-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var row = btn.closest("[data-hx-item]");
+        var wasOn = btn.classList.contains("on");
+        row.querySelectorAll(".hx-btn").forEach(function (b) { b.classList.remove("on"); });
+        if (!wasOn) btn.classList.add("on");
+      });
+    });
+    document.querySelectorAll(".chip").forEach(function (c) { c.addEventListener("click", function () { c.classList.toggle("on"); }); });
+    document.querySelectorAll(".sexbtn").forEach(function (b) {
+      b.addEventListener("click", function () {
+        document.querySelectorAll(".sexbtn").forEach(function (x) { x.classList.remove("on"); });
+        b.classList.add("on");
+        var isF = b.dataset.sex === "F";
+        document.getElementById("femaleHx").hidden = !isF;
+        document.getElementById("cycleSec").hidden = !isF;
+        var submitBtn = document.getElementById("submitBtn");
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Submit";
+      });
+    });
+    document.getElementById("intakeForm").addEventListener("submit", onSubmit);
+  }
+
+  function numOrNull(id) {
+    var v = document.getElementById(id).value;
+    return v === "" ? null : Number(v);
+  }
+
+  function collectPayload() {
+    var sexBtn = document.querySelector(".sexbtn.on");
+    var sex = sexBtn ? sexBtn.dataset.sex : "";
+    var demographics = {
+      sex: sex,
+      dob: document.getElementById("fDob").value || null,
+      address: document.getElementById("fAddress").value.trim() || null,
+    };
+    var history = {};
+    document.querySelectorAll("[data-hx-item]").forEach(function (row) {
+      var on = row.querySelector(".hx-btn.on");
+      if (on) history[row.dataset.hxItem] = on.dataset.hxVal;
+    });
+    var cycle = null;
+    if (sex === "F") {
+      var lmp = document.getElementById("fLmp").value || null;
+      var cycleLen = numOrNull("fCycleLen");
+      var flowDays = numOrNull("fFlowDays");
+      var flowIntensity = document.getElementById("fFlowIntensity").value;
+      var pain = document.getElementById("fPain").value;
+      var regular = document.getElementById("fRegular").checked;
+      var menarcheAge = numOrNull("fMenarche");
+      var contraception = document.getElementById("fContraception").value;
+      var ttcMonths = numOrNull("fTtc");
+      var symptoms = Array.prototype.map.call(document.querySelectorAll(".chip.on"), function (c) { return c.dataset.symptom; });
+      var touched = lmp || cycleLen != null || flowDays != null || menarcheAge != null || contraception !== "none" || ttcMonths != null || symptoms.length || flowIntensity !== "moderate" || pain !== "none" || !regular;
+      if (touched) cycle = { lmp: lmp, cycleLen: cycleLen, flowDays: flowDays, flowIntensity: flowIntensity, pain: pain, regular: regular, menarcheAge: menarcheAge, contraception: contraception, ttcMonths: ttcMonths, symptoms: symptoms };
+    }
+    return { demographics: demographics, history: history, cycle: cycle };
+  }
+
+  function onSubmit(e) {
+    e.preventDefault();
+    var btn = document.getElementById("submitBtn");
+    var errEl = document.getElementById("formErr");
+    errEl.hidden = true;
+    btn.disabled = true; btn.textContent = "Submitting…";
+    var payload = collectPayload();
+    sb.rpc("submit_intake_form", { p_token: token, p_demographics: payload.demographics, p_history: payload.history, p_cycle: payload.cycle }).then(function (res) {
+      if (res.error) throw res.error;
+      if (res.data !== true) {
+        centerScreen("Already submitted", "Looks like this was already sent — thank you! If you need to change anything, contact your practitioner directly.");
+        return;
+      }
+      centerScreen("Thank you", "Your information has been sent to your practitioner for review before your visit. You can close this page now.");
+    }).catch(function () {
+      errEl.textContent = "Something went wrong sending this — please try again.";
+      errEl.hidden = false;
+      btn.disabled = false; btn.textContent = "Submit";
+    });
+  }
+
+  if (!token) {
+    centerScreen("Link incomplete", "This link looks incomplete. Please check you copied the whole link your practitioner sent you.");
+    return;
+  }
+  sb.rpc("get_intake_form", { p_token: token }).then(function (res) {
+    if (res.error) throw res.error;
+    var row = Array.isArray(res.data) ? res.data[0] : res.data;
+    if (!row) { centerScreen("Link not found", "This link isn’t valid. Check you copied the whole link, or ask your practitioner to send a new one."); return; }
+    if (row.status === "submitted" || row.status === "applied") { centerScreen("Already submitted", "You’ve already submitted this — thank you! If you need to make changes, contact your practitioner directly."); return; }
+    if (row.status === "dismissed") { centerScreen("Link no longer active", "This link is no longer active. Please contact your practitioner for a new one."); return; }
+    renderForm(row.patient_name || "there");
+  }).catch(function () {
+    centerScreen("Couldn’t load this form", "Something went wrong loading this form. Please try again, or contact your practitioner.");
+  });
+})();
+</script>
+</body>
+</html>
