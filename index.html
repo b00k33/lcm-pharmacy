@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260905-090000">
+<meta name="lcm-build" content="20260905-100000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -5964,9 +5964,9 @@
   }
   #pharmacyPage .ph-tl-act.cyc { background: var(--ph-white); color: var(--ph-ink); border: 1px solid var(--ph-line); font-size: 12px; }
   #pharmacyPage .ph-tl-act.cyc:hover { background: var(--ph-green-tint); }
-  #pharmacyPage .ph-tl-act.cyc-date { position: relative; display: inline-flex; align-items: center; justify-content: center; background: var(--ph-white); color: var(--ph-ink); border: 1px solid var(--ph-line); font-size: 11px; }
-  #pharmacyPage .ph-tl-act.cyc-date:hover { background: var(--ph-green-tint); }
-  #pharmacyPage .ph-tl-act.cyc-date input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+  #pharmacyPage .ph-tl-cycpop { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; background: var(--ph-green-tint); border-radius: 8px; padding: 8px 10px; }
+  #pharmacyPage .ph-tl-cycpop input[type=date] { min-width: 0; }
+  #pharmacyPage .ph-tl-cycpop .ph-ck-chips { margin-bottom: 0; }
   /* ===== Prescriptions list, option B (her pick 2026-09-04): timeline rows
      under fold bands; the controls row and chips are the timeline's own;
      Scheduled dispenses is one quiet line when empty. Desktop only
@@ -6229,6 +6229,8 @@
   /* the plan's clinical findings: the letter's three charts, interactive, with chips + a text line each */
   #pharmacyPage .ph-tp-fndhead { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ph-faint); margin: 12px 0 6px; }
   #pharmacyPage .ph-tp-fndhead .faint { font-weight: 500; letter-spacing: 0; text-transform: none; }
+  #pharmacyPage .ph-tp-startphase { background: var(--ph-green-tint); border-radius: 8px; padding: 10px 12px; margin-bottom: 16px; }
+  #pharmacyPage .ph-tp-startphase .ph-tp-fndhead { margin-top: 0; }
   #pharmacyPage .ph-tp-findings .ph-gd-field { text-align: left; margin-top: 6px; }
   #pharmacyPage .ph-tp-findings .ph-gd-field span { font-size: 11px; font-weight: 700; color: var(--ph-green-deep); }
   #pharmacyPage .ph-tp-findings .ph-gd-field span em { font-style: normal; font-weight: 500; color: var(--ph-soft); }
@@ -20718,6 +20720,23 @@
         }
         return;
       }
+      // her ask 2026-09-05: the one-time "which phase is she starting in?"
+      // banner on a fresh IVF Protocol plan (phTpStartPhaseBannerHtml) --
+      // same done/current/upcoming cascade as data-tp-phase-status above,
+      // plus marking the plan picked so the banner never shows again.
+      const tpStartPhase = e.target.closest("[data-tp-startphase]");
+      if (tpStartPhase) {
+        const [planId, phaseId] = tpStartPhase.dataset.tpStartphase.split(":");
+        const plan = phTpFindPlan(phTpScreenPatient, planId);
+        const ph = plan && plan.phases.find(p => p.id === phaseId);
+        if (plan && ph) {
+          const i = plan.phases.indexOf(ph);
+          plan.phases.forEach((p, idx) => { p.status = idx < i ? "done" : idx === i ? "current" : "upcoming"; });
+          plan.startPhasePicked = true;
+          savePharmacy(); phTpRerender();
+        }
+        return;
+      }
       const tpPhaseAdd = e.target.closest("[data-tp-phase-add]");
       if (tpPhaseAdd) {
         const plan = phTpFindPlan(phTpScreenPatient, tpPhaseAdd.dataset.tpPhaseAdd);
@@ -20833,6 +20852,29 @@
         const nm = cycTodayBtn.dataset.cyclePeriodToday;
         const rec = nm && nm !== "1" ? phPatientRec(nm) : phCycleTargetRec();
         phCycleLogFrom(cycTodayBtn, rec, keyOf(TODAY), nm && nm !== "1" ? nm : "");
+        return;
+      }
+      // her ask 2026-09-05: the Today's Timeline 🩸 quick-log popover --
+      // see presTlCycBtnHtml/presTlCycPopHtml in renderPresWeek
+      const cycTlToggle = e.target.closest("[data-pres-tl-cyc-toggle]");
+      if (cycTlToggle) {
+        const nm = cycTlToggle.dataset.presTlCycToggle;
+        presTlCycOpen = presTlCycOpen === nm ? null : nm;
+        presTlCycFlow = "moderate"; presTlCycPain = "none";
+        renderPresWeek();
+        return;
+      }
+      const cycTlFlow = e.target.closest("[data-pres-tl-cyc-flow]");
+      if (cycTlFlow) { presTlCycFlow = cycTlFlow.dataset.presTlCycFlow; renderPresWeek(); return; }
+      const cycTlPain = e.target.closest("[data-pres-tl-cyc-pain]");
+      if (cycTlPain) { presTlCycPain = cycTlPain.dataset.presTlCycPain; renderPresWeek(); return; }
+      const cycTlLog = e.target.closest("[data-pres-tl-cyc-log]");
+      if (cycTlLog) {
+        const nm = cycTlLog.dataset.presTlCycLog;
+        const dateEl = cycTlLog.closest(".ph-tl-cycpop").querySelector("[data-pres-tl-cyc-date]");
+        const dateKey = (dateEl && dateEl.value) || keyOf(TODAY);
+        presTlCycOpen = null;
+        phCycleLogFrom(cycTlLog, phPatientRec(nm), dateKey, nm, { flowIntensity: presTlCycFlow, pain: presTlCycPain });
         return;
       }
       // menstrual-history questionnaire: typical period/PMS symptoms are a
@@ -26206,6 +26248,13 @@
   let presWeekOffset = 0;
   // timeline filters (2026-09-04): type, search, status, filters row open
   let presTlType = "all", presTlQ = "", presTlStatus = "all", presTlFiltersOpen = false;
+  // her ask 2026-09-05 ("make it have more complex options" -- the 🩸 icon
+  // used to be a single instant "today" tap with a separate 📅 date-only
+  // icon beside it): one icon now opens a small quick-log popover with
+  // date + flow + pain, reusing the exact fields her cycle intake quiz
+  // already has -- presTlCycOpen names whose row's popover is showing,
+  // reset to the quiet defaults each time a different row opens.
+  let presTlCycOpen = null, presTlCycFlow = "moderate", presTlCycPain = "none";
   // Prescriptions list rebuild (her spec 2026-08-22): the three old static
   // counters became five single-select filter chips. "all" is the default;
   // "noHist" replaces the old standalone presHistFilterOn boolean.
@@ -26467,10 +26516,26 @@
     // the details and the actions -- every row has the cell (blank when
     // she isn't tracking that patient) so the numbers line up down the day.
     const cycBit = r => { const rec = PHARMACY.patients && PHARMACY.patients[r.k]; const comp = rec && phCycleOn(rec) ? phCycleComp(rec) : null; return comp ? `<div class="ph-tl-cd${comp.overdue ? " late" : ""}" title="Cycle day ${comp.day} · ${esc(comp.phaseLabel)}${comp.overdue ? " · late?" : ""}"><span class="n">${comp.day}</span><span class="c">${comp.overdue ? "late?" : "cd"}</span></div>` : `<div class="ph-tl-cd"></div>`; };
+    // her ask 2026-09-05 ("make it have more complex options"): the 🩸 icon
+    // now opens a quick-log popover (date + flow + pain) instead of firing
+    // an instant "today" log -- presTlCycBtnHtml is the toggle, in the row's
+    // usual .ph-tl-end column; presTlCycPopHtml is the expanded form, a
+    // separate grid item spanning the full row (.ph-tl-row is CSS grid, not
+    // flex, so the popover can't just live inside .ph-tl-end and grow).
+    const presTlCycBtnHtml = (name, rec) => rec && phCycleOn(rec)
+      ? `<button type="button" class="ph-tl-act cyc" data-pres-tl-cyc-toggle="${esc(name)}" aria-expanded="${presTlCycOpen === name}" title="Log her period">🩸</button>` : "";
+    const presTlCycPopHtml = (name, rec) => rec && phCycleOn(rec) && presTlCycOpen === name
+      ? `<div class="ph-tl-cycpop" role="group" aria-label="Log period for ${esc(phTitle(name))}">
+          <input type="date" class="ph-cyc-in field-bare" data-pres-tl-cyc-date="${esc(name)}" value="${keyOf(TODAY)}" max="${keyOf(TODAY)}" aria-label="Period started on">
+          <div class="ph-ck-chips">${PH_CYCLE_FLOW.map(([v, l]) => `<button type="button" class="ph-ck-chip${presTlCycFlow === v ? " on" : ""}" data-pres-tl-cyc-flow="${v}">${l}</button>`).join("")}</div>
+          <div class="ph-ck-chips">${PH_CYCLE_PAIN.map(([v, l]) => `<button type="button" class="ph-ck-chip${presTlCycPain === v ? " on" : ""}" data-pres-tl-cyc-pain="${v}">${l}</button>`).join("")}</div>
+          <button type="button" class="btn-save" data-pres-tl-cyc-log="${esc(name)}">Log period</button>
+        </div>` : "";
     const rowHtml = r => `<div class="ph-tl-row${r.done ? " done" : ""}" data-tl-key="${esc(r.k)}">
       <span class="ph-tl-time">${esc(phCkTime12(r.a.time))}</span>${dot(r)}
       <div class="ph-tl-mid"><div class="l1"><b>${esc(phTitle(r.a.patient))}</b>${phApptKindHtml(r.a.service)}${phApptEtHtml(r.a)}${phApptFuDue(r.k, dayKey) ? `<span class="bell" title="Follow-up due">🔔</span>` : ""}</div><div class="l2">${line2(r)}</div>${briefHtml(r)}</div>${cycBit(r)}
-      <div class="ph-tl-end">${(rec => rec && phCycleOn(rec) ? `<button type="button" class="ph-tl-act cyc" data-cycle-period-today="${esc(r.a.patient)}" title="Period started today">🩸</button><label class="ph-tl-act cyc-date" title="Log a different day"><span aria-hidden="true">📅</span><input type="date" data-cycle-period-date="${esc(r.a.patient)}" max="${keyOf(TODAY)}" aria-label="Period started on"></label>` : "")(PHARMACY.patients && PHARMACY.patients[r.k])}${statusChip(r)}${action(r)}</div>
+      <div class="ph-tl-end">${presTlCycBtnHtml(r.a.patient, PHARMACY.patients && PHARMACY.patients[r.k])}${statusChip(r)}${action(r)}</div>
+      ${presTlCycPopHtml(r.a.patient, PHARMACY.patients && PHARMACY.patients[r.k])}
     </div>`;
     const schedHtml = s => { const t = PRESC.items.find(x => x.id === s.prescriptionId); const st = schedStatus(s); return `<div class="ph-tl-row sched">
       <span class="ph-tl-time">${s.targetTime ? esc(phCkTime12(s.targetTime)) : s.method === "pickup" ? "pickup" : "post"}</span><span class="ph-tl-dot sched"></span>
@@ -26856,11 +26921,23 @@
       const herbs = esc(ings.slice(0, 4).map(i => phPinyinName({ name: i.herb || i.name || "" })).filter(Boolean).join(", ")) + (ings.length > 4 ? "…" : "");
       return [`${ings.length} herb${ings.length === 1 ? "" : "s"}`, fx ? `<b>${esc(fx)}</b>` : "", herbs].filter(Boolean).join(" · ");
     };
+    // her ask 2026-09-05 ("draft function does not serve a purpose. show
+    // instead; history taken, herbs dispensed, cycle day"): the old bare
+    // "Draft" pill only ever meant "never dispensed" and crowded out two
+    // other signals that were already one function call away.
+    const presStatusChipsHtml = (t, draft) => {
+      const nm = presPatientFor(t) || t.name || "";
+      const hx = phHxProgress(nm);
+      const noHist = hx.answeredN === 0 && !hx.notNeeded;
+      const rec = phPatientPeek(nm);
+      const comp = rec && phCycleOn(rec) ? phCycleComp(rec) : null;
+      return `${noHist ? `<span class="ph-pill draft">History not started</span>` : ""}${draft ? `<span class="ph-pill draft">Never dispensed</span>` : ""}${phCycleChipHtml(comp)}`;
+    };
     const tlRow = p => {
       const t = p.current, k = phPatientKey(t.name);
       const ms = lastMs(t), stale = isStale(t), draft = isDraft(t), today = isToday(t);
       const times = bookedTimes(k);
-      const badges = `${p.group.length > 1 ? `<span class="ph-pill count">${p.group.length} scripts</span>` : ""}${draft ? `<span class="ph-pill draft">Draft</span>` : ""}${stale ? `<span class="ph-pill stale">Not seen 6+ months</span>` : ""}${phCondBadgesHtml(t.name)}`;
+      const badges = `${p.group.length > 1 ? `<span class="ph-pill count">${p.group.length} scripts</span>` : ""}${presStatusChipsHtml(t, draft)}${stale ? `<span class="ph-pill stale">Not seen 6+ months</span>` : ""}${phCondBadgesHtml(t.name)}`;
       return `<div class="ph-tl-row ph-pl-row" data-pres-row-open="${t.id}" role="button" tabindex="0" aria-label="Open ${esc(phTitle(t.name))}">
         <span class="ph-tl-time ph-pl-when${ms ? (stale ? " stale" : "") : " never"}" title="${ms ? esc((d => `${d.getDate()} ${MON_SHORT[d.getMonth()]} ${d.getFullYear()}`)(new Date(ms))) : "never dispensed"}">${ms ? phRelShort(ms) : "never"}</span><span class="ph-tl-dot ${today ? "done" : draft ? "new" : "chm"}"></span>
         <div class="ph-tl-mid"><div class="l1"><b>${esc(phTitle(t.name))}</b>${badges}</div><div class="l2">${line2(t)}</div></div>
@@ -26882,7 +26959,7 @@
     const patientRow = p => {
       const t = p.current;
       const ms = lastMs(t), stale = isStale(t), draft = isDraft(t);
-      const badges = `${phCondBadgesHtml(t.name)}${draft ? `<span class="ph-pill draft">Draft</span>` : ""}${stale ? `<span class="ph-pill stale">Not seen 6+ months</span>` : ""}`;
+      const badges = `${phCondBadgesHtml(t.name)}${presStatusChipsHtml(t, draft)}${stale ? `<span class="ph-pill stale">Not seen 6+ months</span>` : ""}`;
       const countPill = p.group.length > 1 ? `<span class="ph-pill count">${p.group.length} scripts</span>` : "";
       const dispenseBtn = `<button type="button" class="ph-arr-editbtn" data-pres-open="${t.id}" title="Dispense ${esc(phTitle(t.name))}" aria-label="Dispense ${esc(phTitle(t.name))}">💊</button>`;
       const editBtn = `<button type="button" class="ph-arr-editbtn" data-pres-open="${t.id}" title="Edit ${esc(phTitle(t.name))}" aria-label="Edit ${esc(phTitle(t.name))}">✎</button>`;
@@ -30878,7 +30955,27 @@
       // & IVF Protocol plans (checked via templateName below) -- null until
       // she fills it in once via the Edit form, phTpCycleBarHtml().
       cycle: null,
+      // her ask 2026-09-05 ("sometimes they are in the luteal phase before
+      // their ivf cycle. include this"): IVF stays calendar-driven, not
+      // cycle-synced (see phCycleSyncPlan), so a fresh plan otherwise always
+      // opens on phase 0/Menstruation even when she's already mid-cycle from
+      // a prior natural attempt. false only for a brand-new IVF Protocol
+      // plan shows phTpStartPhaseBannerHtml once; every other template (and
+      // any plan from before this existed) is born already "picked" so nothing
+      // retroactively nags on old data.
+      startPhasePicked: !(tpl && tpl.name === "IVF Protocol"),
     };
+  }
+  // her ask 2026-09-05: shown once on a fresh IVF Protocol plan (see
+  // phTpNewPlan's startPhasePicked) -- any phase chip cascades done/
+  // current/upcoming via data-tp-startphase and dismisses the banner for
+  // good, including tapping the first one if Menstruation really is right.
+  function phTpStartPhaseBannerHtml(plan) {
+    if (!plan || plan.startPhasePicked) return "";
+    return `<div class="ph-tp-startphase">
+      <div class="ph-tp-fndhead">Which phase is she starting in? <span class="faint">— e.g. already in luteal from a prior natural cycle</span></div>
+      <div class="ph-ck-chips">${plan.phases.map(p => `<button type="button" class="ph-ck-chip" data-tp-startphase="${plan.id}:${p.id}">${esc(p.label)}</button>`).join("")}</div>
+    </div>`;
   }
   function phTpStatusMeta(v, list) { return list.find(x => x.v === v) || list[0]; }
   function phTpPlanCurrentPhase(plan) { return (plan.phases || []).find(p => p.status === "current") || null; }
@@ -31136,13 +31233,21 @@
   function phCycleLookAheadHtml(rec, plan, name) {
     const comp = phCycleComp(rec);
     if (!comp) return "";
-    const comp2 = phTpCycleCompute(Object.assign({}, rec.cycle, { lmp: comp.nextDate }));
+    // her ask 2026-09-05 ("if their period is taking longer, change the
+    // predictions"): comp.nextDate is a flat lmp+cycleLen offset -- once the
+    // CURRENT cycle overruns that date is already in the past, so anchoring
+    // "Looking ahead" to it kept projecting an already-stale next cycle.
+    // Floor the virtual LMP at today once she's overdue, same honesty as
+    // the ph-cyclevisits-late note above.
+    const anchor = comp.overdue && comp.nextDate < keyOf(TODAY) ? keyOf(TODAY) : comp.nextDate;
+    const comp2 = phTpCycleCompute(Object.assign({}, rec.cycle, { lmp: anchor }));
     if (!comp2) return "";
     const k = phPatientKey(name || "");
     const appts = k ? phApptList().filter(a => phPatientKey(a.patient) === k) : [];
-    const rows2 = phCyclePhaseRows(comp2, comp.nextDate, plan, appts).filter(x => x.date);
+    const rows2 = phCyclePhaseRows(comp2, anchor, plan, appts).filter(x => x.date);
     if (!rows2.length) return "";
     return `<div class="ph-cyclevisits-h">🔭 Looking ahead <span class="faint">— next cycle, estimated from her average length</span></div>
+      ${comp.overdue ? `<div class="ph-cyclevisits-late">Her period is running late — these dates will firm up once it's logged.</div>` : ""}
       ${rows2.map(x => phCycleVisitRowHtml({ dtag: phFuRelDay(x.date), dt: phShortDate(x.date), label: x.label, cadenceSub: x.cadence, phaseKey: x.phaseKey, hideBook: true })).join("")}`;
   }
   function phCyclePlanScheduleHtml(rec, plan, name) {
@@ -31166,9 +31271,9 @@
   // log + tell her + refresh only the surface the tap came from (timeline
   // row, check-in panel line, or the script panel / plan modal)
   const phCkCycleLineHtml = (comp, name) => `${phCycleChipHtml(comp)} <span class="faint">· ${comp.phaseKey === "luteal" || comp.phaseKey === "ov" ? "" : `ovulation ~${esc(phFuDateLabel(comp.ovDate))} · `}period due ~${esc(phFuDateLabel(comp.nextDate))}</span> <span class="ph-pill predict">Predicted</span> <button type="button" class="tab-link" data-cycle-period-today="${esc(name || "")}">🩸 period started today</button> <label class="ph-cycle-qdate" title="Log a period that started another day">another day…<input type="date" data-cycle-period-date="${esc(name || "")}" max="${keyOf(TODAY)}" aria-label="Period started on"></label>`;
-  function phCycleLogFrom(el, rec, dateKey, name) {
+  function phCycleLogFrom(el, rec, dateKey, name, extra) {
     if (!rec) return;
-    const comp = phCycleLogPeriod(rec, dateKey);
+    const comp = phCycleLogPeriod(rec, dateKey, extra);
     phFlashShow(comp ? `🩸 Period logged · ${dateKey === keyOf(TODAY) ? "day 1 today" : `started ${phShortDate(dateKey)}, day ${comp.day} now`} · next period predicted ~${phFuDateLabel(comp.nextDate)}` : "🩸 Period logged");
     if (el && el.closest("#presWeekWrap")) { renderPresWeek(); return; }
     const kv = el && el.closest(".ph-ck-kv");
@@ -31206,7 +31311,7 @@
     return gaps.slice(-3);
   }
   function phCycleAvgLen(rec) { const g = phCycleGaps(rec); return g.length ? Math.round(g.reduce((a, b) => a + b, 0) / g.length) : 0; }
-  function phCycleLogPeriod(rec, dateKey) {
+  function phCycleLogPeriod(rec, dateKey, extra) {
     if (!rec || !dateKey) return null;
     const cur = phCycleFor(rec) || {};
     rec.cycleLog = rec.cycleLog || [];
@@ -31217,7 +31322,10 @@
     else if (cur.lmp && !rec.cycleLog.some(x => x.lmp === cur.lmp)) rec.cycleLog.push({ lmp: cur.lmp });
     if (!rec.cycleLog.some(x => x.lmp === dateKey)) rec.cycleLog.push({ lmp: dateKey });
     rec.cycleLog.sort((a, b) => a.lmp < b.lmp ? -1 : 1);
-    rec.cycle = Object.assign({ cycleLen: 28, flowDays: 5, flowIntensity: "moderate", pain: "none", regular: true }, cur, { lmp: dateKey });
+    // her ask 2026-09-05: the quick-log popover captures flow/pain at the
+    // same moment as the date, same fields as the intake quiz -- optional,
+    // so every older caller (today-button, plain date picker) is unaffected
+    rec.cycle = Object.assign({ cycleLen: 28, flowDays: 5, flowIntensity: "moderate", pain: "none", regular: true }, cur, { lmp: dateKey }, extra || {});
     const avg = phCycleAvgLen(rec);
     if (avg && !rec.cycle.cycleLenManual) rec.cycle.cycleLen = avg;
     phCycleSyncPlans(rec);
@@ -31557,6 +31665,7 @@
         </span>
       </div>
       ${phCycleVisitsHtml(phPatientRec(name), plan, name)}
+      ${phTpStartPhaseBannerHtml(plan)}
       <div class="ph-tp-timeline">
         ${plan.phases.map(ph => phTpPhaseRowHtml(plan, ph)).join("")}
         <button type="button" class="ph-tp-addbtn" data-tp-phase-add="${plan.id}">+ Add phase</button>
@@ -31909,6 +32018,7 @@
         <div class="ph-tp-fndhead">Clinical findings <span class="faint">· tap a zone or a chip; it saves as you go and flows into her letter</span></div>
         ${phTpFindingsHtml(plan)}
         ${PH_TP_CYCLE_TEMPLATES.includes(plan.templateName) ? `<div class="ph-cycle-wrap ph-cycle-modalquick">${phCycleQuickHtml("1")}</div>` + phCycleBarHtml(phPatientRec(phTpScreenPatient)) + phCycleDetailsHtml(phPatientRec(phTpScreenPatient)) + phCycleVisitsHtml(phPatientRec(phTpScreenPatient), plan, phTpScreenPatient) + phCyclePlanScheduleHtml(phPatientRec(phTpScreenPatient), plan, phTpScreenPatient) : ""}
+        ${phTpStartPhaseBannerHtml(plan)}
         <div class="ph-tp-timeline">
           ${plan.phases.map(ph => phTpPhaseRowHtml(plan, ph)).join("")}
           <button type="button" class="ph-tp-addbtn" data-tp-phase-add="${plan.id}">+ Add phase</button>
