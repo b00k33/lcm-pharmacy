@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260904-130000">
+<meta name="lcm-build" content="20260904-140000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -1818,6 +1818,12 @@
   #pharmacyPage .ph-dash-tiles { max-width: var(--ph-sheet-w, 1040px); margin: 0 auto 12px; }
   @media (max-width: 900px) { #pharmacyPage .ph-dash-hero { margin: 8px 0 12px; padding: 8px 12px 12px; } }
   #pharmacyPage .ph-appt-et-x { margin-left: 3px; }   /* a flex item trims a leading space, so the gap is a margin */
+  /* the /patients briefing under a day row (her "put this somewhere i can see", 2026-09-04) */
+  #pharmacyPage .ph-week-brief { flex: 0 0 100%; margin: 2px 0 2px 52px; font-size: 12px; line-height: 1.45; color: var(--ph-soft); }
+  #pharmacyPage .ph-week-brief b { font-weight: 600; color: var(--ph-ink); margin-right: 4px; }
+  #pharmacyPage .ph-week-brief span + span { display: block; }
+  #pharmacyPage .ph-week-detail-row.has-brief { flex-wrap: wrap; }
+  @media (max-width: 600px) { #pharmacyPage .ph-week-brief { margin-left: 0; } }
   @media (max-width: 600px) { #pharmacyPage .ph-appt-et-x { display: none; } #pharmacyPage .ph-dash-hero .ph-wkt-item { justify-content: center; } }
   #pharmacyPage .ph-ds-mask .ph-wkt-cell { background: var(--ph-paper); }
   #pharmacyPage .ph-ds-mask .ph-dash-tasks { margin-top: 8px; }
@@ -16991,7 +16997,12 @@
     const nm = script
       ? `<button type="button" class="nm" data-ph-dash-pres-open="${script.id}" title="Open ${esc(phTitle(a.patient))}'s script">${esc(phTitle(a.patient))}${phApptKindHtml(a.service)}${phApptEtHtml(a)}</button>`
       : `<b>${esc(phTitle(a.patient))}${phApptKindHtml(a.service)}${phApptEtHtml(a)}</b>`;
-    return `<div class="ph-week-detail-row"><span class="tm">${esc(a.time)}</span>${nm}${bell}${prepHtml}</div>`;
+    // the /patients briefing (focus / goal) pasted in with the table rides
+    // under the row -- her "put this somewhere i can see" (2026-09-04)
+    const brief = a.focus || a.goal
+      ? `<div class="ph-week-brief">${a.focus ? `<span><b>Focus</b>${esc(a.focus)}</span>` : ""}${a.goal ? `<span><b>Goal</b>${esc(a.goal)}</span>` : ""}</div>`
+      : "";
+    return `<div class="ph-week-detail-row${brief ? " has-brief" : ""}"><span class="tm">${esc(a.time)}</span>${nm}${bell}${prepHtml}${brief}</div>`;
   }
   function phDashWeekDetailHtml(day, pharmRefill, pharmOrder) {
     const { disp, fu, appt } = phDashWeekItemsFor(day.key);
@@ -17254,6 +17265,11 @@
     if (dataIdx.length < 2 && !head) return null;
     const col = re => head ? head.findIndex(c => re.test(c)) : -1;
     const cTime = col(/^time|start/), cName = col(/patient|name|event|client/), cPhone = col(/phone|mobile|contact/), cSvc = col(/detail|service|type|appointment|note/), cDate = col(/^date|^day/);
+    // the /patients briefing table (2026-09-04, "put this somewhere i can
+    // see"): Status · Presenting focus · Treatment goal ride along -- focus
+    // and goal are stored on the appointment and shown under the day row;
+    // the status word is dropped so it never lands in the service
+    const cFocus = col(/focus|presenting|reason/), cGoal = col(/goal|plan/), cStatus = col(/^status/);
     const phoneRe = /^(?:\+?61|0)(?:\s?\d){9}$|^\+?\d[\d ]{6,}\d$/;
     const blocked = s => /^(break|lunch|unavailable|blocked|admin|busy|available)$/i.test(s);
     const isAddr = s => /\d/.test(s) && /\b(street|st|road|rd|avenue|ave|lane|drive|dr|highway|hwy|parade|pde|nsw|new south wales|vic|victoria|qld|queensland)\b/i.test(s);
@@ -17268,6 +17284,8 @@
       const time = phApptParseTime(cells[ti]);
       const rest = cells.map((c, k) => k === ti ? "" : c);
       if (cDate >= 0 && rest[cDate]) { const d = phApptParseDateLine(rest[cDate]); if (d) { dk = d; rest[cDate] = ""; } }
+      const focus = cFocus >= 0 ? (rest[cFocus] || "") : "", goal = cGoal >= 0 ? (rest[cGoal] || "") : "";
+      if (cFocus >= 0) rest[cFocus] = ""; if (cGoal >= 0) rest[cGoal] = ""; if (cStatus >= 0) rest[cStatus] = "";
       let phone = "", name = "";
       const pk = cPhone >= 0 && (phoneRe.test(rest[cPhone] || "") || /^[\u2014\u2013-]?$/.test(rest[cPhone] || "")) ? cPhone : rest.findIndex(c => phoneRe.test(c));
       if (pk >= 0) { if (phoneRe.test(rest[pk])) phone = phCkPhonePretty(rest[pk]); rest[pk] = ""; }
@@ -17277,7 +17295,9 @@
       let svcCells = cSvc >= 0 ? [rest[cSvc] || ""] : rest.filter(Boolean);
       const service = svcCells.join(" ").split(/\s*;\s*/).filter(seg => seg && !isAddr(seg)).join("; ").replace(/^[\u2014\u2013-]$/, "");
       if (/cancellation fee/i.test(service)) return;
-      out.push({ date: dk, time, patient: phApptCleanName(name), service, phone });
+      const en = { date: dk, time, patient: phApptCleanName(name), service, phone };
+      if (focus) en.focus = focus; if (goal) en.goal = goal;
+      out.push(en);
     });
     return out;
   }
@@ -17388,9 +17408,11 @@
     return out;
   }
   // re-pasting refreshes: same date+time+patient never doubles up (her spec)
+  let phApptLastAccounts = 0;   // accounts made by the last import (read by the import flash)
   function phApptImport(entries) {
     const list = phApptList();
     let added = 0;
+    phApptLastAccounts = 0;
     entries.forEach(en => {
       if (!en.date || !en.time || !en.patient) return;
       const k = phPatientKey(en.patient);
@@ -17402,11 +17424,27 @@
         const pr = phPatientRec(en.patient);
         if (pr && pr.phone !== en.phone) { pr.phone = en.phone; pr.phoneFrom = en.date; pr.phoneSrc = "list"; }
       }
+      // her acupreg rule (2026-09-04, "all patients in zanda are for
+      // fertility related conditions. why cant i automatically make an
+      // account?"): under the all-herbs default a name with no script gets
+      // its account made here -- a draft script (so she's in Prescriptions
+      // and the Timeline) and a record with Sex F + cycle tracking on. The
+      // plan (IVF vs Natural), formula and LMP stay hers to pick.
+      if (phApptAllHerbs() && !phApptScriptFor(k)) {
+        const t = Object.assign(presNewDraft(), { id: uid(), name: en.patient, createdAt: Date.now(), fromAppt: en.date });
+        PRESC.items.unshift(t);
+        const pr = phPatientRec(en.patient);
+        if (pr) { if (!pr.sex) pr.sex = "F"; if (pr.cycleOn === undefined) pr.cycleOn = true; }
+        phApptLastAccounts++;
+      }
       const dupe = list.find(a => a.date === en.date && a.time === en.time && phPatientKey(a.patient) === k);
-      if (dupe) { if (en.service) dupe.service = en.service; if (en.phone) dupe.phone = en.phone; return; }
-      list.push({ id: uid(), date: en.date, time: en.time, patient: en.patient, service: en.service || "", phone: en.phone || "" });
+      if (dupe) { if (en.service) dupe.service = en.service; if (en.phone) dupe.phone = en.phone; if (en.focus) dupe.focus = en.focus; if (en.goal) dupe.goal = en.goal; return; }
+      const rec = { id: uid(), date: en.date, time: en.time, patient: en.patient, service: en.service || "", phone: en.phone || "" };
+      if (en.focus) rec.focus = en.focus; if (en.goal) rec.goal = en.goal;
+      list.push(rec);
       added++;
     });
+    if (phApptLastAccounts) savePresc();
     // housekeeping: a two-month-old appointment has no dashboard home left
     const cutoff = keyOf(new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() - 60));
     PHARMACY.appointments = list.filter(a => a.date >= cutoff);
@@ -19839,7 +19877,7 @@
         const added = phApptImport(parsed);
         const daysN = new Set(parsed.map(p => p.date)).size;
         phApptState.text = "";
-        phFlashShow(`✓ ${parsed.length} appointment${parsed.length === 1 ? "" : "s"} across ${daysN} day${daysN === 1 ? "" : "s"} — ${added} new, ${parsed.length - added} refreshed`);
+        phFlashShow(`✓ ${parsed.length} appointment${parsed.length === 1 ? "" : "s"} across ${daysN} day${daysN === 1 ? "" : "s"} — ${added} new, ${parsed.length - added} refreshed${phApptLastAccounts ? ` · ${phApptLastAccounts} patient account${phApptLastAccounts === 1 ? "" : "s"} made` : ""}`);
         renderApptModal(); renderPharmacy();
         return;
       }
