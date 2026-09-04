@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260905-130000">
+<meta name="lcm-build" content="20260905-140000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6125,6 +6125,18 @@
   /* patient self-fill intake link (2026-09-05) */
   #pharmacyPage .ph-intake-linkrow { display: flex; gap: 8px; align-items: center; margin-bottom: 4px; }
   #pharmacyPage .ph-intake-linkinput { flex: 1; min-width: 0; padding: 8px 10px; border: 1px solid var(--ph-line); border-radius: var(--field-radius-sm, 8px); font: inherit; font-size: 12px; color: var(--ph-ink); background: var(--ph-paper); }
+  /* intake review queue + compare screen (2026-09-05) */
+  #pharmacyPage .ph-intake-qhead { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+  #pharmacyPage .ph-intake-qrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  #pharmacyPage .ph-intake-qrow-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  #pharmacyPage .ph-intake-qrow-name { font-weight: 700; font-size: 14px; color: var(--ph-ink); }
+  #pharmacyPage .ph-intake-qrow-meta { font-size: 11.5px; color: var(--ph-soft); }
+  #pharmacyPage .ph-intake-diffsec { margin: 14px 0; }
+  #pharmacyPage .ph-intake-diffsec-h { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ph-green-deep); margin-bottom: 6px; }
+  #pharmacyPage .ph-intake-conflict { background: var(--ph-green-tint); border-radius: var(--field-radius-sm, 11px); padding: 8px 10px; margin-bottom: 8px; }
+  #pharmacyPage .ph-intake-conflict-lbl { font-weight: 700; font-size: 12.5px; color: var(--ph-ink); margin-bottom: 6px; }
+  #pharmacyPage .ph-intake-newlist { margin: 0; padding-left: 18px; font-size: 12.5px; color: var(--ph-ink); }
+  #pharmacyPage .ph-intake-newlist li { margin-bottom: 3px; }
   /* letter-first patient letter (2026-09-01) */
   #pharmacyPage .ph-ltr-chips { display: flex; gap: 6px; flex-wrap: wrap; padding: 12px 20px 0; background: var(--ph-white); flex: 0 0 auto; }
   #pharmacyPage .ph-ltr-tchip { font-size: 11.5px; font-weight: 700; border: none; border-radius: 999px; padding: 6px 14px; background: var(--ph-paper); color: var(--ph-soft); cursor: pointer; font-family: inherit; }
@@ -9883,6 +9895,7 @@
           <button type="button" class="ph-nav-item" data-ph-tab="dashboard" data-ph-tip="Dashboard"><span class="ph-nav-ic"><svg class="icn"><use href="#i-home"/></svg></span><span class="ph-nav-label">Dashboard</span></button>
           <button type="button" class="ph-nav-item" data-ph-tab="prescriptions" data-ph-tip="Patient profile"><span class="ph-nav-ic"><svg class="icn"><use href="#i-pill"/></svg></span><span class="ph-nav-label">Patient profile</span></button>
           <button type="button" class="ph-nav-item" data-ph-tab="followups" data-ph-tip="Follow-ups"><span class="ph-nav-ic"><svg class="icn"><use href="#i-clock"/></svg></span><span class="ph-nav-label">Follow-ups</span><span class="ph-nav-badge" id="phFuNavBadge" hidden>0</span></button>
+          <button type="button" class="ph-nav-item" data-ph-tab="intake" data-ph-tip="Intake review"><span class="ph-nav-ic"><svg class="icn"><use href="#i-mail"/></svg></span><span class="ph-nav-label">Intake review</span><span class="ph-nav-badge" id="phIntakeNavBadge" hidden>0</span></button>
           <button type="button" class="ph-nav-item" data-ph-tab="inventory" data-ph-tip="Inventory"><span class="ph-nav-ic"><svg class="icn"><use href="#i-leaf"/></svg></span><span class="ph-nav-label">Inventory</span></button>
           <button type="button" class="ph-nav-item" data-ph-tab="refill" data-ph-tip="Formula refill"><span class="ph-nav-ic"><svg class="icn"><use href="#i-jar"/></svg></span><span class="ph-nav-label">Formula refill</span><span class="ph-nav-badge" id="phRefillBadge" hidden>0</span></button>
           <button type="button" class="ph-nav-item" data-ph-tab="restock" data-ph-tip="To order"><span class="ph-nav-ic"><svg class="icn"><use href="#i-cart"/></svg></span><span class="ph-nav-label">To order</span><span class="ph-nav-badge" id="phSideBadge" hidden>0</span></button>
@@ -10107,6 +10120,12 @@
     <div id="phSettingsWrap" hidden></div>
     <div id="phGuideWrap" hidden></div>
     <div id="phSupplementsWrap" hidden></div>
+    <!-- Intake review queue (her ask 2026-09-05): submitted patient intake
+         links land here for compare-then-apply, same page pattern as the
+         other simple content-only wraps above. -->
+    <div id="phIntakeWrap" hidden></div>
+    <div class="ph-stocktake-backdrop" id="phIntakeReviewBackdrop" hidden></div>
+    <div class="ph-hx-modal" id="phIntakeReviewModal" hidden></div>
     <!-- Relocation project page (her spec 2026-08-27, §1+§2+§3 this round) --
          same shell-head + single JS-filled body shape as Suppliers above. -->
     <div id="phRelocationWrap" hidden>
@@ -16141,6 +16160,7 @@
     // instead of "Follow-ups" -- unrelated to the shell job itself, fixed
     // in passing since it's the same lookup table.
     followups: "Follow-ups",
+    intake: "Intake Review",
   };
   // her ask 2026-08-15: promote each page's primary action into the shared
   // top bar (mockups 02/06/07). Rather than duplicate any add/export logic,
@@ -19600,7 +19620,7 @@
     // | Patients) — the active tab persists so she returns where she left off
     // "dashboard"/"suppliers"/"settings" (PASTE 1, 2026-08-15): placeholder
     // pages for the new sidebar -- real content is PASTE 3's job
-    const tab = ["prescriptions", "followups", "refill", "restock", "stats", "log", "dashboard", "suppliers", "settings", "stocktake", "pricereview", "guide", "supplements", "relocation"].includes(PHARMACY.activeTab) ? PHARMACY.activeTab : "inventory";
+    const tab = ["prescriptions", "followups", "refill", "restock", "stats", "log", "dashboard", "suppliers", "settings", "stocktake", "pricereview", "guide", "supplements", "relocation", "intake"].includes(PHARMACY.activeTab) ? PHARMACY.activeTab : "inventory";
     // hover-dropdown nav (her ask): two section parents; hovering a parent drops
     // a menu of its pages. Inventory owns stock ops; Prescriptions owns the patient side.
     const phTabGroups = [
@@ -20715,6 +20735,18 @@
           inp.select();
           navigator.clipboard.writeText(inp.value).then(() => phFlashShow("✓ Copied"), () => phFlashShow("⚠ Copy blocked — select the text and copy it"));
         }
+        return;
+      }
+      // ---- Intake review queue handlers ----
+      if (e.target.closest("[data-intake-queue-refresh]")) { phIntakeQueueLoad(true); return; }
+      if (e.target.closest("[data-intake-review-open]")) { phIntakeReviewOpen(e.target.closest("[data-intake-review-open]").dataset.intakeReviewOpen); return; }
+      if (e.target.closest("[data-intake-review-close]")) { phIntakeReviewClose(); return; }
+      if (e.target.closest("[data-intake-review-apply]")) { phIntakeReviewApply(); return; }
+      if (e.target.closest("[data-intake-review-dismiss]")) { phIntakeReviewDismiss(); return; }
+      if (e.target.closest("[data-intake-choice]")) {
+        const [key, choice] = e.target.closest("[data-intake-choice]").dataset.intakeChoice.split(":");
+        phIntakeReviewChoices[key] = choice;
+        renderIntakeReviewScreen();
         return;
       }
       // ---- Treatment Plans: detail-screen handlers -- every one below
@@ -24557,6 +24589,7 @@
     }
     renderPhLocBar();
     renderPhDispCheckModal();   // can open from any tab -- keep it in sync every render, same as renderPhLocBar
+    phIntakeMaybeAutoload();    // one-off, cheap no-op once fired -- lets the nav badge show without opening the tab
     renderPhShellNav(tab);
     renderPhShellFooter();   // identical on every tab -- one render call here, not one per page
     phTopbarActionSet(tab);
@@ -24576,6 +24609,7 @@
     document.getElementById("phGuideWrap").hidden = tab !== "guide";
     document.getElementById("phSupplementsWrap").hidden = tab !== "supplements";
     document.getElementById("phRelocationWrap").hidden = tab !== "relocation";
+    document.getElementById("phIntakeWrap").hidden = tab !== "intake";
     // each of these renders a page and returns, so the one-title-per-page pass
     // (PASTE 1) runs synchronously right here -- straight after the page's own
     // markup exists, before the browser paints. It was briefly on rAF instead,
@@ -24596,6 +24630,7 @@
     if (tab === "guide") { renderPhGuidePage(); phMobileDedupeTitles(); return; }
     if (tab === "supplements") { renderPhSupplementsPage(); phMobileDedupeTitles(); return; }
     if (tab === "relocation") { renderPhRelocationPage(); phMobileDedupeTitles(); return; }
+    if (tab === "intake") { renderPhIntakePage(); phMobileDedupeTitles(); return; }
 
     renderPhFlags();
 
@@ -33536,6 +33571,243 @@ Please let me know if you have any questions.`;
     </div>`;
     const inp = document.getElementById("phIntakeNameInput");
     if (inp && !phIntakeResult) inp.focus();
+  }
+  // ---- Intake review queue: submitted links land here for compare-then-
+  // apply (her locked pick, 2026-09-05: "compare screen first"). The queue
+  // itself lives in Supabase, not PHARMACY -- it's read live on entering the
+  // page (and once, opportunistically, right after sign-in) rather than kept
+  // in local state, since it's shared cross-device by construction.
+  let phIntakeQueueRows = null, phIntakeQueueLoading = false, phIntakeQueueError = "", phIntakeAutoloadDone = false;
+  async function phIntakeQueueLoad(force) {
+    if (phIntakeQueueLoading) return;
+    if (phIntakeQueueRows && !force) { renderPhIntakePage(); return; }
+    phIntakeQueueLoading = true; phIntakeQueueError = ""; renderPhIntakePage();
+    try {
+      const sb = phRenRelayClient();
+      if (!sb) throw new Error("Not signed in to cloud sync — sign in, then try again.");
+      const uid = await phRenRelayUid(sb);
+      if (!uid) throw new Error("Not signed in to cloud sync — sign in, then try again.");
+      const { data, error } = await sb.from("intake_forms").select("*").eq("owner", uid).eq("status", "submitted").order("submitted_at", { ascending: true });
+      if (error) {
+        if (error.code === "42P01" || /relation .* does not exist/i.test(error.message || "")) {
+          throw new Error("The intake_forms table hasn't been set up in Supabase yet.");
+        }
+        throw error;
+      }
+      phIntakeQueueRows = data || [];
+    } catch (e) {
+      phIntakeQueueRows = phIntakeQueueRows || [];
+      phIntakeQueueError = (e && e.message) || "Couldn't load the intake queue — try again.";
+    }
+    phIntakeQueueLoading = false;
+    const badge = document.getElementById("phIntakeNavBadge");
+    if (badge) { const n = phIntakeQueueRows.length; badge.hidden = n === 0; badge.textContent = n; }
+    renderPhIntakePage();
+  }
+  // called once per render from renderPharmacy() -- cheap no-op once a
+  // client exists and the first load has fired, so the nav badge can show
+  // up without her having to open the tab first.
+  function phIntakeMaybeAutoload() {
+    if (phIntakeAutoloadDone) return;
+    const sb = phRenRelayClient();
+    if (!sb) return;
+    phIntakeAutoloadDone = true;
+    phIntakeQueueLoad();
+  }
+  function phIntakeRelTime(iso) {
+    if (!iso) return "recently";
+    const ms = Date.now() - new Date(iso).getTime();
+    if (!isFinite(ms) || ms < 0) return "just now";
+    const m = Math.round(ms / 60000);
+    if (m < 1) return "just now";
+    if (m < 60) return `${m}m ago`;
+    const h = Math.round(m / 60);
+    if (h < 24) return `${h}h ago`;
+    return `${Math.round(h / 24)}d ago`;
+  }
+  function phIntakeQueueRowHtml(r) {
+    return `<div class="ph-listing ph-intake-qrow">
+      <div class="ph-intake-qrow-main">
+        <span class="ph-intake-qrow-name">${esc(phTitle(r.patient_name))}</span>
+        <span class="ph-intake-qrow-meta">Submitted ${esc(phIntakeRelTime(r.submitted_at))}${phPatientPeek(r.patient_name) ? "" : " · new patient"}</span>
+      </div>
+      <button type="button" class="ph-load-btn on" data-intake-review-open="${esc(r.id)}">Review →</button>
+    </div>`;
+  }
+  function renderPhIntakePage() {
+    const wrap = document.getElementById("phIntakeWrap");
+    if (!wrap) return;
+    const rows = phIntakeQueueRows || [];
+    const body = phIntakeQueueLoading && !phIntakeQueueRows
+      ? `<p class="ph-hx-constit-note">Loading…</p>`
+      : phIntakeQueueError && !rows.length
+        ? `<p class="ph-merge-note">⚠ ${esc(phIntakeQueueError)}</p>`
+        : rows.length
+          ? rows.map(r => phIntakeQueueRowHtml(r)).join("")
+          : `<p class="ph-hx-constit-note">No intake forms waiting for review right now. Links you send from Patient profile land here once she submits.</p>`;
+    wrap.innerHTML = `
+      ${phShellHead("✉️ Intake review", "", "")}
+      <section class="ph-widget">
+        <div class="ph-intake-qhead">
+          <p class="ph-hx-constit-note" style="margin:0">${rows.length ? `${rows.length} submission${rows.length === 1 ? "" : "s"} waiting for your review.` : ""}</p>
+          <button type="button" class="ph-load-btn" data-intake-queue-refresh="1"${phIntakeQueueLoading ? " disabled" : ""}>${phIntakeQueueLoading ? "Refreshing…" : "↻ Refresh"}</button>
+        </div>
+        ${body}
+      </section>`;
+  }
+  // gap-fill diff against the existing record (or a null "existing" for a
+  // brand-new patient, in which case everything is simply "new") -- same
+  // philosophy as phPatientMerge above: the record on file never silently
+  // loses a value, a real conflict always gets an explicit per-field choice.
+  function phIntakeComputeDiff(row) {
+    const rec = phPatientPeek(row.patient_name);
+    const demo = row.demographics || {}, hist = row.history || {}, cyc = row.cycle || {};
+    const demoNew = [], demoConflicts = [];
+    if (demo.sex === "F" || demo.sex === "M") {
+      const lbl = demo.sex === "F" ? "Female" : "Male";
+      if (!rec || !rec.sex) demoNew.push({ key: "sex", label: "Sex", display: `Sex: ${lbl}` });
+      else if (rec.sex !== demo.sex) demoConflicts.push({ key: "sex", label: "Sex", current: rec.sex === "F" ? "Female" : "Male", value: lbl });
+    }
+    if (demo.dob) {
+      if (!rec || !rec.dob) demoNew.push({ key: "dob", label: "Date of birth", display: `Date of birth: ${phShortDate(demo.dob)}` });
+      else if (rec.dob !== demo.dob) demoConflicts.push({ key: "dob", label: "Date of birth", current: phShortDate(rec.dob), value: phShortDate(demo.dob) });
+    }
+    if (demo.address && demo.address.trim()) demoNew.push({ key: "address", label: "Address", display: `Address: ${demo.address.trim()}` });
+
+    const historyNew = [], historyConflicts = [];
+    PH_HX_ALL_ITEMS.forEach(it => {
+      const val = hist[it.k];
+      if (val !== "yes" && val !== "no") return;
+      const cur = rec ? phHxVal(rec, it.k) : "unasked";
+      if (cur === "unasked") historyNew.push({ key: it.k, label: it.label, display: `${it.label}: ${val === "yes" ? "Yes" : "No"}` });
+      else if (cur !== val) historyConflicts.push({ key: it.k, label: it.label, current: cur === "yes" ? "Yes" : "No", value: val === "yes" ? "Yes" : "No" });
+    });
+
+    const cycleNew = [], cycleConflicts = [];
+    const curCyc = rec ? (rec.cycle || {}) : {};
+    const CF = { lmp: "Last period", cycleLen: "Cycle length (days)", flowDays: "Flow days", flowIntensity: "Flow", pain: "Period pain", regular: "Regular cycle", menarcheAge: "Menarche age", contraception: "Contraception", ttcMonths: "Trying to conceive (months)" };
+    const dispCyc = (k, v) => k === "lmp" ? phShortDate(v) : k === "regular" ? (v ? "Yes" : "No") : String(v);
+    Object.keys(CF).forEach(k => {
+      if (cyc[k] == null || cyc[k] === "") return;
+      const curVal = curCyc[k];
+      if (curVal != null && curVal !== "" && String(curVal) === String(cyc[k])) return;
+      const value = dispCyc(k, cyc[k]);
+      if (curVal == null || curVal === "") cycleNew.push({ key: k, label: CF[k], display: `${CF[k]}: ${value}` });
+      else cycleConflicts.push({ key: k, label: CF[k], current: dispCyc(k, curVal), value });
+    });
+    if (Array.isArray(cyc.symptoms) && cyc.symptoms.length) {
+      const names = cyc.symptoms.map(s => (PH_CYCLE_SYMPTOMS.find(x => x[0] === s) || [s, s])[1]).join(", ");
+      cycleNew.push({ key: "symptoms", label: "Typical symptoms", display: `Typical symptoms: ${names}` });
+    }
+    return { rec, demoNew, demoConflicts, historyNew, historyConflicts, cycleNew, cycleConflicts, hasCycle: !!Object.keys(cyc).length };
+  }
+  let phIntakeReviewRow = null, phIntakeReviewDiffData = null, phIntakeReviewChoices = {}, phIntakeReviewBusy = false;
+  function phIntakeReviewOpen(id) {
+    const row = (phIntakeQueueRows || []).find(r => String(r.id) === String(id));
+    if (!row) return;
+    phIntakeReviewRow = row;
+    phIntakeReviewDiffData = phIntakeComputeDiff(row);
+    phIntakeReviewChoices = {};
+    [...phIntakeReviewDiffData.demoConflicts, ...phIntakeReviewDiffData.historyConflicts, ...phIntakeReviewDiffData.cycleConflicts].forEach(c => { phIntakeReviewChoices[c.key] = "current"; });
+    phIntakeReviewBusy = false;
+    document.getElementById("phIntakeReviewBackdrop").hidden = false;
+    document.getElementById("phIntakeReviewModal").hidden = false;
+    renderIntakeReviewScreen();
+  }
+  function phIntakeReviewClose() {
+    document.getElementById("phIntakeReviewBackdrop").hidden = true;
+    document.getElementById("phIntakeReviewModal").hidden = true;
+    phIntakeReviewRow = null; phIntakeReviewDiffData = null; phIntakeReviewChoices = {}; phIntakeReviewBusy = false;
+  }
+  function phIntakeDiffSectionHtml(title, newItems, conflictItems) {
+    if (!newItems.length && !conflictItems.length) return "";
+    let html = `<div class="ph-intake-diffsec"><div class="ph-intake-diffsec-h">${esc(title)}</div>`;
+    if (conflictItems.length) {
+      html += conflictItems.map(c => `<div class="ph-intake-conflict">
+        <div class="ph-intake-conflict-lbl">${esc(c.label)}</div>
+        <div class="ph-merge-acts">
+          <button type="button" class="ph-load-btn${phIntakeReviewChoices[c.key] !== "new" ? " on" : ""}" data-intake-choice="${esc(c.key)}:current">Keep: ${esc(c.current)}</button>
+          <button type="button" class="ph-load-btn${phIntakeReviewChoices[c.key] === "new" ? " on" : ""}" data-intake-choice="${esc(c.key)}:new">Use new: ${esc(c.value)}</button>
+        </div>
+      </div>`).join("");
+    }
+    if (newItems.length) html += `<ul class="ph-intake-newlist">${newItems.map(n => `<li>${esc(n.display)}</li>`).join("")}</ul>`;
+    html += `</div>`;
+    return html;
+  }
+  function renderIntakeReviewScreen() {
+    const modal = document.getElementById("phIntakeReviewModal");
+    if (!modal || modal.hidden || !phIntakeReviewRow || !phIntakeReviewDiffData) return;
+    const row = phIntakeReviewRow, d = phIntakeReviewDiffData;
+    const isNewPatient = !d.rec;
+    const totalConflicts = d.demoConflicts.length + d.historyConflicts.length + d.cycleConflicts.length;
+    const totalNew = d.demoNew.length + d.historyNew.length + d.cycleNew.length;
+    const body = `
+      <p class="ph-merge-lead">${isNewPatient ? `No existing record for <b>${esc(phTitle(row.patient_name))}</b> — applying creates one.` : `Comparing against <b>${esc(phTitle(row.patient_name))}</b>'s existing record.`}</p>
+      ${totalConflicts ? `<p class="ph-merge-note">⚠ ${totalConflicts} field${totalConflicts === 1 ? "" : "s"} already ${totalConflicts === 1 ? "has" : "have"} a different answer on record — pick which to keep for each.</p>` : ""}
+      ${phIntakeDiffSectionHtml("Your details", d.demoNew, d.demoConflicts)}
+      ${phIntakeDiffSectionHtml("Medical history", d.historyNew, d.historyConflicts)}
+      ${d.hasCycle ? phIntakeDiffSectionHtml("Cycle & fertility", d.cycleNew, d.cycleConflicts) : ""}
+      ${!totalNew && !totalConflicts ? `<p class="ph-hx-constit-note">Nothing new — every answer already matches the record.</p>` : ""}
+      <div class="ph-merge-acts">
+        <button type="button" class="btn-save" data-intake-review-apply="1"${phIntakeReviewBusy ? " disabled" : ""}>${phIntakeReviewBusy ? "Applying…" : (isNewPatient ? "Apply — create patient" : "Apply")}</button>
+        <button type="button" class="ph-load-btn" data-intake-review-dismiss="1"${phIntakeReviewBusy ? " disabled" : ""}>Dismiss</button>
+        <button type="button" class="btn-cancel" data-intake-review-close="1">Cancel</button>
+      </div>`;
+    modal.innerHTML = `<div class="ph-hx-card">
+      <div class="ph-hx-head">
+        <button type="button" class="ph-stocktake-close" data-intake-review-close="1" aria-label="Close">×</button>
+        <div class="ph-hx-head-top"><div class="ph-hx-head-name">✉️ Reviewing intake</div></div>
+      </div>
+      <div class="ph-hx-body">${body}</div>
+    </div>`;
+  }
+  async function phIntakeReviewApply() {
+    if (!phIntakeReviewRow || phIntakeReviewBusy) return;
+    const row = phIntakeReviewRow, d = phIntakeReviewDiffData;
+    phIntakeReviewBusy = true; renderIntakeReviewScreen();
+    try {
+      const rec = phPatientRec(row.patient_name);
+      const demo = row.demographics || {}, hist = row.history || {}, cyc = row.cycle || {};
+      const winner = c => phIntakeReviewChoices[c.key] === "new";
+      d.demoNew.forEach(n => { if (n.key === "sex") rec.sex = demo.sex; else if (n.key === "dob") rec.dob = demo.dob; else if (n.key === "address") phPatientSaveAddress(row.patient_name, demo.address); });
+      d.demoConflicts.forEach(c => { if (!winner(c)) return; if (c.key === "sex") rec.sex = demo.sex; else if (c.key === "dob") rec.dob = demo.dob; });
+      d.historyNew.forEach(n => phHxSet(rec, n.key, hist[n.key]));
+      d.historyConflicts.forEach(c => { if (winner(c)) phHxSet(rec, c.key, hist[c.key]); });
+      if (d.hasCycle) {
+        rec.cycle = rec.cycle || {};
+        const applyField = k => { if (k === "lmp") phCycleAddHistoryDate(rec, cyc.lmp); else rec.cycle[k] = cyc[k]; };
+        d.cycleNew.forEach(n => { if (n.key !== "symptoms") applyField(n.key); });
+        d.cycleConflicts.forEach(c => { if (winner(c)) applyField(c.key); });
+        if (Array.isArray(cyc.symptoms) && cyc.symptoms.length) rec.cycle.symptoms = Array.from(new Set([...(rec.cycle.symptoms || []), ...cyc.symptoms]));
+      }
+      savePharmacy();
+      const sb = phRenRelayClient();
+      if (sb) await sb.from("intake_forms").update({ status: "applied", applied_at: new Date().toISOString() }).eq("id", row.id);
+      phFlashShow("✓ Applied to " + phTitle(row.patient_name));
+      phIntakeReviewClose();
+      phIntakeQueueLoad(true);
+      if (PHARMACY.activeTab === "prescriptions") renderPrescriptions();
+    } catch (e) {
+      phIntakeReviewBusy = false;
+      phFlashShow("⚠ Couldn't apply — try again");
+      renderIntakeReviewScreen();
+    }
+  }
+  async function phIntakeReviewDismiss() {
+    if (!phIntakeReviewRow || phIntakeReviewBusy) return;
+    const row = phIntakeReviewRow;
+    phIntakeReviewBusy = true; renderIntakeReviewScreen();
+    try {
+      const sb = phRenRelayClient();
+      if (sb) await sb.from("intake_forms").update({ status: "dismissed" }).eq("id", row.id);
+      phIntakeReviewClose();
+      phIntakeQueueLoad(true);
+    } catch (e) {
+      phIntakeReviewBusy = false;
+      phFlashShow("⚠ Couldn't dismiss — try again");
+      renderIntakeReviewScreen();
+    }
   }
   // "2 coffee teaspoons, 2 times a day" — composed from the structured dosage inputs
   function presDosageText() {
