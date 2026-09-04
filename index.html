@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260905-080000">
+<meta name="lcm-build" content="20260905-090000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -345,9 +345,14 @@
   #pharmacyPage .ph-supp-textrow.faint { color: var(--ph-faint); }
   #pharmacyPage .ph-supp-open { padding: 10px 0 4px; }
   #pharmacyPage .ph-supp-chips { display: flex; flex-wrap: wrap; gap: 8px 10px; }
-  #pharmacyPage .ph-supp-item { display: flex; align-items: center; gap: 6px; }
-  #pharmacyPage .ph-cyc-in.dose { width: 100%; max-width: 320px; min-width: 180px; flex: 1 1 220px; }
-  #pharmacyPage .ph-supp-item { flex: 1 1 260px; }
+  #pharmacyPage .ph-supp-item { display: flex; align-items: center; gap: 6px; flex: 0 1 auto; }
+  #pharmacyPage .ph-cyc-in.dose { width: 100%; max-width: 560px; min-width: 180px; flex: 1 1 220px; }
+  /* an "on" item's dose text can run long (e.g. Iron's) -- give it the
+     whole row instead of squeezing into whatever's left of a wrapped flex
+     line next to the other still-off chips (found live 2026-09-05: the
+     dose text was cut off with no way to read the rest without clicking
+     in). Off chips stay compact and share a line. */
+  #pharmacyPage .ph-supp-item.on { flex-basis: 100%; }
   /* her ask (2026-08-14): row density -- the Zero/Low/Phasing/Stopped/Snoozed
      listing (#phListing) had no width of its own (100% of #phInvWidget) and
      forced its table to width:100% on top of that, so on a wide screen the
@@ -8000,8 +8005,11 @@
   }
   #pharmacyPage .ph-name-lock > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #pharmacyPage .ph-name-lock .tab-link { flex: none; font-size: 11.5px; }
-  /* Patient block under the ingredients (2026-09-04): name · sex · DOB · type on one row */
-  #pharmacyPage .ph-pres-patient { display: grid; grid-template-columns: minmax(160px, 2fr) auto auto minmax(140px, 1.2fr); gap: 8px 12px; align-items: end; }
+  /* Patient block under the ingredients (2026-09-04): name · sex · DOB · type on one row.
+     Name capped at a real input width (2026-09-05: this now also renders on the
+     wide, full-page Opening stage, where an unbounded 2fr stretched it edge to
+     edge -- a name doesn't need to be 700px wide just because the container is). */
+  #pharmacyPage .ph-pres-patient { display: grid; grid-template-columns: minmax(160px, 360px) auto auto minmax(140px, 220px); gap: 8px 12px; align-items: end; }
   #pharmacyPage .ph-pres-patient .ph-hx-seg { display: inline-flex; }
   #pharmacyPage .ph-pres-patient input[type="date"] { font: inherit; font-size: 12.5px; border: 1px solid var(--ph-line); border-radius: 8px; padding: 6px 8px; background: var(--ph-white); color: var(--ph-ink); }
   #pharmacyPage .ph-pres-patient label .faint { font-weight: 500; text-transform: none; letter-spacing: 0; }
@@ -21258,7 +21266,6 @@
       // round-4 redesign: Notes and Treatment plan are two separate rows
       // below the prescription now, Notes above Treatment
       if (e.target.closest("[data-pres-notes-toggle]")) { presNotesOpen = !presNotesOpen; renderPresPanel(); return; }
-      if (e.target.closest("[data-pres-supp-toggle]")) { presSuppOpen = !presSuppOpen; renderPresPanel(); return; }
       const presStageBtn = e.target.closest("[data-pres-stage]");
       if (presStageBtn) { presStage = presStageBtn.dataset.presStage; renderPresPanel(); return; }
       const suppToggleBtn = e.target.closest("[data-supp-toggle]");
@@ -30391,6 +30398,12 @@
   // under its stage, per the mapping she approved -- no rewritten content in
   // this pass, just regrouping where it's shown. ----
   function presStageOpeningHtml(t) {
+    // her feedback on the live screen (2026-09-05): Supplements was the only
+    // section on this stage still hidden behind an extra click -- everything
+    // else here (Patient, History) is already fully visible, so the accordion
+    // just added friction on a screen whose whole point is "get it all done
+    // once." Same section-label treatment as Patient/History now, always open.
+    const rec = phPatientRec(presPatientFor(t) || t.name || "");
     return `<div class="ph-pres-stage-body">
       <div class="ph-tmpl-sec"><span>Patient</span></div>
       ${presNameTypeFieldsHtml(t)}
@@ -30398,7 +30411,8 @@
       <div class="ph-pres-switches">${presCycleToggleHtml(t)}${presAcuToggleHtml(t)}</div>
       <div class="ph-tmpl-sec"><span>History</span></div>
       ${presHistorySummaryHtml(t)}
-      ${presSupplementsRowHtml(t)}
+      <div class="ph-tmpl-sec"><span>Supplements</span></div>
+      <div class="ph-supp-open">${phSuppEditorHtml(rec)}</div>
       ${presStageNextBtnHtml("opening")}
     </div>`;
   }
@@ -31361,31 +31375,16 @@
       ${presNotesOpen ? `<div class="ph-notes-open">${presNotesFieldHtml(t)}</div>` : ""}
     </div>`;
   }
-  // ============ Supplements row (her ask 2026-09-05): which of the 4 common
-  // ones she's actually taking, and at what dose -- same collapsed-line
-  // shape as Notes/Cycle above, reusing PH_SUPPLEMENTS (defined with the
-  // Supplements reference page) as both the toggle list and each one's
-  // default starting dose. ============
-  function presSupplementsRowHtml(t) {
-    const name = presPatientFor(t);
-    if (!name) return "";
-    const rec = phPatientRec(name);
-    const supps = (rec && rec.supplements) || {};
-    const onList = PH_SUPPLEMENTS.filter(s => supps[s.id] && supps[s.id].on);
-    return `<div class="ph-treat-row-wrap">
-      <button type="button" class="ph-treat-row ph-hx-row ${onList.length ? "hasanswers" : "notstarted"}" data-pres-supp-toggle="1" aria-expanded="${presSuppOpen ? "true" : "false"}">
-        <span class="ph-hx-lead">💊 Supplements${onList.length ? ` · ${esc(onList.map(s => s.name.split(" ")[0]).join(", "))}` : ""}</span>
-        <span class="ph-hx-action ph-treat-chev">${presSuppOpen ? "▾" : "▸"}</span>
-      </button>
-      ${presSuppOpen ? `<div class="ph-supp-open">${phSuppEditorHtml(rec)}</div>` : ""}
-    </div>`;
-  }
+  // Supplements editor (her ask 2026-09-05): which of the 4 common ones
+  // she's actually taking, and at what dose. Always shown open on the
+  // Opening stage (see presStageOpeningHtml) -- no separate collapsed-row
+  // wrapper needed since that's its only caller.
   function phSuppEditorHtml(rec) {
     const supps = (rec && rec.supplements) || {};
     return `<div class="ph-supp-chips">${PH_SUPPLEMENTS.map(s => {
       const st = supps[s.id];
       const on = !!(st && st.on);
-      return `<div class="ph-supp-item">
+      return `<div class="ph-supp-item${on ? " on" : ""}">
         <button type="button" class="ph-ck-chip${on ? " on" : ""}" data-supp-toggle="${s.id}">${esc(s.name)}</button>
         ${on ? `<input type="text" class="ph-cyc-in field-bare dose" data-supp-dose="${s.id}" value="${esc((st && st.dose) || s.dose)}" placeholder="dose" aria-label="${esc(s.name)} dose">` : ""}
       </div>`;
@@ -34234,7 +34233,7 @@ Please let me know if you have any questions.`;
   // presTreatmentRowHtml. presHistMoreOpen is the "+N earlier visits"
   // reveal inside the (now trimmed to 3) History card. Same reset points
   // and "start clean every time" posture as presThirdOpen above.
-  let presNotesOpen = false, presTreatOpen = false, presHistMoreOpen = false, presSuppOpen = false;
+  let presNotesOpen = false, presTreatOpen = false, presHistMoreOpen = false;
   // inline plan editor (her ask 2026-09-03: "allow direct plan editing and
   // making in that row too") -- which plan (by id) is expanded into its
   // full editor inside the Treatment row, or null for the plan list;
