@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260905-070000">
+<meta name="lcm-build" content="20260905-080000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6739,6 +6739,34 @@
   }
   #pharmacyPage .ph-dose-step-link:hover { color: var(--ph-green); text-decoration: underline; }
   #pharmacyPage .ph-dose-step-menubtn { flex: none; }
+  /* Patient profile workflow stepper (her ask 2026-09-05) -- same visual
+     vocabulary as .ph-dose-step above (circular node + connecting line),
+     just laid out horizontally across the top of the panel instead of down
+     the left column. */
+  #pharmacyPage .ph-pres-stages { display: flex; align-items: flex-start; margin: 0 0 14px; }
+  #pharmacyPage .ph-pres-stagebtn {
+    position: relative; flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center;
+    gap: 4px; border: none; background: none; cursor: pointer; font-family: inherit; padding: 4px 2px 0;
+  }
+  #pharmacyPage .ph-pres-stagebtn:not(:last-child)::after {
+    content: ""; position: absolute; top: 13px; left: 50%; width: 100%; height: 2px; background: var(--ph-line); z-index: 0;
+  }
+  #pharmacyPage .ph-pres-stagebtn.done:not(:last-child)::after { background: var(--ph-green); }
+  #pharmacyPage .ph-pres-stagebtn .n {
+    position: relative; z-index: 1; width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--ph-line);
+    background: var(--ph-white); color: var(--ph-soft); display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+  }
+  #pharmacyPage .ph-pres-stagebtn.on .n { border-color: var(--ph-green-deep); color: var(--ph-green-deep); }
+  #pharmacyPage .ph-pres-stagebtn.done .n { background: var(--ph-green); border-color: var(--ph-green); color: #fff; }
+  #pharmacyPage .ph-pres-stagebtn .l { font-size: 10.5px; color: var(--ph-soft); text-align: center; white-space: nowrap; }
+  #pharmacyPage .ph-pres-stagebtn.on .l { color: var(--ph-green-deep); font-weight: 700; }
+  #pharmacyPage .ph-pres-stage-body { display: block; }
+  #pharmacyPage .ph-pres-stage-next {
+    display: block; margin: 14px 0 4px; padding: 9px 14px; width: 100%; border: none; border-radius: var(--field-radius-sm, 11px);
+    background: var(--ph-green-deep); color: var(--ph-cream); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+  }
+  #pharmacyPage .ph-pres-stage-next:hover { background: var(--ph-green-press); }
   /* her 2026-08-22 spec: the standing "dispensed but not logged" warning --
      amber, matching the app's other low-stock/caution tone (--ph-low), not
      a toast, so it persists across re-renders/reopens for as long as the
@@ -9817,7 +9845,7 @@
                the tooltip and Alt+← / mouse-back still explain it -->
           <button type="button" id="phBackBtn" class="ph-nav-back" title="Back to the page you came from (Alt+← or the mouse back button)" aria-label="Back" hidden><svg class="icn" aria-hidden="true"><use href="#i-chev-l"/></svg></button>
           <button type="button" class="ph-nav-item" data-ph-tab="dashboard" data-ph-tip="Dashboard"><span class="ph-nav-ic"><svg class="icn"><use href="#i-home"/></svg></span><span class="ph-nav-label">Dashboard</span></button>
-          <button type="button" class="ph-nav-item" data-ph-tab="prescriptions" data-ph-tip="Prescriptions"><span class="ph-nav-ic"><svg class="icn"><use href="#i-pill"/></svg></span><span class="ph-nav-label">Prescriptions</span></button>
+          <button type="button" class="ph-nav-item" data-ph-tab="prescriptions" data-ph-tip="Patient profile"><span class="ph-nav-ic"><svg class="icn"><use href="#i-pill"/></svg></span><span class="ph-nav-label">Patient profile</span></button>
           <button type="button" class="ph-nav-item" data-ph-tab="followups" data-ph-tip="Follow-ups"><span class="ph-nav-ic"><svg class="icn"><use href="#i-clock"/></svg></span><span class="ph-nav-label">Follow-ups</span><span class="ph-nav-badge" id="phFuNavBadge" hidden>0</span></button>
           <button type="button" class="ph-nav-item" data-ph-tab="inventory" data-ph-tip="Inventory"><span class="ph-nav-ic"><svg class="icn"><use href="#i-leaf"/></svg></span><span class="ph-nav-label">Inventory</span></button>
           <button type="button" class="ph-nav-item" data-ph-tab="refill" data-ph-tip="Formula refill"><span class="ph-nav-ic"><svg class="icn"><use href="#i-jar"/></svg></span><span class="ph-nav-label">Formula refill</span><span class="ph-nav-badge" id="phRefillBadge" hidden>0</span></button>
@@ -16066,7 +16094,7 @@
     // "Inventory", not "Herbal Inventory" -- her mockup 13 point 1: the page
     // title should read the same as the sidebar item it came from
     dashboard: "Dashboard", inventory: "Inventory", refill: "Formula Refill",
-    stats: "Stock Statistics", restock: "To Order", prescriptions: "Prescriptions",
+    stats: "Stock Statistics", restock: "To Order", prescriptions: "Patient profile",
     log: "Dispense History", suppliers: "Suppliers", settings: "Settings", stocktake: "Stocktake",
     pricereview: "Price Review", guide: "方病人 Guide",
     // found while wiring the app-wide header shell (2026-08-24): this page
@@ -21231,6 +21259,8 @@
       // below the prescription now, Notes above Treatment
       if (e.target.closest("[data-pres-notes-toggle]")) { presNotesOpen = !presNotesOpen; renderPresPanel(); return; }
       if (e.target.closest("[data-pres-supp-toggle]")) { presSuppOpen = !presSuppOpen; renderPresPanel(); return; }
+      const presStageBtn = e.target.closest("[data-pres-stage]");
+      if (presStageBtn) { presStage = presStageBtn.dataset.presStage; renderPresPanel(); return; }
       const suppToggleBtn = e.target.closest("[data-supp-toggle]");
       if (suppToggleBtn) {
         const rec = phCycleTargetRec();
@@ -26142,6 +26172,23 @@
      (what the patient takes home) shows ONLY the Price.
      ============================================================ */
   let presSearch = "", presOpenId = null;
+  // ============ Patient profile workflow stages (her ask 2026-09-05:
+  // "change the prescriptions page to Patients Profile page... create a
+  // workflow of opening workflow, etc"). Phase 1 (this commit) is the
+  // stepper SHELL: existing render functions get grouped under stage tabs
+  // rather than rewritten -- see presStage*Html below and the mapping she
+  // approved. presStage is per-open-script, reset to the right DEFAULT
+  // whenever a DIFFERENT script opens (presStageForId tracks which id it's
+  // currently valid for) so every one of the many `presOpenId = ...` call
+  // sites across the file gets this for free without being touched. ============
+  let presStage = null, presStageForId = null;
+  const PRES_STAGES = [
+    { id: "opening", label: "Opening" },
+    { id: "assessment", label: "Assessment" },
+    { id: "treatment", label: "Treatment" },
+    { id: "dispense", label: "Dispense" },
+    { id: "followup", label: "Follow-up" },
+  ];
   // which day of the Booked-today week table is expanded -- undefined means
   // "not yet initialized this load" (renderPresWeek computes the real
   // default, her call: today or the next clinic day); null means she closed
@@ -26747,7 +26794,7 @@
     // meta is the short date, same as Dashboard -- the patient count already
     // owns the strip's first tile, saying it twice was noise ("say each
     // thing once", her 2026-08-24 rule; mobile audit 2026-09-02)
-    if (presHeadEl) presHeadEl.innerHTML = phShellHead("Prescriptions", esc(phDashShortDate(TODAY)), phShellStripHtml([
+    if (presHeadEl) presHeadEl.innerHTML = phShellHead("Patient profile", esc(phDashShortDate(TODAY)), phShellStripHtml([
       { n: patients.length, label: "Total<br>patients" },
       { n: patients.filter(p => CHIP_PREDS.today(p.current)).length, label: "Dispensed<br>today" },
       { n: patients.filter(p => CHIP_PREDS.drafts(p.current)).length, label: "Drafts" },
@@ -30313,6 +30360,71 @@
     </div>`;
   }
 
+  // a patient counts as brand-new (the Opening track) only while NONE of the
+  // three things a real first visit would have produced exist yet: an
+  // answered history question, a treatment plan, or a past dispense. Reuses
+  // the exact signals presHistorySummaryHtml/presTreatmentRowHtml already
+  // trust -- no new data model, just reading what's already there.
+  function presPatientIsNew(name) {
+    if (!name) return true;
+    if (phHxProgress(name).answeredN > 0) return false;
+    const rec = phPatientPeek(name);
+    if (rec && (rec.treatmentPlans || []).length) return false;
+    const key = phPatientKey(name);
+    return !(PRESC.items || []).some(x => phPatientKey(presPatientFor(x) || x.name) === key && x.lastDispensedAt);
+  }
+  function presStageStripHtml(isNew) {
+    return `<div class="ph-pres-stages" role="tablist" aria-label="Visit stage">${PRES_STAGES.map((s, i) => {
+      const openingDone = s.id === "opening" && !isNew;
+      return `<button type="button" class="ph-pres-stagebtn${presStage === s.id ? " on" : ""}${openingDone ? " done" : ""}" data-pres-stage="${s.id}" role="tab" aria-selected="${presStage === s.id ? "true" : "false"}">
+        <span class="n" aria-hidden="true">${openingDone ? "✓" : i + 1}</span><span class="l">${s.label}</span>
+      </button>`;
+    }).join("")}</div>`;
+  }
+  function presStageNextBtnHtml(fromId) {
+    const i = PRES_STAGES.findIndex(s => s.id === fromId);
+    const next = PRES_STAGES[i + 1];
+    if (!next) return "";
+    return `<button type="button" class="ph-pres-stage-next" data-pres-stage="${next.id}">Next: ${next.label} →</button>`;
+  }
+  // ---- the five stage bodies: each one groups EXISTING render functions
+  // under its stage, per the mapping she approved -- no rewritten content in
+  // this pass, just regrouping where it's shown. ----
+  function presStageOpeningHtml(t) {
+    return `<div class="ph-pres-stage-body">
+      <div class="ph-tmpl-sec"><span>Patient</span></div>
+      ${presNameTypeFieldsHtml(t)}
+      ${presAddressesPanelHtml(t)}
+      <div class="ph-pres-switches">${presCycleToggleHtml(t)}${presAcuToggleHtml(t)}</div>
+      <div class="ph-tmpl-sec"><span>History</span></div>
+      ${presHistorySummaryHtml(t)}
+      ${presSupplementsRowHtml(t)}
+      ${presStageNextBtnHtml("opening")}
+    </div>`;
+  }
+  function presStageAssessmentHtml(t) {
+    return `<div class="ph-pres-stage-body">
+      ${presHistoryBannerHtml(t)}
+      ${presClinicalWarningsHtml(t)}
+      ${presCycleRowHtml(t)}
+      ${presNotesRowHtml(t)}
+      ${presStageNextBtnHtml("assessment")}
+    </div>`;
+  }
+  function presStageTreatmentHtml(t) {
+    return `<div class="ph-pres-stage-body">
+      ${presConstitutionSuggestHtml(t)}
+      ${presAcuRowHtml(t)}
+      ${presTreatmentRowHtml(t)}
+      ${presStageNextBtnHtml("treatment")}
+    </div>`;
+  }
+  function presStageFollowupHtml(t) {
+    return `<div class="ph-pres-stage-body">
+      <div class="ph-fu-block" id="presFuBlockWrap">${presFollowupBlockHtml(t)}</div>
+      ${presPatientHistoryHtml(t)}
+    </div>`;
+  }
   function renderPresPanel() {
     const el = presPanelEl();
     const other = [document.getElementById("presPanel"), document.getElementById("refPresPanel")]
@@ -30329,6 +30441,12 @@
     if (!t) { el.innerHTML = ""; done(); return; }
     const pp = PHARMACY.presPricing || { method: "gram", gramPrice: 0.71, markup: 3 };
     const isF = presIsFormula(t), ab = presAbbr(t);
+    // which of the 5 stages a real patient's panel is on -- reset to the
+    // right default only when a DIFFERENT script/patient just opened, so
+    // she can freely navigate stages within one open panel without this
+    // snapping back on every re-render (a keystroke, a toggle, a save)
+    const isNew = !isF && presPatientIsNew(presPatientFor(t) || t.name || "");
+    if (!isF && presStageForId !== t.id) { presStageForId = t.id; presStage = isNew ? "opening" : "assessment"; }
     // her ask (2026-08-01): Dispense Stock's confirmation flashed at the very
     // top of this (often long, scrolled-past) panel, invisible from the button
     // itself. Render it straight into presConfirmZone -- right next to the
@@ -30350,9 +30468,12 @@
         <button type="button" class="ph-print-btn" data-pres-close="1">Close ×</button>
       </div>
       ${!isF ? presTabStripHtml(t) : ""}
-      ${presHistoryBannerHtml(t)}
-      ${presClinicalWarningsHtml(t)}
-      ${presConstitutionSuggestHtml(t)}
+      ${!isF ? presStageStripHtml(isNew) : ""}
+      ${!isF && presStage === "opening" ? presStageOpeningHtml(t) : ""}
+      ${!isF && presStage === "assessment" ? presStageAssessmentHtml(t) : ""}
+      ${!isF && presStage === "treatment" ? presStageTreatmentHtml(t) : ""}
+      ${!isF && presStage === "followup" ? presStageFollowupHtml(t) : ""}
+      ${isF || presStage === "dispense" ? `
       <div class="ph-pres-body">
       <div class="ph-pres-col-left">
       ${!isF ? `<div class="ph-pres-dose">
@@ -30380,7 +30501,6 @@
         <span class="ph-inline-label ph-days-lbl">Days</span>
         ${presDaysRowHtml(t)}
       </div>
-      <div class="ph-fu-block" id="presFuBlockWrap">${presFollowupBlockHtml(t)}</div>
       <div class="ph-build-top ph-priceline-row">
         <span class="ph-price-method-seg" role="radiogroup" aria-label="Pricing method">
           <label class="ph-inline-label ph-pm-opt"><input type="radio" name="presPriceMethod" value="preset" ${t.presetPrice != null ? "checked" : ""}> preset $<input type="text" inputmode="decimal" id="presPresetPrice" value="${t.presetPrice != null ? t.presetPrice : ""}" placeholder="—" aria-label="Preset price for this prescription"></label>
@@ -30435,27 +30555,11 @@
 
       <div class="ph-pres-col-right">
       ${presIngredientsEditorHtml(t, { showSummary: false })}
-
-      ${/* her ask 2026-09-04: no third column -- everything it held now sits
-           under the ingredients: patient details, then the two histories */ ""}
-      <div class="ph-tmpl-sec"><span>${isF ? "Formula" : "Patient"}</span></div>
-      ${presNameTypeFieldsHtml(t)}
-      ${!isF ? presAddressesPanelHtml(t) : ""}
-      ${!isF ? `<div class="ph-pres-switches">${presCycleToggleHtml(t)}${presAcuToggleHtml(t)}</div>` : ""}
-
-      <div class="ph-tmpl-sec"><span>History</span></div>
-      ${!isF ? presHistorySummaryHtml(t) : ""}
-      ${presPatientHistoryHtml(t)}
-
+      ${isF ? `<div class="ph-tmpl-sec"><span>Formula</span></div>${presNameTypeFieldsHtml(t)}` : ""}
+      ${!isF ? presStageNextBtnHtml("dispense") : ""}
       <div class="ph-pres-ing-fill"></div>
       </div>
-      </div>
-
-      ${!isF ? presCycleRowHtml(t) : ""}
-      ${!isF ? presNotesRowHtml(t) : ""}
-      ${!isF ? presSupplementsRowHtml(t) : ""}
-      ${!isF ? presAcuRowHtml(t) : ""}
-      ${!isF ? presTreatmentRowHtml(t) : ""}
+      </div>` : ""}
     </div>`;
     renderPresCalc();
     presRefreshIngTable();
