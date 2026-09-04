@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260905-120000">
+<meta name="lcm-build" content="20260905-130000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6122,6 +6122,9 @@
   #pharmacyPage .ph-merge-linkrow { margin-top: 10px; }
   #pharmacyPage .ph-merge-linkrow .tab-link { font-size: 12px; color: var(--ph-soft); }
   #pharmacyPage #phMergeSugg { margin-top: 8px; }
+  /* patient self-fill intake link (2026-09-05) */
+  #pharmacyPage .ph-intake-linkrow { display: flex; gap: 8px; align-items: center; margin-bottom: 4px; }
+  #pharmacyPage .ph-intake-linkinput { flex: 1; min-width: 0; padding: 8px 10px; border: 1px solid var(--ph-line); border-radius: var(--field-radius-sm, 8px); font: inherit; font-size: 12px; color: var(--ph-ink); background: var(--ph-paper); }
   /* letter-first patient letter (2026-09-01) */
   #pharmacyPage .ph-ltr-chips { display: flex; gap: 6px; flex-wrap: wrap; padding: 12px 20px 0; background: var(--ph-white); flex: 0 0 auto; }
   #pharmacyPage .ph-ltr-tchip { font-size: 11.5px; font-weight: 700; border: none; border-radius: 999px; padding: 6px 14px; background: var(--ph-paper); color: var(--ph-soft); cursor: pointer; font-family: inherit; }
@@ -10010,6 +10013,9 @@
     <!-- Patient merge (her ask 2026-09-01): same shell/pattern again -->
     <div class="ph-stocktake-backdrop" id="phMergeBackdrop" hidden></div>
     <div class="ph-hx-modal" id="phMergeModal" hidden></div>
+    <!-- Patient self-fill intake link (her ask 2026-09-05): same shell/pattern again -->
+    <div class="ph-stocktake-backdrop" id="phIntakeBackdrop" hidden></div>
+    <div class="ph-hx-modal" id="phIntakeModal" hidden></div>
     <!-- Letter-first patient letter (2026-09-01 calibration) -->
     <div class="ph-stocktake-backdrop" id="phLtrBackdrop" hidden></div>
     <div class="ph-hx-modal" id="phLtrModal" hidden></div>
@@ -16173,6 +16179,7 @@
       { icon: "i-plus", label: "New prescription", run: () => presStartNew() },
       { icon: "i-edit", label: "Dosage & markup", ghost: true, run: () => phTogglePresSettings() },
       { icon: "i-search", label: "Find duplicates", ghost: true, run: () => phMergeOpenFinder() },
+      { icon: "i-mail", label: "Send intake link", ghost: true, run: () => phIntakeOpen() },
     ],
     suppliers: [{ icon: "i-plus", label: "Add supplier", run: () => document.getElementById("phSupplierAddBtn")?.click() }],
     // her mockup (2026-08-16) shows only a search icon here, but CSV export
@@ -20699,6 +20706,17 @@
         });
         return;
       }
+      // ---- Patient self-fill intake link handlers ----
+      if (e.target.closest("[data-intake-close]")) { phIntakeClose(); return; }
+      if (e.target.closest("[data-intake-generate]")) { phIntakeGenerate(); return; }
+      if (e.target.closest("[data-intake-copy]")) {
+        const inp = document.getElementById("phIntakeLinkOut");
+        if (inp && navigator.clipboard && navigator.clipboard.writeText) {
+          inp.select();
+          navigator.clipboard.writeText(inp.value).then(() => phFlashShow("✓ Copied"), () => phFlashShow("⚠ Copy blocked — select the text and copy it"));
+        }
+        return;
+      }
       // ---- Treatment Plans: detail-screen handlers -- every one below
       // calls phTpRerender() (not renderTpScreen() directly) so it works
       // identically whether the plan being edited is open in the full-
@@ -23166,6 +23184,12 @@
         phMergeQuery = e.target.value;
         const host = document.getElementById("phMergeSugg");
         if (host) host.innerHTML = phMergeSuggHtml();
+        return;
+      }
+      if (e.target.id === "phIntakeNameInput") {
+        phIntakeName = e.target.value;
+        const btn = document.querySelector("[data-intake-generate]");
+        if (btn) btn.disabled = phIntakeBusy || !phIntakeName.trim();
         return;
       }
       // 📅 appointments: the paste re-parses live into the preview only --
@@ -33431,6 +33455,87 @@ Please let me know if you have any questions.`;
     </div>`;
     const s = document.getElementById("phMergeSearch");
     if (s && phMergeQuery) { s.focus(); const len = s.value.length; s.setSelectionRange(len, len); }
+  }
+  // ---- Patient self-fill intake link (her ask 2026-09-05): same modal
+  // shell/pattern as the merge finder above. Generates a row in the new
+  // `intake_forms` Supabase table -- see project_pharmacy_bigask_2026_09_05
+  // memory for the schema/RLS/functions this depends on. Works for a name
+  // that already has a record OR a brand-new one (her pick: "type a name
+  // when creating the link, either way") -- this button only ever creates
+  // the link; matching it to an existing patient or creating a new one both
+  // happen later, when she reviews the submission (not built yet).
+  let phIntakeName = "", phIntakeBusy = false, phIntakeError = "", phIntakeResult = null;
+  function phIntakeOpen() {
+    phIntakeName = ""; phIntakeBusy = false; phIntakeError = ""; phIntakeResult = null;
+    document.getElementById("phIntakeBackdrop").hidden = false;
+    document.getElementById("phIntakeModal").hidden = false;
+    renderIntakeScreen();
+  }
+  function phIntakeClose() {
+    document.getElementById("phIntakeBackdrop").hidden = true;
+    document.getElementById("phIntakeModal").hidden = true;
+    phIntakeName = ""; phIntakeBusy = false; phIntakeError = ""; phIntakeResult = null;
+  }
+  function phIntakeNameOptionsHtml() {
+    const names = new Set();
+    (PRESC.items || []).forEach(t => { if (presIsFormula(t)) return; const nm = presPatientFor(t) || t.name; if (nm) names.add(phTitle(nm)); });
+    return [...names].sort().map(n => `<option value="${esc(n)}">`).join("");
+  }
+  async function phIntakeGenerate() {
+    const name = phIntakeName.trim();
+    if (!name || phIntakeBusy) return;
+    phIntakeBusy = true; phIntakeError = ""; renderIntakeScreen();
+    try {
+      const sb = phRenRelayClient();
+      if (!sb) throw new Error("Not signed in to cloud sync — sign in, then try again.");
+      const uid = await phRenRelayUid(sb);
+      if (!uid) throw new Error("Not signed in to cloud sync — sign in, then try again.");
+      const { data, error } = await sb.from("intake_forms").insert({ owner: uid, patient_name: name }).select("id").single();
+      if (error) {
+        // her setup runs the SQL in her own time -- a clear message here
+        // beats a raw Postgres error if she generates a link before it exists
+        if (error.code === "42P01" || /relation .* does not exist/i.test(error.message || "")) {
+          throw new Error("The intake_forms table hasn't been set up in Supabase yet — run the setup SQL first, then try again.");
+        }
+        throw error;
+      }
+      const base = location.origin + location.pathname.replace(/[^/]*$/, "");
+      phIntakeResult = `${base}intake.html?t=${data.id}`;
+    } catch (e) {
+      phIntakeError = (e && e.message) || "Couldn't create the link — try again.";
+    }
+    phIntakeBusy = false; renderIntakeScreen();
+  }
+  function renderIntakeScreen() {
+    const modal = document.getElementById("phIntakeModal");
+    if (!modal || modal.hidden) return;
+    let body;
+    if (phIntakeResult) {
+      body = `<p class="ph-merge-lead">Send this link to <b>${esc(phTitle(phIntakeName))}</b> — she can fill in her name, medical history and cycle details from her own phone. It'll wait for your review, not save automatically.</p>
+        <div class="ph-intake-linkrow">
+          <input type="text" class="ph-intake-linkinput" id="phIntakeLinkOut" value="${esc(phIntakeResult)}" readonly aria-label="Intake link">
+          <button type="button" class="ph-load-btn on" data-intake-copy="1"><svg class="icn" aria-hidden="true"><use href="#i-copy"/></svg> Copy</button>
+        </div>
+        <div class="ph-merge-acts"><button type="button" class="btn-cancel" data-intake-close="1">Done</button></div>`;
+    } else {
+      body = `<p class="ph-merge-lead">Who's this link for? Pick an existing patient, or type a new name — either way, her answers wait for your review before anything saves.</p>
+        <input type="text" class="ph-tp-fpick-input" id="phIntakeNameInput" list="phIntakeNameList" placeholder="Patient's name…" value="${esc(phIntakeName)}" autocomplete="off" aria-label="Patient name">
+        <datalist id="phIntakeNameList">${phIntakeNameOptionsHtml()}</datalist>
+        ${phIntakeError ? `<p class="ph-merge-note">⚠ ${esc(phIntakeError)}</p>` : ""}
+        <div class="ph-merge-acts">
+          <button type="button" class="btn-save" data-intake-generate="1"${phIntakeBusy || !phIntakeName.trim() ? " disabled" : ""}>${phIntakeBusy ? "Generating…" : "Generate link"}</button>
+          <button type="button" class="btn-cancel" data-intake-close="1">Cancel</button>
+        </div>`;
+    }
+    modal.innerHTML = `<div class="ph-hx-card">
+      <div class="ph-hx-head">
+        <button type="button" class="ph-stocktake-close" data-intake-close="1" aria-label="Close">×</button>
+        <div class="ph-hx-head-top"><div class="ph-hx-head-name">🔗 Send intake link</div></div>
+      </div>
+      <div class="ph-hx-body">${body}</div>
+    </div>`;
+    const inp = document.getElementById("phIntakeNameInput");
+    if (inp && !phIntakeResult) inp.focus();
   }
   // "2 coffee teaspoons, 2 times a day" — composed from the structured dosage inputs
   function presDosageText() {
