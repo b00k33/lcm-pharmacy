@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260904-150000">
+<meta name="lcm-build" content="20260904-160000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -3588,6 +3588,13 @@
   #pharmacyPage .ph-tl-daycell.on b { color: var(--ph-cream); }
   #pharmacyPage .ph-tl-daycell.on i { background: rgba(255,255,255,.2); color: var(--ph-cream); }
   #pharmacyPage .ph-tl-widget { position: relative; }   /* the sheet-width grip anchors to it */
+  /* the editor docked under a timeline row (her "make it more smooth", 2026-09-04) */
+  #pharmacyPage .ph-tl-row.open { background: var(--ph-green-tint); border-radius: 8px 8px 0 0; padding-left: 8px; padding-right: 8px; margin: 0 -8px; }
+  #pharmacyPage .ph-tl-panelhost { margin: 0 -8px 8px; padding: 8px 8px 0; background: var(--ph-green-tint); border-radius: 0 0 8px 8px; animation: ph-tl-drop .18s ease-out; }
+  #pharmacyPage .ph-tl-panelhost > #presPanel { margin: 0; }
+  #pharmacyPage .ph-tl-panelhost + .ph-tl-row { border-top: none; }
+  @keyframes ph-tl-drop { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { #pharmacyPage .ph-tl-panelhost { animation: none; } }
   #pharmacyPage .ph-tl-body { display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 12px; align-items: start; }
   #pharmacyPage .ph-tl-list { background: var(--ph-white); border-radius: 12px; padding: 4px 12px 8px; }
   #pharmacyPage .ph-tl-listhead { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--ph-soft); padding: 8px 0 4px; }
@@ -19965,12 +19972,13 @@
       const presWeekOpen = e.target.closest("[data-pres-week-open]");
       if (presWeekOpen) {
         if (phTimers.presTmpl) { clearTimeout(phTimers.presTmpl); phTimers.presTmpl = null; presFlushTemplate(); }
+        (t => { if (t) presTlDockSet(presPatientFor(t) || t.name); })(PRESC.items.find(x => x.id === presWeekOpen.dataset.presWeekOpen));
         presOpenScript(presWeekOpen.dataset.presWeekOpen);
         presRenderPanelSmooth();
         return;
       }
       const presWeekNew = e.target.closest("[data-pres-week-newscript]");
-      if (presWeekNew) { presStartNew(undefined, presWeekNew.dataset.presWeekNewscript); return; }
+      if (presWeekNew) { presTlDockSet(presWeekNew.dataset.presWeekNewscript); presStartNew(undefined, presWeekNew.dataset.presWeekNewscript); return; }
       // Clicking anywhere on a prescription row opens that patient (her ask
       // 2026-08-23: the pencil is a small target to aim at hundreds of times).
       // Deliberately generic: ANY button/link/field inside the row does its own
@@ -21007,7 +21015,9 @@
       // so closing the panel mid-debounce would otherwise drop the last keystrokes
       if (e.target.closest("[data-pres-close]")) {
         if (phTimers.presTmpl) { clearTimeout(phTimers.presTmpl); phTimers.presTmpl = null; presFlushTemplate(); }
-        presOpenId = null; presLabelOpen = false; presMoreOpen = false; presFuOpen = false; renderPresPanel(); return;
+        presOpenId = null; presLabelOpen = false; presMoreOpen = false; presFuOpen = false; renderPresPanel();
+        presTlDock = null; presPanelDock();   // a docked editor folds back into its row
+        return;
       }
       if (e.target.closest("[data-ph-confirm-cancel]")) { phClearConfirms(); return; }
       // stock movers: dispensing is immediate (her ask 2026-08-01, see below) —
@@ -25910,9 +25920,51 @@
       <div class="ph-pres-week-foot"><button type="button" class="ph-name-link" data-ph-appt-open="1">📅 Paste a day, a week or a month from Cliniko</button></div>
     </div>`;
   }
+  // ---- the editor docks under the timeline row it was opened from (her
+  // 2026-09-04 "when i click + … page skipping to new prescription section.
+  // can you make it more smooth?" -- pick A, ✎ too, one editor that moves
+  // between rows): the SAME #presPanel node is moved under that row, so
+  // renderPresPanel and every delegated handler work unchanged. The dock
+  // holds only while the panel shows that patient; anything else sends the
+  // node back to its home slot above the list. renderPresWeek moves it home
+  // BEFORE rebuilding the timeline (innerHTML would destroy it) and re-docks
+  // after. ----
+  let presTlDock = null;   // { key } -- the patient whose row holds the editor
+  function presTlDockSet(name) { presTlDock = { key: phPatientKey(name) }; presPanelDock(true); }
+  function presPanelHome() {
+    const p = document.getElementById("presPanel"), list = document.getElementById("presList");
+    if (p && list && p.nextElementSibling !== list) list.before(p);
+  }
+  function presPanelUndock(weekWrap) {
+    const p = document.getElementById("presPanel");
+    if (p && weekWrap && weekWrap.contains(p)) presPanelHome();
+  }
+  function presPanelCurrentKey() {
+    if (presEditId === "__new__") return phPatientKey(presDraft && presDraft.name);
+    const t = PRESC.items.find(x => x.id === presOpenId);
+    return t ? phPatientKey(presPatientFor(t)) : "";
+  }
+  function presPanelDock(force) {
+    const p = document.getElementById("presPanel"), wrap = document.getElementById("presWeekWrap");
+    if (!p) return;
+    document.querySelectorAll(".ph-tl-row.open").forEach(r => r.classList.remove("open"));
+    const row = presTlDock && wrap ? [...wrap.querySelectorAll(".ph-tl-row[data-tl-key]")].find(r => r.dataset.tlKey === presTlDock.key) : null;
+    const key = force ? "" : presPanelCurrentKey();
+    if (!row || (key && key !== presTlDock.key)) {
+      presTlDock = null; presPanelHome();
+      if (wrap) wrap.querySelectorAll(".ph-tl-panelhost").forEach(h => h.remove());
+      return;
+    }
+    let host = row.nextElementSibling && row.nextElementSibling.classList.contains("ph-tl-panelhost") ? row.nextElementSibling : null;
+    wrap.querySelectorAll(".ph-tl-panelhost").forEach(h => { if (h !== host) h.remove(); });
+    if (!host) { host = document.createElement("div"); host.className = "ph-tl-panelhost"; row.after(host); }
+    if (p.parentElement !== host) host.appendChild(p);
+    row.classList.add("open");
+  }
   function renderPresWeek() {
     const el = document.getElementById("presWeekWrap");
     if (!el) return;
+    presPanelUndock(el);
     // ============ Timeline view (her pick 2026-09-04, "i like this. change
     // the page to this style/display"): one day at a time -- ‹ date ›, a
     // slim 7-day strip, type/search/status filters, the day's bookings AND
@@ -25955,7 +26007,7 @@
     const line2 = r => r.script
       ? `${(r.script.ingredients || []).length} herb${(r.script.ingredients || []).length === 1 ? "" : "s"}${(r.script.formula || "").trim() ? ` · <b>${esc(r.script.formula.trim())}</b>` : ""} · ${esc((r.script.ingredients || []).slice(0, 4).map(i => phPinyinName({ name: i.herb || i.name || "" })).join(", "))}${(r.script.ingredients || []).length > 4 ? "…" : ""}`
       : r.kind === "acu" ? "acupuncture only" : "no script yet";
-    const rowHtml = r => `<div class="ph-tl-row${r.done ? " done" : ""}">
+    const rowHtml = r => `<div class="ph-tl-row${r.done ? " done" : ""}" data-tl-key="${esc(r.k)}">
       <span class="ph-tl-time">${esc(phCkTime12(r.a.time))}</span>${dot(r)}
       <div class="ph-tl-mid"><div class="l1"><b>${esc(phTitle(r.a.patient))}</b>${phApptKindHtml(r.a.service)}${phApptEtHtml(r.a)}${phApptFuDue(r.k, dayKey) ? `<span class="bell" title="Follow-up due">🔔</span>` : ""}</div><div class="l2">${line2(r)}</div></div>
       <div class="ph-tl-end">${statusChip(r)}${action(r)}</div>
@@ -26000,6 +26052,7 @@
           </div>
         </div>
       </div>`;
+    presPanelDock();
   }
 
   function renderPrescriptions() {
@@ -26436,6 +26489,11 @@
   }
   function presRenderPanelSmooth() {
     const el = presPanelEl();
+    // docked under a timeline row: no glide at all -- the row she just
+    // clicked is already under her eyes; "nearest" only nudges when the
+    // row itself sits off-screen
+    const host = el && el.closest(".ph-tl-panelhost");
+    if (host) { const row = host.previousElementSibling; if (row) row.scrollIntoView({ behavior: "smooth", block: "nearest" }); renderPresPanel(); return; }
     const inView = el && (() => { const r = el.getBoundingClientRect(); return r.top > -40 && r.top < window.innerHeight * 0.4; })();
     // scrollIntoView reads the CURRENT (pre-mutation) layout the instant it's
     // called, and the panel's own document-top offset never moves when its
