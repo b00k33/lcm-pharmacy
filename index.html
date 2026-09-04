@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260904-120000">
+<meta name="lcm-build" content="20260904-130000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -1811,6 +1811,14 @@
      around them goes -- the band already carries their heading and link */
   #pharmacyPage .ph-ds-mask .ph-dash-secthead, #pharmacyPage .ph-ds-mask .ph-dash-card-link { display: none; }
   #pharmacyPage .ph-ds-mask .ph-wkt { margin-top: 6px; }
+  /* the week board as the Dashboard's lead card (her 2026-09-04 "this week = main focus") */
+  #pharmacyPage .ph-dash-hero { max-width: var(--ph-sheet-w, 1040px); margin: 12px auto 12px; padding: 12px 16px 16px; }
+  #pharmacyPage .ph-dash-hero .ph-wkt { max-width: none; margin-top: 8px; }
+  #pharmacyPage .ph-dash-hero .ph-dash-tasks { margin-top: 12px; }
+  #pharmacyPage .ph-dash-tiles { max-width: var(--ph-sheet-w, 1040px); margin: 0 auto 12px; }
+  @media (max-width: 900px) { #pharmacyPage .ph-dash-hero { margin: 8px 0 12px; padding: 8px 12px 12px; } }
+  #pharmacyPage .ph-appt-et-x { margin-left: 3px; }   /* a flex item trims a leading space, so the gap is a margin */
+  @media (max-width: 600px) { #pharmacyPage .ph-appt-et-x { display: none; } #pharmacyPage .ph-dash-hero .ph-wkt-item { justify-content: center; } }
   #pharmacyPage .ph-ds-mask .ph-wkt-cell { background: var(--ph-paper); }
   #pharmacyPage .ph-ds-mask .ph-dash-tasks { margin-top: 8px; }
   /* ---- Follow-ups sheet (her yes 2026-09-03, mock 42349be8): the same
@@ -17034,6 +17042,7 @@
   // still opens the SAME per-day detail (phDashWeekDetailHtml) below.
   function phDashWeekHtml() {
     const days = phDashWeekDays();
+    if (phDashWeekOpenDay === null) phDashWeekOpenDay = phDashWeekDefaultOpenDay(days);
     const rangeEnd = parseKey(days[days.length - 1].key);
     const pharmRefill = phDashPharmRefillItems(rangeEnd), pharmOrder = phDashPharmOrderItems(rangeEnd);
     const cells = days.map(d => {
@@ -17042,6 +17051,20 @@
       const pharmN = dayRefill.length + dayOrder.length;
       const pharmCrit = dayRefill.filter(x => x.overdue).length + dayOrder.filter(x => x.overdue).length;
       const bits = [];
+      // phone (her 2026-09-04 "same board on phone"): a 7-across cell is
+      // ~44px wide, so first names truncate to nothing -- counts carry the
+      // information there ("📅 4 · 🔔 1 · 📦 2"), names stay on desktop
+      if (window.innerWidth <= 600) {
+        if (appt.length) bits.push(`<svg class="icn" aria-hidden="true"><use href="#i-cal"/></svg> ${appt.length}`);
+        if (fu.length) bits.push(`<svg class="icn" aria-hidden="true"><use href="#i-clock"/></svg> ${fu.length}`);
+        if (disp.length) bits.push(`<svg class="icn" aria-hidden="true"><use href="#i-mail"/></svg> ${disp.length}`);
+        if (pharmN) bits.push(`<svg class="icn" aria-hidden="true"><use href="#i-jar"/></svg> ${pharmN}${pharmCrit ? ` <b class="crit">⚠${pharmCrit}</b>` : ""}`);
+        const open = phDashWeekOpenDay === d.key;
+        return `<button type="button" class="ph-wkt-cell${d.today ? " today" : ""}${bits.length ? " has" : ""}${d.past ? " past" : ""}${d.work ? " wd" : ""}${open ? " open" : ""}" data-ph-dash-week-day="${d.key}" aria-expanded="${open ? "true" : "false"}">
+        <span class="ph-wkt-d">${esc(d.dow)} ${d.dnum}${d.today ? ` <em>today</em>` : ""}</span>
+        ${bits.length ? bits.map(t => `<span class="ph-wkt-item">${t}</span>`).join("") : `<span class="ph-wkt-dash">—</span>`}
+      </button>`;
+      }
       // 📅 appointments lead the cell (approved mock) -- the day's shape is
       // who's walking in before what's going out
       appt.slice(0, 2).forEach(a => bits.push(`<svg class="icn" aria-hidden="true"><use href="#i-cal"/></svg> ${esc(phTitle(a.patient).split(" ")[0])} ${esc(a.time)}${phApptKindHtml(a.service)}`));
@@ -17143,7 +17166,7 @@
     if (a.time === same[same.length - 1].time) return "post";
     return "";
   }
-  const phApptEtHtml = (a, list) => { const s = phApptEtLabel(a, list); return s ? `<span class="ph-appt-et" title="Same patient twice today — embryo transfer day">${s} transfer</span>` : ""; };
+  const phApptEtHtml = (a, list) => { const s = phApptEtLabel(a, list); return s ? `<span class="ph-appt-et" title="Same patient twice today — embryo transfer day">${s}<span class="ph-appt-et-x">transfer</span></span>` : ""; };
   function phApptFor(dayKey) {
     return phApptList().filter(a => a.date === dayKey)
       .sort((a, b) => a.time < b.time ? -1 : a.time > b.time ? 1 : 0);
@@ -17896,14 +17919,18 @@
     // the resize listener in phTitlebarMerge's bound-once block).
     if (window.innerWidth <= 900) {
       wrap.classList.remove("ph-ds-polish");
-      const patBody = phDashApptTodayHtml() + phDashFuRowsHtml(true) + phDashGoingOutHtml();
+      // 2026-09-04 (her "same board on phone"): the week board leads the
+      // phone too; today's appointment list left the Patients zone because
+      // the open day already shows those rows (say each thing once)
+      const patBody = phDashFuRowsHtml(true) + phDashGoingOutHtml();
       wrap.innerHTML = `
       ${phShellHead("Dashboard", dashMeta, phDashActionStripHtml(), dashAction)}
       ${phDashTodayStripHtml()}
       ${phDashRelocationLineHtml()}
+      ${phDashWeekHeroHtml()}
       <div class="ph-dz ph-dz-pat" id="phDzPat">
-        <div class="ph-dz-h">🧑 Patients today<span class="rule"></span></div>
-        ${patBody || `<div class="ph-dz-empty">No patients booked today.</div>`}
+        <div class="ph-dz-h">🧑 Patients<span class="rule"></span></div>
+        ${patBody || `<div class="ph-dz-empty">Nothing due today.</div>`}
       </div>
       <div class="ph-dz ph-dz-pha" id="phDzPha">
         <div class="ph-dz-h">🌿 Pharmacy<span class="rule"></span></div>
@@ -17914,7 +17941,6 @@
       </div>
       <div class="ph-dz ph-dz-pla" id="phDzPla">
         <div class="ph-dz-h">📅 Planning<span class="rule"></span></div>
-        ${phDashWeekHtml()}
         ${phDashPlanStocktakeHtml()}
         ${phDashPlanActivityHtml()}
       </div>`;
@@ -17934,14 +17960,38 @@
       { n: toRefill, label: "Formula refill", linkText: "Open →", linkAttrs: 'data-ph-tab="refill"', icon: "jar" },
       { n: `<svg class="icn" aria-hidden="true"><use href="#i-camera"/></svg>`, label: "Patient photo", linkText: "Take one →", linkAttrs: 'data-cap-open="1"', icon: "camera" },
     ]);
+    // her ask (2026-09-04, "i want this week to be the main focus of
+    // dashboard"; popups: hero above the sheet, tiles UNDER the week, today
+    // open by default, phone gets the same board): This week is its own
+    // white card straight under the title bar; the dark tile strip, Needs
+    // action and the Monday pieces follow it; the sheet keeps everything
+    // else (its own This-week band is gone -- one place, not two).
     wrap.innerHTML = `
-      ${phShellHead("Dashboard", dashMeta, strip, dashAction).replace('<h1>', '<h1><svg class="icn" aria-hidden="true"><use href="#i-home"/></svg>')}
+      ${phShellHead("Dashboard", dashMeta, "", dashAction).replace('<h1>', '<h1><svg class="icn" aria-hidden="true"><use href="#i-home"/></svg>')}
+      ${phDashWeekHeroHtml()}
+      <div class="ph-dash-tiles">${strip}</div>
       ${phDashNeedsActionHtml()}
       ${phDashRelocationLineHtml()}
       ${monday ? phDashMondayBandHtml() : ""}
       ${monday ? phDashMondayReviewHtml() : ""}
       ${phDashSheetHtml()}`;
     phDsResizeApply();
+  }
+  // The week board as the page's lead card (desktop and phone alike): the
+  // Mon–Sun strip, the open day's rows, and the stocktake task card that
+  // used to sit under the week band in the sheet.
+  function phDashWeekHeroHtml() {
+    const stock = (st => st ? `<div class="ph-dash-tasks">${st}</div>` : "")(phDashTaskStocktakeHtml());
+    return `<section class="ph-widget ph-dash-card ph-dash-hero">${phDashWeekHtml()}${stock}</section>`;
+  }
+  // Which day opens by itself: today when it's a clinic day or has bookings,
+  // else the next clinic day this week, else today. null = not chosen yet;
+  // "" = she closed it (the toggle handler writes "" so it stays closed).
+  function phDashWeekDefaultOpenDay(days) {
+    const today = days.find(d => d.today);
+    if (today && (today.work || phApptFor(today.key).length)) return today.key;
+    const next = days.find(d => !d.past && (d.work || phApptFor(d.key).length));
+    return next ? next.key : (today ? today.key : days[0].key);
   }
   // ---- the sheet itself ----------------------------------------------------
   const phDsCollapsed = new Set();   // which bands are folded (session-only, like phOsCollapsed)
@@ -18019,7 +18069,6 @@
   function phDashSheetHtml() {
     const mask = html => `<div class="ph-ds-mask">${html}</div>`;
     const sec = (key, band, body) => band + (phDsCollapsed.has(key) ? "" : mask(body));
-    const stock = (st => st ? `<div class="ph-dash-tasks">${st}</div>` : "")(phDashTaskStocktakeHtml());
     // 2026-09-02 code7 audit: the two ranked lists render as sheet rows on the
     // shared grid (phSigListRowHtml's phDsRowMode branch) inside a transparent
     // body, so the column lines run through them like every other grid
@@ -18038,7 +18087,6 @@
       <div class="ph-ds-card"><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i>
         ${phDashFuSheetHtml()}
         ${phDashUrgentSheetHtml()}
-        ${sec("week", phDsBand("week", "plan", "i-cal", "This week", `<span class="sub">Mon–Sun · click a day for details</span>`, phDsLnk('data-ph-appt-open="1"', "Add appointments")), phDashWeekHtml() + stock)}
         ${sec("month", phDsBand("month", "plan", "i-clipboard", "This month", `<span class="cnt">${esc(monthName)}</span>`), phDashMonthHtml())}
         ${gridBody("ord", phDsBand("ord", "ord", "i-cart", "Order these", phSigWindowSubheadHtml("Most-used first"), phDsLnk('data-ph-tab="restock"', "To order")), order)}
         ${gridBody("ref", phDsBand("ref", "ref", "i-jar", "Refill these formulas", phSigWindowSubheadHtml("Most-used first"), phDsLnk('data-ph-tab="refill"', "Formula refill")), refill)}
@@ -19760,7 +19808,7 @@
       const dashWeekDay = e.target.closest("[data-ph-dash-week-day]");
       if (dashWeekDay) {
         const k = dashWeekDay.dataset.phDashWeekDay;
-        phDashWeekOpenDay = phDashWeekOpenDay === k ? null : k;
+        phDashWeekOpenDay = phDashWeekOpenDay === k ? "" : k;   // "" = closed on purpose (null would re-open today)
         renderPhDashboardPage();
         return;
       }
