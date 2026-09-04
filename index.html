@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260905-140000">
+<meta name="lcm-build" content="20260905-150000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -20737,6 +20737,7 @@
         }
         return;
       }
+      if (e.target.closest("[data-intake-gmsg]")) { phIntakeOpenMessages(); return; }
       // ---- Intake review queue handlers ----
       if (e.target.closest("[data-intake-queue-refresh]")) { phIntakeQueueLoad(true); return; }
       if (e.target.closest("[data-intake-review-open]")) { phIntakeReviewOpen(e.target.closest("[data-intake-review-open]").dataset.intakeReviewOpen); return; }
@@ -33516,6 +33517,29 @@ Please let me know if you have any questions.`;
     (PRESC.items || []).forEach(t => { if (presIsFormula(t)) return; const nm = presPatientFor(t) || t.name; if (nm) names.add(phTitle(nm)); });
     return [...names].sort().map(n => `<option value="${esc(n)}">`).join("");
   }
+  // her ask (2026-09-05): a one-tap path from the generated link straight
+  // into her SMS/Messages app, not just a raw Copy she has to paste herself
+  // -- same phone-vs-desktop split, same sms:/Google-Messages-web pattern
+  // already established for the check-in panel (phCkSmsHref/phCkOpenMessages
+  // above), reused rather than re-invented. Unlike the check-in flow, a
+  // missing phone number doesn't disable the button -- an unnumbered sms:
+  // link still opens the SMS app letting her pick the contact herself,
+  // which matters here since a fresh intake link is often for someone who
+  // has no record (and so no saved phone) yet.
+  function phIntakeMsgText() {
+    return `Hi ${phTitle(phIntakeName)}, before your visit please fill in this quick form: ${phIntakeResult}`;
+  }
+  function phIntakeSmsHref(phone) {
+    const d = String(phone || "").replace(/[^\d+]/g, "");
+    const sep = phCkIos() ? "&" : "?";
+    return `sms:${d}${sep}body=${encodeURIComponent(phIntakeMsgText())}`;
+  }
+  function phIntakeOpenMessages() {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(phIntakeMsgText()).then(() => phFlashShow("✓ Message copied — pick the patient in Messages and paste"), () => {});
+    }
+    window.open(PH_CK_GMSG_NEW, PH_CK_GMSG_TARGET);
+  }
   async function phIntakeGenerate() {
     const name = phIntakeName.trim();
     if (!name || phIntakeBusy) return;
@@ -33546,10 +33570,17 @@ Please let me know if you have any questions.`;
     if (!modal || modal.hidden) return;
     let body;
     if (phIntakeResult) {
+      const patRec = phPatientPeek(phIntakeName);
+      const phone = patRec && patRec.phone;
       body = `<p class="ph-merge-lead">Send this link to <b>${esc(phTitle(phIntakeName))}</b> — she can fill in her name, medical history and cycle details from her own phone. It'll wait for your review, not save automatically.</p>
         <div class="ph-intake-linkrow">
           <input type="text" class="ph-intake-linkinput" id="phIntakeLinkOut" value="${esc(phIntakeResult)}" readonly aria-label="Intake link">
           <button type="button" class="ph-load-btn on" data-intake-copy="1"><svg class="icn" aria-hidden="true"><use href="#i-copy"/></svg> Copy</button>
+        </div>
+        <div class="ph-ck-acts">
+          ${phCkIsPhone()
+            ? `<a class="ph-ck-btn pri" href="${esc(phIntakeSmsHref(phone))}"><svg class="icn" aria-hidden="true"><use href="#i-msg"/></svg>Text${phone ? "" : " — pick contact"}</a>`
+            : `<button type="button" class="ph-ck-btn pri" data-intake-gmsg="1" title="Copies the message, then opens Google Messages for web on a new conversation — pick ${esc(phTitle(phIntakeName))}, paste, send"><svg class="icn" aria-hidden="true"><use href="#i-msg"/></svg>Messages</button>`}
         </div>
         <div class="ph-merge-acts"><button type="button" class="btn-cancel" data-intake-close="1">Done</button></div>`;
     } else {
