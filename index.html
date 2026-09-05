@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260905-221500">
+<meta name="lcm-build" content="20260905-230000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -8829,6 +8829,10 @@
     flex: 0 0 auto; background: var(--ph-gold); color: #3A2E05; font-size: 11px; font-weight: 700;
     border-radius: 999px; padding: 1px 7px; line-height: 1.5;
   }
+  /* follow-ups-due badge (her ask 2026-09-05, "make it louder"): red not gold
+     -- a patient waiting on a call is a different kind of urgent than a
+     stock count, and should read that way at a glance */
+  .ph-nav-badge.crit { background: var(--ph-zero-deep, #B4483A); color: #fff; }
   /* Back (her ask 2026-09-03: "more subtle and discrete, use symbol
      instead"): a 28px round icon, faint until hovered, sitting quietly at the
      top of the nav; no label, the tooltip explains it */
@@ -10149,7 +10153,7 @@
                instead" -- an icon-only round button, muted until hovered;
                the tooltip and Alt+← / mouse-back still explain it -->
           <button type="button" id="phBackBtn" class="ph-nav-back" title="Back to the page you came from (Alt+← or the mouse back button)" aria-label="Back" hidden><svg class="icn" aria-hidden="true"><use href="#i-chev-l"/></svg></button>
-          <button type="button" class="ph-nav-item" data-ph-tab="dashboard" data-ph-tip="Dashboard"><span class="ph-nav-ic"><svg class="icn"><use href="#i-home"/></svg></span><span class="ph-nav-label">Dashboard</span></button>
+          <button type="button" class="ph-nav-item" data-ph-tab="dashboard" data-ph-tip="Dashboard"><span class="ph-nav-ic"><svg class="icn"><use href="#i-home"/></svg></span><span class="ph-nav-label">Dashboard</span><span class="ph-nav-badge crit" id="phDashFuBadge" hidden>0</span></button>
           <button type="button" class="ph-nav-item" data-ph-tab="prescriptions" data-ph-tip="Patient profile"><span class="ph-nav-ic"><svg class="icn"><use href="#i-pill"/></svg></span><span class="ph-nav-label">Patient profile</span></button>
           <button type="button" class="ph-nav-item" data-ph-tab="followups" data-ph-tip="Follow-ups"><span class="ph-nav-ic"><svg class="icn"><use href="#i-clock"/></svg></span><span class="ph-nav-label">Follow-ups</span><span class="ph-nav-badge" id="phFuNavBadge" hidden>0</span></button>
           <button type="button" class="ph-nav-item" data-ph-tab="intake" data-ph-tip="Intake review"><span class="ph-nav-ic"><svg class="icn"><use href="#i-mail"/></svg></span><span class="ph-nav-label">Intake review</span><span class="ph-nav-badge" id="phIntakeNavBadge" hidden>0</span></button>
@@ -16788,6 +16792,13 @@
     const need = (PHARMACY.herbs || []).filter(herbNeedsOrder).length;
     const sideBadge = document.getElementById("phSideBadge");
     if (sideBadge) { sideBadge.hidden = !need; sideBadge.textContent = need; }
+    // her ask 2026-09-05 ("make it louder inside the app"): a due follow-up
+    // used to only surface if she happened to open the Dashboard and scroll
+    // to that section. Same phDashFuDue() the Dashboard panel itself reads,
+    // so this can never disagree with what's shown there.
+    const fuN = phDashFuDue().length;
+    const dashFuBadge = document.getElementById("phDashFuBadge");
+    if (dashFuBadge) { dashFuBadge.hidden = !fuN; dashFuBadge.textContent = fuN; }
     // §1: the refill-list badge, counted and shown exactly like the order one
     const refillN = phRefillCount();
     const refillBadge = document.getElementById("phRefillBadge");
@@ -30936,10 +30947,18 @@
     return !(PRESC.items || []).some(x => phPatientKey(presPatientFor(x) || x.name) === key && x.lastDispensedAt);
   }
   function presStageStripHtml(isNew) {
+    // her ask 2026-09-05: only Opening ever ticked, even once she'd clearly
+    // moved past Assessment/Treatment/Dispense. Passed stages (index before
+    // the active tab) now tick too -- on top of, not instead of, the existing
+    // returning-patient Opening tick, since that one means something else
+    // ("this patient already has a profile") and stays true even while she's
+    // actively sitting on the Opening tab itself.
+    const curIdx = PRES_STAGES.findIndex(s => s.id === presStage);
     return `<div class="ph-pres-stages" role="tablist" aria-label="Visit stage">${PRES_STAGES.map((s, i) => {
       const openingDone = s.id === "opening" && !isNew;
-      return `<button type="button" class="ph-pres-stagebtn${presStage === s.id ? " on" : ""}${openingDone ? " done" : ""}" data-pres-stage="${s.id}" role="tab" aria-selected="${presStage === s.id ? "true" : "false"}">
-        <span class="n" aria-hidden="true">${openingDone ? "✓" : i + 1}</span><span class="l l-full">${s.label}</span><span class="l l-short">${s.short}</span>
+      const done = openingDone || i < curIdx;
+      return `<button type="button" class="ph-pres-stagebtn${presStage === s.id ? " on" : ""}${done ? " done" : ""}" data-pres-stage="${s.id}" role="tab" aria-selected="${presStage === s.id ? "true" : "false"}">
+        <span class="n" aria-hidden="true">${done ? "✓" : i + 1}</span><span class="l l-full">${s.label}</span><span class="l l-short">${s.short}</span>
       </button>`;
     }).join("")}</div>`;
   }
