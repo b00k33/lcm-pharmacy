@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260905-233000">
+<meta name="lcm-build" content="20260905-234500">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6089,13 +6089,26 @@
   #pharmacyPage .ph-cyc-reg input { width: 14px; height: 14px; margin: 0; accent-color: var(--ph-green); }
   #pharmacyPage .ph-cycle-hist { flex-basis: 100%; font-size: 11.5px; color: var(--ph-faint); }
   #pharmacyPage .ph-cyc-histtoggle { flex: none; padding: 0; font-size: 11.5px; }
-  #pharmacyPage .ph-cyc-histbox { flex-basis: 100%; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--ph-line); display: flex; flex-direction: column; gap: 4px; }
-  #pharmacyPage .ph-cyc-histrow { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; color: var(--ph-ink); }
-  #pharmacyPage .ph-cyc-histrow.cur { font-weight: 600; }
-  #pharmacyPage .ph-cyc-histrow .faint { font-weight: 400; color: var(--ph-faint); margin-left: 4px; }
-  #pharmacyPage .ph-cyc-histrow .del { border: none; background: none; color: var(--ph-soft); font-size: 15px; line-height: 1; cursor: pointer; padding: 2px 6px; font-family: inherit; }
-  #pharmacyPage .ph-cyc-histempty { font-size: 12px; color: var(--ph-faint); }
-  #pharmacyPage .ph-cyc-histadd { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ph-green-deep); margin-top: 4px; cursor: pointer; }
+  #pharmacyPage .ph-cyc-histbox { flex-basis: 100%; margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--ph-line); display: flex; flex-direction: column; }
+  /* her ask 2026-09-05 ("it looks plain and boring"): was a bare flex row of
+     date + faint "current" + a lone "x" -- same colour language the cycle
+     bar above it already uses (period-red dot, green for the entry driving
+     LMP), plus the one derived fact she'd actually scan this list FOR --
+     days between periods -- computed from the same log, not a new field. */
+  #pharmacyPage .ph-cyc-histrow { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; position: relative; }
+  #pharmacyPage .ph-cyc-histrow .dot { flex: none; width: 9px; height: 9px; margin-top: 5px; border-radius: 50%; background: var(--ph-zero); position: relative; z-index: 1; box-shadow: 0 0 0 3px var(--ph-white); }
+  #pharmacyPage .ph-cyc-histrow.cur .dot { background: var(--ph-green-deep); }
+  #pharmacyPage .ph-cyc-histrow:not(.last)::before { content: ""; position: absolute; left: 4px; top: 16px; bottom: -6px; width: 1px; background: var(--ph-line); }
+  #pharmacyPage .ph-cyc-histrow .body { flex: 1 1 auto; min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 8px; }
+  #pharmacyPage .ph-cyc-histrow .d { font-size: 12.5px; font-weight: 700; color: var(--ph-ink); }
+  #pharmacyPage .ph-cyc-histrow .ago { font-size: 11px; color: var(--ph-faint); }
+  #pharmacyPage .ph-cyc-histrow .ph-pill { font-size: 9.5px; font-weight: 800; border-radius: 999px; padding: 1px 7px; line-height: 1.5; }
+  #pharmacyPage .ph-cyc-histrow .ph-pill.gap { background: var(--ph-paper); color: var(--ph-soft); }
+  #pharmacyPage .ph-cyc-histrow .ph-pill.cur { background: var(--ph-green-tint); color: var(--ph-green-deep); text-transform: uppercase; letter-spacing: .03em; }
+  #pharmacyPage .ph-cyc-histrow .del { flex: none; border: none; background: none; color: var(--ph-soft); font-size: 15px; line-height: 1; cursor: pointer; padding: 3px 6px; border-radius: 999px; font-family: inherit; }
+  #pharmacyPage .ph-cyc-histrow .del:hover { background: var(--ph-zero-tint); color: var(--ph-zero-deep); }
+  #pharmacyPage .ph-cyc-histempty { font-size: 12px; color: var(--ph-faint); padding: 4px 0; }
+  #pharmacyPage .ph-cyc-histadd { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ph-green-deep); margin-top: 8px; cursor: pointer; }
   #pharmacyPage .ph-cyc-histadd input { font: inherit; border: 1px solid var(--ph-line); border-radius: 6px; padding: 3px 8px; background: var(--ph-white); color: var(--ph-ink); }
   #pharmacyPage .ph-tl-brief { margin-top: 4px; font-size: 11.5px; line-height: 1.4; color: var(--ph-soft); white-space: normal; display: grid; grid-template-columns: 1fr 1fr; gap: 2px 16px; }
   #pharmacyPage .ph-tl-brief span { min-width: 0; padding-left: 12px; border-left: 1px solid var(--ph-line); }
@@ -32025,12 +32038,25 @@
   function phCycleHistoryHtml(rec) {
     const log = ((rec && rec.cycleLog) || []).slice().sort((a, b) => a.lmp < b.lmp ? -1 : 1);
     const curLmp = rec && rec.cycle && rec.cycle.lmp;
-    return `<div class="ph-cyc-histbox">
-      ${log.length ? log.map(x => `<div class="ph-cyc-histrow${x.lmp === curLmp ? " cur" : ""}">
-        <span>${esc(phShortDate(x.lmp))}${x.lmp === curLmp ? ` <span class="faint">current</span>` : ""}</span>
+    const rows = log.map((x, i) => {
+      const isCur = x.lmp === curLmp;
+      const gapDays = i > 0 ? Math.round((parseKey(x.lmp) - parseKey(log[i - 1].lmp)) / 86400000) : null;
+      const daysAgo = Math.round((TODAY - parseKey(x.lmp)) / 86400000);
+      const ago = daysAgo <= 0 ? "today" : daysAgo === 1 ? "1 day ago" : `${daysAgo} days ago`;
+      return `<div class="ph-cyc-histrow${isCur ? " cur" : ""}${i === log.length - 1 ? " last" : ""}">
+        <span class="dot" aria-hidden="true"></span>
+        <span class="body">
+          <span class="d">${esc(phShortDate(x.lmp))}</span>
+          ${gapDays != null ? `<span class="ph-pill gap">${gapDays}d cycle</span>` : ""}
+          ${isCur ? `<span class="ph-pill cur">Current</span>` : ""}
+          <span class="ago">${esc(ago)}</span>
+        </span>
         <button type="button" class="del" data-cycle-hist-del="${esc(x.lmp)}" title="Remove this date" aria-label="Remove ${esc(phShortDate(x.lmp))}">×</button>
-      </div>`).join("") : `<div class="ph-cyc-histempty faint">No periods logged yet.</div>`}
-      <label class="ph-cyc-histadd">+ add a past period<input type="date" data-cycle-hist-add="1" max="${keyOf(TODAY)}" aria-label="Add a past period start date"></label>
+      </div>`;
+    }).join("");
+    return `<div class="ph-cyc-histbox">
+      ${log.length ? rows : `<div class="ph-cyc-histempty faint">No periods logged yet.</div>`}
+      <label class="ph-cyc-histadd">+ Add a past period<input type="date" data-cycle-hist-add="1" max="${keyOf(TODAY)}" aria-label="Add a past period start date"></label>
     </div>`;
   }
   function phTpCycleEditHtml(rec) {
