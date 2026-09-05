@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260906-001500">
+<meta name="lcm-build" content="20260906-003000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -31075,17 +31075,27 @@
     const key = phPatientKey(name);
     return !(PRESC.items || []).some(x => phPatientKey(presPatientFor(x) || x.name) === key && x.lastDispensedAt);
   }
-  function presStageStripHtml(isNew) {
-    // her ask 2026-09-05: only Opening ever ticked, even once she'd clearly
-    // moved past Assessment/Treatment/Dispense. Passed stages (index before
-    // the active tab) now tick too -- on top of, not instead of, the existing
-    // returning-patient Opening tick, since that one means something else
-    // ("this patient already has a profile") and stays true even while she's
-    // actively sitting on the Opening tab itself.
+  function presStageStripHtml(t, isNew) {
+    // her ask 2026-09-05 (round 1): passed stages tick, not just Opening.
+    // her correction, same day: skipping ahead to Dispense doesn't mean
+    // Assessment/Treatment were actually done -- a tick now needs REAL
+    // content, not just "its index is behind the active tab". Opening keeps
+    // its own separate rule (a returning patient doesn't need it, true
+    // regardless of position, even while she's actively sitting on that tab)
+    // since that one means something different from "filled in this visit".
     const curIdx = PRES_STAGES.findIndex(s => s.id === presStage);
+    const name = presPatientFor(t) || t.name || "";
+    const rec = phPatientRec(name);
+    const hx = phHxProgress(name);
+    const openingDone = !isNew || !!(rec && (rec.sex || rec.dob || hx.everTouched));
+    const contentDone = {
+      assessment: hx.everTouched || !!(t.notes && t.notes.trim()),
+      treatment: !!((phTpPlans(name) || []).length) || !!(((phPatientPeek(name) || {}).letters || []).length),
+      dispense: !!t.lastDispensedAt,
+      followup: !!t.lastDispensedAt,
+    };
     return `<div class="ph-pres-stages" role="tablist" aria-label="Visit stage">${PRES_STAGES.map((s, i) => {
-      const openingDone = s.id === "opening" && !isNew;
-      const done = openingDone || i < curIdx;
+      const done = s.id === "opening" ? openingDone : (i < curIdx && contentDone[s.id]);
       return `<button type="button" class="ph-pres-stagebtn${presStage === s.id ? " on" : ""}${done ? " done" : ""}" data-pres-stage="${s.id}" role="tab" aria-selected="${presStage === s.id ? "true" : "false"}">
         <span class="n" aria-hidden="true">${done ? "✓" : i + 1}</span><span class="l l-full">${s.label}</span><span class="l l-short">${s.short}</span>
       </button>`;
@@ -31190,7 +31200,7 @@
         <button type="button" class="ph-print-btn" data-pres-close="1">Close ×</button>
       </div>
       ${!isF ? presTabStripHtml(t) : ""}
-      ${!isF ? presStageStripHtml(isNew) : ""}
+      ${!isF ? presStageStripHtml(t, isNew) : ""}
       ${!isF && presStage === "opening" ? presStageOpeningHtml(t) : ""}
       ${!isF && presStage === "assessment" ? presStageAssessmentHtml(t) : ""}
       ${!isF && presStage === "treatment" ? presStageTreatmentHtml(t) : ""}
@@ -32077,7 +32087,7 @@
     if (!name) return "";
     const rec = phPatientRec(name);
     return `<div class="ph-switch-row ph-acu-switchrow">
-      <span>Track her cycle${rec.cycleOn == null ? ` <span class="faint">· auto</span>` : ""}</span>
+      <span>Cycle${rec.cycleOn == null ? ` <span class="faint">· auto</span>` : ""}</span>
       <span class="ph-switch"><input type="checkbox" data-pres-cycle-enable="${esc(name)}"${phCycleOn(rec) ? " checked" : ""}><span class="ph-switch-track"></span></span>
     </div>`;
   }
@@ -34863,7 +34873,7 @@ Please let me know if you have any questions.`;
     if (!name) return "";
     const rec = phPatientRec(name);
     return `<div class="ph-switch-row ph-acu-switchrow">
-      <span>Also gets acupuncture</span>
+      <span>Acupuncture</span>
       <span class="ph-switch"><input type="checkbox" data-pres-acu-enable="${esc(name)}"${rec.acuEnabled ? " checked" : ""}><span class="ph-switch-track"></span></span>
     </div>`;
   }
