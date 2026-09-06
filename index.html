@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260906-113000">
+<meta name="lcm-build" content="20260906-120000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -16588,7 +16588,7 @@
       PHARMACY = loadPharmacy(); PHARMACY.activeTab = tab;
     } else if (e.key === PRESC_KEY) PRESC = loadPresc();
     else return;
-    phAbbrMap = null; phHerbById = null; phInHouseSet = null; phBlendNames = null;
+    phAbbrMap = null; phHerbById = null; phInHouseSet = null; phBlendNames = null; phRecipeCache = null; phIsFormulaCache = null;
     const el = document.activeElement;
     if (phCellEdit || (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) {
       if (!phSyncRefreshPending) {
@@ -20389,7 +20389,7 @@
   }
   function renderPharmacy() {
     const { herbs, formulas, log, suppliers } = PHARMACY;
-    phAbbrMap = null; phHerbById = null; phInHouseSet = null; phBlendNames = null;   // abbrs / jar links / herbs may have changed — rebuild lazily
+    phAbbrMap = null; phHerbById = null; phInHouseSet = null; phBlendNames = null; phRecipeCache = null; phIsFormulaCache = null;   // abbrs / jar links / herbs may have changed — rebuild lazily
     {
       const tabNow = PHARMACY.activeTab;
       if (phTabLast && tabNow !== phTabLast && !phTabBackNav) { phTabHistory.push(phTabLast); if (phTabHistory.length > 20) phTabHistory.shift(); }
@@ -25586,9 +25586,23 @@
       return phByName(a, b);
     });
   }
+  // refSuggestRecipe scans PRESC.items up to 4 times (each pass calling
+  // presAbbr/presIsFormula per item) to match a jar to its recipe -- cheap
+  // once, but the Refill page calls phRefillRecipe for the SAME jar from
+  // several places in one render (its own row, phRefillCanMake, the
+  // short-count strip) and that render itself runs 2-3x (strip + plan +
+  // sheet). Measured live 2026-09-06 (her "app is laggy" report, found while
+  // auditing other pages after the Dashboard fix): 24 calls to refSuggestRecipe
+  // for just 4 flagged rows, ~950ms total. Same fix as phAbbrMap just above --
+  // resolved ONCE per render into a map, never per row.
+  let phRecipeCache = null;
   function phRefillRecipe(h) {
+    if (!phRecipeCache) phRecipeCache = new Map();
+    if (phRecipeCache.has(h.id)) return phRecipeCache.get(h.id);
     const r = (typeof refSuggestRecipe === "function") ? refSuggestRecipe(h) : null;
-    return (r && (r.ingredients || []).length) ? r : null;
+    const result = (r && (r.ingredients || []).length) ? r : null;
+    phRecipeCache.set(h.id, result);
+    return result;
   }
   const phRefillRecipeTotal = r => (r && r.ingredients || []).reduce((a, i) => a + (i.grams || 0), 0);
   function phRefillDefaultBatch(h, recipe) {
@@ -27285,20 +27299,35 @@
   // Patient scripts vs standing formula recipes — same rule as the inventory
   // (first name-segment ends Tang/San/Wan → formula), with a per-template
   // override (`presType`: "patient" | "formula") that always wins.
+  // The abbreviation-named-recipe fallback below scans ALL of PHARMACY.herbs
+  // per call -- fine once, but this runs per PRESC item (817 of them, 758
+  // without presType so most hit this path) from callers like phApptScriptFor
+  // that filter the whole list. Found 2026-09-06 chasing Communications'
+  // per-row lag (phApptScriptFor alone cost ~75ms/call, ~800ms across 11 rows)
+  // -- same class of cost as phAbbrMap above, same fix: memoize per render
+  // (WeakMap, not id-keyed, so an in-progress item with no id yet still caches
+  // correctly), cleared alongside phAbbrMap/phHerbById wherever those are.
+  let phIsFormulaCache = null;
   const presIsFormula = t => {
-    if (t.presType === "formula") return true;
-    if (t.presType === "patient") return false;
-    const seg = ((t.name || "").split(/[/(#*]/)[0] || "").trim();
-    if (phAutoFormulaName(t.name)) return true;
-    // abbreviation-named recipes ("DGSYS", "HLEJT"): a one-word name that IS
-    // a formula jar's code or name-initials is that jar's recipe, not a patient
-    if (/^\S{2,10}$/.test(seg)) {
-      const up = seg.toUpperCase();
-      return PHARMACY.herbs.some(h => phIsFormula(h)
-        && (phHerbCodes(h).some(c => c.trim().toUpperCase() === up)
-          || phInitials(((h.name || "").split(/[/(#*]/)[0] || "").trim()) === up));
+    if (!phIsFormulaCache) phIsFormulaCache = new WeakMap();
+    if (phIsFormulaCache.has(t)) return phIsFormulaCache.get(t);
+    let result;
+    if (t.presType === "formula") result = true;
+    else if (t.presType === "patient") result = false;
+    else {
+      const seg = ((t.name || "").split(/[/(#*]/)[0] || "").trim();
+      if (phAutoFormulaName(t.name)) result = true;
+      // abbreviation-named recipes ("DGSYS", "HLEJT"): a one-word name that IS
+      // a formula jar's code or name-initials is that jar's recipe, not a patient
+      else if (/^\S{2,10}$/.test(seg)) {
+        const up = seg.toUpperCase();
+        result = PHARMACY.herbs.some(h => phIsFormula(h)
+          && (phHerbCodes(h).some(c => c.trim().toUpperCase() === up)
+            || phInitials(((h.name || "").split(/[/(#*]/)[0] || "").trim()) === up));
+      } else result = false;
     }
-    return false;
+    phIsFormulaCache.set(t, result);
+    return result;
   };
   // the abbreviation that ties a formula recipe to its jar in Formula Refill:
   // typed abbr wins; else a one-word name IS the abbreviation ("BWDHW"),
