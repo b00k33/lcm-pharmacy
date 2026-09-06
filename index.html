@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260906-103000">
+<meta name="lcm-build" content="20260906-110000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -10334,6 +10334,7 @@
   #pharmacyPage .ph-msg-tag-move { background: var(--ph-gold-tint); color: var(--ph-gold-deep); }
   #pharmacyPage .ph-msg-tag-remind { background: var(--ph-blue-tint); color: var(--ph-blue-deep); }
   #pharmacyPage .ph-msg-tag-plan { background: var(--ph-purple-tint); color: var(--ph-purple-deep); }
+  #pharmacyPage .ph-msg-tag-checkin { background: var(--ph-prep-tint); color: var(--ph-prep-deep); }
   #pharmacyPage .ph-msg-tag-custom { background: var(--ph-paper); color: var(--ph-soft); }
   #pharmacyPage .ph-msg-tmpl-list { display: flex; flex-direction: column; }
   #pharmacyPage .ph-msg-tmpl-row { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-top: 1px solid var(--ph-line); }
@@ -28651,27 +28652,47 @@
   const phCkClinic = () => (PHARMACY.locName || "").trim() || "LCM";
   const phCkFirst = name => { const t = phTitle(name || "").trim(); return t.split(/\s+/)[0] || t; };
   const phCkIsOpen = row => !!(phCkOpen && row && phCkOpen.kind === row.kind && phCkOpen.recId === (row.rec ? row.rec.id : row.patientKey));
-  const phCkUserTmpls = () => PHARMACY.ckTemplates || (PHARMACY.ckTemplates = {});
-  // the built-in wording; {first} {herbs} {empty} {clinic} {me} fill in
-  function phCkBuiltin(kind, c) {
-    if (kind === "acu") return "Hi {first}, it's {me} from {clinic}. It's about time for your next acupuncture session — would you like to book one in? {me}";
-    if (kind === "quiet") return "Hi {first}, it's {me} from {clinic}. It's been a while since we've seen you — just checking in on how you're going, and whether you'd like to book a visit. {me}";
-    if (kind === "checkin") return "Hi {first}, it's {me} from {clinic}. You're a few days into the {herbs} — how are you finding them so far? Any changes, or anything unexpected? Reply here anytime and I'll adjust if needed. {me}";
-    if (kind === "running") return "Hi {first}, it's {me} from {clinic}. Just a reminder that your {herbs} will run out around {empty} — would you like the next batch made up so there's no gap? {me}";
-    if (kind === "rebook") return "Hi {first}, it's {me} from {clinic}. It's a good time to book your next visit so I can review how you've gone on the {herbs}. Let me know which days suit you. {me}";
-    const when = c.left == null || !c.emptyLabel ? "should be finishing about now" : c.left > 0 ? "will run out around {empty}" : "would have finished around {empty}";
-    return `Hi {first}, it's {me} from {clinic}. Your {herbs} ${when}. How have you been going with them — any changes, or any side effects? Let me know if you'd like the next batch made up, or I can go over it with you at {visit}. {me}`;
+  // Her ask (2026-09-06): "I want these draft messages part of the
+  // communications templates. right now their systems are different." The 6
+  // check-in quick-picks (4 chips + acu + quiet) now live as ordinary,
+  // slot-tagged rows in the SAME phMsgTemplates() list Communications ->
+  // Templates edits -- one editable place for all her wording, not two. The
+  // starter bodies below are seeded into that list once, migrating any
+  // wording she'd already saved via the old "+ Save mine" (PHARMACY.ckTemplates)
+  // -- see phMsgTemplates()'s seeding step and phCkLegacyTokenConvert.
+  const PH_CK_SLOT_SEEDS = [
+    { slot: "checkin", name: "Check-in", subject: "Checking in — {{clinic}}",
+      body: "Hi {{firstName}}, it's {{me}} from {{clinic}}. You're a few days into the {{herbs}} — how are you finding them so far? Any changes, or anything unexpected? Reply here anytime and I'll adjust if needed. {{me}}" },
+    { slot: "review", name: "Review", subject: "Checking in — {{clinic}}",
+      body: "Hi {{firstName}}, it's {{me}} from {{clinic}}. Your {{herbs}} should be finishing around {{emptyDate}}. How have you been going with them — any changes, or any side effects? Let me know if you'd like the next batch made up, or I can go over it with you at {{visitDate}}. {{me}}" },
+    { slot: "running", name: "Running out", subject: "Checking in — {{clinic}}",
+      body: "Hi {{firstName}}, it's {{me}} from {{clinic}}. Just a reminder that your {{herbs}} will run out around {{emptyDate}} — would you like the next batch made up so there's no gap? {{me}}" },
+    { slot: "rebook", name: "Rebook", subject: "Checking in — {{clinic}}",
+      body: "Hi {{firstName}}, it's {{me}} from {{clinic}}. It's a good time to book your next visit so I can review how you've gone on the {{herbs}}. Let me know which days suit you. {{me}}" },
+    { slot: "acu", name: "Acupuncture follow-up", subject: "Checking in — {{clinic}}",
+      body: "Hi {{firstName}}, it's {{me}} from {{clinic}}. It's about time for your next acupuncture session — would you like to book one in? {{me}}" },
+    { slot: "quiet", name: "Gone quiet", subject: "Checking in — {{clinic}}",
+      body: "Hi {{firstName}}, it's {{me}} from {{clinic}}. It's been a while since we've seen you — just checking in on how you're going, and whether you'd like to book a visit. {{me}}" },
+  ];
+  // one-time conversion of her old single-brace wording to the shared {{...}}
+  // tokens, so a kind she'd already customised via "+ Save mine" keeps her words
+  function phCkLegacyTokenConvert(text) {
+    return String(text || "").replace(/\{first\}/g, "{{firstName}}").replace(/\{herbs\}/g, "{{herbs}}")
+      .replace(/\{empty\}/g, "{{emptyDate}}").replace(/\{clinic\}/g, "{{clinic}}")
+      .replace(/\{visit\}/g, "{{visitDate}}").replace(/\{me\}/g, "{{me}}");
   }
-  const phCkFill = (text, c) => String(text || "").replace(/\{first\}/g, c.first).replace(/\{herbs\}/g, c.herbs).replace(/\{empty\}/g, c.emptyLabel || "soon").replace(/\{clinic\}/g, c.clinic).replace(/\{visit\}/g, c.visit || "your next visit").replace(/\{me\}/g, PH_CK_ME);
+  const phCkSlotTemplate = slot => phMsgTemplates().find(t => t.slot === slot);
+  // maps a row's already-computed context (c) onto the shared token names
+  const phCkCtxForFill = c => ({ firstName: c.first, herbs: c.herbs, emptyDate: c.emptyLabel, visitDate: c.visit, clinic: c.clinic, me: PH_CK_ME, nextAppt: c.visit });
   // ＋ Save mine: her edited text with this patient's particulars turned back
   // into tokens, so the next patient's name / formula / date fill in
   function phCkTokenise(text, c) {
     let t = String(text || "");
     const swap = (val, tok) => { if (val && val.length > 1) t = t.split(val).join(tok); };
-    swap(c.first, "{first}"); swap(c.herbs, "{herbs}"); swap(c.emptyLabel, "{empty}"); swap(c.clinic, "{clinic}"); swap(c.visit, "{visit}"); swap(PH_CK_ME, "{me}");
+    swap(c.first, "{{firstName}}"); swap(c.herbs, "{{herbs}}"); swap(c.emptyLabel, "{{emptyDate}}"); swap(c.clinic, "{{clinic}}"); swap(c.visit, "{{visitDate}}"); swap(PH_CK_ME, "{{me}}");
     return t;
   }
-  const phCkTemplate = (kind, c) => phCkFill(phCkUserTmpls()[kind] || phCkBuiltin(kind, c), c);
+  const phCkTemplate = (kind, c) => phMsgTokenFill(phCkSlotTemplate(kind).body, phCkCtxForFill(c));
   // Google Messages for web (her ask 2026-09-03: "i message patients on
   // gooogle message website. how do i include a quick link that takes me
   // there? help me minimise steps/clicks"). Checked the same day: the web
@@ -29144,7 +29165,7 @@
     const msg = f.text != null ? f.text : phCkTemplate(f.tmpl, c);
     const smsHref = phCkSmsHref(c.phone, msg);
     const chip = (attr, val, label, on) => `<button type="button" class="ph-ck-chip${on ? " on" : ""}" ${attr}="${val}">${label}</button>`;
-    const tmplName = (PH_CK_TMPLS.find(x => x[0] === f.tmpl) || [])[1] || (f.tmpl === "acu" ? "Acu follow-up" : f.tmpl === "quiet" ? "Gone quiet" : "");
+    const tmplName = phCkSlotTemplate(f.tmpl).name;
     return `<div class="ph-ck" data-ck-panel="1">
       <button type="button" class="ph-ck-x" data-ck-close="1" title="Close" aria-label="Close">×</button>
       ${phCkTopBlockHtml(row, c)}
@@ -29222,9 +29243,11 @@
   }
   function phCkSaveTemplate() {
     const row = phCkRow(); if (!row || !phCkForm) return;
-    phCkUserTmpls()[phCkForm.tmpl] = phCkTokenise(phCkCurrentText(), phCkContext(row));
+    const t = phCkSlotTemplate(phCkForm.tmpl);
+    t.body = phCkTokenise(phCkCurrentText(), phCkContext(row));
+    t.editedAt = Date.now();
     savePharmacy();
-    phFlashShow(`✓ Saved as your ${(PH_CK_TMPLS.find(x => x[0] === phCkForm.tmpl) || ["", ""])[1]} wording`);
+    phFlashShow(`✓ Saved as your ${t.name} wording — editable anytime from Communications → Templates`);
   }
   // the Text / Email links carry whatever she has typed, refreshed as she types
   function phCkSyncLinks() {
@@ -29351,7 +29374,7 @@
   // Copy button, or a CSV export -- then a manual tick she makes herself
   // once she's actually sent it. Wiring up real sending is a separate,
   // deliberate decision for her to make explicitly later -- never inferred.
-  const PH_MSG_TAGS = { ready: "Herbs ready", move: "Practice moving", remind: "Reminder", plan: "Treatment plan", custom: "Custom" };
+  const PH_MSG_TAGS = { ready: "Herbs ready", move: "Practice moving", remind: "Reminder", plan: "Treatment plan", checkin: "Check-in wording", custom: "Custom" };
   // starting points she's expected to make her own -- her voice, not final
   // copy shipped on this app's judgement (her explicit instruction, STEP 4)
   const PH_MSG_SEED_TEMPLATES = [
@@ -29371,6 +29394,16 @@
     if (!Array.isArray(PHARMACY.msgTemplates)) {
       PHARMACY.msgTemplates = PH_MSG_SEED_TEMPLATES.map(t => ({ id: uid(), name: t.name, tag: t.tag, subject: t.subject, body: t.body, createdAt: Date.now(), editedAt: Date.now() }));
     }
+    // the 6 check-in quick-picks join this same list, seeded (or migrated
+    // from her old "+ Save mine" wording) the first time either page is
+    // opened after this merge -- idempotent, so this is safe on every call
+    const legacy = PHARMACY.ckTemplates || {};
+    PH_CK_SLOT_SEEDS.forEach(s => {
+      if (!PHARMACY.msgTemplates.some(t => t.slot === s.slot)) {
+        PHARMACY.msgTemplates.push({ id: uid(), name: s.name, tag: "checkin", slot: s.slot, subject: s.subject,
+          body: legacy[s.slot] ? phCkLegacyTokenConvert(legacy[s.slot]) : s.body, createdAt: Date.now(), editedAt: Date.now() });
+      }
+    });
     return PHARMACY.msgTemplates;
   }
   function phMsgPrepared() { if (!Array.isArray(PHARMACY.preparedMessages)) PHARMACY.preparedMessages = []; return PHARMACY.preparedMessages; }
@@ -29389,7 +29422,12 @@
   function phMsgTokenFill(text, ctx) {
     return String(text || "")
       .replace(/\{\{firstName\}\}/g, ctx.firstName || "")
-      .replace(/\{\{nextAppt\}\}/g, ctx.nextAppt || "your next visit");
+      .replace(/\{\{nextAppt\}\}/g, ctx.nextAppt || "your next visit")
+      .replace(/\{\{herbs\}\}/g, ctx.herbs || "herbs")
+      .replace(/\{\{emptyDate\}\}/g, ctx.emptyDate || "soon")
+      .replace(/\{\{visitDate\}\}/g, ctx.visitDate || "your next visit")
+      .replace(/\{\{clinic\}\}/g, ctx.clinic || phCkClinic())
+      .replace(/\{\{me\}\}/g, ctx.me || PH_CK_ME);
   }
   // ---- appointments / acupuncture / dispense read-helpers for the timeline
   // and for {{nextAppt}} -- all reuse the SAME stores the calendar, the
@@ -29493,7 +29531,7 @@
     const batchId = stats.ready.length > 1 ? uid() : null;
     const list = phMsgPrepared();
     stats.ready.forEach(r => {
-      const ctx = { firstName: phCkFirst(r.name), nextAppt: (a => a ? `${phShortDate(a.date)}` : "")(phMsgApptNext(r.key)) };
+      const ctx = { firstName: phCkFirst(r.name), nextAppt: (a => a ? `${phShortDate(a.date)}` : "")(phMsgApptNext(r.key)), clinic: phCkClinic(), me: PH_CK_ME };
       list.unshift({
         id: uid(), patientKey: r.key, patientName: r.name, templateId: tmpl ? tmpl.id : null,
         tag: tmpl ? tmpl.tag : "custom",
@@ -29776,7 +29814,7 @@
         </div>
         <div class="field full"><label>Subject</label><input type="text" id="phMsgTmplSubject" value="${esc(editing.subject)}"></div>
         <div class="field full"><label>Body</label><textarea id="phMsgTmplBody" rows="6">${esc(editing.body)}</textarea>
-          <div class="ph-msg-tokenkey">Tokens: <code>{{firstName}}</code> <code>{{nextAppt}}</code> · editing only changes future prepares — messages already prepared from this template keep their own wording</div>
+          <div class="ph-msg-tokenkey">Tokens: <code>{{firstName}}</code> <code>{{nextAppt}}</code> <code>{{herbs}}</code> <code>{{emptyDate}}</code> <code>{{visitDate}}</code> <code>{{clinic}}</code> <code>{{me}}</code> · editing only changes future prepares — messages already prepared from this template keep their own wording</div>
         </div>
         <div class="form-actions">
           <button type="button" class="btn-cancel" data-ph-msg-tmpl-cancel="1">Cancel</button>
