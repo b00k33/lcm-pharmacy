@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260906-110000">
+<meta name="lcm-build" content="20260906-113000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -17890,8 +17890,15 @@
   // not-yet-completed scheduled dispense) and phFuContactRows() (every
   // not-done follow-up) -- just bucketed by due date instead of filtered to
   // today/overdue only.
-  function phDashWeekItemsFor(dayKey) {
-    const disp = schedActive().filter(s => schedDueDate(s) === dayKey).map(s => {
+  // dueRows/activeSched let a caller looping over many days (the month grid)
+  // hoist phCommDueRows()/schedActive() ONCE instead of paying for them again
+  // per cell -- found live 2026-09-06 (her "app is laggy on desktop" report):
+  // with 500+ real patients phCommDueRows() alone runs ~130ms, and the month
+  // grid was calling this function (uncached) for all ~35-42 of its cells,
+  // making the whole Dashboard take 4-5s to render on every single click.
+  // A lone caller (the single open-day detail panel) can still omit them.
+  function phDashWeekItemsFor(dayKey, dueRows, activeSched) {
+    const disp = (activeSched || schedActive()).filter(s => schedDueDate(s) === dayKey).map(s => {
       const t = PRESC.items.find(x => x.id === s.prescriptionId);
       const patient = t ? presPatientFor(t) : ((s.mailing && s.mailing.name) || "");
       return { who: phTitle(patient || "—"), method: s.method, presId: s.prescriptionId };
@@ -17901,7 +17908,7 @@
     // is "when it crossed the threshold," not something scheduled on this
     // day, so it stays off the grid entirely (still shown in the pinned
     // Overdue band and the Dashboard's own due strip).
-    const fu = phCommDueRows().filter(r => !r.done && r.kind !== "quiet" && r.on === dayKey).map(row => ({
+    const fu = (dueRows || phCommDueRows()).filter(r => !r.done && r.kind !== "quiet" && r.on === dayKey).map(row => ({
       who: phCommRowPatientName(row), kind: row.kind, presId: row.rec ? row.rec.presId : null,
     }));
     // 📅 appointments (2026-09-01): her pasted Cliniko list, same bucketing
@@ -18073,8 +18080,8 @@
       <td>${act}</td>
     </tr>`;
   }
-  function phDashWeekDetailHtml(day, pharmRefill, pharmOrder) {
-    const { disp, fu, appt } = phDashWeekItemsFor(day.key);
+  function phDashWeekDetailHtml(day, pharmRefill, pharmOrder, dueRows, activeSched) {
+    const { disp, fu, appt } = phDashWeekItemsFor(day.key, dueRows, activeSched);
     const dayRefill = pharmRefill.filter(x => keyOf(x.date) === day.key);
     const dayOrder = pharmOrder.filter(x => keyOf(x.date) === day.key);
     const orderOverdueN = dayOrder.filter(x => x.overdue).length;
@@ -18143,6 +18150,8 @@
     if (phDashWeekOpenDay === null) phDashWeekOpenDay = phDashWeekDefaultOpenDay(phDashWeekDays());
     const rangeEnd = parseKey(days[days.length - 1].key);
     const pharmRefill = phDashPharmRefillItems(rangeEnd), pharmOrder = phDashPharmOrderItems(rangeEnd);
+    // computed ONCE for the whole grid, not per cell -- see phDashWeekItemsFor
+    const dueRows = phCommDueRows(), activeSched = schedActive();
     // one quiet badge per day, not a per-kind breakdown -- a month cell is
     // roughly a third the width of the old week cell, nowhere near enough
     // room for "📅 3 · ⏰ 1 · ✉ 2 · 🏺 5" without wrapping or clipping. The
@@ -18154,7 +18163,7 @@
     // language as the existing "This month" stocktake grid (.ph-month-cell)
     // for consistency, not a new pattern.
     const cells = days.map(d => {
-      const { disp, fu, appt } = phDashWeekItemsFor(d.key);
+      const { disp, fu, appt } = phDashWeekItemsFor(d.key, dueRows, activeSched);
       const dayRefill = pharmRefill.filter(x => keyOf(x.date) === d.key), dayOrder = pharmOrder.filter(x => keyOf(x.date) === d.key);
       const n = appt.length + fu.length + disp.length + dayRefill.length + dayOrder.length;
       const overdue = dayRefill.some(x => x.overdue) || dayOrder.some(x => x.overdue);
@@ -18176,7 +18185,7 @@
       </div>
       <div class="ph-cal-grid heads">${heads}</div>
       <div class="ph-cal-grid">${cells}</div>
-      ${openDay ? phDashWeekDetailHtml(openDay, pharmRefill, pharmOrder) : ""}`;
+      ${openDay ? phDashWeekDetailHtml(openDay, pharmRefill, pharmOrder, dueRows, activeSched) : ""}`;
   }
 
   // ============ 📅 Appointment schedule (her ask 2026-09-01, calibrated +
