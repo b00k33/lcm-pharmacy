@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260906-060000">
+<meta name="lcm-build" content="20260906-063000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -28437,12 +28437,53 @@
   // safer (longer) end of each; her call, easy to bump.
   const PH_QUIET_ACU_DAYS = 21;
   const PH_QUIET_HERB_DAYS = 56;
-  // last real touch of ANY kind -- appointment, herbs or acupuncture -- the
-  // three existing read-helpers already cover this, nothing new to calculate
-  function phCommLastTouch(key) {
+  // her ask (2026-09-06, after seeing "2005 days ago" on the list): once
+  // someone is this stale they're a former patient, not someone to chase --
+  // an open-ended alert just piles up dead weight. 3 months, her own words.
+  const PH_QUIET_MAX_DAYS = 90;
+  // a script filed as a "patient" that's really a formula/condition
+  // template (her screenshot, same day: "Vitality", "Allergies And Stress"
+  // etc. showing up as gone-quiet contacts with no profile to open and no
+  // match in Patient search) -- reuses the SAME classifier the Settings
+  // "Formulas filed as patients" bulk re-type already uses (phRetypeCandidates),
+  // so this list can never drift from that one, and it catches these live
+  // even before she's run the bulk re-type herself.
+  function phCommFormulaLikeKeys() {
+    const keys = new Set(phRetypeCandidates().map(c => phPatientKey(c.t.name)));
+    // phRetypeCandidates only classifies a script that STILL exists as a
+    // current PRESC.items entry -- her real "DGSYS" case (2026-09-06): the
+    // script itself is gone (deleted, or already correctly re-typed), but
+    // its old dispense-log lines keep the original text forever, still
+    // contaminating the roster this scan reads. Same all-caps/no-double-
+    // vowel shape phRetypeCandidates already trusts, checked directly
+    // against the log text instead of a live script.
+    const neverSet = new Set(PH_RETYPE_NEVER);
+    (PHARMACY.log || []).forEach(e => {
+      if (!e.patient) return;
+      const k = phPatientKey(e.patient);
+      if (keys.has(k) || neverSet.has(k)) return;
+      const t = e.patient.trim();
+      if (/^[A-Z]{4,10}$/.test(t) && !/[AEIOU]{2}/.test(t)) keys.add(k);
+    });
+    return keys;
+  }
+  // last real touch of ANY kind -- appointment, herbs or acupuncture. Single-
+  // key callers (the check-in panel, opening one quiet row) go through
+  // phMsgApptLast/phMsgLastDispense as before -- fine at that scale. The
+  // full-roster scan below is a different story: those two helpers each
+  // walk the WHOLE log/appointment list, so calling them once per candidate
+  // patient is O(patients × log length) -- found live against her real data
+  // (2026-09-06) at 858 candidates × a 4,021-entry log, ~1 second of blocked
+  // main thread on every single render (every click), which is what read as
+  // "the app keeps crashing." phCommTouchMaps() below builds the same
+  // last-dispense/last-appointment/next-appointment answers as one-off Maps
+  // in a single pass, so phCommQuietRows can look each candidate up in O(1).
+  function phCommLastTouch(key, maps) {
     const touches = [];
-    const appt = phMsgApptLast(key); if (appt) touches.push({ on: appt.date, via: "appointment" });
-    const disp = phMsgLastDispense(key); if (disp) touches.push({ on: disp.date, via: "herbs" });
+    const appt = maps ? maps.apptLast.get(key) : phMsgApptLast(key);
+    if (appt) touches.push({ on: appt.date, via: "appointment" });
+    const disp = maps ? maps.dispense.get(key) : phMsgLastDispense(key);
+    if (disp) touches.push({ on: disp.date, via: "herbs" });
     const rec = PHARMACY.patients && PHARMACY.patients[key];
     const sessions = rec && rec.acuSessions;
     if (sessions && sessions.length) {
@@ -28451,6 +28492,28 @@
     }
     if (!touches.length) return null;
     return touches.sort((a, b) => b.on.localeCompare(a.on))[0];
+  }
+  function phCommTouchMaps() {
+    const todayKey = keyOf(TODAY);
+    const dispense = new Map();
+    (PHARMACY.log || []).forEach(e => {
+      if (e.kind !== "dispense" || !e.patient) return;
+      const k = phPatientKey(e.patient);
+      const cur = dispense.get(k);
+      if (!cur || (e.at || 0) > (cur.at || 0)) dispense.set(k, e);
+    });
+    const apptLast = new Map(), apptNext = new Map();
+    phApptList().forEach(a => {
+      const k = phPatientKey(a.patient), stamp = a.date + (a.time || "");
+      if (a.date <= todayKey) {
+        const cur = apptLast.get(k);
+        if (!cur || stamp > (cur.date + (cur.time || ""))) apptLast.set(k, a);
+      } else {
+        const cur = apptNext.get(k);
+        if (!cur || stamp < (cur.date + (cur.time || ""))) apptNext.set(k, a);
+      }
+    });
+    return { dispense, apptLast, apptNext };
   }
   // flaggedKeys = everyone with a live (undone) herb or acu row already --
   // a quiet alert only fires for someone NOTHING else is already surfacing.
@@ -28461,15 +28524,17 @@
   function phCommQuietRows(flaggedKeys) {
     const todayKey = keyOf(TODAY);
     const rows = [];
+    const formulaLike = phCommFormulaLikeKeys();
+    const maps = phCommTouchMaps();
     phClinikoKnownKeys().forEach(key => {
-      if (flaggedKeys.has(key) || phMsgDoNotContact(key) || phMsgApptNext(key)) return;
-      const touch = phCommLastTouch(key);
+      if (flaggedKeys.has(key) || phMsgDoNotContact(key) || maps.apptNext.has(key) || formulaLike.has(key)) return;
+      const touch = phCommLastTouch(key, maps);
       if (!touch) return;
       const rec = PHARMACY.patients && PHARMACY.patients[key];
       if (rec && rec.quietDismissedTouch === touch.on) return;
       const thresholdDays = (rec && rec.acuEnabled) ? PH_QUIET_ACU_DAYS : PH_QUIET_HERB_DAYS;
       const daysSince = Math.round((parseKey(todayKey) - parseKey(touch.on)) / 86400000);
-      if (daysSince < thresholdDays) return;
+      if (daysSince < thresholdDays || daysSince > PH_QUIET_MAX_DAYS) return;
       const due = parseKey(touch.on); due.setDate(due.getDate() + thresholdDays);
       const dueOn = keyOf(due);
       const snoozedOn = rec && rec.quietSnoozedUntil > dueOn ? rec.quietSnoozedUntil : null;
