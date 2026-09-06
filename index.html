@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260906-120000">
+<meta name="lcm-build" content="20260906-130000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -3648,6 +3648,11 @@
   #pharmacyPage .ph-tl-daycell.on { background: var(--ph-green-deep); color: var(--ph-cream); }
   #pharmacyPage .ph-tl-daycell.on b { color: var(--ph-cream); }
   #pharmacyPage .ph-tl-daycell.on i { background: rgba(255,255,255,.2); color: var(--ph-cream); }
+  #pharmacyPage .ph-tl-daycell.dim { opacity: 0.4; }
+  #pharmacyPage .ph-tl-strip-month { grid-template-columns: repeat(7, minmax(0, 1fr)); row-gap: 4px; }
+  #pharmacyPage .ph-tl-strip-month .ph-tl-daycell { flex-direction: column; gap: 2px; padding: 5px 2px; }
+  #pharmacyPage .ph-tl-striphead { display: flex; justify-content: flex-end; margin-bottom: 4px; }
+  #pharmacyPage .ph-tl-caltoggle { font-size: 11px; }
   #pharmacyPage .ph-tl-widget { position: relative; }   /* the sheet-width grip anchors to it */
   /* the editor docked under a timeline row (her "make it more smooth", 2026-09-04) */
   #pharmacyPage .ph-tl-row.open { background: var(--ph-green-tint); border-radius: 8px 8px 0 0; padding-left: 8px; padding-right: 8px; margin: 0 -8px; }
@@ -17505,10 +17510,10 @@
   // null -- one at a time, same pattern as schedFixAddrOpenId above
   let phDashWeekOpenDay = null;
   // her ask (2026-09-06): "make the dashboard have a calendar style view" --
-  // replaces the old 7-cell week strip with a real month grid (see
-  // phDashCalHtml). Months from the current one; session-only, resets to 0
-  // on reload -- same as every other Dashboard view-state variable here.
-  let phDashCalOffset = 0;
+  // weeks from the current one; session-only, resets to 0 on reload -- same
+  // as every other Dashboard view-state variable here. (Was a month offset
+  // before her 2026-09-06 "change it to week view" ask -- see phDashCalHtml.)
+  let phDashWeekOffset = 0;
   function schedFixAddrSave(schedId, address) {
     const s = PRESC.scheduled.find(x => x.id === schedId);
     if (!s) return;
@@ -18145,45 +18150,49 @@
     return { days, label: `${MON_SHORT[m]} ${y}` };
   }
   const PH_CAL_DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  // her ask (2026-09-06): "i dont like the month view on dashboard, thats
+  // not necessary. change it to week view." A month grid needs its own
+  // month-navigation and a heads row to say which column is which weekday;
+  // a 7-cell week doesn't -- each cell just carries its own day name, same
+  // as the Communications day strip (.ph-comm-daylabel, reused verbatim
+  // here for the same look). The month grid this replaces isn't deleted --
+  // phDashCalDays/PH_CAL_DOW live on as the Patient-profile timeline's new
+  // "expand to month" view, see renderPresWeek.
+  function phDashWeekLabel(days) {
+    const first = parseKey(days[0].key), last = parseKey(days[days.length - 1].key);
+    return first.getMonth() === last.getMonth()
+      ? `${first.getDate()}–${last.getDate()} ${MON_SHORT[first.getMonth()]}`
+      : `${first.getDate()} ${MON_SHORT[first.getMonth()]} – ${last.getDate()} ${MON_SHORT[last.getMonth()]}`;
+  }
   function phDashCalHtml() {
-    const { days, label } = phDashCalDays(phDashCalOffset);
+    const days = phDashWeekDays(phDashWeekOffset);
+    const label = phDashWeekLabel(days);
     if (phDashWeekOpenDay === null) phDashWeekOpenDay = phDashWeekDefaultOpenDay(phDashWeekDays());
     const rangeEnd = parseKey(days[days.length - 1].key);
     const pharmRefill = phDashPharmRefillItems(rangeEnd), pharmOrder = phDashPharmOrderItems(rangeEnd);
     // computed ONCE for the whole grid, not per cell -- see phDashWeekItemsFor
     const dueRows = phCommDueRows(), activeSched = schedActive();
-    // one quiet badge per day, not a per-kind breakdown -- a month cell is
-    // roughly a third the width of the old week cell, nowhere near enough
-    // room for "📅 3 · ⏰ 1 · ✉ 2 · 🏺 5" without wrapping or clipping. The
-    // full per-kind breakdown still lives one tap away in the same detail
-    // panel below (phDashWeekDetailHtml), unchanged -- same "count, not
-    // names/kinds, in the cell; everything real one tap away" idea §5
-    // already established for the week strip, just carried one step further
-    // for the narrower month cell. Same has/overdue/badge/dash visual
-    // language as the existing "This month" stocktake grid (.ph-month-cell)
-    // for consistency, not a new pattern.
     const cells = days.map(d => {
       const { disp, fu, appt } = phDashWeekItemsFor(d.key, dueRows, activeSched);
       const dayRefill = pharmRefill.filter(x => keyOf(x.date) === d.key), dayOrder = pharmOrder.filter(x => keyOf(x.date) === d.key);
       const n = appt.length + fu.length + disp.length + dayRefill.length + dayOrder.length;
       const overdue = dayRefill.some(x => x.overdue) || dayOrder.some(x => x.overdue);
       const open = phDashWeekOpenDay === d.key;
-      return `<button type="button" class="ph-cal-cell${d.today ? " today" : ""}${n ? " has" : ""}${overdue ? " overdue" : ""}${d.past ? " past" : ""}${!d.inMonth ? " dim" : ""}${d.work ? " wd" : ""}${open ? " open" : ""}" data-ph-dash-week-day="${d.key}" aria-expanded="${open ? "true" : "false"}" title="${d.today ? "Today" : ""}">
+      return `<button type="button" class="ph-cal-cell${d.today ? " today" : ""}${n ? " has" : ""}${overdue ? " overdue" : ""}${d.past ? " past" : ""}${d.work ? " wd" : ""}${open ? " open" : ""}" data-ph-dash-week-day="${d.key}" aria-expanded="${open ? "true" : "false"}" title="${d.today ? "Today" : ""}">
+        <span class="ph-comm-daylabel">${d.dow}</span>
         <span class="ph-cal-dnum">${d.dnum}</span>
         ${n ? `<span class="badge">${n}</span>` : ""}
       </button>`;
     }).join("");
     const openDay = days.find(d => d.key === phDashWeekOpenDay);
-    const heads = PH_CAL_DOW.map(d => `<div class="ph-cal-head">${d}</div>`).join("");
-    const isCurMonth = phDashCalOffset === 0;
+    const isCurWeek = phDashWeekOffset === 0;
     return `<div class="ph-dash-secthead"><h2>Calendar</h2><span class="rule"></span><button type="button" class="ph-name-link ph-dash-card-sub" data-ph-appt-open="1">📅 Add appointments</button></div>
       <div class="ph-wkt-nav">
-        <button type="button" class="ph-wkt-navbtn" data-ph-dash-cal-nav="-1" aria-label="Previous month">‹</button>
+        <button type="button" class="ph-wkt-navbtn" data-ph-dash-cal-nav="-1" aria-label="Previous week">‹</button>
         <span class="ph-wkt-navlbl"><b>${esc(label)}</b></span>
-        <button type="button" class="ph-wkt-navbtn" data-ph-dash-cal-nav="1" aria-label="Next month">›</button>
-        ${!isCurMonth ? `<button type="button" class="ph-name-link" data-ph-dash-cal-nav="0">This month</button>` : ""}
+        <button type="button" class="ph-wkt-navbtn" data-ph-dash-cal-nav="1" aria-label="Next week">›</button>
+        ${!isCurWeek ? `<button type="button" class="ph-name-link" data-ph-dash-cal-nav="0">This week</button>` : ""}
       </div>
-      <div class="ph-cal-grid heads">${heads}</div>
       <div class="ph-cal-grid">${cells}</div>
       ${openDay ? phDashWeekDetailHtml(openDay, pharmRefill, pharmOrder, dueRows, activeSched) : ""}`;
   }
@@ -21053,8 +21062,8 @@
       const dashCalNav = e.target.closest("[data-ph-dash-cal-nav]");
       if (dashCalNav) {
         const d = Number(dashCalNav.dataset.phDashCalNav);
-        phDashCalOffset = d === 0 ? 0 : phDashCalOffset + d;
-        phDashWeekOpenDay = "";   // closed on purpose -- a different month has no "today" default to pick
+        phDashWeekOffset = d === 0 ? 0 : phDashWeekOffset + d;
+        phDashWeekOpenDay = "";   // closed on purpose -- a different week has no "today" default to pick
         renderPhDashboardPage();
         return;
       }
@@ -21170,6 +21179,19 @@
       if (presWeekDay) {
         const k = presWeekDay.dataset.presWeekDay;
         presWeekOpenDay = presWeekOpenDay === k ? null : k;
+        // her practical pick (2026-09-06): picking a day off the expanded
+        // month view lands her back in the focused week/day view, not a big
+        // grid left sitting open once she's found what she was looking for
+        presCalExpanded = false;
+        renderPresWeek();
+        return;
+      }
+      const presCalToggle = e.target.closest("[data-pres-cal-toggle]");
+      if (presCalToggle) { presCalExpanded = !presCalExpanded; renderPresWeek(); return; }
+      const presCalMonthNav = e.target.closest("[data-pres-cal-monthnav]");
+      if (presCalMonthNav) {
+        const d = Number(presCalMonthNav.dataset.presCalMonthnav);
+        presCalMonthOffset = d === 0 ? 0 : presCalMonthOffset + d;
         renderPresWeek();
         return;
       }
@@ -27249,6 +27271,14 @@
   // her ask 2026-09-04 ("copy paste 1 week or 1 month"): the table can step
   // to other weeks now, so a month paste has somewhere to be seen
   let presWeekOffset = 0;
+  // her ask (2026-09-06): "in patients files, add the month view to expand
+  // from week view" -- the week strip stays the default (Day nav below it
+  // still drives which single day's timeline shows); a toggle swaps the
+  // 7-cell strip for a full month grid, reusing the exact month-day/label
+  // generator the Dashboard's own calendar used before her SAME-day ask to
+  // simplify that page to week-only (phDashCalDays/PH_CAL_DOW). Session-only.
+  let presCalExpanded = false;
+  let presCalMonthOffset = 0;
   // timeline filters (2026-09-04): type, search, status, filters row open
   let presTlType = "all", presTlQ = "", presTlStatus = "all", presTlFiltersOpen = false;
   // her ask 2026-09-05 ("make it have more complex options" -- the 🩸 icon
@@ -27508,7 +27538,24 @@
     const scripts = appts.map(a => phApptScriptFor(phPatientKey(a.patient))).filter(Boolean);
     const herbSet = new Set(); scripts.forEach(t => (t.ingredients || []).forEach(i => herbSet.add((i.herb || i.name || "").toLowerCase())));
     const grams = scripts.reduce((n, t) => n + (t.totalGrams || 0), 0);
-    const cell = d => { const n = phApptFor(d.key).length; return `<button type="button" class="ph-tl-daycell${d.key === dayKey ? " on" : ""}${d.today ? " today" : ""}${d.work ? " wd" : ""}${n ? " has" : ""}" data-pres-week-day="${d.key}" aria-pressed="${d.key === dayKey}"><span>${esc(d.dow)}</span><b>${d.dnum}</b>${n ? `<i>${n}</i>` : ""}</button>`; };
+    const cell = d => { const n = phApptFor(d.key).length; return `<button type="button" class="ph-tl-daycell${d.key === dayKey ? " on" : ""}${d.today ? " today" : ""}${d.work ? " wd" : ""}${n ? " has" : ""}${d.inMonth === false ? " dim" : ""}" data-pres-week-day="${d.key}" aria-pressed="${d.key === dayKey}"><span>${esc(d.dow)}</span><b>${d.dnum}</b>${n ? `<i>${n}</i>` : ""}</button>`; };
+    // her ask (2026-09-06): "add the month view to expand from week view" --
+    // reuses the exact month-day generator the Dashboard's own calendar used
+    // before that same ask simplified it to week-only (phDashCalDays).
+    const calToggle = `<button type="button" class="ph-name-link ph-tl-caltoggle" data-pres-cal-toggle="1">${presCalExpanded ? "▴ Week view" : "▾ Month view"}</button>`;
+    const stripHtml = presCalExpanded ? (() => {
+      const { days: monthDays, label: monthLabel } = phDashCalDays(presCalMonthOffset);
+      const isCurMonth = presCalMonthOffset === 0;
+      return `<div class="ph-tl-striphead">${calToggle}</div>
+      <div class="ph-wkt-nav">
+        <button type="button" class="ph-wkt-navbtn" data-pres-cal-monthnav="-1" aria-label="Previous month">‹</button>
+        <span class="ph-wkt-navlbl"><b>${esc(monthLabel)}</b></span>
+        <button type="button" class="ph-wkt-navbtn" data-pres-cal-monthnav="1" aria-label="Next month">›</button>
+        ${!isCurMonth ? `<button type="button" class="ph-name-link" data-pres-cal-monthnav="0">This month</button>` : ""}
+      </div>
+      <div class="ph-tl-strip ph-tl-strip-month">${monthDays.map(cell).join("")}</div>`;
+    })() : `<div class="ph-tl-striphead">${calToggle}</div>
+      <div class="ph-tl-strip">${days.map(cell).join("")}</div>`;
     const dot = r => `<span class="ph-tl-dot ${r.done ? "done" : r.kind === "acu" ? "acu" : r.script ? "chm" : "new"}"></span>`;
     const statusChip = r => r.done ? `<span class="ph-tl-chip done">✓ ${esc(presTimeStr(new Date(r.done.at || 0)))}</span>`
       : r.status === "short" ? `<span class="ph-tl-chip short">⚠ ${r.prep.short.length} short</span><button type="button" class="ph-name-link" data-ph-appt-order="${r.a.id}">Order</button>`
@@ -27569,7 +27616,7 @@
         <button type="button" class="ph-tl-filters${presTlStatus !== "all" ? " on" : ""}" data-pres-tl-filters="1" aria-expanded="${presTlFiltersOpen ? "true" : "false"}">⚙ Filters${presTlStatus !== "all" ? ` · ${(statuses.find(x => x[0] === presTlStatus) || [])[1]}` : ""}</button>
       </div>
       ${presTlFiltersOpen ? `<div class="ph-tl-statusrow">${statuses.map(([v, l]) => `<button type="button" class="ph-ck-chip${presTlStatus === v ? " on" : ""}" data-pres-tl-status="${v}">${l}</button>`).join("")}</div>` : ""}
-      <div class="ph-tl-strip">${days.map(cell).join("")}</div>
+      ${stripHtml}
       <div class="ph-tl-body">
         <div class="ph-tl-list">
           <div class="ph-tl-listhead">Timeline – ${esc(DOW_SHORT[dayD.getDay()])} ${dayD.getDate()} ${esc(MON_SHORT[dayD.getMonth()])}${rows.length !== appts.length ? ` <span class="faint">· ${rows.length} of ${appts.length} shown</span>` : ""}</div>
