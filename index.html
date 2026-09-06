@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260906-073000">
+<meta name="lcm-build" content="20260906-080000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6953,7 +6953,13 @@
   #pharmacyPage .ph-fu-card-line { font-size: 12.5px; }
   #pharmacyPage .ph-fu-card-note { font-size: 12px; color: var(--ph-soft); background: var(--ph-paper); border-radius: 8px; padding: 6px 8px; margin-top: 2px; }
   #pharmacyPage .ph-fu-card-acts { display: flex; gap: 8px; margin-top: 4px; }
-  @media (max-width: 720px) {
+  /* 900px, not the old 720px -- must match the JS breakpoint every .ph-fu-cards
+     consumer switches on (window.innerWidth > 900, the app-wide standard).
+     Below 900 the Communications page already renders phone-card markup;
+     a gap here between 721-900px left it in the DOM but display:none,
+     invisible under a correct header/count (her report 2026-09-06,
+     "narrow view cuts out the communications"). */
+  @media (max-width: 900px) {
     #pharmacyPage .ph-fu-table-wrap { display: none; }
     #pharmacyPage .ph-fu-cards { display: flex; flex-direction: column; }
   }
@@ -28381,6 +28387,7 @@
   // same active-plan/current-phase fallback chain already used at the one
   // existing acu call site ("Log today's session", data-pres-acu-log)
   function phAcuCurrentCadenceDays(name) {
+    if (phTpAllPlansInactive(name)) return { days: null, noAcu: true, source: "plan: done/paused" };
     const plans = phTpPlans(name);
     const activePlan = plans.find(p => p.status === "active") || plans[0];
     const curPhase = activePlan ? phTpPlanCurrentPhase(activePlan) : null;
@@ -28537,7 +28544,7 @@
     const formulaLike = phCommFormulaLikeKeys();
     const maps = phCommTouchMaps();
     phClinikoKnownKeys().forEach(key => {
-      if (flaggedKeys.has(key) || phMsgDoNotContact(key) || maps.apptNext.has(key) || formulaLike.has(key)) return;
+      if (flaggedKeys.has(key) || phMsgDoNotContact(key) || maps.apptNext.has(key) || formulaLike.has(key) || phTpAllPlansInactive(phTitle(key))) return;
       const touch = phCommLastTouch(key, maps);
       if (!touch) return;
       const rec = PHARMACY.patients && PHARMACY.patients[key];
@@ -32962,6 +32969,13 @@
   // ============================================================
   const phTpPlans = name => (phPatientPeek(name) || {}).treatmentPlans || [];
   const phTpFindPlan = (name, id) => phTpPlans(name).find(p => p.id === id) || null;
+  // her ask (2026-09-06): once EVERY treatment plan a patient has is marked
+  // Done or Paused -- the completion control that already exists on the plan
+  // itself (PH_TP_STATUSES above) -- Communications must stop generating
+  // acu-followup nags and gone-quiet alerts for them; there's nothing left to
+  // chase. A patient with NO treatment plan at all isn't "done" with
+  // anything, so they keep the existing default-cadence/quiet behaviour.
+  const phTpAllPlansInactive = name => { const plans = phTpPlans(name); return plans.length > 0 && !plans.some(p => p.status === "active"); };
   const PH_TP_STATUSES = [
     { v: "active", label: "Active", pill: "dispensed" },
     { v: "paused", label: "Paused", pill: "stale" },
