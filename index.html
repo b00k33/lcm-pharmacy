@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260906-050100">
+<meta name="lcm-build" content="20260906-060000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -3796,6 +3796,14 @@
     border-radius: 999px; padding: 1px 7px; line-height: 1.4;
   }
   #pharmacyPage .ph-cal-cell.overdue .badge { background: var(--ph-zero-deep, #B4483A); }
+  /* Communications page (2026-09-06): the 14-day strip reuses .ph-cal-cell
+     verbatim (same look the Dashboard month grid already established) --
+     this just adds the horizontal-scroll row it sits in and its own
+     "selected day" ring, since .open already means something else there. */
+  #pharmacyPage .ph-comm-strip { display: flex; gap: 6px; overflow-x: auto; max-width: 1072px; margin: 0 auto 14px; padding-bottom: 2px; }
+  #pharmacyPage .ph-comm-strip .ph-cal-cell { flex: 0 0 60px; }
+  #pharmacyPage .ph-comm-strip .ph-cal-cell.sel { box-shadow: inset 0 0 0 2px var(--ph-green); }
+  #pharmacyPage .ph-comm-daylabel { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ph-faint); }
   @media (max-width: 640px) {
     #pharmacyPage .ph-cal-grid { gap: 3px; }
     #pharmacyPage .ph-cal-cell { padding: 6px 2px; min-height: 40px; }
@@ -6921,6 +6929,8 @@
   #pharmacyPage .ph-fu-badge.review { background: var(--ph-blue-tint); color: var(--ph-blue-deep); }
   #pharmacyPage .ph-fu-badge.both { background: var(--ph-gold-tint); color: var(--ph-gold-deep); }
   #pharmacyPage .ph-fu-badge.done { background: var(--ph-green-tint); color: var(--ph-green-deep); }
+  #pharmacyPage .ph-fu-badge.acu { background: var(--ph-purple-tint); color: var(--ph-purple-deep); }
+  #pharmacyPage .ph-fu-badge.quiet { background: var(--ph-phaseout-tint); color: var(--ph-phaseout-deep); }
   /* mobile: one card per follow-up, not a squeezed table (her open item 4,
      drawn deliberately rather than left to reflow) */
   #pharmacyPage .ph-fu-cards { display: none; }
@@ -10431,8 +10441,7 @@
           <button type="button" id="phBackBtn" class="ph-nav-back" title="Back to the page you came from (Alt+← or the mouse back button)" aria-label="Back" hidden><svg class="icn" aria-hidden="true"><use href="#i-chev-l"/></svg></button>
           <button type="button" class="ph-nav-item" data-ph-tab="dashboard" data-ph-tip="Dashboard"><span class="ph-nav-ic"><svg class="icn"><use href="#i-home"/></svg></span><span class="ph-nav-label">Dashboard</span><span class="ph-nav-badge crit" id="phDashFuBadge" hidden>0</span></button>
           <button type="button" class="ph-nav-item" data-ph-tab="prescriptions" data-ph-tip="Patient profile"><span class="ph-nav-ic"><svg class="icn"><use href="#i-pill"/></svg></span><span class="ph-nav-label">Patient profile</span></button>
-          <button type="button" class="ph-nav-item" data-ph-tab="followups" data-ph-tip="Follow-ups"><span class="ph-nav-ic"><svg class="icn"><use href="#i-clock"/></svg></span><span class="ph-nav-label">Follow-ups</span><span class="ph-nav-badge" id="phFuNavBadge" hidden>0</span></button>
-          <button type="button" class="ph-nav-item" data-ph-tab="messages" data-ph-tip="Messages"><span class="ph-nav-ic"><svg class="icn"><use href="#i-msg"/></svg></span><span class="ph-nav-label">Messages</span></button>
+          <button type="button" class="ph-nav-item" data-ph-tab="communications" data-ph-tip="Communications"><span class="ph-nav-ic"><svg class="icn"><use href="#i-clock"/></svg></span><span class="ph-nav-label">Communications</span><span class="ph-nav-badge" id="phCommNavBadge" hidden>0</span></button>
           <button type="button" class="ph-nav-item" data-ph-tab="intake" data-ph-tip="Intake review"><span class="ph-nav-ic"><svg class="icn"><use href="#i-mail"/></svg></span><span class="ph-nav-label">Intake review</span><span class="ph-nav-badge" id="phIntakeNavBadge" hidden>0</span></button>
           <button type="button" class="ph-nav-item" data-ph-tab="inventory" data-ph-tip="Inventory"><span class="ph-nav-ic"><svg class="icn"><use href="#i-leaf"/></svg></span><span class="ph-nav-label">Inventory</span></button>
           <button type="button" class="ph-nav-item" data-ph-tab="refill" data-ph-tip="Formula refill"><span class="ph-nav-ic"><svg class="icn"><use href="#i-jar"/></svg></span><span class="ph-nav-label">Formula refill</span><span class="ph-nav-badge" id="phRefillBadge" hidden>0</span></button>
@@ -16719,9 +16728,8 @@
     // had no entry, so the shared top bar silently showed "LCM Pharmacy"
     // instead of "Follow-ups" -- unrelated to the shell job itself, fixed
     // in passing since it's the same lookup table.
-    followups: "Follow-ups",
+    communications: "Communications",
     intake: "Intake Review",
-    messages: "Messages",
     journey: "Patient",
   };
   // her ask 2026-08-15: promote each page's primary action into the shared
@@ -17094,6 +17102,8 @@
     const fuN = phDashFuDue().length;
     const dashFuBadge = document.getElementById("phDashFuBadge");
     if (dashFuBadge) { dashFuBadge.hidden = !fuN; dashFuBadge.textContent = fuN; }
+    const commNavBadge = document.getElementById("phCommNavBadge");
+    if (commNavBadge) { commNavBadge.hidden = !fuN; commNavBadge.textContent = fuN; }
     // §1: the refill-list badge, counted and shown exactly like the order one
     const refillN = phRefillCount();
     const refillBadge = document.getElementById("phRefillBadge");
@@ -17862,8 +17872,13 @@
       const patient = t ? presPatientFor(t) : ((s.mailing && s.mailing.name) || "");
       return { who: phTitle(patient || "—"), method: s.method, presId: s.prescriptionId };
     });
-    const fu = phFuContactRows().filter(r => !r.done && r.on === dayKey).map(row => ({
-      who: phTitle(row.rec.patient), kind: row.kind, presId: row.rec.presId,
+    // her scope line (Communications merge, 2026-09-06): herb + acu rows earn
+    // a spot on the calendar grid same as always -- a gone-quiet row's date
+    // is "when it crossed the threshold," not something scheduled on this
+    // day, so it stays off the grid entirely (still shown in the pinned
+    // Overdue band and the Dashboard's own due strip).
+    const fu = phCommDueRows().filter(r => !r.done && r.kind !== "quiet" && r.on === dayKey).map(row => ({
+      who: phCommRowPatientName(row), kind: row.kind, presId: row.rec ? row.rec.presId : null,
     }));
     // 📅 appointments (2026-09-01): her pasted Cliniko list, same bucketing
     const appt = phApptFor(dayKey);
@@ -18047,10 +18062,10 @@
     // Dispensing/Follow-ups untouched -- her spec didn't ask for these two
     // groups to change, only Refill/Order (§3/§4) and the stat strip (§1.3)
     const dispRows = disp.map(x => `<button type="button" class="ph-week-detail-row" data-ph-dash-pres-open="${x.presId}"><svg class="icn" aria-hidden="true"><use href="#${x.method === "pickup" ? "i-car" : "i-mail"}"/></svg><b>${esc(x.who)}</b><span class="meta">${x.method === "pickup" ? "Pickup" : "To post"}</span></button>`);
-    const fuRows = fu.map(x => `<button type="button" class="ph-week-detail-row" data-fu-open="${x.presId}"><svg class="icn" aria-hidden="true"><use href="#i-clock"/></svg><b>${esc(x.who)}</b><span class="meta">${x.kind === "checkin" ? "Check-in" : x.kind === "review" ? "Review" : "Check-in & review"}</span></button>`);
+    const fuRows = fu.map(x => `<button type="button" class="ph-week-detail-row" ${x.kind === "acu" ? 'data-ph-tab="communications"' : `data-fu-open="${x.presId}"`}><svg class="icn" aria-hidden="true"><use href="#i-clock"/></svg><b>${esc(x.who)}</b><span class="meta">${x.kind === "checkin" ? "Check-in" : x.kind === "review" ? "Review" : x.kind === "acu" ? "Acupuncture follow-up" : "Check-in & review"}</span></button>`);
     const groups = [
       phDashWeekGroupHtml("Dispensing", dispRows, "prescriptions", disp.length),
-      phDashWeekGroupHtml("Follow-ups", fuRows, "followups", fu.length),
+      phDashWeekGroupHtml("Communications", fuRows, "communications", fu.length),
     ].join("");
     // §4: Refill/Order as real tables, side by side -- count lives in the
     // heading (REFILL · 9 / ORDER · 17 · 5 out of stock), nowhere else
@@ -18933,26 +18948,30 @@
     if (!lv) return `<span class="faint">—</span>`;
     return `<span class="ph-rf-bar ${lv.tone}" title="${lv.pct}% of the script left · lasts ${lv.lasts.toFixed(1)} d · empty ${esc(phFuDateLabel(rec.emptyOn))}"><i style="--p:${lv.pct}%"></i><b>${lv.pct}%</b></span>`;
   }
-  // the one list both the phone rows and the desktop sheet read
+  // the one list both the phone rows and the desktop sheet read -- the
+  // Communications merge (2026-09-06) widened this from herb-only to the
+  // merged herb+acu+gone-quiet list; phCommRowId/phCommRowPatientName/
+  // phCommRowMetaLabel (defined by phCommDueRows, further down) do the
+  // per-kind branching so this stays a one-line wrapper.
   function phDashFuDue() {
     const todayKey = keyOf(TODAY);
-    return phFuContactRows().filter(r => !r.done && r.on <= todayKey).sort((a, b) => a.on < b.on ? -1 : 1);
+    return phCommDueRows().filter(r => !r.done && r.on <= todayKey).sort((a, b) => a.on < b.on ? -1 : 1);
   }
   function phDashFuRowsHtml(zone) {
     const due = phDashFuDue();
     if (!due.length) return "";
     const shown = due.slice(0, 4);
     return `${zone
-      ? `<div class="ph-dz-sh">Follow-ups due · ${due.length}</div>`
-      : `<div class="ph-dash-secthead"><h2>Follow-ups due</h2><span class="rule"></span><span class="ph-dash-card-sub">${due.length}</span></div>`}
-      <div class="ph-dash-furows">${shown.map(row => { const open = phCkIsOpen(row); return `<div class="ph-dash-furow${open ? " ck-open" : ""}">
+      ? `<div class="ph-dz-sh">Communications due · ${due.length}</div>`
+      : `<div class="ph-dash-secthead"><h2>Communications due</h2><span class="rule"></span><span class="ph-dash-card-sub">${due.length}</span></div>`}
+      <div class="ph-dash-furows">${shown.map(row => { const open = phCkIsOpen(row); const id = phCommRowId(row); return `<div class="ph-dash-furow${open ? " ck-open" : ""}">
         <span class="ic"><svg class="icn" aria-hidden="true"><use href="#i-clock"/></svg></span>
-        <button type="button" class="nm ph-name-link" data-ck-open="${row.rec.id}:${row.kind}">${esc(phTitle(row.rec.patient))}</button>
+        <button type="button" class="nm ph-name-link" data-ck-open="${esc(id)}:${row.kind}">${esc(phCommRowPatientName(row))}</button>
         <span class="ago">${esc(phFuRelDay(row.on))}</span>
-        <span class="meta">${row.kind === "checkin" ? "check-in" : row.kind === "review" ? "review" : "check-in & review"}${row.snoozed ? " · no reply yet" : ""}${esc(phCkBookedLabel(row.rec))}</span>
-        <button type="button" class="ph-load-btn" data-ck-open="${row.rec.id}:${row.kind}">${open ? "Close" : row.kind === "checkin" ? "Check in" : "Review"}</button>
+        <span class="meta">${esc(phCommRowMetaLabel(row))}${row.snoozed ? " · no reply yet" : ""}${row.rec ? esc(phCkBookedLabel(row.rec)) : ""}</span>
+        <button type="button" class="ph-load-btn" data-ck-open="${esc(id)}:${row.kind}">${open ? "Close" : row.kind === "checkin" ? "Check in" : "Review"}</button>
       </div>${open ? phCkPanelHtml(row) : ""}`; }).join("")}
-      ${due.length > shown.length ? `<div class="ph-dash-seeall"><button type="button" class="ph-name-link" data-ph-tab="followups">See all ${due.length} →</button></div>` : ""}</div>`;
+      ${due.length > shown.length ? `<div class="ph-dash-seeall"><button type="button" class="ph-name-link" data-ph-tab="communications">See all ${due.length} →</button></div>` : ""}</div>`;
   }
   // urgent stock -- in-use items empty or under a fortnight of cover,
   // grouped Formulas/Herbs, each ascending by days of cover (her refinement
@@ -19171,6 +19190,19 @@
     // follow-up record the Follow-ups page reads (dispensedDate /
     // lastsDays / emptyOn / gramsDispensed / formulaLabel)
     const rows = due.slice(0, 4).map(row => {
+      const open = phCkIsOpen(row);
+      const id = phCommRowId(row);
+      // acu/gone-quiet rows have no dispense to show a Level/Cover/Use bar
+      // for -- same row shape, the middle three columns just carry their
+      // own meta text instead (Communications merge, 2026-09-06)
+      if (!row.rec) return `<div class="ph-ds-row${open ? " ck-open" : ""}">
+        <div class="st"><span class="glyph"><svg class="icn" aria-hidden="true"><use href="#i-clock"/></svg></span><span class="date hot">${esc(phFuRelDay(row.on))}</span></div>
+        <div class="nm"><button type="button" class="ph-name-link" data-ck-open="${esc(id)}:${row.kind}">${esc(phCommRowPatientName(row))}</button><span class="kind">${esc(phCommRowMetaLabel(row))}${row.snoozed ? " · no reply yet" : ""}</span></div>
+        <div><span class="faint">—</span></div>
+        <div class="cover"><span class="faint">—</span></div>
+        <div class="faint">${row.kind === "acu" ? "Acupuncture" : "Gone quiet"}</div>
+        <div><button type="button" class="ph-os-lnk" data-ck-open="${esc(id)}:${row.kind}">${open ? "Close ▴" : "Contact"}</button></div>
+      </div>${open ? phCkPanelHtml(row) : ""}`;
       const rec = row.rec;
       const lv = phFuScriptLevel(rec);
       const lvl = phFuLevelBarHtml(lv, rec);
@@ -19181,7 +19213,6 @@
       // her ask (2026-09-03): the name and the action open the check-in panel
       // IN PLACE under this row -- nothing jumps to the Prescriptions page any
       // more (the panel has its own "Open script" link for when she wants it)
-      const open = phCkIsOpen(row);
       return `<div class="ph-ds-row${open ? " ck-open" : ""}">
         <div class="st"><span class="glyph"><svg class="icn" aria-hidden="true"><use href="#i-clock"/></svg></span><span class="date hot">${esc(phFuRelDay(row.on))}</span></div>
         <div class="nm"><button type="button" class="ph-name-link" data-ck-open="${rec.id}:${row.kind}">${esc(phTitle(rec.patient))}</button><span class="kind">${row.kind === "checkin" ? "check-in" : row.kind === "review" ? "review" : "check-in & review"}${row.snoozed ? " · no reply yet" : ""}${esc(phCkBookedLabel(row.rec))}</span></div>
@@ -19194,7 +19225,7 @@
     // her ask (2026-09-03): a quick link to Google Messages for web, right
     // where the follow-ups are -- one reused tab (same named target the
     // panel's button uses)
-    return phDsBand("fu", "fu", "i-clock", "Follow-ups due", phDsCnt(due.length), `<span class="ph-ds-links">${phCkGmsgLinkHtml()}${phDsLnk('data-ph-tab="followups"', due.length > 4 ? `All ${due.length} follow-ups` : "All follow-ups")}</span>`)
+    return phDsBand("fu", "fu", "i-clock", "Communications due", phDsCnt(due.length), `<span class="ph-ds-links">${phCkGmsgLinkHtml()}${phDsLnk('data-ph-tab="communications"', due.length > 4 ? `All ${due.length}` : "All")}</span>`)
       + (phDsCollapsed.has("fu") ? "" : rows);
   }
   // urgent stock: same phDashUrgentItems() list, same per-row action logic
@@ -20339,7 +20370,11 @@
     // | Patients) — the active tab persists so she returns where she left off
     // "dashboard"/"suppliers"/"settings" (PASTE 1, 2026-08-15): placeholder
     // pages for the new sidebar -- real content is PASTE 3's job
-    const tab = ["prescriptions", "followups", "refill", "restock", "stats", "log", "dashboard", "suppliers", "settings", "stocktake", "pricereview", "guide", "supplements", "relocation", "intake", "messages", "journey"].includes(PHARMACY.activeTab) ? PHARMACY.activeTab : "inventory";
+    // Communications merge (2026-09-06): a stale saved tab from before the
+    // merge lands on the new page instead of silently falling through to
+    // Inventory the first time she opens the app post-update.
+    if (PHARMACY.activeTab === "followups" || PHARMACY.activeTab === "messages") PHARMACY.activeTab = "communications";
+    const tab = ["prescriptions", "communications", "refill", "restock", "stats", "log", "dashboard", "suppliers", "settings", "stocktake", "pricereview", "guide", "supplements", "relocation", "intake", "journey"].includes(PHARMACY.activeTab) ? PHARMACY.activeTab : "inventory";
     // hover-dropdown nav (her ask): two section parents; hovering a parent drops
     // a menu of its pages. Inventory owns stock ops; Prescriptions owns the patient side.
     const phTabGroups = [
@@ -23028,10 +23063,18 @@
       const ckDone = e.target.closest("[data-ck-done]");
       if (ckDone) { phCkDone(ckDone.dataset.ckDone === "script"); return; }
       if (e.target.closest("[data-ck-snooze]")) { phCkSnooze(); return; }
+      const commDay = e.target.closest("[data-ph-comm-day]");
+      if (commDay) { phCommDay = commDay.dataset.phCommDay; renderPhCommunicationsPage(); return; }
       const fuDone = e.target.closest("[data-fu-done]");
-      if (fuDone) { phFuSetDone(fuDone.dataset.fuDone, fuDone.dataset.fuKind, true); renderPhFollowupsPage(); renderPhDashboardPage(); return; }
+      if (fuDone) {
+        const id = fuDone.dataset.fuDone, kind = fuDone.dataset.fuKind;
+        if (kind === "acu") phAcuFuSetDone(id, true);
+        else if (kind === "quiet") phCommQuietDismiss(id);
+        else phFuSetDone(id, kind, true);
+        renderPharmacy(); return;
+      }
       const fuUndo = e.target.closest("[data-fu-undo]");
-      if (fuUndo) { phFuSetDone(fuUndo.dataset.fuUndo, fuUndo.dataset.fuKind, false); renderPhFollowupsPage(); renderPhDashboardPage(); return; }
+      if (fuUndo) { phFuSetDone(fuUndo.dataset.fuUndo, fuUndo.dataset.fuKind, false); renderPharmacy(); return; }
       const fuOpen = e.target.closest("[data-fu-open]");
       if (fuOpen) {
         presOpenScript(fuOpen.dataset.fuOpen);
@@ -23222,7 +23265,7 @@
       if (fsFold) {
         const k = fsFold.dataset.phFsCollapse;
         if (phFsCollapsed.has(k)) phFsCollapsed.delete(k); else phFsCollapsed.add(k);
-        renderPhFollowupsPage();
+        renderPhCommunicationsPage();
         return;
       }
       const dsFold = e.target.closest("[data-ph-ds-collapse]");
@@ -25369,8 +25412,8 @@
     document.getElementById("phStatsWrap").hidden = tab !== "stats";
     document.getElementById("phLogWrap").hidden = tab !== "log";
     document.getElementById("phDashboardWrap").hidden = tab !== "dashboard";
-    document.getElementById("phFollowupsWrap").hidden = tab !== "followups";
-    document.getElementById("phMessagesWrap").hidden = tab !== "messages";
+    document.getElementById("phFollowupsWrap").hidden = true;   // superseded by phMessagesWrap's Communications page, see below
+    document.getElementById("phMessagesWrap").hidden = tab !== "communications";
     document.getElementById("phJourneyWrap").hidden = tab !== "journey";
     document.getElementById("phSuppliersWrap").hidden = tab !== "suppliers";
     document.getElementById("phSettingsWrap").hidden = tab !== "settings";
@@ -25393,7 +25436,6 @@
     if (tab === "log") { renderPhLogPage(); phMobileDedupeTitles(); return; }
     if (tab === "stocktake") { renderPhStocktakePage(); phMobileDedupeTitles(); return; }
     if (tab === "dashboard") { renderPhDashboardPage(); phMobileDedupeTitles(); return; }
-    if (tab === "followups") { renderPhFollowupsPage(); phMobileDedupeTitles(); return; }
     if (tab === "suppliers") { renderPhSuppliersPage(); phMobileDedupeTitles(); return; }
     if (tab === "pricereview") { renderPhPriceReviewPage(); phMobileDedupeTitles(); return; }
     if (tab === "settings") { renderPhSettingsPage(); phMobileDedupeTitles(); return; }
@@ -25401,7 +25443,7 @@
     if (tab === "supplements") { renderPhSupplementsPage(); phMobileDedupeTitles(); return; }
     if (tab === "relocation") { renderPhRelocationPage(); phMobileDedupeTitles(); return; }
     if (tab === "intake") { renderPhIntakePage(); phMobileDedupeTitles(); return; }
-    if (tab === "messages") { renderPhMessagesPage(); phMobileDedupeTitles(); return; }
+    if (tab === "communications") { renderPhCommunicationsPage(); phMobileDedupeTitles(); return; }
     if (tab === "journey") { renderPhJourneyPage(); phMobileDedupeTitles(); return; }
 
     renderPhFlags();
@@ -28289,6 +28331,190 @@
     savePharmacy();
   }
   // ============================================================
+  // ACUPUNCTURE FOLLOW-UP CADENCE (her ask 2026-09-06, "Communications" merge):
+  // an acu-only patient never gets a dispense, so phFuContactRows() above
+  // never sees them -- no due date anywhere, however long it's been. This
+  // reads the SAME rec.acuSessions[]/rec.acuEnabled the Prescriptions panel's
+  // "Log today's session" already writes, and the SAME free-text cadence
+  // already typed onto a Treatment Plan phase (data-tp-phase-field
+  // "...:cadence") -- nothing new to type, just a real interval parsed out
+  // of wording that already exists.
+  // ------------------------------------------------------------
+  const PH_ACU_DEFAULT_CADENCE_DAYS = 7;   // her call: weekly when nothing is set at all -- easy to bump
+  // Heuristic on purpose (her own cadence corpus is free text, not a picker).
+  // Checked in this order so "Weekly, tapering to fortnightly" resolves to
+  // the CURRENT cadence (weekly), not the future one -- and so "One visit
+  // straight after transfer, THEN weekly through the 2WW" still finds the
+  // ongoing "weekly" part even though the sentence opens on a one-off visit.
+  // A phrase with no recognisable interval at all (most of the "One visit
+  // in the ovulation window"-style one-offs) falls through to matched:false
+  // -- the caller applies the plain weekly default, and since acu follow-ups
+  // only ever clear by her own manual tick (never auto-cleared by logging a
+  // session), an occasional over-eager nag on one of these phases costs her
+  // one tap, not a wrong schedule she has to fight.
+  function phAcuCadenceParse(text) {
+    const t = String(text || "").trim();
+    if (!t) return { days: null, noAcu: false, matched: false };
+    if (/no visit needed|herbs only/i.test(t)) return { days: null, noAcu: true, matched: true };
+    let m = /(\d+)\s*(?:[-–]\s*(\d+))?\s*[x×]\s*\/?\s*wk\b/i.exec(t);
+    if (m) { const n = Math.max(+m[1], +(m[2] || m[1])); return { days: Math.max(1, Math.round(7 / n)), noAcu: false, matched: true }; }
+    m = /every\s+(\d+)\s*days?\b/i.exec(t);
+    if (m) return { days: +m[1], noAcu: false, matched: true };
+    if (/every other week/i.test(t)) return { days: 14, noAcu: false, matched: true };
+    m = /every\s+(\d+)\s*weeks?\b/i.exec(t);
+    if (m) return { days: +m[1] * 7, noAcu: false, matched: true };
+    if (/\bweekly\b/i.test(t)) return { days: 7, noAcu: false, matched: true };
+    if (/fortnightly|bi-?weekly/i.test(t)) return { days: 14, noAcu: false, matched: true };
+    if (/\bmonthly\b/i.test(t)) return { days: 30, noAcu: false, matched: true };
+    return { days: null, noAcu: false, matched: false };
+  }
+  // same active-plan/current-phase fallback chain already used at the one
+  // existing acu call site ("Log today's session", data-pres-acu-log)
+  function phAcuCurrentCadenceDays(name) {
+    const plans = phTpPlans(name);
+    const activePlan = plans.find(p => p.status === "active") || plans[0];
+    const curPhase = activePlan ? phTpPlanCurrentPhase(activePlan) : null;
+    const parsed = phAcuCadenceParse(curPhase ? curPhase.cadence : "");
+    if (parsed.noAcu) return { days: null, noAcu: true, source: "plan: no acu this phase" };
+    return { days: parsed.matched ? parsed.days : PH_ACU_DEFAULT_CADENCE_DAYS, noAcu: false, source: parsed.matched ? "plan" : "default" };
+  }
+  // {ok:false} for anyone not tracked (her §6: acuEnabled + at least one
+  // logged session, nothing else to opt in). dueOn steps off Sunday exactly
+  // like a herb check-in/review's date does (phFuOffSunday) -- same reason,
+  // she isn't in the clinic that day either way.
+  function phAcuFollowupCalc(name) {
+    const rec = phPatientPeek(name);
+    if (!rec || !rec.acuEnabled || !(rec.acuSessions || []).length) return { ok: false, reason: "not-tracked" };
+    const lastSession = rec.acuSessions.slice().sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.at || 0) - (a.at || 0))[0];
+    const cad = phAcuCurrentCadenceDays(name);
+    if (cad.noAcu) return { ok: false, reason: "no-acu-this-phase" };
+    const due = parseKey(lastSession.date);
+    due.setDate(due.getDate() + cad.days);
+    return { ok: true, lastSession, cadenceDays: cad.days, cadenceSource: cad.source, dueOn: keyOf(phFuOffSunday(due)) };
+  }
+  // done/snooze are scoped to the session they were computed from (not a
+  // plain per-patient flag) -- logging session #2 changes lastSession.id, so
+  // an old tick automatically stops applying to the new cycle. Still fully
+  // manual though (her §4): logging a session never flips this itself.
+  function phAcuFuSetDone(name, done) {
+    const rec = phPatientRec(name), calc = phAcuFollowupCalc(name);
+    if (!rec || !calc.ok) return;
+    rec.acuFu = rec.acuFu || {};
+    rec.acuFu.doneForSessionId = done ? calc.lastSession.id : null;
+    rec.acuFu.doneAt = done ? Date.now() : null;
+    savePharmacy();
+  }
+  function phAcuFuSnooze(name) {
+    const rec = phPatientRec(name), calc = phAcuFollowupCalc(name);
+    if (!rec || !calc.ok) return;
+    const tmr = new Date(TODAY.getTime()); tmr.setDate(tmr.getDate() + 1);
+    rec.acuFu = rec.acuFu || {};
+    rec.acuFu.snoozedUntil = keyOf(tmr);
+    rec.acuFu.snoozedForSessionId = calc.lastSession.id;
+    savePharmacy();
+  }
+  // one row per acu-tracked patient with a due follow-up -- acuEnabled can
+  // only ever live on a real PHARMACY.patients[key] record (set from the
+  // Prescriptions panel, which always calls phPatientRec first), so scanning
+  // that store directly is complete -- no need for the wider
+  // phClinikoKnownKeys() union this function's sibling below needs.
+  function phCommAcuRows() {
+    return Object.keys(PHARMACY.patients || {}).map(key => {
+      const rec = PHARMACY.patients[key];
+      if (!rec || !rec.acuEnabled || !(rec.acuSessions || []).length) return null;
+      const name = phTitle(key);
+      const calc = phAcuFollowupCalc(name);
+      if (!calc.ok) return null;
+      const fu = rec.acuFu || {};
+      const done = fu.doneForSessionId === calc.lastSession.id;
+      const snoozedOn = fu.snoozedForSessionId === calc.lastSession.id ? fu.snoozedUntil : null;
+      const on = snoozedOn && snoozedOn > calc.dueOn ? snoozedOn : calc.dueOn;
+      return { kind: "acu", on, done, snoozed: !!snoozedOn, patientKey: key, patientName: name, acu: calc };
+    }).filter(Boolean);
+  }
+  // ---- gone quiet (her ask: a real alert, not just showing the dates) ----
+  // her range was "2-3wk" for acu / "6-8wk" for herbs -- starting at the
+  // safer (longer) end of each; her call, easy to bump.
+  const PH_QUIET_ACU_DAYS = 21;
+  const PH_QUIET_HERB_DAYS = 56;
+  // last real touch of ANY kind -- appointment, herbs or acupuncture -- the
+  // three existing read-helpers already cover this, nothing new to calculate
+  function phCommLastTouch(key) {
+    const touches = [];
+    const appt = phMsgApptLast(key); if (appt) touches.push({ on: appt.date, via: "appointment" });
+    const disp = phMsgLastDispense(key); if (disp) touches.push({ on: disp.date, via: "herbs" });
+    const rec = PHARMACY.patients && PHARMACY.patients[key];
+    const sessions = rec && rec.acuSessions;
+    if (sessions && sessions.length) {
+      const last = sessions.slice().sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.at || 0) - (a.at || 0))[0];
+      touches.push({ on: last.date, via: "acupuncture" });
+    }
+    if (!touches.length) return null;
+    return touches.sort((a, b) => b.on.localeCompare(a.on))[0];
+  }
+  // flaggedKeys = everyone with a live (undone) herb or acu row already --
+  // a quiet alert only fires for someone NOTHING else is already surfacing.
+  // Also excludes anyone already booked ahead, opted out, or dismissed for
+  // this exact touch (dismissing snapshots the touch it applied to, since
+  // the underlying elapsed-time condition doesn't change just because she
+  // ticked it -- without that snapshot it would reappear the next render).
+  function phCommQuietRows(flaggedKeys) {
+    const todayKey = keyOf(TODAY);
+    const rows = [];
+    phClinikoKnownKeys().forEach(key => {
+      if (flaggedKeys.has(key) || phMsgDoNotContact(key) || phMsgApptNext(key)) return;
+      const touch = phCommLastTouch(key);
+      if (!touch) return;
+      const rec = PHARMACY.patients && PHARMACY.patients[key];
+      if (rec && rec.quietDismissedTouch === touch.on) return;
+      const thresholdDays = (rec && rec.acuEnabled) ? PH_QUIET_ACU_DAYS : PH_QUIET_HERB_DAYS;
+      const daysSince = Math.round((parseKey(todayKey) - parseKey(touch.on)) / 86400000);
+      if (daysSince < thresholdDays) return;
+      const due = parseKey(touch.on); due.setDate(due.getDate() + thresholdDays);
+      const dueOn = keyOf(due);
+      const snoozedOn = rec && rec.quietSnoozedUntil > dueOn ? rec.quietSnoozedUntil : null;
+      rows.push({ kind: "quiet", on: snoozedOn || dueOn, done: false, snoozed: !!snoozedOn, patientKey: key, patientName: phTitle(key), quiet: { touch, thresholdDays, daysSince } });
+    });
+    return rows;
+  }
+  function phCommQuietDismiss(name) {
+    const rec = phPatientRec(name);
+    const touch = phCommLastTouch(phPatientKey(name));
+    if (!rec) return;
+    if (touch) rec.quietDismissedTouch = touch.on;
+    savePharmacy();
+  }
+  // the ONE merged list -- the new Communications page, the Dashboard strip
+  // and the nav badge all read this and nothing else. phFuContactRows()
+  // itself stays completely untouched: every existing consumer (the check-in
+  // panel, the old Follow-ups sheet) reaches into dispense-only fields
+  // (presId/formulaLabel/emptyOn) an acu or quiet row has no equivalent for,
+  // and the page that reads it directly is being replaced anyway -- wrapping
+  // instead of extending means nothing downstream of the herb path changes.
+  function phCommDueRows() {
+    const herb = phFuContactRows().map(r => ({
+      kind: r.kind, on: r.on, done: r.done, snoozed: r.snoozed,
+      patientKey: r.rec.patientKey || phPatientKey(r.rec.patient), patientName: r.rec.patient, rec: r.rec, fuRow: r,
+    }));
+    const acu = phCommAcuRows();
+    const flaggedKeys = new Set([...herb, ...acu].filter(r => !r.done).map(r => r.patientKey));
+    return [...herb, ...acu, ...phCommQuietRows(flaggedKeys)];
+  }
+  // shared by the Dashboard strips and the Communications page -- one place
+  // that knows how to label/identify a row regardless of which of the three
+  // kinds it is, so the branching is written once, not per call site.
+  const phCommRowId = row => row.rec ? row.rec.id : row.patientKey;
+  const phCommRowPatientName = row => row.rec ? phTitle(row.rec.patient) : row.patientName;
+  function phCommRowMetaLabel(row) {
+    if (row.kind === "acu") return `Acupuncture follow-up${row.acu && row.acu.ok && row.acu.cadenceDays ? ` · every ${row.acu.cadenceDays}d` : ""}`;
+    if (row.kind === "quiet") return `Gone quiet${row.quiet ? ` · ${row.quiet.daysSince}d` : ""}`;
+    return row.kind === "checkin" ? "check-in" : row.kind === "review" ? "review" : "check-in & review";
+  }
+  function phCommBadgeHtml(row) {
+    if (row.kind === "acu" || row.kind === "quiet") return `<span class="ph-fu-badge ${row.done ? "done" : row.kind}">${row.kind === "acu" ? "Acupuncture" : "Gone quiet"}</span>`;
+    return phFuBadgeHtml(row.kind, row.done);
+  }
+  // ============================================================
   // CHECK-IN PANEL (her ask 2026-09-03: "i dont like that review takes me
   // to the review page. i want the process of checking in with patients to
   // be different" + "make a draft message generator for me with their phone
@@ -28318,10 +28544,12 @@
   const PH_CK_TMPLS = [["checkin", "Check-in"], ["review", "Review"], ["running", "Running out"], ["rebook", "Rebook"]];
   const phCkClinic = () => (PHARMACY.locName || "").trim() || "LCM";
   const phCkFirst = name => { const t = phTitle(name || "").trim(); return t.split(/\s+/)[0] || t; };
-  const phCkIsOpen = row => !!(phCkOpen && row && phCkOpen.recId === row.rec.id && phCkOpen.kind === row.kind);
+  const phCkIsOpen = row => !!(phCkOpen && row && phCkOpen.kind === row.kind && phCkOpen.recId === (row.rec ? row.rec.id : row.patientKey));
   const phCkUserTmpls = () => PHARMACY.ckTemplates || (PHARMACY.ckTemplates = {});
   // the built-in wording; {first} {herbs} {empty} {clinic} {me} fill in
   function phCkBuiltin(kind, c) {
+    if (kind === "acu") return "Hi {first}, it's {me} from {clinic}. It's about time for your next acupuncture session — would you like to book one in? {me}";
+    if (kind === "quiet") return "Hi {first}, it's {me} from {clinic}. It's been a while since we've seen you — just checking in on how you're going, and whether you'd like to book a visit. {me}";
     if (kind === "checkin") return "Hi {first}, it's {me} from {clinic}. You're a few days into the {herbs} — how are you finding them so far? Any changes, or anything unexpected? Reply here anytime and I'll adjust if needed. {me}";
     if (kind === "running") return "Hi {first}, it's {me} from {clinic}. Just a reminder that your {herbs} will run out around {empty} — would you like the next batch made up so there's no gap? {me}";
     if (kind === "rebook") return "Hi {first}, it's {me} from {clinic}. It's a good time to book your next visit so I can review how you've gone on the {herbs}. Let me know which days suit you. {me}";
@@ -28690,7 +28918,43 @@
   });
   // everything the panel shows, read from the follow-up record + the script +
   // the patient record + the dispense log -- no second calculation anywhere
+  // her ask (2026-09-06, Communications merge): the check-in panel now opens
+  // for acu-followup and gone-quiet rows too, which have no PHARMACY.followups
+  // record (only a patientKey/patientName) -- branch here rather than build a
+  // second panel, since the message composer, phone/email block and
+  // Done/Snooze footer below have zero reason to differ by kind.
+  function phCkAcuContext(row) {
+    const name = row.patientName, key = row.patientKey;
+    const pat = phPatientPeek(name) || {};
+    const appt = phCkNextAppt(key);
+    const calc = row.acu && row.acu.ok ? row.acu : phAcuFollowupCalc(name);
+    return {
+      t: null, first: phCkFirst(name), herbs: "acupuncture", clinic: phCkClinic(),
+      phone: (pat.phone || "").trim(), phoneFrom: pat.phoneFrom || "", phoneSrc: pat.phoneSrc || "", email: (pat.email || "").trim(),
+      appt, visitLabel: appt ? `${phFuDateLabel(appt.date)} · ${phCkTime12(appt.time)}` : "",
+      visit: appt ? `your visit on ${phFuDateLabel(appt.date)}` : "your next visit",
+      cycle: pat.medicalHistory ? phCycleComp(pat) : null,
+      lastSessionLabel: calc.ok ? phFuDateLabel(calc.lastSession.date) : "",
+      cadenceDays: calc.ok ? calc.cadenceDays : null, cadenceSource: calc.ok ? calc.cadenceSource : "",
+    };
+  }
+  function phCkQuietContext(row) {
+    const name = row.patientName, key = row.patientKey;
+    const pat = phPatientPeek(name) || {};
+    const appt = phCkNextAppt(key);
+    const q = row.quiet || {};
+    return {
+      t: null, first: phCkFirst(name), herbs: "your treatment", clinic: phCkClinic(),
+      phone: (pat.phone || "").trim(), phoneFrom: pat.phoneFrom || "", phoneSrc: pat.phoneSrc || "", email: (pat.email || "").trim(),
+      appt, visitLabel: appt ? `${phFuDateLabel(appt.date)} · ${phCkTime12(appt.time)}` : "",
+      visit: appt ? `your visit on ${phFuDateLabel(appt.date)}` : "your next visit",
+      cycle: pat.medicalHistory ? phCycleComp(pat) : null,
+      lastTouchLabel: q.touch ? phFuDateLabel(q.touch.on) : "", lastTouchVia: q.touch ? q.touch.via : "", daysSince: q.daysSince || null,
+    };
+  }
   function phCkContext(row) {
+    if (row.kind === "acu") return phCkAcuContext(row);
+    if (row.kind === "quiet") return phCkQuietContext(row);
     const rec = row.rec;
     const t = PRESC.items.find(x => x.id === rec.presId) || null;
     const lv = phFuScriptLevel(rec);
@@ -28717,17 +28981,42 @@
   const phCkIos = () => /iP(hone|ad|od)/.test(navigator.userAgent);
   const phCkSmsHref = (phone, msg) => { const d = String(phone || "").replace(/[^\d+]/g, ""); return d ? `sms:${d}${phCkIos() ? "&" : "?"}body=${encodeURIComponent(msg)}` : ""; };
   const phCkMailHref = (email, clinic, msg) => `mailto:${encodeURIComponent(email || "")}?subject=${encodeURIComponent(`Checking in — ${clinic}`)}&body=${encodeURIComponent(msg)}`;
-  function phCkPanelHtml(row) {
-    const c = phCkContext(row), f = phCkForm, rec = row.rec;
-    if (!f) return "";
-    const isReview = row.kind !== "checkin";
-    const msg = f.text != null ? f.text : phCkTemplate(f.tmpl, c);
-    const smsHref = phCkSmsHref(c.phone, msg);
-    const chip = (attr, val, label, on) => `<button type="button" class="ph-ck-chip${on ? " on" : ""}" ${attr}="${val}">${label}</button>`;
-    const tmplName = (PH_CK_TMPLS.find(x => x[0] === f.tmpl) || ["", ""])[1];
-    return `<div class="ph-ck" data-ck-panel="1">
-      <button type="button" class="ph-ck-x" data-ck-close="1" title="Close" aria-label="Close">×</button>
-      <div>
+  // shared by all three row kinds -- phone/number known or not, same markup either way
+  function phCkPhoneEmailHtml(c) {
+    return `<div class="ph-ck-phone"><svg class="icn" aria-hidden="true"><use href="#i-phone"/></svg>${c.phone
+        ? `<span>${esc(c.phone)}</span><button type="button" class="ph-ck-btn ghost sm" data-ck-copy-num="1"><svg class="icn" aria-hidden="true"><use href="#i-copy"/></svg>Copy</button>${c.phoneFrom ? `<span class="src">from the Cliniko ${c.phoneSrc === "export" ? "export" : "list"} · ${esc(phFuDateLabel(c.phoneFrom))}</span>` : ""}`
+        : `<input type="tel" class="ph-ck-other inline" placeholder="Add their number" data-ck-input="phone" aria-label="Phone number"><span class="src">or <button type="button" class="ph-ck-lnk" data-ph-appt-open="1">paste today's Cliniko list</button> · <button type="button" class="ph-ck-lnk" data-ph-tab="settings">import the Cliniko export</button></span>`}</div>
+      <div class="ph-ck-phone mail"><svg class="icn" aria-hidden="true"><use href="#i-mail"/></svg>${c.email
+        ? `<span>${esc(c.email)}</span>`
+        : `<input type="email" class="ph-ck-other inline" placeholder="Add their email" data-ck-input="email" aria-label="Email">`}</div>`;
+  }
+  // the info column at the top of the panel -- the one place that genuinely
+  // differs by kind (a herb dispense has a script/formula/empty-date to show;
+  // acu/quiet rows have no dispense at all, just their own read-only facts).
+  // Everything below this (draft message, how-did-it-go, footer) is identical
+  // across all three kinds -- see phCkPanelHtml.
+  function phCkTopBlockHtml(row, c) {
+    if (row.kind === "acu") return `<div>
+        <h4><svg class="icn" aria-hidden="true"><use href="#i-scroll"/></svg>Acupuncture follow-up</h4>
+        <div class="ph-ck-kv">
+          <span class="k">Last session</span><span class="v">${c.lastSessionLabel ? esc(c.lastSessionLabel) : "—"}</span>
+          <span class="k">Cadence</span><span class="v">${c.cadenceDays ? `every ${c.cadenceDays} day${c.cadenceDays === 1 ? "" : "s"}` : "—"} <span class="faint">${c.cadenceSource === "plan" ? "· from her treatment plan" : "· default"}</span></span>
+          <span class="k">Booked</span><span class="v">${c.appt ? `<b>${esc(c.visitLabel)}</b> ${phApptKindHtml(c.appt.service)}${phApptEtHtml(c.appt)} <button type="button" class="ph-ck-lnk" data-ph-appt-del="${esc(c.appt.id)}" title="Cancel this appointment">Cancel</button>` : `<span class="faint">not booked</span>`}</span>
+          ${c.cycle ? `<span class="k">Cycle</span><span class="v">${phCkCycleLineHtml(c.cycle, row.patientName)}</span>` : ""}
+        </div>
+        ${phCkPhoneEmailHtml(c)}
+      </div>`;
+    if (row.kind === "quiet") return `<div>
+        <h4><svg class="icn" aria-hidden="true"><use href="#i-scroll"/></svg>Gone quiet</h4>
+        <div class="ph-ck-kv">
+          <span class="k">Last seen</span><span class="v">${c.lastTouchLabel ? `${esc(c.lastTouchLabel)}${c.lastTouchVia ? ` <span class="faint">(${esc(c.lastTouchVia)})</span>` : ""}` : "—"}${c.daysSince ? ` · <span class="warn">${c.daysSince} days ago</span>` : ""}</span>
+          <span class="k">Booked</span><span class="v">${c.appt ? `<b>${esc(c.visitLabel)}</b> ${phApptKindHtml(c.appt.service)}${phApptEtHtml(c.appt)}` : `<span class="faint">not booked</span>`}</span>
+          ${c.cycle ? `<span class="k">Cycle</span><span class="v">${phCkCycleLineHtml(c.cycle, row.patientName)}</span>` : ""}
+        </div>
+        ${phCkPhoneEmailHtml(c)}
+      </div>`;
+    const rec = row.rec;
+    return `<div>
         <h4><svg class="icn" aria-hidden="true"><use href="#i-scroll"/></svg>Their script${c.t ? `<button type="button" class="r ph-ck-lnk" data-fu-open="${esc(rec.presId)}">Open script ↗</button>` : ""}</h4>
         <div class="ph-ck-kv">
           <span class="k">Formula</span><span class="v"><b>${esc(c.formula || "—")}</b>${rec.gramsDispensed ? ` · ${phFmtG(rec.gramsDispensed)}g` : ""}</span>
@@ -28739,13 +29028,20 @@
           ${c.cycle ? `<span class="k">Cycle</span><span class="v">${phCkCycleLineHtml(c.cycle, row.rec.patient)}</span>` : ""}
         </div>
         ${c.note ? `<div class="ph-ck-note"><b>Review note</b>${esc(c.note)}</div>` : ""}
-        <div class="ph-ck-phone"><svg class="icn" aria-hidden="true"><use href="#i-phone"/></svg>${c.phone
-          ? `<span>${esc(c.phone)}</span><button type="button" class="ph-ck-btn ghost sm" data-ck-copy-num="1"><svg class="icn" aria-hidden="true"><use href="#i-copy"/></svg>Copy</button>${c.phoneFrom ? `<span class="src">from the Cliniko ${c.phoneSrc === "export" ? "export" : "list"} · ${esc(phFuDateLabel(c.phoneFrom))}</span>` : ""}`
-          : `<input type="tel" class="ph-ck-other inline" placeholder="Add their number" data-ck-input="phone" aria-label="Phone number"><span class="src">or <button type="button" class="ph-ck-lnk" data-ph-appt-open="1">paste today's Cliniko list</button> · <button type="button" class="ph-ck-lnk" data-ph-tab="settings">import the Cliniko export</button></span>`}</div>
-        <div class="ph-ck-phone mail"><svg class="icn" aria-hidden="true"><use href="#i-mail"/></svg>${c.email
-          ? `<span>${esc(c.email)}</span>`
-          : `<input type="email" class="ph-ck-other inline" placeholder="Add their email" data-ck-input="email" aria-label="Email">`}</div>
-      </div>
+        ${phCkPhoneEmailHtml(c)}
+      </div>`;
+  }
+  function phCkPanelHtml(row) {
+    const c = phCkContext(row), f = phCkForm;
+    if (!f) return "";
+    const isReview = row.kind !== "checkin";
+    const msg = f.text != null ? f.text : phCkTemplate(f.tmpl, c);
+    const smsHref = phCkSmsHref(c.phone, msg);
+    const chip = (attr, val, label, on) => `<button type="button" class="ph-ck-chip${on ? " on" : ""}" ${attr}="${val}">${label}</button>`;
+    const tmplName = (PH_CK_TMPLS.find(x => x[0] === f.tmpl) || [])[1] || (f.tmpl === "acu" ? "Acu follow-up" : f.tmpl === "quiet" ? "Gone quiet" : "");
+    return `<div class="ph-ck" data-ck-panel="1">
+      <button type="button" class="ph-ck-x" data-ck-close="1" title="Close" aria-label="Close">×</button>
+      ${phCkTopBlockHtml(row, c)}
       <div>
         <h4><svg class="icn" aria-hidden="true"><use href="#i-msg"/></svg>Draft message<span class="r">written for you · edit anything</span></h4>
         <div class="ph-ck-chips">${PH_CK_TMPLS.map(([k, l]) => chip("data-ck-tmpl", k, l, f.tmpl === k)).join("")}<button type="button" class="ph-ck-chip" data-ck-save-tmpl="1" title="Keep this wording as your own ${esc(tmplName)} message">＋ Save mine</button></div>
@@ -28782,19 +29078,22 @@
   function phCkRow(recId, kind) {
     const o = recId ? { recId, kind } : phCkOpen;
     if (!o) return null;
+    if (o.kind === "acu" || o.kind === "quiet") return phCommDueRows().find(r => r.kind === o.kind && r.patientKey === o.recId) || null;
     return phFuContactRows().find(r => r.rec.id === o.recId && r.kind === o.kind) || null;
   }
   function phCkToggle(recId, kind) {
     if (phCkOpen && phCkOpen.recId === recId && phCkOpen.kind === kind) { phCkOpen = null; phCkForm = null; phCkRender(); return; }
     phCkOpen = { recId, kind };
-    phCkForm = { going: null, concerns: new Set(), otherOn: false, other: "", next: null, note: "", tmpl: kind === "checkin" ? "checkin" : "review", text: null, sent: false };
+    const startTmpl = kind === "checkin" ? "checkin" : kind === "acu" ? "acu" : kind === "quiet" ? "quiet" : "review";
+    phCkForm = { going: null, concerns: new Set(), otherOn: false, other: "", next: null, note: "", tmpl: startTmpl, text: null, sent: false };
     // already booked in Cliniko -> Next starts on "Booked ✓" (she can still change it)
     const row = phCkRow(recId, kind);
-    if (row && phCkNextAppt(row.rec.patientKey || phPatientKey(row.rec.patient))) phCkForm.next = "booked";
+    const key = row ? (row.rec ? (row.rec.patientKey || phPatientKey(row.rec.patient)) : row.patientKey) : null;
+    if (key && phCkNextAppt(key)) phCkForm.next = "booked";
     phCkRender();
   }
   // both pages can show the panel; whichever is on screen re-draws
-  function phCkRender() { renderPhDashboardPage(); renderPhFollowupsPage(); }
+  function phCkRender() { renderPhDashboardPage(); renderPhCommunicationsPage(); }
   function phCkCurrentText() {
     const ta = document.getElementById("phCkMsg");
     if (ta) return ta.value;
@@ -28861,7 +29160,7 @@
     if (!inp) return;
     const row = phCkRow(); if (!row) return;
     const v = inp.value.trim(); if (!v) return;
-    const pr = phPatientRec(row.rec.patient); if (!pr) return;
+    const pr = phPatientRec(row.rec ? row.rec.patient : row.patientName); if (!pr) return;
     if (inp.dataset.ckInput === "phone") { pr.phone = v; pr.phoneFrom = ""; pr.phoneSrc = ""; } else pr.email = v;
     savePharmacy(); phCkRender();
   });
@@ -28876,7 +29175,26 @@
   // renders directly under the visit it belongs to, see presHistVisitCardHtml.
   function phCkDone(thenScript) {
     const row = phCkRow(); if (!row || !phCkForm) return;
-    const rec = row.rec, f = phCkForm;
+    const f = phCkForm;
+    // acu/quiet rows have no dispense record to attach a checkin to -- log the
+    // same shape onto the patient record itself (rec.contactLog), then flip
+    // the kind-specific done flag that actually clears the row.
+    if (row.kind === "acu" || row.kind === "quiet") {
+      const name = row.patientName, first = phCkFirst(name);
+      const rec = phPatientRec(name);
+      if (rec) {
+        rec.contactLog = rec.contactLog || [];
+        const concerns = Array.from(f.concerns);
+        if (f.otherOn && f.other.trim()) concerns.push("other:" + f.other.trim());
+        rec.contactLog.push({ id: uid(), at: Date.now(), date: keyOf(TODAY), kind: row.kind, going: f.going, concerns, next: f.next, note: f.note.trim() });
+      }
+      if (row.kind === "acu") phAcuFuSetDone(name, true); else phCommQuietDismiss(name);
+      phCkOpen = null; phCkForm = null;
+      phFlashShow(`✓ Saved to ${first}'s history`);
+      phCkRender();
+      return;
+    }
+    const rec = row.rec;
     if (!rec.checkins) rec.checkins = [];
     const concerns = Array.from(f.concerns);
     if (f.otherOn && f.other.trim()) concerns.push("other:" + f.other.trim());
@@ -28893,6 +29211,22 @@
   }
   function phCkSnooze() {
     const row = phCkRow(); if (!row) return;
+    if (row.kind === "acu") {
+      phAcuFuSnooze(row.patientName);
+      phCkOpen = null; phCkForm = null;
+      phFlashShow(`Back tomorrow — ${phCkFirst(row.patientName)} marked "no reply yet"`);
+      phCkRender();
+      return;
+    }
+    if (row.kind === "quiet") {
+      const rec = phPatientRec(row.patientName);
+      if (rec) { const tmr = new Date(TODAY.getTime()); tmr.setDate(tmr.getDate() + 1); rec.quietSnoozedUntil = keyOf(tmr); }
+      savePharmacy();
+      phCkOpen = null; phCkForm = null;
+      phFlashShow(`Back tomorrow — ${phCkFirst(row.patientName)} marked "no reply yet"`);
+      phCkRender();
+      return;
+    }
     const rec = row.rec;
     const tomorrow = keyOf(new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() + 1));
     const mark = c => { if (c && !c.done) { c.snoozedUntil = tomorrow; c.noReply = true; } };
@@ -29103,7 +29437,7 @@
   }
 
   // ============ ✉ Messages page (Compose / Templates / Prepared / Sent) ============
-  let phMsgSection = "compose";
+  let phMsgSection = "due";  // Communications merge (2026-09-06): the page opens on Due, not Compose
   let phMsgToNames = [];              // chip list for Compose
   let phMsgSelTemplateId = null;
   let phMsgDraftSubject = null;       // null = "not yet touched, follow the template"
@@ -29133,15 +29467,70 @@
     }).map(r => r.name);
   }
   function phMsgResetCompose() { phMsgToNames = []; phMsgSelTemplateId = null; phMsgDraftSubject = null; phMsgDraftBody = null; }
-  function renderPhMessagesPage() {
-    document.getElementById("phMessagesShellHead").innerHTML = phShellHead("Messages", "Compose, prepare and track patient messages — nothing here ever sends itself", "", "");
-    const sections = [["compose", "Compose"], ["templates", "Templates"], ["prepared", "Prepared"], ["sent", "Sent"]];
+  // ---- Communications: Due tab (Follow-ups + Messages merge, 2026-09-06) --
+  // locked layout (her calibration, round 2): a pinned Overdue band, always
+  // visible, then a 14-day strip -> tapping a day filters the list below it.
+  let phCommDay = null;   // date key selected on the strip; null = today
+  function phCommStripDays() {
+    const days = [];
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() + i);
+      days.push({ key: keyOf(d), dow: DAY_SHORT[d.getDay()], dnum: d.getDate(), today: i === 0 });
+    }
+    return days;
+  }
+  function phCommRowHtml(row) {
+    const name = phCommRowPatientName(row), open = phCkIsOpen(row), id = phCommRowId(row);
+    const openLabel = open ? "Close" : row.kind === "checkin" ? "Check in" : row.kind === "review" ? "Review" : row.kind === "acu" ? "Contact" : "Reach out";
+    return `<div class="ph-fu-card${open ? " ck-open" : ""}">
+      <div class="ph-fu-card-top"><span class="ph-fu-card-name">${esc(name)}</span>${phCommBadgeHtml(row)}</div>
+      <div class="ph-fu-card-line"><b>${phFuDateLabel(row.on)}</b> · ${phFuRelDay(row.on)}</div>
+      <div class="ph-fu-card-line ph-fu-sub2">${esc(phCommRowMetaLabel(row))}</div>
+      <div class="ph-fu-card-acts">
+        <button type="button" class="ph-name-link" data-ck-open="${esc(id)}:${row.kind}">${openLabel}</button>
+        <button type="button" class="ph-load-btn" data-fu-done="${esc(id)}" data-fu-kind="${row.kind}">✓ Done</button>
+      </div>
+    </div>${open ? phCkPanelHtml(row) : ""}`;
+  }
+  function phCommDueHtml(all) {
+    const todayKey = keyOf(TODAY);
+    const live = all.filter(r => !r.done);
+    // a gone-quiet row's date is "when it crossed threshold," not a day on
+    // the calendar -- it lives only in the pinned band, never the strip/grid
+    const overdue = live.filter(r => r.kind === "quiet" || r.on < todayKey).sort((a, b) => a.on < b.on ? -1 : a.on > b.on ? 1 : phCommRowPatientName(a).localeCompare(phCommRowPatientName(b)));
+    const strip = phCommStripDays();
+    const stripCounts = new Map();
+    live.forEach(r => { if (r.kind !== "quiet") stripCounts.set(r.on, (stripCounts.get(r.on) || 0) + 1); });
+    const selDay = phCommDay && strip.some(d => d.key === phCommDay) ? phCommDay : todayKey;
+    const dayRows = live.filter(r => r.kind !== "quiet" && r.on === selDay).sort((a, b) => phCommRowPatientName(a).localeCompare(phCommRowPatientName(b)));
+    const overdueBand = overdue.length ? `<section class="ph-widget">${phFsBand("over", "over", "i-warn", "Overdue", overdue.length)}${phFsCollapsed.has("over") ? "" : `<div class="ph-fu-cards">${overdue.map(phCommRowHtml).join("")}</div>`}</section>` : "";
+    const stripHtml = `<div class="ph-comm-strip">${strip.map(d => {
+      const n = stripCounts.get(d.key) || 0;
+      return `<button type="button" class="ph-cal-cell${n ? " has" : ""}${d.today ? " today" : ""}${d.key === selDay ? " sel" : ""}" data-ph-comm-day="${d.key}" title="${esc(phFuDateLabel(d.key))}">
+        <span class="ph-comm-daylabel">${esc(d.dow)}</span><span class="ph-cal-dnum">${d.dnum}</span>${n ? `<span class="badge">${n}</span>` : ""}
+      </button>`;
+    }).join("")}</div>`;
+    const dayHead = `<div class="ph-dash-secthead"><h2>${selDay === todayKey ? "Today" : esc(phFuDateLabel(selDay))}</h2><span class="rule"></span><span class="ph-dash-card-sub">${dayRows.length}</span></div>`;
+    const dayList = dayRows.length ? `<div class="ph-fu-cards">${dayRows.map(phCommRowHtml).join("")}</div>` : `<div class="fam-empty">Nothing due ${selDay === todayKey ? "today" : "this day"}.</div>`;
+    return `${overdueBand}<section class="ph-widget">${stripHtml}${dayHead}${dayList}</section>`;
+  }
+  function renderPhCommunicationsPage() {
+    const headWrap = document.getElementById("phMessagesShellHead"), bodyWrap = document.getElementById("phMessages");
+    if (!headWrap || !bodyWrap) return;
+    const all = phCommDueRows(), live = all.filter(r => !r.done);
+    const todayKey = keyOf(TODAY);
+    const overdueN = live.filter(r => r.kind === "quiet" || r.on < todayKey).length;
+    const sections = [["due", "Due"], ["compose", "Compose"], ["templates", "Templates"], ["prepared", "Prepared"], ["sent", "Sent"]];
+    headWrap.innerHTML = phShellHead("Communications",
+      phMsgSection === "due" ? `${live.length} due${overdueN ? ` · ${overdueN} overdue` : ""}` : "Compose, prepare and track patient messages — nothing here ever sends itself",
+      "", "");
     const body =
       phMsgSection === "templates" ? phMsgTemplatesHtml() :
       phMsgSection === "prepared" ? phMsgPreparedHtml() :
-      phMsgSection === "sent" ? phMsgSentHtml() : phMsgComposeHtml();
-    document.getElementById("phMessages").innerHTML = `
-      <div class="ph-msg-seg" role="tablist" aria-label="Messages section">
+      phMsgSection === "sent" ? phMsgSentHtml() :
+      phMsgSection === "compose" ? phMsgComposeHtml() : phCommDueHtml(all);
+    bodyWrap.innerHTML = `
+      <div class="ph-msg-seg" role="tablist" aria-label="Communications section">
         ${sections.map(([id, label]) => `<button type="button" class="ph-msg-seg-opt${phMsgSection === id ? " on" : ""}" role="tab" aria-selected="${phMsgSection === id}" data-ph-msg-section="${id}">${label}</button>`).join("")}
       </div>
       ${body}`;
