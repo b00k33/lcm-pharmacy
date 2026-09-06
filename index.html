@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260906-063000">
+<meta name="lcm-build" content="20260906-070000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -1899,6 +1899,16 @@
   #pharmacyPage .ph-fs-empty.zero b { color: var(--ph-zero-deep); }
   #pharmacyPage .ph-fs-row .ph-rf-bar i { width: 40px; }
   #phFollowupsWrap .ph-ds-vl:nth-child(6) { right: 142px; }
+  /* Communications desktop sheet (her ask 2026-09-06: "I liked this, I want
+     it back" -- the dense Follow-ups sheet look, merged into the new page).
+     Identical grid to #phFollowupsWrap above -- same columns, same reason. */
+  #phMessagesWrap.ph-ds-polish { --ph-ds-grid: 112px minmax(0, 1fr) 142px 134px 104px 184px 130px; }
+  #phMessagesWrap .ph-ds-vl:nth-child(1) { left: 124px; }
+  #phMessagesWrap .ph-ds-vl:nth-child(2) { right: 706px; }
+  #phMessagesWrap .ph-ds-vl:nth-child(3) { right: 564px; }
+  #phMessagesWrap .ph-ds-vl:nth-child(4) { right: 430px; }
+  #phMessagesWrap .ph-ds-vl:nth-child(5) { right: 326px; }
+  #phMessagesWrap .ph-ds-vl:nth-child(6) { right: 142px; }
   #pharmacyPage .ph-ds-band.over { background: var(--ph-zero-tint); color: var(--ph-zero-deep); }
   #pharmacyPage .ph-ds-band.today { background: var(--ph-gold-tint, #FFFBE2); color: var(--ph-gold-deep); }
   #pharmacyPage .ph-ds-band.week { background: var(--ph-green-tint); color: var(--ph-green-deep); }
@@ -14938,7 +14948,7 @@
   // --ph-ds-grid inline on the sheet's wrap; the column lines are then placed
   // from the real caption cells, so they always sit on the true edges.
   // Double-click a grip: that sheet returns to its default widths. ----
-  const PH_DS_WRAPS = "#phDashboardWrap, #phFollowupsWrap, #phRefillWrap, #phLogWrap";
+  const PH_DS_WRAPS = "#phDashboardWrap, #phFollowupsWrap, #phRefillWrap, #phLogWrap, #phMessagesWrap";
   const phDsTracks = wrap => getComputedStyle(wrap).getPropertyValue("--ph-ds-grid").trim().split(/\s+(?![^(]*\))/).filter(Boolean);
   function phDsPlaceLines(cols) {
     const wrap = cols.closest(PH_DS_WRAPS);
@@ -14957,7 +14967,7 @@
   // sheet cap reads it (default 1040px). A grip on the card's right edge
   // drags it between 720px and the page's content width; double-click
   // resets. The column lines re-place as the sheet grows. ----
-  const PH_SHEET_WRAPS = { phDashboardWrap: "dash", phFollowupsWrap: "fu", phRefillWrap: "refill", phLogWrap: "log", phStatsWrap: "stats", phInvWidget: "inv", phRestockWrap: "osheet", phPresWrap: "pres" };
+  const PH_SHEET_WRAPS = { phDashboardWrap: "dash", phFollowupsWrap: "fu", phRefillWrap: "refill", phLogWrap: "log", phStatsWrap: "stats", phInvWidget: "inv", phRestockWrap: "osheet", phPresWrap: "pres", phMessagesWrap: "fu" };
   const PH_SHEET_CARD = ".ph-ds-card, .ph-inv-sheet #phStock, .ph-osheet-wrap.polish, .ph-tl-widget";
   function phSheetWApply() {
     Object.entries(PH_SHEET_WRAPS).forEach(([id, key]) => {
@@ -15540,8 +15550,8 @@
         // resizing across this same 900px line needs to swap them live too,
         // same idiom as Inventory just above.
         if (PHARMACY.activeTab === "prescriptions") renderPresList();
-        // Follow-ups sheet (2026-09-03): sheet on desktop, chips + cards on phone
-        if (PHARMACY.activeTab === "followups") renderPhFollowupsPage();
+        // Communications sheet (2026-09-06): same split, same idiom
+        if (PHARMACY.activeTab === "communications") renderPhCommunicationsPage();
         // Formula refill sheet (2026-09-03): same split
         if (PHARMACY.activeTab === "refill") renderRefill();
         // Dispense history sheet (2026-09-03): same split
@@ -29557,7 +29567,51 @@
       </div>
     </div>${open ? phCkPanelHtml(row) : ""}`;
   }
-  function phCommDueHtml(all) {
+  // desktop row -- her ask (2026-09-06, screenshot): "I liked this, I want it
+  // back" -- the dense Follow-ups sheet row (Level bar, Cover/Empty, booked
+  // label) merged into the new page rather than lost to the simpler card.
+  // Herb rows are byte-identical to the old phFuSheetHtml row; acu/quiet
+  // rows use the same kind-branch already proven on the Dashboard's own
+  // desktop sheet (phDashFuSheetHtml) -- their own meta stands in for
+  // Dispensed/Level/Empty, since there's no script to show a level bar for.
+  function phCommSheetRowHtml(row) {
+    const todayKey = keyOf(TODAY);
+    const open = phCkIsOpen(row), id = phCommRowId(row);
+    const tone = row.on < todayKey ? " hot" : row.on === todayKey ? " gold" : "";
+    if (!row.rec) {
+      const isAcu = row.kind === "acu";
+      const kindLabel = isAcu ? "Acupuncture" : "Gone quiet";
+      const metaSub = isAcu ? (row.acu && row.acu.ok ? `every ${row.acu.cadenceDays}d${row.acu.cadenceSource === "plan" ? "" : " · default"}` : "")
+        : (row.quiet ? `${row.quiet.daysSince}d ago · ${row.quiet.touch.via}` : "");
+      const lastLabel = isAcu ? (row.acu && row.acu.ok ? phFuDateLabel(row.acu.lastSession.date) : "—")
+        : (row.quiet && row.quiet.touch ? phFuDateLabel(row.quiet.touch.on) : "—");
+      const acts = `<button type="button" class="ph-os-lnk" data-ck-open="${esc(id)}:${row.kind}">${open ? "Close ▴" : isAcu ? "Contact" : "Reach out"}</button><button type="button" class="ph-os-lnk" data-fu-done="${esc(id)}" data-fu-kind="${row.kind}"><svg class="icn" aria-hidden="true"><use href="#i-check"/></svg>Done</button>`;
+      return `<div class="ph-ds-row ph-fs-row${open ? " ck-open" : ""}">
+        <div class="st"><span class="glyph"><svg class="icn" aria-hidden="true"><use href="#i-clock"/></svg></span><span class="date${tone}">${esc(phFuRelDay(row.on))}</span></div>
+        <div class="nm"><b>${esc(phCommRowPatientName(row))}</b></div>
+        <div><span class="ph-ds-pill ${row.kind}">${kindLabel}</span>${row.snoozed ? `<span class="ph-fs-sub">no reply yet</span>` : ""}</div>
+        <div class="soft">${lastLabel}${metaSub ? `<span class="ph-fs-sub">${esc(metaSub)}</span>` : ""}</div>
+        <div><span class="faint">—</span></div>
+        <div class="soft ph-fs-empty"><span class="faint">—</span></div>
+        <div class="ph-fs-acts">${acts}</div>
+      </div>${open ? phCkPanelHtml(row) : ""}`;
+    }
+    const rec = row.rec;
+    const f = rec.formulaLabel ? esc(phDispName(rec.formulaLabel)) : "";
+    const kindLabel = row.kind === "checkin" ? "Check-in" : row.kind === "review" ? "Review" : "Both";
+    const lv = phFuScriptLevel(rec);
+    const acts = `<button type="button" class="ph-os-lnk" data-ck-open="${rec.id}:${row.kind}">${open ? "Close ▴" : row.kind === "checkin" ? `<svg class="icn" aria-hidden="true"><use href="#i-msg"/></svg>Check in` : "Review"}</button><button type="button" class="ph-os-lnk" data-fu-done="${rec.id}" data-fu-kind="${row.kind}"><svg class="icn" aria-hidden="true"><use href="#i-check"/></svg>Done</button>`;
+    return `<div class="ph-ds-row ph-fs-row${open ? " ck-open" : ""}">
+      <div class="st"><span class="glyph"><svg class="icn" aria-hidden="true"><use href="#i-clock"/></svg></span><span class="date${tone}">${esc(phFuRelDay(row.on))}</span>${phFuOnWorkDay(row.on) ? `<span class="ph-fs-wk" title="Clinic day"></span>` : ""}</div>
+      <div class="nm"><b>${esc(phTitle(rec.patient))}</b>${f ? `<span class="kind">${f}</span>` : ""}</div>
+      <div><span class="ph-ds-pill ${row.kind}">${kindLabel}</span>${row.collapsed ? `<span class="ph-fs-sub">short script</span>` : row.snoozed ? `<span class="ph-fs-sub">no reply yet</span>` : ""}${phCkBookedLabel(rec) ? `<span class="ph-fs-sub">${esc(phCkBookedLabel(rec).replace(" · ", ""))}</span>` : ""}</div>
+      <div class="soft">${phFuDateLabel(rec.dispensedDate)}<span class="ph-fs-sub">${phFmtG(rec.gramsDispensed)}g</span></div>
+      <div>${phFuLevelBarHtml(lv, rec)}</div>
+      <div class="soft ph-fs-empty${lv ? " " + lv.tone : ""}" title="${rec.weekdaysOnly ? "Weekdays only" : ""}">${!lv ? "—" : lv.left <= 0 ? `<b>empty</b><span class="ph-fs-sub">since ${esc(phFuDateLabel(rec.emptyOn))}</span>` : `<b>${lv.left} d left</b><span class="ph-fs-sub">${esc(phFuDateLabel(rec.emptyOn))}${rec.weekdaysOnly ? " · wkdays" : ""}</span>`}</div>
+      <div class="ph-fs-acts">${acts}</div>
+    </div>${open ? phCkPanelHtml(row) : ""}`;
+  }
+  function phCommDueHtml(all, desktop) {
     const todayKey = keyOf(TODAY);
     const live = all.filter(r => !r.done);
     // a gone-quiet row's date is "when it crossed threshold," not a day on
@@ -29568,20 +29622,36 @@
     live.forEach(r => { if (r.kind !== "quiet") stripCounts.set(r.on, (stripCounts.get(r.on) || 0) + 1); });
     const selDay = phCommDay && strip.some(d => d.key === phCommDay) ? phCommDay : todayKey;
     const dayRows = live.filter(r => r.kind !== "quiet" && r.on === selDay).sort((a, b) => phCommRowPatientName(a).localeCompare(phCommRowPatientName(b)));
-    const overdueBand = overdue.length ? `<section class="ph-widget">${phFsBand("over", "over", "i-warn", "Overdue", overdue.length)}${phFsCollapsed.has("over") ? "" : `<div class="ph-fu-cards">${overdue.map(phCommRowHtml).join("")}</div>`}</section>` : "";
     const stripHtml = `<div class="ph-comm-strip">${strip.map(d => {
       const n = stripCounts.get(d.key) || 0;
       return `<button type="button" class="ph-cal-cell${n ? " has" : ""}${d.today ? " today" : ""}${d.key === selDay ? " sel" : ""}" data-ph-comm-day="${d.key}" title="${esc(phFuDateLabel(d.key))}">
         <span class="ph-comm-daylabel">${esc(d.dow)}</span><span class="ph-cal-dnum">${d.dnum}</span>${n ? `<span class="badge">${n}</span>` : ""}
       </button>`;
     }).join("")}</div>`;
+    if (desktop) {
+      const dayLabel = selDay === todayKey ? "Today" : phFuDateLabel(selDay);
+      const groups = [
+        { key: "over", tone: "over", icon: "i-warn", label: "Overdue", rows: overdue },
+        { key: "day", tone: "today", icon: "i-cal", label: dayLabel, rows: dayRows },
+      ].filter(g => g.rows.length);
+      const body = groups.map(g => phFsBand(g.key, g.tone, g.icon, g.label, g.rows.length) + (phFsCollapsed.has(g.key) ? "" : g.rows.map(phCommSheetRowHtml).join(""))).join("");
+      return `${stripHtml}
+      <div class="ph-ds-cols" data-ph-dsresize="fu"><div>When</div><div>Patient</div><div>Due</div><div>Dispensed</div><div>Level</div><div>Empty on</div><div>Action</div></div>
+      <div class="ph-ds-card"><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i>
+        ${body || `<div class="fam-empty">Nothing due.</div>`}
+      </div>`;
+    }
+    const overdueBand = overdue.length ? `<section class="ph-widget">${phFsBand("over", "over", "i-warn", "Overdue", overdue.length)}${phFsCollapsed.has("over") ? "" : `<div class="ph-fu-cards">${overdue.map(phCommRowHtml).join("")}</div>`}</section>` : "";
     const dayHead = `<div class="ph-dash-secthead"><h2>${selDay === todayKey ? "Today" : esc(phFuDateLabel(selDay))}</h2><span class="rule"></span><span class="ph-dash-card-sub">${dayRows.length}</span></div>`;
     const dayList = dayRows.length ? `<div class="ph-fu-cards">${dayRows.map(phCommRowHtml).join("")}</div>` : `<div class="fam-empty">Nothing due ${selDay === todayKey ? "today" : "this day"}.</div>`;
     return `${overdueBand}<section class="ph-widget">${stripHtml}${dayHead}${dayList}</section>`;
   }
   function renderPhCommunicationsPage() {
+    const wrap = document.getElementById("phMessagesWrap");
     const headWrap = document.getElementById("phMessagesShellHead"), bodyWrap = document.getElementById("phMessages");
     if (!headWrap || !bodyWrap) return;
+    const desktop = window.innerWidth > 900 && phMsgSection === "due";
+    if (wrap) wrap.classList.toggle("ph-ds-polish", desktop);
     const all = phCommDueRows(), live = all.filter(r => !r.done);
     const todayKey = keyOf(TODAY);
     const overdueN = live.filter(r => r.kind === "quiet" || r.on < todayKey).length;
@@ -29593,12 +29663,13 @@
       phMsgSection === "templates" ? phMsgTemplatesHtml() :
       phMsgSection === "prepared" ? phMsgPreparedHtml() :
       phMsgSection === "sent" ? phMsgSentHtml() :
-      phMsgSection === "compose" ? phMsgComposeHtml() : phCommDueHtml(all);
+      phMsgSection === "compose" ? phMsgComposeHtml() : phCommDueHtml(all, desktop);
     bodyWrap.innerHTML = `
       <div class="ph-msg-seg" role="tablist" aria-label="Communications section">
         ${sections.map(([id, label]) => `<button type="button" class="ph-msg-seg-opt${phMsgSection === id ? " on" : ""}" role="tab" aria-selected="${phMsgSection === id}" data-ph-msg-section="${id}">${label}</button>`).join("")}
       </div>
       ${body}`;
+    if (desktop) phDsResizeApply();
   }
   function phMsgComposeHtml() {
     const tmpl = phMsgSelTemplateId ? phMsgTemplateById(phMsgSelTemplateId) : null;
