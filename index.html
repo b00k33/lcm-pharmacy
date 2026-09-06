@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260906-130000">
+<meta name="lcm-build" content="20260906-140000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -10344,6 +10344,9 @@
   #pharmacyPage .ph-msg-tmpl-list { display: flex; flex-direction: column; }
   #pharmacyPage .ph-msg-tmpl-row { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-top: 1px solid var(--ph-line); }
   #pharmacyPage .ph-msg-tmpl-row:first-child { border-top: none; }
+  #pharmacyPage .ph-msg-tmpl-grouphead { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--ph-soft); padding: 14px 0 4px; }
+  #pharmacyPage .ph-msg-tmpl-grouphead:first-child { padding-top: 0; }
+  #pharmacyPage .ph-msg-tmpl-grouphead + .ph-msg-tmpl-row { border-top: none; }
   #pharmacyPage .ph-msg-tmpl-row-mid { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
   #pharmacyPage .ph-msg-tmpl-row-mid b { font-size: 13.5px; color: var(--ph-ink); }
   #pharmacyPage .ph-msg-tmpl-row-mid span { font-size: 11.5px; color: var(--ph-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -28746,17 +28749,17 @@
   // wording she'd already saved via the old "+ Save mine" (PHARMACY.ckTemplates)
   // -- see phMsgTemplates()'s seeding step and phCkLegacyTokenConvert.
   const PH_CK_SLOT_SEEDS = [
-    { slot: "checkin", name: "Check-in", subject: "Checking in — {{clinic}}",
+    { slot: "checkin", name: "Check-in", subject: "Checking in — {{clinic}}", category: "herbs",
       body: "Hi {{firstName}}, it's {{me}} from {{clinic}}. You're a few days into the {{herbs}} — how are you finding them so far? Any changes, or anything unexpected? Reply here anytime and I'll adjust if needed. {{me}}" },
-    { slot: "review", name: "Review", subject: "Checking in — {{clinic}}",
+    { slot: "review", name: "Review", subject: "Checking in — {{clinic}}", category: "herbs",
       body: "Hi {{firstName}}, it's {{me}} from {{clinic}}. Your {{herbs}} should be finishing around {{emptyDate}}. How have you been going with them — any changes, or any side effects? Let me know if you'd like the next batch made up, or I can go over it with you at {{visitDate}}. {{me}}" },
-    { slot: "running", name: "Running out", subject: "Checking in — {{clinic}}",
+    { slot: "running", name: "Running out", subject: "Checking in — {{clinic}}", category: "herbs",
       body: "Hi {{firstName}}, it's {{me}} from {{clinic}}. Just a reminder that your {{herbs}} will run out around {{emptyDate}} — would you like the next batch made up so there's no gap? {{me}}" },
-    { slot: "rebook", name: "Rebook", subject: "Checking in — {{clinic}}",
+    { slot: "rebook", name: "Rebook", subject: "Checking in — {{clinic}}", category: "herbs",
       body: "Hi {{firstName}}, it's {{me}} from {{clinic}}. It's a good time to book your next visit so I can review how you've gone on the {{herbs}}. Let me know which days suit you. {{me}}" },
-    { slot: "acu", name: "Acupuncture follow-up", subject: "Checking in — {{clinic}}",
+    { slot: "acu", name: "Acupuncture follow-up", subject: "Checking in — {{clinic}}", category: "acupuncture",
       body: "Hi {{firstName}}, it's {{me}} from {{clinic}}. It's about time for your next acupuncture session — would you like to book one in? {{me}}" },
-    { slot: "quiet", name: "Gone quiet", subject: "Checking in — {{clinic}}",
+    { slot: "quiet", name: "Gone quiet", subject: "Checking in — {{clinic}}", category: "general",
       body: "Hi {{firstName}}, it's {{me}} from {{clinic}}. It's been a while since we've seen you — just checking in on how you're going, and whether you'd like to book a visit. {{me}}" },
   ];
   // one-time conversion of her old single-brace wording to the shared {{...}}
@@ -29460,24 +29463,39 @@
   // once she's actually sent it. Wiring up real sending is a separate,
   // deliberate decision for her to make explicitly later -- never inferred.
   const PH_MSG_TAGS = { ready: "Herbs ready", move: "Practice moving", remind: "Reminder", plan: "Treatment plan", checkin: "Check-in wording", custom: "Custom" };
+  // her ask (2026-09-06): "organise templates into herbs, acupuncture etc" --
+  // a category (which track this wording is for) separate from tag (which
+  // colour pill it wears) -- the 6 check-in slots all share tag "checkin"
+  // regardless of track, so category can't be derived from tag alone.
+  // Order here is display order in the grouped Templates list.
+  const PH_MSG_CATEGORIES = [["herbs", "🌿 Herbs"], ["acupuncture", "🪡 Acupuncture"], ["general", "✉ General"]];
+  // for a template that predates this field (her real saved data already had
+  // 11 of these before today) -- inferred once, then written back so it's a
+  // real, editable choice from then on, not a guess re-run every render
+  function phMsgInferCategory(t) {
+    if (t.slot === "acu") return "acupuncture";
+    if (t.slot === "quiet") return "general";
+    if (t.slot) return "herbs";               // checkin/review/running/rebook
+    return t.tag === "ready" ? "herbs" : "general";
+  }
   // starting points she's expected to make her own -- her voice, not final
   // copy shipped on this app's judgement (her explicit instruction, STEP 4)
   const PH_MSG_SEED_TEMPLATES = [
-    { name: "Herbs ready", tag: "ready", subject: "Your herbs are ready",
+    { name: "Herbs ready", tag: "ready", subject: "Your herbs are ready", category: "herbs",
       body: "Hi {{firstName}}, your herbs are ready to collect whenever suits you." },
-    { name: "Practice moving", tag: "move", subject: "We're relocating",
+    { name: "Practice moving", tag: "move", subject: "We're relocating", category: "general",
       body: "Hi {{firstName}}, I wanted to let you know the clinic is relocating. Your care continues exactly as before — I'll have the new address ready before your next visit." },
-    { name: "Appointment reminder", tag: "remind", subject: "Your upcoming appointment",
+    { name: "Appointment reminder", tag: "remind", subject: "Your upcoming appointment", category: "general",
       body: "Hi {{firstName}}, just a reminder of your appointment on {{nextAppt}}. See you then." },
-    { name: "Treatment plan", tag: "plan", subject: "Your treatment plan",
+    { name: "Treatment plan", tag: "plan", subject: "Your treatment plan", category: "general",
       body: "Hi {{firstName}}, here's a summary of what we covered today and the plan going forward..." },
-    { name: "Blank", tag: "custom", subject: "", body: "Hi {{firstName}}, " },
+    { name: "Blank", tag: "custom", subject: "", category: "general", body: "Hi {{firstName}}, " },
   ];
   // lazy-seeded once, then fully hers -- editing (even the 5 starters) only
   // ever affects future prepares (see phMsgPrepare's resolved-copy comment)
   function phMsgTemplates() {
     if (!Array.isArray(PHARMACY.msgTemplates)) {
-      PHARMACY.msgTemplates = PH_MSG_SEED_TEMPLATES.map(t => ({ id: uid(), name: t.name, tag: t.tag, subject: t.subject, body: t.body, createdAt: Date.now(), editedAt: Date.now() }));
+      PHARMACY.msgTemplates = PH_MSG_SEED_TEMPLATES.map(t => ({ id: uid(), name: t.name, tag: t.tag, subject: t.subject, body: t.body, category: t.category, createdAt: Date.now(), editedAt: Date.now() }));
     }
     // the 6 check-in quick-picks join this same list, seeded (or migrated
     // from her old "+ Save mine" wording) the first time either page is
@@ -29485,10 +29503,12 @@
     const legacy = PHARMACY.ckTemplates || {};
     PH_CK_SLOT_SEEDS.forEach(s => {
       if (!PHARMACY.msgTemplates.some(t => t.slot === s.slot)) {
-        PHARMACY.msgTemplates.push({ id: uid(), name: s.name, tag: "checkin", slot: s.slot, subject: s.subject,
+        PHARMACY.msgTemplates.push({ id: uid(), name: s.name, tag: "checkin", slot: s.slot, subject: s.subject, category: s.category,
           body: legacy[s.slot] ? phCkLegacyTokenConvert(legacy[s.slot]) : s.body, createdAt: Date.now(), editedAt: Date.now() });
       }
     });
+    // backfill for templates saved before category existed (her real data)
+    PHARMACY.msgTemplates.forEach(t => { if (!t.category) t.category = phMsgInferCategory(t); });
     return PHARMACY.msgTemplates;
   }
   function phMsgPrepared() { if (!Array.isArray(PHARMACY.preparedMessages)) PHARMACY.preparedMessages = []; return PHARMACY.preparedMessages; }
@@ -29897,6 +29917,9 @@
         <div class="field full"><label>Tag / colour</label>
           <select id="phMsgTmplTag">${Object.entries(PH_MSG_TAGS).map(([id, label]) => `<option value="${id}"${editing.tag === id ? " selected" : ""}>${esc(label)}</option>`).join("")}</select>
         </div>
+        <div class="field full"><label>Category</label>
+          <select id="phMsgTmplCategory">${PH_MSG_CATEGORIES.map(([id, label]) => `<option value="${id}"${editing.category === id ? " selected" : ""}>${esc(label)}</option>`).join("")}</select>
+        </div>
         <div class="field full"><label>Subject</label><input type="text" id="phMsgTmplSubject" value="${esc(editing.subject)}"></div>
         <div class="field full"><label>Body</label><textarea id="phMsgTmplBody" rows="6">${esc(editing.body)}</textarea>
           <div class="ph-msg-tokenkey">Tokens: <code>{{firstName}}</code> <code>{{nextAppt}}</code> <code>{{herbs}}</code> <code>{{emptyDate}}</code> <code>{{visitDate}}</code> <code>{{clinic}}</code> <code>{{me}}</code> · editing only changes future prepares — messages already prepared from this template keep their own wording</div>
@@ -29907,12 +29930,18 @@
         </div>
       </div>`;
     }
-    const rows = phMsgTemplates().map(t => `<div class="ph-msg-tmpl-row">
+    // grouped by category (her ask, 2026-09-06) -- fixed display order from
+    // PH_MSG_CATEGORIES, empty groups skipped so a brand-new install with
+    // fewer categories in play doesn't show hollow headers
+    const all = phMsgTemplates();
+    const groups = PH_MSG_CATEGORIES.map(([id, label]) => [label, all.filter(t => t.category === id)]).filter(([, list]) => list.length);
+    const rowHtml = t => `<div class="ph-msg-tmpl-row">
       ${phMsgTagPillHtml(t.tag)}
       <div class="ph-msg-tmpl-row-mid"><b>${esc(t.name)}</b><span class="faint">${esc((t.body || "").split("\n")[0].slice(0, 80))}</span></div>
       <span class="ph-msg-tmpl-uses">${phMsgTemplateUses(t.id)} used</span>
       <button type="button" class="ph-name-link" data-ph-msg-tmpl-edit="${t.id}">Edit</button>
-    </div>`).join("");
+    </div>`;
+    const rows = groups.map(([label, list]) => `<div class="ph-msg-tmpl-grouphead">${esc(label)}</div>${list.map(rowHtml).join("")}`).join("");
     return `<div class="ph-widget ph-dash-card">
       <div class="ph-dash-secthead"><h2>Templates</h2><span class="rule"></span><span class="ph-dash-card-sub">Starting points — make them yours</span></div>
       <div class="ph-msg-tmpl-list">${rows}</div>
@@ -30042,9 +30071,11 @@
     if (tSave) {
       const t = phMsgTemplateById(tSave.dataset.phMsgTmplSave); if (!t) return;
       const nameEl = document.getElementById("phMsgTmplName"), tagEl = document.getElementById("phMsgTmplTag"),
+        categoryEl = document.getElementById("phMsgTmplCategory"),
         subjEl = document.getElementById("phMsgTmplSubject"), bodyEl = document.getElementById("phMsgTmplBody");
       if (nameEl && nameEl.value.trim()) t.name = nameEl.value.trim();
       if (tagEl) t.tag = tagEl.value;
+      if (categoryEl) t.category = categoryEl.value;
       if (subjEl) t.subject = subjEl.value;
       if (bodyEl) t.body = bodyEl.value;
       t.editedAt = Date.now();
