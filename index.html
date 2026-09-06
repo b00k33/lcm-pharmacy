@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260906-140000">
+<meta name="lcm-build" content="20260906-150000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -1894,9 +1894,17 @@
   #phFollowupsWrap .ph-ds-vl:nth-child(3) { right: 564px; }
   #phFollowupsWrap .ph-ds-vl:nth-child(4) { right: 430px; }
   #phFollowupsWrap .ph-ds-vl:nth-child(5) { right: 326px; }
-  #pharmacyPage .ph-fs-empty b { font-weight: 700; color: var(--ph-ink); }
+  #pharmacyPage .ph-fs-empty b { font-weight: 700; color: var(--ph-ink); flex: none; }
   #pharmacyPage .ph-fs-empty.low b { color: var(--ph-low-deep); }
   #pharmacyPage .ph-fs-empty.zero b { color: var(--ph-zero-deep); }
+  /* her ask (2026-09-06): "Wed 26 Aug" + "60g", or "empty" + "since Wed 26
+     Aug", were hard-clipping mid-word with no "…" -- text-overflow:ellipsis
+     never engages across two flex children (each needs its own overflow
+     rule), it only works within ONE element's own content. Same fix already
+     proven on .nm b/.nm .kind just above: the short, always-important half
+     (.ph-fs-main / the empty-state <b>) never shrinks, the longer
+     contextual half (.ph-fs-sub, edited below) shrinks and ellipsizes first. */
+  #pharmacyPage .ph-fs-main { flex: none; }
   #pharmacyPage .ph-fs-row .ph-rf-bar i { width: 40px; }
   #phFollowupsWrap .ph-ds-vl:nth-child(6) { right: 142px; }
   /* Communications desktop sheet (her ask 2026-09-06: "I liked this, I want
@@ -1918,13 +1926,25 @@
   #pharmacyPage .ph-ds-pill.review { background: var(--ph-blue-tint); color: var(--ph-blue-deep); }
   #pharmacyPage .ph-ds-pill.both { background: var(--ph-gold-tint, #FFFBE2); color: var(--ph-gold-deep); }
   #pharmacyPage .ph-ds-pill.done { background: var(--ph-green-tint); color: var(--ph-green-deep); }
+  /* found while fixing the overflow above: these two kinds had no colour at
+     all on the dense sheet's pill (plain black text, no background) --
+     matches .ph-fu-badge's existing acu/quiet tints so the same kind reads
+     the same colour whether she's looking at a card or this sheet. */
+  #pharmacyPage .ph-ds-pill.acu { background: var(--ph-purple-tint); color: var(--ph-purple-deep); }
+  #pharmacyPage .ph-ds-pill.quiet { background: var(--ph-phaseout-tint); color: var(--ph-phaseout-deep); }
   #pharmacyPage .ph-fs-row { cursor: pointer; }
+  /* the "N patients gone quiet" summary row: reads as a section, not a
+     patient -- muted name weight/colour so it never gets mistaken for a real
+     row while collapsed, same distinction .ph-ds-band already draws vs. the
+     rows inside it. */
+  #pharmacyPage .ph-fs-grouprow .nm b { font-weight: 600; color: var(--ph-soft); }
+  #pharmacyPage .ph-fs-grouprow:hover > div { background: none; }
   /* the patient name never gives way -- the muted formula after it ellipsizes first */
   #pharmacyPage .ph-fs-row .nm b { font-size: 13.5px; font-weight: 700; color: var(--ph-green-deep); flex: none; }
   #pharmacyPage .ph-fs-row .nm .kind { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   #pharmacyPage .ph-fs-row .soft { color: var(--ph-soft); }
   #pharmacyPage .ph-fs-row .date.gold { color: var(--ph-gold-deep); }
-  #pharmacyPage .ph-fs-sub { color: var(--ph-faint); font-size: 11.5px; margin-left: 6px; }
+  #pharmacyPage .ph-fs-sub { color: var(--ph-faint); font-size: 11.5px; margin-left: 6px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #pharmacyPage .ph-fs-wk { display: inline-flex; width: 6px; height: 6px; border-radius: 999px; background: var(--ph-gold); margin-left: 6px; flex: none; }
   #pharmacyPage .ph-fs-acts { cursor: default; }
   #pharmacyPage .ph-fs-acts .ph-os-lnk + .ph-os-lnk { margin-left: 16px; }
@@ -23328,6 +23348,8 @@
         renderPhCommunicationsPage();
         return;
       }
+      const quietGroupToggle = e.target.closest("[data-ph-comm-quiet-toggle]");
+      if (quietGroupToggle) { phCommQuietGroupOpen = !phCommQuietGroupOpen; renderPhCommunicationsPage(); return; }
       const dsFold = e.target.closest("[data-ph-ds-collapse]");
       if (dsFold) {
         const k = dsFold.dataset.phDsCollapse;
@@ -27091,7 +27113,7 @@
         <div class="st"><span class="glyph"><svg class="icn" aria-hidden="true"><use href="#i-clock"/></svg></span><span class="date${tone}">${esc(phFuRelDay(r.on))}</span>${phFuOnWorkDay(r.on) ? `<span class="ph-fs-wk" title="Clinic day"></span>` : ""}</div>
         <div class="nm"><b>${esc(phTitle(rec.patient))}</b>${f ? `<span class="kind">${f}</span>` : ""}</div>
         <div><span class="ph-ds-pill ${r.done ? "done" : r.kind}">${kindLabel}</span>${r.collapsed ? `<span class="ph-fs-sub">short script</span>` : r.snoozed && !r.done ? `<span class="ph-fs-sub">no reply yet</span>` : ""}${!r.done && phCkBookedLabel(rec) ? `<span class="ph-fs-sub">${esc(phCkBookedLabel(rec).replace(" · ", ""))}</span>` : ""}</div>
-        <div class="soft">${phFuDateLabel(rec.dispensedDate)}<span class="ph-fs-sub">${phFmtG(rec.gramsDispensed)}g</span></div>
+        <div class="soft"><span class="ph-fs-main">${phFuDateLabel(rec.dispensedDate)}</span><span class="ph-fs-sub">${phFmtG(rec.gramsDispensed)}g</span></div>
         <div>${phFuLevelBarHtml(lv, rec)}</div>
         <div class="soft ph-fs-empty${lv ? " " + lv.tone : ""}" title="${rec.weekdaysOnly ? "Weekdays only" : ""}">${!lv ? "—" : lv.left <= 0 ? `<b>empty</b><span class="ph-fs-sub">since ${esc(phFuDateLabel(rec.emptyOn))}</span>` : `<b>${lv.left} d left</b><span class="ph-fs-sub">${esc(phFuDateLabel(rec.emptyOn))}${rec.weekdaysOnly ? " · wkdays" : ""}</span>`}</div>
         <div class="ph-fs-acts">${acts}</div>
@@ -28387,10 +28409,18 @@
     if (!patient) return;                          // formulas have no patient
     const calc = phFollowupCalc(t, entry.date, grams);
     const isFirst = phFuIsFirstDispense(patient, entry.at);
+    // her ask (2026-09-06): "the system can register the timeline...so the
+    // communications correspond" -- a permanent snapshot of what cycle phase
+    // she was actually in the moment this script went out (e.g. "Rebecca's
+    // last formula was luteal phase"), never recalculated later. The check-in
+    // panel's existing Cycle row is live/current-day by design; this is its
+    // point-in-time counterpart, only set when she's cycle-tracked at all.
+    const cyclePhase = phCycleComp(phPatientPeek(patient));
     const rec = {
       id: uid(), logId: entry.id, presId: t.id,
       patient, patientKey: phPatientKey(patient),
       dispensedAt: entry.at, dispensedDate: entry.date,
+      phaseAtDispense: cyclePhase ? { key: cyclePhase.phaseKey, label: cyclePhase.phaseLabel, day: cyclePhase.day } : null,
       formulaLabel: entry.formula || entry.what || "", gramsDispensed: grams,
       ok: calc.ok, reason: calc.ok ? null : calc.reason,
       lastsDays: calc.ok ? calc.lastsDays : null,
@@ -28571,6 +28601,13 @@
   // someone is this stale they're a former patient, not someone to chase --
   // an open-ended alert just piles up dead weight. 3 months, her own words.
   const PH_QUIET_MAX_DAYS = 90;
+  // her ask (2026-09-06): "exclude patients that had dispenses before i built
+  // the communications system" -- Follow-ups (the feature this grew out of)
+  // first existed 2026-08-23; a patient whose most recent touch of ANY kind
+  // is entirely before that was never actually being tracked, so surfacing
+  // them now as newly "gone quiet" is pure retroactive noise, not a real
+  // alert. Any touch on/after this date re-enters them into normal tracking.
+  const PH_QUIET_CUTOFF = "2026-08-23";
   // a script filed as a "patient" that's really a formula/condition
   // template (her screenshot, same day: "Vitality", "Allergies And Stress"
   // etc. showing up as gone-quiet contacts with no profile to open and no
@@ -28659,7 +28696,7 @@
     phClinikoKnownKeys().forEach(key => {
       if (flaggedKeys.has(key) || phMsgDoNotContact(key) || maps.apptNext.has(key) || formulaLike.has(key) || phTpAllPlansInactive(phTitle(key))) return;
       const touch = phCommLastTouch(key, maps);
-      if (!touch) return;
+      if (!touch || touch.on < PH_QUIET_CUTOFF) return;
       const rec = PHARMACY.patients && PHARMACY.patients[key];
       if (rec && rec.quietDismissedTouch === touch.on) return;
       const thresholdDays = (rec && rec.acuEnabled) ? PH_QUIET_ACU_DAYS : PH_QUIET_HERB_DAYS;
@@ -28693,7 +28730,17 @@
     }));
     const acu = phCommAcuRows();
     const flaggedKeys = new Set([...herb, ...acu].filter(r => !r.done).map(r => r.patientKey));
-    return [...herb, ...acu, ...phCommQuietRows(flaggedKeys)];
+    const rows = [...herb, ...acu, ...phCommQuietRows(flaggedKeys)];
+    // her ask (2026-09-06): a reminder goes quiet on the calendar day she has
+    // that patient booked in -- she'll deal with it in person, so it's not
+    // useful noise that day. Filtered here (not just hidden in the list UI)
+    // so the Dashboard strip and nav badge agree with the page. Nothing is
+    // marked done, so if the visit is missed the row simply reappears as
+    // normal (overdue) the next day once today's date moves on -- no
+    // separate "missed" state to track.
+    const todayKey = keyOf(TODAY);
+    const apptTodaySet = new Set(phApptList().filter(a => a.date === todayKey).map(a => phPatientKey(a.patient)));
+    return rows.filter(r => !apptTodaySet.has(r.patientKey));
   }
   // shared by the Dashboard strips and the Communications page -- one place
   // that knows how to label/identify a row regardless of which of the three
@@ -29191,6 +29238,15 @@
       visit: appt ? `your visit on ${phFuDateLabel(appt.date)}` : "your next visit",
       // 🩸 her cycle today (2026-09-04) -- to time the review to the cycle
       cycle: pat && pat.medicalHistory ? phCycleComp(pat) : null,
+      // 🩸 phase correspondence (2026-09-06): what phase this SCRIPT was
+      // actually written in -- an immutable snapshot taken at dispense time
+      // (rec.phaseAtDispense), independent of the Cycle row above which is
+      // always live/today. reviewPhase is a projection of what phase the
+      // still-pending review will likely land in, for context only -- it
+      // never moves rec.review.on itself.
+      phaseAtDispense: rec.phaseAtDispense || null,
+      reviewPhase: (rec.phaseAtDispense && rec.review && !rec.review.done && rec.review.on && pat)
+        ? phCycleCompAsOf(pat, parseKey(rec.review.on)) : null,
     };
   }
   const phCkIos = () => /iP(hone|ad|od)/.test(navigator.userAgent);
@@ -29237,6 +29293,7 @@
           <span class="k">Formula</span><span class="v"><b>${esc(c.formula || "—")}</b>${rec.gramsDispensed ? ` · ${phFmtG(rec.gramsDispensed)}g` : ""}</span>
           ${c.dose ? `<span class="k">Dose</span><span class="v">${esc(c.dose)}</span>` : ""}
           <span class="k">Dispensed</span><span class="v">${esc(c.dispensedLabel)}${c.lasts ? ` · lasts ${c.lasts} days` : ""}</span>
+          ${c.phaseAtDispense ? `<span class="k">Phase</span><span class="v">${esc(c.phaseAtDispense.label)} at dispense${c.reviewPhase ? ` <span class="faint">· review lands in ${esc(c.reviewPhase.phaseLabel)}</span>` : ""}</span>` : ""}
           <span class="k">Empty</span><span class="v${c.left != null && c.left <= 0 ? " warn" : ""}">${c.left == null ? "—" : c.left <= 0 ? `since ${esc(c.emptyLabel)}${c.left < 0 ? ` · ${-c.left} day${c.left === -1 ? "" : "s"} ago` : " · today"}` : `${esc(c.emptyLabel)} · ${c.left} day${c.left === 1 ? "" : "s"} left`}</span>
           <span class="k">Visits</span><span class="v">${c.scripts} script${c.scripts === 1 ? "" : "s"}${c.lastVisit ? ` · last ${esc(c.lastVisit)}` : ""}</span>
           <span class="k">Booked</span><span class="v">${c.appt ? `<b>${esc(c.visitLabel)}</b> ${phApptKindHtml(c.appt.service)}${phApptEtHtml(c.appt)}${c.appt.service && c.appt.service !== "Booked (Cliniko)" ? ` <span class="faint">${esc(c.appt.service)}</span>` : ""} <button type="button" class="ph-ck-lnk" data-ph-appt-del="${esc(c.appt.id)}" title="Cancel this appointment">Cancel</button>` : `<span class="faint">not booked</span>`}</span>
@@ -29720,6 +29777,10 @@
   // locked layout (her calibration, round 2): a pinned Overdue band, always
   // visible, then a 14-day strip -> tapping a day filters the list below it.
   let phCommDay = null;   // date key selected on the strip; null = today
+  // her ask (2026-09-06): 11 identical "Gone quiet" rows buried the real,
+  // distinct alerts (Review, Check-in) in the Overdue band -- collapsed
+  // behind one summary row by default, session-only like phFsCollapsed.
+  let phCommQuietGroupOpen = false;
   function phCommStripDays() {
     const days = [];
     for (let i = 0; i < 14; i++) {
@@ -29773,7 +29834,7 @@
         <div class="st"><span class="glyph"><svg class="icn" aria-hidden="true"><use href="#i-clock"/></svg></span><span class="date${tone}">${esc(phFuRelDay(row.on))}</span></div>
         <div class="nm">${nameHtml}</div>
         <div><span class="ph-ds-pill ${row.kind}">${kindLabel}</span>${row.snoozed ? `<span class="ph-fs-sub">no reply yet</span>` : ""}</div>
-        <div class="soft">${lastLabel}${metaSub ? `<span class="ph-fs-sub">${esc(metaSub)}</span>` : ""}</div>
+        <div class="soft"><span class="ph-fs-main">${lastLabel}</span>${metaSub ? `<span class="ph-fs-sub">${esc(metaSub)}</span>` : ""}</div>
         <div><span class="faint">—</span></div>
         <div class="soft ph-fs-empty"><span class="faint">—</span></div>
         <div class="ph-fs-acts">${acts}</div>
@@ -29790,11 +29851,27 @@
       <div class="st"><span class="glyph"><svg class="icn" aria-hidden="true"><use href="#i-clock"/></svg></span><span class="date${tone}">${esc(phFuRelDay(row.on))}</span>${phFuOnWorkDay(row.on) ? `<span class="ph-fs-wk" title="Clinic day"></span>` : ""}</div>
       <div class="nm">${nameHtml}${f ? `<span class="kind">${f}</span>` : ""}</div>
       <div><span class="ph-ds-pill ${row.kind}">${kindLabel}</span>${row.collapsed ? `<span class="ph-fs-sub">short script</span>` : row.snoozed ? `<span class="ph-fs-sub">no reply yet</span>` : ""}${phCkBookedLabel(rec) ? `<span class="ph-fs-sub">${esc(phCkBookedLabel(rec).replace(" · ", ""))}</span>` : ""}</div>
-      <div class="soft">${phFuDateLabel(rec.dispensedDate)}<span class="ph-fs-sub">${phFmtG(rec.gramsDispensed)}g</span></div>
+      <div class="soft"><span class="ph-fs-main">${phFuDateLabel(rec.dispensedDate)}</span><span class="ph-fs-sub">${phFmtG(rec.gramsDispensed)}g</span></div>
       <div>${phFuLevelBarHtml(lv, rec)}</div>
       <div class="soft ph-fs-empty${lv ? " " + lv.tone : ""}" title="${rec.weekdaysOnly ? "Weekdays only" : ""}">${!lv ? "—" : lv.left <= 0 ? `<b>empty</b><span class="ph-fs-sub">since ${esc(phFuDateLabel(rec.emptyOn))}</span>` : `<b>${lv.left} d left</b><span class="ph-fs-sub">${esc(phFuDateLabel(rec.emptyOn))}${rec.weekdaysOnly ? " · wkdays" : ""}</span>`}</div>
       <div class="ph-fs-acts">${acts}</div>
     </div>${open ? phCkPanelHtml(row) : ""}`;
+  }
+  // one summary row standing in for every undone "gone quiet" patient, so
+  // the Overdue band leads with real, distinct alerts (Review, Check-in)
+  // instead of 11 look-alike rows -- a tap expands the real rows beneath it,
+  // reusing phCommSheetRowHtml unchanged (this is purely a grouping wrapper).
+  function phCommQuietGroupRowHtml(rows) {
+    const n = rows.length;
+    return `<div class="ph-ds-row ph-fs-row ph-fs-grouprow">
+      <div class="st"><span class="glyph"><svg class="icn" aria-hidden="true"><use href="#i-clock"/></svg></span><span class="date faint">—</span></div>
+      <div class="nm"><b>${n} patient${n === 1 ? "" : "s"} gone quiet</b></div>
+      <div><span class="ph-ds-pill quiet">Gone quiet</span></div>
+      <div class="soft"><span class="faint">—</span></div>
+      <div><span class="faint">—</span></div>
+      <div class="soft ph-fs-empty"><span class="faint">—</span></div>
+      <div class="ph-fs-acts"><button type="button" class="ph-os-lnk" data-ph-comm-quiet-toggle="1">${phCommQuietGroupOpen ? "Hide ▴" : `Show all ${n} ▾`}</button></div>
+    </div>${phCommQuietGroupOpen ? rows.map(phCommSheetRowHtml).join("") : ""}`;
   }
   function phCommDueHtml(all, desktop) {
     const todayKey = keyOf(TODAY);
@@ -29815,11 +29892,14 @@
     }).join("")}</div>`;
     if (desktop) {
       const dayLabel = selDay === todayKey ? "Today" : phFuDateLabel(selDay);
+      const overdueActionable = overdue.filter(r => r.kind !== "quiet");
+      const overdueQuiet = overdue.filter(r => r.kind === "quiet");
+      const overdueHtml = overdueActionable.map(phCommSheetRowHtml).join("") + (overdueQuiet.length ? phCommQuietGroupRowHtml(overdueQuiet) : "");
       const groups = [
-        { key: "over", tone: "over", icon: "i-warn", label: "Overdue", rows: overdue },
-        { key: "day", tone: "today", icon: "i-cal", label: dayLabel, rows: dayRows },
-      ].filter(g => g.rows.length);
-      const body = groups.map(g => phFsBand(g.key, g.tone, g.icon, g.label, g.rows.length) + (phFsCollapsed.has(g.key) ? "" : g.rows.map(phCommSheetRowHtml).join(""))).join("");
+        { key: "over", tone: "over", icon: "i-warn", label: "Overdue", n: overdue.length, html: overdueHtml },
+        { key: "day", tone: "today", icon: "i-cal", label: dayLabel, n: dayRows.length, html: dayRows.map(phCommSheetRowHtml).join("") },
+      ].filter(g => g.n);
+      const body = groups.map(g => phFsBand(g.key, g.tone, g.icon, g.label, g.n) + (phFsCollapsed.has(g.key) ? "" : g.html)).join("");
       return `${stripHtml}
       <div class="ph-ds-cols" data-ph-dsresize="fu"><div>When</div><div>Patient</div><div>Due</div><div>Dispensed</div><div>Level</div><div>Empty on</div><div>Action</div></div>
       <div class="ph-ds-card"><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i>
@@ -33473,11 +33553,19 @@
   // day number. That's what makes the bar real data, not decoration.
   // ============
   const PH_TP_LUTEAL_DAYS = 14;
-  function phTpCycleCompute(cycle) {
+  // asOf (optional, defaults to TODAY): lets a caller ask "what phase would
+  // this have been / will this be on date X" -- her ask (2026-09-06), so a
+  // dispensed script can be tagged with the phase it was actually written in
+  // (asOf = the dispense date, a past snapshot) and a pending review can show
+  // which phase it'll likely land in (asOf = the review due date, a
+  // near-future projection) -- see phCycleCompAsOf below. Every existing
+  // caller keeps computing "today" exactly as before.
+  function phTpCycleCompute(cycle, asOf) {
     if (!cycle || !cycle.lmp) return null;
+    const ref = asOf || TODAY;
     const lmp = parseKey(cycle.lmp);
     if (isNaN(lmp.getTime())) return null;
-    const day = Math.round((TODAY - lmp) / 86400000) + 1;
+    const day = Math.round((ref - lmp) / 86400000) + 1;
     const cycleLen = Math.max(14, cycle.cycleLen || 28);
     const flowDays = Math.max(1, Math.min(cycle.flowDays || 5, cycleLen - 3));
     const ovDay = Math.max(flowDays + 2, cycleLen - PH_TP_LUTEAL_DAYS);
@@ -33537,6 +33625,28 @@
     return age == null || age < 50;
   }
   const phCycleComp = rec => phCycleOn(rec) ? phTpCycleCompute(phCycleFor(rec)) : null;
+  // projected phase on a future/past date (e.g. a pending review's due date)
+  // -- her ask (2026-09-06): show which phase a check-in/review will likely
+  // land in for context, WITHOUT moving the actual due date itself.
+  // phTpCycleCompute deliberately does NOT wrap "day" past cycleLen for
+  // TODAY's own reading -- an overrunning cycle with no new period logged
+  // yet should default to "still luteal, unconfirmed" (the overdue flag),
+  // not silently assume a new cycle already started. But a forecast days or
+  // weeks out is explicitly a statistical projection off her average cycle
+  // length, so it SHOULD roll into whichever future cycle the target date
+  // actually falls in -- same anchor-shifting trick phCycleLookAheadHtml
+  // already uses, generalised to any asOf instead of just "next cycle."
+  function phCycleCompAsOf(rec, asOf) {
+    if (!phCycleOn(rec) || !asOf) return null;
+    const cycle = phCycleFor(rec);
+    if (!cycle || !cycle.lmp) return null;
+    const lmp = parseKey(cycle.lmp);
+    if (isNaN(lmp.getTime())) return null;
+    const cycleLen = Math.max(14, cycle.cycleLen || 28);
+    const cyclesElapsed = Math.floor(Math.round((asOf - lmp) / 86400000) / cycleLen);
+    const effectiveLmp = keyOf(new Date(lmp.getFullYear(), lmp.getMonth(), lmp.getDate() + cyclesElapsed * cycleLen));
+    return phTpCycleCompute(Object.assign({}, cycle, { lmp: effectiveLmp }), asOf);
+  }
   const phCycleChipHtml = comp => comp ? `<span class="ph-cycle-chip">Day ${comp.day} · ${esc(comp.phaseLabel)}${comp.overdue ? " · late?" : ""}</span>` : "";
   // her yes (2026-09-04): a Natural fertility plan's current phase follows
   // the cycle day. IVF phases are calendar-driven (OPU, transfer) so they
