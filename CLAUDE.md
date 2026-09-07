@@ -70,6 +70,14 @@ update STYLE-LCM.md to match so future builds don't undo it.
   list returns. Never ship a change until you've re-checked this.
 - Marking a routine/order "done" must never create a duplicate entry.
 - No white/light-mode regressions, no cut-off elements, no boxes-in-boxes.
+- **End of day** (her spec 2026-09-07; `phEodSelfCheck()` warns in the console on load if any of these break):
+  1. Before 16:00 the Dashboard's "Wrap up the day" row is absent; at/after 16:00 it is present.
+  2. The generated Cliniko prompt lists exactly as many `- ` lines as there are items in "Today from LCM".
+  3. Every price in the prompt matches the price shown in the list.
+  4. The "Copied" state survives a reload on the same day and is gone on a new date.
+  The page only ever READS the dispense log, the left-unlogged stamps and today's appointments — it never
+  writes to them, changes stock, money or any prescription. Its one write is today's Copied mark
+  (`daybook-ph-eod-copied`).
 
 ## lcm6 — Senior Product & Desktop UI/UX Design Agent
 Given 2026-08-30, written down here (same reason as book33-app-redesign's `code6`
