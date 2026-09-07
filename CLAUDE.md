@@ -88,6 +88,8 @@ update STYLE-LCM.md to match so future builds don't undo it.
 - **Her likes ledger (lcm6, her instruction 2026-09-08: "im going to show you what i like
   or dont like and you need to remember this so you can keep doing what i like").** Add
   to this list every time she points at something; read it before designing anything.
+  ALWAYS SHOW (her word, 2026-09-08): after every change, front the local sandbox in
+  the Browser pane on the changed screen, unprompted, and leave the server running.
   LIKES: the "Grouped by rhythm" sidebar mock — dark green rail, small-caps group labels
   that say WHY the list is in that order, everyday work first, the rarely-used groups
   folded into one text line, count badges on the right, the Dashboard demoted below the
