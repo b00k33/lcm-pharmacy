@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260907-113000">
+<meta name="lcm-build" content="20260907-120000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -949,6 +949,8 @@
   #pharmacyPage .ph-ref-quiet { color: var(--ph-faint); font-variant-numeric: tabular-nums; }
   #pharmacyPage .ph-ref-left { font-variant-numeric: tabular-nums; color: var(--ph-soft); }
   #pharmacyPage .ph-ref-left.neg { color: var(--ph-verdict-zero); font-weight: 700; }
+  #pharmacyPage .ph-ref-herbs .ph-name-link { margin-left: 8px; font-size: 11.5px; white-space: nowrap; }
+  #pharmacyPage .ph-ref-order-tick { margin-left: 8px; font-size: 11.5px; color: var(--ph-green-deep); font-weight: 700; white-space: nowrap; }
   /* §7: below 640px drop Recipe rather than clip -- it's context, not the
      job. Herb / Weigh out / Stock→left survive. (col-stock is gone at every
      width now -- merged into the → cell, 2026-09-01.) */
@@ -32431,15 +32433,24 @@
   document.addEventListener("change", e => {
     const t = e.target;
     if (!t || !t.matches) return;
+    // same trap as data-cycle-field="lmp" above (her report 2026-09-04,
+    // "i cant type in 2026") -- a date input fires change on every keystroke
+    // of the year (0002, 0020, 0202 …), and both of these commit-and-rerender
+    // on change, so typing the year added one history row/log per digit.
+    // Found again live 2026-09-07 on "+ Add a past period" specifically
+    // (the fix below was only ever applied to the LMP field). Only a
+    // plausible year commits.
     if (t.matches("[data-cycle-hist-add]")) {
       const rec = phCycleTargetRec();
-      if (rec && t.value) { phCycleAddHistoryDate(rec, t.value); t.value = ""; phCycleRerender(); }
+      const yr = parseInt((t.value || "").slice(0, 4), 10);
+      if (rec && t.value && yr >= 2000 && yr <= TODAY.getFullYear()) { phCycleAddHistoryDate(rec, t.value); t.value = ""; phCycleRerender(); }
       return;
     }
     if (t.matches("[data-cycle-period-date]")) {
       const nm = t.dataset.cyclePeriodDate;
       const rec = nm && nm !== "1" ? phPatientRec(nm) : phCycleTargetRec();
-      if (t.value) phCycleLogFrom(t, rec, t.value, nm && nm !== "1" ? nm : "");
+      const yr = parseInt((t.value || "").slice(0, 4), 10);
+      if (t.value && yr >= 2000 && yr <= TODAY.getFullYear()) phCycleLogFrom(t, rec, t.value, nm && nm !== "1" ? nm : "");
       return;
     }
     if (t.matches("[data-supp-dose]")) {
@@ -40798,12 +40809,21 @@ Dosage: {dosage}
         const stock = x.h && x.h.qty != null ? x.h.qty : null;
         const left = stock == null ? null : phRound2(stock - x.grams);
         const short = scaled && stock != null && stock < x.grams;
+        // her ask 2026-09-07 ("improve the start refill"): a short herb here
+        // used to be a dead end -- ordering it meant Cancel out of this
+        // screen and use the outer row's "Order short" instead. Same
+        // data-ph-order flag/toggle the To Order list and Dashboard's cart
+        // icon already use, just reachable from the exact row that shows
+        // the shortage.
+        const orderBtn = short && x.h
+          ? (x.h.ordered || x.h.order ? `<span class="ph-ref-order-tick" title="On the order list">✓ ordered</span>` : `<button type="button" class="ph-name-link" data-ph-order="${x.h.id}">🛒 Order</button>`)
+          : "";
         // her §5: no decimal point at all on a whole multiple -- this is the
         // number she reads with her hands full
         const weigh = whole ? String(Math.round(x.grams)) : phFmtG(x.grams);
         const stockCell = stock == null
           ? (x.h ? "untracked" : "not in inventory")
-          : `${phFmtG(stock)}g → ${left < 0 ? `<span class="ph-ref-left neg">${phFmtG(Math.abs(left))}g short</span>` : phFmtG(left) + "g"}`;
+          : `${phFmtG(stock)}g → ${left < 0 ? `<span class="ph-ref-left neg">${phFmtG(Math.abs(left))}g short</span>` : phFmtG(left) + "g"}${orderBtn}`;
         return `<tr${short ? ` class="short"` : ""}>
           <td>${phNameHtml(x.name, x.h ? phIsFormula(x.h) : null)}</td>
           ${showRecipe ? `<td class="n col-recipe ph-ref-quiet">${rG == null ? "—" : phFmtG(rG)}</td>` : ""}
