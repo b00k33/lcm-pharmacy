@@ -64,14 +64,28 @@ update STYLE-LCM.md to match so future builds don't undo it.
   device-local); List = the /patients table: Time · Patient · Status (live LCM status,
   never Cliniko's booked/arrived) · Presenting focus · Treatment goal. The old
   below-the-grid panel and the block's ⋯ are gone; don't bring either back.
-- **Sidebar order (her ten answers, 2026-09-07 pm, "organise the list in order of how
-  often i use it"):** "Every day" = Dashboard (her pick: stays first) · Appointments ·
-  Patient profile · Communications · Inventory · Formula refill. "Every week" = To order
-  · Intake review · Stocktake · Stock statistics. Records / Projects / Reference / Data
-  unchanged. The clinic name never truncates (15.5px, wraps). "Sitting too long"
-  (year-idle herbs, `phDashSittingTooLong`) lives INSIDE Inventory's Overstocked tile and
-  listing (`phOverstockList` = threshold nudge ∪ idle), with a Phase out button per row —
-  not on the Dashboard, not its own page.
+- **Sidebar order = the "Grouped by rhythm" mock she liked (2026-09-08, "i actually like
+  this" — supersedes her 2026-09-07 popup answers that kept Dashboard first):** "Every
+  day" = Appointments · Patient profile · Communications · Inventory · Formula refill · To
+  order. "Every week" = Dashboard · Intake review · Stocktake · Stock statistics. Records
+  unchanged. Projects / Reference / Data are ONE quiet line of text links
+  (`.ph-sb-group.compact`: Relocation · Guide · Supplements · Back up · Restore ·
+  Settings), icon column again when the sidebar is minimised. The clinic name never
+  truncates (15px, ~12% spare at 248px; wraps before it ever ellipsises). "Sitting too
+  long" (year-idle herbs, `phDashSittingTooLong`) lives INSIDE Inventory's Overstocked
+  tile and listing (`phOverstockList` = threshold nudge ∪ idle), with a Phase out button
+  per row — not on the Dashboard, not its own page.
+- **Her likes ledger (lcm6, her instruction 2026-09-08: "im going to show you what i like
+  or dont like and you need to remember this so you can keep doing what i like").** Add
+  to this list every time she points at something; read it before designing anything.
+  LIKES: the "Grouped by rhythm" sidebar mock — dark green rail, small-caps group labels
+  that say WHY the list is in that order, everyday work first, the rarely-used groups
+  folded into one text line, count badges on the right, the Dashboard demoted below the
+  daily pages; the GCal-style appointment popup + the /patients briefing table as a List
+  view (her ask, then "these designs look lazy" about the old panel — cohesive, modern,
+  functional). DISLIKES: the clinic name cut off with "…" (reported twice); sprawling
+  designs that look "lazy" (an ad-hoc panel below a grid); anything a second time she has
+  already asked for once.
 - **BBT charts + phase-tagged scripts (same round):** "BBT chart" is a photo type
   (`PH_REN_PHOTO_TYPES` key `bbt`): phone capture, relay, timeline and compare come from
   the photo system, plus a tile beside the cycle tiles showing this cycle's latest chart
