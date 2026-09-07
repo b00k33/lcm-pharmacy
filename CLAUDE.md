@@ -64,6 +64,22 @@ update STYLE-LCM.md to match so future builds don't undo it.
   device-local); List = the /patients table: Time · Patient · Status (live LCM status,
   never Cliniko's booked/arrived) · Presenting focus · Treatment goal. The old
   below-the-grid panel and the block's ⋯ are gone; don't bring either back.
+- **Sidebar order (her ten answers, 2026-09-07 pm, "organise the list in order of how
+  often i use it"):** "Every day" = Dashboard (her pick: stays first) · Appointments ·
+  Patient profile · Communications · Inventory · Formula refill. "Every week" = To order
+  · Intake review · Stocktake · Stock statistics. Records / Projects / Reference / Data
+  unchanged. The clinic name never truncates (15.5px, wraps). "Sitting too long"
+  (year-idle herbs, `phDashSittingTooLong`) lives INSIDE Inventory's Overstocked tile and
+  listing (`phOverstockList` = threshold nudge ∪ idle), with a Phase out button per row —
+  not on the Dashboard, not its own page.
+- **BBT charts + phase-tagged scripts (same round):** "BBT chart" is a photo type
+  (`PH_REN_PHOTO_TYPES` key `bbt`): phone capture, relay, timeline and compare come from
+  the photo system, plus a tile beside the cycle tiles showing this cycle's latest chart
+  and a per-cycle list (cycles = `rec.cycleLog` LMPs + the current LMP). A script may
+  carry a phase word (`t.phaseTag`, picked from the plan's phases or typed); the tab shows
+  it, and `phApptScriptFor` opens the script whose word matches the plan's CURRENT phase
+  first (cycle-driven plans move that phase by cycle day). The popup's "Script ↗ · Phase"
+  and the List's Status chip name it. No per-phase script links on the plan (her pick C).
 
 ## Spacing & size (one scale, no random numbers)
 - Only 4/8/12/16/24/32px for margins/padding/gaps.
