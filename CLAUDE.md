@@ -75,6 +75,16 @@ update STYLE-LCM.md to match so future builds don't undo it.
   long" (year-idle herbs, `phDashSittingTooLong`) lives INSIDE Inventory's Overstocked
   tile and listing (`phOverstockList` = threshold nudge ∪ idle), with a Phase out button
   per row — not on the Dashboard, not its own page.
+- **Appointment block colours = Cliniko's (her call 2026-09-08, "use cliniko for the
+  colors", after a three-option solid-colour mock):** `PH_CLINIKO_TYPE_COLOURS` is her
+  Cliniko Settings → Appointment types table, read live on 2026-09-08 (21 types, exact
+  hex). `phCkTypeColour(service)` matches the imported service text (exact → partial →
+  keyword) and picks white or ink text by luminance, the way Cliniko's calendar does.
+  Blocks with a match get `.ck` + inline `--ck/--ck-ink`: solid fill, no left strip, on
+  desktop AND phone; the popup's colour square uses the same colour. Status on a solid
+  block: ink-outlined dot = herbs status unknown, filled = ready, amber = short, ✓ =
+  dispensed (block fades). No match (a typed service) keeps the old kind tints. If she
+  recolours a type in Cliniko, update the table — nothing else knows the colours.
 - **Her likes ledger (lcm6, her instruction 2026-09-08: "im going to show you what i like
   or dont like and you need to remember this so you can keep doing what i like").** Add
   to this list every time she points at something; read it before designing anything.
