@@ -93,7 +93,28 @@ update STYLE-LCM.md to match so future builds don't undo it.
   LIKES: the "Grouped by rhythm" sidebar mock — dark green rail, small-caps group labels
   that say WHY the list is in that order, everyday work first, the rarely-used groups
   folded into one text line, count badges on the right, the Dashboard demoted below the
-  daily pages; the GCal-style appointment popup + the /patients briefing table as a List
+  daily pages — re-shown 2026-09-08, her why: "clean consistent" = one icon family in one
+  column, one label size/weight for every row, equal row spacing, every group header the
+  same small-caps style, badges one shape right-aligned (gold = count, red = the one
+  urgent), active row a quiet pill + thin gold left edge, everything on one left edge,
+  nothing a one-off; the Appointments page header band ("this heading", 2026-09-08) — one
+  continuous dark green strip with the brand block (gold eyebrow + white clinic name) inside
+  it, one big bold white title with air around it, and on the right ONLY a quiet muted stat
+  (a real count) + ONE round mint disc for the single primary action — never a row of
+  buttons up there, never more than one stat; the GCal-style appointment popup + the /patients briefing table as a List
+  view. DISLIKE + STANDING RULE (2026-09-08, "these are inconsistent. it is your job to
+  prioritise consistency"): page headers that differ from each other — she showed
+  Communications, Formula Refill and To Order side by side (flush band vs inset card,
+  subtitle vs none, one round disc vs two pills vs a button glued to the title, stat in the
+  band vs a strip below vs both). Consistency across pages is MY job to enforce before she
+  ever notices; a header variant that exists on one page only is a bug even if it works.
+  The Appointments header above is the reference shape. BUILT 2026-09-08 to her three
+  picks: the ONE primary action is the icon-only mint `.ph-shell-titlebar-action` disc, every
+  other action folds into ONE ⋯ (`.ph-tbm-more` → `phTbmMenuToggle` popover), titles are
+  words only (no icons, one 20px size, one bar padding). Every page now goes through
+  `phShellHead(title, "N things", strip?)` + `PH_TOPBAR_ACTIONS` (first non-ghost verb = the
+  disc, `ghost:true` = ⋯); never hand-build a button into the bar, never a page-only override
+  on `.ph-shell-titlebar`. Also LIKES the /patients briefing table as a List
   view (her ask, then "these designs look lazy" about the old panel — cohesive, modern,
   functional). DISLIKES: the clinic name cut off with "…" (reported twice); sprawling
   designs that look "lazy" (an ad-hoc panel below a grid); anything a second time she has
