@@ -69,6 +69,11 @@ update STYLE-LCM.md to match so future builds don't undo it.
   name and confirm the list narrows to only matches, then clear it and confirm the full
   list returns. Never ship a change until you've re-checked this.
 - Marking a routine/order "done" must never create a duplicate entry.
+- **Case ↔ Treatment plan** (her pick 2026-09-07, option A): Case lives on each SCRIPT, the plan on the
+  PATIENT. A patient's plan fills the Case of every script of hers that was never set (at +New and when a
+  script opens) — it must NEVER overwrite a Case she set herself, including an explicit "General" (stored as
+  the value `"general"`, not null). Test: patient with a Natural fertility plan + a blank script → opens as
+  Fertility; pick General → stays General after re-render and reload.
 - No white/light-mode regressions, no cut-off elements, no boxes-in-boxes.
 - **End of day** (her spec 2026-09-07; `phEodSelfCheck()` warns in the console on load if any of these break):
   1. Before 16:00 the Dashboard's "Wrap up the day" row is absent; at/after 16:00 it is present.
