@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260907-100000">
+<meta name="lcm-build" content="20260907-110000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -3871,6 +3871,31 @@
   #pharmacyPage .ph-appt-block.sel { outline: 2px solid var(--ph-green-deep); outline-offset: 1px; z-index: 2; }
   #pharmacyPage .ph-appt-block-time { display: block; font-size: 9.5px; font-weight: 700; color: var(--ph-soft); }
   #pharmacyPage .ph-appt-block-name { display: block; font-size: 12px; font-weight: 700; color: var(--ph-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* her ask 2026-09-07 ("do what the dashboard and patient profiles does"):
+     the same ready/short/acu signal those two surfaces show inline, as a
+     small corner dot rather than a text chip -- a block is too small for a
+     chip without recreating the exact narrow-column crowding fixed
+     yesterday (project_pharmacy_appointments_daycounts). Only a "short" dot
+     in the roomy 1/3-day views gets its own tap target (see
+     data-ph-apptcal-order-dot) -- a bigger hit area, cursor:pointer. */
+  #pharmacyPage .ph-appt-block-dot { position: absolute; top: 3px; right: 4px; width: 6px; height: 6px; border-radius: 50%; background: var(--ph-line); }
+  #pharmacyPage .ph-appt-block-dot.ready { background: var(--ph-green-deep); }
+  #pharmacyPage .ph-appt-block-dot.short { background: var(--ph-low-deep); }
+  #pharmacyPage .ph-appt-block-dot.acu { background: var(--ph-blue-deep); }
+  #pharmacyPage .ph-appt-block-dot[data-ph-apptcal-order-dot] { cursor: pointer; width: 9px; height: 9px; }
+  #pharmacyPage .ph-appt-block.dim { opacity: .3; }
+  #pharmacyPage .ph-apptcal-search { display: block; width: 100%; box-sizing: border-box; margin: 10px 0 0; }
+  /* the range-wide Day summary (booked/CHM/ACU/herbs/short) for whatever the
+     day-count picker currently shows -- horizontal, unlike Patient-profile's
+     stacked .ph-tl-stat sidebar card, since this sits above a wide grid
+     rather than beside a narrow list. */
+  #pharmacyPage .ph-apptcal-summary { display: flex; justify-content: space-around; text-align: center; margin: 10px 0 0; padding: 10px 12px; background: var(--ph-white); border-radius: 12px; }
+  #pharmacyPage .ph-apptcal-summary .stat { display: flex; flex-direction: column; gap: 2px; font-size: 11px; color: var(--ph-soft); }
+  #pharmacyPage .ph-apptcal-summary .stat b { font-size: 16px; color: var(--ph-ink); font-variant-numeric: tabular-nums; }
+  #pharmacyPage .ph-apptcal-summary .stat.warn b { color: var(--ph-low-deep); }
+  #pharmacyPage .ph-apptcal-qa { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; }
+  #pharmacyPage .ph-apptcal-qa .ph-tl-qa { width: auto; border: 1px solid var(--ph-line); border-radius: 999px; padding: 6px 12px; }
+  #pharmacyPage .ph-ck-panel-inline .ph-dash-secthead .bell { font-size: 12px; margin-left: 2px; }
   #pharmacyPage .ph-apptcal-now { position: absolute; left: 0; right: 0; height: 2px; background: var(--ph-zero-deep, #B4483A); z-index: 1; pointer-events: none; }
   #pharmacyPage .ph-apptcal-now::before { content: ""; position: absolute; left: -4px; top: -3px; width: 8px; height: 8px; border-radius: 999px; background: var(--ph-zero-deep, #B4483A); }
   /* the in-place detail panel below the grid -- single column (no draft-
@@ -18753,7 +18778,18 @@
     const prep = phApptPrep(phPatientKey(a.patient));
     if (!prep || !prep.short.length) return;
     prep.short.forEach(x => { x.h.order = true; delete x.h.orderSnoozedUntil; });
-    savePharmacy(); renderPharmacy();
+    savePharmacy();
+    phFlashShow(`Added ${prep.short.length} short herb${prep.short.length === 1 ? "" : "s"} to order`);
+  }
+  // her ask 2026-09-07 ("appointments should do what the dashboard and
+  // patient profiles does"): the same ready/short/acu signal
+  // phDashApptTimelineRowHtml's dot uses, reused here so the calendar's own
+  // blocks can carry it too -- one function, two render sites.
+  function phApptCalDotCls(a) {
+    const kind = phApptKind(a.service);
+    if (kind !== "chm" && kind !== "both") return "acu";
+    const prep = phApptPrep(phPatientKey(a.patient));
+    return !prep ? "" : prep.short.length ? "short" : "ready";
   }
   // ============================================================
   // 📅 Appointments calendar (her ask 2026-09-06: "use cliniko calendar
@@ -18774,6 +18810,7 @@
   let phApptCalOpenId = null;     // which block's panel is showing below the grid
   let phApptCalEditId = null;     // which appointment the panel has open for edit
   let phApptCalCancelArm = null;  // id pending a second tap to actually cancel (her ask: a nicer panel makes Cancel too easy to hit by accident)
+  let phApptCalQ = "";            // search box text, her ask 2026-09-07 ("appointments should do what the dashboard and patient profiles does") -- dims non-matching blocks rather than removing them, since the grid's own layout/spacing shouldn't jump around while she types
   const PH_APPTCAL_START_MIN = 7 * 60;     // 7am -- no clinic-hours setting exists to read; a sensible fixed range, scrollable
   const PH_APPTCAL_END_MIN = 21 * 60;      // 9pm
   const PH_APPTCAL_PX_PER_MIN = 1.1;       // 66px/hour
@@ -18865,8 +18902,21 @@
   }
   function phApptCalBlockHtml(it) {
     const a = it.a, kind = phApptKind(a.service);
-    return `<button type="button" class="ph-appt-block${kind ? " " + kind : ""}${phApptCalOpenId === a.id ? " sel" : ""}" style="${phApptCalBlockStyle(it)}" data-ph-apptcal-open="${a.id}" title="${esc(a.patient)}${a.service ? " — " + esc(a.service) : ""}">
+    const dotCls = phApptCalDotCls(a);
+    // her ask 2026-09-07: the status dot is a one-tap "add to order" ONLY in
+    // the roomier 1/3-day views -- in 5/6/7-day views the columns are already
+    // tight (the exact overflow problem fixed yesterday, see
+    // project_pharmacy_appointments_daycounts), so a second small tap target
+    // there would just recreate it; the dot stays purely visual there and the
+    // whole block still opens the panel, which has the same action.
+    const roomy = phApptCalEnsureDayCount() <= 3;
+    const dotTap = roomy && dotCls === "short" ? ` data-ph-apptcal-order-dot="${esc(a.id)}"` : "";
+    const dotTitle = dotCls === "short" ? `Short on herbs${roomy ? " — tap to add to order" : ""}` : dotCls === "ready" ? "Ready to dispense" : dotCls === "acu" ? "Acupuncture" : "";
+    const q = phApptCalQ.trim().toLowerCase();
+    const dim = q && !a.patient.toLowerCase().includes(q) ? " dim" : "";
+    return `<button type="button" class="ph-appt-block${kind ? " " + kind : ""}${phApptCalOpenId === a.id ? " sel" : ""}${dim}" style="${phApptCalBlockStyle(it)}" data-ph-apptcal-open="${a.id}" title="${esc(a.patient)}${a.service ? " — " + esc(a.service) : ""}">
       <span class="ph-appt-block-time">${esc(phCkTime12(a.time))}</span><span class="ph-appt-block-name">${esc(a.patient)}</span>
+      ${dotCls ? `<span class="ph-appt-block-dot ${dotCls}"${dotTap} title="${esc(dotTitle)}"></span>` : ""}
     </button>`;
   }
   // her chosen action set (2026-09-06, all four): Edit, Cancel-with-a-safety-
@@ -18896,11 +18946,22 @@
     const script = phApptScriptFor(key);
     const prep = script ? phApptPrep(key) : null;
     const cancelArmed = phApptCalCancelArm === a.id;
+    // her ask 2026-09-07 ("do what the dashboard and patient profiles does"):
+    // the same herb-count/formula line, cycle-tracked drop and follow-up bell
+    // those two surfaces already show -- this panel had the raw ingredients
+    // to compute all three (script/prep/rec) but wasn't showing them.
+    const rec = PHARMACY.patients && PHARMACY.patients[key];
+    const tracked = rec && phCycleOn(rec);
+    const fuDue = phApptFuDue(key, a.date);
+    const herbsN = script ? (script.ingredients || []).length : 0;
+    const formulaName = script ? (script.formula || "").trim() : "";
+    const herbsLine = script && herbsN ? `${herbsN} herb${herbsN === 1 ? "" : "s"}${formulaName ? ` · ${esc(formulaName)}` : ""}` : "";
     return `<div class="ph-widget ph-ck-panel-inline">
-      <div class="ph-dash-secthead"><h2>${esc(phTitle(a.patient))}</h2><span class="rule"></span>${phApptKindHtml(a.service)}</div>
+      <div class="ph-dash-secthead"><h2>${esc(phTitle(a.patient))}</h2><span class="rule"></span>${phApptKindHtml(a.service)}${tracked ? `<svg class="icn drop" aria-hidden="true" title="Cycle tracked"><use href="#i-drop"/></svg>` : ""}${fuDue ? `<span class="bell" title="Follow-up due">🔔</span>` : ""}</div>
       <div class="ph-ck-kv">
         <span class="k">When</span><span class="v"><b>${esc(phFuDateLabel(a.date))} · ${esc(phCkTime12(a.time))}</b>${a.durationMin ? ` · ${a.durationMin} min` : ""}</span>
         ${a.service ? `<span class="k">Service</span><span class="v">${esc(a.service)}</span>` : ""}
+        ${herbsLine ? `<span class="k">Herbs</span><span class="v">${herbsLine}</span>` : ""}
         ${a.focus ? `<span class="k">Focus</span><span class="v">${esc(a.focus)}</span>` : ""}
         ${a.goal ? `<span class="k">Goal</span><span class="v">${esc(a.goal)}</span>` : ""}
         <span class="k">Next appt</span><span class="v">${next ? `${esc(phFuDateLabel(next.date))} · ${esc(phCkTime12(next.time))}` : `<span class="faint">not booked</span>`}</span>
@@ -18914,6 +18975,47 @@
         <button type="button" class="ph-name-link${cancelArmed ? " warn" : ""}" data-ph-apptcal-cancel="${a.id}">${cancelArmed ? "Tap again to cancel" : "Cancel"}</button>
         <button type="button" class="ph-name-link" data-ph-apptcal-close="1">Close</button>
       </div>
+    </div>`;
+  }
+  // her ask 2026-09-07: the same Day-summary numbers Patient-profile's
+  // Today's-timeline shows for one day, scoped instead to whatever range the
+  // day-count picker currently has visible -- one calendar, one stat set,
+  // never a second "today only" number fighting the range she's looking at.
+  function phApptCalSummary(days) {
+    const appts = days.flatMap(d => phApptFor(d.key));
+    const chmN = appts.filter(a => phApptKind(a.service) !== "acu").length;
+    const acuN = appts.filter(a => { const k = phApptKind(a.service); return k === "acu" || k === "both"; }).length;
+    const scripts = appts.map(a => phApptScriptFor(phPatientKey(a.patient))).filter(Boolean);
+    const herbSet = new Set(); scripts.forEach(t => (t.ingredients || []).forEach(i => herbSet.add((i.herb || i.name || "").toLowerCase())));
+    const shortN = appts.filter(a => phApptCalDotCls(a) === "short").length;
+    return { booked: appts.length, chmN, acuN, herbsN: herbSet.size, shortN };
+  }
+  function phApptCalSummaryHtml(days) {
+    const s = phApptCalSummary(days);
+    if (!s.booked) return "";
+    return `<div class="ph-apptcal-summary">
+      <div class="stat"><b>${s.booked}</b><span>booked</span></div>
+      <div class="stat"><b>${s.chmN}</b><span>CHM</span></div>
+      <div class="stat"><b>${s.acuN}</b><span>ACU</span></div>
+      <div class="stat"><b>${s.herbsN}</b><span>herbs</span></div>
+      ${s.shortN ? `<div class="stat warn"><b>${s.shortN}</b><span>short</span></div>` : ""}
+    </div>`;
+  }
+  // her ask 2026-09-07: same four shortcuts Patient-profile's Quick actions
+  // card offers -- dropped "Paste appointments" here specifically, since this
+  // page already has that as its own header button (data-ph-appt-open), a
+  // second copy of it would just be a duplicate control on the same screen.
+  // All four render into Prescriptions-page DOM (presStartNew/
+  // phTogglePresSettings/phMergeOpenFinder/schedOpenForm all target elements
+  // there, e.g. schedOpenForm -> #schedWidget) -- switch tabs first so she
+  // actually sees what she tapped for, rather than it opening invisibly
+  // behind the calendar.
+  function phApptCalQaHtml() {
+    return `<div class="ph-apptcal-qa">
+      <button type="button" class="ph-tl-qa" data-ph-apptcal-qa="new">＋ New prescription</button>
+      <button type="button" class="ph-tl-qa" data-ph-apptcal-qa="dosage">✎ Dosage &amp; markup</button>
+      <button type="button" class="ph-tl-qa" data-ph-apptcal-qa="dupes">🔍 Find duplicates</button>
+      <button type="button" class="ph-tl-qa" data-ph-apptcal-qa="sched">📅 Schedule a dispense</button>
     </div>`;
   }
   function phApptCalGridHtml() {
@@ -18946,6 +19048,9 @@
         ${!isCurrent ? `<button type="button" class="ph-name-link" data-ph-apptcal-nav="0">Today</button>` : ""}
         ${dayCountSel}
       </div>
+      ${phFlashHtml()}
+      <input type="search" class="ph-tl-search ph-apptcal-search" data-ph-apptcal-q="1" value="${esc(phApptCalQ)}" placeholder="Search patient…" aria-label="Search appointments">
+      ${phApptCalSummaryHtml(days)}
       <div class="ph-apptcal-wrap">
         <div class="ph-apptcal-head" style="grid-template-columns:${colsTemplate}">
           <div class="ph-apptcal-gutter"></div>
@@ -18956,6 +19061,7 @@
           <div class="ph-apptcal-grid" style="grid-template-columns:repeat(${n}, minmax(0, 1fr))">${dayCols}</div>
         </div>
       </div>
+      ${phApptCalQaHtml()}
     </div>
     ${openAppt ? phApptCalPanelHtml(openAppt) : ""}`;
   }
@@ -21412,7 +21518,7 @@
         const added = phApptImport(parsed);
         const daysN = new Set(parsed.map(p => p.date)).size;
         phApptState.text = "";
-        phFlashShow(`✓ ${parsed.length} appointment${parsed.length === 1 ? "" : "s"} across ${daysN} day${daysN === 1 ? "" : "s"} — ${added} new, ${parsed.length - added} refreshed${phApptLastAccounts ? ` · ${phApptLastAccounts} patient account${phApptLastAccounts === 1 ? "" : "s"} made` : ""}`);
+        phFlashShow(`${parsed.length} appointment${parsed.length === 1 ? "" : "s"} across ${daysN} day${daysN === 1 ? "" : "s"} — ${added} new, ${parsed.length - added} refreshed${phApptLastAccounts ? ` · ${phApptLastAccounts} patient account${phApptLastAccounts === 1 ? "" : "s"} made` : ""}`);
         renderApptModal(); renderPharmacy();
         return;
       }
@@ -21439,7 +21545,7 @@
         const gone = phApptList().find(a => a.id === apptDel.dataset.phApptDel);
         PHARMACY.appointments = phApptList().filter(a => a.id !== apptDel.dataset.phApptDel);
         savePharmacy();
-        if (gone) phFlashShow(`✓ Cancelled ${phTitle(gone.patient)}'s appointment · ${phFuDateLabel(gone.date)}`);
+        if (gone) phFlashShow(`Cancelled ${phTitle(gone.patient)}'s appointment · ${phFuDateLabel(gone.date)}`);
         else renderPharmacy();
         if (phApptState) renderApptModal();
         return;
@@ -21459,6 +21565,23 @@
           phApptCalAnchorKey = keyOf(new Date(cur.getFullYear(), cur.getMonth(), cur.getDate() + d * step));
         }
         renderPharmacy();
+        return;
+      }
+      // checked BEFORE data-ph-apptcal-open below: the dot is a span nested
+      // inside the block's own button, so closest() on data-ph-apptcal-open
+      // would also match a click on the dot -- this branch has to win first
+      // and return, or tapping the dot would also toggle the panel open.
+      const apptCalOrderDot = e.target.closest("[data-ph-apptcal-order-dot]");
+      if (apptCalOrderDot) { phApptOrderShort(apptCalOrderDot.dataset.phApptcalOrderDot); return; }
+      const apptCalQa = e.target.closest("[data-ph-apptcal-qa]");
+      if (apptCalQa) {
+        const k = apptCalQa.dataset.phApptcalQa;
+        PHARMACY.activeTab = "prescriptions";
+        renderPharmacy();
+        if (k === "new") presStartNew();
+        else if (k === "dosage") phTogglePresSettings();
+        else if (k === "dupes") phMergeOpenFinder();
+        else if (k === "sched") schedOpenForm();
         return;
       }
       const apptCalOpen = e.target.closest("[data-ph-apptcal-open]");
@@ -21491,7 +21614,7 @@
           if (sEl) a.service = sEl.value;
           if (pEl) a.phone = pEl.value;
           savePharmacy();
-          phFlashShow(`✓ Saved ${phTitle(a.patient)}'s appointment`);
+          phFlashShow(`Saved ${phTitle(a.patient)}'s appointment`);
         }
         phApptCalEditId = null;
         renderPharmacy();
@@ -21508,7 +21631,7 @@
         PHARMACY.appointments = phApptList().filter(a => a.id !== id);
         savePharmacy();
         phApptCalOpenId = null; phApptCalCancelArm = null;
-        if (gone) phFlashShow(`✓ Cancelled ${phTitle(gone.patient)}'s appointment · ${phFuDateLabel(gone.date)}`);
+        if (gone) phFlashShow(`Cancelled ${phTitle(gone.patient)}'s appointment · ${phFuDateLabel(gone.date)}`);
         renderPharmacy();
         return;
       }
@@ -24388,6 +24511,7 @@
       if (e.target.id === "phLogSearch") { phLogSearch = e.target.value; phLogPage = 1; phDefer("phLogRows", renderPhLogRows, 120); return; }
       if (e.target.id === "presSearch") { presSearch = e.target.value; presPage = 1; phDefer("presList", renderPresList, 120); return; }
       if (e.target.matches("[data-pres-tl-q]")) { presTlQ = e.target.value; phDefer("presTl", () => { const v = presTlQ; renderPresWeek(); const inp = document.querySelector("[data-pres-tl-q]"); if (inp && document.activeElement !== inp) { inp.focus(); inp.setSelectionRange(v.length, v.length); } }, 150); return; }
+      if (e.target.matches("[data-ph-apptcal-q]")) { phApptCalQ = e.target.value; phDefer("apptCalQ", () => { const v = phApptCalQ; renderPhAppointmentsPage(); const inp = document.querySelector("[data-ph-apptcal-q]"); if (inp && document.activeElement !== inp) { inp.focus(); inp.setSelectionRange(v.length, v.length); } }, 150); return; }
       if (e.target.id === "presLogSearch") { presLogQ = e.target.value; phDefer("presLog", renderPresLog, 150); return; }
       // 📋 Medical history screen (her ask 2026-08-20): search re-renders only
       // the rows below (renderHxBody), never the box itself -- same reasoning
