@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260908-010000">
+<meta name="lcm-build" content="20260908-020000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -33008,16 +33008,24 @@ or changing anything in Cliniko.
     if (t.matches("[data-pres-case]")) {
       const s = PRESC.items.find(x => x.id === t.dataset.presCase);
       if (!s) return;
-      s.caseType = t.value === "general" ? null : t.value;
+      // "general" is stored as a real value when SHE picks it (it used to
+      // become null), so it reads as her choice: phCaseFillFromPlan (option
+      // A, 2026-09-07) fills only a Case that was never set, never one she
+      // set to General. Everything that reads caseType already treats
+      // "general" and null alike (no quieting, no colour, no narrowing).
+      s.caseType = t.value;
       if (t.value !== "other") delete s.caseTypeOther;
-      savePharmacy(); renderPresPanel();
+      // caseType lives on the script (PRESC), not on PHARMACY -- this called
+      // savePharmacy() before, which never wrote the Case anywhere; it only
+      // survived when some later edit happened to save PRESC.
+      savePresc(); renderPresPanel();
       return;
     }
     if (t.matches("[data-pres-case-other]")) {
       const s = PRESC.items.find(x => x.id === t.dataset.presCaseOther);
       if (!s) return;
       s.caseTypeOther = t.value;
-      savePharmacy();
+      savePresc();
       return;
     }
   });
@@ -34008,6 +34016,9 @@ or changing anything in Cliniko.
     if (!t) { el.innerHTML = ""; done(); return; }
     const pp = PHARMACY.presPricing || { method: "gram", gramPrice: 0.71, markup: 3 };
     const isF = presIsFormula(t), ab = presAbbr(t);
+    // option A (2026-09-07): a script whose Case was never set inherits the
+    // patient's treatment plan the moment it opens -- see phCaseFillFromPlan
+    if (!isF && !t.caseType && phCaseFillFromPlan(presPatientFor(t))) savePresc();
     // which of the 5 stages a real patient's panel is on -- reset to the
     // right default only when a DIFFERENT script/patient just opened, so
     // she can freely navigate stages within one open panel without this
@@ -34574,14 +34585,40 @@ or changing anything in Cliniko.
       </button>`).join("")}`;
     }).join("");
   }
-  // reverse half of the pairing (her Q5, "both directions"): if this
-  // script's Case is still blank, the template she just picked fills it in
-  // from its caseHint. Never overwrites a Case she already set (her Q6) --
-  // s.caseType is only ever touched here when it was previously null.
+  // reverse half of the pairing (her Q5, "both directions"): the template
+  // she just picked fills the Case from its caseHint -- since option A
+  // (2026-09-07) on every never-set script of this patient, not only the
+  // open one. Never overwrites a Case she already set (her Q6): a script's
+  // caseType is only ever written here when it was previously null.
   function phTpAutoFillCase(templateId, scriptId) {
     const tpl = PH_TP_TEMPLATES.find(x => x.id === templateId);
     const s = scriptId && PRESC.items.find(x => x.id === scriptId);
-    if (tpl && tpl.caseHint && s && !s.caseType) s.caseType = tpl.caseHint;
+    if (!tpl || !tpl.caseHint || !s) return;
+    if (phCaseFillFromPlan(presPatientFor(s), tpl.caseHint)) savePresc();
+  }
+  // her pick (2026-09-07, option A of three, after the Kathryn Welsh report:
+  // Case read "General" on two of her scripts while the third one and her
+  // plan both said Fertility). The patient's plan fills the Case of EVERY
+  // script of hers that was never set -- not only the one open at the +New
+  // moment -- and again whenever such a script opens (renderPresPanel).
+  // Fill-blank only: a Case she set herself, including an explicit
+  // "General" (stored as a real value by the dropdown), is never touched.
+  // The plan consulted is the same one the tab strip labels her scripts
+  // with (active, else the first); a custom plan made without a template
+  // carries no caseHint, so it fills nothing.
+  const phTpShownPlan = name => { const plans = phTpPlans(name); return plans.find(p => p.status === "active") || plans[0] || null; };
+  function phCaseHintOfPlan(plan) {
+    if (!plan || !plan.templateName) return null;
+    const tpl = PH_TP_TEMPLATES.find(t => t.name === plan.templateName);
+    return (tpl && tpl.caseHint) || null;
+  }
+  function phCaseFillFromPlan(name, hint) {
+    if (!name) return 0;
+    const h = hint || phCaseHintOfPlan(phTpShownPlan(name));
+    if (!h) return 0;
+    let n = 0;
+    schedPresForPatient(name).forEach(s => { if (!s.caseType) { s.caseType = h; n++; } });
+    return n;
   }
   const phTpAllTemplates = () => [...phTpBuiltinTemplates(), ...phTpUserTemplates()];
   function phTpNewPlan(templateId, ctx) {
