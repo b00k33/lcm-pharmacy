@@ -44,13 +44,26 @@ update STYLE-LCM.md to match so future builds don't undo it.
      behind one Filter button; the list scrolls, no "Page 1 of 6".
   6. Appointments = Cliniko's day view: one day, time gutter, solid full-width
      blocks (CHM green, ACU blue, both purple), the page scrolls, no inner scroller.
+     The phone OPENS on the List view (her Q10, 2026-09-07 pm), Grid a tap away.
 - **Dashboard + landing laws (her 2026-09-07 answers, phone AND desktop alike):**
   the app OPENS on Appointments (her daily schedule check). The Dashboard is
   drastically simple: Today's patients (slim rows) → next clinic day → Communications
   due → Going out today → Urgent stock → Order/Refill cards. NO week calendar, no
-  month, no Recent activity, no Monday bands on it. Tapping a patient row, or an
-  Appointments block, opens their profile with the script (`data-ph-dash-patient-open`);
-  Edit / cancel / book-another live behind the block's ⋯. Don't add sections back.
+  month, no Recent activity, no Monday bands on it. Don't add sections back.
+- **Appointment popup + briefing List (her ten answers, 2026-09-07 pm):** tapping a
+  patient ANYWHERE (Appointments block, List row, Dashboard row: `data-ph-appt-pop`)
+  opens ONE popup card (`#phApptPop`, `phApptPopOpen`) — Google-Calendar style beside
+  the block on desktop (flips left / drops below, never off-screen), a bottom sheet on
+  the phone. ✎ Edit · 🗑 Cancel (confirm strip) · ✕ as icons top-right; "Open profile →"
+  (`data-ph-dash-patient-open`), "Script ↗", "＋ Book another" in words at the bottom.
+  Rows: Focus / Goal, herbs + ready/short, cycle day, last seen — NO phone/email, NO
+  next-appointment (her unticks). Focus / Goal = pasted or typed text on the
+  appointment (`a.focus/a.goal`, `a.briefSrc`), else derived from the script's Case +
+  treatment plan (tagged "plan", never stored) — `phApptBrief`. Typed text lives on
+  THAT appointment only. Appointments has a Grid | List toggle (`PHARMACY.apptCalView`,
+  device-local); List = the /patients table: Time · Patient · Status (live LCM status,
+  never Cliniko's booked/arrived) · Presenting focus · Treatment goal. The old
+  below-the-grid panel and the block's ⋯ are gone; don't bring either back.
 
 ## Spacing & size (one scale, no random numbers)
 - Only 4/8/12/16/24/32px for margins/padding/gaps.
