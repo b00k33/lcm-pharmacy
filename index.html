@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260908-030000">
+<meta name="lcm-build" content="20260908-040000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -17770,11 +17770,58 @@
       </div>
       ${phLtrTemplatesSectionHtml()}
       ${phTpProtocolSectionHtml()}
+      ${phPhotoRelaySectionHtml()}
       ${phSettingsStorageHtml()}
     </section>`;
     renderPhLocBar();
     phSettingsStoragePhotoFill();
+    phPhotoRelayStatusFill();
   }
+  // ---- Settings › Photo relay (2026-09-07): the honest state of the phone
+  // → desktop photo hand-off, checked live against the cloud project. Until
+  // now a missing bucket looked exactly like "working" from both devices.
+  function phPhotoRelaySectionHtml() {
+    return `<div class="ph-settings-sec">
+      <h3>📷 Photo relay (phone → desktop)</h3>
+      <p class="ph-settings-hint">Every photo saved on a phone is sent through your cloud project's "${esc(PH_REN_BUCKET)}" bucket and filed on the desktop under the same patient, type and date. The cloud copy is only removed once the desktop has saved its own.</p>
+      <div class="ph-settings-hint" id="phRelayStatus">Checking…</div>
+      <div class="ph-settings-actions">
+        <button type="button" class="ph-load-btn" data-ph-relay-sendnow="1">📤 Send unsent photos now</button>
+        <button type="button" class="ph-load-btn" data-ph-relay-check="1">🔄 Check for photos</button>
+      </div>
+    </div>`;
+  }
+  async function phPhotoRelayStatusFill() {
+    const el = document.getElementById("phRelayStatus");
+    if (!el) return;
+    try {
+      if (!window.__LCM_SYNC) { el.textContent = "Cloud sync is off on this device — photos stay local."; return; }
+      const sb = phRenRelayClient();
+      const uid0 = sb ? await phRenRelayUid(sb) : null;
+      if (!uid0) { el.textContent = "Not signed in to cloud sync yet — sign in, then check again."; return; }
+      const all = await phRenPhotoGetAll();
+      const unsent = all.filter(r => !r.relayedAt && !/^phone-/.test(r.filename || "")).length;
+      const { error } = await sb.storage.from(PH_REN_BUCKET).list(uid0, { limit: 1 });
+      if (error) {
+        el.innerHTML = `<b>✗ Not set up.</b> The cloud project has no "${esc(PH_REN_BUCKET)}" bucket yet (${esc(error.message)}). One-time step: run <code>supabase/photo_relay_setup.sql</code> in the Supabase SQL editor, then tap Send.${unsent ? ` <b>${unsent}</b> photo${unsent === 1 ? "" : "s"} on this device waiting to go.` : ""}`;
+        return;
+      }
+      const waiting = (await phRenRelayList()).length;
+      const last = window.__phCapLastImport;
+      el.innerHTML = `<b>✓ Ready.</b> ${unsent} unsent on this device · ${waiting} waiting in the cloud for a desktop${last ? ` · ${last.n} received ${esc(phRelShort(last.at))}` : ""}.`;
+    } catch (e) { el.textContent = `Couldn't check — ${(e && e.message) || "try again"}.`; }
+  }
+  document.addEventListener("click", async e => {
+    const send = e.target.closest("[data-ph-relay-sendnow]"), chk = e.target.closest("[data-ph-relay-check]");
+    if (!send && !chk) return;
+    const btn = send || chk; btn.disabled = true;
+    try {
+      if (send) { await window.phCapRelayRetry(); const r = await window.phCapRelayBackfill(); await phCapAutoImport(); phFlashShow(r.sent ? `📤 Sent ${r.sent} photo${r.sent === 1 ? "" : "s"} to the cloud.` : (window.__phCapRelayLastErr ? `Nothing sent — ${esc(window.__phCapRelayLastErr)}.` : "Nothing waiting to send.")); }
+      else await phCapAutoImport();
+    } catch (err) {}
+    btn.disabled = false;
+    phPhotoRelayStatusFill();
+  });
   // her ask (2026-09-03): a way to refresh the Cycle & IVF Protocol's 11
   // phases from Chapter 6 -- Treating Fertility later without asking for a
   // code edit each time -- paste-import, same idiom as the Cliniko box
@@ -32574,6 +32621,45 @@ or changing anything in Cliniko.
   const PH_CAP_QKEY = "daybook-cap-relayq";
   const phCapQLoad = () => { try { const a = JSON.parse(localStorage.getItem(PH_CAP_QKEY)); return Array.isArray(a) ? a : []; } catch (e) { return []; } };
   const phCapQSave = a => { try { localStorage.setItem(PH_CAP_QKEY, JSON.stringify(a)); } catch (e) {} };
+  // ---- her report 2026-09-07 (second time): "the photos are not syncing
+  // from phone to desktop". Diagnosed on her LIVE desktop, not by reading
+  // code: signed in, sync on, and a probe upload answered "Bucket not
+  // found" -- the ren-photo-inbox bucket was never created in her Supabase
+  // project, so EVERY relay upload since 2026-09-01 failed and was queued
+  // silently (the 09-07 morning fix only widened which captures try). Three
+  // things change here so it can never sit silent again:
+  //   1. a device id in every relay filename -- phCapOwnUploads is memory
+  //      only, so after a reload a phone would have imported its OWN uploads
+  //      back as duplicates (and deleted them before the desktop saw them)
+  //   2. every successful upload stamps the local record (relayedAt), and
+  //      phCapRelayBackfill pushes anything still unstamped -- the photos
+  //      already sitting on her phone reach the desktop without re-taking
+  //   3. a failed upload says so once (flash) and Settings › Photo relay
+  //      shows the real state; supabase/photo_relay_setup.sql is the fix
+  const phCapDeviceId = () => {
+    let d = "";
+    try { d = localStorage.getItem("daybook-cap-devid") || ""; if (!d) { d = Math.random().toString(36).slice(2, 8); localStorage.setItem("daybook-cap-devid", d); } } catch (e) {}
+    return d || "x";
+  };
+  const phCapRelayPath = (uid0, patientKey, type, dateKey) => `${uid0}/${patientKey}/${Date.now()}-cap_${type}_${dateKey}_d${phCapDeviceId()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
+  async function phCapMarkRelayed(patientKey, recId) {
+    try {
+      const photos = await phRenPhotoGetAllForPatient(patientKey);
+      const rec = photos.find(p => p.id === recId);
+      if (rec && !rec.relayedAt) { rec.relayedAt = Date.now(); await phRenPhotoPut(rec); }
+      const c = phRenPhotoCache[patientKey], cr = c && c.find(p => p.id === recId);
+      if (cr && rec) cr.relayedAt = rec.relayedAt;
+    } catch (e) {}
+  }
+  let phCapRelayWarned = false;
+  function phCapRelayNoteError(error) {
+    const msg = (error && error.message) || "unknown";
+    window.__phCapRelayLastErr = msg;
+    if (/bucket not found/i.test(msg) && !phCapRelayWarned) {
+      phCapRelayWarned = true;
+      phFlashShow("Saved on this device. The cloud photo relay isn't set up yet — see Settings › Photo relay.");
+    }
+  }
   async function phCapRelayPush(cap, blob, recId) {
     if (!window.__LCM_SYNC) return;
     const queueIt = () => { const q = phCapQLoad(); if (!q.some(x => x.recId === recId)) { q.push({ patientKey: cap.patientKey, type: cap.type, dateKey: cap.dateKey, recId }); phCapQSave(q); } };
@@ -32583,10 +32669,11 @@ or changing anything in Cliniko.
       if (!sb) { queueIt(); return; }
       const uid0 = await phRenRelayUid(sb);
       if (!uid0) { queueIt(); return; }
-      const path = `${uid0}/${cap.patientKey}/${Date.now()}-cap_${cap.type}_${cap.dateKey}_${Math.random().toString(36).slice(2, 8)}.jpg`;
+      const path = phCapRelayPath(uid0, cap.patientKey, cap.type, cap.dateKey);
       const { error } = await sb.storage.from(PH_REN_BUCKET).upload(path, blob, { contentType: "image/jpeg" });
-      if (error) { queueIt(); return; }
+      if (error) { phCapRelayNoteError(error); queueIt(); return; }
       phCapOwnUploads.add(path);
+      phCapMarkRelayed(cap.patientKey, recId);
     } catch (e) { queueIt(); }
   }
   // drains the queue -- called on reconnect, and once at boot for anything
@@ -32603,16 +32690,54 @@ or changing anything in Cliniko.
         if (!rec || !rec.blob) { q = q.filter(x => x.recId !== item.recId); phCapQSave(q); continue; }   // photo since deleted -> drop
         const sb = phRenRelayClient(); if (!sb) return;
         const uid0 = await phRenRelayUid(sb); if (!uid0) return;
-        const path = `${uid0}/${item.patientKey}/${Date.now()}-cap_${item.type}_${item.dateKey}_${Math.random().toString(36).slice(2, 8)}.jpg`;
+        const path = phCapRelayPath(uid0, item.patientKey, item.type, item.dateKey);
         const { error } = await sb.storage.from(PH_REN_BUCKET).upload(path, rec.blob, { contentType: "image/jpeg" });
-        if (error) return;
+        if (error) { phCapRelayNoteError(error); return; }
         phCapOwnUploads.add(path);
+        await phCapMarkRelayed(item.patientKey, item.recId);
         q = q.filter(x => x.recId !== item.recId);
         phCapQSave(q);
       } catch (e) { return; }
     }
   };
-  window.addEventListener("online", () => { setTimeout(() => { try { window.phCapRelayRetry(); } catch (e) {} }, 3000); });
+  // the backfill: every photo on THIS device that has never been relayed
+  // (no relayedAt stamp, not itself an import from another device, not
+  // already in the offline queue) goes up, oldest first, stopping at the
+  // first failure. Runs after boot, on reconnect, when cloud sync catches
+  // up, and from Settings › "Send unsent photos now". The tongue photos
+  // already saved on her phone before any of this existed are exactly what
+  // this sends -- nothing has to be re-taken.
+  let phCapBackfillBusy = false;
+  window.phCapRelayBackfill = async function () {
+    if (!window.__LCM_SYNC || !navigator.onLine || phCapBackfillBusy) return { sent: 0 };
+    phCapBackfillBusy = true;
+    let sent = 0;
+    try {
+      const sb = phRenRelayClient(); if (!sb) return { sent };
+      const uid0 = await phRenRelayUid(sb); if (!uid0) return { sent };
+      const q = phCapQLoad();
+      const all = (await phRenPhotoGetAll())
+        .filter(r => r && r.blob && !r.relayedAt && !/^phone-/.test(r.filename || "") && !q.some(x => x.recId === r.id))
+        .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+      for (const rec of all) {
+        const path = phCapRelayPath(uid0, rec.patientKey, phRenTypeOf(rec), phRenDateKeyOf(rec));
+        const { error } = await sb.storage.from(PH_REN_BUCKET).upload(path, rec.blob, { contentType: "image/jpeg" });
+        if (error) { phCapRelayNoteError(error); break; }
+        phCapOwnUploads.add(path);
+        rec.relayedAt = Date.now();
+        await phRenPhotoPut(rec);
+        const c = phRenPhotoCache[rec.patientKey], cr = c && c.find(p => p.id === rec.id);
+        if (cr) cr.relayedAt = rec.relayedAt;
+        sent++;
+      }
+    } catch (e) {} finally { phCapBackfillBusy = false; }
+    return { sent };
+  };
+  const phCapRelayKick = () => { try { window.phCapRelayRetry().then(() => window.phCapRelayBackfill()).then(() => phCapAutoImport()); } catch (e) {} };
+  window.addEventListener("online", () => { setTimeout(phCapRelayKick, 3000); });
+  // cloud sync signs in AFTER boot -- the 8s timer below used to be the only
+  // send attempt, and it often ran before the client was ready
+  window.addEventListener("lcm-sync-caught-up", () => { setTimeout(phCapRelayKick, 1500); });
   // auto-import (the receiving side): capture-tagged relay files download,
   // file themselves by the tagged type + date, then the cloud copy is
   // deleted -- ONLY after the local save succeeded (same never-lose rule as
@@ -32623,27 +32748,31 @@ or changing anything in Cliniko.
     phCapImportBusy = true;
     try {
       const items = await phRenRelayList();
+      const own = `_d${phCapDeviceId()}_`;
+      let n = 0;
       for (const it of items) {
-        if (phCapOwnUploads.has(it.path)) continue;
+        if (phCapOwnUploads.has(it.path) || it.path.includes(own)) continue;   // never re-import this device's own uploads
         const m = /-cap_([a-z]+)_(\d{4}-\d{2}-\d{2})_/.exec(it.path);
         if (!m) continue;
         try {
           const blob = await phRenRelayDownload(it.path);
           await phRenPhotoPut({
             id: uid(), patientKey: it.patientKey, kind: PH_REN_TYPE_LABEL[m[1]] ? m[1] : "other",
-            dateKey: m[2], blob, mime: "image/jpeg", createdAt: Date.now(),
+            dateKey: m[2], blob, mime: "image/jpeg", createdAt: Date.now(), relayedAt: Date.now(),   // an import is never relayed again
             filename: `phone-${m[1]}-${m[2]}.jpg`,
           });
           await phRenRelayDelete(it.path);
           await phRenLoadPhotosFor(it.patientKey);
+          n++;
         } catch (e) {}
       }
+      if (n) { window.__phCapLastImport = { at: Date.now(), n }; phFlashShow(`📷 ${n} photo${n === 1 ? "" : "s"} arrived from your phone.`); }
     } catch (e) {}
     phCapImportBusy = false;
   }
   // start after boot settles -- phCapAutoImport itself no-ops without sync;
   // the retry drain clears anything queued during a previous offline session
-  setTimeout(() => { phCapAutoImport(); window.phCapRelayRetry(); setInterval(phCapAutoImport, 120000); }, 8000);
+  setTimeout(() => { phCapRelayKick(); setInterval(phCapAutoImport, 120000); }, 8000);
 
   // ---- photo cache bridge: IndexedDB reads are async, phHxConstitutionHtml's
   // render is not -- load once per patient into this cache (minting one
@@ -33481,7 +33610,7 @@ or changing anything in Cliniko.
     const st = phRenCropState;
     try {
       const blob = await phRenCropToBlob(st.img, st.rect, PH_REN_PHOTO_QUALITY, PH_REN_PHOTO_MAXDIM);
-      await phRenPhotoPut({ id: uid(), patientKey: st.patientKey, kind, blob, mime: "image/jpeg", createdAt: Date.now() });
+      await phRenPhotoPut({ id: uid(), patientKey: st.patientKey, kind, blob, mime: "image/jpeg", createdAt: Date.now(), relayedAt: Date.now() });   // a desktop crop of a relayed photo stays on the desktop (never relayed back)
       await phRenCropFinishSave();
       await phRenLoadPhotosFor(st.patientKey);
       phFlashShow(`Saved ${PH_REN_CROP_LABEL[kind]} crop · ${Math.round(blob.size / 1024)} KB.`);
@@ -33495,7 +33624,7 @@ or changing anything in Cliniko.
     const st = phRenCropState;
     try {
       const blob = await phRenCompressToBlob(st.sourceBlob, PH_REN_PHOTO_MAXDIM, PH_REN_PHOTO_QUALITY);
-      await phRenPhotoPut({ id: uid(), patientKey: st.patientKey, kind: "full", blob, mime: "image/jpeg", createdAt: Date.now() });
+      await phRenPhotoPut({ id: uid(), patientKey: st.patientKey, kind: "full", blob, mime: "image/jpeg", createdAt: Date.now(), relayedAt: Date.now() });   // same: keeps on the desktop
       await phRenCropFinishSave();
       await phRenLoadPhotosFor(st.patientKey);
       phFlashShow(`Saved to Reference photos on file · ${Math.round(blob.size / 1024)} KB.`);
