@@ -44,6 +44,13 @@ update STYLE-LCM.md to match so future builds don't undo it.
      behind one Filter button; the list scrolls, no "Page 1 of 6".
   6. Appointments = Cliniko's day view: one day, time gutter, solid full-width
      blocks (CHM green, ACU blue, both purple), the page scrolls, no inner scroller.
+- **Dashboard + landing laws (her 2026-09-07 answers, phone AND desktop alike):**
+  the app OPENS on Appointments (her daily schedule check). The Dashboard is
+  drastically simple: Today's patients (slim rows) → next clinic day → Communications
+  due → Going out today → Urgent stock → Order/Refill cards. NO week calendar, no
+  month, no Recent activity, no Monday bands on it. Tapping a patient row, or an
+  Appointments block, opens their profile with the script (`data-ph-dash-patient-open`);
+  Edit / cancel / book-another live behind the block's ⋯. Don't add sections back.
 
 ## Spacing & size (one scale, no random numbers)
 - Only 4/8/12/16/24/32px for margins/padding/gaps.

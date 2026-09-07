@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260908-040000">
+<meta name="lcm-build" content="20260908-050000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -10676,6 +10676,31 @@
     #pharmacyPage .ph-msg-stats { grid-template-columns: repeat(2, 1fr); }
   }
 
+  /* ============ SIMPLE DASHBOARD (her 2026-09-07 answers: today's list
+     first, then tomorrow, tap a name to work; same page on phone and
+     desktop). The day rows reuse the Patient profile timeline's .ph-tl-*
+     row grid so the two read as one component. ============ */
+  #pharmacyPage .ph-dash-sec, #pharmacyPage .ph-dash-day { max-width: 1072px; margin: 12px auto 0; padding: 10px 14px 12px; }
+  #pharmacyPage .ph-dash-sh { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--ph-green-deep); margin: 0 0 4px; }
+  #pharmacyPage .ph-dash-sh .sub { font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--ph-soft); white-space: nowrap; }
+  #pharmacyPage .ph-dash-sh .rule { flex: 1 1 auto; height: 1px; background: color-mix(in oklab, var(--ph-green-deep) 22%, transparent); }
+  #pharmacyPage .ph-dash-sh .ph-name-link { font-size: 11px; text-transform: none; letter-spacing: 0; }
+  #pharmacyPage .ph-dash-daylist { padding: 0 2px; background: transparent; }
+  #pharmacyPage .ph-dash-drow { cursor: pointer; border-radius: 8px; }
+  #pharmacyPage .ph-dash-drow:hover, #pharmacyPage .ph-dash-drow:focus-visible { background: var(--ph-paper); outline: none; }
+  #pharmacyPage .ph-dash-drow .l1 b { color: var(--ph-green-deep); }
+  #pharmacyPage .ph-dash-drow.done .l1 b { color: var(--ph-soft); }
+  #pharmacyPage .ph-dash-empty { color: var(--ph-soft); font-size: 12.5px; padding: 6px 0; }
+  #pharmacyPage .ph-dash-sec .ph-dash-tasks, #pharmacyPage .ph-dash-sec .ph-dash-furows { margin-top: 4px; }
+  #pharmacyPage .ph-dash-urgent .ph-dash-secthead { margin-top: 0; }
+  /* the Appointments block's ⋯ (Edit · cancel · book another) */
+  #pharmacyPage .ph-appt-block-more { position: absolute; right: 3px; bottom: 3px; width: 22px; height: 18px; padding: 0; border: none; border-radius: 6px; background: rgba(0,0,0,.07); color: inherit; font: inherit; font-size: 13px; font-weight: 800; line-height: 1; cursor: pointer; }
+  #pharmacyPage .ph-appt-block-more:hover { background: rgba(0,0,0,.14); }
+  @media (max-width: 640px) {
+    #pharmacyPage .ph-dash-sec, #pharmacyPage .ph-dash-day { margin: 8px 0 0; padding: 8px 10px 10px; }
+    #pharmacyPage .ph-dash-drow { grid-template-columns: 54px 8px minmax(0, 1fr) auto; gap: 6px; }
+    #pharmacyPage .ph-appt-block-more { background: rgba(255,255,255,.22); color: #fff; width: 26px; height: 20px; }
+  }
   /* ============ PHONE REDESIGN (her "my mobile ui is horrible. i hate
      using it", 2026-09-07) -- seven screens, ≤640px ONLY, desktop untouched.
      Her eight locked answers (memory project_pharmacy_phone_redesign_2026_09):
@@ -19418,10 +19443,16 @@
     const dotTitle = dotCls === "short" ? `Short on herbs${roomy ? " — tap to add to order" : ""}` : dotCls === "ready" ? "Ready to dispense" : dotCls === "acu" ? "Acupuncture" : "";
     const q = phApptCalQ.trim().toLowerCase();
     const dim = q && !a.patient.toLowerCase().includes(q) ? " dim" : "";
-    return `<button type="button" class="ph-appt-block${kind ? " " + kind : ""}${phApptCalOpenId === a.id ? " sel" : ""}${dim}" style="${phApptCalBlockStyle(it)}" data-ph-apptcal-open="${a.id}" title="${esc(a.patient)}${a.service ? " — " + esc(a.service) : ""}">
+    // her 2026-09-07 answer: tapping the block opens the patient's profile
+    // with the script (data-ph-dash-patient-open); Edit / Cancel / Book
+    // another moved behind the block's own ⋯ (the same in-place panel as
+    // before, data-ph-apptcal-open). A div now, not a button -- a button
+    // can't hold the ⋯ button.
+    return `<div class="ph-appt-block${kind ? " " + kind : ""}${phApptCalOpenId === a.id ? " sel" : ""}${dim}" style="${phApptCalBlockStyle(it)}" role="button" tabindex="0" data-ph-dash-patient-open="${esc(a.patient)}" title="${esc(a.patient)}${a.service ? " — " + esc(a.service) : ""} — open">
       <span class="ph-appt-block-time">${esc(phCkTime12(a.time))}</span><span class="ph-appt-block-name">${esc(a.patient)}</span>
       ${dotCls ? `<span class="ph-appt-block-dot ${dotCls}"${dotTap} title="${esc(dotTitle)}"></span>` : ""}
-    </button>`;
+      <button type="button" class="ph-appt-block-more" data-ph-apptcal-open="${esc(a.id)}" title="Edit · cancel · book another" aria-label="More for ${esc(a.patient)}">⋯</button>
+    </div>`;
   }
   // her chosen action set (2026-09-06, all four): Edit, Cancel-with-a-safety-
   // step, Open their script/prep, Book another -- Reschedule folds into Edit
@@ -19932,7 +19963,8 @@
     const due = phDashFuDue();
     if (!due.length) return "";
     const shown = due.slice(0, 4);
-    return `${zone
+    return `${zone === "bare" ? ""   // the simple Dashboard writes its own heading (phDashSec)
+      : zone
       ? `<div class="ph-dz-sh">Communications due · ${due.length}</div>`
       : `<div class="ph-dash-secthead"><h2>Communications due</h2><span class="rule"></span><span class="ph-dash-card-sub">${due.length}</span></div>`}
       <div class="ph-dash-furows">${shown.map(row => { const open = phCkIsOpen(row); const id = phCommRowId(row); return `<div class="ph-dash-furow${open ? " ck-open" : ""}">
@@ -20000,6 +20032,57 @@
       ${group("🏺 Formulas", items.filter(x => phIsFormula(x.h)).sort(sortAsc), "torefill")}
       ${group("🌱 Herbs", items.filter(x => !phIsFormula(x.h)).sort(sortAsc), "toorder")}`;
   }
+  // ---- the simple Dashboard's pieces (her 2026-09-07 answers) ----
+  // next clinic day after today (her working days from Settings); plain
+  // tomorrow when no days are set. null = no clinic day in the next week.
+  function phDashNextDayKey() {
+    const days = phClinicWorkDays();
+    for (let i = 1; i <= 7; i++) {
+      const d = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() + i);
+      if (!days || days.includes(d.getDay())) return keyOf(d);
+    }
+    return null;
+  }
+  function phDashNextDayLabel(key) {
+    const t = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() + 1);
+    return key === keyOf(t) ? "Tomorrow" : "Next clinic day";
+  }
+  function phDashSec(title, count, body) {
+    return `<section class="ph-widget ph-dash-card ph-dash-sec"><div class="ph-dash-sh">${esc(title)}${count != null ? `<span class="sub">· ${count}</span>` : ""}<span class="rule"></span></div>${body}</section>`;
+  }
+  // one slim row per appointment -- time · dot · name · ACU/CHM · ready/short
+  // -- the SAME status logic the Patient profile timeline uses (script,
+  // phApptPrep, presDispenseOnDay); the whole row opens the patient.
+  function phDashDayListHtml(dayKey, label) {
+    const todayKey = keyOf(TODAY);
+    const appts = phApptFor(dayKey);
+    const d = parseKey(dayKey);
+    const dateLabel = `${DOW_SHORT[d.getDay()]} ${d.getDate()} ${MON_SHORT[d.getMonth()]}`;
+    const row = a => {
+      const k = phPatientKey(a.patient), kind = phApptKind(a.service), script = phApptScriptFor(k), done = presDispenseOnDay(k, dayKey);
+      const prep = script && dayKey >= todayKey ? phApptPrep(k) : null;
+      const status = done ? "done" : !script ? (kind === "acu" ? "acu" : "noscript") : prep && prep.short.length ? "short" : "ready";
+      const dot = done ? "done" : kind === "acu" ? "acu" : script ? "chm" : "new";
+      const chip = status === "done" ? `<span class="ph-tl-chip done">✓ ${esc(presTimeStr(new Date(done.at || 0)))}</span>`
+        : status === "short" ? `<span class="ph-tl-chip short">⚠ ${prep.short.length} short</span><button type="button" class="ph-name-link" data-ph-appt-order="${esc(a.id)}">Order</button>`
+        : status === "ready" ? `<span class="ph-tl-chip ready">✓ Ready</span>`
+        : status === "noscript" ? `<span class="ph-tl-chip new">new</span>` : "";
+      const kindHtml = kind === "both" ? `<span class="ph-appt-kind both" title="Acupuncture + Chinese herbal medicine">ACU+CHM</span>` : phApptKindHtml(a.service);
+      return `<div class="ph-tl-row ph-dash-drow${done ? " done" : ""}" role="button" tabindex="0" data-ph-dash-patient-open="${esc(a.patient)}" aria-label="Open ${esc(phTitle(a.patient))}">
+        <span class="ph-tl-time">${esc(phCkTime12(a.time))}</span><span class="ph-tl-dot ${dot}"></span>
+        <div class="ph-tl-mid"><div class="l1"><b>${esc(phTitle(a.patient))}</b>${kindHtml}${phApptFuDue(k, dayKey) ? `<span class="bell" title="Follow-up due">🔔</span>` : ""}</div></div>
+        <div class="ph-tl-end">${chip}</div>
+      </div>`;
+    };
+    return `<section class="ph-widget ph-dash-card ph-dash-day">
+      <div class="ph-dash-sh">${esc(label)}<span class="sub">· ${esc(dateLabel)} · ${appts.length} patient${appts.length === 1 ? "" : "s"}</span><span class="rule"></span>${label === "Today" ? `<button type="button" class="ph-name-link" data-ph-tab="appointments">Appointments →</button>` : ""}</div>
+      <div class="ph-tl-list ph-dash-daylist">${appts.length ? appts.map(row).join("") : `<div class="ph-dash-empty">Nothing booked.</div>`}</div>
+    </section>`;
+  }
+  // keyboard: a row is a div[role=button]; Enter / Space open it like a tap
+  document.addEventListener("keydown", e => {
+    if ((e.key === "Enter" || e.key === " ") && e.target && e.target.matches && e.target.matches("[data-ph-dash-patient-open][role=button]")) { e.preventDefault(); e.target.click(); }
+  });
   function renderPhDashboardPage() {
     const wrap = document.getElementById("phDashboardWrap");
     if (!wrap) return;
@@ -20049,47 +20132,14 @@
           ${phDashRefillNeededHtml()}
         </section>
       </div>`;
-    // her yes 2026-09-02 (approved mock 7d0709a7): phones get the zoned
-    // layout -- today-strip, then 🧑 Patients / 🌿 Pharmacy / 📅 Planning as
-    // tinted chapters; This Month and Recent activity fold to one line.
-    // Desktop keeps the exact markup it had. Width crossings re-render (see
-    // the resize listener in phTitlebarMerge's bound-once block).
-    if (window.innerWidth <= 900) {
-      wrap.classList.remove("ph-ds-polish");
-      // 2026-09-04 (her "same board on phone"): the week board leads the
-      // phone too; today's appointment list left the Patients zone because
-      // the open day already shows those rows (say each thing once)
-      const patBody = phDashFuRowsHtml(true) + phDashGoingOutHtml();
-      wrap.innerHTML = `
-      ${phShellHead("Dashboard", dashMeta, phDashActionStripHtml(), dashAction)}
-      ${phEodEntryRowHtml()}
-      ${phDashTodayStripHtml()}
-      ${phDashRelocationLineHtml()}
-      ${phDashWeekHeroHtml()}
-      <div class="ph-dz ph-dz-pat" id="phDzPat">
-        <div class="ph-dz-h">🧑 Patients<span class="rule"></span></div>
-        ${patBody || `<div class="ph-dz-empty">Nothing due today.</div>`}
-      </div>
-      <div class="ph-dz ph-dz-pha" id="phDzPha">
-        <div class="ph-dz-h">🌿 Pharmacy<span class="rule"></span></div>
-        ${phDashUrgentStockHtml()}
-        ${monday ? phDashMondayBandHtml() : ""}
-        ${monday ? phDashMondayReviewHtml() : ""}
-        ${workCards}
-      </div>
-      <div class="ph-dz ph-dz-pla" id="phDzPla">
-        <div class="ph-dz-h">📅 Planning<span class="rule"></span></div>
-        ${phDashPlanStocktakeHtml()}
-        ${phDashPlanActivityHtml()}
-      </div>`;
-      return;
-    }
+    // (the zoned phone layout of 2026-09-02 and the desktop quiet sheet of the
+    // same day both ended 2026-09-07 -- one page for both widths, built below)
     // her yes 2026-09-02 (mock 159a029d): the desktop Dashboard is the same
     // quiet sheet as To Order -- one white card, tinted fold bands, rows on
     // one shared column grid, continuous column lines. Same sections in the
     // same order, same data, same handlers (workCards' bodies and the
     // week/month/activity builders are embedded as-is under their bands).
-    wrap.classList.add("ph-ds-polish");
+    wrap.classList.remove("ph-ds-polish");
     const toOrder = PHARMACY.herbs.filter(herbNeedsOrder).length;
     const toRefill = phDashRefillList().length;
     // her header-bar quick-actions spec (2026-09-07): the dark tile strip's
@@ -20104,21 +20154,33 @@
       <button type="button" class="ph-shell-qa-btn" data-ph-tab="refill" title="Formula refill" aria-label="Formula refill${toRefill ? `, ${toRefill} to refill` : ""}"><svg class="icn" aria-hidden="true"><use href="#i-jar"/></svg><span class="ph-tbm-tx">Formula refill</span><span class="ph-shell-qa-badge"${toRefill ? "" : " hidden"}>${toRefill}</span></button>
       <button type="button" class="ph-shell-qa-btn" data-cap-open="1" title="Patient photo" aria-label="Patient photo"><svg class="icn" aria-hidden="true"><use href="#i-camera"/></svg><span class="ph-tbm-tx">Patient photo</span></button>
     </div>`;
-    // her ask (2026-09-04, "i want this week to be the main focus of
-    // dashboard"; popups: hero above the sheet, today open by default, phone
-    // gets the same board): the sheet keeps everything else (its own
-    // This-week band is gone -- one place, not two).
+    // ============ her 2026-09-07 answers ("make the dashboard drastically
+    // more simple and basic... remove the week calendar... make it so i can
+    // work from the dashboard like click on patient names"; popups: today's
+    // list first, then tomorrow, keep Communications due / Going out / Urgent
+    // stock + Order/Refill, drop This month / Recent activity / Monday
+    // bands, same page on phone and desktop). The week calendar, the quiet
+    // sheet and the phone zones are gone from here; the week helpers live on
+    // in the Patient profile timeline. Tapping a patient row opens their
+    // profile with the script (data-ph-dash-patient-open). ============
+    const todayKey = keyOf(TODAY), nextKey = phDashNextDayKey();
+    const head = window.innerWidth <= 900
+      ? phShellHead("Dashboard", dashMeta, phDashActionStripHtml(), dashAction)
+      : phShellHead("Dashboard", dashMeta, "", dashAction, dashQuickActs).replace('<h1>', '<h1><svg class="icn" aria-hidden="true"><use href="#i-home"/></svg>');
+    const fu = phDashFuRowsHtml("bare");
+    const out = phDashMustGoToday().map(phDashTaskMustGoHtml).filter(Boolean);
+    const urgent = phDashUrgentStockHtml();
     wrap.innerHTML = `
-      ${phShellHead("Dashboard", dashMeta, "", dashAction, dashQuickActs).replace('<h1>', '<h1><svg class="icn" aria-hidden="true"><use href="#i-home"/></svg>')}
+      ${head}
       ${phEodEntryRowHtml()}
-      ${phDashWeekHeroHtml()}
-      ${phDashNeedsActionHtml()}
       ${phDashRelocationLineHtml()}
-      ${monday ? phDashMondayBandHtml() : ""}
-      ${monday ? phDashMondayReviewHtml() : ""}
-      ${phDashSheetHtml()}
+      ${phDashDayListHtml(todayKey, "Today")}
+      ${nextKey && nextKey !== todayKey ? phDashDayListHtml(nextKey, phDashNextDayLabel(nextKey)) : ""}
+      ${fu ? phDashSec("Communications due", phDashFuDue().length, fu) : ""}
+      ${out.length ? phDashSec("Going out today", out.length, `<div class="ph-dash-tasks">${out.join("")}</div>`) : ""}
+      ${urgent ? `<section class="ph-widget ph-dash-card ph-dash-sec ph-dash-urgent">${urgent}</section>` : ""}
+      ${workCards}
       ${phDashStockTaskBottomHtml()}`;
-    phDsResizeApply();
   }
   // The month calendar as the page's lead card (desktop and phone alike):
   // just the month grid now -- the stocktake task card that used to sit
@@ -21349,6 +21411,10 @@
     // merge lands on the new page instead of silently falling through to
     // Inventory the first time she opens the app post-update.
     if (PHARMACY.activeTab === "followups" || PHARMACY.activeTab === "messages") PHARMACY.activeTab = "communications";
+    // her 2026-09-07 answer ("appointments is where i check everyday"): the
+    // app OPENS on Appointments -- once per load; every later render keeps
+    // whatever tab she is on
+    if (!window.__phBootTabDone) { window.__phBootTabDone = true; PHARMACY.activeTab = "appointments"; }
     const tab = ["prescriptions", "communications", "appointments", "refill", "restock", "stats", "log", "dispenses", "endofday", "dashboard", "suppliers", "settings", "stocktake", "pricereview", "guide", "supplements", "relocation", "intake", "journey"].includes(PHARMACY.activeTab) ? PHARMACY.activeTab : "inventory";
     // hover-dropdown nav (her ask): two section parents; hovering a parent drops
     // a menu of its pages. Inventory owns stock ops; Prescriptions owns the patient side.
@@ -22154,6 +22220,23 @@
       }
       const apptCalBook = e.target.closest("[data-ph-apptcal-book]");
       if (apptCalBook) { phApptOpen(apptCalBook.dataset.phApptcalBook); return; }
+      // her 2026-09-07 answers (Dashboard rows + Appointments blocks): tapping
+      // a patient opens their profile with the script -- or, with no script
+      // yet, the profile searched to that name. Inner buttons (Order, the
+      // block's ⋯, the short-dot) keep their own handlers.
+      const patOpen = e.target.closest("[data-ph-dash-patient-open]");
+      if (patOpen && !e.target.closest("[data-ph-appt-order], [data-ph-apptcal-open], [data-ph-apptcal-order-dot], [data-ph-tab]")) {
+        const name = patOpen.dataset.phDashPatientOpen;
+        const script = phApptScriptFor(phPatientKey(name));
+        if (phTimers.presTmpl) { clearTimeout(phTimers.presTmpl); phTimers.presTmpl = null; presFlushTemplate(); }
+        PHARMACY.activeTab = "prescriptions";
+        if (script) presOpenScript(script.id);
+        else { presOpenId = null; presEditId = null; presDraft = null; presSearch = name; presPage = 1; }
+        savePharmacy(); renderPharmacy();
+        if (script) presScrollToPanel();
+        else { const inp = document.getElementById("presSearch"); if (inp) inp.value = name; }
+        return;
+      }
       const dashPresOpen = e.target.closest("[data-ph-dash-pres-open]");
       if (dashPresOpen) {
         // same forward as data-pres-open below, plus the tab hop the herb-edit
