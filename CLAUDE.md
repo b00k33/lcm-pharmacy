@@ -26,6 +26,24 @@ update STYLE-LCM.md to match so future builds don't undo it.
 - Every dropdown / menu / popover / filter panel MUST open fully on-screen; if it
   would run off an edge, flip or shift it; if taller than the screen, it scrolls
   inside itself and is NEVER cut off. Tapping outside closes it.
+- **Phone laws (≤640px), her eight locked answers 2026-09-07** ("my mobile ui is
+  horrible. i hate using it"; the CSS lives in ONE block at the very end of the
+  stylesheet, "PHONE REDESIGN", plus `window.innerWidth <= 640` branches in
+  `phTitlebarMerge`, `renderPresPanel`, `renderPresList`, `renderPhRows`,
+  `phApptCalEnsureDayCount`). Desktop is untouched by any of it:
+  1. Header is ONE row: ☰ · title · the page's one primary action · ⋯. Every other
+     action, the gold Update and the location switcher live in the ⋯ sheet
+     (`phMoreSheetOpen`). Never add a second row or a second visible action.
+  2. No bottom verb bar, no FAB, no footer band. ☰ is the only nav.
+  3. Tapping a patient opens the script FULL-SCREEN (`#presPanel.ph-pres-full`);
+     the list underneath keeps its scroll spot; ‹ Back returns to it.
+  4. Patient profile order: search box → today's patients → everyone. Day summary
+     and Quick actions fold to one line each. Everyone = the 38px timeline row,
+     no 120px cards.
+  5. Stock strips are ONE scrolling line of real numbers; Inventory's chips sit
+     behind one Filter button; the list scrolls, no "Page 1 of 6".
+  6. Appointments = Cliniko's day view: one day, time gutter, solid full-width
+     blocks (CHM green, ACU blue, both purple), the page scrolls, no inner scroller.
 
 ## Spacing & size (one scale, no random numbers)
 - Only 4/8/12/16/24/32px for margins/padding/gaps.
