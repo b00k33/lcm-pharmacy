@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260909-111500">
+<meta name="lcm-build" content="20260909-113000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -24107,7 +24107,14 @@
       if (tpStatus) {
         const [planId, v] = tpStatus.dataset.tpStatus.split(":");
         const plan = phTpFindPlan(phTpScreenPatient, planId);
-        if (plan) { plan.status = v; savePharmacy(); phTpRerender(); }
+        if (plan) {
+          plan.status = v;
+          // marking an acute detour Done puts the plan it interrupted back
+          // on by itself -- her call, "just do it", no prompt
+          const back = phTpResumeInterrupted(phTpScreenPatient, plan);
+          savePharmacy(); phTpRerender();
+          if (back) phFlashShow(`Back on ${back.title}.`);
+        }
         return;
       }
       const tpPhaseStatus = e.target.closest("[data-tp-phase-status]");
@@ -24812,7 +24819,11 @@
         if (plan) {
           const order = PH_TP_STATUSES.map(s => s.v);
           plan.status = order[(order.indexOf(plan.status) + 1) % order.length];
+          // same as the plan screen's own status control: cycling an acute
+          // detour round to Done hands the patient back to the held plan
+          const back = phTpResumeInterrupted(pname, plan);
           savePharmacy(); renderPresPanel();
+          if (back) phFlashShow(`Back on ${back.title}.`);
         }
         return;
       }
@@ -36957,7 +36968,67 @@ or changing anything in Cliniko.
   // acu-followup nags and gone-quiet alerts for them; there's nothing left to
   // chase. A patient with NO treatment plan at all isn't "done" with
   // anything, so they keep the existing default-cadence/quiet behaviour.
-  const phTpAllPlansInactive = name => { const plans = phTpPlans(name); return plans.length > 0 && !plans.some(p => p.status === "active"); };
+  const phTpAllPlansInactive = name => {
+    const plans = phTpPlans(name);
+    if (!plans.length) return false;
+    // A plan PAUSED BY another plan is not abandoned -- she is being treated
+    // for something else right this minute. Counting it as inactive is what
+    // would have made Phoebe go quiet: seasonal-depression maintenance
+    // paused, immune plan marked Done, every plan inactive, and the app
+    // quietly stops chasing a monthly-acupuncture patient.
+    return !plans.some(p => p.status === "active" || phTpHeldBy(plans, p));
+  };
+  // ---- a plan that interrupts another (her ask 2026-09-09, from Phoebe:
+  // "she is in a seasonal depression maintenance treatment plan. she is
+  // currently sick so i am treating her immune system... when her immunity
+  // improves, she will return to her usual maintenance") -----------------
+  // Her four answers: two plans side by side rather than extra phases on the
+  // existing one; the pause must not silence her; marking the interrupting
+  // plan Done puts the other back on its own with no prompt; and a real
+  // template rather than building it by hand each winter.
+  //
+  // The link lives on the INTERRUPTING plan, not on the paused one, because
+  // the interrupting plan is the short-lived half -- when it is finished and
+  // deleted, nothing is left pointing at a plan that no longer exists.
+  const PH_TP_INTERRUPT_CATS = ["acute"];
+  // the plan this one is holding paused, if any
+  const phTpInterrupted = (plans, plan) => (plan && plan.interruptsPlanId)
+    ? (plans.find(p => p.id === plan.interruptsPlanId) || null) : null;
+  // the active plan currently holding THIS one paused, if any
+  const phTpHeldBy = (plans, plan) => (plan && plan.status === "paused")
+    ? (plans.find(p => p.status === "active" && p.interruptsPlanId === plan.id) || null) : null;
+  // A new acute plan pauses the one plan it is interrupting and says so in
+  // that plan's own review log -- the only dated place a reason can live.
+  // Only the "acute" category does this: she runs other plans concurrently
+  // on purpose, and a new gynae plan must never pause an MSK one. Skipped
+  // when there is no single obvious plan to interrupt -- with none there is
+  // nothing to pause, and with several the app would be guessing which
+  // course she means to hold.
+  function phTpApplyInterrupt(rec, plan, templateId) {
+    const tpl = phTpBuiltinTemplates().find(t => t.id === templateId);
+    if (!tpl || PH_TP_INTERRUPT_CATS.indexOf(tpl.category) < 0) return null;
+    const active = (rec.treatmentPlans || []).filter(p => p.id !== plan.id && p.status === "active");
+    if (active.length !== 1) return null;
+    const held = active[0];
+    held.status = "paused";
+    plan.interruptsPlanId = held.id;
+    held.reviews = held.reviews || [];
+    held.reviews.push({ id: uid(), date: keyOf(TODAY),
+      note: `Paused — ${plan.title}. The current phase is held, not finished; this plan comes back on its own when that one is marked Done.` });
+    return held;
+  }
+  // Marking an interrupting plan Done puts the held plan straight back to
+  // Active -- her answer was "just do it", no prompt -- and dates it on the
+  // plan that was waiting.
+  function phTpResumeInterrupted(name, plan) {
+    if (!plan || plan.status !== "done" || !plan.interruptsPlanId) return null;
+    const held = phTpFindPlan(name, plan.interruptsPlanId);
+    if (!held || held.status !== "paused") return null;
+    held.status = "active";
+    held.reviews = held.reviews || [];
+    held.reviews.push({ id: uid(), date: keyOf(TODAY), note: `Back on this plan — ${plan.title} finished.` });
+    return held;
+  }
   const PH_TP_STATUSES = [
     { v: "active", label: "Active", pill: "dispensed" },
     { v: "paused", label: "Paused", pill: "stale" },
@@ -37015,6 +37086,16 @@ or changing anything in Cliniko.
     // weight-loss plan shouldn't surface while she's mid-way through a
     // Fertility or Pain script.
     { id: "metabolic", label: "Weight & metabolism" },
+    // her ask 2026-09-09 (Phoebe: on a seasonal-depression maintenance plan,
+    // currently sick, "help me structure her plan to show that change").
+    // `always` is the point of this one. Every other category is hidden when
+    // the open script's Case maps elsewhere -- see phTpTemplateGroupsHtml --
+    // and that is right for the others, but an acute illness happens to a
+    // Fertility patient and a Pain patient and a Stress patient alike. If
+    // this group obeyed the Case filter it would have been invisible on
+    // Phoebe, whose Case is Stress, which is the one patient it was written
+    // for. So it shows everywhere, and it is the only category that does.
+    { id: "acute", label: "Acute & immune", always: true },
   ];
   const PH_TP_TEMPLATES = [
     // ---- Musculoskeletal (her ask 2026-09-05) ----
@@ -37192,6 +37273,22 @@ or changing anything in Cliniko.
         { label: "Maintenance — holding it", aim: "Hold the loss through the period when most of it usually comes back, and give her the early signs to act on before a couple of kilos become all of it.", points: "ST36, SP6, REN12, KI3, LIV3. Seasonal top-ups; moxa through winter for cold-type patients.", suggestFormula: "Constitutional Spleen and Kidney formula as needed rather than continuously", cadence: "Monthly, then as needed", watch: "The early signs specific to her — heaviness after meals, the afternoon energy dip, cravings returning, the waistband. Regain almost always follows a life change (injury, stress, a new job, broken sleep) rather than a failure of willpower, so plan for those out loud." },
       ],
     },
+    // ---- Acute & immune (her ask 2026-09-09, from Phoebe) ----
+    // This one is shaped differently from the other 17 on purpose. It is not
+    // a course of treatment for a condition -- it is a DETOUR from one. Its
+    // last phase is a handover rather than a protocol, and marking the plan
+    // Done hands the patient back to whatever plan it interrupted (see
+    // phTpApplyInterrupt / phTpResumeInterrupted). No caseHint: an acute
+    // illness has nothing to do with why she was already being seen.
+    {
+      id: "acute_immune", name: "Immune support — acute", category: "acute",
+      goal: "Treat an acute illness in someone already under care, rebuild what it used up, then hand them back to their usual plan without losing where they were.",
+      phases: [
+        { label: "Acute — while she's unwell", aim: "Shorten the illness and stop it settling in the chest — release the exterior and support the wei qi she is evidently short of.", points: "LU7, LI4, LI11, GB20, BL12, BL13, DU14. Add LU5 for a productive cough, ST40 if the phlegm is thick, LI20 for blocked sinuses. Cupping across the upper back if she is achy and stiff.", suggestFormula: "Wind-cold or wind-heat releasing formula, matched to the presentation", cadence: "2×/wk while acute", watch: "Fever over 38.5 for more than three days, breathlessness, chest pain, or a cough that worsens after seeming to improve — send her to a GP. Note where it settled (chest, sinuses or throat); it usually goes to the same place next time." },
+        { label: "Recovery — the fortnight after", aim: "Rebuild what the illness used up, before her usual pattern is asked to carry a normal load again. This is the phase people skip, and it is why the next one is worse.", points: "ST36, SP6, REN6, REN12, BL13, BL20, BL23. Moxa ST36 and REN6 if she is cold and flat.", suggestFormula: "Qi and Lung-Spleen building formula — Yu Ping Feng San as a base if she catches everything going around", cadence: "1×/wk for 2–3 weeks", watch: "Lingering fatigue, appetite still down, a cough hanging on, sweating easily. Also note what her usual pattern did while she was sick — a flare during illness tells you where she is weakest." },
+        { label: "Back to maintenance", aim: "Hand her back to the plan this interrupted, and record anything the illness changed about it.", points: "Whatever her own plan uses — this phase is a handover, not a new protocol.", suggestFormula: "Return to her maintenance formula", cadence: "Her usual maintenance cadence", watch: "Whether she needs a shorter gap than usual for the first visit back. Marking this plan Done puts her own plan back to Active on its own." },
+      ],
+    },
   ];
   // her own saved templates (her ask 2026-09-01 "make it easier to do
   // treatment plans"): any plan can be saved as a reusable template, stored
@@ -37227,7 +37324,10 @@ or changing anything in Cliniko.
     let groups = PH_TP_CATEGORIES.map(c => ({ id: c.id, label: c.label, items: tpls.filter(t => t.category === c.id) }));
     const leftover = tpls.filter(t => !PH_TP_CATEGORIES.some(c => c.id === t.category));
     if (leftover.length) groups.push({ id: null, label: "Other", items: leftover });
-    if (wantCat) groups = groups.filter(g => g.id === wantCat);
+    // a category flagged `always` survives the Case filter -- Acute & immune
+    // is the only one, because getting sick is not a kind of patient
+    if (wantCat) groups = groups.filter(g => g.id === wantCat
+      || PH_TP_CATEGORIES.some(c => c.id === g.id && c.always));
     return groups.filter(g => g.items.length).map(g => {
       // only pin+badge when curCase reduces to exactly ONE template in this
       // group (Menopause) -- Fertility/Pain narrow the group above but have
@@ -37316,6 +37416,9 @@ or changing anything in Cliniko.
       // any plan from before this existed) is born already "picked" so nothing
       // retroactively nags on old data.
       startPhasePicked: !(tpl && tpl.name === "IVF Protocol"),
+      // set by phTpApplyInterrupt when this plan is an acute detour from
+      // another one; null on every ordinary plan
+      interruptsPlanId: null,
     };
   }
   // her ask 2026-09-05: shown once on a fresh IVF Protocol plan (see
@@ -38184,10 +38287,14 @@ or changing anything in Cliniko.
     return `<div class="ph-tp-inline">
       ${plans.map(p => {
         const cur = phTpPlanCurrentPhase(p);
+        // a plan paused BY another one says so, and says where it is holding
+        // -- "Paused" on its own reads as abandoned, which is the opposite of
+        // what has happened (her ask 2026-09-09, Phoebe)
+        const heldBy = phTpHeldBy(plans, p);
         return `<button type="button" class="ph-tp-plancard" data-tp-inline-open="${esc(name)}|${p.id}">
           <span class="ph-tp-pc-main">
             <span class="ph-tp-pc-title">${esc(p.title || "Treatment plan")}</span>
-            <span class="ph-tp-pc-phase">${cur ? `Currently: ${esc(cur.label)}` : p.status === "done" ? "Completed" : "No phases yet"}</span>
+            <span class="ph-tp-pc-phase">${heldBy ? `Held at ${esc(cur ? cur.label : "this phase")} — on ${esc(heldBy.title)}` : cur ? `Currently: ${esc(cur.label)}` : p.status === "done" ? "Completed" : "No phases yet"}</span>
           </span>
           <span class="ph-pill ${st(p.status).pill}">${st(p.status).label}</span>
           <span class="ph-tp-pc-chev">›</span>
@@ -38250,6 +38357,7 @@ or changing anything in Cliniko.
     const cur = PRESC.items.find(t => !presIsFormula(t) && phPatientKey(presPatientFor(t)) === phPatientKey(name));
     const plan = phTpNewPlan(templateId, { suggestFormula: (cur && (cur.formula || "").trim()) || "" });
     rec.treatmentPlans.push(plan);
+    phTpApplyInterrupt(rec, plan, templateId);   // an acute plan pauses the course it interrupts
     phTpAutoFillCase(templateId, presOpenId);
     presTpInlineNew = false; presTpInlinePlanId = plan.id;
     phTpScreenPatient = name; phTpScreenPlanId = plan.id;
@@ -38270,6 +38378,7 @@ or changing anything in Cliniko.
     const cur = PRESC.items.find(t => !presIsFormula(t) && phPatientKey(presPatientFor(t)) === phPatientKey(name));
     const plan = phTpNewPlan(templateId, { suggestFormula: (cur && (cur.formula || "").trim()) || "" });
     rec.treatmentPlans.push(plan);
+    phTpApplyInterrupt(rec, plan, templateId);   // an acute plan pauses the course it interrupts
     phTpAutoFillCase(templateId, presOpenId);
     savePharmacy(); renderPresPanel();
     phTpOpen(name, plan.id);
