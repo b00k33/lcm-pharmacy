@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260908-234500">
+<meta name="lcm-build" content="20260909-001500">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -5630,6 +5630,22 @@
      Guessing 32 here pushed the editor 20px off BOTH screen edges. These two
      numbers are measured, not assumed; re-measure if the page chrome changes. */
   @media (max-width: 900px) { #pharmacyPage .ph-pres-panel { --ph-pres-bleed: 12px; } }
+  /* THE SCRIPT PAGE (her ask 2026-09-08, "edit patient prescription on an
+     entirely new page instead of swiping down"): an open script or a new
+     draft is its own full-screen layer at EVERY width -- sidebar covered
+     (her pick B), the script's green band the only header (H1), full window
+     width, ‹ / Alt+← / mouse back / Esc return to the list at the same spot.
+     Born as the phone's Q3 layer (2026-09-07) and promoted out of the ≤640
+     media block; the Refill workbench's #refPresPanel never gets .ph-pres-full.
+     z-index 60 clears the phone drawer (50) and the tab bar (40); the plan
+     modal (501), menus and popups still sit above it. */
+  body.ph-pres-fullopen { overflow: hidden; }
+  #pharmacyPage #presPanel.ph-pres-full {
+    position: fixed; inset: 0; z-index: 60; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    background: var(--ph-white); margin: 0; padding: env(safe-area-inset-top) 0 0;
+  }
+  #pharmacyPage #presPanel.ph-pres-full .ph-pres-panel { --ph-pres-bleed: 0px; margin: 0; border-radius: 0; border-left: none; min-height: 100%; max-width: none; box-shadow: none; }
+  #pharmacyPage #presPanel.ph-pres-full .ph-pres-band { position: sticky; top: 0; z-index: 3; }
   #pharmacyPage .ph-pres-band {
     display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px;
     padding: 8px 16px; background: var(--ph-green-deep); color: var(--ph-cream);
@@ -11256,14 +11272,9 @@
     .ph-more-sheet #lcmSwPill { background: var(--ph-green-tint, #E6F1EA) !important; color: var(--ph-green-deep, #0E4D2A) !important; border-color: var(--ph-line, #D3E2D8) !important; }
     .ph-more-sheet #lcmSwPill span { color: inherit !important; }
     .ph-more-sheet [data-sw-menu] { top: auto !important; bottom: calc(100% + 6px) !important; }
-    /* ---- Q3: the script is its own screen ---- */
-    body.ph-pres-fullopen { overflow: hidden; }
-    #pharmacyPage #presPanel.ph-pres-full {
-      position: fixed; inset: 0; z-index: 60; overflow-y: auto; -webkit-overflow-scrolling: touch;
-      background: var(--ph-white); margin: 0; padding: env(safe-area-inset-top) 0 0;
-    }
-    #pharmacyPage #presPanel.ph-pres-full .ph-pres-panel { --ph-pres-bleed: 0px; margin: 0; border-radius: 0; border-left: none; min-height: 100%; box-shadow: none; }
-    #pharmacyPage #presPanel.ph-pres-full .ph-pres-band { position: sticky; top: 0; z-index: 3; }
+    /* ---- Q3: the script is its own screen -- the .ph-pres-full rules
+       moved out of this block on 2026-09-08 (search "THE SCRIPT PAGE"):
+       the same layer now runs at every width, not only on the phone ---- */
     /* ---- Q4: Patient profile -- search, today, everyone ---- */
     /* :not([hidden]) is load-bearing: the page wraps hide by the hidden
        attribute, and a bare #id rule outranks [hidden]{display:none} -- the
@@ -22261,6 +22272,9 @@
   const phTabHistory = [];
   let phTabLast = null, phTabBackNav = false;
   function phGoBack() {
+    // an open script page closes first (her ask 2026-09-08) -- Back returns
+    // to the list it came from, not to the previous tab
+    if (document.body.classList.contains("ph-pres-fullopen") && presPageClose()) return;
     const prev = phTabHistory.pop();
     if (!prev) return;
     phTabBackNav = true;
@@ -24503,13 +24517,7 @@
       if (e.target.closest("[data-pres-third-toggle]")) { presThirdOpen = !presThirdOpen; renderPresPanel(); return; }
       // flush BEFORE clearing presOpenId — the pending write is looked up by it,
       // so closing the panel mid-debounce would otherwise drop the last keystrokes
-      if (e.target.closest("[data-pres-close]")) {
-        if (phTimers.presTmpl) { clearTimeout(phTimers.presTmpl); phTimers.presTmpl = null; presFlushTemplate(); }
-        presOpenId = null; presLabelOpen = false; presMoreOpen = false; presFuOpen = false; renderPresPanel();
-        presTlDock = null; presPanelDock();   // a docked editor folds back into its row
-        document.body.classList.remove("ph-mtabbar-peek");   // don't carry a peeked bar into the next panel
-        return;
-      }
+      if (e.target.closest("[data-pres-close]")) { presPageClose(); return; }
       if (e.target.closest("[data-ph-confirm-cancel]")) { phClearConfirms(); return; }
       // stock movers: dispensing is immediate (her ask 2026-08-01, see below) —
       // native confirm() never fires anyway (blocked inside the published app)
@@ -29830,6 +29838,24 @@ or changing anything in Cliniko.
     const p = document.getElementById("presPanel");
     if (p && weekWrap && weekWrap.contains(p)) presPanelHome();
   }
+  // The script page's one way out (her ask 2026-09-08): the ‹ in the band,
+  // Alt+←, the mouse back button and Esc all land here. Closes an open
+  // script OR a new-draft form and returns to the list at the same spot
+  // (renderPresPanel keeps window.scrollY alone on purpose). Returns true
+  // when a page was actually open, so phGoBack can stop there instead of
+  // also popping a tab.
+  function presPageClose() {
+    const wasOpen = document.body.classList.contains("ph-pres-fullopen");
+    // flush BEFORE clearing presOpenId — the pending write is looked up by it,
+    // so closing the panel mid-debounce would otherwise drop the last keystrokes
+    if (phTimers.presTmpl) { clearTimeout(phTimers.presTmpl); phTimers.presTmpl = null; presFlushTemplate(); }
+    presOpenId = null; presLabelOpen = false; presMoreOpen = false; presFuOpen = false;
+    if (presEditId === "__new__") { presEditId = null; presDraft = null; }
+    renderPresPanel();
+    presTlDock = null; presPanelDock();
+    document.body.classList.remove("ph-mtabbar-peek");   // don't carry a peeked bar into the next panel
+    return wasOpen;
+  }
   function presPanelCurrentKey() {
     if (presEditId === "__new__") return phPatientKey(presDraft && presDraft.name);
     const t = PRESC.items.find(x => x.id === presOpenId);
@@ -29839,21 +29865,14 @@ or changing anything in Cliniko.
     const p = document.getElementById("presPanel"), wrap = document.getElementById("presWeekWrap");
     if (!p) return;
     document.querySelectorAll(".ph-tl-row.open").forEach(r => r.classList.remove("open"));
-    const row = presTlDock && wrap ? [...wrap.querySelectorAll(".ph-tl-row[data-tl-key]")].find(r => r.dataset.tlKey === presTlDock.key) : null;
-    // force = the row was just clicked (the panel is about to fill); otherwise
-    // the panel must currently show that patient -- an emptied panel
-    // (Cancel, save-and-close) means the host folds away too
-    const key = force ? presTlDock.key : presPanelCurrentKey();
-    if (!row || key !== presTlDock.key) {
-      presTlDock = null; presPanelHome();
-      if (wrap) wrap.querySelectorAll(".ph-tl-panelhost").forEach(h => h.remove());
-      return;
-    }
-    let host = row.nextElementSibling && row.nextElementSibling.classList.contains("ph-tl-panelhost") ? row.nextElementSibling : null;
-    wrap.querySelectorAll(".ph-tl-panelhost").forEach(h => { if (h !== host) h.remove(); });
-    if (!host) { host = document.createElement("div"); host.className = "ph-tl-panelhost"; row.after(host); }
-    if (p.parentElement !== host) host.appendChild(p);
-    row.classList.add("open");
+    // Docking retired (her ask 2026-09-08, "edit patient prescription on an
+    // entirely new page instead of swiping down"): the panel used to move
+    // into a .ph-tl-panelhost dropped under the clicked row of the day
+    // list, so she scrolled to work in it. It is a full-screen page at every
+    // width now (see renderPresPanel), so this only ever puts the panel
+    // back in its home slot and clears any leftover host. Callers unchanged.
+    presTlDock = null; presPanelHome();
+    if (wrap) wrap.querySelectorAll(".ph-tl-panelhost").forEach(h => h.remove());
   }
   function renderPresWeek() {
     const el = document.getElementById("presWeekWrap");
@@ -30561,7 +30580,10 @@ or changing anything in Cliniko.
     // her pick A (phone redesign 2026-09-07, Q3): on a phone the panel is a
     // fixed full-screen layer (see .ph-pres-full), so the page underneath
     // must NOT scroll -- that is what keeps the list at her spot for Back
-    const phoneFull = window.innerWidth <= 640;
+    // 2026-09-08: the layer is full-screen at EVERY width now (her "entirely
+    // new page"), so the page underneath never scrolls to meet the panel --
+    // only the Refill workbench's #refPresPanel still lives in the flow
+    const phoneFull = !el || el.id === "presPanel";
     if (host) { const row = host.previousElementSibling; if (row && !phoneFull) row.scrollIntoView({ behavior: "smooth", block: "nearest" }); renderPresPanel(); return; }
     const inView = phoneFull || (el && (() => { const r = el.getBoundingClientRect(); return r.top > -40 && r.top < window.innerHeight * 0.4; })());
     // scrollIntoView reads the CURRENT (pre-mutation) layout the instant it's
@@ -35498,7 +35520,15 @@ or changing anything in Cliniko.
     // (or a new draft) is its own full-screen layer over the list -- the
     // list keeps its scroll spot underneath, Back (data-pres-close) returns
     // to it. Desktop and the Refill page's #refPresPanel are untouched.
-    const phoneFull = window.innerWidth <= 640 && el.id === "presPanel" && (presEditId === "__new__" || PRESC.items.some(x => x.id === presOpenId));
+    // ...and her ask 2026-09-08 ("edit patient prescription on an entirely
+    // new page instead of swiping down"), eight answers: the SAME full-screen
+    // layer at every width -- sidebar covered, the script's band as the only
+    // header, full window width, formulas and the new-draft form included,
+    // every entry point. The desktop used to dock this panel under the
+    // clicked row of the day list (presPanelDock), which is what made her
+    // scroll to work in it; docking is retired. #refPresPanel (the Refill
+    // workbench's own copy) is untouched, as before.
+    const phoneFull = el.id === "presPanel" && (presEditId === "__new__" || PRESC.items.some(x => x.id === presOpenId));
     // "list keeps its spot": nothing here touches window.scrollY on purpose.
     // The panel's in-flow box leaves the page while it is fixed and Chrome's
     // scroll anchoring re-aims the viewport at the row (measured at 412px:
@@ -44165,6 +44195,16 @@ Dosage: {dosage}
       const t = e.target;
       if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
       e.preventDefault(); phGoBack();
+    }
+    // Esc closes the script page (her ask 2026-09-08) -- but never while she
+    // is typing in a field, and never when something sits ABOVE the page
+    // (the plan modal, a ⋯ menu, the More sheet, the appointment popup):
+    // those own Esc and close themselves first.
+    if (e.key === "Escape" && !e.altKey && !e.ctrlKey && !e.metaKey && document.body.classList.contains("ph-pres-fullopen")) {
+      const t = e.target;
+      if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
+      if (document.querySelector(".ph-hx-modal:not([hidden]), .ph-tbm-menu, #phMoreSheet, .ph-apptpop:not([hidden])")) return;
+      e.preventDefault(); presPageClose();
     }
   });
   document.addEventListener("mouseup", e => { if (e.button === 3) { e.preventDefault(); phGoBack(); } });

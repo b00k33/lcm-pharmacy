@@ -114,9 +114,30 @@ update STYLE-LCM.md to match so future builds don't undo it.
   words only (no icons, one 20px size, one bar padding). Every page now goes through
   `phShellHead(title, "N things", strip?)` + `PH_TOPBAR_ACTIONS` (first non-ghost verb = the
   disc, `ghost:true` = ⋯); never hand-build a button into the bar, never a page-only override
-  on `.ph-shell-titlebar`. Also LIKES the /patients briefing table as a List
+  on `.ph-shell-titlebar`. LIKE + STANDING (2026-09-08, treatment plan editor: "i dont like
+  any of the format. i like to see information in table format" → "yes i like this grid"):
+  information in a REAL table — one row per item, one column per field, hairline cells,
+  labels repeated per group; rejected a sheet with sub-rows, a stepper and a one-line
+  timeline. Built as `.ph-tp-grid` (four shared columns: label · value · label · value; Aim
+  and Watch full width, Visits left half beside Formula over Points, the split at the middle
+  of the screen), a progression bar on top (`phTpProgressHtml`), ONE status pill per phase
+  line (a `<select>`), done phases folded to their line, plan status as a pill in the green
+  Treatment row band, click-to-edit cells. Default for any multi-item editor from now on:
+  table first, then ask. Also LIKES the /patients briefing table as a List
   view (her ask, then "these designs look lazy" about the old panel — cohesive, modern,
-  functional). **Script panel stages = the Opening-stage language (built 2026-09-08 to her
+  functional). **THE SCRIPT PAGE (her ask 2026-09-08, "i want to edit patient
+  prescription on an entirely new page instead of swiping down"; eight picks, BUILT):**
+  an open script or a new draft is its own full-screen layer at EVERY width — sidebar
+  covered, the script's green band the only header (‹ · name · subtitle · meta · one disc),
+  full window width, formulas and "+ New prescription" on the same page, every desktop entry
+  point. `#presPanel.ph-pres-full` (rules under "THE SCRIPT PAGE" in the CSS, z 60) +
+  `body.ph-pres-fullopen`; `renderPresPanel` sets both with no width gate. One way out:
+  `presPageClose()` — the band's ‹ (`data-pres-close`), `phGoBack()` (Alt+←, mouse back,
+  sidebar Back) closes the page BEFORE popping tab history, Esc closes it unless she is
+  typing or a modal/menu/sheet/popup sits above. The list keeps its scroll spot (scroll
+  anchoring; never scrollTo). Docking under the day-list row (`presPanelDock`,
+  `.ph-tl-panelhost`) is RETIRED — the function only ever sends the panel home now; the
+  Refill workbench's `#refPresPanel` never gets `.ph-pres-full`. **Script panel stages = the Opening-stage language (built 2026-09-08 to her
   four picks; then "i dont like this" on the Follow-up stage, rebuilt the same day):** every
   stage body uses small-caps faint section headers with a hairline running out of them
   (`.ph-tmpl-sec` direct children, or `.ph-tmpl-sec.ph-sec-line`), ONE 34px hairline pill for
