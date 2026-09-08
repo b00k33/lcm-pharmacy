@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260909-060000">
+<meta name="lcm-build" content="20260909-070000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -7077,6 +7077,30 @@
   #pharmacyPage .ph-ren-view-shots { margin-top: 12px; padding-top: 8px; border-top: 1px dashed var(--ph-line); }
   #pharmacyPage .ph-ren-view-shotlab { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ph-faint); font-weight: 700; margin-bottom: 6px; }
   #pharmacyPage .ph-ren-view-shotrow { display: flex; gap: 5px; flex-wrap: wrap; }
+  /* Sorting recipes from patients (her ask 2026-09-09). A real table, per her
+     standing preference, in the same field language as the rest of the app --
+     hairline rows, no box inside a box, one chip style. */
+  #pharmacyPage .ph-psort { margin: 0 0 16px; }
+  #pharmacyPage .ph-psort-lede { font-size: 12.5px; color: var(--ph-soft); margin: 0 0 10px; max-width: 70ch; }
+  #pharmacyPage .ph-psort-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 10px 0; }
+  #pharmacyPage .ph-psort-hint { font-size: 11.5px; color: var(--ph-faint); }
+  #pharmacyPage .ph-psort-done { font-size: 12.5px; color: var(--ph-faint); margin: 12px 0; }
+  #pharmacyPage .ph-psort-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  #pharmacyPage .ph-psort-table th {
+    text-align: left; font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--ph-faint); font-weight: 700; padding: 6px 8px; border-bottom: 1px solid var(--ph-line);
+  }
+  #pharmacyPage .ph-psort-table td { padding: 6px 8px; border-bottom: 1px solid var(--ph-line); font-size: 12.5px; vertical-align: middle; }
+  #pharmacyPage .ph-psort-name { font-weight: 700; color: var(--ph-ink); }
+  #pharmacyPage .ph-psort-why { color: var(--ph-faint); font-size: 11.5px; }
+  #pharmacyPage .ph-psort-n { color: var(--ph-faint); font-variant-numeric: tabular-nums; width: 56px; }
+  #pharmacyPage .ph-psort-act { width: 240px; white-space: nowrap; }
+  #pharmacyPage .ph-psort-act .ph-ck-chip { margin-left: 6px; }
+  @media (max-width: 640px) {
+    #pharmacyPage .ph-psort-table th:nth-child(2), #pharmacyPage .ph-psort-table td.ph-psort-why,
+    #pharmacyPage .ph-psort-table th:nth-child(3), #pharmacyPage .ph-psort-table td.ph-psort-n { display: none; }
+    #pharmacyPage .ph-psort-act { width: auto; white-space: normal; }
+  }
   #pharmacyPage .ph-ren-crop-labelbtn {
     border: 1px solid var(--ph-line); background: var(--ph-white); color: var(--ph-soft);
     border-radius: 999px; padding: 10px 16px; min-height: 44px; font-size: 13px; font-weight: 600; cursor: pointer;
@@ -24285,6 +24309,14 @@
       if (e.target.closest("[data-ren-crop-done]")) { phRenCropDoDone(); return; }
       const renThumbView = e.target.closest("[data-ren-thumb-view]");
       if (renThumbView) { phRenViewPhoto(renThumbView.dataset.renThumbView, renThumbView.dataset.renThumbPatient); return; }
+      // ---- sorting recipes from patients (her ask 2026-09-09) ----
+      if (e.target.closest("[data-psort-open]")) { phPresSortOpen = true; renderPhPresSort(); return; }
+      if (e.target.closest("[data-psort-close]")) { phPresSortOpen = false; renderPhPresSort(); return; }
+      const psortTab = e.target.closest("[data-psort-tab]");
+      if (psortTab) { phPresSortTab = psortTab.dataset.psortTab; renderPhPresSort(); return; }
+      const psortSet = e.target.closest("[data-psort-set]");
+      if (psortSet) { phPresSetKind(psortSet.dataset.psortSet, psortSet.dataset.psortKind); return; }
+      if (e.target.closest("[data-psort-applyall]")) { phPresApplyObvious(); return; }
       const renViewStep = e.target.closest("[data-ren-view-step]");
       if (renViewStep) { phRenViewStep(Number(renViewStep.dataset.renViewStep) || 0); return; }
       // her pick 2026-09-09, "label them as you go": old tongue photos are
@@ -29942,6 +29974,152 @@ or changing anything in Cliniko.
   // no patient type-in box: a patient script's template name IS the patient
   // (formula recipes have no patient at all)
   const presPatientFor = t => presIsFormula(t) ? "" : t.name;
+
+  // ============ Sorting recipes from patients (her ask 2026-09-09,
+  // "separate the herbal formula from patient prescription system") ==========
+  // The two systems are ALREADY separate on screen: the Patient profile list
+  // is `PRESC.items.filter(t => !presIsFormula(t))` and the Formula Refill
+  // page has its own "Formula recipes" section. What is NOT separate is the
+  // DECIDING. Measured against her real 3 Sep backup: 808 of 809 records carry
+  // no presType at all, so presIsFormula's name rule -- "is there a word
+  // tang/san/wan after the first one" -- re-guesses every record on every
+  // render, and it is wrong about 40 times. BWJYT, THSWT, XGJAT, GCXXT and the
+  // whole "D ..." Doane series sit in her PATIENT list; so do 3 Yellows, Clear
+  // Skin, Early Pregnancy, Yi Guan Jian and Zhe Chong Yin. A patient surnamed
+  // Tang or Wan would land in her recipes.
+  //
+  // So the fix is not a second store, it is to stop guessing: write presType
+  // once, from evidence, and let her settle anything genuinely ambiguous.
+  // Nothing here deletes or moves a record -- presType only decides which of
+  // the two existing lists it appears in, and it is reversible per record.
+  // Every name this clinic has treated as a person. PHARMACY.patients is an
+  // object keyed by phPatientKey (the same key medical history uses), so its
+  // keys already ARE the people she holds a record for; appointments name
+  // theirs directly. The dispense log matters most -- it carried 682 of the
+  // 809 names in her 3 Sep data, against 19 patient records -- but it is the
+  // weakest witness on its own, because a jar refill is logged against the
+  // FORMULA name (Ba Zhen Tang, Ping Wei San, Si Ni San, Zhen Wu Tang all
+  // appear there). So log names are kept SEPARATE below and only believed
+  // after the formula tests have had their say.
+  const phPresPeopleSet = () => {
+    const strong = new Set(Object.keys(PHARMACY.patients || {}));
+    (PHARMACY.appointments || []).forEach(a => { const k = phPatientKey(a.patient || ""); if (k) strong.add(k); });
+    const logged = new Set();
+    (PHARMACY.log || []).forEach(e => {
+      if (e.kind && e.kind !== "dispense") return;
+      const k = phPatientKey(e.patient || "");
+      if (k) logged.add(k);
+    });
+    return { strong, logged };
+  };
+  // an all-caps run with no space is a recipe abbreviation (BWJYT, THSWT), not
+  // a person -- her own naming, seen 9 times in the 3 Sep data
+  const phPresLooksAbbrev = name => /^[A-Z0-9]{3,10}$/.test((name || "").trim());
+  // What the app should think this record is, and how sure it is.
+  // "sure" means evidence, not a name pattern; "unsure" goes to her.
+  function phPresKindGuess(t, people, jarTokens) {
+    const name = (t.name || "").trim(), key = phPatientKey(name);
+    // 1. anything she has settled herself is final
+    if (t.presType === "formula") return { kind: "formula", sure: true, why: "you set this one" };
+    if (t.presType === "patient") return { kind: "patient", sure: true, why: "you set this one" };
+    // 2. a real patient record or a booked appointment is the strongest word
+    if (people.strong.has(key)) return { kind: "patient", sure: true, why: "a patient of this name is in your records" };
+    // 3. then the formula tests, BEFORE the dispense log -- a jar refill is
+    //    logged against the formula's own name, so the log must not be able to
+    //    turn Ba Zhen Tang into a person
+    if (phPresLooksAbbrev(name)) return { kind: "formula", sure: true, why: "an abbreviation, not a name" };
+    const seg = ((name.split(/[/(#*]/)[0]) || "").trim();
+    if (seg && jarTokens.has(seg.toUpperCase())) return { kind: "formula", sure: true, why: "matches one of your jars" };
+    // 4. pinyin formula naming is reliable ON ITS OWN -- Ba Zhen Tang, Bai Hu
+    //    Tang, Dang Gui Shao Yao San. The ONE case it cannot settle is a name
+    //    that ALSO appears in the dispense log: that is either a jar refill
+    //    logged against the formula, or a real patient surnamed Tang or Wan.
+    //    Four records in her 3 Sep data hit this, and only she can say which.
+    if (phAutoFormulaName(name)) {
+      return people.logged.has(key)
+        ? { kind: "formula", sure: false, why: "reads like a formula, but you have dispensed under this name" }
+        : { kind: "formula", sure: true, why: "named like a formula" };
+    }
+    // 5. survived every formula test and you have dispensed to this name
+    if (people.logged.has(key)) return { kind: "patient", sure: true, why: "you have dispensed to this name" };
+    return { kind: "patient", sure: false, why: "no record of a person or a formula by this name" };
+  }
+  // one pass over everything, with the two lookup sets built once
+  function phPresSortScan() {
+    const people = phPresPeopleSet();
+    const jarTokens = new Set();
+    (PHARMACY.herbs || []).forEach(h => {
+      if (!phIsFormula(h)) return;
+      phHerbCodes(h).forEach(c => jarTokens.add((c || "").trim().toUpperCase()));
+      const ini = phInitials(((h.name || "").split(/[/(#*]/)[0] || "").trim());
+      if (ini) jarTokens.add(ini);
+    });
+    const rows = (PRESC.items || []).map(t => {
+      const g = phPresKindGuess(t, people, jarTokens);
+      return { t, ...g, now: presIsFormula(t) ? "formula" : "patient" };
+    });
+    return {
+      rows,
+      // evidence disagrees with what the app currently shows -- these are the
+      // ones actually in the wrong list today
+      moving: rows.filter(r => r.sure && r.kind !== r.now),
+      // no evidence either way: only she can say
+      unsure: rows.filter(r => !r.sure && !r.t.presType),
+      settled: rows.filter(r => r.t.presType),
+    };
+  }
+  // one record settled. presType is the ONLY thing written -- the record keeps
+  // its name, its herbs, its dates and its id, and this can be changed again
+  // any time, so nothing here can lose anything.
+  function phPresSetKind(id, kind) {
+    const t = (PRESC.items || []).find(x => x.id === id);
+    if (!t) return;
+    if (kind) t.presType = kind; else delete t.presType;
+    phIsFormulaCache = null;      // the guess is cached per record -- drop it
+    savePresc();
+    renderPhPresSort();
+  }
+  function phPresApplyObvious() {
+    const s = phPresSortScan();
+    s.moving.forEach(r => { r.t.presType = r.kind; });
+    phIsFormulaCache = null;
+    savePresc();
+    phFlashShow(`Filed ${s.moving.length} record${s.moving.length === 1 ? "" : "s"} where they belong.`);
+    renderPhPresSort();
+  }
+  let phPresSortOpen = false, phPresSortTab = "unsure";
+  function phPresSortHtml() {
+    if (!phPresSortOpen) return "";
+    const s = phPresSortScan();
+    const list = phPresSortTab === "moving" ? s.moving : s.unsure;
+    const row = r => `<tr>
+      <td class="ph-psort-name">${esc(phDispName(r.t.name, r.kind === "formula"))}</td>
+      <td class="ph-psort-why">${esc(r.why)}</td>
+      <td class="ph-psort-n">${(r.t.ingredients || []).length || "—"}</td>
+      <td class="ph-psort-act">
+        <button type="button" class="ph-ck-chip${r.kind === "formula" ? " on" : ""}" data-psort-set="${esc(r.t.id)}" data-psort-kind="formula">Herbal formula</button>
+        <button type="button" class="ph-ck-chip${r.kind === "patient" ? " on" : ""}" data-psort-set="${esc(r.t.id)}" data-psort-kind="patient">Patient</button>
+      </td></tr>`;
+    return `<div class="ph-psort">
+      <div class="ph-tmpl-sec ph-sec-line"><span>Sorting recipes from patients</span>
+        <button type="button" class="ph-tmpl-sec-act" data-psort-close="1">Close</button></div>
+      <p class="ph-psort-lede">Every record here is safe. Choosing only decides which of the two lists it shows up in, and you can change it again any time.</p>
+      <div class="ph-days-seg" role="radiogroup">
+        <button type="button" class="ph-days-opt${phPresSortTab === "unsure" ? " on" : ""}" data-psort-tab="unsure" role="radio" aria-checked="${phPresSortTab === "unsure"}">Needs you · ${s.unsure.length}</button>
+        <button type="button" class="ph-days-opt${phPresSortTab === "moving" ? " on" : ""}" data-psort-tab="moving" role="radio" aria-checked="${phPresSortTab === "moving"}">In the wrong list · ${s.moving.length}</button>
+      </div>
+      ${phPresSortTab === "moving" && s.moving.length ? `<div class="ph-psort-bar"><button type="button" class="btn-save" data-psort-applyall="1">File all ${s.moving.length} where they belong</button><span class="ph-psort-hint">each one is an abbreviation or matches one of your jars</span></div>` : ""}
+      ${list.length ? `<table class="ph-psort-table"><thead><tr><th>Name</th><th>Why it is here</th><th>Herbs</th><th>It is a</th></tr></thead><tbody>${list.map(row).join("")}</tbody></table>`
+        : `<p class="ph-psort-done">Nothing left here. ${phPresSortTab === "unsure" ? "Every record has been settled." : "Everything is in the right list."}</p>`}
+    </div>`;
+  }
+  function renderPhPresSort() {
+    const host = document.getElementById("phPresSortHost");
+    if (host) host.innerHTML = phPresSortHtml();
+    const cnt = document.getElementById("phPresSortCount");
+    if (cnt) { const s = phPresSortScan(); cnt.textContent = `${PRESC.items.filter(presIsFormula).length} recipes${s.moving.length + s.unsure.length ? ` · ${s.moving.length + s.unsure.length} to sort` : " · all sorted"}`; }
+    if (typeof renderPresList === "function" && document.getElementById("presList")) renderPresList();
+  }
 
   // ============ Booked today — a week table above the search (her ask
   // 2026-09-03: "make the prescriptions page show patient scripts for the
@@ -43192,8 +43370,10 @@ Dosage: {dosage}
         ${phRefSheetMode() && !(recipe || noRecipeJar) ? "" : `<div class="ph-ref-browse"${recipe || noRecipeJar ? " hidden" : ""}>
           <section class="ph-widget">
             <div class="ph-widget-head ph-band-head"><h2>Formula recipes</h2>
-              <span class="ph-count">${PRESC.items.filter(presIsFormula).length} recipes · kept separate from patient prescriptions</span>
+              <span class="ph-count" id="phPresSortCount">${PRESC.items.filter(presIsFormula).length} recipes${(() => { const s = phPresSortScan(); const n = s.moving.length + s.unsure.length; return n ? ` · ${n} to sort` : " · all sorted"; })()}</span>
+              <button type="button" class="ph-load-btn" data-psort-open="1">Sort recipes from patients</button>
             </div>
+            <div id="phPresSortHost">${phPresSortHtml()}</div>
             <div id="refPresPanel"></div>
             <div id="refRecipeList"></div>
             <div id="refRecipePagination"></div>
@@ -43338,7 +43518,7 @@ Dosage: {dosage}
       <div class="ph-ds-card"><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i><i class="ph-ds-vl"></i>
         ${phRfBand("plan", "ref", "i-jar", "Refill plan", `<span class="ph-rf-tabs" role="radiogroup" aria-label="Which formulas">${tab("toRefill", "To refill", flagged.length)}${tab("snoozed", "Snoozed", snoozed.length)}${tab("notFlagged", "Not flagged", below.length)}</span>`)}
         ${phRfCollapsed.has("plan") ? "" : planBody}
-        ${sec("recipes", phRfBand("recipes", "act", "i-book", "Formula recipes", `<span class="cnt">${recipesN} recipe${recipesN === 1 ? "" : "s"}</span><span class="sub">kept separate from patient prescriptions</span>`), `<div id="refRecipeList"></div><div id="refRecipePagination"></div>`)}
+        ${sec("recipes", phRfBand("recipes", "act", "i-book", "Formula recipes", `<span class="cnt">${recipesN} recipe${recipesN === 1 ? "" : "s"}</span><span class="sub">${(() => { const s = phPresSortScan(); const n = s.moving.length + s.unsure.length; return n ? `${n} still to sort` : "all sorted"; })()}</span>`), `<div class="ph-psort-open"><button type="button" class="ph-load-btn" data-psort-open="1">Sort recipes from patients</button></div><div id="phPresSortHost">${phPresSortHtml()}</div><div id="refRecipeList"></div><div id="refRecipePagination"></div>`)}
         ${sec("log", phRfBand("log", "act", "i-clock", "Recent refills", refsMonth ? `<span class="cnt">${refsMonth} this month</span>` : ""), `<div id="refLog"></div>`)}
       </div>`;
   }
