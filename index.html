@@ -33085,6 +33085,64 @@ or changing anything in Cliniko.
       body: "Hi {{firstName}}, here's a summary of what we covered today and the plan going forward..." },
     { name: "Blank", tag: "custom", subject: "", category: "general", body: "Hi {{firstName}}, " },
   ];
+  // ---- what each code3 moment is FOR, so a message can be chosen rather than
+  // hunted for by name (2026-09-09) --------------------------------------------
+  // The picking engine lives in the check-in/selection path and is being built
+  // separately; this is the contract it selects against. Rows carry real
+  // fields, so nothing downstream ever parses a template NAME (which she can
+  // rename) or splits a code3 string.
+  //
+  // Two DIFFERENT phase vocabularies exist in this file and must not be mixed:
+  //   cyclePhase = what phCycleComp(rec) returns LIVE for the patient today.
+  //     Exactly four: "period" | "foll" | "ov" | "luteal". Note there is no
+  //     live "foll1"/"foll2" -- that split exists only on PLAN phases.
+  //   planPhase  = keys of PH_TP_PHASE (the treatment-plan phase dictionary):
+  //     menses, foll1, foll2, ov, opu, preEt, postEt, tww, early, birth...
+  // A moment can be reachable by either route, so both are declared.
+  //
+  // ivf: true  = only when the patient is on an IVF plan
+  //      false = only when they are NOT (natural cycle)
+  //      null  = doesn't care
+  // This flag is what keeps "IVF Menstruation" and "Period" apart -- both are
+  // cyclePhase "period", and without it an IVF patient gets the wrong one.
+  //
+  // planText is a fallback regex for the pain/stress tracks, whose plan phases
+  // are free text per template ("Subacute — weeks 2–6 (rebuilding tolerance)",
+  // "Restoring range", ...) rather than keys.
+  const PH_CODE3_MOMENTS = {
+    aftercare:      { track: "everyVisit", cyclePhase: null,     planPhase: [],                ivf: null,  addons: [] },
+    posttx:         { track: "everyVisit", cyclePhase: null,     planPhase: [],                ivf: null,  addons: [] },
+    rebuilding:     { track: "pain",       cyclePhase: null,     planPhase: [],                ivf: null,  addons: [], planText: /rebuild|subacute|restoring range|load tolerance/i },
+    settling:       { track: "stress",     cyclePhase: null,     planPhase: [],                ivf: null,  addons: [], planText: /settling|first (2|two)|acute/i },
+    building:       { track: "stress",     cyclePhase: null,     planPhase: [],                ivf: null,  addons: [], planText: /building|stabilis|resilience/i },
+    "maint-nobooking": { track: "maintenance", cyclePhase: null, planPhase: [],                ivf: null,  addons: [], planText: /maintenance|recurrence prevention/i, requiresBooked: false },
+    "maint-booked": { track: "maintenance", cyclePhase: null,    planPhase: [],                ivf: null,  addons: [], planText: /maintenance|recurrence prevention/i, requiresBooked: true },
+    "weight-building": { track: "weight",  cyclePhase: null,     planPhase: [],                ivf: null,  addons: [] },
+    period:         { track: "cycle",      cyclePhase: "period", planPhase: ["menses"],        ivf: false, addons: ["bbt", "menses"] },
+    follicular:     { track: "cycle",      cyclePhase: "foll",   planPhase: ["foll1", "foll2"], ivf: false, addons: [] },
+    ovulation:      { track: "cycle",      cyclePhase: "ov",     planPhase: ["ov"],            ivf: false, addons: ["bbt"] },
+    luteal:         { track: "cycle",      cyclePhase: "luteal", planPhase: ["tww"],           ivf: false, addons: [] },
+    "ivf-mens":     { track: "ivf",        cyclePhase: "period", planPhase: ["menses"],        ivf: true,  addons: [] },
+    "ivf-foll":     { track: "ivf",        cyclePhase: "foll",   planPhase: ["foll1", "foll2"], ivf: true,  addons: [] },
+    opu:            { track: "ivf",        cyclePhase: null,     planPhase: ["opu"],           ivf: true,  addons: [] },
+    preet:          { track: "ivf",        cyclePhase: null,     planPhase: ["preEt"],         ivf: true,  addons: [] },
+    postet:         { track: "ivf",        cyclePhase: "luteal", planPhase: ["postEt", "tww"], ivf: true,  addons: [] },
+  };
+  // The code3 key convention, parsed ONCE here so nothing downstream has to:
+  //   <moment>[-formal|-casual][-sup]
+  // tone null means the moment has a single wording for everyone (aftercare).
+  function phCode3Facets(key) {
+    const supportive = /-sup$/.test(key);
+    const stem = key.replace(/-sup$/, "");
+    const tone = /-formal$/.test(stem) ? "formal" : /-casual$/.test(stem) ? "casual" : null;
+    const moment = stem.replace(/-(formal|casual)$/, "");
+    const m = PH_CODE3_MOMENTS[moment] || null;
+    return { moment, tone, supportive, track: m ? m.track : null,
+      cyclePhase: m ? m.cyclePhase : null, planPhase: m ? m.planPhase : [],
+      ivf: m ? m.ivf : null, addons: m ? m.addons : [],
+      planText: m && m.planText ? String(m.planText) : null,
+      requiresBooked: m && "requiresBooked" in m ? m.requiresBooked : null };
+  }
   // ---- code3 patient messages (her final edits, 2026-09-09) ----------------
   // Her wording, not drafts of mine -- pasted in by her after the drafting
   // round and saved here so they live in the app rather than in a chat
@@ -33237,9 +33295,16 @@ or changing anything in Cliniko.
     // Only ADDS -- once a row is here her edits own it, exactly like the
     // starters above (a re-word from Templates is never overwritten on load).
     PH_CODE3_MSG_SEEDS.forEach(s => {
-      if (PHARMACY.msgTemplates.some(t => t.code3 === s.code3)) return;
-      PHARMACY.msgTemplates.push({ id: uid(), code3: s.code3, name: s.name, tag: s.tag, subject: s.subject,
-        body: s.body, category: s.category, createdAt: Date.now(), editedAt: Date.now() });
+      const existing = PHARMACY.msgTemplates.find(t => t.code3 === s.code3);
+      if (!existing) {
+        PHARMACY.msgTemplates.push(Object.assign({ id: uid(), code3: s.code3, name: s.name, tag: s.tag,
+          subject: s.subject, body: s.body, category: s.category, createdAt: Date.now(), editedAt: Date.now() },
+          phCode3Facets(s.code3)));
+      } else if (existing.moment == null) {
+        // backfill the selection facets onto rows seeded before they existed,
+        // WITHOUT touching her wording -- only the machine-readable fields
+        Object.assign(existing, phCode3Facets(s.code3));
+      }
     });
     // backfill for templates saved before category existed (her real data)
     PHARMACY.msgTemplates.forEach(t => { if (!t.category) t.category = phMsgInferCategory(t); });
