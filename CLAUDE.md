@@ -223,6 +223,28 @@ update STYLE-LCM.md to match so future builds don't undo it.
   **Measuring trap worth keeping: `color-mix()` computes to `oklab()`, so
   `getComputedStyle` cannot be parsed as rgb** — read real pixels with a 1×1 canvas and
   `getImageData`, or every contrast number you report is fiction.
+- **"Brighter and deeper" — and a screenshot that was two builds old (2026-09-09).**
+  Minutes after the colours went live she sent a picture of the picker saying **"i like
+  this"** — all columns uniform pale green, i.e. the build BEFORE any colour. **Date her
+  screenshots before treating them as a verdict**: this app updates only when she taps
+  the gold Update button, so "live" and "what she is looking at" drift several builds
+  apart. Say so plainly, verify the shipped code is actually correct, then put both looks
+  in front of her and re-ask — the answer changed when she could see both: keep the
+  colours, **"but make them brighter and deeper"**, and keep the solid Suggested card.
+  **Why the first two colour attempts could never get there:** they mixed the category
+  colour into its own pale tint, and a tint has almost no chroma — mixing toward it
+  DESATURATES, so turning the mix up made the cards darker AND dustier at once. The 55%
+  mix measured oklch chroma 0.045–0.072: barely coloured. **Do not build a "stronger"
+  fill by mixing toward a tint.** Each family now has its colour picked in OKLCH and
+  stored as plain hex (`--ph-*-card`, `--ph-*-solid`): all six cards at one lightness
+  (0.70) so the columns read at equal weight, each at 65% of the most chroma its own hue
+  can hold in sRGB — about double the mix, and short of neon (100% chroma at that
+  lightness is `#ff5176` / `#00b1be`, a toy not a clinic). Solids: lightness 0.42, 85%
+  chroma.
+  **Hover must LIFT, not deepen, once a fill is saturated** — deepening is the obvious
+  move and it is wrong: the fill already sits as dark as the text on it can take, and a
+  darker hover measured 3.85–4.16 on four of five columns. Lifting keeps the hue and
+  gains contrast. Final: rest 4.66–6.01, hover 5.39–7.02, white-on-solid 9.17.
 - **BBT charts + phase-tagged scripts (same round):** "BBT chart" is a photo type
   (`PH_REN_PHOTO_TYPES` key `bbt`): phone capture, relay, timeline and compare come from
   the photo system, plus a tile beside the cycle tiles showing this cycle's latest chart
