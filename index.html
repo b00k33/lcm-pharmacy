@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260909-120000">
+<meta name="lcm-build" content="20260909-124500">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6380,6 +6380,65 @@
   }
   #pharmacyPage .ph-tp-addbtn:hover { border-color: var(--ph-green); color: var(--ph-green-press); }
   /* start-mode template cards (2026-09-01 "make it easier") */
+  /* ============ THE PLAN PICKER, IN COLUMNS — her ask 2026-09-09,
+     "redesign treatment plan page layout to make it easier to navigate and
+     see the categories and conditions".
+     Measured before designing anything: 18 plans across 5 categories, and on
+     a 1600px screen every card was 1262 x 57 — a thirteen-letter name on a
+     1262px-wide card, roughly 95% of it empty — stacked into 1323px of list,
+     about 1.5 screens of scrolling, so "Acute & immune" sat a screen and a
+     half down. The problem was never how much there is; it was 18 short
+     names queued down the middle of a very wide screen. The same 18 come to
+     ~470px in columns: one screen, every category name visible at once,
+     nothing folded, nothing hidden, and no search box needed for a list this
+     size (typing "insomnia" is nine keystrokes; looking at the Stress column
+     is none).
+     auto-fit does all the responsive work in ONE rule — ~5 columns on the
+     full-width script page, 3 in the 640px modal, 1 on a phone — so there is
+     no second layout to keep in sync and no width branch in the JS. ============ */
+  /* 260px is a CAP, not a share. With 1fr as the max, a Case-filtered picker
+     that leaves only two categories (Menopause leaves Gynaecology + the
+     always-on Acute & immune) stretched those two columns to 776px each --
+     straight back to the over-wide card this whole change exists to fix, in
+     what is actually the COMMON case, since most scripts have a Case set.
+     Capped, a column is 190-260px whether five survive the filter or two,
+     and the leftover width stays calm whitespace. */
+  #pharmacyPage .ph-tp-tmplcols {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 260px));
+    gap: 0 16px; align-items: start; justify-content: start;
+  }
+  #pharmacyPage .ph-tp-tmplcol { min-width: 0; }
+  /* the header sits at the top of its own column, so it never needs the
+     dashed rule or top padding that separates stacked sections elsewhere --
+     colour and space do the separating here, per the house rule */
+  #pharmacyPage .ph-tp-tmplcol .ph-tp-tmplgroup-h {
+    margin: 0 0 6px; padding-top: 0; border-top: none;
+  }
+  #pharmacyPage .ph-tp-tmplgroup-n { margin-left: auto; font-weight: 700; color: var(--ph-faint); letter-spacing: 0; }
+  /* a column is far narrower than the old full-width row: pull the card's
+     padding in and let a long name wrap to a second line rather than clip */
+  #pharmacyPage .ph-tp-tmplcols .ph-tp-tmplcard { padding: 10px 13px; }
+  #pharmacyPage .ph-tp-tmplcols .ph-tp-tmplcard-title { font-size: 13.5px; }
+  /* "Blank plan" is the one card that is not a condition. It stays above the
+     columns, sized to its own text instead of stretched across the screen --
+     the same 1262px-for-thirteen-letters problem it had before. */
+  #pharmacyPage .ph-tp-tmplcard.blank { max-width: 420px; }
+  /* Below ~1000px the five columns can no longer sit on one row, and a
+     wrapped grid row is as tall as its tallest column -- Gynaecology's eight
+     cards stranded a column of dead space under Musculoskeletal and Stress
+     in the 640px modal. So the narrow fallback stops being one-column-per-
+     category and becomes the other good layout instead: each category takes
+     the full width in the familiar top-to-bottom order, and its own cards
+     flow across it. No dead space at any width, and on a phone it collapses
+     to the single column it has always been. */
+  @media (max-width: 999px) {
+    #pharmacyPage .ph-tp-tmplcols { display: block; }
+    #pharmacyPage .ph-tp-tmplcol {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 0 12px;
+    }
+    #pharmacyPage .ph-tp-tmplcol .ph-tp-tmplgroup-h { grid-column: 1 / -1; margin: 14px 0 6px; }
+    #pharmacyPage .ph-tp-tmplcol:first-child .ph-tp-tmplgroup-h { margin-top: 4px; }
+  }
   #pharmacyPage .ph-tp-tmplcard-wrap { display: flex; align-items: flex-start; gap: 8px; }
   #pharmacyPage .ph-tp-tmplcard-wrap .ph-tp-tmplcard { flex: 1; min-width: 0; }
   #pharmacyPage .ph-tp-tmplcard {
@@ -37344,7 +37403,7 @@ or changing anything in Cliniko.
     // is the only one, because getting sick is not a kind of patient
     if (wantCat) groups = groups.filter(g => g.id === wantCat
       || PH_TP_CATEGORIES.some(c => c.id === g.id && c.always));
-    return groups.filter(g => g.items.length).map(g => {
+    return `<div class="ph-tp-tmplcols">${groups.filter(g => g.items.length).map(g => {
       // only pin+badge when curCase reduces to exactly ONE template in this
       // group (Menopause) -- Fertility/Pain narrow the group above but have
       // several equally-plausible candidates, so no single card should look
@@ -37353,12 +37412,14 @@ or changing anything in Cliniko.
       const soleMatch = matches.length === 1 ? matches[0] : null;
       const items = soleMatch ? [soleMatch, ...g.items.filter(t => t !== soleMatch)] : g.items;
       return `
-      <div class="ph-tmpl-sec ph-tp-tmplgroup-h">${esc(g.label)}</div>
+      <div class="ph-tp-tmplcol">
+      <div class="ph-tmpl-sec ph-tp-tmplgroup-h">${esc(g.label)}<span class="ph-tp-tmplgroup-n">${g.items.length}</span></div>
       ${items.map(t => `<button type="button" class="ph-tp-tmplcard${t === soleMatch ? " suggested" : ""}" ${attr}="${t.id}">
         <span class="ph-tp-tmplcard-title">${esc(t.name)}${t === soleMatch ? ` <span class="ph-tp-tmplcard-sugg">✓ Suggested match</span>` : ""}</span>
-        <span class="ph-tp-tmplcard-sub">${t.phases.length} phases, aims and points pre-filled</span>
-      </button>`).join("")}`;
-    }).join("");
+        <span class="ph-tp-tmplcard-sub">${t.phases.length} phase${t.phases.length === 1 ? "" : "s"}</span>
+      </button>`).join("")}
+      </div>`;
+    }).join("")}</div>`;
   }
   // reverse half of the pairing (her Q5, "both directions"): the template
   // she just picked fills the Case from its caseHint -- since option A
@@ -38324,7 +38385,7 @@ or changing anything in Cliniko.
     const curScript = PRESC.items.find(x => x.id === presOpenId);
     return `<div class="ph-tp-inline">
       <div class="ph-tp-inline-head"><button type="button" class="tab-link" data-tp-inline-new-cancel="1">‹ Cancel</button><b>Start a new plan</b></div>
-      <button type="button" class="ph-tp-tmplcard" data-tp-inline-create="blank">
+      <button type="button" class="ph-tp-tmplcard blank" data-tp-inline-create="blank">
         <span class="ph-tp-tmplcard-title">Blank plan</span>
         <span class="ph-tp-tmplcard-sub">One starter phase — build it as you go${(() => { const cur = PRESC.items.find(t => !presIsFormula(t) && phPatientKey(presPatientFor(t)) === phPatientKey(name)); return cur && (cur.formula || "").trim() ? `, their current formula already suggested` : ""; })()}</span>
       </button>
@@ -38738,7 +38799,7 @@ or changing anything in Cliniko.
           <div class="ph-hx-head-top"><div class="ph-hx-head-name">🗂 New plan — ${esc(phTitle(name))}</div></div>
         </div>
         <div class="ph-hx-body">
-          <button type="button" class="ph-tp-tmplcard" data-tp-create="blank">
+          <button type="button" class="ph-tp-tmplcard blank" data-tp-create="blank">
             <span class="ph-tp-tmplcard-title">Blank plan</span>
             <span class="ph-tp-tmplcard-sub">One starter phase — build it as you go${(() => { const cur = PRESC.items.find(t => !presIsFormula(t) && phPatientKey(presPatientFor(t)) === phPatientKey(name)); return cur && (cur.formula || "").trim() ? `, their current formula already suggested` : ""; })()}</span>
           </button>
