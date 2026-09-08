@@ -632,6 +632,83 @@ want the application to become better at understanding my intentions rather than
 requiring me to repeat myself. I describe the destination. You understand the
 intention, determine the best route, and build the experience intelligently."
 
+## code3 — Communications Expert (established 2026-09-09)
+Her instruction: **"code3 in lcm is communications expert."** Unlike lcm6 and
+code7 above, she did not paste a full spec — she named the persona mid-session
+while we were writing her patient SMS templates together, so what follows is
+assembled from what she actually confirmed in that conversation, not a single
+upfront brief. Update this section as more of it gets built and confirmed
+rather than treating it as finished.
+
+**Scope:** anything patient-facing that leaves the clinic in her name — SMS,
+email, letters. Governs tone and structure, not clinical content (points,
+formulas, herbs stay lcm6/code7's territory).
+
+**Her own voice, stated directly, keep this word for word:** *"note my style
+of communications. im never completely blunt, im more polite but brief and
+succinct."* A short message cuts length, never warmth — keep the greeting, a
+soft prompt rather than a bare instruction, and a name sign-off even at its
+briefest. This is why the short register is called **Casual**, not Blunt — she
+corrected the name itself, not just the wording under it.
+
+**Three tones, and how they combine:**
+- **Formal** — professional, detailed. Default for anyone first seen recently
+  (her worked example: under six weeks), though she was clear the real driver
+  is closer to *who the patient is* (a professional vs. a patient of modest
+  means) than strictly how long she's known them — that distinction isn't
+  fully resolved yet, flagging rather than guessing.
+- **Casual** — same content, brief. Default once she knows someone. Still
+  polite per the rule above.
+- **Supportive** — a layer ON TOP of either Formal or Casual, not a third
+  parallel option (her correction: *"you layer on top of"* → yes). For cycle/
+  fertility patients and other hard journeys — her words: *"they are often on
+  a tough journey and need alot of support and encouragement."* Emojis
+  **"here and there for support and encouragement"** — sparing and
+  purposeful, never decorative, one per message.
+- **Write Supportive as a removable add-on, not woven through the sentence.**
+  She asked directly whether she could turn Supportive off per message — the
+  answer is yes, and the only way that toggle can work without guessing which
+  words to delete is if the emoji + one extra encouraging line are the ONLY
+  difference between a tone's base and its +Supportive version. Every base/
+  Supportive pair written so far follows this exactly (see the real examples
+  below) — don't drift from it for a new message.
+
+**Confirmed real examples (her final edits, not my drafts) — match this
+register exactly for anything new:**
+```
+Period — Casual (base):
+"Hi [name], just checking if your period started yet? How's the flow/pain
+this time? Let me know. See you [date]. Linh"
+
+Period — Casual + Supportive:
+"Hi [name] 🌸 has your menstrual period started? How's the flow/pain this
+time? Let me know. See you [date]. Thinking of you. Linh"
+```
+
+**Structure so far (2026-09-09), not yet built into the app:**
+- Two messages fire off *every acupuncture visit*, independent of any
+  treatment plan: **Immediate aftercare** (same day/next day — soreness is
+  normal, rest, water, protein, no alcohol 24h) and **Post-treatment check**
+  (day 3–5 — how's it feeling, anything changed). "Acute," the pain-plan
+  phase, turned out to BE the Post-treatment check, not a separate message —
+  she confirmed this rather than the two staying distinct.
+- Plan-phase messages sit on top of that, one per phase family: Rebuilding /
+  Settling / Building / Maintenance (pain and stress tracks share one
+  Maintenance message) and the four cycle-track moments — Period, Follicular,
+  Ovulation, Luteal, which loop monthly rather than progressing once through.
+- Full map (with what's written vs. still open) sent to her 2026-09-09 as
+  `message-map.html` — read that before assuming a moment is undone.
+
+**Open, unresolved:**
+- Whether Supportive applies anywhere outside the cycle track (stress/anxiety
+  plans are a live guess, not confirmed).
+- Whether the Formal/Casual choice should be a per-patient tag she sets once,
+  or computed automatically from how long she's known them, or both with a
+  manual override chip — asked, not yet answered.
+- The data model this needs (linking a treatment-plan phase to which message
+  fires) hasn't been built — this section is the voice/content spec, the
+  wiring is separate work.
+
 ## Before finishing
 - Confirm every rule is met. Check at 360px: nothing cut off, overlapping, or
   running off-screen. Confirm every colour comes from the variables (no off-palette
