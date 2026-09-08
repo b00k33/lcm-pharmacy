@@ -156,6 +156,23 @@ update STYLE-LCM.md to match so future builds don't undo it.
   screen's own photo timeline in place; on a desktop the band's camera disc jumps to this
   section with Add open (`presPhotosJump`), the phone's disc keeps the capture sheet. It
   repaints in place (`phRenPhotosSecRefresh`), never through renderPresPanel.
+  **TONGUE SHOTS (her ask 2026-09-09, "i need to organise tongue photos natural light,
+  flash, sublingual, tongue side"; LIKE x2 — "i like this" on the four-lines mock AND on
+  the four-pictures mock, both times picking the MORE separated option over my
+  recommendation):** she wants the four treated as first-class and visible everywhere —
+  four separate LINES in the photo table, four separate PICTURES in the Photos strip, and
+  the PROPER CLINICAL WORDS (Natural light · Flash · Sublingual · Tongue side), chosen
+  knowingly over shorter ones after a preview showed three of four truncating. Never
+  substitute short words to save space here; make the space instead (the row-header column
+  grows to 125px and nothing clips). She also chose to PICK THE SHOT EACH TIME at capture
+  with nothing pre-selected, accepting the extra tap, and to leave every existing photo
+  alone and label them one at a time. Read together that is a standing preference: **for
+  clinical detail she takes accuracy and proper language over speed and tidiness** — the
+  opposite trade-off she makes on admin screens. Built as a second field `rec.shot`, NOT
+  four new `PH_REN_PHOTO_TYPES` entries: the four lines are a VIEW
+  (`phRenRowKeyOf`/`phRenRowsFor`/`phRenCmpGroupOf`), because compare, the viewer's arrows
+  and the patient letter are all scoped to the type key and four types would have broken
+  all three. Letters rank natural → unlabelled → side → sublingual → flash.
   DISLIKES: a fixed green control on a Case-recoloured band ("green against
   red is horrible", 2026-09-08 — everything inside `.ph-pres-band` derives from the band
   colour: `--ph-band-quiet` for muted text, `--ph-band-disc` = mint on green, the Case's
