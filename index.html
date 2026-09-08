@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260909-124500">
+<meta name="lcm-build" content="20260909-133000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -267,9 +267,17 @@
      deep herb green, near-black ink) that stay put in both light and dark. All
      scoped under #pharmacyPage so nothing else in the app is touched. */
   #pharmacyPage {
-    --ph-green: #1B7A46;        /* herb green — primary accent */
-    --ph-green-deep: #0E4D2A;   /* pressed / headings */
-    --ph-green-tint: #EAF5EE;   /* faint green wash */
+    /* The house green, under names that are NEVER reassigned. --ph-green and
+       friends below ARE reassigned -- that is the whole Case-recolouring
+       mechanism (.case-msk/.case-gyn, and now the plan picker's per-category
+       columns) -- so anything that must stay green INSIDE a recoloured
+       subtree has no way to ask for it. These three are that way. Single
+       source of truth: --ph-green is defined from them rather than repeating
+       the hex, so there is still exactly one place each value lives. */
+    --ph-herb: #1B7A46; --ph-herb-deep: #0E4D2A; --ph-herb-tint: #EAF5EE;
+    --ph-green: var(--ph-herb);        /* herb green — primary accent */
+    --ph-green-deep: var(--ph-herb-deep);   /* pressed / headings */
+    --ph-green-tint: var(--ph-herb-tint);   /* faint green wash */
     /* her ask (2026-09-06): "green for herb cases, blue/navy for
        musculoskeletal, crimson for gynaecology" -- the open patient panel's
        own accent (band, stage stepper, primary button) recolours by the
@@ -6415,6 +6423,50 @@
     margin: 0 0 6px; padding-top: 0; border-top: none;
   }
   #pharmacyPage .ph-tp-tmplgroup-n { margin-left: auto; font-weight: 700; color: var(--ph-faint); letter-spacing: 0; }
+  /* ---- a colour per category (her ask 2026-09-09, "give the categories the
+     appropriate colours") ----------------------------------------------------
+     Deliberately NOT a new palette. The app already recolours a whole script
+     panel by Case (.case-msk / .case-gyn, ~5670) by locally redefining
+     --ph-green / -deep / -tint, and PH_CASE_CATEGORY already maps those exact
+     Cases onto these exact categories: pain + neurological -> msk, fertility +
+     menopause -> gynae. So a Musculoskeletal column is the same blue the panel
+     turns when she opens a pain script, and Gynaecology the same rose it turns
+     for fertility. The colour means the same thing in both places, which is the
+     whole point of having it.
+     One override each, and every existing rule follows for free: the card
+     background is var(--ph-green-tint), its title var(--ph-green-deep), its
+     hover a color-mix of the two, and the "Suggested match" card a stronger mix
+     of the same -- none of them need a per-category rule.
+     Stress takes --ph-purple, the one remaining full family in the palette.
+     Weight & metabolism and Acute & immune stay house green for now: giving
+     them a colour means ADDING to the palette, and new palette defaults are
+     hers to approve, not mine to invent. */
+  #pharmacyPage .ph-tp-tmplcol.cat-msk {
+    --ph-green: var(--ph-msk); --ph-green-deep: var(--ph-msk-deep); --ph-green-tint: var(--ph-msk-tint);
+  }
+  #pharmacyPage .ph-tp-tmplcol.cat-gynae {
+    --ph-green: var(--ph-gyn); --ph-green-deep: var(--ph-gyn-deep); --ph-green-tint: var(--ph-gyn-tint);
+  }
+  #pharmacyPage .ph-tp-tmplcol.cat-stress {
+    --ph-green: var(--ph-purple); --ph-green-deep: var(--ph-purple-deep); --ph-green-tint: var(--ph-purple-tint);
+  }
+  /* The two that stay green have to say so OUT LOUD. This picker renders
+     inside the script panel, which is itself Case-recoloured -- so on a pain
+     script (.case-msk) an un-pinned "Acute & immune" column simply inherited
+     the panel's blue and came out identical to Musculoskeletal, the only
+     other column showing. Two categories, one colour, which is the exact
+     opposite of the point. Pinned to --ph-herb, which nothing reassigns. */
+  #pharmacyPage .ph-tp-tmplcol.cat-metabolic,
+  #pharmacyPage .ph-tp-tmplcol.cat-acute,
+  #pharmacyPage .ph-tp-tmplcols > .ph-tp-tmplcol:not([class*="cat-"]) {
+    --ph-green: var(--ph-herb); --ph-green-deep: var(--ph-herb-deep); --ph-green-tint: var(--ph-herb-tint);
+  }
+  /* the header carries its category's colour too, so the column reads as one
+     block of colour rather than a coloured list under a grey label. Stated
+     explicitly because the script panel overrides .ph-tmpl-sec to --ph-faint
+     (~3857) and the modal does not -- without this the two surfaces would
+     disagree. */
+  #pharmacyPage .ph-tp-tmplcol .ph-tp-tmplgroup-h { color: var(--ph-green-deep); }
   /* a column is far narrower than the old full-width row: pull the card's
      padding in and let a long name wrap to a second line rather than clip */
   #pharmacyPage .ph-tp-tmplcols .ph-tp-tmplcard { padding: 10px 13px; }
@@ -37412,7 +37464,7 @@ or changing anything in Cliniko.
       const soleMatch = matches.length === 1 ? matches[0] : null;
       const items = soleMatch ? [soleMatch, ...g.items.filter(t => t !== soleMatch)] : g.items;
       return `
-      <div class="ph-tp-tmplcol">
+      <div class="ph-tp-tmplcol${g.id ? ` cat-${g.id}` : ""}">
       <div class="ph-tmpl-sec ph-tp-tmplgroup-h">${esc(g.label)}<span class="ph-tp-tmplgroup-n">${g.items.length}</span></div>
       ${items.map(t => `<button type="button" class="ph-tp-tmplcard${t === soleMatch ? " suggested" : ""}" ${attr}="${t.id}">
         <span class="ph-tp-tmplcard-title">${esc(t.name)}${t === soleMatch ? ` <span class="ph-tp-tmplcard-sugg">✓ Suggested match</span>` : ""}</span>
