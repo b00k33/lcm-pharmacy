@@ -719,19 +719,35 @@ Post-OPU; no test before day 14 on Post-ET). Menstruation and Follicular reuse
 the natural-cycle wording — not rewritten separately, pending her confirming
 that's right.
 
-**Structure so far (2026-09-09), not yet built into the app:**
-- Two messages fire off *every acupuncture visit*, independent of any
-  treatment plan: **Immediate aftercare** (same day/next day — soreness is
-  normal, rest, water, protein, no alcohol 24h) and **Post-treatment check**
-  (day 3–5 — how's it feeling, anything changed). "Acute," the pain-plan
-  phase, turned out to BE the Post-treatment check, not a separate message —
-  she confirmed this rather than the two staying distinct.
-- Plan-phase messages sit on top of that, one per phase family: Rebuilding /
-  Settling / Building / Maintenance (pain and stress tracks share one
-  Maintenance message) and the four cycle-track moments — Period, Follicular,
-  Ovulation, Luteal, which loop monthly rather than progressing once through.
-- Full map (with what's written vs. still open) sent to her 2026-09-09 as
-  `message-map.html` — read that before assuming a moment is undone.
+**Every moment on the original map is now written (2026-09-09).** Full list,
+all confirmed in her own final edits, not drafts:
+- **Every visit** (any plan, any phase): Immediate aftercare, Post-treatment
+  check. "Acute," the pain-plan phase, turned out to BE the Post-treatment
+  check, not a separate message — she confirmed this rather than the two
+  staying distinct.
+- **Pain/MSK track:** Rebuilding/Rehabilitation, then Maintenance (shared with
+  stress).
+- **Stress/sleep track:** Settling, Building/stabilising, then the same
+  Maintenance.
+- **Maintenance has two variants, not one — a naming distinction she made
+  explicitly, not a guess:** "Maintenance - no booking" is what's written
+  above, for when someone's due and NOT already booked (her Casual version
+  reads "My calendar shows it's time" — data-driven, nudging a booking). A
+  message for someone who's due and DOES already have a visit on the calendar
+  hasn't been asked for — don't invent one; ask if she wants a softer
+  touch-base version for that case before writing it.
+- **Natural cycle track:** Period, Follicular, Ovulation, Luteal — all four in
+  Formal/Casual × base/Supportive, plus the BBT and menses-reminder add-ons
+  above.
+- **IVF-only moments:** Post-OPU, Pre-ET, Post-ET, same four-way structure.
+  Menstruation/Follicular reuse the natural-cycle wording for IVF (asked,
+  unconfirmed either way — treat as reused until she says otherwise).
+- Weight loss's own Building message was asked about and left unanswered —
+  don't assume the stress-track "calm holding" wording fits it; ask before
+  writing one.
+- Original map sent 2026-09-09 as `message-map.html`, before this round —
+  everything on it is now done; treat the map itself as historical context
+  for the shape of the system, not a live to-do list.
 
 **Open, unresolved:**
 - Whether Supportive applies anywhere outside the cycle track (stress/anxiety
