@@ -34064,6 +34064,61 @@ or changing anything in Cliniko.
   // a photo whose kind is missing, or is a kind this build doesn't know,
   // reads as "other" -- surfaced, never dropped (§4)
   const phRenTypeOf = rec => (rec && rec.kind && PH_REN_TYPE_LABEL[rec.kind]) ? rec.kind : "other";
+  // ---- Tongue shots (her ask 2026-09-09: "i need to organise tongue photos
+  // natural light, flash, sublingual, tongue side") ----
+  // These are four ways of shooting ONE organ, not four organs, so the stored
+  // `kind` stays "tongue" and the shot rides alongside it in `rec.shot`. That
+  // is what keeps the three things that are scoped to the type key working:
+  // compare (phRenComparePick -- "same row only") still pairs a natural-light
+  // shot against a flash shot of the same tongue, the viewer's arrows
+  // (phRenViewSetFor) still walk her whole tongue history in one run, and the
+  // patient letter (phLtrEnsureTonguePhoto) still finds a photo. She picked
+  // four separate LINES in the table and four thumbnails in the strip
+  // (2026-09-09, "i like this" on both mocks) -- that is a display decision,
+  // taken below by row key, and it costs none of the above.
+  // Keys are pure lowercase a-z on purpose: the phone->laptop import parses
+  // the type out of the filename with /-cap_([a-z]+)_/ (see phCapAutoImport),
+  // and the shot rides as a trailing _s<shot> segment that older builds
+  // simply ignore rather than choke on.
+  const PH_REN_TONGUE_SHOTS = [
+    { key: "natural",    label: "Natural light", short: "Natural" },
+    { key: "flash",      label: "Flash",         short: "Flash" },
+    { key: "sublingual", label: "Sublingual",    short: "Sublingual" },
+    { key: "side",       label: "Tongue side",   short: "Side" },
+  ];
+  const PH_REN_SHOT_LABEL = PH_REN_TONGUE_SHOTS.reduce((m, s) => (m[s.key] = s.label, m), {});
+  // her answer: old tongue photos are LEFT ALONE and labelled as she goes, so
+  // "no shot" is a real, permanent state -- it reads as a plain Tongue photo
+  // and is never hidden from any list (same principle as phRenTypeOf's "other")
+  const phRenShotOf = rec => (rec && rec.shot && PH_REN_SHOT_LABEL[rec.shot]) ? rec.shot : "";
+  // A ROW in the photo table / a tile in the strip. Every type is its own row
+  // as before, except tongue, which splits by shot. "tongue" with no shot
+  // keeps the plain Tongue row so nothing she already owns moves or vanishes.
+  const phRenRowKeyOf = rec => {
+    const t = phRenTypeOf(rec);
+    if (t !== "tongue") return t;
+    const s = phRenShotOf(rec);
+    return s ? `tongue:${s}` : "tongue";
+  };
+  const phRenRowLabel = rowKey => {
+    if (rowKey.indexOf("tongue:") !== 0) return PH_REN_TYPE_LABEL[rowKey] || "Other";
+    return PH_REN_SHOT_LABEL[rowKey.slice(7)] || "Tongue";
+  };
+  // compare is deliberately NOT scoped to the row -- every tongue row shares
+  // one compare group so a natural-light shot can sit beside a flash shot
+  const phRenCmpGroupOf = rowKey => rowKey.indexOf("tongue") === 0 ? "tongue" : rowKey;
+  // the row list, in display order: each type in its usual place, tongue
+  // expanded into whichever shot rows actually hold photos (plus the plain
+  // Tongue row when unlabelled ones exist)
+  const phRenRowsFor = have => {
+    const rows = [];
+    PH_REN_PHOTO_TYPES.forEach(t => {
+      if (t.key !== "tongue") { rows.push({ key: t.key, label: t.label, type: t.key, shot: "" }); return; }
+      PH_REN_TONGUE_SHOTS.forEach(s => rows.push({ key: `tongue:${s.key}`, label: s.label, type: "tongue", shot: s.key }));
+      if (!have || have("tongue")) rows.push({ key: "tongue", label: "Tongue", type: "tongue", shot: "" });
+    });
+    return rows;
+  };
   // one column per DAY. Existing photos have only createdAt, so the day comes
   // from that; dateKey is written only when she files a photo against a
   // different day from a "+" cell (§3), and is read in preference when present.
@@ -34177,27 +34232,31 @@ or changing anything in Cliniko.
     const list = phRenPhotosFor(patientKey);
     if (list == null) return "";
     if (!list.length) return `<div class="ph-ren-tl-empty">No photos on file yet — the tiles above start one.</div>`;
-    // group: type -> dateKey -> [recs]
+    // group: ROW -> dateKey -> [recs]. A row is the photo type, except tongue,
+    // which splits into its four shots (her pick 2026-09-09) -- see phRenRowKeyOf.
     const grid = {}, dateSet = new Set();
     list.forEach(r => {
-      const t = phRenTypeOf(r), d = phRenDateKeyOf(r);
+      const t = phRenRowKeyOf(r), d = phRenDateKeyOf(r);
       dateSet.add(d);
       grid[t] = grid[t] || {};
       (grid[t][d] = grid[t][d] || []).push(r);
     });
     const dates = Array.from(dateSet).sort();                 // oldest -> newest, her §3
     const newest = dates[dates.length - 1];
-    // §3: only types that HAVE a photo, plus ONE empty row to start a new
-    // type -- never four blank rows for a tongue-only patient
-    let types = PH_REN_PHOTO_TYPES.filter(t => grid[t.key]);
-    const firstUnused = PH_REN_PHOTO_TYPES.find(t => !grid[t.key]);
+    // §3: only rows that HAVE a photo, plus ONE empty row to start a new
+    // type -- never four blank rows for a tongue-only patient. The tongue
+    // shot rows follow the same rule, so a patient with one plain tongue
+    // photo still sees ONE tongue line, not five.
+    const allRows = phRenRowsFor(k => !!grid[k]);
+    let types = allRows.filter(t => grid[t.key]);
+    const firstUnused = allRows.find(t => !grid[t.key]);
     if (firstUnused) types = types.concat([firstUnused]);
     if (phRenTimelineFilter !== "all") types = types.filter(t => t.key === phRenTimelineFilter);
 
     const cell = (t, d) => {
       const recs = (grid[t.key] && grid[t.key][d]) || [];
       if (!recs.length) {
-        return `<td class="ph-ren-tl-cell"><button type="button" class="ph-ren-tl-add" data-ren-cap-type="${t.key}" data-ren-cap-patient="${esc(patientKey)}" data-ren-cap-date="${d}" title="Add a ${esc(t.label)} photo for ${esc(phRenPhotoDateLabel(d))}" aria-label="Add a ${esc(t.label)} photo for ${esc(phRenPhotoDateLabel(d))}">＋</button></td>`;
+        return `<td class="ph-ren-tl-cell"><button type="button" class="ph-ren-tl-add" data-ren-cap-type="${t.type}"${t.shot ? ` data-ren-cap-shot="${t.shot}"` : ""} data-ren-cap-patient="${esc(patientKey)}" data-ren-cap-date="${d}" title="Add a ${esc(t.label)} photo for ${esc(phRenPhotoDateLabel(d))}" aria-label="Add a ${esc(t.label)} photo for ${esc(phRenPhotoDateLabel(d))}">＋</button></td>`;
       }
       const sorted = recs.slice().sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
       const shown = sorted[sorted.length - 1];               // §3: the later one
@@ -34219,7 +34278,7 @@ or changing anything in Cliniko.
     };
     const filterSeg = `<span class="ph-ren-tl-filters" role="radiogroup" aria-label="Filter photo types">
       <button type="button" class="ph-days-opt${phRenTimelineFilter === "all" ? " on" : ""}" data-ren-tl-filter="all" role="radio" aria-checked="${phRenTimelineFilter === "all"}">All types</button>
-      ${PH_REN_PHOTO_TYPES.filter(t => grid[t.key]).map(t => `<button type="button" class="ph-days-opt${phRenTimelineFilter === t.key ? " on" : ""}" data-ren-tl-filter="${t.key}" role="radio" aria-checked="${phRenTimelineFilter === t.key}">${esc(t.label)} only</button>`).join("")}
+      ${allRows.filter(t => grid[t.key]).map(t => `<button type="button" class="ph-days-opt${phRenTimelineFilter === t.key ? " on" : ""}" data-ren-tl-filter="${t.key}" role="radio" aria-checked="${phRenTimelineFilter === t.key}">${esc(t.label)} only</button>`).join("")}
     </span>`;
     const cmpBar = phRenCompare.length === 2
       ? `<div class="ph-ren-tl-cmpbar"><button type="button" class="ph-load-btn on" data-ren-cmp-open="1">Compare these 2 →</button><button type="button" class="ph-load-btn" data-ren-cmp-clear="1">Clear</button></div>`
@@ -34357,7 +34416,10 @@ or changing anything in Cliniko.
   function phRenComparePick(id, rowKey, patientKey) {
     const already = phRenCompare.findIndex(c => c.id === id);
     if (already >= 0) { phRenCompare.splice(already, 1); renderHxScreen(); return true; }
-    if (phRenCompare.length && phRenCompare[0].row !== rowKey) {
+    // the four tongue rows share ONE compare group, so a natural-light shot
+    // can be put beside a flash shot of the same tongue -- the whole reason
+    // she takes both (her 2026-09-09 split into four lines is display only)
+    if (phRenCompare.length && phRenCmpGroupOf(phRenCompare[0].row) !== phRenCmpGroupOf(rowKey)) {
       phFlashShow("Photos can only be compared within the same row.");
       return true;
     }
@@ -36059,15 +36121,18 @@ or changing anything in Cliniko.
     const list = phRenPhotosFor(key);
     const n = list ? list.length : 0;
     const sorted = list ? list.slice().sort((a, b) => phRenDateKeyOf(b).localeCompare(phRenDateKeyOf(a)) || ((b.createdAt || 0) - (a.createdAt || 0))) : [];
+    // one thumbnail per ROW, not per type -- so the four tongue shots each get
+    // their own tile (her pick 2026-09-09, "i like this" on the four-picture mock)
     const latest = {};
-    sorted.forEach(r => { const k = phRenTypeOf(r); if (!latest[k]) latest[k] = r; });
+    sorted.forEach(r => { const k = phRenRowKeyOf(r); if (!latest[k]) latest[k] = r; });
+    const stripRows = phRenRowsFor(k => !!latest[k]);
     const count = n ? `${n} photo${n === 1 ? "" : "s"}<span class="ph-photos-last"> · last ${esc(phFuDateLabel(phRenDateKeyOf(sorted[0])))}</span>` : "";
     const head = `<div class="ph-tmpl-sec ph-sec-line"><span>Photos</span>${count ? `<span class="ph-hist-count">${count}</span>` : (list ? `<span class="ph-sec-note">none yet</span>` : "")}<button type="button" class="ph-tmpl-sec-act ph-photos-add" data-pres-photos-add="1" aria-expanded="${presPhotosAddOpen ? "true" : "false"}">${presPhotosAddOpen ? "Close" : "Add"}</button>${n ? `<button type="button" class="ph-tmpl-sec-act ph-photos-toggle" data-pres-photos-toggle="1" aria-expanded="${presPhotosOpen ? "true" : "false"}">${presPhotosOpen ? "Hide ⌃" : "Show all ⌄"}</button>` : ""}</div>`;
     const addRow = presPhotosAddOpen ? `<div class="ph-photos-addrow">${PH_REN_PHOTO_TYPES.map(tp => `<button type="button" class="ph-ck-chip" data-ren-cap-type="${tp.key}" data-ren-cap-patient="${esc(key)}" data-ren-cap-name="${esc(name)}">${esc(tp.label)}</button>`).join("")}<span class="ph-photos-addhint">pick a type · filed under today</span></div>` : "";
     let body;
     if (!list) body = `<div class="ph-photos-empty">Loading photos…</div>`;
     else if (!n) body = "";   // the header now carries "none yet" (her pick 2026-09-09)
-    else body = `<div class="ph-photos-strip">${PH_REN_PHOTO_TYPES.filter(tp => latest[tp.key]).map(tp => { const r = latest[tp.key]; const d = phRenPhotoDateLabel(phRenDateKeyOf(r)); return `<button type="button" class="ph-photos-th" data-ren-tl-open="${esc(r.id)}" data-ren-tl-row="${tp.key}" data-ren-tl-patient="${esc(key)}" title="${esc(tp.label)} · ${esc(d)}"><img src="${r.objectUrl || ""}" alt=""><span class="t">${esc(tp.label)}</span><span class="d">${esc(d)}</span></button>`; }).join("")}</div>`;
+    else body = `<div class="ph-photos-strip">${stripRows.filter(tp => latest[tp.key]).map(tp => { const r = latest[tp.key]; const d = phRenPhotoDateLabel(phRenDateKeyOf(r)); return `<button type="button" class="ph-photos-th" data-ren-tl-open="${esc(r.id)}" data-ren-tl-row="${tp.key}" data-ren-tl-patient="${esc(key)}" title="${esc(tp.label)} · ${esc(d)}"><img src="${r.objectUrl || ""}" alt=""><span class="t">${esc(tp.label)}</span><span class="d">${esc(d)}</span></button>`; }).join("")}</div>`;
     const tl = presPhotosOpen && n ? `<div class="ph-photos-tl">${phRenTimelineHtml(key, name).replace(' id="phRenTlScroll"', "")}</div>` : "";
     return head + addRow + body + tl;
   }
