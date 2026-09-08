@@ -127,6 +127,14 @@ update STYLE-LCM.md to match so future builds don't undo it.
   "Journey ↗" link · ONE disc (camera). Follow-up = one row of facts + a "Review <date> ⌄"
   pill; History = header + count + Show/Hide with the visit rows straight underneath. The
   phone keeps its own 48px rows (rules under `@media (max-width: 480px)` in the same block).
+  PHOTOS (her four answers, same day, after "where can i see uploaded pictures of patients?"):
+  a section in that language on BOTH the Opening stage (after History) and the Assessment
+  stage (before Cycle) — header + "N photos · last <date>" + Add + Show all; a strip of the
+  latest photo per type (`presPhotosSectionHtml`, 72px `.ph-photos-th`); Add = the type chips
+  firing the existing `data-ren-cap-type` capture; "Show all" unfolds the Health Exam
+  screen's own photo timeline in place; on a desktop the band's camera disc jumps to this
+  section with Add open (`presPhotosJump`), the phone's disc keeps the capture sheet. It
+  repaints in place (`phRenPhotosSecRefresh`), never through renderPresPanel.
   DISLIKES: a fixed green control on a Case-recoloured band ("green against
   red is horrible", 2026-09-08 — everything inside `.ph-pres-band` derives from the band
   colour: `--ph-band-quiet` for muted text, `--ph-band-disc` = mint on green, the Case's
