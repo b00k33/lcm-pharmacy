@@ -12,7 +12,7 @@
 // changes). A waiting service worker sits untouched until that same button
 // tells it to go, via postMessage({type:"SKIP_WAITING"}) -- see the
 // "message" listener below and phDoControlledUpdate's STEP 4.
-var CACHE_VERSION = "lcm-20260909-draft-msg";
+var CACHE_VERSION = "lcm-20260909-slow-network";
 
 var SHELL = ["./", "./index.html", "./manifest.json", "./icons/icon-192-v2.png", "./icons/icon-512-v2.png", "./icons/apple-touch-icon-v2.png", "./icons/favicon-32-v2.png", "./icons/favicon-32-light-v2.png"];
 
@@ -42,8 +42,22 @@ self.addEventListener("message", function (e) {
 });
 
 // A hung connection (flaky clinic wifi, captive portal) must never leave a
-// navigation pending forever -- race the network against a short timer and
-// fall back to the cached shell either way.
+// navigation pending forever -- race the network against a timer and fall
+// back to the cached shell either way.
+//
+// 12s, not the 4s this used to be. Found live 2026-09-09 on her work phone
+// (BlackBerry Key2, Android 8.1, Chrome 138): the app is 920 KB gzipped over
+// the wire, which is ~4-5s on clinic 4G before you count DNS and TLS. So the
+// race lost on nearly every open and she was handed the cached shell every
+// time -- a build from before 7 Sep, which then stopped part-way through
+// starting because it was reading data newer builds had written. Blank page,
+// no message, for days.
+//
+// The short timer bought nothing: a genuinely OFFLINE fetch REJECTS
+// immediately, it never sits out the timer, so this number only ever
+// punishes a slow-but-working connection. 12s is still short enough that a
+// captive portal doesn't hang her.
+var NAV_TIMEOUT_MS = 12000;
 function timeoutFetch(req, ms) {
   return new Promise(function (resolve, reject) {
     var t = setTimeout(function () { reject(new Error("sw-timeout")); }, ms);
@@ -81,10 +95,25 @@ self.addEventListener("fetch", function (e) {
   if (req.mode === "navigate") {
     var freshReq = new Request(req, { cache: "no-store" });
     e.respondWith(
-      timeoutFetch(freshReq, 4000).then(function (res) {
+      timeoutFetch(freshReq, NAV_TIMEOUT_MS).then(function (res) {
         caches.open(CACHE_VERSION).then(function (c) { c.put("./", res.clone()); });
         return res;
       }).catch(function () {
+        // She is being served the OLD copy for this one open. Keep pulling the
+        // new one in the background with no timer on it at all, so the next
+        // open is current even if every single open loses the race. Without
+        // this, the cache is only ever refreshed by a win, and a phone on a
+        // permanently slow connection can never climb off an old build --
+        // exactly how her Key2 got stuck (see NAV_TIMEOUT_MS above).
+        try {
+          e.waitUntil(
+            fetch(new Request(req, { cache: "no-store" })).then(function (res) {
+              if (res && res.ok) {
+                return caches.open(CACHE_VERSION).then(function (c) { return c.put("./", res.clone()); });
+              }
+            }).catch(function () {})
+          );
+        } catch (err) { /* event already settled -- never let this break the load */ }
         return caches.match(req).then(function (c) { return c || caches.match("./"); });
       })
     );
