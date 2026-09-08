@@ -34791,8 +34791,7 @@ or changing anything in Cliniko.
   // and "3 of 12". One rule wherever a photo opens (timeline cell, the
   // script page's Photos strip, the BBT tile): you land on the one you
   // tapped and can walk the rest of that type without going back.
-  function phRenViewSetFor(patientKey, rec) {
-    const type = phRenTypeOf(rec);
+  function phRenViewSetFor(patientKey, type) {
     return (phRenPhotosFor(patientKey) || [])
       .filter(r => phRenTypeOf(r) === type)
       .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
@@ -34810,18 +34809,28 @@ or changing anything in Cliniko.
     const list = phRenPhotosFor(patientKey) || [];
     const rec = list.find(r => r.id === id);
     if (!rec) return;
-    phRenCropState = phRenViewStateFrom(patientKey, rec, phRenViewSetFor(patientKey, rec));
+    phRenCropState = phRenViewStateFrom(patientKey, rec, phRenViewSetFor(patientKey, phRenTypeOf(rec)));
     phRenCropShow();
   }
   // step through that set in place -- the modal stays open, only the image
   // and the counter change
   function phRenViewStep(delta) {
     const st = phRenCropState;
-    if (!st || !st.viewOnly || st.compare || !st.viewSet || st.viewSet.length < 2) return false;
-    const i = (st.viewAt || 0) + delta;
-    if (i < 0 || i >= st.viewSet.length) return false;
-    const rec = (phRenPhotosFor(st.patientKey) || []).find(r => r.id === st.viewSet[i]);
-    if (!rec) return false;
+    if (!st || !st.viewOnly || st.compare || !st.viewType) return false;
+    // the set is re-derived from the live list on every step, never trusted
+    // from when the viewer opened: the phone relay can import a new photo
+    // (phCapAutoImport polls every 120s) or one can be deleted underneath a
+    // viewer she left open, and a frozen id list would page to something
+    // that no longer exists or hide something that just arrived
+    const set = phRenViewSetFor(st.patientKey, st.viewType);
+    st.viewSet = set.map(r => r.id);
+    if (!set.length) { phRenCropClose(); return false; }
+    const found = set.findIndex(r => r.id === st.viewId);
+    const gone = found < 0;
+    const cur = gone ? Math.min(st.viewAt || 0, set.length - 1) : found;
+    const i = Math.max(0, Math.min(set.length - 1, cur + delta));
+    if (i === cur && !gone) { st.viewAt = cur; return false; }
+    const rec = set[i];
     st.viewAt = i;
     st.viewId = rec.id;
     st.kind = rec.kind;
