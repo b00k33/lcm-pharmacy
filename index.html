@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260909-070000">
+<meta name="lcm-build" content="20260909-080000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -7084,6 +7084,8 @@
   #pharmacyPage .ph-psort-lede { font-size: 12.5px; color: var(--ph-soft); margin: 0 0 10px; max-width: 70ch; }
   #pharmacyPage .ph-psort-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 10px 0; }
   #pharmacyPage .ph-psort-hint { font-size: 11.5px; color: var(--ph-faint); }
+  #pharmacyPage .ph-psort-grp { gap: 8px; margin: 0 0 6px; }
+  #pharmacyPage .ph-psort-grplab { font-size: 12.5px; color: var(--ph-ink); font-weight: 600; margin-right: 2px; }
   #pharmacyPage .ph-psort-done { font-size: 12.5px; color: var(--ph-faint); margin: 12px 0; }
   #pharmacyPage .ph-psort-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
   #pharmacyPage .ph-psort-table th {
@@ -24317,6 +24319,8 @@
       const psortSet = e.target.closest("[data-psort-set]");
       if (psortSet) { phPresSetKind(psortSet.dataset.psortSet, psortSet.dataset.psortKind); return; }
       if (e.target.closest("[data-psort-applyall]")) { phPresApplyObvious(); return; }
+      const psortGrp = e.target.closest("[data-psort-group]");
+      if (psortGrp) { phPresSetGroup(psortGrp.dataset.psortGroup, psortGrp.dataset.psortKind); return; }
       const renViewStep = e.target.closest("[data-ren-view-step]");
       if (renViewStep) { phRenViewStep(Number(renViewStep.dataset.renViewStep) || 0); return; }
       // her pick 2026-09-09, "label them as you go": old tongue photos are
@@ -30015,6 +30019,50 @@ or changing anything in Cliniko.
   // an all-caps run with no space is a recipe abbreviation (BWJYT, THSWT), not
   // a person -- her own naming, seen 9 times in the 3 Sep data
   const phPresLooksAbbrev = name => /^[A-Z0-9]{3,10}$/.test((name || "").trim());
+  // A record she has actually WORKED as one kind says so in its own fields,
+  // which beats any reading of the name. These split perfectly in her 3 Sep
+  // data: all 32 records carrying an `abbr` are recipes and not one is a
+  // person, and all 6 carrying a `formula` -- the treatment principle she
+  // writes on a patient's script, "Shao Yang", "Calm Nervous System" -- are
+  // people, as is every takeOn / doseT / gramsMode / lastDispensedAt.
+  // lastDispensedAt is deliberately NOT in this list. A recipe gets dispensed
+  // too -- that is what a recipe is FOR -- and including it filed Chai Gui
+  // Tang, a jar she refills, as a person.
+  const PH_PRES_PATIENT_FIELDS = ["formula", "takeOn", "doseT", "gramsMode"];
+  const phPresHasField = (t, k) => t[k] !== undefined && t[k] !== null && t[k] !== "";
+  // The Mandarin syllable shape: one optional onset, one final. English words
+  // almost never fit it -- Forth, Skin, Bugs, Yellows and Breakers all fail --
+  // so a name whose every syllable fits, three or more of them, is a formula
+  // written out in full: Yi Guan Jian, Zhe Chong Yin, Fu Fang Hong Teng.
+  // Three is the floor on purpose. Two syllables is where her PATIENTS live
+  // (James Lin, David Linh, Fangzhou Wu, Sarah Chan, Rebecca So), because a
+  // Chinese surname is a syllable too.
+  const PH_PY_SYLLABLE = /^(?:zh|ch|sh|[bpmfdtnlgkhjqxrzcysw])?(?:a|o|e|ai|ei|ao|ou|an|en|ang|eng|ong|er|i|ia|ie|iao|iu|ian|in|iang|ing|iong|u|ua|uo|uai|ui|uan|un|uang|v|ve|van|vn)$/i;
+  const phPresAllPinyin = name => {
+    const w = (name || "").trim().split(/[\s/]+/).filter(Boolean);
+    return w.length >= 3 && w.every(x => PH_PY_SYLLABLE.test(x.replace(/[^a-z]/gi, "")));
+  };
+  // Her own shorthand for telling two patients apart: a trailing bare initial
+  // ("Jason Walsh D", "Ronan H") or a bracketed one ("Morgan Cigana (F)",
+  // "Rena Pang (Muoy)"). No formula is ever written this way.
+  const phPresLooksPerson = name => {
+    const n = (name || "").trim();
+    return /\s[A-Z]$/.test(n) || /\([A-Za-z][A-Za-z ]{0,7}\)$/.test(n);
+  };
+  // A jar abbreviation keeps its meaning wherever it sits in the name --
+  // "Refill CHQGT", "XCHT  BXHPT". Requiring NO vowel at all is what keeps a
+  // capitalised surname out: CHQGT, GSDHT and XCHT have none, while INGOLD,
+  // MARK and JOHN all do. But a code with a PERSON on the end of it ("XCHT
+  // Mick", "GSDHT EQ Linh") is a script written FOR that person, so only a
+  // name that is nothing but codes and filler settles itself; a mixed one
+  // goes to her. Returns "" | "pure" | "mixed".
+  const PH_PRES_CODE_FILLER = /^(refill|mix|combo|x|and|\d+)$/i;
+  const phPresCodeTokens = name => {
+    const w = (name || "").trim().split(/[\s/+,()]+/).filter(Boolean);
+    const codes = w.filter(x => /^[A-Z]{3,10}$/.test(x) && !/[AEIOU]/.test(x));
+    if (!codes.length) return "";
+    return w.every(x => codes.indexOf(x) >= 0 || PH_PRES_CODE_FILLER.test(x)) ? "pure" : "mixed";
+  };
   // What the app should think this record is, and how sure it is.
   // "sure" means evidence, not a name pattern; "unsure" goes to her.
   function phPresKindGuess(t, people, jarTokens) {
@@ -30022,25 +30070,42 @@ or changing anything in Cliniko.
     // 1. anything she has settled herself is final
     if (t.presType === "formula") return { kind: "formula", sure: true, why: "you set this one" };
     if (t.presType === "patient") return { kind: "patient", sure: true, why: "you set this one" };
-    // 2. a real patient record or a booked appointment is the strongest word
+    // 2. what the record itself has been used for outranks its name
+    const pf = PH_PRES_PATIENT_FIELDS.find(k => phPresHasField(t, k));
+    if (pf) return { kind: "patient", sure: true, why: pf === "lastDispensedAt" ? "you have dispensed this one" : "it carries a dose or a treatment principle" };
+    // 3. a real patient record or a booked appointment is the strongest word
     if (people.strong.has(key)) return { kind: "patient", sure: true, why: "a patient of this name is in your records" };
-    // 3. then the formula tests, BEFORE the dispense log -- a jar refill is
+    // 4. then the formula tests, BEFORE the dispense log -- a jar refill is
     //    logged against the formula's own name, so the log must not be able to
     //    turn Ba Zhen Tang into a person
+    if (phPresHasField(t, "abbr")) return { kind: "formula", sure: true, why: "you gave it a short code" };
     if (phPresLooksAbbrev(name)) return { kind: "formula", sure: true, why: "an abbreviation, not a name" };
     const seg = ((name.split(/[/(#*]/)[0]) || "").trim();
     if (seg && jarTokens.has(seg.toUpperCase())) return { kind: "formula", sure: true, why: "matches one of your jars" };
-    // 4. pinyin formula naming is reliable ON ITS OWN -- Ba Zhen Tang, Bai Hu
-    //    Tang, Dang Gui Shao Yao San. The ONE case it cannot settle is a name
-    //    that ALSO appears in the dispense log: that is either a jar refill
-    //    logged against the formula, or a real patient surnamed Tang or Wan.
-    //    Four records in her 3 Sep data hit this, and only she can say which.
-    if (phAutoFormulaName(name)) {
+    const codeKind = phPresCodeTokens(name);
+    if (codeKind === "pure") return { kind: "formula", sure: true, why: "a jar code, not a name" };
+    // 5. her patient shorthand -- a trailing or bracketed initial -- before any
+    //    pinyin reading, so "Rena Pang (Muoy)" can never be read as a formula
+    if (phPresLooksPerson(name)) return { kind: "patient", sure: true, why: "written with an initial, the way you name people" };
+    // 6. pinyin formula naming is reliable ON ITS OWN -- Ba Zhen Tang, Bai Hu
+    //    Tang, Dang Gui Shao Yao San, and the fully written-out names that
+    //    carry no tang/san/wan at all (Yi Guan Jian, Zhe Chong Yin). The ONE
+    //    case it cannot settle is a name that ALSO appears in the dispense
+    //    log: that is either a jar refill logged against the formula, or a
+    //    real patient surnamed Tang or Wan. Four records in her 3 Sep data hit
+    //    this, and only she can say which.
+    if (phAutoFormulaName(name) || phPresAllPinyin(name)) {
       return people.logged.has(key)
         ? { kind: "formula", sure: false, why: "reads like a formula, but you have dispensed under this name" }
         : { kind: "formula", sure: true, why: "named like a formula" };
     }
-    // 5. survived every formula test and you have dispensed to this name
+    // 7. a jar code with a person's name after it ("XCHT Mick") is a script
+    //    written for that person; a jar code with a note after it ("GSDHT Egg
+    //    Quality Mo") is a recipe variant. This sits ABOVE the dispense log on
+    //    purpose -- "D HBS 1" is logged, but a name carrying a jar code is
+    //    exactly the case the log cannot settle.
+    if (codeKind === "mixed") return { kind: "formula", sure: false, why: "a jar code with other words after it" };
+    // 8. survived every formula test and you have dispensed to this name
     if (people.logged.has(key)) return { kind: "patient", sure: true, why: "you have dispensed to this name" };
     return { kind: "patient", sure: false, why: "no record of a person or a formula by this name" };
   }
@@ -30087,6 +30152,31 @@ or changing anything in Cliniko.
     phFlashShow(`Filed ${s.moving.length} record${s.moving.length === 1 ? "" : "s"} where they belong.`);
     renderPhPresSort();
   }
+  // Names sharing a first word, three or more of them, are one family she
+  // named herself -- the 14 "D ..." recipes in her 3 Sep data are why this
+  // exists. The app will NOT guess what such a family is; she says once and
+  // the whole family settles, which is 14 taps saved on that one alone.
+  function phPresGroups(rows) {
+    const g = new Map();
+    rows.forEach(r => {
+      const w = (r.t.name || "").trim().split(/\s+/)[0] || "";
+      if (!w) return;
+      if (!g.has(w)) g.set(w, []);
+      g.get(w).push(r);
+    });
+    return [...g.entries()].filter(([, v]) => v.length >= 3)
+      .sort((a, b) => b[1].length - a[1].length)
+      .map(([word, list]) => ({ word, list }));
+  }
+  function phPresSetGroup(word, kind) {
+    const grp = phPresGroups(phPresSortScan().unsure).find(x => x.word === word);
+    if (!grp) return;
+    grp.list.forEach(r => { r.t.presType = kind; });
+    phIsFormulaCache = null;
+    savePresc();
+    phFlashShow(`${grp.list.length} “${word} …” record${grp.list.length === 1 ? "" : "s"} filed as ${kind === "formula" ? "herbal formulas" : "patients"}.`);
+    renderPhPresSort();
+  }
   let phPresSortOpen = false, phPresSortTab = "unsure";
   function phPresSortHtml() {
     if (!phPresSortOpen) return "";
@@ -30109,6 +30199,11 @@ or changing anything in Cliniko.
         <button type="button" class="ph-days-opt${phPresSortTab === "moving" ? " on" : ""}" data-psort-tab="moving" role="radio" aria-checked="${phPresSortTab === "moving"}">In the wrong list · ${s.moving.length}</button>
       </div>
       ${phPresSortTab === "moving" && s.moving.length ? `<div class="ph-psort-bar"><button type="button" class="btn-save" data-psort-applyall="1">File all ${s.moving.length} where they belong</button><span class="ph-psort-hint">each one is an abbreviation or matches one of your jars</span></div>` : ""}
+      ${phPresSortTab === "unsure" ? phPresGroups(s.unsure).map(g => `<div class="ph-psort-bar ph-psort-grp">
+        <span class="ph-psort-grplab">All ${g.list.length} starting with “${esc(g.word)}”</span>
+        <button type="button" class="ph-ck-chip" data-psort-group="${esc(g.word)}" data-psort-kind="formula">Herbal formula</button>
+        <button type="button" class="ph-ck-chip" data-psort-group="${esc(g.word)}" data-psort-kind="patient">Patient</button>
+      </div>`).join("") : ""}
       ${list.length ? `<table class="ph-psort-table"><thead><tr><th>Name</th><th>Why it is here</th><th>Herbs</th><th>It is a</th></tr></thead><tbody>${list.map(row).join("")}</tbody></table>`
         : `<p class="ph-psort-done">Nothing left here. ${phPresSortTab === "unsure" ? "Every record has been settled." : "Everything is in the right list."}</p>`}
     </div>`;
