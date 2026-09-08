@@ -695,6 +695,24 @@ If you're tracking your BBT, send me a screenshot of your chart when you get
 a chance.
 ```
 
+**A fourth layer — menses-signs reminder, new patients especially.** Same
+removable-line shape as BBT, independent of it (both can be on at once). Only
+**Period**.
+```
+A gentle reminder to pay attention to your menses signs this cycle — flow,
+pain, clots, colour. The Fertility Friend app is handy for keeping it all
+recorded in one place: https://www.fertilityfriend.com/
+```
+
+**IVF Protocol adds three moments the natural-cycle track doesn't have** —
+Post-OPU (egg pickup), Pre-ET (transfer) and Post-ET (the wait, replacing
+Luteal for this plan). All three written in the full Formal/Casual × base/
+Supportive structure, clinical grounding straight from `PH_TP_PHASE`'s `opu`/
+`preEt`/`postEt` entries (bloating/one-sided-pain/faintness red flags on
+Post-OPU; no test before day 14 on Post-ET). Menstruation and Follicular reuse
+the natural-cycle wording — not rewritten separately, pending her confirming
+that's right.
+
 **Structure so far (2026-09-09), not yet built into the app:**
 - Two messages fire off *every acupuncture visit*, independent of any
   treatment plan: **Immediate aftercare** (same day/next day — soreness is
