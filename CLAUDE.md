@@ -685,6 +685,16 @@ Period — Casual + Supportive:
 time? Let me know. See you [date]. Thinking of you. Linh"
 ```
 
+**A third layer, independent of tone — BBT add-on.** Same shape as Supportive
+(one removable line), but orthogonal to it: works on top of any Formal/Casual
+× base/Supportive combination. Only on **Period** and **Ovulation**, the two
+moments where a chart matters, for patients who track BBT. Same wording both
+places, her call ("same for both"):
+```
+If you're tracking your BBT, send me a screenshot of your chart when you get
+a chance.
+```
+
 **Structure so far (2026-09-09), not yet built into the app:**
 - Two messages fire off *every acupuncture visit*, independent of any
   treatment plan: **Immediate aftercare** (same day/next day — soreness is
