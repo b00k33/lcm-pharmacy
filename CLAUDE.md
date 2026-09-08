@@ -179,6 +179,27 @@ update STYLE-LCM.md to match so future builds don't undo it.
   tint on a Gynae/MSK band; never `--ph-struct-*` in there); the clinic name cut off with "…" (reported twice); sprawling
   designs that look "lazy" (an ad-hoc panel below a grid); anything a second time she has
   already asked for once.
+- **HER WORK PHONE IS A BLACKBERRY KEY2 (told 2026-09-09) — design phone screens
+  against 360 x 469, not 360 x 780.** Android 8.1, Chrome 138 (the last version that
+  handset can run; everything the app uses works on it, so this is a SPEED constraint,
+  not a capability one). The physical keyboard takes the bottom third, so height is the
+  scarce resource and width is normal — but the real keys never cover a field, so a
+  textarea can be tall and typing is cheap. Communications was rebuilt for it on eight
+  answers: the check-in panel is its own FULL-SCREEN page per patient (`phCkPageHtml`,
+  `.ph-ck-page`, `body.ph-ck-pageopen`, ≤640 only, `phCkPageClose()` the one exit
+  mirroring `presPageClose()`); the DRAFT MESSAGE is the first thing on it, with the
+  whole facts block folded to one always-visible summary line (`phCkSummaryLine`:
+  "30g · empty today · 19 scripts · not booked"); "How did it go" trimmed to They-are +
+  Next with Concerns behind one tap and never re-folded once one is ticked; the day
+  strip is a WEEK with ‹ › instead of 14 days she has to swipe; type one step smaller.
+  Two of her picks went AGAINST my recommendation and both stand: **Done stays at the
+  END of the page, not pinned** (the pinned row is Text/Copy/Email, because sending is
+  the job), and she took "both, script squeezed to one line" over message-only. Read
+  together with the tongue-shot round: she consistently picks seeing MORE over seeing
+  LESS, and accepts an extra tap to get it. CSS trap from this build: a scrolling flex
+  column shrinks its children when content overflows — any such column needs
+  `> * { flex: none }`, or padding silently vanishes (found by measuring, invisible in
+  a screenshot).
 - **BBT charts + phase-tagged scripts (same round):** "BBT chart" is a photo type
   (`PH_REN_PHOTO_TYPES` key `bbt`): phone capture, relay, timeline and compare come from
   the photo system, plus a tile beside the cycle tiles showing this cycle's latest chart
