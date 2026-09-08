@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260909-001500">
+<meta name="lcm-build" content="20260909-003000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -18412,13 +18412,20 @@
   // → desktop photo hand-off, checked live against the cloud project. Until
   // now a missing bucket looked exactly like "working" from both devices.
   function phPhotoRelaySectionHtml() {
+    // roles (phCapRole, 2026-09-08 pm): a phone shows only the sending
+    // controls, a computer only the receiving one -- each device says in
+    // plain words which half of the hand-off it does
+    const phone = phCapRole() === "phone";
     return `<div class="ph-settings-sec">
       <h3>📷 Photo relay (phone → desktop)</h3>
-      <p class="ph-settings-hint">Every photo saved on a phone is sent through your cloud project's "${esc(PH_REN_BUCKET)}" bucket and filed on the desktop under the same patient, type and date. The cloud copy is only removed once the desktop has saved its own.</p>
+      <p class="ph-settings-hint">${phone
+        ? `<b>This phone sends.</b> Every photo saved here goes up to your cloud project's "${esc(PH_REN_BUCKET)}" bucket; your computer files it under the same patient, type and date and then removes the cloud copy. A phone never takes photos back down.`
+        : `<b>This computer receives.</b> It checks the cloud every two minutes, files each phone photo under the same patient, type and date, and only then removes the cloud copy. Photos added on a computer stay on that computer.`}</p>
       <div class="ph-settings-hint" id="phRelayStatus">Checking…</div>
       <div class="ph-settings-actions">
-        <button type="button" class="ph-load-btn" data-ph-relay-sendnow="1">📤 Send unsent photos now</button>
-        <button type="button" class="ph-load-btn" data-ph-relay-check="1">🔄 Check for photos</button>
+        ${phone
+          ? `<button type="button" class="ph-load-btn" data-ph-relay-sendnow="1">📤 Send unsent photos now</button><button type="button" class="ph-load-btn" data-ph-relay-resendall="1">🔁 Resend all photos</button>`
+          : `<button type="button" class="ph-load-btn" data-ph-relay-check="1">🔄 Check for photos</button>`}
       </div>
     </div>`;
   }
@@ -18439,15 +18446,34 @@
       }
       const waiting = (await phRenRelayList()).length;
       const last = window.__phCapLastImport;
-      el.innerHTML = `<b>✓ Ready.</b> ${unsent} unsent on this device · ${waiting} waiting in the cloud for a desktop${last ? ` · ${last.n} received ${esc(phRelShort(last.at))}` : ""}.`;
+      if (phCapRole() === "phone") {
+        const total = all.filter(r => r && r.blob && !/^phone-/.test(r.filename || "")).length;
+        el.innerHTML = `<b>✓ Ready.</b> ${total} photo${total === 1 ? "" : "s"} on this phone · ${unsent} still to send · ${waiting} waiting in the cloud for your computer.`;
+      } else {
+        el.innerHTML = `<b>✓ Ready.</b> ${waiting} waiting in the cloud${last ? ` · ${last.n} received ${esc(phRelShort(last.at))}` : " · nothing received yet since this page opened"}.`;
+      }
     } catch (e) { el.textContent = `Couldn't check — ${(e && e.message) || "try again"}.`; }
   }
   document.addEventListener("click", async e => {
-    const send = e.target.closest("[data-ph-relay-sendnow]"), chk = e.target.closest("[data-ph-relay-check]");
-    if (!send && !chk) return;
-    const btn = send || chk; btn.disabled = true;
+    const send = e.target.closest("[data-ph-relay-sendnow]"), chk = e.target.closest("[data-ph-relay-check]"), resend = e.target.closest("[data-ph-relay-resendall]");
+    if (!send && !chk && !resend) return;
+    const btn = send || chk || resend; btn.disabled = true;
     try {
-      if (send) { await window.phCapRelayRetry(); const r = await window.phCapRelayBackfill(); await phCapAutoImport(); phFlashShow(r.sent ? `📤 Sent ${r.sent} photo${r.sent === 1 ? "" : "s"} to the cloud.` : (window.__phCapRelayLastErr ? `Nothing sent — ${esc(window.__phCapRelayLastErr)}.` : "Nothing waiting to send.")); }
+      if (resend) {
+        // recovery (2026-09-08 pm): photos this phone already sent were taken
+        // by the wrong device, so the laptop never got them. Clear the
+        // "already sent" stamp on every photo taken here (never on copies
+        // that came down from another device) and send them all again --
+        // the computer files them by patient/type/date like any other.
+        const all = (await phRenPhotoGetAll()).filter(r => r && r.blob && !/^phone-/.test(r.filename || ""));
+        if (!all.length) phFlashShow("No photos on this phone to resend.");
+        else if (confirm(`Send all ${all.length} photo${all.length === 1 ? "" : "s"} on this phone to your computer again?`)) {
+          for (const rec of all) { if (rec.relayedAt) { delete rec.relayedAt; await phRenPhotoPut(rec); } const c = phRenPhotoCache[rec.patientKey], cr = c && c.find(p => p.id === rec.id); if (cr) delete cr.relayedAt; }
+          const r = await window.phCapRelayBackfill();
+          phFlashShow(r.sent ? `📤 Sent ${r.sent} photo${r.sent === 1 ? "" : "s"} to the cloud — open LCM on your computer to receive them.` : (window.__phCapRelayLastErr ? `Nothing sent — ${esc(window.__phCapRelayLastErr)}.` : "Nothing sent — check cloud sync is signed in."));
+        }
+      }
+      else if (send) { await window.phCapRelayRetry(); const r = await window.phCapRelayBackfill(); phFlashShow(r.sent ? `📤 Sent ${r.sent} photo${r.sent === 1 ? "" : "s"} to the cloud.` : (window.__phCapRelayLastErr ? `Nothing sent — ${esc(window.__phCapRelayLastErr)}.` : "Nothing waiting to send.")); }
       else await phCapAutoImport();
     } catch (err) {}
     btn.disabled = false;
@@ -33714,6 +33740,17 @@ or changing anything in Cliniko.
     return d || "x";
   };
   const phCapRelayPath = (uid0, patientKey, type, dateKey) => `${uid0}/${patientKey}/${Date.now()}-cap_${type}_${dateKey}_d${phCapDeviceId()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
+  // Device ROLES (her answer 2026-09-08 pm: "this laptop, in Chrome" is where
+  // phone photos land). Until now every device both sent AND received, and
+  // "first device to poll wins, then the cloud copy is deleted" -- so a
+  // second app context (the phone's own poll, a second browser, another PC)
+  // could take a phone's upload before her laptop ever saw it: 26 photos
+  // sat in the cloud at 12:07 and were gone by 12:08 with the laptop still
+  // empty. Now a PHONE only ever sends (never imports) and a COMPUTER only
+  // ever receives (its own photos are born relayed, never uploaded). UA
+  // first (Android / iPhone / iPad), then coarse-pointer + narrow for
+  // anything the UA doesn't name.
+  const phCapRole = () => (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (window.matchMedia && window.matchMedia("(pointer: coarse) and (max-width: 900px)").matches)) ? "phone" : "desktop";
   async function phCapMarkRelayed(patientKey, recId) {
     try {
       const photos = await phRenPhotoGetAllForPatient(patientKey);
@@ -33734,6 +33771,9 @@ or changing anything in Cliniko.
   }
   async function phCapRelayPush(cap, blob, recId) {
     if (!window.__LCM_SYNC) return;
+    // a computer is the receiver: its own photos stay where they are (born
+    // relayed) instead of going up to a cloud drawer nobody would empty
+    if (phCapRole() === "desktop") { phCapMarkRelayed(cap.patientKey, recId); return; }
     const queueIt = () => { const q = phCapQLoad(); if (!q.some(x => x.recId === recId)) { q.push({ patientKey: cap.patientKey, type: cap.type, dateKey: cap.dateKey, recId }); phCapQSave(q); } };
     if (!navigator.onLine) { queueIt(); return; }
     try {
@@ -33782,6 +33822,7 @@ or changing anything in Cliniko.
   let phCapBackfillBusy = false;
   window.phCapRelayBackfill = async function () {
     if (!window.__LCM_SYNC || !navigator.onLine || phCapBackfillBusy) return { sent: 0 };
+    if (phCapRole() === "desktop") return { sent: 0 };   // computers receive, never send
     phCapBackfillBusy = true;
     let sent = 0;
     try {
@@ -33817,6 +33858,7 @@ or changing anything in Cliniko.
   let phCapImportBusy = false;
   async function phCapAutoImport() {
     if (!window.__LCM_SYNC || phCapImportBusy) return;
+    if (phCapRole() === "phone") return;   // a phone only sends -- it must never take its own photos back out of the cloud
     phCapImportBusy = true;
     try {
       const items = await phRenRelayList();
