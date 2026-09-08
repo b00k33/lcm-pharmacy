@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260909-101500">
+<meta name="lcm-build" content="20260909-103000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -17,6 +17,131 @@
 <!-- ONLINE SYNCED PHARMACY BUILD - generated from "LCM Pharmacy.html" by build-synced.ps1; do not hand-edit -->
 <style id="lcm-splash">html{background:#0f2a22}body{visibility:hidden}html::before{content:"LCM - Linh Chinese Medicine";position:fixed;inset:0;z-index:2147483500;background:#0f2a22;color:#d8b979;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 24px;font-family:Georgia,"Cormorant Garamond",serif;font-size:26px;font-weight:600;letter-spacing:.01em}</style>
 <script>/* fail-safe: if the sync layer never runs (e.g. offline), reveal the app after a bit rather than leaving a stuck splash */window.__lcmSplash=setTimeout(function(){var s=document.getElementById("lcm-splash");if(s)s.remove();if(document.body)document.body.style.visibility="visible";},12000);</script>
+<!-- Her ask 2026-09-09, after her work phone showed a blank white page in
+     clinic and it cost an hour to work out why: "when the app fails to start,
+     tell me what went wrong instead of showing a blank page", and she picked
+     the card with Copy and Try again over a one-line strip.
+
+     Why the blank page happens: #lcm-splash above hides the body and paints
+     the dark splash. If the boot script throws, nothing ever removes it -- so
+     the 12s fail-safe fires, the body becomes visible, and there is nothing in
+     it. White screen, no message, no clue.
+
+     This must run BEFORE the module at the next script tag and before the main
+     body script, so it is here rather than anywhere tidier, and it is written
+     in ES5 with no dependency on anything the app defines -- it has to survive
+     exactly the failures that stop the app defining things. It only ever reacts
+     to an error that nothing else caught. A crash BEFORE boot takes the whole
+     screen (there is nothing else on it); a crash AFTER boot is a bar she can
+     dismiss, because taking her work away would be worse than the bug. -->
+<script>(function () {
+  var shown = false;
+  function detail(err, msg, src, line, col) {
+    var meta = document.querySelector('meta[name="lcm-build"]');
+    var lines = [
+      String(msg || (err && err.message) || "Unknown error"),
+      src ? (String(src).split("/").pop() + (line ? "  line " + line + (col ? ":" + col : "") : "")) : "",
+      err && err.stack ? String(err.stack).split("\n").slice(0, 6).join("\n") : "",
+      "build " + (meta ? meta.content : "?"),
+      location.href,
+      navigator.userAgent,
+      new Date().toString()
+    ];
+    return lines.filter(Boolean).join("\n");
+  }
+  function shortOf(msg, line) {
+    var m = String(msg || "Something went wrong").replace(/^Uncaught\s*(Error:)?\s*/, "");
+    if (m.length > 180) m = m.slice(0, 180) + "…";
+    return m + (line ? "  (line " + Number(line).toLocaleString() + ")" : "");
+  }
+  function copy(text, btn) {
+    function done() { btn.textContent = "Copied"; setTimeout(function () { btn.textContent = "Copy this"; }, 1600); }
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, function () { fallback(text, done); });
+        return;
+      }
+    } catch (e) {}
+    fallback(text, done);
+  }
+  function fallback(text, done) {
+    try {
+      var host = document.body || document.documentElement;   // body may not exist on a very early crash
+      var ta = document.createElement("textarea");
+      ta.value = text; ta.setAttribute("readonly", "");
+      ta.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+      host.appendChild(ta); ta.select(); ta.setSelectionRange(0, text.length);
+      document.execCommand("copy"); host.removeChild(ta); done();
+    } catch (e) {}
+  }
+  function paint(err, msg, src, line, col) {
+    if (shown) return; shown = true;
+    var splash = document.getElementById("lcm-splash");
+    var booted = !splash;                       // the app removes #lcm-splash once it is up
+    if (splash) splash.remove();                // otherwise the card would sit behind it
+    if (document.body) document.body.style.visibility = "visible";
+    try { clearTimeout(window.__lcmSplash); } catch (e) {}
+    var full = detail(err, msg, src, line, col);
+    var wrap = document.createElement("div");
+    wrap.setAttribute("role", "alert");
+    // z-index has to beat #lcmOverlay, the sign-in gate, which sits at
+    // 2147483600 -- and, more importantly, is a child of <html>, NOT <body>.
+    // An equal z-index would lose to it on document order alone, so the error
+    // card appeared to do nothing while sitting behind the sign-in screen.
+    // Max z-index, and appended to <html> after it, is what actually wins.
+    wrap.style.cssText = booted
+      ? "position:fixed;left:0;right:0;bottom:0;z-index:2147483647;background:#16382c;color:#f2f6f2;font:14px/1.45 'Segoe UI',system-ui,-apple-system,sans-serif;padding:12px 14px;box-shadow:0 -6px 24px rgba(0,0,0,.3);display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap"
+      : "position:fixed;inset:0;top:0;left:0;right:0;bottom:0;z-index:2147483647;background:#0f2a22;color:#f2f6f2;font:15px/1.5 'Segoe UI',system-ui,-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto";
+    var card = document.createElement("div");
+    card.style.cssText = booted ? "flex:1 1 260px;min-width:0"
+      : "max-width:420px;width:100%;background:#16382c;border:1px solid #2b5946;border-radius:12px;padding:20px 20px 18px";
+    var h = document.createElement("div");
+    h.textContent = booted ? "Something went wrong" : "LCM couldn't start";
+    h.style.cssText = booted
+      ? "font-weight:700;font-size:14px;color:#e6c88a;margin-bottom:2px"
+      : "font-family:Georgia,'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:#d8b979;margin-bottom:10px";
+    var p = document.createElement("div");
+    p.textContent = booted
+      ? "The app hit an error. Your data is safe — nothing was changed."
+      : "Something went wrong while loading. Your data is safe — nothing was changed.";
+    p.style.cssText = "color:#c9d8ce;font-size:13.5px;margin-bottom:12px";
+    var pre = document.createElement("div");
+    pre.textContent = shortOf(msg || (err && err.message), line);
+    pre.style.cssText = "font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.45;color:#f0d9a8;background:#0f2a22;border:1px solid #2b5946;border-radius:8px;padding:9px 11px;margin-bottom:14px;word-break:break-word;white-space:pre-wrap;max-height:9em;overflow:auto";
+    var row = document.createElement("div");
+    row.style.cssText = "display:flex;gap:8px;flex-wrap:wrap";
+    var bCopy = document.createElement("button");
+    bCopy.type = "button"; bCopy.textContent = "Copy this";
+    bCopy.style.cssText = "font:inherit;font-size:13.5px;font-weight:700;cursor:pointer;border:none;border-radius:8px;padding:9px 16px;background:#d8b979;color:#0f2a22";
+    bCopy.onclick = function () { copy(full, bCopy); };
+    var bAgain = document.createElement("button");
+    bAgain.type = "button"; bAgain.textContent = "Try again";
+    bAgain.style.cssText = "font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;border:1px solid #4a7a63;border-radius:8px;padding:9px 16px;background:transparent;color:#e8f0ea";
+    bAgain.onclick = function () { location.reload(); };
+    row.appendChild(bCopy); row.appendChild(bAgain);
+    if (booted) {
+      var bClose = document.createElement("button");
+      bClose.type = "button"; bClose.textContent = "Dismiss";
+      bClose.style.cssText = "font:inherit;font-size:13.5px;cursor:pointer;border:none;background:transparent;color:#9fb8a9;padding:9px 6px";
+      bClose.onclick = function () { wrap.remove(); };
+      row.appendChild(bClose);
+    }
+    card.appendChild(h); card.appendChild(p); card.appendChild(pre); card.appendChild(row);
+    wrap.appendChild(card);
+    // <html>, not <body>: it is a sibling of the sign-in overlay and last in
+    // order, and it exists even when the crash happened before <body> did.
+    document.documentElement.appendChild(wrap);
+  }
+  window.addEventListener("error", function (e) {
+    // resource load failures (an <img> 404) bubble here too and are not crashes
+    if (e && e.target && e.target !== window && e.target.tagName) return;
+    paint(e && e.error, e && e.message, e && e.filename, e && e.lineno, e && e.colno);
+  }, true);
+  window.addEventListener("unhandledrejection", function (e) {
+    var r = e && e.reason;
+    paint(r instanceof Error ? r : null, r && r.message ? r.message : String(r), "", 0, 0);
+  });
+})();</script>
 <!-- PWA installability (her ask 2026-08-16). Relative paths, not the
      domain-absolute ones her spec literally said -- this site is a GitHub
      Pages PROJECT page (b00k33.github.io/lcm-pharmacy/), not domain root,
