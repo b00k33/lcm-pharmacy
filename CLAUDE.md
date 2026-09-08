@@ -695,14 +695,20 @@ If you're tracking your BBT, send me a screenshot of your chart when you get
 a chance.
 ```
 
-**A fourth layer — menses-signs reminder, new patients especially.** Same
-removable-line shape as BBT, independent of it (both can be on at once). Only
-**Period**.
+**A fourth thing — the menses-signs reminder — but this one is NOT a toggle
+like BBT.** Asked whether it should be ("same as BBT" was my default); her
+answer was **"yes"** to living inside Period-**Formal** permanently instead,
+both base and +Supportive. Casual doesn't carry it. Don't add a settings
+toggle for this one.
 ```
 A gentle reminder to pay attention to your menses signs this cycle — flow,
 pain, clots, colour. The Fertility Friend app is handy for keeping it all
 recorded in one place: https://www.fertilityfriend.com/
 ```
+Period-Formal-base with this baked in runs ~396 characters — right at the
+~400-char practical ceiling measured against her actual phone (the message
+box starts an inner scrollbar past that). Still fine, but don't add more to
+this specific message without checking the length again.
 
 **IVF Protocol adds three moments the natural-cycle track doesn't have** —
 Post-OPU (egg pickup), Pre-ET (transfer) and Post-ET (the wait, replacing
