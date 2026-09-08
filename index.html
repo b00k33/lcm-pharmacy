@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260909-030000">
+<meta name="lcm-build" content="20260909-040000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -7054,6 +7054,17 @@
   }
   #pharmacyPage .ph-ren-crop-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
   #pharmacyPage .ph-ren-crop-footer { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  /* walking a stacked set in the full-size viewer (her "how to view all
+     pictures", 2026-09-09) -- quiet hairline pills, same family as the
+     script page's field pills, no box around the row */
+  #pharmacyPage .ph-ren-view-nav { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 8px; }
+  #pharmacyPage .ph-ren-view-arrow {
+    width: 34px; height: 34px; border-radius: 999px; border: 1px solid var(--ph-line);
+    background: var(--ph-white); color: var(--ph-green-deep); font-size: 18px; line-height: 1;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  #pharmacyPage .ph-ren-view-arrow:disabled { opacity: .35; cursor: default; }
+  #pharmacyPage .ph-ren-view-count { font-size: 12.5px; color: var(--ph-faint); }
   #pharmacyPage .ph-ren-crop-labelbtn {
     border: 1px solid var(--ph-line); background: var(--ph-white); color: var(--ph-soft);
     border-radius: 999px; padding: 10px 16px; min-height: 44px; font-size: 13px; font-weight: 600; cursor: pointer;
@@ -9089,7 +9100,12 @@
     /* a column is narrower than the full stage, so a header carrying a count
        AND two actions (Photos) must be allowed a second line rather than
        squeezing its own words together */
-    #pharmacyPage .ph-pres-panel .ph-op-grid .ph-tmpl-sec { flex-wrap: wrap; row-gap: 4px; }
+    /* .ph-sec-line has to be named explicitly: its own rule up in the
+       Opening-stage restyle block is (1,4,0) with flex-wrap:nowrap, so the
+       plain .ph-tmpl-sec form here lost to it and Photos -- the one header
+       that actually carries a count AND two actions -- never wrapped */
+    #pharmacyPage .ph-pres-panel .ph-op-grid .ph-tmpl-sec,
+    #pharmacyPage .ph-pres-panel .ph-op-grid .ph-tmpl-sec.ph-sec-line { flex-wrap: wrap; row-gap: 4px; }
     /* the record column: one field per line, each sized to its content, so
        Type sits under its own label instead of at the far edge */
     #pharmacyPage .ph-op-grid .ph-pres-patient { grid-template-columns: minmax(0, 1fr); gap: 12px 16px; }
@@ -24228,6 +24244,8 @@
       if (e.target.closest("[data-ren-crop-done]")) { phRenCropDoDone(); return; }
       const renThumbView = e.target.closest("[data-ren-thumb-view]");
       if (renThumbView) { phRenViewPhoto(renThumbView.dataset.renThumbView, renThumbView.dataset.renThumbPatient); return; }
+      const renViewStep = e.target.closest("[data-ren-view-step]");
+      if (renViewStep) { phRenViewStep(Number(renViewStep.dataset.renViewStep) || 0); return; }
       if (e.target.closest("[data-ren-view-delete]") && phRenCropState && phRenCropState.viewOnly) {
         const zone = document.getElementById("phRenViewDelZone");
         if (zone) zone.innerHTML = phConfirmStrip("Delete this photo? This can't be undone.", `data-ren-view-delete-yes="1"`, "Delete");
@@ -34185,7 +34203,7 @@ or changing anything in Cliniko.
       const shown = sorted[sorted.length - 1];               // §3: the later one
       const picked = phRenCompare.some(c => c.id === shown.id);
       return `<td class="ph-ren-tl-cell">
-        <button type="button" class="ph-ren-tl-thumb${picked ? " picked" : ""}" data-ren-tl-open="${shown.id}" data-ren-tl-row="${t.key}" data-ren-tl-patient="${esc(patientKey)}">
+        <button type="button" class="ph-ren-tl-thumb${picked ? " picked" : ""}" data-ren-tl-open="${shown.id}" data-ren-tl-row="${t.key}" data-ren-tl-patient="${esc(patientKey)}" title="${sorted.length > 1 ? `${sorted.length} ${esc(t.label.toLowerCase())} photos on this day — open, then use ‹ › to see them all` : `${esc(t.label)} · ${esc(phRenPhotoDateLabel(d))}`}">
           <img src="${shown.objectUrl}" alt="${esc(t.label)} ${esc(phRenPhotoDateLabel(d))}">
           ${sorted.length > 1 ? `<span class="ph-ren-tl-more">${sorted.length}</span>` : ""}
         </button></td>`;
@@ -34765,13 +34783,59 @@ or changing anything in Cliniko.
     img.onerror = () => { URL.revokeObjectURL(url); phFlashShow("⚠ Couldn't open that photo."); };
     img.src = url;
   }
+  // Her question 2026-09-09, "how to view all pictures": a timeline day cell
+  // holding four tongue photos showed ONE thumbnail with a "4" badge, and
+  // tapping it opened only the newest -- the other three were unreachable
+  // from anywhere in the app. So the full-size viewer now carries the whole
+  // set of that patient's photos OF THAT TYPE, oldest -> newest, with ‹ ›
+  // and "3 of 12". One rule wherever a photo opens (timeline cell, the
+  // script page's Photos strip, the BBT tile): you land on the one you
+  // tapped and can walk the rest of that type without going back.
+  function phRenViewSetFor(patientKey, rec) {
+    const type = phRenTypeOf(rec);
+    return (phRenPhotosFor(patientKey) || [])
+      .filter(r => phRenTypeOf(r) === type)
+      .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+  }
+  function phRenViewStateFrom(patientKey, rec, set) {
+    const at = Math.max(0, set.findIndex(r => r.id === rec.id));
+    return {
+      patientKey, viewOnly: true, viewId: rec.id, kind: rec.kind,
+      objectUrl: rec.objectUrl, ownsObjectUrl: false,
+      viewType: phRenTypeOf(rec), viewDate: phRenPhotoDateLabel(phRenDateKeyOf(rec)),
+      viewSet: set.map(r => r.id), viewAt: at,
+    };
+  }
   function phRenViewPhoto(id, patientKey) {
     const list = phRenPhotosFor(patientKey) || [];
     const rec = list.find(r => r.id === id);
     if (!rec) return;
-    phRenCropState = { patientKey, viewOnly: true, viewId: id, kind: rec.kind, objectUrl: rec.objectUrl, ownsObjectUrl: false };
+    phRenCropState = phRenViewStateFrom(patientKey, rec, phRenViewSetFor(patientKey, rec));
     phRenCropShow();
   }
+  // step through that set in place -- the modal stays open, only the image
+  // and the counter change
+  function phRenViewStep(delta) {
+    const st = phRenCropState;
+    if (!st || !st.viewOnly || st.compare || !st.viewSet || st.viewSet.length < 2) return false;
+    const i = (st.viewAt || 0) + delta;
+    if (i < 0 || i >= st.viewSet.length) return false;
+    const rec = (phRenPhotosFor(st.patientKey) || []).find(r => r.id === st.viewSet[i]);
+    if (!rec) return false;
+    st.viewAt = i;
+    st.viewId = rec.id;
+    st.kind = rec.kind;
+    st.objectUrl = rec.objectUrl;
+    st.viewDate = phRenPhotoDateLabel(phRenDateKeyOf(rec));
+    renderPhRenCropModal();
+    return true;
+  }
+  document.addEventListener("keydown", e => {
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    const modal = document.getElementById("phRenCropModal");
+    if (!modal || modal.hidden) return;
+    if (phRenViewStep(e.key === "ArrowRight" ? 1 : -1)) e.preventDefault();
+  });
   function phRenCropShow() {
     document.getElementById("phRenCropBackdrop").hidden = false;
     document.getElementById("phRenCropModal").hidden = false;
@@ -34907,12 +34971,18 @@ or changing anything in Cliniko.
     const st = phRenCropState;
     if (st.compare) { renderPhRenCompareModal(); return; }
     if (st.viewOnly) {
+      const set = st.viewSet || [], at = st.viewAt || 0, many = set.length > 1;
       modal.innerHTML = `<div class="ph-hx-card ph-ren-crop-card">
         <div class="ph-hx-head">
           <button type="button" class="ph-stocktake-close" data-ren-crop-close="1" aria-label="Close">×</button>
-          <div class="ph-hx-head-name">${esc(PH_REN_CROP_LABEL[st.kind] || "Photo")}</div>
+          <div class="ph-hx-head-name">${esc(PH_REN_TYPE_LABEL[st.viewType] || PH_REN_CROP_LABEL[st.kind] || "Photo")}${st.viewDate ? ` · ${esc(st.viewDate)}` : ""}</div>
         </div>
         <div class="ph-ren-crop-stage ph-ren-view-stage"><img class="ph-ren-crop-img" src="${st.objectUrl}" alt=""></div>
+        ${many ? `<div class="ph-ren-view-nav">
+          <button type="button" class="ph-ren-view-arrow" data-ren-view-step="-1"${at <= 0 ? " disabled" : ""} aria-label="Earlier photo">‹</button>
+          <span class="ph-ren-view-count">${at + 1} of ${set.length}${st.viewType ? " " + esc((PH_REN_TYPE_LABEL[st.viewType] || "").toLowerCase()) : ""} photos</span>
+          <button type="button" class="ph-ren-view-arrow" data-ren-view-step="1"${at >= set.length - 1 ? " disabled" : ""} aria-label="Later photo">›</button>
+        </div>` : ""}
         <div id="phRenViewDelZone"></div>
         <div class="ph-ren-crop-footer"><button type="button" class="ph-ren-crop-labelbtn" data-ren-view-delete="1">🗑 Delete this photo</button></div>
       </div>`;
@@ -36121,6 +36191,12 @@ or changing anything in Cliniko.
     { id: "msk", label: "Musculoskeletal" },
     { id: "gynae", label: "Gynaecology" },
     { id: "stress", label: "Stress" },
+    // her ask 2026-09-09, "write up a treatment plan for weight loss". No
+    // Case maps to this category (PH_CASE_CATEGORY), so it shows in the
+    // picker on any script whose Case is blank, General or Other -- a
+    // weight-loss plan shouldn't surface while she's mid-way through a
+    // Fertility or Pain script.
+    { id: "metabolic", label: "Weight & metabolism" },
   ];
   const PH_TP_TEMPLATES = [
     // ---- Musculoskeletal (her ask 2026-09-05) ----
@@ -36285,6 +36361,17 @@ or changing anything in Cliniko.
         { label: "Settling", aim: "Calm the acute stress response and identify what's actually driving it.", points: "Yintang, HT7, LIV3, REN17, DU20.", suggestFormula: "Liver-Qi-soothing, Shen-calming formula", cadence: "1–2×/wk", watch: "Sleep, mood, and physical symptoms she's attributing to stress; what's actually changed in her life/work." },
         { label: "Building capacity", aim: "Extend the calm between visits and address whichever deficiency pattern is underneath — Heart-Spleen, Liver-Kidney, or Qi/Yang depending on presentation.", points: "HT7, SP6, ST36, LIV3, REN4.", suggestFormula: "Tonifying formula matched to the pattern", cadence: "Weekly, tapering to fortnightly", watch: "Coping capacity between visits; whether the external stressor is resolving or ongoing." },
         { label: "Maintenance", aim: "Hold the gain and treat this as an ongoing constitutional pattern.", points: "HT7, ST36, LIV3, as needed.", suggestFormula: "Constitutional formula, as needed", cadence: "Monthly or as needed", watch: "Early signs of a flare; whether life circumstances have genuinely changed." },
+      ],
+    },
+    // ---- Weight & metabolism (her ask 2026-09-09) ----
+    {
+      id: "metab_weightloss", name: "Weight loss", category: "metabolic",
+      goal: "Find the pattern actually holding the weight on, shift it at a pace that lasts, then rebuild the digestion and metabolism underneath so the loss holds.",
+      phases: [
+        { label: "Weeks 1–4 — find the pattern, set the baseline", aim: "Establish which pattern is driving this — Spleen Qi deficiency with Damp, Liver Qi stagnation with stress eating, Stomach Heat with a strong appetite, or Spleen/Kidney Yang deficiency with a slow metabolism and feeling the cold — and record real starting numbers to measure against. Weight loss is not one condition and the four patterns need different treatment.", points: "ST36, SP6, SP9, ST40, REN12, REN6, ST25. Add LIV3 and PC6 where stress eating dominates; ST44 and LI11 for a Stomach-Heat picture with constant hunger; moxa REN4/REN6 and BL20/BL23 for a cold, Yang-deficient picture. Auricular Shen Men, Stomach and Hunger points, with ear seeds kept in between visits.", suggestFormula: "Spleen-strengthening, Damp-transforming base, adjusted once the pattern is clear", cadence: "1×/wk for the first 4 weeks", watch: "Record weight, waist, appetite, energy, bowels and sleep at the first visit as the baseline — waist and energy often move before the scales do. Ask what she has already tried and what happened. Refer to her GP for thyroid function, fasting glucose or HbA1c, lipids and iron before assuming a TCM pattern explains all of it: an undertreated thyroid, PCOS, a new medication or untreated sleep apnoea will hold weight on regardless of treatment. Screen for restricting, bingeing or purging and make that the priority if it is there." },
+        { label: "Weeks 4–12 — transform Damp, settle the appetite", aim: "Shift the Damp and fluid accumulation, bring appetite and cravings down to something manageable, and get steady loss of roughly half a kilo a week rather than a crash.", points: "ST25, ST40, SP9, SP6, ST36, REN9, REN12. Abdominal needling through the Damp; electro-acupuncture on ST25 and ST40 where there is marked fluid retention and a heavy, puffy body. LIV3 and REN17 on the weeks stress is driving the eating. Renew ear seeds each visit.", suggestFormula: "Continue the Damp-transforming Spleen formula; add a Qi-moving, Liver-soothing element where stress eating is the main driver", cadence: "1×/wk", watch: "Faster than a kilo a week is worth slowing down — it comes back. Track the waist and how clothes fit alongside the scales, especially in a Damp picture. Note which weeks stalled and what was happening in her life those weeks; the stall is usually the answer, not the treatment." },
+        { label: "Months 3–6 — rebuild the metabolism underneath", aim: "Treat the deficiency that let the weight accumulate, usually Spleen Qi and Kidney Yang, so the body holds the loss instead of rebounding as soon as treatment stops.", points: "ST36, SP6, REN4, REN6, BL20, BL23, KI3. Moxa REN4/REN6 and BL23 for the cold, Yang-deficient picture. Keep ST25 and ST40 in the mix only while Damp signs remain.", suggestFormula: "Move from the Damp-transforming formula toward a Spleen and Kidney tonifying formula as the tongue coat and puffiness clear", cadence: "Fortnightly", watch: "Whether energy, warmth and digestion are improving alongside the weight — those improving is the sign the pattern is genuinely turning; weight alone is not. Reassess the pattern if she is losing weight but feels worse, colder or more tired." },
+        { label: "Maintenance — holding it", aim: "Hold the loss through the period when most of it usually comes back, and give her the early signs to act on before a couple of kilos become all of it.", points: "ST36, SP6, REN12, KI3, LIV3. Seasonal top-ups; moxa through winter for cold-type patients.", suggestFormula: "Constitutional Spleen and Kidney formula as needed rather than continuously", cadence: "Monthly, then as needed", watch: "The early signs specific to her — heaviness after meals, the afternoon energy dip, cravings returning, the waistband. Regain almost always follows a life change (injury, stress, a new job, broken sleep) rather than a failure of willpower, so plan for those out loud." },
       ],
     },
   ];
