@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260909-014500">
+<meta name="lcm-build" content="20260909-020000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -43644,6 +43644,11 @@ Dosage: {dosage}
       // "Restore ticked sections" just silently did nothing. Every write here
       // is now guarded, and a failure is LOUD and offers a way out instead of
       // vanishing into the console.
+      // MUST be set BEFORE the writes below, not after (2026-09-09): each
+      // setItem schedules its own push 150ms later, and that cycle has to
+      // honour the shrink too, or it reverts the restore before the flush
+      // even runs. See the long note in mergeSections.
+      window.__lcmAllowShrinkUntil = Date.now() + 20000;
       try {
         if (ch.prescriptions && ch.inventory && ch.log) {
           // everything ticked = the old full restore, including any extra
@@ -44978,7 +44983,21 @@ Dosage: {dosage}
     // revert the restore before she ever saw it happen. phDoSectionRestore
     // sets this flag right before its pre-reload push; consume it once here
     // so it can't also mask a real, unrelated accidental-shrink later.
-    var allowShrink = !!window.__lcmAllowShrinkOnce;
+    //
+    // 2026-09-09: the ONE-SHOT flag alone was not enough, and this is the
+    // real cause of "Restore ticked sections does nothing" (first reported
+    // 2026-08-15, reproduced live three times tonight while putting her
+    // Acupreg clinic back). setItem is patched below to schedulePush() 150ms
+    // after any daybook* write, so a restore fires TWO merge cycles: its own
+    // pre-reload flush, and the debounced one its writes just triggered.
+    // Whichever lands first eats the one-shot flag; the other then runs with
+    // allowShrink false against a cloud row that has not caught up yet, sees
+    // the deliberate shrink (0 scripts against 1627) as a bad read, adopts
+    // the CLOUD copy over her restore and pushes that back. The restore
+    // vanished with no error, every time. A restore is a window, not a
+    // single event -- so allow the shrink for a short period covering every
+    // cycle the restore sets off, and keep the one-shot for old callers.
+    var allowShrink = !!window.__lcmAllowShrinkOnce || (window.__lcmAllowShrinkUntil || 0) > Date.now();
     window.__lcmAllowShrinkOnce = false;
     SECTIONS.forEach(function (name) {
       var l = L[name], c = C[name], b = base[name];
@@ -45894,8 +45913,12 @@ Dosage: {dosage}
       var composed = (LS && !(ch.prescriptions && ch.inventory && ch.log)) ? LS.compose(cur, bak, ch) : bak;
       // this restore may deliberately shrink a section (e.g. restoring
       // inventory-only from a day when it had fewer herbs) -- tell the
-      // merge guard this ONE write is expected, not a bad read
+      // merge guard this ONE write is expected, not a bad read -- and, as in
+      // phDoSectionRestore, for the whole window this restore's own writes
+      // keep the sync layer busy (2026-09-09), since apply() below trips the
+      // patched setItem and schedules a second merge cycle of its own
       window.__lcmAllowShrinkOnce = true;
+      window.__lcmAllowShrinkUntil = Date.now() + 20000;
       apply(composed);
       refreshApp();
       setBaseFrom(sectionsFrom(composed));
