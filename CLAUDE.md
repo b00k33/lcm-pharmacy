@@ -245,6 +245,24 @@ update STYLE-LCM.md to match so future builds don't undo it.
   move and it is wrong: the fill already sits as dark as the text on it can take, and a
   darker hover measured 3.85–4.16 on four of five columns. Lifting keeps the hue and
   gains contrast. Final: rest 4.66–6.01, hover 5.39–7.02, white-on-solid 9.17.
+- **Check-in drafts stay throwaway — HER DECISION, do not "fix" this (2026-09-09).**
+  She asked "where are all the sms drafts". Nowhere: the message on a check-in is
+  composed fresh each time the row opens and is gone when she leaves. `phCkDone` records
+  the OUTCOME only (`{going, concerns, next, note}`), and `phMsgPrepare()` — the function
+  that actually files a message — is called from four places, **none of them the check-in
+  panel**. Tapping Text hands the words to her phone's own SMS app; LCM keeps no copy.
+  Offered four ways to change it (file it under Sent on Text / a Save draft button into
+  Prepared / both / leave it) she chose **leave it as it is**. **The check-in drafts and
+  the Messages Prepared/Sent list are two separate systems ON PURPOSE — do not wire them
+  together.** What survives a check-in: the outcome in her history, and via ＋ Save mine
+  the *wording* as a template (Communications → Templates). Prepared/Sent holds only what
+  Compose or the post-dispense "herbs are ready" offer created. Tabs, in order:
+  **Due · Compose · Templates · Prepared · Sent**.
+  Two gaps found in the same pass and fixed: on a phone the app showed its version
+  **nowhere** (`#phVersionLine` is `display:none` under 900px and `phVersionShortText()`
+  was dead code), so it now sits at the foot of the ⋯ sheet under the gold Update row;
+  and on a check-in row the pale `.ph-ds-pill` kind badge reads as the button while the
+  real `data-ck-open` button is plain text below it — flagged to her, not yet changed.
 - **BBT charts + phase-tagged scripts (same round):** "BBT chart" is a photo type
   (`PH_REN_PHOTO_TYPES` key `bbt`): phone capture, relay, timeline and compare come from
   the photo system, plus a tile beside the cycle tiles showing this cycle's latest chart
@@ -763,6 +781,24 @@ Supportive structure, clinical grounding straight from `PH_TP_PHASE`'s `opu`/
 Post-OPU; no test before day 14 on Post-ET). Menstruation and Follicular reuse
 the natural-cycle wording — not rewritten separately, pending her confirming
 that's right.
+
+**WHERE THE WORDS ACTUALLY LIVE (read this before hunting for them):** all 51
+messages are in `index.html`, in the `PH_CODE3_MSG_SEEDS` array, seeded into
+`PHARMACY.msgTemplates` by a stable `code3` key (`period-formal-sup`,
+`luteal-casual`, `opu-formal`, ...) and editable in Communications →
+Templates. **This section is a summary of the decisions, NOT the source of
+the wording — do not go looking for the text here.**
+
+A cost worth not repeating: for one day these existed ONLY as typed messages
+in a conversation. This section said "written and confirmed", which was true,
+but the words themselves had never been saved to any file. When that session's
+context was compacted the wording went out of reach, and two sessions spent an
+hour hunting for something no file contained. It was eventually recovered from
+the session transcript JSONL (`~/.claude/projects/<project>/<session>.jsonl` —
+the file the compaction notice names), where most of it was still there under
+`"origin":{"kind":"human"}`, i.e. in her own typed edits. **The rule that
+follows: patient-facing wording gets written into a file the moment she
+confirms it. A conversation is not a save.**
 
 **Every moment on the original map is now written (2026-09-09).** Full list,
 all confirmed in her own final edits, not drafts:
