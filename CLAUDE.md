@@ -200,6 +200,29 @@ update STYLE-LCM.md to match so future builds don't undo it.
   column shrinks its children when content overflows — any such column needs
   `> * { flex: none }`, or padding silently vanishes (found by measuring, invisible in
   a screenshot).
+- **Category colour on the plan picker (her asks 2026-09-09, three in a row: "give the
+  categories the appropriate colours" → "stronger — make it obvious" → "make ALL the
+  colours stronger").** Reuse before invent: Musculoskeletal takes `--ph-msk`, Gynaecology
+  `--ph-gyn`, Stress `--ph-purple` — the SAME colours the script panel turns for those
+  Cases, so the colour means one thing in both places. The two with no colour got new
+  full four-token families only after she approved them by name ("yes — teal and amber"):
+  `--ph-metab` teal, `--ph-acute` amber, the amber deliberately browner than `--ph-low`
+  and `--ph-gold` so it can't read as a status. **Any column that keeps house green must
+  say so OUT LOUD** (`--ph-herb*`, which nothing reassigns): the picker renders inside
+  the Case-recoloured panel, so an un-pinned column silently inherits the panel's Case
+  colour and comes out identical to whichever category that Case belongs to.
+  **"Stronger" means the FILL gets stronger and the TEXT gets darker to match — never
+  the text staying put.** At 55% toward the colour, `--ph-green-deep` titles measured
+  3.69:1 on amber and 4.08:1 on teal; the fix was `--ph-green-press` (the darkest step)
+  for title AND subtitle, not a weaker fill. Added the two press tokens that were
+  missing, `--ph-herb-press` and `--ph-purple-press`. The one Suggested card goes SOLID
+  `--ph-green-deep` with white text and an inverted white badge — the only card the app
+  recommends should be the only solid block, and going solid escapes the wall a
+  merely-darker tint kept hitting. Measured rest 5.37–6.90, hover worst 4.62, solid
+  6.83–13.57.
+  **Measuring trap worth keeping: `color-mix()` computes to `oklab()`, so
+  `getComputedStyle` cannot be parsed as rgb** — read real pixels with a 1×1 canvas and
+  `getImageData`, or every contrast number you report is fiction.
 - **BBT charts + phase-tagged scripts (same round):** "BBT chart" is a photo type
   (`PH_REN_PHOTO_TYPES` key `bbt`): phone capture, relay, timeline and compare come from
   the photo system, plus a tile beside the cycle tiles showing this cycle's latest chart
