@@ -116,7 +116,21 @@ update STYLE-LCM.md to match so future builds don't undo it.
   disc, `ghost:true` = ⋯); never hand-build a button into the bar, never a page-only override
   on `.ph-shell-titlebar`. Also LIKES the /patients briefing table as a List
   view (her ask, then "these designs look lazy" about the old panel — cohesive, modern,
-  functional). DISLIKES: the clinic name cut off with "…" (reported twice); sprawling
+  functional). **Script panel stages = the Opening-stage language (built 2026-09-08 to her
+  four picks; then "i dont like this" on the Follow-up stage, rebuilt the same day):** every
+  stage body uses small-caps faint section headers with a hairline running out of them
+  (`.ph-tmpl-sec` direct children, or `.ph-tmpl-sec.ph-sec-line`), ONE 34px hairline pill for
+  every field (`:not(.field-bare)` lifts date inputs past the app-wide `!important` radius),
+  12px sentence-case field labels, the section's one action as a quiet text link at the far
+  right, NO box inside the panel, NO emoji (thin sprite icons only), and the patient's name is
+  never repeated below the band. The band itself is ‹ · name/subtitle · one quiet stat ·
+  "Journey ↗" link · ONE disc (camera). Follow-up = one row of facts + a "Review <date> ⌄"
+  pill; History = header + count + Show/Hide with the visit rows straight underneath. The
+  phone keeps its own 48px rows (rules under `@media (max-width: 480px)` in the same block).
+  DISLIKES: a fixed green control on a Case-recoloured band ("green against
+  red is horrible", 2026-09-08 — everything inside `.ph-pres-band` derives from the band
+  colour: `--ph-band-quiet` for muted text, `--ph-band-disc` = mint on green, the Case's
+  tint on a Gynae/MSK band; never `--ph-struct-*` in there); the clinic name cut off with "…" (reported twice); sprawling
   designs that look "lazy" (an ad-hoc panel below a grid); anything a second time she has
   already asked for once.
 - **BBT charts + phase-tagged scripts (same round):** "BBT chart" is a photo type
