@@ -830,6 +830,62 @@ all confirmed in her own final edits, not drafts:
   everything on it is now done; treat the map itself as historical context
   for the shape of the system, not a live to-do list.
 
+**A LATE PERIOD IS NOT THE TWO-WEEK WAIT (fixed 2026-09-09, `18495bb`) — the
+one trap in picking a message off the cycle.** `phTpCycleCompute` initialises
+`phaseKey = "luteal"` and never bounds `day`, on purpose: a cycle running long
+with no new period logged is "still luteal, unconfirmed" rather than a silent
+new cycle. So a patient 30 days past her expected period still reads
+`phaseKey: "luteal"`, with `overdue: true` set beside it. Read at face value
+that hands her the two-week-wait message, which is wrong twice over — she is
+not in a two-week wait, and the message ignores the one thing that has actually
+happened. `phCkPick` now swaps to **Period** when `overdue && phaseKey ===
+"luteal"`, because "just checking if your period started yet?" IS the question
+a practitioner asks, and it is wording she already wrote — no new message
+needed. The reason line reads "her period is 12 days late · day 40 of her
+cycle": the number is named, never hidden. **IVF is excluded from this gate on
+purpose** — post-transfer the identical cycle reading means the wait, and
+asking a transfer patient about her period is the worst message on the list, so
+Post-ET still wins there. This does NOT withhold anything and does not
+contradict her answer 5 ("never stop, I'll judge"): every cycle still gets a
+suggestion however old the date, this only changes WHICH one.
+**Adjacent claim worth not repeating: `phCycleOn`'s `rec.sex !== "F"` gate is
+NOT the problem it looks like.** It is the last test in the function — an
+explicit `cycleOn`, or any non-done plan in `PH_TP_CYCLE_TEMPLATES` (Natural
+fertility, IVF, PCOS, Endometriosis, Dysmenorrhea, Amenorrhea), returns true
+long before it, and importing an Acupreg appointment sets `sex = "F"` +
+`cycleOn = true` outright. Every patient the picker actually serves clears it.
+
+**THE BBT TICK — her answer 8, BUILT 2026-09-09.** "Add a tick per patient."
+`rec.tracksBbt`, set by a **Tracks BBT** tick on the Contact card
+(`phJourneyContactHtml`, `data-ph-jr-bbt`, styled as the existing Don't-contact
+row) — shown only where `phCycleOn(rec)`, so it never appears on an MSK or male
+record. When it is on, a teal **BBT chart** chip appears on the draft-message
+picker beside ♡ Supportive, and only on moments whose `PH_CODE3_ADDONS` entry
+lists `bbt` — today Period and Ovulation. `phCkBbtOffered(moment, name)` is the
+single gate; nothing in the picker names those two moments, so adding a third
+is a data change only. It is a THIRD layer: independent of tone AND of
+Supportive, so all eight combinations are reachable. Defaults ON for a ticked
+patient (that is the point of ticking) and switches off in one tap.
+**Placement rule, learned by looking at the rendered message:** the add-on goes
+in BEFORE her sign-off, not appended after it. Every one of these bodies ends
+with `{{me}}` and her +Supportive line sits just inside it ("… Thinking of you.
+{{me}}"), so appending left text stranded after her name. `phCkTemplate` now
+inserts before token fill, while `{{me}}` is still there to find. Verified
+removable in all eight combinations: stripping the one sentence returns the
+base byte-for-byte, which is what her "Supportive is a removable add-on" rule
+requires of every layer.
+**The length note.** Period-Formal already sits at the ~400-character ceiling
+her phone's message box starts scrolling past; with the BBT line it measures
+457. A quiet "Long message · N characters" appears above the chips past 400 —
+a nuisance, not an error, so it stays grey and uncoloured. Do not "fix" this by
+shortening her confirmed wording.
+**Still hers to decide, flagged not acted on:** Ovulation already asks about "a
+positive OPK or any other signs yet, like vaginal discharge or BBT temp spike?"
+and the add-on then asks for a screenshot of the chart. Different requests, but
+they sit close together and read a little repetitively. Her text, her call.
+**Menses is NOT a toggle** and has no add-on id — it is baked permanently into
+the Period-Formal bodies, base and +Supportive, never Casual.
+
 **Open, unresolved:**
 - Whether Supportive applies anywhere outside the cycle track (stress/anxiety
   plans are a live guess, not confirmed).
