@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260910-081500">
+<meta name="lcm-build" content="20260910-083000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -7081,6 +7081,9 @@
   #pharmacyPage .ph-tp-rec-line { display: block; }
   #pharmacyPage .ph-tp-rec-line + .ph-tp-rec-line { margin-top: 3px; }
   #pharmacyPage .ph-tp-rec-none { color: var(--ph-faint); }
+  #pharmacyPage .ph-tp-grid td.ph-tp-reccell.notyet { vertical-align: middle; background: var(--ph-paper, #F5F8F4); }
+  #pharmacyPage .ph-tp-grid td.ph-tp-reccell.notyet b { display: block; color: var(--ph-soft); font-weight: 700; margin-bottom: 3px; }
+  #pharmacyPage .ph-tp-grid td.ph-tp-reccell.notyet .d { display: block; color: var(--ph-faint); font-size: 11.5px; line-height: 1.5; }
   /* a closed phase's plan is frozen -- it still reads, it just stops inviting */
   #pharmacyPage .ph-tp-grid td.ph-tp-cell.frozen { cursor: default; }
   #pharmacyPage .ph-tp-grid td.ph-tp-cell.frozen:hover { background: none; }
@@ -40658,6 +40661,10 @@ or changing anything in Cliniko.
         return line(`${txt ? `“${esc(txt)}”` : ""}${going ? `${txt ? " " : ""}<b>${esc(going)}</b>` : ""} ${d(ck.date)}`);
       }).join("");
     }
+    if (kind === "periods") {
+      if (!rc.periods.length) return none;
+      return rc.periods.map(p => esc(phShortDate(p.lmp))).join(", ");
+    }
     return none;
   }
   function phTpSpanText(ph) {
@@ -40738,7 +40745,19 @@ or changing anything in Cliniko.
     const cell = (f, extra) => frozen
       ? `<td class="ph-tp-cell frozen${phase[f] ? "" : " empty"}"${extra || ""} title="This phase is closed — unlock it on the phase line to edit">${phase[f] ? esc(phase[f]) : "—"}</td>`
       : `<td class="ph-tp-cell${phase[f] ? "" : " empty"}"${extra || ""} data-tp-edit="${plan.id}:${phase.id}:${f}" title="Click to edit">${phase[f] ? esc(phase[f]) : esc(PH_TP_FIELD_PH[f])}</td>`;
-    const rec = (label, kind) => `<td class="ph-tp-lbl mid rec">${label}</td><td class="ph-tp-reccell">${phTpRecordCellHtml(kind, rc)}</td>`;
+    /* Her report 2026-09-10, "why can't i edit this?", on a phase not yet
+       started: five rows each saying "not started" is the same non-fact five
+       times, and it reads like five broken fields rather than one section that
+       has not begun. Said once, spanning the block, it reads as what it is --
+       and it says out loud that this side fills itself in, which is the part
+       that was not obvious from a column of empty-looking cells. */
+    let recSpanned = false;
+    const rec = (label, kind) => {
+      if (rc) return `<td class="ph-tp-lbl mid rec">${label}</td><td class="ph-tp-reccell">${phTpRecordCellHtml(kind, rc)}</td>`;
+      if (recSpanned) return "";
+      recSpanned = true;
+      return `<td class="ph-tp-reccell notyet" colspan="2" rowspan="5"><b>Nothing yet — this phase hasn’t started.</b><span class="d">This side fills itself in from your visits, scripts, check-ins and periods once the phase is current. You never type it.</span></td>`;
+    };
     // her pick (2026-09-08): a short chip, the suggestion as faint text beside it
     const formula = phase.formulaName
       ? `<button type="button" class="ph-tp-formula-chip" data-tp-formula-unlink="${plan.id}:${phase.id}" title="Click to unlink">🌿 ${esc(phase.formulaName)} ✕</button>`
@@ -40750,7 +40769,7 @@ or changing anything in Cliniko.
       <tr><td class="ph-tp-lbl">Visits</td>${cell("cadence")}${rec("Visits", "visits")}</tr>
       <tr><td class="ph-tp-lbl">Formula</td><td class="ph-tp-fcell">${formula}${picking ? phTpPhaseFormulaPickerHtml(phase) : ""}</td>${rec("Dispensed", "dispensed")}</tr>
       <tr><td class="ph-tp-lbl">Points</td>${cell("points")}${rec("Done", "acu")}</tr>
-      <tr><td class="ph-tp-lbl">Watch</td>${cell("watch")}<td class="ph-tp-lbl mid rec">Periods</td><td class="ph-tp-reccell">${rc && rc.periods.length ? rc.periods.map(p => esc(phShortDate(p.lmp))).join(", ") : `<span class="ph-tp-rec-none">${rc ? "—" : "not started"}</span>`}</td></tr>`;
+      <tr><td class="ph-tp-lbl">Watch</td>${cell("watch")}${rec("Periods", "periods")}</tr>`;
   }
   /* Visits presets (her ask 2026-09-10: "number of visits, let me select from
      preset instead of type"). Every string here is lifted VERBATIM from her
@@ -40832,7 +40851,23 @@ or changing anything in Cliniko.
     grow(); inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length);
     inp.addEventListener("input", grow);
     inp.addEventListener("keydown", e => { if (e.key === "Escape" || (e.key === "Enter" && !multi)) { e.preventDefault(); inp.blur(); } });
-    inp.addEventListener("blur", () => { ph[field] = inp.value; savePharmacy(); phTpRerender(); });
+    inp.addEventListener("blur", () => {
+      ph[field] = inp.value; savePharmacy();
+      /* Her report 2026-09-10: "when i type then click outside the box, screen
+         scrolls to the top. i dont like that." phTpRerender() rebuilds the
+         whole panel, so the browser throws the scroll position away -- on a
+         plan with several phases that is a jump to the top after every single
+         cell she edits. Her standing rule is update-in-place, never a top
+         re-render, and this path was breaking it.
+
+         Nothing on the row derives from aim / watch / points / label except the
+         cell itself, so putting its own text back IS the whole update. Cadence
+         is deliberately not routed through here: the phase line's "book <date>"
+         chip is computed from it, so that one still needs its row rebuilt. */
+      el.classList.remove("editing");
+      el.classList.toggle("empty", !ph[field]);
+      el.textContent = ph[field] || PH_TP_FIELD_PH[field] || "";
+    });
   }
   function phTpReviewRowHtml(plan, r) {
     const arming = phTpDeleteArm === r.id;
