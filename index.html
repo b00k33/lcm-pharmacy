@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260909-223000">
+<meta name="lcm-build" content="20260909-224500">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -17747,8 +17747,17 @@
   // register links, or its name matches a multi-ingredient recipe outright
   const phJarHouseBlend = h => h.source === "premade" ? false
     : (phIsFormula(h) && phMadeInHouse(h)) || phBlendNamesGet().has(h.name.trim().toLowerCase());
+  // her measured report (2026-09-09): keying the escape hatch on "who differs
+  // from what" quietly filed 11 real sales -- $644.20, $423.27 profit, 1,030g,
+  // 28 Jul to 7 Sep -- as stock she'd made. A patient script saved with the
+  // Formula box empty wrote her patient's name into BOTH fields (see
+  // presSavePrescription), and a single pre-made jar then resolved to a house
+  // blend below. Carrying a buyer IS the whole test, exactly as the comment
+  // above always said: batch makes are kind:"refill" and never carry a patient
+  // (0 of her 1,052 refills do; both refMakeCommit writers omit the field),
+  // and of 2,760 dispenses only 3 have no patient at all.
   const phEntryIsHouseMake = e => {
-    if (e.patient && e.patient !== e.what) return false;   // sold to someone — a real sale
+    if (e.patient) return false;                           // sold to someone — a real sale
     const jar = phEntryJar(e);
     return !!(jar && phJarHouseBlend(jar));
   };
@@ -43863,12 +43872,24 @@ Dosage: {dosage}
     // tell which is which (her 2026-08-14 report: formula column showed the
     // patient's name, patient column went blank)
     const formulaLabel = presIsFormula(t) ? "" : ((document.getElementById("presFormulaText") || {}).value || t.formula || "").trim();
+    // ...and the 2026-08-14 fix above only closed half of it: with the Formula
+    // box left EMPTY, `formulaLabel || t.name` still fell through to the
+    // patient's name, so "what" kept echoing "who". Measured 2026-09-09: that
+    // is how 11 single-jar refills got read as house batches and dropped out
+    // of her takings (see phEntryIsHouseMake). One pre-made jar dispensed with
+    // no formula typed HAS a true name -- the jar's own -- so say that instead.
+    // A multi-herb mix with nothing typed genuinely has no name; it keeps
+    // falling back to t.name exactly as before (the Log table's
+    // `e.patient === e.what` column already handles that shape, and it can no
+    // longer cost her money now the guard only asks whether there was a buyer).
+    const whatLabel = presIsFormula(t) ? t.name
+      : (formulaLabel || (items.length === 1 ? (items[0].name || "").trim() : "") || t.name);
     const entry = {
       id: uid(), kind: "dispense", date: keyOf(TODAY), at: now.getTime(),
       patient: presPatientFor(t), method,
       formula: formulaLabel,
       dosage: [presDosageText(), presInstructionText()].filter(Boolean).join(" · "),
-      what: presIsFormula(t) ? t.name : (formulaLabel || t.name), grams: gp, cost: phRound2(cost), price: phRound2(price),
+      what: whatLabel, grams: gp, cost: phRound2(cost), price: phRound2(price),
       useBefore: presUseBeforeStr(now),
       items: items.map(x => ({ code: x.code, name: x.name, grams: x.grams })),
       deducted: presPending[t.id] || [],

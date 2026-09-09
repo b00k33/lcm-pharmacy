@@ -410,6 +410,17 @@ looks, so it cannot be bolted on later.
   script opens) — it must NEVER overwrite a Case she set herself, including an explicit "General" (stored as
   the value `"general"`, not null). Test: patient with a Natural fertility plan + a blank script → opens as
   Fertility; pick General → stays General after re-render and reload.
+- **A dispense with a patient on it is ALWAYS a sale** (her decision 2026-09-09, after I measured it:
+  *"Fix it, and stop new ones too"*). `phEntryIsHouseMake` used to ask "is who different from what?" —
+  which a patient script saved with the **Formula box empty** defeated, because "what" then echoed the
+  patient's own name. Measured against her live log that had quietly filed **11 real sales — $644.20,
+  $423.27 profit, 1,030 g, 28 Jul–7 Sep** — as stock she'd made: August alone showed $791.30 instead of
+  $1,217.70. The guard now asks only whether the entry carries a buyer. **Never reintroduce a
+  `e.patient !== e.what` test there** — batch makes are `kind:"refill"` and carry no patient at all
+  (0 of her 1,052 refills do; both `refMakeCommit` writers omit the field), and of 2,760 dispenses only
+  3 have no patient. Second half of the same fix: `presSavePrescription` now names a single-jar dispense
+  after the JAR, not the patient, when no formula is typed — so the collision stops being created.
+  A multi-herb mix with no formula name still falls back to the patient's name, which is harmless now.
 - No white/light-mode regressions, no cut-off elements, no boxes-in-boxes.
 - **End of day** (her spec 2026-09-07; `phEodSelfCheck()` warns in the console on load if any of these break):
   1. Before 16:00 the Dashboard's "Wrap up the day" row is absent; at/after 16:00 it is present.
