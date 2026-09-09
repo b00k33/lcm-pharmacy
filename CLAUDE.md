@@ -364,6 +364,36 @@ reads existing data without changing any; (b) plan tabs + the loose "Not on a pl
 (c) the three-way stage split; (d) freeze/unlock; (e) print. Do NOT start with the stage
 split — it is the most disruptive part and the least valuable on its own.
 
+**12. HERBS CAN BE TURNED OFF (her ask 2026-09-09: "give an option to turn off herbal
+treatment/prescriptions. some plans/patients dont want/need herbs").** Two switches, her
+answer: **the PATIENT carries the default, a PLAN may differ.** Patient-level off means
+**everything** for that patient goes quiet — no Formula rows, no dispense, no refill, no
+herb follow-ups — her explicit choice over "the plan only". A plan that says herbs-on
+brings the herb side back for that course only; that is how the two answers reconcile, and
+it is the ONE interaction to get right. An acu-only plan simply has no prescriptions,
+which does not weaken answer 4 (every new prescription still sits on a plan).
+**Reuse before inventing:** `phCaseQuiets(t, "herbs")` already FOLDS the herbs editor for
+Pain/Neurological cases behind a "not typical for this case" toggle (`PH_CASE_QUIET`,
+~30643; used at ~38001/38113). That stays as the soft, Case-driven default. Her new switch
+is EXPLICIT and stronger, and must win over it — do not end up with two competing
+mechanisms. Model it on `rec.acuEnabled` (the existing Tracking toggle), and store it
+positively so an absent field means the current behaviour for all 510 existing records.
+
+### Two traps for whoever builds this — both verified in the source, not assumed
+- **`phPatientRec()` MUTATES plans on every single call.** Right after its lazy-init it runs
+  `r.treatmentPlans.forEach(...)`, renaming any "Cycle & IVF Protocol" template/title to
+  "IVF Protocol" and promoting `p.cycle` up to `r.cycle`. A tab strip repaints constantly,
+  so a render path that calls `phPatientRec` rewrites plan fields in memory on every
+  repaint, with no save — divergence that only shows up after a reload. **Render from
+  `phPatientPeek` / `phTpPlans` (which already do); reserve `phPatientRec` for writes.**
+- **`savePharmacy()` can REFUSE the write and return `false`** — the unrecoverable-data
+  guard and the shrink guard both bail out silently. Both existing plan-creation paths
+  ignore that return value. New plan writes must check it, or a plan she just made can
+  vanish on reload with no warning.
+- Plan identity is **(patientKey, plan.id)** — there is no plan index and nothing resolves a
+  plan from its id alone. Any new tab must carry both, the way `data-tp-inline-open`
+  already encodes `"name|planId"` and splits on `lastIndexOf("|")`.
+
 **Why print matters and must not be dropped:** she is a registered practitioner; a medical
 record has to be producible for a patient, another practitioner, an insurer or a records
 request. This is the one requirement that changes how the page is BUILT rather than how it
