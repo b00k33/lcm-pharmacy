@@ -352,11 +352,17 @@ language. Two columns will not fit 360px: stack planned then actual, don't shrin
 4. Going forward **every new prescription must sit on a plan**. The loose tab is legacy-only, not a destination.
 5. Tapping a phase's formula opens the **existing full-screen script page**, ‹ Back to the plan. That page does not change.
 6. **Several prescriptions per phase, newest first** — so a mid-phase formula change reads as history, not an overwrite.
-7. The five stages (Opening/Assessment/Treatment/Dispense/Follow-up): **STILL OPEN — she said "show me".** Mock the three options (split patient-stages onto the profile vs leave as-is vs all five on the profile) and re-ask. Do not guess.
+7. The five stages: **SPLIT THREE WAYS** (she was shown what each stage actually contains, then chose the biggest of three options — as she reliably does). **Opening + Assessment stay on the PROFILE.** **Treatment becomes the plan tabs, and Follow-up moves ONTO the plan** — a review of a course of treatment belongs to the course, not to one script. **Dispense moves to the SCRIPT page** opened from a phase. The five-stage stepper as a control disappears. The observation that decided it, worth keeping: **of the five stages only Dispense is about one prescription** — Opening and Assessment are entirely about the patient, and Treatment already *contains* the treatment plan.
 8. A finished plan **stays a tab, greyed, at the end** — past courses one tap away.
 9. A done phase's Planned column **freezes, with an unlock** that records the fact it was edited after closing.
 10. **A proper printable record** is required — full course: diagnosis, goal, each phase planned vs done, formulas, dates. Build it the way the Dr Authorisation label print works.
-11. The band subtitle must stop saying "patient prescription" — this page is the **patient profile**.
+11. The band subtitle stops saying "patient prescription" and becomes **the active plan and its current phase** — e.g. "Natural fertility · Follicular". She chose live information over a static label (and over dropping the line entirely), so the subtitle now answers "where is she up to" without looking down the page. Falls back to something sensible when there is no plan yet.
+
+**Nothing above is built yet.** Build order that keeps her working throughout: (a) the phase
+date-window gatherer + the Planned/What-happened rows, since that is the whole value and it
+reads existing data without changing any; (b) plan tabs + the loose "Not on a plan" tab;
+(c) the three-way stage split; (d) freeze/unlock; (e) print. Do NOT start with the stage
+split — it is the most disruptive part and the least valuable on its own.
 
 **Why print matters and must not be dropped:** she is a registered practitioner; a medical
 record has to be producible for a patient, another practitioner, an insurer or a records
