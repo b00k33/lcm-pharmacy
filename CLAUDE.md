@@ -879,10 +879,20 @@ her phone's message box starts scrolling past; with the BBT line it measures
 457. A quiet "Long message · N characters" appears above the chips past 400 —
 a nuisance, not an error, so it stays grey and uncoloured. Do not "fix" this by
 shortening her confirmed wording.
-**Still hers to decide, flagged not acted on:** Ovulation already asks about "a
-positive OPK or any other signs yet, like vaginal discharge or BBT temp spike?"
-and the add-on then asks for a screenshot of the chart. Different requests, but
-they sit close together and read a little repetitively. Her text, her call.
+**DECIDED 2026-09-09 — the Ovulation overlap stays.** Ovulation already asks
+about "a positive OPK or any other signs yet, like vaginal discharge or BBT
+temp spike?" and the add-on then asks for a screenshot of the chart. Raised
+with her as reading a little repetitive, with the option of keeping the chart
+line on Period only; she chose **"Leave both as they are"**. Don't re-raise it,
+and don't quietly drop `bbt` from `PH_CODE3_MOMENTS.ovulation.addons` — the
+line only appears for a ticked patient, so most Ovulation messages never carry
+it, which is the reason the overlap is acceptable to her.
+**NOT PUBLISHED at her instruction (2026-09-09).** Asked whether to push the
+BBT tick + the add-on data live, she chose **"Not yet — let me look first"**.
+`f05b59a` and `d3cd7d5` sit committed and unpushed; `origin/main` is at
+`439a2ed`. Because d3cd7d5 is f05b59a's parent, ANY push of the tick also
+deploys the wording change — they go live together or not at all. Do not push
+either until she says go.
 **Menses is NOT a toggle** and has no add-on id — it is baked permanently into
 the Period-Formal bodies, base and +Supportive, never Casual.
 
