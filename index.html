@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260910-083000">
+<meta name="lcm-build" content="20260910-093000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -7123,6 +7123,22 @@
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' fill='none' stroke='%23555' stroke-width='1.5'/></svg>");
     background-repeat: no-repeat; background-position: right 8px center;
   }
+  /* Visits: how many · how often · what for. Three controls in the width of
+     one cell, so they wrap onto a second line on a phone rather than shrink —
+     her standing trade (compress the chrome, never the data). Same hairline
+     pill as .ph-tp-msdate, including the radius !important that lifts a
+     control past the app-wide rule. */
+  #pharmacyPage .ph-tp-vis { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 6px 8px; }
+  #pharmacyPage .ph-tp-vissel { font: inherit; font-size: 12px; padding: 4px 6px; border: 1px solid var(--ph-line);
+    border-radius: 8px !important; background: var(--ph-white); color: var(--ph-ink); min-height: 0; }
+  #pharmacyPage .ph-tp-vissel:focus { outline: none; border-color: var(--ph-green-deep); }
+  #pharmacyPage .ph-tp-vissel:disabled { color: var(--ph-faint); background: var(--ph-paper, #F5F8F4); }
+  #pharmacyPage .ph-tp-vistype { border: 0; background: none; padding: 0 4px; font: inherit; font-size: 11px;
+    color: var(--ph-faint); cursor: pointer; min-height: 0; text-decoration: underline; }
+  #pharmacyPage .ph-tp-vistype:hover { color: var(--ph-green-deep); }
+  /* only ever present when the pickers can't say what she already has */
+  #pharmacyPage .ph-tp-viskeep { flex: 0 0 100%; font-size: 11px; color: var(--ph-faint); line-height: 1.4; }
+  #pharmacyPage .ph-tp-viskeep em { font-style: normal; color: var(--ph-soft); }
   #pharmacyPage .ph-tp-phst.current { background-color: var(--margin-rule, #E3C87A); color: var(--ph-gold-deep, #7A5A10); }
   #pharmacyPage .ph-tp-phst.upcoming { background-color: transparent; border: 1px dashed var(--ph-line); color: var(--ph-soft); }
   #pharmacyPage .ph-tp-phst:focus-visible { outline: 2px solid var(--ph-green); outline-offset: 1px; }
@@ -40771,21 +40787,96 @@ or changing anything in Cliniko.
       <tr><td class="ph-tp-lbl">Points</td>${cell("points")}${rec("Done", "acu")}</tr>
       <tr><td class="ph-tp-lbl">Watch</td>${cell("watch")}${rec("Periods", "periods")}</tr>`;
   }
-  /* Visits presets (her ask 2026-09-10: "number of visits, let me select from
-     preset instead of type"). Every string here is lifted VERBATIM from her
-     own Cycle & IVF / MSK phase templates, and that is load-bearing:
-     phTpCadenceDate() reads this same field to offer the "book <date>" chip,
-     and it only recognises her existing phrasing ("day before", "straight
-     after", "N days after"). Re-wording these presets to read more tidily
-     would silently kill that chip -- so they stay word for word.
-     "Type your own…" keeps the escape hatch, using the same __custom idiom
-     the script tabs' Phase picker already uses. */
-  const PH_TP_CADENCE_PRESETS = [
-    ["Regular", ["1×/wk", "1–2×/wk", "2×/wk", "3×/wk", "Fortnightly", "Fortnightly, then as needed", "Monthly", "As needed"]],
-    ["With herbs", ["1×/wk acupuncture · herbs", "Weekly acupuncture · herbs", "No visit needed — herbs only"]],
-    ["Timed to a clinic date", ["One visit in the ovulation window", "One visit 1–2 days after retrieval", "One visit the day of, or the day before, transfer", "One visit straight after transfer, then weekly through the 2WW"]],
-    ["For a set stretch", ["2×/wk while acute", "2×/wk for the first 1–2 weeks", "Weekly to 14 weeks", "One visit once a test is negative, then 1×/wk until flow"]],
-  ];
+  /* Visits = three pickers (her ask 2026-09-10, clarified twice: "i meant for
+     visits, let me choose: number, frequency", then "include visit for acu or
+     herbs"). How many · how often · what the visit is for.
+
+     WHY THIS WRITES A STRING INSTEAD OF STORING THREE FIELDS. `phase.cadence`
+     is not display text — four live systems read it:
+       · phAcuCadenceParse (32607) turns it into a day interval, which is what
+         sets her acupuncture follow-up dates on Communications;
+       · phTpCadenceDate / phTpCadenceKind, the "book <date>" chip;
+       · the cycle visit rows, which print it as a subtitle;
+       · plan template seeding, which copies it.
+     Storing a structured value beside the string would leave two sources of
+     truth for one fact, and this app already has documented snapshot-vs-live
+     drift. So the pickers COMPOSE the string those parsers already understand,
+     and read it back apart when she reopens the cell.
+
+     ACU / HERBS IS NOT A LABEL — it decides whether Communications chases her
+     for an acupuncture follow-up at all. `no visit needed|herbs only` is
+     phAcuCadenceParse's very FIRST test and turns acu off for the phase, which
+     is also how she gets the "some plans don't need herbs" behaviour she asked
+     for separately. So "Herbs only" has to carry those exact words, and
+     "Acupuncture + herbs" deliberately reuses the ` acupuncture · herbs`
+     wording already in her own templates rather than inventing a synonym.
+
+     A cadence the pickers can't represent is LEFT ALONE. Most of her IVF and
+     gynae phases are timed prose ("One visit the day of, or the day before,
+     transfer") — that is what feeds the book-date chip, and it has no number
+     and no frequency. phTpCadenceDecompose returns null for those; the editor
+     then shows the text she already has, leaves every picker unset, and writes
+     nothing until she actually chooses. "Type instead" stays for the rest. */
+  const PH_TP_VISIT_PER = [["wk", "a week"], ["fn", "a fortnight"], ["mo", "a month"]];
+  const PH_TP_VISIT_FOR = [["acu", "Acupuncture"], ["both", "Acupuncture + herbs"], ["herbs", "Herbs only"]];
+  // How high the number list goes for each period. Fortnight stops at 1 on
+  // purpose: "2 a fortnight" IS "1 a week", it composes to the same interval,
+  // and offering both gives two controls that disagree about the same fact —
+  // pick 2-a-fortnight, reopen, and it would read back as prose. A fortnight
+  // is a rhythm here, not a count. A month still counts (2 a month = every 15
+  // days), and each of those round-trips cleanly.
+  const PH_TP_VISIT_MAX = { wk: 5, fn: 1, mo: 4 };
+  // Every string this can produce was checked against phAcuCadenceParse:
+  // "N×/wk" -> 7/N days, "Fortnightly" -> 14, "Monthly" -> 30, "every N days"
+  // -> N, and anything carrying "herbs only" -> acupuncture off.
+  function phTpCadenceCompose(n, per, forWhat) {
+    if (!n) return "No visit needed — herbs only";
+    const base = per === "wk" ? `${n}×/wk`
+      : per === "fn" ? (n === 1 ? "Fortnightly" : `every ${Math.round(14 / n)} days`)
+      : (n === 1 ? "Monthly" : `every ${Math.round(30 / n)} days`);
+    return forWhat === "both" ? `${base} acupuncture · herbs`
+      : forWhat === "herbs" ? `${base} · herbs only`
+      : base;
+  }
+  /* null = "the pickers cannot say this", which is a real answer, not a failure.
+
+     The test is a ROUND TRIP, and it has to be: reading a prefix is not enough.
+     Measured against her own templates, a prefix match called 17 of the 36
+     representable — but half of those were prose wearing a rhythm at the front
+     ("2×/wk while acute", "1×/wk for 6 weeks, then fortnightly · herbs daily",
+     "Fortnightly acupuncture while bloods and imaging are pending"). The
+     pickers would have shown "2 a week" and quietly dropped "while acute" —
+     the clinically meaningful half — the moment she touched one. So a
+     decomposition only counts if composing it back reproduces the string she
+     already has; anything else is prose and is left exactly as written. */
+  function phTpCadenceDecompose(text) {
+    const got = phTpCadenceRead(text);
+    if (!got) return null;
+    const norm = s => String(s || "").trim().replace(/\s+/g, " ").toLowerCase();
+    return norm(phTpCadenceCompose(got.n, got.per, got.forWhat)) === norm(text) ? got : null;
+  }
+  function phTpCadenceRead(text) {
+    const t = String(text || "").trim();
+    if (!t) return null;
+    if (/no visit needed/i.test(t)) return { n: 0, per: "wk", forWhat: "herbs" };
+    const forWhat = /herbs only/i.test(t) ? "herbs" : /herbs/i.test(t) ? "both" : "acu";
+    let m = /^(\d+)\s*[x×]\s*\/\s*wk\b/i.exec(t);
+    if (m) return { n: +m[1], per: "wk", forWhat };
+    if (/^fortnightly\b/i.test(t)) return { n: 1, per: "fn", forWhat };
+    if (/^monthly\b/i.test(t)) return { n: 1, per: "mo", forWhat };
+    m = /^every\s+(\d+)\s*days?\b/i.exec(t);
+    if (m) {
+      const d = +m[1];
+      // 7 is reachable two ways (once a week, twice a fortnight). They mean the
+      // same thing and both parse to 7, so read it the plainer way; a reopened
+      // "every 7 days" therefore settles as "1 a week", which is not a loss.
+      if (d === 7) return { n: 1, per: "wk", forWhat };
+      if (d === 14) return { n: 1, per: "fn", forWhat };
+      for (let k = 2; k <= PH_TP_VISIT_MAX.fn; k++) if (Math.round(14 / k) === d) return { n: k, per: "fn", forWhat };
+      for (let k = 2; k <= PH_TP_VISIT_MAX.mo; k++) if (Math.round(30 / k) === d) return { n: k, per: "mo", forWhat };
+    }
+    return null;
+  }
   // a value cell becomes its own field on click; blur writes the value and
   // re-renders the text. Re-rendering on blur detaches whatever the next
   // click landed on, so the click handler re-finds the live cell by key.
@@ -40798,44 +40889,90 @@ or changing anything in Cliniko.
     const plan = phTpFindPlan(phTpScreenPatient, planId);
     const ph = plan && plan.phases.find(p => p.id === phaseId);
     if (!ph) return;
-    // Visits picks from the list; every other cell stays the typed field it was
+    // Visits is chosen, not typed; every other cell stays the field it was
     if (field === "cadence") {
       const cur = ph.cadence || "";
-      const known = PH_TP_CADENCE_PRESETS.some(g => g[1].includes(cur));
-      const sel = document.createElement("select");
-      sel.className = "ph-tp-cellin field-bare";
-      sel.setAttribute("data-tp-phase-field", key);
-      sel.setAttribute("aria-label", `Visits for ${ph.label || "this phase"}`);
-      sel.innerHTML =
-        `<option value=""${cur ? "" : " selected"}>— not set —</option>` +
-        // anything she typed before the picker existed stays selectable, so
-        // opening an old plan never silently rewrites what it said
-        (cur && !known ? `<option value="${esc(cur)}" selected>${esc(cur)}</option>` : "") +
-        PH_TP_CADENCE_PRESETS.map(([label, opts]) =>
-          `<optgroup label="${esc(label)}">` +
-          opts.map(o => `<option value="${esc(o)}"${o === cur ? " selected" : ""}>${esc(o)}</option>`).join("") +
-          `</optgroup>`).join("") +
-        `<option value="__custom">Type your own…</option>`;
-      el.classList.add("editing"); el.innerHTML = ""; el.appendChild(sel);
-      sel.focus();
-      let chose = false;
-      sel.addEventListener("change", () => {
-        chose = true;
-        if (sel.value === "__custom") {
-          const inp = document.createElement("input");
-          inp.type = "text"; inp.className = "ph-tp-cellin field-bare";
-          inp.value = cur; inp.placeholder = PH_TP_FIELD_PH.cadence;
-          inp.setAttribute("data-tp-phase-field", key);
-          inp.setAttribute("aria-label", `Visits for ${ph.label || "this phase"}, typed`);
-          sel.replaceWith(inp); inp.focus(); inp.select();
-          inp.addEventListener("keydown", e => { if (e.key === "Escape" || e.key === "Enter") { e.preventDefault(); inp.blur(); } });
-          inp.addEventListener("blur", () => { ph.cadence = inp.value; savePharmacy(); phTpRerender(); });
-          return;
-        }
-        ph.cadence = sel.value; savePharmacy(); phTpRerender();
+      const got = phTpCadenceDecompose(cur);          // null = prose we must not mangle
+      const st = got || { n: 1, per: "wk", forWhat: "both" };
+      const box = document.createElement("div");
+      box.className = "ph-tp-vis";
+      box.setAttribute("data-tp-phase-field", key);
+      // what she has now, shown only when the pickers can't express it — so she
+      // can see exactly what a choice would replace before she makes one
+      const keepLine = cur && !got
+        ? `<div class="ph-tp-viskeep">Now: <em>${esc(cur)}</em></div>` : "";
+      const mkOpts = (list, val) => list.map(([v, l]) =>
+        `<option value="${v}"${v === val ? " selected" : ""}>${esc(l)}</option>`).join("");
+      // The three selects are built ONCE and stay alive while she works. An
+      // earlier pass repainted the row on every change, which blew away the
+      // focused control and shut the editor after a single pick — she has
+      // three choices to make, so the editor has to survive all three.
+      const mk = (vis, html, label) => {
+        const s = document.createElement("select");
+        s.className = "ph-tp-vissel"; s.dataset.vis = vis;
+        s.setAttribute("aria-label", label); s.innerHTML = html;
+        return s;
+      };
+      const numHtml = () => {
+        const max = PH_TP_VISIT_MAX[st.per] || 5;
+        let o = `<option value="0"${st.n === 0 ? " selected" : ""}>No visit</option>`;
+        for (let i = 1; i <= max; i++) o += `<option value="${i}"${st.n === i ? " selected" : ""}>${i}</option>`;
+        return o;
+      };
+      const numSel = mk("n", numHtml(), `How many visits for ${ph.label || "this phase"}`);
+      const perSel = mk("per", mkOpts(PH_TP_VISIT_PER, st.per), "How often");
+      const forSel = mk("for", mkOpts(PH_TP_VISIT_FOR, st.forWhat), "What the visit is for");
+      const typeBtn = document.createElement("button");
+      typeBtn.type = "button"; typeBtn.className = "ph-tp-vistype";
+      typeBtn.dataset.vis = "type"; typeBtn.textContent = "Type instead";
+      if (keepLine) box.insertAdjacentHTML("beforeend", keepLine);
+      box.append(numSel, perSel, forSel, typeBtn);
+      const syncOff = () => { const off = st.n === 0; perSel.disabled = off; forSel.disabled = off; };
+      syncOff();
+      el.classList.add("editing"); el.innerHTML = ""; el.appendChild(box);
+      numSel.focus();
+      // save on every pick, but DON'T rerender yet — the row is rebuilt once
+      // she leaves, so the "book <date>" chip still refreshes off the new
+      // string without the editor closing under her mid-choice
+      const write = () => { ph.cadence = phTpCadenceCompose(st.n, st.per, st.forWhat); savePharmacy(); };
+      box.addEventListener("change", e => {
+        const s = e.target.closest("select[data-vis]");
+        if (!s) return;
+        if (s.dataset.vis === "n") { st.n = +s.value; syncOff(); }
+        else if (s.dataset.vis === "per") {
+          st.per = s.value;
+          // 5 a week is sensible, 5 a month is not — keep the number in range,
+          // and reshape only the number list so nothing else loses focus
+          st.n = Math.min(st.n, PH_TP_VISIT_MAX[st.per] || 5);
+          numSel.innerHTML = numHtml();
+        } else st.forWhat = s.value;
+        write();
       });
-      // clicked away without choosing -- put the cell back, change nothing
-      sel.addEventListener("blur", () => { if (!chose && sel.isConnected) phTpRerender(); });
+      box.addEventListener("click", e => {
+        if (!e.target.closest('[data-vis="type"]')) return;
+        const inp = document.createElement("input");
+        inp.type = "text"; inp.className = "ph-tp-cellin field-bare";
+        inp.value = cur; inp.placeholder = PH_TP_FIELD_PH.cadence;
+        inp.setAttribute("data-tp-phase-field", key);
+        inp.setAttribute("aria-label", `Visits for ${ph.label || "this phase"}, typed`);
+        box.replaceWith(inp); inp.focus(); inp.select();
+        // Enter/Esc commit DIRECTLY, never by calling blur() and letting the
+        // blur handler do it. Caught in testing, and it is the trap already
+        // written down for the tab/plan-title renames: while the document
+        // isn't the focused one, focus() silently no-ops and blur() fires
+        // nothing, so a blur-only commit loses exactly what she just typed.
+        // Idempotent, so the blur path can stay for click-away.
+        let done = false;
+        const commit = () => { if (done) return; done = true; ph.cadence = inp.value; savePharmacy(); phTpRerender(); };
+        inp.addEventListener("keydown", ev => { if (ev.key === "Escape" || ev.key === "Enter") { ev.preventDefault(); commit(); } });
+        inp.addEventListener("blur", commit);
+      });
+      // clicked away without choosing -- put the cell back, change nothing.
+      // focusout (not blur) because focus moves BETWEEN the three selects and
+      // blur doesn't bubble; the timeout lets that land before we decide.
+      box.addEventListener("focusout", () => setTimeout(() => {
+        if (box.isConnected && !box.contains(document.activeElement)) phTpRerender();
+      }, 0));
       return;
     }
     const multi = field === "aim" || field === "watch" || field === "points";

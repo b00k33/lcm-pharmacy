@@ -123,7 +123,100 @@ update STYLE-LCM.md to match so future builds don't undo it.
   of the screen), a progression bar on top (`phTpProgressHtml`), ONE status pill per phase
   line (a `<select>`), done phases folded to their line, plan status as a pill in the green
   Treatment row band, click-to-edit cells. Default for any multi-item editor from now on:
-  table first, then ask. Also LIKES the /patients briefing table as a List
+  table first, then ask.
+  **VISITS IS THREE PICKERS: NUMBER × FREQUENCY × WHAT FOR (her ask 2026-09-10, clarified
+  twice — "number of visits, let me select from preset instead of type", then "i meant for
+  visits, let me choose: number, frequency", then "include visit for acu or herbs"; BUILT).**
+  **The first build was a preset list of cadence strings and it was wrong twice over** —
+  wrong on the facts (hand-typed, it covered 15 of the 36 cadences her templates actually use
+  and carried four strings that appear nowhere in her app), and still wrong on the design
+  after being rebuilt to read the templates live. Her clarification retired the whole idea.
+  **Do not reintroduce a preset string list.** What replaced it, and what is load-bearing:
+  1. **It COMPOSES a string, it does not store three fields.** `phase.cadence` is read by
+     four live systems — `phAcuCadenceParse` (~32607, the acu follow-up dates on
+     Communications), `phTpCadenceDate`/`phTpCadenceKind` (the "book <date>" chip), the cycle
+     visit rows that print it as a subtitle, and template seeding. A structured value beside
+     the string would be a second source of truth for one fact. `phTpCadenceCompose` writes
+     what those parsers already read; `phTpCadenceDecompose` reads it back apart.
+  2. **Acu / herbs is not a label — it switches acupuncture follow-ups off.**
+     `no visit needed|herbs only` is `phAcuCadenceParse`'s FIRST test, so "Herbs only" must
+     carry those exact words; "Acupuncture + herbs" reuses her own templates' wording rather
+     than a synonym. This is also how she gets the herbs-off behaviour she asked for
+     separately. All 39 number×period×for combinations were checked: every one round-trips
+     exactly, every one is `matched` by the acu parser (none falls to the 7-day default), and
+     acu-on/off comes out right every time.
+  3. **A cadence the pickers can't say is LEFT ALONE, and the test is a ROUND TRIP.** A
+     prefix match is not enough: it called 17 of her 36 representable, but half were prose
+     wearing a rhythm at the front ("2×/wk while acute", "Fortnightly acupuncture while
+     bloods and imaging are pending") and picking anything would have silently deleted the
+     clinically meaningful half. `phTpCadenceDecompose` only accepts a reading if composing
+     it back reproduces the string exactly — 5 of 36 representable, **31 left as prose**.
+     Those show as `Now: <text>` above unset pickers, and **opening the cell writes nothing**;
+     the timed IVF/gynae prose that feeds the book-date chip is safe by construction.
+     "Type instead" is the escape hatch.
+  4. **A fortnight is a rhythm, not a count** (`PH_TP_VISIT_MAX = {wk:5, fn:1, mo:4}`):
+     "2 a fortnight" IS "1 a week" and composes to the same interval, so offering both gave
+     two controls that disagreed about one fact. A month still counts — 2 a month = "every 15
+     days" — and each of those round-trips.
+  5. **The three selects are built once and stay alive.** An earlier pass repainted the row
+     on every change, which blew away the focused control and shut the editor after a single
+     pick; she has three choices to make. Only the number list is rebuilt when the period
+     changes. Saving happens on every pick; `phTpRerender()` is deferred to `focusout` (not
+     `blur`, which doesn't bubble between the selects) so the "book <date>" chip still
+     refreshes without the editor closing under her mid-choice.
+  **Verified in the browser, not just read:** the pickers open pre-set from the phase's real
+  value, survive four changes in a row, grey the other two on "No visit", persist to
+  localStorage, restore the row on leaving, leave prose untouched when clicked away, and the
+  chips still read "book 13 Sep" / "book 14 Sep" against a 14 Sep transfer. A **done phase
+  can't reach any of it** — `cell()`'s frozen branch emits no `data-tp-edit` at all, so
+  `phTpCellEditOpen` is structurally unreachable there; confirmed in the source, not a guard
+  the picker has to remember.
+  **Flagged, NOT fixed — a pre-existing parser gap.** Eight of her own template cadences fail
+  `phAcuCadenceParse` and silently fall back to the 7-day default. Seven are the timed "One
+  visit …" ones, arguably fine since they are event-driven. The eighth is **"1×/fortnight
+  acupuncture · herbs"** — a plain rhythm that should read 14 days and reads 7, so
+  Communications chases those phases twice as often as her template intends. One line in
+  `phAcuCadenceParse` would fix it; left alone because it changes her live follow-up dates
+  and she didn't ask.
+
+  *(Superseded, kept only so nobody rebuilds it: the preset-list design, whose notes ran
+  here. `PH_TP_CADENCE_SHAPES` and `phTpCadenceOptions` are gone from the source.)*
+  <!--
+  The Visits cell alone opens a `<select>`, not the bare
+  input every other cell keeps — `phTpCellEditOpen`'s `field === "cadence"` branch. Three
+  things about it are load-bearing:
+  1. **The options are BUILT FROM HER TEMPLATES at open time (`phTpCadenceOptions`), never
+     hand-typed.** The first attempt was hand-typed, and measuring it against
+     `phTpAllTemplates()` killed it: it covered 15 of the 36 cadences her 18 templates
+     actually use, missed the two most common after the top few ("Weekly, tapering to
+     fortnightly" and "Monthly or as needed", four plans each), and carried four strings
+     that appear nowhere in her app. Reading the templates also picks up her own saved
+     templates and the Chapter 6 protocol import for free. **Never re-freeze this into a
+     literal list** — it goes stale the moment she edits a template.
+  2. **The wording is never tidied on the way through.** `phTpCadenceDate()` reads this
+     same field to offer the "book <date>" chip and only recognises her existing phrasing
+     ("day before", "straight after", "N days after"). A preset re-worded to read more
+     neatly silently kills the chip. Verified after the build: transfer 14 Sep still gives
+     "book 13 Sep" for the day-before phase and "book 14 Sep" for the straight-after one,
+     and a cadence it can't resolve degrades to the text as written.
+  3. **Order is the feature** (code7, infer → suggest): "For this phase" (that phase's own
+     template line) → "Rest of <template name>" → the whole corpus in four shape groups
+     (`PH_TP_CADENCE_SHAPES`; timing beats herbs, the same precedence `phCkStyle` uses for
+     travel over location) → "Type your own…". Anything she typed before the picker existed
+     is kept as its own selected option, so opening an old plan never rewrites what it said.
+  -->
+  **The bug this build found, worth not repeating:** the "Type your own…" input committed on
+  blur only, and blur never fires while the document isn't the focused one — `focus()` and
+  `blur()` both silently no-op there, so her typed words vanished. Caught by testing with
+  `document.hasFocus() === false`. It now commits DIRECTLY on Enter/Esc with an idempotent
+  guard, blur kept for click-away — the same shape `data-pres-tab-rename` already uses (that
+  one was checked and is correct; don't "fix" it). **Two places still carry the blur-only
+  weakness: the OTHER grid cells (Aim / Watch / Points / Phase name) in the same
+  `phTpCellEditOpen`, and the `data-tp-title-edit` plan-title rename — both read and
+  confirmed 2026-09-10, flagged to her, deliberately NOT changed:** it alters behaviour on
+  fields she did not ask about, and `data-tp-title-edit` is the exact line a sibling session
+  had uncommitted work on that day ([[feedback_concurrent_clobber_protocol]]).
+  Also LIKES the /patients briefing table as a List
   view (her ask, then "these designs look lazy" about the old panel — cohesive, modern,
   functional). **THE SCRIPT PAGE (her ask 2026-09-08, "i want to edit patient
   prescription on an entirely new page instead of swiping down"; eight picks, BUILT):**
