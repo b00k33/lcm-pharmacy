@@ -171,13 +171,19 @@ update STYLE-LCM.md to match so future builds don't undo it.
   can't reach any of it** — `cell()`'s frozen branch emits no `data-tp-edit` at all, so
   `phTpCellEditOpen` is structurally unreachable there; confirmed in the source, not a guard
   the picker has to remember.
-  **Flagged, NOT fixed — a pre-existing parser gap.** Eight of her own template cadences fail
-  `phAcuCadenceParse` and silently fall back to the 7-day default. Seven are the timed "One
-  visit …" ones, arguably fine since they are event-driven. The eighth is **"1×/fortnight
-  acupuncture · herbs"** — a plain rhythm that should read 14 days and reads 7, so
-  Communications chases those phases twice as often as her template intends. One line in
-  `phAcuCadenceParse` would fix it; left alone because it changes her live follow-up dates
-  and she didn't ask.
+  **FIXED 2026-09-10, `2a4d9b6` — the parser gap this build found.** Eight of her own
+  template cadences failed `phAcuCadenceParse` and silently fell back to the 7-day
+  default. Seven are the timed "One visit …" ones, left alone since they are
+  event-driven. The eighth was **"1×/fortnight acupuncture · herbs"** — a plain rhythm
+  that should read 14 days and read 7, so Communications chased those phases twice as
+  often as her template intends. Raised with her because it moves real follow-up dates
+  on her Communications page; **she said yes.** Two clauses: `N×/fortnight` (14/n days,
+  the same shape as `N×/wk`) and `fortnight` matching bare as well as `fortnightly`, so
+  "every fortnight" reads too. **Surgical, and measured that way** — of the 36 cadence
+  strings her templates actually use, exactly one changed (7 → 14); the other 35 parse
+  identically before and after. Do not "tidy" the two clauses into one: the bare
+  `fortnight(ly)?` test sits BELOW `\bweekly\b`, so "Weekly, tapering to fortnightly"
+  still reads 7, which is the phase she is in when she writes it.
 
   *(Superseded, kept only so nobody rebuilds it: the preset-list design, whose notes ran
   here. `PH_TP_CADENCE_SHAPES` and `phTpCadenceOptions` are gone from the source.)*
