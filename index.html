@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260909-235500">
+<meta name="lcm-build" content="20260910-001500">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -7032,6 +7032,22 @@
   #pharmacyPage .ph-tp-grid td.ph-tp-cell.empty { color: var(--ph-faint); font-style: italic; }
   #pharmacyPage .ph-tp-grid td.ph-tp-cell:hover { background: var(--ph-paper, #F5F8F4); }
   #pharmacyPage .ph-tp-grid td.ph-tp-cell.editing { padding: 0; outline: 2px solid var(--ph-green); outline-offset: -2px; background: var(--ph-white); }
+  /* Planned | What happened (her spec 2026-09-09). The gathered half is not a
+     field: no hover, no text cursor, nothing to click -- it must never look
+     like something she is expected to fill in, because filling it in by hand is
+     precisely what makes a record drift from the log it came from. */
+  #pharmacyPage .ph-tp-grid tr.ph-tp-headrow td { border: 0; background: none; padding: 9px 12px 2px; }
+  #pharmacyPage .ph-tp-grid td.ph-tp-colhead { font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ph-faint); font-weight: 800; }
+  #pharmacyPage .ph-tp-grid td.ph-tp-reccell { color: var(--ph-ink); cursor: default; }
+  #pharmacyPage .ph-tp-grid td.ph-tp-reccell .d { color: var(--ph-faint); font-size: 11.5px; }
+  #pharmacyPage .ph-tp-rec-line { display: block; }
+  #pharmacyPage .ph-tp-rec-line + .ph-tp-rec-line { margin-top: 3px; }
+  #pharmacyPage .ph-tp-rec-none { color: var(--ph-faint); }
+  /* a closed phase's plan is frozen -- it still reads, it just stops inviting */
+  #pharmacyPage .ph-tp-grid td.ph-tp-cell.frozen { cursor: default; }
+  #pharmacyPage .ph-tp-grid td.ph-tp-cell.frozen:hover { background: none; }
+  #pharmacyPage .ph-tp-lock { border: 0; background: none; padding: 0 6px; font: inherit; font-size: 10.5px; color: var(--ph-faint); cursor: pointer; white-space: nowrap; min-height: 0; }
+  #pharmacyPage .ph-tp-lock:hover { color: var(--ph-green-deep); }
   #pharmacyPage .ph-tp-cellin { display: block; width: 100%; box-sizing: border-box; border: none; background: none; padding: 7px 12px; font: inherit; font-size: 12.5px; line-height: 1.45; color: var(--ph-ink); resize: none; overflow: hidden; min-height: 0; }
   #pharmacyPage .ph-tp-cellin:focus { outline: none; }
   #pharmacyPage .ph-tp-grid td.ph-tp-fcell { color: var(--ph-ink); }
@@ -7142,6 +7158,11 @@
     #pharmacyPage .ph-tp-grid td { border-width: 0 0 1px; padding: 4px 10px 7px; }
     #pharmacyPage .ph-tp-grid td.ph-tp-lbl { border-bottom: 0; background: none; padding: 8px 10px 0; }
     #pharmacyPage .ph-tp-grid td.ph-tp-lbl.mid { border-left-width: 0; }
+    /* "Planned" / "What happened" are COLUMN headers, and at this width there
+       are no columns -- the table is one stack, so they land as two stray
+       labels above nothing. The stack already alternates the pairs (Aim then
+       Outcome, Visits then Visits), so the row labels carry it alone. */
+    #pharmacyPage .ph-tp-grid tr.ph-tp-headrow { display: none; }
     #pharmacyPage .ph-tp-grid tr.ph-tp-pline td { border-bottom: 1px solid var(--ph-line); padding: 8px 10px; }
     #pharmacyPage .ph-tp-grid .ph-tp-formula-chip { font: inherit; font-size: 12px; max-width: 100%; }
   }
@@ -9766,6 +9787,16 @@
   #pharmacyPage .ph-pick-more { font-size: 11px; color: var(--ph-faint); padding: 4px 10px 6px; }
   /* the Type select: compact width + a small custom chevron instead of the big
      native arrow floating at the far right (her ask) */
+  /* the escape hatch that replaces the Type picker on an ordinary patient
+     script — a quiet text link, the same language the Opening stage uses for
+     a section's one action, so it reads as an option rather than a question */
+  #pharmacyPage .ph-pres-astype-row { display: flex; justify-content: flex-end; margin: -4px 0 6px; }
+  #pharmacyPage .ph-pres-astype {
+    background: none; border: 0; padding: 2px 0; cursor: pointer;
+    font: 400 12px/1.4 inherit; color: var(--ph-soft); text-decoration: underline;
+    text-underline-offset: 2px; text-decoration-color: var(--ph-line);
+  }
+  #pharmacyPage .ph-pres-astype:hover { color: var(--ph-green-deep); text-decoration-color: currentColor; }
   #pharmacyPage #presEditType {
     max-width: 260px;
     appearance: none; -webkit-appearance: none; -moz-appearance: none;
@@ -24766,6 +24797,14 @@
         phTpRerender();
         return;
       }
+      // the padlock on a closed phase (her pick: "Freeze it, but let me unlock")
+      const tpUnlock = e.target.closest("[data-tp-unlock]");
+      if (tpUnlock) {
+        const phaseId = tpUnlock.dataset.tpUnlock;
+        if (phTpUnlockDone.has(phaseId)) phTpUnlockDone.delete(phaseId); else phTpUnlockDone.add(phaseId);
+        phTpRerender();
+        return;
+      }
       // her ask 2026-09-05: the one-time "which phase is she starting in?"
       // banner on a fresh IVF Protocol plan (phTpStartPhaseBannerHtml) --
       // same done/current/upcoming cascade as data-tp-phase-status above,
@@ -25509,6 +25548,19 @@
         return;
       }
       // Sex right on the prescription panel's Patient block (2026-09-04)
+      // the escape hatch on an ordinary patient script (see presNameTypeFieldsHtml):
+      // one tap files it as a recipe. Writes a REAL value, never "", so the
+      // decision survives the next edit; clearing the memoised guess is what
+      // makes the panel redraw as a formula rather than a stale patient.
+      const presAsType = e.target.closest("[data-pres-astype]");
+      if (presAsType) {
+        const t = (PRESC.items || []).find(x => x.id === presOpenId) || presDraft;
+        if (!t) return;
+        t.presType = presAsType.dataset.presAstype;
+        phIsFormulaCache = null;
+        savePresc(); renderPresPanel();
+        return;
+      }
       const presSex = e.target.closest("[data-pres-sex]");
       if (presSex) {
         const t = (PRESC.items || []).find(x => x.id === presOpenId);
@@ -25920,7 +25972,13 @@
         // store an override only when her pick disagrees with what the name
         // already says — un-overridden templates keep following their name
         const pickedType = document.getElementById("presEditType").value;
-        t.presType = presIsFormula({ name: t.name, abbr: t.abbr }) === (pickedType === "formula") ? "" : pickedType;
+        // Only leave a record name-driven if it ALREADY was. The old line wrote
+        // "" whenever the guess agreed with her pick, which silently erased a
+        // decision she had made in "Sort recipes from patients" — nothing
+        // looked different, but the record dropped back to being guessed from
+        // its name, so a jar added later with a matching code could move it
+        // without warning. An explicit presType now always survives an edit.
+        t.presType = (t.presType || presIsFormula({ name: t.name, abbr: t.abbr }) !== (pickedType === "formula")) ? pickedType : "";
         { const abbrEl = document.getElementById("presEditAbbr"); if (abbrEl) t.abbr = abbrEl.value.trim().toUpperCase(); }
         { const notesEl = document.getElementById("presEditNotes"); if (notesEl) t.notes = presSanitizeNoteText(notesEl.value.trim()); }
         t.ingredients = ings;
@@ -40125,6 +40183,11 @@ or changing anything in Cliniko.
   // Every value is text until clicked (phTpCellEditOpen), blur saves. Same
   // rows drive the inline editor and the full-screen modal. ============
   const phTpOpenDone = new Set();   // done phases she has unfolded this session
+  /* done phases she has unlocked for editing this session (her pick 2026-09-09:
+     "Freeze it, but let me unlock"). Session-only on purpose -- a closed phase
+     should default back to frozen every time the screen is opened, or "frozen"
+     quietly becomes "frozen until the first time I ever edited it". */
+  const phTpUnlockDone = new Set();
   const PH_TP_FIELD_LABELS = { aim: "Aim", watch: "Watch", cadence: "Visits", points: "Points", label: "Phase name" };
   const PH_TP_FIELD_PH = { aim: "What this phase is for…", watch: "What to watch / advice…", cadence: "e.g. 1–2×/wk", points: "Reference points…", label: "Phase name" };
   // the one place a phase's status changes: stamps the day it became
@@ -40155,6 +40218,87 @@ or changing anything in Cliniko.
     if (!name || !ph.sinceKey) return 0;
     const end = ph.doneKey || keyOf(TODAY), key = phPatientKey(name);
     return phApptList().filter(a => a.date >= ph.sinceKey && a.date <= end && phPatientKey(a.patient) === key).length;
+  }
+  /* ---- The record half of a plan (her spec 2026-09-09: "i want the plans to
+     act as a map for future treatments but also as a medical record of what was
+     done", then "Planned beside What happened; the record gathers itself").
+
+     It GATHERS; it does not store. A phase already knows the day it became
+     current and the day it was closed -- sinceKey / doneKey, stamped by
+     phTpSetPhaseStatus and never typed -- and everything she actually does is
+     already saved with a date. So the record is a window over stores that
+     already exist, and there is nothing to maintain. A typed second copy would
+     eventually disagree with the log it was copied from, which is the one thing
+     a medical record must never do.
+
+     Four of the six sources are already merged, in date order, by
+     phMsgPatientTimeline (the treatment-journey screen): appointments,
+     acupuncture, dispensing, and her prepared messages. This reuses that rather
+     than keeping a second reader that could drift from it. The two it does not
+     carry are added here:
+
+       • check-in outcomes, which live in TWO places -- a herb check-in is
+         stored on the FOLLOW-UP record as .checkins[], while an acu or
+         gone-quiet one is stored on the PATIENT record as .contactLog[]. Same
+         entry shape either way. contactLog has been very nearly write-only
+         until now, which is exactly the history she said she could not see.
+       • periods, from rec.cycleLog.
+
+     Returns null for a phase that has never been current: there is no window
+     yet, and an empty record is not the same statement as "not started". ---- */
+  function phTpPhaseRecord(name, ph) {
+    if (!name || !ph || !ph.sinceKey) return null;
+    const from = ph.sinceKey, to = ph.doneKey || keyOf(TODAY);
+    const key = phPatientKey(name);
+    const rec = phPatientPeek(key) || {};
+    const within = d => !!d && d >= from && d <= to;
+    const tl = phMsgPatientTimeline(key);
+    const of = kind => tl.rows.filter(r => r.kind === kind && within(r.date)).map(r => r.data);
+    const checkIns = [];
+    (PHARMACY.followups || []).forEach(r => {
+      if (phPatientKey(r.patient) !== key) return;
+      (r.checkins || []).forEach(ck => { if (within(ck.date)) checkIns.push(ck); });
+    });
+    (rec.contactLog || []).forEach(ck => { if (within(ck.date)) checkIns.push(ck); });
+    checkIns.sort((a, b) => (a.at || 0) - (b.at || 0));   // newest last: "the outcome" is the last line
+    return {
+      from, to, open: !ph.doneKey,
+      visits: of("appt"), acu: of("acu"), dispenses: of("dispense"), messages: of("msg"),
+      checkIns, periods: (rec.cycleLog || []).filter(c => within(c.lmp)),
+    };
+  }
+  /* The right-hand column. Same row as the plan it is being read against, so
+     the GAP is the thing that shows: "planned weekly, actually fortnightly" is
+     a clinical fact she currently cannot see anywhere. An empty result is "—",
+     never a blank cell -- on a record, a blank reads as "not recorded" when
+     what it means is "nothing happened", and those are different statements. */
+  function phTpRecordCellHtml(kind, rc) {
+    if (!rc) return `<span class="ph-tp-rec-none">not started</span>`;
+    const none = `<span class="ph-tp-rec-none">—</span>`;
+    const d = k => `<span class="d">· ${esc(phShortDate(k))}</span>`;
+    const line = s => `<span class="ph-tp-rec-line">${s}</span>`;
+    if (kind === "visits") {
+      if (!rc.visits.length) return none;
+      return `<b>${rc.visits.length} visit${rc.visits.length === 1 ? "" : "s"}</b> <span class="d">· ${rc.visits.map(v => esc(phShortDate(v.date))).join(", ")}</span>`;
+    }
+    if (kind === "dispensed") {
+      if (!rc.dispenses.length) return none;
+      return rc.dispenses.map(e => line(`${esc(e.formula || e.what || "Dispensed")}${e.grams ? ` <span class="d">· ${phFmtG(e.grams)} g</span>` : ""} ${d(e.date)}`)).join("");
+    }
+    if (kind === "acu") {
+      if (!rc.acu.length) return none;
+      return rc.acu.map(s => line(`${s.points ? esc(s.points) : "session"} ${d(s.date)}`)).join("");
+    }
+    if (kind === "outcome") {
+      if (!rc.checkIns.length) return none;
+      // the last three: enough to read a direction, short enough to sit in a cell
+      return rc.checkIns.slice(-3).map(ck => {
+        const going = (PH_CK_GOING.find(x => x[0] === ck.going) || [])[1] || "";
+        const txt = (ck.note || "").trim();
+        return line(`${txt ? `“${esc(txt)}”` : ""}${going ? `${txt ? " " : ""}<b>${esc(going)}</b>` : ""} ${d(ck.date)}`);
+      }).join("");
+    }
+    return none;
   }
   function phTpSpanText(ph) {
     if (!ph.sinceKey) return "";
@@ -40197,19 +40341,36 @@ or changing anything in Cliniko.
         <span class="ph-tp-pname${phase.label ? "" : " empty"}" data-tp-edit="${plan.id}:${phase.id}:label" title="Click to rename">${phase.label ? esc(phase.label) : "Phase name"}</span>
         ${sel}<span class="ph-tp-since">${phTpSpanText(phase)}</span>
         ${phase.status === "done" ? `<button type="button" class="ph-tp-fold" data-tp-fold="${plan.id}:${phase.id}" aria-expanded="${folded ? "false" : "true"}">${folded ? "show ▸" : "hide ▾"}</button>` : ""}
+        ${phase.status === "done" && !folded ? `<button type="button" class="ph-tp-lock" data-tp-unlock="${phase.id}" title="${phTpUnlockDone.has(phase.id) ? "Closed phase, unlocked for this session — click to freeze it again" : "This phase is closed. Its plan is frozen so the record still shows what you intended at the time — click to edit anyway"}">${phTpUnlockDone.has(phase.id) ? "🔓 unlocked" : "🔒 frozen"}</button>` : ""}
         <button type="button" class="del" data-tp-phase-del="${plan.id}:${phase.id}" title="Remove this phase" aria-label="Remove ${esc(phase.label)}">×</button>
       </span></td></tr>`;
     if (folded) return line;
-    const cell = (f, extra) => `<td class="ph-tp-cell${phase[f] ? "" : " empty"}"${extra || ""} data-tp-edit="${plan.id}:${phase.id}:${f}" title="Click to edit">${phase[f] ? esc(phase[f]) : esc(PH_TP_FIELD_PH[f])}</td>`;
+    /* Her spec 2026-09-09: "Planned beside What happened". The left half stays
+       exactly the map she writes; the right half is gathered, never typed, so
+       the two can be read against each other and the GAP shows.
+
+       Frozen once the phase is done (her pick: "Freeze it, but let me unlock").
+       A phase she closed six months ago must still say what she INTENDED at the
+       time, or the record stops being one -- but a typo is still a typo, so the
+       padlock on the phase line lets her back in for this session. */
+    const frozen = phase.status === "done" && !phTpUnlockDone.has(phase.id);
+    const rc = phTpPhaseRecord(phTpScreenPatient, phase);
+    const cell = (f, extra) => frozen
+      ? `<td class="ph-tp-cell frozen${phase[f] ? "" : " empty"}"${extra || ""} title="This phase is closed — unlock it on the phase line to edit">${phase[f] ? esc(phase[f]) : "—"}</td>`
+      : `<td class="ph-tp-cell${phase[f] ? "" : " empty"}"${extra || ""} data-tp-edit="${plan.id}:${phase.id}:${f}" title="Click to edit">${phase[f] ? esc(phase[f]) : esc(PH_TP_FIELD_PH[f])}</td>`;
+    const rec = (label, kind) => `<td class="ph-tp-lbl mid rec">${label}</td><td class="ph-tp-reccell">${phTpRecordCellHtml(kind, rc)}</td>`;
     // her pick (2026-09-08): a short chip, the suggestion as faint text beside it
     const formula = phase.formulaName
       ? `<button type="button" class="ph-tp-formula-chip" data-tp-formula-unlink="${plan.id}:${phase.id}" title="Click to unlink">🌿 ${esc(phase.formulaName)} ✕</button>`
+      : frozen ? `<span class="ph-tp-rec-none">—</span>`
       : `<button type="button" class="ph-tp-formula-chip empty" data-tp-formula-pick-open="${plan.id}:${phase.id}">Link formula</button>${phase.suggestFormula ? `<span class="ph-tp-sugg">suggested: ${esc(phase.suggestFormula)}</span>` : ""}`;
     return line + `
-      <tr><td class="ph-tp-lbl">Aim</td>${cell("aim", ' colspan="3"')}</tr>
-      <tr><td class="ph-tp-lbl">Watch</td>${cell("watch", ' colspan="3"')}</tr>
-      <tr><td class="ph-tp-lbl" rowspan="2">Visits</td>${cell("cadence", ' rowspan="2"')}<td class="ph-tp-lbl mid">Formula</td><td class="ph-tp-fcell">${formula}${picking ? phTpPhaseFormulaPickerHtml(phase) : ""}</td></tr>
-      <tr><td class="ph-tp-lbl mid">Points</td>${cell("points")}</tr>`;
+      <tr class="ph-tp-headrow"><td></td><td class="ph-tp-colhead">Planned</td><td></td><td class="ph-tp-colhead">What happened</td></tr>
+      <tr><td class="ph-tp-lbl">Aim</td>${cell("aim")}${rec("Outcome", "outcome")}</tr>
+      <tr><td class="ph-tp-lbl">Visits</td>${cell("cadence")}${rec("Visits", "visits")}</tr>
+      <tr><td class="ph-tp-lbl">Formula</td><td class="ph-tp-fcell">${formula}${picking ? phTpPhaseFormulaPickerHtml(phase) : ""}</td>${rec("Dispensed", "dispensed")}</tr>
+      <tr><td class="ph-tp-lbl">Points</td>${cell("points")}${rec("Done", "acu")}</tr>
+      <tr><td class="ph-tp-lbl">Watch</td>${cell("watch")}<td class="ph-tp-lbl mid rec">Periods</td><td class="ph-tp-reccell">${rc && rc.periods.length ? rc.periods.map(p => esc(phShortDate(p.lmp))).join(", ") : `<span class="ph-tp-rec-none">${rc ? "—" : "not started"}</span>`}</td></tr>`;
   }
   // a value cell becomes its own field on click; blur writes the value and
   // re-renders the text. Re-rendering on blur detaches whatever the next
@@ -42660,6 +42821,21 @@ Please let me know if you have any questions.`;
   function presNameTypeFieldsHtml(t) {
     const isF = presIsFormula(t);
     const rec = !isF && t.id ? phPatientRec(presPatientFor(t) || t.name) : null;
+    // Her question, 2026-09-09, looking at "New patient prescription" with a
+    // name, sex, DOB, insurance and medical history all filled in: "is this
+    // feature redundant?" On that screen it was — every field around it
+    // assumes a person, and picking "Patient prescription" stored NOTHING
+    // (the save wrote "" whenever the name guess already agreed), so it was a
+    // switch that only worked one way while looking like a choice.
+    // So the picker now appears only where it can change something: a record
+    // the app reads as a formula (she can say "no, that one is a person"), or
+    // one she has already filed by hand (she can see and revise her own
+    // decision). Everything else gets the one-line escape hatch below —
+    // which is not decoration: an English-named house blend ("Early
+    // Pregnancy", "Post Ovulation") has no Tang/San/Wan and no jar code, so
+    // the guess reads it as a patient and this link is her only way to move
+    // it from inside the script.
+    const showType = isF || !!t.presType;
     return `<div class="ph-tmpl-grid ph-pres-patient">
         <div class="ph-tmpl-field ph-pres-patient-name"><label for="presEditName">Name</label>
           <input type="text" id="presEditName" value="${esc(t.name)}" autocomplete="off"></div>
@@ -42671,14 +42847,14 @@ Please let me know if you have any questions.`;
         <div class="ph-tmpl-field ph-fld-dob"><label for="presEditDob">DOB${phAgeOf(rec.dob) != null ? ` <span class="faint">· ${phAgeOf(rec.dob)}</span>` : ""}</label>
           <input type="date" id="presEditDob" data-pres-dob="1" value="${esc(rec.dob || "")}"></div>
         </div>` : ""}
-        <div class="ph-tmpl-field"><label for="presEditType">Type</label>
+        ${showType ? `<div class="ph-tmpl-field"><label for="presEditType">Type</label>
           <!-- no "Auto" category (her call) — the select shows what it IS;
                Tang/San/Wan names arrive as 🏺 Herbal formula on their own -->
           <select id="presEditType" aria-label="Template type">
-            <option value="patient" ${!presIsFormula(t) ? "selected" : ""}>Patient prescription</option>
-            <option value="formula" ${presIsFormula(t) ? "selected" : ""}>Herbal formula</option>
-          </select></div>
-      </div>`;
+            <option value="patient" ${!isF ? "selected" : ""}>Patient prescription</option>
+            <option value="formula" ${isF ? "selected" : ""}>Herbal formula</option>
+          </select></div>` : ""}
+      </div>${showType ? "" : `<div class="ph-pres-astype-row"><button type="button" class="ph-pres-astype" data-pres-astype="formula">This is actually a herbal formula</button></div>`}`;
   }
   function presAcuToggleHtml(t) {
     const name = presPatientFor(t);
@@ -44029,7 +44205,10 @@ Dosage: {dosage}
     const typeEl = document.getElementById("presEditType");
     if (typeEl) {
       const pickedType = typeEl.value;
-      t.presType = presIsFormula({ name: t.name, abbr: t.abbr }) === (pickedType === "formula") ? "" : pickedType;
+      // same rule as the explicit Save above: never clear a decision she made
+      // deliberately. This is the DEBOUNCED path, so it fires on ordinary
+      // typing — it was the likelier of the two to quietly undo a filing.
+      t.presType = (t.presType || presIsFormula({ name: t.name, abbr: t.abbr }) !== (pickedType === "formula")) ? pickedType : "";
     }
     { const abbrEl = document.getElementById("presEditAbbr"); if (abbrEl) t.abbr = abbrEl.value.trim().toUpperCase(); }
     { const notesEl = document.getElementById("presEditNotes"); if (notesEl) t.notes = notesEl.value.trim(); }
