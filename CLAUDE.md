@@ -490,6 +490,35 @@ blue, close enough to confuse on a block that small.
 - **The bar is `rgba(0,0,0,.45)`, not `var(--ck-ink)`.** Ink is white on every deep colour,
   and a white bar reads as a gap in the block rather than a mark on it.
 
+**15. ACUPREG IS A LOCATION COLOUR, NOT A TYPE COLOUR (her swatch, 2026-09-09: "use this
+colour for acupreg appointments").** `#8AAB99`, a soft sage, used **raw — deliberately not
+run through `phCkTone`**. Toning exists to bring Cliniko's harsh brights down to something
+calm; this is already calm, and toning would drag it to `#729280`, muddier than the colour
+she chose.
+
+**Why it lives in `phCkStyle` and not `phCkTypeColour`.** It paints EVERY appointment at
+that login, including ones with no service at all — 7 of the 11 in her 4 Sep Acupreg backup
+were blank, because quick-add hard-codes `service: ""`. `phCkTypeColour` bails on an empty
+service before it can decide anything, so a location rule can never live there. It also
+ends a real borrowing bug: "Alexandria Initial or review Acupuncture consultation" was
+matching the `/initial/ + /acu/` keyword and wearing her **CBD** Initial-Acupuncture green.
+
+**A home visit still wins over it** — that distinction is about TRAVEL, not location, so it
+survives being at another clinic. One line in `phCkStyle` to flip if she wants Acupreg to
+win outright.
+
+**⚠ THE CONTRAST THRESHOLD IS WRONG AND IS STILL WRONG.** `phCkInkFor` picks white below
+relative luminance .42. That was tuned for the toned Cliniko brights and mis-serves a soft
+mid-tone: it hands the sage **white at 2.51:1**, unreadable, where dark ink gives 6.51:1.
+So the Acupreg colour uses `phCkInkByContrast`, which measures both options and picks the
+better. **Verified 2026-09-09: four of the 21 Cliniko colours have this same problem
+today** — Initial Acupuncture 3.29:1, Subsequent with herbs 2.69:1 (her most common),
+Subsequent 2.91:1, Herbal Followup 2.88:1, all white where dark reads far better; Cupping
+sits at 4.23:1 with white still the better of the two. **They were NOT changed**, because
+flipping the text colour on appointments she reads every day is a visible change she has
+not seen — raised with her instead of shipped quietly. If she says yes, the fix is to point
+`phCkTypeColour` at `phCkInkByContrast` and delete `phCkInkFor`; nothing else changes.
+
 ## Spacing & size (one scale, no random numbers)
 - Only 4/8/12/16/24/32px for margins/padding/gaps.
 - One corner radius for cards, one for pills. One type scale (title/body/label).
