@@ -158,7 +158,28 @@ update STYLE-LCM.md to match so future builds don't undo it.
      "2 a fortnight" IS "1 a week" and composes to the same interval, so offering both gave
      two controls that disagreed about one fact. A month still counts — 2 a month = "every 15
      days" — and each of those round-trips.
-  5. **The three selects are built once and stay alive.** An earlier pass repainted the row
+  5. **SEED THE PICKERS FROM THE PHASE, NEVER FROM A DEFAULT** (the worst bug in this
+     build; found 2026-09-10 by a sibling session reading the write path, then reproduced).
+     Opening the cell correctly wrote nothing — but when the string couldn't round-trip, the
+     pickers fell back to {1, a week, acupuncture + herbs}, which is **31 of her 36 template
+     cadences**. So "2×/wk while acute" opened *displaying 1*, the editor contradicting the
+     phase before she touched anything, and one pick on the unrelated acu/herbs dropdown
+     wrote "1×/wk" — **silently halving her visits**, not merely dropping the qualifier. The
+     number was the real damage; the lost words were only the visible part. `phTpCadenceRead`
+     now seeds from whatever can be read, so a single pick changes only what she picked, and
+     the number list grows to hold a seeded value above its normal range so a real number can
+     never fall off the list. It reads "1–2×/wk" as the more frequent end **deliberately
+     matching what `phAcuCadenceParse` does with that same string** — the editor and the
+     scheduler must never disagree about what a range means — and a leading "Weekly", which
+     starts a third of her template lines. 25 of 36 now seed from the text, up from 5;
+     checked across the whole corpus, zero cases where the seeded state disagrees with the
+     acu parser about interval or about acupuncture on/off.
+  6. **The guarantee is "visible, never silent", NOT "cannot be lost".** A pick composes the
+     whole string, so a qualifier the pickers can't say does go. The `Now:` line says so in
+     as many words and points at **Type instead**, which stays seeded with the full original
+     text and is the lossless path. Don't restate this as "cannot be dropped" — it isn't
+     true, and it's the sentence someone quotes later.
+  7. **The three selects are built once and stay alive.** An earlier pass repainted the row
      on every change, which blew away the focused control and shut the editor after a single
      pick; she has three choices to make. Only the number list is rebuilt when the period
      changes. Saving happens on every pick; `phTpRerender()` is deferred to `focusout` (not
