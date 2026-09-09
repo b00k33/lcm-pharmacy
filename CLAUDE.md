@@ -623,6 +623,42 @@ Acupreg sage keeps `phCkInkByContrast` because that colour genuinely was unreada
 2.51:1; the 21 keep `phCkInkFor` because she looked and decided. She also confirmed
 `#8AAB99` reads right on her screen, so the swatch match is settled.
 
+**16. THE BELL'S PALSY CHECKLIST IS SCORED, AND MORE IS ALWAYS BETTER (her ask 2026-09-10,
+prompted by a real facial paralysis case).** She sent thirteen items verbatim, then
+"bells palsy checklist can work on a scoring system". Her full spec and her wording live
+in `FACIAL-PARALYSIS-SPEC.md` — that file is the source of truth, this is the rule.
+
+- **Her scale is none / partial / normal. Three states.** She was shown 0–4 and chose the
+  simpler one. **Do not "upgrade" it later without asking her.**
+- **Seven movements are scored; six symptoms are present/absent.** Movements are what you
+  ask her to do; symptoms are observed or reported. A headache must never move the
+  movement score, or the score stops describing the nerve.
+- **Direction is always the same: more is better.** Four of her labels name the DEFICIT
+  ("Lagophthalmos — Eyelid unable to close", "Nasolabial Fold Absence", "Impaired
+  Articulation"). **Keep her wording exactly** and let the `ask` line say what is being
+  scored. Never rewrite her labels to make the scale read the easy way.
+- **Bell's phenomenon is recorded, NOT counted as a problem.** It is a normal protective
+  reflex, visible only because the lid is not closing. Counting it as a deficit would score
+  a protected eye as worse than an unprotected one. Its row is styled neutral for the same
+  reason. Flagged to her; she can overrule it.
+- **The score is out of what was actually ANSWERED**, never a fixed 14 — a half-finished
+  score must not read as a collapse. The plan-side delta only shows when both scores
+  covered the same number of items.
+- **Cadence, her words: "start of treament, after 4 visits, and review every 4 visits".**
+  The app counts `rec.acuSessions` dated after the last score and shows a quiet "due now"
+  at four. **A prompt, never a block** — her explicit pick.
+- **The thirteen-item form lives on the Assessment stage ONLY.** The treatment plan gets a
+  read-only strip (score, delta, weakest branch, due state, protocol) and a button back.
+  One score entered in two places is a score that can disagree with itself.
+- **The thirteen score taps do NOT re-render the panel.** They repaint their own group and
+  the two totals in place. A full re-render per tap would throw away her scroll position
+  and her half-typed note thirteen times — the worst surface in the app for it.
+- **The point protocol keeps her four-branch structure** (her explicit answer), never
+  flattened into a points line, because the branch is how the decision is made: treat the
+  branch whose movements are weakest. `phFacialProtocolHtml` marks it automatically.
+- Two spellings are standardised in the UI only — *Corrugator Supercilii* and *Levator
+  Labii Superioris Alaeque Nasi*. **Her originals stay verbatim in the spec file.**
+
 ## Spacing & size (one scale, no random numbers)
 - Only 4/8/12/16/24/32px for margins/padding/gaps.
 - One corner radius for cards, one for pills. One type scale (title/body/label).
