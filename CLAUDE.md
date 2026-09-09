@@ -135,7 +135,38 @@ update STYLE-LCM.md to match so future builds don't undo it.
   `presPageClose()` — the band's ‹ (`data-pres-close`), `phGoBack()` (Alt+←, mouse back,
   sidebar Back) closes the page BEFORE popping tab history, Esc closes it unless she is
   typing or a modal/menu/sheet/popup sits above. The list keeps its scroll spot (scroll
-  anchoring; never scrollTo). Docking under the day-list row (`presPanelDock`,
+  anchoring; never scrollTo).
+  **TAP THE THING ITSELF TO EDIT IT — now a STANDING pattern, three asks deep
+  (2026-09-09: "i dont like that the untitled can only be edited from the formula
+  space").** A script tab's label IS `t.formula`, but the only field bound to it
+  (`#presFormulaText`) lived inside the Dispense stage — and a new script opens on
+  Opening, so from where she actually starts there was no way to name it at all.
+  The active tab is the tap target for its own name now (`data-pres-tab-rename` →
+  `presTabBtnHtml`), joining the band name (`data-pres-name-jump`, her 2026-09-01
+  "make it easier to edit the name") and the plan title (`data-tp-title-edit`).
+  **Before adding a field somewhere to edit a value, check whether the place that
+  DISPLAYS it can just become editable** — that is the move she keeps asking for.
+  Build it the way `data-tp-title-edit` does: a `<button>` can't host a field, so
+  REPLACE it in place with an `<input>` reusing the same class, and put it back on
+  commit — **no `renderPresPanel()` anywhere in the handler**, which is what keeps
+  her stage, her scroll spot and her open sections, and leaves the sibling
+  controls alive so a click landing on one still registers. Commit on Enter/Esc
+  *directly*, not via blur alone: blur never fires while the document isn't the
+  focused one, so a blur-only commit is lost exactly when it matters. Two-way, in
+  place: typing in the Dispense Formula field moves the tab and the band meta with
+  it (`presTabLabelSync`, `presBandMetaRefresh`). Phone note: `#pharmacyPage input`
+  carries a `font-size:16px !important` iOS zoom guard, so any pill that becomes a
+  field grows 26px→32px under 640px — leave the guard alone, it is deliberate.
+  **A blank formula name is not harmless — flagged to her 2026-09-09, NOT yet
+  fixed.** `presSavePrescription` logs `what: formulaLabel || t.name`, so an
+  un-named patient script writes `e.what === e.patient`; `phEntryIsHouseMake`'s
+  "sold to someone" escape hatch is keyed on `e.patient !== e.what` and so fails
+  open, and `phEntryJar`'s single-ingredient fallback then resolves the one herb's
+  jar. A single-ingredient dispense of a house-blend jar with no formula typed is
+  therefore counted as a stock batch, not a sale — missing from revenue, profit,
+  grams and most-dispensed. Measure it against her real data before changing it;
+  it rewrites historical figures.
+  Docking under the day-list row (`presPanelDock`,
   `.ph-tl-panelhost`) is RETIRED — the function only ever sends the panel home now; the
   Refill workbench's `#refPresPanel` never gets `.ph-pres-full`. **Script panel stages = the Opening-stage language (built 2026-09-08 to her
   four picks; then "i dont like this" on the Follow-up stage, rebuilt the same day):** every
