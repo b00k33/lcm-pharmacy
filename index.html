@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260909-201500">
+<meta name="lcm-build" content="20260909-213000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -2185,13 +2185,19 @@
      takes the gynae rose rather than house green so it reads as a different
      KIND of control from the message chips beside it. */
   #pharmacyPage .ph-ck-chip.ph-ck-sup.on { background: var(--ph-gyn); border-color: var(--ph-gyn); color: var(--ph-white); }
+  /* BBT sits beside Supportive as a third layer, independent of both tone and
+     Supportive. Teal, so the two layers never read as the same control. */
+  #pharmacyPage .ph-ck-chip.ph-ck-bbt.on { background: var(--ph-metab); border-color: var(--ph-metab); color: var(--ph-white); }
+  /* only ever appears once a message is genuinely past her phone's comfortable
+     length -- a nuisance, not an error, so it stays quiet and uncoloured */
+  #pharmacyPage .ph-ck-long { font-size: 11.5px; color: var(--ph-soft); margin: -2px 0 8px; }
   /* the messages that do not suit this patient -- one tap below, never gone
      (her answer 2: "fitting ones first, rest below") */
   #pharmacyPage .ph-ck-rest { margin: -2px 0 8px; }
   #pharmacyPage .ph-ck-rest > summary { font-size: 11.5px; color: var(--ph-soft); cursor: pointer; padding: 4px 0; list-style: none; }
   #pharmacyPage .ph-ck-rest > summary::-webkit-details-marker { display: none; }
-  #pharmacyPage .ph-ck-rest > summary::before { content: "25B8  "; }
-  #pharmacyPage .ph-ck-rest[open] > summary::before { content: "25BE  "; }
+  #pharmacyPage .ph-ck-rest > summary::before { content: "\25B8  "; }
+  #pharmacyPage .ph-ck-rest[open] > summary::before { content: "\25BE  "; }
   #pharmacyPage .ph-ck-next { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
   #pharmacyPage .ph-ck-next .ph-ck-chip { height: 26px; justify-content: center; }
   #pharmacyPage .ph-ck-other { width: 100%; box-sizing: border-box; margin-top: 6px; border: 1px solid var(--ph-line); border-radius: 8px; padding: 5px 9px; font: inherit; font-size: 12px; background: var(--ph-white); color: var(--ph-ink); min-height: 0; }
@@ -11587,7 +11593,10 @@
   #pharmacyPage .ph-jr-contact-row:first-of-type { border-top: none; }
   #pharmacyPage .ph-jr-contact-row > span { font-size: 11.5px; color: var(--ph-soft); }
   #pharmacyPage .ph-jr-contact-row > b { font-size: 13px; color: var(--ph-ink); word-break: break-word; }
-  #pharmacyPage .ph-jr-dnc { display: flex; align-items: center; justify-content: space-between; padding-top: 10px; margin-top: 4px; border-top: 1px solid var(--ph-line); font-size: 12.5px; font-weight: 600; color: var(--ph-ink); cursor: pointer; }
+  #pharmacyPage .ph-jr-dnc { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 10px; margin-top: 4px; border-top: 1px solid var(--ph-line); font-size: 12.5px; font-weight: 600; color: var(--ph-ink); cursor: pointer; }
+  /* the row carries a bold label; anything explaining it stays light so the
+     label is still what reads first */
+  #pharmacyPage .ph-jr-dnc .faint { font-weight: 400; }
   #pharmacyPage .ph-jr-knownsince { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   #pharmacyPage .ph-jr-knownsince input[type="date"] { font: inherit; font-size: 12.5px; border: 1px solid var(--ph-line); border-radius: 8px; padding: 5px 7px; background: var(--ph-white); color: var(--ph-ink); }
   #pharmacyPage .ph-jr-knownsince .faint { font-size: 11.5px; color: var(--ph-faint); }
@@ -26014,6 +26023,9 @@
       if (ckTone && phCkForm) { phCkForm.tone = ckTone.dataset.ckTone; phCkForm.text = null; phCkRender(); return; }
       // Supportive is a LAYER on either tone, never a third tone (her correction)
       if (e.target.closest("[data-ck-sup]") && phCkForm) { phCkForm.sup = !phCkForm.sup; phCkForm.text = null; phCkRender(); return; }
+      // the BBT line is its own layer again -- independent of tone AND of
+      // Supportive, so all four combinations are reachable (her code3 spec)
+      if (e.target.closest("[data-ck-bbt]") && phCkForm) { phCkForm.bbt = !phCkForm.bbt; phCkForm.text = null; phCkRender(); return; }
       if (e.target.closest("[data-ck-save-tmpl]")) { phCkSaveTemplate(); return; }
       if (e.target.closest("[data-ck-copy]")) { phCkCopy(phCkTextWithPhone(phCkRow()), "✓ Number + message copied"); return; }
       if (e.target.closest("[data-ck-gmsg]")) { phCkOpenMessages(); return; }
@@ -32483,10 +32495,23 @@ or changing anything in Cliniko.
     return by(`${moment}-${tone}${sup ? "-sup" : ""}`) || by(`${moment}-${tone}`)
         || by(`${moment}-formal${sup ? "-sup" : ""}`) || by(`${moment}-formal`) || by(moment) || null;
   }
-  const phCkTemplate = (moment, c, tone, sup) => {
+  const phCkTemplate = (moment, c, tone, sup, bbt) => {
     const t = phCkResolveTemplate(moment, tone, sup);
     if (!t) return "";
-    const body = (!t.code3 && tone === "formal" && t.bodyFormal) ? t.bodyFormal : t.body;
+    let body = (!t.code3 && tone === "formal" && t.bodyFormal) ? t.bodyFormal : t.body;
+    // The add-on goes in BEFORE her sign-off, not after it. Every one of these
+    // bodies ends with {{me}}, and her +Supportive line sits just inside it
+    // ("... Thinking of you. {{me}}") -- appending instead would leave text
+    // stranded after her name. Inserted before token fill so {{me}} is still
+    // there to find, joined with a space because these are one SMS paragraph,
+    // the way the menses reminder sits inline in Period-Formal. Still exactly
+    // one contiguous sentence, so the toggle can take it straight back out.
+    if (bbt) {
+      const add = phCode3AddonText("bbt");
+      if (add) body = /\{\{me\}\}\s*$/.test(body)
+        ? body.replace(/\s*\{\{me\}\}\s*$/, " " + add + " {{me}}")
+        : body + " " + add;
+    }
     return phMsgTokenFill(body, phCkCtxForFill(c));
   };
   // every moment that has wording behind it, slots first then her code3 rows
@@ -32548,12 +32573,23 @@ or changing anything in Cliniko.
     const hasSup = !!phCkResolveTemplate(f.tmpl, f.tone, true) &&
       phCkResolveTemplate(f.tmpl, f.tone, true) !== phCkResolveTemplate(f.tmpl, f.tone, false);
     const tmplRow = phCkResolveTemplate(f.tmpl, f.tone, f.sup);
+    // her answer 8: only where a chart is relevant AND she has ticked this
+    // patient as tracking one -- everyone else never sees the toggle
+    const bbtOn = phCkBbtOffered(f.tmpl, name);
+    // Period-Formal already sits at the ~400-character ceiling her phone's
+    // message box starts scrolling past, and the BBT line pushes it over. Say
+    // so rather than letting her meet it as a mystery scrollbar -- it is only
+    // ever a nuisance, never a failure, so this stays a quiet note.
+    const composed = f.text != null ? f.text : phCkTemplate(f.tmpl, c, f.tone, f.sup, bbtOn && f.bbt);
+    const tooLong = composed && composed.length > 400 ? composed.length : 0;
     return `<div class="ph-ck-tonerow">
         <div class="ph-ck-seg">${["formal", "casual"].map(k => `<button type="button" data-ck-tone="${k}" class="${f.tone === k ? "on" : ""}">${k === "formal" ? "Formal" : "Casual"}</button>`).join("")}</div>
         ${hasSup ? chip("data-ck-sup", "1", "♡ Supportive", !!f.sup, " ph-ck-sup") : ""}
+        ${bbtOn ? chip("data-ck-bbt", "1", "BBT chart", !!f.bbt, " ph-ck-bbt") : ""}
         <span class="faint">${esc(phCkToneCaption(name))}</span>
       </div>
       ${f.pickWhy ? `<div class="ph-ck-why"><svg class="icn" aria-hidden="true"><use href="#i-check"/></svg>${esc(f.pickWhy)}</div>` : ""}
+      ${tooLong ? `<div class="ph-ck-long">Long message · ${tooLong} characters</div>` : ""}
       <div class="ph-ck-chips">${chipsFor(fits)}<button type="button" class="ph-ck-chip" data-ck-save-tmpl="1" title="Keep this wording as your own ${esc(tmplRow ? tmplRow.name : "")} message">＋ Save mine</button></div>
       ${rest.length ? `<details class="ph-ck-rest"><summary>Everything else · ${rest.length}</summary><div class="ph-ck-chips">${chipsFor(rest)}</div></details>` : ""}`;
   }
@@ -33141,7 +33177,7 @@ or changing anything in Cliniko.
     const c = phCkContext(row), f = phCkForm;
     if (!f) return "";
     const isReview = row.kind !== "checkin";
-    const msg = f.text != null ? f.text : phCkTemplate(f.tmpl, c, f.tone, f.sup);
+    const msg = f.text != null ? f.text : phCkTemplate(f.tmpl, c, f.tone, f.sup, f.bbt && phCkBbtOffered(f.tmpl, row.rec ? row.rec.patient : row.patientName));
     const smsHref = phCkSmsHref(c.phone, msg);
     const chip = (attr, val, label, on) => `<button type="button" class="ph-ck-chip${on ? " on" : ""}" ${attr}="${val}">${label}</button>`;
     if (phCkIsNarrow()) return phCkPageHtml(row, c, f, msg, smsHref, chip, isReview);
@@ -33191,7 +33227,7 @@ or changing anything in Cliniko.
     if (phCkOpen && phCkOpen.recId === recId && phCkOpen.kind === kind) { phCkOpen = null; phCkForm = null; phCkRender(); return; }
     phCkOpen = { recId, kind };
     const startTmpl = kind === "checkin" ? "checkin" : kind === "acu" ? "acu" : kind === "quiet" ? "quiet" : "review";
-    phCkForm = { going: null, concerns: new Set(), otherOn: false, other: "", next: null, note: "", tmpl: startTmpl, tone: null, sup: false, pickWhy: "", text: null, sent: false, factsOpen: false, concernsOpen: false };
+    phCkForm = { going: null, concerns: new Set(), otherOn: false, other: "", next: null, note: "", tmpl: startTmpl, tone: null, sup: false, bbt: false, pickWhy: "", text: null, sent: false, factsOpen: false, concernsOpen: false };
     // already booked in Cliniko -> Next starts on "Booked ✓" (she can still change it)
     const row = phCkRow(recId, kind);
     const key = row ? (row.rec ? (row.rec.patientKey || phPatientKey(row.rec.patient)) : row.patientKey) : null;
@@ -33207,6 +33243,9 @@ or changing anything in Cliniko.
         phCkForm.tmpl = p.moment; phCkForm.tone = p.tone; phCkForm.sup = p.sup; phCkForm.pickWhy = p.why;
       }
     }
+    // ticking a patient as tracking BBT is the whole point of the tick, so the
+    // line starts ON for her wherever it applies -- one tap turns it off again
+    phCkForm.bbt = phCkBbtOffered(phCkForm.tmpl, patientName);
     if (key && phCkNextAppt(key)) phCkForm.next = "booked";
     phCkRender();
   }
@@ -33232,7 +33271,10 @@ or changing anything in Cliniko.
     const ta = document.getElementById("phCkMsg");
     if (ta) return ta.value;
     const row = phCkRow();
-    return row && phCkForm ? (phCkForm.text != null ? phCkForm.text : phCkTemplate(phCkForm.tmpl, phCkContext(row), phCkForm.tone, phCkForm.sup)) : "";
+    if (!row || !phCkForm) return "";
+    if (phCkForm.text != null) return phCkForm.text;
+    const nm = row.rec ? row.rec.patient : row.patientName;
+    return phCkTemplate(phCkForm.tmpl, phCkContext(row), phCkForm.tone, phCkForm.sup, phCkForm.bbt && phCkBbtOffered(phCkForm.tmpl, nm));
   }
   // her ask (2026-09-05): "Copy message" on the desktop Messages flow should
   // also carry the number, since Google Messages for web has no way to
@@ -33703,6 +33745,15 @@ or changing anything in Cliniko.
   // never create a patient record (phPatientPeek, not phPatientRec)
   const phMsgContactPref = key => { const r = phPatientPeek(key); return (r && r.contactChannel) || "either"; };
   const phMsgDoNotContact = key => !!(phPatientPeek(key) || {}).doNotContact;
+  // Her answer 8 (2026-09-09): the BBT line is a fact about the PATIENT, not
+  // about one message -- she ticks "tracks BBT" once on the Contact card and
+  // the line is then offered wherever a chart is actually relevant. Which
+  // moments those are is PH_CODE3_ADDONS' business (Period and Ovulation), so
+  // nothing here names them and adding a third moment needs no change here.
+  const phMsgTracksBbt = key => !!(phPatientPeek(key) || {}).tracksBbt;
+  function phMsgSetTracksBbt(name, val) { const r = phPatientRec(name); if (!r) return; r.tracksBbt = !!val; savePharmacy(); }
+  const phCkBbtOffered = (moment, name) =>
+    (((phPickFacets(moment) || {}).addons) || []).indexOf("bbt") >= 0 && phMsgTracksBbt(name);
   function phMsgSetContactPref(name, pref) { const r = phPatientRec(name); if (!r) return; r.contactChannel = pref; savePharmacy(); }
   function phMsgSetDoNotContact(name, val) { const r = phPatientRec(name); if (!r) return; r.doNotContact = !!val; savePharmacy(); }
   // ---- tokens ----
@@ -34412,6 +34463,7 @@ or changing anything in Cliniko.
         </div>
       </div>
       <label class="ph-jr-dnc"><span>Don't contact</span><input type="checkbox" data-ph-jr-dnc="1"${out ? " checked" : ""}></label>
+      ${phCycleOn(rec) ? `<label class="ph-jr-dnc"><span>Tracks BBT<span class="faint"> · offers the chart line on Period and Ovulation</span></span><input type="checkbox" data-ph-jr-bbt="1"${phMsgTracksBbt(key) ? " checked" : ""}></label>` : ""}
       <div class="ph-jr-contact-row">
         <span>Known since</span>
         <div class="ph-jr-knownsince">
@@ -34508,6 +34560,8 @@ or changing anything in Cliniko.
   document.addEventListener("change", e => {
     const dnc = e.target && e.target.closest ? e.target.closest("[data-ph-jr-dnc]") : null;
     if (dnc) { phMsgSetDoNotContact(phMsgDisplayName(phJourneyKey), dnc.checked); renderPharmacy(); return; }
+    const bbtTick = e.target && e.target.closest ? e.target.closest("[data-ph-jr-bbt]") : null;
+    if (bbtTick) { phMsgSetTracksBbt(phMsgDisplayName(phJourneyKey), bbtTick.checked); renderPharmacy(); return; }
     const knownSince = e.target && e.target.closest ? e.target.closest("[data-ph-jr-knownsince]") : null;
     if (knownSince) { phPatientRec(phMsgDisplayName(phJourneyKey)).knownSince = knownSince.value || null; savePharmacy(); renderPharmacy(); return; }
     const jsel = e.target && e.target.closest ? e.target.closest("#phJourneyTemplateSel, #phJourneyBarTemplateSel") : null;
