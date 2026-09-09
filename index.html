@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260909-232000">
+<meta name="lcm-build" content="20260909-234500">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -16041,14 +16041,27 @@
     // `before` — the 0 that h.qty || 0 invented — and write the jar down as
     // empty. The card and the button never offer it, but a stray Enter must
     // not either, so an untyped confirm here simply doesn't count the jar.
+    // ...but 0 is a real answer here, and the first version of this guard
+    // rejected it: `!(typedValue > 0)` threw away "this jar is empty", which
+    // is one of the likeliest findings among the 159 never-counted jars (63
+    // last used in 2024 or earlier, 18 never at all). The button said
+    // "Save 0g as the first count" and then did nothing at all -- exactly the
+    // silent no-op this file refuses to ship elsewhere. Only an absent number
+    // is rejected now.
     const firstCount = phStcNeverCounted(h);
-    if (firstCount && (matched || !(typedValue > 0))) return;
+    if (firstCount && (matched || !Number.isFinite(typedValue))) return;
     const before = h.qty || 0;
     const newQty = matched ? before : Math.max(0, Math.floor(typedValue) || 0);
     const diff = newQty - before;
     const baseline = s.results[h.id] ? s.results[h.id].old : before;
     s.results[h.id] = { old: baseline, new: newQty, adjusted: newQty !== baseline, diff: newQty - baseline, at: new Date().toISOString() };
-    if (diff !== 0) {
+    // `diff !== 0` alone is the wrong test for a FIRST count: an untracked jar
+    // counted as 0 g has before 0, newQty 0, diff 0 -- so h.qty would have been
+    // left null and the jar would still read "never counted", still be worth
+    // nothing on the Stock value tile, and come back in the next count forever.
+    // A first count always writes, even when the answer is zero: null -> 0 is
+    // the whole point of counting it.
+    if (diff !== 0 || firstCount) {
       h.qty = newQty;
       phAfterQtyChange(h);
       // her rule: every stocktake adjustment is its own dated log entry, kept
@@ -33688,17 +33701,55 @@ or changing anything in Cliniko.
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => phFlashShow(okMsg), () => phFlashShow("⚠ Copy blocked — select the text and copy it"));
     else phFlashShow("⚠ Copy blocked — select the text and copy it");
   }
+  /* ＋ Save mine (her "yes", 2026-09-09, to making this ADD a wording rather
+     than overwrite one). It used to write straight over the built-in row she
+     was standing on, which is why the button's name never matched what it did
+     -- and why nothing of hers ever appeared as its own chip.
+
+     Her copy is written as a SLOT row (a `slot`, no `code3`) rather than a
+     code3 row, because that shape already carries both registers: phCkTemplate
+     reads bodyFormal only when `!t.code3 && tone === "formal"`, and the field
+     picked below follows the same test. So one saved row holds her Formal and
+     her Casual wording separately, exactly as the six built-in slots do, and
+     nothing downstream needed teaching a new shape.
+
+     Saving again while standing on her own chip UPDATES it -- otherwise every
+     tweak would mint another near-identical chip and the group counts would
+     creep up forever. `fromMoment` is what files the new chip into the group
+     it was saved from (see phCkGroupOf), so her IVF Follicular wording sits
+     with IVF rather than in a bucket of its own. */
   function phCkSaveTemplate() {
     const row = phCkRow(); if (!row || !phCkForm) return;
     const t = phCkResolveTemplate(phCkForm.tmpl, phCkForm.tone, phCkForm.sup);
     if (!t) return;
-    // a slot row carries BOTH registers (body + bodyFormal); one of her code3
-    // rows IS a single register, so its own body is what she is re-wording
-    const field = (!t.code3 && phCkForm.tone === "formal") ? "bodyFormal" : "body";
-    t[field] = phCkTokenise(phCkCurrentText(), phCkContext(row));
-    t.editedAt = Date.now();
+    const text = phCkTokenise(phCkCurrentText(), phCkContext(row));
+    const formal = phCkForm.tone === "formal";
+    // already standing on one of hers -> reword that one, don't breed another
+    if (t.mine) {
+      t[formal ? "bodyFormal" : "body"] = text;
+      t.editedAt = Date.now();
+      savePharmacy();
+      phCkRender();
+      phFlashShow(`✓ Updated your ${formal ? "Formal " : "Casual "}${t.name} wording`);
+      return;
+    }
+    const slot = "mine-" + uid();
+    const mine = {
+      id: uid(), slot, mine: true, fromMoment: phCkForm.tmpl,
+      name: `${phCkMomentLabel(phCkForm.tmpl)} (mine)`,
+      tag: t.tag || "checkin", subject: t.subject || "", category: t.category || "general",
+      // only the register she actually wrote is hers; the other falls back to
+      // the wording she started from, so switching tone never lands on a blank
+      body: formal ? ((!t.code3 && t.body) || t.body || "") : text,
+      bodyFormal: formal ? text : (t.bodyFormal || t.body || ""),
+      createdAt: Date.now(), editedAt: Date.now(),
+    };
+    phMsgTemplates().push(mine);
+    phCkForm.tmpl = slot;          // land her on the chip she just made
+    phCkForm.text = null;
     savePharmacy();
-    phFlashShow(`✓ Saved as your ${phCkForm.tone === "formal" ? "Formal " : ""}${t.name} wording — editable anytime from Communications → Templates`);
+    phCkRender();
+    phFlashShow(`✓ Saved as a new wording — “${mine.name}”, editable anytime from Communications → Templates`);
   }
   // the Text / Email links carry whatever she has typed, refreshed as she types
   function phCkSyncLinks() {
