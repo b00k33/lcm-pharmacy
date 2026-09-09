@@ -941,6 +941,35 @@ commit is a publish decision here even when the pusher is someone else.
 **Menses is NOT a toggle** and has no add-on id — it is baked permanently into
 the Period-Formal bodies, base and +Supportive, never Casual.
 
+**PRIVATE HEALTH REBATES ARE A SEGMENT, NOT A NOTE (her ask 2026-09-09, BUILT
+and live as `f5ea91b`).** She asked to "include a note in patient profiles
+regarding their insurance giving good rebates", then said what it is FOR:
+**"good rebates puts them on the good to message/followup for future
+maintenance appointments, or for communications around private health
+rebates."** So the tick is a mailing segment — read it that way, never as
+decoration. `rec.insuranceNote` (free text: which fund, how much comes back)
+and `rec.insuranceGood` (the tick). Ticked = good; unticked = **not recorded,
+NOT poor** — she framed this as flagging the good ones, so there is no third
+state and nothing to maintain for everyone else. Empty values are deleted, not
+stored. Editable from BOTH patient-record surfaces — the profile's Contact card
+(beside Package, the card's other money row) and the script's Opening stage
+"the record she fills once" column (beside Addresses) — because she learns a
+patient's fund during intake, which happens on the script. The payoff is in
+Compose: **"+ Add everyone with good rebates (N)"** (`phInsGoodNames`,
+`data-ph-msg-add-rebates`), mirroring the relocation quick-add; its roster is
+`PHARMACY.patients`, not `phMsgAllPatientNames()`, since a record can carry the
+tick before she has ever dispensed to or booked them. `doNotContact` is
+filtered in the helper AND at the call site. The appointment popup carries a 💳
+row only when the tick is on.
+**STILL MISSING — the words.** No rebate message template exists yet, and I did
+not invent one: patient-facing wording is HERS (see the "a conversation is not
+a save" cost above). The two she named are a **maintenance//future-appointment**
+nudge and a **rebate** message — the second is seasonal in Australia (extras
+limits reset, so it is a Nov–Dec "use what's left this year" note, and a
+fund-anniversary one for July resets). **Ask her for both, in her own words,
+then save them into `PH_CODE3_MSG_SEEDS` the same turn she confirms them.**
+Do not guess a first draft into the file.
+
 **Open, unresolved:**
 - Whether Supportive applies anywhere outside the cycle track (stress/anxiety
   plans are a live guess, not confirmed).
