@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260910-060000">
+<meta name="lcm-build" content="20260910-071500">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -9818,16 +9818,6 @@
   #pharmacyPage .ph-pick-more { font-size: 11px; color: var(--ph-faint); padding: 4px 10px 6px; }
   /* the Type select: compact width + a small custom chevron instead of the big
      native arrow floating at the far right (her ask) */
-  /* the escape hatch that replaces the Type picker on an ordinary patient
-     script — a quiet text link, the same language the Opening stage uses for
-     a section's one action, so it reads as an option rather than a question */
-  #pharmacyPage .ph-pres-astype-row { display: flex; justify-content: flex-end; margin: -4px 0 6px; }
-  #pharmacyPage .ph-pres-astype {
-    background: none; border: 0; padding: 2px 0; cursor: pointer;
-    font: 400 12px/1.4 inherit; color: var(--ph-soft); text-decoration: underline;
-    text-underline-offset: 2px; text-decoration-color: var(--ph-line);
-  }
-  #pharmacyPage .ph-pres-astype:hover { color: var(--ph-green-deep); text-decoration-color: currentColor; }
   #pharmacyPage #presEditType {
     max-width: 260px;
     appearance: none; -webkit-appearance: none; -moz-appearance: none;
@@ -25706,19 +25696,12 @@
         return;
       }
       // Sex right on the prescription panel's Patient block (2026-09-04)
-      // the escape hatch on an ordinary patient script (see presNameTypeFieldsHtml):
-      // one tap files it as a recipe. Writes a REAL value, never "", so the
-      // decision survives the next edit; clearing the memoised guess is what
-      // makes the panel redraw as a formula rather than a stale patient.
-      const presAsType = e.target.closest("[data-pres-astype]");
-      if (presAsType) {
-        const t = (PRESC.items || []).find(x => x.id === presOpenId) || presDraft;
-        if (!t) return;
-        t.presType = presAsType.dataset.presAstype;
-        phIsFormulaCache = null;
-        savePresc(); renderPresPanel();
-        return;
-      }
+      // (Removed 2026-09-09, her call: an "This is actually a herbal formula"
+      // escape hatch used to sit under the Type field here. "if i want to make
+      // a herbal formula i would add it in the formula refill page" -- so the
+      // patient script no longer offers it at all. Formula refill → Formula
+      // recipes → "Sort recipes from patients" is still the place to refile
+      // anything the name guess got wrong, so nothing is stranded.)
       const presSex = e.target.closest("[data-pres-sex]");
       if (presSex) {
         const t = (PRESC.items || []).find(x => x.id === presOpenId);
@@ -33582,22 +33565,49 @@ or changing anything in Cliniko.
     }
   });
   // DOB on the prescription panel's Patient block (2026-09-04)
+  //
+  // Her report 2026-09-09: "i cant type in 1995" -- the field stuck on
+  // 31/01/0019 with her age reading 107. A date input fires `change` on every
+  // keystroke of the year, so typing 1995 sends 0001, 0019, 0199, 1995; each
+  // one saved and re-rendered the whole panel, and the re-render replaced the
+  // input underneath her before she could type the fourth digit. Same trap as
+  // the cycle date fields (~37292).
+  //
+  // The year gate alone does NOT fix it. While she is still filling in the day
+  // and month the input's value is the EMPTY STRING (a date input reports ""
+  // until every segment is valid), so an empty value sails past a year check
+  // and re-renders mid-entry just the same. Hence the second rule: only a real
+  // date triggers a re-render. An empty value still commits the clear -- she
+  // may genuinely be wiping a wrong DOB -- but it only repaints once she has
+  // LEFT the field, so a blank on the way to typing one is invisible to her.
   document.addEventListener("change", e => {
     const el = e.target && e.target.closest ? e.target.closest("[data-pres-dob]") : null;
     if (!el) return;
+    const v = el.value || "";
+    const yr = parseInt(v.slice(0, 4), 10);
+    if (v && !(yr >= 1900 && yr <= TODAY.getFullYear())) return;   // still typing the year
     const t = (PRESC.items || []).find(x => x.id === presOpenId);
     const rec = t ? phPatientRec(presPatientFor(t) || t.name) : null;
     if (!rec) return;
-    rec.dob = el.value || undefined;
-    savePharmacy(); renderPresPanel();
+    rec.dob = v || undefined;
+    savePharmacy();
+    if (v || document.activeElement !== el) renderPresPanel();
   });
+  // Same date-input trap as [data-pres-dob] above -- see the note there for
+  // why the year gate alone is not enough. Fixed together 2026-09-09; this
+  // one had never been reported, but it is the same field on another screen
+  // and would have failed her the same way.
   document.addEventListener("change", e => {
     const dobEl = e.target && e.target.closest ? e.target.closest("[data-hx-dob]") : null;
     if (!dobEl) return;
+    const v = dobEl.value || "";
+    const yr = parseInt(v.slice(0, 4), 10);
+    if (v && !(yr >= 1900 && yr <= TODAY.getFullYear())) return;   // still typing the year
     const rec = phPatientRec(presHxScreenName);
     if (!rec) return;
-    rec.dob = dobEl.value || undefined;
-    savePharmacy(); renderHxScreen();
+    rec.dob = v || undefined;
+    savePharmacy();
+    if (v || document.activeElement !== dobEl) renderHxScreen();
   });
   document.addEventListener("change", e => {
     if (!e.target || e.target.id !== "phClinikoCsv") return;
@@ -43164,7 +43174,7 @@ Please let me know if you have any questions.`;
             <option value="patient" ${!isF ? "selected" : ""}>Patient prescription</option>
             <option value="formula" ${isF ? "selected" : ""}>Herbal formula</option>
           </select></div>` : ""}
-      </div>${showType ? "" : `<div class="ph-pres-astype-row"><button type="button" class="ph-pres-astype" data-pres-astype="formula">This is actually a herbal formula</button></div>`}`;
+      </div>`;
   }
   function presAcuToggleHtml(t) {
     const name = presPatientFor(t);
