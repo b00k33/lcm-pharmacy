@@ -887,12 +887,26 @@ line on Period only; she chose **"Leave both as they are"**. Don't re-raise it,
 and don't quietly drop `bbt` from `PH_CODE3_MOMENTS.ovulation.addons` — the
 line only appears for a ticked patient, so most Ovulation messages never carry
 it, which is the reason the overlap is acceptable to her.
-**NOT PUBLISHED at her instruction (2026-09-09).** Asked whether to push the
-BBT tick + the add-on data live, she chose **"Not yet — let me look first"**.
-`f05b59a` and `d3cd7d5` sit committed and unpushed; `origin/main` is at
-`439a2ed`. Because d3cd7d5 is f05b59a's parent, ANY push of the tick also
-deploys the wording change — they go live together or not at all. Do not push
-either until she says go.
+**LIVE 2026-09-09 as `fccde33`** — verified against the DEPLOYED files, not the
+tree: `sw.js` serves `lcm-20260909-bbt-tick`, `index.html` carries build
+`20260909-213000`, `data-ph-jr-bbt`, `phCkBbtOffered`, `ph-ck-long`, the
+escaped `\25B8`, and the late-period gate.
+**Worth keeping — she was asked in two sessions and answered differently.** In
+this session she chose "Not yet — let me look first"; minutes later, in the
+sibling session, she said deploy both. The later word won
+([[feedback_recent_overrides_old]]), and telling her "nothing is live" after it
+had shipped was wrong in a way that matters, because it is her app and her
+patients. **When two sessions are both talking to her about the same deploy,
+check the remote before reporting publish state** — `git log origin/main` and
+a `curl` of the live build stamp, not the local branch.
+**Deploying from this shared tree: push the branch ref
+(`git push origin session-a:main`), never checkout/merge/checkout.** A checkout
+refuses while the other session has uncommitted work, and stashing or
+committing on its behalf is how the 2026-08-05 edit war started
+([[feedback_concurrent_clobber_protocol]]). A ref push fast-forwards main
+without touching the working tree. Corollary learned the same day: anything
+committed on session-a rides along on the next push whoever makes it, so a
+commit is a publish decision here even when the pusher is someone else.
 **Menses is NOT a toggle** and has no add-on id — it is baked permanently into
 the Period-Formal bodies, base and +Supportive, never Casual.
 
