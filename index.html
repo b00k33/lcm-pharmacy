@@ -33447,7 +33447,11 @@ or changing anything in Cliniko.
     "maint-nobooking": { track: "maintenance", cyclePhase: null, planPhase: [],                ivf: null,  addons: [], planText: /maintenance|recurrence prevention/i, requiresBooked: false },
     "maint-booked": { track: "maintenance", cyclePhase: null,    planPhase: [],                ivf: null,  addons: [], planText: /maintenance|recurrence prevention/i, requiresBooked: true },
     "weight-building": { track: "weight",  cyclePhase: null,     planPhase: [],                ivf: null,  addons: [] },
-    period:         { track: "cycle",      cyclePhase: "period", planPhase: ["menses"],        ivf: false, addons: ["bbt", "menses"] },
+    // addons lists only what is SWITCHABLE. "menses" used to sit here too,
+    // but her instruction was that the menses-signs reminder is permanent
+    // inside Period-Formal (base and +Supportive) and absent from Casual --
+    // so it is part of those two bodies, not a toggle anything can turn off.
+    period:         { track: "cycle",      cyclePhase: "period", planPhase: ["menses"],        ivf: false, addons: ["bbt"] },
     follicular:     { track: "cycle",      cyclePhase: "foll",   planPhase: ["foll1", "foll2"], ivf: false, addons: [] },
     ovulation:      { track: "cycle",      cyclePhase: "ov",     planPhase: ["ov"],            ivf: false, addons: ["bbt"] },
     luteal:         { track: "cycle",      cyclePhase: "luteal", planPhase: ["tww"],           ivf: false, addons: [] },
@@ -33482,6 +33486,40 @@ or changing anything in Cliniko.
   // originally read "since we last saw you" and was corrected on the way in.
   // Tokens: {{nextAppt}} fills as a short date ("4 Sep") in Compose, falling
   // back to "your next visit" when nothing is booked -- see phMsgTokenFill.
+  // ---- the BBT add-on: a third layer, independent of Formal/Casual AND of
+  // base/Supportive. One removable line, the SAME wording in both places
+  // ("same for both", her call), offered only on the two moments where a
+  // chart actually matters. Whether it goes on is per-patient, not global --
+  // the tick lives on the patient, and PH_CODE3_MOMENTS[x].addons says which
+  // moments may carry it.
+  // Kept as data rather than hard-coded into each body precisely because it
+  // is removable: baking it into four Period rows and two Ovulation rows
+  // would mean six copies to keep in step. The menses reminder is the
+  // opposite case -- permanent, Formal-only -- so that one IS in the bodies.
+  const PH_CODE3_ADDONS = {
+    bbt: {
+      id: "bbt", label: "BBT chart request", moments: ["period", "ovulation"],
+      text: "If you're tracking your BBT, send me a screenshot of your chart when you get a chance."
+    }
+  };
+  // read through the store first so the wording stays editable later without
+  // this constant having to move; falls back to the seed above until then
+  function phCode3AddonText(id) {
+    const stored = PHARMACY.msgAddons && PHARMACY.msgAddons[id];
+    if (stored && typeof stored.text === "string" && stored.text.trim()) return stored.text;
+    const seed = PH_CODE3_ADDONS[id];
+    return seed ? seed.text : "";
+  }
+  // Body fixes that must reach rows already seeded on her devices. `from` is
+  // the exact previous seed text -- see the guard in phMsgTemplates().
+  const PH_CODE3_BODY_UPGRADES = [
+    { code3: "period-formal",
+      from: "Hi {{firstName}}, it's {{me}} from {{clinic}}. How's the menstrual flow? Any pain or clots this time? Let me know, and I'll go over everything at your next visit on {{nextAppt}}. {{me}}",
+      to:   "Hi {{firstName}}, it's {{me}} from {{clinic}}. How's the menstrual flow? Any pain or clots this time? A gentle reminder to pay attention to your menses signs this cycle — flow, pain, clots, colour. The Fertility Friend app is handy for keeping it all recorded in one place: https://www.fertilityfriend.com/ Let me know, and I'll go over everything at your next visit on {{nextAppt}}. {{me}}" },
+    { code3: "period-formal-sup",
+      from: "Hi {{firstName}}, it's {{me}} from {{clinic}}. 🌸 How's the menstrual flow? Any pain or clots this time? Let me know, and I'll go over everything at your next visit on {{nextAppt}}. You're doing so well with all of this. {{me}}",
+      to:   "Hi {{firstName}}, it's {{me}} from {{clinic}}. 🌸 How's the menstrual flow? Any pain or clots this time? A gentle reminder to pay attention to your menses signs this cycle — flow, pain, clots, colour. The Fertility Friend app is handy for keeping it all recorded in one place: https://www.fertilityfriend.com/ Let me know, and I'll go over everything at your next visit on {{nextAppt}}. You're doing so well with all of this. {{me}}" }
+  ];
   const PH_CODE3_MSG_SEEDS = [
     { code3: "ivf-mens-formal", name: "IVF Menstruation — Formal", tag: "checkin", category: "cycle", subject: "Checking in — {{clinic}}",
       body: "Hi {{firstName}}, it's {{me}} from {{clinic}}. Your period's started, so your stimulation injections should be getting underway — how are you finding them so far, any bruising, bloating, or side effects? Let me know when your baseline scan is booked so I can fit acupuncture around it. {{me}}" },
@@ -33540,10 +33578,16 @@ or changing anything in Cliniko.
       body: "Hi {{firstName}}, it's {{me}} from {{clinic}}. It's about time for your maintenance visit — how have things been holding up since I last saw you? Let me know if you'd like to book in. {{me}}" },
     { code3: "maint-nobooking-casual", name: "Maintenance (no booking) — Casual", tag: "checkin", category: "phase", subject: "Checking in — {{clinic}}",
       body: "Hi {{firstName}}, how's everything holding up? My calendar shows it's time for a maintenance visit. {{me}}" },
+    // the menses-signs reminder is NOT a toggle (her answer, recorded in
+    // CLAUDE.md): it lives permanently inside Period-FORMAL, base and
+    // +Supportive, and never appears in the Casual pair. So it is simply
+    // part of these two bodies -- no addon id, no tick, nothing for the
+    // picker to decide. See PH_CODE3_BODY_UPGRADES for how it reached rows
+    // that were already seeded on her devices before this line existed.
     { code3: "period-formal", name: "Period — Formal", tag: "checkin", category: "cycle", subject: "Checking in — {{clinic}}",
-      body: "Hi {{firstName}}, it's {{me}} from {{clinic}}. How's the menstrual flow? Any pain or clots this time? Let me know, and I'll go over everything at your next visit on {{nextAppt}}. {{me}}" },
+      body: "Hi {{firstName}}, it's {{me}} from {{clinic}}. How's the menstrual flow? Any pain or clots this time? A gentle reminder to pay attention to your menses signs this cycle — flow, pain, clots, colour. The Fertility Friend app is handy for keeping it all recorded in one place: https://www.fertilityfriend.com/ Let me know, and I'll go over everything at your next visit on {{nextAppt}}. {{me}}" },
     { code3: "period-formal-sup", name: "Period — Formal + Supportive", tag: "checkin", category: "cycle", subject: "Checking in — {{clinic}}",
-      body: "Hi {{firstName}}, it's {{me}} from {{clinic}}. 🌸 How's the menstrual flow? Any pain or clots this time? Let me know, and I'll go over everything at your next visit on {{nextAppt}}. You're doing so well with all of this. {{me}}" },
+      body: "Hi {{firstName}}, it's {{me}} from {{clinic}}. 🌸 How's the menstrual flow? Any pain or clots this time? A gentle reminder to pay attention to your menses signs this cycle — flow, pain, clots, colour. The Fertility Friend app is handy for keeping it all recorded in one place: https://www.fertilityfriend.com/ Let me know, and I'll go over everything at your next visit on {{nextAppt}}. You're doing so well with all of this. {{me}}" },
     { code3: "period-casual", name: "Period — Casual", tag: "checkin", category: "cycle", subject: "Checking in — {{clinic}}",
       body: "Hi {{firstName}}, just checking if your period started yet? How's the flow/pain this time? Let me know. See you {{nextAppt}}. {{me}}" },
     { code3: "period-casual-sup", name: "Period — Casual + Supportive", tag: "checkin", category: "cycle", subject: "Checking in — {{clinic}}",
@@ -33623,6 +33667,16 @@ or changing anything in Cliniko.
     // this backfills onto data seeded before they existed and never double-adds.
     // Only ADDS -- once a row is here her edits own it, exactly like the
     // starters above (a re-word from Templates is never overwritten on load).
+    // Rows already on her devices are never overwritten by a changed seed --
+    // the loop below is add-only on purpose, so an edit she makes in
+    // Templates survives every deploy. That also means a seed body FIX can
+    // never reach her. This list is the narrow exception: upgrade a row only
+    // while it is still byte-identical to the previous seed, i.e. she has
+    // not touched it. One character of her own editing and it is left alone.
+    PH_CODE3_BODY_UPGRADES.forEach(u => {
+      const row = PHARMACY.msgTemplates.find(t => t.code3 === u.code3);
+      if (row && row.body === u.from) { row.body = u.to; row.editedAt = Date.now(); }
+    });
     PH_CODE3_MSG_SEEDS.forEach(s => {
       const existing = PHARMACY.msgTemplates.find(t => t.code3 === s.code3);
       if (!existing) {
