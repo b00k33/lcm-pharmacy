@@ -379,7 +379,39 @@ is EXPLICIT and stronger, and must win over it — do not end up with two compet
 mechanisms. Model it on `rec.acuEnabled` (the existing Tracking toggle), and store it
 positively so an absent field means the current behaviour for all 510 existing records.
 
-### Two traps for whoever builds this — both verified in the source, not assumed
+**13. DATED EVENTS BELONG ON A PHASE — and the clinic's dates DRIVE it (her ask 2026-09-09:
+"allow for appointment treatment notes as part of plan e.g. plan ivf appointment date x
+during follicular phase").** Two kinds, and they are not the same thing:
+- **Her own appointments — GATHERED.** Already in `PHARMACY.appointments`, already dated;
+  they carry `focus`/`goal` (+`briefSrc`), which ARE the treatment note in this app. They
+  land in whatever phase window contains their date. No typing.
+- **The fertility clinic's dates — TYPED ONCE.** An egg pickup or transfer happens at the
+  IVF clinic, never appears in Cliniko, and is therefore not gatherable. These are plan
+  milestones: `{date, label, note}`.
+
+**The gap this closes, and why it is not a nice-to-have.** `PH_TP_PHASE` already carries
+IVF phases whose cadence is written *relative to dates the app cannot know*: `opu` says
+**"One visit 1–2 days after retrieval"**, `preEt` says **"One visit the day of, or the day
+before, transfer"** (~38441-38443). Nothing anywhere stores a retrieval or transfer date —
+verified, zero hits. So those phases only ever become current because she advances them by
+hand, which also means the Post-OPU / Pre-ET / Post-ET messages she wrote (`phCkPick` picks
+by `planPhase`, ~33734-33736) only fire when she has remembered to. **The instructions were
+built for a date the app was never given.**
+
+**Her two answers:**
+- **Milestone dates DRIVE the phases** — entering transfer = 14 Sep moves Pre-ET/Post-ET
+  onto the right days automatically, so plan and messages line up without hand-advancing.
+  (She took this over "show the date, I'll move the phase" AND over "ask me first" — so
+  move them, don't prompt. IVF dates change at short notice, so make re-entering a date
+  re-derive cleanly rather than compound.)
+- **Cadence becomes a real date.** "One visit the day before transfer" + transfer 14 Sep →
+  **"book her Fri 13 Sep"**, shown on the phase and countable in Communications. Parse
+  against the existing cadence corpus in `PH_TP_PHASE_TEMPLATES`; `phAcuCadenceParse`
+  already parses the interval half of that language and is the place to extend, not
+  duplicate. A cadence it cannot resolve must degrade to showing the text as written —
+  never a wrong date.
+
+### Three traps for whoever builds this — all verified in the source, not assumed
 - **`phPatientRec()` MUTATES plans on every single call.** Right after its lazy-init it runs
   `r.treatmentPlans.forEach(...)`, renaming any "Cycle & IVF Protocol" template/title to
   "IVF Protocol" and promoting `p.cycle` up to `r.cycle`. A tab strip repaints constantly,
