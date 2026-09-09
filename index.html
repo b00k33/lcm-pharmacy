@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260910-153000">
+<meta name="lcm-build" content="20260910-161500">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -23650,10 +23650,32 @@
   // there. A Back navigation itself is not recorded (phTabBackNav).
   const phTabHistory = [];
   let phTabLast = null, phTabBackNav = false;
+  /* Her report 2026-09-10: "when i open patient profile from appointments grid
+     view, and then go back, it takes me to patient profile - i want to be back
+     to grid view."
+
+     Measured, not guessed. Tapping a patient in the grid opens the appointment
+     popup; tapping the name in it runs the data-ph-dash-patient-open handler,
+     which does TWO things in one tap -- PHARMACY.activeTab = "prescriptions"
+     AND presOpenScript(), which throws the full-screen script page over it.
+     Instrumented run: after that one tap, activeTab "prescriptions",
+     ph-pres-fullopen true, history ["appointments"]. Back then closed the
+     script page (deliberate, her 2026-09-08 ask) and returned -- activeTab
+     still "prescriptions", history still ["appointments"] -- leaving her on a
+     Patient profile she never asked to see, with the grid two presses away.
+
+     One tap opened two layers, so one Back has to undo both. This flag marks
+     only that case: the script page arriving as part of a TAB HOP. A script
+     opened from inside the profile is untouched, and its Back still returns to
+     the list it came from, which is what that back is for. */
+  let presPageFromTabHop = false;
   function phGoBack() {
     // an open script page closes first (her ask 2026-09-08) -- Back returns
-    // to the list it came from, not to the previous tab
-    if (document.body.classList.contains("ph-pres-fullopen") && presPageClose()) return;
+    // to the list it came from, not to the previous tab. Unless the page and
+    // the tab arrived together, in which case closing it is only half the
+    // undo and we carry straight on to the pop below.
+    const wholeHop = presPageFromTabHop;
+    if (document.body.classList.contains("ph-pres-fullopen") && presPageClose() && !wholeHop) return;
     // the phone's check-in page closes the same way (her ask 2026-09-09)
     if (document.body.classList.contains("ph-ck-pageopen") && phCkPageClose()) return;
     const prev = phTabHistory.pop();
@@ -24564,11 +24586,16 @@
         phApptPopClose();
         const name = patOpen.dataset.phDashPatientOpen;
         const script = phApptScriptFor(phPatientKey(name));
+        const cameFrom = PHARMACY.activeTab;
         if (phTimers.presTmpl) { clearTimeout(phTimers.presTmpl); phTimers.presTmpl = null; presFlushTemplate(); }
         PHARMACY.activeTab = "prescriptions";
         if (script) presOpenScript(script.id);
         else { presOpenId = null; presEditId = null; presDraft = null; presSearch = name; presPage = 1; }
         savePharmacy(); renderPharmacy();
+        // set AFTER the render, which is where the tab hop is recorded in
+        // phTabHistory: this one tap opened the tab AND the script page over
+        // it, so one Back undoes both (presPageFromTabHop)
+        presPageFromTabHop = !!script && cameFrom !== "prescriptions";
         if (script) presScrollToPanel();
         else { const inp = document.getElementById("presSearch"); if (inp) inp.value = name; }
         return;
@@ -24577,10 +24604,12 @@
       if (dashPresOpen) {
         // same forward as data-pres-open below, plus the tab hop the herb-edit
         // handler already does — Dashboard has no prescription editor of its own
+        const presCameFrom = PHARMACY.activeTab;
         if (phTimers.presTmpl) { clearTimeout(phTimers.presTmpl); phTimers.presTmpl = null; presFlushTemplate(); }
         PHARMACY.activeTab = "prescriptions";
         presOpenScript(dashPresOpen.dataset.phDashPresOpen);
         savePharmacy(); renderPharmacy();
+        presPageFromTabHop = presCameFrom !== "prescriptions";   // same one-tap-two-layers case as above
         presScrollToPanel();
         return;
       }
@@ -31796,6 +31825,10 @@ or changing anything in Cliniko.
     renderPresPanel();
     presTlDock = null; presPanelDock();
     document.body.classList.remove("ph-mtabbar-peek");   // don't carry a peeked bar into the next panel
+    // the page is gone, so it can no longer be half of an un-undone tab hop --
+    // phGoBack reads the flag BEFORE calling this, so clearing it here is safe
+    // and stops a later Back over-popping (see presPageFromTabHop)
+    presPageFromTabHop = false;
     return wasOpen;
   }
   function presPanelCurrentKey() {
@@ -32506,6 +32539,13 @@ or changing anything in Cliniko.
   // presOpenSnapshot is what presDoseTimelineHtml compares against, see its
   // own comment for the full model.
   function presOpenScript(id) {
+    // Cleared for EVERY way into a script, so the one-Back-undoes-two-layers
+    // behaviour is opt-in rather than sticky: the two handlers that also hop
+    // the tab set it again immediately after their render, and every other
+    // caller -- the profile list, the week rows, a follow-up, the editor --
+    // leaves it false, so their Back still just closes the page. (10 callers,
+    // 2 of them tab hops.)
+    presPageFromTabHop = false;
     presOpenId = id; presEditId = null;
     presLabelOpen = false; presMoreOpen = false; presFuOpen = false;
     presNameOpen = false; presHistOpen = false; presThirdOpen = false; presMedHxOpen = false;
@@ -34443,7 +34483,11 @@ or changing anything in Cliniko.
     const presId = rec.presId, first = phCkFirst(rec.patient);
     phCkOpen = null; phCkForm = null;
     phFlashShow(`✓ Saved to ${first}'s history`);
-    if (thenScript && presId) { presOpenScript(presId); PHARMACY.activeTab = "prescriptions"; savePharmacy(); renderPharmacy(); presScrollToPanel(); return; }
+    // the third one-tap-two-layers hop: finishing a check-in and going straight
+    // to the script leaves Communications behind the same way, so Back has the
+    // same whole tap to undo (presPageFromTabHop). Set after the render, and
+    // after presOpenScript, which clears it.
+    if (thenScript && presId) { const ckCameFrom = PHARMACY.activeTab; presOpenScript(presId); PHARMACY.activeTab = "prescriptions"; savePharmacy(); renderPharmacy(); presPageFromTabHop = ckCameFrom !== "prescriptions"; presScrollToPanel(); return; }
     phCkRender();
   }
   function phCkSnooze() {
