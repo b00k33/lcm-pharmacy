@@ -514,10 +514,15 @@ So the Acupreg colour uses `phCkInkByContrast`, which measures both options and 
 better. **Verified 2026-09-09: four of the 21 Cliniko colours have this same problem
 today** — Initial Acupuncture 3.29:1, Subsequent with herbs 2.69:1 (her most common),
 Subsequent 2.91:1, Herbal Followup 2.88:1, all white where dark reads far better; Cupping
-sits at 4.23:1 with white still the better of the two. **They were NOT changed**, because
-flipping the text colour on appointments she reads every day is a visible change she has
-not seen — raised with her instead of shipped quietly. If she says yes, the fix is to point
-`phCkTypeColour` at `phCkInkByContrast` and delete `phCkInkFor`; nothing else changes.
+sits at 4.23:1 with white still the better of the two.
+
+**SHE WAS ASKED AND SAID LEAVE THEM (2026-09-09).** Shown the four side by side, white
+against dark, she chose "Leave them" — she reads them fine on her own screens. **So do not
+change them, and do not raise it again unless she brings it up.** The measurement is
+recorded here because it is real and worth knowing, not because it is outstanding work. Her
+Acupreg sage keeps `phCkInkByContrast` because that colour genuinely was unreadable at
+2.51:1; the 21 keep `phCkInkFor` because she looked and decided. She also confirmed
+`#8AAB99` reads right on her screen, so the swatch match is settled.
 
 ## Spacing & size (one scale, no random numbers)
 - Only 4/8/12/16/24/32px for margins/padding/gaps.
