@@ -433,8 +433,12 @@ looks, so it cannot be bolted on later.
 
 **14. A HOME VISIT IS A PLACE, NOT A TREATMENT (her ask 2026-09-09: "what about home
 visit color").** "Home Visit" is a real service she books — seen 2026-09-09, 120 minutes,
-12:00pm — but it was NOT among the 21 types read off her Cliniko on 2026-09-08 into
-`PH_CLINIKO_TYPE_COLOURS`. Two consequences, the second much worse than the first:
+12:00pm — and it is absent from the 21 types in `PH_CLINIKO_TYPE_COLOURS` **not because
+that read missed it**. In her words: **"home visit is separate from cliniko"**. She does
+not book these in Cliniko at all; she types them straight into this app's own
+Edit-appointment form, where Service is a bare free-text `<input type="text">` (~21336) —
+no dropdown, no datalist, no suggestions. The string is whatever she typed, and nothing
+upstream normalises it. Two consequences, the second much worse than the first:
 - It matched nothing and fell to the kind tint: pale gold `#FFFBE2` on desktop (~4097),
   solid `--ph-purple-deep` on the phone (~12171). The palest block on a screen of solid ones.
 - **A booking whose NAME carried a treatment word took the CLINIC colour.** "Home visit
@@ -442,9 +446,21 @@ visit color").** "Home Visit" is a real service she books — seen 2026-09-09, 1
   across town painted identically to a session in her own room.
 
 **Her four answers (2026-09-09):** *Both* (own colour AND an away mark) · *"You pick one"*
-— an explicit, one-off exception to "use cliniko for the colors", because she did not want
-to go and read Cliniko · she always writes **"Home Visit"**, never "house call" · and yes,
-fix the Edit-appointment square too.
+— **not** an exception to "use cliniko for the colors" but a case that rule does not reach,
+since there is no Cliniko type here to read a colour from · she always writes **"Home
+Visit"**, never "house call" · and yes, fix the Edit-appointment square too.
+
+**This is a BRIDGE, and it has an expiry.** Same day she added: **"i will coincide all
+appointments to cliniko past january"** — once home visits are booked in Cliniko like
+everything else, Home Visit becomes a real appointment type with a real Cliniko colour, and
+the honest thing is to use hers. At that point move the entry up into
+`PH_CLINIKO_TYPE_COLOURS` with the hex off her Settings screen and delete
+`PH_LCM_OWN_TYPE_COLOURS`. Nothing else changes. **The handover was tested, not assumed:**
+because `PH_CLINIKO_TYPE_INDEX` matches on a bidirectional substring of the normalised
+name, every shape Cliniko is likely to produce already resolves to this entry — "6. Home
+Visit (120 mins)", "Home Visit - Acupuncture", "7. Home Visit with herbs (120 mins)", "HOME
+VISIT", "home visit", even "Homevisit" — all with the away bar. The January move cannot
+strand a home visit on the wrong colour; it only changes which hex.
 
 **How it is built.** `PH_LCM_OWN_TYPE_COLOURS` is a SEPARATE table from the Cliniko-read
 one, deliberately — everything in `PH_CLINIKO_TYPE_COLOURS` was read off her Settings
