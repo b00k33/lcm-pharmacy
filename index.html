@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260909-222000">
+<meta name="lcm-build" content="20260909-223000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -11594,7 +11594,8 @@
   #pharmacyPage .ph-msg-chip button:hover { background: rgba(0,0,0,.08); }
   #pharmacyPage .ph-msg-chips input { flex: 1 1 140px; min-width: 120px; border: none; font: inherit; font-size: 13px; padding: 4px; background: none; color: var(--ph-ink); }
   #pharmacyPage .ph-msg-chips input:focus { outline: none; }
-  #pharmacyPage .ph-msg-compose [data-ph-msg-add-reloc] { display: block; margin-top: 8px; }
+  #pharmacyPage .ph-msg-compose [data-ph-msg-add-reloc],
+  #pharmacyPage .ph-msg-compose [data-ph-msg-add-rebates] { display: block; margin-top: 8px; }
   #pharmacyPage .ph-msg-tokenkey { font-size: 11px; color: var(--ph-soft); margin-top: 5px; }
   #pharmacyPage .ph-msg-tokenkey code { background: var(--ph-paper); border-radius: 4px; padding: 1px 5px; font-family: ui-monospace, "SF Mono", Consolas, monospace; }
   #pharmacyPage .ph-msg-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 4px 0 16px; }
@@ -11800,6 +11801,24 @@
   #pharmacyPage .ph-jr-pkg-fields { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   #pharmacyPage .ph-jr-pkg-fields input { font: inherit; font-size: 12px; border: 1px solid var(--ph-line); border-radius: 8px; padding: 4px 8px; background: var(--ph-white); color: var(--ph-ink); }
   #pharmacyPage .ph-jr-pkg-fields input[type="number"] { width: 66px; }
+  /* Insurance (her ask 2026-09-09, "a note ... regarding their insurance giving
+     good rebates"). Same row language as the Package fields above: these are
+     the card's two money rows and they should read as one family. Deliberately
+     NOT .field-bare -- it takes the app-wide field styling exactly as the
+     Package inputs do, so the two stay identical if that language ever moves.
+     The tick going green is pure CSS off :checked, which is why neither
+     surface needs a re-render to show the change. */
+  #pharmacyPage .ph-ins-fields { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; flex: 1 1 260px; min-width: 0; }
+  #pharmacyPage .ph-ins-fields input[type="text"] {
+    flex: 1 1 190px; min-width: 0; font: inherit; font-size: 12px;
+    border: 1px solid var(--ph-line); border-radius: 8px; padding: 4px 8px;
+    background: var(--ph-white); color: var(--ph-ink);
+  }
+  #pharmacyPage .ph-ins-good { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ph-soft); white-space: nowrap; cursor: pointer; }
+  #pharmacyPage .ph-ins-good input:checked + span { color: var(--ph-green-deep); font-weight: 700; }
+  /* on the script's Opening stage it sits under its own section header rather
+     than in a label/value row, so it needs the breathing space the row gave it */
+  #pharmacyPage .ph-op-record .ph-ins-fields { margin: 6px 0 2px; }
   #pharmacyPage .ph-jr-pkg-past { font-size: 11px; color: var(--ph-faint); }
   /* the empty-cell prompt sits back (her pick 2026-09-09) -- element selector
      so it beats the .ph-name-link green/700 reset further down the sheet */
@@ -21091,6 +21110,7 @@
         ${comp ? `<span class="ic" aria-hidden="true">💧</span><span class="v"><b>Cycle day ${comp.day}</b> · ${esc(comp.phaseLabel)}${comp.overdue ? ` <span class="ph-tl-chip short">late?</span>` : ""}</span>` : ""}
         ${last ? `<span class="ic" aria-hidden="true">🕓</span><span class="v">Last seen <b>${esc(phFuDateLabel(last.on))}</b> · ${esc(last.via)}</span>` : ""}
         ${phPkgCalc(k) ? `<span class="ic" aria-hidden="true">🎟</span><span class="v">${phPkgLineHtml(k)}</span>` : ""}
+        ${phInsGood(k) ? `<span class="ic" aria-hidden="true">💳</span><span class="v"><b>Good rebates</b>${phInsNote(k) ? ` · <span class="faint">${esc(phInsNote(k))}</span>` : ""}</span>` : ""}
       </div>
       <div class="ph-apptpop-foot">
         ${script ? `<button type="button" class="ph-name-link" data-ph-dash-pres-open="${esc(script.id)}" title="${esc(script.phaseTag ? `The ${script.phaseTag} script is the one due` : "Open script")}">Script ↗${script.phaseTag ? ` · ${esc(script.phaseTag)}` : ""}</button>` : ""}
@@ -33955,6 +33975,79 @@ or changing anything in Cliniko.
   // nothing here names them and adding a third moment needs no change here.
   const phMsgTracksBbt = key => !!(phPatientPeek(key) || {}).tracksBbt;
   function phMsgSetTracksBbt(name, val) { const r = phPatientRec(name); if (!r) return; r.tracksBbt = !!val; savePharmacy(); }
+  /* Her ask 2026-09-09: "include a note in patient profiles regarding their
+     insurance giving good rebates."
+
+     One value per patient, two controls: the note carries the detail (which
+     fund, how much comes back), the tick carries the bit she actually asked to
+     see -- whether the rebate is GOOD -- so it reads at a glance instead of
+     having to be re-read. Ticked means good; unticked means not recorded, not
+     "poor" -- she framed this as flagging the good ones, so there is no third
+     state to set and nothing to keep up to date for everyone else.
+
+     Deliberately rendered on BOTH patient surfaces (the profile's Contact card
+     and the script's Opening stage "the record she fills once" column) from
+     this one pair of accessors. They are two views of the same rec, and she
+     learns a patient's fund during intake, which happens on the script -- a
+     value editable from only one of them is precisely the complaint she raised
+     about the script tab earlier the same day. */
+  const phInsNote = key => String((phPatientPeek(key) || {}).insuranceNote || "");
+  const phInsGood = key => !!(phPatientPeek(key) || {}).insuranceGood;
+  function phInsSet(name, patch) {
+    const r = phPatientRec(name);
+    if (!r) return;
+    // delete rather than store "" / false, so a patient she never asked keeps a
+    // clean record and phPatientRec's shape stays as small as it was
+    if ("note" in patch) { const v = String(patch.note || "").trim(); if (v) r.insuranceNote = v; else delete r.insuranceNote; }
+    if ("good" in patch) { if (patch.good) r.insuranceGood = true; else delete r.insuranceGood; }
+    savePharmacy();
+  }
+  /* Her follow-up, same day: "good rebates puts them on the good to
+     message/followup for future maintenance appointments, or for
+     communications around private health rebates." So the tick is a SEGMENT,
+     not just a note -- it has to be reachable from Compose, or she would be
+     retyping the same names every time her patients' extras reset.
+
+     Roster is PHARMACY.patients rather than phMsgAllPatientNames(), because
+     only a patient with a record can carry the tick, and that record may exist
+     before she has ever dispensed to or booked them. Display names still come
+     from the roster where it has one, so the chips read "Kim Lan Nguyen", not
+     the lower-cased storage key. doNotContact is filtered here as well as at
+     the call site -- STEP 7's rule is that an opted-out patient is never
+     offered as an option anywhere, including a bulk add. */
+  function phInsGoodNames() {
+    const pats = PHARMACY.patients || {};
+    const cased = new Map();
+    phMsgAllPatientNames().forEach(n => cased.set(phPatientKey(n), n));
+    return Object.keys(pats)
+      .filter(k => pats[k] && pats[k].insuranceGood && !phMsgDoNotContact(k))
+      .map(k => cased.get(k) || phMsgDisplayName(k))
+      .filter(Boolean)
+      .sort((a, b) => String(a).localeCompare(String(b)));
+  }
+  // just the two controls; each surface wraps them in its own row language.
+  // The patient's name rides on the attributes so ONE handler serves both
+  // surfaces without either needing to know which page it is on.
+  function phInsFieldsHtml(name) {
+    const key = phPatientKey(name);
+    return `<div class="ph-ins-fields">
+      <input type="text" class="ph-ins-note" data-ph-ins-note="${esc(name)}" value="${esc(phInsNote(key))}" placeholder="e.g. Bupa top extras — $45 back a visit" aria-label="Insurance note">
+      <label class="ph-ins-good"><input type="checkbox" data-ph-ins-good="${esc(name)}"${phInsGood(key) ? " checked" : ""}><span>good rebates</span></label>
+    </div>`;
+  }
+  // "change", not "input": the note commits on blur/Enter, so a half-typed fund
+  // name never reaches the record. No re-render on either path -- nothing else
+  // on either page shows this value, and re-rendering the script panel while
+  // she is filling the record in front of a patient would throw away her place.
+  // The tick's green styling is CSS off :checked, so it needs no render either.
+  document.addEventListener("change", e => {
+    const el = e.target;
+    if (!el || !el.closest) return;
+    const note = el.closest("[data-ph-ins-note]");
+    if (note) { phInsSet(note.dataset.phInsNote, { note: note.value }); return; }
+    const good = el.closest("[data-ph-ins-good]");
+    if (good) { phInsSet(good.dataset.phInsGood, { good: good.checked }); return; }
+  });
   // `moment` MUST be a bare moment key ("period"), never a full code3 row key
   // ("period-formal-sup") -- phPickFacets indexes PH_CODE3_MOMENTS, which is
   // keyed by moment. Callers pass phCkForm.tmpl, and that is a moment key only
@@ -34423,6 +34516,7 @@ or changing anything in Cliniko.
     const body = phMsgDraftBody != null ? phMsgDraftBody : (tmpl ? tmpl.body : "");
     const stats = phMsgRecipientStats(phMsgToNames, phMsgSelChannel);
     const stillToTell = phMsgRelocStillToTell();
+    const goodRebates = phInsGoodNames();
     // STEP 7: doNotContact is never shown as an option to include — not in
     // this list, not by typing their exact name, not via the relocation
     // quick-add (phMsgRelocStillToTell reads the same roster, but excluding
@@ -34437,6 +34531,7 @@ or changing anything in Cliniko.
         </div>
         <datalist id="phMsgPatientList">${allNames.filter(n => !phMsgToNames.includes(n)).map(n => `<option value="${esc(phTitle(n))}">`).join("")}</datalist>
         ${stillToTell.length ? `<button type="button" class="ph-name-link" data-ph-msg-add-reloc="1">+ Add everyone still to tell about the move (${stillToTell.length})</button>` : ""}
+        ${goodRebates.length ? `<button type="button" class="ph-name-link" data-ph-msg-add-rebates="1" title="Everyone whose insurance you've marked as giving good rebates">+ Add everyone with good rebates (${goodRebates.length})</button>` : ""}
       </div>
       <div class="field full">
         <label>Template</label>
@@ -34607,6 +34702,8 @@ or changing anything in Cliniko.
     if (rm) { phMsgToNames = phMsgToNames.filter(n => n !== rm.dataset.phMsgToRemove); renderPharmacy(); return; }
     const addReloc = e.target.closest("[data-ph-msg-add-reloc]");
     if (addReloc) { phMsgRelocStillToTell().forEach(n => { if (!phMsgDoNotContact(phPatientKey(n)) && !phMsgToNames.includes(n)) phMsgToNames.push(n); }); renderPharmacy(); return; }
+    const addRebates = e.target.closest("[data-ph-msg-add-rebates]");
+    if (addRebates) { phInsGoodNames().forEach(n => { if (!phMsgDoNotContact(phPatientKey(n)) && !phMsgToNames.includes(n)) phMsgToNames.push(n); }); renderPharmacy(); return; }
     const chan = e.target.closest("[data-ph-msg-channel]");
     if (chan) { phMsgSelChannel = chan.dataset.phMsgChannel; renderPharmacy(); return; }
     const prep = e.target.closest("[data-ph-msg-prepare]");
@@ -34742,6 +34839,10 @@ or changing anything in Cliniko.
           <input type="date" data-ph-jr-knownsince="1" value="${rec && rec.knownSince ? esc(rec.knownSince) : ""}" aria-label="Known since">
           <span class="faint">${esc(phCkToneCaption(key))}</span>
         </div>
+      </div>
+      <div class="ph-jr-contact-row ph-jr-ins-row">
+        <span>Insurance</span>
+        ${phInsFieldsHtml(phMsgDisplayName(key))}
       </div>
       ${phJourneyPkgRowsHtml(key, rec)}
     </div>`;
@@ -37793,6 +37894,8 @@ or changing anything in Cliniko.
         <div class="ph-tmpl-sec"><span>Patient</span></div>
         ${presNameTypeFieldsHtml(t)}
         ${presAddressesPanelHtml(t)}
+        <div class="ph-tmpl-sec"><span>Insurance</span></div>
+        ${phInsFieldsHtml(presPatientFor(t) || t.name || "")}
         ${switches ? `<div class="ph-tmpl-sec"><span>Tracking</span></div>
         <div class="ph-pres-switches">${switches}</div>` : ""}
       </div>
