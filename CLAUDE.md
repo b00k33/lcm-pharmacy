@@ -431,6 +431,49 @@ record has to be producible for a patient, another practitioner, an insurer or a
 request. This is the one requirement that changes how the page is BUILT rather than how it
 looks, so it cannot be bolted on later.
 
+**14. A HOME VISIT IS A PLACE, NOT A TREATMENT (her ask 2026-09-09: "what about home
+visit color").** "Home Visit" is a real service she books — seen 2026-09-09, 120 minutes,
+12:00pm — but it was NOT among the 21 types read off her Cliniko on 2026-09-08 into
+`PH_CLINIKO_TYPE_COLOURS`. Two consequences, the second much worse than the first:
+- It matched nothing and fell to the kind tint: pale gold `#FFFBE2` on desktop (~4097),
+  solid `--ph-purple-deep` on the phone (~12171). The palest block on a screen of solid ones.
+- **A booking whose NAME carried a treatment word took the CLINIC colour.** "Home visit
+  with herbs" hit the `/with\s+herbs/` keyword branch and came back `#07EDB7` — a drive
+  across town painted identically to a session in her own room.
+
+**Her four answers (2026-09-09):** *Both* (own colour AND an away mark) · *"You pick one"*
+— an explicit, one-off exception to "use cliniko for the colors", because she did not want
+to go and read Cliniko · she always writes **"Home Visit"**, never "house call" · and yes,
+fix the Edit-appointment square too.
+
+**How it is built.** `PH_LCM_OWN_TYPE_COLOURS` is a SEPARATE table from the Cliniko-read
+one, deliberately — everything in `PH_CLINIKO_TYPE_COLOURS` was read off her Settings
+screen and nothing in ours was, and that provenance is worth keeping legible. It is
+concatenated into `PH_CLINIKO_TYPE_INDEX`, so exact and substring matching pick it up for
+free. `phCkIsAway()` additionally runs FIRST in the keyword chain — *where she is beats
+what she does* — and reads the hex back out of the combined index, so it keeps working if
+Home Visit is ever promoted into the Cliniko table with a real colour.
+
+**The colour was searched, not eyeballed.** Hue 258–282 (the only family none of the 21
+occupy) against every *toned* colour — toning is what she actually sees, so comparing raw
+Cliniko brights would measure the wrong thing — plus the three fallback tints, keeping only
+candidates whose `phCkInkFor` text clears 4.5:1. `#956AFB` tones to `#7648E4`, white text
+at 5.5:1, nearest neighbours evenly spaced at 105/110/111. A first pick sat 82 from the MSK
+blue, close enough to confuse on a block that small.
+
+**Three things worth knowing before touching this again:**
+- **The type colour reaches exactly three surfaces** — the calendar block (~21189), the view
+  popup square (~21250) and, now, the edit dialog square (~21332). Every other appointment
+  surface (List view `phApptCalListRowHtml`, Dashboard day rows, the week tables) shows
+  ACU/CHM kind pills and **never the service name at all**. A home visit is still invisible
+  on her day briefing — flagged to her 2026-09-09, not built.
+- **`.ph-appt-block.away` must stay BELOW the `.ck` rules.** Both selectors are (1 id, 2
+  classes), so specificity ties and source order is the only thing beating `.ck`'s
+  `border-left: none`. It also outranks the phone's bare `.ph-appt-block` (1 id, 1 class)
+  inside the `@media` at ~12019, so the phone needs no rule of its own.
+- **The bar is `rgba(0,0,0,.45)`, not `var(--ck-ink)`.** Ink is white on every deep colour,
+  and a white bar reads as a gap in the block rather than a mark on it.
+
 ## Spacing & size (one scale, no random numbers)
 - Only 4/8/12/16/24/32px for margins/padding/gaps.
 - One corner radius for cards, one for pills. One type scale (title/body/label).

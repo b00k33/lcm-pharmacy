@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260910-022000">
+<meta name="lcm-build" content="20260910-034500">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -4129,6 +4129,20 @@
   #pharmacyPage .ph-appt-block.ck .ph-appt-block-dot.acu { display: none; }
   #pharmacyPage .ph-appt-block.ck .ph-appt-block-dot.done { width: auto; height: auto; border: none; background: none; color: var(--ck-ink); top: 2px; }
   #pharmacyPage .ph-appt-block.ck.sel { outline: 2px solid var(--ph-ink); box-shadow: 0 0 0 2px #fff; }
+  /* A home visit is somewhere she has to DRIVE to. Her answer 2026-09-09 was
+     "Both" -- its own colour AND a mark for being away -- so the colour says
+     what the appointment is and the bar says where it is, and neither signal
+     has to carry the whole meaning on a block this small.
+     This MUST stay below the .ck rules above: both selectors are (1 id, 2
+     classes), so specificity ties and source order is the only thing that
+     beats their border-left:none. It also outranks the phone's bare
+     #pharmacyPage .ph-appt-block (1 id, 1 class) inside the @media opened at
+     12019, so the phone needs no rule of its own.
+     A translucent black edge rather than var(--ck-ink): it darkens whatever
+     is underneath, so it reads as a deliberate band on the deep violet and on
+     every pale fallback tint alike -- where a white --ck-ink bar would read
+     as a gap in the block rather than a mark on it. */
+  #pharmacyPage .ph-appt-block.away { border-left: 4px solid rgba(0, 0, 0, .45); padding-left: 5px; border-radius: 0 6px 6px 0; }
   #pharmacyPage .ph-appt-block.dim { opacity: .3; }
   #pharmacyPage .ph-apptcal-search { display: block; width: 100%; box-sizing: border-box; margin: 10px 0 0; }
   /* Paste-from-Cliniko, kept deliberately quiet (her ask 2026-09-09: "add
@@ -20456,8 +20470,46 @@
     ["Chinese Herbal Medicine - Subsequent Telehealth (30mins)", "#FDFAAF"],
     ["Meeting", "#B8D9FF"],
   ];
+  // Colours WE chose, kept deliberately apart from the Cliniko-read table
+  // above so its provenance stays honest -- everything in
+  // PH_CLINIKO_TYPE_COLOURS was read off her Settings screen; nothing here
+  // was.
+  //
+  // "Home Visit" is a real service she books (seen 2026-09-09: 120 minutes,
+  // 12:00pm) but it was not among the 21 types, so it fell through to the
+  // kind tint -- the palest block on a screen full of solid ones. Worse, a
+  // booking whose NAME carried a treatment word ("Home visit with herbs")
+  // matched the /with herbs/ keyword below and took the CLINIC colour, so a
+  // drive across town looked exactly like a session in her own room.
+  //
+  // She asked me to pick the colour rather than read it off Cliniko (her
+  // answer 2026-09-09, an explicit exception to "use cliniko for the
+  // colors"). The violet sits in the one hue family none of the 21 occupy --
+  // they cluster at red 0-7, yellow 57-62, green 100-128, mint 166, cyan
+  // 177-189, blue 212-226 and pink 313-338, leaving 230-310 empty.
+  //
+  // Not eyeballed: searched hue 258-282 against every TONED colour (toning
+  // is what she actually sees, so comparing the raw Cliniko brights would
+  // have measured the wrong thing) plus the three fallback tints, keeping
+  // only candidates whose phCkInkFor text clears 4.5:1. #956AFB tones to
+  // #7648E4, white text at 5.5:1, and its nearest neighbours are evenly
+  // spaced -- fertility magenta #B41C9B at 105, Meeting #81B5EF at 110, MSK
+  // blue #1C3FA4 at 111. An earlier pick sat only 82 from the MSK blue,
+  // which is close enough to confuse on a block this small.
+  //
+  // If she ever gives Home Visit a colour in Cliniko, move the entry into the
+  // table above and delete this one.
+  const PH_LCM_OWN_TYPE_COLOURS = [
+    ["Home Visit", "#956AFB"],
+  ];
+  // Is this one she has to travel to? Deliberately wider than the type name
+  // above -- the table only catches a booking Cliniko named exactly, this
+  // catches "Home visit - acupuncture with herbs" and the like. She confirmed
+  // 2026-09-09 that she always writes "Home Visit", so the extra wordings are
+  // insurance, not guesswork.
+  const phCkIsAway = service => /home\s*visit|house\s*call|\bmobile\s+(?:visit|appointment)\b/i.test(String(service || ""));
   const phCkNorm = s => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
-  const PH_CLINIKO_TYPE_INDEX = PH_CLINIKO_TYPE_COLOURS.map(([n, c]) => [phCkNorm(n), c]);
+  const PH_CLINIKO_TYPE_INDEX = PH_CLINIKO_TYPE_COLOURS.concat(PH_LCM_OWN_TYPE_COLOURS).map(([n, c]) => [phCkNorm(n), c]);
   const phCkColourCache = {};
   // her ask 2026-09-08 ("make it less bright and slightly deeper"): the
   // Cliniko HUE is kept -- that is what makes a block recognisable at a
@@ -20505,7 +20557,15 @@
       else {
         const s = String(service).toLowerCase();
         const pick = name => (PH_CLINIKO_TYPE_COLOURS.find(([n]) => n === name) || [])[1] || null;
-        if (/with\s+herbs/.test(s)) hex = pick("4. Subsequent Acupuncture with herbs (60 mins) - LINH ONLY");
+        // WHERE she is beats WHAT she does, so this runs before every
+        // treatment keyword below. "Home visit with herbs" used to fall into
+        // the /with herbs/ rule and come back painted #07EDB7 -- the clinic
+        // colour -- making a drive across town indistinguishable from a
+        // session in her own room. Read back out of the combined index
+        // rather than the own-colours table, so this keeps working if Home
+        // Visit is ever promoted into the Cliniko table with a real hex.
+        if (phCkIsAway(s)) hex = (PH_CLINIKO_TYPE_INDEX.find(([n]) => n === "homevisit") || [])[1] || null;
+        else if (/with\s+herbs/.test(s)) hex = pick("4. Subsequent Acupuncture with herbs (60 mins) - LINH ONLY");
         else if (/musculo|\bmsk\b|no\s*herbs/.test(s)) hex = pick("3. Subsequent Acupuncture - (40 min) MUSCULOSKELETAL ONLY - No Herbs");
         else if (/initial/.test(s) && /fertil|gyn/.test(s)) hex = pick("2. Initial Acupuncture - Fertility/Gynaecology (60 minutes)");
         else if (/initial/.test(s) && /acu/.test(s)) hex = pick("1. Initial Acupuncture (60 mins)");
@@ -21126,7 +21186,7 @@
     // (data-ph-appt-pop -> phApptPopOpen); "Open profile →" inside the popup
     // is the travel-further step, and Edit / Cancel / Book another live in
     // the popup too, so the block's ⋯ is gone.
-    return `<div class="ph-appt-block${kind ? " " + kind : ""}${ck ? " ck" : ""}${dotCls === "done" ? " done" : ""}${phApptCalOpenId === a.id ? " sel" : ""}${dim}" style="${phApptCalBlockStyle(it)}${ck}" role="button" tabindex="0" data-ph-appt-pop="${esc(a.id)}" title="${esc(a.patient)}${a.service ? " — " + esc(a.service) : ""}">
+    return `<div class="ph-appt-block${kind ? " " + kind : ""}${ck ? " ck" : ""}${phCkIsAway(a.service) ? " away" : ""}${dotCls === "done" ? " done" : ""}${phApptCalOpenId === a.id ? " sel" : ""}${dim}" style="${phApptCalBlockStyle(it)}${ck}" role="button" tabindex="0" data-ph-appt-pop="${esc(a.id)}" title="${esc(a.patient)}${a.service ? " — " + esc(a.service) : ""}">
       <span class="ph-appt-block-time">${esc(phCkTime12(a.time))}</span><span class="ph-appt-block-name">${esc(a.patient)}</span>
       ${dotCls ? `<span class="ph-appt-block-dot ${dotCls}"${dotTap} title="${esc(dotTitle)}">${dotCls === "done" ? "✓" : ""}</span>` : ""}
     </div>`;
@@ -21269,7 +21329,7 @@
   function phApptPopEditHtml(a) {
     const kind = phApptKind(a.service) || "";
     return `<div class="ph-apptpop-tools"><button type="button" class="ph-apptpop-ic x" data-ph-apptpop-close="1" title="Close" aria-label="Close"><svg class="icn" aria-hidden="true"><use href="#i-x"/></svg></button></div>
-      <div class="ph-apptpop-title"><span class="ph-apptpop-sq${kind ? " " + kind : ""}"></span><h3>Edit appointment</h3></div>
+      <div class="ph-apptpop-title"><span class="ph-apptpop-sq${kind ? " " + kind : ""}"${phCkStyle(a.service) ? ` style="${phCkStyle(a.service)}"` : ""}></span><h3>Edit appointment</h3></div>
       <div class="ph-apptpop-form">
         <div class="field"><label>Date</label><input type="date" id="phApptCalEditDate" value="${esc(a.date)}" data-ph-apptpop-autofocus="1"></div>
         <div class="field"><label>Time</label><input type="time" id="phApptCalEditTime" value="${esc(a.time)}"></div>
