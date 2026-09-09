@@ -680,6 +680,45 @@ in `FACIAL-PARALYSIS-SPEC.md` — that file is the source of truth, this is the 
 - Two spellings are standardised in the UI only — *Corrugator Supercilii* and *Levator
   Labii Superioris Alaeque Nasi*. **Her originals stay verbatim in the spec file.**
 
+**17. APPOINTMENTS ARE A PHASE'S VISITS (her asks 2026-09-10: "allow me to select
+appointment date for each of these phases and visits… track appointment x as 1
+treatment for x phase", "i want to be able to match phase visits to appointments",
+"can you add an option where both can happen? within the phase i added acute illness
+treatment?").** Her 14 answers live in `PHASE-VISITS-SPEC.md`. The rules:
+- **An appointment counts itself.** She never ticks one off. Every appointment in her
+  book that falls inside the phase's window is one treatment for that phase; she can
+  **exclude** any of them with a click, which stores an exception (`excludedVisits`),
+  never a copy of the visit. The record still GATHERS — spec 11's principle is intact.
+- **Phase dates are the truth** (her words). An appointment before the phase started
+  does not count, and the fix is to **move the phase start**, so `sinceKey`/`doneKey`
+  are now typeable on the phase line. **This reverses her 2026-09-08 "set
+  automatically, never typed"** — flagged in the spec file, not done quietly. The
+  automatic stamp is unharmed: `phTpSetPhaseStatus` only writes those keys when empty,
+  so a day she types survives the phase being re-marked.
+- **Booked-but-not-yet-happened appointments show, marked gold, and are NOT counted.**
+- **The target is worked out from the Visits cadence**, never typed.
+- **A held plan stops counting the day it pauses.** Durable `pauseSpans` on the phase,
+  not a live `plan.status` check — otherwise the sick visits start counting again the
+  moment the plan resumes.
+- **Acute illness has TWO placements and she is asked each time**: *its own phases*
+  (ends the stretch, inserts acute + recovery, then continues the same phase after it —
+  her words: *"both. last phase ended, and continues after acute phase"*), or *inside
+  the phase* (an `acuteBlocks` entry; the sick visits count, are marked 🤧, and the
+  illness **raises** what the phase expects for those days).
+- **One wording, four surfaces.** `phTpVisitParts` is the only place the phrase is
+  built; the grid cell, the progress bar, the appointment card and the collapsed
+  Treatment row all read it. Never hand-write a fifth copy.
+- **Never say "5 of 3 visits"** — past the number the plan asked for is good news
+  ("5 visits · 2 more than planned"), and a phase that starts today says "None yet",
+  not "0 visits".
+- **The appointment card carries the ordinal and the phase only** — "Visit 3 · Phase 1
+  of 3" — deliberately no running total, because "will be visit 4" beside "3 of 3"
+  reads as a contradiction.
+- **The 60-day appointment prune is gone** (her call: *"Stop pruning — keep
+  everything"*), taken against a stated storage cost. It was deleting the very
+  evidence a phase's visit count reads. If the shared ~5MB origin quota is ever hit,
+  the fix is a slim stub (date + patient + service) — **never a new cutoff.**
+
 ## Spacing & size (one scale, no random numbers)
 - Only 4/8/12/16/24/32px for margins/padding/gaps.
 - One corner radius for cards, one for pills. One type scale (title/body/label).
