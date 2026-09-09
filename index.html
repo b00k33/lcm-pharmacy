@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260910-011000">
+<meta name="lcm-build" content="20260910-022000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -7030,6 +7030,23 @@
   #pharmacyPage .ph-tp-grid td.ph-tp-lbl.mid { border-left-width: 2px; }   /* the middle-of-the-screen split she asked for */
   #pharmacyPage .ph-tp-grid td.ph-tp-cell { cursor: text; white-space: pre-wrap; color: var(--ph-ink); }
   #pharmacyPage .ph-tp-grid td.ph-tp-cell.empty { color: var(--ph-faint); font-style: italic; }
+  /* the clinic's two dates (spec 13) — a normal grid row, so it belongs to the
+     table rather than sitting above it as a separate box (no box-in-a-box) */
+  #pharmacyPage .ph-tp-grid td.ph-tp-mscell { padding: 5px 12px; }
+  /* "Embryo transfer" does not fit the 84px label column and .ph-tp-lbl is
+     nowrap, so it clipped to "EMBRYO TRAN". Her standing rule from the tongue
+     shots: keep the proper clinical word and make the space instead — so this
+     row's labels wrap to two short lines rather than losing letters. */
+  #pharmacyPage .ph-tp-msrow td.ph-tp-lbl { white-space: normal; line-height: 1.25; }
+  #pharmacyPage .ph-tp-msdate { width: 100%; max-width: 180px; font: inherit; font-size: 12.5px;
+    padding: 4px 8px; border: 1px solid var(--ph-line); border-radius: 8px !important;
+    background: var(--ph-white); color: var(--ph-ink); }
+  #pharmacyPage .ph-tp-msdate:focus { outline: none; border-color: var(--ph-green-deep); }
+  /* the day her instruction becomes bookable — quiet, and only ever present
+     when a real clinic date produced it */
+  #pharmacyPage .ph-tp-book { margin-left: 8px; font-size: 11px; font-weight: 700;
+    letter-spacing: .02em; color: var(--ph-green-deep); background: var(--ph-green-tint);
+    border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
   #pharmacyPage .ph-tp-grid td.ph-tp-cell:hover { background: var(--ph-paper, #F5F8F4); }
   #pharmacyPage .ph-tp-grid td.ph-tp-cell.editing { padding: 0; outline: 2px solid var(--ph-green); outline-offset: -2px; background: var(--ph-white); }
   /* Planned | What happened (her spec 2026-09-09). The gathered half is not a
@@ -27894,6 +27911,33 @@
       if (!e.target.closest || !e.target.closest("#pharmacyPage")) return;
       // the phase grid's status pill (her Q1, 2026-09-08): one <select> per
       // phase line; the cascade + date stamps happen in phTpSetPhaseStatus
+      // the clinic's own date (spec 13). Three traps honoured here, all of
+      // them already written down: a <input type=date> fires change on EVERY
+      // keystroke, so a half-typed year must not be stored; savePharmacy() can
+      // REFUSE the write and return false, which both existing plan paths
+      // ignore; and a plan is identified by (patient, plan.id), never id alone.
+      const tpMs = e.target.closest("[data-tp-milestone]");
+      if (tpMs) {
+        const raw = tpMs.value || "";
+        const yr = +String(raw).slice(0, 4);
+        if (raw && !(yr >= 1900 && yr <= 2100)) return;   // still typing
+        const [planId, kind] = tpMs.dataset.tpMilestone.split(":");
+        const plan = phTpFindPlan(phTpScreenPatient, planId);
+        if (!plan || !PH_TP_MILESTONES[kind]) return;
+        plan.milestones = phTpMilestones(plan).filter(m => m && m.kind !== kind);
+        if (raw) plan.milestones.push({ id: uid(), kind, date: raw, note: "" });
+        if (savePharmacy() === false) {
+          phFlashShow("That date could not be saved — check the warning at the top and try again");
+          return;
+        }
+        // her answer: the date MOVES the phases, it does not just sit there.
+        // Say so when it does — she should never have to notice a plan
+        // rearranged itself and work out why.
+        const moved = phTpMilestoneSync(plan);
+        if (moved) phFlashShow(`${PH_TP_MILESTONES[kind].label} saved — moved the plan to ${moved.label}`);
+        else phTpRerender();
+        return;
+      }
       const tpPhSel = e.target.closest("[data-tp-phase-status-sel]");
       if (tpPhSel) {
         const [planId, phaseId] = tpPhSel.dataset.tpPhaseStatusSel.split(":");
@@ -40254,11 +40298,54 @@ or changing anything in Cliniko.
      resolve returns null and the caller shows her wording exactly as written,
      because a wrong date on a fertility plan is worse than no date at all
      (her spec: "must degrade to showing the text as written"). */
+  /* Her answer, taken over both alternatives ("show the date, I'll move the
+     phase" AND "ask me first"): the clinic's date MOVES the phases. Entering
+     transfer = 14 Sep puts Pre-ET and Post-ET on the right days by itself, so
+     the plan and the messages line up without her advancing anything by hand.
+
+     It derives, it never accumulates: the target is always recomputed from the
+     milestone dates, so re-entering a changed date lands in the right place
+     rather than stepping on from wherever the plan happened to be. That is
+     what makes a date that moves at short notice safe to retype.
+
+     Only phases whose OWN cadence resolves to a day take part; "Weekly
+     acupuncture" is never dragged around by a transfer date. Returns the phase
+     it moved to, or null if nothing changed -- callers use that to tell her. */
+  function phTpMilestoneSync(plan) {
+    if (!plan || !Array.isArray(plan.phases)) return null;
+    const today = keyOf(TODAY);
+    const dated = plan.phases
+      .map(p => ({ p, d: phTpCadenceDate(p.cadence, plan) }))
+      .filter(x => x.d)
+      .sort((a, b) => a.d.key.localeCompare(b.d.key));
+    if (!dated.length) return null;
+    // the phase whose day has most recently arrived. Nothing arrived yet =
+    // the plan has not reached these dates, so leave her plan alone.
+    const arrived = dated.filter(x => x.d.key <= today);
+    const target = arrived.length ? arrived[arrived.length - 1].p : null;
+    if (!target || target.status === "current") return null;
+    phTpSetPhaseStatus(plan, target, "current");   // cascades + saves + repaints
+    return target;
+  }
+  // which clinic date a cadence sentence is written against, if any. One rule,
+  // shared: the plan asks it to decide whether to offer the date fields at all,
+  // and the phase asks it to resolve its own day. They can never disagree.
+  function phTpCadenceKind(cadence) {
+    const t = String(cadence || "").toLowerCase();
+    if (!t) return null;
+    return /retrieval|pick-?up|\bopu\b/.test(t) ? "retrieval"
+      : /transfer|\bet\b/.test(t) ? "transfer" : null;
+  }
+  // a plan wants the date fields only if one of its own phases is written
+  // against a clinic date -- so this stays right if she adds an IVF phase to
+  // some other plan, and stays quiet on a pain or stress plan that never
+  // mentions one
+  const phTpPlanWantsMilestones = plan =>
+    !!plan && (plan.phases || []).some(p => phTpCadenceKind(p.cadence));
   function phTpCadenceDate(cadence, plan) {
     const t = String(cadence || "").toLowerCase();
     if (!t || !plan) return null;
-    const kind = /retrieval|pick-?up|\bopu\b/.test(t) ? "retrieval"
-      : /transfer|\bet\b/.test(t) ? "transfer" : null;
+    const kind = phTpCadenceKind(t);
     if (!kind) return null;
     const base = phTpMilestoneDate(plan, kind);
     if (!base) return null;
@@ -40391,8 +40478,21 @@ or changing anything in Cliniko.
       <div class="ph-tp-legend">${phs.map(p => `<span class="${p.status}"><i></i>${esc(p.label)}</span>`).join("")}</div>
     </div>`;
   }
+  /* The clinic's two dates, typed once, at the top of the plan they belong to
+     -- above the phases because they DRIVE the phases rather than sitting
+     inside any one of them. Only on a plan that actually references them
+     (phTpPlanWantsMilestones), so a pain or stress plan never sees this. */
+  function phTpMilestoneRowHtml(plan) {
+    if (!phTpPlanWantsMilestones(plan)) return "";
+    const cell = kind => {
+      const v = phTpMilestoneDate(plan, kind) || "";
+      return `<td class="ph-tp-mscell"><input type="date" class="ph-tp-msdate" value="${esc(v)}"
+        data-tp-milestone="${plan.id}:${kind}" aria-label="${esc(PH_TP_MILESTONES[kind].label)} date"></td>`;
+    };
+    return `<tr class="ph-tp-msrow"><td class="ph-tp-lbl">Egg retrieval</td>${cell("retrieval")}<td class="ph-tp-lbl mid">Embryo transfer</td>${cell("transfer")}</tr>`;
+  }
   function phTpGridHtml(plan) {
-    return `<table class="ph-tp-grid"><colgroup><col class="c-lbl"><col class="c-val"><col class="c-lbl"><col class="c-val"></colgroup><tbody>${plan.phases.map(ph => phTpPhaseRowHtml(plan, ph)).join("")}</tbody></table>`;
+    return `<table class="ph-tp-grid"><colgroup><col class="c-lbl"><col class="c-val"><col class="c-lbl"><col class="c-val"></colgroup><tbody>${phTpMilestoneRowHtml(plan)}${plan.phases.map(ph => phTpPhaseRowHtml(plan, ph)).join("")}</tbody></table>`;
   }
   function phTpPhaseRowHtml(plan, phase) {
     const picking = phTpFormulaPickPhase === phase.id;
@@ -40401,7 +40501,14 @@ or changing anything in Cliniko.
     const line = `<tr class="ph-tp-pline ${phase.status}"><td colspan="4"><span class="in">
         <i class="ph-tp-dot"></i>
         <span class="ph-tp-pname${phase.label ? "" : " empty"}" data-tp-edit="${plan.id}:${phase.id}:label" title="Click to rename">${phase.label ? esc(phase.label) : "Phase name"}</span>
-        ${sel}<span class="ph-tp-since">${phTpSpanText(phase)}</span>
+        ${sel}<span class="ph-tp-since">${phTpSpanText(phase)}</span>${(() => {
+          // "One visit the day of, or the day before, transfer" is an
+          // instruction she cannot act on until it names a day. With her
+          // clinic date entered it becomes one. Sits on the phase LINE, not
+          // inside the Visits cell, so click-to-edit still gets a clean cell.
+          const bk = phTpCadenceDate(phase.cadence, plan);
+          return bk ? `<span class="ph-tp-book" title="${esc(bk.why)} — from the date you entered above">book ${esc(phShortDate(bk.key))}</span>` : "";
+        })()}
         ${phase.status === "done" ? `<button type="button" class="ph-tp-fold" data-tp-fold="${plan.id}:${phase.id}" aria-expanded="${folded ? "false" : "true"}">${folded ? "show ▸" : "hide ▾"}</button>` : ""}
         ${phase.status === "done" && !folded ? `<button type="button" class="ph-tp-lock" data-tp-unlock="${phase.id}" title="${phTpUnlockDone.has(phase.id) ? "Closed phase, unlocked for this session — click to freeze it again" : "This phase is closed. Its plan is frozen so the record still shows what you intended at the time — click to edit anyway"}">${phTpUnlockDone.has(phase.id) ? "🔓 unlocked" : "🔒 frozen"}</button>` : ""}
         <button type="button" class="del" data-tp-phase-del="${plan.id}:${phase.id}" title="Remove this phase" aria-label="Remove ${esc(phase.label)}">×</button>
