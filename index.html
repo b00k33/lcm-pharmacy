@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260910-140000">
+<meta name="lcm-build" content="20260910-153000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -21337,6 +21337,34 @@
   const PH_APPTCAL_END_MIN = 21 * 60;      // 9pm
   const PH_APPTCAL_PX_PER_MIN = 1.1;       // 66px/hour
   const PH_APPTCAL_DEFAULT_DUR = 45;       // legacy appointments with no captured duration (see phApptParseDuration)
+  /* code7 audit 2026-09-10: her own service names CARRY the length and nothing
+     read it. "1. Initial Acupuncture (60 mins)", "3. Subsequent Acupuncture -
+     (40 min) MUSCULOSKELETAL ONLY", "Cupping (30 mins)", "Moxibustion (25mins)",
+     "45 min Massage/Acupuncture" -- 16 of the 21 types in
+     PH_CLINIKO_TYPE_COLOURS say how long they are, in her own words, and every
+     one of them was drawn 45 minutes long. phApptParseDuration only ever reads
+     a TIME RANGE ("9:00am - 9:45am") off a pasted line, so it can say nothing
+     about an appointment she quick-added or typed here.
+     PH_HOME_VISIT already proves the shape -- a known service means a known
+     length -- for exactly one service; this is the same idea for the other
+     twenty, read from her text instead of hard-coded per type.
+     The number has to sit against min/mins/minute(s)/hr/hour, so the leading
+     "1." / "3." of her numbered type names can never be read as a length. */
+  function phApptServiceMins(service) {
+    const s = String(service || "");
+    if (!s.trim()) return null;
+    let m = /(\d{1,3})\s*-?\s*(?:mins?\.?|minutes?)\b/i.exec(s);
+    if (m) { const n = +m[1]; return n >= 5 && n <= 240 ? n : null; }
+    m = /(\d(?:\.\d)?)\s*(?:hrs?\.?|hours?)\b/i.exec(s);
+    if (m) { const n = Math.round(parseFloat(m[1]) * 60); return n >= 5 && n <= 240 ? n : null; }
+    // she writes home visits by hand and never puts a length in them
+    if (/home\s*visit/i.test(s)) return PH_HOME_VISIT.mins;
+    return null;
+  }
+  // How long an appointment ACTUALLY is: what she set, else what its own name
+  // says, else the legacy default. Every surface that draws or describes a
+  // block reads this one helper, so they cannot disagree with each other.
+  const phApptMins = a => (a && a.durationMin) || phApptServiceMins(a && a.service) || PH_APPTCAL_DEFAULT_DUR;
   const PH_APPTCAL_DAYCOUNTS = [1, 3, 5, 6, 7];
   // her call 2026-09-07: remembered per device (like PHARMACY.activeTab --
   // see splitPharmacy/applyMergedLocal) since phone and desktop want
@@ -21402,7 +21430,7 @@
     const toMin = t => { const [h, m] = (t || "0:00").split(":").map(Number); return (h || 0) * 60 + (m || 0); };
     const items = phApptFor(dayKey).map(a => {
       const start = toMin(a.time);
-      return { a, start, end: start + (a.durationMin || PH_APPTCAL_DEFAULT_DUR) };
+      return { a, start, end: start + phApptMins(a) };
     });
     const colEnds = [];
     items.forEach(it => {
@@ -21504,7 +21532,7 @@
   function phApptTimeRangeLabel(a) {
     const m = /^(\d{1,2}):(\d{2})/.exec(a.time || "");
     if (!m) return a.time || "";
-    const start = +m[1] * 60 + +m[2], end = start + (a.durationMin || PH_APPTCAL_DEFAULT_DUR);
+    const start = +m[1] * 60 + +m[2], end = start + phApptMins(a);
     const fmt = mins => { const h = Math.floor(mins / 60) % 24, mm = mins % 60; return { s: `${h % 12 || 12}:${String(mm).padStart(2, "0")}`, ap: h < 12 ? "am" : "pm" }; };
     const s = fmt(start), e = fmt(end);
     return s.ap === e.ap ? `${s.s} – ${e.s} ${e.ap}` : `${s.s} ${s.ap} – ${e.s} ${e.ap}`;
@@ -21596,7 +21624,7 @@
         <div class="field"><label>Time</label><input type="time" id="phApptCalEditTime" value="${esc(a.time)}"></div>
         <div class="field full"><label>Patient</label><input type="text" id="phApptCalEditName" value="${esc(a.patient)}"></div>
         <div class="field full"><label>Service</label><input type="text" id="phApptCalEditService" value="${esc(a.service || "")}"></div>
-        <div class="field"><label>Duration (min)</label><input type="number" id="phApptCalEditDur" value="${a.durationMin || PH_APPTCAL_DEFAULT_DUR}" min="5" step="5"></div>
+        <div class="field"><label>Duration (min)</label><input type="number" id="phApptCalEditDur" value="${phApptMins(a)}" min="5" step="5"${a.durationMin ? "" : ` title="Read from the service name — change it and it sticks"`}></div>
         <div class="field"><label>Phone</label><input type="text" id="phApptCalEditPhone" value="${esc(a.phone || "")}"></div>
       </div>
       <div class="ph-apptpop-foot"><button type="button" class="ph-apptpop-btn" data-ph-apptcal-edit-save="${esc(a.id)}">Save</button><button type="button" class="ph-name-link soft" data-ph-apptpop-mode="view">Cancel</button></div>`;
@@ -24479,9 +24507,22 @@
             sEl = document.getElementById("phApptCalEditService"), pEl = document.getElementById("phApptCalEditPhone");
           if (dEl && dEl.value) a.date = dEl.value;
           if (tEl && tEl.value) a.time = tEl.value;
-          if (durEl && +durEl.value > 0) a.durationMin = +durEl.value;
           if (nEl && nEl.value.trim()) a.patient = phTitle(nEl.value.trim());
           if (sEl) a.service = sEl.value;
+          /* code7 audit 2026-09-10: this used to store whatever the box showed,
+             and the box showed a flat 45 for every appointment that had never
+             carried a length -- so opening this form to fix a typo in the NAME
+             silently stamped "45 minutes" onto a 60-minute session, and a guess
+             became stored fact that nothing afterwards could tell from a real
+             answer. Store it ONLY when she has actually moved it off what the
+             appointment already says by itself. Left derived, correcting the
+             service later still fixes the length; set by hand, her number wins
+             for good. Read after a.service so a service edited in this same
+             save is the one it is measured against. */
+          if (durEl && +durEl.value > 0) {
+            const derived = phApptServiceMins(a.service) || PH_APPTCAL_DEFAULT_DUR;
+            if (+durEl.value !== derived) a.durationMin = +durEl.value; else delete a.durationMin;
+          }
           if (pEl) a.phone = pEl.value;
           savePharmacy();
           phFlashShow(`Saved ${phTitle(a.patient)}'s appointment`);
@@ -35124,6 +35165,11 @@ or changing anything in Cliniko.
   let phMsgDraftSubject = null;       // null = "not yet touched, follow the template"
   let phMsgDraftBody = null;
   let phMsgSelChannel = "email";
+  // code7 audit 2026-09-10: false until she taps Email or SMS herself. While it
+  // is false the compose box starts on whichever channel actually reaches more
+  // of the people in the To box (phMsgComposeHtml); once she has chosen, her
+  // choice stands and the app stops second-guessing it.
+  let phMsgChannelPicked = false;
   let phMsgEditTemplateId = null;     // which template the Templates section has open for edit
   let phMsgCopiedId = null;           // brief "Copied" confirmation on one Prepared/Sent row
   function phMsgAllPatientNames() {
@@ -35348,6 +35394,22 @@ or changing anything in Cliniko.
     const tmpl = phMsgSelTemplateId ? phMsgTemplateById(phMsgSelTemplateId) : null;
     const subject = phMsgDraftSubject != null ? phMsgDraftSubject : (tmpl ? tmpl.subject : "");
     const body = phMsgDraftBody != null ? phMsgDraftBody : (tmpl ? tmpl.body : "");
+    /* code7 audit 2026-09-10: the channel was a flat "email" until she noticed
+       and changed it -- while phMsgRecipientStats, three lines down, already
+       knew exactly how many of the people in the To box have an email against
+       how many have a phone. So the box could open on the channel that reaches
+       FEWER of them, show her the "N no email on file" warning it had just
+       computed, and wait for her to fix it by hand.
+       Silent pre-fill, which is her stated preference for a confident guess --
+       it just looks like the right one is already selected. Only on a strict
+       win, so a tie keeps Email exactly as before, and only until she taps
+       either button herself. */
+    if (!phMsgChannelPicked && phMsgToNames.length) {
+      const byEmail = phMsgRecipientStats(phMsgToNames, "email").ready.length;
+      const byPhone = phMsgRecipientStats(phMsgToNames, "sms").ready.length;
+      if (byPhone > byEmail) phMsgSelChannel = "sms";
+      else if (byEmail > byPhone) phMsgSelChannel = "email";
+    }
     const stats = phMsgRecipientStats(phMsgToNames, phMsgSelChannel);
     const stillToTell = phMsgRelocStillToTell();
     const goodRebates = phInsGoodNames();
@@ -35539,7 +35601,7 @@ or changing anything in Cliniko.
     const addRebates = e.target.closest("[data-ph-msg-add-rebates]");
     if (addRebates) { phInsGoodNames().forEach(n => { if (!phMsgDoNotContact(phPatientKey(n)) && !phMsgToNames.includes(n)) phMsgToNames.push(n); }); renderPharmacy(); return; }
     const chan = e.target.closest("[data-ph-msg-channel]");
-    if (chan) { phMsgSelChannel = chan.dataset.phMsgChannel; renderPharmacy(); return; }
+    if (chan) { phMsgSelChannel = chan.dataset.phMsgChannel; phMsgChannelPicked = true; renderPharmacy(); return; }
     const prep = e.target.closest("[data-ph-msg-prepare]");
     if (prep) {
       const tmpl = phMsgSelTemplateId ? phMsgTemplateById(phMsgSelTemplateId) : null;
@@ -44350,6 +44412,10 @@ Please let me know if you have any questions.`;
     const list = presIngParsed();
     list.push({ name: h.name, grams });
     presWriteIngs(list);
+    // only a FORMULA jar names the script. A plain herb must never do it: 8 of
+    // her 15 unnamed scripts are hand-built mixes whose first line is a single
+    // herb, and naming those would print "Formula: Bai Shao" on a patient label.
+    if (phIsFormula(h)) presNameFromPour(phDispName(h.name, true));
     pick.value = ""; gEl.value = "";
     pick.focus();
   }
@@ -44395,6 +44461,33 @@ Please let me know if you have any questions.`;
     for (const part of s.split(/[·—]/)) { const p = part.trim(); r = presFindRecipe(p) || presFindScript(p); if (r) return r; }
     return null;
   }
+  /* code7 audit 2026-09-10: pouring a formula in already TELLS the app its name.
+     presPickAddRecipe and presPickAddRefillById even print it straight back to
+     her one line later -- "⤵ Chai Hu Jia Long Gu Mu Li Tang — 12 herbs in" --
+     and then throw it away, so she had to cross to the other column and retype
+     the same thirty characters into the Formula box to get it onto the label.
+     In her real data 15 of the 32 scripts written through this page have no
+     formula name at all, which is what makes the label print with no "Formula:"
+     line, the tab read "Untitled", and the booked-today row, the appointment
+     popup and the 4pm Cliniko prompt all say "12 herbs" with no name.
+     Fill ONLY when blank -- the same "never overwrite what she set" rule the
+     Case<->Plan pairing already uses -- so a name she typed always wins, and a
+     second formula poured into one script leaves the first standing for her to
+     overtype rather than silently renaming the script under her.
+     In place, reusing the exact three-step sync the Formula field's own typing
+     handler uses, so no renderPresPanel(): her stage, scroll and focus survive. */
+  function presNameFromPour(label) {
+    const name = String(label || "").trim();
+    if (!name) return;
+    const t = PRESC.items.find(x => x.id === presOpenId);
+    if (!t || presIsFormula(t) || (t.formula || "").trim()) return;
+    t.formula = name;
+    const fld = document.getElementById("presFormulaText");
+    if (fld) fld.value = name;
+    presTabLabelSync(t); presBandMetaRefresh(t);
+    if (document.getElementById("presCalc")) renderPresCalc();   // the label's "Formula:" line
+    phDefer("savePresc", savePresc, 400);
+  }
   function presPickAddRecipe() {
     const pick = document.getElementById("presPickHerb");
     const gEl = document.getElementById("presPickGrams");
@@ -44411,6 +44504,7 @@ Please let me know if you have any questions.`;
     const list = presIngParsed();
     r.ingredients.forEach(i => list.push({ name: i.herb || i.name || "", grams: phRound2((i.grams || 0) * ratio) }));
     presWriteIngs(list);
+    presNameFromPour(phDispName(r.name, true));
     if (m) m.insertAdjacentHTML("afterbegin",
       `<div class="ph-ing-ok">⤵ ${esc(phDispName(r.name, true))} — ${r.ingredients.length} herbs in${want ? `, scaled to ${phFmtG(want)}g` : " at template grams"}.</div>`);
     pick.value = ""; gEl.value = "";
@@ -44693,6 +44787,7 @@ Please let me know if you have any questions.`;
     const list = presIngParsed();
     list.push({ name: h.name, grams });
     presWriteIngs(list);
+    if (phIsFormula(h)) presNameFromPour(phDispName(h.name, true));   // see presPickAdd — formula jars only
     document.getElementById("presPickHerb").value = ""; gEl.value = "";
     presPickLocked = null;
     presPickCloseSugg();
@@ -44708,6 +44803,7 @@ Please let me know if you have any questions.`;
     const list = presIngParsed();
     r.ingredients.forEach(i => list.push({ name: i.herb || i.name || "", grams: phRound2((i.grams || 0) * ratio) }));
     presWriteIngs(list);
+    presNameFromPour(phDispName(r.name, true));
     const m = document.getElementById("presEditMatch");
     if (m) m.insertAdjacentHTML("afterbegin",
       `<div class="ph-ing-ok">⤵ ${esc(phDispName(r.name, true))} — ${r.ingredients.length} herbs in${want ? `, scaled to ${phFmtG(want)}g` : " at template grams"}.</div>`);
