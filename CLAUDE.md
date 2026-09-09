@@ -303,6 +303,66 @@ update STYLE-LCM.md to match so future builds don't undo it.
   first (cycle-driven plans move that phase by cycle day). The popup's "Script ↗ · Phase"
   and the List's Status chip name it. No per-phase script links on the plan (her pick C).
 
+## THE PLAN IS THE SPINE — patient → treatment plan → prescriptions
+**Her correction, 2026-09-09 (verbatim): "this tab is not patient prescription. its
+patient profile. so the tabs underneath should be a treatment plan, not prescription.
+prescriptions are part of treatment plan."** Then, on what a plan is FOR: **"i want the
+plans to act as a map for future treatments but also as a medical record of what was
+done."** SPEC AGREED — 11 answers below. NOT BUILT YET; one item still open.
+
+**She was right, and her own data proves it.** Measured against her live app 2026-09-09:
+510 patient records, **817 patient scripts, of which 816 are the ONLY script that patient
+has** (exactly one patient has two; max 2). So today's tab strip renders **one tab for
+almost everybody** — a tab bar with a single tab, labelled with a formula name. It never
+earned its place as prescriptions. Also: the sidebar item reading **"Patient profile"**
+already binds to `data-ph-tab="prescriptions"` (~12254) — she renamed the door; the room
+inside still calls itself a prescription. Only **9 patients have a plan** today; told this,
+she said *"I accept that even though most of them dont have plans, i will create plans"* —
+so low plan uptake is a MIGRATION problem to solve, never an argument against this.
+
+**The model already anticipates all of it — check before building anything new:**
+- Each phase already carries **`sinceKey`** (day it became current) and **`doneKey`**
+  (day it closed), stamped automatically, plus `status` upcoming/current/done.
+- Each phase already has an UNUSED **`formulaId`** slot beside `suggestFormula` — the
+  hook for a real prescription link. `suggestFormula` is deliberately only a suggestion
+  today ("a wrong link on a real plan is worse than a suggestion chip"); this makes it real.
+- `plan.reviews[]` already exists. No script carries a plan id — `t.phaseTag` (a free
+  STRING matched to a phase LABEL by `phPhaseTagMatch`) is the only existing link.
+
+**THE CENTRAL IDEA — the plan does NOT store what happened, it GATHERS it.** A phase runs
+from `sinceKey` to `doneKey`; everything already logged with a date inside that window IS
+that phase's record. Six stores, all existing, all dated: `rec.acuSessions`, the
+`PHARMACY.log` dispense entries, `rec.checkins` / `rec.contactLog`, `phApptList()`, the
+IndexedDB photos, `rec.cycleLog`. **Nothing new to type — the record writes itself.** Never
+store a second copy: this app already has documented snapshot-vs-live drift, and a typed
+copy of a log always eventually disagrees with the log.
+
+**Layout = shape B.** Each phase row shows **Planned** beside **What happened**, same row
+labels down the left (Aim / Visits / Points / Formula / Watch / Outcome). A done phase reads
+as a record, the current one as where she is, the ones below as the map — one table, three
+jobs. The point of the two columns is that **the GAP becomes visible** ("planned weekly,
+actually fortnightly"; "planned Gui Zhi Fu Ling Wan, dispensed Gui Zhi Tang") — a clinical
+fact nothing in the app surfaces today. Extends `.ph-tp-grid`, her approved real-table
+language. Two columns will not fit 360px: stack planned then actual, don't shrink.
+
+**Her 11 answers — do not re-ask:**
+1. Shape **B**, prescriptions hang off their phase (over "listed under the plan" and "two tab rows").
+2. The 817 existing plan-less scripts **stay loose** in a "Not on a plan" tab, indefinitely. Nothing is auto-filed or rewritten.
+3. Opening a patient with **no plan → prompt her to start one first** (plan picker leads). She chose this over the quieter option.
+4. Going forward **every new prescription must sit on a plan**. The loose tab is legacy-only, not a destination.
+5. Tapping a phase's formula opens the **existing full-screen script page**, ‹ Back to the plan. That page does not change.
+6. **Several prescriptions per phase, newest first** — so a mid-phase formula change reads as history, not an overwrite.
+7. The five stages (Opening/Assessment/Treatment/Dispense/Follow-up): **STILL OPEN — she said "show me".** Mock the three options (split patient-stages onto the profile vs leave as-is vs all five on the profile) and re-ask. Do not guess.
+8. A finished plan **stays a tab, greyed, at the end** — past courses one tap away.
+9. A done phase's Planned column **freezes, with an unlock** that records the fact it was edited after closing.
+10. **A proper printable record** is required — full course: diagnosis, goal, each phase planned vs done, formulas, dates. Build it the way the Dr Authorisation label print works.
+11. The band subtitle must stop saying "patient prescription" — this page is the **patient profile**.
+
+**Why print matters and must not be dropped:** she is a registered practitioner; a medical
+record has to be producible for a patient, another practitioner, an insurer or a records
+request. This is the one requirement that changes how the page is BUILT rather than how it
+looks, so it cannot be bolted on later.
+
 ## Spacing & size (one scale, no random numbers)
 - Only 4/8/12/16/24/32px for margins/padding/gaps.
 - One corner radius for cards, one for pills. One type scale (title/body/label).
