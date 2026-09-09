@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260909-221500">
+<meta name="lcm-build" content="20260909-222000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -5950,6 +5950,28 @@
   #pharmacyPage .ph-pres-tab.on { background: var(--ph-green-tint); border-color: var(--ph-green); color: var(--ph-green-deep); }
   #pharmacyPage .ph-pres-tab.new { border-style: dashed; color: var(--ph-faint); }
   #pharmacyPage .ph-pres-tab.new:hover { border-color: var(--ph-green); color: var(--ph-green-deep); }
+  /* her ask 2026-09-09 ("i dont like that the untitled can only be edited from
+     the formula space"): a tab's label IS that script's formula name, and the
+     ONLY field bound to it (#presFormulaText) sits inside the Dispense stage --
+     so from Opening, where a new script starts, there was no way to name it at
+     all without leaving the stage. The ACTIVE tab is the tap target for its own
+     name now, the same move she already has on the band name
+     (data-pres-name-jump) and the plan title (data-tp-title-edit). No new
+     component: the field REUSES .ph-pres-tab, so the pill keeps its exact shape
+     while she types. */
+  #pharmacyPage .ph-pres-tab .ph-pres-tab-pen {
+    width: 10px; height: 10px; margin-left: 6px; vertical-align: -1px;
+    opacity: 0; pointer-events: none; transition: opacity .12s ease;
+  }
+  #pharmacyPage .ph-pres-tab.on .ph-pres-tab-pen { opacity: .45; }
+  #pharmacyPage .ph-pres-tab.on:hover .ph-pres-tab-pen,
+  #pharmacyPage .ph-pres-tab.on:focus-visible .ph-pres-tab-pen { opacity: 1; }
+  /* un-named and open: the label reads as the placeholder it is, so the pill
+     itself says "nothing here yet" without a second control to explain it */
+  #pharmacyPage .ph-pres-tab.on.untitled .lbl { color: var(--ph-faint); font-weight: 600; }
+  #pharmacyPage input.ph-pres-tab { cursor: text; outline: none; width: 22ch; min-width: 150px; max-width: 100%; }
+  #pharmacyPage input.ph-pres-tab::placeholder { color: var(--ph-faint); font-weight: 600; }
+  #pharmacyPage input.ph-pres-tab:focus { border-color: var(--ph-green); box-shadow: 0 0 0 2px var(--ph-green-tint); }
   /* groups the script tabs under their active treatment plan (her ask
      2026-09-06) without moving them -- a label, not a container, so they
      stay reachable from every stage exactly as before */
@@ -24096,7 +24118,67 @@
         // call the one way in that already exists -- same function, same screen
         const btn = presRow.querySelector("[data-pres-open]");
         if (btn) { btn.click(); return; }
-      }      const presOpen = e.target.closest("[data-pres-open]");
+      }
+      // her ask 2026-09-09 ("i dont like that the untitled can only be edited
+      // from the formula space"): rename the open script from its own tab.
+      // Modelled exactly on data-tp-title-edit above -- a <button> can't hold a
+      // field, so it is REPLACED by a same-shaped <input> and put back on blur.
+      // Deliberately no renderPresPanel() anywhere in here: that is what keeps
+      // her stage, her scroll spot and every open section exactly as they were,
+      // and it leaves the sibling tabs untouched so a click that lands on one
+      // of them still registers.
+      const presTabRen = e.target.closest("[data-pres-tab-rename]");
+      if (presTabRen) {
+        e.preventDefault(); e.stopPropagation();
+        const s = PRESC.items.find(x => x.id === presTabRen.dataset.presTabRename);
+        if (!s) return;
+        const inp = document.createElement("input");
+        inp.type = "text";
+        inp.className = presTabRen.className + " field-bare";
+        inp.value = s.formula || "";
+        inp.placeholder = "Name this script";
+        inp.setAttribute("aria-label", "Script name — the formula that prints on the label");
+        inp.title = "This is the formula that prints on the label’s “Formula:” line";
+        // Enter and Esc finish the edit THEMSELVES rather than leaning on
+        // blur to do it: blur events don't fire at all while the document
+        // isn't the focused one, so a blur-only commit is silently lost in
+        // exactly the cases that matter (a background window, a screen lock).
+        // blur stays as the third way in -- clicking away still saves -- and
+        // `done` keeps whichever fires first the only one that counts.
+        let done = false;
+        const finish = cancelled => {
+          if (done) return;
+          done = true;
+          if (!cancelled) {
+            const v = inp.value.trim();
+            if (v) s.formula = v; else delete s.formula;   // cleared -> reads "Untitled" again
+          }
+          // put the pill back FIRST: nothing below may leave her with a
+          // half-open field if it ever throws
+          const back = document.createElement("div");
+          back.innerHTML = presTabBtnHtml(s, s.id);
+          const btn = back.firstElementChild;
+          if (inp.parentNode) inp.replaceWith(btn);
+          if (cancelled) return;
+          savePresc();
+          // every other surface showing this same string, refreshed in place
+          const fld = document.getElementById("presFormulaText");
+          if (fld) fld.value = s.formula || "";
+          presBandMetaRefresh(s);
+          if (document.getElementById("presCalc")) renderPresCalc();   // the label's "Formula:" line
+        };
+        presTabRen.replaceWith(inp);
+        inp.focus(); inp.select();
+        inp.addEventListener("keydown", ev => {
+          if (ev.key === "Enter") { ev.preventDefault(); finish(false); }
+          // Esc puts it back untouched. The script-page Esc handler already
+          // bows out while an INPUT has focus, so nothing closes underneath.
+          else if (ev.key === "Escape") { ev.preventDefault(); finish(true); }
+        });
+        inp.addEventListener("blur", () => finish(false));
+        return;
+      }
+      const presOpen = e.target.closest("[data-pres-open]");
       if (presOpen) {
         // same reason as Close: a pending autosave is resolved against presOpenId,
         // so it has to land on the script she was actually editing, not the new one
@@ -27337,7 +27419,9 @@
       }
       if (e.target.id === "presFormulaText") {
         const t = PRESC.items.find(x => x.id === presOpenId);
-        if (t) { t.formula = e.target.value; phDefer("savePresc", savePresc, 400); }
+        // the tab above shows this exact string -- keep the two in step as she
+        // types, so it never looks like two unrelated fields again
+        if (t) { t.formula = e.target.value; presTabLabelSync(t); presBandMetaRefresh(t); phDefer("savePresc", savePresc, 400); }
         return;
       }
       if (e.target.id === "presEditIngs") {
@@ -31801,6 +31885,25 @@ or changing anything in Cliniko.
       `${(t.ingredients || []).length} herb${(t.ingredients || []).length === 1 ? "" : "s"}`,
       `${phFmtG((t.ingredients || []).reduce((a, i) => a + (i.grams || 0), 0))} g`,
     ].filter(Boolean).join(" · ");
+  }
+  // The band's live "formula · N herbs · Ng" refresh, in ONE place now that the
+  // formula name is editable from two surfaces (the tab and the Dispense field).
+  // innerHTML, not textContent: presBandMetaText already esc()s the name, so
+  // assigning it as text would print a literal "&amp;" for a formula with an
+  // ampersand in it -- which the old inline copy of this line did.
+  function presBandMetaRefresh(t) {
+    const bm = document.getElementById("presBandMeta");
+    if (t && bm) bm.innerHTML = presBandMetaText(t, presIsFormula(t));
+  }
+  // The tab strip's label IS t.formula, so typing in the Dispense stage's
+  // "Formula" field has to move the tab with it -- in place, never a re-render,
+  // which would yank focus out of the field she is mid-word in.
+  function presTabLabelSync(t) {
+    const lbl = document.querySelector(".ph-pres-tabs .ph-pres-tab.on .lbl");
+    if (!lbl || !t) return;
+    const named = (t.formula || "").trim();
+    lbl.textContent = named || "Untitled";
+    lbl.closest(".ph-pres-tab").classList.toggle("untitled", !named);
   }
   /* ============================================================
      MEDICAL HISTORY (her spec 2026-08-19) — a real three-state per item.
@@ -42083,13 +42186,9 @@ Please let me know if you have any questions.`;
         </select>
         ${typing ? `<input type="text" class="ph-pres-phase-text field-bare" data-pres-phase-tag-text="${t.id}" value="${esc(tag)}" placeholder="e.g. Follicular" aria-label="Phase, typed">` : ""}
       </span>` : "";
-    const tabHtml = s => {
-      const cur = s.phaseTag && curPhase && phPhaseTagMatch(s.phaseTag, curPhase.label);
-      return `<button type="button" class="ph-pres-tab${s.id === t.id ? " on" : ""}${cur ? " cur" : ""}" data-pres-open="${s.id}"${cur ? ` title="For the plan's current phase (${esc(curPhase.label)})"` : ""}>${esc(s.formula || "Untitled")}${s.phaseTag ? `<small>${esc(s.phaseTag)}</small>` : ""}</button>`;
-    };
     return `<div class="ph-pres-tabs">
       ${planLabel}
-      ${scripts.map(tabHtml).join("")}
+      ${scripts.map(s => presTabBtnHtml(s, t.id, curPhase)).join("")}
       <button type="button" class="ph-pres-tab new" data-pres-tab-new="${esc(t.name)}">+ New</button>
       <span class="ph-pres-case-wrap">
         <span class="lbl">Case</span>
@@ -42100,6 +42199,31 @@ Please let me know if you have any questions.`;
       </span>
       ${phaseHtml}
     </div>`;
+  }
+  // Which plan phase this script's patient is on right now -- the dot on a tab.
+  // Pulled out of presTabStripHtml so the rename handler can rebuild ONE tab
+  // without the strip around it (rebuilding the strip would destroy the sibling
+  // tabs mid-click, and a click that starts on the field and ends on another
+  // tab would be swallowed).
+  function presTabCurPhase(s) {
+    const plans = phTpPlans(presPatientFor(s));
+    const plan = plans.find(p => p.status === "active") || plans[0];
+    return plan ? phTpPlanCurrentPhase(plan) : null;
+  }
+  // ONE tab pill. The active one carries data-pres-tab-rename instead of
+  // data-pres-open: re-opening the script she is already in was that click's
+  // only previous effect, and all it ever did was collapse her panel back to
+  // scratch (presOpenScript resets every open/collapsed flag), so nothing
+  // useful is being displaced.
+  function presTabBtnHtml(s, activeId, curPhase) {
+    if (curPhase === undefined) curPhase = presTabCurPhase(s);
+    const active = s.id === activeId;
+    const cur = s.phaseTag && curPhase && phPhaseTagMatch(s.phaseTag, curPhase.label);
+    const named = (s.formula || "").trim();
+    const tip = active
+      ? "Rename this script — it is the formula that prints on the label"
+      : cur ? `For the plan's current phase (${curPhase.label})` : "Open this script";
+    return `<button type="button" class="ph-pres-tab${active ? " on" : ""}${cur ? " cur" : ""}${active && !named ? " untitled" : ""}" ${active ? `data-pres-tab-rename="${s.id}"` : `data-pres-open="${s.id}"`} title="${esc(tip)}"><span class="lbl">${esc(named || "Untitled")}</span>${s.phaseTag ? `<small>${esc(s.phaseTag)}</small>` : ""}${active ? `<svg class="ph-pres-tab-pen" aria-hidden="true"><use href="#i-edit"/></svg>` : ""}</button>`;
   }
   let presPhaseTagTyping = null;   // script id whose Phase picker is on "Type your own…"
   // "Follicular" matches "Follicular — Week 1", a typed "luteal" matches
@@ -42463,9 +42587,7 @@ Please let me know if you have any questions.`;
     // her ask (2026-08-18): the header band's "N herbs · Ng" is now the ONLY
     // copy of that summary, so it has to stay live here too, not just after
     // a full renderPresPanel() re-render
-    const t = PRESC.items.find(x => x.id === presOpenId);
-    const bm = document.getElementById("presBandMeta");
-    if (t && bm) bm.textContent = presBandMetaText(t, presIsFormula(t));
+    presBandMetaRefresh(PRESC.items.find(x => x.id === presOpenId));
   }
   // her ask (2026-08-18): a small, quiet flag next to the herb name when it's
   // out or low -- same zero/low verdict as the main Inventory grid
