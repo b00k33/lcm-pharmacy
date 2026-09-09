@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260909-224500">
+<meta name="lcm-build" content="20260909-232000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -2191,13 +2191,25 @@
   /* only ever appears once a message is genuinely past her phone's comfortable
      length -- a nuisance, not an error, so it stays quiet and uncoloured */
   #pharmacyPage .ph-ck-long { font-size: 11.5px; color: var(--ph-soft); margin: -2px 0 8px; }
-  /* the messages that do not suit this patient -- one tap below, never gone
-     (her answer 2: "fitting ones first, rest below") */
-  #pharmacyPage .ph-ck-rest { margin: -2px 0 8px; }
-  #pharmacyPage .ph-ck-rest > summary { font-size: 11.5px; color: var(--ph-soft); cursor: pointer; padding: 4px 0; list-style: none; }
-  #pharmacyPage .ph-ck-rest > summary::-webkit-details-marker { display: none; }
-  #pharmacyPage .ph-ck-rest > summary::before { content: "\25B8  "; }
-  #pharmacyPage .ph-ck-rest[open] > summary::before { content: "\25BE  "; }
+  /* the wordings, grouped (her ask 2026-09-09). One fold per group: the ones
+     that suit this patient lead and open, the rest sit shut one tap below --
+     which keeps her answer 2 ("fitting ones first, rest below") true, now with
+     a name on every fold instead of one 17-chip wall. A shut group is a single
+     22px line, so seven of them cost less height than the old flat block did. */
+  #pharmacyPage .ph-ck-grps { margin: -2px 0 8px; }
+  #pharmacyPage .ph-ck-grp > summary {
+    font-size: 11.5px; font-weight: 600; color: var(--ph-soft); cursor: pointer;
+    padding: 4px 0; list-style: none; display: flex; align-items: center; gap: 7px;
+  }
+  #pharmacyPage .ph-ck-grp > summary::-webkit-details-marker { display: none; }
+  #pharmacyPage .ph-ck-grp > summary::before { content: "\25B8"; font-size: 9px; color: var(--ph-faint); width: 8px; }
+  #pharmacyPage .ph-ck-grp[open] > summary::before { content: "\25BE"; }
+  #pharmacyPage .ph-ck-grp > summary .e { font-size: 12px; line-height: 1; }
+  #pharmacyPage .ph-ck-grp > summary .n { margin-left: auto; font-size: 10.5px; font-weight: 600; color: var(--ph-faint); font-variant-numeric: tabular-nums; }
+  /* the groups that suit this patient carry the same green the picked chip
+     does, so "where am I" reads off the fold titles alone */
+  #pharmacyPage .ph-ck-grp.fits > summary .l { color: var(--ph-green-deep); font-weight: 700; }
+  #pharmacyPage .ph-ck-grp > .ph-ck-chips { margin: 2px 0 8px; }
   #pharmacyPage .ph-ck-next { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
   #pharmacyPage .ph-ck-next .ph-ck-chip { height: 26px; justify-content: center; }
   #pharmacyPage .ph-ck-other { width: 100%; box-sizing: border-box; margin-top: 6px; border: 1px solid var(--ph-line); border-radius: 8px; padding: 5px 9px; font: inherit; font-size: 12px; background: var(--ph-white); color: var(--ph-ink); min-height: 0; }
@@ -11816,6 +11828,19 @@
   }
   #pharmacyPage .ph-ins-good { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ph-soft); white-space: nowrap; cursor: pointer; }
   #pharmacyPage .ph-ins-good input:checked + span { color: var(--ph-green-deep); font-weight: 700; }
+  /* fund + rebate level (her ask 2026-09-09, "50% or more" then "GU Health
+     Member"). The fund is the narrower of the two text boxes -- a fund name is
+     two words, the note beside it is a sentence -- and the level sits between
+     them so the row reads left to right the way she says it out loud: who they
+     are with, how much they get back, what the detail is. Set-vs-unset is the
+     same green-and-700 the tick used, so the row still reads at a glance. */
+  #pharmacyPage .ph-ins-fields input.ph-ins-fund { flex: 0 1 150px; }
+  #pharmacyPage .ph-ins-fields .ph-ins-level {
+    flex: 0 0 auto; font: inherit; font-size: 12px; min-height: 0;
+    border: 1px solid var(--ph-line); border-radius: 8px; padding: 4px 8px;
+    background: var(--ph-white); color: var(--ph-faint); cursor: pointer;
+  }
+  #pharmacyPage .ph-ins-fields .ph-ins-level.set { color: var(--ph-green-deep); font-weight: 700; border-color: var(--ph-green); }
   /* on the script's Opening stage it sits under its own section header rather
      than in a label/value row, so it needs the breathing space the row gave it */
   #pharmacyPage .ph-op-record .ph-ins-fields { margin: 6px 0 2px; }
@@ -14189,8 +14214,25 @@
       if ((h.qty == null || h.qty <= 0) && h.prevQty != null) { h.qty = h.prevQty; delete h.prevQty; }
     }
   }
-  // a phase-out that sold down to nothing becomes a plain stopped write-off
-  function phAfterQtyChange(h) { if (h.phaseOut && h.qty != null && h.qty <= 0) h.phaseOut = false; }
+  // a phase-out that sold down to nothing becomes a plain stopped write-off.
+  // Her rule (2026-09-09), asked as "if the jar is 0 grams, stop it" and then
+  // narrowed by her to "do it for jars that already are marked phasing out or
+  // stopping or low stock=0": an empty jar she was ALREADY winding down is
+  // finished, so stop it. Deliberately NOT every empty jar — an ordinary herb
+  // that simply runs out must stay on Zero/To order so she can restock it, and
+  // stopping is heavy (herbNeedsOrder drops it, phRefillCandidates drops it,
+  // phZeroHerbs stops flagging it). The two states below are ones she set by
+  // hand, so neither can surprise her:
+  //   • phase-out — "use it up, then stop" (36 jars, measured 2026-09-09)
+  //   • "low at" 0 — her way of saying "never order this again" (3 jars)
+  // Order flags are left alone on purpose: herbNeedsOrder already hides a
+  // stopped jar, so nothing needs cancelling, and if she un-stops the jar her
+  // 🛒 flag and any awaiting delivery are still there rather than silently lost.
+  function phAfterQtyChange(h) {
+    if (h.qty == null || h.qty > 0) return;
+    if (h.phaseOut) { h.phaseOut = false; h.stopped = true; return; }   // used up — now a plain stopped jar
+    if (h.low === 0 && !h.stopped) h.stopped = true;                    // "never reorder", and now empty
+  }
 
   // ---- one-time history import (2026-07-23): her 3,759 Galcott dispensing-log
   // entries, 2021-01-14 → 2026-07-22, newest first. Old "Refill" workaround rows
@@ -15735,10 +15777,24 @@
   // there is that the count is wrong, so it's the LAST thing to leave out.
   // This is the single place stocktake eligibility is decided; phHerbStatusKey
   // itself is untouched, so Inventory, the pills and the filters are unchanged.
+  // Her answer 2026-09-09, "Yes, let me count everything". Measured that day:
+  // 159 of her 301 jars had never been given a starting number, which hid them
+  // TWICE -- worth nothing on the Stock value tile, and not offered here, so
+  // there was no way to fix the first problem. 156 of those are jars she still
+  // has (24 used in 2026, 51 in 2025); 157 already carry a price per gram, so
+  // a count is the only thing missing. Phase-out joins too, or the 36 jars she
+  // is winding down for the move would drop straight out of the very count she
+  // wants them in.
   function phStocktakeEligible(h) {
     const k = phHerbStatusKey(h);
-    return k === "stocked" || k === "low" || k === "negative";
+    return k === "stocked" || k === "low" || k === "negative" || k === "untracked" || k === "phaseout";
   }
+  // ...but a never-counted jar has NO recorded number, so "✓ Confirmed,
+  // matches" means nothing on it -- and the `h.qty || 0` those screens use
+  // would quietly write the jar down as 0 grams, which is the opposite of
+  // finding out what is on the shelf. One test, used by the card, the live
+  // button sync, the click handler and the commit, so the four can't drift.
+  const phStcNeverCounted = h => !!h && h.qty == null;
   const phStocktakeBelowZero = h => (h.qty != null && h.qty < 0);
   // the narrow-by-current-filter option reuses the Inventory search+status
   // logic exactly, but deliberately SKIPS phKindFilter -- the stocktake's own
@@ -15981,6 +16037,12 @@
     if (!s) return;
     const h = PHARMACY.herbs.find(x => x.id === s.queue[s.pos]);
     if (!h) { phStocktakeAdvance(); return; }   // herb deleted mid-session -- just move on
+    // last line of defence for a never-counted jar: "matches" would resolve to
+    // `before` — the 0 that h.qty || 0 invented — and write the jar down as
+    // empty. The card and the button never offer it, but a stray Enter must
+    // not either, so an untyped confirm here simply doesn't count the jar.
+    const firstCount = phStcNeverCounted(h);
+    if (firstCount && (matched || !(typedValue > 0))) return;
     const before = h.qty || 0;
     const newQty = matched ? before : Math.max(0, Math.floor(typedValue) || 0);
     const diff = newQty - before;
@@ -16575,6 +16637,7 @@
     if (!h) return "";   // pruned at open-time; this shouldn't happen, but never crash the modal
     const already = s.results[h.id];
     const recorded = h.qty || 0;
+    const fresh = phStcNeverCounted(h);   // no starting number — ask, never offer "matches"
     const heading = phPinyinName(h);
     const latin = phLatinPart(h.name);
     const showLatin = latin && !heading.toLowerCase().includes(latin.toLowerCase());
@@ -16593,14 +16656,17 @@
         <div class="ph-stocktake-name">${esc(heading)}</div>
         <div class="ph-stocktake-latin">${phIsFormula(h) ? "🫙" : "🌿"}${showLatin ? " " + esc(latin) : ""}</div>
         ${phStocktakeUsageLineHtml(h)}
-        <div class="ph-stocktake-recorded${recorded < 0 ? " below-zero" : ""}"><span class="l">App has</span><span class="n">${phFmtG(recorded)}g</span></div>
-        ${recorded < 0 ? `<div class="ph-stocktake-belowzero">Recorded below zero — ${phFmtG(Math.abs(recorded))} g more has gone out than the app had. Counting this fixes the record.</div>` : ""}
+        ${fresh
+          ? `<div class="ph-stocktake-recorded"><span class="l">App has</span><span class="n">never counted</span></div>
+             <div class="ph-stocktake-belowzero">This jar has never been counted, so there is nothing to check it against — whatever you type becomes its first real number.</div>`
+          : `<div class="ph-stocktake-recorded${recorded < 0 ? " below-zero" : ""}"><span class="l">App has</span><span class="n">${phFmtG(recorded)}g</span></div>
+             ${recorded < 0 ? `<div class="ph-stocktake-belowzero">Recorded below zero — ${phFmtG(Math.abs(recorded))} g more has gone out than the app had. Counting this fixes the record.</div>` : ""}`}
         <div class="ph-stocktake-input-wrap">
-          <div class="ph-stocktake-input-label">Real count</div>
-          <input type="text" inputmode="decimal" class="ph-stocktake-input field-bare" id="phStocktakeCountInput" placeholder="${phFmtG(recorded)}" autocomplete="off">
+          <div class="ph-stocktake-input-label">${fresh ? "Grams on the shelf" : "Real count"}</div>
+          <input type="text" inputmode="decimal" class="ph-stocktake-input field-bare" id="phStocktakeCountInput" placeholder="${fresh ? "type the grams" : phFmtG(recorded)}" autocomplete="off">
         </div>
         <div class="ph-stocktake-diff" id="phStocktakeDiff"></div>
-        <button type="button" class="ph-stocktake-main-btn" id="phStocktakeMainBtn" data-ph-stocktake-mode="confirm">✓ Confirmed, matches</button>
+        <button type="button" class="ph-stocktake-main-btn" id="phStocktakeMainBtn" data-ph-stocktake-mode="${fresh ? "need" : "confirm"}">${fresh ? "Type the grams to save" : "✓ Confirmed, matches"}</button>
         <div class="ph-stocktake-status-actions">
           <button type="button" class="ph-stocktake-status-btn" data-ph-stocktake-stop="stopped">⏸ Stop — write off to 0</button>
           <button type="button" class="ph-stocktake-status-btn" data-ph-stocktake-stop="phaseout">🟡 Phase out</button>
@@ -16672,7 +16738,18 @@
     const raw = inp.value.trim();
     const typed = raw === "" ? null : Math.max(0, Math.floor(parseFloat(raw)) || 0);
     btn.classList.remove("adjust-up", "adjust-down");
-    if (typed == null || typed === recorded) {
+    // a never-counted jar has nothing to match: until she types a number there
+    // is no answer to save, so the button says so rather than offering to
+    // "confirm" a zero the app invented (see phStcNeverCounted)
+    if (phStcNeverCounted(h) && typed == null) {
+      btn.textContent = "Type the grams to save";
+      btn.dataset.phStocktakeMode = "need";
+      if (diffEl) { diffEl.textContent = ""; diffEl.classList.remove("up", "down"); }
+    } else if (phStcNeverCounted(h)) {
+      btn.textContent = `✓ Save ${phFmtG(typed)}g as the first count`;
+      btn.dataset.phStocktakeMode = "adjust";
+      if (diffEl) { diffEl.textContent = ""; diffEl.classList.remove("up", "down"); }
+    } else if (typed == null || typed === recorded) {
       btn.textContent = "✓ Confirmed, matches";
       btn.dataset.phStocktakeMode = "confirm";
       if (diffEl) { diffEl.textContent = ""; diffEl.classList.remove("up", "down"); }
@@ -21119,7 +21196,7 @@
         ${comp ? `<span class="ic" aria-hidden="true">💧</span><span class="v"><b>Cycle day ${comp.day}</b> · ${esc(comp.phaseLabel)}${comp.overdue ? ` <span class="ph-tl-chip short">late?</span>` : ""}</span>` : ""}
         ${last ? `<span class="ic" aria-hidden="true">🕓</span><span class="v">Last seen <b>${esc(phFuDateLabel(last.on))}</b> · ${esc(last.via)}</span>` : ""}
         ${phPkgCalc(k) ? `<span class="ic" aria-hidden="true">🎟</span><span class="v">${phPkgLineHtml(k)}</span>` : ""}
-        ${phInsGood(k) ? `<span class="ic" aria-hidden="true">💳</span><span class="v"><b>Good rebates</b>${phInsNote(k) ? ` · <span class="faint">${esc(phInsNote(k))}</span>` : ""}</span>` : ""}
+        ${phInsGood(k) ? `<span class="ic" aria-hidden="true">💳</span><span class="v"><b>${esc(phInsFund(k) || "Good rebates")}</b>${phInsLevel(k) === "high" ? ` · <b>50% or more back</b>` : phInsFund(k) ? ` · good rebates` : ""}${phInsNote(k) ? ` · <span class="faint">${esc(phInsNote(k))}</span>` : ""}</span>` : ""}
       </div>
       <div class="ph-apptpop-foot">
         ${script ? `<button type="button" class="ph-name-link" data-ph-dash-pres-open="${esc(script.id)}" title="${esc(script.phaseTag ? `The ${script.phaseTag} script is the one due` : "Open script")}">Script ↗${script.phaseTag ? ` · ${esc(script.phaseTag)}` : ""}</button>` : ""}
@@ -26228,6 +26305,21 @@
       // form, so they reset with every patient rather than leaking across
       if (e.target.closest("[data-ck-facts]")) { if (phCkForm) { phCkForm.factsOpen = !phCkForm.factsOpen; phCkRender(); } return; }
       if (e.target.closest("[data-ck-concerns]")) { if (phCkForm) { phCkForm.concernsOpen = true; phCkRender(); } return; }
+      // the grouped wording folds (her ask 2026-09-09, "help group the messages
+      // so its easier to navigate"). Every chip tap below runs phCkRender(),
+      // which rebuilds the whole panel -- so a <details> left to the DOM alone
+      // slammed shut the moment she picked a wording, which is most of why the
+      // old flat block felt unnavigable. Remembering the state on the form is
+      // what makes the groups worth having. Deliberately no render of its own:
+      // the browser opens the fold natively, and re-rendering here would fight
+      // it. `.open` is still the PRE-toggle value while the click is handled.
+      const ckGrp = e.target.closest("[data-ck-grp] > summary");
+      if (ckGrp && phCkForm) {
+        const grp = ckGrp.parentNode;
+        phCkForm.grpOpen = phCkForm.grpOpen || {};
+        phCkForm.grpOpen[grp.dataset.ckGrp] = !grp.open;
+        return;
+      }
       const ckTmpl = e.target.closest("[data-ck-tmpl]");
       if (ckTmpl && phCkForm) { phCkForm.tmpl = ckTmpl.dataset.ckTmpl; phCkForm.text = null; phCkRender(); return; }
       const ckTone = e.target.closest("[data-ck-tone]");
@@ -28171,6 +28263,10 @@
         if (e.target.id === "phStocktakeMainBtn") {
           const inp = document.getElementById("phStocktakeCountInput");
           const mode = e.target.dataset.phStocktakeMode || "confirm";
+          // "need" = a never-counted jar with nothing typed yet. There is no
+          // number to save, and mode !== "adjust" would have written 0 g.
+          // Put her in the box instead of moving the queue on silently.
+          if (mode === "need") { if (inp) inp.focus(); return; }
           phStocktakeCommit(mode !== "adjust", inp ? parseFloat(inp.value) : NaN);
           return;
         }
@@ -32788,18 +32884,88 @@ or changing anything in Cliniko.
     ["checkin", "review", "running", "rebook"].forEach(add);
     return fits;
   }
-  /* the tone row, the Supportive toggle, the one-line reason and both chip
-     groups. ONE function, used by the phone page and the desktop panel alike --
-     these two surfaces have drifted apart before and this is the part most
+  /* ---- Grouping the wording chips (her ask 2026-09-09, with a screenshot of
+     "Everything else · 17" as one flat wall: "help group the messages so its
+     easier to navigate").
+
+     Nothing new is invented here. Every moment already declares a `track` in
+     PH_CODE3_MOMENTS, and the wall only read as random because the strip
+     printed them in TEMPLATE order -- which is why ivf-mens/ivf-foll sat at
+     the top of the wall and opu/preet/postet at the bottom, with ten unrelated
+     chips between them. One group each and they reunite for free.
+
+     Labels follow PH_TP_CATEGORIES wherever a plan category exists (her pick:
+     "match the plan categories"), so Gynaecology means the same word on a plan
+     and on a message. Three groups have no plan category to borrow -- IVF (a
+     subset of gynae she needs kept apart, and the whole reason the wall looked
+     unnavigable), Every visit, and Maintenance -- and the herb four carry no
+     PH_CODE3_MOMENTS row at all, which is why the lookup falls back to "herbs"
+     rather than dropping them on the floor. Anything that matches nothing is
+     still shown, under "Other", so a moment can never silently disappear. ---- */
+  const PH_CK_GROUPS = [
+    { track: "herbs",       emoji: "🌿", label: "Herbs" },
+    { track: "cycle",       emoji: "🌸", label: "Gynaecology" },
+    { track: "ivf",         emoji: "🧪", label: "IVF" },
+    { track: "everyVisit",  emoji: "🪡", label: "Every visit" },
+    { track: "stress",      emoji: "🌱", label: "Stress" },
+    { track: "maintenance", emoji: "🔁", label: "Maintenance" },
+    { track: "pain",        emoji: "💪", label: "Musculoskeletal" },
+    // both of these need the emoji variation selector (U+FE0F) or the browser
+    // renders them text-style -- a thin grey glyph beside seven colour ones
+    { track: "weight",      emoji: "⚖️", label: "Weight & metabolism" },
+    { track: "other",       emoji: "✉️", label: "Other" },
+  ];
+  const PH_CK_HERB_MOMENTS = new Set(PH_CK_TMPLS.map(x => x[0]));
+  const phCkGroupOf = m => (phPickFacets(m) || {}).track
+    || (PH_CK_HERB_MOMENTS.has(m) ? "herbs" : "other");
+  /* ONE grouped list -- her pick was to fold the herb four in rather than keep
+     them as an unlabelled shortlist above. The groups that fit THIS patient
+     lead and open; every other group keeps PH_CK_GROUPS order and stays shut,
+     which is what keeps the composer as short as the old closed "Everything
+     else" did. `fits` only decides which groups LEAD and OPEN -- never which
+     chips exist -- so every wording still appears exactly once. */
+  function phCkGroupedMoments(all, fits, openState) {
+    const fitSet = new Set(fits);
+    const byTrack = new Map();
+    all.forEach(m => {
+      const tr = phCkGroupOf(m);
+      if (!byTrack.has(tr)) byTrack.set(tr, []);
+      byTrack.get(tr).push(m);
+    });
+    const rank = tr => { const i = PH_CK_GROUPS.findIndex(g => g.track === tr); return i < 0 ? 99 : i; };
+    const def = tr => PH_CK_GROUPS.find(g => g.track === tr) || { track: tr, emoji: "✉", label: "Other" };
+    return [...byTrack.entries()]
+      .map(([track, moments]) => {
+        const fitting = moments.some(m => fitSet.has(m));
+        // her tap wins over the default: once she has opened or shut a group
+        // by hand, that is the state it keeps for this patient
+        const chosen = openState && Object.prototype.hasOwnProperty.call(openState, track)
+          ? !!openState[track] : fitting;
+        return { ...def(track), track, moments, fitting, open: chosen };
+      })
+      .sort((a, b) => (b.fitting - a.fitting) || (rank(a.track) - rank(b.track)));
+  }
+  /* the tone row, the Supportive toggle, the one-line reason and the grouped
+     chip list. ONE function, used by the phone page and the desktop panel alike
+     -- these two surfaces have drifted apart before and this is the part most
      likely to. */
   function phCkPickerHtml(row, c, f) {
     const name = row.rec ? row.rec.patient : row.patientName;
     const chip = (attr, val, label, on, extra) =>
       `<button type="button" class="ph-ck-chip${on ? " on" : ""}${extra || ""}" ${attr}="${val}">${label}</button>`;
     const fits = phCkFitMoments(row, c, { moment: f.tmpl });
-    const rest = phCkAllMoments().filter(m => fits.indexOf(m) < 0);
     const chipsFor = list => list.map(m =>
       chip("data-ck-tmpl", m, esc(phCkMomentLabel(m)), f.tmpl === m)).join("");
+    // the group holding the wording she is actually on always opens, however
+    // she left it -- otherwise changing tone would hide the chip that is lit
+    const groups = phCkGroupedMoments(phCkAllMoments(), fits, f.grpOpen);
+    const groupsHtml = groups.map(g => {
+      const open = g.open || g.moments.indexOf(f.tmpl) >= 0;
+      return `<details class="ph-ck-grp${g.fitting ? " fits" : ""}"${open ? " open" : ""} data-ck-grp="${esc(g.track)}">
+        <summary><span class="e" aria-hidden="true">${g.emoji}</span><span class="l">${esc(g.label)}</span><span class="n">${g.moments.length}</span></summary>
+        <div class="ph-ck-chips">${chipsFor(g.moments)}</div>
+      </details>`;
+    }).join("");
     // Supportive is offered only where she actually wrote a +Supportive
     // version -- on Rebuilding or Aftercare there is nothing to add
     const hasSup = !!phCkResolveTemplate(f.tmpl, f.tone, true) &&
@@ -32822,8 +32988,8 @@ or changing anything in Cliniko.
       </div>
       ${f.pickWhy ? `<div class="ph-ck-why"><svg class="icn" aria-hidden="true"><use href="#i-check"/></svg>${esc(f.pickWhy)}</div>` : ""}
       ${tooLong ? `<div class="ph-ck-long">Long message · ${tooLong} characters</div>` : ""}
-      <div class="ph-ck-chips">${chipsFor(fits)}<button type="button" class="ph-ck-chip" data-ck-save-tmpl="1" title="Keep this wording as your own ${esc(tmplRow ? tmplRow.name : "")} message">＋ Save mine</button></div>
-      ${rest.length ? `<details class="ph-ck-rest"><summary>Everything else · ${rest.length}</summary><div class="ph-ck-chips">${chipsFor(rest)}</div></details>` : ""}`;
+      <div class="ph-ck-grps">${groupsHtml}</div>
+      <div class="ph-ck-chips"><button type="button" class="ph-ck-chip" data-ck-save-tmpl="1" title="Keep this wording as your own ${esc(tmplRow ? tmplRow.name : "")} message">＋ Save mine</button></div>`;
   }
   // Google Messages for web (her ask 2026-09-03: "i message patients on
   // gooogle message website. how do i include a quick link that takes me
@@ -33459,7 +33625,7 @@ or changing anything in Cliniko.
     if (phCkOpen && phCkOpen.recId === recId && phCkOpen.kind === kind) { phCkOpen = null; phCkForm = null; phCkRender(); return; }
     phCkOpen = { recId, kind };
     const startTmpl = kind === "checkin" ? "checkin" : kind === "acu" ? "acu" : kind === "quiet" ? "quiet" : "review";
-    phCkForm = { going: null, concerns: new Set(), otherOn: false, other: "", next: null, note: "", tmpl: startTmpl, tone: null, sup: false, bbt: false, pickWhy: "", text: null, sent: false, factsOpen: false, concernsOpen: false };
+    phCkForm = { going: null, concerns: new Set(), otherOn: false, other: "", next: null, note: "", tmpl: startTmpl, tone: null, sup: false, bbt: false, pickWhy: "", text: null, sent: false, factsOpen: false, concernsOpen: false, grpOpen: {} };
     // already booked in Cliniko -> Next starts on "Booked ✓" (she can still change it)
     const row = phCkRow(recId, kind);
     const key = row ? (row.rec ? (row.rec.patientKey || phPatientKey(row.rec.patient)) : row.patientKey) : null;
@@ -34001,14 +34167,44 @@ or changing anything in Cliniko.
      value editable from only one of them is precisely the complaint she raised
      about the script tab earlier the same day. */
   const phInsNote = key => String((phPatientPeek(key) || {}).insuranceNote || "");
-  const phInsGood = key => !!(phPatientPeek(key) || {}).insuranceGood;
+  const phInsFund = key => String((phPatientPeek(key) || {}).insuranceFund || "");
+  /* Her ask 2026-09-09: "include an option to indicate that insurance rebate
+     is 50% or more", then, a minute later, "GU Health Member" -- which is a
+     FUND, not a second tick. So the lone good-rebates checkbox becomes a fund
+     box plus a rebate level (her pick over adding one tick per fund, which
+     stops scaling at the second fund). The funds list is a suggestion, not a
+     whitelist: the box stays free text so a fund I have not listed, or a
+     corporate policy she words her own way, is still typeable.
+
+     The old `insuranceGood` boolean is READ here rather than migrated on load.
+     phPatientRec already rewrites every record it touches, and a two-line
+     read-compat costs far less than a migration that has to be right the first
+     time it runs across 510 records. It is dropped from a record only once she
+     actually sets a level on that patient. */
+  const PH_INS_LEVELS = [["", "Rebate —"], ["high", "50% or more"], ["good", "Good"], ["low", "Low"]];
+  const PH_INS_FUNDS = ["GU Health", "Bupa", "Medibank", "HCF", "nib", "ahm", "Australian Unity",
+    "CBHS", "Defence Health", "Doctors' Health Fund", "Frank", "GMHBA", "HBF", "Health Partners",
+    "Latrobe Health", "Navy Health", "Peoplecare", "Police Health", "Queensland Country Health",
+    "St Luke's Health", "Teachers Health", "TUH", "Union Health", "Westfund"];
+  const phInsLevel = key => {
+    const r = phPatientPeek(key) || {};
+    return r.insuranceRebate || (r.insuranceGood ? "good" : "");
+  };
+  // her pick: either level counts as "worth messaging about private health",
+  // so ticking 50%+ alone is enough -- she never has to set two things
+  const phInsGood = key => { const l = phInsLevel(key); return l === "high" || l === "good"; };
   function phInsSet(name, patch) {
     const r = phPatientRec(name);
     if (!r) return;
     // delete rather than store "" / false, so a patient she never asked keeps a
     // clean record and phPatientRec's shape stays as small as it was
     if ("note" in patch) { const v = String(patch.note || "").trim(); if (v) r.insuranceNote = v; else delete r.insuranceNote; }
-    if ("good" in patch) { if (patch.good) r.insuranceGood = true; else delete r.insuranceGood; }
+    if ("fund" in patch) { const v = String(patch.fund || "").trim(); if (v) r.insuranceFund = v; else delete r.insuranceFund; }
+    if ("level" in patch) {
+      const v = String(patch.level || "");
+      if (v) r.insuranceRebate = v; else delete r.insuranceRebate;
+      delete r.insuranceGood;   // folded into the level the moment she sets one
+    }
     savePharmacy();
   }
   /* Her follow-up, same day: "good rebates puts them on the good to
@@ -34029,33 +34225,46 @@ or changing anything in Cliniko.
     const cased = new Map();
     phMsgAllPatientNames().forEach(n => cased.set(phPatientKey(n), n));
     return Object.keys(pats)
-      .filter(k => pats[k] && pats[k].insuranceGood && !phMsgDoNotContact(k))
+      .filter(k => pats[k] && phInsGood(k) && !phMsgDoNotContact(k))
       .map(k => cased.get(k) || phMsgDisplayName(k))
       .filter(Boolean)
       .sort((a, b) => String(a).localeCompare(String(b)));
   }
-  // just the two controls; each surface wraps them in its own row language.
+  // just the three controls; each surface wraps them in its own row language.
   // The patient's name rides on the attributes so ONE handler serves both
   // surfaces without either needing to know which page it is on.
+  // The <datalist> ships with the fields rather than sitting once in the page
+  // shell, because the funds live in JS (PH_INS_FUNDS) and a second hardcoded
+  // copy in static markup is the thing that goes stale. Both surfaces can be in
+  // the DOM at once, so the id can repeat -- harmless here, since every copy
+  // holds the identical option list and `list=` resolves to the first.
   function phInsFieldsHtml(name) {
     const key = phPatientKey(name);
+    const lvl = phInsLevel(key);
     return `<div class="ph-ins-fields">
-      <input type="text" class="ph-ins-note" data-ph-ins-note="${esc(name)}" value="${esc(phInsNote(key))}" placeholder="e.g. Bupa top extras — $45 back a visit" aria-label="Insurance note">
-      <label class="ph-ins-good"><input type="checkbox" data-ph-ins-good="${esc(name)}"${phInsGood(key) ? " checked" : ""}><span>good rebates</span></label>
+      <input type="text" class="ph-ins-fund" list="phInsFundList" data-ph-ins-fund="${esc(name)}" value="${esc(phInsFund(key))}" placeholder="Fund — e.g. GU Health" aria-label="Health fund">
+      <datalist id="phInsFundList">${PH_INS_FUNDS.map(f => `<option value="${esc(f)}"></option>`).join("")}</datalist>
+      <select class="ph-ins-level${lvl ? " set" : ""}" data-ph-ins-level="${esc(name)}" aria-label="Rebate level">
+        ${PH_INS_LEVELS.map(([v, l]) => `<option value="${v}"${lvl === v ? " selected" : ""}>${esc(l)}</option>`).join("")}
+      </select>
+      <input type="text" class="ph-ins-note" data-ph-ins-note="${esc(name)}" value="${esc(phInsNote(key))}" placeholder="e.g. $45 back a visit" aria-label="Insurance note">
     </div>`;
   }
   // "change", not "input": the note commits on blur/Enter, so a half-typed fund
   // name never reaches the record. No re-render on either path -- nothing else
   // on either page shows this value, and re-rendering the script panel while
   // she is filling the record in front of a patient would throw away her place.
-  // The tick's green styling is CSS off :checked, so it needs no render either.
+  // The level's set/unset styling is CSS off .set, toggled in place for the
+  // same reason -- a re-render here would cost her her place in the record.
   document.addEventListener("change", e => {
     const el = e.target;
     if (!el || !el.closest) return;
     const note = el.closest("[data-ph-ins-note]");
     if (note) { phInsSet(note.dataset.phInsNote, { note: note.value }); return; }
-    const good = el.closest("[data-ph-ins-good]");
-    if (good) { phInsSet(good.dataset.phInsGood, { good: good.checked }); return; }
+    const fund = el.closest("[data-ph-ins-fund]");
+    if (fund) { phInsSet(fund.dataset.phInsFund, { fund: fund.value }); return; }
+    const lvl = el.closest("[data-ph-ins-level]");
+    if (lvl) { phInsSet(lvl.dataset.phInsLevel, { level: lvl.value }); lvl.classList.toggle("set", !!lvl.value); return; }
   });
   // `moment` MUST be a bare moment key ("period"), never a full code3 row key
   // ("period-formal-sup") -- phPickFacets indexes PH_CODE3_MOMENTS, which is
