@@ -206,6 +206,18 @@ update STYLE-LCM.md to match so future builds don't undo it.
   `fortnight(ly)?` test sits BELOW `\bweekly\b`, so "Weekly, tapering to fortnightly"
   still reads 7, which is the phase she is in when she writes it.
 
+  **A 4TH PICKER — FOR HOW MANY WEEKS (her ask 2026-09-10, "let me select for how many
+  weeks", BUILT as `b40c558`).** A 4th control beside number/period/what-for on the same
+  round-trip contract: `phTpCadenceCompose` appends ` for N week(s)` when a duration is
+  set (ignored when the visit count is 0 — "No visit needed" has nothing to run for);
+  `phTpCadenceSeed`/`phTpCadenceRead` both extract it with a non-anchored best-effort
+  `for\s+(\d+)\s*weeks?` — non-anchored on purpose, unlike the read path's other anchored
+  fields, because a phase can carry a duration even on prose the other 3 pickers can't
+  represent, and losing it silently would be worse than showing it on text that can't
+  fully round-trip. Checked against all 36 real cadence strings: representable count is
+  unchanged (5/36 both before and after) — the 4th picker adds a capability, it doesn't
+  change which strings qualify for picker treatment.
+
   *(Superseded, kept only so nobody rebuilds it: the preset-list design, whose notes ran
   here. `PH_TP_CADENCE_SHAPES` and `phTpCadenceOptions` are gone from the source.)*
   <!--
@@ -286,6 +298,31 @@ update STYLE-LCM.md to match so future builds don't undo it.
   therefore counted as a stock batch, not a sale — missing from revenue, profit,
   grams and most-dispensed. Measure it against her real data before changing it;
   it rewrites historical figures.
+  **PASTE A CONTACT CARD (her ask 2026-09-10, "allow for me to paste patient info
+  e.g." + a phone Contacts-card screenshot; BUILT, 8 locked answers).** A quiet
+  "📋 Paste contact card" link — never always-visible — on the script's Name field
+  (`presNameTypeFieldsHtml`, new AND existing patients) and on the check-in panel's
+  phone/email block (`phCkPhoneEmailHtml`). Reads phone/email/address/name out of a
+  pasted Contacts-app-style block via `phContactCardParse`, then reuses the intake-review
+  `{key,label,display}`/`{key,label,current,value}` conflict shape (`phContactPasteDiff`)
+  so a disagreeing phone or email asks **which to keep** — never silently overwrites,
+  never silently fills-blanks-only. Multiple numbers on one card → first of each kind
+  only. No match at all → a plain "Couldn't find a phone, email or address in that"
+  message, Apply never appears. A name on the card fills the Name field (still hers to
+  retype) but never bypasses `presNameRenameReconcile` — if the resolved name collides
+  with a REAL existing patient, it routes to her confirmed merge flow
+  (summary + backup) exactly like a manual retype would, never a silent merge. Text-paste
+  only, no screenshot/image reading. `PH_CCARD_PHONE_SHAPE`/`PH_CCARD_EMAIL_SHAPE` are
+  shared consts, not just inline regexes — the name-candidate filter tests every line
+  against the SHAPE, not just the one substring the phone/email match kept, or a second
+  phone number on the same card (a landline under an already-matched mobile) reads as
+  her name. Verified end-to-end against her real screenshot text plus 7 edge cases
+  (landline-with-parens, +61, no name, garbage paste, no-address-header, multiple
+  phones, blank) and, since a real login gate blocks a fully-booted local preview,
+  against the actual app functions directly (not a reimplementation) for: blank-name-
+  gets-filled, both conflict-choice branches, the rename-merge-safety route, the
+  nowhereToSave disabled-Apply guard, and the check-in site's `phCkRow()`-based name
+  resolution — all correct, synthetic test patients cleaned up after.
   Docking under the day-list row (`presPanelDock`,
   `.ph-tl-panelhost`) is RETIRED — the function only ever sends the panel home now; the
   Refill workbench's `#refPresPanel` never gets `.ph-pres-full`. **Script panel stages = the Opening-stage language (built 2026-09-08 to her
