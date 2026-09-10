@@ -97,6 +97,37 @@ the points, how it went and anything she added — not just the points.
 
 ---
 
+## Her tenth and eleventh asks, from a real card on screen
+
+> option to say no to herbs
+
+The Herbs row only offered *Dispense →*, so an acupuncture-only visit sat on
+"none yet" forever as though something were missing. It now offers **no herbs**,
+stored as `row.noHerbs` — an answer, not a blank.
+
+> include clinical findings update for all treatment notes except
+> musculoskeletal and facial paralysis. add a toggle to turn on or off
+
+Tongue / pulse / abdomen change visit to visit, so these belong to the **visit**,
+not the plan — the plan's own findings stay the baseline she took at the start
+(her 2026-09-01 spec). No refactor was needed: `phTpFindings()` is generic over
+any object with a `.findings`, and `phFindingsChartsWith()` already parameterises
+the zone attribute, so the same charts and chips render against the visit row
+and **the plan's copy is never touched** (verified: tapping a visit chip left
+`plan.findings` and `plan.tongue` exactly as they were).
+
+Her two exclusions map to `PH_CASE_CATEGORY`: `pain → "msk"` and
+`neurological → "facial"`. Everything else, including a patient with no case
+set, gets findings. **The toggle overrides in both directions** (`rec.visitFindings`),
+so she can switch it on for a shoulder if she wants it.
+
+`[note]` The findings **save as they go**, matching the plan's own findings — so
+a row can exist before she has said what she did. `phVisitFilledIn` therefore
+gates the dot and the "written up" stamp on points/outcome/no-herbs/note, never
+on the row merely existing. One tapped tongue chip must not mark a visit done.
+
+---
+
 ## One decision taken without asking, and why
 
 **The dot and the count start at 2026-09-10 (`PH_VISIT_FROM`) and never look
