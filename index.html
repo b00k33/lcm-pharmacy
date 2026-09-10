@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260911-120000">
+<meta name="lcm-build" content="20260911-150000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -7511,8 +7511,13 @@
   #pharmacyPage .ph-tp-review-row { display: flex; align-items: baseline; gap: 10px; padding: 7px 0; position: relative; }
   #pharmacyPage .ph-tp-review-date { flex: none; font-size: 11px; color: var(--ph-soft); width: 58px; }
   #pharmacyPage .ph-tp-review-note { flex: 1; font-size: 12.5px; color: var(--ph-ink, #162428); line-height: 1.5; }
-  #pharmacyPage .ph-tp-review-add { display: flex; gap: 8px; margin-top: 8px; }
-  #pharmacyPage .ph-tp-review-add input { flex: 1; padding: 8px 10px; border: 1px solid var(--ph-line); border-radius: var(--field-radius-sm, 8px); font: inherit; font-size: 12.5px; }
+  #pharmacyPage .ph-tp-review-add, #pharmacyPage .ph-tp-outcome-add { display: flex; gap: 8px; margin-top: 8px; }
+  #pharmacyPage .ph-tp-review-add input, #pharmacyPage .ph-tp-outcome-add input { flex: 1; padding: 8px 10px; border: 1px solid var(--ph-line); border-radius: var(--field-radius-sm, 8px); font: inherit; font-size: 12.5px; }
+  /* the outcome-add row lives inside a table cell (narrower than the
+     review section's full-width block below the grid) -- her ask
+     2026-09-11 ("allow for outcome editing that is dated") */
+  #pharmacyPage .ph-tp-outcome-add { flex-wrap: wrap; }
+  #pharmacyPage .ph-tp-outcome-line .del { margin-left: 4px; }
   /* her yes (2026-09-01): tongue/pulse/abdomen snapshot on every review */
   #pharmacyPage .ph-tp-review-examrow { display: flex; gap: 8px; margin-top: 6px; }
   #pharmacyPage .ph-tp-review-examrow input { flex: 1; min-width: 0; padding: 6px 10px; border: 1px solid var(--ph-line); border-radius: var(--field-radius-sm, 8px); font: inherit; font-size: 11.5px; }
@@ -26432,6 +26437,38 @@
         phTpDeleteArm = null; savePharmacy(); phTpRerender();
         return;
       }
+      // her ask 2026-09-11 ("allow for outcome editing that is dated"):
+      // same add/delete shape as a review note (phTpDeleteArm reused --
+      // ids are unique app-wide, so arming an outcome's delete can never be
+      // confused with a review's), scoped to one phase's outcomeLog[]
+      // instead of the plan's reviews[]. See phTpRecordCellHtml's
+      // kind === "outcome" branch for why this exists.
+      const tpOutcomeAdd = e.target.closest("[data-tp-outcome-add]");
+      if (tpOutcomeAdd) {
+        const input = document.getElementById("phTpOutcomeInput");
+        const text = (input && input.value || "").trim();
+        if (!text) return;
+        const [planId, phaseId] = tpOutcomeAdd.dataset.tpOutcomeAdd.split(":");
+        const plan = phTpFindPlan(phTpScreenPatient, planId);
+        const phase = plan && (plan.phases || []).find(p => p.id === phaseId);
+        if (phase) {
+          phase.outcomeLog = phase.outcomeLog || [];
+          phase.outcomeLog.push({ id: uid(), date: keyOf(TODAY), at: Date.now(), text });
+          savePharmacy(); phTpRerender();
+        }
+        return;
+      }
+      const tpOutcomeDel = e.target.closest("[data-tp-outcome-del]");
+      if (tpOutcomeDel) { const [, , oid] = tpOutcomeDel.dataset.tpOutcomeDel.split(":"); phTpDeleteArm = oid; phTpRerender(); return; }
+      const tpOutcomeDelYes = e.target.closest("[data-tp-outcome-del-yes]");
+      if (tpOutcomeDelYes) {
+        const [planId, phaseId, oid] = tpOutcomeDelYes.dataset.tpOutcomeDelYes.split(":");
+        const plan = phTpFindPlan(phTpScreenPatient, planId);
+        const phase = plan && (plan.phases || []).find(p => p.id === phaseId);
+        if (phase) phase.outcomeLog = (phase.outcomeLog || []).filter(o => o.id !== oid);
+        phTpDeleteArm = null; savePharmacy(); phTpRerender();
+        return;
+      }
       if (e.target.closest("[data-tp-plan-del]")) { phTpDeleteArm = "plan"; phTpRerender(); return; }
       if (e.target.closest("[data-tp-plan-del-no]")) { phTpDeleteArm = null; phTpRerender(); return; }
       const tpPlanDelYes = e.target.closest("[data-tp-plan-del-yes]");
@@ -43124,13 +43161,35 @@ or changing anything in Cliniko.
       }).join("");
     }
     if (kind === "outcome") {
-      if (!rc.checkIns.length) return none;
       // the last three: enough to read a direction, short enough to sit in a cell
-      return rc.checkIns.slice(-3).map(ck => {
+      const gathered = rc.checkIns.slice(-3).map(ck => {
         const going = (PH_CK_GOING.find(x => x[0] === ck.going) || [])[1] || "";
         const txt = (ck.note || "").trim();
         return line(`${txt ? `“${esc(txt)}”` : ""}${going ? `${txt ? " " : ""}<b>${esc(going)}</b>` : ""} ${d(ck.date)}`);
-      }).join("");
+      });
+      // her ask 2026-09-11 ("allow for outcome editing that is dated"),
+      // looking straight at a Post-ET phase: this cell only ever gathers
+      // from HERB check-ins (rc.checkIns above), so an acu/IVF-only phase
+      // with no herb prescription can never show an outcome at all -- there
+      // is nothing wrong to gather from, the phase just has no herb side.
+      // Unlike every other field on this side, there is no existing store
+      // that already carries "how this phase turned out" for that case, so
+      // typing it here is new information, not a second copy of something
+      // already logged elsewhere -- it doesn't break "you never type it"
+      // for the fields that DO have a source (visits/dispensed/acu/periods
+      // stay exactly as gathered). Stored on the phase itself
+      // (phase.outcomeLog), each entry dated the day she added it -- same
+      // {id,date} shape as plan.reviews[], same add/delete interaction.
+      const typed = (ctx.phase.outcomeLog || []).slice(-3).map(o => {
+        const arming = phTpDeleteArm === o.id;
+        const del = ctx.frozen ? "" : arming
+          ? ` <span class="ph-confirm-strip"><span>Delete?</span><button type="button" class="btn-save" data-tp-outcome-del-yes="${ctx.plan.id}:${ctx.phase.id}:${o.id}">Delete</button><button type="button" class="btn-cancel" data-tp-review-del-no="1">Cancel</button></span>`
+          : ` <button type="button" class="del" data-tp-outcome-del="${ctx.plan.id}:${ctx.phase.id}:${o.id}" title="Delete this outcome" aria-label="Delete outcome">×</button>`;
+        return `<span class="ph-tp-rec-line ph-tp-outcome-line">${esc(o.text)} ${d(o.date)}${del}</span>`;
+      });
+      const lines = [...gathered, ...typed];
+      const add = ctx.frozen ? "" : `<div class="ph-tp-outcome-add"><input type="text" id="phTpOutcomeInput" placeholder="Add an outcome…" aria-label="New outcome"><button type="button" class="ph-load-btn on" data-tp-outcome-add="${ctx.plan.id}:${ctx.phase.id}">Add</button></div>`;
+      return (lines.length ? lines.join("") : none) + add;
     }
     if (kind === "periods") {
       if (!rc.periods.length) return none;
@@ -43308,7 +43367,7 @@ or changing anything in Cliniko.
     // gets its own quiet row under the table instead
     const acuLine = phTpAcuFoldLineHtml(phTpScreenPatient);
     const rec = (label, kind) => {
-      if (rc) return `<td class="ph-tp-lbl mid rec">${label}</td><td class="ph-tp-reccell">${phTpRecordCellHtml(kind, rc, { name: phTpScreenPatient, plan, phase })}${kind === "acu" ? acuLine : ""}</td>`;
+      if (rc) return `<td class="ph-tp-lbl mid rec">${label}</td><td class="ph-tp-reccell">${phTpRecordCellHtml(kind, rc, { name: phTpScreenPatient, plan, phase, frozen })}${kind === "acu" ? acuLine : ""}</td>`;
       if (recSpanned) return "";
       recSpanned = true;
       return `<td class="ph-tp-reccell notyet" colspan="2" rowspan="5"><b>Nothing yet — this phase hasn’t started.</b><span class="d">This side fills itself in from your visits, scripts, check-ins and periods once the phase is current. You never type it.</span></td>`;
@@ -44621,6 +44680,29 @@ Research shows:
 Iron is especially important during growth, menstruation, and pregnancy, when demands increase. Left unchecked, low iron can affect everything from your mood to your fertility — so it's worth keeping an eye on your levels.
 
 We hope this is of value to you!` },
+    // her ask 2026-09-11 ("include email list: email iron, post transfer
+    // advice, food suggestions"): two more topics in the same picker as
+    // Iron. Unlike Iron -- seeded verbatim from a letter she'd actually
+    // sent -- she hasn't given me real wording for these two yet, and
+    // patient-facing clinical/dietary content is hers to write, not mine to
+    // draft (the same line this app already draws for the check-in/comms
+    // wording, code3 CLAUDE.md: "a conversation is not a save" / "ask her
+    // for it in her own words"). So these are a scaffold only -- greeting +
+    // sign-off, a bracketed prompt where her real advice goes -- fully
+    // editable in the textarea like every other letter here, and ready to
+    // become a real seeded template the moment she sends the actual text.
+    { id: "posttransfer", name: "Post-transfer advice", subject: "After your embryo transfer", body:
+`Hi {first},
+
+[Add your post-transfer advice here — rest, activity, medication timing, when to test, what to watch for.]
+
+Please let me know if you have any questions.` },
+    { id: "food", name: "Food suggestions", subject: "Food suggestions to support your treatment", body:
+`Hi {first},
+
+[Add your food/nutrition suggestions here.]
+
+Please let me know if you have any questions.` },
   ];
   const phInfoLtrUserTemplates = () => PHARMACY.infoLetters || (PHARMACY.infoLetters = []);
   const phInfoLtrAllTemplates = () => [...PH_INFO_LETTERS, ...phInfoLtrUserTemplates()];
@@ -44695,7 +44777,7 @@ Please let me know if you have any questions.`;
       <div class="ph-hx-body">
         <div class="ph-infoltr-picker">
           <select class="ph-cyc-in field-bare" data-infoltr-tmpl="1" aria-label="Letter topic">${tmpls.map(x => `<option value="${x.id}"${!phDoseAdjMode && x.id === phInfoLtrTmplId ? " selected" : ""}>${esc(x.name)}</option>`).join("")}<option value="__doseadj"${phDoseAdjMode ? " selected" : ""}>💊 Adjust a supplement dose</option></select>
-          ${phDoseAdjMode ? "" : `<span class="faint">Iron is the only one saved so far — write or paste more and I'll add them here.</span>`}
+          ${!phDoseAdjMode && (phInfoLtrTmplId === "posttransfer" || phInfoLtrTmplId === "food") ? `<span class="faint">Draft only — write or paste your real wording in below and send it to me to save as a template, the way Iron's was.</span>` : ""}
         </div>
         ${phDoseAdjMode ? `<div class="ph-doseadj-fields">
           <label class="ph-doseadj-f"><span>Supplement</span><select class="ph-cyc-in field-bare" data-doseadj-supp="1" aria-label="Supplement">${PH_SUPPLEMENTS.map(s => `<option value="${s.id}"${s.id === phDoseAdjSupp ? " selected" : ""}>${esc(s.name)}</option>`).join("")}</select></label>
