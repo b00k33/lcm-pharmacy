@@ -752,6 +752,21 @@ multiple things"*. The rules:
   a prune; without it the app opens on hundreds of historical visits.
 - **Nothing here may call `phFlashShow`** — it calls `renderPharmacy()`, which
   closes the card she just saved from. The confirmation lives in the card.
+- **"No herbs" is an answer, not a blank** (`row.noHerbs`). Plenty of visits are
+  acupuncture only; without it the Herbs row reads "none yet" forever.
+- **Clinical findings belong to the VISIT, not the plan** (her ask 2026-09-10:
+  *"include clinical findings update for all treatment notes except
+  musculoskeletal and facial paralysis. add a toggle to turn on or off"*).
+  Tongue/pulse/abdomen change visit to visit; `plan.findings` stays the baseline
+  she took at the start. `phTpFindings()` is generic over any object with a
+  `.findings` and `phFindingsChartsWith()` parameterises the zone attribute, so
+  the visit reuses the same charts and chips — **never** point the visit's
+  controls at `data-tp-zone`/`data-tp-field`, which write to the open plan.
+  Excluded by `PH_CASE_CATEGORY`: `pain → msk`, `neurological → facial`.
+  `rec.visitFindings` overrides in BOTH directions.
+- **Findings save as they go, so a row can exist before the visit is written
+  up.** `phVisitFilledIn` gates the dot and the "written up" stamp on
+  points/outcome/no-herbs/note — never on the row merely existing.
 
 ## Spacing & size (one scale, no random numbers)
 - Only 4/8/12/16/24/32px for margins/padding/gaps.

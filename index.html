@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260910-214500">
+<meta name="lcm-build" content="20260910-231500">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -12170,6 +12170,25 @@
   #pharmacyPage .ph-visit-went.on.same { background: var(--ph-low-tint); color: var(--ph-low-deep); border-color: var(--ph-low-deep); }
   #pharmacyPage .ph-visit-went.on.worse { background: var(--ph-red-tint, #FCEBEB); color: var(--ph-red-deep, #A32D2D); border-color: var(--ph-red-deep, #A32D2D); }
   #pharmacyPage .ph-visit-ok { font-size: 10.5px; font-weight: 700; color: var(--ph-green-deep); }
+  #pharmacyPage .ph-visit-or { color: var(--ph-faint); font-size: 11px; }
+  /* Clinical findings inside the card. The plan's copy lays these three out
+     side by side on a wide screen; the card is ~340px, so here they STACK and
+     the charts are capped -- her rule is compress the chrome, never the data,
+     so every zone and every chip is still here at full tap size. */
+  #pharmacyPage .ph-visit-fndwrap { border-top: 1px solid var(--ph-line); margin-top: 9px; padding-top: 9px; }
+  #pharmacyPage .ph-visit-fndhead { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--ph-soft); }
+  #pharmacyPage .ph-visit-fndhead .faint { text-transform: none; letter-spacing: 0; }
+  #pharmacyPage .ph-visit-fndhead .ph-name-link { font-size: 11px; padding: 0; text-transform: none; letter-spacing: 0; margin-left: auto; }
+  #pharmacyPage .ph-visit-fndhead .ph-name-link.soft { margin-left: 0; }
+  #pharmacyPage .ph-visit-fnds { display: grid; gap: 10px; margin-top: 9px; }
+  #pharmacyPage .ph-visit-fnd { background: var(--ph-white); border: 1px solid var(--ph-line); border-radius: 9px; padding: 9px 10px; }
+  #pharmacyPage .ph-visit-fnd svg { display: block; margin: 0 auto 7px; max-width: 118px; height: auto; }
+  #pharmacyPage .ph-visit-qualgrp { display: flex; align-items: baseline; gap: 6px; margin-bottom: 5px; }
+  #pharmacyPage .ph-visit-qualgrp > i { flex: 0 0 42px; font-style: normal; font-size: 9.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--ph-faint); }
+  #pharmacyPage .ph-visit-quals { display: flex; flex-wrap: wrap; gap: 4px; }
+  #pharmacyPage .ph-visit-fndfld { display: block; margin-top: 6px; }
+  #pharmacyPage .ph-visit-fndfld > span { display: block; font-size: 10.5px; color: var(--ph-soft); margin-bottom: 3px; }
+  #pharmacyPage .ph-visit-fndfld textarea { font: inherit; font-size: 11.5px; width: 100%; box-sizing: border-box; resize: vertical; border: 1px solid var(--ph-line); border-radius: 7px; padding: 5px 7px; background: var(--ph-white); color: var(--ph-ink); }
   #pharmacyPage .ph-visit-acts { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-top: 10px; }
   #pharmacyPage .ph-visit-stamp, #pharmacyPage .ph-visit-note { font-size: 10.5px; color: var(--ph-faint); }
   #pharmacyPage .ph-visit-note { margin-top: 7px; }
@@ -21732,8 +21751,12 @@
      them would have opened the app on "847 visits still to write up". Nothing
      before the day this shipped is ever asked for. */
   const PH_VISIT_FROM = "2026-09-10";
+  // a row that exists only because she tapped one tongue chip is NOT a written-up
+  // visit -- the findings save as they go, so the record can exist long before
+  // she has said what she did
+  const phVisitFilledIn = s => !!s && !!(s.points || s.outcome || s.noHerbs || (s.note || "").trim());
   const phVisitNeedsWriteUp = a => !!a && a.date >= PH_VISIT_FROM && a.date <= keyOf(TODAY)
-    && !phCkIsAway(a.service) && !phVisitNoteFor(a.patient, a);
+    && !phCkIsAway(a.service) && !phVisitFilledIn(phVisitNoteFor(a.patient, a));
   const phVisitOutstanding = () => phApptList().filter(phVisitNeedsWriteUp)
     .sort((x, y) => (y.date + (y.time || "")).localeCompare(x.date + (x.time || "")));
   const phVisitDotHtml = a => phVisitNeedsWriteUp(a)
@@ -21759,6 +21782,100 @@
   // the confirmation line lives IN the card: phFlashShow calls renderPharmacy(),
   // which would close the card she just saved from
   let phVisitMsg = null;     // { apptId, text }
+  let phVisitFndOpen = null; // apptId whose Clinical findings section is expanded
+  /* ==== CLINICAL FINDINGS ON THE VISIT (her ask 2026-09-10) ==============
+     "include clinical findings update for all treatment notes except
+      musculoskeletal and facial paralysis. add a toggle to turn on or off"
+
+     Tongue / pulse / abdomen change visit to visit, so these belong to the
+     VISIT, not to the plan -- the plan's own findings stay what they are, the
+     baseline she took at the start (her 2026-09-01 spec). phTpFindings() turns
+     out to be generic over any object with a .findings, and
+     phFindingsChartsWith() already parameterises the zone attribute, so the
+     same charts and the same chips render here with no change to the plan's
+     copy at all.
+
+     Her two exclusions are the two case CATEGORIES where a tongue and pulse
+     are not what the visit turns on: pain -> "msk" and neurological ->
+     "facial" (PH_CASE_CATEGORY). Anything else, including a patient with no
+     case set, gets it. The toggle overrides in BOTH directions, so she can
+     switch it on for a shoulder if she wants it. */
+  const PH_VISIT_FND_SKIP = ["msk", "facial"];
+  function phVisitFindingsEligible(name) {
+    const script = phApptScriptFor(phPatientKey(name));
+    const cat = script && script.caseType ? PH_CASE_CATEGORY[script.caseType] : null;
+    return !cat || PH_VISIT_FND_SKIP.indexOf(cat) < 0;
+  }
+  function phVisitFindingsOn(name) {
+    const rec = phPatientPeek(phPatientKey(name));
+    if (rec && typeof rec.visitFindings === "boolean") return rec.visitFindings;
+    return phVisitFindingsEligible(name);
+  }
+  // the visit's own row, made on demand -- the findings save as they go, the
+  // same way the plan's do, so there is nothing to lose by not pressing Save
+  function phVisitRow(name, a, create) {
+    const rec = phPatientRec(name);
+    if (!rec.acuSessions) rec.acuSessions = [];
+    let row = rec.acuSessions.find(s => s && s.apptId === a.id);
+    if (!row && create) {
+      const vc = phTpApptVisitCtx(name, a);
+      row = { id: uid(), apptId: a.id, date: a.date, at: Date.now(), points: "", outcome: "", note: "",
+        phaseLabel: vc ? (vc.phase.label || "") : "", planId: vc ? vc.plan.id : null, phaseId: vc ? vc.phase.id : null };
+      rec.acuSessions.push(row);
+    }
+    return row || null;
+  }
+  const phVisitFndFlip = (arr, id) => { const i = arr.indexOf(id); if (i >= 0) arr.splice(i, 1); else arr.push(id); };
+  // the three boxes are read straight off the open card, so a chip tap (which
+  // re-renders) never throws away half-typed tongue or pulse text
+  function phVisitFndSaveText(a, row) {
+    if (!row) return;
+    ["tongue", "pulse", "abdomen"].forEach(k => {
+      const el = document.querySelector(`#pharmacyPage [data-ph-visit-fnd="${k}"]`);
+      if (el) row[k] = el.value.trim();
+    });
+  }
+  function phVisitFindingsHtml(a) {
+    const name = a.patient;
+    if (!phVisitFindingsOn(name)) {
+      return `<div class="ph-visit-fld"><span>Findings</span><span class="faint">off · <button type="button" class="ph-name-link soft" data-ph-visit-fndon="1">turn on</button></span></div>`;
+    }
+    const row = phVisitRow(name, a, false) || {};
+    const f = phTpFindings(row);
+    const summary = ["tongue", "pulse", "abd"].map(w => phTpFindingsText(row, w === "abd" ? "abdomen" : w)).filter(Boolean).join(" · ");
+    if (phVisitFndOpen !== a.id) {
+      return `<div class="ph-visit-fld"><span>Findings</span><span>${summary ? esc(summary.slice(0, 90)) : `<span class="faint">nothing yet</span>`}
+        <button type="button" class="ph-name-link" data-ph-visit-fndtoggle="${esc(a.id)}">open ▸</button></span></div>`;
+    }
+    const chips = (grp, list, on) => `<div class="ph-ltr-quals ph-visit-quals">${list.map(id =>
+      `<button type="button" class="ph-ltr-qual${on.indexOf(id) >= 0 ? " on" : ""}" data-ph-visit-qual="${grp}:${esc(id)}">${esc(id)}</button>`).join("")}</div>`;
+    const zoneText = diag => f.zones.filter(z => z.startsWith(diag + ":"))
+      .map(z => (PH_LTR_ZONES[diag].zones[z.split(":")[1]] || {}).label).filter(Boolean).join(", ");
+    const body = phFindingsChartsWith(new Set(f.zones), new Set(f.quals), "data-ph-visit-zone", () => `
+      <div class="ph-visit-fnd">
+        ${phLtrTongueSvg(true)}
+        <div class="ph-visit-qualgrp"><i>marks</i>${chips("quals", PH_LTR_QUALS.map(q => q.id), f.quals)}</div>
+        <div class="ph-visit-qualgrp"><i>body</i>${chips("body", PH_TP_TONGUE_BODY, f.body)}</div>
+        <div class="ph-visit-qualgrp"><i>coat</i>${chips("coat", PH_TP_TONGUE_COAT, f.coat)}</div>
+        <label class="ph-visit-fndfld"><span>👅 Tongue${zoneText("tongue") ? ` · ${esc(zoneText("tongue"))}` : ""}</span><textarea rows="2" data-ph-visit-fnd="tongue" placeholder="Anything the chips don't say…">${esc(row.tongue || "")}</textarea></label>
+      </div>
+      <div class="ph-visit-fnd">
+        ${phLtrPulseSvg(true)}
+        <div class="ph-visit-qualgrp"><i>quality</i>${chips("pulseQ", PH_TP_PULSE_Q, f.pulseQ)}</div>
+        <label class="ph-visit-fndfld"><span>🫀 Pulse${zoneText("pulse") ? ` · ${esc(zoneText("pulse"))}` : ""}</span><textarea rows="2" data-ph-visit-fnd="pulse" placeholder="Rate, depth, anything else…">${esc(row.pulse || "")}</textarea></label>
+      </div>
+      <div class="ph-visit-fnd">
+        ${phLtrAbdSvg(true)}
+        <label class="ph-visit-fndfld"><span>🤲 Abdomen${zoneText("abd") ? ` · ${esc(zoneText("abd"))}` : ""}</span><textarea rows="2" data-ph-visit-fnd="abdomen" placeholder="Fukushin findings…">${esc(row.abdomen || "")}</textarea></label>
+      </div>`);
+    return `<div class="ph-visit-fndwrap">
+      <div class="ph-visit-fndhead">Clinical findings <span class="faint">· saves as you go</span>
+        <button type="button" class="ph-name-link" data-ph-visit-fndtoggle="${esc(a.id)}">close ▾</button>
+        <button type="button" class="ph-name-link soft" data-ph-visit-fndon="0" title="Stop showing findings for this patient">turn off</button>
+      </div>
+      <div class="ph-visit-fnds">${body}</div>
+    </div>`;
+  }
   function phVisitBlockHtml(a) {
     const name = a.patient;
     const vc = phTpApptVisitCtx(name, a);
@@ -21802,13 +21919,19 @@
         <div class="ph-visit-fld"><span>Went</span><span class="ph-visit-wents">${chips}</span></div>
         <div class="ph-visit-fld"><span>Herbs</span><span>${dispLine
           ? `${esc(dispLine)} <span class="ph-visit-ok">✓ dispensed</span>`
-          : `<span class="faint">none yet</span> <button type="button" class="ph-name-link" data-ph-visit-dispense="${esc(a.id)}">Dispense →</button>`}</span></div>
+          // her ask 2026-09-10, looking at a real card: "option to say no to
+          // herbs". Plenty of visits are acupuncture only, and without this the
+          // row sits on "none yet" forever as though something were missing.
+          : (draft ? draft.noHerbs : saved && saved.noHerbs)
+            ? `<span class="ph-visit-ok">✓ none needed</span> <button type="button" class="ph-name-link soft" data-ph-visit-noherbs="${esc(a.id)}">changed my mind</button>`
+            : `<span class="faint">none yet</span> <button type="button" class="ph-name-link" data-ph-visit-dispense="${esc(a.id)}">Dispense →</button> <span class="ph-visit-or">or</span> <button type="button" class="ph-name-link soft" data-ph-visit-noherbs="${esc(a.id)}">no herbs</button>`}</span></div>
         <label class="ph-visit-fld"><span>Anything else</span><input type="text" class="ph-visit-in field-bare" value="${esc(note)}" placeholder="optional" data-ph-visit-field="${a.id}:note" autocomplete="off"></label>
+        ${phVisitFindingsHtml(a)}
       </div>
       <div class="ph-visit-acts">
         <button type="button" class="ph-apptpop-btn" data-ph-visit-save="${esc(a.id)}">${saved ? "Save changes" : "Save visit"}</button>
         ${vc && vc.idx + 1 < vc.total ? `<button type="button" class="ph-name-link" data-ph-visit-nextphase="${esc(a.id)}" title="Close this phase and start the next one">Phase done → start next</button>` : ""}
-        ${saved ? `<span class="ph-visit-stamp">written up ${esc(phShortDate(saved.date))}</span>` : ""}
+        ${phVisitFilledIn(saved) ? `<span class="ph-visit-stamp">written up ${esc(phShortDate(saved.date))}</span>` : ""}
       </div>
       ${phVisitMsg && phVisitMsg.apptId === a.id ? `<div class="ph-visit-said">${esc(phVisitMsg.text)}${
         phVisitUndo && phVisitUndo.apptId === a.id
@@ -21833,20 +21956,21 @@
       points: pts !== null ? pts : (saved ? saved.points || "" : ""),
       note: nt !== null ? nt : (saved ? saved.note || "" : ""),
       outcome: drafted ? drafted.outcome : (saved ? saved.outcome || "" : ""),
+      noHerbs: drafted ? !!drafted.noHerbs : !!(saved && saved.noHerbs),
     };
   }
   // leaving the card for the dispense flow must never cost her what she typed
   function phVisitStash(a) {
     if (!a) return;
     const d = phVisitReadDraft(a.id);
-    if (d.points || d.outcome || d.note) phVisitSave(a.id, true);
+    if (d.points || d.outcome || d.note || d.noHerbs) phVisitSave(a.id, true);
   }
   function phVisitSave(apptId, quiet) {
     const a = phApptList().find(x => x.id === apptId);
     if (!a) return;
     const name = a.patient, d = phVisitReadDraft(apptId);
     const existing = phVisitNoteFor(name, a);
-    if (!d.points && !d.outcome && !d.note && !existing) {
+    if (!d.points && !d.outcome && !d.note && !d.noHerbs && !existing) {
       if (!quiet) { phVisitMsg = { apptId, text: "Nothing filled in yet." }; phApptPopRender(); }
       return;
     }
@@ -21860,6 +21984,8 @@
     row.date = a.date;
     row.at = existing ? existing.at : Date.now();
     row.points = d.points; row.outcome = d.outcome; row.note = d.note;
+    row.noHerbs = !!d.noHerbs;   // "no herbs this visit" is an answer, not a blank
+    phVisitFndSaveText(a, row);  // the tongue/pulse/abdomen boxes, if they are open
     row.phaseLabel = vc ? (vc.phase.label || "") : "";
     row.planId = vc ? vc.plan.id : null;
     row.phaseId = vc ? vc.phase.id : null;
@@ -24950,6 +25076,56 @@
           const bv = b.dataset.phVisitWent.split(":")[1];
           b.className = "ph-visit-went" + (phVisitDraft.outcome === bv ? " on " + bv : "");
         });
+        return;
+      }
+      /* Clinical findings on the visit. These save as they go, like the plan's
+         own findings do -- so each one keeps whatever she has typed in the
+         other fields by reading the card back into the draft first. */
+      const vFndT = e.target.closest("[data-ph-visit-fndtoggle]");
+      if (vFndT) {
+        const id = vFndT.dataset.phVisitFndtoggle;
+        phVisitDraft = phVisitReadDraft(id);
+        phVisitFndOpen = phVisitFndOpen === id ? null : id;
+        phApptPopRender();
+        return;
+      }
+      const vFndOn = e.target.closest("[data-ph-visit-fndon]");
+      if (vFndOn) {
+        const a = phApptList().find(x => x.id === phApptCalOpenId);
+        if (a) {
+          phVisitDraft = phVisitReadDraft(a.id);
+          const rec = phPatientRec(a.patient);
+          rec.visitFindings = vFndOn.dataset.phVisitFndon === "1";
+          if (!rec.visitFindings) phVisitFndOpen = null;
+          savePharmacy(); phApptPopRender();
+        }
+        return;
+      }
+      const vZone = e.target.closest("[data-ph-visit-zone]");
+      const vQual = e.target.closest("[data-ph-visit-qual]");
+      if (vZone || vQual) {
+        const a = phApptList().find(x => x.id === phApptCalOpenId);
+        if (a) {
+          phVisitDraft = phVisitReadDraft(a.id);
+          const row = phVisitRow(a.patient, a, true);
+          phVisitFndSaveText(a, row);          // keep the three boxes as typed
+          const f = phTpFindings(row);
+          if (vZone) phVisitFndFlip(f.zones, vZone.dataset.phVisitZone);
+          else {
+            const bits = vQual.dataset.phVisitQual.split(":");
+            phVisitFndFlip(f[bits[0]] || (f[bits[0]] = []), bits.slice(1).join(":"));
+          }
+          savePharmacy(); phApptPopRender();
+        }
+        return;
+      }
+      const vNoHerbs = e.target.closest("[data-ph-visit-noherbs]");
+      if (vNoHerbs) {
+        // read the card first so a toggle never costs her what she has typed
+        const id = vNoHerbs.dataset.phVisitNoherbs;
+        phVisitDraft = phVisitReadDraft(id);
+        phVisitDraft.noHerbs = !phVisitDraft.noHerbs;
+        phApptPopRender();
         return;
       }
       const vDisp = e.target.closest("[data-ph-visit-dispense]");
