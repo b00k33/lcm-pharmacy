@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260911-034500">
+<meta name="lcm-build" content="20260911-040500">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -7611,9 +7611,12 @@
   #pharmacyPage .ph-cap-syncline { text-align: center; font-size: 10px; font-style: italic; color: var(--ph-soft); margin-top: 12px; }
   /* multi-pick gallery batch confirm (her ask 2026-09-02) */
   #pharmacyPage .ph-ren-batch-grid { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; padding: 12px 16px; overflow-y: auto; }
-  #pharmacyPage .ph-ren-batch-th { position: relative; }
+  #pharmacyPage .ph-ren-batch-th { position: relative; display: flex; flex-direction: column; gap: 4px; width: 84px; }
   #pharmacyPage .ph-ren-batch-th img { width: 84px; height: 84px; object-fit: cover; border-radius: 8px; display: block; }
   #pharmacyPage .ph-ren-batch-th button { position: absolute; top: -6px; right: -6px; width: 22px; height: 22px; border: none; border-radius: 999px; background: var(--ph-green-deep); color: var(--ph-cream); font-size: 13px; line-height: 1; cursor: pointer; font-family: inherit; }
+  /* her ask 2026-09-11: a tag picker per thumbnail, for an untagged batch
+     she's about to tag one at a time */
+  #pharmacyPage .ph-ren-batch-tag, #pharmacyPage .ph-ren-batch-shot { width: 100%; font: inherit; font-size: 10.5px; padding: 3px 4px; border: 1px solid var(--ph-line); border-radius: 6px; background: var(--ph-white); color: var(--ph-ink); }
   #pharmacyPage .ph-cap-foot { display: flex; gap: 8px; align-items: center; padding: 12px 16px; border-top: 1px solid var(--ph-line); flex: 0 0 auto; }
   #pharmacyPage .ph-cap-done { margin-left: auto; }
   /* 📅 appointment schedule (2026-09-01) -- modal reuses the capture sheet's
@@ -26363,12 +26366,27 @@
         return;
       }
       const cfAll = e.target.closest("[data-ren-confirm-saveall]");
-      if (cfAll && phRenConfirmState && phRenConfirmState.batch && phRenCapture) {
+      if (cfAll && phRenConfirmState && phRenConfirmState.batch) {
         const st = phRenConfirmState;
+        const target = st.target || (phRenCapture && { patientKey: phRenCapture.patientKey, patientName: phRenCapture.patientName, dateKey: phRenCapture.dateKey });
+        if (!target) return;
         cfAll.disabled = true; cfAll.textContent = "Saving…";
+        // her ask 2026-09-11: an untagged batch carries its own type/shot PER
+        // PHOTO (picked in the confirm modal, see the two change-handlers
+        // above), where a tile-started batch already has one shared type on
+        // phRenCapture. phRenCaptureSave always reads type/shot off
+        // phRenCapture, so it's synthesized here when there wasn't one, and
+        // set fresh from that thumbnail before each save -- one file at a
+        // time, always awaited, so there's no race between setting it and
+        // phRenCaptureSave reading it.
+        if (!phRenCapture) phRenCapture = { patientKey: target.patientKey, patientName: target.patientName, dateKey: target.dateKey, type: "other", shot: "", again: false, via: "", gallery: false };
         (async () => {
           let ok = 0;
-          for (const x of st.batch) { if (await phRenCaptureSave(x.file, true)) ok++; }
+          for (const x of st.batch) {
+            phRenCapture.type = x.type || "other";
+            phRenCapture.shot = (phRenCapture.type === "tongue" && x.shot) || "";
+            if (await phRenCaptureSave(x.file, true)) ok++;
+          }
           phRenConfirmClose(); phRenCapture = null;
           phFlashShow(ok === st.batch.length
             ? `Saved all ${ok} photos ✓`
@@ -26383,10 +26401,15 @@
         return;
       }
       if (e.target.closest("[data-ren-confirm-save]") || e.target.closest("[data-ren-confirm-again]")) {
+        if (phRenConfirmSaving) return;   // a second tap while the first is still saving -- see the guard's own comment
         const again = !!e.target.closest("[data-ren-confirm-again]");
         const st = phRenConfirmState, cap = phRenCapture;
         if (!st || !cap) return;
+        phRenConfirmSaving = true;
+        const modal = document.getElementById("phRenCropModal");
+        modal.querySelectorAll("[data-ren-confirm-save], [data-ren-confirm-again], [data-ren-confirm-retake]").forEach(b => b.disabled = true);
         phRenCaptureSave(st.file).then(ok => {
+          phRenConfirmSaving = false;
           phRenConfirmClose();
           // "Save & take another" keeps capture open so tongue -> eyelid ->
           // nails happens without going back to the record (§2). The type
@@ -26465,9 +26488,11 @@
       // ---- Ren (人) photo upload + crop (her ask 2026-08-22) ----
       if (e.target.closest("[data-ren-photo-add]")) {
         const inp = document.getElementById("phRenPhotoFileInput");
-        // the crop route handles ONE image -- clear any multiple left on the
-        // shared input by a previous gallery open
-        if (inp) { inp.removeAttribute("multiple"); inp.removeAttribute("capture"); inp.click(); }
+        // her ask 2026-09-11: let this ONE button take several at once too --
+        // a single pick still runs the original crop-then-tag flow below
+        // untouched, several hands off to the untagged batch flow, where she
+        // tags each one afterward instead of one photo at a time
+        if (inp) { inp.setAttribute("multiple", ""); inp.removeAttribute("capture"); inp.click(); }
         return;
       }
       if (e.target.closest("[data-ren-paste-use]")) { phRenPasteAccept(); return; }
@@ -29407,6 +29432,15 @@
         // several gallery picks at once (her ask 2026-09-02) -> one batch
         // confirm; a single file keeps the exact flow below
         if (files.length > 1 && phRenCapture) { phRenConfirmOpenBatch(files); return; }
+        // her ask 2026-09-11: several picks with NO type chosen first (the
+        // plain 📷 Add photo button) -> the same batch confirm, just with
+        // nothing to inherit a shared type from -- every thumbnail gets its
+        // own tag picker there instead, so she tags each one after picking
+        // rather than one photo at a time through the crop tool below.
+        if (files.length > 1 && !phRenCapture && presHxScreenName) {
+          phRenConfirmOpenBatch(files, { patientKey: phPatientKey(presHxScreenName), patientName: presHxScreenName, dateKey: keyOf(TODAY) });
+          return;
+        }
         // her 2026-08-25 spec §2: a capture started from a TYPE TILE (or a
         // timeline "+") already knows its type, patient and date, so it goes
         // straight to the confirm step -- no tagging afterwards. The plain
@@ -29414,6 +29448,21 @@
         // crop-tool route, untouched.
         if (f && phRenCapture) { phRenConfirmOpen(f); return; }
         if (f && presHxScreenName) phRenCropOpenFromFile(phPatientKey(presHxScreenName), f);
+        return;
+      }
+      // her ask 2026-09-11: per-photo tag pickers in the untagged batch
+      // confirm -- just write the pick onto that thumbnail's own state,
+      // renderPhRenConfirmModal + the save loop read it from there
+      const batchTypeSel = e.target.closest("[data-ren-confirm-batch-type]");
+      if (batchTypeSel && phRenConfirmState && phRenConfirmState.batch) {
+        const x = phRenConfirmState.batch[+batchTypeSel.dataset.renConfirmBatchType];
+        if (x) { x.type = batchTypeSel.value; if (x.type !== "tongue") x.shot = ""; renderPhRenConfirmModal(); }
+        return;
+      }
+      const batchShotSel = e.target.closest("[data-ren-confirm-batch-shot]");
+      if (batchShotSel && phRenConfirmState && phRenConfirmState.batch) {
+        const x = phRenConfirmState.batch[+batchShotSel.dataset.renConfirmBatchShot];
+        if (x) x.shot = batchShotSel.value;
         return;
       }
       // ⚙ Settings -- Label text, STEP 7's plain-characters toggle
@@ -38435,6 +38484,16 @@ or changing anything in Cliniko.
      maintain, not a fifth. The image is shown WHOLE (a framing guide is a
      guide, not a crop -- her §2), so nothing is cut off. */
   let phRenConfirmState = null;   // {file, objectUrl} | {batch: [{file, objectUrl}]}
+  // her report 2026-09-11, "when i press save, it saves twice" -- ✓ Save ran
+  // straight into the async compress+store with nothing blocking a second
+  // tap landing before the modal had closed, so a real double-tap (easy on a
+  // photo she's excited to file) called phRenCaptureSave twice against the
+  // same still-open state and filed the same photo as two records. The
+  // batch "Save all" button next to it already guarded this exact race
+  // (disables itself before the await); this brings the single-photo path
+  // up to the same standard instead of leaving the one path that's actually
+  // hers to click most often unguarded.
+  let phRenConfirmSaving = false;
   function phRenConfirmOpen(file) {
     phRenConfirmRevoke();
     phRenConfirmState = { file, objectUrl: URL.createObjectURL(file) };
@@ -38446,10 +38505,23 @@ or changing anything in Cliniko.
   // several gallery picks in one go (her ask 2026-09-02): one confirm with
   // all the thumbnails, a per-photo ✕ for a misfired pick, one Save all --
   // each file then runs the SAME phRenCaptureSave pipeline (compress, file
-  // by type+date, capture-sheet counter, desktop relay push), nothing new
-  function phRenConfirmOpenBatch(files) {
+  // by type+date, capture-sheet counter, desktop relay push), nothing new.
+  //
+  // `target` (her ask 2026-09-11): when phRenCapture is set, every photo in
+  // the batch shares its type, same as before. When it's not -- the plain
+  // Add-photo button, no tile picked first -- there's nothing to inherit a
+  // type from, so `target` carries the patient/date directly and each photo
+  // starts on "other", waiting for her to pick its real tag in the confirm
+  // modal (renderPhRenConfirmModal's per-thumbnail <select>).
+  function phRenConfirmOpenBatch(files, target) {
     phRenConfirmRevoke();
-    phRenConfirmState = { batch: files.map(f => ({ file: f, objectUrl: URL.createObjectURL(f) })) };
+    const t = target || (phRenCapture && { patientKey: phRenCapture.patientKey, patientName: phRenCapture.patientName, dateKey: phRenCapture.dateKey });
+    if (!t) return;
+    phRenConfirmState = {
+      batch: files.map(f => ({ file: f, objectUrl: URL.createObjectURL(f),
+        type: (phRenCapture && phRenCapture.type) || "other", shot: (phRenCapture && phRenCapture.shot) || "" })),
+      target: t,
+    };
     phRenCropState = null;
     document.getElementById("phRenCropBackdrop").hidden = false;
     document.getElementById("phRenCropModal").hidden = false;
@@ -38468,17 +38540,35 @@ or changing anything in Cliniko.
   }
   function renderPhRenConfirmModal() {
     const modal = document.getElementById("phRenCropModal");
-    if (!modal || !phRenConfirmState || !phRenCapture) return;
-    const cap = phRenCapture;
+    if (!modal || !phRenConfirmState) return;
     if (phRenConfirmState.batch) {
       const b = phRenConfirmState.batch;
+      const target = phRenConfirmState.target || (phRenCapture && { patientKey: phRenCapture.patientKey, patientName: phRenCapture.patientName, dateKey: phRenCapture.dateKey });
+      if (!target) return;
+      // her ask 2026-09-11: a batch picked WITHOUT a type chosen first (the
+      // plain Add-photo button) gets a tag picker on every thumbnail instead
+      // of the one shared "all file as X" line below -- she tags each after
+      // picking rather than running Add four separate times, once per tag.
+      const preTagged = !!phRenCapture;
+      const existing = phRenPhotosFor(target.patientKey) || [];
+      const typeOpts = phRenTypesFor(target.patientKey, k => existing.some(p => phRenTypeOf(p) === k));
       modal.innerHTML = `<div class="ph-hx-card ph-ren-crop-card">
         <div class="ph-hx-head">
           <button type="button" class="ph-stocktake-close" data-ren-confirm-cancel="1" aria-label="Close">×</button>
-          <div class="ph-hx-head-name">${b.length} photos · ${esc(PH_REN_TYPE_LABEL[cap.type] || "Photo")} · ${esc(phRenPhotoDateLabel(cap.dateKey))}</div>
+          <div class="ph-hx-head-name">${b.length} photos · ${preTagged ? `${esc(PH_REN_TYPE_LABEL[phRenCapture.type] || "Photo")} · ` : ""}${esc(phRenPhotoDateLabel(target.dateKey))}</div>
         </div>
-        <div class="ph-ren-batch-grid">${b.map((x, i) => `<span class="ph-ren-batch-th"><img src="${x.objectUrl}" alt="Photo ${i + 1}"><button type="button" data-ren-confirm-drop="${i}" title="Leave this one out" aria-label="Leave photo ${i + 1} out">×</button></span>`).join("")}</div>
-        <div class="ph-ren-confirm-name">all file to ${esc(phTitle(cap.patientName))} as ${esc(PH_REN_TYPE_LABEL[cap.type] || "photo")} — pick a different type chip first if that's wrong</div>
+        <div class="ph-ren-batch-grid">${b.map((x, i) => `<span class="ph-ren-batch-th">
+            <img src="${x.objectUrl}" alt="Photo ${i + 1}">
+            <button type="button" class="ph-ren-batch-drop" data-ren-confirm-drop="${i}" title="Leave this one out" aria-label="Leave photo ${i + 1} out">×</button>
+            ${preTagged ? "" : `<select class="ph-ren-batch-tag" data-ren-confirm-batch-type="${i}" aria-label="Tag for photo ${i + 1}">${typeOpts.map(t => `<option value="${t.key}"${t.key === x.type ? " selected" : ""}>${esc(t.label)}</option>`).join("")}</select>
+            ${x.type === "tongue" ? `<select class="ph-ren-batch-shot" data-ren-confirm-batch-shot="${i}" aria-label="Which tongue shot for photo ${i + 1}">
+                <option value=""${x.shot ? "" : " selected"}>No shot</option>
+                ${PH_REN_TONGUE_SHOTS.map(s => `<option value="${s.key}"${x.shot === s.key ? " selected" : ""}>${esc(s.short)}</option>`).join("")}
+              </select>` : ""}`}
+          </span>`).join("")}</div>
+        <div class="ph-ren-confirm-name">${preTagged
+          ? `all file to ${esc(phTitle(target.patientName))} as ${esc(PH_REN_TYPE_LABEL[phRenCapture.type] || "photo")} — pick a different type chip first if that's wrong`
+          : `filing to ${esc(phTitle(target.patientName))} — pick each photo's tag above (Other is fine to fix later)`}</div>
         <div class="ph-ren-confirm-acts">
           <button type="button" class="ph-load-btn on" data-ren-confirm-saveall="1">✓ Save all ${b.length}</button>
           <button type="button" class="ph-load-btn" data-ren-confirm-cancel="1">Cancel</button>
@@ -38486,6 +38576,8 @@ or changing anything in Cliniko.
       </div>`;
       return;
     }
+    const cap = phRenCapture;
+    if (!cap) return;
     modal.innerHTML = `<div class="ph-hx-card ph-ren-crop-card">
       <div class="ph-hx-head">
         <button type="button" class="ph-stocktake-close" data-ren-confirm-cancel="1" aria-label="Close">×</button>
