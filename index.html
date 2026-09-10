@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260910-234500">
+<meta name="lcm-build" content="20260911-002000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -42713,14 +42713,21 @@ or changing anything in Cliniko.
   // Every string this can produce was checked against phAcuCadenceParse:
   // "N×/wk" -> 7/N days, "Fortnightly" -> 14, "Monthly" -> 30, "every N days"
   // -> N, and anything carrying "herbs only" -> acupuncture off.
-  function phTpCadenceCompose(n, per, forWhat) {
+  // weeks is optional (her ask 2026-09-10, looking at her own "1×/wk for
+  // 2–3 weeks" phase: "let me select for how many weeks") -- a course that
+  // ends, versus the open-ended rhythm every other phase already has. It
+  // means nothing when there's no visit at all, so a 0-visit cadence never
+  // carries one regardless of what the duration picker happens to show
+  // (that picker is disabled the same moment n hits 0 -- see syncOff below).
+  function phTpCadenceCompose(n, per, forWhat, weeks) {
     if (!n) return "No visit needed — herbs only";
     const base = per === "wk" ? `${n}×/wk`
       : per === "fn" ? (n === 1 ? "Fortnightly" : `every ${Math.round(14 / n)} days`)
       : (n === 1 ? "Monthly" : `every ${Math.round(30 / n)} days`);
-    return forWhat === "both" ? `${base} acupuncture · herbs`
+    const withWhat = forWhat === "both" ? `${base} acupuncture · herbs`
       : forWhat === "herbs" ? `${base} · herbs only`
       : base;
+    return weeks ? `${withWhat} for ${weeks} week${weeks === 1 ? "" : "s"}` : withWhat;
   }
   /* What the pickers OPEN on. Reading the rhythm out of the text is the first
      choice; when there is no rhythm to read, ASK THE SCHEDULER rather than
@@ -42744,15 +42751,26 @@ or changing anything in Cliniko.
     const read = phTpCadenceRead(text);
     if (read) return read;
     const a = phAcuCadenceParse(text);
-    if (!a.matched) return { n: 1, per: "wk", forWhat: "both" };
+    // Best-effort duration, even out of prose the round trip below can't
+    // keep whole -- "1×/wk for 6 weeks, then fortnightly · herbs daily" seeds
+    // 6 here so the picker at least opens on the right week count; the "then
+    // fortnightly" half is exactly what the "Now:" line warns is about to be
+    // replaced. Not anchored (unlike phTpCadenceRead's version below), on
+    // purpose -- this one only ever feeds a picker she still has to act on,
+    // never a value written to the phase by itself.
+    const durM = /\bfor\s+(\d+)\s*weeks?\b/i.exec(text);
+    const weeks = durM ? +durM[1] : null;
+    if (!a.matched) return { n: 1, per: "wk", forWhat: "both", weeks };
     // noAcu means no ACUPUNCTURE, not necessarily no visit — only her explicit
-    // "no visit needed" wording earns the zero
-    if (a.noAcu) return { n: /no visit needed/i.test(text) ? 0 : 1, per: "wk", forWhat: "herbs" };
+    // "no visit needed" wording earns the zero. Either way weeks is null: "no
+    // visit" has no duration to seed, and the acu-suppressed branch below is
+    // still a real visit whose duration is Compose's job going forward.
+    if (a.noAcu) return { n: /no visit needed/i.test(text) ? 0 : 1, per: "wk", forWhat: "herbs", weeks: null };
     const withHerbs = /herbs/i.test(text) ? "both" : "acu";
-    if (a.days === 14) return { n: 1, per: "fn", forWhat: withHerbs };
-    if (a.days === 30) return { n: 1, per: "mo", forWhat: withHerbs };
+    if (a.days === 14) return { n: 1, per: "fn", forWhat: withHerbs, weeks };
+    if (a.days === 30) return { n: 1, per: "mo", forWhat: withHerbs, weeks };
     const n = a.days && a.days < 7 ? Math.min(Math.max(1, Math.round(7 / a.days)), PH_TP_VISIT_MAX.wk) : 1;
-    return { n, per: "wk", forWhat: withHerbs };
+    return { n, per: "wk", forWhat: withHerbs, weeks };
   }
   /* null = "the pickers cannot say this", which is a real answer, not a failure.
 
@@ -42769,39 +42787,50 @@ or changing anything in Cliniko.
     const got = phTpCadenceRead(text);
     if (!got) return null;
     const norm = s => String(s || "").trim().replace(/\s+/g, " ").toLowerCase();
-    return norm(phTpCadenceCompose(got.n, got.per, got.forWhat)) === norm(text) ? got : null;
+    return norm(phTpCadenceCompose(got.n, got.per, got.forWhat, got.weeks)) === norm(text) ? got : null;
   }
   function phTpCadenceRead(text) {
     const t = String(text || "").trim();
     if (!t) return null;
-    if (/no visit needed/i.test(t)) return { n: 0, per: "wk", forWhat: "herbs" };
-    const forWhat = /herbs only/i.test(t) ? "herbs" : /herbs/i.test(t) ? "both" : "acu";
+    if (/no visit needed/i.test(t)) return { n: 0, per: "wk", forWhat: "herbs", weeks: null };
+    // A trailing "for N week(s)" is the ONLY duration shape Compose ever
+    // writes (see above), so this is the only shape that gets to round-trip.
+    // Anchored to the end of the string on purpose: her own "1×/wk for
+    // 2–3 weeks" is a RANGE, not a single number, so it falls through here
+    // exactly like the visit-count range below does, and "...for 6 weeks,
+    // then fortnightly · herbs daily" has real words AFTER the duration, so
+    // the anchor correctly refuses it too rather than silently eating the
+    // "then fortnightly" clause it would otherwise leave orphaned.
+    let rest = t, weeks = null;
+    const durM = /^(.*?)\s+for\s+(\d+)\s*weeks?$/i.exec(t);
+    if (durM) { rest = durM[1].trim(); weeks = +durM[2]; }
+    const forWhat = /herbs only/i.test(rest) ? "herbs" : /herbs/i.test(rest) ? "both" : "acu";
     // "1–2×/wk" is her own wording and appears in her templates. Read the more
     // frequent end, which is exactly what phAcuCadenceParse does with the same
     // string — the two must not disagree about what a range means. It still
     // won't round-trip (compose writes a single number), so the range stays
     // prose and the "Now:" line shows it; this only stops the pickers opening
     // on a number the phase never said.
-    let m = /^(\d+)\s*(?:[-–—]\s*(\d+))?\s*[x×]\s*\/\s*wk\b/i.exec(t);
-    if (m) return { n: Math.max(+m[1], +(m[2] || m[1])), per: "wk", forWhat };
+    let m = /^(\d+)\s*(?:[-–—]\s*(\d+))?\s*[x×]\s*\/\s*wk\b/i.exec(rest);
+    if (m) return { n: Math.max(+m[1], +(m[2] || m[1])), per: "wk", forWhat, weeks };
     // "Weekly …" is how a third of her template lines start ("Weekly
     // acupuncture · herbs", "Weekly to 14 weeks", "Weekly, tapering to
     // fortnightly"). None of them round-trip, so they stay prose either way —
     // reading the rhythm just stops the pickers opening on a default that
     // disagrees with the phase about acupuncture vs herbs.
-    if (/^weekly\b/i.test(t)) return { n: 1, per: "wk", forWhat };
-    if (/^fortnightly\b/i.test(t)) return { n: 1, per: "fn", forWhat };
-    if (/^monthly\b/i.test(t)) return { n: 1, per: "mo", forWhat };
-    m = /^every\s+(\d+)\s*days?\b/i.exec(t);
+    if (/^weekly\b/i.test(rest)) return { n: 1, per: "wk", forWhat, weeks };
+    if (/^fortnightly\b/i.test(rest)) return { n: 1, per: "fn", forWhat, weeks };
+    if (/^monthly\b/i.test(rest)) return { n: 1, per: "mo", forWhat, weeks };
+    m = /^every\s+(\d+)\s*days?\b/i.exec(rest);
     if (m) {
       const d = +m[1];
       // 7 is reachable two ways (once a week, twice a fortnight). They mean the
       // same thing and both parse to 7, so read it the plainer way; a reopened
       // "every 7 days" therefore settles as "1 a week", which is not a loss.
-      if (d === 7) return { n: 1, per: "wk", forWhat };
-      if (d === 14) return { n: 1, per: "fn", forWhat };
-      for (let k = 2; k <= PH_TP_VISIT_MAX.fn; k++) if (Math.round(14 / k) === d) return { n: k, per: "fn", forWhat };
-      for (let k = 2; k <= PH_TP_VISIT_MAX.mo; k++) if (Math.round(30 / k) === d) return { n: k, per: "mo", forWhat };
+      if (d === 7) return { n: 1, per: "wk", forWhat, weeks };
+      if (d === 14) return { n: 1, per: "fn", forWhat, weeks };
+      for (let k = 2; k <= PH_TP_VISIT_MAX.fn; k++) if (Math.round(14 / k) === d) return { n: k, per: "fn", forWhat, weeks };
+      for (let k = 2; k <= PH_TP_VISIT_MAX.mo; k++) if (Math.round(30 / k) === d) return { n: k, per: "mo", forWhat, weeks };
     }
     return null;
   }
@@ -42871,22 +42900,32 @@ or changing anything in Cliniko.
         for (let i = 1; i <= max; i++) o += `<option value="${i}"${st.n === i ? " selected" : ""}>${i}</option>`;
         return o;
       };
+      // "Ongoing" (weeks: null) is the default and matches every phase that
+      // has one today — a course that ends is the exception, so it's the
+      // last control, not slotted between two she'll set on every phase.
+      const durHtml = () => {
+        const max = Math.max(16, st.weeks || 0);
+        let o = `<option value=""${!st.weeks ? " selected" : ""}>Ongoing</option>`;
+        for (let i = 1; i <= max; i++) o += `<option value="${i}"${st.weeks === i ? " selected" : ""}>for ${i} week${i === 1 ? "" : "s"}</option>`;
+        return o;
+      };
       const numSel = mk("n", numHtml(), `How many visits for ${ph.label || "this phase"}`);
       const perSel = mk("per", mkOpts(PH_TP_VISIT_PER, st.per), "How often");
       const forSel = mk("for", mkOpts(PH_TP_VISIT_FOR, st.forWhat), "What the visit is for");
+      const durSel = mk("dur", durHtml(), `How many weeks for ${ph.label || "this phase"}`);
       const typeBtn = document.createElement("button");
       typeBtn.type = "button"; typeBtn.className = "ph-tp-vistype";
       typeBtn.dataset.vis = "type"; typeBtn.textContent = "Type instead";
       if (keepLine) box.insertAdjacentHTML("beforeend", keepLine);
-      box.append(numSel, perSel, forSel, typeBtn);
-      const syncOff = () => { const off = st.n === 0; perSel.disabled = off; forSel.disabled = off; };
+      box.append(numSel, perSel, forSel, durSel, typeBtn);
+      const syncOff = () => { const off = st.n === 0; perSel.disabled = off; forSel.disabled = off; durSel.disabled = off; };
       syncOff();
       el.classList.add("editing"); el.innerHTML = ""; el.appendChild(box);
       numSel.focus();
       // save on every pick, but DON'T rerender yet — the row is rebuilt once
       // she leaves, so the "book <date>" chip still refreshes off the new
       // string without the editor closing under her mid-choice
-      const write = () => { ph.cadence = phTpCadenceCompose(st.n, st.per, st.forWhat); savePharmacy(); };
+      const write = () => { ph.cadence = phTpCadenceCompose(st.n, st.per, st.forWhat, st.weeks); savePharmacy(); };
       box.addEventListener("change", e => {
         const s = e.target.closest("select[data-vis]");
         if (!s) return;
@@ -42897,7 +42936,8 @@ or changing anything in Cliniko.
           // and reshape only the number list so nothing else loses focus
           st.n = Math.min(st.n, PH_TP_VISIT_MAX[st.per] || 5);
           numSel.innerHTML = numHtml();
-        } else st.forWhat = s.value;
+        } else if (s.dataset.vis === "for") { st.forWhat = s.value; }
+        else { st.weeks = s.value ? +s.value : null; }
         write();
       });
       box.addEventListener("click", e => {
