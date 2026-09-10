@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260911-013000">
+<meta name="lcm-build" content="20260911-020000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -7506,6 +7506,15 @@
   #pharmacyPage .ph-intake-conflict-lbl { font-weight: 700; font-size: 12.5px; color: var(--ph-ink); margin-bottom: 6px; }
   #pharmacyPage .ph-intake-newlist { margin: 0; padding-left: 18px; font-size: 12.5px; color: var(--ph-ink); }
   #pharmacyPage .ph-intake-newlist li { margin-bottom: 3px; }
+  /* paste a contact card (2026-09-11) -- the .ph-intake-conflict/.ph-merge-acts
+     rules above ARE this box's conflict rows too, reused as-is. */
+  #pharmacyPage .ph-cpaste { border: 1px solid var(--ph-line); border-radius: var(--field-radius-sm, 11px); padding: 10px 11px; margin-top: 8px; background: var(--ph-paper, #F6FAF7); }
+  #pharmacyPage .ph-cpaste-input { width: 100%; padding: 9px 10px; border: 1px solid var(--ph-line); border-radius: var(--field-radius-sm, 8px); font: inherit; font-size: 12.5px; line-height: 1.5; resize: vertical; background: var(--ph-white); }
+  #pharmacyPage .ph-cpaste-acts { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 9px; }
+  #pharmacyPage .ph-cpaste-none { font-size: 12.5px; color: var(--ph-soft); font-style: italic; margin: 8px 0 0; }
+  #pharmacyPage .ph-cpaste-addrnew { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; background: var(--ph-green-tint); border-radius: var(--field-radius-sm, 11px); padding: 8px 10px; margin-bottom: 8px; font-size: 12.5px; color: var(--ph-ink); }
+  #pharmacyPage .ph-cpaste-addrlbl { flex: 1 1 160px; min-width: 140px; padding: 5px 8px; border: 1px solid var(--ph-line); border-radius: var(--field-radius-sm, 8px); font: inherit; font-size: 12.5px; background: var(--ph-white); }
+  #pharmacyPage .ph-cpaste-linkbtn { margin-left: 6px; }
   /* letter-first patient letter (2026-09-01) */
   #pharmacyPage .ph-ltr-chips { display: flex; gap: 6px; flex-wrap: wrap; padding: 12px 20px 0; background: var(--ph-white); flex: 0 0 auto; }
   #pharmacyPage .ph-ltr-tchip { font-size: 11.5px; font-weight: 700; border: none; border-radius: 999px; padding: 6px 14px; background: var(--ph-paper); color: var(--ph-soft); cursor: pointer; font-family: inherit; }
@@ -27709,6 +27718,79 @@
       if (e.target.closest("[data-ph-retype-apply]")) { phRetypeApply(); return; }
       if (e.target.closest("[data-ph-retype-undo]")) { phRetypeUndoApply(); return; }
       if (e.target.closest("[data-ck-copy-num]")) { const row = phCkRow(); if (row) phCkCopy(phCkContext(row).phone, "✓ Number copied"); return; }
+      // ===== PASTE A CONTACT CARD -- opening stage AND check-in panel share
+      // this one handler set; document-level so it catches a click from
+      // either without caring which. See phContactPasteCtx's own header
+      // comment (index.html ~47638) for her eight answers. =====
+      const cpasteOpenBtn = e.target.closest("[data-cpaste-open]");
+      if (cpasteOpenBtn) {
+        phContactPasteOpen(cpasteOpenBtn.dataset.cpasteOpen);
+        if (cpasteOpenBtn.dataset.cpasteOpen === "checkin") phCkRender(); else renderPresPanel();
+        return;
+      }
+      if (e.target.closest("[data-cpaste-cancel]")) {
+        const site = phContactPasteCtx && phContactPasteCtx.site;
+        phContactPasteClose();
+        if (site === "checkin") phCkRender(); else renderPresPanel();
+        return;
+      }
+      if (e.target.closest("[data-cpaste-parse]")) {
+        const ctx = phContactPasteCtx; if (!ctx) return;
+        const inp = document.getElementById("phCPasteInput");
+        if (inp) ctx.raw = inp.value;
+        const currentName = phContactPasteResolveName(ctx.site);
+        const rec = currentName ? phPatientPeek(currentName) : null;
+        ctx.parsed = phContactCardParse(ctx.raw);
+        ctx.diff = phContactPasteDiff(ctx.parsed, rec, ctx.site === "opening" ? currentName : undefined);
+        ctx.choices = {}; ctx.addrLabel = "";
+        if (ctx.site === "checkin") phCkRender(); else renderPresPanel();
+        return;
+      }
+      const cpasteChoiceBtn = e.target.closest("[data-cpaste-choice]");
+      if (cpasteChoiceBtn) {
+        const ctx = phContactPasteCtx; if (!ctx) return;
+        const [key, val] = cpasteChoiceBtn.dataset.cpasteChoice.split(":");
+        ctx.choices[key] = val;
+        if (ctx.site === "checkin") phCkRender(); else renderPresPanel();
+        return;
+      }
+      if (e.target.closest("[data-cpaste-apply]")) {
+        const ctx = phContactPasteCtx; if (!ctx || !ctx.parsed || !ctx.parsed.ok) return;
+        const addrInp = document.getElementById("phCPasteAddrLabel");
+        if (addrInp) ctx.addrLabel = addrInp.value;
+        const site = ctx.site;
+        const currentName = phContactPasteResolveName(site);
+        // phone/email/address are written under currentName FIRST (or, if it
+        // was blank, under whatever name the paste itself resolved) --
+        // BEFORE any rename below, so a rename that turns out to be a merge
+        // carries this fresh write along with everything else that already
+        // belongs to the record, the same order a manual type-then-rename
+        // already produces.
+        const resolvedName = phContactPasteApply(currentName, ctx);
+        phContactPasteClose();
+        if (site === "opening" && resolvedName) {
+          const t = PRESC.items.find(x => x.id === presOpenId);
+          if (t) {
+            if ((currentName || "").trim()) {
+              // a REAL rename -- the field already held something else.
+              // Route through the exact safety net a manual retype gets: if
+              // the new spelling is already a real patient elsewhere, that's
+              // a merge, and merges go through her confirmed flow (summary +
+              // backup), never silently.
+              presNameEditFrom = t.name;
+              t.name = phTitle(resolvedName);
+              presNameRenameReconcile(t);
+            } else {
+              // blank -> filled: nothing existed under the empty name, so
+              // there is nothing to reconcile FROM.
+              t.name = phTitle(resolvedName);
+              phDefer("savePresc", savePresc, 400);
+            }
+          }
+        }
+        if (site === "checkin") phCkRender(); else renderPresPanel();
+        return;
+      }
       const ckGoing = e.target.closest("[data-ck-going]");
       if (ckGoing && phCkForm) { phCkForm.going = phCkForm.going === ckGoing.dataset.ckGoing ? null : ckGoing.dataset.ckGoing; phCkRender(); return; }
       const ckConcern = e.target.closest("[data-ck-concern]");
@@ -34969,12 +35051,18 @@ or changing anything in Cliniko.
   const phCkMailHref = (email, clinic, msg) => `mailto:${encodeURIComponent(email || "")}?subject=${encodeURIComponent(`Checking in — ${clinic}`)}&body=${encodeURIComponent(msg)}`;
   // shared by all three row kinds -- phone/number known or not, same markup either way
   function phCkPhoneEmailHtml(c) {
+    // her ask 2026-09-10/11: reachable here too, for an existing patient
+    // whose phone/email/address is still blank -- not gated on either being
+    // missing, since an address (this panel has no field for one at all)
+    // can still be worth pasting in even when phone and email are both done.
+    const cpasteShowing = !!(phContactPasteCtx && phContactPasteCtx.site === "checkin");
     return `<div class="ph-ck-phone"><svg class="icn" aria-hidden="true"><use href="#i-phone"/></svg>${c.phone
         ? `<span>${esc(c.phone)}</span><button type="button" class="ph-ck-btn ghost sm" data-ck-copy-num="1"><svg class="icn" aria-hidden="true"><use href="#i-copy"/></svg>Copy</button>${c.phoneFrom ? `<span class="src">from the Cliniko ${c.phoneSrc === "export" ? "export" : "list"} · ${esc(phFuDateLabel(c.phoneFrom))}</span>` : ""}`
         : `<input type="tel" class="ph-ck-other inline" placeholder="Add their number" data-ck-input="phone" aria-label="Phone number"><span class="src">or <button type="button" class="ph-ck-lnk" data-ph-appt-open="1">paste today's Cliniko list</button> · <button type="button" class="ph-ck-lnk" data-ph-tab="settings">import the Cliniko export</button></span>`}</div>
       <div class="ph-ck-phone mail"><svg class="icn" aria-hidden="true"><use href="#i-mail"/></svg>${c.email
         ? `<span>${esc(c.email)}</span>`
-        : `<input type="email" class="ph-ck-other inline" placeholder="Add their email" data-ck-input="email" aria-label="Email">`}</div>`;
+        : `<input type="email" class="ph-ck-other inline" placeholder="Add their email" data-ck-input="email" aria-label="Email">`}</div>
+      ${cpasteShowing ? phContactPasteBoxHtml("checkin") : `<button type="button" class="ph-ck-lnk ph-cpaste-linkbtn" data-cpaste-open="checkin">📋 Paste contact card</button>`}`;
   }
   // the info column at the top of the panel -- the one place that genuinely
   // differs by kind (a herb dispense has a script/formula/empty-date to show;
@@ -45473,8 +45561,9 @@ Please let me know if you have any questions.`;
     // the guess reads it as a patient and this link is her only way to move
     // it from inside the script.
     const showType = isF || !!t.presType;
+    const cpasteShowing = !!(phContactPasteCtx && phContactPasteCtx.site === "opening");
     return `<div class="ph-tmpl-grid ph-pres-patient">
-        <div class="ph-tmpl-field ph-pres-patient-name"><label for="presEditName">Name</label>
+        <div class="ph-tmpl-field ph-pres-patient-name"><label for="presEditName">Name${!isF && !cpasteShowing ? ` <button type="button" class="ph-name-link ph-cpaste-linkbtn" data-cpaste-open="opening">📋 Paste contact card</button>` : ""}</label>
           <input type="text" id="presEditName" value="${esc(t.name)}" autocomplete="off"></div>
         ${rec ? `<div class="ph-fld-sexdob">
         <div class="ph-tmpl-field ph-fld-sex"><label>Sex</label>
@@ -45491,7 +45580,8 @@ Please let me know if you have any questions.`;
             <option value="patient" ${!isF ? "selected" : ""}>Patient prescription</option>
             <option value="formula" ${isF ? "selected" : ""}>Herbal formula</option>
           </select></div>` : ""}
-      </div>`;
+      </div>
+      ${!isF && cpasteShowing ? phContactPasteBoxHtml("opening") : ""}`;
   }
   function presAcuToggleHtml(t) {
     const name = presPatientFor(t);
@@ -47606,15 +47696,265 @@ Dosage: {dosage}
   // typing a different address while scheduling ADDS it -- never overwrites,
   // never touches the Default; an exact (normalized) match reuses instead of
   // duplicating. New ones get an auto label until renamed on the record.
-  function phPatientSaveAddress(name, text) {
+  // label is optional (2026-09-11, the contact-card paste): a real label she
+  // typed wins, a blank one falls back to the same "Address N" every other
+  // caller already gets -- so every existing call site is unaffected.
+  function phPatientSaveAddress(name, text, label) {
     const clean = String(text || "").trim();
     if (!clean || !name) return;
     const rec = phPatientRec(name);
     if (!rec) return;
     if (!Array.isArray(rec.addresses)) rec.addresses = [];
     if (rec.addresses.some(a => phAddrNorm(a.text) === phAddrNorm(clean))) return;
-    rec.addresses.push({ id: uid(), label: `Address ${rec.addresses.length + 1}`, text: clean, isDefault: rec.addresses.length === 0, addedAt: Date.now(), source: "manual" });
+    const lbl = String(label || "").trim() || `Address ${rec.addresses.length + 1}`;
+    rec.addresses.push({ id: uid(), label: lbl, text: clean, isDefault: rec.addresses.length === 0, addedAt: Date.now(), source: "manual" });
     savePharmacy();
+  }
+  /* ===== PASTE A CONTACT CARD (her ask 2026-09-10/11, a screenshot of a
+     phone's Contacts app -- phone, email, address, each its own section) ====
+     One parser and one small conflict box, reachable wherever a patient's
+     contact details are typed by hand today: a brand-new script's opening
+     stage (presNameTypeFieldsHtml), and an existing patient's check-in panel
+     (phCkPhoneEmailHtml, the same place "Add their number"/"Add their email"
+     already live). Her eight answers, asked with a visual guide before any
+     of this was built:
+       1. reachable from BOTH places
+       2. behind a quiet link, not sitting open
+       3. a value already on file is never silently touched -- always a real
+          per-field choice, same "current vs new" shape phIntakeComputeDiff
+          already uses for an intake submission
+       4. a name in the block is read too, but the Name field stays hers to
+          change -- it goes through the SAME current/new choice as everything
+          else rather than a silent overwrite
+       5. a fresh address is left for her to label, not auto-named
+       6. more than one phone or email on a card takes the first
+       7. nothing recognisable gets a plain "couldn't find" line, never silence
+       8. text only for now, no screenshot reading
+     One box, one piece of module state -- she only ever has one script or one
+     check-in panel open at a time, so phContactPasteCtx.site tells the two
+     render call sites which of them is showing it. The patient's NAME is
+     deliberately never cached into that state: she can keep typing the Name
+     field, or switch which check-in row is open, while the box sits there,
+     so every read of it goes through this one live lookup instead. */
+  let phContactPasteCtx = null;   // null | { site: "opening"|"checkin", raw, parsed, diff, choices, addrLabel }
+  function phContactPasteOpen(site) {
+    phContactPasteCtx = { site, raw: "", parsed: null, diff: null, choices: {}, addrLabel: "" };
+  }
+  function phContactPasteClose() { phContactPasteCtx = null; }
+  // "opening": the Name field she may or may not have typed into yet.
+  // "checkin": the SAME row.rec/row.patientName resolution the existing
+  // phone/email inline-save handler already uses (data-ck-input, below).
+  function phContactPasteResolveName(site) {
+    if (site === "opening") {
+      const inp = document.getElementById("presEditName");
+      return inp ? inp.value.trim() : "";
+    }
+    const row = typeof phCkRow === "function" ? phCkRow() : null;
+    if (!row) return "";
+    return (row.rec ? row.rec.patient : row.patientName) || "";
+  }
+  // "Send SMS Message"/"Send a text message" is a BUTTON her phone's own
+  // Contacts app (or a web page reading the same way -- Cliniko's patient
+  // screen shows this identical shape) puts INTO the copied text; not
+  // anything a person typed. Stripped before anything else runs so it can
+  // never be mistaken for a name or an address line.
+  const PH_CCARD_NOISE = /send (?:an? )?(?:sms|text)(?: message)?/gi;
+  // Shared shapes -- pulled out to consts (not just inline in the phone/email
+  // matches below) so the name-candidate filter can test a whole LINE against
+  // the same pattern, not just exclude the one specific substring that got
+  // matched first. A card with two numbers on it (e.g. "0412 805 081 (Mobile)"
+  // AND "02 9221 8379 (Home)") was landing its second number in the Name field
+  // -- excluding only `phoneM[0]`'s exact text left every other phone-shaped
+  // line looking like fair game.
+  const PH_CCARD_PHONE_SHAPE = /(?:\+?61[\s.-]*|0)[\s.-]*[2-478](?:[\s.-]*\d){8}/;
+  const PH_CCARD_EMAIL_SHAPE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/;
+  function phContactCardParse(text) {
+    const raw0 = String(text || "");
+    if (!raw0.trim()) return { ok: false, name: null, phone: null, email: null, address: null };
+    // Parens dropped up front, not just spaces/dashes/dots -- a landline
+    // written "(02) 9221 8379" put a ")" directly after the area code, which
+    // broke the phone pattern below (found testing: it matched NOTHING and
+    // the whole bracketed number was then mistaken for the name instead).
+    // Harmless everywhere else this touches: an address never carries a
+    // bare paren pair in practice, and a "(Mobile)"/"(Home)" label still
+    // matches isLabelOnly below with the parens gone.
+    const raw = raw0.replace(PH_CCARD_NOISE, " ").replace(/[()]/g, " ");
+    const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const emailM = raw.match(PH_CCARD_EMAIL_SHAPE);
+    const email = emailM ? emailM[0] : null;
+    // AU phone shapes: a mobile (04...) or a landline (02/03/07/08...),
+    // optionally +61, with spaces/dashes/dots anywhere between digits -- her
+    // own sample number ("0412805081") has none at all. `*` not `?` on every
+    // separator: a landline written "(02) 9221 8379" leaves a DOUBLE space
+    // once the parens above are stripped to spaces, and a `?` (at most one
+    // separator char) missed that -- found testing, it matched nothing and
+    // the number fell through to the name guess instead. FIRST match only
+    // (her call 6, above).
+    const phoneM = raw.match(PH_CCARD_PHONE_SHAPE);
+    let phone = phoneM ? phoneM[0].replace(/[^\d+]/g, "") : null;
+    if (phone) {
+      if (/^0?4\d{8}$/.test(phone)) phone = ("0" + phone.replace(/^0?/, "")).replace(/(\d{4})(\d{3})(\d{3})$/, "$1 $2 $3");
+      else if (/^0\d{9}$/.test(phone)) phone = phone.replace(/(\d{2})(\d{4})(\d{4})$/, "$1 $2 $3");
+    }
+    // The address is everything after a line that just says "Address" --
+    // the shape her own screenshot has, and a Cliniko patient screen reads
+    // the same way. No such header, and nothing else safe to lean on, means
+    // there's nothing to call an address; leaving it blank beats guessing
+    // wrong on a detail that ends up on an envelope.
+    const addrIdx = lines.findIndex(l => /^address(es)?\s*:?$/i.test(l));
+    let address = null;
+    if (addrIdx !== -1) {
+      // A WEB PAGE's block-level layout loses its own line breaks on copy,
+      // so "27/1 Batty Street" / "Balmain New South Wales 2041" / "Australia"
+      // arrive run together as one word-soup. Split at a lowercase letter or
+      // digit immediately followed by an uppercase letter -- exactly the seam
+      // a real line break would have left, and never a seam INSIDE a word
+      // (postcodes, unit numbers and street names never carry that
+      // transition mid-token in real Australian addresses).
+      address = lines.slice(addrIdx + 1)
+        .filter(l => !/^(phone( number)?|email|mobile|home|work)\s*:?$/i.test(l))
+        .join(" ")
+        .replace(/([a-z0-9])(?=[A-Z])/g, "$1 ")
+        .replace(/\s+/g, " ").trim() || null;
+    }
+    // A name is whichever line is none of: a section header, a label like
+    // "(Mobile)" on its own, any phone- or email-SHAPED line, or part of the
+    // address block. Her own sample has none at all -- the very first line is
+    // "Contact information" -- so this often comes back null, which is the
+    // honest answer (her call 4: read it if it's there).
+    const CCARD_HEADERS = /^(contact information|phone( number)?|email|address(es)?|mobile|home|work|australia)\s*:?$/i;
+    const isLabelOnly = l => /^[•*-]?\s*(mobile|home|work)$/i.test(l);
+    // A real name is short and isn't a sentence -- guards against pasting
+    // something else entirely by mistake (an unrelated message) landing in
+    // the Name field. Harmless either way when ok stays false (see below,
+    // nothing here ever reaches phContactPasteDiff unless a phone, email or
+    // address was ALSO found), but worth being careful about regardless.
+    const looksLikeSentence = l => /[.!?]$/.test(l) || l.split(/\s+/).length > 4;
+    const name = lines.find((l, i) => {
+      if (addrIdx !== -1 && i >= addrIdx) return false;
+      if (CCARD_HEADERS.test(l) || isLabelOnly(l) || looksLikeSentence(l)) return false;
+      // Tested against the SHAPE, not just `l.includes(phoneM[0])` -- a card
+      // with a second phone number on it (e.g. a home line under the mobile
+      // one she already matched) still LOOKS like a phone even though it
+      // isn't the one `phoneM` kept, and was landing in the Name field
+      // otherwise (found testing: "0292218379 (Home)" read as her name).
+      if (PH_CCARD_EMAIL_SHAPE.test(l) || PH_CCARD_PHONE_SHAPE.test(l)) return false;
+      return l.length > 1 && l.length < 40;
+    }) || null;
+    return { ok: !!(phone || email || address), name, phone, email, address };
+  }
+  // Same {key,label,display} / {key,label,current,value} shape
+  // phIntakeComputeDiff already uses, so the box below can share its exact
+  // conflict-row markup. currentName is undefined on the check-in site
+  // (there is no Name field there to contest -- see phContactPasteBoxHtml).
+  function phContactPasteDiff(parsed, rec, currentName) {
+    const newItems = [], conflicts = [];
+    if (currentName !== undefined && parsed.name) {
+      const cur = (currentName || "").trim();
+      if (!cur) newItems.push({ key: "name", label: "Name", display: `Name: ${phTitle(parsed.name)}` });
+      else if (phPatientKey(cur) !== phPatientKey(parsed.name)) conflicts.push({ key: "name", label: "Name", current: phTitle(cur), value: phTitle(parsed.name) });
+    }
+    if (parsed.phone) {
+      if (!rec || !rec.phone) newItems.push({ key: "phone", label: "Phone", display: `Phone: ${parsed.phone}` });
+      else if (rec.phone !== parsed.phone) conflicts.push({ key: "phone", label: "Phone", current: rec.phone, value: parsed.phone });
+    }
+    if (parsed.email) {
+      if (!rec || !rec.email) newItems.push({ key: "email", label: "Email", display: `Email: ${parsed.email}` });
+      else if (rec.email !== parsed.email) conflicts.push({ key: "email", label: "Email", current: rec.email, value: parsed.email });
+    }
+    // an address never "conflicts" -- it always just adds another card, same
+    // rule the manual "+ Add" flow already follows (phPatientSaveAddress
+    // de-dupes an exact repeat on its own)
+    if (parsed.address) newItems.push({ key: "address", label: "Address", display: `Address: ${parsed.address}` });
+    return { newItems, conflicts };
+  }
+  // Writes whatever her choices settled on. Phone/email only ever replace
+  // what's on file when she picked "Use new" on a real disagreement
+  // (winner()) -- never a silent overwrite, per her call 3. Returns the
+  // resolved name (or null) so a caller with an actual Name FIELD -- only
+  // the opening stage has one -- can drop it in; the check-in site has no
+  // such field and the return value is simply unused there.
+  //
+  // currentName can be genuinely blank here -- a brand-new script whose Name
+  // field she hasn't typed into yet, and the SAME paste is what tells her
+  // who this is. resolvedName is worked out first so nameForWrite can fall
+  // back to it: without this, phone/email/address from a paste that ALSO
+  // carried a name would have nowhere to be filed and would silently vanish
+  // the moment she hit Apply.
+  function phContactPasteApply(currentName, ctx) {
+    const { parsed, diff, choices, addrLabel } = ctx;
+    const winner = c => choices[c.key] === "new";
+    let resolvedName = null;
+    diff.newItems.forEach(n => { if (n.key === "name") resolvedName = parsed.name; });
+    diff.conflicts.forEach(c => { if (c.key === "name" && winner(c)) resolvedName = parsed.name; });
+    const nameForWrite = (currentName && currentName.trim()) || resolvedName || currentName;
+    const rec = nameForWrite ? phPatientRec(nameForWrite) : null;
+    diff.newItems.forEach(n => {
+      if (n.key === "phone" && rec) { rec.phone = parsed.phone; rec.phoneFrom = ""; rec.phoneSrc = "paste"; }
+      else if (n.key === "email" && rec) rec.email = parsed.email;
+      else if (n.key === "address" && nameForWrite) phPatientSaveAddress(nameForWrite, parsed.address, addrLabel);
+    });
+    diff.conflicts.forEach(c => {
+      if (!winner(c)) return;
+      if (c.key === "phone" && rec) { rec.phone = parsed.phone; rec.phoneFrom = ""; rec.phoneSrc = "paste"; }
+      else if (c.key === "email" && rec) rec.email = parsed.email;
+    });
+    if (rec) savePharmacy();
+    return resolvedName;
+  }
+  // site: "opening" gets the Name-field note and its own placeholder;
+  // "checkin" (no Name field to fill) doesn't mention one at all.
+  function phContactPasteBoxHtml(site) {
+    const ctx = phContactPasteCtx;
+    if (!ctx || ctx.site !== site) return "";
+    const { raw, parsed, diff, choices, addrLabel } = ctx;
+    const acts = (label, extra) => `<div class="ph-cpaste-acts">
+        <button type="button" class="btn-save" data-cpaste-parse="1">${esc(label)}</button>
+        ${extra || ""}<button type="button" class="btn-cancel" data-cpaste-cancel="1">Cancel</button>
+      </div>`;
+    if (!parsed) {
+      return `<div class="ph-cpaste">
+        <textarea id="phCPasteInput" class="ph-cpaste-input" rows="5" placeholder="Paste a contact card here — phone, email, address" aria-label="Paste a contact card">${esc(raw || "")}</textarea>
+        ${acts("Find contact details")}
+      </div>`;
+    }
+    if (!parsed.ok) {
+      return `<div class="ph-cpaste">
+        <textarea id="phCPasteInput" class="ph-cpaste-input" rows="5" aria-label="Paste a contact card">${esc(raw || "")}</textarea>
+        <p class="ph-cpaste-none">Couldn't find a phone, email or address in that.</p>
+        ${acts("Try again")}
+      </div>`;
+    }
+    const conflictRow = c => `<div class="ph-intake-conflict">
+        <div class="ph-intake-conflict-lbl">${esc(c.label)}</div>
+        <div class="ph-merge-acts">
+          <button type="button" class="ph-load-btn${choices[c.key] !== "new" ? " on" : ""}" data-cpaste-choice="${c.key}:current">Keep: ${esc(c.current)}</button>
+          <button type="button" class="ph-load-btn${choices[c.key] === "new" ? " on" : ""}" data-cpaste-choice="${c.key}:new">Use new: ${esc(c.value)}</button>
+        </div>
+      </div>`;
+    const plainNew = diff.newItems.filter(n => n.key !== "address" && n.key !== "name");
+    const nameNew = site === "opening" ? diff.newItems.find(n => n.key === "name") : null;
+    const addrNew = diff.newItems.find(n => n.key === "address");
+    // no Name field to fill and no phone/email target either (a brand-new
+    // patient with a still-blank name has nowhere for phone/email to go) --
+    // say so plainly rather than let Apply silently do nothing
+    const nowhereToSave = site === "opening" && !phContactPasteResolveName(site) && !nameNew && !diff.conflicts.some(c => c.key === "name");
+    return `<div class="ph-cpaste">
+      ${diff.conflicts.map(conflictRow).join("")}
+      ${nameNew ? `<div class="ph-intake-conflict"><div class="ph-intake-conflict-lbl">${esc(nameNew.display)}</div><span class="faint">fills the Name field above — still yours to change</span></div>` : ""}
+      ${plainNew.length ? `<ul class="ph-intake-newlist">${plainNew.map(n => `<li>${esc(n.display)}</li>`).join("")}</ul>` : ""}
+      ${addrNew ? `<div class="ph-cpaste-addrnew">
+          <span>${esc(addrNew.display)}</span>
+          <input type="text" id="phCPasteAddrLabel" class="ph-cpaste-addrlbl" placeholder="Label this address — e.g. Home" value="${esc(addrLabel || "")}" aria-label="Label for the new address">
+        </div>` : ""}
+      ${!diff.conflicts.length && !diff.newItems.length ? `<p class="ph-cpaste-none">Nothing new — every value already matches the record.</p>` : ""}
+      ${nowhereToSave ? `<p class="ph-cpaste-none">Type the patient's name above first — there's nowhere to save this yet.</p>` : ""}
+      <div class="ph-cpaste-acts">
+        <button type="button" class="btn-save" data-cpaste-apply="1"${nowhereToSave ? " disabled" : ""}>Apply</button>
+        <button type="button" class="ph-load-btn" data-cpaste-parse="1">Paste something else</button>
+        <button type="button" class="btn-cancel" data-cpaste-cancel="1">Cancel</button>
+      </div>
+    </div>`;
   }
   // which address the open Schedule form would use right now: a saved card's
   // id, or "custom" (the free-text input). Default card preselected.
