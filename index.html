@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260911-002000">
+<meta name="lcm-build" content="20260911-003000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6460,6 +6460,8 @@
   #pharmacyPage .ph-hx-sexbtn.on { background: rgba(255,255,255,0.9); color: var(--ph-green-deep); border-color: transparent; }
   #pharmacyPage .ph-hx-head-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; margin-top: 10px; font-size: 11.5px; }
   #pharmacyPage .ph-hx-saved { opacity: 0.85; }
+  #pharmacyPage .ph-hx-saved-grp { display: inline-flex; align-items: center; gap: 4px 10px; flex-wrap: wrap; }
+  #pharmacyPage .ph-hx-saved-grp .ph-name-link { font-size: 11.5px; padding: 0; }
   #pharmacyPage .ph-hx-notneeded-lbl { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
   #pharmacyPage .ph-hx-notneeded-lbl input { margin: 0; }
   #pharmacyPage .ph-hx-filters {
@@ -25571,6 +25573,7 @@
       const hxOpenBtn = e.target.closest("[data-hx-open]");
       if (hxOpenBtn) { phHxOpen(hxOpenBtn.dataset.hxOpen); return; }
       if (e.target.closest("[data-hx-close]")) { phHxClose(); return; }
+      if (e.target.closest("[data-hx-sendintake]")) { phIntakeOpen(presHxScreenName); return; }
       // ---- 📷 capture sheet handlers ----
       if (e.target.closest("[data-cap-open]")) { phCapOpenPicker(); return; }
       const capFor = e.target.closest("[data-cap-for]");
@@ -39103,7 +39106,16 @@ or changing anything in Cliniko.
           <div class="ph-stocktake-progress-bar"><div class="ph-stocktake-progress-fill" style="width:${pct}%"></div></div>
         </div>
         <div class="ph-hx-head-meta">
-          <span class="ph-hx-saved">${esc(savedLine)}</span>
+          <span class="ph-hx-saved-grp">
+            <span class="ph-hx-saved">${esc(savedLine)}</span>
+            <!-- her ask 2026-09-10, looking at this exact screen: "allow me to
+                 generate a sms to send patient link so they can fill out their
+                 medical history". Reuses the existing intake link feature
+                 (⚙ menu on Prescriptions, built 2026-09-05) rather than a new
+                 one -- same form, same cloud review-before-merge, prefilled
+                 with the name she's already looking at. -->
+            <button type="button" class="ph-name-link" data-hx-sendintake="1" title="Text ${esc(phTitle(name))} a link to fill this in from her own phone">✉ Send intake link</button>
+          </span>
           <label class="ph-hx-notneeded-lbl"><input type="checkbox" data-hx-notneeded="1"${prog.notNeeded ? " checked" : ""}> Not needed for this patient</label>
         </div>
         ${phHxConstitutionHtml(rec, phPatientKey(name))}
@@ -44562,11 +44574,19 @@ Please let me know if you have any questions.`;
   // the link; matching it to an existing patient or creating a new one both
   // happen later, when she reviews the submission (not built yet).
   let phIntakeName = "", phIntakeBusy = false, phIntakeError = "", phIntakeResult = null;
-  function phIntakeOpen() {
-    phIntakeName = ""; phIntakeBusy = false; phIntakeError = ""; phIntakeResult = null;
+  // her ask 2026-09-10, opened from a patient's own Medical History screen:
+  // "allow me to generate a sms to send patient link so they can fill out
+  // their medical history". Optional prefillName skips the "who's this for"
+  // step and goes straight to generating -- she is already standing on that
+  // patient's screen, so asking her to type or pick the name again would be
+  // exactly the repeated step her standing rule forbids. The generic ⚙ menu
+  // entry still calls phIntakeOpen() with nothing, unchanged.
+  function phIntakeOpen(prefillName) {
+    phIntakeName = (prefillName || "").trim(); phIntakeBusy = false; phIntakeError = ""; phIntakeResult = null;
     document.getElementById("phIntakeBackdrop").hidden = false;
     document.getElementById("phIntakeModal").hidden = false;
     renderIntakeScreen();
+    if (phIntakeName) phIntakeGenerate();
   }
   function phIntakeClose() {
     document.getElementById("phIntakeBackdrop").hidden = true;
