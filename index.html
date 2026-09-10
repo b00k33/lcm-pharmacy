@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260911-020000">
+<meta name="lcm-build" content="20260911-023000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -8391,7 +8391,7 @@
   #pharmacyPage .ph-preset-flbl { font-size: var(--fs-body); color: var(--ph-soft); }
   /* display:contents so wrapping the Days row for targeted repaints doesn't
      add a flex child and change how the row lays out */
-  #pharmacyPage #presDefDaysWrap { display: contents; }
+  #pharmacyPage #presDefDaysWrap, #pharmacyPage #presDefGramsWrap { display: contents; }
   #pharmacyPage .ph-preset-inline-note { font-size: var(--fs-micro); color: var(--ph-faint); }
   /* the live sums -- recomputed every render, never a frozen example */
   #pharmacyPage .ph-preset-sum {
@@ -14792,6 +14792,13 @@
   // the dosage preset at the top of the prescription list (her ask) — the
   // starting dosage for any prescription that hasn't saved its own
   const phDoseDef = () => PHARMACY.presDosage || { n: 3, spoon: "spoon provided", t: 2 };
+  // her ask 2026-09-11 ("include prescription quantity x1 x2 etc"): same
+  // preset idea, for the Grams multiplier (PH_GRAMS_MULTIPLES below) -- what
+  // a BRAND NEW prescription's Grams row starts at, written onto the draft
+  // once at presStartNew rather than read as a live fallback on every
+  // script, so an existing saved script's own gramsMode/gramsAuto (or lack
+  // of one) is never reinterpreted under it.
+  const phGramsMultDef = () => (PHARMACY.presGramsMult && PH_GRAMS_MULTIPLES.includes(PHARMACY.presGramsMult)) ? PHARMACY.presGramsMult : 1;
   // her 2026-08-22 spec: same idea as the dosage preset above, for the Days
   // (Mon–Fri / Sat & Sun) restriction — the starting value for any
   // prescription that hasn't saved its own takeOn/takeDays/skipDays.
@@ -25552,6 +25559,14 @@
         savePharmacy(); presDefDaysRefresh();
         return;
       }
+      // the preset popover's own copy of the Grams multiplier switch (her
+      // ask 2026-09-11) -- writes the global default, not one script
+      const defGramsBtn = e.target.closest("[data-pres-def-grams-mult]");
+      if (defGramsBtn) {
+        PHARMACY.presGramsMult = parseFloat(defGramsBtn.dataset.presDefGramsMult) || 1;
+        savePharmacy(); presDefGramsRefresh();
+        return;
+      }
       // Days switch (her call 2026-08-23). "Mon – Fri" writes the two exact
       // phrases phFuDayPredicate trusts, so picking it from the switch can
       // never land on wording the follow-up dates then refuse to read.
@@ -33034,6 +33049,11 @@ or changing anything in Cliniko.
                   </select>
                   × <input type="text" inputmode="decimal" id="presDefDoseT" value="${esc(dd.t)}" aria-label="Default times a day"> a day
                 </span>
+              </div>
+              <div class="ph-preset-row">
+                <span class="ph-preset-flbl">Quantity</span>
+                <span id="presDefGramsWrap">${presDefGramsRowHtml()}</span>
+                <span class="ph-preset-inline-note">how many times the herb list, to start</span>
               </div>
               <div class="ph-preset-row">
                 <span class="ph-preset-flbl">Days</span>
@@ -45403,6 +45423,10 @@ Please let me know if you have any questions.`;
     const guard = presGuardScript();
     if (guard) { presGuardResume = () => presStartNew(presType, presetName); presGuardShow(guard); return; }
     presDraft = presNewDraft();
+    // her ask 2026-09-11: a new script starts at the preset's own Grams
+    // multiplier default (×1 unless she's changed it) instead of blank
+    // manual -- see phGramsMultDef.
+    presDraft.gramsMode = "multiple"; presDraft.gramsMultiple = phGramsMultDef();
     if (presType === "formula") presDraft.presType = "formula";
     // skipDupCheck: this name was handed in, not typed fresh -- we already
     // know who it's for (the tab strip's + New), so the save-time "already
@@ -46572,6 +46596,25 @@ Dosage: {dosage}
       ${PH_GRAMS_MULTIPLES.map(n => opt(n, `×${n}`, st.mode === "multiple" && st.multiple === n)).join("")}
       ${opt("manual", "✎", st.mode === "manual")}
     </span>`;
+  }
+  // ---- the same segmented control again, for the PRESET popover -----------
+  // Writes PHARMACY.presGramsMult (the global default, read by phGramsMultDef
+  // and applied once at presStartNew) instead of one script's gramsMode --
+  // same split as presDefDaysRowHtml/the Days switch just above it in the
+  // popover. No ✎ here: "manual" describes what a SCRIPT is doing, not a
+  // sensible thing to default every future one to.
+  function presDefGramsRowHtml() {
+    const cur = phGramsMultDef();
+    const opt = (val, label) =>
+      `<button type="button" class="ph-days-opt${cur === val ? " on" : ""}" data-pres-def-grams-mult="${val}" role="radio" aria-checked="${cur === val}">${label}</button>`;
+    return `<span class="ph-days-seg ph-grams-seg" role="radiogroup" aria-label="Default grams multiplier">
+      ${PH_GRAMS_MULTIPLES.map(n => opt(n, `×${n}`)).join("")}
+    </span>`;
+  }
+  function presDefGramsRefresh() {
+    const wrap = document.getElementById("presDefGramsWrap");
+    if (wrap) wrap.innerHTML = presDefGramsRowHtml();
+    presPresetSumsRefresh();
   }
   // the hint line UNDER the Grams row (her §1 table) -- green-soft while a
   // multiple is driving the number, amber-soft once she's typed over it.
