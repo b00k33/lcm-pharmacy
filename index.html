@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260911-090000">
+<meta name="lcm-build" content="20260911-120000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -21120,6 +21120,34 @@
     if (k === "both") return `<span class="ph-appt-kind acu" title="Acupuncture">ACU</span><span class="ph-appt-kind chm" title="Chinese herbal medicine">CHM</span>`;
     return `<span class="ph-appt-kind ${k}" title="${k === "chm" ? "Chinese herbal medicine" : "Acupuncture only"}">${PH_APPT_KIND_LABEL[k]}</span>`;
   };
+  // her ask 2026-09-11 ("when appointments are added to the calendar, it
+  // shows if its acu or herbs. can you auto turn acu if its acu?"): reads
+  // the exact same ACU/ACU+CHM classification the calendar pill above
+  // already shows her -- one mechanism, not a second guess at "is this
+  // acupuncture" -- instead of making her flip the Tracking switch by hand
+  // (data-pres-acu-enable) or wait until she writes up a visit with real
+  // points on it (the existing trigger in phVisitSave, `if (d.points &&
+  // !rec.acuEnabled)`).
+  // Only fires while acuEnabled has NEVER been touched (`undefined`, not
+  // `false`) -- once she's made an explicit choice either way via the
+  // switch, this must never re-guess over it. Stricter than phVisitSave's
+  // trigger on purpose: that one is a single deliberate act of typing real
+  // acupuncture points; this one fires on every paste-import AND every
+  // quick-add (they share phApptImport below), including a recurring
+  // weekly re-sync of the same calendar -- re-flipping a deliberate OFF on
+  // every refresh would be exactly the "silently overwrite a decision she
+  // made" code7 forbids (CLAUDE.md).
+  // A Break row is never a patient (her ask 2026-09-10) -- guarded here too,
+  // not just at the two call sites, since phPatientRec("Break") has
+  // get-or-create semantics and would otherwise mint a phantom patient the
+  // moment a Break block's own Edit form ever reached this.
+  function phApptAutoEnableAcu(name, service) {
+    if (!name || name === "Break") return;
+    const kind = phApptKind(service);
+    if (kind !== "acu" && kind !== "both") return;
+    const rec = phPatientRec(name);
+    if (rec && rec.acuEnabled === undefined) rec.acuEnabled = true;
+  }
   // Same patient twice in one day at the pregnancy clinic = embryo transfer
   // day: the earlier slot is the pre-transfer session, the later the
   // post-transfer one (her rule, 2026-09-04). Only under the all-herbs
@@ -21571,6 +21599,11 @@
       // prescription/patient account gets auto-made for it under the
       // all-herbs default just below.
       const isBreak = en.service === "Break";
+      // her ask 2026-09-11: every entry already carries the same service
+      // text the ACU/CHM pill reads off (phApptKind) -- covers a fresh
+      // paste-import, a repeat re-paste of the same day (the dupe branch
+      // below), AND quick-add, since all three funnel through here.
+      if (!isBreak) phApptAutoEnableAcu(en.patient, en.service);
       // her yes (2026-09-03): the number on the Cliniko list becomes the
       // patient's number -- the check-in panel shows it, Text/Copy use it.
       // A number she typed herself in the panel (phoneFrom empty) is not
@@ -25494,6 +25527,10 @@
             if (+durEl.value !== derived) a.durationMin = +durEl.value; else delete a.durationMin;
           }
           if (pEl) a.phone = pEl.value;
+          // her ask 2026-09-11 -- same auto-enable as a fresh import, for
+          // the case she types "Acupuncture" into an already-booked
+          // appointment's Service field here instead
+          phApptAutoEnableAcu(a.patient, a.service);
           savePharmacy();
           phFlashShow(`Saved ${phTitle(a.patient)}'s appointment`);
         }
