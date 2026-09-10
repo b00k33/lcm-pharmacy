@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260910-225900">
+<meta name="lcm-build" content="20260911-090000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -7451,6 +7451,8 @@
   #pharmacyPage .ph-pres-menu-field > span { flex: 0 0 44px; color: var(--ph-faint); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: 9.5px; }
   #pharmacyPage .ph-pres-menu-field select { flex: 1 1 auto; min-width: 0; }
   #pharmacyPage .ph-pres-menu > input { margin: 0 8px 4px 60px; }
+  #pharmacyPage .ph-pres-sync-note { display: flex; align-items: center; gap: 6px; margin: 0 8px 4px 60px; font-size: 10.5px; color: var(--ph-soft); }
+  #pharmacyPage .ph-pres-sync-note i { width: 6px; height: 6px; border-radius: 999px; background: var(--ph-green); flex: none; }
   #pharmacyPage .ph-pres-menu-item { font: inherit; font-size: 12.5px; font-weight: 600; color: var(--ph-ink); text-align: left; background: none; border: 0; border-radius: 7px; padding: 8px 10px; cursor: pointer; min-height: 0; }
   #pharmacyPage .ph-pres-menu-item:hover { background: var(--ph-paper); }
   #pharmacyPage .ph-pres-menu-item.danger { color: var(--ph-negative, #B4483A); }
@@ -39128,6 +39130,8 @@ or changing anything in Cliniko.
       // "general" and null alike (no quieting, no colour, no narrowing).
       s.caseType = t.value;
       if (t.value !== "other") delete s.caseTypeOther;
+      // her own hand beats a sync note that's just about to go stale
+      if (presCaseSyncNoteFor === s.id) presCaseSyncNoteFor = null;
       // caseType lives on the script (PRESC), not on PHARMACY -- this called
       // savePharmacy() before, which never wrote the Case anywhere; it only
       // survived when some later edit happened to save PRESC.
@@ -39155,6 +39159,7 @@ or changing anything in Cliniko.
       }
       presPhaseTagTyping = null;
       if (t.value) s.phaseTag = t.value; else delete s.phaseTag;
+      presSyncCaseFromPhase(s);
       savePresc(); renderPresPanel();
       return;
     }
@@ -39164,6 +39169,7 @@ or changing anything in Cliniko.
       const v = t.value.trim();
       if (v) s.phaseTag = v; else delete s.phaseTag;
       presPhaseTagTyping = null;
+      presSyncCaseFromPhase(s);
       savePresc(); renderPresPanel();
       return;
     }
@@ -41360,6 +41366,22 @@ or changing anything in Cliniko.
     schedPresForPatient(name).forEach(s => { if (!s.caseType) { s.caseType = h; n++; } });
     return n;
   }
+  /* Her round-3 pick 2026-09-10 ("i want them to sync to the treatment plan
+     features so i dont have too many things to type"): Phase already only
+     ever offers labels from the patient's own active plan, and most patients
+     only have the one plan running -- so the moment she names a Phase, Case
+     is already implied. Reuses phCaseFillFromPlan's own fill-BLANK-only rule
+     (her hand always wins, never overwritten), extended to fire here too, not
+     only at plan creation. presCaseSyncNoteFor is session-only UI, not saved
+     data -- it just tells the ⋯ menu to show "synced from the phase you
+     picked" under Case for one render, cleared the moment she touches Case
+     herself (the data-pres-case handler) or reopens the menu fresh. */
+  let presCaseSyncNoteFor = null;   // script id, or null
+  function presSyncCaseFromPhase(s) {
+    if (!s || s.caseType) return;
+    const hint = phCaseHintOfPlan(phTpShownPlan(presPatientFor(s)));
+    if (hint && phCaseFillFromPlan(presPatientFor(s), hint) > 0) presCaseSyncNoteFor = s.id;
+  }
   const phTpAllTemplates = () => [...phTpBuiltinTemplates(), ...phTpUserTemplates()];
   function phTpNewPlan(templateId, ctx) {
     const tpl = phTpAllTemplates().find(x => x.id === templateId) || null;
@@ -42579,7 +42601,10 @@ or changing anything in Cliniko.
     if (old) old.remove();
     const btn = wrap.querySelector(".ph-pres-menubtn");
     if (btn) { btn.classList.toggle("on", open); btn.setAttribute("aria-expanded", open ? "true" : "false"); }
-    if (!open) return;
+    // the "synced from the phase you picked" note is a one-time confirmation
+    // for the change that just happened, not a permanent menu decoration --
+    // gone the next time she opens the menu fresh
+    if (!open) { presCaseSyncNoteFor = null; return; }
     const t = PRESC.items.find(x => x.id === presOpenId);
     if (t) wrap.insertAdjacentHTML("beforeend", presMenuHtml(t));
   }
@@ -45966,6 +45991,7 @@ Please let me know if you have any questions.`;
           ${PH_CASE_TYPES.map(([v, l]) => `<option value="${v}"${caseVal === v ? " selected" : ""}>${l}</option>`).join("")}
         </select>
       </label>
+      ${presCaseSyncNoteFor === t.id ? `<div class="ph-pres-sync-note"><i></i>synced from the phase you picked</div>` : ""}
       ${caseVal === "other" ? `<input type="text" class="ph-pres-case-other field-bare" data-pres-case-other="${t.id}" value="${esc(t.caseTypeOther || "")}" placeholder="Describe the case" aria-label="Case type, other">` : ""}
       ${showPhase ? `<label class="ph-pres-menu-field"><span>Phase</span>
         <select class="ph-pres-phase field-bare" data-pres-phase-tag="${t.id}" aria-label="Which phase of the plan this script is for">
