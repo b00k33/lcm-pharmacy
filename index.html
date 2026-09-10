@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260911-040500">
+<meta name="lcm-build" content="20260911-043000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -21333,6 +21333,73 @@
         outZ.push({ date: dk, time: phApptParseTime(lines[ti]), patient: phApptCleanName(name), service, phone, ...(zDuration ? { durationMin: zDuration } : {}) });
       });
       return outZ;
+    }
+    // ---- Alexandria day list (her paste 2026-09-11): time, name AND status
+    // all share ONE line -- "8:30 AM - 9:00 AM Fiona Heath Confirmed" --
+    // spelled-out AM/PM with spaces round the dash, unlike Zanda's bare
+    // "9:30am-10:00am" (name ABOVE it) or the day/week export's time ALONE
+    // on its own line. A wrapped copy-paste from a real table with no
+    // column delimiters left: the status word is the only reliable anchor
+    // between name and everything after (Service/Contact/Comments run
+    // together over however many lines it wraps), and a name can itself
+    // wrap PAST the time line before the status word turns up ("Shauna
+    // Mcgrath" / "McGrath Pending") -- phApptCleanName's existing repeat-
+    // word trim already collapses that back to "Shauna Mcgrath" for free.
+    // Only the phone is a real stored field beyond name/time, so that's the
+    // one thing extracted with care; the rest (address, comments, the
+    // repeating "Time Client Status Service Contact Comments" header row)
+    // just gets folded into `service` rather than perfectly classified --
+    // low-stakes since nothing reads a `comments` field separately.
+    const alexTimeLead = l => {
+      const m = l.match(/^(\d{1,2}):(\d{2})\s*(am|pm)\s*[-–—]\s*(\d{1,2}):(\d{2})\s*(am|pm)\b(.*)$/i);
+      if (!m) return null;
+      const to24 = (h, mer) => mer.toLowerCase() === "pm" ? (h % 12) + 12 : h % 12;
+      return { time: `${String(to24(+m[1], m[3])).padStart(2, "0")}:${m[2]}`, rest: m[7].trim() };
+    };
+    const alexStatusRe = /\b(confirmed|pending|arrived|cancelled|did\s*not\s*(?:arrive|wait)|completed|in\s*progress|not\s*arrived)\b/i;
+    const aIdx = lines.map((l, i) => alexTimeLead(l) ? i : -1).filter(i => i >= 0);
+    // require the shape, not just the time format: a bare "10:30 AM -
+    // 11:00 AM" alone on its own line (the day/week export shapes) also
+    // parses as a time lead with nothing trailing -- only fire here when
+    // most matches actually carry text after the time.
+    const aHasRest = aIdx.filter(i => alexTimeLead(lines[i]).rest).length;
+    if (aIdx.length >= 2 && aHasRest >= Math.ceil(aIdx.length * 0.5)) {
+      const outA = [];
+      let dk = fallbackDateKey;
+      for (let i = 0; i < aIdx[0]; i++) { const d = phApptParseDateLine(lines[i]); if (d) dk = d; }
+      aIdx.forEach((ai, n) => {
+        const blockEnd = aIdx[n + 1] != null ? aIdx[n + 1] : lines.length;
+        const lead = alexTimeLead(lines[ai]);
+        const blockLines = [lead.rest, ...lines.slice(ai + 1, blockEnd)]
+          .filter(l => l != null && l !== "")
+          .filter(l => !/^time\s+client\s+status\s+service\s+contact\s+comments$/i.test(l));
+        let name = "", detailLines = [], found = false;
+        for (let si = 0; si < blockLines.length && !found; si++) {
+          const m = alexStatusRe.exec(blockLines[si]);
+          if (!m) continue;
+          name = [...blockLines.slice(0, si), blockLines[si].slice(0, m.index)].join(" ").trim();
+          const tail = blockLines[si].slice(m.index + m[0].length).trim();
+          detailLines = [tail, ...blockLines.slice(si + 1)].filter(Boolean);
+          found = true;
+        }
+        if (!found) { name = blockLines.join(" ").trim(); detailLines = []; }
+        name = phApptCleanName(name);
+        if (!name || /^(break|lunch|unavailable|blocked|admin|busy)$/i.test(name)) return;
+        const detailFlat = detailLines.join(" ").replace(/\s+/g, " ").trim();
+        const phoneM = detailFlat.match(/\b(?:Mb|Hm|Ph)\.?:?\s*(\d[\d\s]{7,14}\d)/i);
+        const phone = phoneM ? phCkPhonePretty(phoneM[1].replace(/\s+/g, "").slice(0, 10)) : "";
+        // strip every Mb:/Hm:/Ph: run (not just the first) from the flattened
+        // text -- a row often carries both a mobile and a home number, and a
+        // wrapped continuation digit with trailing comment text on the same
+        // line ("206 ET time to be confirmed") can't be excluded whole-line,
+        // only its own leading digit run.
+        const service = detailFlat
+          .replace(/\b(?:Mb|Hm|Ph)\.?:?\s*\d[\d\s]{7,14}\d/gi, " ")
+          .replace(/\s+/g, " ").trim();
+        if (/cancellation fee/i.test(service)) return;
+        outA.push({ date: dk, time: lead.time, patient: name, service, phone });
+      });
+      if (outA.length) return outA;
     }
     const out = [];
     let dateKey = fallbackDateKey, cur = null;
