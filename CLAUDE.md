@@ -719,6 +719,40 @@ treatment?").** Her 14 answers live in `PHASE-VISITS-SPEC.md`. The rules:
   evidence a phase's visit count reads. If the shared ~5MB origin quota is ever hit,
   the fix is a slim stub (date + patient + service) — **never a new cutoff.**
 
+**18. THE APPOINTMENT IS WHERE A VISIT GETS WRITTEN UP — AND IT WRITES THROUGH
+(her asks 2026-09-10).** Full spec + her wording: `VISIT-NOTE-SPEC.md`. Her
+three sentences that decide everything: *"i want each appointment to have a
+treatment note function… so when i open the patient profile from appointments
+page, it doesnt feel like im just opening the patient profile to look"*; then
+*"when i say visit note, i dont mean a literal note. perhaps a summary of
+treatment plan phase execution"*; then *"i just want the process to be
+streamlined and simple and cohesive in one place so i dont need to look and edit
+multiple things"*. The rules:
+- **It is NOT a note-taking form.** It is the plan's phase being executed, shown
+  on the appointment: what the phase PLANNED (cadence · points · formula), what
+  is DONE so far, and this visit.
+- **ONE record, four surfaces.** It writes a single `rec.acuSessions` entry —
+  the record that already carried `phaseLabel/points/outcome/note`. The plan
+  grid's WHAT HAPPENED column, the acupuncture record and the patient timeline
+  all GATHER it. **Never add a second store for this**; a typed second copy is
+  exactly what her 2026-09-09 record principle forbids.
+- **The visit is dated to the APPOINTMENT, never `keyOf(TODAY)`.** Writing up
+  Tuesday's visit on Thursday must file it under Tuesday, or it lands in the
+  wrong phase window.
+- **The phase follows what she actually did — no prompt, but say so, with an
+  undo.** She turned a confirm dialog down twice. Never re-introduce one.
+- **Herbs are never typed here.** The button opens the real dispense flow so
+  stock deducts and a log entry exists. What was dispensed is read back by date
+  + patient.
+- **Better / Same / Worse comes from `PH_ACU_OUTCOMES`**, the list the
+  acupuncture record already uses. One field language — never a second list.
+- **No plan? Same block, minus the phase parts**, plus a quiet "start one".
+- **A booked future appointment shows the summary and no form** — "Not yet".
+- **The dot and count never look before `PH_VISIT_FROM`.** A display cutoff, not
+  a prune; without it the app opens on hundreds of historical visits.
+- **Nothing here may call `phFlashShow`** — it calls `renderPharmacy()`, which
+  closes the card she just saved from. The confirmation lives in the card.
+
 ## Spacing & size (one scale, no random numbers)
 - Only 4/8/12/16/24/32px for margins/padding/gaps.
 - One corner radius for cards, one for pills. One type scale (title/body/label).
