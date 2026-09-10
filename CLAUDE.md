@@ -6,14 +6,39 @@ aligned, organized and calm. Follow every rule, then re-check your work.
 For LCM Pharmacy, follow STYLE-LCM.md. If a request conflicts with a rule in it,
 update STYLE-LCM.md to match so future builds don't undo it.
 
-## Theme — keep the current GREEN & WHITE look (do NOT go dark)
-- Keep the existing light theme: clean white / off-white surfaces, a soft light-green
-  page background, forest-green as the primary colour, with tasteful accent colours.
-  Do NOT convert this app to dark mode. (A dark-green accent band for headers/stats is
-  fine — that is an accent, not dark mode.)
-- Pull the greens and accent colours already in use into CSS variables as ONE source
-  of truth, and use only those — no random one-off shades. Keep colours consistent so
-  they never drift from screen to screen.
+## Theme — keep the current TEAL & WHITE look (do NOT go dark)
+- **2026-09-11: the primary colour is deep TEAL, not green.** She was shown four
+  mock candidates (Pine/True/Steel/Teal-Navy — a mockup artifact, not a screen in
+  this app) and picked **True Teal**: `--ph-herb: #165C74`, `--ph-herb-deep:
+  #0B3B4B`, `--ph-herb-press: #072A36`, `--ph-herb-tint: #EDF5F8`, `--ph-herb-card:
+  #4599B5`, `--ph-herb-solid: #0C3B4B` — these are the ONLY source-of-truth
+  definitions (line ~277); `--ph-green`/`--ph-green-deep`/etc alias them, exactly
+  as before. Every other green-family literal in the file (icons, the boot splash,
+  manifest.json, print/letter-template SVGs, toast/popup styles, the near-black
+  `--ph-ink`/`--ph-soft`/`--ph-faint` text tokens, even the app's own `--ph-line`/
+  `--ph-paper`/`--ph-cream` neutrals) was hue-rotated to match in the same pass —
+  do not reintroduce a green hex anywhere in this app on the strength of an old
+  screenshot or an old memory of "the green". The 5 icon PNGs were regenerated
+  by a pixel-level hue rotation (not redrawn), so their exact artwork/shape is
+  unchanged, only the colour.
+  **Deliberately NOT touched** (do not sweep these into teal): `--ph-metab`
+  (`#1F7A82`, the Weight/Metabolic category colour) and `--ph-prep-deep`
+  (`#0A5D65`, the "Being prepared" status colour) are their OWN pre-existing teal
+  tokens with their own meaning — True Teal was chosen with real hue separation
+  from both (checked directly against them in the mockup) so it reads as
+  distinct, not as a restyle of either. Also never touched: `PH_ACUPREG_COLOUR`
+  (`#8AAB99`, Acupreg's own location sage-green, [[project_pharmacy_acupreg_colour_and_contrast]]-family)
+  and the raw/toned Cliniko appointment-type colours (`PH_CK_TYPE_COLOURS`-style
+  arrays) — those are external-system or per-location colours, not this app's
+  own brand identity.
+- Keep the existing light theme: clean white / off-white surfaces, a soft
+  light-teal page background, deep teal as the primary colour, with tasteful
+  accent colours (gold/brass stays exactly as it was — it was never part of
+  this change). Do NOT convert this app to dark mode. (A dark-teal accent band
+  for headers/stats is fine — that is an accent, not dark mode.)
+- Pull the teals and accent colours already in use into CSS variables as ONE
+  source of truth, and use only those — no random one-off shades. Keep colours
+  consistent so they never drift from screen to screen.
 
 ## Fit the screen (mobile-first)
 - Design for a phone ~360px wide. Nothing wider than the screen or overflowing.
