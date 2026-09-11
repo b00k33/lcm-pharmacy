@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260912-080000">
+<meta name="lcm-build" content="20260912-090000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -7035,6 +7035,29 @@
   #pharmacyPage .ph-cyclepin { position: absolute; top: 11px; bottom: -2px; width: 2px; background: var(--ph-ink); }
   #pharmacyPage .ph-cyclepin-lbl { position: absolute; top: -17px; left: 50%; transform: translateX(-50%); font-size: 9.5px; font-weight: 800; background: var(--ph-ink); color: var(--ph-cream); padding: 2px 6px; border-radius: 5px; white-space: nowrap; }
   #pharmacyPage .ph-cyclepin::after { content: ""; position: absolute; bottom: -3px; left: 50%; transform: translateX(-50%); width: 6px; height: 6px; border-radius: 50%; background: var(--ph-ink); }
+  /* 🌱 signs strip (her ask 2026-09-11/12, cycle-strip walkthrough mock):
+     drag/hover along the bar previews CD + date + that day's signs; a plain
+     click/tap opens the small editor below. touch-action:pan-y lets the
+     page still scroll vertically over the strip while a horizontal drag is
+     captured for the preview -- see phCycleSignsPreview + the pointermove
+     listener near it. */
+  #pharmacyPage .ph-cycle-dragzone { cursor: pointer; touch-action: pan-y; -webkit-tap-highlight-color: transparent; }
+  #pharmacyPage .ph-cycle-signsrow { position: relative; height: 16px; margin-bottom: 1px; }
+  #pharmacyPage .ph-cycle-signdot { position: absolute; top: 0; transform: translateX(-50%); font-size: 12px; line-height: 1; pointer-events: none; }
+  #pharmacyPage .ph-cycle-cursordot { position: absolute; top: 16px; width: 11px; height: 11px; border-radius: 50%; background: var(--ph-white, #fff); border: 2.5px solid var(--ph-green-deep); transform: translate(-50%,-50%); pointer-events: none; box-shadow: 0 1px 3px rgba(20,31,35,.25); opacity: 0; transition: opacity .1s; }
+  #pharmacyPage .ph-cycle-cursordot.on { opacity: 1; }
+  #pharmacyPage .ph-cycle-tooltip { position: absolute; bottom: calc(100% + 8px); transform: translateX(-50%); background: var(--ph-ink); color: var(--ph-cream); border-radius: 8px; padding: 6px 10px; font-size: 11px; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity .1s; box-shadow: 0 4px 10px rgba(20,31,35,.22); z-index: 3; }
+  #pharmacyPage .ph-cycle-tooltip.on { opacity: 1; }
+  #pharmacyPage .ph-cycle-tooltip .cd { font-weight: 800; }
+  #pharmacyPage .ph-cycle-tooltip .date { color: var(--ph-faint); font-weight: 500; margin-left: 5px; }
+  #pharmacyPage .ph-cycle-tooltip .signs { display: block; margin-top: 2px; font-weight: 600; }
+  #pharmacyPage .ph-cycle-tooltip .signs.none { color: var(--ph-faint); font-weight: 400; font-style: italic; }
+  #pharmacyPage .ph-cycle-tooltip::after { content: ""; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: var(--ph-ink); }
+  #pharmacyPage .ph-cycle-signpop { background: var(--ph-cream); border-radius: 10px; padding: 10px 12px; margin-top: 8px; display: flex; flex-direction: column; gap: 8px; }
+  #pharmacyPage .ph-cycle-signpop .hd { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--ph-ink); }
+  #pharmacyPage .ph-cycle-signpop .hd .x { border: none; background: none; cursor: pointer; font-size: 15px; line-height: 1; color: var(--ph-faint); padding: 2px 4px; }
+  #pharmacyPage .ph-cycle-signpop .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--ph-soft); font-weight: 600; }
+  #pharmacyPage .ph-cycle-signpop select, #pharmacyPage .ph-cycle-signpop input[type=text] { font-size: 12px; }
   /* the day-range legend (her ask 2026-09-11) -- the bar+legend language the
      plan's phase bar used to speak (that bar became the phase TAB strip on
      2026-09-10; this legend keeps the look on its own), so the width the bar
@@ -26620,6 +26643,32 @@
         phCycleRerender();
         return;
       }
+      // 🌱 cycle-strip signs: drag/hover alone only previews (see the
+      // pointermove listener near phCycleSignsPreview) -- a plain click/tap
+      // commits to opening that day's editor, one at a time; tapping the
+      // same day again closes it, matching the toggle feel of the other
+      // collapsible rows on this page.
+      const signPopClose = e.target.closest("[data-cycle-signpop-close]");
+      if (signPopClose) { presCycleSignEdit = null; phCycleRerender(); return; }
+      const signToggle = e.target.closest("button[data-cycle-sign-field]");
+      if (signToggle) {
+        const field = signToggle.dataset.cycleSignField;
+        const rec = phPatientRec(signToggle.dataset.cycleSignName);
+        if (rec) { const cur = phCycleSignFor(rec, signToggle.dataset.cycleSignDate) || {}; phCycleSignSet(rec, signToggle.dataset.cycleSignDate, { [field]: !cur[field] }); }
+        phCycleRerender();
+        return;
+      }
+      const signZone = e.target.closest(".ph-cycle-dragzone");
+      if (signZone && signZone.dataset.cycleDrag && signZone.dataset.cycleLmp) {
+        const name = signZone.dataset.cycleDrag, len = parseInt(signZone.dataset.cycleLen, 10) || 28;
+        const rect = signZone.getBoundingClientRect();
+        const x = Math.min(Math.max(e.clientX - rect.left, 0), rect.width);
+        const cd = Math.min(len, Math.max(1, Math.round((x / rect.width) * len) || 1));
+        const dateKey = phCycleDateForDay(signZone.dataset.cycleLmp, cd);
+        presCycleSignEdit = (presCycleSignEdit && presCycleSignEdit.name === name && presCycleSignEdit.dateKey === dateKey) ? null : { name, dateKey };
+        phCycleRerender();
+        return;
+      }
       const hxSexBtn = e.target.closest("[data-hx-sex]");
       if (hxSexBtn) {
         const rec = phPatientRec(presHxScreenName);
@@ -39389,6 +39438,15 @@ or changing anything in Cliniko.
       else if (f === "ttcMonths") { const n = parseInt(t.value, 10); rec.cycle.ttcMonths = n >= 0 ? n : null; }
       phCycleSyncPlans(rec); savePharmacy(); phCycleRerender();
     }
+    // 🌱 cycle-strip signs: the CM select and the note field (the two
+    // toggle chips are click-handled above, same field attribute scheme)
+    if (t.matches("select[data-cycle-sign-field], input[data-cycle-sign-field]")) {
+      const field = t.dataset.cycleSignField;
+      const rec = phPatientRec(t.dataset.cycleSignName);
+      if (rec) phCycleSignSet(rec, t.dataset.cycleSignDate, { [field]: field === "note" ? (t.value.trim() || undefined) : (t.value || undefined) });
+      phCycleRerender();
+      return;
+    }
     if (t.matches("[data-pres-case]")) {
       const s = PRESC.items.find(x => x.id === t.dataset.presCase);
       if (!s) return;
@@ -42261,6 +42319,85 @@ or changing anything in Cliniko.
   const phCycleQuickHtml = name => `<span class="ph-cycle-quick">
       <label class="ph-cycle-qdate" title="Log a period -- opens on today, pick an earlier day if it started before that">Log period…<input type="date" data-cycle-period-date="${esc(name || "")}" value="${keyOf(TODAY)}" max="${keyOf(TODAY)}" aria-label="Period started on"></label>
     </span>`;
+  // 🌱 Daily signs (her ask 2026-09-11/12, cycle-strip walkthrough mock --
+  // she picked the drag/hover-reveal strip direction, then "remove temp
+  // line then. show options to add other signs. cd number + date + signs"):
+  // one small entry per calendar day (cervical mucus / ovulation twinge /
+  // mood / a short note), separate from rec.cycle's flowIntensity/pain
+  // above, which describe the WHOLE period rather than a single day.
+  // Sparse on purpose: a day with nothing logged has no key at all, so an
+  // untouched patient's rec.cycleSigns costs nothing and needs no migration.
+  function phCycleSignFor(rec, dateKey) { return (rec && rec.cycleSigns && rec.cycleSigns[dateKey]) || null; }
+  function phCycleSignSet(rec, dateKey, patch) {
+    if (!rec || !dateKey) return;
+    rec.cycleSigns = rec.cycleSigns || {};
+    const next = Object.assign({}, rec.cycleSigns[dateKey], patch);
+    const hasAny = next.cm || next.ov || next.mood || (next.note && next.note.trim());
+    if (hasAny) rec.cycleSigns[dateKey] = next; else delete rec.cycleSigns[dateKey];
+    savePharmacy();
+  }
+  function phCycleSignIcon(s) { return !s ? "" : s.cm ? "💧" : s.ov ? "🥚" : s.mood ? "😴" : s.note ? "📝" : ""; }
+  function phCycleSignLabel(s) {
+    if (!s) return "";
+    const parts = [];
+    if (s.cm) { const m = PH_CYCLE_CM.find(x => x[0] === s.cm); if (m && m[0]) parts.push("💧 " + m[1]); }
+    if (s.ov) parts.push("🥚 Ovulation twinge");
+    if (s.mood) parts.push("😴 Low energy/mood");
+    if (s.note) parts.push("📝 " + s.note);
+    return parts.join(" · ");
+  }
+  function phCycleDateForDay(lmp, cd) { return lmp ? keyOf(new Date(parseKey(lmp).getTime() + (cd - 1) * 86400000)) : ""; }
+  // which day's sign-editor popover is open on the strip -- {name,dateKey}
+  // or null; one at a time, closes itself on Close/re-tapping the same day.
+  let presCycleSignEdit = null;
+  function phCycleSignPopHtml(rec, name) {
+    if (!presCycleSignEdit || presCycleSignEdit.name !== name || !rec) return "";
+    const dateKey = presCycleSignEdit.dateKey;
+    const s = phCycleSignFor(rec, dateKey) || {};
+    const lmp = rec.cycle && rec.cycle.lmp;
+    const cd = lmp ? phBbtDayOf(dateKey, lmp) : null;
+    const attrs = `data-cycle-sign-name="${esc(name)}" data-cycle-sign-date="${esc(dateKey)}"`;
+    return `<div class="ph-cycle-signpop" role="group" aria-label="Signs for ${esc(phShortDate(dateKey))}">
+      <div class="hd"><b>${cd ? `Day ${cd} · ` : ""}${esc(phShortDate(dateKey))}</b><button type="button" class="x" data-cycle-signpop-close="1" aria-label="Close">×</button></div>
+      <label class="row">Cervical mucus<select class="ph-cyc-in field-bare" data-cycle-sign-field="cm" ${attrs}>${PH_CYCLE_CM.map(([v, l]) => `<option value="${v}"${(s.cm || "") === v ? " selected" : ""}>${l}</option>`).join("")}</select></label>
+      <div class="ph-ck-chips">
+        <button type="button" class="ph-ck-chip${s.ov ? " on" : ""}" data-cycle-sign-field="ov" ${attrs}>🥚 Ovulation twinge</button>
+        <button type="button" class="ph-ck-chip${s.mood ? " on" : ""}" data-cycle-sign-field="mood" ${attrs}>😴 Low energy/mood</button>
+      </div>
+      <input type="text" class="field-bare" placeholder="A short note for this day…" maxlength="140" value="${esc(s.note || "")}" data-cycle-sign-field="note" ${attrs}>
+    </div>`;
+  }
+  // hover (desktop) / drag (touch) preview along the strip -- pointermove
+  // fires continuously on a hovering mouse and only while a touch is down,
+  // so one listener covers both without separate drag-state bookkeeping.
+  let phCycleDragActive = null;
+  function phCycleSignsPreview(zone, clientX) {
+    const len = parseInt(zone.dataset.cycleLen, 10) || 28, lmp = zone.dataset.cycleLmp;
+    if (!lmp) return;
+    const rect = zone.getBoundingClientRect();
+    const x = Math.min(Math.max(clientX - rect.left, 0), rect.width);
+    const cd = Math.min(len, Math.max(1, Math.round((x / rect.width) * len) || 1));
+    const leftPct = ((cd - 0.5) / len) * 100;
+    const dot = zone.querySelector(".ph-cycle-cursordot"), tip = zone.querySelector(".ph-cycle-tooltip");
+    if (dot) { dot.style.left = leftPct + "%"; dot.classList.add("on"); }
+    if (tip) {
+      tip.style.left = leftPct + "%";
+      tip.classList.add("on");
+      const signEl = zone.querySelector(`.ph-cycle-signdot[data-cd="${cd}"]`);
+      const label = signEl ? signEl.dataset.label : "";
+      tip.innerHTML = `<span class="cd">CD ${cd}</span><span class="date">${esc(phShortDate(phCycleDateForDay(lmp, cd)))}</span><span class="signs${label ? "" : " none"}">${label ? esc(label) : "No signs logged"}</span>`;
+    }
+  }
+  function phCycleSignsPreviewHide(zone) {
+    const dot = zone.querySelector(".ph-cycle-cursordot"), tip = zone.querySelector(".ph-cycle-tooltip");
+    if (dot) dot.classList.remove("on");
+    if (tip) tip.classList.remove("on");
+  }
+  document.addEventListener("pointermove", e => {
+    const zone = e.target.closest ? e.target.closest(".ph-cycle-dragzone") : null;
+    if (zone) { phCycleSignsPreview(zone, e.clientX); phCycleDragActive = zone; }
+    else if (phCycleDragActive) { phCycleSignsPreviewHide(phCycleDragActive); phCycleDragActive = null; }
+  });
   // Menstrual-history questionnaire (her ask 2026-09-05: "can you make the
   // menstrual tracking into a questionaire format/card like view for new
   // patients so I can fill it out initially that way?") -- this only shows
@@ -42416,6 +42553,11 @@ or changing anything in Cliniko.
   }
   const PH_CYCLE_FLOW = [["light", "Light"], ["moderate", "Moderate"], ["heavy", "Heavy"]];
   const PH_CYCLE_PAIN = [["none", "None"], ["mild", "Mild"], ["moderate", "Moderate"], ["severe", "Severe"]];
+  // 🌱 per-day signs (her ask 2026-09-11/12, cycle-strip walkthrough mock:
+  // "remove temp line then. show options to add other signs" -- cervical
+  // mucus is the one real gap; flow/pain already exist above but describe
+  // the WHOLE period, not a single day, so they stay untouched.
+  const PH_CYCLE_CM = [["", "None noted"], ["dry", "Dry"], ["sticky", "Sticky"], ["creamy", "Creamy"], ["eggwhite", "Egg-white"]];
   const PH_CYCLE_SYMPTOMS = [["cramping", "Cramping"], ["mood", "Mood changes"], ["breast", "Breast tenderness"], ["headache", "Headaches"], ["bloating", "Bloating"], ["fatigue", "Fatigue"], ["acne", "Acne"]];
   const PH_CYCLE_CONTRACEPTION = [["none", "None"], ["pill", "Pill"], ["iud_h", "IUD (hormonal)"], ["iud_c", "IUD (copper)"], ["implant", "Implant"], ["condoms", "Condoms"], ["recent", "Recently stopped"], ["other", "Other"]];
   // ---- BBT charts (her ask 2026-09-07: "i need to be able to add images of
@@ -42532,17 +42674,35 @@ or changing anything in Cliniko.
       segStart = end + 1;
       return { key: k, label: segLbl[k], range };
     });
+    // 🌱 signs row: one dot per day that has anything logged, positioned by
+    // the same day-fraction math as the pin above. Drag/hover reveal is all
+    // JS (phCycleSignsPreview, wired via the pointermove listener near the
+    // data functions) -- this HTML only needs the dots themselves plus the
+    // two empty skeleton nodes the JS fills in (cursor dot + tooltip).
+    const signDots = c.lmp ? Object.keys(rec.cycleSigns || {}).map(dateKey => {
+      const cd = phBbtDayOf(dateKey, c.lmp);
+      if (cd < 1 || cd > comp.cycleLen) return "";
+      const label = phCycleSignLabel(rec.cycleSigns[dateKey]);
+      const icon = phCycleSignIcon(rec.cycleSigns[dateKey]);
+      return `<span class="ph-cycle-signdot" data-cd="${cd}" data-label="${esc(label)}" style="left:${((cd - 0.5) / comp.cycleLen * 100).toFixed(2)}%" title="${esc(label)}">${icon}</span>`;
+    }).join("") : "";
     return `<div class="ph-cyclewrap">
-      <div class="ph-cyclebar-outer">
-        <div class="ph-cyclebar">
-          <div class="ph-cycleseg period" style="flex:${comp.segDays.period}"></div>
-          <div class="ph-cycleseg foll" style="flex:${comp.segDays.foll}"></div>
-          <div class="ph-cycleseg ov" style="flex:${comp.segDays.ov}"></div>
-          <div class="ph-cycleseg luteal" style="flex:${comp.segDays.luteal}"></div>
+      <div class="ph-cycle-dragzone" data-cycle-drag="${esc(name || "")}" data-cycle-lmp="${esc(c.lmp || "")}" data-cycle-len="${comp.cycleLen}" title="Drag or hover to see any day's signs -- tap to log one">
+        <div class="ph-cycle-signsrow">${signDots}</div>
+        <div class="ph-cyclebar-outer">
+          <div class="ph-cyclebar">
+            <div class="ph-cycleseg period" style="flex:${comp.segDays.period}"></div>
+            <div class="ph-cycleseg foll" style="flex:${comp.segDays.foll}"></div>
+            <div class="ph-cycleseg ov" style="flex:${comp.segDays.ov}"></div>
+            <div class="ph-cycleseg luteal" style="flex:${comp.segDays.luteal}"></div>
+          </div>
+          <div class="ph-cyclepin" style="left:${comp.pinPct}%"><span class="ph-cyclepin-lbl">Day ${comp.day} · ${esc(comp.phaseLabel)}${comp.overdue ? " · late?" : ""}</span></div>
+          <div class="ph-cycle-cursordot"></div>
+          <div class="ph-cycle-tooltip"></div>
         </div>
-        <div class="ph-cyclepin" style="left:${comp.pinPct}%"><span class="ph-cyclepin-lbl">Day ${comp.day} · ${esc(comp.phaseLabel)}${comp.overdue ? " · late?" : ""}</span></div>
       </div>
       <div class="ph-cycle-legend">${segRanges.map(s => `<span class="${s.key}${s.key === comp.phaseKey ? " current" : ""}"><i></i>${esc(s.label)} <span class="rng">${s.range}</span></span>`).join("")}</div>
+      ${phCycleSignPopHtml(rec, name)}
       ${(() => {
         // her pick 2026-09-04 ("add icons … too much text", mock approved):
         // the meta sentence becomes four icon tiles, and the Flow / Pain /
