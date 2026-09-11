@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260912-004500">
+<meta name="lcm-build" content="20260912-020000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6543,6 +6543,26 @@
     #pharmacyPage .ph-hx-card { width: 100%; height: 100%; max-height: 100%; border-radius: 0; }
     #pharmacyPage .ph-hx-qlabel { flex: 1 1 100%; }
   }
+  /* ---- inline, on a new patient's Opening stage (2026-09-12, her approved
+     mock) -- same card, sitting in the column flow instead of floating over
+     it: no fixed size/shadow/enter-animation, a light tint head instead of
+     the dark gradient (that gradient is a MODAL cue; flat in a column it
+     would just be a wall of dark green next to the plain-white Patient/
+     Supplements sections either side of it), and the body scrolls with the
+     page instead of clipping to a fixed height. Everything below the head
+     (filters, search, checklist) is untouched -- same markup, same classes. */
+  #pharmacyPage .ph-hx-card-inline {
+    width: auto; max-height: none; margin-top: 8px; border-radius: 14px;
+    border: 1px solid var(--ph-line); box-shadow: none; animation: none;
+  }
+  #pharmacyPage .ph-hx-card-inline .ph-hx-head {
+    padding: 12px 16px 10px; background: var(--ph-green-tint); color: var(--ph-ink);
+  }
+  #pharmacyPage .ph-hx-card-inline .ph-stocktake-progress-label { color: var(--ph-ink); }
+  #pharmacyPage .ph-hx-card-inline .ph-stocktake-progress-bar { background: rgba(0,0,0,0.1); }
+  #pharmacyPage .ph-hx-card-inline .ph-hx-saved,
+  #pharmacyPage .ph-hx-card-inline .ph-hx-notneeded-lbl { color: var(--ph-soft); }
+  #pharmacyPage .ph-hx-card-inline .ph-hx-body { overflow-y: visible; }
 
   /* ============ 方病人 Guide -- body types, formula families, tongue map ============ */
   #pharmacyPage .ph-gd-shell { padding: 16px; }
@@ -37698,6 +37718,21 @@ or changing anything in Cliniko.
     // up whatever changed while the screen was open
     renderPresPanel();
   }
+  // the inline copy on a new patient's Opening stage (2026-09-12) has no
+  // "close" gesture of its own -- she just navigates to a different stage,
+  // a different script, or closes the panel -- so nothing else naturally
+  // resets presHxScreenName back to null the way phHxClose() does for the
+  // modal. Left stuck, it could misdirect a LATER, unrelated photo pick or
+  // paste (several consumers trust it as "whose Hx screen is open" without
+  // re-checking the DOM) to whichever patient she looked at last. Called
+  // from renderPresPanel() every pass with the name it's ABOUT to show
+  // inline this render (or null); never touches it while the modal itself
+  // is legitimately the one holding it open.
+  function presHxInlineSync(keepName) {
+    if (!presHxScreenName || presHxScreenName === keepName) return;
+    const modal = document.getElementById("phHxModal");
+    if (!modal || modal.hidden) presHxScreenName = null;
+  }
   function phHxMarkRestNo(name, group) {
     const rec = phPatientRec(name);
     if (!rec) return;
@@ -39104,10 +39139,14 @@ or changing anything in Cliniko.
     </div>`;
   }
   // Which patient this lands on: only ever the Hx screen that's open right
-  // now. No open screen = not our paste, so it falls through untouched.
+  // now -- the full-screen modal (returning patient) or the inline panel on
+  // a new patient's Opening stage (2026-09-12), either counts as "open".
+  // No open screen = not our paste, so it falls through untouched.
   function phRenPasteTargetKey() {
     const modal = document.getElementById("phHxModal");
-    if (!modal || modal.hidden || !presHxScreenName) return null;
+    const modalOpen = modal && !modal.hidden;
+    const inlineOpen = !!document.getElementById("phOpHxInline");
+    if ((!modalOpen && !inlineOpen) || !presHxScreenName) return null;
     // the crop tool / phone inbox are the same kind of overlay as the
     // preview, so a paste landing while one of those is open would stack two
     // cards on top of each other -- let it fall through untouched instead
@@ -39604,30 +39643,33 @@ or changing anything in Cliniko.
     </div>`;
   }
 
-  function renderHxScreen() {
-    const modal = document.getElementById("phHxModal");
-    if (!modal || modal.hidden) return;
-    // same scroll-jump bug she reported on the Treatment Plan screen
-    // (2026-09-01, "if i select delete, i have to scroll down again") -- this
-    // screen shares the exact shell and rebuild-on-every-tap pattern, so a
-    // Yes/No tap deep in the question list jumped her to the top here too.
-    const prevBody = modal.querySelector(".ph-hx-body");
-    const prevScroll = prevBody ? prevBody.scrollTop : 0;
-    const name = presHxScreenName;
+  // pure builder, extracted 2026-09-12 so the same markup can render into
+  // EITHER the full-screen modal (returning patient, opened on demand) OR
+  // inline on the Opening stage (new patient, always expanded -- her ask
+  // 2026-09-11 "inline expanded for first/initial appointments... collapsed
+  // for followups"). opts.inline drops the name/sex/DOB row and close
+  // button, both already shown elsewhere on the Opening stage (the band
+  // title, the Patient column) -- everything else (progress, intake link,
+  // not-needed, constitution, filters/search, the full checklist) is
+  // identical either way, same data-attributes, so the existing delegated
+  // handlers (data-hx-dob, data-hx-sex, data-cycle-field, etc.) work
+  // unchanged regardless of which shell the markup is sitting in.
+  function phHxScreenInnerHtml(name, opts) {
+    const inline = !!(opts && opts.inline);
     const rec = phPatientRec(name);   // writable -- opening the screen is a deliberate act, unlike opening a script
     const prog = phHxProgress(name);
     const pct = prog.total ? Math.round(prog.answeredN / prog.total * 100) : 0;
     const savedLine = rec.historyUpdatedAt ? `Saved ${phAgo(new Date(rec.historyUpdatedAt))}` : "Nothing recorded yet";
-    modal.innerHTML = `<div class="ph-hx-card">
+    return `<div class="ph-hx-card${inline ? " ph-hx-card-inline" : ""}">
       <div class="ph-hx-head">
-        <button type="button" class="ph-stocktake-close" data-hx-close="1" aria-label="Close">×</button>
+        ${inline ? "" : `<button type="button" class="ph-stocktake-close" data-hx-close="1" aria-label="Close">×</button>
         <div class="ph-hx-head-top">
           <div class="ph-hx-head-name">${esc(phTitle(name))}</div>
           <span class="ph-hx-seg" role="radiogroup" aria-label="Patient sex">
             ${[["F", "F"], ["M", "M"], ["", "—"]].map(([v, l]) => `<button type="button" class="ph-hx-sexbtn${(rec.sex || "") === v ? " on" : ""}" data-hx-sex="${v}" aria-pressed="${(rec.sex || "") === v ? "true" : "false"}">${l}</button>`).join("")}
           </span>
           <label class="ph-hx-dob">DOB <input type="date" data-hx-dob="1" value="${esc(rec.dob || "")}" aria-label="Date of birth">${phAgeOf(rec.dob) != null ? `<span class="age">${phAgeOf(rec.dob)}</span>` : ""}</label>
-        </div>
+        </div>`}
         <div class="ph-stocktake-progress-wrap">
           <div class="ph-stocktake-progress-label">${prog.answeredN} of ${prog.total} asked${prog.yesItems.length ? ` · ${prog.yesItems.length} flagged` : ""}</div>
           <div class="ph-stocktake-progress-bar"><div class="ph-stocktake-progress-fill" style="width:${pct}%"></div></div>
@@ -39655,8 +39697,30 @@ or changing anything in Cliniko.
       </div>
       <div class="ph-hx-body" id="phHxBody">${phHxBodyHtml(rec)}</div>
     </div>`;
-    const newBody = modal.querySelector(".ph-hx-body");
-    if (newBody) newBody.scrollTop = prevScroll;
+  }
+  function renderHxScreen() {
+    if (!presHxScreenName) return;
+    const modal = document.getElementById("phHxModal");
+    const inlineEl = document.getElementById("phOpHxInline");
+    if ((!modal || modal.hidden) && !inlineEl) return;
+    // same scroll-jump bug she reported on the Treatment Plan screen
+    // (2026-09-01, "if i select delete, i have to scroll down again") -- this
+    // screen shares the exact shell and rebuild-on-every-tap pattern, so a
+    // Yes/No tap deep in the question list jumped her to the top here too.
+    if (modal && !modal.hidden) {
+      const prevBody = modal.querySelector(".ph-hx-body");
+      const prevScroll = prevBody ? prevBody.scrollTop : 0;
+      modal.innerHTML = phHxScreenInnerHtml(presHxScreenName);
+      const newBody = modal.querySelector(".ph-hx-body");
+      if (newBody) newBody.scrollTop = prevScroll;
+    }
+    if (inlineEl) {
+      const prevBody = inlineEl.querySelector(".ph-hx-body");
+      const prevScroll = prevBody ? prevBody.scrollTop : 0;
+      inlineEl.innerHTML = phHxScreenInnerHtml(presHxScreenName, { inline: true });
+      const newBody = inlineEl.querySelector(".ph-hx-body");
+      if (newBody) newBody.scrollTop = prevScroll;
+    }
     // §3: the timeline opens at the newest (right-hand) end, after the table
     // is in the DOM and has a real scrollWidth
     phRenTimelineScrollEnd();
@@ -40280,7 +40344,32 @@ or changing anything in Cliniko.
     // its own label. Below 1150px the .ph-op-col wrappers are display:contents
     // and the single stack renders exactly as before, phone included -- which
     // is why the header selectors below also carry a `> .ph-op-col >` twin.
-    const hx = presHistorySummaryHtml(t);
+    // her walkthrough ask (2026-09-11): a brand-new patient's Medical History
+    // should sit open and inline on this stage, not tucked behind a "take
+    // history" tap -- for a returning patient (who already has a history to
+    // glance at) the collapsed summary row stays exactly as it was. Keeps
+    // presHxScreenName in sync with whichever patient's Opening stage is
+    // showing so the checklist/filter/search/DOB/sex delegated handlers
+    // (all document-level, matched on data-hx-* attributes) work unchanged --
+    // same reset-on-switch posture as phHxOpen(), but only when the patient
+    // actually changes, so mid-edit state (a filter, a search term) survives
+    // the frequent innerHTML rebuilds this panel already does on every field
+    // edit.
+    const hxName = presPatientFor(t) || t.name || "";
+    const hxIsNew = presPatientIsNew(hxName);
+    let hx;
+    if (hxIsNew && hxName) {
+      if (presHxScreenName !== hxName) {
+        presHxScreenName = hxName;
+        presHxScreenFilter = "all";
+        presHxScreenSearch = "";
+        presHxQuietGroupsOpen = new Set();
+      }
+      phRenEnsurePhotos(phPatientKey(hxName));
+      hx = `<div id="phOpHxInline">${phHxScreenInnerHtml(hxName, { inline: true })}</div>`;
+    } else {
+      hx = presHistorySummaryHtml(t);
+    }
     const photos = presPhotosSectionHtml(t);
     const switches = `${presCycleToggleHtml(t)}${presAcuToggleHtml(t)}`;
     return `<div class="ph-pres-stage-body ph-op-grid${photos ? "" : " ph-op-nophotos"}">
@@ -40361,10 +40450,10 @@ or changing anything in Cliniko.
     if (phoneFull) el.scrollTop = 0;
     // only a brand-new draft still gets the bare form — an existing script's
     // template lives INSIDE its open panel now (Open and ✎ are one thing)
-    if (presEditId === "__new__") { renderPresEditForm(el, presDraft); done(); return; }
+    if (presEditId === "__new__") { presHxInlineSync(null); renderPresEditForm(el, presDraft); done(); return; }
     presEditId = null;
     const t = PRESC.items.find(x => x.id === presOpenId);
-    if (!t) { el.innerHTML = ""; done(); return; }
+    if (!t) { presHxInlineSync(null); el.innerHTML = ""; done(); return; }
     const pp = PHARMACY.presPricing || { method: "gram", gramPrice: 0.71, markup: 3 };
     const isF = presIsFormula(t), ab = presAbbr(t);
     // option A (2026-09-07): a script whose Case was never set inherits the
@@ -40382,6 +40471,8 @@ or changing anything in Cliniko.
       // straight to Follow-up, not back at square one every time
       presStage = presFurthestStageFor(t);
     }
+    // whichever stage/script is ABOUT to render below -- see presHxInlineSync
+    presHxInlineSync(!isF && isNew && presStage === "opening" ? (presPatientFor(t) || t.name || "") : null);
     const ingQuiet = !isF && phCaseQuiets(t, "herbs");
     // her ask (2026-08-01): Dispense Stock's confirmation flashed at the very
     // top of this (often long, scrolled-past) panel, invisible from the button
