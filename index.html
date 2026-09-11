@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260911-194500">
+<meta name="lcm-build" content="20260911-201500">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6195,11 +6195,17 @@
   /* her ask 2026-09-11 ("the formula name does not need that chip. it should
      only be in the prescription folder"): the tab no longer carries a typed
      or formula-derived name at all -- Formula shows/edits only in Dispense's
-     own field now. In its place, a plain number (oldest = 1) plus which of
-     the five stages that script itself currently sits at (presFurthestStageFor,
-     the exact same read the stage-stepper's own default uses), her pick "D"
-     from the mockup over three other real-data options. Nothing to type,
-     nothing to rename, so the whole rename control is gone with it. */
+     own field now. In its place, two lines: a plain number (oldest = 1) plus
+     which of the five stages that script itself currently sits at
+     (presFurthestStageFor, the exact same read the stage-stepper's own
+     default uses), then a quiet line with the date it started and its phase
+     tag (presScriptCreatedAt/s.phaseTag) -- her round-2 pick "Widget 1" over
+     a switcher and a tap-to-expand card. Nothing to type, nothing to
+     rename, so the whole rename control is gone with it. */
+  #pharmacyPage .ph-pres-tab.two { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 6px 12px 7px; text-align: left; }
+  #pharmacyPage .ph-pres-tab.two .top { display: flex; align-items: center; }
+  #pharmacyPage .ph-pres-tab.two .sub2 { font-size: 9.5px; font-weight: 600; color: var(--ph-faint); }
+  #pharmacyPage .ph-pres-tab.two.on .sub2 { color: var(--ph-green-deep); opacity: .8; }
   #pharmacyPage .ph-pres-tab .n {
     display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px;
     border-radius: 999px; background: var(--ph-line); color: #fff; font-size: 9px; font-weight: 800; margin-right: 6px;
@@ -40162,6 +40168,17 @@ or changing anything in Cliniko.
     ["assessment", "treatment", "dispense", "followup"].forEach(id => { if (contentDone[id]) stage = id; });
     return stage;
   }
+  // when a script was started -- most were never stamped with a createdAt
+  // (only the from-appointment/from-intake quick-adds set one), but every
+  // one has a uid() id, and that id's own first characters ARE Date.now()
+  // in base36 (the fixed-length 5-char random suffix is always
+  // .slice(2,7) of a Math.random() string) -- so this reads a real date
+  // out of data that already exists rather than adding a field to stamp.
+  function presScriptCreatedAt(t) {
+    if (t && t.createdAt) return t.createdAt;
+    const ts = t && t.id ? parseInt(t.id.slice(0, -5), 36) : NaN;
+    return Number.isFinite(ts) ? ts : null;
+  }
   function presStageStripHtml(t, isNew) {
     const name = presPatientFor(t) || t.name || "";
     const rec = phPatientRec(name);
@@ -46052,15 +46069,23 @@ Please let me know if you have any questions.`;
         <button type="button" class="ph-pres-menu-item danger" data-pres-menu-item="1" data-tp-plan-del="${openPlan.id}">Delete plan</button>` : ""}
     </div>`;
   }
-  // ONE script pill: a plain ordinal (oldest = 1) plus whichever of the five
-  // stages that script's own content currently reaches (presFurthestStageFor)
-  // -- her pick "D" from the mockup, over three other real-data alternatives,
-  // once the formula name came off this pill entirely. Always data-pres-open,
-  // even the active one: there is no rename mode left to switch out of.
+  // ONE script pill, two lines: a plain ordinal (oldest = 1) plus whichever
+  // of the five stages that script's own content currently reaches
+  // (presFurthestStageFor), then a quiet second line with the date it
+  // started and its phase tag -- her round-2 pick "Widget 1" once the
+  // formula name came off this pill entirely, over a switcher and a
+  // tap-to-expand card. Always data-pres-open, even the active one: there
+  // is no rename mode left to switch out of.
   function presScriptPillHtml(s, activeId, num) {
     const active = s.id === activeId;
     const stageDef = PRES_STAGES.find(x => x.id === presFurthestStageFor(s)) || PRES_STAGES[0];
-    return `<button type="button" class="ph-pres-tab${active ? " on" : ""}" data-pres-open="${s.id}" title="${active ? "This script" : "Open this script"}"><span class="n">${num}</span><span class="lbl">${esc(stageDef.label)}</span></button>`;
+    const started = presScriptCreatedAt(s);
+    const dateTxt = started ? phShortDate(keyOf(new Date(started))) : "";
+    const phaseTxt = s.phaseTag ? esc(s.phaseTag) : "no phase";
+    return `<button type="button" class="ph-pres-tab two${active ? " on" : ""}" data-pres-open="${s.id}" title="${active ? "This script" : "Open this script"}">
+      <span class="top"><span class="n">${num}</span><span class="lbl">${esc(stageDef.label)}</span></span>
+      <span class="sub2">${dateTxt ? `${dateTxt} · ` : ""}${phaseTxt}</span>
+    </button>`;
   }
   let presPhaseTagTyping = null;   // script id whose Phase picker is on "Type your own…"
   // "Follicular" matches "Follicular — Week 1", a typed "luteal" matches
