@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260912-050000">
+<meta name="lcm-build" content="20260912-060000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6244,6 +6244,11 @@
   /* same content, quieter, right under the Formula field itself */
   #pharmacyPage .ph-dsp-inlinesugg { padding: 2px 0 0; color: var(--ph-soft); }
   #pharmacyPage .ph-dsp-inlinesugg b { color: var(--ph-ink); }
+  /* her decision 12: a herbs-off patient sees this instead of the whole
+     Formula/Dosage/Price block -- quiet, not an error state */
+  #pharmacyPage .ph-herbs-off-note {
+    font-size: 12px; color: var(--ph-soft); padding: 2px 0 10px;
+  }
   /* her ask 2026-09-05: the case type that drives what quiets elsewhere on
      this panel -- lives right next to the script tabs, since that's where
      she's already looking to see which script she's in */
@@ -30118,6 +30123,12 @@
         if (rec) { rec.cycleOn = cycEnable.checked; savePharmacy(); renderPresPanel(); }
         return;
       }
+      const herbsEnable = e.target.closest("[data-pres-herbs-enable]");
+      if (herbsEnable) {
+        const rec = phPatientRec(herbsEnable.dataset.presHerbsEnable);
+        if (rec) { rec.herbsEnabled = herbsEnable.checked; savePharmacy(); renderPresPanel(); }
+        return;
+      }
       // the attach/detach model (her §2, same as Grams): typing a date makes
       // it hers -- later dose/Days edits recalculate everything ELSE but
       // never silently overwrite a date she has already set.
@@ -34029,6 +34040,10 @@ or changing anything in Cliniko.
   // (found 2026-08-18 verifying the two-column rebuild: edited/removed herbs
   // correctly, band still read the old frozen total).
   function presBandMetaText(t, isF) {
+    // her decision 12: shown on all 5 stages, so a herbs-off patient's band
+    // must quiet too, not just the Dispense-stage form -- phHerbsOn wins over
+    // the older phCaseQuiets "herbs" fold (see phHerbsOn's own comment).
+    if (!isF && !phHerbsOn(phPatientPeek(presPatientFor(t)), phTpShownPlan(presPatientFor(t)))) return "herbs off";
     return [
       !isF && (t.formula || "").trim() ? esc((t.formula || "").trim()) : "",
       `${(t.ingredients || []).length} herb${(t.ingredients || []).length === 1 ? "" : "s"}`,
@@ -34246,6 +34261,11 @@ or changing anything in Cliniko.
     if (!PHARMACY.followups) PHARMACY.followups = [];
     const patient = presPatientFor(t);
     if (!patient) return;                          // formulas have no patient
+    // her decision 12's fourth named consequence ("no herb follow-ups") --
+    // the UI already hides the dispense button for a herbs-off patient, but
+    // this is the actual write, so it's the one place that has to hold no
+    // matter which surface got here (e.g. the historical "Dispense again").
+    if (!phHerbsOn(phPatientPeek(patient), phTpShownPlan(patient))) return;
     const calc = phFollowupCalc(t, entry.date, grams);
     const isFirst = phFuIsFirstDispense(patient, entry.at);
     // her ask (2026-09-06): "the system can register the timeline...so the
@@ -34308,6 +34328,10 @@ or changing anything in Cliniko.
     const due = c => c.snoozedUntil && c.snoozedUntil > c.on ? c.snoozedUntil : c.on;
     PHARMACY.followups.forEach(rec => {
       if (!rec.review && !rec.checkIn) return;
+      // decision 12, read-side: a record made while herbs were on stops
+      // surfacing the moment she turns them off for that patient -- old
+      // records aren't deleted (never destroy the record), just no longer due
+      if (!phHerbsOn(phPatientPeek(rec.patient), phTpShownPlan(rec.patient))) return;
       if (phFuCollapsed(rec)) {
         const a = due(rec.checkIn), b = due(rec.review);
         rows.push({ rec, kind: "both", on: a < b ? a : b, done: rec.checkIn.done && rec.review.done, collapsed: true, snoozed: !!(rec.checkIn.snoozedUntil || rec.review.snoozedUntil) });
@@ -34547,6 +34571,11 @@ or changing anything in Cliniko.
       if (!touch || touch.on < PH_QUIET_CUTOFF) return;
       const rec = PHARMACY.patients && PHARMACY.patients[key];
       if (rec && rec.quietDismissedTouch === touch.on) return;
+      // decision 12: a herbs-off, non-acu patient has nothing left being
+      // tracked to have "gone quiet" ON -- without this, everyone she turns
+      // herbs off for (and never acu-enables) still fires PH_QUIET_HERB_DAYS
+      // after 8 weeks, which is her own deliberate call, not a dropped patient
+      if (!(rec && rec.acuEnabled) && !phHerbsOn(rec, phTpShownPlan(phTitle(key)))) return;
       const thresholdDays = (rec && rec.acuEnabled) ? PH_QUIET_ACU_DAYS : PH_QUIET_HERB_DAYS;
       const daysSince = Math.round((parseKey(todayKey) - parseKey(touch.on)) / 86400000);
       if (daysSince < thresholdDays || daysSince > PH_QUIET_MAX_DAYS) return;
@@ -34941,8 +34970,12 @@ or changing anything in Cliniko.
       const track = here && phPickFacets(here) ? phPickFacets(here).track : null;
       if (track) phPickMoments().filter(m => PH_CODE3_MOMENTS[m].track === track).forEach(add);
     }
-    // the herb four always fit: every one of these rows is a herb row
-    ["checkin", "review", "running", "rebook"].forEach(add);
+    // the herb four only fit a herb row -- once acu/quiet rows joined this
+    // same picker (the Communications merge), "every row here is a herb row"
+    // stopped being true. row.rec only exists on rows phFuContactRows()
+    // built (see phCommDueRows), so it's the same signal this file already
+    // uses to tell a herb row apart from an acu/quiet one.
+    if (row.rec) ["checkin", "review", "running", "rebook"].forEach(add);
     return fits;
   }
   /* ---- Grouping the wording chips (her ask 2026-09-09, with a screenshot of
@@ -40457,7 +40490,7 @@ or changing anything in Cliniko.
       hx = presHistorySummaryHtml(t);
     }
     const photos = presPhotosSectionHtml(t);
-    const switches = `${presCycleToggleHtml(t)}${presAcuToggleHtml(t)}`;
+    const switches = `${presCycleToggleHtml(t)}${presAcuToggleHtml(t)}${presHerbsToggleHtml(t)}`;
     return `<div class="ph-pres-stage-body ph-op-grid${photos ? "" : " ph-op-nophotos"}">
       <div class="ph-op-col ph-op-record">
         <div class="ph-tmpl-sec"><span>Patient</span></div>
@@ -40560,6 +40593,7 @@ or changing anything in Cliniko.
     // whichever stage/script is ABOUT to render below -- see presHxInlineSync
     presHxInlineSync(!isF && isNew && presStage === "opening" ? (presPatientFor(t) || t.name || "") : null);
     const ingQuiet = !isF && phCaseQuiets(t, "herbs");
+    const herbsOn = isF || phHerbsOn(phPatientPeek(presPatientFor(t)), phTpShownPlan(presPatientFor(t)));
     // her ask (2026-08-01): Dispense Stock's confirmation flashed at the very
     // top of this (often long, scrolled-past) panel, invisible from the button
     // itself. Render it straight into presConfirmZone -- right next to the
@@ -40593,7 +40627,8 @@ or changing anything in Cliniko.
       ${isF || presStage === "dispense" ? `
       <div class="ph-pres-body">
       <div class="ph-pres-col-left">
-      ${!isF ? `<div class="ph-pres-dose">
+      ${!isF && !herbsOn ? presHerbsOffNoteHtml(t) : ""}
+      ${!isF && herbsOn ? `<div class="ph-pres-dose">
       <div class="ph-tmpl-sec"><span>Dosage &amp; price</span></div>
       <div class="ph-build-top">
         <label class="ph-inline-label">Formula <input type="text" id="presFormulaText" value="${esc(t.formula || "")}" placeholder="e.g. Ban Xia Xie Xin Tang" aria-label="Formula text for the label" style="min-width:240px"></label>
@@ -40653,7 +40688,7 @@ or changing anything in Cliniko.
       </div>
       <div class="ph-pres-actionbar-secondary">
         <button type="button" class="btn-cancel" data-pres-copy="${t.id}">📋 Copy</button>
-      </div>` : presDoseTimelineHtml(t)}
+      </div>` : (herbsOn ? presDoseTimelineHtml(t) : "")}
       ${t.lastDispensedAt && presDispMenuId === t.id ? `<div class="ph-arr-edit">
         ${presDispUndoConfirm === t.id ? phConfirmStrip(
           `Undo this dispense? ${(PHARMACY.log.find(x => x.id === t.lastDispenseLogId) || { deducted: [] }).deducted.length} herb(s) go back on the shelf and the log entry is removed.`,
@@ -41783,6 +41818,19 @@ or changing anything in Cliniko.
     return age == null || age < 50;
   }
   const phCycleComp = rec => phCycleOn(rec) ? phTpCycleCompute(phCycleFor(rec)) : null;
+  // her decision 12 (2026-09-09 addendum, "HERBS CAN BE TURNED OFF"): the
+  // PATIENT carries the default (rec.herbsEnabled, stored positively so an
+  // absent field means today's herbs-on behaviour for all 510 existing
+  // records -- same "!== false" shape as everywhere else absence must mean
+  // "unchanged"), a PLAN may override it back on (or off) for that course
+  // only (plan.herbsOverride, tri-state like phCycleOn's rec.cycleOn: null/
+  // undefined = follow the patient default, true/false = a deliberate call
+  // for this course). Must win over the older, unrelated phCaseQuiets(t,
+  // "herbs") Case-driven soft-fold -- callers check phHerbsOn FIRST.
+  function phHerbsOn(rec, plan) {
+    if (plan && (plan.herbsOverride === true || plan.herbsOverride === false)) return plan.herbsOverride;
+    return !rec || rec.herbsEnabled !== false;
+  }
   // projected phase on a future/past date (e.g. a pending review's due date)
   // -- her ask (2026-09-06): show which phase a check-in/review will likely
   // land in for context, WITHOUT moving the actual due date itself.
@@ -46614,6 +46662,28 @@ Please let me know if you have any questions.`;
     return `<div class="ph-switch-row ph-acu-switchrow">
       <span>Acupuncture</span>
       <span class="ph-switch"><input type="checkbox" data-pres-acu-enable="${esc(name)}"${rec.acuEnabled ? " checked" : ""}><span class="ph-switch-track"></span></span>
+    </div>`;
+  }
+  // her decision 12: the patient-level herbs default, same switch family as
+  // Acupuncture/Cycle right beside it. Positively stored -- checked unless
+  // she's explicitly turned it off, so all 510 existing records read "on".
+  function presHerbsToggleHtml(t) {
+    const name = presPatientFor(t);
+    if (!name) return "";
+    const rec = phPatientRec(name);
+    return `<div class="ph-switch-row ph-acu-switchrow">
+      <span>Herbs</span>
+      <span class="ph-switch"><input type="checkbox" data-pres-herbs-enable="${esc(name)}"${rec.herbsEnabled !== false ? " checked" : ""}><span class="ph-switch-track"></span></span>
+    </div>`;
+  }
+  // her decision 12's first named consequence ("no Formula rows"): replaces
+  // the whole Dosage & price block for a herbs-off patient rather than just
+  // quieting the Ingredients fold (that's the older, narrower phCaseQuiets
+  // "herbs" case-driven fold -- phHerbsOn wins over it, see its own comment).
+  function presHerbsOffNoteHtml(t) {
+    return `<div class="ph-pres-dose ph-herbs-off">
+      <div class="ph-tmpl-sec"><span>Dosage &amp; price</span></div>
+      <div class="ph-herbs-off-note">Herbs are off for this patient — no formula, dosage or price here.</div>
     </div>`;
   }
   function presIngredientsEditorHtml(t, opts) {
