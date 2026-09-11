@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260912-060000">
+<meta name="lcm-build" content="20260912-070000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6217,6 +6217,19 @@
     border-radius: 999px; background: var(--ph-line); color: #fff; font-size: 9px; font-weight: 800; margin-right: 6px;
   }
   #pharmacyPage .ph-pres-tab.on .n { background: var(--ph-green); }
+  /* the plan-tab strip inside the Treatment row's inline editor (decisions
+     2/8, tab order locked 2026-09-11) -- same .ph-pres-tab pill, two new
+     quiet modifiers: a past/done plan not currently open, and the loose
+     "Not on a plan" tab, which is dashed like .new since it isn't a plan. */
+  #pharmacyPage .ph-tp-plantabs { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 0 10px; }
+  #pharmacyPage .ph-tp-plantabs .ph-pres-tab.pastplan { color: var(--ph-faint); }
+  #pharmacyPage .ph-tp-plantabs .ph-pres-tab.loose { border-style: dashed; color: var(--ph-faint); }
+  #pharmacyPage .ph-tp-plantabs .ph-pres-tab.loose.on { background: var(--ph-paper); border-color: var(--ph-line); color: var(--ph-soft); }
+  /* decision 3's full-screen no-plan gate -- same template cards as the
+     inline "+ New" flow, just the whole panel instead of a collapsed row */
+  #pharmacyPage .ph-noplan-gate-body { padding: 16px; }
+  #pharmacyPage .ph-noplan-gate-title { font-size: 15px; font-weight: 700; color: var(--ph-ink); }
+  #pharmacyPage .ph-noplan-gate-sub { font-size: 12px; color: var(--ph-soft); margin: 4px 0 16px; line-height: 1.4; }
   /* groups the script tabs under their active treatment plan (her ask
      2026-09-06). This strip only renders on the Dispense stage now (her ask
      2026-09-11, "script should be under dispense tab" -- Dispense is the one
@@ -27340,10 +27353,12 @@
         presTpInlineOpen(tpInlineOpen.dataset.tpInlineOpen.slice(0, i), tpInlineOpen.dataset.tpInlineOpen.slice(i + 1));
         return;
       }
-      if (e.target.closest("[data-tp-inline-back]")) { presTpInlinePlanId = null; phTpScreenPlanId = null; renderPresPanel(); return; }
+      if (e.target.closest("[data-tp-inline-back]")) { presTpInlinePlanId = null; presTpInlineLoose = false; phTpScreenPlanId = null; renderPresPanel(); return; }
       const tpInlineNewOpen = e.target.closest("[data-tp-inline-new-open]");
-      if (tpInlineNewOpen) { presTpInlineNew = true; phTpScreenPatient = tpInlineNewOpen.dataset.tpInlineNewOpen; renderPresPanel(); return; }
+      if (tpInlineNewOpen) { presTpInlineNew = true; presTpInlineLoose = false; phTpScreenPatient = tpInlineNewOpen.dataset.tpInlineNewOpen; renderPresPanel(); return; }
       if (e.target.closest("[data-tp-inline-new-cancel]")) { presTpInlineNew = false; renderPresPanel(); return; }
+      const tpInlineLooseOpen = e.target.closest("[data-tp-inline-loose-open]");
+      if (tpInlineLooseOpen) { presTpInlineLooseOpen(tpInlineLooseOpen.dataset.tpInlineLooseOpen); return; }
       const tpInlineCreate = e.target.closest("[data-tp-inline-create]");
       if (tpInlineCreate && phTpScreenPatient) {
         const id = tpInlineCreate.dataset.tpInlineCreate;
@@ -33979,7 +33994,7 @@ or changing anything in Cliniko.
     presLabelOpen = false; presMoreOpen = false; presFuOpen = false;
     presNameOpen = false; presHistOpen = false; presThirdOpen = false; presMedHxOpen = false;
     presNotesOpen = false; presTreatOpen = false; presHistMoreOpen = false;
-    presTpInlinePlanId = null; presTpInlineNew = false;
+    presTpInlinePlanId = null; presTpInlineNew = false; presTpInlineLoose = false;
     presAcuOpen = false; presAcuOutcomeDraft = null; phTpCycleEditOpen = false;
     presFacialOpen = false; presFpDraft = null; presFpProtoOpen = false;
     presPickLocked = null;
@@ -40575,6 +40590,17 @@ or changing anything in Cliniko.
     if (!t) { presHxInlineSync(null); el.innerHTML = ""; done(); return; }
     const pp = PHARMACY.presPricing || { method: "gram", gramPrice: 0.71, markup: 3 };
     const isF = presIsFormula(t), ab = presAbbr(t);
+    // decision 3 ("plan is the spine"), locked 2026-09-11: a patient with NO
+    // treatment plan at all sees this, full-screen, before anything else --
+    // no skip, her explicit call. Checked before every other stage/case
+    // computation below since none of it matters until she's past this.
+    const gateName = !isF ? presPatientFor(t) : null;
+    if (gateName && phTpPlans(gateName).length === 0) {
+      phTpScreenPatient = gateName;
+      el.innerHTML = presNoPlanGateHtml(t, gateName);
+      done();
+      return;
+    }
     // option A (2026-09-07): a script whose Case was never set inherits the
     // patient's treatment plan the moment it opens -- see phCaseFillFromPlan
     if (!isF && !t.caseType && phCaseFillFromPlan(presPatientFor(t))) savePresc();
@@ -42731,10 +42757,51 @@ or changing anything in Cliniko.
   // as a template) -- her answer to "replace the modal or keep both" came
   // back as "show", read as keep both; correct me if that's wrong. ----
   function presTpInlineHtml(name, plans) {
-    if (presTpInlineNew) return presTpInlineNewHtml(name);
+    const tabs = presTpPlanTabsHtml(name, plans);
+    if (presTpInlineLoose) return tabs + presTpInlineLooseHtml(name);
+    if (presTpInlineNew) return tabs + presTpInlineNewHtml(name);
     const plan = presTpInlinePlanId ? phTpFindPlan(name, presTpInlinePlanId) : null;
-    if (plan) return presTpInlineEditorHtml(name, plan);
-    return presTpInlineListHtml(name, plans);
+    if (plan) return tabs + presTpInlineEditorHtml(name, plan);
+    return tabs + presTpInlineListHtml(name, plans);
+  }
+  // decisions 2 + 8 + the tab-order pick (2026-09-11, "Option B"): active
+  // plan(s) first, other/past plans next (greyed unless selected), the loose
+  // "Not on a plan" tab last -- it's legacy-only, never a destination (her
+  // decision 4). Only shown at all once there's an actual choice to make;
+  // one plan and nothing loose needs no switcher.
+  function presTpPlanTabsHtml(name, plans) {
+    const loose = presTpLooseScripts(name);
+    if (plans.length <= 1 && !loose.length) return "";
+    const ordered = [...plans.filter(p => p.status === "active"), ...plans.filter(p => p.status !== "active")];
+    return `<div class="ph-tp-plantabs">
+      ${ordered.map(p => {
+        const on = !presTpInlineNew && !presTpInlineLoose && presTpInlinePlanId === p.id;
+        const past = p.status !== "active";
+        return `<button type="button" class="ph-pres-tab${on ? " on" : ""}${past && !on ? " pastplan" : ""}" data-tp-inline-open="${esc(name)}|${p.id}">${esc(p.title || "Treatment plan")}</button>`;
+      }).join("")}
+      <button type="button" class="ph-pres-tab new" data-tp-inline-new-open="${esc(name)}">+ New</button>
+      ${loose.length ? `<button type="button" class="ph-pres-tab loose${presTpInlineLoose ? " on" : ""}" data-tp-inline-loose-open="${esc(name)}">Not on a plan</button>` : ""}
+    </div>`;
+  }
+  // decision 2: her own scripts that predate/sit outside any plan phase --
+  // clicking one just opens it, same as any other script switch
+  // (data-pres-open, already used everywhere else a script list is shown).
+  function presTpInlineLooseHtml(name) {
+    const loose = presTpLooseScripts(name);
+    return `<div class="ph-tp-inline">
+      <div class="ph-hx-constit-note">Not linked to any plan phase — kept here, never auto-filed.</div>
+      ${loose.map(s => {
+        const started = presScriptCreatedAt(s);
+        const dateTxt = started ? phShortDate(keyOf(new Date(started))) : "";
+        return `<button type="button" class="ph-tp-plancard" data-pres-open="${s.id}">
+          <span class="ph-tp-pc-main">
+            <span class="ph-tp-pc-title">${esc(presIdentityText(s))}</span>
+            <span class="ph-tp-pc-phase">${dateTxt ? `Started ${esc(dateTxt)}` : ""}</span>
+          </span>
+          <span class="ph-tp-pc-chev">›</span>
+        </button>`;
+      }).join("") || `<div class="ph-hx-constit-note">Nothing loose right now.</div>`}
+    </div>`;
   }
   function presTpInlineListHtml(name, plans) {
     const st = v => phTpStatusMeta(v, PH_TP_STATUSES);
@@ -42757,12 +42824,12 @@ or changing anything in Cliniko.
       <button type="button" class="ph-tp-addbtn" data-tp-inline-new-open="${esc(name)}">+ New treatment plan</button>
     </div>`;
   }
-  function presTpInlineNewHtml(name) {
+  // shared by the inline "+ New" flow and the no-plan gate below -- same
+  // cards, same click target (data-tp-inline-create), so one edit to either
+  // never leaves the other stale.
+  function presTpTemplatePickCardsHtml(name, curScript) {
     const userTpls = phTpUserTemplates();
-    const curScript = PRESC.items.find(x => x.id === presOpenId);
-    return `<div class="ph-tp-inline">
-      <div class="ph-tp-inline-head"><button type="button" class="tab-link" data-tp-inline-new-cancel="1">‹ Cancel</button><b>Start a new plan</b></div>
-      <button type="button" class="ph-tp-tmplcard blank" data-tp-inline-create="blank">
+    return `<button type="button" class="ph-tp-tmplcard blank" data-tp-inline-create="blank">
         <span class="ph-tp-tmplcard-title">Blank plan</span>
         <span class="ph-tp-tmplcard-sub">One starter phase — build it as you go${(() => { const cur = PRESC.items.find(t => !presIsFormula(t) && phPatientKey(presPatientFor(t)) === phPatientKey(name)); return cur && (cur.formula || "").trim() ? `, their current formula already suggested` : ""; })()}</span>
       </button>
@@ -42770,7 +42837,35 @@ or changing anything in Cliniko.
       ${userTpls.map(t => `<button type="button" class="ph-tp-tmplcard" data-tp-inline-create="${t.id}">
         <span class="ph-tp-tmplcard-title">${esc(t.name)} <span class="ph-tp-tmplcard-mine">yours</span></span>
         <span class="ph-tp-tmplcard-sub">${t.phases.length} phase${t.phases.length === 1 ? "" : "s"}</span>
-      </button>`).join("")}
+      </button>`).join("")}`;
+  }
+  function presTpInlineNewHtml(name) {
+    const curScript = PRESC.items.find(x => x.id === presOpenId);
+    return `<div class="ph-tp-inline">
+      <div class="ph-tp-inline-head"><button type="button" class="tab-link" data-tp-inline-new-cancel="1">‹ Cancel</button><b>Start a new plan</b></div>
+      ${presTpTemplatePickCardsHtml(name, curScript)}
+    </div>`;
+  }
+  // decision 3, locked 2026-09-11 ("leading", no skip): the ENTIRE panel for
+  // a no-plan patient, in place of the normal band+stages -- renderPresPanel
+  // branches here before any of that renders. Same template cards as the
+  // inline "+ New" flow (presTpTemplatePickCardsHtml), just full-screen and
+  // unavoidable. data-pres-close still works -- she can leave to a different
+  // patient, she just can't see THIS one's profile without picking a plan.
+  function presNoPlanGateHtml(t, name) {
+    return `<div class="ph-listing ph-pres-panel${phCaseAccentClass(t)} ph-noplan-gate">
+      <div class="ph-pres-band">
+        <button type="button" class="ph-band-back" data-pres-close="1" aria-label="Close">‹</button>
+        <div class="ph-band-titlewrap">
+          <span class="ph-band-name">${esc(phDispName(t.name, false))}</span>
+          <span class="ph-band-sub">No treatment plan yet</span>
+        </div>
+      </div>
+      <div class="ph-noplan-gate-body">
+        <div class="ph-noplan-gate-title">${esc(phDispName(t.name, false))} doesn't have a treatment plan yet</div>
+        <div class="ph-noplan-gate-sub">Start one to bring her prescriptions, phases and history together — this is the first thing you'll see until she's on a plan.</div>
+        ${presTpTemplatePickCardsHtml(name, t)}
+      </div>
     </div>`;
   }
   function presTpInlineEditorHtml(name, plan) {
@@ -42810,9 +42905,20 @@ or changing anything in Cliniko.
     </div>`;
   }
   function presTpInlineOpen(name, planId) {
-    presTpInlinePlanId = planId; presTpInlineNew = false;
+    presTpInlinePlanId = planId; presTpInlineNew = false; presTpInlineLoose = false;
     phTpScreenPatient = name; phTpScreenPlanId = planId;
     phTpFormulaPickPhase = null; phTpDeleteArm = null;
+    renderPresPanel();
+  }
+  // decision 2, locked 2026-09-11 (the loose "Not on a plan" tab): scripts
+  // with no phaseTag typed at all -- never auto-filed onto a plan, her own
+  // words "stay loose, indefinitely".
+  function presTpLooseScripts(name) {
+    return schedPresForPatient(name).filter(s => !s.phaseTag);
+  }
+  function presTpInlineLooseOpen(name) {
+    presTpInlineLoose = true; presTpInlineNew = false; presTpInlinePlanId = null;
+    phTpScreenPatient = name; phTpScreenPlanId = null;
     renderPresPanel();
   }
   function presTpInlineCreate(name, templateId) {
@@ -42825,9 +42931,18 @@ or changing anything in Cliniko.
     rec.treatmentPlans.push(plan);
     phTpApplyInterrupt(rec, plan, templateId);   // an acute plan pauses the course it interrupts
     phTpAutoFillCase(templateId, presOpenId);
-    presTpInlineNew = false; presTpInlinePlanId = plan.id;
+    presTpInlineNew = false; presTpInlineLoose = false; presTpInlinePlanId = plan.id;
     phTpScreenPatient = name; phTpScreenPlanId = plan.id;
     phTpFormulaPickPhase = null; phTpDeleteArm = null;
+    // land straight on the plan she just made -- a no-op for the existing
+    // "+ New" flow (already there), but the no-plan gate opens with no stage
+    // picked yet, so without this she'd clear the gate into a blank Opening
+    // stage with nothing to show the plan actually exists now. presStageForId
+    // must be set too, or renderPresPanel's own "different script just
+    // opened" check (presStageForId !== t.id) silently recomputes presStage
+    // right back to Opening the moment this render runs -- the exact trap
+    // documented where every other stage-setting caller in this file hits it.
+    presStage = "treatment"; presStageForId = presOpenId; presTreatOpen = true;
     savePharmacy(); renderPresPanel();
   }
   // 2026-09-01 "make it easier": the old inline blank/template chooser strip
@@ -42886,7 +43001,7 @@ or changing anything in Cliniko.
     // from either surface) also drops the inline editor back to its plan
     // list -- the two surfaces share plan identity, so a plan that's gone
     // shouldn't leave the row pointing at it.
-    presTpInlinePlanId = null; presTpInlineNew = false;
+    presTpInlinePlanId = null; presTpInlineNew = false; presTpInlineLoose = false;
     renderPresPanel();
   }
   // re-renders whichever surface is actually showing a plan right now --
@@ -46426,7 +46541,7 @@ Please let me know if you have any questions.`;
     // leak its expanded state into a brand new one
     presThirdOpen = false; presMedHxOpen = false;
     presNotesOpen = false; presTreatOpen = false; presHistMoreOpen = false;
-    presTpInlinePlanId = null; presTpInlineNew = false;
+    presTpInlinePlanId = null; presTpInlineNew = false; presTpInlineLoose = false;
     presAcuOpen = false; presAcuOutcomeDraft = null; phTpCycleEditOpen = false;
     presFacialOpen = false; presFpDraft = null; presFpProtoOpen = false;
     presRenderPanelSmooth();
@@ -47305,7 +47420,7 @@ Please let me know if you have any questions.`;
   // field/status/phase/formula/review handler works completely unchanged
   // whether it's editing through this row or through the full-screen modal
   // -- see phTpRerender().
-  let presTpInlinePlanId = null, presTpInlineNew = false;
+  let presTpInlinePlanId = null, presTpInlineNew = false, presTpInlineLoose = false;
   // 🪡 Acupuncture record (her ask 2026-09-03: "some of my fertility/herb
   // patients also need acupuncture. build an acupuncture treatment record
   // too") -- opt-in per patient (rec.acuEnabled), record-only, no scheduling
