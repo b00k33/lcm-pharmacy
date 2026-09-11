@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260912-020000">
+<meta name="lcm-build" content="20260912-030000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6226,6 +6226,24 @@
     display: flex; align-items: center; font-size: 11px; font-weight: 700; color: var(--ph-green-deep);
     padding-right: 10px; margin-right: 2px; border-right: 1px solid var(--ph-line); white-space: nowrap;
   }
+  /* the cycle/plan strip, Dispense stage only (her approved mock, option C) --
+     one line, quiet tint, sits directly under the tab strip above it */
+  #pharmacyPage .ph-dsp-strip {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px;
+    padding: 8px 16px; background: var(--ph-green-tint); font-size: 11.5px; color: var(--ph-green-deep);
+    border-bottom: 1px solid var(--ph-line);
+  }
+  #pharmacyPage .ph-dsp-phase { font-weight: 700; }
+  #pharmacyPage .ph-dsp-sugg { color: var(--ph-soft); }
+  #pharmacyPage .ph-dsp-sugg b { color: var(--ph-ink); }
+  #pharmacyPage .ph-dsp-use {
+    margin-left: 6px; font: inherit; font-size: 10.5px; font-weight: 700; color: var(--ph-green-deep);
+    background: var(--ph-white); border: 1px solid var(--ph-green); border-radius: 999px; padding: 2px 9px; cursor: pointer;
+  }
+  #pharmacyPage .ph-dsp-use:hover { background: var(--ph-green-tint); }
+  /* same content, quieter, right under the Formula field itself */
+  #pharmacyPage .ph-dsp-inlinesugg { padding: 2px 0 0; color: var(--ph-soft); }
+  #pharmacyPage .ph-dsp-inlinesugg b { color: var(--ph-ink); }
   /* her ask 2026-09-05: the case type that drives what quiets elsewhere on
      this panel -- lives right next to the script tabs, since that's where
      she's already looking to see which script she's in */
@@ -25732,6 +25750,24 @@
       // already refreshes the live price line whether or not the preview
       // is open, so removing this is a pure behavior fix, not a regression.
       if (e.target.closest("[data-pres-calc]")) { presMoreOpen = false; presCalcSessionDone = true; renderPresPanel(); return; }
+      // Dispense stage cycle/plan strip (her approved mock, option C, both
+      // placements) -- one-tap adopt of the CURRENT phase's linked/suggested
+      // formula into the Formula field, same write path #presFormulaText's
+      // own change handler uses (~29336), so nothing downstream needs to know
+      // this came from a click instead of typing.
+      const useSugg = e.target.closest("[data-pres-formula-usesugg]");
+      if (useSugg) {
+        const t = PRESC.items.find(x => x.id === presOpenId);
+        const name = useSugg.dataset.presFormulaUsesugg;
+        if (t && name) {
+          t.formula = name;
+          const fld = document.getElementById("presFormulaText");
+          if (fld) fld.value = name;
+          presBandMetaRefresh(t);
+          savePresc();
+        }
+        return;
+      }
       if (e.target.closest("[data-pres-lastdisp-view]")) {
         const id = e.target.closest("[data-pres-lastdisp-view]").dataset.presLastdispView;
         presLastDispViewId = presLastDispViewId === id ? null : id;
@@ -40502,7 +40538,7 @@ or changing anything in Cliniko.
       ${!isF && presStage === "opening" ? presStageOpeningHtml(t) : ""}
       ${!isF && presStage === "assessment" ? presStageAssessmentHtml(t) : ""}
       ${!isF && presStage === "treatment" ? presStageTreatmentHtml(t) : ""}
-      ${!isF && presStage === "dispense" ? presScriptSwitcherHtml(t) : ""}
+      ${!isF && presStage === "dispense" ? presScriptSwitcherHtml(t) + presDispenseCyclePlanStripHtml(t) : ""}
       ${!isF && presStage === "followup" ? presStageFollowupHtml(t) : ""}
       ${isF || presStage === "dispense" ? `
       <div class="ph-pres-body">
@@ -40513,6 +40549,7 @@ or changing anything in Cliniko.
         <label class="ph-inline-label">Formula <input type="text" id="presFormulaText" value="${esc(t.formula || "")}" placeholder="e.g. Ban Xia Xie Xin Tang" aria-label="Formula text for the label" style="min-width:240px"></label>
         <span class="ph-formula-meta">prints on the label's “Formula:” line</span>
       </div>
+      ${presDispenseFormulaHintHtml(t)}
       <div class="ph-build-top ph-doseline">
         <span class="ph-inline-label ph-dosewrap">Dosage
           <input type="text" inputmode="decimal" id="presDoseN" value="${t.doseN != null ? t.doseN : phDoseDef().n}" aria-label="Spoons per dose">
@@ -46300,6 +46337,48 @@ Please let me know if you have any questions.`;
         ${phTpMenuOpen ? presMenuHtml(t) : ""}
       </span>
     </div>`;
+  }
+  // her approved mock, option C ("both") -- the Dispense stage's own strip
+  // above already names WHICH plan (planLabel, just above); this answers the
+  // two questions that strip doesn't: where is she in her cycle right now,
+  // and what does the plan's CURRENT phase actually call for. Same content
+  // renders in two places (the full-width strip below, and a quieter inline
+  // note beside the Formula field further down) so she can act on it from
+  // wherever she's already looking. Nothing new to type -- phCycleComp,
+  // phTpShownPlan and phTpPlanCurrentPhase already power the Treatment tab's
+  // own cycle chip and phase line; read-only, so phPatientPeek not
+  // phPatientRec (the latter mutates plans on every call -- see CLAUDE.md).
+  function presDispenseCyclePlanInfo(t) {
+    const name = presPatientFor(t);
+    if (!name) return null;
+    const rec = phPatientPeek(name);
+    const comp = rec ? phCycleComp(rec) : null;
+    const plan = phTpShownPlan(name);
+    const phase = plan && phTpPlanCurrentPhase(plan);
+    const suggFormula = phase ? (phase.formulaName || phase.suggestFormula || "").trim() : "";
+    if (!comp && !phase) return null;
+    return { comp, phase, suggFormula };
+  }
+  function presDispenseSuggBtnHtml(suggFormula) {
+    return `<button type="button" class="ph-dsp-use" data-pres-formula-usesugg="${esc(suggFormula)}">Use</button>`;
+  }
+  function presDispenseCyclePlanStripHtml(t) {
+    const info = presDispenseCyclePlanInfo(t);
+    if (!info) return "";
+    const { comp, phase, suggFormula } = info;
+    const differs = suggFormula && suggFormula !== (t.formula || "").trim();
+    const parts = [
+      phCycleChipHtml(comp),
+      phase ? `<span class="ph-dsp-phase">📋 ${esc(phase.label || "Current phase")}</span>` : "",
+      differs ? `<span class="ph-dsp-sugg">plan suggests <b>${esc(suggFormula)}</b>${presDispenseSuggBtnHtml(suggFormula)}</span>` : "",
+    ].filter(Boolean);
+    return parts.length ? `<div class="ph-dsp-strip">${parts.join("")}</div>` : "";
+  }
+  function presDispenseFormulaHintHtml(t) {
+    const info = presDispenseCyclePlanInfo(t);
+    const suggFormula = info && info.suggFormula;
+    if (!suggFormula || suggFormula === (t.formula || "").trim()) return "";
+    return `<div class="ph-formula-meta ph-dsp-inlinesugg">plan suggests <b>${esc(suggFormula)}</b>${presDispenseSuggBtnHtml(suggFormula)}</div>`;
   }
   /* The one ⋯ (her "Everything in ⋯", 2026-09-10). Two sections: the
      prescription's own Case and phase word, then -- only while a plan is
