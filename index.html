@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260912-030000">
+<meta name="lcm-build" content="20260912-040000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -7134,8 +7134,6 @@
   #pharmacyPage .ph-cycle-wrap.quiet > .ph-treat-row.hasanswers,
   #pharmacyPage .ph-cycle-wrap.quiet > .ph-treat-row.notstarted { background: var(--ph-paper); color: var(--ph-soft); }
   #pharmacyPage .ph-cycle-quick { display: inline-flex; align-items: center; gap: 8px; flex: none; padding-right: 4px; }
-  #pharmacyPage .ph-cycle-qbtn { font: inherit; font-size: 11.5px; font-weight: 700; color: var(--ph-cream); background: var(--ph-green-deep); border: 1px solid var(--ph-green-deep); border-radius: 999px; padding: 4px 10px; cursor: pointer; white-space: nowrap; }
-  #pharmacyPage .ph-cycle-qbtn:hover { background: var(--ph-green-press); }
   #pharmacyPage .ph-cycle-qdate { position: relative; font-size: 11.5px; color: var(--ph-soft); cursor: pointer; white-space: nowrap; }
   #pharmacyPage .ph-cycle-qdate:hover { color: var(--ph-green-deep); }
   #pharmacyPage .ph-cycle-qdate input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
@@ -26514,6 +26512,17 @@
         phCycleLogFrom(cycTodayBtn, rec, keyOf(TODAY), nm && nm !== "1" ? nm : "");
         return;
       }
+      // the merged "Log period…" field (2026-09-12) opens pre-filled to
+      // today, unlike every other date field here which starts empty -- so
+      // the usual "blur with a valid value = log it" rule below would fire
+      // from an incidental focus/blur too (tabbing past it, a stray click
+      // that never actually opened the picker), silently creating a real
+      // period-log entry she never meant. A genuine click/tap on the field
+      // is what distinguishes "she opened this on purpose" from "focus just
+      // passed through it" -- deliberately not `return`ing, since this is
+      // bookkeeping only and the click should still focus the input normally.
+      const periodDateClick = e.target.closest("[data-cycle-period-date]");
+      if (periodDateClick) periodDateClick.dataset.cycleTouched = "1";
       // her ask 2026-09-05: the Today's Timeline 🩸 quick-log popover --
       // see presTlCycBtnHtml/presTlCycPopHtml in renderPresWeek
       const cycTlToggle = e.target.closest("[data-pres-tl-cyc-toggle]");
@@ -29454,6 +29463,17 @@
       }
       const periodDate = e.target.closest("[data-cycle-period-date]");
       if (periodDate) {
+        // the merged "Log period…" field opens pre-filled to today (see the
+        // click listener that sets this flag, ~26520) -- without requiring a
+        // genuine click first, an incidental focus/blur (tabbing past it)
+        // would log today's date on its own, since a pre-filled value always
+        // passes the year check below. Every other caller of this same
+        // data-attribute (phCkCycleLineHtml's own copy) starts empty and so
+        // was never at risk -- this guard is a no-op there, not a behavior
+        // change, since a real pick already implies a real click.
+        const touched = periodDate.dataset.cycleTouched === "1";
+        delete periodDate.dataset.cycleTouched;
+        if (!touched) return;
         const nm = periodDate.dataset.cyclePeriodDate;
         const rec = nm && nm !== "1" ? phPatientRec(nm) : phCycleTargetRec();
         const yr = parseInt((periodDate.value || "").slice(0, 4), 10);
@@ -42090,9 +42110,15 @@ or changing anything in Cliniko.
     savePharmacy();
     return phCycleComp(rec);
   }
+  // her walkthrough revision (2026-09-12, on the widget mock): "i dont use
+  // period started today" -- the one-tap button was the loudest thing in
+  // this row for an action she said she never takes. Merged into the single
+  // date field she does use, opened on today so confirming it is one tap,
+  // changing it is one more. (phCkCycleLineHtml, the Today's Timeline
+  // popover's own separate copy of this row, is untouched -- she was shown
+  // and approved this change for the Opening-stage Cycle row only.)
   const phCycleQuickHtml = name => `<span class="ph-cycle-quick">
-      <button type="button" class="ph-cycle-qbtn" data-cycle-period-today="${esc(name || "")}" title="Log that her period started today">🩸 Period started today</button>
-      <label class="ph-cycle-qdate" title="Log a period that started another day">another day…<input type="date" data-cycle-period-date="${esc(name || "")}" max="${keyOf(TODAY)}" aria-label="Period started on"></label>
+      <label class="ph-cycle-qdate" title="Log a period -- opens on today, pick an earlier day if it started before that">Log period…<input type="date" data-cycle-period-date="${esc(name || "")}" value="${keyOf(TODAY)}" max="${keyOf(TODAY)}" aria-label="Period started on"></label>
     </span>`;
   // Menstrual-history questionnaire (her ask 2026-09-05: "can you make the
   // menstrual tracking into a questionaire format/card like view for new
