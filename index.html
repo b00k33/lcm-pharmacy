@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260912-040000">
+<meta name="lcm-build" content="20260912-050000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -7379,6 +7379,16 @@
   #pharmacyPage .ph-tp-formula-chip.empty { background: none; color: var(--ph-soft); font-weight: 600; border-style: dashed; }
   #pharmacyPage .ph-tp-grid .ph-tp-formula-chip { vertical-align: middle; }
   #pharmacyPage .ph-tp-sugg { display: inline-block; margin-left: 6px; font-size: 11px; color: var(--ph-faint); vertical-align: middle; }
+  /* every formula link's history (her decision 6, 2026-09-12) -- collapsed
+     to a small count by default, same "default one line" posture as
+     everywhere else in this app */
+  #pharmacyPage .ph-tp-fhist-toggle {
+    display: block; font: inherit; font-size: 10.5px; font-weight: 600; color: var(--ph-faint);
+    background: none; border: none; padding: 3px 0 0; cursor: pointer;
+  }
+  #pharmacyPage .ph-tp-fhist-toggle:hover { color: var(--ph-soft); }
+  #pharmacyPage .ph-tp-fhist-list { margin-top: 2px; }
+  #pharmacyPage .ph-tp-fhist-row { font-size: 11px; color: var(--ph-soft); padding: 1px 0; }
   /* the phase line -- her report 2026-09-11: two phases of the SAME plan
      read as separate things, even though the table underneath is one
      continuous sequence with zero pixels of real space between them
@@ -26378,11 +26388,22 @@
         phTpRepaintPhasePanel();
         return;
       }
+      const tpFHistToggle = e.target.closest("[data-tp-formula-hist-toggle]");
+      if (tpFHistToggle) {
+        const phaseId = tpFHistToggle.dataset.tpFormulaHistToggle;
+        if (phTpFormulaHistOpen.has(phaseId)) phTpFormulaHistOpen.delete(phaseId); else phTpFormulaHistOpen.add(phaseId);
+        phTpRepaintPhasePanel();
+        return;
+      }
       const tpFUnlink = e.target.closest("[data-tp-formula-unlink]");
       if (tpFUnlink) {
         const [planId, phaseId] = tpFUnlink.dataset.tpFormulaUnlink.split(":");
         const plan = phTpFindPlan(phTpScreenPatient, planId);
         const ph = plan && plan.phases.find(p => p.id === phaseId);
+        // unlinking clears the CURRENT chip only -- the history array is a
+        // record, append-only, same "never destroy the record" posture as
+        // the freeze/unlock and Rx-wipe tombstone fixes elsewhere in this
+        // file. Nothing to push here: an unlink isn't a new formula link.
         if (ph) { ph.formulaId = null; ph.formulaName = ""; savePharmacy(); phTpRepaintPhasePanel(); }
         return;
       }
@@ -26391,12 +26412,13 @@
         const plan = phTpFindPlan(phTpScreenPatient, phTpScreenPlanId);
         const ph = plan && plan.phases.find(p => p.id === phTpFormulaPickPhase);
         if (ph) {
+          let formulaId = null, formulaName = "";
           if (tpPickJar) {
             const h = PHARMACY.herbs.find(x => x.id === tpPickJar.dataset.tpPickJar);
-            if (h) { ph.formulaId = h.id; ph.formulaName = phDispName(h.name, true); }
+            if (h) { formulaId = h.id; formulaName = phDispName(h.name, true); }
           } else if (tpPickRefill) {
             const r = PRESC.items.find(x => x.id === tpPickRefill.dataset.tpPickRefill);
-            if (r) { ph.formulaId = r.id; ph.formulaName = phDispName(r.name, true); }
+            if (r) { formulaId = r.id; formulaName = phDispName(r.name, true); }
           } else {
             // her ask 2026-09-11 ("need to be able to name a formula"): no
             // inventory match required -- formulaName has always been plain
@@ -26404,7 +26426,15 @@
             // "Planned" line), never a lookup key, so a typed-only name is
             // exactly as safe as a picked one. formulaId stays null, same as
             // any phase she hasn't linked to real stock.
-            ph.formulaId = null; ph.formulaName = tpPickTyped.dataset.tpPickTyped || "";
+            formulaName = tpPickTyped.dataset.tpPickTyped || "";
+          }
+          if (formulaName) {
+            ph.formulaId = formulaId; ph.formulaName = formulaName;
+            // her decision 6 (2026-09-12): every link becomes a history
+            // entry, dispensed or not -- a mid-phase change reads as what
+            // was considered, not just an overwritten guess.
+            if (!Array.isArray(ph.formulaHistory)) ph.formulaHistory = [];
+            ph.formulaHistory.push({ id: uid(), formulaId, formulaName, dateKey: keyOf(TODAY), at: Date.now() });
           }
           phTpFormulaPickPhase = null;
           savePharmacy(); phTpRepaintPhasePanel();
@@ -42775,6 +42805,13 @@ or changing anything in Cliniko.
   let phTpScreenPatient = null, phTpScreenPlanId = null;
   let phTpFormulaPickPhase = null;   // phase id currently showing its formula search
   let phTpDeleteArm = null;          // "plan" or a review id currently armed for delete
+  // her decision 6 (2026-09-12, "every formula link creates a new history
+  // entry, dispensed or not"): which phases currently have their PAST
+  // formula links expanded open. Collapsed by default (her "default one
+  // line" posture) -- the current link is always the readable chip, history
+  // is a click away, same progressive-disclosure shape as Photos' own
+  // "Show all" toggle.
+  let phTpFormulaHistOpen = new Set();
   function phTpOpen(name, planId) {
     if (!name || !planId) return;
     phTpScreenPatient = name; phTpScreenPlanId = planId;
@@ -43597,6 +43634,27 @@ or changing anything in Cliniko.
         ${phase.status === "done" ? `<button type="button" class="ph-tp-lock" data-tp-unlock="${phase.id}" title="${phTpUnlockDone.has(phase.id) ? "Closed phase, unlocked for this session — click to freeze it again" : "This phase is closed. Its plan is frozen so the record still shows what you intended at the time — click to edit anyway"}">${phTpUnlockDone.has(phase.id) ? "🔓 unlocked" : "🔒 frozen"}</button>` : ""}
         <button type="button" class="del" data-tp-phase-del="${plan.id}:${phase.id}" title="Remove this phase" aria-label="Remove ${esc(phase.label)}">×</button>`;
   }
+  // her decision 6 (2026-09-12): every formula link is a history entry now
+  // (formula.formulaHistory, appended in the pick handler above), never an
+  // overwrite -- these two helpers turn that log into the small "+N earlier"
+  // disclosure under the Formula cell. "Past" excludes whichever entry is
+  // still the CURRENT chip (the usual case: the last push); after an
+  // unlink, phase.formulaName is empty and nothing in the log is current
+  // any more, so every entry counts as history.
+  function phTpFormulaPastEntries(phase) {
+    const hist = Array.isArray(phase.formulaHistory) ? phase.formulaHistory : [];
+    if (!hist.length) return [];
+    const last = hist[hist.length - 1];
+    const currentIsLast = phase.formulaName && last.formulaId === (phase.formulaId || null) && last.formulaName === phase.formulaName;
+    return currentIsLast ? hist.slice(0, -1) : hist.slice();
+  }
+  function phTpFormulaHistoryHtml(phase) {
+    const past = phTpFormulaPastEntries(phase);
+    if (!past.length) return "";
+    const open = phTpFormulaHistOpen.has(phase.id);
+    const newestFirst = past.slice().reverse();
+    return `<button type="button" class="ph-tp-fhist-toggle" data-tp-formula-hist-toggle="${phase.id}" aria-expanded="${open ? "true" : "false"}">${open ? "▾" : "▸"} ${past.length} earlier</button>${open ? `<div class="ph-tp-fhist-list">${newestFirst.map(e => `<div class="ph-tp-fhist-row">${esc(phShortDate(e.dateKey))} · ${esc(e.formulaName)}</div>`).join("")}</div>` : ""}`;
+  }
   function phTpPhaseBodyRows(plan, phase) {
     const picking = phTpFormulaPickPhase === phase.id;
     /* Her spec 2026-09-09: "Planned beside What happened". The left half stays
@@ -43638,7 +43696,7 @@ or changing anything in Cliniko.
       <tr class="ph-tp-headrow"><td></td><td class="ph-tp-colhead plan">Planned</td><td></td><td class="ph-tp-colhead act">What happened</td></tr>
       <tr><td class="ph-tp-lbl">Aim</td>${cell("aim")}${rec("Outcome", "outcome")}</tr>
       <tr><td class="ph-tp-lbl">Visits</td>${cell("cadence")}${rec("Visits", "visits")}</tr>
-      <tr><td class="ph-tp-lbl">Formula</td><td class="ph-tp-fcell">${formula}${picking ? phTpPhaseFormulaPickerHtml(phase) : ""}</td>${rec("Dispensed", "dispensed")}</tr>
+      <tr><td class="ph-tp-lbl">Formula</td><td class="ph-tp-fcell">${formula}${picking ? phTpPhaseFormulaPickerHtml(phase) : ""}${phTpFormulaHistoryHtml(phase)}</td>${rec("Dispensed", "dispensed")}</tr>
       <tr><td class="ph-tp-lbl">Points</td>${cell("points")}${rec("Done", "acu")}</tr>
       <tr><td class="ph-tp-lbl">Watch</td>${cell("watch")}${rec("Periods", "periods")}</tr>
       ${!rc && acuLine ? `<tr class="ph-tp-acufoldrow"><td colspan="4">${acuLine}</td></tr>` : ""}`;
