@@ -867,6 +867,22 @@ multiple things"*. The rules:
   the main Herbal Inventory table.
 
 ## NEVER break these (protected behaviours — re-test after EVERY change)
+- **ONE location's data must never reach ANOTHER location's cloud row (her Acupreg wipe,
+  2026-09-11 13:01).** Every tab in a browser profile shares ONE copy of the `daybook-*`
+  data AND one saved Supabase session (supabase-js keeps `sb-<ref>-auth-token` in step
+  across tabs); both locations are accounts on one project, rows split only by RLS. Two
+  tabs on two locations meant a switch in one tab replaced the data under the other,
+  which — still signed in as the old location — pushed Sydney CBD's whole pharmacy into
+  Acupreg's row; the "fuller copy" guard only stops SMALLER data. The guard now:
+  `lcm-data-owner` (localStorage, not daybook-prefixed) is set in `afterAuth` when a row
+  is adopted and cleared by `clearLocalData`; `ownerOk()` (tag === signed-in email) gates
+  `pullMergePushImpl`, `flushPush`, `doUpsert.write`, `flushOnHide`, `reconcile` and the
+  history restore; a `ready` tab whose `onAuthStateChange` shows another email locks
+  itself (`ownerLockdown`) and asks for a reload. Do not add a cloud write that bypasses
+  `ownerOk()`, and do not "relax" it for an untagged copy — untagged is unproven, not
+  fine. **Never switch location from a Claude-driven tab while she may have her own LCM
+  tab open**; ask her to close hers first. Test after any sync change: with the real tag,
+  `window.__lcmFlushBeforeReload()` → true; with the tag set to a foreign email → false.
 - The Prescriptions search MUST always filter the list live as I type, by patient name
   (and herb/notes). This has broken before — after ANY change, type a known patient
   name and confirm the list narrows to only matches, then clear it and confirm the full
