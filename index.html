@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260911-223000">
+<meta name="lcm-build" content="20260911-233000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -51347,6 +51347,41 @@ Dosage: {dosage}
   var staleTab = false, pendingPushWhileStale = false, gateInFlight = false;
   var curAccessToken = "";                                 // kept in sync for the pagehide/keepalive flush, which can't await getSession()
   var lastSavedAt = null;                                  // ISO string, for the "Last saved to cloud" label
+  /* ---- WHOSE DATA IS THIS? (her Acupreg wipe, 2026-09-11) ----------------
+     Every tab in this browser profile shares ONE copy of the daybook-* data
+     AND one saved Supabase session (the default sb-<ref>-auth-token key,
+     which supabase-js keeps in step across tabs). So with two tabs open on
+     two locations, a switch in one tab replaced the data under the other
+     tab's feet, and that tab -- still signed in as the old location --
+     pushed the new location's 531-patient pharmacy into the old location's
+     cloud row. The "keep the fuller copy" guard waved it through: it only
+     stops SMALLER data, and a foreign pharmacy is bigger.
+     OWNER_KEY records which login the local data belongs to (set the moment
+     a location's cloud row is adopted, cleared with the data). Nothing may
+     push, adopt or reconcile unless that owner IS the signed-in account --
+     and a tab whose session flips to another account from outside locks
+     itself and asks for a reload rather than touching either row. Not a
+     daybook- key on purpose: never swept into gather(), never synced. */
+  var OWNER_KEY = "lcm-data-owner";
+  var ownerLock = false;
+  function dataOwner() { try { return localStorage.getItem(OWNER_KEY) || ""; } catch (e) { return ""; } }
+  function setDataOwner(email) {
+    try { if (email) _setItem.call(localStorage, OWNER_KEY, email); else localStorage.removeItem(OWNER_KEY); } catch (e) {}
+  }
+  // true only when the local data is tagged AND tagged for the account this
+  // tab is signed in as. An untagged copy is "not proven", not "fine".
+  function ownerOk() { return !ownerLock && !!myEmail && dataOwner() === myEmail; }
+  function ownerLockdown(foreignEmail) {
+    if (ownerLock) return;
+    ownerLock = true; ready = false;
+    clearTimeout(pushTimer);
+    try { sb.removeAllChannels(); } catch (e) {}
+    setLive(false);
+    overlay('<p style="color:#BCCFD6;font-size:14px;margin:2px 0 8px">This browser was switched to <b>' + esc(foreignEmail || "another location") + '</b> from another tab.</p>' +
+      '<p style="' + F.note + '">To keep the two pharmacies separate, this tab has stopped syncing. Reload it to carry on in the location that is now signed in.</p>' +
+      '<button id="lcmOwnerReload" style="' + F.btn + '">Reload</button>');
+    var b = document.getElementById("lcmOwnerReload"); if (b) b.onclick = function () { location.reload(); };
+  }
   var HIST_COL_OK = null, histCheckedDate = null, lastNoteMsg = "";
   // freshness handshake with the app (her wipe, 2026-08-22): the app's
   // boot/wake housekeeping (schedule sweep, migrations) must not WRITE the
@@ -51838,9 +51873,9 @@ Dosage: {dosage}
     return out;
   }
   function pullMergePushImpl(pushAfter) {
-    if (!sb || !ready || switching) return Promise.resolve(false);
+    if (!sb || !ready || switching || !ownerOk()) return Promise.resolve(false);
     return fetchCloud().then(function (row) {
-      if (switching) return false;                          // a location switch started mid-fetch -- abandon this cycle
+      if (switching || !ownerOk()) return false;            // a location switch started mid-fetch (here or in another tab) -- abandon this cycle
       var cloudData = (row && row.data) || {};
       var isOwnEcho = row && row.updated_at && sessionStorage.getItem(APPLIED) === row.updated_at;
       var res = mergeSections(localSnapshotObj(), cloudData);
@@ -51918,6 +51953,10 @@ Dosage: {dosage}
   // (see the 2026-08-13 fix note in pullMergePush above).
   function doUpsert(snap, json, expectedVersion) {
     function write() {
+      // last line of defence: the row this JWT unlocks must be the row this
+      // data came from. false = "not landed", with no retry scheduled --
+      // retrying a write that is wrong by construction would never help.
+      if (!ownerOk()) return Promise.resolve(false);
       return maybeWithHistory(snap).then(function (payload) {
         return sb.from("settings").upsert(payload, { onConflict: "owner" }).select("updated_at").then(function (r) {
           if (r.error) { onPushFail(json); return false; }
@@ -51955,7 +51994,7 @@ Dosage: {dosage}
     }, function () { return write(); });
   }
   function reconcile(row) {
-    if (switching) return;
+    if (switching || !ownerOk()) return;
     if (row && row.updated_at && sessionStorage.getItem(APPLIED) === row.updated_at) return;   // our own echo
     pullMergePush(false);
   }
@@ -52003,7 +52042,7 @@ Dosage: {dosage}
      supabase-js call) is specifically designed to survive page unload. */
   function flushOnHide() {
     clearTimeout(pushTimer);
-    if (!sb || !ready || switching) return;
+    if (!sb || !ready || switching || !ownerOk()) return;
     var snap = gather(), json = JSON.stringify(snap);
     if (json === lastPushed) return;
     var cfg = loadCfg(); if (!cfg) return;
@@ -52163,9 +52202,12 @@ Dosage: {dosage}
       var s = r && r.data && r.data.session; if (!s || !s.user) return;
       curAccessToken = s.access_token || curAccessToken;   // kept for the pagehide/keepalive flush, which can't await this call
       myEmail = s.user.email || myEmail;
-      var reg = loadReg(), lbl = currentLocationLabel() || s.user.email, hit = null;
+      var reg = loadReg(), hit = null;
       for (var i = 0; i < reg.length; i++) { if (reg[i].email === s.user.email) { hit = reg[i]; break; } }
       if (!hit) { hit = { email: s.user.email }; reg.push(hit); }
+      // the label comes from the local locName -- only trust it when the
+      // local data is actually this login's (otherwise keep what we had)
+      var lbl = (dataOwner() === s.user.email && currentLocationLabel()) || hit.label || s.user.email;
       hit.access_token = s.access_token; hit.refresh_token = s.refresh_token; hit.label = lbl;
       saveReg(reg); renderSwitcher();
     }, function () {});
@@ -52175,6 +52217,7 @@ Dosage: {dosage}
     for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && k.indexOf("daybook") === 0) ks.push(k); }
     suppress = true;
     try { ks.forEach(function (k) { localStorage.removeItem(k); }); } finally { suppress = false; }
+    setDataOwner("");                                        // no data, no owner -- re-tagged when the next row is adopted
   }
   // push the current location's snapshot to its OWN row and resolve when done --
   // MUST reject on a real failure (used to always resolve, silently, even when
@@ -52208,6 +52251,9 @@ Dosage: {dosage}
   function flushPush() {
     clearTimeout(pushTimer);
     if (!sb) return Promise.resolve();
+    // the one flush that runs right before a switch/sign-out wipes this
+    // device: if the data here isn't this login's, sending it is the wipe
+    if (!ownerOk()) return Promise.reject(new Error("This browser's data belongs to a different location, so nothing was sent from it."));
     return fetchCloud().then(function (row) {
       var res = mergeSections(localSnapshotObj(), (row && row.data) || {});
       var finalSnap = assembleFromSections(res.sections);
@@ -52645,6 +52691,7 @@ Dosage: {dosage}
         log: !!(document.getElementById("lcmHRLog") || {}).checked
       } : { prescriptions: true, inventory: true, log: true };
       if (!ch.prescriptions && !ch.inventory && !ch.log) return;
+      if (!ownerOk()) { hideOverlay(); return; }            // never restore INTO a row this browser's data doesn't belong to
       downloadSafetyCopy();
       // everything ticked, or the section helper isn't available for some
       // reason -- fall back to the old whole-snapshot replace so this screen
@@ -52685,7 +52732,19 @@ Dosage: {dosage}
   function afterAuth() {
     // Cloud is the source of truth. If it has data, adopt it; else offer first import.
     overlay('<p style="color:#BCCFD6;font-size:14px;margin:12px 0">Loading your pharmacy…</p>');
-    fetchCloud().then(function (row) {
+    // Pin down WHOSE row this is before reading it (see OWNER_KEY). Local data
+    // already tagged for a DIFFERENT login is another location's pharmacy
+    // sitting in this browser -- it must never be merged into, or pushed to,
+    // this account's row. Safety copy, then start clean from this row.
+    sb.auth.getSession().then(function (r) {
+      var s = r && r.data && r.data.session, email = (s && s.user && s.user.email) || myEmail || "";
+      if (email) {
+        var owner = dataOwner();
+        if (owner && owner !== email) { try { downloadSafetyCopy(); } catch (e) {} clearLocalData(); sessionStorage.removeItem(APPLIED); lastPushed = ""; }
+        myEmail = email; setDataOwner(email);
+      }
+      return fetchCloud();
+    }).then(function (row) {
       if (row && row.data && (row.data[PH_KEY] || row.data[PR_KEY])) {
         var localHas = !!localStorage.getItem(PH_KEY);
         if (localHas && sessionStorage.getItem(APPLIED) === row.updated_at) { go(); return; }
@@ -52776,7 +52835,16 @@ Dosage: {dosage}
         return;
       }
       curAccessToken = s.access_token || curAccessToken;
-      myEmail = (s.user && s.user.email) || myEmail;
+      var prevEmail = myEmail, nowEmail = (s.user && s.user.email) || "";
+      myEmail = nowEmail || myEmail;
+      // supabase-js keeps the saved session in step across tabs, so a
+      // location switch in ANOTHER tab arrives here as SIGNED_IN for a
+      // different login while this tab still holds the old location's
+      // data. Lock this tab (no push, no adopt) rather than let either row
+      // be touched -- the reload boots it cleanly into the new location.
+      // (only once this tab is fully booted -- before that, afterAuth's own
+      // owner check handles a mismatch by starting clean from the row)
+      if (ready && !switching && nowEmail && ((prevEmail && nowEmail !== prevEmail) || (dataOwner() && dataOwner() !== nowEmail))) { ownerLockdown(nowEmail); return; }
       if (_e === "TOKEN_REFRESHED" || _e === "SIGNED_IN") recordSession();
     });
   }
