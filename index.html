@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260911-210000">
+<meta name="lcm-build" content="20260911-213000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -43028,10 +43028,20 @@ or changing anything in Cliniko.
        • periods, from rec.cycleLog.
 
      Returns null for a phase that has never been current: there is no window
-     yet, and an empty record is not the same statement as "not started". ---- */
-  function phTpPhaseRecord(name, ph) {
-    if (!name || !ph || !ph.sinceKey) return null;
-    const from = ph.sinceKey, to = ph.doneKey || keyOf(TODAY);
+     yet, and an empty record is not the same statement as "not started".
+
+     `fallbackSince` covers plans created before the 2026-09-08 sinceKey/doneKey
+     stamp shipped -- their phases can be genuinely current or done with no
+     sinceKey at all, which this used to read exactly like "never started" and
+     silently hid every visit, dispense and check-in already on record for it.
+     Found live 2026-09-11 on a real active plan four days old. Only phases
+     that are actually current/done fall back to it; a truly upcoming phase
+     still has no window and correctly stays null. ---- */
+  function phTpPhaseRecord(name, ph, fallbackSince) {
+    if (!name || !ph) return null;
+    const since = ph.sinceKey || ((ph.status === "current" || ph.status === "done") ? fallbackSince : null);
+    if (!since) return null;
+    const from = since, to = ph.doneKey || keyOf(TODAY);
     const key = phPatientKey(name);
     const rec = phPatientPeek(key) || {};
     const within = d => !!d && d >= from && d <= to;
@@ -43300,7 +43310,7 @@ or changing anything in Cliniko.
        time, or the record stops being one -- but a typo is still a typo, so the
        padlock on the phase line lets her back in for this session. */
     const frozen = phase.status === "done" && !phTpUnlockDone.has(phase.id);
-    const rc = phTpPhaseRecord(phTpScreenPatient, phase);
+    const rc = phTpPhaseRecord(phTpScreenPatient, phase, plan.createdDate);
     const cell = (f, extra) => frozen
       ? `<td class="ph-tp-cell frozen${phase[f] ? "" : " empty"}"${extra || ""} title="This phase is closed — unlock it on the phase line to edit">${phase[f] ? esc(phase[f]) : "—"}</td>`
       : `<td class="ph-tp-cell${phase[f] ? "" : " empty"}"${extra || ""} data-tp-edit="${plan.id}:${phase.id}:${f}" title="Click to edit">${phase[f] ? esc(phase[f]) : esc(PH_TP_FIELD_PH[f])}</td>`;
