@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260911-201500">
+<meta name="lcm-build" content="20260911-210000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -34029,7 +34029,13 @@ or changing anything in Cliniko.
     const doseN = t.doseN != null ? parseFloat(t.doseN) : phDoseDef().n;
     const doseT = t.doseT != null ? parseFloat(t.doseT) : phDoseDef().t;
     const gramsPerDay = (doseN || 0) * gpu * (doseT || 0);
-    if (!gramsPerDay || !grams) return { ok: false, reason: "no-gram-value" };
+    // her real gram weight per unit IS known at this point (the !gpu check
+    // above already passed) -- this is a blank/undispensed script, not a
+    // missing-config one, so it needs its own reason: reusing "no-gram-value"
+    // here made the message quote an empty unit name ("no gram weight set
+    // for “”"), which reads as broken config on a script that
+    // simply hasn't had a dose or a Grams total entered yet.
+    if (!gramsPerDay || !grams) return { ok: false, reason: "no-grams-yet" };
     const lastsDays = grams / gramsPerDay;                    // raw, e.g. 5.555.. -- NEVER rounded before date math
     const dispenseDate = parseKey(dispenseDateKey);
     // her call (2026-08-23): "dosing day 1" only means anything if a dose is
@@ -40334,7 +40340,7 @@ or changing anything in Cliniko.
         <button type="button" class="ph-band-back" data-pres-close="1" aria-label="Close">‹</button>
         <div class="ph-band-titlewrap">
           <button type="button" class="ph-band-name" data-pres-name-jump="1" title="Tap to edit the name">${esc(phDispName(t.name, isF))}</button>
-          <span class="ph-band-sub">${isF ? "Formula" : (!isF && presStage === "opening" ? "New patient prescription" : "Patient prescription")}</span>
+          <span class="ph-band-sub">${isF ? "Formula" : (isNew ? "New patient prescription" : "Patient prescription")}</span>
         </div>
         ${isF ? `<span class="ph-pres-type formula">🏺 formula</span>` : ""}
         ${isF && ab ? `<span class="ph-pres-abbr">${esc(ab)}</span>` : ""}
@@ -46213,7 +46219,7 @@ Please let me know if you have any questions.`;
     // text, and ONE pill at the right that opens the dates and the note.
     const reviewKey = t.fuReviewDate || (calc.ok ? keyOf(calc.reviewOn) : "");
     const main = !calc.ok
-      ? `Can’t calculate — ${calc.reason === "unrecognized-days" ? "the Days wording here isn’t one this can read automatically" : `no gram weight set for “${esc(calc.unit || t.doseSpoon || "")}”`}`
+      ? `Can’t calculate — ${calc.reason === "unrecognized-days" ? "the Days wording here isn’t one this can read automatically" : calc.reason === "no-grams-yet" ? "no grams dispensed yet" : `no gram weight set for “${esc(calc.unit || t.doseSpoon || "")}”`}`
       : `Lasts <b>${calc.lastsDays.toFixed(1)} days</b><span class="ph-fu-empty-inline"><span class="ph-fu-dot">·</span>empty <b>${esc(phFuDateLabel(keyOf(calc.emptyOn)))}</b></span>`;
     // the phone keeps the row to one line: it hides the "· empty …" span and
     // the word "Review" (the open body's hero line shows "empty" there instead)
@@ -46233,7 +46239,7 @@ Please let me know if you have any questions.`;
     if (presFuOpen) {
       if (!calc.ok) {
         // her §2 fallback: no guessing, but a review date can still be typed
-        body = `<div class="ph-fu-cant">Can’t calculate — ${calc.reason === "unrecognized-days" ? "the Days wording here isn’t one this can read automatically" : `no gram weight set for “${esc(calc.unit || t.doseSpoon || "")}”`}</div>
+        body = `<div class="ph-fu-cant">Can’t calculate — ${calc.reason === "unrecognized-days" ? "the Days wording here isn’t one this can read automatically" : calc.reason === "no-grams-yet" ? "no grams dispensed yet" : `no gram weight set for “${esc(calc.unit || t.doseSpoon || "")}”`}</div>
           <div class="ph-fu-row"><span class="ph-fu-lbl">Review on</span><input type="date" id="presFuReviewDate" class="ph-fu-date" value="${esc(t.fuReviewDate || "")}" aria-label="Review date"></div>
           <textarea id="presFuNote" class="ph-fu-note" rows="1" placeholder="Review note — what to check next time…">${esc(t.fuReviewNote || "")}</textarea>`;
       } else {
