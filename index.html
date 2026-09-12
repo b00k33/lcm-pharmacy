@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260912-120000">
+<meta name="lcm-build" content="20260912-153000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -26341,23 +26341,30 @@
       }
       /* "Its own phases" — her decision, in her words: "last phase ended, and
          continues after acute phase". So the stretch she was on is CLOSED and
-         dated, the two acute phases go in after it, and a continuation of the
-         same phase follows them. Each stretch keeps its own dates and its own
-         visit count instead of one long phase spanning an unrelated illness. */
-      const tpAcuteOwn = e.target.closest("[data-tp-acute-own]");
-      if (tpAcuteOwn) {
-        const plan = phTpFindPlan(phTpScreenPatient, tpAcuteOwn.dataset.tpAcuteOwn);
+         dated, the detour's own phase(s) go in after it, and a continuation
+         of the same phase follows them. Each stretch keeps its own dates and
+         its own visit count instead of one long phase spanning the detour.
+         Generalised 2026-09-12 (her ask, "i have alot of cases that evolve")
+         beyond acute illness to also cover a Pain/MSK flare and Pregnancy
+         high-risk monitoring -- same shape, a different one-phase preset. */
+      const tpDetourOwn = e.target.closest("[data-tp-detour-own]");
+      if (tpDetourOwn) {
+        const [planId, kind] = tpDetourOwn.dataset.tpDetourOwn.split(":");
+        const plan = phTpFindPlan(phTpScreenPatient, planId);
         if (plan) {
           const today = keyOf(TODAY);
           const cur = (plan.phases || []).find(p => p.status === "current");
           const at = cur ? plan.phases.indexOf(cur) : plan.phases.length - 1;
           if (cur) { cur.status = "done"; if (!cur.doneKey) cur.doneKey = today; }
-          const made = phTpAcutePreset().map((p, i) => ({
+          const preset = kind === "flare" ? phTpFlarePreset(plan)
+            : kind === "highrisk" ? [PH_TP_PHASE.highRiskMonitoring]
+            : phTpAcutePreset();
+          const made = preset.map((p, i) => ({
             id: uid(), label: p.label, aim: p.aim || "", points: p.points || "", cadence: p.cadence || "",
             watch: p.watch || "", suggestFormula: p.suggestFormula || "", formulaId: null, formulaName: "",
-            status: i === 0 ? "current" : "upcoming", sinceKey: i === 0 ? today : null, doneKey: null, fromAcute: true,
+            status: i === 0 ? "current" : "upcoming", sinceKey: i === 0 ? today : null, doneKey: null, fromAcute: kind === "acute",
           }));
-          // the same phase, picked up again on the other side of the illness
+          // the same phase, picked up again on the other side of the detour
           const cont = cur ? [{
             id: uid(), label: /\(continued\)$/.test(cur.label) ? cur.label : `${cur.label} (continued)`,
             aim: cur.aim || "", points: cur.points || "", cadence: cur.cadence || "", watch: cur.watch || "",
@@ -34906,10 +34913,19 @@ or changing anything in Cliniko.
   // a plan phase matches by its KEY where it has one (the fertility/IVF phases),
   // and otherwise by the planText regex, because her pain and stress phases are
   // free text per template ("Subacute — weeks 2-6 (rebuilding tolerance)")
-  function phPickByPlan(phaseId, label, isIvf) {
+  // BUG FIXED 2026-09-12 (found in passing while building IVF fresh/frozen):
+  // both call sites used to pass the phase's random uid() here instead of a
+  // PH_TP_PHASE key, so this always compared a uid against literal strings
+  // like "opu"/"preEt" and never matched -- the byKey branch was dead, and
+  // every plan-phase lookup silently fell through to the planText regex (or
+  // null). `phaseKey` (stamped onto every phase by phTpNewPlan, 2026-09-12)
+  // is what the callers pass now. A phase from before that date has no
+  // phaseKey at all -- indexOf(undefined) correctly finds nothing, so it
+  // falls through to planText exactly as it always has, not an error.
+  function phPickByPlan(phaseKey, label, isIvf) {
     const byKey = phPickMoments().find(m => {
       const f = PH_CODE3_MOMENTS[m];
-      return (f.planPhase || []).indexOf(phaseId) >= 0 && phPickIvfOk(f, isIvf);
+      return (f.planPhase || []).indexOf(phaseKey) >= 0 && phPickIvfOk(f, isIvf);
     });
     if (byKey) return byKey;
     return phPickMoments().find(m => {
@@ -34960,6 +34976,12 @@ or changing anything in Cliniko.
       // is the worst message on the list.
       const late = cy.overdue && cy.phaseKey === "luteal" && !ivf;
       moment = phPickByCycle(late ? "period" : cy.phaseKey, ivf);
+      // her frozen transfer ask 2026-09-12: the cycle engine reads "luteal"
+      // whether the wait is after a fresh or a frozen transfer, so it can
+      // only ever resolve to the fresh "postet" moment here -- swap to the
+      // frozen wording (progesterone support, not OHSS/rest) when that's
+      // actually where she is.
+      if (moment === "postet" && phIvfCurrentTrack(name) === "frozen") moment = "postet-frozen";
       if (moment && late) {
         why = `her period is ${Math.max(1, cy.day - (cy.cycleLen || 28))} days late · day ${cy.day} of her cycle`;
       } else if (moment) {
@@ -34978,7 +35000,7 @@ or changing anything in Cliniko.
     if (!moment) {
       const pp = phPickPlanPhase(name);
       if (pp) {
-        moment = phPickByPlan(pp.phase.id, pp.phase.label, ivf);
+        moment = phPickByPlan(pp.phase.phaseKey, pp.phase.label, ivf);
         if (moment) why = `${pp.phase.label} · ${pp.plan.title || pp.plan.templateName || "their plan"}`;
       }
     }
@@ -35083,7 +35105,7 @@ or changing anything in Cliniko.
     // stage before or after the one they are in
     const pp = phPickPlanPhase(name);
     if (pp) {
-      const here = phPickByPlan(pp.phase.id, pp.phase.label, phPickIsIvf(name));
+      const here = phPickByPlan(pp.phase.phaseKey, pp.phase.label, phPickIsIvf(name));
       const track = here && phPickFacets(here) ? phPickFacets(here).track : null;
       if (track) phPickMoments().filter(m => PH_CODE3_MOMENTS[m].track === track).forEach(add);
     }
@@ -36196,6 +36218,14 @@ or changing anything in Cliniko.
     opu:            { track: "ivf",        cyclePhase: null,     planPhase: ["opu"],           ivf: true,  addons: [] },
     preet:          { track: "ivf",        cyclePhase: null,     planPhase: ["preEt"],         ivf: true,  addons: [] },
     postet:         { track: "ivf",        cyclePhase: "luteal", planPhase: ["postEt", "tww"], ivf: true,  addons: [] },
+    // her ask 2026-09-12 (frozen transfer): one moment for lining-build prep
+    // covers both natural and medicated FET, since the words that need to
+    // change are small (which schedule she's on, not the whole message) --
+    // matches the existing "one message per real moment" discipline rather
+    // than doubling every IVF moment for a track variant.
+    "fet-prep":     { track: "ivf",        cyclePhase: null,     planPhase: ["fetPrepNatural", "fetPrepMedicated"], ivf: true, addons: [] },
+    "preet-frozen": { track: "ivf",        cyclePhase: null,     planPhase: ["preEtFrozen"],   ivf: true,  addons: [] },
+    "postet-frozen": { track: "ivf",       cyclePhase: "luteal", planPhase: ["postEtFrozen", "tww"], ivf: true, addons: [] },
   };
   // The code3 key convention, parsed ONCE here so nothing downstream has to:
   //   <moment>[-formal|-casual][-sup]
@@ -36376,6 +36406,36 @@ or changing anything in Cliniko.
       body: "Hi {{firstName}}, how are you settling in after the transfer? Take it easy today, no heavy exercise or heat on the belly, and try to hold off testing till day 14. Let me know if you need anything. {{me}}" },
     { code3: "postet-casual-sup", name: "IVF Post-ET (the wait) — Casual + Supportive", tag: "checkin", category: "cycle", subject: "Checking in — {{clinic}}",
       body: "Hi {{firstName}} 💛 how are you settling in after the transfer? Take it easy today, no heavy exercise or heat on the belly, and try to hold off testing till day 14. Thinking of you through the wait. {{me}}" },
+    // her ask 2026-09-12 (frozen transfer) -- DRAFT, hers to correct, same
+    // as the phase content: not yet said back to her in her own words the
+    // way the messages above were. One "fet-prep" moment covers both
+    // natural and medicated prep (the words that change are small); Pre-ET/
+    // Post-ET (Frozen) get their own moments because the OHSS-recovery
+    // framing of the fresh versions genuinely doesn't apply.
+    { code3: "fet-prep-formal", name: "IVF Frozen Transfer Prep — Formal", tag: "checkin", category: "cycle", subject: "Checking in — {{clinic}}",
+      body: "Hi {{firstName}}, it's {{me}} from {{clinic}}. How's your frozen transfer prep going — is your clinic tracking your own cycle or have you started your medication schedule? Let me know how you're finding it, and the moment you have a transfer date. {{me}}" },
+    { code3: "fet-prep-formal-sup", name: "IVF Frozen Transfer Prep — Formal + Supportive", tag: "checkin", category: "cycle", subject: "Checking in — {{clinic}}",
+      body: "Hi {{firstName}}, it's {{me}} from {{clinic}}. 💛 How's your frozen transfer prep going — is your clinic tracking your own cycle or have you started your medication schedule? Let me know how you're finding it, and the moment you have a transfer date. Sending you good energy for this stage. {{me}}" },
+    { code3: "fet-prep-casual", name: "IVF Frozen Transfer Prep — Casual", tag: "checkin", category: "cycle", subject: "Checking in — {{clinic}}",
+      body: "Hi {{firstName}}, how's the frozen transfer prep going? Let me know how you're finding it, and as soon as you have a transfer date. {{me}}" },
+    { code3: "fet-prep-casual-sup", name: "IVF Frozen Transfer Prep — Casual + Supportive", tag: "checkin", category: "cycle", subject: "Checking in — {{clinic}}",
+      body: "Hi {{firstName}} 💛 how's the frozen transfer prep going? Let me know how you're finding it, and as soon as you have a transfer date. Thinking of you. {{me}}" },
+    { code3: "preet-frozen-formal", name: "IVF Pre-ET (Frozen transfer) — Formal", tag: "checkin", category: "cycle", subject: "Checking in — {{clinic}}",
+      body: "Hi {{firstName}}, it's {{me}} from {{clinic}}. Your frozen transfer is coming up — let me know the time so I can arrange your acupuncture close to it. Try to keep things calm and unhurried around it if you can. {{me}}" },
+    { code3: "preet-frozen-formal-sup", name: "IVF Pre-ET (Frozen transfer) — Formal + Supportive", tag: "checkin", category: "cycle", subject: "Checking in — {{clinic}}",
+      body: "Hi {{firstName}}, it's {{me}} from {{clinic}}. 💛 Your frozen transfer is coming up — let me know the time so I can arrange your acupuncture close to it. Try to keep things calm and unhurried around it if you can. Sending you calm and strength for today. {{me}}" },
+    { code3: "preet-frozen-casual", name: "IVF Pre-ET (Frozen transfer) — Casual", tag: "checkin", category: "cycle", subject: "Checking in — {{clinic}}",
+      body: "Hi {{firstName}}, what time's your frozen transfer? I'll fit your acupuncture in close to it. Keep it calm today if you can. {{me}}" },
+    { code3: "preet-frozen-casual-sup", name: "IVF Pre-ET (Frozen transfer) — Casual + Supportive", tag: "checkin", category: "cycle", subject: "Checking in — {{clinic}}",
+      body: "Hi {{firstName}} 💛 what time's your frozen transfer? I'll fit your acupuncture in close to it. Keep it calm today if you can. Thinking of you. {{me}}" },
+    { code3: "postet-frozen-formal", name: "IVF Post-ET (Frozen transfer wait) — Formal", tag: "checkin", category: "cycle", subject: "Checking in — {{clinic}}",
+      body: "Hi {{firstName}}, it's {{me}} from {{clinic}}. How are you settling in after your frozen transfer? Keep taking your progesterone exactly as the clinic prescribed, take it easy today, and try not to test before day 14. Let me know if you need anything before your next visit on {{nextAppt}}. {{me}}" },
+    { code3: "postet-frozen-formal-sup", name: "IVF Post-ET (Frozen transfer wait) — Formal + Supportive", tag: "checkin", category: "cycle", subject: "Checking in — {{clinic}}",
+      body: "Hi {{firstName}}, it's {{me}} from {{clinic}}. 💛 How are you settling in after your frozen transfer? Keep taking your progesterone exactly as the clinic prescribed, take it easy today, and try not to test before day 14, as hard as the wait is. Let me know if you need anything before your next visit on {{nextAppt}}. I'm here for you through this. {{me}}" },
+    { code3: "postet-frozen-casual", name: "IVF Post-ET (Frozen transfer wait) — Casual", tag: "checkin", category: "cycle", subject: "Checking in — {{clinic}}",
+      body: "Hi {{firstName}}, how are you settling in after the transfer? Keep up the progesterone exactly as prescribed, take it easy today, and try to hold off testing till day 14. Let me know if you need anything. {{me}}" },
+    { code3: "postet-frozen-casual-sup", name: "IVF Post-ET (Frozen transfer wait) — Casual + Supportive", tag: "checkin", category: "cycle", subject: "Checking in — {{clinic}}",
+      body: "Hi {{firstName}} 💛 how are you settling in after the transfer? Keep up the progesterone exactly as prescribed, take it easy today, and try to hold off testing till day 14. Thinking of you through the wait. {{me}}" },
   ];
   // lazy-seeded once, then fully hers -- editing (even the 5 starters) only
   // ever affects future prepares (see phMsgPrepare's resolved-copy comment)
@@ -41228,6 +41288,13 @@ or changing anything in Cliniko.
     early: { label: "Early Pregnancy", aim: "Support a settling pregnancy and ease first-trimester nausea or anxiety.", points: "YT, DU20, PC6, KI9, KI6, ST36, HT7. Add LIV3/GB34 if Liver Qi blocked. Nausea: KI27, KI21, KI6, PC6, ST36, REN12. Avoid abdomen/lower-back points.", suggestFormula: "Early Pregnancy Support herbs", cadence: "Weekly to 14 weeks", watch: "Nausea, fatigue, spotting — call me the same day about any bleeding" },
     birth: { label: "Birth Preparation", aim: "Prepare the body for labour — encourage a favourable position and an efficient start.", points: "Lying on left side: GB21L, GB41/SJ5, SP6, KI6/LI7, ST36R, ST36 (after 19wk add BL33/BL32, or earlier for sacral back pain).", suggestFormula: "Birth prep herbs and teas · Raspberry leaf from 32wk" },
     breech: { label: "Breech Presentation", aim: "Encourage the baby to turn head-down before term.", points: "Moxa (not burned in clinic) plus acupuncture as part of birth prep. Focus on Dai Mai, Kidney, and Qi flow.", suggestFormula: "" },
+    // her ask 2026-09-12 (named unprompted alongside IVF as a case that
+    // "evolves"): a flagged risk or complication needs the plan to step up
+    // monitoring without derailing the wider pregnancy plan. Draft content --
+    // hers to correct, same as the IVF frozen phases above. Reached through
+    // the generalised "+ Insert a phase" picker (phTpDetourPreset), never
+    // part of the default Pregnancy phase list.
+    highRiskMonitoring: { label: "High-risk monitoring", aim: "Increase support and monitoring in response to a flagged risk or complication, without disrupting the wider pregnancy plan.", points: "YT, DU20, PC6, KI9, KI6, HT7 — calming and steadying only. Avoid abdomen/lower-back points and anything contraindicated for her specific complication; confirm with her obstetric team before adding anything new.", suggestFormula: "", cadence: "Increase to weekly, or as her obstetric team advises", watch: "Whatever prompted the flag specifically — bleeding, reduced movement, blood pressure, growth concerns; call me and her obstetric team the same day for any of these" },
     // her ask 2026-09-04 ("if period is detected late in cycle tracking,
     // include Prolonged Luteal Treatment Phase") -- phCycleSyncPlan inserts
     // this into any cycle-driven plan the moment the app flags the period
@@ -41309,6 +41376,23 @@ or changing anything in Cliniko.
     plan.phases = kept;
     if (savePharmacy() !== false) phTpRerender();
     return true;
+  }
+  // Which IVF track a patient is effectively on right now, for the message
+  // picker (phCkPick) -- her cycle reads "luteal" whether the wait is after
+  // a fresh or a frozen transfer, so cyclePhase alone can't choose between
+  // postet/postet-frozen. Scans backward for the most recent round-phase
+  // (done or current) and reads its track off phaseKey -- the same "most
+  // recent wins" idea phTpMilestoneDate already uses for a re-entered date.
+  const PH_IVF_FROZEN_KEYS = ["fetPrepNatural", "fetPrepMedicated", "preEtFrozen", "postEtFrozen"];
+  function phIvfCurrentTrack(name) {
+    const plan = phTpPlans(name).find(p => p.templateName === "IVF Protocol" && p.status !== "done");
+    if (!plan) return null;
+    for (let i = plan.phases.length - 1; i >= 0; i--) {
+      const k = plan.phases[i].phaseKey;
+      if (PH_IVF_FROZEN_KEYS.includes(k)) return "frozen";
+      if (PH_IVF_ROUND_KEYS.includes(k)) return "fresh";
+    }
+    return null;
   }
   // her ask 2026-09-05: "Conditions I treat can be categorised into
   // Musculoskeletal, Gynaecology, Stress. My treatment plans need to
@@ -43622,9 +43706,42 @@ or changing anything in Cliniko.
     const t = phTpBuiltinTemplates().find(x => x.id === "acute_immune");
     return t && t.phases ? t.phases.slice(0, 2) : [];
   };
+  // her ask 2026-09-12 (named unprompted alongside IVF as a case that
+  // "evolves"): a flare mid-plan doesn't fit the template's assumed
+  // Acute -> Subacute -> Maintenance progression. Rather than a fixed
+  // generic phase, this reads the plan's OWN phases[0] -- every msk_*
+  // template starts with its own Acute phase, already tailored to the
+  // body region -- so the ready-fill is right for THIS plan, not a
+  // generic guess. Falls back to a plain draft only if that phase was
+  // ever deleted or a custom plan has no phase 0 to copy.
+  function phTpFlarePreset(plan) {
+    const acute = plan && plan.phases && plan.phases[0];
+    if (acute && (acute.aim || acute.points)) {
+      return [{ label: "Flare — back to acute care", aim: acute.aim || "", points: acute.points || "",
+        cadence: acute.cadence || "2×/wk while the flare lasts", watch: acute.watch || "", suggestFormula: acute.suggestFormula || "" }];
+    }
+    return [{ label: "Flare — back to acute care", aim: "Settle the flare with the same acute-phase approach that worked before, then return to the maintenance plan.", points: "Repeat this plan's own Acute-phase points and formula.", cadence: "2×/wk while the flare lasts", watch: "Whether it settles faster than the original episode, or new features that need a fresh look" }];
+  }
+  // which template category a plan's insert-phase ready-fills should offer --
+  // msk gets Flare, Pregnancy gets High-risk monitoring. Acute illness stays
+  // available everywhere (her PH_TP_CATEGORIES `always` rule: getting sick
+  // isn't a kind of patient, it can happen on any plan).
+  function phTpDetourKindsFor(plan) {
+    const tpl = plan && PH_TP_TEMPLATES.find(x => x.name === plan.templateName);
+    const kinds = ["acute"];
+    if (tpl && tpl.category === "msk") kinds.push("flare");
+    if (plan && plan.templateName === "Pregnancy") kinds.push("highrisk");
+    return kinds;
+  }
+  const PH_TP_DETOUR_META = {
+    flare: { label: "🔥 Flare", desc: "Ready-filled from this plan's own Acute phase — settle the flare, then pick the current phase up again." },
+    highrisk: { label: "⚠️ High-risk monitoring", desc: "Ready-filled — steps up support for a flagged risk, then picks the current phase up again." },
+  };
   // the two-step picker behind + Add phase. Step 2 exists because she asked
   // to be asked: a bad flu should stop the fertility work, a head cold
-  // shouldn't, and only she knows which this is.
+  // shouldn't, and only she knows which this is. Flare/High-risk skip step 2
+  // -- unlike an illness, there's no "counts toward the current phase
+  // instead" reading for either of them, so there is nothing to ask.
   function phTpAddPhaseHtml(plan) {
     if (!phTpAddPhase || !plan || phTpAddPhase.planId !== plan.id) return "";
     const cur = (plan.phases || []).find(p => p.status === "current");
@@ -43632,7 +43749,7 @@ or changing anything in Cliniko.
     if (phTpAddPhase.step === "placement") {
       return `<div class="ph-tp-addpick">
         <div class="hd">Where does the illness go?${x}</div>
-        <button type="button" class="ph-tp-addopt" data-tp-acute-own="${plan.id}">
+        <button type="button" class="ph-tp-addopt" data-tp-detour-own="${plan.id}:acute">
           <b>Its own phases</b>
           <span>Ends ${cur ? `“${esc(cur.label)}”` : "the current phase"} today, adds the illness and the fortnight after, then picks the same phase up again on the other side. Each stretch keeps its own dates and its own visit count.</span>
         </button>
@@ -43650,6 +43767,9 @@ or changing anything in Cliniko.
       <button type="button" class="ph-tp-addopt" data-tp-addphase-acute="1">
         <b>🤧 Acute illness</b><span>Ready-filled from your acute plan — the points, what to watch, 2×/wk while the illness lasts, and the fortnight after.</span>
       </button>
+      ${phTpDetourKindsFor(plan).filter(k => k !== "acute").map(k => `<button type="button" class="ph-tp-addopt" data-tp-detour-own="${plan.id}:${k}">
+        <b>${PH_TP_DETOUR_META[k].label}</b><span>${PH_TP_DETOUR_META[k].desc}</span>
+      </button>`).join("")}
     </div>`;
   }
   // which plan's "switch transfer track" picker is open -- her ask
