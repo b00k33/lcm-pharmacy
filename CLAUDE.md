@@ -862,6 +862,56 @@ reality:
   Pounding (concave + arrow) have real symbol stamps so far
   (`PH_PULSE_SHAPES`); every other quality (`PH_PULSE_OTHER_Q`) records as a
   plain text tag until she draws it. Never invent a shape for the rest.
+- **The pulse chart is COMPREHENSIVE, built from her own files (her ask
+  2026-09-13 "use these files to create the pulse chart more
+  comprehensively") — three systems, one panel, one record:**
+  1. **Her Doane MPD organ-zone grid** (`PH_PULSE_CHART`) × **four depth
+     rows** (`PH_PULSE_LEVELS`, her words: "skin, qi, blood, organ") — the
+     per-position record. Each column carries `pos` (distal / middle /
+     proximal) so a cell's title also reads in Shen-Hammer terms.
+  2. **Her MPD protocol scores** (`Protocol MPD.docx`, `Pulse Analysis.xlsx`
+     under `2 Work/Books, Seminars/Doane`): `phVisitPulseScores` — depth =
+     level/4 per marked zone, averaged per side (her spreadsheet's exact
+     method), shown as `Depth R 0.56 · L 0.75` with the **last saved visit's
+     scores beside it** (`phVisitPrevPulse`, the spreadsheet's Previous
+     column) and that visit's marks drawn DASHED in the grid; Thin = blood
+     deficiency (diameter), Pounding = inflammation / Weak = yang deficiency
+     (amplitude) as counts. Referred-pain words from her chart template
+     (`PH_PULSE_REFERRED`: Neck/Shoulder/Upper back under R, Lower
+     back/Hips/Knees/Ankle under L) are fixed taps → `pulseRef`.
+  3. **The Shen-Hammer exam** (`PH_HM_*`, folded under "Shen-Hammer pulse
+     exam ▸", auto-open once anything is recorded): every section of her
+     "Lotus Healing Arts - Pulse Exam" form (`Karen Bilton/Pulse form.pdf`)
+     with the per-section vocabulary from the Hammer "Common Qualities" form
+     (rev. Jan 2012) in the form's own most→least-common order — Rhythm,
+     Rate/min (begin/other/end/with exertion, change computed), First
+     impressions, Wave, Depths (Floating · Cotton · Qi · Blood · Organ · O-B
+     · O-S), Complementary positions (Neuro-psychological L/R, Special Lung
+     L/R, Pleura, Heart Mitral/Enlarged/Large Vessel, Pericardium, Diaphragm
+     L/R, Liver Distal/Ulnar Engorged, Gall Bladder, Esophagus, Comp. SP,
+     Stomach Pylorus Extension, Duodenum, Peritoneal/Pancreas, Intestines
+     L/S, Pelvis/Lower Body L/R), each position with the form's **degree 1→5**
+     and **△ change** once marked. A trailing `?` in a vocabulary entry =
+     "(not common but likely when the position is present)", shown italic.
+     The principal positions are NOT repeated — the grid IS them.
+  Saved shape: `rec.visitFnd[sessionId] = { zones, quals, body, coat, pulse,
+  pulseRef, tng:{regions,overlays}, hammer:{rhythm,rate,impressions,wave,
+  depths,positions,degree,change} }` — always read through `phVisitFndRead`
+  (a filled-in copy) so older visits render; `phVisitFndResetDraft()` is the
+  ONE reset (draft + armed stamp + fold + "more" state). Rate inputs write
+  the draft on `input` and never repaint (the `[data-visit-hm-change]` span
+  is patched in place); every chip repaints only the panel.
+- **The tongue in the visit panel is the app's OWN chart, not the letter
+  map** (her 2026-09-13 "there is also a comprehensive tongue chart that has
+  been made in the app. use it"): `phTongueOutlineSvg` from the Guide's tongue
+  tab — four regions (root/middle/tip/sides, multi-select here: it now takes a
+  Set as well as a single region) + six overlay marks (`PH_TONGUE_OVERLAYS`)
+  drawn live on the outline — plus the plan's body/coat word chips. A tapped
+  region also surfaces her Guide notes for it (`phTongueNotes`, read-only,
+  two per region). Region taps are `[data-tng-region]` inside `.ph-visit-tng`
+  and TOGGLE; the Guide's handler stays gated to `.ph-gd-tng-diagram`. The
+  letter's `PH_LTR_QUALS` marks chips are gone from this panel (overlays +
+  coat cover them); `zones` now holds abdomen zones only.
 - **Deliberately not (re)built:** appointment-dating (this logger always
   dates to `keyOf(TODAY)`), phase-write-through-with-undo, a visit-count nag.
   Nothing asked for these back; don't add them speculatively.
