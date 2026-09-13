@@ -8067,6 +8067,7 @@
   #pharmacyPage .ph-pulse-sidelbl { font-size: 10px; font-weight: 800; letter-spacing: 0.06em; color: var(--ph-green-deep); text-align: center; margin-bottom: 4px; }
   #pharmacyPage .ph-pulse-grid { display: grid; gap: 2px; }
   #pharmacyPage .ph-pulse-collbl { font-size: 8.5px; line-height: 1.15; color: var(--ph-soft); text-align: center; padding: 2px 1px; border-bottom: 1px solid var(--ph-line); }
+  #pharmacyPage .ph-pulse-rowlbl { font-size: 9.5px; font-weight: 700; color: var(--ph-green-deep); display: flex; align-items: center; justify-content: flex-end; padding-right: 5px; }
   #pharmacyPage .ph-pulse-cell { font: inherit; height: 26px; padding: 0; border: 1px solid var(--ph-line); background: var(--ph-white); cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--ph-soft); }
   #pharmacyPage .ph-pulse-cell:hover { border-color: var(--ph-green); }
   #pharmacyPage .ph-pulse-cell.on { background: var(--ph-green-tint); color: var(--ph-green-deep); }
@@ -46293,9 +46294,16 @@ or changing anything in Cliniko.
   ];
   const PH_PULSE_OTHER_Q = ["wiry", "slippery", "weak", "rapid", "slow", "choppy", "deep", "floating", "tight", "empty"];
   // her real paper chart (photo, 2026-09-13): two mirrored wrist halves, each
-  // a row of organ-zone columns (narrow = one system, wide = 2-3 stacked),
-  // three numbered rows underneath (depth/intensity -- not yet confirmed
-  // which, so labelled with her own bare numbers, nothing invented).
+  // a row of organ-zone columns (narrow = one system, wide = 2-3 stacked).
+  // The rows underneath are DEPTH, confirmed 2026-09-13: "it needs depth e.g.
+  // 4 levels, skin, qi, blood, organ depth" -- four classical pulse depths,
+  // shallowest to deepest.
+  const PH_PULSE_LEVELS = [
+    { id: "skin", label: "Skin" },
+    { id: "qi", label: "Qi" },
+    { id: "blood", label: "Blood" },
+    { id: "organ", label: "Organ" },
+  ];
   const PH_PULSE_CHART = {
     R: [
       { id: "lungs", label: "Lungs", w: 1 },
@@ -46319,19 +46327,21 @@ or changing anything in Cliniko.
     if (shape === "pounding") return `<svg viewBox="0 0 24 14" class="ph-pulse-shape" aria-hidden="true"><path d="M2 11 Q12 1 22 11" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M18 4 L22 11 L15 10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>`;
     return "";
   }
-  function phVisitPulseCellHtml(side, colId, colLabel, row, marks) {
-    const key = `${side}:${colId}:${row}`;
+  function phVisitPulseCellHtml(side, colId, colLabel, level, marks) {
+    const key = `${side}:${colId}:${level.id}`;
     const m = marks[key];
     const content = m ? (m.shape ? phPulseShapeSvg(m.shape) : `<span class="q">${esc(m.quality)}</span>`) : "";
-    return `<button type="button" class="ph-pulse-cell${m ? " on" : ""}" data-visit-pulse-cell="${esc(key)}" title="${esc(colLabel)} · row ${row}" aria-pressed="${m ? "true" : "false"}">${content}</button>`;
+    return `<button type="button" class="ph-pulse-cell${m ? " on" : ""}" data-visit-pulse-cell="${esc(key)}" title="${esc(colLabel)} · ${level.label}" aria-pressed="${m ? "true" : "false"}">${content}</button>`;
   }
   function phVisitPulseHalfHtml(side, marks) {
     const cols = PH_PULSE_CHART[side];
+    const gridCols = ["44px", ...cols.map(c => c.w === 2 ? "2fr" : "1fr")].join(" ");
     return `<div class="ph-pulse-half">
       <div class="ph-pulse-sidelbl">${side === "R" ? "RIGHT" : "LEFT"}</div>
-      <div class="ph-pulse-grid" style="grid-template-columns:${cols.map(c => c.w === 2 ? "2fr" : "1fr").join(" ")}">
+      <div class="ph-pulse-grid" style="grid-template-columns:${gridCols}">
+        <div class="ph-pulse-collbl"></div>
         ${cols.map(c => `<div class="ph-pulse-collbl">${esc(c.label)}</div>`).join("")}
-        ${[1, 2, 3].map(row => cols.map(c => phVisitPulseCellHtml(side, c.id, c.label, row, marks)).join("")).join("")}
+        ${PH_PULSE_LEVELS.map(level => `<div class="ph-pulse-rowlbl">${esc(level.label)}</div>${cols.map(c => phVisitPulseCellHtml(side, c.id, c.label, level, marks)).join("")}`).join("")}
       </div>
     </div>`;
   }
@@ -46340,9 +46350,10 @@ or changing anything in Cliniko.
   // a history display, so a past visit gets a text summary instead)
   function phVisitPulseSummaryText(marks) {
     return Object.keys(marks || {}).map(k => {
-      const [side, col, row] = k.split(":");
+      const [side, col, levelId] = k.split(":");
       const colDef = (PH_PULSE_CHART[side] || []).find(c => c.id === col);
-      return `${side} ${colDef ? colDef.label : col} (${row}): ${marks[k].quality}`;
+      const levelDef = PH_PULSE_LEVELS.find(l => l.id === levelId);
+      return `${side} ${colDef ? colDef.label : col} (${levelDef ? levelDef.label : levelId}): ${marks[k].quality}`;
     }).join(" · ");
   }
   let presVisitPulseStamp = "thin";
