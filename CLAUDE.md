@@ -818,54 +818,53 @@ treatment?").** Her 14 answers live in `PHASE-VISITS-SPEC.md`. The rules:
   evidence a phase's visit count reads. If the shared ~5MB origin quota is ever hit,
   the fix is a slim stub (date + patient + service) — **never a new cutoff.**
 
-**18. THE APPOINTMENT IS WHERE A VISIT GETS WRITTEN UP — AND IT WRITES THROUGH
-(her asks 2026-09-10).** Full spec + her wording: `VISIT-NOTE-SPEC.md`. Her
-three sentences that decide everything: *"i want each appointment to have a
-treatment note function… so when i open the patient profile from appointments
-page, it doesnt feel like im just opening the patient profile to look"*; then
-*"when i say visit note, i dont mean a literal note. perhaps a summary of
-treatment plan phase execution"*; then *"i just want the process to be
-streamlined and simple and cohesive in one place so i dont need to look and edit
-multiple things"*. The rules:
-- **It is NOT a note-taking form.** It is the plan's phase being executed, shown
-  on the appointment: what the phase PLANNED (cadence · points · formula), what
-  is DONE so far, and this visit.
-- **ONE record, four surfaces.** It writes a single `rec.acuSessions` entry —
-  the record that already carried `phaseLabel/points/outcome/note`. The plan
-  grid's WHAT HAPPENED column, the acupuncture record and the patient timeline
-  all GATHER it. **Never add a second store for this**; a typed second copy is
-  exactly what her 2026-09-09 record principle forbids.
-- **The visit is dated to the APPOINTMENT, never `keyOf(TODAY)`.** Writing up
-  Tuesday's visit on Thursday must file it under Tuesday, or it lands in the
-  wrong phase window.
-- **The phase follows what she actually did — no prompt, but say so, with an
-  undo.** She turned a confirm dialog down twice. Never re-introduce one.
-- **Herbs are never typed here.** The button opens the real dispense flow so
-  stock deducts and a log entry exists. What was dispensed is read back by date
-  + patient.
-- **Better / Same / Worse comes from `PH_ACU_OUTCOMES`**, the list the
-  acupuncture record already uses. One field language — never a second list.
-- **No plan? Same block, minus the phase parts**, plus a quiet "start one".
-- **A booked future appointment shows the summary and no form** — "Not yet".
-- **The dot and count never look before `PH_VISIT_FROM`.** A display cutoff, not
-  a prune; without it the app opens on hundreds of historical visits.
-- **Nothing here may call `phFlashShow`** — it calls `renderPharmacy()`, which
-  closes the card she just saved from. The confirmation lives in the card.
-- **"No herbs" is an answer, not a blank** (`row.noHerbs`). Plenty of visits are
-  acupuncture only; without it the Herbs row reads "none yet" forever.
-- **Clinical findings belong to the VISIT, not the plan** (her ask 2026-09-10:
-  *"include clinical findings update for all treatment notes except
-  musculoskeletal and facial paralysis. add a toggle to turn on or off"*).
-  Tongue/pulse/abdomen change visit to visit; `plan.findings` stays the baseline
-  she took at the start. `phTpFindings()` is generic over any object with a
-  `.findings` and `phFindingsChartsWith()` parameterises the zone attribute, so
-  the visit reuses the same charts and chips — **never** point the visit's
-  controls at `data-tp-zone`/`data-tp-field`, which write to the open plan.
-  Excluded by `PH_CASE_CATEGORY`: `pain → msk`, `neurological → facial`.
-  `rec.visitFindings` overrides in BOTH directions.
-- **Findings save as they go, so a row can exist before the visit is written
-  up.** `phVisitFilledIn` gates the dot and the "written up" stamp on
-  points/outcome/no-herbs/note — never on the row merely existing.
+**18. VISIT LOGGING LIVES ON PATIENT PROFILE'S "LOG TODAY'S SESSION" — NOT THE
+APPOINTMENT CARD (superseded 2026-09-13).** An appointment-card write-up was
+built to her 2026-09-10 spec (`VISIT-NOTE-SPEC.md` has the original design and
+her wording, kept for the "why") and removed the same day, commit `357ffbb`,
+once she looked at a real card and said *"i never fill this out in the
+appointments page"* — she already had the habit of logging from Patient
+profile, so the card sat unused and its richer fields (a note box, `noHerbs`,
+appointment-dating, phase-follows-what-she-did with undo, the visit-count nag)
+never carried over. None of those exist on the surviving logger. Current
+reality:
+- **ONE record.** `data-pres-acu-log` (`presAcuOpenHtml`) pushes a single
+  `rec.acuSessions` entry — `{id, date: keyOf(TODAY), at, phaseLabel, points,
+  outcome}`. The plan grid's WHAT HAPPENED column, the acupuncture record and
+  the patient timeline all GATHER it (`phTpPhaseRecord`,
+  `phMsgPatientTimeline`) — **never add a second store for this.**
+- **Herbs are never typed, not even via a button.** `phAcuHerbsOn(name,
+  dateKey)` computes them live from `PHARMACY.log` dispense entries by date +
+  patient.
+- **No note field, on purpose.** A freeform "anything else" box existed on
+  both the removed card and this logger; she used neither, and it was deleted
+  from here too the same day. Don't bring one back without her asking.
+- **Better / Same / Worse comes from `PH_ACU_OUTCOMES`** — one field language,
+  never a second list.
+- **Clinical findings came back, per-visit, on THIS logger (Request 4,
+  2026-09-13).** Tongue (chips + photo), her real R/L organ-zone pulse chart
+  (`PH_PULSE_CHART` — NOT the generic Cun/Guan/Chi wheel `phLtrPulseSvg`
+  draws), abdomen (now nine zones, `PH_LTR_ZONES.abd`) and a read-only cycle
+  chip sit above the Save button and commit WITH it into
+  `rec.visitFnd[sessionId]` via `phVisitFindings(rec, sessionId)`.
+  Tongue/abdomen reuse `phTpFindings`'s exact zones/quals/body/coat shape and
+  `phLtrTongueSvg`/`phLtrAbdSvg` through
+  `phFindingsChartsWith(..., "data-visit-zone", ...)` so the plan, the letter
+  and the visit never collide — **never** point a visit control at
+  `data-tp-zone`/`data-tp-field`, which write to the open plan instead.
+  Excluded by default via `PH_CASE_QUIET`'s `visitFindings` flag
+  (`pain`/`neurological`); `rec.visitFindings` overrides in BOTH directions.
+  The Treatment Plan's Timeline/Spine (`phTpSpineNodeBodyHtml`) shows a
+  visit's OWN findings, read-only, once they exist, falling back to the
+  plan's baseline otherwise.
+- **Her pulse chart's line-shape legend is still being dictated**
+  ([[project_pharmacy_pulse_chart_notation]] memory) — only Thin (dotted) and
+  Pounding (concave + arrow) have real symbol stamps so far
+  (`PH_PULSE_SHAPES`); every other quality (`PH_PULSE_OTHER_Q`) records as a
+  plain text tag until she draws it. Never invent a shape for the rest.
+- **Deliberately not (re)built:** appointment-dating (this logger always
+  dates to `keyOf(TODAY)`), phase-write-through-with-undo, a visit-count nag.
+  Nothing asked for these back; don't add them speculatively.
 
 ## Spacing & size (one scale, no random numbers)
 - Only 4/8/12/16/24/32px for margins/padding/gaps.
