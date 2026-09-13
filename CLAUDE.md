@@ -392,6 +392,26 @@ update STYLE-LCM.md to match so future builds don't undo it.
   tint on a Gynae/MSK band; never `--ph-struct-*` in there); the clinic name cut off with "…" (reported twice); sprawling
   designs that look "lazy" (an ad-hoc panel below a grid); anything a second time she has
   already asked for once.
+  **DISLIKES, her 2026-09-12 Dispense-page list (seven in one sitting; four fixed in
+  `d944b17`, the button in `169f91f`):** one control in browser-default chrome among styled
+  siblings ("✎ Edit as a plain list ▾" — the `.tab-link` class had only ancestor-scoped
+  rules; there is now ONE `#pharmacyPage .tab-link` base rule, early in the sheet, so it
+  can never fall back again); a picker defaulting to "— any —" when the app already knows
+  the plan's current phase (Phase now presets from the plan, fill-blank-only like Case;
+  an explicit "— any —" stores `""`, never deleted); an unnumbered phase list ("number the
+  plan" → "1. Menstruation…"); empty date fields that make her type the year (cycle dates
+  open on today with a `data-cycle-preset` guard); herbs as a flowing word cloud where she
+  expects the LABEL's one-per-line format (`.ph-hist-ings.label`); the period-date input
+  flow ("extremely unhappy… does not feel easy"); plain-text info letters. PICKS 2026-09-13:
+  period date = **tap-the-day calendar strip, ONE control everywhere** (Assessment,
+  check-in card, timeline); info letters = **fixed designed templates, words editable per
+  section**, pictures from all four sources (her uploads, a built-in illustration set,
+  the clinic letterhead automatically, charts from the patient's record). Batch 2: a
+  tap on a day opens a SMALL POPOVER asking flow + pain every time (her pick over
+  "just log the day"), tapping a logged day reopens it with Update / Remove; templates
+  = Iron · Post-transfer · Food · Menstrual signs & BBT (only Iron has her wording — ask
+  for the other three, never draft them); master wording in Communications → Templates
+  with per-patient tweaks; she is sending the logo file. Not built yet.
 - **HER WORK PHONE IS A BLACKBERRY KEY2 (told 2026-09-09) — design phone screens
   against 360 x 469, not 360 x 780.** Android 8.1, Chrome 138 (the last version that
   handset can run; everything the app uses works on it, so this is a SPEED constraint,
