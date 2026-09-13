@@ -411,7 +411,24 @@ update STYLE-LCM.md to match so future builds don't undo it.
   "just log the day"), tapping a logged day reopens it with Update / Remove; templates
   = Iron · Post-transfer · Food · Menstrual signs & BBT (only Iron has her wording — ask
   for the other three, never draft them); master wording in Communications → Templates
-  with per-patient tweaks; she is sending the logo file. Not built yet.
+  with per-patient tweaks; she is sending the logo file. Tap-the-day SHIPPED `f213189`
+  (`phCycleStripHtml` / `phCyclePopHtml` / `phCycleStripCommit` beside `phCycleLogPeriod`;
+  only the strip repaints in place); letters not built yet.
+  **LIKES the strip (2026-09-13, "i like this", on a working chat widget of it)** — and
+  in the same breath: "sometimes i need to input many previous periods from past". A run
+  of 6–14 past dates must be enterable in one sitting without walking back a week at a
+  time. First direction mocked = STRETCH THE SAME STRIP (range label in its head → 5
+  weeks · 3 · 6 · 12 months, popover under the tapped week, ‹ › jumping a whole window,
+  likely-earlier rings, rhythm fill) — **REJECTED by her ("i dont like that feature. how
+  it works and how it skips")**; do not bring it back — specifically the year-at-once ‹ ›
+  jump AND the size picker itself. Her instinct instead: **a month calendar, one month
+  at a time** (Cliniko/phone-calendar style). Kept from the study: About|Exact marking
+  per sitting, history as a real table, the patient-link path. HER ANSWERS 2026-09-13 batch 1: 6–14 dates up to a
+  year; source mixed per patient; one About/Exact switch per sitting; a past period's
+  popover asks flow + pain PRE-SET to her usual (same as today's popover). Batch 2: mostly
+  desktop in the consult; the PATIENT may tap her own history in via the intake link
+  (reviewed as a tick table, unticked rows never written); about-dates count in the
+  average with a tilde; placement of the stretch control = "show me" (visual first).
 - **HER WORK PHONE IS A BLACKBERRY KEY2 (told 2026-09-09) — design phone screens
   against 360 x 469, not 360 x 780.** Android 8.1, Chrome 138 (the last version that
   handset can run; everything the app uses works on it, so this is a SPEED constraint,
