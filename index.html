@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260912-153000">
+<meta name="lcm-build" content="20260913-100000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -5791,6 +5791,12 @@
   #pharmacyPage .ph-hist-ings { display: flex; flex-wrap: wrap; gap: 1px 10px; font-size: 11.5px; color: var(--ph-soft); margin-top: 3px; }
   #pharmacyPage .ph-hist-ings > span { white-space: nowrap; }
   #pharmacyPage .ph-hist-ings > span b { font-weight: 600; color: var(--ph-ink); margin-left: 3px; font-variant-numeric: tabular-nums; }
+  /* her ask 2026-09-12 ("display herbs in similar format to prescription
+     label"): the same one-herb-per-line block the label prints, name then
+     grams to two decimals -- reads as the label she copies, not a word cloud */
+  #pharmacyPage .ph-hist-ings.label { display: block; color: var(--ph-ink); line-height: 1.45; margin-top: 4px; }
+  #pharmacyPage .ph-hist-ings.label > span { display: block; white-space: normal; }
+  #pharmacyPage .ph-hist-ings.label > span b { font-weight: 500; margin-left: 4px; }
   #pharmacyPage .ph-hist-undo { font-size: 11px; padding: 0; margin-left: auto; }
   #pharmacyPage .ph-hist-date { font: inherit; font-size: 11.5px; font-weight: 700; color: var(--ph-green-deep); background: none; border: 0; padding: 0; cursor: pointer; white-space: nowrap; font-variant-numeric: tabular-nums; }
   #pharmacyPage .ph-hist-visit-g { font-size: 11.5px; font-weight: 600; color: var(--ph-ink); white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -29613,15 +29619,25 @@
       // (~line 39054) for why these three moved here instead of acting on
       // every "change": only her FINAL value, once she's actually left the
       // field, is ever logged/added -- a half-typed date never is.
+      // her ask 2026-09-12 ("preset year for cycle tracking to 2026"): the
+      // cycle date fields that used to start EMPTY now open on today's date
+      // (data-cycle-preset carries what they opened on), so she only ever
+      // overtypes the day and month -- the year is already this year. The
+      // cost of a pre-filled valid date is that focus merely passing through
+      // would log/add it, so a field still sitting on exactly its preset is
+      // treated as untouched and nothing is written.
+      const onPreset = el => !!el.dataset.cyclePreset && el.value === el.dataset.cyclePreset;
       const histAdd = e.target.closest("[data-cycle-hist-add]");
       if (histAdd) {
+        if (onPreset(histAdd)) return;
         const rec = phCycleTargetRec();
         const yr = parseInt((histAdd.value || "").slice(0, 4), 10);
-        if (rec && histAdd.value && yr >= 2000 && yr <= TODAY.getFullYear()) { phCycleAddHistoryDate(rec, histAdd.value); histAdd.value = ""; phCycleRerender(); }
+        if (rec && histAdd.value && yr >= 2000 && yr <= TODAY.getFullYear()) { phCycleAddHistoryDate(rec, histAdd.value); histAdd.value = histAdd.dataset.cyclePreset || ""; phCycleRerender(); }
         return;
       }
       const periodDate = e.target.closest("[data-cycle-period-date]");
       if (periodDate) {
+        if (onPreset(periodDate)) { delete periodDate.dataset.cycleTouched; return; }
         // the merged "Log period…" field opens pre-filled to today (see the
         // click listener that sets this flag, ~26520) -- without requiring a
         // genuine click first, an incidental focus/blur (tabbing past it)
@@ -29641,6 +29657,7 @@
       }
       const lmpField = e.target.closest('[data-cycle-field="lmp"]');
       if (lmpField) {
+        if (onPreset(lmpField)) return;
         const rec = phCycleTargetRec();
         const yr = parseInt((lmpField.value || "").slice(0, 4), 10);
         if (rec && lmpField.value && yr >= 2000 && yr <= TODAY.getFullYear()) phCycleLogFrom(lmpField, rec, lmpField.value, "");
@@ -39581,7 +39598,12 @@ or changing anything in Cliniko.
         return;
       }
       presPhaseTagTyping = null;
-      if (t.value) s.phaseTag = t.value; else delete s.phaseTag;
+      // "" rather than delete: an explicit "— any —" must survive the
+      // open-time preset (presPhaseFillFromPlan only fills a tag that was
+      // never set at all), the way an explicit "general" Case survives
+      // phCaseFillFromPlan. Every reader tests truthiness, so "" still reads
+      // as "no phase" everywhere.
+      if (t.value) s.phaseTag = t.value; else s.phaseTag = "";
       presSyncCaseFromPhase(s);
       savePresc(); renderPresPanel();
       return;
@@ -39590,7 +39612,7 @@ or changing anything in Cliniko.
       const s = PRESC.items.find(x => x.id === t.dataset.presPhaseTagText);
       if (!s) return;
       const v = t.value.trim();
-      if (v) s.phaseTag = v; else delete s.phaseTag;
+      if (v) s.phaseTag = v; else s.phaseTag = "";
       presPhaseTagTyping = null;
       presSyncCaseFromPhase(s);
       savePresc(); renderPresPanel();
@@ -40797,6 +40819,9 @@ or changing anything in Cliniko.
     // option A (2026-09-07): a script whose Case was never set inherits the
     // patient's treatment plan the moment it opens -- see phCaseFillFromPlan
     if (!isF && !t.caseType && phCaseFillFromPlan(presPatientFor(t))) savePresc();
+    // her ask 2026-09-12 ("preset phase to the current phase from plan"):
+    // same fill-blank-only rule for the phase word -- see presPhaseFillFromPlan
+    if (!isF && presPhaseFillFromPlan(t)) savePresc();
     // which of the 5 stages a real patient's panel is on -- reset to the
     // right default only when a DIFFERENT script/patient just opened, so
     // she can freely navigate stages within one open panel without this
@@ -41014,8 +41039,12 @@ or changing anything in Cliniko.
   // one flowing pin-yin list that fits any width, dosage de-mojibaked.
   function presHistVisitCardHtml(e) {
     const d = parseKey(e.date);
+    // her ask 2026-09-12 ("display herbs in similar format to prescription
+    // label"): one herb per line, the exact name + two-decimal grams the
+    // label's {ingredients} block prints (presLabelValuesCore) -- so what she
+    // reads here is what went on the patient's jar, not a pin-yin word cloud
     const ings = Array.isArray(e.items) && e.items.length
-      ? `<div class="ph-hist-ings">${e.items.slice().sort(presIngSort).map(i => `<span>${esc(phPinyinName({ name: i.name }))}${i.grams != null ? `<b>${phFmtG(i.grams)}</b>` : ""}</span>`).join("")}</div>` : "";
+      ? `<div class="ph-hist-ings label">${e.items.slice().sort(presIngSort).map(i => `<span>${esc(phDispName(i.name))}${i.grams != null ? `<b>${(+i.grams || 0).toFixed(2)}g</b>` : ""}</span>`).join("")}</div>` : "";
     const arming = presHistUndoId === e.id;
     const fu = (PHARMACY.followups || []).find(r => r.logId === e.id);
     const ck = fu && fu.checkins && fu.checkins.length ? fu.checkins.slice().sort((a, b) => (b.at || 0) - (a.at || 0))[0] : null;
@@ -41991,6 +42020,22 @@ or changing anything in Cliniko.
     schedPresForPatient(name).forEach(s => { if (!s.caseType) { s.caseType = h; n++; } });
     return n;
   }
+  // her ask 2026-09-12 ("preset phase to the current phase from plan"): a
+  // script whose phase word was NEVER set (undefined -- not the "" an
+  // explicit "— any —" now stores) takes the shown plan's current phase the
+  // moment it opens. Only THIS script, never the patient's others -- two
+  // scripts of hers should not both wake up tagged the same phase. Resolves
+  // through phTpShownPlan + phTpPlanCurrentPhase, the same chain
+  // phApptScriptFor uses to decide which script is the due one, so the
+  // preset and the opener can never disagree about "current".
+  function presPhaseFillFromPlan(s) {
+    if (!s || s.phaseTag != null || presIsFormula(s)) return false;
+    const plan = phTpShownPlan(presPatientFor(s));
+    const cur = plan && phTpPlanCurrentPhase(plan);
+    if (!cur || !cur.label) return false;
+    s.phaseTag = cur.label;
+    return true;
+  }
   /* Her round-3 pick 2026-09-10 ("i want them to sync to the treatment plan
      features so i dont have too many things to type"): Phase already only
      ever offers labels from the patient's own active plan, and most patients
@@ -42426,7 +42471,7 @@ or changing anything in Cliniko.
   // patient when it's open, else the open script's
   // log + tell her + refresh only the surface the tap came from (timeline
   // row, check-in panel line, or the script panel / plan modal)
-  const phCkCycleLineHtml = (comp, name) => `${phCycleChipHtml(comp)} <span class="faint">· ${comp.phaseKey === "luteal" || comp.phaseKey === "ov" ? "" : `ovulation ~${esc(phFuDateLabel(comp.ovDate))} · `}period due ~${esc(phFuDateLabel(comp.nextDate))}</span> <span class="ph-pill predict">Predicted</span> <button type="button" class="tab-link" data-cycle-period-today="${esc(name || "")}">🩸 period started today</button> <label class="ph-cycle-qdate" title="Log a period that started another day">another day…<input type="date" data-cycle-period-date="${esc(name || "")}" max="${keyOf(TODAY)}" aria-label="Period started on"></label>`;
+  const phCkCycleLineHtml = (comp, name) => `${phCycleChipHtml(comp)} <span class="faint">· ${comp.phaseKey === "luteal" || comp.phaseKey === "ov" ? "" : `ovulation ~${esc(phFuDateLabel(comp.ovDate))} · `}period due ~${esc(phFuDateLabel(comp.nextDate))}</span> <span class="ph-pill predict">Predicted</span> <button type="button" class="tab-link" data-cycle-period-today="${esc(name || "")}">🩸 period started today</button> <label class="ph-cycle-qdate" title="Log a period that started another day -- opens on today, change the day and month">another day…<input type="date" data-cycle-period-date="${esc(name || "")}" value="${keyOf(TODAY)}" data-cycle-preset="${keyOf(TODAY)}" max="${keyOf(TODAY)}" aria-label="Period started on"></label>`;
   function phCycleLogFrom(el, rec, dateKey, name, extra) {
     if (!rec) return;
     const comp = phCycleLogPeriod(rec, dateKey, extra);
@@ -42635,7 +42680,7 @@ or changing anything in Cliniko.
     return `<div class="ph-cycle-quiz">
       <div class="ph-cq-h">🩸 Menstrual history <span class="faint">— fill in what you know now, she can update any of it at her next visit</span></div>
       <div class="ph-cq-grid">
-        <label class="ph-cq-q"><span class="q">When did her last period start?</span><input type="date" class="ph-cyc-in d field-bare" data-cycle-field="lmp" value="${esc(c.lmp || "")}" max="${keyOf(TODAY)}" aria-label="Last menstrual period"></label>
+        <label class="ph-cq-q"><span class="q">When did her last period start?</span><input type="date" class="ph-cyc-in d field-bare" data-cycle-field="lmp" value="${esc(c.lmp || keyOf(TODAY))}"${c.lmp ? "" : ` data-cycle-preset="${keyOf(TODAY)}"`} max="${keyOf(TODAY)}" aria-label="Last menstrual period"></label>
         <label class="ph-cq-q"><span class="q">How long is her usual cycle?</span><span class="ph-cq-inline"><input type="number" class="ph-cyc-in n field-bare" data-cycle-field="cycleLen" min="14" max="60" value="${c.cycleLen || 28}" aria-label="Cycle length in days"> days</span></label>
         <label class="ph-cq-q"><span class="q">How many days does she bleed, and how heavy?</span><span class="ph-cq-inline"><input type="number" class="ph-cyc-in n field-bare" data-cycle-field="flowDays" min="1" max="14" value="${c.flowDays != null ? c.flowDays : 5}" aria-label="Flow lasts, days"> days ${sel("flowIntensity", PH_CYCLE_FLOW, c.flowIntensity || "moderate")}</span></label>
         <label class="ph-cq-q"><span class="q">Any period pain?</span>${sel("pain", PH_CYCLE_PAIN, c.pain || "none")}</label>
@@ -42977,7 +43022,7 @@ or changing anything in Cliniko.
     }).join("");
     return `<div class="ph-cyc-histbox">
       ${log.length ? rows : `<div class="ph-cyc-histempty faint">No periods logged yet.</div>`}
-      <label class="ph-cyc-histadd">+ Add a past period<input type="date" data-cycle-hist-add="1" max="${keyOf(TODAY)}" aria-label="Add a past period start date"></label>
+      <label class="ph-cyc-histadd" title="Opens on today -- change the day and month">+ Add a past period<input type="date" data-cycle-hist-add="1" value="${keyOf(TODAY)}" data-cycle-preset="${keyOf(TODAY)}" max="${keyOf(TODAY)}" aria-label="Add a past period start date"></label>
     </div>`;
   }
   function phTpCycleEditHtml(rec) {
@@ -47131,7 +47176,7 @@ Please let me know if you have any questions.`;
       ${showPhase ? `<label class="ph-pres-menu-field"><span>Phase</span>
         <select class="ph-pres-phase field-bare" data-pres-phase-tag="${t.id}" aria-label="Which phase of the plan this script is for">
           <option value=""${!tag ? " selected" : ""}>— any —</option>
-          ${phaseLabels.map(l => `<option value="${esc(l)}"${tag === l ? " selected" : ""}>${esc(l)}</option>`).join("")}
+          ${phaseLabels.map((l, i) => `<option value="${esc(l)}"${tag === l ? " selected" : ""}>${i + 1}. ${esc(l)}</option>`).join("")}
           ${tag && !phaseLabels.includes(tag) ? `<option value="${esc(tag)}" selected>${esc(tag)}</option>` : ""}
           <option value="__custom"${typing ? " selected" : ""}>Type your own…</option>
         </select>
