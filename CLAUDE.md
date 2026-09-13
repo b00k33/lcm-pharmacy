@@ -901,6 +901,42 @@ reality:
   ONE reset (draft + armed stamp + fold + "more" state). Rate inputs write
   the draft on `input` and never repaint (the `[data-visit-hm-change]` span
   is patched in place); every chip repaints only the panel.
+- **The pulse chart also KNOWS what a quality means — her own Bilton /
+  SHPD notes, surfaced read-only (her second batch of files, 2026-09-13,
+  sent with no words under the same "use these files … more
+  comprehensively" ask; built 2026-09-14).** `PH_PULSE_KB_SEED` (in code,
+  ~191 rows) transcribes three of her Karen Bilton files verbatim,
+  abbreviations and all: **Appendix 5** "Interpretation of pulse qualities
+  and psychological states" (`Psycho-em signs_CP.pdf`), **Appendix 6**
+  "Interpretation of Qualities in Complementary Positions"
+  (`Qualities_Complementary_Positions.pdf`) and **"Putting It all
+  Together"** (`Qualities_FSHPD.pdf`: Quality · Conditions · DRRBF or SHL
+  Patterns · Formulas & Herbs · Acupuncture). Each row says WHERE it applies
+  (`w`: whole pulse / rhythm / rate / wave / a depth / a principal position
+  LDP-RDP-LMP-RMP-PPs / a side / a complementary position) and which chip
+  words trigger it (`q`; empty = Guide-only, e.g. Separation of yin and
+  yang, Bean Spinning, Slow/Rapid Rate). `phVisitPulseKbHits(draft)` maps
+  every mark to its rows — a grid cell reads as its side + its `pos` + its
+  depth row (`PH_PULSE_LEVEL_DEPTH`: Skin→Floating, Qi, Blood, Organ); the
+  rate row fires on with-exertion minus begin (>20 / <12 / a decrease) and
+  is patched in place by the rate input handler (`[data-visit-hm-ratekb]`),
+  never by a repaint. Hints render as "Your SHPD notes" blocks
+  (`phPulseKbBlockHtml`, `.ph-kb`) under the scores and under each Hammer
+  row that has a match, with a 📘 App. 5 / App. 6 / SHPD source tag per
+  line. **They GATHER; they never write into the visit** — the saved shape
+  is unchanged. The same notes live on **Guide → Pulse** (`phGdPulseHtml`,
+  seven sections, search, her own "+ Add note" with a where-picker; ✕ hides
+  a seed row / deletes her own; hidden rows restore with one tap) in
+  `PHARMACY.pulseNotes` / `PHARMACY.pulseNotesHidden` — the seed itself
+  stays in code so a transcription slip is fixable in a build. The
+  vocabulary grew only where those files interpret a quality the Common
+  Qualities form did not list (`PH_HM_POSITIONS` extras after the form's
+  own order; Depths gained Yielding/Feeble-Absent/Spreading; stamps gained
+  Restricted, Long). Sources are tagged `bilton` in `PH_SOURCE_TYPES`.
+  The 123-page `SHPD Foundations Class Syd 07_26_final_1.pdf` syllabus
+  could not be read (image/subset-font PDF, no reader on this machine) and
+  the two Romanian-orphan papers are background reading — nothing from
+  either is in the app.
 - **The tongue in the visit panel is the app's OWN chart, not the letter
   map** (her 2026-09-13 "there is also a comprehensive tongue chart that has
   been made in the app. use it"): `phTongueOutlineSvg` from the Guide's tongue
