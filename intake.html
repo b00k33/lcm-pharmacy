@@ -69,6 +69,17 @@
   .cq-inline { display: flex; align-items: center; gap: 8px; }
   .cq-inline input { width: 90px; flex: 0 0 auto; }
   .cq-inline select { flex: 1; }
+  /* IVF history (her ask 2026-09-13, card 11: "Intake form too, marked until
+     you confirm") -- kept to the three plain funnel fields (Eggs/Fertilised/
+     Frozen) plus date and clinic; the bonus fields (Mature/Day3/Blasts/PGT)
+     stay practitioner-only, typed at her next visit, not asked of the patient. */
+  .ivf-card { background: var(--ph-paper); border: 1px solid var(--ph-line); border-radius: 12px; padding: 12px; margin-top: 10px; position: relative; }
+  .ivf-card .rm { position: absolute; top: 8px; right: 8px; border: none; background: none; color: var(--ph-soft); font-size: 16px; line-height: 1; cursor: pointer; padding: 4px; }
+  .ivf-row2 { display: flex; gap: 8px; margin-bottom: 8px; }
+  .ivf-row2 label { flex: 1; min-width: 0; }
+  .ivf-row2 label span.mini { display: block; font-size: 11px; color: var(--ph-soft); margin-bottom: 3px; }
+  .ivf-row2 input { padding: 9px 10px; font-size: 13px; }
+  #ivfAddRow { margin-top: 10px; }
   #cycleSec[hidden], #femaleHx[hidden] { display: none; }
   .submitbar { position: sticky; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, var(--ph-paper) 70%, transparent); padding: 16px 0 0; margin-top: 4px; }
   .submitbtn { width: 100%; padding: 15px; border-radius: 999px; border: none; background: var(--ph-green-deep); color: #fff; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
@@ -181,6 +192,13 @@
             '<div class="field"><label class="q" for="fContraception">Current contraception</label>' + selHtml("fContraception", PH_CYCLE_CONTRACEPTION, "none") + '</div>' +
             '<div class="field"><label class="q" for="fTtc">Trying to conceive — how long? <span style="font-weight:400;color:var(--ph-soft)">(months, if applicable)</span></label><input type="number" id="fTtc" min="0" max="240" placeholder="leave blank if not applicable"></div>' +
             '<div class="field"><span class="q">Any typical period or PMS symptoms?</span><div class="chips" id="symptomChips">' + PH_CYCLE_SYMPTOMS.map(function (s) { return '<button type="button" class="chip" data-symptom="' + s[0] + '">' + esc(s[1]) + '</button>'; }).join("") + '</div></div>' +
+            '<div class="field"><span class="q">Have you had IVF, egg collection, or egg freezing before?</span>' +
+              '<div class="seg" id="ivfSeg"><button type="button" class="sexbtn" data-ivf="yes">Yes</button><button type="button" class="sexbtn" data-ivf="no">No</button></div>' +
+            '</div>' +
+            '<div id="ivfList" hidden>' +
+              '<div id="ivfRows"></div>' +
+              '<button type="button" class="chip" id="ivfAddRow">+ Add a cycle</button>' +
+            '</div>' +
           '</div>' +
         '</div>' +
         '<p class="err" id="formErr" hidden></p>' +
@@ -195,10 +213,12 @@
         if (!wasOn) btn.classList.add("on");
       });
     });
-    document.querySelectorAll(".chip").forEach(function (c) { c.addEventListener("click", function () { c.classList.toggle("on"); }); });
-    document.querySelectorAll(".sexbtn").forEach(function (b) {
+    document.querySelectorAll(".chip:not(#ivfAddRow)").forEach(function (c) { c.addEventListener("click", function () { c.classList.toggle("on"); }); });
+    // scoped to #sexSeg only -- the IVF Yes/No toggle below reuses the same
+    // .sexbtn look (a two-way seg control) and must not clear THIS state
+    document.querySelectorAll("#sexSeg .sexbtn").forEach(function (b) {
       b.addEventListener("click", function () {
-        document.querySelectorAll(".sexbtn").forEach(function (x) { x.classList.remove("on"); });
+        document.querySelectorAll("#sexSeg .sexbtn").forEach(function (x) { x.classList.remove("on"); });
         b.classList.add("on");
         var isF = b.dataset.sex === "F";
         document.getElementById("femaleHx").hidden = !isF;
@@ -208,7 +228,53 @@
         submitBtn.textContent = "Submit";
       });
     });
+    document.querySelectorAll("#ivfSeg .sexbtn").forEach(function (b) {
+      b.addEventListener("click", function () {
+        document.querySelectorAll("#ivfSeg .sexbtn").forEach(function (x) { x.classList.remove("on"); });
+        b.classList.add("on");
+        var yes = b.dataset.ivf === "yes";
+        document.getElementById("ivfList").hidden = !yes;
+        if (yes && !ivfRows.length) ivfAddRow();
+      });
+    });
+    document.getElementById("ivfAddRow").addEventListener("click", ivfAddRow);
     document.getElementById("intakeForm").addEventListener("submit", onSubmit);
+  }
+
+  // ---- IVF history (her ask 2026-09-13, card 11) ----
+  // one plain object per row; only the three funnel numbers a patient can
+  // actually answer without her clinic letter in front of her -- Mature/
+  // Day3/Blastocysts/PGT stay practitioner-typed, at the visit.
+  var ivfRows = [];
+  function ivfAddRow() {
+    ivfRows.push({ when: "", clinic: "", eggs: "", fertilised: "", frozen: "" });
+    ivfRenderRows();
+  }
+  function ivfRenderRows() {
+    var wrap = document.getElementById("ivfRows");
+    wrap.innerHTML = ivfRows.map(function (r, i) {
+      return '<div class="ivf-card" data-ivf-idx="' + i + '">' +
+        '<button type="button" class="rm" data-ivf-rm="' + i + '" aria-label="Remove this cycle">×</button>' +
+        '<div class="ivf-row2">' +
+          '<label><span class="mini">When (a month is fine)</span><input type="month" data-ivf-f="when" value="' + esc(r.when) + '" max="' + new Date().toISOString().slice(0, 7) + '"></label>' +
+          '<label><span class="mini">Clinic</span><input type="text" data-ivf-f="clinic" value="' + esc(r.clinic) + '" placeholder="e.g. Genea"></label>' +
+        '</div>' +
+        '<div class="ivf-row2">' +
+          '<label><span class="mini">Eggs collected</span><input type="number" min="0" data-ivf-f="eggs" value="' + esc(r.eggs) + '" placeholder="e.g. 12"></label>' +
+          '<label><span class="mini">Fertilised</span><input type="number" min="0" data-ivf-f="fertilised" value="' + esc(r.fertilised) + '" placeholder="if known"></label>' +
+          '<label><span class="mini">Frozen</span><input type="number" min="0" data-ivf-f="frozen" value="' + esc(r.frozen) + '" placeholder="if known"></label>' +
+        '</div>' +
+      '</div>';
+    }).join("");
+    wrap.querySelectorAll("[data-ivf-f]").forEach(function (input) {
+      input.addEventListener("input", function () {
+        var idx = +input.closest("[data-ivf-idx]").dataset.ivfIdx;
+        ivfRows[idx][input.dataset.ivfF] = input.value;
+      });
+    });
+    wrap.querySelectorAll("[data-ivf-rm]").forEach(function (btn) {
+      btn.addEventListener("click", function () { ivfRows.splice(+btn.dataset.ivfRm, 1); ivfRenderRows(); });
+    });
   }
 
   function numOrNull(id) {
@@ -217,7 +283,7 @@
   }
 
   function collectPayload() {
-    var sexBtn = document.querySelector(".sexbtn.on");
+    var sexBtn = document.querySelector("#sexSeg .sexbtn.on");
     var sex = sexBtn ? sexBtn.dataset.sex : "";
     var demographics = {
       sex: sex,
@@ -243,8 +309,19 @@
       var contraception = document.getElementById("fContraception").value;
       var ttcMonths = numOrNull("fTtc");
       var symptoms = Array.prototype.map.call(document.querySelectorAll(".chip.on"), function (c) { return c.dataset.symptom; });
-      var touched = lmp || cycleLen != null || flowDays != null || menarcheAge != null || contraception !== "none" || ttcMonths != null || symptoms.length || flowIntensity !== "moderate" || pain !== "none" || !regular;
-      if (touched) cycle = { lmp: lmp, cycleLen: cycleLen, flowDays: flowDays, flowIntensity: flowIntensity, pain: pain, regular: regular, menarcheAge: menarcheAge, contraception: contraception, ttcMonths: ttcMonths, symptoms: symptoms };
+      // her card 11: only rows with SOMETHING typed travel -- an added-then-
+      // left-blank card is not a reported cycle. No SQL change needed:
+      // submit_intake_form's p_cycle is already a jsonb blob (a nested key
+      // costs nothing server-side); phIntakeComputeDiff reads it back out.
+      var ivfSel = document.querySelector("#ivfSeg .sexbtn.on");
+      var ivfCycles = (ivfSel && ivfSel.dataset.ivf === "yes")
+        ? ivfRows.filter(function (r) { return r.when || r.clinic || r.eggs !== "" || r.fertilised !== "" || r.frozen !== ""; })
+            .map(function (r) { return { when: r.when || null, clinic: r.clinic || null,
+              eggs: r.eggs === "" ? null : Number(r.eggs), fertilised: r.fertilised === "" ? null : Number(r.fertilised),
+              frozen: r.frozen === "" ? null : Number(r.frozen) }; })
+        : [];
+      var touched = lmp || cycleLen != null || flowDays != null || menarcheAge != null || contraception !== "none" || ttcMonths != null || symptoms.length || flowIntensity !== "moderate" || pain !== "none" || !regular || ivfCycles.length;
+      if (touched) cycle = { lmp: lmp, cycleLen: cycleLen, flowDays: flowDays, flowIntensity: flowIntensity, pain: pain, regular: regular, menarcheAge: menarcheAge, contraception: contraception, ttcMonths: ttcMonths, symptoms: symptoms, ivfCycles: ivfCycles };
     }
     return { demographics: demographics, history: history, cycle: cycle };
   }
