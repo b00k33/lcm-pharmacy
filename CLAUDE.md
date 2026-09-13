@@ -933,10 +933,19 @@ reality:
   Qualities form did not list (`PH_HM_POSITIONS` extras after the form's
   own order; Depths gained Yielding/Feeble-Absent/Spreading; stamps gained
   Restricted, Long). Sources are tagged `bilton` in `PH_SOURCE_TYPES`.
-  The 123-page `SHPD Foundations Class Syd 07_26_final_1.pdf` syllabus
-  could not be read (image/subset-font PDF, no reader on this machine) and
-  the two Romanian-orphan papers are background reading — nothing from
-  either is in the app.
+  **The syllabus was decoded the same evening** (it is 96 pages, not 123;
+  a custom PowerShell PDF reader walked its 64 `/ToUnicode` font maps) and
+  18 more rows added, source `syl`: Dr Shen's named Heart blocks (Heart
+  Full = LDP Inflated/Tense/Yielding, Heart Closed = LDP Flat) with their
+  actual herb formulas and the Move Qi in the Chest base recipe — her
+  Putting-It-all-Together table only ever cites these as abbreviations;
+  the Heart-shock Sheng Mai San + Yunnan Baiyao protocol; Qi Wild /
+  retained-toxicity / blood-stagnation (Unclear/Heat/Thick) formulas;
+  Nervous System Tense vs Weak formulas; severity nuances for Changing
+  Rate at Rest / Interrupted / Intermittent; the age-appropriate resting
+  rate table; Guide-only notes for Split, San Yin/Fan Quan, the Digestive
+  System formula. The two Romanian-orphan papers are background reading —
+  nothing from either is in the app.
 - **The tongue in the visit panel is the app's OWN chart, not the letter
   map** (her 2026-09-13 "there is also a comprehensive tongue chart that has
   been made in the app. use it"): `phTongueOutlineSvg` from the Guide's tongue
