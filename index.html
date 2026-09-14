@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260914-233000">
+<meta name="lcm-build" content="20260915-000500">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -2237,6 +2237,11 @@
   #pharmacyPage .ph-fs-wk { display: inline-flex; width: 6px; height: 6px; border-radius: 999px; background: var(--ph-gold); margin-left: 6px; flex: none; }
   #pharmacyPage .ph-fs-acts { cursor: default; }
   #pharmacyPage .ph-fs-acts .ph-os-lnk + .ph-os-lnk { margin-left: 16px; }
+  /* the pale kind pill used to read as the button while the real Check-in
+     action was plain text under it (flagged 2026-09-14) -- give the action
+     button chrome, keep the pill a label */
+  #pharmacyPage .ph-fs-acts .ph-os-lnk[data-ck-open] { margin-left: 0; padding: 3px 10px; border: 1px solid var(--ph-green-deep); border-radius: 999px; background: var(--ph-green-tint); }
+  #pharmacyPage .ph-fs-acts .ph-os-lnk[data-ck-open]:hover { text-decoration: none; background: var(--ph-green-deep); color: #fff; }
   #pharmacyPage .ph-fs-row.done .nm b { color: var(--ph-soft); font-weight: 600; }
   #pharmacyPage .ph-fs-row.done .date { color: var(--ph-faint); }
   #pharmacyPage .ph-fs-note { position: relative; z-index: 1; margin: 0 4px 4px; padding: 8px 16px 10px 42px; background: var(--ph-paper); border-radius: 0 0 8px 8px; font-size: 12.5px; color: var(--ph-ink); display: flex; gap: 8px; align-items: baseline; white-space: normal; }
@@ -2374,6 +2379,7 @@
   #pharmacyPage .ph-appt-kind { display: inline-flex; align-items: center; height: 16px; padding: 0 5px; border-radius: 999px; font-size: 9.5px; font-weight: 800; letter-spacing: .06em; line-height: 1; flex: none; margin-left: 6px; vertical-align: middle; }
   #pharmacyPage .ph-appt-kind.chm { background: var(--ph-green-tint); color: var(--ph-green-deep); }
   #pharmacyPage .ph-appt-kind.acu { background: var(--ph-blue-tint); color: var(--ph-blue-deep); }
+  #pharmacyPage .ph-appt-kind.away { background: var(--ph-purple-tint); color: var(--ph-purple-deep); }
   #pharmacyPage .ph-appt-kind.both { background: var(--ph-gold-tint, #FFFBE2); color: var(--ph-gold-deep); }
   #pharmacyPage .ph-wkt-item .ph-appt-kind { height: 14px; font-size: 9px; padding: 0 4px; margin-left: 4px; }
   #pharmacyPage .ph-ck-kv .v .ph-appt-kind { margin-left: 0; margin-right: 2px; }
@@ -21196,6 +21202,7 @@
     const hasHerbs = kind === "chm" || kind === "both";
     const acuTag = kind === "acu" || kind === "both" ? `<span class="ph-appt-kind acu" title="Acupuncture">ACU</span>` : "";
     const chmTag = hasHerbs ? `<span class="ph-appt-kind chm" title="Chinese herbal medicine">CHM</span>` : "";
+    const awayTag = phApptHomeVisitHtml(a.service);
     const script = hasHerbs ? phApptScriptFor(k) : null;
     const prep = script ? phApptPrep(k) : null;
     const ready = !!(prep && !prep.short.length);
@@ -21217,7 +21224,7 @@
     const formulaName = script ? presActualFormula(script) : "";
     const line2 = hasHerbs
       ? `${chmTag}<span class="sub">${herbsN} herb${herbsN === 1 ? "" : "s"}${formulaName ? ` · ${esc(formulaName)}` : ""}</span>`
-      : "";
+      : awayTag ? `<span class="sub">${esc(a.service)}</span>` : "";
     const rec = PHARMACY.patients && PHARMACY.patients[k];
     const tracked = rec && phCycleOn(rec);
     const readyPill = !prep ? ""
@@ -21229,7 +21236,7 @@
     return `<div class="ph-tlr-row">
       <div class="ph-tlr-time"><span class="tm">${esc(a.time)}</span><span class="dot ${dotCls}"></span></div>
       <div class="ph-tlr-main">
-        <div class="ph-tlr-l1">${nameHtml}${acuTag}</div>
+        <div class="ph-tlr-l1">${nameHtml}${acuTag}${awayTag}</div>
         <div class="ph-tlr-l2">${line2}</div>
       </div>
       <div class="ph-tlr-right">
@@ -21707,11 +21714,18 @@
     return "";
   }
   const PH_APPT_KIND_LABEL = { chm: "CHM", acu: "ACU", both: "ACU + CHM" };
+  // "home visit is separate from cliniko" (2026-09-09): she types the service
+  // herself, so match the words, not a Cliniko type. Flagged 2026-09-09 as
+  // invisible on her day briefing -- the pill rides with the kind pills so
+  // every surface that shows ACU/CHM shows it too.
+  const phApptIsHomeVisit = service => /home\s*-?\s*visit/i.test(String(service || ""));
+  const phApptHomeVisitHtml = service => phApptIsHomeVisit(service) ? `<span class="ph-appt-kind away" title="${esc(String(service))}">HOME VISIT</span>` : "";
   const phApptKindHtml = service => {
     const k = phApptKind(service);
-    if (!k) return "";
-    if (k === "both") return `<span class="ph-appt-kind acu" title="Acupuncture">ACU</span><span class="ph-appt-kind chm" title="Chinese herbal medicine">CHM</span>`;
-    return `<span class="ph-appt-kind ${k}" title="${k === "chm" ? "Chinese herbal medicine" : "Acupuncture only"}">${PH_APPT_KIND_LABEL[k]}</span>`;
+    const away = phApptHomeVisitHtml(service);
+    if (!k) return away;
+    if (k === "both") return `<span class="ph-appt-kind acu" title="Acupuncture">ACU</span><span class="ph-appt-kind chm" title="Chinese herbal medicine">CHM</span>${away}`;
+    return `<span class="ph-appt-kind ${k}" title="${k === "chm" ? "Chinese herbal medicine" : "Acupuncture only"}">${PH_APPT_KIND_LABEL[k]}</span>${away}`;
   };
   // her ask 2026-09-11 ("when appointments are added to the calendar, it
   // shows if its acu or herbs. can you auto turn acu if its acu?"): reads
@@ -34954,6 +34968,25 @@ or changing anything in Cliniko.
     const bm = document.getElementById("presBandMeta");
     if (t && bm) bm.innerHTML = presBandMetaText(t, presIsFormula(t));
   }
+  // Her decision 11 (2026-09-09): the band's second line answers "where is
+  // she up to" -- the active plan and its current phase ("Natural fertility
+  // · Follicular") -- instead of the static "Patient prescription" label she
+  // called redundant. No plan yet says so, which is also the nudge (decision
+  // 3: a patient with no plan is prompted to start one). Repainted in place
+  // by phTpRepaintPhasePanel/phTpRerender, never by a keystroke.
+  function presBandSubText(t, isF, isNew) {
+    if (isF) return "Formula";
+    if (isNew) return "New patient prescription";
+    const plan = t && t.id ? phTpShownPlan(presPatientFor(t)) : null;
+    const cur = plan ? phTpPlanCurrentPhase(plan) : null;
+    const bits = [plan && plan.title ? esc(plan.title) : "", cur && cur.label ? esc(cur.label) : ""].filter(Boolean);
+    return bits.length ? bits.join(" · ") : "No treatment plan yet";
+  }
+  function presBandSubRefresh() {
+    const el = document.getElementById("presBandSub");
+    const t = presOpenId && (PRESC.items || []).find(x => x.id === presOpenId);
+    if (el && t) el.innerHTML = presBandSubText(t, presIsFormula(t), false);
+  }
   // The one-line answer to "which script is this?" for the places a script is
   // OFFERED rather than opened -- the dispense scheduler's picker, and the
   // scheduled row that picker creates.
@@ -42228,7 +42261,7 @@ or changing anything in Cliniko.
         <button type="button" class="ph-band-back" data-pres-close="1" aria-label="Close">‹</button>
         <div class="ph-band-titlewrap">
           <button type="button" class="ph-band-name" data-pres-name-jump="1" title="Tap to edit the name">${esc(phDispName(t.name, isF))}</button>
-          <span class="ph-band-sub">${isF ? "Formula" : (isNew ? "New patient prescription" : "Patient prescription")}</span>
+          <span class="ph-band-sub" id="presBandSub">${presBandSubText(t, isF, isNew)}</span>
         </div>
         ${isF ? `<span class="ph-pres-type formula">🏺 formula</span>` : ""}
         ${isF && ab ? `<span class="ph-pres-abbr">${esc(ab)}</span>` : ""}
@@ -43557,8 +43590,12 @@ or changing anything in Cliniko.
   // preset and the opener can never disagree about "current".
   function presPhaseFillFromPlan(s) {
     if (!s || s.phaseTag != null || presIsFormula(s)) return false;
-    const plan = phTpShownPlan(presPatientFor(s));
-    const cur = plan && phTpPlanCurrentPhase(plan);
+    const name = presPatientFor(s), plan = phTpShownPlan(name);
+    // the calendar-read phase wins when the plan is a cycle-synced one (her
+    // 2026-09-13 pick: the phase follows the cycle, read-only), else the
+    // phase she marked current
+    const rec = name ? phPatientPeek(name) : null;
+    const cur = plan && ((rec && phTpCycleEffectivePhase(rec, plan)) || phTpPlanCurrentPhase(plan));
     if (!cur || !cur.label) return false;
     s.phaseTag = cur.label;
     return true;
@@ -45255,6 +45292,7 @@ or changing anything in Cliniko.
   // renderTpScreen() directly so the exact same handler works whether the
   // edit came from the full-screen modal or from presTpInlineHtml.
   function phTpRerender() {
+    presBandSubRefresh();
     const modal = document.getElementById("phTpModal");
     if (modal && !modal.hidden) { renderTpScreen(); return; }
     if (presTpInlinePlanId || presTpInlineNew) { renderPresPanel(); return; }
@@ -45279,6 +45317,7 @@ or changing anything in Cliniko.
     const body = (inModal ? modal : document).querySelector(".ph-tp-phasebody");
     if (!plan || !sel || !body) { phTpRerender(); return; }
     body.innerHTML = phTpPhasePanelHtml(plan, sel);
+    presBandSubRefresh();
   }
   function phTpPhaseFormulaPickerHtml(phase) {
     // scoped-down version of the ingredient-add picker (presPickMatches) --
