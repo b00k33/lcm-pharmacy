@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260915-003000">
+<meta name="lcm-build" content="20260915-010000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -5762,6 +5762,8 @@
   #pharmacyPage .ph-pres-week-row .mid .line1 .bell { margin-left: 4px; font-size: 12px; }
   #pharmacyPage .ph-pres-week-row .mid .line2 { font-size: 12px; color: var(--ph-ink); margin-top: 1px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
   #pharmacyPage .ph-pres-week-row.lean .mid .line2 { font-style: italic; color: var(--ph-faint); }
+  #pharmacyPage .ph-pres-week-row.lean { opacity: .62; }   /* acu-only rows sit back (her 2026-09-03 pick) */
+  #pharmacyPage .ph-wkt-item.acu { color: var(--ph-faint); font-weight: 500; }
   #pharmacyPage .ph-pres-week-row .end { flex: 0 0 auto; display: flex; align-items: center; gap: 6px; margin-left: auto; }
   #pharmacyPage .ph-pres-week-row.done .mid .line1 b, #pharmacyPage .ph-pres-week-row.done .mid .line2 { color: var(--ph-faint); }
   #pharmacyPage .ph-pres-week-row .ph-pres-fx-main { display: inline; }
@@ -8911,6 +8913,15 @@
   #pharmacyPage .ph-pres-stagebtn.done .n { background: var(--ph-green); border-color: var(--ph-green); color: #fff; }
   #pharmacyPage .ph-pres-stagebtn .l { font-size: 10.5px; color: var(--ph-soft); text-align: center; white-space: nowrap; }
   #pharmacyPage .ph-pres-stagebtn.on .l { color: var(--ph-green-deep); font-weight: 700; }
+  #pharmacyPage .ph-hx-paste { margin: 10px 0 4px; }
+  #pharmacyPage .ph-hx-paste-h { font-size: 10.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--ph-soft); margin: 10px 0 4px; }
+  #pharmacyPage .ph-hx-paste-h b { color: var(--ph-green-deep); }
+  #pharmacyPage .ph-hx-paste-row { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; padding: 3px 0; cursor: pointer; }
+  #pharmacyPage .ph-hx-paste-row input { margin-top: 3px; flex: none; }
+  #pharmacyPage .ph-hx-paste-row .why { display: block; font-size: 11px; color: var(--ph-faint); font-style: italic; }
+  #pharmacyPage .ph-hx-paste-row em { font-size: 10.5px; color: var(--ph-faint); font-style: normal; margin-left: 4px; }
+  #pharmacyPage .ph-hx-paste-row.already { opacity: .6; }
+  #pharmacyPage .ph-hx-paste-note { font-size: 11px; color: var(--ph-faint); margin: 8px 0 0; }
   #pharmacyPage .ph-pres-stage-body { display: block; }
   /* the three places (decision 7): a tab row, no numbers, no connector line */
   #pharmacyPage .ph-pres-stages.places { gap: 2px; border-bottom: 1px solid var(--ph-line); align-items: stretch; }
@@ -26053,6 +26064,22 @@
       if (hxOpenBtn) { phHxOpen(hxOpenBtn.dataset.hxOpen); return; }
       if (e.target.closest("[data-hx-close]")) { phHxClose(); return; }
       if (e.target.closest("[data-hx-sendintake]")) { phIntakeOpen(presHxScreenName); return; }
+      if (e.target.closest("[data-hx-paste-open]")) { phHxPaste = { raw: "", parsed: null }; renderHxScreen(); const ta = document.getElementById("phHxPasteInput"); if (ta) ta.focus(); return; }
+      if (e.target.closest("[data-hx-paste-cancel]")) { phHxPaste = null; renderHxScreen(); return; }
+      if (e.target.closest("[data-hx-paste-back]")) { if (phHxPaste) phHxPaste.parsed = null; renderHxScreen(); return; }
+      if (e.target.closest("[data-hx-paste-parse]")) {
+        const ta = document.getElementById("phHxPasteInput");
+        const raw = ta ? ta.value : "";
+        if (!raw.trim()) { phFlashShow("Paste something first."); return; }
+        phHxPaste = { raw, parsed: phHxParseNote(raw, phPatientRec(presHxScreenName)) };
+        renderHxScreen(); return;
+      }
+      if (e.target.closest("[data-hx-paste-apply]")) {
+        const n = phHxPasteApply(phPatientRec(presHxScreenName));
+        phHxPaste = null; renderHxScreen();
+        phFlashShow(n ? `Recorded ${n} answer${n === 1 ? "" : "s"} from the note — and kept the note.` : "Kept the note under History notes.");
+        return;
+      }
       // ---- 📷 capture sheet handlers ----
       if (e.target.closest("[data-cap-open]")) { phCapOpenPicker(); return; }
       const capFor = e.target.closest("[data-cap-for]");
@@ -34061,10 +34088,16 @@ or changing anything in Cliniko.
     const appts = phApptFor(d.key);
     const doneN = appts.filter(a => presDispenseOnDay(phPatientKey(a.patient), d.key)).length;
     const open = presWeekOpenDay === d.key;
-    const names = appts.slice(0, 2).map(a => `<span class="ph-wkt-item">${esc(phTitle(a.patient).split(" ")[0])}${phApptKindHtml(a.service)}</span>`);
+    // her pick (2026-09-03, "LCM = herbs"): a cell NAMES only the herb
+    // patients; acupuncture-only bookings fold into one "+N acu", so the
+    // week reads as a dispensing week, not a diary. Unknown kinds stay named.
+    const herb = appts.filter(a => phApptKind(a.service) !== "acu"), acuN = appts.length - herb.length;
+    const names = herb.slice(0, 2).map(a => `<span class="ph-wkt-item">${esc(phTitle(a.patient).split(" ")[0])}${phApptKindHtml(a.service)}</span>`);
+    if (herb.length > 2) names.push(`<span class="ph-wkt-item">+${herb.length - 2} more</span>`);
+    if (acuN) names.push(`<span class="ph-wkt-item acu">+${acuN} acu</span>`);
     return `<button type="button" class="ph-wkt-cell${appts.length ? " has" : ""}${d.today ? " today" : ""}${d.past ? " past" : ""}${d.work ? " wd" : ""}${open ? " open" : ""}" data-pres-week-day="${d.key}" aria-expanded="${open ? "true" : "false"}">
       <span class="ph-wkt-d">${esc(d.dow)} ${d.dnum}${d.today ? ` <em>today</em>` : ""}</span>
-      ${appts.length ? `<span class="ph-wkt-item n"><b>${appts.length} booked</b>${doneN ? ` · ${doneN} ✓` : ""}</span>${names.join("")}${appts.length > 2 ? `<span class="ph-wkt-item">+${appts.length - 2} more</span>` : ""}` : `<span class="ph-wkt-dash">—</span>`}
+      ${appts.length ? `<span class="ph-wkt-item n"><b>${appts.length} booked</b>${doneN ? ` · ${doneN} ✓` : ""}</span>${names.join("")}` : `<span class="ph-wkt-dash">—</span>`}
     </button>`;
   }
   // one flex row, wraps safely at any width (no fixed grid columns -- the
@@ -35843,13 +35876,21 @@ or changing anything in Cliniko.
     return null;
   }
   const PH_MSG_TONE_THRESHOLD_DAYS = 42; // her worked example, code3: under six weeks -> Formal
+  // her pick 2026-09-14: computed from how long she's known them, AND a
+  // per-patient tag she sets once (rec.tonePref, "formal" | "casual") that
+  // wins whenever it is set -- the Contact card's Tone row is the switch
+  const phMsgTonePref = name => { const r = phPatientPeek(name); return r && (r.tonePref === "formal" || r.tonePref === "casual") ? r.tonePref : null; };
   function phMsgDefaultTone(name) {
+    const pref = phMsgTonePref(name);
+    if (pref) return pref;
     const t = phPatientTenureStart(name);
     if (!t) return "formal"; // no history at all -- her call: safer to start Formal
     return (Date.now() - t.at) / 86400000 < PH_MSG_TONE_THRESHOLD_DAYS ? "formal" : "casual";
   }
   // the small "why it defaulted this way" caption under the panel's toggle
   function phCkToneCaption(name) {
+    const pref = phMsgTonePref(name);
+    if (pref) return `always ${pref} — set by you`;
     const t = phPatientTenureStart(name);
     if (!t) return "no visit history yet";
     const days = Math.round((Date.now() - t.at) / 86400000);
@@ -38700,6 +38741,14 @@ or changing anything in Cliniko.
           <span class="faint">${esc(phCkToneCaption(key))}</span>
         </div>
       </div>
+      <div class="ph-jr-contact-row">
+        <span>Tone</span>
+        <div class="ph-msg-seg" role="group" aria-label="Message tone">
+          <button type="button" class="ph-msg-seg-opt${!phMsgTonePref(key) ? " on" : ""}" data-ph-jr-tone="auto" title="Formal until you've known her ${PH_MSG_TONE_THRESHOLD_DAYS} days, then casual">Auto</button>
+          <button type="button" class="ph-msg-seg-opt${phMsgTonePref(key) === "formal" ? " on" : ""}" data-ph-jr-tone="formal">Formal</button>
+          <button type="button" class="ph-msg-seg-opt${phMsgTonePref(key) === "casual" ? " on" : ""}" data-ph-jr-tone="casual">Casual</button>
+        </div>
+      </div>
       <div class="ph-jr-contact-row ph-jr-ins-row">
         <span>Insurance</span>
         ${phInsFieldsHtml(phMsgDisplayName(key))}
@@ -38802,6 +38851,12 @@ or changing anything in Cliniko.
     if (e.target.closest("[data-ph-journey-menu]")) { phJourneyMenuOpen = !phJourneyMenuOpen; renderPharmacy(); return; }
     const pref = e.target.closest("[data-ph-jr-pref]");
     if (pref) { phMsgSetContactPref(phMsgDisplayName(phJourneyKey), pref.dataset.phJrPref); renderPharmacy(); return; }
+    const toneBtn = e.target.closest("[data-ph-jr-tone]");
+    if (toneBtn) {
+      const rec = phPatientRec(phMsgDisplayName(phJourneyKey));
+      if (toneBtn.dataset.phJrTone === "auto") delete rec.tonePref; else rec.tonePref = toneBtn.dataset.phJrTone;
+      savePharmacy(); renderPharmacy(); return;
+    }
     const openJourney = e.target.closest("[data-ph-journey-open]");
     if (openJourney) { phJourneyOpen(openJourney.dataset.phJourneyOpen); return; }
     // "＋ Add a package" / "Start a new one". A replaced package is CLOSED,
@@ -41373,11 +41428,13 @@ or changing anything in Cliniko.
                  one -- same form, same cloud review-before-merge, prefilled
                  with the name she's already looking at. -->
             <button type="button" class="ph-name-link" data-hx-sendintake="1" title="Text ${esc(phTitle(name))} a link to fill this in from her own phone">✉ Send intake link</button>
+            <button type="button" class="ph-name-link" data-hx-paste-open="1" title="Paste a referral or your own note — the checklist fills itself">📋 Paste a note</button>
           </span>
           <label class="ph-hx-notneeded-lbl"><input type="checkbox" data-hx-notneeded="1"${prog.notNeeded ? " checked" : ""}> Not needed for this patient</label>
         </div>
         ${phHxConstitutionHtml(rec, phPatientKey(name))}
       </div>
+      ${phHxPasteBoxHtml(rec)}
       <div class="ph-hx-filters">
         <span class="ph-hx-filter-seg" role="radiogroup" aria-label="Filter">
           ${[["all", "All"], ["unasked", "Not asked"], ["yes", "Answered yes"]].map(([v, l]) => `<button type="button" class="ph-hx-filterbtn${presHxScreenFilter === v ? " on" : ""}" data-hx-filter="${v}" aria-pressed="${presHxScreenFilter === v ? "true" : "false"}">${l}</button>`).join("")}
@@ -41386,6 +41443,149 @@ or changing anything in Cliniko.
       </div>
       <div class="ph-hx-body" id="phHxBody">${phHxBodyHtml(rec)}</div>
     </div>`;
+  }
+  /* ---- Smart-paste (her 2026-09-05 big-ask, decided "hybrid": keywords now,
+     no AI). She pastes a referral, a Cliniko note or her own shorthand; the
+     words are matched against the 38-item checklist and the cycle facts
+     that already have a home (cycle length, flow, pain, regular, months
+     trying). Everything found is shown as ticks she can untick BEFORE it is
+     written; a "no / not / never / denies" within a few words of a match
+     drops it; a sentence about family (mother, father, sister, grandmother…)
+     feeds the Family-history rows, never the patient's own. The pasted text
+     always lands verbatim in the History notes as well, so nothing the
+     matcher missed is lost. Same "find, show, then apply" shape as the
+     contact paste box. ---- */
+  let phHxPaste = null;   // { raw, parsed } | null
+  const PH_HX_PASTE_RULES = {
+    heavy_menstrual_bleeding: /heavy(?: \S+){0,2} (bleed|periods?|flow|menses)|menorrhag|flooding/i,
+    dysmenorrhoea: /dysmenorrh|painful periods?|period pain|menstrual (pain|cramp)|cramps? with (her |the |)period/i,
+    irregular_menstruation: /irregular(?: \S+){0,3} (period|cycle|menstruat)/i,
+    amenorrhoea: /amenorrh|no periods? for|absent periods?|periods? stopped/i,
+    pms: /\bpms\b|premenstrual (syndrome|tension|symptom)/i,
+    pmdd: /\bpmdd\b|premenstrual dysphoric/i,
+    uterine_fibroids: /fibroid/i,
+    adenomyosis: /adenomyos/i,
+    ovarian_cysts: /ovarian cyst|cysts? on (her |the |)ovar|dermoid/i,
+    endometriosis: /endometrio/i,
+    pcos: /\bpcos\b|polycystic/i,
+    infertility_unexplained: /unexplained (infertility|subfertility)|infertil|subfertil/i,
+    history_of_miscarriage: /miscarr|pregnancy loss|recurrent loss/i,
+    pregnant: /\bpregnant\b|\d+\s*(weeks?|wks?)\s*(pregnant|gestation)|\bgravid/i,
+    breastfeeding: /breast ?feed|lactating|nursing (a |her |)baby/i,
+    diabetes: /diabet|\bt[12]dm?\b|type (1|2|one|two) diabet|gestational diabet|\bgdm\b/i,
+    high_blood_pressure: /hypertens|high blood pressure|\bhbp\b|\bhtn\b/i,
+    thyroid_condition: /thyroid|hashimoto|graves|hypothyroid|hyperthyroid/i,
+    heart_condition: /heart (condition|disease|problem)|cardiac|arrhythm|palpitation|atrial|\bafib\b/i,
+    asthma_respiratory: /asthma|\bcopd\b|respiratory|bronchi/i,
+    digestive_condition: /\bibs\b|reflux|\bgerd\b|\bgord\b|crohn|colitis|coeliac|celiac|gastritis|digestive (condition|problem|issue)/i,
+    kidney_or_liver_condition: /kidney|renal|\bliver\b|hepat|fatty liver/i,
+    autoimmune_condition: /autoimmun|lupus|rheumatoid|sjogren|psoriasis|multiple sclerosis|\bms\b/i,
+    cancer: /cancer|carcinoma|tumou?r|malignan|chemo|lymphoma|leuk(a)?emia/i,
+    taking_prescribed_medication: /medication|\bmeds?\b|prescribed|on (the )?pill|\bocp\b|antidepress|\bssri\b|metformin|thyroxine|levothyrox|\d+\s*mg\b/i,
+    taking_supplements: /supplement|vitamin|folate|folic|\bcoq10\b|\bcoenzyme|fish oil|\bomega|magnesium|zinc|iron tablet|prenatal|elevit/i,
+    known_drug_allergy: /(drug|medication|penicillin|\w+cillin|sulfa|codeine|aspirin) allerg|allerg(y|ic|ies) to (penicillin|\w+cillin|sulfa|codeine|antibiotic|medication)/i,
+    known_food_allergy: /(food|nut|peanut|shellfish|seafood|gluten|dairy|egg|soy|sesame) (allerg|intoleran)|allerg(y|ic|ies) to (nuts?|peanut|shellfish|seafood|gluten|dairy|eggs?|soy|sesame)/i,
+    allergic_to_herbs: /allerg\w* to (any |chinese |)herb|herb\w* allerg/i,
+    blood_thinning_medication: /warfarin|aspirin|clexane|heparin|enoxaparin|apixaban|eliquis|rivaroxaban|xarelto|blood.thin|anticoag/i,
+  };
+  const PH_HX_PASTE_FAMILY = {
+    fh_diabetes: /diabet/i, fh_heart_disease_stroke: /heart|cardiac|stroke/i, fh_high_blood_pressure: /hypertens|blood pressure/i,
+    fh_cancer: /cancer|carcinoma|tumou?r/i, fh_thyroid_condition: /thyroid/i, fh_autoimmune_condition: /autoimmun|lupus|rheumatoid|coeliac|celiac/i,
+    fh_endometriosis_pcos: /endometrio|\bpcos\b|polycystic/i, fh_early_menopause: /early menopause|premature (ovarian|menopause)/i,
+  };
+  const PH_HX_PASTE_FAMILY_RE = /\b(family|familial|mother|father|mum|dad|sister|brother|sibling|grand\w*|aunt|uncle|parents?|maternal|paternal|runs in)\b/i;
+  const PH_HX_PASTE_NEG_RE = /\b(no|not|never|denies|denied|nil|without|negative for|free of|ruled out|no history of|no hx of)\b/i;
+  function phHxPasteNegated(sentence, m) {
+    // a "no / not / never…" inside the ~40 characters before the match
+    const before = sentence.slice(Math.max(0, m.index - 40), m.index);
+    return PH_HX_PASTE_NEG_RE.test(before);
+  }
+  function phHxParseNote(text, rec) {
+    const raw = String(text || "").replace(/\r/g, "").trim();
+    const found = new Map();   // key -> evidence
+    const sentences = raw.split(/(?<=[.;!?\n])\s+|\n+/).map(x => x.trim()).filter(Boolean);
+    sentences.forEach(sen => {
+      const family = PH_HX_PASTE_FAMILY_RE.test(sen);
+      const rules = family ? PH_HX_PASTE_FAMILY : PH_HX_PASTE_RULES;
+      Object.keys(rules).forEach(k => {
+        if (found.has(k)) return;
+        if (!family && !phIsFemale(rec) && PH_HX_ALL_ITEMS.some(it => it.k === k && PH_HX_FEMALE_GROUPS.has(it.group))) return;
+        const m = rules[k].exec(sen);
+        if (!m || phHxPasteNegated(sen, m)) return;
+        found.set(k, sen.length > 90 ? sen.slice(0, 88) + "…" : sen);
+      });
+    });
+    const cycle = {};
+    let m;
+    if ((m = /(\d{2})\s*[- ]?\s*day cycles?|cycles?\s*(?:of|every|around|about|approx\w*|~)\s*(\d{2})|cycle length\D{0,6}(\d{2})|(\d{2})\s*day\s*cycle/i.exec(raw))) {
+      const n = parseInt(m[1] || m[2] || m[3] || m[4], 10); if (n >= 14 && n <= 60) cycle.cycleLen = n;
+    }
+    if (/heavy(?: \S+){0,2} (flow|periods?|bleed|menses)|menorrhag|flooding/i.test(raw)) cycle.flowIntensity = "heavy";
+    else if (/light(?: \S+){0,2} (flow|periods?|menses)|scanty/i.test(raw)) cycle.flowIntensity = "light";
+    if (/severe (period |menstrual |)(pain|cramp)|debilitating|bed.?ridden with pain/i.test(raw)) cycle.pain = "severe";
+    else if (/moderate (period |menstrual |)(pain|cramp)/i.test(raw)) cycle.pain = "moderate";
+    else if (/mild (period |menstrual |)(pain|cramp)/i.test(raw)) cycle.pain = "mild";
+    else if (/(no|pain.?free|painless) periods?|no period pain/i.test(raw)) cycle.pain = "none";
+    if (/irregular(?: \S+){0,3} (period|cycle|menstruat)/i.test(raw)) cycle.regular = false;
+    else if (/\bregular(?: \S+){0,2} (period|cycle)s?/i.test(raw)) cycle.regular = true;
+    if ((m = /(?:trying|ttc|conceiv\w*|attempting)\D{0,30}?(\d+)\s*(months?|mths?|years?|yrs?)/i.exec(raw)) || (m = /(\d+)\s*(months?|mths?|years?|yrs?)\D{0,20}(?:trying|ttc|of trying)/i.exec(raw))) {
+      const n = parseInt(m[1], 10); if (n >= 0) cycle.ttcMonths = /y/i.test(m[2]) ? n * 12 : n;
+    }
+    return { raw, history: Array.from(found, ([k, why]) => ({ k, label: PH_HX_LABEL[k] || k, family: k.startsWith("fh_"), why })), cycle };
+  }
+  function phHxPasteBoxHtml(rec) {
+    const p = phHxPaste;
+    if (!p) return "";
+    if (!p.parsed) {
+      return `<div class="ph-cpaste ph-hx-paste">
+        <textarea id="phHxPasteInput" class="ph-cpaste-input" rows="6" placeholder="Paste a referral, a Cliniko note or your own shorthand — e.g. “PCOS, irregular 35-day cycles, heavy painful periods, TTC 14 months, mother has thyroid.”" aria-label="Paste a note">${esc(p.raw || "")}</textarea>
+        <div class="ph-cpaste-acts">
+          <button type="button" class="btn-save" data-hx-paste-parse="1">Read the note</button>
+          <button type="button" class="btn-cancel" data-hx-paste-cancel="1">Cancel</button>
+        </div>
+      </div>`;
+    }
+    const d = p.parsed;
+    const cyc = Object.entries(d.cycle);
+    const cycLabel = ([k, v]) => k === "cycleLen" ? `Cycle length ${v} days` : k === "flowIntensity" ? `Flow: ${v}` : k === "pain" ? `Period pain: ${v}` : k === "regular" ? (v ? "Regular cycles" : "Irregular cycles") : k === "ttcMonths" ? `Trying for ${v} month${v === 1 ? "" : "s"}` : `${k}: ${v}`;
+    const nothing = !d.history.length && !cyc.length;
+    const row = (id, label, why, already) => `<label class="ph-hx-paste-row${already ? " already" : ""}"><input type="checkbox" data-hx-paste-tick="${esc(id)}"${already ? "" : " checked"}> <span><b>${esc(label)}</b>${already ? ` <em>already yes</em>` : ""}${why ? `<span class="why">${esc(why)}</span>` : ""}</span></label>`;
+    const own = d.history.filter(h => !h.family), fam = d.history.filter(h => h.family);
+    return `<div class="ph-cpaste ph-hx-paste">
+      ${nothing ? `<p class="ph-cpaste-none">Nothing in that matched the checklist or the cycle questions — the text will still be kept in her History notes.</p>` : `
+      ${own.length ? `<div class="ph-hx-paste-h">Her history — tick what to record as <b>Yes</b></div>${own.map(h => row("hx:" + h.k, h.label, h.why, phHxVal(rec, h.k) === "yes")).join("")}` : ""}
+      ${fam.length ? `<div class="ph-hx-paste-h">Family history</div>${fam.map(h => row("hx:" + h.k, h.label, h.why, phHxVal(rec, h.k) === "yes")).join("")}` : ""}
+      ${cyc.length ? `<div class="ph-hx-paste-h">Cycle</div>${cyc.map(([k, v]) => row("cyc:" + k, cycLabel([k, v]), "", false)).join("")}` : ""}`}
+      <p class="ph-hx-paste-note">The whole note is also saved, word for word, under History notes.</p>
+      <div class="ph-cpaste-acts">
+        <button type="button" class="btn-save" data-hx-paste-apply="1">${nothing ? "Keep the note" : "Apply"}</button>
+        <button type="button" class="tab-link" data-hx-paste-back="1">‹ Edit the text</button>
+        <button type="button" class="btn-cancel" data-hx-paste-cancel="1">Cancel</button>
+      </div>
+    </div>`;
+  }
+  function phHxPasteApply(rec) {
+    const p = phHxPaste; if (!p || !p.parsed || !rec) return 0;
+    const ticked = new Set(Array.from(document.querySelectorAll("[data-hx-paste-tick]")).filter(c => c.checked).map(c => c.dataset.hxPasteTick));
+    let n = 0;
+    p.parsed.history.forEach(h => { if (ticked.has("hx:" + h.k) && phHxSet(rec, h.k, "yes")) n++; });
+    const cyc = p.parsed.cycle;
+    if (Object.keys(cyc).some(k => ticked.has("cyc:" + k))) {
+      rec.cycle = Object.assign({ cycleLen: 28, flowDays: 5, flowIntensity: "moderate", pain: "none", regular: true }, phCycleFor(rec) || {});
+      // fill, don't overwrite: a length she typed herself stays hers
+      if (ticked.has("cyc:cycleLen") && !rec.cycle.cycleLenManual) { rec.cycle.cycleLen = cyc.cycleLen; n++; }
+      if (ticked.has("cyc:flowIntensity")) { rec.cycle.flowIntensity = cyc.flowIntensity; n++; }
+      if (ticked.has("cyc:pain")) { rec.cycle.pain = cyc.pain; n++; }
+      if (ticked.has("cyc:regular")) { rec.cycle.regular = cyc.regular; n++; }
+      if (ticked.has("cyc:ttcMonths")) { rec.cycle.ttcMonths = cyc.ttcMonths; n++; }
+    }
+    const raw = presSanitizeNoteText(p.parsed.raw);
+    if (raw && !(rec.medicalHistoryNotes || "").includes(raw)) {
+      const d = TODAY, stamp = `${d.getDate()} ${MON_SHORT[d.getMonth()]} ${d.getFullYear()}`;
+      rec.medicalHistoryNotes = `${(rec.medicalHistoryNotes || "").trim()}${rec.medicalHistoryNotes && rec.medicalHistoryNotes.trim() ? "\n\n" : ""}[pasted ${stamp}]\n${raw}`;
+    }
+    savePharmacy();
+    return n;
   }
   function renderHxScreen() {
     if (!presHxScreenName) return;
