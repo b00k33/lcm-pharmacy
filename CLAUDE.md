@@ -596,10 +596,9 @@ update STYLE-LCM.md to match so future builds don't undo it.
   yet" temperature-shape flag: she said "dont need" (2026-09-15) — do not build it. The
   morning reminder sender: her words "park, dont build now" (2026-09-15) — the patient's
   chosen time saves to `chart_links.reminder_time` and nothing sends; leave it so, and do
-  not raise it again unless she does.** Still open, explained to her the same day and
-  awaiting her word: tongue-photo upload from the patient app (decision 3's Fertility
-  Friend set has a daily tongue photo; the app has no upload today because an anonymous
-  link needs its own storage rule). Still not built: Cliniko
+  not raise it again unless she does. Tongue-photo upload from the patient app: her word
+  "no" (2026-09-15) — patients never send photos through My Cycle; the tongue photos
+  stay hers to take in the room.** Nothing on the My Cycle list is open now. Still not built: Cliniko
   API auto-retrieve — she cannot get an API key (2026-09-15), so it is parked, not pending.
   Two gaps found in the same pass and fixed: on a phone the app showed its version
   **nowhere** (`#phVersionLine` is `display:none` under 900px and `phVersionShortText()`
