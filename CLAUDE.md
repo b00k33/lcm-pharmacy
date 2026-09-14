@@ -593,12 +593,13 @@ update STYLE-LCM.md to match so future builds don't undo it.
   tap-the-day, so the 14-day correction rule, cycleLog, plan sync and the average behave
   exactly as if she had tapped the strip; "Not a period" only remembers the answer. Never
   add a path that writes a phone period into `rec.cycle` without her tap. **The "no rise
-  yet" temperature-shape flag: she said "dont need" (2026-09-15) — do not build it.** Still
-  open, explained to her the same day and awaiting her word: the morning reminder sender
-  (the patient picks a wake-up time on the Me tab; it saves to `chart_links.reminder_time`
-  but nothing sends a push yet) and tongue-photo upload from the patient app (decision 3's
-  Fertility Friend set has a daily tongue photo; the app has no upload today because an
-  anonymous link needs its own storage rule). Still not built: Cliniko
+  yet" temperature-shape flag: she said "dont need" (2026-09-15) — do not build it. The
+  morning reminder sender: her words "park, dont build now" (2026-09-15) — the patient's
+  chosen time saves to `chart_links.reminder_time` and nothing sends; leave it so, and do
+  not raise it again unless she does.** Still open, explained to her the same day and
+  awaiting her word: tongue-photo upload from the patient app (decision 3's Fertility
+  Friend set has a daily tongue photo; the app has no upload today because an anonymous
+  link needs its own storage rule). Still not built: Cliniko
   API auto-retrieve — she cannot get an API key (2026-09-15), so it is parked, not pending.
   Two gaps found in the same pass and fixed: on a phone the app showed its version
   **nowhere** (`#phVersionLine` is `display:none` under 900px and `phVersionShortText()`
