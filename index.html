@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260915-080000">
+<meta name="lcm-build" content="20260915-120000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -12845,6 +12845,12 @@
   #pharmacyPage .ph-apptpop-ic .icn { width: 16px; height: 16px; }
   #pharmacyPage .ph-apptpop-ic:hover, #pharmacyPage .ph-apptpop-ic:focus-visible { background: var(--ph-paper); color: var(--ph-green-deep); outline: none; }
   #pharmacyPage .ph-apptpop-ic.x { margin-left: 4px; color: var(--ph-ink); }
+  #pharmacyPage a.ph-apptpop-ic { text-decoration: none; }
+  #pharmacyPage .ph-apptpop-ic.off { color: var(--ph-faint); opacity: .45; cursor: default; pointer-events: none; }
+  /* her pick 2026-09-15: the popup's three icons are Call / Text / Profile,
+     not appointment-management -- Edit/Cancel moved to quiet footer links so
+     nothing she could already do is lost, it's just not the headline row. */
+  #pharmacyPage .ph-apptpop-contact { display: flex; gap: 4px; margin: 6px 0 0 22px; }
   #pharmacyPage .ph-apptpop-title { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; }
   #pharmacyPage .ph-apptpop-title h3 { margin: 0; font-size: 18px; font-weight: 600; color: var(--ph-ink); line-height: 1.2; }
   /* her ask 2026-09-09: the NAME opens the profile, and the "Open profile →"
@@ -13913,6 +13919,7 @@
       <symbol id="i-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></symbol>
       <symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></symbol>
       <symbol id="i-msg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/></symbol>
+      <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c1.2-4 4-6 7-6s5.8 2 7 6"/></symbol>
       <symbol id="i-clipboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4.5" width="14" height="16" rx="2.5"/><path d="M9.5 4.5V3h5v1.5z"/><path d="M9 10h6M9 14h6"/></symbol>
       <symbol id="i-cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="16" height="14.5" rx="2.5"/><path d="M8 3.5V7M16 3.5V7M4 10.5h16"/></symbol>
       <symbol id="i-drop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5c3.2 4.3 6.5 8.7 6.5 12.2a6.5 6.5 0 0 1-13 0c0-3.5 3.3-7.9 6.5-12.2z"/></symbol>
@@ -22658,18 +22665,6 @@
     return s.ap === e.ap ? `${s.s} – ${e.s} ${e.ap}` : `${s.s} ${s.ap} – ${e.s} ${e.ap}`;
   }
   const phApptLongDate = key => { const d = parseKey(key); return d.toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long" }); };
-  // the latest touch strictly BEFORE this appointment's day -- an earlier
-  // appointment, a herb dispense or a logged acupuncture session -- so
-  // today's own booking never reads as "last seen today"
-  function phApptLastVisit(k, beforeKey) {
-    const cands = [];
-    phApptList().forEach(x => { if (x.date < beforeKey && phPatientKey(x.patient) === k) cands.push({ on: x.date, via: PH_APPT_KIND_LABEL[phApptKind(x.service)] || "appointment" }); });
-    (PHARMACY.log || []).forEach(e => { if (e.kind === "dispense" && e.date && e.date < beforeKey && phPatientKey(e.patient) === k) cands.push({ on: e.date, via: "herbs" }); });
-    const rec = PHARMACY.patients && PHARMACY.patients[k];
-    ((rec && rec.acuSessions) || []).forEach(s => { if (s.date && s.date < beforeKey) cands.push({ on: s.date, via: "acupuncture" }); });
-    if (!cands.length) return null;
-    return cands.sort((x, y) => y.on.localeCompare(x.on))[0];
-  }
   // the same ready / short / dispensed / acu / new signal the Dashboard rows
   // and the Patient-profile timeline show -- one function for the popup and
   // the List view, so the three never disagree
@@ -22687,33 +22682,6 @@
     return "";
   }
   const phApptPopTrashSvg = `<svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>`;
-  /* Her decision 8 (2026-09-10): the count belongs on "the appointment itself"
-     too, so the card says which treatment this one is and for which phase --
-     her ask, verbatim: "track appointment x as 1 treatment for x phase".
-     Returns the icon+value pair the .ph-apptpop-kv grid is built from, or ""
-     when this appointment falls outside every active plan's phases. */
-  // her ask 2026-09-13, looking at a real appointment card: "i never fill
-  // this out in the appointments page" -- measured, she always works from
-  // Patient profile instead (presAcuOpenHtml's "Log today's session"), which
-  // already writes the same rec.acuSessions record. Removed rather than left
-  // to rot: the write-up form (Points/Went/Herbs/Anything else/Findings),
-  // its "N visits still to write up" nag, and every phVisit* handler that
-  // only ever served this one card. Nothing here was a second copy of data
-  // living anywhere else -- phTpPhaseRecord's of("acu") and the patient
-  // timeline read rec.acuSessions directly, never through this form, so
-  // removing the form loses no history and breaks no other surface.
-  function phApptPopVisitRowHtml(a) {
-    const vc = phTpApptVisitCtx(a.patient, a);
-    if (!vc) return "";
-    const where = `Phase ${vc.idx + 1} of ${vc.total}${vc.phase.label ? ` — ${esc(vc.phase.label)}` : ""}`;
-    // deliberately NO running total here: beside "will be visit 4", a phase
-    // total of "3 of 3" reads like a contradiction. The ordinal and the phase
-    // are what she asked this card for; the totals live on the plan.
-    const lead = vc.row.excluded ? `<b>Not counted</b> for this phase`
-      : vc.row.future ? `<b>Will be visit ${vc.nth}</b>`
-      : `<b>Visit ${vc.nth}</b>`;
-    return `<span class="ic" aria-hidden="true">🗂</span><span class="v">${lead} · ${where}</span>`;
-  }
   // the cycle chip on a tracked patient's day row (her pick 2026-09-14, both
   // the desktop Today list and the phone day list): day + today's signs;
   // tapping it opens her cycle strip with today ready to note (data-ph-cyc-jump)
@@ -22756,7 +22724,6 @@
     const formulaName = script ? presActualFormula(script) : "";
     const herbsLine = script && herbsN ? `<b>${herbsN} herb${herbsN === 1 ? "" : "s"}</b>${formulaName ? ` · ${esc(formulaName)}` : ""}`
       : script ? `<span class="faint">script, no herbs yet</span>` : kind === "acu" ? `<span class="faint">acupuncture only</span>` : `<span class="faint">no script yet</span>`;
-    const last = phApptLastVisit(k, a.date);
     const derived = s => s === "plan" || s === "case";
     const briefHtml = phApptPopMode === "brief"
       ? `<label class="ph-apptpop-lbl">Presenting focus<input type="text" id="phApptPopFocus" value="${esc(derived(brief.focusSrc) ? "" : brief.focus)}" placeholder="${esc(derived(brief.focusSrc) ? brief.focus : "e.g. 43yo, stage IV endo, 2nd IVF cycle")}" data-ph-apptpop-autofocus="1"></label>
@@ -22769,30 +22736,34 @@
          </div>${brief.focus || brief.goal ? `<button type="button" class="ph-apptpop-briefedit" data-ph-apptpop-mode="brief" title="Edit focus and goal" aria-label="Edit focus and goal"><svg class="icn" aria-hidden="true"><use href="#i-edit"/></svg></button>` : ""}`;
     const cancelStrip = phApptPopMode === "cancel"
       ? `<div class="ph-apptpop-confirm">Cancel ${esc(phTitle(a.patient))}'s ${esc(phCkTime12(a.time))} appointment?<span><button type="button" class="ph-apptpop-btn danger" data-ph-apptcal-cancel="${esc(a.id)}">Yes, cancel it</button><button type="button" class="ph-name-link soft" data-ph-apptpop-mode="view">Keep</button></span></div>` : "";
+    const phoneDigits = rec && rec.phone ? String(rec.phone).replace(/[^\d+]/g, "") : "";
     return `<div class="ph-apptpop-tools">
-        <button type="button" class="ph-apptpop-ic" data-ph-apptpop-mode="edit" title="Edit appointment" aria-label="Edit appointment"><svg class="icn" aria-hidden="true"><use href="#i-edit"/></svg></button>
-        <button type="button" class="ph-apptpop-ic" data-ph-apptpop-mode="cancel" title="Cancel appointment" aria-label="Cancel appointment">${phApptPopTrashSvg}</button>
         <button type="button" class="ph-apptpop-ic x" data-ph-apptpop-close="1" title="Close" aria-label="Close"><svg class="icn" aria-hidden="true"><use href="#i-x"/></svg></button>
       </div>
       <div class="ph-apptpop-title"><span class="ph-apptpop-sq${kind ? " " + kind : ""}"${phCkStyle(a.service) ? ` style="${phCkStyle(a.service)}"` : ""}></span><h3><button type="button" class="ph-apptpop-name" data-ph-dash-patient-open="${esc(a.patient)}" title="Open ${esc(phTitle(a.patient))}'s profile">${esc(phTitle(a.patient))}</button></h3>${phApptKindHtml(a.service)}${phApptEtHtml(a)}${tracked ? `<svg class="icn drop" aria-hidden="true" title="Cycle tracked"><use href="#i-drop"/></svg>` : ""}${fuDue ? `<span class="bell" title="Follow-up due">🔔</span>` : ""}</div>
-      <div class="ph-apptpop-when">${esc(phApptLongDate(a.date))} · ${esc(phApptTimeRangeLabel(a))}${a.durationMin ? ` <span class="faint">· ${a.durationMin} min</span>` : ""}</div>
-      ${a.service ? `<div class="ph-apptpop-svc">${esc(a.service)}</div>` : ""}
+      <div class="ph-apptpop-contact">
+        ${phoneDigits ? `<a class="ph-apptpop-ic" href="tel:${esc(phoneDigits)}" title="Call ${esc(phTitle(a.patient))}" aria-label="Call ${esc(phTitle(a.patient))}"><svg class="icn" aria-hidden="true"><use href="#i-phone"/></svg></a>` : `<span class="ph-apptpop-ic off" title="No phone on file"><svg class="icn" aria-hidden="true"><use href="#i-phone"/></svg></span>`}
+        ${phoneDigits ? `<a class="ph-apptpop-ic" href="sms:${esc(phoneDigits)}" title="Text ${esc(phTitle(a.patient))}" aria-label="Text ${esc(phTitle(a.patient))}"><svg class="icn" aria-hidden="true"><use href="#i-msg"/></svg></a>` : `<span class="ph-apptpop-ic off" title="No phone on file"><svg class="icn" aria-hidden="true"><use href="#i-msg"/></svg></span>`}
+        <button type="button" class="ph-apptpop-ic" data-ph-dash-patient-open="${esc(a.patient)}" title="Open ${esc(phTitle(a.patient))}'s profile" aria-label="Open profile"><svg class="icn" aria-hidden="true"><use href="#i-user"/></svg></button>
+      </div>
       ${cancelStrip}
-      <div class="ph-apptpop-sec">${briefHtml}</div>
+      ${phApptPopMode === "brief" ? `<div class="ph-apptpop-sec">${briefHtml}</div>` : ""}
       <div class="ph-apptpop-kv">
         <span class="ic" aria-hidden="true">🌿</span><span class="v">${herbsLine} ${phApptStatusChipHtml(a, { long: true })}</span>
-        ${comp ? `<span class="ic" aria-hidden="true">💧</span><span class="v"><b>Cycle day ${comp.day}</b> · ${esc(comp.phaseLabel)}${comp.overdue ? ` <span class="ph-tl-chip short">late?</span>` : ""}${phApptPopSignsHtml(rec)}</span>` : ""}
-        ${last ? `<span class="ic" aria-hidden="true">🕓</span><span class="v">Last seen <b>${esc(phFuDateLabel(last.on))}</b> · ${esc(last.via)}</span>` : ""}
-        ${phApptPopVisitRowHtml(a)}
-        ${phPkgCalc(k) ? `<span class="ic" aria-hidden="true">🎟</span><span class="v">${phPkgLineHtml(k)}</span>` : ""}
-        ${phInsGood(k) ? `<span class="ic" aria-hidden="true">💳</span><span class="v"><b>${esc(phInsFund(k) || "Good rebates")}</b>${phInsLevel(k) === "high" ? ` · <b>50% or more back</b>` : phInsFund(k) ? ` · good rebates` : ""}${phInsNote(k) ? ` · <span class="faint">${esc(phInsNote(k))}</span>` : ""}</span>` : ""}
+        ${comp ? `<span class="ic" aria-hidden="true">💧</span><span class="v">${phCycleRowChipHtml(rec, script)}${phApptPopSignsHtml(rec)}</span>` : ""}
       </div>
       <div class="ph-apptpop-foot">
         <!-- her call 2026-09-10: "remove script - already have dispense button".
              The visit's Herbs row is the way to the script now; when herbs have
              already been dispensed that row's own text carries the link, so the
-             card never becomes a dead end. -->
-        <button type="button" class="ph-name-link" data-ph-apptcal-book="${esc(a.patient)}">＋ Book another</button>
+             card never becomes a dead end.
+             her call 2026-09-15: "simple, easy to visually scan" -- date/time/
+             service/focus/goal/visit/phase/package/insurance all dropped from
+             this view; Edit and Cancel moved here as quiet text links so the
+             popup's three icons above can be Call/Text/Profile instead. -->
+        <button type="button" class="ph-name-link soft" data-ph-apptcal-book="${esc(a.patient)}">＋ Book another</button>
+        <button type="button" class="ph-name-link soft" data-ph-apptpop-mode="edit">Edit</button>
+        <button type="button" class="ph-name-link soft" data-ph-apptpop-mode="cancel">Cancel</button>
       </div>`;
   }
   // Edit mode -- the same six fields the old below-the-grid panel had;
@@ -25867,47 +25838,29 @@
         phApptPopClose();
         const name = patOpen.dataset.phDashPatientOpen;
         const script = phApptScriptFor(phPatientKey(name));
-        const cameFrom = PHARMACY.activeTab;
+        if (script) { presGoToScript(script.id); return; }
         if (phTimers.presTmpl) { clearTimeout(phTimers.presTmpl); phTimers.presTmpl = null; presFlushTemplate(); }
         PHARMACY.activeTab = "prescriptions";
-        if (script) presOpenScript(script.id);
-        else { presOpenId = null; presEditId = null; presDraft = null; presSearch = name; presPage = 1; }
+        presOpenId = null; presEditId = null; presDraft = null; presSearch = name; presPage = 1;
+        presPageFromTabHop = false;   // no script overlay opened, nothing for Back to undo twice
         savePharmacy(); renderPharmacy();
-        // set AFTER the render, which is where the tab hop is recorded in
-        // phTabHistory: this one tap opened the tab AND the script page over
-        // it, so one Back undoes both (presPageFromTabHop)
-        presPageFromTabHop = !!script && cameFrom !== "prescriptions";
-        if (script) presScrollToPanel();
-        else { const inp = document.getElementById("presSearch"); if (inp) inp.value = name; }
+        const inp = document.getElementById("presSearch"); if (inp) inp.value = name;
         return;
       }
       const cycJump = e.target.closest("[data-ph-cyc-jump]");
       if (cycJump) {
         const sid = cycJump.dataset.phCycJump;
         if (!sid) return;   // tracked but no script yet -- the chip just shows
-        if (phTimers.presTmpl) { clearTimeout(phTimers.presTmpl); phTimers.presTmpl = null; presFlushTemplate(); }
-        PHARMACY.activeTab = "prescriptions";
-        presOpenScript(sid);
-        // land on the Profile's Cycle tab with today's sign popover open
-        presStage = "profile"; presStageForId = sid; presAssessTab = "cycle";
-        const t0 = PRESC.items.find(x => x.id === sid);
-        presCycleSignEdit = t0 ? { name: presPatientFor(t0) || t0.name || "", dateKey: keyOf(TODAY) } : null;
-        savePharmacy(); renderPharmacy();
+        presGoToScript(sid, { before: () => {
+          // land on the Profile's Cycle tab with today's sign popover open
+          presStage = "profile"; presStageForId = sid; presAssessTab = "cycle";
+          const t0 = PRESC.items.find(x => x.id === sid);
+          presCycleSignEdit = t0 ? { name: presPatientFor(t0) || t0.name || "", dateKey: keyOf(TODAY) } : null;
+        } });
         return;
       }
       const dashPresOpen = e.target.closest("[data-ph-dash-pres-open]");
-      if (dashPresOpen) {
-        // same forward as data-pres-open below, plus the tab hop the herb-edit
-        // handler already does — Dashboard has no prescription editor of its own
-        const presCameFrom = PHARMACY.activeTab;
-        if (phTimers.presTmpl) { clearTimeout(phTimers.presTmpl); phTimers.presTmpl = null; presFlushTemplate(); }
-        PHARMACY.activeTab = "prescriptions";
-        presOpenScript(dashPresOpen.dataset.phDashPresOpen);
-        savePharmacy(); renderPharmacy();
-        presPageFromTabHop = presCameFrom !== "prescriptions";   // same one-tap-two-layers case as above
-        presScrollToPanel();
-        return;
-      }
+      if (dashPresOpen) { presGoToScript(dashPresOpen.dataset.phDashPresOpen); return; }
       const dashSeeAll = e.target.closest("[data-ph-dash-seeall]");
       if (dashSeeAll) {
         const k = dashSeeAll.dataset.phDashSeeall;
@@ -29200,12 +29153,7 @@
       const fuUndo = e.target.closest("[data-fu-undo]");
       if (fuUndo) { phFuSetDone(fuUndo.dataset.fuUndo, fuUndo.dataset.fuKind, false); renderPharmacy(); return; }
       const fuOpen = e.target.closest("[data-fu-open]");
-      if (fuOpen) {
-        presOpenScript(fuOpen.dataset.fuOpen);
-        PHARMACY.activeTab = "prescriptions"; savePharmacy(); renderPharmacy();
-        presScrollToPanel();
-        return;
-      }
+      if (fuOpen) { presGoToScript(fuOpen.dataset.fuOpen); return; }
       // toggling the note only makes sense on the desktop table -- reuse the
       // SAME allow-nothing-interactive guard already proven for the
       // Prescriptions row-click feature, so a click on Open/Done never also
@@ -35074,11 +35022,10 @@ or changing anything in Cliniko.
   // own comment for the full model.
   function presOpenScript(id) {
     // Cleared for EVERY way into a script, so the one-Back-undoes-two-layers
-    // behaviour is opt-in rather than sticky: the two handlers that also hop
-    // the tab set it again immediately after their render, and every other
-    // caller -- the profile list, the week rows, a follow-up, the editor --
-    // leaves it false, so their Back still just closes the page. (10 callers,
-    // 2 of them tab hops.)
+    // behaviour is opt-in rather than sticky: presGoToScript (the one shared
+    // cross-tab entry point, 2026-09-15) sets it again immediately after its
+    // render, and every same-tab caller -- the profile list, the week rows,
+    // the editor -- leaves it false, so their Back still just closes the page.
     presPageFromTabHop = false;
     presOpenId = id; presEditId = null;
     presLabelOpen = false; presMoreOpen = false; presFuOpen = false;
@@ -35093,6 +35040,28 @@ or changing anything in Cliniko.
     presOpenSnapshot = t ? { lastDispensedAt: t.lastDispensedAt || null, lastDispenseLogId: t.lastDispenseLogId || null } : null;
     presCalcSessionDone = false;
     presLastDispViewId = null;
+  }
+  // her ask 2026-09-15: "audit the whole app to make the back click more
+  // consistent" -- every place that jumps to a patient's script from ANOTHER
+  // tab must record the hop so one Back tap undoes both the script overlay
+  // and the tab switch. Before this helper, 3 call sites remembered to set
+  // presPageFromTabHop after their render (the appointment popup's "Open
+  // profile", Dashboard's direct script link, and check-in's "Make the next
+  // script") and 2 forgot (Communications/Follow-ups' data-fu-open -- her
+  // reported bug -- and the My Cycle day chip). This is the one place that
+  // can no longer forget. opts.before, if given, runs after presOpenScript
+  // (which resets draft state) but before the render, for callers that need
+  // to land on a specific stage/tab of the script (e.g. the cycle chip).
+  function presGoToScript(id, opts) {
+    opts = opts || {};
+    const cameFrom = PHARMACY.activeTab;
+    if (phTimers.presTmpl) { clearTimeout(phTimers.presTmpl); phTimers.presTmpl = null; presFlushTemplate(); }
+    PHARMACY.activeTab = "prescriptions";
+    presOpenScript(id);
+    if (opts.before) opts.before();
+    savePharmacy(); renderPharmacy();
+    presPageFromTabHop = cameFrom !== "prescriptions";
+    presScrollToPanel();
   }
   function presRenderPanelSmooth() {
     const el = presPanelEl();
@@ -37363,11 +37332,10 @@ or changing anything in Cliniko.
     const presId = rec.presId, first = phCkFirst(rec.patient);
     phCkOpen = null; phCkForm = null;
     phFlashShow(`✓ Saved to ${first}'s history`);
-    // the third one-tap-two-layers hop: finishing a check-in and going straight
-    // to the script leaves Communications behind the same way, so Back has the
-    // same whole tap to undo (presPageFromTabHop). Set after the render, and
-    // after presOpenScript, which clears it.
-    if (thenScript && presId) { const ckCameFrom = PHARMACY.activeTab; presOpenScript(presId); PHARMACY.activeTab = "prescriptions"; savePharmacy(); renderPharmacy(); presPageFromTabHop = ckCameFrom !== "prescriptions"; presScrollToPanel(); return; }
+    // finishing a check-in and going straight to the script leaves
+    // Communications behind the same way the other cross-tab jumps do, so
+    // Back has the same one tap to undo -- presGoToScript records that.
+    if (thenScript && presId) { presGoToScript(presId); return; }
     phCkRender();
   }
   function phCkSnooze() {
@@ -37636,7 +37604,7 @@ or changing anything in Cliniko.
     { code3: "follicular-casual", name: "Follicular — Casual", tag: "checkin", category: "cycle", subject: "Checking in — {{clinic}}",
       body: "Hi {{firstName}}, how's your energy since your period finished? Let me know so I can prepare for your next visit on {{nextAppt}}. {{me}}" },
     { code3: "follicular-casual-sup", name: "Follicular — Casual + Supportive", tag: "checkin", category: "cycle", subject: "Checking in — {{clinic}}",
-      body: "Hi {{firstName}} 🌱 how's your energy since your period finished? Let me know so I can prepare for your next visit {{nextAppt}}. Thinking of you. {{me}}" },
+      body: "Hi {{firstName}} 🌱 how's your energy since your period finished? Let me know so I can prepare for your next visit on {{nextAppt}}. Thinking of you. {{me}}" },
     { code3: "ovulation-formal", name: "Ovulation — Formal", tag: "checkin", category: "cycle", subject: "Checking in — {{clinic}}",
       body: "Hi {{firstName}}, it's {{me}} from {{clinic}}. You should be around your ovulation window now — have you noticed a positive OPK or any other signs yet, like vaginal discharge or BBT temp spike? Let me know so I can plan around it for your next visit. {{me}}" },
     { code3: "ovulation-formal-sup", name: "Ovulation — Formal + Supportive", tag: "checkin", category: "cycle", subject: "Checking in — {{clinic}}",
