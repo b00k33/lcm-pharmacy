@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260914-050000">
+<meta name="lcm-build" content="20260914-112500">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -14002,6 +14002,7 @@
         // what's really on disk right now -- the baseline the save-time
         // shrink guard compares against (items 1+2, 2026-08-13)
         phSavedCounts.herbs = st.herbs.length; phSavedCounts.log = (st.log || []).length;
+        phPatientSigSeed(st);   // also runs when a cloud pull is adopted (the "storage" listener reloads through here), so a merge never reads as a local edit
         return st;
       }
       throw new Error("unexpected shape");   // parsed, but not an object -- treat like unreadable below
@@ -14055,9 +14056,36 @@
     const btn = r.querySelector("[data-pres-open]");
     if (btn) btn.click();
   });
+  // updatedAt on a patient record is what mergePatientsByRecency (sync module)
+  // uses to pick the fresher copy when two devices both changed the same
+  // patient. Set HERE, from a content diff against what this device last had
+  // on disk, so it can only ever mean "this record's content changed" -- never
+  // "a screen showed it" (the 2026-09-14 05:00 build stamped inside
+  // phPatientRec and lost that distinction; see the note there).
+  let phPatientSig = null;   // key -> the record serialised without its own stamp, as last loaded or saved
+  const phPatientSigOf = rec => JSON.stringify(Object.assign({}, rec, { updatedAt: undefined }));
+  function phPatientSigSeed(store) {
+    phPatientSig = new Map();
+    const ps = store && store.patients && typeof store.patients === "object" ? store.patients : {};
+    Object.keys(ps).forEach(k => { if (ps[k] && typeof ps[k] === "object") phPatientSig.set(k, phPatientSigOf(ps[k])); });
+  }
+  function phStampChangedPatients() {
+    if (!phPatientSig) { try { phPatientSigSeed(JSON.parse(localStorage.getItem(PHARMACY_KEY))); } catch (e) { phPatientSig = new Map(); } }
+    const ps = PHARMACY.patients && typeof PHARMACY.patients === "object" ? PHARMACY.patients : {};
+    const now = Date.now();
+    Object.keys(ps).forEach(k => {
+      const rec = ps[k];
+      if (!rec || typeof rec !== "object") return;
+      const sig = phPatientSigOf(rec);
+      if (phPatientSig.get(k) === sig) return;
+      rec.updatedAt = now;
+      phPatientSig.set(k, sig);
+    });
+  }
   function savePharmacy() {
     phUsageCache = null;   // stock/log just changed -- recompute usage on next ask
     if (PH_DATA_WARNING && PH_DATA_WARNING.kind === "pharmacy-unrecoverable") return false;
+    phStampChangedPatients();
     // shrink guard (items 1+2, 2026-08-13): a store that suddenly halves in
     // one write is the signature of a bad load (today's wipes: 301 herbs
     // kept, log and prescriptions gone), never of real pharmacy work --
@@ -29605,7 +29633,14 @@
         const [planId, phaseId, field] = tpPhaseField.dataset.tpPhaseField.split(":");
         const plan = phTpFindPlan(phTpScreenPatient, planId);
         const ph = plan && plan.phases.find(p => p.id === phaseId);
-        if (ph) phDefer("tpPhaseField:" + phaseId + ":" + field, () => { ph[field] = tpPhaseField.value; savePharmacy(); }, 400);
+        // her report 2026-09-14, the 5th time ("still reverts"): the Visits
+        // pickers live inside a DIV that carries data-tp-phase-field (so the
+        // cell knows it's already open), and a <select> change bubbles up here
+        // through that div. A div has no .value, so this wrote `undefined` over
+        // the cadence the picker had just saved, 400ms later -- the "saves,
+        // then reverts" she kept seeing, on ONE device, no sync involved. Only
+        // a real form control may write through here.
+        if (ph && tpPhaseField.matches("input,textarea,select")) phDefer("tpPhaseField:" + phaseId + ":" + field, () => { ph[field] = tpPhaseField.value; savePharmacy(); }, 400);
         if (field === "aim") { tpPhaseField.style.height = "auto"; tpPhaseField.style.height = tpPhaseField.scrollHeight + "px"; }
         return;
       }
@@ -38351,13 +38386,14 @@ or changing anything in Cliniko.
       if (p.templateName === "Cycle & IVF Protocol") { p.templateName = "IVF Protocol"; if (p.title === "Cycle & IVF Protocol") p.title = "IVF Protocol"; }
       if (p.cycle && p.cycle.lmp && !r.cycle) r.cycle = p.cycle;
     });
-    // her report 2026-09-14 ("i choose 2 weeks, it doesnt save"): stamped here
-    // because this is the one place already documented as "only called when
-    // she actually records something" -- every disciplined write path already
-    // funnels through it. mergePatientsByRecency (sync module) reads this to
-    // stop a stale second device from wholesale-clobbering a patient record
-    // it hasn't caught up with yet.
-    r.updatedAt = Date.now();
+    // r.updatedAt (read by mergePatientsByRecency in the sync module) is NOT
+    // stamped here, on purpose. It was for one build (2026-09-14, 05:00) and
+    // that made things worse: despite the "only called when she records
+    // something" note above, ~40 render paths (presAcuOpenHtml,
+    // presTpInlineEditorHtml, phTpSpineNodeBodyHtml, the stage strip...)
+    // call this too, so merely LOOKING at a patient on a second device made
+    // that device's stale copy the "most recent" one. The stamp now lives in
+    // savePharmacy, set only for a record whose content actually changed.
     return r;
   }
   const phMedHxVal = (rec, k) => (rec && rec.medicalHistory && rec.medicalHistory[k]) || "unasked";
