@@ -582,11 +582,23 @@ update STYLE-LCM.md to match so future builds don't undo it.
   sits in `phCycleBarHtml` above the cycle tiles, reads `chart_days` directly as the
   signed-in owner, caches per link and swaps in place. Dashboard "My Cycle — gone quiet"
   (`phDashChartHtml`, `phChartTriageMissed`: ≥2 days since her last entry) sits under
-  Communications due. **Deliberately NOT built, ask her before building any of them:**
-  the phone's period tap writing back into `rec.cycle` (unverified patient input into the
-  record that drives phases + messages — needs a conflict answer, cf. the intake compare
-  queue), the morning push sender, anonymous tongue-photo upload, and the "no rise yet"
-  temperature-shape flag (wants real data to tune against). Still not built: Cliniko
+  Communications due. **A PERIOD FROM HER PHONE WAITS FOR REVIEW (her answer 2026-09-15,
+  chosen over writing straight in).** `phChartPeriodStarts` reads period starts off
+  `chart_days` (a flow day with no flow the day before; spotting never starts one),
+  `phChartPendingPeriods` drops the ones already on record (±2 days) or already answered
+  (`rec.chartReviewed[dateKey]` = added | skipped). They show as rows under the live chart
+  card and in an "My Cycle — periods to review" section on Intake review (one query across
+  all her links, `phChartPeriodQueueLoad`; the nav badge counts intake forms + pending
+  periods). "Add to her record" goes through `phCycleStripCommit` — the same path as
+  tap-the-day, so the 14-day correction rule, cycleLog, plan sync and the average behave
+  exactly as if she had tapped the strip; "Not a period" only remembers the answer. Never
+  add a path that writes a phone period into `rec.cycle` without her tap. **The "no rise
+  yet" temperature-shape flag: she said "dont need" (2026-09-15) — do not build it.** Still
+  open, explained to her the same day and awaiting her word: the morning reminder sender
+  (the patient picks a wake-up time on the Me tab; it saves to `chart_links.reminder_time`
+  but nothing sends a push yet) and tongue-photo upload from the patient app (decision 3's
+  Fertility Friend set has a daily tongue photo; the app has no upload today because an
+  anonymous link needs its own storage rule). Still not built: Cliniko
   API auto-retrieve — she cannot get an API key (2026-09-15), so it is parked, not pending.
   Two gaps found in the same pass and fixed: on a phone the app showed its version
   **nowhere** (`#phVersionLine` is `display:none` under 900px and `phVersionShortText()`

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260915-040000">
+<meta name="lcm-build" content="20260915-050000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -26440,6 +26440,13 @@
       if (e.target.closest("[data-chart-gmsg]")) { phChartOpenMessages(); return; }
       if (e.target.closest("[data-chart-copy-num]")) { const patRec = phPatientPeek(phChartName); phCkCopy(patRec && patRec.phone, "✓ Number copied"); return; }
       if (e.target.closest("[data-ph-chart-send]")) { phChartOpen(phMsgDisplayName(phJourneyKey)); return; }
+      const cpAdd = e.target.closest("[data-chart-period-add]"), cpSkip = e.target.closest("[data-chart-period-skip]");
+      if (cpAdd || cpSkip) {
+        const v = (cpAdd || cpSkip).dataset[cpAdd ? "chartPeriodAdd" : "chartPeriodSkip"];
+        const bar = v.lastIndexOf("|");
+        phChartPeriodReview(v.slice(0, bar), v.slice(bar + 1), !!cpAdd);
+        return;
+      }
       const presFabToggle = e.target.closest("[data-pres-fab-toggle]");
       if (presFabToggle) {
         const on = document.body.classList.toggle("ph-mtabbar-peek");
@@ -26448,7 +26455,7 @@
       }
       if (e.target.closest("[data-intake-copy-num]")) { const patRec = phPatientPeek(phIntakeName); phCkCopy(patRec && patRec.phone, "✓ Number copied"); return; }
       // ---- Intake review queue handlers ----
-      if (e.target.closest("[data-intake-queue-refresh]")) { phIntakeQueueLoad(true); return; }
+      if (e.target.closest("[data-intake-queue-refresh]")) { phIntakeQueueLoad(true); phChartPeriodQueueLoad(true); return; }
       if (e.target.closest("[data-intake-review-open]")) { phIntakeReviewOpen(e.target.closest("[data-intake-review-open]").dataset.intakeReviewOpen); return; }
       if (e.target.closest("[data-intake-review-close]")) { phIntakeReviewClose(); return; }
       if (e.target.closest("[data-intake-review-apply]")) { phIntakeReviewApply(); return; }
@@ -37806,7 +37813,7 @@ or changing anything in Cliniko.
   // place -- never a full renderPharmacy() on load, same rule as phBbtRefresh. ----
   const phChartDaysCache = {};   // linkId -> {loading, rows, error}
   function phChartDaysLoad(linkId) {
-    const c = phChartDaysCache[linkId] || (phChartDaysCache[linkId] = { loading: false, rows: null, error: "" });
+    const c = phChartDaysCache[linkId] || (phChartDaysCache[linkId] = { loading: false, rows: null, error: "", name: "" });
     if (c.loading) return;
     c.loading = true; c.error = "";
     (async () => {
@@ -37869,6 +37876,107 @@ or changing anything in Cliniko.
     });
     return sv + `</svg>`;
   }
+  // ---- PERIODS WAIT FOR HER REVIEW (her answer 2026-09-15, asked directly:
+  // "whether a period the patient taps on her phone should wait for her
+  // review" -- yes). A period start on her phone is a CANDIDATE, never a
+  // write: it shows on the live chart card (and on Intake review, the page
+  // that already means "things patients sent, waiting for you") with
+  // Add / Not a period. Add goes through phCycleStripCommit -- the same
+  // path as tap-the-day, so the 14-day correction rule, cycleLog, plan sync
+  // and the average all behave exactly as if she had tapped the strip.
+  // Either answer is remembered in rec.chartReviewed[dateKey] so the same
+  // day never asks twice. Spotting alone never counts as a start. ----
+  const PH_CHART_FLOW_MAP = { light: "light", medium: "moderate", heavy: "heavy" };
+  function phChartPeriodStarts(rows) {
+    const byDay = {}; (rows || []).forEach(r => { if (r && r.day) byDay[r.day] = r; });
+    const flowOf = k => { const r = byDay[k]; return r && r.period_flow && r.period_flow !== "spot" ? r.period_flow : null; };
+    const starts = [];
+    Object.keys(byDay).sort().forEach(k => {
+      if (!flowOf(k)) return;
+      const prev = new Date(parseKey(k)); prev.setDate(prev.getDate() - 1);
+      if (flowOf(keyOf(prev))) return;
+      let n = 0, d = new Date(parseKey(k)), heaviest = "light";
+      const rank = { light: 1, medium: 2, heavy: 3 };
+      while (flowOf(keyOf(d))) { const f = flowOf(keyOf(d)); if (rank[f] > rank[heaviest]) heaviest = f; n++; d.setDate(d.getDate() + 1); if (n > 14) break; }
+      starts.push({ day: k, days: n, flow: heaviest });
+    });
+    return starts;
+  }
+  function phChartPendingPeriods(rec, rows) {
+    if (!rec) return [];
+    const known = new Set([...(rec.cycleLog || []).map(x => x.lmp), (rec.cycle || {}).lmp].filter(Boolean));
+    const reviewed = rec.chartReviewed || {};
+    return phChartPeriodStarts(rows).filter(p => {
+      if (reviewed[p.day]) return false;
+      // within 2 days of a period she already has on record = the same period
+      return ![...known].some(k => Math.abs((parseKey(k) - parseKey(p.day)) / 86400000) <= 2);
+    });
+  }
+  function phChartPeriodRowHtml(linkId, name, p) {
+    return `<div class="ph-listing ph-intake-qrow ph-chart-prow">
+      <div class="ph-intake-qrow-main"><span class="ph-intake-qrow-name">🩸 ${esc(phTitle(name))} logged a period starting ${esc(phShortDate(p.day))}</span><span class="ph-intake-qrow-meta">${p.days} day${p.days === 1 ? "" : "s"} · ${esc(p.flow)} · from her phone, not yet on her record</span></div>
+      <button type="button" class="ph-load-btn on" data-chart-period-add="${esc(linkId)}|${esc(p.day)}" title="Log it on her record — day 1 = ${esc(phShortDate(p.day))}">Add to her record</button>
+      <button type="button" class="ph-load-btn" data-chart-period-skip="${esc(linkId)}|${esc(p.day)}" title="Leave her record as it is and stop asking about this date">Not a period</button>
+    </div>`;
+  }
+  function phChartPeriodReview(linkId, dateKey, add) {
+    const c = phChartDaysCache[linkId];
+    const name = c && c.name;
+    if (!name) return;
+    const rec = phPatientRec(name);
+    if (!rec) return;
+    rec.chartReviewed = rec.chartReviewed || {};
+    rec.chartReviewed[dateKey] = add ? "added" : "skipped";
+    if (add) {
+      const p = phChartPeriodStarts(c.rows || []).find(x => x.day === dateKey);
+      const comp = phCycleStripCommit(rec, dateKey, p ? { flowIntensity: PH_CHART_FLOW_MAP[p.flow] || "moderate" } : null);
+      phFlashShow(comp ? `🩸 Period logged from her phone · started ${phShortDate(dateKey)}, day ${comp.day} now` : "🩸 Period logged from her phone");
+    } else { savePharmacy(); phFlashShow("Left off her record"); }
+    phChartPeriodQueue = null;   // the review page recounts
+    renderPharmacy();
+  }
+  // ---- Intake review: one query for every active link's flow days, so the
+  // page (and the nav badge) counts pending periods across all patients ----
+  let phChartPeriodQueue = null, phChartPeriodQueueLoading = false;
+  function phChartPeriodQueueLoad(force) {
+    if (phChartPeriodQueueLoading) return;
+    if (phChartPeriodQueue && !force) return;
+    phChartPeriodQueueLoading = true;
+    (async () => {
+      try {
+        const sb = phRenRelayClient(); if (!sb) throw new Error("not signed in");
+        const uid = await phRenRelayUid(sb); if (!uid) throw new Error("not signed in");
+        const { data: links, error: e1 } = await sb.from("chart_links").select("id,patient_name,status").eq("owner", uid).neq("status", "revoked");
+        if (e1) throw e1;
+        const ids = (links || []).map(l => l.id);
+        let days = [];
+        if (ids.length) {
+          const from = new Date(TODAY); from.setDate(from.getDate() - 120);
+          const { data, error } = await sb.from("chart_days").select("link_id,day,period_flow").in("link_id", ids).not("period_flow", "is", null).gte("day", keyOf(from)).order("day", { ascending: true });
+          if (error) throw error;
+          days = data || [];
+        }
+        const out = [];
+        (links || []).forEach(l => {
+          const rows = days.filter(d => d.link_id === l.id);
+          const c = phChartDaysCache[l.id] || (phChartDaysCache[l.id] = { loading: false, rows: null, error: "" });
+          c.name = l.patient_name; if (!c.rows) c.rows = rows;
+          phChartPendingPeriods(phPatientPeek(l.patient_name), rows).forEach(p => out.push({ linkId: l.id, name: l.patient_name, p }));
+        });
+        phChartPeriodQueue = out;
+      } catch (e) { phChartPeriodQueue = phChartPeriodQueue || []; }
+      phChartPeriodQueueLoading = false;
+      renderPhIntakePage();
+    })();
+  }
+  function phChartPeriodQueueHtml() {
+    const q = phChartPeriodQueue || [];
+    if (!q.length) return "";
+    return `<section class="ph-widget">
+      <div class="ph-dash-secthead"><h2>My Cycle — periods to review</h2><span class="rule"></span><span class="faint">${q.length}</span></div>
+      ${q.map(x => phChartPeriodRowHtml(x.linkId, x.name, x.p)).join("")}
+    </section>`;
+  }
   function phChartLiveInnerHtml(linkId) {
     const c = phChartDaysCache[linkId];
     const inner = !c || (c.loading && !c.rows)
@@ -37879,15 +37987,18 @@ or changing anything in Cliniko.
           ? `<p class="ph-hx-constit-note">No entries from her yet.</p>`
           : phChartSvgMini(c.rows);
     const last = c && c.rows && c.rows.length ? c.rows[c.rows.length - 1] : null;
+    const pend = c && c.name && c.rows ? phChartPendingPeriods(phPatientPeek(c.name), c.rows) : [];
     return `<div class="ph-widget ph-dash-card ph-chart-live" data-chart-live="${esc(linkId)}">
       <div class="ph-dash-secthead"><h2>📈 My Cycle — her chart</h2><span class="rule"></span>${last ? `<span class="faint">last entry ${esc(phShortDate(last.day))}</span>` : ""}</div>
       ${inner}
+      ${pend.map(p => phChartPeriodRowHtml(linkId, c.name, p)).join("")}
     </div>`;
   }
   function phChartLiveHtml(rec, name) {
     const link = phChartLinkFor(rec);
     if (!link) return "";
     if (!phChartDaysCache[link.id]) phChartDaysLoad(link.id);
+    if (name) phChartDaysCache[link.id].name = name;
     return phChartLiveInnerHtml(link.id);
   }
   // ---- triage list, her decision: "a triage list ('no rise yet', '5 days
@@ -50801,6 +50912,7 @@ Please let me know if you have any questions.`;
         : rows.length
           ? rows.map(r => phIntakeQueueRowHtml(r)).join("")
           : `<p class="ph-hx-constit-note">No intake forms waiting for review right now. Links you send from Patient profile land here once she submits.</p>`;
+    phChartPeriodQueueLoad();
     wrap.innerHTML = `
       ${phShellHead("✉️ Intake review", "", "")}
       <section class="ph-widget">
@@ -50809,7 +50921,10 @@ Please let me know if you have any questions.`;
           <button type="button" class="ph-load-btn" data-intake-queue-refresh="1"${phIntakeQueueLoading ? " disabled" : ""}>${phIntakeQueueLoading ? "Refreshing…" : "↻ Refresh"}</button>
         </div>
         ${body}
-      </section>`;
+      </section>
+      ${phChartPeriodQueueHtml()}`;
+    const badge = document.getElementById("phIntakeNavBadge");
+    if (badge) { const n = rows.length + (phChartPeriodQueue || []).length; badge.hidden = n === 0; badge.textContent = n; }
   }
   // gap-fill diff against the existing record (or a null "existing" for a
   // brand-new patient, in which case everything is simply "new") -- same
