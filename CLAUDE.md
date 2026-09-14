@@ -69,7 +69,11 @@ update STYLE-LCM.md to match so future builds don't undo it.
      behind one Filter button; the list scrolls, no "Page 1 of 6".
   6. Appointments = Cliniko's day view: one day, time gutter, solid full-width
      blocks (CHM green, ACU blue, both purple), the page scrolls, no inner scroller.
-     The phone OPENS on the List view (her Q10, 2026-09-07 pm), Grid a tap away.
+     REVISED 2026-09-15: the phone now OPENS on Grid too (her Q10, 2026-09-07 pm,
+     had it opening on List — seeing that default live, she picked Grid instead:
+     "i like desktop appointments page... i dont like this list"), List a tap
+     away. `phApptCalEnsureView()` defaults to "grid" at every width now; a
+     device where she's explicitly tapped List keeps remembering that pick.
 - **Dashboard + landing laws (her 2026-09-07 answers, phone AND desktop alike):**
   the app OPENS on Appointments (her daily schedule check). The Dashboard is
   drastically simple: Today's patients (slim rows) → next clinic day → Communications
@@ -1785,3 +1789,40 @@ Do not guess a first draft into the file.
   Update button compares to detect a new version — bumping only sw.js ships code
   her app never offers her (real 2026-09-01 incident: nine pushes in one day were
   invisible to the Update flow because the meta stamp never moved).
+
+## Appointment popup (her synth22 spec, 2026-09-15)
+`phApptPopHtml` (index.html, ~22779) — name, kind pills, one herbs line,
+the cycle-signs chip (`phCycleRowChipHtml` + `phApptPopSignsHtml`, unchanged),
+and exactly three icon actions: Call (`tel:`), Text (`sms:`), Profile
+(`data-ph-dash-patient-open`, redundant with the name tap on purpose — her
+literal pick over keeping Edit/Cancel as the headline row). Edit and Cancel
+are still there, just moved to quiet `.ph-name-link.soft` text links in the
+footer beside "+ Book another" — nothing she could do before was dropped.
+Removed per her closed list: date/time/service line, the presenting-focus/
+treatment-goal summary (its own edit FORM, reached from the List view's
+add-focus/add-goal links, is untouched), last-seen, visit/phase, package
+balance, insurance note. `phApptPopVisitRowHtml`/`phApptLastVisit` were
+deleted as dead code (their one caller each was this popup).
+**Watch this trap again**: an HTML comment inside a template literal MUST
+close with `-->`, not `*/` — a `*/` close silently swallows every sibling
+element after it (the footer buttons vanished this way once, caught by
+testing the built popup, not by "boots clean"). See
+[[reference_html_comment_in_template_literal_trap]].
+
+## Back-navigation — one shared helper (her app-wide audit ask, 2026-09-15)
+`presGoToScript(id, opts)` (index.html, ~35068, right after `presOpenScript`)
+is now the ONLY place that jumps to a patient's script from a different tab.
+It captures `cameFrom`, flushes any pending template autosave, hops the tab,
+opens the script, runs `opts.before()` if given (extra draft state a caller
+needs set before the render — e.g. the My Cycle day chip lands on the
+Cycle tab with today's sign popover open), renders, THEN sets
+`presPageFromTabHop = cameFrom !== "prescriptions"` (must be after the
+render — that's where `phGoBack()`'s history read happens), then scrolls
+to the panel. Every cross-tab entry point (`data-ph-dash-patient-open`'s
+script branch, `data-ph-cyc-jump`, `data-ph-dash-pres-open`, `data-fu-open`,
+check-in's "Make the next script") now calls this instead of hand-rolling
+the same five lines — a 6th future entry point can no longer reintroduce
+the "one Back tap strands her on the Prescriptions list" bug by omission.
+Verified: `phGoBack()` after opening a script via `data-fu-open` (her
+reported case, Communications → a patient's name → Back) now returns to
+Communications in one call.
