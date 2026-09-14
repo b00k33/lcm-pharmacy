@@ -520,6 +520,38 @@ update STYLE-LCM.md to match so future builds don't undo it.
   never reached `PHARMACY.followups` (what Communications reads); everything goes through
   `phFuRecordForScript(t)` now. Tabs, in order:
   **Due · Compose · Templates · Prepared · Sent**.
+  The plan grid's What-happened column (2026-09-14, `1ae4f18`) now carries two derived things,
+  neither stored: the DONE cell shows every logged visit's tongue outline + pulse grid +
+  report lines (`phTpVisitFndHtml`, fold state `phTpFndOpen` in memory only — newest open,
+  older fold, repaint via `phTpRepaintPhasePanel`), and the VISITS cell projects "Next, if
+  she keeps this rhythm" from the phase's own cadence (`phTpProjectedVisits`: from the last
+  counted NON-future visit, next 4 or until "for N weeks" ends; booked when an appointment
+  sits within ±2 days; `+ Book` is the existing quick-add with date + name pre-filled).
+  Communications pulls an acu row forward `PH_ACU_BOOK_LEAD_DAYS` (3) as "Book her" when the
+  next visit is due and nothing is booked; it clears itself once `phCkNextAppt` finds one.
+  **"Build everything not built yet" (2026-09-14 evening, she ticked all 16 in the scope
+  popup; memory `project_pharmacy_build_everything_2026_09_14`).** Shipped the same night:
+  HOME VISIT pill rides inside `phApptKindHtml` (regex `phApptIsHomeVisit`, violet
+  `--ph-purple-*`), so every ACU/CHM surface shows it; the check-in row's real action wears
+  button chrome (`.ph-fs-acts .ph-os-lnk[data-ck-open]`); `presPhaseFillFromPlan` prefers
+  `phTpCycleEffectivePhase`. History screen "📋 Paste a note" (`phHxParseNote`, keyword
+  rules `PH_HX_PASTE_RULES`/`PH_HX_PASTE_FAMILY`, negation within 40 chars, family sentences
+  → `fh_*`; cycle facts; ticks shown BEFORE writing; note always kept verbatim in
+  `medicalHistoryNotes`) — keywords only, no AI, her "hybrid" call. This Week cells name only
+  herb patients, `+N acu` folds the rest, acu-only `.lean` rows sit back. Tone: `rec.tonePref`
+  (Contact card row Auto · Formal · Casual) wins inside `phMsgDefaultTone`. Information
+  letters are DESIGNED now (`PH_INFO_DESIGNS` per topic, `phInfoLtrPaperHtml(edit)` is the
+  one paper for screen and document, `phInfoLtrDocHtml` → `phPrintDoc`, email via
+  `phLtrEmailHtmlFrom(doc)` which is the letter engine with the document passed in);
+  sections come from `phInfoSplitSections` (short heading lines), edits live in
+  `phInfoLtrSecs`, "+ Save wording" and Communications → Templates → Information letters both
+  write ONE string per topic to `PHARMACY.infoLetterWords[id]`. Pictures: her uploads and
+  the clinic logo live in the Ren photo store under `__letters__` / `__clinic__` (never
+  localStorage — the 5 MB quota), record charts come from `phRenPhotosFor(pk)` kinds
+  `tongue`/`bbt`. Post-transfer, Food and Menstrual signs & BBT are placeholders until she
+  gives her words — do not draft them. Still not built: charting Stage 2 (ask before the SQL
+  run and publish), Cliniko API auto-retrieve (needs her key + an edge function), cycle-signs
+  placement beyond the profile (mock first).
   Two gaps found in the same pass and fixed: on a phone the app showed its version
   **nowhere** (`#phVersionLine` is `display:none` under 900px and `phVersionShortText()`
   was dead code), so it now sits at the foot of the ⋯ sheet under the gold Update row;
@@ -539,7 +571,8 @@ update STYLE-LCM.md to match so future builds don't undo it.
 patient profile. so the tabs underneath should be a treatment plan, not prescription.
 prescriptions are part of treatment plan."** Then, on what a plan is FOR: **"i want the
 plans to act as a map for future treatments but also as a medical record of what was
-done."** SPEC AGREED — 11 answers below. NOT BUILT YET; one item still open.
+done."** SPEC AGREED — 11 answers below. **BUILT 2026-09-14/15** (see the status note under
+answer 11) except where that note says otherwise.
 
 **She was right, and her own data proves it.** Measured against her live app 2026-09-09:
 510 patient records, **817 patient scripts, of which 816 are the ONLY script that patient
@@ -589,7 +622,21 @@ language. Two columns will not fit 360px: stack planned then actual, don't shrin
 10. **A proper printable record** is required — full course: diagnosis, goal, each phase planned vs done, formulas, dates. Build it the way the Dr Authorisation label print works.
 11. The band subtitle stops saying "patient prescription" and becomes **the active plan and its current phase** — e.g. "Natural fertility · Follicular". She chose live information over a static label (and over dropping the line entirely), so the subtitle now answers "where is she up to" without looking down the page. Falls back to something sensible when there is no plan yet.
 
-**Nothing above is built yet.** Build order that keeps her working throughout: (a) the phase
+**STATUS 2026-09-15 — built, in this order.** (a) the Planned/What-happened grid — built
+2026-09-13/14 (`phTpPhaseRecord`, `phTpRecordCellHtml`, tongue/pulse per visit, projected next
+visits). (b) plan tabs + "Not on a plan" — built (`data-tp-inline-open`, `presTpInlineLoose`).
+(c) the three-way split — `f3c4101`: `PRES_STAGES` is now **profile · plan · dispense**
+(`presStageProfileHtml` = Opening + Assessment stacked, no photos column since the
+Assessment tab has one; `presStagePlanHtml` = plan row auto-opened + Follow-up blocks;
+`presDispenseHeadHtml` = "‹ Back to the plan" + switcher). Old stage ids still arrive from
+older callers — `presStageNorm` folds them; never compare `presStage` to "opening",
+"assessment", "treatment" or "followup" again. (d) freeze/unlock — built earlier
+(`data-tp-unlock`). (e) print — `f3c4101`: plan ⋯ menu "🖨 Print plan record" →
+`phTpPlanDocHtml` through `phPrintDoc`. (11) band subtitle — `0de53dd`:
+`presBandSubText`/`presBandSubRefresh`, repainted by `phTpRepaintPhasePanel`/`phTpRerender`.
+(12) herbs off — built earlier (`phHerbsOn`, `presHerbsOffNoteHtml`). (13) dated milestones —
+built earlier (`plan.milestones`). The original build-order note follows for the record:
+(a) the phase
 date-window gatherer + the Planned/What-happened rows, since that is the whole value and it
 reads existing data without changing any; (b) plan tabs + the loose "Not on a plan" tab;
 (c) the three-way stage split; (d) freeze/unlock; (e) print. Do NOT start with the stage
