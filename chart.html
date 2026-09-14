@@ -1,0 +1,954 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0E4D2A">
+<title>My Cycle</title>
+<link rel="manifest" href="chart.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon-v2.png">
+<link rel="icon" href="icons/favicon-32-v2.png" sizes="32x32">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="My Cycle">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700&display=swap">
+<!--
+  "My Cycle" -- the patient-facing half of LCM's fertility charting.
+
+  Her decisions, 2026-09-08 (12 questions, all answered against mocks):
+    * lives inside LCM      -- one patient record, so a period tapped here
+                               corrects her plan schedule and phase scripts
+    * personal link, no password, exactly like intake.html
+    * the FULL Fertility Friend entry set, PLUS her own Chapter 6 questions
+      (menstrual blood colour / clots / texture, and daily sleep, energy,
+       bowels) -- that is what makes this hers rather than a copy
+    * plain English to the patient, pattern names to Linh only
+    * the app draws the cover line and ovulation, Linh can override
+    * a morning reminder at a time the patient picks
+    * four goals, including pregnancy after a positive test
+    * only patients Linh switches on ever get a link
+
+  Deliberately its own file, not part of index.html -- there is no navigation
+  into the practitioner app by construction, and it talks to Supabase through
+  four narrow SECURITY DEFINER functions (see supabase/cycle_charts_setup.sql).
+
+  SCALE NOTE (her ask, 2026-09-08: "50 patients +"): chart data is NEVER
+  mirrored into localStorage. b00k33.github.io is a shared origin with a
+  single ~5MB budget that Book33 also uses, and 50 patients x 365 days would
+  eat it. Only tiny per-device state is stored locally, all under the
+  daybook- prefix LCM owns. Everything real lives in Postgres.
+-->
+<style>
+  :root{
+    --green-deep:#0E4D2A; --green:#1B7A46; --green-press:#0A3A20;
+    --tint:#EAF5EE; --line:#D3E2D8; --soft:#4A5B50; --ink:#14231A;
+    --paper:#F6FAF7; --white:#fff; --negative:#B4483A;
+    /* her Chapter 6 phase colours, verbatim */
+    --period:#D45B72; --foll:#6FBF8B; --ov:#E8A54A; --luteal:#9B7FD4;
+    --serif:'Cormorant Garamond',Georgia,serif;
+    --body:'Inter',-apple-system,'Segoe UI',sans-serif;
+    color-scheme:light;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);
+    font-family:var(--body);font-size:15px;line-height:1.5;-webkit-text-size-adjust:100%}
+  body{padding-bottom:76px}
+  .wrap{max-width:520px;margin:0 auto;padding:0 16px}
+
+  header.top{background:var(--green-deep);color:#EAF5EE;padding:16px 16px 14px;
+    position:sticky;top:0;z-index:20}
+  header.top .in{max-width:520px;margin:0 auto;display:flex;align-items:center;gap:12px}
+  header.top h1{font-family:var(--serif);font-weight:600;font-size:19px;margin:0;flex:1;min-width:0}
+  header.top .day{font-size:12px;color:#B8D2C2;margin-top:1px;font-family:var(--body)}
+  .cd{flex:0 0 auto;text-align:center;background:rgba(255,255,255,.12);
+    border-radius:12px;padding:5px 10px;min-width:56px}
+  .cd b{display:block;font-size:17px;line-height:1.1}
+  .cd span{display:block;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:#B8D2C2}
+
+  .card{background:var(--white);border:1px solid var(--line);border-radius:14px;
+    padding:16px;margin-top:12px}
+  .card.flush{padding:12px}
+  h2.sec{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+    color:var(--green-deep);margin:20px 0 0;padding:0 2px}
+  .q{font-size:13px;font-weight:600;margin:0 0 6px;color:var(--ink)}
+  .hint{font-size:11.5px;color:var(--soft);margin:4px 0 0}
+
+  /* temperature */
+  .tempwrap{text-align:center;padding:4px 0 0}
+  .tempval{font-family:var(--serif);font-size:52px;font-weight:700;color:var(--green-deep);
+    line-height:1;border:none;background:none;width:150px;text-align:center;padding:0;
+    font-variant-numeric:tabular-nums}
+  .tempval:focus{outline:2px solid var(--green);outline-offset:4px;border-radius:8px}
+  .tempunit{font-size:16px;color:var(--soft);margin-left:2px}
+  .tempsteps{display:flex;gap:10px;justify-content:center;align-items:center;margin-top:10px}
+  .step{width:46px;height:46px;border-radius:999px;border:1px solid var(--line);
+    background:var(--white);font-size:20px;color:var(--green-deep);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .step:active{background:var(--tint)}
+  .tempnone{font-family:var(--serif);font-size:34px;color:var(--line)}
+  .timerow{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;
+    font-size:12.5px;color:var(--soft)}
+  .timerow input{font:inherit;font-size:12.5px;border:1px solid var(--line);border-radius:8px;
+    padding:5px 8px;background:var(--paper);color:var(--ink)}
+
+  /* chips */
+  .chips{display:flex;flex-wrap:wrap;gap:7px}
+  .chip{padding:9px 13px;border-radius:999px;border:1px solid var(--line);background:var(--white);
+    font:inherit;font-size:13px;color:var(--soft);cursor:pointer;line-height:1.2}
+  .chip.on{background:var(--tint);border-color:var(--green);color:var(--green-deep);font-weight:600}
+  .chip.on.red{background:#FBEDEB;border-color:var(--period);color:#8f3145}
+  .chip.wide{flex:1;text-align:center;min-width:64px}
+
+  /* three-state quick rows (sleep / energy / bowels) */
+  .qrow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+  .qrow:last-child{border-bottom:none}
+  .qrow .k{flex:1;min-width:0;font-size:13.5px}
+  .qrow .chips{flex:0 0 auto}
+  .qrow .chip{padding:7px 11px;font-size:12px}
+
+  details.more{margin-top:12px;border:1px solid var(--line);border-radius:14px;background:var(--white)}
+  details.more>summary{padding:14px 16px;font-size:13.5px;font-weight:600;color:var(--green-deep);
+    cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between}
+  details.more>summary::-webkit-details-marker{display:none}
+  details.more>summary:after{content:"\203A";transform:rotate(90deg);font-size:18px;color:var(--soft)}
+  details.more[open]>summary:after{transform:rotate(-90deg)}
+  details.more .inner{padding:0 16px 16px}
+  details.more .grp{margin-top:14px}
+  details.more .grp:first-child{margin-top:0}
+
+  input[type=text],input[type=number],textarea{width:100%;font:inherit;font-size:14px;
+    color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:10px;
+    padding:10px 12px}
+  textarea{resize:vertical;min-height:54px;font-family:inherit}
+  input:focus,textarea:focus{outline:2px solid var(--green);outline-offset:1px}
+
+  .savebar{position:fixed;left:0;right:0;bottom:60px;padding:10px 16px;
+    background:linear-gradient(to top,var(--paper) 72%,rgba(246,250,247,0));z-index:15}
+  .savebar .in{max-width:520px;margin:0 auto}
+  .savebtn{width:100%;padding:15px;border-radius:999px;border:none;background:var(--green-deep);
+    color:#fff;font:inherit;font-size:15px;font-weight:700;cursor:pointer}
+  .savebtn:disabled{opacity:1}
+  /* nothing to save = a quiet acknowledgement, not a green slab over her page */
+  .savebtn.saved{background:var(--white);color:var(--green);border:1px solid var(--line);
+    font-weight:600;box-shadow:0 1px 4px rgba(20,35,26,.05)}
+
+  /* tab bar */
+  nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--white);
+    border-top:1px solid var(--line);display:flex;z-index:25;
+    padding-bottom:env(safe-area-inset-bottom,0)}
+  nav.tabs button{flex:1;border:none;background:none;font:inherit;font-size:11px;
+    color:var(--soft);padding:8px 4px 9px;cursor:pointer;display:flex;flex-direction:column;
+    align-items:center;gap:3px}
+  nav.tabs button.on{color:var(--green-deep);font-weight:700}
+  nav.tabs svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.7;
+    stroke-linecap:round;stroke-linejoin:round}
+
+  /* chart */
+  .chartscroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -4px;padding:0 4px 8px}
+  .chartscroll svg{display:block}
+  .legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;font-size:11px;color:var(--soft)}
+  .legend b{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;
+    vertical-align:-1px}
+  .cycpick{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+  .cycpick button{flex:0 0 auto;padding:7px 12px;border-radius:999px;border:1px solid var(--line);
+    background:var(--white);font:inherit;font-size:12.5px;color:var(--soft);cursor:pointer}
+  .cycpick button.on{background:var(--green-deep);border-color:var(--green-deep);color:#fff;font-weight:600}
+
+  .stat{display:flex;align-items:baseline;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+  .stat:last-child{border-bottom:none}
+  .stat .k{flex:1;color:var(--soft);font-size:13px}
+  .stat .v{font-weight:700;color:var(--green-deep);font-variant-numeric:tabular-nums}
+  .stat .v.flag{color:var(--negative)}
+
+  .note{background:var(--tint);border-radius:12px;padding:12px 14px;margin-top:10px;font-size:13.5px}
+  .note b{color:var(--green-deep)}
+  .note+.note{margin-top:8px}
+
+  .center{text-align:center;padding:56px 20px}
+  .center h2{font-family:var(--serif);font-weight:600;font-size:21px;color:var(--green-deep);margin:0 0 8px}
+  .center p{font-size:14px;color:var(--soft);line-height:1.6;margin:0}
+  .banner{background:#FCF2E3;border:1px solid #E9D6B0;color:#7a5312;border-radius:12px;
+    padding:10px 14px;font-size:12.5px;margin-top:12px}
+  .err{color:var(--negative);font-size:13px;margin-top:8px}
+  [hidden]{display:none !important}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+
+<header class="top"><div class="in">
+  <div style="flex:1;min-width:0">
+    <h1 id="hTitle">My Cycle</h1>
+    <div class="day" id="hDay"></div>
+  </div>
+  <div class="cd" id="hCd" hidden><b></b><span>day</span></div>
+</div></header>
+
+<main id="app"><div class="center"><p>Opening your chart…</p></div></main>
+
+<div class="savebar" id="saveBar" hidden><div class="in">
+  <button type="button" class="savebtn" id="saveBtn">Save today</button>
+</div></div>
+
+<nav class="tabs" id="tabs" hidden>
+  <button type="button" data-tab="today" class="on">
+    <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Today</button>
+  <button type="button" data-tab="chart">
+    <svg viewBox="0 0 24 24"><path d="M3 17l5-6 4 3 5-8 4 5"/><path d="M3 21h18"/></svg>Chart</button>
+  <button type="button" data-tab="me">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>Me</button>
+</nav>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function () {
+  "use strict";
+
+  /* =====================================================================
+     Setup
+     ===================================================================== */
+  var SB_URL = "https://jkpfhqaxhsiwtijxxzql.supabase.co";
+  var SB_KEY = "sb_publishable_td_6_5ACewMZq8fVEB3Gww_KB-EDlYY";
+  var token = new URLSearchParams(location.search).get("c");
+  var DEMO = !token;                 // no link = the walk-through she can tap
+  var sb = null;
+  try { if (!DEMO && window.supabase) sb = window.supabase.createClient(SB_URL, SB_KEY); } catch (e) {}
+
+  var app = document.getElementById("app");
+  var TODAY = keyOf(new Date());
+
+  /* Local state only -- never chart data. LCM owns the daybook- prefix on
+     this shared origin (see the never-write-other-apps-keys rule). */
+  var LK = "daybook-chart-" + (DEMO ? "demo" : token.slice(0, 8));
+  function lsGet(k, d) { try { var v = localStorage.getItem(LK + "-" + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }
+  function lsSet(k, v) { try { localStorage.setItem(LK + "-" + k, JSON.stringify(v)); } catch (e) {} }
+
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function keyOf(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+  function parseKey(k) { var p = String(k).split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function addDays(k, n) { var d = parseKey(k); d.setDate(d.getDate() + n); return keyOf(d); }
+  function daysBetween(a, b) { return Math.round((parseKey(b) - parseKey(a)) / 86400000); }
+  var MON = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  var DOW = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  function longDate(k) { var d = parseKey(k); return DOW[d.getDay()] + " " + d.getDate() + " " + MON[d.getMonth()]; }
+  function shortDate(k) { var d = parseKey(k); return d.getDate() + " " + MON[d.getMonth()].slice(0, 3); }
+  function titleCase(s) { return String(s || "").replace(/\b[a-z]/g, function (c) { return c.toUpperCase(); }); }
+
+  /* =====================================================================
+     What she can tap. The full Fertility Friend set, plus her Chapter 6
+     questions -- her answer 2026-09-08.
+     ===================================================================== */
+  var MUCUS = [["dry","Dry"],["sticky","Sticky"],["creamy","Creamy"],["watery","Watery"],["eggwhite","Egg white"]];
+  var FLOW  = [["spot","Spotting"],["light","Light"],["medium","Medium"],["heavy","Heavy"]];
+  /* straight from her menstrual-quality diagnostic in Chapter 6 */
+  var BCOLOUR  = [["bright","Bright red"],["dark","Dark red"],["brown","Brown"],["purple","Purple"],["pale","Pale / watery"]];
+  var BCLOTS   = [["none","No clots"],["small","Small clots"],["large","Large clots"]];
+  var BTEXTURE = [["thin","Thin"],["normal","Normal"],["thick","Thick"],["sticky","Sticky / stringy"]];
+  var PAIN  = [["none","None"],["mild","Mild"],["moderate","Moderate"],["severe","Severe"]];
+  var CXH   = [["low","Low"],["mid","Middle"],["high","High"]];
+  var CXF   = [["firm","Firm"],["medium","Medium"],["soft","Soft"]];
+  var CXO   = [["closed","Closed"],["partly","Partly open"],["open","Open"]];
+  var OPK   = [["neg","Negative"],["pos","Positive"],["peak","Peak"]];
+  var PTEST = [["neg","Negative"],["faint","Faint line"],["pos","Positive"]];
+  var THREE = [["low","Low"],["ok","OK"],["good","Good"]];
+  var BOWEL = [["loose","Loose"],["normal","Normal"],["dry","Dry / hard"]];
+  var SYMPTOMS = [["cramping","Cramping"],["bloating","Bloating"],["breast","Breast tenderness"],
+    ["headache","Headache"],["fatigue","Fatigue"],["acne","Acne"],["mood","Mood changes"],
+    ["nausea","Nausea"],["backache","Backache"],["spotting","Spotting"],["dizzy","Dizziness"],
+    ["hotflush","Hot flushes"],["insomnia","Poor sleep"],["libido","Low libido"]];
+
+  var GOALS = {
+    ttc:    { label: "Trying to conceive", fertile: true },
+    ivf:    { label: "IVF cycle",          fertile: false },
+    health: { label: "Cycle health",       fertile: false },
+    preg:   { label: "Pregnancy",          fertile: false }
+  };
+
+  /* =====================================================================
+     The reading engine. Deliberately pure functions over an array of days,
+     so LCM's practitioner side can lift this whole block unchanged.
+     Signatures are Linh's own, from Chapter 6's BBT pattern diagnosis.
+     ===================================================================== */
+  var CE = {};
+
+  /* A period starts on the first real flow day (spotting doesn't count) that
+     follows a day without flow, and only if at least 10 days have passed --
+     so mid-cycle bleeding never splits a cycle in two. */
+  CE.periodStarts = function (days) {
+    var out = [], i, prev = null, real = { light: 1, medium: 1, heavy: 1 };
+    for (i = 0; i < days.length; i++) {
+      var f = days[i].flow;
+      if (real[f] && !(prev && real[prev.flow] && daysBetween(prev.d, days[i].d) <= 2)) {
+        if (!out.length || daysBetween(out[out.length - 1], days[i].d) >= 10) out.push(days[i].d);
+      }
+      prev = days[i];
+    }
+    return out;
+  };
+
+  CE.cycles = function (days) {
+    var starts = CE.periodStarts(days), out = [], i;
+    if (!starts.length) return [{ start: days.length ? days[0].d : TODAY, end: TODAY, days: days.slice() }];
+    for (i = 0; i < starts.length; i++) {
+      var s = starts[i], e = i + 1 < starts.length ? addDays(starts[i + 1], -1) : TODAY;
+      out.push({ start: s, end: e, days: days.filter(function (x) { return x.d >= s && x.d <= e; }) });
+    }
+    return out;
+  };
+
+  function mean(a) { return a.length ? a.reduce(function (x, y) { return x + y; }, 0) / a.length : null; }
+  function sd(a) { if (a.length < 2) return null; var m = mean(a);
+    return Math.sqrt(a.reduce(function (t, x) { return t + (x - m) * (x - m); }, 0) / (a.length - 1)); }
+
+  /* Cover line and ovulation: the standard three-over-six rule, which is what
+     Fertility Friend uses too. Linh can override the day on her side; her
+     override is stored on the cycle and wins here. */
+  CE.analyse = function (cycle) {
+    var d = cycle.days, i, a = {
+      cycleLen: daysBetween(cycle.start, cycle.end) + 1,
+      temps: 0, coverline: null, ovDay: null, ovConfirmed: false,
+      follMean: null, follSd: null, lutealMean: null,
+      riseDays: null, riseSize: null, lutealLen: null, slowFall: false, complete: false
+    };
+    var t = d.map(function (x) { return { n: daysBetween(cycle.start, x.d) + 1, v: x.temp == null ? null : +x.temp, flow: x.flow }; })
+             .filter(function (x) { return x.v != null; });
+    a.temps = t.length;
+    if (t.length < 10) return a;
+
+    for (i = 6; i + 2 < t.length; i++) {
+      var prior = t.slice(i - 6, i).map(function (x) { return x.v; });
+      var cl = Math.max.apply(null, prior) + 0.05;
+      if (t[i].v >= cl && t[i + 1].v >= cl && t[i + 2].v >= cl) {
+        a.coverline = Math.round(cl * 100) / 100;
+        a.ovDay = t[i - 1].n;
+        a.ovConfirmed = true;
+        break;
+      }
+    }
+    /* Not yet three highs, but the last two are already above the line: show
+       it as likely, drawn dashed, the way a paper chart is read mid-cycle.
+       Without this a patient on day 17 of a rise that began on day 16 is told
+       "no rise yet", which is both wrong-feeling and discouraging. */
+    if (a.ovDay == null && t.length >= 9) {
+      var j = t.length - 2, prior2 = t.slice(j - 6, j).map(function (x) { return x.v; });
+      if (prior2.length === 6) {
+        var cl2 = Math.max.apply(null, prior2) + 0.05;
+        if (t[j].v >= cl2 && t[j + 1].v >= cl2) {
+          a.coverline = Math.round(cl2 * 100) / 100;
+          a.ovDay = t[j - 1].n;
+          a.ovLikely = true;
+        }
+      }
+    }
+
+    if (cycle.ovOverride) { a.ovDay = cycle.ovOverride; a.ovOverridden = true; a.ovLikely = false; }
+    if (a.ovDay == null) return a;
+
+    var foll = t.filter(function (x) { return x.n >= 5 && x.n <= a.ovDay; }).map(function (x) { return x.v; });
+    var lut  = t.filter(function (x) { return x.n >= a.ovDay + 3; }).map(function (x) { return x.v; });
+    a.follMean = foll.length ? Math.round(mean(foll) * 100) / 100 : null;
+    a.follSd   = foll.length > 2 ? Math.round(sd(foll) * 1000) / 1000 : null;
+    a.lutealMean = lut.length ? Math.round(mean(lut) * 100) / 100 : null;
+
+    if (a.follMean != null && a.lutealMean != null) a.riseSize = Math.round((a.lutealMean - a.follMean) * 100) / 100;
+
+    /* How many days the rise took to reach the luteal plateau. A sharp,
+       healthy rise lands in 1 day; 3 or more is her "slow rise" signature. */
+    if (a.lutealMean != null) {
+      var target = a.lutealMean - 0.05, n = 0;
+      for (i = 0; i < t.length; i++) {
+        if (t[i].n <= a.ovDay) continue;
+        n++;
+        if (t[i].v >= target) { a.riseDays = n; break; }
+        if (n >= 6) { a.riseDays = 6; break; }
+      }
+    }
+
+    a.lutealLen = daysBetween(addDays(cycle.start, a.ovDay - 1), cycle.end);
+    a.complete = cycle.end !== TODAY;
+
+    /* Blood stagnation signature: temperature still above the cover line on
+       the first days of the next period, instead of falling cleanly. */
+    if (a.coverline != null) {
+      var tail = d.filter(function (x) { return x.temp != null && daysBetween(cycle.start, x.d) + 1 >= a.cycleLen - 1; });
+      a.slowFall = tail.length > 0 && tail.every(function (x) { return +x.temp > a.coverline; });
+    }
+    return a;
+  };
+
+  /* Her Chapter 6 signatures. Returns what LINH sees -- never the patient. */
+  CE.patterns = function (a) {
+    var out = [];
+    if (a.temps < 10) return out;
+    if (!a.ovConfirmed && a.temps >= 20)
+      out.push({ k: "jing", label: "KD Jing-xu", why: "No biphasic shift found across " + a.temps + " temperatures" });
+    if (a.riseDays != null && a.riseDays >= 3)
+      out.push({ k: "yang", label: "KD Yang-xu", why: "Rise took " + a.riseDays + " days (staircase; target 1–2)" });
+    if (a.riseSize != null && a.riseSize < 0.25)
+      out.push({ k: "yang", label: "KD Yang-xu / Jing-xu", why: "Shift only " + a.riseSize.toFixed(2) + "°C (target 0.3–0.5)" });
+    if (a.follMean != null && a.follMean < 36.20)
+      out.push({ k: "yang", label: "KD Yang-xu", why: "Follicular baseline low at " + a.follMean.toFixed(2) + "°C" });
+    if (a.follMean != null && a.follMean > 36.45)
+      out.push({ k: "yin", label: "KD Yin-xu", why: "Follicular phase elevated at " + a.follMean.toFixed(2) + "°C" });
+    if (a.follSd != null && a.follSd > 0.12)
+      out.push({ k: "qi", label: "HT / LR Qi stagnation", why: "Choppy follicular phase (spread " + a.follSd.toFixed(2) + "°C)" });
+    if (a.ovDay != null && a.ovDay > 18)
+      out.push({ k: "damp", label: "Phlegm-Damp", why: "Ovulation delayed to day " + a.ovDay });
+    if (a.lutealLen != null && a.complete && a.lutealLen < 11)
+      out.push({ k: "yang", label: "KD Yang / SP Qi", why: "Luteal phase only " + a.lutealLen + " days (target ≥12)" });
+    if (a.slowFall)
+      out.push({ k: "blood", label: "Blood stagnation", why: "Temperature did not fall cleanly at the period" });
+    return out;
+  };
+
+  /* What the PATIENT reads. Her decision: plain English, no pattern names,
+     and always ending with "Linh will look at this with you." */
+  CE.plain = function (a, goal) {
+    var out = [];
+    if (a.temps < 6) { out.push("Keep going — once there are about a week of temperatures, your chart starts to show its shape."); return out; }
+    if (goal === "preg") { out.push("Your temperatures are staying up, which is what we hope to see."); return out; }
+    if (a.ovDay == null) {
+      out.push(a.temps >= 20
+        ? "No clear temperature rise yet this cycle. That happens sometimes, and it is worth looking at together."
+        : "No temperature rise yet this cycle — it may simply be early.");
+    } else {
+      out.push(a.ovLikely
+        ? "Your temperature looks like it has started to rise after day " + a.ovDay + ". One more warm morning will confirm it."
+        : "Your temperature rose after day " + a.ovDay + ", which usually means you ovulated around then.");
+      if (a.riseDays != null && a.riseDays >= 3)
+        out.push("The rise took " + a.riseDays + " days to settle. A quicker rise, over one or two days, is more usual.");
+      if (a.riseSize != null && a.riseSize < 0.25)
+        out.push("The difference between the two halves of your cycle was " + a.riseSize.toFixed(2) + "°C. Around 0.3 to 0.5 is more usual.");
+      if (a.lutealLen != null && a.complete && a.lutealLen < 11)
+        out.push("The second half of your cycle was " + a.lutealLen + " days. Around 12 to 14 is more usual.");
+      if (a.follSd != null && a.follSd > 0.12)
+        out.push("Your temperatures in the first half moved around quite a lot.");
+    }
+    out.push("Linh will look at this with you at your next visit.");
+    return out;
+  };
+
+  /* The practitioner side keeps its own copy of CE (this project's one-file-
+     per-app convention, same as intake.html copying PH_CYCLE_*). Exposing it
+     here lets both be checked against identical data when a chart ever reads
+     oddly, without opening a patient's phone. */
+  window.LCMChartEngine = CE;
+
+  /* =====================================================================
+     Storage. Supabase when she has a link, an on-device walk-through when
+     this page is opened without one.
+     ===================================================================== */
+  var Store = {
+    link: null,
+    days: {},        // dateKey -> record
+
+    load: async function () {
+      if (DEMO) { Store.link = demoLink(); Store.days = demoDays(); return true; }
+      if (!sb) throw new Error("Couldn't reach the internet. Try again in a moment.");
+      var r = await sb.rpc("get_chart_link", { p_token: token });
+      if (r.error) throw r.error;
+      if (!r.data || !r.data.length) return false;
+      Store.link = r.data[0];
+      var from = addDays(TODAY, -400);
+      var d = await sb.rpc("get_chart_days", { p_token: token, p_from: from, p_to: TODAY });
+      if (d.error) throw d.error;
+      Store.days = {};
+      (d.data || []).forEach(function (row) {
+        var e = row.entry || {};
+        e.d = row.day; e.temp = row.temp_c == null ? null : +row.temp_c; e.flow = row.period_flow || null;
+        Store.days[row.day] = e;
+      });
+      return true;
+    },
+
+    saveDay: async function (dayKey, rec) {
+      Store.days[dayKey] = rec;
+      if (DEMO) { lsSet("days", Store.days); return true; }
+      var entry = {}; for (var k in rec) if (k !== "d" && k !== "temp" && k !== "flow") entry[k] = rec[k];
+      var r = await sb.rpc("save_chart_day", {
+        p_token: token, p_day: dayKey,
+        p_temp: rec.temp == null ? null : rec.temp,
+        p_flow: rec.flow || null, p_entry: entry
+      });
+      if (r.error) throw r.error;
+      if (r.data === false) throw new Error("This link is no longer active. Please contact the clinic.");
+      return true;
+    },
+
+    setReminder: async function (time) {
+      Store.link.reminder_time = time;
+      lsSet("reminder", time);
+      if (DEMO) return true;
+      var tz = ""; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch (e) {}
+      var r = await sb.rpc("set_chart_reminder", { p_token: token, p_time: time, p_tz: tz });
+      if (r.error) throw r.error;
+      return true;
+    }
+  };
+
+  /* ---- the walk-through, so this page is usable before any link exists ---- */
+  function demoLink() {
+    return { patient_name: "Sarah", goal: lsGet("goal", "ttc"), status: "active",
+             reminder_time: lsGet("reminder", null), settings: {} };
+  }
+  function demoDays() {
+    var saved = lsGet("days", null);
+    if (saved) return saved;
+    /* three cycles ending today at day 17, with the slow four-day rise that
+       Linh's Chapter 6 reads as Kidney Yang not transforming */
+    var shape = [36.35,36.30,36.28,36.32,36.25,36.30,36.22,36.28,36.20,36.26,36.18,36.24,
+                 36.15,36.20,36.28,36.36,36.44,36.52,36.58,36.60,36.62,36.55,36.58,36.61,
+                 36.54,36.50,36.45,36.38,36.36,36.34];
+    var out = {}, lens = [30, 29, 28], start = addDays(TODAY, -16), c, i;
+    for (c = 0; c < 3; c++) {
+      var len = c === 0 ? 17 : lens[c];
+      if (c > 0) start = addDays(start, -lens[c]);
+      for (i = 0; i < len; i++) {
+        var k = addDays(start, i);
+        if (k > TODAY) break;
+        var rec = { d: k, temp: shape[i] + (c === 1 ? -0.02 : c === 2 ? 0.03 : 0), tempT: "06:30" };
+        if (i < 5) { rec.flow = ["heavy","heavy","medium","light","spot"][i];
+          rec.bColour = i < 2 ? "dark" : "brown"; rec.bClots = i < 2 ? "small" : "none";
+          rec.bTexture = "normal"; rec.pain = i < 2 ? "moderate" : "mild"; }
+        rec.mucus = i < 5 ? null : i < 8 ? "dry" : i < 11 ? "sticky" : i < 14 ? "eggwhite" : i < 16 ? "watery" : "dry";
+        if (i === 11 || i === 13 || i === 15) rec.sex = true;
+        rec.sleep = "ok"; rec.energy = i < 5 ? "low" : "ok"; rec.bowels = "normal";
+        rec.temp = Math.round(rec.temp * 100) / 100;
+        out[k] = rec;
+      }
+    }
+    return out;
+  }
+
+  /* =====================================================================
+     State
+     ===================================================================== */
+  var tab = "today";
+  var draft = null;           // today's record being edited
+  var dirty = false, saving = false, saveErr = "";
+  var cycles = [], curCycle = null, viewCycleIx = null;
+
+  function recompute() {
+    var days = Object.keys(Store.days).sort().map(function (k) { return Store.days[k]; });
+    cycles = CE.cycles(days);
+    curCycle = cycles.length ? cycles[cycles.length - 1] : null;
+    /* the chart opens on THIS cycle, not the oldest one -- null means
+       "follow the current cycle", which is what she wants every morning */
+    if (viewCycleIx == null || viewCycleIx >= cycles.length) viewCycleIx = Math.max(0, cycles.length - 1);
+  }
+  function cycleDay() {
+    if (!curCycle) return null;
+    return daysBetween(curCycle.start, TODAY) + 1;
+  }
+  function phaseLabel() {
+    var a = curCycle ? CE.analyse(curCycle) : null, n = cycleDay();
+    if (!n) return "";
+    var todayRec = Store.days[TODAY];
+    if (todayRec && todayRec.flow && todayRec.flow !== "spot") return "period";
+    if (a && a.ovDay != null) return n > a.ovDay ? "luteal phase" : "follicular phase";
+    return n <= 5 ? "early in your cycle" : "follicular phase";
+  }
+
+  /* =====================================================================
+     Rendering
+     ===================================================================== */
+  function chipsHtml(field, opts, value, cls) {
+    return '<div class="chips">' + opts.map(function (o) {
+      var on = value === o[0];
+      return '<button type="button" class="chip' + (on ? " on" : "") + (cls ? " " + cls : "") +
+        '" data-set="' + field + '" data-val="' + esc(o[0]) + '">' + esc(o[1]) + "</button>";
+    }).join("") + "</div>";
+  }
+  function multiChipsHtml(field, opts, values) {
+    values = values || [];
+    return '<div class="chips">' + opts.map(function (o) {
+      var on = values.indexOf(o[0]) >= 0;
+      return '<button type="button" class="chip' + (on ? " on" : "") +
+        '" data-toggle="' + field + '" data-val="' + esc(o[0]) + '">' + esc(o[1]) + "</button>";
+    }).join("") + "</div>";
+  }
+
+  function renderToday() {
+    var r = draft, goal = Store.link.goal, onPeriod = !!r.flow;
+    var h = "";
+
+    h += '<div class="card"><div class="tempwrap">' +
+      (r.temp == null
+        ? '<div class="tempnone" id="tempShow">––.––<span class="tempunit">°C</span></div>'
+        : '<div><input class="tempval" id="tempIn" inputmode="decimal" value="' + r.temp.toFixed(2) + '" aria-label="Temperature in Celsius"><span class="tempunit">°C</span></div>') +
+      '<div class="tempsteps">' +
+        '<button type="button" class="step" data-temp="-0.05" aria-label="Lower by 0.05">−</button>' +
+        (r.temp == null ? '<button type="button" class="chip wide" data-temp="set">Add temperature</button>' : '') +
+        '<button type="button" class="step" data-temp="0.05" aria-label="Raise by 0.05">+</button>' +
+      "</div>" +
+      '<div class="timerow"><label for="tempTime">Taken at</label>' +
+        '<input type="time" id="tempTime" value="' + esc(r.tempT || "") + '"></div>' +
+      "</div></div>";
+
+    h += '<h2 class="sec">Mucus</h2><div class="card">' + chipsHtml("mucus", MUCUS, r.mucus) + "</div>";
+
+    h += '<h2 class="sec">Today</h2><div class="card">' +
+      '<div class="chips">' +
+        '<button type="button" class="chip' + (onPeriod ? " on red" : "") + '" data-period="1">Period</button>' +
+        '<button type="button" class="chip' + (r.sex ? " on" : "") + '" data-flip="sex">Intimacy</button>' +
+      "</div>";
+    if (onPeriod) {
+      h += '<div class="grp" style="margin-top:14px"><p class="q">Flow</p>' + chipsHtml("flow", FLOW, r.flow, "red") + "</div>" +
+        '<div class="grp" style="margin-top:14px"><p class="q">Colour</p>' + chipsHtml("bColour", BCOLOUR, r.bColour) + "</div>" +
+        '<div class="grp" style="margin-top:14px"><p class="q">Clots</p>' + chipsHtml("bClots", BCLOTS, r.bClots) + "</div>" +
+        '<div class="grp" style="margin-top:14px"><p class="q">Texture</p>' + chipsHtml("bTexture", BTEXTURE, r.bTexture) + "</div>" +
+        '<div class="grp" style="margin-top:14px"><p class="q">Period pain</p>' + chipsHtml("pain", PAIN, r.pain) + "</div>" +
+        '<p class="hint">These four are the ones Linh asks about — they tell her more than the temperature does.</p>';
+    }
+    h += "</div>";
+
+    h += '<h2 class="sec">How you feel</h2><div class="card flush">' +
+      '<div class="qrow"><span class="k">Sleep</span>' + chipsHtml("sleep", THREE, r.sleep) + "</div>" +
+      '<div class="qrow"><span class="k">Energy</span>' + chipsHtml("energy", THREE, r.energy) + "</div>" +
+      '<div class="qrow"><span class="k">Bowels</span>' + chipsHtml("bowels", BOWEL, r.bowels) + "</div>" +
+      "</div>";
+
+    h += '<details class="more"' + (lsGet("moreOpen", false) ? " open" : "") + ' id="moreBox"><summary>Everything else</summary><div class="inner">' +
+      '<div class="grp"><p class="q">Cervix — height</p>' + chipsHtml("cxH", CXH, r.cxH) + "</div>" +
+      '<div class="grp"><p class="q">Cervix — firmness</p>' + chipsHtml("cxF", CXF, r.cxF) + "</div>" +
+      '<div class="grp"><p class="q">Cervix — opening</p>' + chipsHtml("cxO", CXO, r.cxO) + "</div>" +
+      '<div class="grp"><p class="q">Ovulation test</p>' + chipsHtml("opk", OPK, r.opk) + "</div>" +
+      '<div class="grp"><p class="q">Pregnancy test</p>' + chipsHtml("ptest", PTEST, r.ptest) + "</div>" +
+      '<div class="grp"><p class="q">Anything you noticed</p>' + multiChipsHtml("sym", SYMPTOMS, r.sym) + "</div>" +
+      '<div class="grp"><p class="q">Mood</p>' + chipsHtml("mood", THREE, r.mood) + "</div>" +
+      '<div class="grp"><p class="q">Weight (kg)</p><input type="number" step="0.1" id="fWeight" value="' + (r.weight == null ? "" : esc(r.weight)) + '" placeholder="optional"></div>' +
+      '<div class="grp"><p class="q">Medicines and supplements</p><input type="text" id="fMeds" value="' + esc(r.meds || "") + '" placeholder="optional"></div>' +
+      '<div class="grp"><p class="q">Note for Linh</p><textarea id="fNote" rows="2" placeholder="optional">' + esc(r.note || "") + "</textarea></div>" +
+      "</div></details>";
+
+    if (saveErr) h += '<p class="err">' + esc(saveErr) + "</p>";
+    h += '<p class="hint" style="text-align:center;margin:16px 0 0">Everything except the temperature is optional.</p>';
+    return h;
+  }
+
+  /* ---- the chart ---- */
+  function chartSvg(cycle, a, goal) {
+    var days = cycle.days, len = Math.max(14, daysBetween(cycle.start, cycle.end) + 1);
+    var L = 34, R = 10, T = 16, H = 190;
+    /* Fit the whole cycle on the phone instead of scrolling it. A chart you
+       have to drag sideways is not a chart -- the shape IS the information,
+       and on a 28-day cycle 10px a day is what paper charts use anyway.
+       Drawn 1:1 (width == viewBox width) so the labels stay crisp. */
+    var avail = Math.min(520, (window.innerWidth || 375)) - 32 - 24 - L - R;
+    var colW = Math.max(9, Math.min(20, Math.floor(avail / len)));
+    var W = L + len * colW + R, dotR = colW >= 14 ? 2.8 : 2.1;
+    var temps = days.map(function (x) { return x.temp; }).filter(function (v) { return v != null; });
+    var lo = 36.0, hi = 37.0;
+    if (temps.length) {
+      /* fit the band to her own temperatures -- a fixed 36-37 scale squashes
+         every real chart into the middle third and hides the shift */
+      lo = Math.min.apply(null, temps) - 0.10; hi = Math.max.apply(null, temps) + 0.10;
+      if (hi - lo < 0.6) { var mid = (hi + lo) / 2; lo = mid - 0.30; hi = mid + 0.30; }
+      lo = Math.floor(lo * 10) / 10; hi = Math.ceil(hi * 10) / 10;
+    }
+    function X(n) { return L + (n - 0.5) * colW; }
+    function Y(v) { return T + H - ((v - lo) / (hi - lo)) * H; }
+
+    var s = '<svg viewBox="0 0 ' + W + ' 268" width="' + W + '" height="268" role="img" aria-label="Your temperature chart">';
+
+    /* phase bands from what she actually logged */
+    var periodDays = days.filter(function (x) { return x.flow && x.flow !== "spot"; });
+    periodDays.forEach(function (x) {
+      var n = daysBetween(cycle.start, x.d) + 1;
+      s += '<rect x="' + (L + (n - 1) * colW) + '" y="' + T + '" width="' + colW + '" height="' + H + '" fill="#D45B72" opacity=".14"/>';
+    });
+    if (a.ovDay != null) {
+      s += '<rect x="' + (L + a.ovDay * colW) + '" y="' + T + '" width="' + ((len - a.ovDay) * colW) + '" height="' + H + '" fill="#9B7FD4" opacity=".11"/>';
+      if (GOALS[goal].fertile) {
+        var fs = Math.max(1, a.ovDay - 4);
+        s += '<rect x="' + (L + (fs - 1) * colW) + '" y="' + T + '" width="' + (6 * colW) + '" height="' + H + '" fill="#6FBF8B" opacity=".13"/>';
+      }
+    }
+
+    /* grid + axis, one line each 0.2 */
+    var v;
+    for (v = Math.ceil(lo * 5) / 5; v <= hi + 0.001; v += 0.2) {
+      v = Math.round(v * 100) / 100;
+      s += '<line x1="' + L + '" y1="' + Y(v) + '" x2="' + (W - R) + '" y2="' + Y(v) + '" stroke="#D3E2D8" stroke-width="1"/>' +
+           '<text x="' + (L - 4) + '" y="' + (Y(v) + 3) + '" font-size="8.5" fill="#4A5B50" text-anchor="end">' + v.toFixed(1) + "</text>";
+    }
+
+    /* the cover line belongs to the rise, so it starts at ovulation -- drawn
+       right across the chart it cuts through the period days above it and
+       reads as a target she has failed to meet all month */
+    if (a.coverline != null && a.coverline > lo && a.coverline < hi) {
+      var clX = a.ovDay != null ? X(a.ovDay) : L;
+      s += '<line x1="' + clX + '" y1="' + Y(a.coverline) + '" x2="' + (W - R) + '" y2="' + Y(a.coverline) +
+           '" stroke="#0E4D2A" stroke-width="1.5" stroke-dasharray="5 4"/>';
+    }
+    if (a.ovDay != null && goal !== "ivf") {
+      s += '<line x1="' + X(a.ovDay) + '" y1="' + T + '" x2="' + X(a.ovDay) + '" y2="' + (T + H) +
+           '" stroke="#E8A54A" stroke-width="2"' + (a.ovLikely ? ' stroke-dasharray="4 4"' : "") + "/>" +
+           '<text x="' + (X(a.ovDay) + 4) + '" y="' + (T + 10) + '" font-size="9" fill="#8a5a12" font-weight="700">' +
+           (a.ovLikely ? "ovulation?" : "ovulation") + "</text>";
+    }
+
+    /* the line itself, broken wherever she missed a day */
+    var runs = [], run = [];
+    days.forEach(function (x) {
+      var n = daysBetween(cycle.start, x.d) + 1;
+      if (x.temp == null) { if (run.length) { runs.push(run); run = []; } return; }
+      run.push({ n: n, v: x.temp });
+    });
+    if (run.length) runs.push(run);
+    runs.forEach(function (r) {
+      if (r.length > 1) s += '<polyline fill="none" stroke="#0E4D2A" stroke-width="2" points="' +
+        r.map(function (p) { return X(p.n) + "," + Y(p.v); }).join(" ") + '"/>';
+    });
+    runs.forEach(function (r) { r.forEach(function (p) {
+      s += '<circle cx="' + X(p.n) + '" cy="' + Y(p.v) + '" r="' + dotR + '" fill="#0E4D2A"/>';
+    }); });
+
+    /* day numbers, then the strips underneath */
+    var n2;
+    for (n2 = 1; n2 <= len; n2++) {
+      if (n2 % 5 === 0 || n2 === 1) s += '<text x="' + X(n2) + '" y="' + (T + H + 13) + '" font-size="8.5" fill="#4A5B50" text-anchor="middle">' + n2 + "</text>";
+    }
+    var MC = { dry: "#E8D9CF", sticky: "#CFE3D6", creamy: "#A9D8BF", watery: "#8FD3B0", eggwhite: "#6FBF8B" };
+    days.forEach(function (x) {
+      var n = daysBetween(cycle.start, x.d) + 1, x0 = L + (n - 1) * colW + 2, w = colW - 4;
+      if (x.mucus && MC[x.mucus]) s += '<rect x="' + x0 + '" y="' + (T + H + 20) + '" width="' + w + '" height="11" rx="2.5" fill="' + MC[x.mucus] + '"/>';
+      if (x.flow) s += '<rect x="' + x0 + '" y="' + (T + H + 34) + '" width="' + w + '" height="11" rx="2.5" fill="#D45B72" opacity="' +
+        ({ spot: .35, light: .55, medium: .78, heavy: 1 }[x.flow] || .5) + '"/>';
+      if (x.sex) s += '<circle cx="' + X(n) + '" cy="' + (T + H + 54) + '" r="3.4" fill="#9B7FD4"/>';
+    });
+    s += '<text x="2" y="' + (T + H + 29) + '" font-size="8" fill="#4A5B50">mucus</text>' +
+         '<text x="2" y="' + (T + H + 43) + '" font-size="8" fill="#4A5B50">flow</text>' +
+         '<text x="2" y="' + (T + H + 57) + '" font-size="8" fill="#4A5B50">sex</text>';
+    return s + "</svg>";
+  }
+
+  function renderChart() {
+    if (!cycles.length) return '<div class="center"><h2>Nothing to chart yet</h2><p>Add a temperature or two and your chart appears here.</p></div>';
+    var cy = cycles[viewCycleIx], a = CE.analyse(cy), goal = Store.link.goal;
+    var isCur = viewCycleIx === cycles.length - 1;
+    var h = '<div class="card flush"><div class="cycpick">' + cycles.map(function (c, i) {
+      return '<button type="button" class="' + (i === viewCycleIx ? "on" : "") + '" data-cyc="' + i + '">' +
+        (i === cycles.length - 1 ? "This cycle" : shortDate(c.start)) + "</button>";
+    }).reverse().join("") + "</div></div>";
+
+    h += '<div class="card flush"><div class="chartscroll">' + chartSvg(cy, a, goal) + "</div>" +
+      '<div class="legend">' +
+        '<span><b style="background:#F3D8DE"></b>Period</span>' +
+        (GOALS[goal].fertile ? '<span><b style="background:#DDF0E5"></b>Fertile days</span>' : "") +
+        '<span><b style="background:#E4DCF4"></b>After ovulation</span>' +
+        '<span><b style="background:#6FBF8B"></b>Egg-white mucus</span>' +
+        (a.coverline != null ? '<span><b style="background:none;border-top:2px dashed #0E4D2A;height:0;border-radius:0"></b>Cover line</span>' : "") +
+      "</div></div>";
+
+    h += '<h2 class="sec">' + (isCur ? "This cycle so far" : "That cycle") + '</h2><div class="card flush">' +
+      (isCur ? stat("Cycle day", cycleDay()) : stat("Cycle length", a.cycleLen + " days")) +
+      stat("Temperatures recorded", a.temps + " of " + (isCur ? cycleDay() : a.cycleLen)) +
+      (a.ovDay != null ? stat("Rise after day", a.ovDay + (a.ovLikely ? " (likely)" : "")) : stat("Rise", "not yet")) +
+      (a.riseDays != null ? stat("Days the rise took", a.riseDays, a.riseDays >= 3) : "") +
+      (a.riseSize != null ? stat("Size of the rise", a.riseSize.toFixed(2) + " °C", a.riseSize < 0.25) : "") +
+      (a.lutealLen != null && (a.complete || cycleDay() > a.ovDay)
+        ? stat("Days since the rise", a.lutealLen, a.complete && a.lutealLen < 11) : "") +
+      "</div>";
+
+    h += '<h2 class="sec">What this shows</h2>' +
+      CE.plain(a, goal).map(function (t) { return '<div class="note">' + esc(t) + "</div>"; }).join("");
+    return h;
+  }
+  function stat(k, v, flag) {
+    return '<div class="stat"><span class="k">' + esc(k) + '</span><span class="v' + (flag ? " flag" : "") + '">' + esc(v) + "</span></div>";
+  }
+
+  function renderMe() {
+    var l = Store.link, rem = l.reminder_time || "";
+    var h = '<div class="card"><p class="q">Your morning reminder</p>' +
+      '<p class="hint" style="margin:0 0 10px">Take your temperature as soon as you wake, before getting up, at about the same time each day.</p>' +
+      '<div class="chips"><input type="time" id="remTime" value="' + esc(rem) + '" style="width:130px">' +
+      (rem ? '<button type="button" class="chip" data-rem="off">Turn off</button>' : "") + "</div>" +
+      '<p class="hint" id="remNote">' + (rem ? "We’ll remind you at " + esc(rem) + " each morning." : "No reminder set.") + "</p></div>";
+
+    h += '<div class="card"><p class="q">What you’re charting for</p>' +
+      '<p class="hint" style="margin:0">' + esc(GOALS[l.goal].label) + " — Linh sets this. Ask her if it should change.</p></div>";
+
+    h += '<div class="card"><p class="q">Your chart</p><p class="hint" style="margin:0">' +
+      'Everything you enter goes straight to Linh at LCM. Nothing else on this phone is read or shared, and there is nothing else to see here.' +
+      "</p></div>";
+
+    if (DEMO) h += '<div class="banner">This is the walk-through. Everything works and saves on this device, but it isn’t linked to a patient yet.</div>';
+    return h;
+  }
+
+  /* =====================================================================
+     Paint
+     ===================================================================== */
+  function render() {
+    var l = Store.link;
+    document.getElementById("hTitle").textContent = tab === "chart" ? "Your chart" : tab === "me" ? "You" : "My Cycle";
+    document.getElementById("hDay").textContent = tab === "today" ? longDate(TODAY) : (l.patient_name ? titleCase(l.patient_name) : "");
+    var cd = document.getElementById("hCd"), n = cycleDay();
+    /* the badge is her cycle day, nothing louder -- a phase word shouted in
+       capitals at a patient reads as a verdict, and mid-cycle it is a guess */
+    if (n) { cd.hidden = false; cd.querySelector("b").textContent = n;
+             cd.querySelector("span").textContent = "day"; }
+    else cd.hidden = true;
+
+    app.innerHTML = '<div class="wrap">' + (tab === "today" ? renderToday() : tab === "chart" ? renderChart() : renderMe()) + "</div>";
+    /* a long cycle is wider than a phone, and the day she cares about is the
+       one she just entered -- so the chart opens at today, not at day 1 */
+    if (tab === "chart") {
+      var sc = document.querySelector(".chartscroll");
+      if (sc && viewCycleIx === cycles.length - 1) sc.scrollLeft = sc.scrollWidth;
+    }
+    document.getElementById("tabs").hidden = false;
+    var bar = document.getElementById("saveBar");
+    bar.hidden = tab !== "today";
+    document.body.style.paddingBottom = tab === "today" ? "148px" : "76px";
+    var btn = document.getElementById("saveBtn");
+    btn.textContent = saving ? "Saving…" : dirty ? "Save today" : "✓ Saved for today";
+    btn.className = "savebtn" + (dirty || saving ? "" : " saved");
+    btn.disabled = saving || !dirty;
+    [].forEach.call(document.querySelectorAll("nav.tabs button"), function (b) {
+      b.classList.toggle("on", b.dataset.tab === tab);
+    });
+  }
+
+  /* =====================================================================
+     Events
+     ===================================================================== */
+  function touch() { dirty = true; }
+
+  document.addEventListener("click", function (e) {
+    var t = e.target.closest("button"), el;
+
+    el = e.target.closest("nav.tabs button");
+    if (el) { if (dirty && tab === "today") saveNow(); tab = el.dataset.tab; render(); return; }
+    if (!t) return;
+
+    if (t.dataset.set) {
+      var f = t.dataset.set, v = t.dataset.val;
+      draft[f] = draft[f] === v ? null : v;
+      if (f === "flow" && !draft[f]) { draft.bColour = draft.bClots = draft.bTexture = draft.pain = null; }
+      touch(); render(); return;
+    }
+    if (t.dataset.toggle) {
+      var key = t.dataset.toggle, val = t.dataset.val;
+      draft[key] = draft[key] || [];
+      var ix = draft[key].indexOf(val);
+      if (ix >= 0) draft[key].splice(ix, 1); else draft[key].push(val);
+      touch(); render(); return;
+    }
+    if (t.dataset.flip) { draft[t.dataset.flip] = !draft[t.dataset.flip]; touch(); render(); return; }
+    if (t.dataset.period) {
+      draft.flow = draft.flow ? null : "medium";
+      if (!draft.flow) draft.bColour = draft.bClots = draft.bTexture = draft.pain = null;
+      touch(); render(); return;
+    }
+    if (t.dataset.temp) {
+      if (t.dataset.temp === "set") draft.temp = 36.50;
+      else {
+        if (draft.temp == null) draft.temp = 36.50;
+        else draft.temp = Math.round((draft.temp + parseFloat(t.dataset.temp)) * 100) / 100;
+        draft.temp = Math.min(38.5, Math.max(35.0, draft.temp));
+      }
+      if (!draft.tempT) { var now = new Date();
+        draft.tempT = String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0"); }
+      touch(); render(); return;
+    }
+    if (t.dataset.cyc) { viewCycleIx = +t.dataset.cyc; render(); return; }
+    if (t.dataset.rem === "off") { setReminder(""); return; }
+    if (t.id === "saveBtn") { saveNow(); return; }
+  });
+
+  document.addEventListener("change", function (e) {
+    var id = e.target.id;
+    if (id === "tempTime") { draft.tempT = e.target.value; touch(); }
+    else if (id === "fWeight") { draft.weight = e.target.value === "" ? null : +e.target.value; touch(); }
+    else if (id === "fMeds") { draft.meds = e.target.value; touch(); }
+    else if (id === "fNote") { draft.note = e.target.value; touch(); }
+    else if (id === "remTime") { setReminder(e.target.value); }
+    else if (id === "tempIn") { commitTemp(e.target.value); }
+  });
+  document.addEventListener("input", function (e) {
+    if (e.target.id === "tempIn") { draft.temp = parseTemp(e.target.value); touch(); updateSaveBtn(); }
+  });
+  document.addEventListener("toggle", function (e) {
+    if (e.target.id === "moreBox") lsSet("moreOpen", e.target.open);
+  }, true);
+
+  function parseTemp(s) {
+    var v = parseFloat(String(s).replace(",", "."));
+    if (!isFinite(v)) return null;
+    if (v > 90) v = (v - 32) * 5 / 9;           // someone typed Fahrenheit
+    if (v < 34 || v > 39) return null;
+    return Math.round(v * 100) / 100;
+  }
+  function commitTemp(s) { draft.temp = parseTemp(s); touch(); render(); }
+  function updateSaveBtn() {
+    var b = document.getElementById("saveBtn");
+    if (b) { b.disabled = false; b.textContent = "Save today"; b.className = "savebtn"; }
+  }
+
+  async function saveNow() {
+    if (saving || !dirty) return;
+    saving = true; saveErr = ""; render();
+    try {
+      var rec = {}; for (var k in draft) if (draft[k] != null && draft[k] !== "" && !(Array.isArray(draft[k]) && !draft[k].length)) rec[k] = draft[k];
+      rec.d = TODAY;
+      await Store.saveDay(TODAY, rec);
+      draft = Object.assign({ d: TODAY }, rec);
+      dirty = false;
+      recompute();
+      /* her pregnancy-mode decision: a positive test offers the switch */
+      if (rec.ptest === "pos" && Store.link.goal !== "preg") {
+        setTimeout(function () {
+          if (confirm("Congratulations. Would you like your chart to switch to pregnancy mode?")) {
+            Store.link.goal = "preg"; if (DEMO) lsSet("goal", "preg");
+            tab = "chart"; render();
+          }
+        }, 200);
+      }
+    } catch (err) {
+      saveErr = (err && err.message) || "Couldn’t save just now — check your connection and try again.";
+      dirty = true;
+    }
+    saving = false; render();
+  }
+
+  async function setReminder(time) {
+    try {
+      await Store.setReminder(time || null);
+      if (time && "Notification" in window && Notification.permission === "default") {
+        try { await Notification.requestPermission(); } catch (e) {}
+      }
+    } catch (e) {}
+    render();
+  }
+
+  /* =====================================================================
+     Boot
+     ===================================================================== */
+  (async function boot() {
+    try {
+      var ok = await Store.load();
+      if (!ok) {
+        app.innerHTML = '<div class="center"><h2>This link isn’t working</h2>' +
+          "<p>It may have been replaced, or the address may be incomplete. Please check the message from the clinic, or contact Linh.</p></div>";
+        return;
+      }
+      if (Store.link.status === "paused") {
+        app.innerHTML = '<div class="center"><h2>Charting is paused</h2><p>Linh has paused your chart for now. Everything you have entered is safe.</p></div>';
+        return;
+      }
+      recompute();
+      draft = Object.assign({ d: TODAY }, Store.days[TODAY] || {});
+      dirty = false;
+      render();
+    } catch (err) {
+      app.innerHTML = '<div class="center"><h2>Couldn’t open your chart</h2><p>' +
+        esc((err && err.message) || "Please check your connection and try again.") + "</p></div>";
+    }
+  })();
+})();
+</script>
+</body>
+</html>
