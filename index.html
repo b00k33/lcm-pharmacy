@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260914-160000">
+<meta name="lcm-build" content="20260914-170000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -7615,6 +7615,40 @@
   #pharmacyPage .ph-tp-fhist-toggle:hover { color: var(--ph-soft); }
   #pharmacyPage .ph-tp-fhist-list { margin-top: 2px; }
   #pharmacyPage .ph-tp-fhist-row { font-size: 11px; color: var(--ph-soft); padding: 1px 0; }
+  /* Symptom tracker (mock she approved 2026-09-14, "yes i like it") -- lives
+     inside the Watch cell of .ph-tp-grid, so it inherits that cell's width
+     and needs its own horizontal scroll once the table's five columns don't
+     fit a half-width grid cell on a phone. */
+  #pharmacyPage td.ph-tp-symcell { vertical-align: top; }
+  #pharmacyPage .ph-tp-sym-legacy { font-size: 12.5px; color: var(--ph-ink); white-space: pre-wrap; margin-bottom: 8px; }
+  #pharmacyPage .ph-tp-sym-legacy.editable { cursor: pointer; }
+  #pharmacyPage .ph-tp-sym-legacy.editable:hover { color: var(--ph-green-deep); }
+  #pharmacyPage .ph-tp-sym-tablewrap { overflow-x: auto; margin-bottom: 8px; }
+  #pharmacyPage table.ph-tp-sym-table { width: 100%; min-width: 420px; border-collapse: collapse; font-size: 12px; }
+  #pharmacyPage .ph-tp-sym-table th { text-align: left; font-size: 9.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ph-faint); padding: 0 6px 6px; border-bottom: 1px solid var(--ph-line); }
+  #pharmacyPage .ph-tp-sym-table td { padding: 6px; border-bottom: 1px solid var(--ph-line); vertical-align: top; }
+  #pharmacyPage .ph-tp-sym-row:last-child td { border-bottom: none; }
+  #pharmacyPage input.ph-tp-sym-in { width: 100%; font: inherit; font-size: 12px; border: none; background: none; color: var(--ph-ink); padding: 2px 0; }
+  #pharmacyPage input.ph-tp-sym-in.b { font-weight: 700; }
+  #pharmacyPage input.ph-tp-sym-in:focus { outline: none; border-bottom: 1px solid var(--ph-green); }
+  #pharmacyPage input.ph-tp-sym-in::placeholder { color: var(--ph-faint); }
+  #pharmacyPage .ph-tp-sym-dots { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
+  #pharmacyPage button.ph-tp-sym-dot { width: 13px; height: 13px; border-radius: 50%; border: 1px solid var(--ph-line); background: none; cursor: pointer; padding: 0; }
+  #pharmacyPage button.ph-tp-sym-dot.on { background: var(--ph-green); border-color: var(--ph-green-deep); }
+  #pharmacyPage .ph-tp-sym-n { font-size: 10.5px; color: var(--ph-faint); margin-left: 3px; }
+  #pharmacyPage .ph-tp-sym-pct { display: flex; align-items: center; gap: 5px; }
+  #pharmacyPage .ph-tp-sym-pct input[type=range] { width: 56px; }
+  #pharmacyPage .ph-tp-sym-pct .v { font-weight: 700; font-size: 11.5px; min-width: 26px; }
+  #pharmacyPage button.ph-tp-sym-del { background: none; border: none; color: var(--ph-faint); cursor: pointer; font-size: 14px; padding: 0 2px; }
+  #pharmacyPage button.ph-tp-sym-del:hover { color: #B24B4B; }
+  #pharmacyPage .ph-tp-sym-quick { display: flex; gap: 6px; }
+  #pharmacyPage input.ph-tp-sym-qin { flex: 1; font: inherit; font-size: 12px; padding: 6px 8px; border: 1px solid var(--ph-line); border-radius: 7px; background: var(--ph-paper); color: var(--ph-ink); min-width: 0; }
+  #pharmacyPage button.ph-tp-sym-qadd { font: inherit; font-size: 11.5px; font-weight: 700; padding: 6px 12px; border-radius: 7px; border: 1px solid var(--ph-green-deep); background: var(--ph-green-deep); color: #fff; cursor: pointer; white-space: nowrap; }
+  #pharmacyPage .ph-tp-sym-preview { margin-top: 6px; padding: 7px 9px; background: var(--ph-green-tint); border-radius: 7px; font-size: 11.5px; color: var(--ph-soft); }
+  #pharmacyPage .ph-tp-sym-preview b { color: var(--ph-green-deep); }
+  #pharmacyPage .ph-tp-sym-presets { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; }
+  #pharmacyPage button.ph-tp-sym-preset { font: inherit; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--ph-line); background: none; color: var(--ph-soft); cursor: pointer; }
+  #pharmacyPage button.ph-tp-sym-preset:hover { border-color: var(--ph-green-deep); color: var(--ph-green-deep); }
   /* the phase line -- her report 2026-09-11: two phases of the SAME plan
      read as separate things, even though the table underneath is one
      continuous sequence with zero pixels of real space between them
@@ -26567,6 +26601,56 @@
         if (ph) { ph.formulaId = null; ph.formulaName = ""; savePharmacy(); phTpRepaintPhasePanel(); }
         return;
       }
+      // Symptom tracker (her mock, "yes i like it") -- add/preset/delete/dot
+      // are all discrete clicks, each shaped like the formula-link handlers
+      // just above: re-resolve plan/phase fresh by id, mutate, save, repaint
+      // only the phase panel (phTpRepaintPhasePanel), never the whole screen.
+      const tpSymQadd = e.target.closest("[data-tp-sym-qadd]");
+      if (tpSymQadd) {
+        const [planId, phaseId] = tpSymQadd.dataset.tpSymQadd.split(":");
+        const plan = phTpFindPlan(phTpScreenPatient, planId);
+        const ph = plan && plan.phases.find(p => p.id === phaseId);
+        const qin = document.querySelector(`[data-tp-sym-quick="${planId}:${phaseId}"]`);
+        const parsed = qin && phTpSymParse(qin.value);
+        if (ph && parsed && parsed.complaint) {
+          if (!Array.isArray(ph.symptoms)) ph.symptoms = [];
+          ph.symptoms.push({ id: uid(), complaint: parsed.complaint, nature: parsed.nature, frequency: parsed.frequency, scale: "custom", severity: "", pct: 0 });
+          savePharmacy(); phTpRepaintPhasePanel();
+        }
+        return;
+      }
+      const tpSymPreset = e.target.closest("[data-tp-sym-preset]");
+      if (tpSymPreset) {
+        const [planId, phaseId, kind] = tpSymPreset.dataset.tpSymPreset.split(":");
+        const plan = phTpFindPlan(phTpScreenPatient, planId);
+        const ph = plan && plan.phases.find(p => p.id === phaseId);
+        if (ph) {
+          if (!Array.isArray(ph.symptoms)) ph.symptoms = [];
+          ph.symptoms.push({ id: uid(), complaint: "", nature: "", frequency: "", scale: kind, severity: kind === "pain" ? 0 : "", pct: 0 });
+          savePharmacy(); phTpRepaintPhasePanel();
+        }
+        return;
+      }
+      const tpSymDel = e.target.closest("[data-tp-sym-del]");
+      if (tpSymDel) {
+        const [planId, phaseId, rowId] = tpSymDel.dataset.tpSymDel.split(":");
+        const plan = phTpFindPlan(phTpScreenPatient, planId);
+        const ph = plan && plan.phases.find(p => p.id === phaseId);
+        if (ph && Array.isArray(ph.symptoms)) {
+          ph.symptoms = ph.symptoms.filter(r => r.id !== rowId);
+          savePharmacy(); phTpRepaintPhasePanel();
+        }
+        return;
+      }
+      const tpSymDot = e.target.closest("[data-tp-sym-dot]");
+      if (tpSymDot) {
+        const [planId, phaseId, rowId] = tpSymDot.dataset.tpSymDot.split(":");
+        const plan = phTpFindPlan(phTpScreenPatient, planId);
+        const ph = plan && plan.phases.find(p => p.id === phaseId);
+        const row = ph && (ph.symptoms || []).find(r => r.id === rowId);
+        if (row) { row.severity = Number(tpSymDot.dataset.n) || 0; savePharmacy(); phTpRepaintPhasePanel(); }
+        return;
+      }
       const tpPickJar = e.target.closest("[data-tp-pick-jar]"), tpPickRefill = e.target.closest("[data-tp-pick-refill]"), tpPickTyped = e.target.closest("[data-tp-pick-typed]");
       if ((tpPickJar || tpPickRefill || tpPickTyped) && phTpFormulaPickPhase) {
         const plan = phTpFindPlan(phTpScreenPatient, phTpScreenPlanId);
@@ -29775,6 +29859,40 @@
         // a real form control may write through here.
         if (ph && tpPhaseField.matches("input,textarea,select")) phDefer("tpPhaseField:" + phaseId + ":" + field, () => { ph[field] = tpPhaseField.value; savePharmacy(); }, 400);
         if (field === "aim") { tpPhaseField.style.height = "auto"; tpPhaseField.style.height = tpPhaseField.scrollHeight + "px"; }
+        return;
+      }
+      // Symptom tracker fields -- same debounced direct-write as tpPhaseField
+      // just above (never repaints mid-type, or a keystroke would throw her
+      // out of the box); the % slider also patches its own number in place.
+      const tpSymField = e.target.closest("[data-tp-sym-field]");
+      if (tpSymField) {
+        const [planId, phaseId, rowId, field] = tpSymField.dataset.tpSymField.split(":");
+        const plan = phTpFindPlan(phTpScreenPatient, planId);
+        const ph = plan && plan.phases.find(p => p.id === phaseId);
+        const row = ph && (ph.symptoms || []).find(r => r.id === rowId);
+        if (row) {
+          const v = field === "pct" ? (Number(tpSymField.value) || 0) : tpSymField.value;
+          phDefer("tpSym:" + rowId + ":" + field, () => { row[field] = v; savePharmacy(); }, 400);
+          if (field === "pct") {
+            const out = tpSymField.parentElement && tpSymField.parentElement.querySelector(".v");
+            if (out) out.textContent = v + "%";
+          }
+        }
+        return;
+      }
+      const tpSymQuick = e.target.closest("[data-tp-sym-quick]");
+      if (tpSymQuick) {
+        const key = tpSymQuick.dataset.tpSymQuick;
+        const preview = document.querySelector(`[data-tp-sym-preview="${key}"]`);
+        if (preview) {
+          const parsed = phTpSymParse(tpSymQuick.value);
+          if (parsed && parsed.complaint) {
+            preview.hidden = false;
+            preview.innerHTML = `Reads as: <b>${esc(parsed.complaint)}</b>${parsed.nature ? ` · nature: <b>${esc(parsed.nature)}</b>` : ""}${parsed.frequency ? ` · frequency: <b>${esc(parsed.frequency)}</b>` : ""}`;
+          } else {
+            preview.hidden = true;
+          }
+        }
         return;
       }
       if (e.target.id === "phTpFPickInput") {
@@ -45787,6 +45905,7 @@ or changing anything in Cliniko.
       <div class="ph-tp-spine-col watch">
         <div class="ph-tp-spine-colhead">Watch · Acu &amp; herbs</div>
         ${ph && ph.watch ? `<div class="ph-tp-spine-row"><b>Watch:</b> ${esc(ph.watch)}</div>` : ""}
+        ${ph && phTpSymSummary(ph) ? `<div class="ph-tp-spine-row"><b>Symptoms:</b> ${esc(phTpSymSummary(ph))}</div>` : ""}
         ${acu ? `<div class="ph-tp-spine-row"><b>Points:</b> ${esc(acu.points || "—")}${acu.outcome ? ` <span class="out">${outLabel(acu.outcome)}</span>` : ""}</div>` : `<div class="ph-tp-spine-row"><span class="ph-tp-rec-none">No acupuncture logged this day.</span></div>`}
         ${herbs ? `<div class="ph-tp-spine-row"><b>Herbs:</b> ${esc(herbs)}</div>` : ""}
       </div>
@@ -45927,6 +46046,86 @@ or changing anything in Cliniko.
     const newestFirst = past.slice().reverse();
     return `<button type="button" class="ph-tp-fhist-toggle" data-tp-formula-hist-toggle="${phase.id}" aria-expanded="${open ? "true" : "false"}">${open ? "▾" : "▸"} ${past.length} earlier</button>${open ? `<div class="ph-tp-fhist-list">${newestFirst.map(e => `<div class="ph-tp-fhist-row">${esc(phShortDate(e.dateKey))} · ${esc(e.formulaName)}</div>`).join("")}</div>` : ""}`;
   }
+  /* ---- Symptom tracker (Watch row), her ask 2026-09-14 ----------------
+     "when i see patients, i like to record: complaint/symptom; nature of
+     symptom, frequency, severity, and % of improvement." Mocked as a real
+     working page first (side-by-side of a quick-type parser, preset chips
+     and the resulting table) -- her verdict: "yes i like it". Replaces the
+     Watch row's free text with one row per symptom; phase.watch (the old
+     free text) is left exactly where it was, shown above the table, so
+     nothing she already wrote moves or vanishes -- the two coexist rather
+     than one migrating into the other. */
+  const PH_TP_SYM_PRESETS = [
+    { key: "sleep", label: "Sleep" },
+    { key: "pain", label: "Pain" },
+    { key: "rom", label: "Range of motion" },
+    { key: "custom", label: "Custom" },
+  ];
+  // "insomnia: MOTNI, daily, wake 3am, with night sweats" -- complaint is
+  // whatever sits before the first : or =; everything after is split on
+  // commas, and the one clause that reads as a frequency peels off into its
+  // own field. Severity is deliberately never guessed from free text here --
+  // her pain scale in particular is a real clinical number, and a wrong
+  // guess is worse than an empty box she taps once.
+  const PH_TP_SYM_FREQ_RE = /^(daily|weekly|fortnightly|monthly|once a (day|week|month)|\d+x?\s*(a|per)?\s*(day|week|month)s?|most days|every (day|other day))$/i;
+  function phTpSymParse(text) {
+    const t = (text || "").trim();
+    const ci = t.indexOf(":"), ei = t.indexOf("=");
+    const sepIdx = ci === -1 ? ei : ei === -1 ? ci : Math.min(ci, ei);
+    if (sepIdx <= 0) return null;
+    const complaint = t.slice(0, sepIdx).trim();
+    if (!complaint) return null;
+    const clauses = t.slice(sepIdx + 1).split(",").map(s => s.trim()).filter(Boolean);
+    let frequency = "";
+    const nature = [];
+    clauses.forEach(c => { if (!frequency && PH_TP_SYM_FREQ_RE.test(c)) frequency = c; else nature.push(c); });
+    return { complaint, nature: nature.join(", "), frequency };
+  }
+  function phTpSymRowHtml(key, row, frozen) {
+    const rk = `${key}:${row.id}`;
+    const sev = row.scale === "pain"
+      ? `<div class="ph-tp-sym-dots">${Array.from({ length: 10 }, (_, i) => i + 1).map(n => `<button type="button" class="ph-tp-sym-dot${(row.severity || 0) >= n ? " on" : ""}"${frozen ? " disabled" : ""} data-tp-sym-dot="${rk}" data-n="${n}" title="${n}/10" aria-label="${n} of 10 pain"></button>`).join("")}<span class="ph-tp-sym-n">${row.severity || 0}/10</span></div>`
+      : `<input type="text" class="ph-tp-sym-in" data-tp-sym-field="${rk}:severity" value="${esc(row.severity || "")}" placeholder="${row.scale === "rom" ? "e.g. 110°" : "describe it"}"${frozen ? " disabled" : ""}>`;
+    return `<tr class="ph-tp-sym-row">
+      <td><input type="text" class="ph-tp-sym-in b" data-tp-sym-field="${rk}:complaint" value="${esc(row.complaint || "")}" placeholder="Symptom"${frozen ? " disabled" : ""}></td>
+      <td><input type="text" class="ph-tp-sym-in" data-tp-sym-field="${rk}:nature" value="${esc(row.nature || "")}" placeholder="Nature"${frozen ? " disabled" : ""}></td>
+      <td><input type="text" class="ph-tp-sym-in" data-tp-sym-field="${rk}:frequency" value="${esc(row.frequency || "")}" placeholder="Frequency"${frozen ? " disabled" : ""}></td>
+      <td>${sev}</td>
+      <td><div class="ph-tp-sym-pct"><input type="range" min="0" max="100" step="5" data-tp-sym-field="${rk}:pct" value="${row.pct || 0}"${frozen ? " disabled" : ""}><span class="v">${row.pct || 0}%</span></div></td>
+      ${frozen ? "" : `<td><button type="button" class="ph-tp-sym-del" data-tp-sym-del="${rk}" title="Remove this symptom" aria-label="Remove this symptom">×</button></td>`}
+    </tr>`;
+  }
+  // one compact line for surfaces that only have room for a summary (the
+  // Timeline/Spine node, the letter's "What I'm doing" column) -- never the
+  // full table there, just enough to say what's being tracked
+  function phTpSymSummary(phase) {
+    const rows = (phase.symptoms || []).filter(r => (r.complaint || "").trim());
+    if (!rows.length) return "";
+    return rows.map(r => {
+      const sev = r.scale === "pain" && r.severity ? ` ${r.severity}/10` : "";
+      const pct = r.pct ? ` (${r.pct}% better)` : "";
+      return `${r.complaint}${sev}${pct}`;
+    }).join(", ");
+  }
+  function phTpSymptomsHtml(plan, phase, frozen) {
+    const key = `${plan.id}:${phase.id}`;
+    const rows = phase.symptoms || [];
+    const legacy = (phase.watch || "").trim()
+      ? `<div class="ph-tp-sym-legacy${frozen ? "" : " editable"}"${frozen ? "" : ` data-tp-edit="${key}:watch" title="Click to edit"`}>${esc(phase.watch)}</div>`
+      : "";
+    const table = rows.length ? `<div class="ph-tp-sym-tablewrap"><table class="ph-tp-sym-table">
+      <thead><tr><th>Symptom</th><th>Nature</th><th>Frequency</th><th>Severity</th><th>% better</th>${frozen ? "" : "<th></th>"}</tr></thead>
+      <tbody>${rows.map(r => phTpSymRowHtml(key, r, frozen)).join("")}</tbody>
+    </table></div>` : "";
+    const quick = frozen ? "" : `
+      <div class="ph-tp-sym-quick">
+        <input type="text" class="ph-tp-sym-qin" data-tp-sym-quick="${key}" placeholder="Type it up, e.g. insomnia: MOTNI, daily, wake 3am">
+        <button type="button" class="ph-tp-sym-qadd" data-tp-sym-qadd="${key}">Add</button>
+      </div>
+      <div class="ph-tp-sym-preview" data-tp-sym-preview="${key}" hidden></div>
+      <div class="ph-tp-sym-presets">${PH_TP_SYM_PRESETS.map(p => `<button type="button" class="ph-tp-sym-preset" data-tp-sym-preset="${key}:${p.key}">+ ${esc(p.label)}</button>`).join("")}</div>`;
+    return `${legacy}${table}${!rows.length && !legacy && frozen ? `<span class="ph-tp-rec-none">—</span>` : ""}${quick}`;
+  }
   function phTpPhaseBodyRows(plan, phase) {
     const picking = phTpFormulaPickPhase === phase.id;
     /* Her spec 2026-09-09: "Planned beside What happened". The left half stays
@@ -45970,7 +46169,7 @@ or changing anything in Cliniko.
       <tr><td class="ph-tp-lbl">Visits</td>${cell("cadence")}${rec("Visits", "visits")}</tr>
       <tr><td class="ph-tp-lbl">Formula</td><td class="ph-tp-fcell">${formula}${picking ? phTpPhaseFormulaPickerHtml(phase) : ""}${phTpFormulaHistoryHtml(phase)}</td>${rec("Dispensed", "dispensed")}</tr>
       <tr><td class="ph-tp-lbl">Points</td>${cell("points")}${rec("Done", "acu")}</tr>
-      <tr><td class="ph-tp-lbl">Watch</td>${cell("watch")}${rec("Periods", "periods")}</tr>
+      <tr><td class="ph-tp-lbl">Watch</td><td class="ph-tp-cell ph-tp-symcell">${phTpSymptomsHtml(plan, phase, frozen)}</td>${rec("Periods", "periods")}</tr>
       ${!rc && acuLine ? `<tr class="ph-tp-acufoldrow"><td colspan="4">${acuLine}</td></tr>` : ""}`;
   }
   /* Visits = three pickers (her ask 2026-09-10, clarified twice: "i meant for
@@ -46363,6 +46562,7 @@ or changing anything in Cliniko.
     if ((p.cadence || "").trim()) parts.push(p.cadence.trim());
     if ((p.points || "").trim()) parts.push(`Acupuncture: ${p.points.trim()}`);
     if ((p.watch || "").trim()) parts.push(`Watch for: ${p.watch.trim()}`);
+    if (phTpSymSummary(p)) parts.push(`Watching: ${phTpSymSummary(p)}`);
     return parts;
   }
   const phTpPhaseDoingHtml = p => { const parts = phTpPhaseDoingParts(p); return parts.length ? parts.map(esc).join("<br>") : "As discussed"; };
