@@ -506,7 +506,19 @@ update STYLE-LCM.md to match so future builds don't undo it.
   the Messages Prepared/Sent list are two separate systems ON PURPOSE — do not wire them
   together.** What survives a check-in: the outcome in her history, and via ＋ Save mine
   the *wording* as a template (Communications → Templates). Prepared/Sent holds only what
-  Compose or the post-dispense "herbs are ready" offer created. Tabs, in order:
+  Compose, the post-dispense "herbs are ready" offer, or — since 2026-09-14 — **Send
+  later** on the Follow-up stage's own composer created. That last one is her "preplan
+  messages in advance" pick: `phMsgPrepare` takes `scheduledFor`/`label`; a waiting draft
+  is kind `"scheduled"` on Communications → Due (Done = Sent, snooze = tomorrow, Cancel
+  deletes it — the store's ONLY deletion), sits under "Planned for later" on Prepared, and
+  shows again on that script's Follow-up stage. The check-in panel's own drafts stay
+  throwaway exactly as before; only an explicit Send later files anything. The Follow-up
+  stage composer has its OWN form (`presMsgForm`) and its picker clicks are routed by the
+  `[data-pres-msg]` ancestor test before any `phCkForm`-gated handler — never merge the
+  two forms. The same build fixed a real bug: after a dispense, Review date/note edits on
+  that panel wrote to `t.fu*` fields `phFuCreateFromDispense` had already deleted, so they
+  never reached `PHARMACY.followups` (what Communications reads); everything goes through
+  `phFuRecordForScript(t)` now. Tabs, in order:
   **Due · Compose · Templates · Prepared · Sent**.
   Two gaps found in the same pass and fixed: on a phone the app showed its version
   **nowhere** (`#phVersionLine` is `display:none` under 900px and `phVersionShortText()`
