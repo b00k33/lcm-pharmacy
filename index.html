@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260914-213000">
+<meta name="lcm-build" content="20260914-223000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6092,6 +6092,30 @@
   /* excluded: still visible, obviously not counted, one tap from coming back */
   #pharmacyPage .ph-tp-vchip.off { background: none; color: var(--ph-faint); border-style: dashed; text-decoration: line-through; }
   #pharmacyPage .ph-tp-vnote { display: block; font-size: 10.5px; color: var(--ph-faint); line-height: 1.45; margin-top: 5px; }
+  /* Next visits, projected (synth22 2026-09-14): dashed chips = a rhythm,
+     not a booking; a projected day she has already booked wears the same
+     gold as the real booked chips above it */
+  #pharmacyPage .ph-tp-nxt { display: block; margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--ph-line); }
+  #pharmacyPage .ph-tp-nxt-h { display: block; font-size: 10.5px; font-weight: 700; color: var(--ph-soft); margin-bottom: 2px; }
+  #pharmacyPage .ph-tp-vchip.nx { cursor: default; border-style: dashed; background: none; color: var(--ph-soft); display: inline-flex; align-items: center; gap: 6px; }
+  #pharmacyPage .ph-tp-vchip.nx.bk { border-style: solid; background: var(--ph-low-tint); color: var(--ph-low-deep); border-color: var(--ph-low-tint); }
+  #pharmacyPage .ph-tp-book { font: inherit; font-size: 10.5px; font-weight: 700; color: var(--ph-green-deep); background: none; border: none; padding: 0; min-height: 0; cursor: pointer; }
+  #pharmacyPage .ph-tp-book:hover { text-decoration: underline; }
+  /* a visit's tongue + pulse inside the DONE cell (synth22 2026-09-14) */
+  #pharmacyPage .ph-tp-fnd { display: block; margin: 2px 0 8px; }
+  #pharmacyPage .ph-tp-fndtoggle { font: inherit; font-size: 11px; font-weight: 700; color: var(--ph-green-deep); background: none; border: none; padding: 0; min-height: 0; cursor: pointer; }
+  #pharmacyPage .ph-tp-fndtoggle:hover { text-decoration: underline; }
+  #pharmacyPage .ph-tp-fnd-charts { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: flex-start; margin-top: 4px; }
+  #pharmacyPage .ph-tp-fnd .ph-visit-tng.ro .ph-tng-svg { width: 84px; }
+  #pharmacyPage .ph-pulse-mini { display: flex; flex-wrap: wrap; gap: 6px 12px; flex: 1 1 260px; min-width: 0; }
+  #pharmacyPage .ph-pulse-mini .ph-pulse-half { flex: 1 1 200px; min-width: 180px; }
+  #pharmacyPage .ph-pulse-mini .ph-pulse-collbl { font-size: 7.5px; padding: 1px 0; }
+  #pharmacyPage .ph-pulse-mini .ph-pulse-rowlbl { font-size: 8.5px; padding-right: 3px; }
+  #pharmacyPage .ph-pulse-mini .ph-pulse-cell { height: 18px; cursor: default; }
+  #pharmacyPage .ph-pulse-mini .ph-pulse-cell .q { font-size: 7px; }
+  #pharmacyPage .ph-pulse-mini .ph-pulse-shape { width: 16px; height: 9px; }
+  #pharmacyPage .ph-tp-fnd-lines { display: block; margin-top: 4px; font-size: 11px; color: var(--ph-soft); }
+  #pharmacyPage .ph-tp-fnd-lines b { color: var(--ph-ink); }
   /* + Add phase picker */
   #pharmacyPage .ph-tp-addpick { border: 1px solid var(--ph-line); border-radius: 10px; background: var(--ph-white); margin: 8px 0 4px; overflow: hidden; }
   #pharmacyPage .ph-tp-addpick .hd { display: flex; align-items: center; gap: 8px; font-size: 10px; font-weight: 800;
@@ -26604,6 +26628,24 @@
         return;
       }
       // one visit in or out of this phase's count (her decision 1)
+      // the DONE cell's per-visit findings fold (synth22 2026-09-14) -- one
+      // cell repaints, the panel keeps its scroll spot
+      const tpFnd = e.target.closest("[data-tp-fnd-toggle]");
+      if (tpFnd) {
+        const id = tpFnd.dataset.tpFndToggle;
+        if (phTpFndOpen.has(id)) phTpFndOpen.delete(id); else phTpFndOpen.add(id);
+        phTpRepaintPhasePanel();
+        return;
+      }
+      // + Book on a projected date: the existing quick-add, opened on that day
+      const tpBook = e.target.closest("[data-tp-book]");
+      if (tpBook) {
+        const v = tpBook.dataset.tpBook, i = v.lastIndexOf("|");
+        const name = v.slice(0, i), dateKey = v.slice(i + 1);
+        phApptOpen(name);
+        if (phApptState && dateKey) { phApptState.dateKey = dateKey; renderApptModal(); const n = document.getElementById("phApptQaName"); if (n) n.value = name; }
+        return;
+      }
       const tpVis = e.target.closest("[data-tp-visit-toggle]");
       if (tpVis) {
         const bits = String(tpVis.dataset.tpVisitToggle || "").split("~");
@@ -35371,10 +35413,22 @@ or changing anything in Cliniko.
       const fu = rec.acuFu || {};
       const done = fu.doneForSessionId === calc.lastSession.id;
       const snoozedOn = fu.snoozedForSessionId === calc.lastSession.id ? fu.snoozedUntil : null;
-      const on = snoozedOn && snoozedOn > calc.dueOn ? snoozedOn : calc.dueOn;
-      return { kind: "acu", on, done, snoozed: !!snoozedOn, patientKey: key, patientName: name, acu: calc };
+      let on = snoozedOn && snoozedOn > calc.dueOn ? snoozedOn : calc.dueOn;
+      // her synth22 pick (2026-09-14, "VISITS cell + Communications"): when
+      // the projected next visit is NOT booked, the row comes forward a few
+      // days so she can book it in time -- a "book her" nudge, not a new
+      // kind of row. Booked ahead = nothing to nudge, the date stays put.
+      // Done/snooze still key off the session, untouched.
+      let bookAhead = false;
+      if (!snoozedOn && !done && !phCkNextAppt(key)) {
+        const early = keyOf(new Date(parseKey(calc.dueOn).getTime() - PH_ACU_BOOK_LEAD_DAYS * 864e5));
+        const todayKey = keyOf(TODAY);
+        if (early < calc.dueOn && calc.dueOn > todayKey) { on = early < todayKey ? todayKey : early; bookAhead = true; }
+      }
+      return { kind: "acu", on, done, snoozed: !!snoozedOn, patientKey: key, patientName: name, acu: calc, bookAhead };
     }).filter(Boolean);
   }
+  const PH_ACU_BOOK_LEAD_DAYS = 3;   // her Q4: "a few days ahead" -- easy to bump
   // ---- gone quiet (her ask: a real alert, not just showing the dates) ----
   // her range was "2-3wk" for acu / "6-8wk" for herbs -- starting at the
   // safer (longer) end of each; her call, easy to bump.
@@ -35577,7 +35631,7 @@ or changing anything in Cliniko.
   const phCommRowId = row => row.kind === "scheduled" ? row.msg.id : row.rec ? row.rec.id : row.patientKey;
   const phCommRowPatientName = row => row.rec ? phTitle(row.rec.patient) : row.patientName;
   function phCommRowMetaLabel(row) {
-    if (row.kind === "acu") return `Acupuncture follow-up${row.acu && row.acu.ok && row.acu.cadenceDays ? ` · every ${row.acu.cadenceDays}d` : ""}`;
+    if (row.kind === "acu") return `${row.bookAhead ? "Book her" : "Acupuncture follow-up"}${row.acu && row.acu.ok && row.acu.cadenceDays ? ` · every ${row.acu.cadenceDays}d` : ""}`;
     if (row.kind === "quiet") return `Gone quiet${row.quiet ? ` · ${row.quiet.daysSince}d` : ""}`;
     if (row.kind === "scheduled") return `Planned message${row.msg && row.msg.label ? ` · ${row.msg.label}` : ""}`;
     return row.kind === "checkin" ? "check-in" : row.kind === "review" ? "review" : "check-in & review";
@@ -37918,7 +37972,8 @@ or changing anything in Cliniko.
       if (!a || !a.ok) return "Acupuncture follow-up";
       const cad = `every ${a.cadenceDays}d${a.cadenceSource === "plan" ? "" : " (default)"}`;
       const lastVia = a.lastSession.source === "appointment" ? "last visit" : "last session";
-      return `${cad} · ${lastVia} ${phFuDateLabel(a.lastSession.date)}`;
+      const nudge = row.bookAhead ? `book her — next visit due ${phFuDateLabel(a.dueOn)}, nothing booked · ` : "";
+      return `${nudge}${cad} · ${lastVia} ${phFuDateLabel(a.lastSession.date)}`;
     }
     if (row.kind === "quiet") {
       if (!row.quiet) return "Gone quiet";
@@ -45954,6 +46009,88 @@ or changing anything in Cliniko.
      a clinical fact she currently cannot see anywhere. An empty result is "—",
      never a blank cell -- on a record, a blank reads as "not recorded" when
      what it means is "nothing happened", and those are different statements. */
+  /* ---- Next visits, projected (her synth22 ask 2026-09-14, "where are the
+     future predicted appointment tables?"): the phase's own rhythm, stepped
+     forward from the last visit it counted. Nothing is stored -- the same
+     phAcuCadenceParse that sets her Communications dates reads the interval,
+     the same "for N weeks" the Visits picker writes gives the end, and
+     phApptList says which of those days she has already booked. A rhythm
+     the parser can't read shows the text instead of a guessed date, same
+     rule as everywhere else this app turns words into dates. Her picks:
+     next 4 when the phase has no end; booked days marked; unbooked days
+     get a + Book that opens quick-add on that day. ---- */
+  const PH_TP_PROJECT_MAX = 4;
+  const PH_TP_PROJECT_CAP = 12;   // even with an end date, a cell is not a calendar
+  function phTpProjectedVisits(name, plan, ph) {
+    if (!name || !ph || !ph.sinceKey || ph.doneKey) return null;
+    const parsed = phAcuCadenceParse(ph.cadence || "");
+    if (!parsed.matched || parsed.noAcu || !parsed.days) return { ok: false, reason: parsed.noAcu ? "no-acu" : "unreadable" };
+    const st = phTpPhaseVisitStats(name, plan, ph);
+    if (!st) return null;
+    const key = phPatientKey(name), today = keyOf(TODAY);
+    // from the last visit that has HAPPENED -- a booked-ahead one is a chip
+    // above already, and stepping from it would swallow the gap before it
+    const counted = st.rows.filter(r => !r.excluded && !r.future);
+    const lastKey = counted.length ? counted[counted.length - 1].appt.date : ph.sinceKey;
+    const wk = /for\s+(\d+)\s*weeks?/i.exec(ph.cadence || "");
+    const endKey = wk ? keyOf(new Date(parseKey(ph.sinceKey).getTime() + (+wk[1]) * 7 * 864e5)) : null;
+    const booked = phApptList().filter(a => phPatientKey(a.patient) === key && a.date > today);
+    const near = k => booked.find(a => Math.abs(parseKey(a.date) - parseKey(k)) <= 2 * 864e5) || null;
+    const dates = [];
+    let d = parseKey(lastKey);
+    for (let i = 0; i < PH_TP_PROJECT_CAP; i++) {
+      d = new Date(d.getTime() + parsed.days * 864e5);
+      const k = keyOf(d);
+      if (k <= today) continue;                       // a rhythm that has already lapsed just starts from today
+      if (endKey && k > endKey) break;
+      if (!endKey && dates.length >= PH_TP_PROJECT_MAX) break;
+      dates.push({ key: k, appt: near(k) });
+    }
+    return { ok: true, days: parsed.days, dates, endKey, fromKey: lastKey };
+  }
+  // one visit's saved tongue + pulse, read-only, small enough for a grid
+  // cell: the app's own tongue outline (the Log-session panel's), the two
+  // wrist halves as plain cells, and the same report lines the Timeline
+  // shows. `open` = drawings shown; folded = one line naming what's there.
+  let phTpFndOpen = new Set();   // "phaseId:sessionId" she has opened/closed by hand
+  function phVisitPulseMiniHtml(marks) {
+    const half = side => {
+      const cols = PH_PULSE_CHART[side];
+      const gridCols = ["30px", ...cols.map(c => c.w === 2 ? "2fr" : "1fr")].join(" ");
+      return `<div class="ph-pulse-half">
+        <div class="ph-pulse-sidelbl">${side === "R" ? "RIGHT" : "LEFT"}</div>
+        <div class="ph-pulse-grid" style="grid-template-columns:${gridCols}">
+          <div class="ph-pulse-collbl"></div>${cols.map(c => `<div class="ph-pulse-collbl">${esc(c.label)}</div>`).join("")}
+          ${PH_PULSE_LEVELS.map(level => `<div class="ph-pulse-rowlbl">${esc(level.label)}</div>${cols.map(c => {
+            const m = marks[`${side}:${c.id}:${level.id}`];
+            return `<span class="ph-pulse-cell${m ? " on" : ""}" title="${esc(`${c.label} · ${side} ${c.pos} · ${level.label}${m ? ` — ${m.quality}` : ""}`)}">${m ? (m.shape ? phPulseShapeSvg(m.shape) : `<span class="q">${esc(m.quality)}</span>`) : ""}</span>`;
+          }).join("")}`).join("")}
+        </div>
+      </div>`;
+    };
+    return `<div class="ph-pulse-mini">${half("R")}${half("L")}</div>`;
+  }
+  function phTpVisitFndHtml(ctx, s, defaultOpen) {
+    const rec = ctx && ctx.name ? phPatientPeek(ctx.name) : null;
+    const raw = rec && rec.visitFnd && rec.visitFnd[s.id];
+    if (!raw || phVisitFndEmpty(raw)) return "";
+    const f = phVisitFndRead(raw);
+    const id = `${ctx.phase ? ctx.phase.id : "p"}:${s.id}`;
+    const open = phTpFndOpen.has(id) ? !defaultOpen : defaultOpen;
+    const lines = phVisitFndReportLines(f);
+    const hasTongue = f.tng.regions.length || f.tng.overlays.length || f.body.length || f.coat.length;
+    const hasPulse = Object.keys(f.pulse).length > 0;
+    const what = [hasTongue ? "tongue" : "", hasPulse ? "pulse" : "", lines.some(([l]) => /Rhythm|Rate|Impressions|Wave|Depths|Positions/.test(l)) ? "Shen-Hammer" : ""].filter(Boolean).join(" & ") || "findings";
+    const btn = `<button type="button" class="ph-tp-fndtoggle" data-tp-fnd-toggle="${esc(id)}" aria-expanded="${open ? "true" : "false"}">${open ? "▾" : "▸"} ${esc(what)}</button>`;
+    if (!open) return `<span class="ph-tp-fnd folded">${btn}</span>`;
+    return `<span class="ph-tp-fnd">${btn}
+      <span class="ph-tp-fnd-charts">
+        ${hasTongue ? `<span class="ph-visit-tng ro">${phTongueOutlineSvg(new Set(f.tng.regions), new Set(f.tng.overlays))}</span>` : ""}
+        ${hasPulse ? phVisitPulseMiniHtml(f.pulse) : ""}
+      </span>
+      <span class="ph-tp-fnd-lines">${lines.map(([label, text]) => `<span class="ph-tp-rec-line"><b>${esc(label)}:</b> ${esc(text)}</span>`).join("")}</span>
+    </span>`;
+  }
   function phTpRecordCellHtml(kind, rc, ctx) {
     if (!rc) return `<span class="ph-tp-rec-none">not started</span>`;
     const none = `<span class="ph-tp-rec-none">—</span>`;
@@ -45982,9 +46119,21 @@ or changing anything in Cliniko.
         data-tp-visit-toggle="${ctx.plan.id}~${ctx.phase.id}~${esc(r.key)}"
         title="${r.excluded ? "Not counted for this phase — click to count it again" : `Counts as 1 treatment${r.acute ? ` · ${esc(r.acute.label || "acute illness")}` : ""}${r.future ? " once it happens" : ""} — click to leave it out`}"
         >${esc(phShortDate(r.appt.date))}${r.acute ? " 🤧" : ""}${r.future ? ` <span class="bk">booked</span>` : ""}</button>`;
+      // her synth22 ask 2026-09-14: the rhythm projected forward. Booked
+      // days are shown as such; the rest get + Book (quick-add, on that day)
+      const pj = ctx.frozen || st.paused ? null : phTpProjectedVisits(ctx.name, ctx.plan, ctx.phase);
+      let nextHtml = "";
+      if (pj && pj.ok && pj.dates.length) {
+        const nx = x => x.appt
+          ? `<span class="ph-tp-vchip nx bk" title="Already booked · ${esc(phShortDate(x.appt.date))}${x.appt.time ? " " + esc(phCkTime12(x.appt.time)) : ""}">${esc(phShortDate(x.key))} <span class="bk">booked</span></span>`
+          : `<span class="ph-tp-vchip nx">${esc(phShortDate(x.key))}<button type="button" class="ph-tp-book" data-tp-book="${esc(ctx.name)}|${x.key}" title="Book ${esc(phCkFirst(ctx.name))} on ${esc(phShortDate(x.key))}">+ Book</button></span>`;
+        nextHtml = `<span class="ph-tp-nxt"><span class="ph-tp-nxt-h">Next, if she keeps this rhythm</span><span class="ph-tp-vchips">${pj.dates.map(nx).join("")}</span><span class="ph-tp-vnote">every ${pj.days} day${pj.days === 1 ? "" : "s"} from ${esc(phShortDate(pj.fromKey))}${pj.endKey ? ` · ends around ${esc(phShortDate(pj.endKey))}` : ""} — from the phase’s own rhythm, never typed</span></span>`;
+      } else if (pj && !pj.ok && pj.reason === "unreadable") {
+        nextHtml = `<span class="ph-tp-vnote">Can’t project the next visits — “${esc(ctx.phase.cadence || "")}” isn’t a rhythm this can read.</span>`;
+      }
       return `${head}${track}<span class="ph-tp-vchips">${st.rows.map(chip).join("")}</span>${
         st.paused ? `<span class="ph-tp-vnote">Held ${esc(phShortDate(st.heldSince || st.to))} — later visits belong to the plan that interrupted this one.</span>` : ""}${
-        st.rows.some(r => r.excluded) ? `<span class="ph-tp-vnote">Struck-through visits aren’t counted for this phase.</span>` : ""}`;
+        st.rows.some(r => r.excluded) ? `<span class="ph-tp-vnote">Struck-through visits aren’t counted for this phase.</span>` : ""}${nextHtml}`;
     }
     if (kind === "dispensed") {
       if (!rc.dispenses.length) return none;
@@ -45998,6 +46147,11 @@ or changing anything in Cliniko.
          appointment card IS one of these rows, so this side keeps filling
          itself rather than being typed, and carries how it went and whatever
          she added, not just the points. */
+      // her synth22 ask 2026-09-14 ("i want to see the tongue and pulse
+      // diagram"): a visit's saved findings sit right under its line here,
+      // not only behind the Timeline node. Newest visit open, earlier ones
+      // folded to a line -- her pick, so the cell stays a cell.
+      const newest = rc.acu.slice().sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.at || 0) - (a.at || 0))[0];
       return rc.acu.map(s => {
         const went = (PH_ACU_OUTCOMES.find(x => x[0] === s.outcome) || [])[1] || "";
         const txt = (s.note || "").trim();
@@ -46005,7 +46159,7 @@ or changing anything in Cliniko.
           s.points ? esc(s.points) : "session",
           went ? `<b>${esc(went)}</b>` : "",
           txt ? `“${esc(txt)}”` : "",
-        ].filter(Boolean).join(" · ") + ` ${d(s.date)}`);
+        ].filter(Boolean).join(" · ") + ` ${d(s.date)}`) + phTpVisitFndHtml(ctx, s, s === newest);
       }).join("");
     }
     if (kind === "outcome") {
