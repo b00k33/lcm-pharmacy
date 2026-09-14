@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260914-013000">
+<meta name="lcm-build" content="20260914-050000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -38351,6 +38351,13 @@ or changing anything in Cliniko.
       if (p.templateName === "Cycle & IVF Protocol") { p.templateName = "IVF Protocol"; if (p.title === "Cycle & IVF Protocol") p.title = "IVF Protocol"; }
       if (p.cycle && p.cycle.lmp && !r.cycle) r.cycle = p.cycle;
     });
+    // her report 2026-09-14 ("i choose 2 weeks, it doesnt save"): stamped here
+    // because this is the one place already documented as "only called when
+    // she actually records something" -- every disciplined write path already
+    // funnels through it. mergePatientsByRecency (sync module) reads this to
+    // stop a stale second device from wholesale-clobbering a patient record
+    // it hasn't caught up with yet.
+    r.updatedAt = Date.now();
     return r;
   }
   const phMedHxVal = (rec, k) => (rec && rec.medicalHistory && rec.medicalHistory[k]) || "unasked";
@@ -45879,7 +45886,7 @@ or changing anything in Cliniko.
       // save on every pick, but DON'T rerender yet — the row is rebuilt once
       // she leaves, so the "book <date>" chip still refreshes off the new
       // string without the editor closing under her mid-choice
-      const write = () => { const live = freshPh(); if (!live) return; live.cadence = phTpCadenceCompose(st.n, st.per, st.forWhat, st.weeks); savePharmacy(); };
+      const write = () => { const live = freshPh(); if (!live) return; live.cadence = phTpCadenceCompose(st.n, st.per, st.forWhat, st.weeks); phPatientRec(phTpScreenPatient); savePharmacy(); };
       box.addEventListener("change", e => {
         const s = e.target.closest("select[data-vis]");
         if (!s) return;
@@ -45909,7 +45916,7 @@ or changing anything in Cliniko.
         // nothing, so a blur-only commit loses exactly what she just typed.
         // Idempotent, so the blur path can stay for click-away.
         let done = false;
-        const commit = () => { if (done) return; done = true; const live = freshPh(); if (live) live.cadence = inp.value; savePharmacy(); phTpRerender(); };
+        const commit = () => { if (done) return; done = true; const live = freshPh(); if (live) live.cadence = inp.value; phPatientRec(phTpScreenPatient); savePharmacy(); phTpRerender(); };
         inp.addEventListener("keydown", ev => { if (ev.key === "Escape" || ev.key === "Enter") { ev.preventDefault(); commit(); } });
         inp.addEventListener("blur", commit);
       });
@@ -45939,6 +45946,7 @@ or changing anything in Cliniko.
       // a longer note is exactly the kind of edit a mid-typing cloud pull can land during
       const live = freshPh();
       if (live) live[field] = inp.value;
+      phPatientRec(phTpScreenPatient);
       savePharmacy();
       /* Her report 2026-09-10: "when i type then click outside the box, screen
          scrolls to the top. i dont like that." phTpRerender() rebuilds the
@@ -54813,6 +54821,69 @@ Dosage: {dosage}
     return changedIt ? JSON.stringify(pick) : pickStr;
   }
 
+  /* ---- record-by-record merge for patients (her report 2026-09-14, "i
+     choose 2 weeks, it doesnt save") -- pharmacy_core still picks ONE WHOLE
+     SIDE on a genuine conflict. The 2026-09-11 fix (syncQueue serialization,
+     see pullMergePush below) closed a race between two pull-merge-push
+     cycles on the SAME tab; it cannot touch a race between two DIFFERENT
+     DEVICES, which is what she confirmed she runs (phone + desktop at once).
+     A phone that hasn't caught up with a desktop edit yet still looks
+     "locally changed" for some unrelated reason (anything else in the same
+     huge blob), wins the whole pharmacy_core conflict, and carries its own
+     stale patients{} straight back over the cloud -- discarding the
+     desktop's edit as collateral damage from a conflict that had nothing to
+     do with that patient. "It looks right, then reverts a few seconds
+     later" is exactly what that overwrite-then-pull-back looks like from her
+     screen.
+
+     Fix, same shape as mergePrescStrings above: patients{} never rides on
+     the outer blob pick again. Union every patient key from both sides (a
+     record only one side has SURVIVES, same as a prescription record does),
+     and where the SAME patient differs on both sides, prefer whichever copy
+     was actually touched more recently -- phPatientRec now stamps
+     updatedAt on every write -- instead of whichever side happened to win
+     the surrounding, unrelated conflict. A patient neither side has ever
+     stamped just keeps today's behaviour (falls back to the outer pick) --
+     this starts protecting a record from its next edit onward, not
+     retroactively. */
+  function mergePatientsByRecency(pickStr, lStr, cStr) {
+    var pick, l, c;
+    try { pick = JSON.parse(pickStr); } catch (e) { return pickStr; }
+    try { l = JSON.parse(lStr); } catch (e) { l = null; }
+    try { c = JSON.parse(cStr); } catch (e) { c = null; }
+    var lp = (l && l.patients && typeof l.patients === "object") ? l.patients : {};
+    var cp = (c && c.patients && typeof c.patients === "object") ? c.patients : {};
+    if (!Object.keys(lp).length && !Object.keys(cp).length) return pickStr;
+    var pickPatients = (pick.patients && typeof pick.patients === "object") ? pick.patients : {};
+    var out = {}, changedIt = false, keys = {};
+    Object.keys(lp).forEach(function (k) { keys[k] = true; });
+    Object.keys(cp).forEach(function (k) { keys[k] = true; });
+    Object.keys(keys).forEach(function (key) {
+      var a = lp[key], b = cp[key], winner;
+      if (a && !b) winner = a;
+      else if (b && !a) winner = b;
+      else if (!a && !b) return;
+      else {
+        var strA = JSON.stringify(a), strB = JSON.stringify(b);
+        if (strA === strB) winner = a;
+        else {
+          var ta = a.updatedAt || 0, tb = b.updatedAt || 0;
+          // a genuine tie (including "neither side has ever been stamped")
+          // keeps whatever the outer blob pick already decided -- no signal
+          // to improve on, so don't invent one. Compared by VALUE, not `===`:
+          // pick/l/c are three separately-parsed objects, so a reference
+          // check here is always false even when the content is identical.
+          winner = ta !== tb ? (ta > tb ? a : b) : (JSON.stringify(pickPatients[key]) === strB ? b : a);
+        }
+      }
+      out[key] = winner;
+      if (JSON.stringify(pickPatients[key]) !== JSON.stringify(winner)) changedIt = true;
+    });
+    if (!changedIt) return pickStr;
+    pick.patients = out;
+    return JSON.stringify(pick);
+  }
+
   /* ---- record-by-record merge for prescriptions (her wipe, 2026-08-22) --
      The 20:40 wipe: a device that hadn't synced since Aug 19-20 booted, a
      boot-time housekeeping write made its prescriptions section look
@@ -54951,7 +55022,10 @@ Dosage: {dosage}
         conflicts.push(name);
         if (!allowShrink && sectionLooksEmptier(name, c, l)) { pick = c; emptyGuarded.push(name); } else pick = l;
       }
-      if (name === "pharmacy_core") pick = preserveLocationField(pick, l, c);
+      if (name === "pharmacy_core") {
+        pick = preserveLocationField(pick, l, c);
+        pick = mergePatientsByRecency(pick, l, c);
+      }
       if (pick !== l) changed = true;
       // cloudStale: the truth we just landed on isn't what the cloud row
       // holds, so the cloud needs a push -- REGARDLESS of why this merge
