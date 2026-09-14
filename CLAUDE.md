@@ -1918,3 +1918,62 @@ header tap swaps the day. The calendar fills the vertical height.
 - Known gaps: a 1-day List view on desktop has no day head to tap (Grid
   always has one); the profile's "Dosage & markup"/"Paste appointments"
   shortcuts stay out of the widget (her 2026-09-11 / 2026-09-09 calls).
+
+## Refill = one merged, filtered list — Refill plan + Formula recipes combined (her synth22 Stage C, 2026-09-15)
+Her ask: "too many clocks" on the Refill workbench — a tabbed Refill-plan
+band, a separate folded Formula-recipes band and a folded Recent-refills
+band on desktop; a queue + chips + table + browse-sections stack on the
+phone. All of it replaced by ONE filtered list, three columns (Formula /
+Can make / When), one contextual primary action per row.
+- **`phRefUnifiedListHtml()`** (index.html, search "the master unified
+  list") is the one function both widths render from — it branches on
+  `phRefSheetMode()` (`window.innerWidth > 900`, the Refill page's own
+  desktop/phone gate, distinct from the app-wide ≤640px PHONE REDESIGN
+  breakpoint) for `.ph-ds-row` grid markup vs `.ph-rp-table` markup, but
+  shares filter-chip state, search, the short-bar and the recent-refills
+  footer across both. `phRefFilterChipsHtml()` drives four chips (All /
+  Due / Low stock / All recipes); `phRefSheetRowHtml(h, tab)` folds Jar +
+  Recipe into one `.sub` line under the formula name and picks ONE
+  contextual primary action (Make refill / Order / Snooze's row-⋯,
+  depending on stock state) instead of a row of buttons.
+- **Recent refills folds to a count + link** (`phRefRecentFootHtml`) —
+  the old always-expanded band is gone; tapping it opens the same list
+  filtered to "All recipes" rather than a fourth parallel structure.
+- **Plan-it popover = two taps** (her pick "b"): Today / Pick a date is
+  the headline pair; Snooze 1 week and Make Monday moved into the row's
+  own ⋯ menu under a new "Not now" heading. "Add, no date" removed —
+  every refill needs a date to appear correctly in the list's When column.
+- **Date entry = a real calendar popover, Refill-page-only** —
+  `phRefDatePopHtml`/`-Place`/`-Close`, `phRefDatePickFor`/`-View` state.
+  Deliberately scoped: `data-ph-refill-pick`/`-date` only open the
+  popover inside `#phRefillWrap`; the same data-attributes elsewhere
+  (Dashboard, Inventory) still fall back to `window.prompt()` — changing
+  those wasn't part of her complaint and widening the popover's blast
+  radius wasn't asked for. Opens defaulting to the CURRENTLY STORED
+  date's month if the herb already has one, else today's month.
+- **Formula panel action bar trimmed** (`renderPresPanel`'s
+  `.ph-pres-actionbar`) to grams-field + "🏺 Make refill" (primary) + ⋯
+  (Calculate / Save / Copy / Delete) — the old separate Copy row is gone.
+- **Deleted**: `phRefQueueHtml`, `phRefillPlanHtml`, the old
+  `phRefStripHtml`/`phRfBand`/`phRefSheetHtml`, the phone table's batch
+  `<select>` column, `phRefManageOpen` and its two now-orphaned handlers.
+  All underlying stock math, snoozing, ordering and jar↔recipe linking
+  (`refJarForRecipe`, heuristic, never a stored key) is untouched —
+  presentation and interaction only.
+- **Dashboard stock cards** (`data-ph-dash-refill-open` → `phDashOpenRefill`)
+  are pre-existing, unchanged by this build, and were NOT rerouted to land
+  on the visible list. **My call, disclosed:** that handler already knows
+  the exact recipe or jar to open and jumps straight to the loaded-formula
+  workbench for it — the same destination a list tap would reach, one tap
+  sooner. Forcing it through the list first would add a step for a link
+  that already knows where it's going. If she'd rather always land on the
+  list (e.g. to see it in context before committing), that's a one-line
+  change to `phDashOpenRefill`.
+- Verified in sandbox: filter counts, All-recipes/no-jar rows, primary-
+  action contextuality per stock state, calendar popover open/commit/
+  close/month-default on both a flagged and an unflagged herb, phone
+  reflow at 375px with no real overflow (measured via `scrollWidth`, not
+  eyeballed), formula-panel button trim, and the Prescriptions live-search
+  self-check (her CLAUDE.md protected-behaviour rule) all pass.
+  Live `1838fdd`: `sw.js` `lcm-20260915-stagec-refill-onelist`, meta
+  `20260915-220000`.
