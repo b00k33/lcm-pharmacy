@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260914-150000">
+<meta name="lcm-build" content="20260914-160000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -8350,10 +8350,21 @@
   #pharmacyPage .ph-ren-confirm-name { text-align: center; font-size: var(--fs-micro); color: var(--ph-faint); word-break: break-all; padding: 0 var(--sp-3); }
   #pharmacyPage .ph-ren-confirm-acts { display: flex; gap: var(--sp-2); flex-wrap: wrap; justify-content: center; padding: var(--sp-3); }
   #pharmacyPage .ph-ren-confirm-acts .ph-load-btn { min-height: 44px; }
+  #pharmacyPage .ph-ren-cmp-modes { padding: 0 var(--sp-3); margin-top: var(--sp-2); }
   #pharmacyPage .ph-ren-cmp { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); padding: var(--sp-3); }
   #pharmacyPage .ph-ren-cmp-fig { margin: 0; }
   #pharmacyPage .ph-ren-cmp-fig img { width: 100%; border-radius: 10px; display: block; }
   #pharmacyPage .ph-ren-cmp-fig figcaption { text-align: center; font-size: var(--fs-micro); color: var(--ph-soft); margin-top: 4px; }
+  /* the drag-slider compare mode (her pick, 2026-09-14): both photos sit full-
+     size and covered, the earlier one clipped via clip-path so dragging never
+     rescales either image -- see phRenCmpSliderSet */
+  #pharmacyPage .ph-ren-cmp-slider { position: relative; margin: var(--sp-3); border-radius: 10px; overflow: hidden; aspect-ratio: 4 / 3; background: var(--ph-paper); cursor: ew-resize; touch-action: none; }
+  #pharmacyPage .ph-ren-cmp-slider-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+  #pharmacyPage .ph-ren-cmp-slider-handle { position: absolute; top: 0; bottom: 0; width: 3px; background: #fff; transform: translateX(-1.5px); pointer-events: none; }
+  #pharmacyPage .ph-ren-cmp-slider-handle span { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 32px; height: 32px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .3); }
+  #pharmacyPage .ph-ren-cmp-slider-tag { position: absolute; bottom: 8px; background: rgba(0, 0, 0, .45); color: #fff; font-size: var(--fs-micro); font-weight: 700; padding: 3px 9px; border-radius: 999px; pointer-events: none; }
+  #pharmacyPage .ph-ren-cmp-slider-tag.l { left: 8px; }
+  #pharmacyPage .ph-ren-cmp-slider-tag.r { right: 8px; }
 
   /* one card per visit, newest first. Originally phone-only (her §3); her ask
      2026-09-14 (synth22 #5) made it the default at every width -- the
@@ -26918,6 +26929,8 @@
       }
       if (e.target.closest("[data-ren-cmp-clear]")) { phRenCompare = []; renderHxScreen(); phRenPhotosSecRefresh(); return; }
       if (e.target.closest("[data-ren-cmp-open]")) { phRenCompareShow(); return; }
+      const cmpMode = e.target.closest("[data-ren-cmp-mode]");
+      if (cmpMode) { phRenCmpMode = cmpMode.dataset.renCmpMode; renderPhRenCompareModal(); return; }
       // the confirm step's three buttons (§2)
       if (e.target.closest("[data-ren-confirm-cancel]")) { phRenConfirmClose(); phRenCapture = null; return; }
       // batch confirm (her ask 2026-09-02): drop one pick, or save the lot
@@ -39986,19 +39999,74 @@ or changing anything in Cliniko.
       </div>
     </div>`;
   }
-  /* ---- compare view (§3): two photos of ONE type, side by side, dated ---- */
+  /* ---- compare view (§3): two photos of ONE type, dated. Her pick
+     2026-09-14, shown three real mock styles (side-by-side / drag-slider /
+     tap-to-flip): "i like side by side and drag" -- both built here as a
+     toggle, not one replacing the other, matching her established pattern
+     of picking to see MORE rather than fewer options. phRenCmpMode is
+     module-level (not on phRenCropState) so it stays on whichever she used
+     last across separate compares in the same session. ---- */
+  let phRenCmpMode = "side";   // "side" | "slider"
   function renderPhRenCompareModal() {
     const modal = document.getElementById("phRenCropModal");
     if (!modal || !phRenCropState || !phRenCropState.compare) return;
     const [a, b] = phRenCropState.compare;
-    const shot = r => `<figure class="ph-ren-cmp-fig"><img src="${r.objectUrl}" alt="${esc(PH_REN_TYPE_LABEL[phRenTypeOf(r)])} ${esc(phRenPhotoDateLabel(phRenDateKeyOf(r)))}"><figcaption>${esc(phFuDateLabel(phRenDateKeyOf(r)))}</figcaption></figure>`;
+    const label = PH_REN_TYPE_LABEL[phRenTypeOf(a)] || "Photo";
+    const dateA = phFuDateLabel(phRenDateKeyOf(a)), dateB = phFuDateLabel(phRenDateKeyOf(b));
+    const modeToggle = `<div class="ph-cap-chips ph-ren-cmp-modes">
+      <button type="button" class="ph-cap-tchip${phRenCmpMode === "side" ? " on" : ""}" data-ren-cmp-mode="side">Side by side</button>
+      <button type="button" class="ph-cap-tchip${phRenCmpMode === "slider" ? " on" : ""}" data-ren-cmp-mode="slider">Drag to compare</button>
+    </div>`;
+    const body = phRenCmpMode === "slider"
+      ? `<div class="ph-ren-cmp-slider" id="phRenCmpSlider">
+          <img class="ph-ren-cmp-slider-img" src="${b.objectUrl}" alt="${esc(label)} ${esc(dateB)}">
+          <img class="ph-ren-cmp-slider-img" id="phRenCmpSliderTop" src="${a.objectUrl}" alt="${esc(label)} ${esc(dateA)}" style="clip-path:inset(0 50% 0 0)">
+          <div class="ph-ren-cmp-slider-handle" id="phRenCmpSliderHandle" style="left:50%"><span></span></div>
+          <span class="ph-ren-cmp-slider-tag l">${esc(dateA)}</span>
+          <span class="ph-ren-cmp-slider-tag r">${esc(dateB)}</span>
+        </div>`
+      : `<div class="ph-ren-cmp">
+          <figure class="ph-ren-cmp-fig"><img src="${a.objectUrl}" alt="${esc(label)} ${esc(dateA)}"><figcaption>${esc(dateA)}</figcaption></figure>
+          <figure class="ph-ren-cmp-fig"><img src="${b.objectUrl}" alt="${esc(label)} ${esc(dateB)}"><figcaption>${esc(dateB)}</figcaption></figure>
+        </div>`;
     modal.innerHTML = `<div class="ph-hx-card ph-ren-crop-card">
       <div class="ph-hx-head">
         <button type="button" class="ph-stocktake-close" data-ren-crop-close="1" aria-label="Close">×</button>
-        <div class="ph-hx-head-name">${esc(PH_REN_TYPE_LABEL[phRenTypeOf(a)] || "Photo")} — comparing</div>
+        <div class="ph-hx-head-name">${esc(label)} — comparing</div>
       </div>
-      <div class="ph-ren-cmp">${shot(a)}${shot(b)}</div>
+      ${modeToggle}
+      ${body}
     </div>`;
+    if (phRenCmpMode === "slider") phRenCmpSliderBindDrag();
+  }
+  // reuses the exact start/move/end shape phRenCropDragStart/Move/End already
+  // use for the crop rectangle just above -- one drag pattern in this module,
+  // not two. clip-path on the TOP (earlier) photo, not a shrinking width, so
+  // neither image ever rescales mid-drag -- both stay full-size and covered.
+  let phRenCmpSliderDrag = false;
+  function phRenCmpSliderBindDrag() {
+    const wrap = document.getElementById("phRenCmpSlider");
+    if (wrap) wrap.addEventListener("pointerdown", phRenCmpSliderStart);
+  }
+  function phRenCmpSliderPct(e) {
+    const wrap = document.getElementById("phRenCmpSlider");
+    if (!wrap) return 50;
+    const r = wrap.getBoundingClientRect();
+    return Math.max(0, Math.min(100, ((e.clientX - r.left) / r.width) * 100));
+  }
+  function phRenCmpSliderStart(e) {
+    e.preventDefault();
+    phRenCmpSliderDrag = true;
+    phRenCmpSliderSet(phRenCmpSliderPct(e));
+    document.addEventListener("pointermove", phRenCmpSliderMove);
+    document.addEventListener("pointerup", phRenCmpSliderEnd, { once: true });
+  }
+  function phRenCmpSliderMove(e) { if (phRenCmpSliderDrag) phRenCmpSliderSet(phRenCmpSliderPct(e)); }
+  function phRenCmpSliderEnd() { phRenCmpSliderDrag = false; document.removeEventListener("pointermove", phRenCmpSliderMove); }
+  function phRenCmpSliderSet(pct) {
+    const top = document.getElementById("phRenCmpSliderTop"), handle = document.getElementById("phRenCmpSliderHandle");
+    if (top) top.style.clipPath = `inset(0 ${100 - pct}% 0 0)`;
+    if (handle) handle.style.left = pct + "%";
   }
   // §3: opens at the newest (right-hand) end
   function phRenTimelineScrollEnd() {
