@@ -548,8 +548,12 @@ update STYLE-LCM.md to match so future builds don't undo it.
   write ONE string per topic to `PHARMACY.infoLetterWords[id]`. Pictures: her uploads and
   the clinic logo live in the Ren photo store under `__letters__` / `__clinic__` (never
   localStorage — the 5 MB quota), record charts come from `phRenPhotosFor(pk)` kinds
-  `tongue`/`bbt`. Post-transfer, Food and Menstrual signs & BBT are placeholders until she
-  gives her words — do not draft them. **Cycle signs beyond the profile (her picks
+  `tongue`/`bbt`. Post-transfer, Food and Menstrual signs & BBT carry HER wording since
+  2026-09-15 — ported from her own Cliniko letter templates on her instruction ("draft them
+  from letters in cliniko and zanda"; Zanda's Settings is 403 for her login). The sources are
+  kept verbatim in `CLINIKO-LETTERS-2026-09-15.md`; the app bodies are those words
+  re-sectioned, not new writing. When a letter needs changing, change it from her Cliniko
+  text or her own edit, never by drafting fresh. **Cycle signs beyond the profile (her picks
   2026-09-14 on a working widget: BOTH the Dashboard day row AND the appointment popup; a
   tap opens her cycle strip).** `phCycleRowChipHtml(rec, script)` is the ONE chip builder
   for the Dashboard day list (`.ph-dash-drow .ph-tl-end`, every width) and the week-detail
