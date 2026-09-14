@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260915-020000">
+<meta name="lcm-build" content="20260915-030000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -13474,6 +13474,9 @@
     <!-- Patient self-fill intake link (her ask 2026-09-05): same shell/pattern again -->
     <div class="ph-stocktake-backdrop" id="phIntakeBackdrop" hidden></div>
     <div class="ph-hx-modal" id="phIntakeModal" hidden></div>
+    <!-- My Cycle -- send chart link (Stage 2, her go-ahead 2026-09-15): same shell/pattern -->
+    <div class="ph-stocktake-backdrop" id="phChartBackdrop" hidden></div>
+    <div class="ph-hx-modal" id="phChartModal" hidden></div>
     <!-- Letter-first patient letter (2026-09-01 calibration) -->
     <div class="ph-stocktake-backdrop" id="phLtrBackdrop" hidden></div>
     <div class="ph-hx-modal" id="phLtrModal" hidden></div>
@@ -19928,6 +19931,7 @@
       { icon: "i-edit", label: "Dosage & markup", ghost: true, run: () => phTogglePresSettings() },
       { icon: "i-search", label: "Find duplicates", ghost: true, run: () => phMergeOpenFinder() },
       { icon: "i-mail", label: "Send intake link", ghost: true, run: () => phIntakeOpen() },
+      { icon: "i-mail", label: "Send chart link", ghost: true, run: () => phChartOpen() },
     ],
     suppliers: [{ icon: "i-plus", label: "Add supplier", run: () => document.getElementById("phSupplierAddBtn")?.click() }],
     // her mockup (2026-08-16) shows only a search icon here, but CSV export
@@ -23581,6 +23585,7 @@
       ${phDashDayListHtml(todayKey, "Today")}
       ${nextKey && nextKey !== todayKey ? phDashDayListHtml(nextKey, phDashNextDayLabel(nextKey)) : ""}
       ${fu ? phDashSec("Communications due", phDashFuDue().length, fu) : ""}
+      ${phDashChartHtml()}
       ${out.length ? phDashSec("Going out today", out.length, `<div class="ph-dash-tasks">${out.join("")}</div>`) : ""}
       ${urgent ? `<section class="ph-widget ph-dash-card ph-dash-sec ph-dash-urgent">${urgent}</section>` : ""}
       ${workCards}
@@ -26421,6 +26426,20 @@
         return;
       }
       if (e.target.closest("[data-intake-gmsg]")) { phIntakeOpenMessages(); return; }
+      // ---- My Cycle -- send chart link handlers ----
+      if (e.target.closest("[data-chart-close]")) { phChartClose(); return; }
+      if (e.target.closest("[data-chart-generate]")) { phChartGenerate(); return; }
+      if (e.target.closest("[data-chart-copy]")) {
+        const inp = document.getElementById("phChartLinkOut");
+        if (inp && navigator.clipboard && navigator.clipboard.writeText) {
+          inp.select();
+          navigator.clipboard.writeText(inp.value).then(() => phFlashShow("✓ Copied"), () => phFlashShow("⚠ Copy blocked — select the text and copy it"));
+        }
+        return;
+      }
+      if (e.target.closest("[data-chart-gmsg]")) { phChartOpenMessages(); return; }
+      if (e.target.closest("[data-chart-copy-num]")) { const patRec = phPatientPeek(phChartName); phCkCopy(patRec && patRec.phone, "✓ Number copied"); return; }
+      if (e.target.closest("[data-ph-chart-send]")) { phChartOpen(phMsgDisplayName(phJourneyKey)); return; }
       const presFabToggle = e.target.closest("[data-pres-fab-toggle]");
       if (presFabToggle) {
         const on = document.body.classList.toggle("ph-mtabbar-peek");
@@ -30155,6 +30174,12 @@
         phIntakeName = e.target.value;
         const btn = document.querySelector("[data-intake-generate]");
         if (btn) btn.disabled = phIntakeBusy || !phIntakeName.trim();
+        return;
+      }
+      if (e.target.id === "phChartNameInput") {
+        phChartName = e.target.value;
+        const btn = document.querySelector("[data-chart-generate]");
+        if (btn) btn.disabled = phChartBusy || !phChartName.trim();
         return;
       }
       // 📅 appointments: the paste re-parses live into the preview only --
@@ -37702,6 +37727,299 @@ or changing anything in Cliniko.
   // nothing here names them and adding a third moment needs no change here.
   const phMsgTracksBbt = key => !!(phPatientPeek(key) || {}).tracksBbt;
   function phMsgSetTracksBbt(name, val) { const r = phPatientRec(name); if (!r) return; r.tracksBbt = !!val; savePharmacy(); }
+
+  // ============================================================
+  // 📈 MY CYCLE -- her side in LCM (Stage 2 of the patient charting app,
+  // her 12 decisions 2026-09-08 -- [[project_fertility_charting_app]] --
+  // paused that day, "Charting Stage 2 go ahead" 2026-09-15). The patient's
+  // own phone writes to Supabase chart_links/chart_days (chart.html, RLS +
+  // three SECURITY DEFINER functions, supabase/cycle_charts_setup.sql);
+  // this reads it back and sends the link, reusing phRenRelayClient/Uid --
+  // the same signed-in-owner client the photo relay and intake link use.
+  //
+  // Deliberately NOT wired here, flagged rather than silently built:
+  //   - a tapped period on her phone writing back into rec.cycle/rec.cycleLog
+  //     -- that is unverified patient input landing in the record that
+  //     drives phase automation and messaging, and deserves its own
+  //     conflict-handling answer from her first, the same way intake_forms
+  //     lands in a compare-then-apply queue rather than writing straight in.
+  //   - the morning reminder push itself (needs its own scheduled sender,
+  //     see [[b33-notification-system]]) -- the time saves, nothing sends yet.
+  //   - anonymous tongue-photo upload (needs its own storage rule).
+  //   - the "no rise yet" pattern flag on the triage list below -- only the
+  //     simpler "days since her last entry" flag is built for a first pass;
+  //     a temperature-shape heuristic wants real patient data to tune
+  //     against before it's trustworthy triage rather than a false alarm.
+  // ============================================================
+  const phChartLinkFor = rec => rec && rec.chartLinkId ? { id: rec.chartLinkId, status: rec.chartStatus || "active", goal: rec.chartGoal || "ttc" } : null;
+  // local field only -- the cloud row is the source of truth for status;
+  // this always pushes there too so a patient's own app (once it reads
+  // status) and any future reminder sender agree with what the toggle says
+  async function phChartSetStatus(name, status) {
+    const rec = phPatientRec(name);
+    if (!rec || !rec.chartLinkId) return;
+    rec.chartStatus = status; savePharmacy();
+    try {
+      const sb = phRenRelayClient(); if (!sb) return;
+      await sb.from("chart_links").update({ status }).eq("id", rec.chartLinkId);
+    } catch (e) {}
+  }
+  async function phChartEnsureLink(name, goal) {
+    const rec = phPatientRec(name);
+    if (!rec) throw new Error("No patient record.");
+    if (rec.chartLinkId) {
+      if (rec.chartStatus !== "active") await phChartSetStatus(name, "active");
+      return rec.chartLinkId;
+    }
+    const sb = phRenRelayClient();
+    if (!sb) throw new Error("Not signed in to cloud sync — sign in, then try again.");
+    const uid = await phRenRelayUid(sb);
+    if (!uid) throw new Error("Not signed in to cloud sync — sign in, then try again.");
+    const { data, error } = await sb.from("chart_links").insert({ owner: uid, patient_name: name, patient_key: phPatientKey(name), goal: goal || "ttc" }).select("id").single();
+    if (error) {
+      // her setup runs the SQL in her own time -- a clear message here
+      // beats a raw Postgres error if she flips the toggle before it exists
+      if (error.code === "42P01" || /relation .* does not exist/i.test(error.message || "")) {
+        throw new Error("The chart_links table hasn't been set up in Supabase yet — run supabase/cycle_charts_setup.sql first.");
+      }
+      throw error;
+    }
+    rec.chartLinkId = data.id; rec.chartStatus = "active"; rec.chartGoal = goal || "ttc";
+    savePharmacy();
+    return data.id;
+  }
+  let phChartToggleBusy = false;
+  async function phChartToggle(name, on) {
+    phChartToggleBusy = true; renderPharmacy();
+    try {
+      if (on) await phChartEnsureLink(name, (phPatientRec(name) || {}).chartGoal || "ttc");
+      else await phChartSetStatus(name, "paused");
+    } catch (e) { phFlashShow(`⚠ ${(e && e.message) || "Couldn't update charting"}`); }
+    phChartToggleBusy = false; renderPharmacy();
+  }
+  // ---- the live chart card, above the photo tile (her decision, the
+  // "Still open (Stage 2)" list: "the live chart on the patient panel above
+  // the photo tile"). Reads chart_days directly (RLS already lets the
+  // signed-in owner select her own patients' days -- the anon RPCs in
+  // cycle_charts_setup.sql are for the patient's own, signed-OUT browser
+  // only). A per-link cache, refreshed once per panel open, swapped in
+  // place -- never a full renderPharmacy() on load, same rule as phBbtRefresh. ----
+  const phChartDaysCache = {};   // linkId -> {loading, rows, error}
+  function phChartDaysLoad(linkId) {
+    const c = phChartDaysCache[linkId] || (phChartDaysCache[linkId] = { loading: false, rows: null, error: "" });
+    if (c.loading) return;
+    c.loading = true; c.error = "";
+    (async () => {
+      try {
+        const sb = phRenRelayClient();
+        if (!sb) throw new Error("Not signed in to cloud sync.");
+        const from = new Date(TODAY); from.setDate(from.getDate() - 60);
+        const { data, error } = await sb.from("chart_days").select("day,temp_c,period_flow,entry").eq("link_id", linkId).gte("day", keyOf(from)).order("day", { ascending: true });
+        if (error) throw error;
+        c.rows = data || [];
+      } catch (e) {
+        c.rows = c.rows || [];
+        c.error = (e && e.message) || "Couldn't load her chart.";
+      }
+      c.loading = false;
+      document.querySelectorAll(`[data-chart-live="${CSS.escape(linkId)}"]`).forEach(el => {
+        const tmp = document.createElement("div");
+        tmp.innerHTML = phChartLiveInnerHtml(linkId);
+        if (tmp.firstElementChild) el.replaceWith(tmp.firstElementChild);
+      });
+    })();
+  }
+  // a compact temperature + flow strip, same drawing shape as chart.html's
+  // chartSvg but without its ovulation/coverline overlay -- she already
+  // reads charts professionally, and duplicating an auto-diagnosed
+  // ovulation guess in two places risks the two disagreeing. Colours come
+  // from the app's own tokens, not chart.html's fixed hex.
+  function phChartSvgMini(rows) {
+    const days = (rows || []).filter(r => r && r.day);
+    if (!days.length) return "";
+    const L = 30, R = 8, T = 8, H = 90, FH = 10, W = Math.max(220, days.length * 10 + L + R);
+    const temps = days.map(d => d.temp_c).filter(v => v != null).map(Number);
+    let lo = 36.0, hi = 37.0;
+    if (temps.length) {
+      lo = Math.min(...temps) - 0.1; hi = Math.max(...temps) + 0.1;
+      if (hi - lo < 0.6) { const mid = (hi + lo) / 2; lo = mid - 0.3; hi = mid + 0.3; }
+      lo = Math.floor(lo * 10) / 10; hi = Math.ceil(hi * 10) / 10;
+    }
+    const colW = (W - L - R) / days.length;
+    const X = i => L + (i + 0.5) * colW;
+    const Y = v => T + H - ((v - lo) / (hi - lo)) * H;
+    let sv = `<svg viewBox="0 0 ${W} ${T + H + FH + 16}" width="100%" style="display:block" role="img" aria-label="Her temperature chart, last ${days.length} days">`;
+    for (let v = Math.ceil(lo * 5) / 5; v <= hi + 0.001; v += 0.2) {
+      v = Math.round(v * 100) / 100;
+      sv += `<line x1="${L}" y1="${Y(v).toFixed(1)}" x2="${W - R}" y2="${Y(v).toFixed(1)}" stroke="var(--ph-line)" stroke-width="1"/><text x="${L - 4}" y="${(Y(v) + 3).toFixed(1)}" font-size="8" fill="var(--ph-soft)" text-anchor="end">${v.toFixed(1)}</text>`;
+    }
+    days.forEach((d, i) => {
+      if (!d.period_flow) return;
+      const op = { spot: .35, light: .55, medium: .78, heavy: 1 }[d.period_flow] || .5;
+      sv += `<rect x="${(L + i * colW + 1).toFixed(1)}" y="${(T + H + 4).toFixed(1)}" width="${(colW - 2).toFixed(1)}" height="${FH}" rx="2" fill="var(--ph-zero)" opacity="${op}"/>`;
+    });
+    let run = []; const runs = [];
+    days.forEach((d, i) => { if (d.temp_c == null) { if (run.length) { runs.push(run); run = []; } return; } run.push({ x: X(i), y: Y(Number(d.temp_c)) }); });
+    if (run.length) runs.push(run);
+    runs.forEach(r => { if (r.length > 1) sv += `<polyline fill="none" stroke="var(--ph-herb-deep)" stroke-width="2" points="${r.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ")}"/>`; });
+    runs.forEach(r => r.forEach(p => { sv += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.4" fill="var(--ph-herb-deep)"/>`; }));
+    days.forEach((d, i) => {
+      const dnum = parseKey(d.day).getDate();
+      if (dnum === 1 || i === 0 || i === days.length - 1 || dnum % 5 === 0) sv += `<text x="${X(i).toFixed(1)}" y="${T + H + FH + 15}" font-size="7.5" fill="var(--ph-soft)" text-anchor="middle">${dnum}</text>`;
+    });
+    return sv + `</svg>`;
+  }
+  function phChartLiveInnerHtml(linkId) {
+    const c = phChartDaysCache[linkId];
+    const inner = !c || (c.loading && !c.rows)
+      ? `<p class="ph-hx-constit-note">Loading her chart…</p>`
+      : c.error && !(c.rows && c.rows.length)
+        ? `<p class="ph-merge-note">⚠ ${esc(c.error)}</p>`
+        : !c.rows.length
+          ? `<p class="ph-hx-constit-note">No entries from her yet.</p>`
+          : phChartSvgMini(c.rows);
+    const last = c && c.rows && c.rows.length ? c.rows[c.rows.length - 1] : null;
+    return `<div class="ph-widget ph-dash-card ph-chart-live" data-chart-live="${esc(linkId)}">
+      <div class="ph-dash-secthead"><h2>📈 My Cycle — her chart</h2><span class="rule"></span>${last ? `<span class="faint">last entry ${esc(phShortDate(last.day))}</span>` : ""}</div>
+      ${inner}
+    </div>`;
+  }
+  function phChartLiveHtml(rec, name) {
+    const link = phChartLinkFor(rec);
+    if (!link) return "";
+    if (!phChartDaysCache[link.id]) phChartDaysLoad(link.id);
+    return phChartLiveInnerHtml(link.id);
+  }
+  // ---- triage list, her decision: "a triage list ('no rise yet', '5 days
+  // missed') that works at 50 patients" -- see the module comment above for
+  // why only the missed-entries half is built this pass. Cached and
+  // refreshed opportunistically like the intake queue, not on every render. ----
+  let phChartTriageRows = null, phChartTriageLoading = false, phChartTriageAt = 0;
+  function phChartTriageLoad(force) {
+    if (phChartTriageLoading) return;
+    if (phChartTriageRows && !force && Date.now() - phChartTriageAt < 5 * 60000) return;
+    phChartTriageLoading = true;
+    (async () => {
+      try {
+        const sb = phRenRelayClient();
+        if (!sb) throw new Error("not signed in");
+        const uid = await phRenRelayUid(sb);
+        if (!uid) throw new Error("not signed in");
+        const { data, error } = await sb.from("chart_links").select("id,patient_name,status,last_seen_at,last_entry_on,created_at").eq("owner", uid).eq("status", "active");
+        if (error) throw error;
+        phChartTriageRows = data || [];
+      } catch (e) { phChartTriageRows = phChartTriageRows || []; }
+      phChartTriageAt = Date.now(); phChartTriageLoading = false;
+      renderPharmacy();
+    })();
+  }
+  function phChartTriageMissed() {
+    const today = keyOf(TODAY);
+    return (phChartTriageRows || []).map(r => {
+      const last = r.last_entry_on || null;
+      const days = last ? Math.round((parseKey(today) - parseKey(last)) / 86400000) : Math.round((TODAY - new Date(r.created_at)) / 86400000);
+      return Object.assign({}, r, { daysSince: days });
+    }).filter(r => r.daysSince >= 2).sort((a, b) => b.daysSince - a.daysSince);
+  }
+  function phDashChartHtml() {
+    phChartTriageLoad();
+    const rows = phChartTriageMissed();
+    if (!rows.length) return "";
+    const list = rows.map(r => `<div class="ph-listing ph-intake-qrow">
+      <div class="ph-intake-qrow-main"><span class="ph-intake-qrow-name">${esc(phTitle(r.patient_name))}</span><span class="ph-intake-qrow-meta">${r.last_entry_on ? `${r.daysSince} days since her last entry` : `Link sent, nothing logged yet — ${r.daysSince}d`}</span></div>
+      <button type="button" class="ph-load-btn on" data-ph-dash-patient-open="${esc(r.patient_name)}">Open →</button>
+    </div>`).join("");
+    return phDashSec("My Cycle — gone quiet", rows.length, list);
+  }
+  // ---- Send chart link -- same modal/flow shape as Send intake link
+  // (phIntakeOpen/Generate/renderIntakeScreen), her decision #9: "A 'Send
+  // chart link' button beside 'Send intake link'". ----
+  let phChartName = "", phChartBusy = false, phChartError = "", phChartResult = null;
+  function phChartOpen(prefillName) {
+    phChartName = (prefillName || "").trim(); phChartBusy = false; phChartError = ""; phChartResult = null;
+    document.getElementById("phChartBackdrop").hidden = false;
+    document.getElementById("phChartModal").hidden = false;
+    renderChartLinkScreen();
+    if (phChartName) phChartGenerate();
+  }
+  function phChartClose() {
+    document.getElementById("phChartBackdrop").hidden = true;
+    document.getElementById("phChartModal").hidden = true;
+    phChartName = ""; phChartBusy = false; phChartError = ""; phChartResult = null;
+  }
+  async function phChartGenerate() {
+    const name = phChartName.trim();
+    if (!name || phChartBusy) return;
+    phChartBusy = true; phChartError = ""; renderChartLinkScreen();
+    try {
+      const id = await phChartEnsureLink(name, (phPatientRec(name) || {}).chartGoal || "ttc");
+      const base = location.origin + location.pathname.replace(/[^/]*$/, "");
+      phChartResult = `${base}chart.html?c=${id}`;
+    } catch (e) {
+      phChartError = (e && e.message) || "Couldn't create the link — try again.";
+    }
+    phChartBusy = false; renderChartLinkScreen();
+  }
+  function phChartMsgText() {
+    return `Hi ${phTitle(phChartName)}, here's your link for My Cycle — a quick daily entry on your phone: temperature, period, mood and more. ${phChartResult}`;
+  }
+  function phChartSmsHref(phone) {
+    const d = String(phone || "").replace(/[^\d+]/g, "");
+    const sep = phCkIos() ? "&" : "?";
+    return `sms:${d}${sep}body=${encodeURIComponent(phChartMsgText())}`;
+  }
+  function phChartMailHref(email) {
+    const clinic = (PHARMACY.locName || "").trim() || "your clinic";
+    return `mailto:${encodeURIComponent(email || "")}?subject=${encodeURIComponent(`Your My Cycle link — ${clinic}`)}&body=${encodeURIComponent(phChartMsgText())}`;
+  }
+  function phChartOpenMessages() {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(phChartMsgText()).then(() => phFlashShow("✓ Message copied — pick the patient in Messages and paste"), () => {});
+    }
+    window.open(PH_CK_GMSG_NEW, PH_CK_GMSG_TARGET);
+  }
+  function renderChartLinkScreen() {
+    const modal = document.getElementById("phChartModal");
+    if (!modal || modal.hidden) return;
+    let body;
+    if (phChartResult) {
+      const patRec = phPatientPeek(phChartName);
+      const phone = patRec && patRec.phone;
+      const email = patRec && patRec.email;
+      body = `<p class="ph-merge-lead">Send this link to <b>${esc(phTitle(phChartName))}</b> — a quick daily entry on her own phone: temperature, period, mood and more. Her period days already correct her plan and phase scripts here.</p>
+        <div class="ph-intake-linkrow">
+          <input type="text" class="ph-intake-linkinput" id="phChartLinkOut" value="${esc(phChartResult)}" readonly aria-label="My Cycle link">
+          <button type="button" class="ph-load-btn on" data-chart-copy="1"><svg class="icn" aria-hidden="true"><use href="#i-copy"/></svg> Copy</button>
+        </div>
+        ${!phCkIsPhone() && phone ? `<div class="ph-ck-phone"><svg class="icn" aria-hidden="true"><use href="#i-phone"/></svg><span>${esc(phone)}</span><button type="button" class="ph-ck-btn ghost sm" data-chart-copy-num="1"><svg class="icn" aria-hidden="true"><use href="#i-copy"/></svg>Copy number</button></div>` : ""}
+        <div class="ph-ck-phone mail"><svg class="icn" aria-hidden="true"><use href="#i-mail"/></svg>${email ? `<span>${esc(email)}</span>` : `<span class="faint">No email on file</span>`}</div>
+        <div class="ph-ck-acts">
+          ${phCkIsPhone()
+            ? `<a class="ph-ck-btn pri" href="${esc(phChartSmsHref(phone))}"><svg class="icn" aria-hidden="true"><use href="#i-msg"/></svg>Text${phone ? "" : " — pick contact"}</a>`
+            : `<button type="button" class="ph-ck-btn pri" data-chart-gmsg="1" title="Copies the message, then opens Google Messages for web on a new conversation — paste the number to find ${esc(phTitle(phChartName))}, then paste the message"><svg class="icn" aria-hidden="true"><use href="#i-msg"/></svg>Messages</button>`}
+          <a class="ph-ck-btn" href="${esc(phChartMailHref(email))}"><svg class="icn" aria-hidden="true"><use href="#i-mail"/></svg>Email</a>
+        </div>
+        <div class="ph-merge-acts"><button type="button" class="btn-cancel" data-chart-close="1">Done</button></div>`;
+    } else {
+      body = `<p class="ph-merge-lead">Who's this link for? Pick an existing patient, or type a new name.</p>
+        <input type="text" class="ph-tp-fpick-input" id="phChartNameInput" list="phChartNameList" placeholder="Patient's name…" value="${esc(phChartName)}" autocomplete="off" aria-label="Patient name">
+        <datalist id="phChartNameList">${phIntakeNameOptionsHtml()}</datalist>
+        ${phChartError ? `<p class="ph-merge-note">⚠ ${esc(phChartError)}</p>` : ""}
+        <div class="ph-merge-acts">
+          <button type="button" class="btn-save" data-chart-generate="1"${phChartBusy || !phChartName.trim() ? " disabled" : ""}>${phChartBusy ? "Generating…" : "Generate link"}</button>
+          <button type="button" class="btn-cancel" data-chart-close="1">Cancel</button>
+        </div>`;
+    }
+    modal.innerHTML = `<div class="ph-hx-card">
+      <div class="ph-hx-head">
+        <button type="button" class="ph-stocktake-close" data-chart-close="1" aria-label="Close">×</button>
+        <div class="ph-hx-head-top"><div class="ph-hx-head-name">📈 Send chart link</div></div>
+      </div>
+      <div class="ph-hx-body">${body}</div>
+    </div>`;
+    const inp = document.getElementById("phChartNameInput");
+    if (inp && !phChartResult) inp.focus();
+  }
   /* Her ask 2026-09-09: "include a note in patient profiles regarding their
      insurance giving good rebates."
 
@@ -38875,6 +39193,8 @@ or changing anything in Cliniko.
       </div>
       <label class="ph-jr-dnc"><span>Don't contact</span><input type="checkbox" data-ph-jr-dnc="1"${out ? " checked" : ""}></label>
       ${phCycleOn(rec) ? `<label class="ph-jr-dnc"><span>Tracks BBT<span class="faint"> · offers the chart line on Period and Ovulation</span></span><input type="checkbox" data-ph-jr-bbt="1"${phMsgTracksBbt(key) ? " checked" : ""}></label>` : ""}
+      ${phCycleOn(rec) ? (() => { const cl = phChartLinkFor(rec); return `<label class="ph-jr-dnc"><span>My Cycle charting<span class="faint"> · her own phone, daily BBT + signs</span></span><input type="checkbox" data-ph-jr-chart="1"${cl && cl.status === "active" ? " checked" : ""}${phChartToggleBusy ? " disabled" : ""}></label>
+      ${cl ? `<div class="ph-jr-contact-row"><span>Chart link</span><button type="button" class="ph-name-link" data-ph-chart-send="1">🔗 Send link${cl.status === "paused" ? " (paused)" : ""}</button></div>` : ""}`; })() : ""}
       <div class="ph-jr-contact-row">
         <span>Known since</span>
         <div class="ph-jr-knownsince">
@@ -39036,6 +39356,8 @@ or changing anything in Cliniko.
     if (dnc) { phMsgSetDoNotContact(phMsgDisplayName(phJourneyKey), dnc.checked); renderPharmacy(); return; }
     const bbtTick = e.target && e.target.closest ? e.target.closest("[data-ph-jr-bbt]") : null;
     if (bbtTick) { phMsgSetTracksBbt(phMsgDisplayName(phJourneyKey), bbtTick.checked); renderPharmacy(); return; }
+    const chartTick = e.target && e.target.closest ? e.target.closest("[data-ph-jr-chart]") : null;
+    if (chartTick) { phChartToggle(phMsgDisplayName(phJourneyKey), chartTick.checked); return; }
     const knownSince = e.target && e.target.closest ? e.target.closest("[data-ph-jr-knownsince]") : null;
     if (knownSince) { phPatientRec(phMsgDisplayName(phJourneyKey)).knownSince = knownSince.value || null; savePharmacy(); renderPharmacy(); return; }
     const pkgN = e.target && e.target.closest ? e.target.closest("[data-ph-jr-pkg-n]") : null;
@@ -45121,6 +45443,7 @@ or changing anything in Cliniko.
       </div>
       <div class="ph-cycle-legend">${segRanges.map(s => `<span class="${s.key}${s.key === comp.phaseKey ? " current" : ""}"><i></i>${esc(s.label)} <span class="rng">${s.range}</span></span>`).join("")}</div>
       ${phCycleSignPopHtml(rec, name)}
+      ${phChartLiveHtml(rec, name)}
       ${(() => {
         // her pick 2026-09-04 ("add icons … too much text", mock approved):
         // the meta sentence becomes four icon tiles, and the Flow / Pain /

@@ -560,9 +560,30 @@ update STYLE-LCM.md to match so future builds don't undo it.
   open. The row's own `data-ph-appt-pop` handler runs FIRST and excludes
   `[data-ph-cyc-jump]` — keep it in that exclusion list or the row's popup swallows the
   tap. The popup's cycle line ends with `phApptPopSignsHtml(rec)` ("Today: …"). Nothing
-  new is stored; signs stay in `rec.cycleSigns[dateKey]`. Still not built: charting
-  Stage 2 (ask before the SQL run and publish), Cliniko API auto-retrieve (needs her key +
-  an edge function).
+  new is stored; signs stay in `rec.cycleSigns[dateKey]`.
+  **MY CYCLE — STAGE 2, HER SIDE (her "Charting Stage 2 go ahead", 2026-09-15; the 12
+  decisions live in memory `project_fertility_charting_app`).** `chart.html` +
+  `chart.webmanifest` are published beside `intake.html` (not in the sw SHELL, same as
+  intake); `supabase/cycle_charts_setup.sql` is idempotent and RLS-locked like intake.
+  In LCM: `rec.chartLinkId` / `rec.chartStatus` / `rec.chartGoal` mirror her
+  `chart_links` row (the cloud row is the truth for status; `phChartSetStatus` pushes
+  every change). Contact card: "My Cycle charting" tick (`data-ph-jr-chart` →
+  `phChartToggle`; on = `phChartEnsureLink`, off = paused) + a "Chart link" row once a
+  link exists (`data-ph-chart-send`). "Send chart link" beside Send intake link in
+  `PH_TOPBAR_ACTIONS.prescriptions` → `phChartOpen` / `phChartGenerate` /
+  `renderChartLinkScreen`, the exact intake-modal shape (`#phChartModal`,
+  `data-chart-*`); the patient URL is `chart.html?c=<link id>` — `c`, not intake's `t`.
+  The live chart (`phChartLiveHtml` → `phChartSvgMini`, temperature line + flow strip
+  only, NO auto-ovulation overlay so it can never disagree with chart.html's own reading)
+  sits in `phCycleBarHtml` above the cycle tiles, reads `chart_days` directly as the
+  signed-in owner, caches per link and swaps in place. Dashboard "My Cycle — gone quiet"
+  (`phDashChartHtml`, `phChartTriageMissed`: ≥2 days since her last entry) sits under
+  Communications due. **Deliberately NOT built, ask her before building any of them:**
+  the phone's period tap writing back into `rec.cycle` (unverified patient input into the
+  record that drives phases + messages — needs a conflict answer, cf. the intake compare
+  queue), the morning push sender, anonymous tongue-photo upload, and the "no rise yet"
+  temperature-shape flag (wants real data to tune against). Still not built: Cliniko
+  API auto-retrieve — she cannot get an API key (2026-09-15), so it is parked, not pending.
   Two gaps found in the same pass and fixed: on a phone the app showed its version
   **nowhere** (`#phVersionLine` is `display:none` under 900px and `phVersionShortText()`
   was dead code), so it now sits at the foot of the ⋯ sheet under the gold Update row;
