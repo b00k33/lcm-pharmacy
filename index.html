@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260914-173000">
+<meta name="lcm-build" content="20260914-183000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -8933,6 +8933,18 @@
     border: none; background: none; cursor: pointer; font-family: inherit;
     font-size: 10.5px; font-weight: 700; color: inherit; padding: 0; text-decoration: underline;
   }
+  /* the duration readout (her ask 2026-09-14, "what duration is it for 110g
+     at 2 spoons once a day") -- same fact as the Follow-up section's own
+     hero line further down, shown a second time right where Grams/Dosage
+     already sit so she never has to scroll to find it. Empty (no markup)
+     whenever phFollowupCalc can't resolve yet -- a blank Grams field prints
+     nothing here rather than a confusing "0.0 days". */
+  #pharmacyPage .ph-dose-duration {
+    font-size: var(--fs-meta); color: var(--ph-green-deep); font-weight: 700;
+    margin-top: var(--sp-1);
+  }
+  #pharmacyPage .ph-dose-duration:empty { margin: 0; }
+  #pharmacyPage .ph-dose-duration b { font-weight: 800; }
   /* her 2026-08-22 spec §1: the quiet "Last dispensed" line replacing the
      old stale-done chain state on open -- deliberately plain, not a chip,
      so it doesn't compete with the (currently not-done) chain below it. */
@@ -21145,10 +21157,11 @@
     const herbsN = script ? (script.ingredients || []).length : 0;
     // her spec's "<formula name>" -- for a patient script t.name IS the
     // patient's own name (presPatientFor's convention), not the formula;
-    // what prints on the label's "Formula:" line is t.formula (verified
-    // live 2026-09-05: Mia Rankin's own row was showing "4 herbs · Mia
-    // Rankin" before this fix).
-    const formulaName = script ? (script.formula || "").trim() : "";
+    // what prints on the label's "Formula:" line is presActualFormula(t)
+    // (verified live 2026-09-05: Mia Rankin's own row was showing "4 herbs
+    // · Mia Rankin" before this fix; her 2026-09-14 objective/actual split
+    // moved the real value off plain t.formula, see presActualFormula).
+    const formulaName = script ? presActualFormula(script) : "";
     const line2 = hasHerbs
       ? `${chmTag}<span class="sub">${herbsN} herb${herbsN === 1 ? "" : "s"}${formulaName ? ` · ${esc(formulaName)}` : ""}</span>`
       : "";
@@ -22571,7 +22584,7 @@
     const fuDue = phApptFuDue(k, a.date);
     const brief = phApptBrief(a);
     const herbsN = script ? (script.ingredients || []).length : 0;
-    const formulaName = script ? (script.formula || "").trim() : "";
+    const formulaName = script ? presActualFormula(script) : "";
     const herbsLine = script && herbsN ? `<b>${herbsN} herb${herbsN === 1 ? "" : "s"}</b>${formulaName ? ` · ${esc(formulaName)}` : ""}`
       : script ? `<span class="faint">script, no herbs yet</span>` : kind === "acu" ? `<span class="faint">acupuncture only</span>` : `<span class="faint">no script yet</span>`;
     const last = phApptLastVisit(k, a.date);
@@ -25821,16 +25834,16 @@
       if (e.target.closest("[data-pres-calc]")) { presMoreOpen = false; presCalcSessionDone = true; renderPresPanel(); return; }
       // Dispense stage cycle/plan strip (her approved mock, option C, both
       // placements) -- one-tap adopt of the CURRENT phase's linked/suggested
-      // formula into the Formula field, same write path #presFormulaText's
-      // own change handler uses (~29336), so nothing downstream needs to know
-      // this came from a click instead of typing.
+      // formula into the Actual formula field (her 2026-09-14 split: this is
+      // the real thing being dispensed, never the Formula objective box),
+      // same write path #presActualFormulaText's own change handler uses.
       const useSugg = e.target.closest("[data-pres-formula-usesugg]");
       if (useSugg) {
         const t = PRESC.items.find(x => x.id === presOpenId);
         const name = useSugg.dataset.presFormulaUsesugg;
         if (t && name) {
-          t.formula = name;
-          const fld = document.getElementById("presFormulaText");
+          t.actualFormula = name;
+          const fld = document.getElementById("presActualFormulaText");
           if (fld) fld.value = name;
           presBandMetaRefresh(t);
           savePresc();
@@ -25852,7 +25865,7 @@
           phDefer("savePresc", savePresc, 400);
           const gramsEl = document.getElementById("presGrams");
           if (gramsEl) gramsEl.value = t.totalGrams || "";
-          renderPresCalc(); presFuRefresh();
+          renderPresCalc(); presFuRefresh(); presDoseDurationRefresh();
         }
         return;
       }
@@ -25877,7 +25890,7 @@
             phDefer("savePresc", savePresc, 400);
             const el = document.getElementById("presGrams");
             if (el) el.value = t.totalGrams || "";
-            renderPresCalc(); presFuRefresh();
+            renderPresCalc(); presFuRefresh(); presDoseDurationRefresh();
           }
         }
         return;
@@ -30072,7 +30085,7 @@
         // ingredient edit. gramsMode="manual" is the one flag
         // presCommitTemplateFields checks before re-deriving it.
         if (t) { t.totalGrams = parseFloat(e.target.value) || 0; t.gramsMode = "manual"; phDefer("savePresc", savePresc, 400); }
-        phClearConfirms(); renderPresCalc(); presFuRefresh(); return;
+        phClearConfirms(); renderPresCalc(); presFuRefresh(); presDoseDurationRefresh(); return;
       }
       if (e.target.id === "presFuNote") {
         const t = PRESC.items.find(x => x.id === presOpenId);
@@ -30108,7 +30121,7 @@
           t[e.target.id === "presDoseN" ? "doseN" : "doseT"] = v === "" ? null : parseFloat(v) || 0;
           phDefer("savePresc", savePresc, 400);
         }
-        presFuRefresh(); return;
+        presFuRefresh(); presDoseDurationRefresh(); return;
       }
       if (e.target.id === "presTakeDays" || e.target.id === "presSkipDays") {
         const t = PRESC.items.find(x => x.id === presOpenId);
@@ -30116,15 +30129,25 @@
           t[e.target.id === "presTakeDays" ? "takeDays" : "skipDays"] = e.target.value;
           phDefer("savePresc", savePresc, 400);
         }
-        presFuRefresh(); return;
+        presFuRefresh(); presDoseDurationRefresh(); return;
       }
       if (e.target.id === "presFormulaText") {
         const t = PRESC.items.find(x => x.id === presOpenId);
         // her ask 2026-09-11 ("the formula name does not need that chip. it
         // should only be in the prescription folder"): Formula no longer has
-        // a tab anywhere to keep in step with -- it only ever prints on the
-        // label now, so this just writes the field.
+        // a tab anywhere to keep in step with -- just writes the field.
+        // Her 2026-09-14 split: this is now the "Formula objective" box --
+        // it feeds the band identity ONLY as a fallback (presActualFormula
+        // falls back to it while Actual formula is still blank), and never
+        // prints or counts as a sale on its own. See presActualFormula.
         if (t) { t.formula = e.target.value; presBandMetaRefresh(t); phDefer("savePresc", savePresc, 400); }
+        return;
+      }
+      if (e.target.id === "presActualFormulaText") {
+        const t = PRESC.items.find(x => x.id === presOpenId);
+        // the field that actually prints on the label and drives the sale
+        // classification in presSavePrescription -- see presActualFormula.
+        if (t) { t.actualFormula = e.target.value; presBandMetaRefresh(t); phDefer("savePresc", savePresc, 400); }
         return;
       }
       if (e.target.id === "presEditIngs") {
@@ -30827,7 +30850,7 @@
       if (e.target.id === "presSpoon") {
         const t = PRESC.items.find(x => x.id === presOpenId);
         if (t) { t.doseSpoon = e.target.value; savePresc(); }
-        presFuRefresh(); return;
+        presFuRefresh(); presDoseDurationRefresh(); return;
       }      if (e.target.id === "presFuCheckInOn") {
         const t = PRESC.items.find(x => x.id === presOpenId);
         if (t) { t.fuCheckInSkip = !e.target.checked; savePresc(); }
@@ -33007,7 +33030,7 @@
       try { if (grams > 0) price = presCalcNumbers(t, grams).price; } catch (err) {}
       const patient = presPatientFor(t) || "";
       items.push({ presId: t.id, at: pendingToday ? presPendingAt[t.id] : 0, patient, patientKey: phPatientKey(patient),
-        formula: phEodFormulaOf(t.formula, patient), grams, price: price != null ? phRound2(price) : null, logged: false });
+        formula: phEodFormulaOf(presActualFormula(t), patient), grams, price: price != null ? phRound2(price) : null, logged: false });
     });
     const todayAppts = phApptFor(todayKey);
     items.forEach(it => { it.apptFound = !!it.patientKey && todayAppts.some(a => phPatientKey(a.patient || a.name || "") === it.patientKey); });
@@ -34025,7 +34048,7 @@ or changing anything in Cliniko.
       return { sort: a.time, a, k, kind, script, done, prep, status };
     }).filter(r => (presTlType === "all" || (presTlType === "chm" ? r.kind !== "acu" : r.kind === "acu"))
       && (presTlStatus === "all" || r.status === presTlStatus)
-      && (!q || phTitle(r.a.patient).toLowerCase().includes(q) || (r.script && ((r.script.formula || "") + " " + (r.script.ingredients || []).map(i => i.herb || i.name).join(" ")).toLowerCase().includes(q))));
+      && (!q || phTitle(r.a.patient).toLowerCase().includes(q) || (r.script && (presActualFormula(r.script) + " " + (r.script.ingredients || []).map(i => i.herb || i.name).join(" ")).toLowerCase().includes(q))));
     const schedRows = sched.filter(s => !q || (s.patient || s.patientName || "").toLowerCase().includes(q));
     const chmN = appts.filter(a => phApptKind(a.service) !== "acu").length;
     const acuN = appts.filter(a => { const k = phApptKind(a.service); return k === "acu" || k === "both"; }).length;   // "both" = acupuncture + herbs, counts in each
@@ -34070,7 +34093,7 @@ or changing anything in Cliniko.
       : r.kind === "acu" ? "" : `<button type="button" class="ph-tl-act plus" data-pres-week-newscript="${esc(r.a.patient)}" title="New script">+</button>`;
     const line2 = r => {
       if (!r.script) return r.kind === "acu" ? "acupuncture only" : "no script yet";
-      const ings = r.script.ingredients || [], fx = (r.script.formula || "").trim();
+      const ings = r.script.ingredients || [], fx = presActualFormula(r.script);
       const herbs = esc(ings.slice(0, 4).map(i => phPinyinName({ name: i.herb || i.name || "" })).filter(Boolean).join(", ")) + (ings.length > 4 ? "…" : "");
       return [`${ings.length} herb${ings.length === 1 ? "" : "s"}`, fx ? `<b>${esc(fx)}</b>` : "", herbs].filter(Boolean).join(" · ");   // no empty " · " tails
     };
@@ -34376,7 +34399,7 @@ or changing anything in Cliniko.
   // build-up shows a few of its herbs with the real count underneath, same
   // "first few + N total" shape phCondBadgesHtml already uses for conditions.
   function presLastFormulaCellHtml(t) {
-    const formulaName = (t.formula || "").trim();
+    const formulaName = presActualFormula(t);
     if (formulaName) return `<span class="ph-pres-fx-main"><b>${esc(formulaName)}</b></span>`;
     const ings = t.ingredients || [];
     const names = ings.slice(0, 3).map(i => phTitle(i.herb || i.name || "")).filter(Boolean);
@@ -34487,7 +34510,7 @@ or changing anything in Cliniko.
     // or notes -- now across ANY of a patient's scripts (a herb only used
     // in an older one should still surface her), not just the current one.
     const rows = patients
-      .filter(p => !q || p.group.some(t => presWordStartMatch(t.name, q) || presWordStartMatch(t.formula, q) || presWordStartMatch(t.notes, q)))
+      .filter(p => !q || p.group.some(t => presWordStartMatch(t.name, q) || presWordStartMatch(t.formula, q) || presWordStartMatch(t.actualFormula, q) || presWordStartMatch(t.notes, q)))
       .filter(p => (CHIP_PREDS[presFilterChip] || CHIP_PREDS.all)(p.current));
     const val = p => presSort.key === "grams" ? (p.current.totalGrams || 0)
       : presSort.key === "recent" ? lastMs(p.current)
@@ -34526,7 +34549,7 @@ or changing anything in Cliniko.
     const todayAppts = phApptFor(todayKey);
     const bookedTimes = k => todayAppts.filter(a => phPatientKey(a.patient) === k).map(a => phCkTime12(a.time));
     const line2 = t => {   // same shape as the timeline's second line: "N herbs · Formula · first four herbs…"
-      const ings = t.ingredients || [], fx = (t.formula || "").trim();
+      const ings = t.ingredients || [], fx = presActualFormula(t);
       if (!ings.length && !fx) return `<span class="faint">no herbs yet</span>`;
       const herbs = esc(ings.slice(0, 4).map(i => phPinyinName({ name: i.herb || i.name || "" })).filter(Boolean).join(", ")) + (ings.length > 4 ? "…" : "");
       return [`${ings.length} herb${ings.length === 1 ? "" : "s"}`, fx ? `<b>${esc(fx)}</b>` : "", herbs].filter(Boolean).join(" · ");
@@ -34770,13 +34793,28 @@ or changing anything in Cliniko.
   // would silently go stale the moment she edits a herb after that freeze
   // (found 2026-08-18 verifying the two-column rebuild: edited/removed herbs
   // correctly, band still read the old frozen total).
+  /* Her ask 2026-09-14, on a script whose Formula field read "Regulate
+     Nervous System" (her own treatment principle, not a real formula): give
+     Dispense two fields, not one -- "Formula objective" (t.formula, her
+     treatment goal, unchanged from before this split) and "Actual formula"
+     (t.actualFormula, the real thing dispensed, prefilled from the plan's
+     linked/suggested formula). Everywhere that must know what was ACTUALLY
+     given -- the printed label, the sale-vs-house-make classification in
+     presSavePrescription, search, list rows, the band/tab identity -- reads
+     THIS, never t.formula alone, via this one helper.
+     Falls back to t.formula when actualFormula is blank so every one of her
+     748 existing scripts (which only ever had the one field) keeps printing,
+     counting and searching exactly as it did before this split -- nothing
+     about a past dispense is rewritten by this change; only a script she
+     edits going forward can start using the new field. */
+  function presActualFormula(t) { return ((t && (t.actualFormula || t.formula)) || "").trim(); }
   function presBandMetaText(t, isF) {
     // her decision 12: shown on all 5 stages, so a herbs-off patient's band
     // must quiet too, not just the Dispense-stage form -- phHerbsOn wins over
     // the older phCaseQuiets "herbs" fold (see phHerbsOn's own comment).
     if (!isF && !phHerbsOn(phPatientPeek(presPatientFor(t)), phTpShownPlan(presPatientFor(t)))) return "herbs off";
     return [
-      !isF && (t.formula || "").trim() ? esc((t.formula || "").trim()) : "",
+      !isF && presActualFormula(t) ? esc(presActualFormula(t)) : "",
       `${(t.ingredients || []).length} herb${(t.ingredients || []).length === 1 ? "" : "s"}`,
       `${phFmtG((t.ingredients || []).reduce((a, i) => a + (i.grams || 0), 0))} g`,
     ].filter(Boolean).join(" · ");
@@ -34808,7 +34846,7 @@ or changing anything in Cliniko.
   // table's three -- this lands inside a <select> option on a 360px phone, and
   // the herb count sits right beside it in the same line anyway.
   function presIdentityText(t) {
-    const named = ((t && t.formula) || "").trim();
+    const named = presActualFormula(t);
     if (named) return named;
     const ings = (t && t.ingredients) || [];
     const names = ings.slice(0, 2).map(i => phTitle(phPinyinName({ name: i.herb || i.name || "" }))).filter(Boolean);
@@ -41918,8 +41956,12 @@ or changing anything in Cliniko.
       ${!isF && herbsOn ? `<div class="ph-pres-dose">
       <div class="ph-tmpl-sec"><span>Dosage &amp; price</span></div>
       <div class="ph-build-top">
-        <label class="ph-inline-label">Formula <input type="text" id="presFormulaText" value="${esc(t.formula || "")}" placeholder="e.g. Ban Xia Xie Xin Tang" aria-label="Formula text for the label" style="min-width:240px"></label>
-        <span class="ph-formula-meta">prints on the label's “Formula:” line</span>
+        <label class="ph-inline-label">Formula objective <input type="text" id="presFormulaText" value="${esc(t.formula || "")}" placeholder="e.g. Regulate Nervous System" aria-label="Treatment objective — not printed on the label" style="min-width:240px"></label>
+        <span class="ph-formula-meta">her treatment principle — not printed or counted</span>
+      </div>
+      <div class="ph-build-top">
+        <label class="ph-inline-label">Actual formula <input type="text" id="presActualFormulaText" value="${esc(t.actualFormula || "")}" placeholder="e.g. Chai Hu Jia Long Gu Mu Li Tang" aria-label="Formula actually dispensed — prints on the label" style="min-width:240px"></label>
+        <span class="ph-formula-meta">prints on the label's “Formula:” line${!t.actualFormula && t.formula ? ` · still uses “${esc(t.formula)}” above until you set this` : ""}</span>
       </div>
       ${presDispenseFormulaHintHtml(t)}
       <div class="ph-build-top ph-doseline">
@@ -41937,6 +41979,7 @@ or changing anything in Cliniko.
         <span id="presGramsSegWrap">${presGramsSegHtml(t)}</span>
       </div>
       <div id="presGramsHintWrap">${presGramsHintHtml(t)}</div>
+      <div id="presDoseDurationWrap" class="ph-dose-duration">${presDoseDurationHtml(t)}</div>
       <div class="ph-build-top ph-daysline">
         <span class="ph-inline-label ph-days-lbl">Days</span>
         ${presDaysRowHtml(t)}
@@ -44730,7 +44773,7 @@ or changing anything in Cliniko.
     const userTpls = phTpUserTemplates();
     return `<button type="button" class="ph-tp-tmplcard blank" data-tp-inline-create="blank">
         <span class="ph-tp-tmplcard-title">Blank plan</span>
-        <span class="ph-tp-tmplcard-sub">One starter phase — build it as you go${(() => { const cur = PRESC.items.find(t => !presIsFormula(t) && phPatientKey(presPatientFor(t)) === phPatientKey(name)); return cur && (cur.formula || "").trim() ? `, their current formula already suggested` : ""; })()}</span>
+        <span class="ph-tp-tmplcard-sub">One starter phase — build it as you go${(() => { const cur = PRESC.items.find(t => !presIsFormula(t) && phPatientKey(presPatientFor(t)) === phPatientKey(name)); return cur && presActualFormula(cur) ? `, their current formula already suggested` : ""; })()}</span>
       </button>
       ${phTpTemplateGroupsHtml("data-tp-inline-create", curScript && curScript.caseType)}
       ${userTpls.map(t => `<button type="button" class="ph-tp-tmplcard" data-tp-inline-create="${t.id}">
@@ -44828,7 +44871,7 @@ or changing anything in Cliniko.
     // infer the suggestion from the patient's own current script -- what the
     // app already knows, offered not asked (code7)
     const cur = PRESC.items.find(t => !presIsFormula(t) && phPatientKey(presPatientFor(t)) === phPatientKey(name));
-    const plan = phTpNewPlan(templateId, { suggestFormula: (cur && (cur.formula || "").trim()) || "" });
+    const plan = phTpNewPlan(templateId, { suggestFormula: (cur && presActualFormula(cur)) || "" });
     rec.treatmentPlans.push(plan);
     phTpApplyInterrupt(rec, plan, templateId);   // an acute plan pauses the course it interrupts
     phTpAutoFillCase(templateId, presOpenId);
@@ -44858,7 +44901,7 @@ or changing anything in Cliniko.
     // infer the suggestion from the patient's own current script -- what the
     // app already knows, offered not asked (code7)
     const cur = PRESC.items.find(t => !presIsFormula(t) && phPatientKey(presPatientFor(t)) === phPatientKey(name));
-    const plan = phTpNewPlan(templateId, { suggestFormula: (cur && (cur.formula || "").trim()) || "" });
+    const plan = phTpNewPlan(templateId, { suggestFormula: (cur && presActualFormula(cur)) || "" });
     rec.treatmentPlans.push(plan);
     phTpApplyInterrupt(rec, plan, templateId);   // an acute plan pauses the course it interrupts
     phTpAutoFillCase(templateId, presOpenId);
@@ -46699,7 +46742,7 @@ or changing anything in Cliniko.
         <div class="ph-hx-body">
           <button type="button" class="ph-tp-tmplcard blank" data-tp-create="blank">
             <span class="ph-tp-tmplcard-title">Blank plan</span>
-            <span class="ph-tp-tmplcard-sub">One starter phase — build it as you go${(() => { const cur = PRESC.items.find(t => !presIsFormula(t) && phPatientKey(presPatientFor(t)) === phPatientKey(name)); return cur && (cur.formula || "").trim() ? `, their current formula already suggested` : ""; })()}</span>
+            <span class="ph-tp-tmplcard-sub">One starter phase — build it as you go${(() => { const cur = PRESC.items.find(t => !presIsFormula(t) && phPatientKey(presPatientFor(t)) === phPatientKey(name)); return cur && presActualFormula(cur) ? `, their current formula already suggested` : ""; })()}</span>
           </button>
           ${phTpTemplateGroupsHtml("data-tp-create", curScript && curScript.caseType)}
           ${userTpls.map(t => `<div class="ph-tp-tmplcard-wrap">
@@ -46861,7 +46904,7 @@ or changing anything in Cliniko.
     const name = presPatientFor(t) || t.name || "";
     const first = phTpFirstName(name);
     const gp = parseFloat((document.getElementById("presGrams") || {}).value) || t.totalGrams || 0;
-    const formulaLine = ((document.getElementById("presFormulaText") || {}).value || t.formula || "").trim();
+    const formulaLine = ((document.getElementById("presActualFormulaText") || {}).value || presActualFormula(t)).trim();
     const mainName = t.ingredients.length === 1 ? phDispName(t.ingredients[0].herb || t.ingredients[0].name) : "";
     const doseTxt = presDosageText() || "";
     const daysTxt = (presInstructionText() || "").replace(/^Take\s+/i, "") || "Every day";
@@ -49832,7 +49875,7 @@ Please let me know if you have any questions.`;
     const info = presDispenseCyclePlanInfo(t);
     if (!info) return "";
     const { comp, phase, suggFormula } = info;
-    const differs = suggFormula && suggFormula !== (t.formula || "").trim();
+    const differs = suggFormula && suggFormula !== presActualFormula(t);
     const parts = [
       phCycleChipHtml(comp),
       phase ? `<span class="ph-dsp-phase">📋 ${esc(phase.label || "Current phase")}</span>` : "",
@@ -49843,7 +49886,7 @@ Please let me know if you have any questions.`;
   function presDispenseFormulaHintHtml(t) {
     const info = presDispenseCyclePlanInfo(t);
     const suggFormula = info && info.suggFormula;
-    if (!suggFormula || suggFormula === (t.formula || "").trim()) return "";
+    if (!suggFormula || suggFormula === presActualFormula(t)) return "";
     return `<div class="ph-formula-meta ph-dsp-inlinesugg">plan suggests <b>${esc(suggFormula)}</b>${presDispenseSuggBtnHtml(suggFormula)}</div>`;
   }
   /* The one ⋯ (her "Everything in ⋯", 2026-09-10). Two sections: the
@@ -50043,6 +50086,32 @@ Please let me know if you have any questions.`;
   // renders (and only sits in the DOM at all) while presFuOpen is true, so
   // an already-tight panel never pays for markup she can't see. The body
   // content itself, once open, is byte-identical to before this job.
+  /* Her ask 2026-09-14, off a real Dosage & Price screenshot: "i need to see
+     what duration it is for 110g at 2 spoons once a day" -- she was looking
+     right at the Dosage/Grams fields when she asked, but the only duration
+     math in the app lived inside the Follow-up section further down
+     (phFollowupCalc, already correct -- it accounts for spoon-size grams,
+     dose per day AND the Days pattern, e.g. weekdays-only). Rather than a
+     second calculator, this just surfaces that same number a second time,
+     right where she's actually typing the quantity and the dose -- reusing
+     the exact function presFollowupSummaryHtml already trusts, so the two
+     readouts can never disagree with each other. */
+  function presDoseDurationHtml(t) {
+    const gp = parseFloat((document.getElementById("presGrams") || {}).value) || t.totalGrams || 0;
+    const calc = phFollowupCalc(t, keyOf(TODAY), gp);
+    if (!calc.ok) return "";
+    return `Lasts <b>${calc.lastsDays.toFixed(1)} day${calc.lastsDays === 1 ? "" : "s"}</b><span class="ph-fu-dot">·</span>empty <b>${esc(phFuDateLabel(keyOf(calc.emptyOn)))}</b>`;
+  }
+  // #presDoseDurationWrap itself is always in the DOM (see the Dispense stage
+  // template) so this can always find it, even the moment calc.ok flips from
+  // false to true (e.g. she's just typed her first Grams digit) -- an
+  // outerHTML swap that deletes the element on "not ready yet" would have no
+  // element left to revive once she finishes typing.
+  function presDoseDurationRefresh() {
+    const t = PRESC.items.find(x => x.id === presOpenId);
+    const el = document.getElementById("presDoseDurationWrap");
+    if (t && el) el.innerHTML = presDoseDurationHtml(t);
+  }
   function presFollowupSummaryHtml(t, calc) {
     // her "i dont like this" (2026-09-08) on the Follow-up stage: the ⏰
     // sentence + grey help line + floating chevron became the Opening
@@ -50265,14 +50334,18 @@ Please let me know if you have any questions.`;
      Case<->Plan pairing already uses -- so a name she typed always wins, and a
      second formula poured into one script leaves the first standing for her to
      overtype rather than silently renaming the script under her.
-     In place, no renderPresPanel(): her stage, scroll and focus survive. */
+     In place, no renderPresPanel(): her stage, scroll and focus survive.
+     Her 2026-09-14 split: pouring a real recipe in is telling the app what's
+     ACTUALLY being dispensed, so this fills Actual formula, never the
+     Formula objective box -- the two are independent now, so a script she's
+     already written an objective for still gets auto-named here. */
   function presNameFromPour(label) {
     const name = String(label || "").trim();
     if (!name) return;
     const t = PRESC.items.find(x => x.id === presOpenId);
-    if (!t || presIsFormula(t) || (t.formula || "").trim()) return;
-    t.formula = name;
-    const fld = document.getElementById("presFormulaText");
+    if (!t || presIsFormula(t) || (t.actualFormula || "").trim()) return;
+    t.actualFormula = name;
+    const fld = document.getElementById("presActualFormulaText");
     if (fld) fld.value = name;
     presBandMetaRefresh(t);
     if (document.getElementById("presCalc")) renderPresCalc();   // the label's "Formula:" line
@@ -50775,7 +50848,7 @@ Dosage: {dosage}
   // actually open, never recalculate)
   function presLabelValues(t, gp) {
     const name = phDispName(t.name, false);
-    const formulaLine = ((document.getElementById("presFormulaText") || {}).value || t.formula || "").trim();
+    const formulaLine = ((document.getElementById("presActualFormulaText") || {}).value || presActualFormula(t)).trim();
     const { items, price } = presCalcNumbers(t, gp);
     return presLabelValuesCore({
       name, formulaLine, items, gp, price,
@@ -51539,7 +51612,11 @@ Dosage: {dosage}
     // or the log ends up with e.what === e.patient and the summary row can't
     // tell which is which (her 2026-08-14 report: formula column showed the
     // patient's name, patient column went blank)
-    const formulaLabel = presIsFormula(t) ? "" : ((document.getElementById("presFormulaText") || {}).value || t.formula || "").trim();
+    // her 2026-09-14 split: what actually gets counted/printed is the Actual
+    // formula field (falls back to the pre-split t.formula for every script
+    // that predates this change) — the Formula objective box never reaches
+    // here, so typing a treatment principle there can never mislabel a sale.
+    const formulaLabel = presIsFormula(t) ? "" : ((document.getElementById("presActualFormulaText") || {}).value || presActualFormula(t)).trim();
     // ...and the 2026-08-14 fix above only closed half of it: with the Formula
     // box left EMPTY, `formulaLabel || t.name` still fell through to the
     // patient's name, so "what" kept echoing "who". Measured 2026-09-09: that
@@ -52730,7 +52807,7 @@ Dosage: {dosage}
     const gp = t.totalGrams || 0;
     const { items, price } = presCalcNumbers(t, gp);
     return presLabelValuesCore({
-      name: phDispName(t.name, false), formulaLine: (t.formula || "").trim(),
+      name: phDispName(t.name, false), formulaLine: presActualFormula(t),
       items, gp, price,
       dosage: schedPrepDosageText(t), instr: schedPrepInstructionText(t), now: new Date(),
     });
