@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260915-150000">
+<meta name="lcm-build" content="20260915-160000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -22024,7 +22024,18 @@
     };
     const rows = raw.map(cellsOf);
     const timeAt = cells => cells ? cells.findIndex(c => phApptParseTime(c)) : -1;
-    const dataIdx = rows.map((c, i) => c && timeAt(c) >= 0 ? i : -1).filter(i => i >= 0);
+    // a lone time cell with an empty tab after it ("10 – 11:30am<TAB>", the
+    // patient/phone/service on their own separate un-tabbed lines below) is
+    // not a real table column -- it's her plain day-list paste, which just
+    // happens to leave a trailing tab on the time line. Found live
+    // 2026-09-15: that trailing tab was enough for `l.includes("\t")` to call
+    // every appointment a 1-cell "table row" with no name in it, so every
+    // real booking got silently dropped and only a same-line "Break"/
+    // "Available" gap (which DOES carry a second cell) survived. Require at
+    // least one OTHER non-empty cell before trusting a row as genuine
+    // multi-column data.
+    const hasData = cells => cells.some((c, k) => k !== timeAt(cells) && c);
+    const dataIdx = rows.map((c, i) => c && timeAt(c) >= 0 && hasData(c) ? i : -1).filter(i => i >= 0);
     if (dataIdx.length < 1) return null;
     // belt and braces: a genuine table covers most of the document's time
     // lines. If it doesn't, something upstream mis-split it -- fall through
@@ -22097,6 +22108,18 @@
         // line -- split it so the phone stands alone like the day list's
         const m = l.match(/^(.*?)\s*(\+?\d[\d ]{6,}\d)\s*\((?:mobile|home|work|phone)\)/i);
         return m ? [m[1], m[2]].filter(Boolean) : [l];
+      }).flatMap(l => {
+        // a day-view export with nothing booked tabs the status word straight
+        // onto the time line itself -- "3:30 \u2013 4pm<TAB>Available", "4 \u2013
+        // 5pm<TAB>Break" -- instead of wrapping onto its own lines like a
+        // real appointment does. The whitespace collapse above turned that
+        // tab into a space, leaving one combined line phApptParseTime can't
+        // read (it needs the WHOLE line to be the time), so the gap glued
+        // itself onto whichever real appointment came right before it. Split
+        // the time back off its trailing status word so it opens its own
+        // block below, same as every other line shape.
+        const m = l.match(/^(\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*[\u2013\u2014-]\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\s+(\S.*)$/i);
+        return m && phApptParseTime(m[1]) ? [m[1], m[2]] : [l];
       });
     // parentheses stay legal (her "Sylvia Lai (L)" tags); digits or duration
     // words mean a service line, not a person
@@ -22252,8 +22275,16 @@
       // not the service (the month export puts it after the phone)
       const noteAt = cur.lines.findIndex(l => /^appointment notes$/i.test(l));
       const ls = noteAt >= 0 ? cur.lines.slice(0, noteAt) : cur.lines;
-      // blocked-out time ("Unavailable", plus any notes under it) is not a visit
-      if (!ls.length || /^unavailable$/i.test(ls[0])) { cur = null; return; }
+      if (!ls.length) { cur = null; return; }
+      // a same-line "time<TAB>Break" gap (see the split above) collapses to
+      // a single content line with nothing else under it -- give it the same
+      // literal-service treatment as the Zanda/Alexandria day-view branches
+      // above, so it shows as its own deep-yellow Break block instead of
+      // reading "Break" as a patient name.
+      if (ls.length === 1 && /^break$/i.test(ls[0])) { out.push({ date: cur.date, time: cur.time, patient: "Break", service: "Break", phone: "" }); cur = null; return; }
+      // blocked-out time ("Unavailable"/"Available", plus any notes under
+      // it) is not a visit -- same word list as the two branches above
+      if (/^(lunch|unavailable|available|blocked|admin|busy)$/i.test(ls[0])) { cur = null; return; }
       const phoneIdx = ls.findIndex(l => /^\+?\d[\d ]{6,}$/.test(l));
       // day list: time, service line(s), patient, phone -- the name is the
       // line right before the phone. Week export: time, patient, service,
