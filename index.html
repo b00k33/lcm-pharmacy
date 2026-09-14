@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260915-010000">
+<meta name="lcm-build" content="20260915-013000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -7474,6 +7474,19 @@
   #pharmacyPage .ph-doseadj-f select, #pharmacyPage .ph-doseadj-f input { flex: 1 1 auto; }
   #pharmacyPage .ph-infoltr-body { width: 100%; min-height: 360px; font: inherit; font-size: 13px; line-height: 1.55; color: var(--ph-ink); background: var(--ph-white); border: 1px solid var(--ph-line); border-radius: 10px; padding: 14px; resize: vertical; }
   #pharmacyPage .ph-infoltr-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  #pharmacyPage .ph-infoltr-paper { background: #fff; border: 1px solid var(--ph-line); border-radius: 12px; padding: 22px 24px; font-family: Georgia, serif; color: #162428; font-size: 13.5px; line-height: 1.55; overflow-x: auto; }
+  #pharmacyPage .ph-infoltr-paper [contenteditable] { outline: 1px dashed transparent; border-radius: 6px; padding: 2px 4px; margin: -2px -4px; min-height: 1.4em; }
+  #pharmacyPage .ph-infoltr-paper [contenteditable]:hover { outline-color: var(--ph-line); }
+  #pharmacyPage .ph-infoltr-paper [contenteditable]:focus { outline: 1px dashed var(--ph-green); background: var(--ph-paper); }
+  #pharmacyPage .ph-infoltr-pics { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; margin: 0 0 10px; font-size: 12px; }
+  #pharmacyPage .ph-infoltr-pics .lbl { font-size: 10.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--ph-soft); margin-right: 2px; flex: 0 0 100%; }
+  #pharmacyPage .ph-infoltr-chip { font: inherit; font-size: 11.5px; font-weight: 700; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--ph-line); background: none; color: var(--ph-soft); cursor: pointer; }
+  #pharmacyPage .ph-infoltr-chip.on { border-color: var(--ph-green-deep); color: var(--ph-green-deep); background: var(--ph-green-tint); }
+  #pharmacyPage .ph-infoltr-thumb { position: relative; display: inline-block; }
+  #pharmacyPage .ph-infoltr-thumb img { height: 44px; width: auto; border-radius: 6px; border: 2px solid transparent; cursor: pointer; opacity: .55; display: block; }
+  #pharmacyPage .ph-infoltr-thumb.on img { border-color: var(--ph-green-deep); opacity: 1; }
+  #pharmacyPage .ph-infoltr-thumb .x { position: absolute; top: -6px; right: -6px; width: 16px; height: 16px; border-radius: 50%; border: none; background: var(--ph-ink); color: #fff; font-size: 10px; line-height: 16px; padding: 0; cursor: pointer; }
+  #pharmacyPage .ph-infoltr-hint { font-size: 11.5px; color: var(--ph-faint); margin: 0 0 8px; }
   #pharmacyPage .ph-cyc-in { font: inherit; font-size: 12.5px; color: var(--ph-ink); border: 1px solid var(--ph-line); border-radius: 999px; padding: 3px 9px; background: var(--ph-white); }
   #pharmacyPage .ph-cyc-in.n { width: 56px; text-align: center; }
   #pharmacyPage .ph-cyc-in.d { padding: 3px 8px; }
@@ -20448,6 +20461,7 @@
       </div>
       ${phLtrTemplatesSectionHtml()}
       ${phTpProtocolSectionHtml()}
+      ${phClinicLogoSectionHtml()}
       ${phPhotoRelaySectionHtml()}
       ${phSettingsStorageHtml()}
     </section>`;
@@ -26130,8 +26144,22 @@
       if (presInfoLtr) { phInfoLtrOpen(presInfoLtr.dataset.presInfoltr); return; }
       if (e.target.closest("[data-infoltr-close]")) { phInfoLtrClose(); return; }
       if (e.target.closest("[data-infoltr-copy]")) {
-        const text = phInfoLtrBody;
-        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => phFlashShow("✓ Copied"), () => phFlashShow("⚠ Copy blocked — select the text and copy it"));
+        const text = phInfoLtrText();
+        const plain = () => navigator.clipboard && navigator.clipboard.writeText
+          ? navigator.clipboard.writeText(text).then(() => phFlashShow("✓ Copied as text"), () => phFlashShow("⚠ Copy blocked — select the text and copy it yourself"))
+          : phFlashShow("⚠ Copy blocked — select the text and copy it yourself");
+        if (!phDoseAdjMode && window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
+          phFlashShow("… preparing");
+          phLtrEmailHtmlFrom(phInfoLtrDocHtml()).then(html => navigator.clipboard.write([new ClipboardItem({
+            "text/html": new Blob([html], { type: "text/html" }),
+            "text/plain": new Blob([text], { type: "text/plain" }),
+          })])).then(() => phFlashShow("✓ Copied with pictures — paste it into an email"), plain);
+        } else plain();
+        return;
+      }
+      if (e.target.closest("[data-infoltr-copytext]")) {
+        const text = phInfoLtrText();
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => phFlashShow("✓ Copied as plain text"), () => phFlashShow("⚠ Copy blocked — select the text and copy it yourself"));
         return;
       }
       if (e.target.closest("[data-infoltr-print]")) {
@@ -26139,10 +26167,26 @@
         const t = PRESC.items.find(x => x.id === phInfoLtrScriptId);
         const name = t ? phTitle(presPatientFor(t) || t.name || "") : "";
         const docName = phDoseAdjMode ? "Dose adjustment" : (tmpl ? tmpl.name : "Letter");
-        const html = `<pre style="font:14px/1.6 Arial,sans-serif;white-space:pre-wrap;max-width:640px;margin:24px auto">${esc(phInfoLtrBody)}</pre>`;
+        const html = phDoseAdjMode
+          ? `<pre style="font:14px/1.6 Arial,sans-serif;white-space:pre-wrap;max-width:640px;margin:24px auto">${esc(phInfoLtrBody)}</pre>`
+          : phInfoLtrDocHtml();
         phPrintDoc(html, `${docName} - ${name}`);
         return;
       }
+      const infoHero = e.target.closest("[data-infoltr-hero]");
+      if (infoHero) { phInfoLtrHero = infoHero.dataset.infoltrHero; renderInfoLtrScreen(); return; }
+      const infoPicT = e.target.closest("[data-infoltr-pic-toggle]");
+      if (infoPicT) { const id = infoPicT.dataset.infoltrPicToggle; if (phInfoLtrInclude.has(id)) phInfoLtrInclude.delete(id); else phInfoLtrInclude.add(id); renderInfoLtrScreen(); return; }
+      const infoPicD = e.target.closest("[data-infoltr-pic-del]");
+      if (infoPicD) { const id = infoPicD.dataset.infoltrPicDel; phInfoLtrInclude.delete(id); phRenPhotoDelete(id).then(phInfoLtrLoadPics, phInfoLtrLoadPics); return; }
+      const infoRec = e.target.closest("[data-infoltr-rec]");
+      if (infoRec) { const k = infoRec.dataset.infoltrRec; if (phInfoLtrRecOn.has(k)) phInfoLtrRecOn.delete(k); else phInfoLtrRecOn.add(k); renderInfoLtrScreen(); return; }
+      if (e.target.closest("[data-infoltr-savewords]")) { phInfoLtrSaveWords(); phFlashShow("✓ Wording saved — this is the template now"); renderInfoLtrScreen(); return; }
+      if (e.target.closest("[data-clinic-logo-remove]")) {
+        phRenPhotoDelete("clinic-logo").then(() => { phClinicLogo = { loaded: true, dataUrl: null }; const el = document.getElementById("phClinicLogoPreview"); if (el) el.innerHTML = phClinicLogoPreviewHtml(); phFlashShow("Logo removed"); }, () => phFlashShow("⚠ Couldn't remove the logo"));
+        return;
+      }
+
       // tap-to-mark diagram zones + tongue quality markers (her yes)
       // treatment plan findings: zones + quality chips (2026-09-04)
       const tpZone = e.target.closest("[data-tp-zone]");
@@ -29942,6 +29986,7 @@
       // Information letter body -- nothing needs to redraw while she edits
       // it, just keep the in-memory copy Copy/Print read from current
       if (e.target.matches("[data-infoltr-body]")) { phInfoLtrBody = e.target.value; return; }
+      if (e.target.matches("[data-infoltr-editsec]")) { const i = +e.target.dataset.infoltrEditsec; if (phInfoLtrSecs[i]) phInfoLtrSecs[i].text = e.target.innerText.replace(/ /g, " "); return; }
       // ---- 方病人 Guide inputs ----
       if (e.target.id === "phGdSearch") { phGdSearch = e.target.value; phDefer("gdBody", renderPhGdBody, 120); return; }
       if (e.target.matches("[data-gd-tng-overlay]")) {
@@ -36618,6 +36663,31 @@ or changing anything in Cliniko.
     savePharmacy();
     if (v || document.activeElement !== dobEl) renderHxScreen();
   });
+  document.addEventListener("change", async e => {
+    const t = e.target; if (!t || (t.id !== "phInfoLtrPhoto" && t.id !== "phClinicLogo")) return;
+    if (t.id === "phInfoLtrPhoto") {
+      const files = Array.from(t.files || []); t.value = "";
+      for (const f of files) {
+        try {
+          const r = await phShrinkImage(f, 900, "image/jpeg");
+          const id = uid();
+          await phRenPhotoPut({ id, patientKey: PH_INFO_PICS_KEY, kind: "letter", tmplId: phInfoLtrTmplId, blob: r.blob, mime: r.mime, dataUrl: r.dataUrl, createdAt: Date.now() });
+          phInfoLtrInclude.add(id);
+        } catch (err) { phFlashShow("⚠ Couldn't read that picture."); }
+      }
+      phInfoLtrLoadPics();
+      return;
+    }
+    const f = t.files && t.files[0]; t.value = "";
+    if (!f) return;
+    try {
+      const r = await phShrinkImage(f, 600, "image/png");
+      await phRenPhotoPut({ id: "clinic-logo", patientKey: PH_INFO_LOGO_KEY, kind: "logo", blob: r.blob, mime: r.mime, dataUrl: r.dataUrl, createdAt: Date.now() });
+      phClinicLogo = { loaded: true, dataUrl: r.dataUrl };
+      const el = document.getElementById("phClinicLogoPreview"); if (el) el.innerHTML = phClinicLogoPreviewHtml();
+      phFlashShow("✓ Logo saved — it's on every letter now");
+    } catch (err) { phFlashShow("⚠ Couldn't read that file."); }
+  });
   document.addEventListener("change", e => {
     if (!e.target || e.target.id !== "phClinikoCsv") return;
     const input = e.target, file = input.files && input.files[0];
@@ -38005,6 +38075,7 @@ or changing anything in Cliniko.
   // choice stands and the app stops second-guessing it.
   let phMsgChannelPicked = false;
   let phMsgEditTemplateId = null;     // which template the Templates section has open for edit
+  let phMsgEditInfoLtrId = null;      // which information letter's master wording is open for edit
   let phMsgCopiedId = null;           // brief "Copied" confirmation on one Prepared/Sent row
   function phMsgAllPatientNames() {
     const names = new Map();
@@ -38481,6 +38552,21 @@ or changing anything in Cliniko.
     // grouped by category (her ask, 2026-09-06) -- fixed display order from
     // PH_MSG_CATEGORIES, empty groups skipped so a brand-new install with
     // fewer categories in play doesn't show hollow headers
+    const infoEditing = phMsgEditInfoLtrId ? phInfoLtrAllTemplates().find(x => x.id === phMsgEditInfoLtrId) : null;
+    if (infoEditing) {
+      const words = (PHARMACY.infoLetterWords || {})[infoEditing.id] || infoEditing.body;
+      return `<div class="ph-widget ph-dash-card ph-msg-tmpl-edit">
+        <div class="ph-dash-secthead"><h2>Information letter — ${esc(infoEditing.name)}</h2><span class="rule"></span></div>
+        <div class="field full"><label>Master wording</label><textarea id="phInfoWordsBody" rows="14">${esc(words)}</textarea>
+          <div class="ph-msg-tokenkey">A short line on its own becomes a section heading with its icon. <code>{first}</code> is her first name. The layout, colour and pictures are set per topic on the letter itself.</div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-cancel" data-ph-infowords-cancel="1">Cancel</button>
+          ${(PHARMACY.infoLetterWords || {})[infoEditing.id] ? `<button type="button" class="tab-link" data-ph-infowords-reset="${infoEditing.id}">Back to the original</button>` : ""}
+          <button type="button" class="btn-save" data-ph-infowords-save="${infoEditing.id}">Save</button>
+        </div>
+      </div>`;
+    }
     const all = phMsgTemplates();
     const groups = PH_MSG_CATEGORIES.map(([id, label]) => [label, all.filter(t => t.category === id)]).filter(([, list]) => list.length);
     const rowHtml = t => `<div class="ph-msg-tmpl-row">
@@ -38490,9 +38576,19 @@ or changing anything in Cliniko.
       <button type="button" class="ph-name-link" data-ph-msg-tmpl-edit="${t.id}">Edit</button>
     </div>`;
     const rows = groups.map(([label, list]) => `<div class="ph-msg-tmpl-grouphead">${esc(label)}</div>${list.map(rowHtml).join("")}`).join("");
+    const infoRows = phInfoLtrAllTemplates().map(x => {
+      const words = (PHARMACY.infoLetterWords || {})[x.id] || x.body;
+      const first = (words.split("\n").find(l => l.trim() && !/^(hi|dear|hello)\b/i.test(l.trim())) || "").trim();
+      return `<div class="ph-msg-tmpl-row">
+        <span class="ph-msg-tag" style="background:${(PH_INFO_DESIGNS[x.id] || PH_INFO_DESIGN_DEFAULT).tint};color:${(PH_INFO_DESIGNS[x.id] || PH_INFO_DESIGN_DEFAULT).theme}">letter</span>
+        <div class="ph-msg-tmpl-row-mid"><b>${esc(x.name)}</b><span class="faint">${/\[Add your/.test(words) ? "Draft only — your wording still to come" : esc(first.slice(0, 80))}</span></div>
+        <span class="ph-msg-tmpl-uses">${(PHARMACY.infoLetterWords || {})[x.id] ? "your words" : "as shipped"}</span>
+        <button type="button" class="ph-name-link" data-ph-infowords-edit="${x.id}">Edit</button>
+      </div>`;
+    }).join("");
     return `<div class="ph-widget ph-dash-card">
       <div class="ph-dash-secthead"><h2>Templates</h2><span class="rule"></span><span class="ph-dash-card-sub">Starting points — make them yours</span></div>
-      <div class="ph-msg-tmpl-list">${rows}</div>
+      <div class="ph-msg-tmpl-list">${rows}<div class="ph-msg-tmpl-grouphead">Information letters</div>${infoRows}</div>
     </div>`;
   }
   function phMsgLinkButtonsHtml(m) {
@@ -38624,6 +38720,19 @@ or changing anything in Cliniko.
     }
     const tEdit = e.target.closest("[data-ph-msg-tmpl-edit]");
     if (tEdit) { phMsgEditTemplateId = tEdit.dataset.phMsgTmplEdit; renderPharmacy(); return; }
+    const iwEdit = e.target.closest("[data-ph-infowords-edit]");
+    if (iwEdit) { phMsgEditInfoLtrId = iwEdit.dataset.phInfowordsEdit; renderPharmacy(); return; }
+    if (e.target.closest("[data-ph-infowords-cancel]")) { phMsgEditInfoLtrId = null; renderPharmacy(); return; }
+    const iwReset = e.target.closest("[data-ph-infowords-reset]");
+    if (iwReset) { if (PHARMACY.infoLetterWords) delete PHARMACY.infoLetterWords[iwReset.dataset.phInfowordsReset]; savePharmacy(); phMsgEditInfoLtrId = null; renderPharmacy(); phFlashShow("Back to the original wording"); return; }
+    const iwSave = e.target.closest("[data-ph-infowords-save]");
+    if (iwSave) {
+      const ta = document.getElementById("phInfoWordsBody");
+      const body = ta ? presSanitizeNoteText(ta.value) : "";
+      if (body.trim()) { PHARMACY.infoLetterWords = PHARMACY.infoLetterWords || {}; PHARMACY.infoLetterWords[iwSave.dataset.phInfowordsSave] = body; savePharmacy(); }
+      phMsgEditInfoLtrId = null; renderPharmacy(); phFlashShow("✓ Wording saved — every letter on this topic uses it now");
+      return;
+    }
     const tCancel = e.target.closest("[data-ph-msg-tmpl-cancel]");
     if (tCancel) { phMsgEditTemplateId = null; renderPharmacy(); return; }
     const tSave = e.target.closest("[data-ph-msg-tmpl-save]");
@@ -49192,6 +49301,12 @@ Please let me know if you have any questions.` },
 [Add your food/nutrition suggestions here.]
 
 Please let me know if you have any questions.` },
+    { id: "signs", name: "Menstrual signs & BBT", subject: "Your menstrual signs and BBT chart", body:
+`Hi {first},
+
+[Add your words about menstrual signs and BBT charting here — what to notice, how to take the temperature, what the chart tells us.]
+
+Please let me know if you have any questions.` },
   ];
   const phInfoLtrUserTemplates = () => PHARMACY.infoLetters || (PHARMACY.infoLetters = []);
   const phInfoLtrAllTemplates = () => [...PH_INFO_LETTERS, ...phInfoLtrUserTemplates()];
@@ -49220,12 +49335,203 @@ ${def.notes}
 Please let me know if you have any questions.`;
   }
   const phInfoLtrTmpl = () => phInfoLtrAllTemplates().find(x => x.id === phInfoLtrTmplId) || phInfoLtrAllTemplates()[0] || null;
+  /* ---- Designed information letters (her picks 2026-09-13, dislike #7:
+     "Templates only" -- one fixed designed layout per topic: colour, hero
+     picture, section icons; she edits the WORDS in each section only.
+     Pictures from all four sources: her own photos (kept in the photo store
+     under a letters key, never localStorage), a built-in line-art set, the
+     clinic logo + letterhead automatically, and charts from the patient's
+     record (latest tongue photo, latest BBT chart). Copy for email goes
+     through the patient-letter engine (phLtrEmailHtmlFrom: SVGs rasterised,
+     styles inlined, dual text/html + text/plain), Print through phPrintDoc;
+     "Plain text" stays for SMS. The wording model is deliberately tiny: the
+     template body is split into sections at its own short heading lines,
+     and "+ Save wording" writes the whole body back as one string
+     (PHARMACY.infoLetterWords[tmplId]), so nothing old-shaped breaks. ---- */
+  const PH_INFO_DESIGNS = {
+    iron:         { theme: "#8A3B2E", tint: "#FBEFEA", hero: "herbs", icons: ["spark", "heart", "list", "leaf"] },
+    posttransfer: { theme: "#4A3470", tint: "#EFEAF7", hero: "ivf",   icons: ["heart", "drop", "list", "spark"] },
+    food:         { theme: "#8A6D1A", tint: "#FCF4DE", hero: "food",  icons: ["bowl", "leaf", "list", "spark"] },
+    signs:        { theme: "#8A2C53", tint: "#FBE9F0", hero: "cycle", icons: ["drop", "spark", "list", "heart"] },
+  };
+  const PH_INFO_DESIGN_DEFAULT = { theme: "#165C74", tint: "#EDF5F8", hero: "herbs", icons: ["leaf", "spark", "list", "heart"] };
+  const phInfoDesignFor = tmpl => (tmpl && PH_INFO_DESIGNS[tmpl.id]) || PH_INFO_DESIGN_DEFAULT;
+  const PH_INFO_ICONS = {
+    leaf: `<path d="M4 20c0-9 6-15 16-16-1 10-7 16-16 16z"/><path d="M4 20c4-4 8-8 12-12"/>`,
+    spark: `<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l3 3M15 15l3 3M6 18l3-3M15 9l3-3"/>`,
+    list: `<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>`,
+    drop: `<path d="M12 3s7 7 7 12a7 7 0 0 1-14 0c0-5 7-12 7-12z"/>`,
+    bowl: `<path d="M3 11h18a9 9 0 0 1-18 0z"/><path d="M9 5c0 2-2 2-2 4M14 4c0 2-2 2-2 4"/>`,
+    heart: `<path d="M12 21s-8-5-8-11a4 4 0 0 1 8-2 4 4 0 0 1 8 2c0 6-8 11-8 11z"/>`,
+  };
+  const phInfoIconSvg = (k, color) => `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${PH_INFO_ICONS[k] || PH_INFO_ICONS.leaf}</svg>`;
+  const phInfoArtSvg = (k, color, label) => `<svg viewBox="0 0 320 110" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="${color}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:auto;display:block;max-height:120px" aria-label="${label}">${PH_INFO_ART[k]}</svg>`;
+  const PH_INFO_ART = {
+    herbs: `<path d="M40 92C90 70 140 40 200 22"/><path d="M80 72c-2-16 6-28 20-32-2 14-8 26-20 32z"/><path d="M118 56c-4-16 2-30 16-36 0 14-4 28-16 36z"/><path d="M158 40c-6-14-2-30 12-38 2 14 0 28-12 38z"/><path d="M96 78c14-6 30-8 44-4-12 8-28 10-44 4z"/><path d="M136 62c14-8 30-10 44-8-12 10-28 14-44 8z"/><circle cx="236" cy="30" r="3"/><circle cx="252" cy="22" r="2.5"/><circle cx="246" cy="42" r="2"/><path d="M220 96h60"/><path d="M230 96c0-14 6-22 20-24 14 2 20 10 20 24"/>`,
+    food: `<path d="M90 60h140a70 70 0 0 1-140 0z"/><path d="M110 60c10-6 30-10 50-10s40 4 50 10"/><path d="M130 98h60"/><path d="M140 42c0-8-6-10-6-18s6-10 6-18"/><path d="M162 40c0-8-6-10-6-18s6-10 6-18"/><path d="M184 42c0-8-6-10-6-18s6-10 6-18"/><path d="M246 22l14 78"/><path d="M262 20l6 80"/>`,
+    cycle: `<path d="M30 74C90 34 230 34 290 74"/><circle cx="60" cy="52" r="12"/><circle cx="110" cy="44" r="12" fill="currentColor" fill-opacity=".18"/><circle cx="160" cy="40" r="12" fill="currentColor" fill-opacity=".4"/><circle cx="210" cy="44" r="12" fill="currentColor" fill-opacity=".65"/><circle cx="260" cy="52" r="12" fill="currentColor" fill-opacity=".9"/><path d="M160 100s-9-9-9-15a9 9 0 0 1 18 0c0 6-9 15-9 15z"/>`,
+    ivf: `<ellipse cx="150" cy="70" rx="90" ry="26"/><path d="M60 70v10a90 26 0 0 0 180 0V70"/><circle cx="130" cy="66" r="9"/><circle cx="150" cy="60" r="9"/><circle cx="170" cy="66" r="9"/><circle cx="150" cy="76" r="9"/><path d="M236 14l-40 40"/><path d="M228 6l16 16"/><path d="M196 54l-6 6"/>`,
+  };
+  const PH_INFO_ART_LABEL = { herbs: "Herbs", food: "Food", cycle: "Cycle", ivf: "IVF" };
+  const PH_INFO_PICS_KEY = "__letters__", PH_INFO_LOGO_KEY = "__clinic__";
+  let phInfoLtrSecs = [], phInfoLtrHero = null, phInfoLtrPics = { loaded: false, list: [] }, phInfoLtrInclude = new Set();
+  let phInfoLtrRec = {}, phInfoLtrRecOn = new Set(), phClinicLogo = { loaded: false, dataUrl: null };
+  // the body, split at its own short heading lines ("Why Iron Matters",
+  // "Did you know:") -- a greeting, a bullet, a URL or a bracketed
+  // placeholder is never a heading
+  function phInfoSplitSections(body) {
+    const blocks = String(body || "").replace(/\r/g, "").split(/\n{2,}/).map(b => b.trim()).filter(Boolean);
+    const isHeading = b => !b.includes("\n") && b.length <= 60 && !/^(hi|dear|hello)\b/i.test(b) && !/^[•\-–*]/.test(b) && !/^https?:/i.test(b) && !/^\[/.test(b) && (/:$/.test(b) || !/[.!?,]$/.test(b));
+    const secs = []; let pending = null;
+    blocks.forEach(b => {
+      // "Why Iron Matters⏎Iron is essential…" -- a heading typed straight
+      // above its paragraph with no blank line between them
+      const nl = b.indexOf("\n");
+      if (nl > 0 && isHeading(b.slice(0, nl).trim()) && b.slice(nl + 1).trim()) {
+        if (pending) secs.push(pending);
+        secs.push({ heading: b.slice(0, nl).trim().replace(/:$/, ""), text: b.slice(nl + 1).trim() }); pending = null; return;
+      }
+      if (isHeading(b)) { if (pending) secs.push(pending); pending = { heading: b.replace(/:$/, ""), text: "" }; return; }
+      if (pending) { pending.text = b; secs.push(pending); pending = null; }
+      else if (secs.length && !secs[secs.length - 1].heading && !/^(hi|dear|hello)\b/i.test(secs[secs.length - 1].text)) secs[secs.length - 1].text += "\n\n" + b;
+      else secs.push({ heading: "", text: b });
+    });
+    if (pending) secs.push(pending);
+    return secs;
+  }
+  const phInfoJoinSections = secs => secs.map(s => `${s.heading ? s.heading + "\n\n" : ""}${s.text}`).join("\n\n");
+  function phInfoLtrText() {
+    if (phDoseAdjMode) return phInfoLtrBody;
+    return `${phInfoJoinSections(phInfoLtrSecs)}\n\n${PH_SIGNATURE}`;
+  }
+  const phInfoLinkify = html => html.replace(/(https?:\/\/[^\s<]+)/g, `<a href="$1" style="color:#165C74">$1</a>`);
+  function phInfoParaHtml(text) {
+    return String(text || "").split(/\n{2,}/).map(b => b.trim()).filter(Boolean).map(b => {
+      const lines = b.split("\n");
+      if (lines.every(l => /^[•\-–*]\s*/.test(l))) return `<ul style="margin:4px 0 8px 18px;padding:0">${lines.map(l => `<li style="margin:0 0 4px">${phInfoLinkify(esc(l.replace(/^[•\-–*]\s*/, "")))}</li>`).join("")}</ul>`;
+      return `<p style="margin:0 0 10px">${phInfoLinkify(esc(b)).replace(/\n/g, "<br>")}</p>`;
+    }).join("");
+  }
+  const phInfoDateLabel = ms => { const d = new Date(ms); return `${d.getDate()} ${MON_SHORT[d.getMonth()]}`; };
+  // one paper for both the screen (edit = true: section text is
+  // contenteditable) and the document that prints / goes into an email
+  function phInfoLtrPaperHtml(edit) {
+    const tmpl = phInfoLtrTmpl(); if (!tmpl) return "";
+    const d = phInfoDesignFor(tmpl);
+    const heroKey = phInfoLtrHero || d.hero;
+    const hero = heroKey === "none" ? "" : phInfoArtSvg(heroKey, d.theme, PH_INFO_ART_LABEL[heroKey] || "");
+    const logo = phClinicLogo.dataUrl;
+    let iconN = 0;
+    const secs = phInfoLtrSecs.map((sec, i) => {
+      const body = edit
+        ? `<div contenteditable="true" data-infoltr-editsec="${i}" spellcheck="true" style="white-space:pre-wrap">${esc(sec.text)}</div>`
+        : phInfoParaHtml(sec.text);
+      if (!sec.heading) return `<div style="margin:0 0 12px">${body}</div>`;
+      const icon = d.icons[iconN++ % d.icons.length];
+      return `<table style="border-collapse:collapse;width:100%;margin:0 0 12px"><tr>
+        <td style="width:36px;vertical-align:top;padding:2px 8px 0 0"><div style="width:28px;height:28px;border-radius:50%;background:${d.tint};display:flex;align-items:center;justify-content:center">${phInfoIconSvg(icon, d.theme)}</div></td>
+        <td style="vertical-align:top"><h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:${d.theme};margin:6px 0 4px">${esc(sec.heading)}</h2>${body}</td>
+      </tr></table>`;
+    }).join("");
+    const pics = phInfoLtrPics.list.filter(p => phInfoLtrInclude.has(p.id));
+    const recs = ["tongue", "bbt"].filter(k => phInfoLtrRecOn.has(k) && phInfoLtrRec[k]).map(k => ({ url: phInfoLtrRec[k].url, cap: k === "tongue" ? `Your tongue · ${phInfoDateLabel(phInfoLtrRec[k].date)}` : `Your BBT chart · ${phInfoDateLabel(phInfoLtrRec[k].date)}` }));
+    const picTable = rows => rows.length ? `<table style="border-collapse:collapse;margin:8px 0 14px"><tr>${rows.map(r => `<td style="padding:4px 8px 4px 0;vertical-align:top;text-align:center;font-family:system-ui,sans-serif;font-size:11px;color:#4A575B"><img src="${r.url}" alt="" style="max-width:260px;width:100%;height:auto;border-radius:10px;display:block">${r.cap ? `<span style="display:block;margin-top:3px">${esc(r.cap)}</span>` : ""}</td>`).join("")}</tr></table>` : "";
+    return `<div style="display:flex;align-items:center;gap:14px;border-bottom:2px solid ${d.theme};padding-bottom:10px;margin-bottom:14px">
+        ${logo ? `<img src="${logo}" alt="" style="height:52px;width:auto;display:block">` : ""}
+        <div><b style="font-size:16px;color:#0B3B4B;display:block;font-family:Georgia,serif">Linh Chinese Medicine</b><span style="font-size:11.5px;color:#4A575B;font-family:system-ui,sans-serif">${esc(PH_SIGNATURE)} · ${esc(PH_CLINIC_MOBILE)}</span></div>
+      </div>
+      ${hero ? `<div style="background:${d.tint};border-radius:14px;padding:8px 18px;margin:0 0 16px;color:${d.theme}">${hero}</div>` : ""}
+      <h1 style="font-size:20px;color:${d.theme};margin:0 0 14px;font-family:Georgia,serif">${esc(tmpl.subject || tmpl.name)}</h1>
+      ${secs}
+      ${picTable(pics.map(p => ({ url: p.dataUrl, cap: "" })))}
+      ${picTable(recs)}
+      <p style="margin:22px 0 0">${esc(PH_SIGNATURE)}</p>`;
+  }
+  function phInfoLtrDocHtml() {
+    const tmpl = phInfoLtrTmpl();
+    const t = PRESC.items.find(x => x.id === phInfoLtrScriptId);
+    const name = t ? (presPatientFor(t) || t.name || "") : "";
+    return `<title>${esc(tmpl ? (tmpl.subject || tmpl.name) : "Letter")} — ${esc(phTitle(name))}</title>
+      <style>body{font-family:Georgia,serif;padding:32px;max-width:640px;color:#162428;line-height:1.6;font-size:14px} p{margin:0 0 10px} @media print{body{padding:0}}</style>
+      ${phInfoLtrPaperHtml(false)}`;
+  }
+  // ---- pictures: her uploads + the clinic logo live in the photo store
+  // (IndexedDB), never localStorage -- see the Ren photo comment above ----
+  function phShrinkImage(file, maxW, mime) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file); const img = new Image();
+      img.onload = () => {
+        try {
+          const sc = Math.min(1, maxW / (img.width || maxW));
+          const c = document.createElement("canvas"); c.width = Math.max(1, Math.round(img.width * sc)); c.height = Math.max(1, Math.round(img.height * sc));
+          const cx = c.getContext("2d");
+          if (mime === "image/jpeg") { cx.fillStyle = "#fff"; cx.fillRect(0, 0, c.width, c.height); }
+          cx.drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+          const dataUrl = c.toDataURL(mime, 0.86);
+          c.toBlob(blob => blob ? resolve({ dataUrl, blob, mime }) : reject(new Error("blob")), mime, 0.86);
+        } catch (e) { reject(e); }
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("img")); };
+      img.src = url;
+    });
+  }
+  const phBlobToDataUrl = blob => new Promise((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(String(r.result)); r.onerror = () => reject(r.error); r.readAsDataURL(blob); });
+  async function phInfoLtrLoadPics() {
+    try { const all = await phRenPhotoGetAllForPatient(PH_INFO_PICS_KEY); phInfoLtrPics = { loaded: true, list: all.filter(p => p.dataUrl) }; }
+    catch (e) { phInfoLtrPics = { loaded: true, list: [] }; }
+    renderInfoLtrScreen();
+  }
+  async function phClinicLogoLoad(force) {
+    if (phClinicLogo.loaded && !force) return;
+    try { const all = await phRenPhotoGetAllForPatient(PH_INFO_LOGO_KEY); const l = all.find(p => p.id === "clinic-logo"); phClinicLogo = { loaded: true, dataUrl: l && l.dataUrl ? l.dataUrl : null }; }
+    catch (e) { phClinicLogo = { loaded: true, dataUrl: null }; }
+    renderInfoLtrScreen();
+    const el = document.getElementById("phClinicLogoPreview"); if (el) el.innerHTML = phClinicLogoPreviewHtml();
+  }
+  async function phInfoLtrRecordLoad(pk) {
+    phInfoLtrRec = {};
+    if (!pk) return;
+    if (!phRenPhotosFor(pk)) { try { await phRenLoadPhotosFor(pk); } catch (e) {} }
+    const list = phRenPhotosFor(pk) || [];
+    const latest = kind => list.filter(p => p.kind === kind && p.blob).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
+    const out = {};
+    for (const k of ["tongue", "bbt"]) { const p = latest(k); if (p) { try { out[k] = { url: await phBlobToDataUrl(p.blob), date: p.createdAt || Date.now() }; } catch (e) {} } }
+    phInfoLtrRec = out;
+    renderInfoLtrScreen();
+  }
+  const phClinicLogoPreviewHtml = () => !phClinicLogo.loaded ? `<span class="faint">…</span>`
+    : phClinicLogo.dataUrl ? `<img src="${phClinicLogo.dataUrl}" alt="Clinic logo" style="height:40px;width:auto;vertical-align:middle;border-radius:6px"> <button type="button" class="tab-link" data-clinic-logo-remove="1">Remove</button>`
+    : `<span class="faint">No logo yet — letters show the clinic name in text until you add one.</span>`;
+  function phClinicLogoSectionHtml() {
+    if (!phClinicLogo.loaded) phClinicLogoLoad();
+    return `<div class="ph-settings-sec">
+      <h3>🖼 Clinic logo on letters</h3>
+      <p class="ph-settings-hint">Sits on the letterhead of every information letter, automatically. Kept on this computer in the same store as photos — never in the 5 MB app storage.</p>
+      <div class="ph-settings-actions ph-cliniko-row">
+        <label class="ph-load-btn ph-file-btn">🖼 Choose the logo file<input type="file" id="phClinicLogo" accept="image/*" hidden></label>
+        <span id="phClinicLogoPreview">${phClinicLogoPreviewHtml()}</span>
+      </div>
+    </div>`;
+  }
   function phInfoLtrLoadBody() {
     const tmpl = phInfoLtrTmpl();
-    if (!tmpl) { phInfoLtrBody = ""; return; }
+    if (!tmpl) { phInfoLtrBody = ""; phInfoLtrSecs = []; return; }
     const t = PRESC.items.find(x => x.id === phInfoLtrScriptId);
     const first = t ? phTpFirstName(presPatientFor(t) || t.name || "") : "";
-    phInfoLtrBody = tmpl.body.replace(/\{first\}/g, first || "there");
+    const src = (PHARMACY.infoLetterWords || {})[tmpl.id] || tmpl.body;
+    phInfoLtrBody = src.replace(/\{first\}/g, first || "there");
+    phInfoLtrSecs = phInfoSplitSections(phInfoLtrBody);
+    phInfoLtrHero = null;
+  }
+  function phInfoLtrSaveWords() {
+    const tmpl = phInfoLtrTmpl(); if (!tmpl || phDoseAdjMode) return;
+    const t = PRESC.items.find(x => x.id === phInfoLtrScriptId);
+    const first = t ? phTpFirstName(presPatientFor(t) || t.name || "") : "";
+    let body = phInfoJoinSections(phInfoLtrSecs);
+    if (first) body = body.split(first).join("{first}");
+    PHARMACY.infoLetterWords = PHARMACY.infoLetterWords || {};
+    PHARMACY.infoLetterWords[tmpl.id] = body;
+    savePharmacy();
   }
   function phInfoLtrOpen(scriptId) {
     const t = PRESC.items.find(x => x.id === scriptId);
@@ -49242,6 +49548,8 @@ Please let me know if you have any questions.`;
     phDoseAdjOld = onSupp ? ((rec.supplements[onSupp.id].dose) || onSupp.dose) : "";
     phDoseAdjNew = "";
     phInfoLtrLoadBody();
+    phInfoLtrInclude = new Set(); phInfoLtrRecOn = new Set(); phInfoLtrRec = {};
+    phInfoLtrLoadPics(); phClinicLogoLoad(); phInfoLtrRecordLoad(phPatientKey(presPatientFor(t) || t.name || ""));
     document.getElementById("phInfoLtrBackdrop").hidden = false;
     document.getElementById("phInfoLtrModal").hidden = false;
     renderInfoLtrScreen();
@@ -49259,6 +49567,26 @@ Please let me know if you have any questions.`;
     if (!t) { phInfoLtrClose(); return; }
     const name = presPatientFor(t) || t.name || "";
     const tmpls = phInfoLtrAllTemplates();
+    const tmpl = phInfoLtrTmpl();
+    const d = phInfoDesignFor(tmpl);
+    const heroKey = phInfoLtrHero || d.hero;
+    const placeholder = !phDoseAdjMode && /\[Add your/.test(phInfoJoinSections(phInfoLtrSecs));
+    const prevBody = modal.querySelector(".ph-hx-body");
+    const prevScroll = prevBody ? prevBody.scrollTop : 0;
+    const heroChips = [["none", "No picture"], ...Object.keys(PH_INFO_ART).map(k => [k, PH_INFO_ART_LABEL[k]])]
+      .map(([k, l]) => `<button type="button" class="ph-infoltr-chip${heroKey === k ? " on" : ""}" data-infoltr-hero="${k}">${esc(l)}</button>`).join("");
+    const thumbs = phInfoLtrPics.list.map(p => `<span class="ph-infoltr-thumb${phInfoLtrInclude.has(p.id) ? " on" : ""}"><img src="${p.dataUrl}" alt="" data-infoltr-pic-toggle="${p.id}" title="${phInfoLtrInclude.has(p.id) ? "In the letter — tap to leave out" : "Tap to put in the letter"}"><button type="button" class="x" data-infoltr-pic-del="${p.id}" title="Delete this picture" aria-label="Delete picture">×</button></span>`).join("");
+    const recChips = ["tongue", "bbt"].filter(k => phInfoLtrRec[k]).map(k => `<button type="button" class="ph-infoltr-chip${phInfoLtrRecOn.has(k) ? " on" : ""}" data-infoltr-rec="${k}">${k === "tongue" ? "Her tongue photo" : "Her BBT chart"} · ${esc(phInfoDateLabel(phInfoLtrRec[k].date))}</button>`).join("");
+    const picsBar = phDoseAdjMode ? "" : `<div class="ph-infoltr-pics">
+        <span class="lbl">Picture at the top</span>${heroChips}
+      </div>
+      <div class="ph-infoltr-pics">
+        <span class="lbl">Her photos &amp; charts</span>
+        <label class="ph-infoltr-chip">+ Add a photo<input type="file" id="phInfoLtrPhoto" accept="image/*" multiple hidden></label>
+        ${thumbs}${recChips}
+        ${!thumbs && !recChips ? `<span class="faint">${phInfoLtrPics.loaded ? "Nothing added yet — a photo you choose, her latest tongue photo or BBT chart can go in." : "…"}</span>` : ""}
+      </div>
+      ${phClinicLogo.loaded && !phClinicLogo.dataUrl ? `<p class="ph-infoltr-hint">No clinic logo yet — add one under Settings → Clinic logo on letters and it appears on the letterhead here.</p>` : ""}`;
     modal.innerHTML = `<div class="ph-hx-head">
         <div class="ph-hx-head-top"><div class="ph-hx-head-name">${phDoseAdjMode ? "💊 Dose adjustment" : "📚 Information letter"} — ${esc(phTitle(name))}</div></div>
         <button type="button" class="ph-stocktake-close" data-infoltr-close="1" aria-label="Close">×</button>
@@ -49266,21 +49594,26 @@ Please let me know if you have any questions.`;
       <div class="ph-hx-body">
         <div class="ph-infoltr-picker">
           <select class="ph-cyc-in field-bare" data-infoltr-tmpl="1" aria-label="Letter topic">${tmpls.map(x => `<option value="${x.id}"${!phDoseAdjMode && x.id === phInfoLtrTmplId ? " selected" : ""}>${esc(x.name)}</option>`).join("")}<option value="__doseadj"${phDoseAdjMode ? " selected" : ""}>💊 Adjust a supplement dose</option></select>
-          ${!phDoseAdjMode && (phInfoLtrTmplId === "posttransfer" || phInfoLtrTmplId === "food") ? `<span class="faint">Draft only — write or paste your real wording in below and send it to me to save as a template, the way Iron's was.</span>` : ""}
+          ${placeholder ? `<span class="faint">Draft only — the layout is set; type your real wording into each section and press “Save wording”, the way Iron's was.</span>` : ""}
         </div>
         ${phDoseAdjMode ? `<div class="ph-doseadj-fields">
           <label class="ph-doseadj-f"><span>Supplement</span><select class="ph-cyc-in field-bare" data-doseadj-supp="1" aria-label="Supplement">${PH_SUPPLEMENTS.map(s => `<option value="${s.id}"${s.id === phDoseAdjSupp ? " selected" : ""}>${esc(s.name)}</option>`).join("")}</select></label>
           <label class="ph-doseadj-f"><span>Old dose</span><input type="text" class="ph-cyc-in field-bare" data-doseadj-old="1" value="${esc(phDoseAdjOld)}" placeholder="e.g. 100mg daily" aria-label="Old dose"></label>
           <label class="ph-doseadj-f"><span>New dose</span><input type="text" class="ph-cyc-in field-bare" data-doseadj-new="1" value="${esc(phDoseAdjNew)}" placeholder="e.g. 400-500mg daily" aria-label="New dose"></label>
-        </div>` : ""}
-        <textarea class="ph-infoltr-body" data-infoltr-body="1" rows="18" aria-label="Letter text">${esc(phInfoLtrBody)}</textarea>
+        </div>
+        <textarea class="ph-infoltr-body" data-infoltr-body="1" rows="18" aria-label="Letter text">${esc(phInfoLtrBody)}</textarea>` : `${picsBar}
+        <div class="ph-infoltr-paper">${phInfoLtrPaperHtml(true)}</div>`}
         <div class="ph-infoltr-actions">
-          <button type="button" class="btn-save" data-infoltr-copy="1">✓ Copy text</button>
+          <button type="button" class="btn-save" data-infoltr-copy="1">${phDoseAdjMode ? "✓ Copy text" : "✓ Copy for email (with pictures)"}</button>
+          ${phDoseAdjMode ? "" : `<button type="button" class="ph-load-btn" data-infoltr-copytext="1">Plain text</button>`}
           <button type="button" class="ph-load-btn" data-infoltr-print="1">🖨 Print</button>
+          ${phDoseAdjMode ? "" : `<button type="button" class="ph-load-btn" data-infoltr-savewords="1" title="Keep these words as the template for everyone">+ Save wording</button>`}
           <button type="button" class="ph-load-btn" data-infoltr-close="1">Close</button>
         </div>
       </div>`;
+    const body = modal.querySelector(".ph-hx-body"); if (body && prevScroll) body.scrollTop = prevScroll;
   }
+
   // one letter record per open session, upserted on every change -- the
   // quiet "saved automatically" the mock promised
   function phLtrAutosave(t) {
@@ -49415,8 +49748,8 @@ Please let me know if you have any questions.`;
     ".ph-cycle-chip,.ph-ltr-here": "font-family:Arial,sans-serif;font-size:10px;font-weight:bold;color:#8a3b5a",
     "tr.here td": "background:#fbeff2", ".sig,.ph-tp-lnote": "font-family:Georgia,serif;font-size:14px",
   };
-  async function phLtrEmailHtml(t) {
-    const doc = phLtrLetterDocHtml(t);
+  async function phLtrEmailHtml(t) { return phLtrEmailHtmlFrom(phLtrLetterDocHtml(t)); }
+  async function phLtrEmailHtmlFrom(doc) {
     const host = document.createElement("div");
     host.style.cssText = "position:fixed;left:-99999px;top:0;width:640px;background:#fff";
     host.innerHTML = doc.replace(/<title>[\s\S]*?<\/title>/, "");
