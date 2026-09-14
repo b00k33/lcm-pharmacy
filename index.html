@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260915-013000">
+<meta name="lcm-build" content="20260915-020000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -4546,6 +4546,11 @@
   #pharmacyPage .ph-tlr-l2 .sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
   #pharmacyPage .ph-tlr-right { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; }
   #pharmacyPage .ph-tlr-right .drop { width: 14px; height: 14px; color: var(--ph-zero-deep, #B4483A); flex: none; }
+  /* cycle chip on a tracked patient's day row (her pick 2026-09-14): day + today's signs */
+  #pharmacyPage .ph-tlr-cyc { font: inherit; font-size: 10.5px; font-weight: 700; color: var(--ph-gyn-deep, var(--ph-zero-deep)); background: var(--ph-gyn-tint, var(--ph-zero-tint)); border: none; border-radius: 999px; padding: 2px 8px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; flex: none; white-space: nowrap; }
+  #pharmacyPage .ph-tlr-cyc.ro { cursor: default; }
+  #pharmacyPage .ph-tlr-cyc .i { font-size: 11px; letter-spacing: -1px; }
+  #pharmacyPage .ph-apptpop-signs { font-size: 12px; color: var(--ph-soft); margin-top: 2px; }
   #pharmacyPage .ph-tlr-ready { font-size: 11px; font-weight: 800; color: var(--ph-green-deep); background: var(--ph-green-tint); border-radius: 999px; padding: 3px 9px; white-space: nowrap; }
   #pharmacyPage .ph-tlr-short { font-size: 11px; font-weight: 800; color: var(--ph-zero-deep); background: var(--ph-zero-tint); border: none; border-radius: 999px; padding: 3px 9px; cursor: pointer; white-space: nowrap; }
   #pharmacyPage .ph-tlr-edit { flex: none; width: 28px; height: 28px; border-radius: 999px; border: none; background: var(--ph-paper); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
@@ -4631,6 +4636,7 @@
     #pharmacyPage .ph-tlr-l1 .nm { font-size: var(--m-fs-value, 14px); }
     #pharmacyPage .ph-tlr-l2 { font-size: var(--m-fs-help, 12px); }
     #pharmacyPage .ph-tlr-right .drop, #pharmacyPage .ph-tlr-edit { display: none; }
+    #pharmacyPage .ph-tlr-cyc .d { display: none; }   /* phone: icons only, the day is one tap away */
   }
 
   /* "This month" strip, Stocktake only (her ask 2026-08-31: "month is only
@@ -21277,7 +21283,7 @@
         <div class="ph-tlr-l2">${line2}</div>
       </div>
       <div class="ph-tlr-right">
-        ${tracked ? `<svg class="icn drop" aria-hidden="true" title="Cycle tracked"><use href="#i-drop"/></svg>` : ""}
+        ${phCycleRowChipHtml(rec, script) || (tracked ? `<svg class="icn drop" aria-hidden="true" title="Cycle tracked"><use href="#i-drop"/></svg>` : "")}
         ${readyPill}
         ${script ? `<button type="button" class="ph-tlr-edit" data-ph-dash-pres-open="${script.id}" title="Open script" aria-label="Open script"><svg class="icn" aria-hidden="true"><use href="#i-edit"/></svg></button>` : ""}
         <button type="button" class="ph-tlr-cancel" data-ph-appt-del="${esc(a.id)}" title="Cancel this appointment" aria-label="Cancel ${esc(phTitle(a.patient))}'s appointment"><svg class="icn" aria-hidden="true"><use href="#i-x"/></svg></button>
@@ -22661,6 +22667,18 @@
       : `<b>Visit ${vc.nth}</b>`;
     return `<span class="ic" aria-hidden="true">🗂</span><span class="v">${lead} · ${where}</span>`;
   }
+  // the cycle chip on a tracked patient's day row (her pick 2026-09-14, both
+  // the desktop Today list and the phone day list): day + today's signs;
+  // tapping it opens her cycle strip with today ready to note (data-ph-cyc-jump)
+  const phCycleRowChipHtml = (rec, script) => {
+    if (!rec || !phCycleOn(rec)) return "";
+    const comp = phCycleComp(rec); if (!comp) return "";
+    const sign = phCycleSignFor(rec, keyOf(TODAY));
+    const icons = sign ? [sign.cm ? "💧" : "", sign.ov ? "🥚" : "", sign.mood ? "😴" : "", sign.note ? "📝" : ""].join("") : "";
+    const title = `Cycle day ${comp.day} · ${comp.phaseLabel}${sign ? ` · today: ${phCycleSignLabel(sign)}` : " · no signs noted today"}${script ? " — tap to open her cycle strip" : ""}`;
+    return `<button type="button" class="ph-tlr-cyc${script ? "" : " ro"}" data-ph-cyc-jump="${script ? esc(script.id) : ""}" title="${esc(title)}" aria-label="${esc(title)}"><span class="d">Day ${comp.day}</span>${icons ? `<span class="i">${icons}</span>` : ""}</button>`;
+  };
+  const phApptPopSignsHtml = rec => { const s = rec && phCycleSignFor(rec, keyOf(TODAY)); return s ? `<div class="ph-apptpop-signs">Today: <b>${esc(phCycleSignLabel(s))}</b></div>` : ""; };
   function phApptPopHtml(a) {
     // a BREAK block is a schedule gap, not a patient (her ask 2026-09-10) --
     // none of the herbs/cycle/insurance/visit-writeup machinery below
@@ -22716,7 +22734,7 @@
       <div class="ph-apptpop-sec">${briefHtml}</div>
       <div class="ph-apptpop-kv">
         <span class="ic" aria-hidden="true">🌿</span><span class="v">${herbsLine} ${phApptStatusChipHtml(a, { long: true })}</span>
-        ${comp ? `<span class="ic" aria-hidden="true">💧</span><span class="v"><b>Cycle day ${comp.day}</b> · ${esc(comp.phaseLabel)}${comp.overdue ? ` <span class="ph-tl-chip short">late?</span>` : ""}</span>` : ""}
+        ${comp ? `<span class="ic" aria-hidden="true">💧</span><span class="v"><b>Cycle day ${comp.day}</b> · ${esc(comp.phaseLabel)}${comp.overdue ? ` <span class="ph-tl-chip short">late?</span>` : ""}${phApptPopSignsHtml(rec)}</span>` : ""}
         ${last ? `<span class="ic" aria-hidden="true">🕓</span><span class="v">Last seen <b>${esc(phFuDateLabel(last.on))}</b> · ${esc(last.via)}</span>` : ""}
         ${phApptPopVisitRowHtml(a)}
         ${phPkgCalc(k) ? `<span class="ic" aria-hidden="true">🎟</span><span class="v">${phPkgLineHtml(k)}</span>` : ""}
@@ -23456,7 +23474,7 @@
       return `<div class="ph-tl-row ph-dash-drow${done ? " done" : ""}" role="button" tabindex="0" data-ph-appt-pop="${esc(a.id)}" aria-label="Open ${esc(phTitle(a.patient))}">
         <span class="ph-tl-time">${esc(phCkTime12(a.time))}</span><span class="ph-tl-dot ${dot}"></span>
         <div class="ph-tl-mid"><div class="l1"><button type="button" class="ph-name-link" data-ph-dash-patient-open="${esc(a.patient)}">${esc(phTitle(a.patient))}</button>${kindHtml}${phApptFuDue(k, dayKey) ? `<span class="bell" title="Follow-up due">🔔</span>` : ""}</div></div>
-        <div class="ph-tl-end">${chip}</div>
+        <div class="ph-tl-end">${phCycleRowChipHtml(PHARMACY.patients && PHARMACY.patients[k], script)}${chip}</div>
       </div>`;
     };
     return `<section class="ph-widget ph-dash-card ph-dash-day">
@@ -25788,7 +25806,7 @@
       // (her Q1: popup first). Inner controls -- Order, the short-dot, the
       // "+ add focus" link -- keep their own handlers above.
       const popOpen = e.target.closest("[data-ph-appt-pop]");
-      if (popOpen && !e.target.closest("[data-ph-appt-order], [data-ph-apptcal-order-dot], [data-ph-tab], [data-ph-appt-pop-brief], [data-ph-dash-patient-open]")) {
+      if (popOpen && !e.target.closest("[data-ph-appt-order], [data-ph-apptcal-order-dot], [data-ph-tab], [data-ph-appt-pop-brief], [data-ph-dash-patient-open], [data-ph-cyc-jump]")) {
         const id = popOpen.dataset.phApptPop;
         if (phApptCalOpenId === id && phApptPopMode === "view") phApptPopClose(); else phApptPopOpen(id);
         return;
@@ -25813,6 +25831,20 @@
         presPageFromTabHop = !!script && cameFrom !== "prescriptions";
         if (script) presScrollToPanel();
         else { const inp = document.getElementById("presSearch"); if (inp) inp.value = name; }
+        return;
+      }
+      const cycJump = e.target.closest("[data-ph-cyc-jump]");
+      if (cycJump) {
+        const sid = cycJump.dataset.phCycJump;
+        if (!sid) return;   // tracked but no script yet -- the chip just shows
+        if (phTimers.presTmpl) { clearTimeout(phTimers.presTmpl); phTimers.presTmpl = null; presFlushTemplate(); }
+        PHARMACY.activeTab = "prescriptions";
+        presOpenScript(sid);
+        // land on the Profile's Cycle tab with today's sign popover open
+        presStage = "profile"; presStageForId = sid; presAssessTab = "cycle";
+        const t0 = PRESC.items.find(x => x.id === sid);
+        presCycleSignEdit = t0 ? { name: presPatientFor(t0) || t0.name || "", dateKey: keyOf(TODAY) } : null;
+        savePharmacy(); renderPharmacy();
         return;
       }
       const dashPresOpen = e.target.closest("[data-ph-dash-pres-open]");

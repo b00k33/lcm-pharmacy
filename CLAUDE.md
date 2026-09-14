@@ -549,9 +549,20 @@ update STYLE-LCM.md to match so future builds don't undo it.
   the clinic logo live in the Ren photo store under `__letters__` / `__clinic__` (never
   localStorage — the 5 MB quota), record charts come from `phRenPhotosFor(pk)` kinds
   `tongue`/`bbt`. Post-transfer, Food and Menstrual signs & BBT are placeholders until she
-  gives her words — do not draft them. Still not built: charting Stage 2 (ask before the SQL
-  run and publish), Cliniko API auto-retrieve (needs her key + an edge function), cycle-signs
-  placement beyond the profile (mock first).
+  gives her words — do not draft them. **Cycle signs beyond the profile (her picks
+  2026-09-14 on a working widget: BOTH the Dashboard day row AND the appointment popup; a
+  tap opens her cycle strip).** `phCycleRowChipHtml(rec, script)` is the ONE chip builder
+  for the Dashboard day list (`.ph-dash-drow .ph-tl-end`, every width) and the week-detail
+  timeline row (`phDashApptTimelineRowHtml`): "Day N" + today's sign icons (💧 mucus · 🥚
+  ovulation · 😴 mood · 📝 note), `.ro` when she has no script yet; the phone hides the day
+  word (`.ph-tlr-cyc .d`), icons only. `data-ph-cyc-jump` opens her script on Profile →
+  Cycle with `presCycleSignEdit = {name, dateKey: today}` so the sign popover is already
+  open. The row's own `data-ph-appt-pop` handler runs FIRST and excludes
+  `[data-ph-cyc-jump]` — keep it in that exclusion list or the row's popup swallows the
+  tap. The popup's cycle line ends with `phApptPopSignsHtml(rec)` ("Today: …"). Nothing
+  new is stored; signs stay in `rec.cycleSigns[dateKey]`. Still not built: charting
+  Stage 2 (ask before the SQL run and publish), Cliniko API auto-retrieve (needs her key +
+  an edge function).
   Two gaps found in the same pass and fixed: on a phone the app showed its version
   **nowhere** (`#phVersionLine` is `display:none` under 900px and `phVersionShortText()`
   was dead code), so it now sits at the foot of the ⋯ sheet under the gold Update row;
