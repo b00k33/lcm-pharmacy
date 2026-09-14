@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260915-000500">
+<meta name="lcm-build" content="20260915-003000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -8912,6 +8912,18 @@
   #pharmacyPage .ph-pres-stagebtn .l { font-size: 10.5px; color: var(--ph-soft); text-align: center; white-space: nowrap; }
   #pharmacyPage .ph-pres-stagebtn.on .l { color: var(--ph-green-deep); font-weight: 700; }
   #pharmacyPage .ph-pres-stage-body { display: block; }
+  /* the three places (decision 7): a tab row, no numbers, no connector line */
+  #pharmacyPage .ph-pres-stages.places { gap: 2px; border-bottom: 1px solid var(--ph-line); align-items: stretch; }
+  #pharmacyPage .ph-pres-stages.places .ph-pres-stagebtn { flex: 0 0 auto; flex-direction: row; gap: 6px; padding: 8px 12px; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  #pharmacyPage .ph-pres-stages.places .ph-pres-stagebtn::after { display: none; }
+  #pharmacyPage .ph-pres-stages.places .ph-pres-stagebtn.on { border-bottom-color: var(--ph-green-deep); }
+  #pharmacyPage .ph-pres-stages.places .ph-pres-stagebtn .n { width: 16px; height: 16px; font-size: 10px; border-width: 1.5px; }
+  #pharmacyPage .ph-pres-stages.places .ph-pres-stagebtn .n:empty { display: none; }
+  #pharmacyPage .ph-pres-stages.places .ph-pres-stagebtn .l { font-size: 12px; }
+  #pharmacyPage .ph-pres-stage-body .ph-pres-stage-body { padding: 0; }
+  #pharmacyPage .ph-place-sec { margin-top: 20px; }
+  #pharmacyPage .ph-place-gap { height: 18px; }
+  #pharmacyPage .ph-pres-backplan { margin: 0 0 10px; }
   #pharmacyPage .ph-pres-stage-next {
     display: block; margin: 14px 0 4px; padding: 9px 14px; width: 100%; border: none; border-radius: var(--field-radius-sm, 11px);
     background: var(--ph-green-deep); color: var(--ph-cream); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
@@ -26552,6 +26564,13 @@
         phCycleRerender();
         return;
       }
+      const tpPrint = e.target.closest("[data-tp-print]");
+      if (tpPrint) {
+        const bar = tpPrint.dataset.tpPrint.lastIndexOf("|");
+        const nm = tpPrint.dataset.tpPrint.slice(0, bar), plan = phTpFindPlan(nm, tpPrint.dataset.tpPrint.slice(bar + 1));
+        if (plan) phPrintDoc(phTpPlanDocHtml(nm, plan), `Treatment plan ${phTitle(nm)} ${phFileDate()}`);
+        return;
+      }
       const ivfPrint = e.target.closest("[data-ivf-print]");
       if (ivfPrint) {
         if (phTpScreenPatient) phPrintDoc(phIvfHistoryPrintHtml(phTpScreenPatient), `IVF history ${phTitle(phTpScreenPatient)} ${phFileDate()}`);
@@ -27649,7 +27668,7 @@
       // below the prescription now, Notes above Treatment
       if (e.target.closest("[data-pres-notes-toggle]")) { presNotesOpen = !presNotesOpen; renderPresPanel(); return; }
       const presStageBtn = e.target.closest("[data-pres-stage]");
-      if (presStageBtn) { presStage = presStageBtn.dataset.presStage; renderPresPanel(); return; }
+      if (presStageBtn) { presStage = presStageNorm(presStageBtn.dataset.presStage); renderPresPanel(); return; }
       const suppToggleBtn = e.target.closest("[data-supp-toggle]");
       if (suppToggleBtn) {
         const rec = phCycleTargetRec();
@@ -27766,7 +27785,7 @@
       }
       if (e.target.closest("[data-fp-proto]")) { phFpGrabNote(); presFpProtoOpen = !presFpProtoOpen; renderPresPanel(); return; }
       // from the plan strip back to the one place a score is entered
-      if (e.target.closest("[data-fp-goto]")) { presStage = "assessment"; presAssessTab = "checklist"; renderPresPanel(); return; }
+      if (e.target.closest("[data-fp-goto]")) { presStage = "profile"; presAssessTab = "checklist"; renderPresPanel(); return; }
       const assessTab = e.target.closest("[data-assess-tab]");
       if (assessTab) { presAssessTab = assessTab.dataset.assessTab; renderPresPanel(); return; }
       if (e.target.closest("[data-fp-copy]")) {
@@ -33593,13 +33612,20 @@ or changing anything in Cliniko.
   // currently valid for) so every one of the many `presOpenId = ...` call
   // sites across the file gets this for free without being touched. ============
   let presStage = null, presStageForId = null;
+  // Her decision 7 (2026-09-09, "split three ways"): of the five old stages
+  // only Dispense was about one prescription. Opening + Assessment are about
+  // the PATIENT and now sit together on the Profile; Treatment IS the plan
+  // tabs and Follow-up belongs to the course, so both live on the plan; the
+  // script page keeps Dispense. The 1-2-3-4-5 stepper as a control is gone --
+  // these are three places, not five steps. Old ids still arrive from older
+  // callers and deep links, so presStageNorm folds them in.
   const PRES_STAGES = [
-    { id: "opening", label: "Opening", short: "Opening" },
-    { id: "assessment", label: "Assessment", short: "Assess" },
-    { id: "treatment", label: "Treatment", short: "Treat" },
+    { id: "profile", label: "Profile", short: "Profile" },
+    { id: "plan", label: "Treatment plan", short: "Plan" },
     { id: "dispense", label: "Dispense", short: "Dispense" },
-    { id: "followup", label: "Follow-up", short: "Follow-up" },
   ];
+  const PRES_STAGE_ALIAS = { opening: "profile", assessment: "profile", treatment: "plan", followup: "plan", dispense: "dispense", profile: "profile", plan: "plan" };
+  const presStageNorm = id => PRES_STAGE_ALIAS[id] || "profile";
   /* ============================================================
      CASE TYPE (her ask 2026-09-05, "the profile is driven by the treatment
      case that is active — e.g. Bell's palsy quiets herbs and family
@@ -41997,11 +42023,13 @@ or changing anything in Cliniko.
   // position.
   function presStageContentDone(t, name) {
     const hx = phHxProgress(name);
+    const assessment = hx.everTouched || !!(t.notes && t.notes.trim());
+    const treatment = !!((phTpPlans(name) || []).length) || !!(((phPatientPeek(name) || {}).letters || []).length);
     return {
-      assessment: hx.everTouched || !!(t.notes && t.notes.trim()),
-      treatment: !!((phTpPlans(name) || []).length) || !!(((phPatientPeek(name) || {}).letters || []).length),
+      assessment, treatment,
       dispense: !!t.lastDispensedAt,
       followup: !!t.lastDispensedAt,
+      profile: assessment, plan: treatment,
     };
   }
   // the furthest stage a script's own content actually reaches -- pulled out
@@ -42010,11 +42038,9 @@ or changing anything in Cliniko.
   // rather than two copies that could drift apart.
   function presFurthestStageFor(t) {
     const name = presPatientFor(t) || t.name || "";
-    if (presPatientIsNew(name)) return "opening";
+    if (presPatientIsNew(name)) return "profile";
     const contentDone = presStageContentDone(t, name);
-    let stage = "assessment";
-    ["assessment", "treatment", "dispense", "followup"].forEach(id => { if (contentDone[id]) stage = id; });
-    return stage;
+    return contentDone.dispense ? "dispense" : contentDone.treatment ? "plan" : "profile";
   }
   // when a script was started -- most were never stamped with a createdAt
   // (only the from-appointment/from-intake quick-adds set one), but every
@@ -42033,16 +42059,16 @@ or changing anything in Cliniko.
     const hx = phHxProgress(name);
     const openingDone = !isNew || !!(rec && (rec.sex || rec.dob || hx.everTouched));
     const contentDone = presStageContentDone(t, name);
-    return `<div class="ph-pres-stages" role="tablist" aria-label="Visit stage">${PRES_STAGES.map((s, i) => {
+    return `<div class="ph-pres-stages places" role="tablist" aria-label="Where you are">${PRES_STAGES.map((s, i) => {
       const done = s.id === "opening" ? openingDone : contentDone[s.id];
       return `<button type="button" class="ph-pres-stagebtn${presStage === s.id ? " on" : ""}${done ? " done" : ""}" data-pres-stage="${s.id}" role="tab" aria-selected="${presStage === s.id ? "true" : "false"}">
-        <span class="n" aria-hidden="true">${done ? "✓" : i + 1}</span><span class="l l-full">${s.label}</span><span class="l l-short">${s.short}</span>
+        <span class="n" aria-hidden="true">${done ? "✓" : ""}</span><span class="l l-full">${s.label}</span><span class="l l-short">${s.short}</span>
       </button>`;
     }).join("")}</div>`;
   }
   function presStageNextBtnHtml(fromId) {
     const i = PRES_STAGES.findIndex(s => s.id === fromId);
-    const next = PRES_STAGES[i + 1];
+    const next = i < 0 ? null : PRES_STAGES[i + 1];
     if (!next) return "";
     return `<button type="button" class="ph-pres-stage-next" data-pres-stage="${next.id}">Next: ${next.label} →</button>`;
   }
@@ -42090,7 +42116,7 @@ or changing anything in Cliniko.
     } else {
       hx = presHistorySummaryHtml(t);
     }
-    const photos = presPhotosSectionHtml(t);
+    const photos = "";   // photos have their own Assessment tab right under this on the Profile
     const switches = `${presCycleToggleHtml(t)}${presAcuToggleHtml(t)}${presHerbsToggleHtml(t)}`;
     return `<div class="ph-pres-stage-body ph-op-grid${photos ? "" : " ph-op-nophotos"}">
       <div class="ph-op-col ph-op-record">
@@ -42108,7 +42134,6 @@ or changing anything in Cliniko.
         <div class="ph-supp-open">${phSuppEditorHtml(rec)}${phSuppVitalyCopyHtml(rec)}</div>
       </div>
       ${photos ? `<div class="ph-op-col ph-op-photos">${photos}</div>` : ""}
-      ${presStageNextBtnHtml("opening")}
     </div>`;
   }
   /* her ask 2026-09-13 ("instead of dropdowns, can i have tabs? that way i
@@ -42146,7 +42171,6 @@ or changing anything in Cliniko.
       ${presHistoryBannerHtml(t)}
       ${presClinicalWarningsHtml(t)}
       ${presAssessTabsHtml(t)}
-      ${presStageNextBtnHtml("assessment")}
     </div>`;
   }
   function presStageTreatmentHtml(t) {
@@ -42164,7 +42188,6 @@ or changing anything in Cliniko.
       ${presConstitutionSuggestHtml(t)}
       ${hasPlan ? "" : presAcuRowHtml(t)}
       ${presTreatmentRowHtml(t)}
-      ${presStageNextBtnHtml("treatment")}
     </div>`;
   }
   function presStageFollowupHtml(t) {
@@ -42175,6 +42198,44 @@ or changing anything in Cliniko.
       <div class="ph-fu-block" id="presFuBlockWrap">${presFollowupBlockHtml(t)}</div>
       <div class="ph-fu-block" id="presFuMsgWrap">${presFuMsgHtml(t)}</div>
     </div>`;
+  }
+  function presStageProfileHtml(t) {
+    return `<div class="ph-pres-stage-body ph-place">
+      ${presStageOpeningHtml(t)}
+      <div class="ph-tmpl-sec ph-place-sec"><span>Assessment</span></div>
+      ${presStageAssessmentHtml(t)}
+      ${presStageNextBtnHtml("profile")}
+    </div>`;
+  }
+  function presStagePlanHtml(t) {
+    // "Treatment becomes the plan tabs" (decision 7): this place IS the plan,
+    // so the plan row is open the moment she lands here -- and a single-plan
+    // patient lands straight on that plan, the same skip the row's own
+    // toggle makes (data-pres-treat-toggle). Never picks between plans.
+    if (!presTreatOpen) {
+      presTreatOpen = true;
+      if (!presTpInlineNew && !presTpInlineLoose) {
+        const nm = presPatientFor(t) || "";
+        const plans = nm ? phTpPlans(nm) : [];
+        const already = presTpInlinePlanId && phTpFindPlan(nm, presTpInlinePlanId);
+        if (!already && plans.length === 1 && !presTpLooseScripts(nm).length) {
+          presTpInlinePlanId = plans[0].id; phTpScreenPatient = nm; phTpScreenPlanId = plans[0].id;
+        }
+      }
+    }
+    // Follow-up is a review of a course of treatment, so it lives with the
+    // course (her decision 7), under the plan tabs it belongs to -- the
+    // block carries its own heading
+    return `<div class="ph-pres-stage-body ph-place">
+      ${presStageTreatmentHtml(t)}
+      <div class="ph-place-gap"></div>
+      ${presStageFollowupHtml(t)}
+      ${presStageNextBtnHtml("plan")}
+    </div>`;
+  }
+  function presDispenseHeadHtml(t) {
+    return `<div class="ph-pres-backplan"><button type="button" class="tab-link" data-pres-stage="plan">‹ Back to the plan</button></div>
+      ${presScriptSwitcherHtml(t)}${presDispenseCyclePlanStripHtml(t)}`;
   }
   function renderPresPanel() {
     const el = presPanelEl();
@@ -42243,7 +42304,7 @@ or changing anything in Cliniko.
       presStage = presFurthestStageFor(t);
     }
     // whichever stage/script is ABOUT to render below -- see presHxInlineSync
-    presHxInlineSync(!isF && isNew && presStage === "opening" ? (presPatientFor(t) || t.name || "") : null);
+    presHxInlineSync(!isF && isNew && presStage === "profile" ? (presPatientFor(t) || t.name || "") : null);
     const ingQuiet = !isF && phCaseQuiets(t, "herbs");
     const herbsOn = isF || phHerbsOn(phPatientPeek(presPatientFor(t)), phTpShownPlan(presPatientFor(t)));
     // her ask (2026-08-01): Dispense Stock's confirmation flashed at the very
@@ -42271,11 +42332,9 @@ or changing anything in Cliniko.
         ${!isF ? `<button type="button" class="ph-band-cam" data-cap-for="${esc(presPatientFor(t) || t.name)}" title="Take patient photos" aria-label="Take photos of ${esc(t.name)}"><svg class="icn" aria-hidden="true"><use href="#i-camera"/></svg></button>` : ""}
       </div>
       ${!isF ? presStageStripHtml(t, isNew) : ""}
-      ${!isF && presStage === "opening" ? presStageOpeningHtml(t) : ""}
-      ${!isF && presStage === "assessment" ? presStageAssessmentHtml(t) : ""}
-      ${!isF && presStage === "treatment" ? presStageTreatmentHtml(t) : ""}
-      ${!isF && presStage === "dispense" ? presScriptSwitcherHtml(t) + presDispenseCyclePlanStripHtml(t) : ""}
-      ${!isF && presStage === "followup" ? presStageFollowupHtml(t) : ""}
+      ${!isF && presStage === "profile" ? presStageProfileHtml(t) : ""}
+      ${!isF && presStage === "plan" ? presStagePlanHtml(t) : ""}
+      ${!isF && presStage === "dispense" ? presDispenseHeadHtml(t) : ""}
       ${isF || presStage === "dispense" ? `
       <div class="ph-pres-body">
       <div class="ph-pres-col-left">
@@ -42559,7 +42618,7 @@ or changing anything in Cliniko.
   function presPhotosJump(name) {
     const t = presOpenId ? PRESC.items.find(x => x.id === presOpenId) : null;
     if (!t || presIsFormula(t) || (presPatientFor(t) || t.name) !== name) return false;
-    if (presStage !== "opening" && presStage !== "assessment") presStage = "assessment";
+    if (presStage !== "profile") presStage = "profile";
     presPhotosAddOpen = true;
     renderPresPanel();
     const sec = document.querySelector("#pharmacyPage .ph-photos-sec");
@@ -45224,7 +45283,7 @@ or changing anything in Cliniko.
     // opened" check (presStageForId !== t.id) silently recomputes presStage
     // right back to Opening the moment this render runs -- the exact trap
     // documented where every other stage-setting caller in this file hits it.
-    presStage = "treatment"; presStageForId = presOpenId; presTreatOpen = true;
+    presStage = "plan"; presStageForId = presOpenId; presTreatOpen = true;
     savePharmacy(); renderPresPanel();
   }
   // 2026-09-01 "make it easier": the old inline blank/template chooser strip
@@ -45803,9 +45862,81 @@ or changing anything in Cliniko.
     return `<button type="button" class="ph-pres-menu-item" data-pres-menu-item="1" data-tp-phase-add="${plan.id}">+ Add phase</button>
       ${plan.templateName === "IVF Protocol" ? `<button type="button" class="ph-pres-menu-item" data-pres-menu-item="1" data-tp-ivftrack-open="${plan.id}">⇄ Switch transfer track</button>` : ""}
       ${plan.templateName === "IVF Protocol" ? `<button type="button" class="ph-pres-menu-item" data-pres-menu-item="1" data-ivf-print="1">🖨 Print IVF history</button>` : ""}
+      <button type="button" class="ph-pres-menu-item" data-pres-menu-item="1" data-tp-print="${esc(name)}|${plan.id}">🖨 Print plan record</button>
       <button type="button" class="ph-pres-menu-item" data-pres-menu-item="1" data-tp-plan-open="${esc(name)}|${plan.id}">Full screen ↗</button>
       <button type="button" class="ph-pres-menu-item" data-pres-menu-item="1" data-tp-inline-back="1">‹ All plans</button>
       <button type="button" class="ph-pres-menu-item danger" data-pres-menu-item="1" data-tp-plan-del="${plan.id}">Delete plan</button>`;
+  }
+  /* Her decision 10 (2026-09-09): "a proper printable record" of the whole
+     course -- diagnosis, goal, each phase planned vs what happened, formulas,
+     dates -- built the way the letter/label prints work (phPrintDoc). Reads
+     the same phTpPhaseRecord/phTpPhaseVisitStats the grid reads, so the
+     paper says exactly what the screen says. */
+  function phTpPlanDocHtml(name, plan) {
+    const rec = phPatientPeek(name) || {};
+    const pd = k => { if (!k) return ""; const d = parseKey(k); return `${d.getDate()} ${MON_SHORT[d.getMonth()]} ${d.getFullYear()}`; };
+    const cur = phTpPlanCurrentPhase(plan);
+    const kv = (l, v) => v ? `<tr><th>${esc(l)}</th><td>${v}</td></tr>` : "";
+    const line = (l, v) => v ? `<div><b>${esc(l)}</b> ${v}</div>` : "";
+    const phasesHtml = (plan.phases || []).map((ph, i) => {
+      const rc = phTpPhaseRecord(name, ph, plan.createdDate);
+      const st = phTpPhaseVisitStats(name, plan, ph);
+      const when = ph.sinceKey ? `${pd(ph.sinceKey)} → ${ph.doneKey ? pd(ph.doneKey) : ph.status === "current" ? "now" : ""}` : "";
+      const planned = [
+        line("Aim", ph.aim ? esc(ph.aim) : ""),
+        line("Visits", ph.cadence ? esc(ph.cadence) : ""),
+        line("Points", ph.points ? esc(ph.points) : ""),
+        line("Formula", ph.formulaName ? esc(ph.formulaName) : ""),
+        line("Watch", ph.watch ? esc(ph.watch) : ""),
+      ].filter(Boolean);
+      const done = !rc ? [] : [
+        line("Visits", st ? `${st.done} done${st.booked ? `, ${st.booked} booked` : ""}` : ""),
+        line("Acupuncture", rc.acu.map(a => `${pd(a.date)}${a.points ? ` — ${esc(a.points)}` : ""}${a.outcome ? ` (${esc(a.outcome)})` : ""}`).join("; ")),
+        line("Dispensed", rc.dispenses.map(x => `${pd(x.date)} ${esc(x.formula || x.what || "")}`).join("; ")),
+        line("Check-ins", rc.checkIns.map(c => [pd(c.date), c.going, c.next, c.note].filter(Boolean).map(esc).join(" · ")).join("; ")),
+        line("Periods", rc.periods.map(p => pd(p.lmp)).join(", ")),
+      ].filter(Boolean);
+      return `<tr class="${esc(ph.status || "")}">
+        <td class="ph"><b>${i + 1}. ${esc(ph.label || "Phase")}</b><span class="st">${esc(ph.status || "")}</span>${when ? `<span class="when">${esc(when)}</span>` : ""}</td>
+        <td>${planned.length ? planned.join("") : "—"}</td>
+        <td>${done.length ? done.join("") : ph.status === "upcoming" ? "not started" : "—"}</td>
+      </tr>`;
+    }).join("");
+    const reviews = (plan.reviews || []).slice().sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+    const milestones = (plan.milestones || []).slice().sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+    return `<title>Treatment plan — ${esc(phTitle(name))}</title>
+      <style>
+      body{font-family:Georgia,serif;padding:32px;max-width:760px;color:#162428;line-height:1.5;font-size:13px}
+      h1{font-size:18px;color:#0B3B4B;margin:0 0 2px}
+      h2{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#0B3B4B;margin:22px 0 8px}
+      .meta{color:#4A575B;font-size:12px;margin-bottom:14px}
+      table{border-collapse:collapse;width:100%;font-size:12.5px}
+      table.kv th{text-align:left;width:120px;color:#0B3B4B;padding:4px 10px 4px 0;vertical-align:top}
+      table.kv td{padding:4px 0;vertical-align:top}
+      table.ph th{font-size:10px;text-transform:uppercase;text-align:left;color:#555;border-bottom:1px solid #999;padding:0 10px 4px 0}
+      table.ph td{padding:8px 10px 8px 0;border-bottom:1px solid #ddd;vertical-align:top}
+      table.ph td.ph{width:150px}table.ph td.ph b{display:block}
+      table.ph td div{margin:0 0 3px}table.ph td div b{color:#0B3B4B;font-weight:bold}
+      table.ph tr.current td{background:#F1F6F8}
+      .st{display:inline-block;font-size:9.5px;font-weight:bold;text-transform:uppercase;letter-spacing:.05em;color:#4A575B;margin-top:2px}
+      .when{display:block;font-size:11px;color:#4A575B;font-family:system-ui,sans-serif}
+      @media print{body{padding:0}}
+      </style>
+      <h1>Treatment plan record</h1>
+      <div class="meta"><b>${esc(phTitle(name))}</b>${rec.dob ? ` · DOB ${esc(rec.dob)}` : ""} · printed ${pd(keyOf(TODAY))}</div>
+      <table class="kv">
+        ${kv("Plan", `<b>${esc(plan.title || "Treatment plan")}</b>${plan.status ? ` · ${esc(plan.status)}` : ""}${plan.createdDate ? ` · started ${pd(plan.createdDate)}` : ""}`)}
+        ${kv("Now", cur ? esc(cur.label || "") : "")}
+        ${kv("Diagnosis", plan.diagnosis ? esc(plan.diagnosis) : "")}
+        ${kv("Goal", plan.goal ? esc(plan.goal) : "")}
+        ${kv("Tongue", plan.tongue ? esc(plan.tongue) : "")}
+        ${kv("Pulse", plan.pulse ? esc(plan.pulse) : "")}
+        ${kv("Abdomen", plan.abdomen ? esc(plan.abdomen) : "")}
+      </table>
+      <h2>Phases — planned vs what happened</h2>
+      <table class="ph"><thead><tr><th>Phase</th><th>Planned</th><th>What happened</th></tr></thead><tbody>${phasesHtml || `<tr><td colspan="3">No phases yet.</td></tr>`}</tbody></table>
+      ${milestones.length ? `<h2>Dated milestones</h2><table class="kv">${milestones.map(m => kv(pd(m.date), `${esc(m.label || "")}${m.note ? ` — ${esc(m.note)}` : ""}`)).join("")}</table>` : ""}
+      ${reviews.length ? `<h2>Review notes</h2><table class="kv">${reviews.map(r => kv(pd(r.date), [r.note, r.tongue ? `Tongue: ${r.tongue}` : "", r.pulse ? `Pulse: ${r.pulse}` : "", r.abdomen ? `Abdomen: ${r.abdomen}` : ""].filter(Boolean).map(esc).join(" · "))).join("")}</table>` : ""}`;
   }
   let phTpIvfTrack = null;   // null | planId
   function phTpIvfTrackHtml(plan) {
