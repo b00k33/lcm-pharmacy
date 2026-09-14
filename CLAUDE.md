@@ -1868,3 +1868,53 @@ What it actually does, her picks 2026-09-15:
   [[project_pharmacy_synth22_2026_09_15]], open question). Don't assume
   this is silently "done" for every message kind — it is confirmed done
   only for the plain herb Check-in.
+
+## Appointments = the day's home: Day summary + Quick actions widget, grid fills the window; Dashboard = herbs only (her synth22 Stage A, 2026-09-15)
+Her decisions: the Patient-profile day list / Day summary / Quick actions go
+("i dont use this or like it" — there); the Appointments page gets **Day
+summary + Quick actions only** (NOT a day list — the calendar's own List view
+is the day list), shaped **"b desk a phone"**: desktop taps a day header and
+the cards pop up beside it; the phone scrolls them below the calendar and a
+header tap swaps the day. The calendar fills the vertical height.
+- **Widget** — `phApptDay*` (index.html, search "Day summary + Quick actions,
+  scoped to ONE tapped day"): `phApptDaySummary` (the profile card's exact
+  figures — booked/CHM/ACU/herbs/total weight + short/dispensed/scheduled —
+  for one day via `phApptCalSummary([{key}])`), `phApptDayCardsHtml` (same
+  `.ph-tl-card`/`.ph-tl-stat`/`.ph-tl-qa` look she knew from the profile),
+  `phApptDayPopHtml`, `phApptDayOpen`, `phApptDayEnsureKey`,
+  `phApptDayInlineRender`. Tap target = `data-ph-apptcal-day` on the Grid's
+  `.ph-apptcal-daylabel` AND the List's `.ph-apptls-day` heads (role=button,
+  Enter/Space wired). Desktop reuses the ONE `#phApptPop` element:
+  `phApptCalOpenId = "day:<key>"`, and `phApptPopAnchorEl`/`phApptPopRender`
+  branch on that prefix — same placement law, scrim, Escape, close-on-render.
+  Phone: `#phApptDayInline.ph-apptday` right after the calendar card, swapped
+  IN PLACE (scroll position untouched); `phApptCalDayKey` remembers the day,
+  resets to today/first-visible when the week moves. CSS hides `.ph-apptday`
+  above 640px.
+- **Gone with it (my call, disclosed to her)**: the range-wide
+  `.ph-apptcal-summary` strip above the grid — on a phone in 1-day view it was
+  the widget's numbers twice, and the short-stock dots on the blocks already
+  carry its one warning. `phApptCalQaHtml` now returns bare buttons (the
+  `.ph-apptcal-qa` pill row and its phone `display:none` are deleted).
+  Restore as a header `phShellStripHtml` if she wants the week totals back.
+- **Grid height** — `phPinApptZones()` (beside `phPinRefillZones`, same
+  measured-not-guessed idiom): `.ph-apptcal-body { max-height: calc(100dvh -
+  var(--ph-apptcal-chrome, 300px)); min-height: 220px }`, the chrome = body
+  top + everything the document has below it (card/page padding + footer),
+  measured sync AND once more in a rAF (the switcher re-home lands after the
+  render). Called from the `"appointments"` tab dispatch and the resize
+  debounce. Desktop/tablet only; the phone's `max-height:none` rule stays.
+- **Dashboard** (`renderPhDashboardPage`): keeps Wrap-up row, relocation line,
+  Going out today, Urgent stock, Order/Refill work cards, stocktake nudge.
+  Dropped both day lists, "Communications due", the chart, the "+ New
+  prescription" disc and the Patient-photo button (her multiSelect). Deleted
+  dead: `phDashDayListHtml`, `phDashFuRowsHtml`, `phDashChartHtml`, the five
+  zoned-mobile `phDash*` functions. Deliberately LEFT: `phChartTriage*`
+  (Supabase query+cache layer, costly to recreate) and `phDashApptRowHtml`.
+- **Patient profile** (`renderPrescriptions`): no `#presWeekWrap` section, no
+  `renderPresWeek()` call. The function body, ~12 now-unreachable calls in
+  dead delegate branches, and the `.ph-pres-week-widget` CSS are left — the
+  shared `.ph-tl-*` classes now serve the new widget.
+- Known gaps: a 1-day List view on desktop has no day head to tap (Grid
+  always has one); the profile's "Dosage & markup"/"Paste appointments"
+  shortcuts stay out of the widget (her 2026-09-11 / 2026-09-09 calls).
