@@ -1832,3 +1832,39 @@ the "one Back tap strands her on the Prescriptions list" bug by omission.
 Verified: `phGoBack()` after opening a script via `data-fu-open` (her
 reported case, Communications → a patient's name → Back) now returns to
 Communications in one call.
+
+## Check-in panel (phone) fold + "Lives out of town" (her synth22 spec, 2026-09-15)
+`phCkPageHtml` (index.html, ~37012) reorders the phone check-in page to her
+literal spec: Draft message first (always visible), then the one-line facts
+button, then two NEW folds — "Change ▾" (wraps `phCkPickerHtml`, previously
+always visible) and "How did it go ▾" (wraps the going/next/concerns/note
+block) — then the footer. Both folds force open if she's already answered
+something inside them (`outcomeShown` mirrors the existing Concerns
+sub-fold's own rule), so reopening a part-filled row never hides her answer.
+New `phCkForm.pickerOpen`/`.outcomeOpen` state + `data-ck-picker`/
+`data-ck-outcome` handlers, same pattern as the existing `data-ck-facts`.
+The desktop panel (`phCkPanelHtml`) and the Follow-up-stage composer are
+UNCHANGED — her complaint was phone-specific.
+
+**"Lives out of town"** — `rec.livesOutOfTown`, ticked on the Contact card
+(`phJourneyContactHtml`, right after "Don't contact") via
+`phMsgSetLivesOutOfTown`/`phMsgLivesOutOfTown` (mirrors the Tracks-BBT
+pattern exactly). Wired into all four `phCkContext` builders as `c.away`.
+What it actually does, her picks 2026-09-15:
+- The acu "not booked" nag (`phCommAcuRows`' `bookAhead` pull-forward) is
+  gated `&& !rec.livesOutOfTown` — she still gets the plain follow-up-due
+  row, just no early pull-forward, no "Book her" urgency.
+- Every "not booked" display text (the facts line, the panel's Booked row,
+  all four kinds) reads "out of town" instead when `c.away` — this is HER
+  OWN screen, not a patient-facing message, so no wording sign-off needed.
+- The outgoing MESSAGE: her answer to the mock was **"A — drop the visit
+  line entirely."** This is fully true today only for the **Check-in**
+  moment (`phCkPick`, ~36174) — an away+unbooked patient on Check-in gets
+  forced to casual tone, whose body she already wrote with zero visit
+  reference (the formal pair references `{{visitDate}}`). **Still open**:
+  Review/Rebook/Acu/Quiet all reference a visit in BOTH registers — there
+  is no existing wording that drops the clause for those without inventing
+  new copy, which needs her own words first (see
+  [[project_pharmacy_synth22_2026_09_15]], open question). Don't assume
+  this is silently "done" for every message kind — it is confirmed done
+  only for the plain herb Check-in.
