@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260915-133000">
+<meta name="lcm-build" content="20260915-150000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -28966,6 +28966,8 @@
       // the phone page's two folds (her picks 2 and 3) -- both live on the
       // form, so they reset with every patient rather than leaking across
       if (e.target.closest("[data-ck-facts]")) { if (phCkForm) { phCkForm.factsOpen = !phCkForm.factsOpen; phCkRender(); } return; }
+      if (e.target.closest("[data-ck-picker]")) { if (phCkForm) { phCkForm.pickerOpen = !phCkForm.pickerOpen; phCkRender(); } return; }
+      if (e.target.closest("[data-ck-outcome]")) { if (phCkForm) { phCkForm.outcomeOpen = !phCkForm.outcomeOpen; phCkRender(); } return; }
       if (e.target.closest("[data-ck-concerns]")) { if (phCkForm) { phCkForm.concernsOpen = true; phCkRender(); } return; }
       // the grouped wording folds (her ask 2026-09-09, "help group the messages
       // so its easier to navigate"). Every chip tap below runs phCkRender(),
@@ -35638,7 +35640,10 @@ or changing anything in Cliniko.
       // kind of row. Booked ahead = nothing to nudge, the date stays put.
       // Done/snooze still key off the session, untouched.
       let bookAhead = false;
-      if (!snoozedOn && !done && !phCkNextAppt(key)) {
+      // her ask 2026-09-15: "Lives out of town" silences the book-ahead nag --
+      // she still gets the plain follow-up-due row, just no early pull-forward
+      // and no "Book her" urgency for a patient who was never going to book
+      if (!snoozedOn && !done && !phCkNextAppt(key) && !rec.livesOutOfTown) {
         const early = keyOf(new Date(parseKey(calc.dueOn).getTime() - PH_ACU_BOOK_LEAD_DAYS * 864e5));
         const todayKey = keyOf(TODAY);
         if (early < calc.dueOn && calc.dueOn > todayKey) { on = early < todayKey ? todayKey : early; bookAhead = true; }
@@ -36166,7 +36171,16 @@ or changing anything in Cliniko.
       const alt = phPickMoments().find(m => PH_CODE3_MOMENTS[m].requiresBooked === true && PH_CODE3_MOMENTS[m].track === mf.track);
       if (alt) { moment = alt; why += ` · already booked ${phFuDateLabel(c.appt.date)}`; }
     }
-    const tone = phMsgDefaultTone(name);
+    let tone = phMsgDefaultTone(name);
+    // her ask 2026-09-15 ("Lives out of town" — drop the visit line entirely):
+    // the casual Check-in/Review bodies she already wrote never mention a
+    // visit at all (the formal pair does, via {{visitDate}}) -- so for an
+    // away, unbooked patient on one of these two fallback moments, casual is
+    // the register that already says what she wants without inventing any
+    // new wording. Rebook/Acu/Quiet are left alone: both their registers are
+    // explicitly a booking ask, which needs her own words for an away
+    // variant, not a tone swap -- see [[project_pharmacy_synth22_2026_09_15]].
+    if (c.away && !c.appt && (moment === "checkin" || moment === "review")) tone = "casual";
     const f2 = phPickFacets(moment);
     let sup = !!f2 && /^(cycle|ivf)$/.test(f2.track || "");   // answer 4
     // answer 6: a bad last check-in adds the warm line, and ONLY that -- the
@@ -36806,6 +36820,7 @@ or changing anything in Cliniko.
       phone: (pat.phone || "").trim(), phoneFrom: pat.phoneFrom || "", phoneSrc: pat.phoneSrc || "", email: (pat.email || "").trim(),
       appt, visitLabel: appt ? `${phFuDateLabel(appt.date)} · ${phCkTime12(appt.time)}` : "",
       visit: appt ? `your visit on ${phFuDateLabel(appt.date)}` : "your next visit",
+      away: phMsgLivesOutOfTown(key),
       cycle: pat.medicalHistory ? phCycleComp(pat) : null,
       lastSessionLabel: calc.ok ? phFuDateLabel(calc.lastSession.date) : "",
       cadenceDays: calc.ok ? calc.cadenceDays : null, cadenceSource: calc.ok ? calc.cadenceSource : "",
@@ -36821,6 +36836,7 @@ or changing anything in Cliniko.
       phone: (pat.phone || "").trim(), phoneFrom: pat.phoneFrom || "", phoneSrc: pat.phoneSrc || "", email: (pat.email || "").trim(),
       appt, visitLabel: appt ? `${phFuDateLabel(appt.date)} · ${phCkTime12(appt.time)}` : "",
       visit: appt ? `your visit on ${phFuDateLabel(appt.date)}` : "your next visit",
+      away: phMsgLivesOutOfTown(key),
       cycle: pat.medicalHistory ? phCycleComp(pat) : null,
       lastTouchLabel: q.touch ? phFuDateLabel(q.touch.on) : "", lastTouchVia: q.touch ? q.touch.via : "", daysSince: q.daysSince || null,
     };
@@ -36837,6 +36853,7 @@ or changing anything in Cliniko.
       phone: (pat.phone || "").trim(), phoneFrom: pat.phoneFrom || "", phoneSrc: pat.phoneSrc || "", email: (pat.email || "").trim(),
       appt, visitLabel: appt ? `${phFuDateLabel(appt.date)} · ${phCkTime12(appt.time)}` : "",
       visit: appt ? `your visit on ${phFuDateLabel(appt.date)}` : "your next visit",
+      away: phMsgLivesOutOfTown(key),
       cycle: pat.medicalHistory ? phCycleComp(pat) : null,
       msg: m, plannedLabel: m.scheduledFor ? phFuDateLabel(m.scheduledFor) : "",
       plannedFrom: m.context && m.context.type === "followup" ? "the prescription's Follow-up" : m.context && m.context.type === "dispense" ? "a dispense" : "Compose",
@@ -36874,6 +36891,7 @@ or changing anything in Cliniko.
       scripts: past.length, lastVisit: last ? phFuDateLabel(last.date) : "",
       appt, visitLabel: appt ? `${phFuDateLabel(appt.date)} · ${phCkTime12(appt.time)}` : "",
       visit: appt ? `your visit on ${phFuDateLabel(appt.date)}` : "your next visit",
+      away: phMsgLivesOutOfTown(key),
       // 🩸 her cycle today (2026-09-04) -- to time the review to the cycle
       cycle: pat && pat.medicalHistory ? phCycleComp(pat) : null,
       // 🩸 phase correspondence (2026-09-06): what phase this SCRIPT was
@@ -36916,7 +36934,7 @@ or changing anything in Cliniko.
         <div class="ph-ck-kv">
           <span class="k">Last session</span><span class="v">${c.lastSessionLabel ? esc(c.lastSessionLabel) : "—"}</span>
           <span class="k">Cadence</span><span class="v">${c.cadenceDays ? `every ${c.cadenceDays} day${c.cadenceDays === 1 ? "" : "s"}` : "—"} <span class="faint">${c.cadenceSource === "plan" ? "· from her treatment plan" : "· default"}</span></span>
-          <span class="k">Booked</span><span class="v">${c.appt ? `<b>${esc(c.visitLabel)}</b> ${phApptKindHtml(c.appt.service)}${phApptEtHtml(c.appt)} <button type="button" class="ph-ck-lnk" data-ph-appt-del="${esc(c.appt.id)}" title="Cancel this appointment">Cancel</button>` : `<span class="faint">not booked</span>`}</span>
+          <span class="k">Booked</span><span class="v">${c.appt ? `<b>${esc(c.visitLabel)}</b> ${phApptKindHtml(c.appt.service)}${phApptEtHtml(c.appt)} <button type="button" class="ph-ck-lnk" data-ph-appt-del="${esc(c.appt.id)}" title="Cancel this appointment">Cancel</button>` : c.away ? `<span class="faint">out of town</span>` : `<span class="faint">not booked</span>`}</span>
           ${c.cycle ? `<span class="k">Cycle</span><span class="v">${phCkCycleLineHtml(c.cycle, row.patientName)}</span>` : ""}
         </div>
         ${phCkPhoneEmailHtml(c)}
@@ -36926,7 +36944,7 @@ or changing anything in Cliniko.
         <div class="ph-ck-kv">
           <span class="k">Planned for</span><span class="v"><b>${esc(c.plannedLabel || "—")}</b> <span class="faint">· from ${esc(c.plannedFrom)}</span></span>
           ${c.msg && c.msg.label ? `<span class="k">Wording</span><span class="v">${esc(c.msg.label)}</span>` : ""}
-          <span class="k">Booked</span><span class="v">${c.appt ? `<b>${esc(c.visitLabel)}</b> ${phApptKindHtml(c.appt.service)}${phApptEtHtml(c.appt)}` : `<span class="faint">not booked</span>`}</span>
+          <span class="k">Booked</span><span class="v">${c.appt ? `<b>${esc(c.visitLabel)}</b> ${phApptKindHtml(c.appt.service)}${phApptEtHtml(c.appt)}` : c.away ? `<span class="faint">out of town</span>` : `<span class="faint">not booked</span>`}</span>
           ${c.cycle ? `<span class="k">Cycle</span><span class="v">${phCkCycleLineHtml(c.cycle, row.patientName)}</span>` : ""}
         </div>
         <div class="ph-ck-chips"><button type="button" class="ph-ck-chip" data-ck-sched-cancel="${esc(c.msg.id)}" title="Remove this planned message">Cancel this message</button></div>
@@ -36936,7 +36954,7 @@ or changing anything in Cliniko.
         <h4><svg class="icn" aria-hidden="true"><use href="#i-scroll"/></svg>Gone quiet</h4>
         <div class="ph-ck-kv">
           <span class="k">Last seen</span><span class="v">${c.lastTouchLabel ? `${esc(c.lastTouchLabel)}${c.lastTouchVia ? ` <span class="faint">(${esc(c.lastTouchVia)})</span>` : ""}` : "—"}${c.daysSince ? ` · <span class="warn">${c.daysSince} days ago</span>` : ""}</span>
-          <span class="k">Booked</span><span class="v">${c.appt ? `<b>${esc(c.visitLabel)}</b> ${phApptKindHtml(c.appt.service)}${phApptEtHtml(c.appt)}` : `<span class="faint">not booked</span>`}</span>
+          <span class="k">Booked</span><span class="v">${c.appt ? `<b>${esc(c.visitLabel)}</b> ${phApptKindHtml(c.appt.service)}${phApptEtHtml(c.appt)}` : c.away ? `<span class="faint">out of town</span>` : `<span class="faint">not booked</span>`}</span>
           ${c.cycle ? `<span class="k">Cycle</span><span class="v">${phCkCycleLineHtml(c.cycle, row.patientName)}</span>` : ""}
         </div>
         ${phCkPhoneEmailHtml(c)}
@@ -36951,7 +36969,7 @@ or changing anything in Cliniko.
           ${c.phaseAtDispense ? `<span class="k">Phase</span><span class="v">${esc(c.phaseAtDispense.label)} at dispense${c.reviewPhase ? ` <span class="faint">· review lands in ${esc(c.reviewPhase.phaseLabel)}</span>` : ""}</span>` : ""}
           <span class="k">Empty</span><span class="v${c.left != null && c.left <= 0 ? " warn" : ""}">${c.left == null ? "—" : c.left <= 0 ? `since ${esc(c.emptyLabel)}${c.left < 0 ? ` · ${-c.left} day${c.left === -1 ? "" : "s"} ago` : " · today"}` : `${esc(c.emptyLabel)} · ${c.left} day${c.left === 1 ? "" : "s"} left`}</span>
           <span class="k">Visits</span><span class="v">${c.scripts} script${c.scripts === 1 ? "" : "s"}${c.lastVisit ? ` · last ${esc(c.lastVisit)}` : ""}</span>
-          <span class="k">Booked</span><span class="v">${c.appt ? `<b>${esc(c.visitLabel)}</b> ${phApptKindHtml(c.appt.service)}${phApptEtHtml(c.appt)}${c.appt.service && c.appt.service !== "Booked (Cliniko)" ? ` <span class="faint">${esc(c.appt.service)}</span>` : ""} <button type="button" class="ph-ck-lnk" data-ph-appt-del="${esc(c.appt.id)}" title="Cancel this appointment">Cancel</button>` : `<span class="faint">not booked</span>`}</span>
+          <span class="k">Booked</span><span class="v">${c.appt ? `<b>${esc(c.visitLabel)}</b> ${phApptKindHtml(c.appt.service)}${phApptEtHtml(c.appt)}${c.appt.service && c.appt.service !== "Booked (Cliniko)" ? ` <span class="faint">${esc(c.appt.service)}</span>` : ""} <button type="button" class="ph-ck-lnk" data-ph-appt-del="${esc(c.appt.id)}" title="Cancel this appointment">Cancel</button>` : c.away ? `<span class="faint">out of town</span>` : `<span class="faint">not booked</span>`}</span>
           ${c.cycle ? `<span class="k">Cycle</span><span class="v">${phCkCycleLineHtml(c.cycle, row.rec.patient)}</span>` : ""}
         </div>
         ${c.note ? `<div class="ph-ck-note"><b>Review note</b>${esc(c.note)}</div>` : ""}
@@ -36999,7 +37017,7 @@ or changing anything in Cliniko.
       else if (c.lastTouchLabel) bits.push(`last seen ${c.lastTouchLabel}`);
       else if (c.lastSessionLabel) bits.push(c.lastSessionLabel);
     }
-    bits.push(c.appt ? `booked ${phFuDateLabel(c.appt.date)}` : "not booked");
+    bits.push(c.appt ? `booked ${phFuDateLabel(c.appt.date)}` : c.away ? "out of town" : "not booked");
     return bits.filter(Boolean).join(" · ");
   }
   function phCkPageHtml(row, c, f, msg, smsHref, chip, isReview) {
@@ -37007,6 +37025,11 @@ or changing anything in Cliniko.
     const kindWord = row.kind === "checkin" ? "Check-in" : row.kind === "review" ? "Review" : row.kind === "acu" ? "Acupuncture" : row.kind === "scheduled" ? "Planned message" : "Gone quiet";
     // a concern she has already ticked must never hide behind the fold
     const concernsShown = f.concernsOpen || f.concerns.size > 0 || f.otherOn;
+    // her spec 2026-09-15: message first, then the one-line facts, then
+    // Change (the tone/moment picker) and How did it go both folded --
+    // anything she's already answered must stay visible even when folded,
+    // same rule the Concerns sub-fold already used
+    const outcomeShown = f.outcomeOpen || !!f.going || !!f.next || f.concerns.size > 0 || f.otherOn || !!f.note;
     return `<div class="ph-ck ph-ck-page" data-ck-panel="1">
       <div class="ph-ckp-band">
         <button type="button" class="bk" data-ck-close="1" aria-label="Back to the list">‹</button>
@@ -37014,18 +37037,19 @@ or changing anything in Cliniko.
         <span class="sub">${esc(kindWord)} · ${esc(phFuRelDay(row.on))}</span>
       </div>
       <div class="ph-ckp-body">
+        <div class="ph-ckp-sec">
+          <h4><svg class="icn" aria-hidden="true"><use href="#i-msg"/></svg>Draft message<span class="r note">edit anything</span></h4>
+          <textarea class="ph-ck-msg" id="phCkMsg" data-ck-input="text" rows="7" aria-label="Draft message">${esc(msg)}</textarea>
+        </div>
         <button type="button" class="ph-ckp-facts" data-ck-facts="1" aria-expanded="${f.factsOpen ? "true" : "false"}">
           <span class="t">${esc(phCkSummaryLine(row, c))}</span>
           <span class="r">${f.factsOpen ? "Hide ▴" : "Open ▾"}</span>
         </button>
         ${f.factsOpen ? `<div class="ph-ckp-facts-body">${phCkTopBlockHtml(row, c)}</div>` : ""}
-        <div class="ph-ckp-sec">
-          <h4><svg class="icn" aria-hidden="true"><use href="#i-msg"/></svg>Draft message<span class="r note">edit anything</span></h4>
-          ${phCkPickerHtml(row, c, f)}
-          <textarea class="ph-ck-msg" id="phCkMsg" data-ck-input="text" rows="7" aria-label="Draft message">${esc(msg)}</textarea>
-        </div>
-        <div class="ph-ckp-sec">
-          <h4><svg class="icn" aria-hidden="true"><use href="#i-clipboard"/></svg>How did it go</h4>
+        <button type="button" class="ph-ckp-more" data-ck-picker="1" aria-expanded="${f.pickerOpen ? "true" : "false"}">${f.pickerOpen ? "Change ▴" : "Change ▾"}</button>
+        ${f.pickerOpen ? `<div class="ph-ckp-sec">${phCkPickerHtml(row, c, f)}</div>` : ""}
+        <button type="button" class="ph-ckp-more" data-ck-outcome="1" aria-expanded="${outcomeShown ? "true" : "false"}">${outcomeShown ? "How did it go ▴" : "How did it go ▾"}</button>
+        ${outcomeShown ? `<div class="ph-ckp-sec">
           <div class="ph-ck-seg">${PH_CK_GOING.map(([k, l]) => `<button type="button" data-ck-going="${k}" class="${f.going === k ? "on" : ""}">${l}</button>`).join("")}</div>
           <div class="ph-ck-next">${PH_CK_NEXT.filter(x => x[0] !== "booked").map(([k, l]) => k === "visit" && c.appt
             ? chip("data-ck-next", "booked", `Booked ✓ ${esc(phFuDateLabel(c.appt.date))}`, f.next === "booked")
@@ -37036,7 +37060,7 @@ or changing anything in Cliniko.
           ${f.otherOn ? `<input type="text" class="ph-ck-other" data-ck-input="other" value="${esc(f.other)}" placeholder="What they mentioned" aria-label="Other concern">` : ""}`
             : `<button type="button" class="ph-ckp-more" data-ck-concerns="1">Add a concern ▾</button>`}
           <input type="text" class="ph-ck-other" data-ck-input="note" value="${esc(f.note)}" placeholder="A note for their history (optional)" aria-label="Note">
-        </div>
+        </div>` : ""}
         <div class="ph-ck-foot">
           <button type="button" class="ph-ck-btn gold" data-ck-done="1"><svg class="icn" aria-hidden="true"><use href="#i-check"/></svg>Done — save to ${esc(c.first)}'s history</button>
           ${isReview && c.t ? `<button type="button" class="ph-ck-btn" data-ck-done="script"><svg class="icn" aria-hidden="true"><use href="#i-scroll"/></svg>Make the next script</button>` : ""}
@@ -37105,7 +37129,7 @@ or changing anything in Cliniko.
     if (phCkOpen && phCkOpen.recId === recId && phCkOpen.kind === kind) { phCkOpen = null; phCkForm = null; phCkRender(); return; }
     phCkOpen = { recId, kind };
     const startTmpl = kind === "checkin" ? "checkin" : kind === "acu" ? "acu" : kind === "quiet" ? "quiet" : "review";
-    phCkForm = { going: null, concerns: new Set(), otherOn: false, other: "", next: null, note: "", tmpl: startTmpl, tone: null, sup: false, bbt: false, pickWhy: "", text: null, sent: false, factsOpen: false, concernsOpen: false, grpOpen: {} };
+    phCkForm = { going: null, concerns: new Set(), otherOn: false, other: "", next: null, note: "", tmpl: startTmpl, tone: null, sup: false, bbt: false, pickWhy: "", text: null, sent: false, factsOpen: false, concernsOpen: false, pickerOpen: false, outcomeOpen: false, grpOpen: {} };
     // already booked in Cliniko -> Next starts on "Booked ✓" (she can still change it)
     const row = phCkRow(recId, kind);
     const key = row ? (row.rec ? (row.rec.patientKey || phPatientKey(row.rec.patient)) : row.patientKey) : null;
@@ -37750,6 +37774,12 @@ or changing anything in Cliniko.
   // nothing here names them and adding a third moment needs no change here.
   const phMsgTracksBbt = key => !!(phPatientPeek(key) || {}).tracksBbt;
   function phMsgSetTracksBbt(name, val) { const r = phPatientRec(name); if (!r) return; r.tracksBbt = !!val; savePharmacy(); }
+  // "Lives out of town" (her ask 2026-09-15, request 7 of the synth22 batch):
+  // a fact about the PATIENT, same shape as Tracks BBT above -- she ticks it
+  // once on the Contact card and it changes check-in wording + silences the
+  // acu "not booked" nag everywhere, rather than being a per-message choice.
+  const phMsgLivesOutOfTown = key => !!(phPatientPeek(key) || {}).livesOutOfTown;
+  function phMsgSetLivesOutOfTown(name, val) { const r = phPatientRec(name); if (!r) return; r.livesOutOfTown = !!val; savePharmacy(); }
 
   // ============================================================
   // 📈 MY CYCLE -- her side in LCM (Stage 2 of the patient charting app,
@@ -39319,6 +39349,7 @@ or changing anything in Cliniko.
         </div>
       </div>
       <label class="ph-jr-dnc"><span>Don't contact</span><input type="checkbox" data-ph-jr-dnc="1"${out ? " checked" : ""}></label>
+      <label class="ph-jr-dnc"><span>Lives out of town<span class="faint"> · check-ins won't chase a return booking</span></span><input type="checkbox" data-ph-jr-away="1"${phMsgLivesOutOfTown(key) ? " checked" : ""}></label>
       ${phCycleOn(rec) ? `<label class="ph-jr-dnc"><span>Tracks BBT<span class="faint"> · offers the chart line on Period and Ovulation</span></span><input type="checkbox" data-ph-jr-bbt="1"${phMsgTracksBbt(key) ? " checked" : ""}></label>` : ""}
       ${phCycleOn(rec) ? (() => { const cl = phChartLinkFor(rec); return `<label class="ph-jr-dnc"><span>My Cycle charting<span class="faint"> · her own phone, daily BBT + signs</span></span><input type="checkbox" data-ph-jr-chart="1"${cl && cl.status === "active" ? " checked" : ""}${phChartToggleBusy ? " disabled" : ""}></label>
       ${cl ? `<div class="ph-jr-contact-row"><span>Chart link</span><button type="button" class="ph-name-link" data-ph-chart-send="1">🔗 Send link${cl.status === "paused" ? " (paused)" : ""}</button></div>` : ""}`; })() : ""}
@@ -39481,6 +39512,8 @@ or changing anything in Cliniko.
   document.addEventListener("change", e => {
     const dnc = e.target && e.target.closest ? e.target.closest("[data-ph-jr-dnc]") : null;
     if (dnc) { phMsgSetDoNotContact(phMsgDisplayName(phJourneyKey), dnc.checked); renderPharmacy(); return; }
+    const awayTick = e.target && e.target.closest ? e.target.closest("[data-ph-jr-away]") : null;
+    if (awayTick) { phMsgSetLivesOutOfTown(phMsgDisplayName(phJourneyKey), awayTick.checked); renderPharmacy(); return; }
     const bbtTick = e.target && e.target.closest ? e.target.closest("[data-ph-jr-bbt]") : null;
     if (bbtTick) { phMsgSetTracksBbt(phMsgDisplayName(phJourneyKey), bbtTick.checked); renderPharmacy(); return; }
     const chartTick = e.target && e.target.closest ? e.target.closest("[data-ph-jr-chart]") : null;
