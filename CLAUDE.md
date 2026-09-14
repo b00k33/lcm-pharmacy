@@ -152,7 +152,13 @@ update STYLE-LCM.md to match so future builds don't undo it.
   of the screen), a progression bar on top (`phTpProgressHtml`), ONE status pill per phase
   line (a `<select>`), done phases folded to their line, plan status as a pill in the green
   Treatment row band, click-to-edit cells. Default for any multi-item editor from now on:
-  table first, then ask.
+  table first, then ask. LIKE (2026-09-15, shown a live Grid-vs-List toggle widget on her
+  own real Tuesday appointments): Grid (Cliniko day view, solid blocks) over List, on the
+  phone too — reverses her 2026-09-07 Q10 pick that had the phone opening on List. DISLIKE
+  in the same breath: the List view's ≤900px reflow into stacked cards (time / name+pills /
+  status chip / FOCUS+GOAL as labelled lines) reads too tall next to desktop's table — fixed
+  by making Grid the phone default rather than redesigning List, which stays reachable via
+  the toggle. See `phApptCalEnsureView()`.
   **VISITS IS THREE PICKERS: NUMBER × FREQUENCY × WHAT FOR (her ask 2026-09-10, clarified
   twice — "number of visits, let me select from preset instead of type", then "i meant for
   visits, let me choose: number, frequency", then "include visit for acu or herbs"; BUILT).**
