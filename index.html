@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260914-114500">
+<meta name="lcm-build" content="20260914-130000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -8342,17 +8342,23 @@
   #pharmacyPage .ph-ren-cmp-fig img { width: 100%; border-radius: 10px; display: block; }
   #pharmacyPage .ph-ren-cmp-fig figcaption { text-align: center; font-size: var(--fs-micro); color: var(--ph-soft); margin-top: 4px; }
 
-  /* phone: one card per visit, newest first -- NOT a scrolling grid (her §3) */
-  #pharmacyPage .ph-ren-tl-cards { display: none; }
+  /* one card per visit, newest first. Originally phone-only (her §3); her ask
+     2026-09-14 (synth22 #5) made it the default at every width -- the
+     type-by-date grid below is still there, one tap away via the toggle, for
+     comparing one shot type across many dates at once. Below 640px there is
+     no toggle at all: the grid never fit a phone regardless of mode. */
+  #pharmacyPage .ph-ren-tl-cards { display: none; flex-direction: column; gap: var(--sp-3); }
+  #pharmacyPage .ph-ren-tl-card { border: 1px solid var(--ph-line); border-radius: 12px; padding: var(--sp-3); background: var(--ph-white); }
+  #pharmacyPage .ph-ren-tl-carddate { font-size: var(--fs-body); font-weight: 700; color: var(--ph-green-deep); margin-bottom: var(--sp-2); }
+  #pharmacyPage .ph-ren-tl-cardshots { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+  #pharmacyPage .ph-ren-tl-cardshot { margin: 0; text-align: center; }
+  #pharmacyPage .ph-ren-tl-cardshot figcaption { font-size: 10.5px; color: var(--ph-faint); margin-top: 2px; }
+  #pharmacyPage .ph-ren-tl-cardscript { margin-top: var(--sp-2); font-size: var(--fs-micro); color: var(--ph-soft); }
+  #pharmacyPage .ph-ren-tl-mode-byDate .ph-ren-tl-scroll { display: none; }
+  #pharmacyPage .ph-ren-tl-mode-byDate .ph-ren-tl-cards { display: flex; }
   @media (max-width: 640px) {
     #pharmacyPage .ph-ren-tl-scroll { display: none; }
-    #pharmacyPage .ph-ren-tl-cards { display: flex; flex-direction: column; gap: var(--sp-3); }
-    #pharmacyPage .ph-ren-tl-card { border: 1px solid var(--ph-line); border-radius: 12px; padding: var(--sp-3); background: var(--ph-white); }
-    #pharmacyPage .ph-ren-tl-carddate { font-size: var(--fs-body); font-weight: 700; color: var(--ph-green-deep); margin-bottom: var(--sp-2); }
-    #pharmacyPage .ph-ren-tl-cardshots { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
-    #pharmacyPage .ph-ren-tl-cardshot { margin: 0; text-align: center; }
-    #pharmacyPage .ph-ren-tl-cardshot figcaption { font-size: 10.5px; color: var(--ph-faint); margin-top: 2px; }
-    #pharmacyPage .ph-ren-tl-cardscript { margin-top: var(--sp-2); font-size: var(--fs-micro); color: var(--ph-soft); }
+    #pharmacyPage .ph-ren-tl-cards { display: flex; }
     #pharmacyPage .ph-ren-cmp { grid-template-columns: 1fr; }
   }
   #pharmacyPage .ph-ren-crop-card { width: min(480px, 100%); }
@@ -26874,6 +26880,13 @@
         phRenPhotosSecRefresh();   // the script panel's PHOTOS copy of the timeline
         return;
       }
+      const renTlMode = e.target.closest("[data-ren-tl-mode]");
+      if (renTlMode) {
+        phRenTimelineMode = renTlMode.dataset.renTlMode;
+        renderHxScreen();
+        phRenPhotosSecRefresh();
+        return;
+      }
       if (e.target.closest("[data-ren-cmp-clear]")) { phRenCompare = []; renderHxScreen(); phRenPhotosSecRefresh(); return; }
       if (e.target.closest("[data-ren-cmp-open]")) { phRenCompareShow(); return; }
       // the confirm step's three buttons (§2)
@@ -27079,17 +27092,20 @@
         }).catch(() => phFlashShow("⚠ Couldn't save that label."));
         return;
       }
-      // her ask 2026-09-12 ("sort later"): an Unsorted photo picks up its real
-      // type here, same pattern as the tongue-shot picker just above -- but
-      // gated on st.kind (this PHOTO's real, current type), not st.viewType
-      // (which set she's WALKING through, ‹ › -- deliberately left alone here
-      // so stepping through a pile of Unsorted photos keeps walking that same
-      // pile after one gets sorted, instead of jumping to the tongue set the
-      // moment the first one is retyped). If the new type is tongue, st.kind
-      // flips and the existing shot-picker above appears right after -- same
-      // gate change there -- so she can finish labelling in one visit.
+      // her ask 2026-09-14 (synth22 batch, #4, from a real eyelid photo saved
+      // as Tongue): this used to only fire for Unsorted photos. Any photo can
+      // be misfiled, not just an unsorted one, so the gate is now just
+      // "the viewer is open" -- reachable either because it's Unsorted
+      // (chip row always showing) or because she tapped "Change type"
+      // (retypeOpen, toggled below). Gated on st.kind (this PHOTO's real,
+      // current type), not st.viewType (which set she's WALKING through,
+      // ‹ › -- deliberately left alone here so stepping through a pile keeps
+      // walking that same pile after one gets retyped, instead of jumping to
+      // the new type's set). If the new type is tongue, st.kind flips and the
+      // shot-picker appears right after -- same gate change there -- so she
+      // can finish labelling in one visit.
       const renViewType = e.target.closest("[data-ren-view-type]");
-      if (renViewType && phRenCropState && phRenCropState.viewOnly && phRenCropState.kind === "unsorted") {
+      if (renViewType && phRenCropState && phRenCropState.viewOnly) {
         const st = phRenCropState, want = renViewType.dataset.renViewType;
         const rec = (phRenPhotosFor(st.patientKey) || []).find(r => r.id === st.viewId);
         if (!rec) return;
@@ -27099,11 +27115,17 @@
         phRenPhotoPut(write).then(async () => {
           delete phRenPhotoCache[st.patientKey];
           await phRenLoadPhotosFor(st.patientKey);
-          st.kind = want; st.viewShot = write.shot || "";
+          st.kind = want; st.viewShot = write.shot || ""; st.retypeOpen = false;
           renderPhRenCropModal();
           renderHxScreen();
           phRenPhotosSecRefresh(st.patientKey);
         }).catch(() => phFlashShow("⚠ Couldn't save that."));
+        return;
+      }
+      const renViewRetypeToggle = e.target.closest("[data-ren-view-retype-toggle]");
+      if (renViewRetypeToggle && phRenCropState && phRenCropState.viewOnly) {
+        phRenCropState.retypeOpen = !phRenCropState.retypeOpen;
+        renderPhRenCropModal();
         return;
       }
       if (e.target.closest("[data-ren-view-delete]") && phRenCropState && phRenCropState.viewOnly) {
@@ -27409,7 +27431,26 @@
         inp.addEventListener("blur", () => { const v = inp.value.trim(); if (v) plan.title = v; savePharmacy(); renderPresPanel(); });
         return;
       }
-      if (e.target.closest("[data-pres-treat-toggle]")) { presTreatOpen = !presTreatOpen; renderPresPanel(); return; }
+      if (e.target.closest("[data-pres-treat-toggle]")) {
+        presTreatOpen = !presTreatOpen;
+        // her ask 2026-09-14 (synth22 #1): with the standalone acu banner now
+        // hidden whenever a plan exists, a single-plan patient used to land
+        // on an intermediate "which plan?" card first -- one tap short of the
+        // acu-fold line (phTpAcuFoldLineHtml) that actually replaces it. Skip
+        // straight to the only plan there is, same as tapping its card would.
+        // Never applies with >1 plan: the tab switcher exists precisely
+        // because there IS a choice there, and this must not make it for her.
+        if (presTreatOpen && !presTpInlineNew && !presTpInlineLoose) {
+          const t0 = PRESC.items.find(x => x.id === presOpenId);
+          const nm = t0 ? presPatientFor(t0) : "";
+          const plans = nm ? phTpPlans(nm) : [];
+          const already = presTpInlinePlanId && phTpFindPlan(nm, presTpInlinePlanId);
+          if (!already && plans.length === 1 && !presTpLooseScripts(nm).length) {
+            presTpInlinePlanId = plans[0].id; phTpScreenPatient = nm; phTpScreenPlanId = plans[0].id;
+          }
+        }
+        renderPresPanel(); return;
+      }
       if (e.target.closest("[data-pres-acu-toggle]")) { presAcuOpen = !presAcuOpen; presAcuOutcomeDraft = null; phVisitFndResetDraft(); renderPresPanel(); return; }
       // ---- Bell's palsy checklist ----
       // The thirteen SCORE taps deliberately do not re-render the whole
@@ -39631,6 +39672,12 @@ or changing anything in Cliniko.
      pinned while the dates scroll. Reads photos, the dispense log and the
      patient record; writes nothing. */
   let phRenTimelineFilter = "all";
+  // her ask 2026-09-14 (synth22 batch, #5, "make it easier to organise photos
+  // based on date and time"): the phone-only "one card per visit" layout
+  // (built for her §3, below) is now the default at every width -- the
+  // type-by-date grid is the one that used to be the only desktop option.
+  // Same toggle pattern as the treatment plan's Timeline/Grid switch.
+  let phRenTimelineMode = "byDate";   // "byDate" | "byType"
   let phRenCompare = [];      // [{id, patientKey}] -- max 2, same row only
   function phRenTimelineHtml(patientKey, patientName) {
     const list = phRenPhotosFor(patientKey);
@@ -39709,8 +39756,12 @@ or changing anything in Cliniko.
       </section>`;
     }).filter(Boolean).join("")}</div>`;
 
-    return `<div class="ph-ren-tl">
-      <div class="ph-ren-tl-head"><span class="ph-ren-field-label">Photo timeline</span>${filterSeg}</div>
+    const modeToggle = `<div class="ph-tp-viewtoggle">
+      <button type="button" class="${phRenTimelineMode === "byDate" ? "on" : ""}" data-ren-tl-mode="byDate">By date</button>
+      <button type="button" class="${phRenTimelineMode === "byType" ? "on" : ""}" data-ren-tl-mode="byType">By type</button>
+    </div>`;
+    return `<div class="ph-ren-tl ph-ren-tl-mode-${phRenTimelineMode}">
+      <div class="ph-ren-tl-head"><span class="ph-ren-field-label">Photo timeline</span>${modeToggle}${filterSeg}</div>
       ${cmpBar}
       <div class="ph-ren-tl-scroll" id="phRenTlScroll">
         <table class="ph-ren-tl-table">
@@ -40502,7 +40553,7 @@ or changing anything in Cliniko.
       modal.innerHTML = `<div class="ph-hx-card ph-ren-crop-card">
         <div class="ph-hx-head">
           <button type="button" class="ph-stocktake-close" data-ren-crop-close="1" aria-label="Close">×</button>
-          <div class="ph-hx-head-name">${esc(PH_REN_TYPE_LABEL[st.kind] || PH_REN_TYPE_LABEL[st.viewType] || PH_REN_CROP_LABEL[st.kind] || "Photo")}${st.viewShot ? ` · ${esc(PH_REN_SHOT_LABEL[st.viewShot])}` : ""}${st.viewDate ? ` · ${esc(st.viewDate)}` : ""}</div>
+          <div class="ph-hx-head-name">${esc(PH_REN_TYPE_LABEL[st.kind] || PH_REN_TYPE_LABEL[st.viewType] || PH_REN_CROP_LABEL[st.kind] || "Photo")}${st.viewShot ? ` · ${esc(PH_REN_SHOT_LABEL[st.viewShot])}` : ""}${st.viewDate ? ` · ${esc(st.viewDate)}` : ""}${st.kind !== "unsorted" ? ` <button type="button" class="ph-tp-vistype" data-ren-view-retype-toggle="1">${st.retypeOpen ? "Cancel" : "Change type"}</button>` : ""}</div>
         </div>
         <div class="ph-ren-crop-stage ph-ren-view-stage"><img class="ph-ren-crop-img" src="${st.objectUrl}" alt=""></div>
         ${many ? `<div class="ph-ren-view-nav">
@@ -40510,9 +40561,9 @@ or changing anything in Cliniko.
           <span class="ph-ren-view-count">${at + 1} of ${set.length}${st.viewType ? " " + esc((PH_REN_TYPE_LABEL[st.viewType] || "").toLowerCase()) : ""} photos</span>
           <button type="button" class="ph-ren-view-arrow" data-ren-view-step="1"${at >= set.length - 1 ? " disabled" : ""} aria-label="Later photo">›</button>
         </div>` : ""}
-        ${st.kind === "unsorted" ? `<div class="ph-ren-view-shots">
-          <div class="ph-ren-view-shotlab">Not sorted yet — what is this?</div>
-          <div class="ph-ren-view-shotrow">${phRenTypesFor(st.patientKey, () => false).filter(t => t.key !== "unsorted").map(t => `<button type="button" class="ph-cap-tchip" data-ren-view-type="${t.key}">${PH_CAP_TYPE_EMOJI[t.key] || ""} ${esc(t.label)}</button>`).join("")}</div>
+        ${st.kind === "unsorted" || st.retypeOpen ? `<div class="ph-ren-view-shots">
+          <div class="ph-ren-view-shotlab">${st.kind === "unsorted" ? "Not sorted yet — what is this?" : `Currently ${esc((PH_REN_TYPE_LABEL[st.kind] || "").toLowerCase())} — change to:`}</div>
+          <div class="ph-ren-view-shotrow">${phRenTypesFor(st.patientKey, () => false).filter(t => t.key !== "unsorted" && t.key !== st.kind).map(t => `<button type="button" class="ph-cap-tchip" data-ren-view-type="${t.key}">${PH_CAP_TYPE_EMOJI[t.key] || ""} ${esc(t.label)}</button>`).join("")}</div>
         </div>` : ""}
         ${st.kind === "tongue" ? `<div class="ph-ren-view-shots">
           <div class="ph-ren-view-shotlab">${st.viewShot ? "Which shot" : "Not labelled yet — which shot is this?"}</div>
@@ -41428,11 +41479,18 @@ or changing anything in Cliniko.
   }
   function presStageTreatmentHtml(t) {
     // the acu strip folds into the open plan's Done row (phTpAcuFoldLineHtml)
-    // -- her round-2 pick 2026-09-10 -- so it only stands alone when no plan
-    // editor is open under it
+    // when a specific phase is open -- her round-2 pick 2026-09-10. Her
+    // 2026-09-14 ask (synth22 #1) went further: the two collapsed banners
+    // ("🔗 Acupuncture · no sessions logged" above "🗂 Treatment plan · …")
+    // stacked even before either was opened, which read as one clinical
+    // record split in two. Once a plan exists at all, its own row now
+    // carries the acu summary too (presTreatmentRowHtml, above), so the
+    // standalone row only shows for a patient with acu enabled but no plan
+    // yet to fold into -- nothing else has anywhere to put that information.
+    const hasPlan = !!presTpActivePlanFor(presPatientFor(t));
     return `<div class="ph-pres-stage-body">
       ${presConstitutionSuggestHtml(t)}
-      ${presTpInlineEditorOpen(presPatientFor(t)) ? "" : presAcuRowHtml(t)}
+      ${hasPlan ? "" : presAcuRowHtml(t)}
       ${presTreatmentRowHtml(t)}
       ${presStageNextBtnHtml("treatment")}
     </div>`;
@@ -44064,11 +44122,16 @@ or changing anything in Cliniko.
   // (active plan -> latest letter -> "start with the letter") that used to
   // live in presHistorySummaryHtml's planRowHtml before this row existed.
   // ============
+  // her ask 2026-09-14 (synth22 batch, #1): what "the" plan means for THIS
+  // patient -- one definition presStageTreatmentHtml's acu-row gate and this
+  // row's own content both read, so they can never disagree about whether a
+  // plan exists to fold into.
+  const presTpActivePlanFor = name => { const plans = phTpPlans(name); return plans.find(p => p.status === "active") || plans[0] || null; };
   function presTreatmentRowHtml(t) {
     const name = presPatientFor(t);
     if (!name) return "";
     const plans = phTpPlans(name);
-    const activePlan = plans.find(p => p.status === "active") || plans[0];
+    const activePlan = presTpActivePlanFor(name);
     const cur = activePlan ? phTpPlanCurrentPhase(activePlan) : null;
     const letters = ((phPatientPeek(name) || {}).letters || []);
     const latestLtr = letters.length ? letters.slice().sort((a, b) => (b.at || 0) - (a.at || 0))[0] : null;
@@ -44089,7 +44152,32 @@ or changing anything in Cliniko.
       // her decision 8: the count on the collapsed row as well, so she can read
       // where a phase is up to without opening the plan
       const curV = cur ? phTpVisitShort(name, activePlan, cur) : "";
-      bits.push(`<b${editing ? ` data-tp-title-edit="${esc(name)}|${activePlan.id}" title="Click to rename"` : ""}>${esc(activePlan.title || "Treatment plan")}</b>${cur ? ` · ${esc(cur.label)}` : ""}${curV ? ` · ${esc(curV)}` : ""} <span class="ph-tp-bandst ${esc(activePlan.status)}" data-tp-status-cycle="${esc(name)}|${activePlan.id}" title="Click to change" role="button" tabindex="0">${esc(st.label)}</span>`);
+      // her ask 2026-09-14 (synth22 #3, "treatment TP - Condition - Phase -
+      // 1st visit", confirmed "both" when asked date vs. count): the phase's
+      // OWN first counted visit, read off the same phTpPhaseVisitStats every
+      // other visit count on this app already trusts -- never a second date
+      // source that could quietly disagree with "N visits".
+      const stats = cur ? phTpPhaseVisitStats(name, activePlan, cur) : null;
+      const firstVisit = stats && stats.counted.length ? stats.counted[0].appt.date : null;
+      const visitBit = [firstVisit ? `since ${phShortDate(firstVisit)}` : "", curV].filter(Boolean).join(" · ");
+      bits.push(`<b${editing ? ` data-tp-title-edit="${esc(name)}|${activePlan.id}" title="Click to rename"` : ""}>${esc(activePlan.title || "Treatment plan")}</b>${cur ? ` · ${esc(cur.label)}` : ""}${visitBit ? ` · ${esc(visitBit)}` : ""} <span class="ph-tp-bandst ${esc(activePlan.status)}" data-tp-status-cycle="${esc(name)}|${activePlan.id}" title="Click to change" role="button" tabindex="0">${esc(st.label)}</span>`);
+      // her ask 2026-09-14 (synth22 #1, "no need for acu log and treatment
+      // plan log to be separate"): once there IS a plan to fold into,
+      // presStageTreatmentHtml hides the standalone Acupuncture banner --
+      // this carries what that banner used to say, so nothing goes missing
+      // while collapsed. Same wording/logic as phTpAcuFoldLineHtml (the fold
+      // line shown once this row is open on a specific phase), deliberately
+      // NOT shared as one function: that one also renders the "open/close/
+      // log" button and reacts to presAcuOpen, neither of which belongs on a
+      // collapsed summary line.
+      const acuRec = phPatientRec(name);
+      if (acuRec.acuEnabled) {
+        const acuSessions = (acuRec.acuSessions || []).slice().sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.at || 0) - (a.at || 0));
+        const lastAcu = acuSessions[0];
+        bits.push(lastAcu
+          ? `🪡 last acu: ${esc(lastAcu.phaseLabel || "session")}, ${esc(phShortDate(lastAcu.date))}`
+          : `🪡 no acu sessions yet`);
+      }
     }
     else if (latestLtr) bits.push(`✉ Letter — ${esc(phShortDate(latestLtr.date))} · ${esc(latestLtr.templateName || "")}`);
     if (t.fuReviewDate) bits.push(`review <b>${esc(phFuDateLabel(t.fuReviewDate))}</b>`);
@@ -45508,7 +45596,9 @@ or changing anything in Cliniko.
   // read/write the SAME plan, so switching never loses anything. Spine is
   // the default; the grid stays one click away for anyone used to it.
   function phTpPlanBodyHtml(name, plan, extraInner) {
-    const mode = phTpViewMode.get(plan.id) || "spine";
+    // her ask 2026-09-14 (synth22 batch, #2): Grid is now the default view --
+    // Timeline stays one click away for whoever prefers it, same as before
+    const mode = phTpViewMode.get(plan.id) || "grid";
     const toggle = `<div class="ph-tp-viewtoggle">
       <button type="button" class="${mode === "spine" ? "on" : ""}" data-tp-view="${plan.id}:spine">Timeline</button>
       <button type="button" class="${mode === "grid" ? "on" : ""}" data-tp-view="${plan.id}:grid">Grid</button>
