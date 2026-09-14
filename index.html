@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260914-130000">
+<meta name="lcm-build" content="20260914-133000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -8392,6 +8392,7 @@
   #pharmacyPage .ph-ren-view-shots { margin-top: 12px; padding-top: 8px; border-top: 1px dashed var(--ph-line); }
   #pharmacyPage .ph-ren-view-shotlab { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ph-faint); font-weight: 700; margin-bottom: 6px; }
   #pharmacyPage .ph-ren-view-shotrow { display: flex; gap: 5px; flex-wrap: wrap; }
+  #pharmacyPage .ph-ren-view-daterow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   /* Sorting recipes from patients (her ask 2026-09-09). A real table, per her
      standing preference, in the same field language as the rest of the app --
      hairline rows, no box inside a box, one chip style. */
@@ -27128,6 +27129,53 @@
         renderPhRenCropModal();
         return;
       }
+      // "Change date" (her ask 2026-09-14: the header showed 14 Sep but the
+      // burned-in camera timestamp on the photo itself read 7 Sep, with no
+      // way to fix it) -- same toggle/edit shape as Change type just above,
+      // writing rec.dateKey via phRenPhotoPut so every reader of
+      // phRenDateKeyOf (the timeline table, BBT cycle grouping, the walking
+      // set here) picks up the corrected date on the next render.
+      const renViewDateToggle = e.target.closest("[data-ren-view-date-toggle]");
+      if (renViewDateToggle && phRenCropState && phRenCropState.viewOnly) {
+        const st = phRenCropState;
+        if (!st.dateEditOpen) {
+          const rec = (phRenPhotosFor(st.patientKey) || []).find(r => r.id === st.viewId);
+          st.dateEditValue = rec ? phRenDateKeyOf(rec) : keyOf(TODAY);
+        }
+        st.dateEditOpen = !st.dateEditOpen;
+        renderPhRenCropModal();
+        if (st.dateEditOpen) { const inp = document.getElementById("phRenViewDateInput"); if (inp) inp.focus(); }
+        return;
+      }
+      const renViewDateSave = e.target.closest("[data-ren-view-date-save]");
+      if (renViewDateSave && phRenCropState && phRenCropState.viewOnly) {
+        const st = phRenCropState;
+        const inp = document.getElementById("phRenViewDateInput");
+        const val = inp && inp.value;
+        // gate on a genuinely complete, plausible date -- never mid-keystroke, never future
+        if (!val || !/^\d{4}-\d{2}-\d{2}$/.test(val) || val < "2000-01-01" || val > keyOf(TODAY)) { phFlashShow("⚠ Pick a valid date, not in the future."); return; }
+        const rec = (phRenPhotosFor(st.patientKey) || []).find(r => r.id === st.viewId);
+        if (!rec) return;
+        const write = { ...rec, dateKey: val };
+        delete write.objectUrl;
+        phRenPhotoPut(write).then(async () => {
+          delete phRenPhotoCache[st.patientKey];
+          await phRenLoadPhotosFor(st.patientKey);
+          st.viewDate = phRenPhotoDateLabel(val);
+          st.dateEditOpen = false;
+          // the photo may now sit under a different day -- re-derive the
+          // walking set the same way phRenViewStep does, so ‹ › and "N of M"
+          // stay correct for wherever it landed
+          const set = phRenViewSetFor(st.patientKey, st.viewType);
+          st.viewSet = set.map(r => r.id);
+          st.viewAt = Math.max(0, set.findIndex(r => r.id === st.viewId));
+          renderPhRenCropModal();
+          renderHxScreen();
+          phRenPhotosSecRefresh(st.patientKey);
+          phFlashShow(`📅 Date changed to ${phRenPhotoDateLabel(val)}.`);
+        }).catch(() => phFlashShow("⚠ Couldn't save that date."));
+        return;
+      }
       if (e.target.closest("[data-ren-view-delete]") && phRenCropState && phRenCropState.viewOnly) {
         const zone = document.getElementById("phRenViewDelZone");
         if (zone) zone.innerHTML = phConfirmStrip("Delete this photo? This can't be undone.", `data-ren-view-delete-yes="1"`, "Delete");
@@ -40553,13 +40601,17 @@ or changing anything in Cliniko.
       modal.innerHTML = `<div class="ph-hx-card ph-ren-crop-card">
         <div class="ph-hx-head">
           <button type="button" class="ph-stocktake-close" data-ren-crop-close="1" aria-label="Close">×</button>
-          <div class="ph-hx-head-name">${esc(PH_REN_TYPE_LABEL[st.kind] || PH_REN_TYPE_LABEL[st.viewType] || PH_REN_CROP_LABEL[st.kind] || "Photo")}${st.viewShot ? ` · ${esc(PH_REN_SHOT_LABEL[st.viewShot])}` : ""}${st.viewDate ? ` · ${esc(st.viewDate)}` : ""}${st.kind !== "unsorted" ? ` <button type="button" class="ph-tp-vistype" data-ren-view-retype-toggle="1">${st.retypeOpen ? "Cancel" : "Change type"}</button>` : ""}</div>
+          <div class="ph-hx-head-name">${esc(PH_REN_TYPE_LABEL[st.kind] || PH_REN_TYPE_LABEL[st.viewType] || PH_REN_CROP_LABEL[st.kind] || "Photo")}${st.viewShot ? ` · ${esc(PH_REN_SHOT_LABEL[st.viewShot])}` : ""}${st.viewDate ? ` · ${esc(st.viewDate)}` : ""}${st.kind !== "unsorted" ? ` <button type="button" class="ph-tp-vistype" data-ren-view-retype-toggle="1">${st.retypeOpen ? "Cancel" : "Change type"}</button>` : ""}${st.viewDate ? ` <button type="button" class="ph-tp-vistype" data-ren-view-date-toggle="1">${st.dateEditOpen ? "Cancel" : "Change date"}</button>` : ""}</div>
         </div>
         <div class="ph-ren-crop-stage ph-ren-view-stage"><img class="ph-ren-crop-img" src="${st.objectUrl}" alt=""></div>
         ${many ? `<div class="ph-ren-view-nav">
           <button type="button" class="ph-ren-view-arrow" data-ren-view-step="-1"${at <= 0 ? " disabled" : ""} aria-label="Earlier photo">‹</button>
           <span class="ph-ren-view-count">${at + 1} of ${set.length}${st.viewType ? " " + esc((PH_REN_TYPE_LABEL[st.viewType] || "").toLowerCase()) : ""} photos</span>
           <button type="button" class="ph-ren-view-arrow" data-ren-view-step="1"${at >= set.length - 1 ? " disabled" : ""} aria-label="Later photo">›</button>
+        </div>` : ""}
+        ${st.dateEditOpen ? `<div class="ph-ren-view-shots">
+          <div class="ph-ren-view-shotlab">Photo date</div>
+          <div class="ph-ren-view-daterow"><input type="date" class="ph-qty-input" id="phRenViewDateInput" value="${esc(st.dateEditValue || "")}" max="${keyOf(TODAY)}" min="2000-01-01" aria-label="Photo date"><button type="button" class="ph-cap-tchip on" data-ren-view-date-save="1">Save</button></div>
         </div>` : ""}
         ${st.kind === "unsorted" || st.retypeOpen ? `<div class="ph-ren-view-shots">
           <div class="ph-ren-view-shotlab">${st.kind === "unsorted" ? "Not sorted yet — what is this?" : `Currently ${esc((PH_REN_TYPE_LABEL[st.kind] || "").toLowerCase())} — change to:`}</div>
