@@ -2875,3 +2875,25 @@ buildable items (98 not-built + 50 partial, minus this batch) need
 individual attention at varying risk levels — most are real feature work
 or behaviour changes, not inert cleanup, and get their own verification
 pass each, not a blind sweep.
+
+### Batch 2 — a dead field and three stale "not built yet" comments
+
+- `presFlushTemplate`'s dispense-log entry stopped writing `visitApptId`.
+  It carried a booking's id alongside `visitTime` but had exactly one write
+  site and zero reads anywhere in the file (confirmed by grep) — a
+  half-built link a future session could mistake for working plumbing.
+  `visitTime` itself is real and stays (read at ~44208 to show the "visit"
+  pill in History); only the unused id field came out.
+- Three code comments that flatly said something "is not built yet" when
+  it plainly is, each independently confirmed by grep before editing:
+  the Stock/Refill list's bars-column comment (contradicted by its own
+  next line and the `.ph-sig-bars` CSS right after it); the patient
+  intake-link comment claiming the review-and-match step doesn't exist
+  (the Intake review page, its nav badge, and the compare-then-apply
+  queue all exist and are wired up); and the Option K spine-timeline
+  comment claiming per-visit tongue/pulse/abdomen findings are "the next
+  build" (phTpSpineNodeBodyHtml already reads `rec.visitFnd` per visit and
+  only falls back to the plan's baseline chart when a visit has none).
+
+Same sandbox, same clean-boot check. No behaviour changed except the one
+field no longer written (which nothing ever read).
