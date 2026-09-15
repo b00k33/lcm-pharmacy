@@ -1,0 +1,66 @@
+name: Daily 4pm deploy (Sydney time)
+
+# Her ask 2026-09-15: sometimes she's actively using LCM in clinic (live
+# dispensing) at the same time Claude is developing, and a live deploy
+# landing mid-session risked losing dispense data. New standing rule:
+# Claude keeps committing verified LCM work to session-a all day as
+# before, but no longer pushes it to main (which is what actually goes
+# live) right after each change. This job does that push once a day
+# instead, by default -- "unless otherwise requested" just means Claude
+# still pushes immediately if she explicitly asks for something sooner.
+#
+# Runs twice daily (05:00 and 06:00 UTC) to bracket 4pm Sydney time
+# across both AEST (UTC+10) and AEDT (UTC+11) without needing a manual
+# cron edit at each DST changeover -- the job then checks the REAL
+# Australia/Sydney clock and only acts if it's actually ~4pm there, so
+# exactly one of the two daily firings ever does anything.
+#
+# Idempotent and safe by construction: if session-a has nothing new,
+# this is a no-op. If it does, it fast-forwards main to session-a's tip
+# (git push, no --force), which is exactly what a manual
+# "git push origin session-a:main" already does elsewhere in this
+# project's workflow -- and that push is what triggers pages.yml's real
+# deploy. A genuinely diverged history fails the push loudly instead of
+# silently overwriting anything.
+
+on:
+  schedule:
+    - cron: '0 5 * * *'
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy-if-pending:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Only proceed near 4pm Sydney time (unless run manually)
+        id: gate
+        run: |
+          hm=$(TZ=Australia/Sydney date +%H%M)
+          echo "Sydney local time now: $(TZ=Australia/Sydney date +%H:%M)"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "go=true" >> "$GITHUB_OUTPUT"
+          elif [ "$hm" -ge 1550 ] && [ "$hm" -le 1615 ]; then
+            echo "go=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "go=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Checkout
+        if: steps.gate.outputs.go == 'true'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Push session-a to main if it has anything new
+        if: steps.gate.outputs.go == 'true'
+        run: |
+          git fetch origin main session-a
+          if git merge-base --is-ancestor origin/session-a origin/main; then
+            echo "Nothing new on session-a -- nothing to deploy today."
+          else
+            SHA=$(git rev-parse origin/session-a)
+            git push origin "$SHA:refs/heads/main"
+            echo "Deployed: pushed session-a ($SHA) to main."
+          fi
