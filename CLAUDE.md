@@ -1977,3 +1977,152 @@ Can make / When), one contextual primary action per row.
   self-check (her CLAUDE.md protected-behaviour rule) all pass.
   Live `1838fdd`: `sw.js` `lcm-20260915-stagec-refill-onelist`, meta
   `20260915-220000`.
+
+## Design formula + Formula action, Records → Photos, Settings regroup (her synth22 Stage D, 2026-09-15)
+Three independent builds, one commit (`3a0b7a2`).
+
+**Design formula** — `phTpPhaseBodyRows`'s Formula cell (index.html, search
+"Design formula" (her synth22 Stage D ask"): the empty state now shows TWO
+buttons, `data-tp-formula-design` beside the existing `data-tp-formula-pick-
+open` ("Link formula"). Design creates a REAL `PRESC.items` entry immediately
+(the same "commit now, no draft" shape as the appointment/intake quick-add
+importers — `PRESC.items.unshift`, no `presStartNew` draft flow), tags it
+`t.phaseTag` (the existing fuzzy matcher other surfaces already read) AND
+`t.planPhaseLink = {planId, phaseId}` (new, exact — this is what tells the
+chip apart from a plain link), sets `phase.formulaId`/`formulaName` ("Untitled
+formula" until she names it) and pushes a `formulaHistory` entry exactly like
+the three existing link paths, then calls `presGoToScript(t.id, {before: () =>
+{ presStage = "dispense"; presStageForId = t.id; }})`.
+- **The `presStageForId` trap, found by reading the source, not guessing**:
+  `renderPresPanel` only recomputes `presStage` via `presFurthestStageFor`
+  when `presStageForId !== t.id` — a blank new script's furthest stage is
+  "profile", so setting `presStage` alone in `opts.before` would get silently
+  overwritten by the very next render. Both must be set together.
+- **A designed script's chip is reopenable; a plain link's chip is
+  unlink-only, on purpose — same as before Stage D.** `designedScript = phase
+  .formulaId && PRESC.items.find(x => x.id === phase.formulaId && x.
+  planPhaseLink && x.planPhaseLink.phaseId === phase.id)`. When found, the
+  chip renders as ONE pill (`.ph-tp-formula-chip.designed`, never a box in a
+  box) with two plain inner controls: `data-tp-formula-open` (🌿 name, jumps
+  back to the real script via `presGoToScript`, no stage override — lands
+  wherever `presFurthestStageFor` naturally puts it) and `data-tp-formula-x`
+  (✕, same unlink as always — the record survives, only the phase's pointer
+  clears, per the existing "never destroy the record" comment on that
+  handler). A jar/recipe/typed link (the pre-existing three paths) has no
+  `planPhaseLink`, so `designedScript` is null and the chip renders exactly
+  as it always has — regression-checked against a fresh typed link.
+- **The chip name stays live while she's naming it, once — and only once —
+  it's a designed script.** `phTpSyncPhaseFormulaFromScript(t)`, called from
+  both Dispense-stage formula inputs' existing change handlers (`presFormula
+  Text`/`presActualFormulaText`), writes `phase.formulaName = presActualFormula
+  (t) || "Untitled formula"` whenever `t.planPhaseLink` is set and `phase.
+  formulaId === t.id`. Every OTHER formula link in this app is a one-time
+  snapshot on purpose (decision 6's history log exists because of that) — this
+  is the one deliberate exception, because a designed script starts genuinely
+  unnamed. It never rewrites `formulaHistory` (unaffected, still link/design-
+  time only) and never blanks the name back to empty, so the chip can never
+  silently revert to "not linked" while `formulaId` still points at something
+  real.
+- Known, disclosed, PRE-EXISTING gap this build did not touch: a frozen
+  (done) phase's formula chip stays fully interactive if `formulaName` is
+  already set when it freezes — the frozen dash treatment only ever applied
+  to an EMPTY formula, in the original code too. Left as-is rather than
+  fixed unbidden; raise if she wants it closed.
+
+**Formula action** — a new phase field, `phase.formulaAction` (plain string
+array, no separate "custom" slot). `PH_TP_FORMULA_ACTIONS` (index.html, beside
+`phTpFormulaPickPhase`'s declaration): four groups — Tonify / Move / Clear ·
+Resolve / Warm · Stabilise — built from her own examples ("Move Qi and Blood,
+Tonify Blood, Clear Heat, Clear Damp"), same "controlled list + always a typed
+escape hatch" posture as `PH_TP_SYM_PRESETS`'s Custom option. Renders as a new
+`colspan="4"` row directly under Formula (no natural "what happened" pairing
+exists for a diagnostic tag, so it isn't forced into one — same shape as the
+acu-fold row). Picker stays open across multiple picks (closes only on
+Done/toggle) so she can tick several in one visit; the custom-add input
+commits on Enter (delegated `keydown`, matching `presPickGrams`'s idiom) or
+its own Add button, both routed through one shared `phTpFormulaActionAddCustom`
+so the logic exists once.
+
+**Records → Photos** — new sidebar item under the existing Records group
+(`data-ph-tab="photos"`), the "where can i see uploaded pictures of patients"
+gap the per-patient Photos sections never closed since each only ever shows
+ONE patient. `renderPhRecordsPhotosPage` reuses `phRenPhotoGetAll()` (already
+built for the backup export — a whole-clinic read already existed, just never
+had a page) rather than a second gallery system. By date / by type toggle
+(her literal "both", not a pick between them; `phRecPhotosGroupBy`), a
+patient-name filter and a type filter, grouped cards of 72–96px thumbnails
+(`.ph-recphotos-grid`, same no-box-around-caption language as the existing
+`.ph-photos-th` strip).
+- **Thumbnails do NOT reuse `data-ren-thumb-view` directly.** The shared
+  viewer (`phRenViewPhoto`) reads a patient's PER-PATIENT cache (`phRenPhoto
+  Cache[patientKey]`, via `phRenPhotosFor`) — every existing call site renders
+  from inside that one patient's own Health Exam screen, where the cache is
+  already warm. This page reads the separate whole-clinic flat cache
+  (`phRecPhotosCache`), so a patient's per-patient cache may never have loaded
+  — found by testing, not assumed: the first version silently opened nothing.
+  Fixed with `phRecPhotosOpenViewer` (own `data-recphotos-thumb` attribute),
+  which lazy-loads via `phRenLoadPhotosFor` first, THEN hands off to the real,
+  unmodified `phRenViewPhoto`/`phRenCropState` viewer — retag, redate and
+  delete all come from that shared system with zero duplicated UI.
+- **The flat cache needed its own keep-in-step hook.** Retagging/redating/
+  deleting a photo from inside the shared viewer only ever refreshed the
+  per-patient cache before — one line added to `phRenLoadPhotosFor` (`if
+  (phRecPhotosCache) phRecPhotosLoad()`) keeps the Records grid in step with
+  any mutation, from either page, without the two caches ever disagreeing.
+  Confirmed live: deleting from the Records page's own viewer instance drops
+  the grid count immediately, no reload needed.
+- **Delete gained an undo toast — her explicit ask, "confirm first, then an
+  undo toast too."** The shared delete handler (`data-ren-view-delete-yes`)
+  now calls `phRenDeletePhotoWithUndo`, which keeps the just-deleted record
+  (blob included) in memory for 8s behind a small fixed toast (`#phRenUndoToast`,
+  independent of which tab is open, since a delete can happen from either the
+  Records page or a patient's own Health Exam screen); Undo calls `phRenPhotoPut`
+  with the exact same stored shape. The confirm-strip copy changed from "This
+  can't be undone" to "Delete this photo?" — it no longer claims something
+  untrue. This benefits the pre-existing per-patient viewer too, since it's
+  the same shared handler; nothing about retag/redate changed.
+
+**Settings regroup** — her "too crowded" (CLAUDE.md's own Settings history
+above). Ten sections that had piled into one long scroll are grouped by task:
+Clinic (My days at this clinic, This location, Clinic logo) / Prescriptions
+(Label text, Formulas filed as patients, Treatment plan phase templates) /
+Patients (Patient contacts from Cliniko, Letter templates) / Device (Photo
+relay, Storage) — `PH_SETTINGS_GROUPS`/`PH_SETTINGS_CARDS` (index.html, just
+above `renderPhSettingsPage`). A small sidebar (`.ph-settings-nav`, stacks to
+a horizontal row ≤640px) picks the group; every card in it starts folded to
+just its heading (`.ph-settings-cardhead`, `phSettingsOpenCards` — a Set, so
+several can be open at once) — "placeholders folded" read as "nothing forces
+itself open by default," since none of the ten sections were themselves true
+empty stubs once actually read.
+- **Every section's own render function is completely untouched** — four
+  that were previously inline blocks inside `renderPhSettingsPage` got
+  pulled out into their own named functions (`phSettingsWorkdaysHtml`,
+  `phSettingsLabelTextHtml`, `phSettingsLocationHtml`, `phSettingsCliniko
+  ImportHtml`) purely so they could sit in the same array as the six that
+  were already standalone functions (`phRetypeSectionHtml`, `phLtrTemplates
+  SectionHtml`, `phTpProtocolSectionHtml`, `phClinicLogoSectionHtml`,
+  `phPhotoRelaySectionHtml`, `phSettingsStorageHtml`) — zero logic changed
+  inside any of them.
+- A card's own `<h3>` is hidden by CSS when open (`.ph-settings-cardbody
+  .ph-settings-sec h3 { display: none }`) since the outer fold-header already
+  shows the same label — avoids a duplicate heading without string-surgery
+  on ten different functions' return values.
+- `renderPhLocBar()`/`phSettingsStoragePhotoFill()`/`phPhotoRelayStatusFill()`
+  are still called unconditionally after every render, exactly as before —
+  each already no-ops safely (`if (!el) return`) when its card happens to be
+  folded, so nothing needed to change there.
+- Switching group or folding/unfolding a card is pure view state
+  (`phSettingsGroup`, `phSettingsOpenCards`) — never written to `PHARMACY`,
+  forgotten on reload same as any other fold in this app.
+
+Verified in sandbox (all three): a real synthetic prescription created via
+Design formula, correctly tagged/reopened/synced, cleaned up after; the
+pre-existing typed-Link-formula path regression-checked unchanged; the
+Formula-action picker's pick/custom-add/remove/close; a 6-photo synthetic
+gallery across 2 patients/3 types/3 dates grouped, filtered, opened, deleted
+and undone correctly (the lazy-load bug was caught and fixed during this
+same pass, not shipped broken); every one of the 10 Settings cards opened
+without error across all 4 groups; 375px width has no horizontal overflow on
+either new page; the CLAUDE.md-protected Prescriptions live-search self-check
+passed after every stage of this build. Live `3a0b7a2`: `sw.js` `lcm-20260915-
+staged-design-photos-settings`, meta `20260915-233000`.
