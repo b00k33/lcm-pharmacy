@@ -1528,6 +1528,22 @@ want the application to become better at understanding my intentions rather than
 requiring me to repeat myself. I describe the destination. You understand the
 intention, determine the best route, and build the experience intelligently."
 
+### Spacing — a standing preference (2026-09-16)
+**"remember about my spacing preferences in ui"**, then **"code3 code7 pay
+attention to my spacing preferences."** Said right after flagging two
+separate desktop screens: the Appointments week/day grid ("all this empty
+space is taking up space" — dead space in the early-morning hours before
+any appointment starts) and the Appointments header/toolbar ("reduce
+empty space between lines" — the gap between the dark header bar and the
+date-nav/Grid·List/search row under it). This is broader than an earlier,
+mobile-only "be space saving" note — desktop screens count too. On any
+screen: actively compress leading dead space in a scrollable grid/
+timeline (default the visible range to where real data starts, don't
+show hours of nothing first), and tighten excess vertical gaps between
+stacked header/toolbar rows. This is about removing space that isn't
+doing a job — not a license to cram content or remove whitespace that's
+actually doing layout work (grouping, touch targets, tabular alignment).
+
 ## code3 — Communications Expert (established 2026-09-09)
 Her instruction: **"code3 in lcm is communications expert."** Unlike lcm6 and
 code7 above, she did not paste a full spec — she named the persona mid-session
@@ -1538,7 +1554,9 @@ rather than treating it as finished.
 
 **Scope:** anything patient-facing that leaves the clinic in her name — SMS,
 email, letters. Governs tone and structure, not clinical content (points,
-formulas, herbs stay lcm6/code7's territory).
+formulas, herbs stay lcm6/code7's territory). Visual layout/density of the
+Communications page itself is code7's territory too — see "Spacing — a
+standing preference" under code7 above, which she named code3 into as well.
 
 **Her own voice, stated directly, keep this word for word:** *"note my style
 of communications. im never completely blunt, im more polite but brief and
@@ -2391,3 +2409,107 @@ wired `phCyclePlanScheduleHtml` against a synthetic PCOS patient (renders,
 no error); `presTpInlineEditorHtml` end-to-end confirming "Looking ahead"
 is gone and "predicted schedule" is present. Live `eb01d35`: `sw.js`
 `lcm-20260916-synth22-batch-cd-cadence`, meta `20260916-010000`.
+
+### Synth22 batch #3 — 13 items, three clusters (2026-09-16)
+Collected across a run of screenshots, one line each, then **"ok build
+all"**. Synthesized into three clusters rather than 13 independent fixes
+(see [[project_pharmacy_synth22_batch3_2026_09_16]] in memory for the full
+collection + her two mid-batch picks):
+
+**Cluster A — what formula is actually dispensed.** Her words: *"i dont
+need a line for actual formula"*, *"i want linked formula to be in the
+dispensing list already"*, and *"whats dispensed needs to correspond with
+treatment plan. not 2 scripts. if i dispense another formula, its in the
+treatment plan."* Root cause across all three: the typed "Actual formula"
+field, Link/Design formula, and a dispensed script's name could all
+disagree with each other and with the plan. Fix: `t.actualFormula` is now
+derived-only (never a typed field — `presActualFormulaText` input removed
+from Dosage & Price, along with its 5 DOM-read sites); Link/Design formula
+reuse the phase's own undispensed script instead of creating a new one
+every time (`phTpPhaseScript`/`phTpEnsurePhaseScript` — "not 2 scripts");
+and Dispense & log now auto-syncs the dispensed formula onto the plan's
+current phase (`phTpAdoptScriptIntoPlan`, called from
+`presSavePrescription`), appending the old name to `formulaHistory` rather
+than losing it. Her pick, asked directly: **"Automatically, at dispense
+(Recommended)"** over a click-gated "Update plan instead" button — a
+dispense is her explicit action, so this doesn't contradict the existing
+"never auto-linked" comment on plain formula-picking (~44386), which is
+about linking with NO action from her at all.
+
+**Cluster B — presentation & density.** Dosage & Price's left (editor)
+column widened `480px` → `minmax(320px, 1fr)` middle (her: *"left culmn
+width needs to be wider"*). The Dosage & markup ⋯-menu item, dead since
+whenever the outside-click closer's guard list drifted, now opens
+(`phTogglePresSettings`, exempting `#phTbmMenu, .ph-tbm-more, #phMoreSheet`
+from the closer). Period history rewritten as a table — dot-column
+timeline (kept from 2026-09-05) + hairline-boxed cells in the Plan tab's
+Visits-table language, Flow and Pain now shown as real columns (saved
+since 2026-09-05, never displayed before), current row tinted period-red.
+Her pick, after asking the difference between two mocked options: **"box
+and timeline dots"** — a merge of the bordered-table option and the
+timeline-dots option, not either alone (see the memory file above for the
+full "when she asks the difference, she may want the merge" lesson). New
+**✎** affordance opens the same flow/pain/estimate popover the calendar
+strip already used, now with a Date field so a wrong date is fixed in
+place (`phCycleMoveHistoryDate` — swaps the entry's date without the
+14-day "nearby = correction" rule stealing a neighbour). Appointments
+grid's empty early-morning hours default the visible range to 30 minutes
+before the earliest booking across the days on screen
+(`phApptCalStartFor`, `PH_APPTCAL_LEAD_MIN`), rounded to the half-hour;
+nothing booked keeps the old fixed 7 AM. Appointments header→toolbar gap
+tightened to 8px at desktop widths, matching the phone-width tightening
+that already existed — the desktop half of [[feedback_spacing_preferences]].
+
+**Cluster C — independent fixes.** Prepare/postage panel gets a **"✓
+Already dispensed"** button (`schedMarkDispensedManual`) alongside Dispense
+& log — confirms a job as sent/logged without running a second real
+dispense, for the "it was dispensed already, I just need to log it"
+case; links to an existing dispense record when the timing already
+matches, else stamps `s.dispensedManual = true` (shown as "· by hand" on
+the checkpoint cell). Booking edit form's Service field is now a `<select>`
+of the same 21 Cliniko types + Home Visit/Break (`PH_APPTCAL_SERVICE_NAMES`)
+instead of free text, with a "(as typed)" fallback option for any legacy
+value that doesn't match — closes the exact gap the Home Visit colour
+comment already described (a typo stranding a booking on the fallback
+tint). Profile tab gets Phone/Email fields (`presContactFieldsHtml`) right
+under Name/Sex/DOB — same "type it once, saves on change, no re-render"
+rule as the check-in card's own phone/email fields, same source
+attribution label ("from the Cliniko list · date"). Appointment popup
+shows the patient's condition (their treatment plan's title + current
+phase) and lets her pick which plan a visit is for when there's more than
+one (`a.planId`, new 📋 row in `phApptPopHtml`) — her words: *"i want to be
+able to select condition for treatment plans and have that shown in the
+popup. integrate it."* New patient-education letter **"How acupuncture
+relieves pain"** (`PH_INFO_LETTERS` id `howacuworks`) rewrites her pasted
+research (Local Twitch Response → Gate Control Theory → beta-endorphins,
+with its PubMed/PMC citations) in the Iron letter's Did-you-know/
+Research-shows shape, every "dry needling" replaced with "acupuncture" per
+her instruction, and her Ashi-point fact (*"trigger point - also known as
+a shi points in acupuncture"*) folded in as its own Did-you-know bullet.
+
+**Verified in the sandbox** (`lcm-pharmacy-synth22batch`, port 8945; the
+real login gate blocks a fully-booted local preview, same as every other
+batch): a synthetic patient with two plans (condition picker branches
+correctly to a single-plan link vs a multi-plan `<select>`, saves
+`planId`); Period history's date-move round-trip (moved a logged date,
+confirmed it re-sorted, kept its flow/pain, current LMP untouched); the
+Service picker's legacy-value fallback; Profile Phone/Email save-on-change
+with no mid-edit re-render, `phoneFrom`/`phoneSrc` correctly cleared on a
+typed number; `phApptCalStartFor` against day-sets with and without
+bookings; the CLAUDE.md-protected Prescriptions live-search check. One
+layout bug caught and fixed during verification: Period history's Flow/
+Pain/flags columns were sized too narrow for a real `<table
+table-layout:fixed>` and the "~ estimate" pill overflowed its cell —
+widened the flags column and gave Flow/Pain their own explicit column
+widths instead of splitting leftover space evenly.
+
+**Disclosed judgment calls:** the Service picker is a strict list (her
+own 21 Cliniko types + Home Visit/Break) rather than free-typed with
+autocomplete — matches the existing colour-lookup table exactly, and a
+typed value still saves via the "(as typed)" fallback option. Link formula
+does not auto-navigate anywhere after pouring — it stays on the current
+screen, same as before. A poured formula's grams are left blank (the
+ingredient list carries the herb name/code only) — no gram total existed
+to infer one from. `phAcuCadenceParse` (Communications' acu-follow-up
+parser) is untouched, same disclosed scope line as the CD-cadence batch
+above.
