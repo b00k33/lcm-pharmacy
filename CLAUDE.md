@@ -2513,3 +2513,7 @@ ingredient list carries the herb name/code only) — no gram total existed
 to infer one from. `phAcuCadenceParse` (Communications' acu-follow-up
 parser) is untouched, same disclosed scope line as the CD-cadence batch
 above.
+
+Committed to `session-a` (not yet pushed to `main` — the 4pm Sydney job
+does that): `dc54fab`. `sw.js` `lcm-20260916-synth22-batch3`, meta
+`20260916-020000`.
