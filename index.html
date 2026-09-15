@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260916-020000">
+<meta name="lcm-build" content="20260916-030000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -8393,6 +8393,11 @@
   #pharmacyPage .ph-visit-tngsel { font-size: 10px; color: var(--ph-soft); margin: 2px 0 4px; }
   #pharmacyPage .ph-visit-tnghint { font-size: 10px; color: var(--ph-soft); text-align: left; line-height: 1.4; margin-top: 6px; }
   #pharmacyPage .ph-visit-tnghint b { color: var(--ph-green-deep); font-weight: 700; }
+  #pharmacyPage .ph-hx-tng-body { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; margin-top: 4px; }
+  #pharmacyPage .ph-hx-tng-diagram { flex: none; width: 140px; }
+  #pharmacyPage .ph-hx-tng-diagram .ph-tng-svg { width: 100%; }
+  #pharmacyPage .ph-hx-tng-side { flex: 1 1 220px; text-align: left; }
+  #pharmacyPage .ph-hx-tng-side .ph-visit-tngsel { margin: 0 0 4px; }
   /* Shen-Hammer exam sections (her Lotus Healing Arts pulse form) */
   #pharmacyPage .ph-hm { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--ph-line); text-align: left; }
   #pharmacyPage .ph-hm-sec { font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--ph-green-deep); margin: 8px 0 2px; }
@@ -27469,6 +27474,46 @@
         renderHxScreen();
         return;
       }
+      // ---- 方病人 constitution screen's own tongue chart (her ask
+      // 2026-09-15) -- same data-tng-region attribute the Guide and the
+      // per-visit chart both use, so it's gated to .ph-hx-constit-tng the
+      // same way those two are gated to .ph-gd-tng-diagram / .ph-visit-tng;
+      // the overlay/body/coat chips use their own data-constit-tng-* names
+      // so they can never collide with the per-visit draft's handlers.
+      const hxTngRegion = e.target.closest("[data-tng-region]");
+      if (hxTngRegion && hxTngRegion.closest(".ph-hx-constit-tng")) {
+        const rec = phPatientRec(presHxScreenName);
+        if (rec) {
+          const t = phHxConstitTongue(rec), r = hxTngRegion.dataset.tngRegion;
+          t.regions = t.regions.includes(r) ? t.regions.filter(x => x !== r) : t.regions.concat(r);
+          savePharmacy();
+        }
+        renderHxScreen();
+        return;
+      }
+      const hxTngOverlay = e.target.closest("[data-constit-tng-overlay]");
+      if (hxTngOverlay) {
+        const rec = phPatientRec(presHxScreenName);
+        if (rec) {
+          const t = phHxConstitTongue(rec), k = hxTngOverlay.dataset.constitTngOverlay;
+          t.overlays = t.overlays.includes(k) ? t.overlays.filter(x => x !== k) : t.overlays.concat(k);
+          savePharmacy();
+        }
+        renderHxScreen();
+        return;
+      }
+      const hxTngQual = e.target.closest("[data-constit-tng-qual]");
+      if (hxTngQual) {
+        const rec = phPatientRec(presHxScreenName);
+        if (rec) {
+          const [grp, id] = hxTngQual.dataset.constitTngQual.split(":");
+          const t = phHxConstitTongue(rec);
+          if (Array.isArray(t[grp])) t[grp] = t[grp].includes(id) ? t[grp].filter(x => x !== id) : t[grp].concat(id);
+          savePharmacy();
+        }
+        renderHxScreen();
+        return;
+      }
       // ---- Ren (人) photo upload + crop (her ask 2026-08-22) ----
       if (e.target.closest("[data-ren-photo-add]")) {
         const inp = document.getElementById("phRenPhotoFileInput");
@@ -40172,6 +40217,7 @@ or changing anything in Cliniko.
       <label class="ph-gd-field"><span>Findings</span>
         <textarea data-hx-constit-findings rows="2" placeholder="Optional notes…">${esc(rec.constitutionFindings || "")}</textarea>
       </label>
+      ${phHxConstitTongueHtml(rec, patientKey)}
       ${phRenRefStripHtml(patientKey)}
       <!-- her 2026-08-25 spec: capture-by-type tiles, then the dated
            timeline. Both read the same IndexedDB photo list already loaded
@@ -42553,6 +42599,38 @@ or changing anything in Cliniko.
       + greasy + crack + twolines + teeth
       + `<path d="M15,20 Q15,15 25,15 L75,15 Q85,15 85,20 L82,90 Q80,120 65,135 Q50,148 35,135 Q20,120 18,90 Z" class="ph-tng-outline${has("pale") ? " pale" : ""}"/>`
       + `</svg>`;
+  }
+
+  // ---- 方病人 constitution screen: patient-level tongue chart, her ask
+  // 2026-09-15 "i need diagnostics on this page e.g. tongue pulse chart...
+  // i want tongue chart next to tongue photos" -- reuses the same chart the
+  // Guide and per-visit findings already use (phTongueOutlineSvg + the
+  // PH_TONGUE_REGIONS/OVERLAYS/PH_TP_TONGUE_BODY/COAT lists), but keeps its
+  // own patient-level marks (rec.constitTongue) separate from any one
+  // visit's draft -- this is a standing constitutional read, not tied to an
+  // appointment, so it lives beside the 方病人 fields above, not in a plan.
+  function phHxConstitTongue(rec) {
+    return rec.constitTongue || (rec.constitTongue = { regions: [], overlays: [], body: [], coat: [] });
+  }
+  function phHxConstitTongueHtml(rec, patientKey) {
+    const t = phHxConstitTongue(rec);
+    const regions = t.regions || [], overlays = t.overlays || [], body = t.body || [], coat = t.coat || [];
+    const chips = (list, on, attr, grp) => `<div class="ph-ltr-quals ph-visit-quals">${list.map(([id, label]) => `<button type="button" class="ph-ltr-qual${on.includes(id) ? " on" : ""}" ${attr}="${esc(grp ? `${grp}:${id}` : id)}">${esc(label)}</button>`).join("")}</div>`;
+    const notes = regions.flatMap(r => (phTongueNotes()[r] || []).slice(0, 2).map(n => ({ r, n })));
+    return `<div class="ph-gd-field ph-hx-constit-field ph-hx-constit-tng">
+      <span class="ph-ren-field-label">Tongue chart</span>
+      <div class="ph-hx-tng-body">
+        <div class="ph-hx-tng-diagram">${phTongueOutlineSvg(new Set(regions), new Set(overlays))}</div>
+        <div class="ph-hx-tng-side">
+          <div class="ph-visit-tngsel">${regions.length ? regions.map(r => esc(phTongueRegionLabel(r))).join(" · ") : "tap a region"}</div>
+          <div class="ph-tp-qualgrp"><i>marks</i>${chips(PH_TONGUE_OVERLAYS, overlays, "data-constit-tng-overlay")}</div>
+          <div class="ph-tp-qualgrp"><i>body</i>${chips(PH_TP_TONGUE_BODY.map(x => [x, x]), body, "data-constit-tng-qual", "body")}</div>
+          <div class="ph-tp-qualgrp"><i>coat</i>${chips(PH_TP_TONGUE_COAT.map(x => [x, x]), coat, "data-constit-tng-qual", "coat")}</div>
+          ${notes.length ? `<div class="ph-visit-tnghint">${notes.map(({ r, n }) => `<div><b>${esc(phTongueRegionLabel(r))}</b> · ${esc(n.trigger || "")} → ${esc(n.points || "")}</div>`).join("")}</div>` : ""}
+          ${phRenThumbsHtml(patientKey, "tongue")}
+        </div>
+      </div>
+    </div>`;
   }
 
   // ---- STEP 8: live stock beside every formula — reuses the existing
