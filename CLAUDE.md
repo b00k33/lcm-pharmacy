@@ -2158,3 +2158,109 @@ working history link (landed on Profile/Cycle); a non-cycle patient showed
 no summary line at all, list/add-form unchanged; Prescriptions live-search
 self-check passed. Live `67deea5`: `sw.js` `lcm-20260915-tp-periods-
 cyclesummary`, meta `20260915-234500`.
+
+## Assessment → Cycle tab redesign — tessellated layout, phase colour, contraceptive duration (her ask 2026-09-15)
+Two screenshots (empty "no LMP yet" state, populated "15 Ovulation" state)
+with **"improve ui, too much empty space, text needs to be easier to scan"**
+and **"i need to indicate how long patient has been on contraceptive."**
+Calibrated over many rounds of real mocks (front the sandbox, don't just
+describe); every decision below is what she actually picked, not a proposal.
+
+**Layout — "tesselate it".** The calendar strip and the cycle detail
+(quiz or stats) sit SIDE BY SIDE, not stacked, full card width (she was
+explicit: don't cap the card). `phCycleTessHtml(rec, name)` is the one
+shell both call sites use — `.ph-cycle-tess-cal` (calendar, `flex: 0 0
+300px`) + `.ph-cycle-tess-detail` (bar + tiles) — replacing the old
+concatenation of `phCycleStripHtml` + `phCycleBarHtml` + `phCycleDetailsHtml`
+directly. Desktop only (`@media (max-width: 900px)` stacks it back to the
+phone's existing approved layout, unaffected). Calendar day cells grew from
+28px to 34px ("make calendar bigger").
+
+**Same tile shape in BOTH states — her direct correction** ("i dont like
+that populated and empty look different"): the empty-state quiz and the
+populated stat row are the SAME `.ph-cycle-tile` component. An editable
+`<input>`/`<select>` stands in for a computed value in the quiz; the exact
+tiles a patient sees once she has an LMP are pre-seeded by that same
+first-fill. `phCycleContraTileHtml(c, forceCorner)` builds the Contraception
+tile once and is called from both `phCycleDetailsHtml` (quiz) and
+`phCycleBarHtml` (stats) — a real architectural unification, not a visual
+coincidence.
+
+**Bar stays above the tile grid in BOTH states.** A patient with no LMP yet
+gets a quiet placeholder bar (`.ph-cyclebar-empty`, diagonal stripe, no
+segments/pin) in the exact slot the real phase bar occupies once tracked,
+so both states share the same shape from the first glance. **Trap hit and
+fixed the same day**: this placeholder was briefly rendered TWICE — once
+from `phCycleBarHtml`'s empty branch and again from `phCycleDetailsHtml`,
+since the tessellated shell concatenates both and each had grown its own
+copy across mock iterations. Caught by sandbox verification (not by
+reading the diff), fixed by deleting `phCycleDetailsHtml`'s copy — the bar
+belongs to `phCycleBarHtml` alone, called first.
+
+**Bar doubled in thickness** (~10px → 18px, "make this thicker").
+
+**Phase-based bold, not default bold** ("the bolding not necessary, text is
+ok" → "bold based on cycle phase instead"). Mapping: period → LMP tile,
+follicular/ovulation → Ovulation tile, luteal → Next tile; Cycle length
+never bolds (it isn't a phase event, it has no bar segment). When a tile
+IS the current phase, its `.current` class bolds label+value+sub together,
+not just the value. Verified live across Period (LMP bold), Ovulation
+(Ovulation bold) and Luteal (Next bold) — not assumed from one screenshot.
+
+**Tiles permanently colour-matched to their bar segment** ("give the same
+colour of the bar to the tiles related"): LMP tile carries the period-red
+tint (`.lmp`), Ovulation the teal (`.ov`), Next the blue (`.next`) —
+ALWAYS, not just while current; bold is the separate signal for "current".
+A genuinely overdue Next period overrides to red via `.next.overdue` —
+that clinical alert outranks the routine luteal-blue tint.
+
+**Icons**: plain emoji (📅/↻/🥚/🩸) replaced with the app's existing
+outline SVG-sprite system. Added `i-refresh`, `i-egg`, `i-bolt`, `i-heart`
+alongside the existing `i-cal`/`i-drop`/`i-pill`/`i-clipboard`/`i-check`.
+
+**Predicted-date wording is UNCHANGED, only restyled** — the locked
+2026-09-14 wording ("Unlikely"/"May not occur"/"~ estimate" for a
+contraception-suppressed cycle) still shows verbatim; the coloured pill
+badge became a quiet italic `.ph-cycle-predtag` span instead ("i like the
+original table. just dont like the text and highlights"). Do not touch
+this wording again without her sign-off — it's clinical, not decorative.
+
+**All tile text is one uniform size** (12px, no size-based hierarchy) — her
+explicit ask ("make it all same font size"), on top of the original
+paper-tint boxed tile design she confirmed she still wants (not a flat/
+hairline redesign, which she rejected earlier the same day).
+
+**Contraceptive duration — the actual trigger for this whole redesign.**
+New `rec.cycle.contraDuration = {amount, unit}` (`unit` is `"mo"` or
+`"yr"`), edited via a number input + mo/yr toggle inside the Contraception
+tile (`phCycleContraTileHtml`), shown ONLY once a method other than "None"
+is picked. Echoed on the collapsed cycle-line summary
+(`presCycleSectionBodyHtml`), via `phCycleContraDurText(c)`.
+- **The collapsed cycle line is now TWO lines, not one** — her correction
+  ("i dont want cd and date same line"): a `.top` line (CD + phase, e.g.
+  "🩸15 Ovulation") and a `.meta` line below it (LMP + cycle length +
+  contraception detail, e.g. "LMP 1 Sep · ~28d · on Pill 8yr").
+- **A one-time, dismissible nudge** — never a recurring nag — for existing
+  patients who already have a contraceptive method set but no duration
+  logged: `phCycleContraDurNudgeHtml(c)`, gated on
+  `c.contraception && c.contraception !== "none" && !c.contraDuration?.amount
+  && !c.contraDurNudgeDismissed`. "Add" focuses the amount input; the ✕
+  sets `rec.cycle.contraDurNudgeDismissed = true` permanently (same flag
+  either way — filling the field also hides it, since the amount check
+  short-circuits first).
+- **Contraception tile forced to the true bottom-right corner** in both
+  states ("swap position of contraceptive tile to bottom right") via a
+  `forceCorner` param on `phCycleContraTileHtml` applying `.corner4`
+  (`grid-column: 4`) — needed because with 7 quiz tiles + 1 wide Symptoms
+  tile, natural grid flow would otherwise leave the true corner cell
+  blank. Phone breakpoint resets `.corner4` to `grid-column: auto`, since a
+  forced column-4 placement would break the phone's 2-column fallback —
+  verified at 375px, no overflow, 9-tile `.has-bbt` grid (LMP/Cycle/
+  Ovulation/Next/Pain/Regular/Flow/Contraception/BBT) reflows cleanly.
+
+Verified in sandbox beyond the build-time checks above: mo/yr toggle
+commits and re-renders with the value retained; nudge dismiss persists
+across re-render; empty-state (no-LMP) quiz renders with the single
+placeholder bar + all 8 tiles including the forced-corner Contraception
+tile; Prescriptions live-search self-check passed. Live `c366a8c`: `sw.js`
+`lcm-20260915-cycle-tab-redesign`, meta `20260915-235959`.
