@@ -1161,6 +1161,25 @@ reality:
   The page only ever READS the dispense log, the left-unlogged stamps and today's appointments — it never
   writes to them, changes stock, money or any prescription. Its one write is today's Copied mark
   (`daybook-ph-eod-copied`).
+- **WHAT MAKES THE APPOINTMENTS GRID WORK (her own words, 2026-09-16, "the function of
+  this page makes me happy" — asked, not assumed).** Any future change to this page must
+  be checked against this before it ships; if it would weaken one of these, flag it to
+  her rather than shipping it quietly. Her three, in her own selection, over a fourth
+  option (the status dot) she did NOT pick — don't read that as "the dot doesn't
+  matter," just that it wasn't one of the three that make this page happy for her:
+  1. **Seeing the whole day/week in colour at a glance** — the Cliniko-matched block
+     colours (`phCkTypeColour`/`PH_CLINIKO_TYPE_COLOURS`) let her read the shape of a
+     day without opening anything.
+  2. **One tap opens everything about that patient** — the block → `#phApptPop` → Call /
+     Text / Profile, no navigating away from the grid to act.
+  3. **It feels like her real calendar** — Cliniko's own day-view shape (solid blocks,
+     time gutter, the page scrolls), not a generic app grid.
+  Her own framing of WHY, asked directly: **"both, equally — hard to separate"** speed
+  and calm; they are the same thing on this page, not two things to trade off. **Where
+  this bar should reach next, her pick (not yet built, a direction not a to-do list):**
+  Dispense / the script panel, Formula refill, Communications/check-ins — in that
+  order of "furthest from it today." When redesigning any of those three, measure
+  against these same three points before calling it done.
 
 ## lcm6 — Senior Product & Desktop UI/UX Design Agent
 Given 2026-08-30, written down here (same reason as book33-app-redesign's `code6`
