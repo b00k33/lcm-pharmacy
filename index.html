@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260916-031500">
+<meta name="lcm-build" content="20260916-040000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -27514,6 +27514,42 @@
         renderHxScreen();
         return;
       }
+      // ---- the constitution screen's pulse chart (her "yes" 2026-09-16):
+      // same stamp-then-zone logic as the per-visit grid's data-visit-pulse-*
+      // handlers, writing to rec.constitPulse instead of presVisitFndDraft.
+      // Stamp/more are view state only -- no save, just a repaint.
+      const hxPulseStamp = e.target.closest("[data-constit-pulse-stamp]");
+      if (hxPulseStamp) { presHxConstitPulseStamp = hxPulseStamp.dataset.constitPulseStamp; renderHxScreen(); return; }
+      if (e.target.closest("[data-constit-pulse-more]")) { presHxConstitPulseMore = !presHxConstitPulseMore; renderHxScreen(); return; }
+      const hxPulseCell = e.target.closest("[data-constit-pulse-cell]");
+      if (hxPulseCell) {
+        const rec = phPatientRec(presHxScreenName);
+        if (rec) {
+          const key = hxPulseCell.dataset.constitPulseCell, p = phHxConstitPulse(rec), stamp = presHxConstitPulseStamp;
+          if (stamp === "erase") { delete p.pulse[key]; }
+          else {
+            const known = PH_PULSE_SHAPES.find(s => s.id === stamp);
+            const next = known ? { quality: known.quality, shape: known.id } : { quality: stamp, shape: null };
+            const cur = p.pulse[key];
+            if (cur && cur.quality === next.quality && cur.shape === next.shape) delete p.pulse[key];
+            else p.pulse[key] = next;
+          }
+          savePharmacy();
+        }
+        renderHxScreen();
+        return;
+      }
+      const hxPulseRef = e.target.closest("[data-constit-pulse-ref]");
+      if (hxPulseRef) {
+        const rec = phPatientRec(presHxScreenName);
+        if (rec) {
+          const k = hxPulseRef.dataset.constitPulseRef, p = phHxConstitPulse(rec);
+          p.pulseRef = p.pulseRef.includes(k) ? p.pulseRef.filter(x => x !== k) : p.pulseRef.concat(k);
+          savePharmacy();
+        }
+        renderHxScreen();
+        return;
+      }
       // ---- Ren (人) photo upload + crop (her ask 2026-08-22) ----
       if (e.target.closest("[data-ren-photo-add]")) {
         const inp = document.getElementById("phRenPhotoFileInput");
@@ -40218,6 +40254,7 @@ or changing anything in Cliniko.
         <textarea data-hx-constit-findings rows="2" placeholder="Optional notes…">${esc(rec.constitutionFindings || "")}</textarea>
       </label>
       ${phHxConstitTongueHtml(rec, patientKey)}
+      ${phHxConstitPulseHtml(rec)}
       ${phRenRefStripHtml(patientKey)}
       <!-- her 2026-08-25 spec: capture-by-type tiles, then the dated
            timeline. Both read the same IndexedDB photo list already loaded
@@ -42629,6 +42666,49 @@ or changing anything in Cliniko.
           ${notes.length ? `<div class="ph-visit-tnghint">${notes.map(({ r, n }) => `<div><b>${esc(phTongueRegionLabel(r))}</b> · ${esc(n.trigger || "")} → ${esc(n.points || "")}</div>`).join("")}</div>` : ""}
           ${phRenThumbsHtml(patientKey, "tongue")}
         </div>
+      </div>
+    </div>`;
+  }
+  // ---- the pulse twin of the tongue chart above (her "yes" 2026-09-16 to
+  // building it as its own follow-up). Same organ-zone grid, stamps, scores
+  // and SHPD-note hints the per-visit findings panel uses -- every render and
+  // compute function is shared, only the data lives elsewhere
+  // (rec.constitPulse, a standing constitutional read) and the click
+  // attributes are its own, because NONE of the visit pulse handlers are
+  // ancestor-gated: reusing data-visit-pulse-* here would silently write
+  // into whatever visit's draft happened to be open. Deliberately NOT
+  // carried over: "last visit" comparison (no visit series to compare a
+  // baseline against) and the Shen-Hammer exam form (a per-exam record, and
+  // a much bigger surface -- ask her before duplicating it).
+  const PH_HX_CONSTIT_PULSE_STUB_HAMMER = { rhythm: [], rate: {}, impressions: [], wave: "", depths: {}, positions: {}, degree: {}, change: [] };
+  let presHxConstitPulseStamp = "thin", presHxConstitPulseMore = false;
+  function phHxConstitPulse(rec) {
+    return rec.constitPulse || (rec.constitPulse = { pulse: {}, pulseRef: [] });
+  }
+  function phHxConstitPulseHtml(rec) {
+    const p = phHxConstitPulse(rec);
+    const marks = p.pulse || {}, refs = p.pulseRef || [];
+    const stampBtn = (id, label) => `<button type="button" class="ph-pulse-stamp${presHxConstitPulseStamp === id ? " on" : ""}" data-constit-pulse-stamp="${esc(id)}" aria-pressed="${presHxConstitPulseStamp === id ? "true" : "false"}">${esc(label)}</button>`;
+    const shown = PH_PULSE_OTHER_Q.slice(0, PH_PULSE_STAMP_SHOWN), hidden = PH_PULSE_OTHER_Q.slice(PH_PULSE_STAMP_SHOWN);
+    const more = presHxConstitPulseMore || hidden.includes(presHxConstitPulseStamp);
+    const kb = phVisitPulseKbHits({ pulse: marks, hammer: PH_HX_CONSTIT_PULSE_STUB_HAMMER });
+    return `<div class="ph-gd-field ph-hx-constit-field ph-hx-constit-pulse">
+      <span class="ph-ren-field-label">Pulse chart</span>
+      <div class="ph-pulse-wrap">
+        <div class="ph-pulse-stamps">
+          ${PH_PULSE_SHAPES.map(s => stampBtn(s.id, s.label)).join("")}
+          ${shown.map(q => stampBtn(q, q)).join("")}
+          ${more ? hidden.map(q => stampBtn(q, q)).join("") : ""}
+          <button type="button" class="tab-link" data-constit-pulse-more="1">${more ? "fewer" : `more (${hidden.length})`}</button>
+          ${stampBtn("erase", "✕ erase")}
+        </div>
+        <div class="ph-pulse-halves">
+          ${phVisitPulseHalfHtml("R", marks, null, refs, "data-constit-pulse-cell", "data-constit-pulse-ref")}
+          ${phVisitPulseHalfHtml("L", marks, null, refs, "data-constit-pulse-cell", "data-constit-pulse-ref")}
+        </div>
+        ${phVisitPulseScoresHtml(marks, null)}
+        ${phPulseKbBlockHtml(kb.grid, PH_PULSE_KB_LABEL)}
+        <div class="ph-pulse-hint">Tap a stamp, then tap a zone. Thin and Pounding are her drawn shapes; every other quality records by name until she draws it.</div>
       </div>
     </div>`;
   }
@@ -49393,15 +49473,20 @@ or changing anything in Cliniko.
       .sort((a, b) => (b.at || 0) - (a.at || 0));
     return sess[0] ? { session: sess[0], marks: rec.visitFnd[sess[0].id].pulse } : null;
   }
-  function phVisitPulseCellHtml(side, col, level, marks, prevMarks) {
+  // cellAttr/refAttr: which data-* attribute each cell/chip carries, so the
+  // same grid can serve a second, differently-handled context -- the 方病人
+  // constitution screen's patient-level pulse read (her ask 2026-09-16)
+  // passes data-constit-pulse-*; every existing visit caller leaves them
+  // unset and gets the data-visit-pulse-* it always had.
+  function phVisitPulseCellHtml(side, col, level, marks, prevMarks, cellAttr) {
     const key = `${side}:${col.id}:${level.id}`;
     const m = marks[key], pm = !m && prevMarks && prevMarks[key];
     const content = m ? (m.shape ? phPulseShapeSvg(m.shape) : `<span class="q">${esc(m.quality)}</span>`)
       : pm ? `<span class="pq">${pm.shape ? phPulseShapeSvg(pm.shape) : esc(pm.quality)}</span>` : "";
     const title = `${col.label} · ${side} ${col.pos} · ${level.label}${m ? ` — ${m.quality}` : pm ? ` — last visit: ${pm.quality}` : ""}`;
-    return `<button type="button" class="ph-pulse-cell${m ? " on" : pm ? " prev" : ""}" data-visit-pulse-cell="${esc(key)}" title="${esc(title)}" aria-pressed="${m ? "true" : "false"}">${content}</button>`;
+    return `<button type="button" class="ph-pulse-cell${m ? " on" : pm ? " prev" : ""}" ${cellAttr || "data-visit-pulse-cell"}="${esc(key)}" title="${esc(title)}" aria-pressed="${m ? "true" : "false"}">${content}</button>`;
   }
-  function phVisitPulseHalfHtml(side, marks, prevMarks, refs) {
+  function phVisitPulseHalfHtml(side, marks, prevMarks, refs, cellAttr, refAttr) {
     const cols = PH_PULSE_CHART[side];
     const gridCols = ["44px", ...cols.map(c => c.w === 2 ? "2fr" : "1fr")].join(" ");
     return `<div class="ph-pulse-half">
@@ -49409,9 +49494,9 @@ or changing anything in Cliniko.
       <div class="ph-pulse-grid" style="grid-template-columns:${gridCols}">
         <div class="ph-pulse-collbl"></div>
         ${cols.map(c => `<div class="ph-pulse-collbl">${esc(c.label)}</div>`).join("")}
-        ${PH_PULSE_LEVELS.map(level => `<div class="ph-pulse-rowlbl">${esc(level.label)}</div>${cols.map(c => phVisitPulseCellHtml(side, c, level, marks, prevMarks)).join("")}`).join("")}
+        ${PH_PULSE_LEVELS.map(level => `<div class="ph-pulse-rowlbl">${esc(level.label)}</div>${cols.map(c => phVisitPulseCellHtml(side, c, level, marks, prevMarks, cellAttr)).join("")}`).join("")}
       </div>
-      <div class="ph-pulse-refs"><i>referred</i>${PH_PULSE_REFERRED[side].map(([id, label]) => { const k = `${side}:${id}`; return `<button type="button" class="ph-ltr-qual${refs.includes(k) ? " on" : ""}" data-visit-pulse-ref="${esc(k)}">${esc(label)}</button>`; }).join("")}</div>
+      <div class="ph-pulse-refs"><i>referred</i>${PH_PULSE_REFERRED[side].map(([id, label]) => { const k = `${side}:${id}`; return `<button type="button" class="ph-ltr-qual${refs.includes(k) ? " on" : ""}" ${refAttr || "data-visit-pulse-ref"}="${esc(k)}">${esc(label)}</button>`; }).join("")}</div>
     </div>`;
   }
   // compact read-only line for a saved visit's pulse marks (used in the
