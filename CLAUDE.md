@@ -2126,3 +2126,35 @@ without error across all 4 groups; 375px width has no horizontal overflow on
 either new page; the CLAUDE.md-protected Prescriptions live-search self-check
 passed after every stage of this build. Live `3a0b7a2`: `sw.js` `lcm-20260915-
 staged-design-photos-settings`, meta `20260915-233000`.
+
+## Treatment-plan grid Periods cell — cycle date + CD + link to history (her ask straight after Stage D, 2026-09-15)
+A small follow-up, not part of synth22 — she sent a screenshot of the
+Periods "what happened" cell reading "—" and asked to see cycle date, CD,
+and a link to cycle history.
+
+**Why the cell read "—" even with real cycle data logged elsewhere:**
+`phTpRecordCellHtml`'s gathered list (`rc`/`list`) is scoped to the PHASE's
+own date window, same as every other "what happened" field on the grid — it
+was never meant to show current state, only what was logged inside that
+phase's dates. Cycle tracking is patient-level (`[[project_pharmacy_acupuncture_cycle_tracking]]`-era
+decision, unchanged here), so a phase with no period logged in-window shows
+empty even mid-cycle.
+
+**Fix**: added a summary line ABOVE the existing list/add-form in the
+`kind === "periods"` branch, reading the patient's LIVE cycle position —
+`phCycleComp(phPatientPeek(ctx.name))` + `phCycleFor(...)` for the LMP date
+(same two calls the phase-row's own cycle chip already uses elsewhere on
+this grid, not a new calculation). Renders as `<date> · CD <n>` plus a
+`.ph-name-link`-styled `Cycle history →` button
+(`data-tp-cyclehist-jump`), reusing the app's one quiet-text-link
+component rather than inventing a new style. The button sets
+`presStage = "profile"; presAssessTab = "cycle"; renderPresPanel();` —
+jumps the same open script straight to Profile → Cycle. Hidden entirely
+for a patient with no cycle tracked (`comp && cyc && cyc.lmp` guard) — no
+empty summary line for e.g. an MSK-only patient.
+
+Verified in sandbox: real cycle-tracked patient showed `1 Sep · CD 15` +
+working history link (landed on Profile/Cycle); a non-cycle patient showed
+no summary line at all, list/add-form unchanged; Prescriptions live-search
+self-check passed. Live `67deea5`: `sw.js` `lcm-20260915-tp-periods-
+cyclesummary`, meta `20260915-234500`.
