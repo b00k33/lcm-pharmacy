@@ -2575,3 +2575,54 @@ swept into the other session's `ea849eb` by its whole-file `git add`; only
 the six review fixes are in this session's own commit. Nothing lost —
 both are on `session-a`. `sw.js` `lcm-20260916-synth22-batch3-complete`,
 meta `20260916-070000`.
+
+## Constitution tab on the Patient profile — the History popup is not the way to a tongue chart (her pick A, 2026-09-16)
+Her words on the History screen: **"i dont take history when i see it."** The
+方病人 constitution block (`phHxConstitutionHtml`: body type / personality,
+eyes / build / skin / voice, Findings, the tongue chart beside the tongue
+photos, the pulse chart, the Shen-Hammer exam, photo tiles + timeline) lived
+ONLY in that screen's head, so for a returning patient the one road to a
+tongue chart was the History POPUP. Shown three mocks (A tab on the profile ·
+B same popup with diagnostics first and the 38 questions folded · C both) she
+picked **A**. Built as `cc240c0`:
+- `presAssessSections` has a **Constitution** tab (Photos · Constitution ·
+  Checklist · Cycle · IVF history · Notes) for every patient →
+  `presConstitTabBodyHtml` → `#presConstitHost`. **The History row and the
+  popup are untouched** — the popup still carries the block for when she does
+  take a history.
+- Every handler in the block resolves the patient through `presHxScreenName`
+  and repaints via `renderHxScreen()`, so: `presHxInlineSync(keepName)` now
+  keeps the name whenever the **profile stage** shows (not only a new
+  patient's inline history), `presConstitTabBodyHtml` sets it, and
+  `renderHxScreen()` repaints `#presConstitHost` in place (never
+  `renderPresPanel()` — her scroll spot and open sections survive a chip tap).
+  `phRenPasteTargetKey` accepts the host as an open Hx screen (paste/drop a
+  photo onto the tab works).
+- **The block can exist twice at once** — the tab under an open popup, or the
+  closed popup's retained markup — so anything that patches it in place must
+  scope to `e.target.closest("#phRenConstitPanel")`, never a document-wide
+  `querySelector` (the Hammer rate input was the one case; fixed).
+  `phRenTimelineScrollEnd` scrolls every `#phRenTlScroll`.
+- The new patient's inline history (`#phOpHxInline`) renders with
+  `{ inline: true, noConstit: true }` — the block is one row down in the tab.
+  **Both renderers of the inline copy must pass the same opts**
+  (`presStageOpeningHtml` and `renderHxScreen`).
+- **Found in the same build: the 2026-09-11 inline history had been
+  unreachable since the plan gate.** `presPatientIsNew` counts a plan as
+  "not new", and every patient past the gate has one. She chose **"keep it
+  open for new patients"**, so `presStageOpeningHtml` now decides with
+  `presHxUntaken(name)` — history never touched, no acu session logged,
+  nothing ever dispensed; **plans deliberately not counted** — and
+  `presHxInlineFor` keeps it open past her first answer (which makes her
+  "not new") until she leaves the profile or the script
+  (`presHxInlineSync` clears it). Everything else still reads
+  `presPatientIsNew` (band subtitle, landing stage).
+Verified in the sandbox with synthetic patients: returning patient → no
+popup, tab present, tongue/pulse/Hammer/body-type all write to
+`PHARMACY.patients` and repaint in place with the tab still selected; the
+popup opened over the tab writes to the same record and both copies show it;
+new patient → inline history without the block, stays open after an answer +
+panel rebuild, folds to the "N of 38 asked · Continue" row after leaving the
+profile; 375px has no page-level overflow (the tiles row is its own
+scroller); the protected Prescriptions live-search check passes. `sw.js`
+`lcm-20260916-constit-tab`, meta `20260916-080000`.
