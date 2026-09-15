@@ -2821,3 +2821,57 @@ change correctly moving a card between the manager's own groups AND the
 real "+ New plan" picker's groups (same `phTpBuiltinTemplates()` both
 read); phaseKey surviving a phase edit into the override's stored data.
 Console clean throughout.
+
+## Backlog audit 2026-09-16: dead-code cleanup batch #1 ("work on everything")
+
+She said "complete everything" (then again "work on everything") with no
+further detail. A full sweep of 109 memory files + this file + a grep of
+the source itself turned up 296 distinct recorded-as-open items, published
+to her as a browsable, filterable page rather than dumped in chat. That
+page's own [[project_pharmacy_backlog_audit_2026_09_16]] memory has the
+full breakdown; this section only covers the FIRST real batch shipped
+against it — the safest possible starting point, genuinely dead code with
+zero behaviour change, each one independently re-verified by grep before
+touching it (never trust a memory note's "dead" claim on its own — see
+below for why).
+
+**Removed, confirmed zero live callers by grep:**
+- `phCycleLookAheadHtml` / `phCycleLookAheadBlockHtml` (~46082-46113) — the
+  "🔭 Looking ahead — next cycle" block. Its own explanatory comments
+  already recorded that she asked for it gone (synth22 2026-09-15: "this is
+  not really useful because its giving me info in 41 days"), and it was
+  unwired from both call sites at the time, but the function bodies
+  themselves were left behind. Their shared helpers (`phCyclePhaseKeyFor`,
+  `phCyclePhaseWindow`, `phCyclePhaseRows`) are still live — `phCyclePhaseRows`
+  is also called from `phCyclePlanScheduleHtml`, the surviving this-cycle
+  schedule block — so only the two look-ahead-specific functions came out,
+  not their shared helpers.
+- `renderPhPlaceholderPage()`, its `.ph-shell-placeholder` CSS, and the
+  stale "new shell pages … placeholders until their real content lands
+  (PASTE 3)" comment sitting on `#phDashboardWrap`. Dashboard/Suppliers/
+  Settings have all had real content for months; the placeholder renderer
+  had no callers left at all.
+
+**Found stale in the OTHER direction — a memory note wrongly says "dead,"
+it is actually very much alive:** the audit's "Dead profile week-widget
+code left behind after Stage A" item named `renderPresWeek` / `presWeekWrap`
+/ `.ph-pres-week-widget` as leftover Stage-A dead code. Grepping those
+symbols found renderPresWeek called from a dozen+ live sites (search,
+filters, status/type chips, cycle popover, date picks) — it is the current
+Patient-profile prescriptions timeline widget, not a leftover. **Did not
+touch it.** This is exactly the class of mistake [[feedback_verify_peer_claims_in_code]]
+and [[feedback_trace_the_write_not_the_theory]] warn about — the backlog
+audit's own claims are a starting hypothesis, not a fact, and each one
+gets re-checked against the CURRENT source before any code changes, same
+as reading a screenshot or a peer session's summary.
+
+Verified in the sandbox (`lcm-pharmacy-synth22batch`, port 8945): clean
+boot, no console errors, Dashboard renders its real Order-these/Refill-
+these cards (the page next to the touched placeholder comment). No
+behaviour anywhere should differ — everything removed was unreachable.
+
+This is batch 1 of many against the 296-item list; the remaining ~146
+buildable items (98 not-built + 50 partial, minus this batch) need
+individual attention at varying risk levels — most are real feature work
+or behaviour changes, not inert cleanup, and get their own verification
+pass each, not a blind sweep.
