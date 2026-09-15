@@ -2264,3 +2264,130 @@ across re-render; empty-state (no-LMP) quiz renders with the single
 placeholder bar + all 8 tiles including the forced-corner Contraception
 tile; Prescriptions live-search self-check passed. Live `c366a8c`: `sw.js`
 `lcm-20260915-cycle-tab-redesign`, meta `20260915-235959`.
+
+### Treatment plan: custom cycle-day cadence + this-cycle schedule (2026-09-15/16, synth22 batch)
+
+Four requests, collected under her "synth22" protocol (collect everything,
+synthesize one plan, wait for "ok work on it all" before building) and
+built as one change. **The synthesis, disclosed here since I moved
+straight to building at the time:** the app had THREE independent
+"predicted cycle schedule" systems that all *felt* like one thing to her
+but live in different functions — `phCycleVisitsHtml`/`phCycleVisitPlan`
+(Natural-fertility-only, current-cycle, below the phase strip),
+`phCyclePlanScheduleHtml` (current-cycle, the other cycle templates) +
+`phCycleLookAheadHtml`/`phCycleLookAheadBlockHtml` (next-cycle, no
+template restriction), and `phTpProjectedVisits`/`phTpVisitsMergedHtml`
+(per-phase, interval-based, the "if she keeps this rhythm"/"+Book" rows
+inside a phase's own grid). Her four asks landed on three different
+systems, which is why they needed three different fixes rather than one.
+
+1. **"weekly acupuncture for all phases, or specific cd... make the
+   treatment frequency more customised"** — the Visits cell's cadence
+   picker (`PH_TP_VISIT_PER`/`phTpCadenceCompose`/`phTpCadenceRead`/
+   `phTpCadenceDecompose`, all documented above under "VISITS IS THREE
+   PICKERS") gains a 4th mode: **"On specific days"**, `per: "cd"`. Chose
+   this shape (over a tap-the-strip cycle picker, or just teaching the
+   typed escape hatch) from 3 mocked options — her pick, "4th tab beside
+   the pickers". Text shape: `CD 3, 10, 17` as a prefix, parsed by the new
+   shared `phTpCadenceCdList(text)` (checked before every rhythm pattern,
+   since nothing else starts with "CD"), composed back by
+   `phTpCadenceCompose`'s new `per === "cd"` branch. Same round-trip
+   contract as every other mode — `compose(decompose(text)) === text`
+   or the pickers refuse to open on it and show the "Now: ..." prose
+   warning instead.
+   - **Editor UI** (`phTpCellEditOpen`'s `field === "cadence"` branch):
+     `numSel` (the visit-count dropdown) and a new `.ph-tp-cdwrap` chip
+     row toggle via `.hidden`, keyed on `st.per === "cd"` — a visit count
+     makes no sense in CD mode, the day list IS the count. Chips
+     (`.ph-tp-cdchip`) each carry a `×` remove button; a number input +
+     "+ Add a day" button appends. Hit the documented `[hidden]`-loses-
+     to-author-`display` trap immediately: `.ph-tp-cdwrap { display:flex }`
+     outranks the UA `[hidden]{display:none}` on specificity+origin, so it
+     needs its own `.ph-tp-cdwrap[hidden] { display: none; }` override or
+     the chip row never actually hides in rhythm mode. `numSel` needed no
+     such override — `.ph-tp-vissel` sets no `display` of its own.
+   - **Removing a chip closes the editor if you don't refocus** — the
+     clicked `×` button is itself removed from the DOM mid-click
+     (`cdRenderChips()` rebuilds the whole row), which blurs focus clean
+     out of `box`; the existing `focusout` handler (built for click-away)
+     then sees no focus left inside `box` and calls `phTpRerender()`,
+     closing the editor on what should be a one-chip edit. Fixed by
+     refocusing the add-input after every remove, same as `addCd()`
+     already did after every add.
+2. **"its giving me info in 41 days, i want for this cycle... positioned
+   below the plan, not above"** — the "Looking ahead — next cycle" block
+   (`phCycleLookAheadBlockHtml`, next-cycle, averaged off `cyc.cycleLen`)
+   is removed from both call sites (the embedded Profile → Plan tab's
+   `presTpInlineEditorHtml`, and the older full-screen `#phTpModal`
+   render) — its function definitions are left in place, orphaned, not
+   deleted (a concurrent session was already doing an unrelated dead-code
+   sweep; not this batch's job to duplicate that). In its place,
+   `phCyclePlanScheduleHtml` (real THIS-cycle dates, already existed and
+   already sat below the phase strip in the full-screen modal) is now
+   ALSO wired into the embedded tab's `inner`, right after
+   `phCycleVisitsHtml`. Net effect: real current-cycle info, below the
+   strip, in both places — and PCOS/Endometriosis/Dysmenorrhea/
+   Amenorrhea/IVF plans get a current-cycle schedule in the embedded tab
+   for the first time (it was Natural-fertility-only there before; the
+   full-screen modal already had it for everyone, just not the page she
+   actually uses).
+3. **"show cycle day in the predicted dates"** — new
+   `phCycleCdOnDate(dateKey, cyc)`, a raw-day-count wrap into `1..cycleLen`
+   (none of the existing cycle-day helpers did this for an arbitrary
+   future date). `phTpVisitsMergedHtml`'s projected/booked "ahead" rows
+   now prefix `CD ${n} · ` before "booked"/"projected" — a CD-list
+   cadence already carries its own `.cd` per date (from
+   `phTpProjectedVisitsForCds` below), any other rhythm gets one worked
+   out fresh via `phCycleCdOnDate`.
+4. **"currently i can't plan for future treatments"** — new
+   `phTpProjectedVisitsForCds(name, ph, cds)`: unlike the interval
+   projector (which steps forward from the last COUNTED visit, so it has
+   nothing to say until one exists), a CD list reads straight off
+   `phCycleFor(patient).lmp` and walks forward cycle-by-cycle (`c =
+   0..25`), so it needs no prior visit to anchor on. `phTpProjectedVisits`
+   now checks `phTpCadenceCdList(ph.cadence)` first and routes here before
+   falling through to the original interval logic, unchanged below that.
+   **Found during verification, fixed same batch:** `phTpVisitsMergedHtml`
+   gated ALL projection (CD-list included) behind `st.rows.length` —
+   "has this phase got any appointment yet, booked or done" — which is
+   the right gate for an interval rhythm (nothing to step from) but wrong
+   for a CD list (nothing to step from, but nothing needed either): a
+   brand-new phase with a CD cadence and zero visits booked showed no
+   projected dates at all, defeating the entire point of this request.
+   Added `isCdCadence` to bypass that one condition for CD-list phases
+   only — interval rhythms keep the original gate unchanged (verified:
+   a fresh interval-rhythm phase with 0 rows still shows nothing, same as
+   before).
+
+Also fixed in the same push (her literal instruction, "include watch type
+in text", on the Treatment Plan WATCH cell's quick-add preset chips):
+`+Sleep`/`+Pain`/`+Range of motion` named the new symptom row's
+`complaint` after the clicked preset's label instead of leaving it `""`
+— a blank complaint was invisible in the cell AND silently excluded from
+`phTpSymSummary` (filters on non-empty complaint), so a click that looked
+like it worked was actually a no-op two ways.
+
+**Deliberate scope line, disclosed:** `phAcuCadenceParse` (Communications'
+acu-follow-up interval parser) is untouched — a CD-list cadence falls
+through it as `matched:false`, the same safe "unmatched → weekly default"
+fallback every other unreadable-prose cadence already gets there. Her ask
+was about the Treatment Plan display, not Communications' nagging
+accuracy; teaching the scheduler to read `CD 3, 10, 17` too is a real
+follow-up, not assumed as part of this one.
+
+Verified via function-level testing in the sandbox (the real login gate
+blocks a fully-booted local preview, same as every other batch — see the
+Prescriptions live-search note elsewhere in this file): compose/decompose
+round-trip for all 4 forWhat×weeks combinations; `phCycleCdOnDate` across
+a cycle-boundary wrap (CD 29 on a 28-day cycle → CD 1 of the next);
+`phTpProjectedVisitsForCds` against a synthetic patient (past CDs in the
+current cycle correctly skipped, future ones sorted, capped, cycle-
+wrapped); the CD-editor DOM directly via `phTpCellEditOpen` — mode
+toggle, add via button AND Enter, remove without closing the editor,
+reopen-seeds-correctly round trip; `phTpVisitsMergedHtml` end-to-end for
+both a fresh CD-cadence phase (0 rows, dates now show) and a fresh
+interval-rhythm phase (0 rows, still nothing — no regression); the newly-
+wired `phCyclePlanScheduleHtml` against a synthetic PCOS patient (renders,
+no error); `presTpInlineEditorHtml` end-to-end confirming "Looking ahead"
+is gone and "predicted schedule" is present. Live `eb01d35`: `sw.js`
+`lcm-20260916-synth22-batch-cd-cadence`, meta `20260916-010000`.
