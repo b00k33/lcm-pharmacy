@@ -2655,3 +2655,38 @@ Photos is showing across two re-renders, the record has no
 Journey ↗ nulls the name and the paste target, a popup for another patient
 closes on script open while a same-patient popup stays. `sw.js`
 `lcm-20260916-constit-tab-reviewed`, meta `20260916-090000`.
+
+## Formula refill's When column: weeks, not dates (her ask 2026-09-16)
+Her words on the merged Refill list: "instead of choosing a date to refill,
+choose the week." Three mocks (A a plain list of coming weeks · B the
+calendar with a whole row tappable · C quick chips + calendar); she picked
+**A**. Wording: **week of the year** ("Wk 39"), not a count from today
+("Week 2") — stable, matches a wall calendar. A week that has passed reads
+**"last week"** in amber and sorts to the top (same shape as today's
+overdue-date rule). The Plan ▾ menu became week-based too, her explicit
+yes: **This week · Next week · Pick a week…**, replacing Make today / Pick
+a date… / Make Monday (Next week IS what Make Monday meant — the row's
+making day is always `PH_REFILL_MAKE_DAY`, so a week has one obvious day).
+- `h.refillOn` is UNCHANGED as a field — it now holds the week's Monday as
+  a plain date key. A date set before this build (e.g. a Wednesday) is
+  simply read as belonging to that week (`phWeekKeyOf`); nothing needed
+  migrating.
+- `phRefDatePopHtml` is now a **list of week rows** (`phRefillWeekInfo`,
+  `phIsoWeek`, `phWeekRangeText`), not a month calendar — the calendar
+  grid/month-nav code is gone. "More weeks ›" appends 6 more rows in place
+  (`phRefWeekPickMore`); a week already set that has gone by is shown as
+  its own row above the list so the selection stays visible.
+- **The popover moved out of `renderRefill()`'s own markup into a
+  permanent `#phRefWeekPop` host** (`phRefWeekPopSync()`), because Plan ▾'s
+  "Pick a week…" is reachable from the Dashboard's Most Urgent tiles and
+  Inventory too (`phRefillMenuHtml` is shared), and those pages don't
+  re-render through `renderRefill()`. Before this build "Pick a date…"
+  outside `#phRefillWrap` fell back to a bare `window.prompt()` — now every
+  entry point opens the same week list. `phRefDatePopPlace()` anchors to
+  whichever control is on screen for the open id (the When chip, the Plan
+  ▾/⋯ trigger, or the row's own menu button) and re-places once more on the
+  next frame — the sheet's column widths are still settling when a render
+  first paints it, which showed as ~20px of drift.
+- `phRefillFlagged`'s sort now ranks by WEEK: overdue weeks first (oldest
+  first), then this week, then coming weeks soonest-first, undated last —
+  same shape as the old date rank, just bucketed by Monday instead of by day.
