@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260916-070000">
+<meta name="lcm-build" content="20260916-080000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6978,6 +6978,9 @@
   #pharmacyPage .ph-hx-constit-note { margin: 0 0 8px; font-size: 11.5px; font-style: italic; color: var(--ph-soft); }
   #pharmacyPage .ph-hx-constit-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
   #pharmacyPage .ph-hx-constit-field { flex: 1 1 180px; }
+  /* the same block as a Constitution tab on the profile (2026-09-16): the
+     tab panel already pads it, so no head margin there */
+  #pharmacyPage #presConstitHost .ph-hx-constit { margin-top: 0; }
 
   /* ==== Treatment Plans (her ask 2026-09-01) ====
      Entry-point section lives inside 📖 History (.ph-pres-history); the
@@ -30339,9 +30342,14 @@
         const p = phHxConstitPulse(rec), k = e.target.dataset.constitHmRate, v = e.target.value.trim();
         if (v === "" || isNaN(Number(v))) delete p.hammer.rate[k]; else p.hammer.rate[k] = Number(v);
         savePharmacy();
-        const chg = document.querySelector("[data-constit-hm-change]");
+        // patch the copy she is typing in -- the block can exist twice at
+        // once (the profile's Constitution tab under the History popup, or a
+        // closed popup's stale markup), and the document-wide first match
+        // may not be hers
+        const scope = e.target.closest("#phRenConstitPanel") || document;
+        const chg = scope.querySelector("[data-constit-hm-change]");
         if (chg) chg.textContent = phVisitRateChangeText(p.hammer.rate);
-        const ratekb = document.querySelector("[data-constit-hm-ratekb]");
+        const ratekb = scope.querySelector("[data-constit-hm-ratekb]");
         if (ratekb) ratekb.innerHTML = phPulseKbBlockHtml(phVisitPulseKbHits(p).rate, PH_PULSE_KB_LABEL);
         return;
       }
@@ -40307,6 +40315,7 @@ or changing anything in Cliniko.
   // inline this render (or null); never touches it while the modal itself
   // is legitimately the one holding it open.
   function presHxInlineSync(keepName) {
+    if (presHxInlineFor && presHxInlineFor !== keepName) presHxInlineFor = null;
     if (!presHxScreenName || presHxScreenName === keepName) return;
     const modal = document.getElementById("phHxModal");
     if (!modal || modal.hidden) presHxScreenName = null;
@@ -41648,8 +41657,9 @@ or changing anything in Cliniko.
   }
   // §3: opens at the newest (right-hand) end
   function phRenTimelineScrollEnd() {
-    const el = document.getElementById("phRenTlScroll");
-    if (el) el.scrollLeft = el.scrollWidth;
+    // the modal and the profile's Constitution tab can both hold a timeline
+    // at once (History popup open over the profile) -- scroll every copy
+    document.querySelectorAll("#phRenTlScroll").forEach(el => { el.scrollLeft = el.scrollWidth; });
   }
   // §3 compare: only ever two, only ever within one row
   function phRenComparePick(id, rowKey, patientKey) {
@@ -41862,7 +41872,7 @@ or changing anything in Cliniko.
   function phRenPasteTargetKey() {
     const modal = document.getElementById("phHxModal");
     const modalOpen = modal && !modal.hidden;
-    const inlineOpen = !!document.getElementById("phOpHxInline");
+    const inlineOpen = !!document.getElementById("phOpHxInline") || !!document.getElementById("presConstitHost");
     if ((!modalOpen && !inlineOpen) || !presHxScreenName) return null;
     // the crop tool / phone inbox are the same kind of overlay as the
     // preview, so a paste landing while one of those is open would stack two
@@ -42585,6 +42595,12 @@ or changing anything in Cliniko.
   // unchanged regardless of which shell the markup is sitting in.
   function phHxScreenInnerHtml(name, opts) {
     const inline = !!(opts && opts.inline);
+    // the inline copy on a new patient's Opening stage skips the constitution
+    // block: the Constitution tab sits on the same profile a few rows down
+    // (presConstitTabBodyHtml), and two live copies of the same selects/
+    // charts on one screen would fight over which one a handler patches.
+    // The modal keeps it -- there is nothing else on screen behind a modal.
+    const noConstit = !!(opts && opts.noConstit);
     const rec = phPatientRec(name);   // writable -- opening the screen is a deliberate act, unlike opening a script
     const prog = phHxProgress(name);
     const pct = prog.total ? Math.round(prog.answeredN / prog.total * 100) : 0;
@@ -42617,7 +42633,7 @@ or changing anything in Cliniko.
           </span>
           <label class="ph-hx-notneeded-lbl"><input type="checkbox" data-hx-notneeded="1"${prog.notNeeded ? " checked" : ""}> Not needed for this patient</label>
         </div>
-        ${phHxConstitutionHtml(rec, phPatientKey(name))}
+        ${noConstit ? "" : phHxConstitutionHtml(rec, phPatientKey(name))}
       </div>
       ${phHxPasteBoxHtml(rec)}
       <div class="ph-hx-filters">
@@ -42776,7 +42792,8 @@ or changing anything in Cliniko.
     if (!presHxScreenName) return;
     const modal = document.getElementById("phHxModal");
     const inlineEl = document.getElementById("phOpHxInline");
-    if ((!modal || modal.hidden) && !inlineEl) return;
+    const constitEl = document.getElementById("presConstitHost");
+    if ((!modal || modal.hidden) && !inlineEl && !constitEl) return;
     // same scroll-jump bug she reported on the Treatment Plan screen
     // (2026-09-01, "if i select delete, i have to scroll down again") -- this
     // screen shares the exact shell and rebuild-on-every-tap pattern, so a
@@ -42791,10 +42808,14 @@ or changing anything in Cliniko.
     if (inlineEl) {
       const prevBody = inlineEl.querySelector(".ph-hx-body");
       const prevScroll = prevBody ? prevBody.scrollTop : 0;
-      inlineEl.innerHTML = phHxScreenInnerHtml(presHxScreenName, { inline: true });
+      inlineEl.innerHTML = phHxScreenInnerHtml(presHxScreenName, { inline: true, noConstit: true });
       const newBody = inlineEl.querySelector(".ph-hx-body");
       if (newBody) newBody.scrollTop = prevScroll;
     }
+    // the Constitution tab on the profile (presConstitTabBodyHtml) -- same
+    // block, repainted in place so a chip tap never re-renders the whole
+    // script panel (her scroll spot and open sections survive)
+    if (constitEl) constitEl.innerHTML = presConstitTabInnerHtml(presHxScreenName);
     // §3: the timeline opens at the newest (right-hand) end, after the table
     // is in the DOM and has a real scrollWidth
     phRenTimelineScrollEnd();
@@ -43475,6 +43496,22 @@ or changing anything in Cliniko.
     const key = phPatientKey(name);
     return !(PRESC.items || []).some(x => phPatientKey(presPatientFor(x) || x.name) === key && x.lastDispensedAt);
   }
+  // "new" for the History section ONLY -- nothing of her history recorded,
+  // no visit logged, nothing ever dispensed. Plans are deliberately NOT
+  // counted (unlike presPatientIsNew above): since the plan gate (decision
+  // 3, 2026-09-11) every patient past the gate has a plan, which quietly made
+  // the 2026-09-11 "open and inline for a brand-new patient" history
+  // unreachable -- found 2026-09-16 building the Constitution tab, and she
+  // chose to keep the inline history open for new patients.
+  function presHxUntaken(name) {
+    if (!name) return false;
+    const prog = phHxProgress(name);
+    if (prog.everTouched || prog.answeredN > 0) return false;
+    const rec = phPatientPeek(name);
+    if (rec && (rec.acuSessions || []).length) return false;
+    const key = phPatientKey(name);
+    return !(PRESC.items || []).some(x => phPatientKey(presPatientFor(x) || x.name) === key && x.lastDispensedAt);
+  }
   // her report (2026-09-06, opening Rebecca's file -- 2 real scripts, real
   // dispense history): "it always restarts at opening/assessment, why
   // doesn't it show if the process has already completed." Two bugs, same
@@ -43566,9 +43603,10 @@ or changing anything in Cliniko.
     // the frequent innerHTML rebuilds this panel already does on every field
     // edit.
     const hxName = presPatientFor(t) || t.name || "";
-    const hxIsNew = presPatientIsNew(hxName);
+    const hxIsNew = !!hxName && (presHxUntaken(hxName) || presHxInlineFor === hxName);
     let hx;
     if (hxIsNew && hxName) {
+      presHxInlineFor = hxName;
       if (presHxScreenName !== hxName) {
         presHxScreenName = hxName;
         presHxScreenFilter = "all";
@@ -43576,7 +43614,7 @@ or changing anything in Cliniko.
         presHxQuietGroupsOpen = new Set();
       }
       phRenEnsurePhotos(phPatientKey(hxName));
-      hx = `<div id="phOpHxInline">${phHxScreenInnerHtml(hxName, { inline: true })}</div>`;
+      hx = `<div id="phOpHxInline">${phHxScreenInnerHtml(hxName, { inline: true, noConstit: true })}</div>`;
     } else {
       hx = presHistorySummaryHtml(t);
     }
@@ -43610,10 +43648,37 @@ or changing anything in Cliniko.
      this patient (no facial case, no cycle tracking, no IVF history) simply
      doesn't get a tab -- each body builder still returns "" exactly as it
      always did, and presAssessSections keeps only the non-empty ones. */
+  /* Constitution tab (her pick A, 2026-09-16, after "i dont take history when
+     i see it"): the 方病人 constitution block -- body type, eyes/build/skin/
+     voice, the tongue chart beside the tongue photos, the pulse chart and
+     the Shen-Hammer exam -- used to live ONLY inside the History screen's
+     head, so on a returning patient the one way to reach a tongue chart was
+     the History POPUP. It is a tab on the profile now, for every patient;
+     the History row/popup itself is untouched (it still carries the block
+     for when she does take a history). The block's handlers all resolve the
+     patient through presHxScreenName and repaint via renderHxScreen(), so
+     this host keeps that name in sync exactly the way the new-patient inline
+     history does, and renderHxScreen() repaints #presConstitHost in place. */
+  function presConstitTabInnerHtml(name) {
+    return phHxConstitutionHtml(phPatientRec(name), phPatientKey(name));
+  }
+  function presConstitTabBodyHtml(t) {
+    const name = presPatientFor(t) || t.name || "";
+    if (!name) return "";
+    if (presHxScreenName !== name) {
+      presHxScreenName = name;
+      presHxScreenFilter = "all";
+      presHxScreenSearch = "";
+      presHxQuietGroupsOpen = new Set();
+    }
+    phRenEnsurePhotos(phPatientKey(name));
+    return `<div id="presConstitHost">${presConstitTabInnerHtml(name)}</div>`;
+  }
   function presAssessSections(t) {
     const name = presPatientFor(t);
     return [
       { id: "photos", label: "Photos", body: presPhotosSectionHtml(t) },
+      { id: "constitution", label: "Constitution", body: presConstitTabBodyHtml(t) },
       { id: "checklist", label: "Checklist", body: presFacialSectionBodyHtml(t) },
       { id: "cycle", label: "Cycle", body: presCycleSectionBodyHtml(t) },
       { id: "ivf", label: "IVF history", body: name ? phIvfHistoryFoldHtml(name) : "" },
@@ -43768,8 +43833,11 @@ or changing anything in Cliniko.
       // straight to Follow-up, not back at square one every time
       presStage = presFurthestStageFor(t);
     }
-    // whichever stage/script is ABOUT to render below -- see presHxInlineSync
-    presHxInlineSync(!isF && isNew && presStage === "profile" ? (presPatientFor(t) || t.name || "") : null);
+    // whichever stage/script is ABOUT to render below -- see presHxInlineSync.
+    // Every patient's profile now hosts the constitution block (the
+    // Constitution tab, presConstitTabBodyHtml), not just a new patient's
+    // inline history, so the name is kept whenever the profile stage shows.
+    presHxInlineSync(!isF && presStage === "profile" ? (presPatientFor(t) || t.name || "") : null);
     const ingQuiet = !isF && phCaseQuiets(t, "herbs");
     const herbsOn = isF || phHerbsOn(phPatientPeek(presPatientFor(t)), phTpShownPlan(presPatientFor(t)));
     // her ask (2026-08-01): Dispense Stock's confirmation flashed at the very
@@ -53932,6 +54000,13 @@ Please let me know if you have any questions.`;
   let presHxScreenName = null;
   let presHxScreenFilter = "all";   // "all" | "unasked" | "yes"
   let presHxScreenSearch = "";
+  // the patient whose history is open INLINE on the profile right now (a
+  // new patient, presStageOpeningHtml). Her first answer makes her "not
+  // new" -- without this the next field edit on the same stage (the panel
+  // rebuilds on every one) would fold the checklist to its summary row
+  // mid-intake. Cleared by presHxInlineSync the moment she leaves the
+  // profile or the script, so a part-taken history folds then, not sooner.
+  let presHxInlineFor = null;
   // groups quieted by the active script's case type (phCaseQuiets, "quiet"
   // reproHistory) that she's tapped open anyway -- reset every open, same
   // "start clean" posture as the rest of this screen's state
