@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260916-010000">
+<meta name="lcm-build" content="20260916-011500">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -42994,12 +42994,12 @@ or changing anything in Cliniko.
       ${!isF && herbsOn ? `<div class="ph-pres-dose">
       <div class="ph-tmpl-sec"><span>Dosage &amp; price</span></div>
       <div class="ph-build-top">
-        <label class="ph-inline-label">Formula objective <input type="text" id="presFormulaText" value="${esc(t.formula || "")}" placeholder="e.g. Regulate Nervous System" aria-label="Treatment objective — not printed on the label" style="min-width:240px"></label>
-        <span class="ph-formula-meta">her treatment principle — not printed or counted</span>
+        <label class="ph-inline-label">Formula objective <input type="text" id="presFormulaText" value="${esc(t.formula || "")}" placeholder="e.g. Regulate Nervous System" aria-label="Treatment objective — prints on the label's Formula line" style="min-width:240px"></label>
+        <span class="ph-formula-meta">prints on the label's “Formula:” line — never counted as a sale</span>
       </div>
       <div class="ph-build-top">
-        <label class="ph-inline-label">Actual formula <input type="text" id="presActualFormulaText" value="${esc(t.actualFormula || "")}" placeholder="e.g. Chai Hu Jia Long Gu Mu Li Tang" aria-label="Formula actually dispensed — prints on the label" style="min-width:240px"></label>
-        <span class="ph-formula-meta">prints on the label's “Formula:” line${!t.actualFormula && t.formula ? ` · still uses “${esc(t.formula)}” above until you set this` : ""}</span>
+        <label class="ph-inline-label">Actual formula <input type="text" id="presActualFormulaText" value="${esc(t.actualFormula || "")}" placeholder="e.g. Chai Hu Jia Long Gu Mu Li Tang" aria-label="Formula actually dispensed — counted for sales, and the label's fallback if no objective is set" style="min-width:240px"></label>
+        <span class="ph-formula-meta">counted as what's dispensed — also the label's fallback if no objective is typed above${!t.actualFormula && t.formula ? ` · still counts “${esc(t.formula)}” above until you set this` : ""}</span>
       </div>
       ${presDispenseFormulaHintHtml(t)}
       <div class="ph-build-top ph-doseline">
@@ -52975,7 +52975,13 @@ Please let me know if you have any questions.`;
     { key: "price", label: "Price, incl. GST", example: "$59.40 (incl. GST)" },
     { key: "useBefore", label: "Use-before date (6 months from dispense)", example: "21/2/2027" },
     { key: "patient", label: "Patient name", example: "Amy Waters" },
-    { key: "formula", label: "Formula name (blank if none typed in)", example: "Move Qi Blood Support Immunity" },
+    { key: "formula", label: "Actual formula name (blank if none typed in)", example: "Move Qi Blood Support Immunity" },
+    // her ask (2026-09-15): the label should show what the formula is FOR,
+    // not its name -- falls back to the actual formula (never t.name, which
+    // is the patient) so the line still prints something for a script where
+    // she never typed an objective, same fallback shape presActualFormula
+    // itself already uses between its own two fields.
+    { key: "objective", label: "Formula objective / treatment goal (falls back to the actual formula name if blank)", example: "Regulate Nervous System" },
     { key: "ingredients", label: "Every ingredient, one per line, name then grams", example: "DANG GUI SHAO YAO SAN 55.00g" },
     { key: "total", label: "Total grams", example: "90.00g" },
     { key: "dosage", label: "Dosage (blank if not set)", example: "3 spoons provided, 2 times a day" },
@@ -52985,7 +52991,7 @@ Please let me know if you have any questions.`;
 Use Before: {useBefore}
 
 Patient: {patient}
-Formula: {formula}
+Formula: {objective}
 
 {ingredients}
 
@@ -53026,12 +53032,12 @@ Dosage: {dosage}
   // here is passed straight through from whatever presCalcNumbers (or the
   // scheduled entry's own stored totals) already computed -- her rule: if
   // the label and the record ever disagree, the label is wrong.
-  function presLabelValuesCore({ name, formulaLine, items, gp, price, dosage, instr, now }) {
+  function presLabelValuesCore({ name, formulaLine, objective, items, gp, price, dosage, instr, now }) {
     const dateStr = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
     const ingredients = items.map(x => `${phDispName(x.name, x.h ? phIsFormula(x.h) : null)} ${(x.grams || 0).toFixed(2)}g`).join("\n");
     return {
       date: dateStr, time: presTimeStr(now), price: `${phMoney(price)} (incl. GST)`,
-      useBefore: presUseBeforeStr(now), patient: name, formula: formulaLine,
+      useBefore: presUseBeforeStr(now), patient: name, formula: formulaLine, objective,
       ingredients, total: `${(gp || 0).toFixed(2)}g`, dosage, takeDays: instr,
     };
   }
@@ -53053,9 +53059,14 @@ Dosage: {dosage}
   function presLabelValues(t, gp) {
     const name = phDispName(t.name, false);
     const formulaLine = ((document.getElementById("presActualFormulaText") || {}).value || presActualFormula(t)).trim();
+    // her ask 2026-09-15: "Formula:" on the label now prints the objective,
+    // not the actual formula name -- falls back to the actual formula so
+    // the line still prints something for a script where she never typed
+    // an objective.
+    const objective = ((document.getElementById("presFormulaText") || {}).value || t.formula || "").trim() || formulaLine;
     const { items, price } = presCalcNumbers(t, gp);
     return presLabelValuesCore({
-      name, formulaLine, items, gp, price,
+      name, formulaLine, objective, items, gp, price,
       dosage: presDosageText(), instr: presInstructionText(), now: new Date(),
     });
   }
@@ -55010,8 +55021,13 @@ Dosage: {dosage}
   function schedPrepLabelValues(t) {
     const gp = t.totalGrams || 0;
     const { items, price } = presCalcNumbers(t, gp);
+    const formulaLine = presActualFormula(t);
+    // same objective-over-actual-formula swap as presLabelValues above --
+    // this panel is data-sourced (no live editor open), so it reads
+    // t.formula directly rather than a DOM field.
+    const objective = (t.formula || "").trim() || formulaLine;
     return presLabelValuesCore({
-      name: phDispName(t.name, false), formulaLine: presActualFormula(t),
+      name: phDispName(t.name, false), formulaLine, objective,
       items, gp, price,
       dosage: schedPrepDosageText(t), instr: schedPrepInstructionText(t), now: new Date(),
     });
