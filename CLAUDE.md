@@ -2709,3 +2709,115 @@ making day is always `PH_REFILL_MAKE_DAY`, so a week has one obvious day).
 - `phRefillFlagged`'s sort now ranks by WEEK: overdue weeks first (oldest
   first), then this week, then coming weeks soonest-first, undated last —
   same shape as the old date rank, just bucketed by Monday instead of by day.
+
+## 🗂 Treatment plan templates editor (Settings), her ask 2026-09-16
+
+She asked "where can i edit all of these" on the condition-template picker
+(Natural fertility, IVF Protocol, PCOS, …) — there was no in-app editor,
+only a per-template JSON-paste box for the Cycle & IVF Protocol phases.
+She replied "build editor".
+
+**Settings → Prescriptions → "🗂 Treatment plan templates"**, plus a new
+"✎ Manage templates" link on all three template-picker surfaces
+(`presTpInlineNewHtml`, `presNoPlanGateHtml`, `renderTpScreen`'s start
+mode). One chip strip — built-ins grouped exactly like the real picker's
+columns, her own saved ones underneath — and an edit form for whichever
+chip is selected.
+
+**Architecture: an override layer, not a rewrite.** `PH_TP_TEMPLATES`
+itself is never mutated — a built-in stays the hardcoded seed/fallback,
+her edits live in `PHARMACY.tpTemplateOverrides[id]` and layer on top via
+`phTpBuiltinTemplates()` (same idiom as the ✉ Letter templates editor's
+`phLtrOverrides`). This folds in and retires the old single-template
+paste box (`PHARMACY.tpBuiltinOverride`, cycle_ivf only) — migrated once
+into `tpTemplateOverrides.cycle_ivf` and kept alive as a generalised
+"paste phases as JSON" fallback under every template's phase list, not
+just that one. Her own saved templates (`PHARMACY.tpTemplates`, 📌 Save as
+template) are edited directly — no override/reset concept, since there's
+no built-in underneath them to diff against.
+
+Editable per built-in: category, suggested Case match (`caseHint`), goal,
+every phase (label/aim/points/suggested formula/cadence/watch — add,
+remove, reorder). **Not editable: a built-in's Name** — a deliberate scope
+cut, not an oversight (see review below). Editable per her own template:
+name, goal, phases (no category/caseHint — those only ever drove the
+built-in picker's columns and Case auto-suggest, which a user template was
+never part of).
+
+`phTpMgrSetField(id, field, value)` is the one write path for both kinds —
+collapses a built-in field back to "no override" the moment it matches the
+built-in's own value again (keeps the ✎/edited badges honest), pushes the
+previous value onto `phTpMgrUndo` first. "↺ Default" resets one field;
+"↺ Reset phases to the built-in N" resets the whole phases array; delete
+(user templates only) reuses the existing confirm-strip idiom.
+
+**Adversarial review (Workflow, 3 dimensions × 3 refuters) found 5 real
+problems, all fixed and re-verified in the sandbox** (plus one more I
+found myself while fixing them — see below):
+1. **Undo was a single stack with no target visibility** — reverting an
+   edit on a template she wasn't currently looking at left zero visible
+   change on screen. Now `phTpMgrUndoLast()` jumps `phTpMgrSel` to whatever
+   it actually touched and flashes what came back; the button is labelled
+   with its target BEFORE she clicks ("↩ Undo last change — Natural
+   fertility: Goal"), not just after.
+2. **Deleting a user template left its undo entries stale** — a later
+   Undo could pop one and silently no-op while still looking like a real
+   click. The delete handler now purges `phTpMgrUndo` of that id's entries.
+3. **The legacy migration could resurrect and clobber a newer edit** — the
+   sync layer merges the whole `pharmacy_core` blob per device, not
+   field-by-field; a stale tab still on the old paste-box code could write
+   fresh data straight to `tpBuiltinOverride`, and a "both sides changed →
+   keep local" conflict could bring that back to life, re-triggering the
+   migration and overwriting a real edit made through the new editor. Fixed
+   with a permanent tombstone (`PHARMACY.tpTemplateOverridesMigrated`) —
+   once any device has migrated once, the legacy field is never read again
+   on that device, however it reappears.
+4. **`phTpMgrOverrides()` called `savePharmacy()` from inside what several
+   functions treat as a pure read** (`phTpBuiltinTemplates`, called during
+   ordinary renders like building the "+ New plan" picker) — the same
+   render-time-mutation trap this file already documents for
+   `phPatientRec`. Now it only mutates `PHARMACY` in memory; the next real
+   save (near-constant in this app) carries it to disk.
+5. **Editing a built-in template's phases silently broke IVF transfer-
+   track detection** — `PH_TP_PHASE_KEY_OF` is an object-IDENTITY map, and
+   the moment any phase-level edit happens, `phTpBuiltinTemplates()`
+   returns plain-object phase copies that are no longer the same
+   references, so the identity lookup `phTpNewPlan` relies on (to let
+   `phIvfSetTrack` find "the OPU phase" by what it IS, not by her editable
+   label) went blank. Fixed by stamping `phaseKey` as a real own property
+   the first time a built-in phase is copied into an override
+   (`phTpMgrPhaseKeyOf`) — it then survives every further `{...p}` copy
+   regardless of object identity. A phase she adds herself still correctly
+   gets `phaseKey: null`.
+
+**Found while fixing #5, not by the review:** the Name field was
+originally editable for built-ins too (an override, same as category/
+caseHint). Renaming one would silently break every OTHER place in this
+60k-line file that matches `plan.templateName` against a literal string —
+`phTpIsFacialPlan`, `phCaseHintOfPlan`, `phTpDetourKindsFor`,
+`PH_TP_FERTILITY_TEMPLATES`/`PH_TP_CYCLE_TEMPLATES`/`PH_TP_CYCLE_SYNC`, and
+(found independently while tracing `phTpNewPlan`) `startPhasePicked`'s own
+`tpl.name === "IVF Protocol"` check — for every EXISTING plan on that
+template (their stored `templateName` no longer resolves) and every NEW
+plan made after the rename. The review's own finding on this was split
+(the specific IVF Protocol scenario it narrated didn't fully hold up
+verbatim, though the underlying mechanism is real), and auditing every
+name-string comparison in this file to make renaming fully safe was too
+large a change to take on under the same pass — so built-in Name is
+**read-only** ("Built-in names are fixed — …", shown plain with the
+reason), disclosed in the section's own hint text rather than silently
+narrowed. Her own templates keep full rename, since nothing else in the
+app keys off their name.
+
+Verified in the sandbox: legacy migration (injected a fake
+`tpBuiltinOverride`, confirmed it folds in on first read with NO write
+until a real save, confirmed the tombstone then blocks a simulated
+resurrection); rename/category/caseHint/goal edit + collapse-to-default +
+✎ badge + "↺ Default"; phase add/remove/reorder/reset-to-built-in;
+Undo jumping to and flashing the right template from a different one;
+delete purging its own undo entries; "+ New template" create/edit/delete;
+JSON-paste import; all three "✎ Manage templates" entry points; category
+change correctly moving a card between the manager's own groups AND the
+real "+ New plan" picker's groups (same `phTpBuiltinTemplates()` both
+read); phaseKey surviving a phase edit into the override's stored data.
+Console clean throughout.
