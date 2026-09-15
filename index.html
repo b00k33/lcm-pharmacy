@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260916-002000">
+<meta name="lcm-build" content="20260916-010000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -7722,6 +7722,25 @@
   /* only ever present when the pickers can't say what she already has */
   #pharmacyPage .ph-tp-viskeep { flex: 0 0 100%; font-size: 11px; color: var(--ph-faint); line-height: 1.4; }
   #pharmacyPage .ph-tp-viskeep em { font-style: normal; color: var(--ph-soft); }
+  /* the "On specific cycle days" mode of the Visits picker (her synth22 ask
+     2026-09-15, "or specific cd"): chips replace the How-many dropdown when
+     that mode is picked -- same hairline-pill language as .ph-tp-vissel. */
+  #pharmacyPage .ph-tp-cdwrap { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+  /* [hidden]-loses-to-author-display trap (documented elsewhere in this file):
+     the flex rule above outranks the UA [hidden]{display:none} on its own, so
+     toggling cdWrap.hidden between the "cd" and rhythm picker modes needs this
+     explicit override or the chip row stays visible in every mode. */
+  #pharmacyPage .ph-tp-cdwrap[hidden] { display: none; }
+  #pharmacyPage .ph-tp-cdchip { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 700;
+    color: var(--ph-green-deep); background: var(--ph-green-tint); border-radius: 999px !important; padding: 3px 4px 3px 9px; }
+  #pharmacyPage .ph-tp-cdchip button { border: 0; background: none; color: var(--ph-faint); cursor: pointer; font-size: 12px; line-height: 1; padding: 2px; min-height: 0; }
+  #pharmacyPage .ph-tp-cdchip button:hover { color: var(--ph-negative, #B4483A); }
+  #pharmacyPage .ph-tp-cdadd { display: inline-flex; align-items: center; gap: 3px; }
+  #pharmacyPage .ph-tp-cdaddin { font: inherit; font-size: 12px; width: 44px; padding: 4px 6px; border: 1px solid var(--ph-line);
+    border-radius: 8px !important; background: var(--ph-white); color: var(--ph-ink); min-height: 0; }
+  #pharmacyPage .ph-tp-cdaddbtn { border: 1px dashed var(--ph-line); border-radius: 999px !important; background: none;
+    color: var(--ph-soft); font: inherit; font-size: 11px; font-weight: 700; padding: 4px 10px; cursor: pointer; min-height: 0; }
+  #pharmacyPage .ph-tp-cdaddbtn:hover { border-color: var(--ph-green-deep); color: var(--ph-green-deep); }
   #pharmacyPage .ph-tp-grid td.ph-tp-fcell { color: var(--ph-ink); }
   /* This chip had NO styling anywhere in the sheet except the vertical-align
      below -- it was rendering as a raw browser button, 13.333px Arial with a
@@ -45395,6 +45414,18 @@ or changing anything in Cliniko.
     return [...s].sort();
   }
   function phBbtDayOf(dateKey, lmp) { return Math.round((parseKey(dateKey) - parseKey(lmp)) / 86400000) + 1; }
+  // her synth22 ask 2026-09-15 ("show cycle day in the predicted dates — so
+  // i can plan it"): a projected visit weeks out can land in a LATER cycle
+  // than the one her LMP describes, so the raw day count (phBbtDayOf) isn't
+  // what a practitioner means by "CD" for that date — it wraps. Double
+  // modulo handles a date before the LMP too (never expected here, but a
+  // wrong sign should read as a slightly odd number, never NaN or negative).
+  function phCycleCdOnDate(dateKey, cyc) {
+    if (!cyc || !cyc.lmp || !dateKey) return null;
+    const cycleLen = Math.max(14, cyc.cycleLen || 28);
+    const raw = phBbtDayOf(dateKey, cyc.lmp) - 1;
+    return ((raw % cycleLen) + cycleLen) % cycleLen + 1;
+  }
   function phBbtGroups(rec, photos) {
     const groups = phBbtCycleStarts(rec).map(lmp => ({ lmp, photos: [] }));
     const unfiled = { lmp: null, photos: [] };
@@ -45976,11 +46007,19 @@ or changing anything in Cliniko.
     const acuSessions = rec && rec.acuEnabled && presAcuOpen
       ? (rec.acuSessions || []).slice().sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.at || 0) - (a.at || 0))
       : null;
-    // her walkthrough notes 2026-09-11: predicted-schedule moved below the
-    // phase strip ("not important now, need to see that after the plan"),
-    // Looking-ahead moved above it on its own ("more useful... date it above
-    // the plan strip") -- see phCycleLookAheadBlockHtml/phCycleVisitsHtml.
-    const inner = `${phCycleVisitsHtml(rec, plan, name)}
+    // her synth22 ask 2026-09-15 ("this is not really useful because its
+    // giving me info in 41 days. i want for this cycle. i also want this
+    // positioned better in the treatment plan rather than above it"):
+    // phCycleLookAheadBlockHtml (next cycle, projected off her AVERAGE
+    // length) is gone from above the phase strip -- the block she was
+    // looking at had nothing to do with the cycle she's actually in.
+    // phCycleVisitsHtml already sat below the strip with real THIS-cycle
+    // dates, but only for Natural fertility; phCyclePlanScheduleHtml is its
+    // twin for the other cycle-driven templates (PCOS/Endo/Dysmenorrhea/
+    // Amenorrhea/IVF) and was never wired in here (only into the older
+    // full-screen plan modal) -- adding it means every cycle-tracked plan
+    // gets an accurate this-cycle schedule in the one place, not just hers.
+    const inner = `${phCycleVisitsHtml(rec, plan, name)}${phCyclePlanScheduleHtml(rec, plan, name)}
       ${acuSessions ? presAcuOpenHtml(name, acuSessions) : ""}
       ${phTpAddPhaseHtml(plan)}
       ${phTpIvfTrackHtml(plan)}
@@ -45992,7 +46031,6 @@ or changing anything in Cliniko.
     return `<div class="ph-tp-inline">
       ${plan.templateName === "IVF Protocol" ? phIvfHistoryFoldHtml(name) : ""}
       ${phTpFacialStripHtml(rec, plan)}
-      ${phCycleLookAheadBlockHtml(rec, plan, name)}
       ${phTpStartPhaseBannerHtml(plan)}
       ${phTpDeleteArm === "plan"
         ? `<div class="ph-confirm-strip"><span>Delete this whole plan? This can't be undone.</span><button type="button" class="btn-save" data-tp-plan-del-yes="${plan.id}">Delete plan</button><button type="button" class="btn-cancel" data-tp-plan-del-no="1">Cancel</button></div>`
@@ -46993,8 +47031,44 @@ or changing anything in Cliniko.
      get a + Book that opens quick-add on that day. ---- */
   const PH_TP_PROJECT_MAX = 4;
   const PH_TP_PROJECT_CAP = 12;   // even with an end date, a cell is not a calendar
+  // "CD 3, 10, 17" projects differently from a rhythm: each listed day
+  // recurs once PER CYCLE (not stepped from the last visit), so this walks
+  // cycle by cycle off her real LMP rather than adding an interval. Needs
+  // her cycle to be tracked at all -- a CD cadence on a patient with no LMP
+  // logged yet has nothing to project from, same "unreadable" reason a
+  // rhythm the parser can't read already uses.
+  function phTpProjectedVisitsForCds(name, ph, cds) {
+    const rec = phPatientPeek(name);
+    const cyc = rec && phCycleFor(rec);
+    if (!cyc || !cyc.lmp) return { ok: false, reason: "unreadable" };
+    const cycleLen = Math.max(14, cyc.cycleLen || 28);
+    const lmp = parseKey(cyc.lmp);
+    const today = keyOf(TODAY);
+    const key = phPatientKey(name);
+    const wk = /for\s+(\d+)\s*weeks?/i.exec(ph.cadence || "");
+    const endKey = wk ? keyOf(new Date(parseKey(ph.sinceKey).getTime() + (+wk[1]) * 7 * 864e5)) : null;
+    const booked = phApptList().filter(a => phPatientKey(a.patient) === key && a.date > today);
+    const near = k => booked.find(a => Math.abs(parseKey(a.date) - parseKey(k)) <= 2 * 864e5) || null;
+    const dates = [];
+    // c=0 is the cycle her current LMP describes; a listed day already past
+    // in THIS cycle simply produces its next-cycle date instead, same as a
+    // lapsed rhythm above starts fresh from today
+    for (let c = 0; c < 26 && dates.length < PH_TP_PROJECT_CAP; c++) {
+      cds.forEach(cd => {
+        const k = keyOf(new Date(lmp.getFullYear(), lmp.getMonth(), lmp.getDate() + c * cycleLen + (cd - 1)));
+        if (k <= today) return;
+        if (endKey && k > endKey) return;
+        dates.push({ key: k, appt: near(k), cd });
+      });
+    }
+    dates.sort((a, b) => a.key < b.key ? -1 : a.key > b.key ? 1 : 0);
+    const capped = endKey ? dates.slice(0, PH_TP_PROJECT_CAP) : dates.slice(0, PH_TP_PROJECT_MAX);
+    return { ok: true, days: null, dates: capped, endKey, fromKey: cyc.lmp };
+  }
   function phTpProjectedVisits(name, plan, ph) {
     if (!name || !ph || !ph.sinceKey || ph.doneKey) return null;
+    const cdList = phTpCadenceCdList(ph.cadence || "");
+    if (cdList) return phTpProjectedVisitsForCds(name, ph, cdList);
     const parsed = phAcuCadenceParse(ph.cadence || "");
     if (!parsed.matched || parsed.noAcu || !parsed.days) return { ok: false, reason: parsed.noAcu ? "no-acu" : "unreadable" };
     const st = phTpPhaseVisitStats(name, plan, ph);
@@ -47250,12 +47324,27 @@ or changing anything in Cliniko.
         <td>${herbChip(phAcuHerbsOn(name, s.date))}</td>
         <td>${badge(s.outcome)}</td>
       </tr>${findingsRow(s, s.id === newestSessionId)}`).join("");
-    const pj = (!st || !st.rows.length || frozen || st.paused) ? null : phTpProjectedVisits(name, plan, phase);
+    // A rhythm ("2x/wk") projects by stepping off the LAST visit, so it has
+    // nothing to say until at least one row exists -- the `!st.rows.length`
+    // gate below is right for that case. A CD list is different: it reads
+    // straight off her real LMP, needing no prior visit to anchor on, so
+    // gating it the same way would hide exactly what she asked for in her
+    // synth22 ask 2026-09-15 ("currently i can't plan for future
+    // treatments") -- the whole point is seeing the dates BEFORE anything
+    // is booked, on a brand new phase with zero visits so far.
+    const isCdCadence = !!phTpCadenceCdList(phase.cadence || "");
+    const pj = (!st || (!st.rows.length && !isCdCadence) || frozen || st.paused) ? null : phTpProjectedVisits(name, plan, phase);
+    // her synth22 ask 2026-09-15 ("show cycle day in the predicted dates —
+    // so i can plan it"): a CD-list cadence already carries its own x.cd;
+    // any other rhythm gets one worked out from the patient's real cycle,
+    // wrapped to whichever future cycle that date actually falls in.
+    const cyc = phCycleFor(prec);
+    const cdTag = x => { const cd = x.cd != null ? x.cd : phCycleCdOnDate(x.key, cyc); return cd ? `CD ${cd} · ` : ""; };
     let aheadRows = "";
     if (pj && pj.ok && pj.dates.length) {
       aheadRows = pj.dates.map(x => x.appt
-        ? `<tr class="ph-tp-vt-row ahead"><td class="ph-tp-vt-date"><b>${esc(phShortDate(x.key))}</b><span>booked</span></td><td colspan="3" class="ph-tp-vt-note">already on the calendar</td></tr>`
-        : `<tr class="ph-tp-vt-row projected"><td class="ph-tp-vt-date"><b>${esc(phShortDate(x.key))}</b><span>projected</span></td><td colspan="2" class="ph-tp-vt-note">if she keeps this rhythm</td><td><button type="button" class="ph-tp-book" data-tp-book="${esc(name)}|${x.key}" title="Book ${esc(phCkFirst(name))} on ${esc(phShortDate(x.key))}">+ Book</button></td></tr>`
+        ? `<tr class="ph-tp-vt-row ahead"><td class="ph-tp-vt-date"><b>${esc(phShortDate(x.key))}</b><span>${cdTag(x)}booked</span></td><td colspan="3" class="ph-tp-vt-note">already on the calendar</td></tr>`
+        : `<tr class="ph-tp-vt-row projected"><td class="ph-tp-vt-date"><b>${esc(phShortDate(x.key))}</b><span>${cdTag(x)}projected</span></td><td colspan="2" class="ph-tp-vt-note">if she keeps this rhythm</td><td><button type="button" class="ph-tp-book" data-tp-book="${esc(name)}|${x.key}" title="Book ${esc(phCkFirst(name))} on ${esc(phShortDate(x.key))}">+ Book</button></td></tr>`
       ).join("");
     } else if (pj && !pj.ok && pj.reason === "unreadable") {
       aheadRows = `<tr class="ph-tp-vt-row"><td colspan="4" class="ph-tp-vt-note">Can’t project the next visits — “${esc(phase.cadence || "")}” isn’t a rhythm this can read.</td></tr>`;
@@ -47748,7 +47837,11 @@ or changing anything in Cliniko.
      and no frequency. phTpCadenceDecompose returns null for those; the editor
      then shows the text she already has, leaves every picker unset, and writes
      nothing until she actually chooses. "Type instead" stays for the rest. */
-  const PH_TP_VISIT_PER = [["wk", "a week"], ["fn", "a fortnight"], ["mo", "a month"]];
+  // "cd" (her synth22 ask 2026-09-15, "help me make the treatment frequency
+  // more customised... or specific cd"): a fixed set of cycle days, not a
+  // repeating rhythm -- see phTpCadenceCdList/phTpCadenceCompose's "cd"
+  // branch and the chip editor in phTpCellEditOpen.
+  const PH_TP_VISIT_PER = [["wk", "a week"], ["fn", "a fortnight"], ["mo", "a month"], ["cd", "specific cycle days"]];
   const PH_TP_VISIT_FOR = [["acu", "Acupuncture"], ["both", "Acupuncture + herbs"], ["herbs", "Herbs only"]];
   // How high the number list goes for each period. Fortnight stops at 1 on
   // purpose: "2 a fortnight" IS "1 a week", it composes to the same interval,
@@ -47766,7 +47859,21 @@ or changing anything in Cliniko.
   // means nothing when there's no visit at all, so a 0-visit cadence never
   // carries one regardless of what the duration picker happens to show
   // (that picker is disabled the same moment n hits 0 -- see syncOff below).
-  function phTpCadenceCompose(n, per, forWhat, weeks) {
+  // cds: only meaningful when per === "cd" -- an explicit list of cycle days
+  // ("CD 3, 10, 17") rather than a rhythm the other three periods express.
+  // An empty/missing list composes the same "No visit needed" text a
+  // zero-count wk/fn/mo cadence already produces, so the phase reads the
+  // same either way until she's actually added a day.
+  function phTpCadenceCompose(n, per, forWhat, weeks, cds) {
+    if (per === "cd") {
+      const list = Array.isArray(cds) ? Array.from(new Set(cds)).filter(x => x > 0).sort((a, b) => a - b) : [];
+      if (!list.length) return "No visit needed — herbs only";
+      const base = `CD ${list.join(", ")}`;
+      const withWhat = forWhat === "both" ? `${base} acupuncture · herbs`
+        : forWhat === "herbs" ? `${base} · herbs only`
+        : base;
+      return weeks ? `${withWhat} for ${weeks} week${weeks === 1 ? "" : "s"}` : withWhat;
+    }
     if (!n) return "No visit needed — herbs only";
     const base = per === "wk" ? `${n}×/wk`
       : per === "fn" ? (n === 1 ? "Fortnightly" : `every ${Math.round(14 / n)} days`)
@@ -47775,6 +47882,15 @@ or changing anything in Cliniko.
       : forWhat === "herbs" ? `${base} · herbs only`
       : base;
     return weeks ? `${withWhat} for ${weeks} week${weeks === 1 ? "" : "s"}` : withWhat;
+  }
+  // "CD 3, 10, 17" prefix, shared by phTpCadenceRead (the picker's round
+  // trip) and phTpProjectedVisits (turning the same list into real future
+  // dates) -- one regex, not two that could quietly disagree.
+  function phTpCadenceCdList(text) {
+    const m = /^CD\s+((?:\d+\s*,\s*)*\d+)\b/i.exec(String(text || "").trim());
+    if (!m) return null;
+    const cds = m[1].split(",").map(s => parseInt(s.trim(), 10)).filter(n => n > 0);
+    return cds.length ? Array.from(new Set(cds)).sort((a, b) => a - b) : null;
   }
   /* What the pickers OPEN on. Reading the rhythm out of the text is the first
      choice; when there is no rhythm to read, ASK THE SCHEDULER rather than
@@ -47834,7 +47950,7 @@ or changing anything in Cliniko.
     const got = phTpCadenceRead(text);
     if (!got) return null;
     const norm = s => String(s || "").trim().replace(/\s+/g, " ").toLowerCase();
-    return norm(phTpCadenceCompose(got.n, got.per, got.forWhat, got.weeks)) === norm(text) ? got : null;
+    return norm(phTpCadenceCompose(got.n, got.per, got.forWhat, got.weeks, got.cds)) === norm(text) ? got : null;
   }
   function phTpCadenceRead(text) {
     const t = String(text || "").trim();
@@ -47852,6 +47968,10 @@ or changing anything in Cliniko.
     const durM = /^(.*?)\s+for\s+(\d+)\s*weeks?$/i.exec(t);
     if (durM) { rest = durM[1].trim(); weeks = +durM[2]; }
     const forWhat = /herbs only/i.test(rest) ? "herbs" : /herbs/i.test(rest) ? "both" : "acu";
+    // "CD 3, 10, 17" -- a fixed list of cycle days, not a rhythm. Checked
+    // before the rhythm patterns below since nothing else starts with "CD".
+    const cdList = phTpCadenceCdList(rest);
+    if (cdList) return { n: null, per: "cd", forWhat, weeks, cds: cdList };
     // "1–2×/wk" is her own wording and appears in her templates. Read the more
     // frequent end, which is exactly what phAcuCadenceParse does with the same
     // string — the two must not disagree about what a range means. It still
@@ -47920,6 +48040,7 @@ or changing anything in Cliniko.
          prefix means a single pick now changes only what she picked. */
       const st = got || phTpCadenceSeed(cur);
       if (!PH_TP_VISIT_PER.some(p => p[0] === st.per)) st.per = "wk";
+      if (!Array.isArray(st.cds)) st.cds = [];
       const box = document.createElement("div");
       box.className = "ph-tp-vis";
       box.setAttribute("data-tp-phase-field", key);
@@ -47984,16 +48105,57 @@ or changing anything in Cliniko.
       saveBtn.type = "button"; saveBtn.className = "ph-tp-vissave";
       saveBtn.dataset.vis = "save"; saveBtn.textContent = "Save";
       saveBtn.setAttribute("aria-label", `Save visits for ${ph.label || "this phase"}`);
+      // "On specific days" mode (her pick from the 3-option mock, 2026-09-15):
+      // a fixed set of cycle days rather than a repeating rhythm -- weekly
+      // acupuncture doesn't fit every phase she runs on a natural cycle, but
+      // "CD 3, 10, 17" does. Chips replace numSel (a visit count makes no
+      // sense here -- the day list IS the count); per/for/dur stay live.
+      const cdWrap = document.createElement("div");
+      cdWrap.className = "ph-tp-cdwrap";
+      cdWrap.setAttribute("data-tp-phase-field", key);
+      const cdRenderChips = () => {
+        cdWrap.innerHTML = "";
+        st.cds.slice().sort((a, b) => a - b).forEach(cd => {
+          const chip = document.createElement("span");
+          chip.className = "ph-tp-cdchip";
+          chip.dataset.cd = cd;
+          chip.append(`CD ${cd}`);
+          const rm = document.createElement("button");
+          rm.type = "button"; rm.dataset.cdrm = cd; rm.textContent = "×";
+          rm.setAttribute("aria-label", `Remove cycle day ${cd}`);
+          chip.append(rm);
+          cdWrap.append(chip);
+        });
+        const addWrap = document.createElement("span");
+        addWrap.className = "ph-tp-cdadd";
+        addWrap.innerHTML = `<input type="number" min="1" max="60" class="ph-tp-cdaddin field-bare" data-cdaddin aria-label="Cycle day to add">
+          <button type="button" class="ph-tp-cdaddbtn" data-cdaddbtn>+ Add a day</button>`;
+        cdWrap.append(addWrap);
+      };
+      cdRenderChips();
       if (keepLine) box.insertAdjacentHTML("beforeend", keepLine);
-      box.append(numSel, perSel, forSel, durSel, saveBtn, typeBtn);
-      const syncOff = () => { const off = st.n === 0; perSel.disabled = off; forSel.disabled = off; durSel.disabled = off; };
+      box.append(numSel, perSel, cdWrap, forSel, durSel, saveBtn, typeBtn);
+      const syncOff = () => {
+        const cdMode = st.per === "cd";
+        const off = cdMode ? st.cds.length === 0 : st.n === 0;
+        numSel.hidden = cdMode; cdWrap.hidden = !cdMode;
+        perSel.disabled = off; forSel.disabled = off; durSel.disabled = off;
+      };
       syncOff();
       el.classList.add("editing"); el.innerHTML = ""; el.appendChild(box);
-      numSel.focus();
+      (st.per === "cd" ? perSel : numSel).focus();
       // save on every pick, but DON'T rerender yet — the row is rebuilt once
       // she leaves, so the "book <date>" chip still refreshes off the new
       // string without the editor closing under her mid-choice
-      const write = () => { const live = freshPh(); if (!live) return; live.cadence = phTpCadenceCompose(st.n, st.per, st.forWhat, st.weeks); phPatientRec(phTpScreenPatient); savePharmacy(); };
+      const write = () => { const live = freshPh(); if (!live) return; live.cadence = phTpCadenceCompose(st.n, st.per, st.forWhat, st.weeks, st.cds); phPatientRec(phTpScreenPatient); savePharmacy(); };
+      const addCd = () => {
+        const inp = cdWrap.querySelector("[data-cdaddin]");
+        const v = inp && +inp.value;
+        if (!v || v < 1) return;
+        if (!st.cds.includes(v)) st.cds.push(v);
+        cdRenderChips(); syncOff(); write();
+        cdWrap.querySelector("[data-cdaddin]").focus();
+      };
       box.addEventListener("change", e => {
         const s = e.target.closest("select[data-vis]");
         if (!s) return;
@@ -48004,14 +48166,30 @@ or changing anything in Cliniko.
           // and reshape only the number list so nothing else loses focus
           st.n = Math.min(st.n, PH_TP_VISIT_MAX[st.per] || 5);
           numSel.innerHTML = numHtml();
+          syncOff();
         } else if (s.dataset.vis === "for") { st.forWhat = s.value; }
         else { st.weeks = s.value ? +s.value : null; }
         write();
       });
       const finish = () => { write(); phTpRerender(); };
-      box.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.closest("select")) { e.preventDefault(); finish(); } });
+      box.addEventListener("keydown", e => {
+        if (e.target.closest("[data-cdaddin]") && e.key === "Enter") { e.preventDefault(); addCd(); return; }
+        if (e.key === "Enter" && e.target.closest("select")) { e.preventDefault(); finish(); }
+      });
       box.addEventListener("click", e => {
         if (e.target.closest('[data-vis="save"]')) { finish(); return; }
+        if (e.target.closest("[data-cdaddbtn]")) { addCd(); return; }
+        const rmBtn = e.target.closest("[data-cdrm]");
+        if (rmBtn) {
+          st.cds = st.cds.filter(x => x !== +rmBtn.dataset.cdrm);
+          cdRenderChips(); syncOff(); write();
+          // removing the chip removes its own button from the DOM mid-click,
+          // which blurs out of `box` entirely -- refocus the add input so the
+          // focusout handler below sees focus still inside box and doesn't
+          // close the editor on what should be a one-chip edit, not a save
+          cdWrap.querySelector("[data-cdaddin]").focus();
+          return;
+        }
         if (!e.target.closest('[data-vis="type"]')) return;
         const inp = document.createElement("input");
         inp.type = "text"; inp.className = "ph-tp-cellin field-bare";
@@ -48263,7 +48441,7 @@ or changing anything in Cliniko.
         <div class="ph-tp-fndhead">Clinical findings <span class="faint">· tap a zone or a chip; it saves as you go and flows into her letter</span></div>
         ${phTpFindingsHtml(plan)}
         ${plan.templateName === "IVF Protocol" ? phIvfHistoryFoldHtml(phTpScreenPatient) : ""}
-        ${PH_TP_CYCLE_TEMPLATES.includes(plan.templateName) ? phCycleTessHtml(phPatientRec(phTpScreenPatient), phTpScreenPatient) + phCycleLookAheadBlockHtml(phPatientRec(phTpScreenPatient), plan, phTpScreenPatient) : ""}
+        ${PH_TP_CYCLE_TEMPLATES.includes(plan.templateName) ? phCycleTessHtml(phPatientRec(phTpScreenPatient), phTpScreenPatient) : ""}
         ${phTpStartPhaseBannerHtml(plan)}
         <div class="ph-tp-timeline">
           ${phTpPlanBodyHtml(name, plan, "")}
@@ -48272,10 +48450,11 @@ or changing anything in Cliniko.
           ${phTpAddPhaseHtml(plan)}
           ${phTpIvfTrackHtml(plan)}
         </div>
-        <!-- her walkthrough notes 2026-09-11 ("predicted schedule ... not
-             important now, need to see that after the plan"): moved below
-             the phase strip/timeline above; Looking-ahead moved above it
-             instead (see the cycle block near Clinical findings) -->
+        <!-- her synth22 ask 2026-09-15: the next-cycle "Looking ahead" block
+             that used to sit above (near Clinical findings) is gone -- it
+             showed info weeks out instead of this cycle, and sat above the
+             plan rather than in it. This is the accurate this-cycle
+             schedule and it's the only predicted-schedule block left. -->
         ${PH_TP_CYCLE_TEMPLATES.includes(plan.templateName) ? phCycleVisitsHtml(phPatientRec(phTpScreenPatient), plan, phTpScreenPatient) + phCyclePlanScheduleHtml(phPatientRec(phTpScreenPatient), plan, phTpScreenPatient) : ""}
         <div class="ph-tp-reviews">
           <div class="ph-tp-section-head"><b>Review notes</b></div>
