@@ -2597,7 +2597,25 @@ picked **A**. Built as `cc240c0`:
   `renderHxScreen()` repaints `#presConstitHost` in place (never
   `renderPresPanel()` — her scroll spot and open sections survive a chip tap).
   `phRenPasteTargetKey` accepts the host as an open Hx screen (paste/drop a
-  photo onto the tab works).
+  photo onto the tab works) — but only while it is ON SCREEN
+  (`getClientRects().length`), and `renderPharmacy` drops the name on any
+  non-Prescriptions tab: a tab hop (Journey ↗, the sidebar) hides
+  `#phPresWrap` without `renderPresPanel`, so the profile's markup and its
+  claim on the name would otherwise outlive the page and a later paste on
+  any page would file into the last-viewed patient (review finding, `42a4ff3`).
+- **A section body may be a FUNCTION** (`presAssessSections`): built only
+  for the selected tab. The constitution body is the heaviest thing on the
+  profile and the profile re-renders on most field edits — and it takes
+  `presHxScreenName` only while the tab is actually showing.
+- **A view never writes the record.** Rendering uses
+  `phHxConstitTongueRead` / `phHxConstitPulseRead` (no lazy-init); the
+  writers `phHxConstitTongue` / `phHxConstitPulse` belong to the handlers
+  only. The lazy-init on render added two keys to every record she merely
+  looked at, and `phStampChangedPatients` then re-stamped `updatedAt` on the
+  next unrelated save — which the sync merge reads as a real edit.
+- `presOpenScript` closes a History popup held for a DIFFERENT patient
+  (keyboard-reachable: Tab out of the popup onto a list row, Enter);
+  otherwise the popup kept showing A while its handlers wrote to B.
 - **The block can exist twice at once** — the tab under an open popup, or the
   closed popup's retained markup — so anything that patches it in place must
   scope to `e.target.closest("#phRenConstitPanel")`, never a document-wide
@@ -2612,10 +2630,16 @@ picked **A**. Built as `cc240c0`:
   "not new", and every patient past the gate has one. She chose **"keep it
   open for new patients"**, so `presStageOpeningHtml` now decides with
   `presHxUntaken(name)` — history never touched, no acu session logged,
-  nothing ever dispensed; **plans deliberately not counted** — and
+  **no dispense in `PHARMACY.log`** (NOT the script's `lastDispensedAt`
+  stamp — that sits on 10 of 841 scripts in her 11 Sep backup while the log
+  holds 2,759 dispenses for 815 patients; the stamp-only version would have
+  opened the full checklist on ~640 long-standing patients), and no
+  appointment before today; **plans deliberately not counted** — and
   `presHxInlineFor` keeps it open past her first answer (which makes her
   "not new") until she leaves the profile or the script
-  (`presHxInlineSync` clears it). Everything else still reads
+  (`presHxInlineSync` clears it). Measured against that backup: 83 of 745
+  script patients qualify, of whom exactly one has a plan (the only way to
+  reach the profile) — Acupreg 0 of 13. Everything else still reads
   `presPatientIsNew` (band subtitle, landing stage).
 Verified in the sandbox with synthetic patients: returning patient → no
 popup, tab present, tongue/pulse/Hammer/body-type all write to
@@ -2624,5 +2648,10 @@ popup opened over the tab writes to the same record and both copies show it;
 new patient → inline history without the block, stays open after an answer +
 panel rebuild, folds to the "N of 38 asked · Continue" row after leaving the
 profile; 375px has no page-level overflow (the tiles row is its own
-scroller); the protected Prescriptions live-search check passes. `sw.js`
-`lcm-20260916-constit-tab`, meta `20260916-080000`.
+scroller); the protected Prescriptions live-search check passes. After the
+review fixes (`42a4ff3`), re-verified: zero constitution builds while
+Photos is showing across two re-renders, the record has no
+`constitTongue`/`constitPulse` after viewing the tab (only after a tap),
+Journey ↗ nulls the name and the paste target, a popup for another patient
+closes on script open while a same-patient popup stays. `sw.js`
+`lcm-20260916-constit-tab-reviewed`, meta `20260916-090000`.
