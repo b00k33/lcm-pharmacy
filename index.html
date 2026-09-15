@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260916-050000">
+<meta name="lcm-build" content="20260916-060000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -27590,6 +27590,58 @@
         renderHxScreen();
         return;
       }
+      // Shen-Hammer exam on the constitution screen (her "yes" 2026-09-16):
+      // the same four rules as the data-visit-hm* handlers, on
+      // rec.constitPulse.hammer. Fold is view state only.
+      const hxHmChip = e.target.closest("[data-constit-hm]");
+      if (hxHmChip) {
+        const rec = phPatientRec(presHxScreenName);
+        if (rec) {
+          const [sec, key, q] = hxHmChip.dataset.constitHm.split("|");
+          const h = phHxConstitPulse(rec).hammer;
+          const toggle = (arr, v) => arr.includes(v) ? arr.filter(x => x !== v) : arr.concat(v);
+          if (sec === "wave") h.wave = h.wave === q ? "" : q;
+          else if (sec === "rhythm" || sec === "impressions") h[sec] = toggle(h[sec], q);
+          else if (sec === "depths" || sec === "positions") {
+            const next = toggle(h[sec][key] || [], q);
+            if (next.length) h[sec][key] = next;
+            else { delete h[sec][key]; if (sec === "positions") { delete h.degree[key]; h.change = h.change.filter(x => x !== key); } }
+          }
+          savePharmacy();
+        }
+        renderHxScreen();
+        return;
+      }
+      const hxHmDeg = e.target.closest("[data-constit-hm-deg]");
+      if (hxHmDeg) {
+        const rec = phPatientRec(presHxScreenName);
+        if (rec) {
+          const [key, n] = hxHmDeg.dataset.constitHmDeg.split("|"), h = phHxConstitPulse(rec).hammer;
+          if (h.degree[key] === Number(n)) delete h.degree[key]; else h.degree[key] = Number(n);
+          savePharmacy();
+        }
+        renderHxScreen();
+        return;
+      }
+      const hxHmChg = e.target.closest("[data-constit-hm-chg]");
+      if (hxHmChg) {
+        const rec = phPatientRec(presHxScreenName);
+        if (rec) {
+          const key = hxHmChg.dataset.constitHmChg, h = phHxConstitPulse(rec).hammer;
+          h.change = h.change.includes(key) ? h.change.filter(x => x !== key) : h.change.concat(key);
+          savePharmacy();
+        }
+        renderHxScreen();
+        return;
+      }
+      if (e.target.closest("[data-constit-hm-fold]")) {
+        const rec = phPatientRec(presHxScreenName);
+        const h = rec ? phHxConstitPulse(rec).hammer : null;
+        const open = presHxConstitHmOpen == null ? (h ? phVisitHammerCount(h) > 0 : false) : presHxConstitHmOpen;
+        presHxConstitHmOpen = !open;
+        renderHxScreen();
+        return;
+      }
       // ---- Ren (人) photo upload + crop (her ask 2026-08-22) ----
       if (e.target.closest("[data-ren-photo-add]")) {
         const inp = document.getElementById("phRenPhotoFileInput");
@@ -30275,6 +30327,21 @@
         // the rate-driven SHPD notes (>20 / <12 / decrease) patch in place too
         const ratekb = document.querySelector("[data-visit-hm-ratekb]");
         if (ratekb) ratekb.innerHTML = phPulseKbBlockHtml(phVisitPulseKbHits(presVisitFndDraft).rate, PH_PULSE_KB_LABEL);
+        return;
+      }
+      // the constitution screen's copy of the rate row (2026-09-16): same
+      // in-place patching, on rec.constitPulse.hammer.rate, saved as typed --
+      // no renderHxScreen here, that would drop the caret mid-number
+      if (e.target.matches("[data-constit-hm-rate]")) {
+        const rec = phPatientRec(presHxScreenName);
+        if (!rec) return;
+        const p = phHxConstitPulse(rec), k = e.target.dataset.constitHmRate, v = e.target.value.trim();
+        if (v === "" || isNaN(Number(v))) delete p.hammer.rate[k]; else p.hammer.rate[k] = Number(v);
+        savePharmacy();
+        const chg = document.querySelector("[data-constit-hm-change]");
+        if (chg) chg.textContent = phVisitRateChangeText(p.hammer.rate);
+        const ratekb = document.querySelector("[data-constit-hm-ratekb]");
+        if (ratekb) ratekb.innerHTML = phPulseKbBlockHtml(phVisitPulseKbHits(p).rate, PH_PULSE_KB_LABEL);
         return;
       }
       const gdField = e.target.closest("[data-gd-f]");
@@ -42935,12 +43002,15 @@ or changing anything in Cliniko.
   // ancestor-gated: reusing data-visit-pulse-* here would silently write
   // into whatever visit's draft happened to be open. Deliberately NOT
   // carried over: "last visit" comparison (no visit series to compare a
-  // baseline against) and the Shen-Hammer exam form (a per-exam record, and
-  // a much bigger surface -- ask her before duplicating it).
-  const PH_HX_CONSTIT_PULSE_STUB_HAMMER = { rhythm: [], rate: {}, impressions: [], wave: "", depths: {}, positions: {}, degree: {}, change: [] };
-  let presHxConstitPulseStamp = "thin", presHxConstitPulseMore = false;
+  // baseline against). The Shen-Hammer exam form IS here (her "yes"
+  // 2026-09-16 to adding it too), via the same renderer with ns "constit".
+  let presHxConstitPulseStamp = "thin", presHxConstitPulseMore = false, presHxConstitHmOpen = null;
   function phHxConstitPulse(rec) {
-    return rec.constitPulse || (rec.constitPulse = { pulse: {}, pulseRef: [] });
+    const p = rec.constitPulse || (rec.constitPulse = { pulse: {}, pulseRef: [] });
+    // hammer arrived after the first records were written -- fill in place
+    // (phVisitFndRead's read-side copy isn't needed here: this IS the record)
+    if (!p.hammer || typeof p.hammer !== "object") p.hammer = phVisitFndBlank().hammer;
+    return p;
   }
   function phHxConstitPulseHtml(rec) {
     const p = phHxConstitPulse(rec);
@@ -42948,7 +43018,7 @@ or changing anything in Cliniko.
     const stampBtn = (id, label) => `<button type="button" class="ph-pulse-stamp${presHxConstitPulseStamp === id ? " on" : ""}" data-constit-pulse-stamp="${esc(id)}" aria-pressed="${presHxConstitPulseStamp === id ? "true" : "false"}">${esc(label)}</button>`;
     const shown = PH_PULSE_OTHER_Q.slice(0, PH_PULSE_STAMP_SHOWN), hidden = PH_PULSE_OTHER_Q.slice(PH_PULSE_STAMP_SHOWN);
     const more = presHxConstitPulseMore || hidden.includes(presHxConstitPulseStamp);
-    const kb = phVisitPulseKbHits({ pulse: marks, hammer: PH_HX_CONSTIT_PULSE_STUB_HAMMER });
+    const kb = phVisitPulseKbHits(p);
     return `<div class="ph-gd-field ph-hx-constit-field ph-hx-constit-pulse">
       <span class="ph-ren-field-label">Pulse chart</span>
       <div class="ph-pulse-wrap">
@@ -42966,6 +43036,7 @@ or changing anything in Cliniko.
         ${phVisitPulseScoresHtml(marks, null)}
         ${phPulseKbBlockHtml(kb.grid, PH_PULSE_KB_LABEL)}
         <div class="ph-pulse-hint">Tap a stamp, then tap a zone. Thin and Pounding are her drawn shapes; every other quality records by name until she draws it.</div>
+        ${phVisitHammerHtml(p.hammer, kb, "constit", presHxConstitHmOpen)}
       </div>
     </div>`;
   }
@@ -49821,14 +49892,19 @@ or changing anything in Cliniko.
   ];
   const phHmQ = s => s.endsWith("?") ? { q: s.slice(0, -1), likely: true } : { q: s, likely: false };
   const phHmPosLabel = key => { const [id, side] = key.split(":"); const p = PH_HM_POSITIONS.find(x => x.id === id); return `${p ? p.label : id}${side ? ` ${side}` : ""}`; };
-  function phVisitHmChips(sec, key, list, on) {
-    return `<div class="ph-ltr-quals">${list.map(s => { const { q, likely } = phHmQ(s); return `<button type="button" class="ph-ltr-qual${on.includes(q) ? " on" : ""}${likely ? " likely" : ""}" data-visit-hm="${esc(`${sec}|${key}|${q}`)}"${likely ? ` title="not common, but likely when this position is present"` : ""}>${esc(q)}</button>`; }).join("")}</div>`;
+  // ns: which data-* family the chips carry -- "visit" (default, the
+  // per-visit draft) or "constit" (the 方病人 screen's standing read, her ask
+  // 2026-09-16), so the two never fire each other's handlers
+  function phVisitHmChips(sec, key, list, on, ns) {
+    const attr = `data-${ns || "visit"}-hm`;
+    return `<div class="ph-ltr-quals">${list.map(s => { const { q, likely } = phHmQ(s); return `<button type="button" class="ph-ltr-qual${on.includes(q) ? " on" : ""}${likely ? " likely" : ""}" ${attr}="${esc(`${sec}|${key}|${q}`)}"${likely ? ` title="not common, but likely when this position is present"` : ""}>${esc(q)}</button>`; }).join("")}</div>`;
   }
   // degree (1 → 5 = low → high) and △ change, per position, only once
   // something is marked there -- the form's own two modifiers
-  function phVisitHmModsHtml(h, key) {
+  function phVisitHmModsHtml(h, key, ns) {
+    const attr = `data-${ns || "visit"}-hm`;
     const deg = h.degree[key], chg = h.change.includes(key);
-    return `<span class="ph-hm-mods"><i>degree</i>${[1, 2, 3, 4, 5].map(n => `<button type="button" class="ph-ltr-qual deg${deg === n ? " on" : ""}" data-visit-hm-deg="${esc(`${key}|${n}`)}" aria-pressed="${deg === n ? "true" : "false"}">${n}</button>`).join("")}<button type="button" class="ph-ltr-qual${chg ? " on" : ""}" data-visit-hm-chg="${esc(key)}" title="changed since the last exam" aria-pressed="${chg ? "true" : "false"}">△ change</button></span>`;
+    return `<span class="ph-hm-mods"><i>degree</i>${[1, 2, 3, 4, 5].map(n => `<button type="button" class="ph-ltr-qual deg${deg === n ? " on" : ""}" ${attr}-deg="${esc(`${key}|${n}`)}" aria-pressed="${deg === n ? "true" : "false"}">${n}</button>`).join("")}<button type="button" class="ph-ltr-qual${chg ? " on" : ""}" ${attr}-chg="${esc(key)}" title="changed since the last exam" aria-pressed="${chg ? "true" : "false"}">△ change</button></span>`;
   }
   function phVisitRateChangeText(rate) {
     const b = rate.beg, e = rate.end;
@@ -49850,26 +49926,30 @@ or changing anything in Cliniko.
   // "begin" and "with exertion" are typed, and is refreshed in place by the
   // rate input handler through [data-visit-hm-ratekb].
   const PH_PULSE_KB_LABEL = "Your SHPD notes";
-  function phVisitHammerHtml(h, kb) {
+  // ns / openState: see phVisitHmChips -- the constitution copy passes
+  // "constit" and its own fold flag, every visit caller leaves both unset
+  function phVisitHammerHtml(h, kb, ns, openState) {
     kb = kb || { grid: [], rhythm: [], rate: [], impressions: [], wave: [], depths: {}, positions: {} };
+    const attr = `data-${ns || "visit"}-hm`;
+    const openFlag = ns ? openState : presVisitHmOpen;
     const count = phVisitHammerCount(h);
-    const open = presVisitHmOpen == null ? count > 0 : presVisitHmOpen;
+    const open = openFlag == null ? count > 0 : openFlag;
     const row = (label, inner, hits) => `<div class="ph-hm-row"><i>${label}</i><div>${inner}${phPulseKbBlockHtml(hits, PH_PULSE_KB_LABEL)}</div></div>`;
     const posRow = (p, side) => {
       const key = side ? `${p.id}:${side}` : p.id;
       const on = h.positions[key] || [];
-      return row(`${esc(p.label)}${side ? ` <span class="side">${side}</span>` : ""}`, phVisitHmChips("positions", key, p.q, on) + (on.length ? phVisitHmModsHtml(h, key) : ""), kb.positions[key]);
+      return row(`${esc(p.label)}${side ? ` <span class="side">${side}</span>` : ""}`, phVisitHmChips("positions", key, p.q, on, ns) + (on.length ? phVisitHmModsHtml(h, key, ns) : ""), kb.positions[key]);
     };
-    const rateIn = ([k, label]) => `<label class="ph-hm-ratein">${esc(label)} <input type="number" inputmode="numeric" min="20" max="250" class="ph-hm-num" data-visit-hm-rate="${k}" value="${h.rate[k] != null ? esc(String(h.rate[k])) : ""}"></label>`;
+    const rateIn = ([k, label]) => `<label class="ph-hm-ratein">${esc(label)} <input type="number" inputmode="numeric" min="20" max="250" class="ph-hm-num" ${attr}-rate="${k}" value="${h.rate[k] != null ? esc(String(h.rate[k])) : ""}"></label>`;
     return `<div class="ph-hm">
-      <button type="button" class="tab-link" data-visit-hm-fold="1" aria-expanded="${open ? "true" : "false"}">Shen-Hammer pulse exam ${open ? "▾" : "▸"}${count ? ` · ${count} recorded` : ""}</button>
+      <button type="button" class="tab-link" ${attr}-fold="1" aria-expanded="${open ? "true" : "false"}">Shen-Hammer pulse exam ${open ? "▾" : "▸"}${count ? ` · ${count} recorded` : ""}</button>
       ${open ? `
-        ${row("Rhythm", phVisitHmChips("rhythm", "", PH_HM_RHYTHM, h.rhythm), kb.rhythm)}
-        ${row("Rate / min", `<div class="ph-hm-rate">${PH_HM_RATE_FIELDS.map(rateIn).join("")}<span data-visit-hm-change="1">${esc(phVisitRateChangeText(h.rate))}</span></div><div data-visit-hm-ratekb="1">${phPulseKbBlockHtml(kb.rate, PH_PULSE_KB_LABEL)}</div>`)}
-        ${row("First impressions", phVisitHmChips("impressions", "", PH_HM_IMPRESSIONS, h.impressions), kb.impressions)}
-        ${row("Wave", phVisitHmChips("wave", "", PH_HM_WAVE, h.wave ? [h.wave] : []), kb.wave)}
+        ${row("Rhythm", phVisitHmChips("rhythm", "", PH_HM_RHYTHM, h.rhythm, ns), kb.rhythm)}
+        ${row("Rate / min", `<div class="ph-hm-rate">${PH_HM_RATE_FIELDS.map(rateIn).join("")}<span ${attr}-change="1">${esc(phVisitRateChangeText(h.rate))}</span></div><div ${attr}-ratekb="1">${phPulseKbBlockHtml(kb.rate, PH_PULSE_KB_LABEL)}</div>`)}
+        ${row("First impressions", phVisitHmChips("impressions", "", PH_HM_IMPRESSIONS, h.impressions, ns), kb.impressions)}
+        ${row("Wave", phVisitHmChips("wave", "", PH_HM_WAVE, h.wave ? [h.wave] : [], ns), kb.wave)}
         <div class="ph-hm-sec">Depths · uniform qualities</div>
-        ${PH_HM_DEPTHS.map(d => row(esc(d.label), phVisitHmChips("depths", d.id, d.q, h.depths[d.id] || []), kb.depths[d.id])).join("")}
+        ${PH_HM_DEPTHS.map(d => row(esc(d.label), phVisitHmChips("depths", d.id, d.q, h.depths[d.id] || [], ns), kb.depths[d.id])).join("")}
         <div class="ph-hm-sec">Complementary positions</div>
         ${PH_HM_POSITIONS.map(p => p.sides ? posRow(p, "L") + posRow(p, "R") : posRow(p)).join("")}
         <div class="ph-pulse-hint">△ = changed since the last exam · degree 1 → 5 = low → high · italics = not common, but likely when the position is present. The principal positions are the grid above. Notes under a row are your own SHPD files (Guide → Pulse), read-only.</div>
