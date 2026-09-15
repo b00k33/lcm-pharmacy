@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260916-060000">
+<meta name="lcm-build" content="20260916-070000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -13124,7 +13124,8 @@
   #pharmacyPage .ph-apptpop-form .field input, #pharmacyPage .ph-apptpop-form .field select { min-height: 32px; padding: 4px 9px; border-radius: 8px; border: 1px solid var(--ph-line); font-size: 12.5px; box-sizing: border-box; width: 100%; }
   #pharmacyPage .ph-apptpop-form .field select { font-family: inherit; color: var(--ph-ink); background: var(--ph-white); }
   #pharmacyPage .ph-apptpop-form .field input[hidden] { display: none; }
-  #pharmacyPage .ph-apptpop-form #phApptCalEditServiceOther { margin-top: 6px; }
+  /* (no margin on the revealed Other box: .field's own 6px flex gap already
+     spaces it, and a margin on top of that read as a 12px off-rhythm gap) */
   /* the List view: her /patients table -- Time · Patient · Status · Presenting
      focus · Treatment goal, one grid so the five columns line up down the day */
   #pharmacyPage .ph-apptls { max-width: 1072px; margin: 12px auto 0; background: var(--ph-white); border-radius: 12px; overflow: hidden; }
@@ -35368,12 +35369,15 @@ or changing anything in Cliniko.
      typed-in herb list already follows (presGramsFollowHerbs -- ×her preset
      multiplier of the herb total, until she types her own figure), so the
      Dispense stage opens ready rather than gated on "enter grams first". A
-     ready-made jar is one 100 g line (the standard granule pack size,
-     PH_PACK_HERB), so it pours as 100 g × the multiplier -- editable like any
+     ready-made jar is one line at PH_TP_JAR_POUR_G (100 g flat -- a round
+     starting amount, about 11 days at her 3-spoon × 2/day preset; NOT the
+     jar's pack size, which is an ordering unit and was never a prescription
+     quantity), so it pours as 100 g × the multiplier -- editable like any
      other figure. Nothing here touches a dispensed script (presGramsFrozen). */
+  const PH_TP_JAR_POUR_G = 100;
   function phTpPourIntoScript(t, jar, recipe) {
     if (jar) {
-      t.ingredients = [{ code: phHerbCode(jar) || "", herb: jar.name, grams: PH_PACK_HERB }];
+      t.ingredients = [{ code: phHerbCode(jar) || "", herb: jar.name, grams: PH_TP_JAR_POUR_G }];
       t.actualFormula = phDispName(jar.name, true);
     } else if (recipe && Array.isArray(recipe.ingredients) && recipe.ingredients.length) {
       t.ingredients = recipe.ingredients.map(i => ({ code: i.code || "", herb: i.herb || i.name || "", grams: i.grams || 0 }));
@@ -35391,10 +35395,37 @@ or changing anything in Cliniko.
   // "profile" -- setting presStageForId together with presStage is what
   // makes an override stick (renderPresPanel only recomputes presStage when
   // presStageForId !== the open script's id).
+  // Three things the adversarial review of this route caught (2026-09-16),
+  // all fixed here rather than at the two call sites:
+  //  1. leaving a DIFFERENT script that has herbs off the shelf but no log
+  //     entry must go through the same "Log it / Leave it / Stay" gate as
+  //     every other way out of a script (presGuardScript) -- the click-level
+  //     guard (PRES_GUARD_LEAVE_SEL) never sees this route because it calls
+  //     presGoToScript directly, same pattern as presStartNew's own check.
+  //  2. presOpenScript clears presTpInlinePlanId and phTpClose clears
+  //     phTpScreen*, so "‹ Back to the plan" from the landed Dispense stage
+  //     fell to the plan LIST for anyone with two plans or a loose script.
+  //     The script's own planPhaseLink says which plan she was in; restore
+  //     it in the before hook (which runs AFTER presOpenScript's reset).
+  //  3. a Pain/Neurological case folds the herbs editor by default ("Herbs
+  //     -- not typical for this case", presIngQuietOpen) -- she just poured
+  //     herbs into it, so it must open showing them.
   function phTpOpenScriptOnDispense(scriptId) {
+    const t = (PRESC.items || []).find(x => x.id === scriptId);
+    if (!t) return;
+    if (scriptId !== presOpenId) {
+      const guard = presGuardScript();
+      if (guard) { presGuardResume = () => phTpOpenScriptOnDispense(scriptId); presGuardShow(guard); return; }
+    }
     const modal = document.getElementById("phTpModal");
     if (modal && !modal.hidden) phTpClose();
-    presGoToScript(scriptId, { before: () => { presStage = "dispense"; presStageForId = scriptId; } });
+    const name = presPatientFor(t) || t.name || "";
+    const planId = t.planPhaseLink && phTpFindPlan(name, t.planPhaseLink.planId) ? t.planPhaseLink.planId : null;
+    presGoToScript(scriptId, { before: () => {
+      presStage = "dispense"; presStageForId = scriptId;
+      if (planId) { presTpInlinePlanId = planId; phTpScreenPatient = name; phTpScreenPlanId = planId; }
+      if ((t.ingredients || []).length) presIngQuietOpen = true;
+    } });
   }
   /* Her pick 2026-09-16, "Automatically, at dispense" -- her words: "whats
      dispensed needs to correspond with treatment plan. not 2 scripts. if i
@@ -41920,7 +41951,13 @@ or changing anything in Cliniko.
     // box in place (no re-render -- the form's other fields keep her edits)
     if (t.matches("select[data-ph-apptcal-service-sel]")) {
       const oEl = document.getElementById("phApptCalEditServiceOther");
-      if (oEl) { oEl.hidden = t.value !== "__other"; if (!oEl.hidden) { oEl.focus(); oEl.select(); } }
+      if (oEl) {
+        oEl.hidden = t.value !== "__other";
+        // the card grew/shrank by a row: re-place it, or a bottom-clamped
+        // desktop card pushes its Save button below the window edge
+        phApptPopPlace();
+        if (!oEl.hidden) { oEl.focus(); oEl.select(); }
+      }
       return;
     }
     // appointment popup's Condition picker (phApptPopHtml): which treatment
