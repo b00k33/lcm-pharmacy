@@ -2517,3 +2517,61 @@ above.
 Committed to `session-a` (not yet pushed to `main` — the 4pm Sydney job
 does that): `dc54fab`. `sw.js` `lcm-20260916-synth22-batch3`, meta
 `20260916-020000`.
+
+#### The three judgment calls, completed (2026-09-16, her "- complete")
+
+She quoted the three disclosed calls above back with one word — "complete"
+— and that reads as an instruction to finish them, not as approval. Each
+now does what her original request implied:
+
+- **Service picker is no longer a dead end.** Last option is `Other — type
+  it…` (`value="__other"`); choosing it reveals a text box
+  (`#phApptCalEditServiceOther`, `hidden` until then) that saves as the
+  service name. A legacy typed value still shows as its own "(as typed)"
+  option and pre-fills the box. Same "list first, escape hatch last" shape
+  as the plan picker's "Name it…". The change listener
+  (`select[data-ph-apptcal-service-sel]`) toggles the box and calls
+  `phApptPopPlace()` — the card grew by a row, and a bottom-clamped desktop
+  card would otherwise push Save below the window edge. CSS: `.field
+  input[hidden]` must win over `.field input { display:block }`.
+- **Link formula lands on the Dispense list it just filled** — the same
+  "opens on Dispense" she approved for Design formula. New helper
+  `phTpOpenScriptOnDispense(scriptId)`: closes the plan modal first (a modal
+  over the panel hid the stage — this also fixed the pre-existing Design-
+  formula-from-modal case), then `presGoToScript` with a `before` hook that
+  sets `presStage="dispense"`. Both the Link handler (after a pour) and the
+  Design handler call it.
+- **Poured grams are pre-filled by the app's own rule, not left blank.**
+  `presGramsFollowHerbs(t, seedMultiple)` is the ONE place "Grams follows
+  the herbs" lives now — extracted from `presCommitTemplateFields` (which
+  calls it) and reused by the pour. A fresh phase script seeds
+  `gramsMode:"multiple"` at `phGramsMultDef()`; a recipe pours its
+  ingredient grams and the total follows (60 g × 1 = 60; × 2 = 200); a
+  manual total is kept; a dispensed script (`presGramsFrozen`) is never
+  touched. A ready-made jar pours one line at `PH_TP_JAR_POUR_G` (100 g
+  flat — about 11 days at her 3-spoon × 2/day preset). It was `PH_PACK_HERB`
+  first; the review pointed out the picker only offers FORMULA jars, whose
+  pack size (200/100 by supplier) is an ordering unit and never a dose.
+
+**Adversarial review (Workflow, find → 2 refuters per finding) found six
+real problems, all fixed and re-verified in the sandbox.** Besides the two
+above (pack size; popup re-place): (1) the new route skipped the
+unsaved-dispense leave guard — `phTpOpenScriptOnDispense` now runs
+`presGuardScript()` when the target is a different script and replays
+itself via `presGuardResume` after "Leave it"; (2) "‹ Back to the plan"
+from the landed stage fell to the plan LIST for anyone with two plans or a
+loose script, because `presOpenScript` clears `presTpInlinePlanId` and
+`phTpClose` clears `phTpScreen*` — the before hook restores all three from
+the script's `planPhaseLink`; (3) a Pain/Neurological case folds the herbs
+editor by default, so the herbs she just poured were hidden — the hook sets
+`presIngQuietOpen = true` when the script has ingredients; (4) a stray
+`margin-top:6px` on the Other box doubled `.field`'s own 6px gap to 12px —
+removed. First workflow run "found nothing" because every finder hit an
+API network error; an empty result from finders that never ran is a
+failure, not a clean bill — it was re-run.
+
+Concurrency note: the pre-review versions of all three completions were
+swept into the other session's `ea849eb` by its whole-file `git add`; only
+the six review fixes are in this session's own commit. Nothing lost —
+both are on `session-a`. `sw.js` `lcm-20260916-synth22-batch3-complete`,
+meta `20260916-070000`.
