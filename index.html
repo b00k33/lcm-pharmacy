@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260916-080000">
+<meta name="lcm-build" content="20260916-090000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -27639,8 +27639,8 @@
         return;
       }
       if (e.target.closest("[data-constit-hm-fold]")) {
-        const rec = phPatientRec(presHxScreenName);
-        const h = rec ? phHxConstitPulse(rec).hammer : null;
+        const rec = phPatientPeek(presHxScreenName);   // a fold is a view, not an edit -- read side
+        const h = rec ? phHxConstitPulseRead(rec).hammer : null;
         const open = presHxConstitHmOpen == null ? (h ? phVisitHammerCount(h) > 0 : false) : presHxConstitHmOpen;
         presHxConstitHmOpen = !open;
         renderHxScreen();
@@ -32074,6 +32074,12 @@
     document.getElementById("phInvWidget").hidden = tab !== "inventory";
     document.getElementById("invShellHead").hidden = tab !== "inventory";
     document.getElementById("phPresWrap").hidden = tab !== "prescriptions";
+    // leaving Patient profile by a tab hop (Journey ↗, the sidebar, a
+    // Dashboard link) hides #phPresWrap without running renderPresPanel, so
+    // the profile's markup -- and the Constitution tab's claim on
+    // presHxScreenName -- would outlive the page. Drop the claim here; the
+    // History popup (only ever opened from this tab) is left alone if open.
+    if (tab !== "prescriptions") presHxInlineSync(null);
     document.getElementById("phRefillWrap").hidden = tab !== "refill";
     document.getElementById("phRestockWrap").hidden = tab !== "restock";
     document.getElementById("phStatsWrap").hidden = tab !== "stats";
@@ -35229,7 +35235,18 @@ or changing anything in Cliniko.
     presAssessTab = null; presFpDraft = null; presFpProtoOpen = false;
     presPickLocked = null;
     presDispMenuId = null; presDispUndoConfirm = null;
+    // a History popup left open for a DIFFERENT patient (reachable by
+    // keyboard: Tab out of the popup onto a list row, Enter) closes here,
+    // quietly -- otherwise it keeps showing that patient while every one of
+    // its handlers resolves presHxScreenName to whoever this script is for
+    // (review finding 2026-09-16). Same-patient popups are left alone.
+    const hxModal = document.getElementById("phHxModal");
     const t = PRESC.items.find(x => x.id === id);
+    if (hxModal && !hxModal.hidden && presHxScreenName && (!t || phPatientKey(presHxScreenName) !== phPatientKey(presPatientFor(t) || t.name))) {
+      hxModal.hidden = true;
+      document.getElementById("phHxBackdrop").hidden = true;
+      presHxScreenName = null;
+    }
     presOpenSnapshot = t ? { lastDispensedAt: t.lastDispensedAt || null, lastDispenseLogId: t.lastDispenseLogId || null } : null;
     presCalcSessionDone = false;
     presLastDispViewId = null;
@@ -41872,7 +41889,10 @@ or changing anything in Cliniko.
   function phRenPasteTargetKey() {
     const modal = document.getElementById("phHxModal");
     const modalOpen = modal && !modal.hidden;
-    const inlineOpen = !!document.getElementById("phOpHxInline") || !!document.getElementById("presConstitHost");
+    // the inline copies must be ON SCREEN, not merely in the DOM -- the
+    // profile's markup survives under a hidden #phPresWrap after a tab hop
+    const showing = el => !!el && el.getClientRects().length > 0;
+    const inlineOpen = showing(document.getElementById("phOpHxInline")) || showing(document.getElementById("presConstitHost"));
     if ((!modalOpen && !inlineOpen) || !presHxScreenName) return null;
     // the crop tool / phone inbox are the same kind of overlay as the
     // preview, so a paste landing while one of those is open would stack two
@@ -43031,8 +43051,17 @@ or changing anything in Cliniko.
   function phHxConstitTongue(rec) {
     return rec.constitTongue || (rec.constitTongue = { regions: [], overlays: [], body: [], coat: [] });
   }
+  // read side for RENDERING -- never writes the blank shape into the record.
+  // Review finding 2026-09-16: the writer above ran on every profile render
+  // once the block became a tab, adding two keys to a record she only looked
+  // at; phStampChangedPatients then saw a changed signature and re-stamped
+  // updatedAt on the next unrelated save, which the sync merge reads as a
+  // real edit (recency wins). Handlers keep the writer; renders use this.
+  function phHxConstitTongueRead(rec) {
+    return rec.constitTongue || { regions: [], overlays: [], body: [], coat: [] };
+  }
   function phHxConstitTongueHtml(rec, patientKey) {
-    const t = phHxConstitTongue(rec);
+    const t = phHxConstitTongueRead(rec);
     const regions = t.regions || [], overlays = t.overlays || [], body = t.body || [], coat = t.coat || [];
     const chips = (list, on, attr, grp) => `<div class="ph-ltr-quals ph-visit-quals">${list.map(([id, label]) => `<button type="button" class="ph-ltr-qual${on.includes(id) ? " on" : ""}" ${attr}="${esc(grp ? `${grp}:${id}` : id)}">${esc(label)}</button>`).join("")}</div>`;
     const notes = regions.flatMap(r => (phTongueNotes()[r] || []).slice(0, 2).map(n => ({ r, n })));
@@ -43070,8 +43099,14 @@ or changing anything in Cliniko.
     if (!p.hammer || typeof p.hammer !== "object") p.hammer = phVisitFndBlank().hammer;
     return p;
   }
+  // read side for rendering -- same reason as phHxConstitTongueRead: a plain
+  // view must not add constitPulse/hammer to the record
+  function phHxConstitPulseRead(rec) {
+    const p = rec.constitPulse || { pulse: {}, pulseRef: [] };
+    return (p.hammer && typeof p.hammer === "object") ? p : Object.assign({}, p, { hammer: phVisitFndBlank().hammer });
+  }
   function phHxConstitPulseHtml(rec) {
-    const p = phHxConstitPulse(rec);
+    const p = phHxConstitPulseRead(rec);
     const marks = p.pulse || {}, refs = p.pulseRef || [];
     const stampBtn = (id, label) => `<button type="button" class="ph-pulse-stamp${presHxConstitPulseStamp === id ? " on" : ""}" data-constit-pulse-stamp="${esc(id)}" aria-pressed="${presHxConstitPulseStamp === id ? "true" : "false"}">${esc(label)}</button>`;
     const shown = PH_PULSE_OTHER_Q.slice(0, PH_PULSE_STAMP_SHOWN), hidden = PH_PULSE_OTHER_Q.slice(PH_PULSE_STAMP_SHOWN);
@@ -43503,6 +43538,12 @@ or changing anything in Cliniko.
   // the 2026-09-11 "open and inline for a brand-new patient" history
   // unreachable -- found 2026-09-16 building the Constitution tab, and she
   // chose to keep the inline history open for new patients.
+  // "Nothing ever dispensed" reads the DISPENSE LOG, not the script's
+  // lastDispensedAt stamp -- the review (2026-09-16) measured the stamp on
+  // 10 of 841 scripts in her 11 Sep backup against 2,759 log dispenses for
+  // 815 patients, so the stamp alone would have opened the full checklist on
+  // ~640 long-standing patients. An appointment before today counts as a
+  // visit too (her Acupreg imports have appointments and nothing else).
   function presHxUntaken(name) {
     if (!name) return false;
     const prog = phHxProgress(name);
@@ -43510,7 +43551,10 @@ or changing anything in Cliniko.
     const rec = phPatientPeek(name);
     if (rec && (rec.acuSessions || []).length) return false;
     const key = phPatientKey(name);
-    return !(PRESC.items || []).some(x => phPatientKey(presPatientFor(x) || x.name) === key && x.lastDispensedAt);
+    if ((PRESC.items || []).some(x => phPatientKey(presPatientFor(x) || x.name) === key && x.lastDispensedAt)) return false;
+    if ((PHARMACY.log || []).some(e => (!e.kind || e.kind === "dispense") && phPatientKey(e.patient) === key)) return false;
+    const todayKey = keyOf(TODAY);
+    return !phApptList().some(a => a.date < todayKey && phPatientKey(a.patient) === key);
   }
   // her report (2026-09-06, opening Rebecca's file -- 2 real scripts, real
   // dispense history): "it always restarts at opening/assessment, why
@@ -43660,11 +43704,20 @@ or changing anything in Cliniko.
      this host keeps that name in sync exactly the way the new-patient inline
      history does, and renderHxScreen() repaints #presConstitHost in place. */
   function presConstitTabInnerHtml(name) {
-    return phHxConstitutionHtml(phPatientRec(name), phPatientKey(name));
+    // read the record for rendering (phPatientRec rewrites plan fields on
+    // every call -- CLAUDE.md trap); the handlers do their own writes
+    return phHxConstitutionHtml(phPatientPeek(name) || phPatientRec(name), phPatientKey(name));
   }
   function presConstitTabBodyHtml(t) {
     const name = presPatientFor(t) || t.name || "";
     if (!name) return "";
+    // the History popup is the one thing allowed to hold a DIFFERENT name
+    // (presHxInlineSync's own rule) -- while it is open for someone else,
+    // this tab must not take the name over, or the popup's next tap writes
+    // into this patient's record. presOpenScript closes the popup first, so
+    // this is a belt-and-braces guard, not the normal path.
+    const modal = document.getElementById("phHxModal");
+    if (modal && !modal.hidden && presHxScreenName && presHxScreenName !== name) return "";
     if (presHxScreenName !== name) {
       presHxScreenName = name;
       presHxScreenFilter = "all";
@@ -43674,11 +43727,16 @@ or changing anything in Cliniko.
     phRenEnsurePhotos(phPatientKey(name));
     return `<div id="presConstitHost">${presConstitTabInnerHtml(name)}</div>`;
   }
+  // a body may be a FUNCTION: built only when its tab is the selected one.
+  // The constitution body is the heaviest thing on the profile (pulse grid,
+  // Hammer exam, photo timeline) and the profile re-renders on most field
+  // edits, so it is not built while Photos/Cycle/Notes is showing -- and
+  // presHxScreenName is only taken while the tab is actually on screen.
   function presAssessSections(t) {
     const name = presPatientFor(t);
     return [
       { id: "photos", label: "Photos", body: presPhotosSectionHtml(t) },
-      { id: "constitution", label: "Constitution", body: presConstitTabBodyHtml(t) },
+      { id: "constitution", label: "Constitution", body: (presPatientFor(t) || t.name) ? () => presConstitTabBodyHtml(t) : "" },
       { id: "checklist", label: "Checklist", body: presFacialSectionBodyHtml(t) },
       { id: "cycle", label: "Cycle", body: presCycleSectionBodyHtml(t) },
       { id: "ivf", label: "IVF history", body: name ? phIvfHistoryFoldHtml(name) : "" },
@@ -43689,11 +43747,12 @@ or changing anything in Cliniko.
     const sections = presAssessSections(t);
     if (!sections.length) return "";
     const sel = sections.find(s => s.id === presAssessTab) || sections[0];
+    const body = typeof sel.body === "function" ? sel.body() : sel.body;
     return `<div class="ph-assess-tabs">
       <div class="ph-assess-tabsrow" role="tablist" aria-label="Assessment sections">
         ${sections.map(s => `<button type="button" class="ph-assess-tab${s.id === sel.id ? " on" : ""}" data-assess-tab="${s.id}" role="tab" aria-selected="${s.id === sel.id ? "true" : "false"}">${esc(s.label)}</button>`).join("")}
       </div>
-      <div class="ph-assess-panel">${sel.body}</div>
+      <div class="ph-assess-panel">${body}</div>
     </div>`;
   }
   function presStageAssessmentHtml(t) {
