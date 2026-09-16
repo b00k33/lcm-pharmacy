@@ -2897,3 +2897,81 @@ pass each, not a blind sweep.
 
 Same sandbox, same clean-boot check. No behaviour changed except the one
 field no longer written (which nothing ever read).
+
+### Batch 3 — relocation bar, dead notes-toggle, 2 datalist wires, 4 more mojibake sites, dev tooling
+
+Seven candidates from the 296-item backlog audit were run through a parallel
+verify pass first (each agent re-grepped current source, not the audit's old
+line numbers or claims) before anything was touched — the same discipline
+that caught `renderPresWeek` as a false "dead code" claim earlier in this
+audit. Five were genuinely safe to build; two turned out to already be
+non-issues (see below).
+
+- **Relocation page "Patients told" bar**: was a hard-coded `<span>—</span>`
+  / `not built yet` placeholder next to a fully-working Jobs bar one row up.
+  `phRelocNoticeStats()` and `phRelocNoticeCompute()` already exist and are
+  already used one screen away — wired the same call into
+  `renderPhRelocationPage`, mirroring the Jobs bar's markup exactly (same
+  `.ph-sig-fill.ph-reloc-fill-green` class; there's no second fill colour
+  defined anywhere in the file, so the two bars render identically apart
+  from their numbers — a design decision if she ever wants them told apart
+  by colour, not part of this fix).
+- **Dead `presNotesOpen` toggle removed**: its trigger attribute
+  (`data-pres-notes-toggle`) was never emitted by any template — the Notes
+  section it used to gate is now an always-open block inside the Assessment
+  stage. Confirmed dead two independent ways (no read site anywhere; the
+  button that would have flipped it doesn't exist) before deleting the
+  handler, the two reset-line fragments, and the declaration. Its live
+  siblings on the same lines (`presTreatOpen`, `presHistMoreOpen`) were
+  left untouched.
+- **Two more free-text patient-name fields wired to search-and-select**:
+  the appointment-edit popup's Patient field and the prescription panel's
+  Name field now get `phIntakeNameOptionsHtml()` through their own
+  `<datalist>`, matching the pattern already shipped on three other fields
+  (Appointments quick-add, the My-Cycle chart-link modal, the intake-link
+  modal — the backlog note only knew about one of those three). Purely
+  additive (a `list=` attribute + a sibling `<datalist>`); neither field's
+  save logic needed to change.
+- **`phFixText()` mojibake repair extended to four more read-only sites**:
+  the Stock movements Log page's Item column and its expand-to-detail card
+  (refill/stocktake/dispense name and dosage lines), and the History
+  banner's Allergies/meds line, plus the two remaining raw spots on the
+  patient History visit card (the date-input aria-label and the visit-name
+  span/title). All four are display-only — no editable control reads any
+  of them back — deliberately NOT extended to the two editable medical-notes
+  textareas, since their onblur/onchange handlers persist whatever they
+  read, so a display-only fix there could round-trip a "corrected" string
+  back over the stored value.
+- **Dev tooling only, zero clinical files touched**: `static-server.ps1`'s
+  404 and 500 response paths were writing to the output stream without
+  setting `ContentLength64` first (only the 200-OK path did) — the exact
+  defect that crashes the listener with `ProtocolViolationException`,
+  already fixed in a throwaway scratch copy from an earlier session but
+  never carried back into the shared script. Fixed both paths and wrapped
+  the 500 path's own write in a nested try/catch. The shared top-level
+  `.claude/launch.json`'s `lcm-pharmacy` entry was pointing at a session
+  scratchpad temp file on the wrong port (8777 vs. the script's real 8866)
+  — repointed it at this permanent script. (That file lives under a
+  gitignored `.claude/` in the top-level repo, so nothing to commit there.)
+
+**Two candidates from the same pass turned out to already be non-issues** —
+correcting the record rather than writing speculative code:
+- The "`.ph-pres-actions` flex cell breaks other `.ph-spec-table`s besides
+  the ingredient table" claim: re-grepped and found exactly one element in
+  the whole file carries `.ph-spec-table` (the ingredient table, already
+  fixed). Suppliers uses a different class with its own pre-existing fix;
+  the patient list was rebuilt off `<table>` entirely back in
+  early September, so there's no `<td>` left to break.
+- The "dense-sheet ellipsis/pill-colour fixes are Communications-only"
+  claim: the CSS was already written as bare, page-wide selectors with no
+  Communications-specific scoping. Dashboard/Refill/Log don't show the
+  fix's effect because those three sheets' row-renderers never emit an
+  element carrying the relevant classes in the first place (Refill uses
+  its own `.sub` on purpose, for example) — not because the rule needs
+  broadening. Broadening it further would be a no-op.
+
+Sandbox-verified past the usual clean-boot check: `phLogMovementInfo` /
+`phLogDetailHtml` run against all 4,068 real log entries, `presHistVisitCardHtml`
+against all 2,766 dispenses, and `presHistoryBannerHtml` against all 848
+prescriptions — zero failures across all three. Shipped `d7975e6` on
+`session-a`.
