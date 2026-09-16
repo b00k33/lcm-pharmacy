@@ -3125,7 +3125,22 @@ her rather than built — see the end of this section for why.
   3-way, and fixing an already-shipped, currently-latent width-persistence
   bug) once actually scoped, not the quick markup addition it first looked
   like. Deferred to its own future batch rather than under-scoped and
-  rushed into this one.
+  rushed into this one. **CORRECTION (Batch 7, same day):** this
+  assessment was wrong. Batch 7's verification pass read the actual code —
+  not just grep hits — and found the feature has been fully shipped since
+  2026-08-11 (commit `4069869`): the To Order desktop sheet's header row
+  already carries `data-ph-col-drag="restock:${k}"` on every column, every
+  data row already applies the same saved order via its own `ord(k)`
+  helper, the "↺ Reset columns" button is already wired to `restock`, and
+  the shared drag engine already branches on the `restock` table prefix.
+  Dragging a header on the live sheet at ≥1400px genuinely reorders both
+  the header and every row beneath it today. Whatever this batch's
+  verification agent was actually looking at when it reached "needs a
+  3-way engine rewrite," it wasn't this. Lesson for next time: when a
+  build-vs-skip call rests on "this would need rewriting N functions,"
+  that claim itself needs the same grep-and-read verification as any other
+  backlog note — a confident-sounding risk assessment is still a claim,
+  not a fact, until it's traced against the actual source.
 
 Shipped `858ed3f` on `session-a`.
 
@@ -3205,3 +3220,55 @@ reuse, so it needs her answer to "should an intake-reported IVF cycle try to
 match an existing one, and if so how?" before any code gets written.
 
 Shipped `4e39dcf` on `session-a`.
+
+### Batch 7 — "+ New patient" CTA, tongue photo mark badges (and a correction)
+
+An even smaller build than batch 6: of 7 candidates, only 2 needed code — the
+rest were already resolved, already flagged, or already shipped, INCLUDING
+one case where a previous batch's own risk call turned out to be wrong (see
+the correction above, under Batch 5's "Deliberately skipped" list).
+
+- **The Patient profile topbar's "+" CTA now reads "New patient"** (was
+  "New prescription") — decision 7 of her locked patient-first architecture
+  plan (`project_pharmacy_patient_first_architecture.md`). One label string
+  in `PH_TOPBAR_ACTIONS.prescriptions` (line ~20133); the button is
+  icon-only (her 2026-08-16 pick), so the only visible change is the hover
+  tooltip and screen-reader label. Sandbox-verified: `aria-label`/`title`
+  both read "New patient" on the live button. Worth telling her: the two
+  sibling decisions from that same locked memo (5 — Today's Timeline as
+  Patient profile's default view; 6 — a real 4-source patient directory)
+  are both now stale/superseded (5 was reversed on 2026-09-15, "i dont use
+  this or like it"; 6 was never built) — the label alone doesn't need them,
+  but she may want to know they're still open if she was expecting them
+  together.
+- **Tongue photos with circled marks get a small "✎N" badge** on their
+  thumbnails in the profile's Photos strip and the photo timeline (desktop
+  grid cell + phone card). Deliberately did NOT reuse the photo viewer's
+  positional SVG ring overlay (`phRenMarksSvgInner`) here — the viewer draws
+  rings at the photo's full, uncropped natural pixels, but every thumbnail
+  crops via `object-fit:cover`, so the same rings at thumbnail size would
+  drift off the real tongue region the moment a source photo isn't square
+  (most phone photos aren't). A plain count badge (new `phRenMarkCountBadge`
+  helper) sidesteps that entirely. Sandbox-verified via synthetic photo
+  records injected straight into `phRenPhotoCache` (bypassing the real
+  IndexedDB load, which needs actual image blobs): a marked photo's badge
+  renders in all three sites, an unmarked photo's doesn't, and the Photos
+  strip's "one thumbnail per row, latest wins" rule correctly picks the
+  marked photo when it's the newer of the two. Per her "always show the
+  build" rule and the fact her verdict on the whole tongue-marks feature is
+  still pending: front this alongside the underlying marks feature when
+  reporting back, not as if already confirmed liked.
+- **Four items closed with no code change**, each independently re-verified
+  against current source rather than trusted from the backlog note: the
+  Appointments header/toolbar gap and the week/day grid's empty-hours start
+  were both already fixed the same day (2026-09-16, the "Spacing" standing
+  preference); the `presPhaseFillFromPlan` phase-resolver swap was already
+  shipped in `dc54fab` (Synth22 batch #3, Cluster A); and — see the
+  correction above — the To Order desktop sheet's column drag-to-reorder
+  was already fully shipped since 2026-08-11, contrary to Batch 5's own
+  conclusion.
+- **One duplicate skip:** "Dashboard stocktake §4: the always-shown pair of
+  cards" is the same item as Batch 5's `dashboard_stocktake_cards` — still
+  correctly held pending her mock sign-off, nothing new to decide here.
+
+Shipped `2460f9a` on `session-a`.
