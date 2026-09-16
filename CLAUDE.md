@@ -3387,3 +3387,93 @@ this smaller/safer one.
 
 Version bump: `lcm-build` `20260916-190000`, `sw.js` cache `-8`. Shipped
 `065e737` on `session-a`.
+
+### Batch 9 — acu cadence resolves to a real milestone date, new-draft green band, iOS install hint
+
+Anchored on the item deferred from Batch 8. Of 8 candidates, 3 were genuinely
+buildable; 5 were already resolved (one of those — `presNotesOpen` — a
+verification agent claimed was fixed "in Batch 8" and cited a commit hash;
+that citation was wrong (it was actually Batch 3, `d7975e6`), caught by
+grepping the code myself rather than relaying the claim — the underlying
+"already dead, nothing to build" conclusion held up fine, only the batch
+attribution in the agent's narrative was invented).
+
+- **Acu follow-up cadence now resolves to a real bookable date when a
+  plan phase is written against a clinic milestone.** Before this, a phase
+  cadenced "One visit the day before transfer" fell straight through to the
+  generic 7-day interval — Communications nagged her weekly regardless of
+  what the plan actually said, even though the exact date was already sitting
+  in the patient's IVF history (typed once, for the "book \<date\>" chip on
+  the Treatment Plan screen). The resolver (`phTpCadenceDate`/
+  `phTpMilestoneDate`) already existed for that chip but had a hidden global
+  dependency — both functions read `phTpScreenPatient` (whichever patient's
+  plan screen happens to be open) instead of taking an explicit patient — safe
+  at their two existing display-only call sites, silently wrong (resolves
+  against the wrong patient, or nothing) if called from Communications' loop
+  over every acu patient. Fixed by threading an optional `name` parameter
+  through both (defaulting to the global, so the 3 existing callers are
+  untouched), then wiring `phAcuCurrentCadenceDays`/`phAcuFollowupCalc` to try
+  the milestone resolution first and fall back to the existing plain-interval
+  logic exactly as before when there's no milestone wording, or there is but
+  she hasn't typed the clinic date in yet ("must degrade to showing the text
+  as written — never a wrong date" was already her spec for the chip; now
+  Communications honours the same rule). A resolved date is a fixed clinic
+  fact, not a flexible reminder, so — unlike the interval branch — it does
+  NOT get nudged off a Sunday. Updated three display strings that would
+  otherwise print literal "every nulld"/"every — days" text once
+  `cadenceDays` goes null for a resolved phase: the Communications row label,
+  its phone-card "why" line, and the check-in panel's Cadence row (now reads
+  "Booked for \<date\> · \<reason\>" instead of an interval). Sandbox-verified
+  with a synthetic IVF patient (acu-enabled, an active plan phased "the day
+  before transfer", a linked IVF cycle with a typed transfer date, one logged
+  acu session) through the REAL `phCommDueRows()`/`phCkAcuContext()`/
+  `phCkTopBlockHtml()` call chain — all three surfaces show the resolved date
+  and reason correctly, and neither an ordinary weekly-cadence patient nor a
+  milestone-worded phase with no transfer date typed in yet changed at all
+  (both re-verified pixel-for-pixel identical to their pre-batch output).
+- **A brand-new prescription/formula draft's full-screen page gets the same
+  green band + back chevron as every other script page**, replacing the bare
+  `<h3>` + separate "Cancel ×" it had instead. Gated on the panel already
+  carrying `.ph-pres-full` (only ever true for the phone/8-answers redesign's
+  full-screen `#presPanel`), so the Refill workbench's own inline "+ New"
+  editor — a different call site of the same `renderPresEditForm` — is
+  untouched, confirmed in sandbox still showing its original bare heading.
+  The chevron reuses `data-pres-close`, already wired into the unsaved-draft
+  discard guard from Batch 8 — sandbox-verified Stay/Discard both work
+  through the new markup exactly as they did through the old Cancel × button.
+- **iOS/iPadOS Safari gets an install route.** `beforeinstallprompt` never
+  fires there, so the sidebar's Install item stayed permanently hidden with
+  no other way in. Added a standard iOS/iPadOS UA sniff that reveals the
+  button on load and, since there's no real install event to replay on tap,
+  shows a "Share → Add to Home Screen" hint via the app's existing
+  `phFlashShow` toast instead. Sandbox-verified by spoofing `navigator
+  .userAgent` to an iPhone string and clicking the (force-revealed) button —
+  the hint renders correctly, `<b>` intact, alongside the page's unrelated
+  always-on backup-reminder banner (a second, independent `.ph-flash`
+  consumer, not a conflict).
+- **Five items closed with no code change**, each independently
+  re-verified against current source: `screenAuth` already clears local
+  data on an owner mismatch — the fix lives in `afterAuth()` (shipped
+  2026-09-11, the Acupreg-wipe incident fix), one level earlier and covering
+  all four sign-in paths at once, not duplicated at `screenAuth()` itself
+  as the old note suggested. The "Custom Days phrasing" warning has shown on
+  the Plan tab since `5db2e5c` (2026-08-25), two days after the note that
+  raised it. `presNotesOpen` is confirmed fully gone (one stray historical
+  comment, nothing live) — see the attribution correction above. The intake
+  name datalist (`phIntakeNameOptionsHtml`) is already wired onto every
+  applicable free-text patient-name field (5 sites); the two fields NOT
+  wired to it (Communications' "To" field, Scheduled Dispatch's patient
+  search) were checked and correctly excluded — both already have their own,
+  more specific autocomplete, and forcing them onto the shared list would
+  be a behaviour change, not a safe mechanical reuse. The dense-sheet
+  ellipsis/pill-colour fixes don't generalize as described — the pill half
+  is dead CSS even on its own home page (Communications' kind label was
+  never `.ph-ds-pill`), and Refill's equivalent row is a wrap-based design
+  that can't hit the same bug by construction; Dashboard's unranked-tail
+  `.use` cell is the one place a similar clipping risk plausibly exists, but
+  it needs its own small bespoke rule, not a transplant — left alone pending
+  an actual reported symptom, per this project's "repeated ask means wrong
+  layer" rule.
+
+Version bump: `lcm-build` `20260916-200000`, `sw.js` cache `-9`. Shipped
+`82b14ba` on `session-a`.
