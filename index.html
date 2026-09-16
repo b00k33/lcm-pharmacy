@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260916-130000">
+<meta name="lcm-build" content="20260916-140000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -22903,7 +22903,8 @@
       <div class="ph-apptpop-form">
         <div class="field"><label>Date</label><input type="date" id="phApptCalEditDate" value="${esc(a.date)}" data-ph-apptpop-autofocus="1"></div>
         <div class="field"><label>Time</label><input type="time" id="phApptCalEditTime" value="${esc(a.time)}"></div>
-        <div class="field full"><label>Patient</label><input type="text" id="phApptCalEditName" value="${esc(a.patient)}"></div>
+        <div class="field full"><label>Patient</label><input type="text" id="phApptCalEditName" list="phApptCalEditNameList" value="${esc(a.patient)}" autocomplete="off">
+        <datalist id="phApptCalEditNameList">${phIntakeNameOptionsHtml()}</datalist></div>
         <div class="field full"><label>Service</label><select id="phApptCalEditService" data-ph-apptcal-service-sel="1" aria-label="Service">
           <option value=""${a.service ? "" : " selected"}>— pick a service —</option>
           ${a.service && !PH_APPTCAL_SERVICE_NAMES.includes(a.service) ? `<option value="${esc(a.service)}" selected>${esc(a.service)} (as typed)</option>` : ""}
@@ -24625,6 +24626,9 @@
       proj.moveDate ? `${days} day${days === 1 ? "" : "s"} to go` : "No move date set yet", "", "");
     const [notice, ...taskLists] = proj.lists;
     const jobsPct = jobs.total ? Math.round(jobs.done / jobs.total * 100) : 0;
+    const { roster: noticeRoster } = phRelocNoticeCompute(proj);
+    const noticeStats = phRelocNoticeStats(proj, noticeRoster);
+    const noticePct = noticeStats.onList ? Math.round(noticeStats.told / noticeStats.onList * 100) : 0;
     document.getElementById("phRelocation").innerHTML = `
       <div class="ph-widget ph-dash-card ph-reloc-header">
         <div class="ph-reloc-head-top">
@@ -24642,8 +24646,8 @@
             <div class="ph-sig-track"><div class="ph-sig-fill ph-reloc-fill-green" style="width:${jobsPct}%"></div></div>
           </div>
           <div class="ph-reloc-bar-block">
-            <div class="ph-reloc-bar-lbl"><span>Patients told</span><span>—</span></div>
-            <div class="ph-sig-track"><div class="ph-reloc-bar-pending">not built yet</div></div>
+            <div class="ph-reloc-bar-lbl"><span>Patients told</span><span>${noticeStats.told} of ${noticeStats.onList}</span></div>
+            <div class="ph-sig-track"><div class="ph-sig-fill ph-reloc-fill-green" style="width:${noticePct}%"></div></div>
           </div>
         </div>
         ${phRelocChipRowHtml(proj)}
@@ -28046,7 +28050,6 @@
       if (e.target.closest("[data-pres-hist-more]")) { presHistMoreOpen = !presHistMoreOpen; renderPresPanel(); return; }
       // round-4 redesign: Notes and Treatment plan are two separate rows
       // below the prescription now, Notes above Treatment
-      if (e.target.closest("[data-pres-notes-toggle]")) { presNotesOpen = !presNotesOpen; renderPresPanel(); return; }
       const presStageBtn = e.target.closest("[data-pres-stage]");
       if (presStageBtn) { presStage = presStageNorm(presStageBtn.dataset.presStage); renderPresPanel(); return; }
       const suppToggleBtn = e.target.closest("[data-supp-toggle]");
@@ -33189,7 +33192,7 @@
       <div class="ln">Order arrived: <b>${date}</b></div>
       <div class="ings">${(e.added || []).map(x => `<div class="ing"><span>${esc(phDispName(x.name))}</span><span class="g">+${phFmtG(x.grams)}g</span></div>`).join("")}</div>`;
     if (e.kind === "refill") return `
-      <div class="ln">Formula: <b>${esc(phDispName(e.what, true))}</b></div>
+      <div class="ln">Formula: <b>${esc(phDispName(phFixText(e.what), true))}</b></div>
       <div class="ln">Made: <b>+${phFmtG(e.madeGrams)}g</b></div>
       <div class="ln">Date: <b>${date}</b></div>
       ${e.cost != null ? `<div class="ln">Batch Cost: <b>${phMoney(e.cost)}</b></div>` : ""}
@@ -33198,21 +33201,21 @@
       ${ded ? `<div class="ings"><div class="ln">Stock deducted:</div>${ded}</div>` : ""}
       ${Array.isArray(e.stockNotes) && e.stockNotes.length ? `<div class="ph-stock-note">${e.stockNotes.join("<br>")}</div>` : ""}`;
     if (e.kind === "stocktake") return `
-      <div class="ln">Stocktake — <b>${esc(phDispName(e.name))}</b></div>
+      <div class="ln">Stocktake — <b>${esc(phDispName(phFixText(e.name)))}</b></div>
       <div class="ln">App had: <b>${phFmtG(e.oldQty)}g</b></div>
       <div class="ln">Counted: <b>${phFmtG(e.newQty)}g</b></div>
       <div class="ln">Difference: <b>${e.diff > 0 ? "+" : "−"}${phFmtG(Math.abs(e.diff))}g</b></div>
       <div class="ln">Date: <b>${date}</b></div>`;
     return `
       <div class="ln">Patient Name: <b>${e.patient ? esc(phTitle(e.patient)) : "—"}</b></div>
-      <div class="ln">Formula: <b>${e.formula ? esc(e.formula) : esc(phDispName(e.what))}</b></div>
+      <div class="ln">Formula: <b>${e.formula ? esc(phFixText(e.formula)) : esc(phDispName(phFixText(e.what)))}</b></div>
       <div class="ln">Grams Prescribed: <b>${e.grams != null ? phFmtG(e.grams) : "—"}</b></div>
       <div class="ln">Date: <b>${date}${e.at ? ` · ${presTimeStr(new Date(e.at))}` : ""}</b></div>
       ${Array.isArray(e.items) && e.items.length ? `<div class="ings">${e.items.slice().sort(presIngSort).map(i =>
         `<div class="ing"><span>${esc(phDispName(i.name))}</span><span class="g">${i.grams != null ? phFmtG(i.grams) + "g" : ""}</span></div>`).join("")}</div>` : ""}
       ${e.cost != null ? `<div class="ln">Prescription Cost: <b>${phMoney(e.cost)}</b></div>` : ""}
       ${e.price != null ? `<div class="ln">Prescription Price (incl. GST): <b>${phMoney(e.price)}</b></div>` : ""}
-      ${e.dosage ? `<div class="ln" style="margin-top:10px">Dosage: <b>${esc(e.dosage)}</b></div>` : ""}
+      ${e.dosage ? `<div class="ln" style="margin-top:10px">Dosage: <b>${esc(phFixText(e.dosage))}</b></div>` : ""}
       ${e.useBefore ? `<div class="ln">Use Before: <b>${esc(e.useBefore)}</b></div>` : ""}
       ${Array.isArray(e.stockNotes) && e.stockNotes.length ? `<div class="ph-stock-note">${e.stockNotes.join("<br>")}</div>` : ""}`;
   }
@@ -33339,7 +33342,7 @@
     return {
       type: "Dispensed", pill: "dispensed",
       itemCode: oneItem ? (oneItem.code || "") : "",
-      itemName: e.formula ? e.formula : phDispName(e.what),
+      itemName: e.formula ? phFixText(e.formula) : phDispName(phFixText(e.what)),
       source: e.patient ? phTitle(e.patient) : "—",
       change: -(e.grams || 0),
       after: null,
@@ -35288,7 +35291,7 @@ or changing anything in Cliniko.
     presOpenId = id; presEditId = null;
     presLabelOpen = false; presMoreOpen = false; presFuOpen = false;
     presNameOpen = false; presHistOpen = false; presThirdOpen = false; presMedHxOpen = false;
-    presNotesOpen = false; presTreatOpen = false; presHistMoreOpen = false;
+    presTreatOpen = false; presHistMoreOpen = false;
     presTpInlinePlanId = null; presTpInlineNew = false; presTpInlineLoose = false;
     presAcuOpen = false; presAcuOutcomeDraft = null; phVisitFndResetDraft(); phCyclePop = null;
     presAssessTab = null; presFpDraft = null; presFpProtoOpen = false;
@@ -40350,7 +40353,7 @@ or changing anything in Cliniko.
         ${own.length ? `<div class="ph-hxbanner-line"><b>Medical</b> ${own.map(it => esc(it.label)).join(" \u00B7 ")}</div>` : ""}
         ${fam.length ? `<div class="ph-hxbanner-line"><b>Family history</b> ${fam.map(it => esc(it.label)).join(" \u00B7 ")}</div>` : ""}
         ${sig.pregnant ? `<div class="ph-hxbanner-line"><b>Status</b> Pregnant</div>` : ""}
-        ${sig.notes ? `<div class="ph-hxbanner-line"><b>Allergies / meds</b> ${esc(sig.notes)}</div>` : ""}
+        ${sig.notes ? `<div class="ph-hxbanner-line"><b>Allergies / meds</b> ${esc(phFixText(sig.notes))}</div>` : ""}
       </div>` : ""}
     </div>`;
   }
@@ -44195,9 +44198,9 @@ or changing anything in Cliniko.
     return `<div class="ph-hist-visit">
       <div class="ph-hist-visit-top">
         ${phLogDateEdit === e.id && phLogDateEditSrc === "hist"
-          ? `<input type="date" class="ph-qty-input" data-ph-log-date-edit="${e.id}" value="${e.date}" aria-label="Date for ${esc(phDispName(e.what))}">`
+          ? `<input type="date" class="ph-qty-input" data-ph-log-date-edit="${e.id}" value="${e.date}" aria-label="Date for ${esc(phDispName(phFixText(e.what)))}">`
           : `<button type="button" class="ph-hist-date" data-ph-log-date-unlock="${e.id}" title="Click to edit the date">${d.getDate()} ${MON_SHORT[d.getMonth()]}${d.getFullYear() !== TODAY.getFullYear() ? ` ${d.getFullYear()}` : ""}</button>`}
-        <span class="ph-hist-visit-what" title="${esc(phDispName(e.what))}">${phNameHtml(e.what)}</span>
+        <span class="ph-hist-visit-what" title="${esc(phDispName(phFixText(e.what)))}">${phNameHtml(phFixText(e.what))}</span>
         ${e.grams ? `<span class="ph-hist-visit-g">${phFmtG(e.grams)}g</span>` : ""}
       </div>
       <div class="ph-hist-visit-meta">
@@ -53191,7 +53194,7 @@ Please let me know if you have any questions.`;
     // presThirdOpen before, so a script left open earlier could otherwise
     // leak its expanded state into a brand new one
     presThirdOpen = false; presMedHxOpen = false;
-    presNotesOpen = false; presTreatOpen = false; presHistMoreOpen = false;
+    presTreatOpen = false; presHistMoreOpen = false;
     presTpInlinePlanId = null; presTpInlineNew = false; presTpInlineLoose = false;
     presAcuOpen = false; presAcuOutcomeDraft = null; phVisitFndResetDraft(); phCyclePop = null;
     presAssessTab = null; presFpDraft = null; presFpProtoOpen = false;
@@ -53398,7 +53401,8 @@ Please let me know if you have any questions.`;
     const cpasteShowing = !!(phContactPasteCtx && phContactPasteCtx.site === "opening");
     return `<div class="ph-tmpl-grid ph-pres-patient">
         <div class="ph-tmpl-field ph-pres-patient-name"><label for="presEditName">Name${!isF && !cpasteShowing ? ` <button type="button" class="ph-name-link ph-cpaste-linkbtn" data-cpaste-open="opening">📋 Paste contact card</button>` : ""}</label>
-          <input type="text" id="presEditName" value="${esc(t.name)}" autocomplete="off"></div>
+          <input type="text" id="presEditName" list="presEditNameList" value="${esc(t.name)}" autocomplete="off">
+          <datalist id="presEditNameList">${phIntakeNameOptionsHtml()}</datalist></div>
         ${rec ? `<div class="ph-fld-sexdob">
         <div class="ph-tmpl-field ph-fld-sex"><label>Sex</label>
           <span class="ph-hx-seg" role="radiogroup" aria-label="Patient sex">
@@ -54327,7 +54331,7 @@ Please let me know if you have any questions.`;
   // presTreatmentRowHtml. presHistMoreOpen is the "+N earlier visits"
   // reveal inside the (now trimmed to 3) History card. Same reset points
   // and "start clean every time" posture as presThirdOpen above.
-  let presNotesOpen = false, presTreatOpen = false, presHistMoreOpen = false;
+  let presTreatOpen = false, presHistMoreOpen = false;
   // inline plan editor (her ask 2026-09-03: "allow direct plan editing and
   // making in that row too") -- which plan (by id) is expanded into its
   // full editor inside the Treatment row, or null for the plan list;

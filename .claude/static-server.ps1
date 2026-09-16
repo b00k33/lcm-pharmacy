@@ -52,12 +52,16 @@ try {
       } else {
         $response.StatusCode = 404
         $notFoundBytes = [System.Text.Encoding]::UTF8.GetBytes("404 Not Found: $localPath")
+        $response.ContentLength64 = $notFoundBytes.Length
         $response.OutputStream.Write($notFoundBytes, 0, $notFoundBytes.Length)
       }
     } catch {
-      $response.StatusCode = 500
-      $errBytes = [System.Text.Encoding]::UTF8.GetBytes("500 Server Error: $($_.Exception.Message)")
-      $response.OutputStream.Write($errBytes, 0, $errBytes.Length)
+      try {
+        $response.StatusCode = 500
+        $errBytes = [System.Text.Encoding]::UTF8.GetBytes("500 Server Error: $($_.Exception.Message)")
+        $response.ContentLength64 = $errBytes.Length
+        $response.OutputStream.Write($errBytes, 0, $errBytes.Length)
+      } catch {}
     } finally {
       $response.OutputStream.Close()
     }
