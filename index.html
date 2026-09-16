@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260916-150000">
+<meta name="lcm-build" content="20260916-160000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -28976,6 +28976,9 @@
               if (s.mailing.address) phPatientSaveAddress(patientName || s.mailing.name, s.mailing.address);
             }
           }
+          const repeatEl = document.getElementById("schedFormRepeatWeeks");
+          const repeatN = repeatEl ? Math.floor(Number(repeatEl.value)) : 0;
+          s.repeatWeeks = repeatN > 0 ? Math.min(repeatN, 52) : null;
           savePresc();
           schedFormOpen = false; schedFormPresetId = null; schedFormDraft = {};
           phFlash = isPickup
@@ -29026,6 +29029,25 @@
       }
       const schedCancelBtn = e.target.closest("[data-sched-cancel]");
       if (schedCancelBtn) { schedCancel(schedCancelBtn.dataset.schedCancel); return; }
+      // repeat-interval offer's own two buttons (mirrors data-ph-msg-offer-* above)
+      if (e.target.closest("[data-sched-repeat-skip]")) { schedRepeatOffer = null; renderPharmacy(); return; }
+      if (e.target.closest("[data-sched-repeat-go]")) {
+        const off = schedRepeatOffer; schedRepeatOffer = null;
+        const prev = off ? PRESC.scheduled.find(x => x.id === off.schedId) : null;
+        if (!prev) { renderPharmacy(); return; }
+        const next = schedCreate(prev.prescriptionId, prev.method);
+        if (next) {
+          if (prev.method === "pickup") { next.pickupDate = off.nextDate; next.pickupTime = prev.pickupTime; }
+          else { next.targetDate = off.nextDate; next.mailing = { ...prev.mailing, tracking: "" }; }
+          next.repeatWeeks = prev.repeatWeeks;
+          savePresc();
+          phFlash = `Scheduled the next one for ${schedDateStr(off.nextDate)} — <b>${esc(phTitle(next.mailing.name))}</b>`;
+        } else {
+          phFlash = "⚠ Couldn't schedule the next one — its prescription has been deleted.";
+        }
+        renderPharmacy();
+        return;
+      }
       const schedMarkBtn = e.target.closest("[data-sched-mark-dispensed]");
       if (schedMarkBtn) { schedMarkDispensedManual(schedMarkBtn.dataset.schedMarkDispensed); return; }
       if (e.target.closest("[data-sched-toggle-completed]")) { schedShowCompleted = !schedShowCompleted; renderPharmacy(); return; }
@@ -32355,16 +32377,14 @@
       ${menu}</span>`;
   }
 
-  /* ---- the small calendar popover that replaces window.prompt() for a
-     refill date (her yes, 2026-09-15) -- "Pick a date…" and "Change
-     date…" both open this ONE component. Scoped to the Refill page itself
-     (her actual complaint) -- Plan ▾'s "Pick a date…" from the Dashboard
-     or Inventory, outside #phRefillWrap, still falls back to the plain
-     prompt() below; nothing there was part of this ask. Mounted once, at
-     the end of renderRefill()'s own markup, and positioned like any other
-     .ph-rp-menu (phRefillMenuFixPosition's exact idiom, its own function
-     because the anchor here is whichever trigger matches the open id, not
-     the popover's own previousElementSibling). */
+  /* ---- the small popover that replaces window.prompt() for a refill date
+     (her yes, 2026-09-15) -- "Pick a date…" and "Change date…" both open
+     this ONE component. STALE as of the 2026-09-16 weeks rebuild below:
+     this was originally scoped to the Refill page only, with Plan ▾ from
+     the Dashboard or Inventory still falling back to window.prompt() --
+     that gap is closed. phRefDatePopMountHtml() now mounts it in its own
+     permanent #pharmacyPage host (#phRefWeekPop), so it opens from every
+     surface, not just #phRefillWrap; see that function's own comment. */
   let phRefDatePickFor = null;   // the jar/herb id whose popover is open
   let phRefWeekPickMore = 0;     // how many times she has tapped "More weeks ›" (6 rows each)
   /* ---- WEEKS, not days (her ask 2026-09-16 on this exact list: "instead of
@@ -37072,7 +37092,13 @@ or changing anything in Cliniko.
   document.addEventListener("change", e => {
     const el = e.target;
     if (!el || !el.matches) return;
-    if (el.matches("[data-pres-tl-date]")) { if (/^\d{4}-\d{2}-\d{2}$/.test(el.value)) { presWeekOpenDay = el.value; renderPresWeek(); } return; }
+    if (el.matches("[data-pres-tl-date]")) {
+      const raw = el.value || "";
+      const yr = +String(raw).slice(0, 4);
+      if (raw && !(yr >= 1900 && yr <= 2100)) return;   // still typing a year
+      if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) { presWeekOpenDay = raw; renderPresWeek(); }
+      return;
+    }
     if (el.matches("[data-ph-apptcal-daycount]")) {
       phApptCalDayCount = Number(el.value);
       PHARMACY.apptCalDayCount = phApptCalDayCount;
@@ -39883,7 +39909,12 @@ or changing anything in Cliniko.
     const chartTick = e.target && e.target.closest ? e.target.closest("[data-ph-jr-chart]") : null;
     if (chartTick) { phChartToggle(phMsgDisplayName(phJourneyKey), chartTick.checked); return; }
     const knownSince = e.target && e.target.closest ? e.target.closest("[data-ph-jr-knownsince]") : null;
-    if (knownSince) { phPatientRec(phMsgDisplayName(phJourneyKey)).knownSince = knownSince.value || null; savePharmacy(); renderPharmacy(); return; }
+    if (knownSince) {
+      const raw = knownSince.value || "";
+      const yr = +String(raw).slice(0, 4);
+      if (raw && !(yr >= 1900 && yr <= 2100)) return;   // still typing a year
+      phPatientRec(phMsgDisplayName(phJourneyKey)).knownSince = raw || null; savePharmacy(); renderPharmacy(); return;
+    }
     const pkgN = e.target && e.target.closest ? e.target.closest("[data-ph-jr-pkg-n]") : null;
     if (pkgN) {
       const rec = phPatientRec(phMsgDisplayName(phJourneyKey)), pkg = phPkgActive(rec);
@@ -39894,8 +39925,11 @@ or changing anything in Cliniko.
     }
     const pkgDate = e.target && e.target.closest ? e.target.closest("[data-ph-jr-pkg-date]") : null;
     if (pkgDate) {
+      const raw = pkgDate.value || "";
+      const yr = +String(raw).slice(0, 4);
+      if (raw && !(yr >= 1900 && yr <= 2100)) return;   // still typing a year
       const rec = phPatientRec(phMsgDisplayName(phJourneyKey)), pkg = phPkgActive(rec);
-      if (pkg) { pkg.boughtOn = pkgDate.value || null; savePharmacy(); renderPharmacy(); }
+      if (pkg) { pkg.boughtOn = raw || null; savePharmacy(); renderPharmacy(); }
       return;
     }
     const jsel = e.target && e.target.closest ? e.target.closest("#phJourneyTemplateSel, #phJourneyBarTemplateSel") : null;
@@ -55467,6 +55501,10 @@ Dosage: {dosage}
       // only ever one field to trust for "has this been handed over".
       dispensedAt: null, dispenseLogId: null, mailedAt: null, pickedUpAt: null, invoiced: null,
       createdAt: Date.now(),
+      // her ask (backlog 2026-09-16): an optional repeat cadence so a
+      // recurring courier/pickup job can offer its own next occurrence --
+      // null means "one-off", exactly as every schedule before this existed
+      repeatWeeks: null,
     };
     PRESC.scheduled.push(s);
     savePresc();
@@ -55576,6 +55614,7 @@ Dosage: {dosage}
     s.mailedAt = Date.now();
     if (tracking != null) s.mailing.tracking = tracking.trim();
     savePresc();
+    schedMaybeOfferRepeat(s);
     renderPharmacy();
   }
   // the pickup twin of schedConfirmMailed -- same guard (never before it's
@@ -55585,6 +55624,7 @@ Dosage: {dosage}
     if (!s || !s.dispensedAt) return;
     s.pickedUpAt = Date.now();
     savePresc();
+    schedMaybeOfferRepeat(s);
     renderPharmacy();
   }
   function schedConfirmInvoiced(schedId, amount, method) {
@@ -55592,7 +55632,28 @@ Dosage: {dosage}
     if (!s || !s.dispensedAt) return;
     s.invoiced = { at: Date.now(), amount: phRound2(amount) || 0, method: method || "" };
     savePresc();
+    schedMaybeOfferRepeat(s);
     renderPharmacy();
+  }
+  // her ask (backlog 2026-09-16): computed from the ORIGINAL due date plus
+  // N x 7 days, never from today/completion date -- so a job completed late
+  // still reschedules on its own real cadence instead of drifting later
+  // with every cycle (the same drift schedAutoDeferSweep already guards
+  // against for a single overdue entry).
+  function schedMaybeOfferRepeat(s) {
+    if (!s.repeatWeeks) { schedRepeatOffer = null; return; }
+    const origDue = schedDueDate(s);
+    if (!origDue) { schedRepeatOffer = null; return; }
+    const next = new Date(parseKey(origDue).getTime() + s.repeatWeeks * 7 * 86400000);
+    schedRepeatOffer = { schedId: s.id, nextDate: keyOf(next) };
+    // whichever checkpoint completes last drops this row straight into the
+    // collapsed "completed" bucket (schedStatus below) -- force it open so
+    // the offer she's meant to see doesn't render into a hidden table
+    if (schedStatus(s) === "completed") schedShowCompleted = true;
+  }
+  function schedRepeatOfferHtml(s) {
+    if (!schedRepeatOffer || schedRepeatOffer.schedId !== s.id) return "";
+    return `<div class="ph-flash ph-msg-offer">Schedule the next one for <b>${esc(schedDateStr(schedRepeatOffer.nextDate))}</b>? <button type="button" class="ph-msg-offer-btn skip" data-sched-repeat-skip="1">Skip</button><button type="button" class="ph-msg-offer-btn go" data-sched-repeat-go="1">Schedule it</button></div>`;
   }
   const SCHED_STATUS_META = {
     overdue: { pill: "zero", label: "Overdue" },
@@ -55671,6 +55732,11 @@ Dosage: {dosage}
   // closes, or switches to a different scheduled entry, so it never leaks
   // an edit panel open under the wrong row after that.
   let schedPrepEditKey = null;
+  // her ask (backlog 2026-09-16): a recurring job offers its own next
+  // occurrence the moment it's completed -- same "flash-button" shape as
+  // phMsgDispenseOffer (~line 38935), scoped to one scheduled entry at a
+  // time so accepting/skipping one never touches another row's offer.
+  let schedRepeatOffer = null;   // { schedId, nextDate } | null
   // schedOpenAction: {id, kind:"handover"|"invoiced", method:"phone"|"card"} | null -- method only meaningful for kind:"invoiced".
   // "handover" only ever opens a form for a POSTAGE job (the tracking number);
   // a pickup confirms in one tap and never sets this.
@@ -55710,6 +55776,7 @@ Dosage: {dosage}
       if (hit) d.patientName = hit;
     }
     if (v("schedFormPresPick") !== undefined) d.presId = v("schedFormPresPick");
+    if (v("schedFormRepeatWeeks") !== undefined) d.repeatWeeks = v("schedFormRepeatWeeks");
     // Build-new rows keep grams in the DOM until captured here (typing in a
     // grams box deliberately does NOT re-render, so focus never jumps)
     if (Array.isArray(d.rxHerbs)) {
@@ -56213,6 +56280,9 @@ Dosage: {dosage}
       <div class="ph-build-top">
         <label class="ph-inline-label">Target date <input type="date" id="schedFormDate" value="${esc(d.targetDate ?? keyOf(TODAY))}" aria-label="Target date to post"></label>
       </div>`}
+      <div class="ph-build-top">
+        <label class="ph-inline-label">Repeats every <input type="number" id="schedFormRepeatWeeks" min="1" max="52" step="1" value="${d.repeatWeeks ? esc(String(d.repeatWeeks)) : ""}" placeholder="—" aria-label="Repeat interval in weeks"> week(s) <span class="ph-formula-meta">(optional — leave blank for a one-off)</span></label>
+      </div>
       <div class="ph-build-actions">
         <button type="button" class="btn-save" data-sched-form-save="1">Schedule it</button>
         <button type="button" class="btn-cancel" data-sched-form-cancel="1">Cancel</button>
@@ -56599,6 +56669,7 @@ Dosage: {dosage}
     // whole <table>, which silently detaches it from its row
     const actionHtml = schedActionFormHtml(s);
     const prepHtml = schedPrepOpenId === s.id ? schedPrepPanelHtml(s) : "";
+    const repeatOfferHtml = schedRepeatOfferHtml(s);
     return `<tr>
       <td style="white-space:nowrap">${schedDateStr(schedDueDate(s))}${schedCutoffNoteHtml(s)}</td>
       <td>${t
@@ -56612,7 +56683,7 @@ Dosage: {dosage}
         ${!s.dispensedAt ? `<button type="button" class="ph-load-btn" data-sched-prep-open="${s.id}">🧪 Prepare</button>` : ""}
         ${!s.dispensedAt ? `<button type="button" class="ic" data-sched-cancel="${s.id}" title="Cancel this schedule" aria-label="Cancel this schedule"><svg class="icn" aria-hidden="true"><use href="#i-x"/></svg></button>` : ""}
       </td>
-    </tr>${actionHtml ? `<tr class="ph-sched-action-row"><td colspan="7">${actionHtml}</td></tr>` : ""}${prepHtml ? `<tr class="ph-sched-prep-wrap-row"><td colspan="7">${prepHtml}</td></tr>` : ""}`;
+    </tr>${actionHtml ? `<tr class="ph-sched-action-row"><td colspan="7">${actionHtml}</td></tr>` : ""}${prepHtml ? `<tr class="ph-sched-prep-wrap-row"><td colspan="7">${prepHtml}</td></tr>` : ""}${repeatOfferHtml ? `<tr class="ph-sched-repeat-offer-row"><td colspan="7">${repeatOfferHtml}</td></tr>` : ""}`;
   }
   function renderSchedWidget() {
     const host = document.getElementById("schedRows");
@@ -56632,9 +56703,13 @@ Dosage: {dosage}
     // button, so collapsing out from under her mid-fill would strand the
     // form. Purely visual -- schedRowHtml/schedShowCompleted/sort/grouping
     // below are untouched, same table as always once something's active.
+    // A live repeat-offer counts as "expanded" for the same reason: it's
+    // attached to the one entry that just completed, so if that was the
+    // only entry this collapse would hide the offer she's meant to see
+    // (compHost is blanked below, same as host) before she ever sees it.
     const schedSec = document.getElementById("schedWidget");
-    if (schedSec) schedSec.classList.toggle("ph-pl-quietline", !active.length && !schedFormOpen);   // one quiet line when empty (her pick, 2026-09-04)
-    if (!active.length && !schedFormOpen) {
+    if (schedSec) schedSec.classList.toggle("ph-pl-quietline", !active.length && !schedFormOpen && !schedRepeatOffer);   // one quiet line when empty (her pick, 2026-09-04)
+    if (!active.length && !schedFormOpen && !schedRepeatOffer) {
       document.getElementById("schedCount").textContent = completed.length ? `Nothing scheduled · ${completed.length} completed` : "Nothing scheduled";
       btnHost.innerHTML = `<button type="button" class="ph-load-btn" data-sched-new="1">+ Schedule a dispense</button>`;
       host.innerHTML = "";
