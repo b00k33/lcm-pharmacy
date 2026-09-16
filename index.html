@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260916-190000">
+<meta name="lcm-build" content="20260916-200000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -35728,6 +35728,15 @@ or changing anything in Cliniko.
     const activePlan = plans.find(p => p.status === "active") || plans[0];
     const rec = activePlan ? phPatientPeek(name) : null;
     const curPhase = activePlan ? (phTpCycleEffectivePhase(rec, activePlan) || phTpPlanCurrentPhase(activePlan)) : null;
+    // a phase written against a clinic milestone ("the day before transfer")
+    // resolves to a real bookable date, not a repeating interval -- try that
+    // first; phTpCadenceDate returns null whenever there's no milestone
+    // wording, or there is but she hasn't typed that clinic date in yet, and
+    // the plain-interval path below still runs as the fallback either way.
+    if (curPhase) {
+      const resolved = phTpCadenceDate(curPhase.cadence, activePlan, name);
+      if (resolved) return { days: null, noAcu: false, source: "plan-milestone", resolvedDate: resolved.key, why: resolved.why };
+    }
     const parsed = phAcuCadenceParse(curPhase ? curPhase.cadence : "");
     if (parsed.noAcu) return { days: null, noAcu: true, source: "plan: no acu this phase" };
     return { days: parsed.matched ? parsed.days : PH_ACU_DEFAULT_CADENCE_DAYS, noAcu: false, source: parsed.matched ? "plan" : "default" };
@@ -35764,9 +35773,18 @@ or changing anything in Cliniko.
     if (!lastSession) return { ok: false, reason: "not-tracked" };
     const cad = phAcuCurrentCadenceDays(name);
     if (cad.noAcu) return { ok: false, reason: "no-acu-this-phase" };
-    const due = parseKey(lastSession.date);
-    due.setDate(due.getDate() + cad.days);
-    return { ok: true, lastSession, cadenceDays: cad.days, cadenceSource: cad.source, dueOn: keyOf(phFuOffSunday(due)) };
+    // a milestone-resolved date is a fixed clinic fact ("the day before
+    // transfer"), not a flexible reminder -- it must show the SAME date as
+    // the phase's own "book <date>" chip, so (unlike the interval branch)
+    // it does not get pushed off a Sunday.
+    let dueOn;
+    if (cad.resolvedDate) dueOn = cad.resolvedDate;
+    else {
+      const due = parseKey(lastSession.date);
+      due.setDate(due.getDate() + cad.days);
+      dueOn = keyOf(phFuOffSunday(due));
+    }
+    return { ok: true, lastSession, cadenceDays: cad.days, cadenceSource: cad.source, resolvedDate: cad.resolvedDate || null, why: cad.why || null, dueOn };
   }
   // done/snooze are scoped to the session they were computed from (not a
   // plain per-patient flag) -- logging session #2 changes lastSession.id, so
@@ -36031,7 +36049,11 @@ or changing anything in Cliniko.
   const phCommRowId = row => row.kind === "scheduled" ? row.msg.id : row.rec ? row.rec.id : row.patientKey;
   const phCommRowPatientName = row => row.rec ? phTitle(row.rec.patient) : row.patientName;
   function phCommRowMetaLabel(row) {
-    if (row.kind === "acu") return `${row.bookAhead ? "Book her" : "Acupuncture follow-up"}${row.acu && row.acu.ok && row.acu.cadenceDays ? ` · every ${row.acu.cadenceDays}d` : ""}`;
+    if (row.kind === "acu") {
+      const a = row.acu;
+      const cadTxt = a && a.ok && a.resolvedDate ? ` · ${a.why}` : a && a.ok && a.cadenceDays ? ` · every ${a.cadenceDays}d` : "";
+      return `${row.bookAhead ? "Book her" : "Acupuncture follow-up"}${cadTxt}`;
+    }
     if (row.kind === "quiet") return `Gone quiet${row.quiet ? ` · ${row.quiet.daysSince}d` : ""}`;
     if (row.kind === "scheduled") return `Planned message${row.msg && row.msg.label ? ` · ${row.msg.label}` : ""}`;
     return row.kind === "checkin" ? "check-in" : row.kind === "review" ? "review" : "check-in & review";
@@ -37042,6 +37064,7 @@ or changing anything in Cliniko.
       cycle: pat.medicalHistory ? phCycleComp(pat) : null,
       lastSessionLabel: calc.ok ? phFuDateLabel(calc.lastSession.date) : "",
       cadenceDays: calc.ok ? calc.cadenceDays : null, cadenceSource: calc.ok ? calc.cadenceSource : "",
+      resolvedDate: calc.ok ? calc.resolvedDate : null, why: calc.ok ? calc.why : null,
     };
   }
   function phCkQuietContext(row) {
@@ -37151,7 +37174,7 @@ or changing anything in Cliniko.
         <h4><svg class="icn" aria-hidden="true"><use href="#i-scroll"/></svg>Acupuncture follow-up</h4>
         <div class="ph-ck-kv">
           <span class="k">Last session</span><span class="v">${c.lastSessionLabel ? esc(c.lastSessionLabel) : "—"}</span>
-          <span class="k">Cadence</span><span class="v">${c.cadenceDays ? `every ${c.cadenceDays} day${c.cadenceDays === 1 ? "" : "s"}` : "—"} <span class="faint">${c.cadenceSource === "plan" ? "· from her treatment plan" : "· default"}</span></span>
+          <span class="k">Cadence</span><span class="v">${c.resolvedDate ? `Booked for ${esc(phFuDateLabel(c.resolvedDate))}` : c.cadenceDays ? `every ${c.cadenceDays} day${c.cadenceDays === 1 ? "" : "s"}` : "—"} <span class="faint">${c.resolvedDate ? `· ${esc(c.why)}` : c.cadenceSource === "plan" ? "· from her treatment plan" : "· default"}</span></span>
           <span class="k">Booked</span><span class="v">${c.appt ? `<b>${esc(c.visitLabel)}</b> ${phApptKindHtml(c.appt.service)}${phApptEtHtml(c.appt)} <button type="button" class="ph-ck-lnk" data-ph-appt-del="${esc(c.appt.id)}" title="Cancel this appointment">Cancel</button>` : c.away ? `<span class="faint">out of town</span>` : `<span class="faint">not booked</span>`}</span>
           ${c.cycle ? `<span class="k">Cycle</span><span class="v">${phCkCycleLineHtml(c.cycle, row.patientName)}</span>` : ""}
         </div>
@@ -38850,7 +38873,7 @@ or changing anything in Cliniko.
     if (row.kind === "acu") {
       const a = row.acu;
       if (!a || !a.ok) return "Acupuncture follow-up";
-      const cad = `every ${a.cadenceDays}d${a.cadenceSource === "plan" ? "" : " (default)"}`;
+      const cad = a.resolvedDate ? `${phFuDateLabel(a.dueOn)} · ${a.why}` : `every ${a.cadenceDays}d${a.cadenceSource === "plan" ? "" : " (default)"}`;
       const lastVia = a.lastSession.source === "appointment" ? "last visit" : "last session";
       const nudge = row.bookAhead ? `book her — next visit due ${phFuDateLabel(a.dueOn)}, nothing booked · ` : "";
       return `${nudge}${cad} · ${lastVia} ${phFuDateLabel(a.lastSession.date)}`;
@@ -47504,8 +47527,8 @@ or changing anything in Cliniko.
   // copy. Relies on phTpScreenPatient the same way phTpTabsHtml's cycle chip
   // already does; every caller of this function only ever runs while a plan
   // is open under that global.
-  function phTpMilestoneDate(plan, kind) {
-    const row = phIvfLinkedCollection(phTpScreenPatient, plan);
+  function phTpMilestoneDate(plan, kind, name = phTpScreenPatient) {
+    const row = phIvfLinkedCollection(name, plan);
     if (!row) return null;
     if (kind === "retrieval") return row.when || null;
     if (kind === "transfer") {
@@ -47565,12 +47588,12 @@ or changing anything in Cliniko.
   // mentions one
   const phTpPlanWantsMilestones = plan =>
     !!plan && (plan.phases || []).some(p => phTpCadenceKind(p.cadence));
-  function phTpCadenceDate(cadence, plan) {
+  function phTpCadenceDate(cadence, plan, name = phTpScreenPatient) {
     const t = String(cadence || "").toLowerCase();
     if (!t || !plan) return null;
     const kind = phTpCadenceKind(t);
     if (!kind) return null;
-    const base = phTpMilestoneDate(plan, kind);
+    const base = phTpMilestoneDate(plan, kind, name);
     if (!base) return null;
     const d = parseKey(base);
     if (isNaN(d.getTime())) return null;
@@ -53625,8 +53648,16 @@ Please let me know if you have any questions.`;
     return `<textarea id="presEditNotes" rows="2" placeholder="Anything worth remembering about this one…">${esc(t.notes || "")}</textarea>`;
   }
   function renderPresEditForm(el, t) {
+    const title = presTlDock && !t.id ? "New prescription" : `✎ ${t.name ? esc(phDispName(t.name, presIsFormula(t))) : "New prescription"}`;
+    // full-screen (the phone/8-answers redesign, her 2026-09-08 ask): the same
+    // green band + back chevron every other script page uses, not a bare
+    // heading with its own separate "Cancel ×" — the Refill workbench's own
+    // #refPresPanel copy of this form is untouched, it never gets ph-pres-full.
+    const head = el.classList.contains("ph-pres-full")
+      ? `<div class="ph-pres-band"><button type="button" class="ph-band-back" data-pres-close="1" aria-label="Close">‹</button><div class="ph-band-titlewrap"><span class="ph-band-name">${title}</span></div></div>`
+      : `<h3>${title}<button type="button" class="ph-print-btn" data-pres-edit-cancel="1">Cancel ×</button></h3>`;
     el.innerHTML = `<div class="ph-listing ph-pres-panel">
-      <h3>${presTlDock && !t.id ? "New prescription" : `✎ ${t.name ? esc(phDispName(t.name, presIsFormula(t))) : "New prescription"}`}<button type="button" class="ph-print-btn" data-pres-edit-cancel="1">Cancel ×</button></h3>
+      ${head}
       <div class="ph-tmpl">
         ${presNameTypeFieldsHtml(t)}
         ${presIngredientsEditorHtml(t)}
@@ -58350,6 +58381,11 @@ Dosage: {dosage}
   let phInstallEvt = null;
   const phInstallBtn = document.getElementById("phInstallBtn");
   const phIsInstalled = () => window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  // iOS/iPadOS Safari never fires beforeinstallprompt -- the only route is
+  // Share -> Add to Home Screen, so the button has to reveal itself and the
+  // click has to explain that, instead of both staying silently inert.
+  const phIsIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  if (phInstallBtn && phIsIOS() && !phIsInstalled()) phInstallBtn.hidden = false;
   window.addEventListener("beforeinstallprompt", e => {
     e.preventDefault();
     phInstallEvt = e;
@@ -58361,7 +58397,10 @@ Dosage: {dosage}
     phFlashShow("✓ Installed — LCM - Linh Chinese Medicine now opens in its own window from your Start menu / desktop.");
   });
   if (phInstallBtn) phInstallBtn.addEventListener("click", () => {
-    if (!phInstallEvt) return;
+    if (!phInstallEvt) {
+      if (phIsIOS()) phFlashShow("To install LCM: tap the Share icon in Safari's toolbar, then choose <b>Add to Home Screen</b>.");
+      return;
+    }
     const evt = phInstallEvt;
     phInstallEvt = null;
     evt.prompt();
