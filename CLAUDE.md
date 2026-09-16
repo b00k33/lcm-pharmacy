@@ -3272,3 +3272,118 @@ the correction above, under Batch 5's "Deliberately skipped" list).
   correctly held pending her mock sign-off, nothing new to decide here.
 
 Shipped `2460f9a` on `session-a`.
+
+### Batch 8 — mojibake sweep finished, dead Dashboard CSS/JS, date-guard sweep finished, new-draft discard guard
+
+Of 8 candidates, 4 were genuinely buildable; 3 were already resolved (one —
+the flex-action-cell table check — for the third time now, see the note
+below) and 1 (period-history-as-a-table) had already shipped in
+Synth22 batch #3.
+
+- **`phFixText` mojibake repair, finished app-wide.** Batch 3 had already
+  wrapped the Log page's expand-to-detail card and the History banner/visit
+  card; this batch found the SAME Log page's collapsed Item column
+  (`phLogMovementInfo`) was only half-fixed — the dispense branch had it,
+  refill/arrival/stocktake didn't, so a mojibake'd name showed garbled in
+  the row but clean once expanded, on the same screen. Also wrapped: the
+  Log page's delete-confirm strip and undo-flash strings, the Patient
+  Journey timeline's dispense row, the Dashboard recent-activity feed, and
+  the herb inventory movement-history tooltip. All are display-only reads
+  of already-stored `PHARMACY.log` strings (mostly the historical Galcott
+  import) — nothing writes the fixed value back, and `phFixText` is a
+  no-op on already-clean text, so there's no risk of double-encoding.
+  Deliberately still OUT of scope: editable fields like the Dosage & Price
+  "Formula objective" input, where wrapping the displayed value could let
+  a save-on-blur silently rewrite the stored string — same line Batch 3
+  drew.
+- **Dead Dashboard code deleted: the old full-width appointment-timeline
+  row and its CSS family.** The JS side of this cleanup had mostly already
+  happened in an earlier batch (`phDashWeekHeroHtml`, `phDashSheetHtml`,
+  `phDashWeekDetailHtml` and the five zoned-mobile `phDash*` functions were
+  already gone) — what was left was one leftover render function,
+  `phDashApptTimelineRowHtml` (the 2026-09-05 "one full-width row per
+  appointment" design, superseded), plus a large tail of orphaned CSS from
+  that same family: `.ph-week-cell*`, `.ph-week-hint`, `.ph-week-detail-row`
+  (including one leftover copy of its sub-selectors found in a completely
+  different part of the stylesheet), `.ph-week-detail-group*`,
+  `.ph-dash-timeline-head*`, the whole `.ph-tlr-*` row family and its
+  mobile overrides, `.ph-dash-rtables` and its own media query, and the
+  "zoned mobile dashboard" `.ph-dz*`/`.ph-dash-tstrip` block. Every
+  deletion was confirmed dead by grepping the whole current file for a
+  matching `class="..."` emission and finding none — not trusted from the
+  backlog note, which (per this project's own recurring lesson) undersold
+  how much was actually already gone. Live selectors sitting inside the
+  same blocks were explicitly kept: `.ph-week-detail`/`.ph-week-empty`
+  (Patient-profile timeline widget), `.ph-tlr-cyc*`/`.ph-apptpop-signs`
+  (appointment popup's cycle chip), `.ph-dz-empty` (End-of-day widget's
+  empty state). Sandbox-verified clean boot with no console errors on
+  Dashboard, Appointments, Log and Communications at both desktop and
+  phone widths.
+- **The app-wide date-input guard sweep, finished.** Batch 5 fixed 3 of the
+  original 10 unguarded `<input type="date">` commit handlers
+  (`data-pres-tl-date`, `data-ph-jr-knownsince`, `data-ph-jr-pkg-date`) and
+  deliberately deferred the rest. This batch closes the remaining 7: Stock
+  Statistics' and Profit report's From/To range filters (cosmetic — an
+  in-memory display filter, never saved), and the Follow-up
+  check-in/review/combo date fields (real risk — a half-typed year used to
+  get written straight into the patient's real follow-up record AND
+  permanently flag it `hers:true`, freezing a wrong date until she manually
+  re-edited it). Same proven idiom as the other 7 already-fixed fields:
+  `if (raw && !(yr >= 1900 && yr <= 2100)) return;` before the write. The
+  combo field's single gate covers both of its underlying writes (check-in
+  + review), since both read the same input value. Sandbox-verified on
+  Stock Statistics' From field by checking the input's own DOM node
+  identity before/after: an implausible year leaves the same node in place
+  (no re-render, nothing written); a valid date replaces it (re-render
+  happened, the new value landed) — confirming the guard actually skips the
+  write, not just looks like it does from the outside.
+- **A brand-new, unsaved prescription/formula draft no longer discards
+  silently.** Esc, the panel's Cancel ×, Back (‹ / Alt+← / the phone's back
+  button), and switching sidebar tabs all used to route straight through to
+  a silent discard for a "+ New" draft with typed content and nothing
+  saved yet — same underlying gap reachable four different ways, so fixed
+  in one place: a new `presNewDraftUnsaved()` helper (reads the live Name/
+  Ingredients/Notes fields, since `presDraft` itself is never kept in sync
+  while she's typing) gates all four exits with a native `confirm()`,
+  reusing the same bare-`confirm()` precedent already used in this exact
+  save flow (the duplicate-patient-name check). Found and fixed a real bug
+  while building this: replaying the original click after "Discard" via
+  `el.click()` was a silent no-op, because the HTML spec's "click in
+  progress" flag blocks a same-element re-click fired synchronously from
+  inside that same element's own click handler — the exact situation here,
+  since the guard's own `confirm()` call happens inside the click it's
+  intercepting. Fixed by deferring the replay one macrotask out
+  (`setTimeout(..., 0)`), by which point the original dispatch has finished
+  and the flag is clear. Sandbox-verified all four exits (Esc, Cancel ×,
+  a tab switch) both ways — Stay keeps the draft with her typed text
+  intact, Discard actually closes it — plus confirmed an EMPTY new draft
+  still closes instantly with no prompt, and confirmed the existing
+  unlogged-dispense guard (a different, already-working case of the same
+  `el.click()` replay pattern, safe because it fires from a later, separate
+  click on the guard dialog's own button) was untouched by this change.
+- **Three items closed with no code change:** the flex-action-cell table
+  check (`.ph-spec-table`) is now confirmed closed for the THIRD time — a
+  fresh grep found exactly one element in the whole file still carries
+  that class (the ingredient table, already fixed since Batch 3) and
+  Suppliers/the patient list were independently reconfirmed unaffected;
+  worth a follow-up note in the backlog source itself so a future audit
+  pass stops re-surfacing it. The dev-server `launch.json`/
+  `static-server.ps1` fix was already carried into the repo in Batch 3.
+  Period history as a real table (Date/Cycle/Flow/Pain/delete) was already
+  shipped in Synth22 batch #3 (`dc54fab`), four days after the backlog note
+  that raised it.
+
+**Deliberately deferred, not built this batch:** "Acu follow-up cadence
+resolved into a real bookable date from a plan's milestone" was verified
+real and gate:none, but is a larger, medium-risk change than the rest of
+this batch — it needs `phTpMilestoneDate`/`phTpCadenceDate` re-threaded to
+take an explicit patient name (both currently read the global
+`phTpScreenPatient`, which is only safe at their two existing display-only
+call sites; the Communications page iterates every patient, so calling
+them unmodified there would silently resolve nothing for almost everyone),
+plus two display strings taught to show a resolved date instead of an
+"every Nd" cadence line. Sized for its own batch rather than folded into
+this smaller/safer one.
+
+Version bump: `lcm-build` `20260916-190000`, `sw.js` cache `-8`. Shipped
+`065e737` on `session-a`.
