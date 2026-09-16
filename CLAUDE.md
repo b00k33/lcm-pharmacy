@@ -2975,3 +2975,78 @@ Sandbox-verified past the usual clean-boot check: `phLogMovementInfo` /
 against all 2,766 dispenses, and `presHistoryBannerHtml` against all 848
 prescriptions — zero failures across all three. Shipped `d7975e6` on
 `session-a`.
+
+### Batch 4 — dead 3rd-column code, herbs-off tri-state, desktop day-head, honest save toast, Profit report shell
+
+Five more candidates, same verify-first discipline. One item (the save-toast
+gate) turned out to need a genuinely different fix than the backlog note
+asked for — worth reading in full below, since it's a real example of "the
+backlog's own framing was wrong" rather than "not yet done."
+
+- **The "collapse History into a side rail" feature, fully removed**
+  (`presThirdOpen`, `.ph-pres-col-third`, `.ph-collapse-rail`/`-toggle`, the
+  `.ph-pres-body-collapsed` grid variant, and its dead click handler). A
+  PRIOR session in this project looked at this exact item and backed off,
+  calling it "entangled with real CSS classes... too risky to rush." Re-grepped
+  fresh this time: every one of those classes' only markup site was the CSS
+  itself — `renderPresPanel` (the one function that builds the prescription
+  panel, shared by the main panel and the Refill workbench) emits only
+  `.ph-pres-col-left`/`.ph-pres-col-right`, nothing else. That earlier caution
+  was itself mistaken — it saw the CSS existed and stopped there without
+  checking whether anything still applied those classes. Sandbox-verified:
+  the panel still renders both columns correctly with a live grid-template.
+- **A tri-state "Herbs" control**, on a treatment plan's ⋯ menu: Follow
+  patient default / Herbs on for this course / Herbs off for this course.
+  `phHerbsOn`'s override branch (`plan.herbsOverride === true/false`) has
+  existed since her decision 12 (2026-09-09) but nothing in the UI ever wrote
+  `herbsOverride` — it was a built override with no lever to pull. The new
+  `<select>` (`data-tp-herbs-override="name|planId"`, mirroring the same
+  `name|id` + `lastIndexOf("|")` convention `data-tp-plan-open` already uses)
+  reaches all three places a plan's ⋯ menu renders — the inline profile
+  editor, the full-screen modal, and the Dispense-stage ⋯ — because they all
+  share one function, `phTpPlanMenuHtml`. Sandbox-verified all three values
+  round-trip correctly through a real dispatched `change` event.
+- **Desktop's 1-day Appointments List view** gets a tappable day head. It had
+  none — the code comment said so outright ("a 1-day list has no head; the
+  phone's inline widget shows that day regardless"), true for phone, not
+  true for desktop where that inline widget is CSS-hidden. `showDayHead =
+  days.length > 1 || window.innerWidth > 640` reuses the exact markup, the
+  exact click-delegation handler, and the exact popup opener every other
+  day-count already uses — no new plumbing. Side-effect: an empty desktop
+  1-day view now shows a tappable "nothing booked" head instead of bare
+  text, matching every other day-count's empty-day treatment.
+- **"✓ Prescription saved" no longer lies.** The backlog note's literal ask
+  was "gate the toast on whether a field actually changed" — investigated
+  and found that would work AGAINST her own documented reason for making the
+  toast unconditional in the first place (the comment above it quotes her:
+  "a popup shows things are saved after I select it... every commit says
+  so"). Gating on field-changes would go silent exactly when the
+  ingredient-wipe guard is quietly protecting her data from a stray
+  keystroke — the one moment reassurance matters most. Built the real,
+  narrower bug instead: `presCommitTemplateFields` called `savePresc()` but
+  threw its true/false result away, so a genuine save failure (full storage,
+  a shrink-guard trip) still showed "✓ saved" right beside the red "⚠ NOT
+  saved" banner. Now `presFlushTemplate` only toasts when the save actually
+  returned true. Sandbox-verified with a real forced `localStorage.setItem`
+  failure: toast suppressed, error banner shown, nothing thrown.
+- **Stock Statistics' Profit report** moved off the last surviving `.ph-lux-strip`
+  (gold, bespoke) onto the shared `.ph-shell-strip` component — the same move
+  Price Review already made back on 2026-08-24 (grep found that migration's
+  own code comment naming this as the precedent). Added a sheet-mode CSS
+  override (`.ph-st-sheet [data-st="prof"] .ph-shell-strip`/`.ph-shell-cell`)
+  so it keeps its flattened, gold-tint-matched desktop look — `.ph-shell-strip`'s
+  own default is a dark banner, right for a bare/phone strip but wrong once
+  the rest of this page has gone light and flat. A new `.ph-profit-warn`
+  class (not a reuse of End-of-day's `.ph-eod-warn`) carries the Net tile's
+  negative-number colour, because it needs a DIFFERENT colour in sheet mode
+  (dark red on light) than out of it (pale red on dark) — `.ph-eod-warn`'s
+  colour is fixed, it doesn't know about sheet mode. Also deleted the now
+  fully-dead base `.ph-lux-strip`/`.ph-lux-stat` CSS, its mobile 2-up
+  override, and one already-orphaned rule under `#phRestockWrap` whose own
+  comment said "removed 2026-08-24" — it wasn't, until now. Sandbox-verified
+  visually at both sheet-mode (≥900px, flattened/green-deep numbers,
+  dark-red warn) and the default dark-strip width (white numbers, pale-red
+  warn), with real math (sales/cogs/profit/margin/restock/net) and the
+  negative-net warn state both exercised.
+
+Shipped `dc2ac32` on `session-a`.
