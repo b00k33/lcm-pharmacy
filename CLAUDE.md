@@ -1988,6 +1988,10 @@ Can make / When), one contextual primary action per row.
   those wasn't part of her complaint and widening the popover's blast
   radius wasn't asked for. Opens defaulting to the CURRENTLY STORED
   date's month if the herb already has one, else today's month.
+  **STALE as of the 2026-09-16 weeks rebuild** (see "Formula refill's
+  When column: weeks, not dates" below) — the Dashboard/Inventory
+  `window.prompt()` fallback described here no longer exists; the
+  popover now mounts globally and opens from every surface.
 - **Formula panel action bar trimmed** (`renderPresPanel`'s
   `.ph-pres-actionbar`) to grams-field + "🏺 Make refill" (primary) + ⋯
   (Calculate / Save / Copy / Delete) — the old separate Copy row is gone.
@@ -3050,3 +3054,77 @@ backlog's own framing was wrong" rather than "not yet done."
   negative-net warn state both exercised.
 
 Shipped `dc2ac32` on `session-a`.
+
+### Batch 5 — date-input guards, scheduled-dispense repeat interval
+
+Five candidates verified this round. Two built, one closed out as already
+resolved (no code change needed), two deliberately skipped and flagged to
+her rather than built — see the end of this section for why.
+
+- **Three more unguarded `<input type="date">` change handlers** get the
+  year-plausibility guard (`data-tp-milestone`'s idiom, copied verbatim):
+  `data-pres-tl-date` (Patient profile's own booked-week day-picker, the
+  highest-traffic of the three — `renderPresWeek` is called from a dozen+
+  live sites), `data-ph-jr-knownsince` and `data-ph-jr-pkg-date` (Patient
+  Journey's "Known since" and package "Bought on" fields, both writing
+  straight into a patient's saved record via `savePharmacy()`). All three
+  previously committed on every keystroke of a half-typed year with only a
+  bare `/^\d{4}-\d{2}-\d{2}$/` shape check — a real bug, not a style nit.
+  Sandbox-verified against the REAL delegated `change` listener (not a
+  reimplementation): a synthetic implausible-year date (e.g. `0026-09-16`,
+  which the browser accepts as a shape-valid date) is blocked and writes
+  nothing; a plausible full date commits correctly; clearing the field to
+  empty still clears the stored value to `null` — all three behaviours
+  checked on all three fields. The remaining fields in the original 10-field
+  sweep (a cosmetic tier and one needing extra care around a `hers` flag)
+  are deferred to a future batch, not rushed into this one.
+- **Scheduled dispenses gain an optional repeat interval** (`s.repeatWeeks`,
+  a plain number of weeks, `null` = one-off as before — the feature's own
+  2026-08-18 code comment already flagged this as "a small addition later,
+  not a rebuild"). A new "Repeats every ___ week(s)" field sits at the
+  bottom of `schedFormHtml`, read the same way every other field on that
+  form is (`schedReadFormDraft` + a direct DOM read in the save handler).
+  The moment a recurring entry's THIRD checkpoint lands (dispensed, then
+  handover, then invoiced — in whichever order she does them)
+  `schedMaybeOfferRepeat` computes the next date from the entry's ORIGINAL
+  due date + N×7 days — never from today or the completion date, so a job
+  finished late doesn't drift later with every cycle — and shows a one-tap
+  "Schedule the next one for ‹date›? Skip / Schedule it" flash (same shape
+  as `phMsgDispenseOffer`'s post-dispense message offer). Accepting creates
+  a fresh scheduled entry via the same `schedCreate` the manual form uses,
+  carrying forward the method, mailing/pickup details and the repeat
+  interval itself, so a weekly courier run keeps re-offering on its own.
+  **Found and fixed a real bug while verifying, not just the happy path:**
+  the schedWidget already collapses to one quiet line ("Nothing scheduled ·
+  N completed") whenever nothing is active and the form isn't open (her
+  spec, 2026-08-22) — for a solo recurring entry, the checkpoint that
+  triggers the offer is the SAME action that makes it the only, now-
+  completed entry, so the widget would collapse and blank both the
+  completed table AND the offer inside it in the same render. Fixed by
+  treating a live `schedRepeatOffer` as "expanded" alongside `schedFormOpen`
+  in that same collapse check — confirmed via the real checkpoint flow
+  (dispense → pick up → invoice a genuine scheduled entry in the sandbox)
+  that the offer now stays visible, "Schedule it" creates the correctly-
+  dated next entry, and "Skip" clears the offer without creating anything.
+- **`refill_datepicker_everywhere` needed no code change.** The backlog note
+  described a `window.prompt()` fallback for Plan ▾'s "Pick a date…" outside
+  the Refill page — that was accurate when written (2026-09-15) but the
+  2026-09-16 "weeks, not days" rebuild already mounted the popover globally
+  (`#phRefWeekPop`), closing the gap as a side effect of unrelated work.
+  Fixed the now-stale code comment (above `phRefDatePopHtml`, ~line 32380)
+  and the matching stale claim in this file's own 2026-09-15 section, both
+  now pointing at the 2026-09-16 section that actually superseded them.
+
+**Deliberately skipped, not built:**
+- `dashboard_stocktake_cards` — the verification pass recommended building
+  it, but any visible Dashboard change needs a mock/her confirmation first
+  per this file's own standing rule; an agent's "go ahead" isn't the same as
+  her sign-off on a Dashboard layout change. Flagging to her instead.
+- `toorder_col_drag` — turned out to be a genuinely large feature build
+  (rewriting 4 row-template functions, extending a 2-way drag engine to
+  3-way, and fixing an already-shipped, currently-latent width-persistence
+  bug) once actually scoped, not the quick markup addition it first looked
+  like. Deferred to its own future batch rather than under-scoped and
+  rushed into this one.
+
+Shipped `858ed3f` on `session-a`.
