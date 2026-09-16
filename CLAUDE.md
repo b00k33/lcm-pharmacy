@@ -3128,3 +3128,80 @@ her rather than built — see the end of this section for why.
   rushed into this one.
 
 Shipped `858ed3f` on `session-a`.
+
+### Batch 6 — honest plan-creation save guard, sync-base fold
+
+A small batch: of 5 verified candidates, only 2 turned out to genuinely need
+code, one needing her word instead, and two were already resolved (the
+backlog note was itself stale or had been misread) — the verify-first
+discipline earning its keep again, not padding the count for its own sake.
+
+- **Both plan-creation paths now honour `savePharmacy()`'s return.**
+  `presTpInlineCreate` (the inline row's "+ New") and `phTpCreate` (the
+  full-screen modal's start mode) both called `savePharmacy(); renderPresPanel();`
+  unconditionally — so a plan she just made could silently vanish on reload
+  if the unrecoverable-data or shrink guard refused the write, exactly the
+  class of "looks saved, wasn't" bug already fixed at four other call sites
+  in this file (e.g. line 30985). Both now gate on `savePharmacy() === false`,
+  show the same "That could not be saved — check the warning at the top and
+  try again" flash used everywhere else, and — following the established
+  pattern at those other sites — leave the plan pushed into `rec.treatmentPlans`
+  in memory either way rather than trying to unwind it. Sandbox-verified with
+  a real forced `Storage.prototype.setItem` failure on both functions:
+  the warning flash renders correctly (checked via the actual `.ph-flash`
+  DOM element, not a raw `body.innerHTML` substring match — that check gave
+  a false positive at first, since the message string is also embedded
+  verbatim in this file's own inlined `<script>` source, which
+  `body.innerHTML` naturally includes regardless of whether anything
+  rendered), the plan still lands in memory, and `phTpCreate` specifically
+  does NOT navigate into the plan detail screen on failure (confirmed via
+  `phTpScreenPatient` staying unchanged) while still navigating correctly on
+  a genuine success.
+- **`clearLocalData()` now also removes `lcm-sync-base`.** It only ever swept
+  `daybook`-prefixed keys; the sync merge base (`BASE_KEY`, deliberately NOT
+  daybook-prefixed — it's this app's own bookkeeping, never part of the synced
+  data) survived a location switch or sign-out untouched. Traced the actual
+  runtime consequence rather than trusting the backlog note's framing: after
+  a switch, the newly-adopted account's first `pullMergePush` cycle would run
+  against the PREVIOUS account's stale base hash for one cycle, before the
+  `finalJson === lastPushed` fast path corrects it — a real but normally
+  short-lived (same-tick) risk window, not a data-loss bug in the traced
+  happy path, but one a realtime push landing at exactly the wrong moment
+  could exploit. Fix is a one-line addition to the same key list `clearLocalData`
+  already clears. **Could not be exercised end-to-end in sandbox** — the
+  sandbox has no signed-in Supabase account ("No locations saved on this
+  device yet"), and per standing rule Claude never enters her real
+  credentials to create one. Verified instead by static trace (confirmed
+  `BASE_KEY` is in scope at the edit site, confirmed the three call sites —
+  `switchTo`/`doAddLocation`/`doSignOut` — are the only paths that call
+  `clearLocalData`) and a clean boot with no console errors. **Worth a real
+  check on her actual devices**: switch location (or sign out and back in)
+  and confirm `localStorage.getItem("lcm-sync-base")` reads `null`
+  immediately after, before the next boot cycle reseeds it.
+- **Two items closed as already-resolved, no code needed:**
+  "Dashboard Communications strip and nav badge not rebuilt" — re-read the
+  source memory note itself and found it was describing the CURRENT
+  (correct) state ("...still read `phCommDueRows()` unchanged" — meaning
+  nothing needed to change, not that it was broken), which a later
+  backlog-generation pass appears to have misread as a defect. Traced the
+  actual call graph: `phDashFuDue()` (feeding both the Dashboard badge and
+  the sidebar nav badge) already calls the same `phCommDueRows()` the Due
+  tab uses, which already runs every row through `phCommQuietEval()`. No
+  discrepancy exists. "Token type scale on the Dosage & Price panel" — this
+  was already done, same day the backlog note was written, in commit
+  `6e6d00c` (`.ph-pres-dose` re-points the shared `--fs-*` tokens locally;
+  every size in the panel reads from a token, none left as one-off numbers).
+
+**Flagged to her, not built:** "IVF history: per-field conflict UI for
+intake-review IVF rows" — the backlog note under-scoped what building this
+actually requires. Every field of an incoming IVF row is already individually
+editable the moment it lands (the "confirm" button only flips a reviewed
+flag, it doesn't lock anything); the real gap is that `rec.ivfCycles` is a
+LIST with no round/plan id on the intake payload, so there is no way to know
+which existing cycle (if any) an incoming intake report should be diffed
+against. That's a clinical-data matching decision — a wrong guess risks
+conflating two different IVF rounds' egg/embryo counts — not a UI pattern to
+reuse, so it needs her answer to "should an intake-reported IVF cycle try to
+match an existing one, and if so how?" before any code gets written.
+
+Shipped `4e39dcf` on `session-a`.
