@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260916-210000">
+<meta name="lcm-build" content="20260917-090000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -588,7 +588,12 @@
      whole row instead of squeezing into whatever's left of a wrapped flex
      line next to the other still-off chips (found live 2026-09-05: the
      dose text was cut off with no way to read the rest without clicking
-     in). Off chips stay compact and share a line. */
+     in). Off chips stay compact and share a line. The row fix alone wasn't
+     enough on a 375px phone -- a single-line <input> still scrolls long
+     text sideways instead of showing it, so this is now a <textarea>;
+     field-sizing grows it to fit (same graceful-degrade idiom as
+     .ph-ck-msg above -- Chrome 123+, min-height covers everything else). */
+  #pharmacyPage textarea.ph-cyc-in.dose { resize: none; min-height: 34px; field-sizing: content; max-height: 120px; overflow-y: auto; font-family: inherit; line-height: 1.4; padding-top: 7px; padding-bottom: 7px; }
   #pharmacyPage .ph-supp-item.on { flex-basis: 100%; }
   /* her ask (2026-08-14): row density -- the Zero/Low/Phasing/Stopped/Snoozed
      listing (#phListing) had no width of its own (100% of #phInvWidget) and
@@ -40559,6 +40564,11 @@ or changing anything in Cliniko.
       r.readAsDataURL(blob);
     });
   }
+  // the inverse -- used only by backup restore (below), turning a backup
+  // file's renPhotos dataUrls back into Blobs for phRenPhotoPut.
+  function phRenDataUrlToBlob(dataUrl) {
+    return fetch(dataUrl).then(r => r.blob());
+  }
 
   // ---- Supabase relay (phone -> cloud -> desktop, self-cleaning) --------
   const PH_REN_BUCKET = "ren-photo-inbox";
@@ -46821,7 +46831,7 @@ or changing anything in Cliniko.
       const on = !!(st && st.on);
       return `<div class="ph-supp-item${on ? " on" : ""}">
         <button type="button" class="ph-ck-chip${on ? " on" : ""}" data-supp-toggle="${s.id}">${esc(s.name)}</button>
-        ${on ? `<input type="text" class="ph-cyc-in field-bare dose" data-supp-dose="${s.id}" value="${esc((st && st.dose) || s.dose)}" placeholder="dose" aria-label="${esc(s.name)} dose">` : ""}
+        ${on ? `<textarea class="ph-cyc-in field-bare dose" data-supp-dose="${s.id}" rows="1" placeholder="dose" aria-label="${esc(s.name)} dose">${esc((st && st.dose) || s.dose)}</textarea>` : ""}
       </div>`;
     }).join("")}</div>`;
   }
@@ -57673,7 +57683,10 @@ Dosage: {dosage}
     // key, never inside `data` (the restore path writes every key in `data`
     // straight back to localStorage; nesting base64 photos in there would
     // resurrect the exact quota problem they were moved out of localStorage
-    // to avoid). Restore doesn't read this key back yet -- export-only for now.
+    // to avoid). The FILE-restore path below reads this key back in;
+    // on-device auto-backup snapshots never carried photos in the first
+    // place (they only ever stored .ph/.pr), so that restore path is
+    // unaffected and stays photo-less.
     let renPhotos = [];
     try {
       const raw = await phRenPhotoGetAll();
@@ -57746,13 +57759,13 @@ Dosage: {dosage}
       return out;
     }
   };
-  let phPendingRestore = null;    // {data, norm, label} awaiting her section choice in the panel
-  function phApplyRestoredData(data, sourceLabel) {
+  let phPendingRestore = null;    // {norm, label, photos} awaiting her section choice in the panel
+  function phApplyRestoredData(data, sourceLabel, photos) {
     // no more one-shot full overwrite behind a confirm() -- stage it, and let
     // the panel show WHAT changes per section before anything is touched
     const norm = {};
     Object.keys(data).forEach(k => { const v = data[k]; if (v != null) norm[k] = typeof v === "string" ? v : JSON.stringify(v); });
-    phPendingRestore = { norm, label: sourceLabel };
+    phPendingRestore = { norm, label: sourceLabel, photos: Array.isArray(photos) ? photos : [] };
     phRenderRestorePanel();
   }
   function phRestoreChooserHtml() {
@@ -57767,6 +57780,7 @@ Dosage: {dosage}
       ${row("phRestSecPresc", "Prescriptions", a.presc, b.presc)}
       ${row("phRestSecInv", "Inventory, settings &amp; patient records", a.herbs == null ? null : `${a.herbs} herbs · ${a.patients} patient records`, b.herbs == null ? null : `${b.herbs} herbs · ${b.patients} patient records`)}
       ${row("phRestSecLog", "Dispense/stock log", a.log, b.log)}
+      ${phPendingRestore.photos.length ? `<label class="ph-restore-row" style="gap:8px;cursor:pointer"><input type="checkbox" id="phRestSecPhotos" checked> <span style="flex:1">Patient photos</span><span style="color:var(--ph-soft);font-size:12px">${phPendingRestore.photos.length} in backup</span></label>` : ""}
       <div style="display:flex;gap:8px;margin-top:8px">
         <button type="button" id="phRestGo" class="ph-restore-close" style="flex:1">Restore ticked sections</button>
         <button type="button" id="phRestCancel" class="ph-restore-close" style="flex:1">Cancel</button>
@@ -57777,9 +57791,10 @@ Dosage: {dosage}
       prescriptions: !!(document.getElementById("phRestSecPresc") || {}).checked,
       inventory: !!(document.getElementById("phRestSecInv") || {}).checked,
       log: !!(document.getElementById("phRestSecLog") || {}).checked,
+      photos: !!(document.getElementById("phRestSecPhotos") || {}).checked,
     };
     const pending = phPendingRestore; phPendingRestore = null;
-    if (!pending || (!ch.prescriptions && !ch.inventory && !ch.log)) { phRenderRestorePanel(); return; }
+    if (!pending || (!ch.prescriptions && !ch.inventory && !ch.log && !ch.photos)) { phRenderRestorePanel(); return; }
     // The safety copy is best-effort and must NEVER be able to block the
     // restore (2026-09-09). Measured live while putting her Acupreg clinic
     // back: phDownloadBackupFile() stopped resolving -- it awaits turning
@@ -57794,7 +57809,7 @@ Dosage: {dosage}
     Promise.race([
       phDownloadBackupFile("before-restore").then(() => true, () => false),
       new Promise(r => setTimeout(() => r("timeout"), 8000)),
-    ]).then(res => { safetyOk = res === true; }).then(() => {
+    ]).then(res => { safetyOk = res === true; }).then(async () => {
       if (!safetyOk) phFlashShow("⚠ Couldn't download the safety copy first — restoring anyway. Use ⬇ Back up data afterwards.");
       // her report 2026-08-15: this used to call localStorage.setItem() with
       // no try/catch at all. When the on-device auto-backup keys (below) had
@@ -57824,6 +57839,23 @@ Dosage: {dosage}
         phShowRestoreQuotaError(e);
         phRenderRestorePanel();
         return;
+      }
+      // photos live in IndexedDB, entirely separate from the localStorage
+      // writes above -- her spec's merge policy for phRenPhotoPut elsewhere
+      // (e.g. patient merge, line ~52086) is upsert-by-id, so this reuses
+      // that same behaviour rather than inventing a new one: a photo already
+      // on this device with the same id is overwritten, everything else is
+      // added. Raced against a timeout like the safety copy above (2026-09-
+      // 09 lesson) -- a big photo set must never leave "Restore ticked
+      // sections" looking like it silently did nothing.
+      if (ch.photos && pending.photos.length) {
+        const photosOk = await Promise.race([
+          Promise.all(pending.photos.map(p => phRenDataUrlToBlob(p.dataUrl).then(blob =>
+            phRenPhotoPut({ id: p.id, patientKey: p.patientKey, kind: p.kind, mime: p.mime, createdAt: p.createdAt, blob })
+          ))).then(() => true, () => false),
+          new Promise(r => setTimeout(() => r(false), 15000)),
+        ]);
+        if (!photosOk) phFlashShow("⚠ Photos didn't finish restoring in time — the rest of the restore completed; run Restore again if any photos are still missing.");
       }
       // a restore may legitimately shrink a section -- tell the sync layer's
       // shrink bodyguard this ONE push is deliberate, not a bad read
@@ -57941,7 +57973,7 @@ Dosage: {dosage}
       if (!data || typeof data !== "object" || !Object.keys(data).some(k => k.startsWith("daybook"))) {
         return phFlashShow("⚠ That doesn't look like an LCM - Linh Chinese Medicine backup file.");
       }
-      phApplyRestoredData(data, `the file "${f.name}"`);
+      phApplyRestoredData(data, `the file "${f.name}"`, Array.isArray(backup.renPhotos) ? backup.renPhotos : []);
     });
   });
 
