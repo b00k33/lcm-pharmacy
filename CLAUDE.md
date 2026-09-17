@@ -3599,3 +3599,43 @@ taken on the audit's word.
 
 Version bump: `lcm-build` `20260917-090000`, `sw.js` cache `-11`. Shipped
 `5b74375` on `session-a`.
+
+### Batch 12 — Dosage & Price panel onto the shared type-scale tokens
+
+Smallest batch yet: 1 built, 5 closed as already-resolved, 1 deferred after
+turning out to be a much bigger job than described. The select+verify
+discipline keeps earning its keep — 5 of 7 candidates this round were
+already shipped (plan-creation savePharmacy() guard, the desktop 1-day List
+day-head, the Appointments grid start-hour, the header→toolbar gap, the
+launch.json/static-server fix), each independently re-confirmed dead
+against current source rather than taken on the audit's word.
+
+- **Dosage & Price panel's remaining hardcoded font sizes moved onto the
+  shared `--fs-*` tokens** — the grams label (13px → `--fs-name`), the
+  herbs-off note (12px → `--fs-body`), the case-type pills (11px →
+  `--fs-meta`), the per-day-dose inline note (10.5px → `--fs-micro`). Most
+  of the panel already used these tokens; this closes the last 4 gaps.
+  **Caught and fixed a stale comment while here**: the tokens' own doc
+  comment claimed "ONE set of steps, used ONLY on the Dashboard" — grepping
+  `var(--fs-` turned up 140+ live uses across Refill, Stocktake, the shell
+  titlebar, and more, so that constraint was already long abandoned in
+  practice. Left the "ONE set of steps" half (still true) and corrected the
+  "Dashboard only" half rather than leaving future readers to trust a
+  comment the codebase itself has been ignoring for weeks.
+- **Deferred, not built: per-column drag-to-reorder on the To Order desktop
+  sheet.** Looked like "wire the existing drag engine onto a 3rd table" —
+  the same engine already powers Inventory's real `<table>` and Restock's
+  CSS-grid cards. Reading the actual row markup found four different
+  row-shape functions (`osRow` for live to-order/ordered rows, with full
+  independent cells; `osArrivedRow` and `osLowRow`, which each collapse the
+  Level/Size/Bottle/Total group into ONE `colspan="3"` info cell; `osSupRow`,
+  the supplier group header, with its own `colspan="5"`/`colspan="4"` split)
+  — genuine column reordering would mean rebuilding all four consistently to
+  expose the same independently-addressable cells, not a mechanical
+  attribute copy. This is the same shape of trap the original
+  `toorder_col_drag` backlog item turned out to be (Batch 7's correction) —
+  sized for its own properly-scoped future batch rather than rushed into a
+  live ordering-workflow table.
+
+Version bump: `lcm-build` `20260917-100000`, `sw.js` cache `-12`. Shipped
+`d5fcb40` on `session-a`.
