@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260917-130000">
+<meta name="lcm-build" content="20260917-140000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -22369,8 +22369,20 @@
   // one column per overlapping appointment (rare for a solo practitioner,
   // but a same-day pre/post embryo-transfer double-booking, see
   // phApptEtLabel, genuinely can overlap) -- a simple greedy column packer,
-  // not a fully general calendar scheduler: good enough for the 2-wide case
-  // that actually happens here, not built to handle deep nested overlaps.
+  // not a fully general calendar scheduler.
+  // batch 18 (her "go ahead with overlapping appointments 3+"): the "of"
+  // (how many columns to split the row into) used to come from each item's
+  // OWN direct-overlap set only, so two blocks sharing the same visual
+  // cluster only through a third item -- A overlaps B, B overlaps C, but A
+  // and C don't touch -- could disagree about the cluster's column count
+  // (e.g. C alone, unaware of D who only overlaps A, would render at a
+  // different width than the cluster it visually belongs to). Never a
+  // collision (a block's own greedy column is always inside its own overlap
+  // set, so it can't render past its own "of"), just an inconsistent width
+  // within one group once a third or fourth block joins. Union-find over
+  // direct overlaps groups every item into its real cluster first, then
+  // every item in that cluster shares ONE column count -- how every other
+  // calendar (Cliniko included) lays out a 3+-way overlap.
   function phApptCalDayBlocks(dayKey) {
     const toMin = t => { const [h, m] = (t || "0:00").split(":").map(Number); return (h || 0) * 60 + (m || 0); };
     const items = phApptFor(dayKey).map(a => {
@@ -22384,10 +22396,20 @@
       colEnds[ci] = it.end;
       it.col = ci;
     });
-    items.forEach(it => {
-      const overlapping = items.filter(o => o.start < it.end && o.end > it.start);
-      it.of = Math.max(...overlapping.map(o => o.col)) + 1;
+    const parent = items.map((_, i) => i);
+    const find = i => { while (parent[i] !== i) { parent[i] = parent[parent[i]]; i = parent[i]; } return i; };
+    const union = (i, j) => { const ri = find(i), rj = find(j); if (ri !== rj) parent[ri] = rj; };
+    for (let i = 0; i < items.length; i++) {
+      for (let j = i + 1; j < items.length; j++) {
+        if (items[i].start < items[j].end && items[i].end > items[j].start) union(i, j);
+      }
+    }
+    const clusterMaxCol = {};
+    items.forEach((it, i) => {
+      const r = find(i);
+      clusterMaxCol[r] = Math.max(clusterMaxCol[r] == null ? 0 : clusterMaxCol[r], it.col);
     });
+    items.forEach((it, i) => { it.of = clusterMaxCol[find(i)] + 1; });
     return items;
   }
   function phApptCalBlockStyle(it) {
