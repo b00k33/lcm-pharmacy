@@ -3797,3 +3797,59 @@ unambiguous gate:none pool is close to exhausted, not a run of bad luck.
 If Batch 17 also comes back empty, that's three in a row and worth
 pausing the automatic batch-to-batch cycle to report back rather than
 continuing to spend agent effort re-discovering the same settled ground.
+
+### Batch 17 — third zero-candidate batch in a row; AUTO-BATCHING PAUSED
+
+The Select phase couldn't find a single genuinely fresh, small, safe,
+independently-verifiable gate:none candidate at all — every item that
+looked promising on a first read was cross-checked directly against this
+file's own changelog and confirmed already shipped in a specific earlier
+batch (screenAuth/clearLocalData → Batch 9; presPhaseFillFromPlan's phase
+resolver → live at line 45431; Custom-Days follow-up warning → 2026-08-25,
+reconfirmed Batch 9; new-draft green-band/chevron → Batch 9; Appointments
+grid empty-morning-hours default → synth22 batch #3, reconfirmed Batches 7
+and 16; Communications "+ New template" → Batch 10; migration-flag
+cloud-sync exclusion → Batch 10; backup-restore photos → Batch 11;
+Dosage & Price remaining font tokens → Batch 12; dead phDsRowMode/
+phDashWeekLabel/zoneGo → Batch 13; info-letter letterhead address →
+Batch 14).
+
+Everything else still nominally gate:"none" in the audit turns out, on
+closer read, to fall into one of these buckets rather than being a real
+small-and-safe pick:
+- **Repeat false premises** (3rd time now): the Communications ellipsis/
+  pill CSS "fix" for Dashboard/Refill/Log, and the Suppliers/patient-list
+  flex-action-cell recheck — both closed as non-issues in Batches 3, 8/9,
+  and again this round. Worth a source-memory correction so they stop
+  resurfacing (see below).
+- **Conditional on something that hasn't happened yet** — e.g. items
+  gated on the shared-origin storage quota actually being hit, or a third
+  density complaint arriving — not buildable in a vacuum.
+- **Mis-scoped as small when they're real feature builds** — a genuine
+  patient-directory view, a letter-template redesign, and To-Order's
+  per-column drag-to-reorder (Batch 12 already found this needs 4
+  incompatible row-shape functions rebuilt, not a wire-up).
+- **Touches the fragile sync/relay subsystem** — the two-computer relay
+  race and the shrink-window timing fix, both explicitly declined-to-rush
+  in Batch 10 given this project's real incident history (Rx wipe,
+  Acupreg merge/wipe, patients shrink-guard).
+- **Says gate:"none" but its own item text asks to check with her first**
+  — a labelling inconsistency in the original audit triage, not a real
+  green light.
+
+**This is the third consecutive zero-buildable batch (15, 16, 17) — the
+easy, unambiguous gate:none pool is exhausted, not a run of bad luck.**
+Per the plan set out after Batch 16, the automatic batch-to-batch cycle
+STOPS here. What's left in the ~83-item count is either genuine feature
+work that deserves its own scoped, individually-reviewed batch (not a
+6-candidate sweep), work gated on a precedent conflict or a future event,
+or work that's actually blocked on her decision despite being mislabelled
+gate:"none" in the original triage. Continuing to run the same
+select+verify shape from here would mostly re-spend agent effort
+re-confirming settled ground rather than finding new safe wins.
+
+**Housekeeping worth doing at some point (not urgent, no code involved):**
+`project_pharmacy_communications_accuracy_pass.md` and
+`project_pharmacy_table_cell_traps.md` are each now 3-for-3 stale across
+independent re-verifications — a quick correction pass on those two files
+would stop them resurfacing in any future audit re-run.
