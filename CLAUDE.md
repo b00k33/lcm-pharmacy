@@ -3545,3 +3545,57 @@ launch).
 
 Version bump: `lcm-build` `20260916-210000`, `sw.js` cache `-10`. Shipped
 `bb0e32c` on `session-a`.
+
+### Batch 11 — backup restore reads photos back, supplement dose textarea wraps instead of truncating
+
+The select+verify pass this round found only 2 of 8 candidates genuinely
+buildable — the other 6 all turned out to already be shipped in earlier
+batches, described from an audit snapshot that's now stale in several
+places (presNotesOpen, presThirdOpen, the Appointments header→toolbar gap,
+the week/day grid start-hour, the intake name datalist sweep, and a
+"missing neurological template" that in fact already has three). Each was
+independently re-verified against current source before being dropped, not
+taken on the audit's word.
+
+- **Backup restore now reads patient photos back in.** Export has included
+  every Ren photo (as base64 `renPhotos`) since the feature shipped, but the
+  restore/import path only ever read `backup.data` and silently dropped
+  `backup.renPhotos` — a device restored from a file backup would come back
+  with prescriptions/inventory/log intact but every tongue/face photo gone,
+  with no warning. Fixed only on the file-restore path (`phRestoreFileInput`
+  → `phApplyRestoredData` → `phRestoreChooserHtml` → `phDoSectionRestore`) —
+  on-device automatic snapshots never captured photos in the first place
+  (confirmed by grep: they only ever store the `.ph`/`.pr` keys), so that
+  path is unaffected. The chooser gets a 4th ticked-by-default row
+  ("Patient photos — N in backup") only when the loaded file actually
+  carries any. On restore, each entry's dataUrl converts back to a Blob
+  (`phRenDataUrlToBlob`, the plain inverse of the existing
+  `phRenBlobToDataUrl`) and writes via `phRenPhotoPut` — reusing its
+  existing upsert-by-id merge policy from elsewhere (patient merge) rather
+  than inventing a new one, since that's a real product decision this batch
+  didn't need to make fresh. Raced against a 15s timeout, matching the
+  pre-restore safety-copy's own race pattern, so a large photo set can
+  never repeat the exact 2026-09-09 "silent no-op" shape (a hung await with
+  nothing downstream ever running). Sandbox-verified end-to-end through the
+  real functions: a synthetic dataURL round-tripped through
+  `phRenDataUrlToBlob` → `phRenPhotoPut` → `phRenPhotoGetAllForPatient` and
+  came back byte-correct; `phApplyRestoredData` with a synthetic 2-photo
+  backup correctly populated the chooser's new row ("2 in backup"), and a
+  photo-less on-device-backup call confirmed the row stays absent exactly
+  as before.
+- **Supplement dose field is a wrapping `<textarea>` now, not a single-line
+  `<input>`** — a long dose note (e.g. Iron's) used to scroll sideways
+  inside the box on a 375px phone with no way to read the rest without
+  clicking in, even though the "on" chip already reserves a full row for
+  it (a 2026-09-05 fix that widened the row but never touched the control
+  itself). Same `field-sizing: content` graceful-degrade idiom already
+  used for the check-in message box (`.ph-ck-msg`) — grows on browsers that
+  support it (her phone is on Chrome 138, well past the 123+ floor), a
+  sensible `min-height` fallback everywhere else. The existing delegated
+  save handler reads `t.value`, unchanged by the input→textarea swap (same
+  DOM API). Sandbox-verified via the real `phSuppEditorHtml(rec)` render: a
+  120-character dose string produces a `<textarea>` containing the full
+  text as content, not a truncating `value=` attribute.
+
+Version bump: `lcm-build` `20260917-090000`, `sw.js` cache `-11`. Shipped
+`5b74375` on `session-a`.
