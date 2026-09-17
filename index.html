@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260918-090000">
+<meta name="lcm-build" content="20260918-100000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -7592,6 +7592,14 @@
   #pharmacyPage .ph-tp-grid td.ph-tp-reccell.notyet { vertical-align: middle; background: var(--ph-paper, #F4F7F8); }
   #pharmacyPage .ph-tp-grid td.ph-tp-reccell.notyet b { display: block; color: var(--ph-soft); font-weight: 700; margin-bottom: 3px; }
   #pharmacyPage .ph-tp-grid td.ph-tp-reccell.notyet .d { display: block; color: var(--ph-faint); font-size: 11.5px; line-height: 1.5; }
+  /* her ask 2026-09-18: the acu-log ("Today's visit") now renders straight
+     inside this cell instead of below the whole plan block, so the
+     .ph-acu-open card styling built for sitting under an accordion header
+     (negative top margin, no top border, square top corners) needs
+     resetting here -- otherwise it would visually overlap the row above by
+     8px inside a table cell that has no such header to pull up against. */
+  #pharmacyPage .ph-tp-grid td.ph-tp-reccell.todaysvisit { vertical-align: top; padding: 0; background: var(--ph-white); }
+  #pharmacyPage .ph-tp-grid td.ph-tp-reccell.todaysvisit .ph-acu-open { margin-top: 0; border: none; border-radius: 0; padding: 10px 12px; }
   /* a closed phase's plan is frozen -- it still reads, it just stops inviting */
   #pharmacyPage .ph-tp-grid td.ph-tp-cell.frozen { cursor: default; }
   #pharmacyPage .ph-tp-grid td.ph-tp-cell.frozen:hover { background: none; }
@@ -27954,14 +27962,6 @@
         }
         renderPresPanel(); return;
       }
-      if (e.target.closest("[data-pres-acu-toggle]")) {
-        presAcuOpen = !presAcuOpen; presAcuOutcomeDraft = null;
-        presAcuPhaseId = null; presAcuHerbInstruct = false;
-        presAcuPointsChecked = null; presAcuPressChecked = null; presAcuWatchChecked = [];
-        presAcuPointsCustom = []; presAcuPointsAdding = false;
-        presAcuInstructFormula = null; presAcuInstructPickerOpen = false; presAcuNoTreatment = false; presAcuNoTreatStash = null;
-        phVisitFndResetDraft(); renderPresPanel(); return;
-      }
       // ---- Bell's palsy checklist ----
       // The thirteen SCORE taps deliberately do not re-render the whole
       // panel: they repaint the one group they belong to and the two
@@ -28118,7 +28118,22 @@
           // visit ends up filed under; discarding typed text on an override
           // tap would be the exact bug presAcuOpenRefresh's carry-forward
           // logic exists to prevent everywhere else in this panel.
-          presAcuOpenRefresh();
+          // her review-caught bug 2026-09-18: on the Grid, this editor is
+          // now EMBEDDED inside whichever phase's own row is being treated
+          // (phTpPhaseBodyRows' showTodaysVisit) -- a plain presAcuOpenRefresh()
+          // only patches the acu-log div itself in place, leaving it sitting
+          // inside the OLD phase's row next to that phase's own Planned
+          // (Aim/Visits/Formula/Points/Watch) cells while now showing the
+          // NEW phase's suggestions -- the exact "Planned beside What
+          // happened" comparison this Grid exists for ends up comparing two
+          // different phases. Following the tab to the overridden phase (or
+          // back to the calendar phase, on tapping it again to clear the
+          // override) and repainting the whole phase panel keeps the merged
+          // cell and its Planned-column neighbours on the SAME phase,
+          // always -- same fix as every other phase-editing handler already
+          // uses phTpRepaintPhasePanel() for.
+          if (ctx.activePlan) phTpTabPhase.set(ctx.activePlan.id, presAcuPhaseId || (ctx.calendarPhase && ctx.calendarPhase.id) || null);
+          phTpRepaintPhasePanel();
         }
         return;
       }
@@ -35407,7 +35422,7 @@ or changing anything in Cliniko.
     presNameOpen = false; presHistOpen = false; presMedHxOpen = false;
     presTreatOpen = false; presHistMoreOpen = false;
     presTpInlinePlanId = null; presTpInlineNew = false; presTpInlineLoose = false;
-    presAcuOpen = false; presAcuOutcomeDraft = null;
+    presAcuOutcomeDraft = null;
     presAcuPhaseId = null; presAcuHerbInstruct = false;
     presAcuPointsChecked = null; presAcuPressChecked = null; presAcuWatchChecked = [];
     presAcuPointsCustom = []; presAcuPointsAdding = false;
@@ -44084,20 +44099,19 @@ or changing anything in Cliniko.
     </div>`;
   }
   function presStageTreatmentHtml(t) {
-    // the acu-log panel lives inside the open plan's Grid, always visible
-    // when a phase is open (her 2026-09-17 ask retired the old toggle) --
-    // her round-2 pick 2026-09-10 first folded it in there. Her
-    // 2026-09-14 ask (synth22 #1) went further: the two collapsed banners
-    // ("🔗 Acupuncture · no sessions logged" above "🗂 Treatment plan · …")
-    // stacked even before either was opened, which read as one clinical
-    // record split in two. Once a plan exists at all, its own row now
-    // carries the acu summary too (presTreatmentRowHtml, above), so the
-    // standalone row only shows for a patient with acu enabled but no plan
-    // yet to fold into -- nothing else has anywhere to put that information.
-    const hasPlan = !!presTpActivePlanFor(presPatientFor(t));
+    // the acu-log now lives ONLY embedded inside the Grid's own phase row
+    // for whichever phase is actually being treated today (her ask
+    // 2026-09-18, "remove the panel everywhere" -- the old standalone
+    // accordion for a plan-less patient duplicated the same record a real
+    // plan's Grid already shows). Every patient reaches this stage with at
+    // least one plan (the no-plan gate, decision 3), so there is always a
+    // Grid to fold into; the narrow edge case of a patient whose only
+    // plan(s) are all paused/done rather than active is left without an
+    // acu-log surface here rather than reintroducing a second, disconnected
+    // place to log a session -- her plan-first architecture already treats
+    // that case as "start a new plan", not "log against nothing".
     return `<div class="ph-pres-stage-body">
       ${presConstitutionSuggestHtml(t)}
-      ${hasPlan ? "" : presAcuRowHtml(t)}
       ${presTreatmentRowHtml(t)}
     </div>`;
   }
@@ -47349,9 +47363,10 @@ or changing anything in Cliniko.
       // plan log to be separate"): once there IS a plan to fold into,
       // presStageTreatmentHtml hides the standalone Acupuncture banner --
       // this carries what that banner used to say, so nothing goes missing
-      // while collapsed. Deliberately NOT read off the Grid's own acu-log
-      // panel: that one is a live editable draft (presAcuOpenHtml), reacts
-      // to presAcuOpen state, and doesn't belong on a collapsed summary line.
+      // while collapsed. Deliberately NOT read off the Grid's own embedded
+      // "Today's visit" editor (presAcuOpenHtml): that is a live editable
+      // draft tied to whichever phase is current, and doesn't belong on a
+      // collapsed summary line.
       const acuRec = phPatientRec(name);
       if (acuRec.acuEnabled) {
         const acuSessions = (acuRec.acuSessions || []).slice().sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.at || 0) - (a.at || 0));
@@ -47422,25 +47437,6 @@ or changing anything in Cliniko.
       });
     return out;
   }
-  function presAcuRowHtml(t) {
-    const name = presPatientFor(t);
-    if (!name) return "";
-    const rec = phPatientRec(name);
-    if (!rec.acuEnabled) return "";
-    const sessions = (rec.acuSessions || []).slice().sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.at || 0) - (a.at || 0));
-    const last = sessions[0];
-    const outLabel = o => o === "better" ? "✓ better" : o === "worse" ? "⚠ worse" : o === "same" ? "· same" : "";
-    const lead = last
-      ? `🪡 Acupuncture · last: ${last.noTreatment ? "herbs only" : esc(last.phaseLabel || "session")}, ${esc(phShortDate(last.date))}${last.outcome ? ` · ${outLabel(last.outcome)}` : ""}`
-      : `🪡 Acupuncture · no sessions logged`;
-    return `<div class="ph-treat-row-wrap">
-      <button type="button" class="ph-treat-row ph-hx-row ${last ? "hasanswers" : "notstarted"}" data-pres-acu-toggle="1" aria-expanded="${presAcuOpen ? "true" : "false"}">
-        <span class="ph-hx-lead">${lead}</span>
-        <span class="ph-hx-action ph-treat-chev">${presAcuOpen ? "▾" : "▸"}</span>
-      </button>
-      ${presAcuOpen ? presAcuOpenHtml(name, sessions) : ""}
-    </div>`;
-  }
   // 🌱 natural-cycle visit redesign (her synth22 ask 2026-09-17, mocks v1-4,
   // "ok build"): the acu-log gains an auto-computed calendar phase she can
   // reasonedly override for one visit, a distinct press-tag points field, a
@@ -47456,15 +47452,35 @@ or changing anything in Cliniko.
     return String(text || "").split(/[;,]/).map(s => s.trim()).filter(Boolean).map(s => s.charAt(0).toUpperCase() + s.slice(1));
   }
   // one place to re-derive "who/which plan/which phase" for every acu-log
-  // click handler, re-read from presOpenId every time rather than trusted
-  // from a render-time closure -- same reason data-pres-acu-log always did.
-  function presAcuCtx() {
-    const t = PRESC.items.find(x => x.id === presOpenId);
-    const name = t && presPatientFor(t);
+  // click handler, re-read every time rather than trusted from a
+  // render-time closure -- same reason data-pres-acu-log always did.
+  // her review-caught bug 2026-09-18: this used to ALWAYS resolve off
+  // presOpenId (whichever script panel happens to be open), which is a
+  // different piece of state than the Grid's own phTpScreenPatient/
+  // phTpScreenPlanId -- they agree on the inline Plan-tab path (which sets
+  // both together) but disagree the moment a plan is opened from anywhere
+  // else with no script open (e.g. the Appointments popup's "Open this
+  // treatment plan" link), silently hiding the embedded "Today's visit"
+  // editor forever on that path. Now: an explicit override always wins
+  // (phTpPhaseBodyRows passes phTpScreenPatient/plan.id, since THAT is the
+  // identity actually on screen); failing that, the identity is read off
+  // the rendered `.ph-acu-open` box itself (every click handler below fires
+  // from inside it, so this is always the SAME identity that box was drawn
+  // with, however it got there); only with neither does this fall back to
+  // presOpenId, for the one legitimate case that never has a `.ph-acu-open`
+  // box at all yet (the pre-Save button state doesn't need this, but
+  // keeping the fallback costs nothing and keeps old callers working).
+  function presAcuCtx(nameOverride, planIdOverride) {
+    const wrap = document.querySelector(".ph-acu-open");
+    const name = nameOverride || (wrap && wrap.dataset.acuName) || (() => {
+      const t = PRESC.items.find(x => x.id === presOpenId);
+      return t && presPatientFor(t);
+    })();
     if (!name) return null;
     const rec = phPatientRec(name);
     const plans = phTpPlans(name);
-    const activePlan = plans.find(p => p.status === "active") || plans[0];
+    const wantPlanId = planIdOverride || (wrap && wrap.dataset.acuName === name && wrap.dataset.acuPlan);
+    const activePlan = (wantPlanId && plans.find(p => p.id === wantPlanId)) || plans.find(p => p.status === "active") || plans[0];
     // her ask 2026-09-17: "automatically count cd and adjust to the phase
     // with each appointment" -- phTpCycleEffectivePhase already computes
     // this live from the cycle day, it was just never used to drive what
@@ -47479,10 +47495,11 @@ or changing anything in Cliniko.
   function presAcuOpenRefresh() {
     const wrap = document.querySelector(".ph-acu-open");
     if (!wrap) return;
-    const t = PRESC.items.find(x => x.id === presOpenId);
-    const name = t && presPatientFor(t);
-    if (!name) return;
-    const rec = phPatientRec(name);
+    // read identity off this exact box, not off presOpenId -- see the
+    // comment on presAcuCtx above.
+    const ctx = presAcuCtx();
+    if (!ctx) return;
+    const { name, rec, activePlan } = ctx;
     const sessions = (rec.acuSessions || []).slice().sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.at || 0) - (a.at || 0));
     // a phase/points/press/herb/mucus/watch tap re-renders this whole block,
     // which would otherwise silently wipe anything she's mid-typing into the
@@ -47492,7 +47509,7 @@ or changing anything in Cliniko.
     const carry = {};
     wrap.querySelectorAll("input[id]").forEach(inp => { carry[inp.id] = inp.value; });
     const tmp = document.createElement("div");
-    tmp.innerHTML = presAcuOpenHtml(name, sessions);
+    tmp.innerHTML = presAcuOpenHtml(name, sessions, { planId: activePlan && activePlan.id });
     const next = tmp.firstElementChild;
     if (!next) return;
     // the points/press free-text field itself changes id between chip-mode
@@ -47513,9 +47530,17 @@ or changing anything in Cliniko.
     });
     wrap.replaceWith(next);
   }
-  function presAcuOpenHtml(name, sessions) {
+  function presAcuOpenHtml(name, sessions, opts) {
+    opts = opts || {};
     const plans = phTpPlans(name);
-    const activePlan = plans.find(p => p.status === "active") || plans[0];
+    // her review-caught bug 2026-09-18: a patient can genuinely have TWO
+    // plans both marked "active" at once (she runs concurrent courses on
+    // purpose -- see phTpApplyInterrupt's own comment) -- picking "the"
+    // active plan by array order alone permanently pinned this editor to
+    // whichever plan was created first, no matter which plan's Grid is
+    // actually on screen. An explicit planId (passed by every caller that
+    // knows which plan it's rendering) always wins.
+    const activePlan = (opts.planId && plans.find(p => p.id === opts.planId)) || plans.find(p => p.status === "active") || plans[0];
     const rec = phPatientRec(name);
     const calendarPhase = activePlan ? (phTpCycleEffectivePhase(rec, activePlan) || phTpPlanCurrentPhase(activePlan)) : null;
     const phaseChoices = activePlan ? (activePlan.phases || []) : [];
@@ -47578,7 +47603,7 @@ or changing anything in Cliniko.
         ${watchChips.map(w => `<button type="button" class="ph-ck-chip${presAcuWatchChecked.includes(w) ? " on" : ""}" data-pres-acu-watch="${esc(w)}">${esc(w)}</button>`).join("")}
       </div>` : "";
 
-    return `<div class="ph-acu-open">
+    return `<div class="ph-acu-open" data-acu-name="${esc(name)}" data-acu-plan="${activePlan ? activePlan.id : ""}">
       <div class="ph-acu-notreat">
         <button type="button" class="ph-acu-notreat-toggle${presAcuNoTreatment ? " on" : ""}" data-pres-acu-notreat="1" aria-pressed="${presAcuNoTreatment ? "true" : "false"}">${presAcuNoTreatment ? "✓ Herbs only — no acupuncture today" : "No acupuncture today?"}</button>
       </div>
@@ -47803,16 +47828,24 @@ or changing anything in Cliniko.
     // strip surfaces here, above the tabs, where she can see it -- never
     // inside a menu that has just closed.
     const rec = phPatientRec(name);
-    // her ask 2026-09-17: "i wanted it to replace the current treatment plan
-    // display", not sit behind a "log one ›" toggle -- the acu-log panel now
-    // renders unconditionally whenever she's tracking acupuncture for this
-    // patient, same as every other always-visible block in `inner` below.
-    // presAcuOpen (the old open/closed flag) still drives presAcuRowHtml,
-    // the SEPARATE standalone accordion shown when there's no plan at all
-    // (no Grid to fold into there) -- untouched by this change.
+    // her ask 2026-09-18 ("this is meant to replace / or to merge" -- the
+    // acu-log panel and the Grid's own "not written up yet" visit row were
+    // the same fact shown in two disconnected places): the acu-log no
+    // longer floats below the phase table in GRID mode at all -- it's
+    // embedded directly into whichever phase is actually being treated
+    // today (phTpPhaseBodyRows' showTodaysVisit branch, which reuses this
+    // exact presAcuOpenHtml markup so every existing handler/refresh still
+    // targets the same .ph-acu-open wrapper unchanged). It still floats
+    // here, in `acuLogBlock` below, ONLY for TIMELINE mode -- see
+    // phTpPlanBodyHtml -- since Timeline has no per-phase row to embed it
+    // into and would otherwise lose the ability to log a session at all.
+    // The old standalone accordion (presAcuRowHtml, shown when there was no
+    // plan at all to fold into) is gone -- her explicit "remove the panel
+    // everywhere".
     const acuSessions = rec && rec.acuEnabled
       ? (rec.acuSessions || []).slice().sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.at || 0) - (a.at || 0))
       : null;
+    const acuLogBlock = acuSessions ? presAcuOpenHtml(name, acuSessions, { planId: plan.id }) : "";
     // her synth22 ask 2026-09-15 ("this is not really useful because its
     // giving me info in 41 days. i want for this cycle. i also want this
     // positioned better in the treatment plan rather than above it"):
@@ -47831,7 +47864,6 @@ or changing anything in Cliniko.
     // presAcuOpenHtml already uses just above this scope
     const infoLtrScript = PRESC.items.find(x => x.id === presOpenId);
     const inner = `${phCycleVisitsHtml(rec, plan, name)}${phCyclePlanScheduleHtml(rec, plan, name)}
-      ${acuSessions ? presAcuOpenHtml(name, acuSessions) : ""}
       ${phTpAddPhaseHtml(plan)}
       ${phTpIvfTrackHtml(plan)}
       ${infoLtrScript ? `<div class="ph-tp-reviews">
@@ -47851,7 +47883,7 @@ or changing anything in Cliniko.
         ? `<div class="ph-confirm-strip"><span>Delete this whole plan? This can't be undone.</span><button type="button" class="btn-save" data-tp-plan-del-yes="${plan.id}">Delete plan</button><button type="button" class="btn-cancel" data-tp-plan-del-no="1">Cancel</button></div>`
         : ""}
       ${phTpPlanStrategyHtml(plan)}
-      ${phTpPlanBodyHtml(name, plan, inner)}
+      ${phTpPlanBodyHtml(name, plan, inner, acuLogBlock)}
     </div>`;
   }
   function presTpInlineOpen(name, planId) {
@@ -49091,7 +49123,8 @@ or changing anything in Cliniko.
      appointment) still gets its own row at the end -- nothing that used to
      be visible in the old Done cell disappears. */
   function phTpVisitsMergedHtml(ctx) {
-    const { name, plan, phase, frozen, rc } = ctx;
+    const { name, plan, phase, frozen, rc, hideToday } = ctx;
+    const todayKey = keyOf(TODAY);
     const st = phTpPhaseVisitStats(name, plan, phase);
     const prec = phPatientPeek(name);
     // her spec, unchanged from the old Done cell: "Newest visit open, earlier
@@ -49138,9 +49171,15 @@ or changing anything in Cliniko.
       const list = acuByDate.get(r.appt.date);
       const s = (list && list.length) ? list.shift() : null;
       const tag = r.excluded ? `<span class="ph-tp-vt-tag">excluded</span>` : r.future ? `<span class="ph-tp-vt-tag">booked</span>` : r.acute ? `<span class="ph-tp-vt-tag">🤧 acute</span>` : "";
+      // her ask 2026-09-18: when today's own visit is being actively edited
+      // above (the merged "Today's visit" panel, showTodaysVisit/hideToday),
+      // this row must not ALSO claim "not written up yet" -- that was the
+      // exact duplicate-fact she pointed at. The row itself stays (it's
+      // still a real, counted appointment), just says where to go instead.
+      const isEditingHere = hideToday && r.appt.date === todayKey && !s;
       const main = `<tr class="ph-tp-vt-row${r.excluded ? " off" : ""}${r.future ? " ahead" : ""}">
         <td class="ph-tp-vt-date" data-tp-visit-toggle="${plan.id}~${phase.id}~${esc(r.key)}" title="${r.excluded ? "Not counted for this phase — click to count it again" : "Counts as 1 treatment — click to leave it out"}"><b>${esc(phShortDate(r.appt.date))}</b><span>visit${tag}</span></td>
-        <td>${s ? (s.noTreatment ? `<span class="ph-tp-vt-chip herb">herbs only</span>` : chips(s.points)) : `<span class="ph-tp-vt-none">not written up yet</span>`}</td>
+        <td>${s ? (s.noTreatment ? `<span class="ph-tp-vt-chip herb">herbs only</span>` : chips(s.points)) : isEditingHere ? `<span class="ph-tp-vt-none">editing above ↑</span>` : `<span class="ph-tp-vt-none">not written up yet</span>`}</td>
         <td>${herbChip(phAcuHerbsOn(name, r.appt.date))}</td>
         <td>${s ? badge(s.outcome) : `<span class="ph-tp-vt-none">—</span>`}</td>
       </tr>`;
@@ -49392,7 +49431,7 @@ or changing anything in Cliniko.
   // the toggle between Option K's timeline and the phase-tab grid -- both
   // read/write the SAME plan, so switching never loses anything. Spine is
   // the default; the grid stays one click away for anyone used to it.
-  function phTpPlanBodyHtml(name, plan, extraInner) {
+  function phTpPlanBodyHtml(name, plan, extraInner, acuLogBlock) {
     // her ask 2026-09-14 (synth22 batch, #2): Grid is now the default view --
     // Timeline stays one click away for whoever prefers it, same as before
     const mode = phTpViewMode.get(plan.id) || "grid";
@@ -49400,8 +49439,12 @@ or changing anything in Cliniko.
       <button type="button" class="${mode === "spine" ? "on" : ""}" data-tp-view="${plan.id}:spine">Timeline</button>
       <button type="button" class="${mode === "grid" ? "on" : ""}" data-tp-view="${plan.id}:grid">Grid</button>
     </div>`;
+    // her ask 2026-09-18: in GRID mode the acu-log is embedded per-phase now
+    // (phTpPhaseBodyRows' showTodaysVisit branch) -- acuLogBlock is deliberately
+    // NOT appended here for that mode. Timeline has no per-phase row to embed
+    // it into, so it keeps floating below the spine exactly as before.
     if (mode === "grid") return `${toggle}${phTpTabbedHtml(plan, extraInner)}`;
-    return `${toggle}${phTpSpineHtml(name, plan)}${extraInner || ""}`;
+    return `${toggle}${phTpSpineHtml(name, plan)}${acuLogBlock || ""}${extraInner || ""}`;
   }
   /* ==== THE PHASE'S OWN DATES, TYPEABLE (her decision 6, 2026-09-10) =======
      Asked what should happen to an appointment that sits just BEFORE the day a
@@ -49569,6 +49612,30 @@ or changing anything in Cliniko.
        padlock on the phase line lets her back in for this session. */
     const frozen = phase.status === "done" && !phTpUnlockDone.has(phase.id);
     const rc = phTpPhaseRecord(phTpScreenPatient, phase, plan.createdDate);
+    // her ask 2026-09-18 ("this is meant to replace / or to merge" -- the
+    // acu-log panel and the Grid's own "not written up yet" visit row were
+    // the same fact shown in two disconnected places): whichever phase is
+    // actually being treated today shows "Today's visit" -- the acu-log's
+    // own editable fields (reusing presAcuOpenHtml verbatim, so every
+    // existing data-pres-acu-* handler and presAcuOpenRefresh's
+    // ".ph-acu-open" targeting keep working unchanged) -- instead of the
+    // gathered, read-only "What happened" every other phase still gets.
+    // Reuses presAcuCtx()'s own resolution (the calendar-computed phase, or
+    // her one-visit override) so this can never disagree with what "Log
+    // today's session" itself would treat as current -- one source, not two.
+    // her review-caught bug 2026-09-18: presAcuCtx() with no args resolves
+    // off presOpenId (whichever script panel happens to be open) or, absent
+    // that, off any `.ph-acu-open` box already in the DOM -- neither is
+    // guaranteed to be THIS phase's own patient/plan (e.g. no script open
+    // at all, reached via the Appointments popup's "Open this treatment
+    // plan" link). Passing phTpScreenPatient/plan.id explicitly ties the
+    // gate to the exact identity actually on screen for this render.
+    const peekRec = phPatientPeek(phTpScreenPatient);
+    const acuCtx = peekRec && peekRec.acuEnabled ? presAcuCtx(phTpScreenPatient, plan.id) : null;
+    const showTodaysVisit = !frozen && !!(acuCtx && acuCtx.activePlan && acuCtx.activePlan.id === plan.id && acuCtx.treatedPhase && acuCtx.treatedPhase.id === phase.id);
+    const acuSessionsForToday = showTodaysVisit
+      ? (peekRec.acuSessions || []).slice().sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.at || 0) - (a.at || 0))
+      : null;
     const cell = (f, extra) => frozen
       ? `<td class="ph-tp-cell frozen${phase[f] ? "" : " empty"}"${extra || ""} title="This phase is closed — unlock it on the phase line to edit">${phase[f] ? esc(phase[f]) : "—"}</td>`
       : `<td class="ph-tp-cell${phase[f] ? "" : " empty"}"${extra || ""} data-tp-edit="${plan.id}:${phase.id}:${f}" title="Click to edit">${phase[f] ? esc(phase[f]) : esc(PH_TP_FIELD_PH[f])}</td>`;
@@ -49579,11 +49646,33 @@ or changing anything in Cliniko.
        and it says out loud that this side fills itself in, which is the part
        that was not obvious from a column of empty-looking cells. */
     let recSpanned = false;
+    // her review-caught bug 2026-09-18: this cell always claimed
+    // rowspan="5", sized for 5 CALLS to rec() (Aim/Visits/Formula/Points/
+    // Watch) -- but those 5 calls land on 7 PHYSICAL <tr> rows, because the
+    // always-rendered Formula-action row and the Press-tags row sit between
+    // them and never call rec() at all. rowspan="5" only reached down to
+    // the Points row: the Formula-action row's own colspan="4" collided
+    // with the still-open span (its right two columns were already
+    // claimed), and the Watch row -- two rows past where the span had
+    // already ended -- lost its own right-hand cell entirely, since rec()'s
+    // 5th call still (wrongly) returned "" there. Fixed at both ends: the
+    // span now correctly counts and covers all 7 rows, and the
+    // Formula-action/Press-tags rows below narrow their OWN markup to the
+    // left two columns (matching every other row) instead of claiming
+    // columns the span already owns -- only while spanning; their normal,
+    // per-phase-record layout (a real gathered record, not today's visit or
+    // an unstarted phase) is untouched.
+    const spanning = showTodaysVisit || !rc;
     const rec = (label, kind) => {
+      if (showTodaysVisit) {
+        if (recSpanned) return "";
+        recSpanned = true;
+        return `<td class="ph-tp-reccell todaysvisit" colspan="2" rowspan="7">${presAcuOpenHtml(phTpScreenPatient, acuSessionsForToday, { planId: plan.id })}</td>`;
+      }
       if (rc) return `<td class="ph-tp-lbl mid rec">${label}</td><td class="ph-tp-reccell">${phTpRecordCellHtml(kind, rc, { name: phTpScreenPatient, plan, phase, frozen })}</td>`;
       if (recSpanned) return "";
       recSpanned = true;
-      return `<td class="ph-tp-reccell notyet" colspan="2" rowspan="5"><b>Nothing yet — this phase hasn’t started.</b><span class="d">This side fills itself in from your visits, scripts, check-ins and periods once the phase is current. You never type it.</span></td>`;
+      return `<td class="ph-tp-reccell notyet" colspan="2" rowspan="7"><b>Nothing yet — this phase hasn’t started.</b><span class="d">This side fills itself in from your visits, scripts, check-ins and periods once the phase is current. You never type it.</span></td>`;
     };
     // her pick (2026-09-08): a short chip, the suggestion as faint text beside it
     // her synth22 Stage D ask (2026-09-15): "Design formula" creates a REAL
@@ -49603,15 +49692,15 @@ or changing anything in Cliniko.
       : frozen ? `<span class="ph-tp-rec-none">—</span>`
       : `<button type="button" class="ph-tp-formula-chip design" data-tp-formula-design="${plan.id}:${phase.id}">✎ Design formula</button> <button type="button" class="ph-tp-formula-chip empty" data-tp-formula-pick-open="${plan.id}:${phase.id}">Link formula</button>${phase.suggestFormula ? `<span class="ph-tp-sugg">suggested: ${esc(phase.suggestFormula)}</span>` : ""}`;
     return phTpAcuteRowHtml(plan, phase) + `
-      <tr class="ph-tp-headrow"><td></td><td class="ph-tp-colhead plan">Planned</td><td></td><td class="ph-tp-colhead act">What happened</td></tr>
+      <tr class="ph-tp-headrow"><td></td><td class="ph-tp-colhead plan">Planned</td><td></td><td class="ph-tp-colhead act">${showTodaysVisit ? "Today’s visit" : "What happened"}</td></tr>
       <tr><td class="ph-tp-lbl">Aim</td>${cell("aim")}${rec("Outcome", "outcome")}</tr>
       <tr><td class="ph-tp-lbl">Visits</td>${cell("cadence")}${rec("Visits", "visits")}</tr>
       <tr><td class="ph-tp-lbl">Formula</td><td class="ph-tp-fcell">${formula}${picking ? phTpPhaseFormulaPickerHtml(phase) : ""}${phTpFormulaHistoryHtml(phase)}</td>${rec("Dispensed", "dispensed")}</tr>
-      <tr class="ph-tp-factionrow"><td colspan="4">${phTpFormulaActionHtml(phase, frozen)}</td></tr>
+      <tr class="ph-tp-factionrow">${spanning ? `<td colspan="2">${phTpFormulaActionHtml(phase, frozen)}</td>` : `<td colspan="4">${phTpFormulaActionHtml(phase, frozen)}</td>`}</tr>
       <tr><td class="ph-tp-lbl">Points</td>${cell("points")}${rec("Done", "acu")}</tr>
-      <tr><td class="ph-tp-lbl">Press tags</td>${cell("pressPoints")}<td class="ph-tp-lbl mid rec"></td><td class="ph-tp-reccell"></td></tr>
+      <tr><td class="ph-tp-lbl">Press tags</td>${cell("pressPoints")}${spanning ? "" : `<td class="ph-tp-lbl mid rec"></td><td class="ph-tp-reccell"></td>`}</tr>
       <tr><td class="ph-tp-lbl">Watch</td><td class="ph-tp-cell ph-tp-symcell">${phTpSymptomsHtml(plan, phase, frozen)}</td>${rec("Periods", "periods")}</tr>
-      ${rc ? `<tr class="ph-tp-vtrow"><td colspan="4">${phTpVisitsMergedHtml({ name: phTpScreenPatient, plan, phase, frozen, rc })}</td></tr>` : ""}`;
+      ${rc ? `<tr class="ph-tp-vtrow"><td colspan="4">${phTpVisitsMergedHtml({ name: phTpScreenPatient, plan, phase, frozen, rc, hideToday: showTodaysVisit })}</td></tr>` : ""}`;
   }
   /* Visits = three pickers (her ask 2026-09-10, clarified twice: "i meant for
      visits, let me choose: number, frequency", then "include visit for acu or
@@ -53728,7 +53817,7 @@ Please let me know if you have any questions.`;
     presMedHxOpen = false;
     presTreatOpen = false; presHistMoreOpen = false;
     presTpInlinePlanId = null; presTpInlineNew = false; presTpInlineLoose = false;
-    presAcuOpen = false; presAcuOutcomeDraft = null;
+    presAcuOutcomeDraft = null;
     presAcuPhaseId = null; presAcuHerbInstruct = false;
     presAcuPointsChecked = null; presAcuPressChecked = null; presAcuWatchChecked = [];
     presAcuPointsCustom = []; presAcuPointsAdding = false;
@@ -54901,9 +54990,11 @@ Please let me know if you have any questions.`;
   // patients also need acupuncture. build an acupuncture treatment record
   // too") -- opt-in per patient (rec.acuEnabled), record-only, no scheduling
   // (keeps clear of the LCM/C22 split -- see feedback_lcm_herb_c22_acu_split
-  // in memory). Its own row between Notes and Treatment plan; same open/
-  // close + "start clean every time" posture as the rows above.
-  let presAcuOpen = false, presAcuOutcomeDraft = null;
+  // in memory). No open/close flag of its own any more (her 2026-09-18
+  // "remove the panel everywhere") -- it's embedded straight into the
+  // Grid's own phase row for whichever phase is being treated today, see
+  // phTpPhaseBodyRows' showTodaysVisit branch.
+  let presAcuOutcomeDraft = null;
   // 🌱 natural-cycle visit redesign (her synth22 ask 2026-09-17) -- draft
   // state for the acu-log accordion only, same lifetime as the two above:
   // presAcuPhaseId is which phase she's TREATING today when it differs from
