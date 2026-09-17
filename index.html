@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260917-140000">
+<meta name="lcm-build" content="20260917-150000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -10204,6 +10204,26 @@
   #pharmacyPage .ph-pres-patient { display: grid; grid-template-columns: minmax(160px, 360px) auto minmax(140px, 220px); gap: 8px 12px; align-items: end; }
   #pharmacyPage .ph-fld-sexdob { display: flex; gap: 12px; align-items: end; }
   #pharmacyPage .ph-pres-patient .ph-hx-seg { display: inline-flex; }
+  /* returning-patient quiet treatment (her ask 2026-09-17, dialled in live
+     on a tweak widget): Sex/DOB/Phone/Email read lighter for someone she's
+     already seen -- re-entry, not clinical judgment, the side of her own
+     speed/accuracy trade-off where speed wins. Full weight back on focus
+     (still a real field, never hidden) or when it genuinely differs from
+     what was on file when this visit opened (amber, bold). Every selector
+     below is deliberately padded with .ph-pres-stage-body (always a real
+     ancestor here) to clear (1,3,1) -- the existing label/input rules for
+     .ph-tmpl-field (lines ~4082/10188/10482) already sit at (1,2,1), and
+     without the extra class these would silently lose to whichever of
+     those happens to come later in source (see
+     reference_css_media_query_source_order). */
+  #pharmacyPage .ph-pres-stage-body .ph-op-quiet .ph-tmpl-field:not(.changed) label { color: var(--ph-faint); font-weight: 600; }
+  #pharmacyPage .ph-pres-stage-body .ph-op-quiet .ph-tmpl-field:not(.changed) input,
+  #pharmacyPage .ph-pres-stage-body .ph-op-quiet .ph-tmpl-field:not(.changed) .ph-hx-seg { opacity: .65; }
+  #pharmacyPage .ph-pres-stage-body .ph-op-quiet .ph-tmpl-field:focus-within:not(.changed) input,
+  #pharmacyPage .ph-pres-stage-body .ph-op-quiet .ph-tmpl-field:focus-within:not(.changed) .ph-hx-seg { opacity: 1; }
+  #pharmacyPage .ph-pres-stage-body .ph-tmpl-field.changed label { color: var(--ph-low-deep); font-weight: 700; }
+  #pharmacyPage .ph-pres-stage-body .ph-tmpl-field.changed input { background: var(--ph-low-tint); border-color: var(--ph-low-deep); font-weight: 700; }
+  #pharmacyPage .ph-pres-stage-body .ph-fld-sex.changed .ph-hx-seg { background: var(--ph-low-tint); border-radius: 8px; }
   /* Phone / Email under Name (2026-09-16, "i need to see communication details") -- the same field shell, its own two-column track */
   #pharmacyPage .ph-pres-contact { grid-template-columns: minmax(150px, 220px) minmax(180px, 360px); margin-top: 8px; }
   #pharmacyPage .ph-pres-patient input[type="date"] { font: inherit; font-size: 12.5px; border: 1px solid var(--ph-line); border-radius: 8px; padding: 6px 8px; background: var(--ph-white); color: var(--ph-ink); }
@@ -12944,6 +12964,17 @@
   #pharmacyPage .ph-apptls-day.empty + .ph-apptls-day.empty { border-top: none; }
   #pharmacyPage .ph-apptls .ph-dash-empty { padding: 10px 14px; }
   #pharmacyPage .ph-tl-chip.acu { background: var(--ph-blue-tint); color: var(--ph-blue-deep); }
+  /* compact one-line List row, ≤900px (her ask 2026-09-17) -- higher
+     specificity than the ≤900/≤640 grid-area rules below on purpose, so it
+     wins regardless of source order (see reference_css_media_query_source_order):
+     time · ACU/CHM pill · name · focus, one line, no wrap. */
+  #pharmacyPage .ph-apptls-row.compact { display: flex; align-items: center; gap: 6px; height: 29px; padding: 0 12px; }
+  #pharmacyPage .ph-apptls-row.compact .tm { flex: none; font-size: 10.5px; }
+  #pharmacyPage .ph-apptls-row.compact .ph-appt-kind { flex: none; margin-left: 0; }
+  #pharmacyPage .ph-apptls-row.compact .ph-name-link { flex: none; max-width: 42%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+  #pharmacyPage .ph-apptls-row.compact.done .ph-name-link { color: var(--ph-soft); }
+  #pharmacyPage .ph-apptls-row.compact .fg1 { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--ph-soft); }
+  #pharmacyPage .ph-apptls-row.compact .fg1 .ph-apptls-add { font-size: 11px; }
   /* Grid | List: the Communications segmented control, sized for the nav row
      (the ≤640 full-width .ph-msg-seg rule loses to these longer selectors) */
   /* div.ph-apptcal-viewseg, not the bare class: the phone rule at ~11960
@@ -22769,7 +22800,24 @@
     // profile too) -- only when the script carries one, so most rows are unchanged
     const script = phApptScriptFor(k);
     const phaseHtml = script && script.phaseTag ? `<span class="ph-tl-chip phase" title="The ${esc(script.phaseTag)} script is the one due">${esc(script.phaseTag)}</span>` : "";
-    return `<div class="ph-apptls-row${done ? " done" : ""}${phApptCalOpenId === a.id ? " sel" : ""}${dim}" role="button" tabindex="0" data-ph-appt-pop="${esc(a.id)}" aria-label="Open ${esc(phTitle(a.patient))}">
+    const rowState = `${done ? " done" : ""}${phApptCalOpenId === a.id ? " sel" : ""}${dim}`;
+    // compact one-line row under 900px (her ask 2026-09-17, dialled in live
+    // on a tweak widget: 29px tall, focus text kept, ACU/CHM as the same
+    // small text pill kindHtml already renders elsewhere -- replaces the old
+    // ≤900px stacked-card reflow, which read too tall). Same wrapper
+    // attributes as the full row (data-ph-appt-pop, role/tabindex) so the
+    // popup open/select/search-dim logic needs no change; goal, the status
+    // chip and the phase/cycle/follow-up icons are dropped here on purpose
+    // -- one tap into the popup still reaches all of it.
+    if (window.innerWidth <= 900) {
+      return `<div class="ph-apptls-row compact${rowState}" role="button" tabindex="0" data-ph-appt-pop="${esc(a.id)}" aria-label="Open ${esc(phTitle(a.patient))}">
+        <span class="tm">${esc(phCkTime12(a.time))}</span>
+        ${kindHtml}
+        <button type="button" class="ph-name-link" data-ph-dash-patient-open="${esc(a.patient)}">${esc(phTitle(a.patient))}</button>
+        <span class="fg1">${cell(brief.focus, brief.focusSrc, "focus")}</span>
+      </div>`;
+    }
+    return `<div class="ph-apptls-row${rowState}" role="button" tabindex="0" data-ph-appt-pop="${esc(a.id)}" aria-label="Open ${esc(phTitle(a.patient))}">
         <span class="tm">${esc(phCkTime12(a.time))}</span>
         <span class="pt"><button type="button" class="ph-name-link" data-ph-dash-patient-open="${esc(a.patient)}">${esc(phTitle(a.patient))}</button>${kindHtml}${phApptEtHtml(a)}${tracked ? `<svg class="icn drop" aria-hidden="true" title="Cycle tracked"><use href="#i-drop"/></svg>` : ""}${phApptFuDue(k, a.date) ? `<span class="bell" title="Follow-up due">🔔</span>` : ""}</span>
         <span class="stx">${phApptStatusChipHtml(a)}${phaseHtml}</span>
@@ -35114,6 +35162,13 @@ or changing anything in Cliniko.
       presHxScreenName = null;
     }
     presOpenSnapshot = t ? { lastDispensedAt: t.lastDispensedAt || null, lastDispenseLogId: t.lastDispenseLogId || null } : null;
+    // her ask 2026-09-17: same "snapshot on open, compare at render" shape as
+    // presOpenSnapshot above, for the returning-patient Sex/DOB/Phone/Email
+    // fields -- read-only phPatientPeek, never phPatientRec, so merely
+    // opening a script never mutates/re-stamps the record.
+    const identName = t ? (presPatientFor(t) || t.name || "") : "";
+    const identRec = identName ? phPatientPeek(identName) : null;
+    presOpenIdentitySnapshot = identRec ? { sex: identRec.sex || "", dob: identRec.dob || "", phone: identRec.phone || "", email: identRec.email || "" } : null;
     presCalcSessionDone = false;
     presLastDispViewId = null;
   }
@@ -43644,8 +43699,8 @@ or changing anything in Cliniko.
     return `<div class="ph-pres-stage-body ph-op-grid${photos ? "" : " ph-op-nophotos"}">
       <div class="ph-op-col ph-op-record">
         <div class="ph-tmpl-sec"><span>Patient</span></div>
-        ${presNameTypeFieldsHtml(t)}
-        ${presContactFieldsHtml(t)}
+        ${presNameTypeFieldsHtml(t, !hxIsNew)}
+        ${presContactFieldsHtml(t, !hxIsNew)}
         ${presAddressesPanelHtml(t)}
         <div class="ph-tmpl-sec"><span>Insurance</span></div>
         ${phInsFieldsHtml(presPatientFor(t) || t.name || "")}
@@ -44580,6 +44635,37 @@ or changing anything in Cliniko.
     return s;
   }
   const phIvfCyclesSorted = rec => phIvfCycles(rec).slice().sort((a, b) => phIvfSortKey(a.when).localeCompare(phIvfSortKey(b.when)));
+  // her ask 2026-09-17: match an intake-reported collection to an existing
+  // row by date proximity instead of always adding a new one. Only compares
+  // dates that resolve to at least a real YYYY-MM -- prose like "Mar 2025 or
+  // so" degrades to "no match" rather than guessing (same "never silently
+  // pick a bad match" rule phIvfDateLabel already follows).
+  function phIvfDateProximityDays(whenA, whenB) {
+    const toDate = w => {
+      const key = phIvfSortKey(w);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(key)) return new Date(key + "T00:00:00");
+      if (/^\d{4}-\d{2}$/.test(key)) return new Date(key + "-01T00:00:00");
+      return null;
+    };
+    const a = toDate(whenA), b = toDate(whenB);
+    if (!a || !b || isNaN(a) || isNaN(b)) return null;
+    return Math.round(Math.abs(a - b) / 86400000);
+  }
+  // kept narrow on purpose: a plan-linked round (phIvfLinkedCollection) is
+  // already the authoritative slot for its own round, so only UNLINKED rows
+  // are candidates -- and a wide window risks conflating two real, separate
+  // rounds' egg/embryo counts, which is worse than a harmless duplicate row.
+  // Easy to widen later if a week turns out too tight against her real data.
+  const PH_IVF_INTAKE_MATCH_WINDOW_DAYS = 7;
+  function phIvfIntakeMatch(rec, when) {
+    if (!when) return null;
+    let best = null, bestDays = Infinity;
+    phIvfCycles(rec).filter(r => r.linkedPlanId == null).forEach(r => {
+      const days = phIvfDateProximityDays(when, r.when);
+      if (days != null && days <= PH_IVF_INTAKE_MATCH_WINDOW_DAYS && days < bestDays) { best = r; bestDays = days; }
+    });
+    return best;
+  }
   // frozen minus what's already been used in a frozen transfer FROM this
   // collection -- her rule (code7/"never a second store for the same fact"):
   // a running balance is computed, never typed.
@@ -47235,10 +47321,19 @@ or changing anything in Cliniko.
     // Amenorrhea/IVF) and was never wired in here (only into the older
     // full-screen plan modal) -- adding it means every cycle-tracked plan
     // gets an accurate this-cycle schedule in the one place, not just hers.
+    // moved off the Dispense-stage dose timeline (her ask 2026-09-17): info
+    // letters are patient EDUCATION, not a dose step, and every plan has one
+    // real "open script" to resolve them against -- same presOpenId read
+    // presAcuOpenHtml already uses just above this scope
+    const infoLtrScript = PRESC.items.find(x => x.id === presOpenId);
     const inner = `${phCycleVisitsHtml(rec, plan, name)}${phCyclePlanScheduleHtml(rec, plan, name)}
       ${acuSessions ? presAcuOpenHtml(name, acuSessions) : ""}
       ${phTpAddPhaseHtml(plan)}
       ${phTpIvfTrackHtml(plan)}
+      ${infoLtrScript ? `<div class="ph-tp-reviews">
+        <div class="ph-tp-sec"><span>Info letters</span></div>
+        <button type="button" class="ph-load-btn on" data-pres-infoltr="${infoLtrScript.id}">📚 Pick a letter to send</button>
+      </div>` : ""}
       <div class="ph-tp-reviews">
         <div class="ph-tp-sec"><span>Review notes${(plan.reviews || []).length ? ` <em>· ${(plan.reviews || []).length}</em>` : ""}</span></div>
         ${(plan.reviews || []).slice().sort((a, b) => (b.date || "").localeCompare(a.date || "")).map(r => phTpReviewRowHtml(plan, r)).join("") || `<div class="ph-hx-constit-note">Nothing logged yet.</div>`}
@@ -52697,14 +52792,29 @@ Please let me know if you have any questions.`;
       }
       // her card 11: each reported collection lands as its own row, marked
       // unconfirmed -- src:"intake" so phIvfRowHtml shows the pill, confirmed
-      // only when she taps ✓ confirm on the actual row.
+      // only when she taps ✓ confirm on the actual row. Her 2026-09-17
+      // follow-up: try a date-proximity match against an existing unlinked
+      // row first (phIvfIntakeMatch) rather than always adding a new one --
+      // fill-blanks-only on a match, same "never silently overwrite" rule
+      // the paste-contact-card feature already follows, so a field she or an
+      // earlier intake already set is never replaced by a later report.
       if ((d.ivfNew || []).length) {
         rec.ivfCycles = rec.ivfCycles || [];
         d.ivfNew.forEach(n => {
           const c = n.data;
-          rec.ivfCycles.push({ id: uid(), when: c.when || "", clinic: c.clinic || "", kind: "collection",
-            eggs: c.eggs ?? null, mature: null, fertilised: c.fertilised ?? null, day3: null, blastocysts: null,
-            pgtNormal: null, frozen: c.frozen ?? null, transfers: [], linkedPlanId: null, src: "intake", confirmed: false });
+          const match = phIvfIntakeMatch(rec, c.when);
+          if (match) {
+            if (!match.when && c.when) match.when = c.when;
+            if (!match.clinic && c.clinic) match.clinic = c.clinic;
+            if (match.eggs == null && c.eggs != null) match.eggs = c.eggs;
+            if (match.fertilised == null && c.fertilised != null) match.fertilised = c.fertilised;
+            if (match.frozen == null && c.frozen != null) match.frozen = c.frozen;
+            match.src = "intake"; match.confirmed = false;
+          } else {
+            rec.ivfCycles.push({ id: uid(), when: c.when || "", clinic: c.clinic || "", kind: "collection",
+              eggs: c.eggs ?? null, mature: null, fertilised: c.fertilised ?? null, day3: null, blastocysts: null,
+              pgtNormal: null, frozen: c.frozen ?? null, transfers: [], linkedPlanId: null, src: "intake", confirmed: false });
+          }
         });
       }
       savePharmacy();
@@ -52777,6 +52887,14 @@ Please let me know if you have any questions.`;
   // has written a fresh stamp. Only one prescription panel is ever open at
   // once, so a single scalar (not a per-id map) is enough.
   let presOpenSnapshot = null;   // { lastDispensedAt, lastDispenseLogId } | null
+  // same shape, for the returning-patient identity fields' "changed this
+  // visit" highlight (her ask 2026-09-17) -- set alongside presOpenSnapshot
+  // in presOpenScript, read by presFieldChangedThisVisit below.
+  let presOpenIdentitySnapshot = null;   // { sex, dob, phone, email } | null
+  function presFieldChangedThisVisit(field, curVal) {
+    if (!presOpenIdentitySnapshot) return false;
+    return (presOpenIdentitySnapshot[field] || "") !== (curVal || "");
+  }
   // Calculate has no persisted field of its own to compare against (typing
   // Grams already autosaves live, with or without pressing this) -- so
   // "done" is purely "did she press it since this script was opened",
@@ -52876,13 +52994,6 @@ Please let me know if you have any questions.`;
           <span class="ph-dose-step-label">Patient letter</span>
         </button>
         <span class="ph-dose-step-tag">opens ready-made from this script</span>
-      </div>
-      <div class="ph-dose-step">
-        <button type="button" class="ph-dose-step-main" data-pres-infoltr="${t.id}">
-          <span class="ph-dose-step-node" aria-hidden="true">📚</span>
-          <span class="ph-dose-step-label">Info letters</span>
-        </button>
-        <span class="ph-dose-step-tag">education letters — pick one to send</span>
       </div>
       <div class="ph-dose-step${calcDone ? " done" : ""}">
         <button type="button" class="ph-dose-step-main" data-pres-calc="${t.id}">
@@ -53310,9 +53421,24 @@ Please let me know if you have any questions.`;
   // other template field -- no ✎ unlock step), with Sex and DOB right beside
   // it. Sex/DOB write to the patient record (same fields the Medical history
   // header edits) and drive the cycle auto-rule.
-  function presNameTypeFieldsHtml(t) {
+  function presNameTypeFieldsHtml(t, returning) {
     const isF = presIsFormula(t);
     const rec = !isF && t.id ? phPatientRec(presPatientFor(t) || t.name) : null;
+    // her ask 2026-09-17: for a RETURNING patient, Sex/DOB read quieter --
+    // she already knows these, re-typing them every visit is the "admin,
+    // not clinical" side she wants faster, not more careful, per her own
+    // documented speed/accuracy trade-off. Muted by default, full weight on
+    // focus (still there to edit, never hidden) or when it genuinely
+    // differs from what was on file when this visit opened (amber, bold --
+    // the same treatment the tweak widget confirmed).
+    // gated on `returning` too, not just a rec existing -- a NEW patient's
+    // fields all start blank, so every one of them would trivially read as
+    // "changed" the moment she types a first answer, which is meaningless
+    // noise (the amber signal only means something once there was a prior
+    // value to compare against).
+    const sexChanged = returning && rec && presFieldChangedThisVisit("sex", rec.sex);
+    const dobChanged = returning && rec && presFieldChangedThisVisit("dob", rec.dob);
+    const identClass = returning ? " ph-op-quiet" : "";
     // Her question, 2026-09-09, looking at "New patient prescription" with a
     // name, sex, DOB, insurance and medical history all filled in: "is this
     // feature redundant?" On that screen it was — every field around it
@@ -53333,12 +53459,12 @@ Please let me know if you have any questions.`;
         <div class="ph-tmpl-field ph-pres-patient-name"><label for="presEditName">Name${!isF && !cpasteShowing ? ` <button type="button" class="ph-name-link ph-cpaste-linkbtn" data-cpaste-open="opening">📋 Paste contact card</button>` : ""}</label>
           <input type="text" id="presEditName" list="presEditNameList" value="${esc(t.name)}" autocomplete="off">
           <datalist id="presEditNameList">${phIntakeNameOptionsHtml()}</datalist></div>
-        ${rec ? `<div class="ph-fld-sexdob">
-        <div class="ph-tmpl-field ph-fld-sex"><label>Sex</label>
+        ${rec ? `<div class="ph-fld-sexdob${identClass}">
+        <div class="ph-tmpl-field ph-fld-sex${sexChanged ? " changed" : ""}"><label>Sex</label>
           <span class="ph-hx-seg" role="radiogroup" aria-label="Patient sex">
             ${[["F", "F"], ["M", "M"], ["", "—"]].map(([v, l]) => `<button type="button" class="ph-hx-sexbtn${(rec.sex || "") === v ? " on" : ""}" data-pres-sex="${v}" aria-pressed="${(rec.sex || "") === v ? "true" : "false"}">${l}</button>`).join("")}
           </span></div>
-        <div class="ph-tmpl-field ph-fld-dob"><label for="presEditDob">DOB${phAgeOf(rec.dob) != null ? ` <span class="faint">· ${phAgeOf(rec.dob)}</span>` : ""}</label>
+        <div class="ph-tmpl-field ph-fld-dob${dobChanged ? " changed" : ""}"><label for="presEditDob">DOB${phAgeOf(rec.dob) != null ? ` <span class="faint">· ${phAgeOf(rec.dob)}</span>` : ""}</label>
           <input type="date" id="presEditDob" data-pres-dob="1" value="${esc(rec.dob || "")}"></div>
         </div>` : ""}
         ${showType ? `<div class="ph-tmpl-field"><label for="presEditType">Type</label>
@@ -53360,16 +53486,20 @@ Please let me know if you have any questions.`;
   // as HERS, not the Cliniko list's. Where a number came from is said in
   // the label, same words the check-in card uses. No re-render on save --
   // the panel rebuild would pull the field out from under her mid-edit.
-  function presContactFieldsHtml(t) {
+  function presContactFieldsHtml(t, returning) {
     if (presIsFormula(t) || !t.id) return "";
     const name = presPatientFor(t) || t.name;
     if (!name) return "";
     const rec = phPatientRec(name);
     const src = rec.phone && rec.phoneFrom ? `from the Cliniko ${rec.phoneSrc === "export" ? "export" : "list"} · ${phFuDateLabel(rec.phoneFrom)}` : rec.phone && rec.phoneSrc === "intake" ? "from her intake form" : rec.phone && rec.phoneSrc === "paste" ? "from a pasted contact card" : "";
-    return `<div class="ph-tmpl-grid ph-pres-patient ph-pres-contact">
-        <div class="ph-tmpl-field"><label for="presEditPhone">Phone${src ? ` <span class="faint">· ${esc(src)}</span>` : ""}</label>
+    // gated on `returning` too -- see presNameTypeFieldsHtml's own comment:
+    // a new patient's first-ever phone/email isn't a "change", just an answer.
+    const phoneChanged = returning && presFieldChangedThisVisit("phone", rec.phone);
+    const emailChanged = returning && presFieldChangedThisVisit("email", rec.email);
+    return `<div class="ph-tmpl-grid ph-pres-patient ph-pres-contact${returning ? " ph-op-quiet" : ""}">
+        <div class="ph-tmpl-field${phoneChanged ? " changed" : ""}"><label for="presEditPhone">Phone${src ? ` <span class="faint">· ${esc(src)}</span>` : ""}</label>
           <input type="tel" id="presEditPhone" data-pres-phone="1" value="${esc(rec.phone || "")}" placeholder="04…" autocomplete="off" inputmode="tel"></div>
-        <div class="ph-tmpl-field"><label for="presEditEmail">Email</label>
+        <div class="ph-tmpl-field${emailChanged ? " changed" : ""}"><label for="presEditEmail">Email</label>
           <input type="email" id="presEditEmail" data-pres-email="1" value="${esc(rec.email || "")}" placeholder="name@…" autocomplete="off" inputmode="email"></div>
       </div>`;
   }
@@ -60055,6 +60185,22 @@ Dosage: {dosage}
       if (sb) sb.auth.signOut().then(function () {}, function () {});
     });
   }
+  // her ask 2026-09-17: an explicit escape hatch for when the CLOUD is the
+  // thing stuck (offline, a dead network, a push that keeps retrying) --
+  // skips flushPush entirely rather than waiting on it. Confirmed first,
+  // since unlike doSignOut this can genuinely lose an edit still in the
+  // 1.4s debounce window or a save that's still retrying -- the same risk
+  // flushPush's own comment above exists to avoid.
+  function doSignOutNoSave() {
+    if (!confirm("Sign out WITHOUT saving? Any change on this device not already sent to the cloud will be lost.")) return;
+    menuOpen = false; ready = false;
+    overlay('<p style="color:#BCCFD6;font-size:14px;margin:12px 0">Signing out…</p>');
+    saveReg([]);
+    try { sb.removeAllChannels(); } catch (e) {}
+    clearLocalData();
+    var w = document.getElementById("lcmSwitch"); if (w) w.remove();
+    if (sb) sb.auth.signOut().then(function () {}, function () {});
+  }
 
   /* her 2026-08-25 spec: ONE switcher component, two homes, never floating.
      Desktop -> the bottom of the sidebar; phone -> the dark page header.
@@ -60177,10 +60323,12 @@ Dosage: {dosage}
       '<button id="lcmMgAdd" style="' + F.btn + '">＋ Add another location</button>' +
       '<button id="lcmMgHist" style="' + F.btn + ';margin-top:10px;color:#D9AE47;background:transparent;border:1px solid #3A6C7D">🕐 Cloud history</button>' +
       '<button id="lcmMgOut" style="' + F.btn + ';margin-top:10px;color:#e0a58f;background:transparent;border:1px solid #3A6C7D">⎋ Sign out of this device</button>' +
+      '<button id="lcmMgOutNoSave" style="' + F.btn + ';margin-top:6px;padding:8px;font-size:12px;font-weight:400;color:#5f7981;background:transparent;border:none">Sign out without saving</button>' +
       '<button id="lcmMgClose" style="' + F.btn + ';margin-top:18px;color:#BCCFD6;background:transparent;border:1px solid #3A6C7D">Close</button>');
     document.getElementById("lcmMgAdd").onclick = doAddLocation;
     document.getElementById("lcmMgHist").onclick = screenCloudHistory;
     document.getElementById("lcmMgOut").onclick = doSignOut;
+    document.getElementById("lcmMgOutNoSave").onclick = doSignOutNoSave;
     document.getElementById("lcmMgClose").onclick = function () { hideOverlay(); };
   }
   // the app calls this after every page render, because phShellHead() rebuilds
