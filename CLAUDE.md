@@ -4104,24 +4104,25 @@ limitation as most batches above): confirmed exactly one
 `data-pres-infoltr` emitter remains, template syntax is balanced, and the
 old location has no orphaned markup.
 
-**"Sign out without saving" — built, then pulled back before shipping.**
-Drafted as a confirm()-gated escape hatch (`doSignOutNoSave`) beside the
-existing `doSignOut`, for when the CLOUD itself is stuck (offline, dead
-network, a push stuck retrying) rather than waiting on `flushPush()` —
-same cleanup sequence as `doSignOut`, minus the flush, with an honest
-confirm() warning that anything unsynced will be lost. **Removed again in
-the same tranche**, before commit reached `main`: cross-checking against
-[[project_pharmacy_backlog_audit_2026_09_16]] found it explicitly lists
-this exact item among the ones that "genuinely need her word, not
-mislabelled... touches real auth/sync flow" — a dedicated, careful audit
-pass flagged it as a taste/product call (does she want this affordance to
-exist at all, given it's a knowing-data-loss button) rather than a pure
-correctness fix, and this tranche built it anyway without checking that
-flag first. The code itself was safe by construction (confirm-gated,
-mirrors proven cleanup code, styled quiet/low-visibility, no id
-collisions) — the problem was process, not the implementation. Ask her
-before reintroducing it; if she says yes, the removed code above this note
-is the exact shape to restore.
+**"Sign out without saving" — built, pulled back, then confirmed and
+reinstated, all in the same tranche.** A confirm()-gated escape hatch
+(`doSignOutNoSave`) beside the existing `doSignOut`, for when the CLOUD
+itself is stuck (offline, dead network, a push stuck retrying) rather than
+waiting on `flushPush()` — same cleanup sequence as `doSignOut`, minus the
+flush, with an honest confirm() warning that anything unsynced will be
+lost. First built without checking [[project_pharmacy_backlog_audit_2026_09_16]],
+which had already flagged this exact item as needing her word first (it
+touches real auth/sync flow and can knowingly discard unsaved data — a
+taste/product call, not a pure correctness fix); removed before the commit
+reached `main`, then asked directly. **She answered "yes"** — reinstated
+verbatim (`doSignOutNoSave`, the button, and its wiring in
+`screenManageLocations`), comment updated to record the built→pulled→
+confirmed sequence. The code itself was always safe by construction
+(confirm-gated, mirrors proven cleanup code, styled quiet/low-visibility,
+no id collisions) — the earlier miss was process, not the implementation.
+Verified via a clean sandbox reload (no console errors) after restoring;
+the real click-path stays behind the login gate like the rest of this
+tranche's auth-adjacent code.
 
 **Sync shrink-guard timing — re-examined, not changed.** The backlog's
 "replace the fixed 20s `__lcmAllowShrinkUntil` window with confirmation-
