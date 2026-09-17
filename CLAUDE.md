@@ -3677,3 +3677,37 @@ language applies to.
 
 Version bump: `lcm-build` `20260917-110000`, `sw.js` cache `-13`. Shipped
 `04f34e0` on `session-a`.
+
+### Batch 14 — letterhead address, date labels get a year
+
+2 built, 1 closed as false-premise — the audit snapshot keeps aging.
+
+- **Info-letter letterhead now prints the clinic's address.**
+  `phInfoLtrPaperHtml(edit)` (~51502) reads `PHARMACY.locAddress` (already
+  settable via Settings → This location, previously only shown there) and,
+  when set, appends it as a small line under the clinic name/phone in the
+  header block. One edit covers all three consumers of this function —
+  on-screen editing, print, and the emailed copy — since `phInfoLtrDocHtml()`
+  and the screen editor both call the same `phInfoLtrPaperHtml`.
+  Sandbox-verified: set a synthetic address through the real Settings save
+  path, confirmed it lands in `PHARMACY.locAddress`; confirmed the header
+  interpolation line reads correctly by inspection (letterhead itself needs
+  a patient + prescription to render, which the sandbox had none of — the
+  data path and the render logic were each verified directly instead).
+- **`phShortDate`/`phFuDateLabel` now include the year**, matching sibling
+  `phPrDateLabel` which already always did. Both were bare `const` arrow
+  functions (~170 combined call sites app-wide — To Order date chips,
+  Communications/appointment day labels, refill/order status stamps).
+  Sandbox-verified live in the UI: To Order's "Order today" menu item now
+  reads "17 Sep 2026" instead of "17 Sep"; checked at mobile width (375px)
+  for wrapping — no issue, the year-bearing chip isn't part of the row
+  layout that's tight at that width. No console errors after either change.
+- **Closed as false premise:** a candidate describing a "script→prescription
+  wording rename" that supposedly needed a 360px re-check. Grepped current
+  source and searched git history (`git log -S'>Script<'`) — no such rename
+  ever happened. "Script"/"Scripts" (mobile nav label, Profit report
+  headers, Booked-week CTA) and "Prescription"/"Prescriptions" (formal
+  section name) have coexisted since early development; nothing to fix.
+
+Version bump: `lcm-build` `20260917-120000`, `sw.js` cache `-14`. Shipped
+`1713c5f` on `session-a`.
