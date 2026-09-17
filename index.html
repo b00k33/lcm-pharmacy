@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260917-120000">
+<meta name="lcm-build" content="20260917-130000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -17940,7 +17940,18 @@
   const PH_INV_COL_DRAG_ORDER = ["kind", "supplier", "cost", "costFlag", "bottleCost", "qty", "level", "low", "status", "usedByHH", "cart", "note"];
   const PH_RESTOCK_COL_OPTS = [["sup", "Supplier"], ["level", "Level"], ["size", "Size"], ["x", "×"], ["bottle", "Bottle $"], ["total", "Total"], ["status", "Status"]];
   const PH_RESTOCK_COL_DRAG_ORDER = PH_RESTOCK_COL_OPTS.map(o => o[0]);
-  const PH_COL_DRAG_DEFAULTS = { inv: PH_INV_COL_DRAG_ORDER, restock: PH_RESTOCK_COL_DRAG_ORDER };
+  // batch 18 (2026-09-17): the desktop To Order "quiet sheet" table
+  // (osRow/osArrivedRow/osLowRow/osSupRow) never got the real-table
+  // drag-to-reorder Inventory has -- a prior batch confirmed the wrong
+  // table's data-ph-col-drag attribute and wrongly closed this as already
+  // shipped. "amounts" bundles Size×qty/Bottle $/Total as one draggable
+  // unit because osArrivedRow/osLowRow show those three as a single
+  // colspan="3" summary sentence, not independent per-column values --
+  // they can move as a block relative to Status/Herb/Supplier/Level, but
+  // not independently of each other.
+  const PH_OSHEET_COL_OPTS = [["status", "Status"], ["herb", "Herb"], ["supplier", "Supplier"], ["level", "Level"], ["amounts", "Size × qty / Bottle $ / Total"]];
+  const PH_OSHEET_COL_DRAG_ORDER = PH_OSHEET_COL_OPTS.map(o => o[0]);
+  const PH_COL_DRAG_DEFAULTS = { inv: PH_INV_COL_DRAG_ORDER, restock: PH_RESTOCK_COL_DRAG_ORDER, osheet: PH_OSHEET_COL_DRAG_ORDER };
   // her saved order may be stale against these defaults (a column renamed or
   // dropped since) -- keep only keys that still exist, then tack on any
   // default key she's never seen (new column) at the end, in its default spot
@@ -18249,10 +18260,19 @@
   }
   // "the column I'm dragging lifts" — every place that key appears, not just
   // the header: every <td data-col> in Inventory, every .ph-order-col-X in
-  // Restock (both sections, if she's dragging while both are on screen)
+  // Restock (both sections, if she's dragging while both are on screen),
+  // every <th>/<td data-col> across BOTH the To Order sheet's head+body
+  // tables (a mirror pair, batch 18). "amounts" is one drag key covering
+  // three separately-widthed columns (Size×qty/Bottle $/Total, still each
+  // keyed by their own data-col for phApplyColW) -- expand it here so all
+  // three lift together instead of none, since no single cell literally
+  // carries data-col="amounts".
+  const PH_OSHEET_AMOUNTS_KEYS = ["sizeqty", "bottle", "total"];
   function phColLiftSet(table, key, on) {
     const scope = table === "inv"
       ? document.querySelectorAll(`#phStock [data-col="${key}"]`)
+      : table === "osheet"
+      ? document.querySelectorAll((key === "amounts" ? PH_OSHEET_AMOUNTS_KEYS : [key]).map(k => `.ph-osheet-head [data-col="${k}"], .ph-osheet [data-col="${k}"]`).join(", "))
       : document.querySelectorAll(`.ph-order-col-${key}`);
     scope.forEach(el => el.classList.toggle("ph-col-lift", on));
   }
@@ -18261,7 +18281,7 @@
     const handle = e.target.closest ? e.target.closest("[data-ph-col-drag]") : null;
     if (!handle || (e.target.closest && e.target.closest(".ph-col-grip"))) return;
     const [table, key] = handle.dataset.phColDrag.split(":");
-    const headerRow = table === "inv" ? handle.closest("tr") : handle.closest(".ph-order-head-row");
+    const headerRow = (table === "inv" || table === "osheet") ? handle.closest("tr") : handle.closest(".ph-order-head-row");
     if (!headerRow) return;
     phColReorderDrag = { table, key, headerRow, startX: e.clientX, startY: e.clientY, moved: false, handle: null, targetKey: null, before: false };
   });
@@ -18292,7 +18312,7 @@
     d.before = before;
     // the line spans the whole table (Inventory) or the whole order card
     // (Restock) -- a header-height sliver wouldn't read as a column boundary
-    const spanEl = (d.table === "inv" ? d.headerRow.closest("table") : d.headerRow.closest(".ph-order-card")) || d.headerRow;
+    const spanEl = ((d.table === "inv" || d.table === "osheet") ? d.headerRow.closest("table") : d.headerRow.closest(".ph-order-card")) || d.headerRow;
     const sr = spanEl.getBoundingClientRect();
     const line = phColInsertLine();
     line.hidden = false;
@@ -32675,6 +32695,15 @@
     // the card layout below (stage set, status toggle, unlock, supplier
     // picker, copy/bulk, snooze, arrival edit) -- only the markup differs.
     // The phone keeps the stacked cards she approved separately (13974a7).
+    // batch 18 (2026-09-17): her ask ("make it more simple... last column")
+    // covered the Ordered->Arrived trail, which was already this simple --
+    // the real gap was that this table's columns (Status/Herb/Supplier/
+    // Level/Size×qty/Bottle $/Total) were fixed, unlike every other sheet
+    // in the app. Computed once, shared by the head <colgroup>, the <thead>,
+    // and all three row builders below, so a drag always moves everything
+    // in lockstep -- exactly the guarantee Inventory's own drag-reorder
+    // already relies on.
+    const osColOrder = phColOrder("osheet");
     const osRow = (h, stage) => {
       const pack = phOrderPackFor(h), qty = h.orderQty != null ? h.orderQty : 1;
       const supPriceRow = h.supplier ? (h.suppliers || []).find(s => s.name === h.supplier) : null;
@@ -32724,16 +32753,21 @@
         <button type="button" class="ph-stage-seg next" data-ph-stage-set="${h.id}:arrived" title="Mark as arrived (adds +${phFmtG(pack * qty)}g)">Arrived</button>
       </span>`}</td></tr>` : "";
       // her ask (2026-09-02): "move order column to the far left" -- actions
-      // and status lead the row now, before the herb name
+      // lead every row, before whatever's dragged into first place; the ⋮
+      // menu stays pinned last, same as Inventory's own Actions column
+      const tdMap = {
+        status: `<td class="ph-os-statcell" data-col="status">${statusCell}</td>`,
+        herb: `<td class="ph-os-name" data-col="herb"><button type="button" class="ph-name-link" data-ph-herb-edit="${h.id}" title="Open ${esc(h.name)} in the edit form">${esc(phHerbLabel(h))}</button></td>`,
+        supplier: `<td class="ph-os-sup" data-col="supplier"><select class="ph-order-sup-pick field-bare" data-ph-order-sup="${h.id}" aria-label="Which supplier to order ${esc(h.name)} from">${phSupplierOptionsHtml(phIsFormula(h), h.supplier || "")}</select></td>`,
+        level: `<td data-col="level">${phStockBarPct(h.qty, h.low)}</td>`,
+        // one bundled unit -- see the PH_OSHEET_COL_OPTS comment: an
+        // arrived/low row shows these three as a single summary sentence,
+        // so they can't independently reorder past each other
+        amounts: `<td class="ph-os-size" data-col="sizeqty">${sizeCell}</td><td class="r" data-col="bottle">${bottleCell}</td><td class="r ph-os-total" data-col="total" title="Bottle $ × ×">${lineTotal != null ? phMoney(lineTotal) : "—"}</td>`,
+      };
       return `<tr class="ph-os-row ${stage}">
         <td class="ph-os-actcell"><span class="ph-os-acts">${acts}</span></td>
-        <td class="ph-os-statcell">${statusCell}</td>
-        <td class="ph-os-name"><button type="button" class="ph-name-link" data-ph-herb-edit="${h.id}" title="Open ${esc(h.name)} in the edit form">${esc(phHerbLabel(h))}</button></td>
-        <td class="ph-os-sup"><select class="ph-order-sup-pick field-bare" data-ph-order-sup="${h.id}" aria-label="Which supplier to order ${esc(h.name)} from">${phSupplierOptionsHtml(phIsFormula(h), h.supplier || "")}</select></td>
-        <td>${phStockBarPct(h.qty, h.low)}</td>
-        <td class="ph-os-size">${sizeCell}</td>
-        <td class="r">${bottleCell}</td>
-        <td class="r ph-os-total" title="Bottle $ × ×">${lineTotal != null ? phMoney(lineTotal) : "—"}</td>
+        ${osColOrder.map(k => tdMap[k]).join("")}
         <td class="r ph-os-dotscell">${dots}</td>
       </tr>${trailRow}`;
     };
@@ -32753,13 +32787,17 @@
     const osBand = (cls, ic, label, n) => `<tr class="ph-os-band ${cls}${phOsCollapsed.has(cls) ? " folded" : ""}"><td colspan="9"><div class="ph-os-bandin"><span class="ic">${ic}</span>${label}<span class="cnt">${n} item${n === 1 ? "" : "s"}</span>
         <button type="button" class="ph-os-chev" data-ph-os-collapse="${cls}" aria-expanded="${!phOsCollapsed.has(cls)}" title="${phOsCollapsed.has(cls) ? "Show" : "Hide"} this stage"><svg class="icn" aria-hidden="true"><use href="#i-chev-r"/></svg></button></div></td></tr>`;
     const osGap = `<tr class="ph-os-gap"><td colspan="9"></td></tr>`;
-    const osArrivedRow = h => `<tr class="ph-os-row arrived">
+    const osArrivedRow = h => {
+      const tdMap = {
+        status: `<td class="ph-os-statcell" data-col="status"><span class="ph-os-date arr" data-ph-arr-chip="${h.id}" title="Settled — use ⋮ to fix a mistake">${esc(phShortDate(h.arrivedDate))}</span></td>`,
+        herb: `<td class="ph-os-name" data-col="herb"><button type="button" class="ph-name-link" data-ph-herb-edit="${h.id}" title="Open ${esc(h.name)} in the edit form">${esc(phHerbLabel(h))}</button></td>`,
+        supplier: `<td class="ph-os-sup faint" data-col="supplier">${h.supplier ? esc(phSupDisplayName(h.supplier)) : "—"}</td>`,
+        level: `<td data-col="level">${phStockBarPct(h.qty, h.low)}</td>`,
+        amounts: `<td class="faint" colspan="3" data-col="sizeqty">+${phFmtG(h.arrivedGrams || 0)}g · ${phFmtG(h.qty || 0)}g in stock now</td>`,
+      };
+      return `<tr class="ph-os-row arrived">
         <td class="ph-os-actcell"><span class="ph-os-tick" title="Arrived">✓</span></td>
-        <td class="ph-os-statcell"><span class="ph-os-date arr" data-ph-arr-chip="${h.id}" title="Settled — use ⋮ to fix a mistake">${esc(phShortDate(h.arrivedDate))}</span></td>
-        <td class="ph-os-name"><button type="button" class="ph-name-link" data-ph-herb-edit="${h.id}" title="Open ${esc(h.name)} in the edit form">${esc(phHerbLabel(h))}</button></td>
-        <td class="ph-os-sup faint">${h.supplier ? esc(phSupDisplayName(h.supplier)) : "—"}</td>
-        <td>${phStockBarPct(h.qty, h.low)}</td>
-        <td class="faint" colspan="3">+${phFmtG(h.arrivedGrams || 0)}g · ${phFmtG(h.qty || 0)}g in stock now</td>
+        ${osColOrder.map(k => tdMap[k]).join("")}
         <td class="r ph-os-dotscell"><span class="ph-rp-menuwrap ph-os-menuwrap"><button type="button" class="ph-os-dots${phOsMenu === h.id ? " on" : ""}" data-ph-os-menu="${h.id}" aria-haspopup="true" aria-expanded="${phOsMenu === h.id}" aria-label="More for ${esc(h.name)}">⋮</button>${phOsMenu === h.id ? `<div class="ph-rp-menu">
           <div class="ph-rp-mh">${esc(phHerbLabel(h))}</div>
           <button type="button" class="ph-rp-mi" data-ph-arr-edit="${h.id}">Fix the grams or date, or undo</button>
@@ -32775,15 +32813,21 @@
           <button type="button" class="btn-cancel" data-ph-arr-close="1">Close</button>
         </div>`}
       </div></td></tr>` : ""}`;
-    const osLowRow = h => `<tr class="ph-os-row low">
+    };
+    const osLowRow = h => {
+      const tdMap = {
+        status: `<td class="ph-os-statcell" data-col="status">${phOrderMenuHtml(h)}</td>`,
+        herb: `<td class="ph-os-name" data-col="herb"><button type="button" class="ph-name-link" data-ph-herb-edit="${h.id}" title="Open ${esc(h.name)} in the edit form">${esc(phHerbLabel(h))}</button></td>`,
+        supplier: `<td class="ph-os-sup faint" data-col="supplier">${h.supplier ? esc(phSupDisplayName(h.supplier)) : "—"}</td>`,
+        level: `<td data-col="level">${phStockBarPct(h.qty, h.low)}</td>`,
+        amounts: `<td class="faint" colspan="3" data-col="sizeqty">${h.qty <= 0 ? "empty" : `${phFmtG(h.qty)}g`} · not on the list</td>`,
+      };
+      return `<tr class="ph-os-row low">
         <td class="ph-os-actcell"><span class="ph-os-acts"><button type="button" class="ph-os-glyph" data-ph-snooze="${h.id}" title="Snooze 1 week — stock and status stay exactly as they are">⏰</button></span></td>
-        <td class="ph-os-statcell">${phOrderMenuHtml(h)}</td>
-        <td class="ph-os-name"><button type="button" class="ph-name-link" data-ph-herb-edit="${h.id}" title="Open ${esc(h.name)} in the edit form">${esc(phHerbLabel(h))}</button></td>
-        <td class="ph-os-sup faint">${h.supplier ? esc(phSupDisplayName(h.supplier)) : "—"}</td>
-        <td>${phStockBarPct(h.qty, h.low)}</td>
-        <td class="faint" colspan="3">${h.qty <= 0 ? "empty" : `${phFmtG(h.qty)}g`} · not on the list</td>
+        ${osColOrder.map(k => tdMap[k]).join("")}
         <td class="ph-os-dotscell"></td>
       </tr>`;
+    };
     const osSnoozedRows = snoozed.length ? `<tr class="ph-os-snz"><td colspan="9"><span class="ph-os-snzpill">🌙 Snoozed <span class="cnt">${snoozed.length}</span></span>
         <button type="button" class="ph-os-lnk" data-ph-restock-snooze-toggle="1" aria-pressed="${phRestockSnoozeOpen}">${phRestockSnoozeOpen ? "Hide" : "Show"}</button></td></tr>${phRestockSnoozeOpen ? snoozed.map(h => `<tr class="ph-os-row snz">
         <td class="ph-os-actcell"><button type="button" class="ph-os-lnk" style="margin-left:0" data-ph-unsnooze="${h.id}">Unsnooze</button></td>
@@ -32797,11 +32841,29 @@
     // widths), so the header and the body line up exactly. A folded stage
     // keeps its band and drops its rows.
     // data-def = the default each column returns to on a double-click reset
-    // (her ask 2026-09-03: every column resizable -- see phColMirrorSet)
-    const osCols = `<colgroup><col data-def="56" style="width:56px"><col data-def="84" style="width:84px"><col><col data-def="150" style="width:150px"><col data-def="132" style="width:132px"><col data-def="128" style="width:128px"><col data-def="104" style="width:104px"><col data-def="92" style="width:92px"><col data-def="44" style="width:44px"></colgroup>`;
+    // (her ask 2026-09-03: every column resizable -- see phColMirrorSet).
+    // batch 18: keyed by column identity (data-def-key), not position -- a
+    // <col> is rebuilt in osColOrder sequence every render, same as the
+    // <th>s below, so a resized column's stored width (already keyed by
+    // data-col in phApplyColW) keeps landing on the right column after a
+    // drag instead of "glitching" onto whatever moved into that slot (the
+    // exact bug her 2026-08-11 report already fixed for Inventory).
+    const osColDefW = { status: 84, herb: null, supplier: 150, level: 132, sizeqty: 128, bottle: 104, total: 92 };
+    const osColHtml = k => k === "herb" ? `<col>` : `<col data-def="${osColDefW[k]}" style="width:${osColDefW[k]}px">`;
+    const osColsBody = osColOrder.flatMap(k => k === "amounts" ? ["sizeqty", "bottle", "total"] : [k]).map(osColHtml).join("");
+    const osCols = `<colgroup><col data-def="56" style="width:56px">${osColsBody}<col data-def="44" style="width:44px"></colgroup>`;
+    const osThMap = {
+      status: `<th data-col="status" data-ph-col-drag="osheet:status">Status</th>`,
+      herb: `<th data-col="herb" data-ph-col-drag="osheet:herb">Herb</th>`,
+      supplier: `<th data-col="supplier" data-ph-col-drag="osheet:supplier">Supplier</th>`,
+      level: `<th data-col="level" data-ph-col-drag="osheet:level">Level</th>`,
+      amounts: `<th class="r" data-col="sizeqty" data-ph-col-drag="osheet:amounts">Size × qty</th><th class="r" data-col="bottle" data-ph-col-drag="osheet:amounts">Bottle $</th><th class="r" data-col="total" data-ph-col-drag="osheet:amounts">Total</th>`,
+    };
     const fold = k => phOsCollapsed.has(k);
+    const osColsReset = PHARMACY.colOrder && PHARMACY.colOrder.osheet && PHARMACY.colOrder.osheet.length
+      ? `<button type="button" class="ph-os-lnk" data-ph-col-order-reset="osheet" title="Put dragged columns back in their default order">↺ Reset columns</button>` : "";
     const desktopHtml = `${shellHtml}
-      ${anyRows ? `<table class="ph-osheet-head" data-ph-resize="osheet" data-ph-mirror=".ph-osheet.fixed">${osCols}<thead><tr><th></th><th>Status</th><th>Herb</th><th>Supplier</th><th>Level</th><th>Size × qty</th><th class="r">Bottle $</th><th class="r">Total</th><th></th></tr></thead></table>
+      ${anyRows ? `<table class="ph-osheet-head" data-ph-resize="osheet" data-ph-mirror=".ph-osheet.fixed">${osCols}<thead><tr><th></th>${osColOrder.map(k => osThMap[k]).join("")}<th></th></tr></thead></table>
       <div class="ph-osheet-wrap polish"><table class="ph-osheet fixed">${osCols}
         <tbody>
           ${stillToOrder.length ? osBand("toorder", "🛒", "To order", stillToOrder.length) + (fold("toorder") ? "" : osStage(bySupToOrder, "toOrder", "toorder")) : ""}
@@ -32810,7 +32872,7 @@
           ${recentlyArrived.length ? osBand("arrived", "✓", `Arrived in ${MONTHS[TODAY.getMonth()]}`, recentlyArrived.length) + (fold("arrived") ? "" : recentlyArrived.map(osArrivedRow).join("")) + osGap : ""}
           ${unflagged.length ? osBand("low", "⚠", "Running low, not on the list", unflagged.length) + (fold("low") ? "" : unflagged.map(osLowRow).join("")) : ""}
         </tbody></table>
-        <div class="ph-osheet-foot polish"><span class="ph-os-saved">${toOrder.length} on the list</span>${recentlyArrived.length ? `<button type="button" class="ph-os-lnk" data-ph-clear-arrived="1">Clear arrived</button>` : `<span></span>`}</div>
+        <div class="ph-osheet-foot polish"><span class="ph-os-saved">${toOrder.length} on the list</span>${osColsReset}${recentlyArrived.length ? `<button type="button" class="ph-os-lnk" data-ph-clear-arrived="1">Clear arrived</button>` : `<span></span>`}</div>
       </div>` : `<div class="fam-empty" style="margin:16px 0"><span class="ph-stage-btn arrived" style="display:inline-flex;margin-bottom:8px">✓ All arrived</span><br><span class="ph-hint-long">Flag a herb with 🛒 in the inventory and it lines up here.</span></div>`}`;
     const mobileHtml = `
       ${shellHtml}
@@ -35700,6 +35762,23 @@ or changing anything in Cliniko.
     if (curPhase) {
       const resolved = phTpCadenceDate(curPhase.cadence, activePlan, name);
       if (resolved) return { days: null, noAcu: false, source: "plan-milestone", resolvedDate: resolved.key, why: resolved.why };
+      // batch 18: a "CD 3, 5, 12" phase already resolves to real dates on
+      // the Treatment Plan's own Visits panel (phTpProjectedVisits, reusing
+      // her real LMP/cycle length) -- Communications never called the same
+      // reader, so a CD-list phase silently fell all the way through to the
+      // generic weekly default instead (the disclosed synth22 2026-09-15/16
+      // gap: "teaching the scheduler to read CD lists too is a real
+      // follow-up"). Same source shape as the milestone branch above
+      // (resolvedDate/why), so every existing display site already handles
+      // it without change.
+      const cds = phTpCadenceCdList(curPhase.cadence);
+      if (cds) {
+        const proj = phTpProjectedVisitsForCds(name, curPhase, cds);
+        if (proj.ok && proj.dates.length) {
+          const next = proj.dates[0];
+          return { days: null, noAcu: false, source: "plan-cd", resolvedDate: next.key, why: `CD ${next.cd}` };
+        }
+      }
     }
     const parsed = phAcuCadenceParse(curPhase ? curPhase.cadence : "");
     if (parsed.noAcu) return { days: null, noAcu: true, source: "plan: no acu this phase" };
@@ -59076,6 +59155,10 @@ Dosage: {dosage}
   // requirement 4: never let empty win just because it's "newer" -- a section
   // that had a healthy amount of content and suddenly drops by more than half
   // is almost certainly a bad read somewhere upstream, not real mass deletion
+  // batch 18: returns the actual before/after counts (never null on a trip),
+  // not just true/false -- her showSyncNote warning used to say a section
+  // "looked emptied out" with no numbers at all, which her own "never round
+  // counts away" rule already covers everywhere else in this app.
   function sectionLooksEmptier(name, fromStr, toStr) {
     var a = sectionLen(name, fromStr), b = sectionLen(name, toStr);
     // a candidate that's MISSING or unparseable counts as empty (0), it
@@ -59083,18 +59166,21 @@ Dosage: {dosage}
     // local data yet compared as "unknown" instead of "empty", slipped past
     // this guard, and could win a merge against a full cloud copy
     if (b == null) b = 0;
-    if (a != null && a >= 10 && b < a * 0.5) return true;
+    if (a != null && a >= 10 && b < a * 0.5) {
+      var unit = name === "pharmacy_log" ? "log entries" : name === "prescriptions" ? "prescriptions" : "herbs";
+      return { from: a, to: b, unit: unit };
+    }
     if (name === "pharmacy_core") {
       var pa = corePatientsLen(fromStr), pb = corePatientsLen(toStr);
       if (pb == null) pb = 0;
-      if (pa != null && pa >= 3 && pb < pa * 0.5) return true;
+      if (pa != null && pa >= 3 && pb < pa * 0.5) return { from: pa, to: pb, unit: "patients" };
     }
     if (name === "pharmacy_log") {
       var da = logPatientDispenses(fromStr), db = logPatientDispenses(toStr);
       if (db == null) db = 0;
-      if (da != null && da >= 10 && db < da * 0.5) return true;
+      if (da != null && da >= 10 && db < da * 0.5) return { from: da, to: db, unit: "dispenses" };
     }
-    return false;
+    return null;
   }
   function loadBase() { try { var b = JSON.parse(localStorage.getItem(BASE_KEY)); return b && typeof b === "object" ? b : {}; } catch (e) { return {}; } }
   function saveBase(b) { try { _setItem.call(localStorage, BASE_KEY, JSON.stringify(b)); } catch (e) {} }
@@ -59298,7 +59384,7 @@ Dosage: {dosage}
     SECTIONS.forEach(function (name) {
       var l = L[name], c = C[name], b = base[name];
       var localChanged = hashStr(l) !== b, cloudChanged = hashStr(c) !== b;
-      var pick;
+      var pick, eg;
       if (name === "prescriptions" && !allowShrink && l !== c) {
         // never pick one whole blob over the other for prescriptions -- merge
         // record-by-record so a missing record can't be silently dropped by
@@ -59312,11 +59398,13 @@ Dosage: {dosage}
       } else if (localChanged && !cloudChanged) {
         // only this device touched it -- push it on, UNLESS it just went
         // suspiciously empty, in which case trust the (unchanged) cloud copy
-        if (!allowShrink && sectionLooksEmptier(name, c, l)) { pick = c; emptyGuarded.push(name); } else pick = l;
+        eg = !allowShrink && sectionLooksEmptier(name, c, l);
+        if (eg) { pick = c; emptyGuarded.push({ name: name, from: eg.from, to: eg.to, unit: eg.unit }); } else pick = l;
       } else if (!localChanged && cloudChanged) {
         // only the cloud moved -- adopt it, UNLESS it looks suspiciously
         // empty next to what's already here
-        if (sectionLooksEmptier(name, l, c)) { pick = l; emptyGuarded.push(name); } else pick = c;
+        eg = sectionLooksEmptier(name, l, c);
+        if (eg) { pick = l; emptyGuarded.push({ name: name, from: eg.from, to: eg.to, unit: eg.unit }); } else pick = c;
       } else {
         // both sides touched this section since they last agreed. Never
         // silently yank an edit out from under her while she might be
@@ -59324,7 +59412,8 @@ Dosage: {dosage}
         // hold the losing side so it's a one-click restore if this guessed
         // wrong. The empty-guard still overrides even here.
         conflicts.push(name);
-        if (!allowShrink && sectionLooksEmptier(name, c, l)) { pick = c; emptyGuarded.push(name); } else pick = l;
+        eg = !allowShrink && sectionLooksEmptier(name, c, l);
+        if (eg) { pick = c; emptyGuarded.push({ name: name, from: eg.from, to: eg.to, unit: eg.unit }); } else pick = l;
       }
       if (name === "pharmacy_core") {
         pick = preserveLocationField(pick, l, c);
@@ -59356,6 +59445,15 @@ Dosage: {dosage}
   function setBaseFrom(sections) {
     var b = {}; SECTIONS.forEach(function (name) { b[name] = hashStr(sections[name]); });
     saveBase(b);
+  }
+  // batch 18: turns emptyGuarded's {name,from,to,unit} entries into the real
+  // numbers that tripped the guard -- "pharmacy core (12 → 3 patients)"
+  // instead of just naming the section with no sense of how much it shrank.
+  function emptyGuardText(list) {
+    return list.map(function (g) {
+      var label = g.name.replace(/_/g, " ");
+      return (g.from == null || g.to == null) ? label : (label + " (" + g.from + " → " + g.to + (g.unit ? " " + g.unit : "") + ")");
+    }).join(", ");
   }
   function showSyncNote(msg) {
     if (msg === lastNoteMsg && document.getElementById("lcmNote")) return;
@@ -59487,7 +59585,7 @@ Dosage: {dosage}
       var res = mergeSections(localSnapshotObj(), cloudData);
       if (row && row.updated_at) { lastSavedAt = row.updated_at; renderSavedAt(); }
       if (res.emptyGuarded.length) {
-        showSyncNote("⚠ " + res.emptyGuarded.join(", ").replace(/_/g, " ") + " looked emptied out on one side of the sync — kept the fuller copy instead. Worth a quick check.");
+        showSyncNote("⚠ " + emptyGuardText(res.emptyGuarded) + " looked emptied out on one side of the sync — kept the fuller copy instead. Worth a quick check.");
       } else if (res.conflicts.length && !isOwnEcho) {
         showSyncNote("Merged an edit made on another device (" + res.conflicts.join(", ").replace(/_/g, " ") + "). If something looks off, use 🕐 Cloud history.");
       }
@@ -59867,7 +59965,7 @@ Dosage: {dosage}
       var finalJson = JSON.stringify(finalSnap);
       if (finalJson === lastPushed) return true;            // cloud already has it
       if (res.emptyGuarded.length) {
-        showSyncNote("⚠ " + res.emptyGuarded.join(", ").replace(/_/g, " ") + " looked emptied out on this device — kept the fuller copy from the cloud.");
+        showSyncNote("⚠ " + emptyGuardText(res.emptyGuarded) + " looked emptied out on this device — kept the fuller copy from the cloud.");
       }
       return doUpsert(finalSnap, finalJson, row && row.updated_at).then(function (ok) {
         // "superseded" means another device wrote in the gap and doUpsert
