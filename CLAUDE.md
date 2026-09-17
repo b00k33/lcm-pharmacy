@@ -4395,4 +4395,4 @@ after every run; no `localStorage` residue (confirmed via `savePharmacy()`
 re-run after cleanup, not assumed).
 
 Version bump: `lcm-build` `20260918-090000`, `sw.js` cache
-`lcm-20260918-herbsonly-photo-retrieval`.
+`lcm-20260918-herbsonly-photo-retrieval`. Committed `7ea51e7` on `session-a`.
