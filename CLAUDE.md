@@ -4396,3 +4396,122 @@ re-run after cleanup, not assumed).
 
 Version bump: `lcm-build` `20260918-090000`, `sw.js` cache
 `lcm-20260918-herbsonly-photo-retrieval`. Committed `7ea51e7` on `session-a`.
+
+## "Today's visit" merged into the Treatment Plan Grid — the acu-log panel retired everywhere (2026-09-18)
+
+She sent a screenshot of a Grid + acu-log mock and, over several rounds of
+correction ("this is meant to replace" / "or to merge" / "you didnt
+understand me"), the actual ask became clear: the standalone "Log today's
+session" panel (`presAcuOpenHtml`) and the Grid's own Visits table row
+reading "not written up yet" for the exact same date were the SAME fact,
+shown in two disconnected places on screen. This is the app's own
+already-documented, three-times-asked-for pattern ("tap the thing itself
+to edit it") — so rather than a new UI, the acu-log gets embedded straight
+into whichever phase's own row is actually being treated today. Her final
+confirmation, after two scoping questions: **"yes, and remove the panel
+everywhere."**
+
+**What changed:** `phTpPhaseBodyRows` gained a `showTodaysVisit` branch —
+when the phase being rendered is the one `presAcuCtx()` says is currently
+being treated, its "What happened" column header reads "Today's visit"
+and the merged cell embeds `presAcuOpenHtml` VERBATIM (reusing the exact
+same markup, ids and click handlers the old standalone panel used, via
+the pre-existing `recSpanned`/rowspan mechanism already built for the
+"phase hasn't started" empty state) instead of the read-only gathered
+view. `phTpVisitsMergedHtml`'s own Visits table stops saying "not written
+up yet" for today's row when it's being edited right above it — "editing
+above ↑" instead, so the two never contradict each other again. The old
+standalone accordion (`presAcuRowHtml`, the `presAcuOpen` open/closed
+flag, its `data-pres-acu-toggle` handler) is deleted outright, not just
+unwired — her explicit "remove the panel everywhere." Timeline/Spine mode
+(no per-phase row to embed into) keeps the acu-log as a floating block via
+a new `acuLogBlock` parameter threaded through `phTpPlanBodyHtml`, so
+nothing loses the ability to log a session.
+
+**Adversarial review (Workflow, 3 dimensions × 2 refuters) caught 5 real
+bugs — all high/medium severity, all confirmed by both refuters, all fixed
+and re-verified directly against the real functions:**
+
+1. **The gate read a different "current patient" than the editor it
+   gated.** `presAcuCtx()` used to always resolve identity off
+   `presOpenId` (whichever script panel happens to be open) — a
+   completely different piece of state from the Grid's own
+   `phTpScreenPatient`/`phTpScreenPlanId`. They only agreed on the inline
+   Profile → Plan tab path (which sets both together). Opening a plan from
+   the Appointments popup's "Open this treatment plan" link (`phTpOpen`,
+   which never touches `presOpenId`) with no script open anywhere left
+   `presAcuCtx()` resolving nothing — the embedded editor would silently
+   never appear on that entry point, even on the exact phase the calendar
+   said to treat today. **Fixed**: `presAcuCtx()` now takes optional
+   `(name, planId)` overrides (the Grid's gating check passes
+   `phTpScreenPatient`/`plan.id` explicitly — the identity actually on
+   screen for that render); with no override, it reads identity off the
+   currently-rendered `.ph-acu-open` box's own `data-acu-name`/
+   `data-acu-plan` attributes (every click handler fires from inside that
+   box, so it's always the same identity the box was drawn with); only
+   with neither does it fall back to the old `presOpenId` guess.
+2. **Two concurrently-active plans permanently pinned the editor to only
+   one of them.** `presAcuCtx()`/`presAcuOpenHtml()` both picked "the"
+   active plan via `plans.find(p => p.status === "active") || plans[0]` —
+   pure array order, blind to which plan's Grid is actually on screen. She
+   runs concurrent plans on purpose (a fertility plan alongside a later
+   MSK plan, per `phTpApplyInterrupt`'s own comment), so viewing the
+   SECOND active plan's Grid could never show "Today's visit" at all, no
+   matter the phase or day. **Fixed**: `presAcuOpenHtml` now accepts an
+   explicit `{planId}` option, passed by every real call site (the Grid
+   cell passes `plan.id`, the Timeline block passes its own open plan's
+   id) — an explicit plan always wins over the array-order guess.
+3. **Overriding which phase she's treating left the merged cell showing
+   one phase's Planned columns beside a different phase's editor.** The
+   phase-override chip (the Kathryn Welsh case — treated as Ovulation
+   while the calendar reads Luteal) only called `presAcuOpenRefresh()`,
+   which patches the acu-log div in place without touching which phase's
+   row it physically sits inside. **Fixed**: the override handler now also
+   moves the tab selection (`phTpTabPhase.set`) to the overridden phase (or
+   back to the calendar phase, on clearing it) and calls the existing
+   `phTpRepaintPhasePanel()` — the same repaint ~10 other phase-editing
+   handlers already use — so the merged cell and its Planned-column
+   neighbours always describe the same phase.
+4. + 5. **The merged cell's `rowspan="5"` didn't match the 7 physical
+   `<tr>` rows it actually needed to span** (two dimensions independently
+   found the same defect). Only 5 of the block's 7 rows call the `rec()`
+   closure that emits the merged cell (Aim/Visits/Formula/Points/Watch) —
+   the always-rendered Formula-action row and the Press-tags row sit
+   between them and never call it. `rowspan="5"` only reached down to the
+   Points row: the Formula-action row's own `colspan="4"` collided with
+   the still-open span (its right two columns were already claimed), and
+   the Watch row — two rows past where the span had already ended — lost
+   its own right-hand cell entirely. This pattern pre-dated this build
+   (shared with the "phase hasn't started" empty state) but was rare;
+   `showTodaysVisit` made it render every single day for whichever phase
+   is actively being treated — the routine case, not an edge case.
+   **Fixed**: the span now correctly counts and covers all 7 rows
+   (`rowspan="7"`), and the Formula-action/Press-tags rows narrow their own
+   markup to the left two columns — matching every other row — instead of
+   claiming columns the span already owns, but ONLY while spanning; their
+   ordinary per-phase-record layout (a real gathered record, not today's
+   visit or an unstarted phase) is untouched.
+
+**Verified directly against the real functions in the sandbox** (not a
+reimplementation — the login gate still blocks a fully-booted local
+click-through, same limitation as every batch in this file): a synthetic
+patient with a 2-phase plan and no script open anywhere confirmed the
+embedded editor renders via `phTpScreenPatient`/`plan.id` alone (bug 1); a
+second concurrently-active plan confirmed `phTpPhaseBodyRows` correctly
+gates on the ON-SCREEN plan's own current phase, not array order (bug 2);
+a real dispatched click on a rendered phase-override chip (inside a mocked
+`#phTpModal`/`.ph-tp-phasebody`, matching `phTpRepaintPhasePanel`'s own
+lookup) confirmed the tab follows the override and the merged cell
+relocates to the new phase's row, and tapping the calendar phase again
+correctly clears it back (bug 3); DOM inspection of every physical `<tr>`
+in the rendered table confirmed all 7 rows now carry exactly 4 columns
+each with no overlapping or missing cells, while the ordinary
+non-spanning case (an already-gathered phase not being treated today)
+still emits the original `colspan="4"` Formula-action row unchanged (bugs
+4+5). Clean console boot throughout (the two pre-existing icon-asset 404s
+are unrelated to this change). Synthetic patients/plans/DOM cleaned up and
+confirmed absent from `localStorage` after every run (nothing in this
+build ever called `savePharmacy()`, so nothing could have persisted).
+
+Version bump: `lcm-build` `20260918-100000`, `sw.js` cache
+`lcm-20260918-todaysvisit-grid-merge`.
