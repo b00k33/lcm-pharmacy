@@ -3853,3 +3853,113 @@ re-confirming settled ground rather than finding new safe wins.
 `project_pharmacy_table_cell_traps.md` are each now 3-for-3 stale across
 independent re-verifications — a quick correction pass on those two files
 would stop them resurfacing in any future audit re-run.
+
+### Batch 18 — To-Order column drag-to-reorder (for real this time), CD-list
+### cadence reaches Communications, sync shrink-guard shows real numbers
+
+Her "finish all batches" reopened the auto-batching Batch 17 had paused —
+not as another 6-candidate gate:none sweep (that pool really is dry), but
+as three individually-scoped, larger items hand-picked as genuinely safe to
+build without her decision first. The 59 refused/parked and 59
+open-question items from the original audit stayed untouched, per the
+standing rule.
+
+- **To-Order desktop sheet gets real per-column drag-to-reorder — and
+  Batch 7's "already fully shipped" correction was itself wrong.** Batch 7
+  (2026-09-17) claimed this was already live since `4069869`, citing
+  `data-ph-col-drag="restock:${k}"` on the header. That citation is real,
+  but it's the wrong table: `"restock"` is the MOBILE CSS-grid card view's
+  own drag prefix, a completely separate table from `.ph-osheet`, the
+  desktop sheet Batch 12 was actually asked about (and correctly found
+  un-built, needing four row-shape functions reconciled). Batch 7 verified
+  the phone cards dragged and concluded the desktop sheet did too — it
+  didn't check which of the two tables that prefix belonged to. Built for
+  real this time: a new `PH_OSHEET_COL_OPTS`/`PH_OSHEET_COL_DRAG_ORDER`
+  (Status · Herb · Supplier · Level · "Size × qty / Bottle $ / Total") added
+  to `PH_COL_DRAG_DEFAULTS`, an `"osheet"` branch through the shared
+  pointer-drag engine (`phColLiftSet`, the `pointerdown`/`pointermove`
+  header/span resolution), and all three row-shape functions (`osRow`,
+  `osArrivedRow`, `osLowRow`) rewritten to build a `tdMap` keyed by column
+  and render via `osColOrder.map(k => tdMap[k])` — `osSupRow` (the supplier
+  band divider) needs no change, since its `colspan="5"`/`colspan="4"` split
+  sums to 9 regardless of column order. The Size/Bottle/Total group moves as
+  ONE bundled unit (`data-ph-col-drag="osheet:amounts"` on all three
+  `<th>`s, `PH_OSHEET_AMOUNTS_KEYS` expanding the lift-highlight lookup)
+  because `osArrivedRow`/`osLowRow` already show those three as a single
+  `colspan="3"` summary sentence, not independent values — they can move as
+  a block relative to Status/Herb/Supplier/Level, never independently of
+  each other. The `<colgroup>` (`osCols`) is rebuilt from the same
+  `osColOrder` array every render, in lockstep with the `<thead>` — without
+  that, this would silently reintroduce the exact "glitchy columns" mirror-
+  table bug her 2026-08-11 report already fixed once for Inventory (widths
+  are applied POSITIONALLY to a mirrored head+body `<colgroup>`, so the
+  `<col>` sequence has to track the header exactly, every render). A
+  conditional "↺ Reset columns" button was added to `.ph-osheet-foot`,
+  reusing the existing generic `data-ph-col-order-reset="osheet"` handler
+  with zero further changes needed. Sandbox-verified with real synthetic
+  `PointerEvent` drag dispatch (`pointerdown`/`pointermove`/`pointerup`,
+  matching the app's actual listeners — `PHARMACY` is never window-exposed,
+  so this is the only faithful way to test it): single-column drag, the
+  bundled "amounts" group dragging together, colgroup/width identity
+  staying correct post-reorder across a real to-order → ordered → arrived
+  stage transition (all three row shapes), and the reset button. Zero
+  console errors throughout.
+- **A Treatment Plan phase cadenced as a CD list ("CD 3, 10, 12") now
+  reaches Communications, not just the plan's own Visits panel.** The
+  synth22 2026-09-15/16 batch built `phTpCadenceCdList`/
+  `phTpProjectedVisitsForCds` for the plan's own display but explicitly
+  disclosed the gap: "teaching the scheduler to read CD lists too is a
+  real follow-up." `phAcuCurrentCadenceDays` now tries a CD-list reading
+  right after the existing milestone-date check and before the plain-
+  interval fallback — same `{resolvedDate, why}` shape as the milestone
+  branch, so every existing display site (Communications row, phone card,
+  check-in panel) already handles it with no further change, per the
+  app's own "never guess a fertility-plan date" principle: a phase whose
+  cadence can't be read as a CD list, or can but has no cycle/LMP data yet,
+  falls straight through to the same default it always did. Verified
+  end-to-end via a real synthetic patient with a plan phased "CD 3, 10,
+  12": with no cycle data set, `phAcuCurrentCadenceDays` correctly returns
+  the safe `{days:7, source:"default"}` fallback (confirmed via the real
+  `phPatientPeek`/`phPatientRec` accessors, not a reimplementation); once a
+  real LMP/cycle length is set on the record, it correctly returns
+  `{days:null, source:"plan-cd", resolvedDate:"2026-10-01", why:"CD 3"}`,
+  and `phAcuFollowupCalc` (what Communications actually reads) correctly
+  carries that through to `dueOn`. **Trap hit and fixed while verifying,
+  worth remembering**: the sandbox was silently running a STALE cached
+  copy of `index.html` from before this edit — the pre-existing helper
+  functions this edit calls (`phTpCadenceCdList`, `phTpProjectedVisitsForCds`)
+  worked correctly when called directly, masking that `phAcuCurrentCadenceDays`
+  itself hadn't picked up the new branch yet. Unregistering the service
+  worker and clearing the Cache Storage before reloading fixed it — see
+  [[reference_stale_service_worker_sandbox]]. Synthetic patient and script
+  cleaned out of `localStorage` afterward.
+- **The sync shrink-window guard's warning now shows the real numbers that
+  tripped it.** `sectionLooksEmptier` used to return a bare `true`/`false`;
+  her own "never round counts away" rule already applies everywhere else in
+  this app, and the warning toast ("pharmacy_core looked emptied out...")
+  never said emptied from what to what. It now returns `null` or
+  `{from, to, unit}` (unit follows whichever of the three measures a
+  section can trip — generic herbs/log-entries/prescriptions count, or the
+  more specific patients/dispenses-with-a-patient count for
+  `pharmacy_core`/`pharmacy_log`), and a new `emptyGuardText` turns the
+  `emptyGuarded` list into e.g. "pharmacy core (12 → 3 patients)" at both
+  warning sites (`pullMergePushImpl`, `flushPush`). Deliberately narrow
+  scope, matching this item's own risk assessment: only the message
+  wording changed, not the shrink-detection thresholds or the merge
+  decision itself, and NOT the confirmation-based timing fix for the same
+  function Batch 10 already declined as too risky. **Could not be
+  exercised through the real sync flow** — `sectionLooksEmptier`/
+  `mergeSections`/`showSyncNote` are closure-private to the sync module
+  (never window-exposed) and the sandbox has no signed-in Supabase account,
+  per the standing rule against ever entering her real credentials there.
+  Verified instead by copying the exact edited function bodies into an
+  isolated test and running them against synthetic section strings: a
+  generic-count shrink (herbs 12→3), a patients-specific shrink independent
+  of the herb count, a generic log-entry shrink, a dispenses-with-a-patient
+  shrink independent of the generic log count, a prescriptions shrink, the
+  no-shrink case (returns `null`), an unparseable/missing "to" side
+  (correctly floors to 0), and the message-text formatter for both a
+  single- and a multi-section warning.
+
+Version bump: `lcm-build` `20260917-130000`, `sw.js` cache
+`lcm-20260917-batch18-toorder-cd-syncdelta`.
