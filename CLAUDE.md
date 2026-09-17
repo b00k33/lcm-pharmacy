@@ -3963,3 +3963,49 @@ standing rule.
 
 Version bump: `lcm-build` `20260917-130000`, `sw.js` cache
 `lcm-20260917-batch18-toorder-cd-syncdelta`.
+
+### Batch 19 — overlapping appointments 3+ render as one consistent cluster
+
+She said "go ahead" on the one item batch 18 flagged rather than built:
+"Overlapping appointments 3+" on the Appointments Grid. `phApptCalDayBlocks`
+already split a 2-way overlap (a same-day pre/post embryo-transfer double-
+booking, its real documented use case) into two even columns, but its own
+comment admitted it was "not built to handle deep nested overlaps."
+
+**What was actually wrong, traced rather than assumed:** each block's width
+divisor ("of", how many columns to split its row into) came from ONLY the
+appointments that directly overlap IT in time. Two blocks belonging to the
+same visual cluster only through a third block — A overlaps B, B overlaps
+C, A and C never touch — could disagree about their own cluster's column
+count. Proved by hand and then by a 2000-trial randomized stress test that
+this never causes an actual COLLISION (a block's own greedy column is
+always inside its own "of", by construction of the greedy packer), only an
+inconsistent width: a block whose only overlap partner is the cluster's
+"wide" block rendered noticeably wider than its neighbours sharing the same
+columns, instead of matching them.
+
+**Fix:** union-find over direct overlaps groups every block into its real
+connected cluster first (transitively, not just direct neighbours); every
+block in one cluster then shares ONE column count — the same approach every
+other calendar app (Cliniko included) uses for a 3+-way overlap. The
+existing greedy column-assignment pass (which decides WHICH column a block
+sits in) is untouched; only how "of" is computed changed.
+
+Verified two ways: an isolated property-based test (six hand-built cases —
+no overlap, a simple pair, three fully-simultaneous blocks, a staggered
+A-B-C chain with no direct A-C overlap, the exact "third block joins a
+cluster it doesn't directly touch" case, and a four-way pyramid — plus 2000
+randomized trials of up to 8 appointments each) checked three invariants
+every time: no block's column exceeds its own "of", no two time-overlapping
+blocks ever share a column, and every block in one connected cluster
+reports the same "of" — zero failures across all 2006 cases. Then the real
+function against real appointment data: four synthetic appointments
+injected into `PHARMACY.appointments` for today (A 9:00–10:00, B and C both
+9:00–9:20, D 9:30–9:40 overlapping only A) and rendered on the live Grid —
+D now correctly renders at the same one-third width as B and C instead of
+the previous half-width, with no console errors, then cleaned up. The
+2-way case (the feature's original, documented use) is unchanged by this
+fix, confirmed by the same test suite.
+
+Version bump: `lcm-build` `20260917-140000`, `sw.js` cache
+`lcm-20260917-batch19-overlap-clustering`.
