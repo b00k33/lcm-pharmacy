@@ -4147,7 +4147,8 @@ confirming the decision rather than reversing it. If she ever reports a
 NEW, reproducible restore-vanishes symptom, re-open with that concrete
 failure in hand rather than re-deriving this from first principles again.
 
-Version bump: `lcm-build` `20260917-151500`, `sw.js` cache
-`lcm-20260917-phase6-infoletters-tpview`. Committed `f02a95c` (build) +
-`eb4f536` (docs) + `f145685` (sign-out pull-back) on `session-a` — not
-pushed to `main` (the 4pm Sydney job promotes it).
+Version bump: `lcm-build` `20260917-160000`, `sw.js` cache
+`lcm-20260917-phase6-signout-confirmed`. Committed `f02a95c` (build) +
+`eb4f536` (docs) + `f145685` (sign-out pull-back) + `381961c` (hash fix) +
+`714e969` (sign-out reinstated, her "yes") on `session-a` — not pushed to
+`main` (the 4pm Sydney job promotes it).
