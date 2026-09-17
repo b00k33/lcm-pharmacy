@@ -4009,3 +4009,138 @@ fix, confirmed by the same test suite.
 
 Version bump: `lcm-build` `20260917-140000`, `sw.js` cache
 `lcm-20260917-batch19-overlap-clustering`.
+
+## Phase 6 — returning-visit highlight, compact Appointments row, IVF intake matching, Info letters relocated, sign-out escape hatch (2026-09-17)
+
+A separate tranche from the backlog-audit batch numbering above — this is
+her own confirmed-via-widget picks plus two hand-picked sensitive/clinical
+items, not a Select-agent sweep. Six pieces, gathered across several rounds
+(three visual mocks + a live interactive tweak widget for the UI half; two
+direct asks for the other half):
+
+**Returning-visit muted + "changed this visit" highlight.** Three UI mocks
+(Dashboard stocktake cards / Appointments List row / Returning-visit
+profile treatment) went to her as an inline `show_widget` comparison, then
+a real interactive tweak widget once she asked to "edit/tweak" the
+returning-visit option herself. Her exact confirmed spec, delivered via the
+widget's own "Looks right — tell Claude" button: **29px list row, focus
+text shown, small text pills for ACU/CHM, changed-field highlight amber +
+bold value.** Dashboard stocktake cards stayed as-is (her pick).
+- `presOpenIdentitySnapshot` (`{sex, dob, phone, email}`) captures the
+  patient's identity fields the moment a script opens — same shape and
+  same call site as the pre-existing `presOpenSnapshot`
+  (`{lastDispensedAt, lastDispenseLogId}`), read via `phPatientPeek`
+  (never `phPatientRec`, which mutates on every call) so merely opening a
+  script never re-stamps the record. `presFieldChangedThisVisit(field,
+  curVal)` compares the live value against that snapshot.
+- `presNameTypeFieldsHtml`/`presContactFieldsHtml` both take a new
+  `returning` param (`!hxIsNew` at their one call site inside
+  `presStageOpeningHtml`; their other two call sites, ~44023/~53827, pass
+  none and are unaffected). Sex/DOB/Phone/Email get `.ph-op-quiet` (muted
+  label + 65% opacity, full weight on focus) unless the field itself
+  carries `.changed` (amber label/border/tint, bold value).
+- **Gated on `returning`, not just "does a value exist"** — a brand-new
+  patient's first-ever entry into a blank field trivially differs from an
+  empty open-time snapshot, which would read as false "changed" noise on
+  ordinary intake. Caught and fixed before any live testing.
+- **CSS specificity trap, hit and fixed**: a pre-existing rule
+  `#pharmacyPage .ph-pres-stage-body .ph-tmpl-field label` sits at the same
+  (1,2,1) specificity as the first draft of the new `.changed`/`.ph-op-quiet`
+  rules and sits later in the sheet, so it silently won regardless of the
+  new rules' own source position. Fixed by padding every new selector with
+  the real ancestor class `.ph-pres-stage-body`, pushing specificity to
+  (1,3,1) — wins unconditionally, independent of where either rule sits in
+  the file. See [[reference_css_media_query_source_order]].
+- **Scope, disclosed here since it was a build-competence call made
+  mid-build, not re-asked**: covers ONLY Sex/DOB/Phone/Email. NOT Name (its
+  own rename-safety flow), NOT Addresses/Insurance/Supplements (bigger
+  editors, different interaction shape), NOT the Assessment tab's
+  structured content (Photos/Constitution/Checklist/Cycle/IVF/Notes — not a
+  field-list, the "muted pre-filled field" concept doesn't map onto it).
+- Verified live in the sandbox: a real synthetic returning patient
+  (`acuSessions` injected to flip their returning status), DOM class/style
+  inspection before and after a real Sex-toggle interaction, a screenshot,
+  correct `--ph-faint` on an untouched quiet field and correct
+  `--ph-low-deep`/bold/tint on a `.changed` one — synthetic data cleaned up
+  via direct `localStorage` JSON editing afterward (`PHARMACY`/`PRESC`
+  aren't window-exposed).
+
+**Appointments List compact row.** `phApptCalListRowHtml(a)` renders a
+29px one-line row (time · kind pill · name · focus text, no goal/status/
+icons) at `window.innerWidth <= 900`; the desktop 5-column row is
+unchanged. Same wrapper attributes (`data-ph-appt-pop`, role/tabindex) as
+the full row, so popup-open/select/search-dim logic needed no change.
+Verified live: synthetic-appointment injection, viewport resize to mobile,
+DOM height/structure inspection, a real popup-open click test, then
+cleanup.
+
+**IVF intake date-proximity matching.** An intake-reported egg
+collection now tries to match an existing UNLINKED cycle row within 7 days
+(`PH_IVF_INTAKE_MATCH_WINDOW_DAYS`, disclosed/easy to widen, not asked
+about) by date proximity (`phIvfDateProximityDays`/`phIvfIntakeMatch`)
+before falling back to adding a new row. A match fills blanks only (never
+overwrites a value already on the row) — same "never silently overwrite"
+rule the paste-contact-card feature already follows. A plan-linked round is
+never a candidate (it's already the authoritative slot for its own round);
+narrowing to unlinked rows only is deliberate — a wider window risks
+conflating two real, separate rounds' egg/embryo counts, which is worse
+than a harmless duplicate row. Dates that don't resolve to at least a real
+`YYYY-MM` degrade to "no match" rather than guessing. Verified via an
+isolated JS logic test: 5/5 cases passed (exact-day-diff, unparseable
+prose → null, month-only-vs-exact-date diff, correct nearest-match-within-
+window, correct no-match-outside-window).
+
+**Info letters relocated.** Moved from the Dispense-stage dose timeline
+(`presDoseTimelineHtml`, which lost its `.ph-dose-step` Info-letters block)
+into the Treatment plan tab's inline editor (`presTpInlineEditorHtml`,
+right after `phTpIvfTrackHtml`, before Review notes) — patient education
+isn't a dose step, and every plan already has one real "open script" to
+resolve letters against (`presOpenId`, the same read `presAcuOpenHtml`
+already uses one scope above). The existing delegated click handler
+(`e.target.closest("[data-pres-infoltr]")`, ~line 25846) needed no change —
+it doesn't care where in the DOM the button renders. Verified by source
+re-read only (the login gate blocks a fully-booted local click-test, same
+limitation as most batches above): confirmed exactly one
+`data-pres-infoltr` emitter remains, template syntax is balanced, and the
+old location has no orphaned markup.
+
+**"Sign out without saving."** A confirm()-gated escape hatch
+(`doSignOutNoSave`) beside the existing `doSignOut` on the Manage-locations
+screen, for when the CLOUD itself is stuck (offline, dead network, a push
+stuck retrying) rather than waiting on `flushPush()`. Mirrors `doSignOut`'s
+exact cleanup sequence (`saveReg([])`, `sb.removeAllChannels()`,
+`clearLocalData()`, remove `#lcmSwitch`, `sb.auth.signOut()`) with one
+difference: it skips the flush entirely, so the confirm text says plainly
+that anything not already synced will be lost. Styled deliberately
+smaller/quieter than the main Sign-out button (12px, no border, muted
+colour) — an escape hatch, not a peer action. Verified by source re-read
+only, same login-gate limitation as above: button correctly wired
+(`document.getElementById("lcmMgOutNoSave").onclick = doSignOutNoSave`), no
+id collisions, placement between Sign-out and Close.
+
+**Sync shrink-guard timing — re-examined, not changed.** The backlog's
+"replace the fixed 20s `__lcmAllowShrinkUntil` window with confirmation-
+based timing" task was re-opened this tranche, then closed without a code
+change after a full trace of both restore call sites
+(`phDoSectionRestore`, `confirmRestoreHistory`) and `mergeSections`' own
+read of the two flags (`~line 59534`). Both restore paths already pair a
+ONE-SHOT flag (set right before their own deliberate pre-reload push) with
+a 20-SECOND WINDOW (set before their `localStorage` writes, since each
+`setItem` schedules its own debounced push 150ms later and that cycle must
+honour the shrink too) — a layered design already purpose-built for the
+exact multi-cycle race that caused the original 2026-08-15/2026-09-09
+"Restore does nothing" incident, and both paths reload promptly on
+confirmation (or a bounded timeout) regardless, independently capping how
+long the window even matters. There's no dangling exposure left to close,
+and no reproducible failure driving a change beyond the fix already shipped
+2026-09-09. This closes the same way Batch 10 and Batch 18 already closed
+it (both declined the timing change as unverifiable in this sandbox — no
+signed-in Supabase account, and the standing rule against ever creating one
+with her real credentials) — this pass adds a complete fresh trace
+confirming the decision rather than reversing it. If she ever reports a
+NEW, reproducible restore-vanishes symptom, re-open with that concrete
+failure in hand rather than re-deriving this from first principles again.
+
+Version bump: `lcm-build` `20260917-150000`, `sw.js` cache
+`lcm-20260917-phase6-infoletters-signout-tpview`. Committed `f02a95c` on
+`session-a` (not pushed to `main` — the 4pm Sydney job promotes it).
