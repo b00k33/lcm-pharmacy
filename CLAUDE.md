@@ -3711,3 +3711,42 @@ Version bump: `lcm-build` `20260917-110000`, `sw.js` cache `-13`. Shipped
 
 Version bump: `lcm-build` `20260917-120000`, `sw.js` cache `-14`. Shipped
 `1713c5f` on `session-a`.
+
+### Batch 15 — nothing to build (both candidates verified as non-issues)
+
+0 built, 2 closed. The Select agent could only surface 2 gate:none candidates
+this round (down from 6-8 in earlier batches) after the exclusion list of
+already-handled items grew to cover 14 batches' worth of work — the audit
+snapshot is now close to exhausted of easy, unambiguous wins.
+
+- **"Add a standalone Reschedule button to the appointment popup"** — closed,
+  NOT a build-competence gap. Verification traced the actual code and found
+  Edit already opens directly onto an autofocused Date field (then Time), so
+  there's no functional gap a Reschedule button would close — it would be a
+  cosmetic duplicate of Edit. More importantly, re-reading
+  `project_pharmacy_appointments_calendar.md` found this was already a
+  reasoned, disclosed decision from 2026-09-06 ("Reschedule was folded into
+  Edit rather than a separate button — my own call, disclosed to her: Edit
+  already has date/time fields, a second button would just duplicate it"),
+  later reinforced by the 2026-09-15 popup redesign that deliberately pared
+  the footer to exactly Book another / Edit / Cancel. The audit's own
+  framing ("she never explicitly ruled on it") was technically true but
+  misleading — this isn't an open gap, it's a taste call about reversing a
+  considered decision, which is hers to make, not something to auto-build.
+  Left on the table for her to raise if she ever wants it.
+- **"Click-through verify the Perimenopause & menopause plan template"** —
+  closed, false premise on the specific citation but a real question worth
+  settling properly. The original audit note's line reference for the
+  plan-picker wiring actually pointed at an unrelated feature (the intake
+  "Life stage" condition checklist, not the treatment-plan template
+  grouping). Traced all three real integration points instead: the template
+  object itself (all phase fields populated, nothing blank), the actual
+  plan-picker grouping/matching logic (correctly buckets under Gynaecology
+  and pins first with a "✓ Suggested match" badge when Case = menopause),
+  and `phTpNewPlan`'s field destructuring (exact match to every key the
+  template carries). Shares its render path with 6 other already-shipped
+  gynae templates, further reducing the odds of a template-specific bug. No
+  code change needed.
+
+No version bump, no commit to `index.html`/`sw.js` — nothing in the app
+changed this batch.
