@@ -4277,3 +4277,122 @@ boot throughout. Synthetic test patients/scripts cleaned out of
 
 Version bump: `lcm-build` `20260917-170000`, `sw.js` cache
 `lcm-20260917-synth22-natural-cycle-acu-log`.
+
+## Herbs-only visit logging + tongue/abdomen photo retrieval (2026-09-18)
+
+Two asks straight after the natural-cycle acu-log build above shipped, both
+landed the same session.
+
+**"how can i record it if they only got the herbs today?"** — the acu-log
+panel had no way to say "no acupuncture happened, this was a herbs-only
+visit." Recording Response (Better/Same/Worse) on such a day meant either
+going through the whole acupuncture apparatus (Points, phase, pulse/tongue)
+for a visit where none of that happened, or not recording it at all.
+
+New toggle, **"No acupuncture — herbs only today"**, on `presAcuOpenHtml`
+right above the phase/points block. Switching it on:
+- Hides the phase-pick/Points/Press-tags block and the clinical-findings
+  (tongue/pulse/abdomen) toggle+panel, replaced by a quiet note.
+- Save button reads "Log herbs check-in" instead of "Log today's session".
+- The session saves as `{id, date, at, noTreatment: true, points: "",
+  outcome}` — no `phaseLabel`, no override fields, no `rec.visitFnd` entry
+  — instead of the normal phase/points/press shape. Herb-instructed/
+  observed-signs still apply either way; `phCycleSyncPlans` still runs
+  either way (logging a session is still "an appointment happened," per the
+  natural-cycle build above — a herbs check-in is still a visit).
+- Toggling ON also resets `presAcuPhaseId` (a per-visit phase override no
+  longer means anything once nothing is being treated) and stashes any
+  text mid-typed into the reason/press-free/no-plan-points fields
+  (`presAcuNoTreatStash`) so toggling back OFF restores it — the normal
+  `presAcuOpenRefresh` id-carry can't do this itself, since the field it
+  would carry INTO doesn't exist in the very next (noTreatment) render.
+
+**Every display site that reads `rec.acuSessions` needed its own fix** —
+found by review, not by inspection; four consumers besides the acu-log's
+own history strip all needed a `session.noTreatment` branch or they'd
+misrepresent a herbs-only day as a treated acupuncture visit:
+1. `phTpPlanDocHtml` (the printable clinical record, CLAUDE.md decision 10)
+   — now reads "10 Sep 2026 — herbs only, no acupuncture (better)".
+2. `phAcuOutcomeLine`/`phJourneyEventRowHtml` (Patient Journey timeline) —
+   was hardcoded "🪡 Acupuncture treatment" for every acu-kind row,
+   literally "Treatment given" as the fallback subtitle when no outcome was
+   picked — the opposite of what she recorded. Now "🌿 Herbs check-in".
+3. `phTpVisitsMergedHtml` (the plan grid's own Visits table, both the
+   matched-appointment row and the orphan-session row) — Points column now
+   reads "herbs only" instead of the same bare "—" a real-but-unrecorded
+   visit shows.
+4. `phCommLastTouch` (Communications' quiet-patient detector + the check-in
+   panel's "Last seen" line) — was tagging the touch `via: "acupuncture"`;
+   now reuses the existing `"herbs"` tag the dispense touch already uses.
+5. **`phPkgUsedCount` (acupuncture session-package usage) — the one that
+   actually mattered clinically**, not just cosmetically: it counted a
+   noTreatment session as one used session, silently consuming a patient's
+   prepaid acupuncture credit on a day no acupuncture was given. Fixed by
+   excluding `s.noTreatment` from the count.
+
+**Pattern worth repeating** (same lesson the natural-cycle build above
+already drew from its own review): a brand-new session field
+(`noTreatment`) is invisible to every OTHER function that reads the same
+array unless each one is checked by hand — grep for every reader of
+`rec.acuSessions`/`.phaseLabel`, don't assume the one display site you
+built it for is the only consumer.
+
+Adversarial review (Workflow, 4 dimensions × 2 refuters/finding) caught 7
+distinct real bugs (12 raw findings, several dimensions independently
+finding the same Patient Journey issue) — all fixed and re-verified
+directly against the real functions in the sandbox, not reimplemented:
+the 5 display-site fixes above, plus the phase-override staleness (the
+"Watch for" row could keep showing a manually-overridden phase's watch
+text after toggling to noTreatment, since `presAcuPhaseId` was never
+cleared — fixed by the same reset noted above) and the carry-forward
+data-loss on a toggle-on/toggle-off round trip (fixed by
+`presAcuNoTreatStash`).
+
+**"i want the tongue photo to retrieve from tongue pictures i uploaded.
+use the one under natural light" + "i forgot to mention to add
+abdominal" + "i like the tongue chart here. use it and make it better"**
+— the per-visit Tongue/Abdomen photo tiles inside `phVisitFndPanelHtml`
+used to show ONLY a photo taken that exact day ("none yet today" on every
+other visit), even though her Photos section already has real history for
+almost every patient. `phVisitPhotoTileHtml` (the one function both tiles
+already shared) now retrieves her best photo ON FILE, any date:
+- **Tongue** ranks by shot type — natural light first, then unlabelled,
+  then side, then sublingual, then flash last — using the SAME
+  `PH_TONGUE_SHOT_RANK` the info-letter's own tongue photo picker
+  (`phLtrEnsureTonguePhoto`) already used. That constant used to be a
+  private local copy inside the letter function; hoisted to module scope
+  so the two can never independently drift apart on which shot "wins".
+- **Abdomen has no shot-type concept at all** (`phRenShotOf` is
+  tongue-only) — falls back to plain most-recent-by-date. The one part of
+  this ask that genuinely doesn't generalise between the two photo types,
+  disclosed via code comment rather than silently building a fake
+  shot-rank for abdomen.
+- The tile's caption now reads "today" (still today's) or a short date
+  (an older reference photo) plus the shot label when ranked; the Add
+  button reads "Add another" only when the shown photo actually IS
+  today's, "Add today's" otherwise — so it's never ambiguous whether
+  what's pictured was just taken or retrieved from history.
+- The tongue diagram/marks/body/coat chart itself (`phTongueOutlineSvg`,
+  already her own comprehensive chart per the 2026-09-13 "use it" ask) is
+  untouched — this build only changed which PHOTO fills the tile beside
+  it, never the chart.
+
+Verified directly against the real functions in the sandbox (the login
+gate still blocks a fully-booted local click-through, same limitation as
+every batch in this file): `phVisitPhotoTileHtml` against synthetic
+`phRenPhotoCache` entries (tongue correctly picks a newer-natural over an
+older-natural and a newer-flash; abdomen correctly picks most-recent
+regardless of shot; empty and today-already-has-one states both render
+correctly); the herbs-only toggle end-to-end via real dispatched DOM
+clicks against a synthetic patient/script inside `#pharmacyPage` (a
+synthetic click OUTSIDE that container silently no-ops in this app's
+click-delegation model — confirmed by first reproducing that exact false
+negative, then fixing the test, not the code); the phase-override reset
+and field-stash round trip; all 5 review-fixed display sites called
+directly with synthetic `noTreatment` sessions. Clean console boot
+throughout. Synthetic patients/scripts/photo-cache entries cleaned out
+after every run; no `localStorage` residue (confirmed via `savePharmacy()`
+re-run after cleanup, not assumed).
+
+Version bump: `lcm-build` `20260918-090000`, `sw.js` cache
+`lcm-20260918-herbsonly-photo-retrieval`.
