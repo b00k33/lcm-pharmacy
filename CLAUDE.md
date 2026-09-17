@@ -4152,3 +4152,128 @@ Version bump: `lcm-build` `20260917-160000`, `sw.js` cache
 `eb4f536` (docs) + `f145685` (sign-out pull-back) + `381961c` (hash fix) +
 `714e969` (sign-out reinstated, her "yes") on `session-a` — not pushed to
 `main` (the 4pm Sydney job promotes it).
+
+## Natural-cycle acu-log redesign — the CD-computed phase now drives what she logs (2026-09-17)
+
+She walked through Kathryn Welsh (natural fertility, CD18, treated as
+Ovulation window even though the calendar said Luteal, because there was no
+fertile discharge — an explicit clinical override, not an error) as a live
+worked example under the synth22 protocol, then approved a full interactive
+mock with **"ok build"**. This closes a real architectural gap: `phTpCycleEffectivePhase`
+(a live CD→phase computer, [[project_pharmacy_acupuncture_cycle_tracking]]-era)
+already existed but was scoped only to Communications' acu-cadence date
+lookup — never used to drive what she actually sees/logs at a visit, and
+`phCycleSyncPlans` (the function that advances a plan's real persisted phase
+pointer) only ever fired from period-logging, never from logging a session.
+
+**What was built**, all inside the existing "Log today's session" acu panel
+(`presAcuOpenHtml`/`presAcuOpenRefresh`, `data-pres-acu-*` handlers):
+- The phase defaults to the LIVE calendar-computed phase, with a tappable
+  phase-chip row to override it for this one visit plus a typed reason box
+  — a plain text field, not the mock's preset reason chips (her mock showed
+  chips; a free-text reason covers cases no chip could, and matches this
+  app's own "controlled list + always a typed escape hatch" idiom elsewhere).
+- Points and Press-tags are two separate chip groups, pre-checked by
+  default, each with select-all/clear and a typed "+ another…" escape
+  hatch — falling back to plain freeform inputs when the treated phase has
+  no preset points/pressPoints text at all (e.g. an override onto a phase
+  nothing's been typed on yet). The override picker is universal (any
+  multi-phase plan), not restricted to cycle-synced templates — a
+  disclosed widening of scope past the mock's cycle-only frame, since
+  nothing about "which phase am I actually treating today" is
+  cycle-specific.
+- A new phase field, `pressPoints` — propagated to every phase-copying/
+  instantiating/serializing site in the file (`phTpNewPlan`, the acute
+  detour/flare presets, the in-phase acute-illness block, IVF track
+  switching, the template-manager JSON export/import, and — added during
+  this build's review — the Treatment Plan Templates manager's own phase
+  editor, which had every other field but this one).
+- Herbs-dispensed-today stays computed-only (`phAcuHerbsOn`, untouched —
+  the standing "herbs are never typed" rule). A NEW, genuinely separate
+  fact sits beside it when nothing was dispensed today: "Has stock —
+  instruct to start `<formula>`", recorded only on the session
+  (`herbInstructed`/`herbInstructedFormula`).
+- A 3-chip fertile-mucus quick-log (egg white / milky / mix, her exact
+  wording) writes straight into the pre-existing `rec.cycleSigns` via
+  `phCycleSignSet`/`phCycleSignFor` — the SAME store the Period section
+  and cycle-strip popover already read. `PH_CYCLE_CM` extended from 5 to 7
+  entries; no second mucus store was created.
+- A tappable "Watch for" chip list is parsed straight from the phase's own
+  Watch text (`phAcuWatchChips`) — nothing new to type per phase, it reuses
+  content she already writes into the plan.
+- On Save: pushes one `rec.acuSessions` entry, then calls the existing
+  `phCycleSyncPlans(rec)` — logging a session is treated as "an appointment
+  happened," so the plan's real phase pointer advances to the calendar,
+  independent of whatever she clinically treated/recorded on that visit.
+  Verified end-to-end: overriding to Ovulation while the calendar reads
+  Luteal correctly records `phaseLabel:"Ovulation"` /
+  `calendarPhaseLabel:"Luteal"` on the session AND leaves the plan's own
+  Luteal phase `status:"current"` afterward — the two concepts (today's
+  clinical choice vs. the plan's real calendar-driven position) never get
+  conflated.
+
+**Adversarial review (Workflow, 5 dimensions → 2 refuters per finding)
+caught 10 real bugs, all fixed and re-verified in the sandbox** — the same
+discipline this file already documents catching 5 bugs in the TP templates
+editor and 6 in synth22 batch #3:
+1. The phase-override tap reset the Points/Press/Watch chip sets but not
+   the herb-instruct toggle — left on across an override, it silently
+   relabelled itself onto the NEW phase's formula and still saved,
+   recording an herb instruction she never consciously gave for that
+   formula. Fixed: overriding phase now also resets `presAcuHerbInstruct`.
+2. No double-submit guard on "Log today's session" — the handler is fully
+   synchronous, so a real fast double-tap (two separate click events, not
+   a literal race) could push a second, mostly-default-state session.
+   Fixed with a 1200ms timestamp guard (`presAcuLastLogAt`), not a
+   same-call flag, since the handler completes before a second physical
+   tap's event even fires.
+3. `presAcuOpenRefresh`'s carry-forward (this session's earlier fix for
+   "a refresh mustn't wipe what she's mid-typing") matched inputs by DOM
+   id — but the points/press free-text field's id ITSELF changes between
+   chip-mode (`...Extra`) and pure-freeform (`...Points`/`...Free`)
+   depending on whether the newly-treated phase has preset text. An
+   override that flips a field between the two silently dropped
+   mid-typed text one level deeper than the original fix reached. Fixed
+   with a small alias map so the carry tries the paired id when the exact
+   one is gone.
+4. The herb-instruct button reused `.ph-acu-phasechip`'s stadium
+   (`border-radius:999px`) styling, designed for short one-word chips —
+   its own text is a full sentence naming the formula, and wraps to 2-3
+   lines at 360px into an oversized capsule. Fixed with a dedicated
+   `.ph-acu-herbbtn` class (10px radius, left-aligned, wraps normally).
+5. The Settings → Treatment plan templates phase editor had Aim/Points/
+   Suggested formula/Cadence/Watch but no Press tags control at all, even
+   though `PH_TP_FIELD_LABELS` already defined the label for exactly this
+   purpose — her only route to set it was the raw JSON-paste box, whose
+   own placeholder didn't demonstrate the field either (fixed together).
+6. The Flare-detour preset (`phTpFlarePreset`) copied aim/points/cadence/
+   watch/suggestFormula from the plan's real Acute phase but not
+   pressPoints — an inconsistency, not a deliberate omission (sibling
+   presets in the same handler block all carry it). Fixed.
+7. The in-phase acute-illness Recovery block (`tpAcuteEnd`'s
+   `acuteBlocks.push`) had the same omission. Fixed.
+8. IVF track switching (`phIvfSetTrack`) rebuilds a round's phases from
+   the raw `PH_TP_PHASE` dictionary and never carried pressPoints through
+   — currently low-impact since no `PH_TP_PHASE` entry has one yet, but
+   fixed as a straightforward pass-through so it's correct the moment one
+   does.
+9. (Same underlying bug as #3, found independently by a second review
+   dimension — counted once.)
+
+Verified via direct window-exposed-function calls and real dispatched
+click events against a synthetic patient mirroring Kathryn's real numbers
+(LMP 2026-08-31, CD18, 28-day cycle) — the login gate still blocks a
+fully-booted local click-through, same limitation as every other batch in
+this file. Confirmed post-fix: the herb-instruct toggle correctly clears
+(no `✓`, no `.on` class, relabels to the new phase's formula) on an
+override; a simulated fast double-tap produces exactly one session, not
+two; typed points text survives an override that flips its field between
+chip-mode and freeform-mode; the template manager's new Press tags field
+renders, saves, and round-trips through `phTpMgrSetPhaseField` correctly
+against a real built-in template (override cleared after, confirmed
+`msk_lowback` matches its built-in default byte-for-byte). Clean console
+boot throughout. Synthetic test patients/scripts cleaned out of
+`localStorage` after every run.
+
+Version bump: `lcm-build` `20260917-170000`, `sw.js` cache
+`lcm-20260917-synth22-natural-cycle-acu-log`.

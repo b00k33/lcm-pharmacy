@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260917-160000">
+<meta name="lcm-build" content="20260917-170000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -5821,6 +5821,26 @@
   #pharmacyPage .ph-acu-sessrow .o.herbs { background: var(--ph-green-tint); color: var(--ph-green-deep); }
   #pharmacyPage .ph-acu-sessrow .o.fnd { background: var(--ph-paper); color: var(--ph-soft); }
   #pharmacyPage .ph-acu-switchrow { margin-top: 10px; }
+  /* 🌱 natural-cycle visit redesign (her synth22 ask 2026-09-17): phase
+     picker, points/press-tag chips, herb-instruct chip -- one pill family
+     shared by all three, matching .ph-acu-outbtn's existing colours. */
+  #pharmacyPage .ph-acu-phasepick { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 6px; }
+  #pharmacyPage .ph-acu-phasechip { border: 1px solid var(--ph-line); background: var(--ph-white); border-radius: 999px; padding: 5px 10px; font: inherit; font-size: 11px; font-weight: 700; color: var(--ph-soft); cursor: pointer; }
+  #pharmacyPage .ph-acu-phasechip.on { background: var(--ph-green); border-color: var(--ph-green); color: var(--ph-white); }
+  /* .ph-acu-phasechip's stadium radius (999px) suits a short one-word token
+     (a point, a phase label) but the herb-instruct button carries a full
+     sentence naming the formula -- at 999px a wrapped 2-3 line sentence
+     balloons into an oversized capsule instead of a normal rounded button.
+     Reviewed 2026-09-17. */
+  #pharmacyPage .ph-acu-herbbtn { border-radius: 10px; white-space: normal; text-align: left; line-height: 1.35; flex: 1 1 auto; }
+  #pharmacyPage .ph-acu-overridenote { background: var(--ph-low-tint); border-radius: 8px; padding: 7px 9px; margin: 4px 0 8px; font-size: 11px; color: var(--ph-low-deep); }
+  #pharmacyPage .ph-acu-reasonin { width: 100%; margin-top: 5px; border: 1px solid var(--ph-line); border-radius: var(--field-radius-sm, 8px); padding: 6px 8px; font: inherit; font-size: 11.5px; background: var(--ph-white); }
+  #pharmacyPage .ph-acu-pointrow { margin-bottom: 8px; }
+  #pharmacyPage .ph-acu-pointhd { display: flex; align-items: baseline; justify-content: space-between; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: var(--ph-faint); margin-bottom: 4px; }
+  #pharmacyPage .ph-acu-selall { border: none; background: none; font: inherit; font-size: 10.5px; font-weight: 700; color: var(--ph-green-deep); cursor: pointer; padding: 0; text-transform: none; letter-spacing: 0; }
+  #pharmacyPage .ph-acu-chiprow { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 5px; }
+  #pharmacyPage .ph-acu-extra { width: 100%; border: 1px solid var(--ph-line); border-radius: var(--field-radius-sm, 8px); padding: 6px 8px; font: inherit; font-size: 11.5px; background: var(--ph-white); }
+  #pharmacyPage .ph-acu-mucusrow, #pharmacyPage .ph-acu-watchrow { flex-wrap: wrap; }
   /* 🙂 Bell's palsy checklist (her ask 2026-09-10). Same open-panel shell as
      .ph-acu-open above -- stated rather than joined onto that shared
      selector so this whole feature stays in one greppable block. */
@@ -26392,14 +26412,14 @@
             : kind === "highrisk" ? [PH_TP_PHASE.highRiskMonitoring]
             : phTpAcutePreset();
           const made = preset.map((p, i) => ({
-            id: uid(), label: p.label, aim: p.aim || "", points: p.points || "", cadence: p.cadence || "",
+            id: uid(), label: p.label, aim: p.aim || "", points: p.points || "", pressPoints: p.pressPoints || "", cadence: p.cadence || "",
             watch: p.watch || "", suggestFormula: p.suggestFormula || "", formulaId: null, formulaName: "",
             status: i === 0 ? "current" : "upcoming", sinceKey: i === 0 ? today : null, doneKey: null, fromAcute: kind === "acute",
           }));
           // the same phase, picked up again on the other side of the detour
           const cont = cur ? [{
             id: uid(), label: /\(continued\)$/.test(cur.label) ? cur.label : `${cur.label} (continued)`,
-            aim: cur.aim || "", points: cur.points || "", cadence: cur.cadence || "", watch: cur.watch || "",
+            aim: cur.aim || "", points: cur.points || "", pressPoints: cur.pressPoints || "", cadence: cur.cadence || "", watch: cur.watch || "",
             suggestFormula: cur.suggestFormula || "", formulaId: cur.formulaId || null, formulaName: cur.formulaName || "",
             status: "upcoming", sinceKey: null, doneKey: null, continuesPhaseId: cur.id,
           }] : [];
@@ -26420,7 +26440,7 @@
           const p = phTpAcutePreset()[0] || {};
           cur.acuteBlocks = cur.acuteBlocks || [];
           cur.acuteBlocks.push({ id: uid(), from: keyOf(TODAY), to: null, label: "Acute illness",
-            aim: p.aim || "", points: p.points || "", cadence: p.cadence || "2×/wk while acute",
+            aim: p.aim || "", points: p.points || "", pressPoints: p.pressPoints || "", cadence: p.cadence || "2×/wk while acute",
             watch: p.watch || "", suggestFormula: p.suggestFormula || "" });
           phTpAddPhase = null; savePharmacy(); phTpRerender();
         }
@@ -26440,7 +26460,7 @@
           if (rec2 && !(ph.acuteBlocks || []).some(x => x.recoveryFor === b.id)) {
             const nx = new Date(TODAY.getTime()); nx.setDate(nx.getDate() + 1);
             ph.acuteBlocks.push({ id: uid(), from: keyOf(nx), to: null, label: rec2.label || "Recovery",
-              aim: rec2.aim || "", points: rec2.points || "", cadence: rec2.cadence || "",
+              aim: rec2.aim || "", points: rec2.points || "", pressPoints: rec2.pressPoints || "", cadence: rec2.cadence || "",
               watch: rec2.watch || "", suggestFormula: rec2.suggestFormula || "", recoveryFor: b.id });
           }
           savePharmacy(); phTpRerender();
@@ -27911,7 +27931,12 @@
         }
         renderPresPanel(); return;
       }
-      if (e.target.closest("[data-pres-acu-toggle]")) { presAcuOpen = !presAcuOpen; presAcuOutcomeDraft = null; phVisitFndResetDraft(); renderPresPanel(); return; }
+      if (e.target.closest("[data-pres-acu-toggle]")) {
+        presAcuOpen = !presAcuOpen; presAcuOutcomeDraft = null;
+        presAcuPhaseId = null; presAcuHerbInstruct = false;
+        presAcuPointsChecked = null; presAcuPressChecked = null; presAcuWatchChecked = [];
+        phVisitFndResetDraft(); renderPresPanel(); return;
+      }
       // ---- Bell's palsy checklist ----
       // The thirteen SCORE taps deliberately do not re-render the whole
       // panel: they repaint the one group they belong to and the two
@@ -28042,20 +28067,139 @@
         });
         return;
       }
+      // ---- natural-cycle visit redesign, the rest of the acu-log controls
+      // (her synth22 ask 2026-09-17). Each patches just .ph-acu-open in
+      // place (presAcuOpenRefresh) -- same reason the outcome buttons above
+      // avoid a full render, and because changing which phase she's
+      // treating genuinely changes which points/press/watch apply, unlike
+      // the outcome buttons which don't touch anything else on the row. ----
+      const acuPhaseBtn = e.target.closest("[data-pres-acu-phase]");
+      if (acuPhaseBtn) {
+        const ctx = presAcuCtx();
+        if (ctx) {
+          const id = acuPhaseBtn.dataset.presAcuPhase;
+          // tapping the calendar phase again just clears the override
+          presAcuPhaseId = (ctx.calendarPhase && ctx.calendarPhase.id === id) ? null : id;
+          // herb-instruct names a FORMULA off the treated phase (see
+          // presAcuOpenHtml's herbFormulaName) -- switching phase must reset
+          // it too, or a toggle left on from the old phase silently
+          // relabels itself onto the new phase's formula and still saves.
+          presAcuPointsChecked = null; presAcuPressChecked = null; presAcuWatchChecked = [];
+          presAcuHerbInstruct = false;
+          presAcuOpenRefresh();
+        }
+        return;
+      }
+      const acuPointBtn = e.target.closest("[data-pres-acu-point]");
+      if (acuPointBtn) {
+        const ctx = presAcuCtx();
+        if (ctx) {
+          const list = phAcuSplitList(ctx.treatedPhase && ctx.treatedPhase.points);
+          if (!presAcuPointsChecked) presAcuPointsChecked = new Set(list);
+          const v = acuPointBtn.dataset.presAcuPoint;
+          presAcuPointsChecked.has(v) ? presAcuPointsChecked.delete(v) : presAcuPointsChecked.add(v);
+          presAcuOpenRefresh();
+        }
+        return;
+      }
+      if (e.target.closest("[data-pres-acu-points-all]")) {
+        const ctx = presAcuCtx();
+        if (ctx) {
+          const list = phAcuSplitList(ctx.treatedPhase && ctx.treatedPhase.points);
+          const allOn = presAcuPointsChecked ? list.every(p => presAcuPointsChecked.has(p)) : true;
+          presAcuPointsChecked = allOn ? new Set() : new Set(list);
+          presAcuOpenRefresh();
+        }
+        return;
+      }
+      const acuPressBtn = e.target.closest("[data-pres-acu-press]");
+      if (acuPressBtn) {
+        const ctx = presAcuCtx();
+        if (ctx) {
+          const list = phAcuSplitList(ctx.treatedPhase && ctx.treatedPhase.pressPoints);
+          if (!presAcuPressChecked) presAcuPressChecked = new Set(list);
+          const v = acuPressBtn.dataset.presAcuPress;
+          presAcuPressChecked.has(v) ? presAcuPressChecked.delete(v) : presAcuPressChecked.add(v);
+          presAcuOpenRefresh();
+        }
+        return;
+      }
+      if (e.target.closest("[data-pres-acu-press-all]")) {
+        const ctx = presAcuCtx();
+        if (ctx) {
+          const list = phAcuSplitList(ctx.treatedPhase && ctx.treatedPhase.pressPoints);
+          const allOn = presAcuPressChecked ? list.every(p => presAcuPressChecked.has(p)) : true;
+          presAcuPressChecked = allOn ? new Set() : new Set(list);
+          presAcuOpenRefresh();
+        }
+        return;
+      }
+      if (e.target.closest("[data-pres-acu-herbinstruct]")) {
+        presAcuHerbInstruct = !presAcuHerbInstruct;
+        presAcuOpenRefresh();
+        return;
+      }
+      const acuMucusBtn = e.target.closest("[data-pres-acu-mucus]");
+      if (acuMucusBtn) {
+        const ctx = presAcuCtx();
+        if (ctx) {
+          const v = acuMucusBtn.dataset.presAcuMucus;
+          const today = phCycleSignFor(ctx.rec, keyOf(TODAY));
+          // tap again to clear -- same as any other on/off chip in this app
+          phCycleSignSet(ctx.rec, keyOf(TODAY), { cm: (today && today.cm === v) ? "" : v });
+          presAcuOpenRefresh();
+        }
+        return;
+      }
+      const acuWatchBtn = e.target.closest("[data-pres-acu-watch]");
+      if (acuWatchBtn) {
+        const w = acuWatchBtn.dataset.presAcuWatch;
+        presAcuWatchChecked = presAcuWatchChecked.includes(w) ? presAcuWatchChecked.filter(x => x !== w) : presAcuWatchChecked.concat(w);
+        presAcuOpenRefresh();
+        return;
+      }
       if (e.target.closest("[data-pres-acu-log]")) {
-        const t = PRESC.items.find(x => x.id === presOpenId);
-        const name = t && presPatientFor(t);
-        if (name) {
-          const rec = phPatientRec(name);
-          const plans = phTpPlans(name);
-          const activePlan = plans.find(p => p.status === "active") || plans[0];
-          const curPhase = activePlan ? phTpPlanCurrentPhase(activePlan) : null;
-          const points = ((document.getElementById("presAcuPoints") || {}).value || "").trim();
+        const now = Date.now();
+        if (now - presAcuLastLogAt < 1200) return; // a real double-tap, not a second visit
+        presAcuLastLogAt = now;
+        const ctx = presAcuCtx();
+        if (ctx) {
+          const { name, rec, activePlan, calendarPhase, treatedPhase } = ctx;
+          const isOverride = !!(calendarPhase && treatedPhase && treatedPhase.id !== calendarPhase.id);
+          const dispensedToday = phAcuHerbsOn(name, keyOf(TODAY));
+
+          const pointsList = phAcuSplitList(treatedPhase && treatedPhase.points);
+          const pointsExtra = ((document.getElementById("presAcuPointsExtra") || {}).value || "").trim();
+          const points = pointsList.length
+            ? [...pointsList.filter(p => presAcuPointsChecked ? presAcuPointsChecked.has(p) : true), ...phAcuSplitList(pointsExtra)].join(", ")
+            : ((document.getElementById("presAcuPoints") || {}).value || "").trim();
+
+          const pressList = phAcuSplitList(treatedPhase && treatedPhase.pressPoints);
+          const pressFreeEl = document.getElementById(pressList.length ? "presAcuPressExtra" : "presAcuPressFree");
+          const pressFree = ((pressFreeEl || {}).value || "").trim();
+          const pressPoints = pressList.length
+            ? [...pressList.filter(p => presAcuPressChecked ? presAcuPressChecked.has(p) : true), ...phAcuSplitList(pressFree)].join(", ")
+            : pressFree;
+
+          const reason = ((document.getElementById("presAcuReason") || {}).value || "").trim();
+          const herbFormulaName = (treatedPhase && (treatedPhase.formulaName || treatedPhase.suggestFormula)) || "";
+
           const sessionId = uid();
-          rec.acuSessions.push({
+          const session = {
             id: sessionId, date: keyOf(TODAY), at: Date.now(),
-            phaseLabel: curPhase ? curPhase.label : "", points, outcome: presAcuOutcomeDraft,
-          });
+            phaseLabel: treatedPhase ? treatedPhase.label : "", points, outcome: presAcuOutcomeDraft,
+          };
+          if (pressPoints) session.pressPoints = pressPoints;
+          if (isOverride) {
+            session.calendarPhaseLabel = calendarPhase.label;
+            if (reason) session.overrideReason = reason;
+          }
+          if (!dispensedToday && presAcuHerbInstruct) {
+            session.herbInstructed = true;
+            if (herbFormulaName) session.herbInstructedFormula = herbFormulaName;
+          }
+          if (presAcuWatchChecked.length) session.observedSigns = presAcuWatchChecked.slice();
+          rec.acuSessions.push(session);
           // logging a real session is what "she's tracking acupuncture for
           // this patient" means -- found 2026-09-13 that this, the OLDER of
           // the app's two logging paths, never actually set the flag, so a
@@ -28069,7 +28213,16 @@
             const f = phVisitFindings(rec, sessionId);
             Object.assign(f, JSON.parse(JSON.stringify(presVisitFndDraft)));
           }
-          presAcuOutcomeDraft = null;
+          // her ask 2026-09-17: "automatically count cd and adjust to the
+          // phase with each appointment" -- logging today's session IS an
+          // appointment happening, so this is where the plan's own
+          // current-phase pointer catches up to the calendar, via the
+          // existing (unmodified) sync function period-logging already
+          // uses. Independent of any override above: her per-visit
+          // treatment choice never redefines where the cycle actually is.
+          if (activePlan) phCycleSyncPlans(rec);
+          presAcuOutcomeDraft = null; presAcuPhaseId = null; presAcuHerbInstruct = false;
+          presAcuPointsChecked = null; presAcuPressChecked = null; presAcuWatchChecked = [];
           phVisitFndResetDraft();
           savePharmacy(); renderPresPanel();
         }
@@ -28271,7 +28424,7 @@
           // silently fell back to the default weekly.
           phTpUserTemplates().push({
             id: uid(), name: plan.title || "Untitled protocol", goal: plan.goal || "",
-            phases: plan.phases.map(p => ({ label: p.label, aim: p.aim || "", points: p.points || "", suggestFormula: p.formulaName || p.suggestFormula || "", cadence: p.cadence || "", watch: p.watch || "" })),
+            phases: plan.phases.map(p => ({ label: p.label, aim: p.aim || "", points: p.points || "", pressPoints: p.pressPoints || "", suggestFormula: p.formulaName || p.suggestFormula || "", cadence: p.cadence || "", watch: p.watch || "" })),
           });
           savePharmacy();
           const orig = tpSaveTmpl.textContent;
@@ -28518,10 +28671,10 @@
         try { parsed = JSON.parse((ta && ta.value || "").trim()); } catch (err) { parsed = null; }
         const valid = Array.isArray(parsed) && parsed.length && parsed.every(p => p && typeof p.label === "string");
         if (!valid) {
-          if (resEl) resEl.textContent = "Couldn't read that as phase data — expecting a JSON array of {label, aim, points, suggestFormula, cadence, watch}.";
+          if (resEl) resEl.textContent = "Couldn't read that as phase data — expecting a JSON array of {label, aim, points, pressPoints, suggestFormula, cadence, watch}.";
           return;
         }
-        phTpMgrSetField(id, "phases", parsed.map(p => ({ label: p.label || "", aim: p.aim || "", points: p.points || "", suggestFormula: p.suggestFormula || "", cadence: p.cadence || "", watch: p.watch || "" })));
+        phTpMgrSetField(id, "phases", parsed.map(p => ({ label: p.label || "", aim: p.aim || "", points: p.points || "", pressPoints: p.pressPoints || "", suggestFormula: p.suggestFormula || "", cadence: p.cadence || "", watch: p.watch || "" })));
         renderPhSettingsPage();
         return;
       }
@@ -35145,7 +35298,10 @@ or changing anything in Cliniko.
     presNameOpen = false; presHistOpen = false; presMedHxOpen = false;
     presTreatOpen = false; presHistMoreOpen = false;
     presTpInlinePlanId = null; presTpInlineNew = false; presTpInlineLoose = false;
-    presAcuOpen = false; presAcuOutcomeDraft = null; phVisitFndResetDraft(); phCyclePop = null;
+    presAcuOpen = false; presAcuOutcomeDraft = null;
+    presAcuPhaseId = null; presAcuHerbInstruct = false;
+    presAcuPointsChecked = null; presAcuPressChecked = null; presAcuWatchChecked = [];
+    phVisitFndResetDraft(); phCyclePop = null;
     presAssessTab = null; presFpDraft = null; presFpProtoOpen = false;
     presPickLocked = null;
     presDispMenuId = null; presDispUndoConfirm = null;
@@ -44529,7 +44685,7 @@ or changing anything in Cliniko.
     const today = keyOf(TODAY);
     const newPhases = t.keys.map((k, i) => {
       const s = PH_TP_PHASE[k];
-      return { id: uid(), phaseKey: k, label: s.label, aim: s.aim, points: s.points || "",
+      return { id: uid(), phaseKey: k, label: s.label, aim: s.aim, points: s.points || "", pressPoints: s.pressPoints || "",
         cadence: s.cadence || "", watch: s.watch || "", formulaId: null, formulaName: "",
         suggestFormula: s.suggestFormula || "", sinceKey: i === 0 ? today : null, doneKey: null,
         status: i === 0 ? "current" : "upcoming" };
@@ -45403,7 +45559,7 @@ or changing anything in Cliniko.
   }
   function phTpMgrAddPhase(id) {
     const phases = phTpMgrPhases(id).map(p => ({ ...p, phaseKey: phTpMgrPhaseKeyOf(p) }));
-    phases.push({ label: "New phase", aim: "", points: "", suggestFormula: "", cadence: "", watch: "" });
+    phases.push({ label: "New phase", aim: "", points: "", pressPoints: "", suggestFormula: "", cadence: "", watch: "" });
     phTpMgrSetField(id, "phases", phases);
   }
   function phTpMgrRemovePhase(id, idx) {
@@ -45458,6 +45614,7 @@ or changing anything in Cliniko.
       </div>
       <label class="ph-gd-field"><span>Aim</span><textarea rows="2" data-tp-mgr-phase-field="${esc(id)}:${i}:aim">${esc(p.aim || "")}</textarea></label>
       <label class="ph-gd-field"><span>Points</span><textarea rows="2" data-tp-mgr-phase-field="${esc(id)}:${i}:points">${esc(p.points || "")}</textarea></label>
+      <label class="ph-gd-field"><span>Press tags</span><textarea rows="2" data-tp-mgr-phase-field="${esc(id)}:${i}:pressPoints">${esc(p.pressPoints || "")}</textarea></label>
       <div class="ph-tp-fieldgrid">
         <label class="ph-gd-field"><span>Suggested formula</span><input type="text" data-tp-mgr-phase-field="${esc(id)}:${i}:suggestFormula" value="${esc(p.suggestFormula || "")}"></label>
         <label class="ph-gd-field"><span>Cadence</span><input type="text" data-tp-mgr-phase-field="${esc(id)}:${i}:cadence" value="${esc(p.cadence || "")}"></label>
@@ -45503,7 +45660,7 @@ or changing anything in Cliniko.
       ${(cur.phases || []).map((p, i) => phTpMgrPhaseHtml(id, p, i, cur.phases.length)).join("")}
       <button type="button" class="ph-tp-addbtn" data-tp-mgr-phase-add="${esc(id)}">+ Add phase</button>
       <label class="ph-gd-field ph-tp-mgr-jsonfield"><span>Paste phases as JSON <span class="faint">— replaces every phase above in one go, e.g. copied from a reference document</span></span>
-        <textarea rows="3" id="phTpMgrJsonPaste" placeholder='[{"label":"…","aim":"…","points":"…","suggestFormula":"…","cadence":"…","watch":"…"}, …]' spellcheck="false"></textarea>
+        <textarea rows="3" id="phTpMgrJsonPaste" placeholder='[{"label":"…","aim":"…","points":"…","pressPoints":"…","suggestFormula":"…","cadence":"…","watch":"…"}, …]' spellcheck="false"></textarea>
       </label>
       <div class="ph-settings-actions">
         <button type="button" class="ph-load-btn" data-tp-mgr-json-import="${esc(id)}">Import ✓</button>
@@ -45651,7 +45808,7 @@ or changing anything in Cliniko.
       tongue: "", pulse: "", abdomen: "",
       createdDate: keyOf(TODAY), templateName: tpl ? tpl.name : null,
       phases: phases.map((p, i) => ({
-        id: uid(), label: p.label, aim: p.aim, points: p.points || "",
+        id: uid(), label: p.label, aim: p.aim, points: p.points || "", pressPoints: p.pressPoints || "",
         cadence: p.cadence || "", watch: p.watch || "",
         formulaId: null, formulaName: "", suggestFormula: p.suggestFormula || "",
         // the day the phase became current / done -- stamped automatically
@@ -46626,7 +46783,12 @@ or changing anything in Cliniko.
   // "remove temp line then. show options to add other signs" -- cervical
   // mucus is the one real gap; flow/pain already exist above but describe
   // the WHOLE period, not a single day, so they stay untouched.
-  const PH_CYCLE_CM = [["", "None noted"], ["dry", "Dry"], ["sticky", "Sticky"], ["creamy", "Creamy"], ["eggwhite", "Egg-white"]];
+  // her ask 2026-09-17 (synth22, Kathryn Welsh): "fertile mucus has 3
+  // options: egg white, milky, mix" -- added to the SAME store rather than a
+  // second one, so a tap from the acu-log flow (below) and a tap on the
+  // existing cycle-strip popover both write rec.cycleSigns[date].cm and show
+  // up on the one Period section, never two.
+  const PH_CYCLE_CM = [["", "None noted"], ["dry", "Dry"], ["sticky", "Sticky"], ["creamy", "Creamy"], ["milky", "Milky"], ["eggwhite", "Egg-white"], ["mix", "Mix"]];
   const PH_CYCLE_SYMPTOMS = [["cramping", "Cramping"], ["mood", "Mood changes"], ["breast", "Breast tenderness"], ["headache", "Headaches"], ["bloating", "Bloating"], ["fatigue", "Fatigue"], ["acne", "Acne"]];
   const PH_CYCLE_CONTRACEPTION = [["none", "None"], ["pill", "Pill"], ["iud_h", "IUD (hormonal)"], ["iud_c", "IUD (copper)"], ["implant", "Implant"], ["condoms", "Condoms"], ["recent", "Recently stopped"], ["other", "Other"]];
   const PH_CYCLE_CONTRACEPTION_LABEL = PH_CYCLE_CONTRACEPTION.reduce((m, [v, l]) => (m[v] = l, m), {});
@@ -47129,20 +47291,132 @@ or changing anything in Cliniko.
       ${presAcuOpen ? presAcuOpenHtml(name, sessions) : ""}
     </div>`;
   }
+  // 🌱 natural-cycle visit redesign (her synth22 ask 2026-09-17, mocks v1-4,
+  // "ok build"): the acu-log gains an auto-computed calendar phase she can
+  // reasonedly override for one visit, a distinct press-tag points field, a
+  // herb action that doesn't require a real dispense, and a mucus quick-log
+  // feeding the existing Period section -- see presAcuCtx/presAcuOpenRefresh
+  // and the click handlers beside data-pres-acu-log above.
+  function phAcuSplitList(text) { return String(text || "").split(",").map(s => s.trim()).filter(Boolean); }
+  // "fertile mucus, rise in bbt, energy, sleep etc" -> tappable chips.
+  // Comma/semicolon only, deliberately dumb -- this reads whatever she's
+  // already typed into the phase's Watch field, it doesn't try to be clever
+  // about it.
+  function phAcuWatchChips(text) {
+    return String(text || "").split(/[;,]/).map(s => s.trim()).filter(Boolean).map(s => s.charAt(0).toUpperCase() + s.slice(1));
+  }
+  // one place to re-derive "who/which plan/which phase" for every acu-log
+  // click handler, re-read from presOpenId every time rather than trusted
+  // from a render-time closure -- same reason data-pres-acu-log always did.
+  function presAcuCtx() {
+    const t = PRESC.items.find(x => x.id === presOpenId);
+    const name = t && presPatientFor(t);
+    if (!name) return null;
+    const rec = phPatientRec(name);
+    const plans = phTpPlans(name);
+    const activePlan = plans.find(p => p.status === "active") || plans[0];
+    // her ask 2026-09-17: "automatically count cd and adjust to the phase
+    // with each appointment" -- phTpCycleEffectivePhase already computes
+    // this live from the cycle day, it was just never used to drive what
+    // she actually logs against, only Communications' follow-up dates.
+    // Falls back to the plan's persisted current phase for non-cycle-synced
+    // templates (MSK, stress, ...) and for cycle plans it can't place.
+    const calendarPhase = activePlan ? (phTpCycleEffectivePhase(rec, activePlan) || phTpPlanCurrentPhase(activePlan)) : null;
+    const phaseChoices = activePlan ? (activePlan.phases || []) : [];
+    const treatedPhase = (presAcuPhaseId && phaseChoices.find(p => p.id === presAcuPhaseId)) || calendarPhase;
+    return { name, rec, activePlan, calendarPhase, phaseChoices, treatedPhase };
+  }
+  function presAcuOpenRefresh() {
+    const wrap = document.querySelector(".ph-acu-open");
+    if (!wrap) return;
+    const t = PRESC.items.find(x => x.id === presOpenId);
+    const name = t && presPatientFor(t);
+    if (!name) return;
+    const rec = phPatientRec(name);
+    const sessions = (rec.acuSessions || []).slice().sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.at || 0) - (a.at || 0));
+    // a phase/points/press/herb/mucus/watch tap re-renders this whole block,
+    // which would otherwise silently wipe anything she's mid-typing into the
+    // reason box or a freeform points/press field -- carry every text
+    // input's live value across the swap by id, same idea as
+    // presVisitFndRefresh's own in-place patching.
+    const carry = {};
+    wrap.querySelectorAll("input[id]").forEach(inp => { carry[inp.id] = inp.value; });
+    const tmp = document.createElement("div");
+    tmp.innerHTML = presAcuOpenHtml(name, sessions);
+    const next = tmp.firstElementChild;
+    if (!next) return;
+    // the points/press free-text field itself changes id between chip-mode
+    // ("...Extra", beside preset chips) and pure freeform ("...Points"/
+    // "...Free", no preset text on the treated phase) -- an override tap that
+    // flips a field between the two would otherwise drop whatever she'd
+    // already typed, since the plain id-match above finds nothing to write
+    // into. Reviewed 2026-09-17: try the paired id when the exact one is gone.
+    const ACU_CARRY_ALIAS = { presAcuPointsExtra: "presAcuPoints", presAcuPoints: "presAcuPointsExtra", presAcuPressExtra: "presAcuPressFree", presAcuPressFree: "presAcuPressExtra" };
+    Object.keys(carry).forEach(id => {
+      const inp = next.querySelector("#" + id) || (ACU_CARRY_ALIAS[id] && next.querySelector("#" + ACU_CARRY_ALIAS[id]));
+      if (inp) inp.value = carry[id];
+    });
+    wrap.replaceWith(next);
+  }
   function presAcuOpenHtml(name, sessions) {
     const plans = phTpPlans(name);
     const activePlan = plans.find(p => p.status === "active") || plans[0];
-    const curPhase = activePlan ? phTpPlanCurrentPhase(activePlan) : null;
-    const outLabel = o => o === "better" ? "✓ better" : o === "worse" ? "⚠ worse" : "· same";
     const rec = phPatientRec(name);
+    const calendarPhase = activePlan ? (phTpCycleEffectivePhase(rec, activePlan) || phTpPlanCurrentPhase(activePlan)) : null;
+    const phaseChoices = activePlan ? (activePlan.phases || []) : [];
+    const treatedPhase = (presAcuPhaseId && phaseChoices.find(p => p.id === presAcuPhaseId)) || calendarPhase;
+    const isOverride = !!(calendarPhase && treatedPhase && treatedPhase.id !== calendarPhase.id);
+    const comp = phCycleComp(rec);
+    const outLabel = o => o === "better" ? "✓ better" : o === "worse" ? "⚠ worse" : "· same";
     const t = PRESC.items.find(x => x.id === presOpenId);
     const fndOn = phVisitFndOn(t, rec);
+    const dispensedToday = phAcuHerbsOn(name, keyOf(TODAY));
+    const todaySign = phCycleSignFor(rec, keyOf(TODAY));
+    const herbFormulaName = (treatedPhase && (treatedPhase.formulaName || treatedPhase.suggestFormula)) || "her formula";
+
+    const pointsList = phAcuSplitList(treatedPhase && treatedPhase.points);
+    const pointsAllOn = presAcuPointsChecked ? pointsList.every(p => presAcuPointsChecked.has(p)) : true;
+    const pointsHtml = pointsList.length ? `<div class="ph-acu-pointrow">
+        <div class="ph-acu-pointhd"><span>Points</span><button type="button" class="ph-acu-selall" data-pres-acu-points-all="1">${pointsAllOn ? "Clear" : "Select all"}</button></div>
+        <div class="ph-acu-chiprow">${pointsList.map(p => { const on = presAcuPointsChecked ? presAcuPointsChecked.has(p) : true; return `<button type="button" class="ph-acu-phasechip${on ? " on" : ""}" data-pres-acu-point="${esc(p)}">${on ? "✓ " : ""}${esc(p)}</button>`; }).join("")}</div>
+        <input type="text" id="presAcuPointsExtra" class="ph-acu-extra" placeholder="+ another point…" aria-label="Additional points needled today">
+      </div>`
+      : `<input type="text" id="presAcuPoints" class="ph-acu-points-free" placeholder="Points needled today${activePlan ? "" : " — freeform, no active plan to pull from"}" aria-label="Points needled today">`;
+
+    const pressList = phAcuSplitList(treatedPhase && treatedPhase.pressPoints);
+    const pressAllOn = presAcuPressChecked ? pressList.every(p => presAcuPressChecked.has(p)) : true;
+    const pressHtml = pressList.length ? `<div class="ph-acu-pointrow">
+        <div class="ph-acu-pointhd"><span>Press tags</span><button type="button" class="ph-acu-selall" data-pres-acu-press-all="1">${pressAllOn ? "Clear" : "Select all"}</button></div>
+        <div class="ph-acu-chiprow">${pressList.map(p => { const on = presAcuPressChecked ? presAcuPressChecked.has(p) : true; return `<button type="button" class="ph-acu-phasechip${on ? " on" : ""}" data-pres-acu-press="${esc(p)}">${on ? "✓ " : ""}${esc(p)}</button>`; }).join("")}</div>
+        <input type="text" id="presAcuPressExtra" class="ph-acu-extra" placeholder="+ another press tag…" aria-label="Additional press tags today">
+      </div>`
+      : `<input type="text" id="presAcuPressFree" class="ph-acu-extra" placeholder="Press tags — e.g. KD7, KD9, PC6 (optional)" aria-label="Press tags today">`;
+
+    const phasePickHtml = phaseChoices.length > 1 ? `<div class="ph-acu-phasepick">
+        ${phaseChoices.map(p => `<button type="button" class="ph-acu-phasechip${treatedPhase && treatedPhase.id === p.id ? " on" : ""}" data-pres-acu-phase="${p.id}">${esc(p.label)}</button>`).join("")}
+      </div>
+      ${isOverride ? `<div class="ph-acu-overridenote">Different from the calendar (${esc(calendarPhase.label)}${comp ? ` · CD ${comp.day}` : ""}) —
+        <input type="text" id="presAcuReason" class="ph-acu-reasonin" placeholder="why — e.g. no fertile mucus observed" aria-label="Reason for treating as a different phase">
+      </div>` : ""}` : "";
+
+    const mucusHtml = phCycleOn(rec) ? `<div class="ph-acu-row2 ph-acu-mucusrow">
+        <span class="lbl">Mucus</span>
+        ${PH_CYCLE_CM.filter(([v]) => v === "eggwhite" || v === "milky" || v === "mix").map(([v, l]) => `<button type="button" class="ph-ck-chip${todaySign && todaySign.cm === v ? " on" : ""}" data-pres-acu-mucus="${v}">${esc(l)}</button>`).join("")}
+      </div>` : "";
+
+    const watchChips = phAcuWatchChips(treatedPhase && treatedPhase.watch);
+    const watchHtml = watchChips.length ? `<div class="ph-acu-row2 ph-acu-watchrow">
+        <span class="lbl">Watch for</span>
+        ${watchChips.map(w => `<button type="button" class="ph-ck-chip${presAcuWatchChecked.includes(w) ? " on" : ""}" data-pres-acu-watch="${esc(w)}">${esc(w)}</button>`).join("")}
+      </div>` : "";
+
     return `<div class="ph-acu-open">
-      ${curPhase ? `<div class="ph-acu-fromplan">
-        <div class="k">From her active plan — ${esc(activePlan.title || "Treatment plan")}</div>
-        <div class="planphase">Current phase: ${esc(curPhase.label)}</div>
-        ${curPhase.aim ? `<div class="aim">${esc(curPhase.aim)}</div>` : ""}
-        <input type="text" id="presAcuPoints" value="${esc(curPhase.points || "")}" placeholder="Points needled today" aria-label="Points needled today">
+      ${activePlan ? `<div class="ph-acu-fromplan">
+        <div class="k">From her active plan — ${esc(activePlan.title || "Treatment plan")}${comp ? ` · CD ${comp.day}` : ""}</div>
+        ${phasePickHtml || (treatedPhase ? `<div class="planphase">Current phase: ${esc(treatedPhase.label)}</div>` : "")}
+        ${treatedPhase && treatedPhase.aim ? `<div class="aim">${esc(treatedPhase.aim)}</div>` : ""}
+        ${pointsHtml}
+        ${pressHtml}
         <div class="hint">Pre-filled from the plan's phase — edit for what you actually needled today.</div>
       </div>` : `<input type="text" id="presAcuPoints" class="ph-acu-points-free" placeholder="Points needled today — freeform, no active plan to pull from" aria-label="Points needled today">`}
       <div class="ph-acu-row2">
@@ -47153,8 +47427,14 @@ or changing anything in Cliniko.
       </div>
       <div class="ph-acu-row2">
         <span class="lbl">Herbs</span>
-        <span class="${phAcuHerbsOn(name, keyOf(TODAY)) ? "" : "faint"}">${phAcuHerbsOn(name, keyOf(TODAY)) ? "✓ given today" : "none today"}</span>
+        <span class="${dispensedToday ? "" : "faint"}">${dispensedToday ? "✓ given today" : "none today"}</span>
       </div>
+      ${!dispensedToday ? `<div class="ph-acu-row2">
+        <span class="lbl"></span>
+        <button type="button" class="ph-acu-phasechip ph-acu-herbbtn${presAcuHerbInstruct ? " on" : ""}" data-pres-acu-herbinstruct="1">${presAcuHerbInstruct ? "✓ " : ""}Has stock — instruct to start ${esc(herbFormulaName)}</button>
+      </div>` : ""}
+      ${mucusHtml}
+      ${watchHtml}
       ${phVisitFndToggleLineHtml(t, rec)}
       ${fndOn ? phVisitFndPanelHtml(name, rec) : ""}
       <button type="button" class="btn-save ph-acu-logbtn" data-pres-acu-log="1">Log today's session</button>
@@ -47163,11 +47443,12 @@ or changing anything in Cliniko.
         ${sessions.slice(0, 3).map(s => {
           const f = rec.visitFnd && rec.visitFnd[s.id];
           const hasFnd = f && !phVisitFndEmpty(f);
+          const herbInstructTitle = s.herbInstructedFormula ? `Instructed to start ${s.herbInstructedFormula}` : "Instructed from stock";
           return `<div class="ph-acu-sessrow">
           <span class="d">${esc(phShortDate(s.date))}</span>
           <span class="ph">${esc(s.phaseLabel || "")}</span>
           ${s.outcome ? `<span class="o ${s.outcome}">${outLabel(s.outcome)}</span>` : ""}
-          ${phAcuHerbsOn(name, s.date) ? `<span class="o herbs">🌿</span>` : ""}
+          ${phAcuHerbsOn(name, s.date) ? `<span class="o herbs">🌿</span>` : s.herbInstructed ? `<span class="o herbs" title="${esc(herbInstructTitle)}">🌿·</span>` : ""}
           ${hasFnd ? `<span class="o fnd" title="Clinical findings recorded">📋</span>` : ""}
         </div>`;
         }).join("")}
@@ -47638,8 +47919,8 @@ or changing anything in Cliniko.
      should default back to frozen every time the screen is opened, or "frozen"
      quietly becomes "frozen until the first time I ever edited it". */
   const phTpUnlockDone = new Set();
-  const PH_TP_FIELD_LABELS = { aim: "Aim", watch: "Watch", cadence: "Visits", points: "Points", label: "Phase name" };
-  const PH_TP_FIELD_PH = { aim: "What this phase is for…", watch: "What to watch / advice…", cadence: "e.g. 1–2×/wk", points: "Reference points…", label: "Phase name" };
+  const PH_TP_FIELD_LABELS = { aim: "Aim", watch: "Watch", cadence: "Visits", points: "Points", pressPoints: "Press tags", label: "Phase name" };
+  const PH_TP_FIELD_PH = { aim: "What this phase is for…", watch: "What to watch / advice…", cadence: "e.g. 1–2×/wk", points: "Reference points…", pressPoints: "Press-needle points…", label: "Phase name" };
   // the one place a phase's status changes: stamps the day it became
   // current / done (sinceKey / doneKey -- set automatically, never typed;
   // her yes 2026-09-08) and runs her 2026-09-03 cascade: marking one phase
@@ -47828,7 +48109,7 @@ or changing anything in Cliniko.
   function phTpFlarePreset(plan) {
     const acute = plan && plan.phases && plan.phases[0];
     if (acute && (acute.aim || acute.points)) {
-      return [{ label: "Flare — back to acute care", aim: acute.aim || "", points: acute.points || "",
+      return [{ label: "Flare — back to acute care", aim: acute.aim || "", points: acute.points || "", pressPoints: acute.pressPoints || "",
         cadence: acute.cadence || "2×/wk while the flare lasts", watch: acute.watch || "", suggestFormula: acute.suggestFormula || "" }];
     }
     return [{ label: "Flare — back to acute care", aim: "Settle the flare with the same acute-phase approach that worked before, then return to the maintenance plan.", points: "Repeat this plan's own Acute-phase points and formula.", cadence: "2×/wk while the flare lasts", watch: "Whether it settles faster than the original episode, or new features that need a fresh look" }];
@@ -49127,6 +49408,7 @@ or changing anything in Cliniko.
       <tr><td class="ph-tp-lbl">Formula</td><td class="ph-tp-fcell">${formula}${picking ? phTpPhaseFormulaPickerHtml(phase) : ""}${phTpFormulaHistoryHtml(phase)}</td>${rec("Dispensed", "dispensed")}</tr>
       <tr class="ph-tp-factionrow"><td colspan="4">${phTpFormulaActionHtml(phase, frozen)}</td></tr>
       <tr><td class="ph-tp-lbl">Points</td>${cell("points")}${rec("Done", "acu")}</tr>
+      <tr><td class="ph-tp-lbl">Press tags</td>${cell("pressPoints")}<td class="ph-tp-lbl mid rec"></td><td class="ph-tp-reccell"></td></tr>
       <tr><td class="ph-tp-lbl">Watch</td><td class="ph-tp-cell ph-tp-symcell">${phTpSymptomsHtml(plan, phase, frozen)}</td>${rec("Periods", "periods")}</tr>
       ${rc ? `<tr class="ph-tp-vtrow"><td colspan="4">${phTpVisitsMergedHtml({ name: phTpScreenPatient, plan, phase, frozen, rc })}</td></tr>` : ""}
       ${!rc && acuLine ? `<tr class="ph-tp-acufoldrow"><td colspan="4">${acuLine}</td></tr>` : ""}`;
@@ -49540,7 +49822,7 @@ or changing anything in Cliniko.
       }, 0));
       return;
     }
-    const multi = field === "aim" || field === "watch" || field === "points";
+    const multi = field === "aim" || field === "watch" || field === "points" || field === "pressPoints";
     const inp = document.createElement(multi ? "textarea" : "input");
     if (!multi) inp.type = "text"; else inp.rows = 1;
     inp.className = "ph-tp-cellin field-bare";
@@ -53237,7 +53519,10 @@ Please let me know if you have any questions.`;
     presMedHxOpen = false;
     presTreatOpen = false; presHistMoreOpen = false;
     presTpInlinePlanId = null; presTpInlineNew = false; presTpInlineLoose = false;
-    presAcuOpen = false; presAcuOutcomeDraft = null; phVisitFndResetDraft(); phCyclePop = null;
+    presAcuOpen = false; presAcuOutcomeDraft = null;
+    presAcuPhaseId = null; presAcuHerbInstruct = false;
+    presAcuPointsChecked = null; presAcuPressChecked = null; presAcuWatchChecked = [];
+    phVisitFndResetDraft(); phCyclePop = null;
     presAssessTab = null; presFpDraft = null; presFpProtoOpen = false;
     presRenderPanelSmooth();
   }
@@ -54408,6 +54693,20 @@ Please let me know if you have any questions.`;
   // in memory). Its own row between Notes and Treatment plan; same open/
   // close + "start clean every time" posture as the rows above.
   let presAcuOpen = false, presAcuOutcomeDraft = null;
+  // 🌱 natural-cycle visit redesign (her synth22 ask 2026-09-17) -- draft
+  // state for the acu-log accordion only, same lifetime as the two above:
+  // presAcuPhaseId is which phase she's TREATING today when it differs from
+  // the calendar-computed one (null = follow the calendar); the two Checked
+  // sets are null until she first touches a chip, meaning "everything on"
+  // without having to pre-populate them for a phase that might still change.
+  let presAcuPhaseId = null, presAcuPointsChecked = null, presAcuPressChecked = null;
+  let presAcuHerbInstruct = false, presAcuWatchChecked = [];
+  // a fast double-tap on "Log today's session" dispatches two real, separate
+  // click events -- the handler is fully synchronous, so by the time the
+  // second one fires the first has already reset the draft and re-rendered
+  // the same button, and a naive handler would push a second, mostly-blank
+  // session. Timestamp guard, not a same-call flag: reviewed 2026-09-17.
+  let presAcuLastLogAt = 0;
   let presVisitFndDraft = phVisitFndBlank();
   // Bell's palsy checklist: the row's open/closed state, today's unsaved
   // answers, and whether the point protocol is showing under it. presFpDraft
