@@ -3750,3 +3750,50 @@ snapshot is now close to exhausted of easy, unambiguous wins.
 
 No version bump, no commit to `index.html`/`sw.js` — nothing in the app
 changed this batch.
+
+### Batch 16 — second zero-build batch in a row; pool looks exhausted
+
+0 built, 5 closed as already-resolved/false-premise, 1 deferred to her.
+
+- **Esc-discards-new-draft, custom-Days silent warning, Appointments
+  header/toolbar gap** — all three closed as already-fixed: the first two
+  were shipped in Batch 8 (`065e737`) and commit `5db2e5c` (2026-08-25)
+  respectively; the third was fixed the same day it was written up
+  (2026-09-16 synth22 batch #3) and had already been re-confirmed fixed once
+  before, in Batch 7's audit pass. Each candidate's own source memory file
+  simply pre-dates the fix it's describing.
+- **"Apply Communications' ellipsis/pill CSS fixes to Dashboard/Refill/Log"**
+  and **"check Suppliers/patient-list for the flex-action-cell bug"** — both
+  closed as false/stale premises, and both are repeat closures: the first
+  was already closed as a no-op in Batch 3 AND Batch 9 (neither sheet's row
+  markup carries the classes the fix targets — Dashboard uses a different
+  row component entirely, Log's pill/sub-text use different class names,
+  Refill has its own already-colored pill kinds); the second was already
+  closed as a non-issue in Batch 3 AND Batch 8 (Suppliers never used the
+  flex class to begin with, and the patient list stopped being a `<table>`
+  in the 2026-08-31 card rebuild). Re-verifying today makes this the third
+  independent confirmation of each — worth updating the audit's own source
+  memory files so these two stop resurfacing every few batches and burning
+  a verification agent's time on a settled question.
+- **"Add autosave to the Information Letters modal body" — deferred, not
+  built.** The gap is real (the textarea only syncs to an in-memory
+  variable, lost the moment the modal closes), but this is the same item
+  Batch 10 already flagged as a precedent conflict: the only persistent
+  store this could commit into is `PHARMACY.infoLetterWords[tmpl.id]`, the
+  *shared master template* behind the explicit "+ Save wording" button —
+  wiring silent autosave onto that field would mean every keystroke becomes
+  "the template for everyone," quietly overriding her own considered
+  design (the app's standing rule that compose/draft surfaces stay
+  throwaway unless she explicitly commits them). A genuine per-patient
+  draft field would be a new data-model decision, not a mechanical fix.
+  Needs her word before it's safe to build — left open, not silently
+  built and not silently dropped.
+
+No version bump, no commit to `index.html`/`sw.js`.
+
+Two batches in a row (15, 16) found zero buildable candidates out of 8
+evaluated combined — a real, measured signal that the backlog's easy,
+unambiguous gate:none pool is close to exhausted, not a run of bad luck.
+If Batch 17 also comes back empty, that's three in a row and worth
+pausing the automatic batch-to-batch cycle to report back rather than
+continuing to spend agent effort re-discovering the same settled ground.
