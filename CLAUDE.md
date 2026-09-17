@@ -3639,3 +3639,41 @@ against current source rather than taken on the audit's word.
 
 Version bump: `lcm-build` `20260917-100000`, `sw.js` cache `-12`. Shipped
 `d5fcb40` on `session-a`.
+
+### Batch 13 — dead Dashboard sheet-mode code residue removed
+
+1 built, 5 closed as already-resolved — the audit snapshot keeps aging.
+Two of the five closures are worth flagging specifically: "Dashboard
+Communications strip and nav badge not rebuilt" was independently
+re-verified as already resolved (there is only ONE `phCommDueRows()`
+function — the Due tab and the nav badge read the exact same call chain,
+so they can't disagree — and the Dashboard's own Communications section was
+deliberately removed entirely back on 2026-09-15, so there's no strip left
+to rebuild in the first place); and "Treatment/Dispense stage rows not
+restyled" turned out to already be fully converted for Dispense, with
+Treatment's remaining content being a structurally different grid/spine/
+tabs module with its own settled design, not a form the Opening-stage
+language applies to.
+
+- **A narrower residue of dead Dashboard code, missed by Batch 8's earlier
+  sweep of the same family.** `phDsRowMode` — a flag from the desktop
+  Dashboard "sheet" mode that Batch 8 already removed the renderer for —
+  was left declared and never set `true` anywhere, so its two branches
+  (inside `phSigListRowHtml` and `phSigListDividerHtml`) were permanently
+  unreachable dead code, and the `.ph-ds-row.ph-ds-sig*` CSS family (2050-
+  2059) only ever rendered inside that same dead branch. Also removed:
+  `phDashWeekLabel()` (zero call sites — `phApptCalWeekLabel()` does the
+  equivalent job for the still-live Appointments week view) and the dead
+  `zoneGo`/`data-ph-dash-zonego` click handler (no template emits that
+  attribute any more, unlike its still-live siblings `data-ph-dash-expand`/
+  `data-ph-dash-collapse` right next to it in the same delegated listener).
+  Confirmed by exhaustive grep before touching anything: zero remaining
+  references to any of the four removed names after the edit. Left
+  untouched, confirmed still live: the base `.ph-ds-row`/`.ph-ds-sub`
+  classes (Refill workbench, Refill search), `phDashWeekDays`/
+  `phDashCalDays` (Patient-profile timeline's `renderPresWeek`), and
+  `.ph-tlr-cyc`/`.ph-dz-empty`. Sandbox-verified: clean boot, Dashboard,
+  Formula refill, and Patient profile all render with zero console output.
+
+Version bump: `lcm-build` `20260917-110000`, `sw.js` cache `-13`. Shipped
+`04f34e0` on `session-a`.
