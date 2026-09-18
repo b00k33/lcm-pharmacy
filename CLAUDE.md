@@ -4515,3 +4515,144 @@ build ever called `savePharmacy()`, so nothing could have persisted).
 
 Version bump: `lcm-build` `20260918-100000`, `sw.js` cache
 `lcm-20260918-todaysvisit-grid-merge`.
+
+## Grid tab follows the live calendar phase + two phase-announce popups (2026-09-18)
+
+Straight follow-on the same day. She asked a factual question first —
+**"will the plan automatically move to next phase based on next visit date
+corresponding to the cycle day?"** — which resolved a real three-way gap:
+`phCycleSyncPlans` (the WRITE that advances `phase.status`) only fires from
+6 explicit actions (logging a session/period/cycle field); `phTpCycleEffectivePhase`
+(the READ, driving Communications' acu-cadence dates and "Today's visit")
+already computes the live phase every render; but the Grid's **default-opened
+tab** followed only the persisted, sometimes-stale `status:"current"`
+pointer — a genuine gap between "what she sees" and "what the calendar
+says". Fixed with **"yes, go ahead"**: `phTpTabPhaseOf(plan, rec)` gained an
+optional `rec` param, threaded through `phTpRepaintPhasePanel`,
+`phTpTabbedHtml` (which itself gained a `name` param), and
+`phTpPlanBodyHtml`'s grid-mode call site — priority is now: manual tab
+override (`phTpTabPhase`) > live `phTpCycleEffectivePhase` (cycle-synced
+plans only) > persisted `status:"current"` > last done phase > first phase.
+Verified: a stale persisted phase is correctly overridden by the live
+calendar phase; a manual tab pick still wins over both; MSK/non-cycle plans
+are completely untouched (`phTpCycleEffectivePhase` returns `null` for them
+by design).
+
+**Then a genuinely separate ask, arriving as a widget conversation**: shown
+3 interactive mockups for "announcing" the cycle day (a persistent strip, a
+dismissible callout, an inline tab badge), she picked the callout, asked for
+it **animated** ("a popup with animation"), then **"snappier... slide up
+instead"** on the timing/direction. Approving the final animated mock, she
+said **"i like this one, do this for all treatment plans for fertility.
+make the wording more succinct. then do it for musculoskeletal but show the
+count of how many treatments and verify what phase."** Two real features,
+not one, since "fertility" and "MSK" needed entirely different content:
+
+- **Fertility calendar-mismatch popup** — scoped to `PH_TP_CYCLE_SYNC`'s 4
+  templates (Natural fertility, PCOS, Endometriosis, Dysmenorrhea; IVF and
+  Amenorrhea deliberately excluded, same reasoning `phTpCycleEffectivePhase`
+  already uses — neither has a live calendar-computed phase to compare
+  against). `phTpPhaseMismatchHtml(plan, phase)` fires only once she's
+  moved off the calendar phase (a tab click or the Today's-visit
+  phase-override chip, both write `phTpTabPhase`) — succinct wording,
+  "Day N · calendar says **X**", "Go to X" / "Stay on Y".
+- **MSK visit-count-verify popup** — scoped to `phTpIsMskPlan(plan)` (new
+  helper beside the existing `phTpIsFacialPlan`, same category-lookup
+  shape). `phTpPhaseMskVerifyHtml(plan, phase)` fires once the CURRENT
+  phase's visit count reaches what the plan asked for
+  (`phTpVisitParts`/`.st.done >= .st.expected`) and there's a next phase to
+  offer — reuses her own "ONE phrase, four surfaces" visit-count text
+  verbatim (a 5th surface, not a re-derived copy), "N of M visits in
+  **Acute**", "Move to Subacute" / "Keep in Acute". "Move to" calls the
+  pre-existing `phTpSetPhaseStatus`, the same function every other
+  phase-advance control in the app already uses.
+
+Both render from one shared slot (`phTpPhasePanelHtml`, between the phase
+line and the grid table) with a slide-up-and-snap entrance
+(`@keyframes phTpAnnounceIn`), teal for the fertility card and the app's
+existing gold "notice" tone (`--ph-gold-tint`/`-deep`, used everywhere else
+in this app) for the MSK one — no new colours invented.
+
+**Adversarial review (Workflow, 3 dimensions × 2 refuters) found 8 real
+bugs, all confirmed by both refuters, all fixed and re-verified directly
+against the real functions in the sandbox**:
+1. **"Go to X" desynced the tab strip from the panel it had just
+   repainted.** The handler used `phTpRepaintPhasePanel()` (which only
+   touches `.ph-tp-phasebody`, never the sibling tab strip) instead of a
+   full `phTpRerender()` — the table correctly switched to the calendar
+   phase, but the tab strip kept showing the old override as "on", and
+   tapping that stale-but-live tab silently re-created the exact override
+   "Go" had just cleared. Fixed: "Go" now calls `phTpRerender()`.
+2. **Dismissal was keyed on the override phase alone**, with no memory of
+   which live phase it was compared against — dismissing once could
+   silently suppress the popup for the rest of the cycle even after the
+   calendar moved to a completely different phase. Fixed: the dismiss key
+   is now `${overridePhase.id}:${livePhase.id}` together, so a later
+   calendar drift reads as a fresh gap again — the same "scope to what
+   changes" reasoning already used for `rec.acuFu`'s `doneForSessionId` and
+   this popup's own MSK half.
+3. **"Go" never cleared the dismissal**, so re-overriding to the *same*
+   phase later (an ordinary thing to do) could silently hide a brand-new,
+   unrelated mismatch. Fixed: "Go" now clears `phTpMismatchDismissed` for
+   that plan too.
+4. **MSK "Move to X" ignored `plan.status`.** A held/interrupted plan
+   (`phTpApplyInterrupt` sets `plan.status:"paused"` but never touches the
+   phase's own `status`, which stays `"current"`) could still show the
+   verify banner and let her advance the phase mid-pause — corrupting
+   `phTpResumeInterrupted`'s later pause-span attribution (it closes the
+   span on "whichever phase is current" when the interrupting plan
+   resolves, which would now be the wrong one). Fixed: the MSK gate now
+   also requires `plan.status === "active"`.
+5. **MSK "Move to X" left a stale `phTpTabPhase` override in place.**
+   `phTpTabPhaseOf` honours an existing override unconditionally, even once
+   its phase has flipped to `"done"` — found independently by two review
+   dimensions. The Grid kept showing the just-finished (frozen) phase
+   instead of following to the one she'd just moved into, and both the MSK
+   banner and the embedded "Today's visit" editor vanished with no on-screen
+   sign anything had happened. Fixed: "Move to X" now clears the plan's
+   `phTpTabPhase` entry before calling `phTpSetPhaseStatus`.
+6. **A template recategorised to "msk" while still one of the 4
+   cycle-synced names** (a real, supported edit in Settings → Treatment
+   plan templates, since Name is the only locked field) could satisfy both
+   gates on the same phase at once — two differently-coloured,
+   differently-worded cards stacking on one phase reads as two conflicting
+   instructions. Fixed: `phTpPhasePanelHtml` now shows at most one, the
+   calendar-mismatch card winning when both would apply (it's about her
+   actual cycle data, not an editable label).
+7. **The button row could overflow at phone width.** `.acts` used
+   `flex: none` with no wrap; a phase can carry an arbitrarily long custom
+   label (nothing caps it), and once `.acts` wrapped onto its own line its
+   two buttons could neither shrink nor wrap internally. Fixed:
+   `flex-wrap: wrap; max-width: 100%` on `.acts` lets the two buttons stack
+   instead of overflowing. Doesn't reproduce on the shipped short built-in
+   labels — only a long custom/renamed phase.
+8. (Same underlying mechanism as #5, found independently by the
+   integration-and-css dimension — counted once, fixed once.)
+
+**Disclosed, NOT fixed — a pre-existing gap this review surfaced, not
+introduced by today's build.** An ordinary phase-tab click only writes
+`phTpTabPhase` (which tab is showing); it does not touch `presAcuPhaseId`
+(which phase the embedded "Today's visit" editor is treating today) — only
+the Today's-visit phase-override chip keeps the two in sync. So tapping a
+different tab to review history while a Today's-visit override is active on
+another phase makes the editor disappear from view entirely, with nothing
+on screen saying where it went. This predates today's build (it's a property
+of the 2026-09-17/18 "Today's visit" merge), and fixing it properly means a
+real UX decision — either make an ordinary tab click also reset the
+treatment override (would undo a deliberate override just for glancing at
+another phase's history), or add a persistent "Today's visit is pending on
+X" indicator regardless of which tab is open (new UI, not a bug fix). Left
+for her to weigh in on rather than guessed.
+
+**Testing note**: every fix verified via real dispatched calls against the
+actual functions in the sandbox (not a reimplementation) — the tab-follow
+priority chain, the mismatch popup's fresh/override/dismiss/re-drift/Go
+cycle, the MSK popup's target/dismiss/re-trigger/last-phase/not-current/
+paused-plan gates, "Move to X" correctly landing the Grid on the new
+current phase, and the category-reassignment scenario correctly rendering
+exactly one announce card. Synthetic patients/plans/appointments/template
+overrides cleaned up and confirmed absent from `localStorage` after every
+run (`savePharmacy()` re-run after cleanup, not assumed).
+
+Version bump: `lcm-build` `20260918-110000`, `sw.js` cache
+`lcm-20260918-phase-announce-popups`.
