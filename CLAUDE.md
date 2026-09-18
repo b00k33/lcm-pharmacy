@@ -5269,3 +5269,183 @@ dispatched log clicks for the two-days-back (not attached, today) and
 yesterday (attached, dated yesterday, Menstruation) cases; chip "logged".
 Console clean (only the known icon 404s); synthetic patient and bookings
 deleted, `localStorage` residue nil.
+
+## Synth22 items 2, 7, 9 — Planned↔visit linking, Appointments List door-facts, Dashboard Order/Refill as two plain lists (2026-09-18)
+
+Her "finish and build" on the standing SYNTH22 batch closed out the three
+items collected earlier that day (see
+[[project_pharmacy_synth22_2026_09_18]] for the full collection). Each was
+mocked as a real widget with 3 options and she picked by letter — nothing
+here was guessed:
+- **Item 7, Appointments List**: **"C · Both"** — briefing rows (the
+  at-the-door card's own line per patient) AND, one-day view only, a day
+  summary strip + "Herbs to prepare today" list below the rows.
+- **Item 9, Dashboard Order/Refill cards**: **"B · Two plain lists"** —
+  she explicitly declined the recommended "C · one merged stock table".
+  Sort: **"Empty first, then fewest days of cover"** (over most-used-first
+  and A–Z).
+- **Item 2, Planned ↔ Today's-visit linking**: **"C · Both"** — a blank
+  Planned cell (Points, Formula) fills itself silently from today's logged
+  visit; a Planned cell that already has different content shows a
+  "→ plan" tap on the visit-side chip instead of ever silently overwriting.
+
+### Item 7 — Appointments List becomes the receptionist line
+
+`phApptCalListRowHtml` no longer renders the old Focus/Goal "add focus /
+add goal" columns. It now calls the SAME `phDoorFacts(name, opts)` the
+at-the-door card already uses (extracted from `presDoorCardHtml` for this
+reuse — see the "Alive" section above), with `{appt: a, skipAppt: true,
+withPoints: true, noChanges: true}`: `skipAppt` because the row already
+has its own time column, `withPoints` because the row has room for
+Points/Formula that the terser at-the-door card leaves out, `noChanges`
+because "changes since her last visit" stays confined to the at-the-door
+card only (her decision, batch 4) — never a second place it can show. The
+row is 4 columns now (Time / Patient / At the door / Herbs) —
+`phApptCalListHtml`'s head row and the `.ph-apptls-head`/`.ph-apptls-row`
+grid (`72px minmax(150px,.8fr) 2.2fr minmax(120px,.7fr)`) both updated to
+match. Anything she actually TYPED onto the booking (`a.focus`/`a.goal`,
+still typed text, not derived) still shows on its own line under the
+door-facts line, never dropped. The compact ≤900px row is unchanged in
+shape (time · kind pill · name · one line) but that one line now reads
+`facts.mini` instead of the old bare focus text.
+
+`phApptListDayBlockHtml(dayKey)` is new — a day-stats strip
+(booked/CHM/ACU/herbs/total weight, short/dispensed/scheduled when any)
+plus "Herbs to prepare today": every CHM/both booking whose script isn't
+dispensed yet, one row per patient (formula + grams, short-herb chips, a
+Prepare/Open jump to the script). `phApptCalListHtml` appends it only when
+`days.length === 1` — a multi-day List never gets it, matching her "one-day
+view only" pick.
+
+### Item 9 — Dashboard cards rebuilt as two plain lists
+
+`phDashPlainRow(h, actionBtn)` is the one shared row for both cards: herb
+name (with pinyin code, tapping opens the herb editor same as before) ·
+one-word state (`empty` red / `low` amber / a plain `·` dot when neither)
+· one action button. `phDashUrgencySort(items, boardMap)` is the one
+shared sort: every empty item first (name-sorted among themselves), then
+everything else by ascending days-of-cover (`phSigCoverDays`, only
+computed for a herb inside the significance window — `boardMap.get(h)`
+returns nothing for one outside it, and that absence sorts LAST among the
+non-empty group rather than being treated as zero — "a real number or
+honestly absent", matching how the rest of this app already handles
+days-of-cover). `phDashNeedsOrderingHtml`'s and `phDashRefillNeededHtml`'s
+tails were rewritten onto these two shared functions, dropping the old
+ranked/unranked two-branch logic, the rank number, the jar icon and the
+6-month usage bars entirely — her explicit "B" pick over the richer merged
+table. Both cards keep their existing action menus exactly as before
+(`phOrderMenuHtml`/`phRefillMenuHtml`, the shared "Plan ▾" component
+already used elsewhere on this Dashboard) — this build only changed the
+row's presentation and sort, never the ordering/refill mechanics
+underneath it. `data-ph-dash-makerows="1"` is preserved on the refill
+card's `.ph-dash-plain` wrapper, so the phone's tap-the-whole-row-to-open
+handler is unaffected.
+
+**Known leftover, disclosed rather than silently cleaned up:**
+`phC1FallbackRowHtml`, `phC1PlainRefillBtn`, `phSigListRowHtml`,
+`phSigRankedSort`, `phSigListDividerHtml` are now orphaned — the old
+ranked-row renderer these belonged to was removed with the tail rewrite,
+but the functions themselves were left in place rather than folded into
+this UI-only pass. Only remaining reference is the debug hook
+`window.__sigDebugTEMP` (line ~20917), which still points at
+`phSigRankedSort`/`phDashNeedsOrderingHtml` for console poking — harmless,
+but worth a future dead-code sweep.
+
+### Item 2 — a blank Planned cell fills itself; a differing one gets a tap, never a silent overwrite
+
+Two halves, both inside the existing "Today's visit" editor
+(`presAcuOpenHtml`, embedded in the Grid per the 2026-09-18
+"Today's-visit-merged" build above) — no new UI surface, extending the one
+that already exists.
+
+**Fill-when-blank (the log-session save handler, `data-pres-acu-log`).**
+Right after `points`/`pressPoints` are computed and after
+`herbFormulaName` is resolved (the same locals the session itself is
+built from), three one-line guards: `if (treatedPhase && !treatedPhase.points
+&& points) treatedPhase.points = points;` (and the equivalent for
+`pressPoints`), and `if (treatedPhase && !treatedPhase.formulaName &&
+herbFormulaName) { treatedPhase.formulaName = herbFormulaName;
+treatedPhase.formulaHistory.push({...}) }`. The formula fill pushes a
+`formulaHistory` entry (`formulaId: null`, matching the shape of every
+other formula-linking path that doesn't have a real script id) so it
+carries the same audit trail as Design/Link formula and dispense
+adoption. All three guards fire only when the phase's own field is
+currently EMPTY — a phase that already has content is never touched here,
+by construction, regardless of what today's visit logs.
+
+**The "→ plan" tap (three new small buttons in `presAcuOpenHtml`,
+`.ph-acu-toplan`, amber like the returning-visit `.changed` field
+highlight — "differs, needs a look").** Each is shown only when the
+phase's Planned field is non-empty AND disagrees with what today's visit
+currently reads:
+- Points: `pointsToPlan = treatedPhase.points && treatedPhase.points !==
+  (checked chips joined)`, next to the Points header's Select-all/Clear.
+- Press tags: same shape, next to the Press tags header — only reachable
+  when the phase already has preset press tags (a blank
+  `pressPoints` falls to the plain freeform box, where fill-when-blank
+  already covers it and there's nothing to diff against).
+- Formula: `formulaToPlan = treatedPhase.formulaName &&
+  treatedPhase.formulaName !== instructFormula` — `instructFormula`
+  already prioritises a real recent dispense over the plan's own
+  suggestion (Kathryn Welsh precedent, 2026-09-17), so this can only fire
+  when her actual dispense history or her own explicit pick genuinely
+  disagrees with what the plan says, next to the "Instruct to continue…"
+  button.
+Tapping one writes today's value straight into the phase (a formula tap
+also pushes a `formulaHistory` entry) and calls `phTpRepaintPhasePanel()`
+— the Grid's own Planned column needs to move too, same as every other
+phase-editing tap in this panel already does.
+
+**Disclosed scope**: the Press tags "→ plan" comparison only considers the
+CHECKED/UNCHECKED state of the PRESET chips, not whatever she's mid-typing
+into the "+ another press tag…" free-text box — that field is read live
+off the DOM only at save time (same as it always was), and folding it into
+a render-time diff would mean reading a possibly-stale or not-yet-existing
+DOM node during string construction. The primary case her complaint
+described (double-typing the SAME preset points/formula) is fully covered;
+an extra hand-typed press tag not yet reflected in the tap's diff is a
+minor edge the fill-when-blank/tap pair still handles correctly once she
+saves.
+
+**Verified end-to-end in the sandbox via real dispatched click events
+against the actual production functions** (not reimplemented) — the app's
+own click-delegation is scoped to `#pharmacyPage`, so a synthetic element
+mounted outside it silently no-ops (the same trap this file's Herbs-only
+section already documents; reproduced once, then the TEST was fixed, not
+the code): a synthetic patient/plan/phase confirmed (1) the blank-phase
+fill on Save correctly wrote Points (via the real "+ add" chip flow),
+Press tags (via the real freeform field) and Formula (via the
+`suggestFormula` fallback) with a formulaHistory entry; (2) re-saving once
+the phase already had content, with a DIFFERENT selection checked/
+unchecked this visit, left the phase completely unchanged — the
+no-silent-overwrite guard holds; (3) unchecking a preset point/press tag
+correctly made its own "→ plan" tap appear, and tapping it correctly
+pushed the new value into the phase; (4) the Formula tap, exercised by
+injecting a real `data-pres-acu-instructformula` pick button (the exact
+attribute the picker's own recent-dispense rows carry — a stand-in for
+needing real `PHARMACY.log` history, which the sandbox's `PHARMACY` isn't
+window-exposed to seed directly) correctly showed the tap and, on click,
+correctly rewrote `formulaName` with a formulaHistory entry. Item 7's
+`phApptCalListHtml`/`phApptCalListRowHtml`/`phApptListDayBlockHtml` were
+exercised against a synthetic appointment + patient at both compact
+(≤900px) and desktop widths, confirming the 4-column head, the door-facts
+line, the day-stats strip and the herbs-to-prepare row all render
+correctly, plus a CSS grid-template computed-style check
+(`72px 158px 435px 138px` at 900px, matching the declared
+`72px minmax(150px,.8fr) 2.2fr minmax(120px,.7fr)`). Item 9's
+`phDashNeedsOrderingHtml`/`phDashRefillNeededHtml` were called directly
+against her real 301-herb sandbox seed data, confirming empty-before-low
+ordering, the preserved `data-ph-dash-makerows` attribute and correct row
+structure on real herbs. Console clean throughout (only the two known
+pre-existing icon 404s); all synthetic patients/appointments cleared and
+`savePharmacy()` re-run afterward.
+
+Not verified visually (screenshot) — this sandbox's login gate blocks a
+fully-booted local preview even though the underlying app state and click
+delegation are still reachable and testable (per this file's established
+pattern for every prior batch), so a `#pharmacyPage`-scoped DOM mount +
+computed-style check stood in for a screenshot, same as always.
+
+`sw.js` `lcm-20260918-synth22-item2-7-9`, meta `20260918-234500`. Committed
+to `session-a`, not yet pushed to `main` — awaiting her approval per the
+standing pattern for a build she hasn't seen live yet.
