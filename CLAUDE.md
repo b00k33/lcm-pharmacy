@@ -5515,3 +5515,116 @@ sandbox. Follow-up build `lcm-build` `20260919-001500`, `sw.js`
 Console clean after every fix (only the two known icon 404s); the
 protected Prescriptions live-search check passes (2 → 1 → 2 on injected
 scripts, no residue). Committed to `session-a`, still not pushed to `main`.
+
+## IVF Grid — clinic scans, the cycle strip on the plan tab, Edit plan mode, plan switcher (her ask 2026-09-19)
+
+Screenshot of Nyssa Jualim's IVF Protocol Grid: **"make this ui more user
+friendly. i cant change my treatment plan, i cant input scheduled
+ultrasounds and scans and results from those findings, i cant see the
+cycle day."** Story, her words: *"nyssa told me her scans but i have
+nowhere to record it."* Two question batches (18 answers, verbatim in
+memory `project_pharmacy_ivf_grid_scans_cd_2026_09_19`) — every choice
+below is hers, not a guess. Then, mid-build, on Camila Salum: **"how do i
+see other treatment plans and select it. once i open it i cant see
+anything else"** — folded in.
+
+- **Scans live on the IVF history's linked round row, `row.scans[]`**
+  (`phIvfLinkedCollection` / `phIvfLinkedCollectionWritable` — the same
+  "typed once, gathered everywhere" home as retrieval/transfer, decision
+  13; never a copy on the plan). Shape `{id, date, folR, folL, sizes,
+  lining, e2, lh, p4, fsh, amh, hcg, note, src:"me"|"patient", confirmed,
+  at}`. Her fields exactly: date, follicles L/R, sizes, lining mm, the six
+  bloods (E2 pmol/L · LH IU/L · P4 nmol/L · FSH · AMH · hCG), clinic note.
+  **A scan is a record only — it never moves a phase** (her answer;
+  `phTpMilestoneSync` untouched). **The next scan is the earliest
+  future entry with no results** ("booked · results to come"), not a
+  separate field. A patient-typed scan (`src:"patient"`, unconfirmed —
+  the My Cycle write path is not built yet, the app just honours the
+  shape) stays marked "from her phone" with a ✓ Confirm until she
+  confirms. Helpers beside the writable-collection function:
+  `PH_IVF_SCAN_BLOODS`, `phIvfScanList(name, plan)` (this round),
+  `phIvfScanListAll(rec)` (every round, for the strip), `phIvfNextScan`,
+  `phIvfLatestScan`, `phIvfNextScanKey`, `phIvfScanSummary(s, short)`
+  ("R8 L6 · lining 7.2 · E2 1200"), `phIvfScanCd(rec, date)` (days since
+  her LMP, a stim day, never wrapped).
+- **`phTpScansHtml(name, plan)`** renders in `phTpTabbedHtml` right after
+  the milestone-date grid on BOTH surfaces (inline Grid + full-screen
+  modal): Day (CD) · Date · Follicles · Sizes · Lining · Bloods · Note.
+  Shown for IVF Protocol / milestone-cadenced plans, and for any plan
+  whose round already holds scans (so a plan swapped off IVF never hides
+  what she typed). Row tap = the row becomes the form (`phTpScanFormHtml`,
+  ids `phTpScan_*`, date defaults to today, year-plausibility guard shows
+  the field red rather than flashing — a flash would re-render the form
+  away); Save → `phIvfLinkedCollectionWritable`, `savePharmacy()` return
+  checked, `phTpRerender()` (the block sits outside `.ph-tp-phasebody`,
+  so the phase-panel repaint can't reach it). Remove = confirm strip.
+  Phone (≤640): latest + next booked + anything awaiting review, the rest
+  behind "show all N" (`phTpScansShowAll`) — her pick "latest scan only,
+  older ones behind a link". No print (her pick, "nowhere, screen only").
+- **Nudges, all three she ticked:** a purple ring on the cycle strip
+  (`.ph-cyc-day.scan`, legend "scan booked") — and because the strip only
+  ever showed up to the current week, a scan booked past it now extends
+  the strip forward by just enough weeks (≤4) to show the ring, the past
+  window untouched, those future days still disabled; a chip on the door
+  card + the Appointments List row (`phDoorFacts`: "scan day 7 · R8 L6 ·
+  lining 7.2 · E2 1200" and "scan 23 Sep", `data-live` on the next-scan
+  chip) and a 🔬 line on the appointment popup (`phApptPopHtml`); and the
+  Communications row — saving a scan booked ahead flashes "Text her the
+  day after her scan? Skip / Plan it" (`phMsgScanOffer`,
+  `phMsgScanOfferHtml`), Plan it = `phMsgPrepare` with `scheduledFor` =
+  scan + 1 day, label "After her scan", `context {type:"scan", id}`, her
+  own code3 `ivf-foll` wording in the patient's tone
+  (`phCkResolveTemplate` + `phMsgDefaultTone`), sms unless her contact
+  pref is email. That IS the Communications → Due row (the existing
+  scheduled kind) — no 4th row kind across the ~15 kind-branch sites.
+  No phone/email on file → an honest "Nothing planned" flash.
+- **Cycle strip on the plan tab**: `presTpInlineEditorHtml` renders
+  `phCycleStripHtml(phPatientPeek(name), name)` (never `phPatientRec` in
+  a render) above the IVF history fold for every `PH_TP_CYCLE_TEMPLATES`
+  plan — the ONE tap-the-day control she already uses on Assessment, the
+  check-in card and the modal; `phCycleStripRefresh` repaints it in place
+  wherever it lives.
+- **Edit plan mode** (`phTpEditPlanId`): a "✎ Edit plan" pill on the
+  phase-tab strip beside ⋯ (`phTpTabsHtml`, `data-tp-editplan`); on, the
+  `.ph-tp-editing` wrapper (inline `.ph-tp-inline`, modal
+  `.ph-tp-timeline`) gives every `data-tp-edit` Planned cell a dashed
+  outline + ✎ — an affordance layer only, the cells save per cell exactly
+  as before ("each cell saves as I leave it, Done just closes the mode").
+  `phTpPlanHeadHtml` swaps the always-visible one-line **Dx · Goal**
+  summary (her pick over the collapsed fold — `presTpStrategyOpen`,
+  `phTpPlanStrategyHtml` and its toggle are deleted) for Protocol
+  `<select>` (built-ins via `phTpBuiltinTemplates()` + her own) and
+  Diagnosis / Goal inputs on the existing `data-tp-field` write path
+  (debounced, no re-render under her typing).
+- **Switching protocol asks, every time** (her pick): the select arms
+  `phTpProtocolArm` (change handler beside `data-tp-milestone`), and the
+  strip offers **Swap the phases** (phases rebuilt from
+  `phTpNewPlan(templateId)`, templateName follows, title only if she never
+  renamed it, goal fills only when blank, `startPhasePicked` and the
+  plan's `phTpTabPhase` entry cleared, `phTpAutoFillCase`) or **Close
+  this, start new** (`status:"done"`, `phTpResumeInterrupted`, then
+  `presTpInlineCreate` which saves, checks the save and lands on the new
+  plan). Re-picking the same protocol arms nothing. Inline editor only —
+  the modal keeps its own diagnosis/goal textareas and no protocol pick.
+- **Plan switcher** (`presTpPlanTabsHtml`): the chip row under the band
+  now carries a "PLANS" label and the open plan is solid teal
+  (`.ph-tp-plantabs .ph-pres-tab.on:not(.loose)`) — it always was the
+  switcher, it just read as decoration.
+
+Verified in the sandbox against the real functions and the real delegated
+handlers (dispatched clicks inside `#pharmacyPage`; the login gate still
+blocks a booted click-through): add / edit / cancel / confirm a scan; the
+year guard; a booked scan → offer → Plan it → a prepared message with the
+right `scheduledFor`, label, sms channel and her code3 body, present in
+`phMsgScheduledRows()`; a results scan → no offer; door-card chips, the
+popup line, the strip ring + the forward-extended strip, the legend; Edit
+plan on/off, the Dx input saving through `data-tp-field`, the protocol
+arm / same-pick / cancel / swap (6 fresh phases, title, tab cleared,
+diagnosis kept) / close-and-new (old plan done, new IVF plan active and
+landed); the phone fold (2 rows + "show all 3" → 3 rows → "latest only",
+table 272px wide at 360, no overflow); the switcher label + solid chip;
+desktop screenshots of the view and edit states. Clean console (the known
+icon 404s only). Synthetic patient, plans, message and DOM removed,
+`localStorage` residue nil. `lcm-build` `20260919-020000`, `sw.js`
+`lcm-20260919-ivfgrid-scans-cd-editplan`. On `session-a`, not pushed —
+she asked to see it first.
