@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260918-200000">
+<meta name="lcm-build" content="20260918-220000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -7824,6 +7824,37 @@
   #pharmacyPage .ph-tp-announce.msk .stay { background: transparent; border-color: var(--ph-gold-deep, #8A6D1A); color: var(--ph-gold-deep, #8A6D1A); }
   #pharmacyPage .ph-tp-announce.visit .go { background: var(--ph-purple-deep, #4A3470); color: var(--ph-white); }
   @keyframes phTpAnnounceIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  /* ==== AT THE DOOR (her picks 2026-09-18): plain facts under the band,
+     above the plan tabs; A3 = two lines; slides up once, ✕ dismisses;
+     phone = one line, tap to unfold. See presDoorCardHtml. ==== */
+  #pharmacyPage .ph-door { position: relative; margin: 0 0 8px; padding: 8px 32px 8px 12px; border: 1px solid var(--ph-line); border-top: 0; border-radius: 0 0 10px 10px; background: var(--ph-white, #fff); font-size: 13px; line-height: 1.5; color: var(--ph-ink); }
+  #pharmacyPage .ph-door.in { animation: phTpAnnounceIn 220ms cubic-bezier(.2,.9,.3,1.1); }
+  #pharmacyPage .ph-door .l1 { font-weight: 500; color: var(--ph-herb-deep); }
+  #pharmacyPage .ph-door .q { color: var(--ph-faint); font-weight: 400; margin: 0 5px; }
+  #pharmacyPage .ph-door .l2 { margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  #pharmacyPage .ph-door .chg { display: inline-flex; flex-wrap: wrap; gap: 4px; border-radius: 999px; }
+  #pharmacyPage .ph-door .c { display: inline-block; font-size: 11.5px; line-height: 1.5; padding: 1px 8px; border-radius: 999px; background: var(--ph-herb-tint); color: var(--ph-herb-deep); white-space: nowrap; }
+  #pharmacyPage .ph-door .c.am { background: var(--ph-low-tint); color: var(--ph-low-deep); }
+  #pharmacyPage .ph-door .c.rd { background: var(--ph-zero-tint); color: var(--ph-zero-deep); }
+  #pharmacyPage .ph-door .c.new { background: var(--ph-herb-deep); color: var(--ph-cream); }
+  #pharmacyPage .ph-door .x { position: absolute; top: 6px; right: 8px; border: 0; background: none; color: var(--ph-faint); font-size: 14px; line-height: 1; cursor: pointer; padding: 3px 5px; border-radius: 6px; }
+  #pharmacyPage .ph-door .x:hover { background: var(--ph-herb-tint); color: var(--ph-herb-deep); }
+  #pharmacyPage .ph-door .mini { display: none; }
+  @media (max-width: 640px) {
+    #pharmacyPage .ph-door { padding: 7px 30px 7px 10px; }
+    #pharmacyPage .ph-door .mini { display: block; font-size: 13px; line-height: 1.4; font-weight: 500; color: var(--ph-herb-deep); cursor: pointer; }
+    #pharmacyPage .ph-door .mini .q { margin: 0 4px; }
+    #pharmacyPage .ph-door .mini .ar { color: var(--ph-herb); margin-left: 6px; }
+    #pharmacyPage .ph-door:not(.open) .l1, #pharmacyPage .ph-door:not(.open) .l2 { display: none; }
+    #pharmacyPage .ph-door.open .l1 { margin-top: 4px; font-weight: 400; font-size: 12.5px; }
+  }
+  /* motion only when something changes (phLiveSweep) */
+  #pharmacyPage .ph-live-changed { animation: phLiveFlash 900ms ease-out; }
+  @keyframes phLiveFlash { 0% { box-shadow: 0 0 0 3px var(--ph-gold); transform: translateY(-2px); } 100% { box-shadow: 0 0 0 0 transparent; transform: none; } }
+  #pharmacyPage .ph-tp-tab.on { transition: background-color 180ms ease, color 180ms ease; }
+  /* the day as a moving timeline: the block in progress right now */
+  #pharmacyPage .ph-appt-block.now { box-shadow: 0 0 0 2px var(--ph-gold); z-index: 2; }
+  #pharmacyPage .ph-tp-vt-move { font-size: 11px; margin-left: 6px; }
   /* ==== her redesign 2026-09-10 ("too much info. too flat. not easy to
      navigate"): the phases are a TAB STRIP and only the open one's table is
      on screen. This replaced the 2026-09-08 segmented bar + legend and the
@@ -22287,7 +22318,7 @@
     // recently dispensed", which would keep opening last cycle's script
     if (cands.some(t => t.phaseTag)) {
       const plan = phTpShownPlan(presPatientFor(cands[0]));
-      const cur = plan && phTpPlanCurrentPhase(plan);
+      const cur = plan && phTpLivePhase(phPatientPeek(presPatientFor(cands[0])), plan);   // one phase truth (2026-09-18)
       const hit = cur && cands.find(t => t.phaseTag && phPhaseTagMatch(t.phaseTag, cur.label));
       if (hit) return hit;
     }
@@ -22564,7 +22595,11 @@
     // (data-ph-appt-pop -> phApptPopOpen); "Open profile →" inside the popup
     // is the travel-further step, and Edit / Cancel / Book another live in
     // the popup too, so the block's ⋯ is gone.
-    return `<div class="ph-appt-block${kind ? " " + kind : ""}${ck ? " ck" : ""}${phCkIsAway(a.service) ? " away" : ""}${dotCls === "done" ? " done" : ""}${phApptCalOpenId === a.id ? " sel" : ""}${dim}" style="${phApptCalBlockStyle(it)}${ck}" role="button" tabindex="0" data-ph-appt-pop="${esc(a.id)}" title="${esc(a.patient)}${a.service ? " — " + esc(a.service) : ""}">
+    // today's blocks carry their minute span so phApptCalNowTick can light
+    // the one in progress without a re-render ("current patient lit")
+    const sm = /^(\d{1,2}):(\d{2})/.exec(a.time || "");
+    const spanAttr = a.date === keyOf(TODAY) && sm ? ` data-ph-appt-span="${+sm[1] * 60 + +sm[2]}-${+sm[1] * 60 + +sm[2] + phApptMins(a)}"` : "";
+    return `<div class="ph-appt-block${kind ? " " + kind : ""}${ck ? " ck" : ""}${phCkIsAway(a.service) ? " away" : ""}${dotCls === "done" ? " done" : ""}${phApptCalOpenId === a.id ? " sel" : ""}${dim}" style="${phApptCalBlockStyle(it)}${ck}" role="button" tabindex="0" data-ph-appt-pop="${esc(a.id)}"${spanAttr} data-live="appt:${esc(a.id)}" data-live-sig="${esc(a.date)}|${esc(a.time || "")}|${esc(a.service || "")}" title="${esc(a.patient)}${a.service ? " — " + esc(a.service) : ""}">
       <span class="ph-appt-block-time">${esc(phCkTime12(a.time))}</span><button type="button" class="ph-appt-block-name" data-ph-dash-patient-open="${esc(a.patient)}">${esc(a.patient)}</button>
       ${dotCls ? `<span class="ph-appt-block-dot ${dotCls}"${dotTap} title="${esc(dotTitle)}">${dotCls === "done" ? "✓" : ""}</span>` : ""}
     </div>`;
@@ -22609,7 +22644,7 @@
       if (f) { out.focus = f; out.focusSrc = dx ? "plan" : "case"; }
     }
     if (!out.goal && plan) {
-      const phase = phTpPlanCurrentPhase(plan);
+      const phase = phTpLivePhase(phPatientPeek(a.patient), plan);   // one phase truth (2026-09-18)
       const g = [(plan.goal || "").trim(), phase ? (phase.label || "").trim() : ""].filter(Boolean).join(" · ");
       if (g) { out.goal = g; out.goalSrc = "plan"; }
     }
@@ -22635,6 +22670,13 @@
     const done = presDispenseOnDay(k, a.date);
     const prep = script && a.date >= keyOf(TODAY) ? phApptPrep(k) : null;
     if (done) return `<span class="ph-tl-chip done">✓ ${esc(presTimeStr(new Date(done.at || 0)))}</span>`;
+    // her pick 2026-09-18 (fix 2): a written-up visit says so on the List
+    // and the popup -- unless herbs are short, which is the more urgent fact
+    const sess = a.date <= keyOf(TODAY) ? phApptSessionFor(a) : null;
+    if (sess && !(prep && prep.short.length)) {
+      const o = sess.outcome ? ((PH_ACU_OUTCOMES.find(x => x[0] === sess.outcome) || [])[1] || "") : "";
+      return `<span class="ph-tl-chip done">🪡 ${sess.noTreatment ? "herbs only" : "logged"}${o ? ` · ${esc(o.toLowerCase())}` : ""}</span>`;
+    }
     if (!script) return kind === "acu" ? `<span class="ph-tl-chip acu">ACU only</span>` : `<span class="ph-tl-chip new">new</span>`;
     if (prep && prep.short.length) {
       const queued = prep.short.every(x => x.h.order);
@@ -22708,8 +22750,16 @@
     // where a condition gets picked in the first place. Opens the plan on tap.
     const plans = phTpPlans(a.patient);
     const apptPlan = (a.planId && plans.find(p => p.id === a.planId)) || phTpShownPlan(a.patient);
-    const planCur = apptPlan ? phTpPlanCurrentPhase(apptPlan) : null;
+    // one phase truth (2026-09-18): the LIVE phase, same as the Grid tab
+    const planCur = apptPlan ? phTpLivePhase(rec, apptPlan) : null;
     const phaseTail = planCur && planCur.label ? ` <span class="faint">· ${esc(planCur.label)}</span>` : "";
+    // her pick 2026-09-18 (fix 2): a past or today's booking says whether it
+    // was written up -- the session that names it, else the same-day one
+    const sess = a.date <= keyOf(TODAY) ? phApptSessionFor(a) : null;
+    const sessOut = sess && sess.outcome ? ((PH_ACU_OUTCOMES.find(o => o[0] === sess.outcome) || [])[1] || sess.outcome) : "";
+    const sessLine = !sess ? "" : sess.noTreatment
+      ? `<b>herbs only</b>${sessOut ? ` · ${esc(sessOut.toLowerCase())}` : ""}`
+      : `<b>logged</b>${sess.phaseLabel ? ` · ${esc(sess.phaseLabel)}` : ""}${sess.points ? ` · ${esc(sess.points)}` : ""}${sessOut ? ` · ${esc(sessOut.toLowerCase())}` : ""}`;
     const condLine = !plans.length
       ? `<span class="faint">no treatment plan yet</span> <button type="button" class="ph-name-link ph-apptls-add" data-tp-new="${esc(a.patient)}">pick a condition</button>`
       : plans.length === 1
@@ -22729,6 +22779,7 @@
       <div class="ph-apptpop-kv">
         <span class="ic" aria-hidden="true">📋</span><span class="v">${condLine}</span>
         <span class="ic" aria-hidden="true">🌿</span><span class="v">${herbsLine} ${phApptStatusChipHtml(a, { long: true })}</span>
+        ${sessLine ? `<span class="ic" aria-hidden="true">🪡</span><span class="v">${sessLine}</span>` : ""}
         ${comp ? `<span class="ic" aria-hidden="true">💧</span><span class="v">${phCycleRowChipHtml(rec, script)}${phApptPopSignsHtml(rec)}</span>` : ""}
       </div>
       <div class="ph-apptpop-foot">
@@ -23039,7 +23090,12 @@
     const hourRuleOffset = ((60 - phApptCalStart % 60) % 60) * PH_APPTCAL_PX_PER_MIN;
     const todayKey = keyOf(TODAY);
     const isCurrent = days.some(d => d.key === todayKey);
-    const nowMin = TODAY.getHours() * 60 + TODAY.getMinutes();
+    // 2026-09-18: TODAY is frozen at MIDNIGHT on boot, so TODAY.getHours()
+    // was always 0 and this now-line had never once shown. The real clock
+    // places it, and phApptCalNowTick moves it every minute after that --
+    // her "the day as a moving timeline".
+    const nowD = new Date();
+    const nowMin = nowD.getHours() * 60 + nowD.getMinutes();
     const showNow = nowMin >= phApptCalStart && nowMin <= PH_APPTCAL_END_MIN;
     const nowTop = (nowMin - phApptCalStart) * PH_APPTCAL_PX_PER_MIN;
     const colsTemplate = `${window.innerWidth <= 640 ? 40 : 52}px repeat(${n}, minmax(0, 1fr))`;   // narrower time gutter on a phone
@@ -26619,6 +26675,18 @@
         }
         return;
       }
+      // her rule 2026-09-18 (fix 2): "change it from the session row if
+      // wrong" -- re-attach a write-up to the other same-day booking; the
+      // session takes that booking's date too, so the Grid re-files it
+      const tpSessAppt = e.target.closest("[data-tp-session-appt]");
+      if (tpSessAppt) {
+        const [sid, aid] = String(tpSessAppt.dataset.tpSessionAppt || "").split("|");
+        const rec = phPatientRec(phTpScreenPatient);
+        const s = rec && (rec.acuSessions || []).find(x => x.id === sid);
+        const a = phApptList().find(x => x.id === aid);
+        if (s && a) { s.apptId = a.id; s.date = a.date; savePharmacy(); phTpRepaintPhasePanel(); }
+        return;
+      }
       const tpSinceEd = e.target.closest("[data-tp-since-edit]");
       if (tpSinceEd) { phTpSinceEdit = tpSinceEd.dataset.tpSinceEdit; phTpRerender(); return; }
       if (e.target.closest("[data-tp-since-close]")) { phTpSinceEdit = null; phTpRerender(); return; }
@@ -28393,6 +28461,11 @@
         }
         return;
       }
+      // the at-the-door card (2026-09-18): ✕ removes it in place for this
+      // open (no re-render, her scroll spot stays); on the phone the one
+      // line unfolds in place
+      if (e.target.closest("[data-pres-door-close]")) { presDoorDismissed = true; const c = e.target.closest(".ph-door"); if (c) c.remove(); return; }
+      if (e.target.closest("[data-pres-door-toggle]")) { presDoorOpen = !presDoorOpen; const c = e.target.closest(".ph-door"); if (c) { c.classList.toggle("open", presDoorOpen); const ar = c.querySelector(".mini .ar"); if (ar) ar.textContent = presDoorOpen ? "▾" : "▸"; } return; }
       if (e.target.closest("[data-pres-acu-log]")) {
         const now = Date.now();
         if (now - presAcuLastLogAt < 1200) return; // a real double-tap, not a second visit
@@ -28451,6 +28524,27 @@
             if (herbFormulaName) session.herbInstructedFormula = herbFormulaName;
           }
           if (presAcuWatchChecked.length) session.observedSigns = presAcuWatchChecked.slice();
+          // her picks 2026-09-18 (fix 2, session <-> booking): the session
+          // NAMES its booking -- today's nearest-to-the-clock one (her rule
+          // for two bookings on one day). Failing any booking today, a
+          // write-up the morning after lands on the most recent still-unlogged
+          // booking of the last two days and takes ITS date, so the Grid files
+          // it on that booking's row instead of an orphan "session" row. This
+          // is the appointment-dating the old card had and the logger never
+          // did -- rebuilt now because she ticked exactly this. The plan the
+          // visit was for is kept too (fix 1), so a later re-read never has to
+          // guess between two concurrent plans.
+          const todayAppt = phApptNearestNow(name);
+          let linkAppt = todayAppt;
+          if (!linkAppt) {
+            const pk = phPatientKey(name), todayKey = keyOf(TODAY), t0 = parseKey(todayKey);
+            const back = phApptList().filter(a => a.service !== "Break" && phPatientKey(a.patient) === pk && a.date < todayKey && (t0 - parseKey(a.date)) / 86400000 <= 2)
+              .sort((a, b) => (b.date + (b.time || "")).localeCompare(a.date + (a.time || "")));
+            linkAppt = back.find(a => !(rec.acuSessions || []).some(s => s.apptId === a.id || (!s.apptId && s.date === a.date))) || null;
+            if (linkAppt) session.date = linkAppt.date;
+          }
+          if (linkAppt) session.apptId = linkAppt.id;
+          if (activePlan) session.planId = activePlan.id;
           rec.acuSessions.push(session);
           // logging a real session is what "she's tracking acupuncture for
           // this patient" means -- found 2026-09-13 that this, the OLDER of
@@ -35563,6 +35657,7 @@ or changing anything in Cliniko.
     phVisitFndResetDraft(); phCyclePop = null;
     presAssessTab = null; presFpDraft = null; presFpProtoOpen = false;
     presPickLocked = null;
+    presDoorDismissed = false; presDoorShown = false; presDoorOpen = false;   // fresh facts at the door on every open
     presDispMenuId = null; presDispUndoConfirm = null;
     // a History popup left open for a DIFFERENT patient (reachable by
     // keyboard: Tab out of the popup onto a list row, Enter) closes here,
@@ -35860,14 +35955,16 @@ or changing anything in Cliniko.
     if (isF) return "Formula";
     if (isNew) return "New patient prescription";
     const plan = t && t.id ? phTpShownPlan(presPatientFor(t)) : null;
-    const cur = plan ? phTpPlanCurrentPhase(plan) : null;
+    // one phase truth (2026-09-18): the band names the LIVE phase the Grid
+    // tab and Today's visit already use, not the persisted pointer alone
+    const cur = plan ? phTpLivePhase(phPatientPeek(presPatientFor(t)), plan) : null;
     const bits = [plan && plan.title ? esc(plan.title) : "", cur && cur.label ? esc(cur.label) : ""].filter(Boolean);
     return bits.length ? bits.join(" · ") : "No treatment plan yet";
   }
   function presBandSubRefresh() {
     const el = document.getElementById("presBandSub");
     const t = presOpenId && (PRESC.items || []).find(x => x.id === presOpenId);
-    if (el && t) el.innerHTML = presBandSubText(t, presIsFormula(t), false);
+    if (el && t) { const h = presBandSubText(t, presIsFormula(t), false); el.dataset.liveSig = h; el.innerHTML = h; }
   }
   // The one-line answer to "which script is this?" for the places a script is
   // OFFERED rather than opened -- the dispense scheduler's picker, and the
@@ -36826,10 +36923,11 @@ or changing anything in Cliniko.
   const phPickIsIvf = name => phTpPlans(name).some(p => p.templateName === "IVF Protocol" && p.status !== "done");
   function phPickPlanPhase(name) {
     const plans = phTpPlans(name);
+    const rec = phPatientPeek(name);
     for (let i = 0; i < plans.length; i++) {
       const p = plans[i];
       if (p.status === "done" || p.status === "paused") continue;
-      const ph = (p.phases || []).find(x => x.status === "current");
+      const ph = phTpLivePhase(rec, p);   // one phase truth (2026-09-18): the message follows the LIVE phase
       if (ph) return { plan: p, phase: ph };
     }
     return null;
@@ -44280,6 +44378,96 @@ or changing anything in Cliniko.
       ${presStageNextBtnHtml("profile")}
     </div>`;
   }
+  /* ==== AT THE DOOR (her picks 2026-09-18, five batches of answers on real
+     mocks): when a patient profile opens, the app says where she is -- plain
+     facts, no greeting, two lines, in the slot between the band and the
+     stages so it sits above the plan tabs. Line 1: visit number · cycle day
+     and phase · today's booking · last visit and its outcome · today's aim.
+     Line 2: chips -- herbs days left / refill due, her formula's herbs out
+     of stock or low, and what CHANGED since her last logged visit (phase
+     moved, a period or sign from her phone, a dispense, the next booking).
+     Everything is read live off stores that already exist; nothing is
+     written. Slides up once per open (the phase-popup animation she liked),
+     stays until ✕; a re-render keeps it, with fresh numbers, without
+     replaying the slide. Phone (Key2): one line, tap to unfold. Nowhere
+     else -- her pick over the appointment popup and the Communications row. */
+  function phDoorClip(s, n) { s = String(s || "").trim().replace(/\s+/g, " "); const cut = s.split(/[.;·—-]\s/)[0]; s = cut.length >= 12 ? cut : s; return s.length > n ? s.slice(0, n - 1).replace(/\s+\S*$/, "") + "…" : s; }
+  function presDoorCardHtml(t) {
+    if (presDoorDismissed) return "";
+    const name = presPatientFor(t); if (!name) return "";
+    const rec = phPatientPeek(name); if (!rec) return "";
+    const key = phPatientKey(name), today = keyOf(TODAY);
+    const plan = phTpPlanForToday(name, presTpInlinePlanId || null);
+    const phase = plan ? phTpLivePhase(rec, plan) : null;
+    const comp = phCycleComp(rec);
+    const sessions = (rec.acuSessions || []).slice().sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.at || 0) - (a.at || 0));
+    const last = sessions[0] || null;
+    const appt = phApptNearestNow(name);
+    const outWord = o => ((PH_ACU_OUTCOMES.find(x => x[0] === o) || [])[1] || "").toLowerCase();
+    // short dates on a two-line card: "today" / "yesterday" / "11 Sep"
+    const yday = keyOf(new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() - 1));
+    const sd = k => k === today ? "today" : k === yday ? "yesterday" : schedDateStr(k);
+    const cyclePlan = !!(plan && PH_TP_CYCLE_TEMPLATES.includes(plan.templateName));
+    const parts = [], mini = [];
+    if (plan && phase) {
+      const vp = phTpVisitParts(name, plan, phase);
+      if (vp && vp.st) {
+        // today's booking is already counted once the day arrives; with no
+        // booking this is the visit she is about to log
+        const n = vp.st.done + (appt ? 0 : 1);
+        const v = `Visit ${n}${vp.st.expected ? ` of ${vp.st.expected}` : ""}`;
+        parts.push(v); mini.push(v);
+      }
+    }
+    // the cycle day with ITS phase; a cycle-tracked plan's phase IS that
+    // phase (Follicular — Week 1 on IVF), any other plan's phase is its own
+    // fact and reads separately -- "CD 14 Acute" would pair two unrelated things
+    if (comp) { const c = `CD ${comp.day} ${esc(cyclePlan && phase ? phase.label : comp.phaseLabel)}`; parts.push(c); mini.push(c); }
+    if (phase && !(comp && cyclePlan)) { parts.push(esc(phase.label)); if (!comp) mini.push(esc(phase.label)); }
+    if (appt) parts.push(`${esc(phCkTime12(appt.time))} today`);
+    if (last) parts.push(`last ${esc(sd(last.date))}${last.noTreatment ? ", herbs only" : last.outcome ? `, ${esc(outWord(last.outcome))}` : ""}`);
+    if (phase && phase.aim) parts.push(`today: ${esc(phDoorClip(phase.aim, 64))}`);
+    const chips = [];
+    const script = phApptScriptFor(key);
+    const fu = script ? phFuRecordForScript(script) : null;
+    let herbsSig = "";
+    if (fu && fu.emptyOn) {
+      const left = Math.round((parseKey(fu.emptyOn) - TODAY) / 86400000);
+      const txt = left <= 0 ? `herbs empty ${esc(phFuRelDay(fu.emptyOn))}` : left <= 3 ? `herbs ${left} day${left === 1 ? "" : "s"} · refill due` : `herbs ${left} days`;
+      herbsSig = String(left);
+      chips.push(`<span class="c${left <= 3 ? " am" : ""}" data-live="door:herbs:${esc(key)}" data-live-sig="${herbsSig}">${txt}</span>`);
+      mini.push(left <= 0 ? "herbs empty" : `herbs ${left} d`);
+    }
+    const prep = script ? phApptPrep(key) : null;
+    if (prep && prep.short.length) {
+      prep.short.slice(0, 2).forEach(x => chips.push(`<span class="c ${x.h.qty <= 0 ? "rd" : "am"}">${esc(x.h.name || "")} ${x.h.qty <= 0 ? "out" : "low"}</span>`));
+      if (prep.short.length > 2) chips.push(`<span class="c am">+${prep.short.length - 2} short</span>`);
+    }
+    // changes since her LAST VISIT (her pick over "since I last looked")
+    const since = last ? last.date : null;
+    const changes = [];
+    if (since) {
+      const was = last.calendarPhaseLabel || last.phaseLabel || "";
+      if (phase && !last.noTreatment && ((phase.sinceKey && phase.sinceKey > since) || (was && was !== phase.label))) changes.push(`→ ${esc(phase.label)}`);
+      (rec.cycleLog || []).filter(x => x.lmp && x.lmp > since && x.lmp <= today).sort((a, b) => a.lmp.localeCompare(b.lmp)).forEach(x => changes.push(`period ${esc(sd(x.lmp))}`));
+      Object.keys(rec.cycleSigns || {}).filter(k => k > since && k <= today).sort().slice(-2).forEach(k => { const l = phCycleSignLabel(rec.cycleSigns[k]); if (l) changes.push(`${esc(l)} ${esc(sd(k))}`); });
+      const disp = (PHARMACY.log || []).filter(e => e.kind === "dispense" && phPatientKey(e.patient) === key && e.date > since && e.date < today).sort((a, b) => (b.at || 0) - (a.at || 0))[0];
+      if (disp) changes.push(`dispensed ${esc(sd(disp.date))}`);
+    }
+    const next = phApptList().filter(a => a.date > today && a.service !== "Break" && phPatientKey(a.patient) === key).sort((a, b) => a.date.localeCompare(b.date))[0];
+    if (next) changes.push(`${esc(schedDateStr(next.date))} booked`);
+    if (changes.length) chips.push(`<span class="chg" data-live="door:changes:${esc(key)}" data-live-sig="${esc(changes.join("|"))}">${changes.map(c => `<span class="c new">${c}</span>`).join("")}</span>`);
+    if (changes.length) mini.push(`${changes.length} change${changes.length === 1 ? "" : "s"}`);
+    if (!parts.length && !chips.length) return "";
+    const cls = presDoorShown ? "" : " in";
+    presDoorShown = true;
+    return `<div class="ph-door${cls}${presDoorOpen ? " open" : ""}" role="status" aria-label="At the door">
+      <button type="button" class="x" data-pres-door-close="1" title="Dismiss" aria-label="Dismiss">✕</button>
+      <div class="mini" data-pres-door-toggle="1" role="button" tabindex="0">${mini.join('<span class="q">·</span>')}<span class="ar">${presDoorOpen ? "▾" : "▸"}</span></div>
+      ${parts.length ? `<div class="l1">${parts.join('<span class="q">·</span>')}</div>` : ""}
+      ${chips.length ? `<div class="l2">${chips.join("")}</div>` : ""}
+    </div>`;
+  }
   function presStagePlanHtml(t) {
     // "Treatment becomes the plan tabs" (decision 7): this place IS the plan,
     // so the plan row is open the moment she lands here -- and a single-plan
@@ -44294,6 +44482,11 @@ or changing anything in Cliniko.
         if (!already && plans.length === 1 && !presTpLooseScripts(nm).length) {
           presTpInlinePlanId = plans[0].id; phTpScreenPatient = nm; phTpScreenPlanId = plans[0].id;
         }
+        // her pick 2026-09-18 (fix 1): a booking that names a plan lands her
+        // on THAT plan's tabs, whichever plan was made first
+        const booked = !already && plans.length > 1 ? phApptNearestNow(nm) : null;
+        const bookedPlan = booked && booked.planId ? plans.find(p => p.id === booked.planId) : null;
+        if (bookedPlan) { presTpInlinePlanId = bookedPlan.id; phTpScreenPatient = nm; phTpScreenPlanId = bookedPlan.id; }
       }
     }
     // Follow-up is a review of a course of treatment, so it lives with the
@@ -44398,7 +44591,7 @@ or changing anything in Cliniko.
         <button type="button" class="ph-band-back" data-pres-close="1" aria-label="Close">‹</button>
         <div class="ph-band-titlewrap">
           <button type="button" class="ph-band-name" data-pres-name-jump="1" title="Tap to edit the name">${esc(phDispName(t.name, isF))}</button>
-          <span class="ph-band-sub" id="presBandSub">${presBandSubText(t, isF, isNew)}</span>
+          <span class="ph-band-sub" id="presBandSub" data-live="band:${esc(t.id)}" data-live-sig="${esc(presBandSubText(t, isF, isNew))}">${presBandSubText(t, isF, isNew)}</span>
         </div>
         ${isF ? `<span class="ph-pres-type formula">🏺 formula</span>` : ""}
         ${isF && ab ? `<span class="ph-pres-abbr">${esc(ab)}</span>` : ""}
@@ -44407,6 +44600,7 @@ or changing anything in Cliniko.
         ${!isF ? `<button type="button" class="ph-band-journey" data-ph-journey-open="${esc(presPatientFor(t) || t.name)}" title="Open treatment journey" aria-label="Open ${esc(t.name)}'s treatment journey"><svg class="icn" aria-hidden="true"><use href="#i-msg"/></svg><span class="ph-band-journey-txt">Journey ↗</span></button>` : ""}
         ${!isF ? `<button type="button" class="ph-band-cam" data-cap-for="${esc(presPatientFor(t) || t.name)}" title="Take patient photos" aria-label="Take photos of ${esc(t.name)}"><svg class="icn" aria-hidden="true"><use href="#i-camera"/></svg></button>` : ""}
       </div>
+      ${!isF && !isNew ? presDoorCardHtml(t) : ""}
       ${!isF ? presStageStripHtml(t, isNew) : ""}
       ${!isF && presStage === "profile" ? presStageProfileHtml(t) : ""}
       ${!isF && presStage === "plan" ? presStagePlanHtml(t) : ""}
@@ -46411,7 +46605,7 @@ or changing anything in Cliniko.
       }
       if (phases[pi].status === "current") return false;
       phases[pi].lateOn = keyOf(TODAY);      // kept as this cycle's record
-      phases.forEach((p, i) => { p.status = i < pi ? "done" : i === pi ? "current" : "upcoming"; });
+      phTpCascadeTo(phases, pi);
       return true;
     }
     const want = comp.phaseKey === "period" ? PH_CYCLE_PHASE_MATCH.period
@@ -46427,12 +46621,27 @@ or changing anything in Cliniko.
     // a phase she moved past the two-week wait by hand is never pulled back
     // -- except the prolonged one, which the period arriving is meant to end
     if (lutealIdx >= 0 && curIdx > lutealIdx && !proCurrent) return false;
-    phases.forEach((p, i) => {
-      // her pick: once it has been used it stays in the plan, marked done
-      if (i === proIdx) { p.status = p.lateOn ? "done" : "upcoming"; return; }
-      p.status = i < idx ? "done" : i === idx ? "current" : "upcoming";
-    });
+    phTpCascadeTo(phases, idx, proIdx);
     return true;
+  }
+  /* The one cascade a cycle write applies: everything before idx done, idx
+     current, everything after upcoming -- AND the phase dates stamped the way
+     phTpSetPhaseStatus stamps them (first time only, cleared on demotion).
+     Audit 2026-09-18: phCycleSyncPlan moved the status pointer WITHOUT
+     stamping sinceKey/doneKey, but the visit counter (phTpPhaseVisitRows)
+     bails on a missing sinceKey and windows on doneKey -- so a cycle-driven
+     advance left the new phase with no Visits table and the old phase still
+     gathering appointments. proIdx (the prolonged-luteal phase, if any) keeps
+     its own rule: once used it stays in the plan marked done, never current
+     again from here. */
+  function phTpCascadeTo(phases, idx, proIdx) {
+    const today = keyOf(TODAY);
+    phases.forEach((p, i) => {
+      if (proIdx != null && proIdx >= 0 && i === proIdx && i !== idx) { p.status = p.lateOn ? "done" : "upcoming"; if (p.status === "done" && !p.doneKey) p.doneKey = today; return; }
+      if (i < idx) { if (p.status !== "done") { p.status = "done"; if (!p.doneKey) p.doneKey = today; } }
+      else if (i === idx) { p.status = "current"; if (!p.sinceKey) p.sinceKey = today; p.doneKey = null; }
+      else { p.status = "upcoming"; p.sinceKey = null; p.doneKey = null; }
+    });
   }
   function phCycleSyncPlans(rec) {
     let changed = false;
@@ -46446,6 +46655,70 @@ or changing anything in Cliniko.
     });
     if (changed) savePharmacy();
     return changed;
+  }
+  /* ==== ONE PHASE TRUTH (her pick 2026-09-18, "the new phase, everywhere").
+     Every surface that names "her current phase" reads THIS: the live
+     cycle-computed phase (the natural-cycle templates), then the IVF cycle-day
+     suggestion, then the persisted status pointer only when neither can say.
+     Before this the Grid tab, Today's visit and Communications read live
+     while the band subtitle, the appointment popup and List, phApptScriptFor
+     and the message picker read the persisted pointer -- three surfaces could
+     name three phases for one patient on one morning (audit 2026-09-18). The
+     persisted pointer still only MOVES on a cycle or session write
+     (phCycleSyncPlans); this is read-only and no render path mutates a plan.
+     Callers pass phPatientPeek, never phPatientRec, for the same reason. */
+  function phTpLivePhase(rec, plan) {
+    if (!plan) return null;
+    const live = rec ? (phTpCycleEffectivePhase(rec, plan) || (phTpIvfCdSuggest(rec, plan) || {}).phase) : null;
+    return live || phTpPlanCurrentPhase(plan);
+  }
+  /* ==== BOOKING -> TODAY'S VISIT (her picks 2026-09-18). Today's bookings
+     for a patient, nearest to the clock first -- "the one nearest the time
+     now" is her rule for which booking a session attaches to when two sit on
+     one day (logging at 10:40 goes to the 10:30, not the 15:00). Reads the
+     real clock, not TODAY (frozen at midnight on boot). Breaks never count. */
+  function phApptTodayFor(name, dateKey) {
+    const key = phPatientKey(name), day = dateKey || keyOf(TODAY);
+    const n = new Date(), nowM = n.getHours() * 60 + n.getMinutes();
+    const minsOf = a => { const m = /^(\d{1,2}):(\d{2})/.exec(a.time || ""); return m ? +m[1] * 60 + +m[2] : 0; };
+    return phApptList().filter(a => a.date === day && a.service !== "Break" && phPatientKey(a.patient) === key)
+      .sort((a, b) => Math.abs(minsOf(a) - nowM) - Math.abs(minsOf(b) - nowM));
+  }
+  const phApptNearestNow = name => phApptTodayFor(name)[0] || null;
+  /* The plan a visit is FOR. The booking's own pick (a.planId, the popup's
+     condition picker -- written since 2026-09-16, read by nothing but the
+     popup until now) wins; with no pick and several active plans, the plan
+     whose phase the calendar is treating today (a cycle-tracked plan on a
+     cycle day), else the plan the last logged session was on, else the first
+     active plan -- the old array-order guess, now the last resort instead of
+     the only rule. presAcuCtx, presAcuOpenHtml and the at-the-door card all
+     read this, so they can never disagree about which plan today is for. */
+  function phTpPlanForToday(name, explicitId) {
+    const plans = phTpPlans(name);
+    if (!plans.length) return null;
+    if (explicitId) { const p = plans.find(x => x.id === explicitId); if (p) return p; }
+    const appt = phApptNearestNow(name);
+    if (appt && appt.planId) { const p = plans.find(x => x.id === appt.planId); if (p) return p; }
+    const active = plans.filter(p => p.status === "active");
+    if (active.length <= 1) return active[0] || plans[0];
+    const rec = phPatientPeek(name);
+    const cal = rec && active.find(p => phTpCycleEffectivePhase(rec, p) || (phTpIvfCdSuggest(rec, p) || {}).phase);
+    if (cal) return cal;
+    const last = ((rec && rec.acuSessions) || []).slice().sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.at || 0) - (a.at || 0))[0];
+    if (last && last.planId) { const p = active.find(x => x.id === last.planId); if (p) return p; }
+    if (last && last.phaseLabel) { const p = active.find(x => (x.phases || []).some(ph => ph.label === last.phaseLabel)); if (p) return p; }
+    return active[0];
+  }
+  /* ==== SESSION <-> BOOKING (her pick 2026-09-18). The session logged
+     against a booking: by its stored apptId first, then -- for sessions from
+     before ids were stored -- the same-day fallback the Grid's Visits table
+     always used (the first unattached session that day). */
+  function phApptSessionFor(a) {
+    if (!a || a.service === "Break") return null;
+    const rec = phPatientPeek(a.patient);
+    const list = (rec && rec.acuSessions) || [];
+    return list.find(s => s.apptId && s.apptId === a.id)
+      || list.find(s => !s.apptId && s.date === a.date) || null;
   }
   // ============ 📅 This cycle's visits (her pick 2026-09-04, Bonnie's plan:
   // "plan + letter + bookings mapped") -- the dates she should be in, derived
@@ -47637,7 +47910,7 @@ or changing anything in Cliniko.
     if (!name) return "";
     const plans = phTpPlans(name);
     const activePlan = presTpActivePlanFor(name);
-    const cur = activePlan ? phTpPlanCurrentPhase(activePlan) : null;
+    const cur = activePlan ? phTpLivePhase(phPatientPeek(name), activePlan) : null;   // one phase truth (2026-09-18)
     const letters = ((phPatientPeek(name) || {}).letters || []);
     const latestLtr = letters.length ? letters.slice().sort((a, b) => (b.at || 0) - (a.at || 0))[0] : null;
     // most recent check-in across every follow-up record for this patient --
@@ -47787,16 +48060,15 @@ or changing anything in Cliniko.
     const rec = phPatientRec(name);
     const plans = phTpPlans(name);
     const wantPlanId = planIdOverride || (wrap && wrap.dataset.acuName === name && wrap.dataset.acuPlan);
-    const activePlan = (wantPlanId && plans.find(p => p.id === wantPlanId)) || plans.find(p => p.status === "active") || plans[0];
+    // her pick 2026-09-18 (fix 1, booking -> Today's visit): an explicit plan
+    // still wins; with none, the plan today's BOOKING names, then the plan
+    // the calendar is treating -- never plain array order any more.
+    const activePlan = phTpPlanForToday(name, wantPlanId || null);
     // her ask 2026-09-17: "automatically count cd and adjust to the phase
-    // with each appointment" -- phTpCycleEffectivePhase already computes
-    // this live from the cycle day, it was just never used to drive what
-    // she actually logs against, only Communications' follow-up dates.
-    // Falls back to the plan's persisted current phase for non-cycle-synced
-    // templates (MSK, stress, ...) and for cycle plans it can't place. IVF
-    // Protocol gets its own CD-based suggestion (phTpIvfCdSuggest) in the
-    // same slot, since it's excluded from phTpCycleEffectivePhase above.
-    const calendarPhase = activePlan ? (phTpCycleEffectivePhase(rec, activePlan) || (phTpIvfCdSuggest(rec, activePlan) || {}).phase || phTpPlanCurrentPhase(activePlan)) : null;
+    // with each appointment" -- phTpLivePhase is the one live read every
+    // phase-naming surface now shares (cycle phase, IVF CD suggestion, then
+    // the persisted pointer for MSK/stress plans and cycle plans it can't place).
+    const calendarPhase = activePlan ? phTpLivePhase(rec, activePlan) : null;
     const phaseChoices = activePlan ? (activePlan.phases || []) : [];
     const treatedPhase = (presAcuPhaseId && phaseChoices.find(p => p.id === presAcuPhaseId)) || calendarPhase;
     return { name, rec, activePlan, calendarPhase, phaseChoices, treatedPhase };
@@ -47849,9 +48121,12 @@ or changing anything in Cliniko.
     // whichever plan was created first, no matter which plan's Grid is
     // actually on screen. An explicit planId (passed by every caller that
     // knows which plan it's rendering) always wins.
-    const activePlan = (opts.planId && plans.find(p => p.id === opts.planId)) || plans.find(p => p.status === "active") || plans[0];
+    // ...and with no explicit planId, today's booking's own pick, then the
+    // calendar-treated plan (phTpPlanForToday) -- the same resolution
+    // presAcuCtx uses, so the box and its handlers always agree.
+    const activePlan = phTpPlanForToday(name, opts.planId || null);
     const rec = phPatientRec(name);
-    const calendarPhase = activePlan ? (phTpCycleEffectivePhase(rec, activePlan) || (phTpIvfCdSuggest(rec, activePlan) || {}).phase || phTpPlanCurrentPhase(activePlan)) : null;
+    const calendarPhase = activePlan ? phTpLivePhase(rec, activePlan) : null;
     const phaseChoices = activePlan ? (activePlan.phases || []) : [];
     const treatedPhase = (presAcuPhaseId && phaseChoices.find(p => p.id === presAcuPhaseId)) || calendarPhase;
     const isOverride = !!(calendarPhase && treatedPhase && treatedPhase.id !== calendarPhase.id);
@@ -49049,6 +49324,10 @@ or changing anything in Cliniko.
     const rows = [];
     phApptList().forEach(a => {
       if (phPatientKey(a.patient) !== key) return;
+      // her pick 2026-09-18 (fix 1): a booking she filed under another plan
+      // counts for THAT plan only -- before this a.planId was written and
+      // never read, so one visit counted for both concurrent plans
+      if (plan && a.planId && a.planId !== plan.id) return;
       if (a.date < from) return;                 // her call: phase dates are the truth
       if (hardTo && a.date > hardTo) return;
       if (inPause(a.date)) return;               // belongs to the plan that interrupted
@@ -49480,8 +49759,15 @@ or changing anything in Cliniko.
     // must not both read the same session (review finding 2026-09-15); any
     // session still left in a bucket once every row has been matched is a
     // genuine orphan (no counted appointment claimed it).
+    // her pick 2026-09-18 (fix 2): a session that NAMES its booking (apptId,
+    // stored at log time since today) pairs with that row and no other --
+    // the date buckets below are only for sessions logged before ids were
+    // kept, or whose booking is no longer a row of this phase.
+    const rowIds = new Set(st ? st.rows.map(r => r.appt.id) : []);
+    const acuByAppt = new Map();
     const acuByDate = new Map();
     (rc.acu || []).forEach(s => {
+      if (s.apptId && rowIds.has(s.apptId)) { acuByAppt.set(s.apptId, s); return; }
       const list = acuByDate.get(s.date) || [];
       list.push(s);
       acuByDate.set(s.date, list);
@@ -49510,18 +49796,23 @@ or changing anything in Cliniko.
       <td><span class="ph-tp-vt-none">—</span></td>
     </tr>`;
     const visitRows = !st || !st.rows.length ? "" : st.rows.map(r => {
-      const list = acuByDate.get(r.appt.date);
-      const s = (list && list.length) ? list.shift() : null;
+      let s = acuByAppt.get(r.appt.id) || null;
+      if (!s) { const list = acuByDate.get(r.appt.date); s = (list && list.length) ? list.shift() : null; }
       const tag = r.excluded ? `<span class="ph-tp-vt-tag">excluded</span>` : r.future ? `<span class="ph-tp-vt-tag">booked</span>` : r.acute ? `<span class="ph-tp-vt-tag">🤧 acute</span>` : "";
+      // her rule for two bookings on one day: the nearest-to-the-clock one
+      // takes the session, "change it from the session row if wrong" -- the
+      // other same-day booking(s) are offered as a one-tap move
+      const others = s ? st.rows.filter(x => x.appt.date === r.appt.date && x.appt.id !== r.appt.id) : [];
+      const moveHtml = others.map(x => `<button type="button" class="ph-name-link soft ph-tp-vt-move" data-tp-session-appt="${esc(s.id)}|${esc(x.appt.id)}" title="This write-up belongs to the ${esc(phCkTime12(x.appt.time))} booking instead">→ ${esc(phCkTime12(x.appt.time))}</button>`).join("");
       // her ask 2026-09-18: when today's own visit is being actively edited
       // above (the merged "Today's visit" panel, showTodaysVisit/hideToday),
       // this row must not ALSO claim "not written up yet" -- that was the
       // exact duplicate-fact she pointed at. The row itself stays (it's
       // still a real, counted appointment), just says where to go instead.
       const isEditingHere = hideToday && r.appt.date === todayKey && !s;
-      const main = `<tr class="ph-tp-vt-row${r.excluded ? " off" : ""}${r.future ? " ahead" : ""}">
+      const main = `<tr class="ph-tp-vt-row${r.excluded ? " off" : ""}${r.future ? " ahead" : ""}" data-live="visit:${esc(r.appt.id)}" data-live-sig="${esc(r.appt.date)}|${esc(r.appt.time || "")}|${s ? esc(s.id) : ""}">
         <td class="ph-tp-vt-date" data-tp-visit-toggle="${plan.id}~${phase.id}~${esc(r.key)}" title="${r.excluded ? "Not counted for this phase — click to count it again" : "Counts as 1 treatment — click to leave it out"}"><b>${esc(phShortDate(r.appt.date))}</b><span>visit${tag}</span></td>
-        <td>${s ? (s.noTreatment ? `<span class="ph-tp-vt-chip herb">herbs only</span>` : chips(s.points)) : isEditingHere ? `<span class="ph-tp-vt-none">editing above ↑</span>` : `<span class="ph-tp-vt-none">not written up yet</span>`}</td>
+        <td>${s ? (s.noTreatment ? `<span class="ph-tp-vt-chip herb">herbs only</span>` : chips(s.points)) : isEditingHere ? `<span class="ph-tp-vt-none">editing above ↑</span>` : `<span class="ph-tp-vt-none">not written up yet</span>`}${moveHtml}</td>
         <td>${herbChip(phAcuHerbsOn(name, r.appt.date))}</td>
         <td>${s ? badge(s.outcome) : `<span class="ph-tp-vt-none">—</span>`}</td>
       </tr>`;
@@ -49605,7 +49896,8 @@ or changing anything in Cliniko.
     // read presAcuCtx() already uses to decide "Today's visit"; returns
     // null for non-cycle-synced plans (MSK etc.), which fall through to the
     // persisted status exactly as before.
-    const live = rec && phTpCycleEffectivePhase(rec, plan);
+    // ...and the IVF cycle-day suggestion too (one phase truth, 2026-09-18)
+    const live = rec && (phTpCycleEffectivePhase(rec, plan) || (phTpIvfCdSuggest(rec, plan) || {}).phase);
     if (live) return live;
     return phs.find(p => p.status === "current") || phs.slice().reverse().find(p => p.status === "done") || phs[0];
   }
@@ -49632,7 +49924,7 @@ or changing anything in Cliniko.
       const on = !!sel && p.id === sel.id;
       let sub = phTpSpanText(p);
       if (on && cycleComp) sub = sub ? `${sub} · Day ${cycleComp.day}` : `Day ${cycleComp.day}`;
-      return `<button type="button" class="ph-tp-tab ${p.status}${on ? " on" : ""}" data-tp-tab="${plan.id}:${p.id}" role="tab" aria-selected="${on ? "true" : "false"}">
+      return `<button type="button" class="ph-tp-tab ${p.status}${on ? " on" : ""}" data-tp-tab="${plan.id}:${p.id}" role="tab" aria-selected="${on ? "true" : "false"}"${on ? ` data-live="tptab:${plan.id}" data-live-sig="${p.id}"` : ""}>
         <span class="num" aria-hidden="true">${p.status === "done" ? "✓" : i + 1}</span>
         <span class="lbl">${p.label ? esc(p.label) : "Phase name"}</span>
         ${sub ? `<span class="sub">${sub}</span>` : ""}
@@ -50091,7 +50383,11 @@ or changing anything in Cliniko.
     // gate to the exact identity actually on screen for this render.
     const peekRec = phPatientPeek(phTpScreenPatient);
     const acuCtx = peekRec && peekRec.acuEnabled ? presAcuCtx(phTpScreenPatient, plan.id) : null;
-    const showTodaysVisit = !frozen && !!(acuCtx && acuCtx.activePlan && acuCtx.activePlan.id === plan.id && acuCtx.treatedPhase && acuCtx.treatedPhase.id === phase.id);
+    // her pick 2026-09-18 (fix 1): when today's booking names a plan, only
+    // THAT plan's Grid offers Today's visit -- the other plan's Grid would
+    // otherwise log the visit against the wrong course
+    const bookedPlanId = (phApptNearestNow(phTpScreenPatient) || {}).planId || null;
+    const showTodaysVisit = !frozen && !(bookedPlanId && bookedPlanId !== plan.id) && !!(acuCtx && acuCtx.activePlan && acuCtx.activePlan.id === plan.id && acuCtx.treatedPhase && acuCtx.treatedPhase.id === phase.id);
     const acuSessionsForToday = showTodaysVisit
       ? (peekRec.acuSessions || []).slice().sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.at || 0) - (a.at || 0))
       : null;
@@ -55504,6 +55800,9 @@ Please let me know if you have any questions.`;
   // the same button, and a naive handler would push a second, mostly-blank
   // session. Timestamp guard, not a same-call flag: reviewed 2026-09-17.
   let presAcuLastLogAt = 0;
+  // the at-the-door card (2026-09-18): dismissed for THIS open only, shown
+  // (slid up) once per open, phone fold state -- all reset in presOpenScript
+  let presDoorDismissed = false, presDoorShown = false, presDoorOpen = false;
   let presVisitFndDraft = phVisitFndBlank();
   // Bell's palsy checklist: the row's open/closed state, today's unsaved
   // answers, and whether the point protocol is showing under it. presFpDraft
@@ -56911,11 +57210,58 @@ Dosage: {dosage}
   }, 60 * 1000);
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) return;
+    phApptCalNowTick();
     // a waking tab may hold a stale copy -- sweep only once it's re-synced
     // (the sync module drops __lcmSyncFresh on hide, restores it on catch-up)
     if (phSweepSafe()) { if (schedAutoDeferSweep()) renderPharmacy(); return; }
     window.addEventListener("lcm-sync-caught-up", () => { if (schedAutoDeferSweep()) renderPharmacy(); }, { once: true });
   });
+  /* ==== ALIVE VISUALS (her picks 2026-09-18: live numbers, motion only when
+     something changes, the day as a moving timeline, the plan following the
+     cycle day). Two small mechanisms, no per-surface timers:
+     1. phLiveSweep -- any element carrying data-live="key" data-live-sig="v"
+        gets ONE flash the first time a paint shows it with a different sig
+        than the last paint did. Never on first sight, never on a repaint
+        that changed nothing. Session memory only. The band subtitle, the
+        open phase tab, each Grid visit row, each Appointments block and the
+        door card's herbs/changes chips carry it. A MutationObserver on the
+        page runs the sweep after ANY render path, so renderPharmacy,
+        renderPresPanel, the scoped repaints and presBandSubRefresh all get
+        it without each one remembering to call it.
+     2. phApptCalNowTick -- moves the Appointments now-line and lights the
+        block in progress once a minute, only while the tab is visible (her
+        hidden-tab timer rule), and again on the next paint or wake. */
+  const phLiveSigs = new Map();
+  function phLiveSweep(root) {
+    (root || document).querySelectorAll("[data-live]").forEach(el => {
+      const key = el.dataset.live, sig = el.dataset.liveSig || "";
+      const prev = phLiveSigs.get(key);
+      phLiveSigs.set(key, sig);
+      if (prev !== undefined && prev !== sig) {
+        el.classList.remove("ph-live-changed"); void el.offsetWidth; el.classList.add("ph-live-changed");
+        el.addEventListener("animationend", () => el.classList.remove("ph-live-changed"), { once: true });
+      }
+    });
+  }
+  function phApptCalNowTick() {
+    const line = document.querySelector("#pharmacyPage .ph-apptcal-now");
+    const n = new Date(), nowMin = n.getHours() * 60 + n.getMinutes();
+    if (line && typeof phApptCalStart === "number") line.style.top = ((nowMin - phApptCalStart) * PH_APPTCAL_PX_PER_MIN) + "px";
+    document.querySelectorAll("#pharmacyPage .ph-appt-block[data-ph-appt-span]").forEach(b => {
+      const m = /^(\d+)-(\d+)$/.exec(b.dataset.phApptSpan || "");
+      b.classList.toggle("now", !!m && nowMin >= +m[1] && nowMin < +m[2]);
+    });
+  }
+  setInterval(() => { if (!document.hidden) phApptCalNowTick(); }, 60 * 1000);
+  (() => {
+    const page = document.getElementById("pharmacyPage");
+    if (!page || typeof MutationObserver === "undefined") return;
+    let raf = 0;
+    new MutationObserver(() => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => { raf = 0; phLiveSweep(page); phApptCalNowTick(); });
+    }).observe(page, { childList: true, subtree: true });
+  })();
   const schedDateStr = k => { const d = parseKey(k); return `${d.getDate()} ${MON_SHORT[d.getMonth()]}`; };
   const schedTimeStr = ms => new Date(ms).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
   let schedFormOpen = false, schedFormPresetId = null, schedFormMethod = "postage", schedFormDraft = {}, schedOpenAction = null, schedShowCompleted = false;
