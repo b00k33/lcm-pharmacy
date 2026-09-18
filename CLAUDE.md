@@ -5047,3 +5047,71 @@ Synthetic patient/plans/DOM cleaned up and confirmed absent after every run.
 
 Version bump: `lcm-build` `20260918-190000`, `sw.js` cache
 `lcm-20260918-ivfgrid-cdpreselect-merge`.
+
+## IVF Protocol phase follows the cycle day LIVE — "the treatment plans need to be alive" (2026-09-18)
+
+Minutes after the section above shipped: **"i need the treatment plans to
+be alive"** → asked which sense she meant, she picked **"They're static,
+not live-updating"** and then, in her own words, **"when cd is added, the
+stages are selected accordingly."** The CD-preselect just built only ever
+fed the Today's-visit PICKER's highlighted default — it never touched the
+plan's own persisted phase, so the tab strip, the Visits table, the band
+subtitle and the printed record all stayed on whatever she'd last tapped
+until she happened to reopen Today's-visit. Natural fertility/PCOS/
+Endometriosis/Dysmenorrhea already advance on every cycle write via
+`phCycleSyncPlan`; IVF Protocol was the one cycle-tracked template that
+didn't — excluded on purpose, because of that function's overdue splice.
+
+**`phTpIvfCdSync(rec, plan)`** — the WRITE twin of `phTpIvfCdSuggest`,
+beside it. Called from `phCycleSyncPlans` (the wrapper every one of the
+six real cycle write-sites already goes through — logging a period, the
+strip/calendar tap, the history-date add, cycle-field edits), as an
+INDEPENDENT second check next to `phCycleSyncPlan`, not an else-if, so
+neither ever silently relies on the other's exclusion list. Its rules,
+deliberately stricter than `phCycleSyncPlan`'s:
+- **No overdue branch.** A "late" natural-cycle reading is routine and
+  clinically meaningless on a medicated IVF cycle; the plan is left
+  exactly as it is. This is the whole reason IVF got its own cascade
+  instead of joining `PH_TP_CYCLE_SYNC`.
+- **Only the period / Follicular Wk1 / Wk2 window** (everything
+  `phTpIvfCdSuggest` can name). From ovulation on it has nothing to say
+  and does nothing — the milestone dates (decision 13) and her own hand
+  own everything past that.
+- **Never pulls a phase backward.** Once she's on Post-OPU or later (by
+  hand, by a milestone date, by an earlier sync), a lagging cycle reading
+  returns false. Same principle as `phCycleSyncPlan`'s luteal guard, wider.
+- **Idempotent** — already on the matched phase → false, so no needless
+  `savePharmacy()`/`updatedAt` re-stamp on every cycle-field keystroke.
+- **Stamps `sinceKey`/`doneKey` the way `phTpSetPhaseStatus` does**
+  (first-time-only, cleared on demotion) — the visit-count windows
+  (decision 17, "phase dates are the truth") stay correct. It does NOT call
+  `phTpSetPhaseStatus` itself: that function ends in `savePharmacy();
+  phTpRerender()`, and a render fired from inside a cycle-tab write would
+  re-open the exact scroll-jump this file's cycle-tab section fixed the
+  same morning. Pure data mutation, like `phCycleSyncPlan`; the caller's
+  own scoped repaint (`presCycleTabRefresh` + `presBandSubRefresh`) already
+  handles a phase change, because natural-fertility plans have always
+  needed it to.
+- Sets `startPhasePicked = true` — her cycle data has now answered
+  "which phase is she starting in", so the picker's one-time cascade
+  (previous section) never needs to ask.
+
+Verified through the real `phCycleSyncPlans` against a synthetic patient
+carrying an IVF plan AND a Natural fertility plan side by side: no cycle
+data → nothing changes; CD 11 → IVF `done/current/…`, `doneKey`/`sinceKey`
+stamped today, `startPhasePicked` flipped, NF advanced too (no
+regression); same data again → `changed:false`; CD 13 → Follicular Wk2;
+hand-moved to Post-OPU then CD 3 → IVF stays on Post-OPU; **overdue → IVF
+untouched at 6 phases while NF correctly gains "Prolonged luteal" (5
+phases)** — the splice reaching only the plan it was designed for;
+ovulation window from fresh → IVF stays on Menstruation, NF goes to
+Ovulation. Clean console. Synthetic patients cleared and saved after.
+
+**Her wider ask, arriving mid-build, NOT built yet — needs its audit
+first:** "i need the treatment plans and notes and appointment to be
+alive. cross referencing and live updating well." That's the next piece:
+an audit of every plan ↔ notes ↔ appointment link (which ones update live,
+which are one-time snapshots, which are missing), then her questions.
+
+Version bump: `lcm-build` `20260918-200000`, `sw.js` cache
+`lcm-20260918-ivf-cd-live-sync`.
