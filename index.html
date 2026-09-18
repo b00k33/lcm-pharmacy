@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260918-180000">
+<meta name="lcm-build" content="20260918-190000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -7165,6 +7165,14 @@
   /* 🩸 cycle on the patient (2026-09-04): the panel row's slim bar + chip,
      the same chip in the check-in panel, the "you are here" stage row */
   #pharmacyPage .ph-cycle-chip { display: inline-block; font-size: 10.5px; font-weight: 800; border-radius: 999px; padding: 2px 8px; background: var(--ph-zero-tint); color: var(--ph-zero-deep); white-space: nowrap; vertical-align: middle; }
+  /* her ask28 answer, 2026-09-18, on the Treatment Plan phase line
+     specifically: "Useful, but it reads like an error right now — needs
+     to look less like an error" -- the bold red pill above borrows the
+     zero-stock alarm colour, fine for its other call sites (check-in,
+     timeline) which she didn't flag, but wrong beside a phase name it
+     can legitimately disagree with (an IVF plan's phase is clinically
+     set, not cycle-synced). A quiet parenthetical aside instead of a pill. */
+  #pharmacyPage .ph-cycle-chip.ref { display: inline; font-size: inherit; font-weight: 500; font-style: italic; border-radius: 0; padding: 0; background: none; color: var(--ph-faint); }
   /* collapsed cycle row, option A (2026-09-04): big day number leads.
      Split into two lines 2026-09-15 (her "i dont want cd and date same
      line") once the contraceptive duration made the single line run long --
@@ -8340,8 +8348,6 @@
   /* the plan's clinical findings: the letter's three charts, interactive, with chips + a text line each */
   #pharmacyPage .ph-tp-fndhead { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ph-faint); margin: 12px 0 6px; }
   #pharmacyPage .ph-tp-fndhead .faint { font-weight: 500; letter-spacing: 0; text-transform: none; }
-  #pharmacyPage .ph-tp-startphase { background: var(--ph-green-tint); border-radius: 8px; padding: 10px 12px; margin-bottom: 16px; }
-  #pharmacyPage .ph-tp-startphase .ph-tp-fndhead { margin-top: 0; }
   #pharmacyPage .ph-tp-findings .ph-gd-field { text-align: left; margin-top: 6px; }
   #pharmacyPage .ph-tp-findings .ph-gd-field span { font-size: 11px; font-weight: 700; color: var(--ph-green-deep); }
   #pharmacyPage .ph-tp-findings .ph-gd-field span em { font-style: normal; font-weight: 500; color: var(--ph-soft); }
@@ -26348,23 +26354,6 @@
         phTpRerender();
         return;
       }
-      // her ask 2026-09-05: the one-time "which phase is she starting in?"
-      // banner on a fresh IVF Protocol plan (phTpStartPhaseBannerHtml) --
-      // same done/current/upcoming cascade as data-tp-phase-status above,
-      // plus marking the plan picked so the banner never shows again.
-      const tpStartPhase = e.target.closest("[data-tp-startphase]");
-      if (tpStartPhase) {
-        const [planId, phaseId] = tpStartPhase.dataset.tpStartphase.split(":");
-        const plan = phTpFindPlan(phTpScreenPatient, planId);
-        const ph = plan && plan.phases.find(p => p.id === phaseId);
-        if (plan && ph) {
-          const i = plan.phases.indexOf(ph);
-          plan.phases.forEach((p, idx) => { p.status = idx < i ? "done" : idx === i ? "current" : "upcoming"; });
-          plan.startPhasePicked = true;
-          savePharmacy(); phTpRerender();
-        }
-        return;
-      }
       /* + Add phase is a PICKER now (her ask 2026-09-10: "make a preset acute
          illness phase i can choose", then "can you add an option where both
          can happen? within the phase i added acute illness treatment?").
@@ -26423,6 +26412,9 @@
       // ==== IVF history (her ask 2026-09-13) ==================================
       const ivfFoldToggle = e.target.closest("[data-ivf-fold-toggle]");
       if (ivfFoldToggle) { presIvfHistOpen = !presIvfHistOpen; phCycleRerender(); return; }
+      // her ask28 answer, 2026-09-18: diagnosis/goal folds the same way.
+      const tpStrategyFoldToggle = e.target.closest("[data-tp-strategy-fold-toggle]");
+      if (tpStrategyFoldToggle) { presTpStrategyOpen = !presTpStrategyOpen; phTpRerender(); return; }
       const ivfRowToggle = e.target.closest("[data-ivf-row-toggle]");
       if (ivfRowToggle) {
         const id = ivfRowToggle.dataset.ivfRowToggle;
@@ -28229,6 +28221,21 @@
         const ctx = presAcuCtx();
         if (ctx) {
           const id = acuPhaseBtn.dataset.presAcuPhase;
+          // her ask 2026-09-18 (ask28 IVF Grid redesign, "merge into one
+          // control used for both"): a fresh IVF Protocol plan's FIRST tap
+          // on this same picker also decides which phase she's starting
+          // in -- retiring the separate one-time phTpStartPhaseBannerHtml/
+          // data-tp-startphase banner, whose exact done/current/upcoming
+          // cascade this reproduces, so there's no second phase-picker left
+          // on screen for her to reconcile against this one.
+          if (ctx.activePlan && ctx.activePlan.templateName === "IVF Protocol" && !ctx.activePlan.startPhasePicked) {
+            const i = ctx.activePlan.phases.findIndex(p => p.id === id);
+            if (i >= 0) {
+              ctx.activePlan.phases.forEach((p, idx) => { p.status = idx < i ? "done" : idx === i ? "current" : "upcoming"; });
+              ctx.activePlan.startPhasePicked = true;
+              savePharmacy();
+            }
+          }
           // tapping the calendar phase again just clears the override
           presAcuPhaseId = (ctx.calendarPhase && ctx.calendarPhase.id === id) ? null : id;
           // points/press/watch are read straight off the treated phase's own
@@ -46129,30 +46136,19 @@ or changing anything in Cliniko.
       // cycle-synced (see phCycleSyncPlan), so a fresh plan otherwise always
       // opens on phase 0/Menstruation even when she's already mid-cycle from
       // a prior natural attempt. false only for a brand-new IVF Protocol
-      // plan shows phTpStartPhaseBannerHtml once; every other template (and
-      // any plan from before this existed) is born already "picked" so nothing
-      // retroactively nags on old data.
+      // plan; every other template (and any plan from before this existed)
+      // is born already "picked" so nothing retroactively nags on old data.
+      // RETIRED 2026-09-18 (ask28 IVF Grid redesign, "merge into one control
+      // used for both"): the one-time phTpStartPhaseBannerHtml/
+      // data-tp-startphase banner this field used to gate is gone -- the
+      // Today's-visit phase picker's own data-pres-acu-phase handler now
+      // performs the exact same done/current/upcoming cascade on its FIRST
+      // tap for an unpicked IVF plan, so there's no separate control left.
       startPhasePicked: !(tpl && tpl.name === "IVF Protocol"),
       // set by phTpApplyInterrupt when this plan is an acute detour from
       // another one; null on every ordinary plan
       interruptsPlanId: null,
     };
-  }
-  // her ask 2026-09-05: shown once on a fresh IVF Protocol plan (see
-  // phTpNewPlan's startPhasePicked) -- any phase chip cascades done/
-  // current/upcoming via data-tp-startphase and dismisses the banner for
-  // good, including tapping the first one if Menstruation really is right.
-  // Bug caught 2026-09-05: startPhasePicked is undefined (falsy) on every
-  // plan that predates this field, not just IVF ones -- gate on the
-  // template name too, or it retroactively shows on old cycle-synced plans
-  // (Natural fertility etc.) where it's redundant, since those already
-  // auto-advance from her live cycle day (phCycleSyncPlan).
-  function phTpStartPhaseBannerHtml(plan) {
-    if (!plan || plan.templateName !== "IVF Protocol" || plan.startPhasePicked) return "";
-    return `<div class="ph-tp-startphase">
-      <div class="ph-tp-fndhead">Which phase is she starting in? <span class="faint">— e.g. already in luteal from a prior natural cycle</span></div>
-      <div class="ph-ck-chips">${plan.phases.map(p => `<button type="button" class="ph-ck-chip" data-tp-startphase="${plan.id}:${p.id}">${esc(p.label)}</button>`).join("")}</div>
-    </div>`;
   }
   function phTpStatusMeta(v, list) { return list.find(x => x.v === v) || list[0]; }
   function phTpPlanCurrentPhase(plan) { return (plan.phases || []).find(p => p.status === "current") || null; }
@@ -46323,6 +46319,37 @@ or changing anything in Cliniko.
     const proCurrent = proIdx >= 0 && phases[proIdx].status === "current";
     if (lutealIdx >= 0 && curIdx > lutealIdx && !proCurrent) return null;
     return phases[idx];
+  }
+  // her ask 2026-09-18 (ask28 IVF Grid redesign): "i want the plan to
+  // preselect phase based on cd" -- IVF Protocol is deliberately excluded
+  // from PH_TP_CYCLE_SYNC/phTpCycleEffectivePhase above (its later phases
+  // are calendar-driven off OPU/transfer dates, not cycle days -- see that
+  // function's own comment), but her early IVF phases (Menstruation,
+  // Follicular -- Week 1/2) carry the SAME labels phTpCycleEffectivePhase
+  // already matches against a natural cycle, and a fresh/early IVF plan has
+  // nothing else to preselect from. This is the read-only, IVF-only twin of
+  // that function -- same regex matching, but returns null the moment the
+  // cycle would suggest Ovulation/Luteal (IVF has no such phase; it goes to
+  // Post-OPU instead) or once the period reads overdue, so the existing
+  // milestone-date mechanism (decision 13, OPU/transfer dates) naturally
+  // takes over once there's nothing sensible left to suggest from cycle day
+  // alone. NEVER call phCycleSyncPlan for IVF -- its "overdue" branch below
+  // unconditionally splices a "Prolonged luteal" phase into the plan and
+  // cascades the whole plan onto it, clinically meaningless on a medicated
+  // IVF cycle where a "late" natural-cycle read is expected, not a red flag.
+  function phTpIvfCdSuggest(rec, plan) {
+    if (!plan || plan.status !== "active" || plan.templateName !== "IVF Protocol") return null;
+    const comp = phCycleComp(rec);
+    if (!comp || comp.overdue) return null;
+    const phases = plan.phases || [];
+    const want = comp.phaseKey === "period" ? PH_CYCLE_PHASE_MATCH.period
+      : comp.phaseKey === "foll" ? (comp.day <= comp.flowDays + 7 ? PH_CYCLE_PHASE_MATCH.foll1 : PH_CYCLE_PHASE_MATCH.foll2)
+      : null;   // ov/luteal: IVF has no such phase -- nothing to suggest
+    if (!want) return null;
+    let idx = phases.findIndex(p => want.test(p.label || ""));
+    if (idx < 0 && want === PH_CYCLE_PHASE_MATCH.foll2) idx = phases.findIndex(p => PH_CYCLE_PHASE_MATCH.foll1.test(p.label || ""));
+    if (idx < 0) return null;
+    return { phase: phases[idx], comp };
   }
   function phCycleSyncPlan(rec, plan) {
     if (!plan || plan.status !== "active" || !PH_TP_CYCLE_SYNC.includes(plan.templateName)) return false;
@@ -47720,8 +47747,10 @@ or changing anything in Cliniko.
     // this live from the cycle day, it was just never used to drive what
     // she actually logs against, only Communications' follow-up dates.
     // Falls back to the plan's persisted current phase for non-cycle-synced
-    // templates (MSK, stress, ...) and for cycle plans it can't place.
-    const calendarPhase = activePlan ? (phTpCycleEffectivePhase(rec, activePlan) || phTpPlanCurrentPhase(activePlan)) : null;
+    // templates (MSK, stress, ...) and for cycle plans it can't place. IVF
+    // Protocol gets its own CD-based suggestion (phTpIvfCdSuggest) in the
+    // same slot, since it's excluded from phTpCycleEffectivePhase above.
+    const calendarPhase = activePlan ? (phTpCycleEffectivePhase(rec, activePlan) || (phTpIvfCdSuggest(rec, activePlan) || {}).phase || phTpPlanCurrentPhase(activePlan)) : null;
     const phaseChoices = activePlan ? (activePlan.phases || []) : [];
     const treatedPhase = (presAcuPhaseId && phaseChoices.find(p => p.id === presAcuPhaseId)) || calendarPhase;
     return { name, rec, activePlan, calendarPhase, phaseChoices, treatedPhase };
@@ -47776,7 +47805,7 @@ or changing anything in Cliniko.
     // knows which plan it's rendering) always wins.
     const activePlan = (opts.planId && plans.find(p => p.id === opts.planId)) || plans.find(p => p.status === "active") || plans[0];
     const rec = phPatientRec(name);
-    const calendarPhase = activePlan ? (phTpCycleEffectivePhase(rec, activePlan) || phTpPlanCurrentPhase(activePlan)) : null;
+    const calendarPhase = activePlan ? (phTpCycleEffectivePhase(rec, activePlan) || (phTpIvfCdSuggest(rec, activePlan) || {}).phase || phTpPlanCurrentPhase(activePlan)) : null;
     const phaseChoices = activePlan ? (activePlan.phases || []) : [];
     const treatedPhase = (presAcuPhaseId && phaseChoices.find(p => p.id === presAcuPhaseId)) || calendarPhase;
     const isOverride = !!(calendarPhase && treatedPhase && treatedPhase.id !== calendarPhase.id);
@@ -48054,9 +48083,15 @@ or changing anything in Cliniko.
   // which phase tab is selected below it (unlike a phase's own Aim).
   function phTpPlanStrategyHtml(plan) {
     if (!plan || (!plan.diagnosis && !plan.goal)) return "";
-    return `<div class="ph-tp-strategy">
-      ${plan.diagnosis ? `<div class="k">Diagnosis</div><div class="v">${esc(plan.diagnosis)}</div>` : ""}
-      ${plan.goal ? `<div class="k">Treatment strategy</div><div class="v">${esc(plan.goal)}</div>` : ""}
+    return `<div class="ph-ivf-fold">
+      <button type="button" class="ph-ivf-foldhd" data-tp-strategy-fold-toggle="1" aria-expanded="${presTpStrategyOpen ? "true" : "false"}">
+        <span class="ic">📋</span><b>Diagnosis &amp; strategy</b>
+        <span class="chev">${presTpStrategyOpen ? "▾" : "▸"}</span>
+      </button>
+      ${presTpStrategyOpen ? `<div class="ph-tp-strategy">
+        ${plan.diagnosis ? `<div class="k">Diagnosis</div><div class="v">${esc(plan.diagnosis)}</div>` : ""}
+        ${plan.goal ? `<div class="k">Treatment strategy</div><div class="v">${esc(plan.goal)}</div>` : ""}
+      </div>` : ""}
     </div>`;
   }
   function presTpInlineEditorHtml(name, plan) {
@@ -48120,7 +48155,6 @@ or changing anything in Cliniko.
     return `<div class="ph-tp-inline">
       ${plan.templateName === "IVF Protocol" ? phIvfHistoryFoldHtml(name) : ""}
       ${phTpFacialStripHtml(rec, plan)}
-      ${phTpStartPhaseBannerHtml(plan)}
       ${phTpDeleteArm === "plan"
         ? `<div class="ph-confirm-strip"><span>Delete this whole plan? This can't be undone.</span><button type="button" class="btn-save" data-tp-plan-del-yes="${plan.id}">Delete plan</button><button type="button" class="btn-cancel" data-tp-plan-del-no="1">Cancel</button></div>`
         : ""}
@@ -48422,6 +48456,13 @@ or changing anything in Cliniko.
   // (Assessment Cycle row + Treatment stage), never two copies of the open
   // state any more than of the rows themselves.
   let presIvfHistOpen = false;
+  // her ask28 answer, 2026-09-18 ("Most of it -- just needs better visual
+  // separation"): diagnosis/goal is real content she confirmed she still
+  // wants, just not competing for attention with the active phase tabs/
+  // Today's-visit below it. Same quiet default-collapsed fold already
+  // established for IVF history right above -- reused, not a second
+  // visual language for "this is reference".
+  let presTpStrategyOpen = false;
   const presIvfOpenRows = new Set();   // row ids expanded on phone (desktop always shows everything)
   const presIvfPhoneMode = () => window.innerWidth <= 640;
   let phIvfDeleteArm = null;   // null | rowId
@@ -49845,11 +49886,18 @@ or changing anything in Cliniko.
      the tab strip is the fold. */
   function phTpPhaseLineInner(plan, phase) {
     const sel = `<select class="ph-tp-phst ${phase.status}" data-tp-phase-status-sel="${plan.id}:${phase.id}" aria-label="Status of ${esc(phase.label)}">${PH_TP_PHASE_STATUSES.map(s => `<option value="${s.v}"${s.v === phase.status ? " selected" : ""}>${s.label}</option>`).join("")}</select>`;
-    // her ask 2026-09-11, "Both" (see phTpTabsHtml for the tab's own copy):
-    // the same ready-made chip already used on the check-in/timeline rows
-    // (phCycleChipHtml), so nothing new to style; null (not tracked / no LMP
-    // logged) renders nothing, same as everywhere else it's called.
-    const cycleChip = phCycleChipHtml(phCycleComp(phPatientPeek(phTpScreenPatient)));
+    // her ask 2026-09-11, "Both": show the patient's raw natural-cycle
+    // position beside the phase name too, same underlying phCycleComp the
+    // check-in/timeline rows' own phCycleChipHtml reads. Rendered as its
+    // own quiet, parenthesized "(cycle Day N · X)" here rather than that
+    // shared bold pill -- her ask28 answer, 2026-09-18: on THIS screen it
+    // "reads like an error", since a treated phase can legitimately differ
+    // from her raw cycle day (an IVF plan's phase is set clinically, not
+    // cycle-synced) with no actual problem to flag. The check-in/timeline
+    // pill is untouched -- she didn't flag those, and they're not sitting
+    // directly beside a phase name that can disagree with them.
+    const cycleComp = phCycleComp(phPatientPeek(phTpScreenPatient));
+    const cycleChip = cycleComp ? `<span class="ph-cycle-chip ref" title="Her natural cycle position, for reference — this treatment phase is set independently">(cycle Day ${cycleComp.day} · ${esc(cycleComp.phaseLabel)})</span>` : "";
     return `<i class="ph-tp-dot"></i>
         <span class="ph-tp-pname${phase.label ? "" : " empty"}" data-tp-edit="${plan.id}:${phase.id}:label" title="Click to rename">${phase.label ? esc(phase.label) : "Phase name"}</span>
         ${cycleChip}
@@ -50702,7 +50750,6 @@ or changing anything in Cliniko.
         ${phTpFindingsHtml(plan)}
         ${plan.templateName === "IVF Protocol" ? phIvfHistoryFoldHtml(phTpScreenPatient) : ""}
         ${PH_TP_CYCLE_TEMPLATES.includes(plan.templateName) ? phCycleTessHtml(phPatientRec(phTpScreenPatient), phTpScreenPatient) : ""}
-        ${phTpStartPhaseBannerHtml(plan)}
         <div class="ph-tp-timeline">
           ${phTpPlanBodyHtml(name, plan, "")}
           <button type="button" class="ph-tp-addbtn" data-tp-phase-add="${plan.id}">+ Add phase</button>

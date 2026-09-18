@@ -4932,3 +4932,118 @@ cleaned up.
 
 Version bump: `lcm-build` `20260918-180000`, `sw.js` cache
 `lcm-20260918-printdoc-table-audit`.
+
+## IVF Protocol Treatment Plan Grid — CD-based phase preselect, one merged phase-picker, quieter reference content (SYNTH22 item 1, 2026-09-18)
+
+Screenshot of the Treatment Plan Grid on an IVF Protocol plan — duplicate
+8-phase picker bands, a "Day 14 · Ovulation" chip reading as a contradiction
+beside "Menstruation", the Egg Retrieval/Embryo Transfer dates and Today's
+Visit panel competing for attention — **"the workflow feels terrible. the
+ui is horrible. ask28"**. Four grounded questions (the duplicate picker;
+the calendar-phase contradiction; what she does first when opening a plan;
+section density/hierarchy) got her real spec: merge the two phase-pickers
+into one; **"i want the plan to preselect phase based on cd"**; her three
+first-tasks are logging today's treatment, checking the real phase and
+reviewing what's planned (not the IVF milestone dates); keep most content,
+fix the visual hierarchy. Shown a mock (merged phase-picker + CD-slider
+suggestion + a collapsed Reference row, in her real True Teal colours), she
+said **"i like this, build it, and ship live."**
+
+**Why the naive fix (add IVF Protocol to `PH_TP_CYCLE_SYNC`) was rejected
+before writing any code.** `phTpCycleEffectivePhase` already computes a
+live cycle-based phase for Natural fertility/PCOS/Endometriosis/
+Dysmenorrhea — the obvious move was widening that list to include IVF. Read
+`phCycleSyncPlan` (the WRITE-cascade twin) first and found its `overdue`
+branch unconditionally splices a "Prolonged luteal" phase into
+`plan.phases` and cascades the whole plan onto it whenever the natural-
+cycle math reads the period as late — routine and clinically meaningless on
+a medicated IVF cycle, not a real red flag. Joining `PH_TP_CYCLE_SYNC`
+would risk that splice corrupting a real IVF plan. Built a separate,
+read-only, non-write-cascading helper instead.
+
+**`phTpIvfCdSuggest(rec, plan)`** (beside `phTpCycleEffectivePhase`) —
+IVF-only, read-only twin of that function: same `PH_CYCLE_PHASE_MATCH`
+regex matching against `period`/`foll1`/`foll2`, but returns `null` the
+moment the cycle would suggest Ovulation/Luteal (IVF has no such phase — it
+goes to Post-OPU instead) or once the period reads overdue, so the existing
+milestone-date mechanism (decision 13, OPU/transfer dates) naturally takes
+over once there's nothing sensible left to suggest from cycle day alone.
+**Never wired into `phCycleSyncPlan`.** Wired as a second fallback step
+into the `calendarPhase` computation in both `presAcuCtx()` and
+`presAcuOpenHtml()`: `phTpCycleEffectivePhase(...) ||
+(phTpIvfCdSuggest(...)||{}).phase || phTpPlanCurrentPhase(...)`.
+
+**One merged phase-picker, not two.** `phTpStartPhaseBannerHtml` (the
+one-time "Which phase is she starting in?" banner, shown once on a fresh
+IVF plan) is retired — deleted along with both call sites and its
+`data-tp-startphase` click handler. Its exact done/current/upcoming
+cascade now lives inside the Today's-visit phase picker's own
+`data-pres-acu-phase` handler: the FIRST tap on any phase chip, while
+`activePlan.templateName === "IVF Protocol" && !activePlan.startPhasePicked`,
+performs the cascade (byte-identical to the retired handler's own logic),
+sets `startPhasePicked = true` and saves — then falls through to the
+existing override-setting logic unchanged. Tapping the CD-preselected chip
+(now shown pre-highlighted, per `phTpIvfCdSuggest`) confirms it; tapping a
+different one both starts the plan there AND records it as a deliberate
+override from the calendar suggestion, with the same "different from the
+calendar — why" reason box every other override already gets. One control,
+one decision, matching her "merge into one control used for both" answer.
+
+**The "Day 14 · Ovulation" contradiction — restyled, not removed or
+recomputed.** Her answer: "Useful, but it reads like an error right now —
+needs to look less like an error." Traced to `phTpPhaseLineInner`'s
+`cycleChip`, her own 2026-09-11 "Both" ask (show the raw natural-cycle
+position beside the phase name too) — rendered via the shared, app-wide
+`phCycleChipHtml`, styled with the `--ph-zero-tint`/`--ph-zero-deep` ALARM
+colour (the same red used for zero-stock). That colour is right for every
+OTHER call site (check-in rows, timeline), which she didn't flag, but wrong
+here: a treated IVF phase legitimately differs from the raw cycle day (it's
+set clinically, not cycle-synced) with nothing actually wrong. Scoped fix,
+matching the precedent already set for `.ph-cycle-predtag` (2026-09-15,
+"i like the original table. just dont like the text and highlights"): this
+ONE call site now renders its own quiet, parenthesized, italic
+"(cycle Day N · X)" with a tooltip explaining it's independent reference
+info — a new `.ph-cycle-chip.ref` CSS modifier, not a change to
+`phCycleChipHtml` or any of its other call sites.
+
+**Visual hierarchy — "Most of it, just needs better visual separation."**
+IVF history was already a collapsed-by-default fold (`phIvfHistoryFoldHtml`,
+pre-existing). The Egg Retrieval/Embryo Transfer milestone dates
+(`phTpMilestoneRowHtml`) are deliberately NOT folded — that function's own
+comment says they sit above the phases because they DRIVE the phases, not
+because they're reference; collapsing an input that actively steers the
+plan would be a regression, not a hierarchy fix. What was still always-open
+and genuinely reference-only: `phTpPlanStrategyHtml` (diagnosis/goal),
+shown only in the inline plan editor (the full-screen modal has its own
+separate editable textareas, untouched). Given the same collapsed-fold
+treatment as IVF history — new `presTpStrategyOpen` state, same
+`.ph-ivf-fold`/`.ph-ivf-foldhd` component reused rather than inventing a
+second "this is reference" visual language.
+
+**Verified directly against the real functions in the sandbox** (not
+reimplemented — the login gate blocks a fully-booted local click-through,
+same limitation as every batch in this file): `phTpIvfCdSuggest` swept
+across CD 0–16 on the real IVF phase label set (Menstruation → CD 1–5,
+Follicular Week 1 → CD 6–12, Follicular Week 2 (Kidney focus) → CD 13,
+null from CD 14 on, matching `ovDay`), plus explicit overdue/inactive/
+non-IVF guards. `presAcuCtx()`'s `calendarPhase` confirmed showing
+"Follicular — Week 1" (not the persisted "Menstruation") for a brand-new,
+never-picked plan with real CD data — the actual preselect she asked for.
+A real dispatched click on the CD-suggested chip's real rendered markup
+(`presAcuOpenHtml`) correctly cascaded Menstruation→done, Follicular Week
+1→current, and set `startPhasePicked`; a second synthetic plan's click on
+a DIFFERENT chip (a deliberate override) correctly cascaded to that phase,
+left `startPhasePicked` true, and left `calendarPhase` unchanged while
+`treatedPhase` diverged — exactly the "starts here AND flags as an
+override" dual behaviour. One test round tripped over the app's own
+single-open-panel invariant (`presAcuCtx()`'s no-args form reads
+`document.querySelector(".ph-acu-open")`, the first match) by leaving two
+synthetic panels open at once — caught, the TEST was fixed, not the code,
+per this project's own standing rule. The strategy fold's toggle verified
+via a real dispatched click through the actual delegated handler (collapsed
+by default, expands and shows diagnosis/goal on click, matching the IVF
+history fold's own proven pattern). Clean console boot throughout.
+Synthetic patient/plans/DOM cleaned up and confirmed absent after every run.
+
+Version bump: `lcm-build` `20260918-190000`, `sw.js` cache
+`lcm-20260918-ivfgrid-cdpreselect-merge`.
