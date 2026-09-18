@@ -5115,3 +5115,89 @@ which are one-time snapshots, which are missing), then her questions.
 
 Version bump: `lcm-build` `20260918-200000`, `sw.js` cache
 `lcm-20260918-ivf-cd-live-sync`.
+
+## "Alive" — the at-the-door card, booking→visit, session↔booking, one phase truth, motion on change (2026-09-18)
+
+Her two asks straight after the IVF live-sync above: **"i need the treatment
+plans and notes and appointment to be alive. cross referencing and live
+updating well"** and **"i want the visuals to be alive as well. i want the app
+to speak to me like a receptionist/personal assistant."** A read-only audit of
+every plan↔notes↔appointment link came first (22 confirmed gaps; the four that
+matter are in memory `project_pharmacy_alive_receptionist_2026_09_18`), then
+five batches of answers on real widget mocks. Her locked picks, do not re-ask:
+the card is **"at the door" only** (profile open), **plain facts, no greeting**,
+**A3 = two lines**, **slides up and stays until ✕**, phone = **one line, tap to
+unfold**, "changes" are **since her last visit** and show **nowhere else**;
+cross-reference fixes **1, 2 and 3** (NOT 4 — the override reason staying
+invisible after Save was left unticked); with no plan picked on a booking the
+visit goes to **the plan the calendar is treating**; two bookings on one day →
+**the one nearest the time now**; overnight calendar move → **the new phase,
+everywhere**; motion on **all four** changes (phase moved · herbs hit 3 days or
+empty · booking added/moved/cancelled · period or sign from her phone).
+**Shipping: "one build, show me and i will approve to push"** — committed on
+`session-a`, NOT pushed until she says so.
+
+- **`phTpLivePhase(rec, plan)`** (beside `phCycleSyncPlans`) is now the ONE
+  read for "her current phase": live cycle phase → IVF CD suggestion →
+  persisted pointer. Switched onto it: `presBandSubText` (band subtitle),
+  `phApptBrief`, the popup's condition row, `phApptScriptFor`,
+  `phPickPlanPhase` (message picker), `presTreatmentRowHtml` (collapsed
+  Treatment row), and `phTpTabPhaseOf` gained the IVF suggestion. Pass
+  `phPatientPeek`, never `phPatientRec`. The pointer still only MOVES on a
+  cycle/session write. **`phCycleSyncPlan` now stamps `sinceKey`/`doneKey`**
+  through the shared `phTpCascadeTo` (the audit found it moved the pointer
+  without dates, so the visit counter — which bails on a missing sinceKey —
+  gave a cycle-advanced phase no Visits table).
+- **`phTpPlanForToday(name, explicitId)`**: the booking's `a.planId` (written
+  since 2026-09-16, read by nothing but the popup until now) → the
+  calendar-treated active plan → the last session's plan → first active.
+  `presAcuCtx`, `presAcuOpenHtml` and the card all use it. `phTpPhaseVisitRows`
+  skips a booking whose `planId` names another plan (one visit no longer
+  counts for two concurrent plans); the Grid's `showTodaysVisit` is off on a
+  plan today's booking didn't name; `presStagePlanHtml` lands on the booked
+  plan's tabs.
+- **A session names its booking**: the log handler stores `session.apptId`
+  (`phApptNearestNow`, nearest-to-the-clock) and `session.planId`; with no
+  booking today it attaches to the most recent still-unlogged booking of the
+  last two days AND takes that booking's date (the appointment-dating the
+  old card had; rebuilt because she ticked exactly this). `phTpVisitsMergedHtml`
+  pairs by `apptId` first (`acuByAppt`), date buckets only for older sessions,
+  and offers `data-tp-session-appt` "→ 3:00 pm" to move a write-up to the other
+  same-day booking (handler beside `data-tp-visit-toggle`). `phApptSessionFor(a)`
+  feeds a 🪡 "logged · outcome" row on the popup and a chip on the List
+  (`phApptStatusChipHtml`, after the dispensed check, never over "⚠ short").
+- **`presDoorCardHtml(t)`** ("AT THE DOOR" in the source) renders in
+  `renderPresPanel` right after the band, above the stages/plan tabs. Line 1:
+  Visit N (of M) · CD n + phase (the plan's phase on a cycle-tracked plan, the
+  cycle's own phase otherwise, a non-cycle plan's phase as its own part) ·
+  hh:mm today · last <date>, <outcome> · today: <aim clipped>. Line 2 chips:
+  herbs days left / refill due (≤3 d amber), short herbs out/low,
+  `→ Phase` / `period d` / sign / `dispensed d` since the last logged session,
+  next booking. Reads only; nothing written. `.in` plays the slide once per
+  open (`presDoorShown`); ✕ removes the node in place (`presDoorDismissed`);
+  phone `.mini` line toggles `.open` in place; all three reset in
+  `presOpenScript`. Cancelled bookings can't appear as a change — cancelling
+  deletes the row outright (no record to read).
+- **Motion only on change**: `phLiveSweep` flashes any `data-live="key"
+  data-live-sig="v"` element the first paint after its sig changes (never on
+  first sight); a MutationObserver on `#pharmacyPage` (childList/subtree,
+  rAF-debounced) runs it after every render path, so no render function has
+  to remember to. Carried by the band subtitle, the open phase tab, Grid visit
+  rows, Appointments blocks and the card's herbs/changes chips.
+  **The Appointments now-line had never shown**: `TODAY` is frozen at
+  midnight on boot, so `TODAY.getHours()` was always 0 — real clock now,
+  `phApptCalNowTick` moves it every minute (visible tab only) and lights the
+  block in progress (`.ph-appt-block.now`, via `data-ph-appt-span`).
+
+Verified directly against the real functions in the sandbox (login gate as
+ever): live vs persisted phase; plan-for-today with and without a booking
+pick; `phCycleSyncPlans` stamping dates; `a.planId` filtering counts (0 vs 2);
+a real dispatched "Log today's session" click storing `apptId`/`planId`, the
+popup and chip reading "logged", the Visits table pairing by id with the move
+button; the next-morning write-up (after the 1200 ms double-tap guard)
+attaching to yesterday's booking with its date; the card on a cycle patient,
+an MSK patient and a stubbed herbs-on-file case; the flash sweep (fires on
+change, not on same sig); the now-line tick. Desktop and 360px screenshots of
+the card taken from a preview mounted on `body`. Synthetic patients and
+bookings cleaned out, `localStorage` residue checked. Version:
+`lcm-build` `20260918-220000`, `sw.js` `lcm-20260918-alive-door-card-crossrefs`.
