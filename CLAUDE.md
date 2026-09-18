@@ -5631,3 +5631,46 @@ icon 404s only). Synthetic patient, plans, message and DOM removed,
 "push everything live" the same morning put it on `main` together with
 the synth22 items 2/7/9 build and its review fixes — confirmed served
 (`curl` of the live build stamp, not the local branch).
+
+## Photos section — pick several to delete, unsorted first, bigger tiles (her ask 2026-09-19)
+
+Screenshot of Assessment → Photos (8 photos, a "Tongue · u…" tile): **"improve
+the ui so i can delete multiple photos if necessary. allow me to see unsorted
+photos first. make the table/grid larger."** Three plain build calls, no mock
+needed; built on the existing section, not a new surface.
+
+- **Select mode** (`presPhotosSelect`, `presPhotosPicked` Set,
+  `presPhotosDelArm`): a "Select" link in the section head beside Add / Show
+  all. On, the head becomes "Delete N" (`.ph-photos-del`,
+  `data-pres-photos-delete`, disabled at 0) + Cancel, Add/Show-all hide, and
+  the strip becomes a wrapping grid of EVERY photo (`.ph-photos-strip.pickgrid`,
+  one `.ph-photos-th.pick` per photo, `data-pres-photo-pick`, ✓ disc on the
+  picked ones). Delete arms the shared confirm strip ("Delete 2 photos? You
+  get one Undo afterwards." → `data-pres-photos-delete-yes` / `-no`), then
+  `phRenDeletePhotosWithUndo(ids, key)` — the viewer's own
+  `phRenDeletePhotoWithUndo` is now an alias of it with one id, so both
+  routes share ONE undo: `phRenUndoState.recs` holds every deleted record
+  (blob included), the toast reads "N photos deleted · Undo", Undo puts them
+  all back through `phRenPhotoPut` and reloads each patient's cache. Every
+  step repaints via `phRenPhotosSecRefresh` in place, never `renderPresPanel`.
+- **Unsorted first**: `phRenNeedsSort(rowKey)` = the Unsorted type or a
+  tongue photo with no shot picked. Both the normal strip and the pick grid
+  sort needs-sort-first, then newest; those labels wear `.t.needs` (amber
+  `--ph-low-deep`) so the ones to file stand out. `phRenRowsFor` now lists
+  the "Tongue · unsorted" row BEFORE the four named shots. The pick grid
+  says "Tongue · unsorted" too, not bare "Tongue".
+- **Bigger**: one token, `#pharmacyPage { --ph-photo-th: 104px }` (was 72),
+  drives the strip tiles, the Opening-stage `.ph-op-grid` photo column and
+  the pick grid; the photo timeline's `.ph-ren-tl-thumb` went 64 → 88.
+  Labels 11.5px. Nothing else in the photo system changed (capture, viewer,
+  compare, letters, Records → Photos all untouched).
+
+Verified in the sandbox against the real handlers with five real records
+seeded through `phRenPhotoPut` (one Unsorted, one tongue without a shot,
+natural, flash, abdomen): strip order + amber labels; Select → 5-tile grid;
+two picks → "Delete 2" + "2 picked"; confirm → cache and IndexedDB both 5 →
+3, toast "2 photos deleted", select mode closed; Undo → 5 in both; tile
+104px, timeline thumb 88px; console clean (the known icon 404s only); the
+protected live-search check passes; seeds deleted, no residue. `lcm-build`
+`20260919-080000`, `sw.js` `lcm-20260919-photos-multidelete-unsorted-first`.
+Committed on `session-a`, NOT pushed — awaiting her look and her word.
