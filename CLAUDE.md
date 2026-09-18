@@ -5289,7 +5289,12 @@ here was guessed:
   visit; a Planned cell that already has different content shows a
   "→ plan" tap on the visit-side chip instead of ever silently overwriting.
 
-### Item 7 — Appointments List becomes the receptionist line
+### Item 7 — Appointments List becomes the receptionist line (UNDONE 2026-09-19, see "Fertility door popup" below)
+
+**Superseded 2026-09-19:** her words "i dont like the at the door column. bring
+back the presenting focus and treatment goal column" — the columns are back,
+the door-facts row is gone; the door card on profile open and the one-day
+stats / herbs-to-prepare block stay. Historical text follows.
 
 `phApptCalListRowHtml` no longer renders the old Focus/Goal "add focus /
 add goal" columns. It now calls the SAME `phDoorFacts(name, opts)` the
@@ -5776,3 +5781,44 @@ path the same; a hand-advanced Early Pregnancy stays; an MSK plan untouched;
 console clean; live-search 2 → 1 → 2; synthetic patient and scripts removed,
 residue nil. `lcm-build` `20260919-123000`, `sw.js`
 `lcm-20260919-plan-phase-follows-cd-on-open`.
+
+## Fertility door popup, Focus/Goal columns back, head band tidy (her asks 2026-09-19, LIVE d1663a6)
+
+Three asks in one turn, in her words: **"when i open a patient file for
+fertility and they don't have a menstrual cycle logged, have a popup asking
+to log it"**, **"if they have their cycle logged, give me a popup of their
+menstrual cycle day and Presenting focus / Treatment goal"**, and, on a
+screenshot of the Appointments List, **"i dont like the at the door column.
+bring back the presenting focus and treatment goal column"**. Plus "this
+looks good. improve ui" on the plan head band. Pushed on her "when you
+finish, push live".
+- **The popup** (`presFdoorArm` / `presFdoorHtml` / `presFdoorClose`, beside
+  the door-card state): `presOpenScript` arms it for a patient whose
+  `phTpPlanForToday` plan is active and in `PH_TP_CYCLE_TEMPLATES` (fertility,
+  IVF, PCOS, endo, period plans) and who tracks a cycle (`phCycleOn`, never
+  `sex === "M"`). `renderPresPanel` renders it after the door card while
+  `presFdoorOpen`; close removes the two nodes in place (✕, Got it / Not now,
+  backdrop, Escape). No period → "No period logged yet." + the compact
+  two-week `phCycleStripHtml` — the same day-tap → popover → Log period path,
+  and the panel re-render after the log turns it into the facts face (Day N
+  + phase, last/next period via `phTpCycleLineHtml`). "Not tracking a cycle"
+  sets `rec.cycleOn = false` (the Assessment toggle's own field): no more
+  asks, and the head's cycle line now reads "Not tracking a cycle." Focus /
+  Goal come from `phApptBrief` (today's booking's own words, else the plan's
+  diagnosis · title and goal · live phase, marked PLAN) — a plan always
+  derives both, so the fallback is a quiet dash. Centred 440px card on a
+  desktop, bottom sheet ≤640px.
+- **Appointments List**: `phApptCalListRowHtml` is the pre-2026-09-18 row
+  again — Time · Patient · Status · Presenting focus · Treatment goal, the
+  old five-column grid, "add focus / add goal" opening the popup in brief
+  mode; the `.dr`/`.hb` door-row CSS removed. The phone's compact line shows
+  the focus again. `phDoorFacts` keeps its options (the door card uses it).
+- **Head band**: `phTpViewToggleHtml(plan)` split out of `phTpPlanBodyHtml`
+  (new `opts.noToggle`); the inline editor puts the toggle as a third band
+  child with `grid-template-areas` "main cal" / "tog cal" (≥901px) and
+  main / cal / tog stacked on the phone. The compact calculator's Find day 1
+  + Cancel sit together at the right of its second line; placeholder "13".
+Verified in the sandbox (two synthetic patients, removed after): both faces,
+log-from-popup, Not now, Not tracking, Escape, reopen; List columns and
+widths; toggle position; live-search still filters. `lcm-build`
+`20260919-140000`, `sw.js` `lcm-20260919-fertility-door-popup`.
