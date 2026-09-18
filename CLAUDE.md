@@ -4874,3 +4874,61 @@ re-run) — sandbox-only, no production data touched.
 
 Version bump: `lcm-build` `20260918-170000`, `sw.js` cache
 `lcm-20260918-acu-mucus-plan-scoped`.
+
+## Table-overflow audit — every print document hardened (SYNTH22, 2026-09-18)
+
+Her ask right after the info-letter fix: **"synth22 do a visual audit the
+app to prevent these table issues"**, then **"resolve*"** — find AND fix
+the same bug class app-wide, not just catalogue it.
+
+**Method: read every `<table` in the file, not a keyword guess.** ~55
+occurrences. Most already converge on the audited `.rtn-table`/`.ph-table`/
+`.ph-spec-table` pattern from her 2026-08-26 table audit — `table-layout:
+fixed` with declared column widths, or a `.rtn-table-wrap { overflow-x:
+auto }` container — genuinely safe by construction, confirmed by reading
+each class's own CSS rather than assumed. Checked and confirmed already
+safe: `ph-tp-vt-table`/`ph-tp-grid` (the exact Visits table her screenshot
+showed — already `table-layout:fixed`), `ph-cyc-ht`, `ph-tp-sym-table`
+(has its own `overflow-x:auto` wrapper), `ph-ltr-stages`, `ph-psort-table`,
+`ph-reloc-notice-table` (wrapped), `ph-msg-sent-table` (wrapped), and the
+Ren photo timeline `ph-ren-tl-table` — that one LOOKS like the picTable
+bug (a column per date, photos in cells) but is a deliberately
+horizontally-scrolling grid (`.ph-ren-tl-scroll { overflow-x: auto }`,
+`width: max-content`, even auto-scrolls to the newest column) — correctly
+built, not a bug.
+
+**The real gap: every `phPrintDoc` table.** `phPrintDoc` opens a genuinely
+NEW browser window (`window.open` + `document.write`) that inherits NONE
+of `#pharmacyPage`'s scoped CSS — each caller ships its own inline
+`<style>` block, and 8 of them defined `table{width:100%}` with no
+`table-layout:fixed`. `width:100%` alone is only a hint under the default
+auto layout — content that wants to be wider (a long formula name, a long
+diagnosis line with no natural break) can still force the table past its
+100% hint, and a PRINTED PAGE has no scroll fallback at all: an overflow
+there doesn't scroll, it silently clips off the physical page edge. Worse
+than any on-screen cut-off, and directly against her decision 10 ("a
+proper printable record" — this app's medical-record documents need to be
+producible for a patient, another practitioner, an insurer). All 8 fixed
+identically: `table-layout:fixed` added, plus `word-break:break-word` on
+cell text so a genuinely long unbroken token wraps inside its own cell
+instead of overflowing it. The 8: price check sheet, stocktake sheet, the
+zero/low/stopped/phaseout/overstock herb listing, relocation notices, IVF
+history, the treatment plan record (decision 10's own document), the
+patient-facing treatment plan letter, and the herb-making bench sheet. The
+IVF history doc's nested `table.sub` (a transfers list inside one outer
+cell) got `width:auto` so it keeps sizing to its own short content instead
+of stretching to inherit the outer table's 100% width now that fixed
+layout also cascades to it.
+
+Verified directly against the real functions in the sandbox, not by
+reading alone: `phTpPlanDocHtml`, `phIvfHistoryPrintHtml` and
+`phTpLetterDocHtml` all called with synthetic long-text content
+(deliberately long diagnosis/aim strings), each output checked for
+`table-layout:fixed` present and `<table>`/`</table>` tags balanced (no
+broken template literal from the edit). Confirmed the whole 60k-line
+script still parses clean (every later window-exposed function still
+resolves) and the console is clear after the edits. Synthetic patients
+cleaned up.
+
+Version bump: `lcm-build` `20260918-180000`, `sw.js` cache
+`lcm-20260918-printdoc-table-audit`.
