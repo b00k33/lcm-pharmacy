@@ -5673,4 +5673,4 @@ two picks → "Delete 2" + "2 picked"; confirm → cache and IndexedDB both 5 �
 104px, timeline thumb 88px; console clean (the known icon 404s only); the
 protected live-search check passes; seeds deleted, no residue. `lcm-build`
 `20260919-080000`, `sw.js` `lcm-20260919-photos-multidelete-unsorted-first`.
-Committed on `session-a`, NOT pushed — awaiting her look and her word.
+Committed `284a20f`; pushed to `main` on her "push live" the same morning, confirmed served (`curl` of the live stamp).
