@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260919-220000">
+<meta name="lcm-build" content="20260919-231500">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6099,6 +6099,7 @@
   #pharmacyPage .ph-tp-fg .kv b { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--ph-green-deep); padding-top: 4px; }
   #pharmacyPage .ph-tp-fg .faint { color: var(--ph-faint); font-style: italic; }
   #pharmacyPage .ph-tp-fg .v { cursor: text; border-bottom: 1px dashed transparent; min-width: 0; }
+  #pharmacyPage .ph-tp-fg-when { font-size: 10px; color: var(--ph-faint); margin-left: 4px; }
   #pharmacyPage .ph-tp-fg .v:hover, #pharmacyPage .ph-tp-fg .v:focus-visible { border-bottom-color: var(--ph-green); outline: none; }
   #pharmacyPage .ph-tp-fg-in { padding: 1px 6px; border-bottom: 1px solid var(--ph-green); font-size: 12.5px; }
   #pharmacyPage .ph-cyc-strip.compact .ph-cyc-strip-head { margin-bottom: 4px; }
@@ -8735,6 +8736,24 @@
   #pharmacyPage .ph-tng2-sum .faint { color: var(--ph-faint); font-style: italic; }
   #pharmacyPage .ph-tng2-acts { display: flex; gap: 12px; margin-top: 6px; }
   #pharmacyPage .ph-tng2-acts .tab-link { font-size: 11.5px; padding: 0; }
+  /* the detailed abdomen chart (2026-09-19) shares the tongue chart's layout */
+  #pharmacyPage .ph-visit-abd-map .ph-abd2-svg { width: 130px; height: 156px; display: block; margin: 0 auto; }
+  #pharmacyPage .ph-visit-abd-map.ro .ph-abd2-svg { width: 84px; height: 100px; pointer-events: none; }
+  #pharmacyPage .ph-visit-abd-map.ro.mini { float: left; margin: 0 8px 2px 0; }
+  #pharmacyPage .ph-visit-abd-map.ro.mini .ph-abd2-svg { width: 44px; height: 53px; }
+  #pharmacyPage .ph-abd2-zone { stroke: rgba(47,94,68,.28); stroke-width: .7; transition: filter .12s; }
+  #pharmacyPage .ph-abd2-zone:hover { filter: brightness(.94); }
+  #pharmacyPage .ph-abd2-zone.on { stroke: #7A2F45; stroke-width: 1.6; stroke-dasharray: 3 2; }
+  #pharmacyPage .ph-abd2-zone.legacy { stroke: var(--margin-rule, #E3C87A); stroke-width: 2; }
+  #pharmacyPage .ph-abd2-g { stroke: #2F5E44; stroke-width: 1.1; fill: none; }
+  #pharmacyPage .ph-abd2-g[r] { fill: none; }
+  #pharmacyPage .ph-abd2-x { stroke: #B23A3A; stroke-width: 1.4; fill: none; }
+  #pharmacyPage .ph-tng2.abd .ph-tng2-row { grid-template-columns: 72px minmax(0, 1fr); }
+  #pharmacyPage .ph-abd2-pick { display: inline-grid; grid-template-columns: repeat(3, 1fr); gap: 2px; margin: 2px 0 4px; flex-basis: 100%; max-width: 210px; }
+  #pharmacyPage .ph-abd2-wherebtn { font: inherit; font-size: 10.5px; font-weight: 700; color: var(--ph-green-deep); background: none; border: 0; padding: 2px 4px; cursor: pointer; min-height: 0; text-decoration: underline dotted; }
+  #pharmacyPage .ph-abd2-wherebtn.on { color: #7A2F45; }
+  #pharmacyPage .ph-abd2-pick button { font: inherit; font-size: 9px; font-weight: 700; line-height: 1; padding: 2px 4px; border: 1px solid var(--ph-line); border-radius: 3px; background: var(--ph-white); color: var(--ph-faint); cursor: pointer; min-height: 0; }
+  #pharmacyPage .ph-abd2-pick button.on { background: #7A2F45; border-color: #7A2F45; color: #fff; }
   @media (max-width: 640px) {
     #pharmacyPage .ph-tng2 { grid-template-columns: minmax(0, 1fr); }
     #pharmacyPage .ph-ltr-findings .ph-ltr-fnd.wide { grid-column: auto; }
@@ -23108,10 +23127,15 @@
     if (out.focus && out.goal) return out;
     const script = phApptScriptFor(k);
     const plan = planOverride || phTpShownPlan(a.patient);
+    if (!out.focus && plan && (plan.diagnosis || "").trim()) { out.focus = plan.diagnosis.trim(); out.focusSrc = "plan"; }
+    if (!out.focus) {
+      const prev = phApptPrevBrief(k, a, "focus");
+      if (prev) { out.focus = prev.text; out.focusSrc = prev.src; out.focusDate = prev.date; }
+    }
     if (!out.focus) {
       const ct = script && script.caseType;
       const caseLabel = !ct || ct === "general" ? "" : ct === "other" ? (script.caseTypeOther || "").trim() : ((PH_CASE_TYPES.find(c => c[0] === ct) || [])[1] || "");
-      const dx = plan ? ((plan.diagnosis || "").trim() || (plan.title || "").trim()) : "";
+      const dx = plan ? (plan.title || "").trim() : "";
       const f = [caseLabel, dx].filter(Boolean).join(" · ");
       if (f) { out.focus = f; out.focusSrc = dx ? "plan" : "case"; }
     }
@@ -23121,6 +23145,17 @@
       if (g) { out.goal = g; out.goalSrc = "plan"; }
     }
     return out;
+  }
+  // the latest EARLIER booking (today or before, not this one) whose pasted
+  // or typed brief carries the field -- her Cliniko notes name the pattern
+  // visit by visit, and that is where her "TCM diagnosis" actually lives
+  function phApptPrevBrief(k, a, field) {
+    const today = keyOf(TODAY);
+    const prev = phApptList().filter(x => x.id !== a.id && x.service !== "Break" && phPatientKey(x.patient) === k && (x[field] || "").trim() && (x.date || "") <= today)
+      .sort((p, q) => (q.date || "").localeCompare(p.date || "") || (q.time || "").localeCompare(p.time || ""))[0];
+    if (!prev) return null;
+    const src = prev.briefEdited && prev.briefEdited[field] ? "typed" : prev.briefSrc === "paste" ? (prev.date && parseKey(prev.date).getDay() === 5 ? "zanda" : "cliniko") : "typed";
+    return { text: prev[field].trim(), src, date: prev.date };
   }
   const phApptBriefSrcHtml = s => s === "cliniko" || s === "zanda" ? `<span class="ph-apptpop-src cl" title="Pasted from the ${s === "zanda" ? "Zanda" : "Cliniko"} briefing">${s === "zanda" ? "Zanda" : "Cliniko"}</span>`
     : s === "plan" || s === "case" ? `<span class="ph-apptpop-src pl" title="Filled from the ${s === "plan" ? "treatment plan" : "script's Case"}">${s}</span>` : "";
@@ -29415,8 +29450,38 @@
       const visitZone = e.target.closest("[data-visit-zone]");
       if (visitZone) {
         const k = visitZone.dataset.visitZone;
+        if (k.startsWith("abd:") && visitZone.closest(".ph-visit-abd-map")) {
+          // the detailed abdomen chart (2026-09-19): a tap AIMS the rows at that region
+          const z = k.slice(4);
+          presVisitAbdRegion = presVisitAbdRegion === z ? null : z;
+          presVisitFndRefresh();
+          return;
+        }
         const d = presVisitFndDraft;
         d.zones = d.zones.includes(k) ? d.zones.filter(x => x !== k) : d.zones.concat(k);
+        presVisitFndRefresh();
+        return;
+      }
+      const abd2 = e.target.closest("[data-visit-abd2]");
+      if (abd2) {
+        const [attr, ...rest] = abd2.dataset.visitAbd2.split(":");
+        const val = rest.join(":");
+        const a = presVisitFndDraft.abd = phAbd2Read(presVisitFndDraft.abd); a.v2 = 1;
+        const reg = presVisitAbdRegion;
+        const toggleIn = (obj, key, region) => { const list = obj[key] || []; obj[key] = list.includes(region) ? list.filter(x => x !== region) : list.concat(region); if (!obj[key].length) delete obj[key]; };
+        if (attr === "region") { presVisitAbdRegion = null; presVisitAbdPick = null; }
+        else if (attr === "pick") presVisitAbdPick = presVisitAbdPick === val ? null : val;
+        else if (attr === "tension") a.tension = a.tension === val ? "" : val;
+        else if (attr === "tensionAt") { if (reg) { if (a.tensionAt[reg] === val) delete a.tensionAt[reg]; else a.tensionAt[reg] = val; } }
+        else if (attr === "tensionAtClear") delete a.tensionAt[val];
+        else if (attr === "marks") {
+          if (val === "xiaxin") { if (a.marks.xiaxin) delete a.marks.xiaxin; else a.marks.xiaxin = ["epi"]; }
+          else if (reg) toggleIn(a.marks, val, reg);
+          else if (a.marks[val]) { delete a.marks[val]; if (presVisitAbdPick === val) presVisitAbdPick = null; }
+          else { a.marks[val] = []; presVisitAbdPick = val; }
+        }
+        else if (attr === "where") { const [key, region] = rest; toggleIn(a.marks, key, region); if (!a.marks[key]) a.marks[key] = []; if (!a.marks[key].length) delete a.marks[key]; }
+        else if (attr === "clear") { presVisitFndDraft.abd = Object.assign(phAbd2Blank(), { v2: 1 }); presVisitAbdRegion = null; presVisitAbdPick = null; }
         presVisitFndRefresh();
         return;
       }
@@ -49831,21 +49896,22 @@ or changing anything in Cliniko.
     const appt = phApptNearestNow(name);
     const brief = phApptBrief(appt || { patient: name }, plan);
     const src = field === "focus" ? brief.focusSrc : brief.goalSrc;
-    if (appt && (src === "zanda" || src === "cliniko" || src === "typed")) return { kind: "appt", appt, seed: (appt[field] || "").trim() };
-    return { kind: "plan", seed: ((field === "focus" ? plan.diagnosis : plan.goal) || "").trim() };
+    if (appt && (src === "zanda" || src === "cliniko" || src === "typed") && (appt[field] || "").trim()) return { kind: "appt", appt, seed: (appt[field] || "").trim() };
+    const own = ((field === "focus" ? plan.diagnosis : plan.goal) || "").trim();
+    return { kind: "plan", seed: own || (field === "focus" && src !== "plan" && src !== "case" ? (brief.focus || "").trim() : "") };
   }
   function phTpFocusGoalHtml(name, plan) {
     const appt = phApptNearestNow(name);
     const brief = phApptBrief(appt || { patient: name }, plan);
-    const row = (field, label, v, s) => {
+    const row = (field, label, v, s, date) => {
       const editing = phTpFgEdit === `${plan.id}:${field}`;
       const inner = editing
         ? `<input type="text" class="ph-tp-cellin field-bare ph-tp-fg-in" data-tp-fg-in="${field}" data-tp-fg-plan="${plan.id}" data-tp-fg-name="${esc(name)}" value="${esc(phTpFgTarget(name, plan, field).seed)}" placeholder="${field === "focus" ? "what she is here for" : "what the treatment is for"}" aria-label="${label}">`
-        : `<span class="v" data-tp-fg="${field}" data-tp-fg-plan="${plan.id}" data-tp-fg-name="${esc(name)}" role="button" tabindex="0" title="Tap to edit">${v ? `${esc(v)}${phApptBriefSrcHtml(s)}` : `<span class="faint">tap to add</span>`}</span>`;
+        : `<span class="v" data-tp-fg="${field}" data-tp-fg-plan="${plan.id}" data-tp-fg-name="${esc(name)}" role="button" tabindex="0" title="Tap to edit">${v ? `${esc(v)}${phApptBriefSrcHtml(s)}${date ? `<small class="ph-tp-fg-when">${esc(phShortDate(date))}</small>` : ""}` : `<span class="faint">tap to add</span>`}</span>`;
       return `<div class="kv"><b>${label}</b>${inner}</div>`;
     };
     return `<div class="ph-tp-fg" data-tp-fgbox="${plan.id}">
-      ${row("focus", "Focus", brief.focus, brief.focusSrc)}
+      ${row("focus", "Focus", brief.focus, brief.focusSrc, brief.focusDate)}
       ${row("goal", "Goal", brief.goal, brief.goalSrc)}
     </div>`;
   }
@@ -51249,6 +51315,7 @@ or changing anything in Cliniko.
     const open = phTpFndOpen.has(id) ? !defaultOpen : defaultOpen;
     const lines = phVisitFndReportLines(f);
     const hasTongue = f.tng.regions.length || f.tng.overlays.length || f.body.length || f.coat.length || !phTng2Empty(f.tng);
+    const hasAbd = !phAbd2Empty(f.abd) || (f.zones || []).some(z => z.startsWith("abd:"));
     const hasPulse = Object.keys(f.pulse).length > 0;
     const what = [hasTongue ? "tongue" : "", hasPulse ? "pulse" : "", lines.some(([l]) => /Rhythm|Rate|Impressions|Wave|Depths|Positions/.test(l)) ? "Shen-Hammer" : ""].filter(Boolean).join(" & ") || "findings";
     const btn = `<button type="button" class="ph-tp-fndtoggle" data-tp-fnd-toggle="${esc(id)}" aria-expanded="${open ? "true" : "false"}">${open ? "▾" : "▸"} ${esc(what)}</button>`;
@@ -51256,6 +51323,7 @@ or changing anything in Cliniko.
     return `<span class="ph-tp-fnd">${btn}
       <span class="ph-tp-fnd-charts">
         ${hasTongue ? `<span class="ph-visit-tng ro">${phTongueChartSvg(f.tng, null, { ro: true })}</span>` : ""}
+        ${hasAbd ? `<span class="ph-visit-abd-map ro">${phAbdChartSvg(f.abd, null, { ro: true, legacy: f.zones })}</span>` : ""}
         ${hasPulse ? phVisitPulseMiniHtml(f.pulse) : ""}
       </span>
       <span class="ph-tp-fnd-lines">${lines.map(([label, text]) => `<span class="ph-tp-rec-line"><b>${esc(label)}:</b> ${esc(text)}</span>`).join("")}</span>
@@ -51609,11 +51677,7 @@ or changing anything in Cliniko.
   // down the column. ====
   let phTpVrFilter = "all";
   const PH_TP_VR_FILTERS = [["all", "All"], ["tongue", "Tongue"], ["pulse", "Pulse"], ["abd", "Abdomen"], ["herbs", "Herbs"]];
-  function phTpVrAbdText(f) {
-    const zones = (f.zones || []).filter(z => z.startsWith("abd:")).map(z => (PH_LTR_ZONES.abd.zones[z.slice(4)] || {}).label || z.slice(4));
-    const quals = (f.quals || []).filter(q => q.startsWith("abd:")).map(q => q.slice(4));
-    return [zones.join(", "), quals.join(", ")].filter(Boolean).join(" · ");
-  }
+  function phTpVrAbdText(f) { return phAbd2Summary(f.abd, f.zones); }
   function phTpVrPhotos(name) {
     const pk = phPatientKey(name);
     const photos = phRenPhotosFor(pk);
@@ -51653,7 +51717,7 @@ or changing anything in Cliniko.
     let boxes;
     if (fl === "tongue") boxes = box("found", "Tongue", `${x.f && x.f.tng && !phTng2Empty(x.f.tng) ? `<span class="ph-visit-tng ro mini">${phTongueChartSvg(x.f.tng, null, { ro: true })}</span>` : ""}${esc(x.tongue)}`);
     else if (fl === "pulse") boxes = box("found", "Pulse", esc(x.pulse));
-    else if (fl === "abd") boxes = box("found", "Abdomen", esc(x.abd));
+    else if (fl === "abd") boxes = box("found", "Abdomen", `${x.f && (!phAbd2Empty(x.f.abd) || (x.f.zones || []).some(z => z.startsWith("abd:"))) ? `<span class="ph-visit-abd-map ro mini">${phAbdChartSvg(x.f.abd, null, { ro: true, legacy: x.f.zones })}</span>` : ""}${esc(x.abd)}`);
     else if (fl === "herbs") boxes = box("did", "Herbs", x.herbs ? `🌿 ${esc(x.herbs)}` : "") + box("next", "Response", nextText);
     else boxes = box("ask", "Ask", esc(x.ask.join(" · ")))
       + box("found", "Found", [x.tongue ? `<b>Tongue</b> ${esc(x.tongue)}` : "", x.pulse ? `<b>Pulse</b> ${esc(x.pulse)}` : "", x.abd ? `<b>Abdomen</b> ${esc(x.abd)}` : ""].filter(Boolean).join("<br>"))
@@ -52000,7 +52064,7 @@ or changing anything in Cliniko.
         <div class="ph-tp-spine-colhead">Assessment</div>
         ${period ? `<div class="ph-tp-spine-row">🩸 Period logged this day</div>` : ""}
         ${hasVisitF
-          ? phFindingsChartsWith(new Set(visitF.zones), new Set(visitF.quals), "data-visit-zone", () => `<div class="ph-visit-tng ro">${phTongueChartSvg(visitF.tng, null, { ro: true })}</div>${phLtrAbdSvg(false)}`)
+          ? phFindingsChartsWith(new Set(visitF.zones), new Set(visitF.quals), "data-visit-zone", () => `<div class="ph-visit-tng ro">${phTongueChartSvg(visitF.tng, null, { ro: true })}</div><div class="ph-visit-abd-map ro">${phAbdChartSvg(visitF.abd, null, { ro: true, legacy: visitF.zones })}</div>`)
           : (plan ? phTpFindingsHtml(plan) : `<span class="ph-tp-rec-none">No plan findings yet.</span>`)}
         ${hasVisitF ? phVisitFndReportLines(visitF).map(([label, text]) => `<div class="ph-tp-spine-row"><b>${esc(label)}:</b> ${esc(text)}</div>`).join("") : ""}
         <div class="ph-tp-spine-note">${hasVisitF ? "Findings recorded at this visit." : "Baseline findings, shared with the plan."}</div>
@@ -53376,10 +53440,10 @@ or changing anything in Cliniko.
     if (!f) return true;
     const r = phVisitFndRead(f);
     return !r.zones.length && !r.quals.length && !r.body.length && !r.coat.length && !r.pulseRef.length
-      && !Object.keys(r.pulse).length && !r.tng.regions.length && !r.tng.overlays.length && phTng2Empty(r.tng) && phVisitHammerEmpty(r.hammer);
+      && !Object.keys(r.pulse).length && !r.tng.regions.length && !r.tng.overlays.length && phTng2Empty(r.tng) && phAbd2Empty(r.abd) && phVisitHammerEmpty(r.hammer);
   }
   function phVisitFndResetDraft() {
-    presVisitTngRegion = null;
+    presVisitTngRegion = null; presVisitAbdRegion = null; presVisitAbdPick = null;
     presVisitFndDraft = phVisitFndBlank();
     presVisitPulseStamp = "thin"; presVisitHmOpen = null; presVisitPulseMore = false;
     return presVisitFndDraft;
@@ -53816,6 +53880,107 @@ or changing anything in Cliniko.
     if (t.under) bits.push(t.under === "normal" ? "sublingual veins normal" : `sublingual veins ${t.under}`);
     return bits.join(" · ");
   }
+  // ==== the detailed abdomen chart (her ask 2026-09-19, same shape as the
+  // tongue chart she picked): tap a region on the nine-region map to aim the
+  // rows at it, or use the small where-picker on a sign that is on; the map
+  // paints itself -- tension per region, cold / warm washes, water and gas
+  // sounds, pulsation, tenderness, bulging. One read-back sentence. Lives in
+  // abd on the visit's findings; the older marked areas (zones) still draw. ====
+  const PH_ABD_ZONE_ORDER = ["hypoL", "epi", "hypoR", "flankL", "umb", "flankR", "iliacL", "lower", "iliacR"];
+  const PH_ABD_ZONE_SHORT = { hypoL: "L hypo", epi: "epi", hypoR: "R hypo", flankL: "L flank", umb: "umb", flankR: "R flank", iliacL: "L iliac", lower: "lower", iliacR: "R iliac" };
+  const PH_ABD_TENSION = [["soft", "soft · weak", "#DCE6F2"], ["medium", "medium", "#F3E7D3"], ["hard", "hard", "#E8C4BC"]];
+  const PH_ABD_TEMP = [["cold", "cold"], ["warm", "warm"]];
+  const PH_ABD_SOUNDS = [["water", "water sounds"], ["gas", "gas sounds"]];
+  const PH_ABD_FEEL = [["tender", "tender"], ["xiaxin", "Xia Xin tender"], ["pulsation", "pulsation"], ["bulging", "bulging"], ["sunken", "sunken"]];
+  const PH_ABD_MARKS = [...PH_ABD_TEMP, ...PH_ABD_SOUNDS, ...PH_ABD_FEEL];
+  const phAbdZoneLabel = k => (PH_LTR_ZONES.abd.zones[k] || {}).label || k;
+  const phAbd2Blank = () => ({ tension: "", tensionAt: {}, marks: {} });
+  function phAbd2Read(abd) {
+    const a = Object.assign(phAbd2Blank(), abd && typeof abd === "object" ? abd : {});
+    if (!a.tensionAt || typeof a.tensionAt !== "object") a.tensionAt = {};
+    if (!a.marks || typeof a.marks !== "object") a.marks = {};
+    return a;
+  }
+  const phAbd2Empty = abd => { const a = phAbd2Read(abd); return !a.tension && !Object.keys(a.tensionAt).length && !Object.keys(a.marks).length; };
+  // "soft · weak, hard in the lower abdomen · cold around the umbilicus ·
+  // water sounds in the epigastrium · tender left iliac fossa · Xia Xin tender"
+  function phAbd2Summary(abd, legacyZones) {
+    const a = phAbd2Read(abd);
+    const where = list => list && list.length ? " " + list.map(phAbdZoneLabel).join(", ") : "";
+    const bits = [];
+    const tens = [a.tension ? (PH_ABD_TENSION.find(t => t[0] === a.tension) || [])[1] : ""];
+    Object.keys(a.tensionAt).forEach(k => { if (a.tensionAt[k] && a.tensionAt[k] !== a.tension) tens.push(`${a.tensionAt[k]} ${phAbdZoneLabel(k)}`); });
+    if (tens.filter(Boolean).length) bits.push(tens.filter(Boolean).join(", "));
+    PH_ABD_MARKS.forEach(([k, l]) => { if (a.marks[k]) bits.push(k === "xiaxin" ? l : `${l}${where(a.marks[k])}`); });
+    const legacy = (legacyZones || []).filter(z => z.startsWith("abd:")).map(z => phAbdZoneLabel(z.slice(4)));
+    if (legacy.length) bits.push(`marked ${legacy.join(", ")}`);
+    return bits.join(" · ");
+  }
+  function phAbdChartSvg(abd, active, opts) {
+    const a = phAbd2Read(abd);
+    const Z = PH_LTR_ZONES.abd.zones;
+    const legacy = new Set(((opts && opts.legacy) || []).filter(z => z.startsWith("abd:")).map(z => z.slice(4)));
+    const ro = opts && opts.ro;
+    const tensHex = t => (PH_ABD_TENSION.find(x => x[0] === t) || [])[2] || "";
+    const zones = PH_ABD_ZONE_ORDER.map(k => {
+      const z = Z[k];
+      const fill = tensHex(a.tensionAt[k] || a.tension) || "#FBF7F4";
+      const cold = (a.marks.cold || []).includes(k), warm = (a.marks.warm || []).includes(k);
+      return `<ellipse cx="${z.cx}" cy="${z.cy}" rx="${z.rx}" ry="${z.ry}" fill="${fill}" class="ph-abd2-zone${active === k ? " on" : ""}${legacy.has(k) ? " legacy" : ""}"${ro ? "" : ` data-visit-zone="abd:${k}" style="cursor:pointer"`}><title>${esc(z.label)}</title></ellipse>`
+        + (cold ? `<ellipse cx="${z.cx}" cy="${z.cy}" rx="${z.rx}" ry="${z.ry}" fill="rgba(90,140,220,.32)" pointer-events="none"/>` : "")
+        + (warm ? `<ellipse cx="${z.cx}" cy="${z.cy}" rx="${z.rx}" ry="${z.ry}" fill="rgba(240,140,70,.32)" pointer-events="none"/>` : "");
+    }).join("");
+    const glyph = (k, fn) => (a.marks[k] || []).map(zk => { const z = Z[zk]; return z ? fn(z.cx, z.cy, z) : ""; }).join("");
+    const water = glyph("water", (x, y) => `<path d="M${x - 7},${y + 2} q2,-3 4,0 t4,0 t4,0" class="ph-abd2-g" pointer-events="none"/>`);
+    const gas = glyph("gas", (x, y) => `<circle cx="${x - 4}" cy="${y - 4}" r="1.6" class="ph-abd2-g" pointer-events="none"/><circle cx="${x + 3}" cy="${y - 6}" r="1.2" class="ph-abd2-g" pointer-events="none"/><circle cx="${x + 5}" cy="${y + 4}" r="1.8" class="ph-abd2-g" pointer-events="none"/>`);
+    const puls = glyph("pulsation", (x, y) => `<circle cx="${x}" cy="${y}" r="2.2" fill="#7A2F45" pointer-events="none"/><circle cx="${x}" cy="${y}" r="5" fill="none" stroke="#7A2F45" stroke-width=".8" opacity=".6" pointer-events="none"/>`);
+    const tender = glyph("tender", (x, y) => `<path d="M${x - 3},${y - 3} l6,6 M${x + 3},${y - 3} l-6,6" class="ph-abd2-x" pointer-events="none"/>`);
+    const xiaxin = a.marks.xiaxin ? `<path d="M52,37 l6,6 M58,37 l-6,6" class="ph-abd2-x" pointer-events="none"/>` : "";
+    const bulge = glyph("bulging", (x, y, z) => `<path d="M${x - z.rx},${y} q${z.rx},${-z.ry * 1.3} ${z.rx * 2},0" class="ph-abd2-g" stroke-width="1.4" pointer-events="none"/>`);
+    const sunk = glyph("sunken", (x, y, z) => `<path d="M${x - z.rx},${y} q${z.rx},${z.ry * 1.3} ${z.rx * 2},0" class="ph-abd2-g" stroke-width="1.4" pointer-events="none"/>`);
+    return `<svg viewBox="${PH_LTR_ZONES.abd.vb}" class="ph-ltr-fndsvg ph-abd2-svg${ro ? " ro" : ""}" aria-label="Abdomen chart">
+      <path d="M32 8 L78 8 C86 36 88 72 78 124 L32 124 C22 72 24 36 32 8 Z" fill="#FDF9F7" stroke="var(--ph-green-deep)" stroke-width="2" stroke-linejoin="round"/>
+      ${zones}
+      <circle cx="55" cy="70" r="2.6" fill="none" stroke="var(--ph-green-deep)" stroke-width="1.2" pointer-events="none"/>
+      ${water}${gas}${puls}${tender}${xiaxin}${bulge}${sunk}
+    </svg>`;
+  }
+  let presVisitAbdRegion = null, presVisitAbdPick = null;
+  function phVisitAbdHtml(name, draft) {
+    const a = phAbd2Read(draft.abd);
+    const reg = presVisitAbdRegion;
+    const chip = (attr, val, label, on, extra) => `<button type="button" class="ph-ltr-qual${on ? " on" : ""}" data-visit-abd2="${esc(attr)}:${esc(val)}">${extra || ""}${esc(label)}</button>`;
+    const pick = (key, list) => `<span class="ph-abd2-pick">${PH_ABD_ZONE_ORDER.map(k => `<button type="button" class="${(list || []).includes(k) ? "on" : ""}" data-visit-abd2="where:${key}:${k}" title="${esc(phAbdZoneLabel(k))}">${esc(PH_ABD_ZONE_SHORT[k])}</button>`).join("")}</span>`;
+    const tensionRow = reg
+      ? PH_ABD_TENSION.map(([k, l, hex]) => chip("tensionAt", k, l, a.tensionAt[reg] === k, `<i style="background:${hex}"></i>`)).join("")
+      : PH_ABD_TENSION.map(([k, l, hex]) => chip("tension", k, l, a.tension === k, `<i style="background:${hex}"></i>`)).join("");
+    const atRegion = Object.keys(a.tensionAt).filter(k => a.tensionAt[k] && k !== reg).map(k => `<span class="ph-tng2-at">${esc(a.tensionAt[k])} ${esc(phAbdZoneLabel(k))} <button type="button" data-visit-abd2="tensionAtClear:${k}" aria-label="Remove">✕</button></span>`).join("");
+    const markRow = list => list.map(([k, l]) => {
+      const on = !!a.marks[k];
+      if (!on || k === "xiaxin") return chip("marks", k, l, on);
+      const zonesHtml = (a.marks[k] || []).map(z => `<span class="ph-tng2-at">${esc(PH_ABD_ZONE_SHORT[z] || z)} <button type="button" data-visit-abd2="where:${k}:${z}" aria-label="Remove">✕</button></span>`).join("");
+      const open = !reg && presVisitAbdPick === k;
+      const whereBtn = reg ? "" : `<button type="button" class="ph-abd2-wherebtn${open ? " on" : ""}" data-visit-abd2="pick:${k}">${open ? "done" : "where"}</button>`;
+      return chip("marks", k, l, on) + zonesHtml + whereBtn + (open ? pick(k, a.marks[k]) : "");
+    }).join("");
+    const summary = phAbd2Summary(a, draft.zones);
+    return `<div class="ph-tng2 abd">
+      <div class="ph-tng2-left">
+        <div class="ph-visit-abd-map">${phAbdChartSvg(a, reg, { legacy: draft.zones })}</div>
+        <div class="ph-tng2-reg">${reg ? `<b>${esc(phAbdZoneLabel(reg))}</b> <button type="button" class="tab-link" data-visit-abd2="region:">whole abdomen</button>` : `<span class="faint">tap a region, or describe the whole abdomen</span>`}</div>
+        ${phVisitPhotoTileHtml(name, "abdomen", "Abdomen photo", "🤲", false)}
+      </div>
+      <div class="ph-tng2-rows">
+        <div class="ph-tng2-row"><i>${reg ? "Tension here" : "Tension"}</i><div class="ph-ltr-quals ph-visit-quals">${tensionRow}${atRegion}</div></div>
+        <div class="ph-tng2-row"><i>Temp</i><div class="ph-ltr-quals ph-visit-quals">${markRow(PH_ABD_TEMP)}</div></div>
+        <div class="ph-tng2-row"><i>Sounds</i><div class="ph-ltr-quals ph-visit-quals">${markRow(PH_ABD_SOUNDS)}</div></div>
+        <div class="ph-tng2-row"><i>Feel</i><div class="ph-ltr-quals ph-visit-quals">${markRow(PH_ABD_FEEL)}</div></div>
+        ${reg ? `<div class="ph-tng2-hint">Signs you tap now land on the ${esc(phAbdZoneLabel(reg))}.</div>` : ""}
+        <div class="ph-tng2-sum">${summary ? `<b>Reads as</b> ${esc(summary)}` : `<span class="faint">Nothing marked yet.</span>`}</div>
+        <div class="ph-tng2-acts">${!phAbd2Empty(a) ? `<button type="button" class="tab-link cancel" data-visit-abd2="clear:">Clear</button>` : ""}</div>
+      </div>
+    </div>`;
+  }
   let presVisitTngRegion = null;   // the region tapped on the drawing -- the rows aim at it
   function phVisitTongueHtml(name, draft) {
     const t = phTng2Read(draft.tng);
@@ -53866,9 +54031,8 @@ or changing anything in Cliniko.
           <div class="ph-ltr-fnd ph-visit-tongue wide">
             ${phVisitTongueHtml(name, draft)}
           </div>
-          <div class="ph-ltr-fnd ph-visit-abd">
-            ${phLtrAbdSvg(true)}
-            ${phVisitPhotoTileHtml(name, "abdomen", "Abdomen photo", "🤲", false)}
+          <div class="ph-ltr-fnd ph-visit-abd wide">
+            ${phVisitAbdHtml(name, draft)}
           </div>
         `)}
       </div>
@@ -53883,6 +54047,8 @@ or changing anything in Cliniko.
     const tongue = [phTng2Summary(r.tng), r.tng.v2 ? "" : r.tng.regions.map(phTongueRegionLabel).join(", "),
       r.body.length ? `body ${r.body.join(", ")}` : "", r.coat.length ? `coat ${r.coat.join(", ")}` : ""].filter(Boolean).join(" · ");
     if (tongue) out.push(["Tongue", tongue]);
+    const abdomen = phAbd2Summary(r.abd, r.zones);
+    if (abdomen) out.push(["Abdomen", abdomen]);
     if (Object.keys(r.pulse).length) {
       out.push(["Pulse", phVisitPulseSummaryText(r.pulse)]);
       const s = phVisitPulseScores(r.pulse);
