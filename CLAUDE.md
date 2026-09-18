@@ -5449,3 +5449,69 @@ computed-style check stood in for a screenshot, same as always.
 `sw.js` `lcm-20260918-synth22-item2-7-9`, meta `20260918-234500`. Committed
 to `session-a`, not yet pushed to `main` — awaiting her approval per the
 standing pattern for a build she hasn't seen live yet.
+
+**Adversarial review (one background agent on the diff) found 6 problems;
+every one re-checked by hand against the current source (never relayed),
+all 6 real, all fixed and re-verified against the real functions in the
+sandbox. Follow-up build `lcm-build` `20260919-001500`, `sw.js`
+`lcm-20260919-synth22-item2-7-9-review-fixes`:**
+1. **[HIGH] Any tap in the acu-log panel could read/write the WRONG
+   patient's plan.** `presAcuCtx()` with no args (how the three new
+   "→ plan" taps call it — and, it turned out, how every pre-existing
+   handler in the panel calls it: points/press chips, herb-instruct,
+   mucus, watch, "Log today's session" itself) found its box with a bare
+   `document.querySelector(".ph-acu-open")`. `#phPresWrap` and `#phTpModal`
+   are only ever `hidden`-toggled, never cleared (leaving the profile tab
+   hides `#phPresWrap` without `renderPresPanel`; `phTpOpen`/`phTpClose`
+   never touch `#phPresWrap`), and `#phPresWrap` is declared before
+   `#phTpModal` in the skeleton — so a stale box from Patient A, hidden in
+   `#phPresWrap`, always won over Patient B's live box in the modal. Fix:
+   `presAcuLiveWrap()` — skips any box under a `[hidden]` ancestor, and
+   when the modal is open on top of the profile page (both un-hidden),
+   the modal's box wins, since its backdrop is the only thing she could
+   have clicked through. Used by both `presAcuCtx` and `presAcuOpenRefresh`,
+   so it covers every handler at once, not just the three new ones. Proven
+   in the sandbox: with A's hidden box inserted first and B's live box
+   second, the old query returned A, `presAcuLiveWrap()` returns B; with
+   both visible and the modal open, the modal's box wins.
+2. **[MED-HIGH] "→ plan" false positives from comma spacing.** `pointsToPlan`
+   / `pressToPlan` compared the phase's raw typed text to a `", "`-rejoin
+   of the chips — a plan written `"LI4,LI11"` (no space) read as
+   "different" against an untouched, identical selection. Both now compare
+   against `phAcuSplitList(text).join(", ")`, the same split/trim/rejoin
+   that built the chips. Verified: the no-space case no longer flags; an
+   actually-unchecked point still does.
+3. **[MED] The phone List row silently dropped her typed note.** The
+   compact (≤900px) branch showed `facts.mini` whenever it had ANY content
+   — nearly every booking — and only fell back to `brief.focus` when it
+   was empty, so a deliberately typed focus/goal vanished on almost every
+   row, directly against the comment above it ("anything she DID type on
+   the booking still leads"). Desktop never had the bug (it shows both
+   lines). Now `typed || facts.mini || brief.focus`.
+4. **[MED] Break blocks inflated the day stats — pre-existing, shared.**
+   `phApptCalSummary`'s `chmN` filter was `phApptKind(a.service) !== "acu"`
+   (everything that isn't acu, including a Break, whose kind is `""`), and
+   `booked` never excluded breaks at all. Since Stage A (2026-09-15) — it
+   feeds the Dashboard/profile day-summary card too — but the new List
+   day-stats strip put the numbers somewhere she'd read them. Now breaks
+   are filtered out and `chmN` is `k === "chm" || k === "both"`, the same
+   positive test `acuN` and `phApptKindHtml` already use (a kind-less
+   booking got no CHM pill anywhere else either, so the old count was the
+   odd one out). Verified against injected CHM + ACU + Break rows:
+   booked 2, CHM 1, ACU 1; rows spliced back out, list length restored.
+5. **[LOW-MED] The phone Refill row lost its tap target — measured, not
+   argued.** "On phones the ROW is the make action (bench mode, her
+   pick)" — the `data-ph-dash-makerows` handler excludes real controls, and
+   the new row's `flex:1` name button covered 308 of 360px in a 36px row,
+   leaving two 8px padding bands and a 52px sliver. The old ranked row had
+   rank/jar/grams/bars columns as open space. Fix, ≤900px only (the
+   handler's own gate): `.ph-dp-name { flex: 0 1 auto }` +
+   `.ph-dp-state { margin-left: auto }` — name at its own width (210px),
+   state/action still right-aligned, a 109px full-height open middle as
+   the tap zone. Desktop keeps `flex:1`.
+6. **[Minor] Dead `cell` helper** in `phApptCalListRowHtml` (the old
+   Focus/Goal "add focus / add goal" column builder, orphaned by the
+   door-facts rewrite) — deleted, with its now-misleading comment.
+Console clean after every fix (only the two known icon 404s); the
+protected Prescriptions live-search check passes (2 → 1 → 2 on injected
+scripts, no residue). Committed to `session-a`, still not pushed to `main`.
