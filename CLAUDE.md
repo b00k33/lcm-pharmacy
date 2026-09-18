@@ -4700,3 +4700,88 @@ residue checked).
 
 Version bump: `lcm-build` `20260918-120000`, `sw.js` cache
 `lcm-20260918-todaysvisit-pending-indicator`.
+
+## Cycle-tab scroll jump fix + "know her cycle day instead" calculator (2026-09-18)
+
+Two asks on the Assessment > Cycle tab (Patient profile → Assessment →
+Cycle), screenshot-driven: **"when i log a period the screen jumps up to the
+top. fix that. also, allow me to select a date and a cd shows? e.g.
+sometimes patients say today is my cycle day 13 and i need to count back."**
+
+**Root cause of the jump, traced not guessed.** Every cycle edit on this tab
+(log/remove a period, flow/pain/cycle-length/contraception fields, symptom
+chips, the period-history disclosure) funnelled through `phCycleRerender()`,
+which fell to a full `renderPresPanel()` with no plan modal open — the same
+root cause this file already documents for the Constitution tab. WORSE:
+`phCycleAfterLog()` also unconditionally called `phFlashShow(...)` for any
+non-check-in caller, and `phFlashShow()` calls `renderPharmacy()` — a
+WHOLE-PAGE rebuild — whenever `#phTabs` exists (always). A pre-existing
+comment already said as much ("no phFlashShow [for check-in], since that
+re-renders the whole page") but the Cycle tab wasn't given the same
+carve-out.
+
+**Fix, three parts, all reusable beyond just period-logging:**
+1. `presCycleSectionBodyHtml(t)` wraps its output in `<div
+   id="presCycleHost">`. New `presCycleTabRefresh()` finds that host,
+   resolves the open script, and swaps just that subtree — same "repaint
+   what actually changed" rule as the Constitution tab's `#presConstitHost`.
+2. `phCycleRerender()` tries `presCycleTabRefresh()` before falling back to
+   `renderPresPanel()` — this fixes EVERY cycle-field handler on this tab at
+   once, not just period logging, since they all share this one fallback.
+3. `phCycleAfterLog()` gets the same phFlashShow carve-out check-in already
+   has, keyed on `el.closest("#presCycleHost")` — the scoped repaint's own
+   "Last period … day N …" status line is the confirmation, same reasoning.
+
+**"Know her cycle day instead" calculator** — a date input (default today) +
+a cycle-day number, "→ Find day 1" counts back (`date − (cd−1)` days) and
+opens the EXACT SAME log-period popover the day-tap flow uses
+(`phCycleOpenDayPop`, extracted from the day-tap handler so both share one
+commit path — no second way to write a period). Lives inside
+`phCycleStripHtml` itself, so it appears everywhere the strip does (her "one
+control everywhere" rule) — Assessment tab, check-in card, Today's Timeline,
+the full-screen Treatment Plan modal.
+
+**Adversarial review (Workflow, 2 dimensions × 2 refuters) caught 4 real
+bugs, all fixed and re-verified in the sandbox:**
+1. **`presCycleTabRefresh()` never refreshed the band subtitle** (`#presBandSub`,
+   "Natural fertility · Luteal") — a cycle edit that advances a cycle-synced
+   plan's real phase (`phCycleSyncPlans`, called by every handler on this tab)
+   left the header stale until some unrelated full re-render happened. Fixed:
+   `presCycleTabRefresh()` now also calls `presBandSubRefresh()`, the same
+   call `phTpRepaintPhasePanel()`/`phTpRerender()` already make for the
+   identical reason on the Grid.
+2. **Recalculating to the same date silently CLOSED the popover.**
+   `phCycleOpenDayPop`'s tap-a-day toggle ("open, or close if already open on
+   this exact date") doesn't fit the calculator's "Go" button — clicking it
+   twice with the same inputs nulled `phCyclePop`, discarding any unsaved
+   flow/pain/estimate pick with zero feedback. Fixed: `opts.forceOpen` skips
+   the toggle-close branch; the calculator always passes it.
+3. **`parseInt(draft.cd, 10)` silently mis-parsed stray input** — `"1e2"` →
+   `1` (not 100, not rejected), `"13.5"` → `13` with the typo unnoticed, both
+   legal to type into a bare `<input type="number">`. Fixed: a strict
+   `/^\d+$/` shape check before parsing.
+4. **A back-calculated date defaulted to NOT "Estimate"**, even though
+   counting back from a patient's self-reported cycle day is inherently a
+   recall, not an observed bleed. Fixed: `opts.forceApprox` pre-ticks
+   "Estimate only" for the calculator's own new entries (editing an existing
+   entry still keeps whatever it was already marked, unchanged).
+
+Verified via real dispatched DOM events + render-call instrumentation (not
+reimplemented): `renderPharmacy()`/`renderPresPanel()` called ZERO times for
+a period log, a plain cycle-length edit, and a forced stale-phase correction
+(via the calculator), all landing correctly via the scoped
+`presCycleTabRefresh()` path; the band subtitle correctly flips
+"Ovulation" → "Menstruation" on a forced stale-phase scenario with the same
+zero-full-render result; the calculator's math (date=18 Sep + CD13 → LMP 6
+Sep) actually writes through to `rec.cycle.lmp`, not just displays it;
+invalid CD (`0`, `"1e2"`) safely no-ops; Cancel closes the calculator; a
+plain tap-the-day click still opens the popover after the
+`phCycleOpenDayPop` extraction; recomputing to the same date twice keeps the
+popover open with `approx` correctly pre-ticked. Clean console throughout.
+Actual browser scroll pixels were NOT directly observable in this sandbox
+(headless viewport reports 0 height) — verified the underlying mechanism
+(which render function runs) instead, which is what actually determines
+whether the jump occurs.
+
+Version bump: `lcm-build` `20260918-140000`, `sw.js` cache
+`lcm-20260918-cycletab-scrolljump-cdcalc`.

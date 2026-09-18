@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260918-120000">
+<meta name="lcm-build" content="20260918-150000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -7259,6 +7259,11 @@
   #pharmacyPage .ph-cyc-strip-head .nav { margin-left: auto; display: inline-flex; gap: 2px; }
   #pharmacyPage .ph-cyc-strip-head .nav button { font: inherit; font-size: 12px; line-height: 1; width: 24px; height: 22px; border: 1px solid var(--ph-line); border-radius: 999px; background: var(--ph-white); color: var(--ph-soft); cursor: pointer; padding: 0; }
   #pharmacyPage .ph-cyc-strip-head .nav button:disabled { opacity: .35; cursor: default; }
+  /* "know her cycle day instead" calculator (her ask 2026-09-18) */
+  #pharmacyPage .ph-cyc-cdcalc-toggle { display: block; font-size: 11px; margin-bottom: 6px; }
+  #pharmacyPage .ph-cyc-cdcalc { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 11.5px; color: var(--ph-faint); background: var(--ph-cream); border-radius: 8px; padding: 6px 8px; margin-bottom: 6px; }
+  #pharmacyPage .ph-cyc-cdcalc .lbl { white-space: nowrap; }
+  #pharmacyPage .ph-cyc-cdcalc .cancel { margin-left: auto; }
   /* her ask 2026-09-15, "make calendar bigger" */
   #pharmacyPage .ph-cyc-grid { display: grid; grid-template-columns: 26px repeat(7, minmax(0, 1fr)); gap: 4px; }
   #pharmacyPage .ph-cyc-grid .h { font-size: 11px; font-weight: 700; color: var(--ph-faint); text-align: center; line-height: 16px; }
@@ -22447,7 +22452,18 @@
     const todayMon = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() - ((TODAY.getDay() + 6) % 7));
     const offset = Math.round((anchorMon - todayMon) / (7 * 86400000));
     const week = phDashWeekDays(offset);
-    if (n === 7) return week;
+    if (n === 7) {
+      // Week used to always show the full Mon-Sun regardless of "My days at
+      // this clinic" (Settings), unlike the 5/6-day views just below -- a
+      // real gap for a clinic worked ONE day a week (her Acupreg login,
+      // ticked Friday-only): 5/6-day already collapsed to just Friday, Week
+      // still showed all seven. Only filters when she has actually
+      // configured work days; an unconfigured clinic (the plain-calendar
+      // Mon-Sat fallback phApptCalWorkDaySet uses for 5/6-day) keeps
+      // showing the real full week here, unchanged.
+      const cfg = phClinicWorkDays();
+      return cfg ? week.filter(d => cfg.includes(parseKey(d.key).getDay())) : week;
+    }
     const workSet = phApptCalWorkDaySet(n);
     return week.filter(d => workSet.includes(parseKey(d.key).getDay()));
   }
@@ -26985,22 +27001,59 @@
       const cycDay = e.target.closest("button[data-cycle-day]");
       if (cycDay && !cycDay.disabled) {
         const nm = cycDay.dataset.cycleStripName, dateKey = cycDay.dataset.cycleDay;
-        if (phCyclePop && phCyclePop.name === nm && phCyclePop.dateKey === dateKey) { phCyclePop = null; phCycleStripRefresh(nm); return; }
-        const rec = phPatientRec(nm);
-        const existing = phBbtCycleStarts(rec).includes(dateKey);
-        const logged = existing ? ((rec.cycleLog || []).find(x => x.lmp === dateKey) || {}) : {};
-        const cur = phCycleFor(rec) || {};
-        const isCur = existing && cur.lmp === dateKey;
-        // her ask 2026-09-14 ("how do i log this as an approximate period
-        // because with the iud, she does not get her period"): editing an
-        // existing entry keeps whatever it was already marked; a brand NEW
-        // log on a suppressing contraception defaults to "estimate" straight
-        // away, since that IS her scenario most of the time -- she can
-        // still untick it for a genuine confirmed bleed.
-        phCyclePop = { name: nm, dateKey, existing,
-          flow: (isCur ? cur.flowIntensity : logged.flowIntensity) || cur.flowIntensity || "moderate",
-          pain: (isCur ? cur.pain : logged.pain) || cur.pain || "none",
-          approx: existing ? !!(isCur ? cur.approx : logged.approx) : phCycleSuppressed(rec) };
+        phCycleOpenDayPop(nm, dateKey);
+        phCycleStripRefresh(nm);
+        return;
+      }
+      // "know her cycle day instead" (her ask 2026-09-18: "sometimes patients
+      // say today is my cycle day 13 and i need to count back") -- a small
+      // calculator beside the strip that counts back from a stated date + CD
+      // to the actual period-start date, then opens the SAME log-period
+      // popover the day-tap flow uses (phCycleOpenDayPop), so she can check
+      // the computed date before confirming -- no separate commit path.
+      const cdcalcToggle = e.target.closest("[data-cycle-cdcalc-toggle]");
+      if (cdcalcToggle) {
+        const nm = cdcalcToggle.dataset.cycleCdcalcToggle;
+        phCycleCdCalcOpen[nm] = !phCycleCdCalcOpen[nm];
+        if (phCycleCdCalcOpen[nm] && !phCycleCdCalc[nm]) phCycleCdCalc[nm] = { date: keyOf(TODAY), cd: "" };
+        phCycleStripRefresh(nm);
+        return;
+      }
+      const cdcalcClose = e.target.closest("[data-cycle-cdcalc-close]");
+      if (cdcalcClose) {
+        const nm = cdcalcClose.dataset.cycleCdcalcClose;
+        phCycleCdCalcOpen[nm] = false;
+        phCycleStripRefresh(nm);
+        return;
+      }
+      const cdcalcGo = e.target.closest("[data-cycle-cdcalc-go]");
+      if (cdcalcGo) {
+        const nm = cdcalcGo.dataset.cycleCdcalcGo;
+        const draft = phCycleCdCalc[nm] || {};
+        // review-caught (2026-09-18): a plain parseInt() let stray input
+        // through silently wrong instead of safely rejected -- "1e2" parses
+        // to 1 (not 100, and not rejected), "13.5" truncates to 13 with the
+        // typo unnoticed. A number field legally accepts both as typed
+        // content; a strict whole-number shape check closes it.
+        const cdStr = String(draft.cd || "").trim();
+        const cd = /^\d+$/.test(cdStr) ? parseInt(cdStr, 10) : NaN;
+        const dateOk = /^\d{4}-\d{2}-\d{2}$/.test(draft.date || "") && draft.date <= keyOf(TODAY);
+        if (!dateOk || !(cd >= 1 && cd <= 60)) return;
+        const dt = parseKey(draft.date);
+        dt.setDate(dt.getDate() - (cd - 1));
+        const dateKey = keyOf(dt);
+        if (dateKey > keyOf(TODAY)) return; // shouldn't happen given date<=today and cd>=1 -- guard anyway
+        // forceOpen: recomputing to the same date must always show/refresh
+        // the popover, never toggle it closed (review-caught -- see
+        // phCycleOpenDayPop's own comment). forceApprox: a date she counted
+        // BACK to from a stated cycle day is a recall, not an observed
+        // bleed -- defaults "Estimate only" on, same as she can for any
+        // other uncertain date; she can still untick it.
+        phCycleOpenDayPop(nm, dateKey, { forceOpen: true, forceApprox: true });
+        phCycleCdCalcOpen[nm] = false;
+        // bring the computed week into view so the highlighted cell shows too
+        const monday = d0 => { const x = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate()); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; };
+        phCycleStripOff[nm] = Math.max(0, Math.round((monday(TODAY) - monday(dt)) / (7 * 86400000)));
         phCycleStripRefresh(nm);
         return;
       }
@@ -42352,6 +42405,21 @@ or changing anything in Cliniko.
       phCyclePop.newDate = ok && v !== phCyclePop.dateKey ? v : undefined;
       return;
     }
+    // "know her cycle day instead" calculator's own two fields -- same
+    // no-repaint-mid-typing rule as the popover's Date row above.
+    if (t.matches("[data-cycle-cdcalc-date]")) {
+      const nm = t.dataset.cycleCdcalcDate;
+      const d = phCycleCdCalc[nm] || (phCycleCdCalc[nm] = { date: keyOf(TODAY), cd: "" });
+      const v = t.value;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(v) && v <= keyOf(TODAY)) d.date = v;
+      return;
+    }
+    if (t.matches("[data-cycle-cdcalc-cd]")) {
+      const nm = t.dataset.cycleCdcalcCd;
+      const d = phCycleCdCalc[nm] || (phCycleCdCalc[nm] = { date: keyOf(TODAY), cd: "" });
+      d.cd = t.value;
+      return;
+    }
     if (t.matches("[data-cycle-field]")) {
       const rec = phCycleTargetRec();
       if (!rec) return;
@@ -46454,10 +46522,16 @@ or changing anything in Cliniko.
   // the panel under her -- and no phFlashShow there, since that re-renders
   // the whole page; the strip's own status line is the confirmation), every
   // other host goes through phCycleRerender as all cycle edits always have.
+  // The Assessment > Cycle tab gets the same phFlashShow carve-out as
+  // check-in, for the same reason (her report 2026-09-18, "the screen jumps
+  // up to the top" -- traced to phFlashShow's own renderPharmacy(), a
+  // WHOLE-PAGE rebuild, firing before presCycleTabRefresh's scoped repaint
+  // already puts the new "Last period ... day N" status line on screen).
   function phCycleAfterLog(el, rec, comp, name, dateKey) {
     if (!rec) return;
     const inCk = !!(el && el.closest(".ph-ck-kv"));
-    if (!inCk) phFlashShow(!dateKey ? "🩸 Period removed" : comp ? `🩸 Period logged · ${dateKey === keyOf(TODAY) ? "day 1 today" : `started ${phShortDate(dateKey)}, day ${comp.day} now`} · next period predicted ~${phFuDateLabel(comp.nextDate)}` : "🩸 Period logged");
+    const inCycleHost = !!(el && el.closest("#presCycleHost"));
+    if (!inCk && !inCycleHost) phFlashShow(!dateKey ? "🩸 Period removed" : comp ? `🩸 Period logged · ${dateKey === keyOf(TODAY) ? "day 1 today" : `started ${phShortDate(dateKey)}, day ${comp.day} now`} · next period predicted ~${phFuDateLabel(comp.nextDate)}` : "🩸 Period logged");
     if (el && el.closest("#presWeekWrap")) { renderPresWeek(); return; }
     if (inCk) { phCkCycleLineRefresh(el, name); return; }
     phCycleRerender();
@@ -46479,7 +46553,9 @@ or changing anything in Cliniko.
   }
   function phCycleRerender() {
     const modal = document.getElementById("phTpModal");
-    if (modal && !modal.hidden) renderTpScreen(); else renderPresPanel();
+    if (modal && !modal.hidden) { renderTpScreen(); return; }
+    if (presCycleTabRefresh()) return;
+    renderPresPanel();
   }
   // the one-line 🩸 Cycle row at the top of the prescription panel's stack
   // (above Notes) -- collapsed it's the chip + a slim bar, open it's the
@@ -46578,6 +46654,8 @@ or changing anything in Cliniko.
   let phCkStripOpen = null;      // check-in card (patient name) with the strip unfolded
   let phCycleMonthOpen = {};     // name -> true while showing the month calendar (phCycleMonthHtml) instead of the weekly strip
   let phCycleMonthView = {};     // name -> {y, m} the month calendar is currently showing
+  let phCycleCdCalcOpen = {};    // name -> bool, "know her cycle day instead" mini-calculator open
+  let phCycleCdCalc = {};        // name -> {date, cd} draft for that calculator
   // her synth22 Cycle tab redesign, 2026-09-15 ("i want to see cycle date,
   // cd, and link to cycle history" -> a long calibration round that grew
   // into: calendar strip + the cycle detail (quiz OR stats) side by side
@@ -46587,6 +46665,56 @@ or changing anything in Cliniko.
   // instead; nothing about the three functions' own contracts changed.
   function phCycleTessHtml(rec, name) {
     return `<div class="ph-cycle-tess"><div class="ph-cycle-tess-cal">${phCycleStripHtml(rec, name)}</div><div class="ph-cycle-tess-detail">${phCycleBarHtml(rec, name)}${phCycleDetailsHtml(rec)}</div></div>`;
+  }
+  // opens (or closes, if already open on the same day) the log-period
+  // popover for a given date -- shared by tapping a day in the strip AND the
+  // "know her cycle day instead" calculator below, so both arrive at the
+  // exact same review-before-you-commit popover with no second commit path.
+  // opts.forceOpen skips the toggle-close branch (the calculator's "Find day
+  // 1" means "show me this date", never "close whatever's open" -- review-
+  // caught 2026-09-18: recomputing to the SAME date as an already-open
+  // popover silently closed it, discarding any unsaved flow/pain/estimate
+  // pick, since the toggle only ever made sense for tapping a day cell
+  // twice). opts.forceApprox pre-ticks "Estimate only" on a brand-new entry
+  // -- also review-caught: a date she counted BACK to from a patient's own
+  // stated cycle day is inherently a recall, not an observed bleed, and
+  // should not default to reading as confirmed the way a directly-tapped
+  // day does.
+  function phCycleOpenDayPop(nm, dateKey, opts) {
+    opts = opts || {};
+    if (!opts.forceOpen && phCyclePop && phCyclePop.name === nm && phCyclePop.dateKey === dateKey) { phCyclePop = null; return; }
+    const rec = phPatientRec(nm);
+    const existing = phBbtCycleStarts(rec).includes(dateKey);
+    const logged = existing ? ((rec.cycleLog || []).find(x => x.lmp === dateKey) || {}) : {};
+    const cur = phCycleFor(rec) || {};
+    const isCur = existing && cur.lmp === dateKey;
+    // her ask 2026-09-14 ("how do i log this as an approximate period
+    // because with the iud, she does not get her period"): editing an
+    // existing entry keeps whatever it was already marked; a brand NEW
+    // log on a suppressing contraception (or handed in already-approximate
+    // via opts.forceApprox) defaults to "estimate" straight away, since
+    // that IS her scenario most of the time -- she can still untick it for
+    // a genuine confirmed bleed.
+    phCyclePop = { name: nm, dateKey, existing,
+      flow: (isCur ? cur.flowIntensity : logged.flowIntensity) || cur.flowIntensity || "moderate",
+      pain: (isCur ? cur.pain : logged.pain) || cur.pain || "none",
+      approx: existing ? !!(isCur ? cur.approx : logged.approx) : (opts.forceApprox || phCycleSuppressed(rec)) };
+  }
+  // "sometimes patients say today is my cycle day 13 and i need to count
+  // back" (her ask 2026-09-18) -- a date + a stated cycle day, counted back
+  // to the actual period-start date and handed to phCycleOpenDayPop so she
+  // reviews the computed date in the same popover before logging it.
+  function phCycleCdCalcHtml(name) {
+    if (!phCycleCdCalcOpen[name]) return `<button type="button" class="tab-link ph-cyc-cdcalc-toggle" data-cycle-cdcalc-toggle="${esc(name)}">Know her cycle day instead? →</button>`;
+    const d = phCycleCdCalc[name] || (phCycleCdCalc[name] = { date: keyOf(TODAY), cd: "" });
+    return `<div class="ph-cyc-cdcalc">
+      <span class="lbl">On</span>
+      <input type="date" class="ph-cyc-in d" data-cycle-cdcalc-date="${esc(name)}" value="${esc(d.date)}" max="${keyOf(TODAY)}" aria-label="Date she reported her cycle day">
+      <span class="lbl">she was cycle day</span>
+      <input type="number" class="ph-cyc-in n" data-cycle-cdcalc-cd="${esc(name)}" min="1" max="60" value="${esc(d.cd)}" placeholder="e.g. 13" aria-label="The cycle day she reported">
+      <button type="button" class="tab-link" data-cycle-cdcalc-go="${esc(name)}">→ Find day 1</button>
+      <button type="button" class="tab-link cancel" data-cycle-cdcalc-close="${esc(name)}">Cancel</button>
+    </div>`;
   }
   function phCycleStripHtml(rec, name) {
     if (!rec) return "";
@@ -46629,6 +46757,7 @@ or changing anything in Cliniko.
     return `<div class="ph-cyc-strip" data-cycle-strip="${esc(name)}">
       <div class="ph-cyc-strip-head"><span class="t">Log a period</span><span>tap the day it started</span>
         <span class="nav"><button type="button" data-cycle-strip-nav="1" data-cycle-strip-name="${esc(name)}" title="Earlier weeks" aria-label="Earlier weeks">‹</button><button type="button" data-cycle-strip-nav="-1" data-cycle-strip-name="${esc(name)}" title="Later weeks" aria-label="Later weeks"${off ? "" : " disabled"}>›</button></span></div>
+      ${phCycleCdCalcHtml(name)}
       <div class="ph-cyc-grid">${cells}</div>
       <div class="ph-cyc-legend"><span><i class="p"></i>period started</span><span><i class="f"></i>flow days</span><span><i class="t"></i>today</span>${predKey ? `<span><i class="n"></i>next, predicted</span>` : ""}</div>
       ${status}
@@ -46989,10 +47118,37 @@ or changing anything in Cliniko.
     // is untouched either way, so a deliberate choice she made is never
     // silently overruled.
     const quiet = phCaseQuiets(t, "cycleTile");
-    return `<div class="ph-cycle-wrap${quiet ? " quiet" : ""}">
+    return `<div id="presCycleHost"><div class="ph-cycle-wrap${quiet ? " quiet" : ""}">
       <div class="ph-assess-panelhead">${lead}</div>
       <div class="ph-cycle-rowopen">${phCycleTessHtml(rec, name)}</div>
-    </div>`;
+    </div></div>`;
+  }
+  // her report 2026-09-18 ("when i log a period the screen jumps up to the
+  // top"): every cycle edit on the Assessment > Cycle tab (log/remove a
+  // period, flow/pain/cycle-length/contraception fields, symptom chips, the
+  // period-history disclosure) funnelled through phCycleRerender(), which --
+  // with no plan modal open -- fell to a full renderPresPanel(), the same
+  // root cause CLAUDE.md already documents for the Constitution tab. This
+  // scopes the repaint to #presCycleHost (set by presCycleSectionBodyHtml)
+  // instead, same "repaint what actually changed" rule as
+  // phCkCycleLineRefresh/presCycleTabRefresh's Constitution-tab sibling.
+  function presCycleTabRefresh() {
+    const host = document.getElementById("presCycleHost");
+    if (!host) return false;
+    const t = PRESC.items.find(x => x.id === presOpenId);
+    if (!t) return false;
+    const html = presCycleSectionBodyHtml(t);
+    if (!html) return false;
+    host.outerHTML = html;
+    // review-caught (2026-09-18): a cycle edit can advance a cycle-synced
+    // plan's real current phase (phCycleSyncPlans, called by every one of
+    // this tab's own handlers before reaching here) -- the band subtitle
+    // right above this host names that same phase and sits OUTSIDE it, so a
+    // scoped repaint that skips this goes stale until some unrelated action
+    // forces a full renderPresPanel(). Same call phTpRepaintPhasePanel()/
+    // phTpRerender() already make for the identical reason on the Grid.
+    presBandSubRefresh();
+    return true;
   }
   function presCycleToggleHtml(t) {
     const name = presPatientFor(t);
