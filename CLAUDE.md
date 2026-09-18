@@ -5846,3 +5846,77 @@ widths; toggle position; live-search still filters. `lcm-build`
   Verified: plan-derived text marked PLAN, a pasted briefing's own words marked
   Zanda/Cliniko, phone stack main → calendar → toggle, no sideways scroll.
   `lcm-build` `20260919-153000`, `sw.js` `lcm-20260919-focus-goal-rows`.
+
+## Cycle plan Grid tab — work left, context right, calendar as the phase strip, today's checklist (her picks 2026-09-19, LIVE)
+
+Her ask, on a desktop screenshot of Grainne Meade's Grid: **"code3 + code7 +
+lcm6 = mock 3 improvements of ui, optimising workflow and visual simplicity
+to help me get my work done but include essential information. make me
+happy."** Then, while choosing: **"workflow is extremely important"**,
+**"keep all the patient data cohesive chronological order and organised"**,
+**"make it user friendly so less mental load on me"**, **"the app guides me
+to do my job fully so i dont need to rely on my memory. everything is mapped
+out. the patient data is intricate and detailed so i can customise care
+appropriately"**, **"i need this app to improve my productivity, organise all
+the details relevant for patient care and improve my accuracy in treating
+them"**, **"that will make me happy"** (all saved to memory:
+feedback_lcm_app_guides_fully_detailed_data).
+
+Diagnosis shown: "Two-week wait / Luteal" printed six times on one screen,
+"since 18 Sep" three times, five stacked header rows plus seven phase cards
+before the work table (~590px down). Three mocks: A say each fact once, B
+work left / context right, C the calendar painted by phase replacing the
+tab cards. **Her picks: all three combined; first action "Check where she
+is"; chronology "2 · Today first, history below"; phone "Context first";
+checklist "Yes".**
+
+Built, for plans whose template is in `PH_TP_CYCLE_TEMPLATES` only (every
+other plan keeps the tab strip and Dx · Goal head band unchanged):
+- **Door line leads with the cycle day** (`phDoorFacts`, `cyclePlan` branch):
+  "Day 27 Luteal · Two-week wait / Luteal (phase 5 of 6) · Visit 1 · 6:30 pm
+  today · last …, better · today: aim". `.ph-door .l1 .day` is the big number.
+- **Plan band goes quiet while the editor is open** (`presTreatmentRowHtml`,
+  `quiet`): name + status pill only; collapsed it still says everything.
+- **`presTpInlineEditorHtml` cycle branch → `.ph-tp-inline.ph-tp-cyc`**, a
+  grid: `.ph-tp-cyc-rail` (DOM first, so the phone reads context first) and
+  `.ph-tp-cyc-work`; ≥1001px the rail is the right column (320–380px,
+  sticky) and the work the left.
+  - Rail: `phCycleStripHtml(peek, name, { weeks: 4, compact: true, planId })`
+    — with `planId` every day carries `k-<kind>` from `phTpPhaseKind(phase)`
+    (p period · f follicular · o ovulation · l luteal · x prolonged · g
+    pregnancy · n other) via `phTpCycleEffectivePhase(rec, plan,
+    phCycleCompAsOf(rec, d))`; future days muted (`.fut[class*=" k-"]`).
+    `data-cycle-strip-plan` survives `phCycleStripRefresh`. Then
+    `phTpPhaseChipsHtml` (every phase in order, ✓ done, the open one ringed,
+    same `data-tp-tab` as the tabs, colour swatch per kind), then
+    `.ph-tp-cyc-railcard` = `phTpFocusGoalHtml` (or `phTpPlanHeadHtml`'s
+    fields in Edit plan mode), the IVF history fold, and `.ph-tp-cyc-railfoot`
+    = Timeline | Grid + ✎ Edit plan + ⋯ (`phTpPlanActionsHtml`, shared with
+    `phTpTabsHtml`).
+  - Work, Grid mode (`phTpCycGridHtml`): milestone row + scans as before,
+    then `.ph-tp-panel.noph` holding `.ph-tp-phasebody` (the same
+    `phTpPhasePanelHtml`, so `phTpRepaintPhasePanel` is unchanged), then
+    **Next** (`phTpNextHtml`: next phase + its cadence, the period the
+    calendar expects or "late", the next booking or "no visit booked yet ·
+    plan says …"), then **Past visits** (`phTpPastHtml`: `phTpSpineDates`
+    nodes before today, newest first, plus any session the phase windows
+    didn't catch, rendered by `phTpSpineNodeHtml`), then the usual
+    extraInner (this-cycle schedule, add phase, info letters, reviews).
+    Timeline mode: the spine in the work column, the rail unchanged.
+  - The phase line's "(cycle Day N · X)" chip is dropped on cycle plans (the
+    door line says it); other plans keep it.
+- **Today's checklist** (`presAcuOpenHtml`, above "From her active plan"):
+  Ask (the phase's Watch items) · Needle (the chosen points) · Herbs (given
+  today, or the formula to dispense/instruct) · Book (next visit, or the
+  phase's cadence) · Log today's session. The app ticks what it can read
+  (herbs given/instructed, a future booking, a session logged today); the
+  rest are her own ticks in `presAcuTicks` (reset with the other draft state
+  on open; `data-pres-acu-tick` toggles + `presAcuOpenRefresh`). Nothing
+  stored. Header counts "n of 5".
+Verified in the sandbox (synthetic patients, removed): columns 661/380 at
+1200px, 28 painted days "ppppffffffffoolllllllllllllp", 6 chips, chip tap
+→ phase + mismatch announce → Go back, Timeline/Grid, Edit plan in the rail,
+repaint, day popover inside the rail, past visits newest first and opening,
+checklist ticks and count, phone 360 rail-first with no sideways scroll,
+Low back pain plan untouched, live-search filters, console clean.
+`lcm-build` `20260919-170000`, `sw.js` `lcm-20260919-cycle-grid-workflow`.
