@@ -4838,3 +4838,39 @@ backup/restore incident history — never attempted blind).
 
 Version bump: `lcm-build` `20260918-160000`, `sw.js` cache
 `lcm-20260918-infoltr-pics-overflow-fix`.
+
+## "Today's visit" mucus quick-log leaked onto non-fertility plans (2026-09-18)
+
+Screenshot of a Migraine treatment plan's Today's-visit panel showing the
+Mucus (Milky/Egg-white/Mix) quick-log row — **"this doesnt belong in
+migraine headache treatment plan."**
+
+**Traced, not guessed.** `presAcuOpenHtml`'s `mucusHtml` was gated on
+`phCycleOn(rec)` alone — a PATIENT-level check, not a plan-level one.
+`phCycleOn`'s own fallback branch (no explicit `rec.cycleOn`, no matching
+cycle-template plan) returns `true` for any female patient under 50 —
+so the row rendered on EVERY young woman's visit regardless of which
+treatment plan was actually open, Migraine included. Confirmed the exact
+real-world case in the sandbox: a patient with BOTH a Natural fertility
+plan and a Migraine plan showed the mucus row when the Migraine plan's
+Today's-visit was open (the bug) and correctly kept it when the fertility
+plan was open (the fix must not regress this).
+
+**Fix**: `mucusHtml` now also requires `activePlan &&
+PH_TP_CYCLE_TEMPLATES.includes(activePlan.templateName)` — the SAME
+reasoning `phTpCycleEffectivePhase` already applies to the calendar phase
+(is the plan actually being treated right now a cycle-tracked one), not
+"does this patient have a cycle-tracked plan somewhere in her history."
+`phCycleOn(rec)` is kept alongside it so an explicit `rec.cycleOn = false`
+opt-out still wins even on a matching-template plan.
+
+Verified directly against the real function in the sandbox: a synthetic
+Migraine-plan patient → no mucus row; a synthetic Natural-fertility-plan
+patient → mucus row present with the correct 3 chips; a synthetic patient
+with BOTH plans → mucus row absent while viewing the Migraine plan, present
+while viewing the fertility plan (the exact scenario her screenshot showed).
+Synthetic patients cleaned up (`treatmentPlans` cleared, `savePharmacy()`
+re-run) — sandbox-only, no production data touched.
+
+Version bump: `lcm-build` `20260918-170000`, `sw.js` cache
+`lcm-20260918-acu-mucus-plan-scoped`.
