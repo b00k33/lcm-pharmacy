@@ -5514,7 +5514,8 @@ sandbox. Follow-up build `lcm-build` `20260919-001500`, `sw.js`
    door-facts rewrite) — deleted, with its now-misleading comment.
 Console clean after every fix (only the two known icon 404s); the
 protected Prescriptions live-search check passes (2 → 1 → 2 on injected
-scripts, no residue). Committed to `session-a`, still not pushed to `main`.
+scripts, no residue). Pushed to `main` 2026-09-19 with the IVF Grid build
+below, on her "push everything live".
 
 ## IVF Grid — clinic scans, the cycle strip on the plan tab, Edit plan mode, plan switcher (her ask 2026-09-19)
 
@@ -5626,5 +5627,7 @@ table 272px wide at 360, no overflow); the switcher label + solid chip;
 desktop screenshots of the view and edit states. Clean console (the known
 icon 404s only). Synthetic patient, plans, message and DOM removed,
 `localStorage` residue nil. `lcm-build` `20260919-020000`, `sw.js`
-`lcm-20260919-ivfgrid-scans-cd-editplan`. On `session-a`, not pushed —
-she asked to see it first.
+`lcm-20260919-ivfgrid-scans-cd-editplan`. Committed `25a4764`; her
+"push everything live" the same morning put it on `main` together with
+the synth22 items 2/7/9 build and its review fixes — confirmed served
+(`curl` of the live build stamp, not the local branch).
