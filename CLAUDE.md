@@ -5822,3 +5822,17 @@ Verified in the sandbox (two synthetic patients, removed after): both faces,
 log-from-popup, Not now, Not tracking, Escape, reopen; List columns and
 widths; toggle position; live-search still filters. `lcm-build`
 `20260919-140000`, `sw.js` `lcm-20260919-fertility-door-popup`.
+
+### Follow-ups the same afternoon (2026-09-19): four weeks, Zanda chip
+- **"show the 4 weeks."** (screenshot of the two-week calendar with the
+  calculator open): the plan head's compact strip is `{ weeks: 4, compact:
+  true }` now — 28 day cells, today always in view. The popup's strip stays
+  two weeks. The band's left column is therefore emptier again beside the
+  taller calendar; two fills were mocked for her (phase tabs beside the
+  calendar / Presenting focus + Treatment goal as labelled rows), answer pending.
+- **"its zanda not cliniko"** (Grainne Meade's popup chip): a pasted
+  briefing never says which system it came from, so `phApptBrief` tags a
+  `briefSrc === "paste"` booking by its weekday — Friday → `"zanda"`, any
+  other day → `"cliniko"` (her /patients rule) — and `phApptBriefSrcHtml`
+  prints the matching word. Computed at render, so old bookings follow.
+  `lcm-build` `20260919-150000`, `sw.js` `lcm-20260919-fourweeks-zanda`.
