@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260918-220000">
+<meta name="lcm-build" content="20260918-233000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -22749,7 +22749,12 @@
     // offers the plan-template cards (data-tp-new -> phTpOpenNew), which is
     // where a condition gets picked in the first place. Opens the plan on tap.
     const plans = phTpPlans(a.patient);
-    const apptPlan = (a.planId && plans.find(p => p.id === a.planId)) || phTpShownPlan(a.patient);
+    const apptPicked = a.planId ? plans.find(p => p.id === a.planId) || null : null;
+    // a pick that names a plan since deleted: the picker must not show the
+    // fallback plan as "chosen" (re-picking it fires no change and the dead
+    // id could never be repaired) -- offer a blank option instead (review 2026-09-18)
+    const stalePick = !!(a.planId && !apptPicked);
+    const apptPlan = apptPicked || phTpShownPlan(a.patient);
     // one phase truth (2026-09-18): the LIVE phase, same as the Grid tab
     const planCur = apptPlan ? phTpLivePhase(rec, apptPlan) : null;
     const phaseTail = planCur && planCur.label ? ` <span class="faint">· ${esc(planCur.label)}</span>` : "";
@@ -22764,7 +22769,7 @@
       ? `<span class="faint">no treatment plan yet</span> <button type="button" class="ph-name-link ph-apptls-add" data-tp-new="${esc(a.patient)}">pick a condition</button>`
       : plans.length === 1
         ? `<button type="button" class="ph-name-link ph-apptpop-plan" data-tp-plan-open="${esc(a.patient)}|${esc(apptPlan.id)}" title="Open this treatment plan"><b>${esc(apptPlan.title || "Treatment plan")}</b></button>${phaseTail}`
-        : `<select class="ph-apptpop-sel" data-ph-apptpop-plan="${esc(a.id)}" aria-label="Condition this visit is for">${plans.map(p => `<option value="${esc(p.id)}"${p === apptPlan ? " selected" : ""}>${esc(p.title || "Treatment plan")}</option>`).join("")}</select>${phaseTail}`;
+        : `<select class="ph-apptpop-sel" data-ph-apptpop-plan="${esc(a.id)}" aria-label="Condition this visit is for">${stalePick ? `<option value="" selected>— which plan? —</option>` : ""}${plans.map(p => `<option value="${esc(p.id)}"${!stalePick && p === apptPlan ? " selected" : ""}>${esc(p.title || "Treatment plan")}</option>`).join("")}</select>${phaseTail}`;
     return `<div class="ph-apptpop-tools">
         <button type="button" class="ph-apptpop-ic x" data-ph-apptpop-close="1" title="Close" aria-label="Close"><svg class="icn" aria-hidden="true"><use href="#i-x"/></svg></button>
       </div>
@@ -26684,7 +26689,16 @@
         const rec = phPatientRec(phTpScreenPatient);
         const s = rec && (rec.acuSessions || []).find(x => x.id === sid);
         const a = phApptList().find(x => x.id === aid);
-        if (s && a) { s.apptId = a.id; s.date = a.date; savePharmacy(); phTpRepaintPhasePanel(); }
+        if (s && a) {
+          // the target booking already has a named write-up: the two are the
+          // wrong way round, so swap them rather than stack two on one booking
+          const other = (rec.acuSessions || []).find(x => x !== s && x.apptId === a.id);
+          if (other) {
+            const prev = s.apptId ? phApptList().find(x => x.id === s.apptId) : null;
+            if (prev) { other.apptId = prev.id; other.date = prev.date; } else delete other.apptId;
+          }
+          s.apptId = a.id; s.date = a.date; savePharmacy(); phTpRepaintPhasePanel();
+        }
         return;
       }
       const tpSinceEd = e.target.closest("[data-tp-since-edit]");
@@ -28519,32 +28533,48 @@
               if (reason) session.overrideReason = reason;
             }
           }
-          if (!dispensedToday && presAcuHerbInstruct) {
-            session.herbInstructed = true;
-            if (herbFormulaName) session.herbInstructedFormula = herbFormulaName;
-          }
-          if (presAcuWatchChecked.length) session.observedSigns = presAcuWatchChecked.slice();
           // her picks 2026-09-18 (fix 2, session <-> booking): the session
           // NAMES its booking -- today's nearest-to-the-clock one (her rule
           // for two bookings on one day). Failing any booking today, a
-          // write-up the morning after lands on the most recent still-unlogged
-          // booking of the last two days and takes ITS date, so the Grid files
-          // it on that booking's row instead of an orphan "session" row. This
-          // is the appointment-dating the old card had and the logger never
-          // did -- rebuilt now because she ticked exactly this. The plan the
-          // visit was for is kept too (fix 1), so a later re-read never has to
-          // guess between two concurrent plans.
+          // write-up the morning after lands on yesterday's still-unlogged
+          // booking and takes ITS date, so the Grid files it on that booking's
+          // row instead of an orphan "session" row. This is the
+          // appointment-dating the old card had and the logger never did --
+          // rebuilt now because she ticked exactly this. Yesterday only
+          // (review 2026-09-18): two days back was wide enough to swallow a
+          // walk-in today onto a no-show from the day before yesterday. The
+          // plan the visit was for is kept too (fix 1), so a later re-read
+          // never has to guess between two concurrent plans.
           const todayAppt = phApptNearestNow(name);
           let linkAppt = todayAppt;
           if (!linkAppt) {
-            const pk = phPatientKey(name), todayKey = keyOf(TODAY), t0 = parseKey(todayKey);
-            const back = phApptList().filter(a => a.service !== "Break" && phPatientKey(a.patient) === pk && a.date < todayKey && (t0 - parseKey(a.date)) / 86400000 <= 2)
-              .sort((a, b) => (b.date + (b.time || "")).localeCompare(a.date + (a.time || "")));
+            const pk = phPatientKey(name), todayKey = keyOf(TODAY);
+            const yKey = keyOf(new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() - 1));
+            const back = phApptList().filter(a => a.service !== "Break" && phPatientKey(a.patient) === pk && a.date === yKey)
+              .sort((a, b) => (b.time || "").localeCompare(a.time || ""));
             linkAppt = back.find(a => !(rec.acuSessions || []).some(s => s.apptId === a.id || (!s.apptId && s.date === a.date))) || null;
             if (linkAppt) session.date = linkAppt.date;
           }
           if (linkAppt) session.apptId = linkAppt.id;
           if (activePlan) session.planId = activePlan.id;
+          // back-dated: every clinical fact is as of THAT day (review
+          // 2026-09-18) -- the calendar phase yesterday, not this morning's,
+          // and herbs dispensed on that day. Her explicit phase pick stands;
+          // only the default (calendar) phase and the override baseline move.
+          if (session.date !== keyOf(TODAY) && !presAcuNoTreatment && activePlan) {
+            const calAsOf = phTpLivePhase(rec, activePlan, session.date);
+            if (calAsOf) {
+              if (!presAcuPhaseId) { session.phaseLabel = calAsOf.label; delete session.calendarPhaseLabel; delete session.overrideReason; }
+              else if (treatedPhase && calAsOf.id !== treatedPhase.id) { session.calendarPhaseLabel = calAsOf.label; }
+              else { delete session.calendarPhaseLabel; delete session.overrideReason; }
+            }
+          }
+          const dispensedOnDay = phAcuHerbsOn(name, session.date);
+          if (!dispensedOnDay && presAcuHerbInstruct) {
+            session.herbInstructed = true;
+            if (herbFormulaName) session.herbInstructedFormula = herbFormulaName;
+          }
+          if (presAcuWatchChecked.length) session.observedSigns = presAcuWatchChecked.slice();
           rec.acuSessions.push(session);
           // logging a real session is what "she's tracking acupuncture for
           // this patient" means -- found 2026-09-13 that this, the OLDER of
@@ -35909,7 +35939,10 @@ or changing anything in Cliniko.
       plan = phTpShownPlan(name);
       if (!plan || !Array.isArray(plan.phases)) return;
       const tag = String(t.phaseTag || "").trim().toLowerCase();
-      ph = (tag && plan.phases.find(p => String(p.label || "").trim().toLowerCase() === tag)) || phTpPlanCurrentPhase(plan);
+      // the LIVE phase (one phase truth, review 2026-09-18): a dispense before
+      // the session is logged files onto the phase the band shows, not the
+      // persisted pointer that only moves on a session/period write
+      ph = (tag && plan.phases.find(p => String(p.label || "").trim().toLowerCase() === tag)) || phTpLivePhase(phPatientPeek(name), plan);
       if (!ph) return;
       t.planPhaseLink = { planId: plan.id, phaseId: ph.id };
       if (!t.phaseTag) t.phaseTag = ph.label;
@@ -36342,7 +36375,7 @@ or changing anything in Cliniko.
     const plans = phTpPlans(name);
     const activePlan = plans.find(p => p.status === "active") || plans[0];
     const rec = activePlan ? phPatientPeek(name) : null;
-    const curPhase = activePlan ? (phTpCycleEffectivePhase(rec, activePlan) || phTpPlanCurrentPhase(activePlan)) : null;
+    const curPhase = activePlan ? phTpLivePhase(rec, activePlan) : null;
     // a phase written against a clinic milestone ("the day before transfer")
     // resolves to a real bookable date, not a repeating interval -- try that
     // first; phTpCadenceDate returns null whenever there's no milestone
@@ -44484,8 +44517,7 @@ or changing anything in Cliniko.
         }
         // her pick 2026-09-18 (fix 1): a booking that names a plan lands her
         // on THAT plan's tabs, whichever plan was made first
-        const booked = !already && plans.length > 1 ? phApptNearestNow(nm) : null;
-        const bookedPlan = booked && booked.planId ? plans.find(p => p.id === booked.planId) : null;
+        const bookedPlan = !already && plans.length > 1 ? phApptPlanFor(phApptNearestNow(nm), plans) : null;
         if (bookedPlan) { presTpInlinePlanId = bookedPlan.id; phTpScreenPatient = nm; phTpScreenPlanId = bookedPlan.id; }
       }
     }
@@ -46267,7 +46299,7 @@ or changing anything in Cliniko.
     // 2026-09-13 pick: the phase follows the cycle, read-only), else the
     // phase she marked current
     const rec = name ? phPatientPeek(name) : null;
-    const cur = plan && ((rec && phTpCycleEffectivePhase(rec, plan)) || phTpPlanCurrentPhase(plan));
+    const cur = plan && phTpLivePhase(rec, plan);
     if (!cur || !cur.label) return false;
     s.phaseTag = cur.label;
     return true;
@@ -46495,9 +46527,9 @@ or changing anything in Cliniko.
   // inserting a phase without persisting it makes no sense read-only, and
   // her ask was about being stuck on an early phase, not the late-period
   // handling, which already works.
-  function phTpCycleEffectivePhase(rec, plan) {
+  function phTpCycleEffectivePhase(rec, plan, compAsOf) {
     if (!plan || plan.status !== "active" || !PH_TP_CYCLE_SYNC.includes(plan.templateName)) return null;
-    const comp = phCycleComp(rec);
+    const comp = compAsOf || phCycleComp(rec);
     if (!comp || comp.overdue) return null;
     const phases = plan.phases || [];
     const proIdx = phases.findIndex(p => PH_TP_PROLONGED_RE.test(p.label || ""));
@@ -46531,9 +46563,9 @@ or changing anything in Cliniko.
   // unconditionally splices a "Prolonged luteal" phase into the plan and
   // cascades the whole plan onto it, clinically meaningless on a medicated
   // IVF cycle where a "late" natural-cycle read is expected, not a red flag.
-  function phTpIvfCdSuggest(rec, plan) {
+  function phTpIvfCdSuggest(rec, plan, compAsOf) {
     if (!plan || plan.status !== "active" || plan.templateName !== "IVF Protocol") return null;
-    const comp = phCycleComp(rec);
+    const comp = compAsOf || phCycleComp(rec);
     if (!comp || comp.overdue) return null;
     const phases = plan.phases || [];
     const want = comp.phaseKey === "period" ? PH_CYCLE_PHASE_MATCH.period
@@ -46543,6 +46575,14 @@ or changing anything in Cliniko.
     let idx = phases.findIndex(p => want.test(p.label || ""));
     if (idx < 0 && want === PH_CYCLE_PHASE_MATCH.foll2) idx = phases.findIndex(p => PH_CYCLE_PHASE_MATCH.foll1.test(p.label || ""));
     if (idx < 0) return null;
+    // never pull back (review 2026-09-18): once she is on Post-OPU / Post-ET
+    // -- by hand, by a milestone date, by an earlier sync -- a new period
+    // (a failed transfer, CD 1 again) must not read as Menstruation on the
+    // band, the popup, the Grid tab or Today's visit while the plan itself
+    // (phTpIvfCdSync has this same guard) stays put. The READ and the WRITE
+    // refuse the same thing.
+    const curIdx = phases.findIndex(p => p.status === "current");
+    if (curIdx > idx) return null;
     return { phase: phases[idx], comp };
   }
   // her ask 2026-09-18, straight after the CD-preselect build shipped:
@@ -46639,7 +46679,15 @@ or changing anything in Cliniko.
     phases.forEach((p, i) => {
       if (proIdx != null && proIdx >= 0 && i === proIdx && i !== idx) { p.status = p.lateOn ? "done" : "upcoming"; if (p.status === "done" && !p.doneKey) p.doneKey = today; return; }
       if (i < idx) { if (p.status !== "done") { p.status = "done"; if (!p.doneKey) p.doneKey = today; } }
-      else if (i === idx) { p.status = "current"; if (!p.sinceKey) p.sinceKey = today; p.doneKey = null; }
+      else if (i === idx) {
+        // a CLOSED phase re-entered (the period arriving wraps the plan back
+        // to Menstruation every cycle) starts a fresh stretch today -- keeping
+        // the old sinceKey while clearing doneKey would window this cycle's
+        // Menstruation from LAST cycle's day 1, swallowing every visit since
+        // (review 2026-09-18)
+        if (p.status === "done" || p.doneKey) p.sinceKey = today;
+        p.status = "current"; if (!p.sinceKey) p.sinceKey = today; p.doneKey = null;
+      }
       else { p.status = "upcoming"; p.sinceKey = null; p.doneKey = null; }
     });
   }
@@ -46667,9 +46715,12 @@ or changing anything in Cliniko.
      persisted pointer still only MOVES on a cycle or session write
      (phCycleSyncPlans); this is read-only and no render path mutates a plan.
      Callers pass phPatientPeek, never phPatientRec, for the same reason. */
-  function phTpLivePhase(rec, plan) {
+  function phTpLivePhase(rec, plan, asOfKey) {
     if (!plan) return null;
-    const live = rec ? (phTpCycleEffectivePhase(rec, plan) || (phTpIvfCdSuggest(rec, plan) || {}).phase) : null;
+    // asOfKey: the phase the calendar named on THAT day (a write-up the
+    // morning after is filed on yesterday's phase, not today's)
+    const comp = asOfKey && rec ? phCycleCompAsOf(rec, parseKey(asOfKey)) : null;
+    const live = rec ? (phTpCycleEffectivePhase(rec, plan, comp) || (phTpIvfCdSuggest(rec, plan, comp) || {}).phase) : null;
     return live || phTpPlanCurrentPhase(plan);
   }
   /* ==== BOOKING -> TODAY'S VISIT (her picks 2026-09-18). Today's bookings
@@ -46685,6 +46736,17 @@ or changing anything in Cliniko.
       .sort((a, b) => Math.abs(minsOf(a) - nowM) - Math.abs(minsOf(b) - nowM));
   }
   const phApptNearestNow = name => phApptTodayFor(name)[0] || null;
+  /* The plan a booking NAMES -- only while that plan still exists and is
+     active. A pick made weeks ahead can outlive its plan (deleted, marked
+     done, paused by an acute interrupt); honouring the dead id would hide
+     Today's visit on every Grid and count the booking for no plan at all
+     (review 2026-09-18). A stale/paused pick reads as "no pick". */
+  function phApptPlanFor(a, plans) {
+    if (!a || !a.planId) return null;
+    const p = (plans || []).find(x => x.id === a.planId);
+    return p && p.status === "active" ? p : null;
+  }
+  const phApptBookedPlan = name => phApptPlanFor(phApptNearestNow(name), phTpPlans(name));
   /* The plan a visit is FOR. The booking's own pick (a.planId, the popup's
      condition picker -- written since 2026-09-16, read by nothing but the
      popup until now) wins; with no pick and several active plans, the plan
@@ -46697,8 +46759,8 @@ or changing anything in Cliniko.
     const plans = phTpPlans(name);
     if (!plans.length) return null;
     if (explicitId) { const p = plans.find(x => x.id === explicitId); if (p) return p; }
-    const appt = phApptNearestNow(name);
-    if (appt && appt.planId) { const p = plans.find(x => x.id === appt.planId); if (p) return p; }
+    const booked = phApptPlanFor(phApptNearestNow(name), plans);
+    if (booked) return booked;
     const active = plans.filter(p => p.status === "active");
     if (active.length <= 1) return active[0] || plans[0];
     const rec = phPatientPeek(name);
@@ -46717,8 +46779,19 @@ or changing anything in Cliniko.
     if (!a || a.service === "Break") return null;
     const rec = phPatientPeek(a.patient);
     const list = (rec && rec.acuSessions) || [];
-    return list.find(s => s.apptId && s.apptId === a.id)
-      || list.find(s => !s.apptId && s.date === a.date) || null;
+    const named = list.find(s => s.apptId && s.apptId === a.id);
+    if (named) return named;
+    // same-day fallback for sessions from before ids were kept: the i-th
+    // unattached write-up goes to the i-th unclaimed booking of that day (in
+    // time order) -- the Grid's own pairing -- so a double-booked day with
+    // one write-up marks ONE booking logged, not both (review 2026-09-18)
+    const key = phPatientKey(a.patient);
+    const claimed = new Set(list.filter(s => s.apptId).map(s => s.apptId));
+    const slots = phApptList().filter(x => x.date === a.date && x.service !== "Break" && phPatientKey(x.patient) === key && !claimed.has(x.id))
+      .sort((x, y) => (x.time || "").localeCompare(y.time || ""));
+    const pool = list.filter(s => !s.apptId && s.date === a.date).sort((x, y) => (x.at || 0) - (y.at || 0));
+    const i = slots.findIndex(x => x.id === a.id);
+    return i >= 0 ? (pool[i] || null) : null;
   }
   // ============ 📅 This cycle's visits (her pick 2026-09-04, Bonnie's plan:
   // "plan + letter + bookings mapped") -- the dates she should be in, derived
@@ -48443,7 +48516,13 @@ or changing anything in Cliniko.
     const acuSessions = rec && rec.acuEnabled
       ? (rec.acuSessions || []).slice().sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.at || 0) - (a.at || 0))
       : null;
-    const acuLogBlock = acuSessions ? presAcuOpenHtml(name, acuSessions, { planId: plan.id }) : "";
+    // same booked-plan gate as the Grid (review 2026-09-18): today's booking
+    // naming ANOTHER plan means this plan's Timeline must not log the visit
+    const tlBooked = acuSessions ? phApptBookedPlan(name) : null;
+    const acuLogBlock = !acuSessions ? ""
+      : (tlBooked && tlBooked.id !== plan.id)
+        ? `<div class="ph-tp-vt-note" style="padding:8px 0">Today’s booking is for <b>${esc(tlBooked.title || "another plan")}</b> — log the visit from that plan.</div>`
+        : presAcuOpenHtml(name, acuSessions, { planId: plan.id });
     // her synth22 ask 2026-09-15 ("this is not really useful because its
     // giving me info in 41 days. i want for this cycle. i also want this
     // positioned better in the treatment plan rather than above it"):
@@ -49322,12 +49401,15 @@ or changing anything in Cliniko.
     const from = ph.sinceKey;
     const ex = new Set(ph.excludedVisits || []);
     const rows = [];
+    const plans = plan ? phTpPlans(name) : [];
     phApptList().forEach(a => {
       if (phPatientKey(a.patient) !== key) return;
       // her pick 2026-09-18 (fix 1): a booking she filed under another plan
       // counts for THAT plan only -- before this a.planId was written and
-      // never read, so one visit counted for both concurrent plans
-      if (plan && a.planId && a.planId !== plan.id) return;
+      // never read, so one visit counted for both concurrent plans. A pick
+      // naming a deleted/done/paused plan is no pick (phApptPlanFor).
+      const bp = plan ? phApptPlanFor(a, plans) : null;
+      if (bp && bp.id !== plan.id) return;
       if (a.date < from) return;                 // her call: phase dates are the truth
       if (hardTo && a.date > hardTo) return;
       if (inPause(a.date)) return;               // belongs to the plan that interrupted
@@ -49766,8 +49848,17 @@ or changing anything in Cliniko.
     const rowIds = new Set(st ? st.rows.map(r => r.appt.id) : []);
     const acuByAppt = new Map();
     const acuByDate = new Map();
+    const namedElsewhere = [];   // names a booking that is not a row here: never a same-day guess
     (rc.acu || []).forEach(s => {
-      if (s.apptId && rowIds.has(s.apptId)) { acuByAppt.set(s.apptId, s); return; }
+      // a write-up filed for ANOTHER plan is that plan's record (review 2026-09-18)
+      if (s.planId && s.planId !== plan.id) return;
+      if (s.apptId) {
+        if (rowIds.has(s.apptId) && !acuByAppt.has(s.apptId)) { acuByAppt.set(s.apptId, s); return; }
+        // a second session naming the same booking, or a booking that isn't
+        // a row of this phase: shown as its own session row, never dropped
+        // into a date bucket where it would read as another booking's write-up
+        namedElsewhere.push(s); return;
+      }
       const list = acuByDate.get(s.date) || [];
       list.push(s);
       acuByDate.set(s.date, list);
@@ -49802,7 +49893,10 @@ or changing anything in Cliniko.
       // her rule for two bookings on one day: the nearest-to-the-clock one
       // takes the session, "change it from the session row if wrong" -- the
       // other same-day booking(s) are offered as a one-tap move
-      const others = s ? st.rows.filter(x => x.appt.date === r.appt.date && x.appt.id !== r.appt.id) : [];
+      // only bookings with no write-up of their own are offered -- moving
+      // onto one that already has a named session would overwrite it in
+      // acuByAppt and make one of the two vanish (review 2026-09-18)
+      const others = s ? st.rows.filter(x => x.appt.date === r.appt.date && x.appt.id !== r.appt.id && !acuByAppt.has(x.appt.id)) : [];
       const moveHtml = others.map(x => `<button type="button" class="ph-name-link soft ph-tp-vt-move" data-tp-session-appt="${esc(s.id)}|${esc(x.appt.id)}" title="This write-up belongs to the ${esc(phCkTime12(x.appt.time))} booking instead">→ ${esc(phCkTime12(x.appt.time))}</button>`).join("");
       // her ask 2026-09-18: when today's own visit is being actively edited
       // above (the merged "Today's visit" panel, showTodaysVisit/hideToday),
@@ -49820,7 +49914,7 @@ or changing anything in Cliniko.
     }).join("");
     // anything still sitting in a date bucket after every counted appointment
     // has taken its turn is a session with no matching appointment row at all
-    const orphanSessions = Array.from(acuByDate.values()).flat().sort((a, b) => (a.date || "").localeCompare(b.date || "") || (a.at || 0) - (b.at || 0));
+    const orphanSessions = Array.from(acuByDate.values()).flat().concat(namedElsewhere).sort((a, b) => (a.date || "").localeCompare(b.date || "") || (a.at || 0) - (b.at || 0));
     const orphanRows = orphanSessions.map(s => `<tr class="ph-tp-vt-row">
         <td class="ph-tp-vt-date"><b>${esc(phShortDate(s.date))}</b><span>session</span></td>
         <td>${s.noTreatment ? `<span class="ph-tp-vt-chip herb">herbs only</span>` : chips(s.points)}</td>
@@ -49910,7 +50004,12 @@ or changing anything in Cliniko.
     // height, so a line added to just one tab would pad dead space onto
     // every sibling. phPatientPeek, not phPatientRec: this repaints on every
     // tab click and phPatientRec mutates on read (renames templates, etc).
-    const cycleComp = phCycleComp(phPatientPeek(phTpScreenPatient));
+    const tabRec = phPatientPeek(phTpScreenPatient);
+    const cycleComp = phCycleComp(tabRec);
+    // the flash rides on the tab the CALENDAR names, keyed to its id -- a
+    // manual tab tap is not a change (review 2026-09-18); it lights only when
+    // the live phase itself moves
+    const liveTab = phTpLivePhase(tabRec, plan);
     // her card 8, 2026-09-13 ("Treatment ..., with Fresh"): the same
     // Add-phase/Switch-track/Print/Full-screen/Delete actions that used to
     // be reachable ONLY via the Dispense stage's ⋯ now trail this tab strip
@@ -49924,7 +50023,7 @@ or changing anything in Cliniko.
       const on = !!sel && p.id === sel.id;
       let sub = phTpSpanText(p);
       if (on && cycleComp) sub = sub ? `${sub} · Day ${cycleComp.day}` : `Day ${cycleComp.day}`;
-      return `<button type="button" class="ph-tp-tab ${p.status}${on ? " on" : ""}" data-tp-tab="${plan.id}:${p.id}" role="tab" aria-selected="${on ? "true" : "false"}"${on ? ` data-live="tptab:${plan.id}" data-live-sig="${p.id}"` : ""}>
+      return `<button type="button" class="ph-tp-tab ${p.status}${on ? " on" : ""}" data-tp-tab="${plan.id}:${p.id}" role="tab" aria-selected="${on ? "true" : "false"}"${liveTab && p.id === liveTab.id ? ` data-live="tptab:${plan.id}" data-live-sig="${p.id}"` : ""}>
         <span class="num" aria-hidden="true">${p.status === "done" ? "✓" : i + 1}</span>
         <span class="lbl">${p.label ? esc(p.label) : "Phase name"}</span>
         ${sub ? `<span class="sub">${sub}</span>` : ""}
@@ -50386,7 +50485,7 @@ or changing anything in Cliniko.
     // her pick 2026-09-18 (fix 1): when today's booking names a plan, only
     // THAT plan's Grid offers Today's visit -- the other plan's Grid would
     // otherwise log the visit against the wrong course
-    const bookedPlanId = (phApptNearestNow(phTpScreenPatient) || {}).planId || null;
+    const bookedPlanId = (phApptBookedPlan(phTpScreenPatient) || {}).id || null;
     const showTodaysVisit = !frozen && !(bookedPlanId && bookedPlanId !== plan.id) && !!(acuCtx && acuCtx.activePlan && acuCtx.activePlan.id === plan.id && acuCtx.treatedPhase && acuCtx.treatedPhase.id === phase.id);
     const acuSessionsForToday = showTodaysVisit
       ? (peekRec.acuSessions || []).slice().sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.at || 0) - (a.at || 0))

@@ -5201,3 +5201,71 @@ change, not on same sig); the now-line tick. Desktop and 360px screenshots of
 the card taken from a preview mounted on `body`. Synthetic patients and
 bookings cleaned out, `localStorage` residue checked. Version:
 `lcm-build` `20260918-220000`, `sw.js` `lcm-20260918-alive-door-card-crossrefs`.
+Pushed live as `d6d0ada` on her "push live".
+
+**Adversarial review (one background agent on the diff) found 11 real
+problems; all verified in the source by hand, fixed and re-verified in the
+sandbox as the follow-up build `lcm-build` `20260918-233000`, `sw.js`
+`lcm-20260918-alive-review-fixes`:**
+1. **`phTpCascadeTo` re-entering a done phase kept its OLD `sinceKey` and
+   nulled `doneKey`** — every cycle wrap put cycle-2 Menstruation's window at
+   [cycle-1 day 1, today], swallowing the whole previous cycle's visits
+   ("Visit 9", "5 weeks in"). A closed phase re-entered now starts today.
+   `phTpSetPhaseStatus` (the manual path) is deliberately untouched — a
+   date she typed survives re-marking, its documented rule.
+2. + 3. **A booking's `planId` naming a deleted, done or paused plan was
+   still honoured** — Today's visit hidden on every Grid, the booking counted
+   for no plan, the popup unable to repair it (re-picking the shown plan
+   fires no change). `phApptPlanFor(a, plans)` / `phApptBookedPlan(name)` is
+   now the ONE reading of a booking's pick: only an existing, `active` plan
+   counts; anything else is "no pick". Used by `phTpPhaseVisitRows`, the Grid
+   gate, `phTpPlanForToday`, `presStagePlanHtml`; the popup shows a blank
+   "— which plan? —" option when the stored id is dead. The acute-interrupt
+   flow (paused fertility plan, active acute plan) now counts the pinned
+   bookings on the acute plan and offers Today's visit there.
+4. **A session naming another plan's booking fell into the same-day bucket**
+   and rendered as THIS plan's booking's write-up. `phTpVisitsMergedHtml`
+   skips sessions whose `planId` is another plan's; a session with an
+   `apptId` that isn't a row here becomes its own "session" row, never a
+   date-bucket guess.
+5. **"→ move" could stack two sessions on one booking** (Map overwrite, one
+   vanished from the table). The button is offered only for bookings with no
+   named write-up; the handler swaps the two if the target already has one.
+6. **The next-morning attach back-dated the session but computed every fact
+   for today.** `phTpLivePhase(rec, plan, asOfKey)` (via `phCycleCompAsOf`,
+   threaded as an optional `compAsOf` into `phTpCycleEffectivePhase` /
+   `phTpIvfCdSuggest`) gives the phase the calendar named on THAT day; the
+   default phase and the override baseline move to it, her explicit pick
+   stands; herbs-dispensed reads that day. Attach window tightened to
+   **yesterday only** — two days back let a walk-in today land on a no-show
+   from the day before yesterday.
+7. **The IVF read had no "never pull back"** while the write did: a period
+   after a failed transfer showed Menstruation on the band/popup/tab while
+   the plan (and dispense adoption) stayed on Post-ET. `phTpIvfCdSuggest`
+   now returns null when the persisted current phase is past the suggestion,
+   so every reader agrees with `phTpIvfCdSync`.
+8. **Dispense adoption filed onto the persisted phase** (`phTpAdoptScriptIntoPlan`)
+   while the band showed the live one → `phTpLivePhase`. Same switch for
+   `phAcuCurrentCadenceDays` (Communications) and `presPhaseFillFromPlan`
+   (Dispense-page Phase preset), which lacked the IVF step.
+9. **`phApptSessionFor`'s same-day fallback marked BOTH of a double-booked
+   day's bookings "logged"** for every pre-id session. Now the i-th unnamed
+   write-up pairs with the i-th unclaimed booking in time order — the Grid's
+   own rule — so one write-up marks one booking.
+10. **The open phase tab flashed on every manual tab tap.** `data-live` now
+    rides on the tab the CALENDAR names (`phTpLivePhase`), keyed to its id,
+    so it lights only when the live phase moves.
+11. **Timeline mode bypassed the booked-plan gate** — it shows "Today's
+    booking is for <plan> — log the visit from that plan" instead of the
+    editor when today's booking names another active plan.
+Verified against the real functions: cascade re-entry stamps today; dead /
+paused / active picks; IVF suggestion null on Post-ET, Menstruation on a
+fresh plan; as-of phase yesterday vs today (CD 5 → Menstruation, CD 6 →
+Follicular); List/popup pairing with named + legacy sessions; the Visits
+table on both concurrent plans (one move button, on the right row; a
+named-elsewhere session as its own row; the other plan's session absent);
+the tab flash marker on the live tab while Luteal is selected; real
+dispatched log clicks for the two-days-back (not attached, today) and
+yesterday (attached, dated yesterday, Menstruation) cases; chip "logged".
+Console clean (only the known icon 404s); synthetic patient and bookings
+deleted, `localStorage` residue nil.
