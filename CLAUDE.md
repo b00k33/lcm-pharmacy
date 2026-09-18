@@ -5750,3 +5750,29 @@ line; Today's-visit-first and Planned-first row shapes; console clean; the
 protected live-search check (2 → 1 → 2); synthetic patient, scripts and
 photo removed, residue nil. `lcm-build` `20260919-113000`, `sw.js`
 `lcm-20260919-plantab-simplify`. Pushed to `main` on her "push live" the same day (`c9e18e7`, with the viewer fix `388cede`), confirmed served.
+
+## The plan's phase catches up to the cycle day when the patient is opened (her report 2026-09-19)
+
+Grainne Meade's Grid, CD 27: the band, the door card and the phase tab all
+read **Luteal** off the calendar (`phTpLivePhase`) while the plan's own
+status pill on the phase line still said **Upcoming** — Ovulation done, no
+phase current. **"this plan should have auto selected luteal phase based on
+cycle day."** Traced: the persisted pointer only ever moved on a cycle or
+session WRITE (`phCycleSyncPlans`' six call sites), so a calendar that rolled
+over between visits left the pointer behind while every read followed the
+calendar — her 2026-09-18 "overnight calendar move → the new phase,
+everywhere" was true of the reads only.
+- `phTpSyncPlansOnOpen(name)` (beside `phCycleSyncPlans`) runs the SAME
+  cascade from `presOpenScript` (any way into a patient's script/profile)
+  and `phTpOpen` (the full-screen plan). Opening is an explicit act, not a
+  render — no render path mutates a plan, still. Guards unchanged: active +
+  cycle-synced plans only, IVF through its own `phTpIvfCdSync`, never pulled
+  back past the two-week wait, idempotent (no save when already there),
+  `phPatientRec` only after a `phPatientPeek` check so nothing is created.
+Verified in the sandbox on her exact state (LMP 23 Aug, four done, Two-week
+wait upcoming): opening through `presOpenScript` → Two-week wait `current`,
+`sinceKey` today, tab marked current; a second open → no change; the modal
+path the same; a hand-advanced Early Pregnancy stays; an MSK plan untouched;
+console clean; live-search 2 → 1 → 2; synthetic patient and scripts removed,
+residue nil. `lcm-build` `20260919-123000`, `sw.js`
+`lcm-20260919-plan-phase-follows-cd-on-open`.
