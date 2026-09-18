@@ -4785,3 +4785,56 @@ whether the jump occurs.
 
 Version bump: `lcm-build` `20260918-140000`, `sw.js` cache
 `lcm-20260918-cycletab-scrolljump-cdcalc`.
+
+## Information letter picture row could run off the screen edge (SYNTH22 batch, 2026-09-18)
+
+Screenshot of the Information Letter picker with **"this page is cut off"** —
+one of six items collected under her SYNTH22 protocol (collect everything,
+don't build until she signals "finished"; this one is a plain overflow bug,
+not a design decision, so it didn't need to wait for a mock).
+
+**Traced, not guessed.** `phInfoLtrPaperHtml`'s `picTable` helper put every
+attached picture (her own uploads plus, when ticked, her latest tongue photo
+and BBT chart — realistically 3-5 images) into ONE `<table>` row, one `<td>`
+per image, each image capped at `max-width:260px` but with nothing capping
+the ROW. Measured directly: with 4 photos that row's own natural/preferred
+width is 1072px, against a letter paper that's only ~590px wide inside its
+640px card (`.ph-hx-card { width: min(640px, 100%) }`). `.ph-infoltr-paper`
+already carries `overflow-x:auto` as a safety net, but a modal with no
+visible scrollbar affordance reads as "cut off", not "scroll to see more" —
+which matches her report exactly.
+
+**Fix**: `picTable` now chunks photos into pairs and emits one `<tr>` per
+pair instead of one `<tr>` for the whole set — table width is bounded to
+roughly 2×260px regardless of how many photos are attached, so it fits
+inside the paper without relying on a hidden scrollbar. Same function feeds
+the on-screen editor, the printed copy (`phInfoLtrDocHtml` → `phPrintDoc`)
+and the emailed copy (`phLtrEmailHtmlFrom`), so all three get the fix at
+once — a real `<table>` row-wrap, not a flex/grid rewrite, was kept
+deliberately since email clients (Outlook included) don't reliably render
+flexbox.
+
+**Verified two ways, since the sandbox's headless viewport reports 0×0 and
+pixel truth isn't observable here** (the same limitation the cycle-tab fix
+above already hit): (1) structural proof — a real DOM test with 4 synthetic
+800×600 images confirmed the new `picTable` emits 2 rows of 2 cells each,
+replacing the old single row of 4; (2) a sized (592px) container test
+showed the OLD single-row table's own natural/preferred width reaches
+1072px with 4 photos (would keep growing with more), while the NEW paired
+layout never exceeds ~560px regardless of photo count — bounded by
+construction, not by browser-specific shrink behaviour.
+
+**Also flagged to her, not a code fix**: her separate SYNTH22 item, "i need
+to bring back post ovulation formula in inventory" — traced via two
+one-time migration functions in this file (`inventoryUpdate20260724`,
+`kindFix20260806`) that confirm "Post Ovulation" was a real, house-blend
+entry in her own `PHARMACY.herbs` — i.e. it lived in her live browser/
+Supabase data, not in this codebase, and no formula-delete/restore function
+exists here that could have removed it. Not something an `index.html`
+change can bring back; her two real options are recreating it via
+Inventory's own "+ Add formula" flow, or restoring from an on-device backup
+if she has one from before it went missing (her call, given this project's
+backup/restore incident history — never attempted blind).
+
+Version bump: `lcm-build` `20260918-160000`, `sw.js` cache
+`lcm-20260918-infoltr-pics-overflow-fix`.
