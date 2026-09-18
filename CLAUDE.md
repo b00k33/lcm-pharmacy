@@ -5701,3 +5701,52 @@ pointer drag moved a circle (450,900 → 600,1000), an edge drag resized it
 (200 → 307), a plain tap selected another, drawing on empty photo still adds
 one. `lcm-build` `20260919-100000`, `sw.js`
 `lcm-20260919-photo-viewer-scroll-movecircles`.
+
+## Plan tab simplified — calendar beside the head, Today's visit first, done · current · next tabs (her ask 2026-09-19)
+
+Desktop screenshot of a Natural fertility plan's Grid: **"make display more
+simple. too much info all at once, not organised. make it user friendly"**,
+then **"code3 + code7 make user friendliness important."** Diagnosis shown
+to her: the 5-week calendar + legend sat between the plan name and the
+phases and pushed her three first tasks below the fold; seven tabs + the
+Timeline|Grid toggle + Edit plan + ⋯ on one strip; Today's visit on the
+RIGHT although it is her first task. Mock A (calendar folded to one line)
+vs mock B (calendar kept, two weeks, beside the plan head) — **her four
+answers, verbatim: "B · small calendar beside the head" · "Today's visit"
+first · "Done, current, next only" · "One muted line in the head"** for
+Dx/Goal. She picked seeing the calendar over folding it — the second time on
+this page ([[project_pharmacy_plantab_simplify_2026_09_19]]); don't propose
+folding the strip again.
+- **Head band** (`.ph-tp-headband`, `presTpInlineEditorHtml`): left column =
+  `phTpPlanHeadHtml` (the Dx · Goal line, or the Edit-plan form) + the new
+  `phTpCycleLineHtml` ("**Day 27** Luteal · last period 23 Aug · next ~20
+  Sep", `.ph-tp-cycleline`, `data-cycle-line`); right column = the SAME
+  `phCycleStripHtml` with `{ weeks: 2, compact: true }` — no legend, no
+  status line of its own (that is the head's line now), the "Know her cycle
+  day instead?" link under the grid. Two columns ≥901px
+  (`minmax(0,1fr) minmax(300px,360px)`), stacked below. `phCycleStripRefresh`
+  reads the shape back off `data-cycle-strip-weeks` / `-compact` and repaints
+  the head line too, so a period tap, ‹ › or the calculator keep the compact
+  shape. Every other strip (Assessment, check-in card, timeline, the modal)
+  is untouched — `opts` is optional.
+- **Phase strip** (`phTpTabsHtml`): shows done phases (ticks), the current
+  one and the next one; the rest fold behind a `+N more` tab
+  (`data-tp-tabs-more`, `phTpTabsAll` Set of plan ids, `– fewer` to fold
+  back). The selected tab and the calendar's live tab are always shown even
+  when they are not core, so a tab she opened can never vanish under her.
+- **Today's visit leads** (`phTpPhaseBodyRows`, `first = showTodaysVisit`):
+  while today's visit is being logged its merged cell (rowspan 7, colspan 2)
+  is the FIRST column pair and the Planned label/value pair follows; the
+  head row reads "Today's visit | Planned". Any other phase keeps
+  "Planned | What happened" with the record on the right — same four
+  columns, only the order differs, verified 4 cells per row in both cases.
+Verified in the sandbox on a synthetic Natural fertility patient (3 done ·
+1 upcoming · current · 1 upcoming, LMP 23 Aug): two columns 750/360px at
+1200px, stacked at 360×469 with no new overflow; compact strip 14 days, no
+legend, no status, calculator link under the grid; `+1 more` / `– fewer`
+through the real handler; a selected hidden tab (Ovulation) shown; ‹ ›
+nav and a day tap (popover open/close) keep the compact strip and the head
+line; Today's-visit-first and Planned-first row shapes; console clean; the
+protected live-search check (2 → 1 → 2); synthetic patient, scripts and
+photo removed, residue nil. `lcm-build` `20260919-113000`, `sw.js`
+`lcm-20260919-plantab-simplify`.
