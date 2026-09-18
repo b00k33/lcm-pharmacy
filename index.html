@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260919-100000">
+<meta name="lcm-build" content="20260919-113000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -5835,6 +5835,23 @@
   #pharmacyPage .ph-tp-editing .ph-tp-grid td.ph-tp-cell[data-tp-edit] { outline: 1.5px dashed var(--ph-green); outline-offset: -3px; background: var(--ph-green-tint); }
   #pharmacyPage .ph-tp-editing .ph-tp-grid td.ph-tp-cell[data-tp-edit]::after { content: "✎"; float: right; font-size: 10px; color: var(--ph-green); font-style: normal; margin-left: 6px; }
   #pharmacyPage .ph-tp-cyclehost { margin: 0 0 10px; }
+  /* her pick 2026-09-19 ("B · small calendar beside the head"): plan head
+     left, a two-week cycle calendar right on a desktop; stacked on a phone */
+  #pharmacyPage .ph-tp-headband { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px 16px; align-items: start; margin: 0 0 10px; }
+  #pharmacyPage .ph-tp-headband .ph-tp-cyclehost, #pharmacyPage .ph-tp-headband .ph-tp-planline { margin: 0; }
+  #pharmacyPage .ph-cyc-strip.compact .ph-cyc-strip-head { margin-bottom: 4px; }
+  #pharmacyPage .ph-cyc-strip.compact .ph-cyc-cdcalc-toggle { margin: 6px 0 0; }
+  #pharmacyPage .ph-cyc-strip.compact .ph-cyc-cdcalc { margin: 6px 0 0; }
+  #pharmacyPage .ph-tp-cycleline { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin-top: 8px; font-size: 12.5px; color: var(--ph-ink); }
+  #pharmacyPage .ph-tp-cycleline .big { font-size: 18px; font-weight: 800; color: var(--ph-green-deep); line-height: 1; }
+  #pharmacyPage .ph-tp-cycleline .ph { font-weight: 600; }
+  #pharmacyPage .ph-tp-cycleline .mut { color: var(--ph-faint); }
+  #pharmacyPage .ph-tp-cycleline .late { color: var(--ph-zero-deep); }
+  #pharmacyPage .ph-tp-tab.more { flex: 0 0 auto; color: var(--ph-faint); }
+  #pharmacyPage .ph-tp-tab.more .lbl { font-weight: 500; }
+  @media (min-width: 901px) {
+    #pharmacyPage .ph-tp-headband.has-cycle { grid-template-columns: minmax(0, 1fr) minmax(300px, 360px); }
+  }
   #pharmacyPage .ph-tp-scans { margin: 0 0 10px; }
   #pharmacyPage .ph-tp-scans-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 12.5px; font-weight: 800; color: var(--ph-ink); margin-bottom: 4px; }
   #pharmacyPage .ph-tp-scans-head em { font-style: normal; font-weight: 600; color: var(--ph-faint); }
@@ -26669,6 +26686,13 @@
       const ivfFoldToggle = e.target.closest("[data-ivf-fold-toggle]");
       if (ivfFoldToggle) { presIvfHistOpen = !presIvfHistOpen; phCycleRerender(); return; }
       // ==== Edit plan mode, protocol switch, clinic scans (her ask 2026-09-19)
+      const tpTabsMore = e.target.closest("[data-tp-tabs-more]");
+      if (tpTabsMore) {
+        const id = tpTabsMore.dataset.tpTabsMore;
+        if (phTpTabsAll.has(id)) phTpTabsAll.delete(id); else phTpTabsAll.add(id);
+        phTpRerender();
+        return;
+      }
       const tpEditPlan = e.target.closest("[data-tp-editplan]");
       if (tpEditPlan) {
         const id = tpEditPlan.dataset.tpEditplan;
@@ -47743,9 +47767,13 @@ or changing anything in Cliniko.
       <button type="button" class="tab-link cancel" data-cycle-cdcalc-close="${esc(name)}">Cancel</button>
     </div>`;
   }
-  function phCycleStripHtml(rec, name) {
+  function phCycleStripHtml(rec, name, opts) {
     if (!rec) return "";
     if (phCycleMonthOpen[name]) return phCycleMonthHtml(rec, name);
+    // her pick 2026-09-19 (plan tab, "too much info all at once"): a compact
+    // copy -- fewer weeks, no legend -- beside the plan head. The same control
+    // otherwise; phCycleStripRefresh reads the shape back off the element.
+    const weeks = opts && opts.weeks ? opts.weeks : PH_CYC_STRIP_WEEKS, compact = !!(opts && opts.compact);
     const c = phCycleFor(rec) || {};
     const comp = phCycleComp(rec);
     const todayKey = keyOf(TODAY);
@@ -47760,7 +47788,7 @@ or changing anything in Cliniko.
     const scanKey = phIvfNextScanKey(rec);
     const monday = d => { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; };
     const lastMon = monday(TODAY); lastMon.setDate(lastMon.getDate() - off * 7);
-    const firstMon = new Date(lastMon); firstMon.setDate(firstMon.getDate() - (PH_CYC_STRIP_WEEKS - 1) * 7);
+    const firstMon = new Date(lastMon); firstMon.setDate(firstMon.getDate() - (weeks - 1) * 7);
     // a scan booked past this week extends the strip forward just far
     // enough to show its ring (at most 4 weeks) -- the past window she logs
     // periods into is untouched, and those future days stay disabled
@@ -47768,7 +47796,7 @@ or changing anything in Cliniko.
     if (scanKey && !off) { const sm = monday(parseKey(scanKey)); extraWeeks = Math.max(0, Math.min(4, Math.round((sm - lastMon) / (7 * 86400000)))); }
     const selKey = phCyclePop && phCyclePop.name === name ? phCyclePop.dateKey : "";
     let cells = `<div></div>${["M", "T", "W", "T", "F", "S", "S"].map(h => `<div class="h">${h}</div>`).join("")}`;
-    for (let w = 0; w < PH_CYC_STRIP_WEEKS + extraWeeks; w++) {
+    for (let w = 0; w < weeks + extraWeeks; w++) {
       const wk = new Date(firstMon); wk.setDate(wk.getDate() + w * 7);
       let lbl = "";
       for (let i = 0; i < 7; i++) { const d = new Date(wk); d.setDate(d.getDate() + i); if (d.getDate() === 1 || (w === 0 && i === 0)) { lbl = MON_SHORT[d.getMonth()]; break; } }
@@ -47789,13 +47817,13 @@ or changing anything in Cliniko.
     const status = comp
       ? `<div class="ph-cyc-status${comp.overdue && !suppressedStrip ? " late" : ""}"><span class="dot"></span>Last period <b>${esc(phShortDate(c.lmp))}</b>${c.approx ? ` <span class="faint">(estimate)</span>` : ""} · day ${comp.day} · <b>${esc(comp.phaseLabel)}</b>${comp.overdue ? (suppressedStrip ? ` · <span class="faint">on ${esc(PH_CYCLE_CONTRACEPTION_LABEL[c.contraception] || "contraception")}</span>` : ` · <b>late</b>`) : ` · next ~${esc(phShortDate(comp.nextDate))}`}</div>`
       : `<div class="ph-cyc-status">Tap the day her last period started.</div>`;
-    return `<div class="ph-cyc-strip" data-cycle-strip="${esc(name)}">
+    return `<div class="ph-cyc-strip${compact ? " compact" : ""}" data-cycle-strip="${esc(name)}"${opts && opts.weeks ? ` data-cycle-strip-weeks="${weeks}"` : ""}${compact ? ` data-cycle-strip-compact="1"` : ""}>
       <div class="ph-cyc-strip-head"><span class="t">Log a period</span><span>tap the day it started</span>
         <span class="nav"><button type="button" data-cycle-strip-nav="1" data-cycle-strip-name="${esc(name)}" title="Earlier weeks" aria-label="Earlier weeks">‹</button><button type="button" data-cycle-strip-nav="-1" data-cycle-strip-name="${esc(name)}" title="Later weeks" aria-label="Later weeks"${off ? "" : " disabled"}>›</button></span></div>
-      ${phCycleCdCalcHtml(name)}
+      ${compact ? "" : phCycleCdCalcHtml(name)}
       <div class="ph-cyc-grid">${cells}</div>
-      <div class="ph-cyc-legend"><span><i class="p"></i>period started</span><span><i class="f"></i>flow days</span><span><i class="t"></i>today</span>${predKey ? `<span><i class="n"></i>next, predicted</span>` : ""}${scanKey ? `<span><i class="s"></i>scan booked</span>` : ""}</div>
-      ${status}
+      ${compact ? phCycleCdCalcHtml(name) : `<div class="ph-cyc-legend"><span><i class="p"></i>period started</span><span><i class="f"></i>flow days</span><span><i class="t"></i>today</span>${predKey ? `<span><i class="n"></i>next, predicted</span>` : ""}${scanKey ? `<span><i class="s"></i>scan booked</span>` : ""}</div>`}
+      ${compact ? "" : status}
       ${selKey && phCyclePop.host !== "hist" ? phCyclePopHtml(phCyclePop) : ""}
     </div>`;
   }
@@ -47827,7 +47855,11 @@ or changing anything in Cliniko.
   }
   function phCycleStripRefresh(name) {
     const rec = phPatientPeek(name) || phPatientRec(name);
-    document.querySelectorAll(`[data-cycle-strip="${CSS.escape(name)}"]`).forEach(el => { el.outerHTML = phCycleStripHtml(rec, name); });
+    document.querySelectorAll(`[data-cycle-strip="${CSS.escape(name)}"]`).forEach(el => {
+      const o = el.dataset.cycleStripWeeks || el.dataset.cycleStripCompact ? { weeks: +el.dataset.cycleStripWeeks || 0, compact: !!el.dataset.cycleStripCompact } : undefined;
+      el.outerHTML = phCycleStripHtml(rec, name, o);
+    });
+    document.querySelectorAll(`[data-cycle-line="${CSS.escape(name)}"]`).forEach(el => { el.outerHTML = phTpCycleLineHtml(rec, name); });
     // the Period history table hosts the same popover under its ✎ row, so
     // the flow/pain/approx chip taps (which only call this) repaint it too
     document.querySelectorAll(`[data-cycle-histbox="${CSS.escape(name)}"]`).forEach(el => { el.outerHTML = phCycleHistoryHtml(rec, name); });
@@ -49164,11 +49196,28 @@ or changing anything in Cliniko.
   // (data-tp-edit), it just never looked it (a hover tooltip, nothing on a
   // phone); the .ph-tp-editing class makes them read as fields.
   let phTpEditPlanId = null;           // planId whose Edit plan mode is on
+  const phTpTabsAll = new Set();       // plan ids whose phase strip shows every phase (her 2026-09-19 pick: done · current · next, the rest behind "+N more")
   let phTpProtocolArm = null;          // { planId, templateId } -- the "Switch to X?" strip
   let phTpScanEdit = null;             // { planId, scanId } | { planId, scanId: "new" }
   let phTpScanDelArm = null;           // scanId armed for delete
   const phTpScansShowAll = new Set();  // planIds whose phone list shows every scan
   let phMsgScanOffer = null;           // { name, planId, scanId, dateKey } -- "text her after the scan?"
+  // her pick 2026-09-19 (mock B): where she is in the cycle reads in the plan
+  // head -- "Day 27 · Luteal · last period 23 Aug · next ~20 Sep" -- beside
+  // the compact calendar, which then carries no status line of its own. The
+  // same facts phCycleStripHtml's status line shows; phCycleStripRefresh
+  // repaints both after a period is logged.
+  function phTpCycleLineHtml(rec, name) {
+    if (!rec) return "";
+    const c = phCycleFor(rec) || {}, comp = c.lmp ? phCycleComp(rec) : null;
+    const wrap = inner => `<div class="ph-tp-cycleline" data-cycle-line="${esc(name)}">${inner}</div>`;
+    if (!comp) return wrap(`<span class="mut">No period logged yet — tap the day it started.</span>`);
+    const suppressed = phCycleSuppressed(rec);
+    const tail = comp.overdue
+      ? (suppressed ? `on ${esc(PH_CYCLE_CONTRACEPTION_LABEL[c.contraception] || "contraception")}` : `<b class="late">late</b>`)
+      : `next ~${esc(phShortDate(comp.nextDate))}`;
+    return wrap(`<span class="big">Day ${comp.day}</span><span class="ph">${esc(comp.phaseLabel)}</span><span class="mut">last period ${esc(phShortDate(c.lmp))}${c.approx ? " (estimate)" : ""} · ${tail}</span>`);
+  }
   function phTpPlanHeadHtml(name, plan) {
     if (!plan) return "";
     if (phTpEditPlanId !== plan.id) {
@@ -49355,10 +49404,9 @@ or changing anything in Cliniko.
     // (phCycleStripHtml; phCycleStripRefresh repaints it in place wherever
     // it lives). phPatientPeek, never phPatientRec, for a render.
     const cycleStrip = PH_TP_CYCLE_TEMPLATES.includes(plan.templateName)
-      ? `<div class="ph-tp-cyclehost">${phCycleStripHtml(phPatientPeek(name), name)}</div>` : "";
+      ? `<div class="ph-tp-cyclehost">${phCycleStripHtml(phPatientPeek(name), name, { weeks: 2, compact: true })}</div>` : "";
     return `<div class="ph-tp-inline${phTpEditPlanId === plan.id ? " ph-tp-editing" : ""}">
-      ${phTpPlanHeadHtml(name, plan)}
-      ${cycleStrip}
+      <div class="ph-tp-headband${cycleStrip ? " has-cycle" : ""}"><div class="ph-tp-headband-main">${phTpPlanHeadHtml(name, plan)}${cycleStrip ? phTpCycleLineHtml(phPatientPeek(name), name) : ""}</div>${cycleStrip}</div>
       ${plan.templateName === "IVF Protocol" ? phIvfHistoryFoldHtml(name) : ""}
       ${phTpFacialStripHtml(rec, plan)}
       ${phTpDeleteArm === "plan"
@@ -50825,7 +50873,20 @@ or changing anything in Cliniko.
     // the mode -- cells keep saving as she leaves them, exactly as before
     const editOn = phTpEditPlanId === plan.id;
     const editBtn = `<button type="button" class="ph-tp-editbtn${editOn ? " on" : ""}" data-tp-editplan="${plan.id}" title="${editOn ? "Close edit mode" : "Edit plan — protocol, diagnosis, goal and every Planned cell"}">${editOn ? "Done" : "✎ Edit plan"}</button>`;
-    return `<div class="ph-tp-tabs"><div class="ph-tp-tabsrow" role="tablist" aria-label="Phases of this plan">${phs.map((p, i) => {
+    // her pick 2026-09-19 ("done, current, next only"): finished phases as
+    // ticks, the current one, the next one -- the rest behind "+N more"; the
+    // open tab and the calendar's live phase always stay visible
+    const curIdx = phs.findIndex(p => p.status === "current");
+    const nextIdx = curIdx >= 0 ? curIdx + 1 : phs.findIndex(p => p.status !== "done");
+    const showAll = phTpTabsAll.has(plan.id);
+    const core = (p, i) => p.status === "done" || p.status === "current" || i === nextIdx;
+    const shown = phs.filter((p, i) => showAll || core(p, i) || (sel && p.id === sel.id) || (liveTab && p.id === liveTab.id));
+    const hidden = phs.length - shown.length;
+    const foldable = phs.some((p, i) => !core(p, i));
+    const moreBtn = hidden > 0 || (showAll && foldable)
+      ? `<button type="button" class="ph-tp-tab more" data-tp-tabs-more="${plan.id}" title="${showAll ? "Show fewer phases" : "Show every phase"}"><span class="num" aria-hidden="true">${showAll ? "–" : "+"}</span><span class="lbl">${showAll ? "fewer" : `${hidden} more`}</span></button>` : "";
+    return `<div class="ph-tp-tabs"><div class="ph-tp-tabsrow" role="tablist" aria-label="Phases of this plan">${shown.map(p => {
+      const i = phs.indexOf(p);
       const on = !!sel && p.id === sel.id;
       let sub = phTpSpanText(p);
       if (on && cycleComp) sub = sub ? `${sub} · Day ${cycleComp.day}` : `Day ${cycleComp.day}`;
@@ -50834,7 +50895,7 @@ or changing anything in Cliniko.
         <span class="lbl">${p.label ? esc(p.label) : "Phase name"}</span>
         ${sub ? `<span class="sub">${sub}</span>` : ""}
       </button>`;
-    }).join("")}</div>${editBtn}${stageMenu}</div>`;
+    }).join("")}${moreBtn}</div>${editBtn}${stageMenu}</div>`;
   }
   /* The clinic's two dates, typed once, at the top of the plan they belong to
      -- above the phases because they DRIVE the phases rather than sitting
@@ -51352,15 +51413,22 @@ or changing anything in Cliniko.
           : `<button type="button" class="ph-tp-formula-chip" data-tp-formula-unlink="${plan.id}:${phase.id}" title="Click to unlink">🌿 ${esc(phase.formulaName)} ✕</button>`)
       : frozen ? `<span class="ph-tp-rec-none">—</span>`
       : `<button type="button" class="ph-tp-formula-chip design" data-tp-formula-design="${plan.id}:${phase.id}">✎ Design formula</button> <button type="button" class="ph-tp-formula-chip empty" data-tp-formula-pick-open="${plan.id}:${phase.id}">Link formula</button>${phase.suggestFormula ? `<span class="ph-tp-sugg">suggested: ${esc(phase.suggestFormula)}</span>` : ""}`;
-    return phTpAcuteRowHtml(plan, phase) + `
-      <tr class="ph-tp-headrow"><td></td><td class="ph-tp-colhead plan">Planned</td><td></td><td class="ph-tp-colhead act">${showTodaysVisit ? "Today’s visit" : "What happened"}</td></tr>
-      <tr><td class="ph-tp-lbl">Aim</td>${cell("aim")}${rec("Outcome", "outcome")}</tr>
-      <tr><td class="ph-tp-lbl">Visits</td>${cell("cadence")}${rec("Visits", "visits")}</tr>
-      <tr><td class="ph-tp-lbl">Formula</td><td class="ph-tp-fcell">${formula}${picking ? phTpPhaseFormulaPickerHtml(phase) : ""}${phTpFormulaHistoryHtml(phase)}</td>${rec("Dispensed", "dispensed")}</tr>
-      <tr class="ph-tp-factionrow">${spanning ? `<td colspan="2">${phTpFormulaActionHtml(phase, frozen)}</td>` : `<td colspan="4">${phTpFormulaActionHtml(phase, frozen)}</td>`}</tr>
-      <tr><td class="ph-tp-lbl">Points</td>${cell("points")}${rec("Done", "acu")}</tr>
-      <tr><td class="ph-tp-lbl">Press tags</td>${cell("pressPoints")}${spanning ? "" : `<td class="ph-tp-lbl mid rec"></td><td class="ph-tp-reccell"></td>`}</tr>
-      <tr><td class="ph-tp-lbl">Watch</td><td class="ph-tp-cell ph-tp-symcell">${phTpSymptomsHtml(plan, phase, frozen)}</td>${rec("Periods", "periods")}</tr>
+    // her pick 2026-09-19 ("first thing you see: Today's visit"): while
+    // today's visit is being logged its merged cell LEADS each row and the
+    // Planned pair follows -- same four columns, same rowspan, other order
+    const first = showTodaysVisit;
+    const tr = (label, planTd, recTd, cls) => `<tr${cls ? ` class="${cls}"` : ""}>${first ? recTd : ""}<td class="ph-tp-lbl">${label}</td>${planTd}${first ? "" : recTd}</tr>`;
+    const head = first
+      ? `<tr class="ph-tp-headrow"><td class="ph-tp-colhead act" colspan="2">Today’s visit</td><td></td><td class="ph-tp-colhead plan">Planned</td></tr>`
+      : `<tr class="ph-tp-headrow"><td></td><td class="ph-tp-colhead plan">Planned</td><td></td><td class="ph-tp-colhead act">What happened</td></tr>`;
+    return phTpAcuteRowHtml(plan, phase) + head +
+      tr("Aim", cell("aim"), rec("Outcome", "outcome")) +
+      tr("Visits", cell("cadence"), rec("Visits", "visits")) +
+      tr("Formula", `<td class="ph-tp-fcell">${formula}${picking ? phTpPhaseFormulaPickerHtml(phase) : ""}${phTpFormulaHistoryHtml(phase)}</td>`, rec("Dispensed", "dispensed")) +
+      `<tr class="ph-tp-factionrow">${spanning ? `<td colspan="2">${phTpFormulaActionHtml(phase, frozen)}</td>` : `<td colspan="4">${phTpFormulaActionHtml(phase, frozen)}</td>`}</tr>` +
+      tr("Points", cell("points"), rec("Done", "acu")) +
+      tr("Press tags", cell("pressPoints"), spanning ? "" : `<td class="ph-tp-lbl mid rec"></td><td class="ph-tp-reccell"></td>`) +
+      tr("Watch", `<td class="ph-tp-cell ph-tp-symcell">${phTpSymptomsHtml(plan, phase, frozen)}</td>`, rec("Periods", "periods")) + `
       ${rc ? `<tr class="ph-tp-vtrow"><td colspan="4">${phTpVisitsMergedHtml({ name: phTpScreenPatient, plan, phase, frozen, rc, hideToday: showTodaysVisit })}</td></tr>` : ""}`;
   }
   /* Visits = three pickers (her ask 2026-09-10, clarified twice: "i meant for
