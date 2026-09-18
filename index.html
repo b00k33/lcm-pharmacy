@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260919-150000">
+<meta name="lcm-build" content="20260919-153000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -5845,6 +5845,11 @@
   #pharmacyPage .ph-tp-headband > .ph-tp-headband-main { grid-area: main; min-width: 0; }
   #pharmacyPage .ph-tp-headband > .ph-tp-cyclehost { grid-area: cal; }
   #pharmacyPage .ph-tp-headband > .ph-tp-viewtoggle { grid-area: tog; margin: 0; }
+  /* her pick 2026-09-19 ("B · Focus + Goal rows"): the same labelled rows the door popup uses */
+  #pharmacyPage .ph-tp-fg .kv { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 8px; font-size: 12.5px; line-height: 1.45; color: var(--ph-ink); }
+  #pharmacyPage .ph-tp-fg .kv + .kv { margin-top: 6px; }
+  #pharmacyPage .ph-tp-fg .kv b { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--ph-green-deep); padding-top: 4px; }
+  #pharmacyPage .ph-tp-fg .faint { color: var(--ph-faint); font-style: italic; }
   #pharmacyPage .ph-cyc-strip.compact .ph-cyc-strip-head { margin-bottom: 4px; }
   #pharmacyPage .ph-cyc-strip.compact .ph-cyc-cdcalc-toggle { margin: 6px 0 0; }
   #pharmacyPage .ph-cyc-strip.compact .ph-cyc-cdcalc { margin: 6px 0 0; }
@@ -22798,7 +22803,7 @@
   // Focus and the plan's own goal line + current phase for Goal (her Q5),
   // tagged "plan" (or "case" when only the Case contributed) so she can tell
   // derived text from her own. Derived text is never written back.
-  function phApptBrief(a) {
+  function phApptBrief(a, planOverride) {
     const k = phPatientKey(a.patient);
     // her correction 2026-09-19 (Grainne Meade, a Friday booking): "its zanda
     // not cliniko". A pasted briefing table never says which system it came
@@ -22810,7 +22815,7 @@
     if (out.goal) out.goalSrc = own;
     if (out.focus && out.goal) return out;
     const script = phApptScriptFor(k);
-    const plan = phTpShownPlan(a.patient);
+    const plan = planOverride || phTpShownPlan(a.patient);
     if (!out.focus) {
       const ct = script && script.caseType;
       const caseLabel = !ct || ct === "general" ? "" : ct === "other" ? (script.caseTypeOther || "").trim() : ((PH_CASE_TYPES.find(c => c[0] === ct) || [])[1] || "");
@@ -49265,6 +49270,22 @@ or changing anything in Cliniko.
       : `next ~${esc(phShortDate(comp.nextDate))}`;
     return wrap(`<span class="big">Day ${comp.day}</span><span class="ph">${esc(comp.phaseLabel)}</span><span class="mut">last period ${esc(phShortDate(c.lmp))}${c.approx ? " (estimate)" : ""} · ${tail}</span>`);
   }
+  // her pick 2026-09-19 ("B · Focus + Goal rows", after "show the 4 weeks"
+  // left the band's left column empty beside the taller calendar): the
+  // cycle plans' band reads Presenting focus / Treatment goal as two
+  // labelled rows -- the same phApptBrief the List columns and the door
+  // popup show (today's booking's own words first, then THIS plan's
+  // diagnosis · title and goal · live phase, marked). Edit plan mode still
+  // opens phTpPlanHeadHtml's fields; other plans keep the Dx · Goal line.
+  function phTpFocusGoalHtml(name, plan) {
+    const appt = phApptNearestNow(name);
+    const brief = phApptBrief(appt || { patient: name }, plan);
+    const val = (v, s) => v ? `${esc(v)}${phApptBriefSrcHtml(s)}` : `<span class="faint">—</span>`;
+    return `<div class="ph-tp-fg">
+      <div class="kv"><b>Presenting focus</b><span>${val(brief.focus, brief.focusSrc)}</span></div>
+      <div class="kv"><b>Treatment goal</b><span>${val(brief.goal, brief.goalSrc)}</span></div>
+    </div>`;
+  }
   function phTpPlanHeadHtml(name, plan) {
     if (!plan) return "";
     if (phTpEditPlanId !== plan.id) {
@@ -49454,7 +49475,7 @@ or changing anything in Cliniko.
     const cycleStrip = PH_TP_CYCLE_TEMPLATES.includes(plan.templateName)
       ? `<div class="ph-tp-cyclehost">${phCycleStripHtml(phPatientPeek(name), name, { weeks: 4, compact: true })}</div>` : "";
     return `<div class="ph-tp-inline${phTpEditPlanId === plan.id ? " ph-tp-editing" : ""}">
-      <div class="ph-tp-headband${cycleStrip ? " has-cycle" : ""}"><div class="ph-tp-headband-main">${phTpPlanHeadHtml(name, plan)}${cycleStrip ? phTpCycleLineHtml(phPatientPeek(name), name) : ""}</div>${cycleStrip}${cycleStrip ? phTpViewToggleHtml(plan) : ""}</div>
+      <div class="ph-tp-headband${cycleStrip ? " has-cycle" : ""}"><div class="ph-tp-headband-main">${cycleStrip && phTpEditPlanId !== plan.id ? phTpFocusGoalHtml(name, plan) : phTpPlanHeadHtml(name, plan)}${cycleStrip ? phTpCycleLineHtml(phPatientPeek(name), name) : ""}</div>${cycleStrip}${cycleStrip ? phTpViewToggleHtml(plan) : ""}</div>
       ${plan.templateName === "IVF Protocol" ? phIvfHistoryFoldHtml(name) : ""}
       ${phTpFacialStripHtml(rec, plan)}
       ${phTpDeleteArm === "plan"

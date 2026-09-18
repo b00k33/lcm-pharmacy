@@ -5836,3 +5836,13 @@ widths; toggle position; live-search still filters. `lcm-build`
   other day → `"cliniko"` (her /patients rule) — and `phApptBriefSrcHtml`
   prints the matching word. Computed at render, so old bookings follow.
   `lcm-build` `20260919-150000`, `sw.js` `lcm-20260919-fourweeks-zanda`.
+- **Her pick: "B · Focus + Goal rows"** (over A, the phase tabs beside the
+  calendar, and over leaving it). `phTpFocusGoalHtml(name, plan)` renders
+  Presenting focus / Treatment goal as two labelled rows (`.ph-tp-fg .kv`, the
+  popup's own shape) in the head band of cycle plans, replacing the Dx · Goal
+  line there; `phApptBrief(a, planOverride)` gained the second argument so the
+  rows describe THIS plan, not `phTpShownPlan`. Edit plan mode still swaps in
+  `phTpPlanHeadHtml`'s fields; non-cycle plans keep the Dx · Goal line.
+  Verified: plan-derived text marked PLAN, a pasted briefing's own words marked
+  Zanda/Cliniko, phone stack main → calendar → toggle, no sideways scroll.
+  `lcm-build` `20260919-153000`, `sw.js` `lcm-20260919-focus-goal-rows`.
