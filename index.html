@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260919-201500">
+<meta name="lcm-build" content="20260919-203000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6043,6 +6043,9 @@
   #pharmacyPage .ph-tp-fg .kv + .kv { margin-top: 6px; }
   #pharmacyPage .ph-tp-fg .kv b { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--ph-green-deep); padding-top: 4px; }
   #pharmacyPage .ph-tp-fg .faint { color: var(--ph-faint); font-style: italic; }
+  #pharmacyPage .ph-tp-fg .v { cursor: text; border-bottom: 1px dashed transparent; min-width: 0; }
+  #pharmacyPage .ph-tp-fg .v:hover, #pharmacyPage .ph-tp-fg .v:focus-visible { border-bottom-color: var(--ph-green); outline: none; }
+  #pharmacyPage .ph-tp-fg-in { padding: 1px 6px; border-bottom: 1px solid var(--ph-green); font-size: 12.5px; }
   #pharmacyPage .ph-cyc-strip.compact .ph-cyc-strip-head { margin-bottom: 4px; }
   #pharmacyPage .ph-cyc-strip.bare .ph-cyc-strip-head { margin-bottom: 6px; }
   #pharmacyPage .ph-cyc-strip.compact .ph-cyc-cdcalc-toggle { margin: 6px 0 0; }
@@ -23004,9 +23007,10 @@
     // from, but her clinic does -- Fridays run on Zanda, every other day on
     // Cliniko (the /patients rule) -- so the chip follows the booking's weekday.
     const own = a.briefSrc === "paste" ? (a.date && parseKey(a.date).getDay() === 5 ? "zanda" : "cliniko") : "typed";
+    const ownFor = f => a.briefEdited && a.briefEdited[f] ? "typed" : own;
     const out = { focus: (a.focus || "").trim(), goal: (a.goal || "").trim(), focusSrc: "", goalSrc: "" };
-    if (out.focus) out.focusSrc = own;
-    if (out.goal) out.goalSrc = own;
+    if (out.focus) out.focusSrc = ownFor("focus");
+    if (out.goal) out.goalSrc = ownFor("goal");
     if (out.focus && out.goal) return out;
     const script = phApptScriptFor(k);
     const plan = planOverride || phTpShownPlan(a.patient);
@@ -26909,6 +26913,8 @@
         phTpRerender();
         return;
       }
+      const tpFg = e.target.closest("[data-tp-fg]");
+      if (tpFg) { phTpFgEdit = `${tpFg.dataset.tpFgPlan}:${tpFg.dataset.tpFg}`; phTpFgRefresh(tpFg.dataset.tpFgName, tpFg.dataset.tpFgPlan); return; }
       const tpEditPlan = e.target.closest("[data-tp-editplan]");
       if (tpEditPlan) {
         const id = tpEditPlan.dataset.tpEditplan;
@@ -49677,15 +49683,70 @@ or changing anything in Cliniko.
     const mk = liveIdx >= 0 ? `<span class="mk" style="left:${mkPct.toFixed(2)}%"></span><span class="mkl${mkSide}" style="left:${mkPct.toFixed(2)}%">${mkText}</span>` : "";
     return `<div class="ph-tp-pbar-outer${mk ? " has-mk" : ""}" data-tp-pbar="${plan.id}" data-tp-pbar-name="${esc(name)}" role="tablist" aria-label="Phases of this plan"><div class="ph-tp-pbar">${segs}</div>${mk}</div>`;
   }
+  let phTpFgEdit = null;   // "planId:focus" | "planId:goal" while one row is being typed
+  // where a typed Focus / Goal lands: the booking's own words go back on the
+  // booking (the same field the Zanda/Cliniko paste filled); anything the
+  // plan supplied goes to plan.diagnosis / plan.goal
+  function phTpFgTarget(name, plan, field) {
+    const appt = phApptNearestNow(name);
+    const brief = phApptBrief(appt || { patient: name }, plan);
+    const src = field === "focus" ? brief.focusSrc : brief.goalSrc;
+    if (appt && (src === "zanda" || src === "cliniko" || src === "typed")) return { kind: "appt", appt, seed: (appt[field] || "").trim() };
+    return { kind: "plan", seed: ((field === "focus" ? plan.diagnosis : plan.goal) || "").trim() };
+  }
   function phTpFocusGoalHtml(name, plan) {
     const appt = phApptNearestNow(name);
     const brief = phApptBrief(appt || { patient: name }, plan);
-    const val = (v, s) => v ? `${esc(v)}${phApptBriefSrcHtml(s)}` : `<span class="faint">—</span>`;
-    return `<div class="ph-tp-fg">
-      <div class="kv"><b>Focus</b><span>${val(brief.focus, brief.focusSrc)}</span></div>
-      <div class="kv"><b>Goal</b><span>${val(brief.goal, brief.goalSrc)}</span></div>
+    const row = (field, label, v, s) => {
+      const editing = phTpFgEdit === `${plan.id}:${field}`;
+      const inner = editing
+        ? `<input type="text" class="ph-tp-cellin field-bare ph-tp-fg-in" data-tp-fg-in="${field}" data-tp-fg-plan="${plan.id}" data-tp-fg-name="${esc(name)}" value="${esc(phTpFgTarget(name, plan, field).seed)}" placeholder="${field === "focus" ? "what she is here for" : "what the treatment is for"}" aria-label="${label}">`
+        : `<span class="v" data-tp-fg="${field}" data-tp-fg-plan="${plan.id}" data-tp-fg-name="${esc(name)}" role="button" tabindex="0" title="Tap to edit">${v ? `${esc(v)}${phApptBriefSrcHtml(s)}` : `<span class="faint">tap to add</span>`}</span>`;
+      return `<div class="kv"><b>${label}</b>${inner}</div>`;
+    };
+    return `<div class="ph-tp-fg" data-tp-fgbox="${plan.id}">
+      ${row("focus", "Focus", brief.focus, brief.focusSrc)}
+      ${row("goal", "Goal", brief.goal, brief.goalSrc)}
     </div>`;
   }
+  function phTpFgRefresh(name, planId) {
+    const box = document.querySelector(`[data-tp-fgbox="${CSS.escape(planId)}"]`);
+    const plan = phTpFindPlan(name, planId);
+    if (!box || !plan) return;
+    const tmp = document.createElement("div");
+    tmp.innerHTML = phTpFocusGoalHtml(name, plan);
+    box.replaceWith(tmp.firstElementChild);
+    const inp = document.querySelector(`[data-tp-fgbox="${CSS.escape(planId)}"] input[data-tp-fg-in]`);
+    if (inp) { inp.focus(); inp.select(); }
+  }
+  function phTpFgCommit(inp) {
+    const field = inp.dataset.tpFgIn, name = inp.dataset.tpFgName, planId = inp.dataset.tpFgPlan;
+    const plan = phTpFindPlan(name, planId);
+    if (!plan) { phTpFgEdit = null; return; }
+    const v = inp.value.trim();
+    const target = phTpFgTarget(name, plan, field);
+    if (target.kind === "appt") {
+      // re-resolve the live booking by id -- a cloud pull mid-edit swaps PHARMACY wholesale
+      const a = phApptList().find(x => x.id === target.appt.id) || target.appt;
+      a[field] = v;
+      a.briefEdited = Object.assign({}, a.briefEdited, { [field]: true });
+    } else {
+      if (field === "focus") plan.diagnosis = v; else plan.goal = v;
+    }
+    phTpFgEdit = null;
+    savePharmacy();
+    phTpFgRefresh(name, planId);
+  }
+  document.addEventListener("keydown", e => {
+    const inp = e.target && e.target.closest ? e.target.closest("input[data-tp-fg-in]") : null;
+    if (!inp) return;
+    if (e.key === "Enter") { e.preventDefault(); phTpFgCommit(inp); }
+    else if (e.key === "Escape") { e.preventDefault(); phTpFgEdit = null; phTpFgRefresh(inp.dataset.tpFgName, inp.dataset.tpFgPlan); }
+  });
+  document.addEventListener("focusout", e => {
+    const inp = e.target && e.target.closest ? e.target.closest("input[data-tp-fg-in]") : null;
+    if (inp && phTpFgEdit === `${inp.dataset.tpFgPlan}:${inp.dataset.tpFgIn}`) phTpFgCommit(inp);
+  });
   function phTpPlanHeadHtml(name, plan) {
     if (!plan) return "";
     if (phTpEditPlanId !== plan.id) {
