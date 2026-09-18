@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260918-100000">
+<meta name="lcm-build" content="20260918-110000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -7792,6 +7792,23 @@
   #pharmacyPage .ph-tp-datenote { flex: 1 1 100%; font-size: 10.5px; color: var(--ph-faint); }
   #pharmacyPage .ph-tp-pline .del { margin-left: auto; border: none; background: none; color: var(--ph-faint); font-size: 15px; line-height: 1; padding: 0 4px; cursor: pointer; font-family: inherit; }
   #pharmacyPage .ph-tp-pline .del:hover { color: var(--ph-zero); }
+  /* Phase-announce popup (her ask 2026-09-18, after an animated widget mock
+     she approved and asked to be "snappier" and slide up): a quiet card
+     between the phase line and the grid table. .cal (fertility calendar
+     mismatch) takes the teal accent already used for the tab strip; .msk
+     (visit-count verify) reuses the same gold "notice" tone this app
+     already uses everywhere else (--ph-gold-tint/-deep), not a new colour. */
+  #pharmacyPage .ph-tp-announce { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; border-radius: 10px; padding: 8px 12px; margin: 0 0 8px; font-size: 12px; animation: phTpAnnounceIn 160ms cubic-bezier(.34,1.56,.64,1); }
+  #pharmacyPage .ph-tp-announce.cal { background: var(--ph-green-tint); color: var(--ph-green-deep); }
+  #pharmacyPage .ph-tp-announce.msk { background: var(--ph-gold-tint, #FFFBE2); color: var(--ph-gold-deep, #8A6D1A); }
+  #pharmacyPage .ph-tp-announce .txt { flex: 1 1 auto; }
+  #pharmacyPage .ph-tp-announce .acts { display: flex; gap: 6px; flex: none; flex-wrap: wrap; max-width: 100%; }
+  #pharmacyPage .ph-tp-announce button { font: inherit; font-size: 11.5px; font-weight: 700; border-radius: 999px; padding: 4px 10px; cursor: pointer; border: 1px solid transparent; }
+  #pharmacyPage .ph-tp-announce.cal .go { background: var(--ph-green-deep); color: var(--ph-white); }
+  #pharmacyPage .ph-tp-announce.cal .stay { background: transparent; border-color: var(--ph-green-deep); color: var(--ph-green-deep); }
+  #pharmacyPage .ph-tp-announce.msk .go { background: var(--ph-gold-deep, #8A6D1A); color: var(--ph-white); }
+  #pharmacyPage .ph-tp-announce.msk .stay { background: transparent; border-color: var(--ph-gold-deep, #8A6D1A); color: var(--ph-gold-deep, #8A6D1A); }
+  @keyframes phTpAnnounceIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
   /* ==== her redesign 2026-09-10 ("too much info. too flat. not easy to
      navigate"): the phases are a TAB STRIP and only the open one's table is
      on screen. This replaced the 2026-09-08 segmented bar + legend and the
@@ -26234,6 +26251,60 @@
         const [planId, phaseId] = tpTab.dataset.tpTab.split(":");
         phTpTabPhase.set(planId, phaseId);
         phTpRerender();
+        return;
+      }
+      // ---- phase-announce popup, both halves (her ask 2026-09-18) ----
+      const tpMismatchGo = e.target.closest("[data-tp-mismatch-go]");
+      if (tpMismatchGo) {
+        const [planId] = tpMismatchGo.dataset.tpMismatchGo.split(":");
+        phTpTabPhase.delete(planId);
+        // review-caught bug: a dismissal from an earlier, different gap
+        // must not silently suppress a brand-new one later -- clear it
+        // the moment she actually returns to the calendar phase
+        phTpMismatchDismissed.delete(planId);
+        // same reset "tapping the calendar phase chip again" already does
+        // inside Today's visit -- stop overriding what she's viewing AND
+        // what she's treating together, or the acu editor is left pointed
+        // at a phase no tab shows any more
+        presAcuPhaseId = null; presAcuPointsChecked = null; presAcuPressChecked = null; presAcuWatchChecked = [];
+        // review-caught bug: a partial repaint (phTpRepaintPhasePanel) never
+        // touches the tab strip, which sits OUTSIDE .ph-tp-phasebody -- the
+        // strip kept showing the old override as "on", and tapping that
+        // stale-but-live tab silently re-created the override this button
+        // just cleared. The full rerender keeps tabs and body in sync.
+        phTpRerender();
+        return;
+      }
+      const tpMismatchDismiss = e.target.closest("[data-tp-mismatch-dismiss]");
+      if (tpMismatchDismiss) {
+        const [planId, phaseId, liveId] = tpMismatchDismiss.dataset.tpMismatchDismiss.split(":");
+        phTpMismatchDismissed.set(planId, `${phaseId}:${liveId}`);
+        phTpRepaintPhasePanel();
+        return;
+      }
+      const tpMskMove = e.target.closest("[data-tp-msk-move]");
+      if (tpMskMove) {
+        const [planId, , nextId] = tpMskMove.dataset.tpMskMove.split(":");
+        const plan = phTpFindPlan(phTpScreenPatient, planId);
+        const next = plan && plan.phases.find(p => p.id === nextId);
+        if (plan && next) {
+          // review-caught bug: phTpTabPhaseOf honours an existing override
+          // unconditionally, even once its phase has flipped to "done" --
+          // left in place, the Grid kept showing the just-finished phase
+          // (frozen) instead of following to the one she just moved into,
+          // and the MSK banner + the Today's-visit editor both vanished
+          // with no sign anything had happened.
+          phTpTabPhase.delete(planId);
+          phTpSetPhaseStatus(plan, next, "current");
+        }
+        return;
+      }
+      const tpMskDismiss = e.target.closest("[data-tp-msk-dismiss]");
+      if (tpMskDismiss) {
+        const parts = tpMskDismiss.dataset.tpMskDismiss.split(":");
+        const done = Number(parts.pop());
+        phTpMskVerifyDismissed.set(parts.join(":"), done);
+        phTpRepaintPhasePanel();
         return;
       }
       // ==== Option K: the timeline spine's own toggles ====================
@@ -45415,6 +45486,11 @@ or changing anything in Cliniko.
     const tpl = plan && plan.templateName ? phTpBuiltinTemplates().find(t => t.name === plan.templateName) : null;
     return !!(tpl && tpl.category === "facial");
   };
+  // same shape, MSK's own category -- the phase-verify popup's gate
+  const phTpIsMskPlan = plan => {
+    const tpl = plan && plan.templateName ? phTpBuiltinTemplates().find(t => t.name === plan.templateName) : null;
+    return !!(tpl && tpl.category === "msk");
+  };
   function phTpFacialStripHtml(rec, plan) {
     if (!phTpIsFacialPlan(plan) && !((rec && rec.facialScores) || []).length) return "";
     const hist = phFpSorted(rec);
@@ -48034,7 +48110,7 @@ or changing anything in Cliniko.
     const inModal = !!(modal && !modal.hidden);
     if (!inModal && !(presTpInlinePlanId || presTpInlineNew)) return;
     const plan = phTpFindPlan(phTpScreenPatient, phTpScreenPlanId);
-    const sel = plan && phTpTabPhaseOf(plan);
+    const sel = plan && phTpTabPhaseOf(plan, phPatientPeek(phTpScreenPatient));
     const body = (inModal ? modal : document).querySelector(".ph-tp-phasebody");
     if (!plan || !sel || !body) { phTpRerender(); return; }
     body.innerHTML = phTpPhasePanelHtml(plan, sel);
@@ -48123,6 +48199,19 @@ or changing anything in Cliniko.
      like the old unfold set was; with nothing picked it follows the current
      phase (phTpTabPhaseOf). */
   const phTpTabPhase = new Map();   // planId -> phaseId she has tabbed to
+  // her ask 2026-09-18, after a widget mock of an animated popup ("i like
+  // this one, do this for all treatment plans for fertility"): once she's
+  // tabbed (or overridden via a Today's visit phase chip) away from the
+  // live calendar phase, name the gap instead of leaving it silent. Keyed
+  // by the OVERRIDE phase's own id, not a flat boolean, so dismissing it
+  // sticks only until she overrides to a DIFFERENT phase -- the same
+  // "scope to what changes" reasoning as rec.acuFu's doneForSessionId.
+  const phTpMismatchDismissed = new Map();   // planId -> phaseId dismissed for
+  // her MSK half of the same ask ("show the count... and verify what
+  // phase"): once a current MSK phase's visit count reaches what the plan
+  // asked for, ask whether to move on. Keyed by the exact visit count at
+  // dismissal, so a later visit that pushes the count further re-asks.
+  const phTpMskVerifyDismissed = new Map();   // "planId:phaseId" -> done count dismissed at
   /* "Everything in ⋯" (her pick, same round): Case, Phase, + Add phase,
      Full screen, All plans and Delete plan all live behind ONE ⋯ on the
      prescription tab strip. Open/close swaps just the menu node in place --
@@ -49249,12 +49338,22 @@ or changing anything in Cliniko.
      phTpSpanText's dates/visit count under it -- "keep the date line", her
      round-2 answer). Gold marks the open tab, exactly as the bar marked the
      current phase ("keep gold"). */
-  function phTpTabPhaseOf(plan) {
+  function phTpTabPhaseOf(plan, rec) {
     const phs = plan.phases || [];
     if (!phs.length) return null;
     const want = phTpTabPhase.get(plan.id);
     const picked = want ? phs.find(p => p.id === want) : null;
     if (picked) return picked;
+    // her ask 2026-09-18: default to whichever phase the CALENDAR says is
+    // current today, not just the plan's last-saved status pointer -- that
+    // pointer only moves when she takes an action (logging a session, a
+    // period, a cycle field), so left untouched for a few days it can fall
+    // behind the real cycle day. phTpCycleEffectivePhase is the same live
+    // read presAcuCtx() already uses to decide "Today's visit"; returns
+    // null for non-cycle-synced plans (MSK etc.), which fall through to the
+    // persisted status exactly as before.
+    const live = rec && phTpCycleEffectivePhase(rec, plan);
+    if (live) return live;
     return phs.find(p => p.status === "current") || phs.slice().reverse().find(p => p.status === "done") || phs[0];
   }
   function phTpTabsHtml(plan, sel) {
@@ -49308,9 +49407,9 @@ or changing anything in Cliniko.
      wants inside the same box under the table -- the inline editor puts the
      acu log, the add-phase picker and Review notes there; the full-screen
      modal keeps its own blocks outside and passes "". */
-  function phTpTabbedHtml(plan, extraInner) {
+  function phTpTabbedHtml(name, plan, extraInner) {
     const phs = plan.phases || [];
-    const sel = phTpTabPhaseOf(plan);
+    const sel = phTpTabPhaseOf(plan, phPatientPeek(name));
     const ms = phTpMilestoneRowHtml(plan);
     return `${ms ? `<table class="ph-tp-grid ph-tp-msgrid">${PH_TP_COLGROUP}<tbody>${ms}</tbody></table>` : ""}
       ${phTpTabsHtml(plan, sel)}
@@ -49319,8 +49418,82 @@ or changing anything in Cliniko.
         ${extraInner || ""}
       </div>`;
   }
+  /* ==== PHASE ANNOUNCE POPUP (her ask 2026-09-18, after an animated widget
+     mock she approved: "i like this one, do this for all treatment plans
+     for fertility... then do it for musculoskeletal but show the count of
+     how many treatments and verify what phase"). Two different questions,
+     the same quiet slot above the phase table: a fertility plan asks
+     whether she meant to move off the calendar phase; an MSK plan asks
+     whether she's still in this one now the visit count says it's done.
+     Both read state that already exists (phTpTabPhase's override,
+     phTpVisitParts' count) -- nothing new is stored beyond the two
+     ephemeral dismiss maps declared beside phTpTabPhase. ==== */
+  function phTpPhaseMismatchHtml(plan, phase) {
+    if (!PH_TP_CYCLE_SYNC.includes(plan.templateName)) return "";
+    // only the phase she's actually tabbed TO, and only while it differs
+    // from the calendar -- phTpTabPhaseOf already defaults to the calendar
+    // phase with no override, so there's nothing to say the moment a plan
+    // opens fresh; this only fires once she's moved off it (a tab click or
+    // a Today's visit phase-override chip, both write phTpTabPhase).
+    if (phTpTabPhase.get(plan.id) !== phase.id) return "";
+    const rec = phPatientPeek(phTpScreenPatient);
+    const live = rec && phTpCycleEffectivePhase(rec, plan);
+    if (!live || live.id === phase.id) return "";
+    // review-caught bug 2026-09-18: keying dismissal on the override phase
+    // alone left it stuck once set -- staying dismissed even after the
+    // calendar moved on to a completely different phase than the one she
+    // actually compared against. Keying on BOTH phase ids together means a
+    // later calendar move (a new period logged, days passing) makes this
+    // read as a fresh gap again, same "scope to what changes" reasoning as
+    // the MSK popup's own done-count key just below.
+    const dismissKey = `${phase.id}:${live.id}`;
+    if (phTpMismatchDismissed.get(plan.id) === dismissKey) return "";
+    const comp = phCycleComp(rec);
+    return `<div class="ph-tp-announce cal">
+      <div class="txt">${comp ? `Day ${comp.day} · ` : ""}calendar says <b>${esc(live.label)}</b></div>
+      <div class="acts">
+        <button type="button" class="go" data-tp-mismatch-go="${plan.id}:${live.id}">Go to ${esc(live.label)}</button>
+        <button type="button" class="stay" data-tp-mismatch-dismiss="${plan.id}:${dismissKey}">Stay on ${esc(phase.label)}</button>
+      </div>
+    </div>`;
+  }
+  function phTpPhaseMskVerifyHtml(plan, phase) {
+    // review-caught bug 2026-09-18: a held/interrupted plan (plan.status ===
+    // "paused") leaves its interrupted phase's own status as "current" --
+    // phTpApplyInterrupt never touches it -- so without this check the
+    // banner (and its "Move to" action) could fire on a plan that isn't
+    // actually being progressed right now, corrupting phTpResumeInterrupted's
+    // later pause-span attribution once the interrupting plan closes.
+    if (!phTpIsMskPlan(plan) || plan.status !== "active" || phase.status !== "current") return "";
+    const idx = (plan.phases || []).indexOf(phase);
+    const next = idx >= 0 ? plan.phases[idx + 1] : null;
+    if (!next) return "";   // nothing to verify against on the last phase
+    const parts = phTpVisitParts(phTpScreenPatient, plan, phase);
+    if (!parts || !parts.st.expected || parts.st.done < parts.st.expected) return "";
+    const key = `${plan.id}:${phase.id}`;
+    // scoped to the exact count she saw, not a flat boolean -- dismissing
+    // sticks only until a LATER visit pushes the count further, same
+    // "scope to what changes" reasoning as rec.acuFu's doneForSessionId
+    if (phTpMskVerifyDismissed.get(key) === parts.st.done) return "";
+    return `<div class="ph-tp-announce msk">
+      <div class="txt">${parts.text} in ${esc(phase.label)}</div>
+      <div class="acts">
+        <button type="button" class="go" data-tp-msk-move="${plan.id}:${phase.id}:${next.id}">Move to ${esc(next.label)}</button>
+        <button type="button" class="stay" data-tp-msk-dismiss="${key}:${parts.st.done}">Keep in ${esc(phase.label)}</button>
+      </div>
+    </div>`;
+  }
   function phTpPhasePanelHtml(plan, phase) {
+    // review-caught bug 2026-09-18: a template she's since recategorised to
+    // "msk" via the Templates manager (Settings) while it's still one of
+    // PH_TP_CYCLE_SYNC's 4 names could satisfy BOTH gates on the same phase
+    // at once -- two differently-worded, differently-coloured cards stacked
+    // on one phase reads as two conflicting instructions. The calendar
+    // mismatch is the more fundamental fact (it's about her actual cycle
+    // data, not an editable label), so it wins when both would apply.
+    const announce = phTpPhaseMismatchHtml(plan, phase) || phTpPhaseMskVerifyHtml(plan, phase);
     return `<div class="ph-tp-pline ph-tp-panelhead ${phase.status}"><span class="in">${phTpPhaseLineInner(plan, phase)}</span></div>
+      ${announce}
       <table class="ph-tp-grid">${PH_TP_COLGROUP}<tbody>${phTpPhaseBodyRows(plan, phase)}</tbody></table>`;
   }
   /* ==== OPTION K -- the visit-dated timeline spine (her design, settled
@@ -49443,7 +49616,7 @@ or changing anything in Cliniko.
     // (phTpPhaseBodyRows' showTodaysVisit branch) -- acuLogBlock is deliberately
     // NOT appended here for that mode. Timeline has no per-phase row to embed
     // it into, so it keeps floating below the spine exactly as before.
-    if (mode === "grid") return `${toggle}${phTpTabbedHtml(plan, extraInner)}`;
+    if (mode === "grid") return `${toggle}${phTpTabbedHtml(name, plan, extraInner)}`;
     return `${toggle}${phTpSpineHtml(name, plan)}${acuLogBlock || ""}${extraInner || ""}`;
   }
   /* ==== THE PHASE'S OWN DATES, TYPEABLE (her decision 6, 2026-09-10) =======
