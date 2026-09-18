@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260919-080000">
+<meta name="lcm-build" content="20260919-100000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -8702,6 +8702,14 @@
      sits exactly over the <img> (wrapper shrinks to the picture) and its
      viewBox is the photo's natural pixels, so marks never need re-scaling. */
   #pharmacyPage .ph-ren-marks-wrap { position: relative; display: inline-block; line-height: 0; max-width: 100%; }
+  /* the viewer scrolls INSIDE the card (2026-09-19, her "the photo is cropped"):
+     the card is a shrink-to-fit flex column with overflow hidden, so a tall
+     photo plus the notes below it squeezed the stage and its centred image
+     lost its top and bottom under the head/footer. The body is the scroller,
+     the stage never shrinks. */
+  #pharmacyPage .ph-ren-view-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  #pharmacyPage .ph-ren-view-stage { flex: none; }
+  #pharmacyPage .ph-ren-mark { cursor: move; }
   #pharmacyPage .ph-ren-marks { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: crosshair; overflow: visible; }
   #pharmacyPage .ph-ren-mark { cursor: pointer; }
   #pharmacyPage .ph-ren-mark-ring { fill: none; stroke: var(--ph-gold, #D9AE47); stroke-width: 3px; vector-effect: non-scaling-stroke; }
@@ -28006,6 +28014,7 @@
       // photo and its row in the list -- one handler, tap either.
       const renMark = e.target.closest("[data-ren-mark]");
       if (renMark && phRenCropState && phRenCropState.viewOnly) {
+        if (phRenMarkSuppressClick) { phRenMarkSuppressClick = false; return; }
         const st = phRenCropState, id = renMark.dataset.renMark;
         st.markSel = st.markSel === id ? null : id;
         renderPhRenCropModal();
@@ -43401,6 +43410,8 @@ or changing anything in Cliniko.
   // goes through the ordinary delegated click handler. Nothing here is a
   // diagnosis: the note is whatever she types.
   let phRenMarkDrag = null;   // {cx, cy, r, min} in natural px while a circle is being drawn
+  let phRenMarkEdit = null;   // {id, cx, cy, r} live geometry while an existing circle is being moved or resized
+  let phRenMarkSuppressClick = false;   // the click that follows a move/resize must not toggle the selection
   function phRenMarksRec(st) { return st && st.viewOnly ? (phRenPhotosFor(st.patientKey) || []).find(r => r.id === st.viewId) : null; }
   function phRenMarksOf(st) { const rec = phRenMarksRec(st); return (rec && rec.marks) || []; }
   // backlog 2026-09-16: the viewer's own mark ring overlay is drawn at the
@@ -43429,7 +43440,8 @@ or changing anything in Cliniko.
     const st = phRenCropState, svg = document.getElementById("phRenMarksSvg"), img = document.getElementById("phRenViewImg");
     if (!st || !svg || !img || !img.naturalWidth) return;
     svg.setAttribute("viewBox", `0 0 ${img.naturalWidth} ${img.naturalHeight}`);
-    svg.innerHTML = phRenMarksSvgInner(phRenMarksOf(st), img.naturalWidth, st.markSel, phRenMarkDrag);
+    const ed = phRenMarkEdit;
+    svg.innerHTML = phRenMarksSvgInner(phRenMarksOf(st).map(m => ed && m.id === ed.id ? { ...m, cx: ed.cx, cy: ed.cy, r: ed.r } : m), img.naturalWidth, st.markSel, phRenMarkDrag);
     svg.hidden = false;
   }
   function phRenMarksPt(e, svg) {
@@ -43440,8 +43452,12 @@ or changing anything in Cliniko.
     const svg = document.getElementById("phRenMarksSvg");
     if (!svg) return;
     svg.addEventListener("pointerdown", e => {
-      if (e.target.closest("[data-ren-mark]")) return;   // tapping an existing circle selects it (delegated click)
       if (e.button != null && e.button !== 0) return;
+      // press on a circle she already drew: drag it to MOVE, drag its edge to
+      // RESIZE; a press that never travels is a tap and the delegated click
+      // selects it (her 2026-09-19 "i cant drag my annotation")
+      const hit = e.target.closest("[data-ren-mark]");
+      if (hit) { phRenMarkGrab(e, svg, hit.dataset.renMark); return; }
       e.preventDefault();
       const p = phRenMarksPt(e, svg);
       phRenMarkDrag = { cx: p.x, cy: p.y, r: 0, min: Math.max(6, p.w / 50) };
@@ -43466,6 +43482,38 @@ or changing anything in Cliniko.
       svg.addEventListener("pointerup", up, { once: true });
       svg.addEventListener("pointercancel", up, { once: true });
     });
+  }
+  function phRenMarkGrab(e, svg, id) {
+    const st = phRenCropState, m = phRenMarksOf(st).find(x => x.id === id);
+    if (!st || !m) return;
+    e.preventDefault();
+    const p0 = phRenMarksPt(e, svg), min = Math.max(6, p0.w / 50);
+    const dist = Math.hypot(p0.x - m.cx, p0.y - m.cy);
+    const resize = Math.abs(dist - m.r) < Math.max(min * 1.5, m.r * 0.22);
+    let moved = false;
+    try { svg.setPointerCapture(e.pointerId); } catch (err) {}
+    const move = ev => {
+      const q = phRenMarksPt(ev, svg);
+      if (!moved && Math.hypot(q.x - p0.x, q.y - p0.y) < min) return;
+      moved = true;
+      phRenMarkEdit = resize
+        ? { id, cx: m.cx, cy: m.cy, r: Math.max(min, Math.hypot(q.x - m.cx, q.y - m.cy)) }
+        : { id, cx: m.cx + (q.x - p0.x), cy: m.cy + (q.y - p0.y), r: m.r };
+      phRenMarksPaint();
+    };
+    const up = () => {
+      svg.removeEventListener("pointermove", move);
+      const d = phRenMarkEdit; phRenMarkEdit = null;
+      if (!moved || !d) return;
+      // the browser's own click follows this pointerup at once; the timer only
+      // clears the flag if no click ever arrives (pointer cancelled mid-drag)
+      phRenMarkSuppressClick = true;
+      setTimeout(() => { phRenMarkSuppressClick = false; }, 400);
+      phRenMarksWrite(st, phRenMarksOf(st).map(x => x.id === id ? { ...x, cx: Math.round(d.cx), cy: Math.round(d.cy), r: Math.round(d.r) } : x), () => { st.markSel = id; });
+    };
+    svg.addEventListener("pointermove", move);
+    svg.addEventListener("pointerup", up, { once: true });
+    svg.addEventListener("pointercancel", up, { once: true });
   }
   // same read-modify-write as the shot/date handlers: never store objectUrl,
   // an empty list means the field is absent, reload so every cache agrees
@@ -43559,11 +43607,12 @@ or changing anything in Cliniko.
           <button type="button" class="ph-stocktake-close" data-ren-crop-close="1" aria-label="Close">×</button>
           <div class="ph-hx-head-name">${esc(PH_REN_TYPE_LABEL[st.kind] || PH_REN_TYPE_LABEL[st.viewType] || PH_REN_CROP_LABEL[st.kind] || "Photo")}${st.viewShot ? ` · ${esc(PH_REN_SHOT_LABEL[st.viewShot])}` : ""}${st.viewDate ? ` · ${esc(st.viewDate)}` : ""}${st.kind !== "unsorted" ? ` <button type="button" class="ph-tp-vistype" data-ren-view-retype-toggle="1">${st.retypeOpen ? "Cancel" : "Change type"}</button>` : ""}${st.viewDate ? ` <button type="button" class="ph-tp-vistype" data-ren-view-date-toggle="1">${st.dateEditOpen ? "Cancel" : "Change date"}</button>` : ""}</div>
         </div>
+        <div class="ph-ren-view-body">
         <div class="ph-ren-crop-stage ph-ren-view-stage">${annot
           ? `<div class="ph-ren-marks-wrap"><img class="ph-ren-crop-img" id="phRenViewImg" src="${st.objectUrl}" alt="" draggable="false"><svg class="ph-ren-marks" id="phRenMarksSvg" hidden></svg></div>`
           : `<img class="ph-ren-crop-img" src="${st.objectUrl}" alt="">`}</div>
         ${annot ? `<div class="ph-ren-view-shots ph-ren-marks-sec">
-          <div class="ph-ren-view-shotlab">Circled on this photo <span class="ph-ren-marks-how">· drag on the photo to circle an area</span></div>
+          <div class="ph-ren-view-shotlab">Circled on this photo <span class="ph-ren-marks-how">· drag on the photo to circle an area · drag a circle to move it, or its edge to resize</span></div>
           ${marks.length ? `<ol class="ph-ren-mark-list">${marks.map((m, i) => `<li class="${selMark && selMark.id === m.id ? "on" : ""}" data-ren-mark="${esc(m.id)}"><b>${i + 1}</b><span>${m.text ? esc(m.text) : `<i>no note yet — tap to add one</i>`}</span></li>`).join("")}</ol>` : `<div class="ph-ren-marks-empty">Nothing circled yet.</div>`}
           ${selMark ? `<div class="ph-ren-mark-edit">
             <input type="text" class="ph-qty-input" id="phRenMarkText" value="${esc(selMark.text || "")}" placeholder="What this shows — e.g. Liver area, over bulging" aria-label="Note for circle ${marks.indexOf(selMark) + 1}">
@@ -43592,6 +43641,7 @@ or changing anything in Cliniko.
         </div>` : ""}
         <div id="phRenViewDelZone"></div>
         <div class="ph-ren-crop-footer"><button type="button" class="ph-ren-crop-labelbtn" data-ren-view-delete="1">🗑 Delete this photo</button></div>
+        </div>
       </div>`;
       if (annot) {
         // same "paint + bind once the pixels are known" shape as the crop tool below

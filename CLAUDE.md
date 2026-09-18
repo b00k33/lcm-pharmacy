@@ -5674,3 +5674,30 @@ two picks → "Delete 2" + "2 picked"; confirm → cache and IndexedDB both 5 �
 protected live-search check passes; seeds deleted, no residue. `lcm-build`
 `20260919-080000`, `sw.js` `lcm-20260919-photos-multidelete-unsorted-first`.
 Committed `284a20f`; pushed to `main` on her "push live" the same morning, confirmed served (`curl` of the live stamp).
+
+## Photo viewer — the card scrolls, circles move and resize (her report 2026-09-19)
+
+**"i cant drag my annotation and the photo is cropped."** Measured, not
+guessed: `.ph-hx-card` is a shrink-to-fit flex column with `overflow:hidden`
+and nothing inside it scrolled, so on a tall tongue photo the stage was
+squeezed (image 529px tall in a 387px stage on a 900px window) and its
+centred image lost its top and bottom under the head and the notes — worse
+on the Key2. And `phRenMarksBind` returned on any press over an existing
+circle: circles could be drawn and selected, never moved.
+- View mode now wraps everything under the head in `.ph-ren-view-body`
+  (`flex:1 1 auto; min-height:0; overflow-y:auto`), the stage is
+  `flex:none`. The crop tool and compare modes are untouched.
+- `phRenMarkGrab`: a press on a circle drags it to MOVE; a press within
+  ~22% of the radius of its edge drags to RESIZE (`phRenMarkEdit` is the
+  live geometry, painted by `phRenMarksPaint`); a press that never travels
+  is a tap and the delegated click still selects it. The write goes through
+  `phRenMarksWrite` and keeps the moved circle selected;
+  `phRenMarkSuppressClick` eats the browser's own click after a drag (auto-
+  clears in 400ms if none comes). Hint text says so: "drag a circle to move
+  it, or its edge to resize".
+Verified in the sandbox with a 900×1600 photo: image fully inside the stage
+at 1200×900 and at 360×469, body scrolls (858/683 and 644/392), a synthetic
+pointer drag moved a circle (450,900 → 600,1000), an edge drag resized it
+(200 → 307), a plain tap selected another, drawing on empty photo still adds
+one. `lcm-build` `20260919-100000`, `sw.js`
+`lcm-20260919-photo-viewer-scroll-movecircles`.
