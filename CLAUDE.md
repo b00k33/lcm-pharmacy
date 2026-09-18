@@ -5700,7 +5700,7 @@ at 1200×900 and at 360×469, body scrolls (858/683 and 644/392), a synthetic
 pointer drag moved a circle (450,900 → 600,1000), an edge drag resized it
 (200 → 307), a plain tap selected another, drawing on empty photo still adds
 one. `lcm-build` `20260919-100000`, `sw.js`
-`lcm-20260919-photo-viewer-scroll-movecircles`.
+`lcm-20260919-photo-viewer-scroll-movecircles`. Live with the plan-tab build (`c9e18e7`).
 
 ## Plan tab simplified — calendar beside the head, Today's visit first, done · current · next tabs (her ask 2026-09-19)
 
@@ -5749,4 +5749,4 @@ nav and a day tap (popover open/close) keep the compact strip and the head
 line; Today's-visit-first and Planned-first row shapes; console clean; the
 protected live-search check (2 → 1 → 2); synthetic patient, scripts and
 photo removed, residue nil. `lcm-build` `20260919-113000`, `sw.js`
-`lcm-20260919-plantab-simplify`.
+`lcm-20260919-plantab-simplify`. Pushed to `main` on her "push live" the same day (`c9e18e7`, with the viewer fix `388cede`), confirmed served.
