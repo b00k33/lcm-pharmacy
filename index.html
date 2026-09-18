@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260920-014000">
+<meta name="lcm-build" content="20260920-020000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -8770,8 +8770,10 @@
   #pharmacyPage .ph-pulse-scores b { color: var(--ph-green-deep); }
   #pharmacyPage .ph-pulse-prev { font-size: 10px; color: var(--ph-soft); margin-top: 3px; }
   /* the detailed tongue chart (2026-09-19): drawing left, rows right */
-  #pharmacyPage .ph-ltr-findings .ph-ltr-fnd.wide { grid-column: 1 / 3; text-align: left; }
-  #pharmacyPage .ph-tng2 { display: grid; grid-template-columns: 400px minmax(0, 1fr); gap: 12px 16px; align-items: start; }
+  #pharmacyPage .ph-ltr-findings .ph-ltr-fnd.wide { grid-column: 1 / -1; text-align: left; }
+  #pharmacyPage .ph-tng2 { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-start; }
+  #pharmacyPage .ph-tng2-left { flex: 0 0 400px; max-width: 100%; }
+  #pharmacyPage .ph-tng2-rows { flex: 1 1 380px; min-width: 0; }
   /* the photo beside the drawing, big enough to read while she marks (2026-09-19) */
   #pharmacyPage .ph-tng2-pair { display: flex; gap: 12px; align-items: flex-start; justify-content: center; }
   #pharmacyPage .ph-tng2-pair .ph-visit-phototile { margin: 0; padding: 0; border: 0; width: 176px; flex: none; }
@@ -8796,6 +8798,13 @@
   #pharmacyPage .ph-tng2-outline.thin { stroke-width: .9; stroke-dasharray: 2 1.5; }
   #pharmacyPage .ph-tng2-mark { stroke: #7A2F45; stroke-width: 1.5; fill: none; }
   #pharmacyPage .ph-tng2-reg { font-size: 11.5px; color: var(--ph-soft); }
+  #pharmacyPage .ph-tng2-row .ph-ltr-qual.brush { box-shadow: 0 0 0 2px #7A2F45; }
+  #pharmacyPage .ph-tng2-brushhint { color: #7A2F45; font-weight: 600; }
+  #pharmacyPage .ph-tng2-brushhint b { font-weight: 800; }
+  #pharmacyPage .ph-tng2-brushhint .tab-link { font-size: 11px; padding: 0 0 0 6px; }
+  #pharmacyPage .ph-tng2-wherebtn { font: inherit; font-size: 10.5px; font-weight: 700; color: var(--ph-green-deep); background: none; border: 0; padding: 2px 4px; cursor: pointer; min-height: 0; text-decoration: underline dotted; }
+  #pharmacyPage .ph-tng2-wherebtn.on { color: #7A2F45; }
+  #pharmacyPage .ph-tng2 .ph-visit-tng .ph-tng2-zone, #pharmacyPage .ph-tng2 .ph-abd2-zone { cursor: crosshair; }
   #pharmacyPage .ph-tng2-reg b { color: var(--ph-ink); }
   #pharmacyPage .ph-tng2-reg .tab-link { font-size: 11px; padding: 0 0 0 6px; }
   #pharmacyPage .ph-tng2-reg .faint { color: var(--ph-faint); font-style: italic; }
@@ -8834,9 +8843,8 @@
   #pharmacyPage .ph-abd2-wherebtn.on { color: #7A2F45; }
   #pharmacyPage .ph-abd2-pick button { font: inherit; font-size: 9px; font-weight: 700; line-height: 1; padding: 2px 4px; border: 1px solid var(--ph-line); border-radius: 3px; background: var(--ph-white); color: var(--ph-faint); cursor: pointer; min-height: 0; }
   #pharmacyPage .ph-abd2-pick button.on { background: #7A2F45; border-color: #7A2F45; color: #fff; }
-  @media (max-width: 960px) { #pharmacyPage .ph-tng2 { grid-template-columns: minmax(0, 1fr); } }
   @media (max-width: 640px) {
-    #pharmacyPage .ph-tng2 { grid-template-columns: minmax(0, 1fr); }
+    #pharmacyPage .ph-tng2-left { flex-basis: 100%; }
     #pharmacyPage .ph-tng2-pair .ph-visit-phototile { width: 136px; }
     #pharmacyPage .ph-tng2-pair .ph-visit-phothumb { width: 136px; height: 180px; }
     #pharmacyPage .ph-tng2-pair .ph-tng2-svg { width: 124px; }
@@ -29545,9 +29553,15 @@
       if (visitZone) {
         const k = visitZone.dataset.visitZone;
         if (k.startsWith("abd:") && visitZone.closest(".ph-visit-abd-map")) {
-          // the detailed abdomen chart (2026-09-19): a tap AIMS the rows at that region
+          // the detailed abdomen chart (2026-09-19): with a brush armed, a tap
+          // PUTS that sign on the region; with none, a tap AIMS the rows at it
           const z = k.slice(4);
-          presVisitAbdRegion = presVisitAbdRegion === z ? null : z;
+          const b = presVisitAbdBrush;
+          if (b) {
+            const a = presVisitFndDraft.abd = phAbd2Read(presVisitFndDraft.abd); a.v2 = 1;
+            if (b.attr === "tension") { if (a.tensionAt[z] === b.val) delete a.tensionAt[z]; else a.tensionAt[z] = b.val; }
+            else { const list = a.marks[b.val] || []; a.marks[b.val] = list.includes(z) ? list.filter(x => x !== z) : list.concat(z); }
+          } else presVisitAbdRegion = presVisitAbdRegion === z ? null : z;
           presVisitFndRefresh();
           return;
         }
@@ -29563,19 +29577,22 @@
         const a = presVisitFndDraft.abd = phAbd2Read(presVisitFndDraft.abd); a.v2 = 1;
         const reg = presVisitAbdRegion;
         const toggleIn = (obj, key, region) => { const list = obj[key] || []; obj[key] = list.includes(region) ? list.filter(x => x !== region) : list.concat(region); if (!obj[key].length) delete obj[key]; };
-        if (attr === "region") { presVisitAbdRegion = null; presVisitAbdPick = null; }
-        else if (attr === "pick") presVisitAbdPick = presVisitAbdPick === val ? null : val;
-        else if (attr === "tension") a.tension = a.tension === val ? "" : val;
+        const label = (list, v) => (list.find(x => x[0] === v) || [v, v])[1];
+        if (attr === "region") { presVisitAbdRegion = null; presVisitAbdPick = null; presVisitAbdBrush = null; }
+        else if (attr === "brush") presVisitAbdBrush = null;
+        else if (attr === "pick") presVisitAbdBrush = presVisitAbdBrush && presVisitAbdBrush.attr === "marks" && presVisitAbdBrush.val === val ? null : { attr: "marks", val, label: label(PH_ABD_MARKS, val) };
+        // a first tension is the whole abdomen; a second, different one is a brush ("soft, hard in the lower abdomen")
+        else if (attr === "tension") { if (!a.tension || a.tension === val) { a.tension = a.tension === val ? "" : val; presVisitAbdBrush = null; } else presVisitAbdBrush = presVisitAbdBrush && presVisitAbdBrush.attr === "tension" && presVisitAbdBrush.val === val ? null : { attr: "tension", val, label: label(PH_ABD_TENSION, val) }; }
         else if (attr === "tensionAt") { if (reg) { if (a.tensionAt[reg] === val) delete a.tensionAt[reg]; else a.tensionAt[reg] = val; } }
         else if (attr === "tensionAtClear") delete a.tensionAt[val];
         else if (attr === "marks") {
           if (val === "xiaxin") { if (a.marks.xiaxin) delete a.marks.xiaxin; else a.marks.xiaxin = ["epi"]; }
           else if (reg) toggleIn(a.marks, val, reg);
-          else if (a.marks[val]) { delete a.marks[val]; if (presVisitAbdPick === val) presVisitAbdPick = null; }
-          else { a.marks[val] = []; presVisitAbdPick = val; }
+          else if (a.marks[val]) { delete a.marks[val]; if (presVisitAbdBrush && presVisitAbdBrush.val === val) presVisitAbdBrush = null; }
+          else { a.marks[val] = []; presVisitAbdBrush = { attr: "marks", val, label: label(PH_ABD_MARKS, val) }; }
         }
         else if (attr === "where") { const [key, region] = rest; toggleIn(a.marks, key, region); if (!a.marks[key]) a.marks[key] = []; if (!a.marks[key].length) delete a.marks[key]; }
-        else if (attr === "clear") { presVisitFndDraft.abd = Object.assign(phAbd2Blank(), { v2: 1 }); presVisitAbdRegion = null; presVisitAbdPick = null; }
+        else if (attr === "clear") { presVisitFndDraft.abd = Object.assign(phAbd2Blank(), { v2: 1 }); presVisitAbdRegion = null; presVisitAbdPick = null; presVisitAbdBrush = null; }
         presVisitFndRefresh();
         return;
       }
@@ -29624,9 +29641,17 @@
       // here -- and here a region TOGGLES (several can be marked per visit)
       const visitTng = e.target.closest("[data-tng-region]");
       if (visitTng && visitTng.closest(".ph-visit-tng")) {
-        // the detailed chart (2026-09-19): a tap AIMS the rows at that region
+        // the detailed chart (2026-09-19): with a brush armed, a tap PUTS that
+        // sign on the region; with none, a tap AIMS the rows at the region
         const r = visitTng.dataset.tngRegion;
-        presVisitTngRegion = presVisitTngRegion === r ? null : r;
+        const b = presVisitTngBrush;
+        if (b) {
+          const t = presVisitFndDraft.tng = phTng2Read(presVisitFndDraft.tng); t.v2 = 1;
+          const toggleIn = (obj, key, region) => { const list = obj[key] || []; obj[key] = list.includes(region) ? list.filter(x => x !== region) : list.concat(region); if (!obj[key].length) obj[key] = []; };
+          if (b.attr === "colour") { if (t.colourAt[r] === b.val) delete t.colourAt[r]; else t.colourAt[r] = b.val; }
+          else if (b.attr === "thickness") { if (t.thickAt[r] === b.val) delete t.thickAt[r]; else t.thickAt[r] = b.val; }
+          else toggleIn(t[b.attr], b.val, r);
+        } else presVisitTngRegion = presVisitTngRegion === r ? null : r;
         presVisitFndRefresh();
         return;
       }
@@ -29637,12 +29662,16 @@
         const t = presVisitFndDraft.tng = phTng2Read(presVisitFndDraft.tng); t.v2 = 1;
         const reg = presVisitTngRegion;
         const toggleIn = (obj, key, region) => { const list = obj[key] || []; obj[key] = list.includes(region) ? list.filter(x => x !== region) : list.concat(region); if (!obj[key].length) delete obj[key]; };
-        if (attr === "region") presVisitTngRegion = null;
-        else if (attr === "colour") t.colour = t.colour === val ? "" : val;
+        const label = (list, v) => (list.find(x => x[0] === v) || [v, v])[1];
+        if (attr === "region") { presVisitTngRegion = null; presVisitTngBrush = null; }
+        else if (attr === "brush") presVisitTngBrush = null;
+        else if (attr === "pick") { const [kind, key] = rest; presVisitTngBrush = presVisitTngBrush && presVisitTngBrush.attr === kind && presVisitTngBrush.val === key ? null : { attr: kind, val: key, label: kind === "marks" ? label([...PH_TNG_MARKS, ...PH_TNG_SHAPE_MARKS], key) : label(PH_TNG_COAT_QUAL, key) }; }
+        // a first colour is the whole tongue; a second, different one is a brush for a region ("red tip")
+        else if (attr === "colour") { if (!t.colour || t.colour === val) { t.colour = t.colour === val ? "" : val; presVisitTngBrush = null; } else presVisitTngBrush = presVisitTngBrush && presVisitTngBrush.attr === "colour" && presVisitTngBrush.val === val ? null : { attr: "colour", val, label: label(PH_TNG_COLOURS, val) }; }
         else if (attr === "colourAt") { if (reg) { if (t.colourAt[reg] === val) delete t.colourAt[reg]; else t.colourAt[reg] = val; } }
         else if (attr === "colourAtClear") delete t.colourAt[val];
         else if (attr === "shape") t.shape = t.shape.includes(val) ? t.shape.filter(x => x !== val) : t.shape.concat(val);
-        else if (attr === "thickness") t.thickness = t.thickness === val ? "" : val;
+        else if (attr === "thickness") { if (!t.thickness || t.thickness === val) { t.thickness = t.thickness === val ? "" : val; presVisitTngBrush = null; } else presVisitTngBrush = presVisitTngBrush && presVisitTngBrush.attr === "thickness" && presVisitTngBrush.val === val ? null : { attr: "thickness", val, label: label(PH_TNG_THICK, val) }; }
         else if (attr === "thickAt") { if (reg) { if (t.thickAt[reg] === val) delete t.thickAt[reg]; else t.thickAt[reg] = val; } }
         else if (attr === "thickAtClear") delete t.thickAt[val];
         else if (attr === "deviation") t.deviation = t.deviation === val ? "" : val;
@@ -29652,8 +29681,8 @@
         else if (attr === "coatQual" || attr === "marks") {
           const obj = t[attr];
           if (reg) toggleIn(obj, val, reg);
-          else if (obj[val]) delete obj[val];
-          else obj[val] = [];
+          else if (obj[val]) { delete obj[val]; if (presVisitTngBrush && presVisitTngBrush.attr === attr && presVisitTngBrush.val === val) presVisitTngBrush = null; }
+          else { obj[val] = []; presVisitTngBrush = { attr, val, label: attr === "marks" ? label([...PH_TNG_MARKS, ...PH_TNG_SHAPE_MARKS], val) : label(PH_TNG_COAT_QUAL, val) }; }
         }
         else if (attr === "where") { const [kind, key, region] = rest; toggleIn(t[kind], key, region); if (!t[kind][key]) t[kind][key] = []; if (!t[kind][key].length) delete t[kind][key]; }
         else if (attr === "under") t.under = t.under === val ? "" : val;
@@ -29662,7 +29691,7 @@
           const last = rec ? (rec.acuSessions || []).slice().sort((a, b) => (b.date || "").localeCompare(a.date || "")).map(s => rec.visitFnd && rec.visitFnd[s.id]).find(f => f && f.tng && !phTng2Empty(f.tng)) : null;
           if (last) presVisitFndDraft.tng = Object.assign(phTng2Read(JSON.parse(JSON.stringify(last.tng))), { v2: 1 });
         }
-        else if (attr === "clear") { presVisitFndDraft.tng = Object.assign(phTng2Blank(), { v2: 1 }); presVisitTngRegion = null; }
+        else if (attr === "clear") { presVisitFndDraft.tng = Object.assign(phTng2Blank(), { v2: 1 }); presVisitTngRegion = null; presVisitTngBrush = null; }
         presVisitFndRefresh();
         return;
       }
@@ -53625,7 +53654,7 @@ or changing anything in Cliniko.
       && !Object.keys(r.pulse).length && !r.tng.regions.length && !r.tng.overlays.length && phTng2Empty(r.tng) && phAbd2Empty(r.abd) && phVisitHammerEmpty(r.hammer);
   }
   function phVisitFndResetDraft() {
-    presVisitTngRegion = null; presVisitAbdRegion = null; presVisitAbdPick = null;
+    presVisitTngRegion = null; presVisitAbdRegion = null; presVisitAbdPick = null; presVisitTngBrush = null; presVisitAbdBrush = null;
     presVisitFndDraft = phVisitFndBlank();
     presVisitPulseStamp = "thin"; presVisitHmOpen = null; presVisitPulseMore = false;
     return presVisitFndDraft;
@@ -54146,11 +54175,12 @@ or changing anything in Cliniko.
       ${water}${gas}${puls}${tender}${xiaxin}${bulge}${sunk}
     </svg>`;
   }
-  let presVisitAbdRegion = null, presVisitAbdPick = null;
+  let presVisitAbdRegion = null, presVisitAbdPick = null, presVisitAbdBrush = null;   // brush = { attr, val, label }
   function phVisitAbdHtml(name, draft) {
     const a = phAbd2Read(draft.abd);
     const reg = presVisitAbdRegion;
-    const chip = (attr, val, label, on, extra) => `<button type="button" class="ph-ltr-qual${on ? " on" : ""}" data-visit-abd2="${esc(attr)}:${esc(val)}">${extra || ""}${esc(label)}</button>`;
+    const brush = presVisitAbdBrush;
+    const chip = (attr, val, label, on, extra) => `<button type="button" class="ph-ltr-qual${on ? " on" : ""}${brush && brush.attr === attr && brush.val === val ? " brush" : ""}" data-visit-abd2="${esc(attr)}:${esc(val)}">${extra || ""}${esc(label)}</button>`;
     const pick = (key, list) => `<span class="ph-abd2-pick">${PH_ABD_ZONE_ORDER.map(k => `<button type="button" class="${(list || []).includes(k) ? "on" : ""}" data-visit-abd2="where:${key}:${k}" title="${esc(phAbdZoneLabel(k))}">${esc(PH_ABD_ZONE_SHORT[k])}</button>`).join("")}</span>`;
     const tensionRow = reg
       ? PH_ABD_TENSION.map(([k, l, hex]) => chip("tensionAt", k, l, a.tensionAt[reg] === k, `<i style="background:${hex}"></i>`)).join("")
@@ -54160,9 +54190,9 @@ or changing anything in Cliniko.
       const on = !!a.marks[k];
       if (!on || k === "xiaxin") return chip("marks", k, l, on);
       const zonesHtml = (a.marks[k] || []).map(z => `<span class="ph-tng2-at">${esc(PH_ABD_ZONE_SHORT[z] || z)} <button type="button" data-visit-abd2="where:${k}:${z}" aria-label="Remove">✕</button></span>`).join("");
-      const open = !reg && presVisitAbdPick === k;
-      const whereBtn = reg ? "" : `<button type="button" class="ph-abd2-wherebtn${open ? " on" : ""}" data-visit-abd2="pick:${k}">${open ? "done" : "where"}</button>`;
-      return chip("marks", k, l, on) + zonesHtml + whereBtn + (open ? pick(k, a.marks[k]) : "");
+      const armed = !!(brush && brush.attr === "marks" && brush.val === k);
+      const whereBtn = reg ? "" : `<button type="button" class="ph-abd2-wherebtn${armed ? " on" : ""}" data-visit-abd2="pick:${k}">${armed ? "tap the map" : "where"}</button>`;
+      return chip("marks", k, l, on) + zonesHtml + whereBtn;
     }).join("");
     const summary = phAbd2Summary(a, draft.zones);
     return `<div class="ph-tng2 abd">
@@ -54171,7 +54201,9 @@ or changing anything in Cliniko.
           ${phVisitPhotoTileHtml(name, "abdomen", "Abdomen photo", "🤲", false)}
           <div class="ph-visit-abd-map">${phAbdChartSvg(a, reg, { legacy: draft.zones })}</div>
         </div>
-        <div class="ph-tng2-reg">${reg ? `<b>${esc(phAbdZoneLabel(reg))}</b> <button type="button" class="tab-link" data-visit-abd2="region:">whole abdomen</button>` : `<span class="faint">tap a region, or describe the whole abdomen</span>`}</div>
+        <div class="ph-tng2-reg">${brush
+          ? `<span class="ph-tng2-brushhint">Tap the map where it is <b>${esc(brush.label)}</b> <button type="button" class="tab-link" data-visit-abd2="brush:">done</button></span>`
+          : reg ? `<b>${esc(phAbdZoneLabel(reg))}</b> <button type="button" class="tab-link" data-visit-abd2="region:">whole abdomen</button>` : `<span class="faint">tap a sign, then tap the map where it is</span>`}</div>
       </div>
       <div class="ph-tng2-rows">
         <div class="ph-tng2-row"><i>${reg ? "Tension here" : "Tension"}</i><div class="ph-ltr-quals ph-visit-quals">${tensionRow}${atRegion}</div></div>
@@ -54185,12 +54217,15 @@ or changing anything in Cliniko.
     </div>`;
   }
   let presVisitTngRegion = null;   // the region tapped on the drawing -- the rows aim at it
+  let presVisitTngBrush = null;    // { attr, val } -- the sign the next drawing taps place
   function phVisitTongueHtml(name, draft) {
     const t = phTng2Read(draft.tng);
     const reg = presVisitTngRegion;
     const regMeta = reg ? PH_TNG_REGIONS.find(r => r[0] === reg) : null;
-    const chip = (attr, val, label, on, extra) => `<button type="button" class="ph-ltr-qual${on ? " on" : ""}" data-visit-tng2="${esc(attr)}:${esc(val)}">${extra || ""}${esc(label)}</button>`;
-    const pick = (kind, key, list) => `<span class="ph-tng2-pick">${PH_TNG_REGIONS.map(([k, l]) => `<button type="button" class="${(list || []).includes(k) ? "on" : ""}" data-visit-tng2="where:${kind}:${key}:${k}" title="${esc(l)}">${k === "L" || k === "R" ? k : k === "mid" ? "Ctr" : l}</button>`).join("")}</span>`;
+    const brush = presVisitTngBrush;
+    const chip = (attr, val, label, on, extra) => `<button type="button" class="ph-ltr-qual${on ? " on" : ""}${brush && brush.attr === attr && brush.val === val ? " brush" : ""}" data-visit-tng2="${esc(attr)}:${esc(val)}">${extra || ""}${esc(label)}</button>`;
+    // a sign that is on: its regions as small chips (✕ removes one) and "where" to arm it again
+    const pick = (kind, key, list) => `${(list || []).map(k => `<span class="ph-tng2-at">${esc(k === "L" ? "left" : k === "R" ? "right" : k === "mid" ? "centre" : k)} <button type="button" data-visit-tng2="where:${kind}:${key}:${k}" aria-label="Remove">✕</button></span>`).join("")}<button type="button" class="ph-tng2-wherebtn${brush && brush.attr === kind && brush.val === key ? " on" : ""}" data-visit-tng2="pick:${kind}:${key}">${brush && brush.attr === kind && brush.val === key ? "tap the drawing" : "where"}</button>`;
     const colourRow = reg
       ? PH_TNG_COLOURS.map(([k, l, hex]) => chip("colourAt", k, l, t.colourAt[reg] === k, `<i style="background:${hex}"></i>`)).join("")
       : PH_TNG_COLOURS.map(([k, l, hex]) => chip("colour", k, l, t.colour === k, `<i style="background:${hex}"></i>`)).join("");
@@ -54208,7 +54243,9 @@ or changing anything in Cliniko.
           ${phVisitPhotoTileHtml(name, "tongue", "Tongue photo", "👅", true)}
           <div class="ph-visit-tng">${phTongueChartSvg(t, reg)}</div>
         </div>
-        <div class="ph-tng2-reg">${regMeta ? `<b>${esc(regMeta[1])}</b> · ${esc(regMeta[2])} <button type="button" class="tab-link" data-visit-tng2="region:">whole tongue</button>` : `<span class="faint">tap a region, or describe the whole tongue</span>`}</div>
+        <div class="ph-tng2-reg">${brush
+          ? `<span class="ph-tng2-brushhint">Tap the drawing where it is <b>${esc(brush.label)}</b> <button type="button" class="tab-link" data-visit-tng2="brush:">done</button></span>`
+          : regMeta ? `<b>${esc(regMeta[1])}</b> · ${esc(regMeta[2])} <button type="button" class="tab-link" data-visit-tng2="region:">whole tongue</button>` : `<span class="faint">tap a sign, then tap the drawing where it is</span>`}</div>
         ${notes.length ? `<div class="ph-visit-tnghint">${notes.map(n => `<div>${esc(n.trigger || "")} → ${esc(n.points || "")}</div>`).join("")}</div>` : ""}
       </div>
       <div class="ph-tng2-rows">
