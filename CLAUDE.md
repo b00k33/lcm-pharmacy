@@ -4656,3 +4656,47 @@ run (`savePharmacy()` re-run after cleanup, not assumed).
 
 Version bump: `lcm-build` `20260918-110000`, `sw.js` cache
 `lcm-20260918-phase-announce-popups`.
+
+## Persistent "Today's visit is pending" indicator — the disclosed gap closed (2026-09-18)
+
+Straight follow-on the same day. The section above disclosed a gap rather
+than guessing at it: an ordinary phase-tab click only writes `phTpTabPhase`
+(which tab shows), never `presAcuPhaseId` (which phase the embedded
+"Today's visit" editor is treating today) — so tabbing away to review
+history while a Today's-visit override is active elsewhere makes the
+editor disappear with nothing on screen saying where it went. Two remedies
+were offered (auto-reset the override on tab-away, or a persistent "pending
+on X" indicator regardless of which tab is open); she picked the second —
+**"build the persistent 'Today's visit is pending' indicator."**
+
+`phTpTodaysVisitElsewhereHtml(plan, phase)` — new, added to
+`phTpPhasePanelHtml` as a THIRD, independent slot alongside the
+mismatch/verify pair (appended after `announce`, not folded into that same
+mutually-exclusive choice): it answers a different question (where did my
+pending treatment override go, not which phase should I be on) and can
+render alongside either of the other two. Fires only when `presAcuPhaseId`
+is explicitly set (an active Today's-visit override exists) AND
+`presAcuCtx(phTpScreenPatient, plan.id).treatedPhase.id !== phase.id` (the
+phase on screen isn't where the override lives) — deliberately gated on an
+EXPLICIT override, not merely "treated phase differs from viewed phase" in
+general, since the no-override fallback already matches whatever
+`phTpTabPhaseOf` defaults to and a looser gate would fire constantly on
+ordinary history-browsing. "Go there" reuses the existing `data-tp-tab`
+handler (no new handler needed — it's the same full `phTpRerender()` every
+other phase-switch already uses). Styled `.ph-tp-announce.visit`, a new
+`--ph-purple`/`-deep`/`-tint` card so it reads as its own thing rather than
+a third colour crammed into the teal/gold pair already in use.
+
+Verified in the sandbox against a synthetic patient with a Natural
+fertility plan: empty with no override; empty while viewing the treated
+phase itself; correctly showing "Today's visit is pending on Ovulation"
+with a working "Go there" after simulating the acu-chip override followed
+by a plain tab click elsewhere (the exact scenario the gap described); and
+confirmed it coexists correctly with the fertility mismatch card on the
+same phase panel (`hasCal: true, hasVisit: true`, both rendering at once) —
+the coexistence claim was checked, not assumed. Synthetic patient cleaned
+up and confirmed absent from `localStorage` after (`savePharmacy()` re-run,
+residue checked).
+
+Version bump: `lcm-build` `20260918-120000`, `sw.js` cache
+`lcm-20260918-todaysvisit-pending-indicator`.
