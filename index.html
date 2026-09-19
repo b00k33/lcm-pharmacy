@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260920-043000">
+<meta name="lcm-build" content="20260920-050000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -23633,7 +23633,7 @@
     const q = phApptCalQ.trim().toLowerCase();
     const dim = q && !a.patient.toLowerCase().includes(q) ? " dim" : "";
     const brief = phApptBrief(a);
-    const kindHtml = kind === "both" ? `<span class="ph-appt-kind both" title="Acupuncture + Chinese herbal medicine">ACU+CHM</span>` : phApptKindHtml(a.service);
+    const kindHtml = kind === "both" ? `<span class="ph-appt-kind both" title="Acupuncture + Chinese herbal medicine">ACU+CHM</span>${phApptHomeVisitHtml(a.service)}` : phApptKindHtml(a.service);
     // the due script's phase word (her pick 2026-09-07: show it outside the
     // profile too) -- only when the script carries one, so most rows are unchanged
     const script = phApptScriptFor(k);
@@ -31835,7 +31835,14 @@
       // Information letter body -- nothing needs to redraw while she edits
       // it, just keep the in-memory copy Copy/Print read from current
       if (e.target.matches("[data-infoltr-body]")) { phInfoLtrBody = e.target.value; return; }
-      if (e.target.matches("[data-infoltr-editsec]")) { const i = +e.target.dataset.infoltrEditsec; if (phInfoLtrSecs[i]) phInfoLtrSecs[i].text = e.target.innerText.replace(/ /g, " "); return; }
+      if (e.target.matches("[data-infoltr-editsec]")) {
+        const i = +e.target.dataset.infoltrEditsec; if (phInfoLtrSecs[i]) phInfoLtrSecs[i].text = e.target.innerText.replace(/ /g, " ");
+        // her "Yes, keep edits automatically" (2026-09-19): the wording is the
+        // template for everyone, saved a moment after she stops typing -- no
+        // Save wording button to remember, nothing lost when the window closes
+        clearTimeout(phInfoLtrSaveT); phInfoLtrSaveT = setTimeout(() => { phInfoLtrSaveT = null; phInfoLtrSaveWords(); const s = document.querySelector("[data-infoltr-autosaved]"); if (s) { s.textContent = "✓ Saved"; setTimeout(() => { if (s.isConnected) s.textContent = "Saves as you type"; }, 1500); } }, 700);
+        return;
+      }
       // ---- 方病人 Guide inputs ----
       if (e.target.id === "phGdSearch") { phGdSearch = e.target.value; phDefer("gdBody", renderPhGdBody, 120); return; }
       if (e.target.matches("[data-gd-tng-overlay]")) {
@@ -36268,7 +36275,7 @@ or changing anything in Cliniko.
     // which wrapped onto their own line on a narrow phone -- one combined
     // pill here only (phApptKindHtml's two-pill output elsewhere is unchanged,
     // this row alone needed the tighter version)
-    const kindHtml = r => r.kind === "both" ? `<span class="ph-appt-kind both" title="Acupuncture + Chinese herbal medicine">ACU+CHM</span>` : phApptKindHtml(r.a.service);
+    const kindHtml = r => r.kind === "both" ? `<span class="ph-appt-kind both" title="Acupuncture + Chinese herbal medicine">ACU+CHM</span>${phApptHomeVisitHtml(r.a.service)}` : phApptKindHtml(r.a.service);
     const rowHtml = r => `<div class="ph-tl-row${r.done ? " done" : ""}" data-tl-key="${esc(r.k)}">
       <span class="ph-tl-time">${esc(phCkTime12(r.a.time))}</span>${dot(r)}
       <div class="ph-tl-mid"><div class="l1"><b>${esc(phTitle(r.a.patient))}</b>${kindHtml(r)}${phApptEtHtml(r.a)}${phApptFuDue(r.k, dayKey) ? `<span class="bell" title="Follow-up due">🔔</span>` : ""}</div><div class="l2">${line2(r)}</div>${briefHtml(r)}</div>${cycBit(r)}
@@ -46677,7 +46684,10 @@ or changing anything in Cliniko.
   // are candidates -- and a wide window risks conflating two real, separate
   // rounds' egg/embryo counts, which is worse than a harmless duplicate row.
   // Easy to widen later if a week turns out too tight against her real data.
-  const PH_IVF_INTAKE_MATCH_WINDOW_DAYS = 7;
+  // widened to a month on her "Match by date, show me both" (2026-09-19):
+  // a match is no longer silent -- the review shows both rows' numbers as
+  // Keep / Use new picks and offers "a different round, add it".
+  const PH_IVF_INTAKE_MATCH_WINDOW_DAYS = 31;
   function phIvfIntakeMatch(rec, when) {
     if (!when) return null;
     let best = null, bestDays = Infinity;
@@ -55726,7 +55736,7 @@ We hope this helps you understand what your body is doing while you rest on the 
   ];
   const phInfoLtrUserTemplates = () => PHARMACY.infoLetters || (PHARMACY.infoLetters = []);
   const phInfoLtrAllTemplates = () => [...PH_INFO_LETTERS, ...phInfoLtrUserTemplates()];
-  let phInfoLtrScriptId = null, phInfoLtrTmplId = null, phInfoLtrBody = "";
+  let phInfoLtrScriptId = null, phInfoLtrTmplId = null, phInfoLtrBody = "", phInfoLtrSaveT = null;
   // ---- dose-adjustment mode (her ask 2026-09-05: "write an email... i am
   // adjusting their dose and write a little about why"): a dynamic composer
   // living in this same modal rather than a 5th static letter -- pick a
@@ -55987,6 +55997,7 @@ Please let me know if you have any questions.`;
     renderInfoLtrScreen();
   }
   function phInfoLtrClose() {
+    if (phInfoLtrSaveT) { clearTimeout(phInfoLtrSaveT); phInfoLtrSaveT = null; phInfoLtrSaveWords(); }
     document.getElementById("phInfoLtrBackdrop").hidden = true;
     document.getElementById("phInfoLtrModal").hidden = true;
     phInfoLtrScriptId = null;
@@ -56026,7 +56037,7 @@ Please let me know if you have any questions.`;
       <div class="ph-hx-body">
         <div class="ph-infoltr-picker">
           <select class="ph-cyc-in field-bare" data-infoltr-tmpl="1" aria-label="Letter topic">${tmpls.map(x => `<option value="${x.id}"${!phDoseAdjMode && x.id === phInfoLtrTmplId ? " selected" : ""}>${esc(x.name)}</option>`).join("")}<option value="__doseadj"${phDoseAdjMode ? " selected" : ""}>💊 Adjust a supplement dose</option></select>
-          ${placeholder ? `<span class="faint">Draft only — the layout is set; type your real wording into each section and press “Save wording”, the way Iron's was.</span>` : ""}
+          ${placeholder ? `<span class="faint">Draft only — the layout is set; type your real wording into each section — it saves as you type, the way Iron's was.</span>` : ""}
         </div>
         ${phDoseAdjMode ? `<div class="ph-doseadj-fields">
           <label class="ph-doseadj-f"><span>Supplement</span><select class="ph-cyc-in field-bare" data-doseadj-supp="1" aria-label="Supplement">${PH_SUPPLEMENTS.map(s => `<option value="${s.id}"${s.id === phDoseAdjSupp ? " selected" : ""}>${esc(s.name)}</option>`).join("")}</select></label>
@@ -56039,7 +56050,7 @@ Please let me know if you have any questions.`;
           <button type="button" class="btn-save" data-infoltr-copy="1">${phDoseAdjMode ? "✓ Copy text" : "✓ Copy for email (with pictures)"}</button>
           ${phDoseAdjMode ? "" : `<button type="button" class="ph-load-btn" data-infoltr-copytext="1">Plain text</button>`}
           <button type="button" class="ph-load-btn" data-infoltr-print="1">🖨 Print</button>
-          ${phDoseAdjMode ? "" : `<button type="button" class="ph-load-btn" data-infoltr-savewords="1" title="Keep these words as the template for everyone">+ Save wording</button>`}
+          ${phDoseAdjMode ? "" : `<span class="faint" data-infoltr-autosaved="1" title="Every change to the wording is kept as the template for everyone">Saves as you type</span>`}
           <button type="button" class="ph-load-btn" data-infoltr-close="1">Close</button>
         </div>
       </div>`;
@@ -56837,15 +56848,27 @@ Please let me know if you have any questions.`;
     // value" to conflict with). Applied rows carry src:"intake",
     // confirmed:false -- see phIvfRowHtml's own "from intake · unconfirmed"
     // pill, which is where she actually confirms each one.
-    const ivfNew = [];
+    const ivfNew = [], ivfConflicts = [];
     if (Array.isArray(cyc.ivfCycles)) {
+      const PH_IVF_INTAKE_FIELDS = [["when", "Date"], ["clinic", "Clinic"], ["eggs", "Eggs collected"], ["fertilised", "Fertilised"], ["frozen", "Frozen"]];
+      const has = v => v != null && v !== "";
       cyc.ivfCycles.forEach((c, i) => {
         if (!c || (!c.when && c.eggs == null && c.fertilised == null && c.frozen == null && !c.clinic)) return;
         const funnel = `${c.eggs ?? "?"} eggs → ${c.fertilised ?? "?"} fertilised → ${c.frozen ?? "?"} frozen`;
-        ivfNew.push({ key: `ivf${i}`, label: "Egg collection", display: `${phIvfDateLabel(c.when) || "no date given"}${c.clinic ? " · " + c.clinic : ""} — ${funnel}`, data: c });
+        const head = `${phIvfDateLabel(c.when) || "no date given"}${c.clinic ? " · " + c.clinic : ""} — ${funnel}`;
+        // her "Match by date, show me both" (2026-09-19): a round she already
+        // has within a month of the reported one is shown beside it, every
+        // differing number a pick, and "a different round" adds a new row
+        const match = rec ? phIvfIntakeMatch(rec, c.when) : null;
+        if (!match) { ivfNew.push({ key: `ivf${i}`, label: "Egg collection", display: head, data: c }); return; }
+        const mLabel = phIvfDateLabel(match.when) || "no date";
+        const diffs = PH_IVF_INTAKE_FIELDS.filter(([f]) => has(c[f]) && has(match[f]) && String(c[f]) !== String(match[f]));
+        ivfNew.push({ key: `ivf${i}`, label: "Egg collection", matchId: match.id, display: `${head} — looks like your round of ${mLabel}${diffs.length ? "" : " (only fills what is blank there)"}`, data: c });
+        ivfConflicts.push({ key: `ivf${i}:row`, rowChoice: true, label: `Collection reported for ${phIvfDateLabel(c.when) || "no date"} — you already have a round of ${mLabel}`, keepLabel: "Same round", newLabel: "A different round — add it" });
+        diffs.forEach(([f, lbl]) => ivfConflicts.push({ key: `ivf${i}:${f}`, matchId: match.id, field: f, label: `Round of ${mLabel} · ${lbl}`, current: f === "when" ? phIvfDateLabel(match[f]) : String(match[f]), value: f === "when" ? phIvfDateLabel(c[f]) : String(c[f]) }));
       });
     }
-    return { rec, demoNew, demoConflicts, historyNew, historyConflicts, cycleNew, cycleConflicts, ivfNew, hasCycle: !!Object.keys(cyc).length };
+    return { rec, demoNew, demoConflicts, historyNew, historyConflicts, cycleNew, cycleConflicts, ivfNew, ivfConflicts, hasCycle: !!Object.keys(cyc).length };
   }
   let phIntakeReviewRow = null, phIntakeReviewDiffData = null, phIntakeReviewChoices = {}, phIntakeReviewBusy = false;
   function phIntakeReviewOpen(id) {
@@ -56872,8 +56895,8 @@ Please let me know if you have any questions.`;
       html += conflictItems.map(c => `<div class="ph-intake-conflict">
         <div class="ph-intake-conflict-lbl">${esc(c.label)}</div>
         <div class="ph-merge-acts">
-          <button type="button" class="ph-load-btn${phIntakeReviewChoices[c.key] !== "new" ? " on" : ""}" data-intake-choice="${esc(c.key)}:current">Keep: ${esc(c.current)}</button>
-          <button type="button" class="ph-load-btn${phIntakeReviewChoices[c.key] === "new" ? " on" : ""}" data-intake-choice="${esc(c.key)}:new">Use new: ${esc(c.value)}</button>
+          <button type="button" class="ph-load-btn${phIntakeReviewChoices[c.key] !== "new" ? " on" : ""}" data-intake-choice="${esc(c.key)}:current">${c.keepLabel ? esc(c.keepLabel) : `Keep: ${esc(c.current)}`}</button>
+          <button type="button" class="ph-load-btn${phIntakeReviewChoices[c.key] === "new" ? " on" : ""}" data-intake-choice="${esc(c.key)}:new">${c.newLabel ? esc(c.newLabel) : `Use new: ${esc(c.value)}`}</button>
         </div>
       </div>`).join("");
     }
@@ -56886,7 +56909,7 @@ Please let me know if you have any questions.`;
     if (!modal || modal.hidden || !phIntakeReviewRow || !phIntakeReviewDiffData) return;
     const row = phIntakeReviewRow, d = phIntakeReviewDiffData;
     const isNewPatient = !d.rec;
-    const totalConflicts = d.demoConflicts.length + d.historyConflicts.length + d.cycleConflicts.length;
+    const totalConflicts = d.demoConflicts.length + d.historyConflicts.length + d.cycleConflicts.length + (d.ivfConflicts || []).filter(c => !c.rowChoice).length;
     const totalNew = d.demoNew.length + d.historyNew.length + d.cycleNew.length + (d.ivfNew || []).length;
     const body = `
       <p class="ph-merge-lead">${isNewPatient ? `No existing record for <b>${esc(phTitle(row.patient_name))}</b> — applying creates one.` : `Comparing against <b>${esc(phTitle(row.patient_name))}</b>'s existing record.`}</p>
@@ -56894,7 +56917,7 @@ Please let me know if you have any questions.`;
       ${phIntakeDiffSectionHtml("Your details", d.demoNew, d.demoConflicts)}
       ${phIntakeDiffSectionHtml("Medical history", d.historyNew, d.historyConflicts)}
       ${d.hasCycle ? phIntakeDiffSectionHtml("Cycle & fertility", d.cycleNew, d.cycleConflicts) : ""}
-      ${(d.ivfNew || []).length ? `${phIntakeDiffSectionHtml("IVF history — from her own answers", d.ivfNew, [])}<p class="ph-merge-note">Added rows are marked "from intake · unconfirmed" in her IVF history until you confirm each one.</p>` : ""}
+      ${(d.ivfNew || []).length ? `${phIntakeDiffSectionHtml("IVF history — from her own answers", d.ivfNew, d.ivfConflicts || [])}<p class="ph-merge-note">A collection within a month of a round you already have is matched to it — pick which numbers to keep, or add it as a different round. Rows are marked "from intake · unconfirmed" in her IVF history until you confirm each one.</p>` : ""}
       ${!totalNew && !totalConflicts ? `<p class="ph-hx-constit-note">Nothing new — every answer already matches the record.</p>` : ""}
       <div class="ph-merge-acts">
         <button type="button" class="btn-save" data-intake-review-apply="1"${phIntakeReviewBusy ? " disabled" : ""}>${phIntakeReviewBusy ? "Applying…" : (isNewPatient ? "Apply — create patient" : "Apply")}</button>
@@ -56953,13 +56976,17 @@ Please let me know if you have any questions.`;
         rec.ivfCycles = rec.ivfCycles || [];
         d.ivfNew.forEach(n => {
           const c = n.data;
-          const match = phIvfIntakeMatch(rec, c.when);
+          // the match she saw in the review (by id), unless she said "a different round"
+          const asNew = phIntakeReviewChoices[`${n.key}:row`] === "new";
+          const match = asNew ? null : (n.matchId ? rec.ivfCycles.find(r => r.id === n.matchId) : null) || phIvfIntakeMatch(rec, c.when);
           if (match) {
             if (!match.when && c.when) match.when = c.when;
             if (!match.clinic && c.clinic) match.clinic = c.clinic;
             if (match.eggs == null && c.eggs != null) match.eggs = c.eggs;
             if (match.fertilised == null && c.fertilised != null) match.fertilised = c.fertilised;
             if (match.frozen == null && c.frozen != null) match.frozen = c.frozen;
+            // her "Use new" picks from the review overwrite; everything else stays hers
+            ["when", "clinic", "eggs", "fertilised", "frozen"].forEach(f => { if (phIntakeReviewChoices[`${n.key}:${f}`] === "new" && c[f] != null && c[f] !== "") match[f] = c[f]; });
             match.src = "intake"; match.confirmed = false;
           } else {
             rec.ivfCycles.push({ id: uid(), when: c.when || "", clinic: c.clinic || "", kind: "collection",
