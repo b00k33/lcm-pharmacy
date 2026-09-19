@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260920-070000">
+<meta name="lcm-build" content="20260920-080000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -15484,25 +15484,43 @@
     const offMenu = current && !names.includes(current) ? opt(current) : "";
     return `<option value=""${current ? "" : " selected"}>— set supplier —</option>${offMenu}${names.map(opt).join("")}`;
   };
-  // her rule (2026-08-16 spec): "changing a supplier must not alter stock,
-  // cost or any other field." This only ever writes identity -- the
-  // suppliers[] row + isDefault + the h.supplier mirror everything else
-  // reads -- unlike the old comparison-panel/Restock-order behaviour it
-  // replaces, which deliberately followed the picked supplier's own price.
-  // An existing row's own bottleCost/code is left exactly as it was, so
-  // switching to Koda and back to Evergreen can never quietly wipe either
-  // one's recorded price. Returns the old name so callers can log the change.
+  // her 2026-08-16 rule REVERSED on her own word (2026-09-20, "pull in that
+  // supplier's price automatically"): picking a supplier now follows that
+  // supplier's own recorded price again, restoring the old comparison-panel/
+  // Restock-order behaviour the 2026-08-16 rule had switched off. Mirrors
+  // phPriceReviewSetCost's own established pattern below (it already writes
+  // h.bottleCost/h.cost/restockCostComputed whenever the row it touches is
+  // the active supplier) rather than inventing a second mechanism. A
+  // supplier with no price on file yet for this herb (new to it, or no
+  // supplier at all) clears h.bottleCost/restockCostComputed instead of
+  // leaving the OLD supplier's number stranded under the new supplier's
+  // name -- h.cost (per-gram) is deliberately left alone either way, same
+  // as every other place in this file that clears bottleCost, since the
+  // "Estimated from $/g" ghost value elsewhere reads off it. The
+  // suppliers[] row itself still keeps its own bottleCost/code untouched,
+  // so switching to Koda and back to Evergreen can never wipe either one's
+  // recorded price -- only h.supplier's turn to be "active" moves.
+  // Returns the old name so callers can log the change.
   const phQuickSetSupplier = (h, name) => {
     const old = h.supplier || "";
     if (old === (name || "")) return old;
     h.suppliers = h.suppliers || [];
     h.suppliers.forEach(s => { s.isDefault = false; });
+    let picked = null;
     if (name) {
-      let picked = h.suppliers.find(s => s.name === name);
+      picked = h.suppliers.find(s => s.name === name);
       if (!picked) { picked = { name, bottleCost: null, code: "", isDefault: true }; h.suppliers.push(picked); }
       else picked.isDefault = true;
     }
     h.supplier = name || "";
+    if (picked && picked.bottleCost != null) {
+      h.bottleCost = picked.bottleCost;
+      h.cost = picked.bottleCost / phPackForSupplierName(h, name);
+      h.restockCostComputed = true;
+    } else {
+      delete h.bottleCost;
+      delete h.restockCostComputed;
+    }
     PHARMACY.log.unshift({
       id: uid(), kind: "supplier-change", date: keyOf(TODAY),
       herbId: h.id, name: h.name, oldSupplier: old || "(none)", newSupplier: name || "(none)",
@@ -32875,11 +32893,11 @@
         // her spec (2026-08-16): the same full known-supplier list as the
         // Inventory cell (phSupplierOptionsHtml), not just this herb's own
         // recorded options -- so a blank herb can be assigned straight from
-        // this row instead of only being fixable from Inventory. And per her
-        // explicit rule ("must not alter stock, cost or any other field...
-        // everywhere it appears"), picking here no longer pulls the picked
-        // supplier's own price onto the herb the way it used to -- the row's
-        // own Bottle $ cell (right next door) is still there for that.
+        // this row instead of only being fixable from Inventory. Picking
+        // here DOES pull the picked supplier's own price onto the herb
+        // again (her 2026-09-20 reversal, see phQuickSetSupplier) -- the
+        // row's own Bottle $ cell (right next door) still overrides it if
+        // she edits it herself.
         const h = PHARMACY.herbs.find(x => x.id === orderSup.dataset.phOrderSup);
         if (h) {
           phQuickSetSupplier(h, orderSup.value);
@@ -34425,10 +34443,13 @@
       // OLD supplier's price. h.suppliers[] already remembers each
       // supplier's own last confirmed bottleCost (the price-review feature
       // writes it) -- prefer THAT row when it has one, so the picked
-      // supplier's own real price shows immediately. Read-only: this never
-      // writes anything, so it doesn't touch her 2026-08-16 rule that
-      // picking a supplier here "must not alter stock, cost or any other
-      // field" -- h.bottleCost still stays null until she actually clicks.
+      // supplier's own real price shows immediately. Since her 2026-09-20
+      // reversal, phQuickSetSupplier itself now writes h.bottleCost directly
+      // the moment she picks a supplier with a known price -- this
+      // read-only estimate still earns its keep for the case that write
+      // leaves genuinely blank: a fresh order cycle clears h.bottleCost
+      // (below) without re-running supplier selection, and a supplier with
+      // no price on file yet still needs SOME starting number to edit from.
       const supPriceRow = h.supplier ? (h.suppliers || []).find(s => s.name === h.supplier) : null;
       const bottleAuto = (supPriceRow && supPriceRow.bottleCost != null) ? supPriceRow.bottleCost
         : h.cost ? phRound2(h.cost * pack) : null;
