@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260920-030000">
+<meta name="lcm-build" content="20260920-033000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6007,6 +6007,9 @@
   #pharmacyPage .ph-tp-vtab tr.ph-tp-vtab-logrow td { border-top: 0; padding-top: 4px; }
   #pharmacyPage .ph-tp-vtab tr.ph-tp-vtab-logrow td.ph-tp-vtab-td { background: none; }
   #pharmacyPage .ph-tp-vtab .ph-acu-logbtn { margin: 0; }
+  /* her "yes" 2026-09-20: a herbs-only patient's table -- no toggle, a quiet tag in the Phase row */
+  #pharmacyPage .ph-acu-open.herbsonly .ph-acu-notreat { display: none; }
+  #pharmacyPage .ph-tp-vtab .tdw .ph-acu-herbsonly-tag { margin-left: auto; font-size: 11px; font-weight: 700; color: var(--ph-soft); background: var(--ph-paper); border: 1px solid var(--ph-line); border-radius: 6px; padding: 2px 8px; }
   #pharmacyPage .ph-tp-vtab .ph-tp-fcell .ph-tp-faction { margin-top: 6px; }
   @media (max-width: 640px) {
     #pharmacyPage .ph-tp-vtab col.c-lbl { width: 52px; }
@@ -29531,7 +29534,9 @@
           // the app's two logging paths, never actually set the flag, so a
           // patient logged only through this button had real session history
           // but read as "not tracked" to every Communications follow-up check
-          if (!rec.acuEnabled) rec.acuEnabled = true;
+          // her "yes" 2026-09-20: a herbs-only check-in is not that -- it must
+          // not switch acupuncture tracking on for a herbs-only patient
+          if (!rec.acuEnabled && !session.noTreatment) rec.acuEnabled = true;
           // Request 4: clinical findings save WITH the session, not a second
           // action -- if she tapped anything into the tongue/pulse/abdomen
           // charts, it lands on this same acuSessions row via rec.visitFnd.
@@ -49556,6 +49561,11 @@ or changing anything in Cliniko.
     // Findings, Next, Log. No checklist, no hint, no "last 3 sessions"
     // (Past visits under the table has them), phase chips behind "change".
     const compact = !!opts.compact;
+    // her "yes" 2026-09-20: acupuncture not tracked for this patient = a
+    // herbs-only visit every time -- Ask · Response · Herbs · Next · Log
+    // check-in, no points, no toggle to turn acupuncture on from here
+    const herbsOnly = !((phPatientPeek(name) || {}).acuEnabled);
+    if (herbsOnly) presAcuNoTreatment = true;
     const plans = phTpPlans(name);
     // her review-caught bug 2026-09-18: a patient can genuinely have TWO
     // plans both marked "active" at once (she runs concurrent courses on
@@ -49698,7 +49708,7 @@ or changing anything in Cliniko.
       nextBooking || presAcuTicks.has("book") ? "next" : "",
       loggedToday ? "log" : "",
     ].filter(Boolean);
-    return `<div class="ph-acu-open${compact ? " compact" : ""}" data-acu-name="${esc(name)}" data-acu-plan="${activePlan ? activePlan.id : ""}"${compact ? ` data-acu-compact="1"` : ""} data-acu-done="${doneKeys.join(",")}">
+    return `<div class="ph-acu-open${compact ? " compact" : ""}${herbsOnly ? " herbsonly" : ""}" data-acu-name="${esc(name)}" data-acu-plan="${activePlan ? activePlan.id : ""}"${compact ? ` data-acu-compact="1"` : ""}${herbsOnly ? ` data-acu-herbsonly="1"` : ""} data-acu-done="${doneKeys.join(",")}">
       <div class="ph-acu-notreat">
         <button type="button" class="ph-acu-notreat-toggle${presAcuNoTreatment ? " on" : ""}" data-pres-acu-notreat="1" aria-pressed="${presAcuNoTreatment ? "true" : "false"}">${presAcuNoTreatment ? "✓ Herbs only — no acupuncture today" : "No acupuncture today?"}</button>
       </div>
@@ -50474,7 +50484,8 @@ or changing anything in Cliniko.
     // a label · value row's value side, the label dropped (the table's own label column carries it)
     const rowVal = label => { const row = Array.from(root.querySelectorAll(".ph-acu-row2")).find(r => { const l = r.querySelector(".lbl"); return l && l.textContent.trim() === label; }); if (!row) return ""; const c = row.cloneNode(true); const l = c.querySelector(".lbl"); if (l) l.remove(); return c.innerHTML; };
     const P = phTpPlanCells(plan, phase);
-    const notreat = pick(".ph-acu-notreat");
+    const herbsOnly = !!root.dataset.acuHerbsonly;
+    const notreat = herbsOnly ? `<span class="ph-acu-herbsonly-tag">Herbs only</span>` : pick(".ph-acu-notreat");
     const noAcu = !!root.querySelector(".ph-acu-notreat-toggle.on");
     const treatas = (() => { const el = root.querySelector(".ph-acu-fromplan .k.treatas"); if (!el) return `<span class="ph-tp-vtab-phase"><b>${esc(phase.label || "")}</b></span>`; const c = el.cloneNode(true); const l = c.querySelector(".lbl"); if (l) l.remove(); return `<span class="ph-tp-vtab-phase">${c.innerHTML}</span>`; })();
     const phasePick = pick(".ph-acu-phasepick") + pick(".ph-acu-overridenote");
@@ -50484,7 +50495,7 @@ or changing anything in Cliniko.
     const findings = `${mucus}${rowVal("Findings")}`;
     const done = new Set((root.dataset.acuDone || "").split(",").filter(Boolean));
     const order = ["phase", "ask", "response", "findings", "needle", "herbs", "next", "log"];
-    const now = order.find(k => !done.has(k)) || "";
+    const now = order.find(k => !done.has(k) && !(herbsOnly && k === "needle")) || "";
     const row = (key, label, planTd, todayInner, cls) => `<tr class="${[cls || "", done.has(key) ? "done" : "", key === now ? "now" : ""].filter(Boolean).join(" ")}"><td class="ph-tp-lbl">${label}${done.has(key) && key !== "phase" ? `<i class="tick">✓</i>` : ""}</td>${planTd}<td class="ph-tp-vtab-td"><div class="tdw">${todayInner}</div></td></tr>`;
     const attrs = Array.from(root.attributes).filter(a => a.name.startsWith("data-")).map(a => `${a.name}="${esc(a.value)}"`).join(" ");
     return `<div class="ph-acu-open compact merged" ${attrs} data-acu-merged="1">
@@ -50493,8 +50504,8 @@ or changing anything in Cliniko.
         ${row("phase", "Phase", P.aim, `${treatas}${notreat}${phasePick}${opts.phaseNote || ""}`)}
         ${row("ask", "Ask", P.watch, rowVal("Ask"))}
         ${row("response", "Response", `<td class="ph-tp-cell frozen empty">—</td>`, rowVal("Response"))}
-        ${row("findings", "Findings", P.findings, findings)}
-        ${row("needle", "Needle", `<td class="ph-tp-vtab-two"><span class="sub">Points</span>${P.points}<span class="sub">Press tags</span>${P.press}</td>`, needle)}
+        ${herbsOnly && !findings.trim() ? "" : row("findings", "Findings", P.findings, findings)}
+        ${herbsOnly ? "" : row("needle", "Needle", `<td class="ph-tp-vtab-two"><span class="sub">Points</span>${P.points}<span class="sub">Press tags</span>${P.press}</td>`, needle)}
         ${row("herbs", "Herbs", P.formula, herbs)}
         ${row("next", "Next", P.cadence, rowVal("Next"))}
         ${row("log", "", `<td></td>`, pick(".ph-acu-logbtn"), "ph-tp-vtab-logrow")}
@@ -52532,7 +52543,9 @@ or changing anything in Cliniko.
   // one gate decides, for both, whether this phase is the one treated today.
   function phTpTodaysVisitGate(plan, phase, frozen) {
     const peekRec = phPatientPeek(phTpScreenPatient);
-    const acuCtx = peekRec && peekRec.acuEnabled ? presAcuCtx(phTpScreenPatient, plan.id) : null;
+    // her "yes" 2026-09-20: a herbs-only patient gets the table too, in
+    // herbs-only mode (presAcuOpenHtml forces the no-treatment state)
+    const acuCtx = peekRec ? presAcuCtx(phTpScreenPatient, plan.id) : null;
     // her pick 2026-09-18 (fix 1): when today's booking names a plan, only
     // THAT plan's Grid offers Today's visit -- the other plan's Grid would
     // otherwise log the visit against the wrong course
@@ -53284,8 +53297,20 @@ or changing anything in Cliniko.
         ${phTpFindingsHtml(plan)}
         ${plan.templateName === "IVF Protocol" ? phIvfHistoryFoldHtml(phTpScreenPatient) : ""}
         ${PH_TP_CYCLE_TEMPLATES.includes(plan.templateName) ? phCycleTessHtml(phPatientRec(phTpScreenPatient), phTpScreenPatient) : ""}
-        <div class="ph-tp-timeline${phTpEditPlanId === plan.id ? " ph-tp-editing" : ""}">
-          ${phTpPlanBodyHtml(name, plan, "")}
+        <div class="ph-tp-timeline ph-tp-page${phTpEditPlanId === plan.id ? " ph-tp-editing" : ""}">
+          ${(() => {
+            // her "yes" 2026-09-20: the full-screen window shows the plan the
+            // same way the plan tab does -- phase bar, the one synced visit
+            // table, Next, the Visit record (phTpPlanBodyHtml's headband /
+            // tab cards / Timeline toggle are no longer reached from here)
+            const sel = phTpTabPhaseOf(plan, phPatientPeek(name));
+            return `${phTpPhaseBarHtml(name, plan, sel)}
+              <div class="ph-tp-panel noph">
+                <div class="ph-tp-phasebody">${sel ? phTpPhasePanelHtml(plan, sel) : `<div class="ph-hx-constit-note">No phases yet.</div>`}</div>
+                ${sel ? phTpNextHtml(name, plan, sel) : ""}
+                ${phTpPastHtml(name, plan)}
+              </div>`;
+          })()}
           <button type="button" class="ph-tp-addbtn" data-tp-phase-add="${plan.id}">+ Add phase</button>
           ${plan.templateName === "IVF Protocol" ? `<button type="button" class="ph-tp-addbtn" data-tp-ivftrack-open="${plan.id}">⇄ Switch transfer track</button>` : ""}
           ${phTpAddPhaseHtml(plan)}
