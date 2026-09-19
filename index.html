@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260920-033000">
+<meta name="lcm-build" content="20260920-034500">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -5869,6 +5869,13 @@
   #pharmacyPage .ph-tp-cycblk .ph-cyc-day.cd.today small { color: var(--ph-green-deep); }
   #pharmacyPage .ph-tp-cycblk .ph-cyc-grid .m { line-height: 40px; }
   #pharmacyPage .ph-tp-cycblk-links { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; margin-top: 6px; }
+  /* her ask 2026-09-20 "make this collapsible": one head line, the chevron folds the block */
+  #pharmacyPage .ph-tp-cycblk-head { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; width: 100%; margin: -4px 0 -2px; padding: 2px 0; border: 0; background: none; font: inherit; font-size: 12.5px; color: var(--ph-ink); text-align: left; cursor: pointer; min-height: 0; }
+  #pharmacyPage .ph-tp-cycblk-head .chev { font-style: normal; font-size: 11px; color: var(--ph-faint); width: 10px; }
+  #pharmacyPage .ph-tp-cycblk-head b { font-weight: 800; letter-spacing: .04em; text-transform: uppercase; font-size: 10.5px; color: var(--ph-green-deep); }
+  #pharmacyPage .ph-tp-cycblk-head span { color: var(--ph-soft); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #pharmacyPage .ph-tp-cycblk.folded { padding: 8px 14px; grid-template-columns: minmax(0, 1fr); }
+  #pharmacyPage .ph-tp-cycblk.folded .ph-tp-cycblk-head { margin: 0; }
   #pharmacyPage .ph-tp-cycblk-links .ph-cyc-cdcalc-toggle { margin: 0; }
   #pharmacyPage .ph-tp-cycblk-links .ph-cyc-cdcalc { flex-basis: 100%; margin: 0; }
   #pharmacyPage .ph-tp-cycblk-links .ph-cyc-histtoggle { margin-left: auto; }
@@ -28053,6 +28060,13 @@
       }
       // her ask 2026-09-05: the "Period history" disclosure + its per-date
       // delete -- see phCycleHistoryHtml/phCycleDeleteHistoryDate above
+      const cycFold = e.target.closest("[data-cycle-fold]");
+      if (cycFold) {
+        try { localStorage.setItem("daybook-ph-cycblk-fold", phTpCycleFolded() ? "0" : "1"); } catch (err) {}
+        const nm = cycFold.dataset.cycleFold, rec = phPatientPeek(nm);
+        document.querySelectorAll(`[data-cycle-block="${CSS.escape(nm)}"]`).forEach(el => { el.outerHTML = phTpCycleBlockHtml(rec, nm, phTpFindPlan(nm, el.dataset.cycleBlockPlan)); });
+        return;
+      }
       const cycHistToggle = e.target.closest("[data-cycle-hist-toggle]");
       if (cycHistToggle) { presCycleHistOpen = !presCycleHistOpen; if (phCyclePop && phCyclePop.host === "hist") phCyclePop = null; phCycleRerender(); return; }
       const cycHistDel = e.target.closest("[data-cycle-hist-del]");
@@ -49973,10 +49987,22 @@ or changing anything in Cliniko.
   // phases as a bar with their day ranges written inside and a marker naming
   // today, one fact line, one editable line. No headline (the band has CD),
   // no LMP tile (the strip marks it), no legend, no tiles. ====
+  const phTpCycleFolded = () => { try { return localStorage.getItem("daybook-ph-cycblk-fold") === "1"; } catch (e) { return false; } };
   function phTpCycleBlockHtml(rec, name, plan) {
     if (!rec) return "";
     const planId = plan ? plan.id : "";
-    const wrap = inner => `<div class="ph-tp-cycblk" data-cycle-block="${esc(name)}" data-cycle-block-plan="${esc(planId)}">${inner}</div>`;
+    const folded = phTpCycleFolded();
+    // the head says where she is in one line, so folded loses nothing she needs at a glance
+    const headSummary = (() => {
+      if (rec.cycleOn === false) return "not tracking a cycle";
+      const c0 = phCycleFor(rec) || {};
+      const cp = c0.lmp ? phCycleComp(rec) : null;
+      if (!cp) return "no period logged yet";
+      const dTo = Math.round((parseKey(cp.nextDate) - TODAY) / 86400000);
+      return `Day ${cp.day} ${cp.phaseLabel} · period ${phShortDate(c0.lmp)} · next ${dTo < 0 ? `${-dTo} d late` : dTo === 0 ? "today" : `in ${dTo} d`}`;
+    })();
+    const head = `<button type="button" class="ph-tp-cycblk-head" data-cycle-fold="${esc(name)}" aria-expanded="${folded ? "false" : "true"}"><i class="chev">${folded ? "▸" : "▾"}</i><b>Cycle</b><span>${esc(headSummary)}</span></button>`;
+    const wrap = inner => `<div class="ph-tp-cycblk${folded ? " folded" : ""}" data-cycle-block="${esc(name)}" data-cycle-block-plan="${esc(planId)}">${head}${folded ? "" : inner}</div>`;
     const strip = phCycleStripHtml(rec, name, { weeks: PH_CYC_STRIP_WEEKS, compact: true, bare: true, cd: true, planId: planId || null });
     const links = `<div class="ph-tp-cycblk-links">${phCycleCdCalcHtml(name)}<button type="button" class="tab-link ph-cyc-histtoggle" data-cycle-hist-toggle="1" aria-expanded="${presCycleHistOpen}">${presCycleHistOpen ? "Hide history" : "Period history →"}</button></div>`;
     const hist = presCycleHistOpen ? phCycleHistoryHtml(rec, name) : "";
