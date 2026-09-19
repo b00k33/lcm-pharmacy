@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260920-060000">
+<meta name="lcm-build" content="20260920-070000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6808,6 +6808,8 @@
   #pharmacyPage .ph-noplan-gate-body { padding: 16px; }
   #pharmacyPage .ph-noplan-gate-title { font-size: 15px; font-weight: 700; color: var(--ph-ink); }
   #pharmacyPage .ph-noplan-gate-sub { font-size: 12px; color: var(--ph-soft); margin: 4px 0 16px; line-height: 1.4; }
+  #pharmacyPage .ph-noplan-gate-skip { margin-top: 16px; text-align: center; }
+  #pharmacyPage .ph-noplan-gate-skip .tab-link.faint { color: var(--ph-faint); font-size: 12px; }
   /* groups the script tabs under their active treatment plan (her ask
      2026-09-06). This strip only renders on the Dispense stage now (her ask
      2026-09-11, "script should be under dispense tab" -- Dispense is the one
@@ -30261,6 +30263,14 @@
         savePharmacy(); renderPharmacy();
         return;
       }
+      // "Skip for now" on the no-plan gate (her 2026-09-20 answer) -- lets
+      // her see this one patient's profile without a plan, this session only
+      const noPlanSkip = e.target.closest("[data-noplan-skip]");
+      if (noPlanSkip) {
+        presNoPlanGateSkip.add(noPlanSkip.dataset.noplanSkip);
+        renderPresPanel();
+        return;
+      }
       // ✉ Letter templates editor (Settings)
       const ltrPick = e.target.closest("[data-ltr-tpl-pick]");
       if (ltrPick) { phLtrSetTpl = ltrPick.dataset.ltrTplPick; renderPhSettingsPage(); return; }
@@ -45714,13 +45724,16 @@ or changing anything in Cliniko.
     // for whichever phase is actually being treated today (her ask
     // 2026-09-18, "remove the panel everywhere" -- the old standalone
     // accordion for a plan-less patient duplicated the same record a real
-    // plan's Grid already shows). Every patient reaches this stage with at
-    // least one plan (the no-plan gate, decision 3), so there is always a
-    // Grid to fold into; the narrow edge case of a patient whose only
-    // plan(s) are all paused/done rather than active is left without an
-    // acu-log surface here rather than reintroducing a second, disconnected
-    // place to log a session -- her plan-first architecture already treats
-    // that case as "start a new plan", not "log against nothing".
+    // plan's Grid already shows). Almost every patient reaches this stage
+    // with at least one plan (the no-plan gate, decision 3) so there is
+    // usually a Grid to fold into; the narrow edge cases -- a patient whose
+    // only plan(s) are all paused/done, or one she's tapped "Skip for now"
+    // on (presNoPlanGateSkip, 2026-09-20) so has zero plans here at all --
+    // are both left without an acu-log surface here (presTpInlineListHtml
+    // shows its own "+ New treatment plan" card instead) rather than
+    // reintroducing a second, disconnected place to log a session -- her
+    // plan-first architecture already treats that case as "start a new
+    // plan", not "log against nothing".
     return `<div class="ph-pres-stage-body">
       ${presConstitutionSuggestHtml(t)}
       ${presTreatmentRowHtml(t)}
@@ -45952,11 +45965,13 @@ or changing anything in Cliniko.
     const pp = PHARMACY.presPricing || { method: "gram", gramPrice: 0.71, markup: 3 };
     const isF = presIsFormula(t), ab = presAbbr(t);
     // decision 3 ("plan is the spine"), locked 2026-09-11: a patient with NO
-    // treatment plan at all sees this, full-screen, before anything else --
-    // no skip, her explicit call. Checked before every other stage/case
-    // computation below since none of it matters until she's past this.
+    // treatment plan at all sees this, full-screen, before anything else,
+    // UNLESS she's tapped "Skip for now" this session (her 2026-09-20 answer
+    // once flagged the ~501/510-patient consequence -- see presNoPlanGateSkip
+    // above). Checked before every other stage/case computation below since
+    // none of it matters until she's past this.
     const gateName = !isF ? presPatientFor(t) : null;
-    if (gateName && phTpPlans(gateName).length === 0) {
+    if (gateName && phTpPlans(gateName).length === 0 && !presNoPlanGateSkip.has(gateName)) {
       phTpScreenPatient = gateName;
       el.innerHTML = presNoPlanGateHtml(t, gateName);
       done();
@@ -50114,12 +50129,19 @@ or changing anything in Cliniko.
       ${presTpTemplatePickCardsHtml(name, curScript)}
     </div>`;
   }
-  // decision 3, locked 2026-09-11 ("leading", no skip): the ENTIRE panel for
-  // a no-plan patient, in place of the normal band+stages -- renderPresPanel
+  // decision 3, locked 2026-09-11 ("leading"): the ENTIRE panel for a
+  // no-plan patient, in place of the normal band+stages -- renderPresPanel
   // branches here before any of that renders. Same template cards as the
-  // inline "+ New" flow (presTpTemplatePickCardsHtml), just full-screen and
-  // unavoidable. data-pres-close still works -- she can leave to a different
-  // patient, she just can't see THIS one's profile without picking a plan.
+  // inline "+ New" flow (presTpTemplatePickCardsHtml), full-screen. data-
+  // pres-close still works -- she can leave to a different patient. Her
+  // original "no skip, her explicit call" is now "Skip for now" (below).
+  // her "Add a 'Skip for now' escape hatch" (2026-09-20, on being flagged the
+  // consequence at ~501/510 patients): in-memory only, NOT saved to
+  // PHARMACY -- a fresh app load always shows the gate again, so a patient
+  // she skips isn't silently forgotten forever, just out of her way for
+  // this session. Picking a plan later removes her from this set for free
+  // (phTpPlans(name).length stops being 0, the gate condition short-circuits).
+  const presNoPlanGateSkip = new Set();
   function presNoPlanGateHtml(t, name) {
     return `<div class="ph-listing ph-pres-panel${phCaseAccentClass(t)} ph-noplan-gate">
       <div class="ph-pres-band">
@@ -50133,6 +50155,7 @@ or changing anything in Cliniko.
         <div class="ph-noplan-gate-title">${esc(phDispName(t.name, false))} doesn't have a treatment plan yet</div>
         <div class="ph-noplan-gate-sub">Start one to bring her prescriptions, phases and history together — this is the first thing you'll see until she's on a plan. <button type="button" class="tab-link" data-tp-mgr-jump="1">✎ Manage templates</button></div>
         ${presTpTemplatePickCardsHtml(name, t)}
+        <div class="ph-noplan-gate-skip"><button type="button" class="tab-link faint" data-noplan-skip="${esc(name)}">Skip for now — see her profile without a plan</button></div>
       </div>
     </div>`;
   }
