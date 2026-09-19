@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260920-054500">
+<meta name="lcm-build" content="20260920-060000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -22387,7 +22387,12 @@
     const k = phApptKind(service);
     const away = phApptHomeVisitHtml(service);
     if (!k) return away || phApptNonClinicalHtml(service);
-    if (k === "both") return `<span class="ph-appt-kind acu" title="Acupuncture">ACU</span><span class="ph-appt-kind chm" title="Chinese herbal medicine">CHM</span>${away}`;
+    // her "One combined pill everywhere" (2026-09-20): used to be two
+    // separate ACU + CHM pills here; List view and the Booked-week table
+    // already special-cased a single combined pill (narrower, doesn't wrap
+    // on a phone) -- promoted to the one shared function, their own copies
+    // removed below.
+    if (k === "both") return `<span class="ph-appt-kind both" title="Acupuncture + Chinese herbal medicine">ACU+CHM</span>${away}`;
     return `<span class="ph-appt-kind ${k}" title="${k === "chm" ? "Chinese herbal medicine" : "Acupuncture only"}">${PH_APPT_KIND_LABEL[k]}</span>${away}`;
   };
   // her ask 2026-09-11 ("when appointments are added to the calendar, it
@@ -23632,14 +23637,14 @@
   // popup, "+ add focus" opens it straight in brief-edit mode. On the phone
   // the same rows stack (CSS grid areas), no horizontal scroll.
   function phApptCalListRowHtml(a) {
-    const k = phPatientKey(a.patient), kind = phApptKind(a.service);
+    const k = phPatientKey(a.patient);
     const rec = PHARMACY.patients && PHARMACY.patients[k];
     const tracked = rec && phCycleOn(rec);
     const done = presDispenseOnDay(k, a.date);
     const q = phApptCalQ.trim().toLowerCase();
     const dim = q && !a.patient.toLowerCase().includes(q) ? " dim" : "";
     const brief = phApptBrief(a);
-    const kindHtml = kind === "both" ? `<span class="ph-appt-kind both" title="Acupuncture + Chinese herbal medicine">ACU+CHM</span>${phApptHomeVisitHtml(a.service)}` : phApptKindHtml(a.service);
+    const kindHtml = phApptKindHtml(a.service);
     // the due script's phase word (her pick 2026-09-07: show it outside the
     // profile too) -- only when the script carries one, so most rows are unchanged
     const script = phApptScriptFor(k);
@@ -36275,11 +36280,10 @@ or changing anything in Cliniko.
       ? `<button type="button" class="ph-tl-act cyc" data-pres-tl-cyc-toggle="${esc(name)}" aria-expanded="${presTlCycOpen === name}" title="Log her period">🩸</button>` : "";
     const presTlCycPopHtml = (name, rec) => rec && phCycleOn(rec) && presTlCycOpen === name
       ? `<div class="ph-tl-cycpop" role="group" aria-label="Log period for ${esc(phTitle(name))}">${phCycleStripHtml(rec, name)}</div>` : "";
-    // her ask 2026-09-07: ACU + CHM used to render as two separate pills,
-    // which wrapped onto their own line on a narrow phone -- one combined
-    // pill here only (phApptKindHtml's two-pill output elsewhere is unchanged,
-    // this row alone needed the tighter version)
-    const kindHtml = r => r.kind === "both" ? `<span class="ph-appt-kind both" title="Acupuncture + Chinese herbal medicine">ACU+CHM</span>${phApptHomeVisitHtml(r.a.service)}` : phApptKindHtml(r.a.service);
+    // her ask 2026-09-07: ACU + CHM render as one combined pill here (avoids
+    // wrapping onto its own line on a narrow phone). Since 2026-09-20 this is
+    // just phApptKindHtml's own output -- it renders the combined pill too now.
+    const kindHtml = r => phApptKindHtml(r.a.service);
     const rowHtml = r => `<div class="ph-tl-row${r.done ? " done" : ""}" data-tl-key="${esc(r.k)}">
       <span class="ph-tl-time">${esc(phCkTime12(r.a.time))}</span>${dot(r)}
       <div class="ph-tl-mid"><div class="l1"><b>${esc(phTitle(r.a.patient))}</b>${kindHtml(r)}${phApptEtHtml(r.a)}${phApptFuDue(r.k, dayKey) ? `<span class="bell" title="Follow-up due">🔔</span>` : ""}</div><div class="l2">${line2(r)}</div>${briefHtml(r)}</div>${cycBit(r)}
