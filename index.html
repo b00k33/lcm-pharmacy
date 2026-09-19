@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260920-040000">
+<meta name="lcm-build" content="20260920-041500">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -5984,6 +5984,9 @@
   #pharmacyPage .ph-tp-ladder-ph .cells i.booked { background: var(--ph-gold-tint, #FFFBE2); border-color: #E8D48A; color: var(--ph-gold-deep, #8A6D1A); }
   #pharmacyPage .ph-tp-ladder-ph .cells i.next { opacity: .75; }
   #pharmacyPage .ph-tp-ladder-ph .cells i.more { border-style: dashed; }
+  #pharmacyPage .ph-tp-ladder-ph .cells button.off { font: inherit; font-size: 10.5px; line-height: 1.2; min-width: 54px; min-height: 0; border-radius: 6px; padding: 3px 6px; text-align: center; background: var(--ph-white); color: var(--ph-faint); border: 1px dashed var(--ph-line); cursor: pointer; }
+  #pharmacyPage .ph-tp-ladder-ph .cells button.off b { display: block; font-size: 10px; color: var(--ph-soft); text-decoration: line-through; }
+  #pharmacyPage .ph-tp-ladder-ph .cells button.off:hover { border-color: var(--ph-green); color: var(--ph-green-deep); }
   #pharmacyPage .ph-tp-pbar:hover .seg, #pharmacyPage .ph-tp-pbar:active .seg { justify-content: flex-start; }
   #pharmacyPage .ph-tp-pbar .seg.up { color: var(--ph-faint); background: var(--ph-paper); }
   #pharmacyPage .ph-tp-pbar .seg.done { opacity: .6; }
@@ -23287,7 +23290,8 @@
     }
     if (!out.goal && plan) {
       const phase = phTpLivePhase(phPatientPeek(a.patient), plan);   // one phase truth (2026-09-18)
-      const g = [(plan.goal || "").trim(), phase ? (phase.label || "").trim() : ""].filter(Boolean).join(" · ");
+      const phBit = phase ? (/^phase\s*\d*$/i.test((phase.label || "").trim()) ? (phase.aim || "").trim() : (phase.label || "").trim()) : "";
+      const g = [(plan.goal || "").trim(), phBit].filter(Boolean).join(" · ");
       if (g) { out.goal = g; out.goalSrc = "plan"; }
     }
     return out;
@@ -27082,6 +27086,28 @@
       }
       const tpAdvOk = e.target.closest("[data-tp-adv-ok]");
       if (tpAdvOk) { phTpAutoAdv = null; phTpRepaintPhasePanel(); return; }
+      if (e.target.closest(".ph-tp-announce [data-tp-phase-add]")) phTpAutoAdv = null;   // falls through to the add-phase handler
+      const tpAdvClose = e.target.closest("[data-tp-adv-close]");
+      if (tpAdvClose) {
+        const [planId, phaseId] = tpAdvClose.dataset.tpAdvClose.split(":");
+        const plan = phTpFindPlan(phTpScreenPatient, planId);
+        const ph = plan && plan.phases.find(p => p.id === phaseId);
+        phTpAutoAdv = null;
+        if (plan) { plan.status = "done"; if (ph) { ph.status = "done"; if (!ph.doneKey) ph.doneKey = keyOf(TODAY); } savePharmacy(); }
+        phTpRerender();
+        return;
+      }
+      const tpAdvExtend = e.target.closest("[data-tp-adv-extend]");
+      if (tpAdvExtend) {
+        const [planId, phaseId] = tpAdvExtend.dataset.tpAdvExtend.split(":");
+        const plan = phTpFindPlan(phTpScreenPatient, planId);
+        const ph = plan && plan.phases.find(p => p.id === phaseId);
+        const more = phTpAutoAdv ? phTpAutoAdv.planned : 0;
+        phTpAutoAdv = null;
+        if (ph && more) { ph.sessions = phTpSessionsOf(ph) + more; savePharmacy(); }
+        phTpRerender();
+        return;
+      }
       const tpAdvUndo = e.target.closest("[data-tp-adv-undo]");
       if (tpAdvUndo) {
         const adv = phTpAutoAdv; phTpAutoAdv = null;
@@ -29621,10 +29647,15 @@
           if (activePlan && treatedPhase && !session.noTreatment && activePlan.status === "active" && treatedPhase.status === "current" && !PH_TP_CYCLE_TEMPLATES.includes(activePlan.templateName)) {
             const planned = phTpSessionsOf(treatedPhase);
             const idx = activePlan.phases.indexOf(treatedPhase), next = idx >= 0 ? activePlan.phases[idx + 1] : null;
-            if (planned && next && phTpPhaseSessionDates(name, activePlan, treatedPhase).done.length >= planned) {
-              phTpAutoAdv = { planId: activePlan.id, fromId: treatedPhase.id, toId: next.id, planned };
-              phTpTabPhase.delete(activePlan.id);
-              phTpSetPhaseStatus(activePlan, next, "current");
+            if (planned && phTpPhaseSessionDates(name, activePlan, treatedPhase).done.length >= planned) {
+              if (next) {
+                phTpAutoAdv = { planId: activePlan.id, fromId: treatedPhase.id, toId: next.id, planned };
+                phTpTabPhase.delete(activePlan.id);
+                phTpSetPhaseStatus(activePlan, next, "current");
+              } else {
+                // the last phase: nothing to move to -- say so and offer the three real next steps
+                phTpAutoAdv = { planId: activePlan.id, fromId: treatedPhase.id, toId: null, planned, complete: true };
+              }
             }
           }
           presAcuOutcomeDraft = null; presAcuPhaseId = null; presAcuHerbInstruct = false;
@@ -50137,7 +50168,8 @@ or changing anything in Cliniko.
     const mkText = live ? [live.label || "", sinceShort, phTpVisitShort(name, plan, live)].filter(Boolean).join(" · ") : "";
     const mkPct = liveIdx >= 0 ? (liveIdx + 0.5) / phs.length * 100 : 0;
     const mkSide = mkPct > 66 ? " r" : mkPct < 34 ? " l" : "";
-    const mk = liveIdx >= 0 ? `<span class="mk" style="left:${mkPct.toFixed(2)}%"></span><span class="mkl${mkSide}" style="left:${mkPct.toFixed(2)}%">${mkText}</span>` : "";
+    // a one-phase plan: the marker would only repeat the segment and the ladder under it
+    const mk = liveIdx >= 0 && phs.length > 1 ? `<span class="mk" style="left:${mkPct.toFixed(2)}%"></span><span class="mkl${mkSide}" style="left:${mkPct.toFixed(2)}%">${mkText}</span>` : "";
     const named = !PH_TP_CYCLE_TEMPLATES.includes(plan.templateName);
     return `<div class="ph-tp-pbar-outer${mk ? " has-mk" : ""}" data-tp-pbar="${plan.id}" data-tp-pbar-name="${esc(name)}" role="tablist" aria-label="Phases of this plan"><div class="ph-tp-pbar${named ? " named" : ""}">${segs}</div>${mk}</div>`;
   }
@@ -51428,9 +51460,11 @@ or changing anything in Cliniko.
     const st = ph && ph.sinceKey ? phTpPhaseVisitStats(name, plan, ph) : null;
     const today = keyOf(TODAY);
     const done = new Map(), booked = [];
+    const excluded = [];
     if (st) {
       st.counted.forEach(r => done.set(r.appt.date, { date: r.appt.date, appt: r.appt }));
       st.bookedRows.forEach(r => booked.push({ date: r.appt.date, appt: r.appt }));
+      st.rows.filter(r => r.excluded).forEach(r => excluded.push({ date: r.appt.date, appt: r.appt, key: r.key }));
     }
     if (ph && ph.sinceKey) {
       const rec = phPatientPeek(name), to = ph.doneKey || today;
@@ -51440,7 +51474,7 @@ or changing anything in Cliniko.
         if (!done.has(s.date)) done.set(s.date, { date: s.date, session: s });
       });
     }
-    return { done: [...done.values()].sort((a, b) => a.date.localeCompare(b.date)), booked: booked.sort((a, b) => a.date.localeCompare(b.date)), stats: st };
+    return { done: [...done.values()].sort((a, b) => a.date.localeCompare(b.date)), booked: booked.sort((a, b) => a.date.localeCompare(b.date)), excluded, stats: st };
   }
   // the ladder (her pick B): every planned session of every phase with its
   // date -- done ✓ · today · booked · projected (tilde) from the phase's rhythm
@@ -51471,7 +51505,9 @@ or changing anything in Cliniko.
       while (cells.length < n) { last = keyOf(new Date(parseKey(last).getTime() + days * 864e5)); cells.push({ k: "next", date: last }); }
       cursor = last;
       const extra = sd.done.length > n ? `<i class="more" title="beyond the planned count">+${sd.done.length - n} extra</i>` : "";
-      return `<div class="${cls}">${head}<div class="cells">${cells.map((c, j) => `<i class="${c.k}" title="${c.k === "next" ? "projected from the rhythm" : c.k === "booked" ? "booked" : c.k === "today" ? "today" : "done"}"><b>${j + 1}</b>${c.k === "today" ? "today" : (c.k === "next" ? String.fromCharCode(126) : "") + sd2(c.date)}${c.k === "done" ? " ✓" : ""}</i>`).join("")}${extra}</div></div>`;
+      // a booking she marked "not counted" stays visible, struck, one tap to count it again
+      const off = sd.excluded.map(x => `<button type="button" class="off" data-tp-visit-toggle="${[plan.id, p.id, esc(x.key)].join(String.fromCharCode(126))}" title="Not counted for this phase — tap to count it"><b>${x.date === today ? "today" : sd2(x.date)}</b>not counted · count it</button>`).join("");
+      return `<div class="${cls}">${head}<div class="cells">${cells.map((c, j) => `<i class="${c.k}" title="${c.k === "next" ? "projected from the rhythm" : c.k === "booked" ? "booked" : c.k === "today" ? "today" : "done"}"><b>${j + 1}</b>${c.k === "today" ? "today" : (c.k === "next" ? String.fromCharCode(126) : "") + sd2(c.date)}${c.k === "done" ? " ✓" : ""}</i>`).join("")}${extra}${off}</div></div>`;
     }).join("");
     return `<div class="ph-tp-ladder"><div class="ph-tp-sec"><span>Sessions</span></div>${groups}</div>`;
   }
@@ -52406,6 +52442,7 @@ or changing anything in Cliniko.
     // data, not an editable label), so it wins when both would apply.
     const adv = phTpAutoAdv && phTpAutoAdv.planId === plan.id ? (() => {
       const f = plan.phases.find(p => p.id === phTpAutoAdv.fromId), t = plan.phases.find(p => p.id === phTpAutoAdv.toId);
+      if (f && phTpAutoAdv.complete) return `<div class="ph-tp-announce cal"><div class="txt"><b>${esc(f.label)}</b> complete · ${phTpAutoAdv.planned} of ${phTpAutoAdv.planned} sessions · the last phase of this plan</div><div class="acts"><button type="button" class="go" data-tp-adv-close="${plan.id}:${f.id}">Close plan</button><button type="button" class="stay" data-tp-adv-extend="${plan.id}:${f.id}">+${phTpAutoAdv.planned} more sessions</button><button type="button" class="stay" data-tp-phase-add="${plan.id}">Add a phase</button><button type="button" class="stay" data-tp-adv-ok="${plan.id}">Later</button></div></div>`;
       return f && t ? `<div class="ph-tp-announce cal"><div class="txt"><b>${esc(f.label)}</b> complete · ${phTpAutoAdv.planned} of ${phTpAutoAdv.planned} sessions · now in <b>${esc(t.label)}</b></div><div class="acts"><button type="button" class="go" data-tp-adv-ok="${plan.id}">OK</button><button type="button" class="stay" data-tp-adv-undo="${plan.id}">Undo</button></div></div>` : "";
     })() : "";
     const announce = adv + (phTpPhaseMismatchHtml(plan, phase) || phTpPhaseMskVerifyHtml(plan, phase));
