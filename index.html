@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260920-023000">
+<meta name="lcm-build" content="20260920-024500">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -28269,7 +28269,7 @@
           // a pick-in-progress means this tap is choosing the second photo to
           // compare; otherwise it just opens the photo full size
           if (phRenCompare.length && phRenComparePick(tl.dataset.renTlOpen, tl.dataset.renTlRow, tl.dataset.renTlPatient)) return;
-          phRenViewPhoto(tl.dataset.renTlOpen, tl.dataset.renTlPatient);
+          phRenViewPhoto(tl.dataset.renTlOpen, tl.dataset.renTlPatient, { sameShot: !!tl.dataset.renTlShot });
           return;
         }
       }
@@ -43835,9 +43835,9 @@ or changing anything in Cliniko.
   // and "3 of 12". One rule wherever a photo opens (timeline cell, the
   // script page's Photos strip, the BBT tile): you land on the one you
   // tapped and can walk the rest of that type without going back.
-  function phRenViewSetFor(patientKey, type) {
+  function phRenViewSetFor(patientKey, type, shotOnly) {
     return (phRenPhotosFor(patientKey) || [])
-      .filter(r => phRenTypeOf(r) === type)
+      .filter(r => phRenTypeOf(r) === type && (!shotOnly || phRenShotOf(r) === shotOnly))
       .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
   }
   function phRenViewStateFrom(patientKey, rec, set) {
@@ -43850,11 +43850,13 @@ or changing anything in Cliniko.
       viewSet: set.map(r => r.id), viewAt: at,
     };
   }
-  function phRenViewPhoto(id, patientKey) {
+  function phRenViewPhoto(id, patientKey, opts) {
     const list = phRenPhotosFor(patientKey) || [];
     const rec = list.find(r => r.id === id);
     if (!rec) return;
-    phRenCropState = phRenViewStateFrom(patientKey, rec, phRenViewSetFor(patientKey, phRenTypeOf(rec)));
+    const shotOnly = opts && opts.sameShot ? phRenShotOf(rec) || "" : "";
+    phRenCropState = phRenViewStateFrom(patientKey, rec, phRenViewSetFor(patientKey, phRenTypeOf(rec), shotOnly));
+    phRenCropState.viewShotOnly = shotOnly;
     phRenCropShow();
   }
   // step through that set in place -- the modal stays open, only the image
@@ -43867,7 +43869,7 @@ or changing anything in Cliniko.
     // (phCapAutoImport polls every 120s) or one can be deleted underneath a
     // viewer she left open, and a frozen id list would page to something
     // that no longer exists or hide something that just arrived
-    const set = phRenViewSetFor(st.patientKey, st.viewType);
+    const set = phRenViewSetFor(st.patientKey, st.viewType, st.viewShotOnly || "");
     st.viewSet = set.map(r => r.id);
     if (!set.length) { phRenCropClose(); return false; }
     const found = set.findIndex(r => r.id === st.viewId);
@@ -44241,7 +44243,7 @@ or changing anything in Cliniko.
         </div>` : ""}
         ${many ? `<div class="ph-ren-view-nav">
           <button type="button" class="ph-ren-view-arrow" data-ren-view-step="-1"${at <= 0 ? " disabled" : ""} aria-label="Earlier photo">‹</button>
-          <span class="ph-ren-view-count">${at + 1} of ${set.length}${st.viewType ? " " + esc((PH_REN_TYPE_LABEL[st.viewType] || "").toLowerCase()) : ""} photos</span>
+          <span class="ph-ren-view-count">${at + 1} of ${set.length}${st.viewShotOnly ? ` ${esc((PH_REN_SHOT_LABEL[st.viewShotOnly] || st.viewShotOnly).toLowerCase())} shots` : `${st.viewType ? " " + esc((PH_REN_TYPE_LABEL[st.viewType] || "").toLowerCase()) : ""} photos`}</span>
           <button type="button" class="ph-ren-view-arrow" data-ren-view-step="1"${at >= set.length - 1 ? " disabled" : ""} aria-label="Later photo">›</button>
         </div>` : ""}
         ${st.dateEditOpen ? `<div class="ph-ren-view-shots">
@@ -51899,7 +51901,7 @@ or changing anything in Cliniko.
     const photos = phRenPhotosFor(pk);
     if (photos == null) phRenLoadPhotosFor(pk);
     return { pk, loading: photos == null, list: (photos || []).filter(r => phRenTypeOf(r) === "tongue")
-      .sort((a, b) => phRenDateKeyOf(b).localeCompare(phRenDateKeyOf(a)) || (PH_TONGUE_SHOT_RANK[phRenShotOf(a)] || 9) - (PH_TONGUE_SHOT_RANK[phRenShotOf(b)] || 9)) };
+      .sort((a, b) => phRenDateKeyOf(b).localeCompare(phRenDateKeyOf(a)) || PH_TONGUE_SHOT_RANK[phRenShotOf(a)] - PH_TONGUE_SHOT_RANK[phRenShotOf(b)]) };
   }
   // everything one visit row shows, read off the session + its findings
   function phTpVrFacts(name, rec, plan, node, nextNode, photos) {
@@ -51956,7 +51958,7 @@ or changing anything in Cliniko.
       const x = node ? node.x : null;
       const comp = x ? x.comp : (phCycleOn(rec) ? phCycleCompAsOf(rec, parseKey(k)) : null);
       const d = parseKey(k);
-      return `<button type="button" class="ph-tp-vr-shot" data-ren-tl-open="${esc(p.id)}" data-ren-tl-patient="${esc(photos.pk)}"><img src="${p.objectUrl}" alt="Tongue ${esc(k)}"><span class="d">${d.getDate()} ${MON_SHORT[d.getMonth()]}${comp ? ` <i class="k-${esc(comp.phaseKey)}">CD ${comp.day}</i>` : ""}</span>${x && x.tongue ? `<span class="s">${esc(x.tongue)}</span>` : ""}</button>`;
+      return `<button type="button" class="ph-tp-vr-shot" data-ren-tl-open="${esc(p.id)}" data-ren-tl-patient="${esc(photos.pk)}" data-ren-tl-shot="1"><img src="${p.objectUrl}" alt="Tongue ${esc(k)}"><span class="d">${d.getDate()} ${MON_SHORT[d.getMonth()]}${comp ? ` <i class="k-${esc(comp.phaseKey)}">CD ${comp.day}</i>` : ""}</span>${x && x.tongue ? `<span class="s">${esc(x.tongue)}</span>` : ""}</button>`;
     }).join("")}</div>`;
   }
   function phTpVrRefresh(name, planId) {
