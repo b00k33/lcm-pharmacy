@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260920-093000">
+<meta name="lcm-build" content="20260920-100000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -27542,6 +27542,9 @@
           if (cur) { cur.status = "done"; if (!cur.doneKey) cur.doneKey = today; }
           const preset = kind === "flare" ? phTpFlarePreset(plan)
             : kind === "highrisk" ? [PH_TP_PHASE.highRiskMonitoring]
+            : kind === "crisis" ? phTpStressCrisisPreset(plan)
+            : kind === "plateau" ? [PH_TP_PHASE.metabPlateau]
+            : kind === "facialflare" ? [PH_TP_PHASE.facialFlare]
             : phTpAcutePreset();
           const made = preset.map((p, i) => ({
             id: uid(), label: p.label, aim: p.aim || "", points: p.points || "", pressPoints: p.pressPoints || "", cadence: p.cadence || "",
@@ -46517,6 +46520,13 @@ or changing anything in Cliniko.
     // the generalised "+ Insert a phase" picker (phTpDetourPreset), never
     // part of the default Pregnancy phase list.
     highRiskMonitoring: { label: "High-risk monitoring", aim: "Increase support and monitoring in response to a flagged risk or complication, without disrupting the wider pregnancy plan.", points: "YT, DU20, PC6, KI9, KI6, HT7 — calming and steadying only. Avoid abdomen/lower-back points and anything contraindicated for her specific complication; confirm with her obstetric team before adding anything new.", suggestFormula: "", cadence: "Increase to weekly, or as her obstetric team advises", watch: "Whatever prompted the flag specifically — bleeding, reduced movement, blood pressure, growth concerns; call me and her obstetric team the same day for any of these" },
+    // her ask 2026-09-20 (#145 backlog item, "yes" to Metabolic and Facial
+    // detours as well as Stress). Draft content -- hers to correct, same as
+    // highRiskMonitoring above. Reached only through the "+ Add phase"
+    // picker (phTpDetourKindsFor), never part of either template's default
+    // phase list.
+    metabPlateau: { label: "Plateau — troubleshoot the stall", aim: "Find what changed in the weeks the scale stopped moving, and treat that rather than pushing the same protocol harder.", points: "Repeat the current phase's own points; add LIV3/PC6 if stress or a life change coincides with the stall, ST44/LI11 if appetite or cravings have crept back up, moxa REN4/BL23 if energy and warmth have dropped off.", suggestFormula: "", cadence: "Weekly until it's moving again, or the cause is clear", watch: "What was happening in her life the weeks it stalled — sleep, stress, a medication change, travel, less movement than usual. Re-check the waist and how clothes fit, since a plateau shows there before the scale moves again; re-confirm she hasn't quietly drifted off the plan." },
+    facialFlare: { label: "Flare — sudden worsening", aim: "Respond to a sudden worsening or a new symptom with closer monitoring and more frequent care, without losing the gains already made.", points: "Repeat this plan's own current-phase points; re-run the facial checklist to see which branch has actually moved.", cadence: "2×/wk until it settles or clearly plateaus again", watch: "Any new asymmetry, pain, or a symptom on the OTHER side of the face needs same-day medical review, not just a closer acupuncture schedule. Re-score on the checklist to confirm what's actually changed before assuming the worst." },
     // her ask 2026-09-04 ("if period is detected late in cycle tracking,
     // include Prolonged Luteal Treatment Phase") -- phCycleSyncPlan inserts
     // this into any cycle-driven plan the moment the app flags the period
@@ -51149,8 +51159,22 @@ or changing anything in Cliniko.
     }
     return [{ label: "Flare — back to acute care", aim: "Settle the flare with the same acute-phase approach that worked before, then return to the maintenance plan.", points: "Repeat this plan's own Acute-phase points and formula.", cadence: "2×/wk while the flare lasts", watch: "Whether it settles faster than the original episode, or new features that need a fresh look" }];
   }
+  // her ask 2026-09-20 (#145 backlog item, "yes" to Stress/Metabolic/Facial
+  // detours): same reasoning as phTpFlarePreset above -- a Stress plan's own
+  // phase[0] ("Settling"/"Assess and settle"/"Stabilise") already IS the
+  // acute-crisis approach, so pulling from it is right for THIS plan rather
+  // than a generic guess.
+  function phTpStressCrisisPreset(plan) {
+    const settling = plan && plan.phases && plan.phases[0];
+    if (settling && (settling.aim || settling.points)) {
+      return [{ label: "Crisis — back to settling care", aim: settling.aim || "", points: settling.points || "", pressPoints: settling.pressPoints || "",
+        cadence: settling.cadence || "1–2×/wk while acute", watch: settling.watch || "", suggestFormula: settling.suggestFormula || "" }];
+    }
+    return [{ label: "Crisis — back to settling care", aim: "Bring the acute spike back down with the same settling approach that worked before, then return to the maintenance plan.", points: "Repeat this plan's own Settling-phase points and formula.", cadence: "1–2×/wk while acute", watch: "Whether it settles faster than usual, or new triggers that need a fresh look" }];
+  }
   // which template category a plan's insert-phase ready-fills should offer --
-  // msk gets Flare, Pregnancy gets High-risk monitoring. Acute illness stays
+  // msk gets Flare, Pregnancy gets High-risk monitoring, Stress gets Crisis,
+  // Metabolic gets Plateau, Facial gets its own Flare. Acute illness stays
   // available everywhere (her PH_TP_CATEGORIES `always` rule: getting sick
   // isn't a kind of patient, it can happen on any plan).
   function phTpDetourKindsFor(plan) {
@@ -51158,11 +51182,17 @@ or changing anything in Cliniko.
     const kinds = ["acute"];
     if (tpl && tpl.category === "msk") kinds.push("flare");
     if (plan && plan.templateName === "Pregnancy") kinds.push("highrisk");
+    if (tpl && tpl.category === "stress") kinds.push("crisis");
+    if (tpl && tpl.category === "metabolic") kinds.push("plateau");
+    if (tpl && tpl.category === "facial") kinds.push("facialflare");
     return kinds;
   }
   const PH_TP_DETOUR_META = {
     flare: { label: "🔥 Flare", desc: "Ready-filled from this plan's own Acute phase — settle the flare, then pick the current phase up again." },
     highrisk: { label: "⚠️ High-risk monitoring", desc: "Ready-filled — steps up support for a flagged risk, then picks the current phase up again." },
+    crisis: { label: "😟 Crisis", desc: "Ready-filled from this plan's own Settling phase — bring the spike back down, then pick the current phase up again." },
+    plateau: { label: "📉 Plateau", desc: "Ready-filled — troubleshoots a stall before pushing the same protocol harder, then picks the current phase up again." },
+    facialflare: { label: "⚠️ Flare", desc: "Ready-filled — steps up care for a sudden worsening, then picks the current phase up again." },
   };
   // the two-step picker behind + Add phase. Step 2 exists because she asked
   // to be asked: a bad flu should stop the fertility work, a head cold
