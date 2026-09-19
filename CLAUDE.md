@@ -423,7 +423,7 @@ update STYLE-LCM.md to match so future builds don't undo it.
   for the other three, never draft them); master wording in Communications → Templates
   with per-patient tweaks; she is sending the logo file. Tap-the-day SHIPPED `f213189`
   (`phCycleStripHtml` / `phCyclePopHtml` / `phCycleStripCommit` beside `phCycleLogPeriod`;
-  only the strip repaints in place); letters not built yet.
+  only the strip repaints in place); the three letters SHIPPED 2026-09-15 from her Cliniko templates (see CLINIKO-LETTERS-2026-09-15.md) -- an older "not built yet" here was stale, corrected 2026-09-19.
   **LIKES the strip (2026-09-13, "i like this", on a working chat widget of it)** — and
   in the same breath: "sometimes i need to input many previous periods from past". A run
   of 6–14 past dates must be enterable in one sitting without walking back a week at a
@@ -817,8 +817,7 @@ blue, close enough to confuse on a block that small.
 - **The type colour reaches exactly three surfaces** — the calendar block (~21189), the view
   popup square (~21250) and, now, the edit dialog square (~21332). Every other appointment
   surface (List view `phApptCalListRowHtml`, Dashboard day rows, the week tables) shows
-  ACU/CHM kind pills and **never the service name at all**. A home visit is still invisible
-  on her day briefing — flagged to her 2026-09-09, not built.
+  ACU/CHM kind pills and **never the service name at all**. A home visit shows a HOME VISIT pill beside the kind pills on every surface (`phApptHomeVisitHtml` rides inside `phApptKindHtml`; the List view and week table ACU+CHM branches append it since 2026-09-19 -- they had dropped it under the all-herbs default).
 - **`.ph-appt-block.away` must stay BELOW the `.ck` rules.** Both selectors are (1 id, 2
   classes), so specificity ties and source order is the only thing beating `.ck`'s
   `border-left: none`. It also outranks the phone's bare `.ph-appt-block` (1 id, 1 class)
@@ -1648,9 +1647,7 @@ Post-OPU (egg pickup), Pre-ET (transfer) and Post-ET (the wait, replacing
 Luteal for this plan). All three written in the full Formal/Casual × base/
 Supportive structure, clinical grounding straight from `PH_TP_PHASE`'s `opu`/
 `preEt`/`postEt` entries (bloating/one-sided-pain/faintness red flags on
-Post-OPU; no test before day 14 on Post-ET). Menstruation and Follicular reuse
-the natural-cycle wording — not rewritten separately, pending her confirming
-that's right.
+Post-OPU; no test before day 14 on Post-ET). Menstruation and Follicular now have their OWN IVF wording (`ivf-mens-*` / `ivf-foll-*` seeds: injections, baseline scan, bloods, follicle counts, trigger / egg pickup dates) -- the earlier "reuse the natural-cycle wording, pending her confirming" note was stale, corrected 2026-09-19.
 
 **WHERE THE WORDS ACTUALLY LIVE (read this before hunting for them):** all 51
 messages are in `index.html`, in the `PH_CODE3_MSG_SEEDS` array, seeded into
@@ -3531,7 +3528,7 @@ launch).
   with Name pre-filled "New template"; Save returned to the list with the
   count held at 75 and the new row correctly showing under a "CUSTOM" tag
   header.
-- **One item deferred, not built:** backup-restore never reading photos
+- **One item deferred, not built (SINCE BUILT: the restore panel has a "Patient photos · N in backup" tick and `phApplyRestoredData` writes them through `phRenPhotoPut`; note corrected 2026-09-19):** backup-restore never reading photos
   back in was verified buildable and low-to-medium risk by its own
   verification agent, but the restore path has a real incident history in
   this project (see the Data-integrity traps) and she'd just asked to wrap
@@ -5961,3 +5958,18 @@ Her call on the live A+B+C Grid (`c81178e`): "you are not intuiting what i want 
 9. Phase colours: one clear colour per kind (`.ph-tp-pbar .seg.k-*`, `.ph-cyc-day.k-*`): p #F1C9D2, f #CFE6D8, o #F3DF9E, l #D9CDEA, x #EDD5BF, g #F5D3DE.
 
 Verified 2026-09-19 in the sandbox with synthetic patients (Natural fertility CD 27 with two past sessions + a booking; a Low back pain plan keeps the old layout; a fertility plan with no period logged shows the block's empty state + the door popup, and logging a period from the block repaints band, block and plan bar in place); tapping a phase segment, changing Flow/cycle length, opening Findings, tapping a day, Period history, Edit plan, past-visit rows all work at 1200px and 360px. LIVE `24e9412` on her "push live".
+
+## Backlog walk-through 2026-09-19 ("is there any backlog?" -> "work on them and ask me one by one")
+
+- **Communications -> Due tab bands (Overdue / Today / This week / Later): KEPT.** Her "Yes, it is fine" (2026-09-19). Her first two answers were "i dont understand what you are asking" and "where is it?": when asking about a page, give its menu path in her app (EVERY DAY -> Communications -> Due) first; she does not look at the sandbox pane.
+- **Three patient letters (Post-transfer, Food, Menstrual signs & BBT): already built** 2026-09-15 from her Cliniko templates verbatim; the "letters not built yet" line near the cycle-strip notes was stale and is corrected. Nothing to ask her.
+- **IVF Menstruation / Follicular phase messages: already have their own wording** (`ivf-mens-*`, `ivf-foll-*`); the "pending her confirming" note was stale, corrected. Nothing to ask her.
+- **Backup restore reading photos back in: already built** (restore panel "Patient photos" tick); the Batch-deferral note was stale, corrected. Nothing to ask her.
+- **Home visits: her "Yes, tag it everywhere"** (2026-09-19) -- a small "Home" tag beside the name on every surface a booking shows (Appointments list, Dashboard rows, week tables, appointment card), not only the calendar block edge. TO BUILD this walk-through.
+- **Information letters window: her "Yes, keep edits automatically"** (2026-09-19) -- the modal body saves as she types, like the Communications templates; no lost text on close. TO BUILD this walk-through.
+- **Patient-side IVF scan entry in My Cycle: her "No, I enter scans myself"** (2026-09-19) -- CLOSED, not to be built. The app's src:"patient"/confirm path stays dormant.
+- **IVF rounds from intake forms: her "Match by date, show me both"** (2026-09-19) -- an incoming intake IVF cycle in the same month as an existing round is shown beside it and she picks which numbers to keep; otherwise it lands as a new row. TO BUILD this walk-through.
+- **BUILT (build 20260920-050000, sw lcm-20260920-backlog-1) — the three she said yes to:**
+  (1) HOME VISIT pill on the Appointments list row (`phApptCalListRowHtml`) and the week table (`kindHtml` at the Booked-week rows) when the kind is ACU+CHM — the only two surfaces that built their own pill and dropped `phApptHomeVisitHtml`; everything else already carried it. Verified with `PHARMACY.apptAllHerbs = true`: the row shows ACU+CHM then HOME VISIT.
+  (2) Information letter window saves as she types: the `[data-infoltr-editsec]` input handler debounces 700 ms into `phInfoLtrSaveWords()` (the template words for everyone, `PHARMACY.infoLetterWords[tmpl.id]`, first name folded back to `{first}`), `phInfoLtrClose()` flushes a pending save first, the "+ Save wording" button is replaced by a quiet "Saves as you type" note (`[data-infoltr-autosaved]`, flips to "✓ Saved" for 1.5 s); the old `data-infoltr-savewords` click branch is dead but harmless. Dose-adjustment mode is unchanged (its body is never a template).
+  (3) Intake IVF rounds: `PH_IVF_INTAKE_MATCH_WINDOW_DAYS` 7 → 31; `phIntakeComputeDiff` returns `ivfConflicts` — for a reported collection with an unlinked round within a month: a row choice `ivf{i}:row` (Same round / A different round — add it, via new `keepLabel`/`newLabel` on the conflict item) and one Keep / Use new pick per differing field (when, clinic, eggs, fertilised, frozen); the new item says "looks like your round of <date>". `phIntakeReviewApply` honours the picks: "different round" pushes a new row, otherwise blanks are filled and only "Use new" fields overwrite (`rec.ivfCycles` found by `n.matchId`). Sandbox-verified both paths (merge kept 6 fertilised, took 8 eggs, filled 2 frozen; new-round path made a second row). Test patient deleted.
