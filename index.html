@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260920-050000">
+<meta name="lcm-build" content="20260920-054500">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -2325,6 +2325,7 @@
   #pharmacyPage .ph-appt-kind.acu { background: var(--ph-blue-tint); color: var(--ph-blue-deep); }
   #pharmacyPage .ph-appt-kind.away { background: var(--ph-purple-tint); color: var(--ph-purple-deep); }
   #pharmacyPage .ph-appt-kind.both { background: var(--ph-gold-tint, #FFFBE2); color: var(--ph-gold-deep); }
+  #pharmacyPage .ph-appt-kind.noclin { background: var(--ph-surface-2, #EFECE2); color: var(--ph-faint); font-weight: 600; text-transform: none; letter-spacing: 0; }
   #pharmacyPage .ph-wkt-item .ph-appt-kind { height: 14px; font-size: 9px; padding: 0 4px; margin-left: 4px; }
   #pharmacyPage .ph-ck-kv .v .ph-appt-kind { margin-left: 0; margin-right: 2px; }
   #pharmacyPage .ph-appt-kind + .ph-appt-kind { margin-left: 3px; }
@@ -22375,12 +22376,17 @@
   // herself, so match the words, not a Cliniko type. Flagged 2026-09-09 as
   // invisible on her day briefing -- the pill rides with the kind pills so
   // every surface that shows ACU/CHM shows it too.
+  // her "Keep, but mark them clearly" (2026-09-19): a pasted Enquiry/Meeting
+  // row is real (it came off her Cliniko day) but is never a treatment --
+  // mark it, never hide it, so it can't be mistaken for a patient visit
+  const phApptIsNonClinical = service => /^(initial inquiry|initial enquiry|meeting)\b/i.test(String(service || "").trim());
+  const phApptNonClinicalHtml = service => phApptIsNonClinical(service) ? `<span class="ph-appt-kind noclin" title="${esc(String(service))}">not a treatment</span>` : "";
   const phApptIsHomeVisit = service => /home\s*-?\s*visit/i.test(String(service || ""));
   const phApptHomeVisitHtml = service => phApptIsHomeVisit(service) ? `<span class="ph-appt-kind away" title="${esc(String(service))}">HOME VISIT</span>` : "";
   const phApptKindHtml = service => {
     const k = phApptKind(service);
     const away = phApptHomeVisitHtml(service);
-    if (!k) return away;
+    if (!k) return away || phApptNonClinicalHtml(service);
     if (k === "both") return `<span class="ph-appt-kind acu" title="Acupuncture">ACU</span><span class="ph-appt-kind chm" title="Chinese herbal medicine">CHM</span>${away}`;
     return `<span class="ph-appt-kind ${k}" title="${k === "chm" ? "Chinese herbal medicine" : "Acupuncture only"}">${PH_APPT_KIND_LABEL[k]}</span>${away}`;
   };
@@ -26462,10 +26468,8 @@
       if (presWeekDay) {
         const k = presWeekDay.dataset.presWeekDay;
         presWeekOpenDay = presWeekOpenDay === k ? null : k;
-        // her practical pick (2026-09-06): picking a day off the expanded
-        // month view lands her back in the focused week/day view, not a big
-        // grid left sitting open once she's found what she was looking for
-        presCalExpanded = false;
+        // her 2026-09-19 reversal of the 2026-09-06 pick: the month view now
+        // STAYS OPEN after picking a day, instead of collapsing to week view
         renderPresWeek();
         return;
       }
@@ -38037,13 +38041,21 @@ or changing anything in Cliniko.
       bodyFormal: "Hi {{firstName}}, it's {{me}} from {{clinic}}. Your {{herbs}} is due to run out around {{emptyDate}}. Please let me know if you'd like the next batch prepared so there's no gap in your treatment. {{me}}" },
     { slot: "rebook", name: "Rebook", subject: "Checking in — {{clinic}}", category: "herbs",
       body: "Hi {{firstName}}, it's {{me}} from {{clinic}}. It's a good time to book your next visit so I can review how you've gone on the {{herbs}}. Let me know which days suit you. {{me}}",
-      bodyFormal: "Hi {{firstName}}, it's {{me}} from {{clinic}}. It's a good time to book your next visit so I can properly review your progress on the {{herbs}} and adjust your treatment plan if needed. Please let me know which days would suit you. {{me}}" },
+      bodyFormal: "Hi {{firstName}}, it's {{me}} from {{clinic}}. It's a good time to book your next visit so I can properly review your progress on the {{herbs}} and adjust your treatment plan if needed. Please let me know which days would suit you. {{me}}",
+      // her "write new ones" (2026-09-19), for an out-of-town patient (c.away
+      // && !c.appt) -- DRAFT, she must read and correct before it goes out
+      awayBody: "Hi {{firstName}}, it's {{me}} from {{clinic}}. Whenever you're back in Sydney, let me know and we'll get you booked in to review how you've gone on the {{herbs}}. {{me}}",
+      awayBodyFormal: "Hi {{firstName}}, it's {{me}} from {{clinic}}. Whenever you're next in Sydney, I'd like to book you in to properly review your progress on the {{herbs}} and adjust your treatment plan if needed — just let me know when suits. {{me}}" },
     { slot: "acu", name: "Acupuncture follow-up", subject: "Checking in — {{clinic}}", category: "acupuncture",
       body: "Hi {{firstName}}, it's {{me}} from {{clinic}}. It's about time for your next acupuncture session — would you like to book one in? {{me}}",
-      bodyFormal: "Hi {{firstName}}, it's {{me}} from {{clinic}}. Based on your treatment plan, it's about time for your next acupuncture session — would you like to book one in, or has anything changed since I last saw you? {{me}}" },
+      bodyFormal: "Hi {{firstName}}, it's {{me}} from {{clinic}}. Based on your treatment plan, it's about time for your next acupuncture session — would you like to book one in, or has anything changed since I last saw you? {{me}}",
+      awayBody: "Hi {{firstName}}, it's {{me}} from {{clinic}}. Whenever you're back in Sydney, let me know and we'll get your next acupuncture session booked in. {{me}}",
+      awayBodyFormal: "Hi {{firstName}}, it's {{me}} from {{clinic}}. Based on your treatment plan, whenever you're next in Sydney I'd like to book you in for your next acupuncture session — let me know when suits, or if anything's changed since I last saw you. {{me}}" },
     { slot: "quiet", name: "Gone quiet", subject: "Checking in — {{clinic}}", category: "general",
       body: "Hi {{firstName}}, it's {{me}} from {{clinic}}. It's been a while since I've seen you — just checking in on how you're going, and whether you'd like to book a visit. {{me}}",
-      bodyFormal: "Hi {{firstName}}, it's {{me}} from {{clinic}}. It's been some time since I last saw you, and I wanted to check in — how have you been, and would you like to book a visit to continue your treatment? {{me}}" },
+      bodyFormal: "Hi {{firstName}}, it's {{me}} from {{clinic}}. It's been some time since I last saw you, and I wanted to check in — how have you been, and would you like to book a visit to continue your treatment? {{me}}",
+      awayBody: "Hi {{firstName}}, it's {{me}} from {{clinic}}. It's been a while — just checking in on how you're going. Whenever you're back in Sydney, let me know and we'll get you booked in. {{me}}",
+      awayBodyFormal: "Hi {{firstName}}, it's {{me}} from {{clinic}}. It's been some time since I last saw you, and I wanted to check in — how have you been? Whenever you're next in Sydney, I'd be glad to book you in to continue your treatment. {{me}}" },
   ];
   // one-time conversion of her old single-brace wording to the shared {{...}}
   // tokens, so a kind she'd already customised via "+ Save mine" keeps her words
@@ -38290,6 +38302,11 @@ or changing anything in Cliniko.
     const t = phCkResolveTemplate(moment, tone, sup);
     if (!t) return "";
     let body = (!t.code3 && tone === "formal" && t.bodyFormal) ? t.bodyFormal : t.body;
+    // her "write new ones" (2026-09-19): Rebook/Acupuncture follow-up/Gone-quiet
+    // are entirely a booking ask, so an out-of-town patient (c.away, no appt
+    // booked) gets the away-variant body instead of the clause-drop trick
+    // Check-in/Review use -- DRAFT wording, hers to correct
+    if (c && c.away && !c.appt && t.awayBody) body = (tone === "formal" && t.awayBodyFormal) ? t.awayBodyFormal : t.awayBody;
     // The add-on goes in BEFORE her sign-off, not after it. Every one of these
     // bodies ends with {{me}}, and her +Supportive line sits just inside it
     // ("... Thinking of you. {{me}}") -- appending instead would leave text
@@ -38452,6 +38469,9 @@ or changing anything in Cliniko.
     }).join("");
     // Supportive is offered only where she actually wrote a +Supportive
     // version -- on Rebuilding or Aftercare there is nothing to add
+    // her "Offer it everywhere" (2026-09-19): + Supportive used to only ever
+    // resolve for a cycle-track moment with a real -sup seed; now any moment
+    // with a Supportive variant offers the toggle, whatever its track
     const hasSup = !!phCkResolveTemplate(f.tmpl, f.tone, true) &&
       phCkResolveTemplate(f.tmpl, f.tone, true) !== phCkResolveTemplate(f.tmpl, f.tone, false);
     const tmplRow = phCkResolveTemplate(f.tmpl, f.tone, f.sup);
@@ -39819,6 +39839,40 @@ or changing anything in Cliniko.
       body: "Hi {{firstName}}, how are you settling in after the transfer? Keep up the progesterone exactly as prescribed, take it easy today, and try to hold off testing till day 14. Let me know if you need anything. {{me}}" },
     { code3: "postet-frozen-casual-sup", name: "IVF Post-ET (Frozen transfer wait) — Casual + Supportive", tag: "checkin", category: "cycle", subject: "Checking in — {{clinic}}",
       body: "Hi {{firstName}} 💛 how are you settling in after the transfer? Keep up the progesterone exactly as prescribed, take it easy today, and try to hold off testing till day 14. Thinking of you through the wait. {{me}}" },
+    // her "Offer it everywhere" (2026-09-19): + Supportive used to exist only
+    // for cycle-track moments because those were the only ones with a -sup
+    // seed at all. These 14 (7 moments x formal/casual) are DRAFT wording --
+    // she has not read or corrected them -- following the exact pattern the
+    // cycle-track pairs already use (one emoji near the greeting, one warm
+    // line inserted before {{me}}). Flag before treating any of these as final.
+    { code3: "settling-formal-sup", name: "Settling — Formal + Supportive", tag: "checkin", category: "phase", subject: "Checking in — {{clinic}}",
+      body: "Hi {{firstName}}, it's {{me}} from {{clinic}}. 🌿 How have you been feeling since starting treatment — any change to your sleep, energy, or that wired/anxious feeling? Let me know if anything comes up before your next visit on {{nextAppt}}. These early weeks can feel like a lot — you're doing the right thing. {{me}}" },
+    { code3: "settling-casual-sup", name: "Settling — Casual + Supportive", tag: "checkin", category: "phase", subject: "Checking in — {{clinic}}",
+      body: "Hi {{firstName}} 🌿 how's the anxious/wired feeling since starting? Let me know if anything comes up before I see you {{nextAppt}}. Go easy on yourself this week. {{me}}" },
+    { code3: "building-formal-sup", name: "Building / stabilising — Formal + Supportive", tag: "checkin", category: "phase", subject: "Checking in — {{clinic}}",
+      body: "Hi {{firstName}}, it's {{me}} from {{clinic}}. 🌤 How are things feeling a few weeks in — is the calm holding for longer between sessions? Let me know if anything comes up before your next visit on {{nextAppt}}. It's good to see this steadying. {{me}}" },
+    { code3: "building-casual-sup", name: "Building / stabilising — Casual + Supportive", tag: "checkin", category: "phase", subject: "Checking in — {{clinic}}",
+      body: "Hi {{firstName}} 🌤 how's the calm holding between sessions? Let me know if anything comes up before I see you {{nextAppt}}. Glad it's settling. {{me}}" },
+    { code3: "rebuilding-formal-sup", name: "Rebuilding / Rehabilitation — Formal + Supportive", tag: "checkin", category: "phase", subject: "Checking in — {{clinic}}",
+      body: "Hi {{firstName}}, it's {{me}} from {{clinic}}. 💪 You're moving into the rebuilding/rehabilitation phase now — how's the pain settling, and are you able to move more freely day to day? Let me know if anything flares up before your next visit on {{nextAppt}}. You've made real progress to get here. {{me}}" },
+    { code3: "rebuilding-casual-sup", name: "Rebuilding / Rehabilitation — Casual + Supportive", tag: "checkin", category: "phase", subject: "Checking in — {{clinic}}",
+      body: "Hi {{firstName}} 💪 how's the pain settling — moving more freely? Let me know if anything flares up before I see you {{nextAppt}}. You're doing well. {{me}}" },
+    { code3: "posttx-formal-sup", name: "Post-treatment check — Formal + Supportive", tag: "checkin", category: "acupuncture", subject: "Checking in — {{clinic}}",
+      body: "Hi {{firstName}}, it's {{me}} from {{clinic}}. 🌱 Following on from your acupuncture session on [day] — how has the pain been since starting treatment? Let me know if anything's changed, and any questions before your next visit on {{nextAppt}}. If it gets worse rather than better, or you notice anything unusual, message me straight away. Take it gently for a day or two. {{me}}" },
+    { code3: "posttx-casual-sup", name: "Post-treatment check — Casual + Supportive", tag: "checkin", category: "acupuncture", subject: "Checking in — {{clinic}}",
+      body: "Hi {{firstName}} 🌱 how's the [area] since your treatment on [day]? Let me know if anything's changed before I see you on {{nextAppt}}. Rest up. {{me}}" },
+    { code3: "maint-nobooking-formal-sup", name: "Maintenance (no booking) — Formal + Supportive", tag: "checkin", category: "phase", subject: "Checking in — {{clinic}}",
+      body: "Hi {{firstName}}, it's {{me}} from {{clinic}}. 🌷 It's about time for your maintenance visit — how have things been holding up since I last saw you? Let me know if you'd like to book in. Always good to hear how you're going. {{me}}" },
+    { code3: "maint-nobooking-casual-sup", name: "Maintenance (no booking) — Casual + Supportive", tag: "checkin", category: "phase", subject: "Checking in — {{clinic}}",
+      body: "Hi {{firstName}} 🌷 how's everything holding up? My calendar shows it's time for a maintenance visit. Would love to see you again soon. {{me}}" },
+    { code3: "maint-booked-formal-sup", name: "Maintenance (already booked) — Formal + Supportive", tag: "checkin", category: "acupuncture", subject: "Checking in — {{clinic}}",
+      body: "Hi {{firstName}}, it's {{me}} from {{clinic}}. 🌷 Just checking in ahead of your maintenance visit on {{nextAppt}} — how have things been holding up since I last saw you? See you then. Looking forward to it. {{me}}" },
+    { code3: "maint-booked-casual-sup", name: "Maintenance (already booked) — Casual + Supportive", tag: "checkin", category: "acupuncture", subject: "Checking in — {{clinic}}",
+      body: "Hi {{firstName}} 🌷 how's everything holding up? See you {{nextAppt}} for your maintenance visit. Looking forward to it. {{me}}" },
+    { code3: "weight-building-formal-sup", name: "Weight loss check-in — Formal + Supportive", tag: "checkin", category: "general", subject: "Checking in — {{clinic}}",
+      body: "Hi {{firstName}}, it's {{me}} from {{clinic}}. 🌟 How are things feeling a few weeks in — energy, cravings, digestion? Let me know if anything's changed before your next visit on {{nextAppt}}. You're building good momentum. {{me}}" },
+    { code3: "weight-building-casual-sup", name: "Weight loss check-in — Casual + Supportive", tag: "checkin", category: "general", subject: "Checking in — {{clinic}}",
+      body: "Hi {{firstName}} 🌟 how's energy and cravings going? Let me know if anything's changed before I see you {{nextAppt}}. Keep it up. {{me}}" },
   ];
   // lazy-seeded once, then fully hers -- editing (even the 5 starters) only
   // ever affects future prepares (see phMsgPrepare's resolved-copy comment)
@@ -39834,12 +39888,17 @@ or changing anything in Cliniko.
       const existing = PHARMACY.msgTemplates.find(t => t.slot === s.slot);
       if (!existing) {
         PHARMACY.msgTemplates.push({ id: uid(), name: s.name, tag: "checkin", slot: s.slot, subject: s.subject, category: s.category,
-          body: legacy[s.slot] ? phCkLegacyTokenConvert(legacy[s.slot]) : s.body, bodyFormal: s.bodyFormal, createdAt: Date.now(), editedAt: Date.now() });
-      } else if (existing.bodyFormal == null) {
+          body: legacy[s.slot] ? phCkLegacyTokenConvert(legacy[s.slot]) : s.body, bodyFormal: s.bodyFormal,
+          awayBody: s.awayBody, awayBodyFormal: s.awayBodyFormal, createdAt: Date.now(), editedAt: Date.now() });
+      } else {
         // 2026-09-09 (auto-tag ask): backfills the Formal wording onto slots
         // seeded by an earlier session, before bodyFormal existed -- her own
         // edits to .body (via "+ Save mine") are left untouched either way.
-        existing.bodyFormal = s.bodyFormal;
+        if (existing.bodyFormal == null) existing.bodyFormal = s.bodyFormal;
+        // her "write new ones" (2026-09-19): same backfill for the away
+        // variant on rebook/acu/quiet, seeded before this ask existed
+        if (existing.awayBody == null && s.awayBody) existing.awayBody = s.awayBody;
+        if (existing.awayBodyFormal == null && s.awayBodyFormal) existing.awayBodyFormal = s.awayBodyFormal;
       }
     });
     // her code3 messages join the same list, keyed by a stable code3 slug so
@@ -45560,7 +45619,7 @@ or changing anything in Cliniko.
         <div class="ph-pres-switches">${switches}</div>` : ""}
       </div>
       <div class="ph-op-col ph-op-intake">
-        ${hx ? `<div class="ph-tmpl-sec"><span>History</span></div>${hx}` : ""}
+        ${hx ? `<div class="ph-tmpl-sec"><span>Medical history</span></div>${hx}` : ""}
         <div class="ph-tmpl-sec"><span>Supplements</span></div>
         <div class="ph-supp-open">${phSuppEditorHtml(rec)}${phSuppVitalyCopyHtml(rec)}</div>
       </div>
@@ -46301,7 +46360,7 @@ or changing anything in Cliniko.
     // carries it -- a section header (count on the right, Show / Hide as the
     // section's one action) with the visit rows straight underneath.
     return `<div class="ph-pres-history">
-      <div class="ph-tmpl-sec ph-sec-line"><span>History</span><span class="ph-hist-count">${past.length} dispense${past.length === 1 ? "" : "s"}${past.length > shown.length ? ` · last ${shown.length} here` : ""}</span><button type="button" class="ph-tmpl-sec-act ph-hist-toggle" data-pres-hist-toggle="1" aria-expanded="${presHistOpen ? "true" : "false"}">${presHistOpen ? "Hide ⌃" : "Show ⌄"}</button></div>
+      <div class="ph-tmpl-sec ph-sec-line"><span>Visit history</span><span class="ph-hist-count">${past.length} dispense${past.length === 1 ? "" : "s"}${past.length > shown.length ? ` · last ${shown.length} here` : ""}</span><button type="button" class="ph-tmpl-sec-act ph-hist-toggle" data-pres-hist-toggle="1" aria-expanded="${presHistOpen ? "true" : "false"}">${presHistOpen ? "Hide ⌃" : "Show ⌄"}</button></div>
       <div${presHistOpen ? "" : " hidden"}>${past.length ? `
       ${shown.map(presHistVisitCardHtml).join("")}
       <div class="ph-hist-more-row">
@@ -47129,13 +47188,13 @@ or changing anything in Cliniko.
   ];
   const PH_FP_SYMS = [
     { key: "fpEpiphora", label: "Epiphora (Watering Eye)", ask: "Is the eye running?" },
-    // NOT counted as a problem, deliberately. Bell's phenomenon is a NORMAL
-    // protective reflex -- you only see it because the lid is not closing
-    // over it. It is its ABSENCE alongside lagophthalmos that leaves the
-    // cornea exposed. Counting it as a deficit would score a protected eye
-    // as worse than an unprotected one, which is backwards.
+    // her 2026-09-19 override: this was built as "recorded, not counted"
+    // because Bell's phenomenon is a normal protective reflex -- flagged
+    // back to her with that exact reasoning, and she confirmed "Yes, count
+    // it anyway" a second time. Counted as a deficit below on her word, the
+    // original clinical reasoning kept here rather than deleted.
     { key: "fpBellPhen", label: "Bell's Phenomenon: Eyeball turns up and out", ask: "Watch the eye as she tries to close it", observe: true,
-      note: "Recorded, not counted as a problem — the eye rolling up and out is a normal protective reflex, visible only because the lid isn’t closing over it. It is its absence alongside lagophthalmos that puts the cornea at risk." },
+      note: "The eye rolling up and out when the lid can't close over it — normally a protective reflex, but counted here as a deficit on her instruction." },
     { key: "fpHyperac", label: "Hyperacusis (Sound Sensitivity)", ask: "Is ordinary sound uncomfortably loud on that side?" },
     { key: "fpSaliva", label: "Drooping of Saliva", ask: "Does saliva escape from that corner?" },
     { key: "fpTaste", label: "Taste Sensation Loss", ask: "Any change to taste on the front of the tongue?" },
@@ -47156,7 +47215,10 @@ or changing anything in Cliniko.
     return {
       got, max, answered: done.length, of: PH_FP_MOVES.length,
       pct: max ? Math.round(got / max * 100) : null,
-      flagged: PH_FP_SYMS.filter(x => !x.observe && s[x.key] === true).length,
+      // her 2026-09-19 override on fpBellPhen (see its entry above): the
+      // !x.observe exclusion existed only to keep it out of this count --
+      // dropped, so it flags like any other true symptom
+      flagged: PH_FP_SYMS.filter(x => s[x.key] === true).length,
       bell: s.fpBellPhen === true,
     };
   }
