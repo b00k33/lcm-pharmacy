@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260920-200000">
+<meta name="lcm-build" content="20260920-210000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -14259,6 +14259,7 @@
           <button type="button" class="ph-nav-item" data-ph-tab="log" data-ph-tip="Stock movements"><span class="ph-nav-ic"><svg class="icn"><use href="#i-jar-arrow"/></svg></span><span class="ph-nav-label">Stock movements</span></button>
           <button type="button" class="ph-nav-item" data-ph-tab="pricereview" data-ph-tip="Price review"><span class="ph-nav-ic"><svg class="icn"><use href="#i-tag"/></svg></span><span class="ph-nav-label">Price review</span></button>
           <button type="button" class="ph-nav-item" data-ph-tab="suppliers" data-ph-tip="Suppliers"><span class="ph-nav-ic"><svg class="icn"><use href="#i-tag"/></svg></span><span class="ph-nav-label">Suppliers</span></button>
+          <button type="button" class="ph-nav-item" data-ph-tab="directory" data-ph-tip="Patient directory"><span class="ph-nav-ic"><svg class="icn"><use href="#i-user"/></svg></span><span class="ph-nav-label">Patient directory</span></button>
         </div>
         <!-- the mock she liked (2026-09-08): Projects / Reference / Data are
              one quiet line of text links, not three icon groups. Same buttons,
@@ -14512,6 +14513,11 @@
          (renderPhEndOfDayPage) -- reached from the Dashboard's 4 pm row only -->
     <div id="phDispensesWrap" hidden></div>
     <div id="phRecordsPhotosWrap" hidden></div>
+    <!-- Patient directory (her ask 2026-09-20): a small read-only listing of
+         every patient known to the app from any source -- script, intake,
+         appointment, follow-up, dispense log, or a touched record -- so
+         someone with no script yet is still findable, not invisible. -->
+    <div id="phPatientDirectoryWrap" hidden></div>
     <div id="phEndOfDayWrap" hidden></div>
     <div id="phRenUndoToast" hidden></div>
     <div class="ph-stocktake-backdrop" id="phIntakeReviewBackdrop" hidden></div>
@@ -25655,7 +25661,7 @@
     // app OPENS on Appointments -- once per load; every later render keeps
     // whatever tab she is on
     if (!window.__phBootTabDone) { window.__phBootTabDone = true; PHARMACY.activeTab = "appointments"; }
-    const tab = ["prescriptions", "communications", "appointments", "refill", "restock", "stats", "log", "dispenses", "photos", "endofday", "dashboard", "suppliers", "settings", "stocktake", "pricereview", "guide", "supplements", "relocation", "intake", "journey"].includes(PHARMACY.activeTab) ? PHARMACY.activeTab : "inventory";
+    const tab = ["prescriptions", "communications", "appointments", "refill", "restock", "stats", "log", "dispenses", "photos", "directory", "endofday", "dashboard", "suppliers", "settings", "stocktake", "pricereview", "guide", "supplements", "relocation", "intake", "journey"].includes(PHARMACY.activeTab) ? PHARMACY.activeTab : "inventory";
     // hover-dropdown nav (her ask): two section parents; hovering a parent drops
     // a menu of its pages. Inventory owns stock ops; Prescriptions owns the patient side.
     const phTabGroups = [
@@ -28991,6 +28997,17 @@
         phRecPhotosRefresh();
         return;
       }
+      const dirFilter = e.target.closest("[data-dir-filter]");
+      if (dirFilter) {
+        phDirFilter = dirFilter.dataset.dirFilter;
+        const seg = dirFilter.closest(".ph-recphotos-seg");
+        if (seg) seg.querySelectorAll("[data-dir-filter]").forEach(b => {
+          const on = b.dataset.dirFilter === phDirFilter;
+          b.classList.toggle("on", on); b.setAttribute("aria-selected", on);
+        });
+        phDirRefresh();
+        return;
+      }
       if (e.target.closest("[data-recphotos-dup-toggle]")) {
         phRecPhotosDupOpen = !phRecPhotosDupOpen;
         phRecPhotosDupRefresh();
@@ -32069,6 +32086,7 @@
       if (e.target.matches("[data-ph-apptcal-q]")) { phApptCalQ = e.target.value; phDefer("apptCalQ", () => { const v = phApptCalQ; renderPhAppointmentsPage(); const inp = document.querySelector("[data-ph-apptcal-q]"); if (inp && document.activeElement !== inp) { inp.focus(); inp.setSelectionRange(v.length, v.length); } }, 150); return; }
       if (e.target.id === "presLogSearch") { presLogQ = e.target.value; phDefer("presLog", renderPresLog, 150); return; }
       if (e.target.id === "phRecPhotosSearch") { phRecPhotosPatientFilter = e.target.value; phDefer("recPhotos", phRecPhotosRefresh, 150); return; }
+      if (e.target.id === "phDirSearch") { phDirSearch = e.target.value; phDefer("phDir", phDirRefresh, 150); return; }
       // 📋 Medical history screen (her ask 2026-08-20): search re-renders only
       // the rows below (renderHxBody), never the box itself -- same reasoning
       // as #presSearch above. The note field is the OPPOSITE case: nothing
@@ -33859,6 +33877,7 @@
     document.getElementById("phIntakeWrap").hidden = tab !== "intake";
     document.getElementById("phDispensesWrap").hidden = tab !== "dispenses";
     document.getElementById("phRecordsPhotosWrap").hidden = tab !== "photos";
+    document.getElementById("phPatientDirectoryWrap").hidden = tab !== "directory";
     document.getElementById("phEndOfDayWrap").hidden = tab !== "endofday";
     // each of these renders a page and returns, so the one-title-per-page pass
     // (PASTE 1) runs synchronously right here -- straight after the page's own
@@ -33885,6 +33904,7 @@
     if (tab === "journey") { renderPhJourneyPage(); phMobileDedupeTitles(); return; }
     if (tab === "dispenses") { renderPhDispensesPage(); phMobileDedupeTitles(); return; }
     if (tab === "photos") { renderPhRecordsPhotosPage(); phMobileDedupeTitles(); return; }
+    if (tab === "directory") { renderPhPatientDirectoryPage(); phMobileDedupeTitles(); return; }
     if (tab === "endofday") { renderPhEndOfDayPage(); phMobileDedupeTitles(); return; }
 
     renderPhFlags();
@@ -35555,6 +35575,117 @@
     const head = document.getElementById("recPhotosShellHead");
     if (head) head.innerHTML = phShellHead("Photos", phRecPhotosCountText());
     phRecPhotosDupRefresh();
+  }
+  // ============================================================
+  // PATIENT DIRECTORY (her ask, 2026-09-20: "a patient who only has a
+  // submitted intake form, a booked appointment, or a touched history
+  // record -- no script yet -- is currently unfindable anywhere in the
+  // app... a small read-only 'Patient Directory' page that lists everyone
+  // from all 4 sources, so nobody falls through the cracks"). Read-only --
+  // it writes nothing. Modelled directly on renderPhRecordsPhotosPage just
+  // above: a permanent wrapper, built once, refreshed in place.
+  //
+  // Union of every place a patient's name can appear that this app
+  // otherwise has no single list for: scripts, follow-ups, the dispense
+  // log and PHARMACY.patients (all four already unioned by
+  // phClinikoKnownKeys, reused here rather than re-walked), plus the two
+  // sources that ARE missing from that union on purpose (it exists to
+  // answer "does LCM already know this name", not "list everyone") --
+  // the intake queue (phIntakeQueueRows, an unauthenticated patient
+  // hasn't been typed into a script yet) and her own appointment book
+  // (phApptList, a booking she made before ever opening a script).
+  // ============================================================
+  let phDirFilter = "missing";   // "missing" = no script yet (the actual gap this page exists to close) | "all"
+  let phDirSearch = "";
+  function phDirBuild() {
+    const rows = new Map();
+    const touch = (nameRaw, field) => {
+      const name = String(nameRaw || "").trim();
+      const key = phPatientKey(name);
+      if (!key) return;
+      let r = rows.get(key);
+      if (!r) { r = { key, name: "", script: false, followup: false, log: false, patientRec: false, intake: false, appt: false }; rows.set(key, r); }
+      if (name && !r.name) r.name = name;
+      r[field] = true;
+    };
+    PRESC.items.forEach(t => { if (!presIsFormula(t)) touch(presPatientFor(t), "script"); });
+    (PHARMACY.followups || []).forEach(r => touch(r.patient, "followup"));
+    PHARMACY.log.forEach(e => { if (e.patient) touch(e.patient, "log"); });
+    Object.keys(PHARMACY.patients || {}).forEach(k => touch(k, "patientRec"));
+    (phIntakeQueueRows || []).forEach(r => touch(r.patient_name, "intake"));
+    phApptList().forEach(a => touch(a.patient || a.name, "appt"));
+    return Array.from(rows.values()).map(r => {
+      r.displayName = phTitle(r.name || r.key);
+      r.why = r.script ? "Has a script on file"
+        : r.intake ? "Intake form submitted — no script yet"
+        : r.appt ? "Appointment booked — no script yet"
+        : (r.followup || r.log) ? "In her follow-up/dispense history — no script yet"
+        : r.patientRec ? "Touched history record — no script yet"
+        : "On file";
+      return r;
+    }).sort((a, b) => a.displayName.localeCompare(b.displayName));
+  }
+  function phDirFiltered() {
+    const q = phDirSearch.trim().toLowerCase();
+    return phDirBuild().filter(r => {
+      if (phDirFilter === "missing" && r.script) return false;
+      if (q && !r.displayName.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }
+  function phDirTagsHtml(r) {
+    const tags = [];
+    if (r.script) tags.push("script");
+    if (r.followup) tags.push("follow-up");
+    if (r.log) tags.push("dispense log");
+    if (r.appt) tags.push("appointment");
+    if (r.intake) tags.push("intake");
+    if (r.patientRec && !tags.length) tags.push("history record");
+    return tags.join(" · ");
+  }
+  function phDirRowHtml(r) {
+    return `<div class="ph-listing ph-intake-qrow">
+      <div class="ph-intake-qrow-main">
+        <span class="ph-intake-qrow-name">${esc(r.displayName)}</span>
+        <span class="ph-intake-qrow-meta">${esc(r.why)}${phDirTagsHtml(r) ? ` · ${esc(phDirTagsHtml(r))}` : ""}</span>
+      </div>
+      <button type="button" class="ph-load-btn${r.script ? " on" : ""}" data-ph-dash-patient-open="${esc(r.name || r.displayName)}">${r.script ? "Open →" : "Start a script →"}</button>
+    </div>`;
+  }
+  function phDirBodyHtml() {
+    const rows = phDirFiltered();
+    if (!rows.length) return `<div class="fam-empty">${phDirFilter === "missing" ? "Nobody is missing a script right now." : "No patients on file yet."}</div>`;
+    return rows.map(phDirRowHtml).join("");
+  }
+  function phDirCountText() {
+    const n = phDirFiltered().length;
+    return phDirFilter === "missing" ? `${n} without a script yet` : `${n} patient${n === 1 ? "" : "s"}`;
+  }
+  function phDirRefresh() {
+    const body = document.getElementById("phDirBody");
+    if (body) body.innerHTML = phDirBodyHtml();
+    const head = document.getElementById("dirShellHead");
+    if (head) head.innerHTML = phShellHead("Patient directory", phDirCountText());
+  }
+  function renderPhPatientDirectoryPage() {
+    const wrap = document.getElementById("phPatientDirectoryWrap");
+    if (!wrap) return;
+    // same #presSearch rule as the Photos page above: the shell renders
+    // once so typing in the search box never rebuilds the box itself
+    if (!document.getElementById("phDirBody")) {
+      wrap.innerHTML = `<div id="dirShellHead"></div>
+        <section class="ph-widget">
+          <div class="ph-widget-head ph-recphotos-head">
+            <div class="ph-recphotos-seg" role="tablist" aria-label="Filter patients">
+              <button type="button" class="ph-recphotos-segbtn${phDirFilter === "missing" ? " on" : ""}" role="tab" aria-selected="${phDirFilter === "missing"}" data-dir-filter="missing">Missing a script</button>
+              <button type="button" class="ph-recphotos-segbtn${phDirFilter === "all" ? " on" : ""}" role="tab" aria-selected="${phDirFilter === "all"}" data-dir-filter="all">Everyone</button>
+            </div>
+            <input type="search" id="phDirSearch" placeholder="Filter by name…" value="${esc(phDirSearch)}" autocomplete="off" aria-label="Filter patients by name">
+          </div>
+          <div id="phDirBody">${phDirBodyHtml()}</div>
+        </section>`;
+    }
+    phDirRefresh();
   }
   // ============================================================
   // End of day (her spec 2026-09-07): one page, one way in. From 4 pm the
