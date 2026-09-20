@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260920-160000">
+<meta name="lcm-build" content="20260920-170000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -29297,8 +29297,17 @@
         inp.placeholder = "Plan title"; inp.setAttribute("aria-label", "Plan title");
         box.appendChild(inp); btn.replaceWith(box);
         inp.focus(); inp.select();
-        inp.addEventListener("keydown", ev => { if (ev.key === "Enter" || ev.key === "Escape") { ev.preventDefault(); inp.blur(); } });
-        inp.addEventListener("blur", () => { const v = inp.value.trim(); if (v) plan.title = v; savePharmacy(); renderPresPanel(); });
+        // her call 2026-09-10 on this exact field: flagged, deliberately left
+        // on blur-only pending her word. Asked directly 2026-09-20 -- her
+        // "Yes, fix it" -- so it now commits DIRECTLY on Enter/Esc, never via
+        // inp.blur(), matching the cadence "Type instead" field and the tab
+        // rename: while the document isn't the focused one, blur() silently
+        // fires nothing, so a blur-only commit loses exactly what she typed.
+        // Idempotent so the blur listener can stay for click-away.
+        let titleDone = false;
+        const titleCommit = () => { if (titleDone) return; titleDone = true; const v = inp.value.trim(); if (v) plan.title = v; savePharmacy(); renderPresPanel(); };
+        inp.addEventListener("keydown", ev => { if (ev.key === "Enter" || ev.key === "Escape") { ev.preventDefault(); titleCommit(); } });
+        inp.addEventListener("blur", titleCommit);
         return;
       }
       if (e.target.closest("[data-pres-treat-toggle]")) {
@@ -35843,7 +35852,12 @@ or changing anything in Cliniko.
     // automatically") -- Stress already had 4 treatment-plan templates but
     // no matching Case option, the one real gap found while wiring up
     // PH_CASE_CATEGORY below.
-    ["neurological", "Neurological"], ["stress", "Stress"], ["general", "General"], ["other", "Other"],
+    ["neurological", "Neurological"], ["stress", "Stress"],
+    // "Weight" added her ask 2026-09-20 (backlog walk-through, "Yes, add
+    // it") -- same gap as Stress: the "Weight loss" treatment-plan template
+    // (category "metabolic", its own --ph-metab colour family) already
+    // existed with no matching Case option to pair it with.
+    ["weight", "Weight"], ["general", "General"], ["other", "Other"],
   ];
   // her ask 2026-09-07: pair the Case dropdown above with the Treatment Plan
   // picker automatically, calibrated over 8 questions (all Recommended).
@@ -35862,7 +35876,7 @@ or changing anything in Cliniko.
   // all three facial plans are neurological, and a low-back plan was never much
   // use on a palsy. The panel stays .case-msk blue (PH_CASE_MSK is untouched),
   // which is why cat-facial has to state its own colour -- see the CSS.
-  const PH_CASE_CATEGORY = { fertility: "gynae", menopause: "gynae", pain: "msk", neurological: "facial", stress: "stress" };
+  const PH_CASE_CATEGORY = { fertility: "gynae", menopause: "gynae", pain: "msk", neurological: "facial", stress: "stress", weight: "metabolic" };
   // her picks, round 2: herbs / cycle tile / the three reproductive Medical
   // History groups can quiet; Family history stays -- she named it in her
   // one-line example but didn't tick it here, and general family history
@@ -47481,7 +47495,7 @@ or changing anything in Cliniko.
     },
     // ---- Weight & metabolism (her ask 2026-09-09) ----
     {
-      id: "metab_weightloss", name: "Weight loss", category: "metabolic",
+      id: "metab_weightloss", name: "Weight loss", category: "metabolic", caseHint: "weight",
       goal: "Find the pattern actually holding the weight on, shift it at a pace that lasts, then rebuild the digestion and metabolism underneath so the loss holds.",
       phases: [
         { label: "Weeks 1–4 — find the pattern, set the baseline", aim: "Establish which pattern is driving this — Spleen Qi deficiency with Damp, Liver Qi stagnation with stress eating, Stomach Heat with a strong appetite, or Spleen/Kidney Yang deficiency with a slow metabolism and feeling the cold — and record real starting numbers to measure against. Weight loss is not one condition and the four patterns need different treatment.", points: "ST36, SP6, SP9, ST40, REN12, REN6, ST25. Add LIV3 and PC6 where stress eating dominates; ST44 and LI11 for a Stomach-Heat picture with constant hunger; moxa REN4/REN6 and BL20/BL23 for a cold, Yang-deficient picture. Auricular Shen Men, Stomach and Hunger points, with ear seeds kept in between visits.", suggestFormula: "Spleen-strengthening, Damp-transforming base, adjusted once the pattern is clear", cadence: "1×/wk for the first 4 weeks", watch: "Record weight, waist, appetite, energy, bowels and sleep at the first visit as the baseline — waist and energy often move before the scales do. Ask what she has already tried and what happened. Refer to her GP for thyroid function, fasting glucose or HbA1c, lipids and iron before assuming a TCM pattern explains all of it: an undertreated thyroid, PCOS, a new medication or untreated sleep apnoea will hold weight on regardless of treatment. Screen for restricting, bingeing or purging and make that the priority if it is there." },
@@ -53912,8 +53926,17 @@ or changing anything in Cliniko.
     const grow = () => { if (multi) { inp.style.height = "auto"; inp.style.height = inp.scrollHeight + "px"; } };
     grow(); inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length);
     inp.addEventListener("input", grow);
-    inp.addEventListener("keydown", e => { if (e.key === "Escape" || (e.key === "Enter" && !multi)) { e.preventDefault(); inp.blur(); } });
-    inp.addEventListener("blur", () => {
+    // her call 2026-09-10 on this exact field: flagged, deliberately left on
+    // blur-only pending her word ("it alters behaviour on fields she did not
+    // ask about"). Asked directly 2026-09-20 -- her "Yes, fix it" -- so it
+    // now commits DIRECTLY on Enter/Esc, never via inp.blur(), matching the
+    // cadence "Type instead" field and the tab/plan-title renames: while the
+    // document isn't the focused one, blur() silently fires nothing, so a
+    // blur-only commit loses exactly what she just typed. Idempotent so the
+    // blur listener can stay for click-away.
+    let done = false;
+    const commit = () => {
+      if (done) return; done = true;
       // same stale-reference risk as the cadence editor above (freshPh) --
       // a longer note is exactly the kind of edit a mid-typing cloud pull can land during
       const live = freshPh();
@@ -53934,7 +53957,9 @@ or changing anything in Cliniko.
       el.classList.remove("editing");
       el.classList.toggle("empty", !inp.value);
       el.textContent = inp.value || PH_TP_FIELD_PH[field] || "";
-    });
+    };
+    inp.addEventListener("keydown", e => { if (e.key === "Escape" || (e.key === "Enter" && !multi)) { e.preventDefault(); commit(); } });
+    inp.addEventListener("blur", commit);
   }
   function phTpReviewRowHtml(plan, r) {
     const arming = phTpDeleteArm === r.id;
@@ -57364,6 +57389,19 @@ Please let me know if you have any questions.`;
       if (cur === "unasked") historyNew.push({ key: it.k, label: it.label, display: `${it.label}: ${val === "yes" ? "Yes" : "No"}` });
       else if (cur !== val) historyConflicts.push({ key: it.k, label: it.label, current: cur === "yes" ? "Yes" : "No", value: val === "yes" ? "Yes" : "No" });
     });
+    // her ask 2026-09-20 (backlog walk-through): the intake form's free-text
+    // medication/allergy/supplement note -- always offered as a "new" item,
+    // never a conflict (it's prose to append to medicalHistoryNotes, not a
+    // field with a single current value it could disagree with), and
+    // deduped the same way the "Paste a note" feature already dedupes
+    // (rec.medicalHistoryNotes.includes(note)) so re-reviewing an already-
+    // applied form never offers to add the same text twice.
+    if (hist.medNotes && hist.medNotes.trim()) {
+      const note = hist.medNotes.trim();
+      if (!rec || !(rec.medicalHistoryNotes || "").includes(note)) {
+        historyNew.push({ key: "medNotes", label: "Medications/allergies/supplements", display: `Note: "${note}"` });
+      }
+    }
 
     const cycleNew = [], cycleConflicts = [];
     const curCyc = rec ? (rec.cycle || {}) : {};
@@ -57495,7 +57533,17 @@ Please let me know if you have any questions.`;
       const winner = c => phIntakeReviewChoices[c.key] === "new";
       d.demoNew.forEach(n => { if (n.key === "sex") rec.sex = demo.sex; else if (n.key === "dob") rec.dob = demo.dob; else if (n.key === "mobile") { rec.phone = demo.mobile.trim(); rec.phoneSrc = "intake"; } else if (n.key === "email") rec.email = demo.email.trim(); else if (n.key === "address") phPatientSaveAddress(row.patient_name, demo.address); });
       d.demoConflicts.forEach(c => { if (!winner(c)) return; if (c.key === "sex") rec.sex = demo.sex; else if (c.key === "dob") rec.dob = demo.dob; else if (c.key === "mobile") { rec.phone = demo.mobile.trim(); rec.phoneSrc = "intake"; } else if (c.key === "email") rec.email = demo.email.trim(); });
-      d.historyNew.forEach(n => phHxSet(rec, n.key, hist[n.key]));
+      d.historyNew.forEach(n => {
+        if (n.key === "medNotes") {
+          const note = presSanitizeNoteText(hist.medNotes.trim());
+          if (note && !(rec.medicalHistoryNotes || "").includes(note)) {
+            const dd = TODAY, stamp = `${dd.getDate()} ${MON_SHORT[dd.getMonth()]} ${dd.getFullYear()}`;
+            rec.medicalHistoryNotes = `${(rec.medicalHistoryNotes || "").trim()}${rec.medicalHistoryNotes && rec.medicalHistoryNotes.trim() ? "\n\n" : ""}[from intake ${stamp}]\n${note}`;
+          }
+          return;
+        }
+        phHxSet(rec, n.key, hist[n.key]);
+      });
       d.historyConflicts.forEach(c => { if (winner(c)) phHxSet(rec, c.key, hist[c.key]); });
       if (d.hasCycle) {
         rec.cycle = rec.cycle || {};
