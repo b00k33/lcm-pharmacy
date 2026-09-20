@@ -6305,3 +6305,84 @@ not whatever was still in progress.
 Committed `dc7e21b` on `session-a` — not pushed to `main` (the 4pm Sydney
 job does that, or her explicit "push live"). `lcm-build` `20260920-140000`,
 `sw.js` `lcm-20260920-appointments-ui-gap-fix`.
+
+## Tongue-photo Compare "does nothing" + strip ordering (2026-09-20)
+
+Her report: a screenshot of the photo viewer ("Tongue · Natural light ·
+19 Sep", "3 of 3 natural light shots") with **"when i select compare with
+another, nothing happens"**. Traced two real, related bugs — the report
+itself wasn't the crash site; the crash is a downstream bug in the same
+feature, found while investigating.
+
+**Bug 1 — a crash on the SECOND photo tap, not the first.**
+`phTpVrStripHtml` (the Treatment Plan Grid's "Visit record" page's "Tongue
+over time" strip, built 2026-09-18/19) is the newest of three surfaces that
+open a tongue photo through the shared `data-ren-tl-open` contract — the
+Health Exam screen's timeline and the script panel's inline Photos section
+are the other two, and both have always emitted `data-ren-tl-row` alongside
+`data-ren-tl-open`/`data-ren-tl-patient`/`data-ren-tl-shot`. This third
+surface's thumbnail button never did. The generic delegated click handler
+(~line 28556) always reads all four dataset attributes uniformly and passes
+`rowKey` straight into `phRenComparePick(id, rowKey, patientKey)` — with
+`rowKey === undefined`, `phRenCmpGroupOf(rowKey)`'s own `rowKey.indexOf(...)`
+throws `Cannot read properties of undefined (reading 'indexOf')`. This only
+fires once `phRenCompare.length >= 1`, i.e. on the SECOND photo she taps —
+the first pick registers fine, closes the viewer, and only the second tap
+(the one that would complete the pair) crashes. Fixed by adding the missing
+`data-ren-tl-row="${esc(phRenRowKeyOf(p))}"` to the strip's thumbnail
+button — the same attribute the other two surfaces already carry.
+
+**Bug 2 — even with no crash, nothing visibly happened on THIS page.**
+`phRenCompareStartFromView()` (fired by the viewer's "Compare with
+another" button) and `phRenComparePick()` (fired by tapping a second
+photo) only ever refreshed two of the app's three compare-eligible
+surfaces: `renderHxScreen()` for the Health Exam screen, and
+`phRenPhotosSecRefresh()` for the script panel's inline Photos section —
+neither call touches the Visit Record page at all. The feature's actual
+"Pick a second photo…" hint and "Compare these 2 →" trigger bar live
+inside `phRenTimelineHtml`, which on the Visit Record page is folded
+behind its own "Photos by date ⌄" toggle (`phTpVrPhotoTableOpen`, default
+`false`). So from this page the modal simply closed with no visible sign
+anything had started — not a crash, just nothing to look at. Fixed by
+adding `phTpRerender()` calls to both functions (it re-renders whichever
+Treatment Plan surface — modal or inline embed — is actually open, and
+safely no-ops when neither is, so it's harmless on the other two
+surfaces), and by forcing `phTpVrPhotoTableOpen = true` inside
+`phRenCompareStartFromView()` so the already-working compare-bar UI is
+automatically unfolded and visible the moment she starts a compare from
+this page.
+
+**Separately, mid-investigation she sent a second screenshot of the same
+strip** (two photos, "19 Sep" then "14 Sep" left to right) with
+**"organise from oldest to newest from left to right"**. `phTpVrPhotos()`'s
+sort comparator was `phRenDateKeyOf(b).localeCompare(phRenDateKeyOf(a))` —
+newest-first, the opposite of a left-to-right timeline reading. Flipped to
+`phRenDateKeyOf(a).localeCompare(phRenDateKeyOf(b))` — ascending. The row
+list underneath the strip (`phTpPastHtml`) intentionally stays
+newest-first — her own 2026-09-19 "Today first, history below" pick — this
+change only touches the strip, a different component with a different
+reading direction, confirmed via grep that `phTpVrPhotos` has exactly one
+call site (`phTpPastHtml`'s strip renderer) so the change is isolated.
+
+**Verified end-to-end in the sandbox, not by reading alone.** Since the
+real login gate blocks a fully-booted local preview (same limitation as
+every batch in this file), seeded two real synthetic tongue photo records
+via the window-exposed `phRenPhotoPut`, then drove the UI through
+window-exposed action functions (`phRenViewPhoto`, `phRenCompareStartFromView`)
+and REAL dispatched `MouseEvent('click', {bubbles:true, cancelable:true})`
+events on the actual rendered DOM — exercising the real delegated click
+handlers exactly as a genuine tap would, not a reimplementation. Confirmed
+the crash BEFORE the fix via a `window.onerror` hook
+(`caughtError: "Uncaught TypeError: Cannot read properties of undefined
+(reading 'indexOf')"`) and confirmed it GONE after
+(`caughtError: null`); confirmed a real two-pick sequence (button shaped
+like the now-fixed template) completes with no error where it previously
+crashed on the second tap; called `phRenCompareShow()` directly and
+confirmed the compare pair view actually renders (`"Tongue — comparing"`
+header) — the fix doesn't just avoid the crash, the feature completes.
+Synthetic photo records deleted from the `lcm-ren-photos` IndexedDB
+database afterward.
+
+Committed `24680d8` on `session-a` — not pushed to `main` (the 4pm Sydney
+job does that, or her explicit "push live"). `lcm-build` `20260920-150000`,
+`sw.js` `lcm-20260920-tongue-compare-sortorder-fix`.
