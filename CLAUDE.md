@@ -6200,3 +6200,108 @@ absent from both `localStorage` and IndexedDB.
 Committed `a8ca675` on `session-a` — not pushed to `main` (the 4pm Sydney
 job does that, or her explicit "push live"). `lcm-build` `20260920-130000`,
 `sw.js` `lcm-20260920-photos-by-visit`.
+
+## Appointments right-border gap + live-sync dot/pill overlapping the footer (2026-09-20)
+
+Her report: a screenshot of the real/live Appointments page (Grid view),
+**"fix the ui especially the gap on right border"**, then mid-turn a second,
+cropped screenshot of a dark blob overlapping the footer's own "backed up
+[date]" text with **"improve this"**. Both traced to real, measured root
+causes in the sandbox before writing anything, not guessed from the
+screenshots alone — and both turned out to be the SAME bug class the app has
+already hit once before, just never closed off for desktop.
+
+**Root cause 1 — `.ph-pres-fab` (index.html ~12383), the phone/tablet
+"Show quick actions" FAB whose literal text content is `"⋯"` (the dark
+dot-blob visible in her first screenshot).** Its entire CSS block —
+including its own `display: none` default — lives inside
+`@media (max-width: 900px)`. Past 900px there was nothing constraining it at
+all, so it fell back to its bare UA display: an unstyled `<button>` normally
+computes `display: inline-block`, but a flex item's `inline`/`inline-block`
+computed value is blockified to `block` per the CSS Display spec the moment
+it sits inside a flex container — and `.ph-pres-fab` is a direct DOM child
+of `.ph-app-shell`'s flex row (alongside `.ph-sidebar` and `.ph-shell-main`).
+Confirmed live at 1024×768: the FAB rendered `display: block`, consuming
+exactly `27.421875px` of real flex-layout width at the right edge — the
+precise gap between `.ph-shell-main`'s measured right edge (996.578125) and
+the shell's true right edge (1024). Fixed with a belt-and-braces
+`.ph-pres-fab { display: none !important; }` inside the existing
+`@media (min-width: 901px)` block (right beside `.ph-topbar-burger`'s own
+desktop hide) — the FAB is meant to exist only within its own ≤900px range,
+where its already-correct rules (shown only when a prescription/refill panel
+is open, force-hidden again below 640px per phone law #2) are untouched.
+
+**Root cause 2 — `#lcmLive`/`#lcmSaved` (the sync-status dot and "Saved
+HH:MM" pill) use hardcoded `position:fixed;right:Npx;bottom:Npx` on desktop,
+blind to `#phShellFooter`'s own real, in-flow position.** This is the exact
+same bug class the code's own comments already document fixing once for
+mobile (2026-08-15/16, "two rounds of guessed pixel clearance... both still
+overlapped real page content... Fix is... mount into a real document-flow
+slot instead of floating fixed") — but that fix's own comment then asserted
+"Desktop keeps the original floating corner placement, untouched (no
+reported overlap there)", which her two screenshots now contradict directly.
+`#phShellFooter` sits at the TRUE bottom of a short desktop page (the
+flex-column push `.ph-shell-content`/`#pharmacyPage` already use to place
+it there — see "STEP 5" in its own code comments), which is exactly where
+the fixed-position dot/pill also land: on a page with a narrower content
+area (a sidebar present) the dot read as floating detached in the right-side
+gap (her first screenshot, compounding with root cause 1); on a page whose
+content area was closer to full width, the dot/pill sat directly on top of
+the footer's own "backed up [date]"/"Back up now →" text (her second,
+cropped screenshot — colour `rgb(201,139,107)` matches `#c98b6b`, the
+"reconnecting/offline" sync state).
+
+**Fix, same shape as the mobile one already proven to work**: a new
+`footerSlot()` helper (beside the existing `statusSlot()`, sync module,
+~line 64821) returns `#phShellFooter` when `window.innerWidth > 900`.
+`badge()` and `renderSavedAt()` both gained a `foot` branch between their
+existing mobile-slot and fixed-corner branches — mounting `#lcmLive`/
+`#lcmSaved` as ordinary flex children of `#phShellFooter`'s own row (after
+its "Back up now →" button, since that button's `margin-left:auto` pushes
+everything after it to the far right too) instead of computing any offset.
+Real document flow, so there is nothing left to guess or get wrong on a
+future layout change — exactly the same reasoning the mobile fix already
+used. The old fixed-corner style survives only as the fallback for before
+`#phShellFooter` exists (an auth/config screen, before `#pharmacyPage` has
+rendered) — unchanged from before. Both stale "no reported overlap on
+desktop" code comments (the CSS one at ~12422 and the JS one above
+`renderSavedAt()`) were corrected in the same pass to point at this fix,
+rather than left to mislead the next person who reads them.
+
+**Verified in the sandbox** (the real login gate blocked a fully-booted
+click-through, same limitation as every other batch in this file — but the
+underlying `#pharmacyPage`/`#phShellFooter` markup renders in the DOM
+regardless, per this project's own established pattern, so DOM/CSS-level
+verification still reaches the real thing): `.ph-pres-fab` computed
+`display: none` at a 1024px viewport, and the measured gap between
+`.ph-shell-main` and `.ph-app-shell`'s right edges went from 27.4px to
+exactly `0`. `badge()`/`renderSavedAt()` are closure-private to the sync
+module (not window-exposed) and never fired naturally in this sandbox run
+(no authenticated sync session to trigger them) — verified instead by
+copying the exact edited function bodies into an isolated test (the same
+established pattern this file already uses for other closure-private
+sync-module code, e.g. the shrink-guard delta-text fix) and running it
+against the REAL, already-rendered `#phShellFooter` element on the page:
+both `#lcmLive` and `#lcmSaved` correctly parented under `#phShellFooter`,
+fully inside its measured bounding box (`liveInsideFootBounds: true`,
+`savedRect.right` 985 < `footRect.right` 1009) — genuinely part of the
+footer's own row, never able to float loose or land on its text again.
+Test elements removed afterward; nothing in this fix touched `PHARMACY`/
+`PRESC` data, so no cleanup was needed there.
+
+Mid-turn she also said **"push previous builds now"** — the sixty-plus
+commits already sitting on `session-a` unpushed (everything from the
+session-ladder/file-bookings work through the synth22 photos batch and the
+"By visit" photo timeline mode) were confirmed a clean fast-forward of
+`origin/main` (`git merge-base --is-ancestor origin/main session-a`) before
+pushing, per the standing "ref push, never checkout/merge/checkout on this
+shared tree" rule — `72c35ad..d911146` landed on `main` via
+`git push origin session-a:main`. This UI fix's own commit (`dc7e21b`) was
+made AFTER that push and was never bundled into it — it stays on
+`session-a` only, per the standing "never push to main unless she says push
+live" rule, since "push previous builds" named the already-committed work,
+not whatever was still in progress.
+
+Committed `dc7e21b` on `session-a` — not pushed to `main` (the 4pm Sydney
+job does that, or her explicit "push live"). `lcm-build` `20260920-140000`,
+`sw.js` `lcm-20260920-appointments-ui-gap-fix`.
