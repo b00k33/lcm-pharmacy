@@ -6457,3 +6457,164 @@ her to bring when ready:
   +Supportive seeds — all mechanism-complete and live, all marked DRAFT
   pending her own correction pass, same standing rule as every other
   patient-facing message in this app.
+
+## Backlog second-half sweep — 149 not-built/partial items verified (2026-09-20)
+
+"Go through the rest of the backlog" — the remaining 149 `not_built`/
+`partial`/`cannot_tell` items from the same 2026-09-16 audit, beyond the
+59 `open_question` items the two sections above already closed out.
+Dispatched a 7-agent parallel verification Workflow (the same discipline
+as the 59-item sweep): each agent re-checked its chunk against CURRENT
+`index.html`/`CLAUDE.md`, never the audit's own framing, per this file's
+own repeated "the audit snapshot keeps aging" lesson.
+
+**Result — the audit snapshot really had aged, badly:**
+- **87 already resolved** — shipped in a later batch, or a disclosed/
+  confirmed decision the audit predates. Pure memory hygiene, no code.
+- **15 non-issues** — the audit's own premise was wrong (a claimed CSS
+  class doesn't exist on the sheet it named, a claimed bug doesn't
+  reproduce). Several of these (the ellipsis/pill "fix" for Dashboard/
+  Refill/Log, the flex-action-cell table check) are now confirmed false
+  for the 3rd or 4th independent time across different batches — worth
+  a source-memory correction so they stop resurfacing, not done this pass.
+- **10 large feature work** — real gaps, but substantial (AI-assisted
+  intake extraction via the Claude API, a real desktop .exe build, a real
+  4-source patient directory, the two-computer relay race, an app-wide
+  font-token migration, treatment-plan-phase→message data-model wiring,
+  the many-past-periods patient-side bulk entry). Not attempted; each
+  needs its own scoped pass same as always.
+- **27 need her word** — clinical/patient-facing content only she can
+  write, her own data-entry/account tasks outside this codebase, or real
+  taste/architecture calls. NOT dumped in chat — see the two lists below.
+- **10 safe and mechanical** — verified, built and sandbox-tested this
+  pass (5 built; 1 investigated and found too vague to safely fix blind;
+  1 is a verification-only task the login gate still blocks; 3 were
+  re-classified as needing her word on closer read — see below).
+
+**Built, all verified via real function calls against the running app in
+the sandbox (synthetic patients/records only, cleaned up after each):**
+- **Herb check-in/review rows no longer honour a CLOSED plan's stale
+  `herbsOverride`.** `phFuContactRows` always resolved "which plan
+  governs herbs-on for this patient" via `phTpShownPlan`, which falls
+  back to `plans[0]` even when nothing is active — so once her only plan
+  closed or paused, its `herbsOverride` (set or default) kept silently
+  controlling the row forever, in EITHER direction. Fixed by only
+  consulting the shown plan's override when `status === "active"`;
+  a closed plan now correctly falls through to the patient-level
+  `herbsEnabled` default, exactly as if no plan existed — matching
+  decision 12's own words, "a plan may override it back on/off for THAT
+  COURSE only." Does NOT newly suppress anything just because a plan
+  closed. Verified: a closed plan with `herbsOverride:false` used to
+  wrongly suppress the row against a herbs-on patient default — now
+  correctly doesn't; an ACTIVE plan's override still applies unchanged.
+- **A done phase's linked formula chip freezes like every sibling cell.**
+  `phTpPlanCells`' `formula` ternary (and its byte-identical copy inside
+  `phTpPhaseBodyRows` for the full-screen modal) only applied the
+  `frozen` branch when `phase.formulaName` was EMPTY — once a formula was
+  actually linked, the chip stayed a fully-interactive open/unlink button
+  even on a closed phase, breaking "a done phase freezes, with an
+  unlock." Both copies now render a plain `.ph-tp-formula-chip.frozen`
+  span (same tooltip as every other frozen cell) instead. Verified via
+  `phTpPlanCells` directly: a done phase's formula cell carries no
+  `data-tp-formula-unlink`/`-open` attribute; a current phase's does.
+- **The Cycle-length average now signals when it's built from an
+  estimated period date.** Her 2026-09-13 answer ("about-dates count in
+  the average with a tilde") was only half-built — the tile's "~" prefix
+  was already unconditional, but nothing distinguished an average built
+  from confirmed dates from one leaning on an "Estimate only"-marked
+  entry. `phCycleGaps` is now backed by `phCycleGapsDetailed` (same
+  gap-list, each entry also carrying whether either bounding date was
+  approx) and a new `phCycleGapsHaveApprox(rec)`; the tile's sub-text
+  gains "(some estimated)" when true. `phCycleGaps`/`phCycleAvgLen`'s own
+  return shape is untouched (still a bare number array/int), so their
+  other two call sites needed no change. Verified: a synthetic 2-gap
+  history with one approx-marked bounding date correctly flags true, an
+  all-confirmed history correctly flags false, gaps/average unchanged.
+- **The "Lives out of town" away wording now covers Review too.** Her
+  "Yes, drop it from all of them" (2026-09-19) named Review, Rebook,
+  Acupuncture follow-up and Gone-quiet; the build that followed only gave
+  `awayBody`/`awayBodyFormal` to the latter three (Review has no visible
+  visit-line to drop the same way, which is likely why it was missed).
+  Added, same DRAFT convention as the other three — **hers to read and
+  correct, not confirmed wording.** The existing add-only backfill in
+  `phMsgTemplates()` (`if (existing.awayBody == null && s.awayBody) ...`)
+  already generalises to any slot, so her live data picks this up
+  automatically with zero further code — verified directly:
+  `phMsgTemplates().find(t => t.slot === "review")` now carries both
+  fields.
+- **Residual "Book33" strings in the New-location/Import-backup screen.**
+  `screenImport`'s file label and its two error messages ("That doesn't
+  look like a Book33 backup" / "No Book33 data found") still named the
+  app's old identity — confusing, since her real backup files are named
+  `LCM-pharmacy-*.json`. Relabelled to LCM; the underlying `daybook-*`
+  storage-key logic (shared architecture with Book33/C22, per the
+  GitHub-only/never-write-other-apps'-keys rule) was correctly left
+  untouched — only display text changed. The handful of remaining
+  "Book33" mentions elsewhere in the file are either developer-facing
+  code comments explaining real shared-quota/historical-bug context, or
+  the one user-facing string that's correctly naming the 2026-08-15
+  "Book33 key-stealing bug" incident by its real name — none of those
+  needed touching.
+
+**Investigated, not built — too vague to fix blind:** "Double-log and
+lost-pending-state defects" (Dispense-or-Schedule stepper) has no
+CLAUDE.md entry and no reproducible mechanism found by grep (the
+`.ph-dose-step.pending` class is a plain derived state, not stateful data
+that can get "lost"). Rather than guess at a fix for an undescribed
+defect, left open — needs either a concrete repro from her or a real
+investigation pass, not a blind patch.
+
+**Verification-only, not a code task:** the End-of-day Copy button's
+underlying data (item counts, prices) is self-checked by
+`phEodSelfCheck()`, but no batch has confirmed a real dispatched click
+actually reaches `navigator.clipboard`. Not exercised this pass either —
+same login-gate limitation as every other batch's real-click testing.
+
+**Three "safe" candidates re-classified as needing her word on a closer
+read, not built:** "Blur-only commit on TP grid cells and plan-title
+rename" is the SAME code CLAUDE.md already documents as flagged to her
+and deliberately NOT changed 2026-09-10 ("it alters behaviour on fields
+she did not ask about") — a verifying agent missed that cross-reference
+and called it safe; left alone pending her actual confirmation, not
+silently applied. "Slim appointment stub if the shared-origin quota is
+ever hit" is conditional on that quota actually being hit, which hasn't
+happened — nothing to build yet. `createImageBitmap` decode path for
+faster photo saves is genuinely unbuilt and low-risk on paper, but
+touches the photo capture/relay pipeline this project has a real
+incident history with (duplicate uploads, relay races) — deferred rather
+than rushed in.
+
+**The 27 "needs her word" items, sorted so nothing gets popped at her
+that isn't actually decision-ready** (full per-item evidence lives in the
+workflow transcript, `wf_2854f205-919`, not reproduced here):
+- **Her own data-entry/account tasks, not code** — re-entering Acupreg's
+  lost 5-11 Sep data, restoring its 268-herb catalogue, untangling the
+  merged Acupreg+CBD dataset in linhdinh2026 (flagged as possibly
+  sibling-session territory, needs coordination), re-adding the Acupreg
+  login on her laptop, running the pre-fix wipe diff on her other
+  devices, a live phone-to-desktop sync smoke test, confirming whether
+  Sylvia Lai's duplicate IVF plan is actually gone from her data.
+- **Patient-facing wording only she can write** — an intake-form
+  allergies/meds free-text field (the checkboxes exist, no notes field
+  does), a men's pre-collection-acupuncture note for the IVF letter, the
+  two still-missing rebate/maintenance message bodies, drafting anything
+  from the two Romanian orphan-study PDFs (background reading, never
+  meant to become app content without her clinical judgment on what's
+  valid).
+- **Real taste/architecture calls, asked below rather than silently
+  guessed or silently built:** see the questions this turn.
+- **Flagged but genuinely non-urgent, left written rather than raised:**
+  a global app-name/PWA-identity rename (nobody's asked for this, an
+  audit-generated suggestion only), the IVF-intake per-field conflict UI
+  (already correctly gated on a real clinical-matching design question),
+  the fixed/dynamic-section split in the Letter templates editor (a real
+  design question about editing computed content, e.g. a body-map SVG),
+  install screenshots being 5-day-stale mock renders (one already depicts
+  a merged-away page), a wide-Galcott-style-tables→phone-cards redesign
+  (no evidence it's ever been asked for), the Appointments List's
+  ≤900px stacked-card reflow (superseded by Grid-as-phone-default, low
+  priority), a third sheet-row density pass (28px → 26px).
+
+Version: `lcm-build` `20260920-160000`, `sw.js`
+`lcm-20260920-backlog-safe-fixes`. Committed on `session-a`, not pushed
+to `main` (the 4pm Sydney job does that, or her explicit "push live").
