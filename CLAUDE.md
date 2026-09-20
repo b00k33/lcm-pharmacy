@@ -6618,3 +6618,87 @@ workflow transcript, `wf_2854f205-919`, not reproduced here):
 Version: `lcm-build` `20260920-160000`, `sw.js`
 `lcm-20260920-backlog-safe-fixes`. Committed on `session-a`, not pushed
 to `main` (the 4pm Sydney job does that, or her explicit "push live").
+
+## Four curated questions from the 27-item "needs her word" bucket — 3 built (2026-09-20)
+
+The 149-item sweep above left 27 items needing her word, deliberately NOT
+dumped on her at once (this file's own standing "audit ≠ dump" rule) — the
+full 27 stayed written up above in 4 categories for her to consult in her
+own time. Picked 4 genuinely single-tap-decision-ready ones out of that
+bucket for an actual `AskUserQuestion` batch; she answered "Yes" to 3 and
+"No" to 1.
+
+**1 — the blur-only-commit bug, "Yes, fix it."** This is the SAME code this
+file already documents flagging to her 2026-09-10 and deliberately NOT
+touching ("it alters behaviour on fields she did not ask about"). Fixed
+both halves named in the question together:
+- `phTpCellEditOpen`'s general text-field branch (the TP grid's Aim /
+  Watch / Points / Phase-name cells) — extracted the commit logic into a
+  named, idempotent `commit()` (`let done = false; ...`), called directly
+  from `keydown` on Enter/Escape, kept the `blur` listener calling the same
+  `commit()` for click-away — the established pattern already used for the
+  cadence "Type instead" field and `data-pres-tab-rename`.
+- The plan-title rename handler (`data-tp-title-edit`) — identical shape,
+  its own `titleDone`/`titleCommit()` pair.
+Both verified live via `documentElement.outerHTML` source inspection (the
+committed idiom is present in the served app) — a real dispatched-click
+DOM test needs an open script/plan panel behind the login gate, same
+limitation as every batch in this file.
+
+**2 — a "Weight" Case type, "Yes, add it."** `PH_CASE_TYPES` gains
+`["weight", "Weight"]`, `PH_CASE_CATEGORY` gains `weight: "metabolic"` —
+same gap Stress had (a treatment-plan template with no matching Case
+option): the "Weight loss" template (`metab_weightloss`, category
+`"metabolic"`, its own `--ph-metab` colour family) has existed since
+2026-09-09 with nothing to pair it with. Added `caseHint: "weight"` to
+that template too, since it's the sole template in its category — same
+"sole-match gets a Suggested-match badge" treatment Stress's own
+`stress_general` template already has. Deliberately did NOT add a
+`phCaseAccentClass`/`.case-*` script-panel band colour or a `PH_CASE_QUIET`
+entry — Stress itself has neither (only Pain/Neurological/Menopause do),
+so Weight follows the same precedent rather than inventing new clinical
+quieting rules unbidden. Verified live: `PH_CASE_TYPES`/`PH_CASE_CATEGORY`
+both carry the new entry, `phTpBuiltinTemplates().find(t => t.id ===
+"metab_weightloss").caseHint === "weight"`.
+
+**3 — an intake-form allergies/meds/supplements notes field, "Yes, add a
+notes field."** `intake.html`'s "Medication & allergies" group (yes/no
+toggles only — taking prescribed medication, allergies, herbs, blood
+thinners — never WHICH ones) gains a free-text textarea, `#fMedNotes`,
+rendered right after that one group only (`historyGroupsHtml`'s per-group
+`extra` slot, scoped to `gr.g === "Medication & allergies"`). Carried as
+`history.medNotes` in the existing jsonb blob — no SQL/Supabase change,
+same reasoning already documented for `cycle.ivfCycles`. On the
+practitioner side, `phIntakeComputeDiff` surfaces it as its own "new" item
+(never a conflict — it's prose to append, not a field with one current
+value), deduped against `rec.medicalHistoryNotes` so re-reviewing an
+already-applied form never offers the same text twice;
+`phIntakeReviewApply` appends it through `presSanitizeNoteText` in the
+exact `[from intake DD Mon YYYY]\n<text>` tagged format the "Paste a note"
+feature already uses at its own append site (index.html ~45144-46) — one
+shared visual language for "text a patient/note added outside a typed
+field", not a second format invented for this one.
+**Patient-facing content, flagged per this file's own standing rule:** the
+field's *existence* was what she approved; the exact prompt wording
+("Which medications, allergies or supplements?") and hint text are mine,
+not yet read back to her — same DRAFT convention as every other
+Claude-authored patient-facing string in this app.
+Verified end-to-end via the real functions in the sandbox (login gate
+blocks the actual patient-side form submission, same limitation as every
+batch): a synthetic intake row with `history.medNotes` set correctly
+diffed to a "Note: ..." item, `phIntakeReviewApply()` correctly wrote
+`rec.medicalHistoryNotes = "[from intake 20 Sep 2026]\nMetformin 500mg
+twice daily, allergic to penicillin"` alongside the ordinary toggle
+answer, and re-running the diff against the same (now-applied) row
+correctly returned zero new items — the dedupe holds. Synthetic patient
+and queue row removed, `localStorage` residue checked absent.
+
+**4 — a one-tap dispense shortcut on the Booked-this-week table, "No, keep
+the friction."** Confirmed decision, not a build: the existing behaviour
+(dispense always requires opening the full script) stands as designed —
+no code change.
+
+Version: `lcm-build` `20260920-170000`, `sw.js`
+`lcm-20260920-questions-batch-builds`. Committed on `session-a`, not
+pushed to `main` (the 4pm Sydney job does that, or her explicit
+"push live").
