@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260920-190000">
+<meta name="lcm-build" content="20260920-200000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -8335,6 +8335,11 @@
   #pharmacyPage .ph-tp-announce.cal { background: var(--ph-green-tint); color: var(--ph-green-deep); }
   #pharmacyPage .ph-tp-announce.msk { background: var(--ph-gold-tint, #FFFBE2); color: var(--ph-gold-deep, #8A6D1A); }
   #pharmacyPage .ph-tp-announce.visit { background: var(--ph-purple-tint, #EFEAF7); color: var(--ph-purple-deep, #4A3470); }
+  /* her ask 2026-09-20: a phase-change message offer -- its own 4th
+     independent announce card (a different question, "should I text her
+     about this", from the calendar/MSK/pending-visit ones), so it uses the
+     app's own primary teal rather than reusing cal/msk/visit's colours. */
+  #pharmacyPage .ph-tp-announce.msg { background: var(--ph-herb-tint); color: var(--ph-herb-deep); }
   #pharmacyPage .ph-tp-announce .txt { flex: 1 1 auto; }
   #pharmacyPage .ph-tp-announce .acts { display: flex; gap: 6px; flex: none; flex-wrap: wrap; max-width: 100%; }
   #pharmacyPage .ph-tp-announce button { font: inherit; font-size: 11.5px; font-weight: 700; border-radius: 999px; padding: 4px 10px; cursor: pointer; border: 1px solid transparent; }
@@ -8343,6 +8348,8 @@
   #pharmacyPage .ph-tp-announce.msk .go { background: var(--ph-gold-deep, #8A6D1A); color: var(--ph-white); }
   #pharmacyPage .ph-tp-announce.msk .stay { background: transparent; border-color: var(--ph-gold-deep, #8A6D1A); color: var(--ph-gold-deep, #8A6D1A); }
   #pharmacyPage .ph-tp-announce.visit .go { background: var(--ph-purple-deep, #4A3470); color: var(--ph-white); }
+  #pharmacyPage .ph-tp-announce.msg .go { background: var(--ph-herb-deep); color: var(--ph-white); }
+  #pharmacyPage .ph-tp-announce.msg .stay { background: transparent; border-color: var(--ph-herb-deep); color: var(--ph-herb-deep); }
   /* her pick B 2026-09-20: the MSK "N more than planned" prompt lives in the visit table's Phase row */
   #pharmacyPage .ph-tp-vtab .tdw .ph-tp-announce { display: inline-flex; flex-basis: 100%; gap: 8px; margin: 2px 0 0; padding: 4px 8px; border-radius: 6px; font-size: 11.5px; animation: none; }
   #pharmacyPage .ph-tp-vtab .tdw .ph-tp-announce .txt { flex: 1 1 auto; font-weight: 600; }
@@ -27324,6 +27331,36 @@
         const parts = tpMskDismiss.dataset.tpMskDismiss.split(":");
         const done = Number(parts.pop());
         phTpMskVerifyDismissed.set(parts.join(":"), done);
+        phTpRepaintPhasePanel();
+        return;
+      }
+      const tpPhaseMsgSkip = e.target.closest("[data-tp-phasemsg-skip]");
+      if (tpPhaseMsgSkip) {
+        phTpPhaseMsgOffered.set(tpPhaseMsgSkip.dataset.tpPhasemsgSkip, true);
+        phTpRepaintPhasePanel();
+        return;
+      }
+      const tpPhaseMsgGo = e.target.closest("[data-tp-phasemsg-go]");
+      if (tpPhaseMsgGo) {
+        const key = tpPhaseMsgGo.dataset.tpPhasemsgGo;
+        phTpPhaseMsgOffered.set(key, true);
+        const [planId, phaseId] = key.split(":");
+        const plan = phTpFindPlan(phTpScreenPatient, planId);
+        const phase = plan && plan.phases.find(p => p.id === phaseId);
+        const name = phTpScreenPatient;
+        const moment = phase ? phPickByPlan(phase.phaseKey, phase.label, phPickIsIvf(name)) : null;
+        const tone = phMsgDefaultTone(name);
+        const tmpl = moment ? phCkResolveTemplate(moment, tone, false) : null;
+        const channel = phMsgContactPref(phPatientKey(name)) === "email" ? "email" : "sms";
+        const stats = phase ? phMsgPrepare({
+          names: [name], templateId: tmpl ? tmpl.id : null,
+          subject: tmpl ? tmpl.subject : `About ${phase.label}`,
+          body: tmpl ? tmpl.body : `Hi {{firstName}}, just checking in now that you're on ${phase.label} — how are you finding it? {{me}}`,
+          channel, context: { type: "phase", id: phase.id },
+        }) : null;
+        phFlashShow(stats && stats.ready && stats.ready.length
+          ? "Message prepared — see it in Communications → Prepared"
+          : "Nothing planned — no way to reach her on file (check her phone or email)");
         phTpRepaintPhasePanel();
         return;
       }
@@ -51349,6 +51386,15 @@ or changing anything in Cliniko.
   // asked for, ask whether to move on. Keyed by the exact visit count at
   // dismissal, so a later visit that pushes the count further re-asks.
   const phTpMskVerifyDismissed = new Map();   // "planId:phaseId" -> done count dismissed at
+  // her ask 2026-09-20 ("Want an automatic offer to appear whenever a phase
+  // changes?" -- "Yes, on every phase change"): message SELECTION already
+  // worked (phCkPick/phPickPlanPhase resolve the right template off the
+  // LIVE phase); nothing fired when a phase actually changed. Keyed by
+  // "planId:phaseId:sinceKey" so a phase that later re-enters current on a
+  // NEW date reads as a fresh gap, not permanently dismissed -- same "scope
+  // to what changes" reasoning as phTpMismatchDismissed/phTpMskVerifyDismissed
+  // above. Session-only, never persisted.
+  const phTpPhaseMsgOffered = new Map();
   /* "Everything in ⋯" (her pick, same round): Case, Phase, + Add phase,
      Full screen, All plans and Delete plan all live behind ONE ⋯ on the
      prescription tab strip. Open/close swaps just the menu node in place --
@@ -53026,6 +53072,45 @@ or changing anything in Cliniko.
       </div>
     </div>`;
   }
+  // her ask 2026-09-20 -- a phase-CHANGE message offer, independent of
+  // phTpPhaseMismatchHtml/phTpPhaseMskVerifyHtml (a different question --
+  // "should I tell her about this", not "should the phase advance"). Fires
+  // off phase.status/sinceKey directly rather than a set-once-at-the-write-
+  // site flag, because the two things that MOVE a phase -- her manual
+  // phTpSetPhaseStatus and the automatic phCycleSyncPlan/phTpIvfCdSync
+  // cascade -- do NOT share a common call path (neither cascade function
+  // calls phTpSetPhaseStatus; both mutate phase.status directly), so a
+  // single hook at one write site would miss the other's transitions.
+  // Reading status/sinceKey at render time catches both uniformly.
+  function phTpPhaseMsgOfferHtml(plan, phase) {
+    // review-caught trap this file already documents for the MSK verify
+    // card: an interrupted/paused plan can leave its interrupted phase's
+    // own status stuck at "current" (phTpApplyInterrupt never touches it),
+    // so without this the offer could fire on a phase that isn't actually
+    // being progressed right now.
+    if (plan.status !== "active" || phase.status !== "current") return "";
+    // a one-day grace window, not "exactly today" and not indefinite --
+    // exactly today alone would miss a phase that changed just after she
+    // closed the app; indefinite would flood every existing plan with an
+    // offer the first time each is opened after this ships, for phases
+    // that have been current for weeks.
+    const yKey = keyOf(new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() - 1));
+    if (!phase.sinceKey || phase.sinceKey < yKey) return "";
+    const key = `${plan.id}:${phase.id}:${phase.sinceKey}`;
+    if (phTpPhaseMsgOffered.has(key)) return "";
+    const name = phTpScreenPatient;
+    const moment = phPickByPlan(phase.phaseKey, phase.label, phPickIsIvf(name));
+    if (!moment) return "";
+    const tmpl = phCkResolveTemplate(moment, phMsgDefaultTone(name), false);
+    if (!tmpl) return "";
+    return `<div class="ph-tp-announce msg">
+      <div class="txt">Text ${esc(phCkFirst(name))} about <b>${esc(phase.label)}</b>?</div>
+      <div class="acts">
+        <button type="button" class="stay" data-tp-phasemsg-skip="${key}">Skip</button>
+        <button type="button" class="go" data-tp-phasemsg-go="${key}">Message her</button>
+      </div>
+    </div>`;
+  }
   // her pick 2026-09-18 -- the "persistent indicator" half of a gap the
   // phase-announce review surfaced but disclosed rather than guessed at:
   // once she's explicitly overridden which phase "Today's visit" is
@@ -53090,7 +53175,7 @@ or changing anything in Cliniko.
         </div>${fndWide}${(() => { const rc = phTpPhaseRecord(phTpScreenPatient, phase, plan.createdDate); return rc ? `<div class="ph-tp-vtwide"><div class="ph-tp-sec"><span>Visits <em>· ${esc(phase.label || "this phase")}</em></span></div>${phTpVisitsMergedHtml({ name: phTpScreenPatient, plan, phase, frozen, rc, hideToday: true })}</div>` : ""; })()}`
       : `<table class="ph-tp-grid">${PH_TP_COLGROUP}<tbody>${phTpPhaseBodyRows(plan, phase)}</tbody></table>`;
     return `<div class="ph-tp-pline ph-tp-panelhead ${phase.status}"><span class="in">${phTpPhaseLineInner(plan, phase)}</span></div>
-      ${mskNote ? announce.replace(mskNote, "") : announce}${phTpTodaysVisitElsewhereHtml(plan, phase)}
+      ${mskNote ? announce.replace(mskNote, "") : announce}${phTpTodaysVisitElsewhereHtml(plan, phase)}${phTpPhaseMsgOfferHtml(plan, phase)}
       ${body}`;
   }
   /* ==== OPTION K -- the visit-dated timeline spine (her design, settled
