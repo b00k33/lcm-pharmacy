@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260920-140000">
+<meta name="lcm-build" content="20260920-150000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -43836,7 +43836,7 @@ or changing anything in Cliniko.
   // §3 compare: only ever two, only ever within one row
   function phRenComparePick(id, rowKey, patientKey) {
     const already = phRenCompare.findIndex(c => c.id === id);
-    if (already >= 0) { phRenCompare.splice(already, 1); renderHxScreen(); return true; }
+    if (already >= 0) { phRenCompare.splice(already, 1); renderHxScreen(); phTpRerender(); return true; }
     // the four tongue rows share ONE compare group, so a natural-light shot
     // can be put beside a flash shot of the same tongue -- the whole reason
     // she takes both (her 2026-09-09 split into four lines is display only)
@@ -43847,6 +43847,13 @@ or changing anything in Cliniko.
     if (phRenCompare.length >= 2) return false;
     phRenCompare.push({ id, row: rowKey, patientKey });
     renderHxScreen();
+    // her report (2026-09-20, "compare with another does nothing"): a pick
+    // made from the Treatment Plan Grid's own "Tongue over time" strip (the
+    // 3rd surface that reuses data-ren-tl-open, added 2026-09-18/19 --
+    // renderHxScreen() above only ever knew about the other two) never
+    // showed anywhere on that page. See phTpRerender's fuller note on
+    // phRenCompareStartFromView below.
+    phTpRerender();
     return true;
   }
   // her ask 2026-09-19 ("how can i compare tongue photos from today to
@@ -43868,8 +43875,24 @@ or changing anything in Cliniko.
     phRenCompare = [{ id: rec.id, row: phRenRowKeyOf(rec), patientKey: st.patientKey }];
     phRenCropClose();
     presPhotosOpen = true;   // her Photos section is where the timeline lives -- unfold it so the hint is visible
+    // her report (2026-09-20, "when i select compare with another, nothing
+    // happens"): this only ever knew about TWO of the three places a tongue
+    // photo can open from -- the Health Exam screen (renderHxScreen) and the
+    // script panel's inline Photos section (phRenPhotosSecRefresh). The
+    // Treatment Plan Grid's own "Tongue over time" strip (phTpVrStripHtml,
+    // built 2026-09-18/19, reusing the same data-ren-tl-open the other two
+    // already used) was never taught about -- from there the modal just
+    // closed with nothing visibly different, since neither refresh call
+    // touches that page. phTpRerender() re-renders whichever Treatment Plan
+    // surface is actually open (modal or the inline embed) and safely
+    // no-ops when neither is; forcing the "Photos by date" table open too
+    // (the same phRenTimelineHtml this whole feature was built around, just
+    // folded on that page) puts its already-working "Pick a second photo…"
+    // hint and "Compare these 2 →" bar back in front of her.
+    phTpVrPhotoTableOpen = true;
     renderHxScreen();
     phRenPhotosSecRefresh(st.patientKey);
+    phTpRerender();
     phFlashShow("Now tap a second photo of the same type, below, to compare.");
   }
   function phRenCompareShow() {
@@ -52665,8 +52688,14 @@ or changing anything in Cliniko.
     const pk = phPatientKey(name);
     const photos = phRenPhotosFor(pk);
     if (photos == null) phRenLoadPhotosFor(pk);
+    // her ask (2026-09-20, "organise from oldest to newest from left to
+    // right"): the strip reads left-to-right like a timeline, so it sorts
+    // ASCENDING -- the opposite of the row list below it, which stays
+    // newest-first on purpose (her 2026-09-19 "Today first, history
+    // below" pick). Two different components, two different reading
+    // directions; this sort only touches the strip.
     return { pk, loading: photos == null, list: (photos || []).filter(r => phRenTypeOf(r) === "tongue")
-      .sort((a, b) => phRenDateKeyOf(b).localeCompare(phRenDateKeyOf(a)) || PH_TONGUE_SHOT_RANK[phRenShotOf(a)] - PH_TONGUE_SHOT_RANK[phRenShotOf(b)]) };
+      .sort((a, b) => phRenDateKeyOf(a).localeCompare(phRenDateKeyOf(b)) || PH_TONGUE_SHOT_RANK[phRenShotOf(a)] - PH_TONGUE_SHOT_RANK[phRenShotOf(b)]) };
   }
   // everything one visit row shows, read off the session + its findings
   function phTpVrFacts(name, rec, plan, node, nextNode, photos) {
@@ -52723,7 +52752,7 @@ or changing anything in Cliniko.
       const x = node ? node.x : null;
       const comp = x ? x.comp : (phCycleOn(rec) ? phCycleCompAsOf(rec, parseKey(k)) : null);
       const d = parseKey(k);
-      return `<button type="button" class="ph-tp-vr-shot" data-ren-tl-open="${esc(p.id)}" data-ren-tl-patient="${esc(photos.pk)}" data-ren-tl-shot="1"><img src="${p.objectUrl}" alt="Tongue ${esc(k)}"><span class="d">${d.getDate()} ${MON_SHORT[d.getMonth()]}${comp ? ` <i class="k-${esc(comp.phaseKey)}">CD ${comp.day}</i>` : ""}</span>${x && x.tongue ? `<span class="s">${esc(x.tongue)}</span>` : ""}</button>`;
+      return `<button type="button" class="ph-tp-vr-shot" data-ren-tl-open="${esc(p.id)}" data-ren-tl-row="${esc(phRenRowKeyOf(p))}" data-ren-tl-patient="${esc(photos.pk)}" data-ren-tl-shot="1"><img src="${p.objectUrl}" alt="Tongue ${esc(k)}"><span class="d">${d.getDate()} ${MON_SHORT[d.getMonth()]}${comp ? ` <i class="k-${esc(comp.phaseKey)}">CD ${comp.day}</i>` : ""}</span>${x && x.tongue ? `<span class="s">${esc(x.tongue)}</span>` : ""}</button>`;
     }).join("")}</div>`;
   }
   function phTpVrRefresh(name, planId) {
