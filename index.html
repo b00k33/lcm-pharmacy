@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260920-103000">
+<meta name="lcm-build" content="20260920-110000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -11805,6 +11805,17 @@
      fill the row's full width today. */
   #pharmacyPage .ph-refill-layout { display: flex; align-items: flex-start; gap: 16px; }
   #pharmacyPage .ph-refill-main { flex: 1 1 640px; min-width: 0; }
+  /* #247 (her "smooth the transition", 2026-09-20): a Dashboard Order/Refill
+     row tap still lands here in one tap -- phDashOpenRefill's destination is
+     unchanged -- but the arrival itself gets a brief snap-in instead of the
+     page just appearing instantly. One-shot, set by phRefJumpAnim/renderRefill,
+     never plays on an ordinary in-page refill interaction. Reuses the same
+     fade+rise keyframe already used for the "Today's visit" / door-card
+     entrances (phTpAnnounceIn) rather than a one-off animation. */
+  #pharmacyPage .ph-refill-layout.ph-ref-jumpin { animation: phTpAnnounceIn 200ms cubic-bezier(.2,.9,.3,1.1); }
+  @media (prefers-reduced-motion: reduce) {
+    #pharmacyPage .ph-refill-layout.ph-ref-jumpin { animation: none; }
+  }
   @media (max-width: 860px) {
     #pharmacyPage .ph-refill-layout { flex-direction: column; }
     /* align-items: flex-start above sizes stacked flex children to their
@@ -21831,6 +21842,9 @@
     // that makes her retype the name she just tapped.
     else if (h && phIsFormula(h)) { refRecipeId = ""; refNoRecipeJarId = h.id; }
     else { refRecipeId = ""; refNoRecipeJarId = ""; }
+    // #247, her "keep one-tap jump, smooth the transition" -- the destination
+    // is unchanged, only the arrival gets a brief entrance (see phRefJumpAnim).
+    phRefJumpAnim = true;
     savePharmacy(); renderPharmacy();
   }
   // (the Monday band and its "Sitting too long" / "Plan the order" review
@@ -61279,6 +61293,14 @@ Dosage: {dosage}
   // loaded this is ignored outright (every read site checks recipe first),
   // so a stale id here can never surface -- see the assignment sites below.
   let refNoRecipeJarId = "";
+  // her #247 ask 2026-09-20 ("make the movement smooth or minimal"): tapping
+  // a Dashboard Order/Refill row still jumps straight into this workbench
+  // (phDashOpenRefill's destination is unchanged, her explicit call) -- this
+  // is a ONE-SHOT flag phDashOpenRefill sets right before renderPharmacy(),
+  // consumed and cleared by the very next renderRefill() so it plays once for
+  // the jump itself, never for an ordinary in-page refill interaction
+  // (search, grams, ⋯ menu) that also calls renderRefill().
+  let phRefJumpAnim = false;
   let refHowMakeOpen = false;   // her ask 2026-08-15 (mockup 12): collapsed by default, one inline link opens it
   let refRecipePage = 1;        // same shared pagination as Inventory/Log/Prescriptions (PH_PAGE_SIZE)
   // her report (2026-08-17): typed text that matches 2+ formula recipes must
@@ -61495,6 +61517,10 @@ Dosage: {dosage}
     // her §5: a no-recipe formula started from the plan -- ignored the moment
     // a real recipe is loaded, so a stale id here can never show through
     const noRecipeJar = !recipe && refNoRecipeJarId ? PHARMACY.herbs.find(x => x.id === refNoRecipeJarId) : null;
+    // consume-and-clear: plays once for the Dashboard-tap jump this render,
+    // never for a later in-page renderRefill() call (search, grams, ⋯ menu)
+    const jumpAnim = phRefJumpAnim;
+    phRefJumpAnim = false;
     wrap.innerHTML = `
       <!-- THREE-ZONE LAYOUT (her ask 2026-08-16): on a phone this page used to
            push "Yes, make refill" below the fold, so confirming a batch meant
@@ -61503,7 +61529,7 @@ Dosage: {dosage}
            ZONE 2 (.ph-ref-mid) scrolls. Nothing about what a refill DOES has
            changed -- refMake() is untouched; this is markup and CSS only. -->
       ${phShellHead("Formula refill", `${phRefillFlagged().length} to make`, "")}
-      <div class="ph-refill-layout ph-ref-zones${recipe || noRecipeJar ? "" : " ph-ref-browsing"}">
+      <div class="ph-refill-layout ph-ref-zones${recipe || noRecipeJar ? "" : " ph-ref-browsing"}${jumpAnim ? " ph-ref-jumpin" : ""}">
       <div class="ph-refill-main">
       <section class="ph-widget">
       <div class="ph-ref-top">
