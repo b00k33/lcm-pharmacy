@@ -7039,3 +7039,63 @@ sidebar button, both click/input handler additions) grep-confirmed present
 exactly once. `lcm-build` `20260920-210000`, `sw.js`
 `lcm-20260920-patient-directory`. Committed `92e33d1` on `session-a` — not
 pushed to `main` (the 4pm Sydney job does that, or her explicit "push live").
+
+## A dispense that never gets logged can quietly be dispensed twice (2026-09-21 fix)
+
+A backlog item this file previously closed as "no reproducible mechanism
+found" ("Double-log and lost-pending-state defects" on the Dispense-or-
+Schedule stepper) turned out to have a real, source-traceable mechanism once
+actually traced — a re-verification pass caught what the earlier close-out
+missed by only looking at the CSS class the symptom shows through, not the
+data behind it.
+
+**The mechanism.** Her 2026-07-24 split made 💊 Dispense Stock and 💾 Save &
+log two separate steps: Dispense moves real herbs out of the jars and saves
+that immediately; Save & log writes the permanent record afterwards.
+Between the two, "stock is out, not yet logged" lived ONLY in three
+module-scope JS variables (`presPending`/`presPendingNotes`/`presPendingAt`)
+— never written to `localStorage`/`PRESC`. A refresh, a tab close, or a
+crash in that window wiped them silently. Reopening the script then read
+`presPending[t.id]` as empty and `t.lastDispensedAt` as unchanged, so the
+Dose Timeline showed "not yet dispensed" — even though the herbs had
+genuinely already left the shelf and the deduction was already saved.
+Dispensing again from there deducted the same herbs a second time, with
+nothing anywhere recording that the first deduction had ever happened. Real
+stock and, on a priced dispense, real revenue figures could drift from
+reality this way with no error and no trace.
+
+**The fix — a durable twin of the volatile state, mirroring how
+`t.lastDispensedAt` already works.** Three new fields on the prescription
+record itself (`t.pendingDispensedAt`/`-Items`/`-Notes`), persisted via
+`savePresc()` in the exact same atomic two-store pair
+`presSavePrescription` already uses for its own writes (both `savePharmacy()`
+and `savePresc()` must succeed, or everything — including the stock
+deduction — rolls back together, never leaving the two stores disagreeing).
+A single rehydration step, right where the three volatile maps are declared,
+reseeds them from `PRESC.items` at boot — so `presDoseTimelineHtml`, the
+leave-guard (`presGuardScript`/`presGuardFacts`), End of day
+(`phEodItems`), and the ↩ Undo-deduct/💾 Save & log handlers all keep reading
+the exact same three maps with **zero changes to any of them** — only their
+starting values differ. All three places that currently clear the volatile
+maps (Undo deduct, a failed save's rollback, Save & log folding the pending
+movement into the permanent record) now clear the persisted twin in the same
+breath, so the durable stamp can never outlive the fact it represents.
+
+**Verified** via an isolated copy of the four edited code paths (the app's
+`presPending`/`PRESC`/`PHARMACY` are closure-private, same established
+testing pattern used throughout this file) run against synthetic dispense
+data: dispense → simulate a reload (fresh volatile maps, `PRESC`/`PHARMACY`
+round-tripped through JSON) → pending state correctly rehydrates and stock
+stays correctly deducted, not double-counted (the exact bug scenario); a
+normal Save & log clears both the volatile and persisted markers and leaves
+the settled `lastDispensedAt` stamp; ↩ Undo deduct restores stock and clears
+both markers; a failed dispense-save (either store) fully rolls back with no
+orphaned volatile or persisted state; a failed Save & log restores the
+pending state (both volatile and persisted) rather than losing it; a
+never-dispensed script rehydrates to nothing. 21/21 assertions passed. The
+app's own ~60k-line script was also confirmed to still boot clean (login
+screen renders, no fatal console errors) after the edit, the same
+established limitation as every other batch in this file (the real login
+gate blocks a fully-booted click-through).
+
+`lcm-build` `20260921-000000`, `sw.js` `lcm-20260921-dispense-pending-persist`.
