@@ -6914,3 +6914,128 @@ Two genuinely new, decision-ready questions surfaced (phase→message
 auto-offer scope; the smaller patient-directory slice) — asked directly
 rather than built blind, since both are real taste/UI calls, not
 mechanical fixes.
+
+## Two of the re-scoped items, built — phase→message auto-offer, small Patient Directory (2026-09-20)
+
+Both questions from the section above were answered "Yes"/"Recommended" —
+**"Yes, on every phase change"** for the auto-offer, **"Yes, build the small
+read-only version"** for the directory slice. Built in that order.
+
+### A message offer fires automatically whenever a plan's phase changes
+
+The gap this closes: `phCkPick`/`phPickPlanPhase` already resolve the right
+message off a patient's live phase correctly, but only when she manually
+opens Check-in or Compose — nothing fired when a phase actually CHANGED,
+whether she moved it by hand (`phTpSetPhaseStatus`) or the cycle/IVF cascade
+moved it for her (`phCycleSyncPlan`/`phTpIvfCdSync`, both wrapped by
+`phCycleSyncPlans`, and `phTpSyncPlansOnOpen`'s "catch up on open" call).
+Those two paths don't share a call site, so a naive "set a flag where the
+phase is written" approach (the discipline `phMsgScanOffer`/
+`phMsgDispenseOffer` already use) would only ever catch the manual half.
+
+Built instead like `phTpPhaseMismatchHtml`/`phTpTodaysVisitElsewhereHtml` —
+render-time evaluation of the CURRENT state (`phase.status === "current"`,
+`phase.sinceKey`), not an event handler on the mutation. This is deliberately
+agnostic to HOW the phase got to "current," so it catches the manual and the
+automatic cascade uniformly with one code path.
+
+- **`phTpPhaseMsgOffered`** — a session-only `Map`, declared beside
+  `phTpMskVerifyDismissed`. Keyed `${plan.id}:${phase.id}:${phase.sinceKey}` —
+  the same "scope to what changes" idiom as the mismatch/verify dismiss maps
+  — so a phase re-entering "current" on a NEW date (a cycle wrap, a re-open)
+  reads as a fresh, un-dismissed gap rather than staying silenced forever by
+  an old dismissal.
+- **`phTpPhaseMsgOfferHtml(plan, phase)`** — fires only for an active plan's
+  current phase, only within the last day (`sinceKey >= yesterday`, so it
+  can't resurrect a months-old phase change on every render), only once
+  `phPickByPlan`/`phCkResolveTemplate` actually resolve a real message for
+  that phase (no message for the phase → nothing shown, same silent
+  degrade every other message-picker call site already uses), and only
+  while un-dismissed. Renders as a small `.ph-tp-announce.msg` card — new
+  herb-tint colours (`--ph-herb-tint`/`--ph-herb-deep`) so it reads as its
+  own thing beside the existing teal (fertility mismatch) and gold (MSK
+  verify) announce cards, not a third colour crammed onto either.
+- Slotted into `phTpPhasePanelHtml`'s return, right after
+  `phTpTodaysVisitElsewhereHtml` — a fourth independent slot, same pattern
+  as the three that already coexist there.
+- **Skip** just adds the key to the dismissal Map. **Message her** recomputes
+  `moment`/`tone`/`tmpl`/`channel` fresh from the key (never trusts stored
+  offer state, which could be stale by the time she taps it), calls the same
+  `phMsgPrepare(...)` every other message-offer already calls, flashes
+  confirmation via `phFlashShow`, then `phTpRepaintPhasePanel()` so the
+  offer clears from the panel it just fired from.
+
+Verified in the sandbox: full app boot clean (sidebar + Appointments render,
+no fatal parse errors — only the known, already-documented icon-fetch
+console noise); grep-confirmed every wiring point (the Map declaration, the
+function, its slot in the return statement, both click handlers) is present
+exactly once. Committed `f599cba` on `session-a` (code only, at the time —
+this write-up is the docs half of the two-commit pattern, several turns
+late). `lcm-build` `20260920-200000`, `sw.js` `lcm-20260920-phase-message-offer`.
+
+### Patient Directory — a small, read-only page for the patients no search can find
+
+Her exact question, verbatim: *"A patient who only has a submitted intake
+form, a booked appointment, or a touched history record — no script yet —
+is currently unfindable anywhere in the app... Want a small read-only
+'Patient Directory' page that lists everyone from all 4 sources, so nobody
+falls through the cracks before you've written a script for them?"* Her
+answer: **"Yes, build the small read-only version (Recommended)."**
+
+Deliberately the SMALL slice, not the full locked patient-first architecture
+memo (`project_pharmacy_patient_first_architecture.md`'s decisions 5/6) —
+those stay their own, later, larger piece; this is only the read-only list.
+
+- **`phDirBuild()`** unions six sources into one key→row map, keyed by
+  `phPatientKey` (plain lowercased name, same identity scheme every other
+  patient-facing function in this app already uses): scripts (`PRESC.items`,
+  via `presPatientFor`/`presIsFormula` — the exact same pair
+  `phClinikoKnownKeys()` uses), follow-ups, the dispense log, `PHARMACY.patients`
+  (all four the same union `phClinikoKnownKeys()` already does, but walked
+  directly here rather than through that function, so each source can be
+  tagged individually instead of collapsed into one opaque key set), the
+  intake queue (`phIntakeQueueRows`), and her appointment book (`phApptList()`).
+  Each row remembers which of the six sources it came from and a `why` line
+  (script > intake > appointment > follow-up/log > touched history record,
+  in that priority order) — read only, never `phPatientRec` (which mutates
+  on every call).
+- **`renderPhPatientDirectoryPage()`** follows `renderPhRecordsPhotosPage`'s
+  proven architecture exactly: a permanent wrapper div
+  (`#phPatientDirectoryWrap`, added to the static skeleton right after
+  `#phRecordsPhotosWrap`), built once then refreshed in place
+  (`phDirRefresh()`) so typing in the search box never rebuilds the box
+  itself — the same `#presSearch` rule this app applies everywhere a live
+  filter exists.
+- **Filter toggle**, reusing `.ph-recphotos-seg`/`.ph-recphotos-segbtn`
+  verbatim rather than inventing a second pill-toggle component: **Missing a
+  script** (default — the actual gap this page exists to close) and
+  **Everyone**. A live name search box filters within either.
+- **Each row is a tap**, reusing `data-ph-dash-patient-open` — the SAME
+  handler the appointment popup's "Open profile →" already uses, which
+  already does exactly the right thing for both cases: a patient with a
+  script opens straight to it (`presGoToScript`), a patient with none yet
+  jumps to Prescriptions search pre-filled with her name, ready for a new
+  script. No new click handler needed — reuse before invent.
+- **Sidebar**: a new "Patient directory" button in the Records group, right
+  after Suppliers, using the existing `#i-user` icon symbol. `"directory"`
+  added to the tab whitelist array and both routing-dispatch points
+  (`.hidden` toggle, render-function dispatch), same three-spot wiring every
+  other tab in this app follows.
+
+**Verified**: the union/dedup/why-priority logic tested in isolation against
+synthetic data shaped exactly like the six real sources (a patient in both
+scripts AND appointments correctly deduped to one row; a bare formula entry
+correctly excluded; a blank-patient log entry correctly ignored; all five
+`why` branches resolved in the right priority order; alphabetical sort
+correct) — the app's own functions are closure-private inside its single
+top-level IIFE with no broad `window` exposure, so, per this project's own
+established pattern for closure-private code, the edited function bodies
+were copied verbatim into an isolated browser test rather than reimplemented
+from scratch. Full app boot verified clean in the sandbox (login screen
+renders, no console errors — the one login gate blocks a fully-booted
+click-through, the same well-established limitation as most batches in this
+file). All wiring points (wrapper div, tab whitelist, both dispatch points,
+sidebar button, both click/input handler additions) grep-confirmed present
+exactly once. `lcm-build` `20260920-210000`, `sw.js`
+`lcm-20260920-patient-directory`. Committed `92e33d1` on `session-a` — not
+pushed to `main` (the 4pm Sydney job does that, or her explicit "push live").
