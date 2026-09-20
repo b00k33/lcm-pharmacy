@@ -6404,3 +6404,56 @@ database afterward.
 Committed `24680d8` on `session-a` — not pushed to `main` (the 4pm Sydney
 job does that, or her explicit "push live"). `lcm-build` `20260920-150000`,
 `sw.js` `lcm-20260920-tongue-compare-sortorder-fix`.
+
+## Backlog walk-through continued — four more "needs her word" items closed (2026-09-20)
+
+Her "go through backlog one by one" pulled the actual `data/audit_items.json`
+behind the published 296-item backlog artifact
+(`https://claude.ai/code/artifact/b7ae5751-304c-4750-8c12-dccff9bea31c`) — the
+59 `open_question` rows in their own stable 1-59 order (distinct from the
+ad-hoc numbering the earlier "Backlog walk-through 2026-09-19" section used
+for the same underlying items; cross-referenced by content, not number, to
+avoid confusing the two schemes). Cross-checked all 59 against everything
+resolved since — most were already closed in that section or superseded by
+later rebuilds. Four genuine remaining items got a real yes/no this round,
+all closed with **no code change**:
+
+- **Acupreg vs Home Visit colour precedence** — asked whether Acupreg's sage
+  green should win over the home-visit away colour when both apply. Her
+  **"No, leave it"** — Home Visit keeps winning; travel beats location, as
+  documented under "14. A HOME VISIT IS A PLACE, NOT A TREATMENT". Settled,
+  don't re-raise.
+- **Settings "placeholders folded" interpretation** — asked whether every
+  card folding to its heading by default was the right read of her original
+  ask. Her **"Yes, that's what I meant"** — confirmed, not a disclosed guess
+  any more.
+- **Facial-paralysis Zygomatic branch (single test item)** — asked whether
+  she wants a second observable zygomatic movement added (the branch has
+  only 1 item vs the other three branches' 2-4). Her **"Leave it as one
+  item"** — no second item, no reweighting. Settled.
+- **Follow-up composer / "Send later" scheduled messages** — asked whether
+  she's used the live feature and whether a message planned days ahead needs
+  its own dedicated wording (today it just reuses whatever check-in wording
+  she already picked at compose time). Her **"Works fine, no dedicated
+  wording needed"** — confirmed working as built, no new message copy to
+  write for this specific track.
+
+Still open from the same 59-item sweep, genuinely needing something from
+her rather than a quick tap — not raised as questions this round, left for
+her to bring when ready:
+- The clinic logo file, and real Zanda copy text/screenshots (the parser and
+  OCR tidy are tuned on synthetic pastes only, never her real data).
+- Sarah Chan's period-history record has junk dates from the old per-
+  keystroke bug (1 Jul / 27 Jul / 1 Aug / 1 Sep) sitting unconfirmed — only
+  she can say which are real; no bulk-clear tool exists to offer instead.
+- Relocation seed lists 4 and 5 (room contents; which supplier/invoice) ship
+  empty — only she has the real specifics; these are just blank to-do lists
+  in the app waiting for her own items, nothing to build.
+- The large "drafted wording awaiting her read/correct pass" bucket — IVF
+  frozen-track phase content + check-in messages, MSK Flare/Pregnancy
+  detour presets, the new Stress/Metabolic/Facial detour wording, Rebook/
+  Acu-followup/Gone-quiet "away" wording, the MSK/Stress/Weight-loss
+  templates, IVF Menstruation/Follicular wording, and the 14 new
+  +Supportive seeds — all mechanism-complete and live, all marked DRAFT
+  pending her own correction pass, same standing rule as every other
+  patient-facing message in this app.
