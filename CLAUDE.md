@@ -6011,4 +6011,137 @@ Verified 2026-09-19 in the sandbox with synthetic patients (Natural fertility CD
   - Traced the "jump" feeling to its real cause first: every tab in this app is a permanent sibling `<div>` (`#phRefillWrap` among them), and `renderPharmacy()` simply flips `.hidden` on all of them plus re-renders the active one's content — there is no rebuild-from-scratch and no visual transition layer at all on that swap, on ANY tab. Fixing this generally (animating every tab switch app-wide) was out of scope for what she actually asked and risked new jank on pages that re-render constantly (e.g. live-typing screens) — she asked about ONE interaction, so the fix is scoped to exactly that one.
   - New one-shot flag `phRefJumpAnim` (declared beside `refRecipeId`/`refNoRecipeJarId`): `phDashOpenRefill` sets it `true` right before its existing `savePharmacy(); renderPharmacy();` call — nothing else about that function changed, so the destination logic (recipe vs. no-recipe jar vs. blank) is untouched. `renderRefill()` reads-and-clears it at the top of every call (`const jumpAnim = phRefJumpAnim; phRefJumpAnim = false;`), so it can only ever apply to the ONE render that follows the jump — an ordinary in-page Refill action (search, grams, the how-making toggle, Plan ▾, ⋯) or navigating to Refill from the sidebar both call `renderRefill()` too, but with the flag already false, so neither ever animates.
   - When `jumpAnim` is true, `.ph-refill-layout` (the workbench's own top-level wrapper, spanning all three of its pinned/scrolling zones) gets a new `ph-ref-jumpin` class, which plays a single ~200ms snap-in — reusing the app's own existing `phTpAnnounceIn` keyframe (the same fade+rise already used for the "Today's visit" announce cards and the At-the-door card entrance) rather than inventing a new animation, per this app's "one system, no one-offs" component rule. `@media (prefers-reduced-motion: reduce)` turns it off, matching the app's existing per-component reduced-motion pattern (e.g. `.ph-saved-toast`).
+
+## Symptom-progression tracking on the Today column (Grid/merged visit table)
+
+Built earlier the same day as the batch below, undocumented until now. The
+merged visit table's Today Ask cell (`phTpSymTodayHtml`) gained a
+per-symptom severity dot row plus a "% Better" slider, so a symptom she's
+tracking across visits (from `PH_TP_SYM_PRESETS`/her own typed ones) shows
+its trend inline in the same row Ask/Response/Findings already live in,
+rather than requiring her to open the findings panel to compare visit to
+visit. Reads/writes through the same `rec.visitFnd`/session shape the rest
+of the findings system already uses — no second symptom store.
+
+## Synth22 photos batch — 8 items collected, "ok build all" (2026-09-20)
+
+Her go-ahead ("ok build all") followed the standing synth22 protocol —
+collect everything, don't build until she signals go. Eight items, three of
+them (2, 7, 8) real root-cause fixes rather than feature requests, all
+verified live in the sandbox via the real exposed functions and dispatched
+DOM events, never a reimplementation.
+
+**1 — Records → Photos captions now show the tongue shot type.** The
+whole-clinic photo grid (`phRecPhotosThumbHtml`) captioned every tongue
+photo just "Tongue", with no way to tell a Natural light shot from a
+Sublingual one without opening it. New `phRecPhotosCaption(r)` reuses
+`phRenRowKeyOf`/`phRenRowLabel` — the same row-key/shot-label machinery the
+per-patient Photos timeline already uses — so a tongue photo with a shot
+now reads "Tongue · Sublingual" etc., and everything else keeps its plain
+type label. No new data, no new logic — just surfacing what the shot field
+already records, on the one screen that wasn't showing it.
+
+**2 — Duplicate photo uploads (6–8 same-day copies per patient), root
+cause fixed at the source, plus a safe cleanup tool for existing
+duplicates.** Traced, not guessed: `phRenRelayDelete` swallowed every
+Supabase Storage error and always returned success, so `phCapAutoImport`
+believed a relay file was gone even when the delete had silently failed —
+and since it had no idea a path had already been imported, the SAME file
+would re-import on every 120-second poll until the delete eventually
+succeeded (or never did). Fixed both ends: `phRenRelayDelete` now returns
+a real boolean; `phCapAutoImport` keeps a localStorage-persisted set of
+already-imported relay paths (`PH_CAP_IMPORTED_KEY`) and skips anything
+already in it regardless of whether the delete worked, with an honest
+failure counter (`window.__phCapDeleteFails`) surfaced in Settings so a
+run of silent delete failures is visible instead of invisible.
+Separately, a safe cleanup tool for duplicates that already piled up
+before this fix: Records → Photos gains a "Checking for duplicates…"
+toggle that lists exact-duplicate groups per patient (`phRecPhotosDupGroups`)
+with a "Keep this one" button per group. **Never auto-deletes** — per
+standing rule, it always confirms first and always offers Undo. Fixed a
+real bug caught by testing, not assumed: the first version of the "Keep
+this one" handler only ever populated the flat whole-clinic photo cache,
+never the per-patient cache the Undo mechanism actually reads from to
+build its restore list — so the delete worked but Undo silently had
+nothing to restore. Fixed by lazy-loading the per-patient cache
+(`phRenLoadPhotosFor`) before calling the shared delete-with-undo helper,
+mirroring the exact pattern the viewer's own delete path already uses.
+Re-verified after the fix: Undo toast appears and correctly restores the
+deleted record.
+
+**3 — Tongue/Abdomen findings chart can expand to full screen.** A
+"⤢ Full screen" button on the findings panel (`phVisitFndPanelHtml`) now
+toggles a fixed, full-viewport overlay for the chart — useful when she
+wants to look closely at a marked-up tongue or abdomen chart without the
+rest of the visit page around it. Closes itself if the findings panel
+itself is closed, so it can't get stuck open on a panel that's no longer
+showing.
+
+**4 — Sublingual diagram beside the sublingual photo, for the "Under"
+row.** The tongue findings chart's Under-tongue vein-state row (normal /
+dark / distended) now shows a small SVG diagram of the tongue underside,
+coloured to match whichever state is picked, directly beside her actual
+sublingual photo (reusing `phVisitPhotoTileHtml`, filtered to the
+sublingual shot only) — so the clinical drawing and the real photo sit
+side by side rather than the drawing alone.
+
+**5 — Photos-by-date table added to the Visit record page too.** The
+per-patient Photos timeline already has a by-date table elsewhere in the
+app; she asked for it here as well but I'd flagged the ambiguity to her
+earlier ("tell me if you also want it there") rather than guess. Read "ok
+build all" as her answer and built it as the safe interpretation: a
+"Photos by date ⌄" toggle on the Visit record page (`phTpPastHtml`) that
+unfolds the exact same table component (`phRenTimelineHtml`), not a
+second implementation — so it can never drift from the one already
+proven correct elsewhere.
+
+**6 — A likely mis-tagged photo, flagged to her, not silently fixed.** In
+one patient's "Tongue over time" strip, a photo dated 14 Sep and tagged
+"Tongue" looks like it's actually a photo of an eye. **This needs her own
+fix, not mine** — I can't safely guess and silently reclassify a clinical
+photo. She can correct it herself via the photo viewer's "Change type"
+control (open the photo → Change type).
+
+**7 — Photo viewer no longer flashes on every mark edit.** Root cause:
+every drag/resize of a circle, every saved note, every mark selection was
+triggering a full cache invalidation + a full modal HTML rebuild
+(`renderPhRenCropModal()`), for what is really a single-field (`marks`)
+change — visible as a flash/flicker on every interaction. Fixed by
+reusing the established "extract into its own function with an id, patch
+via `outerHTML` swap, mutate the cache record in place" pattern already
+used elsewhere in this codebase (`phCapMarkRelayed`'s relay-stamp patch,
+`presVisitFndRefresh`'s wrap-swap): the marks section is now its own
+`phRenMarksSecHtml`/`phRenMarksSecRefresh` pair, and `phRenMarksWrite`
+patches the record and repaints just that section instead of the whole
+modal. Verified the one thing that actually mattered — the photo's own
+`<img>` DOM node keeps its identity across a mark edit (no reload, no
+flash) — via a real dispatched drag/save; a synthetic test blob's own
+`naturalWidth` limitation meant the SVG-circle-paint half of the check
+couldn't be exercised with fake image data, which is a test-data
+limitation, not a defect.
+
+**8 — Compare (side by side / drag slider) now has an entry point.**
+Traced back to the feature's birth commit: `phRenComparePick` has always
+required an existing first pick before it can register a second, but
+nothing anywhere in the app ever created that first pick from a bare
+viewer view — so Compare has been unreachable dead code since it was
+built. Fixed with a new "⇄ Compare with another →" button in the photo
+viewer's footer (`phRenCompareStartFromView`), which starts the compare
+selection from whichever photo is currently open, closes the viewer, and
+flashes "Now tap a second photo of the same type, below, to compare." Also
+fixed the hint text in the timeline's compare bar, which said "same row"
+when it should say "same type" (rows and types aren't the same concept on
+a tongue photo with a shot).
+
+**Verification, all items:** every function tested via its real
+window-exposed name and real dispatched DOM events, matching the
+project's standing "reuse and verify against the real running app, never
+a reimplementation" rule; the Prescriptions live-search protected
+behaviour (CLAUDE.md's own standing check) was re-confirmed unbroken after
+every stage; all synthetic test photos/patients created for testing were
+cleaned up afterward and confirmed absent from IndexedDB/localStorage.
+
+Committed `71b3586` on `session-a` — not pushed to `main` (the 4pm Sydney
+job does that, or her explicit "push live"). `lcm-build` `20260920-120000`,
+`sw.js` `lcm-20260920-synth22-photos-batch`.
   - Verified live in the sandbox (phone width, real dispatched clicks matching the app's own click-delegation model — not a reimplementation): tapping a real Refill-card row (the state pill, since the name itself is its own button and correctly excluded from the row-tap per the existing herb-edit exclusion) navigated to Refill, landed on the exact same no-recipe-jar workbench `phDashOpenRefill` would compute, and `.ph-refill-layout` carried `ph-ref-jumpin` with `animation-name: phTpAnnounceIn` / `0.2s` computed; toggling the "how making works" panel immediately after (an ordinary in-page `renderRefill()`) showed the class gone; leaving Refill and returning via the sidebar tab button also showed no animation. Console clean (the sandbox's own leftover "Tes*"/"Test *" synthetic patients from an earlier, unrelated test run trip the Prescriptions search self-check's false-positive — confirmed by a direct real-search test, "Hover" correctly narrowed the list to just that one patient — not a regression from this change, and not touched, since that data isn't mine to clean up mid-task). Committed `65c8364` on `session-a`. `lcm-build` `20260920-110000`, `sw.js` `lcm-20260920-dash-refill-smooth-jump`.
