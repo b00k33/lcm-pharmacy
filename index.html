@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260920-130000">
+<meta name="lcm-build" content="20260920-140000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -12397,6 +12397,17 @@
   }
   @media (min-width: 901px) {
     .ph-topbar-burger { display: none !important; }
+    /* her report (2026-09-20, "fix the ui especially the gap on right
+       border"): .ph-pres-fab (the phone/tablet "Show quick actions" FAB,
+       literal text "⋯" -- the dark dot-blob she saw) has its own display:
+       none default inside the @media (max-width:900px) block above, but
+       nothing constrains it past that width -- so on desktop it fell back
+       to its bare UA display (blockified into a real flex item the moment
+       it sits inside .ph-app-shell's flex row, per the CSS Display spec's
+       "an inline-level box that is a flex item computes to block"),
+       consuming real width at the right edge that .ph-shell-main should
+       have had. Belt-and-braces past the FAB's only intended range. */
+    .ph-pres-fab { display: none !important; }
   }
 
   /* her ask (2026-08-15, first "the location is intrusive", then "move the
@@ -12408,10 +12419,17 @@
      one that already worked for the location pill: sync.js's badge()/
      renderSavedAt() now mount #lcmLive/#lcmSaved into #phSidebarStatusSlot
      on mobile instead of floating fixed -- real document flow, so there is
-     no offset left to mis-guess. Desktop keeps the original floating
-     corner placement, untouched (no reported overlap there). #lcmNote (the
-     rare save-conflict toast) is intentionally NOT moved -- it's a
-     transient message, not an always-on status, so it stays a fixed toast. */
+     no offset left to mis-guess.
+     STALE as of 2026-09-20: this comment used to say "Desktop keeps the
+     original floating corner placement, untouched (no reported overlap
+     there)" -- that stopped being true the moment she reported it (two
+     screenshots: the dot floating in the .ph-pres-fab gap fixed above, and
+     the dot/pill sitting directly on #phShellFooter's own "backed up
+     <date>" text). Desktop now mounts into #phShellFooter's own real flex
+     row too, via the same footerSlot() helper -- see badge()/
+     renderSavedAt() below, search "footerSlot". #lcmNote (the rare
+     save-conflict toast) is intentionally NOT moved -- it's a transient
+     message, not an always-on status, so it stays a fixed toast. */
   @media (max-width: 900px) {
     #lcmNote { bottom: calc(140px + env(safe-area-inset-bottom, 0px)) !important; }
   }
@@ -64788,13 +64806,29 @@ Dosage: {dosage}
     d.style.background = on ? "#8FC4D6" : "#c98b6b";
     d.title = on ? "Synced — live" : "Reconnecting…";
   }
+  // her report (2026-09-20, the same gap this file already fixed once for
+  // mobile -- "Desktop keeps the original floating corner placement,
+  // untouched (no reported overlap there)" turned out to be stale): the
+  // fixed-corner placement was blind to #phShellFooter's own real, in-flow
+  // position, which sits at the TRUE bottom of a short desktop page (the
+  // same flex-column push the footer's own comment documents) -- exactly
+  // where the fixed dot/pill also sit, so the dot floated in the gap next
+  // to a narrower content area, or landed straight on top of "backed up
+  // <date>". Same fix as mobile: mount into the footer's own real flex
+  // row (footerSlot()) instead of a fixed corner, so there is no offset to
+  // guess. Falls back to the old fixed corner only when the footer hasn't
+  // been created yet (an auth/config screen before #pharmacyPage exists).
+  function footerSlot() { return window.innerWidth > 900 ? document.getElementById("phShellFooter") : null; }
   function badge() {
     var b = document.getElementById("lcmLive");
     if (!b) { b = document.createElement("div"); b.id = "lcmLive"; document.documentElement.appendChild(b); }
-    var slot = statusSlot();
+    var slot = statusSlot(), foot = !slot ? footerSlot() : null;
     if (slot) {
       b.style.cssText = "width:8px;height:8px;border-radius:50%;flex:0 0 auto";
       if (b.parentElement !== slot) slot.appendChild(b);
+    } else if (foot) {
+      b.style.cssText = "width:8px;height:8px;border-radius:50%;flex:0 0 auto;margin-left:14px";
+      if (b.parentElement !== foot) foot.appendChild(b);
     } else {
       b.style.cssText = "position:fixed;right:12px;bottom:12px;width:11px;height:11px;border-radius:50%;z-index:2147483000;box-shadow:0 0 0 3px rgba(0,0,0,.12)";
       if (b.parentElement !== document.documentElement) document.documentElement.appendChild(b);
@@ -64814,14 +64848,26 @@ Dosage: {dosage}
     // is safe by construction: .ph-shell-content already reserves 84px of bottom
     // padding for the fixed tab bar, so a pill sitting inside that reserved strip
     // cannot cover a row. All placement lives in the .ph-m-saved CSS rule (one
-    // source of truth, no inline offsets to drift); on desktop it keeps its
-    // original floating-corner inline style. The live dot is untouched either way
-    // -- badge() still mounts it into the drawer slot on mobile.
+    // source of truth, no inline offsets to drift).
+    // Desktop (2026-09-20 fix): the old floating-corner inline style was
+    // itself a guessed fixed offset with the exact same failure shape she'd
+    // already reported once for mobile -- it landed on top of
+    // #phShellFooter's own "backed up <date>" text the moment the footer
+    // was visible at the bottom of a short page. Mounts into the footer's
+    // real flex row now (footerSlot()), same "measure, don't guess" fix as
+    // mobile got. The fixed corner style survives only as the fallback for
+    // before #phShellFooter exists (an auth/config screen).
     var onMobile = window.innerWidth <= 900;
+    var foot = onMobile ? null : footerSlot();
     w.className = onMobile ? "ph-m-saved" : "";
-    w.style.cssText = onMobile ? ""
-      : "position:fixed;right:28px;bottom:10px;font:500 10.5px -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#87A0A9;z-index:2147483000;pointer-events:none;white-space:nowrap";
-    if (w.parentElement !== document.documentElement) document.documentElement.appendChild(w);
+    if (foot) {
+      w.style.cssText = "font:500 10.5px -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:var(--ph-struct-lbl,#9CBAC4);white-space:nowrap;margin-left:8px";
+      if (w.parentElement !== foot) foot.appendChild(w);
+    } else {
+      w.style.cssText = onMobile ? ""
+        : "position:fixed;right:28px;bottom:10px;font:500 10.5px -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#87A0A9;z-index:2147483000;pointer-events:none;white-space:nowrap";
+      if (w.parentElement !== document.documentElement) document.documentElement.appendChild(w);
+    }
     // her quiet-swap pick (2026-09-01): the same chip carries the offline /
     // syncing states -- nothing else on screen changes
     if (offlineMode || !navigator.onLine) { w.textContent = "📴 offline — saving locally"; return; }
