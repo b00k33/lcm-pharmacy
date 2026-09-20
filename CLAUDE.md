@@ -6702,3 +6702,79 @@ Version: `lcm-build` `20260920-170000`, `sw.js`
 `lcm-20260920-questions-batch-builds`. Committed on `session-a`, not
 pushed to `main` (the 4pm Sydney job does that, or her explicit
 "push live").
+
+## 208-item backlog re-verification, second question batch — 1 CSS fix, 1 detour built, 2 closures, 1 measurement in progress (2026-09-20)
+
+A separate, parallel round to the "Four curated questions" section directly
+above — that one came from a concurrent session's own pass over the same
+208-item audit dataset (59 `open_question` + 98 `not_built` + 50 `partial` +
+1 `cannot_tell`, published at the artifact behind
+`b7ae5751-304c-4750-8c12-dccff9bea31c`); this one re-ran the FULL 208-item
+set fresh through an 8-agent verification Workflow, then did its own
+correction pass on the results (6 of the workflow's own classifications
+were wrong — 4 `safe_to_build` verdicts that were actually already shipped,
+2 more that were genuinely `needs_her_word` rather than build-blind
+candidates), and curated 4 of the resulting `needs_her_word` items into an
+actual popup. **Both sessions' work landed on `session-a` without
+conflicting** — different files/functions touched, confirmed by `git diff
+--stat` before either commit.
+
+- **`.ph-cyc-strip-head` flex-wrap fix.** The trap flagged in the original
+  2026-09-12 judges' review for the many-past-periods feature — the
+  header's `display:flex` with no `flex-wrap` — was found still live: the
+  check-in card's own cell (~244px) is narrower than "Log a period" +
+  subtitle + ‹› nav all fit on one line without wrapping. One-line CSS
+  addition, verified live in the sandbox via a computed-style check at
+  244px width (`flexWrap: "wrap"` after the fix, `"nowrap"` before). The
+  `renderPresPanel`'s `el.scrollTop = 0` reset (the OTHER build trap from
+  the same 2026-09-12 review) was deliberately NOT touched this round —
+  too central and too tied to this project's own real scroll-position
+  incident history to change blind without either a deeper trace of the
+  `presStageForId !== t.id` guard's exact timing, or a reproduced failure
+  to test against; left open.
+- **Postpartum recovery detour** — built. A sixth `PH_TP_DETOUR_META`
+  entry (`postpartum`), reached only through a Pregnancy plan's own
+  "+ Add phase" picker, alongside the existing High-risk monitoring
+  detour — never part of a new Pregnancy plan's default phase list, same
+  framing as her question. Draft clinical content (Qi & Blood recovery,
+  milk supply, wound/lochia watch-fors) — **hers to read and correct**,
+  same convention as every other Claude-authored template phase in this
+  app. Mirrors the exact wiring shape already proven four times over
+  (flare/highrisk/crisis/plateau/facialflare) — `PH_TP_PHASE.postpartum`,
+  `phTpDetourKindsFor` pushes it for `templateName === "Pregnancy"`, one
+  new `PH_TP_DETOUR_META` entry, one new dispatch branch in the
+  `data-tp-detour-own` click handler — the picker's own render function
+  already maps generically over `phTpDetourKindsFor(plan)`, so no UI
+  markup needed writing by hand. Verified: the app boots clean (full
+  sidebar + Appointments render, confirming the ~60k-line script still
+  parses) and all four wiring points cross-reference correctly by grep;
+  the interactive "+ Add phase" click-through itself is blocked by the
+  real login gate in this sandbox, same limitation as most batches in
+  this file — not click-tested end-to-end.
+- **Dashboard mobile quick-actions — "Keep the labelled row on mobile."**
+  Confirmed decision, not a build: the text-labelled action row (To
+  order / Formula refill / Patient photo) is the permanent mobile design,
+  not a placeholder waiting for desktop's icon-cluster treatment. No code
+  change.
+- **Letter templates editor — "Prose-only is enough."** Confirmed
+  decision, not a build: the computed sections (findings chart, dose
+  table, cycle status, body-map picture, stage tables) stay fixed and
+  non-editable by design — not a gap to close. No code change.
+- **Blank-formula-name revenue-measurement — in progress, not yet
+  reported.** Her answer was "Yes, measure it and show me" on running the
+  real dollar/profit/gram impact of the still-open display sites for the
+  2026-09-09 blank-formula-name bug (the original fix closed the
+  miscount going forward; measuring the REMAINING affected historical
+  display sites before touching them further is her explicit ask, same
+  precedent as the original fix's own "measure it against her real data
+  before changing it" note). A research pass is underway to locate the
+  exact function/line numbers and confirm whether a real measurement is
+  feasible from this sandbox (it likely needs either a script run against
+  her live Supabase data, or an export she provides — this sandbox has no
+  signed-in account and never will, per the standing rule against ever
+  entering her real credentials here). Result to follow in a later entry.
+
+Version: `lcm-build` `20260920-190000`, `sw.js`
+`lcm-20260920-postpartum-detour`. Committed `34644e4` (flex-wrap) and
+`d6e9e02` (Postpartum) on `session-a` — not pushed to `main` (the 4pm
+Sydney job does that, or her explicit "push live").
