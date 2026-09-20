@@ -6794,3 +6794,123 @@ Version: `lcm-build` `20260920-190000`, `sw.js`
 `lcm-20260920-postpartum-detour`. Committed `34644e4` (flex-wrap) and
 `d6e9e02` (Postpartum) on `session-a` — not pushed to `main` (the 4pm
 Sydney job does that, or her explicit "push live").
+
+## Re-scoping the 7 "large feature work" items — one turned out already built, one turned out small (2026-09-20)
+
+"Go through the rest of the backlog" again — rather than re-run another
+full 208-item grep sweep (three consecutive rounds already found that
+pool close to dry, per Batch 15-17's own note), dispatched 8 agents to
+re-scope the "10 large feature work" bucket from the 149-item sweep (only
+7 were ever named) plus recheck 3 items the same sweep left ambiguous.
+Worth doing: this exact judgment — "is this actually as big as it looks"
+— has been wrong before in this file (To-Order column drag was misjudged
+three separate times across Batches 5/7/12 before Batch 18 built it for
+real), so a fresh, independent re-read earns its keep.
+
+**Corrections to the "10 large feature work" bucket, source-verified:**
+- **"Many-past-periods bulk entry" — WAS ALREADY BUILT, mislabelled as
+  unattempted.** `phCycleMonthHtml` (~line 49238) shipped `829b855`,
+  2026-09-13 — the SAME DAY as her stretch-strip rejection ("i dont like
+  that feature. how it works and how it skips") — as a real Cliniko-style
+  month calendar, ‹ › one month at a time, reusing the same tap-a-day →
+  flow/pain/estimate popover and 14-day correction rule as the weekly
+  strip. It answers her literal ask ("a month calendar, one month at a
+  time") but never got a CLAUDE.md write-up, so it read as absent in
+  every later batch note that cited this bucket. **A real, smaller gap
+  does remain**: it's still one date/one popover/one Log tap at a time —
+  no multi-select, no batch form, and reaching a year back still means
+  repeated ‹ taps (no year jump) — but the core need (month-at-a-time
+  instead of week-at-a-time) is met. Not worth re-raising unless she
+  specifically asks for true multi-select.
+- **"Treatment-plan-phase→message data-model wiring" — smaller than
+  thought; message SELECTION is already done, only the auto-trigger is
+  missing.** `phCkPick`/`phPickPlanPhase` already resolve the right
+  message off a patient's live phase correctly (IVF late-period
+  exclusion, away-tone forcing, all working) — but only when she manually
+  opens Check-in/Compose. The actual gap is narrower: nothing fires when
+  a phase CHANGES. The exact shape needed already exists twice over
+  (`phMsgScanOffer`, `phMsgDispenseOffer`/`schedMaybeOfferRepeat` — a
+  flash "Text her? Skip / Plan it" landing as an ordinary
+  `phMsgPrepare`/Due row) — hooking the same pattern into
+  `phTpSetPhaseStatus` and the cascade paths (`phTpCascadeTo`/
+  `phCycleSyncPlan`) is a genuinely small, low-risk build. **What's
+  actually hers to decide**: which phase transitions should offer (every
+  one, or a named subset) and whether a CYCLE-AUTO-advance (not just her
+  own manual click) should also flash one — a message-frequency/alert-
+  fatigue call, not a data-model gap. Asked below.
+- **"A real 4-source patient directory" — smaller than the full locked
+  vision; a real, confirmed gap.** `phClinikoKnownKeys()` already unions
+  all 4 sources, but nothing renders it as a browsable list — the
+  Patient-profile search (`renderPresList`) and even the shared name-
+  autocomplete are `PRESC.items`-only (scripts). A patient who exists
+  only via a touched history record, a submitted-but-unapplied intake, or
+  a booked appointment is genuinely unfindable anywhere in the UI today —
+  not cosmetic. A read-only listing page (resolve each key to a display
+  row + status line, e.g. "Intake submitted, no script yet") is a
+  small-to-medium standalone build — separable from the FULL 8-decision
+  locked architecture (default-view placement, "+ New patient" CTA swap,
+  quieter in-profile scripts), which stays a genuinely larger, later
+  piece. Asked below whether she wants the small read-only slice.
+- **"AI-assisted intake extraction via the Claude API" — confirmed still
+  genuinely large, AND it's a re-confirmed settled decision, not an open
+  gap.** A 2026-09-05 code comment already records her call as "hybrid:
+  keywords now, no AI." This is a static, client-side-only app with no
+  backend — there is nowhere to safely hold an API key (patient-facing
+  `intake.html` is unauthenticated and public), so even a minimal version
+  needs new backend infrastructure this project has never had, plus a
+  real privacy/consent decision about clinical data leaving her device.
+  No safe incremental slice exists. Correctly stays parked; not raised.
+- **"A real desktop .exe build" — confirmed no evidence she's ever asked
+  for this; stays parked.** The 2026-08-03 PWA-install decision's own
+  memory says explicitly: "NOT an Electron/Tauri build... If she ever
+  asks for a real .exe, that is a new decision." She hasn't since — this
+  item only exists because an earlier audit generated it as a
+  suggestion. A real .exe's only genuine gains over the working PWA
+  install (own window/icon, offline, no browser chrome — all already
+  live) are system-tray residency and Windows auto-launch, neither ever
+  requested. Not worth raising proactively.
+- **"An app-wide font-token migration" — confirmed genuinely large, now
+  with a real number.** Grep count: ~1,655 hardcoded `font-size:`
+  declarations in `#pharmacyPage`'s CSS against only 133 already on
+  `var(--fs-*)` tokens — roughly 7-8% migrated. Batch 12's "last 4 gaps"
+  language described closing out ONE panel (Dosage & Price), never an
+  app-wide claim. A real multi-session migration (15-25+ batches at the
+  pace prior ones have run), each needing its own screen-by-screen visual
+  verification — correctly stays its own separately-tracked item, not
+  folded into a single backlog pass.
+- **"The two-computer relay race" / sync shrink-guard timing — reconfirmed
+  correctly off-limits, nothing has changed.** Same constraint every
+  prior decline cited (Batch 10, Phase 6): this sandbox has no signed-in
+  Supabase account and the standing rule forbids ever creating one with
+  her real credentials, so the fragile sync/relay subsystem (real
+  incident history: Rx wipe, Acupreg merge/wipe, patients shrink-guard)
+  can't be exercised end-to-end here. Stays blocked until she gives her
+  word or a reproducible failure exists to test against.
+
+**Deferred-item recheck, source-verified:**
+- **"Blur-only commit on TP grid cells / plan-title rename" — CLOSED, not
+  merely reclassified.** The 149-item sweep's "needs her word" label on
+  this predates the actual fix, which shipped in the "Four curated
+  questions" batch the same day (`titleCommit`/`let done = false` guards,
+  both the plan-title rename and the TP grid's general text-field
+  branch) — confirmed live in current source. The stale "needs her word"
+  bookkeeping is corrected to CLOSED here.
+- **"Double-log / lost-pending-state defects" on the Dispense-or-Schedule
+  stepper** — still no reproducible mechanism found (`.ph-dose-step
+  .pending` is plain derived CSS state, `schedMaybeOfferRepeat`'s call
+  chain shows no double-fire pattern). Still needs a real repro from her,
+  not a blind patch — unchanged.
+- **`createImageBitmap` decode path for photo saves** — still genuinely
+  unbuilt (zero matches). Still deferred given the photo pipeline's real
+  incident history — unchanged.
+- **3 "flagged but non-urgent" items spot-checked** (sheet-row density
+  28px→26px, residual Book33 app-identity strings beyond the ones this
+  session already fixed, Appointments List ≤900px stacked-card reflow) —
+  all still accurate and still correctly non-urgent, no evidence she's
+  asked for any of them.
+
+No code changes this pass — research and documentation correction only.
+Two genuinely new, decision-ready questions surfaced (phase→message
+auto-offer scope; the smaller patient-directory slice) — asked directly
+rather than built blind, since both are real taste/UI calls, not
+mechanical fixes.
