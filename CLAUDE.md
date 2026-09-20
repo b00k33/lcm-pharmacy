@@ -324,15 +324,18 @@ update STYLE-LCM.md to match so future builds don't undo it.
   it (`presTabLabelSync`, `presBandMetaRefresh`). Phone note: `#pharmacyPage input`
   carries a `font-size:16px !important` iOS zoom guard, so any pill that becomes a
   field grows 26px→32px under 640px — leave the guard alone, it is deliberate.
-  **A blank formula name is not harmless — flagged to her 2026-09-09, NOT yet
-  fixed.** `presSavePrescription` logs `what: formulaLabel || t.name`, so an
-  un-named patient script writes `e.what === e.patient`; `phEntryIsHouseMake`'s
-  "sold to someone" escape hatch is keyed on `e.patient !== e.what` and so fails
-  open, and `phEntryJar`'s single-ingredient fallback then resolves the one herb's
-  jar. A single-ingredient dispense of a house-blend jar with no formula typed is
-  therefore counted as a stock batch, not a sale — missing from revenue, profit,
-  grams and most-dispensed. Measure it against her real data before changing it;
-  it rewrites historical figures.
+  **A blank formula name is not harmless — flagged to her 2026-09-09, FIXED
+  the same evening, 49 minutes later** (this paragraph was stale until
+  2026-09-20 — see "A dispense with a patient on it is ALWAYS a sale" under
+  the protected-behaviours section below for the actual fix and her real
+  measured numbers; corrected here so this paragraph stops reading as an
+  open gap). Original problem: `presSavePrescription` logged
+  `what: formulaLabel || t.name`, so an un-named patient script wrote
+  `e.what === e.patient`; `phEntryIsHouseMake`'s old "sold to someone"
+  escape hatch was keyed on `e.patient !== e.what` and so failed open, and
+  `phEntryJar`'s single-ingredient fallback then resolved the one herb's
+  jar — a single-ingredient dispense of a house-blend jar with no formula
+  typed was counted as a stock batch, not a sale.
   **PASTE A CONTACT CARD (her ask 2026-09-10, "allow for me to paste patient info
   e.g." + a phone Contacts-card screenshot; BUILT, 8 locked answers).** A quiet
   "📋 Paste contact card" link — never always-visible — on the script's Name field
@@ -6760,19 +6763,32 @@ conflicting** — different files/functions touched, confirmed by `git diff
   decision, not a build: the computed sections (findings chart, dose
   table, cycle status, body-map picture, stage tables) stay fixed and
   non-editable by design — not a gap to close. No code change.
-- **Blank-formula-name revenue-measurement — in progress, not yet
-  reported.** Her answer was "Yes, measure it and show me" on running the
-  real dollar/profit/gram impact of the still-open display sites for the
-  2026-09-09 blank-formula-name bug (the original fix closed the
-  miscount going forward; measuring the REMAINING affected historical
-  display sites before touching them further is her explicit ask, same
-  precedent as the original fix's own "measure it against her real data
-  before changing it" note). A research pass is underway to locate the
-  exact function/line numbers and confirm whether a real measurement is
-  feasible from this sandbox (it likely needs either a script run against
-  her live Supabase data, or an export she provides — this sandbox has no
-  signed-in account and never will, per the standing rule against ever
-  entering her real credentials here). Result to follow in a later entry.
+- **Blank-formula-name revenue-measurement — closed, false premise (the
+  question itself was built on a stale audit item).** Her answer was
+  "Yes, measure it and show me", asked on the assumption this was still
+  an open bug with unmeasured historical impact. Traced the actual
+  history: the bug was flagged 2026-09-09 17:53 and **fixed the same
+  evening, 49 minutes later, at 18:42** (`cc233937`) — `phEntryIsHouseMake`
+  now tests `e.patient` truthiness (a real buyer) instead of the old
+  `e.patient !== e.what` equality test, `presSavePrescription` now names a
+  blank-formula single-jar dispense after the jar rather than the patient
+  so the collision stops being CREATED, and — since classification is
+  recomputed live from `e.patient` on every report render, with no stored
+  flag — the fix is retroactive across all historical data, no migration
+  needed. All 3 current display sites (the Profit report, Stock
+  Statistics' 6-month strip, and its Most-dispensed ranking) already call
+  the fixed function; no live miscount found in the code. **The real
+  measurement she asked to see already exists, written the same day**
+  ("A dispense with a patient on it is ALWAYS a sale" above): 11 real
+  sales — $644.20, $423.27 profit, 1,030 g, 28 Jul–7 Sep — had been
+  quietly filed as stock she'd made; August alone showed $791.30 instead
+  of $1,217.70. What was actually stale was CLAUDE.md's OWN bug-report
+  paragraph (lines 327-335 as they stood), never edited back to point at
+  the fix written 49 minutes later in the same file — corrected in this
+  pass. If she wants a FRESH number reproduced/extended past 2026-09-09
+  (the repo holds dozens of dated JSON export backups that could support
+  this), that needs an actual JS/Python runtime, which this sandbox
+  doesn't have on PATH — a real gap, but a tooling one, not a code bug.
 
 Version: `lcm-build` `20260920-190000`, `sw.js`
 `lcm-20260920-postpartum-detour`. Committed `34644e4` (flex-wrap) and
