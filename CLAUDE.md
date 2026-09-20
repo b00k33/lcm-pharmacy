@@ -6011,6 +6011,7 @@ Verified 2026-09-19 in the sandbox with synthetic patients (Natural fertility CD
   - Traced the "jump" feeling to its real cause first: every tab in this app is a permanent sibling `<div>` (`#phRefillWrap` among them), and `renderPharmacy()` simply flips `.hidden` on all of them plus re-renders the active one's content — there is no rebuild-from-scratch and no visual transition layer at all on that swap, on ANY tab. Fixing this generally (animating every tab switch app-wide) was out of scope for what she actually asked and risked new jank on pages that re-render constantly (e.g. live-typing screens) — she asked about ONE interaction, so the fix is scoped to exactly that one.
   - New one-shot flag `phRefJumpAnim` (declared beside `refRecipeId`/`refNoRecipeJarId`): `phDashOpenRefill` sets it `true` right before its existing `savePharmacy(); renderPharmacy();` call — nothing else about that function changed, so the destination logic (recipe vs. no-recipe jar vs. blank) is untouched. `renderRefill()` reads-and-clears it at the top of every call (`const jumpAnim = phRefJumpAnim; phRefJumpAnim = false;`), so it can only ever apply to the ONE render that follows the jump — an ordinary in-page Refill action (search, grams, the how-making toggle, Plan ▾, ⋯) or navigating to Refill from the sidebar both call `renderRefill()` too, but with the flag already false, so neither ever animates.
   - When `jumpAnim` is true, `.ph-refill-layout` (the workbench's own top-level wrapper, spanning all three of its pinned/scrolling zones) gets a new `ph-ref-jumpin` class, which plays a single ~200ms snap-in — reusing the app's own existing `phTpAnnounceIn` keyframe (the same fade+rise already used for the "Today's visit" announce cards and the At-the-door card entrance) rather than inventing a new animation, per this app's "one system, no one-offs" component rule. `@media (prefers-reduced-motion: reduce)` turns it off, matching the app's existing per-component reduced-motion pattern (e.g. `.ph-saved-toast`).
+  - Verified live in the sandbox (phone width, real dispatched clicks matching the app's own click-delegation model — not a reimplementation): tapping a real Refill-card row (the state pill, since the name itself is its own button and correctly excluded from the row-tap per the existing herb-edit exclusion) navigated to Refill, landed on the exact same no-recipe-jar workbench `phDashOpenRefill` would compute, and `.ph-refill-layout` carried `ph-ref-jumpin` with `animation-name: phTpAnnounceIn` / `0.2s` computed; toggling the "how making works" panel immediately after (an ordinary in-page `renderRefill()`) showed the class gone; leaving Refill and returning via the sidebar tab button also showed no animation. Console clean (the sandbox's own leftover "Tes*"/"Test *" synthetic patients from an earlier, unrelated test run trip the Prescriptions search self-check's false-positive — confirmed by a direct real-search test, "Hover" correctly narrowed the list to just that one patient — not a regression from this change, and not touched, since that data isn't mine to clean up mid-task). Committed `65c8364` on `session-a`. `lcm-build` `20260920-110000`, `sw.js` `lcm-20260920-dash-refill-smooth-jump`.
 
 ## Symptom-progression tracking on the Today column (Grid/merged visit table)
 
@@ -6144,4 +6145,58 @@ cleaned up afterward and confirmed absent from IndexedDB/localStorage.
 Committed `71b3586` on `session-a` — not pushed to `main` (the 4pm Sydney
 job does that, or her explicit "push live"). `lcm-build` `20260920-120000`,
 `sw.js` `lcm-20260920-synth22-photos-batch`.
-  - Verified live in the sandbox (phone width, real dispatched clicks matching the app's own click-delegation model — not a reimplementation): tapping a real Refill-card row (the state pill, since the name itself is its own button and correctly excluded from the row-tap per the existing herb-edit exclusion) navigated to Refill, landed on the exact same no-recipe-jar workbench `phDashOpenRefill` would compute, and `.ph-refill-layout` carried `ph-ref-jumpin` with `animation-name: phTpAnnounceIn` / `0.2s` computed; toggling the "how making works" panel immediately after (an ordinary in-page `renderRefill()`) showed the class gone; leaving Refill and returning via the sidebar tab button also showed no animation. Console clean (the sandbox's own leftover "Tes*"/"Test *" synthetic patients from an earlier, unrelated test run trip the Prescriptions search self-check's false-positive — confirmed by a direct real-search test, "Hover" correctly narrowed the list to just that one patient — not a regression from this change, and not touched, since that data isn't mine to clean up mid-task). Committed `65c8364` on `session-a`. `lcm-build` `20260920-110000`, `sw.js` `lcm-20260920-dash-refill-smooth-jump`.
+
+## Photo timeline gains a "By visit" mode (2026-09-20)
+
+Her terse ask, "photos by visit and date" — asked which screen first
+(Records → Photos / the patient's own photo timeline / the Treatment
+Plan's existing Visit record, which already does something close to
+this), since a two-word request like that could plausibly mean any of
+three real places in this app. She picked **the patient's own photo
+timeline** (the shared `phRenTimelineHtml` component behind the Health
+Exam "Show all" screen, the inline Photos-section "Show all", and the
+Visit record's own "Photos by date" table — all three call this one
+function, so the fix reaches all three at once).
+
+A third toggle, **"By visit"**, sits beside the existing By date / By
+type. Reuses the exact same one-card-per-date layout as By date (refactored
+`shotsFor(d)`/`scriptLineFor(d)` out of the existing cards builder so both
+modes read from one implementation, never two copies) — the difference is
+each card is annotated with that date's real logged visit when one exists:
+phase and outcome (Better/Same/Worse), via `phAcuOutcomeLine` — the exact
+same label the Patient Journey timeline already uses, never a second
+wording for the same fact. Read through `phPatientPeek`, never
+`phPatientRec`, so opening this mode never mutates the record.
+
+**Disclosed scope call**: a photographed date with no logged session still
+shows, just without the visit line — never hides a real photo for lack of
+a visit record (same universe of dates as "By date" already shows).
+
+**CSS trap worth noting**: the existing phone-width media query
+unconditionally forces the old "cards" view over the table for ANY mode
+(the type-by-date grid never fit a phone) — a generic `.ph-ren-tl-cards`
+override at that breakpoint. The new mode's own two rules
+(`.ph-ren-tl-mode-byVisit .ph-ren-tl-cards { display: none }` and
+`...-visits { display: flex }`) sit outside any media query, at 2-class
+specificity — that beats the 1-class media-query rule regardless of source
+order, so "By visit" still shows its own visit-annotated cards on a
+phone instead of silently falling back to the plain ones.
+
+Verified directly against the real function in the sandbox (a real login
+gate blocks a fully-booted local click-through, same limitation as every
+other batch in this file): a synthetic patient with photos on three dates
+— one with a treated session (phase + outcome), one with a herbs-only
+session, one with no session at all — correctly showed "Better ·
+Follicular", "herbs pickup", and no visit line respectively, in that
+order, newest first; all three toggle buttons correctly report `on`/`off`
+state; computed-style checks at both desktop (1200px) and the sandbox's
+own narrow default width confirmed the table/cards/visits show/hide
+correctly under all three modes, including the phone-override case above.
+Console clean. Synthetic patient, photo records and acuSessions existed
+only in this tab's in-memory `PHARMACY` (never `savePharmacy()`'d) and the
+photo records were explicitly deleted from IndexedDB afterward — confirmed
+absent from both `localStorage` and IndexedDB.
+
+Committed `a8ca675` on `session-a` — not pushed to `main` (the 4pm Sydney
+job does that, or her explicit "push live"). `lcm-build` `20260920-130000`,
+`sw.js` `lcm-20260920-photos-by-visit`.
