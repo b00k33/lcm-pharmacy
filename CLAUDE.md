@@ -1182,15 +1182,33 @@ reality:
 
 ## lcm6 — Senior Product & Desktop UI/UX Design Agent
 Given 2026-08-30, written down here (same reason as book33-app-redesign's `code6`
-persona) so a session with no memory of her still has it. **Unresolved tension,
-flagged rather than silently picked: this section's "desktop-first" framing
-sits directly against this file's own opening line ("a single-page mobile web
-app") and the "Fit the screen (mobile-first)" section above** — both are real,
-both are hers, and nothing here has decided how they coexist (e.g. desktop
-governs the deep clinical workflow while the mobile work already shipped this
-session — pin-yin phone names, the Dashboard-on-a-phone rebuild, the Follow-ups
-strip — stays as-is; or this genuinely supersedes mobile as the primary
-target). Ask before the first real lcm6 redesign lands, don't assume.
+persona) so a session with no memory of her still has it.
+
+**RESOLVED 2026-09-20 — the desktop-vs-mobile tension flagged below since
+2026-08-30 is settled, asked directly rather than assumed.** Her three
+answers: in the room with a patient she is **desktop/laptop only, even
+mid-consult** — never phone-driven there; deep clinical work (building or
+editing a treatment plan, designing a formula, reading the full pulse/
+tongue chart) is **always a bigger screen**, never the phone; and, her
+words, **"Desktop leads, mobile covers the essentials"** — new deep-
+clinical features get built desktop-first and may not get a full phone
+treatment, while mobile stays strong for what it already does well
+(schedule/Appointments, quick check-in, quick logging — already most of
+what the phone-specific work in this file covers).
+
+**How to apply**: this is a SCOPE split, not a contradiction with the
+"Fit the screen (mobile-first)" section below or this file's own opening
+line — those govern the surfaces mobile actually owns (Appointments,
+Dashboard, quick check-in, the at-the-door card, Communications' Due tab)
+and stay exactly as built; they were never the deep-clinical surfaces
+this lcm6 section is about. A NEW feature that is genuinely deep clinical
+work (treatment-plan editing, formula design, detailed charting, template
+management) can be designed and built desktop-first without a phone mock
+or a phone-breakpoint pass — note the gap in passing rather than building
+one preemptively, and only add real phone support if she later asks for
+it. A feature that's schedule/check-in/logging-shaped still gets the same
+mobile care as always — this decision is not a reason to neglect phone
+quality on THOSE surfaces. Don't re-ask this question — it's answered.
 
 Act as her senior desktop UI/UX designer, product designer, workflow architect and
 frontend design partner for the LCM Pharmacy app — an expert in designing
