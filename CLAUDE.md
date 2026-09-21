@@ -7223,3 +7223,84 @@ already shipped 2026-09-20), so it doesn't need her sign-off the way a UI
 redesign would.
 
 `lcm-build` `20260921-020000`, `sw.js` `lcm-20260921-dupguard-capturesave`.
+
+## Cycle block, folded by default — the bar leads, Log rides beside it (Mock C, her pick, 2026-09-21)
+
+She sent a screenshot of the expanded Cycle block on the Treatment Plan tab
+(calendar strip, phase bar with its "Day N" marker, fact/edit rows) and
+said, verbatim: **"i want this always minimised but the cycle colour bar
+visible. and i can press log to log. make 3 mocks."** Three real mocks were
+built from the block's own shipped CSS/markup (never the generic `visualize`
+widget tool — this project's real-token-fidelity convention holds): A folded
+the bar into the one header line (a tiny minibar); B kept the head text as
+today's but added a full bar on its own slim second row; C made the bar the
+headline and demoted the day/period/next text to a caption underneath, Log
+riding as a square icon button. Delivered as a published Artifact with
+tap-to-pick cards (a Browser-pane screenshot alone doesn't reach her — see
+[[feedback_always_show_the_build]]-family lesson, corrected mid-session).
+**Her pick: "c".**
+
+**Two changes, both inside `phTpCycleBlockHtml`/`phTpCycleFolded`
+(index.html ~50964-51075) — CSS in the same file ~5878-5901:**
+
+1. **The default flips to folded.** `phTpCycleFolded()`'s stored flag
+   (`daybook-ph-cycblk-fold`) used to default to `false` (expanded) with
+   `"1"` meaning she'd folded it once; now it defaults to `true`, and only
+   an explicit `"0"` (she tapped it open herself) keeps it expanded across a
+   reload — "always minimised" is now the resting state for every patient,
+   not something she re-folds every time she opens a chart.
+2. **Folded shows the real bar, not just text.** Before, `wrap = inner =>
+   ...${head}${folded ? "" : inner}...` hid EVERYTHING when folded, bar
+   included — exactly what her new ask says to change. Now a folded block
+   with a real cycle tracked renders `phTpCycleBlockHtml`'s **compact head
+   row**: chevron + "CYCLE" (still `data-cycle-fold`, still toggles) +
+   the real segmented bar (same colours/current-phase ring as the expanded
+   one, reusing the identical `segs` the expanded bar computes — genuinely
+   the same bar, not a redraw) + a square icon **Log** button
+   (`.ph-tp-cycblk-logbtn`, the app's teal-outline "does something" button
+   language, a droplet icon) — then a small caption line underneath
+   carrying what the head text used to say ("Day 11 Follicular · period 11
+   Sep 2026 · next in 18 d"). A patient with no period logged yet gets the
+   same treatment with the existing striped `.ph-cyclebar-empty` placeholder
+   in the bar's slot and "no period logged yet" as the caption — Log still
+   works, it opens today straight into the log-period popover so a first
+   period can be logged without expanding anything first. A patient marked
+   not-tracking keeps the old plain text-only header (no bar, no Log —
+   nothing to log for someone explicitly not tracked); unfolding any block
+   is unchanged from before.
+
+**Why the marker (the floating "Day N" tag the expanded bar shows above
+itself) is NOT in the compact bar, disclosed rather than silently dropped:**
+that marker needs about 22px of clear headroom above the bar to float in,
+and the folded card's own padding is 8px — reusing it as-is would either
+clip against the card's rounded top edge or need a padding hack that
+distorts the folded card's compactness (the whole point of "always
+minimised"). The day/phase it would have named is still said — it just
+moved to the caption line below instead of floating over the bar. If she'd
+rather have the marker back at the cost of a taller folded card, that's a
+one-line padding change, not a redesign.
+
+**Log button wiring**: a new `data-cycle-fold-log` click handler (beside the
+existing `data-cycle-fold` one, index.html ~28429-28448) forces the fold
+open (`localStorage` flag to `"0"`) and calls the existing
+`phCycleOpenDayPop(nm, keyOf(TODAY), {forceOpen:true})` — the same
+log-period popover the calendar's own tap-a-day flow has always used — then
+repaints the block, which now renders unfolded with the popover already
+open on today. No new logging mechanism; Log is a one-tap shortcut into the
+one that already exists, since the popover itself only ever renders inside
+the calendar strip, which only exists when unfolded.
+
+**Verified**: `phTpCycleBlockHtml` called directly against a synthetic
+tracked-cycle patient confirmed the default (no stored flag) renders folded
+with the real bar/current-phase ring/Log button/caption all present; the
+no-period and not-tracking folded variants render correctly too. A
+real login-gated leftover-authenticated window in the sandbox let the exact
+shipped HTML string be captured live (not reimplemented) and rendered
+against the file's own real CSS tokens/`.ph-tp-cbar` rules in a temporary
+preview (copied into the served project dir, screenshotted, then deleted —
+no git trace) — confirmed pixel-for-pixel matching Mock C's approved shape:
+segment-coloured bar with the current phase ringed, a small droplet Log
+button at the end, caption text below. Synthetic test patient/localStorage
+flag cleaned up and confirmed absent afterward.
+
+`lcm-build` `20260921-030000`, `sw.js` `lcm-20260921-tp-cycblk-foldedbar-mockc`.
