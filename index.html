@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260921-040000">
+<meta name="lcm-build" content="20260921-050000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -22852,9 +22852,84 @@
     });
     return out;
   }
+  // ---- patient appointment-HISTORY paste (her ask 2026-09-21, "sometimes i
+  // need to paste previous appointments of patients to consolidate treatment
+  // appointments with treatment plans"): Cliniko's own per-patient
+  // Appointments tab -- her patient's own name as the page heading, above a
+  // "When<TAB>Where<TAB>Type<TAB>Practitioner<TAB>Actions" header, then one
+  // block per booking: a "Mon, 21 Sep 2026 2:00PM" line carrying BOTH date
+  // and a SINGLE bare time (never a range -- the one thing every other shape
+  // in this file assumes), an optional "Upcoming appt."/"Past appt." label
+  // and/or a bare status word ("Cancelled"), then the tab row itself. No
+  // patient column anywhere in the data -- the whole page IS one patient, so
+  // the name has to come from the heading line, not a per-row cell; every
+  // other parser in this file would either find no time-shaped table cell
+  // (phApptParseTable) or no name-shaped line above a time (Zanda/Alexandria)
+  // and silently return zero rows -- confirmed empirically against her real
+  // paste before writing this branch, not assumed.
+  const PH_APPT_HIST_SKIP = /^(cancelled|late\s*cancellation|did\s*not\s*arrive|no[\s-]?show|rescheduled)\b/i;
+  function phApptParseDateTimeLine(line) {
+    const m = String(line || "").trim().match(/^[A-Za-z]{3,9},?\s*(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]{3,9})[a-z]*\s+(\d{4})\s+(\d{1,2}):(\d{2})\s*(am|pm)$/i);
+    if (!m) return null;
+    const mon = PH_APPT_MONS.indexOf(m[2].slice(0, 3).toLowerCase());
+    if (mon < 0) return null;
+    const d = new Date(+m[3], mon, +m[1]);
+    if (d.getMonth() !== mon) return null;
+    const h = (+m[4]) % 12, mer = m[6].toLowerCase();
+    return { dateKey: keyOf(d), time: `${String(mer === "pm" ? h + 12 : h).padStart(2, "0")}:${m[5]}` };
+  }
+  function phApptParseHistory(text) {
+    const lines = String(text || "").replace(/[\u200B-\u200D\uFEFF\u00A0\u202A-\u202E\u2066-\u2069]/g, " ").split(/\r?\n/);
+    const hi = lines.findIndex(l => /^when\t/i.test(l.trim()) && /practitioner/i.test(l));
+    if (hi < 0) return null;
+    const head = lines[hi].split("\t").map(c => c.trim().toLowerCase());
+    // the data row has no cell for "When" at all (that's the separate
+    // date/time line above it), so every column after it sits ONE INDEX
+    // EARLIER in the row than in the header -- cType is a header index,
+    // cells[cType - 1] is the matching row cell. Caught by hand-tracing her
+    // real "Asmah Mahmood" paste before shipping: cells[cType] silently
+    // pulled the Practitioner column ("Linh Quach") into the service field.
+    const cType = head.findIndex(c => c === "type" || c === "service") - 1;
+    // the patient's own name is the nearest non-blank line above the header
+    // that isn't itself a date/time line -- her page's own title, not a row
+    let patient = "";
+    for (let k = hi - 1; k >= 0 && k >= hi - 5; k--) {
+      const l = lines[k].trim();
+      if (!l) continue;
+      if (!phApptParseDateTimeLine(l)) patient = phApptCleanName(l);
+      break;
+    }
+    const hIdx = [];
+    for (let i = hi + 1; i < lines.length; i++) if (phApptParseDateTimeLine(lines[i])) hIdx.push(i);
+    if (!hIdx.length) return null;
+    const out = [];
+    hIdx.forEach((li, n) => {
+      const dt = phApptParseDateTimeLine(lines[li]);
+      const end = hIdx[n + 1] != null ? hIdx[n + 1] : lines.length;
+      let skip = false, service = "";
+      for (let k = li + 1; k < end; k++) {
+        const l = lines[k].trim();
+        if (!l) continue;
+        if (PH_APPT_HIST_SKIP.test(l)) { skip = true; continue; }         // Cancelled etc -- never a real visit
+        if (l.includes("\t")) {
+          const cells = l.split("\t").map(c => c.trim());
+          service = (cType >= 0 ? cells[cType] : cells[1]) || service;
+        }
+        // any other bare line ("Upcoming appt.", "Past appt.") is a section
+        // label, not data -- ignored on purpose
+      }
+      if (skip || !service) return;
+      const en = { date: dt.dateKey, time: dt.time, service, phone: "" };
+      if (patient) en.patient = patient; else en.needsName = true;   // she pasted from mid-way through -- ask, don't guess
+      out.push(en);
+    });
+    return out.length ? out : null;
+  }
   function phApptParse(text, fallbackDateKey) {
     const table = phApptParseTable(text, fallbackDateKey);
     if (table && table.length) return table;
+    const hist = phApptParseHistory(text);
+    if (hist && hist.length) return hist;
     const lines = String(text || "").replace(/[\u200B-\u200D\uFEFF\u00A0\u202A-\u202E\u2066-\u2069]/g, " ")
       .split(/\r?\n/).map(l => l.replace(/\s+/g, " ").trim()).flatMap(l => {
         // the week export runs "service<tab>0412 345 678 (Mobile)" on one
@@ -24094,11 +24169,11 @@
     bodyWrap.innerHTML = phApptCalGridHtml();
   }
   // ---- the paste-import modal ----
-  let phApptState = null;   // { dateKey, text }
+  let phApptState = null;   // { dateKey, text, historyName }
   function phApptOpen(prefillName) {
     // a Fridays-only clinic's paste is almost never "for today" -- start on
     // the next day she actually works there (today when today qualifies)
-    phApptState = { dateKey: phNextWorkDayKey(), text: "" };
+    phApptState = { dateKey: phNextWorkDayKey(), text: "", historyName: "" };
     document.getElementById("phApptBackdrop").hidden = false;
     document.getElementById("phApptModal").hidden = false;
     renderApptModal();
@@ -24164,18 +24239,28 @@
     const parsed = phApptParse(st.text, st.dateKey);
     if (!parsed.length) return st.text.trim()
       ? `<div class="ph-appt-note">Couldn't read any appointments yet — each one needs its time range line (e.g. "4:45 – 5:30pm") with the patient's name below it.</div>` : "";
+    // a Cliniko per-patient history paste (phApptParseHistory) carries no
+    // name column at all -- her ask 2026-09-21 -- so every entry comes back
+    // flagged needsName until she types the name above; never a mix of
+    // named + needsName in one paste, since the whole page is one patient
+    const needsNameN = parsed.filter(en => en.needsName).length;
+    const histName = (st.historyName || "").trim();
+    if (needsNameN && !histName) {
+      return `<div class="ph-appt-note">Found ${needsNameN} appointment${needsNameN === 1 ? "" : "s"} with no patient name in the paste — type her name above to import ${needsNameN === 1 ? "it" : "them"}.</div>`;
+    }
+    const resolved = needsNameN ? parsed.map(en => en.needsName ? { ...en, patient: histName } : en) : parsed;
     const known = phMergeAllPatients();
     const wdays0 = phClinicWorkDays();
     // grouped by day (her ask 2026-09-04: a week or a month at a time) --
     // one quiet head per day with its count, the import button top and
     // bottom so a long month paste never needs a scroll to confirm
     const byDay = [];
-    parsed.forEach(en => { let g = byDay.find(x => x.date === en.date); if (!g) { g = { date: en.date, rows: [] }; byDay.push(g); } g.rows.push(en); });
+    resolved.forEach(en => { let g = byDay.find(x => x.date === en.date); if (!g) { g = { date: en.date, rows: [] }; byDay.push(g); } g.rows.push(en); });
     byDay.sort((a, b) => a.date.localeCompare(b.date));
-    const importBtn = `<button type="button" class="btn-save" data-ph-appt-import="1">Import ${parsed.length} appointment${parsed.length === 1 ? "" : "s"}${byDay.length > 1 ? ` across ${byDay.length} days` : ""} ✓</button>`;
+    const importBtn = `<button type="button" class="btn-save" data-ph-appt-import="1">Import ${resolved.length} appointment${resolved.length === 1 ? "" : "s"}${byDay.length > 1 ? ` across ${byDay.length} days` : ""} ✓</button>`;
     const row = en => `<div class="ph-appt-prow${wdays0 && wdays0.includes(parseKey(en.date).getDay()) ? " wk" : ""}">
         <span class="tm">${esc(phCkTime12(en.time))}</span>
-        <b>${esc(en.patient)}</b>${phApptKindHtml(en.service)}${phApptEtHtml(en, parsed)}
+        <b>${esc(en.patient)}</b>${phApptKindHtml(en.service)}${phApptEtHtml(en, resolved)}
         ${en.service ? `<span class="svc" title="${esc(en.service)}">${esc(en.service)}</span>` : ""}
         <span class="match${known.has(phPatientKey(en.patient)) ? "" : " new"}" title="${known.has(phPatientKey(en.patient)) ? "Matched to an existing patient" : "Not seen before — imports fine anyway"}">${known.has(phPatientKey(en.patient)) ? "✓ matched" : "new name"}</span>
       </div>`;
@@ -24202,6 +24287,10 @@
     const upcoming = upcomingAll.slice(0, 80);
     const upDays = [];
     upcoming.forEach(a => { let g = upDays.find(x => x.date === a.date); if (!g) { g = { date: a.date, rows: [] }; upDays.push(g); } g.rows.push(a); });
+    // her Cliniko per-patient history paste (2026-09-21) has no name column
+    // at all -- the row stays hidden until phApptParse actually needs it,
+    // toggled live by the phApptPaste input handler without a full rebuild
+    const histNeedsName = phApptParse(st.text, st.dateKey).some(en => en.needsName);
     modal.innerHTML = `<div class="ph-hx-card ph-appt-card">
       <div class="ph-hx-head">
         <button type="button" class="ph-stocktake-close" data-ph-appt-close="1" aria-label="Close">×</button>
@@ -24219,6 +24308,13 @@
         <div class="ph-switch-row ph-appt-allherbs">
           <span>🌿 Every appointment at <b>${esc(PHARMACY.locName || "this location")}</b> is acupuncture with herbs <span class="faint">· tags them all CHM; a service that says "no herbs" still counts as ACU</span></span>
           <span class="ph-switch"><input type="checkbox" id="phApptAllHerbs"${phApptAllHerbs() ? " checked" : ""} aria-label="Every appointment at this location is acupuncture with herbs"><span class="ph-switch-track"></span></span>
+        </div>
+        <div id="phApptHistNameRow"${histNeedsName ? "" : " hidden"}>
+          <div class="ph-cap-sec">Whose appointments are these?</div>
+          <div class="ph-appt-qa">
+            <input type="text" class="ph-tp-fpick-input" id="phApptHistName" list="phApptHistNameList" placeholder="Patient name" autocomplete="off" value="${esc(st.historyName || "")}" aria-label="Patient name for this paste">
+            <datalist id="phApptHistNameList">${phIntakeNameOptionsHtml()}</datalist>
+          </div>
         </div>
         <div id="phApptPreview">${phApptPreviewHtml()}</div>
         <div class="ph-cap-sec">Or add one</div>
@@ -26420,10 +26516,18 @@
       if (apptDay && phApptState) { phApptState.dateKey = apptDay.dataset.phApptDay; renderApptModal(); return; }
       const apptImport = e.target.closest("[data-ph-appt-import]");
       if (apptImport && phApptState) {
-        const parsed = phApptParse(phApptState.text, phApptState.dateKey);
+        // a history paste's needsName entries resolve to the name she typed
+        // above -- phApptPreviewHtml only ever shows this button once that
+        // name exists, but filter defensively rather than trust the DOM
+        const histName = (phApptState.historyName || "").trim();
+        const parsed = phApptParse(phApptState.text, phApptState.dateKey)
+          .map(en => en.needsName ? { ...en, patient: histName } : en)
+          .filter(en => en.patient);
+        if (!parsed.length) return;
         const added = phApptImport(parsed);
         const daysN = new Set(parsed.map(p => p.date)).size;
         phApptState.text = "";
+        phApptState.historyName = "";
         phFlashShow(`${parsed.length} appointment${parsed.length === 1 ? "" : "s"} across ${daysN} day${daysN === 1 ? "" : "s"} — ${added} new, ${parsed.length - added} refreshed${phApptLastAccounts ? ` · ${phApptLastAccounts} patient account${phApptLastAccounts === 1 ? "" : "s"} made` : ""}`);
         renderApptModal(); renderPharmacy();
         return;
@@ -32356,6 +32460,16 @@
       // her cursor, same rule as the letter sections below)
       if (e.target.id === "phApptPaste" && phApptState) {
         phApptState.text = e.target.value;
+        const host = document.getElementById("phApptPreview");
+        if (host) host.innerHTML = phApptPreviewHtml();
+        // her Cliniko per-patient history shape carries no name column --
+        // show/hide the name prompt live as she pastes, never a full rebuild
+        const nameRow = document.getElementById("phApptHistNameRow");
+        if (nameRow) nameRow.hidden = !phApptParse(phApptState.text, phApptState.dateKey).some(en => en.needsName);
+        return;
+      }
+      if (e.target.id === "phApptHistName" && phApptState) {
+        phApptState.historyName = e.target.value;
         const host = document.getElementById("phApptPreview");
         if (host) host.innerHTML = phApptPreviewHtml();
         return;
@@ -44717,9 +44831,20 @@ or changing anything in Cliniko.
   document.addEventListener("paste", e => {
     if (!e.target || e.target.id !== "phApptPaste" || !phApptState) return;
     const items = [...((e.clipboardData && e.clipboardData.items) || [])].filter(it => it.kind === "file" && /^image\//.test(it.type));
-    if (!items.length) return;
-    e.preventDefault();
-    phApptOcr(items.map(it => it.getAsFile()).filter(Boolean));
+    if (items.length) { e.preventDefault(); phApptOcr(items.map(it => it.getAsFile()).filter(Boolean)); return; }
+    // a fresh TEXT paste may be a different patient's history than whatever
+    // name she typed for an earlier paste in this same modal session (her
+    // ask 2026-09-21, consolidating several patients' history in one
+    // sitting) -- caught by adversarial review before shipping: a stale
+    // historyName was otherwise never cleared except on a successful
+    // import, so pasting patient B's fragment right after typing patient
+    // A's name would silently import B's appointments as A's. A real
+    // paste action is a clean, precise "this is new content" signal --
+    // ordinary typing to fix a line doesn't fire this event, so a minor
+    // in-place edit never makes her re-type the name for nothing.
+    phApptState.historyName = "";
+    const nameEl = document.getElementById("phApptHistName");
+    if (nameEl) nameEl.value = "";
   });
   document.addEventListener("paste", e => {
     if (!phRenCanPaste()) return;                              // §4: no paste path on a phone

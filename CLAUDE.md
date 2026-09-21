@@ -7401,3 +7401,113 @@ sent to her directly since a Browser-pane screenshot alone doesn't reach
 her.
 
 `lcm-build` `20260921-040000`, `sw.js` `lcm-20260921-cyclequiet-widget`.
+
+## Appointment paste-box reads Cliniko's per-patient history tab (2026-09-21)
+
+Her question ("sometimes i paste appointments in different formats. how to
+have the paste box read them all?") turned out to have a specific real gap
+behind it, found through three follow-up messages: **"i like this box.
+sometimes i need to paste previous appointments of patients to consolidate
+treatment appointments with treatment plans"** — confirming she wants the
+SAME shared `#phApptPaste` box extended (Patient profile's timeline
+footer, Today's Timeline's "Paste appointments" button, the check-in
+panel's "paste today's Cliniko list" link all reach it) — and her real
+intent: backfilling a patient's appointment history so it feeds this app's
+existing phase visit-counting system (decision 17, "phase dates are the
+truth").
+
+**The shape, confirmed empirically before writing anything.** Cliniko's own
+per-patient "Appointments" tab, viewed from inside that one patient's
+profile: the patient's name as the page's own heading (no per-row name
+column — the whole page IS one patient), a `When\tWhere\tType\tPractitioner
+\tActions` tab-delimited header, then one block per booking — a
+`"Mon, 21 Sep 2026 2:00PM"` line (date + a SINGLE bare time, never a range,
+the one thing every other shape in this file assumes), an optional
+"Upcoming appt."/status label, then the tab row itself. Ran her exact
+partial paste (just the header + blocks, no name heading) through the real
+`phApptParse` in the sandbox first and confirmed `{count: 0, result: []}` —
+every existing parser correctly declined it: `phApptParseTable` needs a
+time-shaped cell WITHIN a data row (this shape's time sits on a separate
+line above), and the Zanda/Alexandria day-list shapes need a name-shaped
+line above a time (this shape's line above the time is a status word, not
+a name).
+
+**Built**: `phApptParseDateTimeLine` (the "Mon, 21 Sep 2026 2:00PM" line),
+`PH_APPT_HIST_SKIP` (Cancelled/Late cancellation/Did not arrive/No-show/
+Rescheduled — never a real visit), and `phApptParseHistory(text)` — finds
+the header line, reads the patient's name off the nearest non-date heading
+line above it (or flags every produced entry `needsName: true` when she's
+pasted starting mid-way through, no heading in view), then walks forward
+collecting one entry per date/time line, pulling the service text from the
+row that follows it. Wired into `phApptParse` between the table parser and
+the day-list fallback.
+
+**A genuine off-by-one bug caught by hand-tracing her exact real paste
+before shipping, not assumed correct because the code "looked right."**
+The header has 5 columns (When/Where/Type/Practitioner/Actions); the data
+row has only 4 cells, since it carries no "When" cell of its own — that
+date already lives on the separate line above. So every column after
+"When" sits ONE INDEX EARLIER in the row than in the header. The first
+draft read `cells[cType]` (the header's own index for "Type") — on her
+real paste this silently pulled the PRACTITIONER column ("Linh Quach")
+into the service field on every entry. Fixed by computing
+`cType = head.findIndex(...) - 1` once, so every downstream read already
+lands on the right cell. Verified against her exact real paste, function
+called live in a leftover-authenticated sandbox tab (not a
+reimplementation): 3 entries — 21 Sep 2:00pm, 7 Sep 2:00pm, 31 Aug
+12:00pm — all "Asmah Mahmood", each with the CORRECT service text now,
+and the 31 Aug 1:00pm "Cancelled" entry correctly excluded.
+
+**The `needsName` fallback — a partial paste with no name heading in
+view.** `#phApptHistNameRow`/`#phApptHistName` (with a
+`phIntakeNameOptionsHtml()` datalist) sits as a sibling of `#phApptPreview`,
+just above it — hidden by default, shown live by the existing
+`#phApptPaste` input handler the moment a freshly-reparsed paste contains
+any `needsName` entry (same "scoped repaint only, never rebuild the modal
+mid-typing" rule this field's two siblings — `#phApptPaste` and
+`#phApptDate` — already follow, so typing a name never loses her cursor).
+`phApptPreviewHtml()` shows a distinct prompt ("Found N appointments with
+no patient name in the paste — type her name above to import them.")
+instead of the normal grouped-by-day preview while a name is still needed;
+typing one resolves those entries' `.patient` field and the normal preview
++ Import button appear. The `data-ph-appt-import` click handler mirrors the
+same resolution before calling `phApptImport`, filtering out anything still
+unresolved as a defensive guard (the button is never actually rendered in
+that state).
+
+**Adversarial review (one background agent on the diff) found a real
+HIGH-severity bug, fixed and re-verified — a name typed for one paste could
+silently attach to a completely different paste.** `phApptState.historyName`
+was only ever cleared on modal open and after a successful import — never
+when the PASTED TEXT itself changed. So pasting patient A's headingless
+fragment, typing "A", then — without clicking Import — pasting patient B's
+headingless fragment over it would resolve B's appointments to name "A"
+with only a stale, easy-to-miss name field as the tell. Exactly the failure
+mode her own stated workflow risks, since "consolidate treatment
+appointments" for several patients in one sitting means reusing one open
+modal across pastes. Fixed by clearing `historyName` (and the visible
+field) on a genuine `paste` event into `#phApptPaste` — not on every
+`input` event, which would force her to retype the name for a trivial
+in-place correction that never actually fires `paste`. Reused the existing
+paste listener already scoped to this textarea (built for the OCR-image-
+paste feature) rather than adding a second one. Verified live via a real
+dispatched `ClipboardEvent("paste")`: pasting B's fragment after typing "A"
+for A's correctly clears the name field and reverts the preview to the
+"type her name" prompt; a plain keystroke edit to the same text (no `paste`
+event) correctly leaves a typed name untouched.
+
+**Verified end-to-end, function-level and real-DOM, in a
+leftover-authenticated sandbox tab** (the login gate blocks a fully-booted
+click-through, same limitation as every batch in this file): her exact full
+real paste (name heading present) through the real `phApptParse` — 3
+correct entries, Cancelled excluded; the same paste with the heading
+stripped off — all 3 flagged `needsName`, the real modal's name row
+appearing/disappearing live as she pastes, typing a name resolving the
+preview, a real click on Import writing 3 correct appointments (confirmed
+via `phApptList()`), the paste-clears-stale-name fix (above); console
+clean (only the known pre-existing icon-fetch noise). All synthetic
+"Asmah Mahmood" appointments cancelled back out via the real popup's
+Cancel flow afterward — confirmed zero trace via `phApptList()` and
+`phMergeAllPatients()`.
+
+`lcm-build` `20260921-050000`, `sw.js` `lcm-20260921-appt-history-paste`.
