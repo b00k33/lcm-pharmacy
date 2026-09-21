@@ -7664,6 +7664,56 @@ needed. Synthetic test patient (`PRESC.items`, `PHARMACY.log`,
 
 `lcm-build` `20260921-070000`, `sw.js` `lcm-20260921-grams-follows-herbs-always`.
 
+## Dispense stage wears the To Order sheet — her Option B ("i like b… more succinct, less words, more organised" → "push option b live", 2026-09-21)
+
+Her "improve ui" screenshot of the Dispense stage → two mocks (A tidied in
+place / B the sheet) → **"i like b"** → tightened mock (artifact
+C9rFN523Tpjy6HV5s7KmWM) → **"push option b live"**. Built as wrappers + CSS
+only; every id (`#presFormulaText`, `#presDoseN/#presSpoon/#presDoseT`,
+`#presGrams`, `#presGramsSegWrap`, `#presDoseDurationWrap`, the price
+radios, `#presPriceBig/Gst/Stats`, `#presPriceWorking`), every `data-pres-*`
+hook and every listener is untouched.
+
+- **Left column, Dosage & price** (`.ph-pres-dose.ph-sheet`): white sheet,
+  label · value rows (`.ph-row` = `.ph-k` 72px + `.ph-v` flex). Objective
+  (the "prints on the label…" sentence is now the field's `title`), Dose,
+  Grams (the ×1 ×2 ×3 ✎ segment and the "Lasts N days · empty …" duration
+  sit IN the row), Days, Price (the same three radios, one segment), Total.
+  Selector note: `.ph-build-top.ph-row` is needed because `.ph-pres-panel
+  .ph-build-top` (display:flex) sits later at equal specificity — the first
+  sandbox render had every label inline with its value.
+- **Today** (`.ph-pres-foot.ph-sheet-today`): the four-step ladder (three ✓
+  for one action) is gone. Before dispensing: the green pill "Calculate,
+  dispense & copy label" (`.ph-dose-primary .ph-dose-go`, keeps
+  `.ph-dose-step-label` for the "✓ Copied" flash at ~60907) + "or Schedule →".
+  After: one gold band `.ph-dose-band` "Dispensed & logged · 5:48pm · label
+  copied" carrying the long-press chip (`data-pres-disp-chip`) and the ⋯
+  menu button; grey `.pending` variant "Dispensed, not logged" while stock is
+  out but unlogged. Under either: `.ph-dose-links` — Patient letter ·
+  Calculate only ("✓ Calculated" once done) · Log only ("✓ Logged") ·
+  ⋯ More (the same menu). The "On screen only — never printed" caption is
+  gone. The `#presConfirmZone` flashes lose their box inside this sheet.
+- **Right column**: `.ph-pres-col-right` no longer paper-tinted with a
+  border; two sheets — `.ph-sheet-herbs` (the quiet "Herbs · not typical"
+  toggle + Ingredients editor) and `.ph-sheet-fu` (Visit history header +
+  Follow-up + Message, `presStageFollowupHtml` unchanged).
+- Not done from the mock (her open questions): dose controls stay live pills
+  in the row (an Edit-to-reveal state would hide the inputs the price and
+  duration refreshers read by id); message templates keep their existing
+  folds; cost · profit stays on the Total line.
+- Same push: `#phRenUndoToast[hidden] { display: none }` — her "why is that
+  black oval there": the empty photo-undo toast's `display:flex` beat its
+  `hidden` attribute and painted a dark 32×20 pill at the bottom of every page.
+
+Verified in the sandbox on the synthetic "Test Mednotes Patient" (30 g GE GEN
+TANG, Skip-for-now past the plan picker, `presStage = "dispense"`): four
+sheets; six rows all `grid`, labels at x=31 and values at x=111; typing 60 g
+moved the Total from $21.30 to $42.60 and the duration line updated; Mon–Fri
+click, Calculate only → "✓ Calculated", ⋯ More opens and closes; the green
+pill has its background (specificity fix); no horizontal overflow at 375px;
+Prescriptions live search 0 → 2 → 2; toast `display: none`; test edits
+reverted. `lcm-build` `20260921-200000`, `sw.js` `lcm-20260921-dispense-sheet-b`.
+
 ## "LCM couldn't start" — boot housekeeping rendered before the script finished (her "fix this", 2026-09-21 evening)
 
 Her screenshot: the crash card, `ReferenceError: Cannot access 'phInitials'
