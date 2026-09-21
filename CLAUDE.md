@@ -7584,3 +7584,82 @@ specific narrow band, flag it and a further trim (or hiding one of the
 less-essential footer figures below a breakpoint) is the next lever.
 
 `lcm-build` `20260921-060000`, `sw.js` `lcm-20260921-footer-wrap-fix`.
+
+## Grams now always follows the herb total — even on an already-dispensed script (her ask 2026-09-21)
+
+Her report, with a screenshot of Asmah's Dosage & Price panel: **"when i
+make a formula, i add the quantity 100g and then find that the total grams
+is set with a different number. can you make it so grams correspond with
+formula automatically."**
+
+**Two stacking causes, traced before touching any code.** (1) `presGrams
+FollowHerbs`'s seed condition only ever put a script into the auto-follow
+`"multiple"` mode the first time it saw `gramsMode == null && gramsAuto ==
+null && !t.totalGrams` — any script predating the 2026-08-25 multiplier
+feature (or one whose Grams field had ever been non-empty for any reason)
+permanently defaulted to the `"manual"` fallback mode and never got a
+second chance to join auto-follow, however many times its ingredients were
+edited afterward. (2) a second, separate guard —
+`const presGramsFrozen = t => !!t.lastDispensedAt;` — additionally blocked
+the automatic re-derivation for ANY script that had ever been dispensed
+even once. Since most active/recurring patients have multiple dispenses
+over time, that guard was blocking the ordinary case, not a true edge case
+— which is exactly why her screenshot (a patient with "2 dispenses" in her
+visit history) reproduced the bug.
+
+**The safety history behind `presGramsFrozen`, and why removing it needed
+her explicit sign-off, not a guess.** It was built after a real, named
+2026-08-25 incident: on Mia Rankin's real ×2 script, editing her herb list
+from 50 g to 100 g moved her stored grams 100 → 200 with no confirmation —
+a genuine financial-data risk (Grams feeds price and label calculation
+directly). Removing that guard outright would directly reverse a
+documented, incident-based safety rule, so rather than silently picking
+either the safer option (a one-tap "update to match" button, keeping the
+guard) or the literal-request option (always auto-update, dropping the
+guard), I asked her directly via a structured question, naming the
+incident and recommending the safer option. **Her explicit, informed
+answer: "Always auto-update"** — the more aggressive option, chosen over
+the recommended safer one. Honoured as her clear decision.
+
+**What changed and what stayed untouched, to keep the part of the original
+incident's lesson that still matters.** `presGramsFollowHerbs` (index.html,
+~line 60868) now always sets `gramsMode = "multiple"` and recomputes
+`t.totalGrams` from the live ingredient total on every ingredient edit,
+with no seed-condition restriction and no `presGramsFrozen` check —
+`presGramsFrozen` itself is removed outright, replaced by a comment
+recording why. **What this does NOT touch, confirmed by reading the actual
+"Save & log" flush code before shipping**: `t.lastDispensedGrams`,
+`t.lastDispensedAt`, `t.lastDispenseLogId`, and every `PHARMACY.log` dispense
+entry — the immutable historical record of what was actually given out at
+each past dispense — are written only by the dispense/"Save & log" flow,
+never by `presGramsFollowHerbs`. Editing an ingredient after a dispense
+changes the FORWARD-looking "about to be dispensed" figure (`t.totalGrams`),
+never the historical record of what already went out the door. The one
+UI-visible consequence: the amber "✎ set by you · herb total is N g" hint
+on a stale/manual script now reads as a defensive fallback for a genuinely
+manual pick, not as "this used to be permanent" — and a manual figure she
+types is still a deliberate one-shot override (`gramsMode = "manual"`),
+just no longer sticky: the very next ingredient edit resyncs it back into
+auto-follow, matching her "always" answer rather than requiring her to tap
+"↻ back to ×1" herself.
+
+**Verified in the sandbox via the real UI, not a reimplementation**: created
+a genuine synthetic patient script with one ready-made-jar ingredient at
+100 g, confirmed the very first ingredient edit (100→150 g) correctly
+auto-updated Grams/hint/segmented-control to the matching `×1, in sync`
+state; then genuinely dispensed the script via the real "💾 Log only"
+button (confirmed via the real "✓ Prescription logged" flash and the
+persisted state) to set a real, non-simulated `t.lastDispensedAt` — the
+exact scenario her `AskUserQuestion` answer was about — and confirmed a
+further ingredient edit (150→200 g) STILL correctly auto-updated Grams on
+the now-dispensed script, with no confirmation step required. Also
+verified the manual-mode-not-sticky behaviour: typed a custom figure (77)
+into Grams, confirmed it displayed as typed with the "✎ set by you" hint,
+then edited an ingredient again and confirmed it correctly resynced back
+into auto-follow (matching the new ingredient total) with no further tap
+needed. Synthetic test patient (`PRESC.items`, `PHARMACY.log`,
+`PHARMACY.patients`, `PHARMACY.followups`) removed from the sandbox's
+`localStorage` afterward, confirmed via before/after count checks
+(2→1 script, 1→0 log entry, 2→1 patient, 1→0 followup).
+
+`lcm-build` `20260921-070000`, `sw.js` `lcm-20260921-grams-follows-herbs-always`.

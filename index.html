@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260921-060000">
+<meta name="lcm-build" content="20260921-070000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -37696,7 +37696,11 @@ or changing anything in Cliniko.
      starting amount, about 11 days at her 3-spoon × 2/day preset; NOT the
      jar's pack size, which is an ordering unit and was never a prescription
      quantity), so it pours as 100 g × the multiplier -- editable like any
-     other figure. Nothing here touches a dispensed script (presGramsFrozen). */
+     other figure. This call site was always safe regardless of dispensed
+     state anyway -- phTpEnsurePhaseScript only ever reuses or creates an
+     UNDISPENSED phase script (its own `!x.lastDispensedAt` lookup above) --
+     and since 2026-09-21 grams follows the herbs even on a script she HAS
+     already dispensed before (her decision, presGramsFollowHerbs). */
   const PH_TP_JAR_POUR_G = 100;
   function phTpPourIntoScript(t, jar, recipe) {
     if (jar) {
@@ -60338,10 +60342,15 @@ Dosage: {dosage}
     if (t.gramsAuto === true) return { mode: "multiple", multiple: 1 };
     return { mode: "manual" };
   }
-  // her §3: once a script has actually been dispensed it is a record, not a
-  // formula -- its stored grams stop following the herb list. See the fuller
-  // note at the presCommitTemplateFields guard that reads this.
-  const presGramsFrozen = t => !!t.lastDispensedAt;
+  // her §3 (2026-08-25) used to freeze a dispensed script's grams here --
+  // RETIRED 2026-09-21, her explicit decision after being told about the
+  // real incident this protected against (Mia Rankin's 100g->200g, see
+  // presGramsFollowHerbs): "always auto-update", even on a script she's
+  // already dispensed before. What that incident actually risked was never
+  // the historical record -- t.lastDispensedGrams/t.lastDispensedAt/the
+  // PHARMACY.log entries are untouched by any of this code and always were
+  // -- only the forward "about to be dispensed" totalGrams field follows
+  // the herb list now, on every script, no exceptions.
   // the 26px segmented control on the Grams row (her §1) -- same segment
   // language as .ph-days-opt (Days, a few rows below) on purpose, so the two
   // controls in this panel read as one family. Reusing that exact class also
@@ -60387,17 +60396,22 @@ Dosage: {dosage}
     const herbWord = `${ings.length} herb${ings.length === 1 ? "" : "s"}`;
     const st = presGramsStateOf(t);
     if (st.mode === "multiple") {
-      // her §3: a dispensed script's grams stopped following the herb list.
-      // If the two have since diverged, SAY so -- a stale "= 2 × 100 g" over
-      // a field reading 100 would be the app claiming arithmetic it didn't
-      // do. The button re-applies the multiple deliberately.
+      // an ingredient edit keeps this in sync live now (presGramsFollowHerbs,
+      // 2026-09-21) -- this divergence check is only a defensive fallback
+      // for an odd multi-device sync merge, never something an ordinary
+      // edit here can produce any more. "would be" -> a plain "update" fix,
+      // no "as dispensed" framing: nothing is frozen against this any more.
       const expected = phRound2(herbTotal * st.multiple);
-      if (presGramsFrozen(t) && ings.length && Math.abs((t.totalGrams || 0) - expected) >= 0.005) {
-        return `<div class="ph-grams-hint manual" id="presGramsHint">as dispensed · ${st.multiple} × ${phFmtG(herbTotal)} g herb total would be ${phFmtG(expected)} g <button type="button" class="ph-grams-reset" data-pres-grams-mult="${st.multiple}">↻ update to ×${st.multiple}</button></div>`;
+      if (ings.length && Math.abs((t.totalGrams || 0) - expected) >= 0.005) {
+        return `<div class="ph-grams-hint manual" id="presGramsHint">set to ${phFmtG(t.totalGrams || 0)} g · ${st.multiple} × ${phFmtG(herbTotal)} g herb total would be ${phFmtG(expected)} g <button type="button" class="ph-grams-reset" data-pres-grams-mult="${st.multiple}">↻ update to ×${st.multiple}</button></div>`;
       }
       const body = ings.length ? `= ${st.multiple} × ${phFmtG(herbTotal)} g herb total · ${herbWord}` : "Add herbs to calculate the total";
       return `<div class="ph-grams-hint multiple" id="presGramsHint">${body}</div>`;
     }
+    // her decision 2026-09-21: this is only ever a brief window now -- right
+    // after she types a custom figure into Grams, until her next ingredient
+    // edit, which resyncs it automatically (presGramsFollowHerbs) -- not a
+    // stuck state she has to remember to reconcile any more.
     const body = ings.length ? `✎ set by you · herb total is ${phFmtG(herbTotal)} g` : "✎ set by you · add herbs to compare";
     return `<div class="ph-grams-hint manual" id="presGramsHint">${body} <button type="button" class="ph-grams-reset" data-pres-grams-reset="${t.id}">↻ back to ×1</button></div>`;
   }
@@ -60814,18 +60828,14 @@ Dosage: {dosage}
       // "this grams box needs to not change... THIS is the final prescription
       // quantity."
       // her 2026-08-22 spec ("Grams auto-fills from the herbs, stays
-      // overridable"), replaced by the 2026-08-25 multiplier spec: a
-      // genuinely fresh patient script (t.gramsMode/gramsAuto never set,
-      // totalGrams still 0 -- nothing typed into it yet) starts at ×1 the
-      // first time it has any ingredients at all, and stays in multiple mode
-      // until she TYPES into #presGrams herself (which sets gramsMode=
-      // "manual" there, see that handler) or picks ✎. While in multiple
-      // mode, every ingredient edit re-derives totalGrams as multiple ×
-      // herb-total live -- this is what makes it "follow the herbs" rather
-      // than a one-time seed. An EXISTING script from before either feature
-      // (gramsMode and gramsAuto both never set, but totalGrams already
-      // nonzero) never gets auto-attached retroactively -- no migration,
-      // exactly her "existing saved scripts are never rewritten" rule.
+      // overridable"), the 2026-08-25 multiplier spec, then her 2026-09-21
+      // "always auto-update" (see presGramsFollowHerbs for the full story):
+      // every ingredient edit re-derives totalGrams as multiple × herb-total
+      // live -- on a genuinely fresh script, one she typed a manual figure
+      // into, one that predates this feature entirely, and one she's
+      // already dispensed before. The one thing that still never moves from
+      // here: opening an old script and merely LOOKING at it changes
+      // nothing -- only the act of editing an ingredient joins it in.
       // her ask 2026-08-17 (formula recipe editor rework): a formula has no
       // separate "prescribed today" figure at all -- its Grams/pricing box
       // is gone -- so totalGrams IS just its own ingredient sum, always
@@ -60843,37 +60853,54 @@ Dosage: {dosage}
     return savePresc();
   }
   // Grams-prescribed "follows the herbs" for a PATIENT script (never a
-  // formula record, whose totalGrams is simply its own ingredient sum):
-  // a genuinely fresh script (gramsMode/gramsAuto never set, totalGrams
-  // still 0 -- nothing typed into it yet) starts in multiple mode the first
-  // time it has any ingredients at all (seedMultiple: ×1 for an edit in the
-  // Dispense stage, her preset multiplier for a plan-side pour), and stays
-  // there until she TYPES into #presGrams herself (gramsMode="manual", see
-  // that handler) or picks ✎. While in multiple mode every ingredient edit
-  // re-derives totalGrams as multiple × herb-total live -- "follow the herbs"
-  // rather than a one-time seed. An EXISTING script from before either
-  // feature (gramsMode and gramsAuto both never set, totalGrams already
-  // nonzero) never gets auto-attached retroactively -- no migration, exactly
-  // her "existing saved scripts are never rewritten" rule.
-  // her 2026-08-25 spec §3, the rule that must not be got wrong: "a saved or
-  // dispensed script never re-derives its grams". §2 scopes the live
-  // recalculation to "an unsaved or IN-PROGRESS script", so the two agree --
-  // once this script has actually gone out the door it is a RECORD, and
-  // editing the formula later must not silently move what it says was
-  // dispensed. Verified 2026-08-25 against Mia Rankin's real ×2 script:
-  // without this guard, editing her herb list from 50 g to 100 g moved her
-  // stored grams 100 -> 200. She can still change it deliberately -- tapping
-  // a multiple or typing re-applies immediately -- and presGramsHintHtml
-  // calls the divergence out rather than hiding it.
+  // formula record, whose totalGrams is simply its own ingredient sum).
+  // REWRITTEN 2026-09-21, her direct decision: "always auto-update", asked
+  // after she reported a script stuck showing a stale 30 g while its herb
+  // list totalled 100 g -- traced to TWO separate causes, both fixed here.
+  //
+  // Cause 1: an EXISTING script from before this feature (gramsMode never
+  // set, totalGrams already nonzero from some old typed-in figure) used to
+  // be permanently excluded from ever joining multiple mode -- "no
+  // migration, existing scripts are never rewritten". That exclusion only
+  // ever meant "don't change what she's looking at just from OPENING an old
+  // script" -- it was never meant to also mean "and never let her edit it
+  // like a normal one again". The seed below now fires on ANY ingredient
+  // edit, not only a script that's never had anything typed into Grams at
+  // all (the `&& !t.totalGrams` this used to require) -- opening an old
+  // script still shows exactly what it always did; only the ACT of editing
+  // an ingredient on it is what joins it to the herb total from then on.
+  //
+  // Cause 2: her 2026-08-25 spec §3 ("a saved or dispensed script never
+  // re-derives its grams") froze this once a script had EVER been through
+  // Save & log before -- correct instinct at the time (verified against a
+  // real incident: without a guard, editing Mia Rankin's herb list from
+  // 50 g to 100 g silently moved her ALREADY-DISPENSED script's stored
+  // grams 100 -> 200), but Asmah's script shows the guard also blocks the
+  // completely ordinary case of preparing her THIRD dispense on a formula
+  // that's already had two -- which is most of her real patient scripts,
+  // not an edge case. Asked her directly, given the real risk either way:
+  // her answer was to always auto-update, even here. What actually
+  // protects the Mia Rankin scenario was never this "frozen" gate -- it's
+  // that t.lastDispensedGrams / t.lastDispensedAt / the PHARMACY.log entries
+  // (the actual record of what WAS given out, each past dispense) are
+  // separate fields this function has never written and still doesn't; only
+  // the forward "about to be dispensed" totalGrams field follows now, same
+  // as before, just without the extra freeze.
+  //
+  // A manual typed figure (gramsMode="manual", her typing directly into
+  // #presGrams) still shows exactly what she typed -- it's just no longer
+  // sticky against the NEXT ingredient edit, which folds it back to
+  // multiple mode at whatever multiplier was last in play (her own
+  // gramsMultiple if she'd set one, else the seed default). Tapping a
+  // multiple or the reset button still re-applies instantly either way.
   function presGramsFollowHerbs(t, seedMultiple) {
     if (!t || presIsFormula(t)) return;
-    if (t.gramsMode == null && t.gramsAuto == null && !t.totalGrams) { t.gramsMode = "multiple"; t.gramsMultiple = seedMultiple || 1; }
     const st = presGramsStateOf(t);
-    if (st.mode === "multiple" && !presGramsFrozen(t)) {
-      const herbTotal = phRound2((t.ingredients || []).reduce((a, i) => a + (i.grams || 0), 0));
-      t.totalGrams = phRound2(herbTotal * st.multiple);
-      presRefreshGramsFieldIfAttached(t);
-    }
+    const multiple = st.mode === "multiple" ? (st.multiple || 1) : (t.gramsMultiple || seedMultiple || 1);
+    t.gramsMode = "multiple"; t.gramsMultiple = multiple;
+    const herbTotal = phRound2((t.ingredients || []).reduce((a, i) => a + (i.grams || 0), 0));
+    t.totalGrams = phRound2(herbTotal * multiple);
+    presRefreshGramsFieldIfAttached(t);
   }
   // Linh 2026-07-30: "make it so that all prescription formulas are automatically
   // saved live as it is edited." The dosage, take-days, preset price and the
