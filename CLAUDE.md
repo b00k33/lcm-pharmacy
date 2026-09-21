@@ -7663,3 +7663,95 @@ needed. Synthetic test patient (`PRESC.items`, `PHARMACY.log`,
 (2→1 script, 1→0 log entry, 2→1 patient, 1→0 followup).
 
 `lcm-build` `20260921-070000`, `sw.js` `lcm-20260921-grams-follows-herbs-always`.
+
+## Sessions ladder's cadence text is now the real picker, not decoration (her report 2026-09-21)
+
+Her screenshot of the Treatment Plan Grid's Sessions section (a "Burnout /
+fatigue" plan, phase bar Stabilise/Rebuilding/Maintenance, each with a
+session-count stepper and cadence text like "1-2x/wk"), with **"i cant plan
+- 1x1 week for 3 weeks etc"**.
+
+**Root cause, traced not guessed.** Direct function-level testing first
+ruled out the obvious suspect: `phTpCadenceCompose`/`-Decompose`/
+`phTpSessionsOf` all correctly round-tripped and derived session counts for
+every combination tried — the underlying cadence mechanism was never
+broken. The real gap was a UI disconnect: `presTpInlineEditorHtml`'s
+2026-09-20 "one layout for every plan" rebuild renders the Sessions ladder
+(`phTpSessionLadderHtml`) with its cadence text as PLAIN, non-interactive
+`<span class="mut">`. The real, already-proven picker — number × how often
+× for what × how many weeks, exactly "1×/wk for 3 weeks" — lived only in a
+completely different table further down the page (`phTpPlanCells`'s
+"Visits" cell inside the merged Today's-visit table's "Next" row, or the
+classic grid's own Visits row) — reachable, but disconnected from the one
+control actually labelled "Sessions" she was looking at.
+
+**Fix — a second door onto the SAME picker, not a new mechanism.** The
+ladder's cadence text is now a `<div class="mut ph-tp-ladder-cad"
+data-tp-edit="planId:phaseId:cadence">` — the identical `data-tp-edit` key
+`phTpPlanCells`/`phTpPhaseBodyRows` already use, opened by the same,
+unmodified `phTpCellEditOpen` picker. A `<div>`, not a `<span>` (deliberate,
+before any testing): `phTpCellEditOpen` replaces the clicked element's
+`innerHTML` with the picker's own `<div class="ph-tp-vis">` block, and a
+block-level div can never be misnested inside a span if this head string is
+later reparsed through `innerHTML` by a full rerender. A frozen (done,
+un-unlocked) phase keeps the same read-only `<span class="mut">· text</span>`
+treatment every other cadence cell already gives it — `phFrozen` reads the
+same shared `phTpUnlockDone` Set, checked identically to
+`phTpPlanCells`/`phTpPhaseBodyRows`.
+
+**Adversarial review caught two real bugs before this shipped — both
+concurrency/staleness gaps the new second door opened up, not present
+before this fix (fixed same day, verified in the sandbox, not merely
+argued):**
+
+1. **Two independently-live cadence editors could both be open at once,
+   and opening the second silently clobbered or blew away the first.**
+   Whenever a phase's Today's visit is showing (the everyday state), the
+   ladder's new cadence div and `phTpPlanCells`'s pre-existing "Visits"
+   `<td>` sit on screen simultaneously, both carrying the identical
+   `data-tp-edit` key — nothing checked whether a key already had a live
+   editor open elsewhere. Fixed at the top of `phTpCellEditOpen` (~line
+   54422): before opening, it checks every OTHER element sharing the same
+   key for a live `[data-tp-phase-field]` child; if one is already open, the
+   new click does not open a second editor — it scrolls her to the one
+   that's already open instead. Verified via real dispatched clicks: opening
+   the ladder's door then clicking the merged table's door for the same
+   phase no longer opens a second picker (confirmed no `data-tp-phase-field`
+   appears in the second element), `scrollIntoView` fires exactly once, and
+   the first editor stays open and untouched — no clobbering, no silent
+   duplicate-edit-then-overwrite.
+2. **A cycle-data edit elsewhere on the same page silently destroyed the
+   ladder's open cadence picker with no warning.** `phTpCycleBlockRefresh`
+   (fired on any cycle-data change — logging a period, editing flow/cycle-
+   length/contraception — on any cycle-template plan's page) unconditionally
+   did a wholesale `outerHTML` swap of every `[data-tp-ladder]` element. Before
+   this build the ladder held no interactive/stateful DOM, so the swap was
+   harmless; the new cadence editor made it a real live "box" that a blind
+   outerHTML replace tears out from under her mid-pick. Fixed by skipping
+   the swap for any ladder currently holding a live `[data-tp-phase-field]`
+   editor (~line 49458) — it catches up the moment she finishes or reopens
+   it fresh. The same class of risk already existed, disclosed but
+   deliberately not touched here, at `phTpRepaintPhasePanel()`'s
+   `.ph-tp-phasebody` swap a few lines above (predates this build, not the
+   surface her report was about). Verified via a direct call to
+   `phTpCycleBlockRefresh()`: a ladder holding a live editor is left
+   completely untouched (same DOM node, editor intact), while a sibling
+   ladder with no open editor still refreshes normally — the fix is scoped
+   to exactly the ladder that's mid-edit, not a blanket freeze.
+
+**Verified end-to-end in the sandbox, real dispatched DOM events against
+the real functions (never a reimplementation):** the two-door collision
+scenario above; the cycle-block-refresh scenario above; and all four of
+the original fix's test cases re-confirmed still correct after both
+review fixes — a round-trippable cadence ("1×/wk for 3 weeks") opens the
+picker pre-seeded correctly; an undecomposable cadence ("2×/wk while
+acute") opens the picker and correctly shows the "Now: ... Type instead"
+warning through the NEW ladder door (not just the old table door); a
+done/frozen phase shows plain read-only text with no `data-tp-edit` at
+all, structurally unreachable exactly as before; an empty cadence shows
+the "Set the rate" placeholder and is still openable. Console clean (only
+the known pre-existing icon-fetch 404s). Synthetic test patients existed
+only in this tab's in-memory `PHARMACY` (`phPatientRec`, never
+`savePharmacy()`'d) — confirmed absent from `localStorage` afterward.
+
+`lcm-build` `20260921-080000`, `sw.js` `lcm-20260921-sessions-ladder-cadence-edit`.
