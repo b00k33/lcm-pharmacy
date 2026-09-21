@@ -7938,3 +7938,39 @@ only in this tab's in-memory `PHARMACY` (`phPatientRec`, never
 `savePharmacy()`'d) — confirmed absent from `localStorage` afterward.
 
 `lcm-build` `20260921-080000`, `sw.js` `lcm-20260921-sessions-ladder-cadence-edit`.
+
+## Sessions section made quiet — one line per phase, compact chips, text links, calendar folded (her "improve ui - too busy hard to read", 2026-09-21)
+
+Her screenshot of the Treatment plan tab's Sessions section (Janice, Neck &
+shoulder, a one-week course): two full-width segment cards for Today / Next,
+a second "Since 21 Sep · 1 of 2 visits" line under the phase line, a whole
+course calendar for a one-week plan, and four outlined buttons on two lines
+(2 sessions · Set sessions · Set sessions · 1 to book · copy the dates).
+Reductive fix, nothing removed from what she can do:
+- **One line per phase.** `sinceLineFor(p, true)` renders the since/visits
+  fact as an inline `<span class="since">· Since 21 Sep · 1 of 2 visits</span>`
+  on the phase line (`.grp .since { flex-basis: auto }`); the empty-ladder
+  branch keeps the block form.
+- **Compact chips.** `.ph-tp-sessbar i.seg` is `flex: 0 0 auto; min-width:
+  64px; max-width: 132px; padding: 4px 10px` — a segment is as wide as its
+  words, never stretched to fill the row.
+- **Text links, not boxes.** `.ph-tp-sess-edit` ("2 sessions" / "Set
+  sessions", the `.empty` one muted) and the header's `.ph-tp-book` actions
+  lose border/background/padding; underline on hover. The old boxed rule for
+  `.ph-tp-ladder .ph-tp-sec .ph-tp-book` (~6082) was edited in place — it sat
+  later at equal specificity, so a rule added earlier could not beat it.
+- **Calendar folded.** `phTpSessCalOpen()` / `phTpSessCalSet()` read/write
+  localStorage `daybook-ph-sesscal-open` (a device view preference, never
+  synced; closed by default). The header shows "Calendar ▾/▴"
+  (`data-tp-sesscal-toggle`) only when `phTpSessCalHtml` has something to
+  draw (never on cycle-synced plans); the calendar is built only while open.
+  Pins still open from the bar segments (`data-tp-sess-pin`) whether or not
+  the calendar is showing. **Disclosed to her:** she liked Mock 2's calendar,
+  so it is folded, not removed.
+Verified in the sandbox on a synthetic 2-phase Low back pain plan (Today +
+Next ~28 Sep · Next ~12 Oct · ~26 Oct): header links computed border none /
+transparent; Today chip 132px; no overflow at 400px; a real dispatched click
+on Calendar opened the 10-week grid and flipped the glyph, a second folded
+it; key removed, synthetic patient and booking removed, residue nil;
+Prescriptions live search 2 → 0 → 2. `lcm-build` `20260921-213000`, `sw.js`
+`lcm-20260921-sessions-quiet`.
