@@ -7664,6 +7664,48 @@ needed. Synthetic test patient (`PRESC.items`, `PHARMACY.log`,
 
 `lcm-build` `20260921-070000`, `sw.js` `lcm-20260921-grams-follows-herbs-always`.
 
+## "LCM couldn't start" — boot housekeeping rendered before the script finished (her "fix this", 2026-09-21 evening)
+
+Her screenshot: the crash card, `ReferenceError: Cannot access 'phInitials'
+before initialization (line 34,152)`. Live line 34,152 (build 20260921-080000)
+is `presIsFormula`'s `phInitials(...)` call — a real temporal-dead-zone hit.
+
+**Root cause, by construction, not guessed:** `phRunBootHousekeeping` was
+called at top level as `if (!window.__LCM_SYNC) phRunBootHousekeeping(); else
+{ wait for lcm-sync-caught-up }`. But `window.__LCM_SYNC = true` is set by a
+`<script>` AFTER the main one, so at that line the flag is ALWAYS undefined:
+the "sync" branch was unreachable and housekeeping always ran synchronously,
+26k lines before the script's end. It is harmless until the boot sweep
+(`schedAutoDeferSweep`) actually moves an overdue scheduled dispense — then it
+calls `renderPharmacy()` while every `const`/`let` declared below it
+(`phInitials`, `phSeg0`, the `sched*` state…) is still uninitialised. So: a
+clinic with ONE pickup past its 6pm cutoff could not open the app at all, and
+the sandbox (no scheduled entries) never saw it. Fix: the whole
+housekeeping dispatch sits in `setTimeout(…, 0)` — after every inline script
+has run, the flag is real, the sync branch is finally reachable, and no render
+can meet a dead-zone const. Belt and braces: `phInitials` is now a hoisted
+`function` declaration. Verified: an overdue pickup (3 days old) in the
+sandbox → app boots, no card, `lastAutoMove` → tomorrow, "6pm cutoff".
+
+## Visits table: points chips stop pilling sentences; the plan row shows planned points (her "improve ui", 2026-09-21)
+
+Her screenshot of the merged Visits table (`phTpVisitsMergedHtml`): the
+21 Sep visit row's Points cell had pilled a template's prose into fragments
+("TE5. Add local shoulder points (LI15", "SI9", "TE14) if the shoulder is
+involved; avoid deep needling directly into a frozen", "guarded joint on the
+first visit.") — `chips()` was a bare split on commas; the plan row showed
+"2×/wk for 1 week" as a chip in the POINTS column; and the projected row
+read "25 Sep 2026if she keeps this rhythm" because bold "21 Sep 2026" needs
+~86px in a 78px column. Now: `chips()` cuts the text at the first sentence
+break (`[.;]` + space + capital/paren), pills the comma list before it (a
+part over 34 chars or with sentence punctuation goes to the prose instead),
+and puts the rest as one `.ph-tp-vt-prose` line under the pills; the plan
+row's Points cell shows the phase's planned POINTS, with the rhythm as the
+date cell's sub-line ("plan · 2×/wk for 1 week"); `col.dt` 96px (84 on the
+phone), the sub-line may wrap. Verified on the real "Acute / painful phase"
+template text: 6 pills + one prose line, plan and visit rows alike.
+`lcm-build` `20260921-183000`, `sw.js` `lcm-20260921-boot-crash-visits-table`.
+
 ## Session days she can move + the course on one calendar (her pick 2026-09-21, "i like mock 2+3")
 
 Her ask this session: "make 3 widgets so i can plan treatment sessions more
