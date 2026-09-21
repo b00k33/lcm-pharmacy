@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260921-010000">
+<meta name="lcm-build" content="20260921-020000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -21595,7 +21595,11 @@
         // the count so a real cloud-cleanup problem (permissions, a flaky link)
         // is caught before it piles up. Photos still file locally either way.
         const failN = window.__phCapDeleteFails || 0;
-        el.innerHTML = `<b>✓ Ready.</b>${asWho} ${waiting} waiting in the cloud${last ? ` · ${last.n} received ${esc(phRelShort(last.at))}` : " · nothing received yet since this page opened"}.${failN ? ` <b>⚠ ${failN} cloud ${failN === 1 ? "copy" : "copies"} couldn't be removed</b> after filing — they're safely imported here, just check your Supabase project if this keeps happening.` : ""}`;
+        // her ask 2026-09-21: phRenFindDuplicate now rejects a re-sent photo
+        // before it's ever filed -- say so here too, not just in the passing
+        // toast, so "why didn't that photo show up" has an answer on file.
+        const dupN = window.__phCapDupSkips || 0;
+        el.innerHTML = `<b>✓ Ready.</b>${asWho} ${waiting} waiting in the cloud${last ? ` · ${last.n} received ${esc(phRelShort(last.at))}` : " · nothing received yet since this page opened"}.${failN ? ` <b>⚠ ${failN} cloud ${failN === 1 ? "copy" : "copies"} couldn't be removed</b> after filing — they're safely imported here, just check your Supabase project if this keeps happening.` : ""}${dupN ? ` <b>${dupN} duplicate cop${dupN === 1 ? "y" : "ies"}</b> rejected since this page opened — already on file, so nothing new was saved.` : ""}`;
       }
     } catch (e) { el.textContent = `Couldn't check — ${(e && e.message) || "try again"}.`; }
   }
@@ -43375,6 +43379,27 @@ or changing anything in Cliniko.
   // silent delete failures is finally visible instead of only ever showing
   // up as duplicates days later
   window.__phCapDeleteFails = 0;
+  // her ask 2026-09-21 ("make the app reject duplicates") -- the PH_CAP_IMPORTED_KEY
+  // fix above (2026-09-20) closed the "a failed delete re-imports the same
+  // PATH" hole, but it cannot catch the SAME PHOTO arriving under a genuinely
+  // NEW path: her phone's own "Resend all" recovery button, or a mark-as-sent
+  // stamp that never lands (the tab backgrounds right after a real upload
+  // succeeds -- a known risk class, see reference_hidden_tab_timer_throttling),
+  // both upload the identical bytes again under a fresh Date.now()-random
+  // filename, which sails straight past a path-only check. This is a content
+  // check instead: same patient + same row (type, and tongue shot) + same day
+  // + the exact same byte size as a photo she already has on file. Reuses
+  // phRecPhotosDupGroups' own proven signature (patient + phRenRowKeyOf +
+  // phRenDateKeyOf + blob.size) rather than inventing a second definition of
+  // "duplicate" -- a real re-send is always byte-identical; two different
+  // photos of the same shot taken minutes apart essentially never are.
+  async function phRenFindDuplicate(patientKey, candidate) {
+    if (!candidate.blob || !candidate.blob.size) return null;
+    const rowKey = phRenRowKeyOf(candidate), dateKey = phRenDateKeyOf(candidate);
+    const existing = await phRenPhotoGetAllForPatient(patientKey);
+    return existing.find(r => r.blob && r.blob.size === candidate.blob.size && phRenDateKeyOf(r) === dateKey && phRenRowKeyOf(r) === rowKey) || null;
+  }
+  window.__phCapDupSkips = 0;
   // auto-import (the receiving side): capture-tagged relay files download,
   // file themselves by the tagged type + date, then the cloud copy is
   // deleted -- ONLY after the local save succeeded (same never-lose rule as
@@ -43388,7 +43413,7 @@ or changing anything in Cliniko.
       const items = await phRenRelayList();
       const own = `_d${phCapDeviceId()}_`;
       const imported = phCapImportedLoad();
-      let n = 0, delFails = 0;
+      let n = 0, delFails = 0, dupSkips = 0;
       for (const it of items) {
         if (phCapOwnUploads.has(it.path) || it.path.includes(own)) continue;   // never re-import this device's own uploads
         if (imported.has(it.path)) continue;   // already filed locally -- the cloud delete may just be lagging or have failed
@@ -43401,16 +43426,25 @@ or changing anything in Cliniko.
           // sent by an older phone build -- still imports exactly as before.
           const ms = /_s([a-z]+)\.jpg$/.exec(it.path);
           const shot = ms && PH_REN_SHOT_LABEL[ms[1]] ? ms[1] : "";
-          await phRenPhotoPut({
-            id: uid(), patientKey: it.patientKey, kind: PH_REN_TYPE_LABEL[m[1]] ? m[1] : "other",
-            dateKey: m[2], blob, mime: "image/jpeg", createdAt: Date.now(), relayedAt: Date.now(),   // an import is never relayed again
-            filename: `phone-${m[1]}-${m[2]}.jpg`,
-            ...(shot && m[1] === "tongue" ? { shot } : {}),
-          });
+          const kind = PH_REN_TYPE_LABEL[m[1]] ? m[1] : "other";
+          const candidate = { kind, dateKey: m[2], blob, ...(shot && m[1] === "tongue" ? { shot } : {}) };
+          const dup = await phRenFindDuplicate(it.patientKey, candidate);
+          if (dup) { dupSkips++; }
+          else {
+            await phRenPhotoPut({
+              id: uid(), patientKey: it.patientKey, kind,
+              dateKey: m[2], blob, mime: "image/jpeg", createdAt: Date.now(), relayedAt: Date.now(),   // an import is never relayed again
+              filename: `phone-${m[1]}-${m[2]}.jpg`,
+              ...(shot && m[1] === "tongue" ? { shot } : {}),
+            });
+            await phRenLoadPhotosFor(it.patientKey);
+            n++;
+          }
+          // a rejected duplicate still counts as "handled" -- filed already,
+          // or now correctly recognised as the same photo -- so its cloud
+          // copy is cleaned up exactly like a genuinely new import
           imported.add(it.path); phCapImportedSave(imported);   // saved BEFORE the delete attempt -- a failed delete must never cause a re-import
           if (!(await phRenRelayDelete(it.path))) delFails++;
-          await phRenLoadPhotosFor(it.patientKey);
-          n++;
         } catch (e) {}
       }
       // forget any path no longer listed at all (deleted, successfully or by
@@ -43420,7 +43454,14 @@ or changing anything in Cliniko.
       imported.forEach(p => { if (!live.has(p)) { imported.delete(p); pruned = true; } });
       if (pruned) phCapImportedSave(imported);
       if (delFails) window.__phCapDeleteFails = (window.__phCapDeleteFails || 0) + delFails;
-      if (n) { window.__phCapLastImport = { at: Date.now(), n }; phFlashShow(`📷 ${n} photo${n === 1 ? "" : "s"} arrived from your phone.`); }
+      if (dupSkips) window.__phCapDupSkips = (window.__phCapDupSkips || 0) + dupSkips;
+      if (n || dupSkips) {
+        window.__phCapLastImport = { at: Date.now(), n, dupSkips };
+        const bits = [];
+        if (n) bits.push(`📷 ${n} photo${n === 1 ? "" : "s"} arrived from your phone.`);
+        if (dupSkips) bits.push(`${n ? "" : "📷 "}${dupSkips} duplicate cop${dupSkips === 1 ? "y" : "ies"} skipped — already on file.`);
+        phFlashShow(bits.join(" "));
+      }
     } catch (e) {}
     phCapImportBusy = false;
   }
@@ -43708,6 +43749,20 @@ or changing anything in Cliniko.
     if (!cap) return false;
     try {
       const blob = await phRenCompressToBlob(file, PH_REN_PHOTO_MAXDIM, PH_REN_PHOTO_QUALITY);
+      // her ask 2026-09-21 ("make the app reject duplicates"): the same
+      // content signature phRenFindDuplicate already checks on relay-import
+      // (patient + row + date + byte size), reused here against a double-tap
+      // of Save -- two saves of the same picked/captured file compress to
+      // byte-identical output, so a fast second tap before the button
+      // disables would otherwise file a second identical record. A genuine
+      // retake essentially never matches by size, so this never blocks a
+      // real new photo.
+      const dupCand = { kind: cap.type, dateKey: cap.dateKey, blob, ...(cap.shot ? { shot: cap.shot } : {}) };
+      const dup = await phRenFindDuplicate(cap.patientKey, dupCand);
+      if (dup) {
+        if (!quiet) phFlashShow(`Already saved — that's the same photo, ${phRenKb(blob.size)}.`);
+        return true;
+      }
       const recId = uid();
       await phRenPhotoPut({
         id: recId, patientKey: cap.patientKey, kind: cap.type,

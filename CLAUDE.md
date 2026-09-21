@@ -7130,3 +7130,96 @@ built even on the rare `n > 16` path before being discarded for the pill
 — pure wasted computation on an edge case, not a defect, left as-is.
 
 `lcm-build` `20260921-010000`, `sw.js` `lcm-20260921-tp-horizontalc-sessionbar`.
+
+## Duplicate photos — reject at the source, not just clean up after (2026-09-21)
+
+She sent a screenshot of Records → Photos, Rebecca So's "By date" view for
+MON 21 SEP: 6 thumbnails, several correctly type-labelled, two more reading
+as unlabelled duplicates of the same day, with the existing "⚠ 16 possible
+duplicate groups — Review" banner still up. Her words: **"duplicate issue.
+make it easier to prevent duplicates. make the app reject duplicates."**
+Distinct from the already-shipped 2026-09-20 fix (below) — this is new,
+live production data, not a hypothetical.
+
+**Why the 2026-09-20 fix didn't close this.** That fix (`phCapAutoImport`'s
+`PH_CAP_IMPORTED_KEY` persisted-path set) only ever guarded against
+re-importing the SAME relay upload PATH twice — the case where a delete
+silently failed and the same file sat in the bucket to be picked up again.
+It does nothing for the SAME PHOTO CONTENT arriving under a genuinely NEW
+path, which her phone's own documented **"Resend all photos" recovery
+button** (`data-ph-relay-resendall`) does on purpose — it clears
+`relayedAt` on every local phone photo and re-sends the lot, even ones the
+desktop already has, each under a fresh `Date.now()`-random filename that
+sails straight past a path-only check. A tab-backgrounding race around the
+`relayedAt` stamp write (see
+[[reference_stale_service_worker_sandbox]]-family hidden-tab timer traps)
+is a second, plausible route to the same outcome.
+
+**Fix — a content-signature check, reusing the exact heuristic the
+existing cleanup tool already trusts** (`phRecPhotosDupGroups`, shipped
+2026-09-20): `patientKey + phRenRowKeyOf(rec) + phRenDateKeyOf(rec) +
+blob.size`. A real re-send is always byte-identical; two different photos
+of the same shot taken minutes apart essentially never share both the same
+day AND the exact same compressed byte count. New `phRenFindDuplicate
+(patientKey, candidate)` (beside `phCapAutoImport`, ~line 43396) checks a
+save-in-progress candidate against every existing photo already on file
+for that patient (via `phRenPhotoGetAllForPatient`, IndexedDB-direct, no
+cache staleness risk) and returns the match, or `null`.
+
+Wired into TWO save paths, not just the one she reported through:
+1. **`phCapAutoImport`** (the desktop-side relay import, where her actual
+   16 duplicate groups came from) — a matched duplicate is silently
+   skipped (never creates a new IndexedDB record), counted
+   (`window.__phCapDupSkips`), surfaced in the post-import flash toast
+   ("N duplicate copies skipped — already on file"), shown in Settings →
+   Photo relay's status line, and its cloud copy is still cleaned up
+   exactly like a genuine import — a rejected duplicate is "handled" the
+   same as a filed one.
+2. **`phRenCaptureSave`** (the manual capture-save path — the phone's own
+   camera capture, and the desktop's "+ Add" photo picker, both funnel
+   through this one function) — defense-in-depth against a fast double-tap
+   of Save before the button disables: two saves of the same picked file
+   compress to byte-identical output, so a second tap would otherwise file
+   a second identical record. On a match, the save is skipped and she sees
+   "Already saved — that's the same photo, N KB." instead of a silent
+   no-op or a second record. A genuine retake essentially never matches by
+   size, so this can't block a real new photo.
+
+**Deliberately NOT extended to the desktop crop-tool saves**
+(`phRenCropDoSave`/`phRenCropDoSaveFull`) — disclosed scope cut, not an
+oversight. Those create a fresh crop from a source region on every save,
+which is a different risk shape (an accidental identical double-click is
+possible but far less demonstrated than the two paths above, which are
+her actual reported mechanism), and the two paths already covered are
+where the real duplicates came from. Revisit if she reports duplicates
+from that tool specifically.
+
+**What this does NOT do**: it doesn't touch the 16 duplicate groups
+already sitting on her disk — the existing "⚠ Review" tool
+(`phRecPhotosDupGroups`, Records → Photos) is still the right, and only,
+way to clean those up. This fix stops NEW ones from being created going
+forward.
+
+**Verified via an isolated copy of `phRenFindDuplicate`/`phRenRowKeyOf`/
+`phRenDateKeyOf`** (closure-private in the real app, same established
+testing pattern used throughout this file) against synthetic photo
+records: an exact resend (same patient/row/date/size) correctly detected;
+a different byte size, a different tongue shot, a different date, and a
+different patient are all correctly NOT flagged; a null/zero-size
+candidate is never flagged; an unlabelled tongue photo is correctly kept
+distinct from a labelled "natural light" one on the same day (they're
+different rows); a non-tongue type (face) double-tap is also correctly
+caught. 8/8 assertions passed. Separately confirmed the real, unmodified
+app boots clean past both edited regions (line ~43396 and ~43750) — the
+full sidebar, Appointments grid and, once routed to Settings → Device →
+Photo relay, the real (not signed in) status card all rendered with no
+console errors beyond the known pre-existing icon-fetch noise — the real
+login gate reappeared before a screenshot could be taken of the
+Photo-relay card mid-session (this project's own well-documented
+limitation), so this wasn't independently screenshotted this time; the
+change itself has no new visual design to review (a rejection message
+reusing the existing flash-toast component, and one status-line sentence
+already shipped 2026-09-20), so it doesn't need her sign-off the way a UI
+redesign would.
+
+`lcm-build` `20260921-020000`, `sw.js` `lcm-20260921-dupguard-capturesave`.
