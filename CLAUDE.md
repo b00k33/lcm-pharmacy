@@ -7304,3 +7304,100 @@ button at the end, caption text below. Synthetic test patient/localStorage
 flag cleaned up and confirmed absent afterward.
 
 `lcm-build` `20260921-030000`, `sw.js` `lcm-20260921-tp-cycblk-foldedbar-mockc`.
+
+## Fresh 208-item backlog re-verification — pool confirmed exhausted, "My Cycle — gone quiet" widget rebuilt (2026-09-21)
+
+Her "go through the rest of the backlog" (continuing the multi-session audit
+this file has tracked since 2026-09-16) triggered an 8-agent parallel
+Workflow re-verifying all 208 items in the standing dataset against CURRENT
+source, not the old audit's own framing. Result: **109 already done, 32
+already decided against, 19 her own tasks, 11 non-issues, 15 flagged bigger
+work, 5 genuine large features, 17 needs-her-word — zero SAFE_TO_BUILD.**
+This is the fourth independent confirmation across this project's history
+that the easy, unambiguous buildable pool is exhausted (see Batches 15-17
+above for the first three).
+
+**Two of the workflow's own verdicts were stale, caught by checking current
+source rather than relaying them:**
+- Item 44 ("Double-log and lost-pending-state defects still unfixed") — the
+  workflow's evidence cited only CLAUDE.md's OLD "no reproducible mechanism
+  found" notes. The real mechanism WAS found and fixed the same day, earlier
+  in this file ("A dispense that never gets logged can quietly be dispensed
+  twice") — the workflow's search simply didn't reach that later section.
+- Item 116 ("Check-in row: pale kind badge still reads as the button") —
+  the workflow's evidence cited the original 2026-09-15/16 flag. The actual
+  fix already shipped 2026-09-20 (`#pharmacyPage .ph-fu-card .ph-fu-card-top
+  .ph-fu-badge`, index.html ~9593-9603): the badge lost its pill/background
+  so it now reads as a quiet label, matching the desktop `.nm .kind`
+  treatment — confirmed live in source before telling her anything needed
+  building. Her "Yes, swap it" answer today needed no new code.
+
+**Curated 4 of the 17 needs-her-word items into a real popup** (not a dump —
+the other 13 need her to write prose, or are too large for a tap, or are
+already covered above). Her answers:
+- Plan-grid VISITS projection count (4 vs fewer) — **"Keep at 4."** No change.
+- Check-in badge/button emphasis — **"Yes, swap it"** — already done (above).
+- Pharmacy address on the label for non-pre-printed-stock locations —
+  **"No, all locations use pre-printed stock."** No change, closed.
+- **"My Cycle — gone quiet" list — "Yes, add it back."** BUILT.
+
+**The gone-quiet build.** `phChartTriageMissed()` (the ≥2-day-since-last-
+chart-entry detector, deliberately kept 2026-09-15 when `phDashChartHtml`
+was deleted in the Dashboard's herbs-only rebuild — "Supabase query+cache
+layer, costly to recreate") had sat completely unwired since, its own cache
+loader (`phChartTriageLoad`) never called anywhere. The Dashboard is
+herbs-only by design now (protected decision), so this couldn't go back
+there — it belongs on Communications' Due tab instead, since that's where
+every other "who needs contact" alert already lives.
+
+**Deliberately NOT folded into the existing `phCommQuietRows`/
+`phCommQuietEval` machinery** (the general herb/acu "gone quiet" system,
+woven through `phCkContext`, the row-kind filter chips, search and
+bulk-select) — that system reads `phCommLastTouch` (dispense/appointment/
+acu-session), a genuinely different signal from a My Cycle patient's own
+phone-side chart entries. A patient who logs her cycle daily but is rarely
+seen in clinic would never trip the herb/acu quiet check and shouldn't have
+to. Built as a small, standalone widget instead: `phChartQuietRows()`
+(resolves `phChartTriageMissed()`'s rows to real patient keys via
+`phPatientKey`, drops `phMsgDoNotContact` patients), `phChartQuietRowHtml()`
+(name — linked to her script via `phApptScriptFor` when one exists, same
+"Open a real record when one exists, plain text otherwise" pattern used
+throughout Communications — · days-quiet badge · "no entry since \<date\>" /
+"never logged an entry"), `phChartQuietBandHtml()` (reuses `phFsBand` with a
+new `"cyclequiet"` key, so it folds/unfolds through the exact same
+`data-ph-fs-collapse` handler every other Due-tab band already uses — no
+new click handler needed). Wired into `phCommDueHtml()`, above the Overdue/
+Today/Week/Later list; `phChartTriageLoad()` fires (cheaply — it has its
+own 5-minute cache) whenever `renderPhCommunicationsPage()` renders the Due
+tab.
+
+**A real bug caught while verifying, not shipped blind.** The card list
+wrapper I first reused, `.ph-fu-cards`, is deliberately `display:none`
+above 900px — it's the Communications ROW list's phone-only presentation;
+the desktop sheet draws rows a completely different way
+(`.ph-ds-cols`/`.ph-ds-row`). Reusing it here would have shown the band's
+header and count correctly on desktop while the patient rows underneath
+stayed invisible — confirmed by a `getComputedStyle` check inside a real
+`#pharmacyPage`-scoped element (the first check, appended to bare
+`document.body`, gave a false "it's fine" — CSS here is scoped
+`#pharmacyPage .selector`, so checking outside that container proves
+nothing; caught by re-checking scoped, not trusted on the first pass).
+Fixed with a dedicated `.ph-cq-cards` wrapper class (`display:flex` at
+every width, no media query) — confirmed `display: flex` and non-zero
+height inside `#pharmacyPage` after the fix.
+
+Verified via the real functions in a leftover-authenticated sandbox tab
+(the login gate reappeared before a screenshot of the live app itself
+could be taken, same limitation as every batch in this file): empty-state
+(no data loaded) returns no band; a forced 2-row synthetic dataset renders
+both the "no entry since \<date\>" and "never logged an entry" branches
+correctly, with the fold control wired through the shared handler; the
+real `renderPhCommunicationsPage()` call, navigated to the Due tab, shows
+the widget in the actual live DOM. A standalone preview built from the
+exact captured HTML output and the exact CSS tokens now in `index.html`
+(same substitute this project always uses when the login gate blocks a
+click-through) confirms the visual result at both phone and desktop width,
+sent to her directly since a Browser-pane screenshot alone doesn't reach
+her.
+
+`lcm-build` `20260921-040000`, `sw.js` `lcm-20260921-cyclequiet-widget`.
