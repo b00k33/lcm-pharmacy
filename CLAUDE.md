@@ -8191,3 +8191,71 @@ patient/plan/appointment removed from `PHARMACY` afterward, confirmed
 gone.
 
 `lcm-build` `20260921-230000`, `sw.js` `lcm-20260921-sessions-tile-chips`.
+
+## "Breathing room" plan-block spacing — the new standard for every treatment plan page (2026-09-21)
+
+Continuing the same-day spacing/hierarchy exploration: 3 mocks (A "Breathing
+room" — generous card padding, real label widths, a substantial phase bar;
+B "Today leads, plan folds away" — the plan card collapses, a Today hero
+takes over; C "Quiet reference, type-weight hierarchy" — type-scale does
+the separating, not boxes) on the Neck & shoulder plan. Her picks, in
+order: **"build a first"**, then **"use that format as the standard for all
+musculoskeletal treatment plan tables"**, then **"use the same principles
+to redesign all treatment plans in the app too."**
+
+**Why one CSS pass covered all three asks.** `presTpInlineEditorHtml` — the
+ONE inline Treatment Plan tab renderer every plan type goes through (cycle
+plans, facial plans, MSK plans alike; confirmed by reading the function
+itself, not assumed) — calls `phTpFocusGoalHtml`, `phTpPhaseBarHtml` and
+`phTpSessionLadderHtml` unconditionally for every plan, off the SAME shared
+`.ph-tp-pblk`/`.ph-tp-fg`/`.ph-tp-pbar` classes. Raising the desktop base
+rule for those classes is therefore automatically the MSK standard AND the
+app-wide standard in one edit — there was no template-specific styling to
+duplicate.
+
+**What changed, desktop only (index.html ~5954-6160):**
+- `.ph-tp-pblk` padding: `12px 14px 14px` → `20px 24px 22px`.
+- `.ph-tp-pblk-head` gap/margin: `6px 10px`/`8px` → `8px 12px`/`14px`.
+- `.ph-tp-pblk .ph-tp-fg` margin-bottom: `4px` → `10px`; its `.kv` label
+  column: `52px` → `64px`, with an explicit `10px` gap added (previously
+  inherited from the base `.ph-tp-fg .kv` rule's 8px).
+- `.ph-tp-pbar-outer` margin: `8px 0 14px` → `14px 0 18px`; `.ph-tp-pbar`
+  height: `26px` → `32px`; `.seg` padding: `0 6px` → `0 10px`, font-size
+  `10.5px` → `11.5px`.
+- `.ph-tp-pblk .ph-tp-sec` margin-top: `12px` → `20px` (the gap before the
+  Sessions section and its siblings).
+
+**Deliberately NOT touched, disclosed scope cut:** the Sessions table
+(Phase · Sessions · This week, transposed with dated tile chips) and the
+merged Planned|Today visit table (`.ph-tp-vtab`) — both were approved and
+shipped THE SAME DAY, hours earlier, on her explicit "yes i like this."
+Mock A's own generic 12-18px table padding would have quietly undone that
+just-confirmed density decision. "Breathing room" in her three mocks was
+about the page's overall spacing RHYTHM (card chrome, section gaps, the
+phase bar, Focus/Goal) — not a request to loosen the data tables she just
+finished tightening. If she wants the tables looser too, that's a
+separate, explicit ask.
+
+**Phone stays exactly as tight as before, by construction, not by a new
+rule.** The existing `@media (max-width: 640px)` overrides for
+`.ph-tp-pbar .seg` (`padding: 0 4px`) and `.ph-tp-pblk` (`padding: 10px
+10px 12px`) sit at equal CSS specificity to the base rules and come AFTER
+them in source order — so on a phone they still win regardless of the
+new desktop values, unchanged. Matches her standing lcm6 "Desktop leads,
+mobile covers the essentials" decision (2026-09-20) — this is exactly the
+deep-clinical-page case that decision describes.
+
+**Verified**: a standalone preview built from the exact edited CSS
+(`index.html` lines 189-14417, the app's one `<style>` block) applied to
+real markup shapes copied verbatim from `phTpFocusGoalHtml`/
+`phTpPhaseBarHtml`/`phTpSessionLadderHtml`'s own template-literal code —
+same substitute this project always uses since the real login gate blocks
+a fully-booted local click-through. Screenshotted in the Browser pane
+(fronted, per her standing "always show the build" rule) — the card reads
+airier, the phase bar has real presence, Focus/Goal has a readable label
+column, the Sessions/visit tables are untouched and still read exactly as
+dense as the mock she approved earlier today. Preview files were staged
+temporarily inside the served project directory and deleted immediately
+after — confirmed `git status` shows no trace.
+
+`lcm-build` `20260921-240000`, `sw.js` `lcm-20260921-breathing-room-plan-chrome`.
