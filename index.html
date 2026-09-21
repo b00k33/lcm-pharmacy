@@ -5918,12 +5918,12 @@
      day) always shows. On a phone a press on the bar reveals them. */
   #pharmacyPage .ph-tp-cbar i b, #pharmacyPage .ph-tp-cbar i em { opacity: 0; transition: opacity .15s; }
   #pharmacyPage .ph-tp-cbar:hover i b, #pharmacyPage .ph-tp-cbar:hover i em, #pharmacyPage .ph-tp-cbar:active i b, #pharmacyPage .ph-tp-cbar:active i em { opacity: 1; }
-  #pharmacyPage .ph-tp-cbar-outer .mk, #pharmacyPage .ph-tp-pbar-outer .mk { position: absolute; top: -6px; width: 2px; height: 36px; background: var(--ph-ink); transform: translateX(-1px); pointer-events: none; }
-  #pharmacyPage .ph-tp-cbar-outer .mk::after, #pharmacyPage .ph-tp-pbar-outer .mk::after { content: ""; position: absolute; bottom: -3px; left: 50%; transform: translateX(-50%); width: 6px; height: 6px; border-radius: 50%; background: var(--ph-ink); }
-  #pharmacyPage .ph-tp-cbar-outer .mkl, #pharmacyPage .ph-tp-pbar-outer .mkl { position: absolute; top: -22px; transform: translateX(-50%); background: var(--ph-ink); color: var(--ph-cream); font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 5px; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
+  #pharmacyPage .ph-tp-cbar-outer .mk { position: absolute; top: -6px; width: 2px; height: 36px; background: var(--ph-ink); transform: translateX(-1px); pointer-events: none; }
+  #pharmacyPage .ph-tp-cbar-outer .mk::after { content: ""; position: absolute; bottom: -3px; left: 50%; transform: translateX(-50%); width: 6px; height: 6px; border-radius: 50%; background: var(--ph-ink); }
+  #pharmacyPage .ph-tp-cbar-outer .mkl { position: absolute; top: -22px; transform: translateX(-50%); background: var(--ph-ink); color: var(--ph-cream); font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 5px; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
   #pharmacyPage .ph-tp-cbar-outer .mk.late, #pharmacyPage .ph-tp-cbar-outer .mkl.late { background: var(--ph-zero-deep); }
-  #pharmacyPage .ph-tp-cbar-outer .mkl.r, #pharmacyPage .ph-tp-pbar-outer .mkl.r { transform: translateX(calc(-100% + 6px)); }
-  #pharmacyPage .ph-tp-cbar-outer .mkl.l, #pharmacyPage .ph-tp-pbar-outer .mkl.l { transform: translateX(-6px); }
+  #pharmacyPage .ph-tp-cbar-outer .mkl.r { transform: translateX(calc(-100% + 6px)); }
+  #pharmacyPage .ph-tp-cbar-outer .mkl.l { transform: translateX(-6px); }
   #pharmacyPage .ph-tp-cycblk-facts, #pharmacyPage .ph-tp-cycblk-edit { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; font-size: 12.5px; color: var(--ph-ink); }
   #pharmacyPage .ph-tp-cycblk-facts { margin-top: 14px; }
   #pharmacyPage .ph-tp-cycblk-edit { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--ph-line); }
@@ -49442,6 +49442,12 @@ or changing anything in Cliniko.
     // a new cycle length or period moves the plan's live phase too
     phTpRepaintPhasePanel();
     document.querySelectorAll("[data-tp-pbar]").forEach(el => { const plan = phTpFindPlan(el.dataset.tpPbarName, el.dataset.tpPbar); if (plan) el.outerHTML = phTpPhaseBarHtml(el.dataset.tpPbarName, plan, phTpTabPhaseOf(plan, phPatientPeek(el.dataset.tpPbarName))); });
+    // the session ladder's own "live" bolding/since-line/done-booked-next
+    // cells are baked into HTML at render time too -- without this they went
+    // stale (still showing the OLD live phase) after a cycle edit moved the
+    // phase, until some unrelated full re-render happened (adversarial review
+    // 2026-09-21)
+    document.querySelectorAll("[data-tp-ladder]").forEach(el => { const plan = phTpFindPlan(el.dataset.tpLadderName, el.dataset.tpLadder); if (plan) el.outerHTML = phTpSessionLadderHtml(el.dataset.tpLadderName, plan); });
     presBandSubRefresh();
     return true;
   }
@@ -52670,7 +52676,18 @@ or changing anything in Cliniko.
       if (!list.length) return "";
       return `<div class="ph-tp-tray"><div class="t">Not in this plan yet · ${list.length}</div>${list.map(a => `<div class="bk"><b>${esc(sd2(a.date))}${a.time ? ` ${esc(phCkTime12(a.time))}` : ""}</b>${a.date < firstSince ? `<span class="mut">before the plan started</span>` : a.date > today ? `<span class="mut">booked</span>` : ""}<span class="chips">${phs.map(x => `<button type="button" class="chip" data-tp-appt-file="${esc(a.id)}:${plan.id}:${x.id}">→ ${esc(x.label || "Phase")}</button>`).join("")}</span></div>`).join("")}</div>`;
     })();
-    if (!phs.some(p => phTpSessionsOf(p)) && !(phTpSessEdit && phTpSessEdit.startsWith(plan.id + ":"))) return `<div class="ph-tp-ladder empty"><button type="button" class="tab-link" data-tp-sess="${plan.id}:${phs[0].id}">Plan the sessions per phase →</button>${tray}</div>`;
+    // the fact that used to float above the phase bar as a black tooltip pill
+    // now sits on the live phase's own row instead (phTpPhaseBarHtml no longer
+    // emits it) -- shared so it still shows even when the "no counts set yet"
+    // early-return below skips the rest of the per-phase rows (her session
+    // counts and this fact are two independent things; a plan with neither
+    // configured shouldn't lose "Since X · N visits" entirely)
+    const sinceLineFor = p => (live && live.id === p.id && p.sinceKey) ? (() => {
+      const d = parseKey(p.sinceKey);
+      const txt = [`Since ${d.getDate()} ${MON_SHORT[d.getMonth()]}`, phTpVisitShort(name, plan, p)].filter(Boolean).join(" · ");
+      return `<div class="since">${esc(txt)}</div>`;
+    })() : "";
+    if (!phs.some(p => phTpSessionsOf(p)) && !(phTpSessEdit && phTpSessEdit.startsWith(plan.id + ":"))) return `<div class="ph-tp-ladder empty" data-tp-ladder="${plan.id}" data-tp-ladder-name="${esc(name)}">${live ? sinceLineFor(live) : ""}<button type="button" class="tab-link" data-tp-sess="${plan.id}:${phs[0].id}">Plan the sessions per phase →</button>${tray}</div>`;
     let cursor = null;
     const groups = phs.map((p, i) => {
       const n = phTpSessionsOf(p);
@@ -52680,15 +52697,9 @@ or changing anything in Cliniko.
       // box; committing still goes through the same change/keydown/focusout
       // handlers below, unchanged -- the stepper buttons only nudge the input
       const setBtn = editing
-        ? `<span class="ph-tp-sess-stepper"><button type="button" class="ph-tp-sess-btn dec" data-tp-sess-dec="${plan.id}:${p.id}" aria-label="Fewer planned sessions"${n <= 0 ? " disabled" : ""}>−</button><input type="number" class="ph-tp-sess-in" data-tp-sess-in="${plan.id}:${p.id}" min="0" max="99" value="${n || 0}" aria-label="Sessions in ${esc(p.label || "this phase")}"><button type="button" class="ph-tp-sess-btn inc" data-tp-sess-inc="${plan.id}:${p.id}" aria-label="More planned sessions">+</button></span>`
+        ? `<span class="ph-tp-sess-stepper" aria-live="polite" aria-atomic="true"><button type="button" class="ph-tp-sess-btn dec" data-tp-sess-dec="${plan.id}:${p.id}" aria-label="Fewer planned sessions"${n <= 0 ? " disabled" : ""}>−</button><input type="number" class="ph-tp-sess-in" data-tp-sess-in="${plan.id}:${p.id}" min="0" max="99" value="${n || 0}" aria-label="Sessions in ${esc(p.label || "this phase")}"><button type="button" class="ph-tp-sess-btn inc" data-tp-sess-inc="${plan.id}:${p.id}" aria-label="More planned sessions">+</button></span>`
         : `<button type="button" class="ph-tp-sess-edit" data-tp-sess="${plan.id}:${p.id}" title="Click to change">${n ? `${n} session${n === 1 ? "" : "s"}` : "Set sessions"}</button>`;
-      // the fact that used to float above the phase bar as a black tooltip pill
-      // now sits on the live phase's own row instead (phTpPhaseBarHtml no longer emits it)
-      const sinceLine = isLive && p.sinceKey ? (() => {
-        const d = parseKey(p.sinceKey);
-        const txt = [`Since ${d.getDate()} ${MON_SHORT[d.getMonth()]}`, phTpVisitShort(name, plan, p)].filter(Boolean).join(" · ");
-        return `<div class="since">${esc(txt)}</div>`;
-      })() : "";
+      const sinceLine = sinceLineFor(p);
       const head = `<div class="grp"><b>${i + 1}</b> ${esc(p.label || "Phase")} · ${setBtn}${p.cadence ? ` <span class="mut">· ${esc(p.cadence)}</span>` : ""}${sinceLine}</div>`;
       const cls = `ph-tp-ladder-ph${isLive ? " live" : ""}${p.status === "done" ? " done" : ""}`;
       if (!n) { cursor = null; return `<div class="${cls}">${head}</div>`; }
@@ -52722,7 +52733,7 @@ or changing anything in Cliniko.
       }).join("")}</div>`;
       return `<div class="${cls}">${head}${bar}${(extra || off || mv) ? `<div class="ph-tp-sessextra">${extra}${off}${mv}</div>` : ""}</div>`;
     }).join("");
-    return `<div class="ph-tp-ladder"><div class="ph-tp-sec"><span>Sessions</span></div>${groups}${tray}</div>`;
+    return `<div class="ph-tp-ladder" data-tp-ladder="${plan.id}" data-tp-ladder-name="${esc(name)}"><div class="ph-tp-sec"><span>Sessions</span></div>${groups}${tray}</div>`;
   }
   document.addEventListener("change", e => {
     const inp = e.target.closest && e.target.closest("[data-tp-sess-in]");
@@ -52743,6 +52754,15 @@ or changing anything in Cliniko.
   document.addEventListener("focusout", e => {
     const inp = e.target.closest && e.target.closest("[data-tp-sess-in]");
     if (inp && phTpSessEdit) setTimeout(() => { if (phTpSessEdit && !document.querySelector("[data-tp-sess-in]:focus")) inp.dispatchEvent(new Event("change", { bubbles: true })); }, 0);
+  });
+  // a mousedown on the stepper's own buttons would otherwise steal focus off
+  // the input BEFORE the click below ever runs -- the focusout listener above
+  // reads that as "she clicked away, she's done" and auto-commits/closes the
+  // whole editor after a single tap (found by adversarial review 2026-09-21).
+  // Suppressing the button's default focus-move keeps the input focused
+  // throughout, so a +/- tap never fires blur/focusout at all.
+  document.addEventListener("mousedown", e => {
+    if (e.target.closest && e.target.closest("[data-tp-sess-dec],[data-tp-sess-inc]")) e.preventDefault();
   });
   // the stepper's -/+ buttons only nudge the input's displayed value; the
   // existing change/keydown/focusout handlers above still do the actual
