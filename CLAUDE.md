@@ -7974,3 +7974,78 @@ on Calendar opened the 10-week grid and flipped the glyph, a second folded
 it; key removed, synthetic patient and booking removed, residue nil;
 Prescriptions live search 2 → 0 → 2. `lcm-build` `20260921-213000`, `sw.js`
 `lcm-20260921-sessions-quiet`.
+
+## Sessions section becomes one combined table — Phase · Sessions · This week (her ask 2026-09-21, "make a widget" → "ok")
+
+Straight after the "Sessions section made quiet" fix shipped (build
+20260921-213000), she sent a screenshot of the now-quiet Sessions section
+and asked: **"why dont you put the sessions number under the phase like a
+table format. make a widget."** Shown 3 real mocks (A/B/C, built from the
+app's own CSS tokens, published as an Artifact) she asked to see them
+merged: **"combine them all into table format with clear visual
+divisions."** Shown the combined table (republished to the same Artifact
+URL), her verdict was **"ok"** — approved for real implementation.
+
+**The "Horizontal C" segmented bar (built earlier the same day) is retired
+in favour of one real `<table>`** — Phase · Sessions · This week, hairline
+cells all round, the same "real table, hairline cells" language she
+already loved on the Visits grid. Nothing she could do before is gone: the
+calendar (`phTpSessCalHtml`, unchanged) still carries a tap-to-pin /
+tap-to-move day for EVERY session of EVERY phase, so the table's
+This-week cell only needs to surface the one thing that matters right
+now — today's session, or the next one to pin. Everything else is a
+Calendar tap away, exactly as it was before this build.
+
+- **Phase column**: the ordinal circle (`.no`) + phase name on one line
+  (`.ph`), the cadence text underneath (the same `data-tp-edit` picker
+  door built the same day for "i cant plan"), and — only for the live
+  phase — the "Since … · N of M visits" fact on its own line.
+- **Sessions column**, right-aligned: the planned count as a big tabular
+  number, or "Set" in muted italic when unset — reuses the exact same
+  `data-tp-sess`/stepper editing mechanism unchanged, just restyled.
+- **This week column**: only the phase she is actually on shows a real
+  badge — solid teal "Today" (+ her visit-progress text), or an outlined
+  "Next"/gold "Booked" badge with its date (the Next badge is still the
+  tap-to-pin door, `data-tp-sess-pin`; a Booked cell is still
+  `data-tp-appt-move`). A done phase reads quiet "Complete"; an upcoming
+  phase reads "Starts after \<previous phase\>"; a live phase with nothing
+  to show reads "—". This is a deliberate simplification from the old
+  bar's per-session detail — full detail is one Calendar tap away.
+- **Clear divisions**: every cell carries a hairline border on all sides
+  (`border-collapse: collapse`, one border colour, `--ph-line`); the live
+  row gets a teal-tinted background plus a 3px teal left bar on its first
+  cell; a done row fades to 70% opacity; alternating rows get a faint
+  paper tint for scan-ability.
+- **Everything the old bar carried is still there**, just moved into a
+  secondary `<tr class="extra"><td colspan="3">` row under a phase's main
+  row, shown only when there's something to say: the "+N extra" tag
+  (more sessions logged than planned), excluded/"not counted" visits
+  (tap to re-count), the move bar (a tapped booked cell — from the
+  calendar or this table — opens `→ another phase / not counted / by
+  date / ✕`), and the pin bar (the date input + Shift checkbox + Save/✕
+  for a tapped "Next" badge).
+- The tray ("Not in this plan yet"), the "N to book · copy the dates"
+  header link and the folded Calendar toggle are all completely
+  unchanged — this build only touched the per-phase row markup.
+
+Verified with a real synthetic 3-phase plan (Acute done/3 sessions,
+Restoring range live/2 sessions, Maintenance upcoming/unset) called
+directly through `phTpSessionLadderHtml()` in the sandbox: the done row
+reads "Complete"; the live row shows a tappable Next badge with the
+projected date (`~21 Sep`) and the since/visit-progress line; the
+upcoming row reads "Starts after Restoring range" and "Set" in the
+Sessions column; adding a session logged today correctly flips the badge
+to solid "Today" with visit-progress text; adding a real future booking
+filed onto that phase correctly shows a gold "Booked" badge with the real
+date, no tilde; opening the pin bar for a session correctly renders it in
+its own `<tr class="extra">` row; a session count of 20 (the old bar's
+n>16 fallback threshold) no longer needs any fallback at all, since the
+table only ever shows one summary badge regardless of planned count. The
+real markup + the real shipped CSS were rendered in a standalone preview
+(served from this project's own dev server, screenshotted, then removed —
+no git trace) at 375px: no overflow, matches the approved combined mock
+exactly. The protected Prescriptions live-search check passed (N → 0 → N)
+after the change. Synthetic patient/plan/appointment removed from
+`PHARMACY` afterward, confirmed gone.
+
+`lcm-build` `20260921-220000`, `sw.js` `lcm-20260921-sessions-table`.
