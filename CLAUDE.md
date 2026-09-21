@@ -7112,4 +7112,21 @@ Her verdict on the 9w/9x/9y "SESSIONS PER PHASE" build (2026-09-20): **"i dont l
 
 **Verified via real function calls in the sandbox** (the login gate blocks a fully-booted click-through, same limitation as every batch in this file — but both `phTpPhaseBarHtml`/`phTpSessionLadderHtml` are window-exposed, so they were called directly with a synthetic plan, not reimplemented): the phase bar renders with no `.dots` markup at all; the ladder correctly emits `Done ✓`/`Today`/`Booked`/`Next` with the right date formatting and the right `can`/`data-tp-appt-move`/title for a filed cell, across all four states (isolated-logic test) and end-to-end (the real function against a synthetic 2-phase plan); the n>16 fallback fires and reads "0/20 sessions"; the `.ph-tp-sessextra` wrapper appears only when extra/off/mv actually have content and is omitted otherwise; CSS computed styles confirmed done = teal tint (`#EDF5F8`/`#0B3B4B`), today = solid `#0B3B4B` fill with white text, booked = gold tint, next = muted; segment layout (`flex: 1 1 62px`) distributes evenly in one row at typical widths (5 segments at 340px → 66px each, no overflow) and wraps cleanly at phone width with more sessions (8 segments at 300px → 2 rows of 4, no overflow). Grepped the whole file to confirm nothing else reads the removed `.dots`/`.ph-tp-ladder-ph .cells` classes (pure CSS/markup, no JS ever queried them) and that `.ph-tp-ladder-ph .movebar`'s own selector (a descendant combinator, not scoped to `.cells`) still matches now that `.movebar` sits inside `.ph-tp-sessextra`. Fronted a real render of the shipped markup+CSS in the Browser pane (a standalone preview built from the actual `phTpPhaseBarHtml`/`phTpSessionLadderHtml` output and the exact CSS tokens now in `index.html` — the app's own screen is behind the login gate, so this is the substitute this project always uses) at both desktop and 300px phone widths.
 
+**Adversarial review (one background agent on the diff) came back clean —
+no confirmed defects.** It independently re-traced all of the above (the
+`.dots`/`.cells` removal has zero remaining references anywhere in the
+file; the new `ph-tp-sessbar`/`ph-tp-sessextra` class names are unique;
+`.ph-tp-ladder-ph .movebar`'s descendant-combinator selector still matches
+one level deeper; the `data-tp-appt-move` click delegation is
+attribute-based so it doesn't care that the element grew an inner
+`<span>`/`<b>` structure; date values feeding the segment's `title`/text
+are always internal `YYYY-MM-DD` keys, never raw user text, so no
+attribute-injection risk; `phTpSessionsOf` can't return a negative or NaN
+count) and swept every built-in template's cadence text to confirm the
+highest auto-derived session count is 6 — the `n > 16` pill fallback is
+only reachable via a session count she types in by hand. One noted,
+explicitly-non-functional observation: the `cells` array is still fully
+built even on the rare `n > 16` path before being discarded for the pill
+— pure wasted computation on an edge case, not a defect, left as-is.
+
 `lcm-build` `20260921-010000`, `sw.js` `lcm-20260921-tp-horizontalc-sessionbar`.
