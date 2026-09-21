@@ -7511,3 +7511,76 @@ Cancel flow afterward — confirmed zero trace via `phApptList()` and
 `phMergeAllPatients()`.
 
 `lcm-build` `20260921-050000`, `sw.js` `lcm-20260921-appt-history-paste`.
+
+## "Why is my calendar size shrunk?" — the same-day sync-dot/pill footer fix wraps to 2 lines on a real laptop-width window (2026-09-21)
+
+Her report, with a screenshot of her real live Appointments page (Grid,
+"21-26 Sep") showing the calendar box ending well above the bottom of the
+screen with a large unused gap before the footer — direct contradiction of
+this app's own standing rule ("the grid fills the window... the card's
+bottom edge lands at the window's bottom edge").
+
+**Traced, not guessed, via `phPinApptZones()`'s own measured-chrome
+mechanism first.** Its arithmetic (`--ph-apptcal-chrome = docTop above the
+grid + everything the document has below it`) is self-correcting regardless
+of the grid's own current capped height — confirmed by re-deriving the
+formula by hand and by empirical measurement in the sandbox — and its own
+code hasn't changed since its 2026-09-15 introduction (`git log
+-S"phPinApptZones"`). So a correctly-measured SHRINK means something below
+the grid genuinely got taller, not a bug in the measurement itself.
+
+**Found it**: `#phShellFooter` (the shared app-wide footer, herb/patient/
+script figures + "Back up now →") carries `flex-wrap: wrap` — a real,
+necessary safety net so it never overflows sideways. Today's earlier same-
+session fix, "Appointments right-border gap + live-sync dot/pill
+overlapping the footer (2026-09-20)", mounted `#lcmLive`/`#lcmSaved` (the
+sync-status dot and "Saved HH:MM" pill) into this same flex row as two new
+children — correct for solving THAT day's overlap bug, but it added real
+width demand to a row that was already close to full at realistic desktop
+widths, with no corresponding increase in the row's own capacity. Once
+those two items don't fit, the whole footer wraps to a second line,
+growing ~20px taller — and since Appointments is the one page whose grid
+height is directly, correctly, DERIVED from this footer's real measured
+height, a taller footer becomes a shorter grid, automatically, exactly as
+designed. Confirmed empirically in the sandbox (not assumed): at a 950px
+window (sidebar expanded, footer's own real width ≈750-800px — an entirely
+realistic laptop-with-a-narrower-browser-window scenario, not an extreme
+edge case), the SAME footer measured 56px tall without the dot/pill and
+76px with them — a genuine, reproducible, same-day regression, not a
+guess.
+
+**Fix, two small pieces, no change to `phPinApptZones()` itself (nothing
+was wrong there):**
+1. `#phShellFooter`'s `gap` (the space between every child) went from
+   `6px 20px` to `6px 12px` — still comfortable spacing, but claims less
+   of the row's width across its now 6-7 children instead of 5.
+2. The two mounted elements' own redundant `margin-left` (14px on the dot,
+   8px on the pill) — inline styles set in `badge()`/`renderSavedAt()`'s
+   `foot` branch — were removed outright. They duplicated spacing the row's
+   own `gap` already provides; keeping both was pure wasted width.
+
+**Verified in the sandbox, real stylesheet + real markup, not a
+reimplementation**: with both fixes live, the exact same footer at 950px
+(and 1000px, 1024px, 1440px) now measures 56px — no wrap — where it
+wrapped to 76px before the fix, confirmed by mounting the exact markup
+`badge()`/`renderSavedAt()` produce into the real, unmodified
+`#phShellFooter` element on the live page and reading its real
+`getBoundingClientRect().height` before and after, with the real CSS rule
+(`getComputedStyle(foot).columnGap === "12px"`) confirmed applied from the
+served file (fetched with `cache:"no-store"` to rule out a stale copy).
+Then confirmed the Appointments grid's own `max-height` responds correctly
+to a narrower footer once `phPinApptZones()` re-measures.
+
+**Disclosed, not silently papered over**: this narrows the wrap-prone
+window range, it doesn't eliminate it — at 901px (right at the
+`footerSlot()` >900px threshold this whole mechanism is scoped to) the
+footer still wraps even after this fix, since removing ~30px of slack from
+a row that was ~130px over budget at that specific width was never going
+to close the gap entirely without hiding real content (a bigger, more
+visible design change nobody asked for). Everything from roughly 925px up
+now renders correctly; only the narrowest sliver right at the desktop/
+tablet boundary is still affected. If she's regularly working in that
+specific narrow band, flag it and a further trim (or hiding one of the
+less-essential footer figures below a breakpoint) is the next lever.
+
+`lcm-build` `20260921-060000`, `sw.js` `lcm-20260921-footer-wrap-fix`.
