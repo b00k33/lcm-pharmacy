@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260921-260000">
+<meta name="lcm-build" content="20260922-000000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -5958,8 +5958,15 @@
   #pharmacyPage .ph-tp-pblk-head .ph-tp-bandst { margin-left: 0; }
   #pharmacyPage .ph-tp-pblk-head .r { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; }
   #pharmacyPage .ph-tp-pblk-head .r .ph-tp-editbtn { margin-left: 0; }
-  #pharmacyPage .ph-tp-pblk .ph-tp-fg { margin-bottom: 10px; }
-  #pharmacyPage .ph-tp-pblk .ph-tp-fg .kv { grid-template-columns: 64px minmax(0, 1fr); gap: 10px; }
+  /* her 2026-09-21 "one continuous document" ask (stacked-page.html mock):
+     a light rule instead of a floating box -- the card's own head sits
+     above it, everything below flows as one page, not stacked cards */
+  #pharmacyPage .ph-tp-pblk .ph-tp-fg { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--ph-line); margin-bottom: 10px; }
+  #pharmacyPage .ph-tp-pblk .ph-tp-fg .kv { grid-template-columns: 112px minmax(0, 1fr); gap: 10px; }
+  #pharmacyPage .ph-tp-fg-goal { margin: 0; padding-left: 18px; list-style: disc; }
+  #pharmacyPage .ph-tp-fg-goal li { margin: 0 0 3px; }
+  #pharmacyPage .ph-tp-fg-goal li:last-child { margin-bottom: 0; }
+  #pharmacyPage .ph-tp-pblk .ph-tp-pbar-outer { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--ph-line); }
   #pharmacyPage .ph-tp-fndwide { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--ph-line); }
   #pharmacyPage .ph-tp-fndwide .ph-visit-fnd { margin: 0; }
   #pharmacyPage .ph-acu-open.compact .ph-acu-fndrow .tab-link { padding: 0; font-size: 12px; }
@@ -6156,7 +6163,12 @@
   #pharmacyPage .ph-tp-pbar .seg.k-n:not(.up) { background: var(--ph-line); }
   #pharmacyPage .ph-cyc-day.fut[class*=" k-"] { opacity: .6; }
   #pharmacyPage .ph-tp-inline:not(.ph-tp-editing) .ph-tp-pblk .ph-tp-panelhead { display: none; }
-  #pharmacyPage .ph-tp-pblk .ph-tp-panel.noph { padding-top: 0; }
+  /* her 2026-09-21 "one continuous document" ask: this used to be its own
+     bordered/rounded box nested inside .ph-tp-pblk's own box -- CLAUDE.md's
+     own "never put a box inside a box" rule, and the exact thing that read
+     as separate floating cards. Now a light rule, same shape as the two
+     dividers above it -- flows as the same page, not a second card. */
+  #pharmacyPage .ph-tp-pblk .ph-tp-panel.noph { padding: 20px 0 0; margin-top: 20px; border: 0; border-top: 1px solid var(--ph-line); border-radius: 0; background: none; }
   #pharmacyPage .ph-tp-pblk .ph-tp-sec { margin-top: 20px; }
   /* Today's visit beside Planned, each its own height */
   /* the visit table (2026-09-19, her mock A + synced rows): label · Planned · Today */
@@ -6349,6 +6361,10 @@
     /* seven phases on a 360px bar: the number or tick only, colour marks the live one */
     #pharmacyPage .ph-tp-pbar .seg { padding: 0 4px; }
     #pharmacyPage .ph-tp-pblk { padding: 10px 10px 12px; }
+    /* phone stays tight (lcm6's "desktop leads" call) -- the light-rule
+       dividers still separate the sections, just with less air around them */
+    #pharmacyPage .ph-tp-pblk .ph-tp-fg, #pharmacyPage .ph-tp-pblk .ph-tp-pbar-outer, #pharmacyPage .ph-tp-pblk .ph-tp-panel.noph { margin-top: 12px !important; padding-top: 12px !important; }
+    #pharmacyPage .ph-tp-pblk .ph-tp-fg .kv { grid-template-columns: 82px minmax(0, 1fr); }
   }
   /* Next + the checklist */
   #pharmacyPage .ph-tp-nextline { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12.5px; color: var(--ph-ink); }
@@ -51537,18 +51553,33 @@ or changing anything in Cliniko.
     const own = ((field === "focus" ? plan.diagnosis : plan.goal) || "").trim();
     return { kind: "plan", seed: own || (field === "focus" && src !== "plan" && src !== "case" ? (brief.focus || "").trim() : "") };
   }
+  // her 2026-09-21 ask, approved on the stacked-page.html mock ("Yes, build
+  // it now" + "Just this plan card"): the plan card's own Focus row reads
+  // "Chief Complaint" -- scoped to THIS function only (its one caller is
+  // presTpInlineEditorHtml's plan card), never the popup/door-card/briefing
+  // rows, which all keep "Focus" via their own separate wording.
+  function phTpGoalDisplay(text) {
+    // a pure DISPLAY split, never rewrites the stored string -- only on
+    // reliable topic-boundary punctuation (em/en dash, semicolon), never on
+    // "and"/commas, which would fragment ordinary prose into nonsense bullets
+    const parts = String(text || "").split(/\s*[—–;]\s*/).map(s => s.trim()).filter(Boolean);
+    if (parts.length < 2) return esc(text);
+    return `<ul class="ph-tp-fg-goal">${parts.map(p => `<li>${esc(p)}</li>`).join("")}</ul>`;
+  }
   function phTpFocusGoalHtml(name, plan) {
     const appt = phApptNearestNow(name);
     const brief = phApptBrief(appt || { patient: name }, plan);
     const row = (field, label, v, s, date) => {
       const editing = phTpFgEdit === `${plan.id}:${field}`;
+      const asList = !editing && field === "goal" && v && phTpGoalDisplay(v).indexOf("<ul") === 0;
+      const tag = asList ? "div" : "span";
       const inner = editing
         ? `<input type="text" class="ph-tp-cellin field-bare ph-tp-fg-in" data-tp-fg-in="${field}" data-tp-fg-plan="${plan.id}" data-tp-fg-name="${esc(name)}" value="${esc(phTpFgTarget(name, plan, field).seed)}" placeholder="${field === "focus" ? "what she is here for" : "what the treatment is for"}" aria-label="${label}">`
-        : `<span class="v" data-tp-fg="${field}" data-tp-fg-plan="${plan.id}" data-tp-fg-name="${esc(name)}" role="button" tabindex="0" title="Tap to edit">${v ? `${esc(v)}${phApptBriefSrcHtml(s)}${date ? `<small class="ph-tp-fg-when">${esc(phShortDate(date))}</small>` : ""}` : `<span class="faint">tap to add</span>`}</span>`;
+        : `<${tag} class="v" data-tp-fg="${field}" data-tp-fg-plan="${plan.id}" data-tp-fg-name="${esc(name)}" role="button" tabindex="0" title="Tap to edit">${v ? `${field === "goal" ? phTpGoalDisplay(v) : esc(v)}${phApptBriefSrcHtml(s)}${date ? `<small class="ph-tp-fg-when">${esc(phShortDate(date))}</small>` : ""}` : `<span class="faint">tap to add</span>`}</${tag}>`;
       return `<div class="kv"><b>${label}</b>${inner}</div>`;
     };
     return `<div class="ph-tp-fg" data-tp-fgbox="${plan.id}">
-      ${row("focus", "Focus", brief.focus, brief.focusSrc, brief.focusDate)}
+      ${row("focus", "Chief Complaint", brief.focus, brief.focusSrc, brief.focusDate)}
       ${row("goal", "Goal", brief.goal, brief.goalSrc)}
     </div>`;
   }
