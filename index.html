@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260921-173000">
+<meta name="lcm-build" content="20260921-183000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6604,7 +6604,12 @@
      .ph-tp-fnd/.ph-tp-fndtoggle as-is), never squeezed into a column. */
   #pharmacyPage .ph-tp-vt { margin-top: 2px; }
   #pharmacyPage .ph-tp-vt-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12px; }
-  #pharmacyPage .ph-tp-vt-table col.dt { width: 78px; }
+  /* her "improve ui" 2026-09-21: the date column was 78px while "21 Sep 2026"
+     bold needs ~86 -- the date ran under the next cell's text ("25 Sep 2026if
+     she keeps this rhythm"); the sub-line may wrap (it now carries the rhythm) */
+  #pharmacyPage .ph-tp-vt-table col.dt { width: 96px; }
+  #pharmacyPage .ph-tp-vt-date span { white-space: normal; }
+  #pharmacyPage .ph-tp-vt-prose { font-size: 11px; line-height: 1.35; color: var(--ph-soft); margin-top: 2px; }
   #pharmacyPage .ph-tp-vt-table col.oc { width: 74px; }
   #pharmacyPage .ph-tp-vt-table thead .ph-tp-vt-grp { text-align: center; font-size: 9px; letter-spacing: .06em; text-transform: uppercase; font-weight: 800; padding: 0 6px 3px; border-bottom: 1px solid var(--ph-line); }
   #pharmacyPage .ph-tp-vt-table thead .ph-tp-vt-grp.treat { color: var(--ph-green-deep); }
@@ -6636,7 +6641,7 @@
   #pharmacyPage .ph-tp-vt-row.fnd .ph-tp-fnd { margin: 2px 0 6px; }
   @media (max-width: 640px) {
     #pharmacyPage .ph-tp-vt-table { font-size: 11.5px; }
-    #pharmacyPage .ph-tp-vt-table col.dt { width: 62px; }
+    #pharmacyPage .ph-tp-vt-table col.dt { width: 84px; }
     #pharmacyPage .ph-tp-vt-table td { padding: 5px 6px; }
   }
   /* + Add phase picker */
@@ -53502,9 +53507,27 @@ or changing anything in Cliniko.
       const cls = key === "better" ? "good" : key === "worse" ? "bad" : "same";
       return `<span class="ph-tp-vt-badge ${cls}">${esc(o[1])}</span>`;
     };
+    // her "improve ui" 2026-09-21 (screenshot of this table): a template's
+    // points text is a LIST followed by a SENTENCE ("GB20, GB21, SI3, BL10,
+    // Ashi in trapezius, TE5. Add local shoulder points (LI15, SI9, TE14) if
+    // the shoulder is involved; avoid deep needling...") and a bare split on
+    // commas was pilling the sentence into nonsense fragments ("TE14) if the
+    // shoulder is involved; avoid deep needling directly into a frozen").
+    // Now: the points are chips, the sentence is one quiet line under them.
     const chips = txt => {
-      const parts = (txt || "").split(",").map(s => s.trim()).filter(Boolean);
-      return parts.length ? parts.map(p => `<span class="ph-tp-vt-chip">${esc(p)}</span>`).join("") : `<span class="ph-tp-vt-none">—</span>`;
+      const raw = (txt || "").trim();
+      if (!raw) return `<span class="ph-tp-vt-none">—</span>`;
+      // the list ends at the first sentence break ("TE5. Add..." / "; avoid")
+      const cut = raw.search(/[.;]\s+[A-Z(]/);
+      let list = cut > 0 ? raw.slice(0, cut) : raw, note = cut > 0 ? raw.slice(cut + 1).trim() : "";
+      const parts = list.split(",").map(s => s.trim()).filter(Boolean);
+      // a part too long to be a point name is prose too -- keep it with the note
+      const pills = parts.filter(p => p.length <= 34 && !/[.;]/.test(p));
+      const prose = parts.filter(p => !(p.length <= 34 && !/[.;]/.test(p)));
+      if (prose.length) note = [prose.join(", "), note].filter(Boolean).join(" · ");
+      const pillHtml = pills.map(p => `<span class="ph-tp-vt-chip">${esc(p)}</span>`).join("");
+      const noteHtml = note ? `<div class="ph-tp-vt-prose">${esc(note)}</div>` : "";
+      return pillHtml || noteHtml ? pillHtml + noteHtml : `<span class="ph-tp-vt-none">—</span>`;
     };
     const herbChip = has => has ? `<span class="ph-tp-vt-chip herb">🌿 dispensed</span>` : `<span class="ph-tp-vt-none">—</span>`;
     const findingsRow = (s, defaultOpen) => {
@@ -53512,9 +53535,12 @@ or changing anything in Cliniko.
       if (!raw || phVisitFndEmpty(raw)) return "";
       return `<tr class="ph-tp-vt-row fnd"><td></td><td colspan="3">${phTpVisitFndHtml(ctx, s, defaultOpen)}</td></tr>`;
     };
+    // the plan row reads like the visit rows under it: the PLANNED points in
+    // the Points column (they used to show the cadence there -- "2×/wk for 1
+    // week" is not a point), the rhythm as the date cell's own sub-line
     const planRow = `<tr class="ph-tp-vt-row plan">
-      <td class="ph-tp-vt-date"><b>${phase.sinceKey ? esc(phShortDate(phase.sinceKey)) : "—"}</b><span>plan</span></td>
-      <td>${chips(phase.cadence)}</td>
+      <td class="ph-tp-vt-date"><b>${phase.sinceKey ? esc(phShortDate(phase.sinceKey)) : "—"}</b><span>plan${phase.cadence ? ` · ${esc(phase.cadence)}` : ""}</span></td>
+      <td>${chips(phase.points)}</td>
       <td>${phase.formulaName ? `<span class="ph-tp-vt-chip herb">🌿 ${esc(phase.formulaName)} linked</span>` : `<span class="ph-tp-vt-none">—</span>`}</td>
       <td><span class="ph-tp-vt-none">—</span></td>
     </tr>`;
@@ -61768,11 +61794,24 @@ Dosage: {dosage}
     // overtaken -- now possibly after first paint, so it must re-render
     if (schedAutoDeferSweep()) renderPharmacy();
   }
-  if (!window.__LCM_SYNC) phRunBootHousekeeping();
-  else {
-    window.addEventListener("lcm-sync-caught-up", phRunBootHousekeeping, { once: true });
-    setTimeout(phRunBootHousekeeping, 20000);   // offline / not-signed-in fallback
-  }
+  // Her crash 2026-09-21 ("LCM couldn't start · ReferenceError: Cannot access
+  // 'phInitials' before initialization"): this used to run synchronously
+  // right here. window.__LCM_SYNC is only set by a <script> AFTER this one,
+  // so at this point it is ALWAYS undefined and housekeeping always ran at
+  // once -- and when the boot sweep had an overdue scheduled dispense to
+  // move, it called renderPharmacy() while every const/let below this line
+  // (phInitials, phSeg0, the sched* state...) was still in its temporal
+  // dead zone. A clinic with one pickup past its cutoff could not open the
+  // app at all. A 0ms timeout runs after every inline script has executed:
+  // the flag is then real, the sync branch is finally reachable, and a
+  // render can't meet an uninitialised const.
+  setTimeout(() => {
+    if (!window.__LCM_SYNC) phRunBootHousekeeping();
+    else {
+      window.addEventListener("lcm-sync-caught-up", phRunBootHousekeeping, { once: true });
+      setTimeout(phRunBootHousekeeping, 20000);   // offline / not-signed-in fallback
+    }
+  }, 0);
   // a sweep write is safe once boot housekeeping ran AND this tab isn't
   // possibly-stale (backgrounded tabs go unfresh until their next catch-up)
   const phSweepSafe = () => phHousekeepingDone && (!window.__LCM_SYNC || window.__lcmSyncFresh !== false);
@@ -62903,7 +62942,10 @@ Dosage: {dosage}
 
   // "Dang Gui Shao Yao San" → "DGSYS": her templates are often keyed by
   // initials, so the recipe suggests itself from the target's name
-  const phInitials = name => name.trim().split(/[\s/]+/).map(w => w[0] || "").join("").toUpperCase();
+  // a function declaration (hoisted), not a const: presIsFormula 26k lines
+  // above reaches this from any early render -- see the boot-housekeeping
+  // note near phRunBootHousekeeping for the crash this was part of
+  function phInitials(name) { return name.trim().split(/[\s/]+/).map(w => w[0] || "").join("").toUpperCase(); }
   function refSuggestRecipe(target) {
     if (!target) return null;
     const code = (target.code || "").trim().toUpperCase();
