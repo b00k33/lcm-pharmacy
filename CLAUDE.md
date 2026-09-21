@@ -7697,10 +7697,13 @@ hook and every listener is untouched.
   border; two sheets — `.ph-sheet-herbs` (the quiet "Herbs · not typical"
   toggle + Ingredients editor) and `.ph-sheet-fu` (Visit history header +
   Follow-up + Message, `presStageFollowupHtml` unchanged).
-- Not done from the mock (her open questions): dose controls stay live pills
-  in the row (an Edit-to-reveal state would hide the inputs the price and
-  duration refreshers read by id); message templates keep their existing
-  folds; cost · profit stays on the Total line.
+- **Her decisions on the two open questions (2026-09-21, verbatim): "Dose
+  controls stay as tappable pills in the row rather than behind an Edit
+  link. The price and duration read those inputs live - stay tappable" and
+  "Cost · profit stays on the Total line."** So: never move the dose/grams/
+  days/price controls behind an Edit-to-reveal state on this stage, and
+  never fold cost · profit off the Total line. Message templates keep their
+  existing folds (not raised).
 - Same push: `#phRenUndoToast[hidden] { display: none }` — her "why is that
   black oval there": the empty photo-undo toast's `display:flex` beat its
   `hidden` attribute and painted a dark 32×20 pill at the bottom of every page.
