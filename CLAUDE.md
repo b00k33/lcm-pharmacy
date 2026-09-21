@@ -7664,6 +7664,94 @@ needed. Synthetic test patient (`PRESC.items`, `PHARMACY.log`,
 
 `lcm-build` `20260921-070000`, `sw.js` `lcm-20260921-grams-follows-herbs-always`.
 
+## Session days she can move + the course on one calendar (her pick 2026-09-21, "i like mock 2+3")
+
+Her ask this session: "make 3 widgets so i can plan treatment sessions more
+easily" → three widgets → "i like all three. combine and make 3 mocks" →
+"i need the workflow to be easy and smooth. phase 1 acute: 3 sessions, 1 once
+a week, phase 2 2 sessions 1 every 2 weeks." → "i like mock 2 and 3" → a
+merged mock (Mock 2's calendar and cross-linking + Mock 3's card-style phase
+bars and clash check inside the move box) → "where is the section to edit the
+frequency and quantity per phase?" (added to the mock) → **"yes i like mock
+2+3"**. Artifact: https://claude.ai/artifact/WimCy8ZX2DfKHiqC6Ypagg.
+
+**What already existed when this was built** (a sibling session shipped it the
+same day, builds `20260921-04xxxx`–`080000`): the Sessions ladder's Horizontal
+C segmented bar per phase (Done ✓ · Today · Booked · Next ~date), the sessions
+count stepper and the cadence picker on each phase's head, bookings filed onto
+phases, the "Not in this plan yet" tray. So the mock's phase bars and its
+count/frequency controls were ALREADY her app; nothing was rebuilt. What was
+genuinely missing, and is what this build adds inside `phTpSessionLadderHtml`:
+
+- **A to-come session can be pinned to a day of her choosing.** New store
+  `phase.plannedDates = ["YYYY-MM-DD", …]`. A pin is a PLAN, not a booking:
+  `phTpPhaseSessionDates` still reads real bookings first, so the day turns
+  Booked by itself once the Cliniko paste brings that booking in; a pin that
+  fell into the past, or that a real visit overtook, is ignored on read and
+  dropped on the next write. **Nothing here writes an appointment.**
+- **`phTpSessionCells(name, plan)`** is now the ONE builder of a plan's cells
+  (done · today · booked · next, a next one `pinned` or projected) — the bar,
+  the calendar, the move box and the save all read it, so they cannot
+  disagree. It carries the sibling's projection rule unchanged (rhythm runs on
+  from the last real date, never before today; later phases run on from the
+  previous phase's last cell) with pins filling a phase's to-come slots first
+  in date order. Day maths now goes through `phTpDayAdd` (setDate, not ms):
+  +7 days in ms across the April clock change lands at 23:00 the day BEFORE.
+- **The calendar** (`phTpSessCalHtml`, `.ph-tp-sesscal`): the cycle strip's
+  own week grid and `.ph-cyc-day` cells (ONE calendar look on this page, per
+  her consistency rule), Monday-first, from the first session's week to the
+  last one's (a span past 16 weeks starts two weeks back from today). Every
+  session is numbered on its day in the bar's own colours (green done · solid
+  today · gold booked · teal ring to come; "Planned" once pinned, no tilde).
+  No legend. A cycle-synced plan (`PH_TP_CYCLE_SYNC`) gets NO second calendar
+  — its head already carries the strip. Week count uses Math.round: the
+  October clock change leaves the ms span an hour short and floor dropped
+  the last row (found in the sandbox screenshot).
+- **The move box** (`.ph-tp-pinbar`, the booking move bar's paper strip): a
+  to-come day on the calendar or its bar segment (`data-tp-sess-pin`) opens
+  "Session N → [date] ☑ Shift the ones after it · Save · ✕" under that
+  phase's bar. The line under it follows every keystroke (`phTpPinDayCheck`):
+  refuses a past day or one not after the session before it, warns on a
+  non-clinic day (`phClinicWorkDays`, when set), notes "Already booked that
+  day — it will show as Booked" or "N other bookings that day". Enter saves,
+  Escape closes. Save (`phTpSessPinSave`): the moved session gets its pin,
+  the to-come sessions BEFORE it in the phase are pinned where they are (pins
+  fill slots in date order — leaving an earlier one as a bare projection let
+  the new pin jump ahead of it, caught in the sandbox); with "shift" the
+  later ones keep their distance (existing pins move by the same days,
+  projected ones just run on from the new date by the rhythm), without it
+  every later to-come session, this phase and the next ones, is pinned right
+  where it is. The confirm toast reads "Session 3 planned for 7 Oct — the
+  ones after it moved to match." (`phFlashHtml` adds the tick itself).
+  `phTpCycleBlockRefresh` skips a ladder holding an open move box, same as
+  the cadence picker.
+- **"N to book · copy the dates"** on the Sessions header: copies
+  "Name — Mon 5 Oct 2026, Mon 19 Oct 2026" for Cliniko. The mock's "Book N
+  remaining" could not be built literally — the app cannot book in Cliniko,
+  and a local quick-add would only merge with the later paste when the time
+  matches exactly — so this is the bridge. **Disclosed to her as the one
+  place the build differs from the mock.**
+- The sessions count and cadence pickers she asked about ("where is the
+  section to edit the frequency and quantity per phase?") are the sibling's
+  existing stepper and picker on each phase's head, untouched.
+
+Verified in the sandbox (login gate as always; every function called directly
+against a synthetic 2-phase MSK plan: done 14 Sep · booked 28 Sep · 3 weekly,
+2 fortnightly): fresh cells `5 Oct / 19 Oct · 2 Nov`; pin session 3 → 7 Oct
+with shift → phase 2 `21 Oct · 4 Nov`; pin phase-2 session 1 → 19 Oct without
+shift → session 2 pinned at 4 Nov; pin phase-2 session 2 while session 1 is
+still projected → session 1 pinned in place (the bug above, fixed); a real
+booking on a pinned day → cell reads Booked, pin dropped; moving a Booked
+cell refused; past / before-previous / same-day-booked checks; the rendered
+ladder: calendar 8–10 week rows, badges and classes per state, the tapped day
+ringed on the calendar AND its segment, live warning on the date input, Save
+writes and closes, ✕ closes, copy button reads "3 to book · copy the dates";
+computed CSS done `#EDF5F8`, booked `#FFFBE2`, next white + teal inset ring;
+330px box: calendar 312px, no overflow. Prescriptions live search: 2 → 0 → 2
+→ 2. Synthetic patient, plan and bookings removed, residue nil. `lcm-build`
+`20260921-173000`, `sw.js` `lcm-20260921-session-calendar-pins`. Committed to
+`session-a`; live on the next push.
+
 ## Sessions ladder's cadence text is now the real picker, not decoration (her report 2026-09-21)
 
 Her screenshot of the Treatment Plan Grid's Sessions section (a "Burnout /
