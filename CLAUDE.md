@@ -8049,3 +8049,145 @@ after the change. Synthetic patient/plan/appointment removed from
 `PHARMACY` afterward, confirmed gone.
 
 `lcm-build` `20260921-220000`, `sw.js` `lcm-20260921-sessions-table`.
+
+## Sessions table TRANSPOSED — phases as columns, dated tile chips instead of one summary badge (her ask 2026-09-21, same day, further round)
+
+Straight after the row-oriented table above shipped, she kept iterating on
+the same section, all in the same sitting: **"add a tile that highlights
+for current appointment in sessions row. make 3 mocks"** → shown A/B/C →
+**"i like h"** (she'd been shown extra tile-shape variants alongside the
+lettered mocks; H was one of them) → **"show me when there are 3 visits
+planned for each phase. planned actually means prescribed"** → shown a
+combined mock (Table D's transposed layout + tile H's header-strip
+highlight) → **"i want the session tile to have 3 quantities with date
+underneath the number. do you understand?"** → confirmed understanding,
+built the dated-chip version, republished the same mock →
+**"yes i like this."** → **"build and ship live."** Mock file
+`sessions-table-h-3qty-dates.html` in the scratchpad, approved as shown.
+
+**What changed from the row-oriented table two sections up.** That build
+put phases DOWN the table as rows, one row per phase, Sessions as one of
+three columns. Her "highlight current appointment" + "show all planned
+sessions" asks together meant the Sessions cell needed to hold much more
+than a single summary badge — so the table flips: phases now run ACROSS
+the table as COLUMNS (`<thead>` phase headers, `<colgroup>`), and each of
+the three data rows (Phase/cadence · Sessions · This week) reads left to
+right, one column per phase. The Sessions row's cell for the live phase
+gets a teal "Today" header-strip — her literal "highlight for current
+appointment" — shown only when one of that phase's planned sessions falls
+on today's date, never just because the phase is current with nothing
+happening today. Every other phase's Sessions cell has no strip at all,
+not a quieter one — the point is that only a phase in a TODAY state stands
+out.
+
+**The chips are the actual "3 quantities with date underneath" ask.**
+Inside a phase's tile, one small chip per planned session — never a single
+aggregate count or a bar of undifferentiated dots. Each chip is a number
+(1, 2, 3…) with that session's own date underneath it, and the FOUR states
+already established for a session cell (done/today/booked/next, unchanged
+from the row-table build two sections up) carry through unchanged: a done
+chip is teal-tinted with its real logged date; today's chip is solid teal;
+a booked chip is gold-tinted with the real booking date and still opens
+the same move-box (`data-tp-appt-move`) a tapped booking has always
+opened; a to-come chip carries a `~` tilde before its date unless she's
+pinned it (`data-tp-sess-pin`, the exact tap-to-pick-a-day mechanism from
+the same-day calendar/pin build — completely unchanged, just now living
+inside a smaller chip instead of a wide segment).
+
+**"Change" replaces the count as its own tap target, deliberately.** The
+row-table build let tapping the Sessions number itself open the
+count-editing stepper — with three-to-many small chips crowding the same
+cell, the count number is no longer one obvious clickable target, so a
+dedicated small "Change" text-link sits under the tile instead
+(`data-tp-sess`, same handler, same stepper markup, unchanged
+mechanism — only where the tap lives moved). This is a disclosed,
+structural judgment call, not something she was shown a mock of
+separately: it was necessary the moment the tile stopped being "one
+number" and became "several chips," and it deliberately uses a different
+`data-*` attribute family (`data-tp-sess`) from the chips' own
+(`data-tp-appt-move`/`data-tp-sess-pin`) so the shared global delegated
+click handler (`closest("[data-tp-sess-pin]")`/`closest("[data-tp-appt-
+move]")`) can never confuse a chip tap with a Change tap.
+
+**A new `.qty.booked` gold-tint chip state — disclosed, extending past
+what the approved mock actually showed.** The approved
+`sessions-table-h-3qty-dates.html` mock's chip examples only ever showed
+done/today/next states — no example row happened to include a real
+booking. Rather than leave a booked session with no distinct chip
+treatment (which would have looked like an unplanned "next" chip with a
+tilde it doesn't deserve, since a real booking's date is fixed, not
+projected), it reuses the SAME gold `--ph-gold-tint`/`-deep` tokens the
+row-table build's "Booked" badge already used for exactly this state — one
+consistent meaning for "booked" across both table shapes, not a new colour
+invented for this one.
+
+**Extras (excluded visits, the move-bar, the pin-bar, the "+N extra"
+overflow tag) move below the table, one card per phase that has
+something to show.** In the row-oriented table these lived inline inside
+a phase's own `<tr class="extra">` — with phases now running across as
+columns instead of down as rows, there is no natural row to attach a
+per-phase extra block to any more. They now render in a
+`.ph-tp-sessextras` block directly under the table, one `.ph-tp-sessextra`
+card per phase that actually has extra content, each labelled with its
+own phase name so it's unambiguous which phase a "not counted" chip or an
+open move-bar belongs to. Nothing about the extras themselves changed —
+same handlers, same data, same wording — only where they render.
+
+**A pre-existing, unrelated dead-CSS trap found and routed around, not
+separately fixed.** `.ph-tp-ladder-ph .movebar` requires an ancestor
+`.ph-tp-ladder-ph` class that no JS anywhere in this file actually emits
+around `.movebar` markup — meaning the move-bar chips have never actually
+received their intended teal-chip styling, in either table shape, since
+before this build. Per this project's own "audit ≠ dump" convention, this
+was not swept up as a bonus fix mid-build; instead, the newly-relocated
+`.ph-tp-sessextra .movebar*` rules were written fresh and correctly
+scoped, so the redesigned area at least renders its move-bar chips
+correctly styled going forward. The original dead selector is unchanged
+and still dead — worth a future small cleanup pass, not this one.
+
+**Every pre-existing interactive mechanism carries through unchanged in
+behaviour**, verified individually rather than assumed from "the code
+still compiles": the count-edit stepper (now reached via the "Change"
+text-link, structurally distinct from the chips' own attributes so no
+`closest()` collision is possible); the pin-bar and move-bar (both
+unchanged mechanisms, only relocated below the table); the excluded/"not
+counted" toggle; the "+N extra" overflow tag; cadence editing
+(`data-tp-edit`, the same picker door built earlier the same day for "i
+cant plan"); the phase line's since/visit-progress text (via the
+pre-existing inline `sinceLineFor(p, true)` helper, untouched); the
+This-week status row (its own separate table row, unaffected by the
+Sessions row's redesign); the folded course calendar
+(`phTpSessCalHtml`, fully unchanged — still the one place to see every
+session across every phase on one grid, still the mechanism that lets a
+chip's tap and a calendar day's tap both resolve to the same pin/move
+state); the "N to book · copy the dates" header link; and the "Not in
+this plan yet" tray at the very end.
+
+**Verified with a real synthetic 3-phase plan** (Acute done/3 sessions,
+Restoring range live/2 sessions, Maintenance upcoming/unset) called
+directly through `phTpSessionLadderHtml()` in the sandbox: all four chip
+states (done/today/booked/next) render with the correct classes and the
+correct tilde/no-tilde date logic; the live phase's tile shows the
+"Today" strip only when one of its own chips is dated today, and no
+strip at all on a live phase with nothing due today; tapping a "next"
+chip opens the pin-bar with the correct `data-tp-sess-pin` key and Save
+correctly writes the pin and repaints; tapping a "booked" chip opens the
+existing move-bar unchanged; "Change" opens the same stepper the old
+Sessions-number tap used to, confirmed via a byte-identical markup
+diff against the row-table build's own stepper output; a fully-empty
+plan (no phase has any planned sessions at all) still correctly hits the
+pre-existing early-return "Plan the sessions per phase →" link with no
+error. Colours confirmed via `getComputedStyle`, not eyeballed — done
+teal-tint and next's pale paper background read as visually similar in a
+screenshot but are objectively distinct, correct values (`--ph-green-tint`
+vs `--ph-paper`). The real markup + the real shipped CSS were rendered
+in a standalone preview at 375px: no overflow, chips wrap cleanly within
+a phase's tile, matches the approved
+`sessions-table-h-3qty-dates.html` mock exactly. The protected
+Prescriptions live-search check passed (native-setter `input`-event
+dispatch, debounced waits between checks — a positive-match and a
+zero-match case, both correctly clearing on empty search). Synthetic
+patient/plan/appointment removed from `PHARMACY` afterward, confirmed
+gone.
+
+`lcm-build` `20260921-230000`, `sw.js` `lcm-20260921-sessions-tile-chips`.
