@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260922-010000">
+<meta name="lcm-build" content="20260922-020000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -5967,6 +5967,12 @@
   #pharmacyPage .ph-tp-fg-goal li { margin: 0 0 3px; }
   #pharmacyPage .ph-tp-fg-goal li:last-child { margin-bottom: 0; }
   #pharmacyPage .ph-tp-pblk .ph-tp-pbar-outer { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--ph-line); }
+  /* no padding-top here, unlike its 3 siblings above -- .ph-tp-sec (this
+     block's own first child, right below) already carries its own
+     margin-top: 20px from the Breathing room pass (~line 6171), and a
+     border-top stops that margin from collapsing through this element, so
+     adding padding-top too would double the gap under the line to 40px */
+  #pharmacyPage .ph-tp-pblk .ph-tp-ladder { margin: 20px 0 12px; border-top: 1px solid var(--ph-line); }
   #pharmacyPage .ph-tp-fndwide { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--ph-line); }
   #pharmacyPage .ph-tp-fndwide .ph-visit-fnd { margin: 0; }
   #pharmacyPage .ph-acu-open.compact .ph-acu-fndrow .tab-link { padding: 0; font-size: 12px; }
@@ -6009,7 +6015,7 @@
   #pharmacyPage .ph-tp-ladder.empty { margin: -6px 0 10px; font-size: 11.5px; }
   #pharmacyPage .ph-tp-ladder .ph-tp-sec { margin-bottom: 4px; }
   #pharmacyPage .ph-tp-sesstable-wrap { overflow-x: auto; margin-bottom: 4px; }
-  #pharmacyPage .ph-tp-sesstable { width: 100%; min-width: 300px; border: 1px solid var(--ph-line); border-collapse: collapse; table-layout: fixed; }
+  #pharmacyPage .ph-tp-sesstable { width: 100%; min-width: 300px; border-collapse: collapse; table-layout: fixed; }
   #pharmacyPage .ph-tp-sesstable col.lbl { width: 78px; }
   #pharmacyPage .ph-tp-sesstable tbody th { font-size: 9px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--ph-faint); text-align: left; padding: 7px 8px; background: var(--ph-paper, #F4F7F8); border-bottom: 1px solid var(--ph-line); white-space: nowrap; }
   #pharmacyPage .ph-tp-sesstable td { padding: 7px 8px; border-bottom: 1px solid var(--ph-line); border-right: 1px solid var(--ph-line); vertical-align: top; font-size: 11px; }
@@ -6362,6 +6368,11 @@
     /* phone stays tight (lcm6's "desktop leads" call) -- the light-rule
        dividers still separate the sections, just with less air around them */
     #pharmacyPage .ph-tp-pblk .ph-tp-fg, #pharmacyPage .ph-tp-pblk .ph-tp-pbar-outer, #pharmacyPage .ph-tp-pblk .ph-tp-panel.noph { margin-top: 12px !important; padding-top: 12px !important; }
+    /* .ph-tp-ladder gets only its own top gap tightened -- unlike its 3
+       siblings above it has no padding-top to tighten (see the desktop rule's
+       own comment): the gap BELOW its divider line comes from .ph-tp-sec's
+       margin-top, which stays the card's one un-tightened 20px on phone too */
+    #pharmacyPage .ph-tp-pblk .ph-tp-ladder { margin-top: 12px !important; }
     #pharmacyPage .ph-tp-pblk .ph-tp-fg .kv { grid-template-columns: 82px minmax(0, 1fr); }
   }
   /* Next + the checklist */
@@ -51556,11 +51567,21 @@ or changing anything in Cliniko.
   // "Chief Complaint" -- scoped to THIS function only (its one caller is
   // presTpInlineEditorHtml's plan card), never the popup/door-card/briefing
   // rows, which all keep "Focus" via their own separate wording.
+  // her report 2026-09-22 ("when i edit it goes from bullet point to one
+  // line. this is confusing, bring it back"): the Goal row's display splits
+  // on em/en-dash or semicolon into bullets (below), but editing swapped in
+  // a single-line <input> -- the bullets she was just looking at flattened
+  // into one run-on line the moment she tapped it. phTpGoalParts is the one
+  // split used by BOTH the read-only bullet display and the edit seed now,
+  // so what she sees before and during editing is the same structure.
+  function phTpGoalParts(text) {
+    return String(text || "").split(/\s*[—–;]\s*/).map(s => s.trim()).filter(Boolean);
+  }
   function phTpGoalDisplay(text) {
     // a pure DISPLAY split, never rewrites the stored string -- only on
     // reliable topic-boundary punctuation (em/en dash, semicolon), never on
     // "and"/commas, which would fragment ordinary prose into nonsense bullets
-    const parts = String(text || "").split(/\s*[—–;]\s*/).map(s => s.trim()).filter(Boolean);
+    const parts = phTpGoalParts(text);
     if (parts.length < 2) return esc(text);
     return `<ul class="ph-tp-fg-goal">${parts.map(p => `<li>${esc(p)}</li>`).join("")}</ul>`;
   }
@@ -51571,9 +51592,20 @@ or changing anything in Cliniko.
       const editing = phTpFgEdit === `${plan.id}:${field}`;
       const asList = !editing && field === "goal" && v && phTpGoalDisplay(v).indexOf("<ul") === 0;
       const tag = asList ? "div" : "span";
-      const inner = editing
-        ? `<input type="text" class="ph-tp-cellin field-bare ph-tp-fg-in" data-tp-fg-in="${field}" data-tp-fg-plan="${plan.id}" data-tp-fg-name="${esc(name)}" value="${esc(phTpFgTarget(name, plan, field).seed)}" placeholder="${field === "focus" ? "what she is here for" : "what the treatment is for"}" aria-label="${label}">`
-        : `<${tag} class="v" data-tp-fg="${field}" data-tp-fg-plan="${plan.id}" data-tp-fg-name="${esc(name)}" role="button" tabindex="0" title="Tap to edit">${v ? `${field === "goal" ? phTpGoalDisplay(v) : esc(v)}${phApptBriefSrcHtml(s)}${date ? `<small class="ph-tp-fg-when">${esc(phShortDate(date))}</small>` : ""}` : `<span class="faint">tap to add</span>`}</${tag}>`;
+      let inner;
+      if (editing && field === "goal") {
+        // one bullet per textarea line, same idiom phTpCellEditOpen already
+        // uses for Aim/Watch/Points (a multi-line field grows with `oninput`,
+        // Enter adds a line instead of committing) -- reused, not invented
+        const parts = phTpGoalParts(phTpFgTarget(name, plan, field).seed);
+        const seedVal = (parts.length > 1 ? parts : [phTpFgTarget(name, plan, field).seed]).join("\n");
+        const rows = Math.max(2, Math.min(6, parts.length || 1));
+        inner = `<textarea class="ph-tp-cellin field-bare ph-tp-fg-in" rows="${rows}" data-tp-fg-in="${field}" data-tp-fg-plan="${plan.id}" data-tp-fg-name="${esc(name)}" placeholder="what the treatment is for -- one point per line" aria-label="${label}" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'">${esc(seedVal)}</textarea>`;
+      } else if (editing) {
+        inner = `<input type="text" class="ph-tp-cellin field-bare ph-tp-fg-in" data-tp-fg-in="${field}" data-tp-fg-plan="${plan.id}" data-tp-fg-name="${esc(name)}" value="${esc(phTpFgTarget(name, plan, field).seed)}" placeholder="what she is here for" aria-label="${label}">`;
+      } else {
+        inner = `<${tag} class="v" data-tp-fg="${field}" data-tp-fg-plan="${plan.id}" data-tp-fg-name="${esc(name)}" role="button" tabindex="0" title="Tap to edit">${v ? `${field === "goal" ? phTpGoalDisplay(v) : esc(v)}${phApptBriefSrcHtml(s)}${date ? `<small class="ph-tp-fg-when">${esc(phShortDate(date))}</small>` : ""}` : `<span class="faint">tap to add</span>`}</${tag}>`;
+      }
       return `<div class="kv"><b>${label}</b>${inner}</div>`;
     };
     return `<div class="ph-tp-fg" data-tp-fgbox="${plan.id}">
@@ -51588,14 +51620,19 @@ or changing anything in Cliniko.
     const tmp = document.createElement("div");
     tmp.innerHTML = phTpFocusGoalHtml(name, plan);
     box.replaceWith(tmp.firstElementChild);
-    const inp = document.querySelector(`[data-tp-fgbox="${CSS.escape(planId)}"] input[data-tp-fg-in]`);
-    if (inp) { inp.focus(); inp.select(); }
+    const inp = document.querySelector(`[data-tp-fgbox="${CSS.escape(planId)}"] input[data-tp-fg-in], [data-tp-fgbox="${CSS.escape(planId)}"] textarea[data-tp-fg-in]`);
+    if (inp) { inp.focus(); inp.select(); if (inp.tagName === "TEXTAREA") { inp.style.height = "auto"; inp.style.height = inp.scrollHeight + "px"; } }
   }
   function phTpFgCommit(inp) {
     const field = inp.dataset.tpFgIn, name = inp.dataset.tpFgName, planId = inp.dataset.tpFgPlan;
     const plan = phTpFindPlan(name, planId);
     if (!plan) { phTpFgEdit = null; return; }
-    const v = inp.value.trim();
+    // Goal's textarea holds one bullet per line -- rejoin with the same
+    // em-dash separator phTpGoalParts/phTpGoalDisplay split on, so the
+    // bullets she just edited round-trip as bullets on the next render.
+    const v = field === "goal"
+      ? String(inp.value || "").split("\n").map(s => s.trim()).filter(Boolean).join(" — ")
+      : inp.value.trim();
     const target = phTpFgTarget(name, plan, field);
     if (target.kind === "appt") {
       // re-resolve the live booking by id -- a cloud pull mid-edit swaps PHARMACY wholesale
@@ -51610,13 +51647,16 @@ or changing anything in Cliniko.
     phTpFgRefresh(name, planId);
   }
   document.addEventListener("keydown", e => {
-    const inp = e.target && e.target.closest ? e.target.closest("input[data-tp-fg-in]") : null;
+    const inp = e.target && e.target.closest ? e.target.closest("input[data-tp-fg-in], textarea[data-tp-fg-in]") : null;
     if (!inp) return;
-    if (e.key === "Enter") { e.preventDefault(); phTpFgCommit(inp); }
+    // the Goal textarea holds several lines on purpose -- Enter adds a line
+    // there instead of committing, same as phTpCellEditOpen's own multi-line
+    // fields (Aim/Watch/Points); Focus stays a single-line input, Enter saves.
+    if (e.key === "Enter" && inp.tagName !== "TEXTAREA") { e.preventDefault(); phTpFgCommit(inp); }
     else if (e.key === "Escape") { e.preventDefault(); phTpFgEdit = null; phTpFgRefresh(inp.dataset.tpFgName, inp.dataset.tpFgPlan); }
   });
   document.addEventListener("focusout", e => {
-    const inp = e.target && e.target.closest ? e.target.closest("input[data-tp-fg-in]") : null;
+    const inp = e.target && e.target.closest ? e.target.closest("input[data-tp-fg-in], textarea[data-tp-fg-in]") : null;
     if (inp && phTpFgEdit === `${inp.dataset.tpFgPlan}:${inp.dataset.tpFgIn}`) phTpFgCommit(inp);
   });
   function phTpPlanHeadHtml(name, plan) {
