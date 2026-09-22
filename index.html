@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260922-030000">
+<meta name="lcm-build" content="20260922-040000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -59092,6 +59092,12 @@ Please let me know if you have any questions.`;
     const dispensed = pending || dispensedFresh;
     const logged = dispensedFresh && !pending;
     const dispAt = pending ? presPendingAt[t.id] : t.lastDispensedAt;
+    // her report 2026-09-22 ("improve the workflow"): the one-shot confirm
+    // flash below used to restate this same fact a second and third time
+    // (grams, date/time, patient) right under this already-persistent band
+    // -- gp is the one thing the flash carried that this band didn't, so it
+    // moves here instead of the flash carrying the whole sentence again.
+    const dispGrams = pending ? (presPending[t.id] || []).reduce((n, x) => n + (x.grams || 0), 0) : t.lastDispensedGrams;
     const lastRec = !dispensed ? presLastDispRecord(t, presOpenSnapshot) : null;
     return `${lastRec ? `<div class="ph-lastdisp-line">
       <span>🕘 Last dispensed · ${esc(presDispDateTimeStr(lastRec.at))}${lastRec.grams ? ` · ${phFmtG(lastRec.grams)}g` : ""}${lastRec.price != null ? ` · ${phMoney(lastRec.price)}` : ""}</span>
@@ -59111,7 +59117,7 @@ Please let me know if you have any questions.`;
       <div class="ph-dose-band${logged ? " ph-pres-disp-chip" : " pending"}"${logged ? ` data-pres-disp-chip="${t.id}"` : ""} title="${logged ? "Settled — press and hold, or use ⋯, to fix a mistake" : "Stock is out — press Log only below to record it"}">
         <span class="ph-dose-step-node" aria-hidden="true">✓</span>
         <span class="ph-dose-band-main">${logged ? "Dispensed &amp; logged" : "Dispensed, not logged"}</span>
-        <span class="ph-dose-band-tag">${dispAt ? esc(presDispDateTimeStr(dispAt)) : ""}${logged ? " · label copied" : ""}</span>
+        <span class="ph-dose-band-tag">${dispAt ? esc(presDispDateTimeStr(dispAt)) : ""}${dispGrams ? ` · ${phFmtG(dispGrams)}g` : ""}${logged ? " · label copied" : ""}</span>
         ${logged ? `<button type="button" class="ph-arr-editbtn ph-dose-step-menubtn" data-pres-disp-menu="${t.id}" title="Undo this dispense, or dispense again" aria-label="Undo or re-dispense ${esc(t.name)}">⋯</button>` : ""}
       </div>` : `
       <div class="ph-dose-primary">
@@ -61691,7 +61697,31 @@ Dosage: {dosage}
     if (!presIsFormula(t) && entry.patient && !phMsgDoNotContact(phPatientKey(entry.patient))) {
       phMsgDispenseOffer = { presId: t.id, key: phPatientKey(entry.patient), name: entry.patient, entryId: entry.id };
     }
-    phFlash = `Prescription logged${entry.patient ? ` for <b>${esc(phTitle(entry.patient))}</b>` : ""} — ${phFmtG(gp)}g · ${presTimeStr(now)} · in 📖 History and 📜 Log <button type="button" class="ph-undo-btn" data-ph-undo="${entry.id}">↩ Undo</button>`;
+    // her report 2026-09-22 ("improve the workflow" on this exact card):
+    // this used to set phFlash to a full "Prescription logged for X — Ng ·
+    // time · in History and Log ↩ Undo" sentence, which then rendered as a
+    // THIRD line repeating what the gold "Dispensed & logged" band above it
+    // already says (now WITH the grams too, see presDoseTimelineHtml) --
+    // three confirmations of the one fact, ahead of the one thing she still
+    // has to decide (the herbs-ready message offer just below). Undo stays
+    // one tap away via the band's own ⋯ menu (data-pres-disp-menu →
+    // data-pres-disp-undo-yes), which reverses the exact same log entry
+    // through the same phReverseEntry call, just with a confirm step first
+    // -- fitting for a real stock movement, and the same friction her
+    // "Undo dispense" path already asks for everywhere else.
+    // Only suppress it when that band is actually the thing on screen,
+    // though -- presDoseTimelineHtml (and its band) only renders for a
+    // real patient script with herbs on (mirroring the panel's own
+    // isF/herbsOn test exactly). This save function is also reachable via
+    // the scheduled-dispatch checkpoint, which can in principle fire on a
+    // script whose patient has since had herbs turned off -- an edge case,
+    // but "no confirmation anywhere on screen after a real stock movement"
+    // is worse than a rare redundant line, so the original sentence stays
+    // as the fallback for exactly that gap.
+    const dispIsFormula = presIsFormula(t);
+    const dispHerbsOn = dispIsFormula || phHerbsOn(phPatientPeek(presPatientFor(t)), phTpShownPlan(presPatientFor(t)));
+    phFlash = (!dispIsFormula && dispHerbsOn) ? null
+      : `Prescription logged${entry.patient ? ` for <b>${esc(phTitle(entry.patient))}</b>` : ""} — ${phFmtG(gp)}g · ${presTimeStr(now)} · in 📖 History and 📜 Log <button type="button" class="ph-undo-btn" data-ph-undo="${entry.id}">↩ Undo</button>`;
     presLabelOpen = false;   // see the note on presDispense — collapse the label preview once the record's logged
     renderPharmacy();
   }
