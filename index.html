@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260922-020000">
+<meta name="lcm-build" content="20260922-030000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -23078,30 +23078,50 @@
     const h = (+m[4]) % 12, mer = m[6].toLowerCase();
     return { dateKey: keyOf(d), time: `${String(mer === "pm" ? h + 12 : h).padStart(2, "0")}:${m[5]}` };
   }
+  // her report 2026-09-22 ("i copy pasted traceys past appointments - why
+  // arent they adding?"): the SAME per-patient history page, but pasted with
+  // NO "When Where Type Practitioner Actions" header row at all -- either she
+  // started copying below it, or that Cliniko view never showed one for this
+  // page. Confirmed against her real "Tracy Collins" paste: patient-name
+  // heading, then straight into repeating date/time-line blocks. A Cliniko
+  // appointment TYPE is the one thing that never appears on a location or
+  // practitioner line either way -- it always starts "N. " (her real corpus:
+  // "1. Initial Acupuncture(60 mins)", "5. Subsequent Acupuncture (60 mins)
+  // - LINH ONLY") and/or carries "(NN mins)"/"(NN minutes)" -- so the
+  // header-less path finds the service by CONTENT instead of column
+  // position, and stays a separate branch so the already-verified
+  // header-present path below is untouched.
+  const PH_APPT_HIST_TYPE_RE = /^\d+\.\s*\S/;
+  const PH_APPT_HIST_MIN_RE = /\(\s*\d+\s*minutes?\s*\)/i;
+  function phApptParseHistoryLine(l, cType, loose) {
+    const cells = l.includes("\t") ? l.split("\t").map(c => c.trim()) : [l];
+    if (loose) return cells.find(c => PH_APPT_HIST_TYPE_RE.test(c) || PH_APPT_HIST_MIN_RE.test(c)) || "";
+    return (cType >= 0 ? cells[cType] : cells[1]) || "";
+  }
   function phApptParseHistory(text) {
     const lines = String(text || "").replace(/[\u200B-\u200D\uFEFF\u00A0\u202A-\u202E\u2066-\u2069]/g, " ").split(/\r?\n/);
     const hi = lines.findIndex(l => /^when\t/i.test(l.trim()) && /practitioner/i.test(l));
-    if (hi < 0) return null;
-    const head = lines[hi].split("\t").map(c => c.trim().toLowerCase());
+    const hIdx = [];
+    for (let i = (hi >= 0 ? hi + 1 : 0); i < lines.length; i++) if (phApptParseDateTimeLine(lines[i])) hIdx.push(i);
+    if (!hIdx.length) return null;
     // the data row has no cell for "When" at all (that's the separate
     // date/time line above it), so every column after it sits ONE INDEX
     // EARLIER in the row than in the header -- cType is a header index,
     // cells[cType - 1] is the matching row cell. Caught by hand-tracing her
     // real "Asmah Mahmood" paste before shipping: cells[cType] silently
     // pulled the Practitioner column ("Linh Quach") into the service field.
-    const cType = head.findIndex(c => c === "type" || c === "service") - 1;
+    const cType = hi >= 0 ? (lines[hi].split("\t").map(c => c.trim().toLowerCase()).findIndex(c => c === "type" || c === "service") - 1) : -1;
     // the patient's own name is the nearest non-blank line above the header
-    // that isn't itself a date/time line -- her page's own title, not a row
+    // (or, with no header, above the FIRST date/time line) that isn't itself
+    // a date/time line -- her page's own title, not a row
+    const nameAbove = hi >= 0 ? hi : hIdx[0];
     let patient = "";
-    for (let k = hi - 1; k >= 0 && k >= hi - 5; k--) {
+    for (let k = nameAbove - 1; k >= 0 && k >= nameAbove - 5; k--) {
       const l = lines[k].trim();
       if (!l) continue;
       if (!phApptParseDateTimeLine(l)) patient = phApptCleanName(l);
       break;
     }
-    const hIdx = [];
-    for (let i = hi + 1; i < lines.length; i++) if (phApptParseDateTimeLine(lines[i])) hIdx.push(i);
-    if (!hIdx.length) return null;
     const out = [];
     hIdx.forEach((li, n) => {
       const dt = phApptParseDateTimeLine(lines[li]);
@@ -23111,10 +23131,8 @@
         const l = lines[k].trim();
         if (!l) continue;
         if (PH_APPT_HIST_SKIP.test(l)) { skip = true; continue; }         // Cancelled etc -- never a real visit
-        if (l.includes("\t")) {
-          const cells = l.split("\t").map(c => c.trim());
-          service = (cType >= 0 ? cells[cType] : cells[1]) || service;
-        }
+        const svc = phApptParseHistoryLine(l, cType, hi < 0);
+        if (svc) service = svc;
         // any other bare line ("Upcoming appt.", "Past appt.") is a section
         // label, not data -- ignored on purpose
       }
