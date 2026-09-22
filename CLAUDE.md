@@ -8330,3 +8330,45 @@ Prescriptions live-search self-check passed (filter to a nonexistent name
 back to Appointments correctly re-hides/re-shows the footer each time.
 
 `lcm-build` `20260922-210000`, `sw.js` `lcm-20260922-alltemplates-apptfooter`.
+
+### The calendar itself now stretches to fill the freed room (her follow-up, same day)
+
+A screenshot showing the fix above only half-worked: hiding the footer
+freed vertical room, but on a day whose blocks don't reach the grid's
+bottom hour, real blank page still showed below the (shorter) card — her
+words, **"extend calendar to bottom of screen."**
+
+**Root cause, traced not guessed**: `.ph-apptcal-body`'s height is set
+TWICE, in different directions. `phApptCalGridHtml()` sets an inline
+`height: ${gridHeight}px` sized purely to the hours actually being
+displayed (the time range, nothing to do with screen size); the CSS
+`max-height: calc(100dvh - var(--ph-apptcal-chrome))` only ever CAPS that
+inline height when it's too tall for the screen — it does nothing when
+the inline height is naturally shorter than the screen, which is exactly
+her case.
+
+**Fix**: one CSS addition, `min-height: calc(100dvh - var(--ph-apptcal-chrome, 300px))`
+on the same rule, scoped `@media (min-width: 641px)` (the exact
+complement of the existing ≤640px phone breakpoint, and the same >640px
+threshold `phPinApptZones()`'s own JS gate already uses) — the SAME
+measured chrome value the max-height cap already reads, just used as a
+floor instead of a ceiling too. `.ph-apptcal-grid`/`.ph-apptcal-gutter`/
+`.ph-apptcal-daycol` are all grid items with no explicit height of their
+own, so they stretch to match automatically; the day-column gridlines are
+a `repeating-linear-gradient` background, which tiles forever with zero
+code change, so the extra space reads as "more calendar," not a blank
+gap. No JS changes — `phPinApptZones()`'s existing measurement is reused
+as-is.
+
+Verified in the sandbox: with the body's real inline height forced down
+to simulate a short day (200px), it correctly rendered at the full
+available height (600px in that test window) instead of shrinking to
+200px — and the grid/gutter/day-columns all correctly stretched to match,
+confirmed by measuring each directly (not assumed from the outer box
+alone). The un-forced case (a day whose real hour range is taller than
+the screen) is unchanged — still caps and scrolls exactly as before. The
+phone breakpoint is fully unaffected — confirmed `max-height: none` /
+`min-height: 220px` (the original floor) at 375px, my new rule correctly
+not applying there. Console clean.
+
+`lcm-build` `20260922-220000`, `sw.js` `lcm-20260922-apptcal-fillheight`.
