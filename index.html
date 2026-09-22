@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260922-290000">
+<meta name="lcm-build" content="20260922-300000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -31294,6 +31294,39 @@
       if (tpMgrPhaseUp) { const [id, idx] = tpMgrPhaseUp.dataset.tpMgrPhaseUp.split(":"); phTpMgrMovePhase(id, +idx, -1); phTpMgrPhaseSel[id] = +idx - 1; phTplHostRerender(); return; }
       const tpMgrPhaseDown = e.target.closest("[data-tp-mgr-phase-down]");
       if (tpMgrPhaseDown) { const [id, idx] = tpMgrPhaseDown.dataset.tpMgrPhaseDown.split(":"); phTpMgrMovePhase(id, +idx, 1); phTpMgrPhaseSel[id] = +idx + 1; phTplHostRerender(); return; }
+      // her Visits picker (2026-09-22) -- "Type instead" / "← Use the
+      // pickers" just flip the view-state Set and repaint; the CD-list
+      // add/remove buttons write straight through phTpMgrSetPhaseField,
+      // same as every other write in this editor.
+      const tpMgrVisType = e.target.closest("[data-tp-mgr-vis-type]");
+      if (tpMgrVisType) { phTpMgrVisTyped.add(tpMgrVisType.dataset.tpMgrVisType); phTplHostRerender(); return; }
+      const tpMgrVisUntype = e.target.closest("[data-tp-mgr-vis-untype]");
+      if (tpMgrVisUntype) { phTpMgrVisTyped.delete(tpMgrVisUntype.dataset.tpMgrVisUntype); phTplHostRerender(); return; }
+      const tpMgrCdAdd = e.target.closest("[data-tp-mgr-cd-add]");
+      if (tpMgrCdAdd) {
+        const [id, idx] = tpMgrCdAdd.dataset.tpMgrCdAdd.split(":");
+        const inp = tpMgrCdAdd.closest(".ph-tp-cdwrap").querySelector("[data-tp-mgr-cd-in]");
+        const v = inp && +inp.value;
+        if (v && v >= 1) {
+          const cur = (phTpMgrPhases(id)[+idx] || {}).cadence || "";
+          const st = phTpCadenceDecompose(cur) || phTpCadenceSeed(cur);
+          const cds = Array.isArray(st.cds) ? st.cds.slice() : [];
+          if (!cds.includes(v)) cds.push(v);
+          phTpMgrSetPhaseField(id, +idx, "cadence", phTpCadenceCompose(st.n, "cd", st.forWhat, st.weeks, cds));
+          phTplHostRerender();
+        }
+        return;
+      }
+      const tpMgrCdRm = e.target.closest("[data-tp-mgr-cd-rm]");
+      if (tpMgrCdRm) {
+        const [id, idx, cdStr] = tpMgrCdRm.dataset.tpMgrCdRm.split(":");
+        const cur = (phTpMgrPhases(id)[+idx] || {}).cadence || "";
+        const st = phTpCadenceDecompose(cur) || phTpCadenceSeed(cur);
+        const cds = (Array.isArray(st.cds) ? st.cds : []).filter(x => x !== +cdStr);
+        phTpMgrSetPhaseField(id, +idx, "cadence", phTpCadenceCompose(st.n, "cd", st.forWhat, st.weeks, cds));
+        phTplHostRerender();
+        return;
+      }
       // Default treatment therapies (her ask 2026-09-22) -- same
       // toggle/chip/custom-add shape as the live-patient tpTherToggle/
       // tpTherChip/tpTherCustomAdd handlers just above the symptom tracker,
@@ -40243,7 +40276,39 @@ or changing anything in Cliniko.
     const pEl = e.target && e.target.closest ? e.target.closest("[data-tp-mgr-phase-field]") : null;
     if (pEl) {
       const [id, idx, field] = pEl.dataset.tpMgrPhaseField.split(":");
-      phTpMgrSetPhaseField(id, +idx, field, pEl.value.replace(/\r\n/g, "\n").trim());
+      const val = pEl.value.replace(/\r\n/g, "\n").trim();
+      phTpMgrSetPhaseField(id, +idx, field, val);
+      // her Visits picker's own "Type instead" escape hatch (2026-09-22):
+      // if the words she typed can be read back by the pickers after all,
+      // drop out of typed mode so the next look shows the real picker
+      // again -- same spirit as the live cell's own "type instead" only
+      // ever being a per-open-session choice, never sticky forever.
+      if (field === "cadence" && phTpCadenceDecompose(val)) phTpMgrVisTyped.delete(`${id}:${idx}`);
+      phTplHostRerender();
+      return;
+    }
+    // her Visits picker (2026-09-22, "preset number of treatments" ->
+    // "the patient treatment plan has option to plan x visits over x
+    // time for each phase. thats what i want to preplan"): the four
+    // selects compose together into one cadence string, same
+    // phTpCadenceCompose the live cell's picker already uses -- read
+    // every sibling select's current value (not just the one that
+    // changed), since a fresh number list is rebuilt on a period change
+    // and the DOM values are the only live source of truth here.
+    const visEl = e.target && e.target.closest ? e.target.closest("[data-tp-mgr-vis-n],[data-tp-mgr-vis-per],[data-tp-mgr-vis-for],[data-tp-mgr-vis-dur]") : null;
+    if (visEl) {
+      const key = visEl.dataset.tpMgrVisN || visEl.dataset.tpMgrVisPer || visEl.dataset.tpMgrVisFor || visEl.dataset.tpMgrVisDur;
+      const [id, idx] = key.split(":");
+      const box = visEl.closest(".ph-tp-vis");
+      const g = sel => box.querySelector(sel);
+      const n = +(g("[data-tp-mgr-vis-n]").value || 0);
+      const per = g("[data-tp-mgr-vis-per]").value;
+      const forWhat = g("[data-tp-mgr-vis-for]").value;
+      const durV = g("[data-tp-mgr-vis-dur]").value;
+      const weeks = durV ? +durV : null;
+      const cur = (phTpMgrPhases(id)[+idx] || {}).cadence || "";
+      const cds = per === "cd" ? (phTpCadenceDecompose(cur) || phTpCadenceSeed(cur)).cds || [] : [];
+      phTpMgrSetPhaseField(id, +idx, "cadence", phTpCadenceCompose(n, per, forWhat, weeks, cds));
       phTplHostRerender();
       return;
     }
@@ -49251,6 +49316,12 @@ or changing anything in Cliniko.
   // same as every other view-state Set/Map in this file -- forgotten on
   // reload same as a fold state.
   let phTpMgrPhaseSel = {};
+  // her ask 2026-09-22 ("the patient treatment plan has option to plan x
+  // visits over x time for each phase. thats what i want to preplan" --
+  // mocked, "yes, build it"): which id:idx phase keys are showing the
+  // "Type instead" free-text box for Visits instead of the picker, same
+  // in-memory-only view state as phTpMgrPhaseSel above.
+  let phTpMgrVisTyped = new Set();
   function phTpMgrPhaseIdx(id) {
     const n = phTpMgrPhases(id).length;
     let i = phTpMgrPhaseSel[id];
@@ -49458,6 +49529,55 @@ or changing anything in Cliniko.
       </div>
     </div>`;
   }
+  // her ask 2026-09-22 ("the patient treatment plan has option to plan x
+  // visits over x time for each phase. thats what i want to preplan" --
+  // mocked twice, "yes, build it" on the second): the SAME number/how-
+  // often/what-for/how-long picker the live Grid's Visits cell already
+  // uses (phTpCellEditOpen's cadence branch), reused here rather than
+  // reinvented -- phTpCadenceDecompose/-Seed/-Compose and
+  // PH_TP_VISIT_PER/-FOR/-MAX are pure string transforms with no
+  // patient/plan dependency, so they carry over unchanged. Only the
+  // write path and the DOM wiring are new: the template editor has no
+  // live patient to resolve a plan against, and it already fully
+  // repaints on every field change (phTplHostRerender(), same as every
+  // other select in this editor) -- the live picker's careful
+  // no-rerender-mid-pick choreography exists only to protect a real
+  // patient's scroll position and an in-progress multi-step pick, which
+  // doesn't apply to an always-visible form field.
+  function phTpMgrVisitsPickerHtml(id, sel, ph) {
+    const cur = ph.cadence || "";
+    const key = `${id}:${sel}`;
+    if (phTpMgrVisTyped.has(key)) {
+      return `<input type="text" class="ph-tp-mgr-in ph-tp-cellin" data-tp-mgr-phase-field="${esc(id)}:${sel}:cadence" placeholder="${esc(PH_TP_FIELD_PH.cadence)}" value="${esc(cur)}" aria-label="Visits for ${esc(ph.label || "this phase")}, typed">
+        <button type="button" class="tab-link" data-tp-mgr-vis-untype="${esc(key)}">← Use the pickers</button>`;
+    }
+    const got = phTpCadenceDecompose(cur);
+    const st = got || phTpCadenceSeed(cur);
+    if (!PH_TP_VISIT_PER.some(p => p[0] === st.per)) st.per = "wk";
+    if (!Array.isArray(st.cds)) st.cds = [];
+    const cdMode = st.per === "cd";
+    const off = cdMode ? st.cds.length === 0 : st.n === 0;
+    const mkOpts = (list, val) => list.map(([v, l]) =>
+      `<option value="${v}"${v === val ? " selected" : ""}>${esc(l)}</option>`).join("");
+    const max = Math.max(PH_TP_VISIT_MAX[st.per] || 5, st.n || 0);
+    let numOpts = `<option value="0"${st.n === 0 ? " selected" : ""}>No visit</option>`;
+    for (let i = 1; i <= max; i++) numOpts += `<option value="${i}"${st.n === i ? " selected" : ""}>${i}</option>`;
+    const durMax = Math.max(16, st.weeks || 0);
+    let durOpts = `<option value=""${!st.weeks ? " selected" : ""}>Ongoing</option>`;
+    for (let i = 1; i <= durMax; i++) durOpts += `<option value="${i}"${st.weeks === i ? " selected" : ""}>for ${i} week${i === 1 ? "" : "s"}</option>`;
+    const chips = st.cds.slice().sort((a, b) => a - b).map(cd =>
+      `<span class="ph-tp-cdchip" data-cd="${cd}">CD ${cd}<button type="button" data-tp-mgr-cd-rm="${esc(key)}:${cd}" aria-label="Remove cycle day ${cd}">×</button></span>`).join("");
+    const keepLine = cur && !got
+      ? `<div class="ph-tp-viskeep">Now: <em>${esc(cur)}</em><br>Choosing below replaces this wording — use <b>Type instead</b> to keep it.</div>` : "";
+    return `${keepLine}<div class="ph-tp-vis">
+      <select class="ph-tp-vissel field-bare" data-tp-mgr-vis-n="${esc(key)}" aria-label="How many visits for ${esc(ph.label || "this phase")}"${cdMode ? " hidden" : ""}>${numOpts}</select>
+      <select class="ph-tp-vissel field-bare" data-tp-mgr-vis-per="${esc(key)}" aria-label="How often">${mkOpts(PH_TP_VISIT_PER, st.per)}</select>
+      <div class="ph-tp-cdwrap"${cdMode ? "" : " hidden"}>${chips}<span class="ph-tp-cdadd"><input type="number" min="1" max="60" class="ph-tp-cdaddin field-bare" data-tp-mgr-cd-in="${esc(key)}" aria-label="Cycle day to add"><button type="button" class="ph-tp-cdaddbtn" data-tp-mgr-cd-add="${esc(key)}">+ Add a day</button></span></div>
+      <select class="ph-tp-vissel field-bare" data-tp-mgr-vis-for="${esc(key)}" aria-label="What the visit is for"${off ? " disabled" : ""}>${mkOpts(PH_TP_VISIT_FOR, st.forWhat)}</select>
+      <select class="ph-tp-vissel field-bare" data-tp-mgr-vis-dur="${esc(key)}" aria-label="How many weeks for ${esc(ph.label || "this phase")}"${off ? " disabled" : ""}>${durOpts}</select>
+      <button type="button" class="ph-tp-vistype" data-tp-mgr-vis-type="${esc(key)}">Type instead</button>
+    </div>`;
+  }
   function phTpMgrPhasesSectionHtml(id) {
     const phases = phTpMgrPhases(id);
     if (!phases.length) return `<p class="ph-settings-hint">No phases yet.</p><button type="button" class="ph-tp-addbtn" data-tp-mgr-phase-add="${esc(id)}">+ Add phase</button>`;
@@ -49482,7 +49602,7 @@ or changing anything in Cliniko.
           <td class="ph-tp-reccell notyet" rowspan="9"><b>Nothing yet — this phase hasn’t started.</b><span class="d">This side fills itself in from a real patient’s visits, scripts, check-ins and periods once a plan starts from this template. She never types it — and neither do you here.</span></td>
         </tr>
         ${row("aim", "area")}
-        ${row("cadence", "text")}
+        <tr><td class="ph-tp-lbl">${esc(PH_TP_FIELD_LABELS.cadence)}</td><td class="ph-tp-cell">${phTpMgrVisitsPickerHtml(id, sel, p)}</td></tr>
         <tr><td class="ph-tp-lbl">Objective</td><td class="ph-tp-cell">${field("suggestFormula", "text")}</td></tr>
         <tr><td colspan="2" class="ph-tp-mgr-band">Formula action — chosen per patient, not on the template</td></tr>
         <tr class="ph-tp-therrow"><td colspan="2">${phTpMgrTherapiesHtml(id, sel)}</td></tr>
