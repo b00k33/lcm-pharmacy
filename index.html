@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260922-220000">
+<meta name="lcm-build" content="20260922-230000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -8454,6 +8454,24 @@
   #pharmacyPage .ph-tp-faction-custom-in { flex: 1 1 auto; padding: 5px 9px; border: 1px solid var(--ph-line); border-radius: var(--field-radius-sm, 8px); font: inherit; font-size: 12px; }
   #pharmacyPage .ph-tp-faction-custom-add, #pharmacyPage .ph-tp-faction-done { background: none; border: 1px solid var(--ph-line); border-radius: var(--field-radius-sm, 8px); padding: 5px 11px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
   #pharmacyPage .ph-tp-faction-done { align-self: flex-end; color: var(--ph-soft); }
+  /* Treatment therapies -- pills reuse .ph-tp-faction-opt/-custom* above;
+     these are just the per-therapy expandable box (Both line + Left/Right
+     split, a plain vertical divider between them, per her mock). */
+  #pharmacyPage .ph-tp-ther-body { flex-basis: 100%; display: flex; flex-direction: column; gap: 6px; margin-top: 2px; }
+  #pharmacyPage .ph-tp-ther-boxes { display: flex; flex-direction: column; gap: 8px; }
+  #pharmacyPage .ph-tp-ther-box { padding: 8px 10px; background: var(--ph-paper); border: 1px solid var(--ph-line); border-radius: var(--field-radius-sm, 8px); display: flex; flex-direction: column; gap: 6px; }
+  #pharmacyPage .ph-tp-ther-box.frozen { opacity: .75; }
+  #pharmacyPage .ph-tp-ther-title { font-size: 12.5px; font-weight: 800; color: var(--ph-green-deep); }
+  #pharmacyPage .ph-tp-ther-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  #pharmacyPage .ph-tp-ther-chip { background: none; border: 1px dashed var(--ph-line); border-radius: 999px; padding: 2px 8px; font: inherit; font-size: 10.5px; color: var(--ph-soft); cursor: pointer; }
+  #pharmacyPage .ph-tp-ther-chip:hover { border-color: var(--ph-green-deep); color: var(--ph-green-deep); }
+  #pharmacyPage .ph-tp-ther-line { width: 100%; padding: 5px 9px; border: 1px solid var(--ph-line); border-radius: var(--field-radius-sm, 8px); font: inherit; font-size: 12px; background: var(--ph-white); color: var(--ph-ink); }
+  #pharmacyPage .ph-tp-ther-lr { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; }
+  #pharmacyPage .ph-tp-ther-lr .side { display: flex; flex-direction: column; gap: 3px; min-width: 0; font-size: 12px; }
+  #pharmacyPage .ph-tp-ther-lr .side .tag { font-size: 9px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--ph-faint); }
+  #pharmacyPage .ph-tp-ther-lr .side textarea { width: 100%; resize: none; height: 42px; padding: 5px 8px; border: 1px solid var(--ph-line); border-radius: var(--field-radius-sm, 8px); font: inherit; font-size: 12px; background: var(--ph-white); color: var(--ph-ink); }
+  #pharmacyPage .ph-tp-ther-lr .divider { width: 1px; background: var(--ph-line); align-self: stretch; margin-top: 12px; }
+  #pharmacyPage .ph-tp-therapies-cell { vertical-align: top; }
   /* every formula link's history (her decision 6, 2026-09-12) -- collapsed
      to a small count by default, same "default one line" posture as
      everywhere else in this app */
@@ -28663,6 +28681,49 @@
         phTpFormulaActionAddCustom(phaseId, inp && inp.value);
         return;
       }
+      // Treatment therapies (her mock, "yes i like this 2+3... build") --
+      // toggle a preset pill on/off, tap a preset chip to insert into that
+      // therapy's own Both line, or commit the typed-custom field. Same
+      // re-resolve/mutate/save/repaint-only-this-panel shape as Formula
+      // action just above.
+      const tpTherToggle = e.target.closest("[data-tp-ther-toggle]");
+      if (tpTherToggle) {
+        const [phaseId, key, label] = tpTherToggle.dataset.tpTherToggle.split(":");
+        const plan = phTpFindPlan(phTpScreenPatient, phTpScreenPlanId);
+        const ph = plan && plan.phases.find(p => p.id === phaseId);
+        if (ph) {
+          if (!Array.isArray(ph.treatmentTherapies)) ph.treatmentTherapies = [];
+          let entry = ph.treatmentTherapies.find(t => t.key === key);
+          if (!entry) { entry = { key, label, on: false, both: "", left: "", right: "" }; ph.treatmentTherapies.push(entry); }
+          entry.on = !entry.on;
+          savePharmacy(); phTpRepaintPhasePanel();
+        }
+        return;
+      }
+      const tpTherChip = e.target.closest("[data-tp-ther-chip]");
+      if (tpTherChip) {
+        const [phaseId, key, word] = tpTherChip.dataset.tpTherChip.split(":");
+        const plan = phTpFindPlan(phTpScreenPatient, phTpScreenPlanId);
+        const ph = plan && plan.phases.find(p => p.id === phaseId);
+        const entry = ph && Array.isArray(ph.treatmentTherapies) && ph.treatmentTherapies.find(t => t.key === key);
+        if (entry) {
+          const v = (entry.both || "").trim();
+          const parts = v ? v.split(",").map(s => s.trim()) : [];
+          if (!parts.some(p => p.toLowerCase() === word.toLowerCase())) {
+            entry.both = v ? v + ", " + word : word;
+            savePharmacy(); phTpRepaintPhasePanel();
+          }
+        }
+        return;
+      }
+      const tpTherCustomAdd = e.target.closest("[data-tp-ther-custom-add]");
+      if (tpTherCustomAdd) {
+        const phaseId = tpTherCustomAdd.dataset.tpTherCustomAdd;
+        const inp = document.querySelector(`[data-tp-ther-custom="${phaseId}"]`);
+        phTpTherapyAddCustom(phaseId, inp && inp.value);
+        if (inp) inp.value = "";
+        return;
+      }
       // Symptom tracker (her mock, "yes i like it") -- add/preset/delete/dot
       // are all discrete clicks, each shaped like the formula-link handlers
       // just above: re-resolve plan/phase fresh by id, mutate, save, repaint
@@ -32954,6 +33015,18 @@
         // a real form control may write through here.
         if (ph && tpPhaseField.matches("input,textarea,select")) phDefer("tpPhaseField:" + phaseId + ":" + field, () => { ph[field] = tpPhaseField.value; savePharmacy(); }, 400);
         if (field === "aim") { tpPhaseField.style.height = "auto"; tpPhaseField.style.height = tpPhaseField.scrollHeight + "px"; }
+        return;
+      }
+      // Treatment therapies' own Both/Left/Right fields -- same debounced
+      // direct-write idiom as tpPhaseField above, just nested one level
+      // deeper (into a phase.treatmentTherapies entry, not the phase itself).
+      const tpTherField = e.target.closest("[data-tp-ther-field]");
+      if (tpTherField) {
+        const [phaseId, key, sub] = tpTherField.dataset.tpTherField.split(":");
+        const plan = phTpFindPlan(phTpScreenPatient, phTpScreenPlanId);
+        const ph = plan && plan.phases.find(p => p.id === phaseId);
+        const entry = ph && Array.isArray(ph.treatmentTherapies) && ph.treatmentTherapies.find(t => t.key === key);
+        if (entry) phDefer("tpTherField:" + phaseId + ":" + key + ":" + sub, () => { entry[sub] = tpTherField.value; savePharmacy(); }, 400);
         return;
       }
       // Symptom tracker fields -- same debounced direct-write as tpPhaseField
@@ -52619,6 +52692,91 @@ or changing anything in Cliniko.
     { group: "Warm / Stabilise", items: ["Warm the Interior", "Stabilise / Astringe", "Calm Shen"] },
   ];
   let phTpFormulaActionOpen = null;   // phase id currently showing the picker
+  // Treatment therapies (her mock, "yes i like this 2+3... build") -- a
+  // multi-pick of modalities for the phase, each with its own Left/Right/
+  // Both notes. Same posture as Formula action just above: a controlled
+  // preset list, always-open pills (her pick B, "one tap instead of two"),
+  // plus a typed escape hatch, stored as a plain array on the phase
+  // (phase.treatmentTherapies), never pre-seeded -- lazily created the
+  // first time a pill is ticked, exactly like formulaAction. Additive
+  // alongside the existing Points/Press-tags/Watch fields, not a
+  // replacement of them -- the same relationship Formula action has to
+  // Aim/Points/Formula/Watch.
+  const PH_TP_THERAPIES = [
+    { key: "acu", label: "Acupuncture" },
+    { key: "press", label: "Press tags" },
+    { key: "htjj", label: "Hua Tuo Jia Ji" },
+    { key: "mps", label: "Motor Points Stimulation" },
+    { key: "es", label: "Electro Stimulation" },
+    { key: "cup", label: "Cupping" },
+  ];
+  // her guess, disclosed to her in the mock note -- add/remove/rename any
+  const PH_TP_THERAPY_PRESETS = {
+    press: ["LI4", "GB34", "LI11", "TE5", "SP6", "ST36"],
+    cup: ["Upper back", "Paraspinals", "Shoulder", "Lower back", "Neck"],
+  };
+  function phTpTherapyList(phase) { return Array.isArray(phase.treatmentTherapies) ? phase.treatmentTherapies : []; }
+  function phTpTherapyEntry(phase, key) { return phTpTherapyList(phase).find(t => t.key === key) || null; }
+  function phTpTherapyBoxHtml(phaseId, entry, frozen) {
+    const presets = PH_TP_THERAPY_PRESETS[entry.key];
+    const chips = presets && !frozen ? `<div class="ph-tp-ther-chips">${presets.map(p => `<button type="button" class="ph-tp-ther-chip" data-tp-ther-chip="${phaseId}:${esc(entry.key)}:${esc(p)}">${esc(p)}</button>`).join("")}</div>` : "";
+    if (frozen) {
+      const has = entry.both || entry.left || entry.right;
+      return `<div class="ph-tp-ther-box frozen">
+        <div class="ph-tp-ther-title">${esc(entry.label)}</div>
+        ${has ? `${entry.both ? `<div class="ph-tp-ther-line">${esc(entry.both)}</div>` : ""}${(entry.left || entry.right) ? `<div class="ph-tp-ther-lr"><div class="side"><span class="tag">Left</span>${esc(entry.left || "—")}</div><div class="side"><span class="tag">Right</span>${esc(entry.right || "—")}</div></div>` : ""}` : `<span class="ph-tp-rec-none">—</span>`}
+      </div>`;
+    }
+    return `<div class="ph-tp-ther-box">
+      <div class="ph-tp-ther-title">${esc(entry.label)}</div>
+      ${chips}
+      <input type="text" class="ph-tp-ther-line" placeholder="Both sides" value="${esc(entry.both || "")}" data-tp-ther-field="${phaseId}:${esc(entry.key)}:both">
+      <div class="ph-tp-ther-lr">
+        <div class="side"><span class="tag">Left</span><textarea placeholder="Left-side only" data-tp-ther-field="${phaseId}:${esc(entry.key)}:left">${esc(entry.left || "")}</textarea></div>
+        <div class="divider"></div>
+        <div class="side"><span class="tag">Right</span><textarea placeholder="Right-side only" data-tp-ther-field="${phaseId}:${esc(entry.key)}:right">${esc(entry.right || "")}</textarea></div>
+      </div>
+    </div>`;
+  }
+  function phTpTherapiesHtml(phase, frozen) {
+    const list = phTpTherapyList(phase);
+    const onList = list.filter(t => t.on);
+    if (frozen) {
+      if (!onList.length) return "";
+      return `<div class="ph-tp-faction">
+        <span class="ph-tp-faction-lbl">Treatment therapies</span>
+        <div class="ph-tp-ther-boxes">${onList.map(e => phTpTherapyBoxHtml(phase.id, e, true)).join("")}</div>
+      </div>`;
+    }
+    const presetKeys = new Set(PH_TP_THERAPIES.map(t => t.key));
+    const pills = PH_TP_THERAPIES.map(t => {
+      const entry = phTpTherapyEntry(phase, t.key);
+      return `<button type="button" class="ph-tp-faction-opt${entry && entry.on ? " on" : ""}" data-tp-ther-toggle="${phase.id}:${t.key}:${esc(t.label)}">${esc(t.label)}</button>`;
+    }).join("");
+    const customPills = list.filter(t => !presetKeys.has(t.key)).map(t =>
+      `<button type="button" class="ph-tp-faction-opt${t.on ? " on" : ""}" data-tp-ther-toggle="${phase.id}:${esc(t.key)}:${esc(t.label)}">${esc(t.label)}</button>`
+    ).join("");
+    return `<div class="ph-tp-faction">
+      <span class="ph-tp-faction-lbl">Treatment therapies</span>
+      <div class="ph-tp-ther-body">
+        <div class="ph-tp-faction-g">${pills}${customPills}</div>
+        <span class="ph-tp-faction-custom"><input type="text" class="ph-tp-faction-custom-in" placeholder="Another…" data-tp-ther-custom="${phase.id}"><button type="button" class="ph-tp-faction-custom-add" data-tp-ther-custom-add="${phase.id}">Add</button></span>
+        ${onList.length ? `<div class="ph-tp-ther-boxes">${onList.map(e => phTpTherapyBoxHtml(phase.id, e, false)).join("")}</div>` : ""}
+      </div>
+    </div>`;
+  }
+  function phTpTherapyAddCustom(phaseId, val) {
+    const plan = phTpFindPlan(phTpScreenPatient, phTpScreenPlanId);
+    const ph = plan && plan.phases.find(p => p.id === phaseId);
+    const v = (val || "").trim();
+    if (!ph || !v) return;
+    if (!Array.isArray(ph.treatmentTherapies)) ph.treatmentTherapies = [];
+    const exists = ph.treatmentTherapies.find(t => t.label.toLowerCase() === v.toLowerCase());
+    if (exists) { exists.on = true; } else {
+      ph.treatmentTherapies.push({ key: uid(), label: v, on: true, both: "", left: "", right: "" });
+    }
+    savePharmacy(); phTpRepaintPhasePanel();
+  }
   // ==== the visit table (her pick 2026-09-19, mock A + "improve the tables so
   // the rows sync"): Planned and Today as the two value columns of ONE table,
   // rows in the order a visit runs, so the plan's Points sit beside today's
@@ -52649,7 +52807,8 @@ or changing anything in Cliniko.
     return { aim: cell("aim"), cadence: cell("cadence"), points: cell("points", "div"), press: cell("pressPoints", "div"),
       formula: `<td class="ph-tp-fcell">${formula}${picking ? phTpPhaseFormulaPickerHtml(phase) : ""}${phTpFormulaHistoryHtml(phase)}${phTpFormulaActionHtml(phase, frozen)}</td>`,
       watch: `<td class="ph-tp-cell ph-tp-symcell">${watch}</td>`,
-      findings: `<td class="ph-tp-cell frozen${[plan.tongue, plan.pulse, plan.abdomen].some(x => (x || "").trim()) ? "" : " empty"}">${[["Tongue", plan.tongue], ["Pulse", plan.pulse], ["Abdomen", plan.abdomen]].filter(([, v]) => (v || "").trim()).map(([l, v]) => `<b>${l}</b> ${esc(v)}`).join("<br>") || "—"}</td>` };
+      findings: `<td class="ph-tp-cell frozen${[plan.tongue, plan.pulse, plan.abdomen].some(x => (x || "").trim()) ? "" : " empty"}">${[["Tongue", plan.tongue], ["Pulse", plan.pulse], ["Abdomen", plan.abdomen]].filter(([, v]) => (v || "").trim()).map(([l, v]) => `<b>${l}</b> ${esc(v)}`).join("<br>") || "—"}</td>`,
+      therapies: `<td class="ph-tp-cell ph-tp-therapies-cell">${phTpTherapiesHtml(phase, frozen)}</td>` };
   }
   function phTpVisitTableHtml(name, sessions, opts) {
     const html = presAcuOpenHtml(name, sessions, { planId: opts.planId, compact: true });
@@ -52686,6 +52845,7 @@ or changing anything in Cliniko.
         ${row("response", "Response", `<td class="ph-tp-cell frozen empty">—</td>`, rowVal("Response"))}
         ${herbsOnly && !findings.trim() ? "" : row("findings", "Findings", P.findings, findings)}
         ${herbsOnly ? "" : row("needle", "Needle", `<td class="ph-tp-vtab-two"><span class="sub">Points</span>${P.points}<span class="sub">Press tags</span>${P.press}</td>`, needle)}
+        ${row("therapies", "Treatment therapies", P.therapies, "")}
         ${row("herbs", "Herbs", P.formula, herbs)}
         ${row("next", "Next", P.cadence, rowVal("Next"))}
         ${row("log", "", `<td></td>`, pick(".ph-acu-logbtn"), "ph-tp-vtab-logrow")}
@@ -55493,6 +55653,7 @@ or changing anything in Cliniko.
       tr("Visits", cell("cadence"), rec("Visits", "visits")) +
       tr("Formula", `<td class="ph-tp-fcell">${formula}${picking ? phTpPhaseFormulaPickerHtml(phase) : ""}${phTpFormulaHistoryHtml(phase)}</td>`, rec("Dispensed", "dispensed")) +
       `<tr class="ph-tp-factionrow">${spanning ? `<td colspan="2">${phTpFormulaActionHtml(phase, frozen)}</td>` : `<td colspan="4">${phTpFormulaActionHtml(phase, frozen)}</td>`}</tr>` +
+      `<tr class="ph-tp-therrow">${spanning ? `<td colspan="2">${phTpTherapiesHtml(phase, frozen)}</td>` : `<td colspan="4">${phTpTherapiesHtml(phase, frozen)}</td>`}</tr>` +
       tr("Points", cell("points"), rec("Done", "acu")) +
       tr("Press tags", cell("pressPoints"), spanning ? "" : `<td class="ph-tp-lbl mid rec"></td><td class="ph-tp-reccell"></td>`) +
       tr("Watch", `<td class="ph-tp-cell ph-tp-symcell">${phTpSymptomsHtml(plan, phase, frozen)}</td>`, rec("Periods", "periods")) + `
