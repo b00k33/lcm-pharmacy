@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260923-010000">
+<meta name="lcm-build" content="20260923-020000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6309,6 +6309,16 @@
      table elsewhere in the app, which must NOT grow these marks. */
   #pharmacyPage .ph-tp-vtab td.ph-tp-cell[data-tp-edit]::after { content: "✎"; float: right; font-size: 10px; color: var(--ph-green-deep); opacity: .55; margin-left: 4px; }
   #pharmacyPage .ph-tp-vtab td.ph-tp-cell.frozen::after { content: "🔒"; float: right; font-size: 10px; color: var(--ph-soft); opacity: .6; margin-left: 4px; }
+  /* her ask 2026-09-23 pm: Ask/Points/Herbs join Comments as real pickers for
+     preplanning a future session -- same pencil affordance as the Planned
+     column's own data-tp-edit cells, for visual consistency. */
+  #pharmacyPage .ph-tp-vtab td.ph-tp-fut.editable[data-tp-futplan]::after { content: "✎"; float: right; font-size: 10px; color: var(--ph-faint); opacity: .55; margin-left: 4px; }
+  #pharmacyPage .ph-tp-vtab td.ph-tp-fut.editable.editing::after { content: none; }
+  #pharmacyPage .ph-tp-futplan-acts { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+  #pharmacyPage .ph-tp-futplan-done { min-height: 24px; height: 24px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--ph-green); background: var(--ph-green-tint); color: var(--ph-green-deep); font: inherit; font-size: 11.5px; font-weight: 700; cursor: pointer; }
+  #pharmacyPage .ph-tp-futplan-done:hover { background: var(--ph-green); color: var(--ph-white); }
+  #pharmacyPage .ph-tp-futplan-clear { border: none; background: none; font: inherit; font-size: 11px; color: var(--ph-faint); text-decoration: underline; cursor: pointer; padding: 0; }
+  #pharmacyPage .ph-tp-futplan .ph-acu-pointrow:last-of-type { margin-bottom: 8px; }
   /* scrolling future-session columns to the right of Today, and the
      Comments row that runs the width of the table */
   #pharmacyPage .ph-acu-open.compact.merged { overflow-x: auto; }
@@ -27827,8 +27837,8 @@
       // done phase ----
       const tpEdit = e.target.closest("[data-tp-edit]");
       if (tpEdit && !e.target.closest("[data-tp-phase-field]")) { phTpCellEditOpen(tpEdit); return; }
-      const tpFutComment = e.target.closest("[data-tp-futcomment]");
-      if (tpFutComment && !e.target.closest("[data-tp-phase-field]")) { phTpFutCommentOpen(tpFutComment); return; }
+      const tpFutPlan = e.target.closest("[data-tp-futplan]");
+      if (tpFutPlan && !e.target.closest("[data-tp-phase-field]")) { phTpFutPlanOpen(tpFutPlan); return; }
       const tpTab = e.target.closest("[data-tp-tab]");
       if (tpTab) {
         const [planId, phaseId] = tpTab.dataset.tpTab.split(":");
@@ -53200,6 +53210,24 @@ or changing anything in Cliniko.
       therapies: `<td class="ph-tp-cell ph-tp-therapies-cell">${phTpTherapiesHtml(phase, frozen)}</td>`,
       comments: cell("comments") };
   }
+  // her ask 2026-09-23: preplanning a future session -- one small store per
+  // phase, keyed by the session's own date, read/written only through these
+  // two helpers so the "is it empty, drop the key" rule lives in one place.
+  const PH_TP_FUT_PH = { ask: "Plan what to ask…", needle: "Plan points…", herbs: "Plan a formula…", comments: "Add a comment…" };
+  function phTpFutPlanText(field, sp) {
+    if (!sp) return "";
+    if (field === "ask") return (sp.ask || []).join(", ");
+    if (field === "needle") { const parts = []; if ((sp.points || []).length) parts.push(sp.points.join(", ")); if ((sp.press || []).length) parts.push(`+ ${sp.press.join(", ")}`); return parts.join(" · "); }
+    if (field === "herbs") return sp.formulaName || "";
+    if (field === "comments") return sp.comments || "";
+    return "";
+  }
+  function phTpFutPlanSet(phase, dateKey, patch) {
+    phase.sessionPlan = phase.sessionPlan || {};
+    const sp = Object.assign({}, phase.sessionPlan[dateKey], patch);
+    const empty = !((sp.ask || []).length || (sp.points || []).length || (sp.press || []).length || (sp.formulaName || "").trim() || (sp.comments || "").trim());
+    if (empty) delete phase.sessionPlan[dateKey]; else phase.sessionPlan[dateKey] = sp;
+  }
   function phTpVisitTableHtml(name, sessions, opts) {
     const html = presAcuOpenHtml(name, sessions, { planId: opts.planId, compact: true });
     const tpl = document.createElement("template"); tpl.innerHTML = html;
@@ -53233,6 +53261,12 @@ or changing anything in Cliniko.
     // keeps only this phase's cells strictly after today. A frozen (done,
     // un-unlocked) phase never offers an editable future cell -- same rule
     // phTpPlanCells already applies to the Planned column itself.
+    // Her follow-up, same day: "editable ahead of time as a form of
+    // preplanning" -- Ask, Needle (points/press) and Herbs join Comments as
+    // real, per-session pickers (phTpFutPlanOpen), never plain text, so a
+    // future session can genuinely be planned before it happens. Response
+    // and Findings stay untouched placeholders -- they're what actually
+    // happened at a visit that hasn't occurred, which can't be pre-typed.
     const frozen = phase.status === "done" && !phTpUnlockDone.has(phase.id);
     const today = keyOf(TODAY);
     const grp = phTpSessionCells(name, plan).find(g => g.p.id === phase.id);
@@ -53242,24 +53276,29 @@ or changing anything in Cliniko.
       return `<td class="ph-tp-colhead fut">Session ${j + 1}<em>${esc(dateTxt)}</em></td>`;
     }).join("");
     const futTds = futureCells.map(({ c }) => `<td class="ph-tp-fut${c.k === "booked" ? " booked" : ""}">—</td>`).join("");
-    const futCommentTds = futureCells.map(({ c }) => {
+    const futFieldTds = field => futureCells.map(({ c }) => {
       const cls = c.k === "booked" ? " booked" : "";
-      const txt = phase.sessionComments && phase.sessionComments[c.date];
+      const sp = phase.sessionPlan && phase.sessionPlan[c.date];
+      const txt = phTpFutPlanText(field, sp);
       if (frozen) return `<td class="ph-tp-fut${cls}">${txt ? esc(txt) : "—"}</td>`;
-      return `<td class="ph-tp-fut${cls} editable" data-tp-futcomment="${plan.id}:${phase.id}:${c.date}" title="Click to add a note for this session">${txt ? esc(txt) : `<span class="empty-hint">Add a comment…</span>`}</td>`;
+      return `<td class="ph-tp-fut${cls} editable" data-tp-futplan="${plan.id}:${phase.id}:${c.date}:${field}" title="Click to plan ahead for this session">${txt ? esc(txt) : `<span class="empty-hint">${esc(PH_TP_FUT_PH[field])}</span>`}</td>`;
     }).join("");
-    const row = (key, label, planTd, todayInner, cls) => `<tr class="${[cls || "", done.has(key) ? "done" : "", key === now ? "now" : ""].filter(Boolean).join(" ")}"><td class="ph-tp-lbl">${label}${done.has(key) && key !== "phase" ? `<i class="tick">✓</i>` : ""}</td>${planTd}<td class="ph-tp-vtab-td"><div class="tdw">${todayInner}</div></td>${futTds}</tr>`;
+    const futAskTds = futFieldTds("ask");
+    const futNeedleTds = futFieldTds("needle");
+    const futHerbTds = futFieldTds("herbs");
+    const futCommentTds = futFieldTds("comments");
+    const row = (key, label, planTd, todayInner, cls, futOverride) => `<tr class="${[cls || "", done.has(key) ? "done" : "", key === now ? "now" : ""].filter(Boolean).join(" ")}"><td class="ph-tp-lbl">${label}${done.has(key) && key !== "phase" ? `<i class="tick">✓</i>` : ""}</td>${planTd}<td class="ph-tp-vtab-td"><div class="tdw">${todayInner}</div></td>${futOverride !== undefined ? futOverride : futTds}</tr>`;
     const attrs = Array.from(root.attributes).filter(a => a.name.startsWith("data-")).map(a => `${a.name}="${esc(a.value)}"`).join(" ");
     return `<div class="ph-acu-open compact merged" ${attrs} data-acu-merged="1">
       <table class="ph-tp-grid two ph-tp-vtab${futureCells.length ? " has-fut" : ""}"><colgroup><col class="c-lbl"><col class="c-plan"><col class="c-today">${futureCells.map(() => `<col class="c-fut">`).join("")}</colgroup><tbody>
         <tr class="ph-tp-headrow"><td></td><td class="ph-tp-colhead plan">Planned <em>· ${esc(phase.label || "this phase")}</em></td><td class="ph-tp-colhead act">Today${opts.meta ? ` <em>· ${opts.meta}</em>` : ""}</td>${futHeadTds}</tr>
         ${row("phase", "Phase", P.aim, `${treatas}${notreat}${phasePick}${opts.phaseNote || ""}`)}
-        ${row("ask", "Ask", P.watch, `${rowVal("Ask")}${phTpSymTodayHtml(plan, phase)}`)}
+        ${row("ask", "Ask", P.watch, `${rowVal("Ask")}${phTpSymTodayHtml(plan, phase)}`, "", futAskTds)}
         ${row("response", "Response", `<td class="ph-tp-cell frozen empty">—</td>`, rowVal("Response"))}
         ${herbsOnly && !findings.trim() ? "" : row("findings", "Findings", P.findings, findings)}
-        ${herbsOnly ? "" : row("needle", "Needle", `<td class="ph-tp-vtab-two"><span class="sub">Points</span>${P.points}<span class="sub">Press tags</span>${P.press}</td>`, needle)}
+        ${herbsOnly ? "" : row("needle", "Needle", `<td class="ph-tp-vtab-two"><span class="sub">Points</span>${P.points}<span class="sub">Press tags</span>${P.press}</td>`, needle, "", futNeedleTds)}
         ${row("therapies", "Treatment therapies", P.therapies, "")}
-        ${row("herbs", "Herbs", P.formula, herbs)}
+        ${row("herbs", "Herbs", P.formula, herbs, "", futHerbTds)}
         ${row("next", "Next", P.cadence, rowVal("Next"))}
         <tr class="comments"><td class="ph-tp-lbl">Comments</td>${P.comments}<td class="ph-tp-vtab-td"><div class="tdw">${rowVal("Comments")}</div></td>${futCommentTds}</tr>
         ${row("log", "", `<td></td>`, pick(".ph-acu-logbtn"), "ph-tp-vtab-logrow")}
@@ -56546,53 +56585,167 @@ or changing anything in Cliniko.
     inp.addEventListener("keydown", e => { if (e.key === "Escape" || (e.key === "Enter" && !multi)) { e.preventDefault(); commit(); } });
     inp.addEventListener("blur", commit);
   }
-  // her ask 2026-09-23: "make it possible to edit future sessions" -- a
-  // freeform note per upcoming session, the one future-column field that's
-  // actually hers to fill in ahead of the visit (points/herbs/etc. describe
-  // what happens AT a visit that hasn't happened yet, so they stay read-only
-  // placeholders -- see phTpVisitTableHtml). Same generic commit shape as
-  // phTpCellEditOpen's text fields, keyed by date instead of a field name.
-  function phTpFutCommentOpen(el) {
-    const key = el && el.dataset.tpFutcomment;
+  // her ask 2026-09-23, then the same afternoon: "editable ahead of time as
+  // a form of preplanning" -- and, asked directly, she picked real pickers
+  // over plain text (Ask/Points/Press chips off the phase's own preset
+  // text, a real formula search for Herbs) and Ask+Points+Herbs+Comments
+  // as the fields (never Response/Findings -- those are what happened, not
+  // what's planned). One dispatcher, one small box per field-type, all
+  // self-contained (their own addEventListener calls, never routed through
+  // the app's global delegated click handler) so nothing here can collide
+  // with the phase-level Link-formula picker or the Today's-visit chips --
+  // both of those read module-scope state (phTpFormulaPickPhase,
+  // presAcuPointsChecked) this box never touches.
+  function phTpFutPlanOpen(el) {
+    const key = el && el.dataset.tpFutplan;
     if (!key) return;
-    if (!el.isConnected) el = document.querySelector(`[data-tp-futcomment="${key}"]`);
+    if (!el.isConnected) el = document.querySelector(`[data-tp-futplan="${key}"]`);
     if (!el || el.querySelector("[data-tp-phase-field]")) return;
-    const already = Array.from(document.querySelectorAll(`[data-tp-futcomment="${key}"]`))
+    const already = Array.from(document.querySelectorAll(`[data-tp-futplan="${key}"]`))
       .find(other => other !== el && other.querySelector("[data-tp-phase-field]"));
     if (already) { already.scrollIntoView({ block: "center", behavior: "smooth" }); return; }
-    const [planId, phaseId, dateKey] = key.split(":");
+    const [planId, phaseId, dateKey, field] = key.split(":");
     const plan = phTpFindPlan(phTpScreenPatient, planId);
     const ph = plan && plan.phases.find(p => p.id === phaseId);
     if (!ph || (ph.status === "done" && !phTpUnlockDone.has(ph.id))) return;
     const freshPh = () => { const p = phTpFindPlan(phTpScreenPatient, planId); return p && p.phases.find(x => x.id === phaseId); };
-    const inp = document.createElement("textarea");
-    inp.rows = 1;
-    inp.className = "ph-tp-cellin field-bare";
-    inp.value = (ph.sessionComments && ph.sessionComments[dateKey]) || "";
-    inp.placeholder = "Add a comment…";
-    inp.setAttribute("data-tp-phase-field", key);
-    inp.setAttribute("aria-label", `Comment for the ${phTpSd2(dateKey)} session`);
-    el.classList.add("editing"); el.innerHTML = ""; el.appendChild(inp);
-    const grow = () => { inp.style.height = "auto"; inp.style.height = inp.scrollHeight + "px"; };
-    grow(); inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length);
-    inp.addEventListener("input", grow);
+    const spNow = () => (ph.sessionPlan && ph.sessionPlan[dateKey]) || {};
+    const box = document.createElement("div");
+    box.className = "ph-tp-futplan";
+    box.setAttribute("data-tp-phase-field", key);
+    el.classList.add("editing"); el.innerHTML = ""; el.appendChild(box);
     let done = false;
-    const commit = () => {
+    const finish = patch => {
       if (done) return; done = true;
       const live = freshPh();
-      if (live) {
-        const v = inp.value.trim();
-        if (v) { live.sessionComments = live.sessionComments || {}; live.sessionComments[dateKey] = v; }
-        else if (live.sessionComments) delete live.sessionComments[dateKey];
-      }
+      if (live) phTpFutPlanSet(live, dateKey, patch);
       phPatientRec(phTpScreenPatient);
       savePharmacy();
       el.classList.remove("editing");
-      const saved = (live && live.sessionComments && live.sessionComments[dateKey]) || "";
-      el.innerHTML = saved ? esc(saved) : `<span class="empty-hint">Add a comment…</span>`;
+      const sp = live && live.sessionPlan && live.sessionPlan[dateKey];
+      const txt = phTpFutPlanText(field, sp);
+      el.innerHTML = txt ? esc(txt) : `<span class="empty-hint">${esc(PH_TP_FUT_PH[field] || "")}</span>`;
     };
-    inp.addEventListener("keydown", e => { if (e.key === "Escape") { e.preventDefault(); commit(); } });
-    inp.addEventListener("blur", commit);
+    if (field === "comments") {
+      const inp = document.createElement("textarea");
+      inp.rows = 1; inp.className = "ph-tp-cellin field-bare";
+      inp.value = spNow().comments || "";
+      inp.placeholder = PH_TP_FUT_PH.comments;
+      inp.setAttribute("aria-label", `Comment for the ${phTpSd2(dateKey)} session`);
+      box.appendChild(inp);
+      const grow = () => { inp.style.height = "auto"; inp.style.height = inp.scrollHeight + "px"; };
+      grow(); inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length);
+      inp.addEventListener("input", grow);
+      const commit = () => finish({ comments: inp.value.trim() });
+      inp.addEventListener("keydown", e => { if (e.key === "Escape") { e.preventDefault(); commit(); } });
+      inp.addEventListener("blur", commit);
+      return;
+    }
+    if (field === "ask") {
+      const chips = phAcuWatchChips(ph.watch);
+      const checked = new Set(spNow().ask || []);
+      const custom = (spNow().ask || []).filter(a => !chips.includes(a));
+      let adding = false;
+      const render = () => {
+        const all = chips.concat(custom.filter(c => !chips.includes(c)));
+        box.innerHTML = `<div class="ph-acu-pointhd"><span>Plan to ask</span></div>
+          <div class="ph-acu-chiprow">${all.map(c => `<button type="button" class="ph-acu-phasechip${checked.has(c) ? " on" : ""}" data-chip="${esc(c)}">${esc(c)}</button>`).join("")}
+          ${adding ? `<span class="ph-acu-addwrap"><input type="text" class="ph-acu-addin" data-addin="1" placeholder="type and press Enter"></span>` : `<button type="button" class="ph-acu-phasechip ph-acu-addchip" data-act="add">+ add</button>`}</div>
+          <div class="ph-tp-futplan-acts"><button type="button" class="ph-tp-futplan-done" data-act="done">Done</button></div>`;
+        if (adding) box.querySelector("[data-addin]").focus();
+      };
+      const commit = () => finish({ ask: Array.from(checked) });
+      render();
+      box.addEventListener("click", e => {
+        const chip = e.target.closest("[data-chip]");
+        if (chip) { const v = chip.dataset.chip; checked.has(v) ? checked.delete(v) : checked.add(v); render(); return; }
+        if (e.target.closest('[data-act="add"]')) { adding = true; render(); return; }
+        if (e.target.closest('[data-act="done"]')) commit();
+      });
+      box.addEventListener("keydown", e => {
+        if (e.key === "Escape") { e.preventDefault(); commit(); return; }
+        if (e.key === "Enter" && e.target.matches("[data-addin]")) {
+          e.preventDefault();
+          const v = e.target.value.trim();
+          if (v) { if (!chips.includes(v)) custom.push(v); checked.add(v); }
+          adding = false; render();
+        }
+      });
+      return;
+    }
+    if (field === "needle") {
+      const pointsChips = phAcuSplitList(ph.points), pressChips = phAcuSplitList(ph.pressPoints);
+      const pointsChecked = new Set(spNow().points || []), pressChecked = new Set(spNow().press || []);
+      const pointsCustom = (spNow().points || []).filter(p => !pointsChips.includes(p));
+      const pressCustom = (spNow().press || []).filter(p => !pressChips.includes(p));
+      let addingPoints = false, addingPress = false;
+      const group = (label, chips, checked, custom, adding, actKey) => {
+        const all = chips.concat(custom.filter(c => !chips.includes(c)));
+        return `<div class="ph-acu-pointrow">
+          <div class="ph-acu-pointhd"><span>${esc(label)}</span>${all.length ? `<span class="ph-acu-pointhd-acts"><button type="button" class="ph-acu-selall" data-act="${actKey}-all">${all.every(c => checked.has(c)) ? "Clear" : "Select all"}</button></span>` : ""}</div>
+          <div class="ph-acu-chiprow">${all.map(c => `<button type="button" class="ph-acu-phasechip${checked.has(c) ? " on" : ""}" data-chip-${actKey}="${esc(c)}">${esc(c)}</button>`).join("")}
+          ${adding ? `<span class="ph-acu-addwrap"><input type="text" class="ph-acu-addin" data-addin="${actKey}" placeholder="${actKey === "points" ? "point name" : "press tag"}"></span>` : `<button type="button" class="ph-acu-phasechip ph-acu-addchip" data-act="add-${actKey}">+ add</button>`}</div>
+        </div>`;
+      };
+      const render = () => {
+        box.innerHTML = group("Points", pointsChips, pointsChecked, pointsCustom, addingPoints, "points")
+          + group("Press tags", pressChips, pressChecked, pressCustom, addingPress, "press")
+          + `<div class="ph-tp-futplan-acts"><button type="button" class="ph-tp-futplan-done" data-act="done">Done</button></div>`;
+        if (addingPoints) box.querySelector('[data-addin="points"]').focus();
+        if (addingPress) box.querySelector('[data-addin="press"]').focus();
+      };
+      const commit = () => finish({ points: Array.from(pointsChecked), press: Array.from(pressChecked) });
+      render();
+      box.addEventListener("click", e => {
+        const cp = e.target.closest("[data-chip-points]"); if (cp) { const v = cp.dataset.chipPoints; pointsChecked.has(v) ? pointsChecked.delete(v) : pointsChecked.add(v); render(); return; }
+        const cr = e.target.closest("[data-chip-press]"); if (cr) { const v = cr.dataset.chipPress; pressChecked.has(v) ? pressChecked.delete(v) : pressChecked.add(v); render(); return; }
+        if (e.target.closest('[data-act="add-points"]')) { addingPoints = true; render(); return; }
+        if (e.target.closest('[data-act="add-press"]')) { addingPress = true; render(); return; }
+        if (e.target.closest('[data-act="points-all"]')) { const all = pointsChips.concat(pointsCustom.filter(p => !pointsChips.includes(p))); if (all.every(p => pointsChecked.has(p))) pointsChecked.clear(); else all.forEach(p => pointsChecked.add(p)); render(); return; }
+        if (e.target.closest('[data-act="press-all"]')) { const all = pressChips.concat(pressCustom.filter(p => !pressChips.includes(p))); if (all.every(p => pressChecked.has(p))) pressChecked.clear(); else all.forEach(p => pressChecked.add(p)); render(); return; }
+        if (e.target.closest('[data-act="done"]')) commit();
+      });
+      box.addEventListener("keydown", e => {
+        if (e.key === "Escape") { e.preventDefault(); commit(); return; }
+        if (e.key === "Enter" && e.target.matches('[data-addin="points"]')) { e.preventDefault(); const v = e.target.value.trim(); if (v) { if (!pointsChips.includes(v)) pointsCustom.push(v); pointsChecked.add(v); } addingPoints = false; render(); }
+        if (e.key === "Enter" && e.target.matches('[data-addin="press"]')) { e.preventDefault(); const v = e.target.value.trim(); if (v) { if (!pressChips.includes(v)) pressCustom.push(v); pressChecked.add(v); } addingPress = false; render(); }
+      });
+      return;
+    }
+    if (field === "herbs") {
+      // her own search, kept deliberately separate from the phase-level Link
+      // formula picker (data-tp-pick-*) -- planning a future session's herb
+      // must never create or touch a real prescription, only a plain name.
+      const val = spNow().formulaName || "";
+      box.innerHTML = `<div class="ph-tp-fpick"><input type="search" class="ph-tp-fpick-input" data-in="1" placeholder="Search your formulas or type a name…" value="${esc(val)}" autocomplete="off" aria-label="Plan a formula for this session">
+        <div class="ph-pick-sugg" data-sugg="1"></div></div>
+        <div class="ph-tp-futplan-acts"><button type="button" class="ph-tp-futplan-done" data-act="done">Done</button>${val ? `<button type="button" class="ph-tp-futplan-clear" data-act="clear">Clear</button>` : ""}</div>`;
+      const input = box.querySelector("[data-in]"), sugg = box.querySelector("[data-sugg]");
+      const suggRow = (icon, label, tag, id) => `<div class="ph-pick-row" data-futherb-${tag}="${id}" tabindex="0"><span class="ph-pick-ic">${icon}</span><span class="ph-pick-main"><span class="ph-pick-nm">${esc(label)}</span></span></div>`;
+      const renderSugg = () => {
+        const q = input.value.trim();
+        if (!q) { sugg.innerHTML = ""; return; }
+        const { jars, refills } = presPickMatches(q);
+        const group = (label, list, tag) => !list.length ? "" : `<div class="ph-pick-h">${label}</div>${list.slice(0, 8).map(h => suggRow(tag === "jar" ? "🏺" : "🌿", phDispName(h.name, true), tag, h.id)).join("")}`;
+        sugg.innerHTML = group("Ready-made", jars, "jar") + group("Made from herbs", refills, "refill")
+          + `<div class="ph-pick-row ph-pick-typed" data-futherb-typed="${esc(q)}" tabindex="0"><span class="ph-pick-ic">✎</span><span class="ph-pick-main"><span class="ph-pick-nm">Name it "${esc(q)}"</span></span></div>`;
+      };
+      renderSugg();
+      input.focus(); input.setSelectionRange(input.value.length, input.value.length);
+      input.addEventListener("input", renderSugg);
+      const commit = name => finish({ formulaName: (name != null ? name : input.value).trim() });
+      box.addEventListener("click", e => {
+        const jarRow = e.target.closest("[data-futherb-jar]");
+        if (jarRow) { const h = PHARMACY.herbs.find(x => x.id === jarRow.dataset.futherbJar); commit(h ? phDispName(h.name, true) : input.value); return; }
+        const refillRow = e.target.closest("[data-futherb-refill]");
+        if (refillRow) { const r = PRESC.items.find(x => x.id === refillRow.dataset.futherbRefill); commit(r ? phDispName(r.name, true) : input.value); return; }
+        const typedRow = e.target.closest("[data-futherb-typed]");
+        if (typedRow) { commit(typedRow.dataset.futherbTyped); return; }
+        if (e.target.closest('[data-act="done"]')) { commit(); return; }
+        if (e.target.closest('[data-act="clear"]')) commit("");
+      });
+      input.addEventListener("keydown", e => { if (e.key === "Escape" || e.key === "Enter") { e.preventDefault(); commit(); } });
+    }
   }
   function phTpReviewRowHtml(plan, r) {
     const arming = phTpDeleteArm === r.id;
