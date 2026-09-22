@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260922-260000">
+<meta name="lcm-build" content="20260922-270000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -31294,6 +31294,54 @@
       if (tpMgrPhaseUp) { const [id, idx] = tpMgrPhaseUp.dataset.tpMgrPhaseUp.split(":"); phTpMgrMovePhase(id, +idx, -1); phTpMgrPhaseSel[id] = +idx - 1; phTplHostRerender(); return; }
       const tpMgrPhaseDown = e.target.closest("[data-tp-mgr-phase-down]");
       if (tpMgrPhaseDown) { const [id, idx] = tpMgrPhaseDown.dataset.tpMgrPhaseDown.split(":"); phTpMgrMovePhase(id, +idx, 1); phTpMgrPhaseSel[id] = +idx + 1; phTplHostRerender(); return; }
+      // Default treatment therapies (her ask 2026-09-22) -- same
+      // toggle/chip/custom-add shape as the live-patient tpTherToggle/
+      // tpTherChip/tpTherCustomAdd handlers just above the symptom tracker,
+      // just routed through phTpMgrSetPhaseField instead of a direct
+      // plan-phase mutation, so undo/collapse-to-default work the same as
+      // every other template phase field.
+      const tpMgrTherToggle = e.target.closest("[data-tp-mgr-ther-toggle]");
+      if (tpMgrTherToggle) {
+        const [id, idx, key, label] = tpMgrTherToggle.dataset.tpMgrTherToggle.split(":");
+        const list = phTpMgrTherapyList(id, +idx).map(t => ({ ...t }));
+        let entry = list.find(t => t.key === key);
+        if (!entry) { entry = { key, label, on: false, both: "", left: "", right: "" }; list.push(entry); }
+        entry.on = !entry.on;
+        phTpMgrSetPhaseField(id, +idx, "defaultTherapies", list);
+        phTplHostRerender();
+        return;
+      }
+      const tpMgrTherChip = e.target.closest("[data-tp-mgr-ther-chip]");
+      if (tpMgrTherChip) {
+        const [id, idx, key, word] = tpMgrTherChip.dataset.tpMgrTherChip.split(":");
+        const list = phTpMgrTherapyList(id, +idx).map(t => ({ ...t }));
+        const entry = list.find(t => t.key === key);
+        if (entry) {
+          const v = (entry.both || "").trim();
+          const parts = v ? v.split(",").map(s => s.trim()) : [];
+          if (!parts.some(p => p.toLowerCase() === word.toLowerCase())) {
+            entry.both = v ? v + ", " + word : word;
+            phTpMgrSetPhaseField(id, +idx, "defaultTherapies", list);
+            phTplHostRerender();
+          }
+        }
+        return;
+      }
+      const tpMgrTherCustomAdd = e.target.closest("[data-tp-mgr-ther-custom-add]");
+      if (tpMgrTherCustomAdd) {
+        const [id, idx] = tpMgrTherCustomAdd.dataset.tpMgrTherCustomAdd.split(":");
+        const inp = document.querySelector(`[data-tp-mgr-ther-custom="${id}:${idx}"]`);
+        const v = ((inp && inp.value) || "").trim();
+        if (v) {
+          const list = phTpMgrTherapyList(id, +idx).map(t => ({ ...t }));
+          const exists = list.find(t => t.label.toLowerCase() === v.toLowerCase());
+          if (exists) exists.on = true; else list.push({ key: uid(), label: v, on: true, both: "", left: "", right: "" });
+          phTpMgrSetPhaseField(id, +idx, "defaultTherapies", list);
+          phTplHostRerender();
+        }
+        if (inp) inp.value = "";
+        return;
+      }
       const tpMgrJsonImport = e.target.closest("[data-tp-mgr-json-import]");
       if (tpMgrJsonImport) {
         const id = tpMgrJsonImport.dataset.tpMgrJsonImport;
@@ -31306,7 +31354,7 @@
           if (resEl) resEl.textContent = "Couldn't read that as phase data — expecting a JSON array of {label, aim, points, pressPoints, suggestFormula, cadence, watch}.";
           return;
         }
-        phTpMgrSetField(id, "phases", parsed.map(p => ({ label: p.label || "", aim: p.aim || "", points: p.points || "", pressPoints: p.pressPoints || "", suggestFormula: p.suggestFormula || "", cadence: p.cadence || "", watch: p.watch || "" })));
+        phTpMgrSetField(id, "phases", parsed.map(p => ({ label: p.label || "", aim: p.aim || "", points: p.points || "", pressPoints: p.pressPoints || "", suggestFormula: p.suggestFormula || "", cadence: p.cadence || "", watch: p.watch || "", defaultTherapies: Array.isArray(p.defaultTherapies) ? p.defaultTherapies : [] })));
         phTplHostRerender();
         return;
       }
@@ -40190,6 +40238,21 @@ or changing anything in Cliniko.
       const [id, idx, field] = pEl.dataset.tpMgrPhaseField.split(":");
       phTpMgrSetPhaseField(id, +idx, field, pEl.value.replace(/\r\n/g, "\n").trim());
       phTplHostRerender();
+      return;
+    }
+    // Default treatment therapies' own Both/Left/Right fields -- same
+    // commit-on-blur idiom as pEl just above, nested one level deeper into
+    // a phase.defaultTherapies entry.
+    const tEl = e.target && e.target.closest ? e.target.closest("[data-tp-mgr-ther-field]") : null;
+    if (tEl) {
+      const [id, idx, key, sub] = tEl.dataset.tpMgrTherField.split(":");
+      const list = phTpMgrTherapyList(id, +idx).map(t => ({ ...t }));
+      const entry = list.find(t => t.key === key);
+      if (entry) {
+        entry[sub] = tEl.value.replace(/\r\n/g, "\n").trim();
+        phTpMgrSetPhaseField(id, +idx, "defaultTherapies", list);
+        phTplHostRerender();
+      }
       return;
     }
   });
@@ -49337,6 +49400,57 @@ or changing anything in Cliniko.
     return `<div class="ph-tp-pbar-outer"><div class="ph-tp-pbar named">${phases.map((ph, i) => `
       <button type="button" class="seg${i === sel ? " live" : ""}" data-tp-mgr-phase-sel="${esc(id)}:${i}"><em>${esc(ph.label || `Phase ${i + 1}`)}</em></button>`).join("")}</div></div>`;
   }
+  // Default treatment therapies (her ask 2026-09-22: "i want a generic set
+  // of therapies that i will adjust/edit based on patient" -- to save
+  // clinical-record typing during sessions, not treat every plan as a blank
+  // slate): a template phase carries an OPTIONAL phase.defaultTherapies,
+  // same shape as a live phase's phase.treatmentTherapies. phTpNewPlan
+  // clones it into the new plan's treatmentTherapies at creation time --
+  // one-time copy, like every other template field, never a live link back
+  // to the template. Reuses the exact live-patient UI (PH_TP_THERAPIES,
+  // PH_TP_THERAPY_PRESETS, the .ph-tp-faction*/.ph-tp-ther-* CSS, ~8483) and
+  // the identical pill/chip/box shape -- only the data-* attributes and the
+  // write path (through phTpMgrSetPhaseField, so undo/collapse-to-default
+  // work the same as every other phase field) differ from the live version.
+  function phTpMgrTherapyList(id, idx) {
+    const ph = phTpMgrPhases(id)[idx];
+    return (ph && Array.isArray(ph.defaultTherapies)) ? ph.defaultTherapies : [];
+  }
+  function phTpMgrTherapyEntry(id, idx, key) { return phTpMgrTherapyList(id, idx).find(t => t.key === key) || null; }
+  function phTpMgrTherapyBoxHtml(id, idx, entry) {
+    const presets = PH_TP_THERAPY_PRESETS[entry.key];
+    const chips = presets ? `<div class="ph-tp-ther-chips">${presets.map(p => `<button type="button" class="ph-tp-ther-chip" data-tp-mgr-ther-chip="${esc(id)}:${idx}:${esc(entry.key)}:${esc(p)}">${esc(p)}</button>`).join("")}</div>` : "";
+    return `<div class="ph-tp-ther-box">
+      <div class="ph-tp-ther-title">${esc(entry.label)}</div>
+      ${chips}
+      <input type="text" class="ph-tp-ther-line" placeholder="Both sides" value="${esc(entry.both || "")}" data-tp-mgr-ther-field="${esc(id)}:${idx}:${esc(entry.key)}:both">
+      <div class="ph-tp-ther-lr">
+        <div class="side"><span class="tag">Left</span><textarea placeholder="Left-side only" data-tp-mgr-ther-field="${esc(id)}:${idx}:${esc(entry.key)}:left">${esc(entry.left || "")}</textarea></div>
+        <div class="divider"></div>
+        <div class="side"><span class="tag">Right</span><textarea placeholder="Right-side only" data-tp-mgr-ther-field="${esc(id)}:${idx}:${esc(entry.key)}:right">${esc(entry.right || "")}</textarea></div>
+      </div>
+    </div>`;
+  }
+  function phTpMgrTherapiesHtml(id, idx) {
+    const list = phTpMgrTherapyList(id, idx);
+    const onList = list.filter(t => t.on);
+    const presetKeys = new Set(PH_TP_THERAPIES.map(t => t.key));
+    const pills = PH_TP_THERAPIES.map(t => {
+      const entry = phTpMgrTherapyEntry(id, idx, t.key);
+      return `<button type="button" class="ph-tp-faction-opt${entry && entry.on ? " on" : ""}" data-tp-mgr-ther-toggle="${esc(id)}:${idx}:${t.key}:${esc(t.label)}">${esc(t.label)}</button>`;
+    }).join("");
+    const customPills = list.filter(t => !presetKeys.has(t.key)).map(t =>
+      `<button type="button" class="ph-tp-faction-opt${t.on ? " on" : ""}" data-tp-mgr-ther-toggle="${esc(id)}:${idx}:${esc(t.key)}:${esc(t.label)}">${esc(t.label)}</button>`
+    ).join("");
+    return `<div class="ph-tp-faction">
+      <span class="ph-tp-faction-lbl">Default treatment therapies <span class="faint">— pre-fills onto a new plan from this template; still hers to adjust or turn off per patient</span></span>
+      <div class="ph-tp-ther-body">
+        <div class="ph-tp-faction-g">${pills}${customPills}</div>
+        <span class="ph-tp-faction-custom"><input type="text" class="ph-tp-faction-custom-in" placeholder="Another…" data-tp-mgr-ther-custom="${esc(id)}:${idx}"><button type="button" class="ph-tp-faction-custom-add" data-tp-mgr-ther-custom-add="${esc(id)}:${idx}">Add</button></span>
+        ${onList.length ? `<div class="ph-tp-ther-boxes">${onList.map(e => phTpMgrTherapyBoxHtml(id, idx, e)).join("")}</div>` : ""}
+      </div>
+    </div>`;
+  }
   function phTpMgrPhasesSectionHtml(id) {
     const phases = phTpMgrPhases(id);
     if (!phases.length) return `<p class="ph-settings-hint">No phases yet.</p><button type="button" class="ph-tp-addbtn" data-tp-mgr-phase-add="${esc(id)}">+ Add phase</button>`;
@@ -49363,11 +49477,12 @@ or changing anything in Cliniko.
         ${row("aim", "area")}
         ${row("cadence", "text")}
         <tr><td class="ph-tp-lbl">Formula</td><td class="ph-tp-cell">${field("suggestFormula", "text")}</td></tr>
-        <tr><td colspan="2" class="ph-tp-mgr-band">Formula action &amp; Treatment therapies — chosen per patient, not on the template</td></tr>
+        <tr><td colspan="2" class="ph-tp-mgr-band">Formula action — chosen per patient, not on the template</td></tr>
         ${row("points", "area")}
         ${row("pressPoints", "area")}
         ${row("watch", "area")}
       </table>
+      ${phTpMgrTherapiesHtml(id, sel)}
       <div class="ph-tp-mgr-phasefoot">
         <button type="button" class="ph-tp-addbtn" data-tp-mgr-phase-add="${esc(id)}">+ Add phase</button>
         <span class="ph-tp-mgr-phasemove">
@@ -49584,6 +49699,15 @@ or changing anything in Cliniko.
         id: uid(), label: p.label, aim: p.aim, points: p.points || "", pressPoints: p.pressPoints || "",
         cadence: p.cadence || "", watch: p.watch || "",
         formulaId: null, formulaName: "", suggestFormula: p.suggestFormula || "",
+        // her ask 2026-09-22 ("i want a generic set of therapies that i
+        // will adjust/edit based on patient" -- save clinical-record typing
+        // during sessions): a one-time copy from the template's own
+        // phase.defaultTherapies, same as every other template field here
+        // (never a live link back -- editing it on the plan never touches
+        // the template, editing the template never touches a plan already
+        // running). Cloned per-entry so mutating one plan's pick can never
+        // reach into another plan's array, or the template's own.
+        treatmentTherapies: Array.isArray(p.defaultTherapies) ? p.defaultTherapies.map(t => ({ ...t })) : [],
         // the day the phase became current / done -- stamped automatically
         // (2026-09-08 grid); the first phase starts today
         sinceKey: i === 0 ? keyOf(TODAY) : null, doneKey: null,
