@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260922-170000">
+<meta name="lcm-build" content="20260922-180000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -28245,6 +28245,21 @@
         const [planId, kind] = tpDetourOwn.dataset.tpDetourOwn.split(":");
         const plan = phTpFindPlan(phTpScreenPatient, planId);
         if (plan) {
+          if (kind === "breech") {
+            // Breech is unlike her other detours -- it's ALSO one of the
+            // Pregnancy plan's five default phases (never true for
+            // highrisk/postpartum, which were deliberately built to never
+            // collide with a default phase). Without this, tapping the
+            // detour on a fresh plan created a SECOND "Breech Presentation"
+            // phase alongside the still-upcoming default one -- found by
+            // adversarial review, not reported live. Drop the untouched
+            // default placeholder first so the detour's own phase replaces
+            // it instead of duplicating it; an already-done or already-
+            // current one (the phase this detour is about to close) is a
+            // real record and is left alone.
+            const dupIdx = (plan.phases || []).findIndex(p => p.phaseKey === "breech" && p.status === "upcoming");
+            if (dupIdx > -1) plan.phases.splice(dupIdx, 1);
+          }
           const today = keyOf(TODAY);
           const cur = (plan.phases || []).find(p => p.status === "current");
           const at = cur ? plan.phases.indexOf(cur) : plan.phases.length - 1;
@@ -28252,6 +28267,7 @@
           const preset = kind === "flare" ? phTpFlarePreset(plan)
             : kind === "highrisk" ? [PH_TP_PHASE.highRiskMonitoring]
             : kind === "postpartum" ? [PH_TP_PHASE.postpartum]
+            : kind === "breech" ? [PH_TP_PHASE.breech]
             : kind === "crisis" ? phTpStressCrisisPreset(plan)
             : kind === "plateau" ? [PH_TP_PHASE.metabPlateau]
             : kind === "facialflare" ? [PH_TP_PHASE.facialFlare]
@@ -28385,8 +28401,94 @@
       if (tpPhaseDelYes) {
         const [planId, phaseId] = tpPhaseDelYes.dataset.tpPhaseDelYes.split(":");
         const plan = phTpFindPlan(phTpScreenPatient, planId);
-        if (plan) { plan.phases = plan.phases.filter(p => p.id !== phaseId); }
-        phTpDeleteArm = null; savePharmacy(); phTpRerender();
+        if (plan) {
+          const idx = (plan.phases || []).findIndex(p => p.id === phaseId);
+          if (idx > -1) {
+            // her ask 2026-09-22 ("all the phases... can be recovered if
+            // they were deleted"): a "hard" delete now keeps the whole
+            // phase object (visits, formula links, acute blocks, all of
+            // it) in plan.deletedPhases rather than throwing it away --
+            // this is a partial medical record (decision 11), so nothing
+            // she deletes should be gone for good. Restored from the same
+            // "+ Add a phase" picker via data-tp-phase-restore below.
+            // deletedAfterId (not a raw index) is what makes restoring
+            // several deleted phases, in any order, land back in the
+            // right sequence -- a plain index goes stale the moment ANY
+            // other phase is deleted or restored in between (caught by
+            // testing: delete two, restore them in the wrong order, and
+            // an index-based restore put the second one in the wrong
+            // slot). Anchoring to "the phase that was right before it"
+            // survives that, since the restore just re-finds that
+            // neighbour wherever it currently sits.
+            const [removed] = plan.phases.splice(idx, 1);
+            plan.deletedPhases = plan.deletedPhases || [];
+            // deletedSeq (a plain per-plan counter) is what lets restore
+            // tell apart several phases that all share the same
+            // deletedAfterId anchor -- e.g. deleting two adjacent phases
+            // one after another leaves BOTH anchored to the same earlier
+            // neighbour (or both anchored to "start of list", null, if she
+            // deletes from the top). Restoring them back in the wrong order
+            // used to silently swap their positions (caught by adversarial
+            // review, reproduced by hand: delete B then C from [A,B,C,D],
+            // restore B then C -> landed as [A,C,B,D]). The restore handler
+            // below walks past any already-restored sibling with a LOWER
+            // deletedSeq before inserting, so the original relative order
+            // always wins regardless of which one she taps first.
+            plan.phaseDeleteSeq = (plan.phaseDeleteSeq || 0) + 1;
+            plan.deletedPhases.push({ ...removed, deletedAt: keyOf(TODAY), deletedAfterId: idx > 0 ? plan.phases[idx - 1].id : null, deletedSeq: plan.phaseDeleteSeq });
+          }
+        }
+        phTpDeleteArm = null;
+        if (savePharmacy() === false) { phFlashShow("That could not be saved — check the warning at the top and try again"); phTpRerender(); return; }
+        phTpRerender();
+        return;
+      }
+      const tpPhaseRestore = e.target.closest("[data-tp-phase-restore]");
+      if (tpPhaseRestore) {
+        const [planId, phaseId] = tpPhaseRestore.dataset.tpPhaseRestore.split(":");
+        const plan = phTpFindPlan(phTpScreenPatient, planId);
+        if (plan && Array.isArray(plan.deletedPhases)) {
+          const idx = plan.deletedPhases.findIndex(p => p.id === phaseId);
+          if (idx > -1) {
+            const [restored] = plan.deletedPhases.splice(idx, 1);
+            // deletedAfterId/deletedSeq are kept on the live phase (not
+            // stripped) -- harmless bookkeeping once restored, but it's
+            // what lets a LATER restore still order correctly against this
+            // one if she deletes+restores again. Only deletedAt goes.
+            const { deletedAt, ...phaseFields } = restored;
+            // Every other place that ever sets a phase "current"
+            // (phTpSetPhaseStatus, phTpCascadeTo) always demotes every
+            // OTHER phase in the same move -- a deleted phase sat outside
+            // plan.phases the whole time, so splicing its old "current"
+            // status back in verbatim could recreate a second "current"
+            // phase alongside whatever she picked while it was gone
+            // (caught by adversarial review). Never silently do that --
+            // demote the restored copy instead; everything else about it
+            // (aim/points/formula/dates) still comes back exactly as it was.
+            if (phaseFields.status === "current" && plan.phases.some(p => p.status === "current")) {
+              phaseFields.status = "upcoming";
+            }
+            // find where its old neighbour sits NOW, not where it sat when
+            // this phase was deleted -- see the comment on deletedAfterId
+            // above. No neighbour (it was first), or the neighbour is
+            // itself still sitting deleted, both fall back to the end.
+            const anchorId = phaseFields.deletedAfterId;
+            const afterIdx = anchorId ? plan.phases.findIndex(p => p.id === anchorId) : -1;
+            let at = anchorId == null ? 0 : (afterIdx > -1 ? afterIdx + 1 : plan.phases.length);
+            // walk past any sibling already restored to this same anchor
+            // that was deleted BEFORE this one (lower deletedSeq), so the
+            // original relative order comes back regardless of tap order.
+            while (at < plan.phases.length) {
+              const p = plan.phases[at];
+              if (p.deletedAfterId === anchorId && typeof p.deletedSeq === "number" && p.deletedSeq < phaseFields.deletedSeq) at++;
+              else break;
+            }
+            plan.phases.splice(at, 0, phaseFields);
+            phTpAddPhase = null;
+            if (savePharmacy() === false) { phFlashShow("That could not be saved — check the warning at the top and try again"); phTpRerender(); return; }
+            phTpRerender();
+          }
+        }
         return;
       }
       // soft skip -- orthogonal to .status, see phTpPhaseLineInner. Toggling
@@ -52869,7 +52971,7 @@ or changing anything in Cliniko.
     const tpl = plan && phTpBuiltinTemplates().find(x => x.name === plan.templateName);
     const kinds = ["acute"];
     if (tpl && tpl.category === "msk") kinds.push("flare");
-    if (plan && plan.templateName === "Pregnancy") kinds.push("highrisk", "postpartum");
+    if (plan && plan.templateName === "Pregnancy") kinds.push("highrisk", "postpartum", "breech");
     if (tpl && tpl.category === "stress") kinds.push("crisis");
     if (tpl && tpl.category === "metabolic") kinds.push("plateau");
     if (tpl && tpl.category === "facial") kinds.push("facialflare");
@@ -52879,6 +52981,7 @@ or changing anything in Cliniko.
     flare: { label: "🔥 Flare", desc: "Ready-filled from this plan's own Acute phase — settle the flare, then pick the current phase up again." },
     highrisk: { label: "⚠️ High-risk monitoring", desc: "Ready-filled — steps up support for a flagged risk, then picks the current phase up again." },
     postpartum: { label: "🤱 Postpartum recovery", desc: "Ready-filled — Qi & Blood recovery, milk supply and healing after the birth." },
+    breech: { label: "🔄 Breech presentation", desc: "Ready-filled — moxa and acupuncture to encourage the baby to turn, then picks the current phase up again." },
     crisis: { label: "😟 Crisis", desc: "Ready-filled from this plan's own Settling phase — bring the spike back down, then pick the current phase up again." },
     plateau: { label: "📉 Plateau", desc: "Ready-filled — troubleshoots a stall before pushing the same protocol harder, then picks the current phase up again." },
     facialflare: { label: "⚠️ Flare", desc: "Ready-filled — steps up care for a sudden worsening, then picks the current phase up again." },
@@ -52916,6 +53019,10 @@ or changing anything in Cliniko.
       ${phTpDetourKindsFor(plan).filter(k => k !== "acute").map(k => `<button type="button" class="ph-tp-addopt" data-tp-detour-own="${plan.id}:${k}">
         <b>${PH_TP_DETOUR_META[k].label}</b><span>${PH_TP_DETOUR_META[k].desc}</span>
       </button>`).join("")}
+      ${(plan.deletedPhases || []).length ? `<div class="hd">Recently deleted</div>
+      ${plan.deletedPhases.map(p => `<button type="button" class="ph-tp-addopt" data-tp-phase-restore="${plan.id}:${p.id}">
+        <b>↩ ${esc(p.label || "Untitled phase")}</b><span>Removed ${phShortDate(p.deletedAt)} — restore it exactly as it was.</span>
+      </button>`).join("")}` : ""}
     </div>`;
   }
   // which plan's "switch transfer track" picker is open -- her ask
@@ -54946,7 +55053,7 @@ or changing anything in Cliniko.
     // "ids are unique app-wide" idiom the review/outcome deletes already use.
     const skipToggle = `<button type="button" class="ph-tp-skip-toggle${phase.skipped ? " on" : ""}" data-tp-phase-skip="${plan.id}:${phase.id}" title="${phase.skipped ? "This phase is marked as not applying to her — it stays in the plan, excluded from auto-selection" : "Mark this phase as not applying to her. It stays in the plan, greyed out and skipped over automatically, and you can still tap it to view or undo this"}">${phase.skipped ? "↺ Unskip" : "Doesn't apply to her? →"}</button>`;
     const delCtrl = phTpDeleteArm === phase.id
-      ? `<div class="ph-confirm-strip"><span>Remove this phase? This can't be undone.</span><button type="button" class="btn-save" data-tp-phase-del-yes="${plan.id}:${phase.id}">Remove</button><button type="button" class="btn-cancel" data-tp-phase-del-no="1">Cancel</button></div>`
+      ? `<div class="ph-confirm-strip"><span>Remove this phase? You can bring it back later from "+ Add a phase".</span><button type="button" class="btn-save" data-tp-phase-del-yes="${plan.id}:${phase.id}">Remove</button><button type="button" class="btn-cancel" data-tp-phase-del-no="1">Cancel</button></div>`
       : `<button type="button" class="del" data-tp-phase-del="${plan.id}:${phase.id}" title="Remove this phase" aria-label="Remove ${esc(phase.label)}">×</button>`;
     return `<i class="ph-tp-dot"></i>
         <span class="ph-tp-pname${phase.label ? "" : " empty"}" data-tp-edit="${plan.id}:${phase.id}:label" title="Click to rename">${phase.label ? esc(phase.label) : "Phase name"}</span>
