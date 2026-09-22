@@ -8259,3 +8259,74 @@ temporarily inside the served project directory and deleted immediately
 after — confirmed `git status` shows no trace.
 
 `lcm-build` `20260921-240000`, `sw.js` `lcm-20260921-breathing-room-plan-chrome`.
+
+## All templates hub + Appointments footer removed (her ask 2026-09-22, "yes, build and push live")
+
+**"i want the master template editor for all templates - show me where it
+is or mock one"**, investigated and mocked (5 template systems lived
+across 3 separate screens: Settings → Prescriptions → Treatment plan
+templates; Communications → Templates → Message templates + Information
+letters combined; Settings → Patients → Letter templates; Settings →
+Prescriptions → Label text — no single door onto any of them), shown a
+real mock built from the app's own CSS tokens, then **"yes, build and
+push live."**
+
+**Reuse before invent — every editor is the SAME function, unmodified,
+just given a second possible home.** `phTplHostRerender()` (beside
+`renderPhSettingsPage()`) is the ONE new piece of plumbing: it checks
+whether `#phAllTemplatesWrap` is the visible host and repaints whichever
+one actually is — every click/input handler for the Treatment-plan-
+template manager, the Letter-template manager and Label text (20 call
+sites, all hardcoded to `renderPhSettingsPage()` before this) now calls it
+instead. Message templates + Information letters needed **zero handler
+changes** — their own click delegation already calls the generic
+`renderPharmacy()`, which already repaints whatever tab is active.
+
+**Only 4 tabs, not 5 — a disclosed adjustment from the mock.**
+`phMsgTemplatesHtml()` renders Message templates and Information letters
+as ONE combined function under one "Templates" heading (an internal
+"Information letters" sub-group-head, not two separate sections) — real,
+load-bearing code structure, not a display choice. Rather than modify
+that function to support filtering (more invasive, more risk to the
+Communications page's own unrelated call site), the hub's "💬 Messages &
+letters" tab calls it exactly as-is. More honest than the mock's
+synthetic 2-tab split, and lower risk.
+
+**Standard 6-point tab wiring**, following the Patient Directory page's
+own precedent exactly: sidebar button (`data-ph-tab="alltemplates"`,
+Projects·Reference·Data group, right before Settings), permanent wrap div
+(`#phAllTemplatesWrap`), tab whitelist entry, hidden-toggle, routing
+dispatch, and `renderPhAllTemplatesPage()` (right after
+`renderPhPatientDirectoryPage()`) — reuses the Photos page's own
+`.ph-recphotos-seg` tab-strip component rather than inventing a new one.
+Each tab shows a real live count (`24 · 93 · 11` in her data at build
+time). Verified via real dispatched clicks in the sandbox: all four tabs
+render correct content; picking a treatment-plan template, editing a
+message template and editing a letter template all correctly repaint
+`#phAllTplBody` and leave `#phSettingsWrap` hidden throughout; the
+original Settings-page doors (fold a card, pick the same templates there)
+are completely unaffected; no phone-width overflow.
+
+**Appointments — the shell footer under the grid, gone (her second ask,
+same message, with two screenshots): "in image, the bottom row - this is
+not necessary. remove it and increase the vertical size of the
+calendar."** `#phShellFooter` (herb/patient/script figures, "Back up
+now →") is a permanent, shared sibling of every page — this hides it
+ONLY while the Appointments tab is open (`renderPharmacy()`'s per-tab
+dispatch, right after `renderPhShellFooter()`), every other page keeps it
+exactly as before. No separate height override was needed:
+`phPinApptZones()`'s own measurement (`--ph-apptcal-chrome` = everything
+the document has below the grid) already includes the footer's real
+height, so hiding it and letting the very next `phPinApptZones()` call
+re-measure was the whole fix — confirmed in the sandbox by measuring the
+grid's real height with the footer forced visible vs. hidden (the grid
+gained exactly the footer's own height back). Desktop/tablet only; the
+phone media query already hides this footer everywhere (phone law #2, no
+footer band), so there's nothing to toggle there.
+
+Verified: console clean throughout both builds; the protected
+Prescriptions live-search self-check passed (filter to a nonexistent name
+→ 0 rows, clear → list restored); switching Appointments → another tab →
+back to Appointments correctly re-hides/re-shows the footer each time.
+
+`lcm-build` `20260922-210000`, `sw.js` `lcm-20260922-alltemplates-apptfooter`.
