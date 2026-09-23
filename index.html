@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260923-090000">
+<meta name="lcm-build" content="20260923-100000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -27897,7 +27897,7 @@
         // inside Today's visit -- stop overriding what she's viewing AND
         // what she's treating together, or the acu editor is left pointed
         // at a phase no tab shows any more
-        presAcuPhaseId = null; presAcuPointsChecked = null; presAcuPressChecked = null; presAcuWatchChecked = []; presAcuAskNote = ""; presAcuComment = "";
+        presAcuPhaseId = null; presAcuPointsChecked = null; presAcuPressChecked = null; presAcuWatchChecked = []; presAcuAskNote = ""; presAcuComment = ""; presAcuTherapiesDraft = [];
         // review-caught bug: a partial repaint (phTpRepaintPhasePanel) never
         // touches the tab strip, which sits OUTSIDE .ph-tp-phasebody -- the
         // strip kept showing the old override as "on", and tapping that
@@ -30494,7 +30494,7 @@
           // treated phase's suggestFormula, so what's in her hand at home
           // doesn't stop being true just because she's treating a different
           // phase this visit (Kathryn Welsh: Ovulation phase, Luteal herbs).
-          presAcuPointsChecked = null; presAcuPressChecked = null; presAcuWatchChecked = []; presAcuAskNote = ""; presAcuComment = "";
+          presAcuPointsChecked = null; presAcuPressChecked = null; presAcuWatchChecked = []; presAcuAskNote = ""; presAcuComment = ""; presAcuTherapiesDraft = [];
           // presAcuPointsCustom is deliberately NOT reset here -- a point she
           // already typed in stays true regardless of which phase label this
           // visit ends up filed under; discarding typed text on an override
@@ -30593,6 +30593,78 @@
           const val = list.filter(p => presAcuPressChecked ? presAcuPressChecked.has(p) : true).join(", ");
           ctx.treatedPhase.pressPoints = val;
           savePharmacy(); phTpRepaintPhasePanel();
+        }
+        return;
+      }
+      // Treatment therapies recorded for THIS VISIT (session.treatmentTherapies)
+      // -- same {key,label,on,both,left,right} shape and the same pill/chip/box
+      // markup as a phase's own phase.treatmentTherapies (PH_TP_THERAPIES/
+      // PH_TP_THERAPY_PRESETS/phTpTherapyBoxHtml/phTpTherapiesHtml below),
+      // just writing into presAcuTherapiesDraft instead. Every mutation here
+      // repaints the whole acu-log box (presAcuOpenRefresh) -- same as the
+      // Points/Press pill toggles above -- since her Both/Left/Right text is
+      // already committed straight into the draft object on every keystroke
+      // (the input listener beside presAcuTherapiesDraft's declaration), a
+      // repaint can never lose anything she's mid-typing.
+      const acuTherToggle = e.target.closest("[data-pres-acu-ther-toggle]");
+      if (acuTherToggle) {
+        const [key, label] = acuTherToggle.dataset.presAcuTherToggle.split(":");
+        let entry = presAcuTherapiesDraft.find(t => t.key === key);
+        if (!entry) { entry = { key, label, on: false, both: "", left: "", right: "" }; presAcuTherapiesDraft.push(entry); }
+        entry.on = !entry.on;
+        presAcuOpenRefresh();
+        return;
+      }
+      const acuTherChip = e.target.closest("[data-pres-acu-ther-chip]");
+      if (acuTherChip) {
+        const [key, word] = acuTherChip.dataset.presAcuTherChip.split(":");
+        const entry = presAcuTherapiesDraft.find(t => t.key === key);
+        if (entry) {
+          const v = (entry.both || "").trim();
+          const parts = v ? v.split(",").map(s => s.trim()) : [];
+          if (!parts.some(p => p.toLowerCase() === word.toLowerCase())) {
+            entry.both = v ? v + ", " + word : word;
+            presAcuOpenRefresh();
+          }
+        }
+        return;
+      }
+      if (e.target.closest("[data-pres-acu-ther-custom-add]")) {
+        const inp = document.getElementById("presAcuTherCustom");
+        const v = ((inp && inp.value) || "").trim();
+        if (v) {
+          const exists = presAcuTherapiesDraft.find(t => t.label.toLowerCase() === v.toLowerCase());
+          if (exists) exists.on = true;
+          else presAcuTherapiesDraft.push({ key: uid(), label: v, on: true, both: "", left: "", right: "" });
+          presAcuOpenRefresh();
+        }
+        return;
+      }
+      // her ask ("copy template to followup notes"): pours the CURRENT
+      // PHASE's own planned baseline into today's draft, as a starting point
+      // -- non-destructive, still hers to adjust or clear afterward.
+      if (e.target.closest("[data-pres-acu-ther-copyplan]")) {
+        const ctx = presAcuCtx();
+        if (ctx && ctx.treatedPhase && Array.isArray(ctx.treatedPhase.treatmentTherapies) && ctx.treatedPhase.treatmentTherapies.length) {
+          presAcuTherapiesDraft = JSON.parse(JSON.stringify(ctx.treatedPhase.treatmentTherapies));
+          presAcuOpenRefresh();
+        }
+        return;
+      }
+      // her ask ("copy previous notes to current"): the most recent PRIOR
+      // session (never today's own, still being drafted) that actually
+      // recorded therapies -- preferring one filed to this same plan, but
+      // falling back to an older session with no planId at all rather than
+      // finding nothing.
+      if (e.target.closest("[data-pres-acu-ther-copylast]")) {
+        const ctx = presAcuCtx();
+        const rec2 = ctx && ctx.rec;
+        if (rec2) {
+          const todayKey = keyOf(TODAY);
+          const last = (rec2.acuSessions || [])
+            .filter(s => s.date !== todayKey && Array.isArray(s.treatmentTherapies) && s.treatmentTherapies.length && (!ctx.activePlan || !s.planId || s.planId === ctx.activePlan.id))
+            .sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.at || 0) - (a.at || 0))[0];
+          if (last) { presAcuTherapiesDraft = JSON.parse(JSON.stringify(last.treatmentTherapies)); presAcuOpenRefresh(); }
         }
         return;
       }
@@ -30836,6 +30908,11 @@
             treatedPhase.formulaHistory.push({ id: uid(), formulaId: null, formulaName: herbFormulaName, dateKey: session.date, at: Date.now() });
           }
           if (presAcuWatchChecked.length) session.observedSigns = presAcuWatchChecked.slice();
+          // Treatment therapies recorded for THIS visit -- same
+          // {key,label,on,both,left,right} shape as a phase's own
+          // phase.treatmentTherapies, never on a herbs-only/no-treatment
+          // visit since nothing was needled.
+          if (!presAcuNoTreatment && presAcuTherapiesDraft.length) session.treatmentTherapies = JSON.parse(JSON.stringify(presAcuTherapiesDraft));
           rec.acuSessions.push(session);
           // logging a real session is what "she's tracking acupuncture for
           // this patient" means -- found 2026-09-13 that this, the OLDER of
@@ -30885,6 +30962,7 @@
           presAcuPointsChecked = null; presAcuPressChecked = null; presAcuWatchChecked = []; presAcuAskNote = ""; presAcuComment = "";
           presAcuPointsCustom = []; presAcuPointsAdding = false;
           presAcuInstructFormula = null; presAcuInstructPickerOpen = false; presAcuNoTreatment = false; presAcuNoTreatStash = null;
+          presAcuTherapiesDraft = [];
           phVisitFndResetDraft();
           savePharmacy(); renderPresPanel();
         }
@@ -38501,6 +38579,7 @@ or changing anything in Cliniko.
     presAcuPointsChecked = null; presAcuPressChecked = null; presAcuWatchChecked = []; presAcuAskNote = ""; presAcuComment = "";
     presAcuPointsCustom = []; presAcuPointsAdding = false;
     presAcuInstructFormula = null; presAcuInstructPickerOpen = false; presAcuNoTreatment = false; presAcuNoTreatStash = null;
+    presAcuTherapiesDraft = [];
     phVisitFndResetDraft(); phCyclePop = null;
     presAssessTab = null; presFpDraft = null; presFpProtoOpen = false;
     presPickLocked = null;
@@ -52082,6 +52161,52 @@ or changing anything in Cliniko.
   function phAcuWatchChips(text) {
     return String(text || "").split(/[;,]/).map(s => s.trim()).filter(Boolean).map(s => s.charAt(0).toUpperCase() + s.slice(1));
   }
+  // Treatment therapies recorded for THIS VISIT (session.treatmentTherapies) --
+  // reads/writes presAcuTherapiesDraft, adapted from phTpTherapyBoxHtml/
+  // phTpTherapiesHtml (below, ~PH_TP_THERAPIES) which do the identical thing
+  // for a PHASE's own phase.treatmentTherapies. PH_TP_THERAPIES/
+  // PH_TP_THERAPY_PRESETS are declared later in this same file/scope but
+  // available by the time this actually renders, same as every other forward
+  // reference in this module.
+  function presAcuTherapyBoxHtml(entry) {
+    const presets = PH_TP_THERAPY_PRESETS[entry.key];
+    const chips = presets ? `<div class="ph-tp-ther-chips">${presets.map(p => `<button type="button" class="ph-tp-ther-chip" data-pres-acu-ther-chip="${esc(entry.key)}:${esc(p)}">${esc(p)}</button>`).join("")}</div>` : "";
+    return `<div class="ph-tp-ther-box">
+      ${chips}
+      <input type="text" class="ph-tp-ther-line" placeholder="${esc(entry.label)} — both sides" value="${esc(entry.both || "")}" data-pres-acu-ther-field="${esc(entry.key)}:both">
+      <div class="ph-tp-ther-lr">
+        <div class="side"><span class="tag">Left</span><textarea placeholder="Left-side only" data-pres-acu-ther-field="${esc(entry.key)}:left">${esc(entry.left || "")}</textarea></div>
+        <div class="divider"></div>
+        <div class="side"><span class="tag">Right</span><textarea placeholder="Right-side only" data-pres-acu-ther-field="${esc(entry.key)}:right">${esc(entry.right || "")}</textarea></div>
+      </div>
+    </div>`;
+  }
+  // planTherapies: the treated phase's own PLANNED set, only to decide
+  // whether "Copy from plan" has anything to offer -- never read for
+  // anything else here.
+  function presAcuTherapiesRowHtml(planTherapies) {
+    const list = presAcuTherapiesDraft;
+    const onList = list.filter(t => t.on);
+    const presetKeys = new Set(PH_TP_THERAPIES.map(t => t.key));
+    const pills = PH_TP_THERAPIES.map(t => {
+      const entry = list.find(x => x.key === t.key);
+      return `<button type="button" class="ph-tp-faction-opt${entry && entry.on ? " on" : ""}" data-pres-acu-ther-toggle="${t.key}:${esc(t.label)}">${esc(t.label)}</button>`;
+    }).join("");
+    const customPills = list.filter(t => !presetKeys.has(t.key)).map(t =>
+      `<button type="button" class="ph-tp-faction-opt${t.on ? " on" : ""}" data-pres-acu-ther-toggle="${esc(t.key)}:${esc(t.label)}">${esc(t.label)}</button>`
+    ).join("");
+    const hasPlan = Array.isArray(planTherapies) && planTherapies.length;
+    return `<div class="ph-acu-therapiesrow ph-tp-faction">
+      <span class="ph-tp-faction-lbl">Treatment therapies today</span>
+      <div class="ph-tp-ther-body">
+        ${hasPlan ? `<button type="button" class="tab-link" data-pres-acu-ther-copyplan="1">Copy from plan</button>` : ""}
+        <button type="button" class="tab-link" data-pres-acu-ther-copylast="1">Copy from last visit</button>
+        <div class="ph-tp-faction-g">${pills}${customPills}</div>
+        <span class="ph-tp-faction-custom"><input type="text" id="presAcuTherCustom" class="ph-tp-faction-custom-in" placeholder="Another…"><button type="button" class="ph-tp-faction-custom-add" data-pres-acu-ther-custom-add="1">Add</button></span>
+        ${onList.length ? `<div class="ph-tp-ther-boxes">${onList.map(e2 => presAcuTherapyBoxHtml(e2)).join("")}</div>` : ""}
+      </div>
+    </div>`;
+  }
   // "the" .ph-acu-open box, resolved so a STALE one can't win.
   // #phPresWrap and #phTpModal are only ever hidden-toggled, never cleared
   // (leaving Patient profile hides #phPresWrap without touching its markup;
@@ -52303,6 +52428,12 @@ or changing anything in Cliniko.
         <input type="text" id="presAcuReason" class="ph-acu-reasonin" placeholder="why — e.g. no fertile mucus observed" aria-label="Reason for treating as a different phase">
       </div>` : ""}` : "";
 
+    // Treatment therapies recorded for THIS VISIT -- only while there's an
+    // actual treated phase and acupuncture is genuinely happening today
+    // (never on a herbs-only/no-treatment visit, same gate Points/Press use).
+    const therapiesHtml = (activePlan && treatedPhase && !presAcuNoTreatment)
+      ? presAcuTherapiesRowHtml(treatedPhase.treatmentTherapies) : "";
+
     // her report, 2026-09-18, screenshot of a Migraine plan's Today's-visit
     // panel: "this doesnt belong in migraine headache treatment plan."
     // phCycleOn(rec) alone is a PATIENT-level check -- its fallback branch
@@ -52377,6 +52508,7 @@ or changing anything in Cliniko.
         ${treatedPhase && treatedPhase.aim ? `<div class="aim">${esc(treatedPhase.aim)}</div>` : ""}`}
         ${pointsHtml}
         ${pressHtml}
+        ${therapiesHtml}
         ${compact ? "" : `<div class="hint">Pre-filled from the plan's phase — edit for what you actually needled today.</div>`}
       </div>` : `<input type="text" id="presAcuPoints" class="ph-acu-points-free" placeholder="Points needled today — freeform, no active plan to pull from" aria-label="Points needled today">`)}
       <div class="ph-acu-row2">
@@ -53408,9 +53540,8 @@ or changing anything in Cliniko.
       </div>`;
     }
     return `<div class="ph-tp-ther-box">
-      <div class="ph-tp-ther-title">${esc(entry.label)}</div>
       ${chips}
-      <input type="text" class="ph-tp-ther-line" placeholder="Both sides" value="${esc(entry.both || "")}" data-tp-ther-field="${phaseId}:${esc(entry.key)}:both">
+      <input type="text" class="ph-tp-ther-line" placeholder="${esc(entry.label)} — both sides" value="${esc(entry.both || "")}" data-tp-ther-field="${phaseId}:${esc(entry.key)}:both">
       <div class="ph-tp-ther-lr">
         <div class="side"><span class="tag">Left</span><textarea placeholder="Left-side only" data-tp-ther-field="${phaseId}:${esc(entry.key)}:left">${esc(entry.left || "")}</textarea></div>
         <div class="divider"></div>
@@ -53593,7 +53724,7 @@ or changing anything in Cliniko.
         ${row("response", "Response", `<td class="ph-tp-cell frozen empty">—</td>`, rowVal("Response"))}
         ${herbsOnly && !findings.trim() ? "" : row("findings", "Findings", P.findings, findings)}
         ${herbsOnly ? "" : row("needle", "Needle", `<td class="ph-tp-vtab-two"><span class="sub">Points</span>${P.points}<span class="sub">Press tags</span>${P.press}</td>`, needle, "", futNeedleTds)}
-        ${row("therapies", "Treatment therapies", P.therapies, "")}
+        ${row("therapies", "Treatment therapies", P.therapies, pick(".ph-acu-therapiesrow"))}
         ${row("herbs", "Herbs", P.formula, herbs, "", futHerbTds)}
         ${row("next", "Next", P.cadence, rowVal("Next"))}
         <tr class="comments"><td class="ph-tp-lbl">Comments</td>${P.comments}<td class="ph-tp-vtab-td"><div class="tdw">${rowVal("Comments")}</div></td>${futCommentTds}</tr>
@@ -61187,6 +61318,7 @@ Please let me know if you have any questions.`;
     presAcuPointsChecked = null; presAcuPressChecked = null; presAcuWatchChecked = []; presAcuAskNote = ""; presAcuComment = "";
     presAcuPointsCustom = []; presAcuPointsAdding = false;
     presAcuInstructFormula = null; presAcuInstructPickerOpen = false; presAcuNoTreatment = false; presAcuNoTreatStash = null;
+    presAcuTherapiesDraft = [];
     phVisitFndResetDraft(); phCyclePop = null;
     presAssessTab = null; presFpDraft = null; presFpProtoOpen = false;
     presRenderPanelSmooth();
@@ -62370,9 +62502,30 @@ Please let me know if you have any questions.`;
   let presAcuHerbInstruct = false, presAcuWatchChecked = [];
   let presAcuAskNote = "";   // her words today (the visit record's Ask box), saved as session.askNote
   let presAcuComment = "";   // freeform "Comments" row on today's session, saved as session.comments
+  // Treatment therapies actually given at THIS visit -- same {key,label,on,
+  // both,left,right} shape as a phase's own phase.treatmentTherapies (see
+  // PH_TP_THERAPIES/phTpTherapyBoxHtml/phTpTherapiesHtml below), reused for
+  // the session-level draft rather than a second data shape. Reset with the
+  // rest of the acu-log draft state (see the four presAcu* reset blocks
+  // above); saved onto the session at "Log today's session"/"Log herbs
+  // check-in" time.
+  let presAcuTherapiesDraft = [];
   document.addEventListener("input", e => {
     if (e.target && e.target.id === "presAcuAskNote") presAcuAskNote = e.target.value;
     else if (e.target && e.target.id === "presAcuComment") presAcuComment = e.target.value;
+    else {
+      // Treatment therapies' own Both/Left/Right fields -- write straight into
+      // the draft entry on every keystroke (never debounced, never triggers a
+      // repaint), so a toggle/chip tap elsewhere that repaints this whole box
+      // (presAcuOpenRefresh) always already has her latest typed text, with
+      // nothing to carry forward by DOM identity.
+      const therEl = e.target.closest && e.target.closest("[data-pres-acu-ther-field]");
+      if (therEl) {
+        const [key, sub] = therEl.dataset.presAcuTherField.split(":");
+        const entry = presAcuTherapiesDraft.find(t => t.key === key);
+        if (entry) entry[sub] = therEl.value;
+      }
+    }
   });
   // succinct-chip + type-in-more redesign (her ask 2026-09-17): points typed
   // via the inline "+ add" chip join the phase's own preset list as real,
