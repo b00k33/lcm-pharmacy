@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260923-060000">
+<meta name="lcm-build" content="20260923-070000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -7893,6 +7893,24 @@
   #pharmacyPage .ph-tp-mgr-jsonfield { margin-top: 4px; }
   #pharmacyPage .ph-tp-mgr-jsonfield textarea { width: 100%; box-sizing: border-box; min-height: 100px; resize: none; field-sizing: content; max-height: 320px; overflow-y: auto; }
   #pharmacyPage .ph-tp-mgr-namefixed { font-size: 13px; font-weight: 700; color: var(--ph-ink); }
+  /* her pick 2026-09-23, "B - Two-column, category rail": a sticky left
+     rail (category groups as vertical text links, never chips eating
+     width) beside the edit card, matching the "breathing room" spacing
+     already standard on the real Treatment Plan tab (.ph-tp-pblk). */
+  #pharmacyPage .ph-tp-mgr-shell { display: grid; grid-template-columns: 1fr; gap: 16px; align-items: start; margin-top: 12px; }
+  #pharmacyPage .ph-tp-mgr-rail { display: flex; flex-direction: column; gap: 2px; }
+  #pharmacyPage .ph-tp-mgr-rail .grp { font-size: 9.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--ph-faint); margin: 12px 0 4px; }
+  #pharmacyPage .ph-tp-mgr-rail .grp:first-child { margin-top: 0; }
+  #pharmacyPage .ph-tp-mgr-rail .item { text-align: left; border: 0; background: none; padding: 7px 10px; border-radius: 8px; font: inherit; font-size: 12.5px; color: var(--ph-soft); font-weight: 600; cursor: pointer; }
+  #pharmacyPage .ph-tp-mgr-rail .item:hover { background: var(--ph-paper); color: var(--ph-ink); }
+  #pharmacyPage .ph-tp-mgr-rail .item.on { background: var(--ph-herb-tint); color: var(--ph-herb-deep); font-weight: 700; }
+  #pharmacyPage .ph-tp-mgr-rail-new { margin: 14px 10px 0; text-align: left; border: 0; background: none; padding: 0; font: inherit; font-size: 12.5px; font-weight: 700; color: var(--ph-herb-deep); text-decoration: underline; cursor: pointer; }
+  #pharmacyPage .ph-tp-mgr-card { min-width: 0; padding: 20px 24px 22px; background: var(--ph-white); border: 1px solid var(--ph-line); border-radius: 12px; }
+  @media (min-width: 901px) {
+    #pharmacyPage .ph-tp-mgr-shell { grid-template-columns: 200px minmax(0, 1fr); }
+    #pharmacyPage .ph-tp-mgr-rail { position: sticky; top: 12px; }
+  }
+  @media (max-width: 640px) { #pharmacyPage .ph-tp-mgr-card { padding: 12px; } }
 
   /* 🩸 Cycle timeline bar (her ask 2026-09-03) -- reuses existing status-
      colour tokens for the four phase hues rather than inventing new ones
@@ -49568,6 +49586,31 @@ or changing anything in Cliniko.
       <div class="ph-tmpl-sec">${esc(g.label)}</div>
       <div class="ph-ltrset-chips">${g.items.map(({ t, mine }) => chip(t.id, t.name, !mine && !!phTpMgrOverrides()[t.id], mine)).join("")}</div>`).join("");
   }
+  // her pick 2026-09-23 ("B - Two-column, category rail", from 2 real mocks
+  // shown for the All Templates hub's picker+edit-form screen): a vertical,
+  // sticky left rail replaces the wrapped-chip picker above the edit form --
+  // same groups/data/`chip` semantics as phTpMgrGroupsHtml (reuses
+  // phTpBuiltinTemplates()/phTpUserTemplates(), never a second data read),
+  // just a different shape of button so it never eats vertical space above
+  // the fields and stays visible while she scrolls a long phase list.
+  function phTpMgrRailHtml(selId) {
+    const item = (id, name, edited, mine) => `<button type="button" class="item${id === selId ? " on" : ""}" data-tp-mgr-pick="${esc(id)}">${esc(name)}${edited ? " ✎" : ""}${mine ? ` <span class="ph-tp-tmplcard-mine">yours</span>` : ""}</button>`;
+    const current = phTpBuiltinTemplates();
+    const users = phTpUserTemplates();
+    const inCat = c => [
+      ...current.filter(t => t.category === c.id).map(t => ({ t, mine: false })),
+      ...users.filter(t => t.category === c.id).map(t => ({ t, mine: true })),
+    ];
+    const groups = PH_TP_CATEGORIES.map(c => ({ label: c.label, items: inCat(c) }));
+    const leftover = [
+      ...current.filter(t => !PH_TP_CATEGORIES.some(c => c.id === t.category)).map(t => ({ t, mine: false })),
+      ...users.filter(t => !PH_TP_CATEGORIES.some(c => c.id === t.category)).map(t => ({ t, mine: true })),
+    ];
+    if (leftover.length) groups.push({ label: "Other", items: leftover });
+    return groups.filter(g => g.items.length).map(g => `
+      <div class="grp">${esc(g.label)}</div>
+      ${g.items.map(({ t, mine }) => item(t.id, t.name, !mine && !!phTpMgrOverrides()[t.id], mine)).join("")}`).join("");
+  }
   // her ask 2026-09-22 -- replaces the old stacked-form-per-phase view.
   // One real .ph-tp-grid table, the exact same classes/labels/wording the
   // patient-facing Grid uses (PH_TP_FIELD_LABELS/PH_TP_FIELD_PH, shared,
@@ -49807,9 +49850,15 @@ or changing anything in Cliniko.
     return `<div class="ph-settings-sec" id="phTpMgrSec">
       <h3>🗂 Treatment plan templates</h3>
       <p class="ph-settings-hint">Edit the built-in condition templates the "+ New plan" picker offers — category, goal, every phase's points and cadence, all of it — or your own saved ones (name included). A built-in edit only ever changes plans started from NOW ON; a plan already running keeps what it has. Add a brand new template from here with "+ New template", or from inside any open plan with "📌 Save as template".</p>
-      ${phTpMgrGroupsHtml(selId)}
-      <div class="ph-settings-actions"><button type="button" class="ph-load-btn" data-tp-mgr-new="1">+ New template</button></div>
-      ${selId ? phTpMgrEditHtml(selId) : `<p class="ph-settings-hint">No templates yet.</p>`}
+      <div class="ph-tp-mgr-shell">
+        <div class="ph-tp-mgr-rail">
+          ${phTpMgrRailHtml(selId)}
+          <button type="button" class="ph-tp-mgr-rail-new" data-tp-mgr-new="1">+ New template</button>
+        </div>
+        <div class="ph-tp-mgr-card">
+          ${selId ? phTpMgrEditHtml(selId) : `<p class="ph-settings-hint">No templates yet.</p>`}
+        </div>
+      </div>
     </div>`;
   }
   // the "+ New treatment plan" picker groups built-in templates by category
