@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260923-040000">
+<meta name="lcm-build" content="20260923-050000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -31119,9 +31119,13 @@
           // rather than cosmetic: phAcuCadenceParse reads the phase cadence to
           // work out when the next acupuncture visit is due, so a blank one
           // silently fell back to the default weekly.
+          // her ask 2026-09-23 ("include this in master templates for
+          // editing"): sessions (the Sessions ladder's own explicit count)
+          // now travels the same way -- a saved template remembers how
+          // many she planned, not just how often.
           phTpUserTemplates().push({
             id: uid(), name: plan.title || "Untitled protocol", goal: plan.goal || "",
-            phases: plan.phases.map(p => ({ label: p.label, aim: p.aim || "", points: p.points || "", pressPoints: p.pressPoints || "", suggestFormula: p.formulaName || p.suggestFormula || "", cadence: p.cadence || "", watch: p.watch || "" })),
+            phases: plan.phases.map(p => ({ label: p.label, aim: p.aim || "", points: p.points || "", pressPoints: p.pressPoints || "", suggestFormula: p.formulaName || p.suggestFormula || "", cadence: p.cadence || "", sessions: p.sessions || 0, watch: p.watch || "" })),
           });
           savePharmacy();
           const orig = tpSaveTmpl.textContent;
@@ -31403,6 +31407,20 @@
         phTplHostRerender();
         return;
       }
+      // her ask 2026-09-23: the template's own default Sessions count,
+      // same −/+ stepper the live Grid already uses (see
+      // phTpMgrSessionsFieldHtml) -- writes straight through
+      // phTpMgrSetPhaseField and repaints, no in-progress-edit state to
+      // preserve here (this editor already fully repaints on every field).
+      const tpMgrSessDec = e.target.closest("[data-tp-mgr-sess-dec]"), tpMgrSessInc = e.target.closest("[data-tp-mgr-sess-inc]");
+      if (tpMgrSessDec || tpMgrSessInc) {
+        const [id, idx] = (tpMgrSessDec || tpMgrSessInc).dataset[tpMgrSessDec ? "tpMgrSessDec" : "tpMgrSessInc"].split(":");
+        const cur = parseInt((phTpMgrPhases(id)[+idx] || {}).sessions, 10) || 0;
+        const n = tpMgrSessDec ? Math.max(0, cur - 1) : Math.min(99, cur + 1);
+        phTpMgrSetPhaseField(id, +idx, "sessions", n);
+        phTplHostRerender();
+        return;
+      }
       // Default treatment therapies (her ask 2026-09-22) -- same
       // toggle/chip/custom-add shape as the live-patient tpTherToggle/
       // tpTherChip/tpTherCustomAdd handlers just above the symptom tracker,
@@ -31460,10 +31478,10 @@
         try { parsed = JSON.parse((ta && ta.value || "").trim()); } catch (err) { parsed = null; }
         const valid = Array.isArray(parsed) && parsed.length && parsed.every(p => p && typeof p.label === "string");
         if (!valid) {
-          if (resEl) resEl.textContent = "Couldn't read that as phase data — expecting a JSON array of {label, aim, points, pressPoints, suggestFormula, cadence, watch}.";
+          if (resEl) resEl.textContent = "Couldn't read that as phase data — expecting a JSON array of {label, aim, points, pressPoints, suggestFormula, cadence, sessions, watch}.";
           return;
         }
-        phTpMgrSetField(id, "phases", parsed.map(p => ({ label: p.label || "", aim: p.aim || "", points: p.points || "", pressPoints: p.pressPoints || "", suggestFormula: p.suggestFormula || "", cadence: p.cadence || "", watch: p.watch || "", defaultTherapies: Array.isArray(p.defaultTherapies) ? p.defaultTherapies : [] })));
+        phTpMgrSetField(id, "phases", parsed.map(p => ({ label: p.label || "", aim: p.aim || "", points: p.points || "", pressPoints: p.pressPoints || "", suggestFormula: p.suggestFormula || "", cadence: p.cadence || "", watch: p.watch || "", sessions: p.sessions || 0, defaultTherapies: Array.isArray(p.defaultTherapies) ? p.defaultTherapies : [] })));
         phTplHostRerender();
         return;
       }
@@ -40385,6 +40403,16 @@ or changing anything in Cliniko.
       const cur = (phTpMgrPhases(id)[+idx] || {}).cadence || "";
       const cds = per === "cd" ? (phTpCadenceDecompose(cur) || phTpCadenceSeed(cur)).cds || [] : [];
       phTpMgrSetPhaseField(id, +idx, "cadence", phTpCadenceCompose(n, per, forWhat, weeks, cds));
+      phTplHostRerender();
+      return;
+    }
+    // her ask 2026-09-23: typing straight into the Sessions stepper's own
+    // number field, same commit-on-change shape as every other input here
+    const sEl = e.target && e.target.closest ? e.target.closest("[data-tp-mgr-sess-in]") : null;
+    if (sEl) {
+      const [id, idx] = sEl.dataset.tpMgrSessIn.split(":");
+      const n = Math.max(0, Math.min(99, parseInt(sEl.value, 10) || 0));
+      phTpMgrSetPhaseField(id, +idx, "sessions", n);
       phTplHostRerender();
       return;
     }
@@ -49654,6 +49682,25 @@ or changing anything in Cliniko.
       <button type="button" class="ph-tp-vistype" data-tp-mgr-vis-type="${esc(key)}">Type instead</button>
     </div>`;
   }
+  // her ask 2026-09-23 ("call this table Treatment Visits Plan, include
+  // this in master templates for editing... i want patient profile
+  // treatment plans to be same as templates editing"): the live Grid's
+  // Sessions ladder has its OWN explicit count (phase.sessions, the − N +
+  // stepper) beside the cadence text -- a template only ever had the
+  // cadence picker above, so a new plan made from a template always
+  // opened with the stepper at 0, however clearly the template's own
+  // cadence read. Reuses the live stepper's exact markup/classes
+  // (#pharmacyPage-scoped, not .ph-tp-sesstable-scoped, so they already
+  // work here unchanged) -- only the data-tp-mgr-sess-* attributes and the
+  // write path are new. No no-rerender choreography needed here (see the
+  // comment on phTpMgrVisitsPickerHtml above): every tap just writes
+  // through phTpMgrSetPhaseField and calls phTplHostRerender(), same as
+  // every other control in this editor.
+  function phTpMgrSessionsFieldHtml(id, sel, ph) {
+    const n = parseInt(ph.sessions, 10) || 0;
+    const key = `${id}:${sel}`;
+    return `<span class="ph-tp-sess-stepper" aria-live="polite" aria-atomic="true"><button type="button" class="ph-tp-sess-btn dec" data-tp-mgr-sess-dec="${esc(key)}" aria-label="Fewer default sessions"${n <= 0 ? " disabled" : ""}>−</button><input type="number" class="ph-tp-sess-in" data-tp-mgr-sess-in="${esc(key)}" min="0" max="99" value="${n}" aria-label="Default sessions for ${esc(ph.label || "this phase")}"><button type="button" class="ph-tp-sess-btn inc" data-tp-mgr-sess-inc="${esc(key)}" aria-label="More default sessions">+</button></span><span class="mut ph-tp-mgr-sess-hint"> — pre-fills a new plan's Sessions count</span>`;
+  }
   function phTpMgrPhasesSectionHtml(id) {
     const phases = phTpMgrPhases(id);
     if (!phases.length) return `<p class="ph-settings-hint">No phases yet.</p><button type="button" class="ph-tp-addbtn" data-tp-mgr-phase-add="${esc(id)}">+ Add phase</button>`;
@@ -49674,11 +49721,12 @@ or changing anything in Cliniko.
         <tr>
           <td class="ph-tp-lbl">Phase</td>
           <td class="ph-tp-cell">${field("label", "text")}</td>
-          <td class="ph-tp-mgr-gap" rowspan="9"></td>
-          <td class="ph-tp-reccell notyet" rowspan="9"><b>Nothing yet — this phase hasn’t started.</b><span class="d">This side fills itself in from a real patient’s visits, scripts, check-ins and periods once a plan starts from this template. She never types it — and neither do you here.</span></td>
+          <td class="ph-tp-mgr-gap" rowspan="10"></td>
+          <td class="ph-tp-reccell notyet" rowspan="10"><b>Nothing yet — this phase hasn’t started.</b><span class="d">This side fills itself in from a real patient’s visits, scripts, check-ins and periods once a plan starts from this template. She never types it — and neither do you here.</span></td>
         </tr>
         ${row("aim", "area")}
         <tr><td class="ph-tp-lbl">${esc(PH_TP_FIELD_LABELS.cadence)}</td><td class="ph-tp-cell">${phTpMgrVisitsPickerHtml(id, sel, p)}</td></tr>
+        <tr><td class="ph-tp-lbl">Sessions</td><td class="ph-tp-cell">${phTpMgrSessionsFieldHtml(id, sel, p)}</td></tr>
         <tr><td class="ph-tp-lbl">Objective</td><td class="ph-tp-cell">${field("suggestFormula", "text")}</td></tr>
         <tr><td colspan="2" class="ph-tp-mgr-band">Formula action — chosen per patient, not on the template</td></tr>
         <tr class="ph-tp-therrow"><td colspan="2">${phTpMgrTherapiesHtml(id, sel)}</td></tr>
@@ -49901,6 +49949,12 @@ or changing anything in Cliniko.
       phases: phases.map((p, i) => ({
         id: uid(), label: p.label, aim: p.aim, points: p.points || "", pressPoints: p.pressPoints || "",
         cadence: p.cadence || "", watch: p.watch || "",
+        // her ask 2026-09-23: a template's own default Sessions count
+        // (phTpMgrSessionsFieldHtml) travels onto a new plan's phase the
+        // same way cadence already does -- 0 reads the same as "unset"
+        // everywhere phase.sessions is read (phTpSessionsOf), so there's
+        // nothing special to guard here.
+        sessions: p.sessions || 0,
         formulaId: null, formulaName: "", suggestFormula: p.suggestFormula || "",
         // her ask 2026-09-22 ("i want a generic set of therapies that i
         // will adjust/edit based on patient" -- save clinical-record typing
@@ -54615,7 +54669,10 @@ or changing anything in Cliniko.
     const calHtml = calOpen ? phTpSessCalHtml(name, plan, allCells) : "";
     const hasCal = calOpen ? !!calHtml : !!phTpSessCalHtml(name, plan, allCells);
     const calBtn = hasCal ? `<button type="button" class="ph-tp-book" data-tp-sesscal-toggle="1" title="${calOpen ? "Hide the course calendar" : "Show the course on a calendar"}">Calendar ${calOpen ? "▴" : "▾"}</button>` : "";
-    return `<div class="ph-tp-ladder" data-tp-ladder="${plan.id}" data-tp-ladder-name="${esc(name)}"><div class="ph-tp-sec"><span>Sessions</span>${calBtn}${bookBtn}</div>${calHtml}${table}${extrasHtml}${tray}</div>`;
+    // her ask 2026-09-23: this section is called "Treatment Visits Plan"
+    // now -- the row label inside the table stays "Sessions" (it names the
+    // count, not the whole widget)
+    return `<div class="ph-tp-ladder" data-tp-ladder="${plan.id}" data-tp-ladder-name="${esc(name)}"><div class="ph-tp-sec"><span>Treatment Visits Plan</span>${calBtn}${bookBtn}</div>${calHtml}${table}${extrasHtml}${tray}</div>`;
   }
   document.addEventListener("change", e => {
     const inp = e.target.closest && e.target.closest("[data-tp-sess-in]");
