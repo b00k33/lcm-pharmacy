@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260923-100000">
+<meta name="lcm-build" content="20260923-110000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -55702,7 +55702,7 @@ or changing anything in Cliniko.
   // down the column. ====
   let phTpVrFilter = "all";
   let phTpVrPhotoTableOpen = false;   // "Photos by date" -- unfolds the existing whole-clinic timeline TABLE (date columns) for just this patient
-  const PH_TP_VR_FILTERS = [["all", "All"], ["tongue", "Tongue"], ["pulse", "Pulse"], ["abd", "Abdomen"], ["herbs", "Herbs"]];
+  const PH_TP_VR_FILTERS = [["all", "All"], ["tongue", "Tongue"], ["pulse", "Pulse"], ["abd", "Abdomen"], ["herbs", "Herbs"], ["therapies", "Therapies"]];
   function phTpVrAbdText(f) { return phAbd2Summary(f.abd, f.zones); }
   function phTpVrPhotos(name) {
     const pk = phPatientKey(name);
@@ -55728,13 +55728,16 @@ or changing anything in Cliniko.
     const ask = [acu && acu.askNote ? acu.askNote : "", ...(acu && acu.observedSigns ? acu.observedSigns : [])].filter(Boolean);
     const herbs = node.dispenses.map(d => d.formula || d.what).filter(Boolean);
     const herbsText = herbs.length ? herbs.join(", ") : acu && acu.herbInstructed ? `continued${acu.herbInstructedFormula ? ` ${acu.herbInstructedFormula}` : ""}` : "";
+    const therapiesOn = (acu && Array.isArray(acu.treatmentTherapies) ? acu.treatmentTherapies : []).filter(t => t.on);
+    const therapiesText = therapiesOn.length ? therapiesOn.map(t => t.label).join(", ") : "";
     const did = [];
     if (acu && acu.noTreatment) did.push("herbs only");
     else if (acu && acu.points) did.push(acu.points);
     if (acu && acu.pressPoints) did.push(`press ${acu.pressPoints}`);
+    if (therapiesText) did.push(therapiesText);
     const outLabel = o => o === "better" ? "✓ better" : o === "worse" ? "⚠ worse" : o === "same" ? "· same" : "";
     const photo = photos.list.find(p => phRenDateKeyOf(p) === node.date) || null;
-    return { acu, f, comp, tongue: tongue ? tongue[1] : "", pulse, abd, ask, herbs: herbsText, did, outcome: acu && acu.outcome ? outLabel(acu.outcome) : "", outcomeKey: acu && acu.outcome || "", nextNode, photo };
+    return { acu, f, comp, tongue: tongue ? tongue[1] : "", pulse, abd, ask, herbs: herbsText, therapies: therapiesText, did, outcome: acu && acu.outcome ? outLabel(acu.outcome) : "", outcomeKey: acu && acu.outcome || "", nextNode, photo };
   }
   function phTpVrRowHtml(name, plan, node, x) {
     const key = `${plan.id}:${node.date}`;
@@ -55751,6 +55754,7 @@ or changing anything in Cliniko.
     else if (fl === "pulse") boxes = box("found", "Pulse", esc(x.pulse));
     else if (fl === "abd") boxes = box("found", "Abdomen", `${x.f && (!phAbd2Empty(x.f.abd) || (x.f.zones || []).some(z => z.startsWith("abd:"))) ? `<span class="ph-visit-abd-map ro mini">${phAbdChartSvg(x.f.abd, null, { ro: true, legacy: x.f.zones })}</span>` : ""}${esc(x.abd)}`);
     else if (fl === "herbs") boxes = box("did", "Herbs", x.herbs ? `🌿 ${esc(x.herbs)}` : "") + box("next", "Response", nextText);
+    else if (fl === "therapies") boxes = box("did", "Therapies", esc(x.therapies));
     else boxes = box("ask", "Ask", esc(x.ask.join(" · ")))
       + box("found", "Found", [x.tongue ? `<b>Tongue</b> ${esc(x.tongue)}` : "", x.pulse ? `<b>Pulse</b> ${esc(x.pulse)}` : "", x.abd ? `<b>Abdomen</b> ${esc(x.abd)}` : ""].filter(Boolean).join("<br>"))
       + box("did", "Did", [...x.did.map(esc), x.herbs ? `🌿 ${esc(x.herbs)}` : ""].filter(Boolean).join(" · "))
@@ -55798,7 +55802,7 @@ or changing anything in Cliniko.
     nodes.forEach((nn, i) => { nn.x = phTpVrFacts(name, recFull, plan, nn, i > 0 ? nodes[i - 1] : null, photos); });
     nodes.forEach(nn => { if (nn.x.nextNode) nn.x.nextNode = { date: nn.x.nextNode.date, comp: nn.x.nextNode.x ? nn.x.nextNode.x.comp : null }; });
     const fl = phTpVrFilter;
-    const has = nn => fl === "all" ? true : fl === "tongue" ? !!(nn.x.tongue || nn.x.photo) : fl === "pulse" ? !!nn.x.pulse : fl === "abd" ? !!nn.x.abd : !!nn.x.herbs;
+    const has = nn => fl === "all" ? true : fl === "tongue" ? !!(nn.x.tongue || nn.x.photo) : fl === "pulse" ? !!nn.x.pulse : fl === "abd" ? !!nn.x.abd : fl === "therapies" ? !!nn.x.therapies : !!nn.x.herbs;
     const shown = nodes.filter(has);
     const filters = PH_TP_VR_FILTERS.map(([k, l]) => `<button type="button" class="ph-tp-vr-f${fl === k ? " on" : ""}" data-tp-vr-filter="${k}">${l}</button>`).join("");
     return `<div class="ph-tp-vr" data-tp-vr="${esc(plan.id)}" data-tp-vr-name="${esc(name)}">
@@ -55824,6 +55828,8 @@ or changing anything in Cliniko.
     if (acu && acu.outcome) bits.push(`<span class="out ${esc(acu.outcome)}">${outLabel(acu.outcome)}</span>`);
     if (herbs) bits.push(`<span title="${esc(herbs)}">🌿 ${esc(herbs)}</span>`);
     else if (acu && acu.herbInstructed) bits.push(`<span class="mut" title="${esc(acu.herbInstructedFormula ? `Instructed to start ${acu.herbInstructedFormula}` : "Instructed from stock")}">🌿 continued</span>`);
+    const therapiesOn = (acu && Array.isArray(acu.treatmentTherapies) ? acu.treatmentTherapies : []).filter(t => t.on).map(t => t.label);
+    if (therapiesOn.length) bits.push(`<span title="${esc(therapiesOn.join(", "))}">✨ ${esc(therapiesOn.length === 1 ? therapiesOn[0] : `${therapiesOn.length} therapies`)}</span>`);
     if (node.periods.length) bits.push(`<span class="mut">🩸 period started</span>`);
     return `<div class="ph-tp-past-row${open ? " open" : ""}">
       <button type="button" class="ph-tp-past-head" data-tp-spine-toggle="${esc(key)}" aria-expanded="${open ? "true" : "false"}"><span class="d">${esc(phShortDate(node.date))}</span><span class="s">${bits.join(`<span class="q">·</span>`)}</span><span class="chev">${open ? "▾" : "▸"}</span></button>
