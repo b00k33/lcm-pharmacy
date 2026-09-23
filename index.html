@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260923-030000">
+<meta name="lcm-build" content="20260923-040000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6093,9 +6093,13 @@
   #pharmacyPage .ph-tp-sesstable td.skipped { background: var(--ph-phaseout-tint); opacity: .8; }
   #pharmacyPage .ph-tp-sesstable .ph { display: flex; align-items: baseline; gap: 5px; font-weight: 700; margin: 0; line-height: 1.25; }
   #pharmacyPage .ph-tp-sesstable .no { flex: none; display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: var(--ph-line); color: var(--ph-soft); font-size: 8.5px; font-weight: 800; text-align: center; line-height: 14px; }
-  /* her report 2026-09-21 ("i cant plan - 1x1 week for 3 weeks etc"): this
-     cadence text opens the SAME Visits picker phTpPlanCells' cadence cell
-     already does -- no new mechanism, just a second door onto it */
+  /* her report 2026-09-21 ("i cant plan - 1x1 week for 3 weeks etc"), then
+     her follow-up 2026-09-23 ("make the plan sessions table the primary
+     treatment frequency planner and the visits row ... not editable"): this
+     cadence text is now the ONLY door onto the how-often/for-how-many-weeks
+     picker -- the Visits/Next rows the Planned column used to open it from
+     (phTpPlanCells' and phTpPhaseBodyRows' own cadence cells) now just show
+     the same phase.cadence text read-only, via phTpCadenceReadCell. */
   #pharmacyPage .ph-tp-sesstable .ph-tp-ladder-cad { display: inline-flex; cursor: pointer; font-size: 10px; color: var(--ph-faint); border-radius: 5px; padding: 0 3px; margin: 0 -3px; }
   #pharmacyPage .ph-tp-sesstable .ph-tp-ladder-cad:hover { background: var(--ph-paper, #F4F7F8); color: var(--ph-soft); }
   #pharmacyPage .ph-tp-sesstable .ph-tp-ladder-cad.empty { font-style: italic; }
@@ -53184,6 +53188,21 @@ or changing anything in Cliniko.
   // into its rows here -- one source, every data-pres-acu-* handler and
   // presAcuOpenRefresh keep working on the .ph-acu-open wrapper. ====
   let phTpVtabWatchOpen = new Set();   // phase ids whose Watch cell is open for editing
+  // her ask 2026-09-23 ("make the plan sessions table the primary treatment
+  // frequency planner and the visits row is receiving data from there, not
+  // editable"): plain read-only text everywhere the Planned column used to
+  // offer its OWN "how often, for how many weeks" picker on phase.cadence --
+  // the Sessions section's own cadence line (wired to the same field,
+  // data-tp-edit="plan:phase:cadence", built 2026-09-21/23) is now the ONE
+  // place that opens it. Shows her explicit Sessions-ladder count alongside
+  // the cadence text when she's set one (never a count DERIVED from the same
+  // text it would sit beside -- that would just echo itself).
+  function phTpCadenceReadCell(phase, tag) {
+    tag = tag || "td";
+    const n = parseInt(phase && phase.sessions, 10);
+    const txt = [phase && phase.cadence, n > 0 ? `${n} planned` : ""].filter(Boolean).join(" · ");
+    return `<${tag} class="ph-tp-cell${txt ? "" : " empty"}" title="Set in the Sessions table above">${txt ? esc(txt) : "—"}</${tag}>`;
+  }
   function phTpPlanCells(plan, phase) {
     const frozen = phase.status === "done" && !phTpUnlockDone.has(phase.id);
     const cell = (f, tag) => { tag = tag || "td"; return frozen
@@ -53203,7 +53222,7 @@ or changing anything in Cliniko.
       : `<button type="button" class="ph-tp-formula-chip design" data-tp-formula-design="${plan.id}:${phase.id}">✎ Design formula</button> <button type="button" class="ph-tp-formula-chip empty" data-tp-formula-pick-open="${plan.id}:${phase.id}">Link formula</button>${phase.suggestFormula ? `<span class="ph-tp-sugg">suggested: ${esc(phase.suggestFormula)}</span>` : ""}`;
     const watchOpen = phTpVtabWatchOpen.has(phase.id);
     const watch = `${phTpSymptomsHtml(plan, phase, frozen || !watchOpen)}${frozen ? "" : `<button type="button" class="tab-link ph-tp-vtab-watchbtn" data-tp-vtab-watch="${phase.id}">${watchOpen ? "done" : ((phase.symptoms || []).length || (phase.watch || "").trim() ? "edit" : "+ add")}</button>`}`;
-    return { aim: cell("aim"), cadence: cell("cadence"), points: cell("points", "div"), press: cell("pressPoints", "div"),
+    return { aim: cell("aim"), cadence: phTpCadenceReadCell(phase), points: cell("points", "div"), press: cell("pressPoints", "div"),
       formula: `<td class="ph-tp-fcell">${formula}${picking ? phTpPhaseFormulaPickerHtml(phase) : ""}${phTpFormulaHistoryHtml(phase)}${phTpFormulaActionHtml(phase, frozen)}</td>`,
       watch: `<td class="ph-tp-cell ph-tp-symcell">${watch}</td>`,
       findings: `<td class="ph-tp-cell frozen${[plan.tongue, plan.pulse, plan.abdomen].some(x => (x || "").trim()) ? "" : " empty"}">${[["Tongue", plan.tongue], ["Pulse", plan.pulse], ["Abdomen", plan.abdomen]].filter(([, v]) => (v || "").trim()).map(([l, v]) => `<b>${l}</b> ${esc(v)}`).join("<br>") || "—"}</td>`,
@@ -56113,7 +56132,7 @@ or changing anything in Cliniko.
       : `<tr class="ph-tp-headrow"><td></td><td class="ph-tp-colhead plan">Planned</td><td></td><td class="ph-tp-colhead act">What happened</td></tr>`;
     return phTpAcuteRowHtml(plan, phase) + head +
       tr("Aim", cell("aim"), rec("Outcome", "outcome")) +
-      tr("Visits", cell("cadence"), rec("Visits", "visits")) +
+      tr("Visits", phTpCadenceReadCell(phase), rec("Visits", "visits")) +
       tr("Formula", `<td class="ph-tp-fcell">${formula}${picking ? phTpPhaseFormulaPickerHtml(phase) : ""}${phTpFormulaHistoryHtml(phase)}</td>`, rec("Dispensed", "dispensed")) +
       `<tr class="ph-tp-factionrow">${spanning ? `<td colspan="2">${phTpFormulaActionHtml(phase, frozen)}</td>` : `<td colspan="4">${phTpFormulaActionHtml(phase, frozen)}</td>`}</tr>` +
       `<tr class="ph-tp-therrow">${spanning ? `<td colspan="2">${phTpTherapiesHtml(phase, frozen)}</td>` : `<td colspan="4">${phTpTherapiesHtml(phase, frozen)}</td>`}</tr>` +
