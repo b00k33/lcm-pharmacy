@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260923-070000">
+<meta name="lcm-build" content="20260923-090000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -13324,6 +13324,22 @@
      anyway, and was the last 8px of the phantom sideways scroll -- dropping it
      leaves a 34x42 target, still comfortably tappable */
   #pharmacyPage #presIngTable .ph-ing-spec .del::before { content: ""; position: absolute; inset: -8px 0 -8px -8px; }
+  /* Recipe (Treatment plan templates editor, phTpMgrRecipeEditorHtml) reuses
+     .ph-ing-spec/.ph-build-add but isn't inside .ph-tmpl/#presIngTable (a
+     live script's own ids), so it needs its own copy of a few rules that
+     were scoped to those hosts elsewhere in this sheet -- same visual
+     component, different host, not a second design. */
+  #pharmacyPage .ph-tp-mgr-recipe .ph-build-add { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+  #pharmacyPage .ph-tp-mgr-recipe-namein { flex: 1 1 220px; min-width: 0; }
+  #pharmacyPage .ph-tp-mgr-recipe-gin { flex: 0 0 64px; width: 64px; }
+  #pharmacyPage .ph-tp-mgr-recipe .ph-ing-spec td.ph-pres-actions { padding-left: 2px; padding-right: 2px; }
+  #pharmacyPage .ph-tp-mgr-recipe .ph-ing-spec .del {
+    min-width: 0; min-height: 0; width: 26px; height: 26px; position: relative;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: none; border: none; padding: 0; cursor: pointer; font-size: 17px; line-height: 1; color: var(--ph-soft); font-family: inherit;
+  }
+  #pharmacyPage .ph-tp-mgr-recipe .ph-ing-spec .del:hover { color: var(--ph-zero); }
+  #pharmacyPage .ph-tp-mgr-recipe .ph-ing-spec .del::before { content: ""; position: absolute; inset: -8px 0 -8px -8px; }
   /* §2.3 ONE qty control -- the unit lives inside the border */
   #pharmacyPage .ph-qty-box {
     display: inline-flex; align-items: center; width: 70px; height: 32px;
@@ -28726,7 +28742,26 @@
           const existing = phTpPhaseScript(phTpScreenPatient, planId, phaseId);
           const t = existing || phTpEnsurePhaseScript(phTpScreenPatient, plan, ph);
           if (!existing) {
-            ph.formulaId = t.id; ph.formulaName = "Untitled formula";
+            // her approved "Formula / Objective / Recipe" mock, from several
+            // sessions ago ("yes, push live"): a brand-new designed script
+            // starts from the template's own defaultFormulaName/defaultRecipe
+            // (one-time-cloned onto this LIVE phase already, by phTpNewPlan)
+            // when she's actually filled them in -- reuses phTpPourIntoScript,
+            // the exact same pour Link formula already trusts, so this can
+            // never disagree with that path. Untouched, byte-for-byte, for
+            // every phase/template that has neither field set (still the
+            // overwhelming default): "Untitled formula", empty ingredients,
+            // exactly as before this change.
+            const recipe = Array.isArray(ph.defaultRecipe) && ph.defaultRecipe.length ? ph.defaultRecipe : null;
+            let startName = "Untitled formula";
+            if (recipe) {
+              phTpPourIntoScript(t, null, { name: ph.defaultFormulaName || "Untitled formula", ingredients: recipe });
+              startName = presActualFormula(t) || "Untitled formula";
+            } else if (ph.defaultFormulaName) {
+              t.actualFormula = phDispName(ph.defaultFormulaName, true);
+              startName = t.actualFormula || "Untitled formula";
+            }
+            ph.formulaId = t.id; ph.formulaName = startName;
             if (!Array.isArray(ph.formulaHistory)) ph.formulaHistory = [];
             ph.formulaHistory.push({ id: uid(), formulaId: t.id, formulaName: ph.formulaName, dateKey: keyOf(TODAY), at: Date.now() });
           } else if (ph.formulaId !== t.id) {
@@ -31487,6 +31522,40 @@
         if (inp) inp.value = "";
         return;
       }
+      // Recipe (her approved "Formula / Objective / Recipe" mock) -- same
+      // add/remove shape as the therapy custom-add just above, routed
+      // through phTpMgrSetPhaseField's generic "phases" write so undo and
+      // collapse-to-default cover it automatically. Herb name resolves
+      // against the inventory purely for its Code column (presResolveLineName/
+      // phHerbCode, both already generic, no live-script dependency) -- an
+      // unresolved name is kept as typed, same graceful fallback the real
+      // Ingredients editor gives a not-in-inventory herb.
+      const tpMgrRecipeAdd = e.target.closest("[data-tp-mgr-recipe-add]");
+      if (tpMgrRecipeAdd) {
+        const [id, idx] = tpMgrRecipeAdd.dataset.tpMgrRecipeAdd.split(":");
+        const box = tpMgrRecipeAdd.closest(".ph-build-add");
+        const nameIn = box && box.querySelector("[data-tp-mgr-recipe-namein]");
+        const gIn = box && box.querySelector("[data-tp-mgr-recipe-gin]");
+        const name = ((nameIn && nameIn.value) || "").trim();
+        const grams = Math.max(0, parseFloat((gIn && gIn.value) || "0") || 0);
+        if (name) {
+          const h = presResolveLineName(name);
+          const list = phTpMgrRecipeRows(id, +idx).map(i => ({ ...i }));
+          list.push({ code: h ? phHerbCode(h) : "", herb: h ? h.name : name, grams });
+          phTpMgrSetPhaseField(id, +idx, "defaultRecipe", list);
+          phTplHostRerender();
+        }
+        return;
+      }
+      const tpMgrRecipeDel = e.target.closest("[data-tp-mgr-recipe-del]");
+      if (tpMgrRecipeDel) {
+        const [id, idx, ix] = tpMgrRecipeDel.dataset.tpMgrRecipeDel.split(":");
+        const list = phTpMgrRecipeRows(id, +idx).map(i => ({ ...i }));
+        list.splice(+ix, 1);
+        phTpMgrSetPhaseField(id, +idx, "defaultRecipe", list);
+        phTplHostRerender();
+        return;
+      }
       const tpMgrJsonImport = e.target.closest("[data-tp-mgr-json-import]");
       if (tpMgrJsonImport) {
         const id = tpMgrJsonImport.dataset.tpMgrJsonImport;
@@ -31496,10 +31565,10 @@
         try { parsed = JSON.parse((ta && ta.value || "").trim()); } catch (err) { parsed = null; }
         const valid = Array.isArray(parsed) && parsed.length && parsed.every(p => p && typeof p.label === "string");
         if (!valid) {
-          if (resEl) resEl.textContent = "Couldn't read that as phase data — expecting a JSON array of {label, aim, points, pressPoints, suggestFormula, cadence, sessions, watch}.";
+          if (resEl) resEl.textContent = "Couldn't read that as phase data — expecting a JSON array of {label, aim, points, pressPoints, suggestFormula, defaultFormulaName, defaultRecipe, cadence, sessions, watch}.";
           return;
         }
-        phTpMgrSetField(id, "phases", parsed.map(p => ({ label: p.label || "", aim: p.aim || "", points: p.points || "", pressPoints: p.pressPoints || "", suggestFormula: p.suggestFormula || "", cadence: p.cadence || "", watch: p.watch || "", sessions: p.sessions || 0, defaultTherapies: Array.isArray(p.defaultTherapies) ? p.defaultTherapies : [] })));
+        phTpMgrSetField(id, "phases", parsed.map(p => ({ label: p.label || "", aim: p.aim || "", points: p.points || "", pressPoints: p.pressPoints || "", suggestFormula: p.suggestFormula || "", cadence: p.cadence || "", watch: p.watch || "", sessions: p.sessions || 0, defaultTherapies: Array.isArray(p.defaultTherapies) ? p.defaultTherapies : [], defaultFormulaName: p.defaultFormulaName || "", defaultRecipe: Array.isArray(p.defaultRecipe) ? p.defaultRecipe.map(i => ({ code: i.code || "", herb: i.herb || i.name || "", grams: i.grams || 0 })) : [] })));
         phTplHostRerender();
         return;
       }
@@ -40445,6 +40514,19 @@ or changing anything in Cliniko.
       if (entry) {
         entry[sub] = tEl.value.replace(/\r\n/g, "\n").trim();
         phTpMgrSetPhaseField(id, +idx, "defaultTherapies", list);
+        phTplHostRerender();
+      }
+      return;
+    }
+    // Recipe row's own grams field -- commit-on-change, same idiom as every
+    // other input in this editor (data-tp-mgr-phase-field just above).
+    const rgEl = e.target && e.target.closest ? e.target.closest("[data-tp-mgr-recipe-gedit]") : null;
+    if (rgEl) {
+      const [id, idx, ix] = rgEl.dataset.tpMgrRecipeGedit.split(":");
+      const list = phTpMgrRecipeRows(id, +idx).map(i => ({ ...i }));
+      if (list[+ix]) {
+        list[+ix].grams = Math.max(0, parseFloat(rgEl.value || "0") || 0);
+        phTpMgrSetPhaseField(id, +idx, "defaultRecipe", list);
         phTplHostRerender();
       }
       return;
@@ -49761,6 +49843,72 @@ or changing anything in Cliniko.
       </tbody></table></div>
     </div>`;
   }
+  // Formula / Objective / Recipe (her approved mock, from several sessions
+  // ago -- "yes, push live"): a template phase's Objective (suggestFormula,
+  // unchanged, still the formula's PURPOSE, e.g. "Regulate Nervous System")
+  // sat alone with no way to also carry an actual starter Formula name or a
+  // real herb+grams list -- Design formula on a live plan always opened a
+  // blank "Untitled formula" with zero ingredients, however clearly the
+  // template read, and she had to type the whole recipe from scratch on
+  // every patient, every time. Two new OPTIONAL template-phase fields,
+  // named after the existing defaultTherapies/treatmentTherapies precedent
+  // just above (a template-only "default" field, one-time-cloned into the
+  // live plan phase by phTpNewPlan, never a live link back):
+  //   phase.defaultFormulaName -- plain string, the starter Formula name.
+  //   phase.defaultRecipe -- array of {code, herb, grams}, SAME shape as a
+  //     real script's t.ingredients (see presIngParsed/phTpPourIntoScript)
+  //     so it can be handed straight to phTpPourIntoScript unchanged.
+  // phTpMgrRecipeRows / phTpMgrRecipeEditorHtml below reuse the production
+  // Ingredients editor's real classes (.ph-build-add, rtn-table.ph-table.
+  // ph-spec-table.ph-ing-spec, .ph-qty-box, .ph-ing-total) rather than
+  // hand-rolling look-alike markup -- but NOT its JS wiring
+  // (presIngredientsEditorHtml/presRefreshIngTable are hard-bound to one
+  // open live script via presOpenId, fixed #presIngTable/#presEditIngs
+  // singleton ids, and live-inventory stock/clinical flags that make no
+  // sense for an abstract template ratio recipe with no patient and no
+  // stock to check). Writes go through phTpMgrSetPhaseField like every
+  // other field in this editor, so undo/collapse-to-default/JSON-export
+  // all already work with zero extra code, same as defaultTherapies.
+  // The add-a-herb box is a plain typed name + grams, not the live
+  // picker's fuzzy/abbreviation-expanding autocomplete -- a deliberate,
+  // disclosed simplification of the INPUT behaviour, not of the visual
+  // component being reused.
+  function phTpMgrRecipeRows(id, idx) {
+    const ph = phTpMgrPhases(id)[idx];
+    return (ph && Array.isArray(ph.defaultRecipe)) ? ph.defaultRecipe : [];
+  }
+  function phTpMgrRecipeEditorHtml(id, sel) {
+    const list = phTpMgrRecipeRows(id, sel);
+    const totalG = list.reduce((a, i) => a + (i.grams || 0), 0);
+    const key = `${id}:${sel}`;
+    return `<div class="ph-tp-mgr-recipe">
+      <div class="ph-tp-sec"><span>Recipe</span>${list.length ? `<span class="ph-tmpl-sub">${list.length} herb${list.length === 1 ? "" : "s"} · ${phFmtG(totalG)}g template</span>` : ""}</div>
+      <div class="ph-build-add">
+        <input type="text" class="ph-tp-mgr-recipe-namein" placeholder="Add a herb…" autocomplete="off" data-tp-mgr-recipe-namein="${esc(key)}" aria-label="Herb name">
+        <input type="number" class="ph-tp-mgr-recipe-gin" min="0" step="any" placeholder="g" data-tp-mgr-recipe-gin="${esc(key)}" aria-label="Grams">
+        <button type="button" class="btn-save" data-tp-mgr-recipe-add="${esc(key)}">+ Add</button>
+      </div>
+      ${list.length ? `<div class="rtn-table-wrap"><table class="rtn-table ph-table ph-spec-table ph-ing-spec">
+        <thead><tr><th class="ph-code">Code</th><th class="ph-name">Herb</th><th class="n qty">Qty</th><th class="ph-pres-actions"></th></tr></thead>
+        <tbody>${list.map((i, ix) => {
+          const h = presResolveLineName(i.herb);
+          const code = i.code || (h ? phHerbCode(h) : "");
+          return `<tr>
+            <td class="ph-code">${code ? esc(code) : "—"}</td>
+            <td class="ph-name">${esc(i.herb)}</td>
+            <td class="ph-num qty"><span class="ph-qty-box"><input type="number" class="ph-qty-input" data-tp-mgr-recipe-gedit="${esc(key)}:${ix}" value="${i.grams || 0}" min="0" step="any" aria-label="Grams of ${esc(i.herb)}"><span class="u">g</span></span></td>
+            <td class="ph-pres-actions"><button type="button" class="del" data-tp-mgr-recipe-del="${esc(key)}:${ix}" aria-label="Remove ${esc(i.herb)}">×</button></td>
+          </tr>`;
+        }).join("")}</tbody>
+        <tfoot><tr class="ph-ing-total">
+          <td colspan="2" class="ph-ing-total-label">Total · ${list.length} herb${list.length === 1 ? "" : "s"}</td>
+          <td class="ph-num ph-ing-total-num">${phFmtG(totalG)} g</td>
+          <td></td>
+        </tr></tfoot></table></div>`
+        : `<p class="ph-settings-hint">No herbs yet — add one above.</p>`}
+      <div class="ph-formula-meta">This is a ratio/template recipe — a real patient's total grams still scale from her Dosage picker, same as any formula. Tapping ✎ Design formula on a live plan pours this Name and Recipe straight into the new prescription, once both are filled in here.</div>
+    </div>`;
+  }
   function phTpMgrPhasesSectionHtml(id) {
     const phases = phTpMgrPhases(id);
     if (!phases.length) return `<p class="ph-settings-hint">No phases yet.</p><button type="button" class="ph-tp-addbtn" data-tp-mgr-phase-add="${esc(id)}">+ Add phase</button>`;
@@ -49782,11 +49930,13 @@ or changing anything in Cliniko.
         <tr>
           <td class="ph-tp-lbl">Phase</td>
           <td class="ph-tp-cell">${field("label", "text")}</td>
-          <td class="ph-tp-mgr-gap" rowspan="8"></td>
-          <td class="ph-tp-reccell notyet" rowspan="8"><b>Nothing yet — this phase hasn’t started.</b><span class="d">This side fills itself in from a real patient’s visits, scripts, check-ins and periods once a plan starts from this template. She never types it — and neither do you here.</span></td>
+          <td class="ph-tp-mgr-gap" rowspan="10"></td>
+          <td class="ph-tp-reccell notyet" rowspan="10"><b>Nothing yet — this phase hasn’t started.</b><span class="d">This side fills itself in from a real patient’s visits, scripts, check-ins and periods once a plan starts from this template. She never types it — and neither do you here.</span></td>
         </tr>
         ${row("aim", "area")}
+        <tr><td class="ph-tp-lbl">Formula name</td><td class="ph-tp-cell">${field("defaultFormulaName", "text")}</td></tr>
         <tr><td class="ph-tp-lbl">Objective</td><td class="ph-tp-cell">${field("suggestFormula", "text")}</td></tr>
+        <tr class="ph-tp-reciperow"><td colspan="2">${phTpMgrRecipeEditorHtml(id, sel)}</td></tr>
         <tr><td colspan="2" class="ph-tp-mgr-band">Formula action — chosen per patient, not on the template</td></tr>
         <tr class="ph-tp-therrow"><td colspan="2">${phTpMgrTherapiesHtml(id, sel)}</td></tr>
         ${row("points", "area")}
@@ -50030,6 +50180,14 @@ or changing anything in Cliniko.
         // running). Cloned per-entry so mutating one plan's pick can never
         // reach into another plan's array, or the template's own.
         treatmentTherapies: Array.isArray(p.defaultTherapies) ? p.defaultTherapies.map(t => ({ ...t })) : [],
+        // her approved "Formula / Objective / Recipe" mock: same one-time
+        // clone as treatmentTherapies just above, never a live link back to
+        // the template. Read by the Design-formula handler (data-tp-formula-
+        // design) the first time she designs THIS phase's script -- see its
+        // own comment for why it only ever fires once, on a genuinely new
+        // script, never overwriting a script she's already started naming.
+        defaultFormulaName: p.defaultFormulaName || "",
+        defaultRecipe: Array.isArray(p.defaultRecipe) ? p.defaultRecipe.map(i => ({ ...i })) : [],
         // the day the phase became current / done -- stamped automatically
         // (2026-09-08 grid); the first phase starts today
         sinceKey: i === 0 ? keyOf(TODAY) : null, doneKey: null,
@@ -53678,7 +53836,7 @@ or changing anything in Cliniko.
      quietly becomes "frozen until the first time I ever edited it". */
   const phTpUnlockDone = new Set();
   const PH_TP_FIELD_LABELS = { aim: "Aim", watch: "Watch", cadence: "Visits", points: "Points", pressPoints: "Press tags", label: "Phase name", comments: "Comments" };
-  const PH_TP_FIELD_PH = { aim: "What this phase is for…", watch: "What to watch / advice…", cadence: "e.g. 1–2×/wk", points: "Reference points…", pressPoints: "Press-needle points…", label: "Phase name", suggestFormula: "The formula's purpose, e.g. Regulate Nervous System…", comments: "Anything else — not asked elsewhere…" };
+  const PH_TP_FIELD_PH = { aim: "What this phase is for…", watch: "What to watch / advice…", cadence: "e.g. 1–2×/wk", points: "Reference points…", pressPoints: "Press-needle points…", label: "Phase name", suggestFormula: "The formula's purpose, e.g. Regulate Nervous System…", comments: "Anything else — not asked elsewhere…", defaultFormulaName: "e.g. Shu Jing Huo Xue Tang" };
   // the one place a phase's status changes: stamps the day it became
   // current / done (sinceKey / doneKey -- set automatically, never typed;
   // her yes 2026-09-08) and runs her 2026-09-03 cascade: marking one phase
