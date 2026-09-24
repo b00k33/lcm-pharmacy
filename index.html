@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260925-000000">
+<meta name="lcm-build" content="20260925-010000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -8015,6 +8015,22 @@
   #pharmacyPage .ph-tp-mgr-rail .item { text-align: left; border: 0; background: none; padding: 7px 10px; border-radius: 8px; font: inherit; font-size: 12.5px; color: var(--ph-soft); font-weight: 600; cursor: pointer; }
   #pharmacyPage .ph-tp-mgr-rail .item:hover { background: var(--ph-paper); color: var(--ph-ink); }
   #pharmacyPage .ph-tp-mgr-rail .item.on { background: var(--ph-herb-tint); color: var(--ph-herb-deep); font-weight: 700; }
+  /* her ask 2026-09-25 ("give categories colour"): the same category palette
+     the plan picker already uses (.ph-tp-tmplcol.cat-*, ~line 7815) -- each
+     group's own label reads in its category colour, and the selected pill
+     tints to match instead of every category picking the same flat green. */
+  #pharmacyPage .ph-tp-mgr-rail .grp.cat-msk { color: var(--ph-msk-deep); }
+  #pharmacyPage .ph-tp-mgr-rail .grp.cat-gynae { color: var(--ph-gyn-deep); }
+  #pharmacyPage .ph-tp-mgr-rail .grp.cat-stress { color: var(--ph-purple-deep); }
+  #pharmacyPage .ph-tp-mgr-rail .grp.cat-metabolic { color: var(--ph-metab-deep); }
+  #pharmacyPage .ph-tp-mgr-rail .grp.cat-acute { color: var(--ph-acute-deep); }
+  #pharmacyPage .ph-tp-mgr-rail .grp.cat-facial { color: var(--ph-facial-deep); }
+  #pharmacyPage .ph-tp-mgr-rail .item.cat-msk.on { background: var(--ph-msk-tint); color: var(--ph-msk-deep); }
+  #pharmacyPage .ph-tp-mgr-rail .item.cat-gynae.on { background: var(--ph-gyn-tint); color: var(--ph-gyn-deep); }
+  #pharmacyPage .ph-tp-mgr-rail .item.cat-stress.on { background: var(--ph-purple-tint); color: var(--ph-purple-deep); }
+  #pharmacyPage .ph-tp-mgr-rail .item.cat-metabolic.on { background: var(--ph-metab-tint); color: var(--ph-metab-deep); }
+  #pharmacyPage .ph-tp-mgr-rail .item.cat-acute.on { background: var(--ph-acute-tint); color: var(--ph-acute-deep); }
+  #pharmacyPage .ph-tp-mgr-rail .item.cat-facial.on { background: var(--ph-facial-tint); color: var(--ph-facial-deep); }
   #pharmacyPage .ph-tp-mgr-rail-new { margin: 14px 10px 0; text-align: left; border: 0; background: none; padding: 0; font: inherit; font-size: 12.5px; font-weight: 700; color: var(--ph-herb-deep); text-decoration: underline; cursor: pointer; }
   #pharmacyPage .ph-tp-mgr-card { min-width: 0; padding: 20px 24px 22px; background: var(--ph-white); border: 1px solid var(--ph-line); border-radius: 12px; }
   @media (min-width: 901px) {
@@ -50218,23 +50234,32 @@ or changing anything in Cliniko.
   // phTpBuiltinTemplates()/phTpUserTemplates(), never a second data read),
   // just a different shape of button so it never eats vertical space above
   // the fields and stays visible while she scrolls a long phase list.
+  // her ask 2026-09-25 ("give categories colour"): reuses the exact category
+  // palette the plan picker already approved (her 2026-09-09 "the same
+  // colours the script panel turns for those Cases") -- cat-${id} is the
+  // SAME class name phTpBuiltinTemplates' own picker cards already carry
+  // (.ph-tp-tmplcol.cat-msk etc, ~line 50611), just applied to the rail's
+  // own group label and item pills instead of a card.
   function phTpMgrRailHtml(selId) {
-    const item = (id, name, edited, mine) => `<button type="button" class="item${id === selId ? " on" : ""}" data-tp-mgr-pick="${esc(id)}">${esc(name)}${edited ? " ✎" : ""}${mine ? ` <span class="ph-tp-tmplcard-mine">yours</span>` : ""}</button>`;
+    const item = (id, name, edited, mine, catCls) => `<button type="button" class="item${catCls ? ` ${catCls}` : ""}${id === selId ? " on" : ""}" data-tp-mgr-pick="${esc(id)}">${esc(name)}${edited ? " ✎" : ""}${mine ? ` <span class="ph-tp-tmplcard-mine">yours</span>` : ""}</button>`;
     const current = phTpBuiltinTemplates();
     const users = phTpUserTemplates();
     const inCat = c => [
       ...current.filter(t => t.category === c.id).map(t => ({ t, mine: false })),
       ...users.filter(t => t.category === c.id).map(t => ({ t, mine: true })),
     ];
-    const groups = PH_TP_CATEGORIES.map(c => ({ label: c.label, items: inCat(c) }));
+    const groups = PH_TP_CATEGORIES.map(c => ({ id: c.id, label: c.label, items: inCat(c) }));
     const leftover = [
       ...current.filter(t => !PH_TP_CATEGORIES.some(c => c.id === t.category)).map(t => ({ t, mine: false })),
       ...users.filter(t => !PH_TP_CATEGORIES.some(c => c.id === t.category)).map(t => ({ t, mine: true })),
     ];
     if (leftover.length) groups.push({ label: "Other", items: leftover });
-    return groups.filter(g => g.items.length).map(g => `
-      <div class="grp">${esc(g.label)}</div>
-      ${g.items.map(({ t, mine }) => item(t.id, t.name, !mine && !!phTpMgrOverrides()[t.id], mine)).join("")}`).join("");
+    return groups.filter(g => g.items.length).map(g => {
+      const catCls = g.id ? `cat-${g.id}` : "";
+      return `
+      <div class="grp${catCls ? ` ${catCls}` : ""}">${esc(g.label)}</div>
+      ${g.items.map(({ t, mine }) => item(t.id, t.name, !mine && !!phTpMgrOverrides()[t.id], mine, catCls)).join("")}`;
+    }).join("");
   }
   // her ask 2026-09-22 -- replaces the old stacked-form-per-phase view.
   // One real .ph-tp-grid table, the exact same classes/labels/wording the
