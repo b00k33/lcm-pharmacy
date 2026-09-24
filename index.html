@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260924-120000">
+<meta name="lcm-build" content="20260924-130000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6143,6 +6143,20 @@
   #pharmacyPage .ph-tp-sesstable .badge.can:hover { box-shadow: 0 0 0 2px rgba(47,94,68,.22); }
   #pharmacyPage .ph-tp-sesstable .badge.sel { box-shadow: 0 0 0 2px var(--ph-green-deep); }
   #pharmacyPage .ph-tp-sesstable .dt { display: block; font-size: 10px; color: var(--ph-soft); margin-top: 2px; }
+  /* her ask 2026-09-24: every appointment near this plan, filed or not, one
+     phase picker each -- the real-table language her Visits table already
+     uses, not a second boxed tray */
+  #pharmacyPage .ph-tp-apphist { margin-top: 10px; }
+  #pharmacyPage .ph-tp-apphist > .t { font-size: 9px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--ph-faint); margin-bottom: 4px; }
+  #pharmacyPage .ph-tp-apphist-wrap { overflow-x: auto; }
+  #pharmacyPage .ph-tp-apphist-table { width: 100%; min-width: 320px; border-collapse: collapse; }
+  #pharmacyPage .ph-tp-apphist-table th { font-size: 9px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--ph-faint); text-align: left; padding: 6px 8px; background: var(--ph-paper, #F4F7F8); border-bottom: 1px solid var(--ph-line); white-space: nowrap; }
+  #pharmacyPage .ph-tp-apphist-table td { padding: 6px 8px; border-bottom: 1px solid var(--ph-line); vertical-align: middle; font-size: 11px; }
+  #pharmacyPage .ph-tp-apphist-table tbody tr:last-child > td { border-bottom: 0; }
+  #pharmacyPage .ph-tp-apphist-table tbody tr:nth-child(even) { background: var(--ph-paper, #F4F7F8); }
+  #pharmacyPage .ph-tp-apphist-table tr.today { background: var(--ph-green-tint); }
+  #pharmacyPage .ph-tp-apphist-table tr.unf td:first-child { box-shadow: inset 3px 0 0 var(--ph-gold-deep, #8A6D1A); }
+  #pharmacyPage .ph-tp-apphist-table select { font: inherit; font-size: 11px; width: 100%; max-width: 160px; padding: 3px 6px; border-radius: 6px; border: 1px solid var(--ph-line); background: var(--ph-white); color: var(--ph-ink); }
   /* the sessions tile -- one small chip per planned session (her pick) */
   #pharmacyPage .tileH { border: 1px solid var(--ph-line); border-radius: 8px; overflow: hidden; background: var(--ph-white); margin: 0 auto; }
   #pharmacyPage .tileH .strip { font-size: 8px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; text-align: center; padding: 3px 0; background: var(--ph-green-deep); color: var(--ph-gold-tint, #FFFBE2); }
@@ -55083,6 +55097,51 @@ or changing anything in Cliniko.
     const save = inp.closest("[data-tp-pinbar]") && inp.closest("[data-tp-pinbar]").querySelector("[data-tp-pin-save]");
     if (save) save.click();
   });
+  // her ask 2026-09-24 ("see the dates of past appointments to allocate to
+  // the appropriate phase") + her mock pick "c" the same day: replaces the
+  // old "Not in this plan yet" tray (which only ever showed bookings NOTHING
+  // had claimed) with a table of EVERY appointment near this plan, filed or
+  // not, each with a phase picker -- so a wrongly-filed or date-guessed visit
+  // is just as fixable here as a genuinely unfiled one. One write path
+  // (phTpApptFile) reused, not reinvented -- the same function the old tray's
+  // chips and a booked tile's move-bar already call.
+  function phTpApptHistoryHtml(name, plan) {
+    const phs = (plan.phases || []).filter(p => !p.skipped);
+    if (!phs.length) return "";
+    const key = phPatientKey(name), plans = phTpPlans(name);
+    const held = new Map();
+    phs.forEach(p => { const st = phTpPhaseVisitStats(name, plan, p); if (st) st.rows.forEach(r => held.set(r.appt.id, p)); });
+    const firstSince = phs.map(p => p.sinceKey).filter(Boolean).sort()[0] || plan.createdDate || keyOf(TODAY);
+    const floor = keyOf(new Date(parseKey(firstSince).getTime() - 30 * 864e5));
+    const today = keyOf(TODAY);
+    const sd2 = k => { const d = parseKey(k); return `${d.getDate()} ${MON_SHORT[d.getMonth()]}`; };
+    const list = phApptList().filter(a => phPatientKey(a.patient) === key && a.date >= floor
+      && !((b => b && b.id !== plan.id)(phApptPlanFor(a, plans))))
+      .sort((x, y) => (x.date + (x.time || "")).localeCompare(y.date + (y.time || "")));
+    if (!list.length) return "";
+    const rows = list.map(a => {
+      const heldPhase = held.get(a.id);
+      const status = a.date > today ? "Booked" : a.date === today ? "Today" : "Done";
+      const opts = `<option value=""${!heldPhase ? " selected" : ""}>— pick a phase —</option>` +
+        phs.map(p => `<option value="${p.id}"${heldPhase && heldPhase.id === p.id ? " selected" : ""}>${esc(p.label || "Phase")}</option>`).join("");
+      return `<tr class="${a.date === today ? "today" : !heldPhase ? "unf" : ""}">
+        <td>${esc(sd2(a.date))}${a.time ? ` <span class="mut">${esc(phCkTime12(a.time))}</span>` : ""}</td>
+        <td>${esc(a.service || "Appointment")}</td>
+        <td>${status}</td>
+        <td><select data-tp-appt-histfile="${esc(a.id)}:${plan.id}">${opts}</select></td>
+      </tr>`;
+    }).join("");
+    return `<div class="ph-tp-apphist"><div class="t">Appointment history — allocate to a phase</div>
+      <div class="ph-tp-apphist-wrap"><table class="ph-tp-apphist-table"><thead><tr><th>Date</th><th>Service</th><th>Status</th><th>Phase</th></tr></thead><tbody>${rows}</tbody></table></div>
+    </div>`;
+  }
+  document.addEventListener("change", e => {
+    const sel = e.target.closest("[data-tp-appt-histfile]");
+    if (!sel) return;
+    const [apptId, planId] = sel.dataset.tpApptHistfile.split(":");
+    phTpApptFile(`${apptId}:${planId}:${sel.value}`);
+    phTpRerender();
+  });
   // the ladder (her pick B): every planned session of every phase with its
   // date -- done ✓ · today · booked · projected (tilde) from the phase's rhythm
   function phTpSessionLadderHtml(name, plan) {
@@ -55092,21 +55151,9 @@ or changing anything in Cliniko.
     const sd2 = k => { const d = parseKey(k); return `${d.getDate()} ${MON_SHORT[d.getMonth()]}`; };
     const rec = phPatientPeek(name);
     const live = phTpLivePhase(rec, plan);
-    // her pick C: bookings no phase of this plan holds, one tap to file each
-    const tray = (() => {
-      const key = phPatientKey(name), plans = phTpPlans(name);
-      const held = new Set();
-      phs.forEach(p => { const st = phTpPhaseVisitStats(name, plan, p); if (st) st.rows.forEach(r => held.add(r.appt.id)); });
-      const firstSince = phs.map(p => p.sinceKey).filter(Boolean).sort()[0] || plan.createdDate || today;
-      const floor = keyOf(new Date(parseKey(firstSince).getTime() - 30 * 864e5));
-      const list = phApptList().filter(a => phPatientKey(a.patient) === key && !held.has(a.id) && a.date >= floor && !((b => b && b.id !== plan.id)(phApptPlanFor(a, plans))))
-        .sort((x, y) => (x.date + (x.time || "")).localeCompare(y.date + (y.time || "")));
-      if (!list.length) return "";
-      // her pick 3, 2026-09-22 (soft skip): a phase that doesn't apply to
-      // her is never a valid filing target
-      const fileable = phs.filter(p => !p.skipped);
-      return `<div class="ph-tp-tray"><div class="t">Not in this plan yet · ${list.length}</div>${list.map(a => `<div class="bk"><b>${esc(sd2(a.date))}${a.time ? ` ${esc(phCkTime12(a.time))}` : ""}</b>${a.date < firstSince ? `<span class="mut">before the plan started</span>` : a.date > today ? `<span class="mut">booked</span>` : ""}<span class="chips">${fileable.map(x => `<button type="button" class="chip" data-tp-appt-file="${esc(a.id)}:${plan.id}:${x.id}">→ ${esc(x.label || "Phase")}</button>`).join("")}</span></div>`).join("")}</div>`;
-    })();
+    // her ask 2026-09-24: the old "Not in this plan yet" tray (unfiled
+    // bookings only) is now phTpApptHistoryHtml below the table -- every
+    // appointment near this plan, filed or not, one phase picker each.
     // the fact that used to float above the phase bar as a black tooltip pill
     // now sits on the live phase's own row instead (phTpPhaseBarHtml no longer
     // emits it) -- shared so it still shows even when the "no counts set yet"
@@ -55274,7 +55321,7 @@ or changing anything in Cliniko.
     // her ask 2026-09-23: this section is called "Treatment Visits Plan"
     // now -- the row label inside the table stays "Sessions" (it names the
     // count, not the whole widget)
-    return `<div class="ph-tp-ladder" data-tp-ladder="${plan.id}" data-tp-ladder-name="${esc(name)}"><div class="ph-tp-sec"><span>Treatment Visits Plan</span>${calBtn}${bookBtn}</div>${calHtml}${table}${extrasHtml}${tray}</div>`;
+    return `<div class="ph-tp-ladder" data-tp-ladder="${plan.id}" data-tp-ladder-name="${esc(name)}"><div class="ph-tp-sec"><span>Treatment Visits Plan</span>${calBtn}${bookBtn}</div>${calHtml}${table}${extrasHtml}${phTpApptHistoryHtml(name, plan)}</div>`;
   }
   document.addEventListener("change", e => {
     const inp = e.target.closest && e.target.closest("[data-tp-sess-in]");
