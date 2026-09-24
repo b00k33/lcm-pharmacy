@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260924-210000">
+<meta name="lcm-build" content="20260924-220000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6292,7 +6292,13 @@
   #pharmacyPage .ph-tp-vtab col.c-plan { width: 40%; }
   #pharmacyPage .ph-tp-vtab col.c-today { width: auto; }
   #pharmacyPage .ph-tp-vtab td { vertical-align: top; }
-  #pharmacyPage .ph-tp-vtab td.ph-tp-lbl { padding-top: 9px; }
+  /* her report 2026-09-24: "Treatment therapies" is wider than this 66px
+     column and the base .ph-tp-grid label rule is nowrap, so it overflowed
+     straight into the Planned cell and sat on top of that cell's own
+     "Treatment therapies" heading -- read as one garbled overlapping word.
+     Same fix as the "Embryo transfer" label trap above: wrap to two lines
+     and keep the column, rather than lose the words or let them spill. */
+  #pharmacyPage .ph-tp-vtab td.ph-tp-lbl { padding-top: 9px; white-space: normal; line-height: 1.25; overflow-wrap: break-word; }
   /* her ask 2026-09-22 ("make a distinct visual contraste to plan vs today's
      appointment notes"), mock A picked ("i like this"): the two columns are
      washed teal (Planned) / gold (Today) top to bottom, matching the colour
@@ -53972,16 +53978,18 @@ or changing anything in Cliniko.
     const P = phTpPlanCells(plan, phase);
     const herbsOnly = !!root.dataset.acuHerbsonly;
     const notreat = herbsOnly ? `<span class="ph-acu-herbsonly-tag">Herbs only</span>` : pick(".ph-acu-notreat");
-    const noAcu = !!root.querySelector(".ph-acu-notreat-toggle.on");
     const treatas = (() => { const el = root.querySelector(".ph-acu-fromplan .k.treatas"); if (!el) return `<span class="ph-tp-vtab-phase"><b>${esc(phase.label || "")}</b></span>`; const c = el.cloneNode(true); const l = c.querySelector(".lbl"); if (l) l.remove(); return `<span class="ph-tp-vtab-phase">${c.innerHTML}</span>`; })();
     const phasePick = pick(".ph-acu-phasepick") + pick(".ph-acu-overridenote");
-    const needle = noAcu ? pick(".ph-acu-notreat-note") : pickAll(".ph-acu-pointrow");
+    // her ask 2026-09-24 ("needle row not needed"): dropped from this table --
+    // points/press tags still plan and record fine through the phase's own
+    // Planned cell (phTpPlanCells' cell("points")/cell("pressPoints")), this
+    // was only the extra Today-side duplicate of that same picker.
     const herbs = `${rowVal("Herbs")}${pick(".ph-acu-herbactions .ph-acu-herbcol")}`;
     const mucus = (() => { const row = root.querySelector(".ph-acu-mucusrow"); if (!row) return ""; const c = row.cloneNode(true); const l = c.querySelector(".lbl"); if (l) l.remove(); return `<span class="ph-tp-vtab-mucus">${c.innerHTML}</span>`; })();
     const findings = `${mucus}${rowVal("Findings")}`;
     const done = new Set((root.dataset.acuDone || "").split(",").filter(Boolean));
-    const order = ["phase", "ask", "response", "findings", "needle", "herbs", "next", "log"];
-    const now = order.find(k => !done.has(k) && !(herbsOnly && k === "needle")) || "";
+    const order = ["phase", "ask", "response", "findings", "herbs", "next", "log"];
+    const now = order.find(k => !done.has(k)) || "";
     // her ask 2026-09-23: everything she can see today already scrolls
     // right into the sessions still to come -- a booking that's already on
     // the calendar, or the plan's own projected next one. Reuses
@@ -54013,7 +54021,6 @@ or changing anything in Cliniko.
       return `<td class="ph-tp-fut${cls} editable" data-tp-futplan="${plan.id}:${phase.id}:${c.date}:${field}" title="Click to plan ahead for this session">${txt ? esc(txt) : `<span class="empty-hint">${esc(PH_TP_FUT_PH[field])}</span>`}</td>`;
     }).join("");
     const futAskTds = futFieldTds("ask");
-    const futNeedleTds = futFieldTds("needle");
     const futHerbTds = futFieldTds("herbs");
     const futCommentTds = futFieldTds("comments");
     const row = (key, label, planTd, todayInner, cls, futOverride) => `<tr class="${[cls || "", done.has(key) ? "done" : "", key === now ? "now" : ""].filter(Boolean).join(" ")}"><td class="ph-tp-lbl">${label}${done.has(key) && key !== "phase" ? `<i class="tick">✓</i>` : ""}</td>${planTd}<td class="ph-tp-vtab-td"><div class="tdw">${todayInner}</div></td>${futOverride !== undefined ? futOverride : futTds}</tr>`;
@@ -54025,7 +54032,6 @@ or changing anything in Cliniko.
         ${row("ask", "Ask", P.watch, `${rowVal("Ask")}${phTpSymTodayHtml(plan, phase)}`, "", futAskTds)}
         ${row("response", "Response", `<td class="ph-tp-cell frozen empty">—</td>`, rowVal("Response"))}
         ${herbsOnly && !findings.trim() ? "" : row("findings", "Findings", P.findings, findings)}
-        ${herbsOnly ? "" : row("needle", "Needle", `<td class="ph-tp-vtab-two"><span class="sub">Points</span>${P.points}<span class="sub">Press tags</span>${P.press}</td>`, needle, "", futNeedleTds)}
         ${row("therapies", "Treatment therapies", P.therapies, pick(".ph-acu-therapiesrow"))}
         ${row("herbs", "Herbs", P.formula, herbs, "", futHerbTds)}
         ${row("next", "Next", P.cadence, rowVal("Next"))}
