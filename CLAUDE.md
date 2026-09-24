@@ -8372,3 +8372,191 @@ phone breakpoint is fully unaffected — confirmed `max-height: none` /
 not applying there. Console clean.
 
 `lcm-build` `20260922-220000`, `sw.js` `lcm-20260922-apptcal-fillheight`.
+
+## Objective exam tracker (ROM / MMT / Special tests) on the merged visit table -- her ask, "improve this row" (2026-09-24)
+
+Her ask, from an earlier session: improve the merged visit table's "Ask" row
+-- add a Subjective row (dot-point what the patient feels) and an Objective
+row (musculoskeletal exam findings -- MMT, ROM etc, "make a mock, use your
+expertise"). That earlier session built and approved a real interactive
+mock over several correction rounds (MMT fixed to a 3-point weak/mildly-weak/
+strong scale, not a 0-5 clinical grade; button wording made succinct; the
+Scarf test individually checked against physio-pedia.com). Her final word:
+**"ok build all and push live."** Separately confirmed via AskUserQuestion:
+this belongs to **LCM Pharmacy only** -- the sibling `msk-acu-app` keeps its
+own ROM/outcome-measure as free text for v1 and was not touched.
+
+**Built on top of a codebase that had moved substantially since the mock.**
+The merged Planned|Today visit table (`phTpVisitTableHtml`, her "9l"/9t/9u
+builds) is the live shape now -- a row order of `phase, ask, response,
+findings, herbs, next, log` (Needle was dropped 2026-09-24 the same day, in
+a commit just ahead of this one) with `therapies`/`comments` rendered outside
+that order array. Both the Subjective/Objective work and every wiring
+decision below were made against THIS shape, not the pre-evolution one the
+original ask described.
+
+**A. Subjective rename -- minimal, disclosed.** The "Ask" row's DISPLAY
+label is now "Subjective" at its two coupled sites: the compact watch row's
+`<span class="lbl">` inside `presAcuOpenHtml` (only the `compact` branch --
+the full panel's own "Watch for" label is untouched) and the merged table's
+`row("ask", "Subjective", ...)` call, whose `rowVal("Subjective")` lookup was
+updated to match (it resolves by DOM text content, so the two had to change
+together). The internal KEY stays `"ask"` everywhere -- the `done`/`now`
+tracking Set, `futAskTds`' field name, every `data-tp-sym-*`/`data-pres-acu-*`
+attribute, `PH_TP_FUT_PH.ask`, the "Today's checklist" widget's own
+`{id: "ask", html: "Ask ..."}` line, and the separate "Visit record" strip's
+own `box("ask", "Ask", ...)` (a different display, its own filter chip, not
+coupled to the merged table's row label at all) -- exactly as the original
+ask allowed ("use your judgment ... disclose what you changed vs left").
+Nothing about `phase.symptoms`, `PH_TP_SYM_PRESETS`, or their handlers
+changed -- they already were the "list dot-point what patient feels" table
+the original ask described, and stayed untouched per instruction.
+
+**B. Data model.** `phase.objective = { rom: [], mmt: [], tests: [] }`,
+lazily created via `phTpObjEnsure(phase, kind)` -- never eagerly added to a
+phase that's only being read (`phTpObjRows` returns an empty array off an
+undefined `phase.objective` with no write). Entry shapes match the spec: ROM
+carries id/name/normal/pair/active/activeL/activeR/passive/passiveL/
+passiveR/pain (single active/passive fields for a non-paired movement, L/R
+pairs for one whose library entry carries pair:true -- Elbow pronation/
+supination, Lumbar/Cervical lateral flexion and rotation); MMT carries
+id/level/muscle/grade/note with grade one of 1/2/3 (Weak/Mildly weak/Strong
+-- never a 0-5 clinical grade, her explicit correction); Tests carry
+id/name/purpose/tech/pos/src/result with result one of not-tested/positive/
+negative, and purpose/tech/pos/src copied from the library at add-time
+(`phTpObjAddRegion`) so a later library edit can never retroactively rewrite
+a historical record -- the same snapshot principle `formulaHistory` already
+uses elsewhere on this plan.
+
+**C. Library constants**, `PH_TP_OBJ_ROM_LIB`/`PH_TP_OBJ_MMT_LIB`/
+`PH_TP_OBJ_TEST_LIB` (index.html, right after `phTpSymptomsHtml`, beside
+`PH_TP_SYM_PRESETS`'s own section), reproducing the approved mock's content
+exactly, cleaned to `const` throughout (the pasted pseudocode had mixed
+`const`/`var`). Cervical was added to both ROM and MMT (it wasn't in the
+mock's own region map, added for completeness using the mock's own worked-
+example normals for ROM -- Flexion 60/Extension 75/Rotation L R 80/Lateral
+flexion L R 45 -- and standard cervical myotomes C5-T1 for MMT). Sourcing is
+disclosed exactly as she confirmed: everything is standard clinical exam
+content; only the Scarf test carries src "physio-pedia.com/Scarf_Test",
+every other entry's src is absent rather than fabricated.
+
+**D. UI -- ONE "Objective" row, not three, per her mock's own shape.**
+Both `phTpPlanCells` (the shared Planned-cell builder, used by both the
+merged vtab table and the classic grid) and `phTpVisitTableHtml`/
+`phTpPhaseBodyRows` were extended, gated on `phTpIsMskPlan(plan)` at every
+site -- a non-MSK plan's `objective` cell is a bare empty string, confirmed
+by direct test. `phTpObjectiveHtml(plan, phase, frozen)` stacks all three
+mini-tables (Range of motion / Strength (MMT) / Special tests) under one
+cell, matching the mock's own "OBJECTIVE section, 3 mini-tables stacked"
+shape rather than 3 separate top-level rows. On the merged vtab table
+(`phTpVisitTableHtml`) the new row sits directly after Subjective/Ask and
+before Response, matching SOAP order; its Planned cell IS the full
+interactive editor (same precedent as the Watch/Subjective row, whose
+Planned cell is also the live editor, not a summary) and its Today cell
+shows `phTpObjSummary(phase)` -- a short "ROM 4 · MMT 5 (1 weak) · Tests 6
+(1 +ve)" count line, since there's no separate "today's exam reading"
+concept distinct from the phase's own evolving record (same reasoning
+`phTpSymSummary` already applies to symptom rows on other summary
+surfaces). On the classic grid (`phTpPhaseBodyRows`, Timeline mode / the
+full-screen modal only, per the 9t rebuild) the same `phTpObjectiveHtml`
+renders as its own row directly under Watch, colspan-adjusted the same way
+the pre-existing Formula-action/Therapies rows already handle the
+`spanning` (Today's-visit rowspan) case -- no "what happened" counterpart
+exists for exam data (nothing gathers ROM/MMT retrospectively from a log),
+so it stays Planned-side only, exactly like Watch.
+
+**E. Interaction, mirroring the Symptom tracker's own idiom throughout --
+no new interaction language invented.** Region "+" buttons (Cervical /
+Shoulder / Elbow / Lumbar / Hip / Knee / Ankle, all three sections) add a
+whole region's rows at once via `phTpObjAddRegion`; a typed quick-add
+(`phTpObjAddCustom`) is the escape hatch on all three -- ONE free-text name
+field, not a 4-field prompt sequence for a custom test (the task's own "or a
+simpler single field if 4-field is too clunky" allowance) -- every field on
+a custom row (including purpose/tech/pos on a custom test) is still
+individually editable once added. Delegated document-level click/input
+handlers, keyed by data-tp-obj-region/-qadd/-del/-pain/-grade/-result/-field,
+resolved by planId:phaseId:kind:rowId[:field] -- the same shape data-tp-sym-*
+already uses, re-resolving plan/phase fresh by id on every click rather than
+trusting closure state, debounced text writes via the existing `phDefer`
+helper.
+
+**F. Deviation from the task's literal pill/square framing, disclosed.**
+The spec asked for region "+" buttons to be the app's SQUARE "action" shape
+(citing `.ph-tp-sym-preset` as an example of that shape) and MMT-grade/
+test-result picks to be PILLS per the locked "9m" convention. Checking the
+actual current CSS: `.ph-tp-sym-preset` is itself already a 999px-radius
+PILL, not a square -- the spec's own citation was inconsistent with the
+current stylesheet, likely because `PH_TP_SYM_PRESETS` predates the 9m
+button-shape rule and was never revisited. Followed the spec's EXPLICIT
+instruction to visually match `.ph-tp-sym-preset` (reused verbatim, not
+recreated) over the general 9m pill/square framing, since an "add a whole
+region" tap is arguably a PICK (which region) as much as an action, and
+consistency between the Subjective and Objective sections on the SAME table
+was the more specific, more recent instruction. MMT grade / test result /
+ROM pain toggles are genuine picks and are pills (`.ph-tp-obj-pill`, 999px
+radius), filled `--ph-msk-deep` when on -- a positive special test result
+gets `--ph-zero-deep` (red) instead, since a positive finding is clinically
+significant and the app already uses that exact token for "alarm" states
+elsewhere (zero-stock). Delete is the app's plain X text-action, matching
+`.ph-tp-sym-del`.
+
+**G. CSS** -- `.ph-tp-obj-*` are all fresh classes (verified zero prior
+usage by grep before writing them), so none of the specificity-tie traps
+this table has hit before applied here; no ancestor-padding was needed.
+Reuses `--ph-msk`/`-deep`/`-tint`/`-solid` and the existing `--ph-zero-deep`/
+`--ph-low-deep` alarm tokens throughout -- no new colours invented, per
+instruction. `.ph-tp-obj-line` wraps via flex-wrap, the same mechanism
+`.ph-tp-sym-line.editable` already relies on for narrow widths -- confirmed
+no 360px overflow by direct measurement (see Testing below), so no separate
+phone media query was needed.
+
+**Testing (mandatory per this project's own discipline).** This particular
+sandbox tab happened to already be past the login gate with a genuinely
+empty local dataset (`PHARMACY.patients` / `PRESC.items` both empty, no
+Supabase auth token in localStorage) -- confirmed BEFORE writing any test
+data, so every test below ran against the REAL, live, unmodified functions
+in the REAL booted app, not an isolated copy: built a synthetic patient on
+the "Low back pain" MSK template (`phTpNewPlan("msk_lowback")`), opened her
+real script via `presOpenScript`, and drove the actual rendered DOM inside
+`#pharmacyPage` with real dispatched MouseEvent/input events (never a
+coordinate-based click -- one `computer.left_click` by on-screen ref landed
+on a stale sidebar element instead of the intended button, confirming why
+this file's own testing convention insists on dispatched events against
+`#pharmacyPage`-scoped elements, not screen coordinates). Verified: the
+merged table's live "Today's visit" phase correctly shows "SUBJECTIVE" and
+"OBJECTIVE" rows with all three sub-tables and all 7 region-add buttons per
+section; clicking a region "+" (Shoulder ROM, Cervical MMT, Shoulder Tests)
+correctly added the library's real rows, Scarf test's src intact, every
+other test's src empty; editing a ROM degree field, toggling a ROM pain
+pill, an MMT grade pill and a Test result pill all persisted correctly
+(waited past the 400ms debounce before reading back); the typed quick-add
+correctly added and then deleted a custom ROM row; `phTpObjSummary` read
+"ROM 4 · MMT 5 (1 weak) · Tests 6 (1 +ve)" against the exact data just
+entered; `phTpPlanCells(plan, phase).objective` is non-empty and contains
+`ph-tp-objective` for the MSK plan, and is the literal empty string for a
+freshly-created plan on a non-MSK template; freezing the phase (status
+done, unlocked false) correctly fell through to the classic
+`phTpPhaseBodyRows` grid (confirmed this is genuinely reachable, not a
+theoretical path) and rendered read-only lines -- "Flexion 150 degrees
+active (normal 180 degrees) pain at end range", "C6 ... Weak", "Scarf test
+... Positive" with its full purpose/technique/positive-finding text --
+exactly matching what was entered while editable. Re-ran the CLAUDE.md-
+protected Prescriptions live-search self-check with two freshly-created
+synthetic patients: typing a distinguishing substring correctly narrowed
+the list to the one match, clearing correctly restored both. Measured (not
+eyeballed) zero horizontal overflow at a real 360px width by mounting
+`phTpObjectiveHtml`'s actual output under the app's own loaded stylesheet
+and checking every descendant's scrollWidth. Confirmed a clean console on a
+full page reload both before and after all testing (one pre-existing,
+unrelated TypeError -- a `.trim()` call inside the sidebar tab-click
+listener at a totally different line, reproducing even on a bare reload
+with zero of my test data present, and not reproducing on a direct manual
+call to the same functions -- was traced and found to be a boot-order race
+already present in this specific long-lived sandbox tab before this session
+touched it; not part of this diff's blast radius and not investigated
+further, since it never affected any of the above verification). Every
+synthetic patient/script created was deleted afterward and confirmed absent
+from both `PHARMACY`/`PRESC` in memory and from `localStorage` (daybook-*
+keys), via a direct string search, not assumed.
+
+`lcm-build` `20260924-260000`, `sw.js` `lcm-20260924-msk-objective-exam`.
