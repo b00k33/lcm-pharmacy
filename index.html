@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260924-200000">
+<meta name="lcm-build" content="20260924-210000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -54943,11 +54943,26 @@ or changing anything in Cliniko.
   function phTpSessionsOf(ph) {
     const n = parseInt(ph && ph.sessions, 10);
     if (n > 0) return n;
-    const c = ((ph && ph.cadence) || "").toLowerCase();
+    const cRaw = (ph && ph.cadence) || "";
+    const c = cRaw.toLowerCase();
+    // an explicit count in words wins outright
     let m = c.match(/(\d+)\s*(?:sessions|visits|treatments)\b/); if (m) return parseInt(m[1], 10);
-    m = c.match(/(\d+)(?:\s*[–-]\s*\d+)?\s*×\s*\/?\s*(?:wk|week)\b[^.]*?\bfor\s+(?:the first\s+)?(\d+)/); if (m) return parseInt(m[1], 10) * parseInt(m[2], 10);
-    m = c.match(/\bweekly\b[^.]*?\bfor\s+(\d+)\s*(?:weeks|wks|wk)/); if (m) return parseInt(m[1], 10);
-    return 0;
+    // a fixed list of cycle days IS the session count -- "CD 3, 10, 17" = 3
+    const cds = phTpCadenceCdList(cRaw);
+    if (cds) return cds.length;
+    // her ask 2026-09-24 ("it should auto calculate from the phase treatment
+    // frequency row"): everything else derives off phAcuCadenceParse -- the
+    // SAME reader Communications already trusts for her real follow-up dates
+    // -- against a trailing duration clause, instead of the old regex that
+    // only ever understood "N×/wk for M weeks". This covers fortnightly,
+    // monthly, "every N days" and ranges too, and can never disagree with
+    // Communications about how often a phase actually runs.
+    const durM = c.match(/\bfor\s+(?:the first\s+)?(\d+)\s*(week|wk|month|mo)s?\b/);
+    if (!durM) return 0;
+    const weeks = /month|mo/.test(durM[2]) ? +durM[1] * 4.345 : +durM[1];
+    const a = phAcuCadenceParse(cRaw);
+    if (!a.matched || a.noAcu || !a.days) return 0;
+    return Math.max(1, Math.round((weeks * 7) / a.days));
   }
   // the dates that count as a session in this phase: counted bookings, plus
   // a logged acupuncture session on a day with no booking; bookings ahead
