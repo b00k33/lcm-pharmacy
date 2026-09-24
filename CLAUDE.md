@@ -8560,3 +8560,84 @@ from both `PHARMACY`/`PRESC` in memory and from `localStorage` (daybook-*
 keys), via a direct string search, not assumed.
 
 `lcm-build` `20260924-260000`, `sw.js` `lcm-20260924-msk-objective-exam`.
+
+## "Relative to a milestone" cadence mode — the Treatment plan TEMPLATES screen, not the live plan (her ask 2026-09-24/25, "make mock" -> "yes, build it for real")
+
+Her ask, from a screenshot of Settings -> Prescriptions -> Treatment plan
+templates -> IVF Protocol: **"fertility support is not simply once a week.
+its based on cycle day. or within a window. make mock."** Investigated
+first, not guessed: the live plan Grid's Visits picker already had a
+"specific cycle days" (CD-list) mode (2026-09-15/16) and the IVF Grid's
+own cycle-day/milestone-date work (2026-09-18/19) -- but she clarified
+**"the work was for patient profile whereas this is the template view"** --
+a template has no patient, so it has no cycle day to preselect and no
+`plan.milestones` date to resolve against. The genuine gap: a phase like
+Egg Retrieval or Embryo Transfer can only say "1-2 days after retrieval"
+as hand-typed prose, with no picker at all. Mocked 3 modes side by side
+(Rhythm / On specific days / Relative to a milestone, the third new), she
+approved with **"yes, build it for real."**
+
+**Built as a 5th `per` value in the SAME shared cadence composer** (`ms`,
+alongside `wk`/`fn`/`mo`/`cd` in `PH_TP_VISIT_PER`) rather than a parallel
+mechanism -- `phTpCadenceCompose`/`phTpCadenceRead`/`phTpCadenceDecompose`
+all gained an `ms` branch composing `{kind: retrieval|transfer, timing:
+after|day-before|day-of|day-before-or-of, from, to}` into the EXACT prose
+`phTpMilestoneDate`'s own regexes already parse (~line 54654) -- "One visit
+N[-M] days after retrieval", "One visit the day before/of transfer", "One
+visit the day of, or the day before, transfer". **Her own two existing
+built-in phase texts (`PH_TP_PHASE.opu`/`.preEt`, written 2026-09-09) now
+decompose and round-trip through this picker byte-for-byte** -- confirmed
+by test, not assumed -- so they go from frozen "Type instead" prose to
+live pickers with zero wording change. Once a template carrying this mode
+is used on a real patient, nothing about `phTpMilestoneDate`'s resolution
+changes -- it already reads whatever text the phase carries, picker-built
+or hand-typed, identically.
+
+**Built into BOTH cadence editors that share this composer**, since her
+own 2026-09-23 note on the Sessions stepper already says "i want patient
+profile treatment plans to be same as templates editing" -- building the
+mode into only one would immediately contradict that:
+- `phTpMgrVisitsPickerHtml` (Templates Manager, string-rendered,
+  full-repaint-per-change) -- a `.ph-tp-mswrap` block (milestone/timing
+  selects + from/to number inputs, hidden unless `timing === "after"`)
+  slotted between the existing `.ph-tp-cdwrap` and the What-for select;
+  wired into the same generic `visEl` change-handler (~line 40931) that
+  already reads every sibling control's live DOM value and recomposes --
+  broadened its selector and its `ms` value derivation to match how `cds`
+  already falls back to what's already stored when its own controls
+  aren't the one that changed.
+- `phTpCellEditOpen`'s cadence branch (the live plan Grid's Visits cell,
+  DOM-built, no-rerender-mid-pick) -- the same `msWrap` shape as a live
+  `document.createElement` tree, wired into the existing `box`
+  change/keydown listeners exactly like `cdWrap` already is. `numSel`
+  hidden and `durSel` disabled for `ms` mode, same reasoning as `cd` mode
+  (there's no count to pick, and a milestone visit is one specific day,
+  not a "for N weeks" course).
+
+**Disclosed judgment call**: her three follow-up questions on the mock
+(does the wording match her own thinking, should "On specific days" be
+more prominent, anything about the tab shape) went unanswered by her terse
+"yes, build it for real" -- built to the mock as shown rather than
+re-asking, per this project's "she advises, Claude decides" standing
+practice; nothing about "On specific days"'s discoverability was touched,
+since that wasn't part of what the mock actually built.
+
+**Verified via an isolated copy of the edited compose/read/decompose
+functions** (the real login gate blocked a fully-booted click-through in
+this sandbox tab, same limitation as most batches in this file) — 15/15
+assertions passed: both real `opu`/`preEt` phase texts decompose and
+round-trip byte-for-byte; the full 2 kinds x 4 timings x 3 forWhat matrix
+(24 combinations) composes then reads back identically; a single-day
+range composes "1 day after", not "1-1 days after"; the forWhat suffix
+follows the exact acu/both/herbs convention every other mode already
+uses; every pre-existing cadence shape (wk/fn/mo/cd/no-visit/unrelated
+prose) is completely unaffected, including prose that loosely mentions
+"transfer" without the anchoring "One visit" phrase (correctly stays
+prose, never falsely matches). Also confirmed the app's ~68k-line inline
+script still parses with no syntax errors (a live sandbox boot rendered
+the full Appointments page with a clean console) and rendered the real
+generated picker markup against the app's own extracted stylesheet for a
+visual check. Committed to `session-a`, not yet pushed to `main` (the 4pm
+Sydney job does that, or her explicit "push live").
+
+`lcm-build` `20260925-030000`, `sw.js` `lcm-20260925-ms-cadence-picker`.

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260925-020000">
+<meta name="lcm-build" content="20260925-030000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -8647,6 +8647,13 @@
   #pharmacyPage .ph-tp-cdaddbtn { border: 1px dashed var(--ph-line); border-radius: 999px !important; background: none;
     color: var(--ph-soft); font: inherit; font-size: 11px; font-weight: 700; padding: 4px 10px; cursor: pointer; min-height: 0; }
   #pharmacyPage .ph-tp-cdaddbtn:hover { border-color: var(--ph-green-deep); color: var(--ph-green-deep); }
+  /* "Relative to a milestone" mode of the Visits picker (her ask 2026-09-25,
+     mocked for the Treatment plan TEMPLATES screen) -- same hairline-pill
+     family as .ph-tp-cdwrap, shown/hidden the same [hidden]-override way. */
+  #pharmacyPage .ph-tp-mswrap { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+  #pharmacyPage .ph-tp-mswrap[hidden] { display: none; }
+  #pharmacyPage .ph-tp-mswrap .ph-tp-cdaddin { width: 40px; text-align: center; }
+  #pharmacyPage .ph-tp-mssep { font-size: 11.5px; color: var(--ph-faint); }
   #pharmacyPage .ph-tp-grid td.ph-tp-fcell { color: var(--ph-ink); }
   /* This chip had NO styling anywhere in the sheet except the vertical-align
      below -- it was rendering as a raw browser button, 13.333px Arial with a
@@ -40921,9 +40928,10 @@ or changing anything in Cliniko.
     // every sibling select's current value (not just the one that
     // changed), since a fresh number list is rebuilt on a period change
     // and the DOM values are the only live source of truth here.
-    const visEl = e.target && e.target.closest ? e.target.closest("[data-tp-mgr-vis-n],[data-tp-mgr-vis-per],[data-tp-mgr-vis-for],[data-tp-mgr-vis-dur]") : null;
+    const visEl = e.target && e.target.closest ? e.target.closest("[data-tp-mgr-vis-n],[data-tp-mgr-vis-per],[data-tp-mgr-vis-for],[data-tp-mgr-vis-dur],[data-tp-mgr-ms-kind],[data-tp-mgr-ms-timing],[data-tp-mgr-ms-from],[data-tp-mgr-ms-to]") : null;
     if (visEl) {
-      const key = visEl.dataset.tpMgrVisN || visEl.dataset.tpMgrVisPer || visEl.dataset.tpMgrVisFor || visEl.dataset.tpMgrVisDur;
+      const key = visEl.dataset.tpMgrVisN || visEl.dataset.tpMgrVisPer || visEl.dataset.tpMgrVisFor || visEl.dataset.tpMgrVisDur
+        || visEl.dataset.tpMgrMsKind || visEl.dataset.tpMgrMsTiming || visEl.dataset.tpMgrMsFrom || visEl.dataset.tpMgrMsTo;
       const [id, idx] = key.split(":");
       const box = visEl.closest(".ph-tp-vis");
       const g = sel => box.querySelector(sel);
@@ -40934,7 +40942,21 @@ or changing anything in Cliniko.
       const weeks = durV ? +durV : null;
       const cur = (phTpMgrPhases(id)[+idx] || {}).cadence || "";
       const cds = per === "cd" ? (phTpCadenceDecompose(cur) || phTpCadenceSeed(cur)).cds || [] : [];
-      phTpMgrSetPhaseField(id, +idx, "cadence", phTpCadenceCompose(n, per, forWhat, weeks, cds));
+      // Milestone fields only render once "Relative to a milestone" is
+      // picked (same "read what's on screen when it's on screen, else
+      // fall back to what's already stored" shape as cds above) -- their
+      // from/to sub-inputs also only appear while timing === "after".
+      const msKindEl = g("[data-tp-mgr-ms-kind]"), msTimingEl = g("[data-tp-mgr-ms-timing]"),
+        msFromEl = g("[data-tp-mgr-ms-from]"), msToEl = g("[data-tp-mgr-ms-to]");
+      const msStored = (phTpCadenceDecompose(cur) || phTpCadenceSeed(cur)).ms || { kind: "retrieval", timing: "after", from: 1, to: 2 };
+      const ms = per === "ms" ? {
+        kind: msKindEl ? msKindEl.value : msStored.kind,
+        timing: msTimingEl ? msTimingEl.value : msStored.timing,
+        from: msFromEl ? Math.max(1, +msFromEl.value || 1) : msStored.from,
+        to: msToEl ? Math.max(1, +msToEl.value || 1) : msStored.to,
+      } : msStored;
+      if (ms.to < ms.from) ms.to = ms.from;
+      phTpMgrSetPhaseField(id, +idx, "cadence", phTpCadenceCompose(n, per, forWhat, weeks, cds, ms));
       phTplHostRerender();
       return;
     }
@@ -50362,8 +50384,16 @@ or changing anything in Cliniko.
     const st = got || phTpCadenceSeed(cur);
     if (!PH_TP_VISIT_PER.some(p => p[0] === st.per)) st.per = "wk";
     if (!Array.isArray(st.cds)) st.cds = [];
+    if (!st.ms) st.ms = { kind: "retrieval", timing: "after", from: 1, to: 2 };
     const cdMode = st.per === "cd";
-    const off = cdMode ? st.cds.length === 0 : st.n === 0;
+    // "Relative to a milestone" (her ask 2026-09-25, mocked for THIS screen
+    // specifically -- a template has no patient, so no cycle day and no
+    // clinic date to preselect against, unlike the live plan Grid's own
+    // shipped IVF work). Composes prose against a milestone NAME, reusing
+    // the exact wording phTpMilestoneDate's regexes already resolve on a
+    // real patient once this template is used.
+    const msMode = st.per === "ms";
+    const off = cdMode ? st.cds.length === 0 : msMode ? false : st.n === 0;
     const mkOpts = (list, val) => list.map(([v, l]) =>
       `<option value="${v}"${v === val ? " selected" : ""}>${esc(l)}</option>`).join("");
     const max = Math.max(PH_TP_VISIT_MAX[st.per] || 5, st.n || 0);
@@ -50374,14 +50404,23 @@ or changing anything in Cliniko.
     for (let i = 1; i <= durMax; i++) durOpts += `<option value="${i}"${st.weeks === i ? " selected" : ""}>for ${i} week${i === 1 ? "" : "s"}</option>`;
     const chips = st.cds.slice().sort((a, b) => a - b).map(cd =>
       `<span class="ph-tp-cdchip" data-cd="${cd}">CD ${cd}<button type="button" data-tp-mgr-cd-rm="${esc(key)}:${cd}" aria-label="Remove cycle day ${cd}">×</button></span>`).join("");
+    const msAfterOn = st.ms.timing === "after";
     const keepLine = cur && !got
       ? `<div class="ph-tp-viskeep">Now: <em>${esc(cur)}</em><br>Choosing below replaces this wording — use <b>Type instead</b> to keep it.</div>` : "";
     return `${keepLine}<div class="ph-tp-vis">
-      <select class="ph-tp-vissel field-bare" data-tp-mgr-vis-n="${esc(key)}" aria-label="How many visits for ${esc(ph.label || "this phase")}"${cdMode ? " hidden" : ""}>${numOpts}</select>
+      <select class="ph-tp-vissel field-bare" data-tp-mgr-vis-n="${esc(key)}" aria-label="How many visits for ${esc(ph.label || "this phase")}"${cdMode || msMode ? " hidden" : ""}>${numOpts}</select>
       <select class="ph-tp-vissel field-bare" data-tp-mgr-vis-per="${esc(key)}" aria-label="How often">${mkOpts(PH_TP_VISIT_PER, st.per)}</select>
       <div class="ph-tp-cdwrap"${cdMode ? "" : " hidden"}>${chips}<span class="ph-tp-cdadd"><input type="number" min="1" max="60" class="ph-tp-cdaddin field-bare" data-tp-mgr-cd-in="${esc(key)}" aria-label="Cycle day to add"><button type="button" class="ph-tp-cdaddbtn" data-tp-mgr-cd-add="${esc(key)}">+ Add a day</button></span></div>
+      <div class="ph-tp-mswrap"${msMode ? "" : " hidden"}>
+        <select class="ph-tp-vissel field-bare" data-tp-mgr-ms-kind="${esc(key)}" aria-label="Which milestone">${mkOpts(PH_TP_MS_KIND, st.ms.kind)}</select>
+        <select class="ph-tp-vissel field-bare" data-tp-mgr-ms-timing="${esc(key)}" aria-label="When, relative to the milestone">${mkOpts(PH_TP_MS_TIMING, st.ms.timing)}</select>
+        <input type="number" min="1" max="60" class="ph-tp-cdaddin field-bare" data-tp-mgr-ms-from="${esc(key)}" value="${st.ms.from || 1}" aria-label="Days after, from"${msAfterOn ? "" : " hidden"}>
+        <span class="ph-tp-mssep"${msAfterOn ? "" : " hidden"}>to</span>
+        <input type="number" min="1" max="60" class="ph-tp-cdaddin field-bare" data-tp-mgr-ms-to="${esc(key)}" value="${st.ms.to || st.ms.from || 1}" aria-label="Days after, to"${msAfterOn ? "" : " hidden"}>
+        <span class="ph-tp-mssep"${msAfterOn ? "" : " hidden"}>days</span>
+      </div>
       <select class="ph-tp-vissel field-bare" data-tp-mgr-vis-for="${esc(key)}" aria-label="What the visit is for"${off ? " disabled" : ""}>${mkOpts(PH_TP_VISIT_FOR, st.forWhat)}</select>
-      <select class="ph-tp-vissel field-bare" data-tp-mgr-vis-dur="${esc(key)}" aria-label="How many weeks for ${esc(ph.label || "this phase")}"${off ? " disabled" : ""}>${durOpts}</select>
+      <select class="ph-tp-vissel field-bare" data-tp-mgr-vis-dur="${esc(key)}" aria-label="How many weeks for ${esc(ph.label || "this phase")}"${off || msMode ? " disabled" : ""}>${durOpts}</select>
       <button type="button" class="ph-tp-vistype" data-tp-mgr-vis-type="${esc(key)}">Type instead</button>
     </div>`;
   }
@@ -56526,7 +56565,13 @@ or changing anything in Cliniko.
   function phTpMilestoneRowHtml(plan) {
     if (!phTpPlanWantsMilestones(plan)) return "";
     const cell = kind => {
-      const v = phTpMilestoneDate(plan, kind) || "";
+      // her ask 2026-09-25 ("preset the year to 2026 automatically"): an
+      // empty field defaults to today's date for DISPLAY only, same
+      // established fix as the scheduled-dispense date fields -- nothing
+      // is written until she actually changes it (phTpMilestoneDate reads
+      // the stored IVF row, never this input's DOM value).
+      const stored = phTpMilestoneDate(plan, kind) || "";
+      const v = stored || keyOf(TODAY);
       return `<td class="ph-tp-mscell"><input type="date" class="ph-tp-msdate" value="${esc(v)}"
         data-tp-milestone="${plan.id}:${kind}" aria-label="${esc(PH_TP_MILESTONES[kind].label)} date"></td>`;
     };
@@ -57567,7 +57612,16 @@ or changing anything in Cliniko.
   // more customised... or specific cd"): a fixed set of cycle days, not a
   // repeating rhythm -- see phTpCadenceCdList/phTpCadenceCompose's "cd"
   // branch and the chip editor in phTpCellEditOpen.
-  const PH_TP_VISIT_PER = [["wk", "a week"], ["fn", "a fortnight"], ["mo", "a month"], ["cd", "specific cycle days"]];
+  const PH_TP_VISIT_PER = [["wk", "a week"], ["fn", "a fortnight"], ["mo", "a month"], ["cd", "specific cycle days"], ["ms", "relative to a milestone"]];
+  // milestone-relative picker (her ask 2026-09-25, mocked for the Treatment
+  // plan TEMPLATES screen specifically -- a template has no patient, so no
+  // cycle day and no clinic date to preselect against; the shipped IVF-Grid
+  // work (CD-preselect, scans, live milestone dates) is all patient-scoped
+  // and never reaches here). "kind" is which milestone (retrieval/transfer,
+  // the same two phTpMilestoneDate already knows), "timing" is after/
+  // day-before/day-of/day-before-or-of, "from"/"to" only apply to "after".
+  const PH_TP_MS_KIND = [["retrieval", "Egg retrieval"], ["transfer", "Embryo transfer"]];
+  const PH_TP_MS_TIMING = [["after", "days after"], ["day-before", "the day before"], ["day-of", "the day of"], ["day-before-or-of", "the day of, or the day before"]];
   const PH_TP_VISIT_FOR = [["acu", "Acupuncture"], ["both", "Acupuncture + herbs"], ["herbs", "Herbs only"]];
   // How high the number list goes for each period. Fortnight stops at 1 on
   // purpose: "2 a fortnight" IS "1 a week", it composes to the same interval,
@@ -57590,7 +57644,24 @@ or changing anything in Cliniko.
   // An empty/missing list composes the same "No visit needed" text a
   // zero-count wk/fn/mo cadence already produces, so the phase reads the
   // same either way until she's actually added a day.
-  function phTpCadenceCompose(n, per, forWhat, weeks, cds) {
+  function phTpCadenceCompose(n, per, forWhat, weeks, cds, ms) {
+    if (per === "ms") {
+      const m = ms || {};
+      const kind = m.kind === "transfer" ? "transfer" : "retrieval";
+      let phrase;
+      if (m.timing === "day-before") phrase = `the day before ${kind}`;
+      else if (m.timing === "day-of") phrase = `the day of ${kind}`;
+      else if (m.timing === "day-before-or-of") phrase = `the day of, or the day before, ${kind}`;
+      else {
+        const from = Math.max(1, parseInt(m.from, 10) || 1);
+        const to = Math.max(from, parseInt(m.to, 10) || from);
+        phrase = to > from ? `${from}–${to} days after ${kind}` : `${from} day${from === 1 ? "" : "s"} after ${kind}`;
+      }
+      const base = `One visit ${phrase}`;
+      return forWhat === "both" ? `${base} acupuncture · herbs`
+        : forWhat === "herbs" ? `${base} · herbs only`
+        : base;
+    }
     if (per === "cd") {
       const list = Array.isArray(cds) ? Array.from(new Set(cds)).filter(x => x > 0).sort((a, b) => a - b) : [];
       if (!list.length) return "No visit needed — herbs only";
@@ -57676,7 +57747,7 @@ or changing anything in Cliniko.
     const got = phTpCadenceRead(text);
     if (!got) return null;
     const norm = s => String(s || "").trim().replace(/\s+/g, " ").toLowerCase();
-    return norm(phTpCadenceCompose(got.n, got.per, got.forWhat, got.weeks, got.cds)) === norm(text) ? got : null;
+    return norm(phTpCadenceCompose(got.n, got.per, got.forWhat, got.weeks, got.cds, got.ms)) === norm(text) ? got : null;
   }
   function phTpCadenceRead(text) {
     const t = String(text || "").trim();
@@ -57698,6 +57769,21 @@ or changing anything in Cliniko.
     // before the rhythm patterns below since nothing else starts with "CD".
     const cdList = phTpCadenceCdList(rest);
     if (cdList) return { n: null, per: "cd", forWhat, weeks, cds: cdList };
+    // Milestone-relative: "One visit N[-M] days after retrieval/transfer" or
+    // "One visit the day before/of[, or the day before,] retrieval/transfer"
+    // -- the EXACT wording phTpCadenceDate's own regexes already parse (see
+    // that function above), so a picked value and her existing hand-typed
+    // opu/preEt template text (2026-09-09) read and round-trip identically.
+    // Compound branch tried first so "the day of, or the day before, X"
+    // doesn't fall into the plainer "the day of" branch and lose half of it.
+    const msM = /^one visit\s+(?:the day of,?\s*or the day before,?\s*(retrieval|transfer)|the day before\s+(retrieval|transfer)|the day of\s+(retrieval|transfer)|(\d+)\s*(?:[-–—]\s*(\d+))?\s*days?\s+after\s+(retrieval|transfer))\b/i.exec(rest);
+    if (msM) {
+      const kind = (msM[1] || msM[2] || msM[3] || msM[6]).toLowerCase();
+      const timing = msM[1] ? "day-before-or-of" : msM[2] ? "day-before" : msM[3] ? "day-of" : "after";
+      const from = msM[4] ? +msM[4] : null;
+      const to = msM[5] ? +msM[5] : from;
+      return { n: null, per: "ms", forWhat, weeks: null, ms: { kind, timing, from, to } };
+    }
     // "1–2×/wk" is her own wording and appears in her templates. Read the more
     // frequent end, which is exactly what phAcuCadenceParse does with the same
     // string — the two must not disagree about what a range means. It still
@@ -57781,6 +57867,7 @@ or changing anything in Cliniko.
       const st = got || phTpCadenceSeed(cur);
       if (!PH_TP_VISIT_PER.some(p => p[0] === st.per)) st.per = "wk";
       if (!Array.isArray(st.cds)) st.cds = [];
+      if (!st.ms) st.ms = { kind: "retrieval", timing: "after", from: 1, to: 2 };
       const box = document.createElement("div");
       box.className = "ph-tp-vis";
       box.setAttribute("data-tp-phase-field", key);
@@ -57873,21 +57960,50 @@ or changing anything in Cliniko.
         cdWrap.append(addWrap);
       };
       cdRenderChips();
+      // "Relative to a milestone" mode (her ask 2026-09-25, mocked for the
+      // TEMPLATES screen -- see PH_TP_MS_KIND/-TIMING above): a template has
+      // no patient, so this composes prose against a milestone NAME, never a
+      // real date -- once the template is used on a real patient, the exact
+      // same phTpMilestoneDate regexes that already resolve her hand-typed
+      // opu/preEt wording resolve this too. numSel is hidden here for the
+      // same reason it's hidden in "cd" mode: there's no count to pick, it's
+      // always the one visit the milestone implies.
+      const msWrap = document.createElement("div");
+      msWrap.className = "ph-tp-mswrap";
+      msWrap.setAttribute("data-tp-phase-field", key);
+      const msKindSel = mk("mskind", mkOpts(PH_TP_MS_KIND, st.ms.kind), "Which milestone");
+      const msTimingSel = mk("mstiming", mkOpts(PH_TP_MS_TIMING, st.ms.timing), "When, relative to the milestone");
+      const msFrom = document.createElement("input");
+      msFrom.type = "number"; msFrom.min = "1"; msFrom.max = "60"; msFrom.className = "ph-tp-cdaddin field-bare";
+      msFrom.dataset.vis = "msfrom"; msFrom.value = st.ms.from || 1;
+      msFrom.setAttribute("aria-label", "Days after, from");
+      const msTo = document.createElement("input");
+      msTo.type = "number"; msTo.min = "1"; msTo.max = "60"; msTo.className = "ph-tp-cdaddin field-bare";
+      msTo.dataset.vis = "msto"; msTo.value = st.ms.to || st.ms.from || 1;
+      msTo.setAttribute("aria-label", "Days after, to");
+      const msToLbl = document.createElement("span"); msToLbl.className = "ph-tp-mssep"; msToLbl.textContent = "to";
+      const msDaysLbl = document.createElement("span"); msDaysLbl.className = "ph-tp-mssep"; msDaysLbl.textContent = "days";
+      msWrap.append(msKindSel, msTimingSel, msFrom, msToLbl, msTo, msDaysLbl);
+      const syncMsRange = () => {
+        const on = st.ms.timing === "after";
+        msFrom.hidden = !on; msToLbl.hidden = !on; msTo.hidden = !on; msDaysLbl.hidden = !on;
+      };
+      syncMsRange();
       if (keepLine) box.insertAdjacentHTML("beforeend", keepLine);
-      box.append(numSel, perSel, cdWrap, forSel, durSel, saveBtn, typeBtn);
+      box.append(numSel, perSel, cdWrap, msWrap, forSel, durSel, saveBtn, typeBtn);
       const syncOff = () => {
-        const cdMode = st.per === "cd";
-        const off = cdMode ? st.cds.length === 0 : st.n === 0;
-        numSel.hidden = cdMode; cdWrap.hidden = !cdMode;
-        perSel.disabled = off; forSel.disabled = off; durSel.disabled = off;
+        const cdMode = st.per === "cd", msMode = st.per === "ms";
+        const off = cdMode ? st.cds.length === 0 : msMode ? false : st.n === 0;
+        numSel.hidden = cdMode || msMode; cdWrap.hidden = !cdMode; msWrap.hidden = !msMode;
+        perSel.disabled = off; forSel.disabled = off; durSel.disabled = off || msMode;
       };
       syncOff();
       el.classList.add("editing"); el.innerHTML = ""; el.appendChild(box);
-      (st.per === "cd" ? perSel : numSel).focus();
+      (st.per === "cd" || st.per === "ms" ? perSel : numSel).focus();
       // save on every pick, but DON'T rerender yet — the row is rebuilt once
       // she leaves, so the "book <date>" chip still refreshes off the new
       // string without the editor closing under her mid-choice
-      const write = () => { const live = freshPh(); if (!live) return; live.cadence = phTpCadenceCompose(st.n, st.per, st.forWhat, st.weeks, st.cds); phPatientRec(phTpScreenPatient); savePharmacy(); };
+      const write = () => { const live = freshPh(); if (!live) return; live.cadence = phTpCadenceCompose(st.n, st.per, st.forWhat, st.weeks, st.cds, st.ms); phPatientRec(phTpScreenPatient); savePharmacy(); };
       const addCd = () => {
         const inp = cdWrap.querySelector("[data-cdaddin]");
         const v = inp && +inp.value;
@@ -57897,7 +58013,7 @@ or changing anything in Cliniko.
         cdWrap.querySelector("[data-cdaddin]").focus();
       };
       box.addEventListener("change", e => {
-        const s = e.target.closest("select[data-vis]");
+        const s = e.target.closest("select[data-vis], input[data-vis]");
         if (!s) return;
         if (s.dataset.vis === "n") { st.n = +s.value; syncOff(); }
         else if (s.dataset.vis === "per") {
@@ -57908,7 +58024,11 @@ or changing anything in Cliniko.
           numSel.innerHTML = numHtml();
           syncOff();
         } else if (s.dataset.vis === "for") { st.forWhat = s.value; }
-        else { st.weeks = s.value ? +s.value : null; }
+        else if (s.dataset.vis === "mskind") { st.ms.kind = s.value; }
+        else if (s.dataset.vis === "mstiming") { st.ms.timing = s.value; syncMsRange(); }
+        else if (s.dataset.vis === "msfrom") { st.ms.from = Math.max(1, +s.value || 1); if (st.ms.to < st.ms.from) { st.ms.to = st.ms.from; msTo.value = st.ms.to; } }
+        else if (s.dataset.vis === "msto") { st.ms.to = Math.max(st.ms.from || 1, +s.value || 1); msTo.value = st.ms.to; }
+        else if (s.dataset.vis === "dur") { st.weeks = s.value ? +s.value : null; }
         write();
       });
       const finish = () => { write(); phTpRerender(); };
