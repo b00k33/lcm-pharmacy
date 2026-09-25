@@ -8996,3 +8996,71 @@ back to the existing horizontal-strip layout, unchanged from before this
 build.
 
 `lcm-build` `20260925-120000`, `sw.js` `lcm-20260925-profile-rail-unified`.
+
+## Diabetes Type 1/Type 2 quick-pick + smart-paste now captures it (her ask 2026-09-25, "give option to select diabetes type 1 or 2 - be an expert medical ui designer and strategist, audit this page and improve note taking to make things easier and faster")
+
+Screenshot of the Medical History checklist's Diabetes row (Yes selected,
+free-text note reading "type 2") — the concrete ask, plus a broader audit
+request for the checklist screen's note-taking generally.
+
+**Built the concrete fix as a new, reusable, low-risk mechanism** —
+`PH_HX_NOTE_PRESETS` (a `{key: [labels]}` map, today just `{diabetes: ["Type
+1", "Type 2"]}`) + `phHxNoteHasPreset`/`phHxNotePresetToggle`. A preset chip
+TOGGLES its label into the note's own comma-separated free text — never a
+separate structured field, so the note stays the one place a fuller answer
+("Type 2, diagnosed 2019") lives, and any preset can still be edited or
+removed by hand. Same "controlled list + always a typed escape hatch" idiom
+this app already uses everywhere (`PH_TP_SYM_PRESETS`, `PH_TP_OBJ_MMT_LIB`,
+`PH_TP_FORMULA_ACTIONS`). Chips reuse `.ph-ck-chip` verbatim (the app's
+general-purpose small pill component) rather than inventing new styling —
+row shape is label → Not asked/No/Yes segmented control → preset chips
+(shown only on a "yes" row with presets defined) → the note field.
+
+**Extended the smart-paste feature to complete a gap it already had, not
+built as something parallel.** `phHxParseNote`'s diabetes keyword rule
+already implicitly matched "type 1"/"type 2" text but discarded the detail
+— a paste review would tick Diabetes Yes with no note. New
+`PH_HX_PASTE_DETAIL` (a `{key: sentence => detail|null}` map) extracts the
+specific answer from the SAME matched sentence (`T1DM`/`T2DM` abbreviations,
+"type 1/2 diabetes", "gestational diabetes"/"GDM" → Type 2) — `found.set`
+now stores `{why, detail}` instead of a bare `why` string, and the returned
+history rows carry `detail` through to the paste review UI, which shows "→
+Type 2" next to the item label when a detail was found. `phHxPasteApply`
+calls `phHxNotePresetToggle` for any ticked item with a detail, so applying
+a pasted referral both ticks Yes AND pre-fills the note in one step.
+
+**Verified**: `phHxNotePresetToggle` correctly adds/removes a preset label
+from the note's free text without destroying other typed content (tested
+add-to-empty, add-alongside-existing-text, remove-one-of-two);
+`phHxBodyHtml` renders the chip row in the right position with correct
+`.on` state reflecting the note's current content; `phHxParseNote` correctly
+extracts Type 1/Type 2 from "T1DM"/"T2DM"/"type X diabetes"/gestational
+diabetes phrasing, correctly returns no detail on negated text ("No
+diabetes."); a faithful simulation of `phHxPasteApply`'s forEach (calling
+the real `phHxSet`/`phHxNotePresetToggle`, not a reimplementation) confirmed
+the detail writes into the note only when the item is newly ticked to
+"yes", and is correctly skipped for an item with no detail (e.g. PCOS).
+Visual check: a standalone preview built from the real generated row markup
+against the app's own extracted stylesheet, staged temporarily in the
+served project directory and deleted immediately after (confirmed via
+`git status --short`) — the row renders exactly as intended: segmented
+control, then Type 1/Type 2 chips (Type 2 shown selected, dark fill), then
+the note field showing "Type 2".
+
+**The audit half of her ask — findings, not yet built pending her word.**
+This screen is already genuinely sophisticated: the tri-state model
+(Not asked/No/Yes with the note text surviving a flip back to No), the
+"paste a note" keyword-matched smart intake with a tick-to-confirm review,
+live search + unasked/yes filters, case-based group-quieting, and a bulk
+"mark rest as no" — this isn't a screen that needs a rebuild, it needs the
+same targeted extension just built for Diabetes applied to a few more
+fields. Candidates identified but NOT built, since the exact preset wording
+for a clinical field is her call, not a build-competence one: **Blood-
+thinning medication** (specific drug names — warfarin, aspirin, clopidogrel
+etc), **Cancer (current or past)** (status categories — in remission,
+active treatment, ...), **Thyroid condition** (Hypo/Hyper/Hashimoto's).
+Same mechanism, same toggle-into-note behaviour, same escape hatch — just
+needs her to confirm which fields and what the preset words should say
+before it's built.
+
+`lcm-build` `20260925-130000`, `sw.js` `lcm-20260925-diabetes-type-presets`.
