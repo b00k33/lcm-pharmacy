@@ -10250,3 +10250,85 @@ entry `zzcal2`) fully removed afterward — confirmed `stillPatient: false`,
 viewport left at the desktop default (never resized this round).
 
 `lcm-build` `20260925-300000`, `sw.js` `lcm-20260925-daypop-under-bar`.
+
+## "when i click the calendar, i want the cycle details under the horizontal graph to appear" — the calendar now opens the richer signs popover, with period-start marking merged into it (2026-09-25)
+
+A fourth message in the same "under the bar, not under the calendar" run
+today — sent right after the third fix (the period-start popover moving
+under the bar) shipped. Her screenshot this time showed a different
+popover: "Day 5 · Wed 16 Sep" — `phCycleSignPopHtml`, the richer PER-DAY
+signs popover (Today's flow/Pain/Discharge/Sex/Other/note), opened by
+tapping the phase BAR or a day-table header — not `phCyclePopHtml`, the
+narrower PERIOD-START popover (Flow/Pain/Estimate/Log period) the calendar
+itself still opened at that point. Read together with her words, this
+meant: when she taps the calendar, she wants the fuller signs popover to
+appear — not just the narrow period-start one.
+
+**The real risk, and why this wasn't guessed blindly.** The two popovers
+write to genuinely different places (`rec.cycle.lmp`/`cycleLog` vs.
+`rec.cycleSigns[dateKey]`), and only the period-start popover can mark
+when a period began. Simply pointing the calendar's tap at the signs
+popover instead would have silently removed her only way to log a period
+start from the calendar — a real loss of clinical functionality, not a
+placement bug like the first three fixes today. Checked first whether this
+had already been resolved by design: earlier the same session, an approved
+mock (`cycle-final-combined.html`, her "i like this, build it for real, and
+push live") had explicitly merged the two — one popover, opened from either
+the calendar or the bar, with a period-start toggle built INTO the signs
+popover itself (a link/pill that reveals an Estimate-only checkbox + "Log
+period start" button). That merge was never actually built — only the
+Flow/Sex/Discharge fields and the day table from the same mock had shipped
+— so this closes the missing piece of an ALREADY-APPROVED design, not a
+fresh guess.
+
+**Built, matching the approved mock:**
+- `phCycleSignPopHtml` gains a `startSection`, rendered right under the
+  header, above Today's flow: a link ("🩸 Mark this as when her period
+  started →") that reveals a small box (Estimate-only checkbox + "Log
+  period start"/Cancel), or — if this date is already a logged period
+  start (`phBbtCycleStarts(rec).includes(dateKey)`) — a "🩸 Period started
+  this day — change ▾" pill that reopens the same box, relabelled "Update".
+  New state lives on the existing `presCycleSignEdit` object
+  (`.startOpen`/`.startApprox`), so it resets automatically whenever the
+  popover moves to a different day or closes — no separate cleanup needed.
+  "Log period start" calls the SAME `phCycleStripCommit`/`phCycleAfterLog`
+  pair the old popover's own Log button already used — one commit path,
+  not a second. Her per-day Flow (if set on this day) maps down to the
+  whole-period Flow scale the commit writes (spotting/light → light,
+  medium → moderate, heavy → heavy) rather than being left blank.
+- **Scoped, not global** — the calendar's `data-cycle-day` tap handler
+  only switches to opening the signs popover when the tapped day sits
+  inside a strip carrying `data-cycle-strip-bare="1"`, the attribute
+  already unique to `phTpCycleBlockHtml`'s one call of `phCycleStripHtml`
+  with `bare: true` (confirmed by grep — the only caller). Every OTHER
+  screen using this same calendar (the Assessment tab, Today's Timeline,
+  the Fertility door popup, the CD calculator, Period history's own row
+  edit) keeps opening the narrower `phCyclePop` exactly as before — same
+  narrow-scoping discipline as the other three "under the bar" fixes
+  today, none of which touched the shared strip's behaviour on any other
+  screen either. The existing 2026-09-25 mutex (opening one popover
+  clears the other) still holds in both directions.
+
+**Verified via real dispatched clicks against the real functions in the
+sandbox** (not a reimplementation — the login gate blocks a fully-booted
+click-through, worked around as usual by clicking past the overlay and
+building a synthetic patient): on the Treatment Plan tab's bare calendar,
+tapping a day opened `.ph-cycle-signpop` (not `.ph-cyc-pop`) with the new
+"Mark this as when her period started →" link; tapping it revealed the
+Estimate checkbox + Log/Cancel; Cancel closed the box without touching
+`rec.cycle.lmp`; ticking Estimate then "Log period start" correctly wrote
+`rec.cycle.lmp`, `rec.cycle.approx: true` and a matching `cycleLog` entry,
+kept the popover open, and flipped the link to "🩸 Period started this day
+— change ▾" with the `.marked` style. **Regression check**: rendering the
+same strip with no `bare` option (mirroring every other real caller) and
+tapping a day still produced `phCyclePop`'s "Period started" markup, never
+the signs popover — confirming the scoping holds and no other screen's
+behaviour changed. A real screenshot (login overlay hidden for the capture
+only, then restored) confirmed the visual result matches the approved
+mock: the merged popover sitting directly under the phase bar, start
+section on top, signs rows below, day table underneath. Both synthetic
+test patients (`PRESC.items` entries `zzcalmerge1`/`zzshot1`) removed
+afterward, confirmed absent from both `PHARMACY.patients` and
+`PRESC.items`.
+
+`lcm-build` `20260925-310000`, `sw.js` `lcm-20260925-calendar-signs-merge`.
