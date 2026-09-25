@@ -10067,3 +10067,107 @@ PHARMACY.patients[key]` + `PRESC.items` filter, `savePharmacy()` confirmed
 `true`, `patientGone: true`. Viewport reset to the desktop preset.
 
 `lcm-build` `20260925-280000`, `sw.js` `lcm-20260925-cycblk-links-under-bar`.
+
+## "again" / "i dont want th widget under the calendar" — said a second time, root cause was a DIFFERENT render path (2026-09-25)
+
+Straight after the fix above shipped, she sent a screenshot of the
+Treatment Plan tab's Cycle block (calendar strip with days ringed, the
+period-start popover open, and on the right the phase bar with the two
+links already correctly sitting under it — the previous fix visibly
+working) captioned only **"again"**, then, mid-turn, **"i dont th widget
+under the calendar"** (typo for "the"). Read together this was the SAME
+complaint repeated, not a report that the prior fix was wrong — confirmed
+by re-reading `phTpCycleBlockHtml`'s current source line by line before
+touching anything: `links` was still correctly inside `.side`, in all
+three return branches, exactly as the prior commit left it.
+
+**Per this project's own standing rule ("never guess blindly a second
+time on the same complaint" / "diagnose before patching"), the response
+was to search for OTHER, previously-unexamined code paths that could
+produce the identical symptom — not to re-apply the same fix or assume it
+was insufficient.** Found it: `phCycleStripHtml(rec, name, opts)` — the
+shared calendar-strip renderer used across this app's whole cycle-tracking
+surface (per its own code comment: "the Assessment tab, the check-in
+card, Today's Timeline, the full-screen Treatment Plan modal") — has its
+OWN built-in calculator-rendering logic, completely separate from
+`phTpCycleBlockHtml`'s `links` div. Two internal slots render
+`phCycleCdCalcHtml(name)` directly inside the strip's own returned
+markup: once before the day grid (full/non-compact mode) and once after
+it (compact mode shows the calculator there; full mode shows a colour
+legend instead). The pre-existing `opts.bare` flag (built specifically
+for `phTpCycleBlockHtml`'s own call) suppresses BOTH slots — but also the
+legend and the trailing status line, too blunt for any OTHER caller that
+still wants those.
+
+**The second, previously-untouched render path**: `phCycleTessHtml(rec,
+name)` — the Assessment tab's "tessellated" Cycle sub-tab layout (built
+2026-09-15, her "tesselate it" ask) — calls `phCycleStripHtml` in its
+OWN "full" mode (no `bare`, no `compact`), which renders the calculator
+right under the calendar grid via the strip's own built-in slot. The
+same-day fix above only ever touched `phTpCycleBlockHtml` (the Treatment
+Plan tab's own cycle block) — it structurally could not reach this
+completely separate function, which is why the exact same complaint
+persisted after that fix shipped.
+
+**Fix — a new `opts.noCalc`, narrower than `bare`.** Added immediately
+after the existing `bare` derivation in `phCycleStripHtml`:
+suppresses ONLY the calculator in both slots, leaving the day grid, the
+legend and the trailing status line completely untouched — unlike
+`bare`, which also drops the legend/status, too blunt for a caller (like
+the tessellated view) that still wants those, just not the calculator
+sitting under the calendar. Both calculator-render lines now check
+`bare || noCalc` (full-mode slot) and `noCalc ? "" : phCycleCdCalcHtml(name)`
+inside the compact-mode ternary (compact slot). `phCycleTessHtml` now
+passes `{ noCalc: true }` to the strip and renders the calculator
+explicitly itself instead, right after the bar (`phCycleBarHtml`) — same
+placement principle as `phTpCycleBlockHtml`'s own `links`: the calculator
+belongs beside the bar, not under the calendar, everywhere this pattern
+repeats. A small CSS spacing rule (`.ph-cycle-tess-calc { margin-top:
+10px }`) was added alongside the block's existing `.ph-cycle-tess-detail`
+rule so the calculator doesn't sit flush against the bar above it.
+
+**Two other `phCycleStripHtml` callers deliberately left unchanged, my
+own call, disclosed here rather than silently swept in**: Today's
+Timeline's 🩸 quick-log popover (`presTlCycPopHtml`, calls the strip with
+no opts — full mode) and the Fertility door popup (`presFdoorHtml`, calls
+it `{weeks:4, compact:true}` — compact mode, calculator shown via the
+compact branch). Neither of these contexts has an adjacent phase bar or
+any other place to relocate the calculator to, so leaving it inline under
+the calendar in those two spots is the reasonable default, not an
+oversight — if she reports "the widget under the calendar" a third time
+on either of THOSE two screens specifically, that's the signal a
+different fix is needed there (most likely: build a bar-adjacent home for
+it in that context too, the same way this fix and the prior one both
+did).
+
+**Verified four independent ways, since the Browser pane's screenshot/
+scroll/zoom tooling proved unreliable mid-investigation (scroll actions
+all reported success but returned byte-identical screenshots; `zoom`
+explicitly responded "region crop not yet supported in the Browser pane")
+— matching this project's own established fallback pattern for when a
+pixel-perfect screenshot can't be obtained in the sandbox:**
+1. Direct function invocation — called `phCycleTessHtml` for a synthetic
+   cycle-tracked patient and inspected the generated HTML string directly:
+   confirmed no `ph-cyc-cdcalc` markup inside `.ph-cycle-tess-cal`, and
+   confirmed it present inside `.ph-cycle-tess-detail` instead.
+2. Live render-pipeline DOM query — opened the real Assessment → Cycle
+   tab for a synthetic patient through the actual render functions and
+   queried the live DOM: `{"calcButtonInCal": false, "calcButtonInDetail":
+   true}`.
+3. `getBoundingClientRect()` positional check — confirmed the calculator
+   toggle button's real rendered position (`left: 209, right: 509` for the
+   calendar column vs. `left: 529, right: 1341` for the detail column, at
+   a 1400×1000 viewport) places it inside the detail/bar column, to the
+   RIGHT of the calendar, never underneath it — with `scrollWidth ===
+   innerWidth` confirming no horizontal overflow either.
+4. CSS legend/status regression check — confirmed the day grid, the
+   colour legend and the trailing status line all still render unchanged
+   in the tessellated view (only the calculator moved), since `noCalc` is
+   deliberately narrower than the pre-existing `bare` flag.
+Synthetic "Zz Cal Check Patient" test patient (real treatment plan via
+`phTpNewPlan("cycle_natural")`, `PRESC.items` entry `zzcal1`) fully
+removed afterward — confirmed `stillPatient: false`, `prescCount: null`
+(PRESC not window-exposed in this session's sandbox tab, consistent with
+prior batches). Viewport reset to the desktop preset.
+
+`lcm-build` `20260925-290000`, `sw.js` `lcm-20260925-cycletess-nocalc`.

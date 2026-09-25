@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260925-280000">
+<meta name="lcm-build" content="20260925-290000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -8246,6 +8246,7 @@
   #pharmacyPage .ph-cycle-tess { display: flex; gap: 20px; align-items: stretch; }
   #pharmacyPage .ph-cycle-tess-cal { flex: 0 0 300px; border-right: 1px solid var(--ph-line); padding-right: 20px; }
   #pharmacyPage .ph-cycle-tess-detail { flex: 1 1 auto; min-width: 0; }
+  #pharmacyPage .ph-cycle-tess-calc { margin-top: 10px; }
   @media (max-width: 900px) {
     #pharmacyPage .ph-cycle-tess { flex-direction: column; gap: 10px; }
     #pharmacyPage .ph-cycle-tess-cal { flex-basis: auto; border-right: none; border-bottom: 1px solid var(--ph-line); padding: 0 0 10px; }
@@ -52169,7 +52170,16 @@ or changing anything in Cliniko.
   // callers that used to concatenate strip+bar+details now call this
   // instead; nothing about the three functions' own contracts changed.
   function phCycleTessHtml(rec, name) {
-    return `<div class="ph-cycle-tess"><div class="ph-cycle-tess-cal">${phCycleStripHtml(rec, name)}</div><div class="ph-cycle-tess-detail">${phCycleBarHtml(rec, name)}${phCycleDetailsHtml(rec)}</div></div>`;
+    // her report 2026-09-25 ("i dont want th widget under the calendar"),
+    // said again after the Treatment Plan tab's own fix earlier the same day
+    // -- that fix only touched phTpCycleBlockHtml; this Assessment-tab
+    // layout calls the strip in its own "full" mode, which renders the
+    // "know her cycle day instead" calculator right under the calendar grid
+    // via phCycleStripHtml's own built-in slot. noCalc suppresses it there
+    // (keeping the legend/status, which she never asked to lose) and it's
+    // rendered explicitly here instead, right after the bar -- same
+    // placement principle as the Treatment Plan tab's own `links`.
+    return `<div class="ph-cycle-tess"><div class="ph-cycle-tess-cal">${phCycleStripHtml(rec, name, { noCalc: true })}</div><div class="ph-cycle-tess-detail">${phCycleBarHtml(rec, name)}<div class="ph-cycle-tess-calc">${phCycleCdCalcHtml(name)}</div>${phCycleDetailsHtml(rec)}</div></div>`;
   }
   // opens (or closes, if already open on the same day) the log-period
   // popover for a given date -- shared by tapping a day in the strip AND the
@@ -52308,12 +52318,23 @@ or changing anything in Cliniko.
     // opts.bare (the cycle block, her list 2026-09-19): the grid + its head
     // only -- the block draws the two links under it itself
     const bare = !!(opts && opts.bare);
+    // opts.noCalc (her report 2026-09-25, "i dont want th widget under the
+    // calendar" -- said a second time, since her first fix only touched the
+    // Treatment Plan tab's own phTpCycleBlockHtml, not this strip's OWN
+    // built-in calculator, which the tessellated Assessment-tab layout
+    // (phCycleTessHtml) still surfaced inline under the calendar via this
+    // very function): suppress ONLY the "know her cycle day instead"
+    // calculator, keeping the grid/legend/status exactly as before -- unlike
+    // `bare`, which also drops the legend and status line, too blunt for a
+    // caller (like the tessellated view) that still wants those, just not
+    // the calculator sitting under the calendar.
+    const noCalc = !!(opts && opts.noCalc);
     return `<div class="ph-cyc-strip${compact ? " compact" : ""}${bare ? " bare" : ""}" data-cycle-strip="${esc(name)}"${opts && opts.weeks ? ` data-cycle-strip-weeks="${weeks}"` : ""}${compact ? ` data-cycle-strip-compact="1"` : ""}${paintPlan ? ` data-cycle-strip-plan="${esc(paintPlan.id)}"` : ""}${showCd ? ` data-cycle-strip-cd="1"` : ""}${bare ? ` data-cycle-strip-bare="1"` : ""}>
       <div class="ph-cyc-strip-head"><span class="t">Log a period</span><span>tap the day it started</span>
         <span class="nav"><button type="button" data-cycle-strip-nav="1" data-cycle-strip-name="${esc(name)}" title="Earlier weeks" aria-label="Earlier weeks">‹</button><button type="button" data-cycle-strip-nav="-1" data-cycle-strip-name="${esc(name)}" title="Later weeks" aria-label="Later weeks"${off ? "" : " disabled"}>›</button></span></div>
-      ${compact || bare ? "" : phCycleCdCalcHtml(name)}
+      ${compact || bare || noCalc ? "" : phCycleCdCalcHtml(name)}
       <div class="ph-cyc-grid">${cells}</div>
-      ${bare ? "" : compact ? phCycleCdCalcHtml(name) : `<div class="ph-cyc-legend"><span><i class="p"></i>period started</span><span><i class="f"></i>flow days</span><span><i class="t"></i>today</span>${predKey ? `<span><i class="n"></i>next, predicted</span>` : ""}${scanKey ? `<span><i class="s"></i>scan booked</span>` : ""}</div>`}
+      ${bare ? "" : compact ? (noCalc ? "" : phCycleCdCalcHtml(name)) : `<div class="ph-cyc-legend"><span><i class="p"></i>period started</span><span><i class="f"></i>flow days</span><span><i class="t"></i>today</span>${predKey ? `<span><i class="n"></i>next, predicted</span>` : ""}${scanKey ? `<span><i class="s"></i>scan booked</span>` : ""}</div>`}
       ${compact || bare ? "" : status}
       ${selKey && phCyclePop.host !== "hist" ? phCyclePopHtml(phCyclePop) : ""}
     </div>`;
