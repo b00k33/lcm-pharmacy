@@ -8721,3 +8721,92 @@ this if it never sets `.name`.) Synthetic test patient/script removed
 from the sandbox afterward, confirmed gone via a direct re-check.
 
 `lcm-build` `20260925-050000`, `sw.js` `lcm-20260925-cycleday-calc-livetoday`.
+
+## Treatment Plan phase bar colour — Option F, "full colour always, status is a border" (her pick 2026-09-25)
+
+Straight after the cycle-day fix, a screenshot of the IVF Protocol Treatment
+Plan Grid's phase bar: **"improve visual vision based on colour - show 3
+mocks."** Investigated first, not guessed — measured the real shipped CSS
+(index.html ~6266-6283 at the time) directly against a synthetic bar and
+confirmed three real defects: `.seg.done { opacity: .6 }` washed a done
+phase's own kind colour to near-invisibility (Post-OPU has no guessed kind
+at all, so at 60% it read as blank); `.seg.up { background: var(--ph-herb-
+tint) }` **overrode every upcoming phase to the exact same pale teal**,
+discarding the kind colour the code already computes per phase
+(`phTpPhaseKind`); and the kind-colour rules themselves were written
+`.seg.k-p:not(.up)` etc, so an upcoming phase was explicitly excluded from
+ever showing its real hue. Net effect: only the single current/live phase
+had any real visual contrast.
+
+Built 3 real mock options (A: drop kind-colour entirely for one clean
+teal status system; B: keep kind-colour but fix the opacity-wash/upcoming-
+flattening bugs so it actually works; C: a thin top status-strip + full-
+strength phase colour below). **Delivery hit a real problem this session:
+the shared Browser pane repeatedly failed to render/respond for her** (a
+mechanism that had worked earlier the same session for a different mock)
+— three rounds of "where is it" / "i cant see the mocks" / "this is the
+third time" / "you are bullshitting me" before switching channels
+entirely to a published Artifact (`action:"open"`, not the preview pane),
+which worked. She then said **"i like option a and b — make 3 more
+mocks,"** so three more were built as genuine hybrids of what she'd
+already liked (D: B's real colours + a hatch/dim "ahead" treatment + a ✓
+tick for done instead of fading; E: A's teal status language with just a
+faint phase-colour whisper on the upcoming outlines; F: full-strength
+phase colour on every segment always, status told apart purely by a
+border/ring/dash treatment, never by fading or colour override). **Her
+pick: "f".**
+
+**Built into the real CSS** (index.html, the `.ph-tp-pbar .seg.*` block
+right after `#pharmacyPage .ph-tp-pbar:hover .seg` — search "her pick 'F'"):
+- `position: relative` added to the base `.seg` rule (needed for the new
+  `::before`/`::after` overlays).
+- `.seg.up` no longer overrides `background`/`color` at all — it gets a
+  subtle white inset ring (`box-shadow`) plus an `::after` dashed inset
+  border. Its real kind colour (pink/green/gold/lavender/tan/rose/grey)
+  now shows through at full strength, so Post-ET/Two-week-wait/Early-
+  Pregnancy are visually distinct chips again instead of one flat teal.
+- `.seg.done` drops the `opacity: .6` wash entirely — a done phase keeps
+  its full-strength kind colour and gets an always-visible `::after` "✓"
+  in the corner (independent of the bar's existing hover-only `<span>`/
+  `<em>` labels, so "done" reads without hovering, which the pale/washed
+  bar never could before).
+- `.seg.live` drops the forced `background: var(--ph-herb-deep) !important;
+  color: var(--ph-cream)` override — it now shows its OWN kind colour as
+  the base fill, with a 3px teal inset ring (`box-shadow`) and a soft
+  `rgba(11,59,75,.14)` wash via `::before` layered on top ("ring + wash
+  over its own colour", per the approved mock). Text colour falls back to
+  the base `--ph-ink` naturally once the cream override is gone — correct,
+  since the fill is now a light pastel, not solid dark teal.
+- The six `.seg.k-*:not(.up)` kind-colour rules (lines ~6277-6283) had
+  their `:not(.up)` removed — the whole reason they existed was to stop
+  the kind colour from fighting `.seg.up`'s old teal-tint override, which
+  is gone now, so the exclusion is no longer needed and every status
+  (done/live/up) can share one real kind colour. `.seg.skipped` is
+  untouched and still wins via `!important` (grey, faded) — it was never
+  part of the reported defect and Option F's approved mocks never
+  included a skipped state.
+- `.ph-cyc-day.k-*` (the cycle strip's own calendar-day kind colouring, a
+  sibling selector on the same rule lines) is completely unaffected — only
+  the `.ph-tp-pbar .seg.k-*` half of each combined selector changed.
+
+**Verified against the real running app, not a reimplementation.** Booted
+the real `index.html` on a local static server, and — since the login gate
+blocks a fully-booted click-through, same limitation as most batches in
+this file — mounted a synthetic `.ph-tp-pbar` with real `k-p`/`k-f`/`k-n`/
+`k-l`/`k-g`/`live`/`up`/`done`/`skipped` classes directly inside the real
+`#pharmacyPage` element (forced visible past the `#lcmOverlay` login
+screen's very high z-index for a screenshot only, then restored) and read
+`getComputedStyle` for every segment: done phases show their full real
+kind colour (`rgb(241,201,210)` pink, `rgb(207,230,216)` green) with the
+`::after` "✓" content present and opacity back to `1`; live shows its own
+kind colour with the teal inset-ring `box-shadow` and the `::before` wash
+overlay; every upcoming phase shows its own distinct real colour
+(`rgb(211,222,226)` grey, `rgb(217,205,234)` lavender, `rgb(245,211,222)`
+rose) with the dashed-border `::after` content, no longer collapsed into
+one flat teal; skipped is untouched at `rgb(211,222,226)`/opacity `.6`
+via its `!important` rule. Text colour on every non-skipped segment reads
+the base ink (`rgb(20,31,35)`), readable on every pastel fill. Screenshot
+confirmed the bar visually: seven phases, seven visually distinct chips,
+done ticked, live ringed, ahead dashed. Console clean throughout.
+
+`lcm-build` `20260925-080000`, `sw.js` `lcm-20260925-tpphasebar-colour-optionf`.
