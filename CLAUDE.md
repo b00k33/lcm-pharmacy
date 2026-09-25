@@ -8810,3 +8810,74 @@ confirmed the bar visually: seven phases, seven visually distinct chips,
 done ticked, live ringed, ahead dashed. Console clean throughout.
 
 `lcm-build` `20260925-080000`, `sw.js` `lcm-20260925-tpphasebar-colour-optionf`.
+
+## IVF history edits scrolled the script to the top (her report 2026-09-25, "when i edit this, it scrolls to the top")
+
+Her screenshot: Assessment → IVF history tab, an "Egg collection" card open
+(Clinic field, eggs/mature/fert/day3/blasts/PGT-ok/frozen number fields, a
+transfer row, a delete-confirmation strip visible) — typing into any of
+these fields threw her back to the top of the script every time.
+
+**Root cause, traced not guessed.** Every IVF history handler
+(`data-ivf-field`/`-tfield`, row toggle, add collection/transfer, kind
+toggle, confirm, delete) calls the shared `phCycleRerender()`, the same
+dispatcher every Cycle sub-tab handler already goes through. Its fallback
+chain was: full-screen `#phTpModal` check → `presCycleTabRefresh()` (a
+SCOPED repaint of `#presCycleHost`, but that host only exists while the
+**Cycle** sub-tab — not IVF history — is the one showing) →
+`[data-cycle-block]` check (the Treatment Plan tab's cycle block, also not
+present here) → `renderPresPanel()`, the FULL panel rebuild. Since neither
+of the two scoped-repaint checks ever matches on the IVF history sub-tab,
+every keystroke there fell straight through to the full rebuild —
+`renderPresPanel()`'s own `phoneFull` branch stamps `el.scrollTop = 0` on
+every call while a script panel is open (see its own code comment, "every
+width now" — not just phone), which is the exact scroll-jump she reported.
+
+**Fix — reuse the exact precedent already built one day earlier for the
+same class of bug.** `presAssessTabRefresh()` (built 2026-09-24 for "when
+switching Assessment tabs, the screen jumps to the top") swaps
+`#presAssessHost`, which wraps EVERY Assessment sub-tab — Photos /
+Constitution / Checklist / Cycle / IVF history / Appointments — not just
+Cycle. `phCycleRerender()`'s fallback chain now tries it right after
+`presCycleTabRefresh()` and before the `[data-cycle-block]`/full-rebuild
+fallbacks — this fixes IVF history specifically, and as a side effect
+covers Photos/Constitution/Checklist/Appointments too if anything on those
+tabs ever routes through this same dispatcher.
+
+**A second, disclosed precaution taken alongside it.** An IVF history
+edit on a live-linked row's own `when` (retrieval) or transfer date IS the
+plan's clinic milestone date — `phTpMilestoneDate` reads `row.when`
+directly off the linked collection row — so editing it can move the plan's
+live/current phase the exact same way a period-log already can. The band
+subtitle (`#presBandSub`, "IVF Protocol · Post-OPU") sits OUTSIDE
+`#presAssessHost`, so a scoped repaint of the host alone would leave it
+stale after exactly this kind of edit. `presCycleTabRefresh()` already
+takes this same precaution for its own scope; the new branch calls
+`presBandSubRefresh()` right after `presAssessTabRefresh()` succeeds, for
+the same reason.
+
+**Verified against the real, running app in the sandbox, not a
+reimplementation** (the login gate blocks a fully-booted click-through,
+same limitation as most batches in this file). Built a synthetic patient
+(`PRESC.items` entry + `phPatientRec`), an IVF Protocol plan via
+`phTpNewPlan("cycle_ivf")`, manually created the `#presPanel` element the
+pre-login DOM never mounts, and — after finding and fixing two blockers in
+sequence (`presStageForId` must be set alongside `presStage` or the next
+`renderPresPanel()`'s `presFurthestStageFor` silently overwrites
+`presStage`; `#presPanel` itself needed manual creation) — got a REAL
+`renderPresPanel()` call to build genuine `#presAssessHost` content, then
+pushed a real synthetic egg-collection row (`rec.ivfCycles`, the same
+shape the real `data-ivf-add-collection` handler creates) and opened its
+fold. With the script panel's `scrollTop` forced to `500` (simulating a
+scrolled-down state) and the real global `renderPresPanel` monkey-patched
+as a spy: editing the row's Clinic field (`row.clinic = "NEW CLINIC
+VALUE"`, `savePharmacy()`, `phCycleRerender()`) left `renderPresPanel`
+uncalled, left `scrollTop` at `500` (not reset to `0`), and the DOM's
+`data-ivf-field="...:clinic"` input correctly showed the new value —
+confirming the scoped-repaint path now intercepts and the full rebuild
+never runs. Console clean throughout (`presBandSubRefresh()` ran with no
+error in this synthetic context). Synthetic patient/script/DOM scaffolding
+all removed afterward — confirmed absent from `PRESC.items` and
+`PHARMACY.patients`.
+
+`lcm-build` `20260925-100000`, `sw.js` `lcm-20260925-ivfhist-scrolljump-fix`.
