@@ -8641,3 +8641,83 @@ visual check. Committed to `session-a`, not yet pushed to `main` (the 4pm
 Sydney job does that, or her explicit "push live").
 
 `lcm-build` `20260925-030000`, `sw.js` `lcm-20260925-ms-cadence-picker`.
+
+## Cycle-day calculator silently refused today's date — a frozen clock, fixed live (her report 2026-09-25, "knowing cycle day is not working")
+
+Her report, with a screenshot of the "Know her cycle day instead?"
+calculator: **"knowing cycle day is not working — make mock."** Per this
+project's own standing "mock before build" rule, investigated first and
+built a real interactive 3-option mock (Option A same-as-today-but-fixed,
+B answer shown inline, C both inline AND the calendar jumps/rings) rather
+than silently patching it. She confirmed **"option c"** after two rounds
+of friction getting the mock to actually render/respond for her (a plain
+pasted link doesn't surface an Artifact — `Artifact action:"open"` does;
+and once open, she still couldn't click anything in it — worked around by
+opening the same mock directly in the shared built-in Browser pane
+instead, which she could interact with).
+
+**Root cause, confirmed by reading the code, not guessed.** `TODAY`
+(index.html ~15525) is computed ONCE at script boot
+(`const TODAY = (() => new Date(...))()`) and deliberately never updates —
+correct for the hundreds of call sites that want "the day this tab
+loaded" as a stable reference. The cycle-day calculator
+(`phCycleCdCalcHtml`/the `cdcalc-go` click handler) was one of the few
+places that actually needed the REAL current day: its date input's `max`
+attribute and its "is this date in the future?" validation both read
+`TODAY` directly. On a tab left open since before midnight, typing in
+today's REAL date compared as "after" the stale, yesterday-dated `TODAY`
+— the validation's `if (!dateOk || !(cd >= 1 && cd <= 60)) return;` then
+bailed out with a bare `return` and zero user-facing feedback. Same class
+of bug already found and fixed once for the Appointments "now-line"
+(`phApptCalNowTick`, 2026-09-18) — never carried over to this calculator.
+
+**Fix.** A new `phLiveToday()` helper (declared right beside `TODAY`,
+with a comment explaining the two must never be confused) returns a fresh
+`new Date()` every call — `TODAY` itself is untouched, so nothing else in
+this 68k-line file is affected. The calculator's date `max`, its default
+date seed (on open and on the two input-change handlers), and its
+validation in the `cdcalc-go` handler all switched from `TODAY` to
+`phLiveToday()`. The silent `return` on invalid input is gone — three
+distinct, visible messages now show right in the calculator box: "Pick a
+date.", "That date is after today — pick an earlier date.", "Cycle day
+needs to be a whole number between 1 and 60." A fresh edit to either
+field clears any stale error/result from the previous attempt, so nothing
+lingers confusingly.
+
+**Option C, built as she picked it — the answer inline AND the calendar
+ring, never one without the other.** On a valid compute, the box now
+shows "Day 1 was 3 Sep 2026 — ringed below." directly under the fields
+(new `.ph-cyc-cdcalc-result` line, using the app's existing `phShortDate`
+label format) AND still calls the pre-existing `phCycleOpenDayPop` (the
+same log-period popover a direct day-tap already uses) with the computed
+date, plus scrolls the strip to the right week — that half of Option C
+already existed in the original code and needed no change, only the
+inline sentence was new. The calculator deliberately stays OPEN after a
+successful compute now (the original code closed it) — closing it would
+hide the very sentence Option C asks for.
+
+**Verified end-to-end against the real, running app**, not a
+reimplementation: booted the actual `index.html` on a fresh local static
+server (this sandbox's own copy, isolated from her real deployed data),
+created a synthetic patient with cycle tracking, opened her real
+Assessment → Cycle tab, and drove the calculator directly. `phLiveToday()`
+correctly returns the real current date, matching `new Date()` exactly.
+With date = today (live) and CD 23, the calculator correctly computed
+2026-09-03, showed "Day 1 was 3 Sep 2026 — ringed below.", opened the
+popover at the right date with `approx: true`, and scrolled the strip 3
+weeks back — the popover state, the inline text and the strip offset were
+all read back and checked individually, not just eyeballed. With a
+future-dated input (tomorrow) the correct "after today" error appeared
+instead of a silent no-op; with a blank cycle-day field the correct
+"whole number between 1 and 60" error appeared. The date input's `max`
+attribute read the live date, not a frozen one. Confirmed a clean console
+throughout. (One unrelated pre-existing crash was hit and worked around
+while wiring up the synthetic test patient — `renderPresList`'s `isDraft`
+helper reads `t.name`, not `t.patient`, on a `PRESC.items` row; adding a
+`name` field alongside `patient` on the synthetic record avoided it. Not
+part of this fix's scope, not touched, but worth flagging: a script
+created some other way than the app's own "+ New patient" flow could hit
+this if it never sets `.name`.) Synthetic test patient/script removed
+from the sandbox afterward, confirmed gone via a direct re-check.
+
+`lcm-build` `20260925-050000`, `sw.js` `lcm-20260925-cycleday-calc-livetoday`.
