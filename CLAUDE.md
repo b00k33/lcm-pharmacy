@@ -10171,3 +10171,82 @@ removed afterward — confirmed `stillPatient: false`, `prescCount: null`
 prior batches). Viewport reset to the desktop preset.
 
 `lcm-build` `20260925-290000`, `sw.js` `lcm-20260925-cycletess-nocalc`.
+
+## "when i click on calendar i do not want widget below calendar to appear" — the period-start popover moved off the calendar into the bar column too (2026-09-25)
+
+A third round on the same complaint family. Her screenshot showed the
+Treatment Plan tab's Cycle block (unfolded, "CYCLE Day 21 Luteal · period
+5 Sep 2026 · next in 8 d") with day 10 ringed and a full "Period started
+Thu 10 Sep 2026" card (Flow chips, Pain chips, Estimate tick, Log
+period/Cancel) sitting directly below the calendar grid, growing the
+card's height every time a day was tapped.
+
+**Traced, not guessed — a different mechanism from the two prior fixes
+today.** Those two both concerned `phCycleCdCalcHtml` (the "Know her
+cycle day instead?" calculator) and `phTpCycleBlockHtml`'s own `links`
+div. This is a THIRD, independent piece: `phCycleStripHtml` renders
+`phCyclePopHtml(phCyclePop)` — the period-START popover, opened by
+tapping a bare calendar day via `data-cycle-day`/`phCycleOpenDayPop` —
+unconditionally inline, right after the day grid, inside the strip's own
+returned markup (`${selKey && phCyclePop.host !== "hist" ?
+phCyclePopHtml(phCyclePop) : ""}`). Unlike the calculator, this render
+was never gated by the pre-existing `bare` flag at all — `bare` only ever
+suppressed the calculator/legend/status, so `phTpCycleBlockHtml` (the
+ONLY caller that passes `bare: true`) still got this popover dumped
+inline under its calendar every time, regardless of the two earlier fixes
+today.
+
+**Fix, same "put it under the bar" principle a third time.** Suppressed
+the inline pop in `phCycleStripHtml` whenever `bare` is set
+(`${!bare && selKey && ...}`) — confirmed by grep that `bare: true` has
+exactly one call site in the whole file (`phTpCycleBlockHtml`), so this
+can't regress any other caller (Today's Timeline, the Fertility door
+popup, the Assessment tab's tessellated view all pass no `bare`, unchanged).
+`phTpCycleBlockHtml` now computes `dayPop` once (`phCyclePop.name ===
+name && phCyclePop.host !== "hist" ? phCyclePopHtml(phCyclePop) : ""`)
+and renders it inside `.side`, right after `links` — across ALL THREE of
+the block's return branches (populated, "no period logged yet", and the
+`cycleOn === false` "not tracking" state), since the calendar's day-tap
+mechanism is reachable from every one of them. Mutually exclusive with
+the per-day signs popover (`phCycleSignPopHtml`) by construction, via the
+same-day mutex fix already shipped earlier — only one of the two can ever
+be open at once, so `.side` never shows both stacked.
+
+**No new repaint plumbing needed.** `phCycleStripRefresh(nm)` (already
+called by the `data-cycle-day` click handler after
+`phCycleOpenDayPop`) already re-renders the WHOLE `phTpCycleBlockHtml`
+block first, for any `[data-cycle-block]` wrapper matching the name — the
+generic `[data-cycle-strip]` patch that follows explicitly skips any
+strip nested inside a `[data-cycle-block]`. So the existing repaint call
+already reaches the new `.side` content with zero changes to the
+refresh function itself.
+
+**Verified against the real, running app in the sandbox** (a fresh tab
+navigated past the login overlay via `.click()` on the sidebar's
+prescriptions nav button, since `.click()` invokes handlers directly
+without hit-testing and so isn't blocked by the overlay's high z-index —
+worth remembering for future sandbox setup in a cold tab): built a real
+synthetic cycle-tracked patient on the ACTUAL "Natural fertility" template
+(`phTpNewPlan("natural")` — note the real template id is `"natural"`, not
+`"cycle_natural"`, which silently produces a blank untemplated plan
+instead and was caught mid-test when the cycle block vanished after
+clearing `cycle.lmp`, since the untemplated plan only showed the block via
+a DIFFERENT, `lmp`-requiring fallback path (`cycleAlsoShow`); switching to
+the real template id fixed the test, not the code). Confirmed via real
+dispatched clicks against the actual delegated handlers, for all three
+branches: before a click, neither `.cal` nor `.side` contains a
+`.ph-cyc-pop`; after a real day-tap, `.cal` still has none and `.side`
+does — checked with the populated branch (a real logged period + bar),
+the "no period logged yet" empty state, and the `cycleOn === false`
+"not tracking" state. Also fronted a real screenshot (the login overlay's
+`display` was temporarily set to `none` for the capture only, then
+restored — no data touched) confirming visually: tapping day 24 rings
+it, the calendar stays clean, and the "Period started Mon 24 Aug 2026"
+card renders under the phase bar in the right column, exactly matching
+the fix the two prior same-day entries already established for the
+calculator and the links. Synthetic "Zz Cal Check2" patient (`PRESC.items`
+entry `zzcal2`) fully removed afterward — confirmed `stillPatient: false`,
+`prescCount: 4` (back to its pre-test count). Login overlay restored,
+viewport left at the desktop default (never resized this round).
+
+`lcm-build` `20260925-300000`, `sw.js` `lcm-20260925-daypop-under-bar`.
