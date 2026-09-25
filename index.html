@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260925-120000">
+<meta name="lcm-build" content="20260925-130000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -7542,6 +7542,7 @@
     flex: 1 1 100%; min-height: 32px; padding: 4px 10px; border-radius: 8px;
     border: 1px solid var(--ph-line); background: var(--ph-paper); font-size: 12px;
   }
+  #pharmacyPage .ph-hx-presets { flex: 1 1 100%; display: flex; flex-wrap: wrap; gap: 4px; }
   @media (max-width: 640px) {
     #pharmacyPage .ph-hx-modal { padding: 0; }
     #pharmacyPage .ph-hx-card { width: 100%; height: 100%; max-height: 100%; border-radius: 0; }
@@ -29897,6 +29898,16 @@
         }
         return;
       }
+      const hxPresetBtn = e.target.closest("[data-hx-notepreset]");
+      if (hxPresetBtn) {
+        const rec = phPatientRec(presHxScreenName);
+        if (!rec) return;
+        const i = hxPresetBtn.dataset.hxNotepreset.lastIndexOf(":");
+        const k = hxPresetBtn.dataset.hxNotepreset.slice(0, i), label = hxPresetBtn.dataset.hxNotepreset.slice(i + 1);
+        phHxNotePresetToggle(rec, k, label);
+        savePharmacy(); renderHxScreen();
+        return;
+      }
       if (e.target.closest("[data-hx-notneeded]")) {
         const rec = phPatientRec(presHxScreenName);
         if (!rec) return;
@@ -44228,6 +44239,26 @@ or changing anything in Cliniko.
     if (v) rec.historyNotes[k] = v; else delete rec.historyNotes[k];
     rec.historyUpdatedAt = Date.now();
   }
+  // Quick-pick presets for a "yes" row's note (her ask 2026-09-25: "give
+  // option to select diabetes type 1 or 2"). A chip TOGGLES its label into
+  // the note's plain free text -- never a separate field, so the note stays
+  // the one place a fuller answer ("Type 2, diagnosed 2019") lives, and any
+  // preset can still be edited or removed by hand. Same "controlled list +
+  // always a typed escape hatch" idiom this app uses everywhere else
+  // (PH_TP_SYM_PRESETS, PH_TP_OBJ_MMT_LIB, PH_TP_FORMULA_ACTIONS).
+  const PH_HX_NOTE_PRESETS = {
+    diabetes: ["Type 1", "Type 2"],
+  };
+  function phHxNoteHasPreset(note, label) {
+    return String(note || "").split(",").map(s => s.trim().toLowerCase()).includes(label.toLowerCase());
+  }
+  function phHxNotePresetToggle(rec, k, label) {
+    const cur = phHxNote(rec, k);
+    const parts = cur.split(",").map(s => s.trim()).filter(Boolean);
+    const has = phHxNoteHasPreset(cur, label);
+    const next = has ? parts.filter(p => p.toLowerCase() !== label.toLowerCase()) : [label, ...parts];
+    phHxSetNote(rec, k, next.join(", "));
+  }
   // one shared shape for "where is this patient up to" -- the summary
   // block, the screen's header progress bar, and the Prescriptions-list
   // filter/count (STEP 5) all read from this SAME function so they can
@@ -44568,11 +44599,13 @@ or changing anything in Cliniko.
         ${open ? rows.map(([k, label]) => {
           const val = phHxVal(rec, k);
           const note = phHxNote(rec, k);
+          const presets = val === "yes" ? PH_HX_NOTE_PRESETS[k] : null;
           return `<div class="ph-hx-qrow">
             <span class="ph-hx-qlabel">${esc(label)}</span>
             <span class="ph-hx-seg" role="radiogroup" aria-label="${esc(label)}">
               ${PH_MEDHX_STATES.map(st => `<button type="button" class="ph-hx-statebtn ${st.v}${val === st.v ? " on" : ""}" data-hx-set="${k}:${st.v}" aria-pressed="${val === st.v ? "true" : "false"}">${st.label}</button>`).join("")}
             </span>
+            ${presets ? `<span class="ph-hx-presets">${presets.map(p => `<button type="button" class="ph-ck-chip${phHxNoteHasPreset(note, p) ? " on" : ""}" data-hx-notepreset="${k}:${esc(p)}">${esc(p)}</button>`).join("")}</span>` : ""}
             ${val === "yes" ? `<input type="text" class="ph-hx-note" data-hx-note="${k}" value="${esc(note)}" placeholder="Optional note…" aria-label="Note for ${esc(label)}">` : ""}
           </div>`;
         }).join("") : ""}
@@ -47254,9 +47287,20 @@ or changing anything in Cliniko.
     const before = sentence.slice(Math.max(0, m.index - 40), m.index);
     return PH_HX_PASTE_NEG_RE.test(before);
   }
+  // a match against PH_HX_PASTE_RULES already tells us WHICH question -- for
+  // a question with its own PH_HX_NOTE_PRESETS (diabetes: Type 1/Type 2),
+  // pull the specific answer out of the SAME sentence too, so applying a
+  // pasted referral fills the note as well as ticking Yes, not just one.
+  const PH_HX_PASTE_DETAIL = {
+    diabetes: sen => {
+      if (/\bt1dm\b|type\s*(1|one)\s*diabet/i.test(sen)) return "Type 1";
+      if (/\bt2dm\b|type\s*(2|two)\s*diabet|gestational diabet|\bgdm\b/i.test(sen)) return "Type 2";
+      return null;
+    },
+  };
   function phHxParseNote(text, rec) {
     const raw = String(text || "").replace(/\r/g, "").trim();
-    const found = new Map();   // key -> evidence
+    const found = new Map();   // key -> {why, detail}
     const sentences = raw.split(/(?<=[.;!?\n])\s+|\n+/).map(x => x.trim()).filter(Boolean);
     sentences.forEach(sen => {
       const family = PH_HX_PASTE_FAMILY_RE.test(sen);
@@ -47266,7 +47310,7 @@ or changing anything in Cliniko.
         if (!family && !phIsFemale(rec) && PH_HX_ALL_ITEMS.some(it => it.k === k && PH_HX_FEMALE_GROUPS.has(it.group))) return;
         const m = rules[k].exec(sen);
         if (!m || phHxPasteNegated(sen, m)) return;
-        found.set(k, sen.length > 90 ? sen.slice(0, 88) + "…" : sen);
+        found.set(k, { why: sen.length > 90 ? sen.slice(0, 88) + "…" : sen, detail: PH_HX_PASTE_DETAIL[k] ? PH_HX_PASTE_DETAIL[k](sen) : null });
       });
     });
     const cycle = {};
@@ -47285,7 +47329,7 @@ or changing anything in Cliniko.
     if ((m = /(?:trying|ttc|conceiv\w*|attempting)\D{0,30}?(\d+)\s*(months?|mths?|years?|yrs?)/i.exec(raw)) || (m = /(\d+)\s*(months?|mths?|years?|yrs?)\D{0,20}(?:trying|ttc|of trying)/i.exec(raw))) {
       const n = parseInt(m[1], 10); if (n >= 0) cycle.ttcMonths = /y/i.test(m[2]) ? n * 12 : n;
     }
-    return { raw, history: Array.from(found, ([k, why]) => ({ k, label: PH_HX_LABEL[k] || k, family: k.startsWith("fh_"), why })), cycle };
+    return { raw, history: Array.from(found, ([k, ev]) => ({ k, label: PH_HX_LABEL[k] || k, family: k.startsWith("fh_"), why: ev.why, detail: ev.detail })), cycle };
   }
   function phHxPasteBoxHtml(rec) {
     const p = phHxPaste;
@@ -47303,12 +47347,12 @@ or changing anything in Cliniko.
     const cyc = Object.entries(d.cycle);
     const cycLabel = ([k, v]) => k === "cycleLen" ? `Cycle length ${v} days` : k === "flowIntensity" ? `Flow: ${v}` : k === "pain" ? `Period pain: ${v}` : k === "regular" ? (v ? "Regular cycles" : "Irregular cycles") : k === "ttcMonths" ? `Trying for ${v} month${v === 1 ? "" : "s"}` : `${k}: ${v}`;
     const nothing = !d.history.length && !cyc.length;
-    const row = (id, label, why, already) => `<label class="ph-hx-paste-row${already ? " already" : ""}"><input type="checkbox" data-hx-paste-tick="${esc(id)}"${already ? "" : " checked"}> <span><b>${esc(label)}</b>${already ? ` <em>already yes</em>` : ""}${why ? `<span class="why">${esc(why)}</span>` : ""}</span></label>`;
+    const row = (id, label, why, already, detail) => `<label class="ph-hx-paste-row${already ? " already" : ""}"><input type="checkbox" data-hx-paste-tick="${esc(id)}"${already ? "" : " checked"}> <span><b>${esc(label)}${detail ? ` <span class="why">→ ${esc(detail)}</span>` : ""}</b>${already ? ` <em>already yes</em>` : ""}${why ? `<span class="why">${esc(why)}</span>` : ""}</span></label>`;
     const own = d.history.filter(h => !h.family), fam = d.history.filter(h => h.family);
     return `<div class="ph-cpaste ph-hx-paste">
       ${nothing ? `<p class="ph-cpaste-none">Nothing in that matched the checklist or the cycle questions — the text will still be kept in her History notes.</p>` : `
-      ${own.length ? `<div class="ph-hx-paste-h">Her history — tick what to record as <b>Yes</b></div>${own.map(h => row("hx:" + h.k, h.label, h.why, phHxVal(rec, h.k) === "yes")).join("")}` : ""}
-      ${fam.length ? `<div class="ph-hx-paste-h">Family history</div>${fam.map(h => row("hx:" + h.k, h.label, h.why, phHxVal(rec, h.k) === "yes")).join("")}` : ""}
+      ${own.length ? `<div class="ph-hx-paste-h">Her history — tick what to record as <b>Yes</b></div>${own.map(h => row("hx:" + h.k, h.label, h.why, phHxVal(rec, h.k) === "yes", h.detail)).join("")}` : ""}
+      ${fam.length ? `<div class="ph-hx-paste-h">Family history</div>${fam.map(h => row("hx:" + h.k, h.label, h.why, phHxVal(rec, h.k) === "yes", h.detail)).join("")}` : ""}
       ${cyc.length ? `<div class="ph-hx-paste-h">Cycle</div>${cyc.map(([k, v]) => row("cyc:" + k, cycLabel([k, v]), "", false)).join("")}` : ""}`}
       <p class="ph-hx-paste-note">The whole note is also saved, word for word, under History notes.</p>
       <div class="ph-cpaste-acts">
@@ -47322,7 +47366,7 @@ or changing anything in Cliniko.
     const p = phHxPaste; if (!p || !p.parsed || !rec) return 0;
     const ticked = new Set(Array.from(document.querySelectorAll("[data-hx-paste-tick]")).filter(c => c.checked).map(c => c.dataset.hxPasteTick));
     let n = 0;
-    p.parsed.history.forEach(h => { if (ticked.has("hx:" + h.k) && phHxSet(rec, h.k, "yes")) n++; });
+    p.parsed.history.forEach(h => { if (ticked.has("hx:" + h.k) && phHxSet(rec, h.k, "yes")) { n++; if (h.detail) phHxNotePresetToggle(rec, h.k, h.detail); } });
     const cyc = p.parsed.cycle;
     if (Object.keys(cyc).some(k => ticked.has("cyc:" + k))) {
       rec.cycle = Object.assign({ cycleLen: 28, flowDays: 5, flowIntensity: "moderate", pain: "none", regular: true }, phCycleFor(rec) || {});
