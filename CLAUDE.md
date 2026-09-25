@@ -9442,3 +9442,93 @@ Synthetic patient, plan, sessions and appointment all removed afterward,
 confirmed absent via a direct re-check.
 
 `lcm-build` `20260925-190000`, `sw.js` `lcm-20260925-tpplan-declutter`.
+
+## IVF history — order fixed, frozen count promoted to a stepper tile, a patient-level frozen bank (her ask 2026-09-25, "improve workflow and ui, egg collection/transfers organised by date. make the frozen egg/embryo marker easier to manage" + "mock before pushing")
+
+Sent with a screenshot of the Treatment Plan tab's IVF history section
+("2 egg collections · 1 transfer", an undated "no date yet [THIS PLAN]"
+collection sitting ABOVE a real "2024" freeze). Investigated the real code
+first, found two concrete, separate root causes, built and verified a real
+interactive mock (three options — A/B/C) before touching anything, per her
+own explicit instruction. She picked **Option C**.
+
+**Root cause 1 — "not organised by date".** `phIvfSortKey` returned bare
+`""` for an undated round, and empty string sorts BEFORE every real date
+string under `localeCompare` — so an in-progress round with nothing typed
+in yet always read as the OLDEST thing on record, not the newest/current
+one. Fixed: an empty date now returns the sentinel `"9999-99-99"`, which
+sorts LAST — an undated round now reads as "now", the way she actually
+uses it. Both `phIvfCyclesSorted` (the collections list) and the
+transfers list (sorted by the same key on `t.date`) share this one
+function, so the fix reaches both tables at once. Checked this doesn't
+regress `phIvfDateProximityDays`'s own date parsing (the sentinel matches
+the day-level regex but produces an `Invalid Date`, correctly caught by
+`isNaN` and falling through to its existing null-match behaviour).
+
+**Root cause 2 — "hard to manage".** `phIvfFrozenRemaining(row)` was
+always PER-ROUND only — nothing anywhere summed it across a patient's
+whole IVF history, so seeing her real total meant opening every card by
+hand and adding it up herself. New `phIvfFrozenTotal(rows)` sums
+`phIvfFrozenRemaining` across every round — same "computed, never typed"
+rule as the function it wraps.
+
+**Built, Option C:**
+- The Frozen field is promoted out of the plain seven-number funnel row
+  into its own blue-tinted **stepper tile** (`phIvfFrozenTileHtml`) — a
+  `−`/`+` pair flanking the SAME `data-ivf-field="rowId:frozen"` input
+  every other funnel cell already uses (typing a number straight in still
+  works; the buttons are a convenience layered on the same write path,
+  not a second one), plus a "still frozen N" sub-label once a value is
+  set. New `data-ivf-frozen-step="rowId:delta"` click handler, same
+  pattern as every other IVF click handler (`phCycleTargetRec()` →
+  mutate → `savePharmacy()` → `phCycleRerender()`), clamped at 0.
+- A new **Frozen bank** panel (`phIvfFrozenBankHtml`) renders above the
+  two collections/transfers tables whenever at least one round has a
+  frozen count on it — one row per such round (date · clinic · "N left" /
+  "all used", `phIvfFrozenRemaining`), plus a "Total banked now" figure
+  (`phIvfFrozenTotal`). Tapping a row OPENS (never toggles closed) that
+  round's own detail card via a new `data-ivf-bank-open="rowId"` handler
+  — unconditional open, since a tap from the bank panel means "take me to
+  this round," not "maybe hide it."
+
+**Disclosed judgment calls:**
+- Kept the typed `data-ivf-field` input alive inside the stepper tile
+  (not buttons-only as the mock literally showed) — a known count like
+  "8" can still be typed in one go rather than requiring 8 taps.
+- No scroll-into-view on a bank-row tap — it opens the card in place;
+  she's asked to weigh in if she'd rather it scrolled the card into view
+  too.
+- The mock's year-group divider on the collections list was NOT carried
+  into the real build — not part of what Option C's chat description
+  actually specified, and fragile against her free-typed dates (`"Mar
+  2025"`, `"10/09/2026"`) which don't reliably bucket into a year without
+  guessing.
+
+**Verified in the sandbox** against the real, running functions (not a
+reimplementation): `phIvfSortKey("")` → `"9999-99-99"`, sorting after
+`"2026-01"`; `phIvfFrozenRemaining`/`phIvfFrozenTotal` against synthetic
+rows (6 frozen − 2 used = 4; two rounds summing to 7). Built a real
+synthetic patient through the actual UI (New patient → IVF Protocol
+plan → Profile → IVF history), added a real egg-collection round: the
+stepper tile rendered correctly, `−`/`+` clicks correctly moved
+6→5→6 with the bank total tracking live, a bank-row tap correctly opened
+(and stayed open on a second tap) the round's own card, a transfer marked
+`type:"frozen"` with `count:6` correctly zeroed the remaining count and
+flagged the row `.used` (dimmed, "all used"), the bank panel correctly
+disappeared once no round had a frozen count, and a second round with its
+own date correctly summed into one running total while sorting BEFORE the
+undated round in every list (confirming the fix). One sandbox-only
+oddity, not a code defect: `dispatchEvent(new Event("input", ...))` on a
+number field didn't reliably reach the app's delegated document-level
+listener in this particular tab, while real dispatched `click` events
+worked correctly throughout and the identical handler logic, run
+directly, always produced the correct result — verified click-driven
+interactions (the actual shipped mechanism for the stepper/bank tap) via
+real dispatched clicks, and verified the input-write path's logic via
+direct function calls where the click path didn't apply. The
+Prescriptions live-search self-check (CLAUDE.md's own protected
+behaviour) passed before and after. Synthetic patient, plan and script
+all removed afterward, confirmed absent from `PHARMACY.patients`/
+`PRESC.items`.
+
+`lcm-build` `20260925-200000`, `sw.js` `lcm-20260925-ivfhist-frozenbank`.
