@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260925-300000">
+<meta name="lcm-build" content="20260925-310000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -8221,6 +8221,14 @@
   #pharmacyPage .ph-cycle-signpop .ph-ck-chip.on.flow-heavy { background: var(--ph-zero-deep); border-color: var(--ph-zero-deep); color: var(--ph-white); }
   #pharmacyPage .ph-cycle-signpop .ph-cyc-sexchip.on { background: var(--ph-blue); border-color: var(--ph-blue); }
   #pharmacyPage .ph-cycle-signpop select, #pharmacyPage .ph-cycle-signpop input[type=text] { font-size: 12px; }
+  #pharmacyPage .ph-cycle-signpop .ph-cyc-startlink { background: none; border: none; padding: 2px 0; font: inherit; font-size: 12px; font-weight: 700; color: var(--ph-herb-deep); cursor: pointer; text-align: left; display: flex; align-items: center; gap: 4px; }
+  #pharmacyPage .ph-cycle-signpop .ph-cyc-startlink:hover { text-decoration: underline; }
+  #pharmacyPage .ph-cycle-signpop .ph-cyc-startlink.marked { color: var(--ph-zero-deep); }
+  #pharmacyPage .ph-cycle-signpop .ph-cyc-startlink .chg { font-weight: 500; color: var(--ph-faint); }
+  #pharmacyPage .ph-cycle-signpop .ph-cyc-startbox { background: var(--ph-zero-tint); border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 8px; }
+  #pharmacyPage .ph-cycle-signpop .ph-cyc-startbox .acts { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  #pharmacyPage .ph-cycle-signpop .ph-cyc-startbox .acts .btn-save { min-height: 30px; padding: 4px 14px; font-size: 12px; }
+  #pharmacyPage .ph-cycle-signpop .ph-cyc-startbox .acts .tab-link.cancel { margin-left: auto; }
   /* the day-range legend (her ask 2026-09-11) -- the bar+legend language the
      plan's phase bar used to speak (that bar became the phase TAB strip on
      2026-09-10; this legend keeps the look on its own), so the width the bar
@@ -29736,6 +29744,25 @@
       const cycDay = e.target.closest("button[data-cycle-day]");
       if (cycDay && !cycDay.disabled) {
         const nm = cycDay.dataset.cycleStripName, dateKey = cycDay.dataset.cycleDay;
+        // her report 2026-09-25 ("when i click the calendar, i want the
+        // cycle details under the horizontal graph to appear") -- on the
+        // Treatment Plan tab's own bare calendar (data-cycle-strip-bare,
+        // phTpCycleBlockHtml's only caller of `bare:true`), a day tap now
+        // opens the SAME per-day signs popover the bar/day-table already
+        // open (with a period-start toggle merged into it, see
+        // phCycleSignPopHtml's startSection), instead of the narrower
+        // period-start-only phCyclePop. Every OTHER caller of
+        // phCycleStripHtml (Assessment tab, Today's Timeline, the Fertility
+        // door popup, the CD calculator, Period history's row edit) is
+        // untouched -- scoped to exactly the one screen her report was
+        // about, same as the three other "under the bar" fixes earlier today.
+        if (cycDay.closest('[data-cycle-strip-bare="1"]')) {
+          const closing = presCycleSignEdit && presCycleSignEdit.name === nm && presCycleSignEdit.dateKey === dateKey;
+          presCycleSignEdit = closing ? null : { name: nm, dateKey };
+          if (!closing) phCyclePop = null;
+          phCycleStripRefresh(nm);
+          return;
+        }
         phCycleOpenDayPop(nm, dateKey);
         phCycleStripRefresh(nm);
         return;
@@ -30025,6 +30052,36 @@
           phCycleSignSet(rec, signToggle.dataset.cycleSignDate, { [field]: val !== undefined ? (cur[field] === val ? "" : val) : !cur[field] });
         }
         phCycleRerender();
+        return;
+      }
+      // her report 2026-09-25 ("when i click the calendar, i want the
+      // cycle details under the horizontal graph to appear"): the per-day
+      // signs popover (phCycleSignPopHtml) now carries its own period-start
+      // toggle -- these four control it. All four act on the module-level
+      // presCycleSignEdit singleton, so none needs its own name/date data
+      // attributes.
+      const signStartToggle = e.target.closest("[data-cycle-signstart-toggle]");
+      if (signStartToggle && presCycleSignEdit) { presCycleSignEdit.startOpen = !presCycleSignEdit.startOpen; phCycleRerender(); return; }
+      const signStartApprox = e.target.closest("[data-cycle-signstart-approx]");
+      if (signStartApprox && presCycleSignEdit) { presCycleSignEdit.startApprox = !presCycleSignEdit.startApprox; phCycleRerender(); return; }
+      const signStartCancel = e.target.closest("[data-cycle-signstart-cancel]");
+      if (signStartCancel && presCycleSignEdit) { presCycleSignEdit.startOpen = false; phCycleRerender(); return; }
+      const signStartLog = e.target.closest("[data-cycle-signstart-log]");
+      if (signStartLog && presCycleSignEdit) {
+        const { name: nm, dateKey, startApprox } = presCycleSignEdit;
+        const rec = phPatientRec(nm);
+        const s = phCycleSignFor(rec, dateKey) || {};
+        // her per-day Flow scale (PH_CYCLE_DAYFLOW) is finer than the
+        // whole-period one (PH_CYCLE_FLOW) this commit writes -- mapped
+        // down rather than left unset, so marking the start from a day
+        // she's already logged flow on doesn't leave the whole-period
+        // intensity blank.
+        const flowToIntensity = { spotting: "light", light: "light", medium: "moderate", heavy: "heavy" };
+        const extra = { approx: !!startApprox };
+        if (s.flow && flowToIntensity[s.flow]) extra.flowIntensity = flowToIntensity[s.flow];
+        const comp = phCycleStripCommit(rec, dateKey, extra);
+        presCycleSignEdit.startOpen = false;
+        phCycleAfterLog(signStartLog, rec, comp, nm, dateKey);
         return;
       }
       const signZone = e.target.closest(".ph-cycle-dragzone");
@@ -52549,8 +52606,25 @@ or changing anything in Cliniko.
     const attrs = `data-cycle-sign-name="${esc(name)}" data-cycle-sign-date="${esc(dateKey)}"`;
     const popD = dateKey ? parseKey(dateKey) : null;
     const popDateLbl = popD ? `${DAY_SHORT[popD.getDay()]} ${popD.getDate()} ${MON_SHORT[popD.getMonth()]}` : "";
+    // her report 2026-09-25 ("when i click the calendar, i want the cycle
+    // details under the horizontal graph to appear"): merges the period-
+    // start marking action (previously only reachable via the narrower,
+    // separate phCyclePop) into this popover, so a calendar tap on the
+    // Treatment Plan tab's bare strip (see the data-cycle-day handler)
+    // can open this one popover and do both jobs -- log her signs for the
+    // day AND mark it as a period start, without losing either capability.
+    const startedHere = phBbtCycleStarts(rec).includes(dateKey);
+    const startOpen = !!presCycleSignEdit.startOpen;
+    const startToggleLbl = startedHere
+      ? `🩸 Period started this day <span class="chg">— change ▾</span>`
+      : (startOpen ? "🩸 Cancel — not a period start" : "🩸 Mark this as when her period started →");
+    const startSection = `<button type="button" class="ph-cyc-startlink${startedHere ? " marked" : ""}" data-cycle-signstart-toggle="1">${startToggleLbl}</button>${startOpen ? `<div class="ph-cyc-startbox">
+        <label class="ph-cyc-pop-approx"><input type="checkbox" data-cycle-signstart-approx="1"${presCycleSignEdit.startApprox ? " checked" : ""}> Estimate only <span class="faint">— not sure of the exact day</span></label>
+        <div class="acts"><button type="button" class="btn-save" data-cycle-signstart-log="1">${startedHere ? "Update" : "Log period start"}</button><button type="button" class="tab-link cancel" data-cycle-signstart-cancel="1">Cancel</button></div>
+      </div>` : ""}`;
     return `<div class="ph-cycle-signpop" role="group" aria-label="Signs for ${esc(popDateLbl)}">
       <div class="hd"><b>${cd ? `Day ${cd} · ` : ""}${esc(popDateLbl)}</b><button type="button" class="x" data-cycle-signpop-close="1" aria-label="Close">×</button></div>
+      ${startSection}
       <div class="row"><span class="k">Today's flow</span>${phCycleSelectChips("flow", PH_CYCLE_DAYFLOW, s.flow, attrs, flowChipClass)}</div>
       <div class="row"><span class="k">Pain</span>${phCycleSelectChips("pain", PH_CYCLE_DAYPAIN, s.pain, attrs)}</div>
       <div class="row"><span class="k">Discharge</span>${phCycleSelectChips("cm", PH_CYCLE_CM, s.cm, attrs)}</div>
