@@ -9990,3 +9990,46 @@ concurrent session's own testing): the dragzone-bar tap itself, and the
 Flow/Sex/Discharge rows the concurrent build added.
 
 `lcm-build` `20260925-260000`, `sw.js` `lcm-20260925-cycle-daytable-painfield`.
+
+## "There is double flow recording" — the two cycle popovers made mutually exclusive (2026-09-25)
+
+Her screenshot of the Treatment Plan tab's Cycle block: the per-day signs
+popover open for "Day 12 · Tue 15 Sep" (Today's flow/Pain/Discharge/Sex),
+stacked directly above the OLDER period-start popover open at the same
+time for "Period started Sun 6 Sep 2026" (its own, differently-scaled
+Flow/Pain) — two Flow pickers visibly on screen at once.
+
+**Root cause, traced not guessed.** `phCyclePop` (the calendar-day-tap
+period-start popover, `phCycleOpenDayPop`) and `presCycleSignEdit` (the
+bar/day-table-tap per-day signs popover, `phCycleSignPopHtml`) are two
+fully independent module-level state variables — neither's open/close
+handler ever touched the other. This is the unfinished half of her
+original approved mock's part 1 ("merge the two popovers into ONE,
+reachable from either a calendar-day tap or a bar tap") — the concurrent
+session's `99ac428`/`01c229f` wired the BAR to reach the per-day popover,
+but the calendar's own day-tap still opens the separate, older period-start
+one, and nothing stopped both from being open simultaneously.
+
+**Fix — mutual exclusivity, not a further merge.** Actually combining the
+two into one control is a bigger redesign than her literal complaint
+calls for (they log genuinely different things — a period START event vs.
+a day's signs) and wasn't asked for here. `phCycleOpenDayPop` now clears
+`presCycleSignEdit` the moment it opens `phCyclePop`; the `.ph-cycle-
+dragzone` bar handler and the day-table's `data-cycle-signday` handler
+both now clear `phCyclePop` the moment they open `presCycleSignEdit` (only
+on the "opening" branch — the existing toggle-closed branch is untouched).
+The Dashboard's cycle-chip jump (`data-ph-cyc-jump`, which pre-sets
+`presCycleSignEdit` to today when landing on a script) also clears
+`phCyclePop` for the same reason. Tapping any one of the three entry
+points now always closes whichever of the two was open before it.
+
+Verified via real dispatched clicks against the real functions in the
+sandbox (not a reimplementation): opening `phCyclePop` via
+`phCycleOpenDayPop` correctly cleared a pre-set `presCycleSignEdit`; a real
+click on a synthetic `.ph-cycle-dragzone` element correctly cleared a
+pre-set `phCyclePop` and opened `presCycleSignEdit`; a second click on the
+same spot correctly toggled it closed without touching `phCyclePop` (the
+`closing` guard). Clean console before/after. Synthetic test patient
+removed, confirmed absent.
+
+`lcm-build` `20260925-270000`, `sw.js` `lcm-20260925-cyclepop-mutex`.
