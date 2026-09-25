@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260925-040000">
+<meta name="lcm-build" content="20260925-050000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -8254,6 +8254,9 @@
   #pharmacyPage .ph-cyc-cdcalc { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 11.5px; color: var(--ph-faint); background: var(--ph-cream); border-radius: 8px; padding: 6px 8px; margin-bottom: 6px; }
   #pharmacyPage .ph-cyc-cdcalc .lbl { white-space: nowrap; }
   #pharmacyPage .ph-cyc-cdcalc .cancel { margin-left: auto; }
+  #pharmacyPage .ph-cyc-cdcalc-err { flex-basis: 100%; color: var(--ph-zero-deep); font-weight: 600; }
+  #pharmacyPage .ph-cyc-cdcalc-result { flex-basis: 100%; color: var(--ph-herb-deep); }
+  #pharmacyPage .ph-cyc-cdcalc-result b { font-weight: 700; }
   /* her ask 2026-09-15, "make calendar bigger" */
   #pharmacyPage .ph-cyc-grid { display: grid; grid-template-columns: 26px repeat(7, minmax(0, 1fr)); gap: 4px; }
   #pharmacyPage .ph-cyc-grid .h { font-size: 11px; font-weight: 700; color: var(--ph-faint); text-align: center; line-height: 16px; }
@@ -15523,6 +15526,16 @@
   const esc = s => String(s).replace(/[&<>"]/g, c => ESC_MAP[c]);
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   const TODAY = (() => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); })();
+  // TODAY is frozen at boot on purpose -- hundreds of call sites treat it as
+  // a stable "the day this tab loaded" reference. Anything that genuinely
+  // needs the REAL current day on a tab that's been open a while (a date
+  // picker's max, a "is this actually in the future" check) calls
+  // phLiveToday() fresh instead of reading TODAY and expecting it to move.
+  // Fixed 2026-09-25: the cycle-day calculator used TODAY for its date max
+  // and its future-date check, so a tab open since before midnight silently
+  // rejected typing in today's real date with no explanation -- see her
+  // "make mock" ask and phCycleCdCalcHtml/the cdcalc-go handler below.
+  function phLiveToday() { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); }
   const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
   const MON_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   // her "dashboard on a phone" spec (2026-08-27) STEP 2: "Thu 27 Aug" --
@@ -29466,7 +29479,7 @@
       if (cdcalcToggle) {
         const nm = cdcalcToggle.dataset.cycleCdcalcToggle;
         phCycleCdCalcOpen[nm] = !phCycleCdCalcOpen[nm];
-        if (phCycleCdCalcOpen[nm] && !phCycleCdCalc[nm]) phCycleCdCalc[nm] = { date: keyOf(TODAY), cd: "" };
+        if (phCycleCdCalcOpen[nm] && !phCycleCdCalc[nm]) phCycleCdCalc[nm] = { date: keyOf(phLiveToday()), cd: "" };
         phCycleStripRefresh(nm);
         return;
       }
@@ -29480,7 +29493,8 @@
       const cdcalcGo = e.target.closest("[data-cycle-cdcalc-go]");
       if (cdcalcGo) {
         const nm = cdcalcGo.dataset.cycleCdcalcGo;
-        const draft = phCycleCdCalc[nm] || {};
+        const draft = phCycleCdCalc[nm] || (phCycleCdCalc[nm] = { date: keyOf(phLiveToday()), cd: "" });
+        const today = phLiveToday(), todayKey = keyOf(today);
         // review-caught (2026-09-18): a plain parseInt() let stray input
         // through silently wrong instead of safely rejected -- "1e2" parses
         // to 1 (not 100, and not rejected), "13.5" truncates to 13 with the
@@ -29488,23 +29502,35 @@
         // content; a strict whole-number shape check closes it.
         const cdStr = String(draft.cd || "").trim();
         const cd = /^\d+$/.test(cdStr) ? parseInt(cdStr, 10) : NaN;
-        const dateOk = /^\d{4}-\d{2}-\d{2}$/.test(draft.date || "") && draft.date <= keyOf(TODAY);
-        if (!dateOk || !(cd >= 1 && cd <= 60)) return;
-        const dt = parseKey(draft.date);
-        dt.setDate(dt.getDate() - (cd - 1));
-        const dateKey = keyOf(dt);
-        if (dateKey > keyOf(TODAY)) return; // shouldn't happen given date<=today and cd>=1 -- guard anyway
-        // forceOpen: recomputing to the same date must always show/refresh
-        // the popover, never toggle it closed (review-caught -- see
-        // phCycleOpenDayPop's own comment). forceApprox: a date she counted
-        // BACK to from a stated cycle day is a recall, not an observed
-        // bleed -- defaults "Estimate only" on, same as she can for any
-        // other uncertain date; she can still untick it.
-        phCycleOpenDayPop(nm, dateKey, { forceOpen: true, forceApprox: true });
-        phCycleCdCalcOpen[nm] = false;
-        // bring the computed week into view so the highlighted cell shows too
-        const monday = d0 => { const x = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate()); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; };
-        phCycleStripOff[nm] = Math.max(0, Math.round((monday(TODAY) - monday(dt)) / (7 * 86400000)));
+        const dateShapeOk = /^\d{4}-\d{2}-\d{2}$/.test(draft.date || "");
+        // her report 2026-09-25 ("i can see it but i cant interact with it")
+        // traced to a real bug: this used to compare against the frozen
+        // TODAY constant, so a tab open since before midnight silently
+        // refused today's real date (it looked "in the future" to a stale
+        // clock) with a bare `return` and no message at all -- see the
+        // phLiveToday() comment above TODAY's own declaration.
+        if (!dateShapeOk) {
+          draft.err = "Pick a date."; draft.resultKey = null;
+        } else if (draft.date > todayKey) {
+          draft.err = "That date is after today — pick an earlier date."; draft.resultKey = null;
+        } else if (!(cd >= 1 && cd <= 60)) {
+          draft.err = "Cycle day needs to be a whole number between 1 and 60."; draft.resultKey = null;
+        } else {
+          const dt = parseKey(draft.date);
+          dt.setDate(dt.getDate() - (cd - 1));
+          const dateKey = keyOf(dt);
+          draft.err = null; draft.resultKey = dateKey;
+          // forceOpen: recomputing to the same date must always show/refresh
+          // the popover, never toggle it closed (review-caught -- see
+          // phCycleOpenDayPop's own comment). forceApprox: a date she counted
+          // BACK to from a stated cycle day is a recall, not an observed
+          // bleed -- defaults "Estimate only" on, same as she can for any
+          // other uncertain date; she can still untick it.
+          phCycleOpenDayPop(nm, dateKey, { forceOpen: true, forceApprox: true });
+          // bring the computed week into view so the highlighted cell shows too
+          const monday = d0 => { const x = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate()); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; };
+          phCycleStripOff[nm] = Math.max(0, Math.round((monday(today) - monday(dt)) / (7 * 86400000)));
+        }
         phCycleStripRefresh(nm);
         return;
       }
@@ -46228,15 +46254,17 @@ or changing anything in Cliniko.
     // no-repaint-mid-typing rule as the popover's Date row above.
     if (t.matches("[data-cycle-cdcalc-date]")) {
       const nm = t.dataset.cycleCdcalcDate;
-      const d = phCycleCdCalc[nm] || (phCycleCdCalc[nm] = { date: keyOf(TODAY), cd: "" });
+      const d = phCycleCdCalc[nm] || (phCycleCdCalc[nm] = { date: keyOf(phLiveToday()), cd: "" });
       const v = t.value;
-      if (/^\d{4}-\d{2}-\d{2}$/.test(v) && v <= keyOf(TODAY)) d.date = v;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(v) && v <= keyOf(phLiveToday())) d.date = v;
+      d.err = null; d.resultKey = null; // a fresh edit invalidates whatever the last "Find day 1" showed
       return;
     }
     if (t.matches("[data-cycle-cdcalc-cd]")) {
       const nm = t.dataset.cycleCdcalcCd;
-      const d = phCycleCdCalc[nm] || (phCycleCdCalc[nm] = { date: keyOf(TODAY), cd: "" });
+      const d = phCycleCdCalc[nm] || (phCycleCdCalc[nm] = { date: keyOf(phLiveToday()), cd: "" });
       d.cd = t.value;
+      d.err = null; d.resultKey = null;
       return;
     }
     // Pregnancy week tracker's own calculator fields -- same no-repaint-
@@ -51667,14 +51695,22 @@ or changing anything in Cliniko.
   // reviews the computed date in the same popover before logging it.
   function phCycleCdCalcHtml(name) {
     if (!phCycleCdCalcOpen[name]) return `<button type="button" class="tab-link ph-cyc-cdcalc-toggle" data-cycle-cdcalc-toggle="${esc(name)}">Know her cycle day instead? →</button>`;
-    const d = phCycleCdCalc[name] || (phCycleCdCalc[name] = { date: keyOf(TODAY), cd: "" });
+    const d = phCycleCdCalc[name] || (phCycleCdCalc[name] = { date: keyOf(phLiveToday()), cd: "" });
+    // her pick 2026-09-25, "option c" (shown a live A/B/C mock after her
+    // report "i cant interact with it"): the computed date shows right here
+    // AND the calendar jumps to ring it (phCycleOpenDayPop's popover,
+    // opened by the cdcalc-go handler above) -- never one without the other.
+    const foot = d.err ? `<div class="ph-cyc-cdcalc-err">${esc(d.err)}</div>`
+      : d.resultKey ? `<div class="ph-cyc-cdcalc-result">Day 1 was <b>${esc(phShortDate(d.resultKey))}</b> — ringed below.</div>`
+      : "";
     return `<div class="ph-cyc-cdcalc">
       <span class="lbl">On</span>
-      <input type="date" class="ph-cyc-in d" data-cycle-cdcalc-date="${esc(name)}" value="${esc(d.date)}" max="${keyOf(TODAY)}" aria-label="Date she reported her cycle day">
+      <input type="date" class="ph-cyc-in d" data-cycle-cdcalc-date="${esc(name)}" value="${esc(d.date)}" max="${keyOf(phLiveToday())}" aria-label="Date she reported her cycle day">
       <span class="lbl">she was cycle day</span>
       <input type="number" class="ph-cyc-in n" data-cycle-cdcalc-cd="${esc(name)}" min="1" max="60" value="${esc(d.cd)}" placeholder="13" aria-label="The cycle day she reported">
       <button type="button" class="tab-link" data-cycle-cdcalc-go="${esc(name)}">→ Find day 1</button>
       <button type="button" class="tab-link cancel" data-cycle-cdcalc-close="${esc(name)}">Cancel</button>
+      ${foot}
     </div>`;
   }
   function phCycleStripHtml(rec, name, opts) {
