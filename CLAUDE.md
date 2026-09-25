@@ -9139,3 +9139,48 @@ under it. If she still wants any of the deferred pieces, they're each a
 small, separately-scoped follow-up against the table as it stands today.
 
 `lcm-build` `20260925-140000`, `sw.js` `lcm-20260925-lifestylerow-split`.
+
+## Diabetes-style preset chips extended to Blood-thinning medication, Cancer, Thyroid condition (her confirmation 2026-09-25)
+
+Follow-on to the Diabetes Type 1/Type 2 build above. She confirmed via a
+structured question: extend the same mechanism to all three candidate
+fields flagged in that section, and accepted the proposed default wording
+as-is (Warfarin/Aspirin/Clopidogrel/Rivaroxaban/Apixaban for blood
+thinners; Active treatment/In remission/Past (cured)/Monitoring for
+cancer; Hypothyroid/Hyperthyroid/Hashimoto's/Graves' for thyroid).
+
+**Zero mechanism changes needed — the whole point of building it as data
+the first time.** `PH_HX_NOTE_PRESETS`/`PH_HX_PASTE_DETAIL` are both
+generic maps keyed by the checklist item's own key (confirmed by reading
+`phHxBodyHtml`'s row renderer and the `data-hx-notepreset` click handler
+before touching anything — both already read `PH_HX_NOTE_PRESETS[k]` for
+whichever key the row has, with no Diabetes-specific code anywhere). Adding
+the three new fields was purely two array/object literal extensions:
+- `PH_HX_NOTE_PRESETS` gained `blood_thinning_medication`, `cancer`,
+  `thyroid_condition` entries (the exact keys these three items already use
+  in `PH_HX_ALL_ITEMS`, confirmed by grep before writing the keys).
+- `PH_HX_PASTE_DETAIL` gained matching extractor functions — blood-thinner
+  drug names (including brand names: Plavix→Clopidogrel, Xarelto→
+  Rivaroxaban, Eliquis→Apixaban), cancer status phrasing (remission/active
+  treatment/cured-resolved/monitoring-surveillance), thyroid condition
+  names (Hashimoto's/Graves'/Hypothyroid/Hyperthyroid, checked in that
+  order so a sentence naming both the specific autoimmune condition and
+  the general hypo/hyper state resolves to the more specific one).
+
+**Verified directly against the real, running app** (window-exposed
+functions, not a reimplementation): `phHxNotePresetToggle` correctly
+adds/removes/replaces a preset on the Cancer field's note text (tested a
+3-toggle sequence: add "Active treatment" → toggle "Monitoring" alongside
+it → remove "Active treatment", each step read back correctly).
+`phHxParseNote` against a synthetic multi-condition paste ("on Warfarin
+for AF... known Hashimoto's... breast cancer, currently in remission")
+correctly extracted all three details in one pass, with the right `why`
+sentence and `label` for each. Negation correctly suppresses all three
+("No history of cancer. Not on any blood thinners. No thyroid issues
+reported." → zero hits, none of the three). `phHxBodyHtml` correctly
+renders chip rows for all three fields when their status is "yes", with
+the `.on` class correctly reflecting whatever's already in the note (a
+record with `cancer: "Monitoring"` shows the Monitoring chip on, Active
+treatment off).
+
+`lcm-build` `20260925-150000`, `sw.js` `lcm-20260925-hx-presets-extended`.
