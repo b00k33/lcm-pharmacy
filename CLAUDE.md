@@ -9532,3 +9532,68 @@ all removed afterward, confirmed absent from `PHARMACY.patients`/
 `PRESC.items`.
 
 `lcm-build` `20260925-200000`, `sw.js` `lcm-20260925-ivfhist-frozenbank`.
+
+## "+ Add a phase" gets a Follicular phase prep detour for IVF plans (her ask 2026-09-25, "make mock" → "yes, build it for real and push live")
+
+Her ask, from a screenshot of Sophie Taylor's IVF Protocol Grid ("Add a
+phase" showing only Blank phase / Acute illness): **"i sometimes need to
+treat patients leading up to frozen embryo transfer. that leadup is
+follicular phase prep. when i try to add phase, it doesnt have that."**
+
+**The content already existed — there was just no quick door onto it.**
+`PH_TP_PHASE.fetPrepNatural`/`.fetPrepMedicated` (built 2026-09-12 for the
+fresh/frozen transfer track switch) are exactly this — a lining-build
+phase leading up to a frozen transfer — but the only way to reach them was
+switching a plan's WHOLE track (`phIvfSetTrack`, a full phase-array
+rebuild), not a quick single-phase add on a plan that's already underway.
+`phTpDetourKindsFor` had no IVF Protocol branch at all.
+
+**Built as two new detour kinds**, following the exact same shape as
+every sibling detour (Flare/Crisis/Plateau/High-risk/Postpartum/Breech):
+`phTpDetourKindsFor` pushes `"fetprepnatural"`/`"fetprepmedicated"` for
+`plan.templateName === "IVF Protocol"`; `PH_TP_DETOUR_META` gets their
+label/description; the `data-tp-detour-own` dispatch handler's preset
+ternary gets two new branches reading `PH_TP_PHASE.fetPrepNatural`/
+`.fetPrepMedicated`. **Two buttons, not one** — shown as a real mock
+first, her approval covered the mock as shown (Natural timed to her own
+LH surge, Medicated timed to the clinic's estrogen schedule; she'd
+already shown, via the fresh/frozen track switch itself, that she wants
+to be asked which applies rather than have one guessed).
+
+Zero other code needed touching: the "its own phases" insertion mechanic
+(close + date the current phase, insert the ready-filled phase as current,
+continue the interrupted phase afterward) is generic across every kind
+already. The inserted phase's `label` is copied verbatim from
+`PH_TP_PHASE.fetPrepNatural/-Medicated.label` ("FET Prep — Natural"/
+"FET Prep — Medicated") — same wording already live and previously
+confirmed (2026-09-12), so `phIvfCurrentTrack`'s existing label-fallback
+lookup (`PH_TP_PHASE_KEY_OF_LABEL`, built for exactly this — a phase with
+no explicit `phaseKey` stamp) correctly reads a plan carrying one of these
+as "frozen" track, with no extra wiring.
+
+**Disclosed, not a bug**: activating this detour does NOT remove any
+now-irrelevant fresh-cycle phases still sitting later in the plan's array
+(Post-OPU/Pre-ET/Post-ET etc., if the plan hadn't already been switched to
+a frozen track) — same as every other detour, it only touches the current
+phase and inserts around it, trusting her to edit/delete/reorder anything
+downstream that no longer applies. Silently deleting other phases on her
+behalf would be a bigger, unrequested change.
+
+Verified against the real, running app in the sandbox (a local-only tab,
+confirmed no Supabase auth token present, per the standing rule against
+ever touching real cloud data): `phTpDetourKindsFor({templateName:"IVF
+Protocol"})` → `["acute","fetprepnatural","fetprepmedicated"]`, MSK/
+Pregnancy plans' own kinds unaffected (regression check). Built two real
+synthetic patients through the actual functions (`phPatientRec`/
+`phTpNewPlan("cycle_ivf")`/`phTpOpen`), opened the real full-screen plan
+modal, and drove the real rendered "+ Add phase" button + both new detour
+buttons via real dispatched clicks (not a reimplementation): both correctly
+showed in the panel with the exact mock wording; both correctly closed
+Menstruation (dated today), inserted the ready-filled FET-prep phase as
+current with the right aim/points/cadence/watch text, and queued
+"Menstruation (continued)" to resume after — the rest of the plan
+untouched. Clean console on a fresh boot. Both synthetic patients removed
+from `daybook-pharmacy` afterward, confirmed absent (`totalPatients: 0`
+after a reload).
+
+`lcm-build` `20260925-210000`, `sw.js` `lcm-20260925-fetprep-addphase`.
