@@ -9665,4 +9665,88 @@ extended to recognise the two new fields, correctly show a 🩸/💗 icon and a
 "Heavy flow"/"Unprotected sex" label line). Synthetic test patient removed
 afterward, confirmed absent.
 
+## Egg-collection date field — Year/Month pickers + "time unknown" (her synth22 ask 2026-09-25, "let me add an egg collection, dated by year/month, tick time unknown if the case" → shown mock, "i like b - push live")
+
+The IVF history egg-collection row's date field (`phIvfCollectionDetailHtml`'s
+`whenField`) was a free-text `<input>` ("e.g. Mar 2025 or 10/09/2026"). Her
+ask replaces it with real pickers, with an explicit way to say "this
+happened but I genuinely don't know when" — distinct from the existing
+"nothing typed in yet" state (empty `r.when`, already sentineled to sort
+last per the earlier same-day `phIvfSortKey` fix).
+
+**Shown a real interactive mock first** (per this project's standing "mock
+before pushing" rule) — two layouts built from the app's own real CSS
+tokens/markup (Option A: pickers + tick side by side, disabled-not-hidden
+when ticked; Option B: the tick leads, pickers hide behind it once ticked).
+Her pick: **B.**
+
+**Write format — still ONE string field, no new data on the record.**
+`phIvfWhenPickerHtml(r)` composes exactly what `phIvfDateLabel`/
+`phIvfSortKey` already read: month+year picked → `"YYYY-MM"` (unchanged
+format); year only, no month → a bare `"YYYY"`; the tick → the literal
+string `"unknown"`; neither → `""` (the existing "no date yet" state,
+untouched). No fourth field, no native `<input type="date">` (a native one
+still can't hold a month-only or year-only value, the same reason the
+original free-text field existed).
+
+**Three small extensions to the shared date functions, all additive:**
+- `phIvfDateLabel("unknown")` → `"date unknown"` — reads distinctly from
+  `phIvfDateLabel("")` → `""` (shown as "no date yet" by its own callers),
+  so a deliberate tick never looks the same as an untouched field.
+- `phIvfSortKey`: `"unknown"` sorts alongside empty (`"9999-99-99"`, sorts
+  last, reads as "now") — same reasoning as the empty-string sentinel
+  already fixed earlier the same day; a bare `"YYYY"` sorts as
+  `"YYYY-00-00"` (before any month of that year), replacing the old
+  behaviour where a bare year fell to raw-string comparison and could sort
+  *after* a same-year `"YYYY-MM"` entry purely by string-length luck.
+- `phIvfDateProximityDays` (the intake-matching helper) is unaffected in
+  behaviour — both `"unknown"` and a bare year now correctly degrade to "no
+  match" (their sort keys don't parse to a real `Date`), same as any other
+  unreadable text already did.
+
+**One disclosed judgment call, not asked separately.** `row.when` is a
+single string, so ticking "time unknown" after a month/year was already
+picked OVERWRITES it (composes to `"unknown"`, discarding the prior date) —
+the two states are mutually exclusive by construction, matching "a round is
+either dated or marked unknown, not both." Verified this is the actual
+behaviour, not incidental: re-selecting a fresh month/year after unticking
+starts from whatever the (now-re-rendered, blank) pickers show, not from
+memory of the discarded date.
+
+**New click/change handler** (`data-ivf-when-mo`/`-yr`/`-unk`, grouped by
+`data-ivf-when-group="rowId"`) sits beside the existing `data-ivf-field`
+handler in the same delegated `document` `"change"` listener — reads all
+three sibling controls together and writes the ONE composed string, never
+three partial writes. A live-linked row (the one the plan's own Egg
+retrieval date currently writes into) is unaffected — it still shows the
+locked, non-editable `<span>` exactly as before; the picker only replaces
+the editable case.
+
+Verified against the real, running app in the sandbox (this tab already
+carried her real local data past the login gate; built ONE synthetic
+patient/script, confirmed complete removal after — see below): the empty,
+dated (`"2025-03"`) and `"unknown"` states all render `phIvfWhenPickerHtml`
+correctly (pre-selected month/year, hidden/shown fields, ticked checkbox,
+"date unknown" label shown/hidden); mounted the real rendered markup inside
+`#pharmacyPage` and drove it with real dispatched `change` events (not a
+reimplementation) — picking a year alone wrote `"2025"`, adding a month
+wrote `"2025-03"`, ticking "time unknown" wrote `"unknown"`, unticking
+recomposed from whatever the (unrerendered, in this isolated test) pickers
+still showed; `phCycleRerender` fired once per write, confirmed via a
+temporary spy, then restored. `phIvfSortKey`/`phIvfDateLabel`/
+`phIvfDateProximityDays` all re-verified directly for every new state,
+including the sort-order check (`"" `/`"unknown"` last, `"2025"` before
+`"2025-03"` before `"2026-01-05"`) and the intake-proximity null-match
+guard. The synthetic patient (added via `phPatientRec`/`PRESC.items.push`,
+never through the real "+ New patient" UI flow) was removed from both the
+in-memory `PRESC.items` and the `daybook-pharmacy`/localStorage record
+afterward, confirmed absent by direct string search and by a full page
+reload showing a clean console (only the two known pre-existing icon-fetch
+errors) with `PRESC.items.length` back to its pre-test count. This change
+does not touch prescription search/list rendering, so the CLAUDE.md
+protected Prescriptions live-search behaviour was not separately
+re-exercised.
+
+`lcm-build` `20260925-230000`, `sw.js` `lcm-20260925-ivfwhenpicker`.
+
 `lcm-build` `20260925-220000`, `sw.js` `lcm-20260925-cycleday-flowsex`.
