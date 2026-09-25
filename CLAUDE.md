@@ -10352,3 +10352,47 @@ history) with zero horizontal overflow at 375px. Synthetic patient, script
 and appointments removed afterward, confirmed absent.
 
 `lcm-build` `20260926-000000`, `sw.js` `lcm-20260926-apphist-sidebyside`.
+
+## Egg retrieval / Embryo transfer date row removed from the plan tab (her ask 2026-09-26)
+
+Her literal instruction, on the exact row: "remove the egg retrieval /
+embryo transfer row." `presTpInlineEditorHtml` (the Profile → Plan tab's
+own page) no longer calls `phTpMilestoneRowHtml` or renders the plain
+`<input type="date">` pair it used to draw right under the Treatment
+Visits Plan table.
+
+**Re-verified before touching anything (the audit-snapshot-goes-stale
+lesson applies to my own prior plans, not just backlog notes)**: the old
+plan (from before this session's context compaction) worried that removing
+this row would strand `phTpMilestoneDate`/`-Sync`/`phTpCadenceDate`
+(retrieval/transfer-phrased cadence resolution, the phase cascade, and
+Communications' date-driven follow-ups) since `phIvfLinkedCollectionWritable`
+looked like this row's write handler was its ONLY caller. Re-checked
+against current source: it isn't, any more. The 2026-09-19 Clinic scans
+feature's own save handler (`data-tp-scan-save`) already calls the same
+`phIvfLinkedCollectionWritable` -- logging a scan for a round links it to
+the plan exactly the way typing a milestone date used to. So a round
+becomes plan-linked (and the retrieval/transfer dates start resolving)
+the moment she records a scan for it, which she'd naturally be doing
+across the stim cycle well before retrieval anyway -- no replacement UI
+was built, since one wasn't needed.
+
+**Scope**: only the live render path touched
+(`presTpInlineEditorHtml`, the page her screenshots are from).
+`phTpTabbedHtml`'s own copy of this row (line ~57580) was found to be
+DEAD CODE while investigating -- `phTpTabbedHtml` has exactly one caller
+(`phTpPlanBodyHtml`'s grid-mode branch), and `phTpPlanBodyHtml` itself has
+zero remaining callers anywhere in the file (the full-screen plan window,
+`renderTpScreen`, builds its own markup directly and hasn't called either
+function since the 2026-09-20 "one layout for every plan" rebuild). Left
+untouched -- a dead-code sweep wasn't what she asked for this turn.
+
+Verified live in the sandbox with a synthetic patient on the real "IVF
+Protocol" template: the row and its `[data-tp-milestone]` inputs are gone
+(confirmed via DOM query, not just a visual read), while the phase bar,
+Treatment Visits Plan table, Clinic scans section and IVF history fold all
+still render correctly directly underneath, with no visual gap or broken
+markup where the row used to sit. Synthetic patient and script removed
+afterward, confirmed absent.
+
+`lcm-build` `20260926-010000`, `sw.js` `lcm-20260926-milestone-row-removed`.
