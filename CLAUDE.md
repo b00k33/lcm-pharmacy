@@ -9361,3 +9361,84 @@ an unfiled case — both produce the exact text with zero `<button>`/chip
 markup. App boots clean, no console errors from the edit.
 
 `lcm-build` `20260925-180000`, `sw.js` `lcm-20260925-apptpop-phase-readonly`.
+
+## Treatment Plan tab decluttered — the Sessions table stops giving idle phases equal room, the Appointment History Phase select stops truncating, the phase-line drops its duplicate since/visits text (her ask 2026-09-25, "code3 code7 - use your expertise to improve this - too much empty space, help my workflow. make things that i need immediately stand out. things that are less important hideable or take up less space")
+
+Screenshot of an MSK plan's Treatment plan tab ("Headaches & migraines,"
+phase Acute — during an episode). Rendered the real page live in the
+sandbox (a synthetic patient on the actual `msk_headache` template,
+`presOpenScript`/`renderPresPanel` called directly, past the login gate —
+same established pattern as every other batch in this file) rather than
+diagnose from the screenshot alone, and found three concrete, independently
+fixable causes of the dead space — not one thing to redesign.
+
+- **The welded Sessions table (`phTpSessionLadderHtml`, Phase · Frequency ·
+  This week, phases as columns) gave every phase column the SAME width**
+  (`table-layout: fixed`, one bare `<col>` per phase) — so a phase that
+  hasn't started yet (just "Set" / "Fortnightly, then as needed" / "Starts
+  after…") took the exact same real estate as the live phase's own busy
+  cell (the dated session tile), leaving two mostly-white full-height
+  columns either side of the one she's actually reading. Fixed by tagging
+  every NON-live phase's `<col>` with a new `.idle` class pinned to a fixed
+  86px, leaving the live phase's own `<col>` unconstrained — in a fixed
+  table layout that column absorbs whatever width the narrowed idle ones
+  free up. A plan with no live phase at all (every phase done, or none
+  started yet) falls back to the original equal split — there's no one
+  column to favour in that case, so nothing changes there.
+- **The Appointment History table's Phase `<select>` was truncating**
+  ("Acute — during an ep…") — the table had no `<colgroup>` at all, so
+  Date/Service/Status (read left to right first) got first claim on the
+  available width and Phase, the column she actually needs to read and
+  act on, got whatever was left. Added a `<colgroup>` with fixed widths for
+  Date/Service/Status and `table-layout: fixed`, so Phase now gets the
+  remainder instead of the leftovers; the Service cell gets
+  `text-overflow: ellipsis` + a `title` tooltip instead (a service name is
+  informational, not something she picks from), and the select's old
+  `max-width: 160px` cap is gone — verified live, the select now measures
+  863px wide with the full "Acute — during an episode" fitting with room
+  to spare, at a realistic 1280px desktop width.
+- **The phase-line row (name · status pill · since/visits text · "Doesn't
+  apply to her?" · lock · ×) directly above that same table was repeating
+  its own "since 18 Sep 2026 · 1 week in · 1 of 4 visits" fact** — the
+  Sessions table's own Phase row already prints the identical text
+  (`sinceLineFor`, welded directly underneath with no gap) for whichever
+  phase is live. `phTpPhaseLineInner` now checks `phTpLivePhase` itself and
+  skips its own `phTpSinceHtml(plan, phase)` call ONLY when the phase being
+  shown is the live one (i.e. only in the exact case where the table below
+  already says it) — a DONE or non-live phase's own since/date-range text
+  (which appears nowhere else on screen) is completely unaffected, still
+  shown here as before. Every other control on that line (status dropdown,
+  the skip toggle, the lock/unlock, the delete/confirm strip) is untouched.
+
+**Deliberately not touched, disclosed rather than silently expanded**: the
+at-the-door card and the plan header's own spacing were both named in her
+message but didn't show any dead-space defect in the actual live render
+(the door card correctly showed nothing extra for this patient's state;
+the header/Diagnosis-Goal block already carries the 2026-09-21 "Breathing
+room" padding pass). No mock was built for this — per the established
+precedent on this exact page (the "Sessions section made quiet" and
+"Breathing room" builds earlier this week), a bounded, three-part
+hierarchy/density fix on an already-settled design language was built
+directly and verified live rather than put through a multi-option mock
+round; nothing here changes any interaction, data shape, or click
+behaviour, only layout.
+
+Verified live in the sandbox on a real synthetic MSK patient (the actual
+`msk_headache` template, a live phase 1 of 4 sessions with 2 logged, a
+same-day booked appointment): the Sessions table's live-phase column now
+visibly widens while the two idle columns compress to 86px with wrapped
+text ("Fortnightly, then as needed" reads on 2 lines cleanly); the
+Appointment History select renders the full phase name with zero
+truncation (measured 863px available vs 861px content, both at 1280px
+desktop width and re-checked with zero horizontal overflow at a real
+375px phone width — `.ph-tp-sesstable-wrap`/`.ph-tp-apphist-wrap` both
+`scrollWidth === clientWidth`); the phase-line row for the live phase now
+reads "● Acute — during an episode [Current ▾] Doesn't apply to her? →"
+with the duplicate stats gone, while a DONE phase's own tab (not built in
+this pass, verified by re-reading the gating condition) still carries its
+own since/date-range text since the table doesn't print it for a non-live
+phase. Clean console (only the two known pre-existing icon-fetch 404s).
+Synthetic patient, plan, sessions and appointment all removed afterward,
+confirmed absent via a direct re-check.
+
+`lcm-build` `20260925-190000`, `sw.js` `lcm-20260925-tpplan-declutter`.
