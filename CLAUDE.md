@@ -9820,3 +9820,89 @@ Synthetic test patient existed only in this tab's in-memory `PHARMACY`
 (never `savePharmacy()`'d) — confirmed absent from `localStorage` afterward.
 
 `lcm-build` `20260925-240000`, `sw.js` `lcm-20260925-cycblk-dragzone-fix`.
+
+## "an option to log it" + the same date picker for a transfer's date (her follow-up asks 2026-09-25, straight after the egg-collection picker shipped)
+
+After the Year/Month + "time unknown" picker for the egg-collection date
+shipped, she sent a screenshot of the live card ("Time unknown" ticked,
+funnel fields empty except PGT OK = 2, Frozen = 2) and asked **"how to log
+this?"**. My first answer (explaining the funnel fields auto-save as she
+types) was wrong — she corrected it: **"no i want an option to log it"** —
+she wanted an explicit confirm action, not an explanation of existing
+behaviour. Asked which shape "log it" should take; she picked **"Confirm
+the numbers are saved"** — a visible "✓ Log this collection" button
+matching the app's existing "ONE solid Log button" convention (the same
+`.btn-save` class "Log today's session" already uses), confirming what's
+already auto-saved rather than a second write path. Mid-turn she added
+**"and log a transfer date"** — read as: extend the SAME Year/Month +
+"time unknown" picker to the Transfer's own `date` field (still free-text
+until now) and give Transfers their own parallel "✓ Log this transfer"
+button. This was my own interpretation, disclosed rather than re-asked.
+
+**Shared core, two thin wrappers — no duplicated picker markup.**
+`phIvfWhenPickerHtml(r)` was refactored into `phIvfWhenPickerCore(value,
+attrPrefix, key)` (the exact same month/year/"unknown" markup as before,
+parameterised on which `data-*` attribute family to emit) plus two
+one-line callers: `phIvfWhenPickerHtml(r)` → `(r.when, "when", r.id)` and
+the new `phIvfTransferWhenPickerHtml(row, t)` → `(t.date, "twhen",
+"${row.id}:${t.id}")`. `phIvfTransferDetailHtml`'s `dateField` now calls
+the new wrapper in place of its old free-text `<input>` (the `t.fromPlan
+&& live` locked-span branch, unchanged). A new delegated `"change"`
+handler, `ivfTWhenPick` (keyed `data-ivf-twhen-mo/-yr/-unk`, grouped by
+`data-ivf-twhen-group="rowId:tid"`), sits beside the collection's own
+`ivfWhenPick` handler — same compose-the-whole-string-together pattern,
+never three partial writes.
+
+**`phIvfLogBtnHtml(loggedAt, attr)`** is the one shared Log-button
+builder for both surfaces: unlogged shows `.btn-save.ph-ivf-logbtn` ("✓ Log
+this collection"/"✓ Log this transfer", worked out from whether `attr`
+starts with `"tlog"`); logged shows a quiet `.ph-ivf-kindtoggle`-style pill
+("✓ logged 25 Sep 2026", title "Tap to refresh the logged date") — tapping
+it again just re-stamps today's date, never destructive, matching the
+established "Log" convention elsewhere (e.g. acu session logging). New
+fields `r.loggedAt`/`t.loggedAt`, both plain `keyOf(TODAY)` date-key
+strings, stamped by two new click handlers (`data-ivf-log`/`data-ivf-tlog`)
+in the same document-level delegated listener as every other IVF click
+handler — same `phCycleTargetRec()` → mutate → `savePharmacy()`-checked →
+`phCycleRerender()` shape as `ivfFrozenStep`/`ivfConfirm`. The collection's
+Log button sits in a new row (`.ph-ivf-logrow`) between the funnel cells
+and "+ transfer from these eggs"; the transfer's sits inline in
+`.ph-ivf-tfields`, before the delete `×`.
+
+**Verified against the real, running app**, not a reimplementation — a
+tab already past the login gate with real local data (used only after
+confirming, before writing any test data, exactly which functions were
+window-exposed vs. bare-identifier-only, per this project's established
+sandbox-testing discipline): built ONE synthetic patient (`phPatientRec`)
+carrying one IVF egg-collection round + one transfer, plus a minimal
+`PRESC.items` script entry with `presOpenId` pointed at it (required for
+`phCycleTargetRec()` to resolve — its "no open script, no open plan
+modal" fallback returns `null`, so the first click-dispatch attempt
+correctly wrote nothing until this was set up, confirming the guard
+works rather than silently no-oping). Mounted the real, unmodified
+`phIvfCollectionDetailHtml`/`phIvfTransferDetailHtml` output inside the
+real `#pharmacyPage` element and drove it with real dispatched
+`MouseEvent`/`Event("change")`: both Log buttons rendered with the
+correct unlogged wording and `data-ivf-log`/`-tlog` attributes; a real
+click on each correctly stamped `loggedAt`/`transfer.loggedAt` to
+`"2026-09-25"` and called `phCycleRerender()` (spied via a temporary
+monkey-patch of the top-level `phCycleRerender` function, saved as
+`window.__origRerender` and restored after — the established technique
+for testing a write handler without risking a full `renderPresPanel()`
+rebuild against an incomplete synthetic DOM); re-rendering after showed
+both buttons correctly flipped to "✓ logged 25 Sep 2026". The transfer
+date picker's three controls (year-only, +month, "time unknown" tick)
+were each dispatched as real `change` events and correctly composed
+`"2025"` → `"2025-03"` → `"unknown"` into `tr.date`. `phIvfDateLabel`/
+`phIvfSortKey`/`phIvfDateProximityDays` were re-checked directly against
+these same transfer-date values (not just the collection's `when` field
+they were originally built for) — `"unknown"` and a bare year both sort
+last/correctly and both correctly degrade to a null intake-match, exactly
+as they already did for collections. Confirmed a clean console boot
+before and after (only the known pre-existing icon-fetch 404s). Synthetic
+patient, script entry and `presOpenId` fully removed afterward — a fresh
+page reload confirmed `PHARMACY.patients` back to its pre-test 3 entries
+and `PRESC.items` back to its pre-test 2 entries, with no trace of the
+test data in either.
+
+`lcm-build` `20260925-250000`, `sw.js` `lcm-20260925-ivflog-transferwhen`.
