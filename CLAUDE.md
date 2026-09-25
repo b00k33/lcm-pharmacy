@@ -9597,3 +9597,72 @@ from `daybook-pharmacy` afterward, confirmed absent (`totalPatients: 0`
 after a reload).
 
 `lcm-build` `20260925-210000`, `sw.js` `lcm-20260925-fetprep-addphase`.
+
+## Cycle-day popover gains Flow (per-day) and Sex; Cervical mucus renamed Discharge — Option A of her approved mock (her "a", 2026-09-25)
+
+She was sent a real interactive mock (`cycle-day-log-mock.html`) proposing
+three ways to extend the per-day cycle-sign popover to record unprotected
+sex, discharge and flow that varies day to day: A extended the existing
+small popover with more rows; B was a fuller bottom-sheet with icon rows and
+a live summary; C expanded inline under the tapped day on the strip, no
+popover at all. **Her entire reply was "a."**
+
+**Two DISTINCT flow concepts, kept deliberately separate.** `PH_CYCLE_FLOW`
+(whole-period intensity — light/moderate/heavy, read/written only on the day
+a period STARTS: `phCyclePopHtml`, the cycle tiles, the Period-history
+table) already existed and stays untouched. This build adds a brand-new,
+parallel `PH_CYCLE_DAYFLOW` (None/Spotting/Light/Medium/Heavy — 5 levels,
+including two the whole-period scale never needed), stored per day in
+`rec.cycleSigns[dateKey].flow` alongside the existing `cm`/`ov`/`mood`/
+`note` fields — sparse, same as every other sign: an untouched day carries
+no key at all.
+
+**"Rename the label, keep the key"** — the same precedent already
+established elsewhere in this app for "Ask"→"Subjective": Cervical mucus's
+UI label becomes **Discharge**, but the field stays `cm` internally, so
+nothing else reading `s.cm`/`PH_CYCLE_CM` needed to change.
+
+**Mechanism — one generic handler serves both single-select and toggle
+rows, not two parallel mechanisms.** A new `data-cycle-sign-val` attribute
+sits on the EXISTING delegated `button[data-cycle-sign-field]` click
+handler: when present, a tap SETS that value (tapping the currently-selected
+chip clears it back to `""`); when absent (Sex/Ov/Mood, unchanged), it still
+just toggles a boolean. `phCycleSelectChips(field, opts, cur, attrs, cls)`
+is the one new helper building a single-select chip row (Flow uses it with
+a `flowChipClass` callback for the spotting/light/medium/heavy tint
+overrides; Discharge reuses it plain, replacing its old `<select>`).
+`phCycleSignPopHtml` gained two new rows — Flow and Sex ("🩸 Unprotected
+sex") — and the old Discharge `<select>` became a chip row too; Ovulation
+twinge/Low mood/the note field are byte-identical to before.
+
+**A deliberate UX-correctness rule**: "None" only highlights when the
+field is explicitly set to the empty string, never for an untouched/
+undefined field — so a blank day never looks like "she already recorded
+nothing." Verified directly: an untouched synthetic day showed zero chips
+highlighted across all rows.
+
+**CSS specificity, verified via real `getComputedStyle` reads, not just
+class presence**: the new flow-intensity/sex tint overrides
+(`#pharmacyPage .ph-cycle-signpop .ph-ck-chip.on.flow-*` /
+`.ph-cyc-sexchip.on`) are scoped with an extra ancestor class plus an extra
+own class specifically so they outrank the base `.ph-ck-chip.on` green-fill
+rule already in the sheet — confirmed each intensity level resolves to its
+intended hex, not the generic green.
+
+Verified against the real, running app in the local sandbox (a genuinely
+signed-out tab with `lcm-data-owner: null` and zero Supabase auth keys —
+safe for synthetic test patients, real dispatched DOM clicks against the
+actual production functions, never a reimplementation): opened the popover
+on a synthetic patient, clicked through Flow (None→Spotting→Light→Medium→
+Heavy→off), confirmed each state's computed background/border/text colour
+matched the approved mock's design intent; toggled Sex and confirmed the
+blue tint; clicked Discharge chips and confirmed the rename showed in the
+label with `s.cm` still the write target; confirmed Ov/Mood/note were
+completely unaffected; confirmed the popover renders with no horizontal
+overflow at both a real desktop width and 375px; confirmed no regression to
+sibling per-day sign mechanisms (`phCycleSignIcon`/`phCycleSignLabel`, both
+extended to recognise the two new fields, correctly show a 🩸/💗 icon and a
+"Heavy flow"/"Unprotected sex" label line). Synthetic test patient removed
+afterward, confirmed absent.
+
+`lcm-build` `20260925-220000`, `sw.js` `lcm-20260925-cycleday-flowsex`.
