@@ -9906,3 +9906,87 @@ and `PRESC.items` back to its pre-test 2 entries, with no trace of the
 test data in either.
 
 `lcm-build` `20260925-250000`, `sw.js` `lcm-20260925-ivflog-transferwhen`.
+
+## Day-by-day cycle table + per-day Pain + calendar sign badges — the rest of an already-approved mock, finished after a concurrent session shipped the popover merge (2026-09-25)
+
+Her original approval (`cycle-final-combined.html`, "i like this, build it
+for real, and push live") had 5 parts. By the time this session resumed
+from a compaction, a CONCURRENT session had already shipped most of it —
+`ph-cycle-dragzone`/`.ph-tp-cbar-outer` wiring the Treatment Plan tab's
+cycle bar to `phCycleSignPopHtml` (commit `99ac428`), and Flow (per-day) +
+Sex added to that popover with Discharge renamed from "Cervical mucus"
+(commit `01c229f`, her "a" pick on a separate mock). This entry is the
+remainder — the pieces her original mock approved that the concurrent
+build didn't happen to cover, verified independently against the ALREADY-
+SHIPPED state before writing anything (`git log`/`git diff`, not assumed
+from a stale pre-compaction summary) so nothing here duplicates or
+conflicts with what `99ac428`/`01c229f` already did:
+
+1. **A per-day Pain field**, `PH_CYCLE_DAYPAIN` (`""`/mild/moderate/
+   severe — `""` for unset, matching every other per-day chip row's
+   convention, distinct from `PH_CYCLE_PAIN`'s own `"none"` value, which
+   only the whole-period period-start popover still reads). Added to
+   `phCycleSignPopHtml` as its own row, to `phCycleSignSet`'s `hasAny`
+   check, to `phCycleSignIcon` (⚡, between flow and sex in priority) and
+   `phCycleSignLabel`. The popover's Flow row is relabelled **"Today's
+   flow"** (the concurrent build's own Flow row still just said "Flow" —
+   this finishes the double-Flow-field fix her original mock
+   (`cycle-flow-dup-fix-mock.html`) was about).
+2. **The whole-period edit row beneath the bar drops Flow and Pain
+   entirely** (down to Contraception + BBT only) — those two fields are
+   now purely per-day, logged from the popover above; `phCyclePopHtml`
+   (period-start) and Period history's own ✎ are untouched and still set/
+   edit the whole-period `flowDays`/`flowIntensity`/`pain` fields, so
+   nothing is orphaned, this row just stops being a second, now-redundant
+   surface for the same two facts.
+3. **A FertilityFriend.com-style day-by-day table** (`phTpCycleDayTableHtml`,
+   the trailing 14 days through today — a recent-days overview, not a
+   full-history browser, which Period history already covers) — one
+   column per day, one row per sign type (Flow/Pain/CM/Sex/Note), day
+   headers tappable via a new `data-cycle-signday="name|dateKey"` handler
+   that opens the SAME merged popover the bar's dragzone already does —
+   one commit path, never a second.
+4. **Calendar-cell corner badges** on `phCycleStripHtml`'s day cells — her
+   pick "b" from a 3-mock icon-marks round (`cycle-icon-marks-mock.html`):
+   one small badge (the day's top-priority sign icon + "+N" once more than
+   one sign is logged), reusing `phCycleSignIcon`/new `phCycleSignCount`.
+   **Deliberately NOT the mock's "floating pin chips above the bar"** — her
+   later, more specific, repeatedly-reinforced 2026-09-19/20 instruction for
+   this exact bar ("remove text, show when hover... only mark the day") 
+   directly conflicts with adding floating chips above it, and per this
+   project's own "recent overrides old" rule the later instruction won.
+   Calendar-cell badges are a different, non-conflicting component that
+   still delivers the substance of her ask (see her signs at a glance) 
+   without re-cluttering a bar she'd since asked to be kept quiet.
+
+**Verified against the real, running app** in a leftover-authenticated
+sandbox tab (login gate blocks a fresh click-through, same limitation as
+every batch in this file) — bare-identifier `javascript_tool` eval reaches
+every top-level `const`/`function` in this file directly (they're not on
+`window`, but they are in the page's global lexical scope, so no DOM
+dispatch was needed for the pure logic): `PH_CYCLE_DAYPAIN`,
+`phCycleSignCount` (0/multi-count correct), `phCycleSignIcon`/`-Label`
+with pain. Built one synthetic patient (`phPatientRec`, `sex:"F"`,
+`cycle.lmp` 9 days ago), set real per-day signs via `phCycleSignSet`, then
+called `phTpCycleDayTableHtml`/`phTpCycleBlockHtml`/`phCycleStripHtml`
+directly: the day table renders with real flow/pain/cm marks and the right
+`data-cycle-signday` attribute; the block's edit row confirmed to no longer
+contain `<b>Flow</b>`/`<b>Pain</b>` (Contraception still present); the
+block's bar still carries `ph-cycle-dragzone`; the strip's today cell shows
+`marked`+`ph-cyc-sign`. With `presCycleSignEdit` set to today, the block's
+embedded popover correctly appears with "Today's flow"/"Pain" rows and the
+day table's own cell gets `.sel`. The `data-cycle-signday` click handler
+was exercised via a REAL dispatched click on a synthetic button mounted
+inside `#pharmacyPage` (the app's click-delegation is scoped there) with
+`phCycleRerender` spied: first click set `presCycleSignEdit` and fired the
+spy; a second click on the same day correctly toggled it back to `null`
+and fired the spy again. Confirmed a clean console both before and after
+(only the two known pre-existing icon-fetch 404s) on a genuine cold
+reload. Synthetic test patient removed via `delete PHARMACY.patients[key]`
++ `savePharmacy()`, confirmed absent on both direct re-check and a fresh
+page reload; zero orphaned `PRESC.items` entries. **Not independently
+re-verified this round** (unchanged by this build, already covered by the
+concurrent session's own testing): the dragzone-bar tap itself, and the
+Flow/Sex/Discharge rows the concurrent build added.
+
+`lcm-build` `20260925-260000`, `sw.js` `lcm-20260925-cycle-daytable-painfield`.
