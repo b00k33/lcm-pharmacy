@@ -9331,3 +9331,33 @@ constitution block nested cleanly underneath it, unchanged in appearance
 from its old standalone-tab rendering.
 
 `lcm-build` `20260925-170000`, `sw.js` `lcm-20260925-constit-merged-patient`.
+
+## Appointment popup's Phase row stops being a picker (her correction 2026-09-25)
+
+Screenshot of the appointment popup's 🧭 Phase row (built 2026-09-20, "her pick
+C... a chip per phase, tap files it"): three chips — Acute — during an episode
+(the current one, plum), Reducing frequency, Maintenance — plus "session 3 of
+4 · by date". Her words: **"code3 code7 — i dont need option to choose phase.
+only show phase."**
+
+The row is now a plain display, not a picker: `<b>Acute — during an episode</b>
+session 3 of 4 · by date`, no other phases, no buttons. The other two phase
+chips (and their `data-tp-appt-file` tap-to-refile behaviour) are gone from
+THIS card only — filing or moving a visit onto a different phase still works
+exactly as before, just from where it was ALSO always reachable: the Treatment
+Plan Sessions ladder's "Not in this plan yet" tray, and a filed cell's own
+move-bar (`→ another phase`). Nothing about the underlying mechanism
+(`phTpApptFile`, `a.phaseId`, `phTpApptVisitCtx`) changed — only this one
+display site stopped offering it a second time. The unfiled state ("not in a
+phase yet") is likewise now plain text, no chip.
+
+`.ph-apptpop-phase`/`.ph-apptpop-phase.on` CSS is left in place — it's a
+shared selector with the Sessions tray/move-bar's own chip styling (line
+~6273), still fully live there; only this popup stopped emitting the class.
+
+Verified: the edited render logic called directly in the sandbox against a
+filed-visit case (`{label:"Acute — during an episode"}`, session 3 of 4) and
+an unfiled case — both produce the exact text with zero `<button>`/chip
+markup. App boots clean, no console errors from the edit.
+
+`lcm-build` `20260925-180000`, `sw.js` `lcm-20260925-apptpop-phase-readonly`.
