@@ -10332,3 +10332,23 @@ afterward, confirmed absent from both `PHARMACY.patients` and
 `PRESC.items`.
 
 `lcm-build` `20260925-310000`, `sw.js` `lcm-20260925-calendar-signs-merge`.
+
+## Appointment history sits beside the Treatment Visits Plan table (her ask 2026-09-26)
+
+Her literal ask: "put the appointments table next to the treatment visits
+plan." `phTpSessionLadderHtml` used to stack `phTpApptHistoryHtml`'s output
+(Date/Service/Status/Phase) directly under the Phase/Frequency/This-week
+table -- one under the other. Now wrapped in `.ph-tp-ladder-cols` (`.ph-tp-
+ladder-col` × 2), side by side on a wide screen; stacks back below 900px,
+the same breakpoint the cycle tab's own side-by-side shell (`.ph-cycle-
+tess`) already uses. Only wraps into two columns when there's actually a
+history table to show -- `phTpApptHistoryHtml` returns `""` for an empty
+list, and an empty right column would read as a bug, not a feature.
+
+Verified live in the sandbox with a synthetic MSK patient/plan/two real
+appointments: the two tables render side by side with aligned headers at
+desktop width, and correctly stack (Sessions table, then Appointment
+history) with zero horizontal overflow at 375px. Synthetic patient, script
+and appointments removed afterward, confirmed absent.
+
+`lcm-build` `20260926-000000`, `sw.js` `lcm-20260926-apphist-sidebyside`.
