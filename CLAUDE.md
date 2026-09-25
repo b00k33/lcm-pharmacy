@@ -9245,3 +9245,89 @@ measured 33-34px (content-sized, no clipping). Checklist row height 35px
 chips on the same page.
 
 `lcm-build` `20260925-160000`, `sw.js` `lcm-20260925-railfix-hxdensity`.
+
+## Constitution merged into Patient details (her ask 2026-09-25, "merge constitution and patient details together. code3 code7 you are ui experts and strategists, make my workflow easier")
+
+Sent with a screenshot of the new left-side profile rail (Patient details /
+Medical history / Supplements / Photos / Constitution) — a direct, terse
+instruction, delegated to expertise for the how.
+
+**Why not just concatenate the two tab bodies.** The 2026-09-16 build that
+first gave Constitution its own tab says outright why it was split off in
+the first place: "the constitution body is the heaviest thing on the
+profile (pulse grid, Hammer exam, photo timeline) and the profile
+re-renders on most field edits, so it is not built while Photos/Cycle/Notes
+is showing." Patient details is very likely the tab a returning patient
+lands on — merging the two bodies unconditionally would mean every single
+profile open now pays for the tongue chart, the pulse grid and the
+Shen-Hammer exam form whether she's looking at them or not, undoing that
+exact optimisation on the highest-traffic tab in the rail.
+
+**Built as a fold, not a flatten** — same "rooms → drawers → cupboards"
+progressive-disclosure principle this app already applies everywhere
+(Settings cards fold to their heading, IVF history folds, the old Strategy
+fold), and the exact same fold COMPONENT (`.ph-ivf-fold`/`.ph-ivf-foldhd`,
+reused verbatim — no new CSS invented for the shape). Constitution now
+renders as a single quiet row at the bottom of Patient details — "方
+Constitution · recorded / not recorded yet ▸" — collapsed by default;
+tapping it reveals the full, completely unchanged block in place. One tap
+either way: the same number of taps a separate rail entry took, just one
+fewer item to scan in the rail itself and no longer a context switch away
+from the fields she was just looking at.
+
+**Mechanism, minimal by design:**
+- `presConstitFoldOpen` — new module-level boolean (declared beside
+  `presAssessTab`), collapsed by default, same idiom as `presIvfHistOpen`.
+- `presConstitHasData(rec)` — a read-only (`phPatientPeek`, never
+  `phPatientRec`) check across every constitution field (body type,
+  personality, eyes, build, skin, voice, findings, tongue chart, pulse/
+  Hammer) so the fold's quiet tag can say "recorded" vs "not recorded yet"
+  without opening it — same "say it at a glance" idiom as
+  `presMedHxSubLabel`'s "N of 38 asked".
+- `presConstitFoldSectionHtml(t)` — the fold shell; **`presConstitTabBodyHtml`
+  itself is completely untouched**, only called conditionally from inside
+  the fold instead of from its own rail-tab slot. It still wraps its own
+  `#presConstitHost` mount point, so `renderHxScreen()` keeps repainting it
+  in place exactly as before — zero changes needed to the repaint plumbing,
+  the paste-photo targeting guard, or any of the tongue/pulse/Hammer click
+  handlers, all of which resolve the patient through `presHxScreenName`
+  regardless of where the host physically sits in the DOM.
+- `presAssessSections` drops the `"constitution"` rail entry outright.
+- One new delegated handler (`data-constit-fold-toggle`) flips the boolean
+  and calls `presAssessTabRefresh()` — the same scoped `#presAssessHost`
+  swap every tab switch on this rail already uses, never a full
+  `renderPresPanel()` rebuild.
+
+**CSS, disclosed judgment call.** `.ph-ivf-fold`'s stock 14px left margin
+is deliberate elsewhere — a "nested row inside the Treatment stage" indent,
+per its own code comment. Reused as-is, Constitution would have sat
+visually indented under Tracking instead of reading as its own section
+peer to Patient/Insurance/Tracking. Added one scoped override,
+`#pharmacyPage .ph-op-record > .ph-ivf-fold`, matching `.ph-tmpl-sec`'s
+exact flush-left/dashed-border-top values — so it reads as one more
+section header in the same column, not a bolted-on panel. The original
+`.ph-ivf-fold` rule is untouched, so IVF history's own fold is unaffected
+anywhere else it renders.
+
+**Verified directly against the real, running app** (window-exposed
+functions and real DOM mounting, not a reimplementation — the sandbox's
+dev-server proxy port had gone stale mid-session and needed retargeting to
+its real bound port before the browser would load anything, a one-off
+plumbing snag rather than anything about this change): `presAssessSections`
+on a synthetic patient returns `patient/medhx/supplements/photos/apptshist`
+— `"constitution"` is gone. `presPatientTabBodyHtml` on a fresh synthetic
+patient (no constitution data anywhere in the record) renders the fold
+closed by default, correctly tagged "not recorded yet", with **no**
+`#presConstitHost` in the output at all — confirming the lazy-render
+discipline holds, nothing heavy is built while collapsed. Calling the
+untouched `presConstitTabBodyHtml` directly (the "open" branch's own
+function, since the fold's boolean is closure-private and can't be flipped
+from outside the app) confirmed the real content — body type pickers,
+tongue chart, pulse grid — still renders correctly and unchanged.
+Screenshotted both states live in the sandbox: closed shows one flush,
+dashed-top-border row under Tracking, matching the other section headers
+exactly (confirming the CSS override); open shows the full 方病人
+constitution block nested cleanly underneath it, unchanged in appearance
+from its old standalone-tab rendering.
+
+`lcm-build` `20260925-170000`, `sw.js` `lcm-20260925-constit-merged-patient`.
