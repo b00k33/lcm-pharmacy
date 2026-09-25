@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260925-240000">
+<meta name="lcm-build" content="20260925-250000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -9194,6 +9194,12 @@
   #pharmacyPage .ph-ivf-kindtoggle, #pharmacyPage .ph-ivf-addbtn, #pharmacyPage .ph-ivf-addtransfer { font: inherit; font-size: 11px; font-weight: 700; color: var(--ph-green-deep); background: none; border: 1px dashed var(--ph-line); border-radius: 999px; padding: 4px 10px; cursor: pointer; }
   #pharmacyPage .ph-ivf-kindtoggle:hover, #pharmacyPage .ph-ivf-addbtn:hover, #pharmacyPage .ph-ivf-addtransfer:hover { background: var(--ph-green-tint); border-color: var(--ph-green); }
   #pharmacyPage .ph-ivf-addtransfer { margin: 8px 0 0 16px; }
+  /* "log it" (her ask 2026-09-25) -- confirms the funnel's already-auto-saved
+     numbers with a visible "done" moment, same solid-Log-button convention
+     used everywhere else in this app. */
+  #pharmacyPage .ph-ivf-logrow { margin: 8px 0 0; }
+  #pharmacyPage .ph-ivf-logbtn { padding: 6px 14px; font-size: 12px; }
+  #pharmacyPage .ph-tp-tfields .ph-ivf-logbtn, #pharmacyPage .ph-ivf-tfields .ph-ivf-logbtn { padding: 4px 10px; }
   #pharmacyPage .pill.intake, #pharmacyPage .ph-pill.intake { background: var(--ph-blue-tint, #E4EEF6); color: var(--ph-blue-deep, #1E4F7A); font-size: 9.5px; font-weight: 800; border-radius: 999px; padding: 2px 8px; }
   #pharmacyPage .ph-ivf-funnel { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 4px 6px; }
   #pharmacyPage .ph-ivf-num { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 54px; }
@@ -28863,6 +28869,38 @@
         phCycleRerender();
         return;
       }
+      // "an option to log it" (her ask 2026-09-25) -- a deliberate, visible
+      // "done" moment on top of the funnel fields' existing auto-save, same
+      // shape as "Log today's session" elsewhere in the app. Stamps today's
+      // date so it survives a reload; tapping it again just refreshes the
+      // date, never destructive.
+      const ivfLog = e.target.closest("[data-ivf-log]");
+      if (ivfLog) {
+        const rowId = ivfLog.dataset.ivfLog;
+        const rec = phCycleTargetRec();
+        const row = rec && phIvfCycles(rec).find(r => r.id === rowId);
+        if (row) {
+          row.loggedAt = keyOf(TODAY);
+          if (savePharmacy() === false) { phFlashShow("That could not be saved — check the warning at the top and try again"); return; }
+          phFlashShow("✓ Collection logged");
+        }
+        phCycleRerender();
+        return;
+      }
+      const ivfTLog = e.target.closest("[data-ivf-tlog]");
+      if (ivfTLog) {
+        const [rowId, tid] = ivfTLog.dataset.ivfTlog.split(":");
+        const rec = phCycleTargetRec();
+        const row = rec && phIvfCycles(rec).find(r => r.id === rowId);
+        const tr = row && (row.transfers || []).find(x => x.id === tid);
+        if (tr) {
+          tr.loggedAt = keyOf(TODAY);
+          if (savePharmacy() === false) { phFlashShow("That could not be saved — check the warning at the top and try again"); return; }
+          phFlashShow("✓ Transfer logged");
+        }
+        phCycleRerender();
+        return;
+      }
       const tpPrint = e.target.closest("[data-tp-print]");
       if (tpPrint) {
         const bar = tpPrint.dataset.tpPrint.lastIndexOf("|");
@@ -34673,6 +34711,26 @@
         const mo = group.querySelector("[data-ivf-when-mo]").value;
         const yr = group.querySelector("[data-ivf-when-yr]").value;
         row.when = unk ? "unknown" : (yr ? (mo ? `${yr}-${mo}` : yr) : "");
+        if (savePharmacy() === false) { phFlashShow("That could not be saved — check the warning at the top and try again"); return; }
+        phCycleRerender();
+        return;
+      }
+      // the transfer's own Year/Month/"time unknown" picker -- same shared
+      // group pattern as ivfWhenPick above, keyed "rowId:tid" instead of a
+      // bare row id.
+      const ivfTWhenPick = e.target.closest("[data-ivf-twhen-mo],[data-ivf-twhen-yr],[data-ivf-twhen-unk]");
+      if (ivfTWhenPick) {
+        const group = ivfTWhenPick.closest("[data-ivf-twhen-group]");
+        const key = group && group.dataset.ivfTwhenGroup;
+        const [rowId, tid] = (key || "").split(":");
+        const rec = phCycleTargetRec();
+        const row = rec && phIvfCycles(rec).find(r => r.id === rowId);
+        const tr = row && (row.transfers || []).find(x => x.id === tid);
+        if (!tr) return;
+        const unk = group.querySelector("[data-ivf-twhen-unk]").checked;
+        const mo = group.querySelector("[data-ivf-twhen-mo]").value;
+        const yr = group.querySelector("[data-ivf-twhen-yr]").value;
+        tr.date = unk ? "unknown" : (yr ? (mo ? `${yr}-${mo}` : yr) : "");
         if (savePharmacy() === false) { phFlashShow("That could not be saved — check the warning at the top and try again"); return; }
         phCycleRerender();
         return;
@@ -55500,26 +55558,45 @@ or changing anything in Cliniko.
   // once both are picked, a bare "YYYY" for year-only, "unknown" for the
   // tick, or "" untouched -- never a 4th field, never a native date input
   // (a native one still can't take a month-only value).
-  function phIvfWhenPickerHtml(r) {
-    const isUnknown = r.when === "unknown";
-    const m = /^(\d{4})(?:-(\d{2}))?$/.exec(r.when || "");
+  // shared core for the Year/Month + "time unknown" picker -- built for the
+  // egg collection's own date, reused for a transfer's date too (her ask
+  // 2026-09-25, "and log a transfer date"). `attrPrefix` picks which
+  // data-attribute family renders (data-ivf-when-* for a collection,
+  // data-ivf-twhen-* for a transfer) so the shared document-level "change"
+  // listener can tell which kind of row it's recomposing.
+  function phIvfWhenPickerCore(value, attrPrefix, key) {
+    const isUnknown = value === "unknown";
+    const m = /^(\d{4})(?:-(\d{2}))?$/.exec(value || "");
     const yr = m ? m[1] : "", mo = (m && m[2]) ? m[2] : "";
     const moOpts = ["", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"]
       .map(v => `<option value="${v}"${v === mo ? " selected" : ""}>${v ? MON_SHORT[+v - 1] : "— month"}</option>`).join("");
     const nowY = new Date().getFullYear();
     const yrOpts = [""].concat(Array.from({ length: 12 }, (_, i) => String(nowY - i)))
       .map(v => `<option value="${v}"${v === yr ? " selected" : ""}>${v || "— year"}</option>`).join("");
-    return `<div class="ph-ivf-whenpick" data-ivf-when-group="${r.id}">
+    return `<div class="ph-ivf-whenpick" data-ivf-${attrPrefix}-group="${key}">
       <label class="ph-ivf-unknowntick${isUnknown ? " on" : ""}">
-        <input type="checkbox" data-ivf-when-unk="${r.id}"${isUnknown ? " checked" : ""}>
+        <input type="checkbox" data-ivf-${attrPrefix}-unk="${key}"${isUnknown ? " checked" : ""}>
         🕓 Time unknown
       </label>
       <div class="ph-ivf-whenfields${isUnknown ? " hidden" : ""}">
-        <select class="field-bare mo" data-ivf-when-mo="${r.id}">${moOpts}</select>
-        <select class="field-bare yr" data-ivf-when-yr="${r.id}">${yrOpts}</select>
+        <select class="field-bare mo" data-ivf-${attrPrefix}-mo="${key}">${moOpts}</select>
+        <select class="field-bare yr" data-ivf-${attrPrefix}-yr="${key}">${yrOpts}</select>
       </div>
       <span class="ph-ivf-whenunk-label${isUnknown ? "" : " hidden"}">date unknown</span>
     </div>`;
+  }
+  function phIvfWhenPickerHtml(r) { return phIvfWhenPickerCore(r.when, "when", r.id); }
+  function phIvfTransferWhenPickerHtml(row, t) { return phIvfWhenPickerCore(t.date, "twhen", `${row.id}:${t.id}`); }
+  // "an option to log it" (her ask 2026-09-25, clarified: "Confirm the
+  // numbers are saved") -- every field here already auto-saves on change,
+  // this button is a deliberate, visible "done" moment on top of that, not
+  // a second write path. Stamps a real date so it survives a reload (not
+  // just a toast that vanishes); tapping it again just refreshes the date,
+  // never destructive. Same shape for a collection and a transfer.
+  function phIvfLogBtnHtml(loggedAt, attr) {
+    return loggedAt
+      ? `<button type="button" class="ph-ivf-kindtoggle" data-ivf-${attr} title="Tap to refresh the logged date">✓ logged ${esc(phShortDate(loggedAt))}</button>`
+      : `<button type="button" class="btn-save ph-ivf-logbtn" data-ivf-${attr}>✓ Log this${attr.startsWith("tlog") ? " transfer" : " collection"}</button>`;
   }
   function phIvfCollectionDetailHtml(r) {
     const live = phIvfIsLiveLink(r);
@@ -55541,6 +55618,7 @@ or changing anything in Cliniko.
     return `<div class="ph-ivf-detailcard${live ? " cur" : ""}">
       <div class="ph-ivf-hdfields">${whenField}${clinicField}${kindToggle}${intakeFlag}${del}</div>
       ${phIvfFunnelCellsHtml(r)}
+      <div class="ph-ivf-logrow">${phIvfLogBtnHtml(r.loggedAt, `log="${r.id}"`)}</div>
       <button type="button" class="ph-ivf-addtransfer" data-ivf-add-transfer="${r.id}">+ transfer from these eggs</button>
     </div>`;
   }
@@ -55553,20 +55631,21 @@ or changing anything in Cliniko.
     const dateTxt = phIvfDateLabel(t.date);
     const dateField = (t.fromPlan && live)
       ? `<span class="ph-ivf-when locked" title="Set from this plan's Embryo transfer date">${esc(dateTxt || "—")} <span class="ph-pill plan">from the plan</span></span>`
-      : `<input type="text" class="field-bare ph-ivf-when" placeholder="date" value="${esc(t.date || "")}" data-ivf-tfield="${row.id}:${t.id}:date">`;
+      : phIvfTransferWhenPickerHtml(row, t);
     const typeSel = `<select class="field-bare" data-ivf-tfield="${row.id}:${t.id}:type"><option value="fresh"${t.type !== "frozen" ? " selected" : ""}>Fresh</option><option value="frozen"${t.type === "frozen" ? " selected" : ""}>Frozen</option></select>`;
     const prepField = t.type === "frozen" ? `<input type="text" class="field-bare ph-ivf-prep" placeholder="medicated / natural" value="${esc(t.prep || "")}" data-ivf-tfield="${row.id}:${t.id}:prep">` : "";
     const dayField = `<input type="text" class="field-bare ph-ivf-day" placeholder="day 3/5" value="${esc(t.embryoDay || "")}" data-ivf-tfield="${row.id}:${t.id}:embryoDay">`;
     const countField = `<input type="number" min="0" class="field-bare ph-ivf-count" placeholder="1" value="${t.count == null ? "" : t.count}" data-ivf-tfield="${row.id}:${t.id}:count">`;
     const outSel = `<select class="field-bare ph-ivf-outcome" data-ivf-tfield="${row.id}:${t.id}:outcome">${PH_IVF_OUTCOMES.map(([v, l]) => `<option value="${v}"${(t.outcome || "awaiting") === v ? " selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
     const noteField = `<input type="text" class="field-bare ph-ivf-note" placeholder="note" value="${esc(t.note || "")}" data-ivf-tfield="${row.id}:${t.id}:note">`;
+    const logBtn = phIvfLogBtnHtml(t.loggedAt, `tlog="${row.id}:${t.id}"`);
     const del = `<button type="button" class="del" data-ivf-tdel="${row.id}:${t.id}" title="Remove this transfer" aria-label="Remove">×</button>`;
     // now its own table, not nested under the round any more -- say which
     // round it's from, since that's no longer implied by position on screen.
     const fromTxt = phIvfDateLabel(row.when) || "no date yet";
     return `<div class="ph-ivf-trow standalone">
       <div class="ph-ivf-tfrom">from <b>${esc(fromTxt)}</b>${row.clinic ? ` · ${esc(row.clinic)}` : ""}</div>
-      <div class="ph-ivf-tfields">${dateField}${typeSel}${prepField}${dayField}<span class="faint">embryo(s)</span>${countField}${outSel}${noteField}${del}</div>
+      <div class="ph-ivf-tfields">${dateField}${typeSel}${prepField}${dayField}<span class="faint">embryo(s)</span>${countField}${outSel}${noteField}${logBtn}${del}</div>
     </div>`;
   }
   // one-page print (her card 12: "Yes, in this build") -- same phPrintDoc
