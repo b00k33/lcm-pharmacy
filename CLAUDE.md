@@ -9750,3 +9750,73 @@ re-exercised.
 `lcm-build` `20260925-230000`, `sw.js` `lcm-20260925-ivfwhenpicker`.
 
 `lcm-build` `20260925-220000`, `sw.js` `lcm-20260925-cycleday-flowsex`.
+
+## Treatment Plan tab's Cycle block never opened the day-signs popover — her "popover is not working" (2026-09-25)
+
+She sent a screenshot of the Treatment Plan tab's Cycle block (the "Day 14 ·
+Follicular" phase bar with segments Period 1–5 / Follicular 6–22 / Ov 23–24 /
+Luteal 25–37) with the bare caption **"popover is not working"** — a
+different screen from the one the same-day Flow/Sex/Discharge build
+(`01c229f`) was verified against (the Assessment tab's Cycle bar). No
+further detail was given; the diagnosis below was done entirely through
+source investigation, matching this project's "diagnose before patching"
+discipline.
+
+**Root cause, traced not guessed.** This app has TWO structurally different
+cycle-day popovers, easily confused because they're visually similar:
+`phCyclePopHtml` (opened via `data-cycle-day` on the small numbered calendar
+strip — logs a WHOLE-PERIOD start with `PH_CYCLE_FLOW`/`PH_CYCLE_PAIN`) and
+`phCycleSignPopHtml` (opened via the `.ph-cycle-dragzone` class on a coloured
+phase bar — logs PER-DAY signs, including the new Flow/Sex/Discharge fields).
+Only an element that literally carries `.ph-cycle-dragzone` (plus
+`data-cycle-drag`/`-lmp`/`-len`) can open the per-day signs popover — the
+mechanism is a single, generic, document-level delegated click handler keyed
+purely on that class, not tied to any specific rendering function. The OLDER
+`phCycleBarHtml` (still reachable from the Assessment tab and the full-screen
+plan modal) has always carried this class. `phTpCycleBlockHtml` — built
+2026-09-19 "from scratch" for the Treatment Plan tab and redesigned several
+times since (collapsed-by-default fold, Option F colour, etc.) — is a
+completely separate function with its own `.ph-tp-cbar-outer` bar, and it
+**never** carried the dragzone class or attributes. Tapping it did nothing,
+by construction — a pre-existing architectural gap dating to before the
+Flow/Sex build, not a regression it introduced.
+
+**Fix, minimal and scoped to the EXPANDED bar only** (matching exactly what
+her screenshot showed — the folded state's own bar markup inside
+`foldedRow(...)` was deliberately left untouched, since folding/unfolding is
+its own separate, already-correct mechanism). The bar's outer `<div>` gained
+`class="ph-cycle-dragzone ph-tp-cbar-outer"` plus `data-cycle-drag`/
+`-lmp`/`-len` and a `title="Tap a day on the bar to log her signs"` —
+reusing the existing generic delegated handler with **zero JS changes
+needed**. `phCycleSignPopHtml(rec, name)` is now rendered right after the
+bar in the block's output, the same position `phCycleBarHtml` already uses
+it in.
+
+**Deliberately NOT ported**: the older bar's hover cursor-dot/tooltip
+preview and its per-day sign-dots row. Her later, separate, explicit asks on
+this exact component ("remove text, show when hover... only mark the day")
+pushed away from that busier look — porting the richer legacy UI onto a
+component she'd deliberately asked to be quieter would have silently done
+more than the fix called for. Both hover-preview lookup functions
+(`phCycleSignsPreview`/`-Hide`) are already null-guarded against missing
+child nodes, so omitting them here degrades safely (no crash, just no hover
+visual) rather than needing a parallel implementation.
+
+**Verified via real dispatched clicks, not source-reading alone.** Mounted
+`phTpCycleBlockHtml`'s real, unmodified output for a synthetic patient
+inside the real `#pharmacyPage` element (the app's click-delegation is
+scoped there — a synthetic element mounted outside it silently no-ops,
+reproduced once before correcting the test) and dispatched a real
+`MouseEvent("click")` on the bar: `phCycleSignPopHtml` rendered inline with
+all four rows present (Flow, Discharge, Sex, Other/Ov+Mood+note), matching
+the same-day Flow/Sex/Discharge build. Confirmed the fix's HTML output
+carries the exact class/attributes/title via direct string inspection
+first, then confirmed the live click-driven behaviour separately. The
+sandbox's login overlay blocks a fully-booted visual screenshot of the real
+app (this project's well-documented limitation), so pixel-level layout
+wasn't independently re-checked here — the popover's own layout is
+unchanged from the same-day build that already verified it visually.
+Synthetic test patient existed only in this tab's in-memory `PHARMACY`
+(never `savePharmacy()`'d) — confirmed absent from `localStorage` afterward.
+
+`lcm-build` `20260925-240000`, `sw.js` `lcm-20260925-cycblk-dragzone-fix`.
