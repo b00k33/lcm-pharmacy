@@ -9184,3 +9184,64 @@ record with `cancer: "Monitoring"` shows the Monitoring chip on, Active
 treatment off).
 
 `lcm-build` `20260925-150000`, `sw.js` `lcm-20260925-hx-presets-extended`.
+
+## Left rail (Patient profile) went inconsistent — stretched empty on a tall page, clipped/scrolled on a short one (her report 2026-09-25)
+
+Two screenshots of the same 2026-09-25 unified-rail build (see "Patient
+Profile becomes one unified left-side tab rail" above): on the Medical
+history checklist, the rail's tabs had big empty gaps between them; on
+Photos (a short page), the same 7 tabs were squeezed into a tiny scrolling
+strip with their own labels clipped top/bottom. Her words: **"left toolbar
+visual display is not consistent — make mock to fix with issue above."**
+
+**Root cause, traced not guessed.** `#pharmacyPage .ph-assess-tabs` at
+desktop width (`@media (min-width: 901px)`) set `align-items: stretch`,
+which makes the rail column match the HEIGHT OF WHATEVER'S SHOWING ON THE
+RIGHT — not its own content. Each `.ph-assess-tab` carried `flex: 1 1 0`
+(inherited from the base/mobile rule, never overridden at desktop), so
+every tab grew or shrank to fill whatever height the rail was forced to.
+A tall panel (the 38-item checklist) stretched the tabs apart with dead
+space; a short panel (Photos, "none yet · Add") squeezed all 7 tabs into
+a tiny box that had to scroll internally, shrinking each tab below its
+own label's height.
+
+**Fix, two lines, in the same `@media (min-width: 901px)` block (index.html
+~5851-5858):** `align-items: stretch` → `align-items: flex-start` on
+`.ph-assess-tabs` (the rail stops matching the panel's height), and a new
+`.ph-assess-tab { flex: 0 0 auto; ... }` override inside the same block
+(each tab is always exactly as tall as its own label, never grown or
+shrunk to fill space). The mobile/phone horizontal strip is untouched —
+its own `flex: 1 1 0` (equal-width tabs in a row) still comes from the
+base rule and was never touched.
+
+**Bonus, same screen, from her earlier "reduce empty space" message the
+same day:** the Medical history checklist's `.ph-hx-qrow`/`.ph-hx-statebtn`
+still carried the retired 2026-09-02 "minimum tap target 44px" rule
+("remove the 44px codes everywhere in lcm, its outdated") — missed on this
+one screen when that sweep happened. `.ph-hx-qrow` tightened `min-height:
+44px` → `32px` (padding `4px 0` → `3px 0`); `.ph-hx-statebtn`'s own
+`min-height: 44px; padding: 4px 12px;` override was removed outright, so
+it now falls back to the shared 28px/4px-10px sizing the Not-asked/
+Answered-yes filter chips just above it on the same page already use —
+one consistent chip size on one screen, not two.
+
+**Shown as a real, interactive mock first** (her explicit "make mock" both
+times) — a live reproduction of the shipped `.ph-assess-tabs` CSS with a
+toggle between the Photos/Medical-history scenarios, sent to her directly
+as a file since the shared Browser pane wasn't reaching her reliably this
+session. Her "yes, build it for real and push live" approved both the
+rail fix and the row/button tightening together.
+
+**Verified against the real, live shipped code, not a reimplementation** —
+mounted the real `.ph-assess-tabs`/`.ph-hx-qrow`/`.ph-hx-statebtn` markup
+directly inside the real `#pharmacyPage` element in the sandbox (the login
+gate blocks a fully-booted click-through, same limitation as every batch in
+this file) and measured with `getBoundingClientRect()`: the rail is now
+**234px tall on the short (Photos) panel and 234px tall on the tall
+(Medical history, 9 rows) panel — identical**, where before the fix the two
+differed by whatever the panel's own height happened to be. Every tab
+measured 33-34px (content-sized, no clipping). Checklist row height 35px
+(was 44px+), state-button height 28px (was 44px) — matching the filter
+chips on the same page.
+
+`lcm-build` `20260925-160000`, `sw.js` `lcm-20260925-railfix-hxdensity`.

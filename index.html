@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260925-150000">
+<meta name="lcm-build" content="20260925-160000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -5849,9 +5849,15 @@
      rather than below it -- less scrolling to see the same tab. The
      phone (≤640px) keeps the horizontal strip unchanged. */
   @media (min-width: 901px) {
-    #pharmacyPage .ph-assess-tabs { display: flex; align-items: stretch; }
+    /* her report 2026-09-25: "left toolbar visual display is not consistent" --
+       align-items: stretch made the rail match whatever height the panel beside
+       it happened to be: a short panel (Photos) squeezed all the tabs into a
+       shrunk, clipped scroll strip; a tall panel (Medical history) stretched
+       them apart with dead space. flex-start + a content-sized tab (below)
+       makes the rail the same height regardless of what's showing next to it. */
+    #pharmacyPage .ph-assess-tabs { display: flex; align-items: flex-start; }
     #pharmacyPage .ph-assess-tabsrow { flex: 0 0 150px; flex-direction: column; overflow-x: visible; overflow-y: auto; border-bottom: 0; border-right: 1px solid var(--ph-line); }
-    #pharmacyPage .ph-assess-tab { border-right: 0; border-bottom: 1px solid var(--ph-line); text-align: left; }
+    #pharmacyPage .ph-assess-tab { flex: 0 0 auto; border-right: 0; border-bottom: 1px solid var(--ph-line); text-align: left; }
     #pharmacyPage .ph-assess-tab:last-child { border-bottom: 0; }
     #pharmacyPage .ph-assess-panel { flex: 1 1 auto; min-width: 0; }
   }
@@ -7531,12 +7537,17 @@
   #pharmacyPage .ph-hx-markno:hover:not(:disabled) { border-color: var(--ph-green); color: var(--ph-green-deep); }
   #pharmacyPage .ph-hx-markno:disabled { opacity: 0.4; cursor: default; }
   #pharmacyPage .ph-hx-qrow {
-    display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-height: 44px; padding: 4px 0;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-height: 32px; padding: 3px 0;
     border-bottom: 1px solid var(--ph-line);
   }
   #pharmacyPage .ph-hx-group .ph-hx-qrow:last-of-type { border-bottom: none; }
   #pharmacyPage .ph-hx-qlabel { flex: 1 1 160px; min-width: 0; font-size: 12.5px; }
-  #pharmacyPage .ph-hx-statebtn { border-color: var(--ph-line); background: var(--ph-white); color: var(--ph-soft); min-height: 44px; padding: 4px 12px; }
+  /* her report 2026-09-25 ("reduce empty space"): this carried the retired
+     2026-09-02 "minimum tap target 44px" rule ("remove the 44px codes
+     everywhere in lcm") -- missed on this one screen. No override left here
+     at all now, so it falls back to the shared 28px/4px 10px sizing the
+     Not-asked/Answered-yes filter chips above already use on this same page. */
+  #pharmacyPage .ph-hx-statebtn { border-color: var(--ph-line); background: var(--ph-white); color: var(--ph-soft); }
   #pharmacyPage .ph-hx-statebtn.unasked.on { background: var(--ph-stopped-tint); border-color: var(--ph-stopped); color: var(--ph-ink); }
   #pharmacyPage .ph-hx-statebtn.no.on { background: var(--ph-green-tint); border-color: var(--ph-green); color: var(--ph-green-deep); }
   #pharmacyPage .ph-hx-statebtn.yes.on { background: var(--ph-blue-tint); border-color: var(--ph-blue); color: var(--ph-blue-deep); }
@@ -9118,6 +9129,12 @@
   #pharmacyPage .ph-ivf-foldhd .cnt { color: var(--ph-faint); font-weight: 600; font-size: 11.5px; }
   #pharmacyPage .ph-ivf-foldhd .chev { margin-left: auto; color: var(--ph-faint); }
   #pharmacyPage .ph-ivf-body { margin-top: 8px; display: flex; flex-direction: column; gap: 10px; }
+  /* the Constitution fold on Patient details (her ask 2026-09-25) is a
+     top-level section of that tab, a peer of Patient/Insurance/Tracking --
+     not a nested row inside a stage the way IVF history's own fold is, so
+     it drops the 14px indent above and reads flush + dashed like every
+     other .ph-tmpl-sec header in this column. */
+  #pharmacyPage .ph-op-record > .ph-ivf-fold { margin: 12px 0 6px; border-top: 1px dashed var(--ph-line); padding-top: 8px; }
   /* 2 tables, side by side (her ask 2026-09-25) -- collections left,
      transfers right; stacks to one column on phone below. */
   #pharmacyPage .ph-ivf-cols { display: flex; gap: 20px; align-items: flex-start; }
@@ -30835,6 +30852,11 @@
       if (e.target.closest("[data-fp-goto]")) { presStage = "profile"; presAssessTab = "checklist"; renderPresPanel(); return; }
       const assessTab = e.target.closest("[data-assess-tab]");
       if (assessTab) { presAssessTab = assessTab.dataset.assessTab; if (!presAssessTabRefresh()) renderPresPanel(); return; }
+      // the 方病人 constitution fold, merged into Patient details (her ask
+      // 2026-09-25) -- only ever shown inside this one tab, so the scoped
+      // presAssessTabRefresh() is always the right repaint (no second
+      // surface it needs to reach, unlike phIvfHistoryFoldHtml's toggle).
+      if (e.target.closest("[data-constit-fold-toggle]")) { presConstitFoldOpen = !presConstitFoldOpen; if (!presAssessTabRefresh()) renderPresPanel(); return; }
       if (e.target.closest("[data-fp-copy]")) {
         const t = PRESC.items.find(x => x.id === presOpenId);
         const name = t && presPatientFor(t);
@@ -48269,6 +48291,45 @@ or changing anything in Cliniko.
       ${phInsFieldsHtml(presPatientFor(t) || t.name || "")}
       ${switches ? `<div class="ph-tmpl-sec"><span>Tracking</span></div>
       <div class="ph-pres-switches">${switches}</div>` : ""}
+      ${presConstitFoldSectionHtml(t)}
+    </div>`;
+  }
+  // whether ANY constitution field has ever been recorded for this patient
+  // -- the fold header's quiet "recorded"/"not recorded yet" tag, same
+  // "say it at a glance, before opening" idiom as presMedHxSubLabel above.
+  // Read-only (phPatientPeek, never phPatientRec) -- a summary line must
+  // never itself lazy-init the fields it's only reporting on.
+  function presConstitHasData(rec) {
+    if (!rec) return false;
+    if (rec.bodyConstitutionBt || rec.personalityBt || rec.eyes || rec.build || rec.constitutionFindings) return true;
+    if ((rec.skin || []).length || (rec.voiceManner || []).length) return true;
+    const tng = rec.constitTongue;
+    if (tng && ((tng.regions || []).length || (tng.overlays || []).length || (tng.body || []).length || (tng.coat || []).length)) return true;
+    const pul = rec.constitPulse;
+    if (pul && (Object.keys(pul.pulse || {}).length || (pul.pulseRef || []).length)) return true;
+    return false;
+  }
+  // the 方病人 constitution block, merged into Patient details (her ask
+  // 2026-09-25: "merge constitution and patient details together" --
+  // shown a mock, given no further steer beyond "make my workflow
+  // easier"). Folded, collapsed by default -- this is the heaviest render
+  // on the whole profile (tongue chart, pulse grid, Shen-Hammer exam), and
+  // Patient details is the default landing tab for a returning patient, so
+  // an always-open merge would pay that cost on every single profile open.
+  // presConstitTabBodyHtml is completely unchanged and does the real work
+  // -- it already wraps its own #presConstitHost mount point, which is all
+  // renderHxScreen() needs to keep repainting it in place; only WHERE it's
+  // invited to render moved, from its own rail tab to inside this fold.
+  function presConstitFoldSectionHtml(t) {
+    const name = presPatientFor(t) || t.name || "";
+    if (!name) return "";
+    const has = presConstitHasData(phPatientPeek(name));
+    return `<div class="ph-ivf-fold">
+      <button type="button" class="ph-ivf-foldhd" data-constit-fold-toggle="1" aria-expanded="${presConstitFoldOpen ? "true" : "false"}">
+        <span class="ic">方</span><b>Constitution</b><span class="cnt">${has ? "recorded" : "not recorded yet"}</span>
+        <span class="chev">${presConstitFoldOpen ? "▾" : "▸"}</span>
+      </button>
+      ${presConstitFoldOpen ? presConstitTabBodyHtml(t) : ""}
     </div>`;
   }
   // the rail button's own quiet "8 of 38 asked · 2 flagged" sub-line --
@@ -48357,10 +48418,11 @@ or changing anything in Cliniko.
     return `<div id="presConstitHost">${presConstitTabInnerHtml(name)}</div>`;
   }
   // a body may be a FUNCTION: built only when its tab is the selected one.
-  // The constitution body is the heaviest thing on the profile (pulse grid,
-  // Hammer exam, photo timeline) and the profile re-renders on most field
-  // edits, so it is not built while Photos/Cycle/Notes is showing -- and
-  // presHxScreenName is only taken while the tab is actually on screen.
+  // Constitution is no longer its own tab (her ask 2026-09-25, merged into
+  // Patient details as a collapsed fold -- see presConstitFoldSectionHtml);
+  // its render stays lazy either way, just gated on presConstitFoldOpen
+  // instead of which rail tab is selected. presHxScreenName is only taken
+  // while its content is actually on screen (open tab AND open fold).
   function presAssessSections(t) {
     const name = presPatientFor(t);
     const hxName = name || t.name || "";
@@ -48371,7 +48433,6 @@ or changing anything in Cliniko.
     sections.push({ id: "supplements", label: "Supplements", body: () => presSupplementsTabBodyHtml(t) });
     sections.push(
       { id: "photos", label: "Photos", body: presPhotosSectionHtml(t) },
-      { id: "constitution", label: "Constitution", body: (presPatientFor(t) || t.name) ? () => presConstitTabBodyHtml(t) : "" },
       { id: "checklist", label: "Checklist", body: presFacialSectionBodyHtml(t) },
       { id: "cycle", label: "Cycle", body: presCycleSectionBodyHtml(t) },
       { id: "ivf", label: "IVF history", body: name ? phIvfHistoryFoldHtml(name) : "" },
@@ -64045,6 +64106,14 @@ Please let me know if you have any questions.`;
   // Assessment section is showing -- null picks the first available one at
   // render time (presAssessTabsHtml), same idiom as phTpTabPhase.
   let presAssessTab = null;
+  // her ask 2026-09-25 ("merge constitution and patient details together"):
+  // the 方病人 constitution block folds INTO the Patient details tab now
+  // (see presPatientTabBodyHtml) instead of being its own rail entry --
+  // collapsed by default so the profile's default landing tab never pays
+  // for the heaviest render on the page (tongue chart, pulse grid, Hammer
+  // exam) just by being opened; expands in place via presAssessTabRefresh,
+  // same idiom as phIvfHistoryFoldHtml's presIvfHistOpen.
+  let presConstitFoldOpen = false;
   // 🩸 Cycle row (patient-level, 2026-09-04) open/closed in the panel
   // 🩸 period history list (her ask 2026-09-05), collapsed by default so the
   // already-dense cycle bar doesn't grow every time it's shown -- see
