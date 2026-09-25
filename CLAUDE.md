@@ -9064,3 +9064,78 @@ needs her to confirm which fields and what the preset words should say
 before it's built.
 
 `lcm-build` `20260925-130000`, `sw.js` `lcm-20260925-diabetes-type-presets`.
+
+## Merged visit table's Subjective row splits into Subjective + Lifestyle, Lifestyle moved below Herbs (her correction 2026-09-25)
+
+Ten-question discovery round on the merged Planned|Today visit table
+(`phTpVisitTableHtml`), synthesized into a real interactive mock and shown
+to her (`https://claude.ai/artifact/NakUs2GHCyAohUhYQL5vqu`). Most of what
+the mock addressed — label wrapping, the colour rainbow, always-visible
+empty sections, the "Ask" row's own name — had already been independently
+resolved by concurrent same-day work (the MSK Objective-exam build renamed
+"Ask" → "Subjective" and dropped the Needle row the same day; the IVF phase
+bar's "Option F" redesign already fixed the colour issues; the future-
+session/"Session N" columns already cover forward planning). Rather than
+re-build ground already covered, this entry only implements the one piece
+that was genuinely still open: her real clinical correction on the mock —
+**"looks good, subjective row is for complaints only. not records of what
+patient is doing. give a row for lifestyle for that"** — followed by
+**"move lifestyle below herbs row. then build and ship."**
+
+**The split, in `presAcuOpenHtml`'s compact-mode `watchHtml` block** (the
+one the merged table reads via `rowVal`): what used to be ONE row labelled
+"Subjective" carrying both the phase's Watch chips (rest/exercise/ice/test-
+timing — practitioner-given lifestyle instructions) AND the "her words
+today" freeform ask-note is now TWO rows. **Lifestyle** carries the Watch
+chips plus a new one-tap **"Apply the usual"** button
+(`data-pres-acu-watchall`, `presAcuCtx().treatedPhase.watch` through
+`phAcuWatchChips` → the full array in one tap, same pattern
+`data-pres-acu-watch`'s single-chip toggle already uses). **Subjective**
+keeps only the "her words today…" input — genuinely complaint-only now.
+Non-compact mode (Timeline/full-panel) is untouched — still the original
+single "Watch for" row, since her correction was specifically about the
+merged table's own Subjective row, not the standalone acu-log panel.
+
+**`phTpPlanCells` gains `watchText: cell("watch")`** — the phase's raw
+Watch prose, for the Lifestyle row's Planned side — alongside the existing
+`watch` key (the symptom-progression tracker, unchanged, still feeds the
+Subjective row's Planned side).
+
+**Row order in `phTpVisitTableHtml`**: Lifestyle sits directly after Herbs
+and before Next, per her literal instruction — `phase, ask(Subjective),
+objective(MSK), response, findings, therapies, herbs, lifestyle, next,
+comments, log`. Not wired into the `done`/`now` step-highlighting Set
+(same as the Objective row's own precedent) — it's a plan/instruction row,
+not a today's-checklist step.
+
+Verified via real dispatched clicks against the real functions in the
+sandbox (this project's login gate blocks a fully-booted click-through, so
+`#pharmacyPage`-scoped synthetic DOM + real delegated handlers stood in,
+per established practice): a synthetic MSK plan's Lifestyle row correctly
+shows the phase's raw Watch text on Planned and the three chips + Apply-
+the-usual on Today; Subjective's Today side is confirmed chip-free
+(ask-note only); a real click on Apply the usual set
+`presAcuWatchChecked` to all three chips in one tap; an individual chip
+click still toggles correctly (regression-checked, since a new branch was
+added right beside the existing handler); a phase with empty Watch text
+renders the same "—"/placeholder empty-state every other cell in this
+table already uses, nothing broken; non-compact mode's single "Watch for"
+row confirmed unchanged. Clean console throughout. Synthetic patients
+existed only in this tab's in-memory `PHARMACY` (never `savePharmacy()`'d)
+and were removed after, confirmed absent.
+
+**Scope note, disclosed rather than silently expanded**: the other pieces
+from the original 10-question mock — Planned-column collapse-after-first-
+visit, an explicit phase-colour tie-in on this table (Post-ET/Post-OPU/
+Pre-ET still have no distinct kind colour, as originally flagged), an
+"IVF progress" fold merging milestones+scans, a wider label column, and
+MSK-conditional Findings-quieting — were NOT built this round. The table
+has moved substantially since the mock was shown (MSK's own Objective row,
+the future-session columns, the Session-per-phase work, the IVF phase-bar
+recolour), and her most recent instruction was the narrow, concrete
+"move lifestyle below herbs row. then build and ship" — built and shipped
+exactly that rather than layering more redesign onto ground that's shifted
+under it. If she still wants any of the deferred pieces, they're each a
+small, separately-scoped follow-up against the table as it stands today.
+
+`lcm-build` `20260925-140000`, `sw.js` `lcm-20260925-lifestylerow-split`.
