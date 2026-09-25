@@ -10033,3 +10033,37 @@ same spot correctly toggled it closed without touching `phCyclePop` (the
 removed, confirmed absent.
 
 `lcm-build` `20260925-270000`, `sw.js` `lcm-20260925-cyclepop-mutex`.
+
+## "i dont want a widget under the calendar. put it all under the bar" — the CD calculator and Period history link moved off the calendar into the bar column (2026-09-25)
+
+Straight after the popover-mutex fix above, a follow-up correction on the
+Treatment Plan tab's Cycle block layout (`phTpCycleBlockHtml`): the "Know
+her cycle day instead? →" calculator and the "Period history →" link
+(bundled together as one `links` div) were literally coded inside `.cal`
+— the left column, directly under the calendar strip — while the bar,
+facts and edit controls sat in `.side`, the right column. Her instruction
+was to put the whole thing under the bar instead.
+
+**Fix**: moved the `links` div from `.cal` into `.side` across all three
+of `phTpCycleBlockHtml`'s return branches (not-tracking, no-period-logged,
+and the populated branch) — `.cal` now holds only the calendar strip
+itself; `.side` gains `links` as its first child, directly above the bar.
+**Corroborating precedent, not guessed**: the sibling Pregnancy week
+tracker block (same `.ph-tp-cycblk` shell, same two-column layout) already
+places its own equivalent `links` div (with `phTpPregCalcHtml` instead of
+the cycle CD calculator) inside `.side`, not `.cal` — this fix brings the
+Cycle block into line with what its own sibling component already does,
+rather than inventing a new placement.
+
+Verified against the real, running app in the sandbox: recreated a
+synthetic patient on an IVF Protocol plan (a real script via
+`presOpenId`/`presStage`/`presStageForId`/`presTpInlinePlanId`, then
+`renderPresPanel()`), switched to the Prescriptions tab, confirmed
+`.ph-tp-cycblk` rendered — then screenshotted the live result: "Know her
+cycle day instead? →" and "Period history →" now sit directly under the
+phase bar (right column), no longer under the calendar (left column).
+Synthetic patient and script removed afterward via `delete
+PHARMACY.patients[key]` + `PRESC.items` filter, `savePharmacy()` confirmed
+`true`, `patientGone: true`. Viewport reset to the desktop preset.
+
+`lcm-build` `20260925-280000`, `sw.js` `lcm-20260925-cycblk-links-under-bar`.
