@@ -10705,3 +10705,36 @@ images, oldest on the left. Screenshot fronted. Test photos and script
 removed after the batch.
 
 `lcm-build` `20260926-060000`, `sw.js` `lcm-20260926-compare-pick-opens-pair`.
+
+## The photo viewer walks the ROW the tapped photo sits on — an unsorted tongue photo no longer opens "12 of 12" (her synth22 "when i click on unsorted images, it still shows all the photos e.g. 12 of 12 photos. thats confusing", 2026-09-26)
+
+`phRenViewSetFor` built the ‹ › set by TYPE, narrowing to one shot only when
+a tile opted in with `data-ren-tl-shot` (the 2026-09-20 "9s" fix for the
+Visit record strip) — and an unsorted tongue photo has no shot to narrow
+by, so even an opted-in tile opened the whole tongue pile. The Photos
+strip and the timeline tiles never opted in at all. Result: tap one of two
+unsorted photos, read "1 of 12 tongue photos", and page through natural
+light / flash / side shots to find the other unsorted one.
+
+- `phRenViewSetFor(patientKey, rowKey)` filters by `phRenRowKeyOf` — the
+  same row the strip, the timeline table and the compare group already
+  use: `tongue` (unsorted), `tongue:<shot>`, or the type. The viewer state
+  carries `viewRow`; `phRenViewStep` and the Change-date re-derive read
+  it. `sameShot`/`viewShotOnly` are gone — every tile scopes the same way,
+  so `data-ren-tl-shot` is now inert (left on its two emitters, harmless).
+- The counter says what the set is: "1 of 2 unsorted tongue photos",
+  "2 of 3 natural light shots", "2 of 4 abdomen photos"
+  (`phRenViewSetLabel`).
+- Relabelling a shot inside the viewer keeps walking the pile she opened
+  (the photo is re-found on the next step) — the pre-existing, commented
+  choice at the Change-type handler, unchanged.
+
+Verified on the signed-out sandbox with 8 seeded photos (2 unsorted tongue,
+3 natural, 1 flash, 1 side, 1 abdomen) through the real tile clicks: table
+tap on an unsorted photo → "1 of 2 unsorted tongue photos", set = the two
+unsorted ids; natural → "2 of 3 natural light shots"; flash and abdomen
+open with no ‹ › (one each); the strip's unsorted tile → "2 of 2 unsorted
+tongue photos"; ‹ from the newest natural lands on the middle natural,
+never on a flash. Screenshot fronted.
+
+`lcm-build` `20260926-070000`, `sw.js` `lcm-20260926-viewer-walks-its-row`.
