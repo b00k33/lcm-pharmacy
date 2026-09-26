@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260926-090000">
+<meta name="lcm-build" content="20260926-100000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -12430,6 +12430,7 @@
      tiles themselves marked (dashed amber edge, a ? badge) grouped first
      behind an UNSORTED divider. */
   #pharmacyPage .ph-photos-sortline { display: flex; align-items: center; gap: 10px; background: var(--ph-low-tint); color: var(--ph-low-deep); border-radius: 10px; padding: 7px 12px; font-size: 12.5px; font-weight: 600; margin: 0 0 8px; }
+  #pharmacyPage .ph-photos-sortline.done { background: var(--ph-herb-tint); color: var(--ph-herb-deep); }
   #pharmacyPage .ph-photos-sortline .go { margin-left: auto; flex: none; font: inherit; font-size: 11px; font-weight: 800; background: var(--ph-low-deep); color: #fff; border: 0; border-radius: 999px; padding: 5px 11px; cursor: pointer; white-space: nowrap; min-height: 0; }
   #pharmacyPage .ph-photos-th.unsorted .ph-photos-thimg::after { content: "?"; position: absolute; top: 4px; right: 4px; width: 18px; height: 18px; border-radius: 999px; background: var(--ph-low-deep); color: #fff; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; pointer-events: none; }
   #pharmacyPage .ph-photos-th.unsorted img { border: 2px dashed var(--ph-low); }
@@ -27770,15 +27771,7 @@
       const patOpen = e.target.closest("[data-ph-dash-patient-open]");
       if (patOpen && !e.target.closest("[data-ph-appt-order], [data-ph-apptcal-order-dot], [data-ph-tab]")) {
         phApptPopClose();
-        const name = patOpen.dataset.phDashPatientOpen;
-        const script = phApptScriptFor(phPatientKey(name));
-        if (script) { presGoToScript(script.id); return; }
-        if (phTimers.presTmpl) { clearTimeout(phTimers.presTmpl); phTimers.presTmpl = null; presFlushTemplate(); }
-        PHARMACY.activeTab = "prescriptions";
-        presOpenId = null; presEditId = null; presDraft = null; presSearch = name; presPage = 1;
-        presPageFromTabHop = false;   // no script overlay opened, nothing for Back to undo twice
-        savePharmacy(); renderPharmacy();
-        const inp = document.getElementById("presSearch"); if (inp) inp.value = name;
+        phPatientProfileOpen(patOpen.dataset.phDashPatientOpen);
         return;
       }
       const cycJump = e.target.closest("[data-ph-cyc-jump]");
@@ -30396,6 +30389,13 @@
       if (e.target.closest("[data-ren-cmp-start]")) { phRenCompareStartFromView(); return; }
       const cmpMode = e.target.closest("[data-ren-cmp-mode]");
       if (cmpMode) { phRenCmpMode = cmpMode.dataset.renCmpMode; renderPhRenCompareModal(); return; }
+      const cmpShift = e.target.closest("[data-ren-cmp-shift]");
+      if (cmpShift) { phRenCmpShift(+cmpShift.dataset.renCmpShift); return; }
+      if (e.target.closest("[data-ren-cmp-flip]")) { phRenCmpFlip = !phRenCmpFlip; renderPhRenCompareModal(); return; }
+      if (e.target.closest("[data-ren-cmp-blink]")) { phRenCmpBlinkOn = !phRenCmpBlinkOn; renderPhRenCompareModal(); return; }
+      const cmpOtPick = e.target.closest("[data-ren-cmp-ot-pick]");
+      if (cmpOtPick) { phRenCmpOtPickToggle(cmpOtPick.dataset.renCmpOtPick); renderPhRenCompareModal(); return; }
+      if (e.target.closest("[data-ren-cmp-ot-go]")) { phRenCmpOtGo(); return; }
       // the confirm step's three buttons (§2)
       if (e.target.closest("[data-ren-confirm-cancel]")) { phRenConfirmClose(); phRenCapture = null; return; }
       // batch confirm (her ask 2026-09-02): drop one pick, or save the lot
@@ -30745,11 +30745,14 @@
           delete phRenPhotoCache[st.patientKey];
           await phRenLoadPhotosFor(st.patientKey);
           st.viewShot = next;
+          renderHxScreen();
+          phRenPhotosSecRefresh(st.patientKey);
+          // her §5 sort flow: a real shot pick resolves this photo -- move on
+          // to the next one that still needs sorting rather than sit on it
+          if (next && st.sortFlow) { phRenSortFlowNext(st); return; }
           // the photo may have moved to a different line, so its walking set
           // is stale -- phRenViewStep re-derives, but the modal repaints now
           renderPhRenCropModal();
-          renderHxScreen();
-          phRenPhotosSecRefresh(st.patientKey);
         }).catch(() => phFlashShow("⚠ Couldn't save that label."));
         return;
       }
@@ -30777,9 +30780,13 @@
           delete phRenPhotoCache[st.patientKey];
           await phRenLoadPhotosFor(st.patientKey);
           st.kind = want; st.viewShot = write.shot || ""; st.retypeOpen = false;
-          renderPhRenCropModal();
           renderHxScreen();
           phRenPhotosSecRefresh(st.patientKey);
+          // her §5 sort flow: retyping to tongue still needs a shot pick, so
+          // stay put -- the shot handler above advances once that's chosen.
+          // Any other retype is fully resolved, so move on.
+          if (want !== "tongue" && st.sortFlow) { phRenSortFlowNext(st); return; }
+          renderPhRenCropModal();
         }).catch(() => phFlashShow("⚠ Couldn't save that."));
         return;
       }
@@ -30848,6 +30855,16 @@
         const { viewId, patientKey } = phRenCropState;
         phRenCropClose();
         phRenDeletePhotoWithUndo(viewId, patientKey);
+        return;
+      }
+      if (e.target.closest("[data-ren-view-profile]") && phRenCropState && phRenCropState.viewOnly) {
+        const name = phRecPhotosPatientName(phRenCropState.patientKey);
+        phRenCropClose();
+        phPatientProfileOpen(name);
+        return;
+      }
+      if (e.target.closest("[data-ren-view-sort-skip]") && phRenCropState && phRenCropState.sortFlow) {
+        phRenSortFlowSkip(phRenCropState);
         return;
       }
       const recPhotosThumb = e.target.closest("[data-recphotos-thumb]");
@@ -31136,6 +31153,15 @@
       // PHOTOS section: repaint in place, never renderPresPanel (phone scroll)
       if (e.target.closest("[data-pres-photos-toggle]")) { presPhotosOpen = !presPhotosOpen; phRenPhotosSecRefresh(); return; }
       if (e.target.closest("[data-pres-photos-add]")) { presPhotosAddOpen = !presPhotosAddOpen; phRenPhotosSecRefresh(); return; }
+      // her §5 pick "C · Both": the amber sortline's "Sort them →" -- opens
+      // the first unsorted photo and arms phRenCropState.sortFlow so the
+      // viewer walks the rest one by one (see renderPhRenCropModal's
+      // sortflow row + the shot/type handlers' auto-advance below).
+      if (e.target.closest("[data-pres-photos-sort]")) {
+        const sec = e.target.closest("[data-ren-photos]");
+        if (sec) phRenSortFlowStart(sec.dataset.renPhotos);
+        return;
+      }
       // ---- Select several photos, delete once (her ask 2026-09-19) ----
       // every repaint is the section's own in-place refresh, never a full
       // renderPresPanel (the phone's scroll spot, same as the toggles above)
@@ -37619,6 +37645,20 @@
     const rec = PHARMACY.patients[patientKey];
     return (rec && rec.name) || phTitle(patientKey) || "Unknown patient";
   }
+  // the "Open profile →" door onto a patient, shared by the appointment
+  // popup's own link (data-ph-dash-patient-open) and the photo library's new
+  // name link / viewer footer (§4) -- factored out of the popup's handler so
+  // both call the exact same logic instead of a second, drifting copy.
+  function phPatientProfileOpen(name) {
+    const script = phApptScriptFor(phPatientKey(name));
+    if (script) { presGoToScript(script.id); return; }
+    if (phTimers.presTmpl) { clearTimeout(phTimers.presTmpl); phTimers.presTmpl = null; presFlushTemplate(); }
+    PHARMACY.activeTab = "prescriptions";
+    presOpenId = null; presEditId = null; presDraft = null; presSearch = name; presPage = 1;
+    presPageFromTabHop = false;   // no script overlay opened, nothing for Back to undo twice
+    savePharmacy(); renderPharmacy();
+    const inp = document.getElementById("presSearch"); if (inp) inp.value = name;
+  }
   function phRecPhotosFiltered() {
     const list = phRecPhotosCache || [];
     const q = phRecPhotosPatientFilter.trim().toLowerCase();
@@ -37693,10 +37733,19 @@
     const name = phRecPhotosPatientName(r.patientKey);
     const typeLabel = phRecPhotosCaption(r);
     const dk = phRenDateKeyOf(r);
-    return `<button type="button" class="ph-recphotos-thumb" data-recphotos-thumb="${esc(r.id)}" data-recphotos-patient="${esc(r.patientKey)}" title="${esc(name)} · ${esc(typeLabel)} · ${esc(phShortDate(dk))}">
-      <img src="${r.objectUrl}" alt="${esc(typeLabel)} photo of ${esc(name)}" loading="lazy">
-      <span class="ph-recphotos-thumb-meta"><b>${esc(name)}</b>${esc(typeLabel)} · ${esc(phShortDate(dk))}</span>
-    </button>`;
+    // her ask (§4, "how do i open patient profile from the photos library?"):
+    // the name is now its OWN link (data-ph-dash-patient-open, the same
+    // generic door the appointment popup already uses) -- the image button
+    // still only opens the photo viewer.
+    return `<div class="ph-recphotos-thumb">
+      <button type="button" class="ph-recphotos-thumbimg" data-recphotos-thumb="${esc(r.id)}" data-recphotos-patient="${esc(r.patientKey)}" title="${esc(name)} · ${esc(typeLabel)} · ${esc(phShortDate(dk))}">
+        <img src="${r.objectUrl}" alt="${esc(typeLabel)} photo of ${esc(name)}" loading="lazy">
+      </button>
+      <span class="ph-recphotos-thumb-meta">
+        <button type="button" class="ph-recphotos-name" data-ph-dash-patient-open="${esc(name)}">${esc(name)}</button>
+        ${esc(typeLabel)} · ${esc(phShortDate(dk))}
+      </span>
+    </div>`;
   }
   // the shared viewer (phRenViewPhoto) reads a patient's per-patient cache
   // (phRenPhotoCache[patientKey], via phRenPhotosFor) -- every existing call
@@ -37707,7 +37756,7 @@
   // tongue-photo letter picker), then hand off to the real viewer unchanged.
   async function phRecPhotosOpenViewer(id, patientKey) {
     if (!phRenPhotosFor(patientKey)) { try { await phRenLoadPhotosFor(patientKey); } catch (e) {} }
-    phRenViewPhoto(id, patientKey);
+    phRenViewPhoto(id, patientKey, { fromLibrary: true });
   }
   function phRecPhotosGroupHtml(label, rows) {
     return `<div class="ph-recphotos-group"><div class="ph-recphotos-grouph">${esc(label)} <span class="n">${rows.length}</span></div><div class="ph-recphotos-grid">${rows.map(phRecPhotosThumbHtml).join("")}</div></div>`;
@@ -46483,14 +46532,108 @@ or changing anything in Cliniko.
       </div>
     </div>`;
   }
-  /* ---- compare view (§3): two photos of ONE type, dated. Her pick
-     2026-09-14, shown three real mock styles (side-by-side / drag-slider /
-     tap-to-flip): "i like side by side and drag" -- both built here as a
-     toggle, not one replacing the other, matching her established pattern
-     of picking to see MORE rather than fewer options. phRenCmpMode is
-     module-level (not on phRenCropState) so it stays on whichever she used
-     last across separate compares in the same session. ---- */
-  let phRenCmpMode = "side";   // "side" | "slider"
+  /* ---- compare view (§3): her "all of the above" pick 2026-09-26 on
+     "how do i compare 2 images? give me 3 mocks" -- all three real mock
+     styles built as a toggle, not one replacing the other (her established
+     pattern of picking to see MORE rather than fewer options): side-by-side
+     (+ facts per photo + ‹ › to slide the pair a visit earlier/later),
+     drag-slider (+ Flip to swap top/bottom, + Blink to auto-alternate the
+     two full images), and "Over time" (every shot in the compare group,
+     oldest->newest, tap two to open them as the pair). phRenCmp* state is
+     module-level (not on phRenCropState) so a mode/flip/blink pick stays put
+     across separate compares in the same session; phRenCompareShow() resets
+     flip/blink/the over-time pick fresh each time a NEW pair is opened. ---- */
+  let phRenCmpMode = "side";   // "side" | "slider" | "time"
+  let phRenCmpFlip = false;    // slider: swap which photo is background vs the clipped top layer
+  let phRenCmpBlinkOn = false; // slider: auto-alternate showing each photo in full
+  let phRenCmpBlinkTimer = null;
+  let phRenCmpOtPick = [];     // "time" mode: up to 2 picked photo ids, oldest replaced first
+  function phRenCmpPairSet(patientKey, group) {
+    const list = phRenPhotosFor(patientKey) || [];
+    return list.filter(r => phRenCmpGroupOf(phRenRowKeyOf(r)) === group).sort((x, y) => (x.createdAt || 0) - (y.createdAt || 0));
+  }
+  // read-only (never mutates a record) -- CD via the same phCycleCompAsOf
+  // call phTpVrFacts already uses for a visit row; the tongue sentence comes
+  // from the acu session (if any) logged on this exact photo's date.
+  function phRenCmpFactsFor(patientKey, photo) {
+    const rec = PHARMACY.patients[patientKey];
+    if (!rec) return null;
+    const dateKey = phRenDateKeyOf(photo);
+    const comp = phCycleOn(rec) ? phCycleCompAsOf(rec, parseKey(dateKey)) : null;
+    const acu = (rec.acuSessions || []).find(s => s.date === dateKey);
+    const f = acu && rec.visitFnd && rec.visitFnd[acu.id] && !phVisitFndEmpty(rec.visitFnd[acu.id]) ? phVisitFndRead(rec.visitFnd[acu.id]) : null;
+    const tongueLine = f ? phVisitFndReportLines(f).find(([l]) => l === "Tongue") : null;
+    const cdChip = comp ? `<span class="ph-ren-cmp-cd k-${esc(comp.phaseKey)}">CD ${comp.day}</span>` : "";
+    const sentence = tongueLine && tongueLine[1] ? esc(tongueLine[1]) : "";
+    if (!cdChip && !sentence) return null;
+    return { cdChip, sentence };
+  }
+  function phRenCmpFactsHtml(patientKey, photo) {
+    const facts = phRenCmpFactsFor(patientKey, photo);
+    return facts ? `<div class="ph-ren-cmp-facts">${facts.cdChip}${facts.sentence ? `<span class="sent">${facts.sentence}</span>` : ""}</div>` : "";
+  }
+  function phRenCmpShift(dir) {
+    if (!phRenCropState || !phRenCropState.compare) return;
+    const [a, b] = phRenCropState.compare;
+    const set = phRenCmpPairSet(phRenCropState.patientKey, phRenCmpGroupOf(phRenRowKeyOf(a)));
+    const ia = set.findIndex(r => r.id === a.id), ib = set.findIndex(r => r.id === b.id);
+    if (ia < 0 || ib < 0) return;
+    const ni = ia + dir, nj = ib + dir;
+    if (ni < 0 || nj >= set.length) return;
+    phRenCropState.compare = [set[ni], set[nj]];
+    renderPhRenCompareModal();
+  }
+  function phRenCmpBlinkStop() {
+    if (phRenCmpBlinkTimer) { clearInterval(phRenCmpBlinkTimer); phRenCmpBlinkTimer = null; }
+  }
+  function phRenCmpBlinkSync() {
+    phRenCmpBlinkStop();
+    if (!phRenCmpBlinkOn) return;
+    let showTop = true;
+    phRenCmpBlinkTimer = setInterval(() => {
+      const top = document.getElementById("phRenCmpSliderTop"), handle = document.getElementById("phRenCmpSliderHandle");
+      if (!top) { phRenCmpBlinkStop(); return; }
+      showTop = !showTop;
+      top.style.clipPath = showTop ? "inset(0 0 0 0)" : "inset(0 100% 0 0)";
+      if (handle) handle.style.display = "none";
+    }, 700);
+  }
+  function phRenCmpOverTimeHtml(anyPhoto) {
+    const group = phRenCmpGroupOf(phRenRowKeyOf(anyPhoto));
+    const set = phRenCmpPairSet(phRenCropState.patientKey, group);
+    const tiles = set.map(r => {
+      const dk = phRenDateKeyOf(r);
+      const facts = phRenCmpFactsFor(phRenCropState.patientKey, r);
+      const picked = phRenCmpOtPick.includes(r.id);
+      return `<button type="button" class="ot${picked ? " pick" : ""}" data-ren-cmp-ot-pick="${esc(r.id)}">
+        <img src="${r.objectUrl}" alt="${esc(phFuDateLabel(dk))}">
+        <span class="d">${esc(phFuDateLabel(dk))}${facts ? facts.cdChip : ""}</span>
+        ${facts && facts.sentence ? `<span class="s">${facts.sentence}</span>` : ""}
+      </button>`;
+    }).join("");
+    const go = phRenCmpOtPick.length === 2;
+    return `<div class="ph-ren-cmp-ot">${tiles}</div>
+      <div class="ph-ren-cmp-bar"><span>Tap two photos to open them as a pair.</span>
+        <button type="button" class="ph-ren-cmp-go" data-ren-cmp-ot-go="1"${go ? "" : " disabled"}>Compare these 2 →</button>
+      </div>`;
+  }
+  function phRenCmpOtPickToggle(id) {
+    const i = phRenCmpOtPick.indexOf(id);
+    if (i >= 0) { phRenCmpOtPick.splice(i, 1); return; }
+    if (phRenCmpOtPick.length >= 2) phRenCmpOtPick.shift();
+    phRenCmpOtPick.push(id);
+  }
+  function phRenCmpOtGo() {
+    if (phRenCmpOtPick.length !== 2 || !phRenCropState) return;
+    const group = phRenCmpGroupOf(phRenRowKeyOf(phRenCropState.compare[0]));
+    const set = phRenCmpPairSet(phRenCropState.patientKey, group);
+    const picked = phRenCmpOtPick.map(id => set.find(r => r.id === id)).filter(Boolean);
+    if (picked.length !== 2) return;
+    picked.sort((x, y) => (x.createdAt || 0) - (y.createdAt || 0));
+    phRenCropState.compare = picked;
+    phRenCmpMode = "side";
+    renderPhRenCompareModal();
+  }
   function renderPhRenCompareModal() {
     const modal = document.getElementById("phRenCropModal");
     if (!modal || !phRenCropState || !phRenCropState.compare) return;
@@ -46500,19 +46643,35 @@ or changing anything in Cliniko.
     const modeToggle = `<div class="ph-cap-chips ph-ren-cmp-modes">
       <button type="button" class="ph-cap-tchip${phRenCmpMode === "side" ? " on" : ""}" data-ren-cmp-mode="side">Side by side</button>
       <button type="button" class="ph-cap-tchip${phRenCmpMode === "slider" ? " on" : ""}" data-ren-cmp-mode="slider">Drag to compare</button>
+      <button type="button" class="ph-cap-tchip${phRenCmpMode === "time" ? " on" : ""}" data-ren-cmp-mode="time">Over time</button>
     </div>`;
-    const body = phRenCmpMode === "slider"
-      ? `<div class="ph-ren-cmp-slider" id="phRenCmpSlider">
-          <img class="ph-ren-cmp-slider-img" src="${b.objectUrl}" alt="${esc(label)} ${esc(dateB)}">
-          <img class="ph-ren-cmp-slider-img" id="phRenCmpSliderTop" src="${a.objectUrl}" alt="${esc(label)} ${esc(dateA)}" style="clip-path:inset(0 50% 0 0)">
+    let body;
+    if (phRenCmpMode === "slider") {
+      const top = phRenCmpFlip ? b : a, bottom = phRenCmpFlip ? a : b;
+      const topDate = phRenCmpFlip ? dateB : dateA, bottomDate = phRenCmpFlip ? dateA : dateB;
+      body = `<div class="ph-ren-cmp-slider" id="phRenCmpSlider">
+          <img class="ph-ren-cmp-slider-img" src="${bottom.objectUrl}" alt="${esc(label)} ${esc(bottomDate)}">
+          <img class="ph-ren-cmp-slider-img" id="phRenCmpSliderTop" src="${top.objectUrl}" alt="${esc(label)} ${esc(topDate)}" style="clip-path:inset(0 50% 0 0)">
           <div class="ph-ren-cmp-slider-handle" id="phRenCmpSliderHandle" style="left:50%"><span></span></div>
-          <span class="ph-ren-cmp-slider-tag l">${esc(dateA)}</span>
-          <span class="ph-ren-cmp-slider-tag r">${esc(dateB)}</span>
-        </div>`
-      : `<div class="ph-ren-cmp">
-          <figure class="ph-ren-cmp-fig"><img src="${a.objectUrl}" alt="${esc(label)} ${esc(dateA)}"><figcaption>${esc(dateA)}</figcaption></figure>
-          <figure class="ph-ren-cmp-fig"><img src="${b.objectUrl}" alt="${esc(label)} ${esc(dateB)}"><figcaption>${esc(dateB)}</figcaption></figure>
+          <span class="ph-ren-cmp-slider-tag l">${esc(topDate)}</span>
+          <span class="ph-ren-cmp-slider-tag r">${esc(bottomDate)}</span>
+        </div>
+        <div class="ph-ren-cmp-bar">
+          <button type="button" class="ph-ren-cmp-key" data-ren-cmp-flip="1">⇄ Flip</button>
+          <button type="button" class="ph-ren-cmp-key${phRenCmpBlinkOn ? " on" : ""}" data-ren-cmp-blink="1">${phRenCmpBlinkOn ? "■ Stop" : "◐ Blink"}</button>
         </div>`;
+    } else if (phRenCmpMode === "time") {
+      body = phRenCmpOverTimeHtml(a);
+    } else {
+      body = `<div class="ph-ren-cmp">
+          <figure class="ph-ren-cmp-fig"><img src="${a.objectUrl}" alt="${esc(label)} ${esc(dateA)}"><figcaption>${esc(dateA)}</figcaption>${phRenCmpFactsHtml(phRenCropState.patientKey, a)}</figure>
+          <figure class="ph-ren-cmp-fig"><img src="${b.objectUrl}" alt="${esc(label)} ${esc(dateB)}"><figcaption>${esc(dateB)}</figcaption>${phRenCmpFactsHtml(phRenCropState.patientKey, b)}</figure>
+        </div>
+        <div class="ph-ren-cmp-nav">
+          <button type="button" class="ph-ren-cmp-key" data-ren-cmp-shift="-1">‹ Earlier visit</button>
+          <button type="button" class="ph-ren-cmp-key" data-ren-cmp-shift="1">Later visit ›</button>
+        </div>`;
+    }
     modal.innerHTML = `<div class="ph-hx-card ph-ren-crop-card">
       <div class="ph-hx-head">
         <button type="button" class="ph-stocktake-close" data-ren-crop-close="1" aria-label="Close">×</button>
@@ -46521,7 +46680,8 @@ or changing anything in Cliniko.
       ${modeToggle}
       ${body}
     </div>`;
-    if (phRenCmpMode === "slider") phRenCmpSliderBindDrag();
+    if (phRenCmpMode === "slider") { phRenCmpSliderBindDrag(); phRenCmpBlinkSync(); }
+    else phRenCmpBlinkStop();
   }
   // reuses the exact start/move/end shape phRenCropDragStart/Move/End already
   // use for the crop rectangle just above -- one drag pattern in this module,
@@ -46634,6 +46794,7 @@ or changing anything in Cliniko.
     const a = list.find(r => r.id === phRenCompare[0].id), b = list.find(r => r.id === phRenCompare[1].id);
     if (!a || !b) return;
     const pair = [a, b].sort((x, y) => (x.createdAt || 0) - (y.createdAt || 0));
+    phRenCmpFlip = false; phRenCmpBlinkOn = false; phRenCmpBlinkStop(); phRenCmpOtPick = [];
     phRenCropState = { patientKey: phRenCompare[0].patientKey, viewOnly: true, compare: pair };
     phRenCropShow();
   }
@@ -47181,11 +47342,15 @@ or changing anything in Cliniko.
   // now only a tile that opted in (data-ren-tl-shot) scoped to its shot, and
   // an unsorted photo could never scope at all -- it has no shot to scope by,
   // so it opened the whole tongue pile. Scoping by row key covers both.
-  function phRenViewPhoto(id, patientKey) {
+  function phRenViewPhoto(id, patientKey, opts) {
     const list = phRenPhotosFor(patientKey) || [];
     const rec = list.find(r => r.id === id);
     if (!rec) return;
     phRenCropState = phRenViewStateFrom(patientKey, rec, phRenViewSetFor(patientKey, phRenRowKeyOf(rec)));
+    // her ask (§4): opened from the whole-clinic Photos library rather than
+    // from inside this one patient's own screen -- the viewer footer grows
+    // an "Open profile →" door when this is set.
+    if (opts && opts.fromLibrary) phRenCropState.fromLibrary = true;
     phRenCropShow();
   }
   // step through that set in place -- the modal stays open, only the image
@@ -47232,6 +47397,7 @@ or changing anything in Cliniko.
     document.getElementById("phRenCropBackdrop").hidden = true;
     document.getElementById("phRenCropModal").hidden = true;
     if (phRenCropState && phRenCropState.ownsObjectUrl && phRenCropState.objectUrl) URL.revokeObjectURL(phRenCropState.objectUrl);
+    phRenCmpBlinkStop();
     phRenCropState = null;
     phRenCropDrag = null;
   }
@@ -47595,6 +47761,7 @@ or changing anything in Cliniko.
           <div class="ph-hx-head-name">${esc(PH_REN_TYPE_LABEL[st.kind] || PH_REN_TYPE_LABEL[st.viewType] || PH_REN_CROP_LABEL[st.kind] || "Photo")}${st.viewShot ? ` · ${esc(PH_REN_SHOT_LABEL[st.viewShot])}` : ""}${st.viewDate ? ` · ${esc(st.viewDate)}` : ""}${st.kind !== "unsorted" ? ` <button type="button" class="ph-tp-vistype" data-ren-view-retype-toggle="1">${st.retypeOpen ? "Cancel" : "Change type"}</button>` : ""}${st.viewDate ? ` <button type="button" class="ph-tp-vistype" data-ren-view-date-toggle="1">${st.dateEditOpen ? "Cancel" : "Change date"}</button>` : ""}</div>
         </div>
         <div class="ph-ren-view-body">
+        ${st.sortFlow ? (() => { const s = phRenSortFlowStatus(st); return s ? `<div class="ph-ren-view-sortflow"><span>Sorting ${s.doneN} of ${s.total} · pick below, the next opens by itself</span><button type="button" class="skip" data-ren-view-sort-skip="1">Skip ›</button></div>` : ""; })() : ""}
         <div class="ph-ren-crop-stage ph-ren-view-stage">${annot
           ? `<div class="ph-ren-marks-wrap"><img class="ph-ren-crop-img" id="phRenViewImg" src="${st.objectUrl}" alt="" draggable="false"><svg class="ph-ren-marks" id="phRenMarksSvg" hidden></svg></div>`
           : `<img class="ph-ren-crop-img" src="${st.objectUrl}" alt="">`}</div>
@@ -47617,7 +47784,7 @@ or changing anything in Cliniko.
           <div class="ph-ren-view-shotrow">${PH_REN_TONGUE_SHOTS.map(s => `<button type="button" class="ph-cap-tchip${st.viewShot === s.key ? " on" : ""}" data-ren-view-shot="${s.key}" aria-pressed="${st.viewShot === s.key}">${esc(s.label)}</button>`).join("")}</div>
         </div>` : ""}
         <div id="phRenViewDelZone"></div>
-        <div class="ph-ren-crop-footer"><button type="button" class="ph-ren-crop-labelbtn" data-ren-cmp-start="1">⇄ Compare with another →</button><button type="button" class="ph-ren-crop-labelbtn" data-ren-view-delete="1">🗑 Delete this photo</button></div>
+        <div class="ph-ren-crop-footer">${st.fromLibrary ? `<button type="button" class="ph-ren-crop-labelbtn" data-ren-view-profile="1">Open profile →</button>` : ""}<button type="button" class="ph-ren-crop-labelbtn" data-ren-cmp-start="1">⇄ Compare with another →</button><button type="button" class="ph-ren-crop-labelbtn" data-ren-view-delete="1">🗑 Delete this photo</button></div>
         </div>
       </div>`;
       if (annot) {
@@ -49551,6 +49718,58 @@ or changing anything in Cliniko.
   // "unsorted" = still needs her: the Unsorted type, or a tongue photo whose
   // shot (natural light / flash / side / sublingual) hasn't been picked yet
   const phRenNeedsSort = rowKey => (rowKey === "unsorted" || rowKey === "tongue") ? 1 : 0;
+  // her §5 pick "C · Both" (2026-09-26): a one-by-one sorter, walked through
+  // the shared photo viewer -- Skip moves on without resolving; the shot/type
+  // handlers themselves call phRenSortFlowNext once a photo they touch no
+  // longer needs sorting (see the data-ren-view-shot/-type handlers).
+  // phFlashShow's own DOM box only ever renders on the Dispense stage
+  // (#presConfirmZone) -- the Profile stage's Photos section, where this
+  // flow actually lives, never shows it, so "All sorted ✓" was being set
+  // and consumed with nothing on screen to show for it (found by testing,
+  // not assumed). This is the scoped, on-screen equivalent: a brief
+  // done-line right where the "N photos still need a label" line was,
+  // patched in place the same way every other transient state on this
+  // section already is.
+  let phRenSortFlowDoneMsg = {};
+  function phRenSortFlowAllNeeds(patientKey) {
+    return (phRenPhotosFor(patientKey) || []).filter(r => phRenNeedsSort(phRenRowKeyOf(r)));
+  }
+  function phRenSortFlowStart(patientKey) {
+    const needs = phRenSortFlowAllNeeds(patientKey).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    if (!needs.length) return;
+    phRenViewPhoto(needs[0].id, patientKey);
+    if (phRenCropState) phRenCropState.sortFlow = { patientKey, total: needs.length, skipped: new Set() };
+    renderPhRenCropModal();
+  }
+  function phRenSortFlowNext(st) {
+    if (!st || !st.sortFlow) return;
+    const { patientKey, total, skipped } = st.sortFlow;
+    const allNeeds = phRenSortFlowAllNeeds(patientKey);
+    const pickable = allNeeds.filter(r => !skipped.has(r.id)).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    if (!pickable.length) {
+      phRenCropClose();
+      phFlashShow("All sorted ✓");
+      renderHxScreen();
+      phRenSortFlowDoneMsg[patientKey] = true;
+      phRenPhotosSecRefresh(patientKey);
+      setTimeout(() => { delete phRenSortFlowDoneMsg[patientKey]; phRenPhotosSecRefresh(patientKey); }, 2500);
+      return;
+    }
+    phRenViewPhoto(pickable[0].id, patientKey);
+    if (phRenCropState) phRenCropState.sortFlow = { patientKey, total: Math.max(total, allNeeds.length), skipped };
+    renderPhRenCropModal();
+  }
+  function phRenSortFlowSkip(st) {
+    if (!st || !st.sortFlow || !st.viewId) return;
+    st.sortFlow.skipped.add(st.viewId);
+    phRenSortFlowNext(st);
+  }
+  function phRenSortFlowStatus(st) {
+    if (!st || !st.sortFlow) return null;
+    const remaining = phRenSortFlowAllNeeds(st.sortFlow.patientKey).length;
+    const total = Math.max(st.sortFlow.total, remaining);
+    return { doneN: Math.max(1, total - remaining + 1), total };
+  }
   const phRenPhotoLoading = {};
   function phRenEnsurePhotos(patientKey) {
     if (!patientKey || phRenPhotoCache[patientKey] || phRenPhotoLoading[patientKey]) return;
@@ -49620,7 +49839,29 @@ or changing anything in Cliniko.
       // amber-labelled; the rest stay newest first
       const stripItems = stripRows.filter(tp => latest[tp.key]).map(tp => ({ tp, r: latest[tp.key] }))
         .sort((a, b) => (phRenNeedsSort(b.tp.key) - phRenNeedsSort(a.tp.key)) || phRenDateKeyOf(b.r).localeCompare(phRenDateKeyOf(a.r)) || (b.r.createdAt || 0) - (a.r.createdAt || 0));
-      body = `<div class="ph-photos-strip">${stripItems.map(({ tp, r }) => { const d = phRenPhotoDateLabel(phRenDateKeyOf(r)); return `<button type="button" class="ph-photos-th" data-ren-tl-open="${esc(r.id)}" data-ren-tl-row="${tp.key}" data-ren-tl-patient="${esc(key)}" title="${esc(tp.label)} · ${esc(d)}"><span class="ph-photos-thimg"><img src="${r.objectUrl || ""}" alt="">${phRenMarkCountBadge(r)}</span><span class="t${phRenNeedsSort(tp.key) ? " needs" : ""}">${esc(tp.label)}</span><span class="d">${esc(d)}</span></button>`; }).join("")}</div>`;
+      // her §5 pick "C · Both" (2026-09-26): an amber counting line above
+      // the strip ("N photos still need a label · Sort them →", opening the
+      // one-by-one sorter) AND the unsorted tiles wear a dashed amber edge +
+      // "?" badge, grouped first under a vertical "UNSORTED · N" label with a
+      // divider before the rest -- on top of the 2026-09-19 unsorted-first
+      // sort already built here.
+      const needsItems = stripItems.filter(x => phRenNeedsSort(x.tp.key));
+      const restItems = stripItems.filter(x => !phRenNeedsSort(x.tp.key));
+      const tileHtml = ({ tp, r }) => {
+        const d = phRenPhotoDateLabel(phRenDateKeyOf(r)), needs = phRenNeedsSort(tp.key);
+        return `<button type="button" class="ph-photos-th${needs ? " unsorted" : ""}" data-ren-tl-open="${esc(r.id)}" data-ren-tl-row="${tp.key}" data-ren-tl-patient="${esc(key)}" title="${esc(tp.label)} · ${esc(d)}"><span class="ph-photos-thimg"><img src="${r.objectUrl || ""}" alt="">${phRenMarkCountBadge(r)}</span><span class="t${needs ? " needs" : ""}">${esc(tp.label)}</span><span class="d">${esc(d)}</span></button>`;
+      };
+      // the real count -- needsItems.length is only the number of STRIP TILES
+      // (one per row), and several unsorted photos share one row (e.g. three
+      // tongue shots with no shot picked yet are all "tongue"), which would
+      // silently undercount her "N photos still need a label" against
+      // phRenSortFlowStart's own walk of every one of them
+      const needsPhotoCount = phRenSortFlowAllNeeds(key).length;
+      const sortline = needsPhotoCount ? `<div class="ph-photos-sortline"><span>${needsPhotoCount} photo${needsPhotoCount === 1 ? "" : "s"} still need${needsPhotoCount === 1 ? "s" : ""} a label</span><button type="button" class="go" data-pres-photos-sort="1">Sort them →</button></div>`
+        : phRenSortFlowDoneMsg[key] ? `<div class="ph-photos-sortline done"><span>✓ All sorted</span></div>` : "";
+      const groupLab = needsItems.length ? `<span class="ph-photos-grouplab">Unsorted · ${needsPhotoCount}</span>` : "";
+      const divider = needsItems.length && restItems.length ? `<div class="ph-photos-divider"></div>` : "";
+      body = `${sortline}<div class="ph-photos-strip">${groupLab}${needsItems.map(tileHtml).join("")}${divider}${restItems.map(tileHtml).join("")}</div>`;
     }
     const tl = presPhotosOpen && n ? `<div class="ph-photos-tl">${phRenTimelineHtml(key, name).replace(' id="phRenTlScroll"', "")}</div>` : "";
     return head + addRow + body + tl;
