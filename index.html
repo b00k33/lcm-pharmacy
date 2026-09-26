@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260926-060000">
+<meta name="lcm-build" content="20260926-070000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -30412,7 +30412,7 @@
           // a pick-in-progress means this tap is choosing the second photo to
           // compare; otherwise it just opens the photo full size
           if (phRenCompare.length && phRenComparePick(tl.dataset.renTlOpen, tl.dataset.renTlRow, tl.dataset.renTlPatient)) return;
-          phRenViewPhoto(tl.dataset.renTlOpen, tl.dataset.renTlPatient, { sameShot: !!tl.dataset.renTlShot });
+          phRenViewPhoto(tl.dataset.renTlOpen, tl.dataset.renTlPatient);
           return;
         }
       }
@@ -30763,7 +30763,7 @@
           // the photo may now sit under a different day -- re-derive the
           // walking set the same way phRenViewStep does, so ‹ › and "N of M"
           // stay correct for wherever it landed
-          const set = phRenViewSetFor(st.patientKey, st.viewType);
+          const set = phRenViewSetFor(st.patientKey, st.viewRow || st.viewType);
           st.viewSet = set.map(r => r.id);
           st.viewAt = Math.max(0, set.findIndex(r => r.id === st.viewId));
           renderPhRenCropModal();
@@ -47089,10 +47089,17 @@ or changing anything in Cliniko.
   // and "3 of 12". One rule wherever a photo opens (timeline cell, the
   // script page's Photos strip, the BBT tile): you land on the one you
   // tapped and can walk the rest of that type without going back.
-  function phRenViewSetFor(patientKey, type, shotOnly) {
+  function phRenViewSetFor(patientKey, rowKey) {
     return (phRenPhotosFor(patientKey) || [])
-      .filter(r => phRenTypeOf(r) === type && (!shotOnly || phRenShotOf(r) === shotOnly))
+      .filter(r => phRenRowKeyOf(r) === rowKey)
       .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+  }
+  // what the ‹ › counter calls the set: "3 of 12 natural light shots",
+  // "1 of 2 unsorted tongue photos", "2 of 4 abdomen photos"
+  function phRenViewSetLabel(rowKey) {
+    if (rowKey === "tongue") return "unsorted tongue photos";
+    if (rowKey.indexOf("tongue:") === 0) return `${phRenRowLabel(rowKey).toLowerCase()} shots`;
+    return `${(PH_REN_TYPE_LABEL[rowKey] || "").toLowerCase()} photos`.trim();
   }
   function phRenViewStateFrom(patientKey, rec, set) {
     const at = Math.max(0, set.findIndex(r => r.id === rec.id));
@@ -47100,17 +47107,22 @@ or changing anything in Cliniko.
       patientKey, viewOnly: true, viewId: rec.id, kind: rec.kind,
       objectUrl: rec.objectUrl, ownsObjectUrl: false,
       viewType: phRenTypeOf(rec), viewDate: phRenPhotoDateLabel(phRenDateKeyOf(rec)),
-      viewShot: phRenShotOf(rec),
+      viewShot: phRenShotOf(rec), viewRow: phRenRowKeyOf(rec),
       viewSet: set.map(r => r.id), viewAt: at,
     };
   }
-  function phRenViewPhoto(id, patientKey, opts) {
+  // the viewer walks the ROW the tapped photo sits on -- the four tongue
+  // shots and "Tongue · unsorted" are each their own set, every other type is
+  // its own. Her report (2026-09-26, "when i click on unsorted images, it
+  // still shows all the photos e.g. 12 of 12 photos. thats confusing"): until
+  // now only a tile that opted in (data-ren-tl-shot) scoped to its shot, and
+  // an unsorted photo could never scope at all -- it has no shot to scope by,
+  // so it opened the whole tongue pile. Scoping by row key covers both.
+  function phRenViewPhoto(id, patientKey) {
     const list = phRenPhotosFor(patientKey) || [];
     const rec = list.find(r => r.id === id);
     if (!rec) return;
-    const shotOnly = opts && opts.sameShot ? phRenShotOf(rec) || "" : "";
-    phRenCropState = phRenViewStateFrom(patientKey, rec, phRenViewSetFor(patientKey, phRenTypeOf(rec), shotOnly));
-    phRenCropState.viewShotOnly = shotOnly;
+    phRenCropState = phRenViewStateFrom(patientKey, rec, phRenViewSetFor(patientKey, phRenRowKeyOf(rec)));
     phRenCropShow();
   }
   // step through that set in place -- the modal stays open, only the image
@@ -47123,7 +47135,7 @@ or changing anything in Cliniko.
     // (phCapAutoImport polls every 120s) or one can be deleted underneath a
     // viewer she left open, and a frozen id list would page to something
     // that no longer exists or hide something that just arrived
-    const set = phRenViewSetFor(st.patientKey, st.viewType, st.viewShotOnly || "");
+    const set = phRenViewSetFor(st.patientKey, st.viewRow || st.viewType);
     st.viewSet = set.map(r => r.id);
     if (!set.length) { phRenCropClose(); return false; }
     const found = set.findIndex(r => r.id === st.viewId);
@@ -47526,7 +47538,7 @@ or changing anything in Cliniko.
         ${phRenMarksSecHtml(st)}
         ${many ? `<div class="ph-ren-view-nav">
           <button type="button" class="ph-ren-view-arrow" data-ren-view-step="-1"${at <= 0 ? " disabled" : ""} aria-label="Earlier photo">‹</button>
-          <span class="ph-ren-view-count">${at + 1} of ${set.length}${st.viewShotOnly ? ` ${esc((PH_REN_SHOT_LABEL[st.viewShotOnly] || st.viewShotOnly).toLowerCase())} shots` : `${st.viewType ? " " + esc((PH_REN_TYPE_LABEL[st.viewType] || "").toLowerCase()) : ""} photos`}</span>
+          <span class="ph-ren-view-count">${at + 1} of ${set.length} ${esc(phRenViewSetLabel(st.viewRow || st.viewType || "other"))}</span>
           <button type="button" class="ph-ren-view-arrow" data-ren-view-step="1"${at >= set.length - 1 ? " disabled" : ""} aria-label="Later photo">›</button>
         </div>` : ""}
         ${st.dateEditOpen ? `<div class="ph-ren-view-shots">
