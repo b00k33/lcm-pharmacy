@@ -10569,3 +10569,65 @@ the current code and the "missing" lock button appeared immediately. See
 [[reference_stale_service_worker_sandbox]].
 
 `lcm-build` `20260926-030000`, `sw.js` `lcm-20260926-visit-draft-autosave-lockedit`.
+
+## Sessions table beside Appointment history gets its Option 2 background tint (her "i like 2, build it", 2026-09-26)
+
+A short mock-iteration sequence on the Treatment Plan Grid, all same-day
+with the two builds above: **"none. i like the table format. merge phases
+row with treatment sessions plan together — make 3 mocks and show me"**
+→ she picked **M1**. Then, once M1 was live: **"i like m1 — now show how it
+would look next to appointment history"** — the side-by-side layout (this
+file's own "Appointment history sits beside the Treatment Visits Plan
+table" entry above, `lcm-build` `20260926-000000`) is what answered that.
+Then, wanting the two tables told apart at a glance: **"i like it. mock
+some distinctive background colours — make 3 mocks"**, then **"none. i
+want background colours variations to differentiate tables — show 3
+mocks"** — three real interactive mocks built from the app's own CSS
+tokens (O1 paper-vs-white, barely-there; O2 teal-vs-grey, two clearly
+different tints, no accent line; O3 a coloured top-bar + tint, ruled out
+by this app's own "colour and space, never boxes and lines" rule). Her
+final word: **"i like 2, build it."**
+
+**This entry covers ONLY the background-tint addition.** The two-column
+side-by-side LAYOUT itself (`.ph-tp-ladder-cols`/`.ph-tp-ladder-col`) was
+already built and shipped earlier the same day by build `20260926-000000`
+— confirmed by re-reading this file's own most recent entries and
+re-grepping the live CSS/markup before touching anything, per this
+project's standing "the audit snapshot keeps aging, re-verify against
+current source" discipline. `.ph-tp-ladder-col` carried no `background`
+property at all going into this build.
+
+**Built**: a new `--ph-grey-tint: #F1F3F4` token, right beside
+`--ph-paper`/`--ph-cream` in the `:root` block — neither existing neutral
+was close enough to read as "the other panel" beside the teal family
+(both `--ph-paper`/`--ph-cream` sit in the same cool-teal-adjacent range),
+so a genuinely new neutral was warranted rather than reusing one, per this
+app's own "pull the teals/accents into variables, no random one-off
+shades" rule — this is the ONE new shade, and it's now a reusable token,
+not an inline hex. `#pharmacyPage .ph-tp-ladder-cols > .ph-tp-ladder-col`
+gets `border-radius: 14px; padding: 16px 16px 18px`; `:first-child` (the
+Sessions/Treatment Visits Plan table) gets `background: var(--ph-herb-
+tint)` (the real, already-in-use teal tint); `:last-child` (Appointment
+history) gets `background: var(--ph-grey-tint)`. Deliberately **no
+border/accent line** — that was Option 3's treatment, which she did not
+pick. Scoped to the `.ph-tp-ladder-cols` wrapper only, so a plan with no
+appointment history yet (the single-column fallback, `phTpApptHistoryHtml`
+returning `""`) stays unpanelled exactly as before — nothing to
+distinguish when there's only one table showing.
+
+Verified live via a standalone preview (the real, current `index.html`
+stylesheet spliced around real markup shapes copied verbatim from
+`phTpSessionLadderHtml`/`phTpApptHistoryHtml`'s own template literals —
+staged temporarily as `_zz_ladder_verify.html` in the served project
+directory, screenshotted and measured, then deleted; confirmed absent via
+`git status` afterward, only `index.html` shows modified): at desktop
+width, `getComputedStyle` on both columns confirmed `background-color:
+rgb(237, 245, 248)` (teal) on the left and `rgb(241, 243, 244)` (grey) on
+the right, both `border-radius: 14px`, both `padding: 16px 16px 18px`,
+both `border: 0px none` — side by side (`flex-direction: row`, matching
+top offsets) with no visual overlap or gap issue; at a sub-900px width
+the same markup correctly fell back to the pre-existing stacked layout
+(unchanged, since this build touched no layout rule, only background/
+radius/padding). No JS changed — CSS only.
+
+`lcm-build` `20260926-040000`, `sw.js` `lcm-20260926-apphist-panel-tints`.
