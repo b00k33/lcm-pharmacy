@@ -11021,3 +11021,51 @@ data existed only in this tab's in-memory JS state — no `localStorage`/
 IndexedDB writes were made, nothing to clean up on disk.
 
 `lcm-build` `20260926-110000`, `sw.js` `lcm-20260926-recphotos-compare-fix`.
+
+## Closing the comparison view didn't clear the pick — "how to stop the comparison" (2026-09-26)
+
+Straight after the fix above went live, she opened the "Tongue — comparing"
+side-by-side view and asked **"how to stop the comparison"**. The × in the
+top-right corner of that modal does close it — but investigating the
+underlying mechanism (rather than just pointing at the ×) turned up a real,
+related gap worth closing in the same pass, per this project's own
+"diagnose before patching" habit.
+
+**Traced**: the compare pair view and a plain single-photo view are the
+SAME modal (`phRenCropModal`), told apart only by whether
+`phRenCropState.compare` is set — and both use the exact same × button
+(`data-ren-crop-close` → `phRenCropClose()`). That function has only ever
+hidden the modal and nulled `phRenCropState`; it never touched
+`phRenCompare` (the two-photo pick). So closing a finished comparison left
+the pick "remembered" — and the very next photo she opened that happened
+to be a DIFFERENT type from the two just compared would hit
+`phRenComparePick`'s own "same row only" guard and get refused outright
+(`phFlashShow("Photos can only be compared within the same row.")`, the
+photo never opens) — the exact "I tap a photo and nothing happens" shape
+she's reported for this feature more than once before, just one step
+further downstream than the bugs already fixed today.
+
+**Fix**: `phRenCropClose()` now checks `phRenCropState.compare` before
+nulling it — closing the SIDE-BY-SIDE pair specifically also clears
+`phRenCompare` and calls the shared `phRenCompareRefresh()` (so any bar
+elsewhere still reading "Compare these 2 →" resets too). Closing a PLAIN
+single-photo view (`.compare` unset) is completely unaffected — a pick
+still only one photo in (she opened photo A, tapped "Compare with
+another," and is now just glancing at an unrelated photo before finishing
+it) survives exactly as it did before this fix.
+
+**Verified via a real dispatched click on the actual rendered × button**
+(not a direct function call) in the sandbox: armed a real two-photo
+compare pair through the genuine flow (open → "Compare with another" →
+pick the second), confirmed the pair view opened, then dispatched a real
+`click` event on the modal's own `[data-ren-crop-close]` button — the
+document's real delegated handler picked it up, closed the modal, and
+`phRenCompare` correctly went from 2 entries to 0. Re-ran the "just
+glancing at another photo mid-pick" case separately: with only ONE photo
+picked so far, closing an unrelated plain single view through the same
+real button left the pending pick completely untouched. Clean console
+(only the known pre-existing service-worker fetch noise). Synthetic test
+data existed only in this tab's in-memory JS state, cleared afterward —
+nothing written to disk.
+
+`lcm-build` `20260926-120000`, `sw.js` `lcm-20260926-compare-close-clears-pick`.
