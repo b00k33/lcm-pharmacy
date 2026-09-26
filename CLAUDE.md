@@ -10951,3 +10951,73 @@ above" on the 3 compare views; "C · Both" on #4 (profile-from-library)
 and #5 (unsorted photos); "A · Square, whole photo" on #7 (preview crop).
 
 `lcm-build` `20260926-100000`, `sw.js` `lcm-20260926-photosort-flash-fix`.
+
+## Compare-with-another still did nothing — but on a FOURTH surface the earlier fixes never reached (2026-09-26)
+
+Straight after the batch above shipped (which closed out "compare with
+another does nothing" as item 6, fixed via `833e388`/`f02ba85`), she sent
+the exact same complaint again, this time from **Records → Photos** (the
+whole-clinic gallery: "Photos" header, By date/By type toggle, patient
+names under each tile) with a screenshot of "Tongue · Natural light ·
+26 Sep" open in the viewer: **"when i click on photo and click compare with
+another the photo closes so i click on another photo and nothing happens."**
+
+**Traced, not guessed — this is a genuinely different bug from the one
+already fixed today, not a stale build.** `phRenCompareRefresh` (the shared
+repaint every earlier fix already wired up) only ever knew about THREE
+surfaces a compare bar can live on: the History screen, the script panel's
+inline Photos section, and the Treatment Plan page. **Records → Photos is a
+fourth, and it was never taught about the compare mechanism at all** — not
+just "never repainted," genuinely unreachable. Every other photo tile in
+this app (`[data-ren-tl-open]`, the History timeline / script panel /
+Treatment Plan Visit Record strip / BBT chips) shares ONE click handler that
+checks `if (phRenCompare.length && phRenComparePick(...)) return;` before
+falling back to opening a plain viewer — that's the whole mechanism for
+"this tap is picking the second photo, not opening a new one." Records →
+Photos renders its OWN tile markup (`phRecPhotosThumbHtml`, built
+2026-09-15 for the whole-clinic gallery, a completely separate function from
+the shared timeline component) with its OWN click handler
+(`[data-recphotos-thumb]` → `phRecPhotosOpenViewer`), and that handler
+**never checked `phRenCompare` at all** — so tapping "Compare with another"
+correctly armed the pick and closed the viewer, but tapping a second photo
+on this page always just silently reopened a plain single-photo viewer
+(or, from her read of the momentary flash before the second viewer opened
+and closed again on subsequent taps, "nothing").
+
+**Fix, mirroring the exact pattern every other tile already uses:**
+- `phRecPhotosThumbHtml` (index.html ~37732) gained a `data-recphotos-row`
+  attribute (`phRenRowKeyOf(r)`, the same row key `phRenComparePick`'s
+  "same row only" rule needs) and the same `.picked` ring class the shared
+  timeline tiles already show while a pick is in progress
+  (`phRenCompare.some(c => c.id === r.id)`).
+- The `[data-recphotos-thumb]` click handler (~30870) now checks
+  `phRenCompare.length && phRenComparePick(...)` first, exactly matching
+  the `[data-ren-tl-open]` handler's own logic a few lines above it in the
+  same document click delegation, before falling back to
+  `phRecPhotosOpenViewer`.
+- `phRenCompareRefresh` gained a fourth call, `if (phRecPhotosCache)
+  phRecPhotosRefresh()` — `phRecPhotosRefresh()` is already a safe no-op
+  when the page isn't open (it guards on `#phRecPhotosBody` existing), same
+  as the three calls already there, so this reaches the grid whenever it's
+  the one open without needing a new guard shape.
+
+**Verified via real function calls against the live, running app**, not a
+reimplementation (the login gate blocks a fully-booted click-through, same
+limitation as every batch in this file): seeded two synthetic same-row
+photo records into both `phRenPhotoCache` (what the compare/viewer
+machinery reads) and `phRecPhotosCache` (what this page reads) on a fresh
+local static-server tab. Confirmed the new `data-recphotos-row="abdomen"`
+attribute renders; opened the first via the real `phRenViewPhoto`; pressed
+"Compare with another" via the real `phRenCompareStartFromView` (armed the
+pick, closed the viewer); re-rendered the tile and confirmed it now shows
+the `picked` ring; called the exact same check the fixed click handler now
+runs (`phRenCompare.length && phRenComparePick(secondId, "abdomen",
+patientKey)`) and confirmed it returns `true`, `phRenCompare.length`
+reaches 2, and — since picking the second photo already auto-opens the
+pair (the earlier same-day fix) — `phRenCropState.compare` correctly holds
+both photos in date order. Clean console (only the one known pre-existing
+service-worker fetch-noise error, unrelated to this edit). Synthetic test
+data existed only in this tab's in-memory JS state — no `localStorage`/
+IndexedDB writes were made, nothing to clean up on disk.
+
+`lcm-build` `20260926-110000`, `sw.js` `lcm-20260926-recphotos-compare-fix`.
