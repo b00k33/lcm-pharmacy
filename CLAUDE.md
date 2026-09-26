@@ -10669,3 +10669,39 @@ seeded photo (canvas → blob → `phRenPhotoPut`) on a signed-out local
 sandbox at 1280×900; the synthetic photo was deleted afterward.
 
 `lcm-build` `20260926-050000`, `sw.js` `lcm-20260926-photo-circle-hit-target`.
+
+## Picking the second photo to compare did nothing on the Profile's Photos tab — and now opens the pair (her synth22 "i am trying to compare photos but when i click on a comparing photo, nothing happens", 2026-09-26)
+
+The compare bar ("Pick a second photo of the same type…" / "Compare these
+2 →") can live on three surfaces: the History screen (`renderHxScreen`),
+the script panel's Photos section (`phRenPhotosSecRefresh`) and the
+Treatment Plan page (`phTpRerender`). The 2026-09-20 fix for "compare with
+another does nothing" taught `phRenCompareStartFromView` about all three,
+but `phRenComparePick` — the handler that runs when she taps the SECOND
+photo — still refreshed only the first and the third. From Patient profile
+→ Photos (the surface her screenshots come from), the tap registered
+(`phRenCompare` went to 2) and nothing on screen changed: the bar she was
+looking at kept saying "Pick a second photo". Un-picking had the same gap.
+
+- `phRenCompareRefresh(patientKey)` is the ONE repaint for every compare
+  state change — used by the pick, the un-pick, Clear/Cancel (which also
+  never reached the Treatment Plan page before) and the start-from-viewer
+  path. Each of the three calls already no-ops when its surface is closed.
+- **The second pick opens the comparison itself** (`phRenCompareShow()`
+  once `phRenCompare.length === 2`). Picking two photos IS the decision to
+  compare; asking for a third tap on "Compare these 2 →" was one tap she
+  did not need. The bar still shows that button behind the modal, so closing
+  the pair and reopening it is still one tap, and Clear is unchanged. My
+  call, disclosed here.
+
+Verified with real dispatched clicks through the real delegated handlers
+on a signed-out sandbox (two seeded natural-light tongue photos, 14 Sep and
+26 Sep, a synthetic script opened on Profile → Photos with "Show all"
+open): tile → viewer ("Tongue · Natural light · 14 Sep"); "Compare with
+another" → viewer closes, the SECTION's bar reads "Pick a second photo of
+the same type to compare."; the second tile → the section's bar reads
+"Compare these 2 →" AND the "Tongue — comparing" modal is open with both
+images, oldest on the left. Screenshot fronted. Test photos and script
+removed after the batch.
+
+`lcm-build` `20260926-060000`, `sw.js` `lcm-20260926-compare-pick-opens-pair`.
