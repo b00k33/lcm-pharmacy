@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260926-010000">
+<meta name="lcm-build" content="20260926-020000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -5910,6 +5910,10 @@
   #pharmacyPage .ph-tp-cycblk > .cal { min-width: 0; }
   #pharmacyPage .ph-tp-cycblk > .side { min-width: 0; padding-top: 24px; }
   #pharmacyPage .ph-tp-cycblk > .ph-tp-histbox, #pharmacyPage .ph-tp-cycblk > [data-cycle-histbox] { grid-column: 1 / -1; }
+  #pharmacyPage .ph-tp-cycblk > .ph-tp-cycblk-merged { grid-column: 1 / -1; }
+  #pharmacyPage .ph-tp-cycblk-merged .ph-ivf-fold { margin: 14px 0 0; border-top: 1px dashed var(--ph-line); padding-top: 10px; }
+  #pharmacyPage .ph-tp-cycblk-merged .ph-tp-sec { margin: 14px 0 8px; padding-top: 10px; border-top: 1px dashed var(--ph-line); }
+  #pharmacyPage .ph-tp-cycblk-merged .ph-ivf-fold + .ph-tp-sec { border-top: 0; margin-top: 10px; padding-top: 0; }
   #pharmacyPage .ph-tp-cycblk .ph-cyc-strip { max-width: none; margin: 0; }
   #pharmacyPage .ph-tp-cycblk .ph-cyc-day.cd { height: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05; font-size: 12.5px; }
   #pharmacyPage .ph-tp-cycblk .ph-cyc-day.cd small { font-size: 9px; font-weight: 700; color: var(--ph-faint); letter-spacing: .02em; }
@@ -54081,6 +54085,21 @@ or changing anything in Cliniko.
     if (!rec) return "";
     const planId = plan ? plan.id : "";
     const folded = phTpCycleFolded();
+    // her "a" pick 2026-09-26 (Option A1, "folds together"): IVF history and
+    // "What's next" merge into this same stacked card -- unfolded only, so
+    // collapsed still shows nothing but the bar + Log button. Both render
+    // full-width, after the cal/side row, inside the one .ph-tp-cycblk
+    // wrapper (see .ph-tp-cycblk-merged CSS) so there's no border between
+    // sections, just the same quiet dashed divider .ph-tp-cycblk-edit
+    // already uses within this card. IVF Protocol is always a member of
+    // PH_TP_CYCLE_TEMPLATES, so this block is guaranteed to render whenever
+    // an IVF history section would show -- presTpInlineEditorHtml no longer
+    // needs a fallback copy for it, only for plans that never reach this
+    // block at all (Pregnancy/MSK/Facial), which keep their own Next line.
+    const ivfHtml = plan && plan.templateName === "IVF Protocol" ? phIvfHistoryFoldHtml(name) : "";
+    const nextSel = plan ? phTpTabPhaseOf(plan, rec) : null;
+    const nextHtml = nextSel ? phTpNextHtml(name, plan, nextSel) : "";
+    const merged = (ivfHtml || nextHtml) ? `<div class="ph-tp-cycblk-merged">${ivfHtml}${nextHtml}</div>` : "";
     // the head says where she is in one line, so folded loses nothing she needs at a glance
     const headSummary = (() => {
       if (rec.cycleOn === false) return "not tracking a cycle";
@@ -54115,13 +54134,13 @@ or changing anything in Cliniko.
       // not tracking: no bar, no Log action makes sense here -- the plain
       // chevron+label+text head from before, folded or not.
       if (folded) return `<div class="ph-tp-cycblk folded" data-cycle-block="${esc(name)}" data-cycle-block-plan="${esc(planId)}"><button type="button" class="ph-tp-cycblk-head" data-cycle-fold="${esc(name)}" aria-expanded="false"><i class="chev">▸</i><b>Cycle</b><span>${esc(headSummary)}</span></button></div>`;
-      return wrap(`<div class="cal">${strip}</div><div class="side">${links}${dayPop}<div class="ph-tp-cycblk-empty">Not tracking a cycle for her.</div></div>${hist}`);
+      return wrap(`<div class="cal">${strip}</div><div class="side">${links}${dayPop}<div class="ph-tp-cycblk-empty">Not tracking a cycle for her.</div></div>${merged}${hist}`);
     }
     const c = phCycleFor(rec) || {};
     const comp = c.lmp ? phCycleComp(rec) : null;
     if (!comp) {
       if (folded) return `<div class="ph-tp-cycblk folded" data-cycle-block="${esc(name)}" data-cycle-block-plan="${esc(planId)}">${foldedRow(`<div class="ph-cyclebar-empty"></div>`, "no period logged yet")}</div>`;
-      return wrap(`<div class="cal">${strip}</div><div class="side"><div class="ph-cyclebar-empty"></div>${links}${dayPop}<div class="ph-tp-cycblk-empty">Tap the day her last period started — the phases, ovulation and next period fill in from it.</div></div>${hist}`);
+      return wrap(`<div class="cal">${strip}</div><div class="side"><div class="ph-cyclebar-empty"></div>${links}${dayPop}<div class="ph-tp-cycblk-empty">Tap the day her last period started — the phases, ovulation and next period fill in from it.</div></div>${merged}${hist}`);
     }
     // the bar: four segments sized by their day counts, the range inside
     const segLbl = { period: "Period", foll: "Follicular", ov: "Ovulation", luteal: "Luteal" };
@@ -54203,7 +54222,7 @@ or changing anything in Cliniko.
     // under the calendar strip -- moved into .side, right under the bar,
     // matching the precedent the sibling Pregnancy tracker block already
     // sets for its own equivalent `links` (phTpPregCalcHtml, below).
-    return wrap(`<div class="cal">${strip}</div><div class="side">${bar}${links}${dayPop}${phCycleSignPopHtml(rec, name)}${phTpCycleDayTableHtml(rec, name)}${facts}${edit}${phCycleContraDurNudgeHtml(c)}</div>${hist}`);
+    return wrap(`<div class="cal">${strip}</div><div class="side">${bar}${links}${dayPop}${phCycleSignPopHtml(rec, name)}${phTpCycleDayTableHtml(rec, name)}${facts}${edit}${phCycleContraDurNudgeHtml(c)}</div>${merged}${hist}`);
   }
   // ==== Pregnancy week tracker (her ask 2026-09-22: "all pregnancy plans
   // should include a week pregnancy tracker e.g. date x is 37 weeks") --
@@ -54760,9 +54779,19 @@ or changing anything in Cliniko.
       // moment she logs a clinic scan for it (phTpScansHtml's save handler
       // already calls the same phIvfLinkedCollectionWritable this row's
       // handler used to be the only caller of), rather than from this row.
+      // her "a" pick 2026-09-26 (Option A1, the merged Cycle+IVF-history+
+      // What's-next card): when the Cycle block renders, it now carries its
+      // own IVF history + Next inside it (phTpCycleBlockHtml), so both are
+      // dropped from here to avoid saying each fact twice. IVF Protocol is
+      // always a PH_TP_CYCLE_TEMPLATES member, so `showCycleBlock` is
+      // guaranteed true whenever an IVF history section would show -- the
+      // old unconditional call here is now unreachable and removed outright
+      // rather than left as dead code. Next stays here ONLY as the fallback
+      // for plans with no Cycle block at all (Pregnancy/MSK/Facial).
+      const showCycleBlock = cyclePlan || cycleAlsoShow;
       return `<div class="ph-tp-inline ph-tp-page">
         ${delStrip}
-        ${cyclePlan || cycleAlsoShow ? phTpCycleBlockHtml(peek, name, plan) : plan.templateName === "Pregnancy" ? phTpPregBlockHtml(peek, name, plan) : phTpFacialStripHtml(rec, plan)}
+        ${showCycleBlock ? phTpCycleBlockHtml(peek, name, plan) : plan.templateName === "Pregnancy" ? phTpPregBlockHtml(peek, name, plan) : phTpFacialStripHtml(rec, plan)}
         <div class="ph-tp-pblk">
           <div class="ph-tp-pblk-head">
             ${phTpTitleHtml(name, plan)}
@@ -54773,10 +54802,9 @@ or changing anything in Cliniko.
           ${phTpReorderOpen === plan.id ? phTpReorderPanelHtml(plan) : ""}
           <div class="ph-tp-mergewidget">${phTpPhaseBarHtml(name, plan, sel)}${phTpSessionLadderHtml(name, plan)}</div>
           ${phTpScansHtml(name, plan)}
-          ${plan.templateName === "IVF Protocol" ? phIvfHistoryFoldHtml(name) : ""}
           <div class="ph-tp-panel noph">
             <div class="ph-tp-phasebody">${sel ? phTpPhasePanelHtml(plan, sel) : `<div class="ph-hx-constit-note">No phases yet.</div>`}</div>
-            ${sel ? phTpNextHtml(name, plan, sel) : ""}
+            ${showCycleBlock ? "" : (sel ? phTpNextHtml(name, plan, sel) : "")}
             ${schedInner}
             ${phTpPastHtml(name, plan)}
             ${tailInner}

@@ -10396,3 +10396,101 @@ markup where the row used to sit. Synthetic patient and script removed
 afterward, confirmed absent.
 
 `lcm-build` `20260926-010000`, `sw.js` `lcm-20260926-milestone-row-removed`.
+
+## Cycle + IVF history + What's-next merged into ONE stacked card, Option A1 (her "a" pick, 2026-09-26)
+
+Straight follow-on the same session as the milestone-row removal above.
+She was shown three mocks for merging the Treatment Plan tab's Cycle block,
+IVF history fold and "What's next" line into one stacked section (Option A
+from an earlier round — one card, cycle calendar+bar directly followed by
+IVF history with no border, "What's next" a quiet line at the bottom, the
+separate Sessions/Treatment Visits Plan table untouched). Option A itself
+left one question unanswered: does IVF history/What's-next stay hidden
+while the Cycle block is folded (its 2026-09-21 "always minimised by
+default" behaviour), or always show regardless of fold state? Three real,
+interactive sub-variations (A1/A2/A3) were built and shown addressing
+exactly that. Her answer: **"a"** — sub-option **A1, "Folds together"**:
+the whole card folds as ONE unit — collapsed shows only the bar + Log
+button (nothing about IVF history or What's-next); unfolding shows the
+calendar, IVF history and What's-next all together, in one motion. Her
+own words on the earlier mock round: "closed = closed, open = everything."
+Then, mid-turn: **"im done, build please"** — the explicit trigger this
+project's workflow requires to move from mocking to a real code change.
+
+**Re-verified before touching anything, same discipline as the milestone-
+row removal above.** `git log`/direct source reads confirmed this specific
+merge (Cycle block + IVF history + What's-next into one section) had
+genuinely never been built, despite this exact area having been through
+dozens of later redesigns by concurrent sessions the same week (the
+Sessions-table rebuilds, the "breathing room" spacing pass, the calendar/
+popover-merge fixes, the milestone-row removal itself) — none of them
+touched where IVF history or "What's next" physically render.
+
+**What changed.** `phIvfHistoryFoldHtml(name)` and
+`phTpNextHtml(name, plan, sel)` now render INSIDE `phTpCycleBlockHtml`
+(only in the unfolded branches of all three return states — not-tracking,
+no-period-logged, and the populated branch), wrapped together in one
+`.ph-tp-cycblk-merged` div appended after the existing trailing `hist`
+(Period history). `presTpInlineEditorHtml` drops its own former
+unconditional calls to both — since "IVF Protocol" is always a member of
+`PH_TP_CYCLE_TEMPLATES`, `showCycleBlock` is guaranteed true whenever an
+IVF history section would ever have shown, so the old call there was
+unreachable dead code once the merge existed and was removed rather than
+left stranded. A `showCycleBlock` fallback (`cyclePlan || cycleAlsoShow`)
+keeps non-cycle plans (Pregnancy/MSK/Facial, which never render the Cycle
+block at all) on their own unaffected "What's next" line — they never had
+IVF history to merge in the first place. **Fold state gates the whole
+merged block for free** — `phTpCycleBlockHtml`'s early-return "folded"
+branches (via `foldedRow(...)`) never reach the unfolded return at all, so
+IVF history/Next are structurally absent while folded, not just visually
+hidden; no separate fold-state check was needed on the merged content
+itself.
+
+**CSS**: the merged wrapper spans the block's two-column grid full-width
+(`grid-column: 1 / -1`, extending the existing `.ph-tp-histbox` pattern at
+the same spot) so it reads as one continuous card rather than being
+squeezed into the narrower side column. IVF history's fold and the "Then"
+section both get a shared, scoped dashed-divider treatment
+(`border-top: 1px dashed var(--ph-line)`, matching the exact convention
+`.ph-tp-cycblk-edit` already uses inside this same card) instead of
+IVF history's stock indented/solid-bordered look — "no border between
+sections" per her spec, a divider only, never a box.
+
+**Verified via direct function calls AND a real mounted-DOM screenshot in
+the sandbox** (the real login gate blocks a fully-booted click-through,
+worked around by temporarily hiding `#lcmOverlay` for the screenshot only,
+then restoring it — this project's established technique): built a
+synthetic "Zz Cycle Merge Test" patient on the real IVF Protocol template
+with one real egg-collection round. String-level checks on
+`phTpCycleBlockHtml`'s return confirmed `foldedHasIvf: false`,
+`foldedHasNext: false` when folded (nothing extra reachable at all — not
+just hidden by CSS), and `openHasIvf: true`, `openHasNext: true`,
+`openHasMergedWrap: true` with IVF history correctly ordered BEFORE Next
+when unfolded. Mounted the real generated unfolded HTML into the live
+`#pharmacyPage` and screenshotted: calendar strip → phase bar → facts/edit
+row → per-day signs table → IVF history (frozen bank, egg collections,
+transfers) → "THEN" (next phase, period-expected line, booking status),
+reading as one continuous card with only a subtle dashed divider between
+IVF history and Then — confirmed via `get_page_text` since a mid-page
+Browser-pane screenshot proved flaky mid-session (several timeouts,
+worked around by retrying and by falling back to `get_page_text`/direct
+function calls, per this tool's own documented fallback guidance).
+Folded state re-verified both by direct function call (no IVF/Next markup
+in the returned string at all) and visually (mounted the real folded
+output: chevron + "CYCLE" + segmented bar with a "Day 11" marker + Log
+button + one caption line — nothing else). Phone-width (375px) check via
+`scrollWidth`/`overflow-x` measurement (not eyeballed): zero page-level
+horizontal overflow (`documentElement.scrollWidth === windowInnerWidth ===
+375`); the two elements that individually reported `scrollWidth >
+clientWidth` were both confirmed benign — the pre-existing day-by-day
+cycle table (`.ph-tp-daytable-wrap`, its own `overflow-x: auto` container,
+unrelated to this merge) and the folded head's own caption text wrapping
+normally inside its button.
+
+Cleanup, per this project's strict synthetic-test-data discipline: the
+temporary `#zzTestHost` mount removed, `#lcmOverlay`'s display style
+restored to its original value, the synthetic patient deleted from
+`PHARMACY.patients` and `savePharmacy()`-confirmed absent, and the
+testing-only `daybook-ph-cycblk-fold` device-local key cleared.
+
+`lcm-build` `20260926-020000`, `sw.js` `lcm-20260926-cycle-ivf-next-merge`.
