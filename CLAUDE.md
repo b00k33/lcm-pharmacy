@@ -11069,3 +11069,58 @@ data existed only in this tab's in-memory JS state, cleared afterward —
 nothing written to disk.
 
 `lcm-build` `20260926-120000`, `sw.js` `lcm-20260926-compare-close-clears-pick`.
+
+## Starting a comparison scrolled her back to the top of the page (2026-09-27)
+
+Her report: **"when i click to compare it scrolls to top of page again."**
+A different bug from the two just above, in the same feature.
+
+**Traced**: `phRenCompareStartFromView()` (the viewer's "⇄ Compare with
+another →" button) ended with `phFlashShow("Now tap a second photo of the
+same type, below, to compare.")`. `phFlashShow` always calls
+`renderPharmacy()` — a full top-level page rebuild — whenever `#phTabs`
+exists, which is every screen past login. This is the exact same class of
+bug this file already documents fixing for the Cycle tab and the
+Constitution tab: a full rebuild resets scroll to the top, every time.
+
+**It was also pure redundancy, not a needed notice.** The instruction text
+it showed is byte-identical to `phRenTimelineHtml`'s own inline `cmpBar`
+("Pick a second photo of the same type to compare.", shown the moment
+`phRenCompare.length === 1`) — and `phRenCompareStartFromView()` already
+calls `phRenCompareRefresh(st.patientKey)` right before the flash, which
+repaints every surface that bar can live on (History screen, script Photos
+section, Treatment Plan Grid). The flash was telling her something the
+page had just finished telling her already, at the cost of her scroll
+position.
+
+**The one gap that made the flash look load-bearing**: Records → Photos
+(`phRecPhotosBodyHtml`) had the "picked" ring on a thumbnail
+(2026-09-26's fix for "compare with another does nothing... on a FOURTH
+surface") but never rendered `phRenTimelineHtml`'s text hint at all — so
+dropping the flash without giving that one page its own inline hint would
+have left her with a silent ring and no instruction there specifically.
+Fixed by giving it the exact same `cmpBar` markup (same classes, same
+`data-ren-cmp-open`/`-clear` attributes — both handlers are already
+generic document-level delegation, not scoped to the timeline component,
+so no new wiring was needed) at the top of its own render, before the
+grouped grid.
+
+With every surface now showing its own inline hint the moment a pick is
+armed, the redundant `phFlashShow` call in `phRenCompareStartFromView()`
+was removed outright.
+
+**Verified via real function calls against the live app in the sandbox**
+(not a reimplementation): spied on `renderPharmacy` and called the real
+`phRenCompareStartFromView()` against a synthetic photo/crop-state —
+confirmed `renderPharmacy` is never invoked, while the pick still arms
+correctly (`phRenCompare` gains the viewed photo) and `presPhotosOpen`/
+`phTpVrPhotoTableOpen` still flip true exactly as before. Separately
+called `phRecPhotosBodyHtml()` with a synthetic two-photo cache across
+all three pick states: 0 picks → no bar; 1 pick → the hint text renders
+AND the correct thumbnail carries the `picked` ring; 2 picks → "Compare
+these 2 →" + Clear render. Clean console (only the known pre-existing
+service-worker fetch noise). Synthetic test data existed only in this
+tab's in-memory JS state, confirmed cleared afterward — nothing written
+to disk.
+
+`lcm-build` `20260927-100000`, `sw.js` `lcm-20260927-compare-start-no-scrolljump`.
