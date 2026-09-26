@@ -10738,3 +10738,41 @@ tongue photos"; ‹ from the newest natural lands on the middle natural,
 never on a flash. Screenshot fronted.
 
 `lcm-build` `20260926-070000`, `sw.js` `lcm-20260926-viewer-walks-its-row`.
+
+## Phase bar + Treatment Visits Plan flow into one continuous card (her "why are the phase and the treatment visits plan always separated? i want them together", 2026-09-26)
+
+Traced first, not guessed. The phase bar and the "Treatment Visits Plan"
+table (`phTpSessionLadderHtml`) have been welded into one strip with zero
+gap since 2026-09-22 (`.ph-tp-mergewidget`) — that part already reads as
+one piece. The actual gap was one level down: right after that strip
+(and Clinic scans), the phase's own working area — Today's visit /
+Planned, `.ph-tp-panel.noph` — started with a full-weight solid
+`border-top` + a 20px margin, the SAME visual weight this page uses to
+separate genuinely different major sections (Focus/Goal → phase bar). So
+even though nothing was boxed, the solid line still read as "a second
+card starting" — which is exactly her complaint.
+
+Shown a real mock first (toggle between today's two-box layout and one
+continuous card with only a dashed divider, the same treatment the Cycle
++ IVF history + What's-next merge picked earlier the same day) — she
+replied "why arent you building it into one table" rather than picking a
+letter, read as approval to just ship it.
+
+**Fix, one line**: `#pharmacyPage .ph-tp-pblk .ph-tp-panel.noph`'s
+`border-top` changed from `1px solid var(--ph-line)` to `1px dashed
+var(--ph-line)` — margin/padding/border-radius/background untouched. No
+JS, no markup change; `.ph-tp-scans` already had no border of its own, so
+nothing there needed touching.
+
+Verified live in the sandbox on a synthetic MSK patient/plan
+(`presStage` must be `"plan"`, not `"prescriptions"` — `presStageNorm`'s
+three real values are profile/plan/dispense, a stale stage id renders an
+empty panel): `getComputedStyle` on `.ph-tp-panel.noph` confirmed
+`border-top-style: dashed` post-edit; screenshotted the real render —
+phase bar → Treatment Visits Plan table → phase status line → Today's
+visit table now read as one flowing card with only a faint dotted rule
+between them, matching the approved mock. Synthetic patient and script
+removed afterward, confirmed absent (never called `savePharmacy()`, so
+nothing was ever persisted).
+
+`lcm-build` `20260926-080000`, `sw.js` `lcm-20260926-phasevisits-onecard`.
