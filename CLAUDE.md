@@ -10776,3 +10776,86 @@ removed afterward, confirmed absent (never called `savePharmacy()`, so
 nothing was ever persisted).
 
 `lcm-build` `20260926-080000`, `sw.js` `lcm-20260926-phasevisits-onecard`.
+
+## "Treatment Visits Plan" header row removed — it split the table she'd just asked to merge (her "remove treatment visits plan row" -> clarified "the header line" -> "it splits the table", 2026-09-26)
+
+Straight follow-on the same session as the phase-bar/table merge directly
+above. She sent a screenshot of the live, just-merged widget and said
+"remove treatment visits plan row." Asked which row she meant (the header
+label line / the "Phase" row inside the table / the whole table) rather
+than guess a third time on an ambiguous instruction, per this project's
+own standing rule — her answer: **"The header line -- 'Treatment Visits
+Plan · Calendar ▾'"**, then, unprompted, her reasoning: **"it splits the
+table"** -- the very row this session had just welded flush to the phase
+bar above it was itself putting a labelled section break between that bar
+and the table body underneath, undoing half of what the merge above was
+for.
+
+**Traced, not guessed.** `phTpSessionLadderHtml`'s return statement opened
+every render with `<div class="ph-tp-sec"><span>Treatment Visits
+Plan</span>${calBtn}${bookBtn}</div>` before the calendar/table body --
+`.ph-tp-sec` is this app's general small-caps uppercase section-header
+component (10px letter-spaced label, `margin: 14px 0 8px` at its base,
+still `10px` margin-top even inside the mergewidget's own reduced-margin
+override), i.e. structurally the same "a new section is starting" visual
+language as any other section header in the app, however small. Sitting
+directly between the welded phase bar above and the table rows below, it
+read exactly as she said: a split.
+
+**Fix -- the label is gone, the two real controls it carried move to a
+quiet line AFTER the table, not before it.** `calBtn` (the Calendar ▾/▴
+toggle, `phTpSessCalOpen`/`phTpSessCalHtml`) and `bookBtn` (the "N to
+book · copy the dates" clipboard action, `phTpSessBookText`) are both
+genuine, currently-used functional controls, not decoration -- simply
+deleting the whole `.ph-tp-sec` div would have silently removed both.
+Neither is display: the calendar toggle shows/hides the folded course
+calendar (her 2026-09-21 "too busy" fix), and "N to book" is how she
+copies to-come session dates into Cliniko since the app can't book there
+itself. New `footHtml`, `${(calBtn || bookBtn) ? `<div
+class="ph-tp-ladder-foot">${calBtn}${bookBtn}</div>` : ""}`, appended
+after `${body}` in the return string -- nothing sits between the phase bar
+and the table any more in the default (calendar-closed) view; the calendar
+itself, when she has it open, still renders above the table exactly as
+before (`calHtml` unmoved) since she asked to see it beside the phases,
+not to have it relocated. One small CSS rule added right after
+`.ph-tp-ladder-cols` in the same stylesheet block (`#pharmacyPage
+.ph-tp-ladder-foot { display: flex; align-items: center; gap: 14px;
+margin-top: 10px; }`) so the relocated buttons sit on their own quiet row
+rather than crowding under the table with no spacing.
+
+**A second, genuinely LIVE "Treatment Visits Plan" header exists --
+`phTpMgrVisitsPlanHtml`, the Settings -> Prescriptions -> Treatment plan
+templates MANAGER's own phase editor (~line 51244, one real caller at
+~51332).** Checked, not assumed: this is a completely different screen
+(the template-editing tool, never the live patient plan Grid her
+screenshot showed) with its own small "Phase / Sessions" table, built
+2026-09-23 to deliberately mirror the patient page's two-table shape at
+the time. Left untouched, disclosed rather than silently fixed or silently
+ignored -- her clarified complaint ("it splits the table") was specifically
+about the merged widget on a real patient's plan, and nothing said about
+the Templates Manager's own, structurally separate editor. If she wants
+the same treatment there too, that's a small, separate follow-up against
+this same function.
+(A separate, EARLIER grep hit against this same area from before this
+session's context compaction, describing a stale line number, no longer
+points at a `.ph-tp-ladder` block at all -- the file has moved thousands
+of lines since; re-verified fresh rather than trusted from that summary.)
+
+Verified live in the sandbox on a synthetic MSK patient/plan (same
+`presStage = "plan"`/`presStageForId` setup this file's sibling entries
+above document as required -- `presStageNorm`'s three real values are
+profile/plan/dispense): `document.querySelector('.ph-tp-ladder .ph-tp-sec
+> span')` confirmed absent (no "Treatment Visits Plan" text node anywhere
+in the ladder) both with the calendar closed and open; `.ph-tp-ladder-foot`
+confirmed present holding the Calendar toggle button, correctly toggling
+`phTpSessCalOpen()`'s stored device preference and repainting the calendar
+in place on click; a synthetic phase with a real "N to book" count
+(`sinceKey`/booked sessions set) confirmed the copy-to-clipboard button
+still renders and fires from its new position. Screenshotted the real
+render: phase bar flows directly into the Phase/Frequency/This-week table
+with zero header row between them, the Calendar toggle now sitting as a
+single quiet line under the table. Synthetic patient and script removed
+afterward, confirmed absent (`savePharmacy()` never called during this
+verification pass, so nothing was ever persisted to begin with).
+
+`lcm-build` `20260926-090000`, `sw.js` `lcm-20260926-sessplan-header-removed`.
