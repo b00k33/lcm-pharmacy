@@ -10631,3 +10631,41 @@ the same markup correctly fell back to the pre-existing stacked layout
 radius/padding). No JS changed — CSS only.
 
 `lcm-build` `20260926-040000`, `sw.js` `lcm-20260926-apphist-panel-tints`.
+
+## A drawn circle could not be grabbed from inside — SVG hit-testing, not the drag code (her synth22 "when i draw the circle i can't drag it around", 2026-09-26)
+
+The 2026-09-19 build ("Photo viewer — the card scrolls, circles move and
+resize") added `phRenMarkGrab` — press a circle to move it, press its edge
+to resize — and its test dispatched pointer events straight onto the circle
+element, which passed. A real finger or mouse never dispatches on an
+element; it goes through hit-testing, and `.ph-ren-mark-ring` is drawn
+`fill: none`. Under SVG's default `pointer-events: visiblePainted` a shape
+with no fill only registers a pointer on its painted STROKE — the 3px gold
+ring itself — never on the transparent interior. So a press anywhere inside
+a circle (the natural way to grab one) landed on the `<svg>` behind it,
+`e.target.closest("[data-ren-mark]")` found nothing, and `phRenMarksBind`'s
+handler did what it does on empty photo: started a NEW draft circle. Only a
+press that hit the 3px stroke exactly could move one — effectively never.
+
+**Fix: one CSS declaration**, `pointer-events: all` on `#pharmacyPage
+.ph-ren-mark-ring`, so the whole disc (interior and stroke) is the hit
+target regardless of `fill: none`. `phRenMarksBind`/`phRenMarkGrab` were
+structurally correct and are untouched — the move/resize split (within ~22%
+of the radius of the edge = resize, anywhere else = move) is now actually
+reached. The badge circle already had a fill; the number text keeps
+`pointer-events: none`.
+
+**Verified with REAL hit-testing, not a dispatched target.**
+`document.elementFromPoint` at a point half a radius inside a freshly drawn
+circle returns `circle.ph-ren-mark-ring` and `closest("[data-ren-mark]")`
+finds the group; with the pre-fix rule re-injected
+(`pointer-events: visiblePainted !important`) the same point returns the
+bare `svg` and finds no mark — the exact cause, isolated. A drag started
+from that hit-tested interior element moved the circle by the expected
+136 × 91 photo px (450,560 → 586,651) with the mark count staying at ONE
+(no accidental new draft — the reported symptom); an edge drag grew
+r 120 → 211 (+91 expected); a no-travel tap inside selected it. Real
+seeded photo (canvas → blob → `phRenPhotoPut`) on a signed-out local
+sandbox at 1280×900; the synthetic photo was deleted afterward.
+
+`lcm-build` `20260926-050000`, `sw.js` `lcm-20260926-photo-circle-hit-target`.
