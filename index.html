@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260926-020000">
+<meta name="lcm-build" content="20260926-030000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6480,6 +6480,12 @@
   #pharmacyPage .ph-tp-vtab tr.ph-tp-vtab-logrow td { border-top: 0; padding-top: 4px; }
   #pharmacyPage .ph-tp-vtab tr.ph-tp-vtab-logrow td.ph-tp-vtab-td { background: none; }
   #pharmacyPage .ph-tp-vtab .ph-acu-logbtn { margin: 0; }
+  /* her "both" pick, 2026-09-26 (save-a-visit mock): a quiet autosave status
+     next to an explicit save -- never louder than the Log button itself. */
+  #pharmacyPage .ph-acu-draftbar { display: flex; align-items: center; gap: 10px; margin: 6px 0; min-height: 16px; }
+  #pharmacyPage .ph-acu-draftstatus { font-size: 11px; color: var(--ph-soft); }
+  #pharmacyPage .ph-acu-draftstatus.saved { color: var(--ph-green-deep); }
+  #pharmacyPage .ph-acu-savedraftbtn { font-size: 11.5px; }
   /* her "yes" 2026-09-20: a herbs-only patient's table -- no toggle, a quiet tag in the Phase row */
   #pharmacyPage .ph-acu-open.herbsonly .ph-acu-notreat { display: none; }
   #pharmacyPage .ph-tp-vtab .tdw .ph-acu-herbsonly-tag { margin-left: auto; font-size: 11px; font-weight: 700; color: var(--ph-soft); background: var(--ph-paper); border: 1px solid var(--ph-line); border-radius: 6px; padding: 2px 8px; }
@@ -6652,6 +6658,11 @@
   #pharmacyPage .ph-tp-vr-head .ph { font-weight: 700; color: var(--ph-soft); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #pharmacyPage .ph-tp-vr-head .ph.mut { font-weight: 500; color: var(--ph-faint); }
   #pharmacyPage .ph-tp-vr-head .chev { margin-left: auto; color: var(--ph-faint); font-size: 11px; }
+  /* her mock's own Part 2 pick ("2a"), 2026-09-26: the lock icon sits beside
+     the row's own toggle head, not inside it -- same two-sibling shape as
+     .ph-tp-past-headrow. */
+  #pharmacyPage .ph-tp-vr-headrow { display: flex; align-items: center; gap: 2px; }
+  #pharmacyPage .ph-tp-vr-headrow > .ph-tp-vr-head { flex: 1 1 auto; width: auto; min-width: 0; }
   #pharmacyPage .ph-tp-vr-body { display: flex; gap: 10px; align-items: flex-start; margin-top: 4px; }
   #pharmacyPage .ph-tp-vr-thumb { flex: none; width: 56px; height: 56px; border: 0; padding: 0; background: var(--ph-line); border-radius: 8px; overflow: hidden; cursor: pointer; min-height: 0; }
   #pharmacyPage .ph-tp-vr-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -6691,6 +6702,15 @@
   #pharmacyPage .ph-tp-past-head .s .out.worse { color: var(--ph-zero-deep); }
   #pharmacyPage .ph-tp-past-head .chev { color: var(--ph-faint); font-size: 11px; text-align: right; }
   #pharmacyPage .ph-tp-past-row.open > .ph-tp-spine-body { margin-bottom: 8px; }
+  #pharmacyPage .ph-tp-past-headrow { display: flex; align-items: center; gap: 2px; }
+  #pharmacyPage .ph-tp-past-headrow > .ph-tp-past-head { flex: 1 1 auto; min-width: 0; }
+  #pharmacyPage .ph-tp-visit-edit { padding: 8px 0 10px; border-top: 1px dashed var(--ph-line); margin-top: 2px; }
+  #pharmacyPage .ph-tp-visit-edit-note { margin-bottom: 8px; }
+  #pharmacyPage .ph-tp-visit-edit label { display: block; font-size: 10.5px; text-transform: uppercase; letter-spacing: .03em; margin: 8px 0 3px; }
+  #pharmacyPage .ph-tp-visit-edit label:first-of-type { margin-top: 0; }
+  #pharmacyPage .ph-tp-visit-edit input[type="text"], #pharmacyPage .ph-tp-visit-edit textarea { width: 100%; border: 1px solid var(--ph-line); border-radius: 6px; padding: 6px 8px; font: inherit; font-size: 12px; background: #fff; }
+  #pharmacyPage .ph-tp-visit-edit-out { display: flex; gap: 6px; flex-wrap: wrap; }
+  #pharmacyPage .ph-tp-visit-edit-acts { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
   /* a long Ask chip wraps inside its own pill instead of over its neighbours */
   #pharmacyPage .ph-acu-open.compact .ph-acu-watchrow .ph-ck-chip, #pharmacyPage .ph-acu-open.compact .ph-acu-mucusrow .ph-ck-chip, #pharmacyPage .ph-acu-open.compact .ph-acu-lifestylerow .ph-ck-chip { white-space: normal; height: auto; min-height: 0; line-height: 1.3; padding: 4px 10px; text-align: left; }
   @media (max-width: 640px) {
@@ -28584,6 +28604,63 @@
         phTpRerender();
         return;
       }
+      // the padlock on a LOGGED VISIT (her mock pick "2a", 2026-09-26: the
+      // same lock/unlock language as the closed-phase padlock above). Tap
+      // unlocks that one visit for editing in place; tap again re-freezes it
+      // WITHOUT saving whatever's still sitting in the inline fields --
+      // Save changes is the only thing that writes.
+      const tpVisitUnlock = e.target.closest("[data-tp-visit-unlock]");
+      if (tpVisitUnlock) {
+        const [nm, , sid] = tpVisitUnlock.dataset.tpVisitUnlock.split("|");
+        if (phTpVisitUnlocked.has(sid)) { phTpVisitUnlocked.delete(sid); phTpVisitEditDraft.delete(sid); }
+        else {
+          phTpVisitUnlocked.add(sid);
+          const rec = phPatientPeek(nm);
+          const s = rec && (rec.acuSessions || []).find(x => x.id === sid);
+          phTpVisitEditDraft.set(sid, { outcome: (s && s.outcome) || null });
+        }
+        phTpRerender();
+        return;
+      }
+      // Response is a pick, not a text field, so it needs its own live draft
+      // slot the way every other pill-pick in this app does -- Points/Press
+      // tags/Comments are read straight off their own inputs at Save instead
+      // (same idiom as presSavePrescription's own DOM reads), so there's no
+      // second copy of THOSE to keep in sync.
+      const tpVisitEditOut = e.target.closest("[data-tp-visit-edit-outcome]");
+      if (tpVisitEditOut) {
+        const [, , sid, val] = tpVisitEditOut.dataset.tpVisitEditOutcome.split("|");
+        const d = phTpVisitEditDraft.get(sid) || {};
+        d.outcome = d.outcome === val ? null : val;
+        phTpVisitEditDraft.set(sid, d);
+        phTpRerender();
+        return;
+      }
+      const tpVisitEditSave = e.target.closest("[data-tp-visit-edit-save]");
+      if (tpVisitEditSave) {
+        const [nm, , sid] = tpVisitEditSave.dataset.tpVisitEditSave.split("|");
+        const rec = phPatientRec(nm);
+        const s = rec && (rec.acuSessions || []).find(x => x.id === sid);
+        if (s) {
+          const d = phTpVisitEditDraft.get(sid) || {};
+          const pointsEl = document.getElementById("phTpVisitEditPoints_" + sid);
+          const pressEl = document.getElementById("phTpVisitEditPress_" + sid);
+          const commEl = document.getElementById("phTpVisitEditComments_" + sid);
+          if (d.outcome) s.outcome = d.outcome; else delete s.outcome;
+          if (pointsEl) s.points = pointsEl.value.trim();
+          if (pressEl) { const v = pressEl.value.trim(); if (v) s.pressPoints = v; else delete s.pressPoints; }
+          if (commEl) { const v = commEl.value.trim(); if (v) s.comments = v; else delete s.comments; }
+          // her mock's own wording, Part 2: "this will be noted on the
+          // record" -- a plain stamp, not a full audit trail; the row's own
+          // "✎ edited" tag (phTpPastRowHtml) is what shows it.
+          s.editedAt = keyOf(TODAY);
+          if (savePharmacy() === false) phFlashShow("⚠ That could not be saved — check the warning at the top and try again");
+        }
+        phTpVisitUnlocked.delete(sid);
+        phTpVisitEditDraft.delete(sid);
+        phTpRerender();
+        return;
+      }
       /* + Add phase is a PICKER now (her ask 2026-09-10: "make a preset acute
          illness phase i can choose", then "can you add an option where both
          can happen? within the phase i added acute illness treatment?").
@@ -31547,6 +31624,11 @@
       }
       if (e.target.closest("[data-pres-door-close]")) { presDoorDismissed = true; const c = e.target.closest(".ph-door"); if (c) c.remove(); return; }
       if (e.target.closest("[data-pres-door-toggle]")) { presDoorOpen = !presDoorOpen; const c = e.target.closest(".ph-door"); if (c) { c.classList.toggle("open", presDoorOpen); const ar = c.querySelector(".mini .ar"); if (ar) ar.textContent = presDoorOpen ? "▾" : "▸"; } return; }
+      if (e.target.closest("[data-pres-acu-savedraft]")) {
+        const ctxSave = presAcuCtx();
+        if (ctxSave) presAcuDraftSaveNow(ctxSave.name, ctxSave.activePlan && ctxSave.activePlan.id);
+        return;
+      }
       if (e.target.closest("[data-pres-acu-log]")) {
         const now = Date.now();
         if (now - presAcuLastLogAt < 1200) return; // a real double-tap, not a second visit
@@ -31722,6 +31804,11 @@
           presAcuInstructFormula = null; presAcuInstructPickerOpen = false; presAcuNoTreatment = false; presAcuNoTreatStash = null;
           presAcuTherapiesDraft = [];
           phVisitFndResetDraft();
+          // her "both" pick, 2026-09-26 (save-a-visit mock): the draft this
+          // visit built up in rec.acuDraft is now a real, logged session --
+          // clear it in the same save as everything else below, or a stale
+          // draft would silently reappear the next time she opens this plan.
+          presAcuDraftClear(name);
           savePharmacy(); renderPresPanel();
         } else {
           // her report ("clicking log today's session didn't work"): this
@@ -39424,6 +39511,10 @@ or changing anything in Cliniko.
     const identName = t ? (presPatientFor(t) || t.name || "") : "";
     const identRec = identName ? phPatientPeek(identName) : null;
     presOpenIdentitySnapshot = identRec ? { sex: identRec.sex || "", dob: identRec.dob || "", phone: identRec.phone || "", email: identRec.email || "" } : null;
+    // her "both" pick, 2026-09-26: restore a saved draft AFTER every presAcu*
+    // reset above has run, so it hydrates into a genuinely blank slate rather
+    // than being immediately overwritten by the resets that follow it.
+    if (identName) presAcuDraftRestore(identName);
     // a brand-new, untouched patient still lands on Medical history first --
     // the same friction reduction the old inline-on-Opening design gave her
     // (2026-09-11), now expressed as which rail tab opens by default rather
@@ -53615,6 +53706,106 @@ or changing anything in Cliniko.
       if (inp) inp.value = carry[id];
     });
     wrap.replaceWith(next);
+    // her "both" pick, 2026-09-26 (save-a-visit mock): every chip/toggle tap
+    // in this panel repaints through here, so this is also the one place a
+    // tap-driven autosave has to hook in -- the OTHER half, a plain
+    // keystroke into a text field, never reaches this function on purpose
+    // (that's what carries her cursor across the swap above), so THAT half
+    // is hooked separately, in the shared "input" listener below.
+    presAcuDraftAutosave(name, activePlan && activePlan.id);
+  }
+  // ---- Visit draft autosave (her "both" pick, 2026-09-26) --------------
+  // Everything on this panel that isn't yet a real acuSessions entry lived
+  // only in memory until now -- outcome, phase override, points/press picks,
+  // herb instruct, mucus/watch chips, her typed notes, the findings chart --
+  // so an interrupted visit (closed tab, crash, a wrong tap that leaves the
+  // panel) lost all of it with nothing to show for the time she'd spent.
+  // Saved onto the PATIENT record itself (rec.acuDraft), same "reuse the
+  // record, don't invent a second store" rule as every other draft in this
+  // app; restored the moment she reopens this exact plan's Today's visit,
+  // cleared the moment she actually logs (see the data-pres-acu-log handler).
+  function presAcuDraftSnapshot() {
+    return {
+      outcome: presAcuOutcomeDraft || null,
+      phaseId: presAcuPhaseId || null,
+      herbInstruct: !!presAcuHerbInstruct,
+      watchChecked: (presAcuWatchChecked || []).slice(),
+      askNote: presAcuAskNote || "",
+      comment: presAcuComment || "",
+      therapiesDraft: presAcuTherapiesDraft && presAcuTherapiesDraft.length ? JSON.parse(JSON.stringify(presAcuTherapiesDraft)) : [],
+      pointsCustom: (presAcuPointsCustom || []).slice(),
+      instructFormula: presAcuInstructFormula || null,
+      noTreatment: !!presAcuNoTreatment,
+      ticks: Array.from(presAcuTicks || []),
+      pointsChecked: presAcuPointsChecked ? Array.from(presAcuPointsChecked) : null,
+      pressChecked: presAcuPressChecked ? Array.from(presAcuPressChecked) : null,
+      fnd: presVisitFndDraft && !phVisitFndEmpty(presVisitFndDraft) ? JSON.parse(JSON.stringify(presVisitFndDraft)) : null,
+    };
+  }
+  function presAcuDraftIsEmpty(s) {
+    return !s.outcome && !s.phaseId && !s.herbInstruct && !s.watchChecked.length && !s.askNote && !s.comment &&
+      !s.therapiesDraft.length && !s.pointsCustom.length && !s.instructFormula && !s.noTreatment &&
+      !s.ticks.length && !(s.pointsChecked && s.pointsChecked.length) && !(s.pressChecked && s.pressChecked.length) && !s.fnd;
+  }
+  function presAcuDraftStatusPatch(text, saved) {
+    document.querySelectorAll('[data-acu-draftstatus="1"]').forEach(el => { el.textContent = text; el.classList.toggle("saved", !!saved); });
+  }
+  function presAcuDraftDo(name, planId) {
+    if (!name) return;
+    const rec = phPatientRec(name);
+    const snap = presAcuDraftSnapshot();
+    if (presAcuDraftIsEmpty(snap)) {
+      if (rec.acuDraft) { delete rec.acuDraft; savePharmacy(); }
+      presAcuDraftStatusPatch("Nothing to save yet", false);
+      return;
+    }
+    snap.planId = planId || null;
+    snap.savedAt = Date.now();
+    rec.acuDraft = snap;
+    savePharmacy();
+    presAcuDraftStatusPatch("Draft saved " + new Date(snap.savedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }), true);
+  }
+  function presAcuDraftAutosave(name, planId) {
+    if (!name) return;
+    presAcuDraftStatusPatch("Saving…", false);
+    phDefer("acuDraft:" + name, () => presAcuDraftDo(name, planId), 700);
+  }
+  function presAcuDraftSaveNow(name, planId) {
+    if (!name) return;
+    presAcuDraftDo(name, planId);
+    phFlashShow("💾 Draft saved");
+  }
+  function presAcuDraftClear(name) {
+    if (!name) return;
+    const peek = phPatientPeek(name);
+    if (peek && peek.acuDraft) { const rec = phPatientRec(name); delete rec.acuDraft; }
+  }
+  // called from presOpenScript, right after the acu-log draft state below
+  // resets to blank -- only restores into the plan that's still actually
+  // being treated today; a stale draft for a plan that's since closed, or a
+  // different plan than the one the calendar/booking now points at, is left
+  // untouched on the record rather than forced onto the wrong phase (it
+  // shows up again if she reopens that same plan later).
+  function presAcuDraftRestore(name) {
+    const rec = phPatientPeek(name);
+    const d = rec && rec.acuDraft;
+    if (!d) return;
+    const activePlan = phTpPlanForToday(name, null);
+    if (d.planId && (!activePlan || activePlan.id !== d.planId)) return;
+    presAcuOutcomeDraft = d.outcome || null;
+    presAcuPhaseId = d.phaseId || null;
+    presAcuHerbInstruct = !!d.herbInstruct;
+    presAcuWatchChecked = (d.watchChecked || []).slice();
+    presAcuAskNote = d.askNote || "";
+    presAcuComment = d.comment || "";
+    presAcuTherapiesDraft = d.therapiesDraft && d.therapiesDraft.length ? JSON.parse(JSON.stringify(d.therapiesDraft)) : [];
+    presAcuPointsCustom = (d.pointsCustom || []).slice();
+    presAcuInstructFormula = d.instructFormula || null;
+    presAcuNoTreatment = !!d.noTreatment;
+    presAcuTicks = new Set(d.ticks || []);
+    presAcuPointsChecked = d.pointsChecked ? new Set(d.pointsChecked) : null;
+    presAcuPressChecked = d.pressChecked ? new Set(d.pressChecked) : null;
+    if (d.fnd) presVisitFndDraft = JSON.parse(JSON.stringify(d.fnd));
   }
   function presAcuOpenHtml(name, sessions, opts) {
     opts = opts || {};
@@ -53850,6 +54041,14 @@ or changing anything in Cliniko.
         : `${phVisitFndToggleLineHtml(t, rec)}${fndOn ? phVisitFndPanelHtml(name, rec) : ""}`}
       ${nextRowHtml}
       ${commentRowHtml}
+      <div class="ph-acu-draftbar">
+        <span class="ph-acu-draftstatus" data-acu-draftstatus="1">${(() => {
+          const d = rec.acuDraft;
+          if (!d || !d.savedAt || (d.planId && activePlan && d.planId !== activePlan.id)) return "";
+          return "Draft saved " + new Date(d.savedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+        })()}</span>
+        <button type="button" class="tab-link ph-acu-savedraftbtn" data-pres-acu-savedraft="1">💾 Save draft</button>
+      </div>
       <button type="button" class="btn-save ph-acu-logbtn" data-pres-acu-log="1">${presAcuNoTreatment ? "Log herbs check-in" : "Log today's session"}</button>
       ${sessions.length && !compact ? `<div class="ph-acu-hist">
         <div class="hlbl">Last ${Math.min(3, sessions.length)} session${sessions.length === 1 ? "" : "s"}</div>
@@ -55160,7 +55359,7 @@ or changing anything in Cliniko.
         ${row("lifestyle", "Lifestyle", P.watchText, rowVal("Lifestyle"))}
         ${row("next", "Next", P.cadence, rowVal("Next"))}
         <tr class="comments"><td class="ph-tp-lbl">Comments</td>${P.comments}<td class="ph-tp-vtab-td"><div class="tdw">${rowVal("Comments")}</div></td>${futCommentTds}</tr>
-        ${row("log", "", `<td></td>`, pick(".ph-acu-logbtn"), "ph-tp-vtab-logrow")}
+        ${row("log", "", `<td></td>`, pick(".ph-acu-draftbar") + pick(".ph-acu-logbtn"), "ph-tp-vtab-logrow")}
       </tbody></table>
     </div>`;
   }
@@ -55405,6 +55604,15 @@ or changing anything in Cliniko.
      should default back to frozen every time the screen is opened, or "frozen"
      quietly becomes "frozen until the first time I ever edited it". */
   const phTpUnlockDone = new Set();
+  /* a logged visit she has unlocked to fix a mistake (her mock pick "2a",
+     2026-09-26 -- the same lock/unlock language as the padlock above).
+     Session-only, same reasoning: a logged visit defaults back to frozen
+     every time the screen re-opens. phTpVisitEditDraft holds only the one
+     PICK field (Response) the inline form needs live state for -- Points/
+     Press tags/Comments are plain inputs, read straight off the DOM at
+     Save, same idiom presSavePrescription already uses. */
+  const phTpVisitUnlocked = new Set();   // acuSessions[].id currently unlocked
+  const phTpVisitEditDraft = new Map();  // sessionId -> { outcome }
   const PH_TP_FIELD_LABELS = { aim: "Aim", watch: "Watch", cadence: "Visits", points: "Points", pressPoints: "Press tags", label: "Phase name", comments: "Comments" };
   const PH_TP_FIELD_PH = { aim: "What this phase is for…", watch: "What to watch / advice…", cadence: "e.g. 1–2×/wk", points: "Reference points…", pressPoints: "Press-needle points…", label: "Phase name", suggestFormula: "The formula's purpose, e.g. Regulate Nervous System…", comments: "Anything else — not asked elsewhere…", defaultFormulaName: "e.g. Shu Jing Huo Xue Tang" };
   // the one place a phase's status changes: stamps the day it became
@@ -57447,10 +57655,23 @@ or changing anything in Cliniko.
       + box("found", "Found", [x.tongue ? `<b>Tongue</b> ${esc(x.tongue)}` : "", x.pulse ? `<b>Pulse</b> ${esc(x.pulse)}` : "", x.abd ? `<b>Abdomen</b> ${esc(x.abd)}` : ""].filter(Boolean).join("<br>"))
       + box("did", "Did", [...x.did.map(esc), x.herbs ? `🌿 ${esc(x.herbs)}` : ""].filter(Boolean).join(" · "))
       + box("next", "Next", nextText);
+    // her mock's own Part 2 pick ("2a" -- a lock icon on the row, reusing the
+    // app's existing 🔒/🔓 treatment-plan-phase lock/unlock pattern), wired
+    // into THIS function rather than phTpPastRowHtml -- that function has had
+    // zero live callers since the 2026-09-18/19 "one Visit record for every
+    // plan" rebuild made phTpVrRowHtml the row every plan actually renders
+    // through; phTpPastRowHtml's own copy of this same feature is harmless
+    // dead code, kept there rather than deleted since removing it wasn't
+    // asked for this turn.
+    const acu = node.acu;
+    const unlocked = acu && phTpVisitUnlocked.has(acu.id);
+    const lockBtn = acu ? `<button type="button" class="ph-tp-lock" data-tp-visit-unlock="${esc(name)}|${esc(plan.id)}|${esc(acu.id)}" title="${unlocked ? "Editing this visit — click to lock it again without saving" : "This visit is logged and frozen — click to fix a mistake"}">${unlocked ? "🔓 unlocked" : "🔒 frozen"}</button>` : "";
     return `<div class="ph-tp-vr-row${open ? " open" : ""}">
-      <button type="button" class="ph-tp-vr-head" data-tp-spine-toggle="${esc(key)}" aria-expanded="${open ? "true" : "false"}"><span class="d"><b>${d.getDate()} ${MON_SHORT[d.getMonth()]}</b><small>${d.getFullYear()}</small></span>${cd}${ph}${node.periods.length ? `<span class="ph mut">🩸 period started</span>` : ""}<span class="chev">${open ? "▾" : "▸"}</span></button>
-      <div class="ph-tp-vr-body">${thumb}<div class="ph-tp-vr-boxes">${boxes}</div></div>
-      ${open ? phTpSpineNodeBodyHtml(name, plan, node) : ""}
+      <div class="ph-tp-vr-headrow">
+        <button type="button" class="ph-tp-vr-head" data-tp-spine-toggle="${esc(key)}" aria-expanded="${open ? "true" : "false"}"><span class="d"><b>${d.getDate()} ${MON_SHORT[d.getMonth()]}</b><small>${d.getFullYear()}</small></span>${cd}${ph}${node.periods.length ? `<span class="ph mut">🩸 period started</span>` : ""}${acu && acu.editedAt ? `<span class="ph mut" title="Edited after logging, ${esc(phShortDate(acu.editedAt))}">✎ edited</span>` : ""}<span class="chev">${open ? "▾" : "▸"}</span></button>
+        ${lockBtn}
+      </div>
+      ${unlocked ? phTpVisitEditFormHtml(name, plan, acu) : `<div class="ph-tp-vr-body">${thumb}<div class="ph-tp-vr-boxes">${boxes}</div></div>${open ? phTpSpineNodeBodyHtml(name, plan, node) : ""}`}
     </div>`;
   }
   function phTpVrStripHtml(name, rec, photos, nodes) {
@@ -57533,9 +57754,38 @@ or changing anything in Cliniko.
     const therapiesOn = (acu && Array.isArray(acu.treatmentTherapies) ? acu.treatmentTherapies : []).filter(t => t.on).map(t => t.label);
     if (therapiesOn.length) bits.push(`<span title="${esc(therapiesOn.join(", "))}">✨ ${esc(therapiesOn.length === 1 ? therapiesOn[0] : `${therapiesOn.length} therapies`)}</span>`);
     if (node.periods.length) bits.push(`<span class="mut">🩸 period started</span>`);
+    if (acu && acu.editedAt) bits.push(`<span class="mut" title="Edited after logging, ${esc(phShortDate(acu.editedAt))}">✎ edited</span>`);
+    const unlocked = acu && phTpVisitUnlocked.has(acu.id);
     return `<div class="ph-tp-past-row${open ? " open" : ""}">
-      <button type="button" class="ph-tp-past-head" data-tp-spine-toggle="${esc(key)}" aria-expanded="${open ? "true" : "false"}"><span class="d">${esc(phShortDate(node.date))}</span><span class="s">${bits.join(`<span class="q">·</span>`)}</span><span class="chev">${open ? "▾" : "▸"}</span></button>
-      ${open ? phTpSpineNodeBodyHtml(name, plan, node) : ""}
+      <div class="ph-tp-past-headrow">
+        <button type="button" class="ph-tp-past-head" data-tp-spine-toggle="${esc(key)}" aria-expanded="${open ? "true" : "false"}"><span class="d">${esc(phShortDate(node.date))}</span><span class="s">${bits.join(`<span class="q">·</span>`)}</span><span class="chev">${open ? "▾" : "▸"}</span></button>
+        ${acu ? `<button type="button" class="ph-tp-lock" data-tp-visit-unlock="${esc(name)}|${esc(plan.id)}|${esc(acu.id)}" title="${unlocked ? "Editing this visit — click to lock it again without saving" : "This visit is logged and frozen — click to fix a mistake"}">${unlocked ? "🔓 unlocked" : "🔒 frozen"}</button>` : ""}
+      </div>
+      ${unlocked ? phTpVisitEditFormHtml(name, plan, acu) : (open ? phTpSpineNodeBodyHtml(name, plan, node) : "")}
+    </div>`;
+  }
+  // her mock's own Part 2 wording ("fix it in place"), 2026-09-26: Points/
+  // Press tags/Response/Comments only -- editing the tongue/pulse/abdomen
+  // findings chart of an already-logged visit is a deliberate, disclosed
+  // scope cut (that chart is its own large surface, built for TODAY's
+  // draft, not for reopening an old one) and stays a future follow-up.
+  function phTpVisitEditFormHtml(name, plan, acu) {
+    const d = phTpVisitEditDraft.get(acu.id) || { outcome: acu.outcome || null };
+    const outBtn = (v, label) => `<button type="button" class="ph-ck-chip${d.outcome === v ? " on" : ""}" data-tp-visit-edit-outcome="${esc(name)}|${esc(plan.id)}|${esc(acu.id)}|${v}">${label}</button>`;
+    return `<div class="ph-tp-visit-edit">
+      <div class="mut ph-tp-visit-edit-note">Editing a logged visit — saving this will mark it "edited after logging".</div>
+      <label class="mut">Response</label>
+      <div class="ph-tp-visit-edit-out">${outBtn("better", "✓ better")}${outBtn("same", "· same")}${outBtn("worse", "⚠ worse")}</div>
+      <label class="mut">Points</label>
+      <input type="text" id="phTpVisitEditPoints_${esc(acu.id)}" value="${esc(acu.points || "")}">
+      <label class="mut">Press tags</label>
+      <input type="text" id="phTpVisitEditPress_${esc(acu.id)}" value="${esc(acu.pressPoints || "")}">
+      <label class="mut">Comments</label>
+      <textarea id="phTpVisitEditComments_${esc(acu.id)}" rows="2">${esc(acu.comments || "")}</textarea>
+      <div class="ph-tp-visit-edit-acts">
+        <button type="button" class="btn-save" data-tp-visit-edit-save="${esc(name)}|${esc(plan.id)}|${esc(acu.id)}">✓ Save changes</button>
+        ${acu.editedAt ? `<span class="mut">✎ last edited ${esc(phShortDate(acu.editedAt))}</span>` : ""}
+      </div>
     </div>`;
   }
   function phTpTabsHtml(plan, sel) {
@@ -60996,6 +61246,11 @@ or changing anything in Cliniko.
     const tmp = document.createElement("div");
     tmp.innerHTML = phVisitFndPanelHtml(name, rec);
     if (tmp.firstElementChild) wrap.replaceWith(tmp.firstElementChild);
+    // her "both" pick, 2026-09-26: a findings-chart tap (tongue region,
+    // pulse grid cell, abdomen zone) is exactly as much "progress worth not
+    // losing" as a phase/chip tap in the panel above -- same autosave hook.
+    const activePlanFnd = (phPatientPeek(name).treatmentPlans || []).find(p => p.status === "active") || (phPatientPeek(name).treatmentPlans || [])[0];
+    presAcuDraftAutosave(name, activePlanFnd && activePlanFnd.id);
   }
   // real tongue photo beside the diagram (her yes 2026-09-02, layout approved
   // in the letter mock): the patient's LATEST tongue photo, automatic, no
@@ -64649,8 +64904,9 @@ Please let me know if you have any questions.`;
   // check-in" time.
   let presAcuTherapiesDraft = [];
   document.addEventListener("input", e => {
-    if (e.target && e.target.id === "presAcuAskNote") presAcuAskNote = e.target.value;
-    else if (e.target && e.target.id === "presAcuComment") presAcuComment = e.target.value;
+    let touchedAcuDraft = false;
+    if (e.target && e.target.id === "presAcuAskNote") { presAcuAskNote = e.target.value; touchedAcuDraft = true; }
+    else if (e.target && e.target.id === "presAcuComment") { presAcuComment = e.target.value; touchedAcuDraft = true; }
     else {
       // Treatment therapies' own Both/Left/Right fields -- write straight into
       // the draft entry on every keystroke (never debounced, never triggers a
@@ -64662,7 +64918,18 @@ Please let me know if you have any questions.`;
         const [key, sub] = therEl.dataset.presAcuTherField.split(":");
         const entry = presAcuTherapiesDraft.find(t => t.key === key);
         if (entry) entry[sub] = therEl.value;
+        touchedAcuDraft = true;
       }
+    }
+    // her "both" pick, 2026-09-26: a plain keystroke into a free-text field
+    // NEVER triggers presAcuOpenRefresh (deliberately, to keep her cursor in
+    // place -- see that function's own comment), so it's the one draft change
+    // neither of the two chip/toggle-driven autosave hooks above ever sees.
+    // Resolved via presAcuLiveWrap()'s own name/plan attributes, not presOpenId,
+    // for the same stale-box reasons that function documents.
+    if (touchedAcuDraft) {
+      const liveBox = presAcuLiveWrap();
+      if (liveBox) presAcuDraftAutosave(liveBox.dataset.acuName, liveBox.dataset.acuPlan || null);
     }
   });
   // succinct-chip + type-in-more redesign (her ask 2026-09-17): points typed
