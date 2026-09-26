@@ -10494,3 +10494,78 @@ restored to its original value, the synthetic patient deleted from
 testing-only `daybook-ph-cycblk-fold` device-local key cleared.
 
 `lcm-build` `20260926-020000`, `sw.js` `lcm-20260926-cycle-ivf-next-merge`.
+
+## Today's-visit draft autosave + a lock icon to fix a mistake on a past visit (her picks "1c"/"2a" on the save-a-visit mock, 2026-09-26)
+
+Her two lettered picks on the earlier save-a-visit mock: **"1c"** — the
+"Log today's session" panel gets BOTH a silent autosave of in-progress
+draft data AND an explicit "💾 Save draft" button (her Option C, "Both").
+**"2a"** — a way to fix a mistake in an already-logged (frozen) past
+visit: a lock icon on the row, reusing the app's existing 🔒/🔓
+treatment-plan-phase lock/unlock language to unlock a past visit, edit it
+in place, then re-freeze it. Her direct question, answered at the end.
+
+**Part 1 — draft autosave (`presAcuDraft*`, beside `presAcuOpenRefresh`).**
+`presAcuDraftSnapshot()` captures everything on the panel that isn't yet a
+real `acuSessions` entry — outcome, phase override, points/press picks,
+herb instruct, mucus/watch chips, her typed notes, the findings chart —
+onto `rec.acuDraft` (the same "reuse the record, don't invent a second
+store" rule as every other draft in this app). Three independent
+autosave hooks cover every way she can touch the panel: a chip/toggle tap
+(`presAcuOpenRefresh`'s own repaint), a findings-chart tap
+(`presVisitFndRefresh`), and a plain keystroke into a free-text field
+(the global `"input"` listener, resolved via `presAcuLiveWrap()` since a
+keystroke deliberately never triggers `presAcuOpenRefresh` — that's what
+keeps her cursor in place). Each debounces 700ms
+(`phDefer("acuDraft:"+name, ...)`) and patches a quiet status line in
+place (`presAcuDraftStatusPatch`) — never a re-render. The explicit
+**💾 Save draft** button (`data-pres-acu-savedraft`) saves immediately and
+flashes "💾 Draft saved". A saved draft restores the moment she reopens
+that same plan's Today's visit (`presAcuDraftRestore`, called from
+`presOpenScript` right after every `presAcu*` reset, so it hydrates a
+genuinely blank slate) — but ONLY into the plan actually being treated
+today (`phTpPlanForToday`); a stale draft for a closed or different plan
+is left untouched on the record rather than forced onto the wrong phase.
+**Answering her question directly: yes, the Log button already saves
+everything the draft does — dispatching the real "Log today's session"
+click clears `rec.acuDraft` in the same save that pushes the new
+`acuSessions` entry** (`presAcuDraftClear`, called from the existing
+unified treat/herbs-only save path) — the draft only exists to survive an
+interrupted visit (closed tab, crash, a wrong tap); logging normally never
+leaves a stray draft behind.
+
+**Part 2 — the lock icon (her "2a").** The original implementation target,
+`phTpPastRowHtml`, turned out to be **dead code** — confirmed by grep to
+have zero live callers anywhere in the file, superseded by `phTpVrRowHtml`
+since the app's own 2026-09-18/19 "one Visit record for every plan"
+rebuild. Rewired the lock/unlock UI into `phTpVrRowHtml` instead (the
+function every plan's real "Visit record" list actually renders through),
+reusing the already-built, generic `phTpVisitEditFormHtml` helper with no
+duplication: a 🔒 on a logged visit's row (`data-tp-visit-unlock`) flips it
+to 🔓 and swaps the row's summary for an inline edit form — Response chips,
+Points/Press-tags text, Comments — tapping 🔒 again re-freezes it.
+**Deliberate scope cut, disclosed**: findings-chart editing (tongue/pulse/
+abdomen) is NOT part of this — only Outcome/Points/Press tags/Comments.
+Saving stamps `s.editedAt` so the row shows a quiet "✎ edited" tag
+afterward. `phTpPastRowHtml`'s own now-redundant copy of this same feature
+was left in place, unmodified, as harmless dead code — not deleted, since
+deletion wasn't asked for this turn.
+
+**Verified end-to-end via real dispatched DOM events against the real,
+running functions in the sandbox** (not a reimplementation): a synthetic
+patient/plan/backdated acu session confirmed the 🔒 button renders
+correctly on `phTpPastHtml`'s output; a real click flipped it to 🔓 and
+showed the edit form; clicking a Response chip + editing Points + a real
+click on "✓ Save changes" correctly updated `outcome`/`points`, stamped
+`editedAt`, cleared the unlock state, and the row re-rendered frozen with
+"✎ edited" and the new outcome shown. Draft autosave's
+save/restore/clear cycle was re-confirmed directly against the current
+functions (unchanged by the intervening weeks of other work on this file).
+**Trap hit mid-session, worth repeating**: the sandbox tab had been open
+across many prior sessions' worth of edits and was silently serving a
+stale in-memory copy of the app — reloading the tab (no service worker
+was actually registered this time; a plain navigate sufficed) picked up
+the current code and the "missing" lock button appeared immediately. See
+[[reference_stale_service_worker_sandbox]].
+
+`lcm-build` `20260926-030000`, `sw.js` `lcm-20260926-visit-draft-autosave-lockedit`.
