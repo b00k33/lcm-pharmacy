@@ -10859,3 +10859,95 @@ afterward, confirmed absent (`savePharmacy()` never called during this
 verification pass, so nothing was ever persisted to begin with).
 
 `lcm-build` `20260926-090000`, `sw.js` `lcm-20260926-sessplan-header-removed`.
+
+## Tongue photo display/analysis/annotations batch — 7 items resolved (2026-09-26)
+
+Her instruction "code3 code7 lcm6 - work together to resolve the above
+issues. resolve it one by one and show me mocks for each. i am finished"
+closed out 7 collected items about the tongue-photo feature. By the time
+this batch's own work resumed (after this session's own context
+compaction), heavy concurrent activity on this exact file — documented
+throughout the "2026-09-26" entries above (the circle-drag hit-target fix,
+the compare-pick-opens-pair fix, the viewer-walks-its-row fix) — had
+already independently resolved most of the seven; this entry both
+confirms that and closes the one piece still open.
+
+1. **Umbrella ask** ("improve the tongue photo display and analysis and
+   annotations") — no action beyond items 2-7; covered by all of them
+   together.
+2. **Circle-drag** ("i can't drag it around") — the real fix (SVG
+   `pointer-events: all` on `.ph-ren-mark-ring`, since `fill: none`
+   shapes only hit-test their stroke by default) is documented above
+   under "A drawn circle could not be grabbed from inside" — built by a
+   concurrent session the same day, not by this batch.
+3. **Compare 2 images side by side, 3 mocks** ("all of the above") — all
+   three compare views (side-by-side with ‹ ›, drag-slider + Flip/Blink,
+   "Over time" tap-two-to-pick) were built earlier this session, before
+   this continuation, and confirmed still intact by grep. The "click
+   compare, nothing happens" half of this item is the same bug as #6.
+4. **Open patient profile from the photos library** ("C · Both") — the
+   Records → Photos name link and the viewer's "Open profile →" footer
+   button were both built earlier this session and confirmed intact.
+5. **Unsorted photos: easier/more obvious, "12 of 12" confusing**
+   ("C · Both") — TWO separate halves:
+   - The amber "N photos still need a label · Sort them →" line +
+     one-by-one sorter + dashed-amber unsorted tiles grouped first under
+     an "UNSORTED · N" label were built earlier this session, including a
+     real undercounting bugfix (`needsPhotoCount` now walks every unsorted
+     PHOTO via `phRenSortFlowAllNeeds`, not just strip tiles/rows).
+   - **Found and fixed this continuation**: the sort-flow's completion
+     message, `phFlashShow("All sorted ✓")`, was setting and consuming
+     `phFlash` correctly but showing nothing on screen — `phFlashHtml()`
+     is only ever embedded in `#presConfirmZone`, which exists solely on
+     the Dispense stage; the Photos section lives on the Profile stage,
+     which never renders it. A real, on-screen gap, not a testing
+     artifact — confirmed by direct DOM inspection before touching
+     anything. Fixed with a scoped, in-place confirmation instead of
+     relying on the page-wide flash: `phRenSortFlowDoneMsg` (a plain
+     patientKey→bool map) is set for ~2.5s right where the sort-flow
+     completes (`phRenSortFlowNext`, index.html ~49739), and
+     `presPhotosSectionInnerHtml` shows "✓ All sorted" in the exact slot
+     the "N photos still need a label" line just vacated
+     (`.ph-photos-sortline.done`, a green/herb-tint variant of the same
+     amber component) for that window, then fades back to the normal
+     header on its own — no click needed to dismiss it. The original
+     `phFlashShow` call is left in place, harmless, as a safety net for
+     any future context where `#presConfirmZone` might be reachable from
+     this flow.
+   - The "12 of 12 confusing" (viewer-walking-set) half of this complaint
+     is the same fix as #7 below, built by a concurrent session.
+6. **Compare-with-another does nothing** — fixed earlier this session
+   (`f02ba85`), then completed by a concurrent session the same day (the
+   "Picking the second photo to compare did nothing on the Profile's
+   Photos tab" fix above — every surface a compare bar can live on now
+   repaints via `phRenCompareRefresh`, and the second pick auto-opens the
+   pair).
+7. **"The preview cuts off the image, fix that"** ("A · Square, whole
+   photo") — the `.ph-ren-crop-stage`/`.ph-ren-crop-img` CSS
+   (centered flex + `max-width`/`max-height: 60vh`) was built earlier
+   this session and confirmed intact by grep. Separately, the "opens the
+   wrong pile" half of the confusion (a tap on one unsorted photo walking
+   through all 12 tongue photos) is the "The photo viewer walks the ROW"
+   fix above, built by a concurrent session the same day — the viewer now
+   scopes its ‹ › set to the tapped photo's own row (unsorted vs. a named
+   shot vs. another type), not the whole type.
+
+**Verified in the sandbox** (`lcm-lifestylerow-verify`, port 8943; the
+login gate blocks a fully-booted click-through, worked around as usual by
+temporarily hiding `#lcmOverlay` for a screenshot, then restoring it — no
+data touched): a synthetic patient/script/photo walked through the full
+sort-flow via real dispatched clicks — Sort → pick a shot → "✓ All
+sorted" renders in place with the correct green styling, then clears
+itself after ~2.5s leaving the normal photo-count header; instrumented
+`phRenPhotosSecRefresh` to confirm the done-flag is true on the render
+that actually sticks. Screenshotted the live result. All synthetic test
+data (photo records, the script entry, the patient record,
+`presNoPlanGateSkip` membership) removed and confirmed absent afterward —
+twice, once for the functional test patient and once for a second,
+purely-for-the-screenshot demo patient.
+
+Her taste picks from this batch (also saved to memory): "all of the
+above" on the 3 compare views; "C · Both" on #4 (profile-from-library)
+and #5 (unsorted photos); "A · Square, whole photo" on #7 (preview crop).
+
+`lcm-build` `20260926-100000`, `sw.js` `lcm-20260926-photosort-flash-fix`.
