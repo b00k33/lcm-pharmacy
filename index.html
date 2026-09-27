@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260927-100000">
+<meta name="lcm-build" content="20260927-110000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6145,7 +6145,6 @@
   #pharmacyPage .ph-tp-sesstable-wrap { overflow-x: auto; margin-bottom: 4px; }
   #pharmacyPage .ph-tp-sesstable { width: 100%; min-width: 300px; border-collapse: collapse; table-layout: fixed; }
   #pharmacyPage .ph-tp-sesstable col.lbl { width: 78px; }
-  #pharmacyPage .ph-tp-sesstable col.idle { width: 86px; }
   #pharmacyPage .ph-tp-sesstable tbody th { font-size: 9px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--ph-faint); text-align: left; padding: 7px 8px; background: var(--ph-paper, #F4F7F8); border-bottom: 1px solid var(--ph-line); white-space: nowrap; }
   /* her screenshot 2026-09-25: the label column (th) already sits on a
      paper backdrop, but a plain <td> had none at all -- an upcoming phase
@@ -28641,8 +28640,11 @@
       const tpVrF = e.target.closest("[data-tp-vr-filter]");
       if (tpVrF) {
         phTpVrFilter = tpVrF.dataset.tpVrFilter;
-        const w = tpVrF.closest("[data-tp-vr]");
-        if (w) phTpVrRefresh(w.dataset.tpVrName, w.dataset.tpVr);
+        // the filter chips render on the combined wrapper (modal) or the
+        // rail's Treatment-log tab -- never the Photos tab, which has no
+        // filter row of its own
+        const w = tpVrF.closest("[data-tp-vr], [data-tp-vr-log]");
+        if (w) phTpVrRefresh(w.dataset.tpVrName, w.dataset.tpVr || w.dataset.tpVrLog);
         return;
       }
       // her ask 2026-09-20 (synth22, "show table of photos organised by dates
@@ -28652,8 +28654,10 @@
       const tpVrPhotoTbl = e.target.closest("[data-tp-vr-phototable]");
       if (tpVrPhotoTbl) {
         phTpVrPhotoTableOpen = !phTpVrPhotoTableOpen;
-        const w = tpVrPhotoTbl.closest("[data-tp-vr]");
-        if (w) phTpVrRefresh(w.dataset.tpVrName, w.dataset.tpVr);
+        // this toggle renders on the combined wrapper (modal) or the rail's
+        // Photos tab -- never the Treatment-log tab
+        const w = tpVrPhotoTbl.closest("[data-tp-vr], [data-tp-vr-photos]");
+        if (w) phTpVrRefresh(w.dataset.tpVrName, w.dataset.tpVr || w.dataset.tpVrPhotos);
         return;
       }
       const tpSpineToggle = e.target.closest("[data-tp-spine-toggle]");
@@ -31300,6 +31304,10 @@
       if (e.target.closest("[data-fp-goto]")) { presStage = "profile"; presAssessTab = "checklist"; renderPresPanel(); return; }
       const assessTab = e.target.closest("[data-assess-tab]");
       if (assessTab) { presAssessTab = assessTab.dataset.assessTab; if (!presAssessTabRefresh()) renderPresPanel(); return; }
+      // the Treatment plan tab's own left rail (her ask 2026-09-27) --
+      // same scoped-repaint shape as data-assess-tab above
+      const tpMainTab = e.target.closest("[data-tp-main-tab]");
+      if (tpMainTab) { presTpMainTab = tpMainTab.dataset.tpMainTab; if (!presTpMainTabRefresh()) renderPresPanel(); return; }
       // the 方病人 constitution fold, merged into Patient details (her ask
       // 2026-09-25) -- only ever shown inside this one tab, so the scoped
       // presAssessTabRefresh() is always the right repaint (no second
@@ -39638,7 +39646,7 @@ or changing anything in Cliniko.
     presLabelOpen = false; presMoreOpen = false; presFuOpen = false;
     presNameOpen = false; presHistOpen = false; presMedHxOpen = false;
     presTreatOpen = false; presHistMoreOpen = false;
-    presTpInlinePlanId = null; presTpInlineNew = false; presTpInlineLoose = false;
+    presTpInlinePlanId = null; presTpInlineNew = false; presTpInlineLoose = false; presTpMainTab = "plan";
     presAcuOutcomeDraft = null; presAcuTicks = new Set();
     presAcuPhaseId = null; presAcuHerbInstruct = false;
     presAcuPointsChecked = null; presAcuPressChecked = null; presAcuWatchChecked = []; presAcuAskNote = ""; presAcuComment = "";
@@ -45956,8 +45964,10 @@ or changing anything in Cliniko.
     // the script panel's PHOTOS section (Opening + Assessment stages) -- same
     // in-place idiom, it was rendered as "Loading photos…" before this resolved
     phRenPhotosSecRefresh(patientKey);
-    // the cycle page's visit record (tongue strip + per-visit thumbs)
-    document.querySelectorAll("[data-tp-vr]").forEach(el => { if (phPatientKey(el.dataset.tpVrName) === patientKey) phTpVrRefresh(el.dataset.tpVrName, el.dataset.tpVr); });
+    // the cycle page's visit record (tongue strip + per-visit thumbs) --
+    // the combined wrapper (modal) or either of the left rail's own
+    // Treatment-log/Photos tabs (her ask 2026-09-27), whichever is mounted
+    document.querySelectorAll("[data-tp-vr], [data-tp-vr-log], [data-tp-vr-photos]").forEach(el => { if (phPatientKey(el.dataset.tpVrName) === patientKey) phTpVrRefresh(el.dataset.tpVrName, el.dataset.tpVr || el.dataset.tpVrLog || el.dataset.tpVrPhotos); });
     // Records → Photos (Stage D) keeps its OWN whole-clinic flat cache
     // (phRecPhotosCache), separate from this per-patient one -- every
     // mutation that reaches here (retag, redate, delete, undo, a new
@@ -52621,7 +52631,12 @@ or changing anything in Cliniko.
       // the open move box (data-tp-pin-date) is live DOM too -- same rule
       if (el.querySelector("[data-tp-phase-field],[data-tp-pin-date]")) return;
       const plan = phTpFindPlan(el.dataset.tpLadderName, el.dataset.tpLadder);
-      if (plan) el.outerHTML = phTpSessionLadderHtml(el.dataset.tpLadderName, plan);
+      // the ladder now renders the phase bar INSIDE itself (her 2026-09-27
+      // "only connect with first table" fix) -- this outerHTML swap has to
+      // recompute and pass it in too, or a cycle-driven repaint here would
+      // regenerate the ladder with no phase bar at all (pbarHtml defaults
+      // to "").
+      if (plan) el.outerHTML = phTpSessionLadderHtml(el.dataset.tpLadderName, plan, phTpPhaseBarHtml(el.dataset.tpLadderName, plan, phTpTabPhaseOf(plan, phPatientPeek(el.dataset.tpLadderName))));
     });
     presBandSubRefresh();
     return true;
@@ -55271,71 +55286,19 @@ or changing anything in Cliniko.
     if (!phMsgScanOffer || phMsgScanOffer.planId !== plan.id) return "";
     return `<div class="ph-flash ph-msg-offer">Text <b>${esc(phCkFirst(name))}</b> the day after her scan (${esc(schedDateStr(phMsgScanOffer.dateKey))})? <button type="button" class="ph-msg-offer-btn skip" data-tp-scan-msg-skip="1">Skip</button><button type="button" class="ph-msg-offer-btn go" data-tp-scan-msg-go="${plan.id}">Plan it</button></div>`;
   }
-  function presTpInlineEditorHtml(name, plan) {
-    const st = v => phTpStatusMeta(v, PH_TP_STATUSES);
-    // her 2026-09-08 redesign: no head row -- the green Treatment row band
-    // above already names the plan, its current phase and (now) its status;
-    // ‹ All plans / Full screen / Delete live in one quiet footer line
-    // her 2026-09-10 redesign: tabs + one phase's table (phTpTabbedHtml); the
-    // footer links are gone -- + Add phase / Full screen / All plans / Delete
-    // plan all sit in the tab strip's ⋯ (presMenuHtml). Delete's confirm
-    // strip surfaces here, above the tabs, where she can see it -- never
-    // inside a menu that has just closed.
+  // her ask 2026-09-27 ("for the plan treatment log photos etc build a
+  // navigating toolbar on the left"): the inline Plan tab splits into a
+  // left rail -- Plan / Treatment log / Photos / Notes -- mirroring
+  // presAssessSections/-TabsHtml/-TabRefresh EXACTLY (same .ph-assess-tabs
+  // CSS, same scoped #presTpMainHost outerHTML swap, never renderPresPanel
+  // on a tab switch). Disclosed judgment call, approved via a real mock
+  // and her "build it for real": this splits only the page's OUTER
+  // sections. Everything she has repeatedly asked to be merged INSIDE what
+  // is now the "Plan" tab -- the phase-bar+sessions mergewidget, the
+  // Cycle+IVF-history+Next card, the phase body -- stays exactly as
+  // merged as she built it; no internal re-fragmentation.
+  function presTpPlanTabBodyHtml(name, plan) {
     const rec = phPatientRec(name);
-    // her ask 2026-09-18 ("this is meant to replace / or to merge" -- the
-    // acu-log panel and the Grid's own "not written up yet" visit row were
-    // the same fact shown in two disconnected places): the acu-log no
-    // longer floats below the phase table in GRID mode at all -- it's
-    // embedded directly into whichever phase is actually being treated
-    // today (phTpPhaseBodyRows' showTodaysVisit branch, which reuses this
-    // exact presAcuOpenHtml markup so every existing handler/refresh still
-    // targets the same .ph-acu-open wrapper unchanged). It still floats
-    // here, in `acuLogBlock` below, ONLY for TIMELINE mode -- see
-    // phTpPlanBodyHtml -- since Timeline has no per-phase row to embed it
-    // into and would otherwise lose the ability to log a session at all.
-    // The old standalone accordion (presAcuRowHtml, shown when there was no
-    // plan at all to fold into) is gone -- her explicit "remove the panel
-    // everywhere".
-    const acuSessions = rec && rec.acuEnabled
-      ? (rec.acuSessions || []).slice().sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.at || 0) - (a.at || 0))
-      : null;
-    // same booked-plan gate as the Grid (review 2026-09-18): today's booking
-    // naming ANOTHER plan means this plan's Timeline must not log the visit
-    const tlBooked = acuSessions ? phApptBookedPlan(name) : null;
-    const acuLogBlock = !acuSessions ? ""
-      : (tlBooked && tlBooked.id !== plan.id)
-        ? `<div class="ph-tp-vt-note" style="padding:8px 0">Today’s booking is for <b>${esc(tlBooked.title || "another plan")}</b> — log the visit from that plan.</div>`
-        : presAcuOpenHtml(name, acuSessions, { planId: plan.id });
-    // her synth22 ask 2026-09-15 ("this is not really useful because its
-    // giving me info in 41 days. i want for this cycle. i also want this
-    // positioned better in the treatment plan rather than above it"):
-    // phCycleLookAheadBlockHtml (next cycle, projected off her AVERAGE
-    // length) is gone from above the phase strip -- the block she was
-    // looking at had nothing to do with the cycle she's actually in.
-    // phCycleVisitsHtml already sat below the strip with real THIS-cycle
-    // dates, but only for Natural fertility; phCyclePlanScheduleHtml is its
-    // twin for the other cycle-driven templates (PCOS/Endo/Dysmenorrhea/
-    // Amenorrhea/IVF) and was never wired in here (only into the older
-    // full-screen plan modal) -- adding it means every cycle-tracked plan
-    // gets an accurate this-cycle schedule in the one place, not just hers.
-    // moved off the Dispense-stage dose timeline (her ask 2026-09-17): info
-    // letters are patient EDUCATION, not a dose step, and every plan has one
-    // real "open script" to resolve them against -- same presOpenId read
-    // presAcuOpenHtml already uses just above this scope
-    const infoLtrScript = PRESC.items.find(x => x.id === presOpenId);
-    const schedInner = `${phCycleVisitsHtml(rec, plan, name)}${phCyclePlanScheduleHtml(rec, plan, name)}`;
-    const tailInner = `${phTpAddPhaseHtml(plan)}
-      ${phTpIvfTrackHtml(plan)}
-      ${infoLtrScript ? `<div class="ph-tp-reviews">
-        <div class="ph-tp-sec"><span>Info letters</span></div>
-        <button type="button" class="ph-load-btn on" data-pres-infoltr="${infoLtrScript.id}">📚 Pick a letter to send</button>
-      </div>` : ""}
-      <div class="ph-tp-reviews">
-        <div class="ph-tp-sec"><span>Review notes${(plan.reviews || []).length ? ` <em>· ${(plan.reviews || []).length}</em>` : ""}</span></div>
-        ${(plan.reviews || []).slice().sort((a, b) => (b.date || "").localeCompare(a.date || "")).map(r => phTpReviewRowHtml(plan, r)).join("") || `<div class="ph-hx-constit-note">Nothing logged yet.</div>`}
-        <div class="ph-tp-review-add"><input type="text" id="phTpReviewInput" placeholder="Add a review note…" aria-label="New review note"><button type="button" class="ph-load-btn on" data-tp-review-add="${plan.id}">Add</button></div>
-      </div>`;
-    const inner = schedInner + tailInner;
     // her ask 2026-09-19 ("i cant see the cycle day"): the tap-the-day cycle
     // strip on THIS page for every cycle-tracked plan -- the same ONE control
     // the Assessment tab, the check-in card and the full-screen modal use
@@ -55359,69 +55322,127 @@ or changing anything in Cliniko.
     const delStrip = phTpDeleteArm === "plan"
       ? `<div class="ph-confirm-strip"><span>Delete this whole plan? This can't be undone.</span><button type="button" class="btn-save" data-tp-plan-del-yes="${plan.id}">Delete plan</button><button type="button" class="btn-cancel" data-tp-plan-del-no="1">Cancel</button></div>`
       : "";
-    {
-      // her pick B 2026-09-20 ("too busy"): this layout for EVERY plan, not
-      // only cycle ones -- the headband, the tab cards, the Timeline/Grid
-      // toggle and the Planned|Today split below are no longer reached from
-      // here (phTpPlanBodyHtml still serves the full-screen modal).
-      // her list 2026-09-19, made from scratch ("clear out the display page
-      // so i can make it from scratch listing what i need"): the cycle block
-      // (phTpCycleBlockHtml), then the plan block -- its head (title ·
-      // status · ⋯), Presenting focus / Treatment goal, the plan's phases
-      // as a bar with a marker, Today's visit beside the Planned table,
-      // Then, Past visits, and the plan's own extras. No rail, no chips, no
-      // Timeline toggle -- Past visits IS the timeline. Her ask 2026-09-22
-      // ("allow direct editing"): title, Focus/Goal and every Planned cell
-      // are always open -- no Edit-plan toggle gating them any more.
-      const peek = phPatientPeek(name);
-      const sel = phTpTabPhaseOf(plan, peek);
-      const acts = phTpPlanActionsHtml(plan);
-      const st = phTpStatusMeta(plan.status, PH_TP_STATUSES);
-      // her ask 2026-09-26 ("remove the egg retrieval / embryo transfer
-      // row"): the plain date-input row is gone from this page. The dates
-      // it wrote (a linked round's own `when` / its fromPlan transfer's
-      // `date`) still resolve the same phase cascade and cadence dates
-      // (phTpMilestoneDate/-Sync/phTpCadenceDate, unchanged) -- they just
-      // need a round linked to this plan first, which now happens the
-      // moment she logs a clinic scan for it (phTpScansHtml's save handler
-      // already calls the same phIvfLinkedCollectionWritable this row's
-      // handler used to be the only caller of), rather than from this row.
-      // her "a" pick 2026-09-26 (Option A1, the merged Cycle+IVF-history+
-      // What's-next card): when the Cycle block renders, it now carries its
-      // own IVF history + Next inside it (phTpCycleBlockHtml), so both are
-      // dropped from here to avoid saying each fact twice. IVF Protocol is
-      // always a PH_TP_CYCLE_TEMPLATES member, so `showCycleBlock` is
-      // guaranteed true whenever an IVF history section would show -- the
-      // old unconditional call here is now unreachable and removed outright
-      // rather than left as dead code. Next stays here ONLY as the fallback
-      // for plans with no Cycle block at all (Pregnancy/MSK/Facial).
-      const showCycleBlock = cyclePlan || cycleAlsoShow;
-      return `<div class="ph-tp-inline ph-tp-page">
-        ${delStrip}
-        ${showCycleBlock ? phTpCycleBlockHtml(peek, name, plan) : plan.templateName === "Pregnancy" ? phTpPregBlockHtml(peek, name, plan) : phTpFacialStripHtml(rec, plan)}
-        <div class="ph-tp-pblk">
-          <div class="ph-tp-pblk-head">
-            ${phTpTitleHtml(name, plan)}
-            <span class="ph-tp-bandst ${esc(plan.status)}" data-tp-status-cycle="${esc(name)}|${plan.id}" title="Click to change" role="button" tabindex="0">${esc(st.label)}</span>
-            <span class="r">${acts.stageMenu}</span>
-          </div>
-          ${phTpFocusGoalHtml(name, plan)}${phTpProtocolPickHtml(plan)}
-          ${phTpReorderOpen === plan.id ? phTpReorderPanelHtml(plan) : ""}
-          <div class="ph-tp-mergewidget">${phTpPhaseBarHtml(name, plan, sel)}${phTpSessionLadderHtml(name, plan)}</div>
-          ${phTpScansHtml(name, plan)}
-          <div class="ph-tp-panel noph">
-            <div class="ph-tp-phasebody">${sel ? phTpPhasePanelHtml(plan, sel) : `<div class="ph-hx-constit-note">No phases yet.</div>`}</div>
-            ${showCycleBlock ? "" : (sel ? phTpNextHtml(name, plan, sel) : "")}
-            ${schedInner}
-            ${phTpPastHtml(name, plan)}
-            ${tailInner}
-          </div>
+    // her pick B 2026-09-20 ("too busy"): this layout for EVERY plan, not
+    // only cycle ones -- the headband, the tab cards, the Timeline/Grid
+    // toggle and the Planned|Today split below are no longer reached from
+    // here (phTpPlanBodyHtml still serves the full-screen modal).
+    // her list 2026-09-19, made from scratch ("clear out the display page
+    // so i can make it from scratch listing what i need"): the cycle block
+    // (phTpCycleBlockHtml), then the plan block -- its head (title ·
+    // status · ⋯), Presenting focus / Treatment goal, the plan's phases
+    // as a bar with a marker, Today's visit beside the Planned table,
+    // Then, and the plan's own extras. Her ask 2026-09-22
+    // ("allow direct editing"): title, Focus/Goal and every Planned cell
+    // are always open -- no Edit-plan toggle gating them any more.
+    const peek = phPatientPeek(name);
+    const sel = phTpTabPhaseOf(plan, peek);
+    const acts = phTpPlanActionsHtml(plan);
+    const st = phTpStatusMeta(plan.status, PH_TP_STATUSES);
+    // her ask 2026-09-26 ("remove the egg retrieval / embryo transfer
+    // row"): the plain date-input row is gone from this page. The dates
+    // it wrote (a linked round's own `when` / its fromPlan transfer's
+    // `date`) still resolve the same phase cascade and cadence dates
+    // (phTpMilestoneDate/-Sync/phTpCadenceDate, unchanged) -- they just
+    // need a round linked to this plan first, which now happens the
+    // moment she logs a clinic scan for it (phTpScansHtml's save handler
+    // already calls the same phIvfLinkedCollectionWritable this row's
+    // handler used to be the only caller of), rather than from this row.
+    // her "a" pick 2026-09-26 (Option A1, the merged Cycle+IVF-history+
+    // What's-next card): when the Cycle block renders, it now carries its
+    // own IVF history + Next inside it (phTpCycleBlockHtml), so both are
+    // dropped from here to avoid saying each fact twice. IVF Protocol is
+    // always a PH_TP_CYCLE_TEMPLATES member, so `showCycleBlock` is
+    // guaranteed true whenever an IVF history section would show -- the
+    // old unconditional call here is now unreachable and removed outright
+    // rather than left as dead code. Next stays here ONLY as the fallback
+    // for plans with no Cycle block at all (Pregnancy/MSK/Facial).
+    const showCycleBlock = cyclePlan || cycleAlsoShow;
+    const schedInner = `${phCycleVisitsHtml(rec, plan, name)}${phCyclePlanScheduleHtml(rec, plan, name)}`;
+    return `${delStrip}
+      ${showCycleBlock ? phTpCycleBlockHtml(peek, name, plan) : plan.templateName === "Pregnancy" ? phTpPregBlockHtml(peek, name, plan) : phTpFacialStripHtml(rec, plan)}
+      <div class="ph-tp-pblk">
+        <div class="ph-tp-pblk-head">
+          ${phTpTitleHtml(name, plan)}
+          <span class="ph-tp-bandst ${esc(plan.status)}" data-tp-status-cycle="${esc(name)}|${plan.id}" title="Click to change" role="button" tabindex="0">${esc(st.label)}</span>
+          <span class="r">${acts.stageMenu}</span>
+        </div>
+        ${phTpFocusGoalHtml(name, plan)}${phTpProtocolPickHtml(plan)}
+        ${phTpReorderOpen === plan.id ? phTpReorderPanelHtml(plan) : ""}
+        <div class="ph-tp-mergewidget">${phTpSessionLadderHtml(name, plan, phTpPhaseBarHtml(name, plan, sel))}</div>
+        ${phTpScansHtml(name, plan)}
+        <div class="ph-tp-panel noph">
+          <div class="ph-tp-phasebody">${sel ? phTpPhasePanelHtml(plan, sel) : `<div class="ph-hx-constit-note">No phases yet.</div>`}</div>
+          ${showCycleBlock ? "" : (sel ? phTpNextHtml(name, plan, sel) : "")}
+          ${schedInner}
         </div>
       </div>`;
-    }
+  }
+  // moved off the Dispense-stage dose timeline (her ask 2026-09-17): info
+  // letters are patient EDUCATION, not a dose step, and every plan has one
+  // real "open script" to resolve them against
+  function presTpNotesTabBodyHtml(name, plan) {
+    const infoLtrScript = PRESC.items.find(x => x.id === presOpenId);
+    return `${phTpAddPhaseHtml(plan)}
+      ${phTpIvfTrackHtml(plan)}
+      ${infoLtrScript ? `<div class="ph-tp-reviews">
+        <div class="ph-tp-sec"><span>Info letters</span></div>
+        <button type="button" class="ph-load-btn on" data-pres-infoltr="${infoLtrScript.id}">📚 Pick a letter to send</button>
+      </div>` : ""}
+      <div class="ph-tp-reviews">
+        <div class="ph-tp-sec"><span>Review notes${(plan.reviews || []).length ? ` <em>· ${(plan.reviews || []).length}</em>` : ""}</span></div>
+        ${(plan.reviews || []).slice().sort((a, b) => (b.date || "").localeCompare(a.date || "")).map(r => phTpReviewRowHtml(plan, r)).join("") || `<div class="ph-hx-constit-note">Nothing logged yet.</div>`}
+        <div class="ph-tp-review-add"><input type="text" id="phTpReviewInput" placeholder="Add a review note…" aria-label="New review note"><button type="button" class="ph-load-btn on" data-tp-review-add="${plan.id}">Add</button></div>
+      </div>`;
+  }
+  function presTpMainSections(name, plan) {
+    const sel = phTpTabPhaseOf(plan, phPatientPeek(name));
+    const rec = phPatientPeek(name);
+    const cachedPhotos = phRenPhotosFor(phPatientKey(name));
+    const tongueCount = cachedPhotos ? cachedPhotos.filter(r => phRenTypeOf(r) === "tongue").length : 0;
+    const today = keyOf(TODAY);
+    // count DISTINCT DATES, not raw session entries -- the tab body underneath
+    // (phTpVrLogTabHtml -> phTpVrData -> phTpSpineDates) collapses two same-date
+    // sessions into one row, so a raw filter().length here could show a badge
+    // count higher than the number of rows actually rendered in that tab.
+    const sessCount = rec ? new Set((rec.acuSessions || []).filter(s => !s.planId || s.planId === plan.id).filter(s => s.date && s.date < today).map(s => s.date)).size : 0;
+    return [
+      { id: "plan", label: "Plan", sub: sel ? sel.label : "", body: () => presTpPlanTabBodyHtml(name, plan) },
+      { id: "log", label: "Treatment log", sub: sessCount ? `${sessCount}` : "", body: () => phTpVrLogTabHtml(name, plan) },
+      { id: "photos", label: "Photos", sub: tongueCount ? `${tongueCount}` : "", body: () => phTpVrPhotosTabHtml(name, plan) },
+      { id: "notes", label: "Notes", sub: (plan.reviews || []).length ? `${(plan.reviews || []).length}` : "", body: () => presTpNotesTabBodyHtml(name, plan) },
+    ];
+  }
+  function presTpMainTabsHtml(name, plan) {
+    const sections = presTpMainSections(name, plan);
+    const sel = sections.find(s => s.id === presTpMainTab) || sections[0];
+    const body = typeof sel.body === "function" ? sel.body() : sel.body;
+    return `<div id="presTpMainHost"><div class="ph-assess-tabs">
+      <div class="ph-assess-tabsrow" role="tablist" aria-label="Treatment plan sections">
+        ${sections.map(s => `<button type="button" class="ph-assess-tab${s.id === sel.id ? " on" : ""}" data-tp-main-tab="${s.id}" role="tab" aria-selected="${s.id === sel.id ? "true" : "false"}"><span class="lbl">${esc(s.label)}</span>${s.sub ? `<span class="sub">${esc(s.sub)}</span>` : ""}</button>`).join("")}
+      </div>
+      <div class="ph-assess-panel">${body}</div>
+    </div></div>`;
+  }
+  // scoped repaint, same shape as presAssessTabRefresh -- swaps only
+  // #presTpMainHost, never renderPresPanel, so a tab switch keeps her
+  // scroll position and any open sections on the tab she's leaving.
+  function presTpMainTabRefresh() {
+    const host = document.getElementById("presTpMainHost");
+    if (!host) return false;
+    const t = PRESC.items.find(x => x.id === presOpenId);
+    if (!t) return false;
+    const name = presPatientFor(t);
+    const plan = name && presTpInlinePlanId ? phTpFindPlan(name, presTpInlinePlanId) : null;
+    if (!plan) return false;
+    host.outerHTML = presTpMainTabsHtml(name, plan);
+    return true;
+  }
+  function presTpInlineEditorHtml(name, plan) {
+    return `<div class="ph-tp-inline ph-tp-page">${presTpMainTabsHtml(name, plan)}</div>`;
   }
   function presTpInlineOpen(name, planId) {
     presTpInlinePlanId = planId; presTpInlineNew = false; presTpInlineLoose = false;
+    presTpMainTab = "plan";
     phTpScreenPatient = name; phTpScreenPlanId = planId;
     phTpFormulaPickPhase = null; phTpDeleteArm = null;
     renderPresPanel();
@@ -55447,7 +55468,7 @@ or changing anything in Cliniko.
     rec.treatmentPlans.push(plan);
     phTpApplyInterrupt(rec, plan, templateId);   // an acute plan pauses the course it interrupts
     phTpAutoFillCase(templateId, presOpenId);
-    presTpInlineNew = false; presTpInlineLoose = false; presTpInlinePlanId = plan.id;
+    presTpInlineNew = false; presTpInlineLoose = false; presTpInlinePlanId = plan.id; presTpMainTab = "plan";
     phTpScreenPatient = name; phTpScreenPlanId = plan.id;
     phTpFormulaPickPhase = null; phTpDeleteArm = null;
     // land straight on the plan she just made -- a no-op for the existing
@@ -57132,7 +57153,7 @@ or changing anything in Cliniko.
   });
   // the ladder (her pick B): every planned session of every phase with its
   // date -- done ✓ · today · booked · projected (tilde) from the phase's rhythm
-  function phTpSessionLadderHtml(name, plan) {
+  function phTpSessionLadderHtml(name, plan, pbarHtml = "") {
     const phs = plan.phases || [];
     if (!phs.length) return "";
     const today = keyOf(TODAY);
@@ -57270,17 +57291,20 @@ or changing anything in Cliniko.
     // words shown twice in a row. Dropped; the phase bar is now the only
     // place the phase names/numbers print, this table just reads under it.
     // her ask 2026-09-25 ("too much empty space... make things I need
-    // immediately stand out, less important... take up less space"): with
-    // equal-width columns, a phase that hasn't started yet (just "Set" /
-    // "Starts after X") took the exact same width as the live phase's own
-    // busy cell -- real, wasted, full-height whitespace either side of the
-    // one column she's actually reading. Only the LIVE phase's column
-    // keeps its old unconstrained width now (col.idle's fixed px pins
-    // every OTHER phase narrow in table-layout:fixed, so the live column
-    // absorbs whatever that frees up). No live phase (every phase done, or
-    // none started) falls back to the original equal split -- there is no
-    // one column to favour in that case.
-    const table = `<div class="ph-tp-sesstable-wrap"><table class="ph-tp-sesstable"><colgroup><col class="lbl">${phs.map(p => live && p.id === live.id ? "<col>" : `<col${live ? " class=\"idle\"" : ""}>`).join("")}</colgroup><tbody><tr><th>Phase</th>${phaseCells}</tr><tr><th>Frequency</th>${sessCells}</tr><tr><th>This week</th>${twCells}</tr></tbody></table></div>`;
+    // immediately stand out") gave the live phase's column all the leftover
+    // width and pinned every other phase to a flat 86px -- REVERTED
+    // 2026-09-27 ("make the columns align and the overall table wider"):
+    // the phase bar above splits its segments EQUALLY (.seg{flex:1 1 0}),
+    // so an asymmetric table underneath it can never line its dividers up
+    // with the bar's tab boundaries -- exactly what she flagged. Every
+    // phase column is a bare, unconstrained <col> again, so table-layout:
+    // fixed divides the same leftover width equally among them, matching
+    // the bar's own equal split pixel-for-pixel (both start from the same
+    // 78px corner/lbl column and the same overall container width) --
+    // and it gives every non-live phase real room instead of 86px, which
+    // is the "wider" half of her ask. Bug fix over redesign: raised here
+    // rather than silently reverting her 2026-09-25 call without saying so.
+    const table = `<div class="ph-tp-sesstable-wrap"><table class="ph-tp-sesstable"><colgroup><col class="lbl">${phs.map(() => "<col>").join("")}</colgroup><tbody><tr><th>Phase</th>${phaseCells}</tr><tr><th>Frequency</th>${sessCells}</tr><tr><th>This week</th>${twCells}</tr></tbody></table></div>`;
     // extra content (a booking beyond the planned count, one marked "not
     // counted", an open move box, an open pin box) used to sit in a phase's
     // own row -- phases are columns now, so it can't -- it drops below the
@@ -57327,9 +57351,18 @@ or changing anything in Cliniko.
     // never when there's nothing to allocate (phTpApptHistoryHtml returns ""
     // for an empty list, and an empty right column would look like a bug).
     const histHtml = phTpApptHistoryHtml(name, plan);
+    // her ask 2026-09-27 ("top row extends to two tables. only connect
+    // with first table with right proportions"): the phase bar used to be
+    // a widget-level sibling BEFORE this whole two-column split, so it
+    // visually spanned both the Sessions column AND the Appointment
+    // History column instead of matching only the Sessions table's own
+    // width. It now renders as the first thing INSIDE the Sessions
+    // column (pbarHtml, passed in by the caller) -- both are children of
+    // the same padded column now, so they always share the exact same
+    // width, with or without a history column beside them.
     const body = histHtml
-      ? `<div class="ph-tp-ladder-cols"><div class="ph-tp-ladder-col">${table}${extrasHtml}</div><div class="ph-tp-ladder-col">${histHtml}</div></div>`
-      : `${table}${extrasHtml}`;
+      ? `<div class="ph-tp-ladder-cols"><div class="ph-tp-ladder-col">${pbarHtml}${table}${extrasHtml}</div><div class="ph-tp-ladder-col">${histHtml}</div></div>`
+      : `${pbarHtml}${table}${extrasHtml}`;
     // her ask 2026-09-26 ("remove treatment visits plan row" -> "the header
     // line" -> "it splits the table"): the "TREATMENT VISITS PLAN" label row
     // sat between the phase bar and the table with its own margin -- exactly
@@ -58108,12 +58141,29 @@ or changing anything in Cliniko.
     }).join("")}</div>`;
   }
   function phTpVrRefresh(name, planId) {
-    const el = document.querySelector(`[data-tp-vr="${CSS.escape(planId)}"]`);
     const plan = phTpFindPlan(name, planId);
-    if (!el || !plan) return;
-    const tmp = document.createElement("div");
-    tmp.innerHTML = phTpPastHtml(name, plan);
-    el.replaceWith(tmp.firstElementChild);
+    if (!plan) return;
+    // her ask 2026-09-27 (the left rail): the combined wrapper (data-tp-vr)
+    // still serves the full-screen modal; the inline Plan page's own
+    // Treatment-log/Photos rail tabs render two narrower wrappers instead
+    // (data-tp-vr-log/-photos). The modal is only ever hidden-toggled, never
+    // cleared (same trap already documented for #phPresWrap/#phTpModal
+    // elsewhere in this file), so its old data-tp-vr node can still be
+    // sitting in the document after she closes it -- querySelector alone
+    // would silently patch that invisible leftover instead of the visible
+    // rail element. Skip anything under a [hidden] ancestor, same guard
+    // presAcuLiveWrap() already uses for the same class of bug.
+    const swap = (sel, html) => {
+      const el = [...document.querySelectorAll(sel)].find(n => !n.closest("[hidden]"));
+      if (!el) return false;
+      const tmp = document.createElement("div");
+      tmp.innerHTML = html;
+      el.replaceWith(tmp.firstElementChild);
+      return true;
+    };
+    if (swap(`[data-tp-vr="${CSS.escape(planId)}"]`, phTpPastHtml(name, plan))) return;
+    if (swap(`[data-tp-vr-log="${CSS.escape(planId)}"]`, phTpVrLogTabHtml(name, plan))) return;
+    swap(`[data-tp-vr-photos="${CSS.escape(planId)}"]`, phTpVrPhotosTabHtml(name, plan));
   }
   // her report 2026-09-24 ("i can't select all types"): a photo-timeline
   // filter/mode click (phRenTimelineFilter/-Mode) only ever repainted the
@@ -58126,23 +58176,41 @@ or changing anything in Cliniko.
   // safely (same as phTpVrRefresh itself) when the click didn't originate
   // inside a Visit record's own photo table.
   function phRenTlVrRefresh(target) {
-    const w = target.closest("[data-tp-vr]");
-    if (w) phTpVrRefresh(w.dataset.tpVrName, w.dataset.tpVr);
+    const w = target.closest("[data-tp-vr], [data-tp-vr-log], [data-tp-vr-photos]");
+    if (w) phTpVrRefresh(w.dataset.tpVrName, w.dataset.tpVr || w.dataset.tpVrLog || w.dataset.tpVrPhotos);
   }
-  function phTpPastHtml(name, plan) {
+  // her ask 2026-09-27 (the left rail): the combined Visit-record wrapper
+  // (data-tp-vr, phTpPastHtml) still serves the full-screen modal; the
+  // inline Plan page's own Treatment-log/Photos rail tabs read the exact
+  // same node/photo computation, extracted here once, so neither tab can
+  // ever show a fact the other doesn't agree with.
+  function phTpVrData(name, plan) {
     const today = keyOf(TODAY);
     const nodes = phTpSpineDates(name, plan).filter(n => n.date < today);
     // sessions the phase windows didn't catch (a phase with no dated span,
     // a session from before the plan) still belong on her record
     const rec = phPatientPeek(name);
     const have = new Set(nodes.map(n => n.date));
-    ((rec && rec.acuSessions) || []).filter(s => s.date && s.date < today && (!s.planId || s.planId === plan.id) && !have.has(s.date))
-      .forEach(s => { have.add(s.date); nodes.push({ date: s.date, phase: (plan.phases || []).find(p => p.label === s.phaseLabel) || null, appt: null, acu: s, dispenses: [], periods: [] }); });
+    // .filter() then .forEach() would check have.has() against a stale snapshot for
+    // every item at once -- two sessions on the same date outside any phase window
+    // both "pass" and both get pushed, undoing the one-row-per-date collapse this
+    // whole function exists for. One pass, mutate have as we go, so the second
+    // same-date session is correctly skipped (2026-09-27, caught while re-verifying
+    // the sessCount badge fix -- see CLAUDE.md).
+    ((rec && rec.acuSessions) || []).forEach(s => {
+      if (!s.date || !(s.date < today) || (s.planId && s.planId !== plan.id) || have.has(s.date)) return;
+      have.add(s.date);
+      nodes.push({ date: s.date, phase: (plan.phases || []).find(p => p.label === s.phaseLabel) || null, appt: null, acu: s, dispenses: [], periods: [] });
+    });
     nodes.sort((a, b) => b.date.localeCompare(a.date));
     const photos = phTpVrPhotos(name);
     const recFull = rec || phPatientRec(name);
     nodes.forEach((nn, i) => { nn.x = phTpVrFacts(name, recFull, plan, nn, i > 0 ? nodes[i - 1] : null, photos); });
     nodes.forEach(nn => { if (nn.x.nextNode) nn.x.nextNode = { date: nn.x.nextNode.date, comp: nn.x.nextNode.x ? nn.x.nextNode.x.comp : null }; });
+    return { nodes, photos, recFull };
+  }
+  function phTpPastHtml(name, plan) {
+    const { nodes, photos, recFull } = phTpVrData(name, plan);
     const fl = phTpVrFilter;
     const has = nn => fl === "all" ? true : fl === "tongue" ? !!(nn.x.tongue || nn.x.photo) : fl === "pulse" ? !!nn.x.pulse : fl === "abd" ? !!nn.x.abd : fl === "therapies" ? !!nn.x.therapies : !!nn.x.herbs;
     const shown = nodes.filter(has);
@@ -58155,6 +58223,31 @@ or changing anything in Cliniko.
       ${nodes.length
         ? shown.length ? `<div class="ph-tp-vr-list">${shown.map(nn => phTpVrRowHtml(name, plan, nn, nn.x)).join("")}</div>` : `<div class="ph-hx-constit-note">Nothing recorded for ${esc((PH_TP_VR_FILTERS.find(([k]) => k === fl) || ["", fl])[1].toLowerCase())} yet.</div>`
         : `<div class="ph-hx-constit-note">No visits logged on this plan yet.</div>`}
+    </div>`;
+  }
+  // her ask 2026-09-27: the Treatment log rail tab is the same Visit
+  // record, minus the tongue-over-time strip and the photos-by-date
+  // table -- those two live on the Photos tab instead, below.
+  function phTpVrLogTabHtml(name, plan) {
+    const { nodes } = phTpVrData(name, plan);
+    const fl = phTpVrFilter;
+    const has = nn => fl === "all" ? true : fl === "tongue" ? !!(nn.x.tongue || nn.x.photo) : fl === "pulse" ? !!nn.x.pulse : fl === "abd" ? !!nn.x.abd : fl === "therapies" ? !!nn.x.therapies : !!nn.x.herbs;
+    const shown = nodes.filter(has);
+    const filters = PH_TP_VR_FILTERS.map(([k, l]) => `<button type="button" class="ph-tp-vr-f${fl === k ? " on" : ""}" data-tp-vr-filter="${k}">${l}</button>`).join("");
+    return `<div class="ph-tp-vr" data-tp-vr-log="${esc(plan.id)}" data-tp-vr-name="${esc(name)}">
+      <div class="ph-tp-sec ph-tp-vr-sec"><span>Visit record${nodes.length ? ` <em>· ${nodes.length}</em>` : ""}</span>${nodes.length ? `<span class="ph-tp-vr-filters">${filters}</span>` : ""}</div>
+      ${nodes.length
+        ? shown.length ? `<div class="ph-tp-vr-list">${shown.map(nn => phTpVrRowHtml(name, plan, nn, nn.x)).join("")}</div>` : `<div class="ph-hx-constit-note">Nothing recorded for ${esc((PH_TP_VR_FILTERS.find(([k]) => k === fl) || ["", fl])[1].toLowerCase())} yet.</div>`
+        : `<div class="ph-hx-constit-note">No visits logged on this plan yet.</div>`}
+    </div>`;
+  }
+  function phTpVrPhotosTabHtml(name, plan) {
+    const { nodes, photos, recFull } = phTpVrData(name, plan);
+    return `<div class="ph-tp-vr ph-tp-vr-photostab" data-tp-vr-photos="${esc(plan.id)}" data-tp-vr-name="${esc(name)}">
+      ${phTpVrStripHtml(name, recFull, photos, nodes)}
+      <button type="button" class="tab-link ph-tp-vr-phototoggle" data-tp-vr-phototable="1">${phTpVrPhotoTableOpen ? "Hide photos by date ⌃" : "Photos by date ⌄"}</button>
+      ${phTpVrPhotoTableOpen ? `<div class="ph-tp-vr-phototable">${phRenTimelineHtml(photos.pk, name).replace(' id="phRenTlScroll"', "")}</div>` : ""}
+      ${photos.list.length || phTpVrPhotoTableOpen ? "" : `<div class="ph-hx-constit-note">No photos yet.</div>`}
     </div>`;
   }
   function phTpPastRowHtml(name, plan, node) {   // kept for the non-cycle spine; the cycle page uses phTpVrRowHtml
@@ -60194,7 +60287,7 @@ or changing anything in Cliniko.
             // tab cards / Timeline toggle are no longer reached from here)
             const sel = phTpTabPhaseOf(plan, phPatientPeek(name));
             return `${phTpReorderOpen === plan.id ? phTpReorderPanelHtml(plan) : ""}
-              <div class="ph-tp-mergewidget">${phTpPhaseBarHtml(name, plan, sel)}${phTpSessionLadderHtml(name, plan)}</div>
+              <div class="ph-tp-mergewidget">${phTpSessionLadderHtml(name, plan, phTpPhaseBarHtml(name, plan, sel))}</div>
               <div class="ph-tp-panel noph">
                 <div class="ph-tp-phasebody">${sel ? phTpPhasePanelHtml(plan, sel) : `<div class="ph-hx-constit-note">No phases yet.</div>`}</div>
                 ${sel ? phTpNextHtml(name, plan, sel) : ""}
@@ -64121,7 +64214,7 @@ Please let me know if you have any questions.`;
     presEditId = "__new__"; presOpenId = null;
     presMedHxOpen = false;
     presTreatOpen = false; presHistMoreOpen = false;
-    presTpInlinePlanId = null; presTpInlineNew = false; presTpInlineLoose = false;
+    presTpInlinePlanId = null; presTpInlineNew = false; presTpInlineLoose = false; presTpMainTab = "plan";
     presAcuOutcomeDraft = null; presAcuTicks = new Set();
     presAcuPhaseId = null; presAcuHerbInstruct = false;
     presAcuPointsChecked = null; presAcuPressChecked = null; presAcuWatchChecked = []; presAcuAskNote = ""; presAcuComment = "";
@@ -65295,6 +65388,9 @@ Please let me know if you have any questions.`;
   // whether it's editing through this row or through the full-screen modal
   // -- see phTpRerender().
   let presTpInlinePlanId = null, presTpInlineNew = false, presTpInlineLoose = false;
+  // her ask 2026-09-27 (the left rail, Plan/Treatment log/Photos/Notes) --
+  // which of the four tabs is showing on the inline Plan page
+  let presTpMainTab = "plan";
   // 🪡 Acupuncture record (her ask 2026-09-03: "some of my fertility/herb
   // patients also need acupuncture. build an acupuncture treatment record
   // too") -- opt-in per patient (rec.acuEnabled), record-only, no scheduling
