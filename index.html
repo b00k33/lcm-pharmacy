@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260927-140000">
+<meta name="lcm-build" content="20260927-150000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -9826,6 +9826,23 @@
   #pharmacyPage .ph-tng2-sum .faint { color: var(--ph-faint); font-style: italic; }
   #pharmacyPage .ph-tng2-acts { display: flex; gap: 12px; margin-top: 6px; }
   #pharmacyPage .ph-tng2-acts .tab-link { font-size: 11.5px; padding: 0; }
+  /* v3 redesign (2026-09-27, "option 3 but improved") -- 3 columns
+     (photo+drawing | findings | sublingual), a gold brush-armed banner,
+     grouped rows with a "More detail" fold. Scoped to .ph-tng2-v3 so the
+     shared .ph-tng2/.ph-tng2.abd rules above stay exactly as they were. */
+  #pharmacyPage .ph-tng2.ph-tng2-v3 { display: block; }
+  #pharmacyPage .ph-tng2-banner { display: flex; align-items: center; gap: 8px; background: var(--ph-gold-tint); color: var(--ph-gold-deep); border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; font-size: 12px; }
+  #pharmacyPage .ph-tng2-banner .ic { font-size: 14px; }
+  #pharmacyPage .ph-tng2-banner .tx { flex: 1 1 auto; }
+  #pharmacyPage .ph-tng2-banner b { font-weight: 800; }
+  #pharmacyPage .ph-tng2-banner .tab-link { color: var(--ph-gold-deep); text-decoration: underline; font-size: 11.5px; padding: 0; flex: none; }
+  #pharmacyPage .ph-tng2-v3 .ph-tng2-cols { display: grid; grid-template-columns: 210px minmax(300px, 1fr) 210px; gap: 16px; align-items: start; }
+  #pharmacyPage .ph-tng2-v3 .ph-tng2-col > i { display: block; font-style: normal; font-size: 10px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--ph-green-deep); margin-bottom: 6px; text-align: center; }
+  #pharmacyPage .ph-tng2-v3 .ph-tng2-pair.stack { flex-direction: column; align-items: center; }
+  #pharmacyPage .ph-tng2-v3 .ph-subl-pair.stack { justify-content: center; margin: 0; }
+  #pharmacyPage .ph-tng2-morebtn { display: block; width: 100%; text-align: left; background: none; border: 0; border-top: 1px dashed var(--ph-line); padding: 8px 0 4px; margin-top: 4px; font: inherit; font-size: 11px; font-weight: 700; color: var(--ph-green-deep); cursor: pointer; min-height: 0; }
+  #pharmacyPage .ph-tng2-more { padding-top: 4px; }
+  #pharmacyPage .ph-tng2-v3 .ph-tng2-sum { border: 1px solid var(--ph-line); }
   /* the detailed abdomen chart (2026-09-19) shares the tongue chart's layout */
   #pharmacyPage .ph-visit-abd-map .ph-abd2-svg { width: 130px; height: 156px; display: block; margin: 0 auto; }
   #pharmacyPage .ph-visit-abd-map.ro .ph-abd2-svg { width: 84px; height: 100px; pointer-events: none; }
@@ -9851,6 +9868,7 @@
     #pharmacyPage .ph-tng2-pair .ph-tng2-svg { width: 124px; }
     #pharmacyPage .ph-tng2-pair .ph-visit-abd-map .ph-abd2-svg { width: 136px; height: 163px; }
     #pharmacyPage .ph-ltr-findings .ph-ltr-fnd.wide { grid-column: auto; }
+    #pharmacyPage .ph-tng2-v3 .ph-tng2-cols { grid-template-columns: 1fr; }
   }
   /* the app's own tongue chart (phTongueOutlineSvg) inside the visit panel */
   #pharmacyPage .ph-visit-tng .ph-tng-svg { width: 118px; }
@@ -32076,6 +32094,7 @@
         return;
       }
       if (e.target.closest("[data-visit-pulse-more]")) { presVisitPulseMore = !presVisitPulseMore; presVisitFndRefresh(); return; }
+      if (e.target.closest("[data-visit-tng-more]")) { presVisitTngMore = !presVisitTngMore; presVisitFndRefresh(); return; }
       // the app's own tongue chart inside the visit panel: its regions carry
       // data-tng-region like the Guide's copy, but the Guide handler above is
       // gated to .ph-gd-tng-diagram, so only a tap inside .ph-visit-tng lands
@@ -60766,6 +60785,7 @@ or changing anything in Cliniko.
   }
   function phVisitFndResetDraft() {
     presVisitTngRegion = null; presVisitAbdRegion = null; presVisitAbdPick = null; presVisitTngBrush = null; presVisitAbdBrush = null;
+    presVisitTngMore = false;
     presVisitFndDraft = phVisitFndBlank();
     presVisitPulseStamp = "thin"; presVisitHmOpen = null; presVisitPulseMore = false;
     return presVisitFndDraft;
@@ -61364,11 +61384,17 @@ or changing anything in Cliniko.
   }
   let presVisitTngRegion = null;   // the region tapped on the drawing -- the rows aim at it
   let presVisitTngBrush = null;    // { attr, val } -- the sign the next drawing taps place
+  let presVisitTngMore = false;    // "More detail" fold -- thickness/deviation/coat quality/marks
   function phVisitTongueHtml(name, draft) {
     const t = phTng2Read(draft.tng);
     const reg = presVisitTngRegion;
     const regMeta = reg ? PH_TNG_REGIONS.find(r => r[0] === reg) : null;
     const brush = presVisitTngBrush;
+    // aiming at a region is a "work on this region" mode that touches colour,
+    // thickness, coat quality and marks alike -- open the fold automatically
+    // so the region-aware fields she's actually here for aren't a second tap
+    // away (her fold choice for the ordinary case still stands otherwise)
+    const more = presVisitTngMore || !!reg;
     const chip = (attr, val, label, on, extra) => `<button type="button" class="ph-ltr-qual${on ? " on" : ""}${brush && brush.attr === attr && brush.val === val ? " brush" : ""}" data-visit-tng2="${esc(attr)}:${esc(val)}">${extra || ""}${esc(label)}</button>`;
     // a sign that is on: its regions as small chips (✕ removes one) and "where" to arm it again
     const pick = (kind, key, list) => `${(list || []).map(k => `<span class="ph-tng2-at">${esc(k === "L" ? "left" : k === "R" ? "right" : k === "mid" ? "centre" : k)} <button type="button" data-visit-tng2="where:${kind}:${key}:${k}" aria-label="Remove">✕</button></span>`).join("")}<button type="button" class="ph-tng2-wherebtn${brush && brush.attr === kind && brush.val === key ? " on" : ""}" data-visit-tng2="pick:${kind}:${key}">${brush && brush.attr === kind && brush.val === key ? "tap the drawing" : "where"}</button>`;
@@ -61378,41 +61404,56 @@ or changing anything in Cliniko.
     const atRegion = Object.keys(t.colourAt).filter(k => t.colourAt[k] && k !== reg).map(k => `<span class="ph-tng2-at">${esc(t.colourAt[k])} ${esc(PH_TNG_REGION_LABEL(k).toLowerCase())} <button type="button" data-visit-tng2="colourAtClear:${k}" aria-label="Remove">✕</button></span>`).join("");
     const qualRow = PH_TNG_COAT_QUAL.map(([k, l]) => { const on = !!t.coatQual[k]; return chip("coatQual", k, l, on) + (on && !reg ? pick("coatQual", k, t.coatQual[k]) : ""); }).join("");
     const markRow = PH_TNG_MARKS.map(([k, l]) => { const on = !!t.marks[k]; return chip("marks", k, l, on) + (on && !reg ? pick("marks", k, t.marks[k]) : ""); }).join("");
+    const shapeMoistRow = `${PH_TNG_SHAPES.map(k => chip("shape", k, k, t.shape.includes(k))).join("")}${PH_TNG_SHAPE_MARKS.map(([k, l]) => { const on = !!t.marks[k]; return chip("marks", k, l, on) + (on && !reg ? pick("marks", k, t.marks[k]) : ""); }).join("")}<span class="ph-tng2-sep"></span>${PH_TNG_MOIST.map(k => chip("moist", k, k, t.moist === k)).join("")}`;
+    const thicknessRow = reg
+      ? PH_TNG_THICK.map(([k, l]) => chip("thickAt", k, l, t.thickAt[reg] === k)).join("")
+      : PH_TNG_THICK.map(([k, l]) => chip("thickness", k, l, t.thickness === k)).join("");
+    const thickAtRegion = Object.keys(t.thickAt).filter(k => t.thickAt[k] && k !== reg).map(k => `<span class="ph-tng2-at">${esc(t.thickAt[k])} ${esc(PH_TNG_REGION_LABEL(k).toLowerCase())} <button type="button" data-visit-tng2="thickAtClear:${k}" aria-label="Remove">✕</button></span>`).join("");
     const summary = phTng2Summary(t);
     const notes = reg ? (phTongueNotes()[reg === "L" || reg === "R" ? "sides" : reg === "mid" ? "middle" : reg] || []).slice(0, 2) : [];
     const rec = phPatientRec(name);
     const last = (rec.acuSessions || []).slice().sort((a, b) => (b.date || "").localeCompare(a.date || "")).map(s => rec.visitFnd && rec.visitFnd[s.id]).find(f => f && f.tng && !phTng2Empty(f.tng));
     const lastDate = last ? ((rec.acuSessions || []).find(s => rec.visitFnd[s.id] === last) || {}).date : "";
-    return `<div class="ph-tng2">
-      <div class="ph-tng2-left">
-        <div class="ph-tng2-pair">
-          ${phVisitPhotoTileHtml(name, "tongue", "Tongue photo", "👅", true)}
-          <div class="ph-visit-tng">${phTongueChartSvg(t, reg)}</div>
+    const brushCat = brush ? ({ colour: "Colour", thickness: "Thickness", marks: "Marks", coatQual: "Coat quality" }[brush.attr] || "Brush") : "";
+    const banner = brush ? `<div class="ph-tng2-banner"><span class="ic">🖌</span><span class="tx"><b>${esc(brushCat)}: ${esc(brush.label)}</b> is armed — tap a part of the drawing to apply it there, or pick a different value below to change the brush.</span><button type="button" class="tab-link" data-visit-tng2="brush:">done</button></div>` : "";
+    return `<div class="ph-tng2 ph-tng2-v3">
+      ${banner}
+      <div class="ph-tng2-cols">
+        <div class="ph-tng2-col ph-tng2-left">
+          <i>Tongue photo</i>
+          <div class="ph-tng2-pair stack">
+            ${phVisitPhotoTileHtml(name, "tongue", "Tongue photo", "👅", true)}
+            <div class="ph-visit-tng">${phTongueChartSvg(t, reg)}</div>
+          </div>
+          <div class="ph-tng2-reg">${brush
+            ? ""
+            : regMeta ? `<b>${esc(regMeta[1])}</b> · ${esc(regMeta[2])} <button type="button" class="tab-link" data-visit-tng2="region:">whole tongue</button>` : `<span class="faint">tap a sign, then tap the drawing where it is</span>`}</div>
+          ${notes.length ? `<div class="ph-visit-tnghint">${notes.map(n => `<div>${esc(n.trigger || "")} → ${esc(n.points || "")}</div>`).join("")}</div>` : ""}
         </div>
-        <div class="ph-tng2-reg">${brush
-          ? `<span class="ph-tng2-brushhint">Tap the drawing where it is <b>${esc(brush.label)}</b> <button type="button" class="tab-link" data-visit-tng2="brush:">done</button></span>`
-          : regMeta ? `<b>${esc(regMeta[1])}</b> · ${esc(regMeta[2])} <button type="button" class="tab-link" data-visit-tng2="region:">whole tongue</button>` : `<span class="faint">tap a sign, then tap the drawing where it is</span>`}</div>
-        ${notes.length ? `<div class="ph-visit-tnghint">${notes.map(n => `<div>${esc(n.trigger || "")} → ${esc(n.points || "")}</div>`).join("")}</div>` : ""}
-      </div>
-      <div class="ph-tng2-rows">
-        <div class="ph-tng2-row"><i>${reg ? `Colour · ${esc(regMeta[1].toLowerCase())}` : "Colour"}</i><div class="ph-ltr-quals ph-visit-quals">${colourRow}${atRegion}</div></div>
-        <div class="ph-tng2-row"><i>${reg ? `Thickness · ${esc(regMeta[1].toLowerCase())}` : "Thickness"}</i><div class="ph-ltr-quals ph-visit-quals">${reg
-          ? PH_TNG_THICK.map(([k, l]) => chip("thickAt", k, l, t.thickAt[reg] === k)).join("")
-          : PH_TNG_THICK.map(([k, l]) => chip("thickness", k, l, t.thickness === k)).join("")}${Object.keys(t.thickAt).filter(k => t.thickAt[k] && k !== reg).map(k => `<span class="ph-tng2-at">${esc(t.thickAt[k])} ${esc(PH_TNG_REGION_LABEL(k).toLowerCase())} <button type="button" data-visit-tng2="thickAtClear:${k}" aria-label="Remove">✕</button></span>`).join("")}</div></div>
-        <div class="ph-tng2-row"><i>Shape</i><div class="ph-ltr-quals ph-visit-quals">${PH_TNG_SHAPES.map(k => chip("shape", k, k, t.shape.includes(k))).join("")}${PH_TNG_SHAPE_MARKS.map(([k, l]) => { const on = !!t.marks[k]; return chip("marks", k, l, on) + (on && !reg ? pick("marks", k, t.marks[k]) : ""); }).join("")}</div></div>
-        <div class="ph-tng2-row"><i>Deviation</i><div class="ph-ltr-quals ph-visit-quals">${PH_TNG_DEVIATION.map(([k, l]) => chip("deviation", k, l, t.deviation === k)).join("")}</div></div>
-        <div class="ph-tng2-row"><i>Moist</i><div class="ph-ltr-quals ph-visit-quals">${PH_TNG_MOIST.map(k => chip("moist", k, k, t.moist === k)).join("")}</div></div>
-        <div class="ph-tng2-row"><i>Coat</i><div class="ph-ltr-quals ph-visit-quals">${PH_TNG_COAT_THICK.map(k => chip("coatThick", k, k, t.coatThick === k)).join("")}<span class="ph-tng2-sep"></span>${PH_TNG_COAT_COLOUR.map(([k, hex]) => chip("coatColour", k, k, t.coatColour === k, `<i style="background:${hex}"></i>`)).join("")}<span class="ph-tng2-sep"></span>${qualRow}</div></div>
-        <div class="ph-tng2-row"><i>Marks</i><div class="ph-ltr-quals ph-visit-quals">${markRow}</div></div>
-        <div class="ph-tng2-row"><i>Under</i><div class="ph-ltr-quals ph-visit-quals">${PH_TNG_UNDER.map(([k, l]) => chip("under", k, l, t.under === k)).join("")}</div></div>
-        <div class="ph-tng2-pair ph-subl-pair">
-          ${phVisitPhotoTileHtml(name, "tongue", "Sublingual", "👅", false, "sublingual")}
-          <div class="ph-subl-diagram">${phSublingualSvg(t.under)}</div>
+        <div class="ph-tng2-col ph-tng2-rows">
+          <div class="ph-tng2-row"><i>Colour</i><div class="ph-ltr-quals ph-visit-quals">${colourRow}${atRegion}</div></div>
+          <div class="ph-tng2-row"><i>Coat</i><div class="ph-ltr-quals ph-visit-quals">${PH_TNG_COAT_THICK.map(k => chip("coatThick", k, k, t.coatThick === k)).join("")}<span class="ph-tng2-sep"></span>${PH_TNG_COAT_COLOUR.map(([k, hex]) => chip("coatColour", k, k, t.coatColour === k, `<i style="background:${hex}"></i>`)).join("")}</div></div>
+          <div class="ph-tng2-row"><i>Shape · Moist</i><div class="ph-ltr-quals ph-visit-quals">${shapeMoistRow}</div></div>
+          <button type="button" class="ph-tng2-morebtn" data-visit-tng-more="1" aria-expanded="${more ? "true" : "false"}">${more ? "▾" : "▸"} More detail — thickness, deviation, coat quality, marks</button>
+          ${more ? `<div class="ph-tng2-more">
+            <div class="ph-tng2-row"><i>${reg ? `Thickness · ${esc(regMeta[1].toLowerCase())}` : "Thickness"}</i><div class="ph-ltr-quals ph-visit-quals">${thicknessRow}${thickAtRegion}</div></div>
+            <div class="ph-tng2-row"><i>Deviation</i><div class="ph-ltr-quals ph-visit-quals">${PH_TNG_DEVIATION.map(([k, l]) => chip("deviation", k, l, t.deviation === k)).join("")}</div></div>
+            <div class="ph-tng2-row"><i>Coat quality</i><div class="ph-ltr-quals ph-visit-quals">${qualRow}</div></div>
+            <div class="ph-tng2-row"><i>Marks</i><div class="ph-ltr-quals ph-visit-quals">${markRow}</div></div>
+          </div>` : ""}
+          ${reg ? `<div class="ph-tng2-hint">Coat and marks you tap now land on the ${esc(regMeta[1].toLowerCase())}.</div>` : ""}
         </div>
-        ${reg ? `<div class="ph-tng2-hint">Coat and marks you tap now land on the ${esc(regMeta[1].toLowerCase())}.</div>` : ""}
-        <div class="ph-tng2-sum">${summary ? `<b>Reads as</b> ${esc(summary)}` : `<span class="faint">Nothing marked yet.</span>`}</div>
-        <div class="ph-tng2-acts">${last ? `<button type="button" class="tab-link" data-visit-tng2="same:">Same as last visit${lastDate ? ` (${(() => { const d = parseKey(lastDate); return `${d.getDate()} ${MON_SHORT[d.getMonth()]}`; })()})` : ""}</button>` : ""}${!phTng2Empty(t) ? `<button type="button" class="tab-link cancel" data-visit-tng2="clear:">Clear</button>` : ""}</div>
+        <div class="ph-tng2-col ph-tng2-subl">
+          <i>Sublingual</i>
+          <div class="ph-tng2-pair ph-subl-pair stack">
+            ${phVisitPhotoTileHtml(name, "tongue", "Sublingual", "👅", false, "sublingual")}
+            <div class="ph-subl-diagram">${phSublingualSvg(t.under)}</div>
+          </div>
+          <div class="ph-tng2-row"><i>Under</i><div class="ph-ltr-quals ph-visit-quals">${PH_TNG_UNDER.map(([k, l]) => chip("under", k, l, t.under === k)).join("")}</div></div>
+        </div>
       </div>
+      <div class="ph-tng2-sum">${summary ? `<b>Reads as</b> ${esc(summary)}` : `<span class="faint">Nothing marked yet.</span>`}</div>
+      <div class="ph-tng2-acts">${last ? `<button type="button" class="tab-link" data-visit-tng2="same:">Same as last visit${lastDate ? ` (${(() => { const d = parseKey(lastDate); return `${d.getDate()} ${MON_SHORT[d.getMonth()]}`; })()})` : ""}</button>` : ""}${!phTng2Empty(t) ? `<button type="button" class="tab-link cancel" data-visit-tng2="clear:">Clear</button>` : ""}</div>
     </div>`;
   }
   function phVisitFndPanelHtml(name, rec) {

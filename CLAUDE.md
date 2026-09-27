@@ -11381,3 +11381,92 @@ removed and the login overlay restored afterward; no `PHARMACY`/`PRESC`
 data was touched (CSS/markup only, no data writes).
 
 `lcm-build` `20260927-140000`, `sw.js` `lcm-20260927-comparephoto-scrollfix`.
+
+## Tongue chart — the 3-column redesign, "option 3 but improved" (her ask 2026-09-27, "build and push live")
+
+She'd approved a mock in a sibling conversation (3 options shown — "big
+drawing + brush" was option 3), then confirmed here: **"it was option 3
+but improved"** — refined so the Sublingual photo+drawing get their own
+always-visible THIRD column instead of being folded mid-way down the
+Findings rows. Then, mid-build: **"build and push live"** — standing
+authorization to complete this and push straight to `main`, not just
+commit to `session-a`.
+
+**Verified against LIVE source before touching anything** (this exact
+component — `phVisitTongueHtml`, the "Log today's session" acu-log
+panel's tongue chart, distinct from the Guide's own tongue outline and
+from the letter-map's six-ellipse chart) had genuinely not been touched by
+any of the many other tongue-related builds this file documents — checked
+by direct line-number re-read, not assumed from memory.
+
+**Built, `phVisitTongueHtml` (index.html):**
+- **Gold "brush armed" banner** across the top of the whole panel,
+  visible only while a sign is armed as the brush: "🖌 Colour: red is
+  armed — tap a part of the drawing to apply it there, or pick a
+  different value below to change the brush." + a "done" link (reuses
+  the existing `data-visit-tng2="brush:"` clear handler — no new
+  mechanism). Uses `--ph-gold-tint`/`--ph-gold-deep`, never the reserved
+  `--ph-gold` (that token is documented elsewhere in this file as
+  "never for status/error use" — this banner is a live-status
+  indicator, so it earns its own tokens instead).
+- **`.ph-tng2-cols`, a real 3-column CSS grid** (`210px minmax(300px,1fr)
+  210px`): TONGUE PHOTO (photo tile + drawing, stacked vertically) |
+  FINDINGS (Colour, Coat, Shape·Moist merged into one row, then a
+  "▸ More detail" fold) | SUBLINGUAL (photo tile + sublingual drawing +
+  Under pills), always visible — the actual structural change this
+  redesign was for. Collapses to one stacked column at ≤640px via a new
+  rule in the existing phone media-query block.
+- **"▸ More detail — thickness, deviation, coat quality, marks"** fold
+  (`presVisitTngMore`, new module-level state, same pattern as the
+  pre-existing `presVisitPulseMore` fold on the pulse chart) hides
+  Thickness/Deviation/Coat quality/Marks behind one tap. **Auto-opens
+  when a region is aimed** (`more = presVisitTngMore || !!reg`) —
+  disclosed judgment call: aiming at a region is already a "work on this
+  region" mode touching colour/thickness/marks/coat-quality alike (the
+  original 2-column code already supported writing all of them once a
+  region was tapped), so folding those fields away would have silently
+  broken that existing workflow unless the fold opens itself the moment
+  she's in that mode.
+- **Reused the panel's existing "⤢ Full screen" toggle**
+  (`.ph-visit-fnd-fullbtn` on `phVisitFndPanelHtml`, already satisfies
+  the mock's "↗ Full screen" ask) rather than building a second,
+  tongue-scoped button — reuse before invent.
+- Everything else — the brush mechanism, the region-aim mechanism, the
+  colour/coat/shape/moist/deviation/thickness/marks/under data model
+  (`phTng2Read`/`phTng2Blank`/`phTng2Empty`), `phTongueChartSvg`,
+  `phSublingualSvg`, the Same-as-last-visit/Clear actions — is
+  completely unchanged, only re-laid-out into the new structure.
+
+**CSS, scoped `.ph-tng2-v3`** so the shared `.ph-tng2`/`.ph-tng2.abd`
+rules the abdomen chart (`phVisitAbdHtml`) still uses are byte-for-byte
+untouched — confirmed by direct verification, not assumed (see below).
+
+**Verified in the sandbox** (a scratch static server on port 8946, since
+another chat's dev server already occupied this project's default config
+— `preview_start` couldn't reach it) via real function calls against the
+live, running app (not a reimplementation, the standard practice this
+file uses throughout): called `phVisitTongueHtml` directly for a
+synthetic patient and confirmed the returned HTML carries `ph-tng2-v3`,
+`ph-tng2-cols`, all three `ph-tng2-col` children, `ph-tng2-morebtn`, and a
+bordered `ph-tng2-sum`, with the banner and the fold's open state both
+correctly absent by default; armed a colour brush and confirmed the
+banner appears with the right wording; aimed a region and confirmed the
+fold force-opens with the region hint (not the brush hint) shown;
+mounted the rendered markup inside the real `#pharmacyPage` and read
+`getComputedStyle` — `display: grid`, `grid-template-columns: 210px
+300px 210px`, `gap: 16px`, `border: 1px solid` on the summary box;
+dispatched a real click on the "More detail" button and confirmed the
+document's own delegated handler correctly flips `presVisitTngMore` with
+no error; called `phVisitAbdHtml` for the same synthetic patient and
+confirmed it carries none of the new `ph-tng2-v3`/`ph-tng2-cols`
+classes — the abdomen chart's layout is unaffected, regression-checked
+directly rather than assumed from reading the CSS scoping alone;
+screenshotted the rendered panel at desktop width (three columns, gold
+banner, fold link, bordered "Nothing marked yet." box) and at 375px
+phone width (single stacked column, Colour → Coat → Shape·Moist → More
+detail → Sublingual → Under → summary, no horizontal overflow —
+`document.body.scrollWidth === window.innerWidth` at both widths).
+Synthetic test patient removed from `PHARMACY.patients` afterward,
+confirmed absent.
+
+`lcm-build` `20260927-150000`, `sw.js` `lcm-20260927-tongue-v3-redesign`.
