@@ -11202,3 +11202,48 @@ in the scratch script itself; nothing about that affected the real app.
 Synthetic patient/script fully removed and confirmed absent afterward.
 
 `lcm-build` `20260927-110000`, `sw.js` `lcm-20260927-tp-leftrail-sesscount-fix`.
+
+## Photo viewing/comparing popup made genuinely full screen (her ask, carried over from before a context compaction: "make this popup larger. i want the photos viewing and comparing to be full screen")
+
+Re-verified against current source before touching anything, per this
+file's own standing discipline — this exact request pre-dated the
+2026-09-24 "make this window larger" build (640px/880px caps, still the
+live sizing) and the many later interaction fixes to this same modal
+(2026-09-19 scroll fix, 2026-09-26's circle-drag/compare-pick/walks-its-
+row/scroll-jump fixes) — none of which ever changed the CARD SIZE itself.
+Confirmed via grep: `.ph-ren-crop-card` was still capped at `width:
+min(640px, 100%); max-height: min(880px, 96%)` at every width, INCLUDING
+phone — the shared `.ph-hx-card`'s own mobile full-screen override
+(`width:100%; height:100%; border-radius:0` under `@media (max-width:
+640px)`) sits at equal CSS specificity to `.ph-ren-crop-card`'s rule and
+earlier in source, so the crop-card's own rule always won regardless of
+device width. This modal (`#phRenCropModal`) covers all four of its
+states — crop tool, confirm-a-capture, compare-two, view-one — since they
+all share this one card class (confirmed by grep, 7 template-literal
+sites all use `<div class="ph-hx-card ph-ren-crop-card">`).
+
+**Fix, scoped to this ONE modal, not the shared `.ph-hx-modal`/`.ph-hx-card`
+rules** (which ~14 other dialogs — Treatment plan, Merge, Intake, Letters,
+Guide, Relocation, etc. — still rely on for their own centred-card look):
+`#pharmacyPage #phRenCropModal { padding: 0; }` (an ID selector, so it
+naturally outranks the shared `.ph-hx-modal { padding: 20px }` regardless
+of source order) and `#pharmacyPage .ph-ren-crop-card { width: 100%;
+height: 100%; max-width: 100%; max-height: 100%; border-radius: 0; }` at
+every width, not just phone. The already-fixed internal scroll mechanics
+(`.ph-ren-view-body` scrolls, `.ph-ren-view-stage` fixed, from the
+2026-09-19 build) needed no change — they work correctly regardless of
+the outer card's size. Bumped `.ph-ren-crop-img`'s `max-height` from
+`60vh` to `75vh` to use some of the new room for the crop tool's own
+image, without touching the view/compare modes' own layout.
+
+Verified in the sandbox by mounting the real `#phRenCropModal` element
+inside the real, running app (not a reimplementation) at a real 1280×900
+emulated viewport (the headless default reports 0×0, the well-documented
+limitation this file notes elsewhere): `getComputedStyle` confirmed
+`modalPadding: "0px"`, `cardWidth: "1280px"`, `cardHeight: "900px"`,
+`cardBorderRadius: "0px"` — genuinely filling the viewport, not just
+visually close. Screenshotted the result: the card runs edge-to-edge with
+no rounded corners and no dead margin on any side. Scratch server stopped
+and its script file removed afterward; viewport emulation reset.
+
+`lcm-build` `20260927-120000`, `sw.js` `lcm-20260927-photoviewer-fullscreen`.
