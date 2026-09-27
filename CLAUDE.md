@@ -11247,3 +11247,78 @@ no rounded corners and no dead margin on any side. Scratch server stopped
 and its script file removed afterward; viewport emulation reset.
 
 `lcm-build` `20260927-120000`, `sw.js` `lcm-20260927-photoviewer-fullscreen`.
+
+## Visit Record row — Pulse and Tongue made genuinely visual (her ask, carried over from before a context compaction: "pulse and tongue viewing should be visual")
+
+Sent with a screenshot of the Treatment Plan's Visit Record row in its
+"All" filter view — a "26 Sep 2026" row whose Pulse FOUND text was a wall
+of raw marks ("Pulse R Upper Respiratory Tract, LI (Skin): Thin · R
+Stomach/Pancreas/Spleen (Skin): Thin · ..."), while a tongue photo
+thumbnail showed but no visual tongue diagram.
+
+**Re-verified against current source before touching anything** (a
+background Agent's own investigation was cross-checked by directly
+reading the live code, not relayed) — confirmed: Tongue and Abdomen
+already have proven, working, read-only painted SVG chart renderers
+(`phTongueChartSvg`/`phAbdChartSvg` with `opts.ro`), already wired into
+this exact row's own DEDICATED Tongue/Abdomen filter-chip views
+(`phTpVrRowHtml`, the `fl === "tongue"`/`"abd"` branches) — but NOT into
+the "All" view her screenshot actually showed, where both fell back to
+text only. Pulse has its own proven, reusable read-only mini-chart
+function, `phVisitPulseMiniHtml(marks)` — a full R/L grid, already used
+successfully elsewhere (the merged Visits table's findings fold) — but it
+had never been wired into the Visit Record row at all, dedicated Pulse
+chip or "All" view alike.
+
+**Two fixes, reuse before invent:**
+1. **The dedicated "Pulse" filter chip** (`fl === "pulse"`) now shows
+   `phVisitPulseMiniHtml(x.f.pulse)` above the text summary — the exact
+   same pattern Tongue/Abdomen's own chips already use, and it gets the
+   row's FULL width in this view (`.ph-tp-vr-boxes:has(.bx:only-child)`),
+   which the mini grid's own real minimum width (>=360px, two halves at
+   `min-width:180px` each) comfortably fits.
+2. **The "All" combined Found box** (the view her screenshot showed) gets
+   real visuals for all three domains: Tongue and Abdomen get the same
+   44px floated mini-SVG treatment their own dedicated chips already use
+   (`.ph-visit-tng.ro.mini` / `.ph-visit-abd-map.ro.mini` — both already
+   CSS-proven to fit this exact quarter-width `.bx` cell, confirmed by
+   grep before reusing them, no new CSS needed). **Pulse's own mini grid
+   is genuinely too wide for a quarter-width box** (measured against the
+   `.ph-tp-vr-boxes` `repeat(4, minmax(0,1fr))` grid) — rather than force
+   it in and break the layout, or leave it as the wall of text she
+   complained about, a new, genuinely compact twin was built:
+   `phVisitPulseDotsHtml(marks)` — same data, same shape glyphs
+   (`phPulseShapeSvg`, the dashed line for Thin / the arc for Pounding),
+   laid out as small R/L-grouped coloured dot chips instead of a grid
+   table, each with a full-detail tooltip. New CSS: `.ph-pulse-micro`/
+   `.ph-pulse-microside`/`.ph-pulse-microdot`, scoped `#pharmacyPage`,
+   colours from the existing `--ph-herb-tint`/`-deep` tokens (no new
+   colours invented).
+
+**Disclosed design call, not asked separately** (per this project's own
+"disclose scope/judgment calls made along the way" convention): building
+a genuinely compact pulse visual for the narrow "All" context, rather
+than either (a) reusing the full grid unmodified and letting it overflow/
+break the 4-column layout, or (b) leaving Pulse as text-only in "All"
+while only Tongue/Abdomen went visual — the second option would have left
+her literal complaint (which was specifically about Pulse's wall of text
+in this exact view) only half-addressed.
+
+Verified directly against the real, running functions in the sandbox
+(the login gate blocks a fully-booted click-through, same limitation as
+every other batch in this file) — `phVisitPulseDotsHtml` called with
+real synthetic marks (Thin + two Pounding positions) produced correctly
+shaped R/L dot-chip markup with correct tooltips; mounted the real
+generated "All" Found box (with real `phTongueChartSvg`/`phAbdChartSvg`/
+`phVisitPulseDotsHtml` output) inside the actual `#pharmacyPage` element
+at a real emulated viewport and screenshotted it — Tongue's pink outline
+and Abdomen's small torso map both render beside their text, and Pulse
+shows small coloured shape-glyph dots (a dashed-line "Thin" icon, two
+arc "Pounding" icons) inline before its summary sentence; separately
+mounted and screenshotted the dedicated Pulse-only box (`:only-child`,
+full width) and confirmed the full readable R/L grid renders correctly
+with real marked cells. Test DOM removed and the login overlay's display
+restored afterward; no `PHARMACY`/`PRESC` data was touched (this fix is
+read-only rendering, no writes).
+
+`lcm-build` `20260927-130000`, `sw.js` `lcm-20260927-visitrecord-pulsetongue-visual`.

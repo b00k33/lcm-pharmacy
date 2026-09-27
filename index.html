@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260927-120000">
+<meta name="lcm-build" content="20260927-130000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -7062,6 +7062,12 @@
   #pharmacyPage .ph-pulse-mini .ph-pulse-cell { height: 18px; cursor: default; }
   #pharmacyPage .ph-pulse-mini .ph-pulse-cell .q { font-size: 7px; }
   #pharmacyPage .ph-pulse-mini .ph-pulse-shape { width: 16px; height: 9px; }
+  /* her ask 2026-09-27, the Visit Record row's narrow "All" box -- see
+     phVisitPulseDotsHtml above */
+  #pharmacyPage .ph-pulse-micro { display: inline-flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; vertical-align: middle; }
+  #pharmacyPage .ph-pulse-microside { display: inline-flex; align-items: center; gap: 2px; font-size: 8px; font-weight: 800; color: var(--ph-faint); }
+  #pharmacyPage .ph-pulse-microdot { display: inline-flex; width: 12px; height: 12px; border-radius: 999px; background: var(--ph-herb-tint); align-items: center; justify-content: center; cursor: default; }
+  #pharmacyPage .ph-pulse-microdot .ph-pulse-shape { width: 9px; height: 6px; color: var(--ph-herb-deep); }
   #pharmacyPage .ph-tp-fnd-lines { display: block; margin-top: 4px; font-size: 11px; color: var(--ph-soft); }
   #pharmacyPage .ph-tp-fnd-lines b { color: var(--ph-ink); }
   /* The merged Visits table (her design, 2026-09-14, picked after ~12 rounds
@@ -57675,6 +57681,29 @@ or changing anything in Cliniko.
     };
     return `<div class="ph-pulse-mini">${half("R")}${half("L")}</div>`;
   }
+  // her ask 2026-09-27 ("pulse and tongue viewing should be visual") --
+  // phVisitPulseMiniHtml's own grid wants >=360px (two halves at min-width
+  // 180px each), too wide for the Visit Record row's quarter-width "All"
+  // box (see phTpVrRowHtml below). This is a genuinely compact twin, same
+  // data, same shape glyphs (phPulseShapeSvg) as the full grid, just laid
+  // out as small R/L-grouped dots instead of a table -- a real chart, not
+  // a re-shrunk copy of the full one.
+  function phVisitPulseDotsHtml(marks) {
+    const keys = Object.keys(marks || {});
+    if (!keys.length) return "";
+    const side = s => {
+      const dots = keys.filter(k => k.startsWith(`${s}:`)).map(k => {
+        const [, col, lv] = k.split(":");
+        const m = marks[k];
+        const colInfo = (PH_PULSE_CHART[s] || []).find(c => c.id === col);
+        const lvInfo = PH_PULSE_LEVELS.find(l => l.id === lv);
+        const title = `${colInfo ? colInfo.label : col} · ${s} ${colInfo ? colInfo.pos : ""} · ${lvInfo ? lvInfo.label : lv}${m.quality ? ` — ${m.quality}` : ""}`;
+        return `<span class="ph-pulse-microdot" title="${esc(title)}">${m.shape ? phPulseShapeSvg(m.shape) : ""}</span>`;
+      });
+      return dots.length ? `<span class="ph-pulse-microside">${s}${dots.join("")}</span>` : "";
+    };
+    return `<span class="ph-pulse-micro">${side("R")}${side("L")}</span>`;
+  }
   function phTpVisitFndHtml(ctx, s, defaultOpen) {
     const rec = ctx && ctx.name ? phPatientPeek(ctx.name) : null;
     const raw = rec && rec.visitFnd && rec.visitFnd[s.id];
@@ -58123,12 +58152,24 @@ or changing anything in Cliniko.
     const nextText = [x.outcome ? `<b class="out ${esc(x.outcomeKey)}">${esc(x.outcome)}</b>` : "", x.nextNode ? `came back ${esc(phShortDate(x.nextNode.date))}${x.nextNode.comp ? ` (CD ${x.nextNode.comp.day})` : ""}` : node.date < keyOf(TODAY) ? `<em>no visit since</em>` : ""].filter(Boolean).join(" · ");
     let boxes;
     if (fl === "tongue") boxes = box("found", "Tongue", `${x.f && x.f.tng && !phTng2Empty(x.f.tng) ? `<span class="ph-visit-tng ro mini">${phTongueChartSvg(x.f.tng, null, { ro: true })}</span>` : ""}${esc(x.tongue)}`);
-    else if (fl === "pulse") boxes = box("found", "Pulse", esc(x.pulse));
+    else if (fl === "pulse") boxes = box("found", "Pulse", `${x.f && Object.keys(x.f.pulse).length ? phVisitPulseMiniHtml(x.f.pulse) : ""}${esc(x.pulse)}`);
     else if (fl === "abd") boxes = box("found", "Abdomen", `${x.f && (!phAbd2Empty(x.f.abd) || (x.f.zones || []).some(z => z.startsWith("abd:"))) ? `<span class="ph-visit-abd-map ro mini">${phAbdChartSvg(x.f.abd, null, { ro: true, legacy: x.f.zones })}</span>` : ""}${esc(x.abd)}`);
     else if (fl === "herbs") boxes = box("did", "Herbs", x.herbs ? `🌿 ${esc(x.herbs)}` : "") + box("next", "Response", nextText);
     else if (fl === "therapies") boxes = box("did", "Therapies", esc(x.therapies));
     else boxes = box("ask", "Ask", esc(x.ask.join(" · ")))
-      + box("found", "Found", [x.tongue ? `<b>Tongue</b> ${esc(x.tongue)}` : "", x.pulse ? `<b>Pulse</b> ${esc(x.pulse)}` : "", x.abd ? `<b>Abdomen</b> ${esc(x.abd)}` : ""].filter(Boolean).join("<br>"))
+      // her ask 2026-09-27 ("pulse and tongue viewing should be visual") --
+      // this "All" box only ever had room for the two small mini-SVGs
+      // (44px, floated -- already proven to fit here), so Tongue and
+      // Abdomen get the same treatment their own dedicated filter chips
+      // already use above; Pulse's own mini grid wants >=360px and can't
+      // fit this quarter-width box unchanged, so it gets the compact
+      // R/L dot chart (phVisitPulseDotsHtml) instead of the full grid --
+      // same marks, same shape glyphs, just laid out small.
+      + box("found", "Found", [
+          x.tongue ? `<b>Tongue</b> ${x.f && x.f.tng && !phTng2Empty(x.f.tng) ? `<span class="ph-visit-tng ro mini">${phTongueChartSvg(x.f.tng, null, { ro: true })}</span>` : ""}${esc(x.tongue)}` : "",
+          x.pulse ? `<b>Pulse</b> ${x.f && Object.keys(x.f.pulse).length ? phVisitPulseDotsHtml(x.f.pulse) : ""} ${esc(x.pulse)}` : "",
+          x.abd ? `<b>Abdomen</b> ${x.f && (!phAbd2Empty(x.f.abd) || (x.f.zones || []).some(z => z.startsWith("abd:"))) ? `<span class="ph-visit-abd-map ro mini">${phAbdChartSvg(x.f.abd, null, { ro: true, legacy: x.f.zones })}</span>` : ""}${esc(x.abd)}` : ""
+        ].filter(Boolean).join("<br>"))
       + box("did", "Did", [...x.did.map(esc), x.herbs ? `🌿 ${esc(x.herbs)}` : ""].filter(Boolean).join(" · "))
       + box("next", "Next", nextText);
     // her mock's own Part 2 pick ("2a" -- a lock icon on the row, reusing the
