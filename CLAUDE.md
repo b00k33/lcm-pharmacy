@@ -11322,3 +11322,62 @@ restored afterward; no `PHARMACY`/`PRESC` data was touched (this fix is
 read-only rendering, no writes).
 
 `lcm-build` `20260927-130000`, `sw.js` `lcm-20260927-visitrecord-pulsetongue-visual`.
+
+## Photo comparing modal's "picture is cut off" — the side-by-side/over-time body never scrolled (her ask 2026-09-27, "picture is cut off")
+
+Sent with a screenshot of the "Tongue — comparing" side-by-side view (mode
+toggle "Side by side / Drag to compare / Over time", two portrait tongue
+photos) — the photos appeared clipped at the bottom of the window with no
+scrollbar visible.
+
+**Traced, not guessed.** Task A the same day made `.ph-ren-crop-card` (the
+modal's outer wrapper, shared across all four of its states — crop tool,
+confirm-capture, compare, view-one) genuinely full-screen at every width
+(`width:100%; height:100%`), with the card's base rule (`.ph-hx-card`)
+carrying `overflow: hidden` and `display: flex; flex-direction: column`.
+The single-photo VIEW mode already had its own fix for this exact class of
+bug (2026-09-19): `.ph-ren-view-body` wraps everything under the head as a
+`flex: 1 1 auto; min-height: 0; overflow-y: auto` scroller, so a tall photo
+scrolls instead of being clipped. `renderPhRenCompareModal()` — a
+structurally different, simpler render path — never got the same
+treatment: its mode toggle and body sat directly in the flex column with no
+`flex`/scroll properties of their own, so on a tall pair of portrait
+photos (or a long "Over time" thumbnail row) the content's natural height
+could exceed the now-fixed-height card with nothing to scroll it — the
+card's own `overflow: hidden` silently clipped the rest, exactly matching
+her report.
+
+**Fix, mirroring the VIEW mode's own proven pattern**: a new
+`.ph-ren-cmp-scroll` wrapper (`flex: 1 1 auto; min-height: 0; overflow-y:
+auto`) now wraps the mode toggle + body together in
+`renderPhRenCompareModal()`'s output, across all three modes (side-by-side,
+drag-slider, over-time) — the card itself stays fixed, only this inner
+region scrolls. Also capped `.ph-ren-cmp-fig img` at `max-height: 60vh;
+object-fit: contain` (mirroring `.ph-ren-crop-img`'s own cap) so a portrait
+pair shrinks to fit comfortably in the first place, rather than relying on
+scroll alone to reach the second photo.
+
+**Verified by real DOM measurement in the sandbox**, not eyeballing (the
+Browser pane's own `zoom` region-crop isn't supported here, so a full
+screenshot + direct `getBoundingClientRect()`/`scrollHeight` reads did the
+job): mounted the exact markup the fixed function now produces, with a
+synthetic tall (900×1600) portrait image, into the real, unmodified
+`#phRenCropModal` element (bypassing the login gate the usual way — hiding
+`#lcmOverlay`). At a real desktop size (1280×900) the image cap alone
+(`max-height` computed to `540px` = 60vh) already kept everything within
+one screen, confirming the cap does real work on its own. At her actual
+BlackBerry Key2 phone size (360×469, this file's own documented reference
+size), the content's natural height (698px) genuinely exceeded the
+scroll container's visible height (417px) — `cardOverflowClipsScrollEl:
+true`, `scrollElOverflowY: "auto"` — confirming the fix is exercised, not
+just present; scrolling the container to its end correctly brought the
+"‹ Earlier visit / Later visit ›" nav row (previously below the fold,
+`navVisibleBeforeScroll: false`) into view (`navVisibleAfterScroll: true`).
+Screenshotted the phone-size render: header, mode toggle, and the first
+(correctly height-capped) photo all visible with a genuine scrollbar on
+the right edge and the second photo beginning to show below — the visible
+scroll affordance her original report noted was missing. Test DOM/state
+removed and the login overlay restored afterward; no `PHARMACY`/`PRESC`
+data was touched (CSS/markup only, no data writes).
+
+`lcm-build` `20260927-140000`, `sw.js` `lcm-20260927-comparephoto-scrollfix`.
