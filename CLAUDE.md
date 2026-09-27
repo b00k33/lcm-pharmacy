@@ -11124,3 +11124,81 @@ tab's in-memory JS state, confirmed cleared afterward — nothing written
 to disk.
 
 `lcm-build` `20260927-100000`, `sw.js` `lcm-20260927-compare-start-no-scrolljump`.
+
+## Treatment Plan tab gets its own left navigating rail — Plan · Treatment log · Photos · Notes (her ask 2026-09-27, "build it for real" then "and push live")
+
+Her ask: "for the plan treatment log photos etc build a navigating toolbar
+on the left." Shown a mock, she approved with **"build it for real"**, then
+mid-turn added **"and push live"** — standing authorization for this build.
+
+**Scope, disclosed**: only the page's OUTER sections split into rail tabs —
+Plan / Treatment log / Photos / Notes — every internal merge she'd already
+approved (the phase-bar+sessions mergewidget, the Cycle+IVF-history+Next
+card, the phase's own working area) stays exactly as merged; the rail sits
+one level above all of that, not inside it.
+
+**Built**: `presTpMainSections(name, plan)` — the four sections, each with
+a sub-badge (Plan → current phase label; Treatment log → session count;
+Photos → tongue-photo count; Notes → review count). `presTpMainTabsHtml`
+renders the rail + the selected section's body inside `#presTpMainHost`.
+`presTpMainTabRefresh()` swaps that host in place on a tab click
+(`data-tp-main-tab`) — never a full `renderPresPanel()`, so her scroll spot
+survives switching tabs. `presTpMainTab` (module-level, default `"plan"`)
+is reset alongside every other per-script UI-state variable at the three
+places a fresh script/plan can open: `presOpenScript`, `presStartNew`, and
+`presTpInlineCreate` (the "+ New treatment plan for an already-open
+patient" case, which the other two can't reach since no fresh script-open
+intervenes there) — the same reset discipline `presAssessTab` already
+established. `presTpInlineEditorHtml` is now the thin shell
+(`presTpMainTabsHtml`); its old body moved intact into
+`presTpPlanTabBodyHtml` (the Plan tab), and a new `presTpNotesTabBodyHtml`
+holds the tail content (add-phase, IVF track, info letters, review notes).
+Treatment log and Photos split the former combined Visit-Record view into
+two variants sharing one data computation (`phTpVrData` → `phTpVrLogTabHtml`
+/ `phTpVrPhotosTabHtml`), vs. the pre-existing modal's own
+`[data-tp-vr]` wrapper — disambiguated structurally, not by guessing.
+
+**Adversarial review (Workflow, N dimensions × M refuters) run before this
+build, found two confirmed issues, both fixed and re-verified this turn**:
+- **Finding A (HIGH)**: `presTpMainTab` could leak stale across
+  patients/plans — fixed by the three-site reset above.
+- **Finding B (LOW)**: the Treatment-log badge counted raw `acuSessions`
+  entries, which could read HIGHER than the rows actually shown once the
+  underlying tab body collapses two same-day sessions into one row — fixed
+  by counting distinct dates (`new Set(...).size`) instead of a raw
+  filtered-array length.
+
+**A third bug, found only by testing Finding B's fix directly against real
+data, not assumed correct because the code "looked right"**: `phTpVrData`'s
+own fallback loop (which files an `acuSessions` entry into a date row when
+no phase window already caught it) chained `.filter(s => ... && !have.has(
+s.date))` into `.forEach(s => { have.add(s.date); ... })` — `.filter()`
+evaluates its predicate against every array element in one pass BEFORE
+`.forEach()` ever runs, so `have.has(s.date)` was checked against the SAME
+stale snapshot for two same-date sessions, and both passed. Two sessions
+logged on one date, outside any phase's window, rendered as TWO rows — the
+exact badge/row mismatch Finding B's fix exists to prevent, reintroduced by
+a different mechanism one level deeper. Fixed by folding the filter into
+the forEach itself, checking and mutating `have` on every iteration so the
+second same-date session is correctly skipped.
+
+**Verified end-to-end via real function calls against a synthetic patient**
+(`ZzVerifyPatient`, an msk_lowback plan, 3 acuSessions — two on
+2026-09-20, one on 2026-09-15 — deliberately outside the phase's date
+window to exercise the fallback path): before the third fix,
+`phTpVrData(...).nodes` returned 3 entries (2026-09-20 twice); after, 2 —
+matching the Treatment-log badge exactly, and matching the rendered HTML's
+row count. Separately confirmed `presOpenScript`/`presStartNew`/
+`presTpInlineCreate` all correctly reset a deliberately-poisoned
+`presTpMainTab = "notes"` back to `"plan"`. Confirmed the rendered rail
+carries all four tabs (Plan/Treatment log/Photos/Notes) with correct
+sub-badges, and `#presTpMainHost` is present for the scoped-repaint swap.
+Testing used a temporary PowerShell static server on a scratch port for a
+real browser render — the server's own `HttpListener` prefix bug (registered
+`localhost:PORT` only, so a request to `127.0.0.1:PORT` fell through to
+Windows' generic 400 "Invalid Hostname" handler) cost real time chasing a
+phantom "these functions don't exist" theory before being traced and fixed
+in the scratch script itself; nothing about that affected the real app.
+Synthetic patient/script fully removed and confirmed absent afterward.
+
+`lcm-build` `20260927-110000`, `sw.js` `lcm-20260927-tp-leftrail-sesscount-fix`.
