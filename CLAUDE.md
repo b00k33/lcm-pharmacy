@@ -11820,3 +11820,59 @@ afterward, confirmed absent from `PRESC.items`/`PHARMACY.patients`; zero
 Supabase auth tokens present before or after.
 
 `lcm-build` `20260928-080000`, `sw.js` `lcm-20260928-medhx-checklist-css`.
+
+## Patient Photos — Musculoskeletal Posture (case-gated) + Feet/Hands (universal) (her ask 2026-09-28)
+
+Her ask: "include photos organising category: Musculoskeletal Posture -
+neck upper back hip etc", reviewed and confirmed over two rounds (a list ->
+her "1. yes 2. add more regions but make them universal e.g. i take feet
+pictures..." -> "build it").
+
+**10 new MSK-gated photo types**, mirroring the existing `face:true`
+facial-paralysis pattern: Full posture front/back/side-L/side-R, Neck/
+cervical, Shoulder level, Upper back/thoracic, Lower back/lumbar, Hip/
+pelvis level, Knee alignment. Gated on `PH_CASE_CATEGORY[caseType] ===
+"msk"` (currently Case "Pain") via a new `phRenIsMskPatient` — the same
+category-level check `phTpIsMskPlan` already uses elsewhere, more robust
+than a literal `caseType` comparison, so a future Case added to that
+bucket picks this up for free. `phRenTypesFor` filters on both `face` and
+`msk` flags now; `phRenRowsFor` (the photo-timeline row list) updated the
+same way so an MSK photo on a non-MSK patient still surfaces (never
+dropped) — matching the existing facial-photo precedent.
+
+**2 new universal types, no gating flag**: Feet, Hands — her own example
+("i take feet pictures for internal disease and health illness
+sometimes").
+
+Verified against the exact shipped code (extracted from the served file,
+not reimplemented) in an isolated sandbox tab with zero Supabase auth
+tokens: Pain-case patients get MSK+universal, never facial;
+fertility-case patients get universal only; neurological-case patients
+get facial, never MSK; an existing MSK photo on an unrelated-case patient
+still surfaces via the "have" callback (surfaced, never dropped).
+
+Committed `b46d199` on `session-a`.
+
+## Photo viewer — type-selection row no longer needs a scroll to reach (her report 2026-09-28)
+
+Her report, straight after the MSK photo types shipped: "the photo
+viewing cuts off the photo label selection... make it so i dont need to
+scroll." Two causes, both fixed:
+
+- `.ph-ren-crop-img`'s shared 75vh cap (bumped 2026-09-27 for the new
+  full-screen photo modal) left almost no room below it in VIEW mode
+  specifically — scoped a tighter 40vh cap to `.ph-ren-view-stage` only,
+  leaving the crop tool's own 75vh untouched.
+- `.ph-ren-view-shotrow` wrapped onto 3-4 lines once the same-day MSK
+  photo types (10 new chips) joined the existing ones — up to 14 chips on
+  an MSK patient. Changed it to one horizontally-scrolling row instead, so
+  the section's height stays fixed regardless of how many types a
+  patient's case offers.
+
+Verified in the sandbox at 360×469 (the documented BlackBerry Key2
+reference size) with the worst-case 14-chip set: before, the footer
+buttons sat ~118px below the viewport bottom; after, the whole card fits
+with zero vertical overflow (`body.scrollHeight === clientHeight`),
+confirmed both by measurement and a real screenshot.
+
+Committed `394e171` on `session-a`.
