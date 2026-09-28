@@ -11501,3 +11501,93 @@ Four pieces, all inside the same three touched functions from the build above �
 **Verified in the sandbox** (this project's designated 301-herb test environment, zero Supabase auth tokens confirmed both before creating test data and again afterward): mounted the real, unmodified `phIvfPregTestHtml` output for a synthetic transfer inside the real `#pharmacyPage` element and drove it via real dispatched `change` events on the actual delegated `data-ivf-tfield` handler — confirmed `.in` applies exactly once on any `""` → a result transition (both negative and positive) and never re-applies on a later save; confirmed `.flash` + the banner apply only on a genuine transition to positive, never on a repeat save while already positive (`cascadeTid` correctly stays `null` on the second save); confirmed the count-up only fires when `pregTestDate` is already valid at the moment of the positive transition, captured via the `justWentPositive` local read before `phCycleRerender()` clears the flag it depends on; confirmed both one-shot flags are cleared even on `phIvfPregTestHtml`'s empty-`pregResult` early-return path, so a flag set for one transfer id can never leak onto an unrelated later render. Visually confirmed via `getComputedStyle` on a live-mounted render: the flash keyframe (`animationName: "phIvfPregFlash"`) applies and, once it finishes its 1400ms run, settles to `background: rgba(0,0,0,0)` exactly as its own `100% { background: transparent }` keyframe specifies; the banner's computed background/text colours read `rgb(245, 211, 222)` / `rgb(122, 45, 69)` — `#F5D3DE`/`#7A2D45` exactly as coded. Re-ran the CLAUDE.md-protected Prescriptions live-search self-check with two freshly-created, correctly-shaped synthetic scripts (`t.name` set, not just `t.patient` — hit and worked around the documented `isDraft`/`t.name` trap from the section above): typing a distinguishing name narrowed the list from 2 rows to 1, clearing restored both. All synthetic test data (patient record, script entries, DOM test hosts) removed afterward and confirmed absent on direct re-check: `PHARMACY.patients` and `PRESC.items` both empty, zero `sb-`/`supabase` keys in `localStorage`, no `"zz"`-prefixed test ids remaining in either the in-memory state or the persisted `daybook-pharmacy`/`daybook-prescriptions` records (one unrelated, coincidental `"zz"` substring inside a real auto-generated herb id, `mujqdn6zzv7gl`, confirmed to be pre-existing seed data, not test residue).
 
 `lcm-build` `20260928-020000`, `sw.js` `lcm-20260928-ivf-preghcg-animations`.
+
+## Calendar tap now mirrors the horizontal cycle bar's click everywhere (her ask 2026-09-27/28, "i want the click function on calendar to mirror horizontal cycle click function")
+
+Her original ask, carried across a context compaction: on the calendar she
+could only log a period start; on the horizontal cycle bar she could log
+flow/pain/discharge/sex/other for that day too — she wanted every
+calendar's day-tap to do what the bar's tap already does. The 2026-09-25
+build ("Calendar tap opens the merged signs popover with period-start
+marking") built exactly this but scoped it to the ONE calendar that's
+`data-cycle-strip-bare` — the Treatment Plan tab's own cycle block. This
+finishes the generalisation to every other calendar in the app, per her
+literal wording ("mirror... everywhere", not "on this one screen").
+
+**What changed, `phCycleStripHtml`'s `data-cycle-day` click handler**: the
+`cycDay.closest('[data-cycle-strip-bare="1"]')` branch is gone — EVERY
+calendar day-tap now opens `presCycleSignEdit` (the rich per-day popover,
+with the period-start toggle merged in since the 2026-09-25 build) instead
+of the narrow `phCyclePop`. This reaches the Assessment tab's tessellated
+Cycle view, Today's Timeline (`renderPresWeek`, though that widget's own
+`#presWeekWrap` mount was already removed from the page 2026-09-15 — its
+handlers are all live but structurally unreachable, confirmed by grep),
+the check-in card, the Fertility door popup, and the month "add many past
+periods" view — none of which previously opened anything richer than the
+period-start popover. Period history's own row-edit (`host: "hist"`) is a
+separate, untouched affordance — it sets `phCyclePop` directly, never
+through this handler. The CD calculator's own "Go" button still opens the
+narrower `phCyclePop` on purpose — its wording is tuned for a date she's
+recalling from memory ("Estimate only" pre-ticked), not one she's directly
+tapping, and that distinction is worth keeping.
+
+**The one screen that needed a NEW opt-out, not just the widened handler**:
+`phCycleTessHtml` (the Assessment tab's side-by-side calendar+bar layout)
+already renders its OWN copy of the signs popover from `phCycleBarHtml`'s
+detail column — widening the calendar's own popover unconditionally would
+have shown the same popover twice on that one screen. `phCycleStripHtml`
+gained `opts.noSignPop`, round-tripped through the same
+`data-cycle-strip-*` attribute mechanism `bare`/`compact`/`weeks` already
+use (so `phCycleStripRefresh`'s DOM-attribute reconstruction doesn't drop
+it on a click-triggered repaint — the same round-trip-gap class of bug this
+file has hit before with `noCalc`). `phCycleTessHtml` is the only caller
+that sets it. `phCycleMonthHtml` (the month view, reached via
+`phCycleMonthOpen[name]`) got the identical `bare`/`noSignPop` treatment,
+threaded through as `opts` from `phCycleStripHtml`'s own delegation to it —
+previously it ignored `opts` entirely and always showed the narrow popover.
+
+**Two latent bugs fixed along the way, found by reading the code, not
+guessed**: `phCyclePop.host` was read directly in both `phCycleStripHtml`
+and `phCycleMonthHtml` with no null-check and no check that the pop
+actually belongs to THIS patient (`phCyclePop.name === name`) — on a page
+rendering more than one patient's calendar-shaped component in the same
+tick, or simply with `phCyclePop` null, this would throw or show the wrong
+patient's popover. Both now guard `phCyclePop && phCyclePop.name === name`
+before reading `.host`. `selKey` (which day gets the ringed/"sel" state)
+now checks `presCycleSignEdit` first, then falls back to `phCyclePop` — the
+two are mutually exclusive by construction (each clears the other on
+open), so at most one ever matches for a given day.
+
+**On the tessellated view specifically, the click handler routes to the
+fuller repaint.** `phCycleStripRefresh` only ever patches
+`[data-cycle-strip]` in place — it never reaches `.ph-cycle-tess-detail`,
+the separate subtree holding `phCycleBarHtml`'s own render, which is where
+the popover actually lives on this one screen (suppressed in the
+calendar's own copy via `noSignPop`). The handler now checks
+`cycDay.closest("#presCycleHost")` and calls `phCycleRerender()` (→
+`presCycleTabRefresh()`, which swaps the whole tess view) there instead;
+every other calendar context keeps the light, scoped `phCycleStripRefresh`
+call it always used.
+
+**Verified in the sandbox** with a synthetic patient (cycle tracking on,
+one real logged period), real dispatched clicks against the real
+delegated handler, not a reimplementation: a day tap on the month view
+opened `presCycleSignEdit` with zero `.ph-cyc-pop` in the DOM, and a
+second tap on the same day closed it. A day tap on the Assessment tab's
+tessellated calendar opened exactly ONE `.ph-cycle-signpop` in the DOM,
+correctly located in the detail column, never the calendar column
+(`popInCal: 0, popInDetail: 1`) — no duplication; a second tap closed it.
+The CD calculator's "Go" button still correctly opened the narrow
+`phCyclePop` (`approx: true`, `existing: false`) with `presCycleSignEdit`
+left `null` and zero `.ph-cycle-signpop` in the DOM — confirming the
+deliberate exception holds. The Fertility door popup's gating logic
+didn't surface its calendar for this particular synthetic patient's state
+(not investigated further — its calendar is the same shared
+`phCycleStripHtml` component with no special-casing for that call site,
+confirmed by reading the source, and the mechanism it would exercise is
+identical to what the tess/month tests already proved). Synthetic test
+patient and script removed afterward, confirmed absent from
+`PHARMACY.patients`/`PRESC.items`; zero Supabase auth tokens present
+before or after.
+
+`lcm-build` `20260928-030000`, `sw.js` `lcm-20260928-calendar-mirrors-cyclebar-everywhere`.
