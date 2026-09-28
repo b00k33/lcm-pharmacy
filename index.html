@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260928-010000">
+<meta name="lcm-build" content="20260928-020000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -9156,6 +9156,12 @@
      about this", from the calendar/MSK/pending-visit ones), so it uses the
      app's own primary teal rather than reusing cal/msk/visit's colours. */
   #pharmacyPage .ph-tp-announce.msg { background: var(--ph-herb-tint); color: var(--ph-herb-deep); }
+  /* her ask, weeks old, resurfaced 2026-09-28: animate the positive-hCG
+     cascade -- a "deep rose" text colour paired with the existing pink
+     pregnancy-phase tint (#F5D3DE, --ph-tp-pbar .seg.k-g); no CSS variable
+     for this deep shade exists yet, so it's a disclosed one-off hex here,
+     scoped to this one card. */
+  #pharmacyPage .ph-tp-announce.preg { background: #F5D3DE; color: #7A2D45; }
   #pharmacyPage .ph-tp-announce .txt { flex: 1 1 auto; }
   #pharmacyPage .ph-tp-announce .acts { display: flex; gap: 6px; flex: none; flex-wrap: wrap; max-width: 100%; }
   #pharmacyPage .ph-tp-announce button { font: inherit; font-size: 11.5px; font-weight: 700; border-radius: 999px; padding: 4px 10px; cursor: pointer; border: 1px solid transparent; }
@@ -9378,6 +9384,15 @@
      apart with the app's own dashed-divider idiom (colour/space, never a
      box) rather than a border-box. */
   #pharmacyPage .ph-ivf-pregtest { margin-top: 4px; padding-top: 6px; border-top: 1px dashed var(--ph-line); }
+  /* the animated hCG build (her ask, weeks old, resurfaced 2026-09-28,
+     option "c"): .in plays once when the date/hCG fields first appear
+     (any "" -> a result); .flash washes this pregnancy-test sub-card pink
+     once on a genuine transition to positive -- scoped here, not the
+     whole standalone transfer row, the same disclosed scope line already
+     drawn against touching the shared phase-bar component. */
+  #pharmacyPage .ph-ivf-pregtest.in { animation: phTpAnnounceIn 160ms cubic-bezier(.34,1.56,.64,1); }
+  #pharmacyPage .ph-ivf-pregtest.flash { animation: phIvfPregFlash 1400ms ease-out; border-radius: 8px; }
+  @keyframes phIvfPregFlash { 0% { background: #F5D3DE; } 70% { background: #F5D3DE; } 100% { background: transparent; } }
   #pharmacyPage .ph-ivf-trow input.ph-ivf-pregdate { width: 132px; }
   #pharmacyPage .ph-ivf-trow input.ph-ivf-preghcg { width: 84px; text-align: center; }
   @media (max-width: 640px) {
@@ -28553,7 +28568,15 @@
       if (tpTab) {
         const [planId, phaseId] = tpTab.dataset.tpTab.split(":");
         phTpTabPhase.set(planId, phaseId);
-        phTpRerender();
+        // her ask 2026-09-28 ("improve workflow... add animation features",
+        // mock "B" approved): a scoped, animated repaint instead of the old
+        // full phTpRerender() -- phTpRepaintPhasePanel() falls back to a full
+        // rerender itself if plan/sel/body don't resolve, so this can never
+        // show stale content. phTpSyncTabBarOn keeps the tab strip's .on
+        // state (outside .ph-tp-phasebody) correct and gives the tapped tab
+        // its flash, since the scoped repaint alone can't reach the bar.
+        phTpSyncTabBarOn(planId, phaseId);
+        phTpRepaintPhasePanel();
         return;
       }
       // ---- phase-announce popup, both halves (her ask 2026-09-18) ----
@@ -35322,15 +35345,26 @@
           tr.pregTestDate = raw;
         }
         else if (["type", "prep", "embryoDay", "outcome", "note", "pregResult"].includes(f)) tr[f] = ivfTField.value;
+        // reveal: any "" -> a result (negative or positive) fades the
+        // date/hCG fields in once, the moment they first appear.
+        if (f === "pregResult" && tr.pregResult && !prevPregResult) phIvfPregRevealTid = tr.id;
         // "allow to log positive hcg... and add a post positive hcg
         // phase/first trimester" (her ask, weeks ago) -- a genuine transition
         // into positive advances the plan's early-pregnancy phase, the same
         // "milestone dates DRIVE the phases" rule decision 13 already uses.
         // Re-saving while it stays positive must never re-cascade or
         // re-stamp the date a second time -- gated on the transition itself.
-        if (f === "pregResult" && tr.pregResult === "positive" && prevPregResult !== "positive") phIvfPregPositiveCascade(rec);
+        const justWentPositive = f === "pregResult" && tr.pregResult === "positive" && prevPregResult !== "positive";
+        if (justWentPositive) { phIvfPregPositiveCascade(rec); phIvfPregCascadeTid = tr.id; }
         if (savePharmacy() === false) { phFlashShow("That could not be saved — check the warning at the top and try again"); return; }
         phCycleRerender();
+        // captured BEFORE phCycleRerender(), which consumes and clears the
+        // module flag the moment phIvfPregTestHtml renders it -- the count-up
+        // only has something to animate toward when a real test date is
+        // already set at the instant she flips to positive (her accepted,
+        // disclosed limitation: filling the date in afterward just shows the
+        // gest line normally, no animated count-up).
+        if (justWentPositive && /^\d{4}-\d{2}-\d{2}$/.test(tr.pregTestDate || "")) phIvfPregCountUp(tr.id);
         return;
       }
       const tpPhSel = e.target.closest("[data-tp-phase-status-sel]");
@@ -53004,6 +53038,25 @@ or changing anything in Cliniko.
     if (idx < 0 || phases[idx].status === "current") return;
     phTpCascadeTo(phases, idx, null);
   }
+  // count-up companion to phIvfGestAgeHtml's animate=true render: races the
+  // gest-age span from "0w 0d" up to its real value, ease-out cubic, ~550ms
+  // -- matches the approved mock's own shape. Called once, right after the
+  // render that painted the span at 0w 0d (see the data-ivf-tfield handler).
+  function phIvfPregCountUp(tid) {
+    const span = document.querySelector(`[data-ivf-gest="${tid}"]`);
+    if (!span) return;
+    const targetDays = (+span.dataset.ivfGestW || 0) * 7 + (+span.dataset.ivfGestD || 0);
+    if (targetDays <= 0) return;
+    const dur = 550, t0 = performance.now();
+    function tick(now) {
+      const p = Math.min(1, (now - t0) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      const days = Math.round(eased * targetDays);
+      span.textContent = `${Math.floor(days / 7)}w ${days % 7}d pregnant`;
+      if (p < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
   function phCycleSyncPlans(rec) {
     let changed = false;
     (rec && rec.treatmentPlans || []).forEach(p => {
@@ -56584,6 +56637,69 @@ or changing anything in Cliniko.
   // phTpPhasePanelHtml's output, leaving the rest of the panel/screen (tabs,
   // review list, letter, etc.) untouched. Falls back to a full rerender if
   // anything doesn't resolve, so it can never show stale/wrong content.
+  // her ask 2026-09-28 ("as i am working through the phases... improve
+  // workflow... add animation features"), mock treatment "B" approved
+  // ("Smooth resize + fade", "Everywhere", "Quick", tab flash "Yes"): a
+  // FLIP-style height-resize + opacity-crossfade for whatever replaces
+  // .ph-tp-phasebody's content. Every phTpRepaintPhasePanel() caller (tab
+  // clicks, the Today's-visit phase override, formula link/unlink,
+  // symptom/findings edits...) gets this for free, so "everywhere" needed
+  // no per-call-site changes. Respects prefers-reduced-motion. The exact
+  // timings/technique are the ones proven on the approved mock: opacity
+  // must be forced to 0 with transition:none, then reflowed, before the
+  // fade-in transition is set in a later frame -- setting both transition
+  // and end-state opacity together in the same tick never animates, the
+  // browser just applies the end state instantly.
+  function phTpAnimateBodySwap(body, applyFn) {
+    if (!body || !body.isConnected) { applyFn(); return; }
+    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) { applyFn(); return; }
+    const oldH = body.getBoundingClientRect().height;
+    body.style.overflow = "hidden";
+    body.style.height = oldH + "px";
+    body.style.transition = "none";
+    body.style.opacity = "1";
+    void body.offsetWidth;
+    body.style.transition = "opacity 160ms ease";
+    body.style.opacity = "0";
+    setTimeout(() => {
+      if (!body.isConnected) return;
+      applyFn();
+      const newH = body.scrollHeight;
+      body.style.transition = "none";
+      body.style.opacity = "0";
+      void body.offsetWidth;
+      requestAnimationFrame(() => {
+        body.style.transition = "height 260ms ease, opacity 260ms ease";
+        body.style.height = newH + "px";
+        body.style.opacity = "1";
+      });
+      setTimeout(() => {
+        if (!body.isConnected) return;
+        body.style.transition = ""; body.style.height = ""; body.style.overflow = ""; body.style.opacity = "";
+      }, 320);
+    }, 160);
+  }
+  // the bar's .on/aria-selected state lives on .seg buttons OUTSIDE
+  // .ph-tp-phasebody (a structurally separate sibling built by
+  // phTpPhaseBarHtml), so a scoped phTpRepaintPhasePanel() can't reach it
+  // the way a full phTpRerender() always did. This is the cheap DOM patch
+  // that keeps the bar in sync -- and, on her "Yes" to a tab flash on every
+  // click, replays the same phLiveFlash/.ph-live-changed animation
+  // phLiveSweep already gives the calendar-current tab on a real phase
+  // change, here fired directly on whichever tab she just tapped.
+  function phTpSyncTabBarOn(planId, phaseId) {
+    document.querySelectorAll(".seg[data-tp-tab]").forEach(seg => {
+      const [segPlan, segPhase] = (seg.dataset.tpTab || "").split(":");
+      if (segPlan !== planId) return;
+      const on = segPhase === phaseId;
+      seg.classList.toggle("on", on);
+      seg.setAttribute("aria-selected", on ? "true" : "false");
+      if (on) {
+        seg.classList.remove("ph-live-changed"); void seg.offsetWidth; seg.classList.add("ph-live-changed");
+        seg.addEventListener("animationend", () => seg.classList.remove("ph-live-changed"), { once: true });
+      }
+    });
+  }
   function phTpRepaintPhasePanel() {
     phTpSessCommitPending();
     const modal = document.getElementById("phTpModal");
@@ -56593,7 +56709,7 @@ or changing anything in Cliniko.
     const sel = plan && phTpTabPhaseOf(plan, phPatientPeek(phTpScreenPatient));
     const body = (inModal ? modal : document).querySelector(".ph-tp-phasebody");
     if (!plan || !sel || !body) { phTpRerender(); return; }
-    body.innerHTML = phTpPhasePanelHtml(plan, sel);
+    phTpAnimateBodySwap(body, () => { body.innerHTML = phTpPhasePanelHtml(plan, sel); });
     presBandSubRefresh();
   }
   function phTpPhaseFormulaPickerHtml(phase) {
@@ -56756,6 +56872,14 @@ or changing anything in Cliniko.
   // generic data-ivf-row-toggle handler already opens/closes either kind.
   const presIvfOpenRows = new Set();   // row/transfer ids expanded, either kind
   let phIvfDeleteArm = null;   // null | rowId
+  // her ask, weeks old, resurfaced 2026-09-28: "make these features
+  // animated? show me mock" -- Option C (her pick) on the published mock,
+  // build for real. Both are transient, one-shot render flags (same shape
+  // as presDoorShown above): consumed and cleared the moment
+  // phIvfPregTestHtml renders them, so the animation plays exactly once,
+  // on the actual transition, never on a later edit to the same transfer.
+  let phIvfPregRevealTid = null;    // tid whose date/hCG fields should fade in this render (any "" -> a result)
+  let phIvfPregCascadeTid = null;   // tid that just went "" -> positive this render (banner + pink flash + count-up)
   /* done phases she has unlocked for editing this session (her pick 2026-09-09:
      "Freeze it, but let me unlock"). Session-only on purpose -- a closed phase
      should default back to frozen every time the screen is opened, or "frozen"
@@ -57249,7 +57373,7 @@ or changing anything in Cliniko.
   // convention: a positive beta-hCG test day is treated as ~4 weeks 0 days
   // gestational age regardless of a day-3 vs day-5 transfer -- an estimate,
   // never an exact scan date, so the tooltip says so in plain words.
-  function phIvfGestAgeHtml(dateStr) {
+  function phIvfGestAgeHtml(dateStr, tid, animate) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr || "")) return "";
     const yr = +dateStr.slice(0, 4);
     if (!(yr >= 1900 && yr <= 2100)) return "";
@@ -57257,7 +57381,11 @@ or changing anything in Cliniko.
     const gestDays = 28 + days;
     if (gestDays < 0) return "";
     const weeks = Math.floor(gestDays / 7), rem = gestDays % 7;
-    return `<span class="ph-ivf-derived" title="Counted from her positive test date, treated as ~4 weeks gestational age at testing — a standard estimate, not an exact scan date.">${weeks}w ${rem}d pregnant</span>`;
+    // animate: the moment she flips to Positive with a date already set --
+    // starts at 0w 0d and phIvfPregCountUp() (called right after this same
+    // render, see the data-ivf-tfield handler) races it up to the real value.
+    const label = animate ? "0w 0d pregnant" : `${weeks}w ${rem}d pregnant`;
+    return `<span class="ph-ivf-derived" data-ivf-gest="${esc(tid)}" data-ivf-gest-w="${weeks}" data-ivf-gest-d="${rem}" title="Counted from her positive test date, treated as ~4 weeks gestational age at testing — a standard estimate, not an exact scan date.">${label}</span>`;
   }
   // "allow to log positive hcg for chart" (her ask, weeks ago, off Sylvia
   // Lai's IVF plan screenshot; card 1 of that ask). Once a result is picked,
@@ -57268,6 +57396,13 @@ or changing anything in Cliniko.
   // day precision is what phIvfGestAgeHtml needs to mean anything.
   function phIvfPregTestHtml(row, t) {
     const pr = t.pregResult || "";
+    // one-time render flags, consumed the moment they're read (the
+    // presDoorShown idiom) -- must clear before any early return, or a
+    // stale flag could misfire on a later, unrelated render.
+    const reveal = phIvfPregRevealTid === t.id;
+    const cascade = phIvfPregCascadeTid === t.id;
+    if (phIvfPregRevealTid === t.id) phIvfPregRevealTid = null;
+    if (phIvfPregCascadeTid === t.id) phIvfPregCascadeTid = null;
     const sel = `<select class="field-bare ph-ivf-pregresult" data-ivf-tfield="${row.id}:${t.id}:pregResult">
       <option value=""${pr === "" ? " selected" : ""}>hCG test — not yet</option>
       <option value="negative"${pr === "negative" ? " selected" : ""}>Negative</option>
@@ -57276,8 +57411,12 @@ or changing anything in Cliniko.
     if (!pr) return `<div class="ph-ivf-tfields ph-ivf-pregtest">${sel}</div>`;
     const dateField = `<input type="date" class="field-bare ph-ivf-pregdate" value="${esc(t.pregTestDate || "")}" data-ivf-tfield="${row.id}:${t.id}:pregTestDate" aria-label="hCG test date">`;
     const hcgField = `<input type="number" min="0" class="field-bare ph-ivf-preghcg" placeholder="hCG IU/L" value="${t.pregHcg == null ? "" : t.pregHcg}" data-ivf-tfield="${row.id}:${t.id}:pregHcg">`;
-    const gest = pr === "positive" ? phIvfGestAgeHtml(t.pregTestDate) : "";
-    return `<div class="ph-ivf-tfields ph-ivf-pregtest">${sel}${dateField}${hcgField}${gest}</div>`;
+    const gest = pr === "positive" ? phIvfGestAgeHtml(t.pregTestDate, t.id, cascade) : "";
+    const cls = "ph-ivf-tfields ph-ivf-pregtest" + (reveal ? " in" : "") + (cascade ? " flash" : "");
+    const banner = cascade
+      ? `<div class="ph-tp-announce preg in">🌸 Positive result logged — now in Early Pregnancy.</div>`
+      : "";
+    return `<div class="${cls}">${sel}${dateField}${hcgField}${gest}</div>${banner}`;
   }
   function phIvfCollectionDetailHtml(r) {
     const live = phIvfIsLiveLink(r);
