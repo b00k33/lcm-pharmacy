@@ -30572,23 +30572,44 @@
         rec.sex = v || undefined;
         savePharmacy(); renderHxScreen(); return;
       }
-      const hxFilterBtn = e.target.closest("[data-hx-filter]");
-      if (hxFilterBtn) { presHxScreenFilter = hxFilterBtn.dataset.hxFilter; renderHxScreen(); return; }
       const hxMarkNoBtn = e.target.closest("[data-hx-markno]");
       if (hxMarkNoBtn) { phHxMarkRestNo(presHxScreenName, hxMarkNoBtn.dataset.hxMarkno); return; }
-      const hxQuietToggle = e.target.closest("[data-hx-quiet-toggle]");
-      if (hxQuietToggle) {
-        const g = hxQuietToggle.dataset.hxQuietToggle;
-        if (presHxQuietGroupsOpen.has(g)) presHxQuietGroupsOpen.delete(g); else presHxQuietGroupsOpen.add(g);
-        renderHxBody(); return;
+      // her ask28 fold-state link ("Show all N ▾" / "Fold the list ▴") and
+      // the flags-strip "K still not asked · continue ▸" pill -- both just
+      // move presHxListOpen through its 3 states and repaint the screen.
+      const hxFoldBtn = e.target.closest("[data-hx-fold]");
+      if (hxFoldBtn) {
+        presHxListOpen = (presHxListOpen === "folded" || presHxListOpen === "unasked") ? "full" : "folded";
+        renderHxScreen(); return;
+      }
+      if (e.target.closest("[data-hx-fold-unasked]")) { presHxListOpen = "unasked"; renderHxScreen(); return; }
+      // a flag chip in the strip jumps the list open (if folded) then
+      // scrolls its own row into view -- never edits from the strip itself
+      // beyond the note field it already carries (data-hx-note, unchanged)
+      const hxFlagJump = e.target.closest("[data-hx-flag-jump]");
+      if (hxFlagJump) {
+        const k = hxFlagJump.dataset.hxFlagJump;
+        if (presHxListOpen === "folded") { presHxListOpen = "full"; renderHxScreen(); }
+        const row = document.querySelector(`#pharmacyPage [data-hx-row="${CSS.escape(k)}"]`);
+        if (row) row.scrollIntoView({ block: "center", behavior: "smooth" });
+        return;
       }
       const hxSetBtn = e.target.closest("[data-hx-set]");
       if (hxSetBtn) {
         const rec = phPatientRec(presHxScreenName);
         if (!rec) return;
-        const i = hxSetBtn.dataset.hxSet.lastIndexOf(":");
-        const k = hxSetBtn.dataset.hxSet.slice(0, i), val = hxSetBtn.dataset.hxSet.slice(i + 1);
+        const k = hxSetBtn.dataset.hxSet;
+        const cur = phHxVal(rec, k);
+        const val = cur === "yes" ? "unasked" : "yes";
+        const goingYes = val === "yes";
+        // ghost-fly needs the row's own screen position BEFORE the render
+        // replaces it -- skipped when the list is folded (nothing to fly
+        // from) or when she's clearing a Yes back to unasked (nothing to
+        // fly TO once the flag chip is gone)
+        const rowEl = goingYes && presHxListOpen !== "folded" ? hxSetBtn.closest("[data-hx-row]") : null;
+        const fromRect = rowEl ? rowEl.getBoundingClientRect() : null;
         if (!phHxSet(rec, k, val)) return;             // already that value -> no-op
+        if (goingYes) presHxFreshFlag = k;
         savePharmacy(); renderHxScreen();
         // her spec 2026-08-22: a fresh Yes tap opens its own note field with
         // the cursor already in it, no extra tap -- renderHxScreen() just
@@ -30596,9 +30617,10 @@
         // the moment we look for it. Re-select by data-hx-note="k" (not
         // "the first Yes row") so this is right even mid-list. Never fires
         // on a plain reopen -- only as a direct result of THIS click.
-        if (val === "yes") {
+        if (goingYes) {
           const noteEl = Array.from(document.querySelectorAll("#pharmacyPage [data-hx-note]")).find(n => n.dataset.hxNote === k);
           if (noteEl) { noteEl.focus(); const len = noteEl.value.length; noteEl.setSelectionRange(len, len); }
+          if (fromRect) phHxGhostFly(fromRect, k);
         }
         return;
       }
@@ -32119,6 +32141,21 @@
           });
           presAcuNoTreatStash = null;
         }
+        return;
+      }
+      // her bug report ("logging acupuncture treatment didn't log") --
+      // a patient whose acuEnabled is unset/false gets forced into
+      // herbsOnly with no way back to the points/press/therapies picker
+      // from this panel (see the herbsOnly comment above). This is the
+      // one escape hatch, reachable from both the compact-panel tag and
+      // the merged Visits-table tag.
+      const acuEnableInline = e.target.closest("[data-pres-acu-enable-inline]");
+      if (acuEnableInline) {
+        const rec = phPatientRec(acuEnableInline.dataset.presAcuEnableInline);
+        // herbsOnly forces presAcuNoTreatment true on every render (see the
+        // comment above presAcuOpenHtml's herbsOnly line) -- clear it too, or
+        // she'd tap this and still land on the "herbs only" note.
+        if (rec) { rec.acuEnabled = true; presAcuNoTreatment = false; savePharmacy(); presAcuOpenRefresh(); }
         return;
       }
       // the at-the-door card (2026-09-18): ✕ removes it in place for this
@@ -34634,12 +34671,11 @@
       if (e.target.id === "presLogSearch") { presLogQ = e.target.value; phDefer("presLog", renderPresLog, 150); return; }
       if (e.target.id === "phRecPhotosSearch") { phRecPhotosPatientFilter = e.target.value; phDefer("recPhotos", phRecPhotosRefresh, 150); return; }
       if (e.target.id === "phDirSearch") { phDirSearch = e.target.value; phDefer("phDir", phDirRefresh, 150); return; }
-      // 📋 Medical history screen (her ask 2026-08-20): search re-renders only
-      // the rows below (renderHxBody), never the box itself -- same reasoning
-      // as #presSearch above. The note field is the OPPOSITE case: nothing
-      // needs to redraw at all while she's typing it, only save (debounced),
-      // same as #presGrams below.
-      if (e.target.id === "phHxSearch") { presHxScreenSearch = e.target.value; phDefer("hxBody", renderHxBody, 120); return; }
+      // 📋 Medical history screen (her ask 2026-08-20, redesigned 2026-09-28):
+      // the note field -- nothing needs to redraw at all while she's typing
+      // it, just save (debounced), same as #presGrams below. The flags-strip
+      // note field shares this same id-less attribute so one handler covers
+      // both homes for a note.
       // Information letter body -- nothing needs to redraw while she edits
       // it, just keep the in-memory copy Copy/Print read from current
       if (e.target.matches("[data-infoltr-body]")) { phInfoLtrBody = e.target.value; return; }
@@ -45543,9 +45579,9 @@ or changing anything in Cliniko.
   function phHxOpen(name) {
     if (!name) return;
     presHxScreenName = name;
-    presHxScreenFilter = "all";
-    presHxScreenSearch = "";
-    presHxQuietGroupsOpen = new Set();
+    presHxListOpen = presHxUntaken(name) ? "full" : "folded";
+    presHxSweepFlag = null;
+    presHxFreshFlag = null;
     document.getElementById("phHxBackdrop").hidden = false;
     document.getElementById("phHxModal").hidden = false;
     phRenLoadPhotosFor(phPatientKey(name));   // async -- cache starts empty, re-renders itself in once ready
@@ -45575,62 +45611,75 @@ or changing anything in Cliniko.
     const modal = document.getElementById("phHxModal");
     if (!modal || modal.hidden) presHxScreenName = null;
   }
+  // "✓ Asked all" (her ask28 answer #10, a small pill right of the group
+  // header) -- sweeps every still-unasked row in the group to No, with a
+  // staggered flip animation (presHxSweepFlag, consumed once by
+  // phHxBodyHtml then cleared by renderHxScreen -- this file's own
+  // one-shot-render-flag idiom). Never touches an already-Yes/No row.
   function phHxMarkRestNo(name, group) {
     const rec = phPatientRec(name);
     if (!rec) return;
-    PH_HX_ALL_ITEMS.filter(it => it.group === group).forEach(it => {
-      if (phHxVal(rec, it.k) === "unasked") phHxSet(rec, it.k, "no");
-    });
+    const keys = PH_HX_ALL_ITEMS.filter(it => it.group === group && phHxVal(rec, it.k) === "unasked").map(it => it.k);
+    if (!keys.length) return;
+    keys.forEach(k => phHxSet(rec, k, "no"));
+    presHxSweepFlag = { group, keys };
     savePharmacy(); renderHxScreen();
   }
   // the group/rows list only -- a SEPARATE function from the shell below so
-  // typing in the search box can refresh only this (via renderHxBody), never
-  // the box's own <input> node. Redrawing an <input> she's actively typing
-  // in resets its cursor to the end on every keystroke -- the same trap the
-  // Prescriptions search (#presSearch / #presList) already avoids by only
-  // ever replacing its OWN results container, never itself.
+  // a fold/filter tap can refresh just this via renderHxBody() when nothing
+  // else on the shell changed. presHxSweepFlag/presHxFreshFlag are READ
+  // here (never cleared here -- renderHxScreen() clears them once, after
+  // every host this call touches has had its turn) so a single mutation
+  // animates correctly whichever host(s) actually repaint.
   function phHxBodyHtml(rec) {
-    const q = presHxScreenSearch.trim().toLowerCase();
+    if (presHxListOpen === "folded") return "";
     const groups = PH_HISTORY_GROUPS.filter(gr => phIsFemale(rec) || !PH_HX_FEMALE_GROUPS.has(gr.g));
     // her ask 2026-09-05: the active script's case type can quiet the
     // reproductive groups (Cycle & bleeding / Structural / Reproductive) --
-    // collapsed + greyed, never removed from the list, so an unusual case
-    // that DOES need one of these is still one tap away, not gone.
+    // her ask28 answer #8 (2026-09-28), "always show all 38, greyed":
+    // greyed via CSS only now, every row always rendered, never hidden
+    // behind a toggle.
     const openScript = PRESC.items.find(x => x.id === presOpenId);
     const reproQuiet = openScript && phCaseQuiets(openScript, "reproHistory");
+    const unaskedOnly = presHxListOpen === "unasked";
+    const sweep = presHxSweepFlag, fresh = presHxFreshFlag;
     return groups.map(gr => {
-      const rows = gr.items.filter(([k, label]) => {
-        const val = phHxVal(rec, k);
-        if (presHxScreenFilter === "unasked" && val !== "unasked") return false;
-        if (presHxScreenFilter === "yes" && val !== "yes") return false;
-        if (q && !label.toLowerCase().includes(q)) return false;
-        return true;
-      });
+      const rows = gr.items.filter(([k]) => !unaskedOnly || phHxVal(rec, k) === "unasked");
       if (!rows.length) return "";
       const quiet = reproQuiet && PH_HX_CASE_QUIET_GROUPS.has(gr.g);
-      const open = !quiet || presHxQuietGroupsOpen.has(gr.g);
       const unaskedLeft = gr.items.some(([k]) => phHxVal(rec, k) === "unasked");
       return `<div class="ph-hx-group${quiet ? " quiet" : ""}">
-        <div class="ph-tmpl-sec ph-hx-group-h"${quiet ? ` data-hx-quiet-toggle="${esc(gr.g)}"` : ""}>
+        <div class="ph-tmpl-sec ph-hx-group-h">
           <span>${esc(gr.g)}${gr.family ? " (blood relatives)" : ""}${quiet ? ` <span class="ph-quiet-tag">not typical for this case</span>` : ""}</span>
-          ${quiet ? `<span class="ph-hx-group-chev" aria-hidden="true">${open ? "▾" : "▸"}</span>`
-            : `<button type="button" class="ph-hx-markno" data-hx-markno="${esc(gr.g)}"${unaskedLeft ? "" : " disabled"}>Mark rest as No</button>`}
+          <button type="button" class="ph-hx-markno${unaskedLeft ? "" : " done"}" data-hx-markno="${esc(gr.g)}"${unaskedLeft ? "" : " disabled"}>${unaskedLeft ? "✓ Asked all" : "✓ asked"}</button>
         </div>
-        ${open ? rows.map(([k, label]) => {
+        <div class="ph-hx-grouprows">
+        ${rows.map(([k, label]) => {
           const val = phHxVal(rec, k);
           const note = phHxNote(rec, k);
           const presets = val === "yes" ? PH_HX_NOTE_PRESETS[k] : null;
-          return `<div class="ph-hx-qrow">
-            <span class="ph-hx-qlabel">${esc(label)}</span>
-            <span class="ph-hx-seg" role="radiogroup" aria-label="${esc(label)}">
-              ${PH_MEDHX_STATES.map(st => `<button type="button" class="ph-hx-statebtn ${st.v}${val === st.v ? " on" : ""}" data-hx-set="${k}:${st.v}" aria-pressed="${val === st.v ? "true" : "false"}">${st.label}</button>`).join("")}
-            </span>
-            ${presets ? `<span class="ph-hx-presets">${presets.map(p => `<button type="button" class="ph-ck-chip${phHxNoteHasPreset(note, p) ? " on" : ""}" data-hx-notepreset="${k}:${esc(p)}">${esc(p)}</button>`).join("")}</span>` : ""}
-            ${val === "yes" ? `<input type="text" class="ph-hx-note" data-hx-note="${k}" value="${esc(note)}" placeholder="Optional note…" aria-label="Note for ${esc(label)}">` : ""}
+          const sweepIdx = sweep && sweep.group === gr.g ? sweep.keys.indexOf(k) : -1;
+          const delayAttr = sweepIdx >= 0 ? ` style="animation-delay:${sweepIdx * 45}ms"` : "";
+          const animCls = sweepIdx >= 0 ? " sweep" : (fresh === k ? " fresh" : "");
+          // a whole-row tap toggles: anything but Yes -> Yes (opens the note,
+          // cursor ready -- her answer #11); Yes -> back to unasked. An
+          // explicit No only ever comes from the group's own "Asked all"
+          // sweep (her answer #6, "leave them not asked" -- a tap never
+          // auto-converts to No on its own).
+          return `<div class="ph-hx-rowwrap" data-hx-row="${k}">
+            <button type="button" class="ph-hx-qrow ${val}${animCls}" data-hx-set="${k}" aria-pressed="${val === "yes" ? "true" : "false"}"${delayAttr}>
+              <span class="ph-hx-dot ${val}" aria-hidden="true"></span>
+              <span class="ph-hx-qlabel">${esc(label)}</span>
+            </button>
+            ${val === "yes" ? `<div class="ph-hx-rowextra">
+              ${presets ? `<span class="ph-hx-presets">${presets.map(p => `<button type="button" class="ph-ck-chip${phHxNoteHasPreset(note, p) ? " on" : ""}" data-hx-notepreset="${k}:${esc(p)}">${esc(p)}</button>`).join("")}</span>` : ""}
+              <input type="text" class="ph-hx-note" data-hx-note="${k}" value="${esc(note)}" placeholder="Optional note…" aria-label="Note for ${esc(label)}">
+            </div>` : ""}
           </div>`;
-        }).join("") : ""}
+        }).join("")}
+        </div>
       </div>`;
-    }).join("") || `<div class="fam-empty">Nothing matches that search.</div>`;
+    }).join("") || `<div class="fam-empty">${unaskedOnly ? "Nothing left not asked — everything's answered." : "Nothing recorded yet."}</div>`;
   }
   // refreshes ONLY the rows -- the search box's own live-filter handler
   // calls this, never renderHxScreen (which would rebuild the search box's
@@ -50075,9 +50124,9 @@ or changing anything in Cliniko.
     if (presHxUntaken(name)) presHxInlineFor = name;
     if (presHxScreenName !== name) {
       presHxScreenName = name;
-      presHxScreenFilter = "all";
-      presHxScreenSearch = "";
-      presHxQuietGroupsOpen = new Set();
+      presHxListOpen = presHxUntaken(name) ? "full" : "folded";
+      presHxSweepFlag = null;
+      presHxFreshFlag = null;
     }
     phRenEnsurePhotos(phPatientKey(name));
     return `<div id="presMedHxHost">${phHxScreenInnerHtml(name, { inline: true, noConstit: true })}</div>`;
@@ -50124,9 +50173,9 @@ or changing anything in Cliniko.
     if (modal && !modal.hidden && presHxScreenName && presHxScreenName !== name) return "";
     if (presHxScreenName !== name) {
       presHxScreenName = name;
-      presHxScreenFilter = "all";
-      presHxScreenSearch = "";
-      presHxQuietGroupsOpen = new Set();
+      presHxListOpen = presHxUntaken(name) ? "full" : "folded";
+      presHxSweepFlag = null;
+      presHxFreshFlag = null;
     }
     phRenEnsurePhotos(phPatientKey(name));
     return `<div id="presConstitHost">${presConstitTabInnerHtml(name)}</div>`;
@@ -55477,6 +55526,7 @@ or changing anything in Cliniko.
       <div class="ph-acu-notreat">
         <button type="button" class="ph-acu-notreat-toggle${presAcuNoTreatment ? " on" : ""}" data-pres-acu-notreat="1" aria-pressed="${presAcuNoTreatment ? "true" : "false"}">${presAcuNoTreatment ? "✓ Herbs only — no acupuncture today" : "No acupuncture today?"}</button>
       </div>
+      ${herbsOnly ? `<div class="ph-acu-notreat-note">Acupuncture tracking is off for this patient — herbs only. <button type="button" class="ph-name-link" data-pres-acu-enable-inline="${esc(name)}">Turn on acupuncture →</button></div>` : ""}
       ${compact ? "" : checklistHtml}
       ${presAcuNoTreatment ? `<div class="ph-acu-notreat-note">Recording herbs &amp; response only — points, pulse and tongue are skipped for today.</div>` : (activePlan ? `<div class="ph-acu-fromplan">
         ${compact
@@ -56817,7 +56867,7 @@ or changing anything in Cliniko.
     const rowVal = label => { const row = Array.from(root.querySelectorAll(".ph-acu-row2")).find(r => { const l = r.querySelector(".lbl"); return l && l.textContent.trim() === label; }); if (!row) return ""; const c = row.cloneNode(true); const l = c.querySelector(".lbl"); if (l) l.remove(); return c.innerHTML; };
     const P = phTpPlanCells(plan, phase);
     const herbsOnly = !!root.dataset.acuHerbsonly;
-    const notreat = herbsOnly ? `<span class="ph-acu-herbsonly-tag">Herbs only</span>` : pick(".ph-acu-notreat");
+    const notreat = herbsOnly ? `<span class="ph-acu-herbsonly-tag">Herbs only</span> <button type="button" class="ph-name-link" data-pres-acu-enable-inline="${esc(name)}">Turn on acupuncture →</button>` : pick(".ph-acu-notreat");
     const treatas = (() => { const el = root.querySelector(".ph-acu-fromplan .k.treatas"); if (!el) return `<span class="ph-tp-vtab-phase"><b>${esc(phase.label || "")}</b></span>`; const c = el.cloneNode(true); const l = c.querySelector(".lbl"); if (l) l.remove(); return `<span class="ph-tp-vtab-phase">${c.innerHTML}</span>`; })();
     const phasePick = pick(".ph-acu-phasepick") + pick(".ph-acu-overridenote");
     // her ask 2026-09-24 ("needle row not needed"): dropped from this table --
@@ -66979,8 +67029,22 @@ Please let me know if you have any questions.`;
   // it's open for, or null. Filter/search reset every time it opens, same
   // "start clean" posture as the rows above.
   let presHxScreenName = null;
-  let presHxScreenFilter = "all";   // "all" | "unasked" | "yes"
-  let presHxScreenSearch = "";
+  // "folded" | "unasked" | "full" -- the checklist's 3-state fold (her
+  // locked ask28 answers 2026-09-28: returning patient opens folded to
+  // flags, "continue" opens filtered to only the K not-asked rows, "Show
+  // all N" opens everything). Defaulted per-open in phHxOpen/*TabBodyHtml.
+  let presHxListOpen = "folded";
+  // one-shot render flags -- this codebase's own "set right before a
+  // mutation + save + render, consumed once by the render, then cleared"
+  // idiom (presDoorShown/phTpCompleteAnim/presFlowLast are the same
+  // pattern). presHxSweepFlag = {group, keys[]} drives the staggered
+  // "Asked all" sweep (each swept row gets its own inline animation-
+  // delay); presHxFreshFlag = a single key for the one-row "just answered
+  // yes" pop. Both cleared by renderHxScreen() itself, once, after every
+  // host it repaints this call has had a chance to read them -- never
+  // inside phHxBodyHtml, which can run up to 3 times in one call.
+  let presHxSweepFlag = null;
+  let presHxFreshFlag = null;
   // the patient whose history is open INLINE on the profile right now (a
   // new patient, presStageOpeningHtml). Her first answer makes her "not
   // new" -- without this the next field edit on the same stage (the panel
@@ -66988,10 +67052,6 @@ Please let me know if you have any questions.`;
   // mid-intake. Cleared by presHxInlineSync the moment she leaves the
   // profile or the script, so a part-taken history folds then, not sooner.
   let presHxInlineFor = null;
-  // groups quieted by the active script's case type (phCaseQuiets, "quiet"
-  // reproHistory) that she's tapped open anyway -- reset every open, same
-  // "start clean" posture as the rest of this screen's state
-  let presHxQuietGroupsOpen = new Set();
   // Label text -- her spec (2026-08-20, "Label text: one block, only the
   // parts that change"): ONE canonical template + value-builder, shared by
   // the open-prescription screen and the Scheduled/Prepare screen (see
