@@ -11755,3 +11755,68 @@ anim`, step 4 `pulse` ×2, "Next: Dispense"; a repaint replays nothing; rail
 172px on a long label; 360px = one 28px strip, page scroll width 360; console
 clean; Prescriptions live search 2 → 1 → 0 → 2.
 `lcm-build` `20260928-060000`, `sw.js` `lcm-20260928-workflow-flow-rail-c`.
+
+## Medical history checklist redesign — 3-column grid, always-visible flags strip, three-state fold (her ask28, 2026-09-28, "build it, push live")
+
+Her ask28 protocol on the Medical history checklist (17 locked answers,
+memory `project_pharmacy_medhx_checklist_ask28_2026_09_28`): too many taps
+on the old design (search box + 3-button-per-row Not asked/No/Yes + a
+linear scrolling list), and she wanted to see the whole 38 at once, first
+visit, with a way to mark a whole group asked-and-clear in one tap and
+never lose sight of what she's already flagged. The JS/HTML side of the
+rewrite (`phHxBodyHtml`'s whole-row-tap-toggle rows, `phHxFlagsStripHtml`'s
+always-visible flags strip, `phHxScreenInnerHtml`'s new footer, the
+`presHxListOpen` three-state fold machine `folded`/`unasked`/`full`, the
+ghost-fly animation) was already built and correct — verified by reading
+the live source, not assumed. Two gaps closed this pass:
+
+- **The footer Save button had no click handler** — the button markup
+  (`data-hx-savebtn="1"`) rendered but nothing responded to a tap. Every
+  answer on this screen already saves the instant it's picked (no
+  in-progress state to lose), so the handler is pure reassurance: flips the
+  button to "✓ Saved" for 1.4s via a direct DOM patch, never a re-render —
+  the same "don't cost her the scroll spot or an in-progress note" rule
+  this file already documents for the Cycle/Constitution tabs. **Disclosed:
+  there is no "Start over" button** — never part of this design, per her
+  own 17 locked answers (decision 6, "leave them not asked," never a bulk
+  reset).
+- **Every CSS rule the redesign's own JS classes needed was missing.** The
+  new components (`.ph-hx-dot`'s three state colours, `.ph-hx-qrow`'s
+  whole-row state background/border, the `.sweep`/`.fresh` stagger and pop
+  animations, the flags strip's whole family, the footer/save-button, the
+  ghost-fly element, a 3-column desktop layout for the 6 groups) rendered
+  as unstyled/default-browser HTML — the OLD design's CSS (search box,
+  filter segments, the 3-button `.ph-hx-statebtn` row, the group chevron)
+  sat there unused instead, confirmed dead by grep (zero markup emitters
+  anywhere in the file) before removing it. Built the missing CSS,
+  widened the modal at desktop width (`min(640px,100%)` → the card stays
+  fixed at 640px for the popup; the 3-column layout lives inside `.ph-hx-body`
+  via `column-count:3` above 901px, a masonry flow rather than a grid so a
+  short group never leaves a gap beside a tall one — one column under
+  901px, matching the phone-width `@media (max-width:640px)` block that
+  was already correct). `PH_MEDHX_STATES` (the old 3-button label lookup)
+  was confirmed to have zero remaining references once the row rewrite
+  landed — removed.
+
+**Verified in the sandbox** (a real synthetic patient, opened through the
+actual `presOpenScript`/`presTpMainTabsHtml` rail, past the "no plan yet"
+gate's Skip-for-now escape hatch): the body renders as a genuine 3-column
+CSS layout at desktop width (`column-count:3`, confirmed via
+`getComputedStyle`, not assumed) and falls back to one column with zero
+horizontal overflow at 360px; a real dispatched tap on a row flips it to
+"yes" (blue dot/row tint, the `.fresh` pop class applied), opens its note
+field with the Diabetes Type 1/Type 2 preset chips, and the flags strip
+picks up the new flag immediately with a synced, editable note; a group's
+"✓ Asked all" sweep correctly staggers the remaining unasked rows to "no"
+(confirmed 45ms per-row animation-delay) while leaving the one already-
+answered "yes" row untouched, and the button itself flips to a disabled
+"✓ asked"; the flags strip's jump link runs with no error; the footer
+Save button flips to "✓ Saved" with the green-tint confirmed style and no
+full re-render. Re-ran the CLAUDE.md-protected Prescriptions live-search
+self-check directly against the real delegated handler: typing a
+distinguishing name narrowed the list to the one match, clearing restored
+both. Console clean throughout. Synthetic patients fully removed
+afterward, confirmed absent from `PRESC.items`/`PHARMACY.patients`; zero
+Supabase auth tokens present before or after.
+
+`lcm-build` `20260928-080000`, `sw.js` `lcm-20260928-medhx-checklist-css`.
