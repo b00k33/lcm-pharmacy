@@ -11700,3 +11700,58 @@ workflow sequence. make mock" — got a three-option animated mock
 a hand-off band, C one vertical flow on the left); nothing of it is built
 until she picks. `lcm-build` `20260928-050000`, `sw.js`
 `lcm-20260928-plan-lands-first`.
+
+### Same day, her pick "c, push live": ONE vertical flow rail replaces the stage strip
+On the three-option workflow mock she chose **C** — one numbered flow down the
+left of the patient panel: **1 Profile · 2 Plan · 3 Treatment (Treatment log ·
+Photos · Notes as quiet items under it) · 4 Dispense**, a connector line that
+fills top-down as steps are done, the step she is on lit; finishing a step ticks
+it and the next step's circle pulses; the body slides in when the stage changes.
+BUILT, verified, pushed to `main` on her word.
+- `presStageStripHtml` (decision 7's horizontal "three places" tab row) and its
+  `.ph-pres-stages`/`.ph-pres-stagebtn` CSS (desktop + the phone five-column
+  block + the `.l-short` defect rule) are DELETED. `renderPresPanel` wraps the
+  stage body in `.ph-flow` → `presFlowRailHtml(t, isNew)` + `.ph-flow-body`.
+- **`presFlowSteps(t, isNew)`** reads "done" live off data, never stored:
+  Profile = a known patient or a new one once details/history began; Plan = an
+  active plan with a current phase and sessions set; Treatment = a session
+  logged TODAY (resets every visit — her "restart with follow-up
+  appointments"); Dispense = dispensed TODAY. Steps 1/4 are stages
+  (`data-pres-stage`); 2/3 and the sub-items are the plan page's own rail tabs
+  via **`data-flow-go`** (handler beside `[data-pres-stage]`: `presStage =
+  "plan"; presTpMainTab = id`; within the plan stage it is
+  `presTpMainTabRefresh()` + `presFlowRailRefresh()`, never a full render).
+  The `[data-tp-main-tab]` handler repaints the rail too, so the lit step
+  follows a tab tap either way.
+- **Motion only on change** (`presFlowLast` per script: key `stage:tab`, the
+  done list): a step newly done gets `.anim` (connector fill) + `.c.pop`, the
+  step after it `.c.pulse` (×2), the body `.in` only when the key changed. A
+  plain repaint replays nothing — verified by calling `presFlowRailRefresh()`
+  straight after a Complete and reading zero animation classes. Reduced-motion
+  turns it all off.
+- **`presStagePlanAutoOpen(t)`** is the plan stage's landing rule (single plan
+  → open it; a booking that names a plan → that one) pulled out of
+  `presStagePlanHtml` because the rail renders BEFORE the plan stage in the
+  same template literal — without it step 2/3's sub-labels and the sub-items
+  were empty on landing (found in the sandbox, not by reading).
+- The plan page's own tab row (`.ph-assess-tabs.ph-tp-main .ph-assess-tabsrow`)
+  is `display:none` ≥641px — the rail IS that row on a desktop; the phone keeps
+  it, and the rail folds to a horizontal strip of the four steps (no
+  connectors, no `small`, sub-items hidden).
+- `presStageNextBtnHtml(fromId)` follows the flow: Profile → "Next: Plan",
+  Plan with a plan open on its Plan tab → "Next: Treatment" (`data-flow-go`),
+  otherwise "Next: Dispense"; Dispense → none (its head keeps "‹ Back to the
+  plan").
+- **Rail width trap**: a flex item's automatic minimum is its min-content, and
+  a phase label in a nowrap `<small>` grew the rail from 172 to 306px before
+  the ellipsis could apply — `.ph-flow-rail` carries `min-width: 0; width:
+  172px`, measured not guessed. Phone rule resets `width:auto; flex:none`.
+Verified in the sandbox (0 `sb-*` keys, synthetic MSK patient booked today,
+removed after, residue nil): landing on Plan with step 2 lit and 1–2 filled;
+step 3 / sub-items / the plan's own tab switch the tab in place with the rail
+following; Next buttons Profile → Plan → Treatment; step 4 and "‹ Back to the
+plan"; a real Complete click → step 3 `done anim` + `pop`, sub block `done
+anim`, step 4 `pulse` ×2, "Next: Dispense"; a repaint replays nothing; rail
+172px on a long label; 360px = one 28px strip, page scroll width 360; console
+clean; Prescriptions live search 2 → 1 → 0 → 2.
+`lcm-build` `20260928-060000`, `sw.js` `lcm-20260928-workflow-flow-rail-c`.
