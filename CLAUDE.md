@@ -11685,4 +11685,18 @@ patient, both bookings and the `daybook-ph-sesscal-open` key removed,
 overlay restored, residue nil, 0 `sb-*` keys.
 
 `lcm-build` `20260928-040000`, `sw.js` `lcm-20260928-treatment-tab-stepper-band`.
-Committed on `session-a`; NOT pushed — she has not said "push live" for this build.
+Pushed to `main` on her "push live" the same day (`ad7b82b`), confirmed served.
+
+### Same day, her correction: the Treatment plan stage lands on Plan, always
+"when i click on patient profile it goes to treatment instead of plan." The
+auto-default in `presTpMainTabsHtml` (Treatment when a visit is bookable
+today, my call above) is gone — `presTpMainTab` null → `"plan"`, full stop.
+Verified in the sandbox with a synthetic patient booked today
+(`phTpTodaysVisitGate(...).show === true`): `presTpMainTabsHtml` lands on
+"plan" and the rail marks Plan `on`. Her wider ask in the same message —
+"make the plan treatment dispense a workflow with animation to create a
+workflow sequence. make mock" — got a three-option animated mock
+(`workflow-sequence-mocks.html`: A step rail across the top, B tabs kept +
+a hand-off band, C one vertical flow on the left); nothing of it is built
+until she picks. `lcm-build` `20260928-050000`, `sw.js`
+`lcm-20260928-plan-lands-first`.
