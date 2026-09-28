@@ -11591,3 +11591,98 @@ patient and script removed afterward, confirmed absent from
 before or after.
 
 `lcm-build` `20260928-030000`, `sw.js` `lcm-20260928-calendar-mirrors-cyclebar-everywhere`.
+
+## Treatment tab — session stepper, Complete/Then band, the course calendar restyled (her synth22 batch 2026-09-28, "1 yes, finished, build it")
+
+Her synth22 batch, collected one item at a time then approved as one
+(memory `project_pharmacy_synth22_2026_09_28` holds every message
+verbatim). Item 1: "improve the organisation workflow and view of the
+patient profile for this treatment matrix, and use animation — make it
+cohesive — allow for the treatment to be completed at each session and
+restart with followup appointments." Item 2: "improve the calendar look."
+Round 1 on a lettered mock artifact: "i like 1a and 1b — make mock
+together, i like 2a." Round 2: **"1 yes, finished, build it."** Mid-build,
+three more: "where is the table for me to plan the sessions frequency
+etc?" (answered below), "move the treatment table to a treatment table"
+→ "treatment tab*", and, on a screenshot of the Visits merged table, "this
+can be moved to treatment log page."
+
+**The rail gains a fifth tab — Treatment — between Plan and Treatment
+log** (`presTpMainSections` → plan · treatment · log · photos · notes).
+What lives where now:
+- **Plan** (`presTpPlanTabBodyHtml`): head, Focus / Goal, phase bar + the
+  LOCKED Sessions table (Phase · Frequency · This week — this IS her
+  "plan the sessions frequency" table, untouched, welded under the bar),
+  the course calendar behind "Calendar ▾", scans, the cycle block. No
+  stepper, no visit table.
+- **Treatment** (`presTpTreatmentTabBodyHtml`): the session stepper
+  (`phTpStepperHtml`: one group per phase, chips numbered with their
+  date — done ✓ · today solid · booked gold · next-up ringed · projected
+  `~date`), then the phase's own `.ph-tp-phasebody` (the merged
+  Planned | Today visit table, `phTpVisitTableHtml`) whose Log row is now
+  the band (`phTpBandHtml`, `.ph-tp-bandrow`): "💾 Save draft · ✓ Complete
+  session N" on the left, "THEN session N+1 · ~date · + Book it · copy the
+  date" on the right. Then the "Then" section (`phTpNextHtml`) under it —
+  my call to keep it here rather than move it with the Visits table.
+- **Treatment log** (`phTpVrLogTabHtml`): the Visits merged table
+  (`.ph-tp-vtwide`, `phTpVisitsMergedHtml` — VISITS · phase, DATE /
+  TREATMENT / RESULT rows) renders FIRST, above the Visit record. It no
+  longer renders inside the phase panel on the Treatment tab.
+- **Default tab**: `presTpMainTab` null → `presTpMainTabsHtml` picks
+  "treatment" when `phTpTodaysVisitGate(plan, ph, frozen).show` (she is
+  treating this patient today), else "plan". My call, disclosed: the day
+  she has a booking, the tab she works in is the one that opens.
+- The Today column head reads "Today · 10:00 am · 2 of 3 visits" (booking
+  time + `phTpSessionOrdinal`).
+
+**Complete = the same save as "Log today's session", dressed for the
+workflow she asked for.** `data-pres-acu-log` is unchanged underneath;
+`phTpCompleteAnimate(name, plan, phase, render)` wraps it: the band flips
+to `.done.conf-in` ("✓ Session N complete") the instant she taps, the
+save runs, then the render re-arms everything — the completed chip
+`.done.pop`, the next chip `.nextup.pop`, the Today column's cells `.fade-in`
+(`phTpFadeIn`) with the head now "Session N+1 · ~date · not booked", the
+band "log another session" (quiet) + **"Book the follow-up"** (primary, the
+existing `[data-tp-book]` quick-add with date + name pre-filled) + "copy
+the date" (`[data-tp-band-copy]` → clipboard, same shape as `data-tp-sess-
+book`'s "copy the dates"). `phTpCompleteAnim`/`phTpCompleteAnimFor(planId)`
+is a one-shot (<4000ms) flag cleared after the Treatment tab paints, so
+nothing animates on an ordinary repaint. `@media (prefers-reduced-motion:
+reduce)` turns all of it off. New keyframes `phTpFadeIn`, `phTpStepPop`;
+the band's confirm reuses `phTpAnnounceIn`.
+
+**2A calendar** (`phTpSessCalHtml`, `.ph-tp-sesscal.v2`): Monday-first
+grid, `64px repeat(7, minmax(0,1fr))`, 44px cells; a left rail per week
+with the month and the phase name (clamped to 2 lines — long MSK phase
+names wrapped to 4); week rows and days tinted by the phase's kind colour
+(`k-p…k-g`, or `ph-i0…ph-i5` cycling for plans whose phases have no
+cycle kind); closed clinic days hatched; today ringed; each session as a
+chip under its date (`✓1` done · `2` today · `~3` projected · booked gold;
+pinned = no tilde); a next chip is the `[data-tp-sess-pin]` button, a
+booked one `[data-tp-appt-move]`; legend under the grid. Phone ≤640px:
+48px rail (phase name hidden), 40px cells.
+
+**Verified in the sandbox** (sandbox confirmed empty and token-free first;
+synthetic patient on `msk_lowback` with a booking today + one next week,
+one logged session, opened through `presTpInlineOpen` — the gate reads
+`phTpScreenPatient`, so a setup that bypasses the real open path lands on
+"plan" and looks like a bug; it isn't): rail of five tabs with sub-labels;
+default "treatment"; stepper chips and dates; band "Complete session 2 /
+Then session 3 · ~2 Oct"; a real dispatched Complete click → immediate
+"✓ Session 2 complete", session saved with `apptId`, then "Book the
+follow-up" primary, chips `done pop`/`nextup pop`, ten `fade-in` cells,
+head "Session 3 · ~2 Oct · not booked", rail sub "session 3", flag
+cleared; the copy button fires without error (the clipboard itself is
+unreadable in an unfocused pane); Plan tab has phase bar + Sessions table
++ Calendar toggle and no stepper; Treatment log has the Visits table
+first; the calendar measured `64px + 7×54.57px` at 1280 wide, correct
+tints, no overflow; at 360px the stepper groups stack (310px tall, chips
+wrap, readable), the band 154px, the calendar `48px + 7×26px` with 40px
+cells, no page overflow (`scrollWidth` 360). Pre-complete state
+re-verified after popping today's session. Prescriptions live search
+1 → 1 → 0 → 1. Console: only the known sw-fetch line. Synthetic script,
+patient, both bookings and the `daybook-ph-sesscal-open` key removed,
+overlay restored, residue nil, 0 `sb-*` keys.
+
+`lcm-build` `20260928-040000`, `sw.js` `lcm-20260928-treatment-tab-stepper-band`.
+Committed on `session-a`; NOT pushed — she has not said "push live" for this build.
