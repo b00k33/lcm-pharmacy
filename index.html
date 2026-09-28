@@ -46628,6 +46628,24 @@ or changing anything in Cliniko.
     { key: "fpFrown",   label: "Frown", face: true },
     { key: "full",      label: "Full photo" },
     { key: "other",     label: "Other" },
+    // Musculoskeletal Posture (her ask 2026-09-28: "neck upper back hip etc",
+    // reviewed and confirmed -- gated the same way as the facial movements
+    // above, since posture shots only mean something on an MSK case).
+    { key: "mskFront",     label: "Full posture -- front",  msk: true },
+    { key: "mskBack",      label: "Full posture -- back",   msk: true },
+    { key: "mskSideL",     label: "Full posture -- side (left)",  msk: true },
+    { key: "mskSideR",     label: "Full posture -- side (right)", msk: true },
+    { key: "mskNeck",      label: "Neck / cervical posture", msk: true },
+    { key: "mskShoulder",  label: "Shoulder level",          msk: true },
+    { key: "mskUpperBack", label: "Upper back / thoracic",   msk: true },
+    { key: "mskLowerBack", label: "Lower back / lumbar",     msk: true },
+    { key: "mskHip",       label: "Hip / pelvis level",      msk: true },
+    { key: "mskKnee",      label: "Knee alignment",          msk: true },
+    // Universal additions in the same round (her ask: "add more regions but
+    // make them universal e.g. i take feet pictures for internal disease and
+    // health illness sometimes") -- no gating flag, offered to every patient.
+    { key: "feet",  label: "Feet" },
+    { key: "hands", label: "Hands" },
   ];
   const PH_REN_TYPE_LABEL = PH_REN_PHOTO_TYPES.reduce((m, t) => (m[t.key] = t.label, m), {});
   // Which types to OFFER for one patient. A face:true type shows where it means
@@ -46635,12 +46653,20 @@ or changing anything in Cliniko.
   // facial plans hang off (PH_CASE_CATEGORY) -- or wherever photos of that kind
   // already exist, so a tag can never hide pictures already taken. That second
   // clause is the same principle as phRenTypeOf's unknown-kind rule below:
-  // surfaced, never dropped.
+  // surfaced, never dropped. msk:true types follow the same shape, gated on
+  // PH_CASE_CATEGORY's "msk" bucket (currently just Case "Pain") rather than a
+  // literal caseType, the same category-level check phTpIsMskPlan already uses
+  // elsewhere -- so a future case type added to that bucket picks this up free.
   const phRenIsFacialPatient = key => !!key && (PRESC.items || []).some(t =>
     t && t.caseType === "neurological" && phPatientKey(presPatientFor(t) || t.name || "") === key);
+  const phRenIsMskPatient = key => !!key && (PRESC.items || []).some(t =>
+    t && PH_CASE_CATEGORY[t.caseType] === "msk" && phPatientKey(presPatientFor(t) || t.name || "") === key);
   const phRenTypesFor = (key, have) => {
     const facial = phRenIsFacialPatient(key);
-    return PH_REN_PHOTO_TYPES.filter(t => !t.face || facial || (have && have(t.key)));
+    const msk = phRenIsMskPatient(key);
+    return PH_REN_PHOTO_TYPES.filter(t =>
+      (!t.face || facial || (have && have(t.key))) &&
+      (!t.msk || msk || (have && have(t.key))));
   };
   // a photo whose kind is missing, or is a kind this build doesn't know,
   // reads as "other" -- surfaced, never dropped (§4)
@@ -46700,11 +46726,12 @@ or changing anything in Cliniko.
   // Tongue row when unlabelled ones exist)
   const phRenRowsFor = have => {
     const rows = [];
-    // A facial-movement row appears once it actually holds something. This
-    // function is given no patient key, so it cannot test the Case the way
-    // phRenTypesFor does -- and the timeline is a record of what EXISTS, so an
-    // empty "Smile" row on a fertility patient's timeline would be pure noise.
-    PH_REN_PHOTO_TYPES.filter(t => !t.face || (have && have(t.key))).forEach(t => {
+    // A facial-movement or MSK-posture row appears once it actually holds
+    // something. This function is given no patient key, so it cannot test the
+    // Case the way phRenTypesFor does -- and the timeline is a record of what
+    // EXISTS, so an empty "Smile"/"Hip level" row on an unrelated patient's
+    // timeline would be pure noise.
+    PH_REN_PHOTO_TYPES.filter(t => (!t.face && !t.msk) || (have && have(t.key))).forEach(t => {
       if (t.key !== "tongue") { rows.push({ key: t.key, label: t.label, type: t.key, shot: "" }); return; }
       // her ask 2026-09-14: a tongue photo saved with no shot chosen yet (now
       // the normal quick-capture default, not just pre-2026-09-09 legacy) reads
