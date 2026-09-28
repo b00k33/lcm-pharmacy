@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260928-020000">
+<meta name="lcm-build" content="20260928-030000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -30052,26 +30052,40 @@
       if (cycDay && !cycDay.disabled) {
         const nm = cycDay.dataset.cycleStripName, dateKey = cycDay.dataset.cycleDay;
         // her report 2026-09-25 ("when i click the calendar, i want the
-        // cycle details under the horizontal graph to appear") -- on the
-        // Treatment Plan tab's own bare calendar (data-cycle-strip-bare,
-        // phTpCycleBlockHtml's only caller of `bare:true`), a day tap now
-        // opens the SAME per-day signs popover the bar/day-table already
-        // open (with a period-start toggle merged into it, see
+        // cycle details under the horizontal graph to appear") first scoped
+        // this to just the Treatment Plan tab's own bare calendar
+        // (data-cycle-strip-bare). Her follow-up 2026-09-27 ("i want the
+        // click function on calendar to mirror horizontal cycle click
+        // function") is the SAME ask again, generalised -- every calendar's
+        // day tap now opens the same per-day signs popover the bar/day-table
+        // already open (with a period-start toggle merged into it, see
         // phCycleSignPopHtml's startSection), instead of the narrower
-        // period-start-only phCyclePop. Every OTHER caller of
-        // phCycleStripHtml (Assessment tab, Today's Timeline, the Fertility
-        // door popup, the CD calculator, Period history's row edit) is
-        // untouched -- scoped to exactly the one screen her report was
-        // about, same as the three other "under the bar" fixes earlier today.
-        if (cycDay.closest('[data-cycle-strip-bare="1"]')) {
-          const closing = presCycleSignEdit && presCycleSignEdit.name === nm && presCycleSignEdit.dateKey === dateKey;
-          presCycleSignEdit = closing ? null : { name: nm, dateKey };
-          if (!closing) phCyclePop = null;
-          phCycleStripRefresh(nm);
-          return;
-        }
-        phCycleOpenDayPop(nm, dateKey);
-        phCycleStripRefresh(nm);
+        // period-start-only phCyclePop. This reaches the Assessment tab,
+        // Today's Timeline, the check-in card, the Fertility door popup and
+        // the month "add many past periods" view all at once -- see
+        // phCycleStripHtml's/phCycleMonthHtml's own opts.noSignPop, which
+        // keeps the ONE screen with a calendar AND a bar together
+        // (phCycleTessHtml) from showing the same popover twice. Period
+        // history's own row-edit (host:"hist") is a different, untouched
+        // affordance -- it sets phCyclePop directly, never through this
+        // handler. The CD calculator's own "Go" button still opens the
+        // narrower phCyclePop on purpose (its own estimate-by-default
+        // wording is tuned for a recalled date, not a directly-tapped one).
+        const closing = presCycleSignEdit && presCycleSignEdit.name === nm && presCycleSignEdit.dateKey === dateKey;
+        presCycleSignEdit = closing ? null : { name: nm, dateKey };
+        if (!closing) phCyclePop = null;
+        // on the Assessment tab's tessellated Cycle view, the popover this
+        // click opens lives in phCycleBarHtml's own render (the detail
+        // column, .ph-cycle-tess-detail) -- not inside the calendar's own
+        // [data-cycle-strip] subtree (it's suppressed there via noSignPop
+        // specifically so it doesn't show twice). phCycleStripRefresh alone
+        // only ever patches [data-cycle-strip] in place, so on THIS one
+        // screen it needs the fuller repaint (phCycleRerender ->
+        // presCycleTabRefresh) that also repaints the detail column --
+        // every other calendar context (Today's Timeline, the check-in
+        // card, the Fertility door popup, month view, the Treatment Plan
+        // tab's own bare block) keeps the light, scoped strip-only refresh.
+        if (cycDay.closest("#presCycleHost")) phCycleRerender(); else phCycleStripRefresh(nm);
         return;
       }
       // "know her cycle day instead" (her ask 2026-09-18: "sometimes patients
@@ -53548,7 +53562,7 @@ or changing anything in Cliniko.
     // (keeping the legend/status, which she never asked to lose) and it's
     // rendered explicitly here instead, right after the bar -- same
     // placement principle as the Treatment Plan tab's own `links`.
-    return `<div class="ph-cycle-tess"><div class="ph-cycle-tess-cal">${phCycleStripHtml(rec, name, { noCalc: true })}</div><div class="ph-cycle-tess-detail">${phCycleBarHtml(rec, name)}<div class="ph-cycle-tess-calc">${phCycleCdCalcHtml(name)}</div>${phCycleDetailsHtml(rec)}</div></div>`;
+    return `<div class="ph-cycle-tess"><div class="ph-cycle-tess-cal">${phCycleStripHtml(rec, name, { noCalc: true, noSignPop: true })}</div><div class="ph-cycle-tess-detail">${phCycleBarHtml(rec, name)}<div class="ph-cycle-tess-calc">${phCycleCdCalcHtml(name)}</div>${phCycleDetailsHtml(rec)}</div></div>`;
   }
   // opens (or closes, if already open on the same day) the log-period
   // popover for a given date -- shared by tapping a day in the strip AND the
@@ -53614,7 +53628,7 @@ or changing anything in Cliniko.
   }
   function phCycleStripHtml(rec, name, opts) {
     if (!rec) return "";
-    if (phCycleMonthOpen[name]) return phCycleMonthHtml(rec, name);
+    if (phCycleMonthOpen[name]) return phCycleMonthHtml(rec, name, opts);
     // her pick 2026-09-19 (plan tab, "too much info all at once"): a compact
     // copy -- fewer weeks, no legend -- beside the plan head. The same control
     // otherwise; phCycleStripRefresh reads the shape back off the element.
@@ -53652,7 +53666,13 @@ or changing anything in Cliniko.
     // periods into is untouched, and those future days stay disabled
     let extraWeeks = 0;
     if (scanKey && !off) { const sm = monday(parseKey(scanKey)); extraWeeks = Math.max(0, Math.min(4, Math.round((sm - lastMon) / (7 * 86400000)))); }
-    const selKey = phCyclePop && phCyclePop.name === name ? phCyclePop.dateKey : "";
+    // her 2026-09-27 widening (see the data-cycle-day handler): a tapped day
+    // now opens presCycleSignEdit, not phCyclePop, so the ringed/"sel" day
+    // has to read whichever of the two is actually open for this name --
+    // they're mutually exclusive (each clears the other on open), so at
+    // most one ever matches.
+    const selKey = presCycleSignEdit && presCycleSignEdit.name === name ? presCycleSignEdit.dateKey
+      : phCyclePop && phCyclePop.name === name ? phCyclePop.dateKey : "";
     let cells = `<div></div>${["M", "T", "W", "T", "F", "S", "S"].map(h => `<div class="h">${h}</div>`).join("")}`;
     for (let w = 0; w < weeks + extraWeeks; w++) {
       const wk = new Date(firstMon); wk.setDate(wk.getDate() + w * 7);
@@ -53698,14 +53718,24 @@ or changing anything in Cliniko.
     // caller (like the tessellated view) that still wants those, just not
     // the calculator sitting under the calendar.
     const noCalc = !!(opts && opts.noCalc);
-    return `<div class="ph-cyc-strip${compact ? " compact" : ""}${bare ? " bare" : ""}" data-cycle-strip="${esc(name)}"${opts && opts.weeks ? ` data-cycle-strip-weeks="${weeks}"` : ""}${compact ? ` data-cycle-strip-compact="1"` : ""}${paintPlan ? ` data-cycle-strip-plan="${esc(paintPlan.id)}"` : ""}${showCd ? ` data-cycle-strip-cd="1"` : ""}${bare ? ` data-cycle-strip-bare="1"` : ""}>
+    // opts.noSignPop (her 2026-09-27 widening): the ONE screen with both a
+    // calendar AND a horizontal phase bar side by side (phCycleTessHtml,
+    // the Assessment tab's tessellated Cycle view) already renders the
+    // per-day signs popover itself, from phCycleBarHtml -- rendering it a
+    // second time here, under the calendar, would show the same popover
+    // twice on one screen. Every other caller (no bar of its own) leaves
+    // this unset and gets the popover inline, right under the calendar,
+    // same as phTpCycleBlockHtml's bare calendar already did.
+    const noSignPop = !!(opts && opts.noSignPop);
+    return `<div class="ph-cyc-strip${compact ? " compact" : ""}${bare ? " bare" : ""}" data-cycle-strip="${esc(name)}"${opts && opts.weeks ? ` data-cycle-strip-weeks="${weeks}"` : ""}${compact ? ` data-cycle-strip-compact="1"` : ""}${paintPlan ? ` data-cycle-strip-plan="${esc(paintPlan.id)}"` : ""}${showCd ? ` data-cycle-strip-cd="1"` : ""}${bare ? ` data-cycle-strip-bare="1"` : ""}${noSignPop ? ` data-cycle-strip-nosignpop="1"` : ""}>
       <div class="ph-cyc-strip-head"><span class="t">Log a period</span><span>tap the day it started</span>
         <span class="nav"><button type="button" data-cycle-strip-nav="1" data-cycle-strip-name="${esc(name)}" title="Earlier weeks" aria-label="Earlier weeks">‹</button><button type="button" data-cycle-strip-nav="-1" data-cycle-strip-name="${esc(name)}" title="Later weeks" aria-label="Later weeks"${off ? "" : " disabled"}>›</button></span></div>
       ${compact || bare || noCalc ? "" : phCycleCdCalcHtml(name)}
       <div class="ph-cyc-grid">${cells}</div>
       ${bare ? "" : compact ? (noCalc ? "" : phCycleCdCalcHtml(name)) : `<div class="ph-cyc-legend"><span><i class="p"></i>period started</span><span><i class="f"></i>flow days</span><span><i class="t"></i>today</span>${predKey ? `<span><i class="n"></i>next, predicted</span>` : ""}${scanKey ? `<span><i class="s"></i>scan booked</span>` : ""}</div>`}
       ${compact || bare ? "" : status}
-      ${!bare && selKey && phCyclePop.host !== "hist" ? phCyclePopHtml(phCyclePop) : ""}
+      ${!bare && selKey && phCyclePop && phCyclePop.name === name && phCyclePop.host !== "hist" ? phCyclePopHtml(phCyclePop) : ""}
+      ${!bare && !noSignPop && presCycleSignEdit && presCycleSignEdit.name === name ? phCycleSignPopHtml(rec, name) : ""}
     </div>`;
   }
   // the cycle day a given date was (or will be): past days count from the
@@ -53748,7 +53778,7 @@ or changing anything in Cliniko.
     document.querySelectorAll(`[data-cycle-block="${CSS.escape(name)}"]`).forEach(el => { el.outerHTML = phTpCycleBlockHtml(rec, name, phTpFindPlan(name, el.dataset.cycleBlockPlan)); });
     document.querySelectorAll(`[data-cycle-strip="${CSS.escape(name)}"]`).forEach(el => {
       if (el.closest("[data-cycle-block]")) return;
-      const o = el.dataset.cycleStripWeeks || el.dataset.cycleStripCompact || el.dataset.cycleStripPlan ? { weeks: +el.dataset.cycleStripWeeks || 0, compact: !!el.dataset.cycleStripCompact, planId: el.dataset.cycleStripPlan || null, cd: !!el.dataset.cycleStripCd, bare: !!el.dataset.cycleStripBare } : undefined;
+      const o = el.dataset.cycleStripWeeks || el.dataset.cycleStripCompact || el.dataset.cycleStripPlan || el.dataset.cycleStripBare || el.dataset.cycleStripNosignpop || el.dataset.cycleStripCd ? { weeks: +el.dataset.cycleStripWeeks || 0, compact: !!el.dataset.cycleStripCompact, planId: el.dataset.cycleStripPlan || null, cd: !!el.dataset.cycleStripCd, bare: !!el.dataset.cycleStripBare, noSignPop: !!el.dataset.cycleStripNosignpop } : undefined;
       el.outerHTML = phCycleStripHtml(rec, name, o);
     });
     document.querySelectorAll(`[data-cycle-line="${CSS.escape(name)}"]`).forEach(el => { el.outerHTML = phTpCycleLineHtml(rec, name); });
@@ -53808,7 +53838,9 @@ or changing anything in Cliniko.
   // Period history (Assessment only); "Back to the day-by-day strip"
   // returns to the weekly view tap-the-day shipped with, which stays
   // exactly as it was on every host for everyday single-tap logging. =====
-  function phCycleMonthHtml(rec, name) {
+  function phCycleMonthHtml(rec, name, opts) {
+    const bare = !!(opts && opts.bare);
+    const noSignPop = !!(opts && opts.noSignPop);
     const c = phCycleFor(rec) || {};
     const comp = phCycleComp(rec);
     const todayKey = keyOf(TODAY);
@@ -53822,7 +53854,12 @@ or changing anything in Cliniko.
     const first = new Date(view.y, view.m, 1);
     const startDow = (first.getDay() + 6) % 7; // Monday-first, matching the weekly strip
     const daysInMonth = new Date(view.y, view.m + 1, 0).getDate();
-    const selKey = phCyclePop && phCyclePop.name === name ? phCyclePop.dateKey : "";
+    // mirrors phCycleStripHtml's own selKey fix (her 2026-09-27 widening) --
+    // presCycleSignEdit takes priority since a tap now opens it, not
+    // phCyclePop, everywhere; the two are mutually exclusive so at most
+    // one ever matches for this name.
+    const selKey = presCycleSignEdit && presCycleSignEdit.name === name ? presCycleSignEdit.dateKey
+      : phCyclePop && phCyclePop.name === name ? phCyclePop.dateKey : "";
     let cells = ["M", "T", "W", "T", "F", "S", "S"].map(h => `<div class="h">${h}</div>`).join("");
     for (let i = 0; i < startDow; i++) cells += `<button type="button" class="ph-cyc-day pad" disabled tabindex="-1"></button>`;
     for (let d = 1; d <= daysInMonth; d++) {
@@ -53846,7 +53883,8 @@ or changing anything in Cliniko.
       <div class="ph-cyc-month-grid">${cells}</div>
       <div class="ph-cyc-legend"><span><i class="p"></i>period started</span><span><i class="f"></i>flow days</span><span><i class="t"></i>today</span>${predKey ? `<span><i class="n"></i>next, predicted</span>` : ""}</div>
       ${status}
-      ${selKey && phCyclePop.host !== "hist" ? phCyclePopHtml(phCyclePop) : ""}
+      ${!bare && selKey && phCyclePop && phCyclePop.name === name && phCyclePop.host !== "hist" ? phCyclePopHtml(phCyclePop) : ""}
+      ${!bare && !noSignPop && presCycleSignEdit && presCycleSignEdit.name === name ? phCycleSignPopHtml(rec, name) : ""}
       <button type="button" class="tab-link ph-cyc-month-back" data-cycle-month-close="1" data-cycle-strip-name="${esc(name)}">Back to the day-by-day strip</button>
     </div>`;
   }
