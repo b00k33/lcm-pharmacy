@@ -8361,6 +8361,20 @@
   #pharmacyPage .ph-tp-mgr-jumplink { margin-left: auto; }
   #pharmacyPage .ph-tp-mgr-edit { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
   #pharmacyPage .ph-tp-mgr-phaseshead { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: var(--fs-10-5); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--ph-soft); margin-top: 6px; }
+  /* her ask 2026-09-28 ("more succinct... I just need a skeleton" -- 3 real
+     mocks, her pick "B: one switch, whole page"): the Skeleton/Detailed
+     toggle sits beside the Phases label, reusing the app's one segmented-
+     control component (.ph-recphotos-seg) rather than a new one. Skeleton
+     mode's phase-name field reuses .ph-tp-mgr-in (a bare, borderless input
+     that already matches every other field in this editor) inside a plain
+     labelled row -- no new input chrome invented. */
+  #pharmacyPage .ph-tp-mgr-phasesrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 6px; }
+  #pharmacyPage .ph-tp-mgr-phasesrow .ph-tp-mgr-phaseshead { margin-top: 0; flex: 1 1 auto; }
+  #pharmacyPage .ph-tp-mgr-skel { padding: 10px 0 2px; }
+  #pharmacyPage .ph-tp-mgr-skelrow { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--ph-line); border-radius: 8px; background: var(--ph-paper); }
+  #pharmacyPage .ph-tp-mgr-skellbl { flex: none; width: 90px; font-size: var(--fs-10-5); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--ph-faint); }
+  #pharmacyPage .ph-tp-mgr-skelrow .ph-tp-mgr-in { font-size: var(--fs-12-5); }
+  #pharmacyPage .ph-tp-mgr-skelrow .ph-tp-mgr-in:focus { outline: 1px dashed var(--ph-green); outline-offset: -1px; }
   /* her ask 2026-09-22 ("mirror each other... make it more identical to
      patient profile page"): the phase editor is now the exact same
      .ph-tp-grid/.ph-tp-headrow/.ph-tp-pbar the real Treatment Plan tab
@@ -33034,6 +33048,10 @@
       // renderPharmacy() -- a second renderPhSettingsPage() here would only
       // be redundant, not wrong, but the flash needs the outer shell anyway
       if (e.target.closest("[data-tp-mgr-undo]")) { phTpMgrUndoLast(); return; }
+      // her ask 2026-09-28: Skeleton/Detailed view switch -- page-level,
+      // device-local, see phTpMgrViewMode() for the why.
+      const tpMgrView = e.target.closest("[data-tp-mgr-view]");
+      if (tpMgrView) { phTpMgrSetViewMode(tpMgrView.dataset.tpMgrView); phTplHostRerender(); return; }
       // her ask 2026-09-22: which phase's table is showing -- a plain tab
       // pick, mirrors data-tp-tab on a real plan but keyed by template id
       // since a template has no plan/patient identity of its own
@@ -52493,6 +52511,21 @@ or changing anything in Cliniko.
   // "Type instead" free-text box for Visits instead of the picker, same
   // in-memory-only view state as phTpMgrPhaseSel above.
   let phTpMgrVisTyped = new Set();
+  // her ask 2026-09-28 ("make it more succinct... most sessions are custom
+  // designed so I just need a skeleton" -- 3 real mocks shown, her pick "B:
+  // one switch, whole page"): Skeleton hides the whole per-phase clinical
+  // grid (Aim/Formula/Objective/Recipe/Formula action/Therapies/Points/
+  // Press tags/Watch) -- Visits/cadence planning stays visible in BOTH
+  // modes, since that's structure, not clinical content. Detailed is
+  // today's full editor, byte-identical, never restructured. Device-local,
+  // remembered like every other view toggle in this app (phRefSheetMode,
+  // phApptCalView) -- default skeleton, her literal ask.
+  function phTpMgrViewMode() {
+    try { return localStorage.getItem("daybook-ph-tpmgr-view") === "detailed" ? "detailed" : "skeleton"; } catch (e) { return "skeleton"; }
+  }
+  function phTpMgrSetViewMode(m) {
+    try { localStorage.setItem("daybook-ph-tpmgr-view", m === "detailed" ? "detailed" : "skeleton"); } catch (e) {}
+  }
   function phTpMgrPhaseIdx(id) {
     const n = phTpMgrPhases(id).length;
     let i = phTpMgrPhaseSel[id];
@@ -52931,6 +52964,30 @@ or changing anything in Cliniko.
         : `<input type="text" class="ph-tp-mgr-in" data-tp-mgr-phase-field="${esc(id)}:${sel}:${f}" placeholder="${esc(ph)}" value="${esc(val)}">`;
     };
     const row = (f, kind) => `<tr><td class="ph-tp-lbl">${esc(PH_TP_FIELD_LABELS[f])}</td><td class="ph-tp-cell">${field(f, kind)}</td></tr>`;
+    const foot = `<div class="ph-tp-mgr-phasefoot">
+        <button type="button" class="ph-tp-addbtn" data-tp-mgr-phase-add="${esc(id)}">+ Add phase</button>
+        <span class="ph-tp-mgr-phasemove">
+          <button type="button" data-tp-mgr-phase-up="${esc(id)}:${sel}"${sel === 0 ? " disabled" : ""} aria-label="Move phase up" title="Move up">↑</button>
+          <button type="button" data-tp-mgr-phase-down="${esc(id)}:${sel}"${sel === phases.length - 1 ? " disabled" : ""} aria-label="Move phase down" title="Move down">↓</button>
+          <button type="button" class="del" data-tp-mgr-phase-del="${esc(id)}:${sel}"${phases.length <= 1 ? " disabled" : ""} title="Remove this phase" aria-label="Remove phase ${esc(p.label || sel + 1)}">×</button>
+        </span>
+      </div>`;
+    // her ask 2026-09-28, view "B" (see phTpMgrViewMode): Skeleton keeps the
+    // phase tabs + Visits/cadence plan (structure) but drops the whole
+    // clinical grid below it (Aim/Formula/Objective/Recipe/Formula action/
+    // Therapies/Points/Press tags/Watch) down to just the phase name --
+    // "most sessions are custom designed so I just need a skeleton". Nothing
+    // is deleted: the same phTpMgrSetField write path backs the one field
+    // shown here, and every hidden field's data survives untouched under it,
+    // exactly as it read in Detailed before she ever switched.
+    if (phTpMgrViewMode() === "skeleton") {
+      return phTpMgrPhaseTabsHtml(id, phases, sel) +
+        phTpMgrVisitsPlanHtml(id, sel, p) +
+        `<div class="ph-tp-mgr-skel">
+          <div class="ph-tp-mgr-skelrow"><span class="ph-tp-mgr-skellbl">Phase name</span>${field("label", "text")}</div>
+        </div>` +
+        foot;
+    }
     return phTpMgrPhaseTabsHtml(id, phases, sel) +
       phTpMgrVisitsPlanHtml(id, sel, p) +
       `<table class="ph-tp-grid ph-tp-mgr-grid">
@@ -52951,15 +53008,7 @@ or changing anything in Cliniko.
         ${row("points", "area")}
         ${row("pressPoints", "area")}
         ${row("watch", "area")}
-      </table>
-      <div class="ph-tp-mgr-phasefoot">
-        <button type="button" class="ph-tp-addbtn" data-tp-mgr-phase-add="${esc(id)}">+ Add phase</button>
-        <span class="ph-tp-mgr-phasemove">
-          <button type="button" data-tp-mgr-phase-up="${esc(id)}:${sel}"${sel === 0 ? " disabled" : ""} aria-label="Move phase up" title="Move up">↑</button>
-          <button type="button" data-tp-mgr-phase-down="${esc(id)}:${sel}"${sel === phases.length - 1 ? " disabled" : ""} aria-label="Move phase down" title="Move down">↓</button>
-          <button type="button" class="del" data-tp-mgr-phase-del="${esc(id)}:${sel}"${phases.length <= 1 ? " disabled" : ""} title="Remove this phase" aria-label="Remove phase ${esc(p.label || sel + 1)}">×</button>
-        </span>
-      </div>`;
+      </table>` + foot;
   }
   function phTpMgrEditHtml(id) {
     const isBuiltin = phTpMgrIsBuiltin(id);
@@ -52992,7 +53041,13 @@ or changing anything in Cliniko.
         ${kv("goal", "Goal", `<textarea rows="2" class="v ph-tp-mgr-in" data-tp-mgr-field="${esc(id)}:goal">${esc(cur.goal || "")}</textarea>`)}
       </div>
       ${isBuiltin ? `<p class="ph-settings-hint">Built-in names are fixed — a few other parts of the app (the IVF Protocol's cycle sync, its own menu items) recognise a template by its exact name. Everything else here — category, suggested Case match, goal, every phase — is yours to change.</p>` : ""}
-      <div class="ph-tp-mgr-phaseshead">Phases${isBuiltin && ov.phases ? ` <button type="button" class="tab-link" data-tp-mgr-reset="${esc(id)}:phases">↺ Reset phases to the built-in ${base.phases.length}</button>` : ""}</div>
+      <div class="ph-tp-mgr-phasesrow">
+        <div class="ph-tp-mgr-phaseshead">Phases${isBuiltin && ov.phases ? ` <button type="button" class="tab-link" data-tp-mgr-reset="${esc(id)}:phases">↺ Reset phases to the built-in ${base.phases.length}</button>` : ""}</div>
+        <div class="ph-recphotos-seg" role="tablist" aria-label="Skeleton or detailed">
+          <button type="button" class="ph-recphotos-segbtn${phTpMgrViewMode() === "skeleton" ? " on" : ""}" role="tab" aria-selected="${phTpMgrViewMode() === "skeleton"}" data-tp-mgr-view="skeleton">Skeleton</button>
+          <button type="button" class="ph-recphotos-segbtn${phTpMgrViewMode() === "detailed" ? " on" : ""}" role="tab" aria-selected="${phTpMgrViewMode() === "detailed"}" data-tp-mgr-view="detailed">Detailed</button>
+        </div>
+      </div>
       ${phTpMgrPhasesSectionHtml(id)}
       <label class="ph-gd-field ph-tp-mgr-jsonfield"><span>Paste phases as JSON <span class="faint">— replaces every phase above in one go, e.g. copied from a reference document</span></span>
         <textarea rows="3" id="phTpMgrJsonPaste" placeholder='[{"label":"…","aim":"…","points":"…","pressPoints":"…","suggestFormula":"…","cadence":"…","watch":"…"}, …]' spellcheck="false"></textarea>
