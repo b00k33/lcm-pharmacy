@@ -12051,3 +12051,29 @@ Verified in the sandbox (port 8948, 0 `sb-*` keys, synthetic "Zz Profile Band", 
 - Flags ("yes" answers) stay a gold count on the rail only, her rule: not repeated in the band.
 
 Verified in the sandbox (port 8948, 0 `sb-*` keys, synthetic patients removed) and on the exact staged file; the body-chart v15 hunks (~line 57270+) belong to another session and stay uncommitted.
+
+## Profile cockpit, pages 3–10: every remaining page gets the band (her "do them all push live" 2026-09-30, LIVE d53ceb3, build 20260930-210000)
+
+One generic mechanism, not ten hand-built bands: `PRES_BANDS[kind](name, ctx, arg)` returns three gauges `[{cls, html, sig}]`; `presBandHtml(kind, name, arg, live)` draws them on the same deep-teal `.ph-tp-hero.ph-pb-band` and remembers what it showed (`presBandSeen`, keyed `kind|patient|arg`, cleared in `presOpenScript`). First sight per open: rise + count-up; after that only a gauge whose `sig` changed nudges, and a ring grows only its new arcs. Reduced motion respected.
+
+| Page | Band (three gauges) |
+|---|---|
+| Supplements | Taking N/total · Last changed (`rec.suppAt`, stamped by the toggle and dose handlers) · vital.ly (the copy button moved in here) |
+| Photos (profile) | Photos + last date · To sort (the `data-pres-photos-sort` door) · Tongue over time (one thumb per day, first/latest + two between, "Compare first ↔ latest" chip) |
+| Cycle | Cycle-day ring (one arc a day, coloured by phase; `cp/cf/co/cl`, future faded) · Phase + ovulation · Next period |
+| IVF history | Egg collections · Frozen bank (left of frozen · used) · Transfers |
+| Appointments | Visits since · Next booking · Written up N/visits |
+| Treatment (plan) | Visit ring (this phase's sessions, `phTpSessionCells`) · Phase N of M with pips · Response, last 5 |
+| Treatment log | Visits logged · Response trend · Last visit |
+| Photos (plan) | Tongue photos · Latest (CD, shot) · Change since first |
+| Notes | Reviews · Messages · Phases done/to go |
+| Dispense | Formula grams + lasts/empty (reads the live `#presGrams`) · Price · Stock (short/low) |
+
+- **Staying current without every handler remembering:** `presBandsSync(root)` recomputes each band's sig and swaps its `outerHTML` only when it changed; `presBandsSyncSoon()` (120 ms) is called straight from the `#pharmacyPage` MutationObserver — NOT inside its rAF, because rAF never fires in a hidden tab (found testing: the Dispense band waited forever on a grams edit). A swap's own mutation re-runs the sync once, the sig matches, it stops.
+- Bands sit OUTSIDE the scoped repaint hosts, except Photos (inside `.ph-photos-sec`) and Cycle (inside `#presCycleHost`), so those pages' own in-place repaints redraw them too.
+- Said once: the Photos head's count, its "N still need a label" line and the Supplements vital.ly button are gone (the band says them); the Cycle tab's old CD headline line is gone (the ring says it).
+- "Compare first ↔ latest" (`data-pb-compare="pk|a|b"`) sets the pair and opens `phRenCompareShow()` straight away — both photos are known, no pick step.
+- `presPfCountUp(sel)` now counts up every match, not only the first.
+- KEEP (her picks): Treatment row colours, Dispense's three steps.
+
+Verified in the sandbox (port 8948, 0 `sb-*` keys; synthetic patient with a fertility plan, four bookings, five photos, an IVF round, a script with herbs — all removed after, residue nil): every band renders; supplement toggle, frozen stepper, cycle length, Complete session and a grams edit each update their band and nudge only what changed; the compare chip opens the pair; thumbs open the viewer; 360 px has no page overflow; Prescriptions live search 2 → 1 → 0 → 2; the staged file booted clean. The other session's body-chart v15 hunks (~line 57270+) were left uncommitted.
