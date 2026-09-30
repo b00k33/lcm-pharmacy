@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261001-130000">
+<meta name="lcm-build" content="20261001-150000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6155,8 +6155,9 @@
   #pharmacyPage .ph-pm-badge circle { stroke: #fff; stroke-width: 1; }
   #pharmacyPage .ph-pm-badge text { font: 800 8px/1 -apple-system, "Segoe UI", Roboto, sans-serif; fill: #fff; pointer-events: none; }
   #pharmacyPage .ph-pm-lbl { font: 700 7.5px/1 -apple-system, "Segoe UI", Roboto, sans-serif; fill: var(--ph-ink); paint-order: stroke; stroke: #fff; stroke-width: 3; }
-  #pharmacyPage .ph-pm-stage-side { display: flex; flex-direction: column; align-items: center; gap: 6px; margin: 0 auto; max-width: 260px; }
-  #pharmacyPage .ph-pm-fig.side { width: min(60%, 200px); }
+  #pharmacyPage .ph-pm-stage-side { display: flex; flex-direction: column; align-items: center; gap: 6px; margin: 0 auto; max-width: 380px; }
+  #pharmacyPage .ph-pm-sides { display: flex; justify-content: center; gap: 22px; }
+  #pharmacyPage .ph-pm-fig.side { width: min(30%, 96px); }
   #pharmacyPage .ph-pm-sidenote { margin: 2px 0 0; font-size: 10.5px; color: var(--ph-faint); text-align: center; }
   #pharmacyPage .ph-pm .bg-hl { mix-blend-mode: multiply; }
   #pharmacyPage .ph-pm-spot { transition: opacity .2s; }
@@ -58863,6 +58864,29 @@ or changing anything in Cliniko.
     const toViewerRight = view === "front" ? side === "L" : side === "R";
     return toViewerRight ? CX + dx : CX - dx;
   }
+  /* Side-view zones, drawn on the RIGHT-side figure (the patient faces the viewer's right).
+     The left side is the same drawing mirrored, so one set of [x, y, rx, ry, rot] serves both.
+     null = an inner-side (medial) spot that no side view can show. */
+  const PH_PM_SIDE_AT = {
+    head_frontal: [[60,24,6,7,-20]], head_temporal: [[52,32,5,6]], head_vertex: [[40,13,10,4]], head_occipital: [[27,46,5,7]],
+    tmj: [[50,49,3.6,4.4]], neck_front: [[49,72,4,7]], neck_post: [[34,68,4.5,8]], neck_lat: [[42,68,5,8]],
+    upper_trap: [[33,84,7,4,-30]], shoulder: [[45,98,11,12]], shoulder_ant: [[54,100,5,10]], shoulder_lat: [[45,101,6,11]], shoulder_post: [[36,102,5,10]],
+    scapula: [[25,118,6,14]], upper_back: [[24,124,6,18]], interscap: [[22,118,4,14]], mid_back: [[25,158,5,13]], low_back: [[30,190,6,13]],
+    sij: [[26,208,4,6]], sacrum: [[21,221,4,8]], buttock: [[24,236,8,11]], hip_lat: [[37,230,5,8]], groin: [[60,233,4,6,-20]], hip: [[35,228,9,10]],
+    chest: [[66,124,7,11]], breast: [[69,134,5,6]], flank: [[62,164,5,12]], epigastric: [[66,160,5,8]], abdomen: [[66,188,5,10]], lower_abdomen: [[66,212,5,9]],
+    upper_arm: [[45,136,7,16]], elbow: [[46,168,8,7]], elbow_lat: [[46,170,5,6]], elbow_med: null, elbow_ant: [[54,170,3.5,5]], elbow_post: [[37,168,3.5,6]],
+    forearm: [[48,200,7,18]], wrist: [[50,232,7,4]], thumb: [[59,247,3,7]], hand: [[52,256,8,12]], fingers: [[52,276,7,6]],
+    thigh_ant: [[57,290,5,22]], thigh_post: [[29,284,5,24]], thigh_lat: [[44,292,5,24]], thigh_med: null,
+    knee: [[45,320,12,10]], knee_ant: [[56,318,4,8]], knee_med: null, knee_lat: [[46,322,5,8]], knee_post: [[33,320,4,6]],
+    shin: [[51,372,3,24]], calf: [[32,358,6,18]], ankle: [[42,430,7,6]], ankle_lat: [[42,430,4,5]], ankle_med: null,
+    heel: [[32,450,5,6]], achilles: [[36,418,2.5,11]], foot: [[62,450,12,6]], toes: [[84,454,6,4]], big_toe: [[87,454,3,3.5]],
+    lower_leg: [[41,372,10,30]], sciatica: [[24,236,8,11],[29,284,4,24],[32,358,4,18],[40,404,3,14]],
+    leg: [[57,290,5,22],[41,372,8,30]], arm: [[45,136,6,16],[48,200,6,18]]
+  };
+  const PH_PM_SIDE_AT_F = { chest: [[67,122,7,9]], breast: [[72,136,6,8]] };
+  function phPmSideAt(regionId, g) {
+    return (g === "f" && PH_PM_SIDE_AT_F[regionId]) || PH_PM_SIDE_AT[regionId] || null;
+  }
   function phPmSideName(reg, s) {
     if (s === "C") return reg.label.charAt(0).toUpperCase() + reg.label.slice(1);
     if (s === "B") return `${reg.label.charAt(0).toUpperCase() + reg.label.slice(1)}, both sides`;
@@ -58979,19 +59003,45 @@ or changing anything in Cliniko.
         });
       });
     });
+    // side view: R pains on the right figure, L on the left, both/centre on both
+    const sideSpots = { R: [], L: [] };
+    const sideHidden = [];
+    list.forEach((p, idx) => {
+      const at = phPmSideAt(p.r, g);
+      if (!at) { sideHidden.push(idx + 1); return; }
+      (p.s === "R" ? ["R"] : p.s === "L" ? ["L"] : ["R", "L"]).forEach(fs => at.forEach(([x, y, rx, ry, rot = 0], i) => {
+        const key = `side${fs}|${p.r}|${p.s}|${p.c}|${i}`;
+        nowKeys.add(key);
+        sideSpots[fs].push({ key, idx, k: p.c || 0, x, y, rx, ry, rot, fresh: !seen.has(key), summary: phPmSpotSummary(p, idx, R[p.r]) });
+      }));
+    });
     phPmSeen.set(plan.id, nowKeys);
-    const spotSvg = (uid, sp, labelsOn) => {
-      const bx = sp.x + Math.min(sp.rx + 5, 20), by = sp.y - Math.min(sp.ry + 5, 20);
-      const badge = `<g class="ph-pm-badge"><circle cx="${bx.toFixed(1)}" cy="${by.toFixed(1)}" r="6.4" fill="${PH_PM_COLOURS[sp.k] || PH_PM_COLOURS[0]}"/><text x="${bx.toFixed(1)}" y="${by.toFixed(1)}" text-anchor="middle" dominant-baseline="central">${sp.idx + 1}</text></g>`;
-      const label = labelsOn ? `<text class="ph-pm-lbl" x="${(bx + 8).toFixed(1)}" y="${by.toFixed(1)}" dominant-baseline="central">${esc(sp.summary)}</text>` : "";
-      return `<g class="ph-pm-spot${sp.fresh ? " fresh" : ""}" data-pm-spot="${sp.idx}"><title>${esc(sp.summary)}</title>
-      <g transform="translate(${sp.x.toFixed(1)} ${sp.y}) rotate(${sp.rot})"><g class="ph-pm-spot-in">
+    // the spot and its numbered badge, built apart so the side view can mirror the spot
+    // (it sits inside the flipped figure) while the badge number stays readable
+    const spotBody = (uid, sp) => `<g transform="translate(${sp.x.toFixed(1)} ${sp.y}) rotate(${sp.rot})"><g class="ph-pm-spot-in">
         <ellipse rx="${(sp.rx * 1.5).toFixed(1)}" ry="${(sp.ry * 1.38).toFixed(1)}" fill="url(#${uid}-stip${sp.k})" mask="url(#${uid}-fade)"/>
         <ellipse class="ph-pm-core" rx="${sp.rx}" ry="${sp.ry}" fill="url(#${uid}-core${sp.k})"/>
         ${sp.fresh ? `<ellipse class="ph-pm-ring" rx="${sp.rx}" ry="${sp.ry}" fill="none" stroke="${PH_PM_COLOURS[sp.k] || PH_PM_COLOURS[0]}" stroke-width="1.1"/>` : ""}
-      </g></g>
-      ${badge}${label}
+      </g></g>`;
+    const spotBadge = (sp, labelsOn, vx) => {
+      const x = vx == null ? sp.x : vx;
+      const bx = x + Math.min(sp.rx + 5, 20), by = sp.y - Math.min(sp.ry + 5, 20);
+      const badge = `<g class="ph-pm-badge"><circle cx="${bx.toFixed(1)}" cy="${by.toFixed(1)}" r="6.4" fill="${PH_PM_COLOURS[sp.k] || PH_PM_COLOURS[0]}"/><text x="${bx.toFixed(1)}" y="${by.toFixed(1)}" text-anchor="middle" dominant-baseline="central">${sp.idx + 1}</text></g>`;
+      const label = labelsOn ? `<text class="ph-pm-lbl" x="${(bx + 8).toFixed(1)}" y="${by.toFixed(1)}" dominant-baseline="central">${esc(sp.summary)}</text>` : "";
+      return badge + label;
+    };
+    const spotSvg = (uid, sp, labelsOn) => `<g class="ph-pm-spot${sp.fresh ? " fresh" : ""}" data-pm-spot="${sp.idx}"><title>${esc(sp.summary)}</title>
+      ${spotBody(uid, sp)}
+      ${spotBadge(sp, labelsOn)}
     </g>`;
+    // one side figure: R as drawn, L mirrored; badges go in the overlay so their numbers never mirror
+    const sideFig = fs => {
+      const uid = phPmUid(plan.id, "side" + fs), flip = fs === "L", SW = PH_BODY_GEOM.SIDE_W;
+      const sp = sideSpots[fs];
+      const idle = list.length && !sp.length;
+      const hl = sp.map(s => `<g class="ph-pm-spot${s.fresh ? " fresh" : ""}" data-pm-spot="${s.idx}"><title>${esc(s.summary)}</title>${spotBody(uid, s)}</g>`).join("");
+      const overlay = sp.map(s => `<g class="ph-pm-spot" data-pm-spot="${s.idx}"><title>${esc(s.summary)}</title>${spotBadge(s, false, flip ? SW - s.x : s.x)}</g>`).join("");
+      return `<figure class="ph-pm-fig side${idle ? " idle" : ""}">${PH_BODY_GEOM.sideSvg(g, { uid, flip, defsExtra: `<defs>${phPmHlDefs(uid)}</defs>`, hl, overlay })}<figcaption>${fs === "R" ? "Right side" : "Left side"}</figcaption></figure>`;
     };
     const sideOn = phPmSide.has(plan.id);
     const labelsOn = phPmLabels.has(plan.id);
@@ -59029,14 +59079,14 @@ or changing anything in Cliniko.
       </div>` : "";
     return `<div class="ph-pm" data-pm-box="${pid}" data-pm-name="${esc(name)}">
       <div class="ph-pm-head">
-        <b>Pain map</b>${phInfoDot("Starts from the presenting complaint. Type several pains in one line (e.g. “RHS headache with lower left back pain and left ankle pain”) or pick areas. Change a pain's side or remove it on its row; tap its dot for another colour. Hover a row to spotlight it. Standard anatomical position — the patient's right is on your left in the front view, marked R and L. Hover or tap a numbered spot for its details; the Labels toggle shows them beside each spot. Side view is a plain reference figure — pain zones aren't placed on it yet. A hand, knee, ankle or foot pain also gets its own drawn close-up below, numbered to match.")}
+        <b>Pain map</b>${phInfoDot("Starts from the presenting complaint. Type several pains in one line (e.g. “RHS headache with lower left back pain and left ankle pain”) or pick areas. Change a pain's side or remove it on its row; tap its dot for another colour. Hover a row to spotlight it. Standard anatomical position — the patient's right is on your left in the front view, marked R and L. Hover or tap a numbered spot for its details; the Labels toggle shows them beside each spot. Side view shows her right and left sides with the same numbered zones. A hand, knee, ankle or foot pain also gets its own drawn close-up below, numbered to match.")}
         <span class="ph-pm-seg ph-pm-layout" role="group" aria-label="Layout"><button type="button" class="${!turn && !sideOn ? "on" : ""}" data-pm-layout="${pid}|both" aria-pressed="${!turn && !sideOn}">Front + back</button><button type="button" class="${turn && !sideOn ? "on" : ""}" data-pm-layout="${pid}|turn" aria-pressed="${!!turn && !sideOn}">Turn to the pain</button><button type="button" class="${sideOn ? "on" : ""}" data-pm-layout="${pid}|side" aria-pressed="${sideOn}">Side view</button></span>
-        <button type="button" class="ph-pm-turnbtn ph-pm-labelsbtn" data-pm-labels="${pid}" aria-pressed="${labelsOn}">${labelsOn ? "🏷 Labels on" : "🏷 Labels"}</button>
+        ${sideOn ? "" : `<button type="button" class="ph-pm-turnbtn ph-pm-labelsbtn" data-pm-labels="${pid}" aria-pressed="${labelsOn}">${labelsOn ? "🏷 Labels on" : "🏷 Labels"}</button>`}
       </div>
       <div class="ph-pm-body">
         ${sideOn ? `<div class="ph-pm-stage ph-pm-stage-side">
-          <figure class="ph-pm-fig side">${PH_BODY_GEOM.sideSvg(g, { uid: phPmUid(plan.id, "side") })}<figcaption>Side view</figcaption></figure>
-          <p class="ph-pm-sidenote">Reference only — pain zones aren't mapped to the side view yet.</p>
+          <div class="ph-pm-sides">${sideFig("R")}${sideFig("L")}</div>
+          ${sideHidden.length ? `<p class="ph-pm-sidenote">${sideHidden.length > 1 ? "Pains " + sideHidden.join(", ") + " are" : "Pain " + sideHidden[0] + " is"} on the inner side — shown on the front view.</p>` : ""}
         </div>` : `<div class="ph-pm-stage${turn ? " turn" : ""}${showBack ? " show-back" : ""}">
           <div class="ph-pm-flip">${fig("front")}${fig("back")}</div>
           ${turn ? `<button type="button" class="ph-pm-turnbtn" data-pm-flip="${pid}">↻ Turn</button>` : ""}
