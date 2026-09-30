@@ -12101,3 +12101,58 @@ One shared screen, two doors (Settings → Prescriptions → Treatment plan temp
 - Unchanged underneath: every `data-tp-mgr-*` handler, the override layer, Undo, collapse-to-default, the JSON import.
 
 Verified in the sandbox (port 8948, 0 `sb-*` keys) with real dispatched events: all 24 templates render; stepper 0→1→2 grows one arc and pops one square each time, two Undos return the override to null; Goal edit saves, shows "edited", ↺ Default clears it; add/move/delete a phase, reset to the built-in 5; Detailed shows the 9-row grid, Skeleton hides it; the rhythm picker writes and Runs follows; a JSON paste of 2 phases gives a 2-row grid, reset restores; "+ New template" → rename shows in the chip → delete via the confirm strip; 360px has no page overflow; Prescriptions live search 2 → 1 → 0 → 2; the exact staged file booted with a clean console. Test edits all reverted. `lcm-build` `20260930-230000`, `sw.js` `lcm-20260930-template-cockpit`.
+
+
+## Appointments "Command Deck" — the enriched card + a livelier grid (her pick 2026-09-29, built and LIVE 2026-09-30)
+
+Her pick from three Appointments mocks (artifact XLZLPLgL2ao3Ef9y4xTmCz): "i like command deck, improve the visual view of appointment details. call text profil is too simple - i want to see what treatment plan patient is on and brief summary (this is especially important for zanda day friday because i often treat patients im not familiar with)", then "build this into the real app" and "and push live". Built a day late (lost to a compaction); she asked "i thought i approved it" — she had.
+
+**The card** (`phApptPopHtml`, non-Break branch; `.ph-apptpop-in.deck`). From top to bottom:
+- The Cliniko-colour accent strip.
+- The head: an initials avatar, the name (a button that opens the profile), "Today · 11:00 – 11:45 am" plus the kind pill, the ET pill, the cycle drop and the bell, then the plan as a pill. The plan pill takes one of three forms:
+  - one plan → a button that opens it;
+  - several plans → the select;
+  - no plan → "no plan yet" plus a "pick a condition" link.
+- A gold "✦ New to you — first time treating this patient" flag. It shows when she has no earlier booking, logged session or dispense for the patient.
+- These rows:
+  - Visit: "Visit N of M · phase (phase i of n)", from `phTpApptVisitCtx`.
+  - Focus: with its source chip and a ✎ that opens brief mode. In brief mode the brief section replaces this row.
+  - Last: date · outcome or "herbs only" · "seen N×".
+  - Aim: the phase aim, clipped to 90 characters. This row is labelled "Aim", not the mock's "Next".
+  - Herbs.
+  - Logged, Cycle and Scan, each when it applies.
+- Full profile · Call · Text as three real buttons, icon above the label. Call and Text grey out when there is no phone number.
+- The footer: ＋ Book another · Edit · Cancel.
+- Unchanged: Edit mode, the Break card and the day-summary popup (`deck` is only added for view and brief).
+
+**Motion only when the card opens.** `phApptPopOpen` sets `phApptPopEnter`; `phApptPopRender` uses it once and clears it, so switching to brief or edit mode doesn't replay the entrance. On a desktop the card rises and scales in. On the phone sheet it slides up (`phApptDeckUp`), with the accent full-width under the handle and the rows inset 16px.
+
+**The grid** (`phApptCalGridHtml` / `phApptCalBlockHtml`):
+- **Stat strip** (`phApptCalStatsHtml`): "N booked <this week / today / these N days> · N herbs to prepare · N short on stock".
+  - "Herbs to prepare" counts ready and short bookings from today on.
+  - The short count turns red.
+  - The strip shows in Grid view on screens wider than 640px only (the phone's day widget and the one-day List already give these numbers).
+  - Each number carries `data-live` keyed to the first day and the day count, so moving week doesn't flash it; only a real change does.
+  - **Disclosed:** this overrides her 19 Sep "leave it gone" on week totals. Her 29 Sep pick is the newer word.
+- **Blocks:** radius 8. They lift on hover or keyboard focus (scale 1.035 + shadow, z 6).
+- **Search:** matching blocks get `.match` (gold ring + glow, lifted); the rest stay `.dim`. These rules sit below the `.ck` rules on purpose: the specificity is equal, so source order has to win against `.ck`'s `box-shadow: none`.
+- **Week slide:** ‹ › sets `phApptCalSlide` to -1 or +1. The next paint reads it once and slides the day headings and grid in from that side over 220ms. Slide-in only; "Today" and ordinary repaints don't slide.
+- **Now-line:** gold (`--ph-gold`) with a glow, and a white-ringed dot.
+- **Reduced motion** turns off the lift, the glow's scale, the slide and the card entrance.
+
+**Verified in the sandbox** (port 8948, 0 `sb-*` keys; a synthetic returning MSK patient and a newcomer, removed afterwards with no leftovers):
+- The returning patient's card showed "Visit 2 of 4 · Acute … (phase 1 of 3)", Last "23 Sep · better · seen 1×", the Aim, and the plan pill.
+- The newcomer showed the gold flag and "First visit".
+- The ✎ opened brief mode without the entrance animation (the Focus row is hidden there); Edit mode has no deck styling.
+- Search "newc" gave `.match` (scaled, gold shadow) and `.dim` at 0.3.
+- ‹ › added `slide-l`/`slide-r` once; a plain render added none.
+- The strip counted 2 to prepare and 1 short (red) with a stubbed status, and went back to 0 afterwards.
+- The now-line computed gold.
+- A real pointer hover lifted a block.
+- At 360px: the phone sheet has a 360px accent, 16px rows, no page overflow, and the strip is hidden.
+- Prescriptions live search went 2 → 1 → 0 → 2.
+- The staged file booted clean.
+
+The other session's body-chart v15 hunks (~57954+) stayed uncommitted.
+
+`lcm-build` `20260930-235000`, `sw.js` `lcm-20260930-appt-command-deck`. LIVE `1c84648`, confirmed served.
