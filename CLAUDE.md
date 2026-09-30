@@ -12041,3 +12041,13 @@ Her ask: extend the Plan-tab cockpit to every patient-profile page, one page at 
 - KEEP (her picks): Treatment row colours, Dispense's three steps, the Plan page's motion.
 
 Verified in the sandbox (port 8948, 0 `sb-*` keys, synthetic "Zz Profile Band", removed after), including the exact staged file. The body-chart v15 hunks (side view, toes, close-ups, ~line 57200) belong to another session and were left uncommitted.
+
+## Profile cockpit, page 2: Medical history (her "ok live" 2026-09-30, LIVE 918b536, build 20260930-190000)
+
+- **Band** (`presMedHxBandHtml`, `.ph-tp-hero.ph-hx-band`, above `#presMedHxHost`): Asked (ring, one arc per applicable question, gold once asked; big number = answered / total, sub "N still to ask" · "all asked" · "marked not needed") | By group (groups fully asked / groups, one pip per `PH_HISTORY_GROUPS` group sized by its questions, "next: <first group not done>") | Last updated (date + `phAgo`, or "nothing recorded yet"). Female-only groups drop out for a male patient (`phHxApplicableItems`).
+- **Motion only on change** (`presHxBandSeen`, cleared in `presOpenScript`): first sight per open, the arcs grow and the number counts up (`presPfCountUp(sel)` now takes a selector); after that only a newly asked question's arc grows and a changed group/updated gauge nudges.
+- `renderHxScreen()` repaints the band in place (`presMedHxBandRefresh`) beside the rail (`presFlowRailRefresh`); never a full render.
+- On this inline page the old progress bar and "Saved …" line are gone (the band says it); the pop-up checklist keeps both.
+- Flags ("yes" answers) stay a gold count on the rail only, her rule: not repeated in the band.
+
+Verified in the sandbox (port 8948, 0 `sb-*` keys, synthetic patients removed) and on the exact staged file; the body-chart v15 hunks (~line 57270+) belong to another session and stay uncommitted.
