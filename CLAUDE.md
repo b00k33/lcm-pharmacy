@@ -12156,3 +12156,5 @@ Her pick from three Appointments mocks (artifact XLZLPLgL2ao3Ef9y4xTmCz): "i lik
 The other session's body-chart v15 hunks (~57954+) stayed uncommitted.
 
 `lcm-build` `20260930-235000`, `sw.js` `lcm-20260930-appt-command-deck`. LIVE `1c84648`, confirmed served.
+
+**Follow-up 2026-10-01 (her "yes tidy"):** at 360px in the 3-day view the toolbar's › wrapped onto its own line. In the ≤640px block, `.ph-apptcal-nav` is now `flex-wrap: nowrap` and its label is `flex: 0 1 auto; white-space: nowrap` (was a 55% basis that forced the wrap). Checked at 360px for 1/3/5/6/7 days and with "Today" showing: ‹ date › on one line, no page overflow; Prescriptions live search passed. `lcm-build` `20261001-090000`, `sw.js` `lcm-20261001-apptnav-nowrap`.
