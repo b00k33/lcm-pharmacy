@@ -12158,3 +12158,15 @@ The other session's body-chart v15 hunks (~57954+) stayed uncommitted.
 `lcm-build` `20260930-235000`, `sw.js` `lcm-20260930-appt-command-deck`. LIVE `1c84648`, confirmed served.
 
 **Follow-up 2026-10-01 (her "yes tidy"):** at 360px in the 3-day view the toolbar's › wrapped onto its own line. In the ≤640px block, `.ph-apptcal-nav` is now `flex-wrap: nowrap` and its label is `flex: 0 1 auto; white-space: nowrap` (was a 55% basis that forced the wrap). Checked at 360px for 1/3/5/6/7 days and with "Today" showing: ‹ date › on one line, no page overflow; Prescriptions live search passed. `lcm-build` `20261001-090000`, `sw.js` `lcm-20261001-apptnav-nowrap`.
+
+## Pain map close-ups — drawn hand, knee and foot panes (her v15 pick, built 2026-10-01, LIVE a299ab7)
+
+The body-chart v15 mock's last piece: `PH_CLOSE_ART` (the hand/knee/foot drawings already in the file) wired into the Pain map (`phPainMapHtml`), under the figure, as "Close-ups".
+- **Only where a pain is recorded.** `PH_PM_ZOOMS` maps each close-up (Hands & wrists · Knees · Ankles & feet) to its pain regions. A pain on side R/L/B lights that side's panes; views with a `need` list (the foot's outer/inner side, the knee's back) only draw when a matching region is picked, so an ankle pain gets the outer-side view and an inner-ankle pain the inner one.
+- **One pane per side and view**, right before left, front before back; a card with more than two panes spans the full width at ≥620px container width (`.ph-pm-zoom.wide`).
+- **Lat/Med corner labels** follow the mirroring rule `flip = face==="side" ? (side==="L") !== !!medial : (face==="front") !== (side==="R")`; side views carry none.
+- **Badges match the main figure** (list index + 1, `phPmList`); each badge sits outside the flip with a short leader line and is bumped down when it would sit on an earlier one. Spot = stipple + core + outline ellipses at `PH_PM_DRAW_AT` per drawing.
+- **Numbered list** under each card (`ul.ph-pm-zlist`); hovering a row there, or a main pain row, spotlights the same spot on both the figure and the close-ups (`phPmSpotlight` now focuses `.ph-pm-stage` and `.ph-pm-zooms` together).
+- Reads only; nothing new is stored — it follows `plan.painMap` (or the complaint-derived list) on every render.
+
+Verified in the sandbox (port 8948, 0 `sb-*` keys, synthetic patient with wrist, fingers, knee, ankle, heel and Achilles pains, removed after): the right panes and labels per side, badges 1–6 matching, spotlight both ways, one column at 360px with no page overflow, console clean, Prescriptions live search 1 → 1 → 0 → 1. `lcm-build` `20261001-110000`, `sw.js` `lcm-20261001-painmap-closeups`.
