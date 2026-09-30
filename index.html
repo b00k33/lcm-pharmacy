@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260930-173500">
+<meta name="lcm-build" content="20260930-190000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6429,6 +6429,15 @@
   @media (max-width: 760px) {
     #pharmacyPage .ph-tp-hero.ph-pf-band { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
     #pharmacyPage .ph-tp-hero.ph-pf-band > .g.track { grid-column: 1 / -1; order: 3; border-left: 0; padding-left: 0; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.14); }
+  }
+  /* profile cockpit, page 2 (2026-09-30): Medical history -- Asked (ring) ·
+     By group (pips) · Last updated; the band sits above the checklist */
+  #pharmacyPage .ph-tp-hero.ph-hx-band { grid-template-columns: auto minmax(0, 1fr) minmax(0, .8fr); }
+  #pharmacyPage .ph-hx-band .n4 .of { font-size: 26px; opacity: .55; }
+  #pharmacyPage .ph-hx-band .pips { width: min(260px, 100%); }
+  @media (max-width: 760px) {
+    #pharmacyPage .ph-tp-hero.ph-hx-band { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    #pharmacyPage .ph-tp-hero.ph-hx-band > .g.groups { border-left: 0; padding-left: 0; padding-right: 14px; }
   }
 
   /* the session grid: phase rows x visit columns, This week at the end */
@@ -40655,7 +40664,7 @@ or changing anything in Cliniko.
     presDoorDismissed = false; presDoorShown = false; presDoorOpen = false;   // fresh facts at the door on every open
     // the Plan tab's motion (band, grid, history) plays once per open, then
     // only on a real change -- opening the script again starts it fresh
-    phTpHeroSeen.clear(); phTpGridSeen.clear(); phTpHistSeen.clear(); presPfBandSeen.clear();
+    phTpHeroSeen.clear(); phTpGridSeen.clear(); phTpHistSeen.clear(); presPfBandSeen.clear(); presHxBandSeen.clear();
     presDispMenuId = null; presDispUndoConfirm = null;
     // a History popup left open for a DIFFERENT patient (reachable by
     // keyboard: Tab out of the popup onto a list row, Enter) closes here,
@@ -49500,13 +49509,13 @@ or changing anything in Cliniko.
           </span>
           <label class="ph-hx-dob">DOB <input type="date" data-hx-dob="1" value="${esc(rec.dob || "")}" aria-label="Date of birth">${phAgeOf(rec.dob) != null ? `<span class="age">${phAgeOf(rec.dob)}</span>` : ""}</label>
         </div>`}
-        <div class="ph-stocktake-progress-wrap">
+        ${inline ? "" : `<div class="ph-stocktake-progress-wrap">
           <div class="ph-stocktake-progress-label">${prog.answeredN} of ${prog.total} asked${unaskedLeft ? ` · ${unaskedLeft} not asked` : ""}${prog.yesItems.length ? ` · ${prog.yesItems.length} flagged` : ""}</div>
           <div class="ph-stocktake-progress-bar"><div class="ph-stocktake-progress-fill" style="width:${pct}%"></div></div>
-        </div>
+        </div>`}
         <div class="ph-hx-head-meta">
           <span class="ph-hx-saved-grp">
-            <span class="ph-hx-saved">${esc(savedLine)}</span>
+            ${inline ? "" : `<span class="ph-hx-saved">${esc(savedLine)}</span>`}
             <!-- her ask 2026-09-10, looking at this exact screen: "allow me to
                  generate a sms to send patient link so they can fill out their
                  medical history". Reuses the existing intake link feature
@@ -49742,7 +49751,7 @@ or changing anything in Cliniko.
     // the flow rail's gold "flagged" count beside Medical history (her pick
     // 2026-09-30) follows a Yes/No tap straight away -- the rail only
     // repaints itself, so her place on the page is untouched
-    if (inlineEl) presFlowRailRefresh();
+    if (inlineEl) { presFlowRailRefresh(); presMedHxBandRefresh(presHxScreenName); }
     // §3: the timeline opens at the newest (right-hand) end, after the table
     // is in the DOM and has a real scrollWidth
     phRenTimelineScrollEnd();
@@ -50741,8 +50750,8 @@ or changing anything in Cliniko.
     if (count) requestAnimationFrame(() => presPfCountUp());
     return `<div class="ph-tp-hero ph-pf-band${seen ? "" : " first"}" data-pf-band="${esc(name)}">${ageG}${trackG}${pkgG}</div>`;
   }
-  function presPfCountUp() {
-    const el = document.querySelector("[data-pf-band] [data-pf-count]");
+  function presPfCountUp(sel) {
+    const el = document.querySelector(sel || "[data-pf-band] [data-pf-count]");
     if (!el) return;
     const to = +el.dataset.pfCount, t0 = performance.now(), dur = 700;
     const tick = now => {
@@ -50822,6 +50831,63 @@ or changing anything in Cliniko.
     if (prog.answeredN === 0) return "not started";
     return `${prog.answeredN} of ${prog.total} asked${prog.yesItems.length ? ` · ${prog.yesItems.length} flagged` : ""}`;
   }
+  /* profile cockpit, page 2 (her picks 2026-09-30): the Medical history band
+     -- the same deep-teal band as Plan and Patient details, three gauges:
+     Asked (a ring, one arc per question) · By group (one pip per group) ·
+     Last updated. No flagged count: that lives on the rail only, her words
+     "not repeated anywhere else". Motion as on the Plan page: first sight
+     grows the asked arcs and counts the number up, after that only a newly
+     asked arc grows and a gauge whose fact changed nudges. Reads only. */
+  const presHxBandSeen = new Map(); // patientKey -> { asked: Set, cleared, upd }
+  function presMedHxBandHtml(name) {
+    if (!name) return "";
+    const key = phPatientKey(name);
+    const rec = phPatientPeek(name) || {};
+    const prog = phHxProgress(name);
+    const items = phHxApplicableItems(rec);
+    const anim = !phTpReduceMotion();
+    const seen = presHxBandSeen.get(key);
+    // -- asked: the ring
+    const askedKeys = items.filter(it => phHxVal(rec, it.k) !== "unasked").map(it => it.k);
+    const askedSet = new Set(askedKeys);
+    const cls = items.map(it => askedSet.has(it.k) ? "d" : "n");
+    const grow = new Set();
+    if (anim) items.forEach((it, i) => { if (askedSet.has(it.k) && (!seen || !seen.asked.has(it.k))) grow.add(i); });
+    const left = prog.total - prog.answeredN;
+    const count = anim && !seen && prog.answeredN > 1;
+    const askedSm = prog.notNeeded ? "marked not needed" : left === 0 ? "all asked" : `${left} still to ask`;
+    const askedG = `<div class="g visit asked">${prog.total ? phTpHeroRingSvg(cls, grow) : ""}<div><div class="lab">Asked</div>
+      <div class="big n4"><span class="gold"${count ? ` data-pf-count="${prog.answeredN}"` : ""}>${prog.answeredN}</span><span class="of">/${prog.total}</span></div>
+      <div class="sm">${esc(askedSm)}</div></div></div>`;
+    // -- by group: one pip per group, full = every question in it asked
+    const groups = PH_HISTORY_GROUPS.map(gr => {
+      const its = items.filter(it => it.group === gr.g);
+      return { g: gr.g, total: its.length, n: its.filter(it => askedSet.has(it.k)).length };
+    }).filter(gr => gr.total);
+    const cleared = groups.filter(gr => gr.n === gr.total).length;
+    const nextGr = groups.find(gr => gr.n < gr.total);
+    const pips = groups.map(gr => `<i class="${gr.n === gr.total ? "d" : gr.n ? "l" : ""}" style="--n:${gr.total}" title="${esc(`${gr.g} · ${gr.n} of ${gr.total} asked`)}"></i>`).join("");
+    const grpG = `<div class="g groups${seen && seen.cleared !== cleared ? " nudge" : ""}"><div class="lab">By group</div>
+      <div class="big n4"><span class="gold">${cleared}</span><span class="of">/${groups.length}</span></div>
+      <div class="pips" aria-hidden="true">${pips}</div>
+      <div class="sm clip">${esc(nextGr ? `next: ${nextGr.g}` : "every group asked")}</div></div>`;
+    // -- last updated
+    const updD = prog.updatedAt ? new Date(prog.updatedAt) : null;
+    const updSig = updD ? `${updD.getDate()} ${MON_SHORT[updD.getMonth()]} ${updD.getFullYear()}` : "";
+    const sameYear = updD && updD.getFullYear() === TODAY.getFullYear();
+    const updG = `<div class="g upd${seen && seen.upd !== updSig ? " nudge" : ""}"><div class="lab">Last updated</div>
+      <div class="big dt">${updD ? esc(sameYear ? `${updD.getDate()} ${MON_SHORT[updD.getMonth()]}` : updSig) : "—"}</div>
+      <div class="sm">${esc(updD ? phAgo(updD) : "nothing recorded yet")}</div></div>`;
+    presHxBandSeen.set(key, { asked: askedSet, cleared, upd: updSig });
+    if (count) requestAnimationFrame(() => presPfCountUp("[data-hx-band] [data-pf-count]"));
+    return `<div class="ph-tp-hero ph-hx-band${seen ? "" : " first"}" data-hx-band="${esc(name)}">${askedG}${grpG}${updG}</div>`;
+  }
+  // repaint just the band after an answer (renderHxScreen) -- never the page
+  function presMedHxBandRefresh(name) {
+    const el = document.querySelector("[data-hx-band]");
+    if (!el || el.dataset.hxBand !== name) return;
+    el.outerHTML = presMedHxBandHtml(name);
+  }
   // the full interactive checklist -- what used to render inline,
   // unconditionally, only for a brand-new patient's Opening stage
   // (phOpHxInline) now lives here for EVERY patient, reachable as its own
@@ -50847,7 +50913,7 @@ or changing anything in Cliniko.
       presHxFreshFlag = null;
     }
     phRenEnsurePhotos(phPatientKey(name));
-    return `<div id="presMedHxHost">${phHxScreenInnerHtml(name, { inline: true, noConstit: true })}</div>`;
+    return `${presMedHxBandHtml(name)}<div id="presMedHxHost">${phHxScreenInnerHtml(name, { inline: true, noConstit: true })}</div>`;
   }
   function presSupplementsTabBodyHtml(t) {
     const rec = phPatientRec(presPatientFor(t) || t.name || "");
