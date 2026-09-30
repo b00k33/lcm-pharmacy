@@ -11876,3 +11876,126 @@ with zero vertical overflow (`body.scrollHeight === clientHeight`),
 confirmed both by measurement and a real screenshot.
 
 Committed `394e171` on `session-a`.
+
+
+## Dot-point plans + the Pain map (her synth22 batch 2026-09-29/30, "build it and push live")
+
+Her two items, verbatim:
+1. "all treatment plans must be written succinctly, in dot point format. acupuncture needs to be simple too"
+2. "no need to have captions. make it appear from hovering over a symbol to keep these designs clean. add animations and images to make plans easier to understand, a picture says a thousand words - show me mocks"
+
+Item 2 went through 11 mock rounds (artifact `9uW15rNF1auyBxqJZHhm9a`,
+v9 "this is beautiful thank you", v10/v11 below). Settled picks:
+- Textbook front + back figures. The pain area is a zone highlight
+  (solid core plus stippled spread), never pins, which she called "messy".
+- The Points table is unchanged.
+- "Both, with a switch": Front + back is the default, and "Turn to the
+  pain" is a 3D flip.
+- v10: "improve view of issues for me to select, allow for customising
+  pain e.g. RHS headache with lower left back pain and left ankle pain".
+  This added several pains at once, each with its own row carrying a side
+  switch and ×, plus a grouped **Pick areas** list with body-part tabs and
+  wrapping chips (the old sideways-scrolling example row is gone).
+- v11: "make the colours the same and option to change". Every pain starts
+  red; tap its dot to pick one of 6 colours.
+
+**Dot points are DISPLAY ONLY — stored text is never rewritten by reading it.**
+- `phTpDotParts`/`phTpDotsHtml` split Aim/Watch on these, and never inside
+  "3–5" or after "e.g."/"approx.":
+  - newlines
+  - spaced dashes
+  - em-dashes
+  - `;`
+  - sentence ends (`. ` + a capital)
+- `phTpCellShow(f, v)` is the one formatter for every Planned cell, frozen
+  or editable, in both `phTpPlanCells` and `phTpPhaseBodyRows`. The plan
+  print doc (`phTpPlanDocHtml`) uses dots for Aim/Watch too.
+- Editing opens Aim/Watch **one point per line**. That is the same fix as
+  her 2026-09-22 Goal report ("when i edit it goes from bullet point to one
+  line"). The seed is `phTpCellSeed`.
+- On save, `phTpCellUnseed` rejoins the lines with `"; "`, the templates'
+  own separator and the one the visit header's "today:" line cuts at. It
+  writes **only if she changed something**, so opening and closing a cell
+  keeps her exact wording.
+
+**Acupuncture simple: `phAcuPointParts(text)` → `{pills, note}` is now the ONE point-splitting rule.**
+- The list ends at the first sentence break.
+- Commas inside brackets stay with their point, so "Jia Cheng Jiang
+  (mentalis, …)" is one point.
+- A part too long to be a point name (over 34 chars, not counting a
+  bracketed note) is prose and goes into `note`.
+- `phAcuSplitList` now returns just the pills. So every chip row built
+  from a plan's Points/Press text shows point names only, with the prose
+  as one quiet `.ph-acu-pointnote` line under the chips (never lost). This
+  covers the visit log, the preplan "needle" box and the visit table's
+  `chips()`, which now calls `phTpPointsPillsHtml`.
+- **Exception:** press tags she types herself today use
+  `phAcuSplitTyped` (a plain comma split), so nothing she typed is ever
+  dropped.
+- Checked against all 89 built-in template phases.
+
+**Captions → ⓘ.**
+- `phInfoDot(text)` is a hover- and keyboard-focus ⓘ. `phInfoDotPlace`
+  nudges the tip so it stays inside a phone screen.
+- In the Templates manager it replaced these captions:
+  - the section intro
+  - the built-in-name note
+  - the Recipe ratio note
+  - "Formula action — chosen per patient…"
+  - "Nothing yet…" detail
+  - the JSON-paste hint
+
+**Pain map (`phPainMapHtml(name, plan)`, Plan tab, right under Diagnosis/Goal).**
+- **Geometry:** `PH_BODY_GEOM` and `PH_PAIN_REGIONS` are ported verbatim
+  from the mock. `svg()` gained `opts.hl` for the highlight layer. A
+  one-sided headache ("RHS headache") maps to the temple, not the forehead.
+- **Sex:** the figure's sex comes from the record (`phIsFemale`). There is
+  no Man/Woman toggle in the app.
+- **Orientation:** standard anatomical position, with R/L marked.
+- **Where the pains come from:**
+  - Stored as `plan.painMap = [{r: region, s: R|L|B|C, c: colour index}]`,
+    written only once she changes something (via `phPmWrite`, which
+    re-resolves the plan by id).
+  - Until then the map is derived from the complaint (`phApptBrief` focus,
+    falling back to `plan.diagnosis`) on every render, so correcting the
+    complaint still moves it.
+  - It only seeds when the complaint mentions pain
+    (`PH_PM_PAIN_WORDS`), so "irregular periods" never paints a belly.
+- **When nothing is named:**
+  - on MSK and other non-cycle plans, one quiet "＋ Pain map" door;
+  - on fertility/pregnancy plans, nothing.
+- **Repaint and animation:**
+  - Repaint is in place (`phPmRefresh` swaps just `[data-pm-box]`).
+  - Only new or changed spots animate (`phPmSeen`).
+  - Hovering or focusing a row spotlights its zone.
+- **View state:** the Turn view and the open picker are per-plan, in
+  memory only.
+- **Layout:** side-by-side from a 620px container width, stacked below
+  that.
+- **Reduced motion:** all animations are off under
+  `prefers-reduced-motion`.
+
+**Verified in the sandbox**, on a new verify server (`lcm-painmap-verify`,
+port 8948, a fresh origin with no real data). I used real dispatched clicks
+inside `#pharmacyPage`, with `#lcmOverlay` hidden because of the login gate.
+- **Test patient:** a synthetic F patient with a Low back pain plan and the
+  complaint "RHS headache with lower left back pain and left ankle pain".
+  The map drew right temple, left lower back and left ankle.
+- **Pain-map controls, all saved to `plan.painMap` and surviving a reload:**
+  - colour → blue
+  - the picker (Hip & leg → Medial knee)
+  - typed "L heel and right tennis elbow and blah" ("Not placed: blah")
+  - remove
+  - side → Both (only the changed spots re-animated)
+  - Turn + ↻ flip to the back
+- **Aim cell:** it opened as 2 lines. Esc with no change kept the stored
+  wording byte-for-byte. Adding a line saved 3 dots.
+- **Prescriptions search still live-filters by name** (protected check).
+- **Phone width:** at 360px there is no horizontal scroll, and the ⓘ tip
+  stays within the screen.
+- **Console:** clean throughout.
+- **Clean-up:** the synthetic data was removed, `localStorage` was
+  confirmed free of it, and it was reloaded clean.
+
+Build `20260930-120000`, `CACHE_VERSION` `lcm-20260930-dotpoints-painmap`.
+Pushed live on her "build it and push live" (2026-09-30).
