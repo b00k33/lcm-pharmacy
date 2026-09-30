@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260930-150000">
+<meta name="lcm-build" content="20260930-173000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -12656,6 +12656,19 @@
   #pharmacyPage .ph-pres-switches { display: flex; gap: 8px 24px; flex-wrap: wrap; }
   #pharmacyPage .ph-pres-switches .ph-switch-row { margin-top: 8px; }
   @media (max-width: 640px) { #pharmacyPage .ph-pres-patient { grid-template-columns: 1fr 1fr; } #pharmacyPage .ph-pres-patient-name { grid-column: 1 / -1; } }
+  /* the "+ New patient" page (renderPresEditForm's newPatient branch): one
+     quiet line under the Name field saying where the rest gets filled in */
+  #pharmacyPage .ph-newpt-hint { margin: 8px 0 0; font-size: 12px; color: var(--ph-faint); }
+  /* one short column with a real margin, the button right under the Name
+     box (the next step after typing), not stranded at the far right */
+  #pharmacyPage .ph-tmpl.ph-newpt { padding: 16px 24px 24px; max-width: 520px; }
+  #pharmacyPage .ph-newpt .ph-tmpl-actions { justify-content: flex-start; }
+  /* ≤480px the panel's fields carry their own 12px sides
+     (.ph-pres-panel .ph-tmpl-field); the hint and the button line up with them */
+  @media (max-width: 480px) {
+    #pharmacyPage .ph-tmpl.ph-newpt { padding: 8px 0 16px; max-width: none; }
+    #pharmacyPage .ph-newpt .ph-newpt-hint, #pharmacyPage .ph-newpt .ph-tmpl-actions { padding: 0 12px; }
+  }
 
   /* ============ LCM mobile type scale (STYLE-LCM.md, her spec 2026-09-05) ====
      Below 480px: four text sizes (16/14/13/11), one 48px field-row height, no
@@ -22612,7 +22625,7 @@
     // they stay exactly where they were, and this button is just a shortcut
     // that scrolls/focuses them.
     prescriptions: [
-      { icon: "i-plus", label: "New patient", run: () => presStartNew() },
+      { icon: "i-plus", label: "New patient", run: () => presStartNew("patient") },
       { icon: "i-edit", label: "Dosage & markup", ghost: true, run: anchor => phTogglePresSettings(anchor) },
       { icon: "i-search", label: "Find duplicates", ghost: true, run: () => phMergeOpenFinder() },
       { icon: "i-mail", label: "Send intake link", ghost: true, run: () => phIntakeOpen() },
@@ -27478,7 +27491,7 @@
     // undo and we carry straight on to the pop below.
     const wholeHop = presPageFromTabHop;
     if (document.body.classList.contains("ph-pres-fullopen") && presNewDraftUnsaved()
-        && !confirm("Discard this new prescription? Nothing has been saved yet.")) return;
+        && !confirm(presNewDraftDiscardMsg())) return;
     if (document.body.classList.contains("ph-pres-fullopen") && presPageClose() && !wholeHop) return;
     // the phone's check-in page closes the same way (her ask 2026-09-09)
     if (document.body.classList.contains("ph-ck-pageopen") && phCkPageClose()) return;
@@ -33595,6 +33608,7 @@
       const profTop = e.target.closest("[data-ph-profit-topall]");
       if (profTop) { const w = profTop.dataset.phProfitTopall; phProfitTopAll[w] = !phProfitTopAll[w]; renderPhStats(); return; }
       if (e.target.closest("[data-pres-edit-cancel]")) { presEditId = null; presDraft = null; renderPresPanel(); presTlDock = null; presPanelDock(); return; }
+      if (e.target.closest("[data-pres-new-patient-save]")) { presCreateNewPatient(); return; }
       const presSave = e.target.closest("[data-pres-edit-save]");
       if (presSave) {
         const isNew = !presSave.dataset.presEditSave;
@@ -34098,6 +34112,13 @@
       // this one handler set; document-level so it catches a click from
       // either without caring which. See phContactPasteCtx's own header
       // comment (index.html ~47638) for her eight answers. =====
+      // a brand-new draft's Name lives only in its field until saved -- keep
+      // what she typed across the paste box's re-renders (they rebuild the
+      // form from presDraft)
+      if (presEditId === "__new__" && presDraft && e.target.closest("[data-cpaste-open],[data-cpaste-cancel],[data-cpaste-parse],[data-cpaste-choice],[data-cpaste-apply]")) {
+        const nmInp = document.getElementById("presEditName");
+        if (nmInp) presDraft.name = nmInp.value;
+      }
       const cpasteOpenBtn = e.target.closest("[data-cpaste-open]");
       if (cpasteOpenBtn) {
         phContactPasteOpen(cpasteOpenBtn.dataset.cpasteOpen);
@@ -34162,6 +34183,10 @@
               t.name = phTitle(resolvedName);
               phDefer("savePresc", savePresc, 400);
             }
+          } else if (presEditId === "__new__" && presDraft) {
+            // New patient page: nothing is saved yet, so the card's name
+            // simply fills the field; Create patient does the rest
+            presDraft.name = phTitle(resolvedName);
           }
         }
         if (site === "checkin") phCkRender(); else renderPresPanel();
@@ -35776,6 +35801,8 @@
         return;
       }
       if (e.target.id === "presPickGrams" && e.key === "Enter") { e.preventDefault(); presPickAdd(); return; }
+      // Enter on the New patient page's name = Create patient
+      if (e.target.id === "presEditName" && e.key === "Enter" && presEditId === "__new__" && presDraft && presDraft.newPatient) { e.preventDefault(); presCreateNewPatient(); return; }
       if (e.target.id === "phRenMarkText" && e.key === "Enter") { e.preventDefault(); phRenMarkSaveText(); return; }
       if (e.target.id === "phTpFActionCustom" && e.key === "Enter") {
         e.preventDefault();
@@ -67311,7 +67338,7 @@ Please let me know if you have any questions.`;
       }
       if (presNewDraftUnsaved()) {
         e.preventDefault(); e.stopPropagation();
-        if (confirm("Discard this new prescription? Nothing has been saved yet.")) {
+        if (confirm(presNewDraftDiscardMsg())) {
           // deferred: el's own click is still "in progress" on the call stack
           // right here, and a same-element re-click is a no-op while that flag
           // is set (HTML spec) -- a macrotask lets this dispatch finish first
@@ -67355,6 +67382,13 @@ Please let me know if you have any questions.`;
     // manual -- see phGramsMultDef.
     presDraft.gramsMode = "multiple"; presDraft.gramsMultiple = phGramsMultDef();
     if (presType === "formula") presDraft.presType = "formula";
+    // her report 2026-09-30 ("when i click add new, it shows new prescription
+    // rather than new patient"): the Patient profile "+" was relabelled "New
+    // patient" but still opened this prescription form. "patient" mode is the
+    // name-only page renderPresEditForm draws for it -- Create patient makes
+    // the record and opens the profile (presCreateNewPatient). Only that "+"
+    // passes it; Refill and the Dashboard shortcut are unchanged.
+    if (presType === "patient") { presDraft.newPatient = true; phContactPasteClose(); }
     // skipDupCheck: this name was handed in, not typed fresh -- we already
     // know who it's for (the tab strip's + New), so the save-time "already
     // a patient?" check below would just be asking about herself.
@@ -67372,6 +67406,56 @@ Please let me know if you have any questions.`;
     phVisitFndResetDraft(); phCyclePop = null;
     presAssessTab = null; presFpDraft = null; presFpProtoOpen = false;
     presRenderPanelSmooth();
+  }
+  // Create patient, on the "patient" mode page (see presStartNew). A name
+  // already on file opens that profile rather than making a second one (the
+  // same match the prescription save's "already has a prescription" check
+  // uses). A new name gets what every other way in makes -- appointment
+  // import, intake apply: a draft script (the Patient profile list is built
+  // from scripts) plus the patient record -- then opens straight into the
+  // profile, where the plan gate and Medical history lead as for any new
+  // patient. The name is stored as typed; phTitle is display only.
+  function presCreateNewPatient() {
+    const inp = document.getElementById("presEditName");
+    const name = String(inp ? inp.value : (presDraft && presDraft.name) || "").replace(/\s+/g, " ").trim();
+    if (!name) { if (inp) inp.focus(); presSavedToast("Type the patient's name first"); return; }
+    // typing the name queued the 400ms template autosave. On this page it is
+    // a no-op (presFlushTemplate skips "__new__"), but left queued it fires
+    // once the profile below is open and re-commits that script, and its
+    // "✓ Prescription saved" toast replaces this page's own message.
+    // phDefer stores { fn, t } -- the timeout id is .t
+    if (phTimers.presTmpl) { clearTimeout(phTimers.presTmpl.t); phTimers.presTmpl = null; }
+    const onFile = schedPresForPatient(name);
+    let id, msg;
+    if (onFile.length) {
+      id = onFile[0].id;
+      msg = `${phTitle(name)} is already a patient — here's the profile on file`;
+    } else {
+      const t = Object.assign(presNewDraft(), { id: uid(), name, createdAt: Date.now(), gramsMode: "multiple", gramsMultiple: phGramsMultDef() });
+      PRESC.items.unshift(t);
+      phPatientRec(name);
+      // both saves run even if the first refuses; a refused save is said out
+      // loud (the red warning at the top carries the reason), never a
+      // silent "added"
+      const okP = savePresc() !== false, okS = savePharmacy() !== false;
+      id = t.id;
+      msg = okP && okS ? `✓ ${phTitle(name)} added as a new patient`
+        : "That could not be saved — check the warning at the top and try again";
+    }
+    presDraft = null;
+    phContactPasteClose();
+    presOpenScript(id);
+    renderPharmacy();
+    // a toast, not phFlash: the profile stage has no flash slot, so a
+    // phFlash would wait and pop up later on some other page
+    presSavedToast(msg);
+  }
+  // the words for the "discard?" question, so a half-typed New patient page
+  // isn't called a prescription
+  function presNewDraftDiscardMsg() {
+    return presDraft && presDraft.newPatient
+      ? "Discard this new patient? Nothing has been saved yet."
+      : "Discard this new prescription? Nothing has been saved yet.";
   }
   // her ask (2026-08-31): "save multiple prescriptions in one patient
   // file" -- a tab per script under her name, newest first (reuses
@@ -67999,6 +68083,33 @@ Please let me know if you have any questions.`;
     return `<textarea id="presEditNotes" rows="2" placeholder="Anything worth remembering about this one…">${esc(t.notes || "")}</textarea>`;
   }
   function renderPresEditForm(el, t) {
+    // the Patient profile "+" (presStartNew("patient")): a name, the paste
+    // card, one button. Ingredients and notes belong to a prescription, and
+    // that comes later, from the plan.
+    if (t.newPatient) {
+      const cpasteShowing = !!(phContactPasteCtx && phContactPasteCtx.site === "opening");
+      const npHead = el.classList.contains("ph-pres-full")
+        ? `<div class="ph-pres-band"><button type="button" class="ph-band-back" data-pres-close="1" aria-label="Close">‹</button><div class="ph-band-titlewrap"><span class="ph-band-name">New patient</span></div></div>`
+        : `<h3>New patient<button type="button" class="ph-print-btn" data-pres-edit-cancel="1">Cancel ×</button></h3>`;
+      el.innerHTML = `<div class="ph-listing ph-pres-panel">
+        ${npHead}
+        <div class="ph-tmpl ph-newpt">
+          <div class="ph-tmpl-grid ph-pres-patient">
+            <div class="ph-tmpl-field ph-pres-patient-name"><label for="presEditName">Name${!cpasteShowing ? ` <button type="button" class="ph-name-link ph-cpaste-linkbtn" data-cpaste-open="opening">📋 Paste contact card</button>` : ""}</label>
+              <input type="text" id="presEditName" list="presEditNameList" value="${esc(t.name || "")}" autocomplete="off" placeholder="First and last name">
+              <datalist id="presEditNameList">${phIntakeNameOptionsHtml()}</datalist></div>
+          </div>
+          ${cpasteShowing ? phContactPasteBoxHtml("opening") : ""}
+          <p class="ph-newpt-hint">The profile opens next, with the plan, medical history, sex, date of birth, phone and email.</p>
+          <div class="ph-tmpl-actions">
+            <button type="button" class="btn-save" data-pres-new-patient-save="1">✓ Create patient</button>
+          </div>
+        </div>
+      </div>`;
+      const nm = document.getElementById("presEditName");
+      if (nm && !cpasteShowing) { try { nm.focus({ preventScroll: true }); } catch (e) { nm.focus(); } }
+      return;
+    }
     const title = presTlDock && !t.id ? "New prescription" : `✎ ${t.name ? esc(phDispName(t.name, presIsFormula(t))) : "New prescription"}`;
     // full-screen (the phone/8-answers redesign, her 2026-09-08 ask): the same
     // green band + back chevron every other script page uses, not a bare
@@ -73107,7 +73218,7 @@ Dosage: {dosage}
       const t = e.target;
       if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
       if (document.querySelector(".ph-hx-modal:not([hidden]), .ph-tbm-menu, #phMoreSheet, .ph-apptpop:not([hidden])")) return;
-      if (presNewDraftUnsaved() && !confirm("Discard this new prescription? Nothing has been saved yet.")) { e.preventDefault(); return; }
+      if (presNewDraftUnsaved() && !confirm(presNewDraftDiscardMsg())) { e.preventDefault(); return; }
       e.preventDefault();
       if (presPageFromTabHop) phGoBack(); else presPageClose();   // same whole-tap rule as the band's ‹
     }
