@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20260930-190000">
+<meta name="lcm-build" content="20260930-210000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6438,6 +6438,37 @@
   @media (max-width: 760px) {
     #pharmacyPage .ph-tp-hero.ph-hx-band { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
     #pharmacyPage .ph-tp-hero.ph-hx-band > .g.groups { border-left: 0; padding-left: 0; padding-right: 14px; }
+  }
+  /* profile cockpit, pages 3-10 (her "do them all push live", 2026-09-30):
+     one band shape for Supplements, Photos, Cycle, IVF history,
+     Appointments, the plan's Treatment / Treatment log / Photos / Notes
+     tabs and Dispense -- three gauges; a ring leads where there is one */
+  #pharmacyPage .ph-tp-hero.ph-pb-band { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  #pharmacyPage .ph-tp-hero.ph-pb-band.ringed { grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr); }
+  #pharmacyPage .ph-pb-band .n4 .of { font-size: 26px; opacity: .55; }
+  #pharmacyPage .ph-pb-band .warn { color: #F4A6A6; }
+  #pharmacyPage .ph-pb-band .ph-pf-chips { margin-top: 7px; }
+  /* the cycle ring: one arc a day, in the phase colours the plan bar uses */
+  #pharmacyPage .ph-pb-cycle .ring .arc.cp { stroke: #F1C9D2; }
+  #pharmacyPage .ph-pb-cycle .ring .arc.cf { stroke: #CFE6D8; }
+  #pharmacyPage .ph-pb-cycle .ring .arc.co { stroke: #F3DF9E; }
+  #pharmacyPage .ph-pb-cycle .ring .arc.cl { stroke: #D9CDEA; }
+  #pharmacyPage .ph-pb-cycle .ring .arc.fut { stroke-opacity: .28; }
+  #pharmacyPage .ph-pb-cycle .ring .arc.now { stroke: #fff; stroke-opacity: 1; }
+  /* response chips: better green · same grey · worse red */
+  #pharmacyPage .ph-pb-out { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+  #pharmacyPage .ph-pb-out i { font-style: normal; width: 20px; height: 20px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; background: rgba(255,255,255,.14); color: rgba(255,255,255,.8); }
+  #pharmacyPage .ph-pb-out i.b { background: #CFE6D8; color: #0B3B4B; }
+  #pharmacyPage .ph-pb-out i.w { background: #F4A6A6; color: #5A1414; }
+  /* tongue over time: small thumbs, first to latest */
+  #pharmacyPage .ph-pb-thumbs { display: flex; gap: 6px; margin-top: 7px; flex-wrap: wrap; }
+  #pharmacyPage .ph-pb-th { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; padding: 0; min-height: 0; border: 0; background: none; cursor: pointer; color: rgba(255,255,255,.7); font: inherit; font-size: 10px; }
+  #pharmacyPage .ph-pb-th img { width: 40px; height: 40px; object-fit: cover; border-radius: 8px; border: 1px solid rgba(255,255,255,.3); display: block; }
+  #pharmacyPage .ph-pb-th:hover img { border-color: var(--ph-gold-hi); }
+  @media (max-width: 760px) {
+    #pharmacyPage .ph-tp-hero.ph-pb-band, #pharmacyPage .ph-tp-hero.ph-pb-band.ringed { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    #pharmacyPage .ph-tp-hero.ph-pb-band > .g:first-child { grid-column: 1 / -1; }
+    #pharmacyPage .ph-tp-hero.ph-pb-band > .g:nth-child(2) { border-left: 0; padding-left: 0; padding-right: 14px; }
   }
 
   /* the session grid: phase rows x visit columns, This week at the end */
@@ -31370,6 +31401,17 @@
         });
         return;
       }
+      // the Photos bands' "Compare first ↔ latest" chip: both photos are
+      // already known, so it opens the pair straight away (no pick step)
+      const pbCmp = e.target.closest("[data-pb-compare]");
+      if (pbCmp) {
+        const [pk, a, b] = pbCmp.dataset.pbCompare.split("|");
+        const plist = phRenPhotosFor(pk) || [];
+        const rowOf = id => { const r = plist.find(x => x.id === id); return r ? phRenRowKeyOf(r) : "tongue"; };
+        phRenCompare = [{ id: a, row: rowOf(a), patientKey: pk }, { id: b, row: rowOf(b), patientKey: pk }];
+        phRenCompareShow();
+        return;
+      }
       {
         const tl = e.target.closest("[data-ren-tl-open]");
         if (tl) {
@@ -32151,7 +32193,10 @@
         rec.supplements = rec.supplements || {};
         const cur = rec.supplements[id];
         rec.supplements[id] = (cur && cur.on) ? Object.assign({}, cur, { on: false }) : { on: true, dose: (cur && cur.dose) || (def ? def.dose : "") };
-        savePharmacy(); renderPresPanel();
+        rec.suppAt = Date.now();
+        if (savePharmacy() === false) { phFlashShow("That could not be saved — check the warning at the top and try again."); return; }
+        if (!presAssessTabRefresh()) renderPresPanel();
+        presFlowRailRefresh();
         return;
       }
       // her ask 2026-09-11 ("i use vitaly to email patients supplements to
@@ -40664,7 +40709,7 @@ or changing anything in Cliniko.
     presDoorDismissed = false; presDoorShown = false; presDoorOpen = false;   // fresh facts at the door on every open
     // the Plan tab's motion (band, grid, history) plays once per open, then
     // only on a real change -- opening the script again starts it fresh
-    phTpHeroSeen.clear(); phTpGridSeen.clear(); phTpHistSeen.clear(); presPfBandSeen.clear(); presHxBandSeen.clear();
+    phTpHeroSeen.clear(); phTpGridSeen.clear(); phTpHistSeen.clear(); presPfBandSeen.clear(); presHxBandSeen.clear(); presBandSeen.clear();
     presDispMenuId = null; presDispUndoConfirm = null;
     // a History popup left open for a DIFFERENT patient (reachable by
     // keyboard: Tab out of the popup onto a list row, Enter) closes here,
@@ -48604,7 +48649,8 @@ or changing anything in Cliniko.
       const id = t.dataset.suppDose;
       rec.supplements = rec.supplements || {};
       rec.supplements[id] = Object.assign({ on: true }, rec.supplements[id], { dose: t.value });
-      savePharmacy();
+      rec.suppAt = Date.now();
+      savePharmacy(); presBandsSyncSoon();
       return;
     }
     if (t.matches("[data-infoltr-tmpl]")) {
@@ -50751,16 +50797,17 @@ or changing anything in Cliniko.
     return `<div class="ph-tp-hero ph-pf-band${seen ? "" : " first"}" data-pf-band="${esc(name)}">${ageG}${trackG}${pkgG}</div>`;
   }
   function presPfCountUp(sel) {
-    const el = document.querySelector(sel || "[data-pf-band] [data-pf-count]");
-    if (!el) return;
-    const to = +el.dataset.pfCount, t0 = performance.now(), dur = 700;
-    const tick = now => {
-      const p = Math.min(1, Math.max(0, (now - t0) / dur));
-      el.textContent = String(Math.round(to * (1 - Math.pow(1 - p, 3))));
-      if (p < 1) requestAnimationFrame(tick); else el.textContent = String(to);
-    };
-    requestAnimationFrame(tick);
-    setTimeout(() => { if (el.isConnected) el.textContent = String(to); }, dur + 200);
+    document.querySelectorAll(sel || "[data-pf-band] [data-pf-count]").forEach(el => {
+      const to = +el.dataset.pfCount, t0 = performance.now(), dur = 700;
+      el.removeAttribute("data-pf-count");
+      const tick = now => {
+        const p = Math.min(1, Math.max(0, (now - t0) / dur));
+        el.textContent = String(Math.round(to * (1 - Math.pow(1 - p, 3))));
+        if (p < 1) requestAnimationFrame(tick); else el.textContent = String(to);
+      };
+      requestAnimationFrame(tick);
+      setTimeout(() => { if (el.isConnected) el.textContent = String(to); }, dur + 200);
+    });
   }
   function presPatientTabBodyHtml(t) {
     // same hxIsNew computation the old Opening stage used, kept so the
@@ -50888,6 +50935,317 @@ or changing anything in Cliniko.
     if (!el || el.dataset.hxBand !== name) return;
     el.outerHTML = presMedHxBandHtml(name);
   }
+  // ==== PROFILE COCKPIT, pages 3-10 (her "do them all push live",
+  // 2026-09-30): the same deep-teal band with three gauges on every
+  // remaining patient page -- Supplements, Photos, Cycle, IVF history,
+  // Appointments, and the plan's Treatment, Treatment log, Photos and Notes
+  // tabs, and Dispense. ONE mechanism for all of them: each page's builder
+  // returns three gauges { cls, html, sig } read straight off the record
+  // (phPatientPeek, never phPatientRec -- nothing is written by looking).
+  // Motion only on change, the Plan page's rule: first sight per open the
+  // gauges rise and the big numbers count up (presBandSeen, cleared in
+  // presOpenScript); after that only a gauge whose sig changed nudges.
+  // Bands keep themselves current: the page's MutationObserver calls
+  // presBandsSyncSoon(), which recomputes each band on screen and swaps
+  // only one whose sigs moved -- so no handler has to remember to.
+  const presBandSeen = new Map();   // `${kind}|${patientKey}|${arg}` -> { sigs, mem }
+  const PRES_BANDS = {};
+  function presBandCtx(seen, anim, live) {
+    return { anim, live: !!live, seen: !!seen, prev: seen ? seen.mem : null, mem: null,
+      cnt: n => anim && !seen && n > 1 ? ` data-pf-count="${n}"` : "" };
+  }
+  function presBandHtml(kind, name, arg, live) {
+    const b = PRES_BANDS[kind];
+    if (!b || !name) return "";
+    const sk = `${kind}|${phPatientKey(name)}|${arg || ""}`;
+    const seen = presBandSeen.get(sk);
+    const anim = !phTpReduceMotion();
+    const ctx = presBandCtx(seen, anim, live);
+    let gs = null;
+    try { gs = b(name, ctx, arg); } catch (e) { console.warn("band", kind, e); }
+    if (!gs || !gs.length) return "";
+    const sigs = gs.map(g => String(g.sig == null ? "" : g.sig));
+    presBandSeen.set(sk, { sigs, mem: ctx.mem });
+    if (anim && !seen) requestAnimationFrame(() => presPfCountUp(`[data-band-kind="${kind}"] [data-pf-count]`));
+    const ringed = /(^| )visit( |$)/.test(gs[0].cls || "");
+    return `<div class="ph-tp-hero ph-pb-band ph-pb-${kind}${ringed ? " ringed" : ""}${seen ? "" : " first"}" data-band-kind="${kind}" data-band-name="${esc(name)}" data-band-arg="${esc(arg || "")}" data-band-sig="${esc(sigs.join("¦"))}">${gs.map((g, i) => `<div class="g ${g.cls || ""}${anim && seen && seen.sigs[i] !== sigs[i] ? " nudge" : ""}">${g.html}</div>`).join("")}</div>`;
+  }
+  // recompute every band on screen; swap only one whose facts moved
+  function presBandsSync(root) {
+    if (!root) return;
+    root.querySelectorAll("[data-band-kind]").forEach(el => {
+      if (el.closest("[hidden]")) return;
+      const kind = el.dataset.bandKind, name = el.dataset.bandName, arg = el.dataset.bandArg || "";
+      const b = PRES_BANDS[kind];
+      if (!b || !name) return;
+      const seen = presBandSeen.get(`${kind}|${phPatientKey(name)}|${arg}`);
+      let gs = null;
+      try { gs = b(name, presBandCtx(seen || { mem: null }, false, true), arg); } catch (e) { return; }
+      const sig = gs && gs.length ? gs.map(g => String(g.sig == null ? "" : g.sig)).join("¦") : "";
+      if (sig === (el.dataset.bandSig || "")) return;
+      if (!sig) { el.remove(); return; }
+      el.outerHTML = presBandHtml(kind, name, arg, true);
+    });
+  }
+  let presBandsSyncTid = 0;
+  function presBandsSyncSoon() {
+    if (presBandsSyncTid) return;
+    presBandsSyncTid = setTimeout(() => {
+      presBandsSyncTid = 0;
+      try { presBandsSync(document.getElementById("pharmacyPage")); } catch (e) {}
+    }, 120);
+  }
+  // shared bits
+  const presBandDay = k => { const d = k instanceof Date ? k : parseKey(k); return `${d.getDate()} ${MON_SHORT[d.getMonth()]}${d.getFullYear() !== TODAY.getFullYear() ? " " + d.getFullYear() : ""}`; };
+  const presBandBig = (n, of, cnt) => `<div class="big n4"><span class="gold"${cnt || ""}>${n}</span>${of != null ? `<span class="of">/${of}</span>` : ""}</div>`;
+  const presBandOutCls = o => o === "better" ? "b" : o === "worse" ? "w" : o === "same" ? "s" : "x";
+  function presBandOutHtml(list) {
+    if (!list.length) return "";
+    return `<div class="ph-pb-out" aria-hidden="true">${list.map(s => {
+      const o = PH_ACU_OUTCOMES.find(x => x[0] === s.outcome);
+      return `<i class="${presBandOutCls(s.outcome)}" title="${esc(`${presBandDay(s.date)} · ${o ? o[1] : "no response noted"}`)}">${o ? o[2] : "–"}</i>`;
+    }).join("")}</div>`;
+  }
+  // tongue over time: one photo a day (natural light first), the first and
+  // the latest always in, up to four; a tap opens the photo, and the chip
+  // opens first beside latest in the compare view
+  function presBandThumbsHtml(pk, list) {
+    const byDay = new Map();
+    list.forEach(r => {
+      const k = phRenDateKeyOf(r);
+      const cur = byDay.get(k);
+      if (!cur || (PH_TONGUE_SHOT_RANK[phRenShotOf(r)] ?? 9) < (PH_TONGUE_SHOT_RANK[phRenShotOf(cur)] ?? 9)) byDay.set(k, r);
+    });
+    const days = [...byDay.keys()].sort();
+    if (!days.length) return { html: "", n: 0 };
+    let pick = days;
+    if (days.length > 4) pick = [days[0], days[Math.round((days.length - 1) / 3)], days[Math.round(2 * (days.length - 1) / 3)], days[days.length - 1]];
+    const ph = pick.map(k => byDay.get(k));
+    const th = ph.map(r => `<button type="button" class="ph-pb-th" data-ren-tl-open="${esc(r.id)}" data-ren-tl-row="${esc(phRenRowKeyOf(r))}" data-ren-tl-patient="${esc(pk)}" title="${esc(presBandDay(phRenDateKeyOf(r)))}"><img src="${r.objectUrl || ""}" alt=""><span>${esc(presBandDay(phRenDateKeyOf(r)).replace(/ \d{4}$/, ""))}</span></button>`).join("");
+    const a = ph[0], b = ph[ph.length - 1];
+    const cmp = ph.length > 1 ? `<button type="button" class="ph-pf-chip" data-pb-compare="${esc(`${pk}|${a.id}|${b.id}`)}">Compare first ↔ latest</button>` : "";
+    return { html: `<div class="ph-pb-thumbs">${th}</div>${cmp ? `<div class="ph-pf-chips">${cmp}</div>` : ""}`, n: days.length, sig: pick.join(",") };
+  }
+  // ---- Supplements: Taking · Last changed · vital.ly
+  const PH_SUPP_SHORT = { prenatal: "Prenatal", vitd: "Vitamin D3", iron: "Iron", coq10: "CoQ10" };
+  PRES_BANDS.supp = (name, ctx) => {
+    const rec = phPatientPeek(name) || {};
+    const supps = rec.supplements || {};
+    const on = PH_SUPPLEMENTS.filter(s => supps[s.id] && supps[s.id].on);
+    const names = on.map(s => PH_SUPP_SHORT[s.id] || s.name);
+    const at = rec.suppAt ? new Date(rec.suppAt) : null;
+    return [
+      { cls: "take", sig: names.join(","), html: `<div class="lab">Taking</div>${presBandBig(on.length, PH_SUPPLEMENTS.length, ctx.cnt(on.length))}<div class="sm clip" title="${esc(names.join(" · "))}">${esc(names.length ? names.join(" · ") : "none switched on")}</div>` },
+      { cls: "upd", sig: rec.suppAt || "", html: `<div class="lab">Last changed</div><div class="big dt">${at ? esc(presBandDay(at)) : "—"}</div><div class="sm">${esc(at ? phAgo(at) : "no date on record")}</div>` },
+      { cls: "vit", sig: on.length ? "ready" : "", html: `<div class="lab">vital.ly</div>${on.length ? `<div class="big dt">Ready</div><div class="ph-pf-chips"><button type="button" class="ph-pf-chip on" data-supp-vitaly-copy="1">📋 Copy for vital.ly</button></div>` : `<div class="big dt">—</div><div class="sm">switch one on first</div>`}` },
+    ];
+  };
+  // ---- Photos (profile): Photos · To sort · Tongue over time
+  PRES_BANDS.photos = (name, ctx) => {
+    const pk = phPatientKey(name);
+    const list = phRenPhotosFor(pk);
+    if (!list) return null;
+    const n = list.length;
+    const lastK = n ? list.map(phRenDateKeyOf).sort().slice(-1)[0] : "";
+    const need = phRenSortFlowAllNeeds(pk).length;
+    const done = !!phRenSortFlowDoneMsg[pk];
+    const tongue = list.filter(r => phRenTypeOf(r) === "tongue");
+    const tt = presBandThumbsHtml(pk, tongue);
+    return [
+      { cls: "cnt", sig: `${n}|${lastK}`, html: `<div class="lab">Photos</div>${presBandBig(n, null, ctx.cnt(n))}<div class="sm">${n ? `last ${esc(presBandDay(lastK))}` : "none yet"}</div>` },
+      { cls: "sort", sig: `${need}|${done ? 1 : 0}`, html: need
+        ? `<div class="lab">To sort</div>${presBandBig(need, null, ctx.cnt(need))}<div class="ph-pf-chips"><button type="button" class="ph-pf-chip on" data-pres-photos-sort="1">Sort them →</button></div>`
+        : `<div class="lab">To sort</div><div class="big dt">${n ? "✓" : "—"}</div><div class="sm">${done ? "✓ All sorted" : n ? "all labelled" : "nothing to label"}</div>` },
+      { cls: "tl", sig: tt.sig || "", html: `<div class="lab">Tongue over time</div>${tt.n ? tt.html : `<div class="big dt">—</div><div class="sm">no tongue photo yet</div>`}` },
+    ];
+  };
+  // ---- Cycle: the cycle as a ring (one arc a day, coloured by phase) ·
+  // Phase · Next period
+  PRES_BANDS.cycle = (name, ctx) => {
+    const rec = phPatientPeek(name);
+    if (!phCycleOn(rec)) return null;
+    const comp = phCycleComp(rec);
+    const cyc = phCycleFor(rec) || {};
+    const avg = phCycleAvgLen(rec);
+    if (!comp) {
+      return [
+        { cls: "cd", sig: "", html: `<div class="lab">Cycle day</div><div class="big dt">—</div><div class="sm">tap a day to log her period</div>` },
+        { cls: "phase", sig: "", html: `<div class="lab">Phase</div><div class="big nm">—</div><div class="sm">no period logged yet</div>` },
+        { cls: "next", sig: String(avg), html: `<div class="lab">Next period</div><div class="big dt">—</div><div class="sm">${avg ? `her average is ${avg} days` : "nothing to count from yet"}</div>` },
+      ];
+    }
+    const L = comp.cycleLen, day = comp.day, ovEnd = comp.ovDay + comp.segDays.ov - 1;
+    const upTo = Math.min(day, L);
+    const cls = [];
+    for (let d = 1; d <= L; d++) {
+      const k = d <= comp.flowDays ? "cp" : d < comp.ovDay ? "cf" : d <= ovEnd ? "co" : "cl";
+      cls.push(d === day ? `${k} now` : d > upTo ? `${k} fut` : k);
+    }
+    const prevDay = ctx.prev && ctx.prev.lmp === cyc.lmp ? ctx.prev.day : 0;
+    const grow = new Set();
+    if (ctx.anim) for (let d = prevDay + 1; d <= upTo; d++) grow.add(d - 1);
+    ctx.mem = { day, lmp: cyc.lmp };
+    const reg = cyc.regular === false ? "irregular" : "regular";
+    const sm1 = [`LMP ${presBandDay(cyc.lmp)}`, reg, avg ? `avg ${avg}d` : ""].filter(Boolean).join(" · ");
+    const late = comp.overdue;
+    const ovPast = day > ovEnd;
+    const phSm = late ? `${day - L} days past ~${L} days` : ovPast ? `ovulated ~${presBandDay(comp.ovDate)}` : `ovulation ~${presBandDay(comp.ovDate)}`;
+    const diff = L + 1 - day;
+    const nSm = late ? `${day - L} days late` : diff > 1 ? `in ${diff} days` : diff === 1 ? "tomorrow" : diff === 0 ? "due today" : `${-diff} day${diff === -1 ? "" : "s"} past due`;
+    const contra = cyc.contraception && cyc.contraception !== "none" ? `on ${PH_CYCLE_CONTRACEPTION_LABEL[cyc.contraception] || cyc.contraception}${phCycleContraDurText(cyc) ? " " + phCycleContraDurText(cyc) : ""}` : "";
+    const nSm2 = [rec.tracksBbt ? "tracking BBT" : "", contra].filter(Boolean).join(" · ");
+    return [
+      { cls: "visit", sig: `${cyc.lmp}|${L}`, html: `${phTpHeroRingSvg(cls, grow)}<div><div class="lab">Cycle day</div>${presBandBig(day, L, ctx.cnt(day))}<div class="sm">${esc(sm1)}</div></div>` },
+      { cls: "phase", sig: late ? "late" : comp.phaseKey, html: `<div class="lab">Phase</div><div class="big nm">${esc(late ? "Late" : comp.phaseLabel)}</div><div class="sm">${esc(phSm)}</div>` },
+      { cls: "next", sig: `${comp.nextDate}|${late ? 1 : 0}`, html: `<div class="lab">Next period</div><div class="big dt">${late ? "Late" : esc("~" + presBandDay(comp.nextDate))}</div><div class="sm"><span class="dot"></span>${esc(nSm)}</div>${nSm2 ? `<div class="sm">${esc(nSm2)}</div>` : ""}` },
+    ];
+  };
+  // ---- IVF history: Egg collections · Frozen bank · Transfers
+  PRES_BANDS.ivf = (name, ctx) => {
+    const rows = phIvfCyclesSorted(phPatientPeek(name));
+    const lastRow = rows.slice().reverse().find(r => r.when && r.when !== "unknown") || rows[rows.length - 1];
+    const total = phIvfFrozenTotal(rows);
+    const frozen = rows.reduce((n, r) => n + (r.frozen || 0), 0);
+    const trs = [];
+    rows.forEach(r => (r.transfers || []).forEach(t => trs.push(t)));
+    trs.sort((a, b) => phIvfSortKey(a.date).localeCompare(phIvfSortKey(b.date)));
+    const lt = trs[trs.length - 1];
+    const ltOut = lt ? (lt.pregResult === "positive" ? "positive hCG" : ((PH_IVF_OUTCOMES.find(o => o[0] === lt.outcome) || [])[1] || "")) : "";
+    const ltSm = lt ? [phIvfDateLabel(lt.date) || "no date yet", lt.type || "", ltOut].filter(Boolean).join(" · ") : "none yet";
+    return [
+      { cls: "coll", sig: `${rows.length}|${lastRow ? lastRow.when || "" : ""}`, html: `<div class="lab">Egg collections</div>${presBandBig(rows.length, null, ctx.cnt(rows.length))}<div class="sm clip">${esc(lastRow ? `last ${phIvfDateLabel(lastRow.when) || "no date yet"}${lastRow.clinic ? " · " + lastRow.clinic : ""}` : "none logged yet")}</div>` },
+      { cls: "bank", sig: `${total}|${frozen}`, html: `<div class="lab">Frozen bank</div>${presBandBig(total, null, ctx.cnt(total))}<div class="sm">${esc(frozen ? `left of ${frozen} frozen · ${frozen - total} used` : "nothing frozen yet")}</div>` },
+      { cls: "tr", sig: `${trs.length}|${lt ? `${lt.date || ""}${lt.outcome || ""}${lt.pregResult || ""}` : ""}`, html: `<div class="lab">Transfers</div>${presBandBig(trs.length, null, ctx.cnt(trs.length))}<div class="sm clip">${esc(ltSm)}</div>` },
+    ];
+  };
+  // ---- Appointments: Visits · Next · Written up
+  PRES_BANDS.appts = (name, ctx) => {
+    const key = phPatientKey(name), today = keyOf(TODAY);
+    const all = phApptList().filter(a => a.service !== "Break" && phPatientKey(a.patient) === key)
+      .sort((x, y) => (x.date + (x.time || "")).localeCompare(y.date + (y.time || "")));
+    const past = all.filter(a => a.date <= today);
+    const ahead = all.filter(a => a.date > today || (a.date === today && !phApptSessionFor(a)));
+    const nx = ahead[0];
+    const wr = past.filter(a => phApptSessionFor(a)).length;
+    const nSm = nx ? `${DAY_SHORT[parseKey(nx.date).getDay()]}${nx.time ? " " + phCkTime12(nx.time) : ""}${ahead.length > 1 ? ` · +${ahead.length - 1} more booked` : ""}` : "nothing booked";
+    return [
+      { cls: "vis", sig: String(past.length), html: `<div class="lab">Visits</div>${presBandBig(past.length, null, ctx.cnt(past.length))}<div class="sm">${esc(past.length ? `since ${presBandDay(past[0].date)}` : "none yet")}</div>` },
+      { cls: "next", sig: nx ? `${nx.date}${nx.time || ""}|${ahead.length}` : "", html: `<div class="lab">Next</div><div class="big dt">${nx ? esc(nx.date === today ? "Today" : presBandDay(nx.date)) : "—"}</div><div class="sm"><span class="dot"></span>${esc(nSm)}</div>` },
+      { cls: "wr", sig: `${wr}/${past.length}`, html: `<div class="lab">Written up</div>${past.length ? presBandBig(wr, past.length, ctx.cnt(wr)) : `<div class="big dt">—</div>`}<div class="sm">${esc(!past.length ? "no visits yet" : wr === past.length ? "all written up" : `${past.length - wr} to write up`)}</div>` },
+    ];
+  };
+  // sessions logged for this plan (a session with no plan id counts for it)
+  const presBandSessions = (rec, plan) => ((rec && rec.acuSessions) || []).filter(s => s.date && (!s.planId || s.planId === plan.id))
+    .slice().sort((a, b) => (a.date + (a.at || "")).localeCompare(b.date + (b.at || "")));
+  // ---- plan Treatment tab: the course ring · Phase i of n · Response
+  PRES_BANDS.treat = (name, ctx, planId) => {
+    const plan = phTpFindPlan(name, planId);
+    if (!plan) return null;
+    const phs = (plan.phases || []).filter(p => !p.skipped);
+    if (!phs.length) return null;
+    const rec = phPatientPeek(name), today = keyOf(TODAY);
+    const cells = [];
+    phTpSessionCells(name, plan).filter(g => !g.p.skipped).forEach(g => g.cells.forEach(c => cells.push(c)));
+    const loggedToday = !!(rec && (rec.acuSessions || []).some(s => s.date === today && (!s.planId || s.planId === plan.id)));
+    const M = cells.length;
+    const cls = cells.map(c => c.k === "done" ? "d" : c.k === "today" ? (loggedToday ? "d" : "t") : c.k === "booked" ? "b" : "n");
+    const doneN = cls.filter(k => k === "d").length;
+    const prev = ctx.prev || null;
+    const grow = new Set();
+    if (ctx.anim) cells.forEach((c, i) => { if (cls[i] === "d" && (!prev || !prev.has(c.date))) grow.add(i); });
+    ctx.mem = new Set(cells.filter((c, i) => cls[i] === "d").map(c => c.date));
+    const idxToday = cells.findIndex(c => c.k === "today");
+    const lab = idxToday >= 0 ? (loggedToday ? `Visit ${idxToday + 1} · logged` : "Visit today") : "Visits so far";
+    const big = idxToday >= 0 ? idxToday + 1 : doneN;
+    const live = phTpLivePhase(rec, plan);
+    const li = live ? phs.findIndex(p => p.id === live.id) : -1;
+    const pips = phs.map((p, i) => `<i class="${p.status === "done" || (li >= 0 && i < li) ? "d" : i === li ? "l" : ""}" style="--n:${Math.max(1, phTpSessionsOf(p))}"></i>`).join("");
+    const outs = presBandSessions(rec, plan).filter(s => !s.noTreatment).slice(-5);
+    const better = outs.filter(s => s.outcome === "better").length;
+    return [
+      { cls: "visit", sig: `${doneN}/${M}|${idxToday}|${loggedToday ? 1 : 0}`, html: M
+        ? `${phTpHeroRingSvg(cls, grow)}<div><div class="lab">${esc(lab)}</div>${presBandBig(big, M, ctx.cnt(big))}<div class="sm">${esc(`${doneN} done · ${M - doneN} to come`)}</div></div>`
+        : `<div><div class="lab">Sessions</div><div class="big dt">—</div><div class="sm">set sessions on the Plan tab</div></div>` },
+      { cls: "phase", sig: live ? live.id : "", html: `<div class="lab">${esc(live ? `Phase ${li + 1} of ${phs.length}` : `Phase — of ${phs.length}`)}</div><div class="big nm" title="${esc(live ? live.label || "" : "")}">${esc(live ? live.label || `Phase ${li + 1}` : "Not started")}</div><div class="pips">${pips}</div>` },
+      { cls: "resp", sig: outs.map(s => s.outcome || "x").join(""), html: `<div class="lab">Response · last ${outs.length || 5}</div>${outs.length ? presBandBig(better, outs.length, ctx.cnt(better)) : `<div class="big dt">—</div>`}${outs.length ? presBandOutHtml(outs) : `<div class="sm">nothing logged yet</div>`}` },
+    ];
+  };
+  // ---- plan Treatment log tab: Visits logged · Response trend · Last visit
+  PRES_BANDS.log = (name, ctx, planId) => {
+    const plan = phTpFindPlan(name, planId);
+    if (!plan) return null;
+    const rec = phPatientPeek(name);
+    const ss = presBandSessions(rec, plan);
+    const dates = [...new Set(ss.map(s => s.date))].sort();
+    const withOut = ss.filter(s => s.outcome);
+    const cnt = k => withOut.filter(s => s.outcome === k).length;
+    const last = ss[ss.length - 1];
+    const lastOut = last ? ((PH_ACU_OUTCOMES.find(o => o[0] === last.outcome) || [])[1] || (last.noTreatment ? "herbs only" : "no response noted")) : "";
+    return [
+      { cls: "vis", sig: String(dates.length), html: `<div class="lab">Visits logged</div>${presBandBig(dates.length, null, ctx.cnt(dates.length))}<div class="sm">${esc(dates.length ? `since ${presBandDay(dates[0])}` : "none yet")}</div>` },
+      { cls: "trend", sig: `${cnt("better")}|${cnt("same")}|${cnt("worse")}`, html: `<div class="lab">Response trend</div>${withOut.length ? presBandBig(cnt("better"), withOut.length, ctx.cnt(cnt("better"))) : `<div class="big dt">—</div>`}<div class="sm">${esc(withOut.length ? `better · ${cnt("same")} same · ${cnt("worse")} worse` : "no responses yet")}</div>${presBandOutHtml(withOut.slice(-8))}` },
+      { cls: "last", sig: last ? `${last.date}|${last.outcome || ""}` : "", html: `<div class="lab">Last visit</div><div class="big dt">${last ? esc(presBandDay(last.date)) : "—"}</div><div class="sm clip">${esc(last ? [lastOut, last.phaseLabel || ""].filter(Boolean).join(" · ") : "nothing logged yet")}</div>` },
+    ];
+  };
+  // ---- plan Photos tab: Tongue photos · Latest · Change since first
+  PRES_BANDS.tphotos = (name, ctx) => {
+    const photos = phTpVrPhotos(name);
+    if (photos.loading) return null;
+    const list = photos.list, n = list.length;
+    const unsorted = list.filter(r => !phRenShotOf(r)).length;
+    const latest = list[list.length - 1];
+    const rec = phPatientPeek(name);
+    const lk = latest ? phRenDateKeyOf(latest) : "";
+    const comp = latest && phCycleOn(rec) ? phCycleCompAsOf(rec, parseKey(lk)) : null;
+    const shot = latest ? (PH_REN_SHOT_LABEL[phRenShotOf(latest)] || "unlabelled") : "";
+    const tt = presBandThumbsHtml(photos.pk, list);
+    return [
+      { cls: "cnt", sig: `${n}|${unsorted}`, html: `<div class="lab">Tongue photos</div>${presBandBig(n, null, ctx.cnt(n))}<div class="sm">${esc(!n ? "none yet" : unsorted ? `${unsorted} unsorted` : "all labelled")}</div>` },
+      { cls: "last", sig: latest ? `${latest.id}` : "", html: `<div class="lab">Latest</div><div class="big dt">${latest ? esc(presBandDay(lk)) : "—"}</div><div class="sm clip">${esc(latest ? [comp ? `CD ${comp.day}` : "", shot].filter(Boolean).join(" · ") : "no tongue photo yet")}</div>` },
+      { cls: "tl", sig: tt.sig || "", html: `<div class="lab">Change since first</div>${tt.n > 1 ? tt.html : `<div class="big dt">—</div><div class="sm">${esc(tt.n ? "one day so far" : "no tongue photo yet")}</div>`}` },
+    ];
+  };
+  // ---- plan Notes tab: Reviews · Messages · Phases
+  PRES_BANDS.notes = (name, ctx, planId) => {
+    const plan = phTpFindPlan(name, planId);
+    if (!plan) return null;
+    const key = phPatientKey(name);
+    const revs = (plan.reviews || []).slice().sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+    const lr = revs[revs.length - 1];
+    const msgs = (Array.isArray(PHARMACY.preparedMessages) ? PHARMACY.preparedMessages : []).filter(m => m.patientKey === key);
+    const sent = msgs.filter(m => m.status === "sent").sort((a, b) => (a.sentAt || 0) - (b.sentAt || 0));
+    const waiting = msgs.filter(m => m.status !== "sent").length;
+    const ls = sent[sent.length - 1];
+    const phs = (plan.phases || []).filter(p => !p.skipped);
+    const dn = phs.filter(p => p.status === "done").length;
+    const mSm = [ls && ls.sentAt ? `last ${presBandDay(new Date(ls.sentAt))}` : "", waiting ? `${waiting} waiting` : ""].filter(Boolean).join(" · ") || "none sent yet";
+    return [
+      { cls: "rev", sig: `${revs.length}|${lr ? lr.date || "" : ""}`, html: `<div class="lab">Reviews</div>${presBandBig(revs.length, null, ctx.cnt(revs.length))}<div class="sm">${esc(lr && lr.date ? `last ${presBandDay(lr.date)}` : "none yet")}</div>` },
+      { cls: "msg", sig: `${sent.length}|${waiting}`, html: `<div class="lab">Messages</div>${presBandBig(sent.length, null, ctx.cnt(sent.length))}<div class="sm">${esc(mSm)}</div>` },
+      { cls: "phs", sig: `${phs.length}|${dn}`, html: `<div class="lab">Phases</div>${presBandBig(phs.length, null, ctx.cnt(phs.length))}<div class="sm">${esc(`${dn} done · ${phs.length - dn} to go`)}</div>` },
+    ];
+  };
+  // ---- Dispense: Formula (grams, how long it lasts) · Price · Stock --
+  // the grams follow the live box as she types (the band re-reads it)
+  PRES_BANDS.disp = (name, ctx, id) => {
+    const t = PRESC.items.find(x => x.id === id);
+    if (!t || presIsFormula(t)) return null;
+    if (!phHerbsOn(phPatientPeek(name), phTpShownPlan(name))) return null;
+    const gEl = ctx.live ? document.getElementById("presGrams") : null;
+    const gp = (gEl && parseFloat(gEl.value)) || parseFloat(t.totalGrams) || 0;
+    const { items, cost, price } = presCalcNumbers(t, gp);
+    const fu = gp ? phFollowupCalc(t, keyOf(TODAY), gp) : { ok: false };
+    const short = items.filter(x => x.h && x.h.qty != null && x.h.qty < x.grams);
+    const low = items.filter(x => x.h && !short.includes(x) && herbIsLow(x.h));
+    const fSm = fu.ok ? `lasts ${fu.lastsDays.toFixed(1)} days · empty ~${presBandDay(fu.emptyOn)}` : gp ? "set the dose to count the days" : "set the grams";
+    const profit = price - cost;
+    const stNames = (short.length ? short : low).map(x => x.name).filter(Boolean);
+    return [
+      { cls: "fml", sig: `${gp}|${fu.ok ? fu.lastsDays.toFixed(1) : ""}`, html: `<div class="lab">Formula</div><div class="big dt">${gp ? esc(`${phFmtG(gp)} g`) : "—"}</div><div class="sm">${esc(fSm)}</div>` },
+      { cls: "price", sig: price.toFixed(2), html: `<div class="lab">Price</div><div class="big dt"><span class="gold">${esc(phMoney(price))}</span></div><div class="sm">${esc(`incl. GST${cost > 0 ? ` · profit ${phMoney(profit)}` : ""}`)}</div>` },
+      { cls: "stock", sig: `${short.length}|${low.length}|${items.length}`, html: `<div class="lab">Stock</div><div class="big dt">${short.length ? `<span class="warn">${short.length} short</span>` : low.length ? `<span class="gold">${low.length} low</span>` : items.length ? "✓" : "—"}</div><div class="sm clip" title="${esc(stNames.join(", "))}">${esc(short.length || low.length ? stNames.join(", ") : items.length ? "all in stock" : "no herbs yet")}</div>` },
+    ];
+  };
   // the full interactive checklist -- what used to render inline,
   // unconditionally, only for a brand-new patient's Opening stage
   // (phOpHxInline) now lives here for EVERY patient, reachable as its own
@@ -50916,9 +51274,12 @@ or changing anything in Cliniko.
     return `${presMedHxBandHtml(name)}<div id="presMedHxHost">${phHxScreenInnerHtml(name, { inline: true, noConstit: true })}</div>`;
   }
   function presSupplementsTabBodyHtml(t) {
-    const rec = phPatientRec(presPatientFor(t) || t.name || "");
-    return `<div class="ph-tmpl-sec"><span>Supplements</span></div>
-    <div class="ph-supp-open">${phSuppEditorHtml(rec)}${phSuppVitalyCopyHtml(rec)}</div>`;
+    const name = presPatientFor(t) || t.name || "";
+    const rec = phPatientPeek(name) || {};
+    // the band carries Taking · Last changed · vital.ly (the copy button
+    // moved into its third gauge, so it isn't said twice)
+    return `${presBandHtml("supp", name)}<div class="ph-tmpl-sec"><span>Supplements</span></div>
+    <div class="ph-supp-open">${phSuppEditorHtml(rec)}</div>`;
   }
   /* her ask 2026-09-13 ("instead of dropdowns, can i have tabs? that way i
      can see all the options photos bells palsy cycle etc"): the five
@@ -50995,8 +51356,8 @@ or changing anything in Cliniko.
     }
     if (name && phFpApplies(t, peek)) sections.push({ id: "checklist", label: "Checklist", body: () => presFacialSectionBodyHtml(t) });
     if (name && phCycleOn(peek)) sections.push({ id: "cycle", label: "Cycle", body: () => presCycleSectionBodyHtml(t) });
-    if (name && (phIvfCyclesSorted(peek).length || phTpPlans(name).some(p => p.templateName === "IVF Protocol"))) sections.push({ id: "ivf", label: "IVF history", body: () => phIvfHistoryFoldHtml(name) });
-    if (name) sections.push({ id: "apptshist", label: "Appointments", body: () => presApptHistoryTabHtml(name) });
+    if (name && (phIvfCyclesSorted(peek).length || phTpPlans(name).some(p => p.templateName === "IVF Protocol"))) sections.push({ id: "ivf", label: "IVF history", body: () => presBandHtml("ivf", name) + phIvfHistoryFoldHtml(name) });
+    if (name) sections.push({ id: "apptshist", label: "Appointments", body: () => presBandHtml("appts", name) + presApptHistoryTabHtml(name) });
     return sections;
   }
   // her ask 2026-09-24 ("i want to see patient appointments history and
@@ -51279,7 +51640,7 @@ or changing anything in Cliniko.
   }
   function presDispenseHeadHtml(t) {
     return `<div class="ph-pres-backplan"><button type="button" class="tab-link" data-pres-stage="plan">‹ Back to the plan</button></div>
-      ${presScriptSwitcherHtml(t)}${presDispenseCyclePlanStripHtml(t)}`;
+      ${presScriptSwitcherHtml(t)}${presDispenseCyclePlanStripHtml(t)}${presIsFormula(t) ? "" : presBandHtml("disp", presPatientFor(t) || t.name || "", t.id)}`;
   }
   function renderPresPanel() {
     const el = presPanelEl();
@@ -51711,7 +52072,6 @@ or changing anything in Cliniko.
     const latest = {};
     sorted.forEach(r => { const k = phRenRowKeyOf(r); if (!latest[k]) latest[k] = r; });
     const stripRows = phRenRowsFor(k => !!latest[k]);
-    const count = n ? `${n} photo${n === 1 ? "" : "s"}<span class="ph-photos-last"> · last ${esc(phFuDateLabel(phRenDateKeyOf(sorted[0])))}</span>` : "";
     // her ask 2026-09-19 ("delete multiple photos if necessary"): Select
     // turns the strip into a grid of EVERY photo with a tick on each; one
     // Delete for the lot, a confirm strip, one undo for the lot
@@ -51719,7 +52079,10 @@ or changing anything in Cliniko.
     const selectBtns = !n ? "" : presPhotosSelect
       ? `<button type="button" class="ph-tmpl-sec-act ph-photos-del" data-pres-photos-delete="1"${picked ? "" : " disabled"}>Delete ${picked || ""}</button><button type="button" class="ph-tmpl-sec-act" data-pres-photos-select="1">Cancel</button>`
       : `<button type="button" class="ph-tmpl-sec-act" data-pres-photos-select="1">Select</button>`;
-    const head = `<div class="ph-tmpl-sec ph-sec-line"><span>Photos</span>${count ? `<span class="ph-hist-count">${count}</span>` : (list ? `<span class="ph-sec-note">none yet</span>` : "")}${selectBtns}${presPhotosSelect ? "" : `<button type="button" class="ph-tmpl-sec-act ph-photos-add" data-pres-photos-add="1" aria-expanded="${presPhotosAddOpen ? "true" : "false"}">${presPhotosAddOpen ? "Close" : "Add"}</button>`}${n && !presPhotosSelect ? `<button type="button" class="ph-tmpl-sec-act ph-photos-toggle" data-pres-photos-toggle="1" aria-expanded="${presPhotosOpen ? "true" : "false"}">${presPhotosOpen ? "Hide ⌃" : "Show all ⌄"}</button>` : ""}</div>`;
+    // the band (Photos · To sort · Tongue over time) now says the count, the
+    // last date and what's left to sort -- the head keeps only its actions
+    const band = list ? presBandHtml("photos", name) : "";
+    const head = band + `<div class="ph-tmpl-sec ph-sec-line"><span>Photos</span>${selectBtns}${presPhotosSelect ? "" : `<button type="button" class="ph-tmpl-sec-act ph-photos-add" data-pres-photos-add="1" aria-expanded="${presPhotosAddOpen ? "true" : "false"}">${presPhotosAddOpen ? "Close" : "Add"}</button>`}${n && !presPhotosSelect ? `<button type="button" class="ph-tmpl-sec-act ph-photos-toggle" data-pres-photos-toggle="1" aria-expanded="${presPhotosOpen ? "true" : "false"}">${presPhotosOpen ? "Hide ⌃" : "Show all ⌄"}</button>` : ""}</div>`;
     if (presPhotosSelect && list && n) {
       // still-to-sort first (the Unsorted type, a tongue shot not yet named),
       // then newest first -- same order as the strip below
@@ -51775,11 +52138,11 @@ or changing anything in Cliniko.
       // silently undercount her "N photos still need a label" against
       // phRenSortFlowStart's own walk of every one of them
       const needsPhotoCount = phRenSortFlowAllNeeds(key).length;
-      const sortline = needsPhotoCount ? `<div class="ph-photos-sortline"><span>${needsPhotoCount} photo${needsPhotoCount === 1 ? "" : "s"} still need${needsPhotoCount === 1 ? "s" : ""} a label</span><button type="button" class="go" data-pres-photos-sort="1">Sort them →</button></div>`
-        : phRenSortFlowDoneMsg[key] ? `<div class="ph-photos-sortline done"><span>✓ All sorted</span></div>` : "";
       const groupLab = needsItems.length ? `<span class="ph-photos-grouplab">Unsorted · ${needsPhotoCount}</span>` : "";
       const divider = needsItems.length && restItems.length ? `<div class="ph-photos-divider"></div>` : "";
-      body = `${sortline}<div class="ph-photos-strip">${groupLab}${needsItems.map(tileHtml).join("")}${divider}${restItems.map(tileHtml).join("")}</div>`;
+      // the "N still need a label · Sort them →" line moved into the band's
+      // To sort gauge (same data-pres-photos-sort door) -- said once
+      body = `<div class="ph-photos-strip">${groupLab}${needsItems.map(tileHtml).join("")}${divider}${restItems.map(tileHtml).join("")}</div>`;
     }
     const tl = presPhotosOpen && n ? `<div class="ph-photos-tl">${phRenTimelineHtml(key, name).replace(' id="phRenTlScroll"', "")}</div>` : "";
     return head + addRow + body + tl;
@@ -55324,27 +55687,16 @@ or changing anything in Cliniko.
     if (!name) return "";
     const rec = phPatientRec(name);
     if (!phCycleOn(rec)) return "";
-    const comp = phCycleComp(rec);
-    // her pick 2026-09-04 (option A of three mocks, "show cycle day on the
-    // line and make it bigger"): the day count is the headline number, the
-    // "Cycle" word goes (the drop already says it), phase + late flag next
-    // to it, LMP and length as quiet trailing text.
-    // her ask 2026-09-15, straight after adding contraceptive duration: "i
-    // dont want cd and date same line" -- CD+phase now leads on its own
-    // line, LMP/cycle-length/contraception detail drops to a quieter line
-    // below it instead of all running together.
-    const durText = phCycleContraDurText(rec.cycle);
-    const contraSuffix = durText && rec.cycle.contraception && rec.cycle.contraception !== "none" ? ` · on ${esc(PH_CYCLE_CONTRACEPTION_LABEL[rec.cycle.contraception])} ${durText}` : "";
-    const lead = comp
-      ? `<span class="ph-cycle-lead"><span class="top"><span class="ic">🩸</span><span class="ph-cycle-day${comp.overdue ? " late" : ""}">${comp.day}</span><span class="ph">${esc(comp.phaseLabel)}${comp.overdue ? ` <span class="late">· late</span>` : ""}</span></span><span class="meta">LMP ${esc(phShortDate(rec.cycle.lmp))} · ~${comp.cycleLen}d${contraSuffix}</span></span>`
-      : `🩸 Cycle · no LMP yet`;
+    // profile cockpit (2026-09-30): the old CD headline line is now the
+    // band -- the cycle as a ring (one arc a day, coloured by phase) ·
+    // Phase · Next period -- and it sits inside #presCycleHost so every
+    // cycle edit's scoped repaint (presCycleTabRefresh) repaints it too.
     // her ask 2026-09-05: a Pain/Neurological/Menopause case quiets this
     // section -- greyed, never hidden. rec.cycleOn (her own explicit on/off)
     // is untouched either way, so a deliberate choice she made is never
     // silently overruled.
     const quiet = phCaseQuiets(t, "cycleTile");
-    return `<div id="presCycleHost"><div class="ph-cycle-wrap${quiet ? " quiet" : ""}">
-      <div class="ph-assess-panelhead">${lead}</div>
+    return `<div id="presCycleHost">${presBandHtml("cycle", name)}<div class="ph-cycle-wrap${quiet ? " quiet" : ""}">
       <div class="ph-cycle-rowopen">${phCycleTessHtml(rec, name)}</div>
     </div></div>`;
   }
@@ -58426,10 +58778,10 @@ or changing anything in Cliniko.
     const treatSub = sel ? `${sel.label}${ord && ord.n ? ` · session ${ord.loggedToday && ord.next && ord.nextPhase && ord.nextPhase.id === sel.id ? ord.nextN : ord.n}` : ""}` : "";
     return [
       { id: "plan", label: "Plan", sub: sel ? sel.label : "", body: () => presTpPlanTabBodyHtml(name, plan) },
-      { id: "treatment", label: "Treatment", sub: treatSub, body: () => presTpTreatmentTabBodyHtml(name, plan) },
-      { id: "log", label: "Treatment log", sub: sessCount ? `${sessCount}` : "", body: () => phTpVrLogTabHtml(name, plan) },
-      { id: "photos", label: "Photos", sub: tongueCount ? `${tongueCount}` : "", body: () => phTpVrPhotosTabHtml(name, plan) },
-      { id: "notes", label: "Notes", sub: (plan.reviews || []).length ? `${(plan.reviews || []).length}` : "", body: () => presTpNotesTabBodyHtml(name, plan) },
+      { id: "treatment", label: "Treatment", sub: treatSub, body: () => presBandHtml("treat", name, plan.id) + presTpTreatmentTabBodyHtml(name, plan) },
+      { id: "log", label: "Treatment log", sub: sessCount ? `${sessCount}` : "", body: () => presBandHtml("log", name, plan.id) + phTpVrLogTabHtml(name, plan) },
+      { id: "photos", label: "Photos", sub: tongueCount ? `${tongueCount}` : "", body: () => presBandHtml("tphotos", name, plan.id) + phTpVrPhotosTabHtml(name, plan) },
+      { id: "notes", label: "Notes", sub: (plan.reviews || []).length ? `${(plan.reviews || []).length}` : "", body: () => presBandHtml("notes", name, plan.id) + presTpNotesTabBodyHtml(name, plan) },
     ];
   }
   function presTpMainTabsHtml(name, plan) {
@@ -70589,6 +70941,7 @@ Dosage: {dosage}
     if (!page || typeof MutationObserver === "undefined") return;
     let raf = 0;
     new MutationObserver(() => {
+      presBandsSyncSoon();
       if (raf) return;
       raf = requestAnimationFrame(() => { raf = 0; phLiveSweep(page); phApptCalNowTick(); });
     }).observe(page, { childList: true, subtree: true });
