@@ -12028,3 +12028,16 @@ Her words: "when i click add new, it shows new prescription rather than new pati
 - Unchanged: "+ New prescription" from the Dashboard and the Refill workbench, and the formula path (`presStartNew("formula")`).
 
 Verified in the sandbox (port 8953, 0 `sb-*` keys, synthetic "Zz" names, all removed): each of the cases above, via real dispatched clicks and keys. Checked at 1280 px and 360 px with no page overflow, a clean console, and the Prescriptions live search filtering. During testing a red dev-check bar appeared once. It was a false positive: every synthetic name shared the "Zz" prefix, so the search self-check read "matched 5 of 5". A direct search test passed. `lcm-build` `20260930-173000`, `sw.js` `lcm-20260930-new-patient-plus`.
+
+## Profile cockpit, page 1: Patient details (her picks 2026-09-30, LIVE 5415722, build 20260930-173500)
+
+Her ask: extend the Plan-tab cockpit to every patient-profile page, one page at a time, shown to her before the next. Page 1 (Patient details) is live; next is Medical history, then Supplements/Photos, Cycle/IVF/Appointments, Treatment/log/Notes/Dispense.
+
+- **One rail.** The profile's own sections sit under step 1 of the flow rail (`presFlowSteps` builds `profSubs` from `presAssessSections`; `presFlowRailHtml` renders `.ph-flow-sub.prof` buttons with `data-flow-prof`). On desktop the second tab row (`.ph-assess-tabs.ph-pf-main`) is hidden; the phone keeps it.
+- **Gold count on the rail** beside Medical history (flagged items) and Photos (to sort). It pops only when the number changes (`presFlowLast.flags` vs `prevFlags`); reduced motion respected. `presFlowRailRefresh()` repaints just the rail; `presAssessTabRefresh()` swaps just `#presAssessHost`.
+- **Band** (`presPatientBandHtml`, `.ph-tp-hero.ph-pf-band`): Age · sex · known since | Tracking chips | Package left (left/bought, `.pkg.low`/`.pkg.out`). No Visits, no Next booking (her pick). Gauges count up on first sight per open (`presPfBandSeen`, cleared in `presOpenScript`), then only changes move. ≤760 px: two columns, Tracking spans the full width.
+- **Tracking chips are the switches** (`data-pf-track`: cycle / acu / herbs / bbt). The old Tracking section is gone. A tap writes via `phPatientRec`, checks `savePharmacy()`'s return, and repaints only its own area. Cycle off also drops the Cycle page and the BBT chip.
+- DOB label drops the age on the profile (`presNameTypeFieldsHtml(t, returning, noAge)`); the formula and new-patient forms still show it.
+- KEEP (her picks): Treatment row colours, Dispense's three steps, the Plan page's motion.
+
+Verified in the sandbox (port 8948, 0 `sb-*` keys, synthetic "Zz Profile Band", removed after), including the exact staged file. The body-chart v15 hunks (side view, toes, close-ups, ~line 57200) belong to another session and were left uncommitted.
