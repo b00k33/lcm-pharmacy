@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261001-100000">
+<meta name="lcm-build" content="20261001-110000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6205,6 +6205,34 @@
   #pharmacyPage .ph-pm-chip.on { background: var(--ph-herb-tint); border-color: var(--ph-herb); color: var(--ph-herb-deep); font-weight: 700; }
   #pharmacyPage .ph-pm-chip.on::before { content: "✓ "; }
   #pharmacyPage .ph-pm button:focus-visible { outline: 2px solid var(--ph-herb); outline-offset: 2px; }
+  /* v15 close-ups: hand, knee, ankle and foot drawings, only where a pain is marked */
+  #pharmacyPage .ph-pm-zooms { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--ph-line); }
+  #pharmacyPage .ph-pm-zh { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--ph-faint); margin: 0 0 8px 2px; }
+  #pharmacyPage .ph-pm-zgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 12px; }
+  #pharmacyPage .ph-pm-zoom { border: 1px solid var(--ph-line); border-radius: 12px; padding: 10px 12px; background: #fff; min-width: 0; }
+  #pharmacyPage .ph-pm-zoom h4 { display: flex; align-items: center; gap: 7px; margin: 0 0 8px; font-size: 12.5px; font-weight: 800; color: var(--ph-ink); }
+  #pharmacyPage .ph-pm-zc { font-size: 10px; font-weight: 800; color: var(--ph-soft); background: var(--ph-paper); border-radius: 999px; padding: 1px 7px; }
+  #pharmacyPage .ph-pm-zpanes { display: flex; flex-wrap: wrap; gap: 8px; }
+  #pharmacyPage .ph-pm-zpane { margin: 0; flex: 0 1 auto; min-width: 0; max-width: 100%; }
+  #pharmacyPage .ph-pm-zimg { position: relative; border: 1px solid #ECE5DD; border-radius: 10px; padding: 8px 10px 6px; background: radial-gradient(120% 90% at 50% 38%, #FFFFFF 0, #FBF8F4 60%, #F4EFE9 100%); }
+  #pharmacyPage .ph-pm-zimg svg { display: block; height: 118px; width: auto; max-width: 100%; margin: 0 auto; overflow: hidden; }
+  #pharmacyPage .ph-pm-zl, #pharmacyPage .ph-pm-zr { position: absolute; top: 5px; font-style: normal; font-size: 8.5px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: #A7968A; pointer-events: none; }
+  #pharmacyPage .ph-pm-zl { left: 7px; }
+  #pharmacyPage .ph-pm-zr { right: 7px; }
+  #pharmacyPage .ph-pm-zpane figcaption { text-align: center; font-size: 11px; font-weight: 600; color: var(--ph-soft); margin-top: 4px; }
+  #pharmacyPage .ph-pm-zpane figcaption b { font-weight: 800; color: var(--ph-ink); }
+  #pharmacyPage .ph-pm-zlist { list-style: none; margin: 10px 0 0; padding: 8px 0 0; border-top: 1px dashed #E7E1DA; display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--ph-ink); }
+  #pharmacyPage .ph-pm-zlist li { display: flex; align-items: center; gap: 7px; border-radius: 6px; transition: background .15s; }
+  #pharmacyPage .ph-pm-zlist li b { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; color: #fff; font-size: 10px; flex: none; }
+  #pharmacyPage .ph-pm-zlist li span { font-weight: 700; }
+  #pharmacyPage .ph-pm-zlist li.hot { background: var(--ph-herb-tint); }
+  #pharmacyPage .ph-pm-zsvg .ph-pm-core { animation: none; }
+  #pharmacyPage .ph-pm-zooms.focus .ph-pm-spot { opacity: .18; }
+  #pharmacyPage .ph-pm-zooms.focus .ph-pm-spot.hot { opacity: 1; }
+  @container (min-width: 620px) {
+    #pharmacyPage .ph-pm-zoom.wide { grid-column: 1 / -1; }
+    #pharmacyPage .ph-pm-zimg svg { height: 150px; }
+  }
   @media (prefers-reduced-motion: reduce) {
     #pharmacyPage .ph-pm-spot-in, #pharmacyPage .ph-pm-core, #pharmacyPage .ph-pm-ring, #pharmacyPage .ph-pm-stage.turn .ph-pm-flip { animation: none !important; transition: none !important; }
     #pharmacyPage .ph-pm-ring { opacity: 0; }
@@ -58819,6 +58847,84 @@ or changing anything in Cliniko.
     return `${idx + 1}. ${phPmSideName(reg, p.s)} — ${PH_PM_COLOUR_NAMES[p.c || 0]}`;
   }
 
+  // v15 close-ups (her pick 2026-10-01, "Close-up drawings"): a hand, knee,
+  // ankle or foot pain also shows on its own drawn close-up (PH_CLOSE_ART),
+  // only where a pain is marked, one pane per side and view (right before
+  // left, front before back), numbered to match the figures.
+  const PH_PM_ZOOMS = [
+    { id: "hands", title: "Hands & wrists", regions: ["wrist", "thumb", "hand", "fingers"] },
+    { id: "knees", title: "Knees", regions: ["knee", "knee_ant", "knee_med", "knee_lat", "knee_post"] },
+    { id: "feet", title: "Ankles & feet", regions: ["ankle", "ankle_lat", "ankle_med", "achilles", "heel", "foot", "toes", "big_toe"] }
+  ];
+  const PH_PM_LIMB = { hands: "hand", knees: "knee", feet: "foot" };
+  // [x, y, rx, ry, rot] in each drawing's own units (the right limb seen from the front)
+  const PH_PM_HAND_AT = { wrist: [51, 136, 19, 7], thumb: [13, 75, 6.6, 12.5, -30], hand: [52, 94, 21, 20], fingers: [52.5, 36, 26, 20] };
+  const PH_PM_DRAW_AT = {
+    hand_palm: PH_PM_HAND_AT, hand_back: PH_PM_HAND_AT,
+    knee_front: { knee: [41, 55, 21, 15], knee_ant: [41, 48, 10, 12], knee_med: [60, 58, 5.5, 11], knee_lat: [21, 60, 5, 11] },
+    knee_back: { knee: [40.5, 57, 21, 15], knee_post: [40.2, 56, 11, 11], knee_med: [60, 60, 5.5, 11], knee_lat: [21, 60, 5, 11] },
+    foot_top: { toes: [35.5, 26, 15, 9], big_toe: [55.4, 17, 6.6, 10], foot: [42, 70, 19, 22], ankle: [42, 106, 16, 8], ankle_lat: [28, 100, 5, 7], ankle_med: [56, 97, 5, 7] },
+    foot_sole: { heel: [40.6, 111, 12, 10], foot: [45, 78, 13, 18], toes: [35.5, 27, 15, 9], big_toe: [55.4, 16, 6.2, 9] },
+    foot_lat: { ankle: [44, 62, 11, 9], ankle_lat: [36.6, 62, 6, 7], achilles: [24.4, 44, 4, 14], heel: [18, 84, 9, 8], foot: [84, 80, 20, 8], toes: [120, 89, 8, 5] },
+    foot_med: { ankle: [45, 60, 11, 9], ankle_med: [41.8, 56, 6, 7], achilles: [24.4, 44, 4, 14], heel: [18, 84, 9, 8], foot: [84, 80, 20, 8], big_toe: [125, 86, 8, 6] }
+  };
+  // the drawings each close-up offers; `need` limits a side view to the pains it is for
+  const PH_PM_DRAWN = {
+    hands: [{ d: "hand_palm", face: "front", cap: "palm" }, { d: "hand_back", face: "back", cap: "back" }],
+    knees: [{ d: "knee_front", face: "front", cap: "front" }, { d: "knee_back", face: "back", cap: "back" }],
+    feet: [{ d: "foot_top", face: "front", cap: "top" }, { d: "foot_sole", face: "back", cap: "sole" },
+      { d: "foot_lat", face: "side", cap: "outer side", need: ["ankle", "ankle_lat", "achilles", "heel"] },
+      { d: "foot_med", face: "side", cap: "inner side", medial: true, need: ["ankle_med"] }]
+  };
+  // marks sit inside the drawing's own (maybe mirrored) group; the numbers
+  // and their leaders sit outside it, placed at the mirrored x
+  function phPmCloseSvg(art, flip, items, uid, title) {
+    const [W, H] = art.box, bk = H / 118;
+    let marks = "", badges = "";
+    const placed = [];
+    items.forEach(({ p, idx, c, summary }) => {
+      const [x, y, rx, ry, rot = 0] = c, k = p.c || 0, col = PH_PM_COLOURS[k] || PH_PM_COLOURS[0];
+      marks += `<g class="ph-pm-spot" data-pm-spot="${idx}"><title>${esc(summary)}</title><g transform="translate(${x} ${y})${rot ? ` rotate(${rot})` : ""}"><ellipse rx="${(rx * 1.5).toFixed(1)}" ry="${(ry * 1.38).toFixed(1)}" fill="url(#${uid}-stip${k})" mask="url(#${uid}-fade)"/><ellipse class="ph-pm-core" rx="${rx}" ry="${ry}" fill="url(#${uid}-core${k})"/><ellipse rx="${rx}" ry="${ry}" fill="none" stroke="${col}" stroke-width=".9" stroke-opacity=".8"/></g></g>`;
+      const dx = flip ? W - x : x, dir = dx < W / 2 ? -1 : 1;
+      const bx = Math.max(8 * bk, Math.min(W - 8 * bk, dx + dir * (Math.max(rx, 3) + 9 * bk)));
+      let by = Math.max(8 * bk, y - Math.min(ry * .45, 6)), tries = 0;
+      while (placed.some(q => Math.hypot(q[0] - bx, q[1] - by) < 15 * bk) && tries++ < 8) by += 15 * bk;
+      placed.push([bx, by]);
+      badges += `<g class="ph-pm-spot" data-pm-spot="${idx}"><title>${esc(summary)}</title><path d="M${dx.toFixed(1)},${y} L${bx.toFixed(1)},${by.toFixed(1)}" fill="none" stroke="${col}" stroke-width=".8" stroke-opacity=".75"/><g class="ph-pm-zbadge" transform="translate(${bx.toFixed(1)} ${by.toFixed(1)}) scale(${bk.toFixed(2)})"><circle r="6.2" fill="${col}" stroke="#fff" stroke-width="1.5"/><text y="2.5" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="7.4" font-weight="800" fill="#fff" text-anchor="middle">${idx + 1}</text></g></g>`;
+    });
+    const L = PH_CLOSE_ART.layers(art, flip, uid, marks);
+    return `<svg viewBox="0 0 ${W} ${H}" class="ph-pm-zsvg" style="aspect-ratio:${W}/${H}" role="img" aria-label="${esc(title)}"><title>${esc(title)}</title><defs>${phPmHlDefs(uid)}${L.defs}</defs>${L.body}${badges}</svg>`;
+  }
+  function phPmCloseupsHtml(list, planId) {
+    const R = PH_PAIN_REGIONS.REGIONS;
+    const cards = PH_PM_ZOOMS.map(z => {
+      const ms = list.map((p, idx) => ({ p, idx })).filter(o => z.regions.includes(o.p.r));
+      if (!ms.length) return "";
+      const panes = [];
+      ["R", "L"].forEach(side => {
+        const mine = ms.filter(o => o.p.s === side || o.p.s === "B");
+        if (!mine.length) return;
+        PH_PM_DRAWN[z.id].forEach(v => {
+          if (v.need && !mine.some(o => v.need.includes(o.p.r))) return;
+          const at = PH_PM_DRAW_AT[v.d];
+          const items = mine.filter(o => at[o.p.r]).map(o => ({ ...o, c: at[o.p.r], summary: phPmSpotSummary(o.p, o.idx, R[o.p.r]) }));
+          if (!items.length) return;
+          // each drawing is the right limb from the front; the left limb and the back / inner views are it mirrored
+          const flip = v.face === "side" ? (side === "L") !== !!v.medial : (v.face === "front") !== (side === "R");
+          const sideName = side === "R" ? "Right" : "Left";
+          const [lo, hi] = flip ? ["Med", "Lat"] : ["Lat", "Med"];
+          const corners = v.face === "side" ? "" : `<i class="ph-pm-zl">${lo}</i><i class="ph-pm-zr">${hi}</i>`;
+          const svg = phPmCloseSvg(PH_CLOSE_ART[v.d], flip, items, phPmUid(planId, `z-${v.d}-${side}`), `${sideName} ${PH_PM_LIMB[z.id]} · ${v.cap}`);
+          panes.push(`<figure class="ph-pm-zpane"><div class="ph-pm-zimg">${svg}${corners}</div><figcaption><b>${sideName}</b> ${esc(v.cap)}</figcaption></figure>`);
+        });
+      });
+      if (!panes.length) return "";
+      const lis = ms.map(o => `<li data-pm-row="${o.idx}"><b style="background:${PH_PM_COLOURS[o.p.c || 0] || PH_PM_COLOURS[0]}">${o.idx + 1}</b><span>${esc(phPmSideName(R[o.p.r], o.p.s))}</span></li>`).join("");
+      return `<section class="ph-pm-zoom${panes.length > 2 ? " wide" : ""}"><h4>${esc(z.title)}<span class="ph-pm-zc">${ms.length}</span></h4><div class="ph-pm-zpanes">${panes.join("")}</div><ul class="ph-pm-zlist">${lis}</ul></section>`;
+    }).join("");
+    return cards ? `<div class="ph-pm-zooms"><div class="ph-pm-zh">Close-ups</div><div class="ph-pm-zgrid">${cards}</div></div>` : "";
+  }
+
   function phPainMapHtml(name, plan) {
     const list = phPmList(name, plan);
     const pick = phPmPick.get(plan.id);
@@ -58897,7 +59003,7 @@ or changing anything in Cliniko.
       </div>` : "";
     return `<div class="ph-pm" data-pm-box="${pid}" data-pm-name="${esc(name)}">
       <div class="ph-pm-head">
-        <b>Pain map</b>${phInfoDot("Starts from the presenting complaint. Type several pains in one line (e.g. “RHS headache with lower left back pain and left ankle pain”) or pick areas. Change a pain's side or remove it on its row; tap its dot for another colour. Hover a row to spotlight it. Standard anatomical position — the patient's right is on your left in the front view, marked R and L. Hover or tap a numbered spot for its details; the Labels toggle shows them beside each spot. Side view is a plain reference figure — pain zones aren't placed on it yet.")}
+        <b>Pain map</b>${phInfoDot("Starts from the presenting complaint. Type several pains in one line (e.g. “RHS headache with lower left back pain and left ankle pain”) or pick areas. Change a pain's side or remove it on its row; tap its dot for another colour. Hover a row to spotlight it. Standard anatomical position — the patient's right is on your left in the front view, marked R and L. Hover or tap a numbered spot for its details; the Labels toggle shows them beside each spot. Side view is a plain reference figure — pain zones aren't placed on it yet. A hand, knee, ankle or foot pain also gets its own drawn close-up below, numbered to match.")}
         <span class="ph-pm-seg ph-pm-layout" role="group" aria-label="Layout"><button type="button" class="${!turn && !sideOn ? "on" : ""}" data-pm-layout="${pid}|both" aria-pressed="${!turn && !sideOn}">Front + back</button><button type="button" class="${turn && !sideOn ? "on" : ""}" data-pm-layout="${pid}|turn" aria-pressed="${!!turn && !sideOn}">Turn to the pain</button><button type="button" class="${sideOn ? "on" : ""}" data-pm-layout="${pid}|side" aria-pressed="${sideOn}">Side view</button></span>
         <button type="button" class="ph-pm-turnbtn ph-pm-labelsbtn" data-pm-labels="${pid}" aria-pressed="${labelsOn}">${labelsOn ? "🏷 Labels on" : "🏷 Labels"}</button>
       </div>
@@ -58920,6 +59026,7 @@ or changing anything in Cliniko.
           ${picker}
         </div>
       </div>
+      ${phPmCloseupsHtml(list, plan.id)}
     </div>`;
   }
   // in-place repaint of just this box (never renderPresPanel)
@@ -59046,16 +59153,17 @@ or changing anything in Cliniko.
   // hover or focus a pain's row to spotlight its zone on the figures
   function phPmSpotlight(row) {
     const box = row && row.closest("[data-pm-box]");
-    document.querySelectorAll(".ph-pm-stage.focus").forEach(s => { if (!box || !box.contains(s)) s.classList.remove("focus"); });
+    document.querySelectorAll(".ph-pm-stage.focus, .ph-pm-zooms.focus").forEach(s => { if (!box || !box.contains(s)) s.classList.remove("focus"); });
     if (!box) return;
-    const stage = box.querySelector(".ph-pm-stage");
-    if (!stage) return;
-    stage.classList.add("focus");
-    stage.querySelectorAll("[data-pm-spot]").forEach(s => s.classList.toggle("hot", s.dataset.pmSpot === row.dataset.pmRow));
+    box.querySelectorAll(".ph-pm-stage, .ph-pm-zooms").forEach(stage => {
+      stage.classList.add("focus");
+      stage.querySelectorAll("[data-pm-spot]").forEach(s => s.classList.toggle("hot", s.dataset.pmSpot === row.dataset.pmRow));
+      stage.querySelectorAll(".ph-pm-zlist [data-pm-row]").forEach(li => li.classList.toggle("hot", li.dataset.pmRow === row.dataset.pmRow));
+    });
   }
   document.addEventListener("mouseover", e => {
     const t = e.target && e.target.closest ? e.target : null;
-    if (!t || !t.closest(".ph-pm-rows")) { if (document.querySelector(".ph-pm-stage.focus")) phPmSpotlight(null); return; }
+    if (!t || !t.closest(".ph-pm-rows, .ph-pm-zlist")) { if (document.querySelector(".ph-pm-stage.focus, .ph-pm-zooms.focus")) phPmSpotlight(null); return; }
     phPmSpotlight(t.closest("[data-pm-row]"));
   });
   document.addEventListener("focusin", e => {
