@@ -12077,3 +12077,13 @@ One generic mechanism, not ten hand-built bands: `PRES_BANDS[kind](name, ctx, ar
 - KEEP (her picks): Treatment row colours, Dispense's three steps.
 
 Verified in the sandbox (port 8948, 0 `sb-*` keys; synthetic patient with a fertility plan, four bookings, five photos, an IVF round, a script with herbs — all removed after, residue nil): every band renders; supplement toggle, frozen stepper, cycle length, Complete session and a grams edit each update their band and nudge only what changed; the compare chip opens the pair; thumbs open the viewer; 360 px has no page overflow; Prescriptions live search 2 → 1 → 0 → 2; the staged file booted clean. The other session's body-chart v15 hunks (~line 57270+) were left uncommitted.
+
+## Plan tab re-tiled in visit order (her pick C "Visit order", 2026-09-30, "improve tesselation - rearange things according to workflow")
+
+Her screenshot: the course calendar open as a narrow 460px grid above the Session grid, a big empty right side, grid and history pushed down. Three mocks (A calendar beside the grid · B booking desk · C visit order); **she picked C**. Order now: Instrument band → plan head → Focus·Goal / This phase / Pain map tiles → Session grid + Appointment history (locked, unchanged) → course calendar → scans / schedule.
+- `presTpPlanTabBodyHtml`: `phTpTilesHtml` moved ABOVE the `.ph-tp-mergewidget` (read the case, then treat, then book).
+- `phTpSessCalHtml` is turned sideways (`.ph-tp-sesscal.v2.x`): weeks run across as columns (a `.rail` head per week: date + phase name, tinted by phase, this week ringed), Mon–Sun run down, full width; `.ph-tp-sesscal-scroll` scrolls sideways inside itself on a phone (phase names hidden ≤640px). Day cells, chips, pins and the legend are unchanged.
+- `phTpSessionLadderHtml` returns `${body}${footHtml}${calHtml}` — the calendar opens UNDER the "Calendar ▾ · N to book" line, below the grid, never above it.
+- **Disclosed call:** the calendar keeps its Calendar ▾ toggle and its closed default (`daybook-ph-sesscal-open`); the mock showed it always open.
+
+Verified with the real function + real CSS: 10 weeks across at 1200px, this week ringed, chips on their days, closed days hatched; a 375px box scrolls inside itself; the staged file's scripts parse. `lcm-build` `20260930-220000`, `sw.js` `lcm-20260930-plantab-tiling-c`.
