@@ -12292,3 +12292,9 @@ Her asks: "give calendar full size. code3 code7 use your expertise to make this 
 - Phone ≤640px: two columns (ring | words), the gauges row spans the full width, the aim wraps.
 
 Verified in the sandbox (port 8948, 0 `sb-*` keys, synthetic "Zz Upnext Fert" (Natural fertility, CD 10) + "Zz Upnext Msk", bookings `zzun*`, removed after, residue nil): card text and gauges at 1280px; tap opened the popup; 0 mutations idle; a 7-minute move patched 24 → 17 in place (one mutation); next patient change swapped with `.anim`; no later booking removed the card; 360px card 336px, no overflow; block meta ellipsis; Prescriptions live search narrows and restores; console clean. `lcm-build` `20261002-040000`, `sw.js` `lcm-20261002-appt-upnext-pictures`.
+
+**Follow-up 2026-10-02 (her "why doesnt the app look like the mock?" — three pieces of option 3 were missing):**
+- **"No one else today"**: when the day had bookings but none are left, the Up next card stays as a quiet line "No one else today. The last visit finished at 5:15 pm." (`phApptUpNextNoneText`, `.ph-un.none`). It is not shown on a day with no bookings. The tick patches only the words, never rewrites an unchanged line.
+- **Lens chips** (`phApptCalLensHtml`, under the Up next card): Everyone · Herbs to prepare · Cycle & IVF · New to you · Home visits, each counted over the days on screen. A chip lights the matching blocks (`.match`) and dims the rest (`.dim`), reusing the search classes; typing in search wins over the Lens. A second tap on the lit chip goes back to Everyone. View state only (`phApptCalLens`, never saved). Rules in `phApptLensHit`: herbs = ready or short; cycle = an active cycle-template plan; new = `phApptIsNewToYou` (the same rule as the card's flag, now one helper); home = `phApptIsHomeVisit`.
+- **Day counts**: each grid day head shows its booking count beside the day name (Breaks excluded).
+- `lcm-build` `20261002-060000`, `sw.js` `lcm-20261002-appt-lens-counts`.
