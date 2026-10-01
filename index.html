@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261002-060000">
+<meta name="lcm-build" content="20261002-070000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -4469,6 +4469,24 @@
   @keyframes phUnRingIn { from { stroke-dashoffset: var(--c); } }
   @keyframes phUnWmIn { from { opacity: 0; transform: rotate(0deg); } }
   @keyframes phUnStUp { from { transform: scaleY(0); } }
+  /* the card stays gently alive: CSS-only loops, so nothing is written to the page */
+  @keyframes phUnBreath { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.35); } }
+  @keyframes phUnBob { 0%, 100% { opacity: .82; } 50% { opacity: 1; } }   /* opacity, not transform: the fill level is an inline scaleY */
+  @keyframes phUnGlow { 0%, 100% { box-shadow: 0 0 0 0 rgba(217,174,71,0); } 50% { box-shadow: 0 0 0 4px rgba(217,174,71,.25); } }
+  #pharmacyPage .ph-un:not(.none) .wm circle { transform-box: fill-box; transform-origin: center; animation: phUnBreath 2.6s ease-in-out infinite; }
+  #pharmacyPage .ph-un:not(.none) .jar .jfill { animation: phUnBob 3.2s ease-in-out infinite; }
+  #pharmacyPage .ph-un:not(.none) .newflag { animation: phUnGlow 2.8s ease-in-out infinite; }
+  /* Lens tap: the others fade back, the matches pop and glow, the counts pop; day counts pop when the week moves */
+  @keyframes phLensFade { from { opacity: 1; } }
+  @keyframes phLensPop { 0% { transform: scale(1); } 55% { transform: scale(1.07); } 100% { transform: scale(1.035); } }
+  @keyframes phLensNum { 0% { transform: scale(.6); opacity: 0; } 100% { transform: none; opacity: 1; } }
+  #pharmacyPage .ph-apptcal-wrap.lens-pop .ph-appt-block.dim { animation: phLensFade .4s ease; }
+  #pharmacyPage .ph-apptcal-wrap.lens-pop .ph-appt-block.match { animation: phLensPop .5s cubic-bezier(.34,1.56,.64,1); }
+  #pharmacyPage .ph-apptlens.pop .ph-apptlens-chip b { display: inline-block; animation: phLensNum .4s ease both; }
+  #pharmacyPage .ph-apptcal-wrap.slide-l .ph-apptcal-daylabel em, #pharmacyPage .ph-apptcal-wrap.slide-r .ph-apptcal-daylabel em { display: inline-block; animation: phLensNum .45s ease .15s both; }
+  @media (prefers-reduced-motion: reduce) {
+    #pharmacyPage .ph-apptcal-wrap *, #pharmacyPage .ph-apptlens * { animation: none !important; }
+  }
   #pharmacyPage .ph-un.anim { animation: phUnSlideIn .35s ease both; }
   #pharmacyPage .ph-un.anim .q-who { animation: phUnQtIn .4s ease .08s both; }
   #pharmacyPage .ph-un.anim .val { animation: phUnRingIn .9s ease .12s both; }
@@ -25881,7 +25899,7 @@
   }
   // option 3's Lens (her pick 2026-10-01): one chip lights the bookings that
   // need the same kind of attention and dims the rest. View state only.
-  let phApptCalLens = "all";
+  let phApptCalLens = "all", phApptLensAnim = false;   // one-shot: the next paint plays the Lens motion
   const PH_APPTCAL_LENSES = [["herbs", "Herbs to prepare"], ["cycle", "Cycle & IVF"], ["new", "New to you"], ["home", "Home visits"]];
   function phApptLensHit(a, lens) {
     if (!a || a.service === "Break" || !a.patient) return false;
@@ -26943,17 +26961,18 @@
     }
   }
   // the Lens row: Everyone + four chips, each counted over the days on screen
-  function phApptCalLensHtml(days) {
+  function phApptCalLensHtml(days, pop) {
     const appts = days.flatMap(d => phApptFor(d.key)).filter(a => a.service !== "Break" && a.patient);
     if (!appts.length) return "";
     if (phApptCalLens !== "all" && !PH_APPTCAL_LENSES.some(([k]) => k === phApptCalLens)) phApptCalLens = "all";
     const chip = (k, label, n) => `<button type="button" class="ph-apptlens-chip${phApptCalLens === k ? " on" : ""}" data-ph-apptcal-lens="${k}" aria-pressed="${phApptCalLens === k}">${esc(label)}${n == null ? "" : ` <b>${n}</b>`}</button>`;
-    return `<div class="ph-apptlens" role="group" aria-label="Lens"><span class="lbl">Lens</span>${chip("all", "Everyone")}${PH_APPTCAL_LENSES.map(([k, label]) => chip(k, label, appts.filter(a => phApptLensHit(a, k)).length)).join("")}</div>`;
+    return `<div class="ph-apptlens${pop ? " pop" : ""}" role="group" aria-label="Lens"><span class="lbl">Lens</span>${chip("all", "Everyone")}${PH_APPTCAL_LENSES.map(([k, label]) => chip(k, label, appts.filter(a => phApptLensHit(a, k)).length)).join("")}</div>`;
   }
   function phApptCalGridHtml() {
     const days = phApptCalVisibleDays();
     const n = days.length;
     const slide = phApptCalSlide; phApptCalSlide = 0;
+    const lensAnim = phApptLensAnim; phApptLensAnim = false;
     phApptCalStart = phApptCalStartFor(days);
     const hours = phApptCalHourLabels();
     const gridHeight = (PH_APPTCAL_END_MIN - phApptCalStart) * PH_APPTCAL_PX_PER_MIN;
@@ -26991,7 +27010,7 @@
         <button type="button" class="ph-msg-seg-opt${view === "grid" ? " on" : ""}" data-ph-apptcal-view="grid" aria-pressed="${view === "grid"}">Grid</button>
         <button type="button" class="ph-msg-seg-opt${view === "list" ? " on" : ""}" data-ph-apptcal-view="list" aria-pressed="${view === "list"}">List</button>
       </div>`;
-    const gridHtml = `<div class="ph-apptcal-wrap${slide < 0 ? " slide-l" : slide > 0 ? " slide-r" : ""}">
+    const gridHtml = `<div class="ph-apptcal-wrap${slide < 0 ? " slide-l" : slide > 0 ? " slide-r" : ""}${lensAnim ? " lens-pop" : ""}">
         <div class="ph-apptcal-head" style="grid-template-columns:${colsTemplate}">
           <div class="ph-apptcal-gutter"></div>
           ${days.map(d => { const cnt = phApptFor(d.key).filter(a => a.service !== "Break" && a.patient).length; return `<div class="ph-apptcal-daylabel${d.today ? " today" : ""}${d.key === selKey ? " sel" : ""}" role="button" tabindex="0" data-ph-apptcal-day="${d.key}" aria-label="Day summary · ${esc(phApptDayLabel(d.key))}"><span>${esc(d.dow)}${cnt ? ` <em title="${cnt} booked">${cnt}</em>` : ""}</span><b>${d.dnum}</b></div>`; }).join("")}
@@ -27014,7 +27033,7 @@
         <input type="search" class="ph-tl-search ph-apptcal-search" data-ph-apptcal-q="1" value="${esc(phApptCalQ)}" placeholder="Search patient…" aria-label="Search appointments">
       </div>
       ${phFlashHtml()}
-      ${view === "list" ? phApptCalListHtml(days, selKey) : phApptCalStatsHtml(days) + (isCurrent ? phApptUpNextHtml() : "") + phApptCalLensHtml(days) + gridHtml}
+      ${view === "list" ? phApptCalListHtml(days, selKey) : phApptCalStatsHtml(days) + (isCurrent ? phApptUpNextHtml() : "") + phApptCalLensHtml(days, lensAnim) + gridHtml}
     </div>
     <div id="phApptDayInline" class="ph-apptday">${phApptDayCardsHtml(dayKey, true)}</div>`;
   }
@@ -29595,6 +29614,7 @@
         // a second tap on the lit chip goes back to Everyone
         const k = apptLens.dataset.phApptcalLens;
         phApptCalLens = k === phApptCalLens ? "all" : k;
+        phApptLensAnim = true;
         renderPhAppointmentsPage();
         return;
       }
