@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261001-220000">
+<meta name="lcm-build" content="20261001-230000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -14871,6 +14871,25 @@
   #pharmacyPage .ph-instock.short.neg { color: var(--ph-zero-deep); }
   #pharmacyPage .ph-instock-bar { display: block; height: 4px; border-radius: 2px; background: color-mix(in oklab, var(--ph-ink) 10%, transparent); overflow: hidden; }
   #pharmacyPage .ph-instock-bar i { display: block; height: 100%; background: var(--ph-gold-deep); border-radius: 2px; }
+  /* her ask28 Q3 (2026-10-01): every row shows "shelf → after this bag" with
+     a bar; ok = green, at/under the refill line = gold, short = red */
+  #pharmacyPage .ph-instock.ok { color: var(--ph-ink); display: inline-flex; flex-direction: column; gap: 3px; min-width: 64px; font-variant-numeric: tabular-nums; }
+  #pharmacyPage .ph-instock.ok .ph-instock-bar i { background: var(--ph-green); }
+  #pharmacyPage .ph-instock.short { font-variant-numeric: tabular-nums; }
+  #pharmacyPage .ph-instock.short.neg .ph-instock-bar i { background: var(--ph-zero-deep); }
+  /* Supply row (her Q2): days chips + other + "days · N g a day" */
+  #pharmacyPage .ph-supplyline .ph-v { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  #pharmacyPage .ph-supply-other { width: 56px; text-align: center; }
+  #pharmacyPage .ph-supply-unit { font-size: var(--fs-meta); color: var(--ph-soft); white-space: nowrap; }
+  #pharmacyPage .ph-supply-unit b { color: var(--ph-ink); font-variant-numeric: tabular-nums; }
+  #pharmacyPage .ph-supply-none { font-size: var(--fs-meta); color: var(--ph-soft); font-style: italic; }
+  /* one caution line above Dispense (her Q4) */
+  #pharmacyPage .ph-dsp-caution { margin: 4px 0 8px; padding: 6px 10px; border-radius: 8px; background: var(--ph-low-tint); color: var(--ph-low-deep); font-size: var(--fs-body); font-weight: 700; }
+  #pharmacyPage .ph-dsp-caution span { font-weight: 400; }
+  /* label preview, always open but small (her Q7) */
+  #pharmacyPage .ph-label-small .ph-label-text { font-size: var(--fs-11-5); line-height: 1.4; }
+  #pharmacyPage .ph-label-small .ph-label-block { max-height: 220px; overflow: auto; }
+  #pharmacyPage .ph-grams-hint:empty { display: none; }
   /* phone: narrower fixed columns so the name keeps real width at 390 */
   @media (max-width: 640px) {
     /* tighter gutters on the phone (the 11px ones are desktop room); the qty
@@ -14881,7 +14900,8 @@
     #pharmacyPage .ph-ing-spec th.instock { width: 70px; }
     #pharmacyPage .ph-ing-spec th.ph-pres-actions { width: 30px; }
     #pharmacyPage .ph-qty-box { width: 78px; padding: 0 6px; gap: 3px; }
-    #pharmacyPage .ph-ing-spec .ph-instock.short { min-width: 0; }
+    #pharmacyPage .ph-ing-spec .ph-instock.short,
+    #pharmacyPage .ph-ing-spec .ph-instock.ok { min-width: 0; white-space: normal; }
   }
 
   /* ---- Table audit, closing the last gap (2026-08-27): declared widths for
@@ -28978,6 +28998,21 @@
         const t = PRESC.items.find(x => x.id === presOpenId);
         const name = useSugg.dataset.presFormulaUsesugg;
         if (t && name) {
+          // her ask28 Q6 (2026-10-01): she starts from the plan's formula, so
+          // Use pours its herbs in (the same one-time snapshot Link formula
+          // makes, phTpPourIntoScript) -- never over herbs already off the
+          // shelf, and a list she already has is replaced only on her yes
+          const src = presPlanFormulaSource(t, name);
+          const hasIngs = (t.ingredients || []).some(i => (i.herb || "").trim());
+          const pending = presPending[t.id] && presPending[t.id].length;
+          if (src && !pending && (!hasIngs || confirm(`Replace the herbs on this script with ${name}?`))) {
+            phTpPourIntoScript(t, src.jar, src.recipe);
+            t.actualFormula = name;
+            savePresc();
+            renderPresPanel();
+            presSavedToast(`${name} poured in`);
+            return;
+          }
           t.actualFormula = name;
           document.querySelectorAll(".ph-dsp-inlinesugg, .ph-dsp-sugg").forEach(n => n.remove());
           presBandMetaRefresh(t);
@@ -28991,6 +29026,22 @@
         renderPresPanel();
         return;
       }
+      // her pick Q2 (2026-10-01): a Supply chip decides the amount by days
+      if (e.target.closest("[data-pres-supply-days]")) {
+        const n = parseInt(e.target.closest("[data-pres-supply-days]").dataset.presSupplyDays, 10);
+        const t = PRESC.items.find(x => x.id === presOpenId);
+        if (t && n > 0 && presGramsPerDay(t)) {
+          presGramsApplyDays(t, n);
+          phDefer("savePresc", savePresc, 400);
+          const el = document.getElementById("presGrams");
+          if (el) el.value = t.totalGrams || "";
+          const other = document.getElementById("presSupplyDays");
+          if (other) other.value = "";
+          presSupplyRefresh(t);
+          renderPresCalc(); presFuRefresh(); presDoseDurationRefresh();
+        }
+        return;
+      }
       if (e.target.closest("[data-pres-grams-reset]")) {
         const id = e.target.closest("[data-pres-grams-reset]").dataset.presGramsReset;
         const t = PRESC.items.find(x => x.id === id);
@@ -29000,6 +29051,7 @@
           phDefer("savePresc", savePresc, 400);
           const gramsEl = document.getElementById("presGrams");
           if (gramsEl) gramsEl.value = t.totalGrams || "";
+          presSupplyRefresh(t);
           renderPresCalc(); presFuRefresh(); presDoseDurationRefresh();
         }
         return;
@@ -29015,6 +29067,7 @@
           if (val === "manual") {
             t.gramsMode = "manual";
             phDefer("savePresc", savePresc, 400);
+            presSupplyRefresh(t);
             renderPresCalc();
             const el = document.getElementById("presGrams");
             if (el) { el.focus(); el.select(); }
@@ -29025,6 +29078,7 @@
             phDefer("savePresc", savePresc, 400);
             const el = document.getElementById("presGrams");
             if (el) el.value = t.totalGrams || "";
+            presSupplyRefresh(t);
             renderPresCalc(); presFuRefresh(); presDoseDurationRefresh();
           }
         }
@@ -35979,8 +36033,22 @@
         // so a typed figure must never be silently overwritten again by an
         // ingredient edit. gramsMode="manual" is the one flag
         // presCommitTemplateFields checks before re-deriving it.
-        if (t) { t.totalGrams = parseFloat(e.target.value) || 0; t.gramsMode = "manual"; phDefer("savePresc", savePresc, 400); }
+        if (t) { t.totalGrams = parseFloat(e.target.value) || 0; t.gramsMode = "manual"; phDefer("savePresc", savePresc, 400); presSupplyRefresh(t); }
         phClearConfirms(); renderPresCalc(); presFuRefresh(); presDoseDurationRefresh(); return;
+      }
+      // Supply "other" box (ask28 2026-10-01 Q2): typed days × g a day = grams
+      if (e.target.id === "presSupplyDays") {
+        const t = PRESC.items.find(x => x.id === presOpenId);
+        const n = parseInt(e.target.value, 10);
+        if (t && n > 0 && presGramsPerDay(t)) {
+          presGramsApplyDays(t, n);
+          phDefer("savePresc", savePresc, 400);
+          const gEl = document.getElementById("presGrams");
+          if (gEl) gEl.value = t.totalGrams;
+          presSupplyRefresh(t);
+          phClearConfirms(); renderPresCalc(); presFuRefresh(); presDoseDurationRefresh();
+        }
+        return;
       }
       if (e.target.id === "presFuNote") {
         const t = PRESC.items.find(x => x.id === presOpenId);
@@ -36028,6 +36096,7 @@
           const v = e.target.value.trim();
           t[e.target.id === "presDoseN" ? "doseN" : "doseT"] = v === "" ? null : parseFloat(v) || 0;
           phDefer("savePresc", savePresc, 400);
+          presSupplyDoseChanged(t); renderPresCalc();
         }
         presFuRefresh(); presDoseDurationRefresh(); return;
       }
@@ -36810,7 +36879,7 @@
       }
       if (e.target.id === "presSpoon") {
         const t = PRESC.items.find(x => x.id === presOpenId);
-        if (t) { t.doseSpoon = e.target.value; savePresc(); }
+        if (t) { t.doseSpoon = e.target.value; savePresc(); presSupplyDoseChanged(t); renderPresCalc(); }
         presFuRefresh(); presDoseDurationRefresh(); return;
       }      if (e.target.id === "presFuCheckInOn") {
         const t = PRESC.items.find(x => x.id === presOpenId);
@@ -52028,9 +52097,12 @@ or changing anything in Cliniko.
       ${presStageNextBtnHtml("plan")}
     </div>`;
   }
+  // her pick Q1 (2026-10-01): no top band (Formula · Price · Stock) on this
+  // stage -- the Total line carries grams · days · price · cost · profit and
+  // each herb row carries its own stock, so the band only said it twice
   function presDispenseHeadHtml(t) {
     return `<div class="ph-pres-backplan"><button type="button" class="tab-link" data-pres-stage="plan">‹ Back to the plan</button></div>
-      ${presScriptSwitcherHtml(t)}${presDispenseCyclePlanStripHtml(t)}${presIsFormula(t) ? "" : presBandHtml("disp", presPatientFor(t) || t.name || "", t.id)}`;
+      ${presScriptSwitcherHtml(t)}${presDispenseCyclePlanStripHtml(t)}`;
   }
   function renderPresPanel() {
     const el = presPanelEl();
@@ -52164,13 +52236,17 @@ or changing anything in Cliniko.
           <span class="ph-adayinline">a day</span>
         </span>
       </div>
+      <div class="ph-build-top ph-supplyline ph-row">
+        <span class="ph-k">Supply</span>
+        <span class="ph-v" id="presSupplyWrap">${presSupplyRowHtml(t)}</span>
+      </div>
       <div class="ph-build-top ph-row">
         <label class="ph-k ph-grams-label" for="presGrams">Grams</label>
         <span class="ph-v"><input type="text" inputmode="decimal" id="presGrams" value="${t.totalGrams || ""}" aria-label="Grams prescribed"><span id="presGramsSegWrap">${presGramsSegHtml(t)}</span><span id="presDoseDurationWrap" class="ph-dose-duration">${presDoseDurationHtml(t)}</span></span>
       </div>
       <div id="presGramsHintWrap">${presGramsHintHtml(t)}</div>
       <div class="ph-build-top ph-daysline ph-row">
-        <span class="ph-k ph-days-lbl">Days</span>
+        <span class="ph-k ph-days-lbl" title="Which days she takes it">Taken</span>
         <span class="ph-v">${presDaysRowHtml(t)}</span>
       </div>
       <div class="ph-build-top ph-priceline-row ph-row">
@@ -52190,11 +52266,13 @@ or changing anything in Cliniko.
       <div class="ph-formula-meta" id="presPriceWorking"></div>
       </div>` : ""}
 
-      <button type="button" class="ph-sec-toggle" data-pres-label-toggle="1" aria-expanded="${presLabelOpen ? "true" : "false"}">${presLabelOpen ? "▾" : "▸"} 🏷 Label preview</button>
-      <div id="presCalc"${presLabelOpen ? "" : " hidden"}></div>
+      ${isF ? `<button type="button" class="ph-sec-toggle" data-pres-label-toggle="1" aria-expanded="${presLabelOpen ? "true" : "false"}">${presLabelOpen ? "▾" : "▸"} 🏷 Label preview</button>
+      <div id="presCalc"${presLabelOpen ? "" : " hidden"}></div>` : herbsOn ? `<!-- her pick Q7 (2026-10-01): the label preview always open, small -->
+      <div id="presCalc" class="ph-label-small"></div>` : ""}
 
       <div class="ph-pres-foot${isF ? "" : " ph-sheet ph-sheet-today"}">
       ${isF ? "" : `<div class="ph-tmpl-sec"><span>Today</span></div>`}
+      ${!isF && herbsOn ? `<div id="presCautionWrap">${presCautionHtml(t)}</div>` : ""}
       ${isF ? `
       <!-- her synth22 Stage C, 2026-09-15: "shrinks the button row to Make
            refill, with Save, Copy and Calculate in ⋯" -- one primary
@@ -69073,7 +69151,7 @@ Please let me know if you have any questions.`;
             </span>
           </span>` : `
           <button type="button" class="ph-dose-step-main" data-pres-dispense="${t.id}" data-pres-calc-first="1">
-            <span class="ph-dose-step-node" aria-hidden="true">💊</span>
+            <span class="ph-dose-step-node" aria-hidden="true">2</span>
             <span class="ph-dose-step-body">
               <span class="ph-dose-step-label">Dispense &amp; copy label</span>
             </span>
@@ -69455,12 +69533,13 @@ Please let me know if you have any questions.`;
   function presDispenseCyclePlanStripHtml(t) {
     const info = presDispenseCyclePlanInfo(t);
     if (!info) return "";
-    const { comp, phase, suggFormula } = info;
-    const differs = suggFormula && suggFormula !== presActualFormula(t);
+    // her ask28 Q5 (2026-10-01): the plan suggestion shows ONCE, in the
+    // formula name box (presDispenseFormulaHintHtml) -- the strip keeps
+    // only where she is (cycle day + phase)
+    const { comp, phase } = info;
     const parts = [
       phCycleChipHtml(comp),
       phase ? `<span class="ph-dsp-phase">📋 ${esc(phase.label || "Current phase")}</span>` : "",
-      differs ? `<span class="ph-dsp-sugg">plan suggests <b>${esc(suggFormula)}</b>${presDispenseSuggBtnHtml(suggFormula)}</span>` : "",
     ].filter(Boolean);
     return parts.length ? `<div class="ph-dsp-strip">${parts.join("")}</div>` : "";
   }
@@ -69469,6 +69548,29 @@ Please let me know if you have any questions.`;
     const suggFormula = info && info.suggFormula;
     if (!suggFormula || suggFormula === presActualFormula(t)) return "";
     return `<div class="ph-formula-meta ph-dsp-inlinesugg">plan suggests <b>${esc(suggFormula)}</b>${presDispenseSuggBtnHtml(suggFormula)}</div>`;
+  }
+  // where "Use" pours from (her ask28 Q6): the phase's linked script, then
+  // the template's own recipe, then a formula recipe or a jar of that name.
+  // Nothing found = the name only, as before.
+  function presPlanFormulaSource(t, name) {
+    const info = presDispenseCyclePlanInfo(t);
+    const ph = info && info.phase;
+    const key = String(name || "").trim().toLowerCase();
+    const ings = x => (x.ingredients || []).filter(i => (i.herb || i.name || "").trim());
+    if (ph && ph.formulaId && ph.formulaId !== t.id) {
+      const x = (PRESC.items || []).find(y => y.id === ph.formulaId);
+      if (x && ings(x).length) return { recipe: { name, ingredients: ings(x) } };
+    }
+    if (ph && Array.isArray(ph.defaultRecipe) && ph.defaultRecipe.length
+        && (ph.defaultFormulaName || "").trim().toLowerCase() === key) {
+      return { recipe: { name, ingredients: ph.defaultRecipe } };
+    }
+    if (!key) return null;
+    const r = (PRESC.items || []).find(y => presIsFormula(y) && (y.name || "").trim().toLowerCase() === key && ings(y).length);
+    if (r) return { recipe: { name: r.name, ingredients: ings(r) } };
+    const jar = (PHARMACY.herbs || []).find(h => (h.name || "").trim().toLowerCase() === key);
+    if (jar) return { jar };
+    return null;
   }
   /* The one ⋯ (her "Everything in ⋯", 2026-09-10). Two sections: the
      prescription's own Case and phase word, then -- only while a plan is
@@ -70329,6 +70431,10 @@ Please let me know if you have any questions.`;
       list = sorted;
     }
     const totalG = list.reduce((a, i) => a + (i.grams || 0), 0);
+    // her pick Q3 (2026-10-01): each row shows grams left AFTER this bag --
+    // what this bag takes is the line's grams scaled to the grams prescribed
+    // (same ratio presCalcNumbers deducts by), not the recipe's own grams
+    const _scale = presIngBagScale(totalG);
     // her table spec 2026-08-26, §2: one <table> (thead/tbody/tfoot), fixed
     // layout so head, body and footer can never disagree about widths again;
     // the qty's unit INSIDE its control; Level renamed In stock and made
@@ -70341,7 +70447,7 @@ Please let me know if you have any questions.`;
           <td class="ph-code">${h && phHerbCode(h) ? esc(phHerbCode(h)) : "—"}</td>
           <td class="ph-name">${phNameHtml(i.name, h ? phIsFormula(h) : null)}${h ? presStockFlagHtml(h) + presClinicalFlagHtml(h, _clinName) : ` <span class="ph-sub">not in inventory</span>`}</td>
           <td class="ph-num qty"><span class="ph-qty-box"><input type="number" class="ph-qty-input" data-pres-ing-g="${ix}" value="${i.grams || 0}" min="0" step="any" aria-label="Grams of ${esc(i.name)}"><span class="u">g</span></span></td>
-          <td class="instock">${presIngStockCellHtml(h, i.grams || 0)}</td>
+          <td class="instock" data-instock-ix="${ix}">${presIngStockCellHtml(h, phRound2((i.grams || 0) * _scale))}</td>
           <td class="ph-pres-actions"><button class="del" data-pres-ing-del="${ix}" aria-label="Remove ${esc(i.name)}">×</button></td>
         </tr>`;
       }).join("")}</tbody>
@@ -70351,24 +70457,49 @@ Please let me know if you have any questions.`;
         <td colspan="2"></td>
       </tr></tfoot></table></div>`;
   }
-  // §2.4 (2026-08-26): renamed In stock, and honest about it. The anchors:
-  // BELOW what this line needs, or at/below the jar's own refill line, shows
-  // the REAL grams with a gold bar (that row is worth a look before
-  // dispensing); otherwise "ample" -- a capped 100% is not a fact. A jar at
-  // or under zero shows its actual figure in red. "not in inventory" /
-  // "no level set" keep their existing honest wording.
+  // The grams this bag will actually be made at: the Grams field (or the
+  // refill workbench's own field), else the herb total itself -- returned as
+  // the ratio to the herb total, so a line's share is line grams × ratio.
+  function presIngBagScale(totalG) {
+    const f = document.getElementById("presGrams") || document.getElementById("presRefillGrams");
+    const gp = f ? (parseFloat(f.value) || 0) : 0;
+    return (totalG > 0 && gp > 0) ? gp / totalG : 1;
+  }
+  // In stock, her pick Q3 (2026-10-01) -- "grams left after this bag":
+  // shelf → after, with a bar that shrinks as the bag grows. Supersedes the
+  // 2026-08-26 "ample unless short" wording for this row only. Colour reads
+  // the AFTER figure: red when the bag can't be made (short N g) or the jar
+  // is already at/under zero, amber when it leaves the jar at/below its own
+  // refill line, green otherwise. "not in inventory" keeps its wording.
   function presIngStockCellHtml(h, neededG) {
     if (!h) return `<span class="ph-level-cell ph-level-none">not in inventory</span>`;
-    const q = h.qty || 0;
+    const q = h.qty || 0, need = neededG || 0;
     const low = (h.low != null && h.low > 0) ? h.low : null;
-    if (q <= 0) return `<span class="ph-instock short neg">${phFmtG(q)} g</span>`;
-    if (q < (neededG || 0) || (low != null && q <= low)) {
-      const anchor = Math.max(neededG || 0, low || 0) || 1;
-      const pct = Math.max(4, Math.min(100, Math.round((q / anchor) * 100)));
-      return `<span class="ph-instock short">${phFmtG(q)} g<span class="ph-instock-bar"><i style="width:${pct}%"></i></span></span>`;
-    }
-    if (low == null) return `<span class="ph-level-cell ph-level-none">no level set</span>`;
-    return `<span class="ph-instock ample">ample</span>`;
+    if (q <= 0) return `<span class="ph-instock short neg" title="Nothing on the shelf">${phFmtG(q)} g · out</span>`;
+    const after = phRound2(q - need);
+    const cls = after < 0 ? "short neg" : (low != null && after <= low) ? "short" : "ok";
+    const pct = after <= 0 ? 0 : Math.max(4, Math.min(100, Math.round(after / q * 100)));
+    const txt = need > 0
+      ? (after < 0 ? `${phFmtG(q)} g · short ${phFmtG(-after)} g` : `${phFmtG(q)} → ${phFmtG(after)} g`)
+      : `${phFmtG(q)} g`;
+    const tip = `${phFmtG(q)} g on the shelf · this bag takes ${phFmtG(need)} g · ${after < 0 ? `short by ${phFmtG(-after)} g` : `${phFmtG(after)} g left`}${low != null ? ` · refill line ${phFmtG(low)} g` : ""}`;
+    return `<span class="ph-instock ${cls}" title="${esc(tip)}">${txt}<span class="ph-instock-bar"><i style="width:${pct}%"></i></span></span>`;
+  }
+  // Repaint just the In stock cells in place (grams / dose changes) -- the
+  // rest of the table, and her cursor in a qty box, stay put.
+  function presIngStockRefresh() {
+    const host = document.getElementById("presIngTable");
+    if (!host || !host.querySelector("[data-instock-ix]")) return;
+    // same order the table was drawn in: presRefreshIngTable writes its
+    // sorted order back into the textarea, so the parsed list already matches
+    const list = presIngParsed();
+    const totalG = list.reduce((a, i) => a + (i.grams || 0), 0);
+    const scale = presIngBagScale(totalG);
+    host.querySelectorAll("[data-instock-ix]").forEach(td => {
+      const i = list[+td.dataset.instockIx];
+      if (!i) return;
+      td.innerHTML = presIngStockCellHtml(presResolveLineName(i.name), phRound2((i.grams || 0) * scale));
+    });
   }
   // The ingredients to price / deduct RIGHT NOW. While THIS prescription's edit
   // panel is open, the on-screen list (the #presEditIngs textarea) is the source
@@ -71104,6 +71235,10 @@ Dosage: {dosage}
   // A script that predates BOTH fields (gramsAuto never set either) reads as
   // manual, unchanged from what it always displayed.
   function presGramsStateOf(t) {
+    // her pick Q2 (2026-10-01): decide the amount BY DAYS -- grams = days ×
+    // grams a day (dose × spoon weight × times). Sticky per script while
+    // chosen; ×1/×2/×3/✎ switch back out of it.
+    if (t.gramsMode === "days") return { mode: "days", days: t.gramsDays || 0 };
     if (t.gramsMode === "manual") return { mode: "manual" };
     if (t.gramsMode === "multiple") return { mode: "multiple", multiple: t.gramsMultiple || 1 };
     if (t.gramsAuto === true) return { mode: "multiple", multiple: 1 };
@@ -71131,6 +71266,109 @@ Dosage: {dosage}
       ${PH_GRAMS_MULTIPLES.map(n => opt(n, `×${n}`, st.mode === "multiple" && st.multiple === n)).join("")}
       ${opt("manual", "✎", st.mode === "manual")}
     </span>`;
+  }
+  // ---- Supply: decide the amount by days (her pick Q2, 2026-10-01) --------
+  // grams a day = dose × the spoon's gram weight × times a day, the SAME
+  // figure phFollowupCalc counts "lasts N days" with -- so days in, grams
+  // out, and the duration line reads the days straight back. Only spoons
+  // with a known weight (PH_FU_GRAMS_PER_UNIT) can do this; any other spoon
+  // says so instead of guessing a weight.
+  const PH_SUPPLY_DAYS = [7, 10, 14, 21, 28];
+  function presGramsPerDay(t) {
+    const gpu = PH_FU_GRAMS_PER_UNIT[t.doseSpoon || phDoseDef().spoon];
+    if (!gpu) return 0;
+    const n = t.doseN != null ? parseFloat(t.doseN) : phDoseDef().n;
+    const tt = t.doseT != null ? parseFloat(t.doseT) : phDoseDef().t;
+    return phRound2((n || 0) * gpu * (tt || 0));
+  }
+  // writes days mode + the grams it makes; a spoon with no weight keeps the
+  // grams she already has (never zeroes them)
+  function presGramsApplyDays(t, days) {
+    t.gramsMode = "days"; t.gramsDays = days;
+    const gpd = presGramsPerDay(t);
+    if (gpd && days > 0) t.totalGrams = phRound2(days * gpd);
+  }
+  function presSupplyRowHtml(t) {
+    const gpd = presGramsPerDay(t);
+    const st = presGramsStateOf(t);
+    if (!gpd) return `<span class="ph-supply-none">no gram weight for “${esc(t.doseSpoon || phDoseDef().spoon)}” yet · set by grams</span>`;
+    const cur = st.mode === "days" ? st.days : 0;
+    const chips = PH_SUPPLY_DAYS.map(n =>
+      `<button type="button" class="ph-days-opt${cur === n ? " on" : ""}" data-pres-supply-days="${n}" role="radio" aria-checked="${cur === n}">${n}</button>`).join("");
+    const other = cur && !PH_SUPPLY_DAYS.includes(cur) ? cur : "";
+    return `<span class="ph-days-seg ph-supply-seg" role="radiogroup" aria-label="Days of herbs">${chips}</span>
+      <input type="text" inputmode="numeric" id="presSupplyDays" class="ph-supply-other" value="${other}" placeholder="other" aria-label="Other number of days">
+      <span class="ph-supply-unit">days · <b id="presSupplyGpd">${phFmtG(gpd)}</b> g a day</span>`;
+  }
+  // repaint the Supply row in place -- but never yank the "other" box out
+  // from under her cursor
+  function presSupplyRefresh(t) {
+    const wrap = document.getElementById("presSupplyWrap");
+    if (!wrap || !t) return;
+    const inp = document.getElementById("presSupplyDays");
+    if (inp && document.activeElement === inp) {
+      const g = document.getElementById("presSupplyGpd");
+      if (g) g.textContent = phFmtG(presGramsPerDay(t));
+      const st = presGramsStateOf(t);
+      wrap.querySelectorAll("[data-pres-supply-days]").forEach(b => {
+        const on = st.mode === "days" && +b.dataset.presSupplyDays === st.days;
+        b.classList.toggle("on", on); b.setAttribute("aria-checked", on);
+      });
+      return;
+    }
+    wrap.innerHTML = presSupplyRowHtml(t);
+  }
+  // a dose / spoon / times change: in days mode the grams follow (days stay
+  // what she picked); either way the Supply row's g-a-day updates
+  function presSupplyDoseChanged(t) {
+    if (!t || presIsFormula(t)) return;
+    if (presGramsStateOf(t).mode === "days") {
+      presGramsApplyDays(t, t.gramsDays || 0);
+      const g = document.getElementById("presGrams");
+      if (g && document.activeElement !== g) g.value = t.totalGrams || "";
+      phDefer("savePresc", savePresc, 400);
+    }
+    presSupplyRefresh(t);
+  }
+  // ---- caution line (her pick Q4, 2026-10-01): ONE line above Dispense,
+  // never a chip per herb. Says it only when there is both a reason (heavy
+  // flow logged for today, or she's pregnant / in the two-week wait) AND at
+  // least one herb that moves Blood. "Moving" = a standard invigorate-Blood
+  // list, or a herb whose OWN Clinical notes (her words) say it moves blood
+  // or is a pregnancy caution -- the app adds no clinical fact of its own
+  // beyond that disclosed list (same rule as the 2026-08-19 cross-check).
+  // San Qi, Pu Huang and Da Huang are deliberately left off the list (they
+  // also stop bleeding / act mainly elsewhere).
+  const PH_MOVING_HERBS = ["danggui", "chuanxiong", "taoren", "honghua", "danshen", "yimucao", "chishao", "yanhusuo", "yujin", "ruxiang", "moyao", "sanleng", "ezhu", "niuxi", "wangbuliuxing", "zelan", "jixueteng", "wulingzhi", "shuizhi", "sumu", "jianghuang", "mudanpi"];
+  const phPinyinKey = s => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z]/g, "");
+  function presIsMovingHerb(name, h) {
+    const k = phPinyinKey(name) + " " + phPinyinKey(h && h.name);
+    if (PH_MOVING_HERBS.some(m => k.includes(m))) return true;
+    return !!(h && h.clinicalNotes && /mov\w*\s+(the\s+)?blood|invigorat\w*\s+(the\s+)?blood|pregnan/i.test(h.clinicalNotes));
+  }
+  function presCautionHtml(t) {
+    if (!t || presIsFormula(t)) return "";
+    const name = presPatientFor(t) || t.name || "";
+    const rec = phPatientPeek(name);
+    const reasons = [];
+    const sign = phCycleSignFor(rec, keyOf(TODAY));
+    if (sign && sign.flow === "heavy") reasons.push("Heavy flow today");
+    const plan = phTpPlanForToday(name);
+    const ph = plan && plan.status === "active" ? phTpLivePhase(rec, plan) : null;
+    const phLbl = ph ? (ph.label || "") : "";
+    if (phHistorySignals(name).pregnant || (plan && plan.status === "active" && plan.templateName === "Pregnancy")) reasons.push("Pregnant");
+    else if (/early pregnan|post-?et|two.?week wait|2ww/i.test(phLbl)) reasons.push(phLbl);
+    if (!reasons.length) return "";
+    const ta = document.getElementById("presEditIngs");
+    const ings = ta && presOpenId === t.id ? presIngParsed().map(i => i.name) : (t.ingredients || []).map(i => i.herb || i.name || "");
+    const moving = ings.filter(n => presIsMovingHerb(n, presResolveLineName(n)));
+    if (!moving.length) return "";
+    const tip = "Herbs that move Blood: a standard invigorate-Blood list, or your own Clinical notes on the herb (moves blood / pregnancy).";
+    return `<div class="ph-dsp-caution" id="presCaution" title="${esc(tip)}">⚠ ${esc(reasons.join(" · "))}: ${moving.length} moving herb${moving.length === 1 ? "" : "s"} <span>(${moving.map(esc).join(", ")})</span></div>`;
+  }
+  function presCautionRefresh(t) {
+    const wrap = document.getElementById("presCautionWrap");
+    if (wrap) wrap.innerHTML = presCautionHtml(t);
   }
   // ---- the same segmented control again, for the PRESET popover -----------
   // Writes PHARMACY.presGramsMult (the global default, read by phGramsMultDef
@@ -71162,6 +71400,11 @@ Dosage: {dosage}
     const herbTotal = phRound2(ings.reduce((a, i) => a + (i.grams || 0), 0));
     const herbWord = `${ings.length} herb${ings.length === 1 ? "" : "s"}`;
     const st = presGramsStateOf(t);
+    if (st.mode === "days") {
+      const gpd = presGramsPerDay(t);
+      if (!gpd) return `<div class="ph-grams-hint manual" id="presGramsHint">no gram weight for “${esc(t.doseSpoon || phDoseDef().spoon)}” yet · grams stay at ${phFmtG(t.totalGrams || 0)} g <button type="button" class="ph-grams-reset" data-pres-grams-reset="${t.id}">↻ back to ×1</button></div>`;
+      return `<div class="ph-grams-hint multiple" id="presGramsHint">= ${st.days} day${st.days === 1 ? "" : "s"} × ${phFmtG(gpd)} g a day${ings.length ? ` · herb total ${phFmtG(herbTotal)} g` : ""}</div>`;
+    }
     if (st.mode === "multiple") {
       // an ingredient edit keeps this in sync live now (presGramsFollowHerbs,
       // 2026-09-21) -- this divergence check is only a defensive fallback
@@ -71179,6 +71422,9 @@ Dosage: {dosage}
     // after she types a custom figure into Grams, until her next ingredient
     // edit, which resyncs it automatically (presGramsFollowHerbs) -- not a
     // stuck state she has to remember to reconcile any more.
+    // her pick Q8 (2026-10-01): say "set by you" only when it actually
+    // differs from the herb total -- a typed figure equal to it says nothing
+    if (ings.length && Math.abs((t.totalGrams || 0) - herbTotal) < 0.005) return `<div class="ph-grams-hint" id="presGramsHint"></div>`;
     const body = ings.length ? `✎ set by you · herb total is ${phFmtG(herbTotal)} g` : "✎ set by you · add herbs to compare";
     return `<div class="ph-grams-hint manual" id="presGramsHint">${body} <button type="button" class="ph-grams-reset" data-pres-grams-reset="${t.id}">↻ back to ×1</button></div>`;
   }
@@ -71211,7 +71457,19 @@ Dosage: {dosage}
     const gst = document.getElementById("presPriceGst");
     if (gst) gst.textContent = "incl. GST";
     const stats = document.getElementById("presPriceStats");
-    if (stats) stats.innerHTML = `cost ${phMoney(cost)} · profit ${profitStr}${shortN ? ` · <span class="ph-ing-warn">⚠ ${shortN} short on stock</span>` : ""}`;
+    // her pick Q1 (2026-10-01): the Total line carries grams · days · price
+    // · cost · profit (cost · profit stays here, her locked call 2026-09-21)
+    let daysTxt = "";
+    if (!presIsFormula(t) && gp > 0) {
+      const fu = phFollowupCalc(t, keyOf(TODAY), gp);
+      if (fu.ok) daysTxt = `${phFmtG(phRound2(fu.lastsDays))} day${Math.abs(fu.lastsDays - 1) < 0.005 ? "" : "s"}`;
+    }
+    const lead = !presIsFormula(t) && gp > 0 ? `${phFmtG(gp)} g${daysTxt ? ` · ${daysTxt}` : ""} · ` : "";
+    if (stats) stats.innerHTML = `${lead}cost ${phMoney(cost)} · profit ${profitStr}${shortN ? ` · <span class="ph-ing-warn">⚠ ${shortN} short on stock</span>` : ""}`;
+    // the herb rows' shelf → after figures and the caution line follow every
+    // grams / dose / ingredient change, in place (her picks Q3 + Q4)
+    presIngStockRefresh();
+    presCautionRefresh(t);
     // her 2026-08-22 spec, §3: "show how it was derived" -- only meaningful
     // for the gram-rate method (price = grams × rate); markup pricing is
     // cost-driven (already captioned by the cost/profit line above) and a
@@ -71233,13 +71491,13 @@ Dosage: {dosage}
     const fc = document.getElementById("presFootCost"), fp = document.getElementById("presFootProfit");
     if (fc) fc.textContent = phMoney(cost);
     if (fp) fp.textContent = profitStr;
-    // the label preview (collapsed by default -- the herb list isn't shown
-    // twice). Patient scripts only -- a formula has no patient/use-before/
-    // price to show here and keeps its own simple "📋 Copy" button instead.
+    // the label preview -- always open, small, on a patient script (her pick
+    // Q7, 2026-10-01). A formula has no patient/use-before/price to show
+    // here and keeps its own simple "📋 Copy" button instead.
     const el = document.getElementById("presCalc");
     if (!el) return;
     const isF = presIsFormula(t);
-    if (!presLabelOpen || isF) { el.innerHTML = ""; return; }
+    if (isF) { el.innerHTML = ""; return; }
     // her STEP 4 ask: what's on screen and what gets copied must be
     // identical, character for character -- so this renders the exact
     // string presLabelCopy() copies, never a separately laid-out preview.
@@ -71663,6 +71921,9 @@ Dosage: {dosage}
   function presGramsFollowHerbs(t, seedMultiple) {
     if (!t || presIsFormula(t)) return;
     const st = presGramsStateOf(t);
+    // by days (her Q2 pick): the herbs don't decide the amount, the days do --
+    // re-derive from days × grams a day and stay in days mode
+    if (st.mode === "days") { presGramsApplyDays(t, st.days); presRefreshGramsFieldIfAttached(t); return; }
     const multiple = st.mode === "multiple" ? (st.multiple || 1) : (t.gramsMultiple || seedMultiple || 1);
     t.gramsMode = "multiple"; t.gramsMultiple = multiple;
     const herbTotal = phRound2((t.ingredients || []).reduce((a, i) => a + (i.grams || 0), 0));
