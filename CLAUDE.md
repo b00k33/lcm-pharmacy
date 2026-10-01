@@ -6457,8 +6457,8 @@ her to bring when ready:
   detour presets, the new Stress/Metabolic/Facial detour wording, Rebook/
   Acu-followup/Gone-quiet "away" wording, the MSK/Stress/Weight-loss
   templates, IVF Menstruation/Follicular wording, and the 14 new
-  +Supportive seeds — all mechanism-complete and live, all marked DRAFT
-  pending her own correction pass, same standing rule as every other
+  +Supportive seeds — all mechanism-complete and live, all APPROVED as written by her 2026-10-01 ("approve all for now")
+  (she can still correct any line later), same standing rule as every other
   patient-facing message in this app.
 
 ## Backlog second-half sweep — 149 not-built/partial items verified (2026-09-20)
@@ -6538,8 +6538,8 @@ the sandbox (synthetic patients/records only, cleaned up after each):**
   Acupuncture follow-up and Gone-quiet; the build that followed only gave
   `awayBody`/`awayBodyFormal` to the latter three (Review has no visible
   visit-line to drop the same way, which is likely why it was missed).
-  Added, same DRAFT convention as the other three — **hers to read and
-  correct, not confirmed wording.** The existing add-only backfill in
+  Added, APPROVED as written by her 2026-10-01 ("approve all for now") —
+  she can still correct it later. The existing add-only backfill in
   `phMsgTemplates()` (`if (existing.awayBody == null && s.awayBody) ...`)
   already generalises to any slot, so her live data picks this up
   automatically with zero further code — verified directly:
