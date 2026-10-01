@@ -12209,3 +12209,29 @@ Her screenshot was the Follow-up sheet on the Dispense step (the "Message" block
 - **Not touched:** the Communications → Due check-in panel (`phCkPanelHtml`, `phCkForm`) keeps its own message area. That is a different composer; she was pointing at the Follow-up sheet.
 - **Seen, not changed:** with no booking, the Settling wording reads "before your next visit on your next visit" (the `{{nextAppt}}` fallback). It is wording she approved as written, so it is hers to change.
 - Verified in the sandbox (synthetic patient, removed, 0 `sb-*` keys): tab and rail entries, band numbers, Casual switch, typed text survives a tab switch and back, Dispense sheet shows the preview and not the composer, the button lands on the tab with her typed text intact, 360px with no page overflow, console clean (service-worker noise only), Prescriptions live search (→0→back).
+
+## Plan tab tiles: the Pain map gets the room (her report 2026-10-01, LIVE 8be89c5, build 20261001-160000)
+
+An even three-way split kept the Pain map tile under 620px wide, so its own container-query layout (figures beside the pain list) never switched on and it stayed tall and stacked. Now Focus · Goal and This phase stack in one narrower column, so together they are about as tall as the Pain map, and the Pain map takes the rest of the row (`phTpTilesHtml`). Below the tiles' breakpoint they stack as before.
+
+## Dispense redesign — her eight ask28 answers (2026-10-01, committed 5864ee1, build 20261001-230000, NOT live until she says)
+
+Her ask, on a screenshot of the Dispense stage: "use your expertise to redesign this so a tcm practitioner like me have better workflow and accurate management of herbal dispensing. - ask me questions to make it better". Her answers (memory `project_pharmacy_dispense_redesign_ask28_2026_10_01`), all built:
+- **Q1 A, no top band.** `presDispenseHeadHtml` no longer draws the Formula · Price · Stock band. The Total line reads "126 g · 14 days · cost · profit" (`renderPresCalc`, days from `phFollowupCalc`). Cost · profit stays on the Total line (locked 2026-09-21).
+- **Q2 A, decide the amount by days.** A new Supply row (`presSupplyRowHtml`, `#presSupplyWrap`): chips 7 · 10 · 14 · 21 · 28, an "other" box, and "days · N g a day". A pick puts the script in `t.gramsMode = "days"` with `t.gramsDays`, and grams = days × `presGramsPerDay(t)` (dose × the spoon's weight from `PH_FU_GRAMS_PER_UNIT` × times a day, the same figure "Lasts N days" uses). Changing the dose or spoon in days mode re-derives the grams and keeps the days (`presSupplyDoseChanged`). Days mode is **opt-in**: until she taps a chip, Grams behaves exactly as before. ×1/×2/×3/✎ switch back out of it. A spoon with no known weight says so instead of guessing. The repaint is in place and never pulls the "other" box out from under her cursor.
+- **Q3 B, grams left after this bag.** Each herb row's In stock cell reads "shelf → after" with a bar (`presIngStockCellHtml`): green, gold at or under the jar's refill line, red "short N g" when the bag can't be made. "After" uses the line's grams scaled to the prescribed grams (`presIngBagScale`), the same ratio the dispense deducts by. `presIngStockRefresh` repaints only those cells on every grams, dose or herb change. This supersedes the 2026-08-26 "ample unless short" wording for this row.
+- **Q4 B, one caution line above Dispense** (`presCautionHtml`, `#presCautionWrap`), never a chip per herb. It shows only when there is a reason AND a herb that moves Blood:
+  - a reason is heavy flow logged for today, pregnant (history or a Pregnancy plan), or a phase named early pregnancy / post-ET / two-week wait;
+  - "moving" is the disclosed `PH_MOVING_HERBS` list (standard invigorate-Blood herbs; San Qi, Pu Huang and Da Huang left off), or a herb whose own Clinical notes say it moves blood or is a pregnancy caution.
+- **Q5 A, the plan suggestion appears once,** in the formula name box. The cycle strip (`presDispenseCyclePlanStripHtml`) keeps only the cycle day and phase.
+- **Q6 B, start from the plan's formula.** Use (`data-pres-formula-usesugg`) pours the herbs in through `phTpPourIntoScript` (the same one-time snapshot Link formula makes). The source comes from `presPlanFormulaSource`, tried in this order: the phase's linked script, then the template's `defaultRecipe` when the name matches, then a formula recipe, then a jar by that name. It asks before replacing a list she already has, never pours while a dispense is pending, and falls back to the old name-only behaviour when nothing is found.
+- **Q7 B, the label preview is always open and small** (`#presCalc.ph-label-small`, 220px tall with its own scroll). A formula still has its own Copy button.
+- **Q8 A, "✎ set by you"** only shows when the grams differ from the herb total.
+- Also: the Days row is labelled **Taken**; the dispense step's node reads "2" (steps 1/2/3).
+- Unchanged and locked: the three steps (Calculate / Dispense & copy label / Log), Log as its own tap, pills in the rows, the pending-dispense persistence, the Treatment row colours.
+
+Verified in the sandbox (port 8948, 0 `sb-*` keys, synthetic "Zz Dispense Test" on a Natural fertility plan, removed after, XIAO CHAI HU TANG stock and the log restored):
+- Total line; the caution line showed for heavy flow plus a two-week-wait phase with Dang Gui Shao Yao San and Chuan Xiong.
+- Shelf → after on every row; the chips and the "other" box (focus kept); a dose change re-derives in days mode; the manual-grams hint hides when equal to the herb total.
+- No suggestion in the strip; Use poured with its confirm and toast; nodes 1/2/3; label open and small; Dispense deducted stock and Log wrote one entry.
+- 1280px and 360px with no page overflow; Prescriptions live search 1 → 1 → 0 → 1; console clean.
