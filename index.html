@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261001-230000">
+<meta name="lcm-build" content="20261001-233000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -1225,6 +1225,14 @@
   #pharmacyPage .ph-ref-bar-tx b { color: var(--ph-ink); }
   #pharmacyPage .ph-ref-bar-idle { color: var(--ph-faint); font-style: italic; }
   #pharmacyPage .ph-ref-bar-acts { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; }
+  /* just-made motion: the exit buttons slide in, the primary one (the last
+     button) pulses gold twice so the next step is the thing the eye lands on */
+  #pharmacyPage .ph-ref-bar-acts.just .ph-ref-bar-go { animation: phTpAnnounceIn .24s ease-out both; }
+  #pharmacyPage .ph-ref-bar-acts.just .ph-ref-bar-go:last-child { animation: phTpAnnounceIn .24s ease-out both, phFlowPulse 1s ease-out .3s 2; }
+  #pharmacyPage .ph-flash.ph-ref-madein { animation: phTpAnnounceIn .24s ease-out both; }
+  @media (prefers-reduced-motion: reduce) {
+    #pharmacyPage .ph-ref-bar-acts.just .ph-ref-bar-go, #pharmacyPage .ph-flash.ph-ref-madein { animation: none; }
+  }
   #pharmacyPage .ph-ref-bar-go:disabled { opacity: .45; cursor: not-allowed; }
   #pharmacyPage #phRefillWrap .ph-build-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 8px; }
   #pharmacyPage #phRefillWrap .ph-build-top #refSearch { flex: 1 1 220px; }
@@ -74193,7 +74201,9 @@ Dosage: {dosage}
         <button type="button" class="ph-ref-chain-done" data-ref-clear="1">Done for now — back to the queue</button>
       </div>`;
     }
-    return `<div class="ph-flash">✓ <b>Refill made</b>${m.jarAdded ? ` · +${phFmtG(m.madeGrams)}g to bottle` : ""} · ${m.deductedCount} herb${m.deductedCount === 1 ? "" : "s"} deducted${m.perG != null ? ` · bottle cost $${m.perG}/g` : ""} <button type="button" class="ph-undo-btn" data-ref-toast-undo="${m.logId}">↩ Undo</button></div>${chain}`;
+    const toastFresh = !m.toastShown;
+    m.toastShown = true;
+    return `<div class="ph-flash${toastFresh ? " ph-ref-madein" : ""}">✓ <b>Refill made</b>${m.jarAdded ? ` · +${phFmtG(m.madeGrams)}g to bottle` : ""} · ${m.deductedCount} herb${m.deductedCount === 1 ? "" : "s"} deducted${m.perG != null ? ` · bottle cost $${m.perG}/g` : ""} <button type="button" class="ph-undo-btn" data-ref-toast-undo="${m.logId}">↩ Undo</button></div>${chain}`;
   }
   // The summary strip and the confirm bar live in the PINNED zones, so they are
   // rendered into their own containers rather than inline under the table. The
@@ -74264,12 +74274,27 @@ Dosage: {dosage}
     // moment she changes the grams or picks a different formula, since
     // those no longer match recipeId/forGrams.
     const already = refLastMade && refLastMade.recipeId === recipe.id && refLastMade.forGrams === grams;
+    // motion only on change (her 2026-10-01 "animation features to improve
+    // workflow instruction"): the moment a make lands, the exit buttons slide
+    // in and the primary next step pulses twice; any later repaint of the same
+    // finished bar stays still.
+    const justMade = !!already && !refLastMade.barShown;
+    if (already) refLastMade.barShown = true;
     el.innerHTML = `<div class="ph-ref-bar">
       ${sumLine}
       <span class="ph-ref-bar-tx">${already ? "Made" : "Make"} <b>${phFmtG(grams)}g</b> of <b>${esc(phDispName(recipe.name, true))}</b> — ${tracked} of ${items.length} herbs deducted${bottle ? `, ${phFmtG(grams)}g added to its bottle` : ""}.</span>
-      <span class="ph-ref-bar-acts">
+      <span class="ph-ref-bar-acts${justMade ? " just" : ""}">
         ${already
-          ? `<button type="button" class="btn-save ph-ref-bar-go" disabled>✓ Made — weigh out above</button>`
+          ? (() => {
+              // her report 2026-10-01 ("after i make herbs im stuck on this
+              // page"): the table stays for weighing, but the only exit was the
+              // phone-only chain buttons -- on a desktop the bar had a dead
+              // disabled button and nothing else. Done always leaves; the next
+              // flagged formula, when there is one, is the primary.
+              const nx = phRefillFlagged()[0];
+              return `<button type="button" class="${nx ? "btn-cancel" : "btn-save"} ph-ref-bar-go" data-ref-clear="1">✓ Made — done</button>`
+                + (nx ? `<button type="button" class="btn-save ph-ref-bar-go" data-ph-refill-start="${nx.id}">Next: ${esc(phDispName(nx.name, true))} →</button>` : "");
+            })()
           : `<button type="button" class="btn-cancel ph-ref-bar-cancel" data-ref-clear="1">Cancel</button>
         <button type="button" class="btn-save ph-ref-bar-go" data-ref-make-yes="1">Yes, make refill</button>`}
       </span>
