@@ -12212,7 +12212,7 @@ Her screenshot was the Follow-up sheet on the Dispense step (the "Message" block
 
 ## Plan tab tiles: the Pain map gets the room (her report 2026-10-01, LIVE 8be89c5, build 20261001-160000)
 
-An even three-way split kept the Pain map tile under 620px wide, so its own container-query layout (figures beside the pain list) never switched on and it stayed tall and stacked. Now Focus · Goal and This phase stack in one narrower column, so together they are about as tall as the Pain map, and the Pain map takes the rest of the row (`phTpTilesHtml`). Below the tiles' breakpoint they stack as before.
+An even three-way split kept the Pain map tile under 620px wide, so its own container-query layout (figures beside the pain list) never switched on and it stayed tall and stacked. Now Focus · Goal and This phase stack in one narrower column, so together they are about as tall as the Pain map, and the Pain map takes the rest of the row. CSS only: `.ph-tp-tiles:has(.ph-tp-tile.pm)` gets a two-column grid with areas fg / tp / pm (`minmax(240px, 300px) minmax(380px, 1fr)`). At ≤760px the three tiles stack in one column.
 
 ## Dispense redesign — her eight ask28 answers (2026-10-01, committed 5864ee1, build 20261001-230000, NOT live until she says)
 
