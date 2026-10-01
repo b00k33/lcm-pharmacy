@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261002-160000">
+<meta name="lcm-build" content="20261002-163000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6945,6 +6945,16 @@
   #pharmacyPage .ph-tp-apphist.lx .ph-tp-apphist-table { border-collapse: separate; border-spacing: 0; background: #fff; box-shadow: 0 0 0 1px rgba(11,59,75,.10); border-radius: 10px; overflow: hidden; min-width: 300px; }
   #pharmacyPage .ph-tp-apphist.lx col.a { width: 44%; }
   #pharmacyPage .ph-tp-apphist.lx col.s { width: 25%; }
+  /* the CD column (cycle patients only): ring + day number, phase on hover */
+  #pharmacyPage .ph-tp-apphist.lx.hascd col.a { width: 35%; }
+  #pharmacyPage .ph-tp-apphist.lx.hascd col.s { width: 22%; }
+  #pharmacyPage .ph-tp-apphist.lx.hascd col.c { width: 15%; }
+  #pharmacyPage .ph-tp-apphist.lx.hascd th, #pharmacyPage .ph-tp-apphist.lx.hascd td { padding-left: 9px; padding-right: 9px; }
+  #pharmacyPage .ph-tp-apphist.lx td.cd { white-space: nowrap; color: var(--ph-ink); }
+  #pharmacyPage .ph-tp-apphist.lx td.cd .ph-un-ic { vertical-align: -2px; margin-right: 4px; color: var(--ph-herb); fill: none; stroke: currentColor; stroke-width: 2; }
+  #pharmacyPage .ph-tp-apphist.lx td.cd .ph-un-ic .mk { fill: currentColor; stroke: none; }
+  #pharmacyPage .ph-tp-apphist.lx td.cd b { font-family: var(--font-disp); font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  #pharmacyPage .ph-tp-apphist.lx td.cd.none { color: var(--ph-faint); }
   #pharmacyPage .ph-tp-apphist.lx th { font-family: var(--font-disp); font-weight: 600; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ph-herb); background: var(--ph-paper); padding: 9px 12px; }
   #pharmacyPage .ph-tp-apphist.lx td { padding: 9px 12px; border-bottom: 0; border-top: 1px solid var(--ph-line); font-size: 13px; transition: background .15s; }
   #pharmacyPage .ph-tp-apphist.lx tbody tr { background: none; }
@@ -26761,14 +26771,17 @@
   }
   // the List's CD column (her 2026-10-02 "include column for cd"): the cycle
   // day and phase on that booking's date, the same rule as a block's meta line
-  // (a cycle-plan patient only; a past day reads "—" because a cycle day read
-  // back from today's LMP would be wrong there)
+  // (a cycle-plan patient only; a past visit reads the day from the logged
+  // period that was running then -- phApptCdInfo -- and a date past the last
+  // logged cycle reads "~n", projected)
   function phApptListCdHtml(a) {
+    // a cycle-plan patient only (phUnPhaseFor's rule), so a migraine visit
+    // never gets a wheel; the day itself comes from the logged period
     const P = a.service === "Break" ? null : phUnPhaseFor(a);
-    const comp = P && P.comp;
-    if (!comp) return `<span class="cdc none" aria-label="No cycle day">—</span>`;
-    const len = comp.cycleLen, cd = Math.min(comp.day, len), t = ((cd - .5) / len * 360 - 90) * Math.PI / 180;
-    return `<span class="cdc" title="Cycle day ${comp.day} · ${esc(comp.phaseLabel)}"><svg class="ph-un-ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle class="mk" cx="${(12 + 8 * Math.cos(t)).toFixed(1)}" cy="${(12 + 8 * Math.sin(t)).toFixed(1)}" r="2.8"/></svg><b>${comp.day}</b><em>${esc(comp.phaseLabel)}</em></span>`;
+    const x = P && (P.comp || P.ivf || (P.plan && PH_TP_CYCLE_TEMPLATES.includes(P.plan.templateName))) ? phApptCdInfo(a) : null;
+    if (!x) return `<span class="cdc none" aria-label="No cycle day">—</span>`;
+    const comp = x.comp;
+    return `<span class="cdc" title="Cycle day ${comp.day} · ${esc(comp.phaseLabel)}${x.approx ? " (projected)" : ""}">${phApptCdGlyph(comp.day, x.len, 14)}<b>${x.approx ? "~" : ""}${comp.day}</b><em>${esc(comp.phaseLabel)}</em></span>`;
   }
   /* Under a one-day List (her pick C): the day's numbers as a strip and
      "Herbs to prepare today" -- the CHM/both bookings whose script is not
@@ -57751,6 +57764,31 @@ or changing anything in Cliniko.
   // what a practitioner means by "CD" for that date — it wraps. Double
   // modulo handles a date before the LMP too (never expected here, but a
   // wrong sign should read as a slightly odd number, never NaN or negative).
+  // the cycle day (+ phase) a BOOKING falls on, for the CD columns (her
+  // 2026-10-02 "include column for cd"): the logged period that was running
+  // on that date -- a past visit reads its real cycle day, not today's LMP
+  // rolled back -- and only a date past the last logged cycle is projected
+  // (approx). null: cycle off, no period logged, or before the first one.
+  function phApptCdInfo(a) {
+    if (!a || a.service === "Break" || !a.patient || !a.date) return null;
+    const rec = phPatientPeek(a.patient);
+    if (!rec || !phCycleOn(rec)) return null;
+    const cyc = phCycleFor(rec);
+    if (!cyc || !cyc.lmp) return null;
+    const len = Math.max(14, cyc.cycleLen || 28), starts = phBbtCycleStarts(rec);
+    const s = starts.filter(x => x <= a.date).pop();
+    if (!s) return null;
+    const date = parseKey(a.date), next = starts.find(x => x > a.date);
+    const days = Math.round((date - parseKey(s)) / 86400000);
+    const real = next || days < len + 3;
+    const comp = real ? phTpCycleCompute(Object.assign({}, cyc, { lmp: s }), date) : phCycleCompAsOf(rec, date);
+    return comp ? { comp, approx: !real, len } : null;
+  }
+  // the glyph both CD columns use: a ring with a marker on her day
+  function phApptCdGlyph(day, len, s) {
+    const cd = Math.max(1, Math.min(day, len)), t = ((cd - .5) / len * 360 - 90) * Math.PI / 180;
+    return `<svg class="ph-un-ic" viewBox="0 0 24 24" width="${s || 14}" height="${s || 14}" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle class="mk" cx="${(12 + 8 * Math.cos(t)).toFixed(1)}" cy="${(12 + 8 * Math.sin(t)).toFixed(1)}" r="2.8"/></svg>`;
+  }
   function phCycleCdOnDate(dateKey, cyc) {
     if (!cyc || !cyc.lmp || !dateKey) return null;
     const cycleLen = Math.max(14, cyc.cycleLen || 28);
@@ -63335,6 +63373,14 @@ or changing anything in Cliniko.
     const hSeen = phTpHistSeen.get(plan.id);
     const hAnim = hSeen && !phTpReduceMotion();
     phTpHistSeen.set(plan.id, new Set(rowsList.map(a => a.id)));
+    // the CD column (her 2026-10-02 "include column for cd"): only when this
+    // patient tracks a cycle, so a back-pain plan keeps its three columns
+    const cdBy = new Map(rowsList.map(a => [a.id, phApptCdInfo(a)]));
+    const showCd = [...cdBy.values()].some(Boolean);
+    const cdCell = a => {
+      const x = cdBy.get(a.id);
+      return x ? `<td class="cd" title="Cycle day ${x.comp.day} · ${esc(x.comp.phaseLabel)}${x.approx ? " (projected)" : ""}">${phApptCdGlyph(x.comp.day, x.len, 14)}<b>${x.approx ? "~" : ""}${x.comp.day}</b></td>` : `<td class="cd none">—</td>`;
+    };
     const rows = rowsList.map(a => {
       const heldPhase = held.get(a.id);
       const st = a.date > today ? "booked" : a.date === today ? "today" : "done";
@@ -63351,11 +63397,12 @@ or changing anything in Cliniko.
       return `<tr class="${st}${!heldPhase ? " unf" : ""}${hAnim && !hSeen.has(a.id) ? " rowin" : ""}" data-tp-hist-link="${esc(a.id)}">
         <td class="ap" title="${esc(a.service || "Appointment")}"><b>${esc(sd2(a.date))}</b><small>${DAY_SHORT[d.getDay()]}${a.time ? ` · ${esc(phCkTime12(a.time))}` : ""}</small></td>
         <td class="st"><span class="dot ${st}"></span>${status}</td>
+        ${showCd ? cdCell(a) : ""}
         <td class="fl">${tag}<select data-tp-appt-histfile="${esc(a.id)}:${plan.id}" aria-label="Which phase this visit counts for" title="${esc((phs.find(p => heldPhase && p.id === heldPhase.id) || {}).label || "Pick a phase")}">${opts}</select></td>
       </tr>`;
     }).join("");
-    return `<div class="ph-tp-apphist lx">
-      <div class="ph-tp-apphist-wrap"><table class="ph-tp-apphist-table"><colgroup><col class="a"><col class="s"><col class="f"></colgroup><thead><tr><th>Appointment</th><th>Status</th><th>Fills</th></tr></thead><tbody>${rows}</tbody></table></div>
+    return `<div class="ph-tp-apphist lx${showCd ? " hascd" : ""}">
+      <div class="ph-tp-apphist-wrap"><table class="ph-tp-apphist-table"><colgroup><col class="a"><col class="s">${showCd ? `<col class="c">` : ""}<col class="f"></colgroup><thead><tr><th>Appointment</th><th>Status</th>${showCd ? `<th>CD</th>` : ""}<th>Fills</th></tr></thead><tbody>${rows}</tbody></table></div>
     </div>`;
   }
   document.addEventListener("change", e => {
