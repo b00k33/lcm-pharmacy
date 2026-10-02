@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261004-050000">
+<meta name="lcm-build" content="20261004-060000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -56685,9 +56685,25 @@ or changing anything in Cliniko.
     }
     return PHARMACY.tpTemplateOverrides;
   }
+  // An override replaces a template's phases wholesale, so the planned session
+  // counts added to the built-ins later (PH_TP_DEFAULT_SESSIONS 10/1, the
+  // standard course 10/3) never reached a template she had already edited:
+  // its phases showed "Set sessions" while the untouched ones showed a count.
+  // Fill ONLY a missing count, ONLY from the built-in phase of the same name,
+  // and only when her own rhythm text doesn't already give one. Display-only
+  // (nothing is written until she next edits that template), her wording and
+  // rhythm are never touched. (her report 2026-10-04)
+  function phTpMgrFillSessions(basePhases, ovPhases) {
+    if (!ovPhases) return basePhases;
+    return ovPhases.map(p => {
+      if (!p || p.sessions != null || phTpSessionsOf(p) > 0) return p;
+      const b = (basePhases || []).find(x => x && x.label === p.label && x.sessions > 0);
+      return b ? { ...p, sessions: b.sessions } : p;
+    });
+  }
   const phTpBuiltinTemplates = () => PH_TP_TEMPLATES.map(t => {
     const ov = phTpMgrOverrides()[t.id];
-    return ov ? { ...t, ...ov, phases: ov.phases || t.phases } : t;
+    return ov ? { ...t, ...ov, phases: ov.phases ? phTpMgrFillSessions(t.phases, ov.phases) : t.phases } : t;
   });
   const phTpMgrIsBuiltin = id => PH_TP_TEMPLATES.some(t => t.id === id);
   // the one object the editor (and everything downstream of it) shows for
@@ -56695,7 +56711,7 @@ or changing anything in Cliniko.
   // template object itself
   function phTpMgrCurrent(id) {
     const base = PH_TP_TEMPLATES.find(t => t.id === id);
-    if (base) { const ov = phTpMgrOverrides()[id] || {}; return { ...base, ...ov, phases: ov.phases || base.phases }; }
+    if (base) { const ov = phTpMgrOverrides()[id] || {}; return { ...base, ...ov, phases: ov.phases ? phTpMgrFillSessions(base.phases, ov.phases) : base.phases }; }
     return phTpUserTemplates().find(t => t.id === id) || null;
   }
   let phTpMgrSel = null, phTpMgrUndo = [], phTpMgrDeleteArm = null;
@@ -56772,7 +56788,14 @@ or changing anything in Cliniko.
       if (phTpMgrUndo.length > 50) phTpMgrUndo.shift();
       t[field] = value;
     }
-    savePharmacy();
+    // her report 2026-10-04 ("edits to all templates in musculoskeletal ... not
+    // saved"): the cloud merge picks ONE side of pharmacy_core on a conflict, so
+    // a second device that changed anything else could carry its older
+    // overrides straight back over these. Stamp WHEN this template was last
+    // edited (kept in a map, never on the override itself, so it can't leak
+    // into the template objects) and the merge keeps the newer one per template.
+    if (base) (PHARMACY.tpTemplateOverridesAt || (PHARMACY.tpTemplateOverridesAt = {}))[id] = Date.now();
+    if (savePharmacy() === false) phFlashShow("That edit could not be saved — check the warning at the top and try again.");
   }
   // review-caught (2026-09-16): reverting a template she isn't currently
   // looking at used to leave zero visible change on screen -- she'd have no
@@ -56791,7 +56814,8 @@ or changing anything in Cliniko.
       const t = phTpUserTemplates().find(x => x.id === last.id);
       if (t) t[last.field] = last.prev;
     }
-    savePharmacy();
+    if (last.builtin) (PHARMACY.tpTemplateOverridesAt || (PHARMACY.tpTemplateOverridesAt = {}))[last.id] = Date.now();
+    if (savePharmacy() === false) phFlashShow("That could not be saved — check the warning at the top and try again.");
     phTpMgrSel = last.id;
     const cur = phTpMgrCurrent(last.id);
     phFlashShow(`↩ Put back — ${esc(cur ? cur.name : "that template")}: ${PH_TP_MGR_FIELD_LABEL[last.field] || last.field}`);
@@ -81785,6 +81809,51 @@ Dosage: {dosage}
     return JSON.stringify(pick);
   }
 
+  /* ---- template-by-template merge for the Treatment plan template edits
+     (her report 2026-10-04, "previously i made edits to all templates in
+     musculoskeletal section. unfortunately they are not saved") -- same
+     collateral-damage shape as the patients above: tpTemplateOverrides rides
+     inside pharmacy_core, which takes ONE WHOLE SIDE on a conflict, so a
+     device that had not caught up (and had changed something unrelated)
+     carried its older copy of EVERY template edit back over the cloud, and the
+     device she edited on then adopted it. Each edit now stamps
+     tpTemplateOverridesAt[id] (phTpMgrSetField / phTpMgrUndoLast); per
+     template, the side stamped later wins -- including a reset to the
+     built-in (no entry on the winning side = no override). A template with no
+     stamp on either side (edited before this fix) keeps today's behaviour,
+     except that an edit only one side has still survives. */
+  function mergeTemplateOverrides(pickStr, lStr, cStr) {
+    var pick, l, c;
+    try { pick = JSON.parse(pickStr); } catch (e) { return pickStr; }
+    try { l = JSON.parse(lStr); } catch (e) { l = null; }
+    try { c = JSON.parse(cStr); } catch (e) { c = null; }
+    function obj(x, f) { return (x && x[f] && typeof x[f] === "object") ? x[f] : {}; }
+    var lo = obj(l, "tpTemplateOverrides"), co = obj(c, "tpTemplateOverrides");
+    var la = obj(l, "tpTemplateOverridesAt"), ca = obj(c, "tpTemplateOverridesAt");
+    var po = obj(pick, "tpTemplateOverrides");
+    var ids = {};
+    [lo, co, la, ca].forEach(function (m) { Object.keys(m).forEach(function (k) { ids[k] = true; }); });
+    var out = {}, outAt = {};
+    Object.keys(ids).forEach(function (id) {
+      var ta = +la[id] || 0, tb = +ca[id] || 0, a = lo[id], b = co[id], winner;
+      if (ta !== tb) winner = ta > tb ? a : b;
+      else if (a && !b) winner = a;
+      else if (b && !a) winner = b;
+      else winner = po[id];
+      if (winner) out[id] = winner;
+      if (ta || tb) outAt[id] = Math.max(ta, tb);
+    });
+    var migrated = !!((l && l.tpTemplateOverridesMigrated) || (c && c.tpTemplateOverridesMigrated));
+    var same = JSON.stringify(out) === JSON.stringify(po)
+      && JSON.stringify(outAt) === JSON.stringify(obj(pick, "tpTemplateOverridesAt"))
+      && (!migrated || pick.tpTemplateOverridesMigrated);
+    if (same) return pickStr;
+    pick.tpTemplateOverrides = out;
+    if (Object.keys(outAt).length) pick.tpTemplateOverridesAt = outAt;
+    if (migrated) pick.tpTemplateOverridesMigrated = true;
+    return JSON.stringify(pick);
+  }
+
   /* ---- record-by-record merge for prescriptions (her wipe, 2026-08-22) --
      The 20:40 wipe: a device that hadn't synced since Aug 19-20 booted, a
      boot-time housekeeping write made its prescriptions section look
@@ -81929,6 +81998,7 @@ Dosage: {dosage}
       if (name === "pharmacy_core") {
         pick = preserveLocationField(pick, l, c);
         pick = mergePatientsByRecency(pick, l, c);
+        pick = mergeTemplateOverrides(pick, l, c);
       }
       if (pick !== l) changed = true;
       // cloudStale: the truth we just landed on isn't what the cloud row

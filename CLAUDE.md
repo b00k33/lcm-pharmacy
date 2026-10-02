@@ -12446,3 +12446,11 @@ Her ask: simplify planning a phase's sessions. Two mocks (A ghost squares + gold
 **Plan-it B is LIVE (2026-10-04):** pushed on her "push live" (`b1f611f`), served build `20261004-040000`, `sw.js` `lcm-20261004-plan-it-squares` confirmed on GitHub Pages.
 
 **IVF Prep is now in the template editor (her yes, 2026-10-04):** `ivfPrep` is the FIRST phase of the "IVF Protocol" built-in (`cycle_ivf`), so Settings → Prescriptions → Treatment plan templates shows and edits it. Wording is still a Claude draft, hers to correct. It stays out of `PH_IVF_ROUND_KEYS`, so a track switch leaves it alone. `lcm-build` `20261004-050000`, `sw.js` `lcm-20261004-ivfprep-in-editor`. Committed on `session-a`; NOT pushed until she says "push live".
+
+## Template edits survive sync, and edited templates keep session counts (her report 2026-10-04, "my MSK template edits are not saved")
+
+Menu path: Settings → Prescriptions → Treatment plan templates (or All templates → Treatment plans).
+- **Cause 1 — cloud sync:** `tpTemplateOverrides` rides inside `pharmacy_core`, which takes ONE WHOLE SIDE on a conflict, so a second device that was behind could carry an older copy of every template edit back over the newer one. Each edit now stamps `PHARMACY.tpTemplateOverridesAt[id]` (`phTpMgrSetField`, `phTpMgrUndoLast`); `mergeTemplateOverrides` (sync module, right after `mergePatientsByRecency`, wired into the `pharmacy_core` block) keeps, per template, the side stamped later, including a reset to the built-in. A template edited before this build has no stamp: it behaves as before, except an edit only one side has still survives. Protection starts from the next edit.
+- **Cause 2 — defaults never reached edited templates:** an override's `phases` replaces the built-in's wholesale, so the session counts added 10/1 and 10/3 never reached them. `phTpMgrFillSessions` fills a missing `sessions` from the built-in phase with the same label, only when the edited phase has no count and no cadence that gives one.
+- **Cause 3 — unchecked save:** a failed `savePharmacy()` in the template editor now flashes a warning instead of staying silent.
+- Her existing edits can be restored from `LCM-pharmacy-before-restore-2026-10-01.json` only with her go-ahead (real patient data).
