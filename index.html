@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261004-020000">
+<meta name="lcm-build" content="20261004-030000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -55856,7 +55856,7 @@ or changing anything in Cliniko.
       : `<div class="empty">Set an egg retrieval or transfer day and her visit dates appear here.</div>`;
     return `<div class="ph-ivfd" data-ivfd="${esc(name)}|${esc(plan.id)}">
       <h4>IVF dates <span class="new">NEW</span></h4>
-      ${row("retrieval", "Egg retrieval", "egg", dates.retr)}${row("transfer", "Embryo transfer", "et", dates.xfer)}
+      ${row("retrieval", "Egg retrieval", "egg", dates.retr)}${plan.phases.some(p => /^(preEt|postEt|tww|early)/.test(p.phaseKey || PH_TP_PHASE_KEY_OF_LABEL.get(p.label) || "")) ? row("transfer", "Embryo transfer", "et", dates.xfer) : ""}
       <p class="note">The plan moves itself to Post-OPU the day after retrieval, to Pre-ET the day before transfer and to Post-ET on transfer day, so you never advance it by hand. Change a date any time; everything follows.</p>
       <h4 class="v">Visits this sets up</h4>${book}
     </div>`;
@@ -64480,7 +64480,12 @@ or changing anything in Cliniko.
     { id: "fresh", t: "Fresh IVF / ICSI", s: "Stimulation, collection, then transfer" },
     { id: "fetnat", t: "Frozen transfer · natural", s: "Timed to her own ovulation" },
     { id: "fetmed", t: "Frozen transfer · medicated", s: "Lining built on the clinic's schedule" },
+    // DRAFT wording (hers to correct): stimulation and collection only, no transfer phases
+    { id: "egg", t: "Egg collection cycle", s: "Stimulation and collection only — no transfer (e.g. egg freezing)" },
   ];
+  // phases after the transfer: with "not yet" ticked on the transfer date they
+  // default to no visits (her ask 2026-10-04); she can still raise any count
+  const PH_IVFQ_POST_XFER = ["postEt", "postEtFrozen", "tww", "early"];
   const PH_IVFQ_TREATS = [
     { id: "both", t: "Acupuncture + herbs", s: "The usual for her plan" },
     { id: "acu", t: "Acupuncture only", s: "No herbs on this plan" },
@@ -64495,6 +64500,7 @@ or changing anything in Cliniko.
   const phIvfQBlank = () => ({ start: "start", cycle: "fresh", lmp: "", lmpNot: false, retr: "", retrNot: false, xfer: "", xferNot: false, prep: 6, treat: "both", visits: {}, keepKey: "", startFrom: "" });
   const phIvfQQs = S => S.start === "prep" ? [0, 1, 2, 3, 4, 5] : [0, 1, 2, 4, 5];
   function phIvfQKeys(S) {
+    if (S.cycle === "egg") return S.start === "prep" ? ["ivfPrep", "menses", "foll1", "foll2", "opu"] : ["menses", "foll1", "foll2", "opu"];
     const k = S.cycle === "fresh" ? ["menses", "foll1", "foll2", "opu", "preEt", "postEt"]
       : [S.cycle === "fetmed" ? "fetPrepMedicated" : "fetPrepNatural", "preEtFrozen", "postEtFrozen"];
     k.push("tww", "early");
@@ -64503,7 +64509,7 @@ or changing anything in Cliniko.
   // which phase she is on now, from where she says she is
   function phIvfQStartKey(S, keys) {
     if (S.keepKey && S.startFrom === S.start && keys.includes(S.keepKey)) return S.keepKey;
-    const fresh = S.cycle === "fresh";
+    const fresh = S.cycle === "fresh" || S.cycle === "egg";
     const first = fresh ? "menses" : keys.find(k => k.indexOf("fetPrep") === 0);
     if (S.start === "prep") return "ivfPrep";
     if (S.start === "start") return first;
@@ -64519,7 +64525,7 @@ or changing anything in Cliniko.
     }
     return post;
   }
-  const phIvfQDefN = (S, k) => S.treat === "herbs" ? 0 : (S.visits[k] != null ? S.visits[k] : (k === "ivfPrep" ? S.prep : (PH_IVFQ_DEF[k] != null ? PH_IVFQ_DEF[k] : 1)));
+  const phIvfQDefN = (S, k) => S.treat === "herbs" ? 0 : (S.visits[k] != null ? S.visits[k] : (S.xferNot && PH_IVFQ_POST_XFER.includes(k) ? 0 : (k === "ivfPrep" ? S.prep : (PH_IVFQ_DEF[k] != null ? PH_IVFQ_DEF[k] : 1))));
   function phIvfQCadence(S, k, n) {
     if (S.treat === "herbs") return phTpCadenceCompose(0, "wk", "herbs");
     const forWhat = S.treat === "acu" ? "acu" : "both";
@@ -64563,8 +64569,8 @@ or changing anything in Cliniko.
   function phIvfQWriteDates(name, rec, plan, S) {
     const today = keyOf(phLiveToday());
     if (S.lmp && !S.lmpNot && phIvfQDayOk(S.lmp) && S.lmp <= today && /^(start|stim)$/.test(S.start)) phCycleAddHistoryDate(rec, S.lmp);
-    if (S.cycle === "fresh" && S.retr && !S.retrNot && phIvfQDayOk(S.retr)) phIvfDatesSet(name, plan, "retrieval", S.retr, S.retr > today);
-    if (S.xfer && !S.xferNot && phIvfQDayOk(S.xfer) && S.start !== "preg") phIvfDatesSet(name, plan, "transfer", S.xfer, S.xfer > today);
+    if ((S.cycle === "fresh" || S.cycle === "egg") && S.retr && !S.retrNot && phIvfQDayOk(S.retr)) phIvfDatesSet(name, plan, "retrieval", S.retr, S.retr > today);
+    if (S.cycle !== "egg" && S.xfer && !S.xferNot && phIvfQDayOk(S.xfer) && S.start !== "preg") phIvfDatesSet(name, plan, "transfer", S.xfer, S.xfer > today);
   }
   const phIvfQStartIdx = (phases, key, from) => { const i = phases.findIndex((p, j) => j >= (from || 0) && p.phaseKey === key && p.status !== "done"); return i < 0 ? 0 : i; };
   // a NEW plan: the whole thing, then land on it exactly as presTpInlineCreate does
@@ -64620,9 +64626,10 @@ or changing anything in Cliniko.
       const rec = phPatientPeek(name), plan = rec && (rec.treatmentPlans || []).find(p => p.id === opts.planId);
       if (!plan) return;
       const keys = plan.phases.map(p => p.phaseKey).filter(Boolean);
-      S.cycle = keys.includes("fetPrepMedicated") ? "fetmed" : keys.some(k => PH_IVF_FROZEN_KEYS.includes(k)) ? "fetnat" : "fresh";
+      const noXfer = keys.includes("opu") && !keys.some(k => /^(preEt|postEt|tww|early)/.test(k));
+      S.cycle = keys.includes("fetPrepMedicated") ? "fetmed" : keys.some(k => PH_IVF_FROZEN_KEYS.includes(k)) ? "fetnat" : noXfer ? "egg" : "fresh";
       const cur = plan.phases.find(p => p.status === "current");
-      const frozen = S.cycle !== "fresh";
+      const frozen = S.cycle === "fetmed" || S.cycle === "fetnat";
       const map = { ivfPrep: "prep", menses: "start", fetPrepNatural: "start", fetPrepMedicated: "start", foll1: "stim", foll2: "stim", opu: "opu", preEt: "fet", preEtFrozen: "opu", postEt: "wait", postEtFrozen: "wait", tww: "wait", early: "preg" };
       S.start = (cur && map[cur.phaseKey]) || "start";
       S.startFrom = S.start; S.keepKey = cur && cur.phaseKey || "";
@@ -64657,13 +64664,13 @@ or changing anything in Cliniko.
   }
   function phIvfQQuestion(Q, qid) {
     const S = Q.S, today = keyOf(phLiveToday());
-    if (qid === 0) return `<h3>Where is she now?</h3><p>Pick the one that fits. Her plan starts from here.</p>${phIvfQCards(PH_IVFQ_STARTS, S.start, "data-ivfq-start")}`;
+    if (qid === 0) return `<h3>Where is she now?</h3><p>Pick the one that fits. Her plan starts from here.</p>${phIvfQCards(S.cycle === "egg" ? PH_IVFQ_STARTS.filter(o => !/^(fet|wait|preg)$/.test(o.id)) : PH_IVFQ_STARTS, S.start, "data-ivfq-start")}`;
     if (qid === 1) return `<h3>Which cycle is it?</h3><p>This decides which phases she has.</p>${phIvfQCards(PH_IVFQ_CYCLES, S.cycle, "data-ivfq-cycle")}`;
     if (qid === 2) {
       let f = "";
       if (/^(start|stim)$/.test(S.start)) f += phIvfQDateField(S, "lmp", "Period / cycle start", "The first day of her bleed.", today);
-      if (S.cycle === "fresh" && !/^(wait|preg)$/.test(S.start)) f += phIvfQDateField(S, "retr", "Expected egg collection", "An estimate is fine — it can be corrected later.");
-      if (S.start !== "preg") f += phIvfQDateField(S, "xfer", "Embryo transfer date", "An estimate is fine — it can be corrected later.");
+      if ((S.cycle === "fresh" || S.cycle === "egg") && !/^(wait|preg)$/.test(S.start)) f += phIvfQDateField(S, "retr", "Expected egg collection", "An estimate is fine — it can be corrected later.");
+      if (S.start !== "preg" && S.cycle !== "egg") f += phIvfQDateField(S, "xfer", "Embryo transfer date", "An estimate is fine — it can be corrected later.");
       return `<h3>Any dates yet?</h3><p>All optional. Tick "not yet" if there isn't one.</p>${f || `<p class="ph-ivfq-none">Nothing to date — she is already pregnant.</p>`}`;
     }
     if (qid === 3) return `<h3>How far ahead is the prep?</h3><p>Weeks of weekly visits before her cycle starts.</p><div class="ph-ivfq-chips">${PH_IVFQ_PREP_WEEKS.map(w => `<button type="button" class="ph-ivfq-chip${S.prep === w ? " on" : ""}" data-ivfq-prep="${w}">${w} weeks</button>`).join("")}</div>`;
@@ -64738,7 +64745,12 @@ or changing anything in Cliniko.
       if (S.start === "fet" && S.cycle === "fresh") S.cycle = "fetnat";
       phIvfQRender(); return;
     }
-    if (t.dataset.ivfqCycle !== undefined) { S.cycle = t.dataset.ivfqCycle; phIvfQRender(); return; }
+    if (t.dataset.ivfqCycle !== undefined) {
+      S.cycle = t.dataset.ivfqCycle;
+      // an egg collection cycle has no transfer, so "frozen transfer coming / after transfer / pregnant" can't apply
+      if (S.cycle === "egg" && /^(fet|wait|preg)$/.test(S.start)) S.start = "start";
+      phIvfQRender(); return;
+    }
     if (t.dataset.ivfqTreat !== undefined) { S.treat = t.dataset.ivfqTreat; phIvfQRender(); return; }
     if (t.dataset.ivfqPrep !== undefined) { S.prep = +t.dataset.ivfqPrep; phIvfQRender(); return; }
     if (t.dataset.ivfqVis !== undefined) {
@@ -64759,6 +64771,9 @@ or changing anything in Cliniko.
       phIvfQRefreshPv();
     } else if (el.dataset.ivfqNot) {
       S[el.dataset.ivfqNot + "Not"] = el.checked;
+      // "not yet" on the transfer: the post-transfer phases drop to no visits
+      // (clears counts carried from an earlier plan too; she can raise them again)
+      if (el.dataset.ivfqNot === "xfer") PH_IVFQ_POST_XFER.forEach(k => { delete S.visits[k]; });
       phIvfQRender();
     }
   });
