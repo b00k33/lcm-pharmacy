@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261003-130000">
+<meta name="lcm-build" content="20261003-153000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -35632,7 +35632,7 @@
         const [id, idx, key, label] = tpMgrTherToggle.dataset.tpMgrTherToggle.split(":");
         const list = phTpMgrTherapyList(id, +idx).map(t => ({ ...t }));
         let entry = list.find(t => t.key === key);
-        if (!entry) { entry = { key, label, on: false, both: "", left: "", right: "" }; list.push(entry); }
+        if (!entry) { entry = { key, label, on: phTpMgrTherOn(id, +idx, key), both: "", left: "", right: "" }; list.push(entry); }
         entry.on = !entry.on;
         phTpMgrSetPhaseField(id, +idx, "defaultTherapies", list);
         phTplHostRerender();
@@ -35641,6 +35641,17 @@
       const tpMgrTherChip = e.target.closest("[data-tp-mgr-ther-chip]");
       if (tpMgrTherChip) {
         const [id, idx, key, word] = tpMgrTherChip.dataset.tpMgrTherChip.split(":");
+        const pf = PH_TP_MGR_THER_FIELD[key];
+        if (pf) {
+          // Press tags' words go into the phase's own press points text.
+          const cur = String((phTpMgrPhases(id)[+idx] || {})[pf] || "").trim();
+          const parts = cur ? cur.split(",").map(s => s.trim()) : [];
+          if (!parts.some(p => p.toLowerCase() === word.toLowerCase())) {
+            phTpMgrSetPhaseField(id, +idx, pf, cur ? cur + ", " + word : word);
+            phTplHostRerender();
+          }
+          return;
+        }
         const list = phTpMgrTherapyList(id, +idx).map(t => ({ ...t }));
         const entry = list.find(t => t.key === key);
         if (entry) {
@@ -56118,13 +56129,41 @@ or changing anything in Cliniko.
     return (ph && Array.isArray(ph.defaultTherapies)) ? ph.defaultTherapies : [];
   }
   function phTpMgrTherapyEntry(id, idx, key) { return phTpMgrTherapyList(id, idx).find(t => t.key === key) || null; }
+  // Her ask 2026-10-03 ("therapies includes points" -> "Points live inside
+  // the therapy"): on a TEMPLATE, the Acupuncture box holds the phase's
+  // points and the Press tags box its press points, so they are typed once.
+  // The text is still stored in phase.points / phase.pressPoints (which the
+  // acu-log, the plan tiles and new plans all read), never copied anywhere
+  // new -- only where it is typed moved. A legacy template that already has
+  // points counts as Acupuncture ticked until she turns it off.
+  const PH_TP_MGR_THER_FIELD = { acu: "points", press: "pressPoints" };
+  function phTpMgrTherOn(id, idx, key) {
+    const e = phTpMgrTherapyEntry(id, idx, key);
+    if (e) return !!e.on;
+    const f = PH_TP_MGR_THER_FIELD[key], ph = phTpMgrPhases(id)[idx];
+    return !!(f && ph && String(ph[f] || "").trim());
+  }
   function phTpMgrTherapyBoxHtml(id, idx, entry) {
     const presets = PH_TP_THERAPY_PRESETS[entry.key];
     const chips = presets ? `<div class="ph-tp-ther-chips">${presets.map(p => `<button type="button" class="ph-tp-ther-chip" data-tp-mgr-ther-chip="${esc(id)}:${idx}:${esc(entry.key)}:${esc(p)}">${esc(p)}</button>`).join("")}</div>` : "";
+    const pf = PH_TP_MGR_THER_FIELD[entry.key];
+    const ph = phTpMgrPhases(id)[idx] || {};
+    // Her follow-up 2026-10-03 ("points is acupuncture, dont make it
+    // redundant"): the pill above already says Acupuncture / Press tags, so
+    // these two boxes are just the points field -- no repeated title, no
+    // Left/Right split (the points ARE the acupuncture).
+    if (pf) {
+      const ph0 = phTpMgrPhases(id)[idx] || {};
+      return `<div class="ph-tp-ther-box">
+      ${chips}
+      <input type="text" class="ph-tp-ther-line" aria-label="${esc(entry.label)}" placeholder="${esc(entry.key === "acu" ? "Acupuncture points — e.g. LI4, GB20" : "Press-tag points — e.g. LI4, GB34")}" value="${esc(ph0[pf] || "")}" data-tp-mgr-phase-field="${esc(id)}:${idx}:${pf}">
+    </div>`;
+    }
+    const bothInput = `<input type="text" class="ph-tp-ther-line" placeholder="Both sides" value="${esc(entry.both || "")}" data-tp-mgr-ther-field="${esc(id)}:${idx}:${esc(entry.key)}:both">`;
     return `<div class="ph-tp-ther-box">
       <div class="ph-tp-ther-title">${esc(entry.label)}</div>
       ${chips}
-      <input type="text" class="ph-tp-ther-line" placeholder="Both sides" value="${esc(entry.both || "")}" data-tp-mgr-ther-field="${esc(id)}:${idx}:${esc(entry.key)}:both">
+      ${bothInput}
       <div class="ph-tp-ther-lr">
         <div class="side"><span class="tag">Left</span><textarea placeholder="Left-side only" data-tp-mgr-ther-field="${esc(id)}:${idx}:${esc(entry.key)}:left">${esc(entry.left || "")}</textarea></div>
         <div class="divider"></div>
@@ -56134,11 +56173,17 @@ or changing anything in Cliniko.
   }
   function phTpMgrTherapiesHtml(id, idx) {
     const list = phTpMgrTherapyList(id, idx);
-    const onList = list.filter(t => t.on);
     const presetKeys = new Set(PH_TP_THERAPIES.map(t => t.key));
+    // Acupuncture / Press tags count as ticked when the phase already holds
+    // points / press points (phTpMgrTherOn), so nothing typed there vanishes.
+    const onList = [
+      ...PH_TP_THERAPIES.filter(t => PH_TP_MGR_THER_FIELD[t.key] && phTpMgrTherOn(id, idx, t.key))
+        .map(t => ({ ...(phTpMgrTherapyEntry(id, idx, t.key) || { key: t.key, label: t.label, left: "", right: "" }), on: true })),
+      ...list.filter(t => t.on && !PH_TP_MGR_THER_FIELD[t.key]),
+    ];
     const pills = PH_TP_THERAPIES.map(t => {
-      const entry = phTpMgrTherapyEntry(id, idx, t.key);
-      return `<button type="button" class="ph-tp-faction-opt${entry && entry.on ? " on" : ""}" data-tp-mgr-ther-toggle="${esc(id)}:${idx}:${t.key}:${esc(t.label)}">${esc(t.label)}</button>`;
+      const on = PH_TP_MGR_THER_FIELD[t.key] ? phTpMgrTherOn(id, idx, t.key) : !!(phTpMgrTherapyEntry(id, idx, t.key) || {}).on;
+      return `<button type="button" class="ph-tp-faction-opt${on ? " on" : ""}" data-tp-mgr-ther-toggle="${esc(id)}:${idx}:${t.key}:${esc(t.label)}">${esc(t.label)}</button>`;
     }).join("");
     const customPills = list.filter(t => !presetKeys.has(t.key)).map(t =>
       `<button type="button" class="ph-tp-faction-opt${t.on ? " on" : ""}" data-tp-mgr-ther-toggle="${esc(id)}:${idx}:${esc(t.key)}:${esc(t.label)}">${esc(t.label)}</button>`
@@ -56520,8 +56565,6 @@ or changing anything in Cliniko.
         <tr class="ph-tp-reciperow"><td colspan="2">${phTpMgrRecipeEditorHtml(id, sel)}</td></tr>
         <tr><td colspan="2" class="ph-tp-mgr-band">Formula action${phInfoDot("Chosen per patient, not on the template.")}</td></tr>
         <tr class="ph-tp-therrow"><td colspan="2">${phTpMgrTherapiesHtml(id, sel)}</td></tr>
-        ${row("points", "area")}
-        ${row("pressPoints", "area")}
         ${row("watch", "area")}
       </table>`;
   }
