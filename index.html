@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261003-200000">
+<meta name="lcm-build" content="20261003-210000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6347,6 +6347,18 @@
   #pharmacyPage .ff .ffgrid .c { position: relative; border: 0; border-right: 1px solid var(--ph-line); border-bottom: 1px solid var(--ph-line); background: var(--ph-white); color: var(--ph-ink); font: 600 13px var(--font-disp); text-align: left; padding: 5px 5px 4px; cursor: pointer; min-height: 48px; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; transition: background .15s, box-shadow .15s, opacity .2s; }
   #pharmacyPage .ff .ffgrid .c:nth-child(7n) { border-right: 0; }
   #pharmacyPage .ff .ffgrid .c.pad { visibility: hidden; cursor: default; pointer-events: none; }
+  /* her 2026-10-03 "include following calendar" (Mock C): the neighbouring
+     month's days fill the empty cells, tagged with their month; the predicted
+     next period is a quiet outlined cell, never a filled pink one */
+  #pharmacyPage .ff .ffgrid .c .smo { position: absolute; top: 4px; right: 5px; font: 700 8px var(--font-disp); letter-spacing: .08em; text-transform: uppercase; color: var(--ff-teal); opacity: .85; }
+  #pharmacyPage .ff .ffgrid .c.p1 .smo, #pharmacyPage .ff .ffgrid .c.he .smo, #pharmacyPage .ff .ffgrid .c.me .smo { color: #fff; }
+  #pharmacyPage .ff .ffgrid .c.spill .n { opacity: .85; }
+  #pharmacyPage .ff .ffgrid .c.pred { box-shadow: inset 0 0 0 2px var(--ff-p1); outline: 0; }
+  #pharmacyPage .ff .ffgrid .c.pred.fert { box-shadow: inset 0 0 0 2px var(--ff-p1), inset 0 0 0 4px var(--ff-green); }
+  #pharmacyPage .ff .ffgrid .c .prm { position: absolute; right: 4px; bottom: 3px; font: 700 8px var(--font-disp); letter-spacing: .06em; text-transform: uppercase; color: var(--ff-p1); }
+  #pharmacyPage .ff .ffleg .sw.pred { background: #fff; box-shadow: inset 0 0 0 2px var(--ff-p1); }
+  #pharmacyPage .ff .nxt { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; border: 1px dashed var(--ff-teal); color: var(--ff-teal); background: var(--ph-white); border-radius: 999px; font: 700 11px var(--font-disp); letter-spacing: .04em; padding: 3px 10px; cursor: pointer; text-align: left; }
+  #pharmacyPage .ff .nxt:hover { background: var(--ph-herb-tint); }
   #pharmacyPage .ff .ffgrid .c:hover:not(:disabled):not(.p1):not(.he):not(.me):not(.li):not(.sp) { background: var(--ph-paper); }
   #pharmacyPage .ff .ffgrid .c .n { font-size: 14px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; align-self: flex-start; }
   #pharmacyPage .ff .ffgrid .c .cd { font-size: 9px; color: var(--ph-faint); font-weight: 700; line-height: 1; }
@@ -32838,7 +32850,9 @@
         const view = phCycleMonthView[nm] || (phCycleMonthView[nm] = { y: TODAY.getFullYear(), m: TODAY.getMonth() });
         let y = view.y, m = view.m + (+cycMonthNav.dataset.cycleMonthNav || 0);
         if (m < 0) { m = 11; y--; } else if (m > 11) { m = 0; y++; }
-        if (y > TODAY.getFullYear() || (y === TODAY.getFullYear() && m > TODAY.getMonth())) { y = TODAY.getFullYear(); m = TODAY.getMonth(); }
+        // the Fertility-Friend calendar may go one month past today (data-cycle-ff)
+        const capIdx = TODAY.getFullYear() * 12 + TODAY.getMonth() + (cycMonthNav.dataset.cycleFf ? 1 : 0);
+        if (y * 12 + m > capIdx) { y = Math.floor(capIdx / 12); m = capIdx % 12; }
         phCycleMonthView[nm] = { y, m };
         phCyclePop = null;
         phCycleStripRefresh(nm);
@@ -60791,6 +60805,11 @@ or changing anything in Cliniko.
     const todayKey = keyOf(TODAY);
     const view = phCycleMonthView[name] || { y: TODAY.getFullYear(), m: TODAY.getMonth() };
     const atCurrent = view.y === TODAY.getFullYear() && view.m === TODAY.getMonth();
+    // her 2026-10-03 follow-up ("include following calendar", Mock C): the
+    // month may go ONE month past today so the predicted fertile window and
+    // next period can be seen; the next/previous month's days spill into the
+    // empty cells either side of the grid
+    const atMax = view.y * 12 + view.m >= TODAY.getFullYear() * 12 + TODAY.getMonth() + 1;
     const starts = phBbtCycleStarts(rec).slice().sort();
     const signs = rec.cycleSigns || {};
     const cur = phCycleFor(rec) || {};
@@ -60802,9 +60821,18 @@ or changing anything in Cliniko.
     const intensityCls = { light: "li", moderate: "me", heavy: "he" };
     const dayFlowCls = { spotting: "sp", light: "li", medium: "me", heavy: "he" };
     const infoBy = {};
+    // the period the latest cycle predicts (only while it is still ahead)
+    const lastStart = starts.length ? starts[starts.length - 1] : "";
+    const lastF = lastStart ? factsOf(lastStart) : null;
+    const predKey = lastF && !lastF.nextLogged && lastF.nextKey > todayKey ? lastF.nextKey : "";
     // everything one day wears: its cycle day, its period bar, fertile, ovulation
     const dayInfo = k => {
       if (infoBy[k]) return infoBy[k];
+      // from the predicted period on, cycle days count from it (never wrap on the old cycle)
+      if (predKey && k >= predKey) {
+        return (infoBy[k] = { s: predKey, f: null, sg: signs[k] || null, cd: phCycDiff(k, predKey) + 1,
+          isStart: false, bar: "", fert: false, ov: false, pred: k === predKey });
+      }
       const s = startFor(k), f = s ? factsOf(s) : null, sg = signs[k] || null;
       const cd = f ? phCycDiff(k, s) + 1 : null;
       const isStart = !!f && k === s;
@@ -60826,18 +60854,35 @@ or changing anything in Cliniko.
     const lead = (first.getDay() + 6) % 7;
     const dim = new Date(view.y, view.m + 1, 0).getDate();
     let cells = "";
-    for (let i = 0; i < lead; i++) cells += `<span class="c pad" aria-hidden="true"></span>`;
-    for (let day = 1; day <= dim; day++) {
-      const k = keyOf(new Date(view.y, view.m, day));
+    const cellHtml = (dt, spill) => {
+      const k = keyOf(dt), day = dt.getDate();
       const di = dayInfo(k), fut = k > todayKey, sg = di.sg;
       const marks = (sg && sg.sex ? "♥" : "") + (sg && sg.cm === "eggwhite" ? "●" : "") + (sg && sg.lh === "pos" ? "⚡" : "");
-      const cls = ["c", di.isStart ? "p1" : di.bar, di.fert ? "fert" : "", k === todayKey ? "today" : "", k === selKey ? "sel" : "", litSet && litSet.has(k) ? "lit" : "", fut ? "fut" : ""].filter(Boolean).join(" ");
-      const title = `${phShortDate(k)}${di.cd ? ` · CD ${di.cd}` : ""}${di.isStart ? " · period started" : ""}${di.ov ? " · ovulation" : ""}${sg ? " · " + phCycleSignLabel(sg) : ""}`;
-      cells += `<button type="button" class="${cls}" data-cycle-day="${k}" data-cycle-strip-name="${esc(name)}"${fut ? " disabled" : ""} title="${esc(title)}" aria-label="${esc(title)}"><span class="n">${day}</span>${di.cd ? `<span class="cd">CD${di.cd}</span>` : ""}${di.ov ? `<span class="ovm">O</span>` : ""}${marks ? `<span class="mk">${marks}</span>` : ""}</button>`;
-    }
-    const head = `<div class="ffhd"><button type="button" data-cycle-month-nav="-1" data-cycle-strip-name="${esc(name)}" title="Previous month" aria-label="Previous month">‹</button><b>${MON_SHORT[view.m]} ${view.y}</b><button type="button" data-cycle-month-nav="1" data-cycle-strip-name="${esc(name)}" title="Next month" aria-label="Next month"${atCurrent ? " disabled" : ""}>›</button></div>`;
+      const cls = ["c", di.isStart ? "p1" : di.bar, di.fert ? "fert" : "", di.pred ? "pred" : "", spill ? "spill" : "", k === todayKey ? "today" : "", k === selKey ? "sel" : "", litSet && litSet.has(k) ? "lit" : "", fut ? "fut" : ""].filter(Boolean).join(" ");
+      const title = `${phShortDate(k)}${di.cd ? ` · CD ${di.cd}` : ""}${di.isStart ? " · period started" : ""}${di.pred ? " · next period (predicted)" : ""}${di.ov ? " · ovulation" : ""}${di.fert && fut ? " · fertile window (predicted)" : ""}${sg ? " · " + phCycleSignLabel(sg) : ""}`;
+      return `<button type="button" class="${cls}" data-cycle-day="${k}" data-cycle-strip-name="${esc(name)}"${fut ? " disabled" : ""} title="${esc(title)}" aria-label="${esc(title)}"><span class="n">${day}</span>${di.cd ? `<span class="cd">CD${di.cd}</span>` : ""}${di.ov ? `<span class="ovm">O</span>` : ""}${marks ? `<span class="mk">${marks}</span>` : ""}${spill ? `<span class="smo">${MON_SHORT[dt.getMonth()]}</span>` : ""}${di.pred ? `<span class="prm">next</span>` : ""}</button>`;
+    };
+    for (let i = lead; i > 0; i--) cells += cellHtml(new Date(view.y, view.m, 1 - i), true);
+    for (let day = 1; day <= dim; day++) cells += cellHtml(new Date(view.y, view.m, day), false);
+    const trail = (7 - ((lead + dim) % 7)) % 7;
+    for (let i = 1; i <= trail; i++) cells += cellHtml(new Date(view.y, view.m, dim + i), true);
+    const lastShown = keyOf(new Date(view.y, view.m, dim + trail));
+    const head = `<div class="ffhd"><button type="button" data-cycle-month-nav="-1" data-cycle-ff="1" data-cycle-strip-name="${esc(name)}" title="Previous month" aria-label="Previous month">‹</button><b>${MON_SHORT[view.m]} ${view.y}</b><button type="button" data-cycle-month-nav="1" data-cycle-ff="1" data-cycle-strip-name="${esc(name)}" title="Next month" aria-label="Next month"${atMax ? " disabled" : ""}>›</button></div>`;
     const dow = `<div class="ffdow">${["M", "T", "W", "T", "F", "S", "S"].map(h => `<span>${h}</span>`).join("")}</div>`;
-    const legend = `<div class="ffleg"><b>Color code</b><span><i class="sw p1"></i>First day</span><span><i class="bars"><u class="he"></u><u class="me"></u><u class="li"></u><u class="sp"></u></i>Period <small>(colour = flow)</small></span><span><i class="sw fert"></i>Fertile window</span><span><i class="sw ov">O</i>Ovulation</span><span class="mkl">♥ sex · ● egg-white · ⚡ LH +</span></div>`;
+    const legend = `<div class="ffleg"><b>Color code</b><span><i class="sw p1"></i>First day</span><span><i class="bars"><u class="he"></u><u class="me"></u><u class="li"></u><u class="sp"></u></i>Period <small>(colour = flow)</small></span><span><i class="sw fert"></i>Fertile window</span><span><i class="sw ov">O</i>Ovulation</span><span><i class="sw pred"></i>Next period <small>(predicted)</small></span><span class="mkl">♥ sex · ● egg-white · ⚡ LH +</span></div>`;
+    // the button under the month: what the cut-off part of the next month holds
+    let nextBtn = "";
+    if (atCurrent && lastF) {
+      const dl = k => { const d = parseKey(k); return d.getDate() + " " + MON_SHORT[d.getMonth()]; };
+      const fwAhead = lastF.fwTo >= todayKey && lastF.fwTo > lastShown;
+      const prAhead = !!predKey && predKey > lastShown;
+      if (fwAhead || prAhead) {
+        const a = parseKey(lastF.fwFrom), b = parseKey(lastF.fwTo);
+        const fwTxt = a.getMonth() === b.getMonth() ? `${a.getDate()} – ${dl(lastF.fwTo)}` : `${dl(lastF.fwFrom)} – ${dl(lastF.fwTo)}`;
+        const nm = ["January","February","March","April","May","June","July","August","September","October","November","December"][(view.m + 1) % 12];
+        nextBtn = `<button type="button" class="nxt" data-cycle-month-nav="1" data-cycle-ff="1" data-cycle-strip-name="${esc(name)}">${fwAhead ? `Fertile window ${fwTxt} (predicted)` : ""}${fwAhead && prAhead ? " · " : ""}${prAhead ? `Next period ~${dl(predKey)}` : ""} · open ${nm} ›</button>`;
+      }
+    }
     // ---- the temperature chart under it, for the cycle she has open (else the latest)
     let chart = "";
     const f = withChart ? phCycViewFacts(rec, name) : null;
@@ -60914,7 +60959,7 @@ or changing anything in Cliniko.
         <div class="ffscroll"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMinYMid meet" style="min-width:${Math.round(W * 0.9)}px" role="img" aria-label="Basal body temperature by cycle day">${svg}</svg></div>
         <div class="ffnote">cycle day · pink strip = flow (same colours as the calendar) · green band = fertile window · tap a day to log it</div></div>`;
     }
-    return `<div class="ff">${head}${dow}<div class="ffgrid${litSet ? " litmode" : ""}">${cells}</div>${legend}${chart}</div>`;
+    return `<div class="ff">${head}${dow}<div class="ffgrid${litSet ? " litmode" : ""}">${cells}</div>${nextBtn}${legend}${chart}</div>`;
   }
   // ==== Pregnancy week tracker (her ask 2026-09-22: "all pregnancy plans
   // should include a week pregnancy tracker e.g. date x is 37 weeks") --
