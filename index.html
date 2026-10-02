@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261003-000100">
+<meta name="lcm-build" content="20261003-020000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -10370,6 +10370,25 @@
   #pharmacyPage .ph-tp-announce.visit .go { background: var(--ph-purple-deep, #4A3470); color: var(--ph-white); }
   #pharmacyPage .ph-tp-announce.msg .go { background: var(--ph-herb-deep); color: var(--ph-white); }
   #pharmacyPage .ph-tp-announce.msg .stay { background: transparent; border-color: var(--ph-herb-deep); color: var(--ph-herb-deep); }
+  #pharmacyPage .ph-tp-announce.preg .go { background: #7A2D45; color: var(--ph-white); }
+  #pharmacyPage .ph-tp-announce.preg .stay { background: transparent; border-color: #7A2D45; color: #7A2D45; }
+  /* her ask 2026-10-02: "when i set the pregnancy week, auto select current
+     phase ... auto remove previous phases". The card says exactly what the plan
+     did (removed phases struck through, kept ones named) so nothing moves
+     silently; it only slides in the first time it is drawn, never on a repaint. */
+  #pharmacyPage .ph-tp-announce.ph-preg-sync { grid-column: 1 / -1; align-items: flex-start; margin: 0 0 10px; animation: none; }
+  #pharmacyPage .ph-tp-announce.ph-preg-sync.in { animation: phTpAnnounceIn 220ms cubic-bezier(.2,.9,.3,1.1); }
+  #pharmacyPage .ph-preg-sync .txt b { display: block; font-size: var(--fs-13); }
+  #pharmacyPage .ph-preg-sync .txt .d { display: block; margin-top: 2px; line-height: 1.55; }
+  #pharmacyPage .ph-preg-sync .rmv, #pharmacyPage .ph-preg-sync .kpt { display: block; }
+  #pharmacyPage .ph-preg-sync .rmv s { text-decoration-thickness: 1.5px; opacity: .75; margin-right: 6px; }
+  #pharmacyPage .ph-preg-sync .kpt em { font-style: normal; font-weight: 700; margin-right: 6px; }
+  #pharmacyPage .ph-preg-sync .txt i { font-style: normal; opacity: .8; }
+  #pharmacyPage .ph-preg-prev { display: none; flex-basis: 100%; font-size: var(--fs-12); line-height: 1.5; color: var(--ph-ink); }
+  #pharmacyPage .ph-preg-prev.on { display: block; animation: phTpAnnounceIn 160ms ease-out; }
+  #pharmacyPage .ph-preg-prev .chg b { color: #7A2D45; }
+  #pharmacyPage .ph-preg-prev .rm { color: var(--ph-faint); }
+  @media (prefers-reduced-motion: reduce) { #pharmacyPage .ph-tp-announce.ph-preg-sync.in, #pharmacyPage .ph-preg-prev.on { animation: none; } }
   /* her pick B 2026-09-20: the MSK "N more than planned" prompt lives in the visit table's Phase row */
   #pharmacyPage .ph-tp-vtab .tdw .ph-tp-announce { display: inline-flex; flex-basis: 100%; gap: 8px; margin: 2px 0 0; padding: 4px 8px; border-radius: 6px; font-size: var(--fs-11-5); animation: none; }
   #pharmacyPage .ph-tp-vtab .tdw .ph-tp-announce .txt { flex: 1 1 auto; font-weight: 600; }
@@ -32774,21 +32793,41 @@
       const pregCalcGo = e.target.closest("[data-preg-calc-go]");
       if (pregCalcGo) {
         const nm = pregCalcGo.dataset.pregCalcGo;
-        const draft = phTpPregCalc[nm] || {};
-        let start = null;
-        if (draft.mode === "edd") {
-          const eddOk = /^\d{4}-\d{2}-\d{2}$/.test(draft.edd || "");
-          if (!eddOk) return;
-          start = keyOf(new Date(parseKey(draft.edd).getTime() - 280 * 86400000));
-        } else {
-          const weekStr = String(draft.week || "").trim();
-          const week = /^\d+$/.test(weekStr) ? parseInt(weekStr, 10) : NaN;
-          const dateOk = /^\d{4}-\d{2}-\d{2}$/.test(draft.date || "") && draft.date <= keyOf(TODAY);
-          if (!dateOk || !(week >= 0 && week <= 45)) return;
-          start = keyOf(new Date(parseKey(draft.date).getTime() - week * 7 * 86400000));
-        }
+        const start = phTpPregDraftStart(phTpPregCalc[nm]);
+        if (!start) { phTpPregPrevPatch(nm); return; }
         if (!phTpPregSetStart(nm, start)) return;
+        // setting the week is an explicit act: it clears any "I undid that" hold,
+        // then the plan follows her week (card says what it did, with Undo)
+        const rec = phPatientRec(nm);
+        ((rec && rec.treatmentPlans) || []).forEach(p => { if (p && p.templateName === "Pregnancy") delete p.pregSyncHold; });
+        const moved = phTpPregSyncAll(rec);
+        if (moved && savePharmacy() === false) presSavedToast("That could not be saved — check the warning at the top and try again.");
         phTpPregCalcOpen[nm] = false;
+        if (moved) phTpPlanLiveRepaint();
+        phTpPregBlockRefresh(nm);
+        return;
+      }
+      const pregSyncOk = e.target.closest("[data-preg-sync-ok]");
+      if (pregSyncOk) {
+        phTpPregSync.delete(pregSyncOk.dataset.pregSyncOk);
+        const blk = pregSyncOk.closest("[data-preg-block]");
+        if (blk) phTpPregBlockRefresh(blk.dataset.pregBlock);
+        return;
+      }
+      const pregSyncUndo = e.target.closest("[data-preg-sync-undo]");
+      if (pregSyncUndo) {
+        const blk = pregSyncUndo.closest("[data-preg-block]");
+        const nm = blk && blk.dataset.pregBlock;
+        const pid = pregSyncUndo.dataset.pregSyncUndo;
+        const ent = phTpPregSync.get(pid);
+        const plan = nm && phTpFindPlan(nm, pid);
+        if (!ent || !plan || phTpPregSig(plan) !== ent.afterSig) { if (nm) phTpPregBlockRefresh(nm); return; }
+        plan.phases = JSON.parse(JSON.stringify(ent.snapshot));
+        plan.pregSyncHold = ent.key;          // don't redo exactly this move on the next open
+        phTpPregSync.delete(pid);
+        phTpTabPhase.delete(pid);
+        if (savePharmacy() === false) presSavedToast("That could not be saved — check the warning at the top and try again.");
+        phTpPlanLiveRepaint();
         phTpPregBlockRefresh(nm);
         return;
       }
@@ -50824,6 +50863,18 @@ or changing anything in Cliniko.
   }
   // 📷 appointments: a screenshot chosen from the file button, or an image
   // pasted straight into the appointments paste box (2026-09-04)
+  // the pregnancy start calculator's preview follows every keystroke (the
+  // "change" listener below only fires on leaving a number box, which is too
+  // late to be a preview). Draft + preview patch only: nothing is repainted.
+  document.addEventListener("input", e => {
+    const t = e.target;
+    if (!t || !t.matches || !t.matches("[data-preg-calc-week],[data-preg-calc-date],[data-preg-calc-edd]")) return;
+    const nm = t.dataset.pregCalcWeek || t.dataset.pregCalcDate || t.dataset.pregCalcEdd;
+    const d = phTpPregCalc[nm]; if (!d) return;
+    if (t.matches("[data-preg-calc-week]")) d.week = t.value;
+    else if (/^\d{4}-\d{2}-\d{2}$/.test(t.value) && (t.matches("[data-preg-calc-edd]") || t.value <= keyOf(TODAY))) d[t.matches("[data-preg-calc-edd]") ? "edd" : "date"] = t.value;
+    phTpPregPrevPatch(nm);
+  });
   // period logging + the cycle details line (save as she changes it)
   document.addEventListener("change", e => {
     const t = e.target;
@@ -50907,12 +50958,14 @@ or changing anything in Cliniko.
       const d = phTpPregCalc[nm] || (phTpPregCalc[nm] = { mode: "week", date: keyOf(TODAY), week: "", edd: "" });
       const v = t.value;
       if (/^\d{4}-\d{2}-\d{2}$/.test(v) && v <= keyOf(TODAY)) d.date = v;
+      phTpPregPrevPatch(nm);
       return;
     }
     if (t.matches("[data-preg-calc-week]")) {
       const nm = t.dataset.pregCalcWeek;
       const d = phTpPregCalc[nm] || (phTpPregCalc[nm] = { mode: "week", date: keyOf(TODAY), week: "", edd: "" });
       d.week = t.value;
+      phTpPregPrevPatch(nm);
       return;
     }
     if (t.matches("[data-preg-calc-edd]")) {
@@ -50920,6 +50973,7 @@ or changing anything in Cliniko.
       const d = phTpPregCalc[nm] || (phTpPregCalc[nm] = { mode: "edd", date: keyOf(TODAY), week: "", edd: "" });
       const v = t.value;
       if (/^\d{4}-\d{2}-\d{2}$/.test(v)) d.edd = v;
+      phTpPregPrevPatch(nm);
       return;
     }
     if (t.matches("[data-cycle-field]")) {
@@ -57040,10 +57094,91 @@ or changing anything in Cliniko.
     }
     requestAnimationFrame(tick);
   }
+  // ==== Pregnancy plan follows the week she is on (her ask 2026-10-02: "when i
+  // set the pregnancy week, auto select current phase in treatment plan. also
+  // when i start treating them at a later stage in pregnancy, auto remove
+  // previous phases as it is not possible to go back in time") -- and for a
+  // high-attention-to-detail doctor: never a silent surprise. Every move says
+  // what it did (an animated card with OK / Undo), nothing with anything
+  // recorded on it is ever deleted (it is kept and marked done instead), and
+  // the plan never moves BACKWARD, never leaves labour / breech / a detour
+  // phase on its own. Pure data mutation, like phCycleSyncPlan, so it can ride
+  // inside phCycleSyncPlans; the caller saves.
+  const PH_TP_PREG_SERIES = ["early", "preg2nd", "preg3rd"];
+  const phTpPregPhaseKeyFor = w => w >= 28 ? "preg3rd" : w >= 14 ? "preg2nd" : "early";
+  const phTpPhaseKeyOf = ph => (ph && (ph.phaseKey || phTpMgrPhaseKeyOf(ph) || PH_TP_PHASE_KEY_OF_LABEL.get(ph.label))) || null;
+  const phTpPregSync = new Map();   // plan.id -> what the last automatic move did (session only, drives the card + Undo)
+  const phTpPregSig = plan => (plan.phases || []).map(x => x.id + ":" + x.status).join("|");
+  // a phase is "empty" only if it is still exactly what the template gave her
+  // and nothing was ever recorded against it -- otherwise it is kept (done)
+  function phTpPregPhaseEmpty(rec, plan, ph) {
+    const key = phTpPhaseKeyOf(ph);
+    if (PH_TP_PREG_SERIES.indexOf(key) < 0 || ph.skipped) return false;
+    const tpl = phTpAllTemplates().find(x => x.name === plan.templateName);
+    const base = tpl && (tpl.phases || []).find(p => phTpPhaseKeyOf(p) === key);
+    if (!base) return false;
+    if (!["aim", "points", "pressPoints", "cadence", "watch"].every(f => String(ph[f] || "") === String(base[f] || ""))) return false;
+    if ((ph.sessions || 0) !== (base.sessions || 0)) return false;
+    if ((ph.treatmentTherapies || []).length !== (Array.isArray(base.defaultTherapies) ? base.defaultTherapies.length : 0)) return false;
+    const filled = v => Array.isArray(v) ? v.length > 0 : (v && typeof v === "object") ? Object.keys(v).length > 0 : !!v;
+    if (["formulaId", "formulaName", "formulaHistory", "symptoms", "plannedDates", "excludedVisits", "acuteBlocks", "pauseSpans", "formulaAction"].some(f => filled(ph[f]))) return false;
+    if (["rom", "mmt", "tests"].some(k => ((ph.objective || {})[k] || []).length)) return false;
+    if ((rec.acuSessions || []).some(s => s.phaseLabel === ph.label && (!s.planId || s.planId === plan.id))) return false;
+    if (phApptList().some(a => a.phaseId === ph.id)) return false;
+    return true;
+  }
+  // read-only: what WOULD happen if her start date were `start` -- the card, the
+  // live preview in the calculator and the real move all read this one answer
+  function phTpPregPlanAction(rec, plan, start) {
+    const wk = phTpPregWeeksOn(start, keyOf(TODAY));
+    if (!wk) return null;
+    const phases = plan.phases || [];
+    const key = phTpPregPhaseKeyFor(wk.week);
+    const idx = phases.findIndex(p => phTpPhaseKeyOf(p) === key);
+    const cur = phTpPlanCurrentPhase(plan);
+    const out = { wk, key, idx, label: idx >= 0 ? phases[idx].label : "", curLabel: cur ? cur.label : "", kind: "hold", remove: [], keep: [] };
+    if (idx < 0 || phases[idx].skipped || !cur) return out;
+    const ci = PH_TP_PREG_SERIES.indexOf(phTpPhaseKeyOf(cur)), ti = PH_TP_PREG_SERIES.indexOf(key);
+    if (ci < 0) return out;                         // labour, breech or a detour is current: hers to move
+    if (ci >= ti) { out.kind = "stay"; return out; } // never pulled backward
+    out.kind = "move";
+    phases.forEach((p, i) => {
+      const si = PH_TP_PREG_SERIES.indexOf(phTpPhaseKeyOf(p));
+      if (si < 0 || si >= ti || i >= idx) return;
+      (phTpPregPhaseEmpty(rec, plan, p) ? out.remove : out.keep).push(i);
+    });
+    return out;
+  }
+  function phTpPregSyncPlan(rec, plan) {
+    if (!rec || !plan || plan.templateName !== "Pregnancy" || plan.status !== "active") return false;
+    const start = phTpPregFor(rec).start;
+    if (!start) return false;
+    const act = phTpPregPlanAction(rec, plan, start);
+    if (!act || act.kind !== "move") return false;
+    if (plan.pregSyncHold === act.key) return false;   // she undid exactly this move: stay put
+    delete plan.pregSyncHold;
+    const phases = plan.phases;
+    const snapshot = JSON.parse(JSON.stringify(phases));
+    const cur = phTpPlanCurrentPhase(plan), target = phases[act.idx];
+    const removed = act.remove.map(i => phases[i]), kept = act.keep.map(i => phases[i]);
+    const inherit = cur && removed.indexOf(cur) >= 0 ? cur.sinceKey : null;   // visit counts stay continuous
+    act.remove.slice().sort((a, b) => b - a).forEach(i => phases.splice(i, 1));
+    phTpCascadeTo(phases, phases.indexOf(target), null);
+    if (inherit && inherit <= keyOf(TODAY)) target.sinceKey = inherit;
+    phTpTabPhase.delete(plan.id);
+    phTpPregSync.set(plan.id, { snapshot, afterSig: phTpPregSig(plan), removed: removed.map(p => p.label), kept: kept.map(p => p.label), fromLabel: act.curLabel, targetLabel: target.label, week: act.wk.week, day: act.wk.day, key: act.key, shown: false });
+    return true;
+  }
+  function phTpPregSyncAll(rec) {
+    let changed = false;
+    ((rec && rec.treatmentPlans) || []).forEach(p => { if (phTpPregSyncPlan(rec, p)) changed = true; });
+    return changed;
+  }
   function phCycleSyncPlans(rec) {
     let changed = false;
     (rec && rec.treatmentPlans || []).forEach(p => {
       if (phCycleSyncPlan(rec, p)) changed = true;
+      if (p && p.templateName === "Pregnancy" && phTpPregSyncPlan(rec, p)) changed = true;
       // IVF Protocol is excluded from phCycleSyncPlan by design (its
       // PH_TP_CYCLE_SYNC gate) and gets its own safer cascade instead --
       // two independent checks, not an else-if, so neither ever silently
@@ -57372,6 +57507,14 @@ or changing anything in Cliniko.
     const blk = document.querySelector("[data-cycle-block]");
     if (!blk) return false;
     phCycleStripRefresh(blk.dataset.cycleBlock);
+    phTpPlanLiveRepaint();
+    return true;
+  }
+  // everything on the plan tab that reads the phase pointer, repainted in
+  // place (never phTpRerender / renderPresPanel: both throw her to the top).
+  // Shared by the cycle block and the pregnancy week block, so a phase that
+  // moves because of either one is shown the same way everywhere.
+  function phTpPlanLiveRepaint() {
     // a new cycle length or period moves the plan's live phase too
     phTpRepaintPhasePanel();
     document.querySelectorAll("[data-tp-pbar]").forEach(el => { const plan = phTpFindPlan(el.dataset.tpPbarName, el.dataset.tpPbar); if (plan) el.outerHTML = phTpPhaseBarHtml(el.dataset.tpPbarName, plan, phTpTabPhaseOf(plan, phPatientPeek(el.dataset.tpPbarName))); });
@@ -57405,7 +57548,6 @@ or changing anything in Cliniko.
       if (plan) { const h = phTpHeroHtml(el.dataset.tpHeroName, plan); if (h) el.outerHTML = h; }
     });
     presBandSubRefresh();
-    return true;
   }
   // the one-line 🩸 Cycle row at the top of the prescription panel's stack
   // (above Notes) -- collapsed it's the chip + a slim bar, open it's the
@@ -59783,7 +59925,68 @@ or changing anything in Cliniko.
     if (days < 0) return null;
     return { week: Math.floor(days / 7), day: days % 7, days };
   }
-  function phTpPregEdd(start) { return start ? keyOf(new Date(parseKey(start).getTime() + 280 * 86400000)) : null; }
+  // day maths goes through phTpDayAdd (setDate), not milliseconds: +280 days in
+  // ms lands an hour short across a clock change and can read a day early.
+  function phTpPregEdd(start) { return start ? phTpDayAdd(start, 280) : null; }
+  // the ONE reading of the calculator's draft -> a start date, shared by the Go
+  // button and the live preview so they can never disagree. null = not valid yet.
+  function phTpPregDraftStart(draft) {
+    if (!draft) return null;
+    if (draft.mode === "edd") return /^\d{4}-\d{2}-\d{2}$/.test(draft.edd || "") ? phTpDayAdd(draft.edd, -280) : null;
+    const weekStr = String(draft.week || "").trim();
+    const week = /^\d+$/.test(weekStr) ? parseInt(weekStr, 10) : NaN;
+    const dateOk = /^\d{4}-\d{2}-\d{2}$/.test(draft.date || "") && draft.date <= keyOf(TODAY);
+    if (!dateOk || !(week >= 0 && week <= 45)) return null;
+    return phTpDayAdd(draft.date, -week * 7);
+  }
+  const phTpPregList = a => a.length < 2 ? (a[0] || "") : a.slice(0, -1).join(", ") + " and " + a[a.length - 1];
+  // plain words for what a start date would do to her plan (read-only; used under
+  // the calculator while she types, before anything is saved)
+  function phTpPregPreviewText(name, start) {
+    const rec = phPatientPeek(name);
+    const wk = phTpPregWeeksOn(start, keyOf(TODAY));
+    if (!wk) return `<span class="mut">That start date is in the future — pick the date she told you the week on.</span>`;
+    const head = `She'll be at <b>week ${wk.week}${wk.day ? " + " + wk.day : ""}</b> (due ${esc(phShortDate(phTpPregEdd(start)))}).`;
+    const plan = ((rec && rec.treatmentPlans) || []).find(p => p && p.templateName === "Pregnancy" && p.status === "active");
+    if (!plan) return head;
+    const act = phTpPregPlanAction(rec, plan, start);
+    if (!act) return head;
+    const lab = i => esc(plan.phases[i].label);
+    if (act.kind === "move") {
+      const rm = act.remove.map(lab), kp = act.keep.map(lab);
+      return `${head} <span class="chg">The plan will move to <b>${esc(act.label)}</b>.</span>`
+        + (rm.length ? ` <span class="rm">Removes ${phTpPregList(rm)} (nothing recorded on ${rm.length > 1 ? "them" : "it"}).</span>` : "")
+        + (kp.length ? ` <span class="kp">Keeps ${phTpPregList(kp)}, marked done (there are records on ${kp.length > 1 ? "them" : "it"}).</span>` : "");
+    }
+    if (act.kind === "stay") return `${head} <span class="mut">The plan is already on ${esc(act.curLabel)} — it won't go backward.</span>`;
+    return `${head} <span class="mut">${act.curLabel ? esc(act.curLabel) + " is current, so the plan stays where it is." : "No phase to move."}</span>`;
+  }
+  function phTpPregPrevPatch(nm) {
+    const rec = phPatientPeek(nm);
+    const d = phTpPregCalc[nm];
+    document.querySelectorAll(`[data-preg-prev="${CSS.escape(nm)}"]`).forEach(el => {
+      const s = rec && phTpPregDraftStart(d);
+      el.innerHTML = s ? phTpPregPreviewText(nm, s) : "";
+      el.classList.toggle("on", !!s);
+    });
+  }
+  // the card that says what the plan just did (OK / Undo). Sits inside the
+  // pregnancy block so it is seen even while the block is folded.
+  function phTpPregSyncCardHtml(name, plan) {
+    const ent = plan && phTpPregSync.get(plan.id);
+    if (!ent) return "";
+    const first = !ent.shown;
+    ent.shown = true;
+    const rm = ent.removed.map(esc), kp = ent.kept.map(esc);
+    const wkTxt = `Week ${ent.week}${ent.day ? " + " + ent.day : ""}`;
+    const canUndo = phTpPregSig(plan) === ent.afterSig;
+    return `<div class="ph-tp-announce preg ph-preg-sync${first ? " in" : ""}" role="status" data-preg-sync="${esc(plan.id)}">
+      <div class="txt"><b>${esc(wkTxt)} · now on ${esc(ent.targetLabel)}</b><span class="d">The plan moved from ${esc(ent.fromLabel)} to match her week.
+        ${rm.length ? `<span class="rmv">Removed: ${rm.map(x => `<s>${x}</s>`).join(" ")} <i>(nothing recorded on ${rm.length > 1 ? "them" : "it"})</i></span>` : ""}
+        ${kp.length ? `<span class="kpt">Kept as done: ${kp.map(x => `<em>${x}</em>`).join(" ")} <i>(there are records on ${kp.length > 1 ? "them" : "it"})</i></span>` : ""}</span></div>
+      <div class="acts"><button type="button" class="go" data-preg-sync-ok="${esc(plan.id)}">OK</button>${canUndo ? `<button type="button" class="stay" data-preg-sync-undo="${esc(plan.id)}">Undo</button>` : ""}</div>
+    </div>`;
+  }
   function phTpPregSetStart(name, start) {
     const rec = phPatientRec(name);
     if (!rec) return false;
@@ -59803,11 +60006,13 @@ or changing anything in Cliniko.
     const body = d.mode === "edd"
       ? `<span class="lbl">Due date</span><input type="date" class="ph-cyc-in d" data-preg-calc-edd="${esc(name)}" value="${esc(d.edd)}" aria-label="Estimated due date">`
       : `<span class="lbl">On</span><input type="date" class="ph-cyc-in d" data-preg-calc-date="${esc(name)}" value="${esc(d.date)}" max="${keyOf(TODAY)}" aria-label="Date she reported her week"><span class="lbl">she was week</span><input type="number" class="ph-cyc-in n" data-preg-calc-week="${esc(name)}" min="0" max="45" value="${esc(d.week)}" placeholder="24" aria-label="The week she reported">`;
+    const s0 = phTpPregDraftStart(d);
     return `<div class="ph-cyc-cdcalc">
       <span class="ph-cycle-unit"><button type="button" class="${d.mode !== "edd" ? "on" : ""}" data-preg-calc-mode="${esc(name)}:week">From a week</button><button type="button" class="${d.mode === "edd" ? "on" : ""}" data-preg-calc-mode="${esc(name)}:edd">From due date</button></span>
       ${body}
       <button type="button" class="tab-link" data-preg-calc-go="${esc(name)}">→ Set start date</button>
       <button type="button" class="tab-link cancel" data-preg-calc-close="${esc(name)}">Cancel</button>
+      <span class="ph-preg-prev${s0 ? " on" : ""}" data-preg-prev="${esc(name)}" aria-live="polite">${s0 ? phTpPregPreviewText(name, s0) : ""}</span>
     </div>`;
   }
   function phTpPregBlockRefresh(name) {
@@ -59828,9 +60033,10 @@ or changing anything in Cliniko.
     const compactHead = `<button type="button" class="ph-tp-cycblk-head" data-preg-fold="${esc(name)}" aria-expanded="${folded ? "false" : "true"}"><i class="chev">${folded ? "▸" : "▾"}</i><b>Pregnancy</b>${folded ? "" : `<span>${esc(headSummary)}</span>`}</button>`;
     const logBtn = `<button type="button" class="ph-tp-cycblk-logbtn" data-preg-fold-log="${esc(name)}" aria-label="Set the pregnancy start date for ${esc(phTitle(name))}" title="Set start date"><svg aria-hidden="true" focusable="false"><use href="#i-cal"/></svg></button>`;
     const foldedRow = (barInner, cap) => `<div class="ph-tp-cycblk-headrow">${compactHead}<div class="ph-tp-cycblk-headbar">${barInner}</div>${logBtn}</div><div class="ph-tp-cycblk-cap">${esc(cap)}</div>`;
-    const wrap = inner => `<div class="ph-tp-cycblk ph-tp-pregblk${folded ? " folded" : ""}" data-preg-block="${esc(name)}" data-preg-block-plan="${esc(planId)}">${folded ? "" : compactHead}${inner}</div>`;
+    const syncCard = phTpPregSyncCardHtml(name, plan);
+    const wrap = inner => `<div class="ph-tp-cycblk ph-tp-pregblk${folded ? " folded" : ""}" data-preg-block="${esc(name)}" data-preg-block-plan="${esc(planId)}">${syncCard}${folded ? "" : compactHead}${inner}</div>`;
     if (!p.start || !wk) {
-      if (folded) return `<div class="ph-tp-cycblk ph-tp-pregblk folded" data-preg-block="${esc(name)}" data-preg-block-plan="${esc(planId)}">${foldedRow(`<div class="ph-cyclebar-empty"></div>`, headSummary)}</div>`;
+      if (folded) return `<div class="ph-tp-cycblk ph-tp-pregblk folded" data-preg-block="${esc(name)}" data-preg-block-plan="${esc(planId)}">${syncCard}${foldedRow(`<div class="ph-cyclebar-empty"></div>`, headSummary)}</div>`;
       return wrap(`<div class="side"><div class="ph-cyclebar-empty"></div><div class="ph-tp-cycblk-empty">No start date yet — set one from a week she told you, or from her due date.</div><div class="ph-tp-cycblk-links">${phTpPregCalcHtml(name)}</div></div>`);
     }
     // three trimester segments, sized by real week counts (1–13, 14–27, 28–40)
@@ -59845,7 +60051,7 @@ or changing anything in Cliniko.
       startWk = endWk + 1;
       return s;
     }).join("");
-    if (folded) return `<div class="ph-tp-cycblk ph-tp-pregblk folded" data-preg-block="${esc(name)}" data-preg-block-plan="${esc(planId)}">${foldedRow(`<div class="ph-tp-cbar-outer"><div class="ph-tp-cbar">${segs}</div></div>`, headSummary)}</div>`;
+    if (folded) return `<div class="ph-tp-cycblk ph-tp-pregblk folded" data-preg-block="${esc(name)}" data-preg-block-plan="${esc(planId)}">${syncCard}${foldedRow(`<div class="ph-tp-cbar-outer"><div class="ph-tp-cbar">${segs}</div></div>`, headSummary)}</div>`;
     const pinPct = Math.max(0, Math.min(100, (wk.week / 40) * 100));
     const bar = `<div class="ph-tp-cbar-outer" data-preg-hoverbar data-preg-start="${esc(p.start)}"><div class="ph-tp-cbar">${segs}</div><span class="mk" style="left:${pinPct}%"></span><span class="mkl${pinPct > 66 ? " r" : pinPct < 34 ? " l" : ""}" style="left:${pinPct}%" title="${esc(segLbl[curSeg])}">Week ${wk.week}</span><span class="hv" hidden></span><span class="hvl" hidden></span></div>`;
     const toGo = Math.max(0, 40 - wk.week);
