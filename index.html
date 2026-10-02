@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261003-020000">
+<meta name="lcm-build" content="20261003-030000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6937,6 +6937,16 @@
   #pharmacyPage .ph-tpg .nmb:hover { color: var(--ph-herb); text-decoration: underline; }
   #pharmacyPage .ph-tpg tr.on .nmb { color: var(--ph-herb-deep); }
   #pharmacyPage .ph-tpg .nm small { display: block; font-size: 11.5px; color: var(--ph-faint); margin-top: 2px; }
+  /* her ask 2026-10-03 ("let me delete phases"): a quiet x on the phase's own
+     cell. Hidden until the row is hovered or the x is focused; always there on
+     a touch screen, where nothing hovers. Its confirm strip is a row of its own. */
+  #pharmacyPage .ph-tpg .ph-tpg-del { flex: none; margin-left: auto; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 50%; background: none; font: inherit; font-size: 17px; line-height: 1; color: var(--ph-faint); cursor: pointer; min-height: 0; opacity: 0; transition: opacity .15s, background .15s, color .15s; }
+  #pharmacyPage .ph-tpg tr:hover .ph-tpg-del, #pharmacyPage .ph-tpg .ph-tpg-del:focus-visible { opacity: 1; }
+  #pharmacyPage .ph-tpg .ph-tpg-del:hover { background: var(--ph-zero-tint); color: var(--ph-zero-deep); }
+  @media (hover: none) { #pharmacyPage .ph-tpg .ph-tpg-del { opacity: .7; } }
+  #pharmacyPage .ph-tpg-delbox { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 9px; padding: 10px 12px; border-radius: 10px; background: #fff; box-shadow: inset 0 0 0 1px var(--ph-line); animation: phTpDrop .18s ease-out; }
+  #pharmacyPage .ph-tpg-delbox span { flex: 1 1 220px; font-size: 12.5px; color: var(--ph-ink); }
+  @media (prefers-reduced-motion: reduce) { #pharmacyPage .ph-tpg-delbox { animation: none; } #pharmacyPage .ph-tpg .ph-tpg-del { transition: none; } }
   #pharmacyPage .ph-tpg .cntrow { margin: 6px 0 0 35px; }
   #pharmacyPage .ph-tpg-cnt { border: 0; background: none; padding: 0; font: inherit; font-size: 12px; font-weight: 700; color: var(--ph-herb-deep); cursor: pointer; min-height: 0; }
   #pharmacyPage .ph-tpg-cnt.empty { color: var(--ph-faint); font-weight: 600; font-style: italic; }
@@ -7047,7 +7057,7 @@
     /* the grid scrolls sideways inside its wrap on a phone; the drop-down stays one screen wide and does not travel with it */
     #pharmacyPage .ph-tpg-wrap { container-type: inline-size; }
     #pharmacyPage .ph-tpg { overflow: visible; } /* the wrap already clips to the same radius; overflow:hidden on the table would stop the box sticking */
-    #pharmacyPage .ph-tpg-ddbox { position: sticky; left: 12px; width: calc(100cqw - 24px); box-sizing: border-box; }
+    #pharmacyPage .ph-tpg-ddbox, #pharmacyPage .ph-tpg-delbox { position: sticky; left: 12px; width: calc(100cqw - 24px); box-sizing: border-box; }
   }
   @media (prefers-reduced-motion: reduce) {
     #pharmacyPage .ph-tpg-ddbox, #pharmacyPage .ph-tp-ask { animation: none !important; }
@@ -32026,46 +32036,27 @@
       if (tpPhaseDelArm) { phTpDeleteArm = tpPhaseDelArm.dataset.tpPhaseDel.split(":")[1]; phTpRepaintPhasePanel(); return; }
       if (e.target.closest("[data-tp-phase-del-no]")) { phTpDeleteArm = null; phTpRepaintPhasePanel(); return; }
       const tpPhaseDelYes = e.target.closest("[data-tp-phase-del-yes]");
+      // her ask 2026-10-03 ("let me delete phases"): the Session grid has its
+      // own × and Remove strip; same delete, same recoverable record
+      const tpGridDel = e.target.closest("[data-tp-gdel]");
+      if (tpGridDel) { phTpGridDelArm = tpGridDel.dataset.tpGdel.split(":")[1]; phTpPlanRepaint(); return; }
+      if (e.target.closest("[data-tp-gdel-no]")) { phTpGridDelArm = null; phTpPlanRepaint(); return; }
+      const tpGridDelYes = e.target.closest("[data-tp-gdel-yes]");
+      if (tpGridDelYes) {
+        const [planId, phaseId] = tpGridDelYes.dataset.tpGdelYes.split(":");
+        phTpPhaseDeleteNow(planId, phaseId);
+        phTpGridDelArm = null;
+        if (savePharmacy() === false) phFlashShow("That could not be saved — check the warning at the top and try again");
+        // the tiles, the band and the phase panel all follow the phase list, so
+        // swap the plan page in place (never a full render: it resets scroll)
+        const modal = document.getElementById("phTpModal");
+        if (modal && !modal.hidden) phTpRerender();
+        else if (!presTpMainTabRefresh()) phTpRerender();
+        return;
+      }
       if (tpPhaseDelYes) {
         const [planId, phaseId] = tpPhaseDelYes.dataset.tpPhaseDelYes.split(":");
-        const plan = phTpFindPlan(phTpScreenPatient, planId);
-        if (plan) {
-          const idx = (plan.phases || []).findIndex(p => p.id === phaseId);
-          if (idx > -1) {
-            // her ask 2026-09-22 ("all the phases... can be recovered if
-            // they were deleted"): a "hard" delete now keeps the whole
-            // phase object (visits, formula links, acute blocks, all of
-            // it) in plan.deletedPhases rather than throwing it away --
-            // this is a partial medical record (decision 11), so nothing
-            // she deletes should be gone for good. Restored from the same
-            // "+ Add a phase" picker via data-tp-phase-restore below.
-            // deletedAfterId (not a raw index) is what makes restoring
-            // several deleted phases, in any order, land back in the
-            // right sequence -- a plain index goes stale the moment ANY
-            // other phase is deleted or restored in between (caught by
-            // testing: delete two, restore them in the wrong order, and
-            // an index-based restore put the second one in the wrong
-            // slot). Anchoring to "the phase that was right before it"
-            // survives that, since the restore just re-finds that
-            // neighbour wherever it currently sits.
-            const [removed] = plan.phases.splice(idx, 1);
-            plan.deletedPhases = plan.deletedPhases || [];
-            // deletedSeq (a plain per-plan counter) is what lets restore
-            // tell apart several phases that all share the same
-            // deletedAfterId anchor -- e.g. deleting two adjacent phases
-            // one after another leaves BOTH anchored to the same earlier
-            // neighbour (or both anchored to "start of list", null, if she
-            // deletes from the top). Restoring them back in the wrong order
-            // used to silently swap their positions (caught by adversarial
-            // review, reproduced by hand: delete B then C from [A,B,C,D],
-            // restore B then C -> landed as [A,C,B,D]). The restore handler
-            // below walks past any already-restored sibling with a LOWER
-            // deletedSeq before inserting, so the original relative order
-            // always wins regardless of which one she taps first.
-            plan.phaseDeleteSeq = (plan.phaseDeleteSeq || 0) + 1;
-            plan.deletedPhases.push({ ...removed, deletedAt: keyOf(TODAY), deletedAfterId: idx > 0 ? plan.phases[idx - 1].id : null, deletedSeq: plan.phaseDeleteSeq });
-          }
-        }
+        phTpPhaseDeleteNow(planId, phaseId);
         phTpDeleteArm = null;
         if (savePharmacy() === false) { phFlashShow("That could not be saved — check the warning at the top and try again"); phTpRerender(); return; }
         phTpRerender();
@@ -42946,7 +42937,7 @@ or changing anything in Cliniko.
     // the Plan tab's motion (band, grid, history) plays once per open, then
     // only on a real change -- opening the script again starts it fresh
     phTpHeroSeen.clear(); phTpGridSeen.clear(); phTpHistSeen.clear(); presPfBandSeen.clear(); presHxBandSeen.clear(); presBandSeen.clear(); phIvfSeen.clear();
-    phTpPlanUi.dd = null; phTpPlanUi.custom = false; phTpPlanUi.askLater.clear(); phTpPlanUi.askSeen.clear();
+    phTpPlanUi.dd = null; phTpPlanUi.custom = false; phTpPlanUi.askLater.clear(); phTpPlanUi.askSeen.clear(); phTpGridDelArm = null;
     presDispMenuId = null; presDispUndoConfirm = null;
     // a History popup left open for a DIFFERENT patient (reachable by
     // keyboard: Tab out of the popup onto a list row, Enter) closes here,
@@ -62559,6 +62550,9 @@ or changing anything in Cliniko.
   // are open, whether its "Other…" fields are showing, and which "plan the next
   // phase?" asks she has put off with Later. In memory only, reset per patient.
   const phTpPlanUi = { dd: null, custom: false, askLater: new Set(), askSeen: new Set() };
+  // her ask 2026-10-03 ("let me delete phases", on the Session grid): the
+  // phase whose Remove? strip is open under its grid row (view state only)
+  let phTpGridDelArm = null;
   const phTpHistSeen = new Map();   // planId -> Set of appointment ids (the history beside it)
   const phTpReduceMotion = () => { try { return window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } };
   function phTpHeroRingSvg(cls, grow) {
@@ -65061,6 +65055,42 @@ or changing anything in Cliniko.
     const third = { "1w": ["2w", 6], "2w": ["1w", 6], fn: ["mo", 3], mo: ["fn", 3] }[base];
     return [{ rh: base, n: counts[0] }, { rh: base, n: counts[1] }, { rh: third[0], n: third[1] }];
   }
+  // the ONE recoverable phase delete -- the phase line's x and the Session
+  // grid's x both call it (her ask 2026-10-03, "let me delete phases").
+  // Moves the phase to plan.deletedPhases (restorable from "+ Add a phase"),
+  // never throws its record away. The caller saves and repaints.
+  function phTpPhaseDeleteNow(planId, phaseId) {
+    const plan = phTpFindPlan(phTpScreenPatient, planId);
+    if (!plan) return false;
+    const idx = (plan.phases || []).findIndex(p => p.id === phaseId);
+    if (idx < 0) return false;
+    // her ask 2026-09-22 ("all the phases... can be recovered if they were
+    // deleted"): a "hard" delete keeps the whole phase object (visits,
+    // formula links, acute blocks, all of it) in plan.deletedPhases rather
+    // than throwing it away -- this is a partial medical record (decision
+    // 11), so nothing she deletes should be gone for good. Restored from
+    // the same "+ Add a phase" picker via data-tp-phase-restore.
+    // deletedAfterId (not a raw index) is what makes restoring several
+    // deleted phases, in any order, land back in the right sequence -- a
+    // plain index goes stale the moment ANY other phase is deleted or
+    // restored in between. Anchoring to "the phase that was right before
+    // it" survives that, since the restore just re-finds that neighbour
+    // wherever it currently sits.
+    const [removed] = plan.phases.splice(idx, 1);
+    plan.deletedPhases = plan.deletedPhases || [];
+    // deletedSeq (a plain per-plan counter) tells apart several phases that
+    // share the same deletedAfterId anchor -- deleting two adjacent phases
+    // one after another leaves BOTH anchored to the same earlier neighbour
+    // (or both to "start of list", null, if she deletes from the top).
+    // Restoring them in the wrong order used to silently swap their
+    // positions (delete B then C from [A,B,C,D], restore B then C -> landed
+    // as [A,C,B,D]). The restore handler walks past any already-restored
+    // sibling with a LOWER deletedSeq before inserting, so the original
+    // relative order always wins whichever one she taps first.
+    plan.phaseDeleteSeq = (plan.phaseDeleteSeq || 0) + 1;
+    plan.deletedPhases.push({ ...removed, deletedAt: keyOf(TODAY), deletedAfterId: idx > 0 ? plan.phases[idx - 1].id : null, deletedSeq: plan.phaseDeleteSeq });
+    return true;
+  }
   // repaint just the Session grid + the instrument band in place (the Plan
   // button's taps) -- a full phTpRerender() rebuilds the whole panel, which
   // throws her scroll spot back to the top and replays every tile's rise.
@@ -65321,7 +65351,15 @@ or changing anything in Cliniko.
         : `<span class="ph-tp-ladder-cad" data-tp-edit="${plan.id}:${p.id}:cadence" title="Click to change how often, and for how long">${esc(p.cadence)}</span>`;
       const cells = p.skipped ? [] : allCells[i].cells;
       const on = selPh && selPh.id === p.id;
-      return `<tr class="${st}${on ? " on" : ""}${gAnim && !gSeen ? " rise" : ""}" style="--i:${i + 1}"><th><div class="pn"><span class="no ${st}">${st === "done" ? "✓" : st === "skip" ? "⊘" : i + 1}</span><div class="nm"><button type="button" class="nmb" data-tp-tab="${plan.id}:${p.id}" title="Open this phase">${esc(p.label || `Phase ${i + 1}`)}</button>${cadenceHtml ? `<small>${cadenceHtml}</small>` : ""}${p.skipped ? "" : sinceLineFor(p, false)}</div></div><div class="cntrow">${countCtl(p)}</div></th>${slotCells(p, cells)}<td class="tw">${weekCell(p, i)}</td></tr>${ddRow(p)}`;
+      // her ask 2026-10-03 ("let me delete phases"): a quiet x on the phase's
+      // own cell asks first, in a strip under that row -- the same recoverable
+      // delete the phase line's x makes (bring it back from "+ Add a phase")
+      const nm = esc(p.label || `Phase ${i + 1}`);
+      const delBtn = `<button type="button" class="ph-tpg-del" data-tp-gdel="${plan.id}:${p.id}" title="Remove this phase" aria-label="Remove ${nm}">×</button>`;
+      const delRow = phTpGridDelArm === p.id
+        ? `<tr class="dd del"><td colspan="${slotsN + 2}"><div class="ph-tpg-delbox"><span>Remove “${nm}”? You can bring it back later from “+ Add a phase”.</span><button type="button" class="btn-save" data-tp-gdel-yes="${plan.id}:${p.id}">Remove</button><button type="button" class="btn-cancel" data-tp-gdel-no="1">Cancel</button></div></td></tr>`
+        : "";
+      return `<tr class="${st}${on ? " on" : ""}${gAnim && !gSeen ? " rise" : ""}" style="--i:${i + 1}"><th><div class="pn"><span class="no ${st}">${st === "done" ? "✓" : st === "skip" ? "⊘" : i + 1}</span><div class="nm"><button type="button" class="nmb" data-tp-tab="${plan.id}:${p.id}" title="Open this phase">${nm}</button>${cadenceHtml ? `<small>${cadenceHtml}</small>` : ""}${p.skipped ? "" : sinceLineFor(p, false)}</div>${delBtn}</div><div class="cntrow">${countCtl(p)}</div></th>${slotCells(p, cells)}<td class="tw">${weekCell(p, i)}</td></tr>${ddRow(p)}${delRow}`;
     }).join("");
     const table = `<div class="ph-tpg-wrap"><table class="ph-tpg" style="--n:${slotsN}"><colgroup><col class="ph">${Array.from({ length: slotsN }, () => "<col class=\"s\">").join("")}<col class="tw"></colgroup><thead><tr><th>Phase</th>${Array.from({ length: slotsN }, (_, j) => `<th class="slh">${j + 1}</th>`).join("")}<th>This week</th></tr></thead><tbody>${rowsHtml}</tbody></table></div>`;
     // extra content (a booking beyond the planned count, one marked "not
