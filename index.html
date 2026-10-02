@@ -8991,6 +8991,10 @@
     display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 260px));
     gap: 0 16px; align-items: start; justify-content: start;
   }
+  /* her 2026-10-02 "why does it only show stress plans? where are the musculoskeletal":
+     the Case filter now says so out loud and offers every category in one tap */
+  #pharmacyPage .ph-tp-tmplfilter { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 10px 0 8px; font-size: var(--fs-12); color: var(--ph-soft); }
+  #pharmacyPage .ph-tp-tmplfilter b { color: var(--ph-ink); font-weight: 700; }
   #pharmacyPage .ph-tp-tmplcol { min-width: 0; }
   /* the header sits at the top of its own column, so it never needs the
      dashed rule or top padding that separates stacked sections elsewhere --
@@ -34723,8 +34727,14 @@
       }
       if (e.target.closest("[data-tp-inline-back]")) { presTpInlinePlanId = null; presTpInlineLoose = false; phTpScreenPlanId = null; renderPresPanel(); return; }
       const tpInlineNewOpen = e.target.closest("[data-tp-inline-new-open]");
-      if (tpInlineNewOpen) { presTpInlineNew = true; presTpInlineLoose = false; phTpScreenPatient = tpInlineNewOpen.dataset.tpInlineNewOpen; renderPresPanel(); return; }
-      if (e.target.closest("[data-tp-inline-new-cancel]")) { presTpInlineNew = false; renderPresPanel(); return; }
+      if (tpInlineNewOpen) { presTpInlineNew = true; presTpInlineLoose = false; phTpTmplShowAll = false; phTpScreenPatient = tpInlineNewOpen.dataset.tpInlineNewOpen; renderPresPanel(); return; }
+      if (e.target.closest("[data-tp-inline-new-cancel]")) { presTpInlineNew = false; phTpTmplShowAll = false; renderPresPanel(); return; }
+      if (e.target.closest("[data-tp-tmpl-showall]")) {
+        phTpTmplShowAll = !phTpTmplShowAll;
+        const tpModal = document.getElementById("phTpModal");
+        if (tpModal && !tpModal.hidden) renderTpScreen(); else renderPresPanel();
+        return;
+      }
       const tpInlineLooseOpen = e.target.closest("[data-tp-inline-loose-open]");
       if (tpInlineLooseOpen) { presTpInlineLooseOpen(tpInlineLooseOpen.dataset.tpInlineLooseOpen); return; }
       const tpInlineCreate = e.target.closest("[data-tp-inline-create]");
@@ -55956,6 +55966,7 @@ or changing anything in Cliniko.
     </button>`;
     return (opts && opts.wrapMine && mine) ? opts.wrapMine(t, card) : card;
   }
+  let phTpTmplShowAll = false;   // the picker's "Show all categories" toggle -- view state, never saved
   function phTpTemplateGroupsHtml(attr, curCase, opts) {
     const tpls = phTpBuiltinTemplates();
     const users = phTpUserTemplates();
@@ -55968,8 +55979,17 @@ or changing anything in Cliniko.
     if (leftover.length) groups.push({ id: null, label: "Other", items: leftover });
     // a category flagged `always` survives the Case filter -- Acute & immune
     // is the only one, because getting sick is not a kind of patient
-    if (wantCat) groups = groups.filter(g => g.id === wantCat
+    // her 2026-10-02 ("why does it only show stress plans? where are the
+    // musculoskeletal"): the Case a script carries outlives the plan that
+    // set it (deleting Manuel's plan left his script on Stress), so the
+    // filter can't be a silent wall -- a line says which Case is filtering
+    // and one tap shows every category (view state, phTpTmplShowAll)
+    if (wantCat && !phTpTmplShowAll) groups = groups.filter(g => g.id === wantCat
       || PH_TP_CATEGORIES.some(c => c.id === g.id && c.always));
+    const wantLabel = wantCat ? ((PH_TP_CATEGORIES.find(c => c.id === wantCat) || {}).label || "") : "";
+    const filterBar = wantCat ? `<div class="ph-tp-tmplfilter">${phTpTmplShowAll
+      ? `<span>Showing <b>every category</b></span><button type="button" class="tab-link" data-tp-tmpl-showall="1">Only ${esc(wantLabel)} ▴</button>`
+      : `<span>Showing <b>${esc(wantLabel)}</b> plans because this script's Case is <b>${esc(String(curCase).charAt(0).toUpperCase() + String(curCase).slice(1))}</b></span><button type="button" class="tab-link" data-tp-tmpl-showall="1">Show all categories ▾</button>`}</div>` : "";
     const colsHtml = groups.filter(g => g.items.length).map(g => {
       // only pin+badge when curCase reduces to exactly ONE template in this
       // group (Menopause) -- Fertility/Pain narrow the group above but have
@@ -55989,7 +56009,7 @@ or changing anything in Cliniko.
       ? `<div class="ph-tp-tmplcol"><div class="ph-tmpl-sec ph-tp-tmplgroup-h">Your templates<span class="ph-tp-tmplgroup-n">${usersUncat.length}</span></div>
         ${usersUncat.map(t => phTpTmplCardHtml(attr, t, true, false, opts)).join("")}</div>`
       : "";
-    return `<div class="ph-tp-tmplcols">${colsHtml}${uncatHtml}</div>`;
+    return `${filterBar}<div class="ph-tp-tmplcols">${colsHtml}${uncatHtml}</div>`;
   }
   // reverse half of the pairing (her Q5, "both directions"): the template
   // she just picked fills the Case from its caseHint -- since option A
