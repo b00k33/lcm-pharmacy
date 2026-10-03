@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261004-130000">
+<meta name="lcm-build" content="20261004-150000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -59019,7 +59019,11 @@ or changing anything in Cliniko.
     // (keeping the legend/status, which she never asked to lose) and it's
     // rendered explicitly here instead, right after the bar -- same
     // placement principle as the Treatment Plan tab's own `links`.
-    return `<div class="ph-cycle-tess"><div class="ph-cycle-tess-cal">${phCycleStripHtml(rec, name, { noCalc: true, noSignPop: true })}</div><div class="ph-cycle-tess-detail">${phCycleBarHtml(rec, name)}<div class="ph-cycle-tess-calc">${phCycleCdCalcHtml(name)}</div>${phCycleDetailsHtml(rec)}</div></div>`;
+    // her ask 2026-10-04 ("i want it to be universal for the app"): the Fertility
+    // Friend calendar + BBT chart + tiles are the ONE cycle view now, so the
+    // profile's Cycle page and the full-screen plan window show the same block
+    // the Plan tab does (open, no plan) instead of the older strip + bar.
+    return phTpCycleBlockHtml(rec, name, null);
   }
   // opens (or closes, if already open on the same day) the log-period
   // popover for a given date -- shared by tapping a day in the strip AND the
@@ -59083,8 +59087,33 @@ or changing anything in Cliniko.
       ${foot}
     </div>`;
   }
+  // her ask 2026-10-04 ("i want it to be universal for the app"): every caller
+  // of the old week strip / month grid -- the "At the door" popup, the
+  // Appointments quick-log popover, the not-tracking block -- now gets the
+  // Fertility Friend month. Same shell and data attributes as before, so
+  // phCycleStripRefresh rebuilds it unchanged; the day cells use the same
+  // data-cycle-day taps and the popovers sit under it as they did under the strip.
+  // (The BBT chart stays in the full block; these quick-log spots are calendar only.)
+  function phCycFFStripHtml(rec, name, opts) {
+    const o = opts || {}, compact = !!o.compact, bare = !!o.bare, noCalc = !!o.noCalc, noSignPop = !!o.noSignPop, showCd = !!o.cd;
+    const c = phCycleFor(rec) || {}, comp = phCycleComp(rec);
+    const suppressed = phCycleSuppressed(rec);
+    const selKey = presCycleSignEdit && presCycleSignEdit.name === name ? presCycleSignEdit.dateKey
+      : phCyclePop && phCyclePop.name === name ? phCyclePop.dateKey : "";
+    const status = comp
+      ? `<div class="ph-cyc-status${comp.overdue && !suppressed ? " late" : ""}"><span class="dot"></span>Last period <b>${esc(phShortDate(c.lmp))}</b>${c.approx ? ` <span class="faint">(estimate)</span>` : ""} · day ${comp.day} · <b>${esc(comp.phaseLabel)}</b>${comp.overdue ? (suppressed ? ` · <span class="faint">on ${esc(PH_CYCLE_CONTRACEPTION_LABEL[c.contraception] || "contraception")}</span>` : ` · <b>late</b>`) : ` · next ~${esc(phShortDate(comp.nextDate))}`}</div>`
+      : `<div class="ph-cyc-status">Tap the day her last period started.</div>`;
+    return `<div class="ph-cyc-strip ff-strip${compact ? " compact" : ""}${bare ? " bare" : ""}" data-cycle-strip="${esc(name)}"${o.weeks ? ` data-cycle-strip-weeks="${o.weeks}"` : ""}${compact ? ` data-cycle-strip-compact="1"` : ""}${o.planId ? ` data-cycle-strip-plan="${esc(o.planId)}"` : ""}${showCd ? ` data-cycle-strip-cd="1"` : ""}${bare ? ` data-cycle-strip-bare="1"` : ""}${noSignPop ? ` data-cycle-strip-nosignpop="1"` : ""}>
+      ${phCycFFHtml(rec, name, o.lit && o.lit.size ? o.lit : null, false, null)}
+      ${bare || noCalc ? "" : phCycleCdCalcHtml(name)}
+      ${compact || bare ? "" : status}
+      ${!bare && selKey && phCyclePop && phCyclePop.name === name && phCyclePop.host !== "hist" ? phCyclePopHtml(phCyclePop) : ""}
+      ${!bare && !noSignPop && presCycleSignEdit && presCycleSignEdit.name === name ? phCycleSignPopHtml(rec, name) : ""}
+    </div>`;
+  }
   function phCycleStripHtml(rec, name, opts) {
     if (!rec) return "";
+    if (!(opts && opts.legacy)) return phCycFFStripHtml(rec, name, opts);
     if (phCycleMonthOpen[name]) return phCycleMonthHtml(rec, name, opts);
     // her pick 2026-09-19 (plan tab, "too much info all at once"): a compact
     // copy -- fewer weeks, no legend -- beside the plan head. The same control
@@ -62768,7 +62797,11 @@ or changing anything in Cliniko.
   function phTpCycleBlockHtml(rec, name, plan) {
     if (!rec) return "";
     const planId = plan ? plan.id : "";
-    const folded = phTpCycleFolded();
+    // her ask 2026-10-04 ("i want it to be universal for the app"): with NO plan
+    // this is the profile's Cycle page / the full-screen plan window, so the
+    // block is always open and drops its fold head (nothing to fold it into)
+    const onPage = !plan;
+    const folded = onPage ? false : phTpCycleFolded();
     // her "a" pick 2026-09-26 (Option A1, "folds together"): IVF history and
     // "What's next" merge into this same stacked card -- unfolded only, so
     // collapsed still shows nothing but the bar + Log button. Both render
@@ -62802,7 +62835,7 @@ or changing anything in Cliniko.
     const compactHead = `<button type="button" class="ph-tp-cycblk-head" data-cycle-fold="${esc(name)}" aria-expanded="${folded ? "false" : "true"}"><i class="chev">${folded ? "▸" : "▾"}</i><b>Cycle</b>${folded ? "" : `<span>${esc(headSummary)}</span>`}</button>`;
     const logBtn = `<button type="button" class="ph-tp-cycblk-logbtn" data-cycle-fold-log="${esc(name)}" aria-label="Log period for ${esc(phTitle(name))}" title="Log period"><svg aria-hidden="true" focusable="false"><use href="#i-drop"/></svg></button>`;
     const foldedRow = (barInner, cap) => `<div class="ph-tp-cycblk-headrow">${compactHead}<div class="ph-tp-cycblk-headbar">${barInner}</div>${logBtn}</div><div class="ph-tp-cycblk-cap">${cap}</div>`;
-    const wrap = inner => `<div class="ph-tp-cycblk${folded ? " folded" : ""}" data-cycle-block="${esc(name)}" data-cycle-block-plan="${esc(planId)}">${folded ? "" : compactHead}${inner}</div>`;
+    const wrap = inner => `<div class="ph-tp-cycblk${folded ? " folded" : ""}" data-cycle-block="${esc(name)}" data-cycle-block-plan="${esc(planId)}">${folded || onPage ? "" : compactHead}${inner}</div>`;
     // her 2026-10-03 Mock A: a tapped tile lights the days it describes on the
     // calendar (and a second tap clears them) -- the block repaints whole, so
     // the lit set rides in here rather than through a data attribute
