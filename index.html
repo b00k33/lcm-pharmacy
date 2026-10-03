@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261005-210000">
+<meta name="lcm-build" content="20261005-220000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -61416,6 +61416,44 @@ or changing anything in Cliniko.
     ["ribs", "Ribs and chest full"], ["epi", "Pit of the stomach full on pressing"],
     ["lower", "Lower belly hard or tender"], ["cold", "Cold lower belly"]
   ];
+  /* Her 2026-10-05 correction ("use existing abdomen chart in app"): the Examine
+     screen now shows the SAME detailed nine-region chart as the visit findings
+     (phVisitAbdHtml). Its answers live in rec.abdomen.chart (phAbd2 shape); the
+     old six picks are still read, and the chart is turned into the same a_<id>
+     Patterns clues, so nothing downstream changed. */
+  var phAbdExam = null;   // { prev } while a chart tap borrows presVisitFndDraft
+  function phAbdChartPicks(chart) {
+    const a = phAbd2Read(chart), out = [];
+    if (phAbd2Empty(a)) return out;
+    const tAt = z => a.tensionAt[z] || a.tension;
+    const lowerZ = ["lower", "iliacL", "iliacR"], ribZ = ["hypoL", "hypoR"], upperZ = ["hypoL", "hypoR", "epi"];
+    if (a.tension === "soft" && !Object.values(a.tensionAt).some(v => v === "hard")) out.push("soft");
+    if (upperZ.some(z => tAt(z) === "hard")) out.push("taut");
+    if (ribZ.some(z => tAt(z) === "hard" || (a.marks.tender || []).includes(z))) out.push("ribs");
+    if (tAt("epi") === "hard" || (a.marks.tender || []).includes("epi") || a.marks.xiaxin || (a.marks.bulging || []).includes("epi")) out.push("epi");
+    if (lowerZ.some(z => tAt(z) === "hard" || (a.marks.tender || []).includes(z))) out.push("lower");
+    if ((a.marks.cold || []).some(z => lowerZ.concat("umb").includes(z))) out.push("cold");
+    return out;
+  }
+  function phAbdPicks(rec) {
+    const a = rec && rec.abdomen, old = a && Array.isArray(a.picks) ? a.picks : [];
+    return [...new Set(old.concat(a && a.chart ? phAbdChartPicks(a.chart) : []))];
+  }
+  function phAbdHtml(name) {
+    const rec = phPatientPeek(name) || {}, a = rec.abdomen || {}, picks = phAbdPicks(rec);
+    const chart = phAbd2Read(a.chart);
+    const feeds = [...new Set(picks.flatMap(id => phPatDefs().filter(d => !d.off && (d.keys || []).includes("a_" + id)).map(d => d.name)))];
+    const oldOnly = (a.picks || []).length ? `<div class="ph-abd-feeds">Earlier findings: ${(a.picks || []).map(id => esc((PH_ABD.find(x => x[0] === id) || [])[1] || id)).join(" · ")}</div>` : "";
+    return `<div class="ph-pfw-card ph-abd" data-abd-host="1">
+      <div class="ph-pfw-hd"><h3>Abdomen</h3><button type="button" class="ph-pfw-opt${a.normal ? " on" : ""}" data-abd="normal">Nothing unusual</button></div>
+      <p class="ph-pfw-why">Feel the belly. Tap a sign, then tap the map where it is. Each finding becomes a Patterns clue straight away.</p>
+      ${phVisitAbdHtml(name, { abd: chart, zones: [] })}
+      ${oldOnly}
+      <div class="ph-abd-feeds">${picks.length ? `→ feeds ${feeds.map(esc).join(", ") || "no pattern yet"}` : (a.normal ? "Recorded as normal. Nothing added to Patterns." : "")}</div>
+      <div class="ph-pfw-lab">Your own words (optional)</div>
+      <input type="text" class="ph-cc-said" data-abd-note="1" maxlength="200" value="${esc(a.note || "")}" placeholder="e.g. resistance under the right ribs" aria-label="Abdomen note">
+    </div>`;
+  }
   function phAbdWrite(name, fn) {
     const rec = name ? phPatientRec(name) : null;
     if (!rec) return false;
@@ -61432,12 +61470,21 @@ or changing anything in Cliniko.
     try { phPfwSideRefresh(name); } catch (e) { /* the side panel only exists on a wide screen */ }
   }
   function phAbdClick(e) {
+    const T0 = e.target;
+    if (T0 && T0.closest && T0.closest("[data-abd-host]") && T0.closest("[data-visit-zone], [data-visit-abd2]")) {
+      // borrow the visit-findings draft so the shared chart handlers do the work; presVisitFndRefresh hands it back
+      const nm = phPfwName(); if (!nm) return true;
+      const r0 = phPatientPeek(nm) || {};
+      phAbdExam = { prev: presVisitFndDraft, name: nm };
+      presVisitFndDraft = Object.assign(phVisitFndBlank(), { abd: JSON.parse(JSON.stringify(phAbd2Read(r0.abdomen && r0.abdomen.chart))), zones: [] });
+      return false;
+    }
     const T = e.target, el = T && T.closest ? T.closest("[data-abd]") : null;
     if (!el || !el.closest("[data-abd-host]")) return false;
     const name = phPfwName(); if (!name) return true;
     const id = el.dataset.abd;
     if (!phAbdWrite(name, a => {
-      if (id === "normal") { a.normal = !a.normal; if (a.normal) a.picks = []; return; }
+      if (id === "normal") { a.normal = !a.normal; if (a.normal) { a.picks = []; a.chart = null; } return; }
       a.normal = false;
       if (a.picks.includes(id)) { a.picks = a.picks.filter(x => x !== id); return; }
       if (id === "soft") a.picks = a.picks.filter(x => x !== "taut");
@@ -75054,6 +75101,13 @@ or changing anything in Cliniko.
   // here would wipe whatever she's mid-typing into #presAcuPoints (the exact
   // reason the outcome buttons above already avoid it)
   function presVisitFndRefresh() {
+    if (phAbdExam) {
+      const ex = phAbdExam; phAbdExam = null;
+      const chart = presVisitFndDraft.abd; presVisitFndDraft = ex.prev;
+      phAbdWrite(ex.name, a => { a.chart = phAbd2Empty(chart) ? null : chart; if (a.chart) a.normal = false; });
+      phAbdRefresh(ex.name);
+      return;
+    }
     const wrap = document.querySelector('[data-visit-fnd-wrap="1"]');
     if (!wrap) return;
     const t = PRESC.items.find(x => x.id === presOpenId);
