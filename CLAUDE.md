@@ -12612,3 +12612,6 @@ Menu path: EVERY DAY → Patient profile → open patient → **Stress & sleep**
 - They feed Qi stagnation (`sl_hard`, `stress`), Yin deficiency (`night_sweat`, `heat_feel`), Qi deficiency (`fatigue`) and low mood (`low_mood`, `sl_wake`). New clue labels `sl_hard`, `sl_wake` are in `PH_PAT_CLUE_LBL` and the `qistag` rule. A rule override she saved earlier in Settings does not gain the new keys. **No formula** is suggested.
 - The question wording is a DRAFT, hers to correct.
 - Verified in the sandbox with a synthetic F patient (stress complaint): section appears with 4 questions, answers "hard", "hot", "irritable" move Qi stagnation, Yin deficiency and Heat on Patterns, no formula text, live search 2 → 1 → 2. `lcm-build` `20261005-120000`, `sw.js` `lcm-20261005-stress-sleep`. Committed on `session-a`; pushed on her "push live".
+
+## Complaint feeds Patterns (journey, 2026-10-05)
+Her chief complaint is a weak Patterns clue (`phPfAddClues`): Stress & sleep adds `stress` (Qi stagnation), Weight & energy adds `fatigue` (Qi deficiency), source "usual", text "Came in for … (her complaint)". Other complaints add nothing. It works with no question set answered. Verified in the sandbox. `lcm-build` `20261005-130000`, `sw.js` `lcm-20261005-complaint-clue`.
