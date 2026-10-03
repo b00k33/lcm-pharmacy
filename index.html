@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261004-210000">
+<meta name="lcm-build" content="20261004-220000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -28551,11 +28551,10 @@
         </div>
         ${dayCountSel}
         ${viewSeg}
-        ${view === "list" ? "" : phApptCalStatsHtml(days)}
         <input type="search" class="ph-tl-search ph-apptcal-search" data-ph-apptcal-q="1" value="${esc(phApptCalQ)}" placeholder="Search patient…" aria-label="Search appointments">
       </div>
       ${phFlashHtml()}
-      ${view === "list" ? phApptCalListHtml(days, selKey) : (isCurrent || phApptUpNextFocus ? phApptUpNextHtml() : "") + phApptCalLensHtml(days, lensAnim) + gridHtml}
+      ${view === "list" ? phApptCalListHtml(days, selKey) : (isCurrent || phApptUpNextFocus ? phApptUpNextHtml() : "") + gridHtml}
     </div>
     <div id="phApptDayInline" class="ph-apptday">${phApptDayCardsHtml(dayKey, true)}</div>`;
   }
@@ -54938,6 +54937,40 @@ or changing anything in Cliniko.
       ${presTreatmentRowHtml(t)}
     </div>`;
   }
+  // her approved one-screen Dispense (2026-10-05, desktop only): the right
+  // column's history / follow-up / message become three small tiles and a
+  // drawer that slides in over the herb table. Same blocks, same ids, same
+  // handlers -- rendered ONCE here (never also inside .ph-sheet-fu), so
+  // #presFuBlockWrap stays unique.
+  function presDspTilesHtml(t) {
+    const patient = (presPatientFor(t) || "").trim().toLowerCase();
+    const past = patient ? PHARMACY.log.filter(e => (!e.kind || e.kind === "dispense")
+      && (e.patient || "").trim().toLowerCase() === patient)
+      .sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.at || 0) - (a.at || 0)) : [];
+    const last = past[0] || null;
+    const rec = phFuRecordForScript(t);
+    const reviewKey = rec ? (rec.review ? rec.review.on : null) : (t.fuReviewDate || null);
+    const emptyKey = rec ? rec.emptyOn : null;
+    const row = presMsgRowFor(t);
+    let msgB = "Write a message", msgS = "";
+    if (row) {
+      const f = presMsgEnsureForm(t, row);
+      const msg = presMsgText(row, f).replace(/\s+/g, " ").trim();
+      msgB = msg ? (msg.length > 44 ? msg.slice(0, 43).replace(/\s+\S*$/, "") + "…" : msg) : msgB;
+      const planned = phMsgScheduledFor(row.patientKey).length;
+      msgS = planned ? `${planned} planned for later` : "Write message ›";
+    }
+    const nudge = presDspNudge ? " nudge" : "";
+    return `<div class="ph-dsp-after">
+      <button type="button" class="ph-dsp-tile" data-dsp-open="hist"><span class="l">Visit history · ${past.length}</span><b>${last ? `Last ${esc(phFuDateLabel(last.date))}${last.grams ? ` · ${phFmtG(last.grams)}g` : ""}` : "No dispenses yet"}</b><small>${last && last.price != null ? esc(phMoney(last.price)) : ""}</small><span class="go">›</span></button>
+      <button type="button" class="ph-dsp-tile${nudge}" data-dsp-open="fu"><span class="l">Follow-up</span><b>${reviewKey ? `Review ${esc(phFuDateLabel(reviewKey))}` : "Not set"}</b><small>${emptyKey ? `Empty ${esc(phFuDateLabel(emptyKey))}` : ""}</small><span class="go">✎</span></button>
+      <button type="button" class="ph-dsp-tile${nudge}" data-pres-msg-open="1"><span class="l">Message</span><b>${esc(msgB)}</b><small>${esc(msgS)}</small></button>
+    </div>
+    <div class="ph-dsp-drawer${presDspDrawer ? " on" : ""}" id="presDspDrawer" role="dialog" aria-label="Visit history and follow-up">
+      <div class="dh"><span>Visit history &amp; follow-up</span><span class="sp"></span><button type="button" data-dsp-open="close" aria-label="Close">✕</button></div>
+      <div class="dbody">${presPatientHistoryHtml(t, true)}<div class="ph-tmpl-sec ph-sec-line"><span>Follow-up</span></div><div class="ph-fu-block" id="presFuBlockWrap">${presFollowupBlockHtml(t)}</div></div>
+    </div>`;
+  }
   function presStageFollowupHtml(t) {
     // her ask 2026-09-12: full dispense history moved to the Dispense stage
     // (right column, under Ingredients) so she can see it while she's
@@ -55154,6 +55187,17 @@ or changing anything in Cliniko.
   // unchanged since the last draw, and still starts at the top for anything new.
   let presScrollKey = "";
   const presScrollKeyNow = () => `${presOpenId}|${presStage}|${presAssessTab}|${presTpMainTab}`;
+  // ONE-SCREEN DISPENSE (her pick "Mock 1", 2026-10-05, desktop only). The same
+  // markup, ids and handlers as the stacked page; .ph-dsp-fit only changes how it
+  // is laid out, and moves visit history into a drawer. View state, never saved.
+  let presDspDrawer = false;     // visit history drawer open
+  let presDspLabelFull = false;  // label overlay (the ⤢) open
+  let presDspNudge = false;      // one-shot: after Log, Follow-up / Message nudge gold
+  let presDspLastLogged = null;  // the logged flag at the last paint (change detection)
+  // hoisted on purpose: the resize hook and renderPresPanelCore both call it
+  function presDspFit(t, isF) {
+    return !isF && !!t && presStage === "dispense" && window.innerWidth > 900;
+  }
   function renderPresPanel() {
     const el = presPanelEl();
     const keep = el && el.id === "presPanel" && presOpenId && presScrollKey === presScrollKeyNow() ? el.scrollTop : 0;
@@ -55246,7 +55290,13 @@ or changing anything in Cliniko.
     // sticky bottom action bar -- the dark patient skin and the wide sprawl
     // are gone; the band carries name + type chip + formula/herbs/grams meta
     const bandMeta = presBandMetaText(t, isF);
-    el.innerHTML = `<div class="ph-listing ph-pres-panel${!isF ? phCaseAccentClass(t) : ""}">
+    // her pick "Mock 1" 2026-10-05 ("so this page doesnt need scrolling"): on a
+    // desktop-wide window the Dispense stage of a patient script fits one
+    // screen -- slim label window, three-step spine, herb table scrolling in
+    // its own card, visit history in a drawer. Phone / tablet keep the stacked
+    // page; presDspFit() is also what the resize hook re-checks.
+    const fit = presDspFit(t, isF);
+    el.innerHTML = `<div class="ph-listing ph-pres-panel${!isF ? phCaseAccentClass(t) : ""}${fit ? " ph-dsp-fit" : ""}">
       <div class="ph-pres-band">
         <button type="button" class="ph-band-back" data-pres-close="1" aria-label="Close">‹</button>
         <div class="ph-band-titlewrap">
@@ -55260,8 +55310,8 @@ or changing anything in Cliniko.
         ${!isF ? `<button type="button" class="ph-band-journey" data-ph-journey-open="${esc(presPatientFor(t) || t.name)}" title="Open treatment journey" aria-label="Open ${esc(t.name)}'s treatment journey"><svg class="icn" aria-hidden="true"><use href="#i-msg"/></svg><span class="ph-band-journey-txt">Journey ↗</span></button>` : ""}
         ${!isF ? `<button type="button" class="ph-band-cam" data-cap-for="${esc(presPatientFor(t) || t.name)}" title="Take patient photos" aria-label="Take photos of ${esc(t.name)}"><svg class="icn" aria-hidden="true"><use href="#i-camera"/></svg></button>` : ""}
       </div>
-      ${!isF && !isNew ? presDoorCardHtml(t) : ""}
-      ${!isF && !isNew && presFdoorOpen ? presFdoorHtml(t) : ""}
+      ${!isF && !isNew && !fit ? presDoorCardHtml(t) : ""}
+      ${!isF && !isNew && !fit && presFdoorOpen ? presFdoorHtml(t) : ""}
       ${!isF ? `<div class="ph-flow">${presFlowRailHtml(t, isNew)}<div class="ph-flow-body${presFlowBodyClass()}">` : ""}
       ${!isF && presStage === "profile" ? presStageProfileHtml(t) : ""}
       ${!isF && presStage === "plan" ? presStagePlanHtml(t) : ""}
@@ -55378,8 +55428,9 @@ or changing anything in Cliniko.
       ${isF ? `<div class="ph-tmpl-sec"><span>Formula</span></div>${presNameTypeFieldsHtml(t)}` : ""}
       </div>
       ${!isF ? presStageNextBtnHtml("dispense") : ""}
-      ${!isF ? `<div class="ph-sheet ph-sheet-fu">${presPatientHistoryHtml(t)}${presStageFollowupHtml(t)}</div>` : ""}
-      <div class="ph-pres-ing-fill"></div>
+      ${!isF && fit ? presDspTilesHtml(t) : ""}
+      ${!isF && !fit ? `<div class="ph-sheet ph-sheet-fu">${presPatientHistoryHtml(t)}${presStageFollowupHtml(t)}</div>` : ""}
+      ${fit ? "" : `<div class="ph-pres-ing-fill"></div>`}
       </div>
       </div>` : ""}
       ${!isF ? "</div></div>" : ""}
@@ -55707,7 +55758,8 @@ or changing anything in Cliniko.
     if (sec) sec.scrollIntoView({ block: "start", behavior: "smooth" });
     return true;
   }
-  function presPatientHistoryHtml(t) {
+  function presPatientHistoryHtml(t, forceOpen) {
+    const histOpen = !!forceOpen || presHistOpen;
     const patientName = presPatientFor(t) || "";
     const patient = patientName.trim().toLowerCase();
     if (!patient) return "";
@@ -55733,8 +55785,8 @@ or changing anything in Cliniko.
     // carries it -- a section header (count on the right, Show / Hide as the
     // section's one action) with the visit rows straight underneath.
     return `<div class="ph-pres-history">
-      <div class="ph-tmpl-sec ph-sec-line"><span>Visit history</span><span class="ph-hist-count">${past.length} dispense${past.length === 1 ? "" : "s"}${past.length > shown.length ? ` · last ${shown.length} here` : ""}</span><button type="button" class="ph-tmpl-sec-act ph-hist-toggle" data-pres-hist-toggle="1" aria-expanded="${presHistOpen ? "true" : "false"}">${presHistOpen ? "Hide ⌃" : "Show ⌄"}</button></div>
-      <div${presHistOpen ? "" : " hidden"}>${past.length ? `
+      <div class="ph-tmpl-sec ph-sec-line"><span>Visit history</span><span class="ph-hist-count">${past.length} dispense${past.length === 1 ? "" : "s"}${past.length > shown.length ? ` · last ${shown.length} here` : ""}</span><button type="button" class="ph-tmpl-sec-act ph-hist-toggle" data-pres-hist-toggle="1" aria-expanded="${histOpen ? "true" : "false"}">${histOpen ? "Hide ⌃" : "Show ⌄"}</button></div>
+      <div${histOpen ? "" : " hidden"}>${past.length ? `
       ${shown.map(presHistVisitCardHtml).join("")}
       <div class="ph-hist-more-row">
         ${more.length ? `<button type="button" class="tab-link" data-pres-hist-more="1">${presHistMoreOpen ? "▴ Show fewer" : `+ ${more.length} earlier visit${more.length === 1 ? "" : "s"} ▾`}</button>` : ""}
@@ -78614,6 +78666,27 @@ Dosage: {dosage}
     // identical, character for character -- so this renders the exact
     // string presLabelCopy() copies, never a separately laid-out preview.
     const { text, unknown } = presLabelFinalize(presLabelValues(t, gp));
+    // her approved one-screen Dispense (2026-10-05, desktop only): the label is
+    // a small window (the first lines, fading out) with a "read it all"
+    // overlay; same exact text, same Copy hook and #presLabelCopied. The
+    // window sweeps once when the text CHANGED, never on a plain repaint.
+    if (presDspFit(t, false)) {
+      const changed = renderPresCalc._lbl != null && renderPresCalc._lbl !== text;
+      renderPresCalc._lbl = text;
+      el.innerHTML = `
+      <div class="ph-label-block ph-dsp-lbl">
+        <div class="ph-label-block-head">
+          <span class="ph-label-block-title">Label</span>
+          <span class="ph-label-copied" id="presLabelCopied" hidden>✓ Copied</span>
+          <button type="button" class="ph-load-btn" data-dsp-lbl="open">⤢ read it all</button>
+          <button type="button" class="ph-load-btn" data-pres-label-copy="1">⧉ Copy</button>
+        </div>
+        ${unknown.length ? `<div class="ph-label-warn">⚠ Unknown placeholder${unknown.length === 1 ? "" : "s"} in your ⚙ Settings template: ${unknown.map(u => `{${esc(u)}}`).join(", ")}</div>` : ""}
+        <div class="ph-dsp-win${changed ? " sweep" : ""}"><pre class="ph-label-text">${esc(text)}</pre></div>
+        <div class="ph-dsp-full${presDspLabelFull ? " on" : ""}" id="presDspLabelFull"><div class="top"><span>Label — exactly what gets copied</span><span class="sp"></span><button type="button" class="ph-load-btn" data-pres-label-copy="1">⧉ Copy label</button><button type="button" class="ph-load-btn" data-dsp-lbl="close" aria-label="Close">✕</button></div><pre>${esc(text)}</pre></div>
+      </div>`;
+      return;
+    }
     el.innerHTML = `
       <div class="ph-label-block">
         <div class="ph-label-block-head">
