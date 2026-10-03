@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261005-110000">
+<meta name="lcm-build" content="20261005-120000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -55132,6 +55132,9 @@ or changing anything in Cliniko.
       // her pain questions (2026-10-05): only when she came in for pain, or the Case is Pain
       const ccPain = phCcOf(hxName), painOn = (ccPain && ccPain.fams.includes("pain")) || (t.caseType === "pain");
       if (painOn && !presIsFormula(t)) sections.push({ id: "pain", label: "Her pain", sub: phPfwSetDone(hxName, "pain") ? "answered" : "", body: () => `<div data-pfw-slot="1">${presPfwSetHtml(hxName, "pain")}</div>` });
+      // her stress & sleep questions (2026-10-05): only when she came in for stress and sleep, or the Case is Stress
+      const sleepOn = (ccPain && ccPain.fams.includes("sleep")) || (t.caseType === "stress");
+      if (sleepOn && !presIsFormula(t)) sections.push({ id: "sleep", label: "Stress & sleep", sub: phPfwSetDone(hxName, "sleep") ? "answered" : "", body: () => `<div data-pfw-slot="1">${presPfwSetHtml(hxName, "sleep")}</div>` });
     }
     sections.push({ id: "supplements", label: "Supplements", body: () => presSupplementsTabBodyHtml(t) });
     if (hxName) {
@@ -60219,7 +60222,8 @@ or changing anything in Cliniko.
     bt_fuzi: "Fu Zi body type", bt_banxia: "Ban Xia body type", bt_huangqi: "Huang Qi body type",
     pn_cold: "Pain worse in the cold, better with warmth", pn_damp: "Pain worse in damp weather, heavy or swollen",
     pn_stiff: "Stiff in the morning, eases with movement", pn_fixed: "Pain fixed in one place, sharp or stabbing",
-    pn_night: "Pain worse at night", pn_move: "Pain that moves around or comes and goes"
+    pn_night: "Pain worse at night", pn_move: "Pain that moves around or comes and goes",
+    sl_hard: "Hard to fall asleep, mind racing", sl_wake: "Wakes in the night or very early"
   };
   const PH_PAT_DEFS = [
     { id: "stasis", name: "Blood stasis", fam: "purple", zones: ["uterus", "lower_abd"], of: 5,
@@ -60239,7 +60243,7 @@ or changing anything in Cliniko.
       letters: ["food"], food: ["Cooling foods: cucumber, mung bean, pear", "Cut back chilli, alcohol and coffee"],
       supp: [], points: "LI11, SP10, KI2, LR2, SP6", formula: "Qing Re Gu Jing Tang or Liang Di Tang" },
     { id: "qistag", name: "Qi stagnation", fam: "green", zones: ["liver", "chest"], of: 5,
-      keys: ["pms", "stress", "irregular_hx", "irregular_len", "low_mood", "cramp", "p_wiry", "a_ribs", "a_epi", "bt_chaihu", "bt_banxia"],
+      keys: ["pms", "stress", "irregular_hx", "irregular_len", "low_mood", "cramp", "p_wiry", "a_ribs", "a_epi", "bt_chaihu", "bt_banxia", "sl_hard", "sl_wake"],
       letters: ["signs"], food: ["Regular meals, not rushed", "Citrus peel, mint and rose tea"],
       supp: [], points: "LR3, LI4, PC6, GB34, Ren17", formula: "Xiao Yao San" },
     { id: "qidef", name: "Qi deficiency", fam: "sand", zones: ["spleen", "lung"], of: 5,
@@ -60514,10 +60518,19 @@ or changing anything in Cliniko.
         { id: "morning", s: "Morning", q: "Stiff in the morning?", d: "no", o: [["no", "No", []], ["yes", "Yes, eases with movement", ["pn_stiff"]]] },
         { id: "night", s: "Night", q: "Worse at night?", d: "no", o: [["no", "No", []], ["yes", "Yes", ["pn_night"]]] },
         { id: "heat", s: "Heat", q: "Is the area hot, red or swollen?", d: "no", o: [["no", "No", []], ["yes", "Yes", ["heat_feel"]]] }
+      ] },
+    // her stress & sleep questions (2026-10-05): DRAFT wording, hers to correct
+    sleep: { short: "Stress & sleep", title: "Stress & sleep", dflt: false,
+      why: "Four taps about stress and sleep. They feed Qi stagnation, Yin deficiency and Qi deficiency on Patterns. Skip any you do not know.",
+      qs: [
+        { id: "fall", s: "Falling asleep", q: "Falling asleep?", d: "easy", o: [["easy", "Easy", []], ["hard", "Hard, mind racing or tense", ["sl_hard", "stress"]]] },
+        { id: "wake", s: "Waking", q: "Waking in the night?", d: "no", multi: true, o: [["no", "No", []], ["often", "Wakes, then can't get back to sleep", ["sl_wake"]], ["hot", "Wakes hot or sweating", ["night_sweat", "heat_feel"]], ["early", "Wakes very early", ["sl_wake", "low_mood"]]] },
+        { id: "tired", s: "Waking tired", q: "How does she feel on waking?", d: "fresh", o: [["fresh", "Rested", []], ["tired", "Tired, even after a full night", ["fatigue"]]] },
+        { id: "mood", s: "Stress", q: "Stress and mood?", d: "calm", o: [["calm", "Steady", []], ["irr", "Tense, irritable", ["stress"]], ["low", "Low, flat or tearful", ["low_mood"]]] }
       ] }
   };
   // which profile section holds a question set
-  function phPfwTabOf(sid) { return sid === "period" ? "cycle" : sid === "pain" ? "pain" : "usual"; }
+  function phPfwTabOf(sid) { return sid === "period" ? "cycle" : sid === "pain" ? "pain" : sid === "sleep" ? "sleep" : "usual"; }
   // the short "shapes the picture" history set. hx = writes the 38-checklist key (so
   // it is never asked twice); pic = lives in rec.usual.pic. clue = what a Yes feeds.
   const PH_PFW_SHORT = [
@@ -60810,7 +60823,7 @@ or changing anything in Cliniko.
   function phPfwNextId(name, fromId) {
     const rec = phPatientPeek(name) || {}, sid = phPfSetFor(rec);
     const seq = ["patient"]; if (sid === "period") seq.push("cycle"); else if (sid) seq.push("usual");
-    { const cc = phCcOf(name); if (cc && cc.fams.includes("pain")) seq.push("pain"); }
+    { const cc = phCcOf(name); if (cc && cc.fams.includes("pain")) seq.push("pain"); if (cc && cc.fams.includes("sleep")) seq.push("sleep"); }
     seq.push("medhx", "patterns");
     const i = seq.indexOf(fromId);
     return i >= 0 ? seq[i + 1] || null : null;
@@ -60911,7 +60924,7 @@ or changing anything in Cliniko.
     el.innerHTML = presPfwSideInner(name);
     setTimeout(phPfwKick, 40);
   }
-  const phPfwSideWanted = (name, id) => !!name && (id === "patient" || id === "usual" || id === "cycle" || id === "pain" || id === "medhx") && phPfBasicsOk(name);
+  const phPfwSideWanted = (name, id) => !!name && (id === "patient" || id === "usual" || id === "cycle" || id === "pain" || id === "sleep" || id === "medhx") && phPfBasicsOk(name);
   // the Patterns page's own "Sharpen this picture"
   function phPfwSharpenHtml(name) {
     const pic = phPfPicture(name);
@@ -61109,7 +61122,7 @@ or changing anything in Cliniko.
       phPfwDisarm();
       presSavedToast(on ? "Auto-move is off. Next glows instead." : "Auto-move is on.");
       const name = phPfwName();
-      ["period", "meno", "men", "pain", "shx"].forEach(sid => { const h = document.querySelector(`[data-pfw-host="${sid}"]`); if (h) h.outerHTML = sid === "shx" ? presPfwShortHtml(name) : presPfwSetHtml(name, sid); });
+      ["period", "meno", "men", "pain", "sleep", "shx"].forEach(sid => { const h = document.querySelector(`[data-pfw-host="${sid}"]`); if (h) h.outerHTML = sid === "shx" ? presPfwShortHtml(name) : presPfwSetHtml(name, sid); });
       return true;
     }
     if (T.closest("[data-pfw-later]")) {
