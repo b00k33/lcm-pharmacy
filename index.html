@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261006-060000">
+<meta name="lcm-build" content="20261006-080000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -13147,6 +13147,15 @@
     font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; flex: none;
   }
   #pharmacyPage .ph-flow-sub .flag.pop { animation: phTpStepPop 450ms ease-out; }
+  /* her pick Mock B (2026-10-06): captioned groups on the patient rail */
+  #pharmacyPage .ph-flow-sub .cap { display: block; margin: 2px 0 2px; font-size: 9.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--ph-faint); }
+  #pharmacyPage .ph-flow-sub .cap i { font-style: normal; font-weight: 600; letter-spacing: 0; text-transform: none; margin-left: 4px; }
+  #pharmacyPage .ph-flow-sub.g-file .cap { color: var(--ph-herb); }
+  #pharmacyPage .ph-flow-sub.g-check .cap { color: var(--ph-gold-deep); }
+  #pharmacyPage .ph-flow-sub.g-sum .cap { color: #9a3b5a; }
+  #pharmacyPage .ph-flow-sub.log .cap { color: var(--ph-purple-deep, #5b3d8f); }
+  #pharmacyPage .ph-flow-sub.log { padding-top: 8px; margin-top: 4px; border-top: 1px dashed var(--ph-line); }
+  #pharmacyPage .ph-flow-sub.log::before, #pharmacyPage .ph-flow-sub.log::after { display: none; }
   #pharmacyPage .ph-flow-body.in { animation: phFlowSlide .36s cubic-bezier(.2,.8,.2,1) both; }
   @keyframes phFlowSlide { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
   @keyframes phFlowFill { from { transform: scaleY(0); } to { transform: scaleY(1); } }
@@ -35605,6 +35614,8 @@
       }
       // the Patterns page's own taps (focus / open / agree / dismiss / colour /
       // letters / clue tap-through) -- all scoped to #presPatHost
+      const logFilter = e.target.closest("[data-log-filter]");
+      if (logFilter) { presLogFilter = logFilter.dataset.logFilter; if (!presAssessTabRefresh()) renderPresPanel(); return; }
       if (phCcClick(e)) return;
       if (phRcClick(e)) return;
       if (phUpClick(e)) return;
@@ -50210,7 +50221,12 @@ or changing anything in Cliniko.
   // patient record, informational only, never cross-checked against the
   // symptom checklist above. Lives in the fixed head, not #phHxBody, so
   // it never re-renders on a plain Yes/No tap deep in the checklist.
-  function phHxConstitutionHtml(rec, patientKey, dispName) {
+  function phHxConstitutionHtml(rec, patientKey, dispName, part) {
+    // her pick Mock B (2026-10-06): the profile's Ren / Tongue / Pulse pages each show ONE part of
+    // this block; no part (the History popup, the old fold) is the whole block, unchanged
+    if (part === "tongue" || part === "pulse") {
+      return `<div class="ph-hx-constit" id="phRenConstitPanel">${part === "tongue" ? (dispName ? phTngHtml(dispName) : phHxConstitTongueHtml(rec, patientKey)) : phHxConstitPulseHtml(rec)}</div>`;
+    }
     const bts = phBtList();
     const opt = (v, cur) => `<option value="${v.id}"${cur === v.id ? " selected" : ""}>${esc(v.name)}${v.cn ? " " + esc(v.cn) : ""}</option>`;
     const picker = (attr, cur, label) => `<label class="ph-gd-field ph-hx-constit-field"><span>${esc(label)}</span>
@@ -50268,8 +50284,8 @@ or changing anything in Cliniko.
       <label class="ph-gd-field"><span>Findings</span>
         <textarea data-hx-constit-findings rows="2" placeholder="Optional notes…">${esc(rec.constitutionFindings || "")}</textarea>
       </label>
-      ${dispName ? phTngHtml(dispName) : phHxConstitTongueHtml(rec, patientKey)}
-      ${phHxConstitPulseHtml(rec)}
+      ${part === "ren" ? "" : `${dispName ? phTngHtml(dispName) : phHxConstitTongueHtml(rec, patientKey)}
+      ${phHxConstitPulseHtml(rec)}`}
       ${phRenRefStripHtml(patientKey)}
       <!-- her 2026-08-25 spec: capture-by-type tiles, then the dated
            timeline. Both read the same IndexedDB photo list already loaded
@@ -53808,7 +53824,7 @@ or changing anything in Cliniko.
     // the Constitution tab on the profile (presConstitTabBodyHtml) -- same
     // block, repainted in place so a chip tap never re-renders the whole
     // script panel (her scroll spot and open sections survive)
-    if (constitEl) constitEl.innerHTML = presConstitTabInnerHtml(presHxScreenName);
+    if (constitEl) constitEl.innerHTML = presConstitTabInnerHtml(presHxScreenName, constitEl.dataset.part);
     // the one-shot sweep/fresh render flags (set right before this call by
     // phHxMarkRestNo / the data-hx-set handler) have now been read by every
     // host phHxBodyHtml could possibly have painted into above -- clear them
@@ -54662,7 +54678,7 @@ or changing anything in Cliniko.
     const profSel = (profSecs.find(s => s.id === presAssessTab) || profSecs[0] || {}).id;
     return {
       plan, name,
-      profSubs: profSecs.map(s => ({ id: s.id, label: s.label, flags: s.flags || 0, flagTitle: s.flagTitle || (s.flags ? `${s.flags} flagged` : ""), dn: presSecDnHtml(name, s.id), on: presStage === "profile" && s.id === profSel, locked: phPfwLocked(name, s.id) })),
+      profSubs: profSecs.map(s => ({ id: s.id, grp: s.grp || "file", label: s.label, flags: s.flags || 0, flagTitle: s.flagTitle || (s.flags ? `${s.flags} flagged` : ""), dn: presSecDnHtml(name, s.id), on: presStage === "profile" && s.id === profSel, locked: phPfwLocked(name, s.id) })),
       steps: [
         { id: "profile", n: 1, label: "Profile", small: "details · history", done: profileDone, on: presStage === "profile", stage: "profile" },
         // the rail's own small caption stops repeating the phase name here
@@ -54707,10 +54723,21 @@ or changing anything in Cliniko.
     const flagKey = u => `${u.id}:${u.flags}`;
     const seenFlags = prevFlags;
     presFlowLast.flags = f.profSubs.filter(u => u.flags).map(flagKey);
-    const profHtml = f.profSubs.length ? `<div class="ph-flow-sub prof${prof.done ? " done" : ""}${newlyDone.includes("profile") ? " anim" : ""}">${f.profSubs.map(u => `<button type="button" class="${u.on ? "on" : ""}${u.locked ? " locked" : ""}" data-flow-prof="${u.id}" role="tab" aria-selected="${u.on ? "true" : "false"}"${u.locked ? ` title="Add sex and date of birth first"` : ""}>${esc(u.label)}${u.dn || ""}${u.flags ? `<span class="flag${seenFlags && !seenFlags.includes(flagKey(u)) ? " pop" : ""}" title="${esc(u.flagTitle)}">${u.flags}</span>` : ""}</button>`).join("")}</div>` : "";
-    const subHtml = f.subs.length ? `<div class="ph-flow-sub${treat.done ? " done" : ""}${newlyDone.includes("treatment") ? " anim" : ""}">${f.subs.map(u => `<button type="button" class="${u.on ? "on" : ""}" data-flow-go="${u.id}" role="tab" aria-selected="${u.on ? "true" : "false"}">${esc(u.label)}${u.sub ? `<span class="sub">${esc(u.sub)}</span>` : ""}</button>`).join("")}</div>` : "";
+    // her pick Mock B (2026-10-06): the profile pages sit in groups that follow the visit --
+    // her file (once) · today's check (every visit) · putting it together -- and everything dated
+    // sits under Log, together with the plan's own Treatment log / Photos / Notes
+    const profBtn = u => `<button type="button" class="${u.on ? "on" : ""}${u.locked ? " locked" : ""}" data-flow-prof="${u.id}" role="tab" aria-selected="${u.on ? "true" : "false"}"${u.locked ? ` title="Add sex and date of birth first"` : ""}>${esc(u.label)}${u.dn || ""}${u.flags ? `<span class="flag${seenFlags && !seenFlags.includes(flagKey(u)) ? " pop" : ""}" title="${esc(u.flagTitle)}">${u.flags}</span>` : ""}</button>`;
+    const grpHtml = (g, cap, extra) => {
+      const items = f.profSubs.filter(u => u.grp === g);
+      return items.length ? `<div class="ph-flow-sub prof g-${g}${prof.done ? " done" : ""}${newlyDone.includes("profile") ? " anim" : ""}"><span class="cap">${cap}</span>${items.map(profBtn).join("")}</div>` : "";
+    };
+    const fileHtml = grpHtml("file", "Her file <i>once</i>");
+    const checkHtml = grpHtml("check", "Today's check <i>every visit</i>");
+    const sumHtml = grpHtml("sum", "Putting it together");
+    const logItems = f.profSubs.filter(u => u.grp === "log");
+    const logHtml = (logItems.length || f.subs.length) ? `<div class="ph-flow-sub keep log${treat.done ? " done" : ""}${newlyDone.includes("treatment") ? " anim" : ""}"><span class="cap">Log <i>everything dated</i></span>${logItems.map(profBtn).join("")}${f.subs.map(u => `<button type="button" class="${u.on ? "on" : ""}" data-flow-go="${u.id}" role="tab" aria-selected="${u.on ? "true" : "false"}">${esc(u.label)}${u.sub ? `<span class="sub">${esc(u.sub)}</span>` : ""}</button>`).join("")}</div>` : "";
     return `<div class="ph-flow-rail" id="presFlowRail" role="tablist" aria-label="Where you are">
-      ${stepHtml(prof)}${profHtml}${stepHtml(f.steps[1])}${stepHtml(treat)}${subHtml}${stepHtml(f.steps[3])}
+      ${stepHtml(prof)}${fileHtml}${checkHtml}${sumHtml}${stepHtml(f.steps[1])}${stepHtml(treat)}${stepHtml(f.steps[3])}${logHtml}
     </div>`;
   }
   // in-place repaint of the rail alone (a tab switch inside the plan page
@@ -54776,7 +54803,7 @@ or changing anything in Cliniko.
   const PRES_UP_WHY = {
     abdomen: "Tongue, pulse and belly feed her patterns.",
     medhx: "So nothing important is missed before treating.",
-    bodytype: "Five quick questions that finish her constitution picture.",
+    ren: "Five quick questions that finish her constitution picture.",
     cycle: "Her usual period questions feed her patterns.",
     usual: "A few quick questions that feed her patterns.",
     pain: "Where it hurts and what changes it.",
@@ -54931,7 +54958,7 @@ or changing anything in Cliniko.
     const hxIsNew = !!hxName && (presHxUntaken(hxName) || presHxInlineFor === hxName);
     // the Tracking switches live in the band now (its chips ARE the switches);
     // a patient with no name yet has no record to switch, so no band either
-    return `${presPatientBandHtml(t)}${presPfwStartHtml(t)}${presUpNextHtml(t)}${phCcCardHtml(t)}${phRcCardHtml(t)}<div class="ph-op-col ph-op-record">
+    return `${presPatientBandHtml(t)}${presPfwStartHtml(t)}${presUpNextHtml(t)}${phCcCardHtml(t)}<div class="ph-op-col ph-op-record">
       <div class="ph-tmpl-sec"><span>Patient</span></div>
       ${presNameTypeFieldsHtml(t, !hxIsNew, true)}
       ${presContactFieldsHtml(t, !hxIsNew)}
@@ -55430,12 +55457,12 @@ or changing anything in Cliniko.
      patient through presHxScreenName and repaint via renderHxScreen(), so
      this host keeps that name in sync exactly the way the new-patient inline
      history does, and renderHxScreen() repaints #presConstitHost in place. */
-  function presConstitTabInnerHtml(name) {
+  function presConstitTabInnerHtml(name, part) {
     // read the record for rendering (phPatientRec rewrites plan fields on
     // every call -- CLAUDE.md trap); the handlers do their own writes
-    return phHxConstitutionHtml(phPatientPeek(name) || phPatientRec(name), phPatientKey(name), name);
+    return phHxConstitutionHtml(phPatientPeek(name) || phPatientRec(name), phPatientKey(name), name, part || undefined);
   }
-  function presConstitTabBodyHtml(t) {
+  function presConstitTabBodyHtml(t, part) {
     const name = presPatientFor(t) || t.name || "";
     if (!name) return "";
     // the History popup is the one thing allowed to hold a DIFFERENT name
@@ -55452,7 +55479,7 @@ or changing anything in Cliniko.
       presHxFreshFlag = null;
     }
     phRenEnsurePhotos(phPatientKey(name));
-    return `<div id="presConstitHost">${presConstitTabInnerHtml(name)}</div>`;
+    return `<div id="presConstitHost"${part ? ` data-part="${part}"` : ""}>${presConstitTabInnerHtml(name, part)}</div>`;
   }
   // a body may be a FUNCTION: built only when its tab is the selected one.
   // Constitution is no longer its own tab (her ask 2026-09-25, merged into
@@ -55473,16 +55500,22 @@ or changing anything in Cliniko.
     const sections = [
       { id: "patient", label: "Patient details", body: () => presPatientTabBodyHtml(t) },
     ];
-    // her ask 2026-10-03 (new-patient journey): Abdomen is examined BEFORE the medical history
+    // her pick Mock B (2026-10-06): the old Examine page is split. Ren (body + type) is her file, once;
+    // Re-check, Tongue, Pulse and Abdomen are Today's check, every visit
     if (hxName && !presIsFormula(t)) {
       const abdN = phAbdPicks(peek).length;
-      sections.push({ id: "abdomen", label: "Examine", sub: abdN ? `${abdN} finding${abdN === 1 ? "" : "s"}` : (peek && peek.abdomen && peek.abdomen.normal ? "normal" : ""), body: () => `${presConstitTabBodyHtml(t)}${phAbdHtml(hxName)}` });
+      const bq = phBtqTop(peek);
+      sections.push({ id: "ren", label: "Ren", sub: bq ? PH_BTJ[bq].n : "", body: () => `${presConstitTabBodyHtml(t, "ren")}${phBtqHtml(hxName)}` });
+      if (phRcCardHtml(t)) sections.push({ id: "recheck", label: "Re-check", body: () => phRcCardHtml(t) });
+      sections.push({ id: "tongue", label: "Tongue", body: () => presConstitTabBodyHtml(t, "tongue") });
+      sections.push({ id: "pulse", label: "Pulse", body: () => presConstitTabBodyHtml(t, "pulse") });
+      sections.push({ id: "abdomen", label: "Abdomen", sub: abdN ? `${abdN} finding${abdN === 1 ? "" : "s"}` : (peek && peek.abdomen && peek.abdomen.normal ? "normal" : ""), body: () => phAbdHtml(hxName) });
     }
     if (hxName) {
       const prog = phHxProgress(hxName);
       sections.push({ id: "medhx", label: "Medical history", sub: presMedHxSubLabel(hxName), flags: prog.notNeeded ? 0 : prog.yesItems.length, body: () => presMedHxTabBodyHtml(t) });
       // her ask 2026-10-03: the Jing Fang body-type questions come after the history
-      if (!presIsFormula(t)) { const bq = phBtqTop(peek); sections.push({ id: "bodytype", label: "Body type", sub: bq ? PH_BTJ[bq].n : "", body: () => phBtqHtml(hxName) }); }
+      // (Body type now sits on the Ren page, 2026-10-06)
       // profile-first (2026-10-04): a woman 48+ with cycle off gets "Change of
       // life", a man gets "Energy & sleep" -- one-screen question cards that feed
       // Patterns. A woman with cycle on has hers on top of the Cycle page instead.
@@ -55525,7 +55558,42 @@ or changing anything in Cliniko.
       } catch (e) { patSub = ""; }
       sections.push({ id: "patterns", label: "Patterns", sub: patSub, flags: patFlags, flagTitle: `${patFlags} likely, not yet agreed`, body: () => presPatternsTabBodyHtml(t, name) });
     }
-    return sections;
+    // her pick Mock B (2026-10-06): the Log page -- every dated record on one page
+    if (name && !presIsFormula(t)) sections.push({ id: "log", label: "Log", body: () => presLogBodyHtml(t, name) });
+    // the rail's groups: 1 her file (once) · 2 today's check (every visit) · 3 putting it together · Log
+    // (the dated pages sit under Log). Stable sort, so a page keeps its place inside its group.
+    const RANK = { patient: 1, ren: 2, medhx: 3, pain: 4, usual: 5, sleep: 6, supplements: 7, checklist: 8,
+      recheck: 10, tongue: 11, pulse: 12, abdomen: 13, cycle: 14, patterns: 20,
+      log: 30, photos: 31, apptshist: 32, messages: 33, ivf: 34 };
+    const GRP = n => n < 10 ? "file" : n < 20 ? "check" : n < 30 ? "sum" : "log";
+    sections.forEach(s => { s.grp = GRP(RANK[s.id] || 8); });
+    return sections.map((s, i) => [s, i]).sort((a, b) => (RANK[a[0].id] || 8) - (RANK[b[0].id] || 8) || a[1] - b[1]).map(x => x[0]);
+  }
+  // ---- the Log page (her pick Mock B, 2026-10-06): every dated record for her, newest first, one
+  // filter row. Built only from records that already carry a date. Tongue / pulse / abdomen are one
+  // current exam on her record (no dates yet), so they do not appear here. A line opens its page.
+  let presLogFilter = "all";
+  const PRES_LOG_TYPES = [["all", "All"], ["visit", "Visits"], ["recheck", "Re-checks"], ["cycle", "Cycle"], ["photo", "Photos"], ["appt", "Appointments"]];
+  function presLogEntries(t, name) {
+    const rec = phPatientPeek(name) || {}, key = phPatientKey(name), out = [];
+    (rec.acuSessions || []).forEach(s => { if (s.date) out.push({ d: s.date, k: "visit", txt: s.noTreatment ? "Visit · herbs only" : "Visit · acupuncture", go: "log", plan: true }); });
+    if (rec.recheck && rec.recheck.date) {
+      const o = PH_RC_OPTS.find(x => x[0] === rec.recheck.change);
+      out.push({ d: rec.recheck.date, k: "recheck", txt: `Re-check${o ? " · " + o[1] : ""}${rec.recheck.note ? " · " + rec.recheck.note : ""}`, go: "recheck" });
+    }
+    (rec.cycleLog || []).forEach(x => { if (x && x.lmp) out.push({ d: x.lmp, k: "cycle", txt: "Period started", go: "cycle" }); });
+    (phRenPhotosFor(key) || []).forEach(p => { if (p.createdAt) out.push({ d: keyOf(new Date(p.createdAt)), k: "photo", txt: "Photo added", go: "photos" }); });
+    phApptList().filter(a => phPatientKey(a.patient) === key && a.service !== "Break" && a.date).forEach(a => out.push({ d: a.date, k: "appt", txt: `${a.date > keyOf(TODAY) ? "Booked" : "Appointment"}${a.time ? " " + phCkTime12(a.time) : ""} · ${a.service || ""}`, go: "apptshist" }));
+    return out.sort((a, b) => b.d.localeCompare(a.d));
+  }
+  function presLogBodyHtml(t, name) {
+    phRenEnsurePhotos(phPatientKey(name));
+    const all = presLogEntries(t, name);
+    const shown = presLogFilter === "all" ? all : all.filter(e => e.k === presLogFilter);
+    const PILL = { visit: "v", recheck: "g", cycle: "", photo: "", appt: "" };
+    const chips = PRES_LOG_TYPES.map(([id, lbl]) => `<button type="button" class="ph-log-chip${presLogFilter === id ? " on" : ""}" data-log-filter="${id}" aria-pressed="${presLogFilter === id ? "true" : "false"}">${esc(lbl)}</button>`).join("");
+    const rows = shown.length ? shown.slice(0, 200).map(e => `<button type="button" class="ph-log-row" ${e.plan ? `data-flow-go="${e.go}"` : `data-flow-prof="${e.go}"`}><b>${esc(phShortDate(e.d))}</b><span>${esc(e.txt)}</span><i class="ph-log-pill ${PILL[e.k] || ""}">${esc((PRES_LOG_TYPES.find(x => x[0] === e.k) || [0, e.k])[1])}</i></button>`).join("") : `<div class="ph-hx-constit-note">Nothing dated here yet.</div>`;
+    return `<div class="ph-log" data-log-host="1"><div class="ph-log-chips">${chips}</div><div class="ph-log-feed">${rows}</div></div>`;
   }
   // her ask 2026-09-24 ("i want to see patient appointments history and
   // allocate appointment to treatment plan session"): the mechanism already
@@ -60796,7 +60864,7 @@ or changing anything in Cliniko.
     }
     // -- body type (her ask 2026-10-03): the Jing Fang questionnaire's best fit, one clue
     const btTop = phBtqTop(rec);
-    if (btTop && PH_BTJ[btTop]) add("bt_" + btTop, "bt", `${PH_BTJ[btTop].n} body type (questionnaire)`, { tab: "bodytype" }, rec.btQ && rec.btQ.at ? phCycShortLbl(keyOf(new Date(rec.btQ.at))) : "");
+    if (btTop && PH_BTJ[btTop]) add("bt_" + btTop, "bt", `${PH_BTJ[btTop].n} body type (questionnaire)`, { tab: "ren" }, rec.btQ && rec.btQ.at ? phCycShortLbl(keyOf(new Date(rec.btQ.at))) : "");
     // -- her usual answers (profile-first workflow, 2026-10-04): added LAST, so a
     // sign already found in the day log, history or notes wins and is not counted twice
     try { phPfAddClues(rec, add); } catch (e) { /* a bad usual record just adds no clues */ }
@@ -61222,7 +61290,7 @@ or changing anything in Cliniko.
       <h3>Re-check · what changed since last visit?</h3>
       <div class="ph-rc-chips">${chips}</div>
       <input type="text" class="ph-cc-said" data-rc-note-in="1" maxlength="160" value="${esc((rc && rc.note) || "")}" placeholder="a few words, e.g. sleeping better, pain less sharp" aria-label="What changed">
-      <div class="ph-cc-opts"><button type="button" class="ph-cc-chip" data-flow-prof="abdomen">Check abdomen ›</button><button type="button" class="ph-cc-chip" data-flow-prof="abdomen">Tongue &amp; pulse ›</button></div>
+      <div class="ph-cc-opts"><button type="button" class="ph-cc-chip" data-flow-prof="abdomen">Check abdomen ›</button><button type="button" class="ph-cc-chip" data-flow-prof="tongue">Tongue ›</button><button type="button" class="ph-cc-chip" data-flow-prof="pulse">Pulse ›</button></div>
     </div>`;
   }
   function phRcRefresh(calm) {
@@ -61325,7 +61393,8 @@ or changing anything in Cliniko.
     if (id === "patient") return { done: !!(rec.sex && rec.dob), at: rec.basicsAt || 0 };
     if (id === "abdomen") { const a = rec.abdomen || {}; return { done: phAbdPicks(rec).length > 0 || !!a.normal, at: a.at || 0 }; }
     if (id === "medhx") { const p = phHxProgress(name); return { done: p.notNeeded || (p.total > 0 && p.answeredN >= p.total), at: p.updatedAt || 0 }; }
-    if (id === "bodytype") return { done: !!phBtqTop(rec), at: (rec.btQ && rec.btQ.at) || 0 };
+    if (id === "ren") return { done: !!(phBtqTop(rec) || rec.bodyConstitutionBt || rec.eyes || rec.build), at: (rec.btQ && rec.btQ.at) || 0 };
+    if (id === "recheck") { const r = rec.recheck; return { done: !!(r && r.date === keyOf(TODAY) && r.change), at: (r && r.at) || 0 }; }
     const at = (rec.usual && rec.usual.at) || 0;
     if (id === "cycle") return { done: phPfSetFor(rec) === "period" && phPfwSetDone(name, "period"), at };
     if (id === "usual") { const s = phPfSetFor(rec); return { done: (s === "meno" || s === "men") && phPfwSetDone(name, s), at }; }
