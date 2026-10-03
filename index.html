@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261005-200000">
+<meta name="lcm-build" content="20261005-210000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -60838,6 +60838,24 @@ or changing anything in Cliniko.
     });
     if (n) savePresc();
   }
+  // her typed words suggest tiles (never ticked for her: she taps to add)
+  var PH_CC_GUESS = [
+    ["periods", /period|menstru|clot|cramp|spotting|pms|heavy flow|irregular|amenorr|endometri|pcos/i],
+    ["fertility", /conceive|fertil|ivf|pregnan|miscarr|egg|sperm|ttc|implant/i],
+    ["meno", /menopaus|hot flush|flushes|night sweat|perimenop|vaginal dry/i],
+    ["pain", /pain|ache|sore|stiff|sciatic|migraine|headache|sprain|strain|injur|fall|neck|shoulder|back|knee|hip|elbow|arthrit/i],
+    ["sleep", /sleep|insomnia|anxi|stress|worry|panic|mood|depress|overwhelm|burn.?out|can.?t switch off/i],
+    ["weight", /weight|bloat|digest|gut|ibs|constipat|diarrh|reflux|nausea|appetite|fatigue|tired|exhaust|energy|metabol/i],
+    ["face", /bell|facial|face droop|palsy|stroke|numb|tingl|nerve|ramsay/i],
+    ["acute", /\bcolds?\b|\bflu\b|cough|sore throat|sinus|allerg|hay fever|immune|infection|fever|catching/i]
+  ];
+  function phCcGuessIds(text) { const x = String(text || ""); return x.trim() ? PH_CC_GUESS.filter(g => g[1].test(x)).map(g => g[0]) : []; }
+  function phCcGuessHtml(name, text) {
+    const rec = phPatientPeek(name) || {}, male = rec.sex === "M", c = phCcOf(name), sel = c ? c.fams : [];
+    const ids = phCcGuessIds(text).filter(id => !sel.includes(id) && !(male && (id === "periods" || id === "meno")));
+    if (!ids.length) return "";
+    return `<span class="ph-cc-gl">Sounds like:</span> ` + ids.map(id => { const f = phCcFam(id); return f ? `<button type="button" class="ph-cc-chip" data-cc-guess="${id}">＋ ${f.ic} ${esc(f.label)}</button>` : ""; }).join("");
+  }
   function phCcCardHtml(t, calm) {
     const name = presPatientFor(t) || "";
     if (!name || presIsFormula(t)) return "";
@@ -60866,6 +60884,7 @@ or changing anything in Cliniko.
       <div class="ph-cc-tiles">${tiles}</div>${thread}
       <div class="ph-pfw-lab">In ${male ? "their" : "her"} words (optional)</div>
       <input type="text" class="ph-cc-said" data-cc-said-in="1" maxlength="160" value="${esc((c && c.said) || "")}" placeholder="${male ? "e.g. sore lower back, poor sleep" : "e.g. painful, clotty periods"}" aria-label="In ${male ? "their" : "her"} words">
+      <div class="ph-cc-opts" data-cc-guess-host="1">${phCcGuessHtml(name, c && c.said)}</div>
       <div class="ph-cc-opts">${PH_CC_SAID.map(s => `<button type="button" class="ph-cc-chip" data-cc-said="${esc(s)}">${esc(s)}</button>`).join("")}</div>
       <div class="ph-pfw-lab">How long</div>
       <div class="ph-cc-opts">${PH_CC_DUR.map(d => `<button type="button" class="ph-pfw-opt${c && c.dur === d ? " on" : ""}" data-cc-dur="${d}">${d}</button>`).join("")}</div>
@@ -60913,6 +60932,7 @@ or changing anything in Cliniko.
     if (!T || !T.closest) return false;
     if ((el = T.closest("[data-cc-star]"))) { phCcSetMain(el.dataset.ccStar); return true; }
     if ((el = T.closest("[data-cc-fam]"))) { phCcToggle(el.dataset.ccFam); return true; }
+    if ((el = T.closest("[data-cc-guess]"))) { const n0 = phPfwName(), inp = document.querySelector("#pharmacyPage [data-cc-said-in]"); if (n0 && inp) phCcSaid(inp.value, false); phCcToggle(el.dataset.ccGuess); return true; }
     if ((el = T.closest("[data-cc-said]"))) { phCcSaid(el.dataset.ccSaid, true); return true; }
     if ((el = T.closest("[data-cc-dur]"))) { phCcDur(el.dataset.ccDur); return true; }
     if (T.closest("[data-cc-edit]")) { const n = phPfwName(); if (n) { phCcOpen.add(phPatientKey(n)); phCcRefresh(false); } return true; }
@@ -60929,6 +60949,12 @@ or changing anything in Cliniko.
   document.addEventListener("change", e => {
     const el = e.target;
     if (el && el.matches && el.matches("[data-cc-said-in]") && el.closest("#pharmacyPage")) phCcSaid(el.value, false);
+  });
+  document.addEventListener("input", e => {
+    const el = e.target;
+    if (!(el && el.matches && el.matches("[data-cc-said-in]") && el.closest("#pharmacyPage"))) return;
+    const n = phPfwName(), hostCard = el.closest("[data-cc-host]"), host = hostCard && hostCard.querySelector("[data-cc-guess-host]");
+    if (n && host) host.innerHTML = phCcGuessHtml(n, el.value);
   });
   // tiles are divs: Enter / Space picks one, like a button
   document.addEventListener("keydown", e => {
