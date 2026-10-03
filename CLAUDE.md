@@ -12627,3 +12627,6 @@ A returning patient (has sex + DOB, and a plan, dispense, history or logged sess
 
 ## "Also treating" suggestion from a second complaint tile (journey, 2026-10-05)
 On the plan picker (no-plan screen and "+ New treatment plan"), when her complaint names two or more tiles and the combine switch is off, a line reads "She also came in for X. Treat both on one plan: A + B?" with **Combine them ›** (`data-combo-suggest`). One tap turns the switch on and ticks the best-fit plan of each complaint, main first (`phCcSuggestIds`, up to 3, never IVF); she can still untick, change the main one, or ignore it. Nothing is written until she taps Start combined plan. `lcm-build` `20261005-180000`.
+
+## One Examine screen — tongue, pulse and abdomen together (journey, 2026-10-05)
+Menu path: EVERY DAY → Patient profile → open patient → **Examine** (profile rail, right under Patient details and before Medical history). The old Abdomen section is now "Examine" (id still `abdomen`): the tongue, pulse and body-type block (`presConstitTabBodyHtml`) first, then the belly picture (`phAbdHtml`). The fold that held tongue and pulse at the foot of Patient details is gone (`presConstitFoldSectionHtml` is unused); the re-check card's "Tongue & pulse ›" chip now opens Examine too. Nothing stored changed. `lcm-build` `20261005-200000`, `sw.js` `lcm-20261005-examine-screen`.
