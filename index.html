@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261004-230000">
+<meta name="lcm-build" content="20261005-010000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -60098,11 +60098,11 @@ or changing anything in Cliniko.
       qs: [
         { id: "len", s: "Cycle", q: "How long is her cycle?", d: "mid", o: [["short", "Under 25 days", ["short_cycle"]], ["mid", "25 to 35 days", []], ["long", "Over 35 days", ["long_cycle"]], ["vary", "Varies a lot", ["irregular_len"]], ["none", "Missing for months", ["amen"]]] },
         { id: "flow", s: "Flow", q: "How heavy is the flow?", d: "mid", o: [["light", "Light", ["light_flow"]], ["mid", "Moderate", []], ["heavy", "Heavy", ["heavy_flow"]]] },
-        { id: "col", s: "Colour", q: "What colour is the blood?", d: "red", o: [["bright", "Bright red", ["bright_blood"]], ["dark", "Dark or brown", ["dark_blood"]], ["pale", "Pale or watery", ["pale_flow"]], ["red", "Normal red", []]] },
+        { id: "col", s: "Colour", q: "What colour is the blood?", d: "red", o: [["bright", "Bright red", ["bright_blood"]], ["dark", "Dark or brown", ["dark_blood"]], ["pale", "Pale or watery", ["pale_flow"]], ["red", "Normal red", []], ["wine", "Deep wine red", []]] },
         { id: "clot", s: "Clots", q: "Any clots?", d: "none", o: [["none", "None", []], ["small", "Small", ["clots"]], ["large", "Large or many", ["clots"]]] },
-        { id: "pain", s: "Pain", q: "Period pain?", d: "none", o: [["none", "None", []], ["cramp", "Cramping", ["cramp", "dysmen"]], ["stab", "Stabbing", ["stabbing", "dysmen"]], ["severe", "Severe", ["severe_pain", "dysmen"]], ["drag", "Dragging", ["dragging"]]] },
-        { id: "pms", s: "Before", q: "Before the period?", d: "none", o: [["none", "Nothing much", []], ["mood", "Mood, irritable", ["pms", "stress"]], ["bloat", "Bloating, loose stool", ["digestive_sx"]], ["tired", "Tired, low", ["fatigue", "low_mood"]]] },
-        { id: "cm", s: "Discharge", q: "Mid-cycle discharge?", d: "clear", o: [["clear", "Clear, stretchy", []], ["watery", "Watery, lots", ["watery_cm"]], ["creamy", "Creamy, sticky", ["damp_cm"]], ["dry", "Dry, little", ["dry_cm"]]] }
+        { id: "pain", s: "Pain", q: "Period pain?", d: "none", multi: true, o: [["none", "None", []], ["cramp", "Cramping", ["cramp", "dysmen"]], ["stab", "Stabbing", ["stabbing", "dysmen"]], ["severe", "Severe", ["severe_pain", "dysmen"]], ["drag", "Dragging", ["dragging"]]] },
+        { id: "pms", s: "Before", q: "Before the period?", d: "none", multi: true, o: [["none", "Nothing much", []], ["mood", "Mood, irritable", ["pms", "stress"]], ["bloat", "Bloating, loose stool", ["digestive_sx"]], ["tired", "Tired, low", ["fatigue", "low_mood"]]] },
+        { id: "cm", s: "Discharge", q: "Mid-cycle discharge?", d: "clear", multi: true, o: [["clear", "Clear, stretchy", []], ["watery", "Watery, lots", ["watery_cm"]], ["creamy", "Creamy, sticky", ["damp_cm"]], ["dry", "Dry, little", ["dry_cm"]]] }
       ] },
     meno: { short: "Change of life", title: "Change of life", dflt: false,
       why: "Four taps. They feed Heat, Yin deficiency and Qi stagnation the way a cycle log would. Cycle tracking stays off from 48 unless you switch it on in the band.",
@@ -60134,6 +60134,13 @@ or changing anything in Cliniko.
     { id: "cold", l: "Always feels cold", tag: "Yang deficiency", pic: true, clue: ["cold_feel"] }
   ];
   const PH_PFW_LOCKED = ["usual", "cycle", "medhx", "patterns"];
+  // a multi-pick question keeps a list of option ids; an older single answer is still a
+  // plain string, so every reader goes through these two and never compares ans[q.id] directly
+  function phPfwVals(ans, q) {
+    const v = ans ? ans[q.id] : null;
+    return Array.isArray(v) ? v.slice() : (v ? [v] : []);
+  }
+  const phPfwIsAns = (ans, q) => phPfwVals(ans, q).length > 0;
   const phPfwOpen = new Set();       // card folds she opened this visit ("period:name", "shx:name")
   const phPfwLater = new Set();      // patients whose Start-here she tapped "Later" on this visit
   const phPfwStartShown = new Set(); // patients whose Start-here was on screen this visit
@@ -60164,9 +60171,11 @@ or changing anything in Cliniko.
       if (!ans || (sid === "period" && logged)) return;
       const set = PH_PFW_SETS[sid];
       set.qs.forEach(q => {
-        const o = q.o.find(x => x[0] === ans[q.id]);
-        if (!o) return;
-        o[2].forEach(ck => add(ck, "usual", `${q.s}: ${o[1].toLowerCase()} (her usual answers)`, { tab: sid === "period" ? "cycle" : "usual" }));
+        phPfwVals(ans, q).forEach(v => {
+          const o = q.o.find(x => x[0] === v);
+          if (!o) return;
+          o[2].forEach(ck => add(ck, "usual", `${q.s}: ${o[1].toLowerCase()} (her usual answers)`, { tab: sid === "period" ? "cycle" : "usual" }));
+        });
       });
     });
     const pic = u.pic || {};
@@ -60185,7 +60194,7 @@ or changing anything in Cliniko.
     if (sid) {
       const set = PH_PFW_SETS[sid], ans = (rec.usual && rec.usual[sid]) || {};
       const logged = sid === "period" && phPfPeriodLogged(rec);
-      const n = logged ? set.qs.length : set.qs.filter(q => ans[q.id]).length;
+      const n = logged ? set.qs.length : set.qs.filter(q => phPfwIsAns(ans, q)).length;
       total += set.qs.length; have += n;
       if (n < set.qs.length) miss.push({ label: `Finish “${set.title}”`, gain: `${set.qs.length - n} more answer${set.qs.length - n === 1 ? "" : "s"} feed Patterns`, go: sid === "period" ? "cycle" : "usual" });
     }
@@ -60260,17 +60269,17 @@ or changing anything in Cliniko.
     const set = PH_PFW_SETS[sid];
     if (!name || !set) return "";
     const rec = phPatientPeek(name) || {}, ans = (rec.usual && rec.usual[sid]) || {}, key = `${sid}:${phPatientKey(name)}`;
-    const n = set.qs.filter(q => ans[q.id]).length, total = set.qs.length, done = n >= total;
+    const n = set.qs.filter(q => phPfwIsAns(ans, q)).length, total = set.qs.length, done = n >= total;
     const logged = sid === "period" && phPfPeriodLogged(rec);
     const fold = (done || (logged && n === 0)) && !phPfwOpen.has(key);
-    const sum = set.qs.map(q => { const o = q.o.find(x => x[0] === ans[q.id]); return o ? o[1] : ""; }).filter(Boolean);
+    const sum = set.qs.map(q => phPfwVals(ans, q).map(v => { const o = q.o.find(x => x[0] === v); return o ? o[1] : ""; }).filter(Boolean).join(" + ")).filter(Boolean);
     if (fold) return `<div class="ph-pfw-card fold" data-pfw-host="${sid}"><button type="button" class="ph-pfw-foldhd" data-pfw-fold="${sid}"><span class="tick${done ? "" : " dim"}">${done ? "✓" : "–"}</span><b>${esc(set.title)}</b><span class="sm">${done ? esc(sum.slice(0, 3).join(" · ")) : "not asked · the day log feeds Patterns"}</span><span class="chg">${done ? "change" : "ask"} ▸</span></button></div>`;
-    const cur = set.qs.find(q => !ans[q.id]);
+    const cur = set.qs.find(q => !phPfwIsAns(ans, q));
     const rows = set.qs.map(q => {
-      const picked = ans[q.id];
+      const vals = phPfwVals(ans, q), picked = vals.length > 0;
       return `<div class="ph-pfw-q${cur === q ? " cur" : ""}${picked ? " done" : ""}" data-pfw-q="${sid}:${q.id}">
-        <div class="ph-pfw-qt">${picked ? `<span class="tick">✓</span>` : ""}${esc(q.q)}</div>
-        <div class="ph-pfw-opts">${q.o.map((o, i) => `<button type="button" class="ph-pfw-opt${picked === o[0] ? " on" : ""}" data-pfw-ans="${sid}:${q.id}:${o[0]}"><kbd>${i + 1}</kbd>${esc(o[1])}</button>`).join("")}<button type="button" class="ph-pfw-skip${picked === "skip" ? " on" : ""}" data-pfw-skip="${sid}:${q.id}">Skip</button></div>
+        <div class="ph-pfw-qt">${picked ? `<span class="tick">✓</span>` : ""}${esc(q.q)}${q.multi ? ` <small style="font-weight:400;color:var(--ph-faint)">pick all that apply</small>` : ""}</div>
+        <div class="ph-pfw-opts">${q.o.map((o, i) => `<button type="button" class="ph-pfw-opt${vals.includes(o[0]) ? " on" : ""}" data-pfw-ans="${sid}:${q.id}:${o[0]}"><kbd>${i + 1}</kbd>${esc(o[1])}</button>`).join("")}<button type="button" class="ph-pfw-skip${vals.includes("skip") ? " on" : ""}" data-pfw-skip="${sid}:${q.id}">Skip</button></div>
       </div>`;
     }).join("");
     const note = logged ? `<div class="ph-pfw-note">Two cycles are logged, so the day log now feeds Patterns. These stay as what she first told us.</div>` : "";
@@ -60416,7 +60425,7 @@ or changing anything in Cliniko.
   }
   function phPfwSetDone(name, sid) {
     const rec = phPatientPeek(name) || {}, ans = (rec.usual && rec.usual[sid]) || {};
-    return PH_PFW_SETS[sid].qs.every(q => ans[q.id]);
+    return PH_PFW_SETS[sid].qs.every(q => phPfwIsAns(ans, q));
   }
   function phPfwWrite(name, fn) {
     const rec = name ? phPatientRec(name) : null;
@@ -60428,20 +60437,39 @@ or changing anything in Cliniko.
     return true;
   }
   const phPfwRectOf = el => { try { return el && el.getBoundingClientRect ? el.getBoundingClientRect() : null; } catch (e) { return null; } };
+  // A multi-pick question stores an array of option ids. Tapping a pick toggles it. "none" and
+  // "skip" stand alone: picking either clears the rest, and picking a real option clears them.
+  // A single-pick question keeps its plain string, as before.
   function phPfwAnswer(sid, qid, val, el) {
     const name = phPfwName(); if (!name) return;
     phPfwDisarm();
     el = phPfwRectOf(el);
-    if (!phPfwWrite(name, rec => { rec.usual[sid] = rec.usual[sid] || {}; rec.usual[sid][qid] = val; })) return;
     const q = PH_PFW_SETS[sid].qs.find(x => x.id === qid), o = q && q.o.find(x => x[0] === val), clues = o ? o[2] : [];
-    phPfwFed = clues.map(k => "+ " + (PH_PAT_CLUE_LBL[k] || k));
-    phPfwRefresh(name, sid); phPfwFly(el, clues.length);
+    let added = true;
+    if (!phPfwWrite(name, rec => {
+      rec.usual[sid] = rec.usual[sid] || {};
+      if (!(q && q.multi)) { rec.usual[sid][qid] = val; return; }
+      const cur = phPfwVals(rec.usual[sid], q);
+      let next;
+      if (cur.includes(val)) { next = cur.filter(v => v !== val); added = false; }
+      else if (val === "skip" || val === "none") next = [val];
+      else next = cur.filter(v => v !== "skip" && v !== "none").concat(val);
+      rec.usual[sid][qid] = next;
+    })) return;
+    phPfwFed = added ? clues.map(k => "+ " + (PH_PAT_CLUE_LBL[k] || k)) : [];
+    phPfwRefresh(name, sid); phPfwFly(el, added ? clues.length : 0);
     if (phPfwSetDone(name, sid)) phPfwArm(name, sid === "period" ? "cycle" : "usual", "All answered.");
   }
   function phPfwNormal(sid) {
     const name = phPfwName(); if (!name) return;
     phPfwDisarm();
-    if (!phPfwWrite(name, rec => { rec.usual[sid] = rec.usual[sid] || {}; PH_PFW_SETS[sid].qs.forEach(q => { if (!rec.usual[sid][q.id] || rec.usual[sid][q.id] === "skip") rec.usual[sid][q.id] = q.d; }); })) return;
+    if (!phPfwWrite(name, rec => {
+      rec.usual[sid] = rec.usual[sid] || {};
+      PH_PFW_SETS[sid].qs.forEach(q => {
+        const vals = phPfwVals(rec.usual[sid], q);
+        if (!vals.length || vals.every(v => v === "skip")) rec.usual[sid][q.id] = q.multi ? [q.d] : q.d;
+      });
+    })) return;
     phPfwFed = ["Typical answers filled"];
     phPfwRefresh(name, sid);
     presSavedToast("Filled with typical answers. Tap any row to change it.");
