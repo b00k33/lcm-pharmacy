@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261005-080000">
+<meta name="lcm-build" content="20261005-090000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -7288,6 +7288,12 @@
   #pharmacyPage .ph-abd-opts { flex: 1; min-width: 220px; display: flex; flex-wrap: wrap; gap: 6px; }
   #pharmacyPage .ph-abd-feeds { margin-top: 8px; min-height: 18px; font-size: 12.5px; color: var(--ph-gold-deep); }
   @media (prefers-reduced-motion: reduce) { #pharmacyPage .ph-abd-spot.on { animation: none; } }
+  /* plan takes shape (2026-10-03): the draft Diagnosis / principle card on the Patterns page */
+  #pharmacyPage .ph-pat-shape { margin: 12px 0; padding: 12px 14px; border: 2px solid var(--ph-gold); background: var(--ph-gold-tint); border-radius: 12px; animation: phPfwRise .35s ease both; }
+  #pharmacyPage .ph-pat-shh { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  #pharmacyPage .ph-pat-shh h3 { margin: 0; font: 700 16px var(--font-disp); color: var(--ph-gold-deep); }
+  #pharmacyPage .ph-pat-shl { display: grid; grid-template-columns: 82px 1fr; gap: 8px; font-size: 13px; margin: 3px 0; color: var(--ph-ink); }
+  #pharmacyPage .ph-pat-shl b { font: 700 10.5px var(--font-disp); letter-spacing: .08em; text-transform: uppercase; color: var(--ph-faint); padding-top: 2px; }
   /* body type (2026-10-03): the Jing Fang questionnaire. See "BODY TYPE" in the script. */
   #pharmacyPage .ph-btq-res { margin-top: 12px; padding: 12px 14px; border: 2px solid var(--ph-gold); background: var(--ph-gold-tint); border-radius: 12px; animation: phPfwRise .35s ease both; }
   #pharmacyPage .ph-btq-res h3 { margin: 0 0 6px; font: 700 17px var(--font-disp); color: var(--ph-gold-deep); }
@@ -61420,6 +61426,7 @@ or changing anything in Cliniko.
     return `<div class="ph-pat${intro ? " intro" : ""}">${head}
       <div class="ph-pat-hero${ui.focus ? " ringfocus" : ""}">${phPatRingHtml(shown, ui, intro, nClues)}<div class="ph-pat-legend">${legend}</div>${phPatFigureHtml(rec, ui, shown)}</div>
       ${dx}
+      ${phPatShapeHtml(name, rec, plan)}
       <div class="ph-pat-ev"><div class="ph-pat-tile"><h3>The clues</h3>${phPatCluesHtml(comp, ui, shownIds)}</div>
         <div class="ph-pat-tile"><h3>What it points to</h3><div class="ph-pat-cards">${cards}</div></div></div>
       ${phPfwSharpenHtml(name)}${hiddenBar}${phPatKeyHtml(ui)}</div>`;
@@ -61497,6 +61504,64 @@ or changing anything in Cliniko.
     delete st.agreed[id];
     return savePharmacy() !== false;
   }
+  /* ============ PLAN TAKES SHAPE (her ask 2026-10-03, new-patient journey) ============
+     Once she has agreed one or more patterns the page offers the plan's two text fields filled in:
+     Diagnosis (main pattern first, "A (main), with B and C") and Goal / principle (the main
+     pattern's treatment idea, then "Also: ..." for the others), plus the letters. DRAFT, and
+     NOTHING is written until she taps; one Undo restores both fields. It never touches phases
+     or visit counts. The main pattern is the first she agreed unless she taps "Make main"
+     (rec.patterns.main). No formula is proposed (her rule). */
+  var PH_PAT_FOCUS = {
+    stasis: "Move blood first (before and during the period), then nourish", bdef: "Build blood first (iron, food), then regulate",
+    yang: "Warm and tonify yang; moxa on the lower belly", heat: "Clear heat, cool and calm",
+    qistag: "Move qi; ease the mood, the cycle and the sleep", qidef: "Strengthen the spleen and build qi",
+    yindef: "Nourish yin and calm the heart", damp: "Clear damp and support digestion"
+  };
+  function phPatAgreedIds(rec) { const a = (rec && rec.patterns && rec.patterns.agreed) || {}; return Object.keys(a).sort((x, y) => (a[x].at || 0) - (a[y].at || 0)); }
+  function phPatMainId(rec) { const ids = phPatAgreedIds(rec), m = rec && rec.patterns && rec.patterns.main; return ids.includes(m) ? m : (ids[0] || null); }
+  function phPatShapeOf(rec) {
+    const defs = phPatDefs(), mainId = phPatMainId(rec);
+    const ids = phPatAgreedIds(rec).filter(id => defs.some(d => d.id === id));
+    if (!ids.length) return null;
+    const ordered = [mainId, ...ids.filter(x => x !== mainId)].map(id => defs.find(d => d.id === id)).filter(Boolean);
+    const main = ordered[0], rest = ordered.slice(1);
+    const dx = rest.length ? `${main.name} (main), with ${rest.map(d => d.name).join(" and ")}` : main.name;
+    const low = s => s.charAt(0).toLowerCase() + s.slice(1);
+    const fo = d => d.focus || PH_PAT_FOCUS[d.id] || "";
+    const principle = [fo(main), rest.length && rest.some(fo) ? "Also: " + rest.map(fo).filter(Boolean).map(low).join("; ") : ""].filter(Boolean).join(". ");
+    const letters = []; ordered.forEach(d => phPatLettersFor(d).forEach(l => { if (!letters.some(x => x.id === l.id)) letters.push(l); }));
+    return { main, ordered, dx, principle, letters };
+  }
+  function phPatShapeHtml(name, rec, plan) {
+    const S = phPatShapeOf(rec); if (!S) return "";
+    const st = rec.patterns || {}, did = st.shape && plan && st.shape.planId === plan.id && st.shape.at;
+    const letters = S.letters.map(l => `<button type="button" class="ph-pat-sug" data-pat-letter="${esc(l.id)}">${phPatIc("i-mail")}<b>Open</b> · ${esc(l.name)}</button>`).join("");
+    const mk = S.ordered.slice(1).map(d => `<button type="button" class="ph-pat-btn ghost" data-pat-main="${d.id}">★ Make ${esc(d.name)} main</button>`).join(" ");
+    return `<div class="ph-pat-shape"><div class="ph-pat-shh"><h3>Plan takes shape</h3><span class="ph-pat-draft">Draft</span></div>
+      <div class="ph-pat-shl"><b>Main</b><span>★ ${esc(S.main.name)}</span></div>
+      <div class="ph-pat-shl"><b>Diagnosis</b><span>${esc(S.dx)}</span></div>
+      ${S.principle ? `<div class="ph-pat-shl"><b>Principle</b><span>${esc(S.principle)}</span></div>` : ""}
+      ${letters ? `<div class="ph-pat-shl"><b>Letters</b><span class="ph-pat-sugs">${letters}</span></div>` : ""}
+      <div class="ph-pat-acts">${plan ? (did ? `<button type="button" class="ph-pat-btn" data-pat-shape-undo="1">↶ Undo — put the plan back</button><span class="ph-pat-dxmt">✓ In the plan</span>` : `<button type="button" class="ph-pat-btn" data-pat-shape="1">Put diagnosis + principle in the plan</button>`) : `<span class="ph-pat-dxmt">Start a plan first, then these can go into it.</span>`}${mk}</div>
+      <p class="ph-pat-note">Nothing is written until you tap. Phases and visit counts are never changed.</p></div>`;
+  }
+  function phPatShapeApply(name) {
+    const rec = phPatientRec(name), plan = phPatPlanFor(name), S = rec ? phPatShapeOf(rec) : null;
+    if (!rec || !plan || !S) return false;
+    const st = phPatEnsureState(rec);
+    st.shape = { planId: plan.id, prevDx: plan.diagnosis || "", prevGoal: plan.goal || "", at: Date.now() };
+    const dx = (plan.diagnosis || "").trim();
+    if (!dx) plan.diagnosis = S.dx; else if (!dx.toLowerCase().includes(S.main.name.toLowerCase())) plan.diagnosis = dx + "; " + S.dx;
+    const gl = (plan.goal || "").trim();
+    if (S.principle) { if (!gl) plan.goal = S.principle; else if (!gl.toLowerCase().includes(S.principle.toLowerCase())) plan.goal = gl + " · " + S.principle; }
+    return savePharmacy() !== false;
+  }
+  function phPatShapeUndo(name) {
+    const rec = phPatientRec(name), plan = phPatPlanFor(name), sh = rec && rec.patterns && rec.patterns.shape;
+    if (!rec || !plan || !sh || sh.planId !== plan.id) return false;
+    plan.diagnosis = sh.prevDx; plan.goal = sh.prevGoal; delete rec.patterns.shape;
+    return savePharmacy() !== false;
+  }
   function phPatOpenLetter(name, letterId) {
     const same = x => phPatientKey(presPatientFor(x) || x.name || "") === phPatientKey(name);
     let t = null;
@@ -61551,6 +61616,19 @@ or changing anything in Cliniko.
     if ((el = T.closest("[data-pat-restore]"))) {
       const rec = phPatientRec(name);
       if (rec) { const st = phPatEnsureState(rec); delete st.dismissed[el.dataset.patRestore]; presSavedToast(savePharmacy() === false ? PH_PAT_SAVE_FAIL : "Restored."); }
+      presPatRefresh(name); return true;
+    }
+    if (T.closest("[data-pat-shape]")) {
+      presSavedToast(phPatShapeApply(name) ? "Diagnosis and principle added to the plan. Undo is on the card." : PH_PAT_SAVE_FAIL);
+      presPatRefresh(name); return true;
+    }
+    if (T.closest("[data-pat-shape-undo]")) {
+      presSavedToast(phPatShapeUndo(name) ? "Put back as it was." : PH_PAT_SAVE_FAIL);
+      presPatRefresh(name); return true;
+    }
+    if ((el = T.closest("[data-pat-main]"))) {
+      const rec = phPatientRec(name);
+      if (rec) { const st = phPatEnsureState(rec); st.main = el.dataset.patMain; presSavedToast(savePharmacy() === false ? PH_PAT_SAVE_FAIL : "Main pattern changed."); }
       presPatRefresh(name); return true;
     }
     if (T.closest("[data-pat-fidea]")) {
