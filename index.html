@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261006-030000">
+<meta name="lcm-build" content="20261006-040000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6163,6 +6163,10 @@
   #pharmacyPage .ph-assess-tab:hover { background: var(--ph-paper); }
   #pharmacyPage .ph-assess-tab.on { color: var(--ph-green-deep); background: color-mix(in oklab, var(--margin-rule, #E3C87A) 22%, var(--ph-white)); }
   #pharmacyPage .ph-assess-tab .lbl { display: block; }
+  /* completed tick + date on a profile section (rail and tab) */
+  #pharmacyPage .dn { display: inline-block; margin-left: 6px; font-size: var(--fs-10); font-weight: 700; color: var(--ph-herb); white-space: nowrap; }
+  #pharmacyPage .ph-assess-tab .dn { display: block; margin: 1px 0 0; }
+  #pharmacyPage .ph-pres-stage-next[data-flow-prof] { margin-top: 16px; }
   #pharmacyPage .ph-assess-tab .sub { display: block; font-size: var(--fs-10); font-weight: 600; color: var(--ph-faint); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #pharmacyPage .ph-assess-tab.on .sub { color: var(--ph-green-deep); opacity: .75; }
   #pharmacyPage .ph-assess-panel { padding: 12px 14px; }
@@ -35573,9 +35577,11 @@
       if (flowProf) {
         // profile-first: Cycle / Medical history / Patterns wait for sex + DOB
         if (phPfwLocked(phPfwName(), flowProf.dataset.flowProf)) { phFlashShow("Add sex and date of birth first"); return; }
-        const wasProf = presStage === "profile";
+        const wasProf = presStage === "profile", fromNext = flowProf.classList.contains("ph-pres-stage-next");
         presStage = "profile"; presAssessTab = flowProf.dataset.flowProf;
         if (wasProf && presAssessTabRefresh()) presFlowRailRefresh(); else renderPresPanel();
+        // the Next button sits at the foot of a long page: bring the new section's top into view
+        if (fromNext) { const h = document.getElementById("presAssessHost"); if (h && h.scrollIntoView) h.scrollIntoView({ block: "start" }); }
         return;
       }
       const flowGo = e.target.closest("[data-flow-go]");
@@ -35775,6 +35781,7 @@
         const rec = t ? phPatientRec(presPatientFor(t) || t.name) : null;
         if (!rec) return;
         rec.sex = presSex.dataset.presSex || undefined;
+        phProfileStamp(rec);
         savePharmacy(); renderPresPanel();
         phPfwBasicsArm();
         return;
@@ -46666,6 +46673,7 @@ or changing anything in Cliniko.
     const rec = t ? phPatientRec(presPatientFor(t) || t.name) : null;
     if (!rec) return;
     rec.dob = v || undefined;
+    phProfileStamp(rec);
     savePharmacy();
     if (v || document.activeElement !== el) { renderPresPanel(); phPfwBasicsArm(); }
   });
@@ -54613,7 +54621,7 @@ or changing anything in Cliniko.
     const profSel = (profSecs.find(s => s.id === presAssessTab) || profSecs[0] || {}).id;
     return {
       plan, name,
-      profSubs: profSecs.map(s => ({ id: s.id, label: s.label, flags: s.flags || 0, flagTitle: s.flagTitle || (s.flags ? `${s.flags} flagged` : ""), on: presStage === "profile" && s.id === profSel, locked: phPfwLocked(name, s.id) })),
+      profSubs: profSecs.map(s => ({ id: s.id, label: s.label, flags: s.flags || 0, flagTitle: s.flagTitle || (s.flags ? `${s.flags} flagged` : ""), dn: presSecDnHtml(name, s.id), on: presStage === "profile" && s.id === profSel, locked: phPfwLocked(name, s.id) })),
       steps: [
         { id: "profile", n: 1, label: "Profile", small: "details · history", done: profileDone, on: presStage === "profile", stage: "profile" },
         // the rail's own small caption stops repeating the phase name here
@@ -54658,7 +54666,7 @@ or changing anything in Cliniko.
     const flagKey = u => `${u.id}:${u.flags}`;
     const seenFlags = prevFlags;
     presFlowLast.flags = f.profSubs.filter(u => u.flags).map(flagKey);
-    const profHtml = f.profSubs.length ? `<div class="ph-flow-sub prof${prof.done ? " done" : ""}${newlyDone.includes("profile") ? " anim" : ""}">${f.profSubs.map(u => `<button type="button" class="${u.on ? "on" : ""}${u.locked ? " locked" : ""}" data-flow-prof="${u.id}" role="tab" aria-selected="${u.on ? "true" : "false"}"${u.locked ? ` title="Add sex and date of birth first"` : ""}>${esc(u.label)}${u.flags ? `<span class="flag${seenFlags && !seenFlags.includes(flagKey(u)) ? " pop" : ""}" title="${esc(u.flagTitle)}">${u.flags}</span>` : ""}</button>`).join("")}</div>` : "";
+    const profHtml = f.profSubs.length ? `<div class="ph-flow-sub prof${prof.done ? " done" : ""}${newlyDone.includes("profile") ? " anim" : ""}">${f.profSubs.map(u => `<button type="button" class="${u.on ? "on" : ""}${u.locked ? " locked" : ""}" data-flow-prof="${u.id}" role="tab" aria-selected="${u.on ? "true" : "false"}"${u.locked ? ` title="Add sex and date of birth first"` : ""}>${esc(u.label)}${u.dn || ""}${u.flags ? `<span class="flag${seenFlags && !seenFlags.includes(flagKey(u)) ? " pop" : ""}" title="${esc(u.flagTitle)}">${u.flags}</span>` : ""}</button>`).join("")}</div>` : "";
     const subHtml = f.subs.length ? `<div class="ph-flow-sub${treat.done ? " done" : ""}${newlyDone.includes("treatment") ? " anim" : ""}">${f.subs.map(u => `<button type="button" class="${u.on ? "on" : ""}" data-flow-go="${u.id}" role="tab" aria-selected="${u.on ? "true" : "false"}">${esc(u.label)}${u.sub ? `<span class="sub">${esc(u.sub)}</span>` : ""}</button>`).join("")}</div>` : "";
     return `<div class="ph-flow-rail" id="presFlowRail" role="tablist" aria-label="Where you are">
       ${stepHtml(prof)}${profHtml}${stepHtml(f.steps[1])}${stepHtml(treat)}${subHtml}${stepHtml(f.steps[3])}
@@ -55448,9 +55456,9 @@ or changing anything in Cliniko.
     const pfSide = phPfwSideWanted(pfName, sel.id);
     return `<div id="presAssessHost"><div class="ph-assess-tabs ph-pf-main">
       <div class="ph-assess-tabsrow" role="tablist" aria-label="Profile sections">
-        ${sections.map(s => `<button type="button" class="ph-assess-tab${s.id === sel.id ? " on" : ""}${phPfwLocked(pfName, s.id) ? " locked" : ""}" data-assess-tab="${s.id}" role="tab" aria-selected="${s.id === sel.id ? "true" : "false"}"><span class="lbl">${esc(s.label)}</span>${s.sub ? `<span class="sub">${esc(s.sub)}</span>` : ""}</button>`).join("")}
+        ${sections.map(s => `<button type="button" class="ph-assess-tab${s.id === sel.id ? " on" : ""}${phPfwLocked(pfName, s.id) ? " locked" : ""}" data-assess-tab="${s.id}" role="tab" aria-selected="${s.id === sel.id ? "true" : "false"}"><span class="lbl">${esc(s.label)}</span>${presSecDnHtml(pfName, s.id)}${s.sub ? `<span class="sub">${esc(s.sub)}</span>` : ""}</button>`).join("")}
       </div>
-      <div class="ph-assess-panel">${pfSide ? `<div class="ph-pfw-split"><div class="ph-pfw-main">${body}</div>${presPfwSideHtml(pfName)}</div>` : body}</div>
+      <div class="ph-assess-panel">${pfSide ? `<div class="ph-pfw-split"><div class="ph-pfw-main">${body}</div>${presPfwSideHtml(pfName)}</div>` : body}${presProfNextBtnHtml(sections, sel.id)}</div>
     </div></div>`;
   }
   // her report 2026-09-24 ("scroll to bottom, select cycle or tongue tab, it
@@ -55557,7 +55565,6 @@ or changing anything in Cliniko.
       ${presHistoryBannerHtml(t)}
       ${presClinicalWarningsHtml(t)}
       ${presAssessTabsHtml(t)}
-      ${presStageNextBtnHtml("profile")}
     </div>`;
   }
   /* ==== AT THE DOOR (her picks 2026-09-18, five batches of answers on real
@@ -61187,6 +61194,48 @@ or changing anything in Cliniko.
     const t = (PRESC.items || []).find(x => x.id === presOpenId);
     const s = t ? presAssessSections(t).find(x => x.id === id) : null;
     return s ? s.label : "";
+  }
+  // her ask 2026-10-06 ("show when each questionnaire section was completed ...
+  // next button should take to the next section"): a section's "done" and its
+  // date are read off what is already recorded, never stored twice. Only the
+  // basics (sex + DOB) needed a stamp of their own -- set in the handlers, never
+  // during a render.
+  function phProfileStamp(rec) {
+    if (!rec) return;
+    if (rec.sex && rec.dob) { if (!rec.basicsAt) rec.basicsAt = Date.now(); }
+    else if (rec.basicsAt) delete rec.basicsAt;
+  }
+  function presSecDone(name, id) {
+    const rec = phPatientPeek(name);
+    if (!rec) return { done: false, at: 0 };
+    if (id === "patient") return { done: !!(rec.sex && rec.dob), at: rec.basicsAt || 0 };
+    if (id === "abdomen") { const a = rec.abdomen || {}; return { done: phAbdPicks(rec).length > 0 || !!a.normal, at: a.at || 0 }; }
+    if (id === "medhx") { const p = phHxProgress(name); return { done: p.notNeeded || (p.total > 0 && p.answeredN >= p.total), at: p.updatedAt || 0 }; }
+    if (id === "bodytype") return { done: !!phBtqTop(rec), at: (rec.btQ && rec.btQ.at) || 0 };
+    const at = (rec.usual && rec.usual.at) || 0;
+    if (id === "cycle") return { done: phPfSetFor(rec) === "period" && phPfwSetDone(name, "period"), at };
+    if (id === "usual") { const s = phPfSetFor(rec); return { done: (s === "meno" || s === "men") && phPfwSetDone(name, s), at }; }
+    if (id === "pain" || id === "sleep") return { done: phPfwSetDone(name, id), at };
+    return { done: false, at: 0 };
+  }
+  function presSecDnHtml(name, id) {
+    const r = presSecDone(name, id);
+    if (!r.done) return "";
+    let when = "", full = "";
+    if (r.at) {
+      const d = new Date(r.at);
+      when = ` ${d.getDate()} ${MON_SHORT[d.getMonth()]}${d.getFullYear() !== new Date().getFullYear() ? " " + d.getFullYear() : ""}`;
+      full = ` ${d.getDate()} ${MON_SHORT[d.getMonth()]} ${d.getFullYear()}`;
+    }
+    return `<span class="dn" title="Completed${full}">✓${when}</span>`;
+  }
+  // "Next:" inside the panel goes to the next section in the list she is
+  // actually looking at; only after the last one does it go to the Plan.
+  function presProfNextBtnHtml(sections, selId) {
+    const i = sections.findIndex(s => s.id === selId);
+    const nx = i >= 0 ? sections[i + 1] : null;
+    if (!nx) return `<button type="button" class="ph-pres-stage-next" data-pres-stage="plan">Next: Plan →</button>`;
+    return `<button type="button" class="ph-pres-stage-next" data-flow-prof="${nx.id}">Next: ${esc(nx.label)} →</button>`;
   }
   const phPfwAutoOn = () => { try { return localStorage.getItem("lcm-pfw-automove") !== "off"; } catch (e) { return true; } };
   function phPfwFootHtml(name, fromId, done, left) {
@@ -74720,7 +74769,8 @@ or changing anything in Cliniko.
   let presVisitTngRegion = null;   // the region tapped on the drawing -- the rows aim at it
   let presVisitTngBrush = null;    // { attr, val } -- the sign the next drawing taps place
   let presVisitTngMore = false;    // "More detail" fold -- thickness/deviation/coat quality/marks
-  function phVisitTongueHtml(name, draft) {
+  function phVisitTongueHtml(name, draft, opts) {
+    const exam = !!(opts && opts.exam);   // the Examine page's copy: patient-level, no "last visit" to copy from
     const t = phTng2Read(draft.tng);
     const reg = presVisitTngRegion;
     const regMeta = reg ? PH_TNG_REGIONS.find(r => r[0] === reg) : null;
@@ -74746,8 +74796,8 @@ or changing anything in Cliniko.
     const thickAtRegion = Object.keys(t.thickAt).filter(k => t.thickAt[k] && k !== reg).map(k => `<span class="ph-tng2-at">${esc(t.thickAt[k])} ${esc(PH_TNG_REGION_LABEL(k).toLowerCase())} <button type="button" data-visit-tng2="thickAtClear:${k}" aria-label="Remove">✕</button></span>`).join("");
     const summary = phTng2Summary(t);
     const notes = reg ? (phTongueNotes()[reg === "L" || reg === "R" ? "sides" : reg === "mid" ? "middle" : reg] || []).slice(0, 2) : [];
-    const rec = phPatientRec(name);
-    const last = (rec.acuSessions || []).slice().sort((a, b) => (b.date || "").localeCompare(a.date || "")).map(s => rec.visitFnd && rec.visitFnd[s.id]).find(f => f && f.tng && !phTng2Empty(f.tng));
+    const rec = exam ? (phPatientPeek(name) || {}) : phPatientRec(name);
+    const last = exam ? null : (rec.acuSessions || []).slice().sort((a, b) => (b.date || "").localeCompare(a.date || "")).map(s => rec.visitFnd && rec.visitFnd[s.id]).find(f => f && f.tng && !phTng2Empty(f.tng));
     const lastDate = last ? ((rec.acuSessions || []).find(s => rec.visitFnd[s.id] === last) || {}).date : "";
     const brushCat = brush ? ({ colour: "Colour", thickness: "Thickness", marks: "Marks", coatQual: "Coat quality" }[brush.attr] || "Brush") : "";
     const banner = brush ? `<div class="ph-tng2-banner"><span class="ic">🖌</span><span class="tx"><b>${esc(brushCat)}: ${esc(brush.label)}</b> is armed — tap a part of the drawing to apply it there, or pick a different value below to change the brush.</span><button type="button" class="tab-link" data-visit-tng2="brush:">done</button></div>` : "";
