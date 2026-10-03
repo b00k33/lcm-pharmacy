@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261006-040000">
+<meta name="lcm-build" content="20261006-050000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -35568,6 +35568,7 @@
       // letters / clue tap-through) -- all scoped to #presPatHost
       if (phCcClick(e)) return;
       if (phRcClick(e)) return;
+      if (phTngClick(e)) return;
       if (phAbdClick(e)) return;
       if (phBtqClick(e)) return;
       if (phPfwClick(e)) return;
@@ -50169,7 +50170,7 @@ or changing anything in Cliniko.
   // patient record, informational only, never cross-checked against the
   // symptom checklist above. Lives in the fixed head, not #phHxBody, so
   // it never re-renders on a plain Yes/No tap deep in the checklist.
-  function phHxConstitutionHtml(rec, patientKey) {
+  function phHxConstitutionHtml(rec, patientKey, dispName) {
     const bts = phBtList();
     const opt = (v, cur) => `<option value="${v.id}"${cur === v.id ? " selected" : ""}>${esc(v.name)}${v.cn ? " " + esc(v.cn) : ""}</option>`;
     const picker = (attr, cur, label) => `<label class="ph-gd-field ph-hx-constit-field"><span>${esc(label)}</span>
@@ -50227,7 +50228,7 @@ or changing anything in Cliniko.
       <label class="ph-gd-field"><span>Findings</span>
         <textarea data-hx-constit-findings rows="2" placeholder="Optional notes…">${esc(rec.constitutionFindings || "")}</textarea>
       </label>
-      ${phHxConstitTongueHtml(rec, patientKey)}
+      ${dispName ? phTngHtml(dispName) : phHxConstitTongueHtml(rec, patientKey)}
       ${phHxConstitPulseHtml(rec)}
       ${phRenRefStripHtml(patientKey)}
       <!-- her 2026-08-25 spec: capture-by-type tiles, then the dated
@@ -53553,7 +53554,7 @@ or changing anything in Cliniko.
           </span>
           <label class="ph-hx-notneeded-lbl"><input type="checkbox" data-hx-notneeded="1"${prog.notNeeded ? " checked" : ""}> Not needed for this patient</label>
         </div>
-        ${noConstit ? "" : phHxConstitutionHtml(rec, phPatientKey(name))}
+        ${noConstit ? "" : phHxConstitutionHtml(rec, phPatientKey(name), name)}
       </div>
       ${phHxPasteBoxHtml(rec)}
       ${phHxFlagsStripHtml(rec)}
@@ -54838,6 +54839,7 @@ or changing anything in Cliniko.
     if ((rec.skin || []).length || (rec.voiceManner || []).length) return true;
     const tng = rec.constitTongue;
     if (tng && ((tng.regions || []).length || (tng.overlays || []).length || (tng.body || []).length || (tng.coat || []).length)) return true;
+    if (rec.tongueExam && !phTng2Empty(phTng2Read(rec.tongueExam))) return true;
     const pul = rec.constitPulse;
     if (pul && (Object.keys(pul.pulse || {}).length || (pul.pulseRef || []).length)) return true;
     return false;
@@ -55319,7 +55321,7 @@ or changing anything in Cliniko.
   function presConstitTabInnerHtml(name) {
     // read the record for rendering (phPatientRec rewrites plan fields on
     // every call -- CLAUDE.md trap); the handlers do their own writes
-    return phHxConstitutionHtml(phPatientPeek(name) || phPatientRec(name), phPatientKey(name));
+    return phHxConstitutionHtml(phPatientPeek(name) || phPatientRec(name), phPatientKey(name), name);
   }
   function presConstitTabBodyHtml(t) {
     const name = presPatientFor(t) || t.name || "";
@@ -61651,6 +61653,47 @@ or changing anything in Cliniko.
       const name = phPfwName(); if (name) phAbdWrite(name, a => { a.note = el.value.trim().slice(0, 200); });
     }
   });
+  /* ============ EXAMINE TONGUE (her ask 2026-10-06: "use this format for the tongue section") ====
+     The Examine page's tongue is the SAME three-column panel the visit log uses
+     (phVisitTongueHtml, exam mode). Its answers live on the patient in
+     rec.tongueExam (the phTng2 shape). Same borrow-the-draft trick as the abdomen
+     above: a tap inside [data-tng-host] lends the visit draft to the shared
+     [data-visit-tng2] / [data-tng-region] / [data-visit-tng-more] handlers, and
+     presVisitFndRefresh hands it back and writes it to the record. */
+  var phTngExam = null;   // { prev, name, before } while a chart tap borrows presVisitFndDraft
+  function phTngHtml(name) {
+    const rec = phPatientPeek(name) || {}, old = rec.constitTongue;
+    const oldBits = old ? [].concat(old.regions || [], old.overlays || [], old.body || [], old.coat || []) : [];
+    const earlier = oldBits.length ? `<div class="ph-abd-feeds">Earlier findings: ${oldBits.map(esc).join(" · ")}</div>` : "";
+    return `<div class="ph-hx-constit-field ph-tng-exam" data-tng-host="1" data-tng-name="${esc(name)}">
+      ${phVisitTongueHtml(name, { tng: phTng2Read(rec.tongueExam) }, { exam: true })}
+      ${earlier}
+    </div>`;
+  }
+  function phTngWrite(name, tng) {
+    const rec = name ? phPatientRec(name) : null;
+    if (!rec) return false;
+    const next = phTng2Empty(tng) ? null : tng;
+    if (JSON.stringify(next) === JSON.stringify(rec.tongueExam || null)) return true;   // a view tap (More fold, region aim) is not an edit
+    rec.tongueExam = next;
+    if (savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return false; }
+    return true;
+  }
+  function phTngRefresh(name) {
+    document.querySelectorAll("#pharmacyPage [data-tng-host]").forEach(h => {
+      if (h.dataset.tngName === name) h.outerHTML = phTngHtml(name);
+    });
+    try { phPfwSideRefresh(name); } catch (e) { /* the side panel only exists on a wide screen */ }
+  }
+  function phTngClick(e) {
+    const T0 = e.target, host = T0 && T0.closest ? T0.closest("[data-tng-host]") : null;
+    if (!host || !T0.closest("[data-visit-tng2], [data-tng-region], [data-visit-tng-more]")) return false;
+    const nm = host.dataset.tngName; if (!nm) return true;
+    const r0 = phPatientPeek(nm) || {};
+    phTngExam = { prev: presVisitFndDraft, name: nm };
+    presVisitFndDraft = Object.assign(phVisitFndBlank(), { tng: JSON.parse(JSON.stringify(phTng2Read(r0.tongueExam))), zones: [] });
+    return false;
+  }
   /* ============ BODY TYPE (her ask 2026-10-03: "jing fang body constitution questionaire") ====
      Huang Huang's seven constitution types (Chapter 6 Part 3) from five short questions.
      rec.btQ = { a: { qIndex: optionIndex }, at }. The best fit is DERIVED from the answers
@@ -75253,6 +75296,13 @@ or changing anything in Cliniko.
   // here would wipe whatever she's mid-typing into #presAcuPoints (the exact
   // reason the outcome buttons above already avoid it)
   function presVisitFndRefresh() {
+    if (phTngExam) {
+      const ex = phTngExam; phTngExam = null;
+      const tng = presVisitFndDraft.tng; presVisitFndDraft = ex.prev;
+      phTngWrite(ex.name, tng);
+      phTngRefresh(ex.name);
+      return;
+    }
     if (phAbdExam) {
       const ex = phAbdExam; phAbdExam = null;
       const chart = presVisitFndDraft.abd; presVisitFndDraft = ex.prev;
