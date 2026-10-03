@@ -12592,3 +12592,11 @@ On the Patterns page, once one or more patterns are agreed, a gold **"Plan takes
 - Not built: the Treatment-step pre-load of today's points; a ★ marker on the pattern cards themselves.
 
 Verified in the sandbox (synthetic "Zz Sh Test" with a Dysmenorrhea plan, removed): card appears only after agreeing; two patterns → combined text; apply appended to the template's goal; Make main swaps; Undo restored both fields. `lcm-build` `20261005-090000`, `sw.js` `lcm-20261005-plan-shape`.
+
+## Treatment points from her patterns — suggestions only, no formula (her ask 2026-10-05, "build and push live")
+
+Menu path: EVERY DAY → Patient profile → open patient → Plan → Treatment tab → "Treatment therapies today". Under the therapy pills, a "From her patterns" strip lists today's points from the patterns she has agreed (the main pattern's points first, then the others), minus anything already in the Acupuncture box. One tap adds one point to the Acupuncture therapy (turning it on if needed).
+- `phPatPointSuggest(name, have)` (beside `phPatMainId`) reads `rec.patterns`, `PH_PAT_DEFS` points via `phPatDefs()` and `phPatientPeek`; derived on every render, nothing stored until she taps.
+- Tap handler `data-pres-acu-ther-sugg` appends to the `acu` entry's `both` text in `presAcuTherapiesDraft`, then `presAcuOpenRefresh()`. The older `data-pres-acu-point-sugg` strip in the non-compact Points chips (`pointsHtml`) does the same for Timeline mode.
+- **No formula is suggested** (her rule: type or pick her own via the plan phase picker and Dispense).
+- Sandbox: synthetic MSK patient with agreed stasis + bdef (main bdef) shows 9 chips, ST36 first; a tap puts "ST36" in the Acupuncture box and drops it from the strip.

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261005-090000">
+<meta name="lcm-build" content="20261005-100000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6558,6 +6558,10 @@
   #pharmacyPage .ph-tp-ptpills { display: block; }
   #pharmacyPage span.ph-tp-vt-prose { display: block; }
   #pharmacyPage .ph-acu-pointnote { margin-top: 4px; }
+  #pharmacyPage .ph-acu-sugg { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+  #pharmacyPage .ph-acu-sugg .lbl { font-size: 11px; color: var(--ph-faint); margin-right: 2px; }
+  #pharmacyPage .ph-acu-suggchip { background: var(--ph-gold-tint); color: var(--ph-gold-deep); border: 1px dashed var(--ph-gold-deep); }
+  #pharmacyPage .ph-acu-suggchip.main { font-weight: 600; }
 
   /* hover/focus ⓘ in place of a caption (synth22 item 2) */
   #pharmacyPage .ph-infodot { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; background: var(--ph-line); color: var(--ph-soft); font: 700 10.5px/1 -apple-system, "Segoe UI", Roboto, sans-serif; font-style: normal; text-transform: none; letter-spacing: 0; cursor: help; flex: none; vertical-align: middle; margin-left: 6px; transition: background .15s, color .15s; }
@@ -35797,6 +35801,20 @@
         }
         return;
       }
+      const acuSuggBtn = e.target.closest("[data-pres-acu-point-sugg]");
+      if (acuSuggBtn) {
+        const ctx = presAcuCtx();
+        if (ctx) {
+          const v = acuSuggBtn.dataset.presAcuPointSugg;
+          const list = phAcuSplitList(ctx.treatedPhase && ctx.treatedPhase.points).concat(presAcuPointsCustom);
+          if (v && !list.includes(v)) {
+            presAcuPointsCustom = presAcuPointsCustom.concat(v);
+            presAcuPointsChecked = new Set((presAcuPointsChecked ? Array.from(presAcuPointsChecked) : list).concat(v));
+          }
+          presAcuOpenRefresh();
+        }
+        return;
+      }
       if (e.target.closest("[data-pres-acu-points-all]")) {
         const ctx = presAcuCtx();
         if (ctx) {
@@ -35878,6 +35896,18 @@
         let entry = presAcuTherapiesDraft.find(t => t.key === key);
         if (!entry) { entry = { key, label, on: false, both: "", left: "", right: "" }; presAcuTherapiesDraft.push(entry); }
         entry.on = !entry.on;
+        presAcuOpenRefresh();
+        return;
+      }
+      const acuTherSugg = e.target.closest("[data-pres-acu-ther-sugg]");
+      if (acuTherSugg) {
+        const word = acuTherSugg.dataset.presAcuTherSugg;
+        let entry = presAcuTherapiesDraft.find(t => t.key === "acu");
+        if (!entry) { entry = { key: "acu", label: "Acupuncture", on: true, both: "", left: "", right: "" }; presAcuTherapiesDraft.push(entry); }
+        entry.on = true;
+        const v = (entry.both || "").trim();
+        const parts = v ? v.split(",").map(s => s.trim()) : [];
+        if (!parts.some(p => p.toLowerCase() === word.toLowerCase())) entry.both = v ? v + ", " + word : word;
         presAcuOpenRefresh();
         return;
       }
@@ -61519,6 +61549,23 @@ or changing anything in Cliniko.
   };
   function phPatAgreedIds(rec) { const a = (rec && rec.patterns && rec.patterns.agreed) || {}; return Object.keys(a).sort((x, y) => (a[x].at || 0) - (a[y].at || 0)); }
   function phPatMainId(rec) { const ids = phPatAgreedIds(rec), m = rec && rec.patterns && rec.patterns.main; return ids.includes(m) ? m : (ids[0] || null); }
+  // TODAY'S POINTS FROM HER PATTERNS: the agreed patterns' points, main first, each
+  // point once, minus what is already on today's list. Suggestions only, no formula.
+  function phPatPointSuggest(name, have) {
+    const rec = phPatientPeek(name), ids = phPatAgreedIds(rec), main = phPatMainId(rec);
+    if (!ids.length) return [];
+    const defs = phPatDefs(), skip = new Set((have || []).map(p => String(p).toLowerCase()));
+    const order = [main].concat(ids.filter(i => i !== main)), out = [];
+    order.forEach(id => {
+      const d = defs.find(x => x.id === id);
+      if (!d || !d.points) return;
+      String(d.points).split(",").map(s => s.trim()).filter(Boolean).forEach(p => {
+        const k = p.toLowerCase();
+        if (!skip.has(k)) { skip.add(k); out.push({ p, pat: d.name, main: id === main }); }
+      });
+    });
+    return out;
+  }
   function phPatShapeOf(rec) {
     const defs = phPatDefs(), mainId = phPatMainId(rec);
     const ids = phPatAgreedIds(rec).filter(id => defs.some(d => d.id === id));
@@ -63066,8 +63113,14 @@ or changing anything in Cliniko.
   // planTherapies: the treated phase's own PLANNED set, only to decide
   // whether "Copy from plan" has anything to offer -- never read for
   // anything else here.
-  function presAcuTherapiesRowHtml(planTherapies) {
+  function presAcuTherapiesRowHtml(planTherapies, name) {
     const list = presAcuTherapiesDraft;
+    // "From her patterns": today's points suggested by her agreed patterns
+    // (main first), one tap adds one to the Acupuncture box. No formula.
+    const acuEntry = list.find(t => t.key === "acu");
+    const haveAcu = acuEntry && acuEntry.both ? acuEntry.both.split(",").map(s => s.trim()).filter(Boolean) : [];
+    const sugg = name ? phPatPointSuggest(name, haveAcu) : [];
+    const suggHtml = sugg.length ? `<div class="ph-acu-sugg"><span class="lbl">From her patterns</span>${sugg.map(s => `<button type="button" class="ph-acu-phasechip ph-acu-suggchip${s.main ? " main" : ""}" data-pres-acu-ther-sugg="${esc(s.p)}" title="${esc(s.pat)}${s.main ? " (main)" : ""}">+ ${esc(s.p)}</button>`).join("")}</div>` : "";
     const onList = list.filter(t => t.on);
     const presetKeys = new Set(PH_TP_THERAPIES.map(t => t.key));
     const pills = PH_TP_THERAPIES.map(t => {
@@ -63084,6 +63137,7 @@ or changing anything in Cliniko.
         ${hasPlan ? `<button type="button" class="tab-link" data-pres-acu-ther-copyplan="1">Copy from plan</button>` : ""}
         <button type="button" class="tab-link" data-pres-acu-ther-copylast="1">Copy from last visit</button>
         <div class="ph-tp-faction-g">${pills}${customPills}</div>
+        ${suggHtml}
         <span class="ph-tp-faction-custom"><input type="text" id="presAcuTherCustom" class="ph-tp-faction-custom-in" placeholder="Another…"><button type="button" class="ph-tp-faction-custom-add" data-pres-acu-ther-custom-add="1">Add</button></span>
         ${onList.length ? `<div class="ph-tp-ther-boxes">${onList.map(e2 => presAcuTherapyBoxHtml(e2)).join("")}</div>` : ""}
       </div>
@@ -63386,6 +63440,11 @@ or changing anything in Cliniko.
         <div class="ph-acu-pointhd"><span>Points</span><span class="ph-acu-pointhd-acts">${pointsList.length ? `<button type="button" class="ph-acu-selall" data-pres-acu-points-all="1">${pointsAllOn ? "Clear" : "Select all"}</button>` : ""}${pointsToPlan ? `<button type="button" class="ph-acu-toplan" data-pres-acu-points-toplan="1" title="The plan's Points read differently today — tap to update the plan">→ plan</button>` : ""}</span></div>
         <div class="ph-acu-chiprow">${pointsList.map(p => { const on = presAcuPointsChecked ? presAcuPointsChecked.has(p) : true; return `<button type="button" class="ph-acu-phasechip${on ? " on" : ""}" data-pres-acu-point="${esc(p)}">${esc(p)}</button>`; }).join("")}${pointsAddHtml}</div>
         ${phAcuPointNoteHtml(treatedPhase && treatedPhase.points)}
+        ${(() => {
+          const sg = phPatPointSuggest(name, pointsList);
+          if (!sg.length) return "";
+          return `<div class="ph-acu-sugg"><span class="lbl">From her patterns</span>${sg.map(s => `<button type="button" class="ph-acu-phasechip ph-acu-suggchip${s.main ? " main" : ""}" data-pres-acu-point-sugg="${esc(s.p)}" title="${esc(s.pat)}${s.main ? " (main)" : ""}">+ ${esc(s.p)}</button>`).join("")}</div>`;
+        })()}
       </div>`;
 
     const pressList = phAcuSplitList(treatedPhase && treatedPhase.pressPoints);
@@ -63416,7 +63475,7 @@ or changing anything in Cliniko.
     // actual treated phase and acupuncture is genuinely happening today
     // (never on a herbs-only/no-treatment visit, same gate Points/Press use).
     const therapiesHtml = (activePlan && treatedPhase && !presAcuNoTreatment)
-      ? presAcuTherapiesRowHtml(treatedPhase.treatmentTherapies) : "";
+      ? presAcuTherapiesRowHtml(treatedPhase.treatmentTherapies, name) : "";
 
     // her report, 2026-09-18, screenshot of a Migraine plan's Today's-visit
     // panel: "this doesnt belong in migraine headache treatment plan."
