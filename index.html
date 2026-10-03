@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261005-230000">
+<meta name="lcm-build" content="20261006-010000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -35025,9 +35025,11 @@
           // her §5 sort flow: a real shot pick resolves this photo -- move on
           // to the next one that still needs sorting rather than sit on it
           if (next && st.sortFlow) { phRenSortFlowNext(st); return; }
-          // the photo may have moved to a different line, so its walking set
-          // is stale -- phRenViewStep re-derives, but the modal repaints now
-          renderPhRenCropModal();
+          // the photo may have moved to a different line, so the pile she is
+          // walking has changed under her: re-derive it and carry on with the
+          // next photo in that same pile (her report 2026-10-05: the count
+          // dropped 3 -> 2 and the right arrow stopped working)
+          phRenViewAfterFile(st, next ? `Filed as ${PH_REN_SHOT_LABEL[next] || next}` : "Label removed");
         }).catch(() => phFlashShow("⚠ Couldn't save that label."));
         return;
       }
@@ -35061,7 +35063,7 @@
           // stay put -- the shot handler above advances once that's chosen.
           // Any other retype is fully resolved, so move on.
           if (want !== "tongue" && st.sortFlow) { phRenSortFlowNext(st); return; }
-          renderPhRenCropModal();
+          phRenViewAfterFile(st, `Filed as ${PH_REN_TYPE_LABEL[want] || want}`);
         }).catch(() => phFlashShow("⚠ Couldn't save that."));
         return;
       }
@@ -52869,9 +52871,12 @@ or changing anything in Cliniko.
     if (!set.length) { phRenCropClose(); return false; }
     const found = set.findIndex(r => r.id === st.viewId);
     const gone = found < 0;
-    const cur = gone ? Math.min(st.viewAt || 0, set.length - 1) : found;
-    const i = Math.max(0, Math.min(set.length - 1, cur + delta));
-    if (i === cur && !gone) { st.viewAt = cur; return false; }
+    // a photo that has left this pile (filed, retyped, deleted) leaves the NEXT
+    // one sitting at the same index already, so "next" lands there, not past it
+    const i = gone
+      ? Math.max(0, Math.min(set.length - 1, (st.viewAt || 0) + (delta < 0 ? -1 : 0)))
+      : Math.max(0, Math.min(set.length - 1, found + delta));
+    if (!gone && i === found) { st.viewAt = found; return false; }
     const rec = set[i];
     st.viewAt = i;
     st.viewId = rec.id;
@@ -52880,8 +52885,50 @@ or changing anything in Cliniko.
     st.viewDate = phRenPhotoDateLabel(phRenDateKeyOf(rec));
     st.viewShot = phRenShotOf(rec);
     st.markSel = null;
+    st.filedMsg = "";
+    st.anim = delta < 0 ? "prev" : "next";
     renderPhRenCropModal();
     return true;
+  }
+  // a photo has just been filed (a shot or a type picked) -- it may have left
+  // the pile she is walking. Re-derive the pile from the live list and carry on
+  // with whatever now sits at the same place, so the counter stays honest and
+  // the right arrow keeps working. An emptied pile closes the viewer.
+  function phRenViewAfterFile(st, msg) {
+    if (!st || !st.viewOnly || phRenCropState !== st) return;
+    const pileKey = st.viewRow || st.viewType;
+    const set = phRenViewSetFor(st.patientKey, pileKey);
+    const at = st.viewAt || 0;
+    const here = (phRenPhotosFor(st.patientKey) || []).find(r => r.id === st.viewId);
+    st.viewSet = set.map(r => r.id);
+    st.retypeOpen = false;
+    st.dateEditOpen = false;
+    st.markSel = null;
+    st.filedMsg = msg || "";
+    if (here && phRenRowKeyOf(here) === pileKey) {      // still on this pile
+      st.viewAt = Math.max(0, set.findIndex(r => r.id === here.id));
+      st.kind = here.kind; st.objectUrl = here.objectUrl; st.viewShot = phRenShotOf(here);
+      st.anim = "stay";
+      renderPhRenCropModal();
+      return;
+    }
+    if (!set.length) {                                  // nothing left in the pile
+      const pk = st.patientKey, needs = phRenNeedsSort(pileKey);
+      phRenCropClose();
+      renderHxScreen();
+      if (needs) {
+        phRenSortFlowDoneMsg[pk] = true;
+        phRenPhotosSecRefresh(pk);
+        setTimeout(() => { delete phRenSortFlowDoneMsg[pk]; phRenPhotosSecRefresh(pk); }, 2500);
+      } else phRenPhotosSecRefresh(pk);
+      return;
+    }
+    const i = Math.min(at, set.length - 1), rec = set[i];
+    st.viewAt = i; st.viewId = rec.id; st.kind = rec.kind; st.objectUrl = rec.objectUrl;
+    st.viewDate = phRenPhotoDateLabel(phRenDateKeyOf(rec));
+    st.viewShot = phRenShotOf(rec);
+    st.anim = "filed";
+    renderPhRenCropModal();
   }
   document.addEventListener("keydown", e => {
     if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
@@ -53287,6 +53334,9 @@ or changing anything in Cliniko.
     if (st.viewOnly) {
       const set = st.viewSet || [], at = st.viewAt || 0, many = set.length > 1;
       const annot = st.kind === "tongue";
+      // motion plays once per move (step / filed), never on a plain repaint
+      const anim = st.anim || ""; st.anim = "";
+      const filedMsg = st.filedMsg || "";
       modal.innerHTML = `<div class="ph-hx-card ph-ren-crop-card">
         <div class="ph-hx-head">
           <button type="button" class="ph-stocktake-close" data-ren-crop-close="1" aria-label="Close">×</button>
@@ -53300,7 +53350,7 @@ or changing anything in Cliniko.
         ${phRenMarksSecHtml(st)}
         ${many ? `<div class="ph-ren-view-nav">
           <button type="button" class="ph-ren-view-arrow" data-ren-view-step="-1"${at <= 0 ? " disabled" : ""} aria-label="Earlier photo">‹</button>
-          <span class="ph-ren-view-count">${at + 1} of ${set.length} ${esc(phRenViewSetLabel(st.viewRow || st.viewType || "other"))}</span>
+          <span class="ph-ren-view-count${anim ? " pop" : ""}">${at + 1} of ${set.length} ${esc(phRenViewSetLabel(st.viewRow || st.viewType || "other"))}</span>
           <button type="button" class="ph-ren-view-arrow" data-ren-view-step="1"${at >= set.length - 1 ? " disabled" : ""} aria-label="Later photo">›</button>
         </div>` : ""}
         ${st.dateEditOpen ? `<div class="ph-ren-view-shots">
@@ -53319,6 +53369,18 @@ or changing anything in Cliniko.
         <div class="ph-ren-crop-footer">${st.fromLibrary ? `<button type="button" class="ph-ren-crop-labelbtn" data-ren-view-profile="1">Open profile →</button>` : ""}<button type="button" class="ph-ren-crop-labelbtn" data-ren-cmp-start="1">⇄ Compare with another →</button><button type="button" class="ph-ren-crop-labelbtn" data-ren-view-delete="1">🗑 Delete this photo</button></div>
         </div>
       </div>`;
+      if (filedMsg) {
+        // the "✓ Filed as …" chip clears itself in place (a timer, not rAF) --
+        // no repaint, so nothing she is doing is disturbed
+        setTimeout(() => {
+          if (phRenCropState !== st || st.filedMsg !== filedMsg) return;
+          st.filedMsg = "";
+          const chip = modal.querySelector(".ph-ren-filed");
+          if (!chip) return;
+          chip.classList.add("out");
+          setTimeout(() => chip.remove(), 320);
+        }, 2200);
+      }
       if (annot) {
         // same "paint + bind once the pixels are known" shape as the crop tool below
         const img = document.getElementById("phRenViewImg");
@@ -60360,7 +60422,7 @@ or changing anything in Cliniko.
     p_deep: "Deep pulse", p_slow: "Slow pulse", p_rapid: "Rapid pulse",
     night_sweat: "Night sweats", nocturia: "Passes urine at night",
     a_soft: "Belly soft, no resistance", a_taut: "Belly taut, resists on the upper part", a_ribs: "Ribs and chest full", a_epi: "Pit of the stomach full on pressing",
-    a_lower: "Lower belly hard or tender", a_cold: "Cold lower belly",
+    a_lower: "Lower belly hard or tender", a_lowerL: "Left lower belly hard or tender (Gui Zhi Fu Ling Wan sign)", a_lowerR: "Right lower belly hard or tender (Dang Gui Shao Yao San sign)", a_cold: "Cold lower belly",
     bt_chaihu: "Chai Hu body type", bt_guizhi: "Gui Zhi body type", bt_mahuang: "Ma Huang body type", bt_dahuang: "Da Huang body type",
     bt_fuzi: "Fu Zi body type", bt_banxia: "Ban Xia body type", bt_huangqi: "Huang Qi body type",
     pn_cold: "Pain worse in the cold, better with warmth", pn_damp: "Pain worse in damp weather, heavy or swollen",
@@ -60386,7 +60448,7 @@ or changing anything in Cliniko.
       letters: ["food"], food: ["Cooling foods: cucumber, mung bean, pear", "Cut back chilli, alcohol and coffee"],
       supp: [], points: "LI11, SP10, KI2, LR2, SP6", formula: "Qing Re Gu Jing Tang or Liang Di Tang" },
     { id: "qistag", name: "Qi stagnation", fam: "green", zones: ["liver", "chest"], of: 5,
-      keys: ["pms", "stress", "irregular_hx", "irregular_len", "low_mood", "cramp", "p_wiry", "a_ribs", "a_epi", "bt_chaihu", "bt_banxia", "sl_hard", "sl_wake"],
+      keys: ["pms", "stress", "irregular_hx", "irregular_len", "low_mood", "cramp", "p_wiry", "a_ribs", "a_epi", "a_lowerR", "bt_chaihu", "bt_banxia", "sl_hard", "sl_wake"],
       letters: ["signs"], food: ["Regular meals, not rushed", "Citrus peel, mint and rose tea"],
       supp: [], points: "LR3, LI4, PC6, GB34, Ren17", formula: "Xiao Yao San" },
     { id: "qidef", name: "Qi deficiency", fam: "sand", zones: ["spleen", "lung"], of: 5,
@@ -60398,7 +60460,7 @@ or changing anything in Cliniko.
       letters: ["food"], food: ["Soups with pear, goji and black sesame", "Go easy on spicy food, coffee and late nights"],
       supp: [], points: "KI3, SP6, KI6, Ren4, HT7", formula: "Liu Wei Di Huang Wan or Zuo Gui Wan" },
     { id: "damp", name: "Damp / phlegm", fam: "amber", zones: ["spleen", "lower_abd"], of: 5,
-      keys: ["damp_cm", "t_greasy", "t_thickcoat", "t_swollen", "p_slippery", "pcos", "digestive_sx", "long_cycle", "irregular_len", "a_epi", "bt_mahuang", "bt_banxia"],
+      keys: ["damp_cm", "t_greasy", "t_thickcoat", "t_swollen", "p_slippery", "pcos", "digestive_sx", "long_cycle", "irregular_len", "a_epi", "a_lowerR", "bt_mahuang", "bt_banxia"],
       letters: ["food"], food: ["Cut back dairy, sugar and fried food", "Barley, adzuki bean, tangerine peel"],
       supp: [], points: "SP9, ST40, Ren9, SP3, ST36", formula: "Er Chen Tang or Cang Fu Dao Tan Wan" },
     // her pain questions (2026-10-05): DRAFT, hers to correct in Settings -> Patterns. Points and food only.
@@ -61431,7 +61493,10 @@ or changing anything in Cliniko.
     if (upperZ.some(z => tAt(z) === "hard")) out.push("taut");
     if (ribZ.some(z => tAt(z) === "hard" || (a.marks.tender || []).includes(z))) out.push("ribs");
     if (tAt("epi") === "hard" || (a.marks.tender || []).includes("epi") || a.marks.xiaxin || (a.marks.bulging || []).includes("epi")) out.push("epi");
-    if (lowerZ.some(z => tAt(z) === "hard" || (a.marks.tender || []).includes(z))) out.push("lower");
+    const hit = z => tAt(z) === "hard" || (a.marks.tender || []).includes(z);
+    if (hit("lower")) out.push("lower");
+    if (hit("iliacL")) out.push("lowerL");  // left lower quadrant: Gui Zhi Fu Ling Wan sign (Blood stasis)
+    if (hit("iliacR")) out.push("lowerR");  // right lower quadrant: Dang Gui Shao Yao San sign (Damp + Qi stasis)
     if ((a.marks.cold || []).some(z => lowerZ.concat("umb").includes(z))) out.push("cold");
     return out;
   }
