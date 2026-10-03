@@ -12615,3 +12615,6 @@ Menu path: EVERY DAY → Patient profile → open patient → **Stress & sleep**
 
 ## Complaint feeds Patterns (journey, 2026-10-05)
 Her chief complaint is a weak Patterns clue (`phPfAddClues`): Stress & sleep adds `stress` (Qi stagnation), Weight & energy adds `fatigue` (Qi deficiency), source "usual", text "Came in for … (her complaint)". Other complaints add nothing. It works with no question set answered. Verified in the sandbox. `lcm-build` `20261005-130000`, `sw.js` `lcm-20261005-complaint-clue`.
+
+## ★ main marker on Patterns cards (journey, 2026-10-05)
+When two or more patterns are agreed, the main one's card reads "· ✓ agreed · ★ main" (`phPatCardHtml`, using `phPatMainId`). With only one agreed pattern nothing extra shows. Display only; she still sets the main with "★ Make X main" on the Plan takes shape card. Verified in the sandbox. `lcm-build` `20261005-140000`, `sw.js` `lcm-20261005-main-star`.
