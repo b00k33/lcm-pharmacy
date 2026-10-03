@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261004-170000">
+<meta name="lcm-build" content="20261004-180000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -30470,6 +30470,10 @@
           return;
         }
         if (e.target.closest("[data-rfc-undo]")) { phRfcUndo(); return; }
+        // her report 2026-10-04 ("when i click substitute nothing happens" -- it only
+        // opened the Make screen): Substitute now goes straight to the swap picker
+        const rfcSub = e.target.closest("[data-rfc-substitute]");
+        if (rfcSub) { phRfcSubstitute(rfcSub.dataset.rfcSubstitute); return; }
         const rfcOrd = e.target.closest("[data-rfc-ordershort]");
         if (rfcOrd) {
           const h = PHARMACY.herbs.find(x => x.id === rfcOrd.dataset.rfcOrdershort);
@@ -78726,7 +78730,32 @@ Dosage: {dosage}
       && h2.qty != null && h2.qty >= (parseFloat(short.subAmount) || 0))
       .sort(phByName);
   }
-  function phDispCancel() { phDispCheck = null; renderPharmacy(); }
+  function phDispCancel() {
+    const cb = phDispCheck && phDispCheck.onCancel;
+    phDispCheck = null;
+    if (cb) cb();
+    renderPharmacy();
+  }
+  // the Formula refill row's Substitute chip (her report 2026-10-04): the SAME
+  // short-herb gate "Yes, make refill" uses, opened straight from the row with
+  // every short herb's swap picker already open. Nothing is deducted until she
+  // confirms; Cancel drops the loaded recipe so she is back on the list.
+  function phRfcSubstitute(id) {
+    const h = PHARMACY.herbs.find(x => x.id === id);
+    const recipe = h && phRefillRecipe(h);
+    if (!h || !recipe) { phFlashShow("There is no recipe to swap herbs in — use Make instead."); return; }
+    const grams = phRefillBatchFor(h, recipe);
+    const res = phRefillCanMake(h, grams);
+    if (!res.shorts || !res.shorts.length) { phRfcPaintList(); return; }   // nothing is short any more
+    phRefFixOpenId = null;
+    refRecipeId = recipe.id; refGrams = String(grams); refNoRecipeJarId = "";
+    refMake();
+    if (phDispCheck) {
+      phDispCheck.onCancel = () => { refRecipeId = ""; refGrams = ""; };
+      phDispCheck.shorts.forEach(s => { s.subOpen = true; });
+      renderPhDispCheckModal();
+    }
+  }
   function phDispConfirm() {
     if (!phDispCheck) return;
     const dc = phDispCheck;
@@ -81161,7 +81190,7 @@ Dosage: {dosage}
       let ratio = 1;
       res.shorts.forEach(s => { if (s.needed > 0) ratio = Math.min(ratio, s.stock / s.needed); });
       const leftG = Math.floor(batch * Math.max(0, ratio));
-      extra = `<div class="chips fix"><span>${res.shorts.map(s => `<b>${esc(phDispName(s.name, false))}</b> ${phFmtG(s.short)} g short`).join(" · ")} ·</span>${fitK ? `<button type="button" class="chip rec" data-ph-refill-startg="${h.id}:${phRound2(sum * fitK)}" title="${phFmtG(phRound2(sum * fitK))} g">Make ×${fitK} instead</button>` : ""}${leftG >= 1 && leftG < batch ? `<button type="button" class="chip" data-ph-refill-startg="${h.id}:${leftG}">Use what is left · ${phFmtG(leftG)} g</button>` : ""}<button type="button" class="chip" data-ph-refill-start="${h.id}">Substitute</button><button type="button" class="chip" data-rfc-ordershort="${h.id}">Add to To order</button></div>`;
+      extra = `<div class="chips fix"><span>${res.shorts.map(s => `<b>${esc(phDispName(s.name, false))}</b> ${phFmtG(s.short)} g short`).join(" · ")} ·</span>${fitK ? `<button type="button" class="chip rec" data-ph-refill-startg="${h.id}:${phRound2(sum * fitK)}" title="${phFmtG(phRound2(sum * fitK))} g">Make ×${fitK} instead</button>` : ""}${leftG >= 1 && leftG < batch ? `<button type="button" class="chip" data-ph-refill-startg="${h.id}:${leftG}">Use what is left · ${phFmtG(leftG)} g</button>` : ""}<button type="button" class="chip" data-rfc-substitute="${h.id}" title="Swap an in-stock herb in for the short one, for this batch only">Substitute</button><button type="button" class="chip" data-rfc-ordershort="${h.id}">Add to To order</button></div>`;
     }
     return `<div class="ph-rfc-row${short && tab === "toRefill" && onList ? " short" : ""}" data-rfc-id="${h.id}" ${st}>
       <div class="nm" title="${esc(name)}"><button type="button" class="nmb" data-ph-herb-edit="${h.id}">${esc(name)}</button>${code ? `<i>${esc(code)}</i>` : ""}</div>
