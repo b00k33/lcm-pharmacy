@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261005-100000">
+<meta name="lcm-build" content="20261005-110000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -55129,6 +55129,9 @@ or changing anything in Cliniko.
       // Patterns. A woman with cycle on has hers on top of the Cycle page instead.
       const pfSet = peek ? phPfSetFor(peek) : null;
       if (pfSet === "meno" || pfSet === "men") sections.push({ id: "usual", label: PH_PFW_SETS[pfSet].title, body: () => `<div data-pfw-slot="1">${presPfwSetHtml(hxName, pfSet)}</div>` });
+      // her pain questions (2026-10-05): only when she came in for pain, or the Case is Pain
+      const ccPain = phCcOf(hxName), painOn = (ccPain && ccPain.fams.includes("pain")) || (t.caseType === "pain");
+      if (painOn && !presIsFormula(t)) sections.push({ id: "pain", label: "Her pain", sub: phPfwSetDone(hxName, "pain") ? "answered" : "", body: () => `<div data-pfw-slot="1">${presPfwSetHtml(hxName, "pain")}</div>` });
     }
     sections.push({ id: "supplements", label: "Supplements", body: () => presSupplementsTabBodyHtml(t) });
     if (hxName) {
@@ -60213,7 +60216,10 @@ or changing anything in Cliniko.
     a_soft: "Belly soft, no resistance", a_taut: "Belly taut, resists on the upper part", a_ribs: "Ribs and chest full", a_epi: "Pit of the stomach full on pressing",
     a_lower: "Lower belly hard or tender", a_cold: "Cold lower belly",
     bt_chaihu: "Chai Hu body type", bt_guizhi: "Gui Zhi body type", bt_mahuang: "Ma Huang body type", bt_dahuang: "Da Huang body type",
-    bt_fuzi: "Fu Zi body type", bt_banxia: "Ban Xia body type", bt_huangqi: "Huang Qi body type"
+    bt_fuzi: "Fu Zi body type", bt_banxia: "Ban Xia body type", bt_huangqi: "Huang Qi body type",
+    pn_cold: "Pain worse in the cold, better with warmth", pn_damp: "Pain worse in damp weather, heavy or swollen",
+    pn_stiff: "Stiff in the morning, eases with movement", pn_fixed: "Pain fixed in one place, sharp or stabbing",
+    pn_night: "Pain worse at night", pn_move: "Pain that moves around or comes and goes"
   };
   const PH_PAT_DEFS = [
     { id: "stasis", name: "Blood stasis", fam: "purple", zones: ["uterus", "lower_abd"], of: 5,
@@ -60247,7 +60253,12 @@ or changing anything in Cliniko.
     { id: "damp", name: "Damp / phlegm", fam: "amber", zones: ["spleen", "lower_abd"], of: 5,
       keys: ["damp_cm", "t_greasy", "t_thickcoat", "t_swollen", "p_slippery", "pcos", "digestive_sx", "long_cycle", "irregular_len", "a_epi", "bt_mahuang", "bt_banxia"],
       letters: ["food"], food: ["Cut back dairy, sugar and fried food", "Barley, adzuki bean, tangerine peel"],
-      supp: [], points: "SP9, ST40, Ren9, SP3, ST36", formula: "Er Chen Tang or Cang Fu Dao Tan Wan" }
+      supp: [], points: "SP9, ST40, Ren9, SP3, ST36", formula: "Er Chen Tang or Cang Fu Dao Tan Wan" },
+    // her pain questions (2026-10-05): DRAFT, hers to correct in Settings -> Patterns. Points and food only.
+    { id: "colddamp", name: "Cold-damp (pain)", fam: "orange", zones: ["lower_abd"], of: 5,
+      keys: ["pn_cold", "pn_damp", "pn_stiff", "cold_feel", "t_greasy", "p_slippery", "p_deep", "t_pale"],
+      letters: ["food"], food: ["Keep the painful area warm", "Warm cooked food, ginger and cinnamon tea", "Cut back cold drinks and damp-forming foods"],
+      supp: [], points: "GB34, SP9, ST36, BL23, local points (moxa)", formula: "" }
   ];
   // her edits: { rules: { patId: { name, keys, of, letters, food, supp, points, formula, off } }, colours: { patId: famId } }
   // Created in memory only -- a read never calls savePharmacy (same rule as phTpMgrOverrides).
@@ -60494,8 +60505,19 @@ or changing anything in Cliniko.
         { id: "temp", s: "Hot or cold", q: "Does he run hot or cold?", d: "norm", o: [["norm", "Normal", []], ["cold", "Always cold", ["cold_feel"]], ["hot", "Runs hot", ["heat_feel"]], ["sweat", "Night sweats, hot palms", ["night_sweat", "heat_feel"]]] },
         { id: "urine", s: "Night urine", q: "Passes urine at night?", d: "no", o: [["no", "No", []], ["some", "Once or twice", ["nocturia"]], ["lots", "Three or more times", ["nocturia", "cold_feel"]]] },
         { id: "mood", s: "Mood", q: "Mood and stress?", d: "calm", o: [["calm", "Steady", []], ["irr", "Irritable, tense", ["stress"]], ["low", "Low, flat", ["low_mood"]]] }
+      ] },
+    pain: { short: "Her pain", title: "Her pain", dflt: false,
+      why: "Five taps about what the pain is like. They feed Cold-damp, Blood stasis and Qi stagnation on Patterns. Skip any you do not know.",
+      qs: [
+        { id: "weather", s: "Weather", q: "What makes it worse?", d: "none", multi: true, o: [["none", "Nothing in particular", []], ["cold", "Cold, better with warmth", ["pn_cold", "cold_feel"]], ["damp", "Damp weather, heavy or swollen", ["pn_damp"]]] },
+        { id: "kind", s: "Kind", q: "What is the pain like?", d: "none", o: [["none", "Dull or achy", []], ["fixed", "Fixed in one place, sharp or stabbing", ["pn_fixed", "stabbing"]], ["move", "Moves around or comes and goes", ["pn_move"]]] },
+        { id: "morning", s: "Morning", q: "Stiff in the morning?", d: "no", o: [["no", "No", []], ["yes", "Yes, eases with movement", ["pn_stiff"]]] },
+        { id: "night", s: "Night", q: "Worse at night?", d: "no", o: [["no", "No", []], ["yes", "Yes", ["pn_night"]]] },
+        { id: "heat", s: "Heat", q: "Is the area hot, red or swollen?", d: "no", o: [["no", "No", []], ["yes", "Yes", ["heat_feel"]]] }
       ] }
   };
+  // which profile section holds a question set
+  function phPfwTabOf(sid) { return sid === "period" ? "cycle" : sid === "pain" ? "pain" : "usual"; }
   // the short "shapes the picture" history set. hx = writes the 38-checklist key (so
   // it is never asked twice); pic = lives in rec.usual.pic. clue = what a Yes feeds.
   const PH_PFW_SHORT = [
@@ -60549,7 +60571,7 @@ or changing anything in Cliniko.
         phPfwVals(ans, q).forEach(v => {
           const o = q.o.find(x => x[0] === v);
           if (!o) return;
-          o[2].forEach(ck => add(ck, "usual", `${q.s}: ${o[1].toLowerCase()} (her usual answers)`, { tab: sid === "period" ? "cycle" : "usual" }));
+          o[2].forEach(ck => add(ck, "usual", `${q.s}: ${o[1].toLowerCase()} (her usual answers)`, { tab: phPfwTabOf(sid) }));
         });
       });
     });
@@ -60571,7 +60593,7 @@ or changing anything in Cliniko.
       const logged = sid === "period" && phPfPeriodLogged(rec);
       const n = logged ? set.qs.length : set.qs.filter(q => phPfwIsAns(ans, q)).length;
       total += set.qs.length; have += n;
-      if (n < set.qs.length) miss.push({ label: `Finish “${set.title}”`, gain: `${set.qs.length - n} more answer${set.qs.length - n === 1 ? "" : "s"} feed Patterns`, go: sid === "period" ? "cycle" : "usual" });
+      if (n < set.qs.length) miss.push({ label: `Finish “${set.title}”`, gain: `${set.qs.length - n} more answer${set.qs.length - n === 1 ? "" : "s"} feed Patterns`, go: phPfwTabOf(sid) });
     }
     if (rec.sex) {
       const items = phPfShortItems(rec), left = items.filter(it => phPfShortVal(rec, it) === "unasked").length;
@@ -60788,6 +60810,7 @@ or changing anything in Cliniko.
   function phPfwNextId(name, fromId) {
     const rec = phPatientPeek(name) || {}, sid = phPfSetFor(rec);
     const seq = ["patient"]; if (sid === "period") seq.push("cycle"); else if (sid) seq.push("usual");
+    { const cc = phCcOf(name); if (cc && cc.fams.includes("pain")) seq.push("pain"); }
     seq.push("medhx", "patterns");
     const i = seq.indexOf(fromId);
     return i >= 0 ? seq[i + 1] || null : null;
@@ -60826,7 +60849,7 @@ or changing anything in Cliniko.
       <p class="ph-pfw-why">${esc(set.why)}</p>${note}
       <div class="ph-pfw-quick"><button type="button" class="ph-pfw-opt quick" data-pfw-normal="${sid}">✨ Nothing unusual · fill the rest, then change the exceptions</button></div>
       ${rows}
-      ${phPfwFootHtml(name, sid === "period" ? "cycle" : "usual", done, `${n} of ${total} answered`)}
+      ${phPfwFootHtml(name, phPfwTabOf(sid), done, `${n} of ${total} answered`)}
       <div class="ph-pfw-keys"><kbd>1</kbd>–<kbd>9</kbd> pick · <kbd>S</kbd> skip · <kbd>Enter</kbd> next step</div>
     </div>`;
   }
@@ -60888,7 +60911,7 @@ or changing anything in Cliniko.
     el.innerHTML = presPfwSideInner(name);
     setTimeout(phPfwKick, 40);
   }
-  const phPfwSideWanted = (name, id) => !!name && (id === "patient" || id === "usual" || id === "cycle" || id === "medhx") && phPfBasicsOk(name);
+  const phPfwSideWanted = (name, id) => !!name && (id === "patient" || id === "usual" || id === "cycle" || id === "pain" || id === "medhx") && phPfBasicsOk(name);
   // the Patterns page's own "Sharpen this picture"
   function phPfwSharpenHtml(name) {
     const pic = phPfPicture(name);
@@ -60996,7 +61019,7 @@ or changing anything in Cliniko.
     })) return;
     phPfwFed = added ? clues.map(k => "+ " + (PH_PAT_CLUE_LBL[k] || k)) : [];
     phPfwRefresh(name, sid); phPfwFly(el, added ? clues.length : 0);
-    if (phPfwSetDone(name, sid)) phPfwArm(name, sid === "period" ? "cycle" : "usual", "All answered.");
+    if (phPfwSetDone(name, sid)) phPfwArm(name, phPfwTabOf(sid), "All answered.");
   }
   function phPfwNormal(sid) {
     const name = phPfwName(); if (!name) return;
@@ -61011,7 +61034,7 @@ or changing anything in Cliniko.
     phPfwFed = ["Typical answers filled"];
     phPfwRefresh(name, sid);
     presSavedToast("Filled with typical answers. Tap any row to change it.");
-    if (phPfwSetDone(name, sid)) phPfwArm(name, sid === "period" ? "cycle" : "usual", "Filled.");
+    if (phPfwSetDone(name, sid)) phPfwArm(name, phPfwTabOf(sid), "Filled.");
   }
   function phPfwShort(id, val, el) {
     const name = phPfwName(); if (!name) return;
@@ -61086,7 +61109,7 @@ or changing anything in Cliniko.
       phPfwDisarm();
       presSavedToast(on ? "Auto-move is off. Next glows instead." : "Auto-move is on.");
       const name = phPfwName();
-      ["period", "meno", "men", "shx"].forEach(sid => { const h = document.querySelector(`[data-pfw-host="${sid}"]`); if (h) h.outerHTML = sid === "shx" ? presPfwShortHtml(name) : presPfwSetHtml(name, sid); });
+      ["period", "meno", "men", "pain", "shx"].forEach(sid => { const h = document.querySelector(`[data-pfw-host="${sid}"]`); if (h) h.outerHTML = sid === "shx" ? presPfwShortHtml(name) : presPfwSetHtml(name, sid); });
       return true;
     }
     if (T.closest("[data-pfw-later]")) {
@@ -61304,7 +61327,7 @@ or changing anything in Cliniko.
     return now - s.at < 500;
   }
   const phPatIc = (id, cls) => `<svg class="ph-pat-ic${cls ? " " + cls : ""}" aria-hidden="true"><use href="#${id}"/></svg>`;
-  const PH_PAT_ICON = { stasis: "i-pt-clot", bdef: "i-pt-lowdrop", yang: "i-pt-snow", heat: "i-pt-flame", qistag: "i-pt-knot", yindef: "i-pt-drop", damp: "i-pt-bowl", qidef: "i-pt-ring" };
+  const PH_PAT_ICON = { stasis: "i-pt-clot", bdef: "i-pt-lowdrop", yang: "i-pt-snow", heat: "i-pt-flame", qistag: "i-pt-knot", yindef: "i-pt-drop", damp: "i-pt-bowl", qidef: "i-pt-ring", colddamp: "i-pt-snow" };
   const PH_PAT_SRC = { cycle: ["Cycle day log", "i-cal"], usual: ["Her usual answers", "i-cal"], hx: ["Medical history", "i-pt-clip"], tongue: ["Tongue", "i-pt-tongue"], pulse: ["Pulse", "i-pt-pulse"], abd: ["Abdomen", "i-pt-clip"], bt: ["Body type", "i-pt-clip"], supp: ["Supplements", "i-pill"], notes: ["Notes", "i-pt-clip"] };
   const PH_PAT_ZONE_LBL = { uterus: "uterus & ovaries", lower_abd: "lower abdomen", heart: "heart & head", liver: "liver", spleen: "digestion", kidney: "kidneys", chest: "chest & ribs", lung: "lungs" };
   const PH_PAT_LVL = { likely: ["Likely", "L"], possible: ["Possible", "P"], hint: ["A hint", "H"] };
@@ -61545,7 +61568,8 @@ or changing anything in Cliniko.
     stasis: "Move blood first (before and during the period), then nourish", bdef: "Build blood first (iron, food), then regulate",
     yang: "Warm and tonify yang; moxa on the lower belly", heat: "Clear heat, cool and calm",
     qistag: "Move qi; ease the mood, the cycle and the sleep", qidef: "Strengthen the spleen and build qi",
-    yindef: "Nourish yin and calm the heart", damp: "Clear damp and support digestion"
+    yindef: "Nourish yin and calm the heart", damp: "Clear damp and support digestion",
+    colddamp: "Warm the channels, dispel cold and damp, relieve the pain"
   };
   function phPatAgreedIds(rec) { const a = (rec && rec.patterns && rec.patterns.agreed) || {}; return Object.keys(a).sort((x, y) => (a[x].at || 0) - (a[y].at || 0)); }
   function phPatMainId(rec) { const ids = phPatAgreedIds(rec), m = rec && rec.patterns && rec.patterns.main; return ids.includes(m) ? m : (ids[0] || null); }
