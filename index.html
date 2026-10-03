@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261005-060000">
+<meta name="lcm-build" content="20261005-070000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -7272,6 +7272,22 @@
   #pharmacyPage .ph-cc-casebar i { font-style: normal; font-size: 11.5px; color: var(--ph-faint); }
   @media (max-width: 640px) { #pharmacyPage .ph-cc-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   @media (prefers-reduced-motion: reduce) { #pharmacyPage .ph-cc, #pharmacyPage .ph-cc-tile, #pharmacyPage .ph-cc-thread, #pharmacyPage .ph-cc-fold, #pharmacyPage .ph-cc-thread .ar, #pharmacyPage .ph-cc-tile.main .star { animation: none; } }
+  /* abdomen (2026-10-03): the belly picture and its findings. See "ABDOMEN" in the script. */
+  #pharmacyPage .ph-abd-row { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+  #pharmacyPage .ph-abd-pic { padding: 6px 10px; border: 1px solid var(--ph-line); border-radius: 12px; background: var(--ph-white); }
+  #pharmacyPage .ph-abd-fig { width: 150px; height: auto; display: block; }
+  #pharmacyPage .ph-abd-belly { fill: var(--ph-paper); stroke: var(--ph-line); stroke-width: 2; transition: stroke .3s, fill .3s; }
+  #pharmacyPage .ph-abd-belly.taut { stroke: var(--ph-herb); stroke-width: 3.5; }
+  #pharmacyPage .ph-abd-belly.soft { stroke-dasharray: 4 3; }
+  #pharmacyPage .ph-abd-arch { fill: none; stroke: var(--ph-line); stroke-width: 1.5; }
+  #pharmacyPage .ph-abd-navel { fill: var(--ph-faint); }
+  #pharmacyPage .ph-abd-spot { opacity: .16; cursor: pointer; transition: opacity .2s, transform .2s; transform-box: fill-box; transform-origin: center; }
+  #pharmacyPage .ph-abd-spot:hover { opacity: .4; }
+  #pharmacyPage .ph-abd-spot.on { opacity: .6; animation: phAbdPulse 1.8s ease-in-out infinite; }
+  @keyframes phAbdPulse { 50% { transform: scale(1.18); } }
+  #pharmacyPage .ph-abd-opts { flex: 1; min-width: 220px; display: flex; flex-wrap: wrap; gap: 6px; }
+  #pharmacyPage .ph-abd-feeds { margin-top: 8px; min-height: 18px; font-size: 12.5px; color: var(--ph-gold-deep); }
+  @media (prefers-reduced-motion: reduce) { #pharmacyPage .ph-abd-spot.on { animation: none; } }
   /* profile first (2026-10-04): Start-here card, one-screen question cards, the
      live Patterns panel, the auto-move bar. See "PROFILE FIRST" in the script. */
   #pharmacyPage .ph-pfw-start { border: 2px solid var(--ph-gold); background: var(--ph-gold-tint); border-radius: 12px; padding: 16px 18px; margin: 0 0 14px; animation: phPfwRise .35s ease both; }
@@ -35461,6 +35477,7 @@
       // the Patterns page's own taps (focus / open / agree / dismiss / colour /
       // letters / clue tap-through) -- all scoped to #presPatHost
       if (phCcClick(e)) return;
+      if (phAbdClick(e)) return;
       if (phPfwClick(e)) return;
       if (phPatClick(e)) return;
       if (phPatSetClick(e)) return;
@@ -55050,6 +55067,11 @@ or changing anything in Cliniko.
     const sections = [
       { id: "patient", label: "Patient details", body: () => presPatientTabBodyHtml(t) },
     ];
+    // her ask 2026-10-03 (new-patient journey): Abdomen is examined BEFORE the medical history
+    if (hxName && !presIsFormula(t)) {
+      const abdN = phAbdPicks(peek).length;
+      sections.push({ id: "abdomen", label: "Abdomen", sub: abdN ? `${abdN} finding${abdN === 1 ? "" : "s"}` : (peek && peek.abdomen && peek.abdomen.normal ? "normal" : ""), body: () => phAbdHtml(hxName) });
+    }
     if (hxName) {
       const prog = phHxProgress(hxName);
       sections.push({ id: "medhx", label: "Medical history", sub: presMedHxSubLabel(hxName), flags: prog.notNeeded ? 0 : prog.yesItems.length, body: () => presMedHxTabBodyHtml(t) });
@@ -60138,11 +60160,13 @@ or changing anything in Cliniko.
     t_peeled: "Peeled coat", t_reddots: "Red dots on the tongue", t_under: "Dark or distended under-tongue veins",
     p_wiry: "Wiry or tight pulse", p_slippery: "Slippery pulse", p_thin: "Thin pulse", p_choppy: "Choppy pulse", p_weak: "Weak or empty pulse",
     p_deep: "Deep pulse", p_slow: "Slow pulse", p_rapid: "Rapid pulse",
-    night_sweat: "Night sweats", nocturia: "Passes urine at night"
+    night_sweat: "Night sweats", nocturia: "Passes urine at night",
+    a_soft: "Belly soft, no resistance", a_taut: "Belly taut, resists on the upper part", a_ribs: "Ribs and chest full", a_epi: "Pit of the stomach full on pressing",
+    a_lower: "Lower belly hard or tender", a_cold: "Cold lower belly"
   };
   const PH_PAT_DEFS = [
     { id: "stasis", name: "Blood stasis", fam: "purple", zones: ["uterus", "lower_abd"], of: 5,
-      keys: ["clots", "dark_blood", "stabbing", "dysmen", "fibroids", "adeno", "endo", "cysts", "severe_pain", "t_purple", "t_under", "p_choppy"],
+      keys: ["clots", "dark_blood", "stabbing", "dysmen", "fibroids", "adeno", "endo", "cysts", "severe_pain", "t_purple", "t_under", "p_choppy", "a_lower"],
       letters: ["signs"], food: ["Warm cooked food in the days before the period", "Ginger and cinnamon tea", "Cut back cold drinks and raw food"],
       supp: [], points: "SP10, LI4, LR3, SP6, Ren6", formula: "Gui Zhi Fu Ling Wan or Shao Fu Zhu Yu Tang" },
     { id: "bdef", name: "Blood deficiency", fam: "white", zones: ["heart", "liver", "spleen"], of: 5,
@@ -60150,19 +60174,19 @@ or changing anything in Cliniko.
       letters: ["iron", "food"], food: ["Red meat, liver or bone broth twice a week", "Dark leafy greens with vitamin C", "Black sesame, dates, goji"],
       supp: ["iron"], points: "ST36, SP6, Ren4, BL17, BL20", formula: "Si Wu Tang or Gui Pi Tang" },
     { id: "yang", name: "Yang deficiency / cold", fam: "blue", zones: ["kidney", "lower_abd"], of: 5,
-      keys: ["cold_feel", "watery_cm", "t_pale", "t_swollen", "t_teeth", "p_deep", "p_slow", "p_weak", "long_cycle", "digestive_sx", "amen", "nocturia"],
+      keys: ["cold_feel", "watery_cm", "t_pale", "t_swollen", "t_teeth", "p_deep", "p_slow", "p_weak", "long_cycle", "digestive_sx", "amen", "nocturia", "a_cold"],
       letters: ["food"], food: ["Warm soups and congee, ginger, cinnamon", "Avoid iced drinks and salads", "Keep the lower belly and feet warm"],
       supp: [], points: "Ren4, Ren8 (moxa), ST36, DU4, BL23", formula: "Wen Jing Tang or You Gui Wan" },
     { id: "heat", name: "Heat", fam: "red", zones: ["uterus", "heart"], of: 5,
-      keys: ["bright_blood", "heavy_flow", "short_cycle", "heat_feel", "stress", "t_red", "t_reddots", "t_yellow", "p_rapid", "dry_sx"],
+      keys: ["bright_blood", "heavy_flow", "short_cycle", "heat_feel", "stress", "t_red", "t_reddots", "t_yellow", "p_rapid", "dry_sx", "a_taut"],
       letters: ["food"], food: ["Cooling foods: cucumber, mung bean, pear", "Cut back chilli, alcohol and coffee"],
       supp: [], points: "LI11, SP10, KI2, LR2, SP6", formula: "Qing Re Gu Jing Tang or Liang Di Tang" },
     { id: "qistag", name: "Qi stagnation", fam: "green", zones: ["liver", "chest"], of: 5,
-      keys: ["pms", "stress", "irregular_hx", "irregular_len", "low_mood", "cramp", "p_wiry"],
+      keys: ["pms", "stress", "irregular_hx", "irregular_len", "low_mood", "cramp", "p_wiry", "a_ribs", "a_epi"],
       letters: ["signs"], food: ["Regular meals, not rushed", "Citrus peel, mint and rose tea"],
       supp: [], points: "LR3, LI4, PC6, GB34, Ren17", formula: "Xiao Yao San" },
     { id: "qidef", name: "Qi deficiency", fam: "sand", zones: ["spleen", "lung"], of: 5,
-      keys: ["fatigue", "dragging", "t_swollen", "t_teeth", "p_weak", "heavy_flow", "digestive_sx", "low_mood"],
+      keys: ["fatigue", "dragging", "t_swollen", "t_teeth", "p_weak", "heavy_flow", "digestive_sx", "low_mood", "a_soft"],
       letters: ["food"], food: ["Warm, cooked, easy-to-digest meals", "Oats, sweet potato, rice, chicken soup"],
       supp: ["coq10"], points: "ST36, Ren6, Ren12, SP3, LI4", formula: "Bu Zhong Yi Qi Tang or Si Jun Zi Tang" },
     { id: "yindef", name: "Yin deficiency", fam: "pink", zones: ["kidney", "heart"], of: 5,
@@ -60170,7 +60194,7 @@ or changing anything in Cliniko.
       letters: ["food"], food: ["Soups with pear, goji and black sesame", "Go easy on spicy food, coffee and late nights"],
       supp: [], points: "KI3, SP6, KI6, Ren4, HT7", formula: "Liu Wei Di Huang Wan or Zuo Gui Wan" },
     { id: "damp", name: "Damp / phlegm", fam: "amber", zones: ["spleen", "lower_abd"], of: 5,
-      keys: ["damp_cm", "t_greasy", "t_thickcoat", "t_swollen", "p_slippery", "pcos", "digestive_sx", "long_cycle", "irregular_len"],
+      keys: ["damp_cm", "t_greasy", "t_thickcoat", "t_swollen", "p_slippery", "pcos", "digestive_sx", "long_cycle", "irregular_len", "a_epi"],
       letters: ["food"], food: ["Cut back dairy, sugar and fried food", "Barley, adzuki bean, tangerine peel"],
       supp: [], points: "SP9, ST40, Ren9, SP3, ST36", formula: "Er Chen Tang or Cang Fu Dao Tan Wan" }
   ];
@@ -60337,6 +60361,10 @@ or changing anything in Cliniko.
     const pLbl = { p_wiry: "Pulse is wiry or tight", p_slippery: "Pulse is slippery", p_thin: "Pulse is thin", p_choppy: "Pulse is choppy", p_weak: "Pulse is weak or empty",
       p_deep: "Pulse is deep", p_slow: "Pulse is slow", p_rapid: "Pulse is rapid" };
     pq.forEach(k => add(k, "pulse", pLbl[k], { tab: "patient", fold: "constit" }, pv && pv.session ? phCycShortLbl(pv.session.date || todayKey) : ""));
+    // -- abdomen (her ask 2026-10-03, 腹診): the findings she tapped on the Abdomen page
+    if (rec.abdomen && Array.isArray(rec.abdomen.picks)) {
+      rec.abdomen.picks.forEach(id => { const k = "a_" + id; if (PH_PAT_CLUE_LBL[k]) add(k, "abd", PH_PAT_CLUE_LBL[k] + " (abdomen)", { tab: "abdomen" }, rec.abdomen.at ? phCycShortLbl(keyOf(new Date(rec.abdomen.at))) : ""); });
+    }
     // -- her usual answers (profile-first workflow, 2026-10-04): added LAST, so a
     // sign already found in the day log, history or notes wins and is not counted twice
     try { phPfAddClues(rec, add); } catch (e) { /* a bad usual record just adds no clues */ }
@@ -60502,7 +60530,9 @@ or changing anything in Cliniko.
       tOk = !!((ct.body || []).length || (ct.coat || []).length || (ct.overlays || []).length) || (rec.acuSessions || []).some(s => rec.visitFnd && rec.visitFnd[s.id] && rec.visitFnd[s.id].tng && !phTng2Empty(rec.visitFnd[s.id].tng));
     } catch (e) { tOk = false; }
     try { pOk = Object.keys(phHxConstitPulseRead(rec).pulse || {}).length > 0 || !!phVisitPrevPulse(rec); } catch (e) { pOk = false; }
-    cnt(tOk); cnt(pOk);
+    const abdOk = phAbdPicks(rec).length > 0 || !!(rec.abdomen && rec.abdomen.normal);
+    cnt(tOk); cnt(pOk); cnt(abdOk);
+    if (!abdOk) miss.push({ label: "Abdomen", gain: "can move up to six patterns", go: "abdomen" });
     if (!tOk) miss.push({ label: "Tongue", gain: "can move up to six patterns", go: "patient" });
     if (!pOk) miss.push({ label: "Pulse", gain: "can move up to six patterns", go: "patient" });
     return { have, total, p: total ? Math.round(have / total * 100) : 0, missing: miss };
@@ -61028,6 +61058,80 @@ or changing anything in Cliniko.
     if (h && (k === "y" || k === "n")) { const b = h.querySelector(k === "y" ? ".yes" : ".no"); if (b) { e.preventDefault(); b.click(); } return; }
     if (k === "enter") { const b = document.querySelector("#pharmacyPage .ph-pfw-next"); if (b) { e.preventDefault(); b.click(); } }
   });
+  /* ============ ABDOMEN (her ask 2026-10-03: "include tongue pulse and abdominal diagnosis",
+     Huang Huang's 腹診, the hand that confirms the formula family) ============
+     rec.abdomen = { picks: [id…], normal: bool, note, at }. A section on the profile, placed
+     BEFORE Medical history (her pick: examine before history). A belly picture with spots she
+     can tap (ribs, pit of the stomach, lower belly, cold) plus six findings; every finding is a
+     Patterns clue "a_<id>" (phPatClues, source "abd"). Tongue and pulse stay on Patient details
+     (the merged constitution block). Whole-belly findings soft / taut exclude each other. */
+  var PH_ABD = [
+    ["soft", "Soft, no resistance"], ["taut", "Taut, resists on the upper belly"],
+    ["ribs", "Ribs and chest full"], ["epi", "Pit of the stomach full on pressing"],
+    ["lower", "Lower belly hard or tender"], ["cold", "Cold lower belly"]
+  ];
+  function phAbdPicks(rec) { const a = rec && rec.abdomen; return a && Array.isArray(a.picks) ? a.picks : []; }
+  function phAbdHtml(name) {
+    const rec = phPatientPeek(name) || {}, a = rec.abdomen || {}, picks = phAbdPicks(rec);
+    const on = id => picks.includes(id);
+    const spot = (id, cx, cy, r, col) => `<circle class="ph-abd-spot${on(id) ? " on" : ""}" data-abd="${id}" cx="${cx}" cy="${cy}" r="${r}" fill="${col}"><title>${esc((PH_ABD.find(x => x[0] === id) || [])[1] || id)}</title></circle>`;
+    const svg = `<svg class="ph-abd-fig" viewBox="0 0 100 92" role="img" aria-label="Belly. Tap a spot to record a finding.">
+      <ellipse cx="50" cy="46" rx="38" ry="38" class="ph-abd-belly${on("taut") ? " taut" : ""}${on("soft") ? " soft" : ""}"/>
+      <path d="M12 22 Q50 42 88 22" class="ph-abd-arch"/><circle cx="50" cy="46" r="2.2" class="ph-abd-navel"/>
+      ${spot("ribs", 27, 30, 8, "#2E7D5B")}${spot("ribs", 73, 30, 8, "#2E7D5B")}${spot("epi", 50, 31, 8, "#B7791F")}
+      ${spot("lower", 50, 62, 9, "#7B4FA0")}${spot("cold", 50, 76, 7, "#2B6CB0")}
+    </svg>`;
+    const feeds = [...new Set(picks.flatMap(id => phPatDefs().filter(d => !d.off && (d.keys || []).includes("a_" + id)).map(d => d.name)))];
+    return `<div class="ph-pfw-card ph-abd" data-abd-host="1">
+      <div class="ph-pfw-hd"><h3>Abdomen</h3></div>
+      <p class="ph-pfw-why">Feel the belly, then tap what you find. Tap a spot on the picture or a finding. Each one becomes a Patterns clue straight away.</p>
+      <div class="ph-abd-row"><div class="ph-abd-pic">${svg}</div>
+        <div class="ph-abd-opts">
+          <button type="button" class="ph-pfw-opt${a.normal ? " on" : ""}" data-abd="normal">Nothing unusual</button>
+          ${PH_ABD.map(([id, l]) => `<button type="button" class="ph-pfw-opt${on(id) ? " on" : ""}" data-abd="${id}">${esc(l)}</button>`).join("")}
+        </div></div>
+      <div class="ph-abd-feeds">${picks.length ? `→ feeds ${feeds.map(esc).join(", ") || "no pattern yet"}` : (a.normal ? "Recorded as normal. Nothing added to Patterns." : "")}</div>
+      <div class="ph-pfw-lab">Your own words (optional)</div>
+      <input type="text" class="ph-cc-said" data-abd-note="1" maxlength="200" value="${esc(a.note || "")}" placeholder="e.g. resistance under the right ribs" aria-label="Abdomen note">
+    </div>`;
+  }
+  function phAbdWrite(name, fn) {
+    const rec = name ? phPatientRec(name) : null;
+    if (!rec) return false;
+    rec.abdomen = rec.abdomen || { picks: [], normal: false, note: "" };
+    if (!Array.isArray(rec.abdomen.picks)) rec.abdomen.picks = [];
+    fn(rec.abdomen);
+    rec.abdomen.at = Date.now();
+    if (savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return false; }
+    return true;
+  }
+  function phAbdRefresh(name) {
+    const h = document.querySelector("#pharmacyPage [data-abd-host]");
+    if (h) { const keep = h.querySelector("[data-abd-note]"); h.outerHTML = phAbdHtml(name); void keep; }
+    try { phPfwSideRefresh(name); } catch (e) { /* the side panel only exists on a wide screen */ }
+  }
+  function phAbdClick(e) {
+    const T = e.target, el = T && T.closest ? T.closest("[data-abd]") : null;
+    if (!el || !el.closest("[data-abd-host]")) return false;
+    const name = phPfwName(); if (!name) return true;
+    const id = el.dataset.abd;
+    if (!phAbdWrite(name, a => {
+      if (id === "normal") { a.normal = !a.normal; if (a.normal) a.picks = []; return; }
+      a.normal = false;
+      if (a.picks.includes(id)) { a.picks = a.picks.filter(x => x !== id); return; }
+      if (id === "soft") a.picks = a.picks.filter(x => x !== "taut");
+      if (id === "taut") a.picks = a.picks.filter(x => x !== "soft");
+      a.picks.push(id);
+    })) return true;
+    phAbdRefresh(name);
+    return true;
+  }
+  document.addEventListener("change", e => {
+    const el = e.target;
+    if (el && el.matches && el.matches("[data-abd-note]") && el.closest("#pharmacyPage")) {
+      const name = phPfwName(); if (name) phAbdWrite(name, a => { a.note = el.value.trim().slice(0, 200); });
+    }
+  });
   // ---- PATTERNS page (renderer). Reads phPatCompute and draws the picture:
   // a ring of clue counts, the shared body figure (PH_BODY_GEOM, the same
   // drawing as the Pain map), the clues behind each pattern (every one taps
@@ -61053,7 +61157,7 @@ or changing anything in Cliniko.
   }
   const phPatIc = (id, cls) => `<svg class="ph-pat-ic${cls ? " " + cls : ""}" aria-hidden="true"><use href="#${id}"/></svg>`;
   const PH_PAT_ICON = { stasis: "i-pt-clot", bdef: "i-pt-lowdrop", yang: "i-pt-snow", heat: "i-pt-flame", qistag: "i-pt-knot", yindef: "i-pt-drop", damp: "i-pt-bowl", qidef: "i-pt-ring" };
-  const PH_PAT_SRC = { cycle: ["Cycle day log", "i-cal"], usual: ["Her usual answers", "i-cal"], hx: ["Medical history", "i-pt-clip"], tongue: ["Tongue", "i-pt-tongue"], pulse: ["Pulse", "i-pt-pulse"], supp: ["Supplements", "i-pill"], notes: ["Notes", "i-pt-clip"] };
+  const PH_PAT_SRC = { cycle: ["Cycle day log", "i-cal"], usual: ["Her usual answers", "i-cal"], hx: ["Medical history", "i-pt-clip"], tongue: ["Tongue", "i-pt-tongue"], pulse: ["Pulse", "i-pt-pulse"], abd: ["Abdomen", "i-pt-clip"], supp: ["Supplements", "i-pill"], notes: ["Notes", "i-pt-clip"] };
   const PH_PAT_ZONE_LBL = { uterus: "uterus & ovaries", lower_abd: "lower abdomen", heart: "heart & head", liver: "liver", spleen: "digestion", kidney: "kidneys", chest: "chest & ribs", lung: "lungs" };
   const PH_PAT_LVL = { likely: ["Likely", "L"], possible: ["Possible", "P"], hint: ["A hint", "H"] };
   const PH_PAT_LUNG = "M96 80C84 76 72 82 70 98C68 110 72 118 80 118C90 118 96 114 98 108Z";
@@ -61160,7 +61264,7 @@ or changing anything in Cliniko.
       </div></div></div></div>`;
   }
   function phPatCluesHtml(comp, ui, shownIds) {
-    const order = ["cycle", "usual", "hx", "tongue", "pulse", "supp", "notes"];
+    const order = ["cycle", "usual", "hx", "tongue", "pulse", "abd", "supp", "notes"];
     const foc = ui.focus ? comp.shown.find(p => p.def.id === ui.focus) : null;
     let k = 0;
     return order.map(src => {
