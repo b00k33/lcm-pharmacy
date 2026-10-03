@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261006-120000">
+<meta name="lcm-build" content="20261006-140000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -8800,6 +8800,18 @@
   #pharmacyPage .ph-pulse-mini .ph-pulse-shape { width: 16px; height: 9px; }
   /* her ask 2026-09-27, the Visit Record row's narrow "All" box -- see
      phVisitPulseDotsHtml above */
+  #pharmacyPage .ph-vc-wrap { overflow-x: auto; border: 1px solid var(--ph-line); border-radius: 12px; background: #fff; }
+  #pharmacyPage .ph-vc-tbl { border-collapse: collapse; width: 100%; min-width: 760px; font-size: 12.5px; }
+  #pharmacyPage .ph-vc-tbl th, #pharmacyPage .ph-vc-tbl td { border: 1px solid var(--ph-line); padding: 7px 9px; text-align: left; vertical-align: top; }
+  #pharmacyPage .ph-vc-tbl thead th { background: var(--ph-herb-tint); color: var(--ph-herb-deep); font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; border-top: 0; }
+  #pharmacyPage .ph-vc-tbl tbody tr:nth-child(even) { background: var(--ph-paper); }
+  #pharmacyPage .ph-vc-tbl th[scope="row"] { white-space: nowrap; font-weight: 400; }
+  #pharmacyPage .ph-vc-tbl th[scope="row"] small { display: block; color: var(--ph-faint); font-size: 10.5px; }
+  #pharmacyPage .ph-vc-tbl td.r.better { color: #1F6B45; font-weight: 600; }
+  #pharmacyPage .ph-vc-tbl td.r.worse { color: var(--ph-low-deep); font-weight: 600; }
+  #pharmacyPage .ph-vc-none { color: var(--ph-faint); font-style: normal; }
+  #pharmacyPage .ph-vc-tbl .ph-visit-tng.mini, #pharmacyPage .ph-vc-tbl .ph-visit-abd-map.mini { float: left; margin: 0 6px 2px 0; }
+  #pharmacyPage .ph-vc-tbl .ph-pulse-micro { margin-right: 4px; }
   #pharmacyPage .ph-pulse-micro { display: inline-flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; vertical-align: middle; }
   #pharmacyPage .ph-pulse-microside { display: inline-flex; align-items: center; gap: 2px; font-size: var(--fs-8); font-weight: 800; color: var(--ph-faint); }
   #pharmacyPage .ph-pulse-microdot { display: inline-flex; width: 12px; height: 12px; border-radius: 999px; background: var(--ph-herb-tint); align-items: center; justify-content: center; cursor: default; }
@@ -55584,11 +55596,17 @@ or changing anything in Cliniko.
     }
     // her pick Mock B (2026-10-06): the Log page -- every dated record on one page
     if (name && !presIsFormula(t)) sections.push({ id: "log", label: "Log", body: () => presLogBodyHtml(t, name) });
+    // her ask 2026-10-06 ("something that organises every visit check into a table"): the
+    // dated tongue / pulse / abdomen each visit already saves in rec.visitFnd, one row a visit
+    if (name && !presIsFormula(t)) {
+      const vn = (peek && peek.acuSessions || []).filter(s => s.date).length;
+      sections.push({ id: "checks", label: "Visit checks", sub: vn ? `${vn} visit${vn === 1 ? "" : "s"}` : "", body: () => presVisitChecksHtml(t, name) });
+    }
     // the rail's groups: 1 her file (once) · 2 today's check (every visit) · 3 putting it together · Log
     // (the dated pages sit under Log). Stable sort, so a page keeps its place inside its group.
     const RANK = { patient: 1, ren: 2, medhx: 3, pain: 4, usual: 5, sleep: 6, supplements: 7, checklist: 8,
       recheck: 10, tongue: 11, pulse: 12, abdomen: 13, cycle: 14, patterns: 20,
-      log: 30, photos: 31, apptshist: 32, messages: 33, ivf: 34 };
+      log: 30, checks: 30.5, photos: 31, apptshist: 32, messages: 33, ivf: 34 };
     const GRP = n => n < 10 ? "file" : n < 20 ? "check" : n < 30 ? "sum" : "log";
     sections.forEach(s => { s.grp = GRP(RANK[s.id] || 8); });
     return sections.map((s, i) => [s, i]).sort((a, b) => (RANK[a[0].id] || 8) - (RANK[b[0].id] || 8) || a[1] - b[1]).map(x => x[0]);
@@ -55618,6 +55636,37 @@ or changing anything in Cliniko.
     const chips = PRES_LOG_TYPES.map(([id, lbl]) => `<button type="button" class="ph-log-chip${presLogFilter === id ? " on" : ""}" data-log-filter="${id}" aria-pressed="${presLogFilter === id ? "true" : "false"}">${esc(lbl)}</button>`).join("");
     const rows = shown.length ? shown.slice(0, 200).map(e => `<button type="button" class="ph-log-row" ${e.plan ? `data-flow-go="${e.go}"` : `data-flow-prof="${e.go}"`}><b>${esc(phShortDate(e.d))}</b><span>${esc(e.txt)}</span><i class="ph-log-pill ${PILL[e.k] || ""}">${esc((PRES_LOG_TYPES.find(x => x[0] === e.k) || [0, e.k])[1])}</i></button>`).join("") : `<div class="ph-hx-constit-note">Nothing dated here yet.</div>`;
     return `<div class="ph-log" data-log-host="1"><div class="ph-log-chips">${chips}</div><div class="ph-log-feed">${rows}</div></div>`;
+  }
+  // ---- Visit checks (her ask 2026-10-06): one row a logged visit, newest first -- date, cycle day,
+  // phase, response, tongue, pulse, abdomen, points. Reads rec.visitFnd[session.id] (dated per visit,
+  // written by "Log today's session"); a visit with nothing saved shows "not recorded". Reads only.
+  function presVisitChecksHtml(t, name) {
+    const rec = phPatientPeek(name) || {};
+    const sess = (rec.acuSessions || []).filter(s => s.date).slice().sort((a, b) => b.date.localeCompare(a.date) || String(b.at || "").localeCompare(String(a.at || "")));
+    if (!sess.length) return `<div class="ph-hx-constit-note">No visits logged yet. Each visit's tongue, pulse and abdomen check will list here.</div>`;
+    const cycleOn = phCycleOn(rec);
+    const none = `<em class="ph-vc-none">not recorded</em>`;
+    const outL = o => o === "better" ? "✓ better" : o === "worse" ? "⚠ worse" : o === "same" ? "· same" : "";
+    const rows = sess.map(s => {
+      const raw = rec.visitFnd && rec.visitFnd[s.id];
+      const f = raw && !phVisitFndEmpty(raw) ? phVisitFndRead(raw) : null;
+      const comp = cycleOn ? phCycleCompAsOf(rec, parseKey(s.date)) : null;
+      const d = parseKey(s.date);
+      const cd = comp ? `<span class="cd k-${esc(comp.phaseKey)}" title="${esc(comp.phaseLabel)}"><i></i>CD ${comp.day}</span>` : "";
+      let tng = none, pls = none, abd = none;
+      if (s.noTreatment && !f) { tng = pls = abd = `<em class="ph-vc-none">herbs only</em>`; }
+      if (f) {
+        const tl = phVisitFndReportLines(f).find(([l]) => l === "Tongue");
+        const hasT = f.tng.regions.length || f.tng.overlays.length || f.body.length || f.coat.length || !phTng2Empty(f.tng);
+        if (hasT) tng = `<span class="ph-visit-tng ro mini">${phTongueChartSvg(f.tng, null, { ro: true })}</span>${tl ? esc(tl[1]) : ""}`;
+        if (Object.keys(f.pulse).length) pls = `${phVisitPulseDotsHtml(f.pulse)} ${esc(phVisitPulseSummaryText(f.pulse))}`;
+        const hasA = !phAbd2Empty(f.abd) || (f.zones || []).some(z => z.startsWith("abd:"));
+        if (hasA) abd = `<span class="ph-visit-abd-map ro mini">${phAbdChartSvg(f.abd, null, { ro: true, legacy: f.zones })}</span>${esc(phTpVrAbdText(f))}`;
+      }
+      const pts = s.noTreatment ? "herbs only" : [s.points, s.pressPoints ? `press ${s.pressPoints}` : ""].filter(Boolean).join(" · ");
+      return `<tr><th scope="row"><b>${d.getDate()} ${MON_SHORT[d.getMonth()]}</b><small>${d.getFullYear()}</small></th><td>${cd || "—"}</td><td>${esc(s.phaseLabel || "") || "—"}</td><td class="r ${esc(s.outcome || "")}">${esc(outL(s.outcome)) || "—"}</td><td>${tng}</td><td>${pls}</td><td>${abd}</td><td>${esc(pts) || "—"}</td></tr>`;
+    }).join("");
+    return `<div class="ph-vc"><div class="ph-vc-wrap"><table class="ph-vc-tbl"><thead><tr><th>Visit</th><th>Cycle day</th><th>Phase</th><th>Response</th><th>Tongue</th><th>Pulse</th><th>Abdomen</th><th>Points</th></tr></thead><tbody>${rows}</tbody></table></div><div class="ph-hx-constit-note">Only visits logged with “Log today's session” carry a tongue, pulse or abdomen check. The Examine pages hold her current check, without dates.</div></div>`;
   }
   // her ask 2026-09-24 ("i want to see patient appointments history and
   // allocate appointment to treatment plan session"): the mechanism already
