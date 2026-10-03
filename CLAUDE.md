@@ -12581,3 +12581,14 @@ Menu path: EVERY DAY → Patient profile → open patient → **Body type** (rai
 - Not built: the picture-built gauge does not count it; no auto-add of the two missing types.
 
 Verified in the sandbox (synthetic "Zz Bt Test", removed, 0 `sb-*` keys): section order patient → abdomen → medhx → bodytype; 3 answers → Gui Zhi; save wrote her real Gui Zhi id; clue `bt_guizhi` → Qi deficiency; undo and clear. `lcm-build` `20261005-080000`, `sw.js` `lcm-20261005-body-type`.
+
+## Plan takes shape — agreed patterns fill the plan's Diagnosis and principle, with a main pattern (her ask 2026-10-03, new-patient journey)
+
+On the Patterns page, once one or more patterns are agreed, a gold **"Plan takes shape · Draft"** card sits under the Diagnosis line. One block, "PLAN TAKES SHAPE", above `phPatOpenLetter`; `grep phPatShape` finds every piece.
+- Shows: ★ **Main** pattern, **Diagnosis** ("Blood stasis (main), with Blood deficiency"), **Principle** (the main pattern's idea from `PH_PAT_FOCUS`, then "Also: …" for the others), and the combined **Letters** (open, never sent). No formula is proposed (her rule).
+- **Main pattern** = the first she agreed unless she taps "★ Make X main" (`rec.patterns.main`).
+- **"Put diagnosis + principle in the plan"** writes the plan's `diagnosis` and `goal` ("Goal / principle"): into an empty field, or appended (`;` for diagnosis, ` · ` for goal) when she already has text and it does not already contain it. The previous values are kept in `rec.patterns.shape` so **Undo** puts both back exactly. Nothing is written until she taps. **Phases and visit counts are never changed** (the mock's "visits" line was deliberately not built).
+- With no plan the card says to start one first.
+- Not built: the Treatment-step pre-load of today's points; a ★ marker on the pattern cards themselves.
+
+Verified in the sandbox (synthetic "Zz Sh Test" with a Dysmenorrhea plan, removed): card appears only after agreeing; two patterns → combined text; apply appended to the template's goal; Make main swaps; Undo restored both fields. `lcm-build` `20261005-090000`, `sw.js` `lcm-20261005-plan-shape`.
