@@ -12630,3 +12630,6 @@ On the plan picker (no-plan screen and "+ New treatment plan"), when her complai
 
 ## One Examine screen — tongue, pulse and abdomen together (journey, 2026-10-05)
 Menu path: EVERY DAY → Patient profile → open patient → **Examine** (profile rail, right under Patient details and before Medical history). The old Abdomen section is now "Examine" (id still `abdomen`): the tongue, pulse and body-type block (`presConstitTabBodyHtml`) first, then the belly picture (`phAbdHtml`). The fold that held tongue and pulse at the foot of Patient details is gone (`presConstitFoldSectionHtml` is unused); the re-check card's "Tongue & pulse ›" chip now opens Examine too. Nothing stored changed. `lcm-build` `20261005-200000`, `sw.js` `lcm-20261005-examine-screen`.
+
+## Typed complaint words suggest tiles (journey, 2026-10-05)
+In "What brings her in?", typing in "in her words" shows a "Sounds like: ＋ Weight & energy …" line under the box (`phCcGuessHtml`, keyword rules `PH_CC_GUESS`, updates as she types, no repaint). A tap adds that tile (`data-cc-guess`) and saves her typed words. Nothing is ticked for her; tiles already picked, and Periods / Menopause for a man, are not offered. Keywords are a draft: bloating and digestion point to Weight & energy. `lcm-build` `20261005-210000`, `sw.js` `lcm-20261005-complaint-guess`.
