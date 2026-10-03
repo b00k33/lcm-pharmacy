@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261005-180000">
+<meta name="lcm-build" content="20261005-190000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -58593,9 +58593,14 @@ or changing anything in Cliniko.
       || PH_TP_CATEGORIES.some(c => c.id === g.id && c.always));
     // every category showing: the complaint's (or Case's) own lead, the rest keep their order
     if (wantCat && phTpTmplShowAll) groups = [...wantCats.map(id => groups.find(g => g.id === id)).filter(Boolean), ...groups.filter(g => !wantCats.includes(g.id))];
+    // a man is not offered gynaecology first: it stays available, but sits last
+    // unless his own complaint (Fertility) already put it in front
+    if (ccName && (phPatientPeek(ccName) || {}).sex === "M" && !wantCats.includes("gynae")) {
+      groups = [...groups.filter(g => g.id !== "gynae"), ...groups.filter(g => g.id === "gynae")];
+    }
     const wantLabel = wantCat ? ((PH_TP_CATEGORIES.find(c => c.id === wantCat) || {}).label || "") : "";
     const whyTxt = ccMain
-      ? `she came in for <b>${esc(ccFams.map(f => f.label).join(" + "))}</b>`
+      ? `${ccName && (phPatientPeek(ccName) || {}).sex === "M" ? "they" : "she"} came in for <b>${esc(ccFams.map(f => f.label).join(" + "))}</b>`
       : `this script's Case is <b>${esc(String(curCase).charAt(0).toUpperCase() + String(curCase).slice(1))}</b>`;
     const filterBar = wantCat ? `<div class="ph-tp-tmplfilter">${phTpTmplShowAll
       ? `<span>Showing every category, <b>${esc(wantLabel)}</b> first because ${whyTxt}</span><button type="button" class="tab-link" data-tp-tmpl-showall="1">Only ${esc(wantLabel)} ▴</button>`
@@ -60849,17 +60854,19 @@ or changing anything in Cliniko.
         const fs = phCcFamsOf(name);
         return `<div class="ph-cc-fold${cl}" data-cc-host="1"><span class="tick">✓</span><span class="sm"><b>Came in for</b> ${fs.map((f, i) => `${f.ic} ${esc(f.label)}${i === 0 && fs.length > 1 ? " ★" : ""}`).join(" · ")}${c.said ? ` · “${esc(c.said)}”` : ""}${c.dur ? ` · ${esc(c.dur.toLowerCase())}` : ""}</span><button type="button" class="ph-pfw-link" data-cc-edit="1">Change</button></div>`;
       }
-      return `<div class="ph-cc-fold${cl}" data-cc-host="1"><span class="sm"><b>What brings her in?</b> Not asked yet. It picks the plans shown first.</span><button type="button" class="ph-pfw-link" data-cc-edit="1">+ Add</button></div>`;
+      return `<div class="ph-cc-fold${cl}" data-cc-host="1"><span class="sm"><b>What brings ${rec.sex === "M" ? "them" : "her"} in?</b> Not asked yet. It picks the plans shown first.</span><button type="button" class="ph-pfw-link" data-cc-edit="1">+ Add</button></div>`;
     }
     const sel = c ? c.fams : [], mainId = c ? phCcMainId(c) : null, mf = phCcFam(mainId);
-    const tiles = PH_CC_FAMS.map(f => `<div class="ph-cc-tile${sel.includes(f.id) ? " on" : ""}${f.id === mainId ? " main" : ""}${phCcPop === f.id ? " pop" : ""}" role="button" tabindex="0" aria-pressed="${sel.includes(f.id) ? "true" : "false"}" data-cc-fam="${f.id}"><span class="star" data-cc-star="${f.id}" role="button" title="Make this the main one" aria-label="Make ${esc(f.label)} the main complaint">★</span><span class="ph-cc-ic" aria-hidden="true">${f.ic}</span><b>${esc(f.label)}</b><small>${esc(phCcCatLabel(f.cat))}</small></div>`).join("");
+    // a man is not asked about periods or menopause; fertility stays, worded for him
+    const male = rec.sex === "M", who = male ? "them" : "her";
+    const tiles = PH_CC_FAMS.filter(f => !(male && (f.id === "periods" || f.id === "meno"))).map(f => `<div class="ph-cc-tile${sel.includes(f.id) ? " on" : ""}${f.id === mainId ? " main" : ""}${phCcPop === f.id ? " pop" : ""}" role="button" tabindex="0" aria-pressed="${sel.includes(f.id) ? "true" : "false"}" data-cc-fam="${f.id}"><span class="star" data-cc-star="${f.id}" role="button" title="Make this the main one" aria-label="Make ${esc(f.label)} the main complaint">★</span><span class="ph-cc-ic" aria-hidden="true">${f.ic}</span><b>${esc(male && f.id === "fertility" ? "Fertility" : f.label)}</b><small>${esc(male && f.id === "fertility" ? "Male fertility" : phCcCatLabel(f.cat))}</small></div>`).join("");
     const thread = mf ? `<div class="ph-cc-thread"><span>Main: <b>${esc(mf.label)}</b></span><span class="ar">→</span><span><b>${esc(phCcCatLabel(mf.cat))}</b> plans are shown first${sel.length > 1 ? ", and the other can ride along on the same plan" : ""}</span></div>` : "";
     return `<div class="ph-cc${isNew && !c ? " fresh" : ""}${cl}" data-cc-host="1">
-      <h3>What brings her in?</h3>
+      <h3>What brings ${who} in?</h3>
       <p class="why">Before any history. Tap one or more. The ★ marks the main one: it chooses which plans are shown first.</p>
       <div class="ph-cc-tiles">${tiles}</div>${thread}
-      <div class="ph-pfw-lab">In her words (optional)</div>
-      <input type="text" class="ph-cc-said" data-cc-said-in="1" maxlength="160" value="${esc((c && c.said) || "")}" placeholder="e.g. painful, clotty periods" aria-label="In her words">
+      <div class="ph-pfw-lab">In ${male ? "their" : "her"} words (optional)</div>
+      <input type="text" class="ph-cc-said" data-cc-said-in="1" maxlength="160" value="${esc((c && c.said) || "")}" placeholder="${male ? "e.g. sore lower back, poor sleep" : "e.g. painful, clotty periods"}" aria-label="In ${male ? "their" : "her"} words">
       <div class="ph-cc-opts">${PH_CC_SAID.map(s => `<button type="button" class="ph-cc-chip" data-cc-said="${esc(s)}">${esc(s)}</button>`).join("")}</div>
       <div class="ph-pfw-lab">How long</div>
       <div class="ph-cc-opts">${PH_CC_DUR.map(d => `<button type="button" class="ph-pfw-opt${c && c.dur === d ? " on" : ""}" data-cc-dur="${d}">${d}</button>`).join("")}</div>
