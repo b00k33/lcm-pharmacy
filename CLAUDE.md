@@ -12618,3 +12618,6 @@ Her chief complaint is a weak Patterns clue (`phPfAddClues`): Stress & sleep add
 
 ## ★ main marker on Patterns cards (journey, 2026-10-05)
 When two or more patterns are agreed, the main one's card reads "· ✓ agreed · ★ main" (`phPatCardHtml`, using `phPatMainId`). With only one agreed pattern nothing extra shows. Display only; she still sets the main with "★ Make X main" on the Plan takes shape card. Verified in the sandbox. `lcm-build` `20261005-140000`, `sw.js` `lcm-20261005-main-star`.
+
+## Medical history ordered by complaint (journey round 4, 2026-10-05)
+When her main complaint is not a gynae one (Pain, Stress & sleep, Weight, Face, Cold/flu), the three cycle groups (Cycle & bleeding, Structural, Reproductive) drop to the end of the checklist; General health and Medication come first. Order only: every group and row is still shown. Gynae complaints or none keep the old order. `phHxBodyHtml`. `lcm-build` `20261005-150000`, `sw.js` `lcm-20261005-history-by-complaint`.
