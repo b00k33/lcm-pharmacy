@@ -12569,3 +12569,15 @@ Menu path: EVERY DAY → Patient profile → open patient → **Abdomen** (secon
 - **Not built:** tongue and pulse stay on Patient details (the merged constitution block), so there is no single three-tab "Examine" screen yet; the Jing Fang body-type questions are the next round.
 
 Verified in the sandbox (localhost:8866, synthetic "Zz Ab Test", removed, 0 `sb-*` keys): section order, lower + ribs + soft→taut, the feeds line, Patterns clues and counts, Nothing unusual, note saved. `lcm-build` `20261005-070000`, `sw.js` `lcm-20261005-abdomen`.
+
+## Body type — the Jing Fang constitution questionnaire (her ask 2026-10-03, "jing fang body constitution questionaire")
+
+Menu path: EVERY DAY → Patient profile → open patient → **Body type** (rail item right after Medical history). One block, "BODY TYPE", just above the Patterns renderer; `grep phBtq` finds every piece.
+- **Seven types** (`PH_BTJ`, from the Huang Huang chapter): Chai Hu, Gui Zhi, Ma Huang, Da Huang, Fu Zi, Ban Xia, Huang Qi. **Five questions** (`PH_BTQ`): build, skin and complexion, temperament, hot or cold, gut and body; one tap each, tap again to undo. Each option adds weight to one to three types.
+- **Data:** `rec.btQ = { a: { qIndex: optionIndex }, at }`. The best fit is DERIVED (`phBtqTop`, needs 3 answered, never stored). It shows "<Type> body type · 桂枝體質", a one-line "Looks like", and "Also leans" (next two).
+- **Save button** writes the matching type from HER 方病人 list (`PHARMACY.bodyTypes`, matched by NAME) into `rec.bodyConstitutionBt`, the field that was a hand-picked dropdown. If a different type is already recorded the button reads "Replace “X” with Y" (her tap is the confirmation). Her seeded list has Ban Xia, Chai Hu, Gui Zhi, Da Huang, Ma Huang only: **Fu Zi and Huang Qi are not in it**, so the page says so and writes nothing until she adds them in the Guide.
+- **Patterns:** one clue `bt_<id>` (source "Body type"): Fu Zi → Yang deficiency, Da Huang → Heat, Chai Hu → Qi stagnation, Ban Xia → Qi stagnation + Damp, Ma Huang → Damp, Gui Zhi and Huang Qi → Qi deficiency. DRAFT rules; a rule she overrode in Settings does not gain them.
+- **No formulas are suggested** (her rule, see "Formula ideas ... OFF").
+- Not built: the picture-built gauge does not count it; no auto-add of the two missing types.
+
+Verified in the sandbox (synthetic "Zz Bt Test", removed, 0 `sb-*` keys): section order patient → abdomen → medhx → bodytype; 3 answers → Gui Zhi; save wrote her real Gui Zhi id; clue `bt_guizhi` → Qi deficiency; undo and clear. `lcm-build` `20261005-080000`, `sw.js` `lcm-20261005-body-type`.
