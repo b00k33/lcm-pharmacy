@@ -60856,6 +60856,19 @@ or changing anything in Cliniko.
     if (!ids.length) return "";
     return `<span class="ph-cc-gl">Sounds like:</span> ` + ids.map(id => { const f = phCcFam(id); return f ? `<button type="button" class="ph-cc-chip" data-cc-guess="${id}">＋ ${f.ic} ${esc(f.label)}</button>` : ""; }).join("");
   }
+  // her 2026-10-05 ("she already has a neck & shoulder plan but the profile still asks what brings
+  // her in"): a patient with a plan but no complaint on record is not "not asked yet". Read the
+  // complaint off the plan's own category, show it, and write nothing until she taps Change.
+  function phCcFromPlan(name) {
+    const plans = (phTpPlans(name) || []).filter(p => p.status !== "done");
+    for (const p of plans) {
+      const tpl = phTpBuiltinTemplates().find(x => x.name === p.templateName) || phTpAllTemplates().find(x => x.name === p.templateName);
+      if (!tpl) continue;
+      const f = PH_CC_FAMS.find(x => x.plans.includes(tpl.id)) || PH_CC_FAMS.find(x => x.cat === tpl.category);
+      if (f) return { fam: f, plan: p.title || p.templateName };
+    }
+    return null;
+  }
   function phCcCardHtml(t, calm) {
     const name = presPatientFor(t) || "";
     if (!name || presIsFormula(t)) return "";
@@ -60863,6 +60876,10 @@ or changing anything in Cliniko.
     // Start here comes first: sex + DOB decide which questions follow
     if (!(rec.sex && rec.dob) && !phPfwLater.has(key)) return "";
     const c = phCcOf(name);
+    if (!c && !phCcOpen.has(key)) {
+      const fp = phCcFromPlan(name);
+      if (fp) return `<div class="ph-cc-fold${calm ? " calm" : ""}" data-cc-host="1"><span class="tick">✓</span><span class="sm"><b>Came in for</b> ${fp.fam.ic} ${esc(fp.fam.label)} · from the ${esc(fp.plan)} plan</span><button type="button" class="ph-pfw-link" data-cc-edit="1">Change</button></div>`;
+    }
     const isNew = !(phTpPlans(name) || []).length && !(rec.acuSessions || []).length;
     const open = phCcOpen.has(key) || (!c && isNew && !phCcSkip.has(key));
     const cl = calm ? " calm" : "";
@@ -61399,31 +61416,6 @@ or changing anything in Cliniko.
     ["ribs", "Ribs and chest full"], ["epi", "Pit of the stomach full on pressing"],
     ["lower", "Lower belly hard or tender"], ["cold", "Cold lower belly"]
   ];
-  function phAbdPicks(rec) { const a = rec && rec.abdomen; return a && Array.isArray(a.picks) ? a.picks : []; }
-  function phAbdHtml(name) {
-    const rec = phPatientPeek(name) || {}, a = rec.abdomen || {}, picks = phAbdPicks(rec);
-    const on = id => picks.includes(id);
-    const spot = (id, cx, cy, r, col) => `<circle class="ph-abd-spot${on(id) ? " on" : ""}" data-abd="${id}" cx="${cx}" cy="${cy}" r="${r}" fill="${col}"><title>${esc((PH_ABD.find(x => x[0] === id) || [])[1] || id)}</title></circle>`;
-    const svg = `<svg class="ph-abd-fig" viewBox="0 0 100 92" role="img" aria-label="Belly. Tap a spot to record a finding.">
-      <ellipse cx="50" cy="46" rx="38" ry="38" class="ph-abd-belly${on("taut") ? " taut" : ""}${on("soft") ? " soft" : ""}"/>
-      <path d="M12 22 Q50 42 88 22" class="ph-abd-arch"/><circle cx="50" cy="46" r="2.2" class="ph-abd-navel"/>
-      ${spot("ribs", 27, 30, 8, "#2E7D5B")}${spot("ribs", 73, 30, 8, "#2E7D5B")}${spot("epi", 50, 31, 8, "#B7791F")}
-      ${spot("lower", 50, 62, 9, "#7B4FA0")}${spot("cold", 50, 76, 7, "#2B6CB0")}
-    </svg>`;
-    const feeds = [...new Set(picks.flatMap(id => phPatDefs().filter(d => !d.off && (d.keys || []).includes("a_" + id)).map(d => d.name)))];
-    return `<div class="ph-pfw-card ph-abd" data-abd-host="1">
-      <div class="ph-pfw-hd"><h3>Abdomen</h3></div>
-      <p class="ph-pfw-why">Feel the belly, then tap what you find. Tap a spot on the picture or a finding. Each one becomes a Patterns clue straight away.</p>
-      <div class="ph-abd-row"><div class="ph-abd-pic">${svg}</div>
-        <div class="ph-abd-opts">
-          <button type="button" class="ph-pfw-opt${a.normal ? " on" : ""}" data-abd="normal">Nothing unusual</button>
-          ${PH_ABD.map(([id, l]) => `<button type="button" class="ph-pfw-opt${on(id) ? " on" : ""}" data-abd="${id}">${esc(l)}</button>`).join("")}
-        </div></div>
-      <div class="ph-abd-feeds">${picks.length ? `→ feeds ${feeds.map(esc).join(", ") || "no pattern yet"}` : (a.normal ? "Recorded as normal. Nothing added to Patterns." : "")}</div>
-      <div class="ph-pfw-lab">Your own words (optional)</div>
-      <input type="text" class="ph-cc-said" data-abd-note="1" maxlength="200" value="${esc(a.note || "")}" placeholder="e.g. resistance under the right ribs" aria-label="Abdomen note">
-    </div>`;
-  }
   function phAbdWrite(name, fn) {
     const rec = name ? phPatientRec(name) : null;
     if (!rec) return false;
