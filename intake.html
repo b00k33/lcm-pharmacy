@@ -85,6 +85,9 @@
   .submitbtn { width: 100%; padding: 15px; border-radius: 999px; border: none; background: var(--ph-green-deep); color: #fff; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
   .submitbtn:disabled { opacity: 0.5; cursor: default; }
   .submitbtn:not(:disabled):active { background: var(--ph-green-press); }
+  .dob-row { display: grid; grid-template-columns: 78px 1fr 100px; gap: 8px; }
+  .dob-row select { min-width: 0; }
+  .miss { box-shadow: 0 0 0 2px #B3261E; border-radius: 10px; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -175,7 +178,7 @@
     app.innerHTML =
       '<div class="card">' +
         '<p class="lead">Hi ' + esc(titleCase(name)) + ' — a few questions before your visit.</p>' +
-        '<p class="note">This takes about 5 minutes. Your answers go straight to your practitioner’s private review — nothing else on this device is shared, and there’s nothing else to see here. Leave anything blank you’d rather discuss in person.</p>' +
+        '<p class="note">This takes about 5 minutes. Your answers go straight to your practitioner’s private review — nothing else on this device is shared, and there’s nothing else to see here. Every question needs an answer before you can send it — pick Yes or No for each one.</p>' +
       '</div>' +
       '<form id="intakeForm">' +
         '<div class="section-h">Your details</div>' +
@@ -183,7 +186,10 @@
           '<div class="field"><span class="q">Sex <span style="font-weight:400;color:var(--ph-soft)">(so we know which questions are relevant)</span></span>' +
             '<div class="seg" id="sexSeg"><button type="button" class="sexbtn" data-sex="F">Female</button><button type="button" class="sexbtn" data-sex="M">Male</button></div>' +
           '</div>' +
-          '<div class="field"><label class="q" for="fDob">Date of birth</label><input type="date" id="fDob" max="' + new Date().toISOString().slice(0, 10) + '"></div>' +
+          '<div class="field" id="dobField"><span class="q">Date of birth <span style="font-weight:400;color:var(--ph-soft)">(day, month, year)</span></span>' +
+            '<div class="dob-row"><input type="number" id="fDobDay" min="1" max="31" inputmode="numeric" placeholder="Day">' +
+            '<select id="fDobMon" aria-label="Month"><option value="">Month</option>' + PH_MONTHS.map(function (m, i) { return '<option value="' + (i + 1) + '">' + m + '</option>'; }).join("") + '</select>' +
+            '<input type="number" id="fDobYr" min="1900" max="' + new Date().getFullYear() + '" inputmode="numeric" placeholder="Year"></div></div>' +
           '<div class="field"><label class="q" for="fPhone">Mobile number</label><input type="text" id="fPhone" inputmode="tel" autocomplete="tel" placeholder="04xx xxx xxx"></div>' +
           '<div class="field"><label class="q" for="fEmail">Email</label><input type="text" id="fEmail" inputmode="email" autocomplete="email" placeholder="you@example.com"></div>' +
           '<div class="field"><label class="q" for="fAddress">Address</label><textarea id="fAddress" rows="2" placeholder="Street, suburb, postcode"></textarea></div>' +
@@ -212,8 +218,9 @@
             '</div>' +
           '</div>' +
         '</div>' +
+        '<p class="note" id="missNote" aria-live="polite"></p>' +
         '<p class="err" id="formErr" hidden></p>' +
-        '<div class="submitbar"><button type="submit" class="submitbtn" id="submitBtn" disabled>Choose your sex above to continue</button></div>' +
+        '<div class="submitbar"><button type="submit" class="submitbtn" id="submitBtn">Submit</button></div>' +
       '</form>';
 
     document.querySelectorAll(".hx-btn").forEach(function (btn) {
@@ -234,9 +241,6 @@
         var isF = b.dataset.sex === "F";
         document.getElementById("femaleHx").hidden = !isF;
         document.getElementById("cycleSec").hidden = !isF;
-        var submitBtn = document.getElementById("submitBtn");
-        submitBtn.disabled = false;
-        submitBtn.textContent = "Submit";
       });
     });
     document.querySelectorAll("#ivfSeg .sexbtn").forEach(function (b) {
@@ -250,6 +254,14 @@
     });
     document.getElementById("ivfAddRow").addEventListener("click", ivfAddRow);
     document.getElementById("intakeForm").addEventListener("submit", onSubmit);
+    // one listener on the form catches every answer: typing, picking a date
+    // part, Yes/No, the sex and IVF toggles and the symptom chips. Bubbling
+    // runs after each control's own handler, so the classes are already set.
+    var intakeForm = document.getElementById("intakeForm");
+    intakeForm.addEventListener("input", gateChanged);
+    intakeForm.addEventListener("change", gateChanged);
+    intakeForm.addEventListener("click", function () { setTimeout(gateChanged, 0); });
+    refreshGate();
   }
 
   // ---- IVF history (her ask 2026-09-13, card 11) ----
@@ -288,6 +300,74 @@
     });
   }
 
+  // ---- required answers ----
+  // every question must be answered before the form can be sent. Missing
+  // items are listed under the form, and the Submit button stays disabled
+  // until the list is empty.
+  var PH_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  // showMissing turns on the first time she changes anything, so the red
+  // outlines never appear on a blank form before she has touched it.
+  var showMissing = false;
+  var submitting = false;
+
+  // day / month / year, read as an Australian date. Null until it is a real
+  // date in the past, so a half-typed or impossible date never gets through.
+  function dobIso() {
+    var d = document.getElementById("fDobDay").value.trim();
+    var m = document.getElementById("fDobMon").value;
+    var y = document.getElementById("fDobYr").value.trim();
+    if (!/^\d{1,2}$/.test(d) || !m || !/^\d{4}$/.test(y)) return null;
+    var dd = Number(d), mm = Number(m), yy = Number(y);
+    var dt = new Date(Date.UTC(yy, mm - 1, dd));
+    if (dt.getUTCFullYear() !== yy || dt.getUTCMonth() !== mm - 1 || dt.getUTCDate() !== dd) return null;
+    if (yy < 1900 || dt.getTime() > Date.now()) return null;
+    return yy + "-" + String(mm).padStart(2, "0") + "-" + String(dd).padStart(2, "0");
+  }
+
+  // { label, el } for each unanswered question; el is the box to highlight
+  function missingItems() {
+    var miss = [];
+    var blank = function (id) { return !document.getElementById(id).value.trim(); };
+    if (!document.querySelector("#sexSeg .sexbtn.on")) miss.push({ label: "Sex", el: document.getElementById("sexSeg") });
+    if (!dobIso()) miss.push({ label: "Date of birth", el: document.getElementById("dobField") });
+    if (blank("fPhone")) miss.push({ label: "Mobile number", el: document.getElementById("fPhone") });
+    if (blank("fEmail")) miss.push({ label: "Email", el: document.getElementById("fEmail") });
+    if (blank("fAddress")) miss.push({ label: "Address", el: document.getElementById("fAddress") });
+    var cycle = document.getElementById("cycleSec");
+    if (!cycle.hidden) {
+      if (blank("fLmp")) miss.push({ label: "Last period start", el: document.getElementById("fLmp") });
+      if (blank("fCycleLen")) miss.push({ label: "Usual cycle length", el: document.getElementById("fCycleLen") });
+      if (blank("fFlowDays")) miss.push({ label: "Days you bleed", el: document.getElementById("fFlowDays") });
+      if (blank("fMenarche")) miss.push({ label: "Age at first period", el: document.getElementById("fMenarche") });
+      if (!document.querySelector("#ivfSeg .sexbtn.on")) miss.push({ label: "IVF question", el: document.getElementById("ivfSeg") });
+    }
+    // medical history rows in a hidden group (e.g. female-only for a man) don't count
+    document.querySelectorAll("[data-hx-item]").forEach(function (row) {
+      if (row.closest("[hidden]") || row.querySelector(".hx-btn.on")) return;
+      miss.push({ label: "Medical history", el: row, hx: true });
+    });
+    return miss;
+  }
+
+  function refreshGate() {
+    var miss = missingItems();
+    var btn = document.getElementById("submitBtn");
+    var note = document.getElementById("missNote");
+    document.querySelectorAll(".miss").forEach(function (el) { el.classList.remove("miss"); });
+    if (showMissing) miss.forEach(function (m) { m.el.classList.add("miss"); });
+    btn.disabled = submitting || miss.length > 0;
+    if (!miss.length) {
+      note.textContent = "Everything is answered. Thank you.";
+      return;
+    }
+    var names = miss.filter(function (m) { return !m.hx; }).map(function (m) { return m.label; });
+    var hx = miss.filter(function (m) { return m.hx; }).length;
+    if (hx) names.push(hx + (hx === 1 ? " medical history question" : " medical history questions"));
+    note.textContent = "Still to answer: " + names.join(", ") + ".";
+  }
+
+  function gateChanged() { showMissing = true; refreshGate(); }
+
   function numOrNull(id) {
     var v = document.getElementById(id).value;
     return v === "" ? null : Number(v);
@@ -298,7 +378,7 @@
     var sex = sexBtn ? sexBtn.dataset.sex : "";
     var demographics = {
       sex: sex,
-      dob: document.getElementById("fDob").value || null,
+      dob: dobIso(),
       mobile: document.getElementById("fPhone").value.trim() || null,
       email: document.getElementById("fEmail").value.trim() || null,
       address: document.getElementById("fAddress").value.trim() || null,
@@ -337,8 +417,8 @@
               eggs: r.eggs === "" ? null : Number(r.eggs), fertilised: r.fertilised === "" ? null : Number(r.fertilised),
               frozen: r.frozen === "" ? null : Number(r.frozen) }; })
         : [];
-      var touched = lmp || cycleLen != null || flowDays != null || menarcheAge != null || contraception !== "none" || ttcMonths != null || symptoms.length || flowIntensity !== "moderate" || pain !== "none" || !regular || ivfCycles.length;
-      if (touched) cycle = { lmp: lmp, cycleLen: cycleLen, flowDays: flowDays, flowIntensity: flowIntensity, pain: pain, regular: regular, menarcheAge: menarcheAge, contraception: contraception, ttcMonths: ttcMonths, symptoms: symptoms, ivfCycles: ivfCycles };
+      var hasCycleAnswer = lmp || cycleLen != null || flowDays != null || menarcheAge != null || contraception !== "none" || ttcMonths != null || symptoms.length || flowIntensity !== "moderate" || pain !== "none" || !regular || ivfCycles.length;
+      if (hasCycleAnswer) cycle = { lmp: lmp, cycleLen: cycleLen, flowDays: flowDays, flowIntensity: flowIntensity, pain: pain, regular: regular, menarcheAge: menarcheAge, contraception: contraception, ttcMonths: ttcMonths, symptoms: symptoms, ivfCycles: ivfCycles };
     }
     return { demographics: demographics, history: history, cycle: cycle };
   }
@@ -347,7 +427,11 @@
     e.preventDefault();
     var btn = document.getElementById("submitBtn");
     var errEl = document.getElementById("formErr");
+    // second line of defence: the button is disabled while anything is
+    // missing, but Enter in a text box can still submit the form
+    if (missingItems().length) { showMissing = true; refreshGate(); return; }
     errEl.hidden = true;
+    submitting = true;
     btn.disabled = true; btn.textContent = "Submitting…";
     var payload = collectPayload();
     sb.rpc("submit_intake_form", { p_token: token, p_demographics: payload.demographics, p_history: payload.history, p_cycle: payload.cycle }).then(function (res) {
@@ -360,7 +444,9 @@
     }).catch(function () {
       errEl.textContent = "Something went wrong sending this — please try again.";
       errEl.hidden = false;
-      btn.disabled = false; btn.textContent = "Submit";
+      submitting = false;
+      btn.textContent = "Submit";
+      refreshGate();
     });
   }
 
