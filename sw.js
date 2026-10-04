@@ -12,7 +12,7 @@
 // changes). A waiting service worker sits untouched until that same button
 // tells it to go, via postMessage({type:"SKIP_WAITING"}) -- see the
 // "message" listener below and phDoControlledUpdate's STEP 4.
-var CACHE_VERSION = "lcm-20261008-flowrail-tick";
+var CACHE_VERSION = "lcm-20261008-sw-clone-order";
 
 var SHELL = ["./", "./index.html", "./manifest.json", "./icons/icon-192-v2.png", "./icons/icon-512-v2.png", "./icons/apple-touch-icon-v2.png", "./icons/favicon-32-v2.png", "./icons/favicon-32-light-v2.png"];
 
@@ -96,7 +96,10 @@ self.addEventListener("fetch", function (e) {
     var freshReq = new Request(req, { cache: "no-store" });
     e.respondWith(
       timeoutFetch(freshReq, NAV_TIMEOUT_MS).then(function (res) {
-        caches.open(CACHE_VERSION).then(function (c) { c.put("./", res.clone()); });
+        // clone BEFORE returning: once the response is handed to the browser
+        // its body is used up, and a clone taken later throws
+        var copy = res.clone();
+        caches.open(CACHE_VERSION).then(function (c) { c.put("./", copy); });
         return res;
       }).catch(function () {
         // She is being served the OLD copy for this one open. Keep pulling the
@@ -128,7 +131,8 @@ self.addEventListener("fetch", function (e) {
     caches.match(req).then(function (cached) {
       return cached || fetch(req).then(function (res) {
         if (res && (res.status === 200 || res.type === "opaque")) {
-          caches.open(CACHE_VERSION).then(function (c) { c.put(req, res.clone()); });
+          var copy = res.clone();
+          caches.open(CACHE_VERSION).then(function (c) { c.put(req, copy); });
         }
         return res;
       }).catch(function () {
