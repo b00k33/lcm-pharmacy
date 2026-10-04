@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261007-130000">
+<meta name="lcm-build" content="20261007-150000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -4490,6 +4490,8 @@
   #pharmacyPage .ph-appt-block .nm { font-weight: 600; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
   #pharmacyPage .ph-appt-block.xs .nm { font-size: 11px; }
   #pharmacyPage .ph-appt-block .ivf { flex: none; font: 700 9.5px/15px var(--font-body, inherit); color: #7A1F6B; background: #fff; border-radius: 999px; padding: 0 5px; }
+  #pharmacyPage .ph-appt-block .ivf.preg { color: #9B2C55; background: #FBE3EC; }
+  #pharmacyPage .ph-appt-preg { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: #FBE3EC; color: #9B2C55; font-size: var(--fs-11); font-weight: 700; }
   #pharmacyPage .ph-appt-block .hb { margin-left: auto; flex: none; display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; font-size: 10px; font-weight: 700; line-height: 1; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.06); }
   #pharmacyPage .ph-appt-block .hb.short { color: #fff; background: var(--ph-zero); }
   #pharmacyPage .ph-appt-block .hb[data-ph-apptcal-order-dot] { cursor: pointer; }
@@ -4580,6 +4582,8 @@
   #pharmacyPage .ph-un .g-cd .g-in { font-size: 22px; }
   #pharmacyPage .ph-un .g-in .uncap { font: 700 9.5px/1 var(--font-body, inherit); color: var(--ph-herb); letter-spacing: .02em; }
   #pharmacyPage .ph-un .g-in .uncap:empty { display: none; }
+  #pharmacyPage .ph-un .un-send { flex: none; align-self: center; margin-left: 12px; padding: 6px 12px; border: 1px solid var(--ph-herb); border-radius: 8px; background: var(--ph-herb-tint); color: var(--ph-herb-deep); font: 600 12px/1 inherit; font-family: inherit; cursor: pointer; white-space: nowrap; }
+  #pharmacyPage .ph-un .un-send:hover { background: #fff; }
   #pharmacyPage .ph-un .g-in.low { padding-top: 10px; font-size: 12px; }
   #pharmacyPage .ph-un .g-in .ph-un-ic { color: var(--ph-herb-card); }
   #pharmacyPage .ph-un .wseg { fill: none; stroke: #D6E8EE; stroke-width: 7; stroke-linecap: round; }
@@ -27869,6 +27873,15 @@
   const phApptShortTime = t => { const m = /^(\d{1,2}):(\d{2})/.exec(t || ""); return m ? `${(+m[1] + 11) % 12 + 1}:${m[2]}` : ""; };
   // option 3's one tag on a block: days since her transfer (or retrieval) on
   // an IVF Protocol plan -- "ET+5", "OPU+2". Only a day-precise date counts.
+  // a positive pregnancy test on record -> "🌸 6w2d" (week from the test date), "🌸" without one
+  function phApptPregTxt(a) {
+    if (!a || !a.patient || a.service === "Break") return "";
+    const r = phPatientPeek(a.patient), pt = r && r.pregTest;
+    if (!pt || pt.result !== "positive") return "";
+    const w = phPregWk(pt.date).replace(/ /g, "");
+    return "🌸" + (w ? " " + w : "");
+  }
+  const phApptPregHtml = a => { const s = phApptPregTxt(a); return s ? `<span class="ph-appt-preg" title="Positive pregnancy test on record">${esc(s)}</span>` : ""; };
   function phApptIvfTag(a) {
     if (!a || !a.patient || a.service === "Break") return "";
     const plans = phTpPlans(a.patient) || [];
@@ -27943,11 +27956,13 @@
     const tm = `<span class="tm">${esc(phApptShortTime(a.time))}</span>`;
     const tagTxt = phApptIvfTag(a);
     const tag = tagTxt ? `<span class="ivf">${esc(tagTxt)}</span>` : "";
+    const pregTxt = phApptPregTxt(a);
+    const pregTag = pregTxt ? `<span class="ivf preg" title="Positive pregnancy test on record">${esc(pregTxt)}</span>` : "";
     const hb = short ? `<span class="hb short"${dotTap} title="Short on herbs${roomy ? " — tap to add to order" : ""}">!</span>` : "";
     const meta = sz !== "xs" ? phApptBlockMetaHtml(a) : "";
     const inner = sz === "lg"
-      ? `<div class="r1">${tm}${tag}${hb}</div><div class="nm">${who}</div>${meta}`
-      : `<div class="r1">${tm}<span class="nm">${who}</span>${tag}${hb}</div>${meta}`;
+      ? `<div class="r1">${tm}${tag}${pregTag}${hb}</div><div class="nm">${who}</div>${meta}`
+      : `<div class="r1">${tm}<span class="nm">${who}</span>${tag}${pregTag}${hb}</div>${meta}`;
     // how far through the phase's sessions this visit is (visit N of M)
     let prog = "";
     if (a.patient && a.service !== "Break") {
@@ -28216,7 +28231,7 @@
         <span class="ph-apptpop-av${kindCls}"${ck ? ` style="${ck}"` : ""} aria-hidden="true">${esc(phInitials(phTitle(a.patient)).slice(0, 2))}</span>
         <div class="hd">
           <h3><button type="button" class="ph-apptpop-name" data-ph-dash-patient-open="${esc(a.patient)}" title="Open ${esc(phTitle(a.patient))}'s profile">${esc(phTitle(a.patient))}</button></h3>
-          <div class="meta">${esc(dayTxt)} · ${esc(phApptTimeRangeLabel(a))}${phApptKindHtml(a.service)}${phApptEtHtml(a)}${tracked ? `<svg class="icn drop" aria-hidden="true"><title>Cycle tracked</title><use href="#i-drop"/></svg>` : ""}${fuDue ? `<span class="bell" title="Follow-up due">🔔</span>` : ""}</div>
+          <div class="meta">${esc(dayTxt)} · ${esc(phApptTimeRangeLabel(a))}${phApptKindHtml(a.service)}${phApptEtHtml(a)}${phApptPregHtml(a)}${tracked ? `<svg class="icn drop" aria-hidden="true"><title>Cycle tracked</title><use href="#i-drop"/></svg>` : ""}${fuDue ? `<span class="bell" title="Follow-up due">🔔</span>` : ""}</div>
           <div class="plan">${planPill}</div>
         </div>
         <button type="button" class="ph-apptpop-ic x" data-ph-apptpop-close="1" title="Close" aria-label="Close"><svg class="icn" aria-hidden="true"><use href="#i-x"/></svg></button>
@@ -28834,6 +28849,7 @@
         <div class="q-sub"><span class="q-ty">${ty.ics}</span>${dd !== 0 ? esc(phUnDayWord(a)) + " " : ""}${esc(phCkTime12(a.time))}</div>
       </div>
       <div class="g-row">${g1}${g1b}${g2}${g3}</div>
+      <button type="button" class="un-send" data-ph-un-send="${esc(a.patient)}" title="Send her the online form (details + medical history)">✉ Send online form</button>
     </div>`;
   }
   // a tall block's quiet third line: a phase glyph + "CD n · phase" (cycle)
@@ -31692,6 +31708,7 @@
       // "+ add focus" link -- keep their own handlers above.
       // the Up next card's "Up next ›": drop the tapped patient, show the next one
       if (e.target.closest("[data-ph-un-back]")) { phApptUpNextFocus = null; phApptUpNextShow(); return; }
+      const unSend = e.target.closest("[data-ph-un-send]"); if (unSend) { phIntakeOpen(unSend.dataset.phUnSend); return; }
       const popOpen = e.target.closest("[data-ph-appt-pop]");
       if (popOpen && !e.target.closest("[data-ph-appt-order], [data-ph-apptcal-order-dot], [data-ph-tab], [data-ph-appt-pop-brief], [data-ph-dash-patient-open], [data-ph-cyc-jump]")) {
         const id = popOpen.dataset.phApptPop;
