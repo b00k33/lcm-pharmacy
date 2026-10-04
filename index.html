@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261007-170000">
+<meta name="lcm-build" content="20261007-180000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -4626,6 +4626,19 @@
   #pharmacyPage .ph-un.vc .un-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   #pharmacyPage .ph-un.vc .gf.cdf { border-right: 0; padding-right: 0; flex-direction: row; align-items: center; }
   #pharmacyPage .ph-un.vc .un-send { justify-self: auto; }
+  /* fold / expand: a small round chevron, pushed to the far right of the card head */
+  #pharmacyPage .ph-un .un-fold { width: 26px; height: 26px; padding: 0; border: 1px solid var(--ph-line); border-radius: 50%; background: #fff; color: var(--ph-herb-deep); display: inline-grid; place-items: center; cursor: pointer; flex: none; transition: background .18s ease; }
+  #pharmacyPage .ph-un .un-fold:hover { background: var(--ph-herb-tint); }
+  #pharmacyPage .ph-un .un-fold:focus-visible { outline: 2px solid var(--ph-herb); outline-offset: 2px; }
+  #pharmacyPage .ph-un.vc .un-top .un-fold { margin-left: auto; }
+  /* folded: one quiet line — countdown, name, time, chevron */
+  #pharmacyPage .ph-un.folded { display: flex; align-items: center; gap: 10px; padding: 8px 12px; }
+  #pharmacyPage .ph-un.folded .un-fmin { display: flex; align-items: baseline; gap: 4px; min-width: 56px; }
+  #pharmacyPage .ph-un.folded .un-fmin b { font-family: var(--font-disp); font-size: 18px; color: var(--ph-herb-deep); font-variant-numeric: tabular-nums; }
+  #pharmacyPage .ph-un.folded .uncap { font-size: 11px; color: var(--ph-soft); }
+  #pharmacyPage .ph-un.folded .un-fname { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #pharmacyPage .ph-un.folded .un-ftime { font-size: 12px; color: var(--ph-soft); white-space: nowrap; }
+  #pharmacyPage .ph-un.folded .un-fold { margin-left: 2px; }
   #pharmacyPage .ph-un.vc .un-eb { margin-top: 2px; }
   #pharmacyPage .ph-un.vc .un-n { font-size: 17px; }
   #pharmacyPage .ph-un.vc .un-pips { display: flex; justify-content: flex-start; line-height: 0; }
@@ -28878,6 +28891,10 @@
     const prevDisp = (PHARMACY.log || []).some(e => (!e.kind || e.kind === "dispense") && e.date && e.date < a.date && phPatientKey(e.patient) === k);
     return { newToYou: !prevAppts.length && !prevSess.length && !prevDisp, prevAppts, prevSess };
   }
+  // her 2026-10-08 ask: the Up next card can fold to one line. Device-local
+  // view state, remembered in localStorage (never synced, never in the record).
+  function phUnFolded() { try { return localStorage.getItem("lcm-un-folded") === "1"; } catch (e) { return false; } }
+  function phUnFoldSet(on) { try { localStorage.setItem("lcm-un-folded", on ? "1" : "0"); } catch (e) { /* private window */ } }
   function phApptUpNextHtml() {
     const pick = phApptUpNextPick();
     if (!pick) {
@@ -28886,6 +28903,16 @@
       return txt ? `<div class="ph-un none" data-ph-un="">${esc(txt)}</div>` : "";
     }
     const a = pick.a;
+    if (phUnFolded()) {
+      // one quiet line: the countdown (ticked in place), the name, the time, and an expand chevron
+      const L0 = phUnLeft(pick.left, a);
+      return `<div class="ph-un vc folded" data-ph-un="${esc(a.id)}" data-ph-appt-pop="${esc(a.id)}" role="button" tabindex="0" title="${esc(phTitle(a.patient))}">
+        <span class="un-fmin"><b class="unmin">${L0.n}</b><span class="uncap">${L0.cap}</span></span>
+        <span class="un-fname">${esc(phTitle(a.patient))}</span>
+        <span class="un-ftime">${esc(phCkTime12(a.time))}</span>
+        <button type="button" class="un-fold" data-ph-un-fold aria-expanded="false" aria-label="Expand Up next" title="Expand Up next"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+      </div>`;
+    }
     // a repaint within a moment of the change keeps the motion (opening the
     // page can paint twice in a row); after that the same patient sits still
     const nowMs = Date.now();
@@ -28941,6 +28968,7 @@
     const icons = `<div class="un-icons">${unPd ? `<a class="un-ic" href="tel:${esc(unPd)}" title="Call">${ico.call}<span>Call</span></a>` : `<span class="un-ic off" title="No phone on file">${ico.call}<span>Call</span></span>`}${unPd ? `<a class="un-ic" href="sms:${esc(unPd)}" title="Text">${ico.text}<span>Text</span></a>` : `<span class="un-ic off" title="No phone on file">${ico.text}<span>Text</span></span>`}${eml ? `<a class="un-ic" href="mailto:${esc(eml)}" title="Email">${ico.mail}<span>Email</span></a>` : `<span class="un-ic off" title="No email on file">${ico.mail}<span>Email</span></span>`}</div>`;
     return `<div class="ph-un vc${anim ? " anim" : ""}${pick.focus ? " focus" : ""}" role="button" tabindex="0" data-ph-appt-pop="${esc(a.id)}" data-ph-un="${esc(a.id)}" title="${esc(`${ty.word} · ${planWord}`)}">
       <div class="un-top">
+        <button type="button" class="un-fold" data-ph-un-fold aria-expanded="true" aria-label="Fold Up next" title="Fold Up next"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button>
         <figure class="gf cdf"><span class="g-cd">${phUnRing(52, 20, pick.left <= 0 ? 0 : Math.min(pick.left, 60) / 60, "cdring")}<span class="g-in"><b class="unmin">${L.n}</b><span class="uncap">${L.cap}</span></span></span></figure>
         <button type="button" class="un-send" data-ph-un-send="${esc(a.patient)}" title="Send online form (details + medical history)" aria-label="Send online form"><span class="un-env" aria-hidden="true"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5.5" width="17" height="13" rx="2"/><path d="M4 7l8 6 8-6"/></svg></span></button>
       </div>
@@ -31821,6 +31849,8 @@
       // "+ add focus" link -- keep their own handlers above.
       // the Up next card's "Up next ›": drop the tapped patient, show the next one
       if (e.target.closest("[data-ph-un-back]")) { phApptUpNextFocus = null; phApptUpNextShow(); return; }
+      // fold / expand the Up next card in place (never opens the popup)
+      if (e.target.closest("[data-ph-un-fold]")) { phUnFoldSet(!phUnFolded()); phApptUpNextShow(); return; }
       const unSend = e.target.closest("[data-ph-un-send]"); if (unSend) { phIntakeOpen(unSend.dataset.phUnSend); return; }
       const unEdit = e.target.closest("[data-ph-un-edit]"); if (unEdit) { phApptPopOpen(unEdit.dataset.phUnEdit, "edit"); return; }
       const popOpen = e.target.closest("[data-ph-appt-pop]");
