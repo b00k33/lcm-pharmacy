@@ -12717,3 +12717,6 @@ Menu path: EVERY DAY → Patient profile → open patient → Plan tab → the g
 
 ## Patient-facing wording follows the patient's sex (her reports 2026-10-07, "i already chose the gender ... questionaire still has she")
 `phPro(name)` (above `phCcFamsOf`) returns the pronoun set from `rec.sex` (F / M / they), never guessed from the name. The complaint picker, the no-plan screen and the plan-picker line use it. A sweep then made the rest of the sex-agnostic screens neutral: rail and tab labels "Pain", "Usual period"; "File once"; "From the patterns"; "Recent dispenses"; "Photos & charts"; "Usual answers"; the intake-link note says "they". Cycle, IVF and pregnancy screens keep "her" on purpose (they only show for women). Template phase wording (clinical text) was NOT touched. `lcm-build` `20261007-110000`, `sw.js` `lcm-20261007-pronoun-sweep`.
+
+## Visible "Send patient link" button on Patient details (her ask 2026-10-07)
+Top of the Patient details page (`presPatientTabBodyHtml`): a teal button "Send patient link · details + medical history" (`data-pf-sendintake`, opens the existing intake-link box pre-filled with the patient). Same link as before, only easier to find. `lcm-build` `20261007-130000`, `sw.js` `lcm-20261007-send-patient-link`.
