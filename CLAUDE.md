@@ -12720,3 +12720,8 @@ Menu path: EVERY DAY → Patient profile → open patient → Plan tab → the g
 
 ## Visible "Send patient link" button on Patient details (her ask 2026-10-07)
 Top of the Patient details page (`presPatientTabBodyHtml`): a teal button "Send patient link · details + medical history" (`data-pf-sendintake`, opens the existing intake-link box pre-filled with the patient). Same link as before, only easier to find. `lcm-build` `20261007-130000`, `sw.js` `lcm-20261007-send-patient-link`.
+
+## Positive-hCG sign on appointments + "Send online form" on Up next (her asks 2026-10-07, "work on earlier request then push live")
+- A patient with `rec.pregTest.result === "positive"` now shows a pink "🌸 5w3d" (week from the test date, `phPregWk`; bare 🌸 with no date) beside the ET+N tag on the Appointments Grid block (`phApptPregTxt` / `.ivf.preg`) and in the appointment popup's meta row (`phApptPregHtml`, `.ph-appt-preg`). Read-only, nothing stored. Not added to the List or Up next card.
+- The Up next card at the top of Appointments has a "✉ Send online form" button (`data-ph-un-send`) that opens the patient-link box for that patient (`phIntakeOpen`).
+- `lcm-build` `20261007-150000`, `sw.js` `lcm-20261007-appt-preg-sign`.
