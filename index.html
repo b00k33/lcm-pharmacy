@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261010-110100">
+<meta name="lcm-build" content="20261010-150000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -7467,6 +7467,12 @@
   #pharmacyPage .ph-btq-act { margin-top: 10px; }
   #pharmacyPage .ph-btq-saved { color: var(--ph-herb); font-weight: 700; font-size: 13px; animation: phPfwPop .4s ease; }
   #pharmacyPage .ph-btq-foot { margin-top: 8px; text-align: right; }
+  #pharmacyPage .ph-btq-mix { margin-top: 10px; display: grid; gap: 6px; }
+  #pharmacyPage .ph-btq-mixrow { display: grid; grid-template-columns: 82px 1fr 44px; gap: 8px; align-items: center; font-size: 13px; }
+  #pharmacyPage .ph-btq-mixrow b { font: 700 10.5px var(--font-disp); letter-spacing: .08em; text-transform: uppercase; color: var(--ph-faint); }
+  #pharmacyPage .ph-btq-mixrow .bar { height: 8px; border-radius: 4px; background: var(--ph-herb-tint); overflow: hidden; }
+  #pharmacyPage .ph-btq-mixrow .bar i { display: block; height: 100%; background: var(--ph-herb-deep); transition: width .4s ease; }
+  #pharmacyPage .ph-btq-mixrow > span:last-child { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
   #pharmacyPage .ph-pfw-q.done { box-shadow: inset 3px 0 0 var(--ph-herb); }
   /* profile first (2026-10-04): Start-here card, one-screen question cards, the
      live Patterns panel, the auto-move bar. See "PROFILE FIRST" in the script. */
@@ -50506,7 +50512,7 @@ or changing anything in Cliniko.
       return `<div class="ph-hx-constit" id="phRenConstitPanel">${part === "tongue" ? (dispName ? phTngHtml(dispName) : phHxConstitTongueHtml(rec, patientKey)) : phHxConstitPulseHtml(rec)}</div>`;
     }
     const bts = phBtList();
-    const opt = (v, cur) => `<option value="${v.id}"${cur === v.id ? " selected" : ""}>${esc(v.name)}${v.cn ? " " + esc(v.cn) : ""}</option>`;
+    const opt = (v, cur) => `<option value="${v.id}"${cur === v.id ? " selected" : ""}>${esc(v.name)}</option>`;
     const picker = (attr, cur, label) => `<label class="ph-gd-field ph-hx-constit-field"><span>${esc(label)}</span>
       <select data-hx-constit="${attr}"><option value="">Not recorded</option>${bts.map(v => opt(v, cur)).join("")}</select>
     </label>`;
@@ -50540,17 +50546,16 @@ or changing anything in Cliniko.
     };
     return `<div class="ph-hx-constit" id="phRenConstitPanel">
       <div class="ph-hx-constit-head">
-        <div class="ph-tmpl-sec"><span>方病人 constitution</span></div>
+        <div class="ph-tmpl-sec"><span>Constitution</span></div>
         <div class="ph-hx-constit-headbtns">
           <button type="button" class="ph-ren-showtypes-btn" data-ren-photo-add="1">📷 Add photo</button>
           ${window.__LCM_SYNC ? `<button type="button" class="ph-ren-showtypes-btn" data-ren-photo-check="1">🔄 Check for photos</button>` : ""}
           <button type="button" class="ph-ren-showtypes-btn${showTypes ? " on" : ""}" data-ren-showtypes-toggle="1" aria-pressed="${showTypes ? "true" : "false"}">${showTypes ? "✓ Showing types" : "Show types"}</button>
         </div>
       </div>
-      <p class="ph-hx-constit-note">Informational only, from the 方病人 Guide — never cross-checked against history above, never changes a dose.</p>
+      <p class="ph-hx-constit-note">Informational only, from the Constitution Guide — never cross-checked against history above, never changes a dose.</p>
       ${phRenCanPaste() ? `<p class="ph-hx-constit-note ph-ren-paste-hint">📋 Paste a photo here with ${phRenPasteKeyLabel()} — or drag one onto this panel.</p>` : ""}
       <div class="ph-hx-constit-row">
-        ${part === "ren" ? "" : picker("bodyConstitutionBt", rec.bodyConstitutionBt || "", "Body constitution")}
         ${picker("personalityBt", rec.personalityBt || "", "Personality / temperament")}
       </div>
       <div class="ph-hx-constit-row">
@@ -62581,28 +62586,40 @@ or changing anything in Cliniko.
     return Object.entries(t).map(([id, n]) => ({ id, n })).sort((a, b) => b.n - a.n);
   }
   function phBtqTop(rec) { const s = phBtqScores(rec); return Object.keys(phBtqAns(rec)).length >= 3 && s.length ? s[0].id : null; }
+  // Shares: each type's points over the total, as whole percentages that add to exactly 100
+  // (largest remainder). Every type with points is kept, so ties count both. Empty until 3 answered.
+  function phBtqShares(rec) {
+    const s = phBtqScores(rec).filter(x => x.n > 0);
+    const total = s.reduce((a, x) => a + x.n, 0);
+    if (Object.keys(phBtqAns(rec)).length < 3 || !total) return [];
+    const raw = s.map(x => ({ id: x.id, n: x.n, exact: x.n * 100 / total }));
+    const out = raw.map(x => ({ id: x.id, n: x.n, pct: Math.floor(x.exact), rem: x.exact - Math.floor(x.exact) }));
+    let left = 100 - out.reduce((a, x) => a + x.pct, 0);
+    out.slice().sort((a, b) => b.rem - a.rem).forEach(x => { if (left > 0) { x.pct += 1; left -= 1; } });
+    return out.map(({ id, n, pct }) => ({ id, n, pct })).sort((a, b) => b.pct - a.pct || b.n - a.n);
+  }
   function phBtqMatch(id) { const j = PH_BTJ[id]; return j ? (phBtList().find(b => String(b.name || "").trim().toLowerCase() === j.n.toLowerCase()) || null) : null; }
   function phBtqHtml(name) {
     const rec = phPatientPeek(name) || {}, ans = phBtqAns(rec), top = phBtqTop(rec), T = top ? PH_BTJ[top] : null;
-    const sc = phBtqScores(rec), done = Object.keys(ans).length;
+    const mix = phBtqShares(rec), done = Object.keys(ans).length;
     const qs = PH_BTQ.map((q, qi) => `${qi === PH_BTQ_GUIZHI_FROM ? `<div class="ph-pfw-qt" style="margin:14px 0 6px">Gui Zhi type</div>` : ""}<div class="ph-pfw-q${ans[qi] === undefined ? "" : " done"}"><div class="ph-pfw-qt">${esc(q[0])}</div><div class="ph-pfw-opts">${q[1].map((o, oi) => `<button type="button" class="ph-pfw-opt${+ans[qi] === oi && ans[qi] !== undefined ? " on" : ""}" data-btq="${qi}:${oi}">${esc(o[0])}</button>`).join("")}</div></div>`).join("");
     let res = `<div class="ph-pfw-note">Answer at least three and the best-fit type appears here. (${done} of ${PH_BTQ.length} answered)</div>`;
     if (T) {
       const m = phBtqMatch(top), cur = rec.bodyConstitutionBt ? phBtById(rec.bodyConstitutionBt) : null;
       const same = m && rec.bodyConstitutionBt === m.id;
-      const btn = !m ? `<div class="ph-pfw-note">“${esc(T.n)}” is not in your 方病人 Guide list yet, so there is nothing to save to. Add it there first.</div>`
+      const btn = !m ? `<div class="ph-pfw-note">“${esc(T.n)}” is not in your Constitution list yet, so there is nothing to save to. Add it in the Guide first.</div>`
         : same ? `<div class="ph-btq-saved">✓ Saved as her body constitution</div>`
         : `<button type="button" class="ph-cc-done" data-btq-save="${esc(top)}">${cur ? `Replace “${esc(cur.name)}” with ${esc(T.n)}` : "Save as her body constitution"}</button>`;
-      res = `<div class="ph-btq-res"><h3>${esc(T.n)} body type <span>${esc(T.hz)}體質 · ${esc(T.en)}</span></h3>
+      res = `<div class="ph-btq-res"><h3>${esc(T.n)} body type <span>${esc(T.en)}</span></h3>
         <div class="ph-btq-line"><b>Looks like</b>${esc(T.arch)}</div>
-        <div class="ph-btq-line"><b>Also leans</b>${sc.slice(1, 3).map(s => esc(PH_BTJ[s.id].n)).join(" · ") || "—"}</div>
+        <div class="ph-btq-mix">${mix.map(x => `<div class="ph-btq-mixrow"><b>${esc(PH_BTJ[x.id].n)}</b><span class="bar"><i style="width:${x.pct}%"></i></span><span>${x.pct}%</span></div>`).join("")}</div>
         <div class="ph-btq-act">${btn}</div></div>`;
     }
     return `<div class="ph-pfw-card ph-btq" data-btq-host="1">
       <div class="ph-pfw-hd"><h3>Body type</h3></div>
       <p class="ph-pfw-why">Huang Huang’s seven types. Quick questions, about them or what you see. One tap each. The best fit feeds Patterns and fills the body constitution.</p>
       ${qs}${res}
-      ${done ? `<div class="ph-btq-foot"><button type="button" class="ph-pfw-link" data-btq-clear="1">Clear the answers</button></div>` : ""}
+      ${done ? `<div class="ph-btq-foot"><button type="button" class="ph-pfw-link" data-btq-clear="1">Redo the questions</button></div>` : ""}
     </div>`;
   }
   function phBtqWrite(name, fn) {
@@ -62612,6 +62629,8 @@ or changing anything in Cliniko.
     if (!rec.btQ.a || typeof rec.btQ.a !== "object") rec.btQ.a = {};
     fn(rec, rec.btQ);
     rec.btQ.at = Date.now();
+    const mix = phBtqShares(rec);
+    if (mix.length) rec.btMix = mix.map(x => ({ id: x.id, pct: x.pct })); else delete rec.btMix;
     if (savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return false; }
     return true;
   }
@@ -62631,7 +62650,7 @@ or changing anything in Cliniko.
     }
     if ((el = T.closest("[data-btq-save]"))) {
       const m = phBtqMatch(el.dataset.btqSave);
-      if (!m) { presSavedToast("That type is not in your 方病人 Guide list yet."); return true; }
+      if (!m) { presSavedToast("That type is not in your Constitution list yet. Add it in the Guide first."); return true; }
       const rec = phPatientRec(name); if (!rec) return true;
       rec.bodyConstitutionBt = m.id;
       if (savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return true; }
