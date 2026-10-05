@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261008-170000">
+<meta name="lcm-build" content="20261008-180000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -61359,10 +61359,11 @@ or changing anything in Cliniko.
   function phPatClues(rec, name) {
     const out = [], seen = new Set();
     if (!rec) return out;
-    const add = (key, src, text, go, when) => {
+    // group = the one answer a clue came from. Several keys from one answer count once per rule (see phPatCompute)
+    const add = (key, src, text, go, when, group) => {
       if (seen.has(key)) return;
       seen.add(key);
-      out.push({ id: key, key, src, text, when: when || "", go: go || null });
+      out.push({ id: key, key, src, text, when: when || "", go: go || null, group: group || null });
     };
     const todayKey = keyOf(TODAY), from = phCycAdd(todayKey, -120);
     // -- the cycle day log (the last ~4 months of signs)
@@ -61529,8 +61530,10 @@ or changing anything in Cliniko.
     const pats = phPatDefs().filter(d => !d.off).map(d => {
       const matched = (d.keys || []).map(k => byKey[k]).filter(Boolean);
       matched.forEach(c => c.feeds.push(d.id));
-      const need = Math.max(1, d.of || 5), ratio = Math.min(1, matched.length / need), of = Math.max(need, matched.length);
-      return { def: d, matched, n: matched.length, of, ratio, level: ratio >= 0.7 ? "likely" : ratio >= 0.4 ? "possible" : "hint",
+      // count distinct answers, not keys: one answer that files two keys in this rule is still one point
+      const n = new Set(matched.map(c => c.group || c.key)).size;
+      const need = Math.max(1, d.of || 5), ratio = Math.min(1, n / need), of = Math.max(need, n);
+      return { def: d, matched, n, of, ratio, level: ratio >= 0.7 ? "likely" : ratio >= 0.4 ? "possible" : "hint",
         agreed: agreed[d.id] || null, dismissed: dismissed[d.id] || null };
     }).filter(p => p.n > 0);
     pats.sort((a, b) => b.ratio - a.ratio || b.n - a.n);
@@ -61667,7 +61670,8 @@ or changing anything in Cliniko.
         phPfwVals(ans, q).forEach(v => {
           const o = q.o.find(x => x[0] === v);
           if (!o) return;
-          o[2].forEach(ck => add(ck, "usual", `${q.s}: ${o[1].toLowerCase()} (usual answers)`, { tab: phPfwTabOf(sid) }));
+          // one answer, one group: "crash" files fatigue + digestive_sx but is still one answer
+          o[2].forEach(ck => add(ck, "usual", `${q.s}: ${o[1].toLowerCase()} (usual answers)`, { tab: phPfwTabOf(sid) }, "", `ans:${sid}:${q.s}:${o[0]}`));
         });
       });
     });
@@ -62768,7 +62772,15 @@ or changing anything in Cliniko.
     const foc = ui.focus ? comp.shown.find(p => p.def.id === ui.focus) : null;
     let k = 0;
     return order.map(src => {
-      const list = comp.clues.filter(c => c.src === src && (c.feeds || []).some(id => shownIds.has(id)));
+      // one answer can file two clue keys with the same wording (e.g. "crashes after meals"
+      // feeds fatigue + digestive_sx): show that once, with the dots of both
+      const merged = new Map();
+      comp.clues.filter(c => c.src === src && (c.feeds || []).some(id => shownIds.has(id))).forEach(c => {
+        const m = merged.get(c.text);
+        if (!m) merged.set(c.text, Object.assign({}, c, { feeds: (c.feeds || []).slice() }));
+        else m.feeds = Array.from(new Set(m.feeds.concat(c.feeds || [])));
+      });
+      const list = Array.from(merged.values());
       if (!list.length) return "";
       const meta = PH_PAT_SRC[src] || PH_PAT_SRC.notes;
       return `<div class="ph-pat-src">${phPatIc(meta[1])}${esc(meta[0])}</div>` + list.map(c => {
