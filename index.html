@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261008-180000">
+<meta name="lcm-build" content="20261008-190000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -55849,7 +55849,7 @@ or changing anything in Cliniko.
       if (pfSet === "meno" || pfSet === "men") sections.push({ id: "usual", label: PH_PFW_SETS[pfSet].title, body: () => `<div data-pfw-slot="1">${presPfwSetHtml(hxName, pfSet)}</div>` });
       // her pain questions (2026-10-05): only when she came in for pain, or the Case is Pain
       const ccPain = phCcOf(hxName), painOn = (ccPain && ccPain.fams.includes("pain")) || (t.caseType === "pain");
-      if (painOn && !presIsFormula(t)) sections.push({ id: "pain", label: "Pain", sub: phPfwSetDone(hxName, "pain") ? "answered" : "", body: () => `<div data-pfw-slot="1">${presPfwSetHtml(hxName, "pain")}</div>` });
+      if (painOn && !presIsFormula(t)) sections.push({ id: "pain", label: "Pain", sub: phPfwSetDone(hxName, "pain") ? "answered" : "", body: () => `<div data-pfw-slot="1">${presPfwSetHtml(hxName, "pain")}</div><div class="ph-pain-where">${phPainMapHtml(hxName, phPmPlanFor(hxName, "pt:" + phPatientKey(hxName)))}</div>` });
       // her stress & sleep questions (2026-10-05): only when she came in for stress and sleep, or the Case is Stress
       const sleepOn = (ccPain && ccPain.fams.includes("sleep")) || (t.caseType === "stress");
       if (sleepOn && !presIsFormula(t)) sections.push({ id: "sleep", label: "Stress & sleep", sub: phPfwSetDone(hxName, "sleep") ? "answered" : "", body: () => `<div data-pfw-slot="1">${presPfwSetHtml(hxName, "sleep")}</div>` });
@@ -61662,6 +61662,11 @@ or changing anything in Cliniko.
     const pr = phPro(name);
     const u = rec.usual || {};
     const logged = phPfPeriodLogged(rec);
+    // her pain map (Pain section): pain in two or more places reads as pain that moves about.
+    // Region-to-pattern links are not built; those are hers to decide.
+    const sites = Array.isArray(rec.painSites) ? rec.painSites.filter(p => p && PH_PAIN_REGIONS.REGIONS[p.r]) : [];
+    const spread = new Set(sites.map(p => p.r)).size;
+    if (spread >= 2) add("pn_move", "usual", `Pain in ${spread} places on her pain map`, { tab: "pain" }, "", "pain-map:spread");
     Object.keys(PH_PFW_SETS).forEach(sid => {
       const ans = u[sid];
       if (!ans || (sid === "period" && logged)) return;
@@ -67445,9 +67450,18 @@ or changing anything in Cliniko.
     </div>`;
   }
   // in-place repaint of just this box (never renderPresPanel)
+  // the Pain section's map is the patient's own, not a plan's: planId "pt:<key>" resolves to a
+  // stand-in plan whose painMap is rec.painSites, so the same drawing and handlers serve both
+  function phPmPlanFor(name, planId) {
+    if (String(planId).startsWith("pt:")) {
+      const rec = phPatientPeek(name) || {};
+      return { id: planId, templateName: "", diagnosis: "", ...(Array.isArray(rec.painSites) ? { painMap: rec.painSites } : {}) };
+    }
+    return phTpFindPlan(name, planId);
+  }
   function phPmRefresh(name, planId, focusSel) {
     const box = document.querySelector(`[data-pm-box="${CSS.escape(planId)}"]`);
-    const plan = phTpFindPlan(name, planId);
+    const plan = phPmPlanFor(name, planId);
     if (!box || !plan) return;
     const tmp = document.createElement("div");
     tmp.innerHTML = phPainMapHtml(name, plan);
@@ -67460,12 +67474,12 @@ or changing anything in Cliniko.
   // every write re-resolves the live plan by id first -- a cloud pull can
   // swap PHARMACY wholesale between two clicks (see phTpCellEditOpen)
   function phPmWrite(name, planId, fn) {
-    const plan = phTpFindPlan(name, planId);
+    const plan = phPmPlanFor(name, planId);
     if (!plan) return false;
     const list = phPmList(name, plan).map(p => ({ r: p.r, s: p.s, c: p.c || 0, ...(p.d ? { d: p.d } : {}) }));
     fn(list);
-    plan.painMap = list;
-    phPatientRec(name);
+    if (String(planId).startsWith("pt:")) phPatientRec(name).painSites = list;
+    else { plan.painMap = list; phPatientRec(name); }
     return savePharmacy() !== false;
   }
   // the detail line on a pain row ("period pain, endometriosis stage 4"): saved as she types,
