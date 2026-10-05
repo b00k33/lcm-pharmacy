@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
-$port = 8866
+$port = if ($env:PORT) { [int]$env:PORT } else { 8866 }
 
 $mimeMap = @{
   ".html" = "text/html; charset=utf-8"
