@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261005-fbr-tally">
+<meta name="lcm-build" content="20261005-fbr-learn">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -7510,6 +7510,12 @@
   #pharmacyPage .ph-tri-fx { background: var(--ph-gold-tint); border-color: var(--ph-gold); }
   #pharmacyPage .ph-tri-fcard { background: #fff; border-radius: 10px; padding: 10px; margin-top: 8px; }
   #pharmacyPage .ph-tri-fs { font-size: 12px; color: var(--ph-soft); margin-top: 6px; }
+  #pharmacyPage .ph-tri-add { display: flex; gap: 6px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+  #pharmacyPage .ph-tri-in { flex: 1 1 120px; min-width: 0; font: 13px var(--font-body); padding: 6px 8px; border: 1px solid var(--ph-line); border-radius: 10px; }
+  #pharmacyPage .ph-tri-pt { width: 52px; font: 13px var(--font-body); padding: 6px 6px; border: 1px solid var(--ph-line); border-radius: 10px; }
+  #pharmacyPage .ph-tri-plab { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ph-gold); margin: 10px 0 4px; }
+  #pharmacyPage .ph-tri-pend { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 10px; margin-bottom: 5px; border-radius: 10px; background: var(--ph-gold-tint); font-size: 13px; }
+  #pharmacyPage .ph-tri-more { margin: 4px 0 6px; }
   @media (max-width: 700px) { #pharmacyPage .ph-tri-cols { grid-template-columns: 1fr; } }
   #pharmacyPage .ph-pfw-q.done { box-shadow: inset 3px 0 0 var(--ph-herb); }
   /* profile first (2026-10-04): Start-here card, one-screen question cards, the
@@ -62247,7 +62253,7 @@ or changing anything in Cliniko.
   // read live from rec.tri. Only the top formula is named; Gui Zhi Tang is the only one built so far.
   function phTriTallyHtml(name) {
     const tri = (phPatientPeek(name) || {}).tri || {};
-    const dS = phTriSum(PH_TRI_DIS, tri.d || {}), pS = phTriSum(PH_TRI_PAT, tri.p || {});
+    const fam = phTriFam(name), dS = phTriSum(phTriAll("d", fam), tri.d || {}), pS = phTriSum(phTriAll("p", fam), tri.p || {});
     if (!dS && !pS) return `<h3>Fang Bing Ren</h3><div class="ph-pfw-mt">Tick the Triangle and the tally lands here.</div>`;
     const bar = (s, c) => `<div class="bar"><i style="width:${Math.round(s * 100 / 56)}%;background:${c}"></i></div>`;
     return `<h3>Fang Bing Ren</h3>
@@ -62845,20 +62851,45 @@ or changing anything in Cliniko.
     ["emotional", "Sensitive emotionally and physically", 3]
   ];
   function phTriSum(list, picks) { return list.reduce((s, r) => s + (picks[r[0]] ? r[2] : 0), 0); }
+  // The symptom library learns. Seed lists above never change; what she adds lives in PHARMACY.triLearn.added
+  // (agreed = on the list for everyone). Tick counts per complaint only ORDER the list -- points come from
+  // the seed or an agreed symptom, never from the counts.
+  const PH_TRI_TOP = 6;               // symptoms shown per column before "Show all"
+  var phTriOpen = new Set();          // patient keys with the full list open (view state, never saved)
+  function phTriFam(name) { const c = phCcOf(name); return c ? phCcMainId(c) : "general"; }
+  function phTriAll(kind, fam) {
+    const seed = kind === "d" ? PH_TRI_DIS : PH_TRI_PAT, L = PHARMACY.triLearn || {}, cnt = L.counts || {};
+    const extra = (L.added || []).filter(a => a.kind === kind && a.agreed).map(a => ["a_" + a.id, a.label, a.pts]);
+    return seed.concat(extra).map((r, i) => ({ r, i, n: cnt[fam + "|" + kind + "|" + r[0]] || 0 }))
+      .sort((a, b) => b.n - a.n || a.i - b.i).map(x => x.r);
+  }
+  function phTriCount(fam, kind, key) {
+    const L = PHARMACY.triLearn || (PHARMACY.triLearn = { counts: {}, added: [] });
+    L.counts = L.counts || {};
+    const k = fam + "|" + kind + "|" + key; L.counts[k] = (L.counts[k] || 0) + 1;
+  }
   function phTriHtml(name) {
     const rec = phPatientPeek(name) || {}, tri = rec.tri || {}, d = tri.d || {}, p = tri.p || {};
-    const dS = phTriSum(PH_TRI_DIS, d), pS = phTriSum(PH_TRI_PAT, p);
+    const L = PHARMACY.triLearn || { added: [] }, fam = phTriFam(name), open = phTriOpen.has(phPatientKey(name));
+    const dS = phTriSum(phTriAll("d", fam), d), pS = phTriSum(phTriAll("p", fam), p);
     const row = (r, kind, picks) => `<button type="button" class="ph-tri-row${picks[r[0]] ? " on" : ""}" aria-pressed="${picks[r[0]] ? "true" : "false"}" data-tri="${kind}:${r[0]}"><span>${esc(r[1])}</span><b>+${r[2]}</b></button>`;
     const bar = s => `<div class="ph-tri-bar"><i style="width:${Math.round(s * 100 / 56)}%"></i></div>`;
+    const col = (kind, picks) => {
+      const all = phTriAll(kind, fam), shown = open ? all : all.slice(0, PH_TRI_TOP);
+      const pend = (L.added || []).filter(a => a.kind === kind && !a.agreed);
+      const pendRow = a => `<div class="ph-tri-pend"><span>${esc(a.label)} <b>+${a.pts}</b></span><button type="button" class="ph-pfw-link" data-tri-agree="${esc(a.id)}">Agree</button></div>`;
+      const addRow = `<div class="ph-tri-add"><input class="ph-tri-in" type="text" maxlength="60" placeholder="Add a symptom…" aria-label="Add a symptom"><input class="ph-tri-pt" type="number" min="1" max="9" value="2" aria-label="Points"><button type="button" class="ph-pfw-link" data-tri-add="${kind}">Add</button></div>`;
+      return `${shown.map(r => row(r, kind, picks)).join("")}${all.length > PH_TRI_TOP ? `<button type="button" class="ph-pfw-link ph-tri-more" data-tri-more="1">${open ? "Show fewer" : `Show all ${all.length} ›`}</button>` : ""}${pend.length ? `<div class="ph-tri-plab">To check</div>${pend.map(pendRow).join("")}` : ""}${addRow}`;
+    };
     return `<div class="ph-pfw-card ph-tri" data-tri-host="1">
       <div class="ph-pfw-hd"><h3>Triangle</h3></div>
       <p class="ph-pfw-why">Three scores that work together. Tick what applies. Each score is worked out on its own.</p>
       <div class="ph-tri-cols">
-        <section class="ph-tri-col"><h4>Disease · what is wrong now</h4><p>Your ticks add points to the formula.</p>${PH_TRI_DIS.map(r => row(r, "d", d)).join("")}</section>
+        <section class="ph-tri-col"><h4>Disease · what is wrong now</h4><p>Your ticks add points to the formula.</p>${col("d", d)}</section>
         <section class="ph-tri-col ph-tri-fx"><h4>Formula · which plan fits</h4><p>Ranked by the Disease ticks.</p>
           <div class="ph-tri-fcard"><div class="ph-tri-ft"><span>Gui Zhi Tang</span><span>${dS} of 56</span></div>${bar(dS)}<div class="ph-tri-fs">${dS ? "Top match so far" : "No Disease ticks yet"}</div></div>
         </section>
-        <section class="ph-tri-col"><h4>Patient · the person's build</h4><p>Your ticks show the Gui Zhi type. This does not pick the formula.</p>${PH_TRI_PAT.map(r => row(r, "p", p)).join("")}
+        <section class="ph-tri-col"><h4>Patient · the person's build</h4><p>Your ticks show the Gui Zhi type. This does not pick the formula.</p>${col("p", p)}
           <div class="ph-tri-ft"><span>Gui Zhi type</span><span>${pS} of 56</span></div>${bar(pS)}</section>
       </div>
       ${dS + pS ? `<div class="ph-btq-foot"><button type="button" class="ph-pfw-link" data-tri-clear="1">Clear the triangle</button></div>` : ""}
@@ -62884,9 +62915,28 @@ or changing anything in Cliniko.
     if (!T || !T.closest || !T.closest("[data-tri-host]")) return false;
     const name = phPfwName(); if (!name) return true;
     if ((el = T.closest("[data-tri]"))) {
-      const [kind, key] = el.dataset.tri.split(":");
-      if (phTriWrite(name, t => { const m = kind === "d" ? t.d : t.p; m[key] = !m[key]; })) phTriRefresh(name);
+      const [kind, key] = el.dataset.tri.split(":"), fam = phTriFam(name);
+      if (phTriWrite(name, t => { const m = kind === "d" ? t.d : t.p; m[key] = !m[key]; if (m[key]) phTriCount(fam, kind, key); })) phTriRefresh(name);
       return true;
+    }
+    if ((el = T.closest("[data-tri-more]"))) {
+      const k = phPatientKey(name); if (phTriOpen.has(k)) phTriOpen.delete(k); else phTriOpen.add(k);
+      phTriRefresh(name); return true;
+    }
+    if ((el = T.closest("[data-tri-add]"))) {
+      const col = el.closest(".ph-tri-col"), label = ((col && col.querySelector(".ph-tri-in")) || {}).value || "";
+      if (!label.trim()) { presSavedToast("Type the symptom first."); return true; }
+      const pts = Math.min(9, Math.max(1, Math.round(Number(((col && col.querySelector(".ph-tri-pt")) || {}).value) || 2)));
+      const L = PHARMACY.triLearn || (PHARMACY.triLearn = { counts: {}, added: [] });
+      L.added = L.added || [];
+      L.added.push({ id: Date.now().toString(36), kind: el.dataset.triAdd, label: label.trim(), pts, agreed: false, fam: phTriFam(name) });
+      if (savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return true; }
+      phTriRefresh(name); return true;
+    }
+    if ((el = T.closest("[data-tri-agree]"))) {
+      const a = ((PHARMACY.triLearn || {}).added || []).find(x => x.id === el.dataset.triAgree);
+      if (a) { a.agreed = true; if (savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return true; } }
+      phTriRefresh(name); return true;
     }
     if (T.closest("[data-tri-clear]")) { if (phTriWrite(name, t => { t.d = {}; t.p = {}; })) phTriRefresh(name); return true; }
     return false;
