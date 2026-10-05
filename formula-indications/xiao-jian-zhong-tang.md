@@ -91,4 +91,4 @@ The formula is warm, sweet and tonifying, for deficiency. It is poorly suited to
 | Prominent damp/phlegm accumulation | The sweet, tonifying nature may be inappropriate when substantial accumulation is present. |
 | Significant digestive stagnation | Heavy fullness, food accumulation, thick coating and strong pulse point away from the formula. |
 | Strong constitution with excess abdominal presentation | Especially when the pain occurs with a robust rather than deficient presentation. |
-| Acute severe abdominal pain of unclear cause | This requires medical assessment rather than *(her note ends here; the paste was cut off. Please complete it.)* |
+| Acute severe abdominal pain of unclear cause | This requires medical assessment rather than empiric use of a deficiency formula. |
