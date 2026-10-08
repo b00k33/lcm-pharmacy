@@ -7505,16 +7505,22 @@
   #pharmacyPage .ph-tri-row.on { background: var(--ph-herb-tint); border-color: var(--ph-herb); }
   #pharmacyPage .ph-tri-row.on.auto { border-style: dashed; }
   #pharmacyPage .ph-tri-row.on.auto::after { content: "already known"; font: 600 var(--fs-11) var(--font-body); color: var(--ph-herb); opacity: .7; margin-left: 4px; }
+  /* her ask (2026-10-08, "give option to say no"): explicit-false now looks different from
+     never-asked -- muted, crossed out, an x instead of a point badge. */
+  #pharmacyPage .ph-tri-row.no { background: var(--ph-paper); border-color: var(--ph-line); color: var(--ph-faint); }
+  #pharmacyPage .ph-tri-row.no span { text-decoration: line-through; }
+  #pharmacyPage .ph-tri-row.no b { color: var(--ph-faint); }
   #pharmacyPage .ph-tri-row b { font-size: var(--fs-12); color: var(--ph-herb); white-space: nowrap; }
-  #pharmacyPage .ph-tri-ft { display: flex; justify-content: space-between; gap: 8px; font: 700 var(--fs-14) var(--font-body); color: var(--ph-herb-deep); margin-top: 10px; }
+  #pharmacyPage .ph-tri-ft { display: flex; justify-content: space-between; align-items: center; gap: 8px; font: 700 var(--fs-14) var(--font-body); color: var(--ph-herb-deep); margin-top: 10px; }
   #pharmacyPage .ph-tri-bar { height: 8px; border-radius: 8px; background: var(--ph-herb-tint); overflow: hidden; margin-top: 6px; }
   #pharmacyPage .ph-tri-bar i { display: block; height: 100%; border-radius: 8px; background: var(--ph-herb); transition: width .4s ease; }
   #pharmacyPage .ph-tri-fx { background: var(--ph-gold-tint); border-color: var(--ph-gold); }
   #pharmacyPage .ph-tri-fcard { background: #fff; border-radius: 10px; padding: 10px; margin-top: 8px; border: 1px solid var(--ph-line); }
   #pharmacyPage .ph-tri-fcard:first-child { margin-top: 0; }
   #pharmacyPage .ph-tri-fcard.lead { border-color: var(--ph-gold); box-shadow: 0 0 0 1px var(--ph-gold) inset; }
-  #pharmacyPage .ph-tri-ft-ren { margin-top: 8px; font: 700 var(--fs-12) var(--font-body); color: var(--ph-soft); }
-  #pharmacyPage .ph-tri-fcore { font-size: var(--fs-11); color: var(--ph-soft); margin-top: 6px; font-style: italic; }
+  /* her ask (2026-10-08): one colour-coded chip per herb instead of plain text, so the family
+     reads by colour at a glance -- values in PH_FBR_HERB_COLOUR. */
+  #pharmacyPage .ph-tri-herb-chip { display: inline-flex; border-radius: 999px; padding: 3px 11px; font: 700 var(--fs-13) var(--font-body); line-height: 1.3; }
   #pharmacyPage .ph-tri-col-sub { display: block; margin-top: 2px; font: 600 var(--fs-11) var(--font-body); letter-spacing: normal; text-transform: none; color: var(--ph-soft); }
   #pharmacyPage .ph-tri-fs { font-size: var(--fs-12); color: var(--ph-soft); margin-top: 6px; }
   #pharmacyPage .ph-tri-add { display: flex; gap: 6px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
@@ -63433,6 +63439,22 @@ or changing anything in Cliniko.
   // The ceiling is the sum of POSITIVE weights only, so a future disqualifier (negative weight)
   // narrows who scores well without raising the ceiling anyone else can reach.
   function phFbrMax(weights) { return Object.values(weights).reduce((s, n) => s + (n > 0 ? n : 0), 0); }
+  // Her colour-per-herb ask (2026-10-08): Ban Xia/Chai Hu/Fu Zi/Huang Lian/Shi Gao/Da Huang/
+  // Gui Zhi were given explicitly; Ma Huang and Huang Qi weren't named, so these two are MY pick
+  // (tan for Ma Huang's dried stem, pale gold for Huang Qi's root slices) -- disclosed, hers to
+  // correct. `fg` is the readable text colour for that chip; Shi Gao's white chip gets a border
+  // since white-on-white would otherwise vanish.
+  const PH_FBR_HERB_COLOUR = {
+    guizhi: { bg: "#D3DEE2", fg: "#141F23" },
+    chaihu: { bg: "#4F8B5B", fg: "#FFFFFF" },
+    mahuang: { bg: "#9C7E4F", fg: "#FFFFFF" },
+    dahuang: { bg: "#B4453A", fg: "#FFFFFF" },
+    fuzi: { bg: "#8A9498", fg: "#FFFFFF" },
+    banxia: { bg: "#D9A62E", fg: "#141F23" },
+    huangqi: { bg: "#DCC883", fg: "#141F23" },
+    shigao: { bg: "#FFFFFF", fg: "#141F23", border: "#C7D0D3" },
+    huanglian: { bg: "#C9732E", fg: "#FFFFFF" }
+  };
   // 2026-10-08 fixes: the Disease row labelled "Sensitive to cold" was stored under the key
   // `low_fever` (this engine's usual name for a recurring/unexplained fever -- a copy-paste slip,
   // not a deliberate choice) and a second row laid "Body aches or joint pain" under `bt_guizhi`
@@ -63540,8 +63562,12 @@ or changing anything in Cliniko.
     // the ranked list below for how each one actually reads this same tap.
     const lead = hasTicks ? top.f : PH_FORMULAS[PH_FBR_ACTIVE];
     const archName = (PH_BTJ[lead.family] && PH_BTJ[lead.family].n) || lead.name;
-    const row = (r, kind, picks, eff, weights) => { const on = eff[r[0]], auto = picks[r[0]] === undefined && on;
-      return `<button type="button" class="ph-tri-row${on ? " on" : ""}${auto ? " auto" : ""}" aria-pressed="${on ? "true" : "false"}" data-tri="${kind}:${r[0]}"${auto ? ` title="${esc(phTriAutoWhy(rec, name, kind, r[0], today.prevD))}"` : ""}><span>${esc(r[1])}</span><b>+${phFbrPts(weights, r)}</b></button>`; };
+    // Her ask (2026-10-08, "give option to say no"): a tap already cycled true/false/true... but
+    // explicit-false (a real "No, ruled out") rendered identically to "never asked" -- no visible
+    // difference. Now a `.no` row shows a crossed-out "x" instead of the point badge, so ruling
+    // something out is something she can actually SEE, not just something the data already held.
+    const row = (r, kind, picks, eff, weights) => { const on = eff[r[0]], no = picks[r[0]] === false, auto = picks[r[0]] === undefined && on;
+      return `<button type="button" class="ph-tri-row${on ? " on" : no ? " no" : ""}${auto ? " auto" : ""}" aria-pressed="${on ? "true" : "false"}" data-tri="${kind}:${r[0]}"${auto ? ` title="${esc(phTriAutoWhy(rec, name, kind, r[0], today.prevD))}"` : ""}><span>${esc(r[1])}</span><b>${no ? "✕" : "+" + phFbrPts(weights, r)}</b></button>`; };
     const bar = (s, max) => `<div class="ph-tri-bar"><i style="width:${Math.round(s * 100 / max)}%"></i></div>`;
     const col = (kind, picks, eff, weights) => {
       const all = phTriAll(kind, fam), shown = open ? all : all.slice(0, PH_TRI_TOP);
@@ -63550,24 +63576,29 @@ or changing anything in Cliniko.
       const addRow = `<div class="ph-tri-add"><input class="ph-tri-in" type="text" maxlength="60" placeholder="Add a symptom…" aria-label="Add a symptom"><input class="ph-tri-pt" type="number" min="1" max="9" value="2" aria-label="Points"><button type="button" class="ph-pfw-link" data-tri-add="${kind}">Add</button></div>`;
       return `${shown.map(r => row(r, kind, picks, eff, weights)).join("")}${all.length > PH_TRI_TOP ? `<button type="button" class="ph-pfw-link ph-tri-more" data-tri-more="1">${open ? "Show fewer" : `Show all ${all.length} ›`}</button>` : ""}${pend.length ? `<div class="ph-tri-plab">To check</div>${pend.map(pendRow).join("")}` : ""}${addRow}`;
     };
-    const fCard = (r, i) => `<div class="ph-tri-fcard${i === 0 && hasTicks ? " lead" : ""}">
-        <div class="ph-tri-ft"><span>${esc(r.f.name)}</span><span>${r.dS} of ${r.maxD}</span></div>${bar(r.dS, r.maxD)}
-        ${r.f.core ? `<div class="ph-tri-fcore">${esc(r.f.core)}</div>` : ""}
-        <div class="ph-tri-ft ph-tri-ft-ren"><span>${esc((PH_BTJ[r.f.family] && PH_BTJ[r.f.family].n) || r.f.name)} type</span><span>${r.pS} of ${r.maxP}</span></div>${bar(r.pS, r.maxP)}
-      </div>`;
+    // Her ask (2026-10-08): one row per family, not a Bing sub-row + a "<name> type" Ren
+    // sub-row underneath it -- the Bing/Ren split still DRIVES the ranking (phFbrRank sorts by
+    // dS then pS), it just no longer needs to be shown as two separately-labelled lines to read.
+    // Combined into one total/one bar; the italic `core` caption is dropped from this card too
+    // (still exists on PH_FORMULAS, just not shown here); the herb name is now a colour chip
+    // (PH_FBR_HERB_COLOUR) instead of plain text, so the family reads by colour at a glance.
+    const fCard = (r, i) => { const c = PH_FBR_HERB_COLOUR[r.id] || { bg: "#D3DEE2", fg: "#141F23" }, total = r.dS + r.pS, totalMax = r.maxD + r.maxP;
+      return `<div class="ph-tri-fcard${i === 0 && hasTicks ? " lead" : ""}">
+        <div class="ph-tri-ft"><span class="ph-tri-herb-chip" style="background:${c.bg};color:${c.fg};${c.border ? `border:1px solid ${c.border};` : ""}">${esc(r.f.name)}</span><span>${total} of ${totalMax}</span></div>${bar(total, totalMax)}
+      </div>`; };
     const qaOpen = phQaOpen.has(phPatientKey(name));
     return `<div class="ph-pfw-card ph-tri" data-tri-host="1">
       <div class="ph-pfw-hd"><h3>Triangle</h3></div>
       ${phCsHtml(name)}
       <div class="ph-tri-cols">
-        <section class="ph-tri-col"><h4>Disease · what is wrong now <span class="ph-tri-col-sub">points toward ${esc(lead.name)}</span></h4>${col("d", d, effD, lead.bing)}</section>
+        <section class="ph-tri-col"><h4>Bing · what is wrong now <span class="ph-tri-col-sub">points toward ${esc(lead.name)}</span></h4>${col("d", d, effD, lead.bing)}</section>
         <section class="ph-tri-col ph-tri-fx"><h4>Constitution · which family fits</h4>
           ${ranked.map(fCard).join("")}
           ${!hasTicks ? `<div class="ph-tri-fs">No ticks yet — every family starts level</div>` : ""}
           <button type="button" class="ph-pfw-link" data-qa-toggle="1">${qaOpen ? "Hide quick assess" : "Quick assess ▸"}</button>
           ${qaOpen ? phQaHtml(name) : ""}
         </section>
-        <section class="ph-tri-col"><h4>Patient · the person's build <span class="ph-tri-col-sub">toward ${esc(archName)}</span></h4>${col("p", p, effP, lead.ren)}</section>
+        <section class="ph-tri-col"><h4>Ren · the person's build <span class="ph-tri-col-sub">toward ${esc(archName)}</span></h4>${col("p", p, effP, lead.ren)}</section>
       </div>
       ${hasTicks ? `<div class="ph-btq-foot"><button type="button" class="ph-pfw-link" data-tri-clear="1">Clear the triangle</button></div>` : ""}
     </div>`;
@@ -63661,8 +63692,8 @@ or changing anything in Cliniko.
       const pool = kind === "d" ? PH_BING_SIGNS : PH_REN_SIGNS;
       return keys.map(key => {
         const r = pool.find(x => x[0] === key); if (!r) return "";
-        const on = eff[key], auto = picks[key] === undefined && on;
-        return `<button type="button" class="ph-tri-row${on ? " on" : ""}${auto ? " auto" : ""}" aria-pressed="${on ? "true" : "false"}" data-tri-inline="${scope}:${kind}:${key}"${auto ? ` title="${esc(phTriAutoWhy(rec, name, kind, key, prevD))}"` : ""}><span>${esc(r[1])}</span><b>+${phFbrPts(weights, r)}</b></button>`;
+        const on = eff[key], no = picks[key] === false, auto = picks[key] === undefined && on;
+        return `<button type="button" class="ph-tri-row${on ? " on" : no ? " no" : ""}${auto ? " auto" : ""}" aria-pressed="${on ? "true" : "false"}" data-tri-inline="${scope}:${kind}:${key}"${auto ? ` title="${esc(phTriAutoWhy(rec, name, kind, key, prevD))}"` : ""}><span>${esc(r[1])}</span><b>${no ? "✕" : "+" + phFbrPts(weights, r)}</b></button>`;
       }).join("");
     };
     const body = `${rowsFor("d", spec.d)}${rowsFor("p", spec.p)}`;
