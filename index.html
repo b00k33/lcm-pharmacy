@@ -7510,7 +7510,12 @@
   #pharmacyPage .ph-tri-bar { height: 8px; border-radius: 8px; background: var(--ph-herb-tint); overflow: hidden; margin-top: 6px; }
   #pharmacyPage .ph-tri-bar i { display: block; height: 100%; border-radius: 8px; background: var(--ph-herb); transition: width .4s ease; }
   #pharmacyPage .ph-tri-fx { background: var(--ph-gold-tint); border-color: var(--ph-gold); }
-  #pharmacyPage .ph-tri-fcard { background: #fff; border-radius: 10px; padding: 10px; margin-top: 8px; }
+  #pharmacyPage .ph-tri-fcard { background: #fff; border-radius: 10px; padding: 10px; margin-top: 8px; border: 1px solid var(--ph-line); }
+  #pharmacyPage .ph-tri-fcard:first-child { margin-top: 0; }
+  #pharmacyPage .ph-tri-fcard.lead { border-color: var(--ph-gold); box-shadow: 0 0 0 1px var(--ph-gold) inset; }
+  #pharmacyPage .ph-tri-ft-ren { margin-top: 8px; font: 700 var(--fs-12) var(--font-body); color: var(--ph-soft); }
+  #pharmacyPage .ph-tri-fcore { font-size: var(--fs-11); color: var(--ph-soft); margin-top: 6px; font-style: italic; }
+  #pharmacyPage .ph-tri-col-sub { display: block; margin-top: 2px; font: 600 var(--fs-11) var(--font-body); letter-spacing: normal; text-transform: none; color: var(--ph-soft); }
   #pharmacyPage .ph-tri-fs { font-size: var(--fs-12); color: var(--ph-soft); margin-top: 6px; }
   #pharmacyPage .ph-tri-add { display: flex; gap: 6px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
   #pharmacyPage .ph-tri-in { flex: 1 1 120px; min-width: 0; font: var(--fs-13) var(--font-body); padding: 6px 8px; border: 1px solid var(--ph-line); border-radius: 10px; }
@@ -62547,17 +62552,17 @@ or changing anything in Cliniko.
       ${phPfwZhengTiZiHtml(top, name)}
       ${comp.shown.length ? `<button type="button" class="ph-pfw-link" data-flow-prof="patterns">Open Patterns ›</button>` : ""}`;
   }
-  // Fang Bing Ren tally for the side panel: Bing (Disease ticks) and Ren (Patient ticks), each out of 56,
-  // read live from rec.tri. Only the top formula is named; Gui Zhi Tang is the only one built so far.
+  // Fang Bing Ren tally for the side panel: Bing (Disease ticks) and Ren (Patient ticks) toward
+  // whichever formula currently leads, read live from rec.tri.
   function phTriTallyHtml(name) {
-    const rec = phPatientPeek(name) || {}, today = phTriToday(rec), f = PH_FORMULAS[PH_FBR_ACTIVE];
-    const fam = phTriFam(name), maxD = phFbrMax(f.bing), maxP = phFbrMax(f.ren);
-    const dS = phTriSum(f.bing, phTriAll("d", fam), phTriEffective(rec, name, "d", today.d, today.prevD)), pS = phTriPatientTotal(rec, name, fam, today.p);
+    const rec = phPatientPeek(name) || {}, today = phTriToday(rec), fam = phTriFam(name);
+    const effD = phTriEffective(rec, name, "d", today.d, today.prevD), effP = phTriEffective(rec, name, "p", today.p);
+    const ranked = phFbrRank(rec, fam, effD, effP), top = ranked[0];
     const bar = (s, max, c) => `<div class="bar"><i style="width:${Math.round(s * 100 / max)}%;background:${c}"></i></div>`;
     return `<h3>Fang Bing Ren</h3>
-      <div class="ph-pfw-pat"><span class="n">Bing · ${esc(f.name)}</span><span class="l">${dS} of ${maxD}</span>${bar(dS, maxD, "var(--ph-herb)")}</div>
-      <div class="ph-pfw-pat"><span class="n">Ren · supports</span><span class="l">${pS} of ${maxP}</span>${bar(pS, maxP, "var(--ph-herb-card)")}</div>
-      <div class="ph-pfw-mt">${dS ? `Fang: ${esc(f.name)}, the top formula so far.` : "Fang: waiting on Disease ticks."}</div>`;
+      <div class="ph-pfw-pat"><span class="n">Bing · ${esc(top.f.name)}</span><span class="l">${top.dS} of ${top.maxD}</span>${bar(top.dS, top.maxD, "var(--ph-herb)")}</div>
+      <div class="ph-pfw-pat"><span class="n">Ren · supports</span><span class="l">${top.pS} of ${top.maxP}</span>${bar(top.pS, top.maxP, "var(--ph-herb-card)")}</div>
+      <div class="ph-pfw-mt">${top.dS ? `Fang: ${esc(top.f.name)}, the top formula so far.` : "Fang: waiting on Disease ticks."}</div>`;
   }
   // Herb family = the arrow, formula = the target (her words, verbatim).
   // Approved mock "herb-family-arrow": one herb-family box, a dashed arrow
@@ -63009,8 +63014,8 @@ or changing anything in Cliniko.
     // same things Triangle's Patient column asks, word for word, scored separately and never
     // reconciled. Triangle (Fang Bing Ren tab) is the one place Gui Zhi constitution is scored
     // now; these 5 general questions above feed it too -- see phBtqGuizhiPts, read by
-    // phTriPatientTotal -- instead of computing their own separate "top match" number for Gui
-    // Zhi specifically. They still decide the other 6 archetypes on their own, as before.
+    // phFbrRank (Gui Zhi Tang only) -- instead of computing their own separate "top match" number
+    // for Gui Zhi specifically. They still decide the other 6 archetypes on their own, as before.
   ];
   function phBtqAns(rec) { const a = rec && rec.btQ && rec.btQ.a; return a && typeof a === "object" ? a : {}; }
   function phBtqScores(rec) {
@@ -63117,7 +63122,18 @@ or changing anything in Cliniko.
     ["feverish", "Feels feverish"], ["cold_feel", "Sensitive to cold"], ["pulsate", "Pulsing in the belly"],
     ["upsurge", "Feels a rush moving upward"], ["palp", "Palpitations"], ["insomnia_dream", "Poor sleep or vivid dreams"],
     ["startle", "Startles easily"], ["tight", "Tight or spasming muscles"], ["joint_ache", "Body aches or joint pain"],
-    ["headache", "Headache"], ["dizzy", "Dizziness"], ["flush", "Flushed or red face"], ["abd_disc", "Belly pain"], ["diarrhea", "Loose stools"]
+    ["headache", "Headache"], ["dizzy", "Dizziness"], ["flush", "Flushed or red face"], ["abd_disc", "Belly pain"], ["diarrhea", "Loose stools"],
+    // Chai Hu family (her passage, 2026-10-08). "Shao Yang / Bupleurum-type presentation" (her
+    // #1 Bing item) isn't a discrete tappable sign -- it's the gestalt diagnosis itself -- so it's
+    // the formula's `core` caption below, not a row here. "Neck and shoulder pain/spasm" reuses
+    // `tight` and "episodic insomnia" reuses `insomnia_dream`: same underlying fact this pool
+    // already has, just her wording for it in this family's context.
+    ["chest_hypo_full", "Chest and hypochondriac pain or fullness"], ["cyclical_illness", "Illness comes and goes cyclically or episodically"],
+    ["alt_fever_chill", "Alternating fever and chills"], ["biliary_colic", "Biliary colic"], ["intercostal_neuralgia", "Intercostal neuralgia"],
+    ["breast_disten_now", "Breast distention, pain, or nodules"], ["menstrual_irreg_now", "Irregular menstruation"],
+    ["pms_breast_now", "Premenstrual chest or breast distention"], ["dysmenorrhea_stasis", "Painful periods with dark clots"],
+    ["mood_stress", "Mood-related or stress-associated symptoms"], ["lateral_pain", "Lateral-body pain or unusual sensations"],
+    ["numbness", "Numbness, especially coming and going"], ["epilepsy_ep", "Epilepsy, especially an alternating/episodic pattern"]
   ];
   const PH_REN_SIGNS = [
     ["thin_body", "Thin, delicate build"], ["fine_skin", "Fine-textured, fair skin"], ["moist_flesh", "Moist, firm flesh"],
@@ -63126,19 +63142,48 @@ or changing anything in Cliniko.
     ["white_coat", "Thin white tongue coating"], ["sweats_easy", "Sweats easily"], ["sweaty_palms", "Sweaty palms or soles"],
     ["cold_sens", "Sensitive to cold"], ["colds", "Catches colds often"], ["palp_tend", "Tends to palpitations"],
     ["shallow_sleep", "Shallow or dream-filled sleep"], ["belly_pain_tend", "Tends to belly pain"], ["spasms", "Muscle spasms"],
-    ["emotional", "Sensitive emotionally and physically"]
+    ["emotional", "Sensitive emotionally and physically"],
+    // Chai Hu family (her passage, 2026-10-08). Her three chest/hypochondriac rows (fullness,
+    // tenderness on palpation, distending pain) all scored 5 -- the same tendency said three
+    // ways -- merged into one row. Her two lower-abdominal/hip rows (3 and 4) merged into one at
+    // the higher weight, for the same reason. "Shoulder/neck spasms" reuses `spasms` above.
+    ["chest_hypo_tend", "Tends to chest/hypochondriac fullness, tenderness, or distending pain"],
+    ["alt_fever_chill_tend", "Tends to alternating fever and chills"], ["episodic_tend", "Symptoms come and go episodically or cyclically"],
+    ["temp_sensitive", "Sensitive to temperature changes"], ["lateral_zone", "Symptoms in the lateral body (the \"Bupleurum zone\")"],
+    ["neck_shoulder_ache_tend", "Tends to neck and shoulder pain or ache"], ["breast_disten_tend", "Tends to breast distention or pain"],
+    ["breast_nodule_tend", "Tends to breast nodules"], ["hip_lowabd_pain_tend", "Tends to hip or lower-abdominal distention or pain"],
+    ["groin_tend", "Tends to groin discomfort or lumps"], ["irritable_mood", "Mood swings or irritability"],
+    ["appetite_emotional", "Appetite changes with emotion"], ["cold_extrem", "Cold hands or feet"],
+    ["menstrual_irreg_tend", "Tends to irregular periods"], ["pms_breast_tend", "Tends to premenstrual chest or breast distention"],
+    ["pms_irritable_tend", "Tends to premenstrual irritability"], ["menstrual_pain_tend", "Tends to period pain"],
+    ["dark_clots_tend", "Tends to dark menstrual blood or clots"], ["tongue_purple", "Dark or purple tongue"],
+    ["tongue_purple_spots", "Purple spots on the tongue"], ["complexion_dark_green", "Dark yellow or greenish complexion"],
+    ["dry_skin", "Dry skin"], ["pulse_wiry_thin", "Wiry or thin pulse"]
   ];
   const PH_FORMULAS = {
     guizhitang: {
       name: "Gui Zhi Tang", family: "guizhi",
       bing: { spont_sweat: 5, wind_averse: 5, p_float: 5, feverish: 4, cold_feel: 4, pulsate: 4, upsurge: 4, palp: 3, insomnia_dream: 3, startle: 3, tight: 3, joint_ache: 3, headache: 2, dizzy: 2, flush: 2, abd_disc: 2, diarrhea: 2 },
       ren: { thin_body: 3, fine_skin: 3, moist_flesh: 3, flat_belly: 2, tight_belly: 3, bright_eyes: 2, lips: 3, tongue_dusky: 3, tongue_tender: 4, white_coat: 3, sweats_easy: 4, sweaty_palms: 3, cold_sens: 4, colds: 3, palp_tend: 3, shallow_sleep: 3, belly_pain_tend: 2, spasms: 2, emotional: 3 }
+    },
+    // Her passage, 2026-10-08. Named Xiao Chai Hu Tang (Minor Bupleurum Decoction) -- not stated
+    // in her passage, but the single most standard Jing Fang match for "Shao Yang... alternating
+    // fever and chills... chest and hypochondriac fullness" (the textbook indication). Flag this
+    // name for her to confirm/correct if she meant a different Chai Hu formula (e.g. Si Ni San).
+    xiaochaihutang: {
+      name: "Xiao Chai Hu Tang", family: "chaihu",
+      core: "Chest/hypochondriac constraint + alternating/episodic symptoms + Bupleurum-zone signs. Chest and hypochondriac fullness is the single most important sign; the alternating hot/cold pattern helps but doesn't have to be present.",
+      bing: { chest_hypo_full: 5, cyclical_illness: 4, alt_fever_chill: 4, biliary_colic: 4, intercostal_neuralgia: 4, breast_disten_now: 4, menstrual_irreg_now: 4, pms_breast_now: 4, dysmenorrhea_stasis: 4, mood_stress: 3, tight: 3, lateral_pain: 3, insomnia_dream: 3, numbness: 3, epilepsy_ep: 2 },
+      ren: { chest_hypo_tend: 5, alt_fever_chill_tend: 4, episodic_tend: 4, temp_sensitive: 4, lateral_zone: 4, neck_shoulder_ache_tend: 4, spasms: 3, breast_disten_tend: 4, breast_nodule_tend: 4, hip_lowabd_pain_tend: 4, groin_tend: 3, irritable_mood: 4, appetite_emotional: 3, cold_extrem: 4, menstrual_irreg_tend: 4, pms_breast_tend: 4, pms_irritable_tend: 4, menstrual_pain_tend: 4, dark_clots_tend: 4, tongue_purple: 4, tongue_purple_spots: 4, complexion_dark_green: 3, dry_skin: 3, pulse_wiry_thin: 3 }
     }
   };
   const PH_FBR_ACTIVE = "guizhitang";
   // A pool sign's weight for this formula, falling back to a learned/added sign's own point
-  // value (those aren't in any weight table -- she set their points herself when she added them).
-  function phFbrPts(weights, r) { return weights[r[0]] != null ? weights[r[0]] : r[2]; }
+  // value (those aren't in any weight table -- she set their points herself when she added them),
+  // and to 0 for a perfectly normal shared-pool sign this particular formula just doesn't use --
+  // expected now that formulas share one pool: a Chai Hu sign is worth nothing toward Gui Zhi
+  // Tang, not "unknown". Without this, that case summed in as NaN (undefined + number).
+  function phFbrPts(weights, r) { if (weights[r[0]] != null) return weights[r[0]]; return r[2] != null ? r[2] : 0; }
   // The ceiling is the sum of POSITIVE weights only, so a future disqualifier (negative weight)
   // narrows who scores well without raising the ceiling anyone else can reach.
   function phFbrMax(weights) { return Object.values(weights).reduce((s, n) => s + (n > 0 ? n : 0), 0); }
@@ -63199,9 +63244,28 @@ or changing anything in Cliniko.
     PH_BTQ.forEach((q, qi) => { const oi = ans[qi]; if (oi === undefined) return; const o = q[1][oi]; if (o && o[1] && o[1].guizhi) pts += o[1].guizhi; });
     return pts;
   }
-  function phTriPatientTotal(rec, name, fam, picks) {
-    const f = PH_FORMULAS[PH_FBR_ACTIVE];
-    return Math.min(phFbrMax(f.ren), phTriSum(f.ren, phTriAll("p", fam), phTriEffective(rec, name, "p", picks)) + phBtqGuizhiPts(rec));
+  // Every formula scores against the SAME shared ticks (effD/effP, already pre-filled/carried
+  // forward) -- one tap, every formula weighs it its own way. Ranked by Bing score, Ren breaks
+  // ties. The Gui Zhi body-type questionnaire's bonus (her ask 2026-10-08) only ever applies to
+  // Gui Zhi Tang, not to every formula -- it's that formula's own extra evidence source.
+  function phFbrRank(rec, fam, effD, effP) {
+    return Object.keys(PH_FORMULAS).map(id => {
+      const f = PH_FORMULAS[id], maxD = phFbrMax(f.bing), maxP = phFbrMax(f.ren);
+      const dS = phTriSum(f.bing, phTriAll("d", fam), effD);
+      const bonus = id === "guizhitang" ? phBtqGuizhiPts(rec) : 0;
+      const pS = Math.min(maxP, phTriSum(f.ren, phTriAll("p", fam), effP) + bonus);
+      return { id, f, dS, pS, maxD, maxP };
+    }).sort((a, b) => b.dS - a.dS || b.pS - a.pS);
+  }
+  // The one formula a badge/label should reference when only one number fits (a tap-row's "+N",
+  // the side-panel tally, an inline exam-screen strip): whichever formula currently leads, or
+  // PH_FBR_ACTIVE (declaration order's first) when nothing's ticked yet, so there's always a
+  // real formula behind the number rather than an arbitrary one.
+  function phFbrTop(rec, name, fam) {
+    const today = phTriToday(rec);
+    const effD = phTriEffective(rec, name, "d", today.d, today.prevD), effP = phTriEffective(rec, name, "p", today.p);
+    const ranked = phFbrRank(rec, fam, effD, effP);
+    return (ranked[0] && ranked[0].dS + ranked[0].pS > 0) ? ranked[0].id : PH_FBR_ACTIVE;
   }
   // The symptom library learns. Seed lists above never change; what she adds lives in PHARMACY.triLearn.added
   // (agreed = on the list for everyone). Tick counts per complaint only ORDER the list -- points come from
@@ -63223,12 +63287,13 @@ or changing anything in Cliniko.
   function phTriHtml(name) {
     const rec = phPatientPeek(name) || {}, today = phTriToday(rec), d = today.d, p = today.p;
     const L = PHARMACY.triLearn || { added: [] }, fam = phTriFam(name), open = phTriOpen.has(phPatientKey(name));
-    const f = PH_FORMULAS[PH_FBR_ACTIVE], archName = (PH_BTJ[f.family] && PH_BTJ[f.family].n) || f.name;
     const effD = phTriEffective(rec, name, "d", d, today.prevD), effP = phTriEffective(rec, name, "p", p);
-    const maxD = phFbrMax(f.bing), maxP = phFbrMax(f.ren);
-    const dS = phTriSum(f.bing, phTriAll("d", fam), effD), pS = phTriPatientTotal(rec, name, fam, p);
-    // "auto" = on only because it's already recorded elsewhere, never tapped here yet -- a tap
-    // always writes a real true/false and wins from then on, same as any other row.
+    const ranked = phFbrRank(rec, fam, effD, effP), top = ranked[0], hasTicks = top.dS + top.pS > 0;
+    // The tap rows show ONE formula's points (the current leader, or the first formula when
+    // nothing's ticked) -- any sign can be worth something different to every other formula; see
+    // the ranked list below for how each one actually reads this same tap.
+    const lead = hasTicks ? top.f : PH_FORMULAS[PH_FBR_ACTIVE];
+    const archName = (PH_BTJ[lead.family] && PH_BTJ[lead.family].n) || lead.name;
     const row = (r, kind, picks, eff, weights) => { const on = eff[r[0]], auto = picks[r[0]] === undefined && on;
       return `<button type="button" class="ph-tri-row${on ? " on" : ""}${auto ? " auto" : ""}" aria-pressed="${on ? "true" : "false"}" data-tri="${kind}:${r[0]}"${auto ? ` title="${esc(phTriAutoWhy(rec, name, kind, r[0], today.prevD))}"` : ""}><span>${esc(r[1])}</span><b>+${phFbrPts(weights, r)}</b></button>`; };
     const bar = (s, max) => `<div class="ph-tri-bar"><i style="width:${Math.round(s * 100 / max)}%"></i></div>`;
@@ -63239,17 +63304,22 @@ or changing anything in Cliniko.
       const addRow = `<div class="ph-tri-add"><input class="ph-tri-in" type="text" maxlength="60" placeholder="Add a symptom…" aria-label="Add a symptom"><input class="ph-tri-pt" type="number" min="1" max="9" value="2" aria-label="Points"><button type="button" class="ph-pfw-link" data-tri-add="${kind}">Add</button></div>`;
       return `${shown.map(r => row(r, kind, picks, eff, weights)).join("")}${all.length > PH_TRI_TOP ? `<button type="button" class="ph-pfw-link ph-tri-more" data-tri-more="1">${open ? "Show fewer" : `Show all ${all.length} ›`}</button>` : ""}${pend.length ? `<div class="ph-tri-plab">To check</div>${pend.map(pendRow).join("")}` : ""}${addRow}`;
     };
+    const fCard = (r, i) => `<div class="ph-tri-fcard${i === 0 && hasTicks ? " lead" : ""}">
+        <div class="ph-tri-ft"><span>${esc(r.f.name)}</span><span>${r.dS} of ${r.maxD}</span></div>${bar(r.dS, r.maxD)}
+        ${r.f.core ? `<div class="ph-tri-fcore">${esc(r.f.core)}</div>` : ""}
+        <div class="ph-tri-ft ph-tri-ft-ren"><span>${esc((PH_BTJ[r.f.family] && PH_BTJ[r.f.family].n) || r.f.name)} type</span><span>${r.pS} of ${r.maxP}</span></div>${bar(r.pS, r.maxP)}
+      </div>`;
     return `<div class="ph-pfw-card ph-tri" data-tri-host="1">
       <div class="ph-pfw-hd"><h3>Triangle</h3></div>
       <div class="ph-tri-cols">
-        <section class="ph-tri-col"><h4>Disease · what is wrong now</h4>${col("d", d, effD, f.bing)}</section>
+        <section class="ph-tri-col"><h4>Disease · what is wrong now <span class="ph-tri-col-sub">points toward ${esc(lead.name)}</span></h4>${col("d", d, effD, lead.bing)}</section>
         <section class="ph-tri-col ph-tri-fx"><h4>Formula · which plan fits</h4>
-          <div class="ph-tri-fcard"><div class="ph-tri-ft"><span>${esc(f.name)}</span><span>${dS} of ${maxD}</span></div>${bar(dS, maxD)}<div class="ph-tri-fs">${dS ? "Top match so far" : "No Disease ticks yet"}</div></div>
+          ${ranked.map(fCard).join("")}
+          ${!hasTicks ? `<div class="ph-tri-fs">No ticks yet — every formula starts level</div>` : ""}
         </section>
-        <section class="ph-tri-col"><h4>Patient · the person's build</h4>${col("p", p, effP, f.ren)}
-          <div class="ph-tri-ft"><span>${esc(archName)} type</span><span>${pS} of ${maxP}</span></div>${bar(pS, maxP)}</section>
+        <section class="ph-tri-col"><h4>Patient · the person's build <span class="ph-tri-col-sub">toward ${esc(archName)}</span></h4>${col("p", p, effP, lead.ren)}</section>
       </div>
-      ${dS + pS ? `<div class="ph-btq-foot"><button type="button" class="ph-pfw-link" data-tri-clear="1">Clear the triangle</button></div>` : ""}
+      ${hasTicks ? `<div class="ph-btq-foot"><button type="button" class="ph-pfw-link" data-tri-clear="1">Clear the triangle</button></div>` : ""}
     </div>`;
   }
   function phTriWrite(name, fn) {
@@ -63314,7 +63384,8 @@ or changing anything in Cliniko.
   };
   function phTriInlineHtml(name, scope) {
     const spec = PH_TRI_INLINE[scope]; if (!spec || !name) return "";
-    const rec = phPatientPeek(name) || {}, today = phTriToday(rec), f = PH_FORMULAS[PH_FBR_ACTIVE];
+    const rec = phPatientPeek(name) || {}, today = phTriToday(rec);
+    const f = PH_FORMULAS[phFbrTop(rec, name, phTriFam(name))];
     const rowsFor = (kind, keys) => {
       if (!keys || !keys.length) return "";
       const picks = kind === "d" ? today.d : today.p, prevD = kind === "d" ? today.prevD : undefined;
