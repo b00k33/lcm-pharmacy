@@ -1239,11 +1239,29 @@ what's on the "never" side.
 - Never delete cross-account duplicate scripts without her say.
 - Medical history's "Long-term tendencies" group is gone for good (2026-10-08
   audit) — Tires easily / Catches colds / Muscle spasms / Light sleep /
-  Emotionally sensitive, and feeling-the-cold, are asked ONCE now, on Ren's
-  Gui Zhi body-type questions. Never re-add them to Medical history as a
-  second copy; phPatClues reads the Ren answer directly (incl. a dedicated
-  cold_feel read via PH_BTQ_COLD_IDX, since the old Medical history/quick-
-  flag copies no longer exist to fall back on).
+  Emotionally sensitive were exact duplicates of Ren's Gui Zhi body-type
+  questions. Never re-add them to Medical history.
+- **Triangle (the Disease/Formula/Patient card on the Fang Bing Ren tab) is
+  the one place Gui Zhi Tang is scored — not the general pattern engine,
+  not Ren.** (2026-10-08, her words: "triangle IS fang bing ren".) Ren's 24
+  Gui Zhi yes/no questions were retired for the same reason the general
+  engine's separate "guizhi" PH_PAT_DEFS entry was retired — both duplicated
+  Triangle and were never connected to it. Never reintroduce either. Ren's
+  general 5-question survey (Build/Skin/Temperament/Hot-cold/Gut) still
+  decides the OTHER 6 constitution archetypes on its own; only its Gui Zhi
+  weight now also counts toward Triangle's Patient total (phBtqGuizhiPts).
+  Triangle rows pre-fill from phPatClues where a real existing source
+  exists (PH_TRI_PREFILL — currently just cold_feel/dizzy); a tap always
+  overrides the pre-fill (phTriEffective). The other ~30 Triangle rows have
+  no existing source anywhere yet and are correctly tap-only — that's not
+  a gap to "fix" by inventing a source, only by actually asking it
+  somewhere else first. The 56-point ceiling on each Triangle column is the
+  exact sum of its own items' weights — never add, remove, or reweight a
+  row without recalculating that every item still sums to 56, or the "X of
+  56" display stops meaning what it says. The other 13 formulas (Blood
+  stasis, Blood deficiency, etc.) still run on the older automatic engine,
+  untouched — extending Triangle to them is deliberately a separate,
+  later, formula-by-formula project, not done in this pass.
 - Teal only, no green hex anywhere except the two disclosed brand
   exceptions (Dispense herb-table head, Koda/GMP jar art) — `--ph-gold` is
   never a status colour.
