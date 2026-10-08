@@ -7530,6 +7530,21 @@
   #pharmacyPage .ph-tri-inline-lab { font-size: var(--fs-11); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ph-herb); margin-bottom: 6px; }
   #pharmacyPage .ph-tri-inline-rows { display: flex; flex-wrap: wrap; gap: 6px; }
   #pharmacyPage .ph-tri-inline-rows .ph-tri-row { width: auto; margin-bottom: 0; }
+  /* Fang Bing Ren -- complaint search + quick assess (Phase 2, 2026-10-08). Everything here
+     reuses an existing component: .ph-tri-in (the Add-a-symptom input), .ph-cc-chip/.ph-cc-opts
+     (the chief-complaint guess chips), .ph-rc-chip (the recheck Better/Same/Worse buttons) --
+     no new pill/button/input shape, same system as the rest of the app. */
+  #pharmacyPage .ph-cs { margin-bottom: 12px; }
+  #pharmacyPage .ph-cs-in { width: 100%; }
+  #pharmacyPage .ph-cs-chips-wrap { margin-top: 6px; }
+  #pharmacyPage .ph-cs-empty { font-size: var(--fs-12); color: var(--ph-faint); margin-top: 6px; }
+  #pharmacyPage .ph-qa-card { background: var(--ph-herb-tint); border: 1px solid var(--ph-herb-card); border-radius: 12px; padding: 12px 14px; margin-top: 10px; }
+  #pharmacyPage .ph-qa-lead { font-size: var(--fs-12); color: var(--ph-soft); margin-bottom: 4px; }
+  #pharmacyPage .ph-qa-lead b { color: var(--ph-herb-deep); }
+  #pharmacyPage .ph-qa-q { font: 700 var(--fs-14) var(--font-body); color: var(--ph-ink); margin-bottom: 8px; }
+  #pharmacyPage .ph-qa-q i { font-style: normal; font-weight: 500; color: var(--ph-faint); font-size: var(--fs-12); }
+  #pharmacyPage .ph-qa-btns { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  #pharmacyPage .ph-qa-done { font-size: var(--fs-13); color: var(--ph-soft); }
   #pharmacyPage .ph-pfw-q.done { box-shadow: inset 3px 0 0 var(--ph-herb); }
   /* profile first (2026-10-04): Start-here card, one-screen question cards, the
      live Patterns panel, the auto-move bar. See "PROFILE FIRST" in the script. */
@@ -63540,13 +63555,17 @@ or changing anything in Cliniko.
         ${r.f.core ? `<div class="ph-tri-fcore">${esc(r.f.core)}</div>` : ""}
         <div class="ph-tri-ft ph-tri-ft-ren"><span>${esc((PH_BTJ[r.f.family] && PH_BTJ[r.f.family].n) || r.f.name)} type</span><span>${r.pS} of ${r.maxP}</span></div>${bar(r.pS, r.maxP)}
       </div>`;
+    const qaOpen = phQaOpen.has(phPatientKey(name));
     return `<div class="ph-pfw-card ph-tri" data-tri-host="1">
       <div class="ph-pfw-hd"><h3>Triangle</h3></div>
+      ${phCsHtml(name)}
       <div class="ph-tri-cols">
         <section class="ph-tri-col"><h4>Disease · what is wrong now <span class="ph-tri-col-sub">points toward ${esc(lead.name)}</span></h4>${col("d", d, effD, lead.bing)}</section>
         <section class="ph-tri-col ph-tri-fx"><h4>Constitution · which family fits</h4>
           ${ranked.map(fCard).join("")}
           ${!hasTicks ? `<div class="ph-tri-fs">No ticks yet — every family starts level</div>` : ""}
+          <button type="button" class="ph-pfw-link" data-qa-toggle="1">${qaOpen ? "Hide quick assess" : "Quick assess ▸"}</button>
+          ${qaOpen ? phQaHtml(name) : ""}
         </section>
         <section class="ph-tri-col"><h4>Patient · the person's build <span class="ph-tri-col-sub">toward ${esc(archName)}</span></h4>${col("p", p, effP, lead.ren)}</section>
       </div>
@@ -63600,6 +63619,24 @@ or changing anything in Cliniko.
       phTriRefresh(name); return true;
     }
     if (T.closest("[data-tri-clear]")) { if (phTriWrite(name, t => { t.d = {}; t.p = {}; })) phTriRefresh(name); return true; }
+    if ((el = T.closest("[data-cs-pick]"))) {
+      const key = el.dataset.csPick, fam = phTriFam(name), rec = phPatientPeek(name) || {};
+      if (phTriWrite(name, t => { const eff = phTriEffective(rec, name, "d", t.d, t.prevD); t.d[key] = !eff[key]; if (t.d[key]) phTriCount(fam, "d", key); })) phTriRefresh(name);
+      return true;
+    }
+    if (T.closest("[data-qa-toggle]")) {
+      const k = phPatientKey(name); if (phQaOpen.has(k)) phQaOpen.delete(k); else phQaOpen.add(k);
+      phTriRefresh(name); return true;
+    }
+    if ((el = T.closest("[data-qa-ans]"))) {
+      const kind = el.dataset.qaKind, key = el.dataset.qaKey, ans = el.dataset.qaAns === "yes", fam = phTriFam(name);
+      if (phTriWrite(name, t => { const m = kind === "d" ? t.d : t.p; m[key] = ans; if (ans) phTriCount(fam, kind, key); })) phTriRefresh(name);
+      return true;
+    }
+    if ((el = T.closest("[data-qa-skip]"))) {
+      phQaSkipSet(name).add(el.dataset.qaSkip);
+      phTriRefresh(name); return true;
+    }
     return false;
   }
   // ---- Fang Bing Ren INLINE strips (Phase 2, 2026-10-08): a handful of Bing/Ren signs tapped
@@ -63645,6 +63682,88 @@ or changing anything in Cliniko.
     const fam = phTriFam(name), rec = phPatientPeek(name) || {};
     if (phTriWrite(name, t => { const m = kind === "d" ? t.d : t.p; const eff = phTriEffective(rec, name, kind, m, kind === "d" ? t.prevD : undefined); m[key] = !eff[key]; if (m[key]) phTriCount(fam, kind, key); })) phTriInlineRefresh(name, scope);
     return true;
+  }
+  // ---- Complaint search (2026-10-08): a typed complaint matched against the SHARED Bing-sign
+  // pool, not a separate clinical mapping -- "chilblains" doesn't need its own lookup table, it
+  // just needs to find "Cold hands or feet" etc among the signs already there and let her tap
+  // the ones that fit. Keyword overlap only (no stemming/synonyms) -- an honest first pass, same
+  // as the adaptive quick-assess below. Suggestions are never auto-ticked; same "nothing
+  // auto-selected" rule as the ranked formula list itself.
+  var phCsQuery = new Map(); // patient key -> typed text, view-only, never saved
+  function phCsMatches(q) {
+    const toks = String(q || "").toLowerCase().split(/[^a-z]+/).filter(t => t.length > 2);
+    if (!toks.length) return [];
+    return PH_BING_SIGNS.map(r => {
+      const label = r[1].toLowerCase();
+      const score = toks.reduce((s, t) => s + (label.includes(t) ? 1 : 0), 0);
+      return { r, score };
+    }).filter(x => x.score > 0).sort((a, b) => b.score - a.score || a.r[1].localeCompare(b.r[1])).slice(0, 8);
+  }
+  function phCsChipsHtml(name, q) {
+    if (!q || !q.trim()) return "";
+    const matches = phCsMatches(q);
+    if (!matches.length) return `<div class="ph-cs-empty">No matching sign yet — tap it directly under Disease below.</div>`;
+    const rec = phPatientPeek(name) || {}, today = phTriToday(rec);
+    return `<div class="ph-cc-opts">${matches.map(m => `<button type="button" class="ph-cc-chip${today.d[m.r[0]] ? " on" : ""}" data-cs-pick="${esc(m.r[0])}">${esc(m.r[1])}</button>`).join("")}</div>`;
+  }
+  function phCsHtml(name) {
+    const q = phCsQuery.get(phPatientKey(name)) || "";
+    return `<div class="ph-cs" data-cs-host="1">
+      <input type="text" class="ph-tri-in ph-cs-in" data-cs-input="1" maxlength="60" placeholder="What's the complaint? e.g. nausea, chest pain…" aria-label="Search presenting signs by complaint" value="${esc(q)}">
+      <div class="ph-cs-chips-wrap" data-cs-chips-host="1">${phCsChipsHtml(name, q)}</div>
+    </div>`;
+  }
+  document.addEventListener("input", e => {
+    const el = e.target;
+    if (!(el && el.matches && el.matches("[data-cs-input]") && el.closest("#pharmacyPage"))) return;
+    const name = phPfwName(); if (!name) return;
+    phCsQuery.set(phPatientKey(name), el.value);
+    const host = el.closest("[data-cs-host]"), chips = host && host.querySelector("[data-cs-chips-host]");
+    if (chips) chips.innerHTML = phCsChipsHtml(name, el.value);
+  });
+  // ---- Quick assess (2026-10-08): the "fast-look -> family-guess -> a few questions" entry
+  // point from the plan, built as an honest first pass exactly as scoped there -- re-rank the
+  // leading families after every tap, surface their own highest-weighted unanswered sign next,
+  // Ren (constitution) before Bing (today's presentation). It asks about the top 3 currently-
+  // ranked families, not just the single leader, so it never stalls early on a tie (all 9 start
+  // level) -- a disclosed widening of "the leading family," not a change to the scoring itself.
+  // Skip is session-only (never written, never saved) so a skipped question is simply asked
+  // again next time she opens this patient.
+  var phQaOpen = new Set();   // patient keys with the panel open -- view state, never saved
+  var phQaSkip = new Map();   // patient key -> Set of sign keys skipped this session
+  function phQaSkipSet(name) {
+    const k = phPatientKey(name); let s = phQaSkip.get(k);
+    if (!s) { s = new Set(); phQaSkip.set(k, s); }
+    return s;
+  }
+  function phFbrUnanswered(rec, name, kind, picks, weights, exclude) {
+    const pool = kind === "d" ? PH_BING_SIGNS : PH_REN_SIGNS;
+    const clueKeys = new Set(phPatClues(rec, name).map(c => c.key));
+    return pool.filter(r => weights[r[0]] != null && picks[r[0]] === undefined && !exclude.has(r[0])
+      && !(PH_TRI_PREFILL[r[0]] && clueKeys.has(PH_TRI_PREFILL[r[0]])))
+      .sort((a, b) => Math.abs(weights[b[0]]) - Math.abs(weights[a[0]]));
+  }
+  function phFbrNextQ(rec, name) {
+    const fam = phTriFam(name), today = phTriToday(rec), skip = phQaSkipSet(name);
+    const effD = phTriEffective(rec, name, "d", today.d, today.prevD), effP = phTriEffective(rec, name, "p", today.p);
+    const cands = phFbrRank(rec, fam, effD, effP).slice(0, 3);
+    for (const c of cands) { const q = phFbrUnanswered(rec, name, "p", today.p, c.f.ren, skip)[0]; if (q) return { kind: "p", r: q, rank: c }; }
+    for (const c of cands) { const q = phFbrUnanswered(rec, name, "d", today.d, c.f.bing, skip)[0]; if (q) return { kind: "d", r: q, rank: c }; }
+    return null;
+  }
+  function phQaHtml(name) {
+    const rec = phPatientPeek(name) || {}, nq = phFbrNextQ(rec, name);
+    if (!nq) return `<div class="ph-qa-card"><div class="ph-qa-done">Nothing left to ask for the leading families — anything else is a direct tap under Disease or Patient below.</div></div>`;
+    const famName = (PH_BTJ[nq.rank.f.family] && PH_BTJ[nq.rank.f.family].n) || nq.rank.f.name;
+    return `<div class="ph-qa-card">
+      <div class="ph-qa-lead">Checking <b>${esc(famName)}</b> — ${nq.rank.dS + nq.rank.pS} pts so far</div>
+      <div class="ph-qa-q">${esc(nq.r[1])} <i>${nq.kind === "d" ? "(now)" : "(lifelong tendency)"}</i></div>
+      <div class="ph-qa-btns">
+        <button type="button" class="ph-rc-chip" data-qa-ans="yes" data-qa-kind="${nq.kind}" data-qa-key="${esc(nq.r[0])}">Yes</button>
+        <button type="button" class="ph-rc-chip" data-qa-ans="no" data-qa-kind="${nq.kind}" data-qa-key="${esc(nq.r[0])}">No</button>
+        <button type="button" class="ph-pfw-link" data-qa-skip="${esc(nq.r[0])}">Skip</button>
+      </div>
+    </div>`;
   }
   // ---- PATTERNS page (renderer). Reads phPatCompute and draws the picture:
   // a ring of clue counts, the shared body figure (PH_BODY_GEOM, the same
