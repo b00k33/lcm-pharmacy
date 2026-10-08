@@ -62542,9 +62542,9 @@ or changing anything in Cliniko.
   // Fang Bing Ren tally for the side panel: Bing (Disease ticks) and Ren (Patient ticks), each out of 56,
   // read live from rec.tri. Only the top formula is named; Gui Zhi Tang is the only one built so far.
   function phTriTallyHtml(name) {
-    const rec = phPatientPeek(name) || {}, tri = rec.tri || {}, f = PH_FORMULAS[PH_FBR_ACTIVE];
+    const rec = phPatientPeek(name) || {}, today = phTriToday(rec), f = PH_FORMULAS[PH_FBR_ACTIVE];
     const fam = phTriFam(name), maxD = phFbrMax(f.bing), maxP = phFbrMax(f.ren);
-    const dS = phTriSum(f.bing, phTriAll("d", fam), phTriEffective(rec, name, "d", tri.d || {})), pS = phTriPatientTotal(rec, name, fam, tri.p || {});
+    const dS = phTriSum(f.bing, phTriAll("d", fam), phTriEffective(rec, name, "d", today.d, today.prevD)), pS = phTriPatientTotal(rec, name, fam, today.p);
     const bar = (s, max, c) => `<div class="bar"><i style="width:${Math.round(s * 100 / max)}%;background:${c}"></i></div>`;
     return `<h3>Fang Bing Ren</h3>
       <div class="ph-pfw-pat"><span class="n">Bing · ${esc(f.name)}</span><span class="l">${dS} of ${maxD}</span>${bar(dS, maxD, "var(--ph-herb)")}</div>
@@ -63151,14 +63151,34 @@ or changing anything in Cliniko.
   function phTriSum(weights, list, picks) { return Math.max(0, list.reduce((s, r) => s + (picks[r[0]] ? phFbrPts(weights, r) : 0), 0)); }
   // picks with pre-filled values folded in where nothing's been explicitly tapped either way --
   // tapping always writes a real true/false into rec.tri, which this always prefers over a guess.
-  function phTriEffective(rec, name, kind, picks) {
+  // `prevD` (Disease only) is yesterday's-or-earlier ticks, carried forward as a third kind of
+  // pre-fill -- her ask 2026-10-08 ("carry forward as a quick recheck"). Ren never carries
+  // forward this way; she sets it once and it just persists, no day boundary involved.
+  function phTriEffective(rec, name, kind, picks, prevD) {
     const clueKeys = new Set(phPatClues(rec, name).map(c => c.key));
     const list = kind === "d" ? PH_BING_SIGNS : PH_REN_SIGNS, eff = {};
     list.forEach(r => {
       const src = PH_TRI_PREFILL[r[0]];
-      eff[r[0]] = picks[r[0]] !== undefined ? picks[r[0]] : !!(src && clueKeys.has(src));
+      const known = !!(src && clueKeys.has(src));
+      const carried = kind === "d" && !!(prevD && prevD[r[0]]);
+      eff[r[0]] = picks[r[0]] !== undefined ? picks[r[0]] : (known || carried);
     });
     return eff;
+  }
+  // Why a row shows pre-ticked, for its tooltip -- same precedence phTriEffective uses.
+  function phTriAutoWhy(rec, name, kind, key, prevD) {
+    const src = PH_TRI_PREFILL[key], clueKeys = new Set(phPatClues(rec, name).map(c => c.key));
+    if (src && clueKeys.has(src)) return "Already recorded elsewhere — tap to override";
+    if (kind === "d" && prevD && prevD[key]) return "Ticked last visit — tap to confirm or change";
+    return "Already recorded elsewhere — tap to override";
+  }
+  // Today's working view of rec.tri: Ren (.p) never resets. Disease (.d) resets on a new day,
+  // and whatever was ticked before that rollover becomes `prevD` -- last visit's picture, read
+  // by phTriEffective above as a soft pre-fill until she confirms or changes each row today.
+  function phTriToday(rec) {
+    const tri = rec.tri || {}, today = keyOf(TODAY);
+    if (tri.date === today) return { d: tri.d || {}, p: tri.p || {}, prevD: tri.prevD || {} };
+    return { d: {}, p: tri.p || {}, prevD: tri.d || {} };
   }
   // the general Body-type survey's Gui Zhi weight counts toward this same Patient total now
   // (her ask 2026-10-08), instead of that survey computing a separate "top match" of its own for
@@ -63191,16 +63211,16 @@ or changing anything in Cliniko.
     const k = fam + "|" + kind + "|" + key; L.counts[k] = (L.counts[k] || 0) + 1;
   }
   function phTriHtml(name) {
-    const rec = phPatientPeek(name) || {}, tri = rec.tri || {}, d = tri.d || {}, p = tri.p || {};
+    const rec = phPatientPeek(name) || {}, today = phTriToday(rec), d = today.d, p = today.p;
     const L = PHARMACY.triLearn || { added: [] }, fam = phTriFam(name), open = phTriOpen.has(phPatientKey(name));
     const f = PH_FORMULAS[PH_FBR_ACTIVE], archName = (PH_BTJ[f.family] && PH_BTJ[f.family].n) || f.name;
-    const effD = phTriEffective(rec, name, "d", d), effP = phTriEffective(rec, name, "p", p);
+    const effD = phTriEffective(rec, name, "d", d, today.prevD), effP = phTriEffective(rec, name, "p", p);
     const maxD = phFbrMax(f.bing), maxP = phFbrMax(f.ren);
     const dS = phTriSum(f.bing, phTriAll("d", fam), effD), pS = phTriPatientTotal(rec, name, fam, p);
     // "auto" = on only because it's already recorded elsewhere, never tapped here yet -- a tap
     // always writes a real true/false and wins from then on, same as any other row.
     const row = (r, kind, picks, eff, weights) => { const on = eff[r[0]], auto = picks[r[0]] === undefined && on;
-      return `<button type="button" class="ph-tri-row${on ? " on" : ""}${auto ? " auto" : ""}" aria-pressed="${on ? "true" : "false"}" data-tri="${kind}:${r[0]}"${auto ? ` title="Already recorded elsewhere — tap to override"` : ""}><span>${esc(r[1])}</span><b>+${phFbrPts(weights, r)}</b></button>`; };
+      return `<button type="button" class="ph-tri-row${on ? " on" : ""}${auto ? " auto" : ""}" aria-pressed="${on ? "true" : "false"}" data-tri="${kind}:${r[0]}"${auto ? ` title="${esc(phTriAutoWhy(rec, name, kind, r[0], today.prevD))}"` : ""}><span>${esc(r[1])}</span><b>+${phFbrPts(weights, r)}</b></button>`; };
     const bar = (s, max) => `<div class="ph-tri-bar"><i style="width:${Math.round(s * 100 / max)}%"></i></div>`;
     const col = (kind, picks, eff, weights) => {
       const all = phTriAll(kind, fam), shown = open ? all : all.slice(0, PH_TRI_TOP);
@@ -63225,8 +63245,8 @@ or changing anything in Cliniko.
   function phTriWrite(name, fn) {
     const rec = name ? phPatientRec(name) : null;
     if (!rec) return false;
-    rec.tri = rec.tri || {};
-    rec.tri.d = rec.tri.d || {}; rec.tri.p = rec.tri.p || {};
+    const today = phTriToday(rec);
+    rec.tri = { d: today.d, p: today.p, prevD: today.prevD, date: keyOf(TODAY) };
     fn(rec.tri);
     rec.tri.at = Date.now();
     if (savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return false; }
@@ -63243,9 +63263,10 @@ or changing anything in Cliniko.
     const name = phPfwName(); if (!name) return true;
     if ((el = T.closest("[data-tri]"))) {
       const [kind, key] = el.dataset.tri.split(":"), fam = phTriFam(name), rec = phPatientPeek(name) || {};
-      // flips the row's EFFECTIVE (possibly pre-filled) state, not the raw stored one -- so the
-      // first tap on an already-ticked-elsewhere row turns it off, as an explicit override.
-      if (phTriWrite(name, t => { const m = kind === "d" ? t.d : t.p; const eff = phTriEffective(rec, name, kind, m); m[key] = !eff[key]; if (m[key]) phTriCount(fam, kind, key); })) phTriRefresh(name);
+      // flips the row's EFFECTIVE (possibly pre-filled, possibly carried-forward) state, not the
+      // raw stored one -- so the first tap on an already-ticked row turns it off, as an explicit
+      // override. `t` is rec.tri AFTER phTriWrite's day rollover, so t.prevD is this visit's one.
+      if (phTriWrite(name, t => { const m = kind === "d" ? t.d : t.p; const eff = phTriEffective(rec, name, kind, m, kind === "d" ? t.prevD : undefined); m[key] = !eff[key]; if (m[key]) phTriCount(fam, kind, key); })) phTriRefresh(name);
       return true;
     }
     if ((el = T.closest("[data-tri-more]"))) {
