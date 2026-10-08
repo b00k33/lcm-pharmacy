@@ -1237,6 +1237,13 @@ what's on the "never" side.
 - Check-in drafts stay throwaway, never wired to Prepared/Sent — only an
   explicit "Send later" files a real draft.
 - Never delete cross-account duplicate scripts without her say.
+- Medical history's "Long-term tendencies" group is gone for good (2026-10-08
+  audit) — Tires easily / Catches colds / Muscle spasms / Light sleep /
+  Emotionally sensitive, and feeling-the-cold, are asked ONCE now, on Ren's
+  Gui Zhi body-type questions. Never re-add them to Medical history as a
+  second copy; phPatClues reads the Ren answer directly (incl. a dedicated
+  cold_feel read via PH_BTQ_COLD_IDX, since the old Medical history/quick-
+  flag copies no longer exist to fall back on).
 - Teal only, no green hex anywhere except the two disclosed brand
   exceptions (Dispense herb-table head, Koda/GMP jar art) — `--ph-gold` is
   never a status colour.
