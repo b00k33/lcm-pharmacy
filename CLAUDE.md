@@ -1241,27 +1241,44 @@ what's on the "never" side.
   audit) — Tires easily / Catches colds / Muscle spasms / Light sleep /
   Emotionally sensitive were exact duplicates of Ren's Gui Zhi body-type
   questions. Never re-add them to Medical history.
-- **Triangle (the Disease/Formula/Patient card on the Fang Bing Ren tab) is
-  the one place Gui Zhi Tang is scored — not the general pattern engine,
-  not Ren.** (2026-10-08, her words: "triangle IS fang bing ren".) Ren's 24
-  Gui Zhi yes/no questions were retired for the same reason the general
-  engine's separate "guizhi" PH_PAT_DEFS entry was retired — both duplicated
-  Triangle and were never connected to it. Never reintroduce either. Ren's
-  general 5-question survey (Build/Skin/Temperament/Hot-cold/Gut) still
-  decides the OTHER 6 constitution archetypes on its own; only its Gui Zhi
-  weight now also counts toward Triangle's Patient total (phBtqGuizhiPts).
-  Triangle rows pre-fill from phPatClues where a real existing source
-  exists (PH_TRI_PREFILL — currently just cold_feel/dizzy); a tap always
-  overrides the pre-fill (phTriEffective). The other ~30 Triangle rows have
-  no existing source anywhere yet and are correctly tap-only — that's not
-  a gap to "fix" by inventing a source, only by actually asking it
-  somewhere else first. The 56-point ceiling on each Triangle column is the
-  exact sum of its own items' weights — never add, remove, or reweight a
-  row without recalculating that every item still sums to 56, or the "X of
-  56" display stops meaning what it says. The other 13 formulas (Blood
-  stasis, Blood deficiency, etc.) still run on the older automatic engine,
-  untouched — extending Triangle to them is deliberately a separate,
-  later, formula-by-formula project, not done in this pass.
+- **Triangle (the Disease/Constitution/Patient card on the Fang Bing Ren tab)
+  is the one place constitutional-family scoring happens — not the general
+  pattern engine, not Ren's own survey.** (2026-10-08, her words: "triangle
+  IS fang bing ren".) Ren's 24 Gui Zhi yes/no questions were retired for the
+  same reason the general engine's separate "guizhi" PH_PAT_DEFS entry was
+  retired — both duplicated Triangle and were never connected to it. Never
+  reintroduce either. Ren's general 5-question survey (Build/Skin/
+  Temperament/Hot-cold/Gut) still decides the OTHER 6 constitution
+  archetypes on its own; only its Gui Zhi weight also counts toward
+  Triangle's Gui Zhi Patient total (phBtqGuizhiPts).
+- **PH_FORMULAS entries (Phase 3, 2026-10-08+) are constitutional families,
+  named after the herb — "Gui Zhi", "Chai Hu", "Ma Huang", "Da Huang" — NOT
+  specific prescribable formulas** (her correction, after an early draft
+  mis-named one "Xiao Chai Hu Tang"). Bing and Ren signs are two SHARED
+  pools (PH_BING_SIGNS/PH_REN_SIGNS, label-only); what a sign is worth lives
+  in each family's own weight table in PH_FORMULAS, so the same tap can
+  score differently per family, including negative (a disqualifier — Ma
+  Huang's cautions are the first real example: thin_body/sweats_easy/
+  complexion_red_oily/dreads_heat/dry_mouth_tend/hypertension_tend all
+  argue against it). Triangle's Formula card is a ranked list over every
+  PH_FORMULAS entry (phFbrRank), scored against the same shared ticks; tap-
+  row point badges, the side-panel tally, and the inline exam-screen strips
+  (Pulse/Abdomen/Tongue) all reference whichever family currently leads
+  (phFbrTop), not a fixed one. A sign's weight toward a family (phFbrPts)
+  falls back to 0, not undefined, when that family doesn't use it — don't
+  revert that, it's what keeps an unrelated family's sign from corrupting
+  another family's score to NaN. There is no fixed point ceiling any more —
+  phFbrMax sums each family's own positive weights dynamically; never
+  assume "X of 56" everywhere, that was Gui Zhi's own total before Phase 3,
+  not an engine rule. Triangle rows pre-fill from phPatClues where a real
+  existing source exists (PH_TRI_PREFILL) and carry forward day-to-day for
+  Disease ticks only (phTriToday/phTriEffective's `prevD`, her "quick
+  recheck" ask) — a tap always overrides either. Only 4 of 7 families are
+  built so far (Gui Zhi, Chai Hu, Ma Huang, Da Huang); Fu Zi, Ban Xia, and
+  Huang Qi are still open, sent incrementally the same way (her passage →
+  extracted into the shared pools + a new PH_FORMULAS entry). The other 13
+  PH_PAT_DEFS patterns (Blood stasis, Blood deficiency, etc.) still run on
+  the older automatic engine, untouched — a separate, unrelated project.
 - Teal only, no green hex anywhere except the two disclosed brand
   exceptions (Dispense herb-table head, Koda/GMP jar art) — `--ph-gold` is
   never a status colour.
