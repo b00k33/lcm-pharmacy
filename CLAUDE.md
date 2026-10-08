@@ -1260,25 +1260,31 @@ what's on the "never" side.
   score differently per family, including negative (a disqualifier — Ma
   Huang's cautions are the first real example: thin_body/sweats_easy/
   complexion_red_oily/dreads_heat/dry_mouth_tend/hypertension_tend all
-  argue against it). Triangle's Formula card is a ranked list over every
-  PH_FORMULAS entry (phFbrRank), scored against the same shared ticks; tap-
-  row point badges, the side-panel tally, and the inline exam-screen strips
-  (Pulse/Abdomen/Tongue) all reference whichever family currently leads
-  (phFbrTop), not a fixed one. A sign's weight toward a family (phFbrPts)
-  falls back to 0, not undefined, when that family doesn't use it — don't
-  revert that, it's what keeps an unrelated family's sign from corrupting
-  another family's score to NaN. There is no fixed point ceiling any more —
-  phFbrMax sums each family's own positive weights dynamically; never
-  assume "X of 56" everywhere, that was Gui Zhi's own total before Phase 3,
-  not an engine rule. Triangle rows pre-fill from phPatClues where a real
-  existing source exists (PH_TRI_PREFILL) and carry forward day-to-day for
-  Disease ticks only (phTriToday/phTriEffective's `prevD`, her "quick
-  recheck" ask) — a tap always overrides either. Only 4 of 7 families are
-  built so far (Gui Zhi, Chai Hu, Ma Huang, Da Huang); Fu Zi, Ban Xia, and
-  Huang Qi are still open, sent incrementally the same way (her passage →
-  extracted into the shared pools + a new PH_FORMULAS entry). The other 13
-  PH_PAT_DEFS patterns (Blood stasis, Blood deficiency, etc.) still run on
-  the older automatic engine, untouched — a separate, unrelated project.
+  argue against it; Ban Xia's explicit tongue contraindication — a dry,
+  burnt, or shiny red tongue — is the second, negative on tongue_red_firm/
+  tongue_very_dry_tend). Triangle's Formula card is a ranked list over
+  every PH_FORMULAS entry (phFbrRank), scored against the same shared
+  ticks; tap-row point badges, the side-panel tally, and the inline
+  exam-screen strips (Pulse/Abdomen/Tongue) all reference whichever family
+  currently leads (phFbrTop), not a fixed one. A sign's weight toward a
+  family (phFbrPts) falls back to 0, not undefined, when that family
+  doesn't use it — don't revert that, it's what keeps an unrelated
+  family's sign from corrupting another family's score to NaN. There is
+  no fixed point ceiling any more — phFbrMax sums each family's own
+  positive weights dynamically; never assume "X of 56" everywhere, that
+  was Gui Zhi's own total before Phase 3, not an engine rule. Triangle
+  rows pre-fill from phPatClues where a real existing source exists
+  (PH_TRI_PREFILL) and carry forward day-to-day for Disease ticks only
+  (phTriToday/phTriEffective's `prevD`, her "quick recheck" ask) — a tap
+  always overrides either. **All 7 of Huang Huang's original families are
+  built** (Gui Zhi, Chai Hu, Ma Huang, Da Huang, Huang Qi, Ban Xia, Fu
+  Zi), plus Shi Gao and Huang Lian as an 8th and 9th on her call to extend
+  the set beyond the original 7 — all sent the same way, incrementally
+  (her passage → extracted into the shared pools + a new PH_FORMULAS
+  entry), and all nine now have a matching PH_BTJ archetype-display entry.
+  The other 13 PH_PAT_DEFS patterns (Blood stasis, Blood deficiency, etc.)
+  still run on the older automatic engine, untouched — a separate,
+  unrelated project.
 - Teal only, no green hex anywhere except the two disclosed brand
   exceptions (Dispense herb-table head, Koda/GMP jar art) — `--ph-gold` is
   never a status colour.
@@ -1384,9 +1390,6 @@ live on a later, separate "push live."
   a live guess, not confirmed.
 - **Whether Formal/Casual should be a settable per-patient tag, computed
   from time-known, or both with an override** — asked, not answered.
-- **Two body types (Fu Zi, Huang Qi)** are not yet in her seeded
-  `PHARMACY.bodyTypes` list — the Body-type page can't save them as a match
-  until she adds them via the Guide.
 - **Dashboard "stocktake" always-shown pair of cards** — any Dashboard
   layout change needs a mock + her sign-off first; not yet shown to her.
 - **Two-computer sync/relay subsystem** (the shrink-window timing, the
