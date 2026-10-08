@@ -62542,13 +62542,14 @@ or changing anything in Cliniko.
   // Fang Bing Ren tally for the side panel: Bing (Disease ticks) and Ren (Patient ticks), each out of 56,
   // read live from rec.tri. Only the top formula is named; Gui Zhi Tang is the only one built so far.
   function phTriTallyHtml(name) {
-    const rec = phPatientPeek(name) || {}, tri = rec.tri || {};
-    const fam = phTriFam(name), dS = phTriSum(phTriAll("d", fam), phTriEffective(rec, name, "d", tri.d || {})), pS = phTriPatientTotal(rec, name, fam, tri.p || {});
-    const bar = (s, c) => `<div class="bar"><i style="width:${Math.round(s * 100 / 56)}%;background:${c}"></i></div>`;
+    const rec = phPatientPeek(name) || {}, tri = rec.tri || {}, f = PH_FORMULAS[PH_FBR_ACTIVE];
+    const fam = phTriFam(name), maxD = phFbrMax(f.bing), maxP = phFbrMax(f.ren);
+    const dS = phTriSum(f.bing, phTriAll("d", fam), phTriEffective(rec, name, "d", tri.d || {})), pS = phTriPatientTotal(rec, name, fam, tri.p || {});
+    const bar = (s, max, c) => `<div class="bar"><i style="width:${Math.round(s * 100 / max)}%;background:${c}"></i></div>`;
     return `<h3>Fang Bing Ren</h3>
-      <div class="ph-pfw-pat"><span class="n">Bing · Gui Zhi Tang</span><span class="l">${dS} of 56</span>${bar(dS, "var(--ph-herb)")}</div>
-      <div class="ph-pfw-pat"><span class="n">Ren · supports</span><span class="l">${pS} of 56</span>${bar(pS, "var(--ph-herb-card)")}</div>
-      <div class="ph-pfw-mt">${dS ? "Fang: Gui Zhi Tang, the top formula so far." : "Fang: waiting on Disease ticks."}</div>`;
+      <div class="ph-pfw-pat"><span class="n">Bing · ${esc(f.name)}</span><span class="l">${dS} of ${maxD}</span>${bar(dS, maxD, "var(--ph-herb)")}</div>
+      <div class="ph-pfw-pat"><span class="n">Ren · supports</span><span class="l">${pS} of ${maxP}</span>${bar(pS, maxP, "var(--ph-herb-card)")}</div>
+      <div class="ph-pfw-mt">${dS ? `Fang: ${esc(f.name)}, the top formula so far.` : "Fang: waiting on Disease ticks."}</div>`;
   }
   // Herb family = the arrow, formula = the target (her words, verbatim).
   // Approved mock "herb-family-arrow": one herb-family box, a dashed arrow
@@ -63090,25 +63091,47 @@ or changing anything in Cliniko.
     if (T.closest("[data-btq-clear]")) { if (phBtqWrite(name, (rec, b) => { b.a = {}; })) phBtqRefresh(name); return true; }
     return false;
   }
-  // ---- TRIANGLE (Formula-Disease-Patient), her approved mock. Disease ticks add points toward
-  // Gui Zhi Tang (max 56). Patient ticks give the Gui Zhi type (max 56) and never pick the formula.
+  // ---- FANG BING REN engine (Phase 1, 2026-10-08). Bing (disease/presenting signs) and Ren
+  // (constitution signs) are now two SHARED pools, label-only -- no formula owns a sign, any
+  // formula can use it. What a sign is worth lives in that formula's own weight table in
+  // PH_FORMULAS below, so the same tap can count differently toward different formulas, and a
+  // formula can give a sign a NEGATIVE weight (a disqualifier: this sign argues against it).
   // Ticks live on rec.tri and are written only on her tap; scores are summed on read.
-  const PH_TRI_DIS = [
-    ["spont_sweat", "Sweats without effort", 5], ["wind_averse", "Dislikes wind", 5], ["p_float", "Pulse floating, weak or loose", 5],
-    ["feverish", "Feels feverish", 4], ["cold_feel", "Sensitive to cold", 4], ["pulsate", "Pulsing in the belly", 4],
-    ["upsurge", "Feels a rush moving upward", 4], ["palp", "Palpitations", 3], ["insomnia_dream", "Poor sleep or vivid dreams", 3],
-    ["startle", "Startles easily", 3], ["tight", "Tight or spasming muscles", 3], ["joint_ache", "Body aches or joint pain", 3],
-    ["headache", "Headache", 2], ["dizzy", "Dizziness", 2], ["flush", "Flushed or red face", 2], ["abd_disc", "Belly pain", 2], ["diarrhea", "Loose stools", 2]
+  // Gui Zhi Tang's weights are migrated unchanged from the old single-formula Triangle (same
+  // numbers, same 56-point ceiling on each side) -- this phase proves the new shape without
+  // changing anything she sees. PH_FBR_ACTIVE picks which formula currently scores in the
+  // Triangle card; once a second formula exists this becomes a per-family lookup instead of one
+  // constant (Phase 3).
+  const PH_BING_SIGNS = [
+    ["spont_sweat", "Sweats without effort"], ["wind_averse", "Dislikes wind"], ["p_float", "Pulse floating, weak or loose"],
+    ["feverish", "Feels feverish"], ["cold_feel", "Sensitive to cold"], ["pulsate", "Pulsing in the belly"],
+    ["upsurge", "Feels a rush moving upward"], ["palp", "Palpitations"], ["insomnia_dream", "Poor sleep or vivid dreams"],
+    ["startle", "Startles easily"], ["tight", "Tight or spasming muscles"], ["joint_ache", "Body aches or joint pain"],
+    ["headache", "Headache"], ["dizzy", "Dizziness"], ["flush", "Flushed or red face"], ["abd_disc", "Belly pain"], ["diarrhea", "Loose stools"]
   ];
-  const PH_TRI_PAT = [
-    ["thin_body", "Thin, delicate build", 3], ["fine_skin", "Fine-textured, fair skin", 3], ["moist_flesh", "Moist, firm flesh", 3],
-    ["flat_belly", "Relatively flat belly", 2], ["tight_belly", "Tight belly muscles", 3], ["bright_eyes", "Bright, spirited eyes", 2],
-    ["lips", "Pale-red or dark, pale lips", 3], ["tongue_dusky", "Pale-red or dusky tongue body", 3], ["tongue_tender", "Tender, moist tongue body", 4],
-    ["white_coat", "Thin white tongue coating", 3], ["sweats_easy", "Sweats easily", 4], ["sweaty_palms", "Sweaty palms or soles", 3],
-    ["cold_sens", "Sensitive to cold", 4], ["colds", "Catches colds often", 3], ["palp_tend", "Tends to palpitations", 3],
-    ["shallow_sleep", "Shallow or dream-filled sleep", 3], ["belly_pain_tend", "Tends to belly pain", 2], ["spasms", "Muscle spasms", 2],
-    ["emotional", "Sensitive emotionally and physically", 3]
+  const PH_REN_SIGNS = [
+    ["thin_body", "Thin, delicate build"], ["fine_skin", "Fine-textured, fair skin"], ["moist_flesh", "Moist, firm flesh"],
+    ["flat_belly", "Relatively flat belly"], ["tight_belly", "Tight belly muscles"], ["bright_eyes", "Bright, spirited eyes"],
+    ["lips", "Pale-red or dark, pale lips"], ["tongue_dusky", "Pale-red or dusky tongue body"], ["tongue_tender", "Tender, moist tongue body"],
+    ["white_coat", "Thin white tongue coating"], ["sweats_easy", "Sweats easily"], ["sweaty_palms", "Sweaty palms or soles"],
+    ["cold_sens", "Sensitive to cold"], ["colds", "Catches colds often"], ["palp_tend", "Tends to palpitations"],
+    ["shallow_sleep", "Shallow or dream-filled sleep"], ["belly_pain_tend", "Tends to belly pain"], ["spasms", "Muscle spasms"],
+    ["emotional", "Sensitive emotionally and physically"]
   ];
+  const PH_FORMULAS = {
+    guizhitang: {
+      name: "Gui Zhi Tang", family: "guizhi",
+      bing: { spont_sweat: 5, wind_averse: 5, p_float: 5, feverish: 4, cold_feel: 4, pulsate: 4, upsurge: 4, palp: 3, insomnia_dream: 3, startle: 3, tight: 3, joint_ache: 3, headache: 2, dizzy: 2, flush: 2, abd_disc: 2, diarrhea: 2 },
+      ren: { thin_body: 3, fine_skin: 3, moist_flesh: 3, flat_belly: 2, tight_belly: 3, bright_eyes: 2, lips: 3, tongue_dusky: 3, tongue_tender: 4, white_coat: 3, sweats_easy: 4, sweaty_palms: 3, cold_sens: 4, colds: 3, palp_tend: 3, shallow_sleep: 3, belly_pain_tend: 2, spasms: 2, emotional: 3 }
+    }
+  };
+  const PH_FBR_ACTIVE = "guizhitang";
+  // A pool sign's weight for this formula, falling back to a learned/added sign's own point
+  // value (those aren't in any weight table -- she set their points herself when she added them).
+  function phFbrPts(weights, r) { return weights[r[0]] != null ? weights[r[0]] : r[2]; }
+  // The ceiling is the sum of POSITIVE weights only, so a future disqualifier (negative weight)
+  // narrows who scores well without raising the ceiling anyone else can reach.
+  function phFbrMax(weights) { return Object.values(weights).reduce((s, n) => s + (n > 0 ? n : 0), 0); }
   // 2026-10-08 fixes: the Disease row labelled "Sensitive to cold" was stored under the key
   // `low_fever` (this engine's usual name for a recurring/unexplained fever -- a copy-paste slip,
   // not a deliberate choice) and a second row laid "Body aches or joint pain" under `bt_guizhi`
@@ -63125,12 +63148,12 @@ or changing anything in Cliniko.
   // exactly as before: tap-only. That's not a gap in this wiring, there's genuinely nothing to
   // pre-fill from until those signs are asked somewhere else too.
   const PH_TRI_PREFILL = { cold_feel: "cold_feel", dizzy: "dizzy", cold_sens: "cold_feel" };
-  function phTriSum(list, picks) { return list.reduce((s, r) => s + (picks[r[0]] ? r[2] : 0), 0); }
+  function phTriSum(weights, list, picks) { return Math.max(0, list.reduce((s, r) => s + (picks[r[0]] ? phFbrPts(weights, r) : 0), 0)); }
   // picks with pre-filled values folded in where nothing's been explicitly tapped either way --
   // tapping always writes a real true/false into rec.tri, which this always prefers over a guess.
   function phTriEffective(rec, name, kind, picks) {
     const clueKeys = new Set(phPatClues(rec, name).map(c => c.key));
-    const list = kind === "d" ? PH_TRI_DIS : PH_TRI_PAT, eff = {};
+    const list = kind === "d" ? PH_BING_SIGNS : PH_REN_SIGNS, eff = {};
     list.forEach(r => {
       const src = PH_TRI_PREFILL[r[0]];
       eff[r[0]] = picks[r[0]] !== undefined ? picks[r[0]] : !!(src && clueKeys.has(src));
@@ -63147,7 +63170,8 @@ or changing anything in Cliniko.
     return pts;
   }
   function phTriPatientTotal(rec, name, fam, picks) {
-    return Math.min(56, phTriSum(phTriAll("p", fam), phTriEffective(rec, name, "p", picks)) + phBtqGuizhiPts(rec));
+    const f = PH_FORMULAS[PH_FBR_ACTIVE];
+    return Math.min(phFbrMax(f.ren), phTriSum(f.ren, phTriAll("p", fam), phTriEffective(rec, name, "p", picks)) + phBtqGuizhiPts(rec));
   }
   // The symptom library learns. Seed lists above never change; what she adds lives in PHARMACY.triLearn.added
   // (agreed = on the list for everyone). Tick counts per complaint only ORDER the list -- points come from
@@ -63156,7 +63180,7 @@ or changing anything in Cliniko.
   var phTriOpen = new Set();          // patient keys with the full list open (view state, never saved)
   function phTriFam(name) { const c = phCcOf(name); return c ? phCcMainId(c) : "general"; }
   function phTriAll(kind, fam) {
-    const seed = kind === "d" ? PH_TRI_DIS : PH_TRI_PAT, L = PHARMACY.triLearn || {}, cnt = L.counts || {};
+    const seed = kind === "d" ? PH_BING_SIGNS : PH_REN_SIGNS, L = PHARMACY.triLearn || {}, cnt = L.counts || {};
     const extra = (L.added || []).filter(a => a.kind === kind && a.agreed).map(a => ["a_" + a.id, a.label, a.pts]);
     return seed.concat(extra).map((r, i) => ({ r, i, n: cnt[fam + "|" + kind + "|" + r[0]] || 0 }))
       .sort((a, b) => b.n - a.n || a.i - b.i).map(x => x.r);
@@ -63169,29 +63193,31 @@ or changing anything in Cliniko.
   function phTriHtml(name) {
     const rec = phPatientPeek(name) || {}, tri = rec.tri || {}, d = tri.d || {}, p = tri.p || {};
     const L = PHARMACY.triLearn || { added: [] }, fam = phTriFam(name), open = phTriOpen.has(phPatientKey(name));
+    const f = PH_FORMULAS[PH_FBR_ACTIVE], archName = (PH_BTJ[f.family] && PH_BTJ[f.family].n) || f.name;
     const effD = phTriEffective(rec, name, "d", d), effP = phTriEffective(rec, name, "p", p);
-    const dS = phTriSum(phTriAll("d", fam), effD), pS = phTriPatientTotal(rec, name, fam, p);
+    const maxD = phFbrMax(f.bing), maxP = phFbrMax(f.ren);
+    const dS = phTriSum(f.bing, phTriAll("d", fam), effD), pS = phTriPatientTotal(rec, name, fam, p);
     // "auto" = on only because it's already recorded elsewhere, never tapped here yet -- a tap
     // always writes a real true/false and wins from then on, same as any other row.
-    const row = (r, kind, picks, eff) => { const on = eff[r[0]], auto = picks[r[0]] === undefined && on;
-      return `<button type="button" class="ph-tri-row${on ? " on" : ""}${auto ? " auto" : ""}" aria-pressed="${on ? "true" : "false"}" data-tri="${kind}:${r[0]}"${auto ? ` title="Already recorded elsewhere — tap to override"` : ""}><span>${esc(r[1])}</span><b>+${r[2]}</b></button>`; };
-    const bar = s => `<div class="ph-tri-bar"><i style="width:${Math.round(s * 100 / 56)}%"></i></div>`;
-    const col = (kind, picks, eff) => {
+    const row = (r, kind, picks, eff, weights) => { const on = eff[r[0]], auto = picks[r[0]] === undefined && on;
+      return `<button type="button" class="ph-tri-row${on ? " on" : ""}${auto ? " auto" : ""}" aria-pressed="${on ? "true" : "false"}" data-tri="${kind}:${r[0]}"${auto ? ` title="Already recorded elsewhere — tap to override"` : ""}><span>${esc(r[1])}</span><b>+${phFbrPts(weights, r)}</b></button>`; };
+    const bar = (s, max) => `<div class="ph-tri-bar"><i style="width:${Math.round(s * 100 / max)}%"></i></div>`;
+    const col = (kind, picks, eff, weights) => {
       const all = phTriAll(kind, fam), shown = open ? all : all.slice(0, PH_TRI_TOP);
       const pend = (L.added || []).filter(a => a.kind === kind && !a.agreed);
       const pendRow = a => `<div class="ph-tri-pend"><span>${esc(a.label)} <b>+${a.pts}</b></span><button type="button" class="ph-pfw-link" data-tri-agree="${esc(a.id)}">Agree</button></div>`;
       const addRow = `<div class="ph-tri-add"><input class="ph-tri-in" type="text" maxlength="60" placeholder="Add a symptom…" aria-label="Add a symptom"><input class="ph-tri-pt" type="number" min="1" max="9" value="2" aria-label="Points"><button type="button" class="ph-pfw-link" data-tri-add="${kind}">Add</button></div>`;
-      return `${shown.map(r => row(r, kind, picks, eff)).join("")}${all.length > PH_TRI_TOP ? `<button type="button" class="ph-pfw-link ph-tri-more" data-tri-more="1">${open ? "Show fewer" : `Show all ${all.length} ›`}</button>` : ""}${pend.length ? `<div class="ph-tri-plab">To check</div>${pend.map(pendRow).join("")}` : ""}${addRow}`;
+      return `${shown.map(r => row(r, kind, picks, eff, weights)).join("")}${all.length > PH_TRI_TOP ? `<button type="button" class="ph-pfw-link ph-tri-more" data-tri-more="1">${open ? "Show fewer" : `Show all ${all.length} ›`}</button>` : ""}${pend.length ? `<div class="ph-tri-plab">To check</div>${pend.map(pendRow).join("")}` : ""}${addRow}`;
     };
     return `<div class="ph-pfw-card ph-tri" data-tri-host="1">
       <div class="ph-pfw-hd"><h3>Triangle</h3></div>
       <div class="ph-tri-cols">
-        <section class="ph-tri-col"><h4>Disease · what is wrong now</h4>${col("d", d, effD)}</section>
+        <section class="ph-tri-col"><h4>Disease · what is wrong now</h4>${col("d", d, effD, f.bing)}</section>
         <section class="ph-tri-col ph-tri-fx"><h4>Formula · which plan fits</h4>
-          <div class="ph-tri-fcard"><div class="ph-tri-ft"><span>Gui Zhi Tang</span><span>${dS} of 56</span></div>${bar(dS)}<div class="ph-tri-fs">${dS ? "Top match so far" : "No Disease ticks yet"}</div></div>
+          <div class="ph-tri-fcard"><div class="ph-tri-ft"><span>${esc(f.name)}</span><span>${dS} of ${maxD}</span></div>${bar(dS, maxD)}<div class="ph-tri-fs">${dS ? "Top match so far" : "No Disease ticks yet"}</div></div>
         </section>
-        <section class="ph-tri-col"><h4>Patient · the person's build</h4>${col("p", p, effP)}
-          <div class="ph-tri-ft"><span>Gui Zhi type</span><span>${pS} of 56</span></div>${bar(pS)}</section>
+        <section class="ph-tri-col"><h4>Patient · the person's build</h4>${col("p", p, effP, f.ren)}
+          <div class="ph-tri-ft"><span>${esc(archName)} type</span><span>${pS} of ${maxP}</span></div>${bar(pS, maxP)}</section>
       </div>
       ${dS + pS ? `<div class="ph-btq-foot"><button type="button" class="ph-pfw-link" data-tri-clear="1">Clear the triangle</button></div>` : ""}
     </div>`;
