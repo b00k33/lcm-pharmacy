@@ -63247,12 +63247,18 @@ or changing anything in Cliniko.
     { id: "pulse", label: "Pulse" },
     { id: "abdomen", label: "Abdomen" },
   ];
+  // her ask 2026-10-10 ("make menstrual cycle first check"): Cycle leads the checklist, before
+  // Re-check -- but only for patients it actually applies to (phCycleOn), so the list a male or
+  // a 48+ patient sees is unchanged.
+  const PH_TODAY_CYCLE_PART = { id: "cycle", label: "Cycle" };
+  function phTodayParts(rec) { return phCycleOn(rec) ? [PH_TODAY_CYCLE_PART].concat(PH_TODAY_PARTS) : PH_TODAY_PARTS; }
   function phTodayDonePart(rec, id) {
     const today = keyOf(TODAY);
     if (id === "recheck") return !!(rec.recheck && rec.recheck.date === today && rec.recheck.change);
     if (id === "tongue") return !!(rec.tongueExam && rec.tongueExam.at && keyOf(new Date(rec.tongueExam.at)) === today);
     if (id === "pulse") return !!(rec.constitPulse && rec.constitPulse.at && keyOf(new Date(rec.constitPulse.at)) === today);
     if (id === "abdomen") return !!(rec.abdomen && rec.abdomen.at && keyOf(new Date(rec.abdomen.at)) === today);
+    if (id === "cycle") return !!(rec.cycleSigns && rec.cycleSigns[today]);
     return false;
   }
   function phTodaySumPart(rec, id) {
@@ -63262,6 +63268,7 @@ or changing anything in Cliniko.
       if (rec.abdomen && rec.abdomen.normal) return "Normal";
       return (rec.abdomen && phAbd2Summary(rec.abdomen.chart)) || "Nothing recorded";
     }
+    if (id === "cycle") { const comp = phCycleComp(rec); return comp ? `CD ${comp.day} · ${comp.phaseLabel}` : "Not tracked yet"; }
     return "";
   }
   var phTodayOpen = new Set();     // view state: which tongue/pulse/abdomen tiles are expanded
@@ -63277,12 +63284,13 @@ or changing anything in Cliniko.
     // visiting that screen directly
     presHxScreenName = name;
     const key = phPatientKey(name);
-    const doneFlags = PH_TODAY_PARTS.map(p => phTodayDonePart(rec, p.id));
+    const parts = phTodayParts(rec);
+    const doneFlags = parts.map(p => phTodayDonePart(rec, p.id));
     const doneN = doneFlags.filter(Boolean).length;
-    const gate = doneN === PH_TODAY_PARTS.length
+    const gate = doneN === parts.length
       ? `<div class="ph-today-gate done">✓ Today's visit complete</div>`
-      : `<div class="ph-today-gate">◐ ${doneN} of ${PH_TODAY_PARTS.length} done</div>`;
-    const tiles = PH_TODAY_PARTS.map((p, i) => {
+      : `<div class="ph-today-gate">◐ ${doneN} of ${parts.length} done</div>`;
+    const tiles = parts.map((p, i) => {
       const done = doneFlags[i];
       if (p.id === "recheck") return `<div class="ph-today-tile recheck${done ? " done" : ""}" data-today-tile="recheck">${phRcCardHtml(t, true)}</div>`;
       const open = phTodayOpen.has(key + ":" + p.id);
@@ -63291,7 +63299,7 @@ or changing anything in Cliniko.
         <span class="ph-today-openlink">${open ? "Close ‹" : (done ? "Change ›" : "Open ›")}</span>
       </button>`;
       if (!open) return `<div class="ph-today-tile${done ? " done" : ""}" data-today-tile="${p.id}">${head}<div class="ph-today-sum">${esc(phTodaySumPart(rec, p.id))}</div></div>`;
-      const body = p.id === "tongue" ? phTngHtml(name) : p.id === "pulse" ? phHxConstitPulseHtml(rec, name) : phAbdHtml(name);
+      const body = p.id === "tongue" ? phTngHtml(name) : p.id === "pulse" ? phHxConstitPulseHtml(rec, name) : p.id === "cycle" ? presCycleSectionBodyHtml(t) : phAbdHtml(name);
       return `<div class="ph-today-tile open${done ? " done" : ""}" data-today-tile="${p.id}">${head}${body}</div>`;
     }).join("");
     return `<div class="ph-today" data-today-host="1">${gate}${tiles}</div>`;
@@ -63321,10 +63329,11 @@ or changing anything in Cliniko.
     if (!name || presIsFormula(t)) return "";
     const rec = phPatientPeek(name) || {};
     if (!(rec.sex && rec.dob) || phTodayDispSkip.has(phPatientKey(name))) return "";
-    const doneN = PH_TODAY_PARTS.filter(p => phTodayDonePart(rec, p.id)).length;
-    if (doneN === PH_TODAY_PARTS.length) return "";
+    const parts = phTodayParts(rec);
+    const doneN = parts.filter(p => phTodayDonePart(rec, p.id)).length;
+    if (doneN === parts.length) return "";
     return `<div class="ph-today-dispgate" data-today-dispgate="1">
-      <span>◐ Today's visit isn't finished — ${doneN} of ${PH_TODAY_PARTS.length} checks done.</span>
+      <span>◐ Today's visit isn't finished — ${doneN} of ${parts.length} checks done.</span>
       <button type="button" class="ph-pfw-link" data-flow-prof="today">Finish it ›</button>
       <button type="button" class="ph-pfw-link" data-today-dispskip="1">Dispense anyway</button>
     </div>`;
@@ -63401,9 +63410,9 @@ or changing anything in Cliniko.
     if (id === "ren") return { done: !!(phFbrRenLead(rec, name) || rec.bodyConstitutionBt), at: (rec.tri && rec.tri.at) || 0 };
     if (id === "recheck") { const r = rec.recheck; return { done: !!(r && r.date === keyOf(TODAY) && r.change), at: (r && r.at) || 0 }; }
     if (id === "today") {
-      const parts = PH_TODAY_PARTS.map(p => phTodayDonePart(rec, p.id));
+      const done = phTodayParts(rec).map(p => phTodayDonePart(rec, p.id));
       const ats = ["recheck", "tongue", "pulse", "abdomen"].map(k => k === "tongue" ? (rec.tongueExam && rec.tongueExam.at) || 0 : k === "pulse" ? (rec.constitPulse && rec.constitPulse.at) || 0 : k === "abdomen" ? (rec.abdomen && rec.abdomen.at) || 0 : (rec.recheck && rec.recheck.at) || 0);
-      return { done: parts.every(Boolean), at: Math.max(0, ...ats) };
+      return { done: done.every(Boolean), at: Math.max(0, ...ats) };
     }
     const at = (rec.usual && rec.usual.at) || 0;
     if (id === "cycle") return { done: phPfSetFor(rec) === "period" && phPfwSetDone(name, "period"), at };
