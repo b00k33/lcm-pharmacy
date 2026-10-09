@@ -165,6 +165,35 @@ update STYLE-LCM.md to match so future builds don't undo it.
   mechanism, a second undo mechanism, or a second message-kind when an
   existing one already fits the job.
 
+## Integrative builds — one source of truth, shown everywhere
+**Her standing instruction (2026-10-10): "all builds and developments are
+integrative. the same information needs to present in all places that
+reference it ... i want this app to be integratively heavy."** This is
+broader than the Components rule above (reused UI widgets) — it's about the
+underlying DATA. The same real fact — a tongue photo, an abdomen finding, a
+pulse reading, a pain map, a plan's current phase — must look the same and
+come from the same read wherever it's shown, not get re-derived or
+reinvented per screen. Concretely: before building any new view that shows
+information already captured elsewhere, find the existing function that
+already renders/reads it and call that, rather than writing a parallel
+summary, a second mini-chart, or a fresh text description of the same
+underlying record. If no reusable function exists yet for something new,
+build it once and have every surface that needs it call that one function —
+don't let a second screen quietly duplicate the logic.
+
+Real examples already following this (use as the precedent, not photos or
+text reinvented per screen): the Tongue/Pulse/Abdomen tiles on Today's
+visit, the Treatment log's "All" filter mini-charts, and the Review step's
+mindmap all read tongue findings through the same `phTongueChartSvg` +
+best-photo-on-file resolution (`PH_TONGUE_SHOT_RANK`) rather than three
+different tongue renderers; abdomen through the one `phAbdChartSvg`; pulse
+through the one `phVisitPulseDotsHtml`/`phVisitPulseSummaryText`; the pain
+map through the one `phPainMapHtml`. A patient's current phase, pattern
+clues, or flagged history item should read the same way everywhere they
+surface, for the same reason. When a new feature's design calls for
+"showing X," the first question is always "where does X already live, and
+what already renders it" — not "what's the best way to draw X here."
+
 ## Status colours — quiet and consistent
 - The inventory status counts (Zero / Low / Phasing out / Temporarily
   stopping) are a compact, aligned set of small chips of equal height — not
