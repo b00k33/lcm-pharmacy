@@ -13773,6 +13773,7 @@
   #pharmacyPage .ph-rv-node.c-gold .cat { color: var(--ph-gold-deep); } #pharmacyPage .ph-rv-node.c-gold .cat i { background: var(--ph-gold); }
   #pharmacyPage .ph-rv-node.c-grey .cat { color: #5C6770; } #pharmacyPage .ph-rv-node.c-grey .cat i { background: #8B96A0; }
   #pharmacyPage .ph-rv-map { margin-top: 18px; }
+  #pharmacyPage .ph-rv-intake { margin-top: 18px; }
   @media (prefers-reduced-motion: reduce) {
     #pharmacyPage .ph-rv-node { animation: none; opacity: 1; transform: none; transition: none; }
     #pharmacyPage .ph-rv-spokes line { transition: none !important; }
@@ -36673,6 +36674,13 @@
         if (presTpMainTab === "review") requestAnimationFrame(() => presTpReviewSpokesDraw(true));
         return;
       }
+      if (e.target.closest("[data-rv-intake-toggle]")) {
+        const name = phPfwName(); if (!name) return;
+        const key = phPatientKey(name);
+        if (presRvIntakeOpen.has(key)) presRvIntakeOpen.delete(key); else presRvIntakeOpen.add(key);
+        if (!presTpMainTabRefresh()) renderPresPanel();
+        return;
+      }
       // the 方病人 constitution fold, merged into Patient details (her ask
       // 2026-09-25) -- only ever shown inside this one tab, so the scoped
       // presAssessTabRefresh() is always the right repaint (no second
@@ -56059,7 +56067,7 @@ or changing anything in Cliniko.
     // "This visit" (her mock, 2026-10-08): the rail says what this visit still
     // needs. Only sections with a real done-state count (presSecDone); Tongue,
     // Pulse and the rest stay plain and uncounted.
-    const VISIT_TRACKED = new Set(["patient", "ren", "today", "medhx", "cycle", "usual", "pain", "sleep"]);
+    const VISIT_TRACKED = new Set(["patient", "ren", "today", "medhx", "cycle", "usual", "sleep"]);
     const visitItems = f.profSubs.filter(u => VISIT_TRACKED.has(u.id));
     const visitDone = visitItems.filter(u => u.dn).length + (f.steps[1].done ? 1 : 0) + (f.steps[2].done ? 1 : 0);
     const visitTotal = visitItems.length + 2;
@@ -56357,7 +56365,7 @@ or changing anything in Cliniko.
   // "ren" dropped (her ask 2026-10-09, "i dont want ren having its own row"):
   // the Fang Bing Ren tile right below this strip already covers it in full --
   // a chip here too was the exact kind of duplicate she's flagged before.
-  const PH_PF_PROGRESS_IDS = ["medhx", "usual", "pain", "sleep", "cycle", "supplements"];
+  const PH_PF_PROGRESS_IDS = ["medhx", "usual", "sleep", "cycle", "supplements"];
   function presPfProgressStripHtml(t, name) {
     if (!name || presIsFormula(t)) return "";
     const all = presAssessSections(t);
@@ -57032,11 +57040,12 @@ or changing anything in Cliniko.
       // Patterns. A woman with cycle on has hers on top of the Cycle page instead.
       const pfSet = peek ? phPfSetFor(peek) : null;
       if (pfSet === "meno" || pfSet === "men") sections.push({ id: "usual", label: PH_PFW_SETS[pfSet].title, body: () => `<div data-pfw-slot="1">${presPfwSetHtml(hxName, pfSet)}</div>` });
-      // her pain questions (2026-10-05): only when she came in for pain, or the Case is Pain.
-      // Same gate the Review step uses (phReviewOn) -- was a separate inline
-      // copy that drifted from it, see the comment on phReviewOn.
-      const painOn = phReviewOn(hxName, t);
-      if (painOn && !presIsFormula(t)) sections.push({ id: "pain", label: "Pain", sub: phPfwSetDone(hxName, "pain") ? "answered" : "", body: () => `<div data-pfw-slot="1">${presPfwSetHtml(hxName, "pain")}</div><div class="ph-pain-where">${phPainMapHtml(hxName, phPmPlanFor(hxName, "pt:" + phPatientKey(hxName)))}</div>` });
+      // her pain questions (2026-10-05) used to be their own rail page here;
+      // folded into the Review step instead (2026-10-10, "Fold it into
+      // Review") -- phReviewOn(hxName, t) (the same gate Review uses) still
+      // decides whether she's a pain patient at all, just no longer pushes
+      // a standalone "pain" section. See presTpReviewTabBodyHtml.
+      const ccPain = phCcOf(hxName);
       // her stress & sleep questions (2026-10-05): only when she came in for stress and sleep, or the Case is Stress
       const sleepOn = (ccPain && ccPain.fams.includes("sleep")) || (t.caseType === "stress");
       if (sleepOn && !presIsFormula(t)) sections.push({ id: "sleep", label: "Stress & sleep", sub: phPfwSetDone(hxName, "sleep") ? "answered" : "", body: () => `<div data-pfw-slot="1">${presPfwSetHtml(hxName, "sleep")}</div>` });
@@ -62909,12 +62918,15 @@ or changing anything in Cliniko.
     // Region-to-pattern links are not built; those are hers to decide.
     const sites = Array.isArray(rec.painSites) ? rec.painSites.filter(p => p && PH_PAIN_REGIONS.REGIONS[p.r]) : [];
     const spread = new Set(sites.map(p => p.r)).size;
-    if (spread >= 2) add("pn_move", "usual", `Pain in ${spread} places on her pain map`, { tab: "pain" }, "", "pain-map:spread");
+    // "pain" rail page is gone (folded into the Review step, 2026-10-10) --
+    // these clues point at "review" now; data-pat-go knows that's a Plan-
+    // stage tab, not a profile one (see the click handler).
+    if (spread >= 2) add("pn_move", "usual", `Pain in ${spread} places on her pain map`, { tab: "review" }, "", "pain-map:spread");
     // draft region clues: which region feeds which pattern is hers to correct
     const regHit = pre => sites.some(p => p.r.startsWith(pre));
-    if (regHit("low_back")) add("pr_lowback", "usual", "Pain in the lower back on her pain map", { tab: "pain" }, "", "pain-map:lowback");
-    if (regHit("shoulder") || regHit("neck")) add("pr_shoulder", "usual", "Pain in the shoulder or neck on her pain map", { tab: "pain" }, "", "pain-map:shoulder");
-    if (regHit("knee") || regHit("ankle")) add("pr_knee", "usual", "Pain in the knee or ankle on her pain map", { tab: "pain" }, "", "pain-map:knee");
+    if (regHit("low_back")) add("pr_lowback", "usual", "Pain in the lower back on her pain map", { tab: "review" }, "", "pain-map:lowback");
+    if (regHit("shoulder") || regHit("neck")) add("pr_shoulder", "usual", "Pain in the shoulder or neck on her pain map", { tab: "review" }, "", "pain-map:shoulder");
+    if (regHit("knee") || regHit("ankle")) add("pr_knee", "usual", "Pain in the knee or ankle on her pain map", { tab: "review" }, "", "pain-map:knee");
     Object.keys(PH_PFW_SETS).forEach(sid => {
       const ans = u[sid];
       if (!ans || (sid === "period" && logged)) return;
@@ -63450,7 +63462,9 @@ or changing anything in Cliniko.
   function phPfwNextId(name, fromId) {
     const rec = phPatientPeek(name) || {}, sid = phPfSetFor(rec);
     const seq = ["patient"]; if (sid === "period") seq.push("cycle"); else if (sid) seq.push("usual");
-    { const cc = phCcOf(name); if (cc && cc.fams.includes("pain")) seq.push("pain"); if (cc && cc.fams.includes("sleep")) seq.push("sleep"); }
+    // "pain" dropped from this chain (2026-10-10, folded into Review, no
+    // longer a rail page to auto-advance to) -- phPfwArm no-ops for it now.
+    { const cc = phCcOf(name); if (cc && cc.fams.includes("sleep")) seq.push("sleep"); }
     seq.push("medhx", "patterns");
     const i = seq.indexOf(fromId);
     return i >= 0 ? seq[i + 1] || null : null;
@@ -65697,6 +65711,16 @@ or changing anything in Cliniko.
     if ((el = T.closest("[data-pat-go]"))) {
       const [tab, fold] = String(el.dataset.patGo).split("|");
       if (!tab) return true;
+      // "review" lives on the Plan stage, not the profile rail every other
+      // clue target does (2026-10-10, the old "pain" rail page folded into
+      // it) -- same branch presStageNextBtnHtml/data-flow-go already use.
+      if (tab === "review") {
+        presStage = "plan"; presTpMainTab = "review";
+        if (!presTpMainTabRefresh()) renderPresPanel();
+        presFlowRailRefresh();
+        requestAnimationFrame(() => presTpReviewSpokesDraw(true));
+        return true;
+      }
       if (fold === "constit") presConstitFoldOpen = true;
       presStage = "profile"; presAssessTab = tab;
       if (!presAssessTabRefresh()) renderPresPanel();
@@ -71437,6 +71461,7 @@ or changing anything in Cliniko.
   // phVisitPulseDotsHtml for pulse, phAbdChartSvg for abdomen, phPainMapHtml
   // for the musculoskeletal map, phTpCellShow for the plan's own fields --
   // nothing here is a second drawing or a second summary of the same record.
+  var presRvIntakeOpen = new Set(); // view state: whose Pain-intake fold is open on Review
   function presTpReviewTabBodyHtml(name, plan) {
     const rec = phPatientPeek(name) || {};
     const t = PRESC.items.find(x => x.id === presOpenId);
@@ -71487,10 +71512,27 @@ or changing anything in Cliniko.
     </button>`).join("");
 
     const mapHtml = mainFam && mainFam.id === "pain" ? phPainMapHtml(name, phPmPlanFor(name, "pt:" + pk)) : "";
+    // the old one-time Pain intake (onset/quality/aggravating-relieving) --
+    // folded in here (2026-10-10, "Fold it into Review") rather than kept as
+    // its own rail page. Collapsed by default so the fast visual summary
+    // above isn't buried under a question form; presPfwSetHtml is the same
+    // function/data the old rail page used, just a new home for it.
+    const intakeOpen = presRvIntakeOpen.has(pk);
+    const intakeDone = phPfwSetDone(name, "pain");
+    // reuses Today's visit's own tile/fold look (.ph-today-tile etc.)
+    // rather than a new fold style (CLAUDE.md "Integrative builds").
+    const intakeHtml = `<div class="ph-today-tile ph-rv-intake${intakeDone ? " done" : ""}${intakeOpen ? " open" : ""}">
+      <button type="button" class="ph-today-head" data-rv-intake-toggle="1">
+        <span class="ph-today-tick">${intakeDone ? "✓" : ""}</span><span class="ph-today-label">Pain intake</span>
+        <span class="ph-today-openlink">${intakeOpen ? "Close ‹" : (intakeDone ? "Change ›" : "Open ›")}</span>
+      </button>
+      ${intakeOpen ? `<div data-pfw-slot="1">${presPfwSetHtml(name, "pain")}</div>` : ""}
+    </div>`;
     return `<div class="ph-rv" data-rv-host="1">
       <div class="ph-rv-quick">${t ? phRcCardHtml(t, true) : ""}</div>
       <div class="ph-rv-radial"><svg class="ph-rv-spokes"></svg><div class="ph-rv-ring">${ring}</div></div>
       ${mapHtml ? `<div class="ph-rv-map"><div class="hd2"><b>Where it hurts</b></div>${mapHtml}</div>` : ""}
+      ${intakeHtml}
     </div>`;
   }
   // scoped repaint for the Review tab's spoke lines -- the lines are
