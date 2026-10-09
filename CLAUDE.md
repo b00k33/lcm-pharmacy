@@ -519,6 +519,25 @@ tighten excess vertical gaps between stacked header/toolbar rows. This is
 about removing space that isn't doing a job, not a license to cram content
 or remove whitespace that's genuinely doing layout work.
 
+**Edge padding on full-bleed panels — the opposite failure mode, added
+2026-10-09.** Compressing dead space (above) is about removing gaps that do
+no work; it is never licence to strip a full-bleed panel's own top/left
+content padding down to zero. A panel that deliberately cancels the page's
+ambient ~40px chrome padding to sit flush against the window (e.g.
+`.ph-pres-panel`'s `--ph-pres-bleed`, see "FULL BLEED" below) still owes
+its OWN inner content a baseline inset — without one, every label sits
+flush against the CARD's inner edge too, not just the window edge. Her
+words: "the overall border of words and text at the top and left side are
+too close to the edges." Fixed app-wide 2026-10-09: every full-bleed /
+zero-padding top-level container gets `padding: 16px 0 0 16px` (top+left
+only — right/bottom already get breathing room from sibling content or
+existing rules), scoped `@media (min-width: 641px)` so phone's own already-
+tuned spacing is untouched, matching the pre-existing `.ph-pres-stage-body`
+16px side-padding precedent. Reuse this exact number and this exact
+scoping for any new full-bleed container rather than inventing a new one;
+see `.ph-flow`'s own rule (search `.ph-flow { display: flex`) as the
+canonical example.
+
 ## code3 — Communications Expert (established 2026-09-09)
 
 Her instruction: **"code3 in lcm is communications expert."** Named
@@ -1351,6 +1370,9 @@ what's on the "never" side.
 - Deploy from the shared tree by pushing the branch ref
   (`git push origin session-a:main`) — never checkout/merge/checkout.
 - Reduced-motion must disable every animation added to this app.
+- A full-bleed container (one that cancels the page's own ambient chrome
+  padding) must still give its own content a 16px top+left inset, desktop-
+  scoped (`@media (min-width: 641px)`) — never ship one at zero padding.
 - Zygomatic branch stays at one checklist item on the facial-paralysis
   checklist — she's declined a second, twice.
 
