@@ -16,6 +16,18 @@ several small ones nearby (see "Remove → Combine → Infer → Group → Colla
 → Contextualise → Hide → Reveal" under code7 below) — restraint is the
 default, not an afterthought pass at the end.
 
+**No standing how-to-use captions anywhere in the app** (2026-10-09, her
+words: "not having explanation and instructions in app" — found first on
+the photo circle-tool's permanent "drag on the photo to circle an area ·
+drag a circle to move it, or its edge to resize" line, removed). A control
+must be self-evident from its own design, or carry its affordance in a
+hover `title`/`aria-label`, never a permanently-visible sentence of
+UI-mechanics text sitting on screen ("tap a zone to apply it", "drag here
+to resize"). Does NOT cover: an empty-state prompt telling her what to do
+when a section has no data yet ("tap a day to log her period"), or a
+legend decoding a chart's own symbols (e.g. the pulse grid's △/degree
+key) — both stay, since they explain content, not interaction mechanics.
+
 For LCM Pharmacy, follow STYLE-LCM.md. If a request conflicts with a rule in it,
 update STYLE-LCM.md to match so future builds don't undo it.
 
