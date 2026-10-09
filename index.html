@@ -63833,13 +63833,15 @@ or changing anything in Cliniko.
   // generalised 2026-10-09 to cover both columns (her ask, "organise the feels symptoms into
   // subjective category") -- kind/groups/groupIx now passed in rather than hardcoded to Ren's own,
   // so the same sectioning serves Bing's PH_BING_GROUPS too. Behaviour for existing Ren callers
-  // is unchanged -- they just pass PH_REN_GROUPS/PH_REN_GROUP_IX/"p" explicitly now.
-  function phFbrGroupedHtml(rec, name, all, kind, picks, eff, weights, prefix, prevD, groups, groupIx) {
+  // is unchanged -- they just pass PH_REN_GROUPS/PH_REN_GROUP_IX/"p" explicitly now. filtColour
+  // (optional) carries the filtered family's own bar colour through to every row, same as the
+  // flat-list renderer below already does -- a family filter now reuses this grouped layout too.
+  function phFbrGroupedHtml(rec, name, all, kind, picks, eff, weights, prefix, prevD, groups, groupIx, filtColour) {
     const buckets = groups.map(g => ({ lab: g.lab, rows: [] }));
     const other = { lab: "Other", rows: [] };
     all.forEach(r => { const gi = groupIx[r[0]]; (gi == null ? other : buckets[gi]).rows.push(r); });
     return buckets.concat(other.rows.length ? [other] : []).filter(b => b.rows.length)
-      .map(b => `<div class="ph-fbr-grp"><div class="ph-fbr-grp-lab">${esc(b.lab)}</div>${b.rows.map(r => phFbrRowHtml(rec, name, r, kind, picks, eff, weights, prefix, prevD)).join("")}</div>`).join("");
+      .map(b => `<div class="ph-fbr-grp"><div class="ph-fbr-grp-lab">${esc(b.lab)}</div>${b.rows.map(r => phFbrRowHtml(rec, name, r, kind, picks, eff, weights, prefix, prevD, filtColour)).join("")}</div>`).join("");
   }
   function phTriHtml(name, fresh) {
     const rec = phPatientPeek(name) || {}, today = phTriToday(rec), d = today.d, p = today.p;
@@ -63873,11 +63875,12 @@ or changing anything in Cliniko.
       const addRow = `<div class="ph-tri-add"><input class="ph-tri-in" type="text" maxlength="60" placeholder="Add a symptom…" aria-label="Add a symptom"><input class="ph-tri-pt" type="number" min="1" max="9" value="2" aria-label="Points"><button type="button" class="ph-pfw-link" data-tri-add="${kind}">Add</button></div>`;
       // Grouping only earns its keep once there's enough on screen to need organising -- the
       // default top-6 view stays a flat, light list; "Show all" (same patient-level `open` flag
-      // both columns share) is where ~100 Ren signs genuinely benefit from sections. A filtered
-      // list is already small and already one family's own context, so it stays flat too, and
-      // shows every matching sign at once -- capping it to 6 would defeat the point of filtering.
-      const rowsHtml = (grouped && open && !fw)
-        ? phFbrGroupedHtml(rec, name, shown, kind, picks, eff, rowWeights, "tri", today.prevD, kind === "d" ? PH_BING_GROUPS : PH_REN_GROUPS, kind === "d" ? PH_BING_GROUP_IX : PH_REN_GROUP_IX)
+      // both columns share) and a family filter both keep the category headers (her ask
+      // 2026-10-09: "when i filter, i still need to see the categories") -- a filtered list
+      // is smaller, but it's still a wall of signs without them. Rows keep whatever order
+      // `shown` already carries (ranked by that family's weight when filtered) within each group.
+      const rowsHtml = (grouped && (open || fw))
+        ? phFbrGroupedHtml(rec, name, shown, kind, picks, eff, rowWeights, "tri", today.prevD, kind === "d" ? PH_BING_GROUPS : PH_REN_GROUPS, kind === "d" ? PH_BING_GROUP_IX : PH_REN_GROUP_IX, filtColour)
         : shown.map(r => phFbrRowHtml(rec, name, r, kind, picks, eff, rowWeights, "tri", today.prevD, filtColour)).join("");
       const emptyMsg = fw && !shown.length ? `<div class="ph-tri-fs">No ${esc(filtFam.name)}-specific signs here.</div>` : "";
       const moreBtn = (!fw && all.length > PH_TRI_TOP) ? `<button type="button" class="ph-pfw-link ph-tri-more" data-tri-more="1">${open ? "Show fewer" : `Show all ${all.length} ›`}</button>` : "";
