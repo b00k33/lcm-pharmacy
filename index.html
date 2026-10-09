@@ -9733,6 +9733,16 @@
     background: var(--ph-paper); font-size: var(--fs-11);
   }
   #pharmacyPage .ph-hx-flags-empty { font-size: var(--fs-11-5); color: var(--ph-soft); font-style: italic; }
+  /* the priority-items note that replaced the "shapes the picture" card (her merge, 2026-10-09) */
+  #pharmacyPage .ph-hx-prio-note {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 20px;
+    border-bottom: 1px solid var(--ph-line); background: var(--ph-gold-tint); color: var(--ph-gold-deep);
+    font-size: var(--fs-11-5); font-weight: 600;
+  }
+  #pharmacyPage .ph-hx-prio-skip {
+    border: 1px solid var(--ph-gold); background: var(--ph-white); color: var(--ph-gold-deep);
+    border-radius: 999px; padding: 3px 10px; font-size: var(--fs-11); font-weight: 700; cursor: pointer; min-height: 24px;
+  }
   #pharmacyPage .ph-hx-flag-continue {
     border: 1px solid var(--ph-stopped); background: var(--ph-stopped-tint); color: var(--ph-ink);
     border-radius: 999px; padding: 4px 12px; font-size: var(--fs-11-5); font-weight: 600; cursor: pointer; min-height: 28px;
@@ -35063,6 +35073,12 @@
         rec.historyUpdatedAt = Date.now();   // so the "Saved..." line means something even with zero questions answered
         savePharmacy(); renderHxScreen(); return;
       }
+      if (e.target.closest("[data-hx-prio-none]")) {
+        const rec = phPatientRec(presHxScreenName);
+        if (!rec) return;
+        phPfShortItems(rec).forEach(it => { if (phHxVal(rec, it.id) === "unasked") phHxSet(rec, it.id, "no"); });
+        savePharmacy(); renderHxScreen(); return;
+      }
       // ---- 方病人 Guide (2026-08-20): source-quote toggle works anywhere a
       // source chip appears (body type/formula detail, tongue notes) — it
       // just shows/hides whatever chip+quote pair sit next to each other in
@@ -50717,6 +50733,9 @@ or changing anything in Cliniko.
   // mutation animates correctly whichever host(s) actually repaint.
   function phHxBodyHtml(rec) {
     if (presHxListOpen === "folded") return "";
+    // the 5 "shapes the picture first" items (her merge, 2026-10-09): they live in their
+    // real group now, not a second card -- this is just the "feeds X" tag they carried there
+    const prioTag = {}; PH_PFW_SHORT.forEach(it => { prioTag[it.id] = it.tag; });
     let groups = PH_HISTORY_GROUPS.filter(gr => phIsFemale(rec) || !PH_HX_FEMALE_GROUPS.has(gr.g));
     // journey round 4: when her main complaint is not a gynae one, the cycle
     // groups drop to the end so what matters for her complaint comes first
@@ -50762,6 +50781,7 @@ or changing anything in Cliniko.
             <button type="button" class="ph-hx-qrow ${val}${animCls}" data-hx-set="${k}" aria-pressed="${val === "yes" ? "true" : "false"}"${delayAttr}>
               <span class="ph-hx-dot ${val}" aria-hidden="true"></span>
               <span class="ph-hx-qlabel">${esc(label)}</span>
+              ${prioTag[k] ? `<span class="ph-pfw-tag">feeds ${esc(prioTag[k])}</span>` : ""}
             </button>
             ${val === "yes" ? `<div class="ph-hx-rowextra">
               ${presets ? `<span class="ph-hx-presets">${presets.map(p => `<button type="button" class="ph-ck-chip${phHxNoteHasPreset(note, p) ? " on" : ""}" data-hx-notepreset="${k}:${esc(p)}">${esc(p)}</button>`).join("")}</span>` : ""}
@@ -50793,6 +50813,17 @@ or changing anything in Cliniko.
       </div>`;
     }).join("") : `<div class="ph-hx-flags-empty">Nothing flagged yet.</div>`;
     return `<div class="ph-hx-flags">${chips}${continuePill}</div>`;
+  }
+  // the 5 priority items now sit inside the grid itself (her merge, 2026-10-09 --
+  // "instead of two blocks, make it 1"), so there is no card of their own left to hold
+  // a counter or a quick-mark. This one line stands in for both, and disappears once
+  // every priority item has an answer -- the grid alone is calmer once it's done.
+  function phHxPrioNoteHtml(rec) {
+    const items = phPfShortItems(rec);
+    const left = items.filter(it => phHxVal(rec, it.id) === "unasked");
+    if (!items.length || !left.length) return "";
+    return `<div class="ph-hx-prio-note">${items.length - left.length} of ${items.length} priority items answered
+      <button type="button" class="ph-hx-prio-skip" data-hx-prio-none="1">✨ None of these</button></div>`;
   }
   // ---- STEP 9 (方病人, her ask 2026-08-20): body constitution / personality
   // are recorded SEPARATELY -- "you can have a ban xia personality but a ma
@@ -54212,6 +54243,7 @@ or changing anything in Cliniko.
       </div>
       ${phHxPasteBoxHtml(rec)}
       ${phHxFlagsStripHtml(rec)}
+      ${inline ? phHxPrioNoteHtml(rec) : ""}
       <div class="ph-hx-body" id="phHxBody">${phHxBodyHtml(rec)}</div>
       ${phSurgSectionHtml(name, "hx")}
       <div class="ph-hx-footer">
@@ -54434,9 +54466,10 @@ or changing anything in Cliniko.
     // repaints itself, so her place on the page is untouched
     if (inlineEl) {
       presFlowRailRefresh(); presMedHxBandRefresh(presHxScreenName);
-      // profile-first: the short "shapes the picture" card and the live Patterns
-      // panel follow a tap in the full checklist below them (both read the same keys)
-      try { phPfwShortSync(presHxScreenName); } catch (e) { /* card repaints next open */ }
+      // the live Patterns panel follows a tap in the checklist (her merge, 2026-10-09 --
+      // the "shapes the picture" card that used to carry this call is gone, folded into
+      // the grid itself, so this is the direct refresh now)
+      phPfwSideRefresh(presHxScreenName);
     }
     // §3: the timeline opens at the newest (right-hand) end, after the table
     // is in the DOM and has a real scrollWidth
@@ -56365,7 +56398,7 @@ or changing anything in Cliniko.
       presHxFreshFlag = null;
     }
     phRenEnsurePhotos(phPatientKey(name));
-    return `${presMedHxBandHtml(name)}${presPfwShortHtml(name)}<div id="presMedHxHost">${phHxScreenInnerHtml(name, { inline: true, noConstit: true })}</div>`;
+    return `${presMedHxBandHtml(name)}<div id="presMedHxHost">${phHxScreenInnerHtml(name, { inline: true, noConstit: true })}</div>`;
   }
   function presSupplementsTabBodyHtml(t) {
     const name = presPatientFor(t) || t.name || "";
@@ -62799,28 +62832,12 @@ or changing anything in Cliniko.
       <div class="ph-pfw-keys"><kbd>1</kbd>–<kbd>9</kbd> pick · <kbd>S</kbd> skip · <kbd>Enter</kbd> next step</div>
     </div>`;
   }
-  function presPfwShortHtml(name) {
-    if (!name) return "";
-    const rec = phPatientPeek(name) || {};
-    if (!rec.sex) return "";
-    const items = phPfShortItems(rec), key = `shx:${phPatientKey(name)}`;
-    const left = items.filter(it => phPfShortVal(rec, it) === "unasked");
-    const done = !left.length, fold = done && !phPfwOpen.has(key);
-    if (fold) return `<div class="ph-pfw-card fold" data-pfw-host="shx"><button type="button" class="ph-pfw-foldhd" data-pfw-fold="shx"><span class="tick">✓</span><b>Shapes the picture first</b><span class="sm">${items.length} of ${items.length} asked</span><span class="chg">change ▸</span></button></div>`;
-    const cur = left[0];
-    const rows = items.map(it => {
-      const v = phPfShortVal(rec, it);
-      return `<div class="ph-pfw-h${cur === it ? " cur" : ""}" data-pfw-h="${it.id}"><span class="l">${v !== "unasked" ? `<span class="tick">✓</span>` : ""}${esc(it.l)}<span class="ph-pfw-tag">feeds ${esc(it.tag)}</span></span>
-        <span class="yn"><button type="button" class="yes${v === "yes" ? " on" : ""}" data-pfw-sh="${it.id}:yes"><kbd>Y</kbd>Yes</button><button type="button" class="no${v === "no" ? " on" : ""}" data-pfw-sh="${it.id}:no"><kbd>N</kbd>No</button></span></div>`;
-    }).join("");
-    return `<div class="ph-pfw-card" data-pfw-host="shx">
-      <div class="ph-pfw-hd"><h3>Shapes the picture first</h3>${done ? `<button type="button" class="ph-pfw-link" data-pfw-fold="shx">Fold ▴</button>` : ""}</div>
-      <div class="ph-pfw-quick"><button type="button" class="ph-pfw-opt quick" data-pfw-shno="1">✨ None of these · mark every one left as No</button></div>
-      ${rows}
-      ${phPfwFootHtml(name, "medhx", done, `${items.length - left.length} of ${items.length} asked`)}
-      <div class="ph-pfw-keys"><kbd>Y</kbd> yes · <kbd>N</kbd> no · <kbd>Enter</kbd> next step</div>
-    </div>`;
-  }
+  // "Shapes the picture first" (its own card) retired 2026-10-09, her merge: the 5
+  // priority items now render inside the real Medical History grid (phHxBodyHtml's
+  // "feeds X" tag) and phHxPrioNoteHtml carries the counter + quick-mark that used to
+  // live in this card's own header. See the audit that led here: 3 of the original 8
+  // items (iron/iron_low/tired) were removed outright the same day for overlapping
+  // Sleep/Period wording -- the 5 left were always safe, just shown twice.
   // ---- Patterns so far: the live panel beside the questions (wide screens)
   // her ask 2026-10-09 ("too busy" -- this panel fully duplicated its own Fang
   // Bing Ren tab): shrunk to a short summary + link, approved via mock
@@ -62968,13 +62985,8 @@ or changing anything in Cliniko.
   }
   function phPfwRefresh(name, sid) {
     const host = document.querySelector(`[data-pfw-host="${sid}"]`);
-    if (host) host.outerHTML = sid === "shx" ? presPfwShortHtml(name) : presPfwSetHtml(name, sid);
+    if (host) host.outerHTML = presPfwSetHtml(name, sid);
     phPfwSideRefresh(name); presFlowRailRefresh(); phPfwBandRefresh();
-  }
-  function phPfwShortSync(name) {
-    const host = document.querySelector('[data-pfw-host="shx"]');
-    if (host) host.outerHTML = presPfwShortHtml(name);
-    phPfwSideRefresh(name);
   }
   function phPfwSetDone(name, sid) {
     const rec = phPatientPeek(name) || {}, ans = (rec.usual && rec.usual[sid]) || {};
@@ -63028,45 +63040,10 @@ or changing anything in Cliniko.
     presSavedToast("Filled with typical answers. Tap any row to change it.");
     if (phPfwSetDone(name, sid)) phPfwArm(name, phPfwTabOf(sid), "Filled.");
   }
-  function phPfwShort(id, val, el) {
-    const name = phPfwName(); if (!name) return;
-    const it = PH_PFW_SHORT.find(x => x.id === id); if (!it) return;
-    phPfwDisarm();
-    el = phPfwRectOf(el);
-    if (it.hx) {
-      const rec = phPatientRec(name); if (!rec) return;
-      phHxSet(rec, it.id, val);
-      if (savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return; }
-      phPfwFed = val === "yes" ? it.clue.map(k => "+ " + (PH_PAT_CLUE_LBL[k] || k)) : [];
-      let synced = false;
-      try { renderHxScreen(); synced = !!document.getElementById("presMedHxHost"); } catch (e) { /* the checklist repaints next time it opens */ }
-      if (!synced) phPfwRefresh(name, "shx");       // renderHxScreen already repaints this card + the panel
-    } else {
-      if (!phPfwWrite(name, rec => { rec.usual.pic = rec.usual.pic || {}; rec.usual.pic[it.id] = val; })) return;
-      phPfwFed = val === "yes" ? it.clue.map(k => "+ " + (PH_PAT_CLUE_LBL[k] || k)) : [];
-      phPfwRefresh(name, "shx");
-    }
-    if (val === "yes") phPfwFly(el, it.clue.length);
-    const rec2 = phPatientPeek(name) || {};
-    if (phPfShortItems(rec2).every(x => phPfShortVal(rec2, x) !== "unasked")) phPfwArm(name, "medhx", "All asked.");
-  }
-  function phPfwShortNone() {
-    const name = phPfwName(); if (!name) return;
-    phPfwDisarm();
-    const rec = phPatientRec(name); if (!rec) return;
-    phPfShortItems(rec).forEach(it => {
-      if (phPfShortVal(rec, it) !== "unasked") return;
-      if (it.hx) phHxSet(rec, it.id, "no"); else { rec.usual = rec.usual || {}; rec.usual.pic = rec.usual.pic || {}; rec.usual.pic[it.id] = "no"; }
-    });
-    rec.usual = rec.usual || {}; rec.usual.at = Date.now();
-    if (savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return; }
-    phPfwFed = [];
-    let synced = false;
-    try { renderHxScreen(); synced = !!document.getElementById("presMedHxHost"); } catch (e) { /* ok */ }
-    if (!synced) phPfwRefresh(name, "shx");
-    presSavedToast("The rest marked No.");
-    phPfwArm(name, "medhx", "All asked.");
-  }
+  // phPfwShort / phPfwShortNone (the shx card's own Y/N write + quick-mark) retired
+  // 2026-10-09 with the card itself -- the 5 remaining priority items write through the
+  // ordinary data-hx-set row tap now, and data-hx-prio-none (phHxPrioNoteHtml, the main
+  // click delegate near data-hx-notneeded) covers the quick-mark.
   // after a sex / DOB write on the Patient details page: if the Start-here card was
   // what she was filling in and it is now complete, offer to move on
   function phPfwBasicsArm() {
@@ -63085,13 +63062,11 @@ or changing anything in Cliniko.
     if ((el = T.closest("[data-pfw-ans]"))) { const [sid, qid, val] = el.dataset.pfwAns.split(":"); phPfwAnswer(sid, qid, val, el); return true; }
     if ((el = T.closest("[data-pfw-skip]"))) { const [sid, qid] = el.dataset.pfwSkip.split(":"); phPfwAnswer(sid, qid, "skip", el); return true; }
     if ((el = T.closest("[data-pfw-normal]"))) { phPfwNormal(el.dataset.pfwNormal); return true; }
-    if ((el = T.closest("[data-pfw-sh]"))) { const [id, val] = el.dataset.pfwSh.split(":"); phPfwShort(id, val, el); return true; }
-    if (T.closest("[data-pfw-shno]")) { phPfwShortNone(); return true; }
     if ((el = T.closest("[data-pfw-fold]"))) {
       const name = phPfwName(), sid = el.dataset.pfwFold, key = `${sid}:${phPatientKey(name)}`;
       if (phPfwOpen.has(key)) phPfwOpen.delete(key); else phPfwOpen.add(key);
       const host = document.querySelector(`[data-pfw-host="${sid}"]`);
-      if (host) host.outerHTML = sid === "shx" ? presPfwShortHtml(name) : presPfwSetHtml(name, sid);
+      if (host) host.outerHTML = presPfwSetHtml(name, sid);
       return true;
     }
     if ((el = T.closest("[data-pfw-next]"))) { phPfwDisarm(); phPfwGo(el.dataset.pfwNext); return true; }
@@ -63101,7 +63076,7 @@ or changing anything in Cliniko.
       phPfwDisarm();
       presSavedToast(on ? "Auto-move is off. Next glows instead." : "Auto-move is on.");
       const name = phPfwName();
-      ["period", "meno", "men", "pain", "sleep", "shx"].forEach(sid => { const h = document.querySelector(`[data-pfw-host="${sid}"]`); if (h) h.outerHTML = sid === "shx" ? presPfwShortHtml(name) : presPfwSetHtml(name, sid); });
+      ["period", "meno", "men", "pain", "sleep"].forEach(sid => { const h = document.querySelector(`[data-pfw-host="${sid}"]`); if (h) h.outerHTML = presPfwSetHtml(name, sid); });
       return true;
     }
     if (T.closest("[data-pfw-later]")) {
