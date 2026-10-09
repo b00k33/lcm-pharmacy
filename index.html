@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261009-150000">
+<meta name="lcm-build" content="20261009-153000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -7476,16 +7476,16 @@
   #pharmacyPage .ph-tri-row.no span { text-decoration: line-through; }
   #pharmacyPage .ph-tri-row.no b { color: var(--ph-faint); }
   #pharmacyPage .ph-tri-row b { font-size: var(--fs-12); color: var(--ph-herb); white-space: nowrap; }
-  #pharmacyPage .ph-tri-ft { display: flex; justify-content: space-between; align-items: center; gap: 8px; font: 700 var(--fs-14) var(--font-body); color: var(--ph-herb-deep); margin-top: 10px; }
-  #pharmacyPage .ph-tri-bar { height: 8px; border-radius: 8px; background: var(--ph-herb-tint); overflow: hidden; margin-top: 6px; }
-  #pharmacyPage .ph-tri-bar i { display: block; height: 100%; border-radius: 8px; background: var(--ph-herb); transition: width .4s ease; }
   #pharmacyPage .ph-tri-fx { background: var(--ph-gold-tint); }
-  #pharmacyPage .ph-tri-fcard { background: #fff; border-radius: 10px; padding: 10px; margin-top: 8px; border: 1px solid var(--ph-line); }
-  #pharmacyPage .ph-tri-fcard:first-child { margin-top: 0; }
-  #pharmacyPage .ph-tri-fcard.lead { border-color: var(--ph-gold); box-shadow: 0 0 0 1px var(--ph-gold) inset; }
-  /* her ask (2026-10-08): one colour-coded chip per herb instead of plain text, so the family
-     reads by colour at a glance -- values in PH_FBR_HERB_COLOUR. */
-  #pharmacyPage .ph-tri-herb-chip { display: inline-flex; border-radius: 999px; padding: 3px 11px; font: 700 var(--fs-13) var(--font-body); line-height: 1.3; }
+  /* Her ask (2026-10-09, "mock B, the mosaic"): the Constitution column's 9 families as a
+     proportional mosaic instead of 9 stacked full-width cards -- tile size (grid-column/row span,
+     set inline per tile from PH_FBR_MOSAIC_MIN/_BONUS) carries the score, colour still comes from
+     PH_FBR_HERB_COLOUR. Replaces the old .ph-tri-fcard/.ph-tri-ft/.ph-tri-bar/.ph-tri-herb-chip set. */
+  #pharmacyPage .ph-fbr-mosaic { display: grid; grid-template-columns: repeat(6, 1fr); grid-auto-rows: 36px; gap: 4px; margin-top: 4px; }
+  #pharmacyPage .ph-fbr-mo { border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 4px; min-width: 0; overflow: hidden; }
+  #pharmacyPage .ph-fbr-mo.lead { box-shadow: 0 0 0 2px var(--ph-gold) inset; }
+  #pharmacyPage .ph-fbr-mo-name { font: 700 var(--fs-12) var(--font-body); line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  #pharmacyPage .ph-fbr-mo-n { font: 600 var(--fs-10) var(--font-body); opacity: .85; line-height: 1.2; margin-top: 2px; }
   #pharmacyPage .ph-tri-col-sub { display: block; margin-top: 2px; font: 600 var(--fs-11) var(--font-body); letter-spacing: normal; text-transform: none; color: var(--ph-soft); }
   #pharmacyPage .ph-tri-fs { font-size: var(--fs-12); color: var(--ph-soft); margin-top: 6px; }
   #pharmacyPage .ph-tri-add { display: flex; gap: 6px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
@@ -63566,6 +63566,10 @@ or changing anything in Cliniko.
   // (agreed = on the list for everyone). Tick counts per complaint only ORDER the list -- points come from
   // the seed or an agreed symptom, never from the counts.
   const PH_TRI_TOP = 6;               // symptoms shown per column before "Show all"
+  // Her ask (2026-10-09, "mock B, the mosaic"): Constitution column tile sizing. 6-column grid;
+  // every family gets PH_FBR_MOSAIC_MIN cells minimum (so a 0-scorer still shows a real tile),
+  // plus its share of PH_FBR_MOSAIC_BONUS cells by score. 2 grid columns per "cell" of width.
+  const PH_FBR_MOSAIC_MIN = 2, PH_FBR_MOSAIC_BONUS = 22;
   var phTriOpen = new Set();          // patient keys with the full list open (view state, never saved)
   function phTriFam(name) { const c = phCcOf(name); return c ? phCcMainId(c) : "general"; }
   // Her ask (2026-10-09): ticking a row must never jump it mid-session -- the "most-tapped rises
@@ -63632,7 +63636,6 @@ or changing anything in Cliniko.
     // the ranked list below for how each one actually reads this same tap.
     const lead = hasTicks ? top.f : PH_FORMULAS[PH_FBR_ACTIVE];
     const archName = (PH_BTJ[lead.family] && PH_BTJ[lead.family].n) || lead.name;
-    const bar = (s, max) => `<div class="ph-tri-bar"><i style="width:${Math.round(s * 100 / max)}%"></i></div>`;
     const col = (kind, picks, eff, weights, grouped) => {
       const all = phTriAll(kind, fam, name, fresh), shown = open ? all : all.slice(0, PH_TRI_TOP);
       const pend = (L.added || []).filter(a => a.kind === kind && !a.agreed);
@@ -63646,16 +63649,22 @@ or changing anything in Cliniko.
         : shown.map(r => phFbrRowHtml(rec, name, r, kind, picks, eff, weights, "tri", today.prevD)).join("");
       return `${rowsHtml}${all.length > PH_TRI_TOP ? `<button type="button" class="ph-pfw-link ph-tri-more" data-tri-more="1">${open ? "Show fewer" : `Show all ${all.length} ›`}</button>` : ""}${pend.length ? `<div class="ph-tri-plab">To check</div>${pend.map(pendRow).join("")}` : ""}${addRow}`;
     };
-    // Her ask (2026-10-08): one row per family, not a Bing sub-row + a "<name> type" Ren
-    // sub-row underneath it -- the Bing/Ren split still DRIVES the ranking (phFbrRank sorts by
-    // dS then pS), it just no longer needs to be shown as two separately-labelled lines to read.
-    // Combined into one total/one bar; the italic `core` caption is dropped from this card too
-    // (still exists on PH_FORMULAS, just not shown here); the herb name is now a colour chip
-    // (PH_FBR_HERB_COLOUR) instead of plain text, so the family reads by colour at a glance.
-    const fCard = (r, i) => { const c = PH_FBR_HERB_COLOUR[r.id] || { bg: "#D3DEE2", fg: "#141F23" }, total = r.dS + r.pS, totalMax = r.maxD + r.maxP;
-      return `<div class="ph-tri-fcard${i === 0 && hasTicks ? " lead" : ""}">
-        <div class="ph-tri-ft"><span class="ph-tri-herb-chip" style="background:${c.bg};color:${c.fg};${c.border ? `border:1px solid ${c.border};` : ""}">${esc(r.f.name)}</span><span>${total} of ${totalMax}</span></div>${bar(total, totalMax)}
-      </div>`; };
+    // Her ask (2026-10-09, "mock B, the mosaic"): the 9 stacked full-width family cards became a
+    // proportional mosaic -- tile size follows the score itself (Gui Zhi's lead reads by area, not
+    // just a number), every family keeps a minimum-size tile so a 0-scorer never disappears. A
+    // 6-column grid budget: 2 cells minimum each + a share of 22 bonus cells by score, rounded to
+    // column spans (2 cols per "cell" of width). Replaces the one-row-per-family `.ph-tri-fcard`
+    // stack (`bar()` helper retired with it -- no other caller in this scope).
+    const fbrTotalS = ranked.reduce((s, x) => s + x.dS + x.pS, 0);
+    const mosaicTile = (r, i) => {
+      const c = PH_FBR_HERB_COLOUR[r.id] || { bg: "#D3DEE2", fg: "#141F23" }, total = r.dS + r.pS, totalMax = r.maxD + r.maxP;
+      const extra = fbrTotalS ? Math.round((total / fbrTotalS) * PH_FBR_MOSAIC_BONUS) : 0;
+      const cells = PH_FBR_MOSAIC_MIN + extra, colSpan = Math.max(1, Math.min(6, Math.round(cells / 2))), rowSpan = cells >= 10 ? 2 : 1;
+      const tiny = cells <= PH_FBR_MOSAIC_MIN;
+      return `<div class="ph-fbr-mo${i === 0 && hasTicks ? " lead" : ""}" style="grid-column:span ${colSpan};grid-row:span ${rowSpan};background:${c.bg};color:${c.fg};${c.border ? `border:1px solid ${c.border};` : ""}">
+        <span class="ph-fbr-mo-name">${esc(r.f.name)}</span>${tiny ? "" : `<span class="ph-fbr-mo-n">${total} of ${totalMax}</span>`}
+      </div>`;
+    };
     const qaOpen = phQaOpen.has(phPatientKey(name));
     return `<div class="ph-pfw-card ph-tri" data-tri-host="1">
       <div class="ph-pfw-hd"><h3>Fang Bing Ren (方病人)</h3></div>
@@ -63663,7 +63672,7 @@ or changing anything in Cliniko.
       <div class="ph-tri-cols">
         <section class="ph-tri-col"><h4>Bing · what is wrong now <span class="ph-tri-col-sub">points toward ${esc(lead.name)}</span></h4>${col("d", d, effD, lead.bing)}</section>
         <section class="ph-tri-col ph-tri-fx"><h4>Constitution · which family fits</h4>
-          ${ranked.map(fCard).join("")}
+          <div class="ph-fbr-mosaic">${ranked.map(mosaicTile).join("")}</div>
           ${!hasTicks ? `<div class="ph-tri-fs">No ticks yet — every family starts level</div>` : ""}
           <button type="button" class="ph-pfw-link" data-qa-toggle="1">${qaOpen ? "Hide quick assess" : "Quick assess ▸"}</button>
           ${qaOpen ? phQaHtml(name) : ""}
