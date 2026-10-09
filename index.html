@@ -7431,9 +7431,29 @@
     #pharmacyPage .ph-rc { padding: 10px 12px; }
     #pharmacyPage .ph-rc-chips { gap: 6px; }
     #pharmacyPage .ph-rc-chip { padding: 6px 10px; font-size: var(--fs-12); gap: 4px; }
-    #pharmacyPage .ph-rc .ph-cc-opts { gap: 5px; margin-top: 8px; }
-    #pharmacyPage .ph-rc .ph-cc-chip { padding: 4px 9px; font-size: var(--fs-11); }
   }
+  /* "also treating" -- a second, smaller re-check row per other listed complaint
+     (her ask 2026-10-10) */
+  #pharmacyPage .ph-rc-other { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--ph-line); }
+  #pharmacyPage .ph-rc-other .lab { display: block; font-size: var(--fs-12); color: var(--ph-soft); margin-bottom: 5px; }
+  #pharmacyPage .ph-rc-minichips { display: flex; gap: 5px; }
+  #pharmacyPage .ph-rc-minichip { border: 1.5px solid var(--ph-line); background: var(--ph-white); color: var(--ph-ink); border-radius: 999px; width: 30px; height: 26px; font-size: var(--fs-13); cursor: pointer; min-height: 0; }
+  #pharmacyPage .ph-rc-minichip.on { background: var(--ph-herb); border-color: var(--ph-herb); color: #fff; }
+  /* ---- Today's visit checklist (her ask 2026-10-10: one card for Re-check,
+     Tongue, Pulse, Abdomen -- she does all four at every return visit) ---- */
+  #pharmacyPage .ph-today-gate { display: flex; align-items: center; gap: 8px; background: var(--ph-gold-tint); border: 1px dashed var(--ph-gold); border-radius: 10px; padding: 9px 12px; font-size: var(--fs-12-5); color: var(--ph-gold-deep); font-weight: 600; margin: 0 0 12px; }
+  #pharmacyPage .ph-today-gate.done { background: var(--ph-herb-tint); border: 1px solid var(--ph-herb-card); color: var(--ph-herb-deep); }
+  #pharmacyPage .ph-today-tile { border: 1.5px solid var(--ph-line); background: var(--ph-white); border-radius: 12px; padding: 12px 14px; margin: 0 0 10px; }
+  #pharmacyPage .ph-today-tile.recheck { border: 0; background: none; padding: 0; }
+  #pharmacyPage .ph-today-tile.done:not(.open) { border-color: var(--ph-herb-card); }
+  #pharmacyPage .ph-today-head { width: 100%; display: flex; align-items: center; gap: 8px; border: 0; background: none; padding: 0; cursor: pointer; font-family: inherit; text-align: left; }
+  #pharmacyPage .ph-today-tile.open .ph-today-head { margin-bottom: 10px; }
+  #pharmacyPage .ph-today-tick { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--ph-line); display: flex; align-items: center; justify-content: center; font-size: var(--fs-11); color: #fff; flex: none; }
+  #pharmacyPage .ph-today-tile.done .ph-today-tick { background: var(--ph-herb); border-color: var(--ph-herb); }
+  #pharmacyPage .ph-today-label { flex: 1; font: 600 var(--fs-14-5) var(--font-body); color: var(--ph-ink); }
+  #pharmacyPage .ph-today-openlink { font: 600 var(--fs-12-5) var(--font-body); color: var(--ph-herb); }
+  #pharmacyPage .ph-today-sum { font-size: var(--fs-12); color: var(--ph-soft); padding-left: 26px; }
+  #pharmacyPage .ph-today-dispgate { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--ph-gold-tint); border: 1px dashed var(--ph-gold); border-radius: 10px; padding: 9px 12px; font-size: var(--fs-12-5); color: var(--ph-gold-deep); margin: 0 0 12px; }
   /* ---- Up next + Last 6 visits (Patient details, her pick "a" 2026-10-06) ---- */
   /* fades/collapses on dismiss instead of vanishing (phUpClick's "gone"
      class, her ask 2026-10-09 "i like k and l" -- mock K); opacity+scale
@@ -35748,6 +35768,7 @@
             if (cur && cur.quality === next.quality && cur.shape === next.shape) delete p.pulse[key];
             else p.pulse[key] = next;
           }
+          p.at = Date.now();   // stamps "checked today" for the Today's visit checklist
           savePharmacy();
         }
         renderHxScreen();
@@ -36469,6 +36490,7 @@
       if (logFilter) { presLogFilter = logFilter.dataset.logFilter; if (!presAssessTabRefresh()) renderPresPanel(); return; }
       if (phCcClick(e)) return;
       if (phRcClick(e)) return;
+      if (phTodayClick(e)) return;
       if (phPregClick(e)) return;
       if (phBldClick(e)) return;
       if (phUpClick(e)) return;
@@ -37259,6 +37281,23 @@
                 phTpAutoAdv = { planId: activePlan.id, fromId: treatedPhase.id, toId: null, planned, complete: true };
               }
             }
+          }
+          // her ask 2026-10-10 (Treatment-tab audit, "Response feels redundant
+          // with Re-check"): both ask the same Better/Same/Worse question --
+          // Response is per SESSION (feeds the instrument band's "Response ·
+          // last N" and the printed visit record), Re-check is per CALENDAR
+          // DAY (feeds the rail's done-stamp and the dated Log) -- so on a
+          // normal visit day she was answering it twice with nothing
+          // reconciling them. Logging today's Response now stamps today's
+          // Re-check with the same answer. Only for a same-day session -- a
+          // back-dated write-up must never claim something about TODAY's
+          // re-check. Re-check keeps "Something new" as its own option
+          // (Response has no equivalent) and still works standalone on a day
+          // she checks in without a full visit.
+          if (session.outcome && session.date === keyOf(TODAY)) {
+            if (!rec.recheck || rec.recheck.date !== session.date) rec.recheck = { date: session.date, change: "", note: "" };
+            rec.recheck.change = session.outcome;
+            rec.recheck.at = Date.now();
           }
           presAcuOutcomeDraft = null; presAcuPhaseId = null; presAcuHerbInstruct = false;
           presAcuPointsChecked = null; presAcuPressChecked = null; presAcuWatchChecked = []; presAcuAskNote = ""; presAcuComment = "";
@@ -55968,7 +56007,7 @@ or changing anything in Cliniko.
     // "This visit" (her mock, 2026-10-08): the rail says what this visit still
     // needs. Only sections with a real done-state count (presSecDone); Tongue,
     // Pulse and the rest stay plain and uncounted.
-    const VISIT_TRACKED = new Set(["patient", "ren", "recheck", "abdomen", "medhx", "cycle", "usual", "pain", "sleep"]);
+    const VISIT_TRACKED = new Set(["patient", "ren", "today", "medhx", "cycle", "usual", "pain", "sleep"]);
     const visitItems = f.profSubs.filter(u => VISIT_TRACKED.has(u.id));
     const visitDone = visitItems.filter(u => u.dn).length + (f.steps[1].done ? 1 : 0) + (f.steps[2].done ? 1 : 0);
     const visitTotal = visitItems.length + 2;
@@ -56917,16 +56956,15 @@ or changing anything in Cliniko.
     const sections = [
       { id: "patient", label: "Patient details", body: () => presPatientTabBodyHtml(t) },
     ];
-    // her pick Mock B (2026-10-06): the old Examine page is split. Ren (body + type) is her file, once;
-    // Re-check, Tongue, Pulse and Abdomen are Today's check, every visit
+    // her pick Mock B (2026-10-06): the old Examine page is split. Ren (body + type) is her file,
+    // once. Re-check, Tongue, Pulse and Abdomen used to be four separate Today's check tabs; her
+    // ask 2026-10-10 ("tongue pulse take photos recheck chief complaint -- every appointment")
+    // folded them into ONE checklist card (phTodayVisitHtml) -- she does all four at every return
+    // visit, so one door beats four.
     if (hxName && !presIsFormula(t)) {
-      const abdN = phAbdPicks(peek).length;
       const bq = peek ? phFbrRenLead(peek, hxName) : null;
       sections.push({ id: "ren", label: "Ren", sub: bq ? PH_BTJ[bq].n : "", body: () => phRenTabHtml(hxName, true) });
-      if (phRcCardHtml(t)) sections.push({ id: "recheck", label: "Re-check", body: () => phRcCardHtml(t) });
-      sections.push({ id: "tongue", label: "Tongue", body: () => presConstitTabBodyHtml(t, "tongue") });
-      sections.push({ id: "pulse", label: "Pulse", body: () => presConstitTabBodyHtml(t, "pulse") });
-      sections.push({ id: "abdomen", label: "Abdomen", sub: abdN ? `${abdN} finding${abdN === 1 ? "" : "s"}` : (peek && peek.abdomen && peek.abdomen.normal ? "normal" : ""), body: () => phAbdHtml(hxName) });
+      if (phTodayVisitHtml(t)) sections.push({ id: "today", label: "Today's visit", body: () => phTodayVisitHtml(t) });
     }
     if (hxName) {
       const prog = phHxProgress(hxName);
@@ -56989,7 +57027,7 @@ or changing anything in Cliniko.
     // the rail's groups: 1 her file (once) · 2 today's check (every visit) · 3 putting it together · Log
     // (the dated pages sit under Log). Stable sort, so a page keeps its place inside its group.
     const RANK = { patient: 1, ren: 2, medhx: 3, pain: 4, usual: 5, sleep: 6, supplements: 7, checklist: 8,
-      recheck: 10, tongue: 11, pulse: 12, abdomen: 13, cycle: 14, patterns: 20,
+      today: 10, cycle: 14, patterns: 20,
       bloods: 7.5, log: 30, checks: 30.5, photos: 31, apptshist: 32, messages: 33, ivf: 34 };
     const GRP = n => n < 10 ? "file" : n < 20 ? "check" : n < 30 ? "sum" : "log";
     sections.forEach(s => { s.grp = GRP(RANK[s.id] || 8); });
@@ -57005,7 +57043,7 @@ or changing anything in Cliniko.
     (rec.acuSessions || []).forEach(s => { if (s.date) out.push({ d: s.date, k: "visit", txt: s.noTreatment ? "Visit · herbs only" : "Visit · acupuncture", go: "log", plan: true }); });
     if (rec.recheck && rec.recheck.date) {
       const o = PH_RC_OPTS.find(x => x[0] === rec.recheck.change);
-      out.push({ d: rec.recheck.date, k: "recheck", txt: `Re-check${o ? " · " + o[1] : ""}${rec.recheck.note ? " · " + rec.recheck.note : ""}`, go: "recheck" });
+      out.push({ d: rec.recheck.date, k: "recheck", txt: `Re-check${o ? " · " + o[1] : ""}${rec.recheck.note ? " · " + rec.recheck.note : ""}`, go: "today" });
     }
     (rec.cycleLog || []).forEach(x => { if (x && x.lmp) out.push({ d: x.lmp, k: "cycle", txt: "Period started", go: "cycle" }); });
     (phRenPhotosFor(key) || []).forEach(p => { if (p.createdAt) out.push({ d: keyOf(new Date(p.createdAt)), k: "photo", txt: "Photo added", go: "photos" }); });
@@ -62627,7 +62665,7 @@ or changing anything in Cliniko.
     pq.forEach(k => add(k, "pulse", pLbl[k], { tab: "patient", fold: "constit" }, pv && pv.session ? phCycShortLbl(pv.session.date || todayKey) : ""));
     // -- abdomen (her ask 2026-10-03, 腹診): the findings she tapped on the Abdomen page
     if (rec.abdomen && phAbdPicks(rec).length) {
-      phAbdPicks(rec).forEach(id => { const k = "a_" + id; if (PH_PAT_CLUE_LBL[k]) add(k, "abd", PH_PAT_CLUE_LBL[k] + " (abdomen)", { tab: "abdomen" }, rec.abdomen.at ? phCycShortLbl(keyOf(new Date(rec.abdomen.at))) : ""); });
+      phAbdPicks(rec).forEach(id => { const k = "a_" + id; if (PH_PAT_CLUE_LBL[k]) add(k, "abd", PH_PAT_CLUE_LBL[k] + " (abdomen)", { tab: "today" }, rec.abdomen.at ? phCycShortLbl(keyOf(new Date(rec.abdomen.at))) : ""); });
     }
     // -- body type: the questionnaire this used to read (her ask 2026-10-03) retired 2026-10-09 --
     // reads the same leading-family signal from Fang Bing Ren's real Ren taps now instead.
@@ -62873,7 +62911,7 @@ or changing anything in Cliniko.
     const btOk = !!(phFbrRenLead(rec, name) || rec.bodyConstitutionBt);
     cnt(tOk); cnt(pOk); cnt(abdOk); cnt(btOk);
     if (!btOk) miss.push({ label: "Body type", gain: "a few taps feed Fang Bing Ren", go: "ren" });
-    if (!abdOk) miss.push({ label: "Abdomen", gain: "can move up to six patterns", go: "abdomen" });
+    if (!abdOk) miss.push({ label: "Abdomen", gain: "can move up to six patterns", go: "today" });
     if (!tOk) miss.push({ label: "Tongue", gain: "can move up to six patterns", go: "patient" });
     if (!pOk) miss.push({ label: "Pulse", gain: "can move up to six patterns", go: "patient" });
     return { have, total, p: total ? Math.round(have / total * 100) : 0, missing: miss };
@@ -63119,11 +63157,20 @@ or changing anything in Cliniko.
       return `<div class="ph-cc-fold ph-rc-fold${cl}" data-rc-host="1"><span class="tick">✓</span><span class="sm"><b>Re-checked today</b> · ${o[2]} ${esc(o[1])}${rc.note ? ` · “${esc(rc.note)}”` : ""}</span><button type="button" class="ph-pfw-link" data-rc-edit="1">Change</button></div>`;
     }
     const chips = PH_RC_OPTS.map(x => `<button type="button" class="ph-rc-chip${rc && rc.change === x[0] ? " on" : ""}" data-rc-pick="${x[0]}" aria-pressed="${rc && rc.change === x[0] ? "true" : "false"}"><i>${x[2]}</i>${esc(x[1])}</button>`).join("");
+    // her ask 2026-10-10: a quick line for every OTHER listed complaint too, not just the main
+    // one -- rec.recheck.other[famId] = change, same day-scoped record as the main pick
+    const cc = phCcOf(name), mainId = cc ? phCcMainId(cc) : null;
+    const otherRows = (cc ? cc.fams.filter(id => id !== mainId) : []).map(id => {
+      const fam = phCcFam(id); if (!fam) return "";
+      const cur = rc && rc.other && rc.other[id] || "";
+      const mini = PH_RC_OPTS.map(x => `<button type="button" class="ph-rc-minichip${cur === x[0] ? " on" : ""}" data-rc-other-pick="${id}:${x[0]}" aria-pressed="${cur === x[0] ? "true" : "false"}" title="${esc(x[1])}">${x[2]}</button>`).join("");
+      return `<div class="ph-rc-other"><span class="lab">Also treating: ${esc(fam.label)}</span><div class="ph-rc-minichips">${mini}</div></div>`;
+    }).join("");
     return `<div class="ph-cc ph-rc${cl}" data-rc-host="1">
       <h3>Re-check · what changed since last visit?</h3>
       <div class="ph-rc-chips">${chips}</div>
       <input type="text" class="ph-cc-said" data-rc-note-in="1" maxlength="160" value="${esc((rc && rc.note) || "")}" placeholder="a few words, e.g. sleeping better, pain less sharp" aria-label="What changed">
-      <div class="ph-cc-opts"><button type="button" class="ph-cc-chip" data-flow-prof="abdomen">Check abdomen ›</button><button type="button" class="ph-cc-chip" data-flow-prof="tongue">Tongue ›</button><button type="button" class="ph-cc-chip" data-flow-prof="pulse">Pulse ›</button></div>
+      ${otherRows}
     </div>`;
   }
   function phRcRefresh(calm, justPicked) {
@@ -63150,6 +63197,17 @@ or changing anything in Cliniko.
     if (savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return false; }
     return true;
   }
+  function phRcOtherWrite(name, famId, fn) {
+    const rec = name ? phPatientRec(name) : null;
+    if (!rec) return false;
+    const today = keyOf(TODAY);
+    if (!rec.recheck || rec.recheck.date !== today) rec.recheck = { date: today, change: "", note: "" };
+    if (!rec.recheck.other || typeof rec.recheck.other !== "object") rec.recheck.other = {};
+    fn(rec.recheck.other);
+    rec.recheck.at = Date.now();
+    if (savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return false; }
+    return true;
+  }
   const phRcOpen = new Set();            // view state only: a re-check she is editing stays open
   function phRcClick(e) {
     const T = e.target; let el;
@@ -63162,8 +63220,114 @@ or changing anything in Cliniko.
       if (phRcWrite(n, r => { r.change = was === v ? "" : v; })) { const picked = was !== v; picked ? phRcOpen.delete(key) : phRcOpen.add(key); phRcRefresh(true, picked); }
       return true;
     }
+    if ((el = T.closest("[data-rc-other-pick]"))) {
+      const n = phPfwName(); if (!n) return true;
+      const [famId, v] = el.dataset.rcOtherPick.split(":");
+      const cur = (phPatientPeek(n) || {}).recheck;
+      const was = cur && cur.date === keyOf(TODAY) && cur.other ? (cur.other[famId] || "") : "";
+      if (phRcOtherWrite(n, famId, o => { if (was === v) delete o[famId]; else o[famId] = v; })) phRcRefresh(true);
+      return true;
+    }
     if (T.closest("[data-rc-edit]")) { const n = phPfwName(); if (n) { phRcOpen.add(phPatientKey(n)); phRcRefresh(false); } return true; }
     return false;
+  }
+  /* ---- TODAY'S VISIT (her ask 2026-10-10: "tongue pulse take photos recheck chief
+     complaint and other complaints -- every appointment") ----
+     Re-check, Tongue, Pulse and Abdomen used to be four separate rail tabs; she does all
+     four at every return visit, so they're now ONE checklist card. Each tile reuses the
+     SAME render/write/refresh functions the old tabs already had (phRcCardHtml,
+     phTngHtml, phHxConstitPulseHtml, phAbdHtml) -- nothing about how a tile saves
+     changed, only how she reaches it. "Done today" reads each part's own .at/.date
+     stamp, never a separate flag of its own. Reachable both from the profile rail
+     (id "today") and from the Treatment tab's dispense warning below -- one flow,
+     two doors. */
+  const PH_TODAY_PARTS = [
+    { id: "recheck", label: "Re-check · what changed" },
+    { id: "tongue", label: "Tongue" },
+    { id: "pulse", label: "Pulse" },
+    { id: "abdomen", label: "Abdomen" },
+  ];
+  function phTodayDonePart(rec, id) {
+    const today = keyOf(TODAY);
+    if (id === "recheck") return !!(rec.recheck && rec.recheck.date === today && rec.recheck.change);
+    if (id === "tongue") return !!(rec.tongueExam && rec.tongueExam.at && keyOf(new Date(rec.tongueExam.at)) === today);
+    if (id === "pulse") return !!(rec.constitPulse && rec.constitPulse.at && keyOf(new Date(rec.constitPulse.at)) === today);
+    if (id === "abdomen") return !!(rec.abdomen && rec.abdomen.at && keyOf(new Date(rec.abdomen.at)) === today);
+    return false;
+  }
+  function phTodaySumPart(rec, id) {
+    if (id === "tongue") return (rec.tongueExam && phTng2Summary(rec.tongueExam)) || "Nothing recorded";
+    if (id === "pulse") return (rec.constitPulse && phVisitPulseSummaryText(rec.constitPulse.pulse)) || "Nothing recorded";
+    if (id === "abdomen") {
+      if (rec.abdomen && rec.abdomen.normal) return "Normal";
+      return (rec.abdomen && phAbd2Summary(rec.abdomen.chart)) || "Nothing recorded";
+    }
+    return "";
+  }
+  var phTodayOpen = new Set();     // view state: which tongue/pulse/abdomen tiles are expanded
+  var phTodayDispSkip = new Set(); // view state: "dispense anyway" dismissals, cleared on reload
+  function phTodayVisitHtml(t) {
+    const name = presPatientFor(t) || t.name || "";
+    if (!name || presIsFormula(t)) return "";
+    const rec = phPatientPeek(name) || {};
+    if (!(rec.sex && rec.dob) || (presPatientIsNew(name) && !(rec.acuSessions || []).length)) return "";
+    // the pulse chart's own click handlers resolve the patient through
+    // presHxScreenName (the Constitution screen's variable, not phPfwName) --
+    // keep it in sync here too, now that this tile is reached without ever
+    // visiting that screen directly
+    presHxScreenName = name;
+    const key = phPatientKey(name);
+    const doneFlags = PH_TODAY_PARTS.map(p => phTodayDonePart(rec, p.id));
+    const doneN = doneFlags.filter(Boolean).length;
+    const gate = doneN === PH_TODAY_PARTS.length
+      ? `<div class="ph-today-gate done">✓ Today's visit complete</div>`
+      : `<div class="ph-today-gate">◐ ${doneN} of ${PH_TODAY_PARTS.length} done</div>`;
+    const tiles = PH_TODAY_PARTS.map((p, i) => {
+      const done = doneFlags[i];
+      if (p.id === "recheck") return `<div class="ph-today-tile recheck${done ? " done" : ""}" data-today-tile="recheck">${phRcCardHtml(t, true)}</div>`;
+      const open = phTodayOpen.has(key + ":" + p.id);
+      const head = `<button type="button" class="ph-today-head" data-today-toggle="${p.id}">
+        <span class="ph-today-tick">${done ? "✓" : ""}</span><span class="ph-today-label">${esc(p.label)}</span>
+        <span class="ph-today-openlink">${open ? "Close ‹" : (done ? "Change ›" : "Open ›")}</span>
+      </button>`;
+      if (!open) return `<div class="ph-today-tile${done ? " done" : ""}" data-today-tile="${p.id}">${head}<div class="ph-today-sum">${esc(phTodaySumPart(rec, p.id))}</div></div>`;
+      const body = p.id === "tongue" ? phTngHtml(name) : p.id === "pulse" ? phHxConstitPulseHtml(rec, name) : phAbdHtml(name);
+      return `<div class="ph-today-tile open${done ? " done" : ""}" data-today-tile="${p.id}">${head}${body}</div>`;
+    }).join("");
+    return `<div class="ph-today" data-today-host="1">${gate}${tiles}</div>`;
+  }
+  function phTodayClick(e) {
+    const T = e.target, el = T && T.closest ? T.closest("[data-today-toggle]") : null;
+    if (el) {
+      const name = phPfwName(); if (!name) return true;
+      const key = phPatientKey(name) + ":" + el.dataset.todayToggle;
+      if (phTodayOpen.has(key)) phTodayOpen.delete(key); else phTodayOpen.add(key);
+      if (!presAssessTabRefresh()) renderPresPanel();
+      return true;
+    }
+    if (T && T.closest && T.closest("[data-today-dispskip]")) {
+      const name = phPfwName(); if (name) phTodayDispSkip.add(phPatientKey(name));
+      const host = document.querySelector("#pharmacyPage [data-today-dispgate]");
+      if (host) host.remove();
+      return true;
+    }
+    return false;
+  }
+  // a soft, visible nudge above the Dispense step -- not a block on the dispense button
+  // itself. The protected 3-step dispense chain (see CLAUDE.md) keeps working exactly as
+  // before either way; "Dispense anyway" just dismisses the note for today.
+  function phTodayDispGateHtml(t) {
+    const name = presPatientFor(t) || t.name || "";
+    if (!name || presIsFormula(t)) return "";
+    const rec = phPatientPeek(name) || {};
+    if (!(rec.sex && rec.dob) || phTodayDispSkip.has(phPatientKey(name))) return "";
+    const doneN = PH_TODAY_PARTS.filter(p => phTodayDonePart(rec, p.id)).length;
+    if (doneN === PH_TODAY_PARTS.length) return "";
+    return `<div class="ph-today-dispgate" data-today-dispgate="1">
+      <span>◐ Today's visit isn't finished — ${doneN} of ${PH_TODAY_PARTS.length} checks done.</span>
+      <button type="button" class="ph-pfw-link" data-flow-prof="today">Finish it ›</button>
+      <button type="button" class="ph-pfw-link" data-today-dispskip="1">Dispense anyway</button>
+    </div>`;
   }
   // typing the note saves when she leaves the field (no repaint, the cursor stays)
   document.addEventListener("change", e => {
@@ -63236,6 +63400,11 @@ or changing anything in Cliniko.
     if (id === "medhx") { const p = phHxProgress(name); return { done: p.notNeeded || (p.total > 0 && p.answeredN >= p.total), at: p.updatedAt || 0 }; }
     if (id === "ren") return { done: !!(phFbrRenLead(rec, name) || rec.bodyConstitutionBt), at: (rec.tri && rec.tri.at) || 0 };
     if (id === "recheck") { const r = rec.recheck; return { done: !!(r && r.date === keyOf(TODAY) && r.change), at: (r && r.at) || 0 }; }
+    if (id === "today") {
+      const parts = PH_TODAY_PARTS.map(p => phTodayDonePart(rec, p.id));
+      const ats = ["recheck", "tongue", "pulse", "abdomen"].map(k => k === "tongue" ? (rec.tongueExam && rec.tongueExam.at) || 0 : k === "pulse" ? (rec.constitPulse && rec.constitPulse.at) || 0 : k === "abdomen" ? (rec.abdomen && rec.abdomen.at) || 0 : (rec.recheck && rec.recheck.at) || 0);
+      return { done: parts.every(Boolean), at: Math.max(0, ...ats) };
+    }
     const at = (rec.usual && rec.usual.at) || 0;
     if (id === "cycle") return { done: phPfSetFor(rec) === "period" && phPfwSetDone(name, "period"), at };
     if (id === "usual") { const s = phPfSetFor(rec); return { done: (s === "meno" || s === "men") && phPfwSetDone(name, s), at }; }
@@ -63787,6 +63956,7 @@ or changing anything in Cliniko.
     if (!rec) return false;
     const next = phTng2Empty(tng) ? null : tng;
     if (JSON.stringify(next) === JSON.stringify(rec.tongueExam || null)) return true;   // a view tap (More fold, region aim) is not an edit
+    if (next) next.at = Date.now();   // stamps "checked today" for the Today's visit checklist
     rec.tongueExam = next;
     if (savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return false; }
     return true;
@@ -67202,6 +67372,20 @@ or changing anything in Cliniko.
       </div>` : "";
 
     const watchChips = phAcuWatchChips(treatedPhase && treatedPhase.watch);
+    // her ask 2026-10-10 (Treatment-tab audit, "Lifestyle feels redundant
+    // with Cycle"): the real overlap turned out to be narrower than it
+    // looked -- the Mucus row just above already writes the structured
+    // cm value straight into rec.cycleSigns (same field the Cycle tab
+    // reads), so it's not a duplicate of anything. A free-typed Watch
+    // chip that happens to ALSO be about mucus/discharge is a different,
+    // looser statement though (her own wording, not a cm enum value), so
+    // it's never auto-filled or hidden -- just a quiet pointer to what's
+    // already logged above, so she's not left wondering if the two agree.
+    const cmTodayLabel = todaySign && todaySign.cm ? ((PH_CYCLE_CM.find(x => x[0] === todaySign.cm) || [])[1] || "") : "";
+    const watchChipHtml = w => {
+      const hint = cmTodayLabel && /mucus|discharge/i.test(w) ? ` <i class="ph-acu-watch-cmhint">· logged as ${esc(cmTodayLabel)} above</i>` : "";
+      return `<button type="button" class="ph-ck-chip${presAcuWatchChecked.includes(w) ? " on" : ""}" data-pres-acu-watch="${esc(w)}">${esc(w)}${hint}</button>`;
+    };
     // her pick 2026-09-19 ("Yes, add the checklist"): the phase's own plan
     // as today's to-do -- ask, needle, herbs, book, log. The app ticks what
     // it can see (herbs given or instructed, a visit booked, today's session
@@ -80970,6 +81154,7 @@ Please let me know if you have any questions.`;
          .ph-dose-step markup (just its own, un-connected row) rather than
          a new shape -- literally "one more done step", not a different
          component. -->
+    ${phTodayDispGateHtml(t)}
     <div class="ph-dose-today">
       ${logged ? `
       <div class="ph-dose-step done settled" data-pres-disp-chip="${t.id}" title="Settled — press and hold, or use ⋯, to fix a mistake">
