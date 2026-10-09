@@ -9788,6 +9788,12 @@
   #pharmacyPage .ph-ivfq-fin h3 { margin: 0 0 8px; font-family: var(--font-disp); font-size: var(--fs-22); font-weight: 600; color: var(--ph-herb-deep); }
   #pharmacyPage .ph-ivfq-fin p { max-width: 420px; margin: 0 auto 20px; font-size: var(--fs-13-5); color: var(--ph-soft); line-height: 1.5; }
   @keyframes phIvfQPop { 0% { transform: scale(.6); opacity: 0; } 70% { transform: scale(1.08); } 100% { transform: scale(1); opacity: 1; } }
+  /* ---- Pregnancy start-date popup (her ask 2026-10-09): one small step, not a
+     wizard -- same card/head shell as the IVF questionnaire, smaller dialog. */
+  #pharmacyPage #phPregQModal .ph-pregq-dlg { width: min(460px, 94vw); max-height: min(520px, 92vh); border-radius: 18px; }
+  #pharmacyPage .ph-pregq-body { flex: 1 1 auto; overflow-y: auto; padding: 18px 22px 6px; }
+  #pharmacyPage .ph-pregq-body p { margin: 0 0 14px; font-size: var(--fs-13); color: var(--ph-soft); line-height: 1.5; }
+  #pharmacyPage .ph-pregq-foot { flex: 0 0 auto; display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding: 14px 18px; border-top: 1px solid var(--ph-line); background: var(--ph-white); }
   @media (max-width: 640px) {
     #pharmacyPage #phIvfQModal .ph-ivfq-dlg { width: 100%; height: 100%; max-height: 100%; border-radius: 0; }
     #pharmacyPage #phIvfQModal .ph-ivfq-dlg.done { height: auto; margin-top: auto; border-radius: 18px 18px 0 0; }
@@ -9796,6 +9802,8 @@
     #pharmacyPage .ph-ivfq-foot { flex-wrap: wrap; padding: 10px 14px; }
     #pharmacyPage .ph-ivfq-foot .sum { flex-basis: 100%; order: -1; }
     #pharmacyPage .ph-ivfq-foot .ph-ivfq-next { flex: 1 1 auto; }
+    #pharmacyPage #phPregQModal .ph-pregq-dlg { width: 100%; height: auto; margin-top: auto; max-height: 100%; border-radius: 18px 18px 0 0; }
+    #pharmacyPage .ph-pregq-foot .ph-ivfq-next { flex: 1 1 auto; }
   }
   @media (prefers-reduced-motion: reduce) {
     #pharmacyPage .ph-ivfq-fin .tick { animation: none; }
@@ -18977,6 +18985,10 @@
          #pharmacyPage child so the delegated handlers reach it. -->
     <div class="ph-stocktake-backdrop" id="phIvfQBackdrop" hidden></div>
     <div class="ph-hx-modal" id="phIvfQModal" hidden></div>
+    <!-- Pregnancy start-date popup (her ask 2026-10-09): opens the moment the
+         Pregnancy template is picked, before the plan exists -- same shell again. -->
+    <div class="ph-stocktake-backdrop" id="phPregQBackdrop" hidden></div>
+    <div class="ph-hx-modal" id="phPregQModal" hidden></div>
     <!-- Patient merge (her ask 2026-09-01): same shell/pattern again -->
     <div class="ph-stocktake-backdrop" id="phMergeBackdrop" hidden></div>
     <div class="ph-hx-modal" id="phMergeModal" hidden></div>
@@ -33320,6 +33332,9 @@
         // the IVF questionnaire opens first; the old course only closes once she
         // finishes it, so Cancel leaves everything exactly as it was
         if (arm.templateId === "cycle_ivf") { phIvfQOpen(phTpScreenPatient, { pre: closeOld }); return; }
+        // same rule for Pregnancy's due-date popup -- e.g. switching an IVF course
+        // straight to Pregnancy on a positive result
+        if (arm.templateId === "pregnancy") { phPregQOpen(phTpScreenPatient, "pregnancy", { from: "inline", pre: closeOld }); return; }
         closeOld();
         presTpInlineCreate(phTpScreenPatient, arm.templateId);
         return;
@@ -69900,7 +69915,12 @@ or changing anything in Cliniko.
   // POSITIVE (and only a genuine move to positive, never a repeat save) moves
   // any active plan that has an Early Pregnancy phase onto it. Motion only on
   // the change; reduced motion respected. ====
-  const phPregUi = { key: "", open: false, kind: "urine", result: "positive", date: "", hcg: "" };
+  const phPregUi = { key: "", open: false, mode: "date", kind: "urine", result: "positive", date: "", hcg: "", wk: "", wd: "", due: "" };
+  // mode "weeks"/"due" let her skip a test date entirely -- she just tells me how far
+  // along, or the due date her doctor gave. Both convert to the same stored pt.date
+  // (the "as if tested at exactly 4 weeks" anchor phPregWk already reads), so every
+  // other reader of pt.date (the badge, the appt flag, the IVF card) needs no change.
+  function phPregDateFromGestDays(gestDays) { return phTpDayAdd(keyOf(phLiveToday()), 28 - gestDays); }
   let phPregFresh = { key: "", at: 0 };
   // sex only: phCycleOn is true for any patient on a cycle-template plan, which
   // would show the pregnancy button to a man (reported on David Dinh, 2026-10-07)
@@ -69937,21 +69957,33 @@ or changing anything in Cliniko.
     const L = phPregLatestTransfer(rec);
     const sub = L && L.t.date ? `Linked to her ${phIvfDateLabel(L.t.date)} ${L.t.type === "fresh" ? "fresh" : "frozen"} transfer` : "Saved on her record";
     const chip = (attr, val, label, on) => `<button type="button" class="ph-preg-chip${on ? " on" : ""}" ${attr}="${val}">${label}</button>`;
-    return `<div class="ph-preg-pop" role="dialog" aria-label="Pregnancy test">
-      <h3>Pregnancy test</h3><div class="sub">${esc(sub)}</div>
+    const mode = phPregUi.mode || "date";
+    const modeRow = `<div class="ph-preg-f"><label>Known by</label><div class="chips">${chip("data-preg-mode", "date", "Test date", mode === "date")}${chip("data-preg-mode", "weeks", "Weeks pregnant", mode === "weeks")}${chip("data-preg-mode", "due", "Due date", mode === "due")}</div></div>`;
+    const dateFields = mode !== "date" ? "" : `
       <div class="ph-preg-f"><label>Type</label><div class="chips">${chip("data-preg-kind", "urine", "Urine (home)", phPregUi.kind === "urine")}${chip("data-preg-kind", "blood", "Blood (beta hCG)", phPregUi.kind === "blood")}</div></div>
       <div class="ph-preg-f"><label>Result</label><div class="chips">${chip("data-preg-res", "positive", "Positive", phPregUi.result === "positive")}${chip("data-preg-res", "negative", "Negative", phPregUi.result === "negative")}</div></div>
       <div class="ph-preg-f"><label for="phPregDate">Date</label><input type="date" id="phPregDate" value="${esc(phPregUi.date)}" max="2100-12-31" min="1900-01-01"></div>
-      ${phPregUi.kind === "blood" ? `<div class="ph-preg-f"><label for="phPregHcg">hCG</label><input type="number" id="phPregHcg" min="0" step="1" inputmode="numeric" placeholder="e.g. 250" value="${esc(phPregUi.hcg)}"></div>` : ""}
+      ${phPregUi.kind === "blood" ? `<div class="ph-preg-f"><label for="phPregHcg">hCG</label><input type="number" id="phPregHcg" min="0" step="1" inputmode="numeric" placeholder="e.g. 250" value="${esc(phPregUi.hcg)}"></div>` : ""}`;
+    const weeksFields = mode !== "weeks" ? "" : `
+      <div class="ph-preg-f"><label>How many weeks pregnant today</label><div class="ph-preg-wk"><input type="number" id="phPregWeeks" min="0" max="45" inputmode="numeric" placeholder="0" value="${esc(phPregUi.wk)}"><span>weeks</span><input type="number" id="phPregDays" min="0" max="6" inputmode="numeric" placeholder="0" value="${esc(phPregUi.wd)}"><span>days</span></div></div>`;
+    const dueFields = mode !== "due" ? "" : `
+      <div class="ph-preg-f"><label for="phPregDue">Due date</label><input type="date" id="phPregDue" value="${esc(phPregUi.due)}" max="2100-12-31" min="1900-01-01"></div>`;
+    return `<div class="ph-preg-pop" role="dialog" aria-label="Pregnancy">
+      <h3>Record pregnancy</h3><div class="sub">${esc(sub)}</div>
+      ${modeRow}${dateFields}${weeksFields}${dueFields}
       <div class="ph-preg-acts"><button type="button" class="ph-preg-save" data-preg-save="1">Save result</button><button type="button" class="ph-preg-cancel" data-preg-cancel="1">Cancel</button></div>
     </div>`;
   }
   function phPregBannerHtml(name, rec) {
     const pt = rec && rec.pregTest;
     if (!pt || pt.result !== "positive" || !phPregIsFresh(name, 15000)) return "";
-    const d = /^\d{4}-\d{2}-\d{2}$/.test(pt.date || "") ? phShortDate(pt.date).replace(/ \d{4}$/, "") : "";
+    // a real test date is worth repeating back to her; the "weeks"/"due" entry
+    // modes store a computed anchor date, not an actual event, so it's never shown
+    const d = (pt.kind === "blood" || pt.kind === "urine") && /^\d{4}-\d{2}-\d{2}$/.test(pt.date || "") ? phShortDate(pt.date).replace(/ \d{4}$/, "") : "";
     const wk = phPregWk(pt.date);
-    return `<div class="ph-preg-banner${phPregIsFresh(name, 1600) ? " in" : ""}">🌸 Positive ${pt.kind === "blood" ? "blood" : "urine"} test logged${d ? ` (${esc(d)})` : ""} · plan moved to Early Pregnancy${wk ? ` · <span data-preg-gest="${esc(wk)}">${esc(wk)}</span> pregnant` : ""}</div>`;
+    const src = pt.kind === "blood" ? "Positive blood test logged" : pt.kind === "urine" ? "Positive urine test logged"
+      : pt.kind === "due" ? "Pregnancy recorded from her due date" : pt.kind === "weeks" ? "Pregnancy recorded from her stated week" : "Positive test logged";
+    return `<div class="ph-preg-banner${phPregIsFresh(name, 1600) ? " in" : ""}">🌸 ${src}${d ? ` (${esc(d)})` : ""} · plan moved to Early Pregnancy${wk ? ` · <span data-preg-gest="${esc(wk)}">${esc(wk)}</span> pregnant` : ""}</div>`;
   }
   // count the "Xw Yd" up from 0 once, right after the repaint that logged it
   // (timer, not rAF: frames stall in a background tab)
@@ -69986,44 +70018,63 @@ or changing anything in Cliniko.
     });
   }
   function phPregClick(e) {
-    const el = e.target.closest("[data-preg-open],[data-preg-kind],[data-preg-res],[data-preg-save],[data-preg-cancel]");
+    const el = e.target.closest("[data-preg-open],[data-preg-mode],[data-preg-kind],[data-preg-res],[data-preg-save],[data-preg-cancel]");
     if (!el) return false;
     const hero = el.closest("[data-tp-hero]");
     if (!hero) return false;
     const name = hero.dataset.tpHeroName, key = phPatientKey(name);
     const dEl = hero.querySelector("#phPregDate"), hEl = hero.querySelector("#phPregHcg");
+    const wEl = hero.querySelector("#phPregWeeks"), ddEl = hero.querySelector("#phPregDays"), dueEl = hero.querySelector("#phPregDue");
     if (dEl) phPregUi.date = dEl.value;
     if (hEl) phPregUi.hcg = hEl.value;
+    if (wEl) phPregUi.wk = wEl.value;
+    if (ddEl) phPregUi.wd = ddEl.value;
+    if (dueEl) phPregUi.due = dueEl.value;
     if (el.dataset.pregOpen) {
       if (phPregUi.open && phPregUi.key === key) { phPregUi.open = false; }
       else {
         const pt = (phPatientPeek(name) || {}).pregTest;
-        Object.assign(phPregUi, { key, open: true, kind: pt && pt.kind === "blood" ? "blood" : "urine", result: pt && pt.result ? pt.result : "positive", date: pt && pt.date ? pt.date : keyOf(phLiveToday()), hcg: pt && pt.hcg != null ? String(pt.hcg) : "" });
+        Object.assign(phPregUi, { key, open: true, mode: "date", kind: pt && pt.kind === "blood" ? "blood" : "urine", result: pt && pt.result ? pt.result : "positive", date: pt && pt.date ? pt.date : keyOf(phLiveToday()), hcg: pt && pt.hcg != null ? String(pt.hcg) : "", wk: "", wd: "", due: "" });
       }
       phTpPlanRepaint(); return true;
     }
+    if (el.dataset.pregMode) { phPregUi.mode = el.dataset.pregMode; phTpPlanRepaint(); return true; }
     if (el.dataset.pregKind) { phPregUi.kind = el.dataset.pregKind; phTpPlanRepaint(); return true; }
     if (el.dataset.pregRes) { phPregUi.result = el.dataset.pregRes; phTpPlanRepaint(); return true; }
     if (el.dataset.pregCancel) { phPregUi.open = false; phTpPlanRepaint(); return true; }
     if (el.dataset.pregSave) {
-      const date = phPregUi.date || keyOf(phLiveToday());
-      const yr = +date.slice(0, 4);
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !(yr >= 1900 && yr <= 2100)) { presSavedToast("Pick a real date for the test"); return true; }
-      const hcgN = phPregUi.kind === "blood" && String(phPregUi.hcg).trim() !== "" ? Math.max(0, parseInt(phPregUi.hcg, 10) || 0) : null;
+      const today = keyOf(phLiveToday());
+      const mode = phPregUi.mode || "date";
+      let date, kind, hcgN = null, result = phPregUi.result;
+      if (mode === "weeks") {
+        const wk = Math.max(0, parseInt(phPregUi.wk, 10) || 0), wd = Math.min(6, Math.max(0, parseInt(phPregUi.wd, 10) || 0));
+        if (!String(phPregUi.wk).trim() && !String(phPregUi.wd).trim()) { presSavedToast("Enter how many weeks pregnant"); return true; }
+        date = phPregDateFromGestDays(wk * 7 + wd); kind = "weeks"; result = "positive";
+      } else if (mode === "due") {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(phPregUi.due || "")) { presSavedToast("Pick a due date"); return true; }
+        const daysToDue = Math.round((parseKey(phPregUi.due) - parseKey(today)) / 86400000);
+        date = phPregDateFromGestDays(280 - daysToDue); kind = "due"; result = "positive";
+      } else {
+        date = phPregUi.date || today;
+        const yr = +date.slice(0, 4);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !(yr >= 1900 && yr <= 2100)) { presSavedToast("Pick a real date for the test"); return true; }
+        kind = phPregUi.kind;
+        hcgN = kind === "blood" && String(phPregUi.hcg).trim() !== "" ? Math.max(0, parseInt(phPregUi.hcg, 10) || 0) : null;
+      }
       const rec = phPatientRec(name);
       const wasPositive = !!(rec.pregTest && rec.pregTest.result === "positive");
-      rec.pregTest = { result: phPregUi.result, kind: phPregUi.kind, date, hcg: hcgN, at: keyOf(phLiveToday()) };
+      rec.pregTest = { result, kind, date, hcg: hcgN, at: today };
       const L = phPregLatestTransfer(rec);
-      if (L) { L.t.pregResult = phPregUi.result; L.t.pregKind = phPregUi.kind; L.t.pregTestDate = date; L.t.pregHcg = hcgN; }
-      if (phPregUi.result === "positive" && !wasPositive) phPregCascadeAny(rec);
+      if (L) { L.t.pregResult = result; L.t.pregKind = kind; L.t.pregTestDate = date; L.t.pregHcg = hcgN; }
+      if (result === "positive" && !wasPositive) phPregCascadeAny(rec);
       if (savePharmacy() === false) { presSavedToast("That could not be saved — check the warning at the top and try again"); return true; }
       phPregUi.open = false;
-      if (phPregUi.result === "positive") phPregFresh = { key, at: Date.now() };
-      presSavedToast(phPregUi.result === "positive" ? "✓ Positive test saved — plan moved to Early Pregnancy" : "✓ Negative test saved");
+      if (result === "positive") phPregFresh = { key, at: Date.now() };
+      presSavedToast(result === "positive" ? "✓ Pregnancy saved — plan moved to Early Pregnancy" : "✓ Negative test saved");
       // a positive moves the plan's phase, so the tiles and grid move too: swap the whole tab in place (never renderPresPanel, which resets scroll)
-      if (!(phPregUi.result === "positive" && presTpMainTabRefresh())) phTpPlanRepaint();
+      if (!(result === "positive" && presTpMainTabRefresh())) phTpPlanRepaint();
       else if (typeof presFlowRailRefresh === "function") presFlowRailRefresh();
-      if (phPregUi.result === "positive") phPregCountUp();
+      if (result === "positive") phPregCountUp();
       return true;
     }
     return false;
@@ -70523,6 +70574,118 @@ or changing anything in Cliniko.
     if (m) { m.hidden = true; m.innerHTML = ""; }
     if (b) b.hidden = true;
   }
+  // ---- Pregnancy start-date popup (her ask 2026-10-09): "when I select Pregnancy,
+  // I need the due date to pop up first" -- one small step, not a wizard, reusing the
+  // exact calculator fields the Pregnancy plan already has (phTpPregCalcHtml's draft/
+  // preview). On finish it hands straight back to the exact creation call it
+  // intercepted, now carrying the date -- phPregQSkip is a one-shot per-patient pass so
+  // that replay doesn't loop back into the popup a second time.
+  let phPregQ = null;        // {name, templateId, from, alsoIds, pre} while the popup is open
+  let phPregQSkip = new Set(); // patient keys allowed through once, consumed by the gate below
+  function phPregQOpen(name, templateId, opts) {
+    opts = opts || {};
+    phPregQ = { name, templateId, from: opts.from || "inline", alsoIds: opts.alsoIds || null, pre: opts.pre || null };
+    if (!phTpPregCalc[name]) phTpPregCalc[name] = { mode: "week", date: keyOf(TODAY), week: "", edd: "" };
+    phPregQRender();
+    document.getElementById("phPregQBackdrop").hidden = false;
+    document.getElementById("phPregQModal").hidden = false;
+  }
+  function phPregQClose() {
+    phPregQ = null;
+    const m = document.getElementById("phPregQModal"), b = document.getElementById("phPregQBackdrop");
+    if (m) { m.hidden = true; m.innerHTML = ""; }
+    if (b) b.hidden = true;
+  }
+  function phPregQRender() {
+    const m = document.getElementById("phPregQModal");
+    if (m) m.innerHTML = phPregQHtml();
+  }
+  // live preview + the Start button's enabled state follow every keystroke, same
+  // no-repaint-mid-typing rule as the calculator this reuses
+  function phPregQPrevPatch() {
+    if (!phPregQ) return;
+    const m = document.getElementById("phPregQModal");
+    if (!m) return;
+    const d = phTpPregCalc[phPregQ.name];
+    const el = m.querySelector("[data-pregq-prev]"), go = m.querySelector("[data-pregq-go]");
+    const s = d && phTpPregDraftStart(d);
+    if (el) { el.innerHTML = s ? phTpPregPreviewText(phPregQ.name, s) : ""; el.classList.toggle("on", !!s); }
+    if (go) go.disabled = !s;
+  }
+  function phPregQHtml() {
+    if (!phPregQ) return "";
+    const name = phPregQ.name;
+    const d = phTpPregCalc[name] || (phTpPregCalc[name] = { mode: "week", date: keyOf(TODAY), week: "", edd: "" });
+    const first = (name || "").split(/\s+/)[0] || "her";
+    const body = d.mode === "edd"
+      ? `<span class="lbl">Due date</span><input type="date" class="ph-cyc-in d" data-pregq-edd value="${esc(d.edd)}" aria-label="Estimated due date">`
+      : `<span class="lbl">On</span><input type="date" class="ph-cyc-in d" data-pregq-date value="${esc(d.date)}" max="${keyOf(TODAY)}" aria-label="Date she reported her week"><span class="lbl">she was week</span><input type="number" class="ph-cyc-in n" data-pregq-week min="0" max="45" value="${esc(d.week)}" placeholder="24" aria-label="The week she reported">`;
+    const s0 = phTpPregDraftStart(d);
+    return `<div class="ph-hx-card ph-pregq-dlg" role="dialog" aria-modal="true" aria-label="Set ${esc(first)}'s pregnancy start date">
+      <div class="ph-ivfq-head"><div class="t">Before ${esc(first)}'s plan starts</div><div class="s">One date sets which trimester the plan opens on</div><button type="button" class="x" data-pregq-cancel aria-label="Close">×</button></div>
+      <div class="ph-pregq-body">
+        <p>When is she due, or what week was she on a known date?</p>
+        <span class="ph-cycle-unit"><button type="button" class="${d.mode !== "edd" ? "on" : ""}" data-pregq-mode="week">From a week</button><button type="button" class="${d.mode === "edd" ? "on" : ""}" data-pregq-mode="edd">From due date</button></span>
+        ${body}
+        <span class="ph-preg-prev${s0 ? " on" : ""}" data-pregq-prev aria-live="polite">${s0 ? phTpPregPreviewText(name, s0) : ""}</span>
+      </div>
+      <div class="ph-pregq-foot">
+        <button type="button" class="ph-ivfq-skip" data-pregq-skip>Skip for now</button>
+        <button type="button" class="ph-ivfq-next" data-pregq-go${s0 ? "" : " disabled"}>Start the plan ✓</button>
+      </div>
+    </div>`;
+  }
+  // finishing (Start or Skip, never Cancel): write the date if she gave one, run
+  // anything the caller needed deferred until now (e.g. the protocol-switch arm's
+  // closeOld, so a Cancel leaves the old plan untouched -- same rule as phIvfQOpen's
+  // own `pre`), then hand straight back to the exact call this intercepted.
+  function phPregQFinish(startOrNull) {
+    const { name, templateId, from, alsoIds, pre } = phPregQ;
+    if (startOrNull) phTpPregSetStart(name, startOrNull);
+    phPregQClose();
+    if (typeof pre === "function") pre();
+    phPregQSkip.add(phPatientKey(name));
+    if (from === "modal") phTpCreate(name, templateId);
+    else presTpInlineCreate(name, templateId, alsoIds);
+    // the plan now exists, created on its default first phase -- with a start
+    // date on hand, move it straight to the trimester her week actually falls in,
+    // same sync the calculator's own Go button runs after an existing plan's date changes
+    if (startOrNull) {
+      const rec = phPatientRec(name);
+      if (rec && phTpPregSyncAll(rec)) {
+        if (savePharmacy() === false) presSavedToast("That could not be saved — check the warning at the top and try again.");
+        phTpPlanLiveRepaint();
+      }
+    }
+  }
+  document.addEventListener("click", e => {
+    if (e.target.id === "phPregQBackdrop") { phPregQClose(); return; }
+    const t = e.target.closest && e.target.closest("[data-pregq-mode],[data-pregq-go],[data-pregq-skip],[data-pregq-cancel]");
+    if (!t || !phPregQ) return;
+    if (t.dataset.pregqCancel !== undefined) { phPregQClose(); return; }
+    if (t.dataset.pregqSkip !== undefined) { phPregQFinish(null); return; }
+    if (t.dataset.pregqGo !== undefined) {
+      const start = phTpPregDraftStart(phTpPregCalc[phPregQ.name]);
+      if (start) phPregQFinish(start);
+      return;
+    }
+    if (t.dataset.pregqMode !== undefined) {
+      const d = phTpPregCalc[phPregQ.name];
+      if (d) d.mode = t.dataset.pregqMode;
+      phPregQRender();
+    }
+  });
+  document.addEventListener("input", e => {
+    const t = e.target;
+    if (!phPregQ || !t || !t.matches || !t.matches("[data-pregq-week],[data-pregq-date],[data-pregq-edd]")) return;
+    const d = phTpPregCalc[phPregQ.name]; if (!d) return;
+    if (t.matches("[data-pregq-week]")) d.week = t.value;
+    else if (/^\d{4}-\d{2}-\d{2}$/.test(t.value) && (t.matches("[data-pregq-edd]") || t.value <= keyOf(TODAY))) d[t.matches("[data-pregq-edd]") ? "edd" : "date"] = t.value;
+    phPregQPrevPatch();
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && phPregQ) { e.stopPropagation(); phPregQClose(); }
+  }, true);
   // ---- drawing it
   function phIvfQCards(list, cur, attr) {
     return `<div class="ph-ivfq-cards">${list.map(o => `<button type="button" class="ph-ivfq-card${cur === o.id ? " on" : ""}" ${attr}="${o.id}"><b>${esc(o.t)}</b><span>${esc(o.s)}</span></button>`).join("")}</div>`;
@@ -70665,6 +70828,10 @@ or changing anything in Cliniko.
   function presTpInlineCreate(name, templateId, alsoIds) {
     // picking IVF Protocol opens the questionnaire first; its answers decide the phases
     if (templateId === "cycle_ivf") { phIvfQOpen(name); return; }
+    // her ask 2026-10-09: picking Pregnancy asks the due date first, so the plan opens
+    // on the right trimester from the first render -- phPregQFinish replays this exact
+    // call once she's answered (or skipped), consuming the one-shot pass below
+    if (templateId === "pregnancy" && !phPregQSkip.delete(phPatientKey(name))) { phPregQOpen(name, templateId, { from: "inline", alsoIds }); return; }
     const rec = phPatientRec(name);
     if (!rec) return;
     // infer the suggestion from the patient's own current script -- what the
@@ -70707,6 +70874,7 @@ or changing anything in Cliniko.
   // mode calls via data-tp-create.)
   function phTpCreate(name, templateId) {
     if (templateId === "cycle_ivf") { phIvfQOpen(name, { from: "modal" }); return; }
+    if (templateId === "pregnancy" && !phPregQSkip.delete(phPatientKey(name))) { phPregQOpen(name, templateId, { from: "modal" }); return; }
     const rec = phPatientRec(name);
     if (!rec) return;
     // infer the suggestion from the patient's own current script -- what the
@@ -71959,6 +72127,8 @@ or changing anything in Cliniko.
       <option value=""${pk === "" ? " selected" : ""}>Test type —</option>
       <option value="urine"${pk === "urine" ? " selected" : ""}>Urine (home test)</option>
       <option value="blood"${pk === "blood" ? " selected" : ""}>Blood (beta hCG)</option>
+      <option value="weeks"${pk === "weeks" ? " selected" : ""}>From her stated week</option>
+      <option value="due"${pk === "due" ? " selected" : ""}>From her due date</option>
     </select>`;
     const dateField = `<input type="date" class="field-bare ph-ivf-pregdate" value="${esc(t.pregTestDate || "")}" data-ivf-tfield="${row.id}:${t.id}:pregTestDate" aria-label="hCG test date">`;
     const hcgField = `<input type="number" min="0" class="field-bare ph-ivf-preghcg" placeholder="hCG IU/L" value="${t.pregHcg == null ? "" : t.pregHcg}" data-ivf-tfield="${row.id}:${t.id}:pregHcg">`;
