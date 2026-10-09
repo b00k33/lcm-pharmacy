@@ -7535,7 +7535,24 @@
   #pharmacyPage .ph-fbr-grp { margin-bottom: 10px; }
   #pharmacyPage .ph-fbr-grp:last-child { margin-bottom: 0; }
   #pharmacyPage .ph-fbr-grp-lab { font: 700 var(--fs-11) var(--font-body); letter-spacing: .05em; text-transform: uppercase; color: var(--ph-soft); margin: 0 0 3px 6px; }
-  @media (max-width: 700px) { #pharmacyPage .ph-tri-cols { grid-template-columns: 1fr; } }
+  /* Her ask (2026-10-09, "find a way to display bing and ren into 4 columns" -> "B · paired by
+     matching category"): Bing and Ren no longer sit as two independent full-height columns once
+     there's enough to group -- each shared theme (Subjective, Pain, Tongue...) becomes one block
+     with Bing and Ren side by side, and two theme blocks sit side by side in turn, so a wide
+     desktop screen reads 4 real columns. Kind labels reuse the app's own two existing families
+     (teal = Bing, gold = Ren) -- no new colour. */
+  #pharmacyPage .ph-tri-pairs { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 12px; }
+  #pharmacyPage .ph-tri-pair { min-width: 0; border-radius: 14px; padding: 12px; background: var(--ph-paper); }
+  #pharmacyPage .ph-tri-pair-lab { font: 700 var(--fs-11) var(--font-body); letter-spacing: .05em; text-transform: uppercase; color: var(--ph-ink); margin: 0 0 8px 2px; }
+  #pharmacyPage .ph-tri-pair-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
+  #pharmacyPage .ph-tri-pair-half { min-width: 0; border-radius: 10px; padding: 8px; background: var(--ph-herb-tint); }
+  #pharmacyPage .ph-tri-pair-half:last-child { background: var(--ph-gold-tint); }
+  #pharmacyPage .ph-tri-pair-kind { font: 700 var(--fs-10) var(--font-body); letter-spacing: .04em; text-transform: uppercase; margin: 0 0 4px 4px; }
+  #pharmacyPage .ph-tri-pair-kind.bing { color: var(--ph-herb-deep); }
+  #pharmacyPage .ph-tri-pair-kind.ren { color: var(--ph-gold-deep); }
+  #pharmacyPage .ph-tri-pair-empty { font-size: var(--fs-11); color: var(--ph-faint); padding: 2px 4px; }
+  @media (max-width: 960px) { #pharmacyPage .ph-tri-pairs { grid-template-columns: 1fr; } }
+  @media (max-width: 700px) { #pharmacyPage .ph-tri-cols { grid-template-columns: 1fr; } #pharmacyPage .ph-tri-pair-grid { grid-template-columns: 1fr; } }
   /* Fang Bing Ren inline strip (Phase 2): a few Triangle rows embedded in Pulse/Abdomen/Tongue,
      same .ph-tri-row look, just a label instead of the full three-column layout. */
   #pharmacyPage .ph-tri-inline { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--ph-line); }
@@ -63849,6 +63866,47 @@ or changing anything in Cliniko.
     return buckets.concat(other.rows.length ? [other] : []).filter(b => b.rows.length)
       .map(b => `<div class="ph-fbr-grp"><div class="ph-fbr-grp-lab">${esc(b.lab)}</div>${b.rows.map(r => phFbrRowHtml(rec, name, r, kind, picks, eff, weights, prefix, prevD, filtColour)).join("")}</div>`).join("");
   }
+  // Her ask (2026-10-09, "find a way to display bing and ren into 4 columns", picked "B · paired
+  // by matching category"): Bing's 9 groups and Ren's 7 groups already share most of the same
+  // theme -- this table says which of each belong to the same theme, so the paired board can show
+  // Bing and Ren side by side FOR THAT THEME rather than as two independent full-height columns.
+  // Every Bing and every Ren group label appears in exactly one entry here (checked live, not just
+  // by eye) -- a label that stops matching after a future group rename falls into its own
+  // leftover row in phTriPairedHtml rather than silently vanishing.
+  const PH_TRI_THEME_PAIRS = [
+    { lab: "Subjective — how she feels", bing: ["Subjective — how she feels"], ren: ["Subjective — how she feels"] },
+    { lab: "Tongue & pulse", bing: ["Pulse & tongue"], ren: ["Pulse", "Tongue"] },
+    { lab: "Pain & body", bing: ["Pain & body"], ren: ["Pain & tension"] },
+    { lab: "Build, skin & complexion", bing: ["Skin, sweat & complexion"], ren: ["Build, skin & complexion"] },
+    { lab: "Digestion & respiratory", bing: ["Respiratory", "Digestive"], ren: ["Digestion, elimination & immunity"] },
+    { lab: "Mind, mood & cycle", bing: ["Mind & mood", "Gynae & reproductive"], ren: ["Cycle & fever pattern"] },
+    { lab: "Urinary & severe", bing: ["Urinary, edema & severe"], ren: [] }
+  ];
+  function phTriPairedHtml(rec, name, bingRows, renRows, bingWeights, renWeights, effD, effP, d, p, prevD, filtColour) {
+    const byLab = (rows, groups, groupIx) => {
+      const out = {};
+      rows.forEach(r => { const gi = groupIx[r[0]]; const lab = gi == null ? "Other" : groups[gi].lab; (out[lab] || (out[lab] = [])).push(r); });
+      return out;
+    };
+    const bingByLab = byLab(bingRows, PH_BING_GROUPS, PH_BING_GROUP_IX), renByLab = byLab(renRows, PH_REN_GROUPS, PH_REN_GROUP_IX);
+    const usedBing = new Set(), usedRen = new Set();
+    const half = (rows, kind, picks, eff, weights) => rows && rows.length
+      ? rows.map(r => phFbrRowHtml(rec, name, r, kind, picks, eff, weights, "tri", prevD, filtColour)).join("")
+      : `<div class="ph-tri-pair-empty">—</div>`;
+    const block = (lab, bRows, rRows) => `<div class="ph-tri-pair"><div class="ph-tri-pair-lab">${esc(lab)}</div>
+      <div class="ph-tri-pair-grid">
+        <div class="ph-tri-pair-half"><div class="ph-tri-pair-kind bing">Bing</div>${half(bRows, "d", d, effD, bingWeights)}</div>
+        <div class="ph-tri-pair-half"><div class="ph-tri-pair-kind ren">Ren</div>${half(rRows, "p", p, effP, renWeights)}</div>
+      </div></div>`;
+    const blocks = PH_TRI_THEME_PAIRS.map(pr => {
+      const bRows = pr.bing.flatMap(l => { usedBing.add(l); return bingByLab[l] || []; });
+      const rRows = pr.ren.flatMap(l => { usedRen.add(l); return renByLab[l] || []; });
+      return (bRows.length || rRows.length) ? block(pr.lab, bRows, rRows) : "";
+    }).filter(Boolean);
+    Object.keys(bingByLab).forEach(l => { if (!usedBing.has(l)) blocks.push(block(l, bingByLab[l], [])); });
+    Object.keys(renByLab).forEach(l => { if (!usedRen.has(l)) blocks.push(block(l, [], renByLab[l])); });
+    return `<div class="ph-tri-pairs">${blocks.join("")}</div>`;
+  }
   function phTriHtml(name, fresh) {
     const rec = phPatientPeek(name) || {}, today = phTriToday(rec), d = today.d, p = today.p;
     const L = PHARMACY.triLearn || { added: [] }, fam = phTriFam(name), open = phTriOpen.has(phPatientKey(name));
@@ -63866,7 +63924,13 @@ or changing anything in Cliniko.
     const filtId = phTriFilt.get(phPatientKey(name));
     const filtFam = filtId ? PH_FORMULAS[filtId] : null;
     const filtColour = filtFam ? PH_FBR_HERB_COLOUR[filtId] : null;
-    const col = (kind, picks, eff, weights, grouped) => {
+    // Her ask (2026-10-09, "find a way to display bing and ren into 4 columns" -> picked "B"):
+    // once there's enough on screen to need the category headers -- "Show all" or a family filter,
+    // same condition as the old grouped-rows check below -- Bing and Ren now share a single paired
+    // board (phTriPairedHtml) instead of two independent full-height columns, so matching themes
+    // (Subjective, Pain, Tongue...) sit side by side. The default light top-6 view is untouched.
+    const usePaired = open || !!filtFam;
+    const shownFor = (kind, weights) => {
       const fw = filtFam ? (kind === "d" ? filtFam.bing : filtFam.ren) : null;
       // Filtered: every sign that family's table actually weights, strongest first (a negative
       // weight -- a caution -- sorts to the bottom, never hidden). Unfiltered: her existing
@@ -63874,20 +63938,17 @@ or changing anything in Cliniko.
       const all = fw
         ? phTriAll(kind, fam, name, fresh).filter(r => fw[r[0]]).sort((a, b) => fw[b[0]] - fw[a[0]])
         : phTriAll(kind, fam, name, fresh);
-      const shown = fw ? all : (open ? all : all.slice(0, PH_TRI_TOP));
-      const rowWeights = fw || weights;
+      return { fw, all, shown: fw ? all : (open ? all : all.slice(0, PH_TRI_TOP)), rowWeights: fw || weights };
+    };
+    const bingS = shownFor("d", lead.bing), renS = shownFor("p", lead.ren);
+    const col = (kind, picks, eff, S) => {
+      const { fw, all, shown, rowWeights } = S;
       const pend = (L.added || []).filter(a => a.kind === kind && !a.agreed);
       const pendRow = a => `<div class="ph-tri-pend"><span>${esc(a.label)} <b>+${a.pts}</b></span><button type="button" class="ph-pfw-link" data-tri-agree="${esc(a.id)}">Agree</button></div>`;
       const addRow = `<div class="ph-tri-add"><input class="ph-tri-in" type="text" maxlength="60" placeholder="Add a symptom…" aria-label="Add a symptom"><input class="ph-tri-pt" type="number" min="1" max="9" value="2" aria-label="Points"><button type="button" class="ph-pfw-link" data-tri-add="${kind}">Add</button></div>`;
-      // Grouping only earns its keep once there's enough on screen to need organising -- the
-      // default top-6 view stays a flat, light list; "Show all" (same patient-level `open` flag
-      // both columns share) and a family filter both keep the category headers (her ask
-      // 2026-10-09: "when i filter, i still need to see the categories") -- a filtered list
-      // is smaller, but it's still a wall of signs without them. Rows keep whatever order
-      // `shown` already carries (ranked by that family's weight when filtered) within each group.
-      const rowsHtml = (grouped && (open || fw))
-        ? phFbrGroupedHtml(rec, name, shown, kind, picks, eff, rowWeights, "tri", today.prevD, kind === "d" ? PH_BING_GROUPS : PH_REN_GROUPS, kind === "d" ? PH_BING_GROUP_IX : PH_REN_GROUP_IX, filtColour)
-        : shown.map(r => phFbrRowHtml(rec, name, r, kind, picks, eff, rowWeights, "tri", today.prevD, filtColour)).join("");
+      // The paired board above (when usePaired) already renders every row -- this column keeps
+      // only its own footer (empty/show-more/pending/add) so neither piece duplicates the rows.
+      const rowsHtml = usePaired ? "" : shown.map(r => phFbrRowHtml(rec, name, r, kind, picks, eff, rowWeights, "tri", today.prevD, filtColour)).join("");
       const emptyMsg = fw && !shown.length ? `<div class="ph-tri-fs">No ${esc(filtFam.name)}-specific signs here.</div>` : "";
       const moreBtn = (!fw && all.length > PH_TRI_TOP) ? `<button type="button" class="ph-pfw-link ph-tri-more" data-tri-more="1">${open ? "Show fewer" : `Show all ${all.length} ›`}</button>` : "";
       return `${rowsHtml}${emptyMsg}${moreBtn}${pend.length ? `<div class="ph-tri-plab">To check</div>${pend.map(pendRow).join("")}` : ""}${addRow}`;
@@ -63923,9 +63984,10 @@ or changing anything in Cliniko.
         <button type="button" class="ph-pfw-link" data-qa-toggle="1">${qaOpen ? "Hide quick assess" : "Quick assess ▸"}</button>
         ${qaOpen ? phQaHtml(name) : ""}
       </div>
+      ${usePaired ? phTriPairedHtml(rec, name, bingS.shown, renS.shown, bingS.rowWeights, renS.rowWeights, effD, effP, d, p, today.prevD, filtColour) : ""}
       <div class="ph-tri-cols">
-        <section class="ph-tri-col"><h4>Bing · what is wrong now <span class="ph-tri-col-sub">→ ${esc(filtFam ? filtFam.name : lead.name)}</span></h4>${col("d", d, effD, lead.bing, true)}</section>
-        <section class="ph-tri-col"><h4>Ren · the person's build <span class="ph-tri-col-sub">→ ${esc(filtFam ? filtFam.name : archName)}</span></h4>${col("p", p, effP, lead.ren, true)}</section>
+        <section class="ph-tri-col"><h4>Bing · what is wrong now <span class="ph-tri-col-sub">→ ${esc(filtFam ? filtFam.name : lead.name)}</span></h4>${col("d", d, effD, bingS)}</section>
+        <section class="ph-tri-col"><h4>Ren · the person's build <span class="ph-tri-col-sub">→ ${esc(filtFam ? filtFam.name : archName)}</span></h4>${col("p", p, effP, renS)}</section>
       </div>
       ${hasTicks ? `<div class="ph-btq-foot"><button type="button" class="ph-pfw-link" data-tri-clear="1">Clear the triangle</button></div>` : ""}
     </div>`;
