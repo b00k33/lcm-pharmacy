@@ -55995,7 +55995,7 @@ or changing anything in Cliniko.
     // "Integrative builds") -- reviewDone reuses the exact same
     // Better/Same/Worse/New flag Today's visit's recheck tile already
     // reads (phTodayDonePart's "recheck" case), not a second done-test.
-    const reviewOn = phReviewOn(name);
+    const reviewOn = phReviewOn(name, t);
     const reviewDone = reviewOn && !!(rec && rec.recheck && rec.recheck.date === today && rec.recheck.change);
     const onPlan = presStage === "plan";
     const tab = presTpMainTab || "plan";
@@ -56121,7 +56121,7 @@ or changing anything in Cliniko.
       const name = t ? presPatientFor(t) || t.name || "" : "";
       const plan = name && presTpInlinePlanId ? phTpFindPlan(name, presTpInlinePlanId) : null;
       if (plan && (presTpMainTab || "plan") === "plan") {
-        const toReview = name && phReviewOn(name);
+        const toReview = name && phReviewOn(name, t);
         return `<button type="button" class="ph-pres-stage-next" data-flow-go="${toReview ? "review" : "treatment"}">Next: ${toReview ? "Review" : "Treatment"} →</button>`;
       }
       if (plan && presTpMainTab === "review") return `<button type="button" class="ph-pres-stage-next" data-flow-go="treatment">Next: Treatment →</button>`;
@@ -57032,8 +57032,10 @@ or changing anything in Cliniko.
       // Patterns. A woman with cycle on has hers on top of the Cycle page instead.
       const pfSet = peek ? phPfSetFor(peek) : null;
       if (pfSet === "meno" || pfSet === "men") sections.push({ id: "usual", label: PH_PFW_SETS[pfSet].title, body: () => `<div data-pfw-slot="1">${presPfwSetHtml(hxName, pfSet)}</div>` });
-      // her pain questions (2026-10-05): only when she came in for pain, or the Case is Pain
-      const ccPain = phCcOf(hxName), painOn = (ccPain && ccPain.fams.includes("pain")) || (t.caseType === "pain");
+      // her pain questions (2026-10-05): only when she came in for pain, or the Case is Pain.
+      // Same gate the Review step uses (phReviewOn) -- was a separate inline
+      // copy that drifted from it, see the comment on phReviewOn.
+      const painOn = phReviewOn(hxName, t);
       if (painOn && !presIsFormula(t)) sections.push({ id: "pain", label: "Pain", sub: phPfwSetDone(hxName, "pain") ? "answered" : "", body: () => `<div data-pfw-slot="1">${presPfwSetHtml(hxName, "pain")}</div><div class="ph-pain-where">${phPainMapHtml(hxName, phPmPlanFor(hxName, "pt:" + phPatientKey(hxName)))}</div>` });
       // her stress & sleep questions (2026-10-05): only when she came in for stress and sleep, or the Case is Stress
       const sleepOn = (ccPain && ccPain.fams.includes("sleep")) || (t.caseType === "stress");
@@ -63012,11 +63014,15 @@ or changing anything in Cliniko.
   function phCcMain(name) { const c = phCcOf(name); return c ? phCcFam(phCcMainId(c)) : null; }
   // one shared gate for the Review flow step (2026-10-10, "Pain should be
   // Followup Page" -> "it can go after the plan step before treatment as a
-  // Review Step"): used by BOTH presFlowSteps (the step bubble) and
-  // presTpMainSections (the tab itself) so they can never disagree about
-  // whether Review shows for this patient -- the integrative-builds rule in
-  // CLAUDE.md applies to gating logic, not just to rendered content.
-  function phReviewOn(name) { const c = phCcOf(name); return !!(c && c.fams.includes("pain")); }
+  // Review Step"): used by presFlowSteps (the step bubble), presTpMainSections
+  // (the tab itself) AND presAssessSections (the old "Pain" rail item, same
+  // test it always used) so none of them can disagree about whether Review
+  // applies to this patient -- caught 2026-10-10 by a real screenshot where
+  // the rail still showed "Pain" but no Review step: the old gate also
+  // checked t.caseType, the new one didn't, so they drifted apart on a
+  // script with a Pain Case but no "pain" complaint family. `t` is the open
+  // script and is optional -- some call sites only have `name`.
+  function phReviewOn(name, t) { const c = phCcOf(name); return !!((c && c.fams.includes("pain")) || (t && t.caseType === "pain")); }
   // every complaint, the main one first
   // she / her / he / him by the sex on record; "they / their" when it is not set (never guessed from the name)
   function phPro(name) {
@@ -71413,9 +71419,10 @@ or changing anything in Cliniko.
     // the Treatment tab's sub-label says where she is: "phase · session N"
     const ord = sel ? phTpSessionOrdinal(name, plan, sel) : null;
     const treatSub = sel ? `${sel.label}${ord && ord.n ? ` · session ${ord.loggedToday && ord.next && ord.nextPhase && ord.nextPhase.id === sel.id ? ord.nextN : ord.n}` : ""}` : "";
+    const openT = PRESC.items.find(x => x.id === presOpenId);
     return [
       { id: "plan", label: "Plan", sub: sel ? sel.label : "", body: () => presTpPlanTabBodyHtml(name, plan) },
-      ...(phReviewOn(name) ? [{ id: "review", label: "Review", sub: "", body: () => presTpReviewTabBodyHtml(name, plan) }] : []),
+      ...(phReviewOn(name, openT) ? [{ id: "review", label: "Review", sub: "", body: () => presTpReviewTabBodyHtml(name, plan) }] : []),
       { id: "treatment", label: "Treatment", sub: treatSub, body: () => presBandHtml("treat", name, plan.id) + presTpTreatmentTabBodyHtml(name, plan) },
       { id: "log", label: "Treatment log", sub: sessCount ? `${sessCount}` : "", body: () => presBandHtml("log", name, plan.id) + phTpVrLogTabHtml(name, plan) },
       { id: "notes", label: "Notes", sub: (plan.reviews || []).length ? `${(plan.reviews || []).length}` : "", body: () => presBandHtml("notes", name, plan.id) + presTpNotesTabBodyHtml(name, plan) },
