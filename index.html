@@ -36544,10 +36544,16 @@
       if (phPatSetClick(e)) return;
       const flowProf = e.target.closest("[data-flow-prof]");
       if (flowProf) {
+        const dest = flowProf.dataset.flowProf;
         // profile-first: Cycle / Medical history / Patterns wait for sex + DOB
-        if (phPfwLocked(phPfwName(), flowProf.dataset.flowProf)) { phFlashShow("Add sex and date of birth first"); return; }
+        if (phPfwLocked(phPfwName(), dest)) { phFlashShow("Add sex and date of birth first"); return; }
+        // Fang Bing Ren's "Open ›" buttons (phPatCardHtml etc.) still say
+        // data-flow-prof="patterns" -- it's a Plan-stage tab now (2026-10-10,
+        // "fang bing ren doesnt belong in profile"), so route it there
+        // instead of the profile rail every other destination here uses.
+        if (dest === "patterns" || dest === "review") { phFlowGoPlanTab(dest); return; }
         const wasProf = presStage === "profile", fromNext = flowProf.classList.contains("ph-pres-stage-next");
-        presStage = "profile"; presAssessTab = flowProf.dataset.flowProf;
+        presStage = "profile"; presAssessTab = dest;
         if (wasProf && presAssessTabRefresh()) presFlowRailRefresh(); else renderPresPanel();
         // the Next button sits at the foot of a long page: bring the new section's top into view
         if (fromNext) { const h = document.getElementById("presAssessHost"); if (h && h.scrollIntoView) h.scrollIntoView({ block: "start" }); }
@@ -36669,6 +36675,10 @@
       // same scoped-repaint shape as data-assess-tab above
       const tpMainTab = e.target.closest("[data-tp-main-tab]");
       if (tpMainTab) {
+        // Fang Bing Ren is the only Plan-stage tab PH_PFW_LOCKED names, so
+        // this is a no-op for Plan/Review/Treatment/Log/Notes -- same lock
+        // the profile rail's own tabs already respect.
+        if (phPfwLocked(phPfwName(), tpMainTab.dataset.tpMainTab)) { phFlashShow("Add sex and date of birth first"); return; }
         presTpMainTab = tpMainTab.dataset.tpMainTab;
         if (!(presTpMainTabRefresh() && presFlowRailRefresh())) renderPresPanel();
         if (presTpMainTab === "review") requestAnimationFrame(() => presTpReviewSpokesDraw(true));
@@ -56054,7 +56064,14 @@ or changing anything in Cliniko.
         <span class="c${anim ? " pop" : ""}${pulse ? " pulse" : ""}" aria-hidden="true">${s.done ? "✓" : s.n}</span><b>${esc(s.label)}</b><small>${esc(s.small)}</small>
       </button>`;
     };
-    const treat = f.steps[2];
+    // looked up by id, not position -- f.steps[2] used to mean "treatment"
+    // until the Review step could splice itself in before it, which silently
+    // dropped Dispense off the rail and mis-counted "This visit" (caught
+    // 2026-10-10 from a live screenshot missing its Dispense bubble).
+    const planStep = f.steps.find(s => s.id === "plan");
+    const reviewStep = f.steps.find(s => s.id === "review");
+    const treat = f.steps.find(s => s.id === "treatment");
+    const dispStep = f.steps.find(s => s.id === "dispense");
     const prof = f.steps[0];
     // a count gets its own seen-check, so a NEW flag pops once and nothing
     // replays on an ordinary repaint (motion only on change)
@@ -56069,7 +56086,7 @@ or changing anything in Cliniko.
     // Pulse and the rest stay plain and uncounted.
     const VISIT_TRACKED = new Set(["patient", "ren", "today", "medhx", "cycle", "usual", "sleep"]);
     const visitItems = f.profSubs.filter(u => VISIT_TRACKED.has(u.id));
-    const visitDone = visitItems.filter(u => u.dn).length + (f.steps[1].done ? 1 : 0) + (f.steps[2].done ? 1 : 0);
+    const visitDone = visitItems.filter(u => u.dn).length + (planStep.done ? 1 : 0) + (treat.done ? 1 : 0);
     const visitTotal = visitItems.length + 2;
     const visitLeft = visitTotal - visitDone;
     const nextUp = visitItems.find(u => !u.dn && !u.locked);
@@ -56102,7 +56119,7 @@ or changing anything in Cliniko.
     const logItems = f.profSubs.filter(u => u.grp === "log");
     const logHtml = (logItems.length || f.subs.length) ? `<div class="ph-flow-sub keep log${treat.done ? " done" : ""}${newlyDone.includes("treatment") ? " anim" : ""}"><span class="cap">Log <i>everything dated</i></span>${logItems.map(profBtn).join("")}${f.subs.map(u => `<button type="button" class="${u.on ? "on" : ""}" data-flow-go="${u.id}" role="tab" aria-selected="${u.on ? "true" : "false"}">${esc(u.label)}${u.sub ? `<span class="sub">${esc(u.sub)}</span>` : ""}</button>`).join("")}</div>` : "";
     return `<div class="ph-flow-rail" id="presFlowRail" role="tablist" aria-label="Where you are">
-      ${visitHead}${nextHtml}${stepHtml(prof)}${fileHtml}${checkHtml}${sumHtml}${stepHtml(f.steps[1])}${stepHtml(treat)}${stepHtml(f.steps[3])}${logHtml}
+      ${visitHead}${nextHtml}${stepHtml(prof)}${fileHtml}${checkHtml}${sumHtml}${stepHtml(planStep)}${reviewStep ? stepHtml(reviewStep) : ""}${stepHtml(treat)}${stepHtml(dispStep)}${logHtml}
     </div>`;
   }
   // in-place repaint of the rail alone (a tab switch inside the plan page
@@ -57066,20 +57083,9 @@ or changing anything in Cliniko.
     // "Write message" button that lands on this tab. A formula has no patient
     // to write to, so it never gets the tab.
     if (name && !presIsFormula(t)) sections.push({ id: "messages", label: "Messages", body: () => presMessagesTabBodyHtml(t, name) });
-    // her ask 2026-10-02 ("i want the data input in patients profile to
-    // contribute to possible diagnosis ... paint a picture of what diagnosis /
-    // treatment the patient needs"): the Patterns page, derived from what is
-    // already recorded. The gold count = patterns that read "likely" and that
-    // she has not agreed to yet.
-    if (name && !presIsFormula(t)) {
-      let patSub = "", patFlags = 0;
-      try {
-        const pc = phPatCompute(name);
-        patSub = pc.shown.length ? `${pc.shown.length} pattern${pc.shown.length === 1 ? "" : "s"}` : "no clues yet";
-        patFlags = pc.shown.filter(p => p.level === "likely" && !p.agreed).length;
-      } catch (e) { patSub = ""; }
-      sections.push({ id: "patterns", label: "Fang Bing Ren", sub: patSub, flags: patFlags, flagTitle: `${patFlags} likely, not yet agreed`, body: () => presPatternsTabBodyHtml(t, name) });
-    }
+    // Fang Bing Ren/Patterns moved to the Plan tab (2026-10-10, "fang bing
+    // ren doesnt belong in profile. its part of plan tab") -- see
+    // presTpMainSections for what used to be here.
     // her pick Mock B (2026-10-06): the Log page -- every dated record on one page
     if (name && !presIsFormula(t)) sections.push({ id: "log", label: "Log", body: () => presLogBodyHtml(t, name) });
     // her ask 2026-10-06 ("something that organises every visit check into a table"): the
@@ -57093,8 +57099,11 @@ or changing anything in Cliniko.
     }
     // the rail's groups: 1 her file (once) · 2 today's check (every visit) · 3 putting it together · Log
     // (the dated pages sit under Log). Stable sort, so a page keeps its place inside its group.
-    const RANK = { patient: 1, ren: 2, medhx: 3, pain: 4, usual: 5, sleep: 6, supplements: 7, checklist: 8,
-      today: 10, cycle: 14, patterns: 20,
+    // "pain" and "patterns" removed from this table 2026-10-10 -- both left
+    // this rail entirely (folded into Review / moved to the Plan tab), so a
+    // leftover rank for either would be inert dead weight.
+    const RANK = { patient: 1, ren: 2, medhx: 3, usual: 5, sleep: 6, supplements: 7, checklist: 8,
+      today: 10, cycle: 14,
       bloods: 7.5, log: 30, checks: 30.5, photos: 31, apptshist: 32, messages: 33, ivf: 34 };
     const GRP = n => n < 10 ? "file" : n < 20 ? "check" : n < 30 ? "sum" : "log";
     sections.forEach(s => { s.grp = GRP(RANK[s.id] || 8); });
@@ -63464,8 +63473,11 @@ or changing anything in Cliniko.
     const seq = ["patient"]; if (sid === "period") seq.push("cycle"); else if (sid) seq.push("usual");
     // "pain" dropped from this chain (2026-10-10, folded into Review, no
     // longer a rail page to auto-advance to) -- phPfwArm no-ops for it now.
+    // "patterns" (Fang Bing Ren) dropped the same way, same day -- it's a
+    // Plan-stage tab now, not a profile-rail destination to land the
+    // profile-first auto-advance on.
     { const cc = phCcOf(name); if (cc && cc.fams.includes("sleep")) seq.push("sleep"); }
-    seq.push("medhx", "patterns");
+    seq.push("medhx");
     const i = seq.indexOf(fromId);
     return i >= 0 ? seq[i + 1] || null : null;
   }
@@ -65711,16 +65723,11 @@ or changing anything in Cliniko.
     if ((el = T.closest("[data-pat-go]"))) {
       const [tab, fold] = String(el.dataset.patGo).split("|");
       if (!tab) return true;
-      // "review" lives on the Plan stage, not the profile rail every other
-      // clue target does (2026-10-10, the old "pain" rail page folded into
-      // it) -- same branch presStageNextBtnHtml/data-flow-go already use.
-      if (tab === "review") {
-        presStage = "plan"; presTpMainTab = "review";
-        if (!presTpMainTabRefresh()) renderPresPanel();
-        presFlowRailRefresh();
-        requestAnimationFrame(() => presTpReviewSpokesDraw(true));
-        return true;
-      }
+      // "review" and "patterns" live on the Plan stage, not the profile
+      // rail every other clue target does (2026-10-10 -- the old "pain" rail
+      // page folded into Review, Fang Bing Ren moved out of Profile into
+      // Plan) -- phFlowGoPlanTab is the one shared routine for this.
+      if (tab === "review" || tab === "patterns") { phFlowGoPlanTab(tab); return true; }
       if (fold === "constit") presConstitFoldOpen = true;
       presStage = "profile"; presAssessTab = tab;
       if (!presAssessTabRefresh()) renderPresPanel();
@@ -71444,8 +71451,20 @@ or changing anything in Cliniko.
     const ord = sel ? phTpSessionOrdinal(name, plan, sel) : null;
     const treatSub = sel ? `${sel.label}${ord && ord.n ? ` · session ${ord.loggedToday && ord.next && ord.nextPhase && ord.nextPhase.id === sel.id ? ord.nextN : ord.n}` : ""}` : "";
     const openT = PRESC.items.find(x => x.id === presOpenId);
+    // Fang Bing Ren (2026-10-10, moved from the profile rail -- "its part of
+    // plan tab"): the gold count is still patterns that read "likely" and
+    // haven't been agreed to yet, same rule as when this lived in Profile.
+    let patSub = "", patFlags = 0;
+    if (name && openT && !presIsFormula(openT)) {
+      try {
+        const pc = phPatCompute(name);
+        patSub = pc.shown.length ? `${pc.shown.length} pattern${pc.shown.length === 1 ? "" : "s"}` : "no clues yet";
+        patFlags = pc.shown.filter(p => p.level === "likely" && !p.agreed).length;
+      } catch (e) { patSub = ""; }
+    }
     return [
       { id: "plan", label: "Plan", sub: sel ? sel.label : "", body: () => presTpPlanTabBodyHtml(name, plan) },
+      ...(name && openT && !presIsFormula(openT) ? [{ id: "patterns", label: "Fang Bing Ren", sub: patSub, flags: patFlags, flagTitle: `${patFlags} likely, not yet agreed`, body: () => presPatternsTabBodyHtml(openT, name) }] : []),
       ...(phReviewOn(name, openT) ? [{ id: "review", label: "Review", sub: "", body: () => presTpReviewTabBodyHtml(name, plan) }] : []),
       { id: "treatment", label: "Treatment", sub: treatSub, body: () => presBandHtml("treat", name, plan.id) + presTpTreatmentTabBodyHtml(name, plan) },
       { id: "log", label: "Treatment log", sub: sessCount ? `${sessCount}` : "", body: () => presBandHtml("log", name, plan.id) + phTpVrLogTabHtml(name, plan) },
@@ -71609,6 +71628,16 @@ or changing anything in Cliniko.
     if (!plan) return false;
     host.outerHTML = presTpMainTabsHtml(name, plan);
     return true;
+  }
+  // one shared "jump to a Plan-stage tab from wherever she is" routine
+  // (2026-10-10) -- used by data-flow-prof's "review"/"patterns" cases and
+  // data-pat-go, which used to each hand-roll this same sequence (CLAUDE.md
+  // "Integrative builds": one navigation decision, not several copies).
+  function phFlowGoPlanTab(tabId) {
+    presStage = "plan"; presTpMainTab = tabId;
+    if (!presTpMainTabRefresh()) renderPresPanel();
+    presFlowRailRefresh();
+    if (tabId === "review") requestAnimationFrame(() => presTpReviewSpokesDraw(true));
   }
   function presTpInlineEditorHtml(name, plan) {
     return `<div class="ph-tp-inline ph-tp-page">${presTpMainTabsHtml(name, plan)}</div>`;
