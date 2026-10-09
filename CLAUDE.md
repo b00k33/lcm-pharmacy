@@ -1,7 +1,20 @@
 # LCM Pharmacy — design rules (read before ANY UI change)
 Also read ABOUT-ME.md before any work — build to this user's preferences.
 This is a single-page mobile web app. It must always look clean, symmetrical,
-aligned, organized and calm. Follow every rule, then re-check your work.
+aligned, organized, calm, sleek and minimal. Follow every rule, then re-check
+your work.
+
+**Standing preference, every build: terse, succinct wording and a sleek,
+minimal design, by default — cut filler, don't pad.** Applies to everything
+she reads herself: screen headers, labels, button text, audit/diagnostic
+write-ups, mock captions, status messages, Claude's own replies to her — not
+just Communications' patient-facing tone (code3 below), which is a stricter,
+separate spec for what actually leaves the clinic in her name ("polite but
+brief, never blunt"). Visually, prefer fewer elements over more — one line
+over two, one colour system over several stacked, a single merged widget over
+several small ones nearby (see "Remove → Combine → Infer → Group → Collapse
+→ Contextualise → Hide → Reveal" under code7 below) — restraint is the
+default, not an afterthought pass at the end.
 
 For LCM Pharmacy, follow STYLE-LCM.md. If a request conflicts with a rule in it,
 update STYLE-LCM.md to match so future builds don't undo it.
