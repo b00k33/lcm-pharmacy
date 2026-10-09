@@ -63471,6 +63471,101 @@ or changing anything in Cliniko.
   // exactly as before: tap-only. That's not a gap in this wiring, there's genuinely nothing to
   // pre-fill from until those signs are asked somewhere else too.
   const PH_TRI_PREFILL = { cold_feel: "cold_feel", dizzy: "dizzy", cold_sens: "cold_feel" };
+  // ---- Chart pre-fill (her ask 2026-10-09, "I need the tongue and pulse charts to feed into
+  // fang bing ren... integrated"): the SAME pre-fill idea as PH_TRI_PREFILL above, just reading
+  // from her comprehensive Tongue chart (phTng2*, and the older constitutional phTongueOutlineSvg
+  // chip lists) and Pulse chart (the organ-zone grid + Shen-Hammer exam, both per-visit and the
+  // standing rec.constitPulse/constitTongue) instead of phPatClues. Kept as its OWN mechanism
+  // rather than folded into phPatClues() -- that aggregator has its own, older key vocabulary
+  // (cold_feel, bt_fuzi, digestive_sx...) serving other consumers (Patterns); this only ever
+  // feeds Fang Bing Ren and stays self-contained so it can't quietly change what Patterns reads.
+  // Bing (today) signs only ever read the LATEST visit's chart; Ren (constitutional) signs read
+  // the standing constitPulse/constitTongue record AND the latest visit's chart (OR'd -- whichever
+  // she actually uses), since most of her charting in practice happens per-visit, not on the
+  // separate standing screens.
+  function phFbrPulseWords(p) {
+    const out = [];
+    Object.values((p && p.pulse) || {}).forEach(m => { if (m && m.quality) out.push(String(m.quality).toLowerCase()); });
+    const h = (p && p.hammer) || {};
+    (h.rhythm || []).forEach(w => out.push(String(w).toLowerCase()));
+    (h.impressions || []).forEach(w => out.push(String(w).toLowerCase()));
+    if (h.wave) out.push(String(h.wave).toLowerCase());
+    Object.values(h.depths || {}).forEach(arr => (arr || []).forEach(w => out.push(String(w).toLowerCase())));
+    Object.values(h.positions || {}).forEach(arr => (arr || []).forEach(w => out.push(String(w).toLowerCase())));
+    return out;
+  }
+  function phFbrTng2Words(tng) {
+    const t = phTng2Read(tng), out = [];
+    if (t.colour) out.push(t.colour.toLowerCase());
+    Object.values(t.colourAt).forEach(v => { if (v) out.push(String(v).toLowerCase()); });
+    (t.shape || []).forEach(w => out.push(String(w).toLowerCase()));
+    if (t.thickness) out.push(t.thickness.toLowerCase());
+    Object.values(t.thickAt).forEach(v => { if (v) out.push(String(v).toLowerCase()); });
+    if (t.moist) out.push(t.moist.toLowerCase());
+    if (t.coatThick) out.push(t.coatThick.toLowerCase());
+    if (t.coatColour) out.push(t.coatColour.toLowerCase());
+    Object.keys(t.coatQual || {}).forEach(k => out.push(k.toLowerCase()));
+    Object.keys(t.marks || {}).forEach(k => out.push(k.toLowerCase()));
+    if (t.under) out.push(t.under.toLowerCase());
+    return out;
+  }
+  function phFbrConstitTongueWords(ct) {
+    const out = [];
+    (ct.body || []).forEach(w => out.push(String(w).toLowerCase()));
+    (ct.coat || []).forEach(w => out.push(String(w).toLowerCase()));
+    (ct.overlays || []).forEach(w => out.push(String(w).toLowerCase()));
+    return out;
+  }
+  // The most recent visit whose tongue (or pulse) chart actually has something marked -- same
+  // "find the latest non-empty one" shape already used elsewhere in this file for the same job.
+  function phFbrLatestVisit(rec, test) {
+    return (rec.acuSessions || []).slice().sort((a, b) => (b.date || "").localeCompare(a.date || ""))
+      .map(s => rec.visitFnd && rec.visitFnd[s.id]).find(f => f && test(f));
+  }
+  function phFbrChartWords(rec, kind) {
+    const words = [];
+    const pulseVisit = phFbrLatestVisit(rec, f => f.pulse && Object.keys(f.pulse).length || !phVisitHammerEmpty(f.hammer || {}));
+    if (pulseVisit) words.push(...phFbrPulseWords(pulseVisit));
+    const tngVisit = phFbrLatestVisit(rec, f => f.tng && !phTng2Empty(f.tng));
+    if (tngVisit) words.push(...phFbrTng2Words(tngVisit.tng));
+    if (kind === "p") {
+      words.push(...phFbrPulseWords(phHxConstitPulseRead(rec)));
+      words.push(...phFbrConstitTongueWords(phHxConstitTongueRead(rec)));
+    }
+    return words;
+  }
+  // Honest first pass, same spirit as the complaint-search keyword matching: a listed word is a
+  // SUBSTRING match against whatever's actually marked, no stemming/synonyms. A couple of signs
+  // whose own label names two attributes at once (e.g. "dry, scorched YELLOW coating") are
+  // matched on their single most defining word only, not both ANDed together -- looser than
+  // ideal, sharpen later if it over- or under-fires in real use.
+  const PH_FBR_CHART_PREFILL = [
+    { key: "pulse_wiry_thin", kind: "p", words: ["wiry", "thin"] },
+    { key: "pulse_float_large", kind: "p", words: ["floating"] },
+    { key: "pulse_faint_sinking_weak_tend", kind: "p", words: ["weak", "feeble-absent", "deep"] },
+    { key: "pulse_large_flooding_tend", kind: "p", words: ["flooding excess", "full-overflowing"] },
+    { key: "pulse_float_slippery_tend", kind: "p", words: ["floating", "slippery"] },
+    { key: "p_float", kind: "d", words: ["floating"] },
+    { key: "tongue_dusky", kind: "p", words: ["dusky", "pink"] },
+    { key: "tongue_tender", kind: "p", words: ["tender"] },
+    { key: "white_coat", kind: "p", words: ["white"] },
+    { key: "tongue_purple", kind: "p", words: ["purple", "dusky"] },
+    { key: "tongue_purple_spots", kind: "p", words: ["purple"] },
+    { key: "tongue_large_palered", kind: "p", words: ["swollen"] },
+    { key: "coat_thick_dry", kind: "p", words: ["thick", "dry"] },
+    { key: "tongue_pale_flabby_wet", kind: "p", words: ["pale", "flaccid", "wet"] },
+    { key: "tongue_very_dry_tend", kind: "p", words: ["dry"] },
+    { key: "coat_moist_slippery_greasy", kind: "p", words: ["greasy", "moist", "wet"] },
+    { key: "tongue_pale_white_slippery", kind: "p", words: ["pale", "white"] },
+    { key: "tongue_red_firm", kind: "d", words: ["red", "stiff"] },
+    { key: "coat_dry_yellow", kind: "d", words: ["yellow", "dry"] },
+    { key: "coat_greasy_yellow", kind: "d", words: ["greasy", "yellow"] }
+  ];
+  function phFbrChartKnown(chartWords, kind, key) {
+    const spec = PH_FBR_CHART_PREFILL.find(x => x.key === key && x.kind === kind);
+    if (!spec || !chartWords.length) return false;
+    return spec.words.some(w => chartWords.some(cw => cw.includes(w)));
+  }
   function phTriSum(weights, list, picks) { return Math.max(0, list.reduce((s, r) => s + (picks[r[0]] ? phFbrPts(weights, r) : 0), 0)); }
   // picks with pre-filled values folded in where nothing's been explicitly tapped either way --
   // tapping always writes a real true/false into rec.tri, which this always prefers over a guess.
@@ -63479,12 +63574,14 @@ or changing anything in Cliniko.
   // forward this way; she sets it once and it just persists, no day boundary involved.
   function phTriEffective(rec, name, kind, picks, prevD) {
     const clueKeys = new Set(phPatClues(rec, name).map(c => c.key));
+    const chartWords = phFbrChartWords(rec, kind);
     const list = kind === "d" ? PH_BING_SIGNS : PH_REN_SIGNS, eff = {};
     list.forEach(r => {
       const src = PH_TRI_PREFILL[r[0]];
       const known = !!(src && clueKeys.has(src));
       const carried = kind === "d" && !!(prevD && prevD[r[0]]);
-      eff[r[0]] = picks[r[0]] !== undefined ? picks[r[0]] : (known || carried);
+      const chartKnown = phFbrChartKnown(chartWords, kind, r[0]);
+      eff[r[0]] = picks[r[0]] !== undefined ? picks[r[0]] : (known || carried || chartKnown);
     });
     return eff;
   }
@@ -63493,6 +63590,7 @@ or changing anything in Cliniko.
     const src = PH_TRI_PREFILL[key], clueKeys = new Set(phPatClues(rec, name).map(c => c.key));
     if (src && clueKeys.has(src)) return "Already recorded elsewhere — tap to override";
     if (kind === "d" && prevD && prevD[key]) return "Ticked last visit — tap to confirm or change";
+    if (phFbrChartKnown(phFbrChartWords(rec, kind), kind, key)) return "Already on the tongue/pulse chart — tap to override";
     return "Already recorded elsewhere — tap to override";
   }
   // Today's working view of rec.tri: Ren (.p) never resets. Disease (.d) resets on a new day,
