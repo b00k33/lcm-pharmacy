@@ -1230,6 +1230,41 @@ session must diff `session-a` against `main` before assuming any one part
 of Patterns is or isn't live** — don't trust a single build note in
 isolation.
 
+## Treatment Care Plan head: Diagnosis + Goal write themselves (her ask28, 2026-10-10)
+**Her ask:** "i need this page to require little to no effort" -- the only thing she sets is each phase's
+frequency. Her picks are in memory `project_pharmacy_autofill_diagnosis_goal_2026_10_10`; do not re-ask.
+- **Diagnosis / pattern** = every Fang Bing Ren pattern that is **Likely or Possible** (plus any she agreed),
+  minus the ones she removed with the chip's x (that writes `rec.patterns.dismissed`, the same "Not this
+  patient"). Main (★) = `phPatMainId`, else the top-ranked. A dashed "+ Name" chip puts a removed one back.
+  The old Plan-tab Fang Bing Ren strip is GONE (folded into this row; its "Open Fang Bing Ren" link sits at
+  the row's end). The Patterns page no longer asks "also add to Diagnosis?" and `phPatAgree` never writes
+  `plan.diagnosis`; "Put diagnosis + principle in the plan" and its Undo were removed.
+- **Goal** = (1) the plan template's complaint family (`phCcFamOfPlan`), (2) her main complaint if different,
+  (3) one bullet per secondary symptom via `PH_CC_GOAL_WORDS`; no match reads "Ease <her words>"; nothing
+  recorded falls back to the template's own sentence. Main lines `PH_CC_GOAL_MAIN`. **All wording is DRAFT, hers
+  to correct**: Settings -> Patients -> "Goal wording" (`PHARMACY.goalWording = { main:{famId:text}, rules:"words = goal" }`,
+  her lines tried first). No phase tail on Goal any more (the top band says it).
+- **Derived on read, never stored** (`phTpAutoDx`, `phTpAutoGoal`; `var` tables + try/catch because
+  `phApptBrief` can call them during boot). `plan.diagnosis` / `plan.goal` are HERS only when she typed them:
+  `plan.dxHers` / `plan.goalHers`, or (older plans) text that is not just pattern names / not the template's
+  own seeded sentence (`phTpDxHersText`, `phTpGoalHersText`). Typing the auto text back unchanged, or clearing
+  the row, returns it to auto ("back to auto" button). Editing starts from what she sees.
+- **One source everywhere:** `phApptBrief` (door card, popup, day list, `focusSrc/goalSrc = "auto"`), letters
+  (`planDiagnosis` / `planGoal`, goal bullets joined "a; b; c"), the printed plan record and the pain map all read
+  hers-else-auto. A booking's own pasted/typed focus/goal still wins on the card. Memo: 1.5 s for `phApptBrief`
+  reads, busted by `phPatEnsureState` and every edit here; the card itself reads fresh.
+- **"Updated today" gold line:** a pattern that joined AFTER she first looked today shows "Updated today -
+  <Pattern> added (from tongue)" with Undo (= dismiss it). Baseline `plan.dxSeen = {day, ids, keys}` is written
+  once per day by `phTpDxSeenSet`, deferred (setTimeout) after the card draws, never from inside a render.
+  Changes made between days are not announced (by design: she asked about changes after she has looked).
+- **Frequency** (Session grid): the open (first unplanned) phase shows the four rhythms as pills in its row
+  (`data-tp-plan-prev`, preview only, squares re-date), a gold "Your turn" in This week, and **"Same for all
+  phases"** (`phTpPlanCommitAll`: every phase with no sessions takes the previewed rhythm and its suggested
+  count; ONE Undo restores them all). Tapping the last square still plans one phase as before (Plan-it B).
+- **Known edges:** Likely + Possible can list 4+ chips and a long sentence (her call); a new `PHARMACY.goalWording`
+  key has no cloud-merge protection yet (same as `patternOverrides`); "Same for all" gives each phase the
+  rhythm's suggested count (1x/wk = 4, 2x/wk = 6), including herbs-only phases, so she tidies rows after.
+
 ## Communications / messaging
 See the code3 persona above for tone/voice rules. Mechanically: a message
 offer fires automatically whenever a plan's phase changes (manual move or a
