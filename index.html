@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261010-135500">
+<meta name="lcm-build" content="20261010-140500">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -63412,12 +63412,17 @@ or changing anything in Cliniko.
     if (id === "cycle") return !!(rec.cycleSigns && rec.cycleSigns[today]);
     return false;
   }
+  // The one place "nothing recorded yet" is spelled for tongue/pulse/abdomen --
+  // Review's glance tiles (presTpReviewTabBodyHtml) call this too (2026-10-10)
+  // instead of re-deriving the same three summaries with their own fallback
+  // text, so the two tiles can't drift into different wording again.
+  const PH_FINDING_EMPTY = "Nothing recorded";
   function phTodaySumPart(rec, id) {
-    if (id === "tongue") return (rec.tongueExam && phTng2Summary(rec.tongueExam)) || "Nothing recorded";
-    if (id === "pulse") return (rec.constitPulse && phVisitPulseSummaryText(rec.constitPulse.pulse)) || "Nothing recorded";
+    if (id === "tongue") return (rec.tongueExam && phTng2Summary(rec.tongueExam)) || PH_FINDING_EMPTY;
+    if (id === "pulse") return (rec.constitPulse && phVisitPulseSummaryText(rec.constitPulse.pulse)) || PH_FINDING_EMPTY;
     if (id === "abdomen") {
       if (rec.abdomen && rec.abdomen.normal) return "Normal";
-      return (rec.abdomen && phAbd2Summary(rec.abdomen.chart)) || "Nothing recorded";
+      return (rec.abdomen && phAbd2Summary(rec.abdomen.chart, rec.abdomen.zones)) || PH_FINDING_EMPTY;
     }
     if (id === "cycle") { const comp = phCycleComp(rec); return comp ? `CD ${comp.day} · ${comp.phaseLabel}` : "Not tracked yet"; }
     return "";
@@ -64999,7 +65004,7 @@ or changing anything in Cliniko.
         <div class="ph-tri-filt-row">
           ${filtFam
             ? `<span class="ph-tri-filt-pill">Filtering: ${esc(filtFam.name)} only <button type="button" data-tri-filt-clear="1">Clear ✕</button></span><span>tap another tile to switch</span>`
-            : (hasTicks ? `<span>Tap a tile to filter</span>` : `<span>No ticks yet — tap a tile to filter</span>`)}
+            : `<span>Tap a tile to filter</span>`}
         </div>
         <button type="button" class="ph-pfw-link" data-qa-toggle="1">${qaOpen ? "Hide quick assess" : "Quick assess ▸"}</button>
         ${qaOpen ? phQaHtml(name) : ""}
@@ -65299,7 +65304,7 @@ or changing anything in Cliniko.
   function phCsChipsHtml(name, q) {
     if (!q || !q.trim()) return "";
     const matches = phCsMatches(q);
-    if (!matches.length) return `<div class="ph-cs-empty">No matching sign yet — tap it directly under Disease below.</div>`;
+    if (!matches.length) return `<div class="ph-cs-empty">No matching sign yet.</div>`;
     const rec = phPatientPeek(name) || {}, today = phTriToday(rec);
     return `<div class="ph-cc-opts">${matches.map(m => `<button type="button" class="ph-cc-chip${today.d[m.r[0]] ? " on" : ""}" data-cs-pick="${esc(m.r[0])}">${esc(m.r[1])}</button>`).join("")}</div>`;
   }
@@ -67931,13 +67936,12 @@ or changing anything in Cliniko.
         <button type="button" class="ph-band-back" data-pres-close="1" aria-label="Close">‹</button>
         <div class="ph-band-titlewrap">
           <span class="ph-band-name">${esc(phDispName(t.name, false))}</span>
-          <span class="ph-band-sub">No treatment plan yet</span>
         </div>
       </div>
       <div class="ph-noplan-gate-body">
         ${presPfwStartHtml(t)}${phCcCardHtml(t)}
         <div class="ph-noplan-gate-title">${esc(phDispName(t.name, false))} doesn't have a treatment plan yet</div>
-        <div class="ph-noplan-gate-sub">Start one to bring ${phPro(t.name).p} prescriptions, phases and history together — this is the first thing you'll see until ${phPro(t.name).be} on a plan. <button type="button" class="tab-link" data-tp-mgr-jump="1">✎ Manage templates</button></div>
+        <div class="ph-noplan-gate-sub">Start one to bring ${phPro(t.name).p} prescriptions, phases and history together. <button type="button" class="tab-link" data-tp-mgr-jump="1">✎ Manage templates</button></div>
         ${presTpTemplatePickCardsHtml(name, t)}
         <div class="ph-noplan-gate-skip"><button type="button" class="tab-link faint" data-noplan-skip="${esc(name)}">Skip for now — see ${phPro(name).p} profile without a plan</button></div>
       </div>
@@ -69968,6 +69972,13 @@ or changing anything in Cliniko.
     return cards ? `<div class="ph-pm-zooms"><div class="ph-pm-zh">Close-ups</div><div class="ph-pm-zgrid">${cards}</div></div>` : "";
   }
 
+  // One tooltip, shared by the 2D and 3D headers below -- they used to carry
+  // two independently-worded paragraphs (her audit, 2026-10-10: "merge the
+  // two Pain Map tooltips into one short version") that each explained
+  // ordinary tap/hover mechanics at length. Kept to the one fact that's
+  // actually easy to get wrong (R/L mirrors) and the one time-saver that
+  // isn't obvious from the UI (typing several pains at once).
+  const PH_PM_TIP = "Patient's right is on your left (front view). Type several pains in one line, or pick areas.";
   function phPainMapHtml(name, plan) {
     const list = phPmList(name, plan);
     const pick = phPmPick.get(plan.id);
@@ -70135,7 +70146,7 @@ or changing anything in Cliniko.
       const n3 = list.length;
       return `<div class="ph-pm m3d" data-pm-box="${pid}" data-pm-name="${esc(name)}">
         <div class="ph-pm-head">
-          <b>Pain map</b>${phInfoDot("Drag the body to turn it, scroll or pinch to zoom. Tap a spot or a note to turn to that pain. Open “N pains” to change a pain's side, remove it, tap its dot for another colour, or pick areas. Standard anatomical position — the patient's right is on your left in the front view.")}
+          <b>Pain map</b>${phInfoDot(PH_PM_TIP)}
           <span class="ph-pm-seg ph-pm-layout" role="group" aria-label="Layout"><button type="button" data-pm-layout="${pid}|both" aria-pressed="false">Front + back</button><button type="button" data-pm-layout="${pid}|turn" aria-pressed="false">Turn to the pain</button><button type="button" data-pm-layout="${pid}|side" aria-pressed="false">Side view</button><button type="button" class="on" data-pm-layout="${pid}|3d" aria-pressed="true">3D</button></span>
         </div>
         <div class="p3-card${S3.full ? " full" : ""}">
@@ -70175,7 +70186,7 @@ or changing anything in Cliniko.
     }
     return `<div class="ph-pm" data-pm-box="${pid}" data-pm-name="${esc(name)}">
       <div class="ph-pm-head">
-        <b>Pain map</b>${phInfoDot("Starts from the presenting complaint. Type several pains in one line (e.g. “RHS headache with lower left back pain and left ankle pain”) or pick areas. Change a pain's side or remove it on its row; tap its dot for another colour. Hover a row to spotlight it. Standard anatomical position — the patient's right is on your left in the front view, marked R and L. Hover or tap a numbered spot for its details; the Labels toggle shows them beside each spot. Side view shows her right and left sides with the same numbered zones. A hand, knee, ankle or foot pain also gets its own drawn close-up below, numbered to match.")}
+        <b>Pain map</b>${phInfoDot(PH_PM_TIP)}
         <span class="ph-pm-seg ph-pm-layout" role="group" aria-label="Layout"><button type="button" class="${!turn && !sideOn ? "on" : ""}" data-pm-layout="${pid}|both" aria-pressed="${!turn && !sideOn}">Front + back</button><button type="button" class="${turn && !sideOn ? "on" : ""}" data-pm-layout="${pid}|turn" aria-pressed="${!!turn && !sideOn}">Turn to the pain</button><button type="button" class="${sideOn ? "on" : ""}" data-pm-layout="${pid}|side" aria-pressed="${sideOn}">Side view</button><button type="button" data-pm-layout="${pid}|3d" aria-pressed="false">3D</button></span>
         ${sideOn ? "" : `<button type="button" class="ph-pm-turnbtn ph-pm-labelsbtn" data-pm-labels="${pid}" aria-pressed="${labelsOn}">${labelsOn ? "🏷 Labels on" : "🏷 Labels"}</button>`}
       </div>
@@ -71650,13 +71661,13 @@ or changing anything in Cliniko.
     if (topPat) nodes.push({ cls: "c-teal", cat: "Pattern", ic: "pattern", tt: `Likely · ${esc(topPat.def.name)}`, s: esc(`${topPat.n} clue${topPat.n === 1 ? "" : "s"}`) });
     nodes.push({ cls: "c-teal", prof: "today", cat: "Tongue", ic: "tongue",
       pic: bestTng ? `<img src="${bestTng.objectUrl}" alt="Tongue photo">` : (rec.tongueExam ? `<span class="ph-visit-tng ro mini">${phTongueChartSvg(rec.tongueExam, null, { ro: true })}</span>` : ""),
-      tt: esc(dateBit(tngAt)), s: esc(rec.tongueExam ? phTng2Summary(rec.tongueExam) : "Nothing recorded") });
+      tt: esc(dateBit(tngAt)), s: esc(phTodaySumPart(rec, "tongue")) });
     nodes.push({ cls: "c-teal", prof: "today", cat: "Pulse", ic: "pulse",
       pic: `<span class="ph-rv-pulsepic">${phVisitPulseDotsHtml(rec.constitPulse && rec.constitPulse.pulse) || ""}</span>`,
-      tt: esc(dateBit(pulseAt)), s: esc(rec.constitPulse ? phVisitPulseSummaryText(rec.constitPulse.pulse) : "Nothing recorded") });
+      tt: esc(dateBit(pulseAt)), s: esc(phTodaySumPart(rec, "pulse")) });
     nodes.push({ cls: "c-teal", prof: "today", cat: "Abdomen", ic: "abdomen",
       pic: rec.abdomen ? `<span class="ph-visit-abd-map ro mini">${phAbdChartSvg(rec.abdomen.chart, null, { ro: true, legacy: rec.abdomen.zones })}</span>` : "",
-      tt: esc(dateBit(abdAt)), s: esc(rec.abdomen && rec.abdomen.normal ? "Normal" : (rec.abdomen ? phAbd2Summary(rec.abdomen.chart, rec.abdomen.zones) : "Nothing recorded")) });
+      tt: esc(dateBit(abdAt)), s: esc(phTodaySumPart(rec, "abdomen")) });
     if (hxFlag) nodes.push({ cls: "c-grey", prof: "medhx", cat: "History", ic: "history", tt: "Flagged", s: esc(hxFlag.label + ((hx.yesItems || []).length > 1 ? ` +${hx.yesItems.length - 1} more` : "")) });
     if (phase) nodes.push({ cls: "c-gold", wide: true, go: "plan", cat: "Plan", ic: "plan",
       tt: esc(`${plan.title || plan.templateName || "Plan"} · ${phase.label || "Phase"}`),
