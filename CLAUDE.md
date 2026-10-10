@@ -62,7 +62,7 @@ visit. That is fixed by this law.)
 | Medical history | Once. One tap "anything new since <date>?" at the end of each treatment phase. |
 | Stress & sleep | **Asked once for EVERY patient** (not only when the complaint says so). Re-asked at plan review. |
 | Supplements | Confirm every visit with one tap "Same as last time" / "Changed". |
-| Blood tests | When a new result arrives. Each result shows its age ("9 months old"); very old results count less in Fang Bing Ren. |
+| Blood tests | When a new result arrives. Each result shows its age ("9 months old"); a result **over 12 months old** is still listed and dated but marked "not counted" and gives Fang Bing Ren no clue (`PH_BLD_OLD_DAYS`, `phBldIsOld`). |
 | Re-check, Cycle, Tongue, Pulse, Abdomen | Every visit (Cycle while on). |
 | Fang Bing Ren | Recalculated live on every render, never stored; only her Agree / Not this patient taps are saved. |
 | Treatment Care Plan | Built after Fang Bing Ren; reviewed at the end of each phase. |
@@ -70,15 +70,17 @@ visit. That is fixed by this law.)
 
 ## 4 · What feeds what (influence map)
 Fang Bing Ren **reads everything in groups 1 and 2**: complaint (weak),
-Ren taps, medical history + notes, Stress & sleep, ALL supplements (today
-only iron counts — Phase 3 fixes), blood results (iron, thyroid; weighted by
-age), Cycle day log, Tongue, Pulse, Abdomen, period/change-of-life/men's
-answers. It shows a "fed by" line so nothing influences it invisibly.
+Ren taps, medical history + notes, Stress & sleep, supplements (only iron
+reaches it — she chose to leave supplements as they are; the other three are
+what she takes, not signs of a pattern), blood results (iron, thyroid; only
+results under 12 months old), Cycle day log, Tongue, Pulse, Abdomen,
+period/change-of-life/men's answers. **She declined a "fed by" strip** (9/10 Phase 3):
+do not add one.
 - Fang Bing Ren → Treatment Care Plan: **suggests only** (Diagnosis/goal
   draft). → Treatment: point suggestions, one tap applies, nothing pre-ticked.
   → Dispense: **never suggests a formula; the formula is always hers.**
-- Re-check → Treatment Care Plan: **Worse** or **Something new** raises a
-  flag on the plan.
+- Re-check → Treatment Care Plan: saved and shown on Today's visit only.
+  **She declined a flag on the plan** (Phase 3): do not add one.
 - Cycle → Fang Bing Ren, Treatment Care Plan (phase by cycle day, IVF), Treatment.
 - Treatment saved → files the dated visit (and its dated findings) to the Log.
 - Complaint → reorders the plan picker and picks which question sets show.
@@ -111,7 +113,7 @@ Never call it "Treatment plan", "Plan tab" or bare "Plan" in new UI text.
 | 0 | Write this law | **DONE 2026-10-10** |
 | 1 | Names + order: rename, reorder rail, fold Review into Today's visit, Tongue/Pulse/Abdomen/Cycle as separate pages | **BUILT 2026-10-10, uncommitted on `session-a`, NOT pushed** (sandbox-verified: rail order, Next chain, taps repaint + tick, return-visit Re-check, 375px). Disclosed: the tiles show today's finding only — "last visit's finding beside today's" waits for Phase 2; the default landing tab is still Treatment Care Plan (her 9/28 "Plan is the door" rule) — landing on Today's visit is a Phase 4 call; remaining prose that says "treatment plan" (messages, printed plan record, comments) is untouched on purpose; `grep phTodayStripHtml`, `presRvPainHtml`, `phExamPageHtml` |
 | 2 | One home each: Cycle single door; trace then unify the two finding copies | **BUILT 2026-10-10, uncommitted on `session-a`, NOT pushed** (her pick "A" + "last visit on pages and tiles"). Cycle: already one page after Phase 1, nothing more. Findings: the exam pages are the ONE entry; `phExamMirrorToday(rec)` mirrors today's exam into the dated `rec.visitFnd[session.id]` of every session logged today (hooks: `phTngWrite`, `phAbdWrite`, the Pulse repaint in `renderHxScreen`, and visit save), so history keeps building and nothing is typed twice; earlier dated copies are never touched. The Treatment tab's findings row is a read-only line (`phVisitFndLineHtml`) with a Change link; the old chart panel is no longer shown anywhere. History lines: `phExamPast` / `phExamPastHtml` under each exam page, and "last: …" on each Today's visit tile. Known edge: a part cleared AFTER it was mirrored stays in that day's dated copy. `phVisitFndPanelHtml` + its `[data-visit-fnd-wrap]` refresh branch are now unreachable dead code — remove in Phase 5 with care (the exam pages borrow `presVisitFndDraft`, so the chart handlers stay) |
-| 3 | Wire influence: all supplements, Stress & sleep for all, blood age, "fed by" line | pending |
+| 3 | Wire influence (scaled to her answers): Stress & sleep for everyone, blood result age | **BUILT 2026-10-10, uncommitted on `session-a`, NOT pushed.** Stress & sleep now a rail page for every non-formula patient, right after Medical history (Next chain: Patient details → Medical history → Stress & sleep). Blood tests header shows each result's age; over 12 months = "not counted" and `phPatClues` ignores it (fresh ones still count; sandbox-verified old-only → no clue, fresh → low_iron). **Her answers: supplements unchanged, NO "fed by" strip, NO re-check flag on the plan** — do not build these. Supplements "Same as last time" tap is a Phase 4 item |
 | 4 | Guided path: "Up next" follows first-visit / return-visit order; "Same as last time"; repeat nudges | pending |
 | 5 | Audit: walk a new, a return and an IVF patient at 360px and desktop | pending |
 Each phase: build in the sandbox, show her, check 360px + desktop, push only

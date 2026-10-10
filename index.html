@@ -9186,6 +9186,10 @@
   #pharmacyPage .ph-bld-tbl td i { font-style: normal; margin-right: 4px; }
   #pharmacyPage .ph-bld-dh { background: none; border: 0; padding: 0; cursor: pointer; text-align: left; font: inherit; color: inherit; text-transform: none; letter-spacing: 0; }
   #pharmacyPage .ph-bld-dh b { font-size: var(--fs-12-5); }
+  /* result age (law 2026-10-10): always shown; over 12 months = "not counted", dimmed, never hidden */
+  #pharmacyPage .ph-bld-dh small.age { font-weight: 600; }
+  #pharmacyPage .ph-bld-tbl th.old .ph-bld-dh { opacity: .75; }
+  #pharmacyPage .ph-bld-tbl th.old .ph-bld-dh small.age { color: var(--ph-gold-deep); }
   #pharmacyPage .ph-bld-notes { margin: 10px 0 0; padding-left: 18px; font-size: var(--fs-12-5); color: var(--ph-soft); }
   #pharmacyPage .ph-bld-form { display: flex; flex-direction: column; gap: 16px; }
   #pharmacyPage .ph-bld-frow { display: flex; gap: 12px; flex-wrap: wrap; }
@@ -57303,13 +57307,11 @@ or changing anything in Cliniko.
       // folded into the Review step (2026-10-10), and that step is itself
       // retired now (law 2026-10-10): the Pain intake fold lives on Today's
       // visit, see presRvPainHtml. No standalone "pain" section.
-      const ccPain = phCcOf(hxName);
-      // her stress & sleep questions (2026-10-05): only when she came in for stress and sleep, or
-      // the Case is Stress. Primary is a category (checked directly); secondary is free-typed
-      // symptoms now (2026-10-10 pass), so it's checked by the same guess-words a sleep symptom
-      // would trip, not a family id.
-      const sleepOn = (ccPain && (ccPain.main === "sleep" || (ccPain.secondary || []).some(s => phCcGuessIds(s.text).includes("sleep")))) || (t.caseType === "stress");
-      if (sleepOn && !presIsFormula(t)) sections.push({ id: "sleep", label: "Stress & sleep", sub: phPfwSetDone(hxName, "sleep") ? "answered" : "", body: () => `<div data-pfw-slot="1">${presPfwSetHtml(hxName, "sleep")}</div>` });
+      // her stress & sleep questions (2026-10-05): used to show only for a stress/sleep complaint
+      // or Case = Stress, so poor sleep under any other complaint was never asked. PATIENT
+      // WORKFLOW LAW (CLAUDE.md 2026-10-10, her pick): asked of EVERYONE once -- it is short, and
+      // its answers already feed Fang Bing Ren whenever they exist.
+      if (!presIsFormula(t)) sections.push({ id: "sleep", label: "Stress & sleep", sub: phPfwSetDone(hxName, "sleep") ? "answered" : "", body: () => `<div data-pfw-slot="1">${presPfwSetHtml(hxName, "sleep")}</div>` });
     }
     sections.push({ id: "supplements", label: "Supplements", body: () => presSupplementsTabBodyHtml(t) });
     if (hxName) {
@@ -57442,6 +57444,22 @@ or changing anything in Cliniko.
   function phBldList(rec) {
     return ((rec && rec.bloods) || []).filter(b => b && /^\d{4}-\d{2}-\d{2}$/.test(b.date || "")).slice().sort((a, b) => b.date.localeCompare(a.date) || (b.at || 0) - (a.at || 0));
   }
+  // PATIENT WORKFLOW LAW (CLAUDE.md 2026-10-10, her pick): a result's age always shows, and one over
+  // 12 months old is marked "old" and gives Fang Bing Ren no clue. It is still listed, never deleted.
+  const PH_BLD_OLD_DAYS = 365;
+  function phBldAgeDays(dateKey) {
+    const d = parseKey(dateKey), t0 = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate());
+    return Math.max(0, Math.round((t0 - d) / 86400000));   // Math.round, not floor: a DST day is an hour short
+  }
+  const phBldIsOld = dateKey => phBldAgeDays(dateKey) > PH_BLD_OLD_DAYS;
+  function phBldAgeText(dateKey) {
+    const n = phBldAgeDays(dateKey);
+    if (n < 1) return "today";
+    if (n < 14) return `${n} day${n === 1 ? "" : "s"} old`;
+    if (n < 60) return `${Math.round(n / 7)} weeks old`;
+    if (n < 730) return `${Math.round(n / 30.4)} months old`;
+    return `${Math.round(n / 365)} years old`;
+  }
   function phBldCustomRowHtml(k, e) {
     const x = e || {};
     return `<div class="ph-bld-crow"><input type="text" data-bld-cn placeholder="Marker name" maxlength="40" value="${esc(x.n || "")}" aria-label="Marker name"><input type="text" inputmode="decimal" data-bld-cv placeholder="Result" maxlength="12" value="${x.v != null ? esc(String(x.v)) : ""}" aria-label="Result"><input type="text" data-bld-cu placeholder="Unit" maxlength="14" value="${esc(x.u || "")}" aria-label="Unit"><input type="text" inputmode="decimal" data-bld-clo placeholder="Low" maxlength="8" value="${x.lo != null ? esc(String(x.lo)) : ""}" aria-label="Lab low"><input type="text" inputmode="decimal" data-bld-chi placeholder="High" maxlength="8" value="${x.hi != null ? esc(String(x.hi)) : ""}" aria-label="Lab high"></div>`;
@@ -57471,7 +57489,7 @@ or changing anything in Cliniko.
     const keys = [];
     PH_BLD_MARKERS.forEach(m => { if (list.some(b => b.vals && b.vals[m[0]])) keys.push(m[0]); });
     list.forEach(b => Object.keys(b.vals || {}).forEach(k => { if (k.indexOf("c:") === 0 && keys.indexOf(k) < 0) keys.push(k); }));
-    const head = list.map(b => { const d = parseKey(b.date); return `<th scope="col"><button type="button" class="ph-bld-dh" data-bld-edit="${esc(b.id)}" title="Edit this result"><b>${d.getDate()} ${MON_SHORT[d.getMonth()]}</b><small>${d.getFullYear()}</small>${b.lab ? `<small class="lab">${esc(b.lab)}</small>` : ""}</button></th>`; }).join("");
+    const head = list.map(b => { const d = parseKey(b.date), old = phBldIsOld(b.date); return `<th scope="col"${old ? ` class="old"` : ""}><button type="button" class="ph-bld-dh" data-bld-edit="${esc(b.id)}" title="${old ? "Over 12 months old: not counted in Fang Bing Ren. Edit this result" : "Edit this result"}"><b>${d.getDate()} ${MON_SHORT[d.getMonth()]}</b><small>${d.getFullYear()}</small><small class="age">${esc(phBldAgeText(b.date))}${old ? " · not counted" : ""}</small>${b.lab ? `<small class="lab">${esc(b.lab)}</small>` : ""}</button></th>`; }).join("");
     const rows = keys.map(k => {
       const first = list.map(b => b.vals && b.vals[k]).find(Boolean);
       const m = phBldMeta(k, first);
@@ -62953,7 +62971,8 @@ or changing anything in Cliniko.
     // as the existing low-normal/borderline tag -- the same distinction the
     // free-text scan above already makes, just read off a number instead of
     // a sentence, not a new clinical call.
-    const bloods = phBldList(rec);
+    // (law 2026-10-10, her pick) a result over 12 months old is listed and dated but gives no clue
+    const bloods = phBldList(rec).filter(b => !phBldIsOld(b.date));
     const latestBld = key => { for (const b of bloods) { const e = b.vals && b.vals[key]; if (e && e.v != null) return { meta: phBldMeta(key, e), v: e.v }; } return null; };
     const bldBand = key => {
       const hit = latestBld(key); if (!hit) return "";
@@ -64007,8 +64026,8 @@ or changing anything in Cliniko.
     // Plan-stage tab now, not a profile-rail destination to land the
     // profile-first auto-advance on. "cycle" (period sets) left the rail
     // the same day too, joining Today's visit on the Plan tab.
-    { const cc = phCcOf(name); if (cc && (cc.main === "sleep" || (cc.secondary || []).some(s => phCcGuessIds(s.text).includes("sleep")))) seq.push("sleep"); }
-    seq.push("medhx");
+    // rail order (law 2026-10-10): Medical history, then Stress & sleep -- which everyone has now
+    seq.push("medhx", "sleep");
     const i = seq.indexOf(fromId);
     return i >= 0 ? seq[i + 1] || null : null;
   }
