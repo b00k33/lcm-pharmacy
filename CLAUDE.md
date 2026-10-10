@@ -1261,6 +1261,16 @@ before touching an area that smells similar.
 - A table row with no width cap on variable-width items (e.g. photos) lets
   natural/preferred width balloon past the container — chunk into
   fixed-size row groups instead of one unbounded row.
+- A CSS grid item defaults to `min-width:auto` — it silently grows past its
+  own `1fr` track to fit its widest unbreakable descendant (a `nowrap`
+  button's full text, say), pushing the whole column past the window edge
+  with no scrollbar. Because the column itself grew, the descendant's own
+  `overflow:hidden`/`text-overflow:ellipsis` never gets a narrow-enough box
+  to actually trigger — the symptom is text cut off mid-word with NO "…",
+  not a visible ellipsis. Fix at the grid level (`.parent > * { min-width:
+  0; }`), not by adding more overflow rules to the descendant — those were
+  already correct and still wouldn't have fired. Hit on `.ph-pf-rec2-l/-r`
+  (Patient details' two-up record), 2026-10-10.
 - Print documents (`phPrintDoc`, opened via `document.write`) inherit NO
   app CSS and have no scrollbar fallback — pair `table-layout:fixed` with
   `word-break:break-word` on any inline-styled print table, or a long
