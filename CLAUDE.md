@@ -1,5 +1,132 @@
 # LCM Pharmacy — design rules (read before ANY UI change)
 Also read ABOUT-ME.md before any work — build to this user's preferences.
+
+<!-- ============================================================ -->
+# ★★★ PATIENT WORKFLOW — THE LAW (her design, 2026-10-10) ★★★
+<!-- ============================================================ -->
+> **Read this before touching ANY patient page** (Patient details, Ren,
+> Medical history, Stress & sleep, Supplements, Blood tests, Today's visit,
+> Cycle, Tongue, Pulse, Abdomen, Fang Bing Ren, Treatment Care Plan,
+> Treatment, Dispense). It fixes the **order, names, repetition and data flow**
+> of those pages. It does NOT fix the widgets (stage/tab/rail mechanics are an
+> implementation detail, Phase 1). If a request conflicts with it, **ask her,
+> then update this section** — never quietly drift. Every line below is her
+> pick from the design session (12 popups + two visual guides); do not re-ask.
+> Where older text further down this file disagrees, **this section wins**
+> (see "Superseded" at the end of it).
+
+## 1 · Three groups, in this order
+| Group | Pages, in order | How often |
+|---|---|---|
+| **1 Her file** | Patient details → Ren → Medical history → Stress & sleep → Supplements → Blood tests | Set once, kept current |
+| **2 Today's visit** | Today's visit (checklist home) → Cycle (if on) → Tongue → Pulse → Abdomen | Every visit |
+| **3 Put together & do** | Fang Bing Ren → Treatment Care Plan → Treatment → Dispense | Decide, then treat |
+
+- **Today's visit** is a checklist home: a one-line strip on top (last visit
+  date · likely pattern · phase and visit number · flagged history), the
+  **Re-check** (Better/Same/Worse/New + note), then Cycle / Tongue / Pulse /
+  Abdomen as tiles with a ✓ when done today and last visit's finding beside
+  today's. Each tile opens its own page. Pain patients also get "Where it
+  hurts" (pain map) and the collapsed Pain intake here.
+- **Tongue, Pulse, Abdomen and Cycle are each their own page** (her pick,
+  reversing the earlier one-card fold). Cycle has ONE home: its own page,
+  reached from its Today's visit tile. No second Cycle tab.
+- **The Review step is retired** — folded into Today's visit (strip + pain
+  map + pain intake). Nothing lost, only repeats removed.
+- Other pages (Photos, Appointments, Messages, IVF history, Log, Visit
+  checks, Checklist) are unchanged and sit outside this law.
+
+## 2 · The order of a visit
+**First visit (her pick "Examine first"):** 1 Patient details → 2 Ren → 3
+Medical history → 4 Stress & sleep → 5 Supplements → 6 Blood tests (if she
+brought any) → 7 Cycle (if on) → 8 Tongue · Pulse · Abdomen → 9 **Fang Bing
+Ren** (now has data to read) → 10 **Treatment Care Plan** → 11 Treatment →
+12 Dispense.
+**Return visit:** Her-file pages show "✓ on file" and are skipped, except
+Supplements (confirm) and Blood tests (if new). Then: Re-check → Cycle (if
+on) → Tongue · Pulse · Abdomen → Fang Bing Ren as **one line: what shifted** →
+Treatment Care Plan as **one line: phase, session** → Treatment → Dispense.
+**Order of WORK, not of record creation:** a plan shell still exists from the
+door (the "plan is the spine" no-plan gate, decision 3), because the exam pages
+live on the plan stage's tabs. Step 10 is when she shapes and uses that shell
+after Fang Bing Ren, not when it is first created.
+**Why:** Fang Bing Ren READS tongue, pulse, abdomen. It must come after
+them. (The Oct 10 tab order put it before, so it opened empty on a first
+visit. That is fixed by this law.)
+
+## 3 · How often each page repeats
+| Page | Rule |
+|---|---|
+| Patient details | Once. Sex + DOB gate the rest (existing Start-here card stays). |
+| Ren | Once. Quiet nudge when its photos are ~3 months old. |
+| Medical history | Once. One tap "anything new since <date>?" at the end of each treatment phase. |
+| Stress & sleep | **Asked once for EVERY patient** (not only when the complaint says so). Re-asked at plan review. |
+| Supplements | Confirm every visit with one tap "Same as last time" / "Changed". |
+| Blood tests | When a new result arrives. Each result shows its age ("9 months old"); very old results count less in Fang Bing Ren. |
+| Re-check, Cycle, Tongue, Pulse, Abdomen | Every visit (Cycle while on). |
+| Fang Bing Ren | Recalculated live on every render, never stored; only her Agree / Not this patient taps are saved. |
+| Treatment Care Plan | Built after Fang Bing Ren; reviewed at the end of each phase. |
+| Treatment, Dispense | Every visit (Dispense when herbs). |
+
+## 4 · What feeds what (influence map)
+Fang Bing Ren **reads everything in groups 1 and 2**: complaint (weak),
+Ren taps, medical history + notes, Stress & sleep, ALL supplements (today
+only iron counts — Phase 3 fixes), blood results (iron, thyroid; weighted by
+age), Cycle day log, Tongue, Pulse, Abdomen, period/change-of-life/men's
+answers. It shows a "fed by" line so nothing influences it invisibly.
+- Fang Bing Ren → Treatment Care Plan: **suggests only** (Diagnosis/goal
+  draft). → Treatment: point suggestions, one tap applies, nothing pre-ticked.
+  → Dispense: **never suggests a formula; the formula is always hers.**
+- Re-check → Treatment Care Plan: **Worse** or **Something new** raises a
+  flag on the plan.
+- Cycle → Fang Bing Ren, Treatment Care Plan (phase by cycle day, IVF), Treatment.
+- Treatment saved → files the dated visit (and its dated findings) to the Log.
+- Complaint → reorders the plan picker and picks which question sets show.
+
+## 5 · One finding per visit
+Tongue, Pulse and Abdomen get **one dated finding per visit**, shown against
+the last visit, and Fang Bing Ren reads the latest. **Traced and fixed in
+Phase 2 (2026-10-10):** there are still two stores — the standing
+`rec.tongueExam` / `constitPulse` / `abdomen` (what the exam pages write; the
+live "today" finding) and the dated `rec.visitFnd[sessionId]` (history) — but
+they no longer drift: `phExamMirrorToday` copies today's exam into every session
+logged today, whichever happens first. The exam pages are the ONLY entry; the
+Treatment tab only shows a summary. (Before this they never talked to each
+other, so the same findings were typed twice.) Old data is never deleted.
+
+## 6 · Skipped steps
+**Gentle gold nudge only, never a block** ("no tongue or pulse yet · Do it
+now ›" on Fang Bing Ren; it still opens). The only hard gate is the existing
+sex + DOB Start-here lock (with its "Later, open it anyway" override).
+
+## 7 · Naming
+"Plan" becomes **Treatment Care Plan** everywhere in the app (rail, tab,
+headers, buttons, popups). Patient letters and messages are NOT touched. If the
+rail text cuts off at 360px, only the rail may use "Care Plan" — and tell her.
+Never call it "Treatment plan", "Plan tab" or bare "Plan" in new UI text.
+
+## 8 · Build phases (status)
+| # | Phase | Status |
+|---|---|---|
+| 0 | Write this law | **DONE 2026-10-10** |
+| 1 | Names + order: rename, reorder rail, fold Review into Today's visit, Tongue/Pulse/Abdomen/Cycle as separate pages | **BUILT 2026-10-10, uncommitted on `session-a`, NOT pushed** (sandbox-verified: rail order, Next chain, taps repaint + tick, return-visit Re-check, 375px). Disclosed: the tiles show today's finding only — "last visit's finding beside today's" waits for Phase 2; the default landing tab is still Treatment Care Plan (her 9/28 "Plan is the door" rule) — landing on Today's visit is a Phase 4 call; remaining prose that says "treatment plan" (messages, printed plan record, comments) is untouched on purpose; `grep phTodayStripHtml`, `presRvPainHtml`, `phExamPageHtml` |
+| 2 | One home each: Cycle single door; trace then unify the two finding copies | **BUILT 2026-10-10, uncommitted on `session-a`, NOT pushed** (her pick "A" + "last visit on pages and tiles"). Cycle: already one page after Phase 1, nothing more. Findings: the exam pages are the ONE entry; `phExamMirrorToday(rec)` mirrors today's exam into the dated `rec.visitFnd[session.id]` of every session logged today (hooks: `phTngWrite`, `phAbdWrite`, the Pulse repaint in `renderHxScreen`, and visit save), so history keeps building and nothing is typed twice; earlier dated copies are never touched. The Treatment tab's findings row is a read-only line (`phVisitFndLineHtml`) with a Change link; the old chart panel is no longer shown anywhere. History lines: `phExamPast` / `phExamPastHtml` under each exam page, and "last: …" on each Today's visit tile. Known edge: a part cleared AFTER it was mirrored stays in that day's dated copy. `phVisitFndPanelHtml` + its `[data-visit-fnd-wrap]` refresh branch are now unreachable dead code — remove in Phase 5 with care (the exam pages borrow `presVisitFndDraft`, so the chart handlers stay) |
+| 3 | Wire influence: all supplements, Stress & sleep for all, blood age, "fed by" line | pending |
+| 4 | Guided path: "Up next" follows first-visit / return-visit order; "Same as last time"; repeat nudges | pending |
+| 5 | Audit: walk a new, a return and an IVF patient at 360px and desktop | pending |
+Each phase: build in the sandbox, show her, check 360px + desktop, push only
+on her "push live". Update the status column when a phase lands.
+
+## 9 · Superseded by this law (older text below is stale where it says…)
+- "Examine page merges tongue+pulse+body-type+abdomen" and "Re-check, Tongue,
+  Pulse, Abdomen folded into ONE checklist card" → now separate pages (§1).
+- "Examine comes BEFORE Medical history" (Oct 3) → Medical history is in her
+  file first; the examine comes after her file, before Fang Bing Ren (§2).
+- "Fang Bing Ren, Plan, Review, Today's visit, Treatment" (Oct 10 tab order)
+  → §2 order. Review step → retired.
+- "Cycle in Today's visit AND its own tab" → one home (§1).
+- Stress & sleep "only when the complaint says so" → asked for everyone (§3).
+<!-- ===================== END OF THE LAW ====================== -->
 This is a single-page mobile web app. It must always look clean, symmetrical,
 aligned, organized, calm, sleek and minimal. Follow every rule, then re-check
 your work.
