@@ -15528,6 +15528,8 @@
   #pharmacyPage .ph-cc-sec-name.pop { animation: phPfwPop .4s ease; }
   #pharmacyPage .ph-cc-hl { min-height: 0; padding: 0 1px; border: 0; border-bottom: 1px dotted var(--ph-faint); border-radius: 0; background: none; font: 600 var(--fs-13) var(--font-body); color: var(--ph-herb-deep); cursor: pointer; }
   #pharmacyPage .ph-cc-hl.empty { color: var(--ph-faint); font-weight: 500; }
+  #pharmacyPage .ph-cc-sec-name.auto { cursor: default; }
+  #pharmacyPage .ph-cc-fbr { padding: 1px 7px; border-radius: 999px; background: var(--ph-herb-tint); color: var(--ph-herb-deep); font: 600 var(--fs-10) var(--font-body); letter-spacing: .02em; white-space: nowrap; }
   #pharmacyPage .ph-cc-tbl + .ph-cc-sec-starters { margin-top: 8px; }
   @media (max-width: 640px) {
     #pharmacyPage .ph-cc-tbl thead { display: none; }
@@ -35025,6 +35027,9 @@
         const plan = phTpFindPlan(phTpScreenPatient, planId);
         const ph = plan && plan.phases.find(p => p.id === phaseId);
         if (ph && Array.isArray(ph.symptoms)) {
+          // a row that came from her complaints is remembered, so opening the plan never puts it back
+          const gone = ph.symptoms.find(r => r.id === rowId);
+          if (gone && gone.ccKey) { if (!Array.isArray(ph.symGone)) ph.symGone = []; if (!ph.symGone.includes(gone.ccKey)) ph.symGone.push(gone.ccKey); }
           ph.symptoms = ph.symptoms.filter(r => r.id !== rowId);
           savePharmacy(); phTpRepaintPhasePanel();
         }
@@ -36999,7 +37004,7 @@
       // round-4 redesign: Notes and Treatment plan are two separate rows
       // below the prescription now, Notes above Treatment
       const presStageBtn = e.target.closest("[data-pres-stage]");
-      if (presStageBtn) { presStage = presStageNorm(presStageBtn.dataset.presStage); renderPresPanel(); return; }
+      if (presStageBtn) { presStage = presStageNorm(presStageBtn.dataset.presStage); phCcSeedOpen(); renderPresPanel(); return; }
       // the workflow flow rail (her pick "c", 2026-09-28): steps 2/3 and the
       // sub-items under Treatment are the plan page's own tabs. Landing on the
       // plan stage from elsewhere is a full render; a switch within it is the
@@ -37064,6 +37069,7 @@
       if (flowGo) {
         const wasPlan = presStage === "plan";
         presStage = "plan"; presTpMainTab = flowGo.dataset.flowGo;
+        phCcSeedOpen();
         if (!(wasPlan && presTpMainTabRefresh() && presFlowRailRefresh())) renderPresPanel();
         return;
       }
@@ -57101,7 +57107,7 @@ or changing anything in Cliniko.
     const tags = `<span class="ph-pf-condtag main">${esc(title)}</span>${also.map(a => `<span class="ph-pf-condtag also">+ ${esc(a.name || "Condition")}</span>`).join("")}`;
     // her 3rd pick on "Came in for" (2026-10-10): secondary symptoms are a plain, read-only line
     // here -- "Care plan" meant this card, not a second set of phases per symptom
-    const cc = phCcOf(name), sec = (cc && cc.secondary) || [];
+    const cc = phCcOf(name), sec = phCcSecAll(name);
     const noting = sec.length ? `<div class="ph-pf-plantile-noting">Also noting: ${esc(sec.map(s => s.text + (s.since ? ` · ${phCcRel(s.since)}` : "")).join(", "))}</div>` : "";
     return `${head}<div class="ph-pf-plantile">
       <div class="ph-pf-plantile-top">${tags}<button type="button" class="ph-pfw-link" data-pres-stage="plan">Open &rsaquo;</button></div>
@@ -63838,6 +63844,7 @@ or changing anything in Cliniko.
   // Aim. Fill-blank only, the same rule as Points/Press below -- an Aim she's already written
   // herself, or that already reads differently, is never silently overwritten.
   function phCcFillAim(name) {
+    phCcSeedSymptoms(name);   // her complaints also start the treatment table's symptom rows
     const shown = phTpShownPlan(name); if (!shown) return;
     const rec = phPatientRec(name); if (!rec) return;
     const plan = (rec.treatmentPlans || []).find(p => p.id === shown.id); if (!plan) return;
@@ -63913,13 +63920,117 @@ or changing anything in Cliniko.
     if (days < 700) return Math.round(days / 30.4) + " mo";
     return (Math.round(days / 365.25 * 2) / 2) + " yr";
   }
+  // ==== her 2026-10-10 ask: "secondary complaints, take it from fang bing ren" ====
+  // The symptoms Fang Bing Ren's clue list already holds (day log, history, her notes, her
+  // usual answers, Triangle, the pain map) join the secondary complaints on their own. Derived on
+  // read, never stored: typed secondaries are hers (rec.complaint.secondary); these are
+  // `auto`, and an x on one writes only rec.complaint.fbrOff (never "Not this patient" on a
+  // pattern). Tapping its "since when?" keeps it as one of hers. Exam signs (tongue, pulse,
+  // abdomen, body type, bloods, supplements) are findings, not complaints, so they are left out.
+  var PH_CC_FBR_SX = {
+    clots: "clots", stabbing: "stabbing period pain", cramp: "period cramps", dragging: "bearing-down feeling", heavy_flow: "heavy periods",
+    light_flow: "light periods", severe_pain: "severe period pain", dysmen: "painful periods", irregular_hx: "irregular periods", amen: "missing periods",
+    pms: "PMS", short_cycle: "short cycles", long_cycle: "long cycles", irregular_len: "irregular cycle length", low_mood: "low mood or energy",
+    fatigue: "tiredness", cold_feel: "feels cold", cold_limbs: "cold hands and feet", dizzy: "dizziness", heat_feel: "feels hot or sweats",
+    stress: "stress or irritability", digestive_sx: "bloating or loose stools", dry_sx: "dryness or thirst", bdef_sx: "hair loss or brittle nails",
+    night_sweat: "night sweats", nocturia: "night urination", spont_sweat: "spontaneous sweating", wind_averse: "catches colds easily", palp: "palpitations",
+    insomnia_dream: "insomnia or vivid dreams", startle: "easily startled", flush: "flushing", tight: "muscle tightness", neck_tension: "neck and upper-back tension",
+    abd_disc: "abdominal discomfort", sl_hard: "trouble falling asleep", sl_wake: "waking in the night", throat_lump: "lump in the throat",
+    pr_lowback: "lower back pain", pr_shoulder: "shoulder or neck pain", pr_knee: "knee or ankle pain"
+  };
+  var PH_CC_STOP = /^(period|cycle|pain|flow|feel|night|sleep)/;
+  function phCcWordsOf(s) { return String(s || "").toLowerCase().split(/[^a-z]+/).map(w => w.replace(/s$/, "")).filter(w => w.length >= 4 && !PH_CC_STOP.test(w)); }
+  function phCcFbrList(name) {
+    try {
+      return phTpAutoMemoGet(`${phPatientKey(name)}|ccfbr`, () => {
+        const out = [];
+        phPatClues(phPatientPeek(name), name).forEach(cl => {
+          const t = PH_CC_FBR_SX[cl.key];
+          // a clue that only echoes what she typed on the Came in for card is not new information
+          if (t && !/^Came in for/.test(cl.text || "") && out.length < 6) out.push({ key: cl.key, text: t });
+        });
+        return out;
+      });
+    } catch (e) { return []; }
+  }
+  // every secondary complaint: hers first, then Fang Bing Ren's (minus the x'd ones and any she already typed)
+  function phCcSecAll(name) {
+    const c = phCcOf(name), typed = (c && c.secondary) || [], off = (c && c.fbrOff) || [];
+    const have = new Set();
+    typed.forEach(s => phCcWordsOf(s.text).forEach(w => have.add(w)));
+    const auto = [];
+    phCcFbrList(name).forEach(d => {
+      const ws = phCcWordsOf(d.text);
+      if (off.includes(d.key) || ws.some(w => have.has(w))) return;
+      ws.forEach(w => have.add(w));
+      auto.push({ id: "fbr:" + d.key, text: d.text, since: "", auto: true, key: d.key });
+    });
+    return typed.concat(auto);
+  }
+  function phCcFbrOff(key) {
+    const name = phPfwName(); if (!name || !key) return;
+    if (!phCcWrite(name, c => { if (!Array.isArray(c.fbrOff)) c.fbrOff = []; if (!c.fbrOff.includes(key)) c.fbrOff.push(key); })) return;
+    phTpAutoBust(); phCcSaved = true; phCcRefresh(true);
+  }
+  function phCcFbrKeep(key) {
+    const name = phPfwName(); if (!name || !key) return;
+    const it = phCcSecAll(name).find(s => s.auto && s.key === key); if (!it) return;
+    const id = uid();
+    if (!phCcWrite(name, c => { if (!Array.isArray(c.secondary)) c.secondary = []; c.secondary.push({ id, text: it.text, since: "" }); })) return;
+    phTpAutoBust(); phCcPop = id; phCcSaved = true; phCcActive = id; phCcRefresh(true);
+  }
+  // her complaint's age in days; a long-standing one suggests a few more visits in the first phase
+  function phCcDaysSince(iso) { const m = /^(\d{4})-(\d\d)-(\d\d)$/.exec(iso || ""); return m ? Math.round((phCcNow() - new Date(+m[1], +m[2] - 1, +m[3])) / 864e5) : 0; }
+  function phCcChronicBump(name) {
+    try {
+      const c = phCcOf(name); if (!c) return 0;
+      let d = phCcDaysSince(c.since);
+      (c.secondary || []).forEach(s => { d = Math.max(d, phCcDaysSince(s.since)); });
+      return d >= 730 ? 2 : d >= 180 ? 1 : 0;
+    } catch (e) { return 0; }
+  }
+  // the treatment table's symptom rows start filled with her complaints and how long (her ask
+  // 2026-10-10). Written only from a click (a complaint edit, an x/keep, opening the plan), onto
+  // the LIVE phase and only rows it does not already have; a row she deletes is remembered in
+  // phase.symGone so it never comes back. The row's ccKey ties it to its complaint.
+  function phCcSeedSymptoms(name) {
+    try {
+      if (!name) return false;
+      const rec = phPatientRec(name); if (!rec) return false;
+      const shown = phTpShownPlan(name); if (!shown) return false;
+      const plan = (rec.treatmentPlans || []).find(p => p.id === shown.id); if (!plan) return false;
+      const phase = phTpLivePhase(rec, plan); if (!phase || phase.status === "done") return false;
+      const c = phCcOf(name), want = [];
+      const f = c && c.main && phCcFam(c.main);
+      if (f) want.push({ k: "main:" + f.id, text: f.label, since: c.since || "" });
+      phCcSecAll(name).forEach(s => want.push({ k: s.auto ? "fbr:" + s.key : "s:" + s.id, text: s.text, since: s.since || "" }));
+      if (!want.length) return false;
+      const rows = Array.isArray(phase.symptoms) ? phase.symptoms : [], gone = phase.symGone || [];
+      const have = new Set(rows.map(r => r.ccKey).filter(Boolean));
+      const txt = new Set(rows.map(r => String(r.complaint || "").trim().toLowerCase()));
+      let added = 0;
+      want.forEach(w => {
+        if (have.has(w.k) || gone.includes(w.k) || txt.has(w.text.toLowerCase())) return;
+        const pain = phCcGuessIds(w.text).includes("pain");
+        rows.push({ id: uid(), complaint: w.text, nature: w.since ? "for " + phCcRel(w.since) : "", frequency: "", scale: pain ? "pain" : "custom", severity: pain ? 0 : "", pct: 0, ccKey: w.k });
+        added++;
+      });
+      if (!added) return false;
+      phase.symptoms = rows;
+      savePharmacy();
+      return true;
+    } catch (e) { return false; }
+  }
+  function phCcSeedOpen() {
+    try { const t = (PRESC.items || []).find(x => x.id === presOpenId); if (t) phCcSeedSymptoms(presPatientFor(t)); } catch (e) { /* seeding is a convenience, never a blocker */ }
+  }
   // her 2026-10-10 ask on the profile page ("i need it to show chief complaint / secondary
   // complaints / in table format: how long"): the same record and the same handlers as before
   // (data-cc-main-*, data-cc-sec-*), drawn as one small table -- Chief complaint first, then
   // each secondary complaint, with a "How long" column. A secondary's quick-pick row opens
   // under it only while she is on it (phCcActive); the chief complaint's stays under its row.
-  function phCcTableHtml(c, mainFam, male) {
-    const list = c.secondary || [];
+  function phCcTableHtml(c, mainFam, male, list) {
+    list = list || c.secondary || [];
     const rows = [];
     const x = (attr, id, label) => `<span class="x" ${attr}="${id}" role="button" title="Remove" aria-label="Remove ${esc(label)}">×</span>`;
     const f = c.main && phCcFam(c.main);
@@ -63931,8 +64042,12 @@ or changing anything in Cliniko.
       rows.push(`<tr class="q"><td></td><td colspan="2"><div class="ph-cc-quick">${quick}</div></td></tr>`);
     }
     list.forEach((s, i) => {
+      if (s.auto) {
+        rows.push(`<tr><td class="ty">${i === 0 ? "Secondary complaints" : ""}</td><td><span class="ph-cc-sec-name auto">${esc(s.text)}<span class="ph-cc-fbr" title="Found by Fang Bing Ren">Fang Bing Ren</span>${x("data-cc-fbr-off", s.key, s.text)}</span></td><td class="hl"><button type="button" class="ph-cc-hl empty" data-cc-fbr-keep="${esc(s.key)}">since when?</button></td></tr>`);
+        return;
+      }
       const open = s.id === phCcActive;
-      const name = `<span class="ph-cc-sec-name${phCcPop === s.id ? " pop" : ""}"${open ? "" : ` data-cc-sec-open="${s.id}"`}>${esc(s.text)}${x("data-cc-sec-rm", s.id, s.text)}</span>`;
+      const name =`<span class="ph-cc-sec-name${phCcPop === s.id ? " pop" : ""}"${open ? "" : ` data-cc-sec-open="${s.id}"`}>${esc(s.text)}${x("data-cc-sec-rm", s.id, s.text)}</span>`;
       const hl = open
         ? `<span class="ph-cc-since"><input type="text" class="ph-cc-in" data-cc-sec-since="${s.id}" value="${esc(phCcFmtDate(s.since))}" placeholder="dd/mm/yyyy" inputmode="numeric" autocomplete="off" aria-label="${esc(s.text)} started"><span class="rel${s.since ? "" : " empty"}">${s.since ? esc(phCcRel(s.since)) : "since when?"}</span></span>`
         : `<button type="button" class="ph-cc-hl${s.since ? "" : " empty"}" data-cc-sec-open="${s.id}">${s.since ? esc(phCcRel(s.since)) : "since when?"}</button>`;
@@ -63960,7 +64075,8 @@ or changing anything in Cliniko.
     const mainId = c ? phCcMainId(c) : (fp ? fp.fam.id : null), mf = phCcFam(mainId);
     const hasAny = !!(c && (c.main || (c.secondary || []).length));
     const addBox = c && c.main ? "" : `<div class="ph-cc3-add"><input type="text" data-cc-add-in="1" maxlength="40" placeholder="What brought ${male ? "them" : "her"} in? Type e.g. periods, sleep, neck" autocomplete="off" aria-label="Primary concern"></div>`;
-    const table = hasAny ? phCcTableHtml(c, mf, male) : "";
+    const secAll = phCcSecAll(name);
+    const table = hasAny || secAll.length ? phCcTableHtml(c || { secondary: [] }, mf, male, secAll) : "";
     const feeds = mf ? `<div class="ph-cc2-feeds${phCcPop ? " flash" : ""}"><span class="dot"></span><span><b>${esc(phCcCatLabel(mf.cat))}</b> plans first${fp ? ` · from the ${esc(fp.plan)} plan` : ""}</span></div>` : "";
     const go = hasAny ? `<div class="ph-cc2-go"><span>Used in</span><button type="button" class="ph-pfw-link" data-flow-go="treatment">Treatment &rsaquo;</button><button type="button" class="ph-pfw-link" data-flow-go="review">Review · re-check &rsaquo;</button></div>` : "";
     return `<div class="ph-cc2 ph-cc3${isNew && !c && !fp ? " fresh" : ""}${calm ? " calm" : ""}" data-cc-host="1">
@@ -64062,6 +64178,8 @@ or changing anything in Cliniko.
     if ((el = T.closest("[data-cc-main-q]"))) { const q = PH_CC_QUICK[+el.dataset.ccMainQ]; phCcMainSinceSet(phCcAgo(q[1], q[2])); return true; }
     if ((el = T.closest("[data-cc-sec-q]"))) { const [id, k] = el.dataset.ccSecQ.split(":"), q = PH_CC_QUICK[+k]; phCcSecSinceSet(id, phCcAgo(q[1], q[2])); return true; }
     if ((el = T.closest("[data-cc-sec-hint]"))) { phCcSecAdd(el.dataset.ccSecHint); return true; }
+    if ((el = T.closest("[data-cc-fbr-off]"))) { phCcFbrOff(el.dataset.ccFbrOff); return true; }
+    if ((el = T.closest("[data-cc-fbr-keep]"))) { phCcFbrKeep(el.dataset.ccFbrKeep); return true; }
     if (T.closest("[data-cc-case-change]")) {
       const menu = T.closest(".ph-pres-menu");
       if (menu) { const bar = menu.querySelector("[data-cc-casebar]"), lab = menu.querySelector("[data-cc-caselabel]"); if (bar) bar.style.display = "none"; if (lab) lab.style.display = ""; }
@@ -71871,6 +71989,18 @@ or changing anything in Cliniko.
     [/sore throat/i, "Ease the sore throat"],
     [/cough/i, "Ease the cough"],
     [/cold hands|cold feet/i, "Warm the hands and feet"],
+    [/feels hot|sweat|flushing/i, "Settle heat and sweating"],
+    [/feels cold/i, "Warm the body"],
+    [/dizz/i, "Ease dizziness"],
+    [/low mood|mood/i, "Lift mood"],
+    [/palpitat|startle/i, "Calm the heart and mind"],
+    [/dryness|thirst/i, "Moisten dryness"],
+    [/hair loss|brittle nails/i, "Nourish hair and nails"],
+    [/muscle tight|upper-back tension|neck and/i, "Ease muscle tension"],
+    [/(?:short|long|irregular) (?:cycle|cycles)|cycle length|missing periods/i, "Regulate the cycle"],
+    [/light periods/i, "Build the period flow"],
+    [/bearing-down/i, "Lift the bearing-down feeling"],
+    [/\bpms\b/i, "Ease PMS"],
     [/catches? colds?|immune|\bcolds?\b|\bflu\b/i, "Build resistance to colds"],
     [/numb|tingl/i, "Ease numbness and tingling"],
     [/droop|bell'?s|palsy/i, "Restore facial movement"],
@@ -71998,7 +72128,7 @@ or changing anything in Cliniko.
         if (pf) fams.push(pf);
         if (mf && !fams.includes(mf)) fams.push(mf);
         fams.forEach(f => addPart(phCcGoalMain(f.id)));
-        ((c && c.secondary) || []).forEach(s => addPart(phCcGoalFor(s.text)));
+        phCcSecAll(name).forEach(s => addPart(phCcGoalFor(s.text)));
         if (!parts.length && plan) {
           const tpl = phTpAllTemplates().find(x => x.name === plan.templateName);
           if (tpl && (tpl.goal || "").trim()) addPart(tpl.goal.trim());
@@ -76077,7 +76207,16 @@ or changing anything in Cliniko.
     }
     const counts = { "1w": [4, 6], "2w": [6, 8], fn: [3, 4], mo: [3, 4] }[base];
     const third = { "1w": ["2w", 6], "2w": ["1w", 6], fn: ["mo", 3], mo: ["fn", 3] }[base];
-    return [{ rh: base, n: counts[0] }, { rh: base, n: counts[1] }, { rh: third[0], n: third[1] }];
+    const bump = phTpSugBump(plan, ph);
+    return [{ rh: base, n: counts[0] + bump }, { rh: base, n: counts[1] + bump }, { rh: third[0], n: third[1] + bump }];
+  }
+  // her 2026-10-10 ask (complaints feed the treatment plan): a long-standing complaint (6 mo+ -> +1,
+  // 2 yr+ -> +2 visits) suggests a few more in the FIRST phase only. phTpSugName is set by the
+  // callers that know the patient (the session grid, its "same for all", the cards).
+  var phTpSugName = "";
+  function phTpSugBump(plan, ph) {
+    const phs = plan.phases || [], firstIdx = phs.findIndex(x => !x.skipped);
+    return phTpSugName && phs.findIndex(x => x.id === ph.id) <= firstIdx ? phCcChronicBump(phTpSugName) : 0;
   }
   // the ONE recoverable phase delete -- the phase line's x and the Session
   // grid's x both call it (her ask 2026-10-03, "let me delete phases").
@@ -76252,6 +76391,7 @@ or changing anything in Cliniko.
   function phTpPlanCommitAll(name, planId, openPhaseId) {
     const plan = phTpFindPlan(name, planId), open = plan && plan.phases.find(x => x.id === openPhaseId);
     if (!open) return false;
+    phTpSugName = name;
     const rh = phTpPlanOpenRh(plan, open), r = PH_TP_RHYTHMS[rh];
     const todo = plan.phases.filter(p => !p.skipped && p.status !== "done" && !phTpSessionsOf(p));
     if (!todo.length) return false;
@@ -76265,6 +76405,7 @@ or changing anything in Cliniko.
   }
   // the cards: label + date range, three of them
   function phTpPlanCardsHtml(name, plan, ph) {
+    phTpSugName = name;
     const cur = phTpRhKeyOf(ph), curN = phTpSessionsOf(ph);
     return phTpPlanSuggest(plan, ph).map((s, i) => {
       const pv = phTpPlanPreview(name, plan, ph.id, s.rh, s.n);
@@ -76388,7 +76529,9 @@ or changing anything in Cliniko.
     const openRh = openPh ? phTpPlanOpenRh(plan, openPh) : "";
     const slotsN = Math.min(12, Math.max(openPh ? 6 : 4, maxN));
     const slotDates = openPh ? phTpPlanSlotDates(name, plan, openPh, openRh, slotsN) : [];
+    phTpSugName = name;
     const sugN = openPh ? phTpPlanSugN(plan, openPh, openRh) : 0;
+    const sugBump = openPh ? phTpSugBump(plan, openPh) : 0;
     const openRise = !!(gAnim && gSeen && openPh && gSeen.open !== openPh.id);
     phTpGridSeen.get(plan.id).open = openPh ? openPh.id : "";
     // her "i like horizontal" tile rule, 12 across at most: a longer run
@@ -76403,7 +76546,7 @@ or changing anything in Cliniko.
           const out = [];
           for (let j = 0; j < slotsN; j++) {
             const dt = slotDates[j] ? (String.fromCharCode(126) + sd2(slotDates[j])) : "";
-            out.push(`<td class="sl slotc"><button type="button" class="ph-tpg-slot" data-tp-plan-slot="${plan.id}:${p.id}:${openRh}:${j + 1}" title="Plan ${j + 1} visit${j ? "s" : ""}${dt ? ` — the last on ${esc(dt)}` : ""}" aria-label="Plan ${j + 1} visit${j ? "s" : ""}"><span class="pl">+</span><span class="n">${j + 1}</span><i>${esc(dt)}</i>${j + 1 === sugN ? `<em class="sugflag">suggested</em>` : ""}</button></td>`);
+            out.push(`<td class="sl slotc"><button type="button" class="ph-tpg-slot" data-tp-plan-slot="${plan.id}:${p.id}:${openRh}:${j + 1}" title="Plan ${j + 1} visit${j ? "s" : ""}${dt ? ` — the last on ${esc(dt)}` : ""}" aria-label="Plan ${j + 1} visit${j ? "s" : ""}"><span class="pl">+</span><span class="n">${j + 1}</span><i>${esc(dt)}</i>${j + 1 === sugN ? `<em class="sugflag"${sugBump ? ` title="Her complaint is long-standing: ${sugBump} more visit${sugBump === 1 ? "" : "s"} suggested"` : ""}>suggested</em>` : ""}</button></td>`);
           }
           return out.join("");
         }
