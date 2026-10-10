@@ -7875,6 +7875,15 @@
   #pharmacyPage .ph-pfw-sub { font-size: var(--fs-12); color: var(--ph-soft); margin-top: 2px; }
   #pharmacyPage .ph-pfw-pct { display: inline-block; background: var(--ph-gold-tint); color: var(--ph-gold-deep); font-weight: 700; font-size: var(--fs-11-5); border-radius: 999px; padding: 3px 10px; margin: 8px 0; }
   #pharmacyPage .ph-pfw-pct + .ph-pfw-link { display: block; margin-top: 2px; }
+  /* Ren page: the person drawn from the Ren ticks (her 2026-10-11 ask), under the Fang Bing Ren summary */
+  #pharmacyPage .ph-rf { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--ph-line); text-align: center; }
+  #pharmacyPage .ph-rf-hd { text-align: left; font: 700 var(--fs-11) var(--font-disp); letter-spacing: .09em; text-transform: uppercase; color: var(--ph-faint); margin-bottom: 6px; }
+  #pharmacyPage .ph-rf-svg { display: block; margin: 0 auto; width: auto; height: min(400px, calc(100vh - 400px)); min-height: 240px; max-width: 100%; }
+  #pharmacyPage .ph-rf-svg.none { opacity: .55; }
+  #pharmacyPage .ph-rf-keys { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 10px; text-align: left; }
+  #pharmacyPage .ph-rf-k { display: inline-flex; align-items: center; gap: 5px; font-size: var(--fs-11-5); color: var(--ph-soft); }
+  #pharmacyPage .ph-rf-k i { width: 8px; height: 8px; border-radius: 50%; flex: none; box-shadow: inset 0 0 0 1px rgba(0,0,0,.12); }
+  #pharmacyPage .ph-rf-empty { margin-top: 8px; font-size: var(--fs-12); color: var(--ph-faint); }
   #pharmacyPage .ph-pfw-ring { display: flex; gap: 12px; align-items: center; margin: 4px 0 10px; }
   #pharmacyPage .ph-pfw-ring .arc { transition: stroke-dashoffset .8s cubic-bezier(.2,.8,.2,1); }
   #pharmacyPage .ph-pfw-ring .t { font: 700 var(--fs-22) var(--font-disp); color: var(--ph-herb-deep); }
@@ -64772,6 +64781,111 @@ or changing anything in Cliniko.
   // Blood tests, Cycle), so the shrink applies wherever it appears, not only
   // the Patient-details screenshot she showed -- it's the same element on
   // every one of those tabs, not a per-page widget.
+  // ==== her 2026-10-11 ask: "based on the ren quality, draw a diagram of a person on the furthest right
+  // column" (Ren page, right rail). The Ren ticks -- build, skin and face, lips, belly, where it hurts,
+  // cold / heat / sweat -- drawn on the app's own front figure (PH_BODY_GEOM, the one the Pain map uses).
+  // Derived on read from the same effective ticks the Ren page shows; nothing is stored. A sign with
+  // nothing to draw (mood, sleep, tongue, pulse) simply isn't on the figure.
+  var PH_REN_DRAW_COL = { pain: "#C62828", cold: "#1F66B3", heat: "#D2691E", swell: "#6B8FA3" };
+  var PH_REN_DRAW = [
+    // [keys, kind, label, [[dx, y, rx, ry], ...] (mirrored to both sides when dx != 0)]
+    [["menstrual_pain_tend", "dark_clots_tend"], "pain", "period pain", [[0, 214, 16, 10]]],
+    [["belly_pain_tend"], "pain", "belly pain", [[0, 194, 21, 14]]],
+    [["abd_resist_tend"], "pain", "tender on pressure", [[0, 180, 17, 11]]],
+    [["epigastric_heavy_tend"], "pain", "upper belly heaviness", [[0, 163, 14, 8]]],
+    [["pulsate_upsurge_tend"], "pain", "pulsation rising up", [[0, 188, 7, 7]]],
+    [["hip_lowabd_pain_tend"], "pain", "hip / lower belly", [[24, 218, 9, 12]]],
+    [["groin_tend"], "pain", "groin", [[14, 243, 7, 6]]],
+    [["neck_shoulder_ache_tend"], "pain", "neck & shoulders", [[0, 77, 10, 8], [34, 93, 13, 8]]],
+    [["spasms"], "pain", "muscle spasms", [[52, 113, 6, 15]]],
+    [["chest_hypo_tend"], "pain", "ribs & chest sides", [[31, 148, 9, 14]]],
+    [["lateral_zone"], "pain", "side of the body", [[41, 176, 4, 40]]],
+    [["breast_disten_tend", "pms_breast_tend", "breast_nodule_tend"], "pain", "breasts", [[16, 130, 11, 8]]],
+    [["chest_stuffy_tend"], "pain", "chest stuffiness", [[0, 124, 12, 13]]],
+    [["palp_tend"], "pain", "palpitations", [[10, 128, 6, 6]]],
+    [["heavy_sore_muscle_tend"], "pain", "heavy, sore muscles", [[26, 272, 10, 24], [52, 126, 6, 16]]],
+    [["back_knee_weak_ache_tend"], "pain", "knees & lower back", [[20, 322, 9, 10]]],
+    [["headache_tend", "head_heavy_tend", "dizzy_tend"], "pain", "head", [[0, 19, 15, 8]]],
+    [["numbness_tend"], "pain", "numb hands & feet", [[62, 266, 6, 10], [17, 447, 8, 6]]],
+    [["cold_extrem"], "cold", "cold hands & feet", [[62, 266, 7, 12], [17, 447, 9, 7]]],
+    [["cold_lower_body_tend"], "cold", "cold below the knees", [[20, 382, 10, 52]]],
+    [["edema_tend"], "swell", "swelling", [[20, 420, 10, 8]]]
+  ];
+  function phRenFigureHtml(rec, effP) {
+    const on = k => !!effP && effP[k] === true, any = ks => ks.some(on);
+    const G = PH_BODY_GEOM, CX = G.CX, g = phIsFemale(rec) ? "f" : "m", path = G.outline(g, "front");
+    const legend = [], u = "phrf";
+    const note = (c, lab) => legend.push({ c, lab });
+    // build: one reading, the heaviest wins
+    const sx = on("obesity_tend") ? 1.2 : (on("robust_build") || on("robust_firm_build")) ? 1.12 : on("soft_loose_muscle") ? 1.06 : on("thin_body") ? .86 : 1;
+    if (sx !== 1) note("#8a7a6a", sx < 1 ? "thin build" : sx > 1.15 ? "heavy build" : sx > 1.1 ? "robust build" : "soft, loose muscle");
+    // face and skin
+    const faceCol = on("complexion_red_oily") ? ["#E9876F", "red, oily complexion"] : on("complexion_dark_green") ? ["#A9B27A", "dark yellow / greenish complexion"]
+      : on("complexion_sallow") ? ["#E0C46F", "sallow complexion"] : on("complexion_pale_lusterless") ? ["#D9D6C0", "pale, lusterless complexion"]
+      : on("complexion_puffy") ? ["#E7DDCB", "puffy complexion"] : null;
+    if (faceCol) note(faceCol[0], faceCol[1]);
+    const fair = on("fine_skin"); if (fair) note("#F1E9E0", "fine, fair skin");
+    const dry = on("dry_skin"); if (dry) note("#B8A894", "dry skin");
+    const lipCol = on("lips_dark_purple") ? "#7B3B5A" : on("lips") ? "#D9A9A3" : "#C98F8A";
+    if (on("lips_dark_purple")) note("#7B3B5A", "dark, purplish lips"); else if (on("lips")) note("#D9A9A3", "pale lips");
+    const bright = on("bright_eyes"), round = on("eyes_round");
+    if (bright) note("#E3B341", "bright, spirited eyes"); if (round) note("#5a4636", "round eyes");
+    // belly shape
+    const tight = on("tight_belly"), bloat = on("bloating_tend"), soft = on("abd_wall_weak_tend");
+    if (tight) note("#8a7a6a", "tight belly muscles"); if (bloat) note("#C9A24A", "bloated belly"); if (soft) note("#8a7a6a", "soft belly wall");
+    // temperature and sweat
+    const cold = any(["cold_sens", "cold_pain_tend", "desire_lie_curl_tend", "wind_averse_tend"]), heat = any(["dreads_heat", "body_hot_tend"]);
+    if (cold) note(PH_REN_DRAW_COL.cold, "feels the cold"); if (heat) note(PH_REN_DRAW_COL.heat, "runs hot");
+    const sweatHead = on("sweats_easy"), sweatPalm = on("sweaty_palms"), sweatSide = on("sweat_uneven_tend");
+    if (sweatHead) note("#6FB3D9", "sweats easily"); if (sweatPalm) note("#6FB3D9", "sweaty palms"); if (sweatSide) note("#6FB3D9", "uneven sweating");
+    // marks
+    let marks = "";
+    PH_REN_DRAW.forEach(([keys, kind, lab, at]) => {
+      if (!any(keys)) return;
+      note(PH_REN_DRAW_COL[kind], lab);
+      at.forEach(([dx, y, rx, ry]) => {
+        (dx ? [CX + dx, CX - dx] : [CX]).forEach(x => { marks += `<ellipse cx="${x}" cy="${y}" rx="${(rx * 1.45).toFixed(1)}" ry="${(ry * 1.45).toFixed(1)}" fill="url(#${u}-${kind})"/>`; });
+      });
+    });
+    const drop = (x, y) => `<path d="M0,-4 C3,0 3.2,3 0,3.6 C-3.2,3 -3,0 0,-4Z" fill="#6FB3D9" stroke="#fff" stroke-width=".5" transform="translate(${x} ${y})"/>`;
+    let drops = "";
+    if (sweatHead) drops += drop(CX - 10, 15) + drop(CX + 11, 17) + drop(CX + 1, 12) + drop(CX - 34, 112) + drop(CX + 34, 112);
+    if (sweatPalm) drops += drop(CX - 60, 262) + drop(CX - 56, 272) + drop(CX + 60, 262) + drop(CX + 56, 272);
+    if (sweatSide) drops += drop(CX + 30, 108) + drop(CX + 36, 124) + drop(CX + 32, 142);
+    const radial = (id, c, a) => `<radialGradient id="${u}-${id}"><stop offset="0" stop-color="${c}" stop-opacity="${a}"/><stop offset=".55" stop-color="${c}" stop-opacity="${(a * .55).toFixed(2)}"/><stop offset="1" stop-color="${c}" stop-opacity="0"/></radialGradient>`;
+    const gx = `translate(${CX} 0) scale(${sx} 1) translate(${-CX} 0)`;
+    const face = faceCol ? `<ellipse cx="${CX}" cy="34" rx="19" ry="26" fill="${faceCol[0]}" fill-opacity=".62"/>` : "";
+    const belly = (tight ? `<g stroke="#8a7a6a" stroke-opacity=".55" stroke-width=".9" fill="none"><path d="M${CX},160 V232"/><path d="M${CX - 14},172 H${CX + 14} M${CX - 15},190 H${CX + 15} M${CX - 15},208 H${CX + 15}"/></g>` : "")
+      + (bloat ? `<ellipse cx="${CX}" cy="200" rx="32" ry="26" fill="#C9A24A" fill-opacity=".30" stroke="#C9A24A" stroke-opacity=".7" stroke-width="1" stroke-dasharray="3 2"/>` : "")
+      + (soft ? `<path d="M${CX - 27},206 Q${CX},238 ${CX + 27},206" fill="none" stroke="#8a7a6a" stroke-opacity=".6" stroke-width="1" stroke-dasharray="3 2"/>` : "");
+    const eyeFill = round ? "#fff" : "#5a4636";
+    const eyes = [-7, 7].map(d => round
+      ? `<circle cx="${CX + d}" cy="30" r="3.3" fill="#fff" stroke="#5a4636" stroke-width="1"/><circle cx="${CX + d}" cy="30" r="1.5" fill="#5a4636"/>`
+      : `<ellipse cx="${CX + d}" cy="30" rx="2.4" ry="${bright ? 2 : 1.3}" fill="${eyeFill}"/>${bright ? `<circle cx="${CX + d + .8}" cy="29.2" r=".7" fill="#fff"/>` : ""}`).join("")
+      + (bright ? `<g stroke="#E3B341" stroke-width="1" stroke-linecap="round"><path d="M${CX - 13},24 l-2,-2 M${CX - 10},22.5 v-3 M${CX + 13},24 l2,-2 M${CX + 10},22.5 v-3"/></g>` : "");
+    const aura = (cold ? `<path d="${path}" fill="none" stroke="${PH_REN_DRAW_COL.cold}" stroke-width="9" stroke-opacity=".28" stroke-linejoin="round" filter="url(#${u}-blur)"/>` : "")
+      + (heat ? `<path d="${path}" fill="none" stroke="${PH_REN_DRAW_COL.heat}" stroke-width="9" stroke-opacity=".32" stroke-linejoin="round" filter="url(#${u}-blur)"/>` : "");
+    const none = !legend.length;
+    const svg = `<svg class="ph-rf-svg${none ? " none" : ""}" viewBox="15 0 190 462" role="img" aria-label="Her build, drawn from the Ren ticks" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="${u}-skin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${fair ? "#FBF7F2" : "#F5F0EA"}"/><stop offset="1" stop-color="${fair ? "#F1E9E0" : "#E7DDD2"}"/></linearGradient>
+        <filter id="${u}-blur" x="-20%" y="-10%" width="140%" height="120%"><feGaussianBlur stdDeviation="5"/></filter>
+        <clipPath id="${u}-clip"><path d="${path}"/></clipPath>
+        <pattern id="${u}-dry" width="7" height="6" patternUnits="userSpaceOnUse"><path d="M1,2 l3,1.2 M4,5 l2.6,-1" stroke="#9c8a74" stroke-width=".7" stroke-linecap="round" fill="none"/></pattern>
+        ${radial("pain", PH_REN_DRAW_COL.pain, .85)}${radial("cold", PH_REN_DRAW_COL.cold, .75)}${radial("heat", PH_REN_DRAW_COL.heat, .75)}${radial("swell", PH_REN_DRAW_COL.swell, .7)}
+      </defs>
+      <g transform="${gx}">
+        ${aura}
+        <path d="${path}" fill="url(#${u}-skin)"/>
+        <g clip-path="url(#${u}-clip)">${dry ? `<rect x="0" y="62" width="220" height="400" fill="url(#${u}-dry)" opacity=".32"/>` : ""}${face}${marks}${belly}</g>
+        <path d="${path}" fill="none" stroke="#6f6053" stroke-width="1.05" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+        ${eyes}<ellipse cx="${CX}" cy="46" rx="5" ry="1.9" fill="${lipCol}"/>
+        ${drops}
+      </g>
+    </svg>`;
+    const chips = legend.map(l => `<span class="ph-rf-k"><i style="background:${l.c}"></i>${esc(l.lab)}</span>`).join("");
+    return `<div class="ph-rf"><div class="ph-rf-hd">Her build</div>${svg}${chips ? `<div class="ph-rf-keys">${chips}</div>` : `<div class="ph-rf-empty">Tick Ren signs to draw her</div>`}</div>`;
+  }
   function presPfwSideInner(name) {
     const rec = phPatientPeek(name) || {}, today = phTriToday(rec), fam = phTriFam(name);
     const effD = phTriEffective(rec, name, "d", today.d, today.prevD), effP = phTriEffective(rec, name, "p", today.p);
@@ -64787,7 +64901,7 @@ or changing anything in Cliniko.
       <div class="ph-pfw-lead">${leading ? esc(top.f.name) + " leading" : "No ticks yet"}</div>
       <div class="ph-pfw-sub">${top.dS} of ${top.maxD} Bing · ${top.pS} of ${top.maxP} Ren</div>
       <span class="ph-pfw-pct">${fbrPct}% built</span>
-      <button type="button" class="ph-pfw-link" data-flow-prof="patterns">Open Fang Bing Ren ›</button>`;
+      <button type="button" class="ph-pfw-link" data-flow-prof="patterns">Open Fang Bing Ren ›</button>${presAssessTab === "ren" ? phRenFigureHtml(rec, effP) : ""}`;
   }
   // Herb family = the arrow, formula = the target (her words, verbatim).
   // Approved mock "herb-family-arrow": one herb-family box, a dashed arrow
