@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261010-134500">
+<meta name="lcm-build" content="20261010-135500">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -56083,6 +56083,13 @@ or changing anything in Cliniko.
         { id: "log", label: "Treatment log", sub: subOf("log"), on: onPlan && tab === "log" },
         { id: "notes", label: "Notes", sub: subOf("notes"), on: onPlan && tab === "notes" },
       ] : [],
+      // Fang Bing Ren / Today's visit / Cycle: Plan-tab sections (2026-10-10
+      // move) with no way in on desktop, where the tab row itself is hidden
+      // ([[presFlowRailHtml]]'s own comment on why). Pre-filtered from
+      // `sections` here, same shape as `subs` above, so the rail doesn't
+      // need its own copy of presTpMainSections' id list to stay in sync with.
+      planExtras: plan ? ["patterns", "today", "cycle"].map(id => sections.find(s => s.id === id)).filter(Boolean)
+        .map(s => ({ id: s.id, label: s.label, sub: s.sub, flags: s.flags, flagTitle: s.flagTitle, on: onPlan && tab === s.id })) : [],
     };
   }
   function presFlowRailHtml(t, isNew) {
@@ -56158,8 +56165,18 @@ or changing anything in Cliniko.
     const sumHtml = grpHtml("sum", "Putting it together");
     const logItems = f.profSubs.filter(u => u.grp === "log");
     const logHtml = (logItems.length || f.subs.length) ? `<div class="ph-flow-sub keep log${treat.done ? " done" : ""}${newlyDone.includes("treatment") ? " anim" : ""}"><span class="cap">Log <i>everything dated</i></span>${logItems.map(profBtn).join("")}${f.subs.map(u => `<button type="button" class="${u.on ? "on" : ""}" data-flow-go="${u.id}" role="tab" aria-selected="${u.on ? "true" : "false"}">${esc(u.label)}${u.sub ? `<span class="sub">${esc(u.sub)}</span>` : ""}</button>`).join("")}</div>` : "";
+    // Fang Bing Ren / Today's visit (tongue · pulse · abdomen) / Cycle live on
+    // the Plan tab's own tab row (2026-10-10 move), but that row is hidden on
+    // desktop -- "the rail IS that row" -- and nobody added them to the rail
+    // when they moved, so they had no way in on desktop at all. Her call
+    // (2026-10-10, "left column of tabs, include tongue abdomen etc"): a
+    // sub-group under Plan, same shape as Profile's File/Check/Putting-it-
+    // together groups, reusing `sections` (already computed above) so it
+    // can't list anything presTpMainSections wouldn't also show as a tab.
+    const planSubBtn = s => `<button type="button" class="${s.on ? "on" : ""}" data-flow-go="${s.id}" role="tab" aria-selected="${s.on ? "true" : "false"}">${esc(s.label)}${s.sub ? `<span class="sub">${esc(s.sub)}</span>` : ""}${s.flags ? `<span class="flag" title="${esc(s.flagTitle)}">${s.flags}</span>` : ""}</button>`;
+    const planSubHtml = f.planExtras.length ? `<div class="ph-flow-sub keep plan${planStep.done ? " done" : ""}"><span class="cap">Also on this plan</span>${f.planExtras.map(planSubBtn).join("")}</div>` : "";
     return `<div class="ph-flow-rail" id="presFlowRail" role="tablist" aria-label="Where you are">
-      ${visitHead}${nextHtml}${stepHtml(prof)}${fileHtml}${checkHtml}${sumHtml}${stepHtml(planStep)}${reviewStep ? stepHtml(reviewStep) : ""}${stepHtml(treat)}${stepHtml(dispStep)}${logHtml}
+      ${visitHead}${nextHtml}${stepHtml(prof)}${fileHtml}${checkHtml}${sumHtml}${stepHtml(planStep)}${planSubHtml}${reviewStep ? stepHtml(reviewStep) : ""}${stepHtml(treat)}${stepHtml(dispStep)}${logHtml}
     </div>`;
   }
   // in-place repaint of the rail alone (a tab switch inside the plan page
@@ -71614,8 +71631,6 @@ or changing anything in Cliniko.
   function presTpReviewTabBodyHtml(name, plan) {
     const rec = phPatientPeek(name) || {};
     const t = PRESC.items.find(x => x.id === presOpenId);
-    const cc = phCcOf(name);
-    const mainFam = cc ? phCcFam(phCcMainId(cc)) : null;
     const phase = phTpLivePhase(rec, plan);
     const ord = phase ? phTpSessionOrdinal(name, plan, phase) : null;
     const pats = phPatCompute(name).shown.filter(p => p.level === "likely" && !p.dismissed);
@@ -71660,7 +71675,13 @@ or changing anything in Cliniko.
       <span class="body"><span class="cat"><i></i>${esc(n.cat)}</span><span class="t">${n.tt}</span><span class="s">${n.s}</span></span>
     </button>`).join("");
 
-    const mapHtml = mainFam && mainFam.id === "pain" ? phPainMapHtml(name, phPmPlanFor(name, "pt:" + pk)) : "";
+    // Used to only show for a complaint tagged "Pain", and even then read a
+    // SEPARATE patient-level store (rec.painSites) instead of the plan's own
+    // painMap -- so Amy's Plan tab and her Review tab could show two
+    // different pain maps. Her call 2026-10-10 ("fix it so both pain maps
+    // match"): always the plan's own map, same object the Plan tab edits,
+    // so there is only one to ever disagree with itself.
+    const mapHtml = phPainMapHtml(name, plan);
     // the old one-time Pain intake (onset/quality/aggravating-relieving) --
     // folded in here (2026-10-10, "Fold it into Review") rather than kept as
     // its own rail page. Collapsed by default so the fast visual summary
