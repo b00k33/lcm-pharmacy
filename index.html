@@ -7883,6 +7883,11 @@
   #pharmacyPage .ph-rf-keys { display: grid; gap: 6px; margin-top: 10px; text-align: left; }
   #pharmacyPage .ph-rf-fam { display: grid; grid-template-columns: 4px minmax(0, 1fr); gap: 8px; font-size: var(--fs-11-5); color: var(--ph-soft); line-height: 1.35; }
   #pharmacyPage .ph-rf-fam b { color: var(--ph-herb-deep); font-weight: 700; }
+  #pharmacyPage .ph-rf-fam > span { display: grid; gap: 3px; min-width: 0; }
+  #pharmacyPage .ph-rf-fam .top { display: flex; justify-content: space-between; align-items: baseline; }
+  #pharmacyPage .ph-rf-fam em { font-style: normal; font-weight: 700; color: var(--ph-herb-deep); }
+  #pharmacyPage .ph-rf-fam .bar { display: block; height: 4px; border-radius: 3px; background: var(--ph-line); overflow: hidden; }
+  #pharmacyPage .ph-rf-fam .bar u { display: block; height: 100%; border-radius: 3px; text-decoration: none; }
   #pharmacyPage .ph-rf-fam i { border-radius: 2px; }
   #pharmacyPage .ph-rf-empty { margin-top: 8px; font-size: var(--fs-12); color: var(--ph-faint); }
   #pharmacyPage .ph-pfw-ring { display: flex; gap: 12px; align-items: center; margin: 4px 0 10px; }
@@ -64815,7 +64820,7 @@ or changing anything in Cliniko.
   // on the left of that sign's row (PH_FBR_HERB_COLOUR via phFbrSignFam), her 2026-10-11 ask:
   // "correspond the symptoms visually to the herb family color". Looks of the body itself (skin tone,
   // lips, eyes) keep their natural colour and get a ring / outline in the family colour instead.
-  function phRenFigureHtml(rec, effP) {
+  function phRenFigureHtml(rec, effP, ranked) {
     const on = k => !!effP && effP[k] === true, any = ks => ks.some(on);
     const G = PH_BODY_GEOM, CX = G.CX, g = phIsFemale(rec) ? "f" : "m", path = G.outline(g, "front");
     const u = "phrf", legend = [];
@@ -64903,9 +64908,16 @@ or changing anything in Cliniko.
     // legend by herb family: its colour (the bar colour on the left of the rows), its name, the signs drawn
     const byFam = new Map();
     legend.forEach(l => { if (!byFam.has(l.id)) byFam.set(l.id, []); if (!byFam.get(l.id).includes(l.lab)) byFam.get(l.id).push(l.lab); });
-    const rows = [...byFam.entries()].sort((a, b) => b[1].length - a[1].length).map(([id, labs]) => {
-      const c = PH_FBR_HERB_COLOUR[id] || { bg: "#D3DEE2" };
-      return `<div class="ph-rf-fam"><i style="background:${c.bg}${c.border ? `;box-shadow:inset 0 0 0 1px ${c.border}` : ""}"></i><span><b>${esc((PH_FORMULAS[id] || {}).name || id)}</b> ${esc(labs.join(", "))}</span></div>`;
+    // her 2026-10-11 ask: "show the herb score/percentage" -- each family's Ren score (ticked points over
+    // the family's own ceiling, the same pS / maxP Fang Bing Ren ranks on). Every family that scores
+    // lists, highest first, even one with no sign to draw.
+    const score = {};
+    (ranked || []).forEach(r => { score[r.id] = r; });
+    const ids = [...new Set([...byFam.keys(), ...(ranked || []).filter(r => r.pS > 0).map(r => r.id)])];
+    const pct = id => { const s = score[id]; return s && s.maxP ? Math.min(100, Math.round(s.pS / s.maxP * 100)) : 0; };
+    const rows = ids.sort((a, b) => pct(b) - pct(a) || (byFam.get(b) || []).length - (byFam.get(a) || []).length).map(id => {
+      const c = PH_FBR_HERB_COLOUR[id] || { bg: "#D3DEE2" }, labs = byFam.get(id) || [], s = score[id], p = pct(id);
+      return `<div class="ph-rf-fam"><i style="background:${c.bg}${c.border ? `;box-shadow:inset 0 0 0 1px ${c.border}` : ""}"></i><span><span class="top"><b>${esc((PH_FORMULAS[id] || {}).name || id)}</b><em title="${s ? s.pS + " of " + s.maxP + " Ren points" : ""}">${p}%</em></span><span class="bar"><u style="width:${p}%;background:${c.bg}${c.border ? `;box-shadow:inset 0 0 0 1px ${c.border}` : ""}"></u></span>${labs.length ? `<span class="lab">${esc(labs.join(", "))}</span>` : ""}</span></div>`;
     }).join("");
     return `<div class="ph-rf"><div class="ph-rf-hd">Her build</div>${svg}${rows ? `<div class="ph-rf-keys">${rows}</div>` : `<div class="ph-rf-empty">Tick Ren signs to draw her</div>`}</div>`;
   }
@@ -64924,7 +64936,7 @@ or changing anything in Cliniko.
       <div class="ph-pfw-lead">${leading ? esc(top.f.name) + " leading" : "No ticks yet"}</div>
       <div class="ph-pfw-sub">${top.dS} of ${top.maxD} Bing · ${top.pS} of ${top.maxP} Ren</div>
       <span class="ph-pfw-pct">${fbrPct}% built</span>
-      <button type="button" class="ph-pfw-link" data-flow-prof="patterns">Open Fang Bing Ren ›</button>${presAssessTab === "ren" ? phRenFigureHtml(rec, effP) : ""}`;
+      <button type="button" class="ph-pfw-link" data-flow-prof="patterns">Open Fang Bing Ren ›</button>${presAssessTab === "ren" ? phRenFigureHtml(rec, effP, ranked) : ""}`;
   }
   // Herb family = the arrow, formula = the target (her words, verbatim).
   // Approved mock "herb-family-arrow": one herb-family box, a dashed arrow
