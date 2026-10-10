@@ -15521,6 +15521,10 @@
   #pharmacyPage .ph-cc-tbl tr.q .ph-cc-quick { margin-top: 0; }
   #pharmacyPage .ph-cc-tbl tr.add td { border-bottom: 0; }
   #pharmacyPage .ph-cc-tbl .ph-cc2-pill { white-space: nowrap; }
+  #pharmacyPage .ph-cc-main-text { display: block; width: 100%; min-width: 220px; height: 32px; margin: 0 0 6px; padding: 0 10px; border: 1px solid var(--ph-line); border-radius: 8px; background: var(--ph-white); font: 500 var(--fs-13) var(--font-body); color: var(--ph-ink); }
+  #pharmacyPage .ph-cc-main-text:focus { outline: 0; border-color: var(--ph-herb); box-shadow: 0 0 0 3px rgba(22,92,116,.14); }
+  #pharmacyPage .ph-cc-plantype { display: inline-flex; align-items: center; gap: 8px; }
+  #pharmacyPage .ph-cc-plantype .k { font-size: var(--fs-11); font-weight: 600; color: var(--ph-faint); }
   #pharmacyPage .ph-cc-tbl .ph-cc-sec-in { width: 100%; min-width: 0; }
   #pharmacyPage .ph-cc-sec-name { display: inline-flex; align-items: center; gap: 6px; font: 600 var(--fs-13) var(--font-body); color: var(--ph-ink); cursor: pointer; }
   #pharmacyPage .ph-cc-sec-name .x { padding: 0 3px; border: 0; background: none; font-size: var(--fs-14); line-height: 1; color: var(--ph-faint); cursor: pointer; }
@@ -63906,6 +63910,14 @@ or changing anything in Cliniko.
   function phCcAgo(n, u) { const d = phCcNow(); if (u === "d") d.setDate(d.getDate() - n); else if (u === "m") d.setMonth(d.getMonth() - n); else d.setFullYear(d.getFullYear() - n); return phCcIso(d); }
   function phCcFmtDate(s) { const m = /^(\d{4})-(\d\d)-(\d\d)$/.exec(s || ""); return m ? `${m[3]}/${m[2]}/${m[1]}` : ""; }
   function phCcParseDate(t) {
+    // her 2026-10-11 ask: "how long" in her own words -- "2 years", "6 mo", "3 wk", "10 days" count back from today
+    const w = /^(\d+(?:\.\d+)?)\s*(d|day|days|w|wk|wks|week|weeks|m|mo|mos|month|months|y|yr|yrs|year|years)\.?$/i.exec(String(t || "").trim());
+    if (w) {
+      const n = parseFloat(w[1]), u = w[2][0].toLowerCase(), d = phCcNow();
+      if (u === "d") d.setDate(d.getDate() - Math.round(n)); else if (u === "w") d.setDate(d.getDate() - Math.round(n * 7));
+      else if (u === "m") d.setDate(d.getDate() - Math.round(n * 30.44)); else d.setDate(d.getDate() - Math.round(n * 365.25));
+      return d.getFullYear() < 1950 ? null : phCcIso(d);
+    }
     const m = /^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/.exec(String(t || "").trim()); if (!m) return null;
     let y = +m[3]; if (y < 100) y += 2000;
     const d = new Date(y, +m[2] - 1, +m[1]);
@@ -64005,7 +64017,7 @@ or changing anything in Cliniko.
       const phase = phTpLivePhase(rec, plan); if (!phase || phase.status === "done") return false;
       const c = phCcOf(name), want = [];
       const f = c && c.main && phCcFam(c.main);
-      if (f) want.push({ k: "main:" + f.id, text: f.label, since: c.since || "" });
+      if (f) want.push({ k: "main:" + f.id, text: c.mainText || f.label, since: c.since || "" });
       phCcSecAll(name).forEach(s => want.push({ k: s.auto ? "fbr:" + s.key : "s:" + s.id, text: s.text, since: s.since || "" }));
       if (!want.length) return false;
       const rows = Array.isArray(phase.symptoms) ? phase.symptoms : [], gone = phase.symGone || [];
@@ -64041,7 +64053,9 @@ or changing anything in Cliniko.
       const lab = male && f.id === "fertility" ? "Fertility" : f.label;
       const since = c.since || "";
       const quick = PH_CC_QUICK.map((q, k) => `<button type="button" class="ph-cc-q" data-cc-main-q="${k}">${q[0]}</button>`).join("");
-      rows.push(`<tr><td class="ty">Chief complaint</td><td><span class="ph-cc2-pill on main${phCcPop === "main" ? " pop" : ""}">${phCcIcHtml(f.ic)}${esc(lab)}${x("data-cc-main-rm", "1", lab)}</span></td><td class="hl"><span class="ph-cc-since"><input type="text" class="ph-cc-in" data-cc-main-since="1" value="${esc(phCcFmtDate(since))}" placeholder="dd/mm/yyyy" inputmode="numeric" autocomplete="off" aria-label="${esc(lab)} started"><span class="rel${since ? "" : " empty"}">${since ? esc(phCcRel(since)) : "since when?"}</span></span></td></tr>`);
+      // her 2026-10-11 ask: the pill only picks the plan family -- the chief complaint itself is
+      // written in her own words (rec.complaint.mainText), the pill sits under it as "Plan type"
+      rows.push(`<tr><td class="ty">Chief complaint</td><td><input type="text" class="ph-cc-main-text field-bare" data-cc-main-text="1" maxlength="140" value="${esc(c.mainText || "")}" placeholder="In her words, e.g. irregular painful periods, trying to conceive" autocomplete="off" aria-label="Chief complaint in her words"><span class="ph-cc-plantype"><span class="k">Plan type</span><span class="ph-cc2-pill on main${phCcPop === "main" ? " pop" : ""}">${phCcIcHtml(f.ic)}${esc(lab)}${x("data-cc-main-rm", "1", lab)}</span></span></td><td class="hl"><span class="ph-cc-since"><input type="text" class="ph-cc-in" data-cc-main-since="1" value="${esc(phCcFmtDate(since))}" placeholder="date or 2 yr" title="A date (dd/mm/yyyy) or how long: 2 years, 6 mo, 3 wk" autocomplete="off" aria-label="${esc(lab)} started"><span class="rel${since ? "" : " empty"}">${since ? esc(phCcRel(since)) : "since when?"}</span></span></td></tr>`);
       rows.push(`<tr class="q"><td></td><td colspan="2"><div class="ph-cc-quick">${quick}</div></td></tr>`);
     }
     list.forEach((s, i) => {
@@ -64052,7 +64066,7 @@ or changing anything in Cliniko.
       const open = s.id === phCcActive;
       const name =`<span class="ph-cc-sec-name${phCcPop === s.id ? " pop" : ""}"${open ? "" : ` data-cc-sec-open="${s.id}"`}>${esc(s.text)}${s.fromFbr ? `<span class="ph-cc-fbr" title="Found by Fang Bing Ren">Fang Bing Ren</span>` : ""}${x("data-cc-sec-rm", s.id, s.text)}</span>`;
       const hl = open
-        ? `<span class="ph-cc-since"><input type="text" class="ph-cc-in" data-cc-sec-since="${s.id}" value="${esc(phCcFmtDate(s.since))}" placeholder="dd/mm/yyyy" inputmode="numeric" autocomplete="off" aria-label="${esc(s.text)} started"><span class="rel${s.since ? "" : " empty"}">${s.since ? esc(phCcRel(s.since)) : "since when?"}</span></span>`
+        ? `<span class="ph-cc-since"><input type="text" class="ph-cc-in" data-cc-sec-since="${s.id}" value="${esc(phCcFmtDate(s.since))}" placeholder="date or 2 yr" title="A date (dd/mm/yyyy) or how long: 2 years, 6 mo, 3 wk" autocomplete="off" aria-label="${esc(s.text)} started"><span class="rel${s.since ? "" : " empty"}">${s.since ? esc(phCcRel(s.since)) : "since when?"}</span></span>`
         : `<button type="button" class="ph-cc-hl${s.since ? "" : " empty"}" data-cc-sec-open="${s.id}">${s.since ? esc(phCcRel(s.since)) : "since when?"}</button>`;
       rows.push(`<tr><td class="ty">${i === 0 ? "Secondary complaints" : ""}</td><td>${name}</td><td class="hl">${hl}</td></tr>`);
       if (open) {
@@ -64094,7 +64108,7 @@ or changing anything in Cliniko.
     const t = (PRESC.items || []).find(x => x.id === presOpenId);
     if (host && t) {
       const a = document.activeElement, was = a && host.contains(a) && a.dataset
-        ? (a.dataset.ccSecIn ? ["data-cc-sec-in", "1"] : a.dataset.ccMainSince ? ["data-cc-main-since", "1"] : a.dataset.ccSecSince ? ["data-cc-sec-since", a.dataset.ccSecSince] : null)
+        ? (a.dataset.ccSecIn ? ["data-cc-sec-in", "1"] : a.dataset.ccMainText ? ["data-cc-main-text", "1"] : a.dataset.ccMainSince ? ["data-cc-main-since", "1"] : a.dataset.ccSecSince ? ["data-cc-sec-since", a.dataset.ccSecSince] : null)
         : null;
       const h = phCcCardHtml(t, calm);
       if (h) {
@@ -64195,6 +64209,12 @@ or changing anything in Cliniko.
   document.addEventListener("change", e => {
     const el = e.target;
     if (!(el && el.matches && el.closest && el.closest("#pharmacyPage"))) return;
+    // chief complaint in her own words: saved quietly, no repaint (it would steal the focus)
+    if (el.matches("[data-cc-main-text]")) {
+      const name = phPfwName(); if (!name) return;
+      if (phCcWrite(name, c => { c.mainText = el.value.trim(); })) { phTpAutoBust(); phCcSavedFlash(); }
+      return;
+    }
     const isMain = el.matches("[data-cc-main-since]"), isSec = el.matches("[data-cc-sec-since]");
     if (!isMain && !isSec) return;
     const v = phCcParseDate(el.value);
@@ -64258,7 +64278,7 @@ or changing anything in Cliniko.
       return `<div class="ph-rc-other"><span class="lab">Secondary: ${esc(s.text)}${s.since ? ` · ${esc(phCcRel(s.since))}` : ""}</span><div class="ph-rc-minichips">${mini}</div></div>`;
     }).join("");
     return `<div class="ph-cc ph-rc${cl}" data-rc-host="1">
-      <h3>Re-check · what changed since last visit?</h3>${cc && phCcFam(mainId) ? `<div class="ph-rc-other prim"><span class="lab">Primary: ${esc(phCcFam(mainId).label)}${cc.since ? ` · ${esc(phCcRel(cc.since))}` : ""}</span></div>` : ""}
+      <h3>Re-check · what changed since last visit?</h3>${cc && phCcFam(mainId) ? `<div class="ph-rc-other prim"><span class="lab">Primary: ${esc(cc.mainText || phCcFam(mainId).label)}${cc.since ? ` · ${esc(phCcRel(cc.since))}` : ""}</span></div>` : ""}
       <div class="ph-rc-chips">${chips}</div>
       <input type="text" class="ph-cc-said" data-rc-note-in="1" maxlength="160" value="${esc((rc && rc.note) || "")}" placeholder="a few words, e.g. sleeping better, pain less sharp" aria-label="What changed">
       ${otherRows}
