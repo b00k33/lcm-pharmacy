@@ -1672,3 +1672,38 @@ live on a later, separate "push live."
   the `<meta name="lcm-build">` stamp in index.html — the meta stamp is
   what the gold Update button compares; bumping only one ships an update
   her app never offers her.
+
+## Cycle PAGE redesign: a sentence, three tabs, one plain line (her ask28, 2026-10-10)
+**Her ask:** "too many elements colours fonts font sizes lines boxes... more sleek... reduce repetitive redundant
+instructions text... make chips and links consistent". Approved mock = `cycle-page-v2-mock.html` ("version 3").
+Her picks are in memory `project_pharmacy_cycle_page_redesign_2026_10_10`; do not re-ask.
+- **Scope = the Cycle PAGE only.** `phTpCycleBlockHtml(rec, name, plan)` returns `phCycPageHtml(rec, name)` when
+  `onPage` (no plan) and `rec.cycleOn !== false`. The Plan tab's folded cycle bar (plan given) and the
+  not-tracking path are the OLD code, untouched. The full-screen plan window (no plan) shows the new page too.
+- **Page = `.ph-cp`** (still carries `data-cycle-block`, so `phCycleStripRefresh` / `phCycleRerender` repaint it
+  in place -- never `renderPresPanel`): `phCpTopHtml` (sentence + Pregnant?), tab row (`data-cp-tab`, state
+  `phCpTab[name]`), tool buttons per tab, pane, one plain footer line.
+- **Sentence** `phCpSentence`: "Day 7, follicular. Fertile from 12 Oct, ovulation ~17 Oct, period ~1 Nov." from
+  `phCycFacts` (latest start) + `phCycleComp`; late -> "Day 34, period 6 days late. Last period 7 Sep."; no
+  period -> one prompt line. Dates via `presBandDay` (year only when not this year). `~` dropped once LH confirms.
+- **Tabs:** Calendar = `phCycFFHtml(..., "cal")` full width; tapping a day opens the log card BESIDE it
+  (`.cp-calwrap.open`, `phCycleSignPopHtml(rec, name, {flat:true})`: Flow, Pain, Discharge, LH, BBT, Sex, note,
+  period-start link; clots / blood looks / pain feels / twinge / mood behind "More signs" =
+  `presCycleSignEdit.box === "more"`, handler `data-cp-more`). Temperature = `phCycFFHtml(..., "chart")`.
+  Past cycles = table (Started / Length / Days bled / LH + / Sex in window; row tap = jump to that cycle's
+  calendar) + optional editable Period history (`presCycleHistOpen`). Tool buttons: Cycle day (calculator),
+  BBT chart (+ Add chart), Period history + Referral summary.
+- **Colours** are re-pointed on `.ph-cp .ff` (`--ff-p1/he/me/li/sp` red family, `--ff-green`); the Plan tab's
+  block reads the old FF pink/lime. `PH_CP_PAL` / `PH_FF_PAL` swap the chart colours by `part`. Period red
+  `#B3174A` (blue undertone -- she said the first red looked orange), mid `#CC5A7B`, fertile `#4C9A5F`, one gold.
+- **Pregnant?** lives on `.cp-top[data-preg-host]`; `phPregRepaint` repaints that strip (the old band is no
+  longer rendered; `PRES_BANDS.cycle` still exists, unused).
+- **Gone from the page:** dark band, three tiles (`phCycTilesHtml`), 14-day grid (`phTpCycleDayTableHtml`),
+  "Color code" block, instruction text, Regular / Cycle / Contraception chips (now dotted-underline values in
+  the footer line). Those functions still serve the Plan tab block.
+- **Traps hit:** global rule `#pharmacyPage input:is([type=number]...):not(.field-bare)` restyles every number
+  input -- give bare inline inputs `field-bare`. Phone pins every field to 16px (iOS zoom guard) so the footer
+  line goes 16px on phone. `.ph-cycle-rowopen` needed `min-width:0` or the tab row overflowed at 360px.
+- **Disclosed calls:** calendar key has only Period / Fertile / Ovulation / Next period (the tiny ♥ ● ⚡ marks
+  keep their hover text); BBT tab shows "BBT chart" + "Add chart" when a chart exists; Pain stays the 0-10
+  slider (the mock drew None/Mild/Strong chips).
