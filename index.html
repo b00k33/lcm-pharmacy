@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261010-140500">
+<meta name="lcm-build" content="20261010-141500">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -62750,6 +62750,27 @@ or changing anything in Cliniko.
     // -- supplements
     const sup = rec.supplements || {};
     if (sup.iron && sup.iron.on) add("iron_supp", "supp", "Taking an iron supplement", { tab: "supplements" });
+    // -- blood tests (her audit 2026-10-10, "wire these two"): the most recent
+    // flagged result per marker. Below her own printed range reads as the
+    // existing frank-low tag; inside the range but in its bottom fifth reads
+    // as the existing low-normal/borderline tag -- the same distinction the
+    // free-text scan above already makes, just read off a number instead of
+    // a sentence, not a new clinical call.
+    const bloods = phBldList(rec);
+    const latestBld = key => { for (const b of bloods) { const e = b.vals && b.vals[key]; if (e && e.v != null) return { meta: phBldMeta(key, e), v: e.v }; } return null; };
+    const bldBand = key => {
+      const hit = latestBld(key); if (!hit) return "";
+      const { meta, v } = hit;
+      if (meta.lo != null && v < meta.lo) return "low";
+      if (meta.hi != null && v > meta.hi) return "high";
+      if (meta.lo != null && meta.hi != null && v <= meta.lo + (meta.hi - meta.lo) * 0.2) return "low-normal";
+      return "";
+    };
+    const ironBands = ["iron", "ferritin", "tsat", "hb"].map(bldBand);
+    if (ironBands.includes("low")) add("low_iron", "bloods", "Blood test shows a low iron-panel marker", { tab: "bloods" });
+    else if (ironBands.includes("low-normal")) add("iron_low", "bloods", "Blood test shows an iron-panel marker at the low end of normal", { tab: "bloods" });
+    if (["tsh", "ft4", "ft3"].some(k => { const b = bldBand(k); return b === "low" || b === "high"; }))
+      add("thyroid", "bloods", "Blood test shows an abnormal thyroid marker", { tab: "bloods" });
     // -- tongue: her standing constitution read plus the latest visit's chart
     const tf = {}, tsrc = {};
     const lowerList = arr => (arr || []).map(x => String(x || "").toLowerCase());
@@ -77868,7 +77889,7 @@ or changing anything in Cliniko.
         ${phTpLetterOpen ? phTpLetterViewHtml(name, plan) : `
         <div class="ph-tp-fieldgrid">
           <label class="ph-gd-field"><span>Diagnosis / pattern</span><textarea rows="2" data-tp-field="${plan.id}:diagnosis" placeholder="TCM pattern, presenting complaint…">${esc(plan.diagnosis || "")}</textarea></label>
-          <label class="ph-gd-field"><span>Goal / principle</span><textarea rows="2" data-tp-field="${plan.id}:goal" placeholder="What this plan is working toward…">${esc(plan.goal || "")}</textarea></label>
+          <label class="ph-gd-field"><span>Goal</span><textarea rows="2" data-tp-field="${plan.id}:goal" placeholder="What this plan is working toward…">${esc(plan.goal || "")}</textarea></label>
         </div>
         <div class="ph-tp-fndhead">Clinical findings</div>
         ${phTpFindingsHtml(plan)}
