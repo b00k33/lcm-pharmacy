@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261010-153000">
+<meta name="lcm-build" content="20261010-160000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -62580,9 +62580,15 @@ or changing anything in Cliniko.
     throat_lump: "Lump in the throat, can't swallow or cough it out",
     pr_lowback: "Pain in the lower back (pain map)", pr_shoulder: "Pain in the shoulder or neck (pain map)", pr_knee: "Pain in the knee or ankle (pain map)"
   };
+  // pn_night/pn_move added 2026-10-10 (audit item 6, dead-signal cleanup):
+  // the "Pain" question set's own card already promised "They feed
+  // Cold-damp, Blood stasis and Qi stagnation" -- cold/damp/stiff taps did,
+  // but "worse at night" and "moves around" were collected and silently
+  // matched nothing. Worse-at-night is a classic stasis sign, moving pain a
+  // classic qi-stagnation one, matching the card's own text.
   const PH_PAT_DEFS = [
     { id: "stasis", name: "Blood stasis", fam: "purple", zones: ["uterus", "lower_abd"], of: 5,
-      keys: ["clots", "dark_blood", "stabbing", "dysmen", "fibroids", "adeno", "endo", "cysts", "severe_pain", "t_purple", "t_under", "p_choppy", "a_lower", "pr_lowback"],
+      keys: ["clots", "dark_blood", "stabbing", "dysmen", "fibroids", "adeno", "endo", "cysts", "severe_pain", "t_purple", "t_under", "p_choppy", "a_lower", "pr_lowback", "pn_night"],
       letters: ["signs"], food: ["Warm cooked food in the days before the period", "Ginger and cinnamon tea", "Cut back cold drinks and raw food"],
       supp: [], points: "SP10, LI4, LR3, SP6, Ren6", formula: "Gui Zhi Fu Ling Wan or Shao Fu Zhu Yu Tang" },
     { id: "bdef", name: "Blood deficiency", fam: "white", zones: ["heart", "liver", "spleen"], of: 5,
@@ -62603,7 +62609,7 @@ or changing anything in Cliniko.
       letters: ["food"], food: ["Cooling foods: cucumber, mung bean, pear", "Cut back chilli, alcohol and coffee"],
       supp: [], points: "LI11, SP10, KI2, LR2, SP6", formula: "Qing Re Gu Jing Tang or Liang Di Tang" },
     { id: "qistag", name: "Qi stagnation", fam: "green", zones: ["liver", "chest"], of: 5,
-      keys: ["pms", "stress", "irregular_hx", "irregular_len", "low_mood", "cramp", "p_wiry", "a_ribs", "a_epi", "a_lowerR", "bt_chaihu", "bt_banxia", "sl_hard", "sl_wake", "pr_shoulder"],
+      keys: ["pms", "stress", "irregular_hx", "irregular_len", "low_mood", "cramp", "p_wiry", "a_ribs", "a_epi", "a_lowerR", "bt_chaihu", "bt_banxia", "sl_hard", "sl_wake", "pr_shoulder", "pn_move"],
       letters: ["signs"], food: ["Regular meals, not rushed", "Citrus peel, mint and rose tea"],
       supp: [], points: "LR3, LI4, PC6, GB34, Ren17", formula: "Xiao Yao San" },
     { id: "qidef", name: "Qi deficiency", fam: "sand", zones: ["spleen", "lung"], of: 5,
@@ -62645,6 +62651,13 @@ or changing anything in Cliniko.
       letters: ["food"], food: ["Warm cooked food, ginger and jujube tea", "Avoid cold raw food and iced drinks", "Regular small meals rather than large ones"],
       supp: [], points: "Ren4, Ren6, Ren12, ST36, SP3, PC6 (moxa)", formula: "Xiao Jian Zhong Tang" }
   ];
+  // which bt_<family> clues any pattern above actually reads -- derived, not
+  // hand-maintained, so it can never go stale as patterns change. Shi Gao
+  // and Huang Lian (PH_BTJ's 8th/9th families, added 2026-10-08) have no
+  // pattern wired to them yet; without this, Triangle naming either as a
+  // patient's leading family produced a bt_shigao/bt_huanglian clue no
+  // pattern's keys list has ever read (audit item 6, 2026-10-10).
+  const PH_PAT_BT_WIRED = new Set(PH_PAT_DEFS.flatMap(d => d.keys).filter(k => k.startsWith("bt_")));
   // her edits: { rules: { patId: { name, keys, of, letters, food, supp, points, formula, off } }, colours: { patId: famId } }
   // Created in memory only -- a read never calls savePharmacy (same rule as phTpMgrOverrides).
   function phPatOverrides() {
@@ -62847,7 +62860,7 @@ or changing anything in Cliniko.
     // -- body type: the questionnaire this used to read (her ask 2026-10-03) retired 2026-10-09 --
     // reads the same leading-family signal from Fang Bing Ren's real Ren taps now instead.
     const btTop = phFbrRenLead(rec, name);
-    if (btTop && PH_BTJ[btTop]) add("bt_" + btTop, "bt", `${PH_BTJ[btTop].n} body type (Fang Bing Ren)`, { tab: "ren" }, rec.tri && rec.tri.at ? phCycShortLbl(keyOf(new Date(rec.tri.at))) : "");
+    if (btTop && PH_BTJ[btTop] && PH_PAT_BT_WIRED.has("bt_" + btTop)) add("bt_" + btTop, "bt", `${PH_BTJ[btTop].n} body type (Fang Bing Ren)`, { tab: "ren" }, rec.tri && rec.tri.at ? phCycShortLbl(keyOf(new Date(rec.tri.at))) : "");
     // -- feeling the cold (2026-10-08, superseding the body-type-questionnaire version of this
     // same day): "Sensitive to cold?" moved to Triangle when Ren's 24 Gui Zhi questions were
     // retired, so read Triangle's own explicit taps here -- Disease's "cold_feel" row or
