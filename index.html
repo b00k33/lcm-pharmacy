@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261010-160000">
+<meta name="lcm-build" content="20261010-174500">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6995,6 +6995,9 @@
   #pharmacyPage .ph-pat-chip:hover { transform: translateY(-1px); }
   #pharmacyPage .ph-pat-chip .ph-pat-bub { width: 22px; height: 22px; border-radius: 50%; background: var(--c); color: var(--on); display: grid; place-items: center; font-size: var(--fs-12); }
   #pharmacyPage .ph-pat-chip small { font: 600 var(--fs-10) var(--font-disp, inherit); letter-spacing: .6px; text-transform: uppercase; opacity: .8; }
+  #pharmacyPage .ph-pat-chip .ok { display: none; color: #1E8449; font-size: var(--fs-13); }
+  #pharmacyPage .ph-pat-chip.agreed { box-shadow: inset 0 0 0 2px var(--c); }
+  #pharmacyPage .ph-pat-chip.agreed .ok { display: inline-block; animation: phPatPop .4s cubic-bezier(.2, 1.6, .4, 1); }
   #pharmacyPage .ph-pat-strip .go { margin-left: auto; font: 600 var(--fs-12) var(--font-disp, inherit); color: var(--ph-herb); background: none; border: 0; cursor: pointer; padding: 0; }
   /* opening motion: only when first opened for a patient (presPatSeen), never on a plain repaint */
   #pharmacyPage .ph-pat.intro:not(.go) .ph-pat-seg { stroke-dashoffset: var(--len); }
@@ -7358,10 +7361,11 @@
   #pharmacyPage .ph-tp-hero.first > .g:nth-child(3) { animation-delay: 110ms; }
   /* her ask 2026-10-10 ("i dont use this much on the plan page ... it takes
      up too much space"): the Plan tab's own instance of this shared band
-     (Visits so far / Phase / Next) shrinks -- the Pregnant? button stays,
-     she just wants less of it. Scoped to .ph-tp-plan-band only, the OTHER
-     three .ph-tp-hero variants (History's ph-hx-band, Patterns' ph-pb-band,
-     the template manager's ph-tp-mgr-band) are untouched. */
+     (Visits so far / Phase / Next) shrinks. Scoped to .ph-tp-plan-band only,
+     the OTHER three .ph-tp-hero variants (History's ph-hx-band, Patterns'
+     ph-pb-band, the template manager's ph-tp-mgr-band) are untouched. The
+     Pregnant? button (same-day follow-up ask) has since moved off this band
+     entirely, onto the Cycle tab's own ph-pb-cycle band -- see presBandHtml. */
   #pharmacyPage .ph-tp-plan-band { padding: 11px 20px 12px; gap: 10px 26px; margin-bottom: 10px; }
   #pharmacyPage .ph-tp-plan-band .ring { width: 60px; height: 60px; }
   #pharmacyPage .ph-tp-plan-band .n4 { font-size: var(--fs-36); }
@@ -36582,6 +36586,7 @@
       if (phRenTabClick(e)) return;
       if (phPfwClick(e)) return;
       if (phPatClick(e)) return;
+      if (phPatStripClick(e)) return;
       if (phPatSetClick(e)) return;
       const flowProf = e.target.closest("[data-flow-prof]");
       if (flowProf) {
@@ -56709,7 +56714,16 @@ or changing anything in Cliniko.
     presBandSeen.set(sk, { sigs, mem: ctx.mem });
     if (anim && !seen) requestAnimationFrame(() => presPfCountUp(`[data-band-kind="${kind}"] [data-pf-count]`));
     const ringed = /(^| )visit( |$)/.test(gs[0].cls || "");
-    return `<div class="ph-tp-hero ph-pb-band ph-pb-${kind}${ringed ? " ringed" : ""}${seen ? "" : " first"}" data-band-kind="${kind}" data-band-name="${esc(name)}" data-band-arg="${esc(arg || "")}" data-band-sig="${esc(sigs.join("¦"))}">${gs.map((g, i) => `<div class="g ${g.cls || ""}${anim && seen && seen.sigs[i] !== sigs[i] ? " nudge" : ""}">${g.html}</div>`).join("")}</div>`;
+    // her ask 2026-10-10 ("move the pregnant chip to the cycle tab, remove
+    // it from [the Plan tab band]"): the Pregnant?/test-entry chip + its
+    // popover + confirm banner moved from the Plan tab's own instrument
+    // band (phTpHeroHtml) onto this one -- same self-contained ph-preg-*
+    // markup, just a different host, so phPregClick finds it via
+    // data-preg-host instead of data-tp-hero.
+    const pregRec = kind === "cycle" ? phPatientPeek(name) : null;
+    const preg = kind === "cycle" ? phPregRowHtml(name, pregRec) : "";
+    const pregExtra = kind === "cycle" ? `${phPregPopHtml(name, pregRec)}${phPregBannerHtml(name, pregRec)}` : "";
+    return `<div class="ph-tp-hero ph-pb-band ph-pb-${kind}${ringed ? " ringed" : ""}${seen ? "" : " first"}" data-band-kind="${kind}" data-band-name="${esc(name)}" data-band-arg="${esc(arg || "")}" data-band-sig="${esc(sigs.join("¦"))}"${kind === "cycle" ? ` data-preg-host="${esc(name)}"` : ""}>${preg}${gs.map((g, i) => `<div class="g ${g.cls || ""}${anim && seen && seen.sigs[i] !== sigs[i] ? " nudge" : ""}">${g.html}</div>`).join("")}${pregExtra}</div>`;
   }
   // recompute every band on screen; swap only one whose facts moved
   function presBandsSync(root) {
@@ -65655,13 +65669,46 @@ or changing anything in Cliniko.
     host.outerHTML = presPatHostHtml(name);
     return true;
   }
-  // a short strip for the Plan tab: the top patterns as chips, tapping goes to the page
-  function presPatStripHtml(name) {
+  // a short strip for the Plan tab: the top patterns as chips. Her ask
+  // (2026-10-10, "allow for fang bing ren patterns to be in diagnosis/
+  // pattern - i can confirm which patterns for patient"): a chip itself now
+  // confirms that pattern for her, right here, instead of only linking away
+  // to the full page -- reuses phPatAgree/phPatUnagree (the same write the
+  // full Patterns page's "Agree + add to Diagnosis" already does), so this
+  // is a second entry point into one existing mechanism, not a new one.
+  // "Open Fang Bing Ren ›" still navigates, for the full card/why-matched detail.
+  function presPatStripHtml(name, plan) {
     let comp;
     try { comp = phPatCompute(name); } catch (e) { return ""; }
     if (!comp.shown.length) return "";
     const top = comp.shown.slice(0, 3);
-    return `<div class="ph-pat-strip" data-pat-name="${esc(name)}"><span class="ph-pat-lab">Fang Bing Ren</span>${top.map(p => `<button type="button" class="ph-pat-chip pf-${p.def.fam}" data-flow-prof="patterns"><span class="ph-pat-bub">${phPatIc(PH_PAT_ICON[p.def.id] || "i-pt-drop")}</span>${esc(p.def.name)} <small>${PH_PAT_LVL[p.level][0]}</small></button>`).join("")}<button type="button" class="go" data-flow-prof="patterns">Open Fang Bing Ren ›</button></div>`;
+    return `<div class="ph-pat-strip" id="phPatStripBox" data-pat-name="${esc(name)}"><span class="ph-pat-lab">Fang Bing Ren</span>${top.map(p => `<button type="button" class="ph-pat-chip pf-${p.def.fam}${p.agreed ? " agreed" : ""}" data-pat-strip-agree="${p.def.id}" title="${p.agreed ? "Confirmed for her — tap to undo" : "Tap to confirm this pattern — adds it to Diagnosis / pattern"}"><span class="ph-pat-bub">${phPatIc(PH_PAT_ICON[p.def.id] || "i-pt-drop")}</span>${esc(p.def.name)} <small>${PH_PAT_LVL[p.level][0]}</small><span class="ok">${phPatIc("i-check")}</span></button>`).join("")}<button type="button" class="go" data-flow-prof="patterns">Open Fang Bing Ren ›</button></div>`;
+  }
+  // scoped repaint for the strip above -- never a full rerender, same
+  // reason every other Plan-tab sub-widget has its own (see presPatRefresh)
+  function presPatStripRefresh(name) {
+    const box = document.getElementById("phPatStripBox");
+    if (!box || phPatientKey(box.dataset.patName) !== phPatientKey(name)) return false;
+    box.outerHTML = presPatStripHtml(name, phPatPlanFor(name));
+    return true;
+  }
+  function phPatStripClick(e) {
+    const T = e.target; let el;
+    if (!T || !T.closest || !(el = T.closest("[data-pat-strip-agree]"))) return false;
+    const box = T.closest("#phPatStripBox");
+    const name = box ? box.dataset.patName : phPfwName();
+    if (!name) return true;
+    const id = el.dataset.patStripAgree;
+    let comp; try { comp = phPatCompute(name); } catch (err) { return true; }
+    const p = comp.pats.find(x => x.def.id === id);
+    const wasAgreed = !!(p && p.agreed);
+    const ok = wasAgreed ? phPatUnagree(name, id) : phPatAgree(name, id, true);
+    if (!ok) { presSavedToast(PH_PAT_SAVE_FAIL); return true; }
+    presSavedToast(wasAgreed ? "Undone." : `Confirmed — "${p ? p.def.name : id}" added to Diagnosis / pattern.`);
+    presPatStripRefresh(name);
+    const plan = phPatPlanFor(name);
+    if (plan) phTpFgRefresh(name, plan.id);
+    return true;
   }
   // ---- PATTERNS page handlers. phPatClick is called from the #pharmacyPage click
   // delegate; it returns true when it handled the tap. Nothing is written until
@@ -71211,16 +71258,18 @@ or changing anything in Cliniko.
     const next = `<div class="g next${nudge ? " nudge" : ""}"><div class="lab">${esc(nLab)}</div><div class="big dt">${esc(nBig)}</div><div class="sm"><span class="dot"></span>${esc(nSm)}</div>${nAhead ? `<div class="sm">${nAhead}</div>` : ""}</div>`;
     phTpHeroSeen.set(plan.id, { done: doneKeys, liveId: live ? live.id : "", nextKey });
     if (count) requestAnimationFrame(() => phTpHeroCountUp(plan.id));
-    return `<div class="ph-tp-hero ph-tp-plan-band${seen ? "" : " first"}" data-tp-hero="${plan.id}" data-tp-hero-name="${esc(name)}">${phPregRowHtml(name, rec)}${visit}${phase}${next}${phPregPopHtml(name, rec)}${phPregBannerHtml(name, rec)}</div>`;
+    return `<div class="ph-tp-hero ph-tp-plan-band${seen ? "" : " first"}" data-tp-hero="${plan.id}" data-tp-hero-name="${esc(name)}">${visit}${phase}${next}</div>`;
   }
-  // ==== "Pregnant?" button on the Plan-tab band (her pick A on the "log pregnancy"
-  // mock, 2026-10-06: "a, build and push"). A patient-level pregnancy test
-  // (rec.pregTest) so it works for EVERY patient, not only IVF; when she has an
-  // IVF transfer it is mirrored onto the latest one (pregResult / pregKind /
-  // pregTestDate / pregHcg, the fields the IVF card already reads). Saving a
-  // POSITIVE (and only a genuine move to positive, never a repeat save) moves
-  // any active plan that has an Early Pregnancy phase onto it. Motion only on
-  // the change; reduced motion respected. ====
+  // ==== "Pregnant?" button (her pick A on the "log pregnancy" mock,
+  // 2026-10-06: "a, build and push"; moved off the Plan tab's own band onto
+  // the Cycle tab's band 2026-10-10 -- "i dont use it" there). A
+  // patient-level pregnancy test (rec.pregTest) so it works for EVERY
+  // patient, not only IVF; when she has an IVF transfer it is mirrored onto
+  // the latest one (pregResult / pregKind / pregTestDate / pregHcg, the
+  // fields the IVF card already reads). Saving a POSITIVE (and only a
+  // genuine move to positive, never a repeat save) moves any active plan
+  // that has an Early Pregnancy phase onto it. Motion only on the change;
+  // reduced motion respected. ====
   const phPregUi = { key: "", open: false, mode: "date", kind: "urine", result: "positive", date: "", hcg: "", wk: "", wd: "", due: "" };
   // mode "weeks"/"due" let her skip a test date entirely -- she just tells me how far
   // along, or the due date her doctor gave. Both convert to the same stored pt.date
@@ -71334,12 +71383,19 @@ or changing anything in Cliniko.
       phTpCascadeTo(phases, idx, null);
     });
   }
+  // scoped repaint for the pregnancy chip/popover/banner -- it now lives on
+  // the Cycle tab's own band (data-preg-host, see presBandHtml), so a
+  // toggle re-renders just that band rather than falling through to
+  // phTpPlanRepaint (which looks for [data-tp-hero], not present there).
+  function phPregRepaint(hero) {
+    hero.outerHTML = presBandHtml("cycle", hero.dataset.pregHost);
+  }
   function phPregClick(e) {
     const el = e.target.closest("[data-preg-open],[data-preg-mode],[data-preg-kind],[data-preg-res],[data-preg-save],[data-preg-cancel]");
     if (!el) return false;
-    const hero = el.closest("[data-tp-hero]");
+    const hero = el.closest("[data-preg-host]");
     if (!hero) return false;
-    const name = hero.dataset.tpHeroName, key = phPatientKey(name);
+    const name = hero.dataset.pregHost, key = phPatientKey(name);
     const dEl = hero.querySelector("#phPregDate"), hEl = hero.querySelector("#phPregHcg");
     const wEl = hero.querySelector("#phPregWeeks"), ddEl = hero.querySelector("#phPregDays"), dueEl = hero.querySelector("#phPregDue");
     if (dEl) phPregUi.date = dEl.value;
@@ -71353,12 +71409,12 @@ or changing anything in Cliniko.
         const pt = (phPatientPeek(name) || {}).pregTest;
         Object.assign(phPregUi, { key, open: true, mode: "date", kind: pt && pt.kind === "blood" ? "blood" : "urine", result: pt && pt.result ? pt.result : "positive", date: pt && pt.date ? pt.date : keyOf(phLiveToday()), hcg: pt && pt.hcg != null ? String(pt.hcg) : "", wk: "", wd: "", due: "" });
       }
-      phTpPlanRepaint(); return true;
+      phPregRepaint(hero); return true;
     }
-    if (el.dataset.pregMode) { phPregUi.mode = el.dataset.pregMode; phTpPlanRepaint(); return true; }
-    if (el.dataset.pregKind) { phPregUi.kind = el.dataset.pregKind; phTpPlanRepaint(); return true; }
-    if (el.dataset.pregRes) { phPregUi.result = el.dataset.pregRes; phTpPlanRepaint(); return true; }
-    if (el.dataset.pregCancel) { phPregUi.open = false; phTpPlanRepaint(); return true; }
+    if (el.dataset.pregMode) { phPregUi.mode = el.dataset.pregMode; phPregRepaint(hero); return true; }
+    if (el.dataset.pregKind) { phPregUi.kind = el.dataset.pregKind; phPregRepaint(hero); return true; }
+    if (el.dataset.pregRes) { phPregUi.result = el.dataset.pregRes; phPregRepaint(hero); return true; }
+    if (el.dataset.pregCancel) { phPregUi.open = false; phPregRepaint(hero); return true; }
     if (el.dataset.pregSave) {
       const today = keyOf(phLiveToday());
       const mode = phPregUi.mode || "date";
@@ -71388,8 +71444,11 @@ or changing anything in Cliniko.
       phPregUi.open = false;
       if (result === "positive") phPregFresh = { key, at: Date.now() };
       presSavedToast(result === "positive" ? "✓ Pregnancy saved — plan moved to Early Pregnancy" : "✓ Negative test saved");
-      // a positive moves the plan's phase, so the tiles and grid move too: swap the whole tab in place (never renderPresPanel, which resets scroll)
-      if (!(result === "positive" && presTpMainTabRefresh())) phTpPlanRepaint();
+      // a positive moves the plan's phase, so the Plan tab's own tiles and
+      // grid move too even though she's on the Cycle tab right now: swap
+      // the whole tab host in place (never renderPresPanel, which resets
+      // scroll) so it's already fresh whenever she switches back to Plan.
+      if (!(result === "positive" && presTpMainTabRefresh())) phPregRepaint(hero);
       else if (typeof presFlowRailRefresh === "function") presFlowRailRefresh();
       if (result === "positive") phPregCountUp();
       return true;
@@ -71600,7 +71659,7 @@ or changing anything in Cliniko.
         ${phTpReorderOpen === plan.id ? phTpReorderPanelHtml(plan) : ""}
         ${phTpFocusGoalHtml(name, plan)}${phTpProtocolPickHtml(plan)}
         ${phTpTilesHtml(name, plan)}
-        ${presPatStripHtml(name)}
+        ${presPatStripHtml(name, plan)}
         <div class="ph-tp-mergewidget">${phTpSessionLadderHtml(name, plan)}</div>
         ${phTpScansHtml(name, plan)}
         ${schedInner ? `<div class="ph-tp-panel noph">${schedInner}</div>` : ""}
