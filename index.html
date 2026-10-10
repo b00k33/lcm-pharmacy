@@ -7439,6 +7439,7 @@
   /* "also treating" -- a second, smaller re-check row per other listed complaint
      (her ask 2026-10-10) */
   #pharmacyPage .ph-rc-other { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--ph-line); }
+  #pharmacyPage .ph-rc-other.prim { border: 0; margin: 0 0 6px; padding: 0; }
   #pharmacyPage .ph-rc-other .lab { display: block; font-size: var(--fs-12); color: var(--ph-soft); margin-bottom: 5px; }
   #pharmacyPage .ph-rc-minichips { display: flex; gap: 5px; }
   #pharmacyPage .ph-rc-minichip { border: 1.5px solid var(--ph-line); background: var(--ph-white); color: var(--ph-ink); border-radius: 999px; width: 30px; height: 26px; font-size: var(--fs-13); cursor: pointer; min-height: 0; }
@@ -15236,6 +15237,14 @@
   @keyframes phCc2In { from { opacity: 0; transform: scale(.85); } }
   #pharmacyPage .ph-cc2-said { margin: 8px 0 0; font-size: var(--fs-12-5); color: var(--ph-soft); }
   #pharmacyPage .ph-cc2-said q { color: var(--ph-ink); font-weight: 500; }
+  #pharmacyPage .ph-cc2-rows { display: grid; gap: 8px; }
+  #pharmacyPage .ph-cc2-row { display: grid; grid-template-columns: 62px minmax(0, 1fr); align-items: center; gap: 8px; }
+  #pharmacyPage .ph-cc2-rl { font-size: var(--fs-11); font-weight: 600; color: var(--ph-faint); }
+  #pharmacyPage .ph-cc2-pill .x { margin-left: 2px; padding: 0 3px; border-radius: 50%; font-size: var(--fs-14); line-height: 1; color: var(--ph-herb-card); transition: color .15s ease, transform .15s ease; }
+  #pharmacyPage .ph-cc2-pill .x:hover { color: var(--ph-gyn, #A83C50); transform: scale(1.2); }
+  #pharmacyPage .ph-cc2-pill.main .x { color: rgba(255,255,255,.7); }
+  #pharmacyPage .ph-cc2-go { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; font-size: var(--fs-11); font-weight: 600; color: var(--ph-faint); }
+  #pharmacyPage .ph-cc2-go .ph-pfw-link { padding: 0; }
   #pharmacyPage .ph-cc2-fold { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .32s cubic-bezier(.2,.8,.2,1); }
   #pharmacyPage .ph-cc2-fold.open { grid-template-rows: 1fr; }
   #pharmacyPage .ph-cc2-fold > div { overflow: hidden; min-height: 0; }
@@ -37378,6 +37387,7 @@
             const names = [];
             if (off.has("main")) names.push(activePlan.templateName || "Main condition");
             (activePlan.also || []).forEach(a => { if (off.has(a.id)) names.push(a.name || "Condition"); });
+            phTpTreatedCcSecondaries(activePlan, presPatientFor(PRESC.items.find(x => x.id === presOpenId) || {}) || "").forEach(f => { if (off.has("cc:" + f.id)) names.push(f.label); });
             if (names.length) session.notTreated = names;
             phTpTreatedOff.delete(activePlan.id);
           }
@@ -63320,7 +63330,7 @@ or changing anything in Cliniko.
   }
   // view state for the card's motion (never saved): the chips just opened (enter), a change was
   // saved (flash the "Saved" tick), and where the How-long thumb slides from
-  var phCcEnter = false, phCcSaved = false, phCcSegFrom = null;
+  var phCcEnter = false, phCcSaved = false, phCcSegFrom = null, phCcAddOpen = false;
   const phCcChev = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>`;
   // her 2026-10-05 ("she already has a neck & shoulder plan but the profile still asks what brings
   // her in"): a patient with a plan but no complaint on record is not "not asked yet". Read the
@@ -63354,18 +63364,29 @@ or changing anything in Cliniko.
     const sel = c ? c.fams : (fp ? [fp.fam.id] : []), mainId = c ? phCcMainId(c) : (fp ? fp.fam.id : null), mf = phCcFam(mainId);
     // a man is not asked about periods or menopause; fertility stays, worded for him
     const male = rec.sex === "M";
-    const multi = sel.length > 1;
-    const pill = (f, k) => {
-      const on = sel.includes(f.id), main = on && multi && f.id === mainId;
-      if (!open && !on) return "";
-      const lab = male && f.id === "fertility" ? "Fertility" : f.label;
-      const star = on && (open || main) ? `<span class="st${phCcPop === f.id && main ? " ping" : ""}" data-cc-star="${f.id}" role="button" title="${main ? "Main complaint" : "Make this the main one"}" aria-label="Make ${esc(lab)} the main complaint">${main ? "★" : "☆"}</span>` : "";
-      const extra = phCcEnter && !on ? " ph-cc2-extra" : "";
-      return `<button type="button" class="ph-cc2-pill${on ? " on" : ""}${main ? " main" : ""}${phCcPop === f.id ? " pop" : ""}${extra}" style="--k:${k}" data-cc-fam="${f.id}" aria-pressed="${on ? "true" : "false"}" title="${esc(lab)} (key ${k + 1})">${phCcIcHtml(f.ic)}${esc(lab)}${star}</button>`;
+    // her 2nd pass 2026-10-10 ("keep this simple, show selected and hide the rest ... primary and
+    // secondary complaints, connected to Treatment and Review"): only what is picked is shown, as
+    // a Primary row and a Secondary row. Tap a secondary to make it primary, x removes, "＋ Add"
+    // lists the rest for one pick and folds away again.
+    const labOf = f => male && f.id === "fertility" ? "Fertility" : f.label;
+    const selPill = (id, isMain) => {
+      const f = phCcFam(id); if (!f) return "";
+      const x = open ? `<span class="x" data-cc-rm="${id}" role="button" title="Remove" aria-label="Remove ${esc(labOf(f))}">×</span>` : "";
+      return `<button type="button" class="ph-cc2-pill on${isMain ? " main" : ""}${phCcPop === id ? " pop" : ""}" data-cc-fam="${id}" title="${isMain ? "Primary complaint" : "Make primary"}">${phCcIcHtml(f.ic)}${esc(labOf(f))}${x}</button>`;
     };
-    const pills = PH_CC_FAMS.filter(f => !(male && (f.id === "periods" || f.id === "meno"))).map(pill).join("");
+    const secIds = sel.filter(id => id !== mainId);
+    const addShown = open && (phCcAddOpen || !sel.length);
+    const addPills = addShown ? PH_CC_FAMS.filter(f => !sel.includes(f.id) && !(male && (f.id === "periods" || f.id === "meno"))).map((f, k) => `<button type="button" class="ph-cc2-pill ph-cc2-extra" style="--k:${k}" data-cc-pick="${f.id}">${phCcIcHtml(f.ic)}${esc(labOf(f))}</button>`).join("") : "";
+    const addBtn = open && sel.length && !phCcAddOpen ? `<button type="button" class="ph-cc2-pill ghost" data-cc-add="1">＋ Add</button>` : "";
+    const rowP = mainId ? `<div class="ph-cc2-row"><span class="ph-cc2-rl">Primary</span><div class="ph-cc2-chips">${selPill(mainId, true)}</div></div>` : (!open ? `<div class="ph-cc2-chips"><button type="button" class="ph-cc2-pill ghost" data-cc-edit="1">＋ Add</button></div>` : "");
+    const rowS = secIds.length || addBtn ? `<div class="ph-cc2-row"><span class="ph-cc2-rl">Secondary</span><div class="ph-cc2-chips">${secIds.map(id => selPill(id, false)).join("")}${addBtn}</div></div>` : "";
+    const rowA = addShown ? `<div class="ph-cc2-row"><span class="ph-cc2-rl">${sel.length ? "Add" : "Pick"}</span><div class="ph-cc2-chips">${addPills}</div></div>` : "";
+    const pills = rowP + rowS + rowA;
     const said = !open ? (c && (c.said || c.dur) ? `<p class="ph-cc2-said">${c.said ? `<q>${esc(c.said)}</q>` : ""}${c.said && c.dur ? " · " : ""}${c.dur ? "for " + esc(c.dur.toLowerCase()) : ""}</p>` : (fp ? `<p class="ph-cc2-said">From the ${esc(fp.plan)} plan</p>` : "")) : "";
-    const ghost = !open ? `<button type="button" class="ph-cc2-pill ghost" data-cc-edit="1">${sel.length ? "Edit" : "＋ Add"}</button>` : "";
+    const ghost = "";
+    // where this is used: the same answer drives the Treatment tab's "Treated today" ticks and
+    // the Review tab's re-check rows, so say so and link there (only once something is picked)
+    const go = c ? `<div class="ph-cc2-go"><span>Used in</span><button type="button" class="ph-pfw-link" data-flow-go="treatment">Treatment${secIds.length ? ` · ticks ${secIds.length} secondary` : ""} &rsaquo;</button><button type="button" class="ph-pfw-link" data-flow-go="review">Review &rsaquo;</button></div>` : "";
     const feeds = open && mf ? `<div class="ph-cc2-feeds${phCcPop ? " flash" : ""}"><span class="dot"></span><span><b>${esc(phCcCatLabel(mf.cat))}</b> plans first</span></div>` : "";
     const di = c ? PH_CC_DUR.indexOf(c.dur) : -1, dFrom = phCcSegFrom != null ? phCcSegFrom : di;
     const panel = open ? `<div class="ph-cc2-fold${phCcEnter ? "" : " open"}"><div><div class="ph-cc2-panel">${feeds}
@@ -63376,7 +63397,7 @@ or changing anything in Cliniko.
       </div></div></div>` : "";
     return `<div class="ph-cc2${open ? " open" : ""}${isNew && !c && !fp ? " fresh" : ""}${cl}" data-cc-host="1">
       <div class="ph-cc2-hd"><span class="ph-cc2-lbl">Came in for</span><span class="ph-cc2-r"><span class="ph-cc2-sv${phCcSaved ? " show" : ""}">Saved ✓</span><button type="button" class="ph-cc2-x" data-cc-toggle="1" aria-expanded="${open ? "true" : "false"}" title="${open ? "Close" : "Edit"}" aria-label="${open ? "Close" : "Edit"}">${phCcChev}</button></span></div>
-      <div class="ph-cc2-chips">${pills}${ghost}</div>${said}${panel}
+      <div class="ph-cc2-rows">${pills}</div>${said}${panel}${go}
     </div>`;
   }
   // paints the just-swapped card: slides the panel open (it is rendered shut on the frame it
@@ -63420,7 +63441,7 @@ or changing anything in Cliniko.
   function phCcCloseCard(later) {
     const n = phPfwName(); if (!n) return;
     const key = phPatientKey(n), card = document.querySelector("#pharmacyPage .ph-cc2[data-cc-host]"), fold = card && card.querySelector(".ph-cc2-fold");
-    const done = () => { phCcOpen.delete(key); if (later) phCcSkip.add(key); phCcRefresh(true); };
+    const done = () => { phCcOpen.delete(key); phCcAddOpen = false; if (later) phCcSkip.add(key); phCcRefresh(true); };
     if (fold && fold.classList.contains("open") && !phTpReduceMotion()) { fold.classList.remove("open"); setTimeout(done, 280); } else done();
   }
   function phCcSavedFlash() {
@@ -63462,8 +63483,10 @@ or changing anything in Cliniko.
     if (!T || !T.closest) return false;
     // a chip tap on a shut card opens it first (the chips grow in place); once open it picks
     const shut = !(T.closest(".ph-cc2") || document.createElement("i")).classList.contains("open");
-    if ((el = T.closest("[data-cc-star]"))) { if (shut) phCcOpenCard(); else phCcSetMain(el.dataset.ccStar); return true; }
-    if ((el = T.closest("[data-cc-fam]"))) { if (shut) phCcOpenCard(); else phCcToggle(el.dataset.ccFam); return true; }
+    if ((el = T.closest("[data-cc-rm]"))) { phCcToggle(el.dataset.ccRm); return true; }
+    if ((el = T.closest("[data-cc-pick]"))) { phCcAddOpen = false; phCcToggle(el.dataset.ccPick); return true; }
+    if (T.closest("[data-cc-add]")) { phCcAddOpen = true; phCcEnter = false; phCcRefresh(true); return true; }
+    if ((el = T.closest("[data-cc-fam]"))) { if (shut) phCcOpenCard(); else phCcSetMain(el.dataset.ccFam); return true; }
     if ((el = T.closest("[data-cc-guess]"))) { const n0 = phPfwName(), inp = document.querySelector("#pharmacyPage [data-cc-said-in]"); if (n0 && inp) phCcSaid(inp.value, false); phCcToggle(el.dataset.ccGuess); return true; }
     if ((el = T.closest("[data-cc-said]"))) { phCcSaid(el.dataset.ccSaid, true); return true; }
     if ((el = T.closest("[data-cc-dur]"))) { phCcDur(el.dataset.ccDur); return true; }
@@ -63500,10 +63523,6 @@ or changing anything in Cliniko.
     // the whole script page, registered later in this file) never also fires
     if (e.key === "Escape") { e.preventDefault(); e.stopImmediatePropagation(); phCcCloseCard(!(n && phCcOf(n))); return; }
     if (T.matches("[data-cc-said-in]")) { if (e.key === "Enter") { e.preventDefault(); phCcSaid(T.value, false); phCcCloseCard(!(n && phCcOf(n))); } return; }
-    if (/^[1-8]$/.test(e.key)) {
-      const chip = card.querySelectorAll("[data-cc-fam]")[+e.key - 1];
-      if (chip) { e.preventDefault(); phCcToggle(chip.dataset.ccFam); }
-    }
   });
   // click away closes an open card once there is a complaint on record (a patient with none yet
   // keeps it open: that one is a question still waiting for an answer, not a setting)
@@ -63539,10 +63558,10 @@ or changing anything in Cliniko.
       const fam = phCcFam(id); if (!fam) return "";
       const cur = rc && rc.other && rc.other[id] || "";
       const mini = PH_RC_OPTS.map(x => `<button type="button" class="ph-rc-minichip${cur === x[0] ? " on" : ""}" data-rc-other-pick="${id}:${x[0]}" aria-pressed="${cur === x[0] ? "true" : "false"}" title="${esc(x[1])}">${x[2]}</button>`).join("");
-      return `<div class="ph-rc-other"><span class="lab">Also treating: ${esc(fam.label)}</span><div class="ph-rc-minichips">${mini}</div></div>`;
+      return `<div class="ph-rc-other"><span class="lab">Secondary: ${esc(fam.label)}</span><div class="ph-rc-minichips">${mini}</div></div>`;
     }).join("");
     return `<div class="ph-cc ph-rc${cl}" data-rc-host="1">
-      <h3>Re-check · what changed since last visit?</h3>
+      <h3>Re-check · what changed since last visit?</h3>${cc && phCcFam(mainId) ? `<div class="ph-rc-other prim"><span class="lab">Primary: ${esc(phCcFam(mainId).label)}</span></div>` : ""}
       <div class="ph-rc-chips">${chips}</div>
       <input type="text" class="ph-cc-said" data-rc-note-in="1" maxlength="160" value="${esc((rc && rc.note) || "")}" placeholder="a few words, e.g. sleeping better, pain less sharp" aria-label="What changed">
       ${otherRows}
@@ -71705,17 +71724,30 @@ or changing anything in Cliniko.
   // condition's current stage says to do. View state only until she logs the
   // session; only an UNTICKED condition is then stored (session.notTreated).
   const phTpTreatedOff = new Map();   // planId -> Set of "main" | alsoId she unticked today
-  function phTpTreatedRowHtml(plan, row) {
+  // her 2026-10-10 ask ("primary and secondary complaints ... integrated"): the SECONDARY
+  // complaints on the Patient details card (rec.complaint) get a tick here too, keyed
+  // "cc:<famId>", unless a plan's "Also treating" already covers that complaint (same family of
+  // plan templates) -- one list, never the same condition twice.
+  function phTpTreatedCcSecondaries(plan, name) {
+    const cc = name ? phCcOf(name) : null;
+    if (!cc) return [];
+    const mainId = phCcMainId(cc), also = (plan && plan.also) || [];
+    const tpl = phTpAllTemplates().find(x => x.name === plan.templateName), planTid = tpl ? tpl.id : null;
+    return cc.fams.filter(id => id !== mainId).map(phCcFam).filter(f => f
+      && !(f.plans || []).includes(planTid) && !also.some(a => (f.plans || []).includes(a.templateId)));
+  }
+  function phTpTreatedRowHtml(plan, row, name) {
     const list = (plan && plan.also) || [];
-    if (!list.length) return "";
+    const ccSec = phTpTreatedCcSecondaries(plan, name);
+    if (!list.length && !ccSec.length) return "";
     const off = phTpTreatedOff.get(plan.id) || new Set();
     const tick = (key, label) => `<button type="button" class="ph-treated-tick${off.has(key) ? "" : " on"}" data-tp-treated="${esc(plan.id)}|${esc(key)}" aria-pressed="${!off.has(key)}"><i>${off.has(key) ? "" : "✓"}</i>${esc(label)}</button>`;
     const planned = list.map(a => {
       const phs = a.phases || [], st = Math.min(Math.max(a.stage | 0, 0), Math.max(phs.length - 1, 0));
       const pts = (phs[st] && phs[st].points) || "";
       return `<div class="ph-treated-pl"><b>${esc(a.name || "")}</b> ${pts ? phTpPointsPillsHtml(pts) || esc(pts) : `<span class="quiet">no points set</span>`}</div>`;
-    }).join("");
-    const ticks = `<div class="ph-treated">${tick("main", plan.templateName || "Main condition")}${list.map(a => tick(a.id, a.name || "Condition")).join("")}</div>`;
+    }).join("") + ccSec.map(f => `<div class="ph-treated-pl"><b>${esc(f.label)}</b> <span class="quiet">secondary complaint · no plan</span></div>`).join("");
+    const ticks = `<div class="ph-treated">${tick("main", plan.templateName || "Main condition")}${list.map(a => tick(a.id, a.name || "Condition")).join("")}${ccSec.map(f => tick("cc:" + f.id, f.label)).join("")}</div>`;
     return row("treated", "Treated today", `<td class="ph-tp-cell frozen">${planned}</td>`, ticks);
   }
   // write one change onto plan.also[i]; the plan is re-resolved by id every time
@@ -72913,7 +72945,7 @@ or changing anything in Cliniko.
       <table class="ph-tp-grid two ph-tp-vtab${futureCells.length ? " has-fut" : ""}"><colgroup><col class="c-lbl"><col class="c-plan"><col class="c-today">${futureCells.map(() => `<col class="c-fut">`).join("")}</colgroup><tbody>
         <tr class="ph-tp-headrow"><td></td><td class="ph-tp-colhead plan">Planned</td><td class="ph-tp-colhead act">${todayHead}</td>${futHeadTds}</tr>
         ${row("phase", "Phase", P.aim, `${treatas}${notreat}${phasePick}${opts.phaseNote || ""}`)}
-        ${phTpTreatedRowHtml(plan, row)}
+        ${phTpTreatedRowHtml(plan, row, name)}
         ${row("ask", "Subjective", P.watch, `${rowVal("Subjective")}${phTpSymTodayHtml(plan, phase)}`, "", futAskTds)}
         ${phTpIsMskPlan(plan) ? row("objective", "Objective", P.objective, phTpObjSummary(phase) || `<span class="ph-tp-rec-none">—</span>`) : ""}
         ${row("response", "Response", `<td class="ph-tp-cell frozen empty">—</td>`, rowVal("Response"))}
