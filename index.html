@@ -63578,17 +63578,23 @@ or changing anything in Cliniko.
           opens by itself after under 2 s with a Stay button. Reduced motion is
           respected. Keys: 1-9 pick, S skip, Y/N on history rows, Enter next. */
   const PH_PFW_SETS = {
+    // her ask 2026-10-11 ("improve organisation and correspond with questionnaire"):
+    // reordered + grouped to match the Cycle day-log popover's own shape (Flow, Pain,
+    // Discharge core, then Clots/Blood looks/Pain feels tucked under "More signs") --
+    // same four core questions up top, the rest fold the same way the day log's own
+    // More/Fewer signs toggle does. Cold hands/feet and PMS have no daily-log twin
+    // (they're pattern facts, not day-to-day signs) so they join the folded group too.
     period: { short: "Usual period", title: "Usual period", dflt: true,
       why: "One tap each. It describes a typical period, so Patterns can start before any day is logged. Once two real cycles are logged, the day log takes over.",
       qs: [
         { id: "len", s: "Cycle", q: "How long is her cycle?", range: true, d: { lo: 25, hi: 35 }, o: [] },
         { id: "flow", s: "Flow", q: "How heavy is the flow?", d: "mid", o: [["light", "Light", ["light_flow"]], ["mid", "Moderate", []], ["heavy", "Heavy", ["heavy_flow"]]] },
-        { id: "col", s: "Colour", q: "What colour is the blood?", d: "red", o: [["bright", "Bright red", ["bright_blood"]], ["red", "Normal red", []], ["dark", "Dark red", ["dark_blood"]], ["brown", "Brown", ["dark_blood"]], ["pale", "Pale", ["pale_flow"]], ["watery", "Watery", ["pale_flow"]]] },
-        { id: "clot", s: "Clots", q: "Any clots?", d: "none", o: [["none", "None", []], ["small", "Small", ["clots"]], ["large", "Large", ["clots"]], ["many", "Many", ["clots"]]] },
         { id: "pain", s: "Pain", q: "Period pain?", d: "none", multi: true, o: [["none", "None", []], ["cramp", "Cramping", ["cramp", "dysmen"]], ["stab", "Stabbing", ["stabbing", "dysmen"]], ["severe", "Severe", ["severe_pain", "dysmen"]], ["drag", "Dragging", ["dragging"]], ["warm", "Eased by warmth", ["pain_warm"]]] },
-        { id: "limbs", s: "Hands and feet", q: "Cold hands and feet?", d: "no", o: [["no", "No", []], ["yes", "Yes", ["cold_limbs", "cold_feel"]]] },
-        { id: "pms", s: "PMS", q: "PMS symptoms?", d: "none", multi: true, o: [["none", "Nothing much", []], ["mood", "Mood, irritable", ["pms", "stress"]], ["bloat", "Bloating", ["digestive_sx"]], ["loose", "Loose stool", ["digestive_sx"]], ["const", "Constipation", ["digestive_sx"]], ["tired", "Tired", ["fatigue", "low_mood"]]] },
-        { id: "cm", s: "Discharge", q: "Mid-cycle discharge?", d: "clear", multi: true, whenField: true, o: [["clear", "Clear, stretchy", []], ["watery", "Watery, lots", ["watery_cm"]], ["creamy", "Creamy, sticky", ["damp_cm"]], ["dry", "Dry, little", ["dry_cm"]]] }
+        { id: "cm", s: "Discharge", q: "Mid-cycle discharge?", d: "clear", multi: true, whenField: true, o: [["clear", "Clear, stretchy", []], ["watery", "Watery, lots", ["watery_cm"]], ["creamy", "Creamy, sticky", ["damp_cm"]], ["dry", "Dry, little", ["dry_cm"]]] },
+        { id: "clot", s: "Clots", q: "Any clots?", d: "none", more: true, o: [["none", "None", []], ["small", "Small", ["clots"]], ["large", "Large", ["clots"]], ["many", "Many", ["clots"]]] },
+        { id: "col", s: "Colour", q: "What colour is the blood?", d: "red", more: true, o: [["bright", "Bright red", ["bright_blood"]], ["red", "Normal red", []], ["dark", "Dark red", ["dark_blood"]], ["brown", "Brown", ["dark_blood"]], ["pale", "Pale", ["pale_flow"]], ["watery", "Watery", ["pale_flow"]]] },
+        { id: "limbs", s: "Hands and feet", q: "Cold hands and feet?", d: "no", more: true, o: [["no", "No", []], ["yes", "Yes", ["cold_limbs", "cold_feel"]]] },
+        { id: "pms", s: "PMS", q: "PMS symptoms?", d: "none", multi: true, more: true, o: [["none", "Nothing much", []], ["mood", "Mood, irritable", ["pms", "stress"]], ["bloat", "Bloating", ["digestive_sx"]], ["loose", "Loose stool", ["digestive_sx"]], ["const", "Constipation", ["digestive_sx"]], ["tired", "Tired", ["fatigue", "low_mood"]]] }
       ] },
     meno: { short: "Change of life", title: "Change of life", dflt: false,
       why: "Four taps. They feed Heat, Yin deficiency and Qi stagnation the way a cycle log would. Cycle tracking stays off from 48 unless you switch it on in the band.",
@@ -63662,6 +63668,7 @@ or changing anything in Cliniko.
   }
   const phPfwIsAns = (ans, q) => phPfwVals(ans, q).length > 0;
   const phPfwOpen = new Set();       // card folds she opened this visit ("period:name", "shx:name")
+  const phPfwMoreOpen = new Set();   // "More signs" folds she opened this visit ("sid:name"), same shape as phPfwOpen
   const phPfwLater = new Set();      // patients whose Start-here she tapped "Later" on this visit
   const phPfwStartShown = new Set(); // patients whose Start-here was on screen this visit
   const phPfwPrev = new Map();       // patient key -> { pic, w: {patId: ratio} } so the panel only moves what changed
@@ -64750,14 +64757,14 @@ or changing anything in Cliniko.
     }).filter(Boolean);
     if (fold) return `<div class="ph-pfw-card fold" data-pfw-host="${sid}"><button type="button" class="ph-pfw-foldhd" data-pfw-fold="${sid}"><span class="tick${done ? "" : " dim"}">${done ? "✓" : "–"}</span><b>${esc(set.title)}</b><span class="sm">${done ? esc(sum.slice(0, 3).join(" · ")) : "not asked · the day log feeds Patterns"}</span><span class="chg">${done ? "change" : "ask"} ▸</span></button></div>`;
     const cur = set.qs.find(q => !phPfwIsAns(ans, q));
-    // Dense 2-col grid (her pick, "mock N" 2026-10-09): every question stays visible,
-    // nothing collapses -- the space saving is the grid alone. An answered row keeps
-    // its own picked option full-strength and recedes the rest, so a glance down the
-    // grid shows what's answered without hunting for a "change" link.
+    // Dense 2-col grid (her pick, "mock N" 2026-10-09): every question stays visible
+    // within its own group -- the space saving is the grid alone, not hiding answers.
+    // An answered row keeps its own picked option full-strength and recedes the rest,
+    // so a glance down the grid shows what's answered without hunting for a "change" link.
     // "len" (Cycle) is a typed lo/hi range, not a pill pick; "cm" (Discharge) grows an
     // inline "when?" note under each ticked option (her 2026-10-09 ask) -- both still
     // live inside the same grid cell as every other question.
-    const rows = `<div class="ph-pfw-rows">${set.qs.map(q => {
+    const qHtml = q => {
       const vals = phPfwVals(ans, q), picked = vals.length > 0;
       if (q.range) {
         const v = ans[q.id] || {};
@@ -64780,13 +64787,26 @@ or changing anything in Cliniko.
         ${whenRows}
         ${phPfwRenLineHtml(rec, sid, q)}
       </div>`;
-    }).join("")}</div>`;
+    };
+    // her ask 2026-10-11 ("correspond with questionnaire"): core questions (the ones
+    // with a daily-log twin: Flow, Pain, Discharge, plus Cycle length) always show;
+    // the rest fold behind the same More/Fewer-signs toggle the Cycle day-log popover
+    // already uses, so an already-answered "more" question stays visible by default
+    // rather than hiding something she's told you.
+    const coreQs = set.qs.filter(q => !q.more), moreQs = set.qs.filter(q => q.more);
+    const moreKey = `${sid}:${phPatientKey(name)}`;
+    const moreOpen = !moreQs.length || phPfwMoreOpen.has(moreKey) || moreQs.some(q => phPfwIsAns(ans, q));
+    const rows = `<div class="ph-pfw-rows">${coreQs.map(qHtml).join("")}</div>`;
+    const moreToggle = moreQs.length ? `<button type="button" class="ph-pfw-link ph-pfw-more" data-pfw-moretoggle="${sid}" aria-expanded="${moreOpen}">${moreOpen ? "▴ Fewer signs" : `▾ More signs (${moreQs.length})`}</button>` : "";
+    const moreRows = moreQs.length && moreOpen ? `<div class="ph-pfw-rows ph-pfw-more-rows">${moreQs.map(qHtml).join("")}</div>` : "";
     const note = logged ? `<div class="ph-pfw-note">Two cycles are logged, so the day log now feeds Patterns. These stay as what she first told us.</div>` : "";
     return `<div class="ph-pfw-card" data-pfw-host="${sid}">
       <div class="ph-pfw-hd"><h3>${esc(set.title)}</h3>${done || n ? `<button type="button" class="ph-pfw-link" data-pfw-fold="${sid}">${done ? "Fold ▴" : ""}</button>` : ""}</div>
       ${note}
       <div class="ph-pfw-quick"><button type="button" class="ph-pfw-opt quick" data-pfw-normal="${sid}">✨ Nothing unusual · fill the rest, then change the exceptions</button></div>
       ${rows}
+      ${moreToggle}
+      ${moreRows}
       ${phPfwFootHtml(name, phPfwTabOf(sid), done, `${n} of ${total} answered`)}
       <div class="ph-pfw-keys"><kbd>1</kbd>–<kbd>9</kbd> pick · <kbd>S</kbd> skip · <kbd>Enter</kbd> next step</div>
     </div>`;
@@ -65231,6 +65251,13 @@ or changing anything in Cliniko.
     if ((el = T.closest("[data-pfw-fold]"))) {
       const name = phPfwName(), sid = el.dataset.pfwFold, key = `${sid}:${phPatientKey(name)}`;
       if (phPfwOpen.has(key)) phPfwOpen.delete(key); else phPfwOpen.add(key);
+      const host = document.querySelector(`[data-pfw-host="${sid}"]`);
+      if (host) host.outerHTML = presPfwSetHtml(name, sid);
+      return true;
+    }
+    if ((el = T.closest("[data-pfw-moretoggle]"))) {
+      const name = phPfwName(), sid = el.dataset.pfwMoretoggle, key = `${sid}:${phPatientKey(name)}`;
+      if (phPfwMoreOpen.has(key)) phPfwMoreOpen.delete(key); else phPfwMoreOpen.add(key);
       const host = document.querySelector(`[data-pfw-host="${sid}"]`);
       if (host) host.outerHTML = presPfwSetHtml(name, sid);
       return true;
