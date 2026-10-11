@@ -80146,6 +80146,11 @@ or changing anything in Cliniko.
       <div class="mk-sub">${esc(name)} · ${prev ? `last measured ${esc(phCycShortLbl(prev.day))}` : "first measurement"}${plan && plan.title ? ` · ${esc(plan.title)}` : ""}</div></div>
       <div class="mk-regs" role="group" aria-label="Regions to examine">${PH_MSK_REGIONS.map(([k, l]) => `<button type="button" class="mk-chip${regs.includes(k) ? " on" : ""}" data-msk="region" data-v="${k}" aria-pressed="${regs.includes(k) ? "true" : "false"}"${auto.has(k) ? ` title="on her pain map"` : ""}>${esc(l)}${auto.has(k) && regs.includes(k) ? `<i aria-hidden="true">·</i>` : ""}</button>`).join("")}</div></div>${phMskWarnHtml(rec)}</div>`;
   }
+  // her 2026-10-11 "this section doesn't seem to work": with no region ticked these tabs said "Pick a region above" and the
+  // chips were off-screen. The same chips now sit right here (same data-msk="region" tap, so the header chips follow).
+  function phMskEmptyHtml() {
+    return `<div class="mk-empty"><div>Which regions are you examining? Tap to start.</div><div class="mk-regs" role="group" aria-label="Regions to examine" style="margin-top:8px">${PH_MSK_REGIONS.map(([k, l]) => `<button type="button" class="mk-chip" data-msk="region" data-v="${k}" aria-pressed="false">${esc(l)}</button>`).join("")}</div></div>`;
+  }
   function phMskNprsHtml(rec) {
     const v = phMskVisOf(rec), prev = phMskPrev(rec), pn = (prev && prev.nprs) || {};
     const row = (k, l) => `<div class="mk-nrow"><span class="mk-nl">${l}</span>${mkScale("nprs", k, v.nprs && v.nprs[k] != null ? Number(v.nprs[k]) : null, pn[k] != null ? Number(pn[k]) : null)}${pn[k] != null ? mkHint("last " + pn[k]) : ""}</div>`;
@@ -80198,7 +80203,7 @@ or changing anything in Cliniko.
     PH_MSK_MUSCLES.filter(m => m.view === view).forEach(m => {
       ["R", "L"].forEach(S => {
         const k = m.id + S, st = pal[k] || 0;
-        if (!st && !m.regions.some(r => regs.includes(r))) return;
+        if (!st && regs.length && !m.regions.some(r => regs.includes(r))) return;
         const x = phPmPlaceX(view, S, m.dx), y = m.y, c = PH_MSK_SPOT[st];
         spots += `<g class="mk-spot${st ? " on" : ""}" data-msk="spot" data-v="${k}"><title>${esc(m.name)} ${phMskSideTxt(S)}${st ? " · " + PH_MSK_PALP[st] : ""}</title><circle cx="${x}" cy="${y}" r="8.5" fill="transparent"/><circle cx="${x}" cy="${y}" r="5.4" fill="${st ? c : "var(--ph-white)"}" fill-opacity="${st ? .88 : .6}" stroke="${st ? c : "var(--ph-faint)"}" stroke-width="${st ? 1.4 : 1}"${st ? "" : ` stroke-dasharray="2.4 1.8"`}/>${st === 3 ? `<path d="M${x - 3},${y - 3}L${x + 3},${y + 3}M${x + 3},${y - 3}L${x - 3},${y + 3}" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>` : ""}</g>`;
       });
@@ -80296,7 +80301,7 @@ or changing anything in Cliniko.
           <td class="pc">${e.normal ? `<div class="mk-bar"><i class="${pct == null ? "" : pct < 60 ? "bad" : pct < 85 ? "warn" : "good"}" style="width:${pct == null ? 0 : pct}%"></i></div><span class="mk-sub">${pct == null ? "" : pct + "%"}</span>` : ""}</td></tr>`;
       }).join("")}</tbody></table></div></div>`;
     }).join("");
-    return body ? phMskSplitFig(body, phMskRegionFig(rec, regs, (rk, S) => phMskRomStat(rec, vis, rk, S), "Furthest-behind movement in each region, as a share of normal range.")) : `<div class="mk-empty">Pick a region above.</div>`;
+    return body ? phMskSplitFig(body, phMskRegionFig(rec, regs, (rk, S) => phMskRomStat(rec, vis, rk, S), "Furthest-behind movement in each region, as a share of normal range.")) : `${phMskEmptyHtml()}`;
   }
   /* her 2026-10-11 ask ("include images and diagrams"), tabs ROM / Strength / Neuro / Special tests:
      the same shared body figure again. Marks are display-only (the tables stay the place you
@@ -80376,11 +80381,11 @@ or changing anything in Cliniko.
       const key = `${rk}:${i}:${S}`, cur = vis.mmt && vis.mmt[key], was = prev && prev.mmt && (prev.mmt[key] || prev.mmt[`${rk}:${i}:`]);
       return `<td><span class="mk-pills">${G.map(([v, l]) => mkPill(cur === v, "mmt", `${key}:${v}`, l, "g" + v)).join("")}</span>${was && !cur ? mkHint("last " + (G.find(g => g[0] === was) || [, ""])[1].toLowerCase()) : ""}</td>`;
     }).join("")}</tr>`).join("")}</tbody></table></div></div>`).join("");
-    return body ? phMskSplitFig(body, phMskRegionFig(rec, regs, (rk, S) => phMskMmtStat(vis, rk, S), "Weakest muscle recorded in each region, right and left.")) : `<div class="mk-empty">Pick a region above.</div>`;
+    return body ? phMskSplitFig(body, phMskRegionFig(rec, regs, (rk, S) => phMskMmtStat(vis, rk, S), "Weakest muscle recorded in each region, right and left.")) : `${phMskEmptyHtml()}`;
   }
   function phMskNeuroTabHtml(vis, regs, rec) {
     const up = regs.some(r => ["cervical", "shoulder", "elbow", "wrist", "thoracic"].includes(r)), low = regs.some(r => ["lumbar", "hip", "knee", "ankle"].includes(r));
-    if (!up && !low) return `<div class="mk-empty">Pick a region above.</div>`;
+    if (!up && !low) return `${phMskEmptyHtml()}`;
     const nu = vis.neuro || {};
     const derm = [].concat(up ? PH_MSK_DERM.up : [], low ? PH_MSK_DERM.low : []), refl = [].concat(up ? PH_MSK_REFL.up : [], low ? PH_MSK_REFL.low : []);
     const opt = (key, arr) => `<span class="mk-pills">${arr.map(v => mkPill(nu[key] === v, "neuro", `${key}:${v}`, v)).join("")}</span>`;
@@ -80393,7 +80398,7 @@ or changing anything in Cliniko.
       const key = `${rk}:${i}`, cur = (vis.tests && vis.tests[key]) || "nt", was = prev && prev.tests && prev.tests[key];
       return `<tr><td class="n">${esc(e.name)}</td><td><span class="mk-pills">${[["nt", "Not tested"], ["pos", "Positive"], ["neg", "Negative"]].map(([k, l]) => mkPill(cur === k, "test", `${key}:${k}`, l, k)).join("")}</span>${was && was !== "nt" && cur === "nt" ? mkHint("last " + (was === "pos" ? "positive" : "negative")) : ""}</td>
         <td class="mk-sub"><b>${esc(e.purpose || "")}</b><br>Technique: ${esc(e.tech || "")}. Positive: ${esc(e.pos || "")}.${e.src ? ` <i>Source: ${esc(e.src)}</i>` : ""}</td></tr>`;
-    }).join("")}</tbody></table></div></div>`).join("") || `<div class="mk-empty">Pick a region above.</div>`;
+    }).join("")}</tbody></table></div></div>`).join("") || `${phMskEmptyHtml()}`;
   }
   function phMskFuncTabHtml(rec, vis) {
     const prev = phMskPrev(rec), mine = (vis.psfs || []).slice(), names = mine.map(p => p.n);
