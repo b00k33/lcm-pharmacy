@@ -66819,45 +66819,76 @@ or changing anything in Cliniko.
   const PH_TRI_INLINE = {
     pulse: { d: ["p_float"] },
     abd: { d: ["pulsate", "abd_disc"], p: ["flat_belly", "tight_belly"] },
-    tng: { p: ["tongue_dusky", "tongue_tender", "white_coat"] }
+    // her 2026-10-11 ask ("link the tongue signs to Fang Bing Ren"): widened
+    // from her original 3-sign 2026-10-09 pick to every tongue/coat Bing+Ren
+    // sign in the shared pools that maps to ONE clean, not-already-claimed
+    // chip (see PH_TNG_FBR_MAP below). Two signs stay OFF this inline list --
+    // `tongue_pale_white_slippery` (pale/white/thin are all already claimed
+    // by tongue_dusky/white_coat) and `coat_greasy_yellow` (greasy/yellow are
+    // already claimed by coat_moist_slippery_greasy/coat_dry_yellow) -- a
+    // chip can only wear one badge today, so a sign with no unclaimed chip
+    // left stays visible on the Triangle tab only, same as before this change.
+    tng: {
+      d: ["tongue_red_firm", "coat_dry_yellow"],
+      p: ["tongue_dusky", "tongue_tender", "white_coat", "tongue_purple", "tongue_purple_spots", "tongue_large_palered", "coat_thick_dry", "tongue_very_dry_tend", "coat_moist_slippery_greasy", "tongue_pale_flabby_wet"]
+    }
   };
   // Her ask 2026-10-09 ("correspond fang bing ren traits to the chips of the
-  // tongue"): the 3 tongue Ren signs above, each pointing at the real chart
-  // chip(s) it describes -- "Pale-red or dusky" isn't one chip, so her Mock R
-  // pick gives both Pale and Dusky the full weight, not a guessed split.
+  // tongue"): each key points at the real chart chip(s) it describes --
+  // "Pale-red or dusky" isn't one chip, so her Mock R pick gave both Pale and
+  // Dusky the full weight, not a guessed split. Widened 2026-10-11 to the
+  // rest of PH_TRI_INLINE.tng; every new chip below is otherwise unclaimed.
   const PH_TNG_FBR_MAP = {
     tongue_dusky: [["colour", "pale"], ["colour", "dusky"]],
     tongue_tender: [["shape", "tender"], ["moist", "moist"]],
-    white_coat: [["coatThick", "thin"], ["coatColour", "white"]]
+    white_coat: [["coatThick", "thin"], ["coatColour", "white"]],
+    tongue_purple: [["colour", "purple"]],
+    tongue_purple_spots: [["marks", "purple"]],
+    tongue_large_palered: [["shape", "swollen"]],
+    coat_thick_dry: [["coatThick", "thick"], ["coatQual", "dry"]],
+    tongue_very_dry_tend: [["moist", "dry"]],
+    coat_moist_slippery_greasy: [["coatQual", "greasy"], ["moist", "wet"]],
+    tongue_pale_flabby_wet: [["shape", "flaccid"]],
+    tongue_red_firm: [["colour", "red"], ["shape", "stiff"]],
+    coat_dry_yellow: [["coatColour", "yellow"]]
   };
   // Live per-chip Fang Bing Ren info for the tongue chart: the same effective-
   // ticks/leading-family math phTriInlineHtml uses for its strip, reshaped by
   // chip key ("attr:val") so phVisitTongueHtml's own chip() can badge the
-  // chart's chips directly instead of a separate row list below it.
+  // chart's chips directly instead of a separate row list below it. Widened
+  // 2026-10-11 to cover both Bing (d, disease) and Ren (p, constitution)
+  // tongue signs, not just Ren -- mirrors phTriInlineHtml's own d-then-p read.
   function phTngFbrInfo(name) {
-    const keys = (PH_TRI_INLINE.tng && PH_TRI_INLINE.tng.p) || [];
-    const out = { byKey: {}, byChip: {}, done: 0, total: keys.length };
-    if (!name || !keys.length) return out;
+    const spec = PH_TRI_INLINE.tng || {}, dKeys = spec.d || [], pKeys = spec.p || [];
+    const out = { byKey: {}, byChip: {}, done: 0, total: dKeys.length + pKeys.length };
+    if (!name || !out.total) return out;
     const rec = phPatientPeek(name) || {}, today = phTriToday(rec);
     const f = PH_FORMULAS[phFbrTop(rec, name, phTriFam(name))];
-    const eff = phTriEffective(rec, name, "p", today.p);
-    keys.forEach(key => {
-      const r = PH_REN_SIGNS.find(x => x[0] === key); if (!r) return;
-      const on = eff[key], no = today.p[key] === false, auto = today.p[key] === undefined && on;
-      const info = { key, pts: phFbrPts(f.ren, r), on, no, auto, label: r[1] };
-      out.byKey[key] = info;
-      if (on) out.done++;
-      (PH_TNG_FBR_MAP[key] || []).forEach(([attr, val]) => { out.byChip[attr + ":" + val] = info; });
-    });
+    const addKind = (kind, keys) => {
+      const picks = kind === "d" ? today.d : today.p, prevD = kind === "d" ? today.prevD : undefined;
+      const eff = phTriEffective(rec, name, kind, picks, prevD), weights = kind === "d" ? f.bing : f.ren;
+      const pool = kind === "d" ? PH_BING_SIGNS : PH_REN_SIGNS;
+      keys.forEach(key => {
+        const r = pool.find(x => x[0] === key); if (!r) return;
+        const on = eff[key], no = picks[key] === false, auto = picks[key] === undefined && on;
+        const info = { key, kind, pts: phFbrPts(weights, r), on, no, auto, label: r[1] };
+        out.byKey[key] = info;
+        if (on) out.done++;
+        (PH_TNG_FBR_MAP[key] || []).forEach(([attr, val]) => { out.byChip[attr + ":" + val] = info; });
+      });
+    };
+    addKind("d", dKeys);
+    addKind("p", pKeys);
     return out;
   }
-  // A badge tap only flips rec.tri.p[key] -- same single fact whichever of its
-  // mapped chips she tapped it from -- so this patches every matching badge
-  // and the summary line in place, never a full chart re-render (which would
-  // also have to know whether the chart is on the Examine page or mid-visit).
+  // A badge tap only flips rec.tri.d/p[key] -- same single fact whichever of
+  // its mapped chips she tapped it from -- so this patches every matching
+  // badge and the summary line in place, never a full chart re-render (which
+  // would also have to know whether the chart is on the Examine page or
+  // mid-visit).
   function phTngFbrBadgesRefresh(name) {
     const info = phTngFbrInfo(name);
-    document.querySelectorAll('#pharmacyPage [data-tri-inline^="tng:p:"]').forEach(b => {
+    document.querySelectorAll('#pharmacyPage [data-tri-inline^="tng:"]').forEach(b => {
       const key = b.dataset.triInline.split(":")[2], s = info.byKey[key];
       if (!s) return;
       b.classList.toggle("on", !!s.on); b.classList.toggle("no", !!s.no); b.classList.toggle("auto", !!s.auto);
@@ -82130,7 +82161,7 @@ or changing anything in Cliniko.
       const fbr = fbrInfo.byChip[attr + ":" + val];
       if (!fbr || !fbr.pts) return btn;
       const cls = fbr.no ? " no" : fbr.on ? " on" + (fbr.auto ? " auto" : "") : "";
-      const badge = `<button type="button" class="ph-tng-fbr${cls}" data-tri-inline="tng:p:${fbr.key}" title="Fang Bing Ren${fbr.auto ? " — already known, tap to confirm or change" : ""}">${fbr.no ? "✕" : "+" + fbr.pts}</button>`;
+      const badge = `<button type="button" class="ph-tng-fbr${cls}" data-tri-inline="tng:${fbr.kind}:${fbr.key}" title="Fang Bing Ren${fbr.auto ? " — already known, tap to confirm or change" : ""}">${fbr.no ? "✕" : "+" + fbr.pts}</button>`;
       return `<span class="ph-tng-chipwrap">${btn}${badge}</span>`;
     };
     const colourRow = PH_TNG_COLOURS.map(([k, l, hex]) => chip("colour", k, l, t.colour === k, `<i style="background:${hex}"></i>`)).join("");
@@ -82153,28 +82184,37 @@ or changing anything in Cliniko.
     // moved to Guide → Tongue map as a standalone demo model -- what's left
     // is just photo + the chip rows that used to sit beside each diagram,
     // now stacked under their own photo instead.
+    // her 2026-10-11 ask ("organise this better"): the two columns used to be
+    // lopsided (everything but Under crammed into the left one) with no real
+    // grouping -- now LEFT is the tongue BODY (colour, shape/moist, and the
+    // body-detail fold: thickness, deviation, marks) and RIGHT is the COAT +
+    // sublingual (coat thickness/colour, under, and the coat-quality fold),
+    // a true even split instead of a leftover column. One shared More toggle
+    // still drives both folds together, now sitting below both columns.
     return `<div class="ph-tng2 ph-tng2-v3 ph-tng2-v5">
       <div class="ph-tng2-cols ph-tng2-cols2">
         <div class="ph-tng2-col">
           <i>Tongue photo</i>
           ${phVisitPhotoTileHtml(name, "tongue", "Tongue photo", "👅", true)}
           <div class="ph-tng2-row"><i>Colour</i><div class="ph-ltr-quals ph-visit-quals">${colourRow}${atRegion}</div></div>
-          <div class="ph-tng2-row"><i>Coat</i><div class="ph-ltr-quals ph-visit-quals">${PH_TNG_COAT_THICK.map(k => chip("coatThick", k, k, t.coatThick === k)).join("")}<span class="ph-tng2-sep"></span>${PH_TNG_COAT_COLOUR.map(([k, hex]) => chip("coatColour", k, k, t.coatColour === k, `<i style="background:${hex}"></i>`)).join("")}</div></div>
           <div class="ph-tng2-row"><i>Shape · Moist</i><div class="ph-ltr-quals ph-visit-quals">${shapeMoistRow}</div></div>
-          <button type="button" class="ph-tng2-morebtn" data-visit-tng-more="1" aria-expanded="${more ? "true" : "false"}">${more ? "▾" : "▸"} More — thickness, deviation, coat quality, marks</button>
           ${more ? `<div class="ph-tng2-more">
             <div class="ph-tng2-row"><i>Thickness</i><div class="ph-ltr-quals ph-visit-quals">${thicknessRow}${thickAtRegion}</div></div>
             <div class="ph-tng2-row"><i>Deviation</i><div class="ph-ltr-quals ph-visit-quals">${PH_TNG_DEVIATION.map(([k, l]) => chip("deviation", k, l, t.deviation === k)).join("")}</div></div>
-            <div class="ph-tng2-row"><i>Coat quality</i><div class="ph-ltr-quals ph-visit-quals">${qualRow}</div></div>
             <div class="ph-tng2-row"><i>Marks</i><div class="ph-ltr-quals ph-visit-quals">${markRow}</div></div>
           </div>` : ""}
         </div>
         <div class="ph-tng2-col">
           <i>Sublingual</i>
           ${phVisitPhotoTileHtml(name, "tongue", "Sublingual", "👅", false, "sublingual")}
+          <div class="ph-tng2-row"><i>Coat</i><div class="ph-ltr-quals ph-visit-quals">${PH_TNG_COAT_THICK.map(k => chip("coatThick", k, k, t.coatThick === k)).join("")}<span class="ph-tng2-sep"></span>${PH_TNG_COAT_COLOUR.map(([k, hex]) => chip("coatColour", k, k, t.coatColour === k, `<i style="background:${hex}"></i>`)).join("")}</div></div>
           <div class="ph-tng2-row"><i>Under</i><div class="ph-ltr-quals ph-visit-quals">${PH_TNG_UNDER.map(([k, l]) => chip("under", k, l, t.under === k)).join("")}</div></div>
+          ${more ? `<div class="ph-tng2-more">
+            <div class="ph-tng2-row"><i>Coat quality</i><div class="ph-ltr-quals ph-visit-quals">${qualRow}</div></div>
+          </div>` : ""}
         </div>
       </div>
+      <button type="button" class="ph-tng2-morebtn" data-visit-tng-more="1" aria-expanded="${more ? "true" : "false"}">${more ? "▾" : "▸"} More — thickness, deviation, coat quality, marks</button>
       <div class="ph-tng2-full">
         <div class="ph-tng2-sum">${summary ? `<b>Reads as</b> ${esc(summary)}` : `<span class="faint">Nothing marked yet.</span>`}</div>
         <div class="ph-tng-fbrsum" data-tng-fbrsum="1">Fang Bing Ren ${fbrInfo.done} of ${fbrInfo.total} picked up from what's ticked above — open Triangle for the full list.</div>
