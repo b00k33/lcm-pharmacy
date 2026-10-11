@@ -1526,7 +1526,7 @@ what's on the "never" side.
   (phTriToday/phTriEffective's `prevD`, her "quick recheck" ask) — a tap
   always overrides either. **All 7 of Huang Huang's original families are
   built** (Gui Zhi, Chai Hu, Ma Huang, Da Huang, Huang Qi, Ban Xia, Fu
-  Zi), plus Shi Gao and Huang Lian as an 8th and 9th (and Wu Ling San as a 10th, 2026-10-11) on her call to extend
+  Zi), plus Shi Gao and Huang Lian as an 8th and 9th (Wu Ling San 10th and Xiao Qing Long Tang 11th, 2026-10-11) on her call to extend
   the set beyond the original 7 — all sent the same way, incrementally
   (her passage → extracted into the shared pools + a new PH_FORMULAS
   entry), and all nine now have a matching PH_BTJ archetype-display entry.
@@ -1760,3 +1760,6 @@ Her 2026-10-11 ask: "improve the visual to be more medically accurate". Built on
 
 ## Wu Ling San integration audit (her 2026-10-11 ask)
 After adding Wu Ling San as the 10th Fang Bing Ren family, each of its signs was checked against the other systems. Wired: tongue chart (`tongue_swollen_toothmark` via `PH_TNG_FBR_MAP` + inline strip + chart prefill on the `teeth` word); abdomen chart (`phFbrChartWords` now also reads the latest visit's abdomen marks as `abd:<mark>` words; water sounds -> `stomach_sloshing_tend`, full/distended -> `bloating_tend`; strip adds sloshing, bloating, ascites, gastric retention); blood tests (new `ua` Uric acid marker, draft range 400; `PH_TRI_BLOOD` / `phTriBloodKnown` pre-tick `hyperuricemia` from a high result inside the 12-month law, for either column); Usual period PMS question (3 new options: Swelling, Headache, Nausea -> `edema_tend`, `headache_tend`, `nausea_tend` via `PH_USUAL_REN`); complaint search (`PH_BING_ALIAS` adds words a typed complaint may use); Patterns (`bt_wulingsan` joins the Damp / phlegm pattern). Deliberately NOT wired: ascites from a distended belly, compound Bing conditions from a single lab, anything from Medical history (no honest checklist match), pulse (her list has none). One-page matrix: `wu-ling-san-integration-audit.html`.
+
+## integrate33 (her standing code word, 2026-10-11)
+New formula/herb for Fang Bing Ren = add it AND audit/wire its signs into the other systems in one pass; recipe in memory `feedback_integrate33_protocol`. First run: Xiao Qing Long Tang (11th family, `xiaoqinglong`; negative weights for thick-yellow phlegm and dry/greasy-yellow coats), her Chai Hu re-send (identical to what was built, no change), and a baseline pass over the first nine: `phFbrChartWords` now emits zone-aware abdomen words (`abd:<mark>@<zone>`, `abd:tension:<v>`) and 10 existing belly signs prefill from the chart; `PH_TRI_PREFILL` values may be a clue key or a list (`phTriPrefillKeys`) and gained 14 Ren tendencies; `PH_TRI_BLOOD` gained `hyperlipidemia_tend`; `PH_TRI_PREFILL_HX` gained `wheeze_tend` <- asthma_respiratory; Usual PMS question gained Breast tenderness; `PH_BING_ALIAS` covers the older Bing signs; Shi Gao + Huang Lian now feed the Heat pattern; Xiao Qing Long joins Damp. Not wired on purpose: dx_diabetes from bloods, cycle-day-log clues, ambiguous clues. Matrix: `fbr-integrate33-audit-2026-10-11.html`.
