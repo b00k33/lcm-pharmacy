@@ -1526,7 +1526,7 @@ what's on the "never" side.
   (phTriToday/phTriEffective's `prevD`, her "quick recheck" ask) — a tap
   always overrides either. **All 7 of Huang Huang's original families are
   built** (Gui Zhi, Chai Hu, Ma Huang, Da Huang, Huang Qi, Ban Xia, Fu
-  Zi), plus Shi Gao and Huang Lian as an 8th and 9th on her call to extend
+  Zi), plus Shi Gao and Huang Lian as an 8th and 9th (and Wu Ling San as a 10th, 2026-10-11) on her call to extend
   the set beyond the original 7 — all sent the same way, incrementally
   (her passage → extracted into the shared pools + a new PH_FORMULAS
   entry), and all nine now have a matching PH_BTJ archetype-display entry.
