@@ -7843,6 +7843,11 @@
   #pharmacyPage .ph-pfw-rangenum:focus { outline: 2px solid var(--ph-herb); outline-offset: 1px; }
   #pharmacyPage .ph-pfw-when { display: flex; align-items: center; gap: 6px; margin: 6px 0 0; font-size: var(--fs-12-5); color: var(--ph-faint); }
   #pharmacyPage .ph-pfw-when span { flex: none; }
+  /* the Ren signs an answered question ticks in Fang Bing Ren, each with its herb-family colour */
+  #pharmacyPage .ph-pfw-fbr { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 8px 0 0; font-size: var(--fs-11-5); color: var(--ph-soft); }
+  #pharmacyPage .ph-pfw-fbr b { font: 600 var(--fs-11) var(--font-disp); letter-spacing: .09em; text-transform: uppercase; color: var(--ph-faint); }
+  #pharmacyPage .ph-pfw-fbr span { display: inline-flex; align-items: center; gap: 6px; }
+  #pharmacyPage .ph-pfw-fbr i { width: 4px; height: 12px; border-radius: 2px; flex: none; }
   #pharmacyPage .ph-pfw-whenin { flex: 1; min-width: 90px; border: 1px solid var(--ph-line); border-radius: 7px; padding: 4px 8px; font: inherit; font-size: var(--fs-12-5); color: var(--ph-ink); background: var(--ph-paper); }
   #pharmacyPage .ph-pfw-whenin:focus { outline: 2px solid var(--ph-herb); outline-offset: 1px; background: var(--ph-white); }
   #pharmacyPage .ph-pfw-opt:hover { border-color: var(--ph-herb); }
@@ -64717,6 +64722,16 @@ or changing anything in Cliniko.
     const auto = phPfwAutoOn();
     return `<div class="ph-pfw-foot"><span>${left}</span><span>${nid && done ? `<button type="button" class="ph-pfw-next${auto ? "" : " pulse"}" data-pfw-next="${nid}">Next: ${esc(nl)} →</button>` : ""}<button type="button" class="ph-pfw-link" data-pfw-auto="1">Auto-move: ${auto ? "on" : "off"}</button></span></div>`;
   }
+  // "Fang Bing Ren" line under an answered question: the Ren signs that answer ticks, each with the
+  // herb-family colour of the bar on its Ren row (her 2026-10-11 ask, "correspond this with fang bing ren")
+  function phPfwRenLineHtml(rec, sid, q) {
+    const keys = phUsualRenFor(rec, sid, q);
+    if (!keys.length) return "";
+    return `<div class="ph-pfw-fbr"><b>Ren</b>${keys.map(k => {
+      const r = PH_REN_SIGNS.find(x => x[0] === k), c = PH_FBR_HERB_COLOUR[phFbrSignFam("p", [k])] || { bg: "#D3DEE2" };
+      return `<span><i style="background:${c.bg}${c.border ? `;box-shadow:inset 0 0 0 1px ${c.border}` : ""}"></i>${esc(r ? r[1] : k)}</span>`;
+    }).join("")}</div>`;
+  }
   function presPfwSetHtml(name, sid) {
     const set = PH_PFW_SETS[sid];
     if (!name || !set) return "";
@@ -64749,6 +64764,7 @@ or changing anything in Cliniko.
             <input type="number" inputmode="numeric" class="ph-pfw-rangenum" min="10" max="90" placeholder="35" value="${v.hi != null ? v.hi : ""}" data-pfw-range="${sid}:${q.id}:hi" aria-label="Longest, in days">
             days
           </div>
+          ${phPfwRenLineHtml(rec, sid, q)}
         </div>`;
       }
       const whenAns = q.whenField ? (ans[q.id + "When"] || {}) : null;
@@ -64757,6 +64773,7 @@ or changing anything in Cliniko.
         <div class="ph-pfw-qt">${picked ? `<span class="tick">✓</span>` : ""}${esc(q.q)}${q.multi ? ` <small style="font-weight:400;color:var(--ph-faint)">pick all that apply</small>` : ""}</div>
         <div class="ph-pfw-opts">${q.o.map((o, i) => `<button type="button" class="ph-pfw-opt${vals.includes(o[0]) ? " on" : ""}" data-pfw-ans="${sid}:${q.id}:${o[0]}"><kbd>${i + 1}</kbd>${esc(o[1])}</button>`).join("")}<button type="button" class="ph-pfw-skip${vals.includes("skip") ? " on" : ""}" data-pfw-skip="${sid}:${q.id}">Skip</button></div>
         ${whenRows}
+        ${phPfwRenLineHtml(rec, sid, q)}
       </div>`;
     }).join("")}</div>`;
     const note = logged ? `<div class="ph-pfw-note">Two cycles are logged, so the day log now feeds Patterns. These stay as what she first told us.</div>` : "";
@@ -65856,6 +65873,47 @@ or changing anything in Cliniko.
     if (!v) return false;
     return typeof v === "function" ? v(rec) : v.some(k => phHxVal(rec, k) === "yes");
   };
+  // ---- Usual-answers pre-fill (her ask 2026-10-11, "correspond this with fang bing ren", on the Usual
+  // period card): the one-tap answers (Usual period, Change of life, Energy & sleep, Pain, Stress &
+  // sleep) describe how she usually is, so they answer Ren (the person's own tendencies), never Bing
+  // (today). Same shape as the Medical-history pre-fill above: a tap on the Ren row always wins.
+  // Only honest matches are here -- an answer with no Ren sign of the same meaning (flow amount,
+  // blood that is bright or pale, discharge, hot flushes, dryness, a throat lump) feeds Patterns only,
+  // as before. [Ren sign, question set, question, [option ids that say yes]]
+  const PH_USUAL_REN = [
+    ["dark_clots_tend", "period", "clot", ["small", "large", "many"]], ["dark_clots_tend", "period", "col", ["dark", "brown"]],
+    ["menstrual_pain_tend", "period", "pain", ["cramp", "stab", "severe", "drag"]],
+    ["cold_pain_tend", "period", "pain", ["warm"]], ["cold_pain_tend", "pain", "weather", ["cold"]],
+    ["cold_extrem", "period", "limbs", ["yes"]], ["cold_extrem", "men", "temp", ["cold"]],
+    ["pms_irritable_tend", "period", "pms", ["mood"]],
+    ["irritable_mood", "men", "mood", ["irr"]], ["irritable_mood", "sleep", "mood", ["irr"]],
+    ["bloating_tend", "period", "pms", ["bloat"]], ["stool_watery_tend", "period", "pms", ["loose"]], ["constipation_tend", "period", "pms", ["const"]],
+    ["fatigue_tend", "period", "pms", ["tired"]], ["fatigue_tend", "meno", "sleep", ["flat"]], ["fatigue_tend", "men", "energy", ["low", "crash"]], ["fatigue_tend", "sleep", "tired", ["tired"]],
+    ["anxiety_tend", "meno", "sleep", ["wake"]], ["anxiety_tend", "sleep", "fall", ["hard"]],
+    ["shallow_sleep", "sleep", "fall", ["hard"]], ["shallow_sleep", "sleep", "wake", ["often", "hot", "early"]],
+    ["menstrual_irreg_tend", "meno", "stage", ["irr"]],
+    ["urine_frequent_night_tend", "men", "urine", ["some", "lots"]],
+    ["body_hot_tend", "men", "temp", ["hot", "sweat"]]
+  ];
+  // a cycle length range that is wider than ten days, or outside 21 to 35, reads as irregular periods
+  const phUsualLenIrregular = u => { const v = u && u.period && u.period.len; return !!(v && v.lo != null && v.hi != null && (v.hi - v.lo > 10 || v.lo < 21 || v.hi > 35)); };
+  // the Ren signs ONE question's current answer ticks (for the little "Fang Bing Ren" line on the card)
+  function phUsualRenFor(rec, sid, q) {
+    const u = (rec && rec.usual) || {}, ans = u[sid] || {}, vals = phPfwVals(ans, q), out = [];
+    PH_USUAL_REN.forEach(r => { if (r[1] === sid && r[2] === q.id && vals.some(v => r[3].includes(v)) && !out.includes(r[0])) out.push(r[0]); });
+    if (sid === "period" && q.id === "len" && phUsualLenIrregular(u) && !out.includes("menstrual_irreg_tend")) out.push("menstrual_irreg_tend");
+    return out;
+  }
+  const phTriUsualKnown = (rec, key) => {
+    const u = rec && rec.usual;
+    if (!u) return false;
+    if (key === "menstrual_irreg_tend" && phUsualLenIrregular(u)) return true;
+    return PH_USUAL_REN.some(r => {
+      if (r[0] !== key) return false;
+      const ans = u[r[1]], q = PH_PFW_SETS[r[1]] && PH_PFW_SETS[r[1]].qs.find(x => x.id === r[2]);
+      return !!(ans && q && phPfwVals(ans, q).some(v => r[3].includes(v)));
+    });
+  };
   // ---- Chart pre-fill (her ask 2026-10-09, "I need the tongue and pulse charts to feed into
   // fang bing ren... integrated"): the SAME pre-fill idea as PH_TRI_PREFILL above, just reading
   // from her comprehensive Tongue chart (phTng2*, and the older constitutional phTongueOutlineSvg
@@ -65966,7 +66024,7 @@ or changing anything in Cliniko.
       const known = !!(src && clueKeys.has(src));
       const carried = kind === "d" && !!(prevD && prevD[r[0]]);
       const chartKnown = phFbrChartKnown(chartWords, kind, r[0]);
-      const hxKnown = kind === "p" && phTriHxKnown(rec, r[0]);
+      const hxKnown = kind === "p" && (phTriHxKnown(rec, r[0]) || phTriUsualKnown(rec, r[0]));
       eff[r[0]] = picks[r[0]] !== undefined ? picks[r[0]] : (known || carried || chartKnown || hxKnown);
     });
     return eff;
@@ -65978,6 +66036,7 @@ or changing anything in Cliniko.
     if (kind === "d" && prevD && prevD[key]) return "Ticked last visit — tap to confirm or change";
     if (phFbrChartKnown(phFbrChartWords(rec, kind), kind, key)) return "Already on the tongue/pulse chart — tap to override";
     if (kind === "p" && phTriHxKnown(rec, key)) return "Already on Medical history — tap to override";
+    if (kind === "p" && phTriUsualKnown(rec, key)) return "Already answered in her usual answers — tap to override";
     return "Already recorded elsewhere — tap to override";
   }
   // Today's working view of rec.tri: Ren (.p) never resets. Disease (.d) resets on a new day,
