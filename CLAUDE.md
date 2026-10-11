@@ -26,8 +26,8 @@ Also read ABOUT-ME.md before any work — build to this user's preferences.
   date · likely pattern · phase and visit number · flagged history), the
   **Re-check** (Better/Same/Worse/New + note), then Cycle / Tongue / Pulse /
   Abdomen as tiles with a ✓ when done today and last visit's finding beside
-  today's. Each tile opens its own page. Pain patients also get "Where it
-  hurts" (pain map) and the collapsed Pain intake here.
+  today's. Each tile opens its own page. Pain / MSK patients also get a **Musculoskeletal** tile and page after Abdomen (2026-10-11,
+  see "Musculoskeletal Assessments page" at the end): the pain map + Pain intake moved onto it, so "Where it hurts" no longer sits on Today's visit for them.
 - **Tongue, Pulse, Abdomen and Cycle are each their own page** (her pick,
   reversing the earlier one-card fold). Cycle has ONE home: its own page,
   reached from its Today's visit tile. No second Cycle tab.
@@ -1707,3 +1707,43 @@ Her picks are in memory `project_pharmacy_cycle_page_redesign_2026_10_10`; do no
 - **Disclosed calls:** calendar key has only Period / Fertile / Ovulation / Next period (the tiny ♥ ● ⚡ marks
   keep their hover text); BBT tab shows "BBT chart" + "Add chart" when a chart exists; Pain stays the 0-10
   slider (the mock drew None/Mild/Strong chips).
+
+## Musculoskeletal Assessments page (her ask 2026-10-11, mock `msk-assessments-mock.html`)
+**Her ask:** "a specific musculoskeletal examination in the pain page ... change pain page name to Musculoskeletal
+Assessments ... below the pain chart ... syncs with plan and treatment symptoms, reassessment each appointment, syncs
+with which muscles to motor ... comprehensive, an acupuncturist can use it." Her 4 popup picks (do not re-ask): own
+rail page **Musculoskeletal** (title "Musculoskeletal Assessments") in Today's visit after Abdomen; the Care Plan's
+per-phase Objective tracker becomes **read-only**; a red flag **warns only** (never blocks Log); muscle library for all
+four regions. Memory: `project_pharmacy_msk_assessments_2026_10_11`.
+- **Who gets it:** `phMskApplies(rec)` (rec-only, so Today's visit, the rail and the Next walk all agree): any saved MSK
+  visit, a Pain complaint, or an active plan that is MSK (`phTpIsMskPlan`) or has a saved pain map. Then the page is
+  `presTpMainSections` id `msk` (`phMskPageHtml`), `phTodayParts` has the part `msk`, and the **"Where it hurts" block
+  leaves Today's visit** (the pain map + Pain intake + a 0-10 score now live on the page; `presRvPainHtml` is reused,
+  never copied). Others still see the old block, whose "＋ Pain map" door starts it.
+- **Data:** `rec.msk = { v:1, visits:{[day]: snapshot}, targets:{[measureKey]: n} }`, written ONLY from handlers by
+  `phMskWrite`. Snapshot: `regions?, nprs{now,best,worst}, sin, flags, safety, obs, pal{"<muscle><R|L>":0-3}, refer, rom{"rk:i:S":{a,p,pain,end}},
+  mmt{"rk:i:S":"1|2|3"}, neuro, tests{"rk:i":"pos|neg"}, psfs[{n,v}], func, treat{key:{tech,done}}, imp`. Library indexes
+  (`PH_MSK_ROM / MMT / TESTS`) are **append-only**: snapshots key rows by region:index:side. 3-point Weak / Mildly weak /
+  Strong, never 0-5.
+- **Derived on read, never migrated:** `phMskView(rec)` = real visits + a synthetic earliest visit built from the old
+  `phase.objective` rows (`phMskLegacyVisit`; rows that match no library entry are kept as text under "Also noted
+  earlier"). Baseline = first visit with a reading, Last = latest earlier one, Now = today's. `phMskKeys/phMskTrack/
+  phMskProgress` are the ONE read for baseline/now/target, shared by the Re-measure table, the Care Plan view and the tiles.
+- **Return visit** opens on the Re-measure table (tiles, baseline / last / today / change / toward target, "Same as last
+  time"); the full exam is below. Region chips come from the pain map + last visit (explicit taps win).
+- **Syncs:** (1) pain score <-> the live phase's first pain-scale symptom row `severity`, **MSK plans only**
+  (`phMskPainRow`, `phMskFromSymptom` hooked on the `data-tp-sym-dot` tap) -- another plan's pain row (period pain) is
+  never touched; (2) "Treat today" ticks -> `rec.msk` today's `treat` AND the Treatment tab's `presTsMsk` draft
+  (`phMskSyncDraft`, labels end " R"/" L"), so `session.msk`, "Motor points: X" chips and the draft persistence keep
+  working; Log also files `session.msk.detail` (label, technique, done) and `session.mskDay`; (3) Treatment tab "Range of
+  motion / MSK" row = `phMskTreatRowHtml` (tick done, technique pills Motor point / Needle & move / Dry needle) when the page
+  applies, else the old chips; (4) Care Plan: `phTpObjectiveHtml` -> `phMskPlanViewHtml` (read-only list, "→ plan" fills
+  Points only when blank); (5) Log has a Musculoskeletal filter; Today's visit tile shows today + "last: ...".
+- **Red flags / needling safety** (Screen & safety tab) show a warn line on Today's visit, the Treatment tab and the page
+  head. Never a block.
+- **All wording is DRAFT, hers to correct:** red-flag and safety lists, 50-odd muscles (nerve, motor point, nearest
+  classical point, cautions), special-test notes, derm/reflex lists, function checks, new regions (thoracic, wrist & hand).
+  `PH_MSK_*` consts live right after `PH_TP_OBJ_SECTIONS` (TDZ trap: they must stay after `PH_TP_OBJ_TEST_LIB`).
+- **Traps hit:** an SVG `<g>` has no `.click()` (dispatch a MouseEvent in tests); a focused checkbox must not count as an
+  open text edit in `phMskRefresh`; the inline Treatment tab never sets `phTpScreenPatient` (use `phMskPatientName`);
+  the sandbox service worker serves a stale index.html after every edit (unregister + clear caches before each reload).
