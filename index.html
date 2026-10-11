@@ -7917,6 +7917,23 @@
   #pharmacyPage .ph-rf-seg { display: inline-flex; gap: 4px; letter-spacing: 0; text-transform: none; }
   #pharmacyPage .ph-rf-seg button { font: 600 var(--fs-11) var(--font-body); color: var(--ph-soft); background: var(--ph-white); border: 1px solid var(--ph-line); border-radius: 999px; padding: 2px 11px; cursor: pointer; min-height: 0; }
   #pharmacyPage .ph-rf-seg button.on { background: var(--ph-herb); border-color: var(--ph-herb); color: var(--ph-white); }
+  #pharmacyPage .ph-rf-tools { display: inline-flex; align-items: center; gap: 8px; letter-spacing: 0; text-transform: none; }
+  #pharmacyPage .ph-rf-expand { font: 600 var(--fs-14) var(--font-body); line-height: 1; color: var(--ph-soft); background: var(--ph-white); border: 1px solid var(--ph-line); border-radius: 8px; width: 26px; height: 24px; padding: 0; cursor: pointer; min-height: 0; }
+  #pharmacyPage .ph-rf-expand:hover { color: var(--ph-herb-deep); border-color: var(--ph-herb); }
+  #pharmacyPage .ph-hx-card.ph-rfx { width: min(1100px, 96vw); max-height: 92vh; overflow: auto; padding: 16px 20px 20px; }
+  #pharmacyPage .ph-rfx-hd { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; padding-right: 40px; margin-bottom: 10px; position: relative; }
+  #pharmacyPage .ph-rfx-hd b { font: 700 var(--fs-20) var(--font-body); color: var(--ph-herb-deep); }
+  #pharmacyPage .ph-rfx-sub { font-size: var(--fs-12-5); color: var(--ph-faint); }
+  #pharmacyPage .ph-rfx-hd .ph-stocktake-close { position: absolute; top: -4px; right: -6px; color: var(--ph-herb-deep); background: var(--ph-herb-tint); }
+  #pharmacyPage .ph-rfx-body { display: flex; flex-wrap: wrap; gap: 18px 28px; align-items: flex-start; }
+  #pharmacyPage .ph-rfx-body .ph-rf { margin: 0; padding: 0; border: 0; }
+  #pharmacyPage .ph-rfx-figs { flex: 1 1 520px; display: flex; flex-wrap: wrap; gap: 8px 12px; min-width: 0; }
+  #pharmacyPage .ph-rfx-fig { flex: 1 1 240px; min-width: 0; }
+  #pharmacyPage .ph-rfx-lab { font: 700 var(--fs-11) var(--font-disp); letter-spacing: .09em; text-transform: uppercase; color: var(--ph-faint); text-align: center; }
+  #pharmacyPage .ph-rfx .ph-rf-svg { height: min(640px, calc(92vh - 170px)); min-height: 280px; }
+  #pharmacyPage .ph-rfx-capwrap { flex: 1 1 100%; text-align: center; }
+  #pharmacyPage .ph-rfx-keys { flex: 1 1 260px; max-width: 360px; min-width: 0; }
+  #pharmacyPage .ph-rfx-note { margin-top: 10px; font-size: var(--fs-11-5); color: var(--ph-faint); }
   #pharmacyPage .ph-rf-cap { min-height: 18px; margin-top: 6px; font-size: var(--fs-11-5); color: var(--ph-faint); }
   #pharmacyPage .ph-rf-cap.on { color: var(--ph-herb-deep); font-weight: 600; }
   #pharmacyPage .ph-rf-svg .rf-part, #pharmacyPage .ph-rf-svg .rf-mk { cursor: pointer; }
@@ -20007,6 +20024,9 @@
          📖 History card inside their prescription panel. -->
     <div class="ph-stocktake-backdrop" id="phTpBackdrop" hidden></div>
     <div class="ph-hx-modal" id="phTpModal" hidden></div>
+    <!-- Ren figure expanded view (her ask 2026-10-11, "make it expandable"): same shell, direct #pharmacyPage child -->
+    <div class="ph-stocktake-backdrop" id="phRfBackdrop" hidden></div>
+    <div class="ph-hx-modal" id="phRfModal" hidden></div>
     <!-- IVF plan questionnaire (her ask 2026-10-02): opens every time IVF Protocol is
          picked, and can be re-run from the plan. Same shell again, a direct
          #pharmacyPage child so the delegated handlers reach it. -->
@@ -65101,11 +65121,11 @@ or changing anything in Cliniko.
   // on the left of that sign's row (PH_FBR_HERB_COLOUR via phFbrSignFam), her 2026-10-11 ask:
   // "correspond the symptoms visually to the herb family color". Looks of the body itself (skin tone,
   // lips, eyes) keep their natural colour and get a ring / outline in the family colour instead.
-  function phRenFigureHtml(rec, effP, ranked) {
+  function phRenFigureParts(rec, effP, ranked, view, u) {
     const on = k => !!effP && effP[k] === true, any = ks => ks.some(on);
-    const view = PH_REN_VIEW === "back" ? "back" : "front", back = view === "back";
+    const back = view === "back";
     const G = PH_BODY_GEOM, CX = G.CX, female = phIsFemale(rec), g = female ? "f" : "m", path = G.outline(g, view);
-    const u = "phrf", legend = [];
+    const legend = [];
     // family of a sign (first ticked key of a group); records it in the legend
     const famOf = ks => phFbrSignFam("p", [ks.find(on) || ks[0]]);
     const colOf = id => (PH_FBR_HERB_COLOUR[id] || { bg: "#D3DEE2" }).bg;
@@ -65215,14 +65235,52 @@ or changing anything in Cliniko.
       const c = PH_FBR_HERB_COLOUR[id] || { bg: "#D3DEE2" }, labs = byFam.get(id) || [], s = score[id], p = pct(id);
       return `<div class="ph-rf-fam"><i style="background:${c.bg}${c.border ? `;box-shadow:inset 0 0 0 1px ${c.border}` : ""}"></i><span><span class="top"><b>${esc((PH_FORMULAS[id] || {}).name || id)}</b><em title="${s ? s.pS + " of " + s.maxP + " Ren points" : ""}">${p}%</em></span><span class="bar"><u style="width:${p}%;background:${c.bg}${c.border ? `;box-shadow:inset 0 0 0 1px ${c.border}` : ""}"></u></span>${labs.length ? `<span class="lab">${esc(labs.join(", "))}</span>` : ""}</span></div>`;
     }).join("");
-    const seg = `<span class="ph-rf-seg" role="group" aria-label="View">${["front", "back"].map(v => `<button type="button" class="${v === view ? "on" : ""}" data-rf-view="${v}" aria-pressed="${v === view ? "true" : "false"}">${v === "front" ? "Front" : "Back"}</button>`).join("")}</span>`;
-    const cap = `<div class="ph-rf-cap" data-rf-cap aria-live="polite">Tap the body for names${offSide ? ` · ${offSide} sign${offSide === 1 ? " shows" : "s show"} on the ${back ? "front" : "back"}` : ""}</div>`;
-    return `<div class="ph-rf"><div class="ph-rf-hd"><span>Her build</span>${seg}</div>${svg}${cap}${rows ? `<div class="ph-rf-keys">${rows}</div>` : `<div class="ph-rf-empty">Tick Ren signs to draw her</div>`}</div>`;
+    return { svg, rows, offSide, view, none };
   }
+  const phRenCapHtml = (offSide, view) => `<div class="ph-rf-cap" data-rf-cap aria-live="polite">Tap the body for names${offSide ? ` · ${offSide} sign${offSide === 1 ? " shows" : "s show"} on the ${view === "back" ? "front" : "back"}` : ""}</div>`;
+  function phRenFigureHtml(rec, effP, ranked) {
+    const p = phRenFigureParts(rec, effP, ranked, PH_REN_VIEW === "back" ? "back" : "front", "phrf");
+    const seg = `<span class="ph-rf-seg" role="group" aria-label="View">${["front", "back"].map(v => `<button type="button" class="${v === p.view ? "on" : ""}" data-rf-view="${v}" aria-pressed="${v === p.view ? "true" : "false"}">${v === "front" ? "Front" : "Back"}</button>`).join("")}</span>`;
+    const expand = `<button type="button" class="ph-rf-expand" data-rf-open="1" aria-label="Expand her build to a larger view" title="Expand">⤢</button>`;
+    return `<div class="ph-rf"><div class="ph-rf-hd"><span>Her build</span><span class="ph-rf-tools">${seg}${expand}</span></div>${p.svg}${phRenCapHtml(p.offSide, p.view)}${p.rows ? `<div class="ph-rf-keys">${p.rows}</div>` : `<div class="ph-rf-empty">Tick Ren signs to draw her</div>`}</div>`;
+  }
+  // Expanded view (her 2026-10-11 ask "make it expandable"): front and back side by side, large, with the herb-family
+  // scores beside them. Same marks, same tap-for-names; opens from the figure's ⤢ button, closes on Esc, ✕ or the backdrop.
+  function phRenExpandHtml(rec, effP, ranked) {
+    const f = phRenFigureParts(rec, effP, ranked, "front", "phrfx-f"), b = phRenFigureParts(rec, effP, ranked, "back", "phrfx-b");
+    const off = f.offSide || b.offSide;
+    return `<div class="ph-hx-card ph-rfx" role="dialog" aria-modal="true" aria-label="Her build">
+      <div class="ph-rfx-hd"><b>Her build</b><span class="ph-rfx-sub">Front and back, drawn from the Ren ticks</span><button type="button" class="ph-stocktake-close" data-rf-close="1" aria-label="Close">✕</button></div>
+      <div class="ph-rfx-body">
+        <div class="ph-rfx-figs ph-rf">
+          <div class="ph-rfx-fig"><div class="ph-rfx-lab">Front</div>${f.svg}</div>
+          <div class="ph-rfx-fig"><div class="ph-rfx-lab">Back</div>${b.svg}</div>
+          <div class="ph-rfx-capwrap">${phRenCapHtml(0, "front").replace("Tap the body", "Tap either body")}</div>
+        </div>
+        <div class="ph-rfx-keys ph-rf">${f.rows ? `<div class="ph-rf-keys">${f.rows}</div>` : `<div class="ph-rf-empty">Tick Ren signs to draw her</div>`}${off ? `<div class="ph-rfx-note">Some signs have no spot on one side, so each body shows only what belongs there.</div>` : ""}</div>
+      </div>
+    </div>`;
+  }
+  function phRenExpandOpen() {
+    const side = document.getElementById("presPfwSide"), modal = document.getElementById("phRfModal"), back = document.getElementById("phRfBackdrop");
+    if (!side || !modal || !back) return;
+    const name = side.dataset.pfwSide, rec = phPatientPeek(name) || {}, today = phTriToday(rec), fam = phTriFam(name);
+    const effD = phTriEffective(rec, name, "d", today.d, today.prevD), effP = phTriEffective(rec, name, "p", today.p);
+    modal.innerHTML = phRenExpandHtml(rec, effP, phFbrRank(rec, fam, effD, effP));
+    modal.hidden = false; back.hidden = false;
+  }
+  function phRenExpandClose() {
+    const modal = document.getElementById("phRfModal"), back = document.getElementById("phRfBackdrop");
+    if (modal) { modal.hidden = true; modal.innerHTML = ""; }
+    if (back) back.hidden = true;
+  }
+  document.addEventListener("keydown", e => { const m = document.getElementById("phRfModal"); if (e.key === "Escape" && m && !m.hidden) phRenExpandClose(); });
   // Front / Back switch and tap-for-names on the figure (delegated: the side rail repaints often)
   document.addEventListener("click", e => {
     const t = e.target;
     if (!t || !t.closest) return;
+    if (t.closest("[data-rf-open]")) { phRenExpandOpen(); return; }
+    if (t.closest("[data-rf-close]") || t.id === "phRfBackdrop" || t.id === "phRfModal") { phRenExpandClose(); return; }
     const seg = t.closest("[data-rf-view]");
     if (seg) {
       PH_REN_VIEW = seg.dataset.rfView === "back" ? "back" : "front";

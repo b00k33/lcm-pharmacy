@@ -1756,3 +1756,4 @@ Her 2026-10-11 ask: "improve the visual to be more medically accurate". Built on
 - **Names on tap only** (`data-rf-name` on every part and mark, `[data-rf-cap]` caption, `<title>` for hover). No labels printed on the body.
 - `PH_BODY_GEOM` now also returns `detailSvg` (collarbones, navel, kneecaps, fingers).
 - Mock: `ren-person-accuracy-mock.html`. All anatomy wording is DRAFT, hers to check.
+- **Expand** (her "make it expandable"): the ⤢ button in the figure header (`data-rf-open`) opens `#phRfModal` (shared `.ph-hx-modal` shell) with Front and Back side by side, large, plus the herb-family scores. `phRenFigureParts(rec, effP, ranked, view, uid)` builds one body + legend and is used by both the rail (`phRenFigureHtml`) and the expanded view (`phRenExpandHtml`); each call needs its own `uid` so gradient/clip ids do not collide. Closes on Esc, the ✕ or an outside tap.
