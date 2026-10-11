@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261011-203000">
+<meta name="lcm-build" content="20261011-211000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -7944,6 +7944,12 @@
   #pharmacyPage .ph-rf-seg { display: inline-flex; gap: 4px; letter-spacing: 0; text-transform: none; }
   #pharmacyPage .ph-rf-seg button { font: 600 var(--fs-11) var(--font-body); color: var(--ph-soft); background: var(--ph-white); border: 1px solid var(--ph-line); border-radius: 999px; padding: 2px 11px; cursor: pointer; min-height: 0; }
   #pharmacyPage .ph-rf-seg button.on { background: var(--ph-herb); border-color: var(--ph-herb); color: var(--ph-white); }
+  #pharmacyPage .ph-rf-grps { display: flex; flex-wrap: wrap; gap: 5px; margin: 0 0 8px; text-align: left; }
+  #pharmacyPage .ph-rf-grps button { font: 600 var(--fs-11) var(--font-body); color: var(--ph-faint); background: var(--ph-white); border: 1px dashed var(--ph-line); border-radius: 999px; padding: 2px 10px; cursor: pointer; min-height: 0; }
+  #pharmacyPage .ph-rf-grps button i { font-style: normal; opacity: .7; margin-left: 2px; }
+  #pharmacyPage .ph-rf-grps button.on { color: var(--ph-herb-deep); background: var(--ph-white); border: 1px solid var(--ph-herb); }
+  #pharmacyPage .ph-rf-grps button.all { color: var(--ph-soft); border-style: solid; }
+  #pharmacyPage .ph-rfx > .ph-rf { padding: 0 20px 6px; }
   #pharmacyPage .ph-rf-tools { display: inline-flex; align-items: center; gap: 8px; letter-spacing: 0; text-transform: none; }
   #pharmacyPage .ph-rf-expand { font: 600 var(--fs-14) var(--font-body); line-height: 1; color: var(--ph-soft); background: var(--ph-white); border: 1px solid var(--ph-line); border-radius: 8px; width: 26px; height: 24px; padding: 0; cursor: pointer; min-height: 0; }
   #pharmacyPage .ph-rf-expand:hover { color: var(--ph-herb-deep); border-color: var(--ph-herb); }
@@ -65118,6 +65124,23 @@ or changing anything in Cliniko.
     ["rlum", "Right lumbar (right side of the belly)", -1, 1], ["umb", "Umbilical (around the navel)", 0, 1], ["llum", "Left lumbar (left side of the belly)", 1, 1],
     ["ril", "Right iliac fossa (right lower side)", -1, 2], ["hypo", "Hypogastric (lower middle belly)", 0, 2], ["lil", "Left iliac fossa (left lower side)", 1, 2]
   ];
+  // her 2026-10-11 ask ("give an option to turn on and off certain groups of signs"): chips above the figure switch
+  // whole groups of Ren signs on or off. The groups are the ones already on the Ren page (PH_REN_GROUPS), so the
+  // two pages agree. Display only -- the ticks and the herb-family scores never change.
+  var PH_REN_OFF = new Set();
+  const phRenGrpOf = k => PH_REN_GROUP_IX[k];
+  function phRenDrawnKeys() {
+    const s = new Set(["obesity_tend", "robust_build", "robust_firm_build", "soft_loose_muscle", "thin_body", "fine_skin", "dry_skin", "complexion_red_oily", "complexion_dark_green", "complexion_sallow", "complexion_pale_lusterless", "complexion_puffy", "lips_dark_purple", "lips", "bright_eyes", "eyes_round", "tight_belly", "bloating_tend", "abd_wall_weak_tend", "cold_sens", "cold_pain_tend", "desire_lie_curl_tend", "wind_averse_tend", "dreads_heat", "body_hot_tend", "sweats_easy", "sweaty_palms", "sweat_uneven_tend"]);
+    PH_REN_DRAW.forEach(r => r[0].forEach(k => s.add(k)));
+    return s;
+  }
+  function phRenGroupChipsHtml(effP) {
+    const drawn = phRenDrawnKeys(), n = {};
+    Object.keys(effP || {}).forEach(k => { const g = phRenGrpOf(k); if (effP[k] === true && g != null && drawn.has(k)) n[g] = (n[g] || 0) + 1; });
+    const chips = PH_REN_GROUPS.map((g, i) => [i, g.lab.split(" — ")[0].replace("Build, skin & complexion", "Build & skin").replace("Digestion, elimination & immunity", "Digestion & immunity").replace("Cycle & fever pattern", "Cycle & fever")]).filter(([i]) => n[i]).map(([i, l]) => { const on = !PH_REN_OFF.has(i); return `<button type="button" class="${on ? "on" : ""}" data-rf-grp="${i}" aria-pressed="${on ? "true" : "false"}">${esc(l)} <i>${n[i]}</i></button>`; }).join("");
+    if (!chips) return "";
+    return `<div class="ph-rf-grps" role="group" aria-label="Show or hide groups of signs">${chips}${PH_REN_OFF.size ? `<button type="button" class="all" data-rf-grp="all">Show all</button>` : ""}</div>`;
+  }
   // nine belly zones: under = washes and tap areas (below the organs), lines = the dashed grid (above, never tappable)
   function phRenZonesHtml(hot, hotLab, col) {
     const CX = PH_BODY_GEOM.CX, ys = [149, 168, 206, 240], xa = [CX - 47, CX - 17, CX + 17, CX + 47];
@@ -65172,7 +65195,7 @@ or changing anything in Cliniko.
   // "correspond the symptoms visually to the herb family color". Looks of the body itself (skin tone,
   // lips, eyes) keep their natural colour and get a ring / outline in the family colour instead.
   function phRenFigureParts(rec, effP, ranked, view, u) {
-    const on = k => !!effP && effP[k] === true, any = ks => ks.some(on);
+    const on = k => !!effP && effP[k] === true && !PH_REN_OFF.has(phRenGrpOf(k)), any = ks => ks.some(on);
     const back = view === "back";
     const G = PH_BODY_GEOM, CX = G.CX, female = phIsFemale(rec), g = female ? "f" : "m", path = G.outline(g, view);
     const legend = [];
@@ -65292,7 +65315,7 @@ or changing anything in Cliniko.
     const p = phRenFigureParts(rec, effP, ranked, PH_REN_VIEW === "back" ? "back" : "front", "phrf");
     const seg = `<span class="ph-rf-seg" role="group" aria-label="View">${["front", "back"].map(v => `<button type="button" class="${v === p.view ? "on" : ""}" data-rf-view="${v}" aria-pressed="${v === p.view ? "true" : "false"}">${v === "front" ? "Front" : "Back"}</button>`).join("")}</span>`;
     const expand = `<button type="button" class="ph-rf-expand" data-rf-open="1" aria-label="Expand her build to a larger view" title="Expand">⤢</button>`;
-    return `<div class="ph-rf"><div class="ph-rf-hd"><span>Her build</span><span class="ph-rf-tools">${seg}${expand}</span></div>${p.svg}${phRenCapHtml(p.offSide, p.view)}${p.rows ? `<div class="ph-rf-keys">${p.rows}</div>` : `<div class="ph-rf-empty">Tick Ren signs to draw her</div>`}</div>`;
+    return `<div class="ph-rf"><div class="ph-rf-hd"><span>Her build</span><span class="ph-rf-tools">${seg}${expand}</span></div>${phRenGroupChipsHtml(effP)}${p.svg}${phRenCapHtml(p.offSide, p.view)}${p.rows ? `<div class="ph-rf-keys">${p.rows}</div>` : `<div class="ph-rf-empty">Tick Ren signs to draw her</div>`}</div>`;
   }
   // Expanded view (her 2026-10-11 ask "make it expandable"): front and back side by side, large, with the herb-family
   // scores beside them. Same marks, same tap-for-names; opens from the figure's ⤢ button, closes on Esc, ✕ or the backdrop.
@@ -65301,6 +65324,7 @@ or changing anything in Cliniko.
     const off = f.offSide || b.offSide;
     return `<div class="ph-hx-card ph-rfx" role="dialog" aria-modal="true" aria-label="Her build">
       <div class="ph-rfx-hd"><b>Her build</b><span class="ph-rfx-sub">Front and back, drawn from the Ren ticks</span><button type="button" class="ph-stocktake-close" data-rf-close="1" aria-label="Close">✕</button></div>
+      <div class="ph-rf">${phRenGroupChipsHtml(effP)}</div>
       <div class="ph-rfx-body">
         <div class="ph-rfx-figs ph-rf">
           <div class="ph-rfx-fig"><div class="ph-rfx-lab">Front</div>${f.svg}</div>
@@ -65331,6 +65355,15 @@ or changing anything in Cliniko.
     if (!t || !t.closest) return;
     if (t.closest("[data-rf-open]")) { phRenExpandOpen(); return; }
     if (t.closest("[data-rf-close]") || t.id === "phRfBackdrop" || t.id === "phRfModal") { phRenExpandClose(); return; }
+    const grp = t.closest("[data-rf-grp]");
+    if (grp) {
+      const g = grp.dataset.rfGrp === "all" ? "all" : +grp.dataset.rfGrp;
+      if (g === "all") PH_REN_OFF.clear(); else if (PH_REN_OFF.has(g)) PH_REN_OFF.delete(g); else PH_REN_OFF.add(g);
+      const side = document.getElementById("presPfwSide"), modal = document.getElementById("phRfModal");
+      if (side) phPfwSideRefresh(side.dataset.pfwSide);
+      if (modal && !modal.hidden) phRenExpandOpen();
+      return;
+    }
     const seg = t.closest("[data-rf-view]");
     if (seg) {
       PH_REN_VIEW = seg.dataset.rfView === "back" ? "back" : "front";
