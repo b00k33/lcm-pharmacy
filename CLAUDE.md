@@ -1747,3 +1747,12 @@ four regions. Memory: `project_pharmacy_msk_assessments_2026_10_11`.
 - **Traps hit:** an SVG `<g>` has no `.click()` (dispatch a MouseEvent in tests); a focused checkbox must not count as an
   open text edit in `phMskRefresh`; the inline Treatment tab never sets `phTpScreenPatient` (use `phMskPatientName`);
   the sandbox service worker serves a stale index.html after every edit (unregister + clear caches before each reload).
+
+## Ren "Her build" figure (right rail, Ren tab)
+Her 2026-10-11 ask: "improve the visual to be more medically accurate". Built on `phRenFigureHtml` (marks, herb-family colours, legend and scores unchanged):
+- **Anatomy under the skin** (`phRenAnatomyHtml`): ribs, breastbone, pelvis, lungs, heart, liver, stomach, colon; female adds uterus, tubes, ovaries, male adds bladder. Chosen by `phIsFemale(rec)` (`rec.sex === "F"`).
+- **Nine belly zones** (`PH_REN_ZONES`, `phRenZonesHtml`): the belly signs list their zone as the 7th field of `PH_REN_DRAW`; the zone is washed in that sign's family colour.
+- **Front / Back switch** (`PH_REN_VIEW`, `data-rf-view`, delegated click -> `phPfwSideRefresh`): `PH_REN_DRAW` rows are `[keys, kind, label, front spots, back spots (null = front only), patient side (null = both), zones]`. Signs with no spot on the shown side are counted in the caption under the figure.
+- **Names on tap only** (`data-rf-name` on every part and mark, `[data-rf-cap]` caption, `<title>` for hover). No labels printed on the body.
+- `PH_BODY_GEOM` now also returns `detailSvg` (collarbones, navel, kneecaps, fingers).
+- Mock: `ren-person-accuracy-mock.html`. All anatomy wording is DRAFT, hers to check.
