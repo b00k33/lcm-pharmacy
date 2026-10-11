@@ -7949,6 +7949,7 @@
   #pharmacyPage .ph-rf-grps button i { font-style: normal; opacity: .7; margin-left: 2px; }
   #pharmacyPage .ph-rf-grps button.on { color: var(--ph-herb-deep); background: var(--ph-white); border: 1px solid var(--ph-herb); }
   #pharmacyPage .ph-rf-grps button.all { color: var(--ph-soft); border-style: solid; }
+  #pharmacyPage .ph-rf-grps button.fam { color: var(--ph-herb-deep); border-style: solid; padding-left: 12px; }
   #pharmacyPage .ph-rfx > .ph-rf { padding: 0 20px 6px; }
   #pharmacyPage .ph-rf-tools { display: inline-flex; align-items: center; gap: 8px; letter-spacing: 0; text-transform: none; }
   #pharmacyPage .ph-rf-expand { font: 600 var(--fs-14) var(--font-body); line-height: 1; color: var(--ph-soft); background: var(--ph-white); border: 1px solid var(--ph-line); border-radius: 8px; width: 26px; height: 24px; padding: 0; cursor: pointer; min-height: 0; }
@@ -7980,6 +7981,13 @@
   #pharmacyPage .ph-rf-fam .bar { display: block; height: 4px; border-radius: 3px; background: var(--ph-line); overflow: hidden; }
   #pharmacyPage .ph-rf-fam .bar u { display: block; height: 100%; border-radius: 3px; text-decoration: none; }
   #pharmacyPage .ph-rf-fam i { border-radius: 2px; }
+  #pharmacyPage button.ph-rf-fam { width: 100%; min-height: 0; margin: 0; padding: 4px 6px 4px 0; border: 0; border-radius: 6px; background: transparent; font: inherit; font-size: var(--fs-11-5); text-align: left; cursor: pointer; transition: opacity .15s, background .15s; }
+  #pharmacyPage button.ph-rf-fam:hover { background: var(--ph-herb-tint); }
+  #pharmacyPage button.ph-rf-fam.sel { background: var(--ph-herb-tint); }
+  #pharmacyPage button.ph-rf-fam.dim { opacity: .5; }
+  #pharmacyPage button.ph-rf-fam.dim:hover { opacity: 1; }
+  #pharmacyPage .ph-rf-fam .lab { color: var(--ph-soft); }
+  @media (prefers-reduced-motion: reduce) { #pharmacyPage button.ph-rf-fam { transition: none; } }
   #pharmacyPage .ph-rf-empty { margin-top: 8px; font-size: var(--fs-12); color: var(--ph-faint); }
   #pharmacyPage .ph-pfw-ring { display: flex; gap: 12px; align-items: center; margin: 4px 0 10px; }
   #pharmacyPage .ph-pfw-ring .arc { transition: stroke-dashoffset .8s cubic-bezier(.2,.8,.2,1); }
@@ -65133,6 +65141,10 @@ or changing anything in Cliniko.
   // whole groups of Ren signs on or off. The groups are the ones already on the Ren page (PH_REN_GROUPS), so the
   // two pages agree. Display only -- the ticks and the herb-family scores never change.
   var PH_REN_OFF = new Set();
+  // her 2026-10-12 ask ("a filter for fang bing ren family e.g. huang lian, including huang lian signs"): tap a family
+  // row (or its pill) and the figure shows only the ticked Ren signs that family weighs, all in its colour. Display only.
+  var PH_REN_FAM = "";
+  const phRenFamOk = k => { if (!PH_REN_FAM) return true; try { return ((PH_FORMULAS[PH_REN_FAM] || {}).ren || {})[k] > 0; } catch (e) { return true; } };
   const phRenGrpOf = k => PH_REN_GROUP_IX[k];
   function phRenDrawnKeys() {
     const s = new Set(["obesity_tend", "robust_build", "robust_firm_build", "soft_loose_muscle", "thin_body", "fine_skin", "dry_skin", "complexion_red_oily", "complexion_dark_green", "complexion_sallow", "complexion_pale_lusterless", "complexion_puffy", "lips_dark_purple", "lips", "bright_eyes", "eyes_round", "tight_belly", "bloating_tend", "abd_wall_weak_tend", "cold_sens", "cold_pain_tend", "desire_lie_curl_tend", "wind_averse_tend", "dreads_heat", "body_hot_tend", "sweats_easy", "sweaty_palms", "sweat_uneven_tend"]);
@@ -65141,10 +65153,11 @@ or changing anything in Cliniko.
   }
   function phRenGroupChipsHtml(effP) {
     const drawn = phRenDrawnKeys(), n = {};
-    Object.keys(effP || {}).forEach(k => { const g = phRenGrpOf(k); if (effP[k] === true && g != null && drawn.has(k)) n[g] = (n[g] || 0) + 1; });
+    Object.keys(effP || {}).forEach(k => { const g = phRenGrpOf(k); if (effP[k] === true && g != null && drawn.has(k) && phRenFamOk(k)) n[g] = (n[g] || 0) + 1; });
     const chips = PH_REN_GROUPS.map((g, i) => [i, g.lab.split(" — ")[0].replace("Build, skin & complexion", "Build & skin").replace("Digestion, elimination & immunity", "Digestion & immunity").replace("Cycle & fever pattern", "Cycle & fever")]).filter(([i]) => n[i]).map(([i, l]) => { const on = !PH_REN_OFF.has(i); return `<button type="button" class="${on ? "on" : ""}" data-rf-grp="${i}" aria-pressed="${on ? "true" : "false"}">${esc(l)} <i>${n[i]}</i></button>`; }).join("");
-    if (!chips) return "";
-    return `<div class="ph-rf-grps" role="group" aria-label="Show or hide groups of signs">${chips}${PH_REN_OFF.size ? `<button type="button" class="all" data-rf-grp="all">Show all</button>` : ""}</div>`;
+    if (!chips && !PH_REN_FAM) return "";
+    const famPill = PH_REN_FAM ? (() => { const c = PH_FBR_HERB_COLOUR[PH_REN_FAM] || { bg: "#D3DEE2" }; return `<button type="button" class="fam" data-rf-fam="" aria-label="Clear the herb family filter" style="border-color:${c.bg};box-shadow:inset 3px 0 0 ${c.bg}">${esc((PH_FORMULAS[PH_REN_FAM] || {}).name || PH_REN_FAM)} only ✕</button>`; })() : "";
+    return `<div class="ph-rf-grps" role="group" aria-label="Show or hide groups of signs">${famPill}${chips}${PH_REN_OFF.size || PH_REN_FAM ? `<button type="button" class="all" data-rf-grp="all">Show all</button>` : ""}</div>`;
   }
   // nine belly zones: under = washes and tap areas (below the organs), lines = the dashed grid (above, never tappable)
   function phRenZonesHtml(hot, hotLab, col) {
@@ -65200,12 +65213,12 @@ or changing anything in Cliniko.
   // "correspond the symptoms visually to the herb family color". Looks of the body itself (skin tone,
   // lips, eyes) keep their natural colour and get a ring / outline in the family colour instead.
   function phRenFigureParts(rec, effP, ranked, view, u) {
-    const on = k => !!effP && effP[k] === true && !PH_REN_OFF.has(phRenGrpOf(k)), any = ks => ks.some(on);
+    const on = k => !!effP && effP[k] === true && !PH_REN_OFF.has(phRenGrpOf(k)) && phRenFamOk(k), any = ks => ks.some(on);
     const back = view === "back";
     const G = PH_BODY_GEOM, CX = G.CX, female = phIsFemale(rec), g = female ? "f" : "m", path = G.outline(g, view);
     const legend = [];
     // family of a sign (first ticked key of a group); records it in the legend
-    const famOf = ks => phFbrSignFam("p", [ks.find(on) || ks[0]]);
+    const famOf = ks => PH_REN_FAM || phFbrSignFam("p", [ks.find(on) || ks[0]]);
     const colOf = id => (PH_FBR_HERB_COLOUR[id] || { bg: "#D3DEE2" }).bg;
     const note = (id, lab) => { legend.push({ id, lab }); return colOf(id); };
     const RING = "rgba(63,74,79,.55)";
@@ -65311,7 +65324,8 @@ or changing anything in Cliniko.
     const pct = id => { const s = score[id]; return s && s.maxP ? Math.min(100, Math.round(s.pS / s.maxP * 100)) : 0; };
     const rows = ids.sort((a, b) => pct(b) - pct(a) || (byFam.get(b) || []).length - (byFam.get(a) || []).length).map(id => {
       const c = PH_FBR_HERB_COLOUR[id] || { bg: "#D3DEE2" }, labs = byFam.get(id) || [], s = score[id], p = pct(id);
-      return `<div class="ph-rf-fam"><i style="background:${c.bg}${c.border ? `;box-shadow:inset 0 0 0 1px ${c.border}` : ""}"></i><span><span class="top"><b>${esc((PH_FORMULAS[id] || {}).name || id)}</b><em title="${s ? s.pS + " of " + s.maxP + " Ren points" : ""}">${p}%</em></span><span class="bar"><u style="width:${p}%;background:${c.bg}${c.border ? `;box-shadow:inset 0 0 0 1px ${c.border}` : ""}"></u></span>${labs.length ? `<span class="lab">${esc(labs.join(", "))}</span>` : ""}</span></div>`;
+      const sel = PH_REN_FAM === id;
+      return `<button type="button" class="ph-rf-fam${sel ? " sel" : ""}${PH_REN_FAM && !sel ? " dim" : ""}" data-rf-fam="${id}" aria-pressed="${sel ? "true" : "false"}" title="${sel ? "Show every family again" : "Show only " + esc((PH_FORMULAS[id] || {}).name || id) + " signs"}"><i style="background:${c.bg}${c.border ? `;box-shadow:inset 0 0 0 1px ${c.border}` : ""}"></i><span><span class="top"><b>${esc((PH_FORMULAS[id] || {}).name || id)}</b><em title="${s ? s.pS + " of " + s.maxP + " Ren points" : ""}">${p}%</em></span><span class="bar"><u style="width:${p}%;background:${c.bg}${c.border ? `;box-shadow:inset 0 0 0 1px ${c.border}` : ""}"></u></span>${labs.length ? `<span class="lab">${esc(labs.join(", "))}</span>` : ""}</span></button>`;
     }).join("");
     return { svg, rows, offSide, view, none };
   }
@@ -65360,10 +65374,19 @@ or changing anything in Cliniko.
     if (!t || !t.closest) return;
     if (t.closest("[data-rf-open]")) { phRenExpandOpen(); return; }
     if (t.closest("[data-rf-close]") || t.id === "phRfBackdrop" || t.id === "phRfModal") { phRenExpandClose(); return; }
+    const fam = t.closest("[data-rf-fam]");
+    if (fam) {
+      const id = fam.dataset.rfFam || "";
+      PH_REN_FAM = id && id !== PH_REN_FAM ? id : "";
+      const side = document.getElementById("presPfwSide"), modal = document.getElementById("phRfModal");
+      if (side) phPfwSideRefresh(side.dataset.pfwSide);
+      if (modal && !modal.hidden) phRenExpandOpen();
+      return;
+    }
     const grp = t.closest("[data-rf-grp]");
     if (grp) {
       const g = grp.dataset.rfGrp === "all" ? "all" : +grp.dataset.rfGrp;
-      if (g === "all") PH_REN_OFF.clear(); else if (PH_REN_OFF.has(g)) PH_REN_OFF.delete(g); else PH_REN_OFF.add(g);
+      if (g === "all") { PH_REN_OFF.clear(); PH_REN_FAM = ""; } else if (PH_REN_OFF.has(g)) PH_REN_OFF.delete(g); else PH_REN_OFF.add(g);
       const side = document.getElementById("presPfwSide"), modal = document.getElementById("phRfModal");
       if (side) phPfwSideRefresh(side.dataset.pfwSide);
       if (modal && !modal.hidden) phRenExpandOpen();
