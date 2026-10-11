@@ -7742,6 +7742,8 @@
   #pharmacyPage .ph-tri-filt-row { display: flex; align-items: center; gap: 8px; margin-top: 9px; flex-wrap: wrap; font-size: var(--fs-12); color: var(--ph-soft); }
   #pharmacyPage .ph-tri-filt-pill { display: inline-flex; align-items: center; gap: 6px; background: var(--ph-white); border: 1px solid var(--ph-gold); color: var(--ph-gold-deep); font-weight: 700; font-size: var(--fs-12); border-radius: 999px; padding: 4px 10px; }
   #pharmacyPage .ph-tri-filt-pill button { border: 0; background: none; color: inherit; font-weight: 700; cursor: pointer; padding: 0; font: inherit; text-decoration: underline; }
+  #pharmacyPage .ph-tri-multi { margin-left: auto; border: 1px solid var(--ph-line); background: var(--ph-white); color: var(--ph-soft); font: inherit; font-weight: 700; border-radius: 999px; padding: 4px 11px; cursor: pointer; }
+  #pharmacyPage .ph-tri-multi.on { background: var(--ph-gold); border-color: var(--ph-gold); color: var(--ph-white); }
   #pharmacyPage .ph-tri-col-sub { display: block; margin-top: 2px; font: 600 var(--fs-11) var(--font-body); letter-spacing: normal; text-transform: none; color: var(--ph-soft); }
   #pharmacyPage .ph-tri-fs { font-size: var(--fs-12); color: var(--ph-soft); margin-top: 6px; }
   #pharmacyPage .ph-tri-add { display: flex; gap: 6px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
@@ -67116,7 +67118,9 @@ or changing anything in Cliniko.
   // plus its share of PH_FBR_MOSAIC_BONUS cells by score. 2 grid columns per "cell" of width.
   const PH_FBR_MOSAIC_MIN = 2, PH_FBR_MOSAIC_BONUS = 22;
   var phTriOpen = new Set();          // patient keys with the full list open (view state, never saved)
-  var phTriFilt = new Map();          // patient key -> family id filtering Bing/Ren (view state, never saved)
+  var phTriFilt = new Map();          // patient key -> list of family ids filtering Bing/Ren (view state, never saved; her 2026-10-12 ask: several at once)
+  var phTriMulti = new Set();         // patient keys with "Pick several" on: a tile tap adds/removes instead of switching (view state)
+  const phTriFiltIds = k => (phTriFilt.get(k) || []).filter(id => PH_FORMULAS[id]);
   var phFbrLbl = new Set();           // patient keys with the FBR body-figure Labels on (view state, never saved)
   function phTriFam(name) { const c = phCcOf(name); return c ? phCcMainId(c) : "general"; }
   // Her ask (2026-10-09): ticking a row must never jump it mid-session -- the "most-tapped rises
@@ -67160,7 +67164,7 @@ or changing anything in Cliniko.
   // broken "+-3" since the badge always prepended "+"; it's now a proper "−3" on a warning row.
   function phFbrRowHtml(rec, name, r, kind, picks, eff, weights, prefix, prevD, filtColour) {
     const on = eff[r[0]], no = picks[r[0]] === false, auto = picks[r[0]] === undefined && on;
-    const c = filtColour || PH_FBR_HERB_COLOUR[phFbrSignFam(kind, r)] || { bg: "#D3DEE2", fg: "#141F23" };
+    const c = (typeof filtColour === "function" ? filtColour(r) : filtColour) || PH_FBR_HERB_COLOUR[phFbrSignFam(kind, r)] || { bg: "#D3DEE2", fg: "#141F23" };
     const barStyle = `background:${c.bg};${c.border ? `border:1px solid ${c.border};` : ""}`;
     const titleAttr = auto ? ` title="${esc(phTriAutoWhy(rec, name, kind, r[0], prevD))}"` : "";
     const pts = phFbrPts(weights, r), neg = pts < 0;
@@ -67304,11 +67308,21 @@ or changing anything in Cliniko.
     // narrow BOTH columns down to only the signs that family's own weight table actually scores
     // (positive or negative), tap it again (or the Clear pill) for every sign. Session view state
     // only (phTriFilt), never saved.
-    const filtId = phTriFilt.get(phPatientKey(name));
-    const filtFam = filtId ? PH_FORMULAS[filtId] : null;
-    const filtColour = filtFam ? PH_FBR_HERB_COLOUR[filtId] : null;
+    // 2026-10-12, her ask "give option to have multiple herb family filters": the filter is a LIST of
+    // families. With "Pick several" off a tap switches to that one family (as before); with it on a tap
+    // adds/removes. Several families show every sign ANY of them weights (highest weight wins, so a
+    // caution only shows red when no picked family rates the sign positively), each row coloured by the
+    // picked family that rates it highest.
+    const pkey = phPatientKey(name), multiOn = phTriMulti.has(pkey);
+    const filtIds = phTriFiltIds(pkey), filtSet = new Set(filtIds);
+    const filtFams = filtIds.map(id => PH_FORMULAS[id]);
+    const filtFam = filtIds.length ? (ranked.find(x => filtSet.has(x.id)) || { f: filtFams[0] }).f : null;   // the figure + column headings follow the best-ranked picked family
+    const filtName = filtFams.map(f => f.name).join(" + ");
+    const filtColour = !filtIds.length ? null
+      : filtIds.length === 1 ? PH_FBR_HERB_COLOUR[filtIds[0]]
+      : r => { let best = null, bw = -Infinity; filtIds.forEach(id => { const F = PH_FORMULAS[id], w = Math.max((F.bing || {})[r[0]] ?? -Infinity, (F.ren || {})[r[0]] ?? -Infinity); if (w > bw) { bw = w; best = id; } }); return best ? PH_FBR_HERB_COLOUR[best] : null; };
     const shownFor = (kind, weights) => {
-      const fw = filtFam ? (kind === "d" ? filtFam.bing : filtFam.ren) : null;
+      const fw = filtFams.length ? (() => { const m = {}; filtFams.forEach(F => { const t = (kind === "d" ? F.bing : F.ren) || {}; Object.keys(t).forEach(k => { if (t[k] && (m[k] === undefined || t[k] > m[k])) m[k] = t[k]; }); }); return m; })() : null;
       // Filtered: every sign that family's table actually weights, strongest first (a negative
       // weight -- a caution -- sorts to the bottom, never hidden). Unfiltered: every sign, grouped.
       const all = fw
@@ -67332,7 +67346,7 @@ or changing anything in Cliniko.
       const pendRow = a => `<div class="ph-tri-pend"><span>${esc(a.label)} <b>+${a.pts}</b></span><button type="button" class="ph-pfw-link" data-tri-agree="${esc(a.id)}">Agree</button></div>`;
       const addRow = `<div class="ph-tri-add"><input class="ph-tri-in" type="text" maxlength="60" placeholder="Add a symptom…" aria-label="Add a symptom"><input class="ph-tri-pt" type="number" min="1" max="9" value="2" aria-label="Points"><button type="button" class="ph-pfw-link" data-tri-add="${kind}">Add</button></div>`;
       const rowsHtml = all.length ? phFbrGroupedHtml(rec, name, all, kind, picks, eff, rowWeights, "tri", today.prevD, groups, groupIx, filtColour, true, false) : "";   // her 2026-10-12 "make this always expanded": every group stays open, no fold
-      const emptyMsg = fw && !all.length ? `<div class="ph-tri-fs">No ${esc(filtFam.name)}-specific signs here.</div>` : "";
+      const emptyMsg = fw && !all.length ? `<div class="ph-tri-fs">No ${esc(filtName)}-specific signs here.</div>` : "";
       return `${rowsHtml}${emptyMsg}${pend.length ? `<div class="ph-tri-plab">To check</div>${pend.map(pendRow).join("")}` : ""}${addRow}`;
     };
     // Her ask (2026-10-09, "mock B, the mosaic"): the 9 stacked full-width family cards became a
@@ -67347,7 +67361,7 @@ or changing anything in Cliniko.
       const extra = fbrTotalS ? Math.round((total / fbrTotalS) * PH_FBR_MOSAIC_BONUS) : 0;
       const cells = PH_FBR_MOSAIC_MIN + extra, colSpan = Math.max(1, Math.min(6, Math.round(cells / 2))), rowSpan = cells >= 10 ? 2 : 1;
       const tiny = cells <= PH_FBR_MOSAIC_MIN;
-      return `<button type="button" class="ph-fbr-mo${i === 0 && hasTicks ? " lead" : ""}${r.id === filtId ? " filt" : ""}" style="grid-column:span ${colSpan};grid-row:span ${rowSpan};background:${c.bg};color:${c.fg};${c.border ? `border:1px solid ${c.border};` : ""}" aria-pressed="${r.id === filtId ? "true" : "false"}" data-tri-filt="${r.id}" title="Filter to ${esc(r.f.name)} only">
+      return `<button type="button" class="ph-fbr-mo${i === 0 && hasTicks ? " lead" : ""}${filtSet.has(r.id) ? " filt" : ""}" style="grid-column:span ${colSpan};grid-row:span ${rowSpan};background:${c.bg};color:${c.fg};${c.border ? `border:1px solid ${c.border};` : ""}" aria-pressed="${filtSet.has(r.id) ? "true" : "false"}" data-tri-filt="${r.id}" title="Filter to ${esc(r.f.name)} only">
         <span class="ph-fbr-mo-name">${esc(r.f.name)}</span>${tiny ? "" : `<span class="ph-fbr-mo-n">${total} of ${totalMax}</span>`}
       </button>`;
     };
@@ -67368,16 +67382,17 @@ or changing anything in Cliniko.
         ${leadLine}
         <div class="ph-tri-filt-row">
           ${filtFam
-            ? `<span class="ph-tri-filt-pill">Filtering: ${esc(filtFam.name)} only <button type="button" data-tri-filt-clear="1">Clear ✕</button></span><span>tap another tile to switch</span>`
-            : `<span>Tap a tile to filter</span>`}
+            ? `<span class="ph-tri-filt-pill">Filtering: ${esc(filtName)} only <button type="button" data-tri-filt-clear="1">Clear ✕</button></span><span>${multiOn ? "tap tiles to add or remove" : "tap another tile to switch"}</span>`
+            : `<span>${multiOn ? "Tap tiles to pick several" : "Tap a tile to filter"}</span>`}
+          <button type="button" class="ph-tri-multi${multiOn ? " on" : ""}" aria-pressed="${multiOn ? "true" : "false"}" data-tri-multi="1">Pick several</button>
         </div>
         <button type="button" class="ph-pfw-link" data-qa-toggle="1">${qaOpen ? "Hide quick assess" : "Quick assess ▸"}</button>
         ${qaOpen ? phQaHtml(name) : ""}
       </div>
       ${phCsHtml(name)}
       <div class="ph-tri-cols">
-        <section class="ph-tri-col"><h4>Bing · what is wrong now <span class="ph-tri-col-sub">→ ${esc(filtFam ? filtFam.name : lead.name)}</span></h4>${col("d", d, effD, bingS, PH_BING_GROUPS, PH_BING_GROUP_IX)}</section>
-        <section class="ph-tri-col"><h4>Ren · the person's build <span class="ph-tri-col-sub">→ ${esc(filtFam ? filtFam.name : archName)}</span></h4>${col("p", p, effP, renS, PH_REN_GROUPS, PH_REN_GROUP_IX)}</section>
+        <section class="ph-tri-col"><h4>Bing · what is wrong now <span class="ph-tri-col-sub">→ ${esc(filtFam ? filtName : lead.name)}</span></h4>${col("d", d, effD, bingS, PH_BING_GROUPS, PH_BING_GROUP_IX)}</section>
+        <section class="ph-tri-col"><h4>Ren · the person's build <span class="ph-tri-col-sub">→ ${esc(filtFam ? filtName : archName)}</span></h4>${col("p", p, effP, renS, PH_REN_GROUPS, PH_REN_GROUP_IX)}</section>
       </div>
       ${hasTicks ? `<div class="ph-btq-foot"><button type="button" class="ph-pfw-link" data-tri-clear="1">Clear the triangle</button></div>` : ""}
     </div>`;
@@ -67469,7 +67484,17 @@ or changing anything in Cliniko.
     // no save, just a repaint.
     if ((el = T.closest("[data-tri-filt]"))) {
       const fid = el.dataset.triFilt, k = phPatientKey(name);
-      if (phTriFilt.get(k) === fid) phTriFilt.delete(k); else phTriFilt.set(k, fid);
+      const cur = phTriFiltIds(k);
+      if (phTriMulti.has(k)) {            // "Pick several": a tap adds or removes one family
+        const next = cur.includes(fid) ? cur.filter(x => x !== fid) : cur.concat(fid);
+        if (next.length) phTriFilt.set(k, next); else phTriFilt.delete(k);
+      } else if (cur.length === 1 && cur[0] === fid) phTriFilt.delete(k);
+      else phTriFilt.set(k, [fid]);
+      phTriRefresh(name); return true;
+    }
+    if (T.closest("[data-tri-multi]")) {   // turning it OFF with several picked keeps just the first, so one family is still shown
+      const k = phPatientKey(name);
+      if (phTriMulti.has(k)) { phTriMulti.delete(k); const cur = phTriFiltIds(k); if (cur.length > 1) phTriFilt.set(k, [cur[0]]); } else phTriMulti.add(k);
       phTriRefresh(name); return true;
     }
     if (T.closest("[data-tri-filt-clear]")) { phTriFilt.delete(phPatientKey(name)); phTriRefresh(name); return true; }
