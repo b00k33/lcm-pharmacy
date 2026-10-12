@@ -16077,6 +16077,14 @@
   #pharmacyPage .ph-pf-onebox .ph-pf-plantile-top .quiet { font-size: var(--fs-14); font-weight: 600; color: var(--ph-ink); }
   #pharmacyPage .ph-pf-onebox .ph-pf-condtag { margin: 0; }
   #pharmacyPage .ph-pf-onebox .ph-pf-plantile .ph-pf-plantile-phase { margin: 0; }
+  /* two plans (her 2026-10-13, Mock A "current leads"): a finished plan reads "Completed", earlier ones fold into one line */
+  #pharmacyPage .ph-pf-plantile-phase.ok { display: inline-flex; align-items: center; gap: 4px; }
+  #pharmacyPage .ph-pf-plantile-phase.ok .ph-cc-svgic, #pharmacyPage .ph-pf-ep .ph-cc-svgic { width: 11px; height: 11px; color: var(--ph-herb); vertical-align: 0; }
+  #pharmacyPage .ph-pf-earlier { display: flex; align-items: center; gap: 4px 10px; flex-wrap: wrap; min-width: 0; font-size: var(--fs-12-5); color: var(--ph-soft); }
+  #pharmacyPage .ph-pf-ep { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; padding: 0; font: 600 var(--fs-12-5) var(--font-body); color: var(--ph-herb-deep); text-decoration: underline dotted; text-underline-offset: 3px; cursor: pointer; }
+  #pharmacyPage .ph-pf-ep em { font-style: normal; font-weight: 500; color: var(--ph-faint); }
+  #pharmacyPage .ph-pf-ep:hover { color: var(--ph-herb); }
+  #pharmacyPage .ph-pf-ep-more { color: var(--ph-faint); }
   #pharmacyPage .ph-pf-onebox .ph-pf-fbrhd { margin-bottom: 0; grid-column: 1 / -1; }
   #pharmacyPage .ph-pf-onebox .ph-pf-plantile .ph-pf-fbrows { grid-template-columns: 1fr 1fr; gap: 8px 18px; }
   @container (max-width: 480px) { #pharmacyPage .ph-pf-onebox .ph-pf-plantile .ph-pf-fbrows { grid-template-columns: 1fr; } }
@@ -38005,6 +38013,14 @@
       if (e.target.closest("[data-pres-hist-more]")) { presHistMoreOpen = !presHistMoreOpen; renderPresPanel(); return; }
       // round-4 redesign: Notes and Treatment plan are two separate rows
       // below the prescription now, Notes above Treatment
+      // Patient details' plan band: Open and an "Earlier" plan open THAT plan on the plan stage (her 2026-10-13, two plans in the box)
+      const pfPlanOpen = e.target.closest("[data-pf-plan-open]");
+      if (pfPlanOpen) {
+        const [pnm, ppid] = pfPlanOpen.dataset.pfPlanOpen.split("|");
+        presStage = presStageNorm("plan"); phCcSeedOpen();
+        if (phTpFindPlan(pnm, ppid)) presTpInlineOpen(pnm, ppid); else renderPresPanel();
+        return;
+      }
       const presStageBtn = e.target.closest("[data-pres-stage]");
       if (presStageBtn) { presStage = presStageNorm(presStageBtn.dataset.presStage); phCcSeedOpen(); renderPresPanel(); return; }
       // the workflow flow rail (her pick "c", 2026-09-28): steps 2/3 and the
@@ -58266,9 +58282,26 @@ or changing anything in Cliniko.
   // fertility natural cycle and neck pain". Colour comes from --ph-green/
   // -deep/-tint, already recoloured per Case by .ph-pres-panel.case-gyn/
   // .case-msk above -- no case-colour logic duplicated here.
+  // her 2026-10-13 ("ivf protocol is completed and pregnancy protocol is now present, how can this page show it", pick
+  // Mock A "current leads" + "yes, treat it as finished"): a plan is FINISHED when it is marked Completed or when every
+  // phase is ticked done. The box shows the plan she is on now (the first unfinished Active one, else the first unfinished
+  // one, else the latest); finished ones fold under it as one "Earlier" line. phTpShownPlan is NOT changed: the Case fill
+  // and the phase fill still read it.
+  function phPfPlanDone(plan) {
+    if (!plan) return false;
+    if (plan.status === "done") return true;
+    const phs = (plan.phases || []).filter(p => !p.skipped);
+    return phs.length > 0 && phs.every(p => p.status === "done");
+  }
+  function phPfPlanSet(name) {
+    const plans = phTpPlans(name) || [];
+    const live = plans.filter(p => !phPfPlanDone(p));
+    const cur = live.find(p => p.status === "active") || live[0] || plans[plans.length - 1] || null;
+    return { cur, earlier: plans.filter(p => p !== cur && phPfPlanDone(p)) };
+  }
   function presPfPlanTileHtml(t, name) {
     if (!name || presIsFormula(t)) return "";
-    const plan = phTpShownPlan(name);
+    const set = phPfPlanSet(name), plan = set.cur;
     // sleek pass 2026-10-10 (her pick "one card"): the plan, its phase, the Bing/Ren bars and the
     // Next button are ONE card. The Next button is the same presProfNextBtnHtml every section
     // ends with (presAssessTab skips its own copy for this tab so there is only ever one).
@@ -58282,14 +58315,24 @@ or changing anything in Cliniko.
     const live = phTpLivePhase(rec, plan);
     const li = live ? phs.findIndex(p => p.id === live.id) : -1;
     const pips = phs.length ? `<div class="pips">${phs.map((p, i) => `<i style="--k:${i}" class="${p.status === "done" || (li >= 0 && i < li) ? "d" : i === li ? "l" : ""}"></i>`).join("")}</div>` : "";
-    const phaseWord = live && live.label ? `${live.label}${li >= 0 ? ` · phase ${li + 1} of ${phs.length}` : ""}` : (phs.length ? `Phase — of ${phs.length}` : "");
+    const tick = `<svg class="ph-cc-svgic" aria-hidden="true" focusable="false"><use href="#i-check"/></svg>`;
+    // a Pregnancy plan also says which week she is in (rec.pregnancy.start, the same date the Pregnancy block uses)
+    let wkTxt = "";
+    if (plan.templateName === "Pregnancy") { const wk = phTpPregWeeksOn((rec.pregnancy || {}).start, keyOf(TODAY)); if (wk) wkTxt = ` · week ${wk.week}`; }
+    const done = phPfPlanDone(plan);
+    const phaseHtml = done ? `<span class="ph-pf-plantile-phase ok">${tick}Completed</span>`
+      : (live && live.label ? `<span class="ph-pf-plantile-phase">${esc(live.label + (li >= 0 ? ` · phase ${li + 1} of ${phs.length}` : "") + wkTxt)}</span>`
+        : (phs.length ? `<span class="ph-pf-plantile-phase">${esc(`Phase — of ${phs.length}` + wkTxt)}</span>` : ""));
     const tags = `<span class="ph-pf-condtag main">${esc(title)}</span>${also.map(a => `<span class="ph-pf-condtag also">+ ${esc(a.name || "Condition")}</span>`).join("")}`;
+    // finished plans fold under the current one: the newest three, each opens that plan
+    const earlierHtml = set.earlier.length
+      ? `<div class="ph-pf-earlier"><span class="ph-cc2-lbl">Earlier</span>${set.earlier.slice(-3).map(p => `<button type="button" class="ph-pf-ep" data-pf-plan-open="${esc(name)}|${p.id}">${tick}${esc(p.title || p.templateName || "Treatment Care Plan")} <em>· Completed</em></button>`).join("")}${set.earlier.length > 3 ? `<span class="ph-pf-ep-more">+ ${set.earlier.length - 3} more</span>` : ""}</div>` : "";
     // her pick (2026-10-13, "merge all this into one box", Mock B): the plan name, its phase and Open share one line.
     // The old "Also noting: <secondary complaints>" line is gone: Came in for sits in the same box right above and
     // lists the same complaints (her 2026-10-10 pick of that line was for when they were separate cards)
     return `<div class="ph-pf-plantile">
-      <div class="ph-pf-plantile-top"><div class="l"><span class="ph-cc2-lbl">Treatment Care Plan</span>${tags}${phaseWord ? `<span class="ph-pf-plantile-phase">${esc(phaseWord)}</span>` : ""}</div><button type="button" class="ph-pfw-link" data-pres-stage="plan">Open</button></div>
-      ${pips}${fbr}${nx}
+      <div class="ph-pf-plantile-top"><div class="l"><span class="ph-cc2-lbl">Treatment Care Plan</span>${tags}${phaseHtml}</div><button type="button" class="ph-pfw-link" data-pf-plan-open="${esc(name)}|${plan.id}">Open</button></div>
+      ${pips}${earlierHtml}${fbr}${nx}
     </div>`;
   }
   // patches the "Also noting" line in place when a secondary symptom changes on the Came in for
