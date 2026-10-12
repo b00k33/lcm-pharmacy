@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261012-111715">
+<meta name="lcm-build" content="20261012-113358">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -8019,6 +8019,25 @@
   #pharmacyPage .ph-rf-fam em .d.up { color: var(--ph-herb); }
   #pharmacyPage .ph-rf-fam em .d.dn { color: var(--ph-gold-deep); }
   /* the picked family's signs: tick from here */
+  /* Body card (Patient details) */
+  #pharmacyPage .ph-bodycard { margin-top: 12px; }
+  #pharmacyPage .ph-body-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+  #pharmacyPage .ph-body-grid .ph-tmpl-field { margin: 0; min-width: 0; }
+  #pharmacyPage .ph-body-stat { margin-top: 10px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  #pharmacyPage .ph-body-stat div { background: var(--ph-paper); border-radius: 8px; padding: 6px 9px; }
+  #pharmacyPage .ph-body-stat b { display: block; font: 700 var(--fs-14) var(--font-body); color: var(--ph-herb-deep); font-variant-numeric: tabular-nums; }
+  #pharmacyPage .ph-body-stat small { color: var(--ph-faint); font-size: var(--fs-11); }
+  #pharmacyPage .ph-body-bands { margin-top: 8px; display: grid; gap: 4px; }
+  #pharmacyPage .ph-body-band { display: grid; grid-template-columns: 70px minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: var(--fs-11-5); color: var(--ph-soft); }
+  #pharmacyPage .ph-body-band .bar { position: relative; height: 6px; border-radius: 4px; }
+  #pharmacyPage .ph-body-band .bar i { position: absolute; top: -3px; width: 3px; height: 12px; border-radius: 2px; background: var(--ph-herb-deep); }
+  #pharmacyPage .ph-body-band em { font-style: normal; font-weight: 700; color: var(--ph-herb-deep); white-space: nowrap; }
+  #pharmacyPage .ph-body-feeds { margin-top: 8px; font-size: var(--fs-11-5); color: var(--ph-faint); }
+  #pharmacyPage .ph-body-feeds span { color: var(--ph-herb-deep); font-weight: 600; }
+  #pharmacyPage .ph-body-hist { margin-top: 8px; width: 100%; border-collapse: collapse; font-size: var(--fs-11-5); font-variant-numeric: tabular-nums; }
+  #pharmacyPage .ph-body-hist th { text-align: left; font: 700 var(--fs-10, 10px) var(--font-disp); letter-spacing: .09em; text-transform: uppercase; color: var(--ph-faint); padding: 0 6px 3px 0; }
+  #pharmacyPage .ph-body-hist td { padding: 2px 6px 2px 0; color: var(--ph-soft); }
+  #pharmacyPage .ph-body-hist .up { color: var(--ph-herb); } #pharmacyPage .ph-body-hist .dn { color: var(--ph-gold-deep); }
   #pharmacyPage .ph-rf-signs { margin: 4px 0 6px 18px; padding: 8px 4px 6px 10px; background: var(--ph-paper); border-radius: 8px; text-align: left; }
   #pharmacyPage .ph-rf-signs h4 { margin: 0 0 6px; display: flex; justify-content: space-between; gap: 8px; font: 700 var(--fs-11) var(--font-disp); letter-spacing: .09em; text-transform: uppercase; color: var(--ph-faint); }
   #pharmacyPage .ph-rf-signs h4 span { text-transform: none; letter-spacing: 0; font: 500 var(--fs-11) var(--font-body); }
@@ -51593,6 +51612,76 @@ or changing anything in Cliniko.
   });
   const phCondList = rec => (rec && Array.isArray(rec.conditions)) ? rec.conditions : [];
   const phIsFemale = rec => !!rec && rec.sex === "F";
+  // ==== Body composition (her 2026-10-12 ask; mock body-composition-mock.html, her 8 picks) ====
+  // rec.body = { readings: [{ d: "YYYY-MM-DD", h cm, w kg, f body fat %, m skeletal muscle kg }] }, dated, newest wins. Written ONLY by
+  // phBodyWrite on her typing. Everything below is derived on read, never stored: BMI / fat mass / muscle %, the build signs Fang Bing Ren
+  // pre-ticks (phBodySigns), and the width profile every body figure is drawn with (phBodyBuild). Sex is required (F or M): no sex, no figure
+  // scaling and no pre-ticks. The ranges and rules are DRAFT from standard tables, hers to correct.
+  const PH_BODY_REF = { F: { bmi: 21.8, fat: 26, mus: 31 }, M: { bmi: 23.5, fat: 18, mus: 39 } };
+  const PH_BODY_FAT_BANDS = { F: [20, 32, 38], M: [10, 20, 28] }, PH_BODY_MUS_BANDS = { F: [27, 34], M: [33, 42] };
+  const PH_BODY_LIM = { h: [100, 230], w: [25, 250], f: [3, 65], m: [8, 90] };
+  function phBodyReadings(rec) {
+    const L = rec && rec.body && Array.isArray(rec.body.readings) ? rec.body.readings : [];
+    return L.filter(r => r && r.d).slice().sort((a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : 0);
+  }
+  // the latest reading that can say anything (needs height and weight); a newer partial reading borrows what it lacks from the one before
+  function phBodyLatest(rec) {
+    const L = phBodyReadings(rec); const out = {}; let any = false;
+    L.forEach(r => { ["h", "w", "f", "m"].forEach(k => { if (r[k] != null) out[k] = r[k]; }); out.d = r.d; any = true; });
+    return any && out.h > 0 && out.w > 0 ? out : null;
+  }
+  function phBodyCalc(b) { const hm = b.h / 100, bmi = b.w / (hm * hm); return { bmi, mus: b.m != null ? b.m / b.w * 100 : null, fatKg: b.f != null ? b.w * b.f / 100 : null }; }
+  // build signs the numbers support -> { sign key: plain-words reason }, or null when there is nothing to read
+  function phBodySigns(rec) {
+    const sx = rec && rec.sex; const b = (sx === "F" || sx === "M") ? phBodyLatest(rec) : null; if (!b) return null;
+    const c = phBodyCalc(b), fb = PH_BODY_FAT_BANDS[sx], mb = PH_BODY_MUS_BANDS[sx], bmi = c.bmi.toFixed(1);
+    const hasF = b.f != null, hasM = c.mus != null;
+    const fatHigh = hasF && b.f > fb[1], fatVHigh = hasF && b.f > fb[2], musLow = hasM && c.mus < mb[0], musHigh = hasM && c.mus > mb[1];
+    const thin = c.bmi < 18.5 || (c.bmi < 20 && musLow), obese = c.bmi >= 30 || fatVHigh, soft = fatHigh && musLow && !thin, firm = musHigh && !fatHigh;
+    const robust = !thin && !firm && c.bmi >= 25 && c.bmi < 30 && !fatVHigh && (!hasM || c.mus >= mb[0]);
+    const out = {};
+    if (thin) out.thin_body = c.bmi < 18.5 ? `BMI ${bmi}, under 18.5` : `BMI ${bmi} with low muscle`;
+    if (obese) out.obesity_tend = c.bmi >= 30 ? `BMI ${bmi}, 30 or over` : `body fat ${b.f}%, over ${fb[2]}%`;
+    if (soft) out.soft_loose_muscle = `fat ${b.f}% is high and muscle ${c.mus.toFixed(0)}% is low`;
+    if (firm) out.robust_firm_build = `muscle ${c.mus.toFixed(0)}% is high, fat is not`;
+    if (robust) out.robust_build = `BMI ${bmi}, sturdy`;
+    return out;
+  }
+  // Width profile for every body figure: factor on the average figure's half-width at height y (0 head .. 458 feet). BMI sets the overall
+  // width, body fat piles on at the hips / thighs (women) or the belly (men), muscle at the shoulders, arms and thighs. Figures are drawn at a
+  // fixed frame height, so height reaches them through BMI. sxm = the torso average, applied to everything inside the outline.
+  function phBodyBuild(rec) {
+    const sx = rec && rec.sex; const b = (sx === "F" || sx === "M") ? phBodyLatest(rec) : null; if (!b) return null;
+    const c = phBodyCalc(b), r = PH_BODY_REF[sx];
+    const base = 1 + 0.85 * (Math.sqrt(c.bmi / r.bmi) - 1);
+    const fd = b.f != null ? (b.f - r.fat) / 100 : 0, md = c.mus != null ? (c.mus - r.mus) / 100 : 0;
+    const bell = (y, m, s) => Math.exp(-((y - m) * (y - m)) / (2 * s * s));
+    const w = y => {
+      const gf = sx === "F" ? 0.75 * bell(y, 232, 30) + 0.55 * bell(y, 290, 36) + 0.3 * bell(y, 192, 22) : bell(y, 196, 26) + 0.3 * bell(y, 242, 30);
+      const gm = bell(y, 100, 22) + 0.8 * bell(y, 288, 40) + 0.4 * bell(y, 385, 30);
+      let v = Math.max(0.72, Math.min(1.45, base + fd * 1.2 * gf + md * 1.6 * gm));
+      if (y < 64) v = 1 + (v - 1) * 0.15;
+      if (y > 435) v = 1 + (v - 1) * 0.5;
+      return v;
+    };
+    let s = 0, n = 0; for (let y = 110; y <= 240; y += 10) { s += w(y); n++; }
+    return { w, sxm: s / n, sex: sx, bmi: c.bmi };
+  }
+  function phBodyWrite(name, field, raw) {
+    const rec = phPatientRec(name), lim = PH_BODY_LIM[field]; if (!rec || !lim) return false;
+    const txt = String(raw == null ? "" : raw).trim(), v = parseFloat(txt.replace(",", "."));
+    if (txt !== "" && !(v >= lim[0] && v <= lim[1])) { presSavedToast(`That looks off. ${field === "h" ? "Height" : field === "w" ? "Weight" : field === "f" ? "Body fat" : "Muscle"} should be ${lim[0]} to ${lim[1]}.`); return false; }
+    rec.body = rec.body || { readings: [] }; rec.body.readings = Array.isArray(rec.body.readings) ? rec.body.readings : [];
+    const L = rec.body.readings, today = keyOf(TODAY);
+    let r = L.find(x => x.d === today);
+    if (txt === "") { if (r) delete r[field]; }
+    else {
+      if (!r) { r = { d: today }; const last = phBodyLatest(rec); if (last) ["h", "w", "f", "m"].forEach(k => { if (last[k] != null) r[k] = last[k]; }); L.push(r); }
+      r[field] = Math.round(v * 10) / 10;
+    }
+    if (savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return false; }
+    return true;
+  }
   // badges, capped -- one shape shared by the header band and (later) any
   // list row. Reads the unified history store now (2026-08-20 rework) --
   // shows for ANY patient with a Yes flag, not just female (General health /
@@ -57450,6 +57539,7 @@ or changing anything in Cliniko.
           ${hxName ? phPfAvatarHtml(hxName) : ""}
           ${presNameTypeFieldsHtml(t, !hxIsNew, true)}
           ${presContactFieldsHtml(t, !hxIsNew)}
+          ${hxName && !presIsFormula(t) ? phBodyCardHtml(hxName) : ""}
           ${presAddressesPanelHtml(t)}
           <div class="ph-tmpl-sec"><span>Insurance</span></div>
           ${phInsFieldsLabeledHtml(hxName)}
@@ -65396,7 +65486,8 @@ or changing anything in Cliniko.
     const itemNum = site => { const it = items.find(i => i.site === site && i.num); return it ? it.num : 0; };
     const famsWeighing = (kind, ks) => Object.keys(PH_FORMULAS).filter(id => ks.some(k => (((PH_FORMULAS[id] || {})[kind] || {})[k] || 0) > 0));
     const bestOf = (kind, ks, pool) => { let b = pool[0], bw = 0; pool.forEach(m => ks.forEach(k => { const w = (((PH_FORMULAS[m] || {})[kind] || {})[k] || 0); if (w > bw) { bw = w; b = m; } })); return b; };
-    const G = PH_BODY_GEOM, CX = G.CX, female = phIsFemale(rec), g = female ? "f" : "m", path = G.outline(g, view);
+    const bld = phBodyBuild(rec);   // her measured build, when she has typed height and weight; else the old tick-based stretch below
+    const G = PH_BODY_GEOM, CX = G.CX, female = phIsFemale(rec), g = female ? "f" : "m", path = G.outline(g, view, bld);
     const legend = [];
     // family of a sign (first ticked key of a group); records it in the legend
     const famOf = ks => phRenFamActive() ? phRenFamColourId(ks.find(on) || ks[0]) : phFbrSignFam("p", [ks.find(on) || ks[0]]);
@@ -65405,7 +65496,7 @@ or changing anything in Cliniko.
     const RING = "rgba(63,74,79,.55)";
     // build: one reading, the heaviest wins
     const buildKey = on("obesity_tend") ? "obesity_tend" : on("robust_build") ? "robust_build" : on("robust_firm_build") ? "robust_firm_build" : on("soft_loose_muscle") ? "soft_loose_muscle" : on("thin_body") ? "thin_body" : "";
-    const sx = { obesity_tend: 1.2, robust_build: 1.12, robust_firm_build: 1.12, soft_loose_muscle: 1.06, thin_body: .86 }[buildKey] || 1;
+    const sx = bld ? bld.sxm : ({ obesity_tend: 1.2, robust_build: 1.12, robust_firm_build: 1.12, soft_loose_muscle: 1.06, thin_body: .86 }[buildKey] || 1);
     let outline = "#6f6053", outlineW = 1.05;
     if (buildKey) { outline = note(famOf([buildKey]), { obesity_tend: "heavy build", robust_build: "robust build", robust_firm_build: "robust, firm build", soft_loose_muscle: "soft, loose muscle", thin_body: "thin build" }[buildKey]); outlineW = 2.2; }
     // face and skin
@@ -67213,13 +67304,15 @@ or changing anything in Cliniko.
     const clueKeys = new Set(phPatClues(rec, name).map(c => c.key));
     const chartWords = phFbrChartWords(rec, kind);
     const list = kind === "d" ? PH_BING_SIGNS : PH_REN_SIGNS, eff = {};
+    const bodySigns = kind === "p" ? phBodySigns(rec) : null;   // her height / weight / fat / muscle -> build signs (2026-10-12)
     list.forEach(r => {
       const known = phTriPrefillKeys(r[0]).some(k => clueKeys.has(k));
       const carried = kind === "d" && !!(prevD && prevD[r[0]]);
       const chartKnown = phFbrChartKnown(chartWords, kind, r[0]);
       const hxKnown = kind === "p" && (phTriHxKnown(rec, r[0]) || phTriUsualKnown(rec, r[0]));
       const bldKnown = phTriBloodKnown(rec, r[0]);
-      eff[r[0]] = picks[r[0]] !== undefined ? picks[r[0]] : (known || carried || chartKnown || hxKnown || bldKnown);
+      const bodyKnown = !!(bodySigns && bodySigns[r[0]]);
+      eff[r[0]] = picks[r[0]] !== undefined ? picks[r[0]] : (known || carried || chartKnown || hxKnown || bldKnown || bodyKnown);
     });
     return eff;
   }
@@ -67232,6 +67325,7 @@ or changing anything in Cliniko.
     if (phTriBloodKnown(rec, key)) return "Already on a recent blood test — tap to override";
     if (kind === "p" && phTriHxKnown(rec, key)) return "Already on Medical history — tap to override";
     if (kind === "p" && phTriUsualKnown(rec, key)) return "Already answered in her usual answers — tap to override";
+    if (kind === "p") { const bs = phBodySigns(rec); if (bs && bs[key]) return "From her measurements (" + bs[key] + ") — tap to override"; }
     return "Already recorded elsewhere — tap to override";
   }
   // Today's working view of rec.tri: Ren (.p) never resets. Disease (.d) resets on a new day,
@@ -67457,7 +67551,7 @@ or changing anything in Cliniko.
       return `<g class="ph-pat-ll"><text x="${l[1]}" y="${l[2] + 3}" text-anchor="${L ? "end" : "start"}">${l[0]}</text><line x1="${L ? l[1] + 3 : l[1] - 3}" y1="${l[2]}" x2="${l[3]}" y2="${l[4]}"/><circle cx="${l[3]}" cy="${l[4]}" r="1.7"/></g>`;
     }).join("")}</g>` : "";
     let svg = "";
-    try { svg = PH_BODY_GEOM.svg(female ? "f" : "m", "front", { uid: "fbrfig", shade: true, details: true, hl, overlay: lead, viewBox: lbl ? "-79 0 409 462" : undefined }); } catch (e) { svg = ""; }
+    try { svg = PH_BODY_GEOM.svg(female ? "f" : "m", "front", { uid: "fbrfig", build: phBodyBuild(rec), shade: true, details: true, hl, overlay: lead, viewBox: lbl ? "-79 0 409 462" : undefined }); } catch (e) { svg = ""; }
     const zoneLabs = (PH_FBR_ZONES[fam.family] || []).map(z => PH_PAT_ZONE_LBL[z] || z).join(", ") || "not mapped yet";
     return `<div class="ph-pat-figcol ph-fbr-figcol"><div class="ph-pat-fig ph-fbr-fig${lbl ? " lbl" : ""}" role="img" aria-label="Where ${esc(fam.name)} presents on the body">${svg}</div>
       <button type="button" class="ph-pat-lblbtn" data-fbr-lbl="1" aria-pressed="${lbl ? "true" : "false"}">Labels</button>
@@ -68115,7 +68209,7 @@ or changing anything in Cliniko.
     }).join("")}</g>` : "";
     let svg = "";
     try {
-      svg = PH_BODY_GEOM.svg(female ? "f" : "m", "front", { uid: "patfig", shade: true, details: true, hl, overlay: lead, viewBox: ui.lbl ? "-79 0 409 462" : undefined });
+      svg = PH_BODY_GEOM.svg(female ? "f" : "m", "front", { uid: "patfig", build: phBodyBuild(rec), shade: true, details: true, hl, overlay: lead, viewBox: ui.lbl ? "-79 0 409 462" : undefined });
     } catch (e) { svg = ""; }
     const cls = ["ph-pat-fig", ui.lbl ? "lbl" : "", bdef ? "washed" : "", foc && foc.def.id === "bdef" ? "glow" : "", foc ? "pf-" + foc.def.fam : ""].filter(Boolean).join(" ");
     const cap = foc ? `${esc(foc.def.name)}: ${esc((foc.def.zones || []).map(z => PH_PAT_ZONE_LBL[z] || z).join(", "))}` : "Where each pattern shows";
@@ -71544,10 +71638,13 @@ or changing anything in Cliniko.
       const S = SHAPES[g];
       return [].concat(S.head, S.neck, S.armOut, S.hand, S.armIn, S.torso, S.legOut, view === "back" ? S.footBack : S.footFront, S.legIn);
     }
-    function outline(g, view) {
+    // `build` (her 2026-10-12 body-composition ask, phBodyBuild): each contour point's distance from the midline is scaled by the
+    // patient's width profile at that height, relative to the torso average (which the caller applies to everything inside).
+    function outline(g, view, build) {
       const half = halfContour(g, view);
-      const right = half.map(p => [CX + p[0], p[1], p[2]]);
-      const left = half.slice(1, -1).reverse().map(p => [CX - p[0], p[1], p[2]]);
+      const k = p => build ? build.w(p[1]) / build.sxm : 1;
+      const right = half.map(p => [CX + p[0] * k(p), p[1], p[2]]);
+      const left = half.slice(1, -1).reverse().map(p => [CX - p[0] * k(p), p[1], p[2]]);
       return crPath(right.concat(left), true);
     }
 
@@ -71677,8 +71774,11 @@ or changing anything in Cliniko.
     function svg(g, view, opts) {
       opts = opts || {};
       const uid = opts.uid || ("b" + Math.random().toString(36).slice(2, 7));
-      const path = outline(g, view);
+      const bld = opts.build || null, path = outline(g, view, bld);
       const stroke = "#6f6053";
+      // drawn to scale: everything inside the outline (organs, marks, details, labels) takes the torso-average width, the outline itself
+      // carries the shape on top of that
+      const open = bld ? `<g transform="translate(${CX} 0) scale(${bld.sxm.toFixed(3)} 1) translate(${-CX} 0)">` : "", shut = bld ? "</g>" : "";
       return `<svg viewBox="${opts.viewBox || `0 0 ${W} ${H}`}" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="${uid}-skin" x1="0" y1="0" x2="0" y2="1">
@@ -71696,11 +71796,11 @@ or changing anything in Cliniko.
         ${opts.guides ? guidesSvg() : ""}
         <clipPath id="${uid}-clip"><path d="${path}"/></clipPath>
         ${opts.defsExtra || ""}
-        <path d="${path}" fill="url(#${uid}-skin)" ${opts.shade ? `filter="url(#${uid}-shade)"` : ""}/>
+        ${open}<path d="${path}" fill="url(#${uid}-skin)" ${opts.shade ? `filter="url(#${uid}-shade)"` : ""}/>
         <g class="bg-details">${opts.details ? detailSvg(g, view, stroke) : ""}</g>
         <g class="bg-hl" id="${uid}-hl" clip-path="url(#${uid}-clip)">${opts.hl || ""}</g>
         <path d="${path}" fill="none" stroke="${stroke}" stroke-width="1.05" stroke-linejoin="round"/>
-        ${opts.overlay || ""}
+        ${opts.overlay || ""}${shut}
       </svg>`;
     }
 
@@ -71826,6 +71926,7 @@ or changing anything in Cliniko.
         <clipPath id="${uid}-clip"><path d="${body}"/><path d="${arm}"/></clipPath>
         <clipPath id="${uid}-bclip"><path d="${body}"/></clipPath>
         ${opts.defsExtra || ""}
+        ${opts.build ? (px => `<g transform="translate(${px} 0) scale(${(1 + 0.7 * (opts.build.sxm - 1)).toFixed(3)} 1) translate(${-px} 0)">`)(opts.flip ? SW - SIDE.X : SIDE.X) : ""}
         <g filter="url(#${uid}-shb)"><g${t}><path d="${body}" fill="url(#${uid}-skin)"/></g></g>
         <g${t}>
           <g class="bg-details" fill="none" stroke="${stroke}" stroke-linecap="round">${det(SIDE_DET.both)}${g === "f" ? det(SIDE_DET.f) : ""}</g>
@@ -71839,10 +71940,10 @@ or changing anything in Cliniko.
           <path d="${arm}" fill="none" stroke="${stroke}" stroke-width="1.05" stroke-linejoin="round"/>
           <g class="bg-hl" id="${uid}-hl" clip-path="url(#${uid}-clip)">${opts.hl || ""}</g>
         </g>
-        ${opts.overlay || ""}
+        ${opts.overlay || ""}${opts.build ? "</g>" : ""}
       </svg>`;
     }
-  
+
     return { svg, sideSvg, outline, crPath, detailSvg, CX, W, H, SIDE_W: SIDE.W, SIDE_X: SIDE.X };
   })();
 
@@ -72846,7 +72947,7 @@ or changing anything in Cliniko.
       return cyclish ? ""
         : `<div class="ph-pm-door" data-pm-box="${esc(plan.id)}"><button type="button" class="ph-pm-doorbtn" data-pm-pick="${esc(plan.id)}" data-pm-name="${esc(name)}">＋ Pain map</button></div>`;
     }
-    const g = phIsFemale(phPatientPeek(name)) ? "f" : "m";
+    const g = phIsFemale(phPatientPeek(name)) ? "f" : "m", pmBld = phBodyBuild(phPatientPeek(name));
     const R = PH_PAIN_REGIONS.REGIONS;
     const seen = phPmSeen.get(plan.id) || new Set();
     const nowKeys = new Set();
@@ -72928,7 +73029,7 @@ or changing anything in Cliniko.
         + sgs.map(s => `<g class="ph-pm-spot ph-sg-spot" data-pm-spot="s${s.i}"><title>${esc(s.summary)}</title>${sgBody(s)}</g>`).join("");
       const overlay = sp.map(s => `<g class="ph-pm-spot" data-pm-spot="${s.idx}"><title>${esc(s.summary)}</title>${spotBadge(s, false, flip ? SW - s.x : s.x)}</g>`).join("")
         + sgs.map(s => `<g class="ph-pm-spot ph-sg-spot" data-pm-spot="s${s.i}"><title>${esc(s.summary)}</title>${sgBadge(s, flip ? SW - s.x : s.x)}</g>`).join("");
-      return `<figure class="ph-pm-fig side${idle ? " idle" : ""}">${PH_BODY_GEOM.sideSvg(g, { uid, flip, defsExtra: `<defs>${phPmHlDefs(uid)}</defs>`, hl, overlay })}<figcaption>${fs === "R" ? "Right side" : "Left side"}</figcaption></figure>`;
+      return `<figure class="ph-pm-fig side${idle ? " idle" : ""}">${PH_BODY_GEOM.sideSvg(g, { uid, flip, build: pmBld, defsExtra: `<defs>${phPmHlDefs(uid)}</defs>`, hl, overlay })}<figcaption>${fs === "R" ? "Right side" : "Left side"}</figcaption></figure>`;
     };
     const sideOn = phPmSide.has(plan.id);
     const labelsOn = phPmLabels.has(plan.id);
@@ -72939,7 +73040,7 @@ or changing anything in Cliniko.
     const fig = view => {
       const uid = phPmUid(plan.id, view);
       const idle = !turn && list.length && !spots[view].length && !sgSpots[view].length;
-      return `<figure class="ph-pm-fig ${view}${idle ? " idle" : ""}">${PH_BODY_GEOM.svg(g, view, { uid, shade: true, details: true, defsExtra: `<defs>${phPmHlDefs(uid)}</defs>`, overlay: phPmRlLabels(view), hl: spots[view].map(sp => spotSvg(uid, sp, labelsOn)).join("") + sgSpots[view].map(sgSvg).join("") })}<figcaption>${view === "front" ? "Anterior" : "Posterior"}</figcaption></figure>`;
+      return `<figure class="ph-pm-fig ${view}${idle ? " idle" : ""}">${PH_BODY_GEOM.svg(g, view, { uid, build: pmBld, shade: true, details: true, defsExtra: `<defs>${phPmHlDefs(uid)}</defs>`, overlay: phPmRlLabels(view), hl: spots[view].map(sp => spotSvg(uid, sp, labelsOn)).join("") + sgSpots[view].map(sgSvg).join("") })}<figcaption>${view === "front" ? "Anterior" : "Posterior"}</figcaption></figure>`;
     };
     const pid = esc(plan.id);
     const rows = list.map((p, idx) => {
@@ -72985,14 +73086,14 @@ or changing anything in Cliniko.
       const badge3 = (sp, vx) => `<g class="ph-pm-spot" data-pm-spot="${sp.idx}">${spotBadge(sp, false, vx)}</g>`;
       const faceFB3 = (k, view) => {
         const uid = phPmUid(plan.id, "f3-" + k), sg = S3.showSurg ? sgSpots[view] : [];
-        return `<figure>${PH_BODY_GEOM.svg(g, view, { uid, shade: true, details: true, defsExtra: `<defs>${phPmHlDefs(uid)}</defs>`,
+        return `<figure>${PH_BODY_GEOM.svg(g, view, { uid, build: pmBld, shade: true, details: true, defsExtra: `<defs>${phPmHlDefs(uid)}</defs>`,
           hl: spots[view].map(sp => spot3(uid, sp)).join("") + sg.map(sp => sgBody(sp)).join(""),
           overlay: phPmRlLabels(view) + spots[view].map(sp => badge3(sp)).join("") + sg.map(sp => sgBadge(sp)).join("") })}</figure>`;
       };
       const faceSide3 = (k, fs) => {
         const uid = phPmUid(plan.id, "f3-" + k), flip = fs === "L", SW = PH_BODY_GEOM.SIDE_W;
         const sp = sideSpots[fs], sgs = S3.showSurg ? sgSpots["side" + fs] : [];
-        return `<figure>${PH_BODY_GEOM.sideSvg(g, { uid, flip, defsExtra: `<defs>${phPmHlDefs(uid)}</defs>`,
+        return `<figure>${PH_BODY_GEOM.sideSvg(g, { uid, flip, build: pmBld, defsExtra: `<defs>${phPmHlDefs(uid)}</defs>`,
           hl: sp.map(s => spot3(uid, s)).join("") + sgs.map(s => sgBody(s)).join(""),
           overlay: sp.map(s => badge3(s, flip ? SW - s.x : s.x)).join("") + sgs.map(s => sgBadge(s, flip ? SW - s.x : s.x)).join("") })}</figure>`;
       };
@@ -80581,7 +80682,7 @@ or changing anything in Cliniko.
         spots += `<g class="mk-spot${st ? " on" : ""}" data-msk="spot" data-v="${k}"><title>${esc(m.name)} ${phMskSideTxt(S)}${st ? " · " + PH_MSK_PALP[st] : ""}</title><circle cx="${x}" cy="${y}" r="8.5" fill="transparent"/><circle cx="${x}" cy="${y}" r="5.4" fill="${st ? c : "var(--ph-white)"}" fill-opacity="${st ? .88 : .6}" stroke="${st ? c : "var(--ph-faint)"}" stroke-width="${st ? 1.4 : 1}"${st ? "" : ` stroke-dasharray="2.4 1.8"`}/>${st === 3 ? `<path d="M${x - 3},${y - 3}L${x + 3},${y + 3}M${x + 3},${y - 3}L${x - 3},${y + 3}" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>` : ""}</g>`;
       });
     });
-    return PH_BODY_GEOM.svg(g, view, { uid: "mskfig" + view, shade: true, details: false, overlay: phPmRlLabels(view), hl: spots });
+    return PH_BODY_GEOM.svg(g, view, { uid: "mskfig" + view, build: phBodyBuild(rec), shade: true, details: false, overlay: phPmRlLabels(view), hl: spots });
   }
   function phMskPalpHtml(name, rec, plan, vis) {
     const regs = phMskRegions(name, rec, plan), pal = vis.pal || {};
@@ -80637,7 +80738,7 @@ or changing anything in Cliniko.
     const figs = [["front", "Front"], ["back", "Back"], ["side", "Side"]].map(([v, lab]) => {
       const marks = on.map(k => PH_MSK_MARKS[k][v] ? PH_MSK_MARKS[k][v]() : "").join("");
       const uid = "mskpost" + v;
-      const svg = v === "side" ? PH_BODY_GEOM.sideSvg(g, { uid, overlay: marks }) : PH_BODY_GEOM.svg(g, v, { uid, shade: true, details: false, overlay: (v === "front" || v === "back" ? phPmRlLabels(v) : "") + marks });
+      const svg = v === "side" ? PH_BODY_GEOM.sideSvg(g, { uid, build: phBodyBuild(rec), overlay: marks }) : PH_BODY_GEOM.svg(g, v, { uid, build: phBodyBuild(rec), shade: true, details: false, overlay: (v === "front" || v === "back" ? phPmRlLabels(v) : "") + marks });
       return `<figure>${svg}<figcaption>${lab}</figcaption></figure>`;
     }).join("");
     return `<div class="mk-posefigs">${figs}</div><div class="mk-legend"><span>${on.length ? `${on.length} posture finding${on.length > 1 ? "s" : ""} marked` : "Tick a posture chip and its mark appears on the figure."}</span></div>`;
@@ -80695,7 +80796,7 @@ or changing anything in Cliniko.
         return `<g><title>${esc(PH_MSK_REGION_LABEL[rk])}${S === "C" ? "" : " " + phMskSideTxt(S)}</title><circle cx="${x}" cy="${a.y}" r="9" fill="${none ? "var(--ph-white)" : c}" fill-opacity="${none ? .6 : .85}" stroke="${c}" stroke-width="${none ? 1.2 : 1.6}"${none ? ` stroke-dasharray="2.4 1.8"` : ""}/></g>`;
       }).join("");
     }).join("");
-    return `<div class="mk-fig mk-regfig">${PH_BODY_GEOM.svg(g, "front", { uid: "mskrf", shade: true, details: false, overlay: phPmRlLabels("front") + dots })}
+    return `<div class="mk-fig mk-regfig">${PH_BODY_GEOM.svg(g, "front", { uid: "mskrf", build: phBodyBuild(rec), shade: true, details: false, overlay: phPmRlLabels("front") + dots })}
       <div class="mk-legend"><span><i style="background:${PH_MSK_STAT_C.good}"></i>Fine</span><span><i style="background:${PH_MSK_STAT_C.warn}"></i>Reduced</span><span><i style="background:${PH_MSK_STAT_C.bad}"></i>Poor</span><span><i style="background:var(--ph-faint);opacity:.5"></i>Not recorded</span></div>
       <div class="mk-sub">${esc(caption)}</div></div>`;
   }
@@ -80736,7 +80837,7 @@ or changing anything in Cliniko.
       const v = nu[`d${l}${S}`], c = col(v), x = phPmPlaceX("front", S, p[0]);
       return `<g><title>${l} · ${esc(a)} · ${phMskSideTxt(S)}${v ? " · " + v : ""}</title><circle cx="${x}" cy="${p[1]}" r="6.6" fill="${c || "var(--ph-white)"}" fill-opacity="${c ? .88 : .6}" stroke="${c || "var(--ph-faint)"}" stroke-width="1.3"${c ? "" : ` stroke-dasharray="2.4 1.8"`}/><text x="${x}" y="${p[1] + 2.6}" text-anchor="middle" font-size="6.4" font-weight="700" fill="${c ? "#fff" : "var(--ph-soft)"}" font-family="-apple-system,Segoe UI,Roboto,sans-serif">${l}</text></g>`;
     }).join("")).join("");
-    return `<div class="mk-fig mk-regfig">${PH_BODY_GEOM.svg(g, "front", { uid: "mskdm", shade: true, details: false, overlay: phPmRlLabels("front") + dots })}
+    return `<div class="mk-fig mk-regfig">${PH_BODY_GEOM.svg(g, "front", { uid: "mskdm", build: phBodyBuild(rec), shade: true, details: false, overlay: phPmRlLabels("front") + dots })}
       <div class="mk-legend"><span><i style="background:${PH_MSK_STAT_C.good}"></i>Normal</span><span><i style="background:${PH_MSK_STAT_C.warn}"></i>Reduced</span><span><i style="background:${PH_MSK_STAT_C.bad}"></i>Absent</span><span><i style="background:var(--ph-faint);opacity:.5"></i>Not tested</span></div>
       <div class="mk-sub">Where each nerve root's skin area sits. Filled in from the table.</div></div>`;
   }
@@ -86624,6 +86725,48 @@ Please let me know if you have any questions.`;
           <input type="email" id="presEditEmail" data-pres-email="1" value="${esc(rec.email || "")}" placeholder="name@…" autocomplete="off" inputmode="email"></div>
       </div>`;
   }
+  // Body card on Patient details (her 2026-10-12 ask): height, weight, body fat, skeletal muscle. Typed once, saved on change as TODAY's
+  // dated reading (an older reading is never edited, so the trend keeps its history). Scoped host `data-body-host`, repainted in place.
+  function phBodyBandHtml(label, v, lo, hi, max, unit) {
+    const pos = Math.max(2, Math.min(98, v / max * 100)), lp = lo / max * 100, hp = hi / max * 100, word = v < lo ? "low" : v > hi ? "high" : "usual";
+    return `<div class="ph-body-band"><span>${label}</span><span class="bar" style="background:linear-gradient(90deg,var(--ph-line) 0 ${lp}%,var(--ph-herb-tint) ${lp}% ${hp}%,var(--ph-line) ${hp}% 100%)"><i style="left:calc(${pos}% - 1px)"></i></span><em>${v.toFixed(1)}${unit} ${word}</em></div>`;
+  }
+  // the part under the inputs: BMI / fat mass / muscle tiles, the usual-range bars, what it feeds, the history. Repainted alone, so the
+  // inputs (and the field she is tabbing into) are never replaced mid-typing.
+  function phBodyReadHtml(name) {
+    const rec = phPatientPeek(name) || {}, sx = rec.sex === "F" || rec.sex === "M" ? rec.sex : "";
+    const b = phBodyLatest(rec) || {};
+    let read = "";
+    if (b.h > 0 && b.w > 0) {
+      const c = phBodyCalc(b), fb = PH_BODY_FAT_BANDS[sx], mb = PH_BODY_MUS_BANDS[sx];
+      read = `<div class="ph-body-stat"><div><b>${c.bmi.toFixed(1)}</b><small>BMI</small></div>${c.fatKg != null ? `<div><b>${c.fatKg.toFixed(1)} kg</b><small>fat mass</small></div>` : ""}${c.mus != null ? `<div><b>${c.mus.toFixed(0)}%</b><small>muscle of weight</small></div>` : ""}</div>`
+        + `<div class="ph-body-bands">${phBodyBandHtml("BMI", c.bmi, 18.5, 25, 40, "")}${sx && b.f != null ? phBodyBandHtml("Body fat", b.f, fb[0], fb[1], 50, "%") : ""}${sx && c.mus != null ? phBodyBandHtml("Muscle", c.mus, mb[0], mb[1], 50, "%") : ""}</div>`;
+      const sg = phBodySigns(rec), labs = {}; PH_REN_SIGNS.forEach(s => { labs[s[0]] = s[1]; });
+      read += sx ? (sg && Object.keys(sg).length ? `<div class="ph-body-feeds">Feeds Fang Bing Ren: ${Object.keys(sg).map(k => `<span title="${esc(sg[k])}">${esc(labs[k] || k)}</span>`).join(", ")}</div>` : `<div class="ph-body-feeds">No build sign from these numbers.</div>`) : `<div class="ph-body-feeds">Set her sex to draw the figure to scale and read her build.</div>`;
+    }
+    const hist = phBodyReadings(rec);
+    const tr =(cur, p) => { if (cur == null || p == null) return ""; const d = Math.round((cur - p) * 10) / 10; return d ? ` <span class="${d > 0 ? "up" : "dn"}">${d > 0 ? "▲" : "▼"}${Math.abs(d)}</span>` : ""; };
+    const histHtml = hist.length > 1 ? `<table class="ph-body-hist"><tr><th>Date</th><th>Kg</th><th>Fat</th><th>Muscle</th></tr>${hist.slice(-5).map((r, i, arr) => { const p = i > 0 ? arr[i - 1] : (hist.length > 5 ? hist[hist.length - 6] : null); return `<tr><td>${esc(phFuDateLabel(r.d))}</td><td>${r.w != null ? r.w : "—"}${tr(r.w, p && p.w)}</td><td>${r.f != null ? r.f + "%" : "—"}${tr(r.f, p && p.f)}</td><td>${r.m != null ? r.m : "—"}${tr(r.m, p && p.m)}</td></tr>`; }).join("")}</table>` : "";
+    return read + histHtml;
+  }
+  function phBodyCardHtml(name) {
+    const rec = phPatientPeek(name) || {}, b = phBodyLatest(rec) || {};
+    const inp = (k, lab, unit) => `<div class="ph-tmpl-field"><label for="presBody_${k}">${lab} <span class="faint">${unit}</span></label><input type="text" inputmode="decimal" id="presBody_${k}" data-pres-body="${k}" value="${b[k] != null ? b[k] : ""}" autocomplete="off" placeholder="—"></div>`;
+    return `<div class="ph-bodycard" data-body-host="${esc(name)}"><div class="ph-tmpl-sec"><span>Body</span></div>
+      <div class="ph-body-grid">${inp("h", "Height", "cm")}${inp("w", "Weight", "kg")}${inp("f", "Body fat", "%")}${inp("m", "Skeletal muscle", "kg")}</div>
+      <div class="ph-body-read">${phBodyReadHtml(name)}</div></div>`;
+  }
+  function phBodyRefresh(name) {
+    const host = document.querySelector("#pharmacyPage [data-body-host]");
+    if (host && host.dataset.bodyHost === name) { const r = host.querySelector(".ph-body-read"); if (r) r.innerHTML = phBodyReadHtml(name); }
+    try { phPfwSideRefresh(name); } catch (e) { /* only when the side rail is on screen */ }
+    try { const h = document.querySelector("#pharmacyPage [data-rentab-host]"); if (h) h.outerHTML = phRenTabHtml(name); } catch (e) { /* Ren page only */ }
+  }
+  document.addEventListener("change", e => {
+    const el = e.target && e.target.closest && e.target.closest("[data-pres-body]"); if (!el) return;
+    const host = el.closest("[data-body-host]"), name = host && host.dataset.bodyHost; if (!name) return;
+    if (phBodyWrite(name, el.dataset.presBody, el.value)) phBodyRefresh(name); else { const rec = phPatientPeek(name) || {}, b = phBodyLatest(rec) || {}; el.value = b[el.dataset.presBody] != null ? b[el.dataset.presBody] : ""; }
+  });
   function presAcuToggleHtml(t) {
     const name = presPatientFor(t);
     if (!name) return "";
