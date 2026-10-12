@@ -7742,6 +7742,15 @@
   #pharmacyPage .ph-tri-filt-row { display: flex; align-items: center; gap: 8px; margin-top: 9px; flex-wrap: wrap; font-size: var(--fs-12); color: var(--ph-soft); }
   #pharmacyPage .ph-tri-filt-pill { display: inline-flex; align-items: center; gap: 6px; background: var(--ph-white); border: 1px solid var(--ph-gold); color: var(--ph-gold-deep); font-weight: 700; font-size: var(--fs-12); border-radius: 999px; padding: 4px 10px; }
   #pharmacyPage .ph-tri-filt-pill button { border: 0; background: none; color: inherit; font-weight: 700; cursor: pointer; padding: 0; font: inherit; text-decoration: underline; }
+  /* her 2026-10-12 ask: Bing in 2 columns and Ren in 2 columns (4 across on a wide screen). Each group's rows
+     flow two-across under a full-width group heading; the Bing/Ren column itself is the container, so a phone
+     (one narrow list per row) keeps one column. */
+  @container (min-width: 400px) {
+    #pharmacyPage .ph-tri-col .ph-fbr-board { columns: 1; }
+    #pharmacyPage .ph-tri-col div.ph-fbr-grp.enh { display: grid; grid-template-columns: 1fr 1fr; column-gap: 10px; align-items: start; }
+    #pharmacyPage .ph-tri-col div.ph-fbr-grp.enh > .ph-fbr-grp-hd { grid-column: 1 / -1; }
+  }
+  #pharmacyPage .ph-tri-cols.csq .ph-fbr-grp.enh { animation: none; }
   #pharmacyPage .ph-tri-multi { margin-left: auto; border: 1px solid var(--ph-line); background: var(--ph-white); color: var(--ph-soft); font: inherit; font-weight: 700; border-radius: 999px; padding: 4px 11px; cursor: pointer; }
   #pharmacyPage .ph-tri-multi.on { background: var(--ph-gold); border-color: var(--ph-gold); color: var(--ph-white); }
   #pharmacyPage .ph-tri-col-sub { display: block; margin-top: 2px; font: 600 var(--fs-11) var(--font-body); letter-spacing: normal; text-transform: none; color: var(--ph-soft); }
@@ -67588,11 +67597,15 @@ or changing anything in Cliniko.
       const fw = filtFams.length ? (() => { const m = {}; filtFams.forEach(F => { const t = (kind === "d" ? F.bing : F.ren) || {}; Object.keys(t).forEach(k => { if (t[k] && (m[k] === undefined || t[k] > m[k])) m[k] = t[k]; }); }); return m; })() : null;
       // Filtered: every sign that family's table actually weights, strongest first (a negative
       // weight -- a caution -- sorts to the bottom, never hidden). Unfiltered: every sign, grouped.
-      const all = fw
+      const allFam = fw
         ? phTriAll(kind, fam, name, fresh).filter(r => fw[r[0]]).sort((a, b) => fw[b[0]] - fw[a[0]])
         : phTriAll(kind, fam, name, fresh);
+      // complaint box: keep only the best-matching signs (see phCsScore); nothing matches -> empty lists + a note
+      const all = csOn ? allFam.filter(r => csMax > 0 && phCsScore(r, csToks) === csMax) : allFam;
       return { fw, all, rowWeights: fw || weights };
     };
+    const csToks = phCsToks(phCsQuery.get(pkey)), csOn = csToks.length > 0;
+    const csMax = csOn ? Math.max(0, ...["d", "p"].flatMap(k => phTriAll(k, fam, name, fresh).map(r => phCsScore(r, csToks)))) : 0;
     const bingS = shownFor("d", lead.bing), renS = shownFor("p", lead.ren);
     // her 2026-10-11 ask ("organise this better" -> her pick "B", grouped & collapsed): the old
     // top-6-then-"Show all" flat list (and the separate paired-by-theme board it swapped in once
@@ -67609,7 +67622,7 @@ or changing anything in Cliniko.
       const pendRow = a => `<div class="ph-tri-pend"><span>${esc(a.label)} <b>+${a.pts}</b></span><button type="button" class="ph-pfw-link" data-tri-agree="${esc(a.id)}">Agree</button></div>`;
       const addRow = `<div class="ph-tri-add"><input class="ph-tri-in" type="text" maxlength="60" placeholder="Add a symptom…" aria-label="Add a symptom"><input class="ph-tri-pt" type="number" min="1" max="9" value="2" aria-label="Points"><button type="button" class="ph-pfw-link" data-tri-add="${kind}">Add</button></div>`;
       const rowsHtml = all.length ? phFbrGroupedHtml(rec, name, all, kind, picks, eff, rowWeights, "tri", today.prevD, groups, groupIx, filtColour, true, false) : "";   // her 2026-10-12 "make this always expanded": every group stays open, no fold
-      const emptyMsg = fw && !all.length ? `<div class="ph-tri-fs">No ${esc(filtName)}-specific signs here.</div>` : "";
+      const emptyMsg = !all.length && (fw || csOn) ? `<div class="ph-tri-fs">${csOn ? "No matching signs here." : `No ${esc(filtName)}-specific signs here.`}</div>` : "";
       return `${rowsHtml}${emptyMsg}${pend.length ? `<div class="ph-tri-plab">To check</div>${pend.map(pendRow).join("")}` : ""}${addRow}`;
     };
     // Her ask (2026-10-09, "mock B, the mosaic"): the 9 stacked full-width family cards became a
@@ -67652,8 +67665,8 @@ or changing anything in Cliniko.
         <button type="button" class="ph-pfw-link" data-qa-toggle="1">${qaOpen ? "Hide quick assess" : "Quick assess ▸"}</button>
         ${qaOpen ? phQaHtml(name) : ""}
       </div>
-      ${phCsHtml(name)}
-      <div class="ph-tri-cols">
+      ${phCsHtml(name, bingS.all.length + renS.all.length)}
+      <div class="ph-tri-cols${csOn ? " csq" : ""}">
         <section class="ph-tri-col"><h4>Bing · what is wrong now <span class="ph-tri-col-sub">→ ${esc(filtFam ? filtName : lead.name)}</span></h4>${col("d", d, effD, bingS, PH_BING_GROUPS, PH_BING_GROUP_IX)}</section>
         <section class="ph-tri-col"><h4>Ren · the person's build <span class="ph-tri-col-sub">→ ${esc(filtFam ? filtName : archName)}</span></h4>${col("p", p, effP, renS, PH_REN_GROUPS, PH_REN_GROUP_IX)}</section>
       </div>
@@ -68058,27 +68071,29 @@ or changing anything in Cliniko.
     jaundice_bright: "yellow skin yellow eyes jaundiced yellowing liver", urine_yellow_scanty: "dark urine yellow urine little urine concentrated urine", interior_heat_excess: "internal heat hot body overheated",
     tongue_red_yellow_now: "red tongue yellow coat yellow tongue", appetite_poor_now: "no appetite not hungry loss of appetite off food", digestive_dysfunction_now: "indigestion upset stomach poor digestion gut trouble"
   };
+  // her 2026-10-12 ask ("list symptoms based on search bar"): the complaint box now filters the Bing AND Ren
+  // lists themselves down to the signs that match what she typed (instead of offering a few chips above them).
+  // A sign scores one point per typed word its label / everyday-words alias contains; only the best-scoring
+  // signs stay, so "chest pain" shows the chest-pain signs, not every sign that mentions pain.
+  function phCsToks(q) { return String(q || "").toLowerCase().split(/[^a-z]+/).filter(t => t.length > 2); }
+  function phCsScore(r, toks) {
+    const label = (r[1] + " " + (PH_BING_ALIAS[r[0]] || "") + " " + (PH_BING_ALIAS[String(r[0]).replace(/_tend$/, "")] || "")).toLowerCase();
+    return toks.reduce((s, t) => s + (label.includes(t) ? 1 : 0), 0);
+  }
   function phCsMatches(q) {
-    const toks = String(q || "").toLowerCase().split(/[^a-z]+/).filter(t => t.length > 2);
+    const toks = phCsToks(q);
     if (!toks.length) return [];
-    return PH_BING_SIGNS.map(r => {
-      const label = (r[1] + " " + (PH_BING_ALIAS[r[0]] || "")).toLowerCase();
-      const score = toks.reduce((s, t) => s + (label.includes(t) ? 1 : 0), 0);
-      return { r, score };
-    }).filter(x => x.score > 0).sort((a, b) => b.score - a.score || a.r[1].localeCompare(b.r[1])).slice(0, 8);
+    return PH_BING_SIGNS.map(r => ({ r, score: phCsScore(r, toks) })).filter(x => x.score > 0).sort((a, b) => b.score - a.score || a.r[1].localeCompare(b.r[1])).slice(0, 8);
   }
-  function phCsChipsHtml(name, q) {
-    if (!q || !q.trim()) return "";
-    const matches = phCsMatches(q);
-    if (!matches.length) return `<div class="ph-cs-empty">No matching sign yet.</div>`;
-    const rec = phPatientPeek(name) || {}, today = phTriToday(rec);
-    return `<div class="ph-cc-opts">${matches.map(m => `<button type="button" class="ph-cc-chip${today.d[m.r[0]] ? " on" : ""}" data-cs-pick="${esc(m.r[0])}">${esc(m.r[1])}</button>`).join("")}</div>`;
+  function phCsChipsHtml(name, q, n) {
+    if (!q || !q.trim() || !phCsToks(q).length) return "";
+    return `<div class="ph-cs-empty">${n ? `Showing the ${n} sign${n === 1 ? "" : "s"} that match` : "No matching sign yet."}</div>`;
   }
-  function phCsHtml(name) {
+  function phCsHtml(name, n) {
     const q = phCsQuery.get(phPatientKey(name)) || "";
     return `<div class="ph-cs" data-cs-host="1">
       <input type="text" class="ph-tri-in ph-cs-in" data-cs-input="1" maxlength="60" placeholder="What's the complaint? e.g. nausea, chest pain…" aria-label="Search presenting signs by complaint" value="${esc(q)}">
-      <div class="ph-cs-chips-wrap" data-cs-chips-host="1">${phCsChipsHtml(name, q)}</div>
+      <div class="ph-cs-chips-wrap" data-cs-chips-host="1">${phCsChipsHtml(name, q, n)}</div>
     </div>`;
   }
   document.addEventListener("input", e => {
@@ -68086,8 +68101,12 @@ or changing anything in Cliniko.
     if (!(el && el.matches && el.matches("[data-cs-input]") && el.closest("#pharmacyPage"))) return;
     const name = phPfwName(); if (!name) return;
     phCsQuery.set(phPatientKey(name), el.value);
+    // repaint ONLY the two lists + the count line, so the box keeps focus and the caret while she types
     const host = el.closest("[data-cs-host]"), chips = host && host.querySelector("[data-cs-chips-host]");
-    if (chips) chips.innerHTML = phCsChipsHtml(name, el.value);
+    const tmp = document.createElement("div"); tmp.innerHTML = phTriHtml(name);
+    const nc = tmp.querySelector(".ph-tri-cols"), oc = document.querySelector("#pharmacyPage .ph-tri-cols"), nchips = tmp.querySelector("[data-cs-chips-host]");
+    if (nc && oc) oc.outerHTML = nc.outerHTML;
+    if (chips) chips.innerHTML = nchips ? nchips.innerHTML : phCsChipsHtml(name, el.value);
   });
   // ---- Quick assess (2026-10-08): the "fast-look -> family-guess -> a few questions" entry
   // point from the plan, built as an honest first pass exactly as scoped there -- re-rank the
