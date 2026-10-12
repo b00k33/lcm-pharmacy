@@ -49,8 +49,12 @@ Session-grid gold "suggested" slot flag; Treatment-tab acupuncture "From the pat
 Patterns page "Sharpen this picture" box and per-pattern "Supplements to consider" chips; herb picker "— use this";
 Dispense "plan suggests" wording (now "Plan formula"); 56 "e.g. …" placeholders in the app and 6 in `intake.html`; the
 "try e.g. …" body-area message; the template manager label "Suggested match for Case" (now "Case").
-**Kept and flagged (her call):** the Patterns page's per-pattern Letters / Food advice / Points lists and the "Plan
-takes shape · Draft" card (the analysis tool she opens); Quick assess; Today's visit "Worth a look" data questions.
+**Also removed (her "strip the Patterns page lists too", same day):** each pattern card's Letters, Food advice and
+Points / formula-idea lists (the card now shows only its clues and Agree / Not this patient); the "Plan takes shape ·
+Draft" card's Principle and Letters lines, its heading and Draft tag (it is now one quiet "Main ★ <pattern>" row with the
+"Make X main" buttons). The pattern data (`letters`, `food`, `points`, `formula`) still sits in `PH_PAT_DEFS` but nothing
+reads it; do not render it again.
+**Kept and flagged (her call):** Quick assess; Today's visit "Worth a look" data questions.
 
 <!-- ============================================================ -->
 # ★★★ PATIENT WORKFLOW — THE LAW (her design, 2026-10-10) ★★★
@@ -1266,12 +1270,12 @@ deficiency, damp, plus Dang Gui Si Ni and Mei He Qi) — **all wording is
 Claude-drafted, hers to correct, not yet reviewed line by line.** Strength
 shows as plain words (Likely/Possible/A hint) + a clue count, never a
 percentage. **Formula-idea suggestions are OFF by default per-device** —
-she dislikes auto-suggested herbs. A pattern's own detail (letters, food advice, points) stays on this page
-because she opens it; the supplement-to-consider chips, the "Sharpen this picture" box and the Treatment-tab
-"From the patterns" point chips were removed 2026-10-13 (see "NO SUGGESTIONS" at the top). Several patterns can be agreed at once; one is flagged ★ main,
-surfaced via a "Plan takes shape · Draft" card that can write combined
-Diagnosis+Goal text into the plan (undo-able, never touches phases or
-visit counts). **A rule she's overridden in Settings does NOT retroactively
+she dislikes auto-suggested herbs (the per-device "Show a formula idea" switch is gone too). A pattern card shows only its clues and
+Agree / Not this patient: the letters, food advice and points lists, the supplement-to-consider chips, the "Sharpen this
+picture" box, the Treatment-tab "From the patterns" point chips and the "Plan takes shape · Draft" card's principle and
+letters were all removed 2026-10-13 (see "NO SUGGESTIONS" at the top). Several patterns can be agreed at once; one is
+flagged ★ main, shown on a single "Main ★ <pattern>" row with "Make X main" buttons (the plan's Diagnosis writes itself
+from the patterns; this row writes nothing). **A rule she's overridden in Settings does NOT retroactively
 gain new clue keys added by later feature work** — this is a deliberate,
 repeatedly-disclosed trade-off, not a bug to fix. Body-type (Jing Fang, 7
 types, 5 questions) is derived until she taps Save. Abdomen exam is ported
