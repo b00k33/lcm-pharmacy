@@ -28,6 +28,9 @@
 
 ## What I dislike (avoid these)
 - Clutter, overlap, anything cut off or running off the screen.
+- **Suggestions** (2026-10-13: "i dont like suggestions, it clutters the screen"): no suggestion chips, no
+  "suggested / best fit / consider" text, no "e.g." example text, no proposed rows. Show what is true; I'll
+  decide what to do. (CLAUDE.md, top of file, has the full rule.)
 - Oversized or disproportionate elements; irregular or random spacing.
 - Inconsistent colours or one-off components.
 - Too many boxes and borders — separate with colour and space, not outlines.
