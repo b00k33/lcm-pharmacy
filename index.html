@@ -7855,6 +7855,8 @@
   #pharmacyPage .ph-tri-lead { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 10px; padding: 9px 12px; background: #fff; border: 1px solid var(--margin-rule); border-radius: 10px; }
   #pharmacyPage .ph-tri-lead b { color: var(--ph-gold-deep); font-size: var(--fs-14); }
   #pharmacyPage .ph-tri-lead span { font-size: var(--fs-12); color: var(--ph-soft); }
+  #pharmacyPage .ph-tri-lead .agr { font-weight: 600; }
+  #pharmacyPage .ph-tri-lead .agr.agree { color: var(--ph-herb); }
   /* her 2026-10-12 ask ("give option to switch from fang bing ren to patterns diagnosis tab", her picks A + D in
      fbr-patterns-switch-mock.html): the same pill switch the Cycle page uses (.cp-seg), at the top of both pages */
   #pharmacyPage .ph-fbr-switch { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 0 12px; }
@@ -7919,7 +7921,6 @@
   #pharmacyPage .ph-fbr-card.hot { box-shadow: 0 0 0 2px var(--ph-gold); }
   #pharmacyPage .ph-fbr-card-hd { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
   #pharmacyPage .ph-fbr-card-hd .ph-fbr-t { flex: 1; min-width: 0; }
-  #pharmacyPage .ph-fbr-card-tot { font: 600 var(--fs-10) var(--font-body); color: var(--ph-soft); white-space: nowrap; }
   #pharmacyPage .ph-fbr-card-fs { display: flex; flex-wrap: wrap; gap: 4px; padding-left: 10px; margin-left: 4px; border-left: 2px solid var(--c); }
   #pharmacyPage .ph-fbr-alone { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; padding: 4px 2px 0; }
   #pharmacyPage .ph-fbr-alone .lab { margin-right: 4px; font: 600 var(--fs-10) var(--font-disp); letter-spacing: .09em; text-transform: uppercase; color: var(--ph-gold-deep); }
@@ -58229,7 +58230,7 @@ or changing anything in Cliniko.
     const effD = phTriEffective(rec, name, "d", today.d, today.prevD);
     const effP = phTriEffective(rec, name, "p", today.p);
     const ranked = phFbrRank(rec, fam, effD, effP);
-    const bingTop = ranked[0], renTop = ranked.slice().sort((a, b) => b.pS - a.pS)[0];
+    const bingTop = phFbrBySide(ranked, "d")[0], renTop = phFbrBySide(ranked, "p")[0];
     const row = (top, kind, cls, label) => {
       const score = kind === "d" ? top.dS : top.pS, max = kind === "d" ? top.maxD : top.maxP;
       const lead = score > 0, pct = max ? Math.min(100, Math.round(score / max * 100)) : 0;
@@ -65726,7 +65727,7 @@ or changing anything in Cliniko.
     const rec = phPatientPeek(name) || {}, today = phTriToday(rec), day = keyOf(TODAY), mode = modeIn || phAhModeOf(name, rec);
     const effP = phTriEffective(rec, name, "p", today.p), effD = phTriEffective(rec, name, "d", today.d, today.prevD);
     const eff = mode === "d" ? effD : effP, picks = mode === "d" ? today.d : today.p;
-    const top = phFbrRank(rec, phTriFam(name), effD, effP).filter(r => r.dS + r.pS > 0).slice(0, 3);
+    const top = phFbrRank(rec, phTriFam(name), effD, effP).filter(r => r.fit > 0).slice(0, 3);
     const ah = rec.askHer || {}, cells = (mode === "d" ? ah.d : ah.t) || {}, sel = {};
     PH_AH_TOPICS.forEach(t => {
       const cell = cells[t.id] || {}, keyOn = a => { const k = phAhKey(a, mode); return !!k && eff[k] === true; };
@@ -65765,10 +65766,10 @@ or changing anything in Cliniko.
     } else phAhNote.delete(pk);
     phAhPrev.set(pk, ids);
     const note = phAhNote.get(pk) || "";
-    const mx = Math.max(1, ...S.top.map(r => r.dS + r.pS));
+    const fitPct = r => Math.round(r.fit * 100), mx = Math.max(1, ...S.top.map(fitPct));
     const back = S.shown.some(t => S.isAns(t) && S.sel[t.id].stamp && S.sel[t.id].stamp < day);
     const strip = S.top.length
-      ? `<span class="lab">Top 3 now</span>${S.top.map(r => `<span class="fam"><i style="background:${phAhFamColour(r.id)}"></i>${esc(phAhFamName(r.id))}<em>${r.dS + r.pS}</em></span>`).join("")}${note ? `<span class="moved" role="status">${esc(note)}</span>` : ""}`
+      ? `<span class="lab">Top 3 now</span>${S.top.map(r => `<span class="fam"><i style="background:${phAhFamColour(r.id)}"></i>${esc(phAhFamName(r.id))}<em>${fitPct(r)}%</em></span>`).join("")}${note ? `<span class="moved" role="status">${esc(note)}</span>` : ""}`
       : `<span class="lab">Top 3 now</span><span class="none">Nothing ticked yet. The top 3 appear as answers come in.</span>`;
     const card = t => {
       const s = S.sel[t.id], fams = S.why.get(t.id) || [], answered = S.isAns(t), ans = phAhAns(t, mode);
@@ -65787,7 +65788,7 @@ or changing anything in Cliniko.
       if (a[2] && S.effD[a[2]] === true) ticked.push([a[2], "Bing"]);
     }));
     const tickedHtml = ticked.length ? ticked.map(([k, w]) => `<span>${esc(phSignLabel(k))}<u>${w}</u></span>`).join("") : `<span class="empty">Nothing yet. Answers tick the matching signs.</span>`;
-    const bars = S.top.map(r => { const v = r.dS + r.pS; return `<div class="r"><b>${esc(phAhFamName(r.id))}</b><span class="t"><i style="width:${Math.round(v / mx * 100)}%;background:${phAhFamColour(r.id)}"></i></span><span>${v}</span></div>`; }).join("");
+    const bars = S.top.map(r => { const v = fitPct(r); return `<div class="r"><b>${esc(phAhFamName(r.id))}</b><span class="t"><i style="width:${Math.round(v / mx * 100)}%;background:${phAhFamColour(r.id)}"></i></span><span>${v}%</span></div>`; }).join("");
     const seg = `<span class="ph-tc-seg" role="tablist" aria-label="Which questions"><button type="button" data-ah-mode="p" role="tab" aria-selected="${mode === "p"}" class="${mode === "p" ? "on" : ""}">Usually</button><button type="button" data-ah-mode="d" role="tab" aria-selected="${mode === "d"}" class="${mode === "d" ? "on" : ""}">Right now</button></span>`;
     return `<div class="ph-ah" data-ah-host="1">
       <div class="ph-ah-hd"><h2>Ask her</h2><span class="cnt">${S.answered} of ${S.shown.length} answered</span><span class="acts">${seg}${back ? `<button type="button" class="ph-today-nbtn" data-ah-same="1">Same as last time</button>` : ""}</span></div>
@@ -66738,13 +66739,12 @@ or changing anything in Cliniko.
     const rec = phPatientPeek(name) || {}, today = phTriToday(rec), fam = phTriFam(name);
     const effD = phTriEffective(rec, name, "d", today.d, today.prevD), effP = phTriEffective(rec, name, "p", today.p);
     const ranked = phFbrRank(rec, fam, effD, effP), top = ranked[0];
-    const leading = top.dS || top.pS;
-    // this card's own % -- Bing+Ren ticks answered over this family's own
-    // total, never phPfPicture's whole-profile % (her 2026-10-09 call: the
-    // header and this panel were showing the identical number under two
+    const leading = phFbrLeadOf(ranked).hasTicks;
+    // this card's own % -- the leading family's fit (its Bing share and its Ren share of its own
+    // tables, averaged: the number the ranking uses), never phPfPicture's whole-profile % (her
+    // 2026-10-09 call: the header and this panel were showing the identical number under two
     // different names; they now answer two different questions).
-    const fbrTot = (top.maxD || 0) + (top.maxP || 0);
-    const fbrPct = fbrTot ? Math.min(100, Math.round(((top.dS || 0) + (top.pS || 0)) / fbrTot * 100)) : 0;
+    const fbrPct = Math.min(100, Math.round(top.fit * 100));
     return `<h3>Fang Bing Ren</h3>
       <div class="ph-pfw-lead">${leading ? esc(top.f.name) + " leading" : "No ticks yet"}</div>
       <div class="ph-pfw-sub">${top.dS} of ${top.maxD} Bing · ${top.pS} of ${top.maxP} Ren</div>
@@ -68423,18 +68423,47 @@ or changing anything in Cliniko.
     return { d: {}, p: tri.p || {}, prevD: tri.d || {} };
   }
   // Every formula scores against the SAME shared ticks (effD/effP, already pre-filled/carried
-  // forward) -- one tap, every formula weighs it its own way. Ranked by Bing score, Ren breaks
-  // ties. The Gui Zhi body-type questionnaire's bonus (her ask 2026-10-08) was removed 2026-10-09
-  // when the questionnaire itself retired -- Gui Zhi's Ren score is now purely its own tap-rows,
-  // same as every other family, no second evidence source bolted on.
+  // forward) -- one tap, every formula weighs it its own way. The Gui Zhi body-type questionnaire's
+  // bonus (her ask 2026-10-08) was removed 2026-10-09 when the questionnaire itself retired -- Gui
+  // Zhi's Ren score is now purely its own tap-rows, same as every other family.
+  // RANK (her 2026-10-13 audit fix 2, "ren and bing work together"): a family's fit is how much of its
+  // OWN Bing table plus how much of its OWN Ren table is ticked, the two shares averaged so each side
+  // has an equal voice. Raw point sums used to rule (Bing first, Ren only breaking ties), which favoured
+  // families with long tables (max Ren runs 40 to 91). bP / rP are 0..1; fit is 0..1 (a family with only
+  // one side's table would use that side alone -- none today). Equal fit falls back to raw points.
   function phFbrRank(rec, fam, effD, effP) {
     return Object.keys(PH_FORMULAS).map(id => {
       const f = PH_FORMULAS[id], maxD = phFbrMax(f.bing), maxP = phFbrMax(f.ren);
       const dS = phTriSum(f.bing, phTriAll("d", fam), effD);
       const pS = Math.min(maxP, phTriSum(f.ren, phTriAll("p", fam), effP));
-      return { id, f, dS, pS, maxD, maxP };
-    }).sort((a, b) => b.dS - a.dS || b.pS - a.pS);
+      const bP = maxD ? Math.min(1, dS / maxD) : 0, rP = maxP ? pS / maxP : 0;
+      const fit = maxD && maxP ? (bP + rP) / 2 : maxD ? bP : rP;
+      return { id, f, dS, pS, maxD, maxP, bP, rP, fit };
+    }).sort((a, b) => b.fit - a.fit || (b.dS + b.pS) - (a.dS + a.pS) || b.dS - a.dS);
   }
+  // The same list ordered by ONE side alone (the Bing leader, the Ren leader): share of that family's own table.
+  function phFbrBySide(ranked, kind) {
+    return ranked.slice().sort(kind === "d" ? (a, b) => b.bP - a.bP || b.dS - a.dS : (a, b) => b.rP - a.rP || b.pS - a.pS);
+  }
+  // Where Bing and Ren stand with each other, from a ranked list: "agree" = the family leading overall is also
+  // the best on BOTH sides; "split" = each side leans to a different family; "bing" / "ren" = only that side has
+  // anything ticked; "none" = nothing counts yet. `bing` / `ren` are each side's best family (ties: the better fit).
+  function phFbrAgree(ranked) {
+    const top = ranked[0], best = k => ranked.reduce((m, r) => Math.max(m, r[k]), 0);
+    const bm = best("bP"), rm = best("rP");
+    const bs = bm > 0 ? ranked.filter(r => r.bP >= bm - 1e-9) : [], rs = rm > 0 ? ranked.filter(r => r.rP >= rm - 1e-9) : [];
+    const state = !bs.length && !rs.length ? "none" : !rs.length ? "bing" : !bs.length ? "ren" : (bs.includes(top) && rs.includes(top)) ? "agree" : "split";
+    return { state, bing: bs[0] || null, ren: rs[0] || null };
+  }
+  // ONE lead for every screen that names a leading family (her 2026-10-13 audit fix 1: the Ren page and the Fang Bing Ren
+  // page used to lead from different places). Pass the list from phFbrRank over the EFFECTIVE picks (ticks + pre-fills).
+  // `lead` is always a real family: the top one, or PH_FBR_ACTIVE (declaration order's first) while nothing counts yet,
+  // so a "+N" badge always has a family behind it.
+  function phFbrLeadOf(ranked) {
+    const top = ranked[0], hasTicks = !!top && top.fit > 0;
+    return { top, second: ranked[1], hasTicks, lead: hasTicks ? top.f : PH_FORMULAS[PH_FBR_ACTIVE], agree: phFbrAgree(ranked) };
+  }
+  function phFbrArchName(f) { return (PH_BTJ[f.family] && PH_BTJ[f.family].n) || f.name; }
   // The one formula a badge/label should reference when only one number fits (a tap-row's "+N",
   // the side-panel tally, an inline exam-screen strip): whichever formula currently leads, or
   // PH_FBR_ACTIVE (declaration order's first) when nothing's ticked yet, so there's always a
@@ -68443,20 +68472,21 @@ or changing anything in Cliniko.
     const today = phTriToday(rec);
     const effD = phTriEffective(rec, name, "d", today.d, today.prevD), effP = phTriEffective(rec, name, "p", today.p);
     const ranked = phFbrRank(rec, fam, effD, effP);
-    return (ranked[0] && ranked[0].dS + ranked[0].pS > 0) ? ranked[0].id : PH_FBR_ACTIVE;
+    return phFbrLeadOf(ranked).hasTicks ? ranked[0].id : PH_FBR_ACTIVE;
   }
   // Which family her RECORDED Ren signs alone point toward, or null if she hasn't tapped any yet
   // -- used wherever the retired Body-type survey's phBtqTop(rec) used to be read (the Ren
-  // section's sub-label, the completeness checklist, the Ti Zi display). Ren-only, re-sorted by
-  // pS specifically (phFbrRank's own default order is Bing-first, the wrong axis for this). Ranks
-  // on the RAW tri.p ticks, never phTriEffective's pre-filled picks -- phTriEffective itself calls
-  // phPatClues, which calls this function for its own bt_<id> clue, so folding pre-fill in here
-  // would recurse (caught live-testing 2026-10-09: stack overflow the moment a real tap existed).
+  // section's sub-label, the completeness checklist, the Ti Zi display, the bt_<id> pattern clue).
+  // Ren-only: re-sorted by the share of each family's own Ren table (phFbrRank's default order mixes
+  // Bing in, the wrong axis for this). NOT the lead the Ren page and Fang Bing Ren show -- that is
+  // phFbrLeadOf over the effective picks. Ranks on the RAW tri.p ticks, never phTriEffective's
+  // pre-filled picks -- phTriEffective itself calls phPatClues, which calls this function for its own
+  // bt_<id> clue, so folding pre-fill in here would recurse (caught live-testing 2026-10-09: stack
+  // overflow the moment a real tap existed).
   function phFbrRenLead(rec, name) {
     const tri = rec && rec.tri;
     if (!tri || !tri.p || !Object.values(tri.p).some(Boolean)) return null;
-    const ranked = phFbrRank(rec, phTriFam(name), {}, tri.p).slice().sort((a, b) => b.pS - a.pS);
-    return ranked[0].id;
+    return phFbrBySide(phFbrRank(rec, phTriFam(name), {}, tri.p), "p")[0].id;
   }
   // The symptom library learns. Seed lists above never change; what she adds lives in PHARMACY.triLearn.added
   // (agreed = on the list for everyone). Tick counts per complaint only ORDER the list -- points come from
@@ -68656,12 +68686,12 @@ or changing anything in Cliniko.
     const rec = phPatientPeek(name) || {}, today = phTriToday(rec), d = today.d, p = today.p;
     const L = PHARMACY.triLearn || { added: [] }, fam = phTriFam(name);
     const effD = phTriEffective(rec, name, "d", d, today.prevD), effP = phTriEffective(rec, name, "p", p);
-    const ranked = phFbrRank(rec, fam, effD, effP), top = ranked[0], second = ranked[1], hasTicks = top.dS + top.pS > 0;
+    const ranked = phFbrRank(rec, fam, effD, effP), { top, second, hasTicks, lead, agree } = phFbrLeadOf(ranked);
     // The tap rows show ONE formula's points (the current leader, or the first formula when
     // nothing's ticked) -- any sign can be worth something different to every other formula; see
-    // the ranked list below for how each one actually reads this same tap.
-    const lead = hasTicks ? top.f : PH_FORMULAS[PH_FBR_ACTIVE];
-    const archName = (PH_BTJ[lead.family] && PH_BTJ[lead.family].n) || lead.name;
+    // the ranked list below for how each one actually reads this same tap. The Ren page reads the
+    // very same lead (phFbrLeadOf over the effective picks), so a sign shows the same +N on both.
+    const archName = phFbrArchName(lead);
     // Her ask (2026-10-09, "Mock 1"): a mosaic tile is now also a family filter -- tap one to
     // narrow BOTH columns down to only the signs that family's own weight table actually scores
     // (positive or negative), tap it again (or the Clear pill) for every sign. Session view state
@@ -68717,7 +68747,8 @@ or changing anything in Cliniko.
     // 6-column grid budget: 2 cells minimum each + a share of 22 bonus cells by score, rounded to
     // column spans (2 cols per "cell" of width). Replaces the one-row-per-family `.ph-tri-fcard`
     // stack (`bar()` helper retired with it -- no other caller in this scope).
-    const fbrTotalS = ranked.reduce((s, x) => s + x.dS + x.pS, 0);
+    // her 2026-10-13 audit fix 2: the tile number, width and bar are the family's FIT (its Bing share and Ren share of
+    // its own tables, averaged -- phFbrRank), so what you see is what orders the cards; the points are in the hover.
     // her 2026-10-12 ask ("make the diagram bigger and formula mosaic buttons smaller, group the da huang herb family and
     // da huang formulas together", mock fbr-mosaic-grouped-mocks-2026-10-12.html option A): the loose mosaic became family
     // CARDS. Each herb heads a card tinted in its colour with its formulas on a branch underneath (PH_REN_FAM_GROUPS, the same
@@ -68725,13 +68756,13 @@ or changing anything in Cliniko.
     // one small height; a bigger score still means a wider tile (96 px + 5.5 px a point, never wider than the card), and a thin
     // bar inside shows how far along the family is. Cards sort by the family's best score. Colour, lead ring, filter ring and
     // the data-tri-filt tap are unchanged.
-    const rankedById = new Map(ranked.map(r => [r.id, r])), tileScore = r => r.dS + r.pS;
+    const rankedById = new Map(ranked.map(r => [r.id, r])), tileScore = r => r.fit, fitOf = r => Math.round(r.fit * 100);
     const mosaicTile = (r, herbHead) => {
-      const c = PH_FBR_HERB_COLOUR[r.id] || { bg: "#D3DEE2", fg: "#141F23" }, total = tileScore(r), totalMax = r.maxD + r.maxP;
-      const pct = totalMax ? Math.min(100, Math.round(total / totalMax * 300)) : 0;
-      const w = herbHead ? "" : `flex:0 0 auto;min-width:max-content;width:min(100%,${Math.round(96 + total * 5.5)}px);`;
-      return `<button type="button" class="ph-fbr-t${herbHead ? " herb" : ""}${c.fg === "#FFFFFF" ? "" : " dk"}${r === ranked[0] && hasTicks ? " lead" : ""}${filtSet.has(r.id) ? " filt" : ""}" style="background:${c.bg};color:${c.fg};${c.border ? `box-shadow:inset 0 0 0 1px ${c.border};` : ""}${w}" aria-pressed="${filtSet.has(r.id) ? "true" : "false"}" data-tri-filt="${r.id}" title="${esc(r.f.name)}: ${total} of ${totalMax}. Tap to filter to it only">
-        <span class="ph-fbr-t-name">${esc(r.f.name)}</span><span class="ph-fbr-t-n">${total}</span><span class="ph-fbr-t-bar" style="width:${pct}%"></span>
+      const c = PH_FBR_HERB_COLOUR[r.id] || { bg: "#D3DEE2", fg: "#141F23" }, total = fitOf(r);
+      const pct = Math.min(100, total * 2);
+      const w = herbHead ? "" : `flex:0 0 auto;min-width:max-content;width:min(100%,${Math.round(96 + total * 2.2)}px);`;
+      return `<button type="button" class="ph-fbr-t${herbHead ? " herb" : ""}${c.fg === "#FFFFFF" ? "" : " dk"}${r === ranked[0] && hasTicks ? " lead" : ""}${filtSet.has(r.id) ? " filt" : ""}" style="background:${c.bg};color:${c.fg};${c.border ? `box-shadow:inset 0 0 0 1px ${c.border};` : ""}${w}" aria-pressed="${filtSet.has(r.id) ? "true" : "false"}" data-tri-filt="${r.id}" title="${esc(r.f.name)}: fits ${total}%. Bing ${r.dS} of ${r.maxD}, Ren ${r.pS} of ${r.maxP}. Tap to filter to it only">
+        <span class="ph-fbr-t-name">${esc(r.f.name)}</span><span class="ph-fbr-t-n">${total}%</span><span class="ph-fbr-t-bar" style="width:${pct}%"></span>
       </button>`;
     };
     const mosaicHtml = (() => {
@@ -68742,16 +68773,21 @@ or changing anything in Cliniko.
       const cards = groups.filter(g => g.ms.length).sort((a, b) => best(b) - best(a));
       const alone = groups.filter(g => !g.ms.length).sort((a, b) => best(b) - best(a));
       return `<div class="ph-fbr-cards">${cards.map(g => {
-        const c = (PH_FBR_HERB_COLOUR[g.herb] || { bg: "#D3DEE2" }).bg, all = tileScore(g.h) + g.ms.reduce((s, m) => s + tileScore(m), 0);
+        const c = (PH_FBR_HERB_COLOUR[g.herb] || { bg: "#D3DEE2" }).bg;
         const lead = hasTicks && (g.h === ranked[0] || g.ms.includes(ranked[0]));
-        return `<div class="ph-fbr-card${lead ? " hot" : ""}${g.ms.length >= 4 ? " wide" : ""}" style="--c:${c}"><div class="ph-fbr-card-hd">${mosaicTile(g.h, true)}<span class="ph-fbr-card-tot">${all} in all</span></div><div class="ph-fbr-card-fs">${g.ms.map(m => mosaicTile(m, false)).join("")}</div></div>`;
+        return `<div class="ph-fbr-card${lead ? " hot" : ""}${g.ms.length >= 4 ? " wide" : ""}" style="--c:${c}"><div class="ph-fbr-card-hd">${mosaicTile(g.h, true)}</div><div class="ph-fbr-card-fs">${g.ms.map(m => mosaicTile(m, false)).join("")}</div></div>`;
       }).join("")}${alone.length ? `<div class="ph-fbr-alone"><span class="lab">On their own</span>${alone.map(g => mosaicTile(g.h, false)).join("")}</div>` : ""}</div>`;
     })();
     const qaOpen = phQaOpen.has(phPatientKey(name));
     // her 2026-10-11 ask ("the model and herb families first"): the gold Constitution band --
     // mosaic + a new plain-English leading-family line -- now opens the card, ahead of the
     // complaint search box (used to sit first); Bing/Ren stay below it either way.
-    const leadLine = hasTicks ? `<div class="ph-tri-lead"><div><b>${esc(top.f.name)} leads</b> <span>· ${top.dS + top.pS} of ${top.maxD + top.maxP}${second ? `, next closest is ${esc(second.f.name)} at ${second.dS + second.pS} of ${second.maxD + second.maxP}` : ""}</span></div></div>` : "";
+    // her 2026-10-13 audit fix 2 ("ren and bing work together"): the line gives the fit and each side's share, and says in
+    // plain words whether Bing and Ren agree (same family best on both sides) or lean different ways.
+    const sh = x => Math.round(x * 100) + "%";
+    const agreeTxt = { agree: "Bing and Ren agree", bing: "Only Bing ticked so far", ren: "Only Ren ticked so far",
+      split: agree.bing && agree.ren ? `Bing leans ${agree.bing.f.name}, Ren leans ${agree.ren.f.name}` : "" }[agree.state] || "";
+    const leadLine = hasTicks ? `<div class="ph-tri-lead"><div><b>${esc(top.f.name)} leads</b> <span>· fits ${sh(top.fit)} (Bing ${sh(top.bP)}, Ren ${sh(top.rP)})${second && second.fit > 0 ? `, next closest is ${esc(second.f.name)} at ${sh(second.fit)}` : ""}</span></div>${agreeTxt ? `<span class="agr ${agree.state}">${esc(agreeTxt)}</span>` : ""}</div>` : "";
     const figFam = filtFam || lead;
     return `<div class="ph-pfw-card ph-tri" data-tri-host="1">
       <div class="ph-pfw-hd"><h3>Fang Bing Ren (方病人)</h3></div>
@@ -69255,16 +69291,21 @@ or changing anything in Cliniko.
   function phRenTabHtml(name, fresh) {
     const rec = phPatientPeek(name) || {}, today = phTriToday(rec), p = today.p;
     const fam = phTriFam(name), effP = phTriEffective(rec, name, "p", p);
-    const hasTicks = Object.values(p).some(Boolean);
-    const leadId = phFbrRenLead(rec, name) || PH_FBR_ACTIVE, lead = PH_FORMULAS[leadId];
-    const leadName = (PH_BTJ[leadId] && PH_BTJ[leadId].n) || lead.name;
+    // Her 2026-10-13 audit fix 1: this page names the SAME lead as Fang Bing Ren (phFbrLeadOf over the effective Bing +
+    // Ren picks, auto-ticks included), so a sign shows the same "+N" here and there and "no ticks yet" never shows over
+    // signs that are on. If the Ren signs alone lean to another family, the line says so ("Ren alone: ...").
+    const effD = phTriEffective(rec, name, "d", today.d, today.prevD);
+    const ranked = phFbrRank(rec, fam, effD, effP), { top, hasTicks, lead } = phFbrLeadOf(ranked);
+    const anyOn = hasTicks || Object.values(effP).some(v => v === true) || Object.values(effD).some(v => v === true);
+    const leadName = phFbrArchName(lead), renOnly = phFbrAgree(ranked).ren;
+    const renAlone = hasTicks && renOnly && renOnly !== top && renOnly.rP > top.rP ? `, Ren alone: ${renOnly.f.name}` : "";
     const L = PHARMACY.triLearn || { added: [] };
     const all = phTriAll("p", fam, name, fresh);
     const pend = (L.added || []).filter(a => a.kind === "p" && !a.agreed);
     const pendRow = a => `<div class="ph-tri-pend"><span>${esc(a.label)} <b>+${a.pts}</b></span><button type="button" class="ph-pfw-link" data-rentab-agree="${esc(a.id)}">Agree</button></div>`;
     const addRow = `<div class="ph-tri-add"><input class="ph-tri-in" type="text" maxlength="60" placeholder="Add a sign…" aria-label="Add a sign"><input class="ph-tri-pt" type="number" min="1" max="9" value="2" aria-label="Points"><button type="button" class="ph-pfw-link" data-rentab-add="1">Add</button></div>`;
     return `<div class="ph-pfw-card ph-tri" data-rentab-host="1">
-      <div class="ph-pfw-hd"><h3>Ren · the person's build <span class="ph-tri-col-sub">${hasTicks ? `points toward ${esc(leadName)}` : "no ticks yet — every family starts level"}</span></h3></div>
+      <div class="ph-pfw-hd"><h3>Ren · the person's build <span class="ph-tri-col-sub">${hasTicks ? `points toward ${esc(leadName)}${esc(renAlone)}` : anyOn ? "no family leads yet" : "no ticks yet — every family starts level"}</span></h3></div>
       ${phFbrGroupedHtml(rec, name, all, "p", p, effP, lead.ren, "rentab", undefined, PH_REN_GROUPS, PH_REN_GROUP_IX, undefined, true)}
       ${pend.length ? `<div class="ph-tri-plab">To check</div>${pend.map(pendRow).join("")}` : ""}
       ${addRow}
