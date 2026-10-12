@@ -57582,8 +57582,8 @@ or changing anything in Cliniko.
           ${phInsFieldsLabeledHtml(hxName)}
         </div>
         <div class="ph-pf-rec2-r">
-          ${presPfHeaderGridHtml(t)}
           ${phCcCardHtml(t, false)}
+          ${presPfHeaderGridHtml(t)}
           ${presPfProgressStripHtml(t, hxName)}
           <div data-pf-plantile-host="1">${presPfPlanTileHtml(t, hxName)}</div>
         </div>
@@ -64315,6 +64315,32 @@ or changing anything in Cliniko.
     const mainSince = (raw.items && mid && raw.items[mid] && raw.items[mid].since) || "";
     return { main: mid || null, since: mainSince, secondary, at: raw.at || 0 };
   }
+  // her 2026-10-12 ask ("integrate what she came in for from any data collected, e.g. she already has a pain chart and what brought her in
+  // is empty"): with no chief complaint typed, it is read off what is already on file -- her pain map (and the regions she marked on the
+  // Musculoskeletal page), then her treatment plan, then her IVF history. Derived on read; nothing is written until she edits the row
+  // (phCcWrite then keeps it as hers). Her x on the row sets complaint.autoOff so it stays off. Returns { fam, text, src } or null.
+  function phCcAuto(name) {
+    try {
+      const rec = name ? phPatientPeek(name) : null; if (!rec || (rec.complaint && rec.complaint.autoOff)) return null;
+      const fam = id => PH_CC_FAMS.find(f => f.id === id) || null, R = PH_PAIN_REGIONS.REGIONS;
+      const sides = {}, order = [];
+      const add = (r, s) => { if (!R[r]) return; if (!sides[r]) { sides[r] = new Set(); order.push(r); } sides[r].add(s || "B"); };
+      (phTpPlans(name) || []).filter(p => p && p.status !== "done").forEach(p => phPmList(name, p).forEach(x => add(x.r, x.s)));
+      (Array.isArray(rec.painSites) ? rec.painSites : []).forEach(x => x && add(x.r, x.s));
+      if (order.length) {
+        const words = order.slice(0, 4).map(r => {
+          const lab = R[r].label, s = sides[r], both = s.has("B") || (s.has("R") && s.has("L"));
+          return R[r].central ? lab : both ? `${lab} (both sides)` : s.has("R") ? `right ${lab}` : s.has("L") ? `left ${lab}` : lab;
+        });
+        if (order.length > 4) words.push(`+${order.length - 4} more`);
+        return { fam: fam("pain"), text: "Pain: " + words.join(", "), src: "her pain map" };
+      }
+      const fp = phCcFromPlan(name);
+      if (fp) return { fam: fp.fam, text: fp.plan, src: `the ${fp.plan} plan` };
+      if (Array.isArray(rec.ivfCycles) && rec.ivfCycles.length) return { fam: fam("fertility"), text: "IVF", src: "her IVF history" };
+    } catch (e) { /* data not ready yet */ }
+    return null;
+  }
   function phCcOf(name) {
     const r = name ? phPatientPeek(name) : null, c = r && phCcNormalize(r.complaint);
     return c && (c.main || (c.secondary && c.secondary.length)) ? c : null;
@@ -64343,8 +64369,12 @@ or changing anything in Cliniko.
     // a complaint read off her plan (nothing on record yet) becomes hers on her first edit, so
     // the thing she's editing is already there
     if (!rec.complaint) {
-      const fp = phCcFromPlan(name);
-      rec.complaint = { main: fp ? fp.fam.id : null, since: "", secondary: [] };
+      const au = phCcAuto(name);
+      rec.complaint = { main: au ? au.fam.id : null, mainText: au ? au.text : "", since: "", secondary: [] };
+    }
+    if (!rec.complaint.main && !rec.complaint.autoOff && Array.isArray(rec.complaint.secondary)) {
+      const au = phCcAuto(name);
+      if (au) { rec.complaint.main = au.fam.id; if (!rec.complaint.mainText) rec.complaint.mainText = au.text; }
     }
     // migrates an old-shape record exactly once, using the same reading phCcOf already showed
     // her (same deterministic ids), so a tap on an already-rendered chip still resolves
@@ -64578,7 +64608,7 @@ or changing anything in Cliniko.
       const quick = PH_CC_QUICK.map((q, k) => `<button type="button" class="ph-cc-q" data-cc-main-q="${k}">${q[0]}</button>`).join("");
       // her 2026-10-11 ask: the pill only picks the plan family -- the chief complaint itself is
       // written in her own words (rec.complaint.mainText), the pill sits under it as "Plan type"
-      rows.push(`<tr><td class="ty">Chief complaint</td><td><input type="text" class="ph-cc-main-text field-bare" data-cc-main-text="1" maxlength="140" value="${esc(c.mainText || "")}" placeholder="In her words, e.g. irregular painful periods, trying to conceive" autocomplete="off" aria-label="Chief complaint in her words"><span class="ph-cc-plantype"><span class="k">Plan type</span><span class="ph-cc2-pill on main${phCcPop === "main" ? " pop" : ""}">${phCcIcHtml(f.ic)}${esc(lab)}${x("data-cc-main-rm", "1", lab)}</span></span></td><td class="hl"><span class="ph-cc-since"><input type="text" class="ph-cc-in" data-cc-main-since="1" value="${esc(phCcFmtDate(since))}" placeholder="date or 2 yr" title="A date (dd/mm/yyyy) or how long: 2 years, 6 mo, 3 wk" autocomplete="off" aria-label="${esc(lab)} started"><span class="rel${since ? "" : " empty"}">${since ? esc(phCcRel(since)) : "since when?"}</span></span></td></tr>`);
+      rows.push(`<tr><td class="ty">Chief complaint</td><td><input type="text" class="ph-cc-main-text field-bare" data-cc-main-text="1" maxlength="140" value="${esc(c.mainText || "")}" placeholder="In her words, e.g. irregular painful periods, trying to conceive" autocomplete="off" aria-label="Chief complaint in her words">${c.auto ? `<span class="ph-cc-fbr" title="Read from ${esc(c.auto)}. Edit it and it becomes hers.">from ${esc(c.auto)}</span>` : ""}<span class="ph-cc-plantype"><span class="k">Plan type</span><span class="ph-cc2-pill on main${phCcPop === "main" ? " pop" : ""}">${phCcIcHtml(f.ic)}${esc(lab)}${x("data-cc-main-rm", "1", lab)}</span></span></td><td class="hl"><span class="ph-cc-since"><input type="text" class="ph-cc-in" data-cc-main-since="1" value="${esc(phCcFmtDate(since))}" placeholder="date or 2 yr" title="A date (dd/mm/yyyy) or how long: 2 years, 6 mo, 3 wk" autocomplete="off" aria-label="${esc(lab)} started"><span class="rel${since ? "" : " empty"}">${since ? esc(phCcRel(since)) : "since when?"}</span></span></td></tr>`);
       rows.push(`<tr class="q"><td></td><td colspan="2"><div class="ph-cc-quick">${quick}</div></td></tr>`);
     }
     list.forEach((s, i) => {
@@ -64609,15 +64639,18 @@ or changing anything in Cliniko.
     const rec = phPatientPeek(name) || {}, key = phPatientKey(name);
     // Start here comes first: sex + DOB decide which questions follow
     if (!(rec.sex && rec.dob) && !phPfwLater.has(key)) return "";
-    const c = phCcOf(name), fp = !c ? phCcFromPlan(name) : null;
+    const c0 = phCcOf(name), au = (!c0 || !c0.main) ? phCcAuto(name) : null;
+    // nothing typed: the chief complaint row shows what is already on file (phCcAuto), editable in place
+    const c = au ? Object.assign({ secondary: [] }, c0 || {}, { main: au.fam.id, mainText: (c0 && c0.mainText) || au.text, auto: au.src }) : c0;
+    const fp = null;
     const isNew = !(phTpPlans(name) || []).length && !(rec.acuSessions || []).length;
     const male = rec.sex === "M";
-    const mainId = c ? phCcMainId(c) : (fp ? fp.fam.id : null), mf = phCcFam(mainId);
+    const mainId = c ? phCcMainId(c) : null, mf = phCcFam(mainId);
     const hasAny = !!(c && (c.main || (c.secondary || []).length));
     const addBox = c && c.main ? "" : `<div class="ph-cc3-add"><input type="text" data-cc-add-in="1" maxlength="40" placeholder="What brought ${male ? "them" : "her"} in? Type e.g. periods, sleep, neck" autocomplete="off" aria-label="Primary concern"></div>`;
     const secAll = phCcSecAll(name);
     const table = hasAny || secAll.length ? phCcTableHtml(c || { secondary: [] }, mf, male, secAll) : "";
-    const feeds = mf ? `<div class="ph-cc2-feeds${phCcPop ? " flash" : ""}"><span class="dot"></span><span><b>${esc(phCcCatLabel(mf.cat))}</b> plans first${fp ? ` · from the ${esc(fp.plan)} plan` : ""}</span></div>` : "";
+    const feeds = mf ? `<div class="ph-cc2-feeds${phCcPop ? " flash" : ""}"><span class="dot"></span><span><b>${esc(phCcCatLabel(mf.cat))}</b> plans first${au ? ` · from ${esc(au.src)}` : ""}</span></div>` : "";
     const go = hasAny ? `<div class="ph-cc2-go"><span>Used in</span><button type="button" class="ph-pfw-link" data-flow-go="treatment">Treatment &rsaquo;</button><button type="button" class="ph-pfw-link" data-flow-go="review">Review · re-check &rsaquo;</button></div>` : "";
     return `<div class="ph-cc2 ph-cc3${isNew && !c && !fp ? " fresh" : ""}${calm ? " calm" : ""}" data-cc-host="1">
       <div class="ph-cc2-hd"><span class="ph-cc2-lbl">Came in for</span><span class="ph-cc2-sv${phCcSaved ? " show" : ""}">Saved ✓</span></div>
@@ -64651,12 +64684,12 @@ or changing anything in Cliniko.
   }
   function phCcSetPrimary(id) {
     const name = phPfwName(); if (!name) return;
-    if (!phCcWrite(name, c => { c.main = id; })) return;
+    if (!phCcWrite(name, c => { c.main = id; c.autoOff = false; })) return;
     phCcPop = "main"; phCcSaved = true; phCcFillCase(name); phCcFillAim(name); phCcRefresh(true);
   }
   function phCcClearPrimary() {
     const name = phPfwName(); if (!name) return;
-    if (!phCcWrite(name, c => { c.main = null; })) return;
+    if (!phCcWrite(name, c => { c.main = null; c.autoOff = true; })) return;
     phCcSaved = true; phCcFillCase(name); phCcRefresh(true);
   }
   function phCcMainSinceSet(iso, noRepaint) {
