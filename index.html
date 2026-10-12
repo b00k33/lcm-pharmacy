@@ -50417,6 +50417,7 @@ or changing anything in Cliniko.
     return phChartTriageMissed().map(r => {
       const key = phPatientKey(r.patient_name);
       if (!key || phMsgDoNotContact(key)) return null;
+      if (phCyclePregnantPositive(phPatientPeek(r.patient_name))) return null;   // pregnant: no chart to keep up (her 2026-10-13 ask)
       return { patientKey: key, patientName: phTitle(r.patient_name), daysSince: r.daysSince, lastEntryOn: r.last_entry_on || null };
     }).filter(Boolean);
   }
@@ -62568,6 +62569,11 @@ or changing anything in Cliniko.
   // means no period is expected, so the cycle is never "overdue" for her.
   const phCyclePregnantPositive = rec => !!(rec && ((rec.pregTest && rec.pregTest.result === "positive") ||
     (Array.isArray(rec.ivfCycles) && rec.ivfCycles.some(r => (r.transfers || []).some(t => t && t.pregResult === "positive")))));
+  // her 2026-10-13 ask ("pregnant patients dont need to track menstrual details anymore"): once a pregnancy test or transfer result is
+  // positive, nothing asks her to log the cycle -- no Cycle tile / page / checklist step, no "Cycle -- reported, not examined" rows on the
+  // Treatment table, no cycle block on the plan, no "gone quiet" nudge. Display gate only: the cycle data and the phase sync are untouched,
+  // and a later negative result (pregTest changed) brings it all back.
+  const phCycleTracked = rec => phCycleOn(rec) && !phCyclePregnantPositive(rec);
   const phCycleComp = rec => {
     if (!phCycleOn(rec)) return null;
     const c = phTpCycleCompute(phCycleFor(rec));
@@ -65349,7 +65355,7 @@ or changing anything in Cliniko.
     const today = keyOf(TODAY);
     const back = ((rec && rec.acuSessions) || []).some(s => s.date && s.date < today);
     // Musculoskeletal (her ask 2026-10-11): after Abdomen, only for pain / MSK patients
-    return [].concat(back ? [PH_TODAY_RECHECK_PART] : [], phCycleOn(rec) ? [PH_TODAY_CYCLE_PART] : [], PH_TODAY_EXAM_PARTS, phMskApplies(rec) ? [PH_TODAY_MSK_PART] : []);
+    return [].concat(back ? [PH_TODAY_RECHECK_PART] : [], phCycleTracked(rec) ? [PH_TODAY_CYCLE_PART] : [], PH_TODAY_EXAM_PARTS, phMskApplies(rec) ? [PH_TODAY_MSK_PART] : []);
   }
   function phTodayDonePart(rec, id) {
     const today = keyOf(TODAY);
@@ -75937,6 +75943,7 @@ or changing anything in Cliniko.
   // the plan tab's cycle-block gate, shared with the Treatment tab so the
   // two can never disagree about whether "Then" is said on the cycle card
   function presTpShowCycleBlock(name, plan) {
+    if (phCyclePregnantPositive(phPatientPeek(name))) return false;   // pregnant: no cycle to track (her 2026-10-13 ask)
     const cyclePlan = PH_TP_CYCLE_TEMPLATES.includes(plan.templateName);
     if (cyclePlan) return true;
     if (plan.templateName === "Pregnancy" || !phCycleOn(phPatientPeek(name))) return false;
@@ -76056,7 +76063,7 @@ or changing anything in Cliniko.
     // (its strip + pain map + pain intake live on Today's visit). The exam
     // pages need sex + DOB, same gate Today's visit always had.
     const examOn = !!(name && openT && !presIsFormula(openT) && rec && rec.sex && rec.dob);
-    const cycleOn = examOn && phCycleOn(rec);
+    const cycleOn = examOn && phCycleTracked(rec);
     const todayParts = examOn ? phTodayParts(rec) : [];
     const todayN = todayParts.filter(p => phTodayDonePart(rec, p.id)).length;
     return [
