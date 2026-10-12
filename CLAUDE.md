@@ -325,8 +325,20 @@ update STYLE-LCM.md to match so future builds don't undo it.
   ships code her app never offers her to update to.
 
 ## Spacing & size (one scale, no random numbers)
-- Only 4/8/12/16/24/32px for margins/padding/gaps.
-- One corner radius for cards, one for pills. One type scale (title/body/label).
+- Margins/padding/gaps use the app's own density scale: **4 / 6 / 8 / 10 / 12 / 18px**
+  (`--sp-1` to `--sp-6`, from her 2026-08-23 "smaller type, less air" spec), plus
+  16 / 24 / 32px for section gaps and page gutters. Her pick 2026-10-13 after the
+  audit (finding 2): this scale IS the rule. The old "only 4/8/12/16/24/32" line was
+  never how the app was built (about 57% of spacing settings were off it) and is retired.
+  Leftover 2 / 3 / 5 / 7 / 14px values are not to be copied into new code; fix them
+  only when already editing that rule. Dead space stays tight everywhere (standing pref).
+- Corners come in three steps plus the pill: **6px** small (tags, inputs, buttons,
+  small chips), **10px** card / panel / tile / popover, **16px** sheet or question box,
+  **999px** pill; 2px for hairline bars. Set 2026-10-13 (audit finding 3, her pick
+  "apply the three steps"; 620 radius settings moved, plus `--field-radius-sm`
+  11 to 10px and `--field-radius-area` 14 to 16px; about 15 near-pill 18/20/99px
+  shapes were left as they are). Fields stay pills (`--field-radius`). One type
+  scale (title/body/label).
 
 ## Alignment & symmetry
 - Equal left/right padding, balanced top/bottom. Items share one left edge and
