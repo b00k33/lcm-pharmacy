@@ -13098,11 +13098,14 @@
   #pharmacyPage .ph-pulse-grid { display: grid; gap: 2px; }
   #pharmacyPage .ph-pulse-collbl { font-size: var(--fs-8-5); line-height: 1.15; color: var(--ph-soft); text-align: center; padding: 2px 1px; border-bottom: 1px solid var(--ph-line); }
   #pharmacyPage .ph-pulse-rowlbl { font-size: var(--fs-9-5); font-weight: 700; color: var(--ph-green-deep); display: flex; align-items: center; justify-content: flex-end; padding-right: 5px; }
-  #pharmacyPage .ph-pulse-cell { font: inherit; height: 26px; padding: 0; border: 1px solid var(--ph-line); background: var(--ph-white); cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--ph-soft); }
+  #pharmacyPage .ph-pulse-cell { font: inherit; min-height: 26px; padding: 0; border: 1px solid var(--ph-line); background: var(--ph-white); cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--ph-soft); }
   #pharmacyPage .ph-pulse-cell:hover { border-color: var(--ph-green); }
   #pharmacyPage .ph-pulse-cell.on { background: var(--ph-green-tint); color: var(--ph-green-deep); }
   #pharmacyPage .ph-pulse-cell .q { font-size: var(--fs-8); font-weight: 700; }
   #pharmacyPage .ph-pulse-shape { width: 20px; height: 12px; }
+  #pharmacyPage .ph-pulse-qs { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 1px 3px; padding: 2px 1px; min-width: 0; max-width: 100%; }
+  #pharmacyPage .ph-pulse-qs .q { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #pharmacyPage .ph-pulse-cell .q.more { color: var(--ph-soft); font-weight: 600; }
   #pharmacyPage .ph-pulse-hint { font-size: var(--fs-10-5); color: var(--ph-soft); margin-top: 8px; }
   #pharmacyPage .ph-pulse-cell.prev { border-style: dashed; }
   #pharmacyPage .ph-pulse-cell .pq { font-size: var(--fs-7-5); font-weight: 700; opacity: .55; display: flex; align-items: center; }
@@ -37135,14 +37138,7 @@
         const rec = phPatientRec(presHxScreenName);
         if (rec) {
           const key = hxPulseCell.dataset.constitPulseCell, p = phHxConstitPulse(rec), stamp = presHxConstitPulseStamp;
-          if (stamp === "erase") { delete p.pulse[key]; }
-          else {
-            const known = PH_PULSE_SHAPES.find(s => s.id === stamp);
-            const next = known ? { quality: known.quality, shape: known.id } : { quality: stamp, shape: null };
-            const cur = p.pulse[key];
-            if (cur && cur.quality === next.quality && cur.shape === next.shape) delete p.pulse[key];
-            else p.pulse[key] = next;
-          }
+          phPulseCellToggle(p.pulse, key, stamp);
           p.at = Date.now();   // stamps "checked today" for the Today's visit checklist
           savePharmacy();
         }
@@ -38832,14 +38828,7 @@
         const key = pulseCell.dataset.visitPulseCell;
         const d = presVisitFndDraft;
         const stamp = presVisitPulseStamp;
-        if (stamp === "erase") { delete d.pulse[key]; }
-        else {
-          const known = PH_PULSE_SHAPES.find(s => s.id === stamp);
-          const next = known ? { quality: known.quality, shape: known.id } : { quality: stamp, shape: null };
-          const cur = d.pulse[key];
-          if (cur && cur.quality === next.quality && cur.shape === next.shape) delete d.pulse[key];
-          else d.pulse[key] = next;
-        }
+        phPulseCellToggle(d.pulse, key, stamp);
         presVisitFndRefresh();
         return;
       }
@@ -64535,8 +64524,8 @@ or changing anything in Cliniko.
     Object.keys(tf).forEach(k => add(k, "tongue", `${tLbl[k]} (${tsrc[k].why === "visit" ? "visit chart" : "constitution read"})`, { tab: "patient", fold: "constit" }, tsrc[k].when === "standing read" ? "" : tsrc[k].when));
     // -- pulse: the standing read plus the latest visit's marks
     const pq = new Set();
-    const pulseWords = marks => Object.keys(marks || {}).forEach(k => {
-      const m = marks[k] || {}, q = String(m.quality || m.shape || "").toLowerCase();
+    const pulseWords = marks => Object.keys(marks || {}).forEach(k => phPulseQuals(marks[k]).forEach(mq => {
+      const q = String(mq.quality || mq.shape || "").toLowerCase();
       if (/wiry|tense|tight|string/.test(q)) pq.add("p_wiry");
       if (/slippery/.test(q)) pq.add("p_slippery");
       if (/thin|choppy|rough/.test(q) && !/choppy/.test(q)) pq.add("p_thin");
@@ -64545,7 +64534,7 @@ or changing anything in Cliniko.
       if (/deep|sunken|sink/.test(q)) pq.add("p_deep");
       if (/slow/.test(q)) pq.add("p_slow");
       if (/rapid|fast|heat/.test(q)) pq.add("p_rapid");
-    });
+    }));
     pulseWords(phHxConstitPulseRead(rec).pulse);
     const pv = phVisitPrevPulse(rec);
     if (pv) pulseWords(pv.marks);
@@ -67975,7 +67964,7 @@ or changing anything in Cliniko.
   // separate standing screens.
   function phFbrPulseWords(p) {
     const out = [];
-    Object.values((p && p.pulse) || {}).forEach(m => { if (m && m.quality) out.push(String(m.quality).toLowerCase()); });
+    Object.values((p && p.pulse) || {}).forEach(m => phPulseQuals(m).forEach(q => out.push(String(q.quality).toLowerCase())));
     const h = (p && p.hammer) || {};
     (h.rhythm || []).forEach(w => out.push(String(w).toLowerCase()));
     (h.impressions || []).forEach(w => out.push(String(w).toLowerCase()));
@@ -77849,7 +77838,7 @@ or changing anything in Cliniko.
     const hDepths = PH_HM_DEPTHS.filter(d => (h.depths[d.id] || []).length).map(d => d.label);
     return [
       { label: "Depth", text: uniq(levels.concat(hDepths)) },
-      { label: "Quality", text: uniq(Object.values(marks).map(m => m && m.quality)) },
+      { label: "Quality", text: uniq([].concat(...Object.values(marks).map(m => phPulseQuals(m).map(q => q.quality)))) },
       { label: "Rhythm", text: uniq(h.rhythm) },
       { label: "Wave", text: uniq([h.wave]) },
       { label: "Impressions", text: uniq(h.impressions) },
@@ -80632,7 +80621,7 @@ or changing anything in Cliniko.
           <div class="ph-pulse-collbl"></div>${cols.map(c => `<div class="ph-pulse-collbl">${esc(c.label)}</div>`).join("")}
           ${PH_PULSE_LEVELS.map(level => `<div class="ph-pulse-rowlbl">${esc(level.label)}</div>${cols.map(c => {
             const m = marks[`${side}:${c.id}:${level.id}`];
-            return `<span class="ph-pulse-cell${m ? " on" : ""}" title="${esc(`${c.label} · ${side} ${c.pos} · ${level.label}${m ? ` — ${m.quality}` : ""}`)}">${m ? (m.shape ? phPulseShapeSvg(m.shape) : `<span class="q">${esc(m.quality)}</span>`) : ""}</span>`;
+            return `<span class="ph-pulse-cell${m ? " on" : ""}" title="${esc(`${c.label} · ${side} ${c.pos} · ${level.label}${m ? ` — ${phPulseQualText(m)}` : ""}`)}">${m ? phPulseCellInnerHtml(m, true) : ""}</span>`;
           }).join("")}`).join("")}
         </div>
       </div>`;
@@ -80655,8 +80644,8 @@ or changing anything in Cliniko.
         const m = marks[k];
         const colInfo = (PH_PULSE_CHART[s] || []).find(c => c.id === col);
         const lvInfo = PH_PULSE_LEVELS.find(l => l.id === lv);
-        const title = `${colInfo ? colInfo.label : col} · ${s} ${colInfo ? colInfo.pos : ""} · ${lvInfo ? lvInfo.label : lv}${m.quality ? ` — ${m.quality}` : ""}`;
-        return `<span class="ph-pulse-microdot" title="${esc(title)}">${m.shape ? phPulseShapeSvg(m.shape) : ""}</span>`;
+        const title = `${colInfo ? colInfo.label : col} · ${s} ${colInfo ? colInfo.pos : ""} · ${lvInfo ? lvInfo.label : lv}${m.quality ? ` — ${phPulseQualText(m)}` : ""}`;
+        return `<span class="ph-pulse-microdot" title="${esc(title)}">${phPulseGlyphs(phPulseQuals(m))[0] || ""}</span>`;
       });
       return dots.length ? `<span class="ph-pulse-microside">${s}${dots.join("")}</span>` : "";
     };
@@ -84759,10 +84748,44 @@ or changing anything in Cliniko.
   // quality she hasn't drawn: see project_pharmacy_pulse_chart_notation
   // memory. A quality tapped from PH_PULSE_OTHER_Q instead renders as a
   // small text tag, not a symbol, until she gives it a real shape.
+  // 2026-10-13: she drew the rest of the set (screenshots from her own
+  // reference): Normal = a thick arch, Wiry = a flat line, Pounding = up
+  // arrows (three), and they combine -- arch + arrows = normal with
+  // pounding, flat line + arrows = wiry pounding. So Normal, Wiry and Thin are
+  // the three LINES and Pounding is the arrows laid over one of them.
   const PH_PULSE_SHAPES = [
+    { id: "normal", quality: "Normal", label: "⌒ Normal" },
     { id: "thin", quality: "Thin", label: "〰 Thin" },
-    { id: "pounding", quality: "Pounding", label: "⌒→ Pounding" },
+    { id: "wiry", quality: "Wiry", label: "― Wiry" },
+    { id: "pounding", quality: "Pounding", label: "↑↑↑ Pounding" },
   ];
+  // a quality typed before it had a drawing (older marks hold Wiry as plain text)
+  // still draws as its shape
+  const PH_PULSE_SHAPE_OF_Q = { normal: "normal", thin: "thin", wiry: "wiry", pounding: "pounding" };
+  const PH_PULSE_LINES = ["normal", "wiry", "thin"];
+  // every quality in one grid cell, in the order she added them: the cell's own
+  // {quality, shape} first, then `more` (a cell can hold several, e.g. Thin + Weak)
+  function phPulseQuals(m) {
+    if (!m || !m.quality) return [];
+    const out = [{ quality: m.quality, shape: m.shape || null }];
+    (Array.isArray(m.more) ? m.more : []).forEach(x => { if (x && x.quality) out.push({ quality: x.quality, shape: x.shape || null }); });
+    return out.map(q => ({ quality: q.quality, shape: q.shape || PH_PULSE_SHAPE_OF_Q[String(q.quality).toLowerCase()] || null }));
+  }
+  const phPulseQualText = m => phPulseQuals(m).map(q => q.quality).join(" + ");
+  // tap a stamp on a cell: adds that quality to the cell, or takes just that one
+  // off if it is already there (her pick 2026-10-13, "keep adding"); erase clears the cell
+  function phPulseCellToggle(marks, key, stamp) {
+    if (stamp === "erase") { delete marks[key]; return; }
+    const known = PH_PULSE_SHAPES.find(s => s.id === stamp);
+    const add = known ? { quality: known.quality, shape: known.id } : { quality: stamp, shape: null };
+    const cur = phPulseQuals(marks[key]);
+    const has = cur.findIndex(q => q.quality.toLowerCase() === add.quality.toLowerCase());
+    const list = has >= 0 ? cur.filter((q, i) => i !== has) : cur.concat(add);
+    if (!list.length) { delete marks[key]; return; }
+    const next = { quality: list[0].quality, shape: list[0].shape };
+    if (list.length > 1) next.more = list.slice(1).map(q => ({ quality: q.quality, shape: q.shape }));
+    marks[key] = next;
+  }
   // named-quality stamps: Dr Hammer's "First Impressions" vocabulary in his
   // own most-to-least-common order (her Common Qualities Pulse Form, rev.
   // Jan 2012), her MPD protocol's amplitude word (Weak = yang deficiency),
@@ -84770,7 +84793,7 @@ or changing anything in Cliniko.
   // PH_PULSE_STAMP_SHOWN are always on the toolbar; the rest fold behind
   // "more" so the grid stays the first thing she sees.
   const PH_PULSE_OTHER_Q = ["Tense", "Tight", "Robust Pounding", "Amplitude Change", "Smooth Vibration", "Rough Vibration", "Choppy", "Reduced Substance", "Weak",
-    "Muffled", "Diffuse", "Slippery", "Leather-Hard", "Ropy", "Feeble-Absent", "Inflated", "Flat", "Narrow", "Heat", "Thick", "Wiry", "Deep", "Floating", "Empty", "Restricted", "Long", "Soft", "Forceful", "Loose"];
+    "Muffled", "Diffuse", "Slippery", "Leather-Hard", "Ropy", "Feeble-Absent", "Inflated", "Flat", "Narrow", "Heat", "Thick", "Deep", "Floating", "Empty", "Restricted", "Long", "Soft", "Forceful", "Loose"];
   const PH_PULSE_STAMP_SHOWN = 9;
   // her real paper chart (photo, 2026-09-13): two mirrored wrist halves, each
   // a row of organ-zone columns (narrow = one system, wide = 2-3 stacked).
@@ -84813,10 +84836,40 @@ or changing anything in Cliniko.
     R: [["neck", "Neck"], ["shoulder", "Shoulder"], ["upperback", "Upper back"]],
     L: [["lowback", "Lower back"], ["hips", "Hips"], ["knees", "Knees"], ["ankle", "Ankle"]],
   };
-  function phPulseShapeSvg(shape) {
-    if (shape === "thin") return `<svg viewBox="0 0 24 14" class="ph-pulse-shape" aria-hidden="true"><line x1="2" y1="7" x2="22" y2="7" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2.5 2.5"/></svg>`;
-    if (shape === "pounding") return `<svg viewBox="0 0 24 14" class="ph-pulse-shape" aria-hidden="true"><path d="M2 11 Q12 1 22 11" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M18 4 L22 11 L15 10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>`;
-    return "";
+  // one drawing: a LINE (normal arch / wiry flat / thin dotted), with her three
+  // pounding arrows laid under it when `arrows` is set. Pounding on its own
+  // keeps the look she first dictated: the arch with arrows.
+  function phPulseShapeSvg(shape, arrows) {
+    if (shape === "pounding") { shape = "normal"; arrows = true; }
+    const up = arrows ? 1 : 0;   // arrows push the line up to make room under it
+    const line = shape === "normal" ? `<path d="${up ? "M2 7.5 Q12 -1 22 7.5" : "M2 11 Q12 1 22 11"}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>`
+      : shape === "wiry" ? `<line x1="2" y1="${up ? 3 : 7}" x2="22" y2="${up ? 3 : 7}" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>`
+      : shape === "thin" ? `<line x1="2" y1="${up ? 3 : 7}" x2="22" y2="${up ? 3 : 7}" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2.5 2.5"/>`
+      : "";
+    if (!line) return "";
+    const arrow = cx => `<path d="M${cx - 2.3} 9.8 L${cx} 6.4 L${cx + 2.3} 9.8 Z" fill="currentColor"/><rect x="${cx - 0.9}" y="9.4" width="1.8" height="4.2" fill="currentColor"/>`;
+    return `<svg viewBox="0 0 24 14" class="ph-pulse-shape" aria-hidden="true">${line}${up ? arrow(6) + arrow(12) + arrow(18) : ""}</svg>`;
+  }
+  // the drawings for one cell's qualities: each line once (Normal, Wiry, Thin),
+  // Pounding's arrows on the first line, or the arch + arrows when it stands alone
+  function phPulseGlyphs(quals) {
+    const shapes = quals.map(q => q.shape).filter(Boolean);
+    const lines = PH_PULSE_LINES.filter(s => shapes.includes(s)), pound = shapes.includes("pounding");
+    if (!lines.length) return pound ? [phPulseShapeSvg("pounding")] : [];
+    return lines.map((s, i) => phPulseShapeSvg(s, pound && i === 0));
+  }
+  // what goes inside a grid cell: the drawings first, then a small word for each
+  // quality with no drawing (Weak, Tense...); more than three shows "+N" and the
+  // cell's tooltip lists all. compact = one line only (the small read-only grids)
+  function phPulseCellInnerHtml(m, compact) {
+    const quals = phPulseQuals(m);
+    if (!quals.length) return "";
+    const glyphs = phPulseGlyphs(quals), tags = quals.filter(q => !q.shape).map(q => `<span class="q">${esc(q.quality)}</span>`);
+    const parts = glyphs.concat(tags);
+    if (compact) return parts[0] + (parts.length > 1 ? `<span class="q more">+${parts.length - 1}</span>` : "");
+    if (parts.length === 1) return parts[0];
+    const shown = parts.length > 3 ? parts.slice(0, 2).concat(`<span class="q more">+${parts.length - 2}</span>`) : parts;
+    return `<span class="ph-pulse-qs">${shown.join("")}</span>`;
   }
   // her MPD protocol scores (Protocol MPD.docx + Pulse Analysis.xlsx):
   // depth = the level a zone's mark sits at as a fraction of the four
@@ -84837,10 +84890,11 @@ or changing anything in Cliniko.
       const cols = Object.values(perCol);
       if (cols.length) out[side] = cols.reduce((sum, arr) => sum + arr.reduce((a, b) => a + b, 0) / arr.length, 0) / cols.length / PH_PULSE_LEVELS.length;
     });
-    Object.values(marks || {}).forEach(m => {
-      const q = String(m && m.quality || "").toLowerCase();
+    // a cell with several qualities counts each one once (her pick 2026-10-13); Normal adds to nothing
+    Object.values(marks || {}).forEach(m => phPulseQuals(m).forEach(({ quality }) => {
+      const q = String(quality || "").toLowerCase();
       if (q === "thin") out.thin++; else if (q === "pounding" || q === "robust pounding") out.pounding++; else if (q === "weak") out.weak++;
-    });
+    }));
     return out;
   }
   const phPulseScoreFmt = v => v == null ? "—" : v.toFixed(2);
@@ -84867,9 +84921,9 @@ or changing anything in Cliniko.
   function phVisitPulseCellHtml(side, col, level, marks, prevMarks, cellAttr) {
     const key = `${side}:${col.id}:${level.id}`;
     const m = marks[key], pm = !m && prevMarks && prevMarks[key];
-    const content = m ? (m.shape ? phPulseShapeSvg(m.shape) : `<span class="q">${esc(m.quality)}</span>`)
-      : pm ? `<span class="pq">${pm.shape ? phPulseShapeSvg(pm.shape) : esc(pm.quality)}</span>` : "";
-    const title = `${col.label} · ${side} ${col.pos} · ${level.label}${m ? ` — ${m.quality}` : pm ? ` — last visit: ${pm.quality}` : ""}`;
+    const content = m ? phPulseCellInnerHtml(m)
+      : pm ? `<span class="pq">${phPulseCellInnerHtml(pm)}</span>` : "";
+    const title = `${col.label} · ${side} ${col.pos} · ${level.label}${m ? ` — ${phPulseQualText(m)}` : pm ? ` — last visit: ${phPulseQualText(pm)}` : ""}`;
     return `<button type="button" class="ph-pulse-cell${m ? " on" : pm ? " prev" : ""}" ${cellAttr || "data-visit-pulse-cell"}="${esc(key)}" title="${esc(title)}" aria-pressed="${m ? "true" : "false"}">${content}</button>`;
   }
   function phVisitPulseHalfHtml(side, marks, prevMarks, refs, cellAttr, refAttr) {
@@ -84893,7 +84947,7 @@ or changing anything in Cliniko.
       const [side, col, levelId] = k.split(":");
       const colDef = (PH_PULSE_CHART[side] || []).find(c => c.id === col);
       const levelDef = PH_PULSE_LEVELS.find(l => l.id === levelId);
-      return `${side} ${colDef ? colDef.label : col} (${levelDef ? levelDef.label : levelId}): ${marks[k].quality}`;
+      return `${side} ${colDef ? colDef.label : col} (${levelDef ? levelDef.label : levelId}): ${phPulseQualText(marks[k])}`;
     }).join(" · ");
   }
   function phVisitPulseRefText(refs) {
@@ -85854,7 +85908,7 @@ or changing anything in Cliniko.
       const col = (PH_PULSE_CHART[side] || []).find(c => c.id === colId);
       const wheres = ["any", `side:${side}`, `depth:${PH_PULSE_LEVEL_DEPTH[level] || level}`];
       (col ? col.pos.split("–") : []).forEach(p => { wheres.push(`grid:${side}:${p}`); if (p === "proximal") wheres.push("grid:proximal"); });
-      out.grid.push(...phPulseKbFind(notes, wheres, f.pulse[k].quality));
+      phPulseQuals(f.pulse[k]).forEach(q => out.grid.push(...phPulseKbFind(notes, wheres, q.quality)));
     });
     h.rhythm.forEach(q => out.rhythm.push(...phPulseKbFind(notes, ["rhythm"], q)));
     const tags = phPulseKbRateTags(h.rate);
