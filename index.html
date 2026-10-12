@@ -3513,6 +3513,41 @@
     #pharmacyPage .ph-presguard-stay { display: block; width: 100%; box-sizing: border-box; margin-top: 8px; }
     #pharmacyPage .ph-presguard-leave { display: block; width: 100%; margin-left: 0; margin-top: 8px; text-align: center; }
   }
+  /* ---- phAsk: the one styled question box that replaces the browser's own
+     confirm()/prompt() (her audit 2026-10-13). Same card language as the
+     "script hasn't been logged" guard above; spacing on the 4/8/12/16/24 scale. ---- */
+  #pharmacyPage #phAskWrap[hidden] { display: none; }
+  #pharmacyPage .ph-ask-backdrop { position: fixed; inset: 0; z-index: 700; background: rgba(14,37,45,0.45); }
+  #pharmacyPage .ph-ask-modal { position: fixed; inset: 0; z-index: 701; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  #pharmacyPage .ph-ask-card {
+    width: min(420px, 100%); max-height: calc(100dvh - 32px); overflow-y: auto; box-sizing: border-box;
+    background: var(--ph-white); border-radius: 16px; box-shadow: 0 24px 60px rgba(8,30,17,0.35);
+    padding: 24px; display: flex; flex-direction: column; gap: 12px;
+  }
+  #pharmacyPage .ph-ask-card h3 { margin: 0; font-size: var(--fs-15); font-weight: 700; color: var(--ph-green-deep); }
+  #pharmacyPage .ph-ask-msg { margin: 0; font-size: var(--fs-13); line-height: 1.55; color: var(--ph-ink); }
+  #pharmacyPage .ph-ask-input {
+    font: inherit; font-size: var(--fs-14); color: var(--ph-ink); background: var(--ph-white);
+    border: 1px solid var(--ph-line); border-radius: 10px; padding: 8px 12px; min-height: 40px;
+    width: 100%; box-sizing: border-box;
+  }
+  #pharmacyPage .ph-ask-input:focus { outline: 2px solid var(--ph-green); outline-offset: 1px; }
+  #pharmacyPage .ph-ask-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+  #pharmacyPage .ph-ask-yes {
+    font: inherit; font-size: var(--fs-14); font-weight: 700; color: var(--ph-cream);
+    background: var(--ph-green-deep); border: 1px solid var(--ph-green-deep); border-radius: 10px;
+    padding: 8px 16px; min-height: 40px; cursor: pointer; touch-action: manipulation;
+  }
+  #pharmacyPage .ph-ask-yes:hover { background: var(--ph-green-press); }
+  #pharmacyPage .ph-ask-yes.danger { background: var(--ph-zero); border-color: var(--ph-zero); color: #FFFFFF; }
+  #pharmacyPage .ph-ask-yes.danger:hover { background: var(--ph-zero-deep); }
+  #pharmacyPage .ph-ask-no {
+    font: inherit; font-size: var(--fs-13); font-weight: 600; color: var(--ph-green-deep);
+    background: var(--ph-white); border: 1px solid var(--ph-green); border-radius: 10px;
+    padding: 8px 16px; min-height: 40px; cursor: pointer; touch-action: manipulation;
+  }
+  #pharmacyPage .ph-ask-no:hover { background: var(--ph-green-tint); }
+  @media (max-width: 640px) { #pharmacyPage .ph-ask-acts > button { flex: 1 1 100%; } }
   #pharmacyPage .ph-stocktake-start-h { font-family: var(--font-body); font-size: var(--fs-20); font-weight: 600; color: var(--ph-green-deep); text-align: center; margin: 0 0 6px; }
   #pharmacyPage .ph-stocktake-start-note { font-size: var(--fs-12-5); color: var(--ph-soft); text-align: center; margin: 0 0 22px; }
   /* ---- stocktake side list (her spec 2026-08-24) --------------------------
@@ -27890,7 +27925,7 @@
         // the computer files them by patient/type/date like any other.
         const all = (await phRenPhotoGetAll()).filter(r => r && r.blob && !/^phone-/.test(r.filename || ""));
         if (!all.length) phFlashShow("No photos on this phone to resend.");
-        else if (confirm(`Send all ${all.length} photo${all.length === 1 ? "" : "s"} on this phone to your computer again?`)) {
+        else if (await phAsk({ message: `Send all ${all.length} photo${all.length === 1 ? "" : "s"} on this phone to your computer again?`, yes: "Send again" })) {
           for (const rec of all) { if (rec.relayedAt) { delete rec.relayedAt; await phRenPhotoPut(rec); } const c = phRenPhotoCache[rec.patientKey], cr = c && c.find(p => p.id === rec.id); if (cr) delete cr.relayedAt; }
           const r = await window.phCapRelayBackfill();
           phFlashShow(r.sent ? `📤 Sent ${r.sent} photo${r.sent === 1 ? "" : "s"} to the cloud — open LCM on your computer to receive them.` : (window.__phCapRelayLastErr ? `Nothing sent — ${esc(window.__phCapRelayLastErr)}.` : "Nothing sent — check cloud sync is signed in."));
@@ -32576,14 +32611,23 @@
      opened from inside the profile is untouched, and its Back still returns to
      the list it came from, which is what that back is for. */
   let presPageFromTabHop = false;
+  // set while phGoBack() re-runs after she already said "discard" in the box
+  // (phGoBack is also a click handler, so it can't take a flag as an argument)
+  let phGoBackAsked = false;
   function phGoBack() {
     // an open script page closes first (her ask 2026-09-08) -- Back returns
     // to the list it came from, not to the previous tab. Unless the page and
     // the tab arrived together, in which case closing it is only half the
     // undo and we carry straight on to the pop below.
     const wholeHop = presPageFromTabHop;
-    if (document.body.classList.contains("ph-pres-fullopen") && presNewDraftUnsaved()
-        && !confirm(presNewDraftDiscardMsg())) return;
+    if (!phGoBackAsked && document.body.classList.contains("ph-pres-fullopen") && presNewDraftUnsaved()) {
+      phAsk({ message: presNewDraftDiscardMsg(), yes: "Discard", no: "Keep editing", danger: true }).then(ok => {
+        if (!ok) return;
+        phGoBackAsked = true;
+        try { phGoBack(); } finally { phGoBackAsked = false; }
+      });
+      return;
+    }
     if (document.body.classList.contains("ph-pres-fullopen") && presPageClose() && !wholeHop) return;
     // the phone's check-in page closes the same way (her ask 2026-09-09)
     if (document.body.classList.contains("ph-ck-pageopen") && phCkPageClose()) return;
@@ -33122,12 +33166,13 @@
         if (oPick) {
           const h = PHARMACY.herbs.find(x => x.id === oPick.dataset.phOrderPick);
           if (h) {
-            const v = prompt(`What day do you plan to order ${phDispName(h.name, true)}? (YYYY-MM-DD)`, h.orderOn || keyOf(TODAY));
-            if (v && /^\d{4}-\d{2}-\d{2}$/.test(v.trim())) {
-              h.order = true; h.orderOn = v.trim(); delete h.orderSnoozedUntil;
-            }
-            phOrderMenuFor = null;
-            savePharmacy(); renderPharmacy();
+            phAsk({ message: `What day do you plan to order ${phDispName(h.name, true)}?`, yes: "Set day", input: { type: "date", value: h.orderOn || keyOf(TODAY) } }).then(v => {
+              if (v && /^\d{4}-\d{2}-\d{2}$/.test(v.trim())) {
+                h.order = true; h.orderOn = v.trim(); delete h.orderSnoozedUntil;
+              }
+              phOrderMenuFor = null;
+              savePharmacy(); renderPharmacy();
+            });
           }
           return;
         }
@@ -33874,18 +33919,27 @@
           const src = presPlanFormulaSource(t, name);
           const hasIngs = (t.ingredients || []).some(i => (i.herb || "").trim());
           const pending = presPending[t.id] && presPending[t.id].length;
-          if (src && !pending && (!hasIngs || confirm(`Replace the herbs on this script with ${name}?`))) {
+          const pour = () => {
             phTpPourIntoScript(t, src.jar, src.recipe);
             t.actualFormula = name;
             savePresc();
             renderPresPanel();
             presSavedToast(`${name} poured in`);
+          };
+          const adopt = () => {
+            t.actualFormula = name;
+            document.querySelectorAll(".ph-dsp-inlinesugg, .ph-dsp-sugg").forEach(n => n.remove());
+            presBandMetaRefresh(t);
+            savePresc();
+          };
+          if (src && !pending && hasIngs) {
+            // her herbs already on the script: replace only on her yes; a no
+            // still adopts the formula NAME, exactly as the old Cancel did
+            phAsk({ message: `Replace the herbs on this script with ${name}?`, yes: "Replace", no: "Keep my herbs" }).then(ok => { if (ok) pour(); else adopt(); });
             return;
           }
-          t.actualFormula = name;
-          document.querySelectorAll(".ph-dsp-inlinesugg, .ph-dsp-sugg").forEach(n => n.remove());
-          presBandMetaRefresh(t);
-          savePresc();
+          if (src && !pending) { pour(); return; }
+          adopt();
         }
         return;
       }
@@ -37415,17 +37469,20 @@
       if (dupKeep) {
         const others = (dupKeep.dataset.recphotosDupothers || "").split(",").filter(Boolean);
         const patientKey = dupKeep.dataset.recphotosDuppatient;
-        if (others.length && confirm(`Delete the other ${others.length} cop${others.length === 1 ? "y" : "ies"} and keep this one? You'll get an Undo after.`)) {
-          // this page reads the flat whole-clinic cache, never the per-patient
-          // one phRenDeletePhotosWithUndo needs to actually STORE the deleted
-          // record for Undo -- warm it first (same lazy-load phRecPhotosOpenViewer
-          // already uses) or a patient whose per-patient cache never loaded this
-          // session would lose the photo with no Undo offered at all
-          (async () => {
-            if (!phRenPhotosFor(patientKey)) { try { await phRenLoadPhotosFor(patientKey); } catch (err) {} }
-            await phRenDeletePhotosWithUndo(others, patientKey);
-            phRecPhotosDupRefresh();
-          })();
+        if (others.length) {
+          phAsk({ message: `Delete the other ${others.length} cop${others.length === 1 ? "y" : "ies"} and keep this one? You'll get an Undo after.`, yes: "Delete copies", danger: true }).then(ok => {
+            if (!ok) return;
+            // this page reads the flat whole-clinic cache, never the per-patient
+            // one phRenDeletePhotosWithUndo needs to actually STORE the deleted
+            // record for Undo -- warm it first (same lazy-load phRecPhotosOpenViewer
+            // already uses) or a patient whose per-patient cache never loaded this
+            // session would lose the photo with no Undo offered at all
+            (async () => {
+              if (!phRenPhotosFor(patientKey)) { try { await phRenLoadPhotosFor(patientKey); } catch (err) {} }
+              await phRenDeletePhotosWithUndo(others, patientKey);
+              phRecPhotosDupRefresh();
+            })();
+          });
         }
         return;
       }
@@ -39571,8 +39628,17 @@
           // first, so a real second script and an accidental near-duplicate
           // name don't look identical until she notices. Skipped when the
           // name was handed in (the tab strip's + New already knows who).
-          if (name && !(presDraft && presDraft.skipDupCheck) && schedPresForPatient(name).length
-              && !confirm(`${phTitle(name)} already has a prescription on file. Add this as another one for her?`)) return;
+          // the box answers asynchronously, so on her yes the same Save is
+          // clicked again with a one-shot flag that skips this question
+          if (presSave.dataset.presDupOk) delete presSave.dataset.presDupOk;
+          else if (name && !(presDraft && presDraft.skipDupCheck) && schedPresForPatient(name).length) {
+            phAsk({ message: `${phTitle(name)} already has a prescription on file. Add this as another one for her?`, yes: "Add another" }).then(ok => {
+              if (!ok) return;
+              presSave.dataset.presDupOk = "1";
+              presSave.click();
+            });
+            return;
+          }
           t = { id: uid(), name: name || "New prescription", notes: "", totalGrams: 0, ingredients: [] };
           PRESC.items.unshift(t);
         } else {
@@ -41597,10 +41663,11 @@
           if (rBatch.value === "__type") {
             const recipe = phRefillRecipe(h);
             const cur = phRefillBatchFor(h, recipe);
-            const typed = prompt(`How many grams of ${phDispName(h.name, true)}?`, String(cur));
-            const g = parseFloat(typed);
-            if (typed != null && !isNaN(g) && g > 0) h.refillBatch = phRound2(g);
-            savePharmacy(); renderRefill();
+            phAsk({ message: `How many grams of ${phDispName(h.name, true)}?`, yes: "Set grams", input: { type: "number", inputmode: "decimal", min: "0", step: "any", value: String(cur) } }).then(typed => {
+              const g = parseFloat(typed);
+              if (typed != null && !isNaN(g) && g > 0) h.refillBatch = phRound2(g);
+              savePharmacy(); renderRefill();
+            });
             return;
           }
           const g = parseFloat(rBatch.value);
@@ -42891,9 +42958,12 @@
         const listRename = e.target.closest("[data-reloc-list-rename]");
         if (listRename) {
           const list = phRelocList(PHARMACY.relocation, listRename.dataset.relocListRename);
-          const nm = list ? prompt("Rename this list", list.name) : null;
-          if (list && nm && nm.trim()) { list.name = nm.trim(); savePharmacy(); }
-          phRelocListMenuId = null; renderPhRelocationPage(); return;
+          if (!list) { phRelocListMenuId = null; renderPhRelocationPage(); return; }
+          phAsk({ message: "Rename this list", yes: "Rename", input: { type: "text", value: list.name } }).then(nm => {
+            if (nm && nm.trim()) { list.name = nm.trim(); savePharmacy(); }
+            phRelocListMenuId = null; renderPhRelocationPage();
+          });
+          return;
         }
         const listUp = e.target.closest("[data-reloc-list-up]");
         if (listUp) {
@@ -46592,6 +46662,73 @@ or changing anything in Cliniko.
       <button type="button" class="btn-save" ${yesAttr}>${yesLabel}</button>
       <button type="button" class="btn-cancel" data-ph-confirm-cancel="1">Cancel</button></div>`;
   const phClearConfirms = () => document.querySelectorAll("#pharmacyPage .ph-confirm-strip").forEach(n => n.remove());
+
+  /* phAsk -- the one styled question box that replaces the browser's own
+     confirm() / prompt() (her audit 2026-10-13, finding 6: fourteen places used
+     the plain grey browser boxes, which look out of place and are blocked when
+     the app is shown inside another page -- there a Yes/No box answers "no" by
+     itself and a type-a-value box answers "nothing", so the action silently
+     did nothing).
+       phAsk({ title?, message, yes?, no?, danger?, input? }) -> Promise
+     A question resolves true / false. With `input: { type, value, ... }` it
+     resolves the typed text, or null if she cancelled. Esc or a tap outside =
+     No; Enter = Yes. Only one is ever open (asking again answers the old one
+     "no"). `danger` makes Yes red and puts the cursor on Cancel, so a stray
+     Enter never confirms a delete. Also published as window.phAsk for the
+     sign-in script, which lives outside this one. With no page to hang the box
+     on (never in normal use) it falls back to the browser's own box. */
+  let phAskFinish = null;
+  function phAsk(o) {
+    o = o || {};
+    const host = document.getElementById("pharmacyPage");
+    if (!host) {
+      return Promise.resolve(o.input ? window.prompt(o.message || "", o.input.value || "") : window.confirm(o.message || ""));
+    }
+    if (phAskFinish) phAskFinish(false);
+    return new Promise(resolve => {
+      let wrap = document.getElementById("phAskWrap");
+      if (!wrap) { wrap = document.createElement("div"); wrap.id = "phAskWrap"; host.appendChild(wrap); }
+      const inp = o.input || null;
+      const attrs = inp ? ["type", "inputmode", "min", "step", "placeholder"].filter(k => inp[k] != null).map(k => ` ${k}="${esc(String(inp[k]))}"`).join("") : "";
+      wrap.innerHTML = `
+        <div class="ph-ask-backdrop" data-ph-ask-no="1"></div>
+        <div class="ph-ask-modal" role="alertdialog" aria-modal="true" aria-label="${esc(o.title || o.message || "Question")}">
+          <div class="ph-ask-card">
+            ${o.title ? `<h3>${esc(o.title)}</h3>` : ""}
+            ${o.message ? `<p class="ph-ask-msg">${esc(o.message)}</p>` : ""}
+            ${inp ? `<input class="ph-ask-input"${attrs} value="${esc(String(inp.value == null ? "" : inp.value))}">` : ""}
+            <div class="ph-ask-acts">
+              <button type="button" class="ph-ask-yes${o.danger ? " danger" : ""}" data-ph-ask-yes="1">${esc(o.yes || "OK")}</button>
+              <button type="button" class="ph-ask-no" data-ph-ask-no="1">${esc(o.no || "Cancel")}</button>
+            </div>
+          </div>
+        </div>`;
+      wrap.hidden = false;
+      const done = ok => {
+        if (phAskFinish !== done) return;
+        phAskFinish = null;
+        document.removeEventListener("keydown", onKey, true);
+        wrap.removeEventListener("click", onClick);
+        const v = inp ? (ok ? wrap.querySelector(".ph-ask-input").value : null) : !!ok;
+        wrap.hidden = true; wrap.innerHTML = "";
+        resolve(v);
+      };
+      const onClick = e => {
+        if (e.target.closest("[data-ph-ask-yes]")) done(true);
+        else if (e.target.closest("[data-ph-ask-no]")) done(false);
+      };
+      const onKey = e => {
+        if (e.key === "Escape") { e.preventDefault(); e.stopImmediatePropagation(); done(false); }
+        else if (e.key === "Enter" && inp && e.target && e.target.classList && e.target.classList.contains("ph-ask-input")) { e.preventDefault(); e.stopImmediatePropagation(); done(true); }
+      };
+      phAskFinish = done;
+      wrap.addEventListener("click", onClick);
+      document.addEventListener("keydown", onKey, true);
+      const first = inp ? wrap.querySelector(".ph-ask-input") : wrap.querySelector(o.danger ? ".ph-ask-no" : ".ph-ask-yes");
+      if (first) { first.focus(); if (inp && first.select) first.select(); }
+    });
+  }
+  window.phAsk = phAsk;
 
   // one panel renderer, two homes: patient scripts open inside Prescriptions,
   // formula recipes inside Formula Refill — the other container is cleared so
@@ -58738,12 +58875,15 @@ or changing anything in Cliniko.
     }
     if ((el = T.closest("[data-bld-del]"))) {
       const n = phPfwName(); if (!n) return true;
-      if (!window.confirm("Delete this blood test result?")) return true;
-      const rec = phPatientRec(n); if (!rec) return true;
-      rec.bloods = (rec.bloods || []).filter(b => b.id !== el.dataset.bldDel);
-      if (!rec.bloods.length) delete rec.bloods;
-      if (savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return true; }
-      presBldForm = null; phBldRefresh();
+      const bldId = el.dataset.bldDel;
+      phAsk({ message: "Delete this blood test result?", yes: "Delete", danger: true }).then(ok => {
+        if (!ok) return;
+        const rec = phPatientRec(n); if (!rec) return;
+        rec.bloods = (rec.bloods || []).filter(b => b.id !== bldId);
+        if (!rec.bloods.length) delete rec.bloods;
+        if (savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return; }
+        presBldForm = null; phBldRefresh();
+      });
       return true;
     }
     if (T.closest("[data-bld-save]")) { phBldSave(); return true; }
@@ -73226,7 +73366,15 @@ or changing anything in Cliniko.
       if (!kind) return;
       if (T.closest("[data-tls-add]")) { if (phTlStdEdit(kind, l => l.push(kind === "preg" ? { id: "x" + uid(), n: "New item", t: "test", a: 20, b: 22, note: "" } : { id: "x" + uid(), n: "New item", t: "test", note: "" }))) phTlStdRender(); return; }
       if ((el = T.closest("[data-tls-del]"))) { if (phTlStdEdit(kind, l => l.splice(+el.dataset.tlsDel, 1))) phTlStdRender(); return; }
-      if (T.closest("[data-tls-reset]")) { if (!window.confirm("Go back to the built-in list? Your edits to this standard list are removed.")) return; PHARMACY.tlSchedules = PHARMACY.tlSchedules || {}; delete PHARMACY.tlSchedules[kind]; if (savePharmacy() === false) phFlashShow("That could not be saved — check the warning at the top and try again"); phTlStdRender(); return; }
+      if (T.closest("[data-tls-reset]")) {
+        phAsk({ message: "Go back to the built-in list? Your edits to this standard list are removed.", yes: "Go back to built-in", danger: true }).then(ok => {
+          if (!ok) return;
+          PHARMACY.tlSchedules = PHARMACY.tlSchedules || {}; delete PHARMACY.tlSchedules[kind];
+          if (savePharmacy() === false) phFlashShow("That could not be saved — check the warning at the top and try again");
+          phTlStdRender();
+        });
+        return;
+      }
       return;
     }
     const stdOpen = T.closest("[data-tl-std-open]");
@@ -73244,9 +73392,13 @@ or changing anything in Cliniko.
     if ((el = T.closest("[data-tl-std]"))) { phTlUi.menu = false; rep(); phTlStdOpen(el.dataset.tlStd); return; }
     if ((el = T.closest("[data-tl-reset-all]"))) {
       phTlUi.menu = false;
-      if (!window.confirm("Remove the changes made on this patient's timeline (renamed, moved, removed and added items)? Done marks stay.")) { rep(); return; }
-      phTlWrite(name, tl => { const k = el.dataset.tlResetAll + ":"; Object.keys(tl.edit || {}).forEach(x => { if (x.indexOf(k) === 0) delete tl.edit[x]; }); tl.custom = (tl.custom || []).filter(c => c.kind !== el.dataset.tlResetAll); });
-      rep(); return;
+      const resetKind = el.dataset.tlResetAll;
+      phAsk({ message: "Remove the changes made on this patient's timeline (renamed, moved, removed and added items)? Done marks stay.", yes: "Remove changes", danger: true }).then(ok => {
+        if (!ok) { rep(); return; }
+        phTlWrite(name, tl => { const k = resetKind + ":"; Object.keys(tl.edit || {}).forEach(x => { if (x.indexOf(k) === 0) delete tl.edit[x]; }); tl.custom = (tl.custom || []).filter(c => c.kind !== resetKind); });
+        rep();
+      });
+      return;
     }
     if (T.closest("[data-tl-hist]")) { phTlUi.hist = !phTlUi.hist; rep(); return; }
     if ((el = T.closest("[data-tl-done-open]"))) { phTlUi.edit = el.dataset.tlDoneOpen; phTlUi.itemEdit = null; rep(); const r = document.querySelector(`[data-tl-host="${CSS.escape(name)}"] [data-tl-r]`); if (r) r.focus(); return; }
@@ -88400,15 +88552,14 @@ Please let me know if you have any questions.`;
       }
       if (presNewDraftUnsaved()) {
         e.preventDefault(); e.stopPropagation();
-        if (confirm(presNewDraftDiscardMsg())) {
-          // deferred: el's own click is still "in progress" on the call stack
-          // right here, and a same-element re-click is a no-op while that flag
-          // is set (HTML spec) -- a macrotask lets this dispatch finish first
-          setTimeout(() => {
-            presGuardBypass = true;
-            try { el.click(); } finally { presGuardBypass = false; }
-          }, 0);
-        }
+        // the box answers after this click has finished dispatching, so el's
+        // own click is no longer "in progress" and the re-click below works
+        // (a same-element re-click is a no-op while that flag is set)
+        phAsk({ message: presNewDraftDiscardMsg(), yes: "Discard", no: "Keep editing", danger: true }).then(ok => {
+          if (!ok) return;
+          presGuardBypass = true;
+          try { el.click(); } finally { presGuardBypass = false; }
+        });
       }
     }, true);
     document.addEventListener("keydown", e => {
@@ -95064,8 +95215,16 @@ Dosage: {dosage}
       if (document.querySelector(".ph-hx-modal:not([hidden]), .ph-tbm-menu, #phMoreSheet, .ph-apptpop:not([hidden])")) return;
       // the one-screen Dispense's label window / history drawer close first
       if (presDspCloseTop()) { e.preventDefault(); return; }
-      if (presNewDraftUnsaved() && !confirm(presNewDraftDiscardMsg())) { e.preventDefault(); return; }
       e.preventDefault();
+      if (presNewDraftUnsaved()) {
+        phAsk({ message: presNewDraftDiscardMsg(), yes: "Discard", no: "Keep editing", danger: true }).then(ok => {
+          if (!ok) return;
+          // she just said discard, so phGoBack must not ask a second time
+          phGoBackAsked = true;
+          try { if (presPageFromTabHop) phGoBack(); else presPageClose(); } finally { phGoBackAsked = false; }
+        });
+        return;
+      }
       if (presPageFromTabHop) phGoBack(); else presPageClose();   // same whole-tap rule as the band's ‹
     }
     // ...and the same for the phone's check-in page (her 2026-09-09 answers).
@@ -96688,14 +96847,21 @@ Dosage: {dosage}
   // exact item as needing it, since it touches real auth/sync flow), then
   // reintroduced once she said "yes" to it directly.
   function doSignOutNoSave() {
-    if (!confirm("Sign out WITHOUT saving? Any change on this device not already sent to the cloud will be lost.")) return;
-    menuOpen = false; ready = false;
-    overlay('<p style="color:#BCCFD6;font-size:var(--fs-14);margin:12px 0">Signing out…</p>');
-    saveReg([]);
-    try { sb.removeAllChannels(); } catch (e) {}
-    clearLocalData();
-    var w = document.getElementById("lcmSwitch"); if (w) w.remove();
-    if (sb) sb.auth.signOut().then(function () {}, function () {});
+    var go = function () {
+      menuOpen = false; ready = false;
+      overlay('<p style="color:#BCCFD6;font-size:var(--fs-14);margin:12px 0">Signing out…</p>');
+      saveReg([]);
+      try { sb.removeAllChannels(); } catch (e) {}
+      clearLocalData();
+      var w = document.getElementById("lcmSwitch"); if (w) w.remove();
+      if (sb) sb.auth.signOut().then(function () {}, function () {});
+    };
+    // the styled box (phAsk, published by the pharmacy script); the browser's
+    // own confirm only if that script somehow isn't there
+    if (window.phAsk) {
+      window.phAsk({ title: "Sign out without saving?", message: "Any change on this device not already sent to the cloud will be lost.", yes: "Sign out without saving", no: "Cancel", danger: true })
+        .then(function (ok) { if (ok) go(); });
+    } else if (confirm("Sign out WITHOUT saving? Any change on this device not already sent to the cloud will be lost.")) go();
   }
 
   /* her 2026-08-25 spec: ONE switcher component, two homes, never floating.
