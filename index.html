@@ -15811,6 +15811,10 @@
   #pharmacyPage .ph-cc-sec-name.pop { animation: phPfwPop .4s ease; }
   #pharmacyPage .ph-cc-hl { min-height: 0; padding: 0 1px; border: 0; border-bottom: 1px dotted var(--ph-faint); border-radius: 0; background: none; font: 600 var(--fs-13) var(--font-body); color: var(--ph-herb-deep); cursor: pointer; }
   #pharmacyPage .ph-cc-hl.empty { color: var(--ph-faint); font-weight: 500; }
+  #pharmacyPage .ph-cc-note { display: block; margin-top: 2px; font: 500 var(--fs-12) var(--font-body); color: var(--ph-soft); cursor: pointer; }
+  #pharmacyPage .ph-cc-moreinfo { display: block; margin-top: 2px; font-size: var(--fs-12); }
+  #pharmacyPage .ph-cc-note-in { display: block; width: 100%; min-width: 220px; height: 30px; padding: 0 10px; border: 1px solid var(--ph-line); border-radius: 8px; background: var(--ph-white); font: 500 var(--fs-13) var(--font-body); }
+  #pharmacyPage .ph-cc-note-in:focus { outline: 0; border-color: var(--ph-herb); box-shadow: 0 0 0 3px rgba(22,92,116,.14); }
   #pharmacyPage .ph-cc-sec-name.auto { cursor: default; }
   #pharmacyPage .ph-cc-fbr { padding: 1px 7px; border-radius: 999px; background: var(--ph-herb-tint); color: var(--ph-herb-deep); font: 600 var(--fs-10) var(--font-body); letter-spacing: .02em; white-space: nowrap; }
   #pharmacyPage .ph-cc-tbl + .ph-cc-sec-starters { margin-top: 8px; }
@@ -64640,17 +64644,25 @@ or changing anything in Cliniko.
       const phase = phTpLivePhase(rec, plan); if (!phase || phase.status === "done") return false;
       const c = phCcOf(name), want = [];
       const f = c && c.main && phCcFam(c.main);
-      if (f) want.push({ k: "main:" + f.id, text: c.mainText || f.label, since: c.since || "" });
-      phCcSecAll(name).forEach(s => want.push({ k: s.auto ? "fbr:" + s.key : "s:" + s.id, text: s.text, since: s.since || "" }));
+      if (f) want.push({ k: "main:" + f.id, text: c.mainText || f.label, since: c.since || "", note: "" });
+      phCcSecAll(name).forEach(s => want.push({ k: s.auto ? "fbr:" + s.key : "s:" + s.id, text: s.text, since: s.since || "", note: s.note || "" }));
       if (!want.length) return false;
       const rows = Array.isArray(phase.symptoms) ? phase.symptoms : [], gone = phase.symGone || [];
-      const have = new Set(rows.map(r => r.ccKey).filter(Boolean));
       const txt = new Set(rows.map(r => String(r.complaint || "").trim().toLowerCase()));
       let added = 0;
       want.forEach(w => {
-        if (have.has(w.k) || gone.includes(w.k) || txt.has(w.text.toLowerCase())) return;
+        // her 2026-10-12: "how long" and the "more info" note travel to the treatment table's Nature column
+        const nat = [w.since ? "for " + phCcRel(w.since) : "", w.note].filter(Boolean).join(" · ");
+        const row = rows.find(r => r.ccKey === w.k);
+        if (row) {
+          // keep it up to date, unless she has written her own words there
+          const hers = row.nature && row.nature !== row.ccNat && !/^for [\d.]+ (day|days|wk|mo|yr)$/.test(row.nature);
+          if (!hers && row.nature !== nat) { row.nature = nat; row.ccNat = nat; added++; }
+          return;
+        }
+        if (gone.includes(w.k) || txt.has(w.text.toLowerCase())) return;
         const pain = phCcGuessIds(w.text).includes("pain");
-        rows.push({ id: uid(), complaint: w.text, nature: w.since ? "for " + phCcRel(w.since) : "", frequency: "", scale: pain ? "pain" : "custom", severity: pain ? 0 : "", pct: 0, ccKey: w.k });
+        rows.push({ id: uid(), complaint: w.text, nature: nat, ccNat: nat, frequency: "", scale: pain ? "pain" : "custom", severity: pain ? 0 : "", pct: 0, ccKey: w.k });
         added++;
       });
       if (!added) return false;
@@ -64691,8 +64703,12 @@ or changing anything in Cliniko.
       const hl = open
         ? `<span class="ph-cc-since"><input type="text" class="ph-cc-in" data-cc-sec-since="${s.id}" value="${esc(phCcFmtDate(s.since))}" placeholder="date or 2 yr" title="A date (dd/mm/yyyy) or how long: 2 years, 6 mo, 3 wk" autocomplete="off" aria-label="${esc(s.text)} started"><span class="rel${s.since ? "" : " empty"}">${s.since ? esc(phCcRel(s.since)) : "since when?"}</span></span>`
         : `<button type="button" class="ph-cc-hl${s.since ? "" : " empty"}" data-cc-sec-open="${s.id}">${s.since ? esc(phCcRel(s.since)) : "since when?"}</button>`;
-      rows.push(`<tr><td class="ty">${i === 0 ? "Secondary complaints" : ""}</td><td>${name}</td><td class="hl">${hl}</td></tr>`);
+      // her 2026-10-12 ask ("include option to give more info on secondary complaints"): a short note per complaint
+      // (rec.complaint.secondary[].note), shown under its name and carried to the treatment table's Nature column
+      const more = open ? "" : s.note ? `<span class="ph-cc-note" data-cc-sec-open="${s.id}">${esc(s.note)}</span>` : `<button type="button" class="ph-cc-hl empty ph-cc-moreinfo" data-cc-sec-open="${s.id}">+ info</button>`;
+      rows.push(`<tr><td class="ty">${i === 0 ? "Secondary complaints" : ""}</td><td>${name}${more}</td><td class="hl">${hl}</td></tr>`);
       if (open) {
+        rows.push(`<tr class="q"><td></td><td colspan="2"><input type="text" class="ph-cc-note-in field-bare" data-cc-sec-note="${s.id}" maxlength="140" value="${esc(s.note || "")}" placeholder="More info, e.g. worse at night, with cold air" autocomplete="off" aria-label="More about ${esc(s.text)}"></td></tr>`);
         const quick = PH_CC_QUICK.map((q, k) => `<button type="button" class="ph-cc-q" data-cc-sec-q="${s.id}:${k}">${q[0]}</button>`).join("");
         rows.push(`<tr class="q"><td></td><td colspan="2"><div class="ph-cc-quick">${quick}<button type="button" class="ph-cc3-done" data-cc-sec-close="1">Done ✓</button></div></td></tr>`);
       }
@@ -64703,7 +64719,8 @@ or changing anything in Cliniko.
     const starterHtml = starters.length ? `<div class="ph-cc-sec-starters">${starters.map(s => `<button type="button" class="ph-cc-q hint" data-cc-sec-hint="${esc(s)}">${esc(s)}</button>`).join("")}</div>` : "";
     return `<table class="ph-cc-tbl"><thead><tr><th></th><th>Complaint</th><th>How long</th></tr></thead><tbody>${rows.join("")}</tbody></table>${starterHtml}`;
   }
-  function phCcCardHtml(t, calm) {
+  function phCcCardHtml(t, calm, opts) {
+    const onToday = !!(opts && opts.today);   // her 2026-10-12: the same table repeats on Today's visit, editable, without the "plans first / used in" lines
     const name = presPatientFor(t) || "";
     if (!name || presIsFormula(t)) return "";
     const rec = phPatientPeek(name) || {}, key = phPatientKey(name);
@@ -64722,10 +64739,10 @@ or changing anything in Cliniko.
     const table = hasAny || secAll.length ? phCcTableHtml(c || { secondary: [] }, mf, male, secAll) : "";
     const feeds = mf ? `<div class="ph-cc2-feeds${phCcPop ? " flash" : ""}"><span class="dot"></span><span><b>${esc(phCcCatLabel(mf.cat))}</b> plans first${au ? ` · from ${esc(au.src)}` : ""}</span></div>` : "";
     const go = hasAny ? `<div class="ph-cc2-go"><span>Used in</span><button type="button" class="ph-pfw-link" data-flow-go="treatment">Treatment &rsaquo;</button><button type="button" class="ph-pfw-link" data-flow-go="review">Review · re-check &rsaquo;</button></div>` : "";
-    return `<div class="ph-cc2 ph-cc3${isNew && !c && !fp ? " fresh" : ""}${calm ? " calm" : ""}" data-cc-host="1">
+    return `<div class="ph-cc2 ph-cc3${isNew && !c && !fp ? " fresh" : ""}${calm ? " calm" : ""}" data-cc-host="1"${onToday ? ` data-cc-today="1"` : ""}>
       <div class="ph-cc2-hd"><span class="ph-cc2-lbl">Came in for</span><span class="ph-cc2-sv${phCcSaved ? " show" : ""}">Saved ✓</span></div>
       ${addBox}${table}
-      ${feeds}${go}
+      ${onToday ? "" : feeds}${onToday ? "" : go}
     </div>`;
   }
   // repaint the card in place (never renderPresPanel); keeps the field she was typing in
@@ -64734,9 +64751,9 @@ or changing anything in Cliniko.
     const t = (PRESC.items || []).find(x => x.id === presOpenId);
     if (host && t) {
       const a = document.activeElement, was = a && host.contains(a) && a.dataset
-        ? (a.dataset.ccSecIn ? ["data-cc-sec-in", "1"] : a.dataset.ccMainText ? ["data-cc-main-text", "1"] : a.dataset.ccMainSince ? ["data-cc-main-since", "1"] : a.dataset.ccSecSince ? ["data-cc-sec-since", a.dataset.ccSecSince] : null)
+        ? (a.dataset.ccSecIn ? ["data-cc-sec-in", "1"] : a.dataset.ccSecNote ? ["data-cc-sec-note", a.dataset.ccSecNote] : a.dataset.ccMainText ? ["data-cc-main-text", "1"] : a.dataset.ccMainSince ? ["data-cc-main-since", "1"] : a.dataset.ccSecSince ? ["data-cc-sec-since", a.dataset.ccSecSince] : null)
         : null;
-      const h = phCcCardHtml(t, calm);
+      const h = phCcCardHtml(t, calm, { today: host.dataset.ccToday === "1" });
       if (h) {
         host.outerHTML = h;
         if (was) { const el = document.querySelector(`#pharmacyPage [${was[0]}="${was[1]}"]`); if (el) el.focus({ preventScroll: true }); }
@@ -64839,6 +64856,12 @@ or changing anything in Cliniko.
     if (el.matches("[data-cc-main-text]")) {
       const name = phPfwName(); if (!name) return;
       if (phCcWrite(name, c => { c.mainText = el.value.trim(); })) { phTpAutoBust(); phCcSavedFlash(); }
+      return;
+    }
+    if (el.matches("[data-cc-sec-note]")) {
+      const name = phPfwName(); if (!name) return;
+      const id = el.dataset.ccSecNote, v = el.value.trim().slice(0, 140);
+      if (phCcWrite(name, c => { const s = (c.secondary || []).find(x => x.id === id); if (s) s.note = v; })) { phTpAutoBust(); phCcSeedSymptoms(name); phCcSavedFlash(); }
       return;
     }
     const isMain = el.matches("[data-cc-main-since]"), isSec = el.matches("[data-cc-sec-since]");
@@ -65137,7 +65160,7 @@ or changing anything in Cliniko.
         ${(() => { const last = p.id === "cycle" ? null : p.id === "msk" ? phMskLastLine(rec) : phExamPast(rec, p.id)[0]; return last ?`<div class="ph-today-sum last">last: ${esc(last.txt)} · ${esc(phCycShortLbl(last.date))}</div>` : ""; })()}
       </div>`;
     }).join("");
-    return `<div class="ph-today" data-today-host="1">${phTodayStripHtml(name, rec, plan)}${presUpNextHtml(t, true)}${phTodayNudgesHtml(name, rec)}${gate}${phMskWarnHtml(rec)}${tiles}${plan ? phGlanceHtml("patterns", name, plan, true) + phGlanceHtml("plan", name, plan, true) : ""}${plan && !phMskApplies(rec) ? presRvPainHtml(name, plan) : ""}</div>`;
+    return `<div class="ph-today" data-today-host="1">${phTodayStripHtml(name, rec, plan)}${phCcCardHtml(t, true, { today: true })}${presUpNextHtml(t, true)}${phTodayNudgesHtml(name, rec)}${gate}${phMskWarnHtml(rec)}${tiles}${plan ? phGlanceHtml("patterns", name, plan, true) + phGlanceHtml("plan", name, plan, true) : ""}${plan && !phMskApplies(rec) ? presRvPainHtml(name, plan) : ""}</div>`;
   }
   // Phase 4 (law 2026-10-10, her picks): quiet one-tap "worth a look" lines on a RETURN visit only.
   // Supplements: still the same? (only when something is switched on). History: anything new? (every
