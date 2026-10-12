@@ -23515,39 +23515,6 @@
   // PHARMACY.log only; writes nothing. Same code-first-then-exact-name
   // resolver as everywhere else -- no fuzzy matching.
   let phDash6moCache = null, phDash6moSig = "";
-  function phDash6moSeries() {
-    const sig = `${PHARMACY.log.length}:${PHARMACY.herbs.length}:${keyOf(TODAY)}`;
-    if (phDash6moCache && phDash6moSig === sig) return phDash6moCache;
-    const months = [];
-    for (let i = 6; i >= 1; i--) {
-      const d = new Date(TODAY.getFullYear(), TODAY.getMonth() - i, 1);
-      months.push({ y: d.getFullYear(), m: d.getMonth() });
-    }
-    const idx = new Map(months.map((mm, i) => [`${mm.y}-${mm.m}`, i]));
-    const out = new Map();
-    PHARMACY.log.forEach(e => {
-      if (e.kind !== "dispense") return;
-      const d = parseKey(e.date);
-      const slot = idx.get(`${d.getFullYear()}-${d.getMonth()}`);
-      if (slot == null) return;
-      (Array.isArray(e.items) ? e.items : []).forEach(i => {
-        const ih = (i.code && findHerbByCode(i.code, i.name)) || findHerbByName(i.name);
-        if (!ih) return;
-        let arr = out.get(ih);
-        if (!arr) { arr = [0, 0, 0, 0, 0, 0]; out.set(ih, arr); }
-        arr[slot] += i.grams || 0;
-      });
-    });
-    phDash6moCache = out; phDash6moSig = sig;
-    return out;
-  }
-  function phDash6moBarsHtml(h, tier) {
-    const arr = phDash6moSeries().get(h);
-    if (!arr || !arr.some(v => v > 0)) return `<span class="ph-sig-bars empty" aria-hidden="true"></span>`;
-    const max = Math.max(...arr);
-    const bars = arr.map(v => `<i style="height:${max > 0 ? Math.max(8, Math.round((v / max) * 100)) : 8}%"></i>`).join("");
-    return `<span class="ph-sig-bars tier-${tier}" title="Last 6 months: ${arr.map(v => phFmtG(v) + "g").join(" · ")}">${bars}</span>`;
-  }
   // ============ APP-WIDE SHELL (2026-08-24): one header, one strip
   // builder, one footer -- every page calls these three instead of writing
   // its own. Presentation only; every number handed in still comes from
@@ -23738,22 +23705,6 @@
     return `${leftHtml}${rightHtml}`;
   }
   // ---- STEP 7: ranked rows shared by Order-these/Refill-these --------------
-  // Only reached for UNRANKED rows now -- her STEP 2 split the ranked row's
-  // figures into separate grams / scripts columns so they can align down the
-  // page. The ranked branch is kept for any other caller.
-  function phSigListSecondLine(h, rec) {
-    // her spec 2026-08-23 (§2.2): the month range dropped -- the section
-    // heading above the list already names the window ("Most-used first").
-    if (rec) {
-      return `${phFmtG(h.qty)}g · ${rec.entries} script${rec.entries === 1 ? "" : "s"}`;
-    }
-    // "not used in 6 months" has to be TRUE, not just "not ranked in this
-    // 2-month window" -- phUsageAll is the app's own existing trailing-6-
-    // month map (built for Overstock), reused here rather than a second
-    // window invented just for this one line. An item that WAS touched
-    // 3-6 months ago gets the honest, weaker claim instead.
-    return phUsageAll().has(h) ? "not used in the last 2 months" : "not used in 6 months";
-  }
   // phoneActionBtn defaults to actionBtn, but a caller whose action is a
   // stateful open/close dropdown (phRefillMenuHtml's Plan/Planned/Snoozed
   // menu) MUST pass a plain, stateless one instead -- rendering both the
@@ -24830,13 +24781,6 @@
   // newest history record's own date, whatever its kind -- PHARMACY.stocktakes
   // is unshifted newest-first by phStocktakeFinish, never pushed.
   const STOCKTAKE_DUE_MONTHS = 3;
-  function phStocktakeNextDueInfo() {
-    const last = PHARMACY.stocktakes[0];
-    if (!last) return { known: false };
-    const due = new Date(parseKey(last.date));
-    due.setMonth(due.getMonth() + STOCKTAKE_DUE_MONTHS);
-    return { known: true, overdue: due < TODAY, dueKey: keyOf(due), lastDate: last.date };
-  }
   // her mockup (2026-08-16), her answer once asked "what should print?":
   // the last completed stocktake's results, for her records -- not a blank
   // count sheet. Same phPrintDoc engine as every other print button, same
@@ -27024,43 +26968,6 @@
   }
 
 
-  // one renderer for all three movement kinds — dispense, refill, arrival —
-  // used by the pharmacy log and the prescription/refill views alike
-  function phLogRowHtml(e) {
-    const d = parseKey(e.date);
-    const when = `<span class="when">${d.getDate()} ${MON_SHORT[d.getMonth()]} ${d.getFullYear()}</span>`;
-    const ded = (e.deducted || []).map(x => {
-      const h = phHerbByIdGet().get(x.herbId);
-      return h ? `${esc(phDispName(h.name, phIsFormula(h)))} −${phFmtG(x.grams)}g` : null;
-    }).filter(Boolean).join(", ");
-    if (e.kind === "arrival") {
-      const got = (e.added || []).map(x => `${esc(phDispName(x.name))} +${phFmtG(x.grams)}g`).join(", ");
-      return `<div class="log-row">${when}
-        <span class="val"><b>📦 Order arrived</b><div class="ph-log-deduct">${got}</div></span>
-        <button type="button" class="wrp-del" data-ph-log-del="${e.id}" aria-label="Delete entry and take the stock back out">×</button></div>`;
-    }
-    if (e.kind === "refill") {
-      return `<div class="log-row">${when}
-        <span class="val"><b>🏺 Refill — ${esc(phDispName(e.what, true))}</b> · +${phFmtG(e.madeGrams)}g ${e.targetId ? "into bottle" : "made"}${ded ? `<div class="ph-log-deduct">used: ${ded}</div>` : ""}</span>
-        <button type="button" class="wrp-del" data-ph-log-del="${e.id}" aria-label="Delete entry and reverse the refill">×</button></div>`;
-    }
-    // her ask 2026-09-20 ("clean up the ~10 display-site workarounds"): a
-    // formula-less multi-herb dispense before the 2026-09-09 write fix
-    // logged the patient's own name into `what` -- shown raw here it read
-    // as the patient's name doing double duty as the headline AND (until
-    // the "for X" suffix already suppressed itself) the "for" line. Recover
-    // the real herbs from the deduction record already computed above as
-    // `ded`, names only (no grams, which belong in the deducted sub-line).
-    const collided = e.patient && e.what && phPatientKey(e.what) === phPatientKey(e.patient);
-    const dedNamesOnly = (e.deducted || []).map(x => {
-      const h = phHerbByIdGet().get(x.herbId);
-      return h ? phDispName(h.name, phIsFormula(h)) : null;
-    }).filter(Boolean).join(", ");
-    const whatLabel = collided ? (dedNamesOnly || "herbal formula") : e.what;
-    return `<div class="log-row">${when}
-      <span class="val"><b>${esc(phDispName(whatLabel))}</b>${e.grams ? ` · ${phFmtG(e.grams)}g` : e.qty && e.qty !== 1 ? ` × ${e.qty}` : ""}${e.patient && e.patient !== e.what ? ` · for ${esc(phTitle(e.patient))}` : ""}${e.price != null ? ` · ${phMoney(e.price)}` : ""}${ded ? `<div class="ph-log-deduct">deducted: ${ded}</div>` : ""}</span>
-      <button type="button" class="wrp-del" data-ph-log-del="${e.id}" aria-label="Delete entry${ded ? " and restore its stock" : ""}">×</button></div>`;
-  }
 
   // (Day-page dispensing tile removed 2026-07-23, her call — "recent
   // prescriptions should be shown in the pharmacy's Prescriptions page, not
@@ -27259,10 +27166,6 @@
   // array, nothing else about them changes. 2026-08-16: Inventory/Restock
   // gained entries too (search+add, print+mark-all-arrived) per her full
   // app mockup; only Stocktake and Suppliers'-second-table still have none.
-  // scroll-then-focus helper for the new search-shortcut topbar icons below
-  // -- doesn't hide/collapse the page's own always-visible search box (her
-  // mockup shows both at once on Inventory), just jumps straight to it
-  const phTopbarFocus = id => { const el = document.getElementById(id); if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.focus(); } };
   // Dashboard has no page of its own to forward to, so its primary action
   // switches to Prescriptions first, then starts a new one -- named here
   // (2026-08-24) so the dark header's own copy of this button (her "say each
@@ -28185,47 +28088,6 @@
     if (dateKey === yestKey) return "Yesterday";
     return phShortDate(dateKey);
   }
-  // Merges PHARMACY.log (dispense/refill/arrival) with PHARMACY.stocktakes
-  // (session-level records, not the per-herb kind:"stocktake" log entries --
-  // those would flood this short list with one line per adjusted herb).
-  function phDashActivityHtml() {
-    const rows = [];
-    PHARMACY.log.forEach(e => {
-      if (e.kind === "stocktake") return;
-      const sortMs = e.at != null ? e.at : parseKey(e.date).getTime();
-      if (!e.kind || e.kind === "dispense") {
-        rows.push({ sortMs, label: `<svg class="icn" aria-hidden="true"><use href="#i-pill"/></svg> Dispensed — ${esc(e.patient || phFixText(e.what) || "")}`, time: phDashRelTime(e.at, e.date) });
-      } else if (e.kind === "refill") {
-        rows.push({ sortMs, label: `<svg class="icn" aria-hidden="true"><use href="#i-jar"/></svg> Made — ${esc(phDispName(phFixText(e.what), true))}`, time: phDashRelTime(null, e.date) });
-      } else if (e.kind === "arrival") {
-        const sup = (e.added && e.added[0] && e.added[0].supplier) || "";
-        rows.push({ sortMs, label: `<svg class="icn" aria-hidden="true"><use href="#i-parcel"/></svg> Restock arrived${sup ? ` — ${esc(sup)}` : ""}`, time: phDashRelTime(null, e.date) });
-      }
-    });
-    (PHARMACY.stocktakes || []).forEach(r => {
-      const hasTime = !!r.finishedAt;
-      const sortMs = hasTime ? new Date(r.finishedAt).getTime() : parseKey(r.date).getTime();
-      const kindLabel = r.kind === "herb" ? "herbs" : r.kind === "formula" ? "formulas" : "both";
-      rows.push({ sortMs, label: `<svg class="icn" aria-hidden="true"><use href="#i-clipboard"/></svg> Stocktake — ${kindLabel} (${r.checked})`, time: phDashRelTime(hasTime ? sortMs : null, r.date) });
-    });
-    rows.sort((a, b) => b.sortMs - a.sortMs);
-    if (!rows.length) return `<div class="fam-empty">Nothing logged yet.</div>`;
-    const shown = rows.slice(0, 5);
-    // her PART C: an activity line has no rank, number or cover % -- it's a
-    // finished event, not a stock level -- so it keeps the same 56px shell
-    // with only what it genuinely has: the label and a relative time, time
-    // styled small/muted (numStyle "time") rather than as a stock figure.
-    const phoneRows = shown.map(r => phC1RowHtml({
-      nameHtml: r.label, num: r.time, numStyle: "time"
-    })).join("");
-    return `<div class="ph-c1-desktop"><div class="ph-dash-list">${shown.map(r => `
-      <div class="ph-dash-row">
-        <div class="ph-dash-row-main">${r.label}</div>
-        <span class="ph-dash-time">${esc(r.time)}</span>
-      </div>`).join("")}</div></div>
-      <div class="ph-c1-phone"><div class="ph-dash-list ph-c1-card">${phoneRows}</div></div>
-      <div class="ph-dash-card-link"><button type="button" class="ph-name-link" data-ph-tab="log">Full dispense history →</button></div>`;
-  }
   // ============ Dashboard, action-first redesign (her ask 2026-08-19) ========
   // Her own framing: "301 herbs" and "745 prescriptions" never make her DO
   // anything -- every section below either lists real items with a button
@@ -28475,28 +28337,6 @@
       <span class="ph-dash-reloc-txt"><b>Relocation</b> — ${bits.map(esc).join(" · ")}</span>
       <span class="ph-dash-reloc-arrow">→</span>
     </button>`;
-  }
-  // her ask 2026-08-24: the whole section vanishes when there's nothing in
-  // it -- no heading, no empty box, no "all clear" message. Content starts
-  // at the tile row instead.
-  function phDashNeedsActionHtml() {
-    // stocktake card moved out of the top slot (her call 2026-09-02:
-    // "stocktake/herb count doesnt need to be on top of the page") -- it
-    // renders down by This Month now, stocktake's own section
-    const cards = phDashMustGoToday().map(phDashTaskMustGoHtml).filter(Boolean);
-    if (!cards.length) return "";
-    // her "dashboard on a phone" spec (2026-08-27) STEP 7: this heading
-    // joins "Most urgent"/"Holding up a script" in dropping to a thin
-    // hairline label on the phone. Found live while measuring: a global
-    // "#pharmacyPage h2{font-size:16.5px!important}" rule (unrelated to this
-    // job) was already beating the B4 pass's own 11px phone override for
-    // EVERY <h2> on this page, "Needs action now" included -- so it never
-    // actually read as 19px on a real phone, but it never read thin either.
-    // Sidestepped the same way "Holding up a script" was built: a plain
-    // <div>, not an <h2>, so that !important rule has nothing to grab.
-    return `<div class="ph-c1-desktop"><div class="ph-dash-secthead"><h2>Needs action now</h2><span class="rule"></span></div></div>
-      <div class="ph-c1-phone"><div class="ph-dash-secthead-thin">Needs action now<span class="rule"></span></div></div>
-      <div class="ph-dash-tasks">${cards.join("")}</div>`;
   }
 
   function phDashStripHtml() {
@@ -30782,24 +30622,6 @@
       <button type="button" class="ph-tl-qa" data-ph-apptcal-qa="dupes"><svg class="icn" aria-hidden="true"><use href="#i-search"/></svg>Find duplicates</button>
       <button type="button" class="ph-tl-qa" data-ph-apptcal-qa="sched"><svg class="icn" aria-hidden="true"><use href="#i-cal"/></svg>Schedule a dispense</button>`;
   }
-  // her Command Deck pick (2026-09-29): one quiet line of real counts under
-  // the toolbar -- booked in view, herbs still to prepare (ready or short,
-  // today onward), short stock in red. Grid view on a desktop only: the
-  // phone's day widget and the one-day List already say these for one day.
-  // Her 19 Sep "leave it gone" (week totals) is superseded by this 29 Sep pick.
-  function phApptCalStatsHtml(days) {
-    const s = phApptCalSummary(days);
-    const todayKey = keyOf(TODAY);
-    const prep = days.filter(d => d.key >= todayKey).flatMap(d => phApptFor(d.key))
-      .filter(a => { const c = phApptCalDotCls(a); return c === "ready" || c === "short"; }).length;
-    const span = days.length === 1 ? (days[0].key === todayKey ? "today" : "this day") : days.length === 7 ? "this week" : `these ${days.length} days`;
-    const it = (key, n, label, cls) => `<span class="${cls || ""}" data-live="apptstat-${key}-${days[0].key}-${days.length}" data-live-sig="${n}"><b>${n}</b>${label}</span>`;
-    return `<div class="ph-apptcal-stats">
-      ${it("booked", s.booked, `booked ${span}`)}
-      ${it("prep", prep, `herb${prep === 1 ? "" : "s"} to prepare`)}
-      ${it("short", s.shortN, "short on stock", s.shortN ? "short" : "")}
-    </div>`;
-  }
   /* ---- "Up next" card (her pick 2026-10-01, option 3 "Pictures with
      words" on the full-size mock): the NEXT patient only, above the grid --
      a gold countdown ring, the name (+ New to you), type icons, plan · phase
@@ -30819,30 +30641,6 @@
   function phUnRing(sz, r, frac, cls) {
     const c = 2 * Math.PI * r, o = sz / 2, f = Math.max(0, Math.min(1, frac || 0));
     return `<svg viewBox="0 0 ${sz} ${sz}" width="${sz}" height="${sz}" aria-hidden="true"><circle cx="${o}" cy="${o}" r="${r}" class="trk"/><circle cx="${o}" cy="${o}" r="${r}" class="val${cls ? " " + cls : ""}" style="stroke-dasharray:${c.toFixed(1)};stroke-dashoffset:${(c * (1 - f)).toFixed(1)};--c:${c.toFixed(1)};transform:rotate(-90deg);transform-origin:${o}px ${o}px"/></svg>`;
-  }
-  function phUnArc(cx, cy, r, a0, a1) {
-    const p = a => { const t = (a - 90) * Math.PI / 180; return `${(cx + r * Math.cos(t)).toFixed(2)} ${(cy + r * Math.sin(t)).toFixed(2)}`; };
-    return `M${p(a0)}A${r} ${r} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${p(a1)}`;
-  }
-  // the cycle wheel: one arc per phase sized by the patient's own segDays,
-  // the current one in plan blue, a gold marker on her cycle day
-  function phUnWheel(comp) {
-    const len = comp.cycleLen, cd = Math.min(comp.day, len);
-    const segs = [["period", comp.segDays.period], ["foll", comp.segDays.foll], ["ov", comp.segDays.ov], ["luteal", comp.segDays.luteal]];
-    let at = 0;
-    const paths = segs.map(([key, n]) => {
-      const a0 = at / len * 360 + 4, a1 = (at + n) / len * 360 - 4; at += n;
-      return a1 > a0 ? `<path d="${phUnArc(28, 28, 22, a0, a1)}" class="wseg${key === comp.phaseKey ? " cur" : ""}"/>` : "";
-    }).join("");
-    return `<svg viewBox="0 0 56 56" width="56" height="56" aria-hidden="true">${paths}<g class="wm" style="transform:rotate(${((cd - .5) / len * 360).toFixed(1)}deg);transform-origin:28px 28px"><circle cx="28" cy="6" r="4.6"/></g></svg><span class="g-in">${phUnIc("drop", 10, "fill")}<b>${cd}</b></span>`;
-  }
-  // three steps, the plan's position mapped onto them (first · middle · last)
-  function phUnSteps(idx, n) {
-    const k = n <= 1 ? 0 : Math.round(idx / (n - 1) * 2);
-    return `<svg viewBox="0 0 56 56" width="56" height="56" aria-hidden="true">${[14, 22, 30].map((h, j) => { const x = 10 + j * 13; return `<rect x="${x}" y="${44 - h}" width="10" height="${h}" rx="2.5" class="st${j < k ? " done" : j === k ? " cur" : ""}" style="--i:${j};transform-origin:${x + 5}px 44px"/>`; }).join("")}<path d="M7 48h42" class="base"/></svg>`;
-  }
-  function phUnCal(word) {
-    return `<svg viewBox="0 0 56 56" width="56" height="56" aria-hidden="true"><rect x="8" y="12" width="40" height="36" rx="6" class="cal"/><path d="M8 22h40M18 8v8M38 8v8" class="cal"/></svg><span class="g-in low"><b>${esc(word)}</b></span>`;
   }
   function phUnJar(state) {
     const lv = state === "ready" ? .82 : .16;
@@ -31105,14 +30903,6 @@
       }
     }
     if (typeof phPinApptZones === "function") phPinApptZones();
-  }
-  // the Lens row: Everyone + four chips, each counted over the days on screen
-  function phApptCalLensHtml(days, pop) {
-    const appts = days.flatMap(d => phApptFor(d.key)).filter(a => a.service !== "Break" && a.patient);
-    if (!appts.length) return "";
-    if (phApptCalLens !== "all" && !PH_APPTCAL_LENSES.some(([k]) => k === phApptCalLens)) phApptCalLens = "all";
-    const chip = (k, label, n) => `<button type="button" class="ph-apptlens-chip${phApptCalLens === k ? " on" : ""}" data-ph-apptcal-lens="${k}" aria-pressed="${phApptCalLens === k}">${esc(label)}${n == null ? "" : ` <b>${n}</b>`}</button>`;
-    return `<div class="ph-apptlens${pop ? " pop" : ""}" role="group" aria-label="Lens"><span class="lbl">Lens</span>${chip("all", "Everyone")}${PH_APPTCAL_LENSES.map(([k, label]) => chip(k, label, appts.filter(a => phApptLensHit(a, k)).length)).join("")}</div>`;
   }
   function phApptCalGridHtml() {
     const days = phApptCalVisibleDays();
@@ -31409,10 +31199,6 @@
     const tone = left <= 0 ? "zero" : pct <= 35 ? "low" : "ok";
     return { left, pct, tone, lasts: rec.lastsDays };
   }
-  function phFuLevelBarHtml(lv, rec) {
-    if (!lv) return `<span class="faint">—</span>`;
-    return `<span class="ph-rf-bar ${lv.tone}" title="${lv.pct}% of the script left · lasts ${lv.lasts.toFixed(1)} d · empty ${esc(phFuDateLabel(rec.emptyOn))}"><i style="--p:${lv.pct}%"></i><b>${lv.pct}%</b></span>`;
-  }
   // the one list both the phone rows and the desktop sheet read -- the
   // Communications merge (2026-09-06) widened this from herb-only to the
   // merged herb+acu+gone-quiet list; phCommRowId/phCommRowPatientName/
@@ -31479,20 +31265,6 @@
       ${group("🌱 Herbs", items.filter(x => !phIsFormula(x.h)).sort(sortAsc), "toorder")}`;
   }
   // ---- the simple Dashboard's pieces (her 2026-09-07 answers) ----
-  // next clinic day after today (her working days from Settings); plain
-  // tomorrow when no days are set. null = no clinic day in the next week.
-  function phDashNextDayKey() {
-    const days = phClinicWorkDays();
-    for (let i = 1; i <= 7; i++) {
-      const d = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() + i);
-      if (!days || days.includes(d.getDay())) return keyOf(d);
-    }
-    return null;
-  }
-  function phDashNextDayLabel(key) {
-    const t = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() + 1);
-    return key === keyOf(t) ? "Tomorrow" : "Next clinic day";
-  }
   function phDashSec(title, count, body) {
     return `<section class="ph-widget ph-dash-card ph-dash-sec"><div class="ph-dash-sh">${esc(title)}${count != null ? `<span class="sub">· ${count}</span>` : ""}<span class="rule"></span></div>${body}</section>`;
   }
@@ -43646,11 +43418,6 @@
   }
   // her open item 3: the second item is her making day. One constant.
   const PH_REFILL_MAKE_DAY = 1;    // 1 = Monday
-  function phRefillNextMakeDay() {
-    const d = new Date(TODAY.getTime());
-    do { d.setDate(d.getDate() + 1); } while (d.getDay() !== PH_REFILL_MAKE_DAY);
-    return keyOf(d);
-  }
   function phRefillMenuHtml(h) {
     if (!phIsFormula(h) || h.stopped) return "";
     const open = phRefillMenuFor === h.id;
@@ -43946,21 +43713,6 @@
       <td class="ph-rp-act">${actions}</td>
     </tr>`;
   }
-  // a recipe with no linked jar, phone/tablet shape -- same "+ Add to
-  // inventory" escape hatch as the desktop version.
-  function phRefNoJarRowHtmlPhone(t) {
-    const ab = presAbbr(t);
-    const nHerbs = (t.ingredients || []).length;
-    return `<tr>
-      <td class="ph-rp-nm">
-        <div class="ph-rp-nm-line"><button type="button" class="ph-name-link" data-pres-open="${t.id}">${phNameHtml(t.name, true)}</button>${ab && ab !== t.name.toUpperCase() ? `<span class="ph-rp-sub">${esc(ab)}</span>` : ""}</div>
-        <div class="ph-rp-sub2">${nHerbs} herb${nHerbs === 1 ? "" : "s"}${t.totalGrams ? ` · ${phFmtG(t.totalGrams)}g recipe` : ""} · no jar in inventory</div>
-      </td>
-      <td class="ph-rp-can"><span class="ph-rp-verdict none">no jar</span></td>
-      <td class="ph-rp-when"><span class="ph-rp-quiet">—</span></td>
-      <td class="ph-rp-act"><button type="button" class="ph-load-btn" data-ph-recipe-add-inventory="${t.id}">+ Add to inventory</button></td>
-    </tr>`;
-  }
   // her ask (2026-09-01, code7 "smooth workflow"): "make the list, email the
   // list ... use the list to verify order" -- she never prints, so this
   // copies one supplier's order as plain text ready to paste into an email.
@@ -44031,35 +43783,6 @@
     stillToOrder.forEach(h => { (bySupToOrder[h.supplier || ""] = bySupToOrder[h.supplier || ""] || []).push(h); });
     const bySupOrdered = {};
     onTheWay.forEach(h => { (bySupOrdered[h.supplier || ""] = bySupOrdered[h.supplier || ""] || []).push(h); });
-    // 2026-08-31 (her confirmed workflow: "batch — one supplier, several
-    // herbs at once"): stage 1 already had its own bulk action ✓ All
-    // arrived, but stage 0 -> 1 (To order -> Ordered) didn't — after
-    // building a whole supplier's order she still had to tap Ordered on
-    // every row one at a time. ✓ Mark all Ordered is the same idiom, one
-    // step earlier; stageForGroup limits each button to the section it
-    // actually belongs to (a toOrder group offers "mark ordered", an
-    // ordered group offers "mark arrived" — no more mixing stage-skipping
-    // actions into the wrong section).
-    const renderSupGroups = (map, stageForGroup) => Object.keys(map).sort((a, b) => (a || "zz").localeCompare(b || "zz")).map(sup => {
-      const supTotal = map[sup].reduce((sum, h) => sum + (h.bottleCost != null ? h.bottleCost * (h.orderQty != null ? h.orderQty : 1) : 0), 0);
-      const bulkBtn = map[sup].length > 1
-        ? (stageForGroup === "toOrder"
-            ? `<button type="button" class="ph-add-order" data-ph-ordered-sup="${esc(sup)}" title="The whole order was placed — every item moves to Ordered">✓ Mark all Ordered</button>`
-            : `<button type="button" class="ph-add-order" data-ph-arrived-sup="${esc(sup)}" title="The whole delivery landed — every item gets its pack">✓ All arrived</button>`)
-        : "";
-      // her ask (2026-09-01): "i dont print. allow me to copy list for
-      // email" -- every supplier group gets this, not just multi-item ones,
-      // since even a single-herb order still needs emailing.
-      const copyBtn = `<button type="button" class="ph-add-order" data-ph-copy-sup="${esc(sup)}" data-ph-copy-stage="${stageForGroup}" title="Copy this list to paste into an email">📋 Copy for email</button>`;
-      return `
-      <div class="ph-order-sup">${sup ? esc(sup) : "No supplier recorded"}
-        <span class="ph-order-sup-count">${map[sup].length} item${map[sup].length === 1 ? "" : "s"}</span>
-        ${supTotal ? `<span class="ph-order-sup-total">${phMoney(supTotal)}</span>` : ""}
-        ${copyBtn}
-        ${bulkBtn}
-      </div>
-      ${map[sup].map((h, i) => orderRow(h, i)).join("")}`;
-    }).join("");
     // STEP 8h: the grid's tracks are fixed (grid-template-columns, in the
     // CSS) but which key lands in which track is just CSS `order` on each
     // item -- Herb and the trailing × stay pinned (order 0 / 99), the seven
@@ -44177,28 +43900,6 @@
         ${statusOpen ? `<div class="ph-order-status-expand">${stage}</div>` : ""}
       </div>`;
     };
-    const arrivedRow = (h, i) => `<div class="ph-order-row ph-order-row-arrived${i % 2 ? " ph-row-alt" : ""}">
-      <button type="button" class="ph-order-nm ph-name-link" data-ph-herb-edit="${h.id}" title="Open ${esc(h.name)} in the edit form">${esc(phHerbLabel(h))}</button>
-      <div class="ph-order-line2">
-        <span class="ph-order-stock">${phFmtG(h.qty || 0)}g in stock now</span>
-        <span class="ph-order-col-status">
-          <span class="ph-order-status-badge arrived ph-arr-chip" data-ph-arr-chip="${h.id}" title="Settled — press and hold, or use ⋯, to fix a mistake">✓ Arrived ${esc(phShortDate(h.arrivedDate))} · +${phFmtG(h.arrivedGrams || 0)}g</span>
-          <button type="button" class="ph-arr-editbtn" data-ph-arr-edit="${h.id}" title="Fix the grams or date, or undo this arrival" aria-label="Edit or undo arrival for ${esc(h.name)}">⋯</button>
-        </span>
-      </div>
-      ${phArrEditId === h.id ? `<div class="ph-arr-edit">
-        ${phArrUndoConfirm === h.id ? phConfirmStrip(
-          `Undo this arrival? −${phFmtG(h.arrivedGrams || 0)}g comes back out of stock.`,
-          `data-ph-arr-undo-yes="${h.id}"`, "Undo") : `
-        <label>Grams received<input type="number" min="0" step="1" value="${h.arrivedGrams != null ? h.arrivedGrams : 0}" data-ph-arr-grams="${h.id}" aria-label="Grams received for ${esc(h.name)}"></label>
-        <label>Arrived<input type="date" value="${esc(h.arrivedDate || "")}" data-ph-arr-date="${h.id}" aria-label="Arrival date for ${esc(h.name)}"></label>
-        <div class="ph-arr-edit-actions">
-          <button type="button" class="btn-save" data-ph-arr-save="${h.id}">Save</button>
-          <button type="button" class="del" data-ph-arr-undo="${h.id}">Undo arrival</button>
-          <button type="button" class="btn-cancel" data-ph-arr-close="1">Close</button>
-        </div>`}
-      </div>` : ""}
-    </div>`;
     // her reference image (2026-09-02): a faint outline icon in each tile
     // her To Order redesign (2026-10-02): four numbers (no "On the way" -- that
     // stage has its own blue band), each pops only when it changes
@@ -46141,83 +45842,6 @@ or changing anything in Cliniko.
   function presDispenseOnDay(patientKey, dayKey) {
     return PHARMACY.log.find(e => (!e.kind || e.kind === "dispense") && e.date === dayKey && phPatientKey(e.patient) === patientKey) || null;
   }
-  function presWeekCellHtml(d, todayKey) {
-    const appts = phApptFor(d.key);
-    const doneN = appts.filter(a => presDispenseOnDay(phPatientKey(a.patient), d.key)).length;
-    const open = presWeekOpenDay === d.key;
-    // her pick (2026-09-03, "LCM = herbs"): a cell NAMES only the herb
-    // patients; acupuncture-only bookings fold into one "+N acu", so the
-    // week reads as a dispensing week, not a diary. Unknown kinds stay named.
-    const herb = appts.filter(a => phApptKind(a.service) !== "acu"), acuN = appts.length - herb.length;
-    const names = herb.slice(0, 2).map(a => `<span class="ph-wkt-item">${esc(phTitle(a.patient).split(" ")[0])}${phApptKindHtml(a.service)}</span>`);
-    if (herb.length > 2) names.push(`<span class="ph-wkt-item">+${herb.length - 2} more</span>`);
-    if (acuN) names.push(`<span class="ph-wkt-item acu">+${acuN} acu</span>`);
-    return `<button type="button" class="ph-wkt-cell${appts.length ? " has" : ""}${d.today ? " today" : ""}${d.past ? " past" : ""}${d.work ? " wd" : ""}${open ? " open" : ""}" data-pres-week-day="${d.key}" aria-expanded="${open ? "true" : "false"}">
-      <span class="ph-wkt-d">${esc(d.dow)} ${d.dnum}${d.today ? ` <em>today</em>` : ""}</span>
-      ${appts.length ? `<span class="ph-wkt-item n"><b>${appts.length} booked</b>${doneN ? ` · ${doneN} ✓` : ""}</span>${names.join("")}` : `<span class="ph-wkt-dash">—</span>`}
-    </button>`;
-  }
-  // one flex row, wraps safely at any width (no fixed grid columns -- the
-  // dense .ph-ds-row sheet grammar is desktop-only elsewhere in this app, see
-  // #phDashboardWrap.ph-ds-polish's own comment, so it's the wrong component
-  // for a widget that also has to fit a 360px phone)
-  function presWeekRowHtml(a, dayKey, todayKey) {
-    const k = phPatientKey(a.patient);
-    const kind = phApptKind(a.service);
-    const script = phApptScriptFor(k);
-    const done = presDispenseOnDay(k, dayKey);
-    const bell = phApptFuDue(k, dayKey) ? `<span class="bell" title="Follow-up due">🔔</span>` : "";
-    const nm = `<b>${esc(phTitle(a.patient))}</b>${phApptKindHtml(a.service)}${phApptEtHtml(a)}${bell}`;
-    // acu-only with no herb script: LCM's job is the herb side (her scoping
-    // rule) -- a quiet line, no dispense controls to reach for
-    if (kind === "acu" && !script) {
-      return `<div class="ph-pres-week-row lean"><span class="tm">${esc(phCkTime12(a.time))}</span><div class="mid"><div class="line1">${nm}</div><div class="line2">acupuncture only</div></div></div>`;
-    }
-    const line2 = script ? presLastFormulaCellHtml(script) : `<span class="ph-pres-day-note">no script yet</span>`;
-    const isFuture = dayKey >= todayKey;
-    const lookahead = isFuture && (parseKey(dayKey) - parseKey(todayKey)) / 86400000 <= 7;
-    let statusHtml, actionHtml;
-    if (done) {
-      statusHtml = `<span class="ph-pres-day-tick">✓${done.at ? " " + esc(presTimeStr(new Date(done.at))) : ""}</span>`;
-      actionHtml = script ? `<button type="button" class="ph-name-link" data-pres-week-open="${script.id}">Open →</button>` : "";
-    } else if (script) {
-      const prep = lookahead ? phApptPrep(k) : null;
-      statusHtml = !prep ? ""
-        : prep.short.length
-          ? `<span class="ph-appt-prep">⚠ ${prep.short.length} short</span><button type="button" class="ph-load-btn" data-ph-appt-order="${a.id}">🛒 Order</button>`
-          : `<span class="ph-appt-prep ok">✓ ready</span>`;
-      actionHtml = isFuture
-        ? `<button type="button" class="ph-arr-editbtn" data-pres-week-open="${script.id}" title="Dispense ${esc(phTitle(a.patient))}" aria-label="Dispense ${esc(phTitle(a.patient))}">💊</button>`
-        : `<button type="button" class="ph-name-link" data-pres-week-open="${script.id}">Open →</button>`;
-    } else {
-      statusHtml = isFuture ? `<span class="ph-pres-day-note">new patient</span>` : "";
-      actionHtml = isFuture ? `<button type="button" class="ph-load-btn" data-pres-week-newscript="${esc(a.patient)}">+ New script</button>` : "";
-    }
-    return `<div class="ph-pres-week-row${done ? " done" : ""}">
-      <span class="tm">${esc(phCkTime12(a.time))}</span>
-      <div class="mid"><div class="line1">${nm}</div><div class="line2">${line2}</div></div>
-      <div class="end">${statusHtml}${actionHtml}</div>
-    </div>`;
-  }
-  function presWeekDayCardHtml(dayKey, todayKey) {
-    const appts = phApptFor(dayKey);
-    const d = parseKey(dayKey);
-    const chmN = appts.filter(a => phApptKind(a.service) !== "acu").length;
-    const acuN = appts.length - chmN;
-    const doneN = appts.filter(a => presDispenseOnDay(phPatientKey(a.patient), dayKey)).length;
-    const statRow = appts.length ? `<div class="ph-stat-row">
-      <div class="ph-stat-chip"><b>${appts.length}</b><span class="lbl">Booked</span></div>
-      ${chmN ? `<div class="ph-stat-chip"><b>${chmN}</b><span class="lbl">CHM</span></div>` : ""}
-      ${acuN ? `<div class="ph-stat-chip"><b>${acuN}</b><span class="lbl">ACU</span></div>` : ""}
-      ${doneN ? `<div class="ph-stat-chip"><b>${doneN}</b><span class="lbl">Dispensed</span></div>` : ""}
-    </div>` : "";
-    return `<div class="ph-week-detail">
-      <div class="dtitle">${esc(DOW_SHORT[d.getDay()])} ${d.getDate()} ${esc(MON_SHORT[d.getMonth()])}</div>
-      ${statRow}
-      ${appts.length ? appts.map(a => presWeekRowHtml(a, dayKey, todayKey)).join("") : `<div class="ph-week-empty">Nothing booked</div>`}
-      <div class="ph-pres-week-foot"><button type="button" class="ph-name-link" data-ph-appt-open="1">📅 Paste a day, a week or a month from Cliniko</button></div>
-    </div>`;
-  }
   // ---- the editor docks under the timeline row it was opened from (her
   // 2026-09-04 "when i click + … page skipping to new prescription section.
   // can you make it more smooth?" -- pick A, ✎ too, one editor that moves
@@ -46254,11 +45878,6 @@ or changing anything in Cliniko.
     // and stops a later Back over-popping (see presPageFromTabHop)
     presPageFromTabHop = false;
     return wasOpen;
-  }
-  function presPanelCurrentKey() {
-    if (presEditId === "__new__") return phPatientKey(presDraft && presDraft.name);
-    const t = PRESC.items.find(x => x.id === presOpenId);
-    return t ? phPatientKey(presPatientFor(t)) : "";
   }
   function presPanelDock(force) {
     const p = document.getElementById("presPanel"), wrap = document.getElementById("presWeekWrap");
@@ -48744,7 +48363,6 @@ or changing anything in Cliniko.
     phFlashShow("✓ Number + message copied — paste it into Google Messages");
     phCkRender();
   }
-  const phCkGmsgLinkHtml = () => `<a class="ph-os-lnk" href="${PH_CK_GMSG_HOME}" target="${PH_CK_GMSG_TARGET}" rel="noopener" title="Google Messages for web, in its own tab">Messages <span class="ext">↗</span></a>`;
   // ---- "already booked" awareness (her ask 2026-09-03: "i already have this
   // patient booked for a followup. how to auto retrieve this data from
   // cliniko") -- the next upcoming appointment for a patient, from the same
@@ -48759,7 +48377,6 @@ or changing anything in Cliniko.
       .sort((a, b) => (a.date + a.time) < (b.date + b.time) ? -1 : 1)[0] || null;
   }
   const phCkTime12 = t => { const m = /^(\d{1,2}):(\d{2})/.exec(t || ""); if (!m) return t || ""; const h = +m[1]; return `${h % 12 || 12}:${m[2]} ${h < 12 ? "am" : "pm"}`; };
-  const phCkBookedLabel = rec => { const a = phCkNextAppt(rec.patientKey || phPatientKey(rec.patient)); const k = a && phApptKind(a.service); return a ? ` · booked ${phFuDateLabel(a.date)}${k ? ` · ${PH_APPT_KIND_LABEL[k]}` : ""}` : ""; };
   // ---- Cliniko patient export (her ask 2026-09-03: "can i upload patient
   // phone number file to add to patient files?") -- Cliniko → Patients →
   // Export gives a CSV with First/Last/Preferred First Name, Email, Mobile/
@@ -51055,7 +50672,6 @@ or changing anything in Cliniko.
     return (PHARMACY.log || []).filter(e => e.kind === "dispense" && phPatientKey(e.patient) === key)
       .sort((a, b) => (b.at || 0) - (a.at || 0))[0] || null;
   }
-  const phMsgNextApptLabel = appt => appt ? `${phShortDate(appt.date)}, ${phCkTime12(appt.time)}` : "—";
   // ---- link builders (STEP 10) ----
   // most mail/SMS clients cap a launched link somewhere around 2,000 chars;
   // past that we trim the BODY only (never the subject) and say so, rather
@@ -52224,7 +51840,6 @@ or changing anything in Cliniko.
     const jsel = e.target && e.target.closest ? e.target.closest("#phJourneyTemplateSel, #phJourneyBarTemplateSel") : null;
     if (jsel) { phJourneyTemplateId = jsel.value || null; renderPharmacy(); return; }
   });
-  const phCondList = rec => (rec && Array.isArray(rec.conditions)) ? rec.conditions : [];
   const phIsFemale = rec => !!rec && rec.sex === "F";
   // ==== Body composition (her 2026-10-12 ask; mock body-composition-mock.html, her 8 picks) ====
   // rec.body = { readings: [{ d: "YYYY-MM-DD", h cm, w kg, f body fat %, m skeletal muscle kg }] }, dated, newest wins. Written ONLY by
@@ -52533,7 +52148,6 @@ or changing anything in Cliniko.
     // savePharmacy, set only for a record whose content actually changed.
     return r;
   }
-  const phMedHxVal = (rec, k) => (rec && rec.medicalHistory && rec.medicalHistory[k]) || "unasked";
   // What the banner/badges surface. ONLY "yes" items — "no" and "unasked"
   // are not a contraindication signal, so they stay on the record and off
   // any summary. Reads the unified history store (phHxProgress) now, so
@@ -52681,35 +52295,6 @@ or changing anything in Cliniko.
       ${rowHtml}
       <label class="ph-medhx-notes-lbl" for="presMedHxNotes">Other / allergies / current medications</label>
       <textarea id="presMedHxNotes" rows="2" placeholder="Anything else worth knowing before writing a script\u2026">${esc(notes)}</textarea>
-    </div>`;
-  }
-  // the banner across the top of the editor. Informational ONLY — it never
-  // checks a herb against anything, never warns, never blocks (her open item 3).
-  function presHistoryBannerHtml(t) {
-    const name = presPatientFor(t);
-    if (!name) return "";
-    const sig = phHistorySignals(name);
-    const own = sig.yes.filter(it => !it.family), fam = sig.yes.filter(it => it.family);
-    const all = (sig.pregnant ? ["Pregnant"] : []).concat(own.map(it => it.label));
-    // nothing recorded at all -> no banner (rather than an empty "History:")
-    if (!all.length && !fam.length && !sig.notes) return "";
-    const shown = all.slice(0, 3);
-    const more = all.length - shown.length;
-    const summary = all.length
-      ? `${shown.map(esc).join(" \u00B7 ")}${more > 0 ? ` \u2014 ${more} more` : ""}`
-      : fam.length ? "family history noted" : "allergies / meds noted";
-    return `<div class="ph-hxbanner${presHxOpen ? " open" : ""}${sig.pregnant ? " preg" : ""}">
-      <button type="button" class="ph-hxbanner-top" data-pres-hx-toggle="1" aria-expanded="${presHxOpen ? "true" : "false"}">
-        <span class="ph-hxbanner-lead">\u2695 History:</span>
-        <span class="ph-hxbanner-sum">${summary}</span>
-        <span class="ph-hxbanner-caret">${presHxOpen ? "\u25BE" : "\u25B8"}</span>
-      </button>
-      ${presHxOpen ? `<div class="ph-hxbanner-detail">
-        ${own.length ? `<div class="ph-hxbanner-line"><b>Medical</b> ${own.map(it => esc(it.label)).join(" \u00B7 ")}</div>` : ""}
-        ${fam.length ? `<div class="ph-hxbanner-line"><b>Family history</b> ${fam.map(it => esc(it.label)).join(" \u00B7 ")}</div>` : ""}
-        ${sig.pregnant ? `<div class="ph-hxbanner-line"><b>Status</b> Pregnant</div>` : ""}
-        ${sig.notes ? `<div class="ph-hxbanner-line"><b>Allergies / meds</b> ${esc(phFixText(sig.notes))}</div>` : ""}
-      </div>` : ""}
     </div>`;
   }
   // (STEP 9's "Suggested formulas — <constitution>" box was removed 2026-10-13: no suggestion text or chips anywhere, see CLAUDE.md "No suggestions")
@@ -53671,13 +53256,6 @@ or changing anything in Cliniko.
     phPfAvatarRefresh(patientKey);
     // the Musculoskeletal page's posture photo slots (her 2026-10-12 ask)
     try { phMskPhotosRefresh(patientKey); } catch (e) { /* only when that page is on screen */ }
-  }
-  async function phRenDeletePhoto(id, patientKey) {
-    const cached = phRenPhotoCache[patientKey];
-    const rec = cached && cached.find(r => r.id === id);
-    if (rec && rec.objectUrl) URL.revokeObjectURL(rec.objectUrl);
-    await phRenPhotoDelete(id);
-    await phRenLoadPhotosFor(patientKey);
   }
   // Undo (her synth22 Stage D ask, 2026-09-15, Records page: "confirm first,
   // then an undo toast too"). The real record (blob included) is kept in
@@ -55106,7 +54684,6 @@ or changing anything in Cliniko.
   // same as the shell/sidebar/status pill) with any-pointer:fine as a second
   // chance, so only a genuinely phone-shaped screen falls through to §4.
   const phRenCanPaste = () => window.innerWidth > 900 || matchMedia("(any-pointer: fine)").matches;
-  const phRenPasteKeyLabel = () => /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent || "") ? "⌘V" : "Ctrl V";
   // her 2026-08-25 spec §4: ONE pair of numbers for every photo that gets
   // stored, whichever door it came in by (📷 Add photo, paste, drag-drop,
   // phone->desktop relay). Longest side 1280px, JPEG 0.7. Was 1280/0.82 for
@@ -58402,22 +57979,6 @@ or changing anything in Cliniko.
     host.querySelectorAll("[data-pf-fbr-w]").forEach(i => { i.style.width = i.dataset.pfFbrW + "%"; });
     presPfCountUp(`[data-pf-fbr-host="${CSS.escape(name)}"] [data-pf-count]`);
   }
-  // whether ANY constitution field has ever been recorded for this patient
-  // -- the fold header's quiet "recorded"/"not recorded yet" tag, same
-  // "say it at a glance, before opening" idiom as presMedHxSubLabel above.
-  // Read-only (phPatientPeek, never phPatientRec) -- a summary line must
-  // never itself lazy-init the fields it's only reporting on.
-  function presConstitHasData(rec) {
-    if (!rec) return false;
-    if (rec.bodyConstitutionBt || rec.personalityBt || rec.eyes || rec.build || rec.constitutionFindings) return true;
-    if ((rec.skin || []).length || (rec.voiceManner || []).length) return true;
-    const tng = rec.constitTongue;
-    if (tng && ((tng.regions || []).length || (tng.overlays || []).length || (tng.body || []).length || (tng.coat || []).length)) return true;
-    if (rec.tongueExam && !phTng2Empty(phTng2Read(rec.tongueExam))) return true;
-    const pul = rec.constitPulse;
-    if (pul && (Object.keys(pul.pulse || {}).length || (pul.pulseRef || []).length)) return true;
-    return false;
-  }
   // the 方病人 constitution block, merged into Patient details (her ask
   // 2026-09-25: "merge constitution and patient details together" --
   // shown a mock, given no further steer beyond "make my workflow
@@ -60500,9 +60061,6 @@ or changing anything in Cliniko.
   // the interrupting plan is the short-lived half -- when it is finished and
   // deleted, nothing is left pointing at a plan that no longer exists.
   const PH_TP_INTERRUPT_CATS = ["acute"];
-  // the plan this one is holding paused, if any
-  const phTpInterrupted = (plans, plan) => (plan && plan.interruptsPlanId)
-    ? (plans.find(p => p.id === plan.interruptsPlanId) || null) : null;
   // the active plan currently holding THIS one paused, if any
   const phTpHeldBy = (plans, plan) => (plan && plan.status === "paused")
     ? (plans.find(p => p.status === "active" && p.interruptsPlanId === plan.id) || null) : null;
@@ -65139,7 +64697,6 @@ or changing anything in Cliniko.
     const c = phCcOf(name), f = c && phCcMainId(c) && phCcFam(phCcMainId(c));
     return f ? [f] : [];
   }
-  function phCcCatLabel(cat) { return (PH_TP_CATEGORIES.find(x => x.id === cat) || {}).label || ""; }
   function phCcWrite(name, fn) {
     const rec = name ? phPatientRec(name) : null;
     if (!rec) return false;
@@ -66514,11 +66071,6 @@ or changing anything in Cliniko.
   }
   const phRenFamColourId = k => { const m = phRenFamMembers() || []; let best = m[0], bw = 0; m.forEach(id => { const w = ((PH_FORMULAS[id] || {}).ren || {})[k] || 0; if (w > bw) { bw = w; best = id; } }); return best; };
   const phRenGrpOf = k => PH_REN_GROUP_IX[k];
-  function phRenDrawnKeys() {
-    const s = new Set(["obesity_tend", "robust_build", "robust_firm_build", "soft_loose_muscle", "thin_body", "fine_skin", "dry_skin", "complexion_red_oily", "complexion_dark_green", "complexion_sallow", "complexion_pale_lusterless", "complexion_puffy", "lips_dark_purple", "lips", "bright_eyes", "eyes_round", "tight_belly", "bloating_tend", "abd_wall_weak_tend", "cold_sens", "cold_pain_tend", "desire_lie_curl_tend", "wind_averse_tend", "dreads_heat", "body_hot_tend", "sweats_easy", "sweaty_palms", "sweat_uneven_tend"]);
-    PH_REN_DRAW.forEach(r => r[0].forEach(k => s.add(k)));
-    return s;
-  }
   function phRenGroupChipsHtml() {
     // her 2026-10-12: the group chips (Build & skin, Pain & tension...) were removed -- she never used them. Only the
     // herb-family pill stays, and only while a family is picked. PH_REN_OFF is left empty so nothing is ever hidden.
@@ -69880,11 +69432,6 @@ or changing anything in Cliniko.
     const label = (r[1] + " " + (PH_BING_ALIAS[r[0]] || "") + " " + (PH_BING_ALIAS[String(r[0]).replace(/_tend$/, "")] || "")).toLowerCase();
     return toks.reduce((s, t) => s + (label.includes(t) ? 1 : 0), 0);
   }
-  function phCsMatches(q) {
-    const toks = phCsToks(q);
-    if (!toks.length) return [];
-    return PH_BING_SIGNS.map(r => ({ r, score: phCsScore(r, toks) })).filter(x => x.score > 0).sort((a, b) => b.score - a.score || a.r[1].localeCompare(b.r[1])).slice(0, 8);
-  }
   function phCsChipsHtml(name, q, n) {
     if (!q || !q.trim() || !phCsToks(q).length) return "";
     return `<div class="ph-cs-empty">${n ? `Showing the ${n} sign${n === 1 ? "" : "s"} that match` : "No matching sign yet."}</div>`;
@@ -71161,15 +70708,6 @@ or changing anything in Cliniko.
     presBandSubRefresh();
     return true;
   }
-  function presCycleToggleHtml(t) {
-    const name = presPatientFor(t);
-    if (!name) return "";
-    const rec = phPatientRec(name);
-    return `<div class="ph-switch-row ph-acu-switchrow">
-      <span>Cycle${rec.cycleOn == null ? ` <span class="faint">· auto</span>` : ""}</span>
-      <span class="ph-switch"><input type="checkbox" data-pres-cycle-enable="${esc(name)}"${phCycleOn(rec) ? " checked" : ""}><span class="ph-switch-track"></span></span>
-    </div>`;
-  }
   const PH_CYCLE_FLOW = [["light", "Light"], ["moderate", "Moderate"], ["heavy", "Heavy"]];
   const PH_CYCLE_PAIN = [["none", "None"], ["mild", "Mild"], ["moderate", "Moderate"], ["severe", "Severe"]];
   // 🌱 per-day signs (her ask 2026-09-11/12, cycle-strip walkthrough mock:
@@ -71598,11 +71136,6 @@ or changing anything in Cliniko.
     const supps = (rec && rec.supplements) || {};
     return PH_SUPPLEMENTS.filter(s => supps[s.id] && supps[s.id].on)
       .map(s => `${s.name} — ${(supps[s.id] && supps[s.id].dose) || s.dose}`).join("\n");
-  }
-  function phSuppVitalyCopyHtml(rec) {
-    const supps = (rec && rec.supplements) || {};
-    if (!PH_SUPPLEMENTS.some(s => supps[s.id] && supps[s.id].on)) return "";
-    return `<div class="ph-dash-card-link"><button type="button" class="ph-name-link" data-supp-vitaly-copy="1">📋 Copy for vital.ly</button></div>`;
   }
   // ============ Treatment plan row (round-3 redesign, 2026-09-03, her steer:
   // "keep history, but move the treatment notes in its own row below
@@ -72200,10 +71733,6 @@ or changing anything in Cliniko.
     // it's never auto-filled or hidden -- just a quiet pointer to what's
     // already logged above, so she's not left wondering if the two agree.
     const cmTodayLabel = todaySign && todaySign.cm ? ((PH_CYCLE_CM.find(x => x[0] === todaySign.cm) || [])[1] || "") : "";
-    const watchChipHtml = w => {
-      const hint = cmTodayLabel && /mucus|discharge/i.test(w) ? ` <i class="ph-acu-watch-cmhint">· logged as ${esc(cmTodayLabel)} above</i>` : "";
-      return `<button type="button" class="ph-ck-chip${presAcuWatchChecked.includes(w) ? " on" : ""}" data-pres-acu-watch="${esc(w)}">${esc(w)}${hint}</button>`;
-    };
     // her pick 2026-09-19 ("Yes, add the checklist"): the phase's own plan
     // as today's to-do -- ask, needle, herbs, book, log. The app ticks what
     // it can see (herbs given or instructed, a visit booked, today's session
@@ -78182,7 +77711,6 @@ or changing anything in Cliniko.
     const phase = ctx && ctx.treatedPhase;
     if (!root || !plan || !phase) return html;   // no plan / no phase: the plain compact block
     const pick = sel => { const el = root.querySelector(sel); return el ? el.outerHTML : ""; };
-    const pickAll = sel => Array.from(root.querySelectorAll(sel)).map(el => el.outerHTML).join("");
     // a label · value row's value side, the label dropped (the table's own label column carries it)
     const rowVal = label => { const row = Array.from(root.querySelectorAll(".ph-acu-row2")).find(r => { const l = r.querySelector(".lbl"); return l && l.textContent.trim() === label; }); if (!row) return ""; const c = row.cloneNode(true); const l = c.querySelector(".lbl"); if (l) l.remove(); return c.innerHTML; };
     const P = phTpPlanCells(plan, phase);
@@ -78950,7 +78478,6 @@ or changing anything in Cliniko.
     retrieval: { label: "Egg retrieval", phase: "opu" },
     transfer: { label: "Embryo transfer", phase: "preEt" },
   };
-  const phTpMilestones = plan => (plan && Array.isArray(plan.milestones)) ? plan.milestones : [];
   // the most recent dated one of its kind -- re-entering a date must RE-DERIVE
   // cleanly rather than compound (her answer), and IVF dates move at short
   // notice, so the latest entry is always the truth.
@@ -79384,18 +78911,6 @@ or changing anything in Cliniko.
     const plan = phTpFindPlan(phTpScreenPatient, r.linkedPlanId);
     return !!plan && (plan.ivfRoundSeq || 0) === (r.linkedRound || 0);
   }
-  // the chip -- collapsed resting state, every width. "this plan"/"earlier
-  // round" and the unconfirmed-intake flag ride as small marks on the chip
-  // itself, so she can tell which round needs a look without opening any.
-  function phIvfCollectionChipHtml(r) {
-    const open = presIvfOpenRows.has(r.id);
-    const live = phIvfIsLiveLink(r);
-    const dateTxt = phIvfDateLabel(r.when) || "no date yet";
-    const icon = r.kind === "freeze" ? "🧊" : "🥚";
-    const tag = live ? `<span class="tag plan">this plan</span>` : (r.linkedPlanId ? `<span class="tag">earlier round</span>` : "");
-    const unconfirmed = r.src === "intake" && !r.confirmed;
-    return `<button type="button" class="ph-ivf-chip${open ? " open" : ""}${unconfirmed ? " unconfirmed" : ""}" data-ivf-row-toggle="${r.id}" title="${esc(dateTxt)}">${icon} ${esc(dateTxt)}${tag}</button>`;
-  }
   // the full funnel editor -- shown for every chip currently in
   // presIvfOpenRows, in a strip below the whole chip row (never inline
   // under its own chip, so the chips themselves never move as she opens
@@ -79573,11 +79088,6 @@ or changing anything in Cliniko.
       <div class="ph-ivf-logrow">${phIvfLogBtnHtml(r.loggedAt, `log="${r.id}"`)}</div>
       <button type="button" class="ph-ivf-addtransfer" data-ivf-add-transfer="${r.id}">+ transfer from these eggs</button>
     </div>`;
-  }
-  function phIvfTransferChipHtml(row, t) {
-    const open = presIvfOpenRows.has(t.id);
-    const dateTxt = phIvfDateLabel(t.date) || "no date yet";
-    return `<button type="button" class="ph-ivf-chip${open ? " open" : ""}" data-ivf-row-toggle="${t.id}" title="${esc(dateTxt)}">🩸 ${esc(dateTxt)}</button>`;
   }
   function phIvfTransferDetailHtml(row, t, live) {
     const dateTxt = phIvfDateLabel(t.date);
@@ -81032,11 +80542,6 @@ or changing anything in Cliniko.
       expected: phTpSessionsOf(ph) || phTpPhaseExpected(ph, g.from, g.to, g.spans),
     });
   }
-  // kept for the phase line's "· N visits" — now excludes what she excluded
-  function phTpPhaseVisits(name, ph) {
-    const st = phTpPhaseVisitStats(name, null, ph);
-    return st ? st.done : 0;
-  }
   /* ONE phrase, four surfaces. Her decision 8 (2026-09-10) put the count on the
      progress bar, the appointment itself and the collapsed Treatment row as well
      as in the grid; four hand-written copies would drift the first time the
@@ -82183,25 +81688,6 @@ or changing anything in Cliniko.
     });
     return Array.from(rows.values()).sort((a, b) => b.date.localeCompare(a.date));
   }
-  function phTpSpineSummaryHtml(name, plan) {
-    const phs = plan.phases || [];
-    let done = 0, booked = 0;
-    phs.forEach(ph => { const st = phTpPhaseVisitStats(name, plan, ph); if (st) { done += st.done; booked += st.booked; } });
-    const cur = phTpPlanCurrentPhase(plan);
-    const parts = [`${done} visit${done === 1 ? "" : "s"} so far`];
-    if (booked) parts.push(`${booked} booked`);
-    const span = cur ? phTpSpanText(cur) : "";
-    if (span) parts.push(span);
-    return `<div class="ph-tp-spine-summary">${parts.map(p => `<span>${esc(p)}</span>`).join("")}</div>`;
-  }
-  function phTpSpineAimHtml(plan) {
-    const cur = phTpPlanCurrentPhase(plan) || (plan.phases || [])[0];
-    if (!cur) return "";
-    return `<div class="ph-tp-spine-aim">
-      <span class="lbl">Aim</span>
-      <span class="txt${cur.aim ? "" : " empty"}" data-tp-edit="${plan.id}:${cur.id}:aim">${cur.aim ? esc(cur.aim) : `Click to set the aim for ${esc(cur.label || "this phase")}`}</span>
-    </div>`;
-  }
   // one date node's body: Assessment (left) and Watch + Acu & herbs (right)
   function phTpSpineNodeBodyHtml(name, plan, node) {
     const ph = node.phase;
@@ -82249,27 +81735,6 @@ or changing anything in Cliniko.
         <span class="chev">${open ? "▾" : "▸"}</span>
       </button>
       ${open ? phTpSpineNodeBodyHtml(name, plan, node) : ""}
-    </div>`;
-  }
-  function phTpSpineHtml(name, plan) {
-    const dates = phTpSpineDates(name, plan);
-    return `<div class="ph-tp-spine">
-      ${phTpSpineAimHtml(plan)}
-      ${phTpSpineSummaryHtml(name, plan)}
-      <div class="ph-tp-spine-list">
-        ${dates.length ? dates.map(n => phTpSpineNodeHtml(name, plan, n)).join("")
-          : `<div class="ph-hx-constit-note">No visits recorded on this plan yet.</div>`}
-      </div>
-    </div>`;
-  }
-  // the toggle between Option K's timeline and the phase-tab grid -- both
-  // read/write the SAME plan, so switching never loses anything. Spine is
-  // the default; the grid stays one click away for anyone used to it.
-  function phTpViewToggleHtml(plan) {
-    const mode = phTpViewMode.get(plan.id) || "grid";
-    return `<div class="ph-tp-viewtoggle">
-      <button type="button" class="${mode === "spine" ? "on" : ""}" data-tp-view="${plan.id}:spine">Timeline</button>
-      <button type="button" class="${mode === "grid" ? "on" : ""}" data-tp-view="${plan.id}:grid">Grid</button>
     </div>`;
   }
   /* ==== THE PHASE'S OWN DATES — READ-ONLY AGAIN (her decision 6 of
@@ -83078,7 +82543,6 @@ or changing anything in Cliniko.
   }
   // red flags ticked today (a warn-only line on Today's visit and the Treatment tab; it never blocks Log)
   function phMskRedFlags(rec) { const v = phMskToday(rec); return v && v.flags ? Object.keys(v.flags).filter(k => v.flags[k]) : []; }
-  function phMskSafetyTicks(rec) { const v = phMskToday(rec); return v && v.safety ? Object.keys(v.safety).filter(k => v.safety[k]) : []; }
   function phMskWarnHtml(rec) {
     const f = phMskRedFlags(rec); if (!f.length) return "";
     return `<div class="ph-msk-warn" data-msk-warn="1"><b>Red flag${f.length > 1 ? "s" : ""}:</b> ${esc(f.slice(0, 2).join("; "))}${f.length > 2 ? ` +${f.length - 2} more` : ""}. Review before needling. <button type="button" class="tab-link" data-flow-go="msk">Open</button></div>`;
@@ -83781,89 +83245,6 @@ or changing anything in Cliniko.
     else if (kind === "mmt") rows.push({ id: uid(), level: "", muscle: t, grade: "", note: "" });
     else rows.push({ id: uid(), name: t, purpose: "", tech: "", pos: "", src: "", result: "nt" });
   }
-  function phTpObjRomLineHtml(key, row, frozen) {
-    const rk = `${key}:rom:${row.id}`;
-    if (frozen) {
-      const vals = row.pair ? `${row.activeL || "—"}° / ${row.activeR || "—"}° active` : `${row.active || "—"}° active${row.passive ? ` · ${row.passive}° passive` : ""}`;
-      return `<div class="ph-tp-obj-line"><span class="nm">${esc(row.name)}</span><span class="v">${vals}${row.normal ? ` <i>(normal ${row.normal}°)</i>` : ""}</span>${row.pain ? `<span class="pain ${esc(row.pain)}">${row.pain === "end" ? "pain at end range" : "no pain"}</span>` : ""}</div>`;
-    }
-    const painBtn = v => `<button type="button" class="ph-tp-obj-pill${row.pain === v ? " on" : ""}" data-tp-obj-pain="${rk}" data-v="${v}">${v === "none" ? "No pain" : "Pain at end"}</button>`;
-    const activeFields = row.pair
-      ? `<input type="text" class="ph-tp-obj-in sm" data-tp-obj-field="${rk}:activeL" value="${esc(row.activeL || "")}" placeholder="Act. L°"><input type="text" class="ph-tp-obj-in sm" data-tp-obj-field="${rk}:activeR" value="${esc(row.activeR || "")}" placeholder="Act. R°">`
-      : `<input type="text" class="ph-tp-obj-in sm" data-tp-obj-field="${rk}:active" value="${esc(row.active || "")}" placeholder="Active°">`;
-    const passiveFields = row.pair
-      ? `<input type="text" class="ph-tp-obj-in sm" data-tp-obj-field="${rk}:passiveL" value="${esc(row.passiveL || "")}" placeholder="Pass. L°"><input type="text" class="ph-tp-obj-in sm" data-tp-obj-field="${rk}:passiveR" value="${esc(row.passiveR || "")}" placeholder="Pass. R°">`
-      : `<input type="text" class="ph-tp-obj-in sm" data-tp-obj-field="${rk}:passive" value="${esc(row.passive || "")}" placeholder="Passive°">`;
-    return `<div class="ph-tp-obj-line editable">
-      <input type="text" class="ph-tp-obj-in nm b" data-tp-obj-field="${rk}:name" value="${esc(row.name || "")}" placeholder="Movement">
-      ${row.normal ? `<span class="norm">/${row.normal}°</span>` : ""}
-      ${activeFields}${passiveFields}
-      ${painBtn("none")}${painBtn("end")}
-      <button type="button" class="ph-tp-obj-del" data-tp-obj-del="${rk}" title="Remove" aria-label="Remove">×</button>
-    </div>`;
-  }
-  function phTpObjMmtLineHtml(key, row, frozen) {
-    const rk = `${key}:mmt:${row.id}`;
-    const gradeLbl = (PH_TP_OBJ_MMT_GRADES.find(g => g[0] === row.grade) || [])[1] || "";
-    if (frozen) {
-      return `<div class="ph-tp-obj-line"><span class="nm">${row.level ? `<i>${esc(row.level)}</i> ` : ""}${esc(row.muscle)}</span><span class="v">${gradeLbl || "not tested"}</span>${row.note ? `<span class="note">${esc(row.note)}</span>` : ""}</div>`;
-    }
-    return `<div class="ph-tp-obj-line editable">
-      <input type="text" class="ph-tp-obj-in lvl" data-tp-obj-field="${rk}:level" value="${esc(row.level || "")}" placeholder="Level">
-      <input type="text" class="ph-tp-obj-in nm b" data-tp-obj-field="${rk}:muscle" value="${esc(row.muscle || "")}" placeholder="Muscle">
-      ${PH_TP_OBJ_MMT_GRADES.map(([v, l]) => `<button type="button" class="ph-tp-obj-pill${row.grade === v ? " on" : ""}" data-tp-obj-grade="${rk}" data-v="${v}">${l}</button>`).join("")}
-      <input type="text" class="ph-tp-obj-in note" data-tp-obj-field="${rk}:note" value="${esc(row.note || "")}" placeholder="Note">
-      <button type="button" class="ph-tp-obj-del" data-tp-obj-del="${rk}" title="Remove" aria-label="Remove">×</button>
-    </div>`;
-  }
-  function phTpObjTestLineHtml(key, row, frozen) {
-    const rk = `${key}:tests:${row.id}`;
-    const resLbl = (PH_TP_OBJ_TEST_RESULTS.find(r => r[0] === row.result) || [])[1] || "Not tested";
-    const info = [row.purpose, row.tech, row.pos].some(Boolean)
-      ? `<div class="ph-tp-obj-testinfo">${row.purpose ? `<b>Purpose</b> ${esc(row.purpose)} ` : ""}${row.tech ? `<b>Technique</b> ${esc(row.tech)} ` : ""}${row.pos ? `<b>Positive</b> ${esc(row.pos)}` : ""}${row.src ? `<span class="src">Source: ${esc(row.src)}</span>` : ""}</div>`
-      : "";
-    if (frozen) {
-      return `<div class="ph-tp-obj-line"><span class="nm">${esc(row.name)}</span><span class="v ${esc(row.result)}">${resLbl}</span></div>${info}`;
-    }
-    return `<div class="ph-tp-obj-line editable">
-      <input type="text" class="ph-tp-obj-in nm b" data-tp-obj-field="${rk}:name" value="${esc(row.name || "")}" placeholder="Test name">
-      ${PH_TP_OBJ_TEST_RESULTS.map(([v, l]) => `<button type="button" class="ph-tp-obj-pill${row.result === v ? " on" : ""} r-${v}" data-tp-obj-result="${rk}" data-v="${v}">${l}</button>`).join("")}
-      <button type="button" class="ph-tp-obj-del" data-tp-obj-del="${rk}" title="Remove" aria-label="Remove">×</button>
-    </div>${info}`;
-  }
-  // region "+" buttons: her call is to match `.ph-tp-sym-preset`'s existing
-  // visual language for a preset-add button, for consistency between the two
-  // sections on the same table -- reused verbatim, not restyled to a
-  // different shape.
-  function phTpObjSectionHtml(kind, label, plan, phase, frozen) {
-    const key = `${plan.id}:${phase.id}`;
-    const rows = phTpObjRows(phase, kind);
-    const lineFn = kind === "rom" ? phTpObjRomLineHtml : kind === "mmt" ? phTpObjMmtLineHtml : phTpObjTestLineHtml;
-    const lines = rows.length ? `<div class="ph-tp-obj-lines">${rows.map(r => lineFn(key, r, frozen)).join("")}</div>` : (frozen ? `<span class="ph-tp-rec-none">—</span>` : "");
-    const presets = frozen ? "" : `<div class="ph-tp-obj-presets">${PH_TP_OBJ_REGIONS.map(([rk, rl]) => `<button type="button" class="ph-tp-sym-preset" data-tp-obj-region="${key}:${kind}:${rk}">+ ${esc(rl)}</button>`).join("")}</div>`;
-    const quick = frozen ? "" : `<div class="ph-tp-sym-quick">
-        <input type="text" class="ph-tp-sym-qin" data-tp-obj-quick="${key}:${kind}" placeholder="Type your own…">
-        <button type="button" class="ph-tp-sym-qadd" data-tp-obj-qadd="${key}:${kind}">Add</button>
-      </div>`;
-    return `<div class="ph-tp-obj-sec"><div class="ph-tp-obj-sechd">${esc(label)}</div>${lines}${presets}${quick}</div>`;
-  }
-  // her ask 2026-09-24 ("give option to copy planned"): baseline exam data
-  // is measured once, on whichever phase happens first (the "no what-
-  // happened counterpart" call above) -- a LATER phase starting blank
-  // needlessly makes her retype the same ROM/MMT/tests rather than
-  // carrying the most recent earlier reading forward as a starting point
-  // she then updates in place, in this same live editor. Only offered
-  // while this phase's own objective is still genuinely empty -- once
-  // she's recorded anything here, there's nothing left to "start from".
-  function phTpObjCopySource(plan, phase) {
-    const idx = (plan.phases || []).findIndex(p => p.id === phase.id);
-    if (idx <= 0) return null;
-    for (let i = idx - 1; i >= 0; i--) {
-      const p = plan.phases[i];
-      if (phTpObjSummary(p)) return p;
-    }
-    return null;
-  }
   // the mock's 3 mini-tables (ROM / MMT / Tests) stacked under one
   // "Objective" section, exactly as she approved -- see phTpVisitTableHtml's
   // own comment for why this is ONE row rather than three top-level rows.
@@ -83872,11 +83253,6 @@ or changing anything in Cliniko.
     // (phMskPlanViewHtml); what was typed here before is folded in as an earlier visit and is
     // never deleted. The editor below stays for reference only.
     return phMskPlanViewHtml(plan, phase);
-  }
-  function phTpObjectiveEditorOld(plan, phase, frozen) {
-    const src =!frozen && !phTpObjSummary(phase) ? phTpObjCopySource(plan, phase) : null;
-    const copy = src ? `<button type="button" class="tab-link ph-tp-obj-copy" data-tp-obj-copyphase="${esc(plan.id)}:${esc(phase.id)}:${esc(src.id)}">Copy from ${esc(src.label || "earlier phase")} →</button>` : "";
-    return `<div class="ph-tp-objective">${copy}${PH_TP_OBJ_SECTIONS.map(([k, l]) => phTpObjSectionHtml(k, l, plan, phase, frozen)).join("")}</div>`;
   }
   // one short line for a summary context (the Today column, a frozen
   // phase's collapsed line) -- counts, never the full editor.
@@ -85206,14 +84582,6 @@ or changing anything in Cliniko.
       </div>
     </div>`);
   }
-  // one line of text per finding for letters / summaries: chips + zones + free text
-  function phTpFindingsText(plan, which) {
-    const f = phTpFindings(plan);
-    const zoneText = diag => f.zones.filter(z => z.startsWith(diag + ":")).map(z => (PH_LTR_ZONES[diag].zones[z.split(":")[1]] || {}).label).filter(Boolean).join(", ");
-    if (which === "tongue") return [f.body.join(", "), f.coat.length ? `${f.coat.join(", ")} coat` : "", f.quals.map(id => (PH_LTR_QUALS.find(q => q.id === id) || {}).label).filter(Boolean).join(", "), zoneText("tongue") ? `(${zoneText("tongue")})` : "", plan.tongue || ""].filter(Boolean).join(" · ");
-    if (which === "pulse") return [f.pulseQ.join(", "), zoneText("pulse") ? `(${zoneText("pulse")})` : "", plan.pulse || ""].filter(Boolean).join(" · ");
-    return [zoneText("abd") ? `(${zoneText("abd")})` : "", plan.abdomen || ""].filter(Boolean).join(" · ");
-  }
   // commit any still-debounced textarea edits before a chip click re-renders the modal
   function phTpFlushFields(plan) {
     document.querySelectorAll(`[data-tp-field^="${plan.id}:"]`).forEach(el => { const field = el.dataset.tpField.split(":")[1]; if (field && el.value !== undefined) plan[field] = el.value; });
@@ -85732,30 +85100,6 @@ or changing anything in Cliniko.
       ` : ""}
     </div>`;
   }
-  function phVisitPulseHtml(f, prev) {
-    const marks = f.pulse, prevMarks = prev ? prev.marks : null;
-    const stampBtn = (id, label) => `<button type="button" class="ph-pulse-stamp${presVisitPulseStamp === id ? " on" : ""}" data-visit-pulse-stamp="${esc(id)}" aria-pressed="${presVisitPulseStamp === id ? "true" : "false"}">${esc(label)}</button>`;
-    const shown = PH_PULSE_OTHER_Q.slice(0, PH_PULSE_STAMP_SHOWN), hidden = PH_PULSE_OTHER_Q.slice(PH_PULSE_STAMP_SHOWN);
-    const more = presVisitPulseMore || hidden.includes(presVisitPulseStamp);
-    const kb = phVisitPulseKbHits(f);
-    return `<div class="ph-pulse-wrap">
-      <div class="ph-pulse-stamps">
-        ${PH_PULSE_SHAPES.map(s => stampBtn(s.id, s.label)).join("")}
-        ${shown.map(q => stampBtn(q, q)).join("")}
-        ${more ? hidden.map(q => stampBtn(q, q)).join("") : ""}
-        <button type="button" class="tab-link" data-visit-pulse-more="1">${more ? "fewer" : `more (${hidden.length})`}</button>
-        ${stampBtn("erase", "✕ erase")}
-      </div>
-      <div class="ph-pulse-halves">
-        ${phVisitPulseHalfHtml("R", marks, prevMarks, f.pulseRef)}
-        ${phVisitPulseHalfHtml("L", marks, prevMarks, f.pulseRef)}
-      </div>
-      ${phVisitPulseScoresHtml(marks, prevMarks)}
-      ${phPulseKbBlockHtml(kb.grid, PH_PULSE_KB_LABEL)}
-      ${prev ? `<div class="ph-pulse-prev">Last visit ${esc(phShortDate(prev.session.date))}: ${esc(phVisitPulseSummaryText(prev.marks))} <span class="faint">· dashed cells in the grid</span></div>` : ""}
-      ${phVisitHammerHtml(f.hammer, kb)}
-    </div>`;
-  }
   // her ask 2026-09-17 ("i want the tongue photo to retrieve from tongue
   // pictures i uploaded. use the one under natural light"): this tile used
   // to show only a photo taken TODAY, "none yet today" every other visit
@@ -85827,7 +85171,6 @@ or changing anything in Cliniko.
     </svg>`;
   }
   const phTongueRegionLabel = r => (PH_TONGUE_REGIONS.find(([k]) => k === r) || [r, r])[1];
-  const phTongueOverlayLabel = k => (PH_TONGUE_OVERLAYS.find(([id]) => id === k) || [k, k])[1];
   // the tongue here is the app's OWN comprehensive chart (phTongueOutlineSvg
   // from the Guide's tongue tab: four regions + six overlay marks), her ask
   // 2026-09-13 "there is also a comprehensive tongue chart ... use it" --
@@ -89507,27 +88850,6 @@ Please let me know if you have any questions.`;
     const host = el.closest("[data-body-host]"), name = host && host.dataset.bodyHost; if (!name) return;
     if (phBodyWrite(name, el.dataset.presBody, el.value)) phBodyRefresh(name); else { const rec = phPatientPeek(name) || {}, b = phBodyLatest(rec) || {}; el.value = b[el.dataset.presBody] != null ? b[el.dataset.presBody] : ""; }
   });
-  function presAcuToggleHtml(t) {
-    const name = presPatientFor(t);
-    if (!name) return "";
-    const rec = phPatientRec(name);
-    return `<div class="ph-switch-row ph-acu-switchrow">
-      <span>Acupuncture</span>
-      <span class="ph-switch"><input type="checkbox" data-pres-acu-enable="${esc(name)}"${rec.acuEnabled ? " checked" : ""}><span class="ph-switch-track"></span></span>
-    </div>`;
-  }
-  // her decision 12: the patient-level herbs default, same switch family as
-  // Acupuncture/Cycle right beside it. Positively stored -- checked unless
-  // she's explicitly turned it off, so all 510 existing records read "on".
-  function presHerbsToggleHtml(t) {
-    const name = presPatientFor(t);
-    if (!name) return "";
-    const rec = phPatientRec(name);
-    return `<div class="ph-switch-row ph-acu-switchrow">
-      <span>Herbs</span>
-      <span class="ph-switch"><input type="checkbox" data-pres-herbs-enable="${esc(name)}"${rec.herbsEnabled !== false ? " checked" : ""}><span class="ph-switch-track"></span></span>
-    </div>`;
-  }
   // her decision 12's first named consequence ("no Formula rows"): replaces
   // the whole Dosage & price block for a herbs-off patient rather than just
   // quieting the Ingredients fold (that's the older, narrower phCaseQuiets
@@ -92070,7 +91392,6 @@ Dosage: {dosage}
     });
     return map;
   }
-  const schedReservedGrams = (herbId, map) => (map || schedReservedMap()).get(herbId) || 0;
 
   const SCHED_STATUS_RANK = { overdue: 0, ready: 1, inprogress: 2, scheduled: 3, completed: 4 };
   // her ask (2026-08-19): a schedule is either a mail-out (due = targetDate,
@@ -92180,7 +91501,6 @@ Dosage: {dosage}
   }
   const schedActive = () => PRESC.scheduled.filter(s => schedStatus(s) !== "completed");
   const schedOverdueCount = () => PRESC.scheduled.filter(s => schedStatus(s) === "overdue").length;
-  const schedReadyCount = () => PRESC.scheduled.filter(s => schedStatus(s) === "ready").length;
 
   // her ask (2026-08-19): Pickup vs Postage, chosen first on the form -- the
   // due date/time fields differ per method, so schedCreate only stakes out
