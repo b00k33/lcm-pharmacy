@@ -1716,8 +1716,7 @@ live on a later, separate "push live."
   desktop installable build beyond the PWA; AI-assisted intake extraction
   via the Claude API (confirmed off — no backend, no safe place for a key
   in this static client-only app; don't re-raise without an architecture
-  change); an app-wide font-size-token migration (roughly 7–8% done);
-  automatic treatment-plan-phase-to-message wiring beyond what's already
+  change); automatic treatment-plan-phase-to-message wiring beyond what's already
   built; bulk multi-past-period entry from the patient's own phone.
 
 ---
