@@ -72,6 +72,8 @@ an oversight.
 `font-size: var(--m-fs-label); background: var(--ph-surface); border-radius: 999px; padding:
 2px 8px;` — no border. Family-history chips use a cool grey-blue tint instead of an outline,
 so the two groups separate by tone, not by two different border styles.
+A chip is for something she **picks or has recorded** — never a proposal. No suggestion chips, no gold
+dashed "+ X" starters, no "Suggested" tag (her 2026-10-13; see CLAUDE.md "NO SUGGESTIONS").
 
 ### Floors, unchanged
 Nothing interactive below 12.5px. No tap target below 32px (the toggle's 26px height is a
