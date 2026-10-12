@@ -2,6 +2,57 @@
 Also read ABOUT-ME.md before any work — build to this user's preferences.
 
 <!-- ============================================================ -->
+# ★★ NO SUGGESTIONS — standing rule (her 2026-10-13: "i dont like suggestions. it clutters the screen.") ★★
+<!-- ============================================================ -->
+> Applies to every page and every future build. Where an older line anywhere below says "suggest", "suggestion",
+> "starter", "best fit" or "one tap applies", **this rule wins**. It was set after the Came in for card, then audited
+> across the whole app the same day (list at the end of this section).
+
+**Never put on screen:**
+1. **Suggestion chips** — "+ X" starters, "Often with this", "From the patterns", "Combine them", quick-add lists of
+   common items she did not ask for.
+2. **Suggestion text or labels** — "Suggested", "Best fit", "Recommended", "Consider", "plan suggests", "Try …", tip /
+   💡 boxes, "Sharpen this picture"-style lists of what to ask or do next.
+3. **Example text** — no "e.g. …" in a placeholder, hint, hover text, error message or empty state. A placeholder is
+   the field's name (or empty when its label is already visible). A *format* hint that says what a value looks like
+   (dd/mm/yyyy, 04xx xxx xxx, you@example.com) is fine.
+4. **Proposed rows or items she must accept or dismiss** (the old auto "Fang Bing Ren" secondary complaints are the
+   example). A derived value shows as an ordinary editable value in the field it belongs to (autofill Diagnosis / Goal,
+   an auto-ticked sign with its source in the tooltip), never as a separate proposal.
+5. **A "recommended" option among equals** — no solid card, pin, badge or colour that tells her which one to pick.
+   Ordering by relevance is fine (a plan picker still lists her complaint's plans first); labelling it is not.
+
+**What stays (these are not suggestions):**
+- **A tool she opens on purpose and its result:** the Patterns page (the analysis, clue counts, a pattern's detail when
+  she expands it), the Fang Bing Ren ranking, Quick assess, the "Suggest from codes" button and its sheet, search /
+  typeahead results after she types, native datalist autocomplete.
+- **Controls that record an answer:** quick picks (1 wk / 1 mo / …), dropdowns, answer chips on a Medical history row,
+  the "+ Sleep / + Pain / + Range of motion" row-type buttons, the Normal-fill button.
+- **Facts and statuses:** stock chips, "overstocked", counts, dates, and "Plan formula X · Use" in Dispense (the
+  plan's own formula with her pour-in action — worded as the fact, never "suggests").
+- **Safety flags:** red flags, allergy / contraindication warnings.
+- **Data questions her workflow law already asks** (Today's visit "still the same supplements?", Cycle "how long has
+  she been on it?"): they ask her to confirm data, they never propose content.
+
+**Wording test:** a line that says what *the app thinks she should add, do or say* is a suggestion — leave it out. A
+line that says what *is* (a value, a source, a count) is fine.
+**Design rule:** if a design wants to propose something, show the data and let her act. If a feature is genuinely a
+suggestion tool, it must sit behind a deliberate tap (a button or menu item), keep its result off the page until then,
+and be agreed with her first. Do not reintroduce a gold dashed chip, a gold tint box or a "sugg" class for this.
+**When you touch a screen**, grep it for `suggest`, `e.g.`, `starter`, dashed gold chips and `placeholder="` before
+you finish; a new "e.g." or suggestion chip left in is a defect, not a style choice.
+
+**Audit 2026-10-13 — removed:** Came in for starter chips + Fang Bing Ren auto rows (card and plan card "Also noting");
+Script panel "Suggested formulas — constitution" box; plan picker "Best fit / Suggested match" label and solid card,
+"She also came in for … Combine them" prompt, Blank plan "formula already suggested" text; rhythm "suggested" tag;
+Session-grid gold "suggested" slot flag; Treatment-tab acupuncture "From the patterns" point chips (both places);
+Patterns page "Sharpen this picture" box and per-pattern "Supplements to consider" chips; herb picker "— use this";
+Dispense "plan suggests" wording (now "Plan formula"); 56 "e.g. …" placeholders in the app and 6 in `intake.html`; the
+"try e.g. …" body-area message; the template manager label "Suggested match for Case" (now "Case").
+**Kept and flagged (her call):** the Patterns page's per-pattern Letters / Food advice / Points lists and the "Plan
+takes shape · Draft" card (the analysis tool she opens); Quick assess; Today's visit "Worth a look" data questions.
+
+<!-- ============================================================ -->
 # ★★★ PATIENT WORKFLOW — THE LAW (her design, 2026-10-10) ★★★
 <!-- ============================================================ -->
 > **Read this before touching ANY patient page** (Patient details, Ren,
@@ -77,9 +128,9 @@ what she takes, not signs of a pattern), blood results (iron, thyroid; only
 results under 12 months old), Cycle day log, Tongue, Pulse, Abdomen,
 period/change-of-life/men's answers. **She declined a "fed by" strip** (9/10 Phase 3):
 do not add one.
-- Fang Bing Ren → Treatment Care Plan: **suggests only** (Diagnosis/goal
-  draft). → Treatment: point suggestions, one tap applies, nothing pre-ticked.
-  → Dispense: **never suggests a formula; the formula is always hers.**
+- Fang Bing Ren → Treatment Care Plan: **fills the Diagnosis / Goal as editable text only**
+  (never a proposal box). → Treatment: **no point-suggestion chips** (removed 2026-10-13, see "NO SUGGESTIONS"
+  at the top). → Dispense: **never suggests a formula; the formula is always hers.**
 - Re-check → Treatment Care Plan: saved and shown on Today's visit only.
   **She declined a flag on the plan** (Phase 3): do not add one.
 - Cycle → Fang Bing Ren, Treatment Care Plan (phase by cycle day, IVF), Treatment.
@@ -608,7 +659,8 @@ user shouldn't have to tell the application something it already knows; if
 information can be reliably inferred from previous actions/inputs/context/
 existing data, use it. Example: she enters "Sunday 30 August · 7pm" then
 picks "Weekly" — the app should understand "every Sunday at 7pm," not make
-her reselect Sunday. **Infer → Suggest → Pre-fill → Confirm → Remember**,
+her reselect Sunday. **Infer → Pre-fill → Confirm → Remember** (the old "Suggest" step is retired: pre-fill the
+editable value, never show a suggestion chip or text — see "NO SUGGESTIONS" at the top),
 not **Ask → Re-enter → Confirm → Repeat.** Ask for every feature: what does
 the user already know, what does the app already know, what can be
 inferred, what decision does the user actually need to make, what's being
@@ -1214,8 +1266,9 @@ deficiency, damp, plus Dang Gui Si Ni and Mei He Qi) — **all wording is
 Claude-drafted, hers to correct, not yet reviewed line by line.** Strength
 shows as plain words (Likely/Possible/A hint) + a clue count, never a
 percentage. **Formula-idea suggestions are OFF by default per-device** —
-she dislikes auto-suggested herbs; point/letter/food/supplement suggestions
-stay on. Several patterns can be agreed at once; one is flagged ★ main,
+she dislikes auto-suggested herbs. A pattern's own detail (letters, food advice, points) stays on this page
+because she opens it; the supplement-to-consider chips, the "Sharpen this picture" box and the Treatment-tab
+"From the patterns" point chips were removed 2026-10-13 (see "NO SUGGESTIONS" at the top). Several patterns can be agreed at once; one is flagged ★ main,
 surfaced via a "Plan takes shape · Draft" card that can write combined
 Diagnosis+Goal text into the plan (undo-able, never touches phases or
 visit counts). **A rule she's overridden in Settings does NOT retroactively
@@ -1571,6 +1624,8 @@ what's on the "never" side.
 - No formula/herb-recipe auto-suggestion outside the plan-phase formula
   picker and Dispense's pour-in — she dislikes auto-suggested herbs;
   Patterns' own formula ideas stay opt-in, off by default.
+- **No suggestion chips, suggestion text, "e.g." example text, proposed rows or "recommended" options on any page**
+  (her 2026-10-13, whole-app audit) — full rule, exceptions and the removal list at the very top of this file.
 - A Patterns rule she's overridden in Settings never automatically gains a
   new clue key added by a later build — a deliberate, repeated trade-off,
   not a bug to "fix".
