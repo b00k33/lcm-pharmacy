@@ -19538,6 +19538,18 @@
   #pharmacyPage .ph-msk .mk-psfs { margin: 8px 0; } #pharmacyPage .ph-msk .mk-psfs .n { font-weight: 600; margin-bottom: 4px; font-size: var(--fs-13); }
   #pharmacyPage .ph-msk .mk-add { margin-top: 10px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   #pharmacyPage .ph-msk .mk-note-row { margin-top: 12px; }
+  /* her 2026-10-12 "reserve a spot for posture images": three slots under the posture chips, Front / Back / Side */
+  #pharmacyPage .ph-msk .mk-pshots { margin-top: 16px; }
+  #pharmacyPage .ph-msk .mk-pshots-hd { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  #pharmacyPage .ph-msk .mk-pshots-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; max-width: 520px; }
+  #pharmacyPage .ph-msk .mk-pshot { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+  #pharmacyPage .ph-msk .mk-pshot-box { width: 100%; aspect-ratio: 3 / 4; border-radius: 10px; overflow: hidden; background: var(--ph-herb-tint); border: 0; padding: 0; display: block; }
+  #pharmacyPage .ph-msk .mk-pshot-box img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #pharmacyPage .ph-msk .mk-pshot-box.empty { background: none; border: 1.5px dashed var(--ph-line); color: var(--ph-faint); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: var(--fs-12); font-weight: 600; cursor: pointer; }
+  #pharmacyPage .ph-msk .mk-pshot-box.empty:hover { border-color: var(--ph-herb); color: var(--ph-herb-deep); }
+  #pharmacyPage .ph-msk .mk-pshot-box.empty .plus { font-size: var(--fs-18); line-height: 1; }
+  #pharmacyPage .ph-msk .mk-pshot figcaption { font-size: var(--fs-10-5); color: var(--ph-soft); text-align: center; }
+  #pharmacyPage .ph-msk .mk-pshot .mk-pshot-add { border: 0; background: none; padding: 0; font-size: var(--fs-10-5); font-weight: 700; color: var(--ph-herb); cursor: pointer; }
   #pharmacyPage .ph-msk .mk-reg { margin-bottom: 14px; }
   /* body figure */
   #pharmacyPage .ph-msk .mk-fig svg { display: block; width: 100%; height: auto; max-height: 520px; }
@@ -53117,6 +53129,8 @@ or changing anything in Cliniko.
     if (phRecPhotosCache) phRecPhotosLoad();
     // Patient details' own avatar (her ask 2026-10-09) -- same in-place idiom
     phPfAvatarRefresh(patientKey);
+    // the Musculoskeletal page's posture photo slots (her 2026-10-12 ask)
+    try { phMskPhotosRefresh(patientKey); } catch (e) { /* only when that page is on screen */ }
   }
   async function phRenDeletePhoto(id, patientKey) {
     const cached = phRenPhotoCache[patientKey];
@@ -81315,9 +81329,33 @@ or changing anything in Cliniko.
     }).join("");
     return `<div class="mk-posefigs">${figs}</div><div class="mk-legend"><span>${on.length ? `${on.length} posture finding${on.length > 1 ? "s" : ""} marked` : "Tick a posture chip and its mark appears on the figure."}</span></div>`;
   }
+  // her 2026-10-12 ask ("reserve a spot for posture images"): three slots under the posture chips -- Front, Back, Side -- each showing the
+  // newest posture photo of that kind (the Photos page's "Full posture" types: mskFront, mskBack, mskSideR / mskSideL) or a dashed place to add
+  // one. The same capture pipeline and viewer as every other photo (data-ren-cap-type / data-ren-tl-open); a new photo repaints this block
+  // in place (phMskPhotosRefresh, called from phRenLoadPhotosFor).
+  function phMskPostureShotsHtml(name) {
+    if (!name) return "";
+    const pk = phPatientKey(name), photos = phRenPhotosFor(pk);
+    if (photos == null) phRenLoadPhotosFor(pk);
+    const today = keyOf(TODAY);
+    const newest = types => (photos || []).filter(r => types.includes(phRenTypeOf(r)))
+      .sort((a, b) => phRenDateKeyOf(b).localeCompare(phRenDateKeyOf(a)) || (b.createdAt || 0) - (a.createdAt || 0))[0];
+    const slots = [["Front", ["mskFront"], "mskFront"], ["Back", ["mskBack"], "mskBack"], ["Side", ["mskSideR", "mskSideL"], "mskSideR"]].map(([lab, types, addType]) => {
+      const r = newest(types);
+      const cap = `data-ren-cap-type="${addType}" data-ren-cap-patient="${esc(pk)}" data-ren-cap-name="${esc(name)}" data-ren-cap-date="${esc(today)}"`;
+      if (!r) return `<figure class="mk-pshot"><button type="button" class="mk-pshot-box empty" ${cap} aria-label="Add a ${lab.toLowerCase()} posture photo"><span class="plus">+</span><span>${lab}</span></button></figure>`;
+      const side = types.length > 1 ? (phRenTypeOf(r) === "mskSideL" ? " · left" : " · right") : "";
+      return `<figure class="mk-pshot"><button type="button" class="mk-pshot-box" data-ren-tl-open="${esc(r.id)}" data-ren-tl-patient="${esc(pk)}" data-ren-tl-row="${esc(phRenRowKeyOf(r))}" title="Open the ${lab.toLowerCase()} posture photo"><img src="${r.objectUrl}" alt="${lab} posture"></button>
+        <figcaption>${lab}${side} · ${phRenDateKeyOf(r) === today ? "today" : esc(phShortDate(phRenDateKeyOf(r)))}</figcaption><button type="button" class="mk-pshot-add" ${cap}>+ New</button></figure>`;
+    }).join("");
+    return `<div class="mk-pshots" data-msk-pshots="${esc(name)}"><div class="mk-pshots-hd"><h4>Posture photos</h4><button type="button" class="tab-link" data-flow-prof="photos">All photos</button></div><div class="mk-pshots-row">${slots}</div></div>`;
+  }
+  function phMskPhotosRefresh(patientKey) {
+    document.querySelectorAll("#pharmacyPage [data-msk-pshots]").forEach(el => { if (phPatientKey(el.dataset.mskPshots) === patientKey) el.outerHTML = phMskPostureShotsHtml(el.dataset.mskPshots); });
+  }
   function phMskObsHtml(vis, rec) {
     const ob = vis.obs || {};
-    const chips = PH_MSK_OBS.map(([g, a]) => `<h4>${g}</h4><div class="mk-pills wrap">${a.map(x => mkPill(!!ob[x], "obs", x, x)).join("")}</div>`).join("") + `<div class="mk-note-row"><button type="button" class="mk-btn" data-flow-prof="photos">Posture photos</button></div>`;
+    const chips = PH_MSK_OBS.map(([g, a]) => `<h4>${g}</h4><div class="mk-pills wrap">${a.map(x => mkPill(!!ob[x], "obs", x, x)).join("")}</div>`).join("") + phMskPostureShotsHtml(phMskPatientName());
     return `<div class="mk-split wide"><div>${chips}</div><div class="mk-fig">${phMskPostureFigsHtml(vis, rec)}</div></div>`;
   }
   // rows for one region: [{ i, e, S }] in display order, sides per phMskSides
