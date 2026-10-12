@@ -12741,6 +12741,12 @@
   #pharmacyPage .ph-pres-menu-item { font: inherit; font-size: var(--fs-12-5); font-weight: 600; color: var(--ph-ink); text-align: left; background: none; border: 0; border-radius: 7px; padding: 8px 10px; cursor: pointer; min-height: 0; }
   #pharmacyPage .ph-pres-menu-item:hover { background: var(--ph-paper); }
   #pharmacyPage .ph-pres-menu-item.danger { color: var(--ph-negative, #B4483A); }
+  /* the plan menu's "More" fold (a plain <details>): same left edge and row height as every other item, a small chevron on the right */
+  #pharmacyPage .ph-pres-menu-more > .ph-pres-menu-item { display: block; width: 100%; box-sizing: border-box; }
+  #pharmacyPage .ph-pres-menu-more > summary { display: flex; align-items: center; justify-content: space-between; list-style: none; color: var(--ph-soft); }
+  #pharmacyPage .ph-pres-menu-more > summary::-webkit-details-marker { display: none; }
+  #pharmacyPage .ph-pres-menu-more > summary::after { content: "▸"; font-size: var(--fs-10); }
+  #pharmacyPage .ph-pres-menu-more[open] > summary::after { content: "▾"; }
   @media (max-width: 640px) {
     /* an 8-phase IVF plan cannot share 360px eight ways -- the strip scrolls
        sideways instead, each tab keeping a readable width */
@@ -79592,24 +79598,35 @@ or changing anything in Cliniko.
   // ⋯'s "Treatment plan" section both share this -- one menu, two doors,
   // same as the IVF history fold above.
   function phTpPlanMenuHtml(name, plan, cc) {
-    // her pick 2026-10-13 (Case | Course): on the Care Plan page itself the menu also holds what left the page --
-    // edit diagnosis / goal, change protocol, and the predicted schedule (it repeats the phases table)
-    const ccItems = !cc ? "" : (() => {
-      let sched = false;
-      try { const r = phPatientPeek(name); sched = !!r && !!(phCycleVisitsHtml(r, plan, name) || phCyclePlanScheduleHtml(r, plan, name)); } catch (e) { sched = false; }
-      return `<button type="button" class="ph-pres-menu-item" data-pres-menu-item="1" data-tp-menu-edit="focus|${esc(name)}|${plan.id}">✎ Edit diagnosis</button>
-      <button type="button" class="ph-pres-menu-item" data-pres-menu-item="1" data-tp-menu-edit="goal|${esc(name)}|${plan.id}">✎ Edit goal</button>
-      <button type="button" class="ph-pres-menu-item" data-pres-menu-item="1" data-tp-protocol-open="${plan.id}">⇄ Change protocol</button>
-      ${sched ? `<button type="button" class="ph-pres-menu-item" data-pres-menu-item="1" data-tp-sched-toggle="${plan.id}">${phTpCcUi.sched.has(plan.id) ? "Hide" : "Show"} predicted schedule</button>` : ""}`;
-    })();
+    const item = (attrs, label, cls) => `<button type="button" class="ph-pres-menu-item${cls ? " " + cls : ""}" data-pres-menu-item="1" ${attrs}>${label}</button>`;
+    const ivf = plan.templateName === "IVF Protocol";
     // her ask 2026-10-13 ("how to mark plan from active to completed"): the stage pill cycles Active > Paused > Done, which she did not
     // find; the menu says it in words. Done plans offer the way back.
     const stItem = plan.status === "done"
-      ? `<button type="button" class="ph-pres-menu-item" data-pres-menu-item="1" data-tp-status-set="${esc(name)}|${plan.id}|active">↺ Reopen plan</button>`
-      : `<button type="button" class="ph-pres-menu-item" data-pres-menu-item="1" data-tp-status-set="${esc(name)}|${plan.id}|done">✓ Mark completed</button>`;
-    return `${stItem}${ccItems}<button type="button" class="ph-pres-menu-item" data-pres-menu-item="1" data-tp-phase-add="${plan.id}">+ Add phase</button>
-      ${(plan.phases || []).length > 1 ? `<button type="button" class="ph-pres-menu-item" data-pres-menu-item="1" data-tp-reorder-open="${plan.id}">↕ Reorder phases</button>` : ""}
-      <button type="button" class="ph-pres-menu-item" data-pres-menu-item="1" data-tp-rename-open="${esc(name)}|${plan.id}">✎ Rename plan</button>
+      ? item(`data-tp-status-set="${esc(name)}|${plan.id}|active"`, "↺ Reopen plan")
+      : item(`data-tp-status-set="${esc(name)}|${plan.id}|done"`, "✓ Mark completed");
+    // her picks 2026-10-13 ("i dont use the majority of this", asked which she uses): seven stay on the menu -- Mark completed / Reopen,
+    // Add phase, Reorder phases, Rename plan, Herbs, Patient letter, Delete -- and every other action sits under a "More" fold (a plain
+    // <details>, so it opens in place with no repaint). Nothing was removed. On the Care Plan page (cc) the fold also holds what left
+    // the page: edit diagnosis / goal (the case card edits them directly), change protocol (the plan name taps it) and the predicted schedule.
+    let sched = false;
+    if (cc) { try { const r = phPatientPeek(name); sched = !!r && !!(phCycleVisitsHtml(r, plan, name) || phCyclePlanScheduleHtml(r, plan, name)); } catch (e) { sched = false; } }
+    const more = [
+      cc ? item(`data-tp-menu-edit="focus|${esc(name)}|${plan.id}"`, "✎ Edit diagnosis") : "",
+      cc ? item(`data-tp-menu-edit="goal|${esc(name)}|${plan.id}"`, "✎ Edit goal") : "",
+      cc ? item(`data-tp-protocol-open="${plan.id}"`, "⇄ Change protocol") : "",
+      cc && sched ? item(`data-tp-sched-toggle="${plan.id}"`, `${phTpCcUi.sched.has(plan.id) ? "Hide" : "Show"} predicted schedule`) : "",
+      ivf ? item(`data-ivfq-rerun="${esc(name)}|${plan.id}"`, "↻ Re-run the IVF questions") : "",
+      ivf ? item(`data-tp-ivftrack-open="${plan.id}"`, "⇄ Switch transfer track") : "",
+      ivf ? item(`data-ivf-print="1"`, "🖨 Print IVF history") : "",
+      item(`data-tp-print="${esc(name)}|${plan.id}"`, "🖨 Print plan record"),
+      item(`data-tp-save-tmpl="${plan.id}"`, "📌 Save as template"),
+      item(`data-tp-screen-open="${esc(name)}|${plan.id}"`, "Full screen ↗"),
+      (phTpPlans(name) || []).length > 1 ? "" : item(`data-tp-inline-back="1"`, "‹ All plans"),
+    ].join("");
+    return `${stItem}${item(`data-tp-phase-add="${plan.id}"`, "+ Add phase")}
+      ${(plan.phases || []).length > 1 ? item(`data-tp-reorder-open="${plan.id}"`, "↕ Reorder phases") : ""}
+      ${item(`data-tp-rename-open="${esc(name)}|${plan.id}"`, "✎ Rename plan")}
       <label class="ph-pres-menu-field"><span>Herbs</span>
         <select class="field-bare" data-tp-herbs-override="${esc(name)}|${plan.id}" aria-label="Herbs for this course">
           <option value=""${plan.herbsOverride == null ? " selected" : ""}>Follow patient default</option>
@@ -79617,15 +79634,9 @@ or changing anything in Cliniko.
           <option value="off"${plan.herbsOverride === false ? " selected" : ""}>Herbs off for this course</option>
         </select>
       </label>
-      ${plan.templateName === "IVF Protocol" ? `<button type="button" class="ph-pres-menu-item" data-pres-menu-item="1" data-ivfq-rerun="${esc(name)}|${plan.id}">↻ Re-run the IVF questions</button>` : ""}
-      ${plan.templateName === "IVF Protocol" ? `<button type="button" class="ph-pres-menu-item" data-pres-menu-item="1" data-tp-ivftrack-open="${plan.id}">⇄ Switch transfer track</button>` : ""}
-      ${plan.templateName === "IVF Protocol" ? `<button type="button" class="ph-pres-menu-item" data-pres-menu-item="1" data-ivf-print="1">🖨 Print IVF history</button>` : ""}
-      <button type="button" class="ph-pres-menu-item" data-pres-menu-item="1" data-tp-print="${esc(name)}|${plan.id}">🖨 Print plan record</button>
-      <button type="button" class="ph-pres-menu-item" data-pres-menu-item="1" data-tp-letter-open="1">✉ Patient letter</button>
-      <button type="button" class="ph-pres-menu-item" data-pres-menu-item="1" data-tp-save-tmpl="${plan.id}">📌 Save as template</button>
-      <button type="button" class="ph-pres-menu-item" data-pres-menu-item="1" data-tp-screen-open="${esc(name)}|${plan.id}">Full screen ↗</button>
-      ${(phTpPlans(name) || []).length > 1 ? "" : `<button type="button" class="ph-pres-menu-item" data-pres-menu-item="1" data-tp-inline-back="1">‹ All plans</button>`}
-      <button type="button" class="ph-pres-menu-item danger" data-pres-menu-item="1" data-tp-plan-del="${plan.id}">Delete plan</button>`;
+      ${item(`data-tp-letter-open="1"`, "✉ Patient letter")}
+      <details class="ph-pres-menu-more"><summary class="ph-pres-menu-item">More</summary>${more}</details>
+      ${item(`data-tp-plan-del="${plan.id}"`, "Delete plan", "danger")}`;
   }
   /* Her decision 10 (2026-09-09): "a proper printable record" of the whole
      course -- diagnosis, goal, each phase planned vs what happened, formulas,
