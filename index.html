@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261013-330000">
+<meta name="lcm-build" content="20261013-340000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6402,6 +6402,14 @@
      branch that has a real cycle to mark; "not tracking"/"no period yet"
      stay at the plain 8px so their row isn't pushed down for nothing). */
   #pharmacyPage .ph-tp-cycblk.folded.withmark { padding-top: 30px; }
+  /* her ask 2026-10-13 ("bring back [the cycle bar] but make it so its not collapsible"): the Care Plan page's bar is the
+     folded look above with a plain "Cycle" label where the chevron button was -- nothing on it folds (phTpCycleBarHtml) */
+  #pharmacyPage .ph-tp-cycblk.slim { padding: 8px 14px; grid-template-columns: minmax(0, 1fr); }
+  #pharmacyPage .ph-tp-cycblk.slim.withmark { padding-top: 30px; }
+  #pharmacyPage .ph-tp-cycblk-lbl { flex: none; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; font-size: var(--fs-10-5); color: var(--ph-green-deep); }
+  #pharmacyPage .ph-tp-cycblk-off { min-width: 0; color: var(--ph-soft); font-size: var(--fs-12-5); }
+  #pharmacyPage .ph-tp-cycblk.slim .ph-tp-cycblk-cap { padding-left: 0; }
+  #pharmacyPage .ph-tp-cycblk-pop { grid-column: 1 / -1; }
   #pharmacyPage .ph-tp-cycblk-headrow { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; width: 100%; }
   #pharmacyPage .ph-tp-cycblk-headrow .ph-tp-cycblk-head { width: auto; flex: none; margin: 0; padding: 2px 0; }
   #pharmacyPage .ph-tp-cycblk-headbar { flex: 1 1 auto; min-width: 0; }
@@ -36567,22 +36575,15 @@
       }
       // her ask 2026-09-05: the "Period history" disclosure + its per-date
       // delete -- see phCycleHistoryHtml/phCycleDeleteHistoryDate above
-      const cycFold = e.target.closest("[data-cycle-fold]");
-      if (cycFold) {
-        try { localStorage.setItem("daybook-ph-cycblk-fold", phTpCycleFolded() ? "0" : "1"); } catch (err) {}
-        const nm = cycFold.dataset.cycleFold, rec = phPatientPeek(nm);
-        document.querySelectorAll(`[data-cycle-block="${CSS.escape(nm)}"]`).forEach(el => { el.outerHTML = phTpCycleBlockHtml(rec, nm, phTpFindPlan(nm, el.dataset.cycleBlockPlan)); });
-        return;
-      }
-      // Mock C's Log button (her pick 2026-09-21): a folded block's own
-      // Log action -- unfold (the popover it opens lives inside the
-      // calendar strip, which only renders unfolded) and open today's
-      // day straight into the log-period popover in one tap.
-      const cycFoldLog = e.target.closest("[data-cycle-fold-log]");
-      if (cycFoldLog) {
-        const nm = cycFoldLog.dataset.cycleFoldLog;
-        try { localStorage.setItem("daybook-ph-cycblk-fold", "0"); } catch (err) {}
-        phCycleOpenDayPop(nm, keyOf(TODAY), { forceOpen: true });
+      // the Care Plan page's cycle bar (phTpCycleBarHtml, her ask 2026-10-13): the drop button opens
+      // today's Log-period box right under the bar (host "plan" is what lets the bar show it); a second
+      // tap on the drop closes the box. The bar itself never folds.
+      const cycBarLog = e.target.closest("[data-cycle-bar-log]");
+      if (cycBarLog) {
+        const nm = cycBarLog.dataset.cycleBarLog;
+        const openHere = phCyclePop && phCyclePop.name === nm && phCyclePop.host === "plan";
+        if (openHere) phCyclePop = null;
+        else { phCycleOpenDayPop(nm, keyOf(TODAY), { forceOpen: true }); if (phCyclePop) phCyclePop.host = "plan"; }
         const rec = phPatientPeek(nm);
         document.querySelectorAll(`[data-cycle-block="${CSS.escape(nm)}"]`).forEach(el => { el.outerHTML = phTpCycleBlockHtml(rec, nm, phTpFindPlan(nm, el.dataset.cycleBlockPlan)); });
         return;
@@ -72848,21 +72849,51 @@ or changing anything in Cliniko.
   // phases as a bar with their day ranges written inside and a marker naming
   // today, one fact line, one editable line. No headline (the band has CD),
   // no LMP tile (the strip marks it), no legend, no tiles. ====
-  // her ask 2026-09-21 "i want this always minimised": the default flips to
-  // folded (was expanded) -- an explicit "0" (she tapped it open herself)
-  // is the only thing that keeps it open across a reload.
-  const phTpCycleFolded = () => { try { const v = localStorage.getItem("daybook-ph-cycblk-fold"); return v === null ? true : v === "1"; } catch (e) { return true; } };
+  // her ask 2026-10-13 ("i previously asked to remove the cycle bar. bring back but make it so its not
+  // collapsible"): the Care Plan page's cycle bar is back as the old "minimised" look -- the "Cycle" label,
+  // the four-phase bar with its Day N mark, the drop button, and one caption line under it -- but it has
+  // no chevron and no fold memory: it is always shown. The drop opens the same Log-period box right under
+  // the bar (phCyclePop with host "plan"); saving or cancelling closes the box, never the bar. The bar
+  // carries data-cycle-block + data-cycle-block-plan like the old block, so every repaint hook still finds it.
+  function phTpCycleBarHtml(rec, name, plan) {
+    if (!rec || !plan || phCyclePregnantPositive(rec)) return "";
+    const wrap = (cls, inner) => `<div class="ph-tp-cycblk slim${cls}" data-cycle-block="${esc(name)}" data-cycle-block-plan="${esc(plan.id)}">${inner}</div>`;
+    const label = `<span class="ph-tp-cycblk-lbl">Cycle</span>`;
+    if (rec.cycleOn === false) return wrap("", `<div class="ph-tp-cycblk-headrow">${label}<span class="ph-tp-cycblk-off">not tracking a cycle</span></div>`);
+    const c0 = phCycleFor(rec) || {};
+    const comp = c0.lmp ? phCycleComp(rec) : null;
+    const logBtn = `<button type="button" class="ph-tp-cycblk-logbtn" data-cycle-bar-log="${esc(name)}" aria-label="Log period for ${esc(phTitle(name))}" title="Log period"><svg aria-hidden="true" focusable="false"><use href="#i-drop"/></svg></button>`;
+    // the Log-period box is only shown here when the drop on THIS bar opened it
+    const pop = phCyclePop && phCyclePop.name === name && phCyclePop.host === "plan" ? `<div class="ph-tp-cycblk-pop">${phCyclePopHtml(phCyclePop)}</div>` : "";
+    const row = (barInner, cap) => `<div class="ph-tp-cycblk-headrow">${label}<div class="ph-tp-cycblk-headbar">${barInner}</div>${logBtn}</div><div class="ph-tp-cycblk-cap">${cap}</div>${pop}`;
+    if (!comp) return wrap("", row(`<div class="ph-cyclebar-empty"></div>`, "no period logged yet"));
+    // the bar: four segments sized by their day counts, the range inside
+    const segLbl = { period: "Period", foll: "Follicular", ov: "Ovulation", luteal: "Luteal" };
+    let start = 1;
+    const segs = ["period", "foll", "ov", "luteal"].map(k => {
+      const len = Math.max(0, comp.segDays[k] || 0), end = start + len - 1;
+      const range = len <= 0 ? "" : len === 1 ? `${start}` : `${start}–${end}`;
+      const cur = k === comp.phaseKey;
+      start = end + 1;
+      return `<i class="${k}${cur ? " cur" : ""}" style="flex:${len || 0.001}" title="${esc(segLbl[k])} · days ${esc(range)}"><b>${k === "ov" && len <= 3 ? "Ov" : segLbl[k]}</b><em>${esc(range)}</em></i>`;
+    }).join("");
+    const late = comp.overdue && !phCycleSuppressed(rec);
+    const mkSide = comp.pinPct > 66 ? " r" : comp.pinPct < 34 ? " l" : "";
+    const marker = `<span class="mk${late ? " late" : ""}" style="left:${comp.pinPct}%"></span><span class="mkl${late ? " late" : ""}${mkSide}" style="left:${comp.pinPct}%" title="${esc(comp.phaseLabel)}">Day ${comp.day}${late ? " · late" : ""}</span>`;
+    const dTo = Math.round((parseKey(comp.nextDate) - TODAY) / 86400000);
+    const cap = `Day ${comp.day} ${comp.phaseLabel} · period ${phShortDate(c0.lmp)} · next ${dTo < 0 ? `${-dTo} d late` : dTo === 0 ? "today" : `in ${dTo} d`}`;
+    return wrap(" withmark", row(`<div class="ph-tp-cbar-outer"><div class="ph-tp-cbar">${segs}</div>${marker}</div>`, esc(cap)));
+  }
   function phTpCycleBlockHtml(rec, name, plan) {
     if (!rec) return "";
-    const planId = plan ? plan.id : "";
+    // with a plan this is the Care Plan page's bar (the repaint hooks reach it through here)
+    if (plan) return phTpCycleBarHtml(rec, name, plan);
     // her ask 2026-10-04 ("i want it to be universal for the app"): with NO plan
-    // this is the profile's Cycle page / the full-screen plan window, so the
-    // block is always open and drops its fold head (nothing to fold it into)
-    const onPage = !plan;
-    const folded = onPage ? false : phTpCycleFolded();
+    // this is the profile's Cycle page, always open
     // her 2026-10-10 redesign (mock v3): the Cycle PAGE is a sentence, three tabs and one
-    // plain line; the Plan tab's folded bar below is untouched
-    if (onPage && rec.cycleOn !== false) return phCycPageHtml(rec, name);
+    // plain line
+    if (rec.cycleOn !== false) return phCycPageHtml(rec, name);
+    const planId = "";
     // her "a" pick 2026-09-26 (Option A1, "folds together"): IVF history and
     // "What's next" merge into this same stacked card -- unfolded only, so
     // collapsed still shows nothing but the bar + Log button. Both render
@@ -72878,25 +72909,7 @@ or changing anything in Cliniko.
     const nextSel = plan ? phTpTabPhaseOf(plan, rec) : null;
     const nextHtml = nextSel ? phTpNextHtml(name, plan, nextSel) : "";
     const merged = (ivfHtml || nextHtml) ? `<div class="ph-tp-cycblk-merged">${ivfHtml}${nextHtml}</div>` : "";
-    // the head says where she is in one line, so folded loses nothing she needs at a glance
-    const headSummary = (() => {
-      if (rec.cycleOn === false) return "not tracking a cycle";
-      const c0 = phCycleFor(rec) || {};
-      const cp = c0.lmp ? phCycleComp(rec) : null;
-      if (!cp) return "no period logged yet";
-      const dTo = Math.round((parseKey(cp.nextDate) - TODAY) / 86400000);
-      return `Day ${cp.day} ${cp.phaseLabel} · period ${phShortDate(c0.lmp)} · next ${dTo < 0 ? `${-dTo} d late` : dTo === 0 ? "today" : `in ${dTo} d`}`;
-    })();
-    // her ask 2026-09-21, Mock C (the published mocks let her pick a
-    // letter; she picked C): folded, the compact head button carries only
-    // the chevron + "Cycle" label -- the bar and the Log action are
-    // siblings, not nested inside the button, so Log can carry its own
-    // tap target -- and the day/period/next detail that used to sit
-    // beside the chevron moves to a caption line underneath.
-    const compactHead = `<button type="button" class="ph-tp-cycblk-head" data-cycle-fold="${esc(name)}" aria-expanded="${folded ? "false" : "true"}"><i class="chev">${folded ? "▸" : "▾"}</i><b>Cycle</b>${folded ? "" : `<span>${esc(headSummary)}</span>`}</button>`;
-    const logBtn = `<button type="button" class="ph-tp-cycblk-logbtn" data-cycle-fold-log="${esc(name)}" aria-label="Log period for ${esc(phTitle(name))}" title="Log period"><svg aria-hidden="true" focusable="false"><use href="#i-drop"/></svg></button>`;
-    const foldedRow = (barInner, cap) => `<div class="ph-tp-cycblk-headrow">${compactHead}<div class="ph-tp-cycblk-headbar">${barInner}</div>${logBtn}</div><div class="ph-tp-cycblk-cap">${cap}</div>`;
-    const wrap = inner => `<div class="ph-tp-cycblk${folded ? " folded" : ""}" data-cycle-block="${esc(name)}" data-cycle-block-plan="${esc(planId)}">${folded || onPage ? "" : compactHead}${inner}</div>`;
+    const wrap = inner => `<div class="ph-tp-cycblk" data-cycle-block="${esc(name)}" data-cycle-block-plan="${esc(planId)}">${inner}</div>`;
     // her 2026-10-03 Mock A: a tapped tile lights the days it describes on the
     // calendar (and a second tap clears them) -- the block repaints whole, so
     // the lit set rides in here rather than through a data attribute
@@ -72922,15 +72935,12 @@ or changing anything in Cliniko.
     const ivfSec = ivfOn ? phIvfDatesSectionHtml(name, plan) : "";
     const signOpts = { insights: true, ivfPlan: ivfOn ? plan : null };
     if (rec.cycleOn === false) {
-      // not tracking: no bar, no Log action makes sense here -- the plain
-      // chevron+label+text head from before, folded or not.
-      if (folded) return `<div class="ph-tp-cycblk folded" data-cycle-block="${esc(name)}" data-cycle-block-plan="${esc(planId)}"><button type="button" class="ph-tp-cycblk-head" data-cycle-fold="${esc(name)}" aria-expanded="false"><i class="chev">▸</i><b>Cycle</b><span>${esc(headSummary)}</span></button></div>`;
+      // not tracking: no bar, no Log action makes sense here
       return wrap(`<div class="cal">${strip}</div><div class="side">${links}${dayPop}${ivfSec}<div class="ph-tp-cycblk-empty">Not tracking a cycle for her.</div></div>${merged}${hist}`);
     }
     const c = phCycleFor(rec) || {};
     const comp = c.lmp ? phCycleComp(rec) : null;
     if (!comp) {
-      if (folded) return `<div class="ph-tp-cycblk folded" data-cycle-block="${esc(name)}" data-cycle-block-plan="${esc(planId)}">${foldedRow(`<div class="ph-cyclebar-empty"></div>`, "no period logged yet")}</div>`;
       return wrap(`<div class="cal">${phCycFFHtml(rec, name, lit, false, ivfDates)}</div><div class="side"><div class="ph-cyclebar-empty"></div>${links}${dayPop}${phCycleSignPopHtml(rec, name, signOpts)}${ivfSec}<div class="ph-tp-cycblk-empty">Tap the day her last period started — the phases, ovulation and next period fill in from it.</div></div>${merged}${hist}`);
     }
     // the bar: four segments sized by their day counts, the range inside
@@ -72954,7 +72964,6 @@ or changing anything in Cliniko.
     const late = comp.overdue && !suppressed;
     const mkSide = comp.pinPct > 66 ? " r" : comp.pinPct < 34 ? " l" : "";
     const marker = `<span class="mk${late ? " late" : ""}" style="left:${comp.pinPct}%"></span><span class="mkl${late ? " late" : ""}${mkSide}" style="left:${comp.pinPct}%" title="${esc(comp.phaseLabel)}">Day ${comp.day}${late ? " · late" : ""}</span>`;
-    if (folded) return `<div class="ph-tp-cycblk folded withmark" data-cycle-block="${esc(name)}" data-cycle-block-plan="${esc(planId)}">${foldedRow(`<div class="ph-tp-cbar-outer"><div class="ph-tp-cbar">${segs}</div>${marker}</div>`, esc(headSummary))}</div>`;
     // her report 2026-09-25 ("popover is not working"): this bar (built
     // 2026-09-19, restyled since) never carried the .ph-cycle-dragzone class
     // the day-signs popover's click handler is keyed on (that handler lives
@@ -77435,7 +77444,9 @@ or changing anything in Cliniko.
     // timeline, scans, pain map / also-treating) beside what she does about it on the right (the Session grid with
     // the latest appointments under it). The cycle strip + its IVF-history / Next card are gone from this page --
     // Cycle and IVF history keep their own pages. The full scan table and the predicted schedule open under the columns.
-    const stripHtml = showCycleBlock ? "" : plan.templateName === "Pregnancy" ? phTpPregBlockHtml(peek, name, plan) : phTpFacialStripHtml(rec, plan);
+    // her ask 2026-10-13 ("i previously asked to remove the cycle bar. bring back but make it so its not collapsible"):
+    // only the slim cycle BAR comes back, straight under the band, always shown (phTpCycleBarHtml); a pregnant patient has none
+    const stripHtml = showCycleBlock ? phTpCycleBarHtml(peek, name, plan) : plan.templateName === "Pregnancy" ? phTpPregBlockHtml(peek, name, plan) : phTpFacialStripHtml(rec, plan);
     const scansOpen = phTpCcUi.scans.has(plan.id) || !!(phTpScanEdit && phTpScanEdit.planId === plan.id);
     const tilesHtml = phTpTilesHtml(name, plan);
     return `${delStrip}
