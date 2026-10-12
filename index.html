@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261013-210000">
+<meta name="lcm-build" content="20261013-220000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -38134,6 +38134,22 @@
           const back = phTpResumeInterrupted(pname, plan);
           savePharmacy(); renderPresPanel();
           if (back) phFlashShow(`Back on ${back.title}.`);
+        }
+        return;
+      }
+      // the ⋯ menu's "Mark completed" / "Reopen plan": sets the stage in one tap (the pill above cycles it a step at a time)
+      const tpStatusSet = e.target.closest("[data-tp-status-set]");
+      if (tpStatusSet) {
+        e.preventDefault(); e.stopPropagation();
+        const [pname, planId, v] = tpStatusSet.dataset.tpStatusSet.split("|");
+        const plan = phTpFindPlan(pname, planId);
+        if (plan && PH_TP_STATUSES.some(s => s.v === v)) {
+          plan.status = v;
+          // an acute detour marked done hands the patient back to the plan it held (same as the pill)
+          const back = phTpResumeInterrupted(pname, plan);
+          if (savePharmacy() === false) { phFlashShow("That could not be saved — check the warning at the top and try again"); return; }
+          renderPresPanel();
+          phFlashShow(back ? `Back on ${back.title}.` : v === "done" ? `${plan.title || "Plan"} marked completed.` : `${plan.title || "Plan"} is active again.`);
         }
         return;
       }
@@ -79724,7 +79740,12 @@ or changing anything in Cliniko.
       <button type="button" class="ph-pres-menu-item" data-pres-menu-item="1" data-tp-protocol-open="${plan.id}">⇄ Change protocol</button>
       ${sched ? `<button type="button" class="ph-pres-menu-item" data-pres-menu-item="1" data-tp-sched-toggle="${plan.id}">${phTpCcUi.sched.has(plan.id) ? "Hide" : "Show"} predicted schedule</button>` : ""}`;
     })();
-    return `${ccItems}<button type="button" class="ph-pres-menu-item" data-pres-menu-item="1" data-tp-phase-add="${plan.id}">+ Add phase</button>
+    // her ask 2026-10-13 ("how to mark plan from active to completed"): the stage pill cycles Active > Paused > Done, which she did not
+    // find; the menu says it in words. Done plans offer the way back.
+    const stItem = plan.status === "done"
+      ? `<button type="button" class="ph-pres-menu-item" data-pres-menu-item="1" data-tp-status-set="${esc(name)}|${plan.id}|active">↺ Reopen plan</button>`
+      : `<button type="button" class="ph-pres-menu-item" data-pres-menu-item="1" data-tp-status-set="${esc(name)}|${plan.id}|done">✓ Mark completed</button>`;
+    return `${stItem}${ccItems}<button type="button" class="ph-pres-menu-item" data-pres-menu-item="1" data-tp-phase-add="${plan.id}">+ Add phase</button>
       ${(plan.phases || []).length > 1 ? `<button type="button" class="ph-pres-menu-item" data-pres-menu-item="1" data-tp-reorder-open="${plan.id}">↕ Reorder phases</button>` : ""}
       <button type="button" class="ph-pres-menu-item" data-pres-menu-item="1" data-tp-rename-open="${esc(name)}|${plan.id}">✎ Rename plan</button>
       <label class="ph-pres-menu-field"><span>Herbs</span>
