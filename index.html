@@ -6783,6 +6783,7 @@
   #pharmacyPage .ph-tlx .T-visit { --c: var(--ph-herb); } #pharmacyPage .ph-tlx .T-jab { --c: var(--ph-metab); } #pharmacyPage .ph-tlx .T-test { --c: var(--ph-purple); }
   #pharmacyPage .ph-tlx-head { display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap; min-height: 28px; }
   #pharmacyPage .ph-tlx-fold { display: inline-flex; align-items: center; gap: 8px; border: 0; background: none; padding: 2px 0; font: inherit; color: var(--ph-ink); cursor: pointer; text-align: left; min-height: 0; }
+  #pharmacyPage span.ph-tlx-fold { cursor: default; }
   #pharmacyPage .ph-tlx-fold i { font-style: normal; font-size: var(--fs-11); color: var(--ph-faint); width: 10px; }
   #pharmacyPage .ph-tlx-fold b { font-weight: 800; letter-spacing: .04em; text-transform: uppercase; font-size: var(--fs-10-5); color: var(--ph-green-deep); }
   #pharmacyPage .ph-tlx-sum { color: var(--ph-soft); font-size: var(--fs-11-5); }
@@ -57616,7 +57617,7 @@ or changing anything in Cliniko.
         // carry it where it's shown once, not four times.
         { id: "today", n: 2, label: "Today's visit", small: "re-check · exam", done: todayDone, on: onPlan && !!plan && tab === "today", go: "today" },
         { id: "patterns", n: 3, label: "Fang Bing Ren", small: "pattern · formula type", done: patAgreed, on: onPlan && !!plan && (tab === "patterns" || tab === "patdx"), go: "patterns", flags: (sections.find(x => x.id === "patdx") || {}).flags || 0 },
-        { id: "plan", n: 4, label: "Treatment Care Plan", small: "phases · sessions", done: planDone, on: onPlan && (!plan || tab === "plan"), go: "plan" },
+        { id: "plan", n: 4, label: "Treatment Care Plan", small: "phases · sessions", done: planDone, on: onPlan && (!plan || tab === "plan" || tab === "timeline"), go: "plan" },
         { id: "treatment", n: 5, label: "Treatment", small: "today's session", done: treatDone, on: onPlan && !!plan && tab === "treatment", go: "treatment" },
         { id: "dispense", n: 6, label: "Dispense", small: "herbs · label", done: dispDone, on: presStage === "dispense", stage: "dispense", last: true },
       ],
@@ -57634,6 +57635,11 @@ or changing anything in Cliniko.
       patSubs: plan && sections.find(s => s.id === "patdx") ? [
         { id: "patterns", label: "Constitution", on: onPlan && tab === "patterns" },
         { id: "patdx", label: "Patterns · Diagnosis", on: onPlan && tab === "patdx", flags: (sections.find(s => s.id === "patdx") || {}).flags || 0, done: patAgreed },
+      ] : [],
+      // the Care Plan lists its fertility Timeline page under it (her 2026-10-13), only when the plan has one
+      planSubs: plan && sections.find(s => s.id === "timeline") ? [
+        { id: "plan", label: "Phases", on: onPlan && tab === "plan" },
+        { id: "timeline", label: "Timeline", sub: subOf("timeline"), on: onPlan && tab === "timeline" },
       ] : [],
     };
   }
@@ -57724,7 +57730,8 @@ or changing anything in Cliniko.
     // Fang Bing Ren's two pages (her 2026-10-12 pick D); the gold count stays on the parent row, as in the mock
     const patSubBtn = s => `<button type="button" class="${s.on ? "on" : ""}${s.done ? " done" : ""}" data-flow-go="${s.id}" role="tab" aria-selected="${s.on ? "true" : "false"}">${esc(s.label)}${s.done ? `<i class="tk" aria-hidden="true">✓</i>` : ""}</button>`;
     const patSubHtml = f.patSubs.length ? `<div class="ph-flow-sub keep plan${patStep.done ? " done" : ""}">${f.patSubs.map(patSubBtn).join("")}</div>` : "";
-    const inner = `${visitHead}${nextHtml}${stepHtml(prof)}${fileHtml}${checkHtml}${sumHtml}${stepHtml(todayStep)}${examSubHtml}${stepHtml(patStep)}${patSubHtml}${stepHtml(planStep)}${stepHtml(treat)}${stepHtml(dispStep)}${logHtml}`;
+    const planSubHtml = f.planSubs.length ? `<div class="ph-flow-sub keep plan${planStep.done ? " done" : ""}">${f.planSubs.map(examSubBtn).join("")}</div>` : "";
+    const inner = `${visitHead}${nextHtml}${stepHtml(prof)}${fileHtml}${checkHtml}${sumHtml}${stepHtml(todayStep)}${examSubHtml}${stepHtml(patStep)}${patSubHtml}${stepHtml(planStep)}${planSubHtml}${stepHtml(treat)}${stepHtml(dispStep)}${logHtml}`;
     let sig = 0; for (let i = 0; i < inner.length; i++) sig = (sig * 31 + inner.charCodeAt(i)) | 0;   // lets a repaint skip an identical rail
     return `<div class="ph-flow-rail" id="presFlowRail" role="tablist" aria-label="Where you are" data-sig="${sig}">
       ${inner}
@@ -57766,7 +57773,7 @@ or changing anything in Cliniko.
       const plan = name && presTpInlinePlanId ? phTpFindPlan(name, presTpInlinePlanId) : null;
       if (plan) {
         const order = ["today", "cycle", "tongue", "pulse", "abdomen", "msk", "patterns", "patdx", "plan", "treatment"];
-        const at = order.indexOf(presTpMainTab || "plan");
+        const at = order.indexOf(presTpMainTab === "timeline" ? "plan" : (presTpMainTab || "plan"));   // the Timeline page sits under the Care Plan, so its Next is the Care Plan's
         if (at >= 0) {
           const secs = presTpMainSections(name, plan);
           // return visit: Fang Bing Ren and the Care Plan are glances on Today's visit, not steps (her pick 2026-10-10)
@@ -73067,10 +73074,15 @@ or changing anything in Cliniko.
     const open = phTlUi.hist;
     return `<div class="ph-tlx-hist"><button type="button" class="ph-tlx-btn" data-tl-hist="1">Before pregnancy · ${n} ${open ? "▾" : "▸"}</button>${open ? `<ul>${nat.map(i => `<li><b>${esc(i.n)}</b> · ${esc(phTlDmY(i.done.date))}${i.done.res ? " · " + esc(i.done.res) : ""}</li>`).join("")}${ivf.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : ""}</div>`;
   }
-  function phTlHtml(rec, name, plan) {
+  // one-line "3 of 13" for the rail's Timeline page
+  function phTlCountText(rec, name, plan) {
+    try { const kind = phTlKindOf(plan); if (!kind || !rec) return ""; const it = phTlModel(rec, name, plan, kind).items; return it.length ? `${it.filter(i => i.done).length} of ${it.length}` : ""; } catch (e) { return ""; }
+  }
+  // page = on its own rail page: always open, no fold button
+  function phTlHtml(rec, name, plan, page) {
     const kind = phTlKindOf(plan);
     if (!kind || !rec || !plan) return "";
-    const m = phTlModel(rec, name, plan, kind), folded = phTlFoldGet(kind), lay = phTlLay();
+    const m = phTlModel(rec, name, plan, kind), folded = page ? false : phTlFoldGet(kind), lay = phTlLay();
     const cnt = { done: 0, due: 0, over: 0, up: 0, none: 0 };
     m.items.forEach(i => cnt[i.status]++);
     const open = m.items.filter(i => !i.done).sort((a, b) => kind === "preg" ? a.lo - b.lo : (a.dLo || "9999").localeCompare(b.dLo || "9999"))[0];
@@ -73089,11 +73101,11 @@ or changing anything in Cliniko.
         + (m.removed.length ? `<div class="ph-tlx-gone">Removed: ${m.removed.map(r => `<button type="button" class="ph-tlx-btn" data-tl-restore="${esc(r.key)}" title="Put back">${esc(r.n)} ＋</button>`).join(" ")}</div>` : "")
         + (kind === "preg" ? phTlHistHtml(rec, name) : "");
     }
-    return `<div class="ph-tlx" data-tl-host="${esc(name)}" data-tl-plan="${esc(plan.id)}" data-tl-kind="${kind}"><div class="ph-tlx-head"><button type="button" class="ph-tlx-fold" data-tl-fold="${kind}" aria-expanded="${folded ? "false" : "true"}"><i>${folded ? "▸" : "▾"}</i><b>Timeline</b></button><span class="ph-tlx-sum">${sum}</span>${chips}${tools}</span></div>${body}</div>`;
+    return `<div class="ph-tlx" data-tl-host="${esc(name)}" data-tl-plan="${esc(plan.id)}" data-tl-kind="${kind}"${page ? ` data-tl-page="1"` : ""}><div class="ph-tlx-head">${page ? `<span class="ph-tlx-fold"><b>Timeline</b></span>` : `<button type="button" class="ph-tlx-fold" data-tl-fold="${kind}" aria-expanded="${folded ? "false" : "true"}"><i>${folded ? "▸" : "▾"}</i><b>Timeline</b></button>`}<span class="ph-tlx-sum">${sum}</span>${chips}${tools}</span></div>${body}</div>`;
   }
   function phTlRefresh(name) {
     const rec = phPatientPeek(name) || phPatientRec(name);
-    document.querySelectorAll(`[data-tl-host="${CSS.escape(name)}"]`).forEach(el => { const plan = phTpFindPlan(name, el.dataset.tlPlan); if (plan) el.outerHTML = phTlHtml(rec, name, plan); });
+    document.querySelectorAll(`[data-tl-host="${CSS.escape(name)}"]`).forEach(el => { const plan = phTpFindPlan(name, el.dataset.tlPlan); if (plan) el.outerHTML = phTlHtml(rec, name, plan, el.dataset.tlPage === "1"); });
   }
   const phTlRefreshAll = () => { const seen = new Set(); document.querySelectorAll("[data-tl-host]").forEach(el => seen.add(el.dataset.tlHost)); seen.forEach(phTlRefresh); };
   function phTlWrite(name, fn) {
@@ -76605,9 +76617,9 @@ or changing anything in Cliniko.
         </div>
         ${phTpReorderOpen === plan.id ? phTpReorderPanelHtml(plan) : ""}
         ${phTpFocusGoalHtml(name, plan)}${phTpProtocolPickHtml(plan)}
+        ${phTlHtml(peek, name, plan)}
         ${phTpTilesHtml(name, plan)}
         <div class="ph-tp-mergewidget">${phTpSessionLadderHtml(name, plan)}</div>
-        ${phTlHtml(peek, name, plan)}
         ${phTpScansHtml(name, plan)}
         ${schedInner ? `<div class="ph-tp-panel noph">${schedInner}</div>` : ""}
       </div>`;
@@ -76749,6 +76761,8 @@ or changing anything in Cliniko.
       ...(name && openT && !presIsFormula(openT) ? [{ id: "patterns", label: "Fang Bing Ren", body: () => presPatternsTabBodyHtml(openT, name) },
         { id: "patdx", label: "Patterns · Diagnosis", sub: patSub, flags: patFlags, flagTitle: `${patFlags} likely, not yet agreed`, body: () => presPatDxTabBodyHtml(openT, name, plan) }] : []),
       { id: "plan", label: "Treatment Care Plan", sub: sel ? sel.label : "", body: () => phGlanceHtml("plan", name, plan) + presTpPlanTabBodyHtml(name, plan) },
+      // the fertility timeline on its own rail page too (her 2026-10-13 "both 1 and 2"), only on a Pregnancy / Natural fertility / IVF plan
+      ...(phTlKindOf(plan) ? [{ id: "timeline", label: "Timeline", sub: phTlCountText(rec, name, plan), body: () => phTlHtml(phPatientPeek(name), name, plan, true) }] : []),
       { id: "treatment", label: "Treatment", sub: treatSub, body: () => phTsDxStripHtml(name, plan) + phMskWarnHtml(rec) + presBandHtml("treat", name, plan.id) + presTpTreatmentTabBodyHtml(name, plan) },
       { id: "log", label: "Treatment log", sub: sessCount ? `${sessCount}` : "", body: () => presBandHtml("log", name, plan.id) + phTpVrLogTabHtml(name, plan) },
       { id: "notes", label: "Notes", sub: (plan.reviews || []).length ? `${(plan.reviews || []).length}` : "", body: () => presBandHtml("notes", name, plan.id) + presTpNotesTabBodyHtml(name, plan) },
