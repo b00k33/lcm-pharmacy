@@ -13103,6 +13103,8 @@
   #pharmacyPage .ph-pulse-cell.on { background: var(--ph-green-tint); color: var(--ph-green-deep); }
   #pharmacyPage .ph-pulse-cell .q { font-size: var(--fs-8); font-weight: 700; }
   #pharmacyPage .ph-pulse-shape { width: 20px; height: 12px; }
+  #pharmacyPage .ph-pulse-shape.sq { width: 13px; height: 13px; }
+  #pharmacyPage .ph-pulse-microdot .ph-pulse-shape.sq { width: 9px; height: 9px; }
   #pharmacyPage .ph-pulse-qs { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 1px 3px; padding: 2px 1px; min-width: 0; max-width: 100%; }
   #pharmacyPage .ph-pulse-qs .q { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #pharmacyPage .ph-pulse-cell .q.more { color: var(--ph-soft); font-weight: 600; }
@@ -84961,12 +84963,22 @@ or changing anything in Cliniko.
     { id: "normal", quality: "Normal", label: "⌒ Normal" },
     { id: "thin", quality: "Thin", label: "〰 Thin" },
     { id: "wiry", quality: "Wiry", label: "― Wiry" },
+    // her words: "arrow up = pounding, 1 arrow slight pounding, 3 arrows strong pounding"
+    { id: "slightpound", quality: "Slight pounding", label: "↑ Slight pounding" },
     { id: "pounding", quality: "Pounding", label: "↑↑↑ Pounding" },
+    // also hers (2026-10-13): Blocked = a loop that crosses itself; Small / Large
+    // compressed = a narrow / a wide red peak standing on a dotted baseline
+    // Weak = three DOWN arrows over a dashed arch (the mirror of Pounding's up arrows)
+    { id: "weak", quality: "Weak", label: "↓↓↓ Weak" },
+    { id: "blocked", quality: "Blocked", label: "α Blocked" },
+    { id: "smallcomp", quality: "Small compressed", label: "▴ Small compressed" },
+    { id: "medcomp", quality: "Medium compressed", label: "▲ Medium compressed" },
   ];
   // a quality typed before it had a drawing (older marks hold Wiry as plain text)
   // still draws as its shape
-  const PH_PULSE_SHAPE_OF_Q = { normal: "normal", thin: "thin", wiry: "wiry", pounding: "pounding" };
-  const PH_PULSE_LINES = ["normal", "wiry", "thin"];
+  const PH_PULSE_SHAPE_OF_Q = { normal: "normal", thin: "thin", wiry: "wiry", pounding: "pounding", "slight pounding": "slightpound", weak: "weak", blocked: "blocked", "small compressed": "smallcomp", "medium compressed": "medcomp" };
+  // drawings that stand on their own (no arrows laid over them)
+  const PH_PULSE_STANDALONE = ["blocked", "smallcomp", "medcomp"];
   // every quality in one grid cell, in the order she added them: the cell's own
   // {quality, shape} first, then `more` (a cell can hold several, e.g. Thin + Weak)
   function phPulseQuals(m) {
@@ -84996,7 +85008,7 @@ or changing anything in Cliniko.
   // then the classical qualities the plan's findings already use. The first
   // PH_PULSE_STAMP_SHOWN are always on the toolbar; the rest fold behind
   // "more" so the grid stays the first thing she sees.
-  const PH_PULSE_OTHER_Q = ["Tense", "Tight", "Robust Pounding", "Amplitude Change", "Smooth Vibration", "Rough Vibration", "Choppy", "Reduced Substance", "Weak",
+  const PH_PULSE_OTHER_Q = ["Tense", "Tight", "Robust Pounding", "Amplitude Change", "Smooth Vibration", "Rough Vibration", "Choppy", "Reduced Substance",
     "Muffled", "Diffuse", "Slippery", "Leather-Hard", "Ropy", "Feeble-Absent", "Inflated", "Flat", "Narrow", "Heat", "Thick", "Deep", "Floating", "Empty", "Restricted", "Long", "Soft", "Forceful", "Loose"];
   const PH_PULSE_STAMP_SHOWN = 9;
   // her real paper chart (photo, 2026-09-13): two mirrored wrist halves, each
@@ -85040,27 +85052,59 @@ or changing anything in Cliniko.
     R: [["neck", "Neck"], ["shoulder", "Shoulder"], ["upperback", "Upper back"]],
     L: [["lowback", "Lower back"], ["hips", "Hips"], ["knees", "Knees"], ["ankle", "Ankle"]],
   };
-  // one drawing: a LINE (normal arch / wiry flat / thin dotted), with her three
-  // pounding arrows laid under it when `arrows` is set. Pounding on its own
-  // keeps the look she first dictated: the arch with arrows.
-  function phPulseShapeSvg(shape, arrows) {
-    if (shape === "pounding") { shape = "normal"; arrows = true; }
-    const up = arrows ? 1 : 0;   // arrows push the line up to make room under it
-    const line = shape === "normal" ? `<path d="${up ? "M2 7.5 Q12 -1 22 7.5" : "M2 11 Q12 1 22 11"}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>`
-      : shape === "wiry" ? `<line x1="2" y1="${up ? 3 : 7}" x2="22" y2="${up ? 3 : 7}" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>`
-      : shape === "thin" ? `<line x1="2" y1="${up ? 3 : 7}" x2="22" y2="${up ? 3 : 7}" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2.5 2.5"/>`
+  // one drawing, built the way she draws it (screenshots 2026-10-13): a LINE
+  // (Normal = arch, Wiry = flat), made dashed by Thin, with three arrows hung
+  // UNDER it -- up for Pounding (1 = slight, 3 = strong), down (a little
+  // lighter) for Weak. The arrows are their own layer: alone they are just the
+  // arrows, and she stacks a line under them (Normal / Wiry / Thin).
+  // Blocked, Small and Medium compressed are drawings of their own.
+  function phPulseShapeSvg(shape, arrows, dashed) {
+    // the arrows are a layer of their own (her 2026-10-13: "separate pounding from pulse so I can
+    // layer it"): alone they draw just the arrows, with no line under them
+    if (shape === "pounding") { shape = null; arrows = "up"; }
+    else if (shape === "slightpound") { shape = null; arrows = "up1"; }
+    else if (shape === "weak") { shape = null; arrows = "down"; }
+    else if (shape === "wiry") shape = "flat";
+    else if (shape === "thin") { shape = "flat"; dashed = true; }
+    if (shape === "blocked") return `<svg viewBox="20 14 104 100" class="ph-pulse-shape sq" aria-hidden="true"><path d="M92 22 C86 44 80 64 70 82 C62 96 54 104 46 102 C36 100 29 88 29 70 C29 58 28 48 36 46 C48 44 66 54 80 62 C94 70 108 76 116 88" fill="none" stroke="currentColor" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    if (shape === "smallcomp" || shape === "medcomp") {
+      const half = shape === "smallcomp" ? 1.6 : 8;   // a narrow peak / a wide one, same height, on a dotted baseline
+      // her call: the small peak needs no dotted baseline; the medium one keeps it
+      const base = shape === "medcomp" ? `<line x1="1" y1="11.5" x2="23" y2="11.5" stroke="currentColor" stroke-width="1.1" stroke-dasharray="1.5 1.5"/>` : "";
+      return `<svg viewBox="0 0 24 14" class="ph-pulse-shape" aria-hidden="true">${base}<path d="M12 2.2 L${12 + half} 11.5 L${12 - half} 11.5 Z" fill="currentColor"/></svg>`;
+    }
+    const lift = arrows ? 1 : 0;   // arrows hang under the line, so the line moves up to make room
+    const sw = dashed ? 1.7 : 2, cap = dashed ? "butt" : "round", dash = dashed ? ` stroke-dasharray="2.5 2.2"` : "";
+    const line = shape === "normal" ? `<path d="${lift ? "M2 7.5 Q12 -1 22 7.5" : "M2 11 Q12 1 22 11"}" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="${cap}"${dash}/>`
+      : shape === "flat" ? `<line x1="2" y1="${lift ? 3 : 7}" x2="22" y2="${lift ? 3 : 7}" stroke="currentColor" stroke-width="${sw}" stroke-linecap="${cap}"${dash}/>`
       : "";
-    if (!line) return "";
-    const arrow = cx => `<path d="M${cx - 2.3} 9.8 L${cx} 6.4 L${cx + 2.3} 9.8 Z" fill="currentColor"/><rect x="${cx - 0.9}" y="9.4" width="1.8" height="4.2" fill="currentColor"/>`;
-    return `<svg viewBox="0 0 24 14" class="ph-pulse-shape" aria-hidden="true">${line}${up ? arrow(6) + arrow(12) + arrow(18) : ""}</svg>`;
+    if (!line && !arrows) return "";
+    const upArrow = cx =>`<path d="M${cx - 2.3} 9.8 L${cx} 6.4 L${cx + 2.3} 9.8 Z" fill="currentColor"/><rect x="${cx - 0.9}" y="9.4" width="1.8" height="4.2" fill="currentColor"/>`;
+    const downArrow = cx => `<rect x="${cx - 0.9}" y="6.4" width="1.8" height="4.2" fill="currentColor"/><path d="M${cx - 2.3} 10.2 L${cx + 2.3} 10.2 L${cx} 13.6 Z" fill="currentColor"/>`;
+    const arrowSet = arrows === "up" ? [6, 12, 18].map(upArrow).join("") : arrows === "up1" ? upArrow(12) : arrows === "down" ? `<g opacity=".8">${[6, 12, 18].map(downArrow).join("")}</g>` : "";
+    // arrows with no line under them sit in the middle of the box instead of hanging low
+    return `<svg viewBox="0 0 24 14" class="ph-pulse-shape" aria-hidden="true">${line}${line ? arrowSet : `<g transform="translate(0 -3.2)">${arrowSet}</g>`}</svg>`;
   }
-  // the drawings for one cell's qualities: each line once (Normal, Wiry, Thin),
-  // Pounding's arrows on the first line, or the arch + arrows when it stands alone
+  // the drawings for one cell's qualities: Normal's arch and Wiry's flat line
+  // (Thin makes them dashed; Thin alone is the dashed flat line), the first line
+  // carries Pounding's arrows or Weak's; with no line, each arrow set draws by
+  // itself; Blocked / Small / Medium compressed follow
   function phPulseGlyphs(quals) {
-    const shapes = quals.map(q => q.shape).filter(Boolean);
-    const lines = PH_PULSE_LINES.filter(s => shapes.includes(s)), pound = shapes.includes("pounding");
-    if (!lines.length) return pound ? [phPulseShapeSvg("pounding")] : [];
-    return lines.map((s, i) => phPulseShapeSvg(s, pound && i === 0));
+    const shapes = quals.map(q => q.shape).filter(Boolean), has = s => shapes.includes(s);
+    const pound = has("pounding"), slight = has("slightpound"), weak = has("weak"), thin = has("thin"), lines = [];
+    if (has("normal")) lines.push("normal");
+    if (has("wiry")) lines.push("flat");
+    if (!lines.length && thin) lines.push("flat");
+    const out = [], upKind = pound ? "up" : slight ? "up1" : null;   // 3 arrows = strong, 1 arrow = slight
+    if (lines.length) {
+      lines.forEach((k, i) => out.push(phPulseShapeSvg(k, i === 0 ? (upKind || (weak ? "down" : null)) : null, thin)));
+      if (upKind && weak) out.push(phPulseShapeSvg("weak"));
+    } else {
+      if (upKind) out.push(phPulseShapeSvg(pound ? "pounding" : "slightpound"));
+      if (weak) out.push(phPulseShapeSvg("weak"));
+    }
+    PH_PULSE_STANDALONE.filter(has).forEach(s => out.push(phPulseShapeSvg(s)));
+    return out;
   }
   // what goes inside a grid cell: the drawings first, then a small word for each
   // quality with no drawing (Weak, Tense...); more than three shows "+N" and the
@@ -85083,7 +85127,7 @@ or changing anything in Cliniko.
   // = yang deficiency. Counts, never a made-up composite.
   function phVisitPulseScores(marks) {
     const levelIdx = {}; PH_PULSE_LEVELS.forEach((l, i) => { levelIdx[l.id] = i + 1; });
-    const out = { R: null, L: null, thin: 0, pounding: 0, weak: 0 };
+    const out = { R: null, L: null, thin: 0, pounding: 0, slight: 0, weak: 0 };
     ["R", "L"].forEach(side => {
       const perCol = {};
       Object.keys(marks || {}).forEach(k => {
@@ -85097,7 +85141,7 @@ or changing anything in Cliniko.
     // a cell with several qualities counts each one once (her pick 2026-10-13); Normal adds to nothing
     Object.values(marks || {}).forEach(m => phPulseQuals(m).forEach(({ quality }) => {
       const q = String(quality || "").toLowerCase();
-      if (q === "thin") out.thin++; else if (q === "pounding" || q === "robust pounding") out.pounding++; else if (q === "weak") out.weak++;
+      if (q === "thin") out.thin++; else if (q === "pounding" || q === "robust pounding") out.pounding++; else if (q === "slight pounding") out.slight++; else if (q === "weak") out.weak++;
     }));
     return out;
   }
@@ -85106,7 +85150,7 @@ or changing anything in Cliniko.
     const s = phVisitPulseScores(marks), p = prevMarks ? phVisitPulseScores(prevMarks) : null;
     const depth = `<span><b>Depth</b> R ${phPulseScoreFmt(s.R)} · L ${phPulseScoreFmt(s.L)}${p ? ` <span class="faint">(last visit R ${phPulseScoreFmt(p.R)} · L ${phPulseScoreFmt(p.L)})</span>` : ""}</span>`;
     const dia = s.thin ? `<span><b>Diameter</b> Thin ×${s.thin} · blood deficiency</span>` : "";
-    const amp = s.pounding || s.weak ? `<span><b>Amplitude</b> ${[s.pounding ? `Pounding ×${s.pounding} · inflammation` : "", s.weak ? `Weak ×${s.weak} · yang deficiency` : ""].filter(Boolean).join(", ")}</span>` : "";
+    const amp = s.pounding || s.slight || s.weak ? `<span><b>Amplitude</b> ${[s.pounding ? `Pounding ×${s.pounding} · inflammation` : "", s.slight ? `Slight pounding ×${s.slight}` : "", s.weak ? `Weak ×${s.weak} · yang deficiency` : ""].filter(Boolean).join(", ")}</span>` : "";
     return `<div class="ph-pulse-scores">${depth}${dia}${amp}</div>`;
   }
   // the most recent SAVED session with pulse marks -- her spreadsheet's
