@@ -67406,9 +67406,14 @@ or changing anything in Cliniko.
     if (tngVisit) words.push(...phFbrTng2Words(tngVisit.tng));
     // abdomen chart (2026-10-11, Wu Ling San audit): the latest visit's marked findings, as "abd:<mark>"
     // words so a belly sign can be matched without ever clashing with a tongue/pulse word
-    const abdVisit = phFbrLatestVisit(rec, f => f.abd && !phAbd2Empty(f.abd));
-    if (abdVisit) {
-      const ab = phAbd2Read(abdVisit.abd);
+    // her 2026-10-12 ("integrate abdomen signs with fang bing ren signs"): the chart she is marking on the Abdomen page
+    // (rec.abdomen.chart) counts at once. Before, only a chart already filed into a LOGGED visit was read, so the belly signs
+    // stayed dark until a session existed. Ren (constitution) takes the standing chart whenever it has marks; Bing (today's
+    // signs) only when the exam was done today, else the latest logged visit as before.
+    const abdLive = rec.abdomen && rec.abdomen.chart && !phAbd2Empty(rec.abdomen.chart) && (kind === "p" || phTodayDonePart(rec, "abdomen")) ? rec.abdomen.chart : null;
+    const abdVisit = abdLive ? null : phFbrLatestVisit(rec, f => f.abd && !phAbd2Empty(f.abd));
+    if (abdLive || abdVisit) {
+      const ab = phAbd2Read(abdLive || abdVisit.abd);
       Object.keys(ab.marks).forEach(k => { words.push("abd:" + k); (ab.marks[k] || []).forEach(z => words.push("abd:" + k + "@" + z)); });
       if (ab.tension) words.push("abd:tension:" + ab.tension);
       Object.values(ab.tensionAt).forEach(v => { if (v) words.push("abd:tension:" + v); });
@@ -67465,6 +67470,11 @@ or changing anything in Cliniko.
     { key: "chest_hypo_full", kind: "d", words: ["abd:tender@hypo", "abd:distended@hypo"] },
     { key: "epigastric_focal_disten", kind: "d", words: ["abd:xiaxin", "abd:distended@epi"] },
     { key: "hip_lowabd_pain_tend", kind: "p", words: ["abd:tender@iliac", "abd:tender@lower", "abd:distended@lower"] },
+    // her 2026-10-12 abdomen pass: Bing "gastric retention" is the twin of sloshing (water sounds); "severe fullness and distention" is a
+    // belly marked distended AND hard; "epigastric heaviness or pressure" is a tender / Xia Xin / distended epigastrium
+    { key: "gastric_retention", kind: "d", words: ["abd:water"] },
+    { key: "abd_distend_severe", kind: "d", words: ["abd:distended"], also: ["abd:tension:hard"] },
+    { key: "epigastric_heavy_tend", kind: "p", words: ["abd:xiaxin", "abd:tender@epi", "abd:distended@epi"] },
     // integrate33 batch 2 (2026-10-11): a spec may carry `also` -- a second list of words, ONE of which must ALSO be on the chart
     // (words AND also), for a sign whose label names two attributes ("greasy" AND "yellow").
     { key: "pulse_wiry_forceful", kind: "p", words: ["wiry"] },
@@ -67540,7 +67550,17 @@ or changing anything in Cliniko.
     const clueKeys = new Set(phPatClues(rec, name).map(c => c.key));
     if (phTriPrefillKeys(key).some(k => clueKeys.has(k))) return "Already recorded elsewhere — tap to override";
     if (kind === "d" && prevD && prevD[key]) return "Ticked last visit — tap to confirm or change";
-    if (phFbrChartKnown(phFbrChartWords(rec, kind), kind, key)) return "Already on the tongue, pulse or abdomen chart — tap to override";
+    if (phFbrChartKnown(phFbrChartWords(rec, kind), kind, key)) {
+      const sp = PH_FBR_CHART_PREFILL.find(x => x.key === key && x.kind === kind), cws = phFbrChartWords(rec, kind);
+      const hit = sp ? cws.filter(cw => cw.indexOf("abd:") === 0 && sp.words.concat(sp.also || []).some(w => cw.includes(w))) : [];
+      const zoned = new Set(hit.filter(h => h.includes("@")).map(h => h.slice(0, h.indexOf("@"))));
+      const say = [...new Set(hit.filter(h => h.includes("@") || !zoned.has(h)).map(h => {
+        if (h.indexOf("abd:tension:") === 0) return h.slice(12) + " belly";
+        const [m, z] = h.slice(4).split("@"), mk = PH_ABD_MARKS.find(x => x[0] === m);
+        return (mk ? mk[1] : m) + (z ? " " + phAbdZoneLabel(z) : "");
+      }))].slice(0, 3);
+      return say.length ? "On the abdomen chart: " + say.join(", ") + " — tap to override" : "Already on the tongue, pulse or abdomen chart — tap to override";
+    }
     if (phTriBloodKnown(rec, key)) return "Already on a recent blood test — tap to override";
     if (kind === "p" && phTriHxKnown(rec, key)) return "Already on Medical history — tap to override";
     if (kind === "p" && phTriUsualKnown(rec, key)) return "Already answered in her usual answers — tap to override";
