@@ -60,7 +60,7 @@ reads it; do not render it again.
 # ★★★ PATIENT WORKFLOW — THE LAW (her design, 2026-10-10) ★★★
 <!-- ============================================================ -->
 > **Read this before touching ANY patient page** (Patient details, Ren,
-> Medical history, Stress & sleep, Supplements, Blood tests, Today's visit,
+> Medical history, Supplements, Blood tests, Today's visit,
 > Cycle, Tongue, Pulse, Abdomen, Fang Bing Ren, Treatment Care Plan,
 > Treatment, Dispense). It fixes the **order, names, repetition and data flow**
 > of those pages. It does NOT fix the widgets (stage/tab/rail mechanics are an
@@ -73,7 +73,7 @@ reads it; do not render it again.
 ## 1 · Three groups, in this order
 | Group | Pages, in order | How often |
 |---|---|---|
-| **1 Her file** | Patient details → Ren → Medical history → Stress & sleep → Supplements → Blood tests | Set once, kept current |
+| **1 Her file** | Patient details → Ren → Medical history → Supplements → Blood tests (Stress & sleep left this list 2026-10-13, see §3) | Set once, kept current |
 | **2 Today's visit** | Today's visit (checklist home) → Cycle (if on) → Tongue → Pulse → Abdomen | Every visit |
 | **3 Put together & do** | Fang Bing Ren → Treatment Care Plan → Treatment → Dispense | Decide, then treat |
 
@@ -94,10 +94,11 @@ reads it; do not render it again.
 
 ## 2 · The order of a visit
 **First visit (her pick "Examine first"):** 1 Patient details → 2 Ren → 3
-Medical history → 4 Stress & sleep → 5 Supplements → 6 Blood tests (if she
-brought any) → 7 Cycle (if on) → 8 Tongue · Pulse · Abdomen → 9 **Fang Bing
-Ren** (now has data to read) → 10 **Treatment Care Plan** → 11 Treatment →
-12 Dispense.
+Medical history → 4 Supplements → 5 Blood tests (if she brought any) → 6
+Cycle (if on) → 7 Tongue · Pulse · Abdomen (and Ask her, which now holds the
+sleep and mood questions) → 8 **Fang Bing Ren** (now has data to read) → 9
+**Treatment Care Plan** → 10 Treatment → 11 Dispense. (Stress & sleep was
+step 4 until 2026-10-13.)
 **Return visit:** Her-file pages show "✓ on file" and are skipped, except
 Supplements (confirm) and Blood tests (if new). Then: Re-check → Cycle (if
 on) → Tongue · Pulse · Abdomen → Fang Bing Ren as **one line: what shifted** →
@@ -116,7 +117,7 @@ visit. That is fixed by this law.)
 | Patient details | Once. Sex + DOB gate the rest (existing Start-here card stays). |
 | Ren | Once. (She skipped the "photos ~3 months old" nudge in Phase 4: none.) |
 | Medical history | Once. One tap "Anything new since <date>?" on Today's visit EVERY return visit (Phase 4). |
-| Stress & sleep | **Asked once for EVERY patient** (not only when the complaint says so). Re-asked at plan review. |
+| Stress & sleep | **No page any more (her pick A, 2026-10-13, `stress-sleep-audit-2026-10-13.html`).** It was "asked once for EVERY patient"; it now lives on **Ask her** (every visit, Usually and Right now): the Sleep topic gained *Hard to fall asleep* and *Wakes in the night or very early*, the Mood topic gained *Low, flat or tearful* and is now always shown. Each answer ticks a new Fang Bing Ren sign (`sleep_onset_hard`, `sleep_wakes`, `mood_low` + `_tend` twins) that makes the Patterns clue `sl_hard` / `sl_wake` / `low_mood`; tapping "hard to fall asleep" or "wakes" also shows the broad sleep sign pre-ticked (`PH_TRI_IMPLIED_BY`). The Energy grid and throat lump were not carried over (Energy is on Today's visit and Fang Bing Ren; throat lump is already a Fang Bing Ren sign). Answers saved before still count and still pre-tick (`PH_PFW_RETIRED`). The mood question on the men's page and the Change of life "Sleep and mood" question went with it. |
 | Supplements | Confirm every return visit with one tap "Same as last time" / "Changed" on Today's visit (the Supplements page itself is unchanged). |
 | Blood tests | When a new result arrives. Each result shows its age ("9 months old"); a result **over 12 months old** is still listed and dated but marked "not counted" and gives Fang Bing Ren no clue (`PH_BLD_OLD_DAYS`, `phBldIsOld`). |
 | Re-check, Cycle, Tongue, Pulse, Abdomen | Every visit (Cycle while on). |
@@ -126,7 +127,7 @@ visit. That is fixed by this law.)
 
 ## 4 · What feeds what (influence map)
 Fang Bing Ren **reads everything in groups 1 and 2**: complaint (weak),
-Ren taps, medical history + notes, Stress & sleep, supplements (only iron
+Ren taps, medical history + notes, Ask her (sleep and mood), supplements (only iron
 reaches it — she chose to leave supplements as they are; the other three are
 what she takes, not signs of a pattern), blood results (iron, thyroid; only
 results under 12 months old), Cycle day log, Tongue, Pulse, Abdomen,
@@ -184,7 +185,7 @@ on her "push live". Update the status column when a phase lands.
 - "Fang Bing Ren, Plan, Review, Today's visit, Treatment" (Oct 10 tab order)
   → §2 order. Review step → retired.
 - "Cycle in Today's visit AND its own tab" → one home (§1).
-- Stress & sleep "only when the complaint says so" → asked for everyone (§3).
+- Stress & sleep "only when the complaint says so" → asked for everyone (§3) → **retired 2026-10-13: its questions are on Ask her (§3).**
 <!-- ===================== END OF THE LAW ====================== -->
 This is a single-page mobile web app. It must always look clean, symmetrical,
 aligned, organized, calm, sleek and minimal. Follow every rule, then re-check
@@ -1229,7 +1230,8 @@ first" (`rec.complaint`: tiles, main pick, free text, duration) feeds/
 replaces the Case dropdown, reorders the plan-template picker to lead with
 her stated complaint's category, and feeds Patterns as a weak clue.
 One-screen question sets (period for women under 48, change-of-life for
-48+, men's 4 questions, Her pain, Stress & sleep) are gated by sex/age/
+48+, men's 2 questions, Her pain; Stress & sleep and the men's / change-of-life mood questions were retired 2026-10-13, their saved answers
+still count via `PH_PFW_RETIRED`) are gated by sex/age/
 complaint and stored under `rec.usual.*`, sharing one `usual.at` stamp. Each
 profile section shows a live "✓ done" stamp (read from existing data, never
 double-stored); an "Up next" card on Patient details surfaces the next
