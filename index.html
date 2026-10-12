@@ -16457,20 +16457,27 @@
   #pharmacyPage .ph-gal-panel { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--ph-line); border-radius: 10px; background: var(--ph-paper); }
   #pharmacyPage .ph-gal-panel .lab { font-size: var(--fs-12); font-weight: 700; color: var(--ph-ink); margin-right: 4px; }
   #pharmacyPage .ph-gal-tablewrap { overflow-x: auto; border: 1px solid var(--ph-line); border-radius: 10px; }
-  #pharmacyPage .ph-gal-table { border-collapse: collapse; width: max-content; min-width: 100%; }
+  #pharmacyPage .ph-gal-table { --cw: 160px; border-collapse: collapse; width: max-content; min-width: 100%; }
+  #pharmacyPage .ph-gal-table.fit { width: 100%; }
+  #pharmacyPage .ph-gal-table.fit .ph-gal-cell { min-width: 220px; }
+  #pharmacyPage .ph-gal-chips.dates { align-items: center; }
+  #pharmacyPage .ph-gal-chips .lab { font-size: var(--fs-12); font-weight: 600; color: var(--ph-soft); margin-right: 2px; }
+  #pharmacyPage .ph-gal-chips .hint { font-size: var(--fs-11-5); color: var(--ph-faint); }
+  #pharmacyPage .ph-gal-tsl { min-width: 74px; font-size: var(--fs-12); font-weight: 600; color: var(--ph-ink); }
   #pharmacyPage .ph-gal-table th, #pharmacyPage .ph-gal-table td { padding: 6px 8px; text-align: center; vertical-align: middle; border-bottom: 1px solid var(--ph-line); }
   #pharmacyPage .ph-gal-table thead th { font-size: var(--fs-11-5); color: var(--ph-ink); font-weight: 700; }
   #pharmacyPage .ph-gal-table thead th span { display: block; font-weight: 400; color: var(--ph-faint); font-size: var(--fs-10-5); max-width: 130px; margin: 0 auto; }
   #pharmacyPage .ph-gal-table th.rh { text-align: left; position: sticky; left: 0; background: var(--ph-white); font-size: var(--fs-12); white-space: nowrap; }
   #pharmacyPage .ph-gal-table th.rh.needs { color: var(--ph-low-deep); }
-  #pharmacyPage .ph-gal-cell { padding: 0; border: 0; background: none; cursor: pointer; min-height: 0; display: block; margin: 0 auto; }
-  #pharmacyPage .ph-gal-cell img { width: 84px; height: 84px; object-fit: cover; border-radius: 8px; border: 1px solid var(--ph-line); display: block; }
+  #pharmacyPage .ph-gal-cell { padding: 0; border: 0; background: none; cursor: pointer; min-height: 0; display: block; margin: 0 auto; width: var(--cw, 100%); }
+  #pharmacyPage .ph-gal-table.fit .ph-gal-cell { width: 100%; }
+  #pharmacyPage .ph-gal-cell + .ph-gal-cell { margin-top: 6px; }
+  #pharmacyPage .ph-gal-cell img { width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--ph-line); display: block; background: var(--ph-paper); }
   #pharmacyPage .ph-gal-cell:hover img { border-color: var(--ph-green); }
   #pharmacyPage .ph-gal-none { font-size: var(--fs-11-5); color: var(--ph-faint); font-style: italic; }
   @media (max-width: 640px) {
     #pharmacyPage .ph-gal-size input[type=range] { width: 90px; }
     #pharmacyPage .ph-gal-grid { grid-template-columns: repeat(auto-fill, minmax(min(var(--ph-gal-th), 42vw), 1fr)); gap: 8px; }
-    #pharmacyPage .ph-gal-cell img { width: 68px; height: 68px; }
   }
   #pharmacyPage .ph-photos-del:not([disabled]) { color: var(--ph-zero-deep); }
   #pharmacyPage .ph-photos-del[disabled] { color: var(--ph-faint); cursor: default; }
@@ -37558,6 +37565,13 @@
       if (galMode) { phRenGalMode = galMode.dataset.galMode; phRenPhotosSecRefresh(); return; }
       const galFilter = e.target.closest("[data-gal-filter]");
       if (galFilter) { phRenGalFilter = galFilter.dataset.galFilter; phRenGalShot = ""; phRenPhotosSecRefresh(); return; }
+      const galTd = e.target.closest("[data-gal-tdate]");
+      if (galTd) {
+        const sec0 = galTd.closest("[data-ren-photos]"), pk0 = sec0 ? sec0.dataset.renPhotos : "", d0 = galTd.dataset.galTdate;
+        let cur = (phRenGalCmp.get(pk0) || []).slice();
+        if (!d0) cur = []; else if (cur.includes(d0)) cur = cur.filter(x => x !== d0); else { cur.push(d0); if (cur.length > 2) cur.shift(); }
+        phRenGalCmp.set(pk0, cur); phRenPhotosSecRefresh(pk0); return;
+      }
       const galShot = e.target.closest("[data-gal-shot]");
       if (galShot) { phRenGalShot = galShot.dataset.galShot || ""; phRenPhotosSecRefresh(); return; }
       const galRel = e.target.closest("[data-gal-relabel]");
@@ -59505,6 +59519,8 @@ or changing anything in Cliniko.
   let phRenGalFilter = "all";            // "all" | "unsorted" | a photo type key
   let phRenGalShot = "";                 // tongue shot narrowing, only with filter "tongue"
   let phRenGalSize = 104;                // tile px, the slider
+  let phRenGalTblSize = 3;               // Comparison table size: 0 small, 1 medium, 2 large, 3 fit the page (her 2026-10-12 "make the photos larger")
+  const phRenGalCmp = new Map();         // patient key -> the (up to two) date columns she picked; none = every date
   let presPhotosRelabelOpen = false;     // the Relabel chip row is showing
   let presPhotosDateOpen = false;        // the Change date row is showing
   // "unsorted" = still needs her: the Unsorted type, or a tongue photo whose
@@ -59603,13 +59619,23 @@ or changing anything in Cliniko.
     const cmp = phRenCompare.some(c => c.id === r.id);
     return `<button type="button" class="ph-gal-tile${needs ? " unsorted" : ""}${cmp ? " on" : ""}" data-ren-tl-open="${esc(r.id)}" data-ren-tl-row="${rk}" data-ren-tl-patient="${esc(key)}" title="${esc(lbl)} · ${esc(d)}"><span class="ph-gal-img"><img src="${r.objectUrl || ""}" alt="">${phRenMarkCountBadge(r)}</span>${cap}</button>`;
   }
-  function phRenGalTongueTableHtml(key, name, sorted) {
-    const tongue = sorted.filter(r => phRenTypeOf(r) === "tongue");
-    if (!tongue.length) return `<div class="ph-photos-empty">No tongue photos yet.</div>`;
-    const dates = [...new Set(tongue.map(r => phRenDateKeyOf(r)))].sort().reverse();   // newest on the left
+  // her 2026-10-12 ask ("make the photos larger - large enough to see the differences side by side ... change tongue table to comparison
+  // table and include all pictures"), both mock designs: A the photos share the page (Size slider: small / medium / large / fit the page),
+  // B date chips narrow the table to two dates side by side. Every photo type is a row (tongue split by shot, the rest as before), every
+  // picture is drawn (two on one day stack), and the chips above it (All / Unsorted / a type) narrow the rows.
+  const PH_GAL_TSIZE = [["Small", 96], ["Medium", 160], ["Large", 260], ["Fit the page", 0]];
+  function phRenGalTableHtml(key, name, sorted) {
+    const list = sorted.filter(r => phRenGalFilter === "all" || (phRenGalFilter === "unsorted" ? phRenNeedsSort(phRenRowKeyOf(r)) : phRenTypeOf(r) === phRenGalFilter));
+    if (!list.length) return `<div class="ph-photos-empty">No photos here yet.</div>`;
+    const allDates = [...new Set(list.map(r => phRenDateKeyOf(r)))].sort().reverse();   // newest on the left
+    const picked = (phRenGalCmp.get(key) || []).filter(d => allDates.includes(d));
+    const dates = picked.length ? allDates.filter(d => picked.includes(d)) : allDates;
     const rec = phPatientPeek(name);
     const sess = (rec && Array.isArray(rec.acuSessions)) ? rec.acuSessions : [];
-    const rows = PH_REN_TONGUE_SHOTS.map(s => ({ k: `tongue:${s.key}`, l: s.label })).concat([{ k: "tongue", l: "Unsorted" }]);
+    const have = new Set(list.map(r => phRenRowKeyOf(r)));
+    const rows = phRenRowsFor(() => true).filter(row => have.has(row.key)).map(row => ({ k: row.key, l: row.label }));
+    have.forEach(k => { if (!rows.some(r => r.k === k)) rows.push({ k, l: phRenRowLabel(k) }); });
+    const chips = allDates.length > 2 ? `<div class="ph-gal-chips dates"><span class="lab">Show</span><button type="button" class="ph-gal-chip${picked.length ? "" : " on"}" data-gal-tdate="">All dates</button>${allDates.map(dk => `<button type="button" class="ph-gal-chip${picked.includes(dk) ? " on" : ""}" data-gal-tdate="${dk}">${esc(phRenPhotoDateLabel(dk))}</button>`).join("")}${picked.length === 1 ? `<span class="hint">pick a second date to put them side by side</span>` : ""}</div>` : "";
     const head = dates.map(dk => {
       const s = sess.find(x => x.date === dk);
       const line = s ? phAcuOutcomeLine(s) : "";
@@ -59617,14 +59643,15 @@ or changing anything in Cliniko.
     }).join("");
     const body = rows.map(row => {
       const cells = dates.map(dk => {
-        const r = tongue.find(x => phRenDateKeyOf(x) === dk && phRenRowKeyOf(x) === row.k);
-        return r
-          ? `<td><button type="button" class="ph-gal-cell" data-ren-tl-open="${esc(r.id)}" data-ren-tl-row="${row.k}" data-ren-tl-patient="${esc(key)}" title="${esc(row.l)} · ${esc(phRenPhotoDateLabel(dk))}"><img src="${r.objectUrl || ""}" alt=""></button></td>`
+        const rs = list.filter(x => phRenDateKeyOf(x) === dk && phRenRowKeyOf(x) === row.k).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+        return rs.length
+          ? `<td>${rs.map(r => `<button type="button" class="ph-gal-cell" data-ren-tl-open="${esc(r.id)}" data-ren-tl-row="${row.k}" data-ren-tl-patient="${esc(key)}" title="${esc(row.l)} · ${esc(phRenPhotoDateLabel(dk))}"><img src="${r.objectUrl || ""}" alt="${esc(row.l)}"></button>`).join("")}</td>`
           : `<td><span class="ph-gal-none">not taken</span></td>`;
       }).join("");
-      return `<tr><th class="rh${row.k === "tongue" ? " needs" : ""}">${esc(row.l)}</th>${cells}</tr>`;
+      return `<tr><th class="rh${row.k === "tongue" || row.k === "unsorted" ? " needs" : ""}">${esc(row.l)}</th>${cells}</tr>`;
     }).join("");
-    return `<div class="ph-gal-tablewrap"><table class="ph-gal-table"><thead><tr><th class="rh"></th>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+    const sz = Math.max(0, Math.min(3, phRenGalTblSize)), w = PH_GAL_TSIZE[sz][1];
+    return `${chips}<div class="ph-gal-tablewrap"><table class="ph-gal-table${w ? "" : " fit"}" data-gal-ttbl="1" style="--cw:${w}px"><thead><tr><th class="rh"></th>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
   }
   function phRenGalleryHtml(key, name, sorted, selecting) {
     const mode = phRenGalMode;
@@ -59637,8 +59664,10 @@ or changing anything in Cliniko.
     const chips = `<div class="ph-gal-chips"><button type="button" class="ph-gal-chip${phRenGalFilter === "all" ? " on" : ""}" data-gal-filter="all">All <i>${sorted.length}</i></button><button type="button" class="ph-gal-chip warn${phRenGalFilter === "unsorted" ? " on" : ""}" data-gal-filter="unsorted">⚠ Unsorted <i>${unsortedN}</i></button>${typeChips}</div>`;
     const shotRow = phRenGalFilter === "tongue" && mode !== "table"
       ? `<div class="ph-gal-chips shots"><button type="button" class="ph-gal-chip${!phRenGalShot ? " on" : ""}" data-gal-shot="">Any shot</button>${PH_REN_TONGUE_SHOTS.map(s => `<button type="button" class="ph-gal-chip${phRenGalShot === s.key ? " on" : ""}" data-gal-shot="${s.key}">${esc(s.label)}</button>`).join("")}</div>` : "";
-    const seg = `<div class="ph-recphotos-seg" role="tablist">${[["visit", "By visit"], ["type", "By type"], ["table", "Tongue table"]].map(([m, l]) => `<button type="button" class="ph-recphotos-segbtn${mode === m ? " on" : ""}" data-gal-mode="${m}">${l}</button>`).join("")}</div>`;
-    const slider = mode === "table" ? "" : `<label class="ph-gal-size"><span>Size</span><input type="range" min="90" max="240" step="10" value="${phRenGalSize}" data-gal-size="1" aria-label="Photo size"></label>`;
+    const seg = `<div class="ph-recphotos-seg" role="tablist">${[["visit", "By visit"], ["type", "By type"], ["table", "Comparison table"]].map(([m, l]) => `<button type="button" class="ph-recphotos-segbtn${mode === m ? " on" : ""}" data-gal-mode="${m}">${l}</button>`).join("")}</div>`;
+    const slider = mode === "table"
+      ? `<label class="ph-gal-size"><span>Size</span><input type="range" min="0" max="3" step="1" value="${Math.max(0, Math.min(3, phRenGalTblSize))}" data-gal-tsize="1" aria-label="Photo size"><b class="ph-gal-tsl">${PH_GAL_TSIZE[Math.max(0, Math.min(3, phRenGalTblSize))][0]}</b></label>`
+      : `<label class="ph-gal-size"><span>Size</span><input type="range" min="90" max="420" step="10" value="${phRenGalSize}" data-gal-size="1" aria-label="Photo size"></label>`;
     const cmpBar = phRenCompare.length === 2
       ? `<div class="ph-ren-tl-cmpbar"><button type="button" class="ph-load-btn on" data-ren-cmp-open="1">Compare these 2 →</button><button type="button" class="ph-load-btn" data-ren-cmp-clear="1">Clear</button></div>`
       : phRenCompare.length === 1
@@ -59658,7 +59687,7 @@ or changing anything in Cliniko.
     }
     // the body
     let body;
-    if (mode === "table") body = phRenGalTongueTableHtml(key, name, sorted);
+    if (mode === "table") body = phRenGalTableHtml(key, name, sorted);
     else {
       const list = phRenGalleryFiltered(sorted);
       const needFirst = (a, b) => phRenNeedsSort(phRenRowKeyOf(b)) - phRenNeedsSort(phRenRowKeyOf(a));
@@ -59771,9 +59800,18 @@ or changing anything in Cliniko.
   }
   // the gallery's size slider: moves the --ph-gal-th variable in place (no repaint)
   document.addEventListener("input", e => {
+    // Comparison table size: moves the cell width in place (no repaint, so the scroll stays)
+    const ts = e.target.closest ? e.target.closest("[data-gal-tsize]") : null;
+    if (ts) {
+      const z = Math.max(0, Math.min(3, parseInt(ts.value, 10) || 0)), g0 = ts.closest(".ph-gal"), t0 = g0 && g0.querySelector("[data-gal-ttbl]");
+      phRenGalTblSize = z;
+      const lab = g0 && g0.querySelector(".ph-gal-tsl"); if (lab) lab.textContent = PH_GAL_TSIZE[z][0];
+      if (t0) { const w = PH_GAL_TSIZE[z][1]; t0.classList.toggle("fit", !w); t0.style.setProperty("--cw", w + "px"); }
+      return;
+    }
     const sl = e.target.closest ? e.target.closest("[data-gal-size]") : null;
     if (!sl) return;
-    const v = Math.max(90, Math.min(240, parseInt(sl.value, 10) || 104));
+    const v = Math.max(90, Math.min(420, parseInt(sl.value, 10) || 104));
     phRenGalSize = v;
     const g = sl.closest(".ph-gal");
     if (g) g.style.setProperty("--ph-gal-th", v + "px");
