@@ -68156,9 +68156,15 @@ or changing anything in Cliniko.
     if (phEnWrite(name, d => { if (d[k] === +n) delete d[k]; else d[k] = +n; })) phEnRefresh(name);
   });
   const PH_TRI_PREFILL = {
-    cold_feel: "cold_feel", dizzy: "dizzy", cold_sens: "cold_feel", menstrual_pain_tend: "dysmen", menstrual_irreg_tend: "irregular_hx",
+    cold_feel: "cold_feel", dizzy: "dizzy", cold_sens: "cold_feel", menstrual_pain_tend: ["dysmen", "stabbing", "cramp", "dragging", "severe_pain"], menstrual_irreg_tend: ["irregular_hx", "irregular_len", "long_cycle"],
     fatigue_tend: "fatigue", dizzy_tend: "dizzy", sweats_easy: "spont_sweat", wind_averse_tend: "wind_averse", colds: "wind_averse", palp_tend: "palp",
-    startle_tend: "startle", shallow_sleep: "insomnia_dream", spasms: "tight", neck_shoulder_ache_tend: ["neck_tension", "pr_shoulder"],
+    startle_tend: "startle", shallow_sleep: ["insomnia_dream", "sl_hard", "sl_wake"], spasms: "tight", neck_shoulder_ache_tend: ["neck_tension", "pr_shoulder"],
+    // her 2026-10-13 "correspond patterns with fang bing ren, e.g. cold hands in patterns tick it in fang bing ren too": a Patterns clue
+    // ticks EVERY Fang Bing Ren sign that says the same thing, Bing and Ren (the way "Feels cold" always did). Cold hands and feet had
+    // only reached the Ren row; the day-log period signs only reached Ren from the usual answers. A tap still overrides every one.
+    // A clue with no same-meaning sign (flow amount, discharge, low iron, PMS) feeds Patterns only, as before.
+    cold_limbs: "cold_limbs", night_sweats: "night_sweat", throat_lump: "throat_lump", insomnia_dream: ["sl_hard", "sl_wake"], mood_stress: "stress",
+    fibroids: "fibroids", endometriosis: "endo", knee_pain: "pr_knee", dark_clots_tend: ["clots", "dark_blood"],
     back_knee_weak_ache_tend: ["pr_lowback", "pr_knee"], urine_frequent_night_tend: "nocturia", cold_extrem: "cold_limbs",
     // integrate33 batch 2: "Pain fixed in one place" (Pain question set / notes) is her fixed-location pain; a lower-back mark on
     // the pain map is her heavy, sore lower back.
@@ -68295,11 +68301,13 @@ or changing anything in Cliniko.
       .map(s => rec.visitFnd && rec.visitFnd[s.id]).find(f => f && test(f));
   }
   function phFbrChartWords(rec, kind) {
-    const words = [];
+    // three pools, one per chart: a spec only ever reads the words of ITS OWN chart (her 2026-10-13 "correspond patterns with
+    // fang bing ren" check: a "thin abdominal wall" mark used to tick "Wiry or thin pulse", a tender belly "Tender tongue")
+    const pw = [], tw = [], aw = [];
     const pulseVisit = phFbrLatestVisit(rec, f => f.pulse && Object.keys(f.pulse).length || !phVisitHammerEmpty(f.hammer || {}));
-    if (pulseVisit) words.push(...phFbrPulseWords(pulseVisit));
+    if (pulseVisit) pw.push(...phFbrPulseWords(pulseVisit));
     const tngVisit = phFbrLatestVisit(rec, f => f.tng && !phTng2Empty(f.tng));
-    if (tngVisit) words.push(...phFbrTng2Words(tngVisit.tng));
+    if (tngVisit) tw.push(...phFbrTng2Words(tngVisit.tng));
     // abdomen chart (2026-10-11, Wu Ling San audit): the latest visit's marked findings, as "abd:<mark>"
     // words so a belly sign can be matched without ever clashing with a tongue/pulse word
     // her 2026-10-12 ("integrate abdomen signs with fang bing ren signs"): the chart she is marking on the Abdomen page
@@ -68310,14 +68318,16 @@ or changing anything in Cliniko.
     const abdVisit = abdLive ? null : phFbrLatestVisit(rec, f => f.abd && !phAbd2Empty(f.abd));
     if (abdLive || abdVisit) {
       const ab = phAbd2Read(abdLive || abdVisit.abd);
-      Object.keys(ab.marks).forEach(k => { words.push("abd:" + k); (ab.marks[k] || []).forEach(z => words.push("abd:" + k + "@" + z)); });
-      if (ab.tension) words.push("abd:tension:" + ab.tension);
-      Object.values(ab.tensionAt).forEach(v => { if (v) words.push("abd:tension:" + v); });
+      Object.keys(ab.marks).forEach(k => { aw.push("abd:" + k); (ab.marks[k] || []).forEach(z => aw.push("abd:" + k + "@" + z)); });
+      if (ab.tension) aw.push("abd:tension:" + ab.tension);
+      Object.values(ab.tensionAt).forEach(v => { if (v) aw.push("abd:tension:" + v); });
     }
     if (kind === "p") {
-      words.push(...phFbrPulseWords(phHxConstitPulseRead(rec)));
-      words.push(...phFbrConstitTongueWords(phHxConstitTongueRead(rec)));
+      pw.push(...phFbrPulseWords(phHxConstitPulseRead(rec)));
+      tw.push(...phFbrConstitTongueWords(phHxConstitTongueRead(rec)));
     }
+    const words = pw.concat(tw, aw);
+    words.pulse = pw; words.tongue = tw; words.abd = aw;
     return words;
   }
   // Honest first pass, same spirit as the complaint-search keyword matching: a listed word is a
@@ -68326,9 +68336,11 @@ or changing anything in Cliniko.
   // matched on their single most defining word only, not both ANDed together -- looser than
   // ideal, sharpen later if it over- or under-fires in real use.
   const PH_FBR_CHART_PREFILL = [
-    { key: "pulse_wiry_thin", kind: "p", words: ["wiry", "thin"] },
+    // her 2026-10-13 "correspond patterns with fang bing ren": the Patterns page calls a Tense, Tight or String pulse "wiry", an
+    // Empty, Feeble or Yielding one "weak" and a Sunken one "deep" (phPatClues' pulseWords), so these two signs now take the same words
+    { key: "pulse_wiry_thin", kind: "p", words: ["wiry", "thin", "tense", "tight", "string"] },
     { key: "pulse_float_large", kind: "p", words: ["floating"] },
-    { key: "pulse_faint_sinking_weak_tend", kind: "p", words: ["weak", "feeble-absent", "deep"] },
+    { key: "pulse_faint_sinking_weak_tend", kind: "p", words: ["weak", "empty", "feeble", "yielding", "deep", "sunken", "sink"] },
     { key: "pulse_large_flooding_tend", kind: "p", words: ["flooding excess", "full-overflowing"] },
     { key: "pulse_float_slippery_tend", kind: "p", words: ["floating", "slippery"] },
     { key: "p_float", kind: "d", words: ["floating"] },
@@ -68398,7 +68410,9 @@ or changing anything in Cliniko.
   function phFbrChartKnown(chartWords, kind, key) {
     const spec = PH_FBR_CHART_PREFILL.find(x => x.key === key && x.kind === kind);
     if (!spec || !chartWords.length) return false;
-    const has = list => list.some(w => chartWords.some(cw => cw.includes(w)));
+    // a sign reads ONE chart: belly signs the abdomen words, p_ / pulse_ signs the pulse words, everything else the tongue words
+    const pool = (spec.words[0].indexOf("abd:") === 0 ? chartWords.abd : /^(pulse_|p_)/.test(spec.key) ? chartWords.pulse : chartWords.tongue) || chartWords;
+    const has = list => list.some(w => pool.some(cw => cw.includes(w)));
     return has(spec.words) && (!spec.also || has(spec.also));
   }
   // Blood-test pre-fill (2026-10-11, Wu Ling San audit): a sign that IS a lab finding reads the patient's own
@@ -68451,8 +68465,8 @@ or changing anything in Cliniko.
   }
   // Why a row shows pre-ticked, for its tooltip -- same precedence phTriEffective uses.
   function phTriAutoWhy(rec, name, kind, key, prevD) {
-    const clueKeys = new Set(phPatClues(rec, name).map(c => c.key));
-    if (phTriPrefillKeys(key).some(k => clueKeys.has(k))) return "Already recorded elsewhere — tap to override";
+    const clues = phPatClues(rec, name), pk = phTriPrefillKeys(key), hit = clues.find(c => pk.includes(c.key));
+    if (hit) return "On the Patterns page: " + hit.text + " — tap to override";
     if (kind === "d" && prevD && prevD[key]) return "Ticked last visit — tap to confirm or change";
     { const es = phEnergySigns(rec, kind)[key]; if (es) return es + " — tap to override"; }
     if (phFbrChartKnown(phFbrChartWords(rec, kind), kind, key)) {
