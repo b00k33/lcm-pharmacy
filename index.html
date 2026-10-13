@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261013-550000">
+<meta name="lcm-build" content="20261013-560000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -47241,7 +47241,7 @@ or changing anything in Cliniko.
     presDspDrawer = false; presDspLabelFull = false; presDspNudge = false; presDspLastLogged = null;
     renderPresCalc._lbl = null;
     if (presStripCountTo._last) presStripCountTo._last.clear();
-    presDoorDismissed = false; presDoorShown = false; presDoorOpen = false;   // fresh facts at the door on every open
+    presDoorDismissed = false; presDoorShown = false; presDoorOpen = false; presDoorHome = "";   // fresh facts at the door on every open
     // the Plan tab's motion (band, grid, history) plays once per open, then
     // only on a real change -- opening the script again starts it fresh
     phTpHeroSeen.clear(); phTpGridSeen.clear(); phTpHistSeen.clear(); presPfBandSeen.clear(); presUpSkip.clear(); presUpSeen.clear(); presHxBandSeen.clear(); presBandSeen.clear(); phIvfSeen.clear();
@@ -58596,6 +58596,7 @@ or changing anything in Cliniko.
     const newSig = (railHtml.match(/data-sig="(-?\d+)"/) || [])[1];
     if (!newSig || newSig !== rail.dataset.sig) rail.outerHTML = railHtml;
     phCcRibSync();   // the complaint ribbon follows the page (hidden on Patient details and Today's visit)
+    presDoorSync();   // the At-the-door card stays on the page she landed on
     // the "Up next" card on Today's visit follows the same walk, so it repaints with the rail
     const bare = document.querySelector("#pharmacyPage [data-pf-bare]");
     if (bare) { const h = presUpNextHtml(t, true); if (h) bare.outerHTML = h; else bare.remove(); }
@@ -60194,8 +60195,24 @@ or changing anything in Cliniko.
     if (changes.length) mini.push(`${changes.length} change${changes.length === 1 ? "" : "s"}`);
     return { parts, mini, chips, changeChips, plan, phase };
   }
-  function presDoorCardHtml(t) {
+  // her 2026-10-13 ("this row is not needed on all pages. i keep seeing it with option to close"): the At-the-door card
+  // belongs to the page she lands on. Once she moves to another page it is gone until the patient is opened again, so
+  // there is nothing to close. Same page key as the rail's "you are here" (the defaults match what each stage opens on).
+  function presDoorPageKey() {
+    return `${presStage}:${presStage === "plan" ? (presTpMainTab || "plan") : presStage === "profile" ? (presAssessTab || "patient") : ""}`;
+  }
+  // called by the rail repaint (every in-place page switch): drop the card when the page is no longer its own
+  function presDoorSync() {
+    if (!presDoorHome || presDoorHome === presDoorPageKey()) return;
+    presDoorDismissed = true;
+    const c = document.querySelector("#pharmacyPage .ph-door"); if (c) c.remove();
+  }
+  function presDoorCardHtml(t, hide) {
     if (presDoorDismissed) return "";
+    const here = presDoorPageKey();
+    if (!presDoorHome) presDoorHome = here;
+    else if (presDoorHome !== here) { presDoorDismissed = true; return ""; }
+    if (hide) return "";
     // her list 2026-09-19: a cycle plan's page is header (name · CD), the
     // cycle block, the plan block -- the door line said the same facts again
     if (presBandCyclePlan(t)) return "";
@@ -60433,7 +60450,7 @@ or changing anything in Cliniko.
         ${isF ? `<span class="ph-band-meta" id="presBandMeta">${bandMeta}</span>` : ""}
         ${!isF ? `<button type="button" class="ph-band-cam" data-cap-for="${esc(presPatientFor(t) || t.name)}" title="Take patient photos" aria-label="Take photos of ${esc(t.name)}"><svg class="icn" aria-hidden="true"><use href="#i-camera"/></svg></button>` : ""}
       </div>
-      ${!isF && !isNew && !fit ? presDoorCardHtml(t) : ""}
+      ${!isF ? presDoorCardHtml(t, isNew || fit) : ""}
       ${!isF ? `<div id="phCcRib" class="ph-ccrib-host">${phCcRibHtml(t)}</div>` : ""}
       ${!isF ? `<div class="ph-flow">${presFlowRailHtml(t, isNew)}<div class="ph-flow-body${presFlowBodyClass()}">` : ""}
       ${!isF && presStage === "profile" ? presStageProfileHtml(t) : ""}
@@ -92333,7 +92350,8 @@ Please let me know if you have any questions.`;
   let presAcuLastLogAt = 0;
   // the at-the-door card (2026-09-18): dismissed for THIS open only, shown
   // (slid up) once per open, phone fold state -- all reset in presOpenScript
-  let presDoorDismissed = false, presDoorShown = false, presDoorOpen = false;
+  // presDoorHome = the page it first drew on: the card belongs to that page only (her 2026-10-13)
+  let presDoorDismissed = false, presDoorShown = false, presDoorOpen = false, presDoorHome = "";
   let presAcuTicks = new Set();   // today's checklist ticks she made herself (the rest are read off the record)
   let presAcuPhasePickOpen = false;   // "change" on the Treating-as line unfolds the phase chips (they were seven chips on every visit)
   // her ask 2026-09-19 (synth22, "give option to expand this/pop up to full
