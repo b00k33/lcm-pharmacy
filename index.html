@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261013-510000">
+<meta name="lcm-build" content="20261013-520000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -66663,8 +66663,10 @@ or changing anything in Cliniko.
       const on = t.a.map(keyOn), out = t.a.map(a => { const k = phAhKey(a, mode); return !!k && picks[k] === false; });
       // Right now: an answer on only because last visit ticked it (the Bing carry-forward) says which day that was
       const carried = mode === "d" && t.a.some(a => { const k = phAhKey(a, mode); return !!k && today.prevD[k] && today.d[k] === undefined; });
+      // an answer that is on only because her patient said Yes on the intake form says so (the day she sent it)
+      const fromForm = t.a.some(a => { const k = phAhKey(a, mode); return !!k && picks[k] === undefined && phTriFormKnown(rec, mode, k); });
       sel[t.id] = { on, out, none: !on.some(Boolean) && !!cell.none && (mode === "p" || cell.day === day),
-        stamp: mode === "d" ? (carried ? ((rec.tri && rec.tri.date) || "") : "") : (cell.day || "") };
+        stamp: mode === "d" ? (carried ? ((rec.tri && rec.tri.date) || "") : "") : (cell.day || ""), form: fromForm ? rec.fbrForm.at : "" };
     });
     // the basics are always asked; then each top-3 family's own five leanings (largest positive weight first); a topic she has answered stays
     const topics = PH_AH_TOPICS.filter(t => phAhAns(t, mode).some(x => x.key));
@@ -66703,7 +66705,8 @@ or changing anything in Cliniko.
     const card = t => {
       const s = S.sel[t.id], fams = S.why.get(t.id) || [], answered = S.isAns(t), ans = phAhAns(t, mode);
       const last = answered && s.stamp && s.stamp < day
-        ? `<div class="last">last time: ${esc(s.none ? phAhLabel(ans.find(x => !x.key).a, mode) : ans.filter(x => s.on[x.i]).map(x => phAhLabel(x.a, mode)).join(", "))} · ${esc(phCycShortLbl(s.stamp))}</div>` : "";
+        ? `<div class="last">last time: ${esc(s.none ? phAhLabel(ans.find(x => !x.key).a, mode) : ans.filter(x => s.on[x.i]).map(x => phAhLabel(x.a, mode)).join(", "))} · ${esc(phCycShortLbl(s.stamp))}</div>`
+        : answered && s.form ? `<div class="last">from her intake form · ${esc(phCycShortLbl(s.form))}</div>` : "";
       const btn = x => {
         const a = x.a, on = x.key ? s.on[x.i] : s.none, out = x.key && s.out[x.i];
         const sup = x.key ? S.top.filter(r => phAhW(r.id, x.key, mode) > 0).map(r => r.id) : [];
@@ -69651,6 +69654,18 @@ or changing anything in Cliniko.
   // page did (her 2026-10-13, folded into Ask her): "hard to fall asleep" and "wakes in the night" ticked the broad poor-sleep signs, which the
   // families weight. Read off her RAW taps only, so a pre-fill never chains into another pre-fill.
   const PH_TRI_IMPLIED_BY = { shallow_sleep: ["sleep_onset_hard_tend", "sleep_wakes_tend"], insomnia_dream: ["sleep_onset_hard", "sleep_wakes"] };
+  // The short Fang Bing Ren questions on the intake form (her 2026-10-13: "prefill a small amount of questions to make my work faster"):
+  // the patient's Yes answers tick signs the way a chart or Medical history does, a tap of hers always wins. Only a Yes is stored (a No or
+  // a skip is just blank). rec.fbrForm = { v:1, at:"YYYY-MM-DD" (the day she sent it), p:{ renKey:true }, d:{ bingKey:true } }, written only by
+  // phIntakeReviewApply. Usually (Ren) lasts; the Bing list asks about "the last few weeks", so it counts for PH_FBR_FORM_DAYS after that day.
+  const PH_FBR_FORM_DAYS = 28;
+  const phTriFormKnown = (rec, kind, key) => {
+    const f = rec && rec.fbrForm;
+    if (!f || !f[kind] || f[kind][key] !== true) return false;
+    if (kind === "p") return true;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(f.at || "")) return false;
+    return Math.round((parseKey(keyOf(TODAY)) - parseKey(f.at)) / 864e5) <= PH_FBR_FORM_DAYS;
+  };
   function phTriEffective(rec, name, kind, picks, prevD) {
     const clueKeys = new Set(phPatClues(rec, name).filter(c => !c.fbrTap).map(c => c.key));   // never the clues her own Fang Bing Ren taps added (no echo)
     const chartWords = phFbrChartWords(rec, kind);
@@ -69666,12 +69681,14 @@ or changing anything in Cliniko.
       const bodyKnown = !!(bodySigns && bodySigns[r[0]]);
       const enKnown = !!enSigns[r[0]];
       const impliedKnown = (PH_TRI_IMPLIED_BY[r[0]] || []).some(k => picks[k] === true);
-      eff[r[0]] = picks[r[0]] !== undefined ? picks[r[0]] : (known || carried || chartKnown || hxKnown || bldKnown || bodyKnown || enKnown || impliedKnown);
+      const formKnown = phTriFormKnown(rec, kind, r[0]);
+      eff[r[0]] = picks[r[0]] !== undefined ? picks[r[0]] : (known || carried || chartKnown || hxKnown || bldKnown || bodyKnown || enKnown || impliedKnown || formKnown);
     });
     return eff;
   }
   // Why a row shows pre-ticked, for its tooltip -- same precedence phTriEffective uses.
   function phTriAutoWhy(rec, name, kind, key, prevD) {
+    if (phTriFormKnown(rec, kind, key)) return "From her intake form (" + phCycShortLbl(rec.fbrForm.at) + ") — tap to override";
     const clues = phPatClues(rec, name).filter(c => !c.fbrTap), pk = phTriPrefillKeys(key), hit = clues.find(c => pk.includes(c.key));
     if (hit) return "On the Patterns page: " + hit.text + " — tap to override";
     if (kind === "d" && prevD && prevD[key]) return "Ticked last visit — tap to confirm or change";
@@ -70731,7 +70748,7 @@ or changing anything in Cliniko.
     return `<div class="ph-lk-aud">
       <h5>Entered by you (${mine.length})</h5><ul>${mine.map(x => li(`${esc(phSignLabel(x.k))} · <b>${x.v ? "Yes" : "No"}</b>`)).join("") || li("nothing yet")}</ul>
       <h5>Filled in by a link (${auto.length})</h5><ul>${auto.map(x => li(`${esc(phSignLabel(x.k))} · <b>No</b> <span class="why">because “${esc(phSignLabel(x.a.from))}”${x.a.overrode ? " (changed your earlier Yes)" : ""}</span> <button type="button" class="ph-lk-mine" data-lk-mine="${x.kind}:${x.k}">make mine</button>`)).join("") || li("nothing yet")}</ul>
-      <h5>From charts, history and last visit (${chart.length})</h5><ul>${chart.slice(0, 10).map(l => li(`${esc(l)}: <b>Yes</b>`)).join("") || li("nothing")}${chart.length > 10 ? li(`+ ${chart.length - 10} more`) : ""}</ul>
+      <h5>From charts, history, her form and last visit (${chart.length})</h5><ul>${chart.slice(0, 10).map(l => li(`${esc(l)}: <b>Yes</b>`)).join("") || li("nothing")}${chart.length > 10 ? li(`+ ${chart.length - 10} more`) : ""}</ul>
       <h5>Recent changes</h5><ul>${log.join("") || li("nothing yet")}</ul></div>`;
   }
   // ---- the Linked symptoms sheet (add / edit / switch off links) ----
@@ -89920,6 +89937,22 @@ Please let me know if you have any questions.`;
       }
     }
 
+    // her ask 2026-10-13 (the short Fang Bing Ren questions on the form): only her patient's Yes answers travel (history.fbr = { v, p, d }). They go
+    // straight onto the signs when she applies the form (rec.fbrForm, read by phTriEffective), so this is a plain list, never a choice. A key that is
+    // not a real sign in its pool (a stale form, a mistyped link) is dropped.
+    const fbrNew = [], fbrData = { p: [], d: [] };
+    if (hist.fbr && typeof hist.fbr === "object") {
+      ["p", "d"].forEach(kind => {
+        const pool = kind === "d" ? PH_BING_SIGNS : PH_REN_SIGNS;
+        (Array.isArray(hist.fbr[kind]) ? hist.fbr[kind] : []).forEach(k => {
+          const sg = pool.find(r => r[0] === k);
+          if (!sg || fbrData[kind].includes(k)) return;
+          fbrData[kind].push(k);
+          fbrNew.push({ key: `fbr:${kind}:${k}`, label: sg[1], display: `${kind === "d" ? "Lately" : "Usually"} · ${sg[1]}` });
+        });
+      });
+    }
+
     const cycleNew = [], cycleConflicts = [];
     const curCyc = rec ? (rec.cycle || {}) : {};
     const CF = { lmp: "Last period", cycleLen: "Cycle length (days)", flowDays: "Flow days", flowIntensity: "Flow", pain: "Period pain", regular: "Regular cycle", menarcheAge: "Menarche age", contraception: "Contraception", ttcMonths: "Trying to conceive (months)" };
@@ -89963,7 +89996,7 @@ Please let me know if you have any questions.`;
         diffs.forEach(([f, lbl]) => ivfConflicts.push({ key: `ivf${i}:${f}`, matchId: match.id, field: f, label: `Round of ${mLabel} · ${lbl}`, current: f === "when" ? phIvfDateLabel(match[f]) : String(match[f]), value: f === "when" ? phIvfDateLabel(c[f]) : String(c[f]) }));
       });
     }
-    return { rec, demoNew, demoConflicts, historyNew, historyConflicts, cycleNew, cycleConflicts, ivfNew, ivfConflicts, hasCycle: !!Object.keys(cyc).length };
+    return { rec, demoNew, demoConflicts, historyNew, historyConflicts, cycleNew, cycleConflicts, ivfNew, ivfConflicts, fbrNew, fbrData, hasCycle: !!Object.keys(cyc).length };
   }
   let phIntakeReviewRow = null, phIntakeReviewDiffData = null, phIntakeReviewChoices = {}, phIntakeReviewBusy = false;
   function phIntakeReviewOpen(id) {
@@ -90005,7 +90038,7 @@ Please let me know if you have any questions.`;
     const row = phIntakeReviewRow, d = phIntakeReviewDiffData;
     const isNewPatient = !d.rec;
     const totalConflicts = d.demoConflicts.length + d.historyConflicts.length + d.cycleConflicts.length + (d.ivfConflicts || []).filter(c => !c.rowChoice).length;
-    const totalNew = d.demoNew.length + d.historyNew.length + d.cycleNew.length + (d.ivfNew || []).length;
+    const totalNew = d.demoNew.length + d.historyNew.length + d.cycleNew.length + (d.ivfNew || []).length + (d.fbrNew || []).length;
     const body = `
       <p class="ph-merge-lead">${isNewPatient ? `No existing record for <b>${esc(phTitle(row.patient_name))}</b> — applying creates one.` : `Comparing against <b>${esc(phTitle(row.patient_name))}</b>'s existing record.`}</p>
       ${totalConflicts ? `<p class="ph-merge-note">⚠ ${totalConflicts} field${totalConflicts === 1 ? "" : "s"} already ${totalConflicts === 1 ? "has" : "have"} a different answer on record — pick which to keep for each.</p>` : ""}
@@ -90013,6 +90046,7 @@ Please let me know if you have any questions.`;
       ${phIntakeDiffSectionHtml("Medical history", d.historyNew, d.historyConflicts)}
       ${d.hasCycle ? phIntakeDiffSectionHtml("Cycle & fertility", d.cycleNew, d.cycleConflicts) : ""}
       ${(d.ivfNew || []).length ? `${phIntakeDiffSectionHtml("IVF history — from her own answers", d.ivfNew, d.ivfConflicts || [])}<p class="ph-merge-note">Rows are marked "from intake · unconfirmed" in her IVF history until you confirm each one.</p>` : ""}
+      ${(d.fbrNew || []).length ? phIntakeDiffSectionHtml("Fang Bing Ren answers (Yes only)", d.fbrNew, []) : ""}
       ${!totalNew && !totalConflicts ? `<p class="ph-hx-constit-note">Nothing new — every answer already matches the record.</p>` : ""}
       <div class="ph-merge-acts">
         <button type="button" class="btn-save" data-intake-review-apply="1"${phIntakeReviewBusy ? " disabled" : ""}>${phIntakeReviewBusy ? "Applying…" : (isNewPatient ? "Apply — create patient" : "Apply")}</button>
@@ -90099,6 +90133,14 @@ Please let me know if you have any questions.`;
               pgtNormal: null, frozen: c.frozen ?? null, transfers: [], linkedPlanId: null, src: "intake", confirmed: false });
           }
         });
+      }
+      // her ask 2026-10-13: the patient's Fang Bing Ren Yes answers go straight onto her signs (no per-answer choice): rec.fbrForm, dated the day
+      // she sent the form (the Bing list is "the last few weeks"), read by phTriEffective as a pre-tick her own tap overrides. A newer form replaces it.
+      if ((d.fbrNew || []).length) {
+        const sent = row.submitted_at ? new Date(row.submitted_at) : null;
+        rec.fbrForm = { v: 1, at: keyOf(sent && isFinite(sent) ? sent : TODAY), p: {}, d: {} };
+        d.fbrData.p.forEach(k => { rec.fbrForm.p[k] = true; });
+        d.fbrData.d.forEach(k => { rec.fbrForm.d[k] = true; });
       }
       savePharmacy();
       const sb = phRenRelayClient();

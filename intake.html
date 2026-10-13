@@ -59,8 +59,8 @@
   .hx-row:last-child { border-bottom: none; }
   .hx-label { font-size: 13.5px; flex: 1; min-width: 0; }
   .hx-toggle { display: flex; gap: 6px; flex: 0 0 auto; }
-  .hx-btn { padding: 7px 14px; border-radius: 999px; border: 1px solid var(--ph-line); background: var(--ph-white); font: inherit; font-size: 12.5px; font-weight: 600; color: var(--ph-soft); cursor: pointer; }
-  .hx-btn.on { background: var(--ph-green-tint); border-color: var(--ph-green); color: var(--ph-green-deep); }
+  .hx-btn, .fbr-btn { padding: 7px 14px; border-radius: 999px; border: 1px solid var(--ph-line); background: var(--ph-white); font: inherit; font-size: 12.5px; font-weight: 600; color: var(--ph-soft); cursor: pointer; }
+  .hx-btn.on, .fbr-btn.on { background: var(--ph-green-tint); border-color: var(--ph-green); color: var(--ph-green-deep); }
   .checkrow { display: flex; align-items: center; gap: 8px; font-size: 13.5px; padding: 4px 0; }
   .checkrow input { width: auto; }
   .chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 4px; }
@@ -132,6 +132,36 @@
       ["fh_endometriosis_pcos", "Endometriosis or PCOS"], ["fh_early_menopause", "Early menopause"] ] },
   ];
   var PH_HX_FEMALE_GROUPS = { "Cycle & bleeding": 1, "Structural": 1, "Reproductive": 1 };
+  // her ask 2026-10-13 (the short Fang Bing Ren questions): [sign key, the patient's words, "F" = women only]. Keys are rows of
+  // PH_REN_SIGNS ("p", how she usually is) and PH_BING_SIGNS ("d", the last few weeks) in index.html; only a Yes travels, as
+  // history.fbr = { v, p: [keys], d: [keys] }, and the app puts it straight onto her signs when the form is applied. Optional:
+  // none of these rows counts as a missing answer. THE WORDING IS A DRAFT for her to correct, here and nowhere else.
+  var PH_FBR_Q = {
+    p: [
+      ["chest_hypo_tend", "Do you often feel fullness, tightness or an aching pressure in your chest or ribs?"],
+      ["edema_tend", "Do your feet or lower legs tend to swell?"],
+      ["nausea_tend", "Do you often feel nauseous?"],
+      ["constipation_tend", "Are you usually constipated?"],
+      ["cold_extrem", "Are your hands and feet usually cold?"],
+      ["palp_tend", "Do you often feel your heart racing or pounding?"],
+      ["sweat_profuse_tend", "Do you sweat heavily?"],
+      ["appetite_poor_tend", "Is your appetite usually poor?"],
+      ["wheeze_tend", "Do you tend to wheeze or feel tight in the chest when you breathe?"],
+      ["irritable_restless_tend", "Are you often irritable or restless?"]
+    ],
+    d: [
+      ["edema_surf", "Have you had puffy swelling under the skin (face, hands or ankles)?"],
+      ["nausea_vomit", "Have you felt sick or vomited?"],
+      ["feverish", "Have you felt feverish?"],
+      ["insomnia_dream", "Have you slept poorly or had vivid dreams?"],
+      ["diarrhea", "Have you had loose stools?"],
+      ["headache", "Have you had headaches?"],
+      ["menstrual_irreg_now", "Have your periods been irregular?", "F"],
+      ["constipation_now", "Have you been constipated?"],
+      ["joint_ache", "Have you had aches or joint pain?"],
+      ["alt_fever_chill", "Have you had a fever that comes and goes with chills?"]
+    ]
+  };
   var PH_CYCLE_FLOW = [["light", "Light"], ["moderate", "Moderate"], ["heavy", "Heavy"]];
   var PH_CYCLE_PAIN = [["none", "None"], ["mild", "Mild"], ["moderate", "Moderate"], ["severe", "Severe"]];
   var PH_CYCLE_SYMPTOMS = [["cramping", "Cramping"], ["mood", "Mood changes"], ["breast", "Breast tenderness"], ["headache", "Headaches"], ["bloating", "Bloating"], ["fatigue", "Fatigue"], ["acne", "Acne"]];
@@ -172,13 +202,26 @@
     }).join("");
   }
 
+  function fbrRowsHtml(kind) {
+    return PH_FBR_Q[kind].map(function (q) {
+      return '<div class="hx-row" data-fbr-item="' + q[0] + '" data-fbr-kind="' + kind + '"' + (q[2] === "F" ? ' data-fbr-f="1" hidden' : '') + '><span class="hx-label">' + esc(q[1]) + '</span>' +
+        '<div class="hx-toggle"><button type="button" class="fbr-btn" data-fbr-val="yes">Yes</button><button type="button" class="fbr-btn" data-fbr-val="no">No</button></div></div>';
+    }).join("");
+  }
+  // women-only rows (a period question) show once she is Female, whether she taps it or the form arrived pre-filled
+  function showFemaleRows(isF) {
+    document.getElementById("femaleHx").hidden = !isF;
+    document.getElementById("cycleSec").hidden = !isF;
+    document.querySelectorAll("[data-fbr-f]").forEach(function (r) { r.hidden = !isF; });
+  }
+
   function renderForm(name, prefill) {
     var alwaysGroups = PH_HISTORY_GROUPS.filter(function (gr) { return !PH_HX_FEMALE_GROUPS[gr.g]; });
     var femaleGroups = PH_HISTORY_GROUPS.filter(function (gr) { return PH_HX_FEMALE_GROUPS[gr.g]; });
     app.innerHTML =
       '<div class="card">' +
         '<p class="lead">Hi ' + esc(titleCase(name)) + ' — a few questions before your visit.</p>' +
-        '<p class="note">This takes about 5 minutes. Your answers go straight to your practitioner’s private review — nothing else on this device is shared, and there’s nothing else to see here. Every question needs an answer before you can send it — pick Yes or No for each one.</p>' +
+        '<p class="note">This takes about 5 minutes. Your answers go straight to your practitioner’s private review — nothing else on this device is shared, and there’s nothing else to see here. Every question in Your details and Medical history needs an answer before you can send it — pick Yes or No for each one. The last two lists are optional: tap Yes for anything that fits you.</p>' +
       '</div>' +
       '<form id="intakeForm">' +
         '<div class="section-h">Your details</div>' +
@@ -218,6 +261,10 @@
             '</div>' +
           '</div>' +
         '</div>' +
+        '<div class="section-h">How you usually are</div>' +
+        '<div class="card">' + fbrRowsHtml("p") + '</div>' +
+        '<div class="section-h">The last few weeks</div>' +
+        '<div class="card">' + fbrRowsHtml("d") + '</div>' +
         '<p class="note" id="missNote" aria-live="polite"></p>' +
         '<p class="err" id="formErr" hidden></p>' +
         '<div class="submitbar"><button type="submit" class="submitbtn" id="submitBtn">Submit</button></div>' +
@@ -231,6 +278,14 @@
         if (!wasOn) btn.classList.add("on");
       });
     });
+    document.querySelectorAll(".fbr-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var row = btn.closest("[data-fbr-item]");
+        var wasOn = btn.classList.contains("on");
+        row.querySelectorAll(".fbr-btn").forEach(function (b) { b.classList.remove("on"); });
+        if (!wasOn) btn.classList.add("on");
+      });
+    });
     document.querySelectorAll(".chip:not(#ivfAddRow)").forEach(function (c) { c.addEventListener("click", function () { c.classList.toggle("on"); }); });
     // scoped to #sexSeg only -- the IVF Yes/No toggle below reuses the same
     // .sexbtn look (a two-way seg control) and must not clear THIS state
@@ -238,9 +293,7 @@
       b.addEventListener("click", function () {
         document.querySelectorAll("#sexSeg .sexbtn").forEach(function (x) { x.classList.remove("on"); });
         b.classList.add("on");
-        var isF = b.dataset.sex === "F";
-        document.getElementById("femaleHx").hidden = !isF;
-        document.getElementById("cycleSec").hidden = !isF;
+        showFemaleRows(b.dataset.sex === "F");
       });
     });
     document.querySelectorAll("#ivfSeg .sexbtn").forEach(function (b) {
@@ -274,8 +327,7 @@
       var sexBtn = document.querySelector('#sexSeg .sexbtn[data-sex="' + p.sex + '"]');
       if (sexBtn) {
         sexBtn.classList.add("on");
-        document.getElementById("femaleHx").hidden = p.sex !== "F";
-        document.getElementById("cycleSec").hidden = p.sex !== "F";
+        showFemaleRows(p.sex === "F");
       }
     }
     var dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(typeof p.dob === "string" ? p.dob : "");
@@ -419,6 +471,15 @@
     // below): submit_intake_form's p_history is already jsonb.
     var medNotesEl = document.getElementById("fMedNotes");
     if (medNotesEl && medNotesEl.value.trim()) history.medNotes = medNotesEl.value.trim();
+    // her ask 2026-10-13: the short Fang Bing Ren lists. ONLY a Yes travels (a No or a skipped row stays blank on her side), as one more
+    // plain key on the same jsonb blob (no SQL change, like medNotes). A row hidden for her sex is not sent.
+    var fbr = { v: 1, p: [], d: [] };
+    document.querySelectorAll("[data-fbr-item]").forEach(function (row) {
+      var yes = row.querySelector('.fbr-btn.on[data-fbr-val="yes"]');
+      if (!yes || row.hidden) return;
+      (row.dataset.fbrKind === "p" ? fbr.p : fbr.d).push(row.dataset.fbrItem);
+    });
+    if (fbr.p.length || fbr.d.length) history.fbr = fbr;
     var cycle = null;
     if (sex === "F") {
       var lmp = document.getElementById("fLmp").value || null;
