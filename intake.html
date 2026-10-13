@@ -42,7 +42,7 @@
   .err { color: var(--ph-negative); font-size: 13px; margin-top: 8px; }
   .section-h { font-size: 12px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ph-green-deep); margin: 22px 0 8px; padding: 0 2px; }
   .field { margin-bottom: 14px; }
-  .field label.q { display: block; font-size: 13px; font-weight: 600; color: var(--ph-ink); margin-bottom: 6px; }
+  .field label.q, .field span.q { display: block; font-size: 13px; font-weight: 600; color: var(--ph-ink); margin-bottom: 6px; }
   .field .hint { font-size: 11.5px; color: var(--ph-soft); margin-top: 4px; }
   input[type="date"], input[type="number"], input[type="text"], textarea, select {
     width: 100%; font: inherit; font-size: 14px; color: var(--ph-ink); background: var(--ph-paper);
@@ -222,6 +222,7 @@
       '<div class="card">' +
         '<p class="lead">Hi ' + esc(titleCase(name)) + ' — a few questions before your visit.</p>' +
         '<p class="note">This takes about 5 minutes. Your answers go straight to your practitioner’s private review — nothing else on this device is shared, and there’s nothing else to see here. Every question in Your details and Medical history needs an answer before you can send it — pick Yes or No for each one. The last two lists are optional: tap Yes for anything that fits you.</p>' +
+        '<p class="note" id="pfNote" hidden>Some answers are already filled in from your file. Please check them and change anything that is out of date.</p>' +
       '</div>' +
       '<form id="intakeForm">' +
         '<div class="section-h">Your details</div>' +
@@ -339,6 +340,25 @@
     if (typeof p.mobile === "string") document.getElementById("fPhone").value = p.mobile;
     if (typeof p.email === "string") document.getElementById("fEmail").value = p.email;
     if (typeof p.address === "string") document.getElementById("fAddress").value = p.address;
+    document.getElementById("pfNote").hidden = !Object.keys(p).length;
+    // her ask 2026-10-13 ("integrate the form with her profile"): the cycle answers and the Yes / No medical history her file already holds.
+    // The app only sends values that carry real information (never its own starting values), so a blank here is a question still to answer.
+    var cy = p.cycle && typeof p.cycle === "object" ? p.cycle : null;
+    if (cy) {
+      var setVal = function (id, v) { if (v != null && v !== "") document.getElementById(id).value = String(v); };
+      if (typeof cy.lmp === "string" && /^\d{4}-\d{2}-\d{2}$/.test(cy.lmp)) setVal("fLmp", cy.lmp);
+      setVal("fCycleLen", cy.cycleLen); setVal("fFlowDays", cy.flowDays); setVal("fMenarche", cy.menarcheAge); setVal("fTtc", cy.ttcMonths);
+      var setSel = function (id, v, list) { if (list.some(function (o) { return o[0] === v; })) document.getElementById(id).value = v; };
+      setSel("fFlowIntensity", cy.flowIntensity, PH_CYCLE_FLOW); setSel("fPain", cy.pain, PH_CYCLE_PAIN); setSel("fContraception", cy.contraception, PH_CYCLE_CONTRACEPTION);
+      if (cy.regular === false) document.getElementById("fRegular").checked = false;
+      if (Array.isArray(cy.symptoms)) cy.symptoms.forEach(function (s) { if (!/^[a-z_]+$/.test(s)) return; var chip = document.querySelector('[data-symptom="' + s + '"]'); if (chip) chip.classList.add("on"); });
+    }
+    var hx = p.history && typeof p.history === "object" ? p.history : null;
+    if (hx) Object.keys(hx).forEach(function (k) {
+      if ((hx[k] !== "yes" && hx[k] !== "no") || !/^[a-z0-9_]+$/.test(k)) return;
+      var btn = document.querySelector('[data-hx-item="' + k + '"] .hx-btn[data-hx-val="' + hx[k] + '"]');
+      if (btn) btn.classList.add("on");
+    });
   }
 
   // ---- IVF history (her ask 2026-09-13, card 11) ----
