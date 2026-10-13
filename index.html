@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261013-530000">
+<meta name="lcm-build" content="20261013-540000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -89623,7 +89623,7 @@ Please let me know if you have any questions.`;
   let phIntakeName = "", phIntakeBusy = false, phIntakeError = "", phIntakeResult = null;
   // what went into the link from her file: the list of field keys, "missing" (the one-time setup is not done), or ""
   let phIntakePrefillState = "";
-  const PH_INTAKE_PREFILL_LABEL = { sex: "sex", dob: "date of birth", mobile: "mobile", email: "email", address: "address", cycle: "cycle answers", history: "medical history answers" };
+  const PH_INTAKE_PREFILL_LABEL = { sex: "sex", dob: "date of birth", mobile: "mobile", email: "email", address: "address", cycle: "cycle answers", history: "medical history answers", ivf: "IVF history", medNotes: "medications and allergies note", fbr: "Fang Bing Ren answers" };
   // the details her file already holds for the "Your details" box of the form. Only what is really there: nothing
   // is guessed, a blank stays blank for the patient to fill. Read-only (phPatientPeek), never writes.
   function phIntakePrefillFor(name) {
@@ -89643,31 +89643,65 @@ Please let me know if you have any questions.`;
     // no pain, regular) that nobody answered; those are NOT sent, so a patient is never shown an answer nobody gave and the form still asks.
     // A length counts when she typed it (cycleLenManual), when it is worked out from logged periods, or when it is not 28.
     if (rec.sex === "F") {
-      const cy = rec.cycle || ((rec.treatmentPlans || []).find(x => x.cycle && x.cycle.lmp) || {}).cycle || null, c = {};
-      if (cy) {
-        const num = (v, lo, hi) => { const n = Number(v); return v != null && v !== "" && Number.isFinite(n) && n >= lo && n <= hi ? n : null; };
-        if (/^\d{4}-\d{2}-\d{2}$/.test(cy.lmp || "")) c.lmp = cy.lmp;
-        const len = num(cy.cycleLen, 14, 60);
-        if (len != null && (cy.cycleLenManual || phCycleAvgLen(rec) > 0 || len !== 28)) c.cycleLen = len;
-        const fd = num(cy.flowDays, 1, 14);
-        if (fd != null && fd !== 5) c.flowDays = fd;
-        if (PH_CYCLE_FLOW.some(x => x[0] === cy.flowIntensity) && cy.flowIntensity !== "moderate") c.flowIntensity = cy.flowIntensity;
-        if (PH_CYCLE_PAIN.some(x => x[0] === cy.pain) && cy.pain !== "none") c.pain = cy.pain;
-        if (cy.regular === false) c.regular = false;
-        const mn = num(cy.menarcheAge, 8, 20); if (mn != null) c.menarcheAge = mn;
-        if (PH_CYCLE_CONTRACEPTION.some(x => x[0] === cy.contraception) && cy.contraception !== "none") c.contraception = cy.contraception;
-        const tt = num(cy.ttcMonths, 0, 240); if (tt != null) c.ttcMonths = tt;
-        const sy = (Array.isArray(cy.symptoms) ? cy.symptoms : []).filter(s => PH_CYCLE_SYMPTOMS.some(x => x[0] === s));
-        if (sy.length) c.symptoms = sy;
-      }
+      const cy = rec.cycle || ((rec.treatmentPlans || []).find(x => x.cycle && x.cycle.lmp) || {}).cycle || {}, c = {};
+      const num = (v, lo, hi) => { const n = Number(v); return v != null && v !== "" && Number.isFinite(n) && n >= lo && n <= hi ? n : null; };
+      // her audit ask 2026-10-13: the last period also comes from the period log (its newest entry) and the length from the logged periods when the
+      // record holds no cycle object, since the Cycle page shows both
+      const logLmp = (Array.isArray(rec.cycleLog) ? rec.cycleLog : []).map(x => x && x.lmp).filter(l => /^\d{4}-\d{2}-\d{2}$/.test(l || "")).sort().pop();
+      const lmp = /^\d{4}-\d{2}-\d{2}$/.test(cy.lmp || "") ? cy.lmp : (logLmp || "");
+      if (lmp) c.lmp = lmp;
+      const avg = phCycleAvgLen(rec), len = num(cy.cycleLen, 14, 60) != null ? num(cy.cycleLen, 14, 60) : (avg ? num(avg, 14, 60) : null);
+      if (len != null && (cy.cycleLenManual || avg > 0 || len !== 28)) c.cycleLen = len;
+      const fd = num(cy.flowDays, 1, 14);
+      if (fd != null && fd !== 5) c.flowDays = fd;
+      if (PH_CYCLE_FLOW.some(x => x[0] === cy.flowIntensity) && cy.flowIntensity !== "moderate") c.flowIntensity = cy.flowIntensity;
+      if (PH_CYCLE_PAIN.some(x => x[0] === cy.pain) && cy.pain !== "none") c.pain = cy.pain;
+      // regular: only when she has it as irregular, on the cycle itself or from the cycle-length range in her usual answers
+      if (cy.regular === false || phUsualLenIrregular(rec.usual)) c.regular = false;
+      const mn = num(cy.menarcheAge, 8, 20); if (mn != null) c.menarcheAge = mn;
+      if (PH_CYCLE_CONTRACEPTION.some(x => x[0] === cy.contraception) && cy.contraception !== "none") c.contraception = cy.contraception;
+      const tt = num(cy.ttcMonths, 0, 240); if (tt != null) c.ttcMonths = tt;
+      const sy = (Array.isArray(cy.symptoms) ? cy.symptoms : []).filter(s => PH_CYCLE_SYMPTOMS.some(x => x[0] === s));
+      if (sy.length) c.symptoms = sy;
       if (Object.keys(c).length) out.cycle = c;
+      // IVF / egg collection / egg freezing rounds: each carries `ref` (her round's id) so the review knows an unchanged row from a new one
+      // (see phIntakeComputeDiff). The form holds a month, so a date is cut to YYYY-MM; text such as "Mar 2025" cannot sit in a month box and goes blank.
+      const ivf = phIvfCycles(rec).filter(r => r && r.id && (r.kind === "collection" || r.kind === "freeze" || !r.kind)).slice(0, 8).map(r => ({
+        ref: r.id, when: /^\d{4}-\d{2}(-\d{2})?$/.test(r.when || "") ? r.when.slice(0, 7) : "", clinic: String(r.clinic || "").trim(),
+        eggs: r.eggs == null ? null : r.eggs, fertilised: r.fertilised == null ? null : r.fertilised, frozen: r.frozen == null ? null : r.frozen
+      })).filter(x => x.when || x.clinic || x.eggs != null || x.fertilised != null || x.frozen != null);
+      if (ivf.length) out.ivf = ivf;
     }
-    // MEDICAL HISTORY every question she has really answered (Yes or No); a question never asked stays blank on the form. The free-text
-    // medication note is not sent (it is prose that appends to her notes), and neither are IVF rounds (the review matches them by date).
-    const hx = {};
+    // MEDICAL HISTORY every question she has really answered (Yes or No); a question never asked stays blank on the form. A supplement she has
+    // switched on in Supplements answers "Taking supplements" Yes while that question is unasked (never over an answer she gave).
+    const hx = {}, supps = PH_SUPPLEMENTS.filter(s => rec.supplements && rec.supplements[s.id] && rec.supplements[s.id].on);
     PH_HX_ALL_ITEMS.forEach(it => { const v = phHxVal(rec, it.k); if (v === "yes" || v === "no") hx[it.k] = v; });
+    if (supps.length && !hx.taking_supplements) hx.taking_supplements = "yes";
     if (Object.keys(hx).length) out.history = hx;
+    const med = phIntakeMedNoteFor(rec);
+    if (med) out.medNotes = med;
+    // FANG BING REN "How you usually are" rows (the short questions on the form): a row reads Yes when her file already has that Ren sign as a
+    // Yes of her own (a tap on Fang Bing Ren / Ask her, or the patient's earlier form answer) or in the patient's usual answers. Never a sign
+    // derived from her tongue, pulse or belly exam, and never the "last few weeks" rows (those go stale).
+    const tp = (rec.tri && rec.tri.p) || {}, fp = (rec.fbrForm && rec.fbrForm.p) || {};
+    const fbrP = PH_INTAKE_FBR_P.filter(k => tp[k] === true || fp[k] === true || phTriUsualKnown(rec, k));
+    if (fbrP.length) out.fbr = { p: fbrP };
     return Object.keys(out).length ? out : null;
+  }
+  // the Ren sign keys of the "How you usually are" list on the form (intake.html PH_FBR_Q.p): keep the two lists the same
+  const PH_INTAKE_FBR_P = ["chest_hypo_tend", "edema_tend", "nausea_tend", "constipation_tend", "cold_extrem", "palp_tend", "sweat_profuse_tend", "appetite_poor_tend", "wheeze_tend", "irritable_restless_tend"];
+  // "Which medications, allergies or supplements?": written from what her file holds for the Medication & allergies questions that are Yes
+  // (each question's own note) and the supplements switched on. Read by phIntakePrefillFor AND by the review, which does not offer the note
+  // again when the patient sends it back unchanged. Her private clinical notes (medicalHistoryNotes) are never used.
+  const PH_INTAKE_MED_NOTE_ITEMS = [["taking_prescribed_medication", "Prescribed medication"], ["blood_thinning_medication", "Blood thinner"], ["taking_supplements", "Supplements"], ["known_drug_allergy", "Drug allergy"], ["known_food_allergy", "Food allergy"], ["allergic_to_herbs", "Herb allergy"]];
+  function phIntakeMedNoteFor(rec) {
+    if (!rec) return "";
+    const supps = PH_SUPPLEMENTS.filter(s => rec.supplements && rec.supplements[s.id] && rec.supplements[s.id].on).map(s => s.name);
+    return PH_INTAKE_MED_NOTE_ITEMS.map(([k, lbl]) => {
+      const v = phHxVal(rec, k), note = v === "yes" ? presSanitizeNoteText(phHxNote(rec, k)) : "";
+      const parts = [note].concat(k === "taking_supplements" && v !== "no" ? supps : []).filter(Boolean);
+      return parts.length ? `${lbl}: ${parts.join(", ")}` : "";
+    }).filter(Boolean).join("; ");
   }
   // her ask 2026-09-10, opened from a patient's own Medical History screen:
   // "allow me to generate a sms to send patient link so they can fill out
@@ -89964,7 +89998,8 @@ Please let me know if you have any questions.`;
     // applied form never offers to add the same text twice.
     if (hist.medNotes && hist.medNotes.trim()) {
       const note = hist.medNotes.trim();
-      if (!rec || !(rec.medicalHistoryNotes || "").includes(note)) {
+      // the form arrives with this box written from her file (phIntakeMedNoteFor): sent back unchanged it is not a new note
+      if (note !== phIntakeMedNoteFor(rec) && (!rec || !(rec.medicalHistoryNotes || "").includes(note))) {
         historyNew.push({ key: "medNotes", label: "Medications/allergies/supplements", display: `Note: "${note}"` });
       }
     }
@@ -90019,12 +90054,18 @@ Please let me know if you have any questions.`;
         // her "Match by date, show me both" (2026-09-19): a round she already
         // has within a month of the reported one is shown beside it, every
         // differing number a pick, and "a different round" adds a new row
-        const match = rec ? phIvfIntakeMatch(rec, c.when) : null;
+        // her audit ask 2026-10-13: a round the form arrived with carries `ref` (her round's id, see phIntakePrefillFor), so it is matched
+        // by that id, never by date, and a round sent back unchanged is not offered at all (and never re-marked "from intake · unconfirmed").
+        // The form holds a month, her file may hold the day, so the date counts as the same when the day-level date starts with the month.
+        const byRef = c.ref && rec ? phIvfCycles(rec).find(r => r.id === c.ref) || null : null;
+        const match = byRef || (rec ? phIvfIntakeMatch(rec, c.when) : null);
         if (!match) { ivfNew.push({ key: `ivf${i}`, label: "Egg collection", display: head, data: c }); return; }
         const mLabel = phIvfDateLabel(match.when) || "no date";
-        const diffs = PH_IVF_INTAKE_FIELDS.filter(([f]) => has(c[f]) && has(match[f]) && String(c[f]) !== String(match[f]));
-        ivfNew.push({ key: `ivf${i}`, label: "Egg collection", matchId: match.id, display: `${head} — looks like your round of ${mLabel}${diffs.length ? "" : " (only fills what is blank there)"}`, data: c });
-        ivfConflicts.push({ key: `ivf${i}:row`, rowChoice: true, label: `Collection reported for ${phIvfDateLabel(c.when) || "no date"} — you already have a round of ${mLabel}`, keepLabel: "Same round", newLabel: "A different round — add it" });
+        const sameWhen = (a, b) => String(a) === String(b) || (!!byRef && String(b).slice(0, String(a).length) === String(a));
+        const diffs = PH_IVF_INTAKE_FIELDS.filter(([f]) => has(c[f]) && has(match[f]) && (f === "when" ? !sameWhen(c.when, match.when) : String(c[f]) !== String(match[f])));
+        if (byRef && !diffs.length && !PH_IVF_INTAKE_FIELDS.some(([f]) => has(c[f]) && !has(match[f]))) return;
+        ivfNew.push({ key: `ivf${i}`, label: "Egg collection", matchId: match.id, display: `${head} — ${byRef ? `a change to your round of ${mLabel}` : `looks like your round of ${mLabel}`}${diffs.length ? "" : " (only fills what is blank there)"}`, data: c });
+        if (!byRef) ivfConflicts.push({ key: `ivf${i}:row`, rowChoice: true, label: `Collection reported for ${phIvfDateLabel(c.when) || "no date"} — you already have a round of ${mLabel}`, keepLabel: "Same round", newLabel: "A different round — add it" });
         diffs.forEach(([f, lbl]) => ivfConflicts.push({ key: `ivf${i}:${f}`, matchId: match.id, field: f, label: `Round of ${mLabel} · ${lbl}`, current: f === "when" ? phIvfDateLabel(match[f]) : String(match[f]), value: f === "when" ? phIvfDateLabel(c[f]) : String(c[f]) }));
       });
     }
