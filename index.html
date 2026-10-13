@@ -88648,6 +88648,24 @@ Please let me know if you have any questions.`;
   // the link; matching it to an existing patient or creating a new one both
   // happen later, on the Intake review page, once she reviews the submission.
   let phIntakeName = "", phIntakeBusy = false, phIntakeError = "", phIntakeResult = null;
+  // what went into the link from her file: the list of field keys, "missing" (the one-time setup is not done), or ""
+  let phIntakePrefillState = "";
+  const PH_INTAKE_PREFILL_LABEL = { sex: "sex", dob: "date of birth", mobile: "mobile", email: "email", address: "address" };
+  // the details her file already holds for the "Your details" box of the form. Only what is really there: nothing
+  // is guessed, a blank stays blank for the patient to fill. Read-only (phPatientPeek), never writes.
+  function phIntakePrefillFor(name) {
+    const rec = phPatientPeek(name);
+    if (!rec) return null;
+    const out = {};
+    if (rec.sex === "F" || rec.sex === "M") out.sex = rec.sex;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(rec.dob || "")) out.dob = rec.dob;
+    if (String(rec.phone || "").trim()) out.mobile = String(rec.phone).trim();
+    if (String(rec.email || "").trim()) out.email = String(rec.email).trim();
+    const addrs = (Array.isArray(rec.addresses) ? rec.addresses : []).filter(a => a && String(a.text || "").trim());
+    const a = addrs.find(x => x.isDefault) || addrs[0];
+    if (a) out.address = String(a.text).trim();
+    return Object.keys(out).length ? out : null;
+  }
   // her ask 2026-09-10, opened from a patient's own Medical History screen:
   // "allow me to generate a sms to send patient link so they can fill out
   // their medical history". Optional prefillName skips the "who's this for"
@@ -88656,7 +88674,7 @@ Please let me know if you have any questions.`;
   // exactly the repeated step her standing rule forbids. The generic ⚙ menu
   // entry still calls phIntakeOpen() with nothing, unchanged.
   function phIntakeOpen(prefillName) {
-    phIntakeName = (prefillName || "").trim(); phIntakeBusy = false; phIntakeError = ""; phIntakeResult = null;
+    phIntakeName = (prefillName || "").trim(); phIntakeBusy = false; phIntakeError = ""; phIntakeResult = null; phIntakePrefillState = "";
     document.getElementById("phIntakeBackdrop").hidden = false;
     document.getElementById("phIntakeModal").hidden = false;
     renderIntakeScreen();
@@ -88665,7 +88683,7 @@ Please let me know if you have any questions.`;
   function phIntakeClose() {
     document.getElementById("phIntakeBackdrop").hidden = true;
     document.getElementById("phIntakeModal").hidden = true;
-    phIntakeName = ""; phIntakeBusy = false; phIntakeError = ""; phIntakeResult = null;
+    phIntakeName = ""; phIntakeBusy = false; phIntakeError = ""; phIntakeResult = null; phIntakePrefillState = "";
   }
   function phIntakeNameOptionsHtml() {
     const names = new Set();
@@ -88723,13 +88741,25 @@ Please let me know if you have any questions.`;
   async function phIntakeGenerate() {
     const name = phIntakeName.trim();
     if (!name || phIntakeBusy) return;
-    phIntakeBusy = true; phIntakeError = ""; renderIntakeScreen();
+    phIntakeBusy = true; phIntakeError = ""; phIntakePrefillState = ""; renderIntakeScreen();
     try {
       const sb = phRenRelayClient();
       if (!sb) throw new Error("Not signed in to cloud sync — sign in, then try again.");
       const uid = await phRenRelayUid(sb);
       if (!uid) throw new Error("Not signed in to cloud sync — sign in, then try again.");
-      const { data, error } = await sb.from("intake_forms").insert({ owner: uid, patient_name: name }).select("id").single();
+      // her ask 2026-10-13 ("prefill details if patient already has it in their file"): what her file already holds
+      // travels with the link. Needs the one-time prefill column (supabase/intake_prefill_setup.sql); without it the
+      // link is made without the prefill and the dialog says so, never a failed link.
+      const prefill = phIntakePrefillFor(name);
+      const row = { owner: uid, patient_name: name };
+      if (prefill) row.prefill = prefill;
+      let ins = await sb.from("intake_forms").insert(row).select("id").single();
+      if (ins.error && prefill && /prefill/i.test(ins.error.message || "")) {
+        phIntakePrefillState = "missing";
+        delete row.prefill;
+        ins = await sb.from("intake_forms").insert(row).select("id").single();
+      } else if (prefill) phIntakePrefillState = Object.keys(prefill);
+      const { data, error } = ins;
       if (error) {
         // her setup runs the SQL in her own time -- a clear message here
         // beats a raw Postgres error if she generates a link before it exists
@@ -88753,7 +88783,14 @@ Please let me know if you have any questions.`;
       const patRec = phPatientPeek(phIntakeName);
       const phone = patRec && patRec.phone;
       const email = patRec && patRec.email;
+      // what her file already filled in on the form, or that the one-time setup stops it (a fact, never a nudge)
+      const pfNote = phIntakePrefillState === "missing"
+        ? `<p class="ph-merge-note">⚠ Her details weren't added to the form: the one-time setup for that isn't done yet.</p>`
+        : Array.isArray(phIntakePrefillState) && phIntakePrefillState.length
+          ? `<p class="ph-merge-note">Pre-filled from her file: ${esc(phIntakePrefillState.map(k => PH_INTAKE_PREFILL_LABEL[k] || k).join(", "))}.</p>`
+          : "";
       body = `<p class="ph-merge-lead">Send this link to <b>${esc(phTitle(phIntakeName))}</b>. It'll wait for your review, not save automatically.</p>
+        ${pfNote}
         <div class="ph-intake-linkrow">
           <input type="text" class="ph-intake-linkinput" id="phIntakeLinkOut" value="${esc(phIntakeResult)}" readonly aria-label="Intake link">
           <button type="button" class="ph-load-btn on" data-intake-copy="1"><svg class="icn" aria-hidden="true"><use href="#i-copy"/></svg> Copy</button>
@@ -88904,7 +88941,8 @@ Please let me know if you have any questions.`;
       if (!rec || !rec.email) demoNew.push({ key: "email", label: "Email", display: `Email: ${v}` });
       else if (rec.email !== v) demoConflicts.push({ key: "email", label: "Email", current: rec.email, value: v });
     }
-    if (demo.address && demo.address.trim()) demoNew.push({ key: "address", label: "Address", display: `Address: ${demo.address.trim()}` });
+    // her ask 2026-10-13: the form now arrives pre-filled from her file, so an address she already has is not offered again
+    if (demo.address && demo.address.trim() && !(rec && Array.isArray(rec.addresses) && rec.addresses.some(a => phAddrNorm(a.text) === phAddrNorm(demo.address)))) demoNew.push({ key: "address", label: "Address", display: `Address: ${demo.address.trim()}` });
 
     const historyNew = [], historyConflicts = [];
     PH_HX_ALL_ITEMS.forEach(it => {
