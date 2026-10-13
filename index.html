@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261013-520000">
+<meta name="lcm-build" content="20261013-530000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -70450,13 +70450,15 @@ or changing anything in Cliniko.
     // bar inside shows how far along the family is. Cards sort by the family's best score. Colour, lead ring, filter ring and
     // the data-tri-filt tap are unchanged.
     const rankedById = new Map(ranked.map(r => [r.id, r])), tileScore = r => r.fit, fitOf = r => Math.round(r.fit * 100);
+    // her 2026-10-13 ("fill the formula like the percentage, like the leading formula's percentage", mock fbr-page-sleek-mock-c3): a block is a pale pill
+    // with a colour dot until its family scores, then it fills left to right by its own %, on the same scale as the leading family's bar (fit x 3, capped
+    // at 100). The label is drawn twice -- ink on the pale part, the family's own text colour on the filled part (the second copy is clipped to the fill).
+    // A family at 0% draws no fill and no number.
     const mosaicTile = (r, herbHead) => {
       const c = PH_FBR_HERB_COLOUR[r.id] || { bg: "#D3DEE2", fg: "#141F23" }, total = fitOf(r);
-      const pct = Math.min(100, total * 2);
-      const w = herbHead ? "" : `flex:0 0 auto;min-width:max-content;width:min(100%,${Math.round(96 + total * 2.2)}px);`;
-      return `<button type="button" class="ph-fbr-t${herbHead ? " herb" : ""}${c.fg === "#FFFFFF" ? "" : " dk"}${r === ranked[0] && hasTicks ? " lead" : ""}${filtSet.has(r.id) ? " filt" : ""}" style="background:${c.bg};color:${c.fg};${c.border ? `box-shadow:inset 0 0 0 1px ${c.border};` : ""}${w}" aria-pressed="${filtSet.has(r.id) ? "true" : "false"}" data-tri-filt="${r.id}" title="${esc(r.f.name)}: fits ${total}%. Bing ${r.dS} of ${r.maxD}, Ren ${r.pS} of ${r.maxP}. Tap to filter to it only">
-        <span class="ph-fbr-t-name">${esc(r.f.name)}</span><span class="ph-fbr-t-n">${total}%</span><span class="ph-fbr-t-bar" style="width:${pct}%"></span>
-      </button>`;
+      const p = total > 0 ? Math.min(100, total * 3) : 0;
+      const lab = `<span class="ph-fbr-t-nm"><i class="ph-fbr-t-dot" style="--c:${c.bg}"></i>${esc(r.f.name)}</span>${total > 0 ? `<span class="ph-fbr-t-n">${total}%</span>` : ""}`;
+      return `<button type="button" class="ph-fbr-t${herbHead ? " herb" : ""}${total > 0 ? "" : " zero"}${r === ranked[0] && hasTicks ? " lead" : ""}${filtSet.has(r.id) ? " filt" : ""}" style="--c:${c.bg};--fg:${c.fg};--p:${p}%;--cb:${c.border || "transparent"}" aria-pressed="${filtSet.has(r.id) ? "true" : "false"}" data-tri-filt="${r.id}" title="${esc(r.f.name)}: fits ${total}%. Bing ${r.dS} of ${r.maxD}, Ren ${r.pS} of ${r.maxP}. Tap to filter to it only">${p ? `<span class="ph-fbr-t-fill"></span>` : ""}<span class="ph-fbr-t-lab lo">${lab}</span>${p ? `<span class="ph-fbr-t-lab hi" aria-hidden="true">${lab}</span>` : ""}</button>`;
     };
     const mosaicHtml = (() => {
       const listed = new Set(PH_REN_FAM_GROUPS.flatMap(g => [g.herb, ...g.formulas]));
@@ -89621,7 +89623,7 @@ Please let me know if you have any questions.`;
   let phIntakeName = "", phIntakeBusy = false, phIntakeError = "", phIntakeResult = null;
   // what went into the link from her file: the list of field keys, "missing" (the one-time setup is not done), or ""
   let phIntakePrefillState = "";
-  const PH_INTAKE_PREFILL_LABEL = { sex: "sex", dob: "date of birth", mobile: "mobile", email: "email", address: "address" };
+  const PH_INTAKE_PREFILL_LABEL = { sex: "sex", dob: "date of birth", mobile: "mobile", email: "email", address: "address", cycle: "cycle answers", history: "medical history answers" };
   // the details her file already holds for the "Your details" box of the form. Only what is really there: nothing
   // is guessed, a blank stays blank for the patient to fill. Read-only (phPatientPeek), never writes.
   function phIntakePrefillFor(name) {
@@ -89635,6 +89637,36 @@ Please let me know if you have any questions.`;
     const addrs = (Array.isArray(rec.addresses) ? rec.addresses : []).filter(a => a && String(a.text || "").trim());
     const a = addrs.find(x => x.isDefault) || addrs[0];
     if (a) out.address = String(a.text).trim();
+    // her ask 2026-10-13 ("some of this info is already in her profile details, integrate the form with her profile"): the cycle questions and
+    // the Yes / No medical history come from her file too (read-only: rec.cycle is read as it stands, never through phCycleFor, which can write).
+    // CYCLE only values that carry real information. When a period is first logged the app writes starting values (28 days, 5 days, moderate,
+    // no pain, regular) that nobody answered; those are NOT sent, so a patient is never shown an answer nobody gave and the form still asks.
+    // A length counts when she typed it (cycleLenManual), when it is worked out from logged periods, or when it is not 28.
+    if (rec.sex === "F") {
+      const cy = rec.cycle || ((rec.treatmentPlans || []).find(x => x.cycle && x.cycle.lmp) || {}).cycle || null, c = {};
+      if (cy) {
+        const num = (v, lo, hi) => { const n = Number(v); return v != null && v !== "" && Number.isFinite(n) && n >= lo && n <= hi ? n : null; };
+        if (/^\d{4}-\d{2}-\d{2}$/.test(cy.lmp || "")) c.lmp = cy.lmp;
+        const len = num(cy.cycleLen, 14, 60);
+        if (len != null && (cy.cycleLenManual || phCycleAvgLen(rec) > 0 || len !== 28)) c.cycleLen = len;
+        const fd = num(cy.flowDays, 1, 14);
+        if (fd != null && fd !== 5) c.flowDays = fd;
+        if (PH_CYCLE_FLOW.some(x => x[0] === cy.flowIntensity) && cy.flowIntensity !== "moderate") c.flowIntensity = cy.flowIntensity;
+        if (PH_CYCLE_PAIN.some(x => x[0] === cy.pain) && cy.pain !== "none") c.pain = cy.pain;
+        if (cy.regular === false) c.regular = false;
+        const mn = num(cy.menarcheAge, 8, 20); if (mn != null) c.menarcheAge = mn;
+        if (PH_CYCLE_CONTRACEPTION.some(x => x[0] === cy.contraception) && cy.contraception !== "none") c.contraception = cy.contraception;
+        const tt = num(cy.ttcMonths, 0, 240); if (tt != null) c.ttcMonths = tt;
+        const sy = (Array.isArray(cy.symptoms) ? cy.symptoms : []).filter(s => PH_CYCLE_SYMPTOMS.some(x => x[0] === s));
+        if (sy.length) c.symptoms = sy;
+      }
+      if (Object.keys(c).length) out.cycle = c;
+    }
+    // MEDICAL HISTORY every question she has really answered (Yes or No); a question never asked stays blank on the form. The free-text
+    // medication note is not sent (it is prose that appends to her notes), and neither are IVF rounds (the review matches them by date).
+    const hx = {};
+    PH_HX_ALL_ITEMS.forEach(it => { const v = phHxVal(rec, it.k); if (v === "yes" || v === "no") hx[it.k] = v; });
+    if (Object.keys(hx).length) out.history = hx;
     return Object.keys(out).length ? out : null;
   }
   // her ask 2026-09-10, opened from a patient's own Medical History screen:
