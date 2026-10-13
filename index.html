@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261013-350000">
+<meta name="lcm-build" content="20261013-360000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -8272,6 +8272,32 @@
   #pharmacyPage .ph-lk-arrow { align-self: center; color: var(--ph-faint); font-size: 18px; }
   #pharmacyPage .ph-nq-more { font-size: var(--fs-11); color: var(--ph-faint); margin-top: 2px; }
   #pharmacyPage .ph-nq-last { margin-top: 8px; padding-left: 9px; border-left: 3px solid var(--ph-gold); font-size: var(--fs-12); color: var(--ph-soft); }
+  /* several questions at once (her 2026-10-13, mock fbr-quick-assess-multi-mock-2026-10-13.html, A Rows): one card, one row per question
+     (or per Bing / Ren twin pair), Yes / No / Not sure on the right, the family bars once underneath. The row text and the buttons
+     wrap under each other when the card is narrow. An answered row fades out and the next best slides into its seat. */
+  #pharmacyPage .ph-qm-hd { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; margin-bottom: 2px; }
+  #pharmacyPage .ph-qm-hd b { font: 700 var(--fs-12) var(--font-disp); letter-spacing: .08em; text-transform: uppercase; color: var(--ph-herb-deep); white-space: nowrap; }
+  #pharmacyPage .ph-qm-hd span { font-size: var(--fs-12); color: var(--ph-soft); }
+  #pharmacyPage .ph-qm-hd .undo { margin-left: auto; }
+  #pharmacyPage .ph-qm-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; padding: 10px 0; border-top: 1px solid color-mix(in srgb, var(--ph-herb) 22%, transparent); }
+  #pharmacyPage .ph-qm-row:first-of-type { border-top: 0; }
+  #pharmacyPage .ph-qm-main { flex: 1 1 260px; min-width: 0; }
+  #pharmacyPage .ph-qm-tag { font-size: var(--fs-11-5); color: var(--ph-soft); }
+  #pharmacyPage .ph-qm-tag b { color: var(--ph-herb-deep); font-weight: 700; }
+  #pharmacyPage .ph-qm-q { font: 700 var(--fs-13-5) var(--font-body); line-height: 1.3; color: var(--ph-ink); }
+  #pharmacyPage .ph-qm-why { font-size: var(--fs-11-5); color: var(--ph-soft); }
+  #pharmacyPage .ph-qm-why:empty { display: none; }
+  #pharmacyPage .ph-qm-acts { flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  #pharmacyPage .ph-qm-acts2 { flex: 0 0 auto; display: grid; gap: 6px; justify-items: start; }
+  #pharmacyPage .ph-qm-al { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  #pharmacyPage .ph-qm-al .tg { min-width: 54px; font-size: var(--fs-11); font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--ph-herb); }
+  #pharmacyPage .ph-qm-acts .ph-rc-chip, #pharmacyPage .ph-qm-al .ph-rc-chip { padding: 5px 13px; font-size: var(--fs-12-5); }
+  #pharmacyPage .ph-qm-row .ph-rc-chip:disabled { cursor: default; transform: none; }
+  @keyframes phQmIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @keyframes phQmOut { to { opacity: 0; transform: translateY(-6px); } }
+  #pharmacyPage .ph-qm-row.in { animation: phQmIn .3s ease both; }
+  #pharmacyPage .ph-qm-row.gone { animation: phQmOut .34s ease forwards; }
+  @media (prefers-reduced-motion: reduce) { #pharmacyPage .ph-qm-row.in { animation: none; } #pharmacyPage .ph-qm-row.gone { animation: none; opacity: 0; } }
   #pharmacyPage .ph-pfw-q.done { box-shadow: inset 3px 0 0 var(--ph-herb); }
   /* profile first (2026-10-04): Start-here card, one-screen question cards, the
      live Patterns panel, the auto-move bar. See "PROFILE FIRST" in the script. */
@@ -69927,13 +69953,15 @@ or changing anything in Cliniko.
       // narrow-down (her 2026-10-12): remember what we are about to change so Undo can put it back, and say what the answer did
       const rec0 = phPatientPeek(name) || {}, before = phNqState(rec0, name), label = ((kind === "d" ? PH_BING_SIGNS : PH_REN_SIGNS).find(r => r[0] === key) || [key, key])[1];
       // Undo restores a snapshot of everything one answer can touch (both maps, the link bookkeeping, the "started" dates, the audit)
+      // (several at once: the rows on screen ride along, so Undo brings the answered row back)
+      const slotsSnap = JSON.stringify(phQaSlots.get(pk) || []);
       let snap = "", lkConf = [], autoBefore = [];
       if (phTriWrite(name, t => {
         snap = JSON.stringify([t.d, t.p, t.auto || null, t.since || {}, t.audit || []]);
         autoBefore = Object.keys(phTriAutoMap(t, kind));
         if (ans) lkConf = phTriSetYes(t, kind, key, fam, rec0, name); else phTriSetNo(t, kind, key);
       })) {
-        const st = phQaUndoStack.get(pk) || []; st.push({ snap }); phQaUndoStack.set(pk, st);
+        const st = phQaUndoStack.get(pk) || []; st.push({ snap, slots: slotsSnap }); phQaUndoStack.set(pk, st);
         phLinkAfterWrite(name, kind, key, lkConf);
         const rec1 = phPatientPeek(name) || {}, after = phNqState(rec1, name);
         const autos = Object.keys(((rec1.tri || {}).auto || {})[kind] || {}).filter(k => !autoBefore.includes(k)).map(phSignLabel);
@@ -69947,7 +69975,11 @@ or changing anything in Cliniko.
       if (last && phTriWrite(name, t => {
         const s = JSON.parse(last.snap);
         t.d = s[0]; t.p = s[1]; if (s[2]) t.auto = s[2]; else delete t.auto; t.since = s[3]; t.audit = s[4];
-      })) { phQaLast.delete(pk); phLinkAsk.delete(pk); phTriRefresh(name); }
+      })) {
+        phQaLast.delete(pk); phLinkAsk.delete(pk);
+        phQaSlots.set(pk, (JSON.parse(last.slots || "[]")).map(sl => Object.assign(sl, { phase: "", born: 0 })));
+        phTriRefresh(name);
+      }
       return true;
     }
     if ((el = T.closest("[data-qa-use]"))) {
@@ -69956,7 +69988,8 @@ or changing anything in Cliniko.
     }
     if (T.closest("[data-qa-keep]")) { phQaKeep.add(phPatientKey(name)); phTriRefresh(name); return true; }
     if ((el = T.closest("[data-qa-skip]"))) {
-      phQaSkipSet(name).add(el.dataset.qaSkip);
+      // a twin row lists both of its signs: "Not sure" skips the pair
+      el.dataset.qaSkip.split(",").forEach(k => phQaSkipSet(name).add(k));
       phTriRefresh(name); return true;
     }
     return false;
@@ -70325,36 +70358,92 @@ or changing anything in Cliniko.
     const m = Math.max(...lp), e = lp.map(x => Math.exp(x - m)), s = e.reduce((a, b) => a + b, 0);
     return { ids, p: e.map(x => x / s), eff, picks, answered, nAns, clueKeys: new Set(phPatClues(rec, name).filter(c => !c.fbrTap).map(c => c.key)) };
   }
-  function phNqNext(S, skip) {
-    const H = p => p.reduce((s, x) => (x > 0 ? s - x * Math.log2(x) : s), 0), H0 = H(S.p), dx = phNqDx();
-    const Fs = S.ids.map(id => PH_FORMULAS[id]);
-    let best = null;
-    ["p", "d"].forEach(kind => {
-      (kind === "d" ? PH_BING_SIGNS : PH_REN_SIGNS).forEach(r => {
-        const k = r[0];
-        if (S.answered.has(kind + ":" + k) || skip.has(k)) return;
-        if (phLinkOpp(k).some(o => S.eff[kind][o] === true)) return;   // its opposite is already Yes: answered
-        if (phTriPrefillKeys(k).some(c => S.clueKeys.has(c))) return;                 // the chart / history already says
-        let q = 0;
-        const ys = Fs.map((F, i) => { const y = phNqYes((F[kind === "d" ? "bing" : "ren"] || {})[k]); q += S.p[i] * y; return y; });
-        if (q < 1e-4 || q > 1 - 1e-4) return;
-        let hy = 0, hn = 0;
-        Fs.forEach((F, i) => { const py = S.p[i] * ys[i] / q, pn = S.p[i] * (1 - ys[i]) / (1 - q); if (py > 0) hy -= py * Math.log2(py); if (pn > 0) hn -= pn * Math.log2(pn); });
-        let ig = (H0 - q * hy - (1 - q) * hn) * (dx.has(kind + ":" + k) ? 0.5 : 1) + (kind === "p" ? 0.003 : 0);
-        if (!best || ig > best.ig + 1e-9) best = { kind, r, ig };
-      });
-    });
-    if (!best || best.ig <= 0.005) return null;
-    // "why this one": the likeliest family that rates it highest against the likeliest that rates it lowest
-    const wOf = i => (Fs[i][best.kind === "d" ? "bing" : "ren"] || {})[best.r[0]] || 0;
-    const alive = S.ids.map((id, i) => i).filter(i => S.p[i] >= 0.04).sort((a, b) => S.p[b] - S.p[a]);
-    if (alive.length >= 2) {
-      const hi = alive.slice().sort((a, b) => wOf(b) - wOf(a) || S.p[b] - S.p[a])[0], lo = alive.slice().sort((a, b) => wOf(a) - wOf(b) || S.p[b] - S.p[a])[0];
-      if (hi !== lo && wOf(hi) !== wOf(lo)) best.why = wOf(hi) >= 3
-        ? `Separates <b>${esc(Fs[hi].name)}</b> (key sign) from <b>${esc(Fs[lo].name)}</b> (${wOf(lo) < 0 ? "counts against it" : wOf(lo) === 0 ? "not typical" : "weaker sign"}).`
-        : `Helps tell <b>${esc(Fs[hi].name)}</b> and <b>${esc(Fs[lo].name)}</b> apart.`;
+  // ---- SEVERAL QUESTIONS AT ONCE (her 2026-10-13: "for quick assessment questions, show multiple instead of just 1"; mock
+  // fbr-quick-assess-multi-mock-2026-10-13.html; her picks, all my recommendations: 4 at once, A Rows, the answered row leaves and the next
+  // best slides in, a Bing / Ren twin pair is ONE row with a Now and a Usually line). The rows are chosen TOGETHER: each new row is the sign
+  // that, asked with the rows already on screen, leaves the least doubt (phNqJointH), so four rows do not all split the same two families.
+  // A twin pair counts once when rows are chosen (it is one fact asked twice); both answers still count (each is its own write and its own
+  // multiply). Nothing is re-ranked while she reads: only the seat of an answered row is refilled. A sign is askable when it is not answered,
+  // not skipped, its opposite is not already Yes and the chart / history has not already said it (the old phNqNext rules, unchanged).
+  const PH_QA_AT_ONCE = 4;
+  function phNqAskable(S, skip, kind, k) {
+    return !(S.answered.has(kind + ":" + k) || skip.has(k) || phLinkOpp(k).some(o => S.eff[kind][o] === true) || phTriPrefillKeys(k).some(c => S.clueKeys.has(c)));
+  }
+  const phNqYsOf = (S, kind, k) => S.ids.map(id => phNqYes((PH_FORMULAS[id][kind === "d" ? "bing" : "ren"] || {})[k]));
+  // the doubt (bits) left, on average, after ALL of these signs are answered; each entry is the chance of a Yes per family
+  function phNqJointH(p, list) {
+    const H = w => w.reduce((s, x) => (x > 0 ? s - x * Math.log2(x) : s), 0), n = list.length;
+    let e = 0;
+    for (let m = 0; m < (1 << n); m++) {
+      const w = p.slice();
+      list.forEach((ys, j) => { const yes = (m >> j) & 1; for (let i = 0; i < w.length; i++) w[i] *= yes ? ys[i] : 1 - ys[i]; });
+      const t = w.reduce((a, b) => a + b, 0);
+      if (t > 0) e += t * H(w.map(x => x / t));
     }
-    return best;
+    return e;
+  }
+  // "why this one": the likeliest family that rates it highest against the likeliest that rates it lowest
+  function phNqWhy(S, kind, key) {
+    const Fs = S.ids.map(id => PH_FORMULAS[id]), wOf = i => (Fs[i][kind === "d" ? "bing" : "ren"] || {})[key] || 0;
+    const alive = S.ids.map((id, i) => i).filter(i => S.p[i] >= 0.04).sort((a, b) => S.p[b] - S.p[a]);
+    if (alive.length < 2) return "";
+    const hi = alive.slice().sort((a, b) => wOf(b) - wOf(a) || S.p[b] - S.p[a])[0], lo = alive.slice().sort((a, b) => wOf(a) - wOf(b) || S.p[b] - S.p[a])[0];
+    if (hi === lo || wOf(hi) === wOf(lo)) return "";
+    return wOf(hi) >= 3
+      ? `Separates <b>${esc(Fs[hi].name)}</b> (key sign) from <b>${esc(Fs[lo].name)}</b> (${wOf(lo) < 0 ? "counts against it" : wOf(lo) === 0 ? "not typical" : "weaker sign"}).`
+      : `Helps tell <b>${esc(Fs[hi].name)}</b> and <b>${esc(Fs[lo].name)}</b> apart.`;
+  }
+  const phNqLabel = (kind, k) => ((kind === "d" ? PH_BING_SIGNS : PH_REN_SIGNS).find(r => r[0] === k) || [k, k])[1];
+  // a row is finished when none of its signs is askable any more (answered here, on the lists, or settled by a link)
+  const phQaRowOpen = (S, skip, sl) => sl.signs.some(s => phNqAskable(S, skip, s.kind, s.key));
+  // the next row, chosen together with the rows on screen; null when nothing would narrow it further
+  function phQaPickRow(S, skip, slots) {
+    const dx = phNqDx(), tw = phFbrTwins(), cands = new Map();
+    ["p", "d"].forEach(kind => (kind === "d" ? PH_BING_SIGNS : PH_REN_SIGNS).forEach(r => {
+      const k = r[0];
+      if (!phNqAskable(S, skip, kind, k)) return;
+      const ys = phNqYsOf(S, kind, k);
+      let q = 0; ys.forEach((y, i) => { q += S.p[i] * y; });
+      if (q < 1e-4 || q > 1 - 1e-4) return;
+      cands.set(kind + ":" + k, { kind, k, ys, dxf: dx.has(kind + ":" + k) ? 0.5 : 1, pb: kind === "p" ? 0.003 : 0 });
+    }));
+    const onScreen = new Set();
+    slots.forEach(sl => sl.signs.forEach(s => onScreen.add(s.kind + ":" + s.key)));
+    // rows still waiting for an answer: each counts once, by its first open sign
+    const pending = [];
+    slots.forEach(sl => { const s = sl.signs.find(x => phNqAskable(S, skip, x.kind, x.key)); if (s) pending.push(phNqYsOf(S, s.kind, s.key)); });
+    const base = phNqJointH(S.p, pending);
+    let best = null;
+    cands.forEach(c => {
+      if (onScreen.has(c.kind + ":" + c.k)) return;
+      const twK = c.kind === "d" ? tw.b2r.get(c.k) : tw.r2b.get(c.k), twC = twK ? cands.get((c.kind === "d" ? "p:" : "d:") + twK) : null;
+      // a Ren sign whose Bing twin can still be asked is asked through that twin's row
+      if (c.kind === "p" && twC && !onScreen.has("d:" + twK)) return;
+      const gain = (base - phNqJointH(S.p, pending.concat([c.ys]))) * c.dxf + c.pb;
+      if (!best || gain > best.gain + 1e-9) best = { gain, c, twC: c.kind === "d" && twC && !onScreen.has("p:" + twK) ? twC : null };
+    });
+    if (!best || best.gain <= 0.005) return null;
+    return { id: ++phQaSlotId, signs: [{ kind: best.c.kind, key: best.c.k }].concat(best.twC ? [{ kind: "p", key: best.twC.k }] : []), phase: "", born: Date.now() };
+  }
+  var phQaSlots = new Map();     // patient key -> [{ id, signs: [{ kind, key }], phase: "" | "answered" | "fading", born }] the rows on screen (view state, never saved)
+  var phQaSlotId = 0;
+  var phQaSettling = new Set();  // patient keys with a "the answered row leaves" timer running (view state)
+  // an answered row shows its tick for a beat, fades, then its seat is refilled on the next draw
+  function phQaSettleLater(name) {
+    const pk = phPatientKey(name);
+    if (phQaSettling.has(pk)) return;
+    phQaSettling.add(pk);
+    setTimeout(() => {
+      (phQaSlots.get(pk) || []).forEach(sl => { if (sl.phase === "answered") sl.phase = "fading"; });
+      phTriRefresh(name);
+      setTimeout(() => {
+        phQaSettling.delete(pk);
+        const rest = (phQaSlots.get(pk) || []).filter(sl => sl.phase !== "fading");
+        phQaSlots.set(pk, rest);
+        phTriRefresh(name);
+        if (rest.some(sl => sl.phase === "answered")) phQaSettleLater(name);
+      }, 340);
+    }, 480);
   }
   // one plain line about what an answer just changed (families that fell hard + opposites it settled)
   function phNqChangeLine(before, after, ids, label, val, autoLabels) {
@@ -70381,17 +70470,35 @@ or changing anything in Cliniko.
         <div class="ph-qa-btns"><button type="button" class="ph-rc-chip" data-qa-use="${esc(id)}">Filter to ${esc(nm)}</button><button type="button" class="ph-pfw-link" data-qa-keep="1">Keep asking</button>${undo}</div>
         ${bars}${lastLine}</div>`;
     }
-    const nq = phNqNext(S, phQaSkipSet(name));
-    if (!nq) return `<div class="ph-qa-card ph-nq"><span class="ph-qa-done">✓ Nothing left that would narrow it further</span>${undo}${bars}${lastLine}</div>`;
-    return `<div class="ph-qa-card ph-nq">
-      <div class="ph-qa-lead">${nq.kind === "d" ? "Bing · what is wrong now" : "Ren · lifelong build"}</div>
-      <div class="ph-qa-q">${esc(nq.r[1])}?</div>
-      <div class="ph-nq-why">${nq.why || ""}</div>
-      <div class="ph-qa-btns">
-        <button type="button" class="ph-rc-chip" data-qa-ans="yes" data-qa-kind="${nq.kind}" data-qa-key="${esc(nq.r[0])}">Yes</button>
-        <button type="button" class="ph-rc-chip" data-qa-ans="no" data-qa-kind="${nq.kind}" data-qa-key="${esc(nq.r[0])}">No</button>
-        <button type="button" class="ph-pfw-link" data-qa-skip="${esc(nq.r[0])}">Not sure</button>${undo}
-      </div>${bars}${lastLine}</div>`;
+    // the rows on screen: rows finished elsewhere (a tap on the lists, an opposite settled) leave like any answered row, then empty seats refill
+    const skip = phQaSkipSet(name);
+    let slots = phQaSlots.get(pk);
+    if (!slots) { slots = []; phQaSlots.set(pk, slots); }
+    let leaving = false;
+    slots.forEach(sl => { if (!sl.phase && !phQaRowOpen(S, skip, sl)) sl.phase = "answered"; if (sl.phase === "answered") leaving = true; });
+    while (slots.length < PH_QA_AT_ONCE && !leaving) {
+      const row = phQaPickRow(S, skip, slots);
+      if (!row) break;
+      slots.push(row);
+    }
+    if (leaving) phQaSettleLater(name);
+    if (!slots.length) return `<div class="ph-qa-card ph-nq"><span class="ph-qa-done">✓ Nothing left that would narrow it further</span>${undo}${bars}${lastLine}</div>`;
+    const chip = (s, yes) => {
+      const v = S.eff[s.kind][s.key] === true ? true : S.picks[s.kind][s.key] === false ? false : null;
+      return `<button type="button" class="ph-rc-chip${v === yes ? " on" : ""}" data-qa-ans="${yes ? "yes" : "no"}" data-qa-kind="${s.kind}" data-qa-key="${esc(s.key)}"${v !== null ? " disabled" : ""}>${yes ? "Yes" : "No"}</button>`;
+    };
+    const rowsHtml = slots.map(sl => {
+      const cls = `ph-qm-row${sl.phase === "fading" ? " gone" : ""}${Date.now() - sl.born < 600 ? " in" : ""}`;
+      const notSure = `<button type="button" class="ph-pfw-link" data-qa-skip="${esc(sl.signs.map(s => s.key).join(","))}">Not sure</button>`;
+      if (sl.signs.length === 2) {
+        // one fact asked twice: how it is now (the Bing sign) and how it has always been (its Ren twin)
+        const [b, r] = sl.signs, bl = phNqLabel(b.kind, b.key), rl = phNqLabel(r.kind, r.key);
+        return `<div class="${cls}"><div class="ph-qm-main"><div class="ph-qm-tag"><b>Bing + Ren · now and lifelong</b></div><div class="ph-qm-q">${esc(bl)}?</div><div class="ph-qm-why">${phNqWhy(S, b.kind, b.key)}</div>${rl.replace(/\?$/, "") === bl ? "" : `<div class="ph-qm-why">Usually means: “${esc(rl)}”</div>`}</div><div class="ph-qm-acts2"><div class="ph-qm-al"><span class="tg">Now</span>${chip(b, true)}${chip(b, false)}</div><div class="ph-qm-al"><span class="tg">Usually</span>${chip(r, true)}${chip(r, false)}</div><div class="ph-qm-al"><span class="tg"></span>${notSure}</div></div></div>`;
+      }
+      const s = sl.signs[0];
+      return `<div class="${cls}"><div class="ph-qm-main"><div class="ph-qm-tag"><b>${s.kind === "d" ? "Bing · what is wrong now" : "Ren · lifelong build"}</b></div><div class="ph-qm-q">${esc(phNqLabel(s.kind, s.key))}?</div><div class="ph-qm-why">${phNqWhy(S, s.kind, s.key)}</div></div><div class="ph-qm-acts">${chip(s, true)}${chip(s, false)}${notSure}</div></div>`;
+    }).join("");
+    return `<div class="ph-qa-card ph-nq ph-qm"><div class="ph-qm-hd"><b>${slots.length === 1 ? "Next question" : `Next ${slots.length} questions`}</b><span>asked together</span><span class="undo">${undo}</span></div>${rowsHtml}${bars}${lastLine}</div>`;
   }
   // ---- PATTERNS page (renderer). Reads phPatCompute and draws the picture:
   // a ring of clue counts, the shared body figure (PH_BODY_GEOM, the same
