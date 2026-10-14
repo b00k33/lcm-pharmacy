@@ -72650,6 +72650,29 @@ or changing anything in Cliniko.
   // Her 2026-10-14 ("split frequent urination and nocturia ... make them linked. if one is ticked, the other gets ticked too"): a LINKED pair ticks together.
   // Whatever ticks one (her tap, a clue, a chart, her form, last visit) shows the other ticked too; her own answer on the other always wins. Same kind only.
   const PH_TRI_LINKED = { urine_frequent_tend: "nocturia_tend", nocturia_tend: "urine_frequent_tend", urine_frequent_now: "nocturia_now", nocturia_now: "urine_frequent_now" };
+  // Her 2026-10-14 (my question 7, her pick "Yes, tick it for me"): a line that states two facts at once ticks itself once BOTH halves are ticked
+  // (by her tap, a chart, a clue, her form ...). Each half is a list of alternatives: a sign of the same kind, or "clue:<Patterns clue key>". Her own
+  // answer on the line always wins, and a half is never itself a two-fact line, so nothing chains. A new two-fact line goes here, nowhere else.
+  const PH_TRI_COMPOUND = {
+    p: {
+      palp_chest_oppress_tend: [["palp_tend"], ["chest_stuffy_tend"]],
+      thirst_wasting_tend: [["thirst_intense_tend", "thirst_tend"], ["weight_loss_tend"]],
+      fatigue_pulse_sunken_lax: [["fatigue_tend"], ["pulse_sinking", "pulse_weak"]],
+      period_early_red_tend: [["clue:bright_blood"], ["clue:short_cycle"]],
+      hot_irritable_tend: [["body_hot_tend", "clue:heat_feel"], ["irritable_restless_tend", "irritable_mood"]],
+      fatigue_lower_weak: [["fatigue_tend"], ["legs_knees_weak_tend", "back_knee_weak_ache_tend", "cold_lower_body_tend"]]
+    },
+    d: {
+      palp_chest_oppress_now: [["palp"], ["chest_oppress"]],
+      thirst_wasting_now: [["thirst_intense"], ["weight_loss_now"]],
+      period_early_red_now: [["clue:bright_blood"], ["clue:short_cycle"]]
+    }
+  };
+  // the alternative that is on in each half, or null when a half has none on
+  function phTriCompoundHit(spec, eff, clueKeys) {
+    const hit = spec.map(alts => alts.find(a => a.indexOf("clue:") === 0 ? clueKeys.has(a.slice(5)) : eff[a] === true));
+    return hit.every(Boolean) ? hit : null;
+  }
   // The short Fang Bing Ren questions on the intake form (her 2026-10-13: "prefill a small amount of questions to make my work faster"):
   // the patient's Yes answers tick signs the way a chart or Medical history does, a tap of hers always wins. Only a Yes is stored (a No or
   // a skip is just blank). rec.fbrForm = { v:1, at:"YYYY-MM-DD" (the day she sent it), p:{ renKey:true }, d:{ bingKey:true } }, written only by
@@ -72689,6 +72712,8 @@ or changing anything in Cliniko.
       eff[r[0]] = picks[r[0]] !== undefined ? picks[r[0]] : (known || carried || chartKnown || hxKnown || bldKnown || bodyKnown || enKnown || impliedKnown || formKnown || cycKeys.has(r[0]));
     });
     Object.keys(PH_TRI_LINKED).forEach(k => { if (k in eff && picks[k] === undefined && !eff[k] && eff[PH_TRI_LINKED[k]] === true) eff[k] = true; });
+    const cmp = PH_TRI_COMPOUND[kind] || {};
+    Object.keys(cmp).forEach(k => { if (k in eff && picks[k] === undefined && !eff[k] && phTriCompoundHit(cmp[k], eff, clueKeys)) eff[k] = true; });
     return eff;
   }
   // Why a row shows pre-ticked, for its tooltip -- same precedence phTriEffective uses.
@@ -72721,6 +72746,11 @@ or changing anything in Cliniko.
     if (kind === "p" && phTriUsualKnown(rec, key)) return "Already answered in the usual answers — tap to override";
     if (kind === "p") { const bs = phBodySigns(rec); if (bs && bs[key]) return "From the measurements (" + bs[key] + ") — tap to override"; }
     if (kind === "p") { const as = phAgeSigns(rec); if (as[key]) return as[key] + " — tap to override"; }
+    if ((PH_TRI_COMPOUND[kind] || {})[key]) {
+      const tp = phTriToday(rec), e = phTriEffective(rec, name, kind, kind === "d" ? tp.d : tp.p, kind === "d" ? tp.prevD : undefined);
+      const hh = phTriCompoundHit(PH_TRI_COMPOUND[kind][key], e, new Set(clues.map(c => c.key))), pool = kind === "d" ? PH_BING_SIGNS : PH_REN_SIGNS;
+      if (hh) return "Both halves are ticked: " + hh.map(a => a.indexOf("clue:") === 0 ? ((clues.find(c => c.key === a.slice(5)) || {}).text || a.slice(5)) : ((pool.find(r => r[0] === a) || [])[1] || a)).join(" + ") + " — tap to override";
+    }
     if (PH_TRI_LINKED[key]) {
       const o = PH_TRI_LINKED[key], tp = phTriToday(rec), e = phTriEffective(rec, name, kind, kind === "d" ? tp.d : tp.p, kind === "d" ? tp.prevD : undefined);
       if (e[o] === true) { const r = (kind === "d" ? PH_BING_SIGNS : PH_REN_SIGNS).find(x => x[0] === o); return "Ticked with " + (r ? r[1] : o) + " (the two are linked) — tap to override"; }
