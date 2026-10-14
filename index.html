@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261014-790000">
+<meta name="lcm-build" content="20261014-800000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -73677,7 +73677,7 @@ or changing anything in Cliniko.
     "Energy": "energy", "Eyes": "face", "Family history": "other", "Fever": "temp", "Groin": "hips", "Hair": "skin", "Hands & feet": "handsfeet", "Head": "headmind",
     "Heart": "heart", "Hip & lower abdomen": "hips", "Illness": "other", "Immunity": "lungs", "Joints": "joints", "Knees": "joints", "Legs": "legs", "Limbs": "muscles",
     "Lips": "face", "Local area": "skin", "Mind & mood": "headmind", "Mouth & throat": "throat", "Muscles": "muscles", "Neck & shoulders": "neck", "Nerves": "headmind",
-    "Nose": "face", "Pain": "pain", "Periods": "pelvis", "Phlegm": "lungs", "Pulse": "wrist", "Sensation": "belly", "Sex & fertility": "pelvis", "Signs": "other",
+    "Nose": "face", "Pain": "pain", "Periods": "pelvis", "Phlegm": "lungs", "Pulse": "wrist", "Sensation": "belly", "Sex": "skin", "Sex & fertility": "pelvis", "Signs": "other",
     "Skin": "skin", "Sleep": "headmind", "Stomach": "stomach", "Sweat": "sweat", "Swelling": "legs", "Symptoms": "cycle", "Teeth": "face", "Thirst": "throat",
     "Tongue": "tongue", "Tongue coat": "tongue", "Ulcer": "skin", "Urine": "bladder", "Vaginal discharge": "pelvis", "Vomiting & diarrhea": "stomach"
   };
@@ -73704,6 +73704,19 @@ or changing anything in Cliniko.
     return PH_FBB_SUBJ[subj] || "other";
   }
   const phFbbPlaceLab = id => (PH_FBB_PLACE[id] || PH_FBB_WHOLE.find(w => w.id === id) || { lab: id }).lab;
+  // the chart draws THIS patient's body (her 2026-10-14 "show men"): a man is not shown the breast, period, discharge, womb or miscarriage signs, a woman not
+  // the seminal-emission or impotence ones; no sex on record = every sign. Only the picture: the board and every score still count them all.
+  const PH_FBB_ONLY_F_SUBJ = new Set(["Breasts", "Chest & breasts", "Periods", "Vaginal discharge"]);
+  const PH_FBB_ONLY_F = new Set(["mastitis_acute", "breast_hyperplasia", "pms_now", "menopause_sx", "tubal_block", "endometriosis", "fibroids", "pelvic_inflammation", "miscarriage_now", "miscarriage_tend", "postpartum_insomnia", "abd_pain_post_tubal", "pms_irritable_tend", "acne_premenstrual_tend", "sex_female"]);
+  const PH_FBB_ONLY_M = new Set(["seminal_emission", "impotence", "impotence_tend"]);
+  function phFbbSexOk(sex, key, lab) {
+    if (sex === "F") return !PH_FBB_ONLY_M.has(key);
+    if (sex !== "M") return true;
+    const m = String(lab || "").match(/^([^:]+):/);
+    return !PH_FBB_ONLY_F.has(key) && !(m && PH_FBB_ONLY_F_SUBJ.has(m[1]));
+  }
+  // the pelvis place says what is on it for this patient
+  const phFbbLab = (sex, id) => id !== "pelvis" ? phFbbPlaceLab(id) : sex === "F" ? "Womb & periods" : sex === "M" ? "Sex & fertility" : "Pelvis & fertility";
   // the family's colour for the glows; a near-white family (Shi Gao, Gui Zhi) is drawn a shade deeper so its glow still shows on the skin
   function phFbbCol(famId) {
     const c = PH_FBR_HERB_COLOUR[famId] || { bg: "#8A9498", fg: "#FFFFFF" }, bg = /^#[0-9a-f]{6}$/i.test(c.bg) ? c.bg : "#8A9498";
@@ -73719,12 +73732,12 @@ or changing anything in Cliniko.
     const effD = (pre && pre.effD) || phTriEffective(rec, name, "d", today.d, today.prevD), effP = (pre && pre.effP) || phTriEffective(rec, name, "p", today.p);
     const pl = {};
     [["d", f.bing || {}, effD, today.d], ["p", f.ren || {}, effP, today.p]].forEach(([kind, wts, eff, picks]) => phTriAll(kind, fam).forEach(r => {
-      const w = phFbrPts(wts, r); if (!(w > 0)) return;
+      const w = phFbrPts(wts, r); if (!(w > 0) || !phFbbSexOk(rec.sex, r[0], r[1])) return;
       const lab = String(r[1]), m = lab.match(/^([^:]+):\s*(.*)$/), place = phFbbPlaceOf(r[0], lab);
       const on = eff[r[0]] === true, auto = on && picks[r[0]] === undefined;
       const s = { kind, key: r[0], w, lab, desc: m ? m[2] : lab, place, on, auto, no: picks[r[0]] === false };
       if (auto && !(pre && pre.small)) { try { s.why = phTriAutoWhy(rec, name, kind, r[0], kind === "d" ? today.prevD : undefined); } catch (e) { s.why = ""; } }
-      const p = pl[place] || (pl[place] = { id: place, signs: [], w: 0, wt: 0 });
+      const p = pl[place] || (pl[place] = { id: place, lab: phFbbLab(rec.sex, place), signs: [], w: 0, wt: 0 });
       p.signs.push(s); p.w += w; if (on) p.wt += w;
     }));
     Object.values(pl).forEach(p => {
@@ -73821,7 +73834,7 @@ or changing anything in Cliniko.
     return `<div class="ph-fbb-lanes">${col("d")}${col("p")}</div>`;
   }
   function phFbbListHtml(M, chg) {
-    const grp = (p, nd) => `<div class="ph-fbb-grp" data-fbb-pl="${p.id}"><div class="bh">${nd}<b>${esc(phFbbPlaceLab(p.id))}</b><span class="cnt${chg === p.id ? " roll" : ""}">${p.nt} of ${p.n}</span><span class="wb"><i style="width:${Math.round(100 * p.wt / p.w)}%"></i></span></div>${phFbbLanes(p)}</div>`;
+    const grp = (p, nd) => `<div class="ph-fbb-grp" data-fbb-pl="${p.id}"><div class="bh">${nd}<b>${esc(p.lab)}</b><span class="cnt${chg === p.id ? " roll" : ""}">${p.nt} of ${p.n}</span><span class="wb"><i style="width:${Math.round(100 * p.wt / p.w)}%"></i></span></div>${phFbbLanes(p)}</div>`;
     return M.order.map(p => grp(p, `<span class="nd${p.nt ? "" : " ghost"}">${M.num[p.id]}</span>`)).join("")
       + (M.whole.length ? `<div class="ph-fbb-sep">No one place</div>` + M.whole.map(w => grp(w, `<span class="nd ghost ic${w.nt ? " hot" : ""}"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">${PH_FBB_WHOLE.find(x => x.id === w.id).ic}</svg></span>`)).join("") : "");
   }
@@ -73872,8 +73885,8 @@ or changing anything in Cliniko.
     const card = phFbbCard(), name = phPfwName(); if (!card || !name) return;
     const p = phFbbModel(name, card.dataset.fbb).pl[id]; if (!p) return;
     const el = document.createElement("div");
-    el.className = "ph-fbb-pop" + (keep ? " still" : ""); el.dataset.fbbPl = id; el.setAttribute("role", "group"); el.setAttribute("aria-label", phFbbPlaceLab(id));
-    el.innerHTML = `<div class="ph"><b>${esc(phFbbPlaceLab(id))}</b><span class="cnt">${p.nt} of ${p.n}</span></div>${phFbbLanes(p)}`;
+    el.className = "ph-fbb-pop" + (keep ? " still" : ""); el.dataset.fbbPl = id; el.setAttribute("role", "group"); el.setAttribute("aria-label", p.lab);
+    el.innerHTML = `<div class="ph"><b>${esc(p.lab)}</b><span class="cnt">${p.nt} of ${p.n}</span></div>${phFbbLanes(p)}`;
     card.appendChild(el);
     if (keep) { el.style.left = keep.left; el.style.top = keep.top; }
     else {
