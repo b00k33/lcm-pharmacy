@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261014-620000">
+<meta name="lcm-build" content="20261014-630000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -29897,10 +29897,34 @@
       if (!phApptParseDateTimeLine(l)) patient = phApptCleanName(l);
       break;
     }
+    // MANY patients in one paste (her 2026-10-14, after a list of 281 visits for 87 patients all landed under the
+    // first name): a name alone on its line -- after a blank line or at the very top -- directly above a date/time
+    // line heads that patient's visits, up to the next heading. It counts only when TWO different names head the
+    // paste; one name is the ordinary single-patient paste above, untouched. Cliniko's own rows never qualify
+    // (tab-separated, or carry digits; "Past appt." and the status words are skipped by name).
+    const heads = [];
+    hIdx.forEach(li => {
+      let k = li - 1;
+      while (k >= 0 && !lines[k].trim()) k--;
+      if (k < 0 || heads.some(h => h.k === k)) return;
+      const l = lines[k].trim();
+      if (k > 0 && lines[k - 1].trim()) return;
+      if (phApptParseDateTimeLine(l) || PH_APPT_HIST_SKIP.test(l) || /^(upcoming|past)\b/i.test(l)) return;
+      if (/[\t\d]/.test(l) || l.length > 60 || !/^\p{L}[\p{L}\p{M}'’ .()-]*$/u.test(l)) return;
+      heads.push({ k, name: phApptCleanName(l) });
+    });
+    const multi = heads.length >= 2 && new Set(heads.map(h => phPatientKey(h.name))).size >= 2;
     const out = [];
     hIdx.forEach((li, n) => {
       const dt = phApptParseDateTimeLine(lines[li]);
-      const end = hIdx[n + 1] != null ? hIdx[n + 1] : lines.length;
+      let end = hIdx[n + 1] != null ? hIdx[n + 1] : lines.length;
+      let who = patient;
+      if (multi) {
+        const nx = heads.find(h => h.k > li);
+        if (nx && nx.k < end) end = nx.k;
+        who = "";
+        heads.forEach(h => { if (h.k < li) who = h.name; });
+      }
       let skip = false, service = "";
       for (let k = li + 1; k < end; k++) {
         const l = lines[k].trim();
@@ -29913,7 +29937,7 @@
       }
       if (skip || !service) return;
       const en = { date: dt.dateKey, time: dt.time, service, phone: "" };
-      if (patient) en.patient = patient; else en.needsName = true;   // she pasted from mid-way through -- ask, don't guess
+      if (who) en.patient = who; else en.needsName = true;   // she pasted from mid-way through -- ask, don't guess
       out.push(en);
     });
     return out.length ? out : null;
@@ -31962,7 +31986,10 @@
       const other = !!(fpKey && patient && phPatientKey(patient) !== fpKey);
       return { i, src: en, date: en.date, time: o.time || en.time, service: en.service, patient, other, dropped: other ? !st.pKeep.has(i) : st.pDrop.has(i) };
     });
-    return { rows, needsNameN, waiting: needsNameN > 0 && !histName };
+    // a paste headed by several names (2026-10-14) can still hold a few lines above the first heading with no
+    // name: those wait for a typed name, while every named line shows and imports as it is. Only a paste where
+    // NO line has a name stops at the "no patient name" note.
+    return { rows, needsNameN, waiting: needsNameN > 0 && !histName && needsNameN === parsed.length };
   }
   function phApptImportBarSync(m) {
     const bar = phApptEl("phApptImportBar");
@@ -31970,8 +31997,9 @@
     const keep = m.waiting ? [] : m.rows.filter(r => !r.dropped && r.patient);
     bar.hidden = !keep.length;
     const days = new Set(keep.map(r => r.date)).size;
+    const pats = new Set(keep.map(r => phPatientKey(r.patient))).size;
     const btn = bar.firstElementChild;
-    const html = `${phApptIc("check")}<span>Import <span class="n">${keep.length}</span> appointment${keep.length === 1 ? "" : "s"}${days > 1 ? ` across ${days} days` : ""}</span>`;
+    const html = `${phApptIc("check")}<span>Import <span class="n">${keep.length}</span> appointment${keep.length === 1 ? "" : "s"}${days > 1 ? ` across ${days} days` : ""}${pats > 1 ? ` · ${pats} patients` : ""}</span>`;
     if (btn && btn.dataset.sig !== html) { btn.dataset.sig = html; btn.innerHTML = html; }
   }
   function phApptPreviewSync() {
@@ -32000,10 +32028,10 @@
       const xTitle = r.dropped ? "Put this line back" : "Leave this line out";
       return `<div class="ap-prow${wdays0 && wdays0.includes(parseKey(r.date).getDay()) ? " wk" : ""}${r.dropped ? " off" : ""}" data-pi="${r.i}">
         <button type="button" class="tm" data-ap-pedit="time" title="Change the time">${esc(phCkTime12(r.time))}</button>
-        <button type="button" class="nm" data-ap-pedit="name" title="Change the name">${esc(r.patient)}</button>
+        <button type="button" class="nm" data-ap-pedit="name" title="Change the name">${esc(r.patient || "Name needed")}</button>
         ${phApptKindHtml(r.service)}${phApptEtHtml(r, live)}
         ${r.service ? `<span class="svc" title="${esc(r.service)}">${esc(r.service)}</span>` : ""}
-        ${r.other ? `<span class="match new" title="This line names someone else, so it is left out of ${esc(phTitle(st.forPatient))}'s appointments">someone else</span>` : `<span class="match${isKnown ? "" : " new"}" title="${isKnown ? "Matched to an existing patient" : "Not seen before — imports fine anyway"}">${isKnown ? phApptIc("check") + "matched" : "new name"}</span>`}
+        ${!r.patient ? `<span class="match new" title="No name above this line, so it is not imported until it has one">no name</span>` : r.other ? `<span class="match new" title="This line names someone else, so it is left out of ${esc(phTitle(st.forPatient))}'s appointments">someone else</span>` : `<span class="match${isKnown ? "" : " new"}" title="${isKnown ? "Matched to an existing patient" : "Not seen before — imports fine anyway"}">${isKnown ? phApptIc("check") + "matched" : "new name"}</span>`}
         <button type="button" class="x" data-ap-pdrop="1" title="${xTitle}" aria-label="${xTitle}">${phApptIc(r.dropped ? "undo" : "x")}</button>
       </div>`;
     };
@@ -32046,7 +32074,7 @@
     b.type = "button"; b.dataset.apPedit = kind;
     b.className = kind === "time" ? "tm" : "nm";
     b.title = kind === "time" ? "Change the time" : "Change the name";
-    b.textContent = kind === "time" ? phCkTime12(r.time) : r.patient;
+    b.textContent = kind === "time" ? phCkTime12(r.time) : (r.patient || "Name needed");
     inp.replaceWith(b);
     if (kind === "name") {
       const isKnown = phMergeAllPatients().has(phPatientKey(r.patient)), mt = row.querySelector(".match");
@@ -32373,12 +32401,13 @@
     const added = phApptImport(entries);
     const ids = phApptList().filter(a => !before.has(a.id)).map(a => a.id);
     const daysN = new Set(entries.map(p => p.date)).size;
+    const patsN = new Set(entries.map(p => phPatientKey(p.patient))).size;
     st.text = ""; st.historyName = st.forPatient || ""; st.pEdit = {}; st.pDrop = new Set(); st.pKeep = new Set(); st.dirty = true;
     const ta = phApptEl("phApptPaste"), hn = phApptEl("phApptHistName");
     if (ta) ta.value = "";
     if (hn) hn.value = st.historyName;
     phApptPreviewSync(); phApptListSync(); phApptClearBtnSync();
-    phApptToast(`${entries.length} appointment${entries.length === 1 ? "" : "s"} across ${daysN} day${daysN === 1 ? "" : "s"} — ${added} new, ${entries.length - added} refreshed${phApptLastAccounts ? ` · ${phApptLastAccounts} patient account${phApptLastAccounts === 1 ? "" : "s"} made` : ""}`,
+    phApptToast(`${entries.length} appointment${entries.length === 1 ? "" : "s"}${patsN > 1 ? ` for ${patsN} patients` : ""} across ${daysN} day${daysN === 1 ? "" : "s"} — ${added} new, ${entries.length - added} refreshed${phApptLastAccounts ? ` · ${phApptLastAccounts} patient account${phApptLastAccounts === 1 ? "" : "s"} made` : ""}`,
       ids.length ? () => { phApptDeleteIds(ids); st.dirty = true; phApptListSync(); } : null);
   }
   function phApptClearPaste() {
