@@ -49151,7 +49151,7 @@ or changing anything in Cliniko.
   // phase, the plan block says the plan
   function presBandCyclePlan(t) {
     const plan = t && t.id && !presIsFormula(t) ? phTpShownPlan(presPatientFor(t)) : null;
-    return plan && PH_TP_CYCLE_TEMPLATES.includes(plan.templateName) ? plan : null;
+    return plan && PH_TP_CYCLE_TEMPLATES.includes(plan.templateName) && (phPatientPeek(presPatientFor(t)) || {}).sex !== "M" ? plan : null;   // a man: no cycle day in the band (her 2026-10-14 audit)
   }
   function presBandSubText(t, isF, isNew) {
     if (isF) return "Formula";
@@ -56077,8 +56077,9 @@ or changing anything in Cliniko.
     t && PH_CASE_CATEGORY[t.caseType] === "msk" && phPatientKey(presPatientFor(t) || t.name || "") === key);
   const phRenTypesFor = (key, have) => {
     const facial = phRenIsFacialPatient(key);
-    const msk = phRenIsMskPatient(key);
+    const msk = phRenIsMskPatient(key), man = !!key && ((PHARMACY.patients && PHARMACY.patients[key]) || {}).sex === "M";   // a man has no BBT chart to photograph (her 2026-10-14 audit)
     return PH_REN_PHOTO_TYPES.filter(t =>
+      (t.key !== "bbt" || !man || (have && have(t.key))) &&
       (!t.face || facial || (have && have(t.key))) &&
       (!t.msk || msk || (have && have(t.key))));
   };
@@ -65449,6 +65450,7 @@ or changing anything in Cliniko.
   }
   function phCycleOn(rec) {
     if (!rec) return false;
+    if (rec.sex === "M") return false;   // her 2026-10-14 audit: a man never tracks a cycle, not even on a fertility plan (the Cycle tile, page, bar, Timeline cycle-day items and Treatment table cycle rows all read this)
     if (rec.cycleOn === true || rec.cycleOn === false) return rec.cycleOn;
     if ((rec.treatmentPlans || []).some(p => p.status !== "done" && PH_TP_CYCLE_TEMPLATES.includes(p.templateName))) return true;
     if (rec.sex !== "F") return false;
@@ -70230,10 +70232,10 @@ or changing anything in Cliniko.
   };
   // Every sign the picked formula(s) weigh, ticked first then by weight. `top` = ticked, or one of the 10 strongest unticked; only those
   // get a number and a ghost mark (a whole Chai Hu family counts 170+ signs, far too many to draw). `site` ties a sign to its mark.
-  function phRenSignItems(ms, effP, effD) {
+  function phRenSignItems(ms, effP, effD, sex) {
     const seen = {}, labR = {}, labB = {};
     PH_REN_SIGNS.forEach(s => { labR[s[0]] = s[1]; }); PH_BING_SIGNS.forEach(s => { labB[s[0]] = s[1]; });
-    ms.forEach(m => { const f = PH_FORMULAS[m]; if (!f) return; [["ren", f.ren], ["bing", f.bing]].forEach(([kind, w]) => { for (const k in w) if (w[k] > 0) { const key = kind + ":" + k; if (!seen[key] || seen[key].w < w[k]) seen[key] = { kind, key: k, w: w[k], fam: m }; } }); });
+    ms.forEach(m => { const f = PH_FORMULAS[m]; if (!f) return; [["ren", f.ren], ["bing", f.bing]].forEach(([kind, w]) => { for (const k in w) if (w[k] > 0 && (phSignSexOk(sex, k) || ((kind === "ren" ? effP : effD) || {})[k] === true)) { const key = kind + ":" + k; if (!seen[key] || seen[key].w < w[k]) seen[key] = { kind, key: k, w: w[k], fam: m }; } }); });
     const items = Object.values(seen).map(s => {
       let site = "";
       if (s.kind === "ren") { const ri = PH_REN_DRAW.findIndex(r => r[0].includes(s.key)); if (ri >= 0) site = "r:" + ri; } else if (PH_BING_SITE[s.key]) site = "b:" + s.key;
@@ -70329,7 +70331,7 @@ or changing anything in Cliniko.
     const back = view === "back";
     ctx = ctx || {};
     const effD = ctx.effD || {}, famMs = phRenFamMembers();
-    const items = famMs ? phRenSignItems(famMs, effP || {}, effD) : [];
+    const items = famMs ? phRenSignItems(famMs, effP || {}, effD, rec && rec.sex) : [];   // only the signs that fit this patient's sex
     const itemNum = site => { const it = items.find(i => i.site === site && i.num); return it ? it.num : 0; };
     const famsWeighing = (kind, ks) => Object.keys(PH_FORMULAS).filter(id => ks.some(k => (((PH_FORMULAS[id] || {})[kind] || {})[k] || 0) > 0));
     const bestOf = (kind, ks, pool) => { let b = pool[0], bw = 0; pool.forEach(m => ks.forEach(k => { const w = (((PH_FORMULAS[m] || {})[kind] || {})[k] || 0); if (w > bw) { bw = w; b = m; } })); return b; };
@@ -72566,7 +72568,7 @@ or changing anything in Cliniko.
     ["irritable_mood", "men", "mood", ["irr"]], ["irritable_mood", "sleep", "mood", ["irr"]],
     ["bloating_tend", "period", "pms", ["bloat"]], ["stool_watery_tend", "period", "pms", ["loose"]], ["constipation_tend", "period", "pms", ["const"]],
     ["edema_tend", "period", "pms", ["swell"]], ["headache_tend", "period", "pms", ["head"]], ["nausea_tend", "period", "pms", ["nausea"]], ["pms_breast_tend", "period", "pms", ["breast"]], ["acne_premenstrual_tend", "period", "pms", ["acne"]],
-    ["fatigue_tend", "period", "pms", ["tired"]], ["fatigue_tend", "meno", "sleep", ["flat"]], ["fatigue_tend", "men", "energy", ["low", "crash"]], ["fatigue_tend", "sleep", "tired", ["tired"]],
+    ["fatigue_tend", "period", "pms", ["tired"]], ["fatigue_tend", "meno", "sleep", ["flat"]],   // (the retired men "energy" and sleep "tired" questions: their saved answers count through phEnLegacyLow)
     // her 2026-10-13 (Stress & sleep audit): a saved "hard to fall asleep" answer no longer also ticks anxiety; it is a sleep answer
     ["anxiety_tend", "meno", "sleep", ["wake"]],
     ["shallow_sleep", "sleep", "fall", ["hard"]], ["shallow_sleep", "sleep", "wake", ["often", "hot", "early"]],
@@ -73382,7 +73384,7 @@ or changing anything in Cliniko.
       const ic = PH_FBR_GRP_ICONS[a.A.icon], done = a.total > 0 && a.tickN === a.total;
       const open = st.has(k) ? st.get(k) : defOpen;
       return `<details class="ph-fbr-grp enh ph-bd-area${done ? " done" : ""}"${open ? " open" : ""}><summary class="ph-fbr-grp-hd" data-fbr-sum="${k}"><span class="ph-fbr-grp-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ic}</svg></span>
-        <span class="ph-fbr-grp-lab">${esc(a.A.lab)}</span>${a.tickN ? `<span class="ph-fbr-grp-tk">${a.tickN} ticked</span>` : ""}<span class="ph-fbr-grp-cnt">${ctx.fams ? a.fitN + "/" + a.total : a.total}</span></summary>
+        <span class="ph-fbr-grp-lab">${esc(rec && rec.sex === "M" && a.A.icon === "cycle" ? "Sex & fertility" : a.A.lab)}</span>${a.tickN ? `<span class="ph-fbr-grp-tk">${a.tickN} ticked</span>` : ""}<span class="ph-fbr-grp-cnt">${ctx.fams ? a.fitN + "/" + a.total : a.total}</span></summary>
         <div class="ph-bd-body">${twinBand}${oneBand}${link}</div></details>`;
     };
     let body = "", rest = "";
@@ -73708,14 +73710,14 @@ or changing anything in Cliniko.
     "Body": "muscles", "Body sides": "sides", "Bowels": "belly", "Breasts": "breasts", "Breathing": "lungs", "Build": "skin", "Chest & breasts": "breasts",
     "Chest & ribs": "ribs", "Cold & heat": "temp", "Complexion": "face", "Constitution": "other", "Cough": "lungs", "Digestion": "stomach", "Ears": "face",
     "Energy": "energy", "Eyes": "face", "Family history": "other", "Fever": "temp", "Groin": "hips", "Hair": "skin", "Hands & feet": "handsfeet", "Head": "headmind",
-    "Heart": "heart", "Hip & lower abdomen": "hips", "Illness": "other", "Immunity": "lungs", "Joints": "joints", "Knees": "joints", "Legs": "legs", "Limbs": "muscles",
+    "Heart": "heart", "Heat": "temp", "Hip & lower abdomen": "hips", "Illness": "other", "Immunity": "lungs", "Joints": "joints", "Knees": "joints", "Legs": "legs", "Legs & knees": "legs", "Limbs": "muscles",
     "Lips": "face", "Local area": "skin", "Mind & mood": "headmind", "Mouth & throat": "throat", "Muscles": "muscles", "Neck & shoulders": "neck", "Nerves": "headmind",
     "Nose": "face", "Pain": "pain", "Periods": "pelvis", "Phlegm": "lungs", "Pulse": "wrist", "Sensation": "belly", "Sex": "skin", "Sex & fertility": "pelvis", "Signs": "other",
     "Skin": "skin", "Sleep": "headmind", "Stomach": "stomach", "Sweat": "sweat", "Swelling": "legs", "Symptoms": "cycle", "Teeth": "face", "Thirst": "throat",
     "Tongue": "tongue", "Tongue coat": "tongue", "Ulcer": "skin", "Urine": "bladder", "Vaginal discharge": "pelvis", "Vomiting & diarrhea": "stomach"
   };
   // the few signs whose subject would put them in the wrong place
-  const PH_FBB_KEY = { skin_face_red_tend: "face", numbness: "handsfeet", numbness_tend: "handsfeet", face_edema_eyes: "face", face_edema_eyes_tend: "face", desire_lie_curl: "energy", desire_lie_curl_tend: "energy", lumps_nodes: "other", eye_blur_edema: "face", body_ache_tend: "muscles", palp_edema_urine: "heart", palp_edema_urine_tend: "heart" };
+  const PH_FBB_KEY = { lower_jiao_heat_tend: "belly", skin_face_red_tend: "face", numbness: "handsfeet", numbness_tend: "handsfeet", face_edema_eyes: "face", face_edema_eyes_tend: "face", desire_lie_curl: "energy", desire_lie_curl_tend: "energy", lumps_nodes: "other", eye_blur_edema: "face", body_ache_tend: "muscles", palp_edema_urine: "heart", palp_edema_urine_tend: "heart" };
   // a "Diagnosis:" sign goes where the condition lives (first match wins; no match = Other)
   const PH_FBB_DX = [
     [/glauc|conjunct|papill|retin|\beyes?\b|mumps|parotid|sinus|rhinit|nasal|hay fever|\bears?\b|tinnit/i, "face"],
@@ -73737,16 +73739,21 @@ or changing anything in Cliniko.
     return PH_FBB_SUBJ[subj] || "other";
   }
   const phFbbPlaceLab = id => (PH_FBB_PLACE[id] || PH_FBB_WHOLE.find(w => w.id === id) || { lab: id }).lab;
-  // the chart draws THIS patient's body (her 2026-10-14 "show men"): a man is not shown the breast, period, discharge, womb or miscarriage signs, a woman not
-  // the seminal-emission or impotence ones; no sex on record = every sign. Only the picture: the board and every score still count them all.
-  const PH_FBB_ONLY_F_SUBJ = new Set(["Breasts", "Chest & breasts", "Periods", "Vaginal discharge"]);
-  const PH_FBB_ONLY_F = new Set(["mastitis_acute", "breast_hyperplasia", "pms_now", "menopause_sx", "tubal_block", "endometriosis", "fibroids", "pelvic_inflammation", "miscarriage_now", "miscarriage_tend", "postpartum_insomnia", "abd_pain_post_tubal", "pms_irritable_tend", "acne_premenstrual_tend", "sex_female"]);
-  const PH_FBB_ONLY_M = new Set(["seminal_emission", "impotence", "impotence_tend"]);
-  function phFbbSexOk(sex, key, lab) {
-    if (sex === "F") return !PH_FBB_ONLY_M.has(key);
+  // ONE rule for which signs fit this patient's sex (her 2026-10-14 "show men", then the audit "all charts correspond with patient gender"): a man is not
+  // shown the breast, period, discharge, womb or miscarriage signs, a woman not the seminal-emission or impotence ones; no sex on record = every sign. Every
+  // sign list reads it: this body chart, the Fang Bing Ren board, the Ren page, Quick assess and the Treatment table. A sign SHE ticked Yes stays on the lists
+  // (so a wrong tick can be undone). Only what is shown: every score still counts every sign. A new women-only sign whose subject is not one of the four
+  // below needs its key in PH_SIGN_ONLY_F.
+  const PH_SIGN_ONLY_F_SUBJ = new Set(["Breasts", "Chest & breasts", "Periods", "Vaginal discharge"]);
+  const PH_SIGN_ONLY_F = new Set(["mastitis_acute", "breast_hyperplasia", "pms_now", "menopause_sx", "tubal_block", "endometriosis", "fibroids", "pelvic_inflammation", "miscarriage_now", "miscarriage_tend", "postpartum_insomnia", "abd_pain_post_tubal", "pms_irritable_tend", "acne_premenstrual_tend", "sex_female"]);
+  const PH_SIGN_ONLY_M = new Set(["seminal_emission", "impotence", "impotence_tend"]);
+  let phSignLabMap = null;   // key -> label, built on the first man's list (the subject rule needs the label when a caller only has the key)
+  function phSignSexOk(sex, key, lab) {
+    if (sex === "F") return !PH_SIGN_ONLY_M.has(key);
     if (sex !== "M") return true;
+    if (lab == null) lab = (phSignLabMap || (phSignLabMap = new Map(PH_BING_SIGNS.concat(PH_REN_SIGNS).map(r => [r[0], r[1]])))).get(key);
     const m = String(lab || "").match(/^([^:]+):/);
-    return !PH_FBB_ONLY_F.has(key) && !(m && PH_FBB_ONLY_F_SUBJ.has(m[1]));
+    return !PH_SIGN_ONLY_F.has(key) && !(m && PH_SIGN_ONLY_F_SUBJ.has(m[1]));
   }
   // the pelvis place says what is on it for this patient
   const phFbbLab = (sex, id) => id !== "pelvis" ? phFbbPlaceLab(id) : sex === "F" ? "Womb & periods" : sex === "M" ? "Sex & fertility" : "Pelvis & fertility";
@@ -73765,7 +73772,7 @@ or changing anything in Cliniko.
     const effD = (pre && pre.effD) || phTriEffective(rec, name, "d", today.d, today.prevD), effP = (pre && pre.effP) || phTriEffective(rec, name, "p", today.p);
     const pl = {};
     [["d", f.bing || {}, effD, today.d], ["p", f.ren || {}, effP, today.p]].forEach(([kind, wts, eff, picks]) => phTriAll(kind, fam).forEach(r => {
-      const w = phFbrPts(wts, r); if (!(w > 0) || !phFbbSexOk(rec.sex, r[0], r[1])) return;
+      const w = phFbrPts(wts, r); if (!(w > 0) || !phSignSexOk(rec.sex, r[0], r[1])) return;
       const lab = String(r[1]), m = lab.match(/^([^:]+):\s*(.*)$/), place = phFbbPlaceOf(r[0], lab);
       const on = eff[r[0]] === true, auto = on && picks[r[0]] === undefined;
       const s = { kind, key: r[0], w, lab, desc: m ? m[2] : lab, place, on, auto, no: picks[r[0]] === false };
@@ -74030,13 +74037,14 @@ or changing anything in Cliniko.
       // weight -- a caution -- sorts to the bottom, never hidden). Unfiltered: every sign, grouped.
       const allFam = fw
         ? phTriAll(kind, fam, name, fresh).filter(r => fw[r[0]]).sort((a, b) => fw[b[0]] - fw[a[0]])
-        : phTriAll(kind, fam, name, fresh);
+        : phTriAll(kind, fam, name, fresh)
+        .filter(r => phSignSexOk(rec.sex, r[0], r[1]) || (kind === "d" ? d : p)[r[0]] === true);   // the signs that fit this patient's sex (phSignSexOk)
       // complaint box: keep only the best-matching signs (see phCsScore); nothing matches -> empty lists + a note
       const all = csOn ? allFam.filter(r => csMax > 0 && phCsScore(r, csToks) === csMax) : allFam;
       return { fw, all, rowWeights: fw || weights };
     };
     const csToks = phCsToks(phCsQuery.get(pkey)), csOn = csToks.length > 0;
-    const csMax = csOn ? Math.max(0, ...["d", "p"].flatMap(k => phTriAll(k, fam, name, fresh).map(r => phCsScore(r, csToks)))) : 0;
+    const csMax = csOn ? Math.max(0, ...["d", "p"].flatMap(k => phTriAll(k, fam, name, fresh).filter(r => phSignSexOk(rec.sex, r[0], r[1])).map(r => phCsScore(r, csToks)))) : 0;
     const bingS = shownFor("d", lead.bing), renS = shownFor("p", lead.ren);
     // her 2026-10-11 ask ("organise this better" -> her pick "B", grouped & collapsed): the old
     // top-6-then-"Show all" flat list (and the separate paired-by-theme board it swapped in once
@@ -74681,7 +74689,7 @@ or changing anything in Cliniko.
     const leadName = phFbrArchName(lead), renOnly = phFbrAgree(ranked).ren;
     const renAlone = hasTicks && renOnly && renOnly !== top && renOnly.rP > top.rP ? `, Ren alone: ${renOnly.f.name}` : "";
     const L = PHARMACY.triLearn || { added: [] };
-    const all = phTriAll("p", fam, name, fresh);
+    const all = phTriAll("p", fam, name, fresh).filter(r => phSignSexOk(rec.sex, r[0], r[1]) || p[r[0]] === true);   // the signs that fit this patient's sex
     const pend = (L.added || []).filter(a => a.kind === "p" && !a.agreed);
     const pendRow = a => `<div class="ph-tri-pend"><span>${esc(a.label)} <b>+${a.pts}</b></span><button type="button" class="ph-pfw-link" data-rentab-agree="${esc(a.id)}">Agree</button></div>`;
     const addRow = `<div class="ph-tri-add"><input class="ph-tri-in" type="text" maxlength="60" placeholder="Add a sign…" aria-label="Add a sign"><input class="ph-tri-pt" type="number" min="1" max="9" value="2" aria-label="Points"><button type="button" class="ph-pfw-link" data-rentab-add="1">Add</button></div>`;
@@ -75110,7 +75118,7 @@ or changing anything in Cliniko.
       });
     });
     const m = Math.max(...lp), e = lp.map(x => Math.exp(x - m)), s = e.reduce((a, b) => a + b, 0);
-    return { ids, p: e.map(x => x / s), eff, picks, answered, nAns, ans, clueKeys: new Set(phPatClues(rec, name).filter(c => !c.fbrTap).map(c => c.key)) };
+    return { ids, p: e.map(x => x / s), eff, picks, answered, nAns, ans, sex: rec && rec.sex, clueKeys: new Set(phPatClues(rec, name).filter(c => !c.fbrTap).map(c => c.key)) };
   }
   // ---- SEVERAL QUESTIONS AT ONCE (her 2026-10-13: "for quick assessment questions, show multiple instead of just 1"; mock
   // fbr-quick-assess-multi-mock-2026-10-13.html; her picks, all my recommendations: 4 at once, A Rows, the answered row leaves and the next
@@ -75123,7 +75131,7 @@ or changing anything in Cliniko.
   // the two signs read off Patient details (sex, age) are never asked here: the answer is on the patient's file, so a man is never asked "Sex: female?"
   const PH_NQ_NEVER = new Set(["sex_female", "age_middle_elderly"]);
   function phNqAskable(S, skip, kind, k) {
-    return !(S.answered.has(kind + ":" + k) || skip.has(k) || PH_NQ_NEVER.has(k) || phLinkOpp(k).some(o => S.eff[kind][o] === true) || phTriPrefillKeys(k).some(c => S.clueKeys.has(c)));
+    return !(S.answered.has(kind + ":" + k) || skip.has(k) || PH_NQ_NEVER.has(k) || !phSignSexOk(S.sex, k) || phLinkOpp(k).some(o => S.eff[kind][o] === true) || phTriPrefillKeys(k).some(c => S.clueKeys.has(c)));
   }
   const phNqYsOf = (S, kind, k) => S.ids.map(id => phNqYes((PH_FORMULAS[id][kind === "d" ? "bing" : "ren"] || {})[k]));
   // the doubt (bits) left, on average, after ALL of these signs are answered; each entry is the chance of a Yes per family
@@ -75296,6 +75304,8 @@ or changing anything in Cliniko.
   const PH_PAT_ICON = { stasis: "i-pt-clot", bdef: "i-pt-lowdrop", yang: "i-pt-snow", heat: "i-pt-flame", qistag: "i-pt-knot", yindef: "i-pt-drop", damp: "i-pt-bowl", qidef: "i-pt-ring", colddamp: "i-pt-snow", dgsn: "i-pt-snow", meihe: "i-pt-knot" };
   const PH_PAT_SRC = { cycle: ["Cycle day log", "i-cal"], usual: ["Usual answers", "i-cal"], hx: ["Medical history", "i-pt-clip"], tongue: ["Tongue", "i-pt-tongue"], pulse: ["Pulse", "i-pt-pulse"], abd: ["Abdomen", "i-pt-clip"], bt: ["Body type", "i-pt-clip"], tri: ["Fang Bing Ren", "i-pt-clip"], supp: ["Supplements", "i-pill"], notes: ["Notes", "i-pt-clip"] };
   const PH_PAT_ZONE_LBL = { uterus: "uterus & ovaries", lower_abd: "lower abdomen", heart: "heart & head", liver: "liver", spleen: "digestion", kidney: "kidneys", chest: "chest & ribs", lung: "lungs" };
+  // the "uterus" zone is drawn on the pelvis for a man (a bladder there, phRenAnatomyHtml), so his caption says pelvis (her 2026-10-14 audit)
+  const phPatZoneLbl = (z, female) => z === "uterus" && !female ? "pelvis" : PH_PAT_ZONE_LBL[z] || z;
   const PH_PAT_LVL = { likely: ["Likely", "L"], possible: ["Possible", "P"], hint: ["A hint", "H"] };
   // leader labels [text, x, y, target x, target y, side]; shown only while Labels is on
   const PH_PAT_LEADERS = [
@@ -75328,7 +75338,7 @@ or changing anything in Cliniko.
       svg = PH_BODY_GEOM.svg(female ? "f" : "m", "front", { uid: "patfig", build: phBodyBuild(rec), shade: true, details: true, hl, overlay: phPmRlLabels("front") + lead, viewBox: ui.lbl ? "-79 0 409 462" : undefined });
     } catch (e) { svg = ""; }
     const cls = ["ph-pat-fig", ui.lbl ? "lbl" : "", bdef ? "washed" : "", foc && foc.def.id === "bdef" ? "glow" : "", foc ? "pf-" + foc.def.fam : ""].filter(Boolean).join(" ");
-    const cap = foc ? `${esc(foc.def.name)}: ${esc((foc.def.zones || []).map(z => PH_PAT_ZONE_LBL[z] || z).join(", "))}` : "Where each pattern shows";
+    const cap = foc ? `${esc(foc.def.name)}: ${esc((foc.def.zones || []).map(z => phPatZoneLbl(z, female)).join(", "))}` : "Where each pattern shows";
     return `<div class="ph-pat-figcol"><div class="${cls}" role="img" aria-label="Where each pattern shows on the body">${svg}</div>
       <button type="button" class="ph-pat-lblbtn" data-pat-lbl="1" aria-pressed="${ui.lbl ? "true" : "false"}">Labels</button>
       <div class="ph-pat-figcap">${cap}</div></div>`;
@@ -75350,7 +75360,7 @@ or changing anything in Cliniko.
   }
   function phPatCardHtml(p, rec, ui, plan, idx) {
     const d = p.def, open = ui.open.has(d.id), lv = PH_PAT_LVL[p.level];
-    const zones = (d.zones || []).map(z => PH_PAT_ZONE_LBL[z] || z).join(", ");
+    const zones = (d.zones || []).map(z => phPatZoneLbl(z, phIsFemale(rec))).join(", ");
     const pips = Array.from({ length: Math.min(12, p.of) }, (_, k) => `<span class="ph-pat-pip${k < p.n ? " f" : ""}"></span>`).join("");
     const why = p.matched.map(c => `<li><span class="s">${phPatIc((PH_PAT_SRC[c.src] || PH_PAT_SRC.notes)[1])}${esc((PH_PAT_SRC[c.src] || PH_PAT_SRC.notes)[0])}</span>${esc(c.text)}</li>`).join("");
     return `<div class="ph-pat-card pf-${d.fam} ph-pat-pf-${d.fam}${open ? " open" : ""}${p.agreed ? " agreed" : ""}" data-pat-card="${d.id}" style="--i:${idx}">
@@ -82647,6 +82657,7 @@ or changing anything in Cliniko.
   // the plan tab's cycle-block gate, shared with the Treatment tab so the
   // two can never disagree about whether "Then" is said on the cycle card
   function presTpShowCycleBlock(name, plan) {
+    if ((phPatientPeek(name) || {}).sex === "M") return false;   // a man has no cycle bar, even on a fertility plan (her 2026-10-14 audit)
     if (phCyclePregnantPositive(phPatientPeek(name))) return false;   // pregnant: no cycle to track (her 2026-10-13 ask)
     const cyclePlan = PH_TP_CYCLE_TEMPLATES.includes(plan.templateName);
     if (cyclePlan) return true;
@@ -83776,6 +83787,7 @@ or changing anything in Cliniko.
     const rows = [], byLabel = new Map();
     [["d", PH_BING_GROUPS, PH_BING_SIGNS, effD], ["p", PH_REN_GROUPS, PH_REN_SIGNS, effP]].forEach(([kind, groups, list, eff]) => grpKeys(groups).forEach(k => {
       const label = (list.find(r => r[0] === k) || [k, k])[1], lk = label.toLowerCase();
+      if (!phSignSexOk(rec.sex, k, label) && (kind === "d" ? tt.d : tt.p)[k] !== true) return;   // not for this patient's sex (phSignSexOk), unless she ticked it
       const row = byLabel.get(lk);
       if (row) { row.keys.push(k); if (eff[k]) row.on = true; if (!row.since && since[k]) row.since = since[k]; return; }
       const nr = { kind, key: k, keys: [k], label, on: !!eff[k], since: since[k] || "" };
