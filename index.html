@@ -40717,6 +40717,12 @@
               if (phMskCount(mv)) session.mskDay = mv.day;
             }
           } catch (e) { /* the exam page never blocks logging */ }
+          // her 2026-10-14 ("the dated Log entry ... yes"): what each pain felt like on the day, kept with the visit (the words on the pain
+          // table can change later, so this is a snapshot, like session.msk.detail), shown on the Log page's visit line
+          try {
+            const pf = phPmPainsOf(rec).filter(p => Array.isArray(p.f) && p.f.length).map(p => ({ r: p.r, s: p.s, f: p.f.slice() }));
+            if (pf.length) session.pains = pf;
+          } catch (e) { /* the pain table never blocks logging */ }
           rec.acuSessions.push(session);
           // logging a real session is what "she's tracking acupuncture for
           // this patient" means -- found 2026-09-13 that this, the OLDER of
@@ -61418,7 +61424,9 @@ or changing anything in Cliniko.
   const PRES_LOG_TYPES = [["all", "All"], ["visit", "Visits"], ["recheck", "Re-checks"], ["msk", "Musculoskeletal"], ["cycle", "Cycle"], ["photo", "Photos"], ["blood", "Bloods"], ["appt", "Appointments"]];
   function presLogEntries(t, name) {
     const rec = phPatientPeek(name) || {}, key = phPatientKey(name), out = [];
-    (rec.acuSessions || []).forEach(s => { if (s.date) out.push({ d: s.date, k: "visit", txt: s.noTreatment ? "Visit · herbs only" : "Visit · acupuncture", go: "log", plan: true }); });
+    // a visit logged since 2026-10-14 carries what each pain felt like that day (session.pains, a snapshot): "right shoulder: numb, heavy"
+    const painsTxt = s => (Array.isArray(s.pains) ? s.pains : []).map(p => { const reg = PH_PAIN_REGIONS.REGIONS[p.r], ws = phPmFeelWords(p); return reg && ws ? `${phPmSideName(reg, p.s).toLowerCase()}: ${ws}` : ""; }).filter(Boolean).join("; ");
+    (rec.acuSessions || []).forEach(s => { if (s.date) { const pt = painsTxt(s); out.push({ d: s.date, k: "visit", txt: (s.noTreatment ? "Visit · herbs only" : "Visit · acupuncture") + (pt ? " · " + pt : ""), go: "log", plan: true }); } });
     if (rec.recheck && rec.recheck.date) {
       const o = PH_RC_OPTS.find(x => x[0] === rec.recheck.change);
       out.push({ d: rec.recheck.date, k: "recheck", txt: `Re-check${o ? " · " + o[1] : ""}${rec.recheck.note ? " · " + rec.recheck.note : ""}`, go: "today", plan: true });
@@ -67858,7 +67866,8 @@ or changing anything in Cliniko.
     [["burning"], "pn_burn", "Burning pain", "pain-feel:burn"],
     [["heavy"], "pn_damp", "Heavy pain", "ans:pain:Weather:damp"],
     [["tension", "cramping"], "tight", "Tension or cramping", "pain-feel:tight"],
-    [["weak"], "pn_weak", "Weak, gives way", "pain-feel:weak"]   // her 2026-10-14: "weak goes to qi deficiency"
+    [["weak"], "pn_weak", "Weak, gives way", "pain-feel:weak"],   // her 2026-10-14: "weak goes to qi deficiency"
+    [["comesgoes"], "pn_move", "Comes and goes", "pain-feel:comesgoes"]   // the retired Kind question's third answer (two or more spots on the map say it too)
   ];
   // every usual answer as a Patterns clue (called last from phPatClues)
   function phPfAddClues(rec, add, name) {
@@ -71453,7 +71462,7 @@ or changing anything in Cliniko.
     // same tendencies her other families already named, just confirmed again here.
     ["wind_averse_tend", "Cold & heat: dislikes wind"], ["soft_loose_muscle", "Muscles: soft, loose"],
     ["tongue_pale_flabby_wet", "Tongue: pale, flabby, wet coat"], ["complexion_pale_lusterless", "Complexion: lusterless, yellowish-pale"],
-    ["appetite_poor_tend", "Appetite: poor"], ["numbness_tend", "Hands & feet: numbness"],
+    ["appetite_poor_tend", "Appetite: poor"], ["numbness_tend", "Body: numbness in the hands and feet"],
     ["stool_watery_tend", "Bowels: thin, watery or unformed stools"], ["stool_dry_then_watery_tend", "Bowels: stools dry, then watery"],
     ["stool_sticky_tend", "Bowels: sticky stools"], ["stool_smelly_tend", "Bowels: smelly stools"],
     ["allergy_tend", "Allergy: present"], ["abd_wall_weak_tend", "Abdominal: weak, soft wall"],
@@ -73239,6 +73248,7 @@ or changing anything in Cliniko.
   // and Ren sign whose key differs only by _now / _tend or whose wording is identical, plus a few that say the same thing in other words. Both signs must sit in
   // the same area to share a row. Tongue & pulse keeps its own table (PH_FBR_TP_GROUPS) because its rows can reach across two.
   const PH_FBR_TWINS_DRAFT = [
+    ["numbness", "numbness_tend"],   // her 2026-10-14 "pair" (the Ren label moved to the Body subject so both sit in the Pain, muscles & joints area)
     ["cyclical_illness", "episodic_tend"], ["interior_heat_excess", "interior_heat_excess_tend"], ["colds_often", "colds"], ["fatigue_now", "fatigue_tend"], ["recur_fluctuate", "recur_fluctuate_tend"],
     ["wind_averse", "wind_averse_tend"], ["cold_feel", "cold_sens"], ["alt_fever_chill", "alt_fever_chill_tend"], ["cold_limbs", "cold_extrem"], ["no_sweat", "no_sweat_tend"], ["fever_chills", "fever_chills_tend"],
     ["fever_sweat", "fever_sweat_tend"], ["thirst_intense", "thirst_intense_tend"], ["sweat_profuse", "sweat_profuse_tend"], ["fever_high_tidal", "fever_high_tend"], ["heat_averse", "dreads_heat"], ["spont_sweat", "sweats_easy"],
@@ -80176,7 +80186,7 @@ or changing anything in Cliniko.
   let phPmFeelPtr = false;         // a pointer is down outside the open chips: close on its pointerup, after the click has landed
   var PH_PM_FEELS = [["tension", "Tension"], ["sharp", "Sharp"], ["dull", "Dull"], ["aching", "Aching"], ["burning", "Burning"], ["electric", "Electric"],
     ["throbbing", "Throbbing"], ["stabbing", "Stabbing"], ["pins", "Pins and needles"], ["numb", "Numb"], ["shooting", "Shooting"], ["stiff", "Stiff"],
-    ["cramping", "Cramping"], ["heavy", "Heavy"], ["weak", "Weak"], ["tender", "Tender to touch"]];
+    ["cramping", "Cramping"], ["heavy", "Heavy"], ["weak", "Weak"], ["tender", "Tender to touch"], ["comesgoes", "Comes and goes"]];   // her 2026-10-14: the retired Kind question's "comes and goes", kept as a word
   // `var` + the `|| []` guards: Came in for and Patterns can read these during boot, before this line has run
   function phPmFeelsOf(p) { const f = p && Array.isArray(p.f) ? p.f : []; return (PH_PM_FEELS || []).filter(([k]) => f.includes(k)); }
   function phPmTensionOnly(p) { return !!(p && Array.isArray(p.f) && p.f.length === 1 && p.f[0] === "tension"); }
