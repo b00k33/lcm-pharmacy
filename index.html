@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261014-660000">
+<meta name="lcm-build" content="20261014-670000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -37772,13 +37772,16 @@
       const cycMonthNav = e.target.closest("[data-cycle-month-nav]");
       if (cycMonthNav) {
         const nm = cycMonthNav.dataset.cycleStripName;
-        const view = phCycleMonthView[nm] || (phCycleMonthView[nm] = { y: TODAY.getFullYear(), m: TODAY.getMonth() });
+        // the Cycle page's calendar (data-cycle-cal) moves its own view, starting from where it opened (the month of her last period)
+        const calNav = !!cycMonthNav.dataset.cycleCal, store = calNav ? phCycleCalView : phCycleMonthView;
+        let view = store[nm];
+        if (!view) { const dv = calNav ? phCycCalDefault(phPatientPeek(nm)) : null; view = { y: dv ? dv.y : TODAY.getFullYear(), m: dv ? dv.m : TODAY.getMonth() }; }
         let y = view.y, m = view.m + (+cycMonthNav.dataset.cycleMonthNav || 0);
         if (m < 0) { m = 11; y--; } else if (m > 11) { m = 0; y++; }
         // the Fertility-Friend calendar may go one month past today (data-cycle-ff)
         const capIdx = TODAY.getFullYear() * 12 + TODAY.getMonth() + (cycMonthNav.dataset.cycleFf ? 1 : 0);
         if (y * 12 + m > capIdx) { y = Math.floor(capIdx / 12); m = capIdx % 12; }
-        phCycleMonthView[nm] = { y, m };
+        store[nm] = { y, m };
         phCyclePop = null;
         phCycleStripRefresh(nm);
         return;
@@ -65765,6 +65768,7 @@ or changing anything in Cliniko.
   let phCkStripOpen = null;      // check-in card (patient name) with the strip unfolded
   let phCycleMonthOpen = {};     // name -> true while showing the month calendar (phCycleMonthHtml) instead of the weekly strip
   let phCycleMonthView = {};     // name -> {y, m} the month calendar is currently showing
+  let phCycleCalView = {};       // name -> {y, m} the Cycle PAGE's two-month calendar (her own nav / a jump); none yet = phCycCalDefault
   let phCycleCdCalcOpen = {};    // name -> bool, "know her cycle day instead" mini-calculator open
   let phCycleCdCalc = {};        // name -> {date, cd} draft for that calculator
   // her synth22 Cycle tab redesign, 2026-09-15 ("i want to see cycle date,
@@ -75719,6 +75723,22 @@ or changing anything in Cliniko.
     let y = d.getFullYear(), m = d.getMonth();
     if (y > TODAY.getFullYear() || (y === TODAY.getFullYear() && m > TODAY.getMonth())) { y = TODAY.getFullYear(); m = TODAY.getMonth(); }
     phCycleMonthView[nm] = { y, m };
+    phCycleCalView[nm] = { y, m };
+  }
+  // Her 2026-10-14 ("make the default calendar display for cycle page to show the month of last menstrual cycle with current month side by side"):
+  // the Cycle page's Calendar tab opens on the month her last period started, beside this month. Period this month: this month + next (as before,
+  // so the predicted period / fertile window can spill in). A cycle two or more months long: the period's month and this month, not touching (`v2`).
+  // Used only until she moves the calendar herself (phCycleCalView); the Plan tab's single-month calendar keeps today's month.
+  function phCycCalDefault(rec) {
+    const ty = TODAY.getFullYear(), tm = TODAY.getMonth();
+    const st = phBbtCycleStarts(rec || {}).slice().sort().filter(k => k <= keyOf(TODAY));
+    const ls = st.length ? st[st.length - 1] : "";
+    if (!ls) return { y: ty, m: tm };
+    const d = parseKey(ls), gap = (ty * 12 + tm) - (d.getFullYear() * 12 + d.getMonth());
+    if (gap <= 0) return { y: ty, m: tm };
+    const out = { y: d.getFullYear(), m: d.getMonth() };
+    if (gap >= 2) out.v2 = { y: ty, m: tm };
+    return out;
   }
   // her 2026-10-10 Cycle page redesign (mock v3): the page draws the calendar and the
   // temperature chart as two separate tabs, in red (period) and green (fertile)
@@ -75731,7 +75751,10 @@ or changing anything in Cliniko.
   function phCycFFHtml(rec, name, lit, withChart, ivfDates, part) {
     const pg = !!part, PAL = pg ? PH_CP_PAL : PH_FF_PAL;
     const todayKey = keyOf(TODAY);
-    const view = phCycleMonthView[name] || { y: TODAY.getFullYear(), m: TODAY.getMonth() };
+    // the Cycle page's Calendar tab has its own view: the month of her last period beside this month until she moves it (phCycCalDefault)
+    const calStored = part === "cal" ? phCycleCalView[name] : null;
+    const calDef = part === "cal" && !calStored ? phCycCalDefault(rec) : null;
+    const view = (part === "cal" ? (calStored || calDef) : phCycleMonthView[name]) || { y: TODAY.getFullYear(), m: TODAY.getMonth() };
     const atCurrent = view.y === TODAY.getFullYear() && view.m === TODAY.getMonth();
     // her 2026-10-03 follow-up ("include following calendar", Mock C): the
     // month may go ONE month past today so the predicted fertile window and
@@ -75807,7 +75830,7 @@ or changing anything in Cliniko.
     // reuses the same cellHtml/dayInfo the first month already built with.
     let cells2 = "", label2 = "";
     if (part === "cal") {
-      const v2y = view.m === 11 ? view.y + 1 : view.y, v2m = (view.m + 1) % 12;
+      const v2y = calDef && calDef.v2 ? calDef.v2.y : view.m === 11 ? view.y + 1 : view.y, v2m = calDef && calDef.v2 ? calDef.v2.m : (view.m + 1) % 12;
       const first2 = new Date(v2y, v2m, 1);
       const lead2 = (first2.getDay() + 6) % 7;
       const dim2 = new Date(v2y, v2m + 1, 0).getDate();
@@ -75818,7 +75841,8 @@ or changing anything in Cliniko.
       label2 = `${MON_SHORT[v2m]} ${v2y}`;
     }
     const label1 = `${MON_SHORT[view.m]} ${view.y}`;
-    const head = pg ? `<div class="mhd"><button type="button" data-cycle-month-nav="-1" data-cycle-ff="1" data-cycle-strip-name="${esc(name)}" title="Previous month" aria-label="Previous month">‹</button><b>${part === "cal" ? `${label1} – ${label2}` : label1}</b><button type="button" data-cycle-month-nav="1" data-cycle-ff="1" data-cycle-strip-name="${esc(name)}" title="Next month" aria-label="Next month"${atMax ? " disabled" : ""}>›</button></div>` : `<div class="ffhd"><button type="button" data-cycle-month-nav="-1" data-cycle-ff="1" data-cycle-strip-name="${esc(name)}" title="Previous month" aria-label="Previous month">‹</button><b>${label1}</b><button type="button" data-cycle-month-nav="1" data-cycle-ff="1" data-cycle-strip-name="${esc(name)}" title="Next month" aria-label="Next month"${atMax ? " disabled" : ""}>›</button></div>`;
+    const calAttr = part === "cal" ? ` data-cycle-cal="1"` : "";   // tells the nav click which view to move (phCycleCalView)
+    const head = pg ? `<div class="mhd"><button type="button" data-cycle-month-nav="-1" data-cycle-ff="1"${calAttr} data-cycle-strip-name="${esc(name)}" title="Previous month" aria-label="Previous month">‹</button><b>${part === "cal" ? `${label1} – ${label2}` : label1}</b><button type="button" data-cycle-month-nav="1" data-cycle-ff="1"${calAttr} data-cycle-strip-name="${esc(name)}" title="Next month" aria-label="Next month"${atMax ? " disabled" : ""}>›</button></div>` : `<div class="ffhd"><button type="button" data-cycle-month-nav="-1" data-cycle-ff="1" data-cycle-strip-name="${esc(name)}" title="Previous month" aria-label="Previous month">‹</button><b>${label1}</b><button type="button" data-cycle-month-nav="1" data-cycle-ff="1" data-cycle-strip-name="${esc(name)}" title="Next month" aria-label="Next month"${atMax ? " disabled" : ""}>›</button></div>`;
     const dow = `<div class="ffdow">${["M", "T", "W", "T", "F", "S", "S"].map(h => `<span>${h}</span>`).join("")}</div>`;
     const legend = pg ? `<div class="key"><span><i class="k-p"></i>Period</span><span><i class="k-f"></i>Fertile window</span><span><i class="k-o"></i>Ovulation</span><span><i class="k-n"></i>Next period</span></div>` : `<div class="ffleg"><b>Color code</b><span><i class="sw p1"></i>First day</span><span><i class="bars"><u class="he"></u><u class="me"></u><u class="li"></u><u class="sp"></u></i>Period <small>(colour = flow)</small></span><span><i class="sw fert"></i>Fertile window</span><span><i class="sw ov">O</i>Ovulation</span><span><i class="sw pred"></i>Next period <small>(predicted)</small></span><span class="mkl">♥ sex · ● egg-white · ⚡ LH +</span>${ivfDates ? `<span><i class="sw ivegg"></i>Egg retrieval</span><span><i class="sw ivet"></i>Transfer</span><span class="mkl">dashed = estimated</span>` : ""}</div>`;
     // the button under the month: what the cut-off part of the next month holds
