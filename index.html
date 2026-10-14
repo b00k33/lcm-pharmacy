@@ -12621,6 +12621,9 @@
   #pharmacyPage .ph-ren-batch-grid { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; padding: 12px 16px; overflow-y: auto; }
   #pharmacyPage .ph-ren-batch-th { position: relative; display: flex; flex-direction: column; gap: 4px; width: 84px; }
   #pharmacyPage .ph-ren-batch-th img { width: 84px; height: 84px; object-fit: cover; border-radius: 10px; display: block; }
+  #pharmacyPage .ph-ren-batch-th.in { animation: phBatchIn .35s ease-out; }   /* a photo pasted or dropped into an open batch pops in (her 2026-10-15) */
+  @keyframes phBatchIn { from { opacity: 0; transform: scale(.85); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { #pharmacyPage .ph-ren-batch-th.in { animation: none; } }
   #pharmacyPage .ph-ren-batch-th button { position: absolute; top: -6px; right: -6px; width: 22px; height: 22px; border: none; border-radius: 999px; background: var(--ph-green-deep); color: var(--ph-cream); font-size: var(--fs-13); line-height: 1; cursor: pointer; font-family: inherit; }
   /* her ask 2026-09-11: a tag picker per thumbnail, for an untagged batch
      she's about to tag one at a time */
@@ -54518,7 +54521,7 @@ or changing anything in Cliniko.
           <button type="button" class="ph-stocktake-close" data-ren-confirm-cancel="1" aria-label="Close">×</button>
           <div class="ph-hx-head-name">${b.length} photo${b.length === 1 ? "" : "s"} · ${preTagged ? `${esc(PH_REN_TYPE_LABEL[phRenCapture.type] || "Photo")} · ` : ""}${esc(phRenPhotoDateLabel(target.dateKey))}</div>
         </div>
-        <div class="ph-ren-batch-grid">${b.map((x, i) => `<span class="ph-ren-batch-th">
+        <div class="ph-ren-batch-grid">${b.map((x, i) => `<span class="ph-ren-batch-th${x.fresh ? " in" : ""}">
             <img src="${x.objectUrl}" alt="Photo ${i + 1}">
             <button type="button" class="ph-ren-batch-drop" data-ren-confirm-drop="${i}" title="Leave this one out" aria-label="Leave photo ${i + 1} out">×</button>
             ${preTagged ? "" : `<select class="ph-ren-batch-tag" data-ren-confirm-batch-type="${i}" aria-label="Tag for photo ${i + 1}">${typeOpts.map(t => `<option value="${t.key}"${t.key === x.type ? " selected" : ""}>${esc(t.label)}</option>`).join("")}</select>
@@ -54528,13 +54531,16 @@ or changing anything in Cliniko.
               </select>` : ""}`}
           </span>`).join("")}</div>
         <div class="ph-ren-confirm-name">${preTagged
-          ? `all file to ${esc(phTitle(target.patientName))} as ${esc(PH_REN_TYPE_LABEL[phRenCapture.type] || "photo")} — pick a different type chip first if that's wrong`
-          : `filing to ${esc(phTitle(target.patientName))} — pick each photo's tag above (Other is fine to fix later)`}</div>
+          ? `all file to ${esc(phTitle(target.patientName))} as ${esc(PH_REN_TYPE_LABEL[phRenCapture.type] || "photo")}`
+          : `filing to ${esc(phTitle(target.patientName))}`}</div>
         <div class="ph-ren-confirm-acts">
           <button type="button" class="ph-load-btn on" data-ren-confirm-saveall="1">✓ Save all ${b.length}</button>
+          <button type="button" class="ph-load-btn" data-ren-confirm-more="1">＋ Add more</button>
           <button type="button" class="ph-load-btn" data-ren-confirm-cancel="1">Cancel</button>
+          <input type="file" id="phRenConfirmMore" accept="image/*" multiple hidden>
         </div>
       </div>`;
+      b.forEach(x => { x.fresh = false; });   // the pop-in plays once
       return;
     }
     const cap = phRenCapture;
@@ -55783,6 +55789,7 @@ or changing anything in Cliniko.
     if (phRenPasteIsTypingTarget(document.activeElement) || phRenPasteIsTypingTarget(e.target)) return;   // §2: Findings/notes keep their normal paste
     const key = phRenPasteTargetKey();
     if (!key) return;
+    if (phRenClipFiles(e.clipboardData).length > 1) return;    // several photos at once belong to the batch confirm below (her 2026-10-15)
     const file = phRenFirstImageFile(e.clipboardData);
     if (!file) return;                                         // §2: text/URL/non-image is not our business
     e.preventDefault();
@@ -55829,6 +55836,29 @@ or changing anything in Cliniko.
     const name = presPatientFor(t) || t.name || "";
     return name ? { patientKey: phPatientKey(name), patientName: name, dateKey: keyOf(TODAY), defaultType: "tongue" } : null;
   }
+  // the batch confirm is open: more photos (a paste, a drop, "+ Add more") join it as new rows instead of being ignored (her 2026-10-15 "paste multiple photos instead of one at a time")
+  const phRenConfirmBatchTarget = () => (phRenConfirmState && phRenConfirmState.batch && phRenConfirmState.target) || null;
+  function phRenConfirmAdd(files) {
+    const S = phRenConfirmState; if (!S || !S.batch) return false;
+    const all = [...(files || [])], imgs = all.filter(phRenIsImageFile).filter(f => f.size);
+    if (!imgs.length) { presSavedToast(all.length ? "Those weren't photos — pictures only (JPG, PNG, WebP)." : "No photo found."); return false; }
+    const t = S.target || {};
+    imgs.forEach(f => S.batch.push({ file: f, objectUrl: URL.createObjectURL(f), type: (phRenCapture && phRenCapture.type) || t.defaultType || "other", shot: (phRenCapture && phRenCapture.shot) || "", fresh: true }));
+    renderPhRenConfirmModal();
+    if (imgs.length < all.length) presSavedToast(`${all.length - imgs.length} of ${all.length} weren't photos and were left out.`);
+    return true;
+  }
+  document.addEventListener("click", e => {
+    const b = e.target.closest && e.target.closest("[data-ren-confirm-more]");
+    if (!b) return;
+    const inp = document.getElementById("phRenConfirmMore");
+    if (inp) inp.click();
+  });
+  document.addEventListener("change", e => {
+    if (!e.target || e.target.id !== "phRenConfirmMore") return;
+    const files = [...(e.target.files || [])]; e.target.value = "";
+    if (files.length) phRenConfirmAdd(files);
+  });
   function phRenDropFiles(files, target) {
     const all = [...(files || [])], imgs = all.filter(phRenIsImageFile).filter(f => f.size);
     if (!imgs.length) { phFlashShow(all.length ? "Those weren't photos — drop or paste pictures (JPG, PNG, WebP)." : "No photo found."); return; }
@@ -55855,7 +55885,7 @@ or changing anything in Cliniko.
   function phRenVeilHide() { const v = document.getElementById("phDropVeil"); if (v) v.hidden = true; clearTimeout(phRenVeilT); }
   document.addEventListener("dragover", e => {
     if (!phRenDtHasFiles(e) || (e.target.closest && e.target.closest("#phRenConstitPanel, input[type=file]"))) return;
-    const tg = phRenDropTarget(); if (!tg) return;
+    const tg = phRenConfirmBatchTarget() || phRenDropTarget(); if (!tg) return;
     e.preventDefault();   // without this the browser would open the picture in place of the app
     if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
     phRenVeilShow(tg.patientName);
@@ -55864,6 +55894,7 @@ or changing anything in Cliniko.
   document.addEventListener("drop", e => {
     if (!phRenDtHasFiles(e) || (e.target.closest && e.target.closest("#phRenConstitPanel, input[type=file]"))) return;
     phRenVeilHide();
+    if (phRenConfirmState && phRenConfirmState.batch) { e.preventDefault(); phRenConfirmAdd(e.dataTransfer.files); return; }   // the confirm is open: they join the batch
     const tg = phRenDropTarget(); if (!tg) return;
     e.preventDefault();
     phRenDropFiles(e.dataTransfer.files, tg);
@@ -55872,6 +55903,7 @@ or changing anything in Cliniko.
     if (e.defaultPrevented || phRenPasteState) return;                                        // the Ren / Medical history paste took it
     if (phRenPasteIsTypingTarget(document.activeElement) || phRenPasteIsTypingTarget(e.target)) return;   // notes keep their normal paste
     const files = phRenClipFiles(e.clipboardData); if (!files.length) return;                  // text / links are not ours
+    if (phRenConfirmState && phRenConfirmState.batch) { e.preventDefault(); phRenConfirmAdd(files); return; }   // the confirm is open: they join the batch (her 2026-10-15)
     const tg = phRenDropTarget(); if (!tg) return;
     e.preventDefault();
     phRenDropFiles(files, tg);
