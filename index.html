@@ -29108,6 +29108,7 @@
     const phone = phCapRole() === "phone";
     return `<div class="ph-settings-sec">
       <div class="ph-settings-hint" id="phRelayStatus">Checking…</div>
+      <div class="ph-settings-hint" id="phStoragePersistLine" hidden></div>
       <div class="ph-settings-actions">
         ${phone
           ? `<button type="button" class="ph-load-btn" data-ph-relay-sendnow="1">📤 Send unsent photos now</button><button type="button" class="ph-load-btn" data-ph-relay-resendall="1">🔁 Resend all photos</button>`
@@ -29118,6 +29119,9 @@
   async function phPhotoRelayStatusFill() {
     const el = document.getElementById("phRelayStatus");
     if (!el) return;
+    // 2026-10-14: is this site's storage protected from Chrome's clean-up? (phStoragePersist, after the photo relay)
+    // (reads the boot-time answer only: a persist() that never settles must not leave this status on "Checking…")
+    try { const pl = document.getElementById("phStoragePersistLine"); if (pl) { pl.innerHTML = phStoragePersistNote(); pl.hidden = !pl.innerHTML; } } catch (e) {}
     try {
       if (!window.__LCM_SYNC) { el.textContent = "Cloud sync is off on this device — photos stay local."; return; }
       const sb = phRenRelayClient();
@@ -55892,6 +55896,30 @@ or changing anything in Cliniko.
   }
   // start after boot settles -- phCapAutoImport itself no-ops without sync;
   // the retry drain clears anything queued during a previous offline session
+  // 2026-10-14 ("where are my photos?"): Chrome threw this site's whole
+  // IndexedDB away twice -- 211 photos in the 9 Oct backup, 14 by 12 Oct,
+  // and the store was created afresh again tonight at 20:54 -- because the
+  // disk was nearly full (3.9 GB free) and the site's storage was never
+  // marked persistent. Chrome only ever evicts UNPROTECTED sites; her text
+  // data (localStorage) is not quota-managed, so it survived both times.
+  // Ask once at boot: an installed app gets it with no prompt. Settings ›
+  // Photo relay says whether it was granted (phStoragePersistNote).
+  window.__phStoragePersisted = null;
+  async function phStoragePersist() {
+    try {
+      if (!navigator.storage || !navigator.storage.persist) return null;
+      const was = await navigator.storage.persisted();
+      window.__phStoragePersisted = was || await navigator.storage.persist();
+    } catch (e) { window.__phStoragePersisted = null; }
+    return window.__phStoragePersisted;
+  }
+  function phStoragePersistNote() {
+    const p = window.__phStoragePersisted;
+    if (p === true) return " Photos protected from Chrome's storage clean-up ✓";
+    if (p === false) return " <b>⚠ Photos not protected</b> — Chrome may clear them when the disk is nearly full. Install the app, or free up disk space.";
+    return "";
+  }
+  phStoragePersist();
   setTimeout(() => { phCapRelayKick(); setInterval(phCapAutoImport, 120000); }, 8000);
 
   // ---- photo cache bridge: IndexedDB reads are async, phHxConstitutionHtml's
