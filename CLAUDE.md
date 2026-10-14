@@ -245,6 +245,16 @@ update STYLE-LCM.md to match so future builds don't undo it.
   legibility exceptions, never a precedent for reintroducing green elsewhere.
   `--ph-gold` itself is reserved and never used for a status/error state —
   give a new status its own `-tint`/`-deep` pair instead.
+- **The one status green is `--ph-good`** (`-deep` / `-tint` / `-soft` /
+  `-line` / `-hi`, defined beside the other status tokens; audit step 2,
+  2026-10-15): better / agreed / ok / done marks, the "better" response chip,
+  the Visit checks "better" cell, the abdomen chart's green mark, the
+  follicular segment's pale fill on the cycle bars and calendars, and the pale
+  outline of the visit table's square action buttons all read it. Never a raw
+  green hex for any of those again. Kept raw on purpose: her named herb-row
+  green `#15803D` ("green 3", her own pick on the visit table), the Dispense
+  head and jar art above, Acupreg's `#8AAB99`, the Cliniko type colours and
+  the Cycle page's own palette (`--cp-*`, her picks).
 
 ## Fit the screen (mobile-first)
 - Design for a phone ~360px wide. Nothing wider than the screen or overflowing.
