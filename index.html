@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261014-670000">
+<meta name="lcm-build" content="20261014-680000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -68037,7 +68037,7 @@ or changing anything in Cliniko.
         if (had) delete cell.none;
         else {
           const eff = phTriEffective(rec, name, mode, m, prevD);
-          keys.forEach(k => { if (eff[k] === true) phTriSetNo(t, mode, k); });
+          keys.forEach(k => { if (eff[k] === true) phTriSetNo(t, mode, k, true); });
           cell.none = true;
         }
       } else {
@@ -71144,11 +71144,12 @@ or changing anything in Cliniko.
     // linked symptoms (her 2026-10-12): a No a link filled in ("auto"), a sign a chart / history Yes rules out (dotted, never stored),
     // and a Yes that clashes with another Yes
     const opp = phLinkOpp(r[0]);
-    const lkAuto = no && rec.tri && rec.tri.auto && rec.tri.auto[kind] && rec.tri.auto[kind][r[0]];
-    const lkSrc = opp.find(o => eff[o] === true);
+    const lkAuto = (no || picks[r[0]] === true) && rec.tri && rec.tri.auto && rec.tri.auto[kind] && rec.tri.auto[kind][r[0]];
+    const lkSrc = opp.find(o => eff[o] === true && !(rec.tri && rec.tri.auto && rec.tri.auto[kind] && rec.tri.auto[kind][o] && rec.tri.auto[kind][o].yes));
     const lkDer = !no && !on && picks[r[0]] === undefined && lkSrc != null;
     const lkConf = on && lkSrc != null;
-    const lkChip = lkAuto ? `<span class="ph-lk-chip auto" title="${esc("Filled in as No because you said Yes to “" + phSignLabel(lkAuto.from) + "”. Tap ✕ to clear it, or “Who answered what” to make it yours.")}">auto</span>`
+    const lkChip = lkAuto && lkAuto.yes ? `<span class="ph-lk-chip auto" title="${esc("Ticked because you ruled out “" + phSignLabel(lkAuto.from) + "”. Tap it to clear it, or “Who answered what” to make it yours.")}">auto</span>`
+      : lkAuto ? `<span class="ph-lk-chip auto" title="${esc("Filled in as No because you said Yes to “" + phSignLabel(lkAuto.from) + "”. Tap ✕ to clear it, or “Who answered what” to make it yours.")}">auto</span>`
       : lkDer ? `<span class="ph-lk-chip der" title="${esc("Ruled out because " + (picks[lkSrc] === true ? "you" : "the chart or history") + " says Yes to “" + phSignLabel(lkSrc) + "”")}">ruled out</span>`
       : lkConf ? `<span class="ph-lk-chip warn" title="${esc("Clashes with “" + phSignLabel(lkSrc) + "”, which is also Yes")}">⚠ clash</span>` : "";
     return `<div class="ph-fbr-row${quiet ? " q" : ""}${on ? " on" : ""}${no ? " no" : ""}${auto ? " auto" : ""}${neg ? " warn" : ""}${lkAuto ? " lk-auto" : ""}${lkDer ? " lk-der" : ""}${lkConf ? " lk-conf" : ""}"${titleAttr}>
@@ -71843,6 +71844,7 @@ or changing anything in Cliniko.
   //     reads both ways by itself (nobody types the reverse). The 25 old hand-typed opposites are now built-in links; each can be
   //     switched off or edited, and she can add her own (the Linked symptoms sheet). Stored in PHARMACY.signLinks.
   //   * A link only ever sets NO, never Yes, and only on a sign that is blank: a blank sign stays unknown unless a link names it.
+  //     (One exception, her 2026-10-14: PH_LINK_FLIP, a two-way question such as sweats easily / not easily; her ✕ on one ticks the other, auto + undone with the ✕.)
   //   * Same kind only (Bing with Bing, Ren with Ren): a Bing "now" Yes and a Ren "lifelong" Yes can both be true, so across kinds a
   //     link only raises a light "worth a look" note.
   //   * Priority: her own answer > a chart / history / last-visit finding > a link. A link never overrides either: when a new Yes
@@ -71910,6 +71912,10 @@ or changing anything in Cliniko.
     if (a.length > 100) a.splice(0, a.length - 100);
   }
   const phTriAutoMap = (t, kind) => ((t.auto || (t.auto = { d: {}, p: {} }))[kind] || (t.auto[kind] = {}));
+  // The ONE exception to "a link only sets No" (her 2026-10-14: "when i cross sweat: easily, tick sweat not easily"): a pair that is one question
+  // answered two ways, so a No on one IS a Yes on the other. Same kind only, and only a true two-way question; add a pair here, nowhere else.
+  const PH_LINK_FLIP = [["sweats_easy", "no_sweat_tend"]];
+  const phLinkFlipOf = key => { const o = []; PH_LINK_FLIP.forEach(([a, b]) => { if (a === key) o.push(b); else if (b === key) o.push(a); }); return o; };
   // Her Yes tap on a sign. Returns the earlier answers of hers it clashes with (the caller asks "Change it to No?").
   function phTriSetYes(t, kind, key, fam, rec, name) {
     const m = kind === "d" ? t.d : t.p, auto = phTriAutoMap(t, kind), conflicts = [];
@@ -71917,27 +71923,45 @@ or changing anything in Cliniko.
     phTriAuditPush(t, { by: "you", kind, key, val: true });
     let eff = null;
     phLinkOppDetail(key, false).forEach(({ key: o, link }) => {
-      const cur = m[o];
-      if (cur === true) { conflicts.push({ key: o, link }); return; }   // her earlier Yes: ask
+      const cur = m[o], flipYes = cur === true && auto[o] && auto[o].yes;   // a Yes the cross-it-tick-the-other rule set: not hers, so it just gives way
+      if (cur === true && !flipYes) { conflicts.push({ key: o, link }); return; }   // her earlier Yes: ask
       if (cur === false) return;                                         // already No (hers or a link's): leave it
-      if (!eff) eff = phTriEffective(rec, name, kind, m, kind === "d" ? t.prevD : undefined);
-      if (eff[o] === true) return;                                       // a chart / history / last-visit Yes: never overwritten, the clash is flagged
+      if (!flipYes) {
+        if (!eff) eff = phTriEffective(rec, name, kind, m, kind === "d" ? t.prevD : undefined);
+        if (eff[o] === true) return;                                     // a chart / history / last-visit Yes: never overwritten, the clash is flagged
+      }
       m[o] = false; auto[o] = { from: key, link };
       phTriAuditPush(t, { by: "link", kind, key: o, val: false, from: key, link });
     });
     return conflicts;
   }
-  // Her own ✕ on a sign: a No of her own (or clears one; clearing an automatic No puts the sign back to blank)
-  function phTriSetNo(t, kind, key) {
+  // Her own ✕ on a sign: a No of her own (or clears one; clearing an automatic No puts the sign back to blank).
+  // A ✕ also ticks the sign it is the other half of (PH_LINK_FLIP) unless that sign already has an answer; `plain` skips that (Ask her's "normal" pick is not a cross).
+  function phTriSetNo(t, kind, key, plain) {
     const m = kind === "d" ? t.d : t.p, auto = phTriAutoMap(t, kind);
-    if (m[key] === false) { const was = auto[key] ? "auto" : "you"; delete m[key]; delete auto[key]; phTriAuditPush(t, { by: "you", kind, key, val: null, was }); return; }
+    if (m[key] === false) {
+      const was = auto[key] ? "auto" : "you"; delete m[key]; delete auto[key]; phTriAuditPush(t, { by: "you", kind, key, val: null, was });
+      Object.keys(auto).forEach(k => {   // un-crossing takes back the Yes it ticked
+        if (!(auto[k].yes && auto[k].from === key)) return;
+        if (m[k] === true) { delete m[k]; phTriAuditPush(t, { by: "link", kind, key: k, val: null, from: key, link: "flip", undone: true }); }
+        delete auto[k];
+      });
+      return;
+    }
     m[key] = false; delete auto[key];
     phTriAuditPush(t, { by: "you", kind, key, val: false });
+    if (plain) return;
+    phLinkFlipOf(key).forEach(o => {
+      if (m[o] === false && auto[o] && auto[o].from === key && !auto[o].yes) { delete m[o]; delete auto[o]; }   // the No her Yes on this sign had set: now a cross, so it gives way
+      if (m[o] !== undefined) return;                                    // already answered (hers or a link's): never overwritten
+      m[o] = true; auto[o] = { from: key, link: "flip", yes: true };
+      phTriAuditPush(t, { by: "link", kind, key: o, val: true, from: key, link: "flip", flip: true });
+    });
   }
   // Un-ticking a Yes: take back the automatic No answers it set, unless another Yes of hers still supports them
   function phTriClearYes(t, kind, key) {
     const m = kind === "d" ? t.d : t.p, auto = phTriAutoMap(t, kind);
-    delete m[key];
+    delete m[key]; delete auto[key];
     phTriAuditPush(t, { by: "you", kind, key, val: null });
     Object.keys(auto).forEach(k => {
       if (auto[k].from !== key) return;
@@ -72010,7 +72034,7 @@ or changing anything in Cliniko.
       const m = kind === "d" ? today.d : today.p, A = (tri.auto && tri.auto[kind]) || {};
       Object.keys(m).forEach(k => {
         if (m[k] !== true && m[k] !== false) return;
-        if (m[k] === false && A[k] && (kind === "p" || same)) auto.push({ kind, k, a: A[k] }); else mine.push({ k, v: m[k] });
+        if ((m[k] === false || (m[k] === true && A[k] && A[k].yes)) && A[k] && (kind === "p" || same)) auto.push({ kind, k, a: A[k], v: m[k] }); else mine.push({ k, v: m[k] });
       });
       (kind === "d" ? PH_BING_SIGNS : PH_REN_SIGNS).forEach(r => { if (eff[kind][r[0]] === true && m[r[0]] === undefined) chart.push(r[1]); });
     });
@@ -72018,11 +72042,11 @@ or changing anything in Cliniko.
     const log = (tri.audit || []).slice(-8).reverse().map(e => {
       const t = new Date(e.at), hm = String(t.getHours()).padStart(2, "0") + ":" + String(t.getMinutes()).padStart(2, "0");
       const what = e.restored ? "Yes again (your earlier answer)" : e.undone ? "taken back" : e.val === true ? "Yes" : e.val === false ? "No" : "cleared";
-      return li(`<span class="tm">${hm}</span> ${e.by === "you" ? "You" : "A link"}: ${esc(phSignLabel(e.key))} → ${what}${e.from ? ` <span class="why">because “${esc(phSignLabel(e.from))}”</span>` : ""}${e.overrode ? ` <span class="why">(changed your earlier Yes)</span>` : ""}`);
+      return li(`<span class="tm">${hm}</span> ${e.by === "you" ? "You" : "A link"}: ${esc(phSignLabel(e.key))} → ${what}${e.from ? ` <span class="why">because ${e.flip ? "you ruled out " : ""}“${esc(phSignLabel(e.from))}”</span>` : ""}${e.overrode ? ` <span class="why">(changed your earlier Yes)</span>` : ""}`);
     });
     return `<div class="ph-lk-aud">
       <h5>Entered by you (${mine.length})</h5><ul>${mine.map(x => li(`${esc(phSignLabel(x.k))} · <b>${x.v ? "Yes" : "No"}</b>`)).join("") || li("nothing yet")}</ul>
-      <h5>Filled in by a link (${auto.length})</h5><ul>${auto.map(x => li(`${esc(phSignLabel(x.k))} · <b>No</b> <span class="why">because “${esc(phSignLabel(x.a.from))}”${x.a.overrode ? " (changed your earlier Yes)" : ""}</span> <button type="button" class="ph-lk-mine" data-lk-mine="${x.kind}:${x.k}">make mine</button>`)).join("") || li("nothing yet")}</ul>
+      <h5>Filled in by a link (${auto.length})</h5><ul>${auto.map(x => li(`${esc(phSignLabel(x.k))} · <b>${x.v ? "Yes" : "No"}</b> <span class="why">because ${x.a.yes ? "you ruled out " : ""}“${esc(phSignLabel(x.a.from))}”${x.a.overrode ? " (changed your earlier Yes)" : ""}</span> <button type="button" class="ph-lk-mine" data-lk-mine="${x.kind}:${x.k}">make mine</button>`)).join("") || li("nothing yet")}</ul>
       <h5>From charts, history, the form and last visit (${chart.length})</h5><ul>${chart.slice(0, 10).map(l => li(`${esc(l)}: <b>Yes</b>`)).join("") || li("nothing")}${chart.length > 10 ? li(`+ ${chart.length - 10} more`) : ""}</ul>
       <h5>Recent changes</h5><ul>${log.join("") || li("nothing yet")}</ul></div>`;
   }
@@ -72097,7 +72121,7 @@ or changing anything in Cliniko.
     if ("lkAud" in D) { if (phLkAudOpen.has(pk)) phLkAudOpen.delete(pk); else phLkAudOpen.add(pk); phLinkRepaint(name); return; }
     if ("lkMine" in D) {
       const [kind, key] = D.lkMine.split(":");
-      if (phTriWrite(name, t => { delete phTriAutoMap(t, kind)[key]; phTriAuditPush(t, { by: "you", kind, key, val: false, mine: true }); })) phLinkRepaint(name);
+      if (phTriWrite(name, t => { delete phTriAutoMap(t, kind)[key]; phTriAuditPush(t, { by: "you", kind, key, val: (kind === "d" ? t.d : t.p)[key] === true, mine: true }); })) phLinkRepaint(name);
       return;
     }
     if ("lkKeepboth" in D) { phLinkAsk.delete(pk); phLinkRepaint(name); return; }
@@ -72264,8 +72288,9 @@ or changing anything in Cliniko.
         const st = phQaUndoStack.get(pk) || []; st.push({ snap, slots: slotsSnap }); phQaUndoStack.set(pk, st);
         phLinkAfterWrite(name, kind, key, lkConf);
         const rec1 = phPatientPeek(name) || {}, after = phNqState(rec1, name);
-        const autos = Object.keys(((rec1.tri || {}).auto || {})[kind] || {}).filter(k => !autoBefore.includes(k)).map(phSignLabel);
-        phQaLast.set(pk, phNqChangeLine(before, after, before.ids, label, ans, autos));
+        const autoNow = ((rec1.tri || {}).auto || {})[kind] || {}, autoNew = Object.keys(autoNow).filter(k => !autoBefore.includes(k));
+        const autos = autoNew.filter(k => !autoNow[k].yes).map(phSignLabel), autosYes = autoNew.filter(k => autoNow[k].yes).map(phSignLabel);
+        phQaLast.set(pk, phNqChangeLine(before, after, before.ids, label, ans, autos, autosYes));
         phTriRefresh(name);
       }
       return true;
@@ -72345,7 +72370,7 @@ or changing anything in Cliniko.
     }
     if ((el = T.closest("[data-rentab-no]"))) {
       const key = el.dataset.rentabNo.split(":")[1];
-      if (phTriWrite(name, t => { if (t.p[key] === false) { delete t.p[key]; } else { t.p[key] = false; } })) phRenTabRefresh(name);
+      if (phTriWrite(name, t => phTriSetNo(t, "p", key))) { phLinkAsk.delete(phPatientKey(name)); phRenTabRefresh(name); }
       return true;
     }
     if (T.closest("[data-rentab-add]")) {
@@ -72799,11 +72824,12 @@ or changing anything in Cliniko.
     }, 480);
   }
   // one plain line about what an answer just changed (families that fell hard + opposites it settled)
-  function phNqChangeLine(before, after, ids, label, val, autoLabels) {
+  function phNqChangeLine(before, after, ids, label, val, autoLabels, autoYesLabels) {
     const fell = ids.map((id, i) => ({ id, b: before.p[i], a: after.p[i] })).filter(x => x.b >= 0.04 && x.a < x.b / 2.5).sort((x, y) => y.b - x.b);
     const parts = [];
     if (fell.length) parts.push(`${fell.slice(0, 3).map(x => `<b>${esc(PH_FORMULAS[x.id].name)}</b> ${Math.round(x.b * 100)}% → ${Math.round(x.a * 100)}%`).join(", ")}${fell.length > 3 ? `, +${fell.length - 3} more fell` : ""}`);
     if (autoLabels.length) parts.push(`also marked No (not asked): ${autoLabels.map(esc).join(", ")}`);
+    if ((autoYesLabels || []).length) parts.push(`also marked Yes (the other half): ${autoYesLabels.map(esc).join(", ")}`);
     return parts.length ? `${val ? "Yes" : "No"} to “${esc(label)}”: ${parts.join(" · ")}` : "";
   }
   // her 2026-10-13 sleek card (mock fbr-page-sleek-mock-c3-2026-10-13.html): Quick assess is always ONE soft card on the page. Its heading is the open / close arrow (the
