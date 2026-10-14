@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261014-590000">
+<meta name="lcm-build" content="20261014-600000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -4597,6 +4597,21 @@
   #pharmacyPage .ph-apptlens-chip:hover { border-color: var(--ph-herb-card); }
   #pharmacyPage .ph-apptlens-chip.on { background: var(--ph-herb-deep); border-color: var(--ph-herb-deep); color: #fff; }
   #pharmacyPage .ph-apptlens-chip.on b { color: var(--ph-gold); }
+  #pharmacyPage .ph-pracrow { flex-wrap: nowrap; overflow-x: auto; margin: 0 0 8px; padding-bottom: 2px; scrollbar-width: none; }
+  #pharmacyPage .ph-pracrow::-webkit-scrollbar { display: none; }
+  #pharmacyPage .ph-pracrow .ph-apptlens-chip { flex: none; }
+  #pharmacyPage .prac { font: 700 var(--fs-10)/1 var(--font-body, inherit); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
+  #pharmacyPage .ph-appt-block .prac { flex: none; margin-left: auto; opacity: .78; }
+  #pharmacyPage .ph-apptcal-daycol { container-type: inline-size; container-name: dc; }
+  @container dc (max-width: 149px) { .ph-appt-block.sm .prac, .ph-appt-block.xs .prac { display: none; } }
+  @container dc (max-width: 79px) { .ph-appt-block .prac { display: none; } }
+  #pharmacyPage .ph-apptls-row .prac, #pharmacyPage .ph-un .q-sub .prac { margin-left: 6px; color: var(--ph-soft); }
+  #pharmacyPage .ph-apptpop-head .meta .prac { color: var(--ph-herb-deep); }
+  #pharmacyPage .ph-prac-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 0 8px; }
+  #pharmacyPage .ph-prac-row .ph-prac-name { width: 130px; flex: none; }
+  #pharmacyPage .ph-prac-del { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border: 0; border-radius: 6px; background: none; color: var(--ph-faint); cursor: pointer; }
+  #pharmacyPage .ph-prac-del:hover { color: var(--ph-herb-deep); background: var(--ph-herb-tint); }
+  #pharmacyPage .ph-prac-del .ph-cc-svgic { width: 11px; height: 11px; }
   #pharmacyPage .ph-un:focus-visible { outline: 2px solid var(--ph-herb-card); outline-offset: 2px; }
   #pharmacyPage .ph-un .ph-un-ic { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
   #pharmacyPage .ph-un .ph-un-ic.fill { fill: currentColor; stroke: none; }
@@ -28525,6 +28540,7 @@
   }
   const PH_SETTINGS_CARDS = [
     { key: "workdays", group: "clinic", label: "📍 My days at this clinic", html: phSettingsWorkdaysHtml },
+    { key: "practitioners", group: "clinic", label: "👥 Other practitioners", html: phSettingsPracHtml, show: () => phIsAcupregLoc() || Array.isArray(PHARMACY.practitioners) },
     { key: "location", group: "clinic", label: "📍 This location", html: phSettingsLocationHtml },
     { key: "logo", group: "clinic", label: "🖼 Clinic logo on letters", html: phClinicLogoSectionHtml },
     { key: "labeltext", group: "prescriptions", label: "🏷 Label text", html: phSettingsLabelTextHtml },
@@ -28545,7 +28561,7 @@
     </div>`;
   }
   function phSettingsGroupBodyHtml() {
-    const cards = PH_SETTINGS_CARDS.filter(c => c.group === phSettingsGroup);
+    const cards = PH_SETTINGS_CARDS.filter(c => c.group === phSettingsGroup && (!c.show || c.show()));
     return cards.map(phSettingsCardHtml).join("");
   }
   function renderPhSettingsPage() {
@@ -30322,12 +30338,75 @@
   let phApptCalLens = "all", phApptLensAnim = false;   // one-shot: the next paint plays the Lens motion
   const PH_APPTCAL_LENSES = [["herbs", "Herbs to prepare"], ["cycle", "Cycle & IVF"], ["new", "New to you"], ["home", "Home visits"]];
   function phApptLensHit(a, lens) {
+    if (String(lens).startsWith("prac:")) return !!a && phApptPractitioner(a) === String(lens).slice(5);
     if (!a || a.service === "Break" || !a.patient) return false;
     if (lens === "herbs") { const d = phApptCalDotCls(a); return d === "ready" || d === "short"; }
     if (lens === "cycle") return (phTpPlans(a.patient) || []).some(p => p.status !== "done" && PH_TP_CYCLE_TEMPLATES.includes(p.templateName));
     if (lens === "new") return phApptIsNewToYou(a).newToYou;
     if (lens === "home") return phApptIsHomeVisit(a.service);
     return false;
+  }
+  /* ---- Practitioners at this clinic (her ask 2026-10-14, Acupreg: "acupreg clinic has different practitioners and i want to
+     include them. Anni - Monday Wed, Charlie Thursday Christine Tuesday"; "they will not be using acupreg, its for me to keep
+     track of patients"). The others do not use the app: their names only label the bookings she keeps track of.
+     PHARMACY.practitioners = [{ name, days:[0-6] }] (Sunday = 0) lists the OTHER practitioners and their weekdays; her own days
+     stay "My days at this clinic" (clinicWorkDays). Unset, the Acupreg login starts from PH_PRAC_ACUPREG; any other location has
+     none and shows nothing new. A booking's practitioner = its own a.practitioner (the Edit form, for a cover day), else
+     whoever works that weekday, else nobody. Derived on read, never stored. */
+  var PH_PRAC_ACUPREG = [{ name: "Anni", days: [1, 3] }, { name: "Charlie", days: [4] }, { name: "Christine", days: [2] }];
+  function phPracRaw() { return Array.isArray(PHARMACY.practitioners) ? PHARMACY.practitioners : (phIsAcupregLoc() ? PH_PRAC_ACUPREG : []); }
+  function phPracOthers() { return phPracRaw().filter(p => p && String(p.name || "").trim()); }
+  function phPracNames() {
+    const o = phPracOthers();
+    return o.length ? o.map(p => String(p.name).trim()).sort((x, y) => x.localeCompare(y)).concat([PH_CK_ME]) : [];
+  }
+  function phApptPractitioner(a) {
+    const others = phPracOthers();
+    if (!others.length || !a) return "";
+    if (a.practitioner) return a.practitioner;
+    const dow = a.date ? parseKey(a.date).getDay() : -1, mine = phClinicWorkDays();
+    if (mine && mine.includes(dow)) return PH_CK_ME;
+    const p = others.find(x => (x.days || []).includes(dow));
+    return p ? String(p.name).trim() : (mine ? "" : PH_CK_ME);   // no days set for her: whatever no one else claims is hers
+  }
+  function phApptPracTagHtml(a) {
+    if (!a || a.service === "Break") return "";
+    const n = phApptPractitioner(a);
+    return n ? `<span class="prac" title="Practitioner">${esc(n)}</span>` : "";
+  }
+  // the calendar also shows the days the other practitioners work (her own days stay as set); no days set = every day, as before
+  function phApptCalDaysCfg() {
+    const mine = phClinicWorkDays(), others = phPracOthers();
+    if (!mine || !others.length) return mine;
+    const s = new Set(mine); others.forEach(p => (p.days || []).forEach(d => s.add(d)));
+    return [...s];
+  }
+  function phApptPracChipsHtml(days) {
+    const names = phPracNames();
+    if (!names.length) return "";
+    const cnt = {}; let total = 0;
+    (days || []).forEach(d => phApptFor(d.key).forEach(a => { if (a.service === "Break" || !a.patient) return; total++; const p = phApptPractitioner(a); if (p) cnt[p] = (cnt[p] || 0) + 1; }));
+    const chip = (k, label, n) => `<button type="button" class="ph-apptlens-chip${phApptCalLens === k ? " on" : ""}" data-ph-apptcal-lens="${esc(k)}" aria-pressed="${phApptCalLens === k}">${esc(label)} <b>${n}</b></button>`;
+    return `<div class="ph-apptlens ph-pracrow" role="group" aria-label="Practitioner">${chip("all", "Everyone", total)}${names.map(n => chip("prac:" + n, n, cnt[n] || 0)).join("")}</div>`;
+  }
+  function phApptPracFieldHtml(a) {
+    const names = phPracNames();
+    if (!names.length) return "";
+    const cur = a.practitioner || "";
+    return `<div class="field full"><label>Practitioner</label><select id="phApptCalEditPrac" aria-label="Practitioner"><option value=""${cur ? "" : " selected"}>Auto — by the weekday</option>${cur && !names.includes(cur) ? `<option value="${esc(cur)}" selected>${esc(cur)}</option>` : ""}${names.map(n => `<option value="${esc(n)}"${n === cur ? " selected" : ""}>${esc(n)}</option>`).join("")}</select></div>`;
+  }
+  // Settings › Other practitioners: every change starts from the current list (the Acupreg starter list the first time), saves, repaints
+  function phPracEdit(fn) {
+    const list = phPracRaw().map(p => ({ name: p.name, days: (p.days || []).slice() }));
+    fn(list);
+    PHARMACY.practitioners = list;
+    if (String(phApptCalLens).startsWith("prac:")) phApptCalLens = "all";
+    savePharmacy();
+    renderPhSettingsPage();
+  }
+  function phSettingsPracHtml() {
+    const rows = phPracRaw().map((p, i) => `<div class="ph-prac-row"><input type="text" class="ph-prac-name" data-ph-prac-name="${i}" value="${esc(p.name || "")}" maxlength="30" aria-label="Practitioner name" placeholder="Name"><div class="ph-workday-chips">${[1, 2, 3, 4, 5, 6, 0].map(n => { const on = (p.days || []).includes(n); return `<button type="button" class="ph-cap-tchip${on ? " on" : ""}" data-ph-prac-day="${i}|${n}" aria-pressed="${on}">${DAY_SHORT[n]}</button>`; }).join("")}</div><button type="button" class="ph-prac-del" data-ph-prac-del="${i}" aria-label="Remove ${esc(p.name || "practitioner")}"><svg class="ph-cc-svgic" aria-hidden="true" focusable="false"><use href="#i-x"/></svg></button></div>`).join("");
+    return `<div class="ph-settings-sec"><h3>👥 Other practitioners</h3>${rows}<div class="ph-settings-actions"><button type="button" class="ph-load-btn" data-ph-prac-add="1">＋ Add practitioner</button></div></div>`;
   }
   let phApptCalQ = "";            // search box text, her ask 2026-09-07 ("appointments should do what the dashboard and patient profiles does") -- dims non-matching blocks rather than removing them, since the grid's own layout/spacing shouldn't jump around while she types
   let phApptCalEnterKey = null;   // the days last painted; a new set plays the blocks' rise-in (null = the page just opened)
@@ -30442,7 +30521,7 @@
   // (Settings) when set, else plain calendar convention -- Mon-Fri / Mon-Sat.
   function phApptCalWorkDaySet(n) {
     const MON_FIRST = [1, 2, 3, 4, 5, 6, 0];
-    const cfg = phClinicWorkDays();
+    const cfg = phApptCalDaysCfg();
     const base = cfg && cfg.length ? MON_FIRST.filter(d => cfg.includes(d)) : [1, 2, 3, 4, 5, 6];
     return base.slice(0, n);
   }
@@ -30475,7 +30554,7 @@
       // configured work days; an unconfigured clinic (the plain-calendar
       // Mon-Sat fallback phApptCalWorkDaySet uses for 5/6-day) keeps
       // showing the real full week here, unchanged.
-      const cfg = phClinicWorkDays();
+      const cfg = phApptCalDaysCfg();
       return cfg ? week.filter(d => cfg.includes(parseKey(d.key).getDay())) : week;
     }
     const workSet = phApptCalWorkDaySet(n);
@@ -30684,8 +30763,8 @@
     const hb = short ? `<span class="hb short"${dotTap} title="Short on herbs${roomy ? " — tap to add to order" : ""}">!</span>` : "";
     const meta = sz !== "xs" ? phApptBlockMetaHtml(a) : "";
     const inner = sz === "lg"
-      ? `<div class="r1">${tm}${tag}${pregTag}${hb}</div><div class="nm">${who}</div>${meta}`
-      : `<div class="r1">${tm}<span class="nm">${who}</span>${tag}${pregTag}${hb}</div>${meta}`;
+      ? `<div class="r1">${tm}${tag}${pregTag}${hb}${phApptPracTagHtml(a)}</div><div class="nm">${who}</div>${meta}`
+      : `<div class="r1">${tm}<span class="nm">${who}</span>${tag}${pregTag}${hb}${phApptPracTagHtml(a)}</div>${meta}`;
     // how far through the phase's sessions this visit is (visit N of M)
     let prog = "";
     if (a.patient && a.service !== "Break") {
@@ -30981,7 +31060,7 @@
         <span class="ph-apptpop-av${kindCls}"${ck ? ` style="${ck}"` : ""} aria-hidden="true">${esc(phInitials(phTitle(a.patient)).slice(0, 2))}</span>
         <div class="hd">
           <h3><button type="button" class="ph-apptpop-name" data-ph-dash-patient-open="${esc(a.patient)}" title="Open ${esc(phTitle(a.patient))}'s profile">${esc(phTitle(a.patient))}</button></h3>
-          <div class="meta">${esc(dayTxt)} · ${esc(phApptTimeRangeLabel(a))}${phApptKindHtml(a.service)}${phApptEtHtml(a)}${phApptPregHtml(a)}${tracked ? `<svg class="icn drop" aria-hidden="true"><title>Cycle tracked</title><use href="#i-drop"/></svg>` : ""}${fuDue ? `<span class="bell" title="Follow-up due">🔔</span>` : ""}</div>
+          <div class="meta">${esc(dayTxt)} · ${esc(phApptTimeRangeLabel(a))}${phApptKindHtml(a.service)}${phApptEtHtml(a)}${phApptPregHtml(a)}${phApptPracTagHtml(a)}${tracked ?`<svg class="icn drop" aria-hidden="true"><title>Cycle tracked</title><use href="#i-drop"/></svg>` : ""}${fuDue ? `<span class="bell" title="Follow-up due">🔔</span>` : ""}</div>
         </div>
         <button type="button" class="ph-apptpop-ic x" data-ph-apptpop-close="1" title="Close" aria-label="Close"><svg class="icn" aria-hidden="true"><use href="#i-x"/></svg></button>
       </div>
@@ -31038,6 +31117,7 @@
           <input type="text" id="phApptCalEditServiceOther" value="${esc(a.service && !PH_APPTCAL_SERVICE_NAMES.includes(a.service) ? a.service : "")}" placeholder="Type the service" aria-label="Other service" hidden></div>
         <div class="field"><label>Duration (min)</label><input type="number" id="phApptCalEditDur" value="${phApptMins(a)}" min="5" step="5"${a.durationMin ? "" : ` title="Read from the service name — change it and it sticks"`}></div>
         <div class="field"><label>Phone</label><input type="text" id="phApptCalEditPhone" value="${esc(a.phone || "")}"></div>
+        ${phApptPracFieldHtml(a)}
         <div class="field full"><label>Repeat</label>${phApptRepeatHtml("phApptCalEdit")}</div>
       </div>
       <div class="ph-apptpop-foot"><button type="button" class="ph-apptpop-btn" data-ph-apptcal-edit-save="${esc(a.id)}">Save</button><button type="button" class="ph-name-link soft" data-ph-apptpop-mode="view">Cancel</button></div>`;
@@ -31194,14 +31274,14 @@
         ${phApptListColHtml(a)}
         <span class="tm">${esc(phCkTime12(a.time))}</span>
         ${kindHtml}
-        <button type="button" class="ph-name-link" data-ph-dash-patient-open="${esc(a.patient)}">${esc(phTitle(a.patient))}</button>
+        <button type="button" class="ph-name-link" data-ph-dash-patient-open="${esc(a.patient)}">${esc(phTitle(a.patient))}${phApptPracTagHtml(a)}</button>
         <span class="fg1">${cell(brief.focus, brief.focusSrc, "focus")}</span>
       </div>`;
     }
     return `<div class="ph-apptls-row${rowState}" role="button" tabindex="0" data-ph-appt-pop="${esc(a.id)}" aria-label="Open ${esc(phTitle(a.patient))}">
         ${phApptListColHtml(a)}
         <span class="tm"><b>${esc(phCkTime12(a.time))}</b>${phApptListSpanHtml(a)}</span>
-        <span class="pt"><button type="button" class="ph-name-link" data-ph-dash-patient-open="${esc(a.patient)}">${esc(phTitle(a.patient))}</button>${kindHtml}${phApptEtHtml(a)}${tracked ? `<svg class="icn drop" aria-hidden="true" title="Cycle tracked"><use href="#i-drop"/></svg>` : ""}${phApptFuDue(k, a.date) ? `<span class="bell" title="Follow-up due">🔔</span>` : ""}</span>
+        <span class="pt"><button type="button" class="ph-name-link" data-ph-dash-patient-open="${esc(a.patient)}">${esc(phTitle(a.patient))}</button>${phApptPracTagHtml(a)}${kindHtml}${phApptEtHtml(a)}${tracked ? `<svg class="icn drop" aria-hidden="true" title="Cycle tracked"><use href="#i-drop"/></svg>` : ""}${phApptFuDue(k, a.date) ? `<span class="bell" title="Follow-up due">🔔</span>` : ""}</span>
         <span class="stx">${phApptStatusChipHtml(a)}${phaseHtml}</span>
         ${phApptListCdHtml(a)}
         <span class="fg f1">${cell(brief.focus, brief.focusSrc, "focus")}</span>
@@ -31585,7 +31665,7 @@
       </div>
       <div class="un-eb">${eb}</div>
       <div class="un-n">${esc(phTitle(a.patient))}${newToYou ? `<span class="newflag">New to you</span>` : ""}${phApptPregTxt(a) ? `<span class="un-preg" title="Positive pregnancy test on record">${esc(phApptPregTxt(a))}</span>` : ""}</div>
-      <div class="q-sub"><span class="q-ty">${ty.ics}</span>${dd !== 0 ? esc(phUnDayWord(a)) + " " : ""}${esc(phCkTime12(a.time))}</div>
+      <div class="q-sub"><span class="q-ty">${ty.ics}</span>${dd !== 0 ? esc(phUnDayWord(a)) + " " : ""}${esc(phCkTime12(a.time))}${phApptPracTagHtml(a)}</div>
       ${pips}
       <div class="un-visit"><span>${esc(visitTxt)}</span>${cdSig ? `<span class="un-cd">${esc(cdSig)}</span>` : ""}${g3 ? `<span class="un-jar">${g3}</span>` : ""}</div>
       ${herbsLine}
@@ -31736,6 +31816,7 @@
         ${viewSeg}
         <input type="search" class="ph-tl-search ph-apptcal-search" data-ph-apptcal-q="1" value="${esc(phApptCalQ)}" placeholder="Search patient…" aria-label="Search appointments">
       </div>
+      ${phApptPracChipsHtml(days)}
       ${phFlashHtml()}
       ${view === "list" ? phApptCalListHtml(days, selKey) : (window.innerWidth > 900
         // desktop: the Up next card is a right-hand column beside the grid, and it is the
@@ -34685,6 +34766,12 @@
         savePharmacy(); renderPhSettingsPage();
         return;
       }
+      // other practitioners (Settings, 2026-10-14)
+      const pracDay = e.target.closest("[data-ph-prac-day]");
+      if (pracDay) { const [pi, pd] = pracDay.dataset.phPracDay.split("|").map(Number); phPracEdit(l => { const p = l[pi]; if (p) p.days = p.days.includes(pd) ? p.days.filter(x => x !== pd) : p.days.concat([pd]); }); return; }
+      const pracDel = e.target.closest("[data-ph-prac-del]");
+      if (pracDel) { phPracEdit(l => { l.splice(+pracDel.dataset.phPracDel, 1); }); return; }
+      if (e.target.closest("[data-ph-prac-add]")) { phPracEdit(l => { l.push({ name: "", days: [] }); }); const ins = document.querySelectorAll("#pharmacyPage .ph-prac-name"); if (ins.length) ins[ins.length - 1].focus(); return; }
       // ---- 📅 appointment schedule handlers (2026-09-01) ----
       if (e.target.closest("[data-ph-appt-open]")) { phApptOpen(); return; }
       if (e.target.closest("[data-ph-appt-close]")) { phApptClose(); return; }
@@ -34858,6 +34945,7 @@
             if (+durEl.value !== derived) a.durationMin = +durEl.value; else delete a.durationMin;
           }
           if (pEl) a.phone = pEl.value;
+          { const prEl = document.getElementById("phApptCalEditPrac"); if (prEl) { if (prEl.value) a.practitioner = prEl.value; else delete a.practitioner; } }
           // her ask 2026-09-11 -- same auto-enable as a fresh import, for
           // the case she types "Acupuncture" into an already-booked
           // appointment's Service field here instead
@@ -56749,6 +56837,17 @@ or changing anything in Cliniko.
         phApptPopPlace();
         if (!oEl.hidden) { oEl.focus(); oEl.select(); }
       }
+      return;
+    }
+    // Settings › Other practitioners: a renamed practitioner takes their cover-day bookings with them; the box is not repainted so the cursor stays
+    if (t.matches("input[data-ph-prac-name]")) {
+      const pi = +t.dataset.phPracName, old = (phPracRaw()[pi] || {}).name, nv = t.value.trim().slice(0, 30);
+      const list = phPracRaw().map(p => ({ name: p.name, days: (p.days || []).slice() }));
+      if (list[pi]) list[pi].name = nv;
+      PHARMACY.practitioners = list;
+      if (old && nv && old !== nv) phApptList().forEach(a => { if (a.practitioner === old) a.practitioner = nv; });
+      if (String(phApptCalLens).startsWith("prac:")) phApptCalLens = "all";
+      savePharmacy();
       return;
     }
     // appointment popup's Condition picker (phApptPopHtml): which treatment
