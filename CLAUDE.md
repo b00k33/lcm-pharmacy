@@ -55,6 +55,7 @@ Draft" card's Principle and Letters lines, its heading and Draft tag (it is now 
 "Make X main" buttons). The pattern data (`letters`, `food`, `points`, `formula`) still sits in `PH_PAT_DEFS` but nothing
 reads it; do not render it again.
 **Kept and flagged (her call):** Quick assess; Today's visit "Worth a look" data questions.
+**Audit step 4 (2026-10-15, her "yes to 1-6"):** the last on-screen "e.g." went (the template manager's "Paste phases as JSON" hover text, the IVF "Egg collection cycle" option now "(eggs or embryos frozen)", the iron reference note now "such as"); the Ren photo popover reads "→ <type>" like its quiet tag (no "suggests"); placeholders are the field's name again (Medical history paste box "Referral, note or shorthand", the relocation notice hand-over line has its label only, the Journey message box "Message"); the relocation search box and the plan review's Tongue / Pulse / Abdomen boxes lost their emoji (icons are the sprite, never emoji).
 
 <!-- ============================================================ -->
 # ★★★ PATIENT WORKFLOW — THE LAW (her design, 2026-10-10) ★★★
