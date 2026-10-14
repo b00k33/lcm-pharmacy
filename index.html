@@ -14715,6 +14715,14 @@
   #pharmacyPage .ph-rtng .ph-ren-view-shotlab { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
   #pharmacyPage .ph-rtng .ph-ren-view-shotlab em { font-style: normal; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--ph-faint); font-size: var(--fs-11); }
   #pharmacyPage .ph-rtng .ph-ltr-qual.src { box-shadow: 0 0 0 2px var(--ph-gold, #D9AE47); }
+  /* chips on every tongue photo (her 2026-10-14): the Drawing toggle in the header, the small drawing beside the rows when it is on, the Same as / Clear chips */
+  #pharmacyPage .ph-rtng-tools { display: flex; align-items: center; gap: 8px; }
+  #pharmacyPage .ph-rtng-tools .ph-cap-tchip { padding: 3px 9px; font-size: var(--fs-10); }
+  #pharmacyPage .ph-rtng-body.draw { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 0 10px; align-items: start; }
+  #pharmacyPage .ph-rtng-fig { padding-top: 4px; line-height: 0; }
+  #pharmacyPage .ph-rtng-fig .ph-tng2-svg { width: 84px; height: auto; }
+  #pharmacyPage .ph-rtng-acts { justify-content: flex-start; margin: 6px 0 0; }
+  #pharmacyPage .ph-expast-tag { font-style: normal; font-weight: 600; color: var(--ph-faint); font-size: var(--fs-10); margin-left: 5px; }
   #pharmacyPage .ph-ren-mark-list li .tp { font-weight: 700; color: var(--ph-green-deep); }
   #pharmacyPage .ph-ren-markrow { display: flex; flex-direction: column; gap: 4px; margin: 0 0 8px; width: 100%; }
   #pharmacyPage .ph-ren-markrow > i { font-style: normal; font-size: var(--fs-10); font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--ph-green-deep); }
@@ -58446,23 +58454,49 @@ or changing anything in Cliniko.
   }
   // where this photo's tongue analysis lives: today's photo = the Tongue page's finding (rec.tongueExam); an earlier day = that day's visit finding when there was
   // a visit; otherwise nowhere (the panel says so and the chips stay off)
+  // the dated review of one day (her 2026-10-14: a photo from a day with no visit writes a dated review, the store the Compare screen lists and compares); the newest when several
+  function phTngReviewFor(rec, dateKey) {
+    const list = ((rec && rec.tongueReviews) || []).filter(r => r.date === dateKey);
+    return list.length ? list.slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0] : null;
+  }
   function phTngViewTarget(pk, dateKey) {
     const rec = phPatientPeek(pk);
     if (!rec || !dateKey) return { kind: "none", dateKey };
     if (dateKey === keyOf(TODAY)) return { kind: "today", dateKey, tng: phTng2Read(rec.tongueExam) };
     const sess = (rec.acuSessions || []).filter(s => s.date === dateKey);
-    if (!sess.length) return { kind: "none", dateKey };
+    if (!sess.length) { const rev = phTngReviewFor(rec, dateKey); return { kind: "review", dateKey, tng: phTng2Read(rev ? rev.tng : null) }; }
     const f = sess.map(s => rec.visitFnd && rec.visitFnd[s.id]).find(x => x && x.tng && !phTng2Empty(x.tng));
     return { kind: "visit", dateKey, sess, tng: phTng2Read(f ? f.tng : null) };
   }
   function phTngViewWrite(pk, tgt, tng) {
     if (tgt.kind === "today") return phTngWrite(pk, tng);
-    if (tgt.kind !== "visit") return false;
+    if (tgt.kind !== "visit" && tgt.kind !== "review") return false;
     const rec = phPatientRec(pk); if (!rec) return false;
-    tgt.sess.forEach(s => { phVisitFindings(rec, s.id).tng = JSON.parse(JSON.stringify(tng)); });
+    if (tgt.kind === "review") {
+      // one review per day: the first tap makes it (flagged `photo`), later taps edit it; Clear removes a review the photo made, a review with a note only empties
+      const rev = phTngReviewFor(rec, tgt.dateKey), empty = phTng2Empty(tng);
+      if (!rev && empty) return true;
+      if (!rev) { if (!Array.isArray(rec.tongueReviews)) rec.tongueReviews = []; rec.tongueReviews.push({ id: uid(), date: tgt.dateKey, note: "", tng: JSON.parse(JSON.stringify(tng)), createdAt: Date.now(), photo: true }); }
+      else if (empty && rev.photo && !rev.note) { rec.tongueReviews = rec.tongueReviews.filter(r => r !== rev); if (!rec.tongueReviews.length) delete rec.tongueReviews; }
+      else rev.tng = JSON.parse(JSON.stringify(tng));
+    } else tgt.sess.forEach(s => { phVisitFindings(rec, s.id).tng = JSON.parse(JSON.stringify(tng)); });
     if (savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return false; }
     return true;
   }
+  // the last finding before a day, for the "Same as <date>" chip: a visit's finding, a dated review, or the Tongue page's own (by the day it was recorded)
+  function phTngPriorFinding(rec, dateKey) {
+    if (!rec || !dateKey) return null;
+    const out = [];
+    (rec.acuSessions || []).forEach(s => { const f = s.date && s.date < dateKey && rec.visitFnd && rec.visitFnd[s.id]; if (f && f.tng && !phTng2Empty(f.tng)) out.push({ date: s.date, tng: f.tng, src: "visit" }); });
+    (rec.tongueReviews || []).forEach(r => { if (r.date && r.date < dateKey && r.tng && !phTng2Empty(r.tng)) out.push({ date: r.date, tng: r.tng, src: r.photo ? "photo" : "review" }); });
+    const ex = rec.tongueExam; if (ex && ex.at && !phTng2Empty(ex)) { const d = keyOf(new Date(ex.at)); if (d < dateKey) out.push({ date: d, tng: ex, src: "Tongue page" }); }
+    if (!out.length) return null;
+    out.sort((a, b) => b.date.localeCompare(a.date));
+    return out[0];
+  }
+  // the small drawing beside the chips: a toggle, off until she turns it on, remembered on this device (her 2026-10-14 "give toggle to show on tongue")
+  const phTngDrawOn = () => { try { return localStorage.getItem("lcm-tng-draw") === "1"; } catch (e) { return false; } };
+  const phTngDrawSet = v => { try { localStorage.setItem("lcm-tng-draw", v ? "1" : "0"); } catch (e) { /* storage blocked */ } };
   // circles -> the finding. A circle with a type (and a place) puts that mark on the finding. For each mark type the finding keeps
   // tng.cm[type] = { base, c, last, off }: `base` is what she had on that mark BEFORE any circle touched it (null = not ticked, [] = ticked with no place, or
   // her list of places), `c` maps each circle ("photoId:circleId") to its place, `last` is what this function last wrote, and `off` means she took the mark off by
@@ -58508,8 +58542,9 @@ or changing anything in Cliniko.
     if (!st || st.kind !== "tongue") return "";
     const rec = phRenMarksRec(st), dk = rec ? phRenDateKeyOf(rec) : "", dl = dk ? phFuDateLabel(dk) : "this date";
     const tgt = phTngViewTarget(st.patientKey, dk);
-    const head = src => `<div class="ph-ren-view-shotlab">Tongue analysis${src ? `<em>${esc(src)}</em>` : ""}</div>`;
-    if (tgt.kind === "none") return `<div class="ph-ren-view-shots ph-rtng" id="phRenTngSec">${head("")}<div class="ph-ren-marks-empty">No visit on ${esc(dl)}.</div></div>`;
+    const draw = phTngDrawOn();
+    const head = (src, tools) => `<div class="ph-ren-view-shotlab"><span>Tongue analysis</span><span class="ph-rtng-tools">${tools ? `<button type="button" class="ph-cap-tchip${draw ? " on" : ""}" data-vtp-draw="1" aria-pressed="${draw}">Drawing</button>` : ""}${src ? `<em>${esc(src)}</em>` : ""}</span></div>`;
+    if (tgt.kind === "none") return `<div class="ph-ren-view-shots ph-rtng" id="phRenTngSec">${head("")}<div class="ph-ren-marks-empty">No patient record for this photo.</div></div>`;
     const t = tgt.tng, more = !!st.tngMore, nm = phPfwName();
     // Fang Bing Ren badges only on today's finding (the one Fang Bing Ren reads) and with this patient open (their taps need an open patient)
     const fbr = tgt.kind === "today" && nm && phPatientKey(nm) === st.patientKey ? phTngFbrInfo(nm) : null;
@@ -58533,12 +58568,14 @@ or changing anything in Cliniko.
       + row("Deviation", PH_TNG_DEVIATION.map(([k, l]) => chip("deviation", k, l, t.deviation === k)).join(""))
       + row("Coat quality", PH_TNG_COAT_QUAL.map(([k, l]) => chip("coatQual", k, l, !!t.coatQual[k])).join("")) : "";
     const summary = phTng2Summary(t);
-    return `<div class="ph-ren-view-shots ph-rtng" id="phRenTngSec">${head(tgt.kind === "today" ? "same finding as the Tongue page" : `visit of ${dl}`)}
-      ${row("Colour", colour)}${row("Shape · Moist", shapeMoist)}${row("Coat", coat)}${row("Under", under)}${row("Marks", marks)}${moreRows}
+    const prior = phTngPriorFinding(phPatientPeek(st.patientKey), dk);
+    const srcLab = tgt.kind === "today" ? "same finding as the Tongue page" : tgt.kind === "review" ? `dated review · ${dl}` : `visit of ${dl}`;
+    return `<div class="ph-ren-view-shots ph-rtng" id="phRenTngSec">${head(srcLab, true)}<div class="ph-rtng-body${draw ? " draw" : ""}">${draw ? `<div class="ph-rtng-fig">${phTongueChartSvg(t, null, { ro: true })}</div>` : ""}<div class="ph-rtng-rows">
+      ${row("Colour", colour)}${row("Shape · Moist", shapeMoist)}${row("Coat", coat)}${row("Under", under)}${row("Marks", marks)}${moreRows}</div></div>
       <button type="button" class="ph-tng2-morebtn" data-vtp-more="1" aria-expanded="${more}">${more ? "▾" : "▸"} More — thickness, deviation, coat quality</button>
       <div class="ph-tng2-sum">${summary ? `<b>Reads as</b> ${esc(summary)}` : `<span class="faint">Nothing marked yet.</span>`}</div>
       ${fbr ? `<div class="ph-tng-fbrsum" data-tng-fbrsum="1">Fang Bing Ren ${fbr.done} of ${fbr.total} picked up from what's ticked above.</div>` : ""}
-      ${!phTng2Empty(t) ? `<div class="ph-tng2-acts"><button type="button" class="tab-link cancel" data-vtp="clear:">Clear</button></div>` : ""}
+      ${prior || !phTng2Empty(t) ? `<div class="ph-ltr-quals ph-rtng-acts">${prior ? `<button type="button" class="ph-ltr-qual" data-vtp-same="1" title="${esc(`Copies the ${prior.src === "visit" ? "visit finding" : prior.src === "Tongue page" ? "Tongue page finding" : "dated review"} of ${phFuDateLabel(prior.date)}`)}">⟲ Same as ${esc(phCycShortLbl(prior.date))}</button>` : ""}${!phTng2Empty(t) ? `<button type="button" class="ph-ltr-qual" data-vtp="clear:">Clear</button>` : ""}</div>` : ""}
     </div>`;
   }
   function phRenTngSecRefresh() {
@@ -58549,8 +58586,20 @@ or changing anything in Cliniko.
   // the taps of both new pieces (chip rows + the circle's type / place); true when it was one of ours
   function phRenTngClick(e) {
     const st = phRenCropState; if (!st || !st.viewOnly || st.compare || st.kind !== "tongue") return false;
-    const T = e.target, vtp = T.closest("[data-vtp]"), more = T.closest("[data-vtp-more]"), ty = T.closest("[data-ren-mark-type]"), wh = T.closest("[data-ren-mark-where]"), pd = T.closest("[data-ren-mark-popdone]");
+    const T = e.target, vtp = T.closest("[data-vtp]"), more = T.closest("[data-vtp-more]"), ty = T.closest("[data-ren-mark-type]"), wh = T.closest("[data-ren-mark-where]"), pd = T.closest("[data-ren-mark-popdone]"), drw = T.closest("[data-vtp-draw]"), same = T.closest("[data-vtp-same]");
     if (more) { st.tngMore = !st.tngMore; phRenTngSecRefresh(); return true; }
+    if (drw) { phTngDrawSet(!phTngDrawOn()); phRenTngSecRefresh(); return true; }
+    if (same) {   // copy the last finding before this photo's day into this day's finding (a tap on any chip still changes it after)
+      const rec = phRenMarksRec(st), dk = rec ? phRenDateKeyOf(rec) : "", tgt = phTngViewTarget(st.patientKey, dk), prior = phTngPriorFinding(phPatientPeek(st.patientKey), dk);
+      if (tgt.kind === "none" || !prior) return true;
+      const t = Object.assign(phTng2Read(prior.tng), { v2: 1 }); delete t.at; delete t.cm;
+      if (phTngViewWrite(st.patientKey, tgt, t)) {
+        phRenTngSecRefresh();
+        const nm = phPfwName();
+        if (tgt.kind === "today" && nm && phPatientKey(nm) === st.patientKey) { try { phTngRefresh(nm); } catch (err) { /* the Tongue page is not on screen */ } }
+      }
+      return true;
+    }
     if (pd) { st.markPop = null; phRenMarkPopPaint(); phRenMarksSecRefresh(); return true; }
     if (ty || wh) {
       const id = st.markSel; if (!id) return true;
@@ -69227,14 +69276,17 @@ or changing anything in Cliniko.
   function phExamPast(rec, id) {
     const today = keyOf(TODAY);
     const read = f => { const r = phVisitFndRead(f); return id === "tongue" ? phTng2Summary(r.tng) : id === "pulse" ? (Object.keys(r.pulse).length ? phVisitPulseSummaryText(r.pulse) : "") : (r.abdNormal ? "Normal" : phAbd2Summary(r.abd, r.zones)); };
-    return (rec.acuSessions || []).filter(s => s.date && s.date < today).sort((a, b) => b.date.localeCompare(a.date))
-      .map(s => ({ date: s.date, txt: rec.visitFnd && rec.visitFnd[s.id] ? read(rec.visitFnd[s.id]) : "" })).filter(x => x.txt).slice(0, 2);
+    const rows = (rec.acuSessions || []).filter(s => s.date && s.date < today)
+      .map(s => ({ date: s.date, txt: rec.visitFnd && rec.visitFnd[s.id] ? read(rec.visitFnd[s.id]) : "" })).filter(x => x.txt);
+    // a dated tongue review (saved from a photo, or on the Compare screen) joins the line on its day, tagged (her 2026-10-14); a day with a visit finding keeps the visit's
+    if (id === "tongue") (rec.tongueReviews || []).forEach(r => { if (!r.date || r.date >= today || rows.some(x => x.date === r.date)) return; const txt = phTng2Summary(r.tng); if (txt) rows.push({ date: r.date, txt, tag: r.photo ? "photo" : "review" }); });
+    return rows.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 2);
   }
   // the quiet history block under today's finding on each exam page
   function phExamPastInner(rec, id) {
     const past = phExamPast(rec, id), at = id === "tongue" ? rec.tongueExam && rec.tongueExam.at : id === "pulse" ? rec.constitPulse && rec.constitPulse.at : rec.abdomen && rec.abdomen.at;
     const stamp = at && !phTodayDonePart(rec, id) ? `<div class="ph-expast-r"><span>Recorded ${esc(phCycShortLbl(keyOf(new Date(at))))}</span><span>not today</span></div>` : "";
-    return stamp + past.map((p, i) => `<div class="ph-expast-r"><span>${i === 0 ? "Last · " : ""}${esc(phCycShortLbl(p.date))}</span><span>${esc(p.txt)}</span></div>`).join("");
+    return stamp + past.map((p, i) => `<div class="ph-expast-r"><span>${i === 0 ? "Last · " : ""}${esc(phCycShortLbl(p.date))}${p.tag ? `<em class="ph-expast-tag">${p.tag}</em>` : ""}</span><span>${esc(p.txt)}</span></div>`).join("");
   }
   function phExamPastHtml(rec, id) { return `<div class="ph-expast" data-exam-past="${id}">${phExamPastInner(rec, id)}</div>`; }
   // repaint the history block in place after a finding is entered (the "recorded 12 Sep, not today" line goes)
