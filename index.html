@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261014-600000">
+<meta name="lcm-build" content="20261014-610000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -11132,6 +11132,7 @@
      data-tp-appt-file mechanism the popup and the Sessions tray already
      use -- never a second store. */
   #pharmacyPage .ph-appthist { display: flex; flex-direction: column; gap: 6px; }
+  #pharmacyPage .ph-appthist-bar { display: flex; justify-content: flex-end; margin: 0 0 8px; }
   #pharmacyPage .ph-appthist-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; font-size: var(--fs-12); padding: 6px 0; border-bottom: 1px solid var(--ph-line); }
   #pharmacyPage .ph-appthist-row:last-child { border-bottom: none; }
   #pharmacyPage .ph-appthist-row.future .w { color: var(--ph-gold-deep); }
@@ -31847,20 +31848,24 @@
   const phApptIc = id => `<svg class="ph-cc-svgic" aria-hidden="true" focusable="false"><use href="#i-${id}"/></svg>`;
   const phApptEl = id => document.getElementById(id);
   const phApptDl = k => { const s = phFuDateLabel(k); return s.endsWith(" " + TODAY.getFullYear()) ? s.slice(0, -5) : s; };
-  function phApptOpen(prefillName, dateKey) {
+  /* opts.forPatient: opened from that patient's own Appointments page (her 2026-10-14 "go into patient profile and paste
+     appointments"): starts on Paste list with the name already filled in, the list on the right shows that patient's
+     bookings, and a pasted line that names someone else is left out unless she puts it back. */
+  function phApptOpen(prefillName, dateKey, opts) {
+    const fp = opts && opts.forPatient ? String(opts.forPatient) : "";
     // a Fridays-only clinic's paste is almost never "for today" -- start on
     // the next day she actually works there (today when today qualifies)
-    phApptState = { dateKey: dateKey || phNextWorkDayKey(), text: "", historyName: "", mode: "quick", home: false, rep: false, rhythm: "weekly", repN: 4, menu: false, dirty: false, ocr: "", pEdit: {}, pDrop: new Set(), toastUndo: null, toastTimer: 0 };
+    phApptState = { dateKey: dateKey || phNextWorkDayKey(), text: "", historyName: fp, forPatient: fp, pKeep: new Set(), mode: fp ? "paste" : "quick", home: false, rep: false, rhythm: "weekly", repN: 4, menu: false, dirty: false, ocr: "", pEdit: {}, pDrop: new Set(), toastUndo: null, toastTimer: 0 };
     document.getElementById("phApptBackdrop").hidden = false;
     document.getElementById("phApptModal").hidden = false;
     renderApptModal();
     // "Book another" from the calendar (2026-09-06) passes the patient's
     // name straight into quick-add so she isn't retyping it
     const nEl = phApptEl("phApptQaName");
-    if (nEl && prefillName) nEl.value = prefillName;
+    if (nEl && (prefillName || fp)) nEl.value = prefillName || fp;
     // the cursor is ready where she types next (a touch screen would pop its keyboard over the list, so not there)
     let coarse = false; try { coarse = window.matchMedia("(pointer: coarse)").matches; } catch (e) {}
-    if (!coarse) { const f = phApptEl(prefillName ? "phApptQaTime" : "phApptQaName"); if (f) f.focus({ preventScroll: true }); }
+    if (!coarse) { const f = phApptEl(fp ? "phApptPaste" : prefillName ? "phApptQaTime" : "phApptQaName"); if (f) f.focus({ preventScroll: true }); }
   }
   function phApptClose() {
     const st = phApptState;
@@ -31870,7 +31875,7 @@
     modal.hidden = true; modal.innerHTML = "";
     phApptState = null;
     // the calendar behind repaints ONCE, here, not on every tap inside the dialog
-    if (st && st.dirty) renderPharmacy();
+    if (st && st.dirty) { renderPharmacy(); if (st.forPatient) presAssessTabRefresh(); }
   }
   // ---- 📷 screenshot → text (her 2026-09-04 "i cant select zanda text"):
   // Tesseract.js, loaded from the CDN the first time she uses it and run
@@ -31913,7 +31918,7 @@
       await worker.terminate();
       if (phApptState !== st) return;   // the dialog was closed while the reader worked
       st.text = (st.text ? st.text.trimEnd() + "\n" : "") + got;
-      st.pEdit = {}; st.pDrop = new Set();
+      st.pEdit = {}; st.pDrop = new Set(); st.pKeep = new Set();
       setHint("");
       const ta = phApptEl("phApptPaste"); if (ta) ta.value = st.text;
       phApptPreviewSync(); phApptClearBtnSync();
@@ -31934,9 +31939,13 @@
     // needsName in one paste, since the whole page is one patient
     const needsNameN = parsed.filter(en => en.needsName).length;
     const histName = (st.historyName || "").trim();
+    const fpKey = st.forPatient ? phPatientKey(st.forPatient) : "";
     const rows = parsed.map((en, i) => {
       const o = st.pEdit[i] || {};
-      return { i, src: en, date: en.date, time: o.time || en.time, service: en.service, patient: o.patient || (en.needsName ? histName : en.patient) || "", dropped: st.pDrop.has(i) };
+      const patient = o.patient || (en.needsName ? histName : en.patient) || "";
+      // opened from a patient's profile: a line that names someone else starts out left off; the x puts it back (pKeep)
+      const other = !!(fpKey && patient && phPatientKey(patient) !== fpKey);
+      return { i, src: en, date: en.date, time: o.time || en.time, service: en.service, patient, other, dropped: other ? !st.pKeep.has(i) : st.pDrop.has(i) };
     });
     return { rows, needsNameN, waiting: needsNameN > 0 && !histName };
   }
@@ -31956,7 +31965,8 @@
     const m = phApptPreviewModel();
     // the "whose appointments" row only exists while the paste needs it
     const nameRow = phApptEl("phApptHistNameRow");
-    if (nameRow && nameRow.hidden === (m.needsNameN > 0)) nameRow.hidden = !(m.needsNameN > 0);
+    const showName = m.needsNameN > 0 && !st.forPatient;
+    if (nameRow && nameRow.hidden === showName) nameRow.hidden = !showName;
     if (!m.rows.length) { host.innerHTML = ""; phApptImportBarSync(m); return; }
     if (m.waiting) {
       host.innerHTML = `<div class="ph-appt-note">Found ${m.needsNameN} appointment${m.needsNameN === 1 ? "" : "s"} with no patient name in the paste.</div>`;
@@ -31978,7 +31988,7 @@
         <button type="button" class="nm" data-ap-pedit="name" title="Change the name">${esc(r.patient)}</button>
         ${phApptKindHtml(r.service)}${phApptEtHtml(r, live)}
         ${r.service ? `<span class="svc" title="${esc(r.service)}">${esc(r.service)}</span>` : ""}
-        <span class="match${isKnown ? "" : " new"}" title="${isKnown ? "Matched to an existing patient" : "Not seen before — imports fine anyway"}">${isKnown ? phApptIc("check") + "matched" : "new name"}</span>
+        ${r.other ? `<span class="match new" title="This line names someone else, so it is left out of ${esc(phTitle(st.forPatient))}'s appointments">someone else</span>` : `<span class="match${isKnown ? "" : " new"}" title="${isKnown ? "Matched to an existing patient" : "Not seen before — imports fine anyway"}">${isKnown ? phApptIc("check") + "matched" : "new name"}</span>`}
         <button type="button" class="x" data-ap-pdrop="1" title="${xTitle}" aria-label="${xTitle}">${phApptIc(r.dropped ? "undo" : "x")}</button>
       </div>`;
     };
@@ -32015,6 +32025,8 @@
     // another line's x that caused this tap-away still lands
     const row = inp.closest(".ap-prow"), m = phApptPreviewModel(), r = m.rows.find(x => x.i === i);
     if (!row || !r) return;
+    // from a profile, a new name can move a line in or out of "someone else": repaint the lines only then
+    if (kind === "name" && st.forPatient && row.classList.contains("off") !== r.dropped) { phApptPreviewSync(); return; }
     const b = document.createElement("button");
     b.type = "button"; b.dataset.apPedit = kind;
     b.className = kind === "time" ? "tm" : "nm";
@@ -32030,8 +32042,9 @@
   function phApptPDrop(btn) {
     const st = phApptState, row = btn.closest(".ap-prow");
     if (!st || !row) return;
-    const i = +row.dataset.pi, off = !st.pDrop.has(i);
-    if (off) st.pDrop.add(i); else st.pDrop.delete(i);
+    const i = +row.dataset.pi, r0 = phApptPreviewModel().rows.find(x => x.i === i), off = r0 ? !r0.dropped : !st.pDrop.has(i);
+    if (r0 && r0.other) { if (off) st.pKeep.delete(i); else st.pKeep.add(i); }
+    else if (off) st.pDrop.add(i); else st.pDrop.delete(i);
     row.classList.toggle("off", off);
     btn.title = off ? "Put this line back" : "Leave this line out";
     btn.setAttribute("aria-label", btn.title);
@@ -32047,7 +32060,7 @@
       <div class="ph-hx-head">
         <button type="button" class="ph-stocktake-close ap-more" data-ap-menu="1" aria-label="More" aria-haspopup="true" aria-expanded="false">${ic("more")}</button>
         <button type="button" class="ph-stocktake-close" data-ph-appt-close="1" aria-label="Close">${ic("x")}</button>
-        <div class="ap-title">${ic("cal")}<span>Appointments</span></div>
+        <div class="ap-title">${ic("cal")}<span>Appointments${st.forPatient ? ` · ${esc(phTitle(st.forPatient))}` : ""}</span></div>
       </div>
       <div class="ap-menu" id="phApptMenu" hidden>
         <div class="ph-switch-row">
@@ -32180,13 +32193,15 @@
     if (!st || !host) return null;
     const motion = !first && !phTpReduceMotion();
     const todayKey = keyOf(TODAY), wdays = phClinicWorkDays();
-    const all = phApptList().filter(a => a.date >= todayKey).sort((a, b) => (a.date + a.time) < (b.date + b.time) ? -1 : 1);
-    const shown = all.slice(0, 80);
+    // from a patient's profile the list is that patient's bookings, past and ahead
+    const fpKey = st.forPatient ? phPatientKey(st.forPatient) : "";
+    const all = phApptList().filter(a => fpKey ? phPatientKey(a.patient) === fpKey && a.service !== "Break" : a.date >= todayKey).sort((a, b) => (a.date + a.time) < (b.date + b.time) ? -1 : 1);
+    const shown = fpKey ? all.slice(-80) : all.slice(0, 80);
     const lh = phApptEl("phApptLh");
     if (lh) {
       const days = new Set(all.map(a => a.date)).size;
-      const tail = all.length ? `· ${all.length} across ${days} day${days === 1 ? "" : "s"}${all.length > shown.length ? ` · first ${shown.length} shown` : ""}` : "";
-      if (!lh.firstChild) lh.innerHTML = `<span>Booked ahead</span><span class="faint"></span>`;
+      const tail = all.length ? `· ${all.length} across ${days} day${days === 1 ? "" : "s"}${all.length > shown.length ? ` · ${fpKey ? "latest" : "first"} ${shown.length} shown` : ""}` : "";
+      if (!lh.firstChild) lh.innerHTML = `<span>${fpKey ? "On file" : "Booked ahead"}</span><span class="faint"></span>`;
       const f = lh.querySelector(".faint");
       if (f.textContent !== tail) { f.textContent = tail; if (motion) { f.classList.remove("bump"); void f.offsetWidth; f.classList.add("bump"); } }
     }
@@ -32212,7 +32227,7 @@
         if (n.dataset.sig !== sig) { n.dataset.sig = sig; n.innerHTML = `<span>${esc(phApptDl(w.date))}</span> <span class="faint">· ${sig}</span>`; }
         n.classList.toggle("cur", w.date === st.dateKey);
       } else if (w.empty) {
-        if (isNew) n.textContent = "Nothing booked ahead yet.";
+        if (isNew) n.textContent = fpKey ? "Nothing on file yet." : "Nothing booked ahead yet.";
       } else {
         const a = w.a, sig = [a.time, a.patient, a.service, phApptAllHerbs() ? 1 : 0, phApptEtLabel(a)].join("|");
         if (n.dataset.sig !== sig) {
@@ -32338,15 +32353,15 @@
     const m = phApptPreviewModel();
     const rows = m.waiting ? [] : m.rows.filter(r => !r.dropped && r.patient);
     if (!rows.length) return;
-    const entries = rows.map(r => { const en = Object.assign({}, r.src, { time: r.time, patient: r.patient }); delete en.needsName; return en; });
+    const entries = rows.map(r => { const en = Object.assign({}, r.src, { time: r.time, patient: st.forPatient && !r.other ? st.forPatient : r.patient }); delete en.needsName; return en; });
     const before = new Set(phApptList().map(a => a.id));
     const added = phApptImport(entries);
     const ids = phApptList().filter(a => !before.has(a.id)).map(a => a.id);
     const daysN = new Set(entries.map(p => p.date)).size;
-    st.text = ""; st.historyName = ""; st.pEdit = {}; st.pDrop = new Set(); st.dirty = true;
+    st.text = ""; st.historyName = st.forPatient || ""; st.pEdit = {}; st.pDrop = new Set(); st.pKeep = new Set(); st.dirty = true;
     const ta = phApptEl("phApptPaste"), hn = phApptEl("phApptHistName");
     if (ta) ta.value = "";
-    if (hn) hn.value = "";
+    if (hn) hn.value = st.historyName;
     phApptPreviewSync(); phApptListSync(); phApptClearBtnSync();
     phApptToast(`${entries.length} appointment${entries.length === 1 ? "" : "s"} across ${daysN} day${daysN === 1 ? "" : "s"} — ${added} new, ${entries.length - added} refreshed${phApptLastAccounts ? ` · ${phApptLastAccounts} patient account${phApptLastAccounts === 1 ? "" : "s"} made` : ""}`,
       ids.length ? () => { phApptDeleteIds(ids); st.dirty = true; phApptListSync(); } : null);
@@ -32354,10 +32369,10 @@
   function phApptClearPaste() {
     const st = phApptState;
     if (!st) return;
-    st.text = ""; st.historyName = ""; st.pEdit = {}; st.pDrop = new Set();
+    st.text = ""; st.historyName = st.forPatient || ""; st.pEdit = {}; st.pDrop = new Set(); st.pKeep = new Set();
     const ta = phApptEl("phApptPaste"), hn = phApptEl("phApptHistName");
     if (ta) { ta.value = ""; ta.focus({ preventScroll: true }); }
-    if (hn) hn.value = "";
+    if (hn) hn.value = st.historyName;
     phApptPreviewSync(); phApptClearBtnSync();
   }
   // every tap inside the dialog (the global click handler calls this first while the dialog is open)
@@ -32394,7 +32409,7 @@
     if (id === "phApptPaste") {
       st.text = e.target.value;
       const n = phApptParse(st.text, st.dateKey).length;
-      if (n !== st.pLen) { st.pEdit = {}; st.pDrop = new Set(); }   // her fixes are by line number; a changed line count voids them
+      if (n !== st.pLen) { st.pEdit = {}; st.pDrop = new Set(); st.pKeep = new Set(); }   // her fixes are by line number; a changed line count voids them
       st.pLen = n;
       phApptPreviewSync(); phApptClearBtnSync();
     } else if (id === "phApptHistName") {
@@ -32468,11 +32483,11 @@
     e.preventDefault(); e.stopImmediatePropagation();
     if (imgs.length) { phApptOcr(imgs); return; }
     phApptMode("paste");
-    st.historyName = "";
+    st.historyName = st.forPatient || "";
     const hn = phApptEl("phApptHistName");
-    if (hn) hn.value = "";
+    if (hn) hn.value = st.historyName;
     st.text = (st.text ? st.text.trimEnd() + "\n" : "") + text.trim();
-    st.pEdit = {}; st.pDrop = new Set();
+    st.pEdit = {}; st.pDrop = new Set(); st.pKeep = new Set();
     const ta = phApptEl("phApptPaste");
     if (ta) ta.value = st.text;
     phApptPreviewSync(); phApptClearBtnSync();
@@ -36746,6 +36761,9 @@
         phTpRepaintPhasePanel();
         return;
       }
+      // the patient's own Appointments page: paste appointments for them
+      const apPasteFor = e.target.closest("[data-ph-appt-paste-for]");
+      if (apPasteFor) { phApptOpen("", null, { forPatient: apPasteFor.dataset.phApptPasteFor }); return; }
       // + Book on a projected date: the existing quick-add, opened on that day
       const tpBook = e.target.closest("[data-tp-book]");
       if (tpBook) {
@@ -56998,9 +57016,9 @@ or changing anything in Cliniko.
     // paste action is a clean, precise "this is new content" signal --
     // ordinary typing to fix a line doesn't fire this event, so a minor
     // in-place edit never makes her re-type the name for nothing.
-    phApptState.historyName = "";
+    phApptState.historyName = phApptState.forPatient || "";
     const nameEl = document.getElementById("phApptHistName");
-    if (nameEl) nameEl.value = "";
+    if (nameEl) nameEl.value = phApptState.historyName;
   });
   document.addEventListener("paste", e => {
     if (!phRenCanPaste()) return;                              // §4: no paste path on a phone
@@ -60687,10 +60705,12 @@ or changing anything in Cliniko.
     const key = phPatientKey(name);
     const rows = phApptList().filter(a => phPatientKey(a.patient) === key && a.service !== "Break")
       .sort((a, b) => b.date.localeCompare(a.date) || (b.time || "").localeCompare(a.time || ""));
-    if (!rows.length) return `<div class="ph-hx-constit-note">No appointments on file yet.</div>`;
+    // her 2026-10-14 "go into patient profile and paste appointments": the existing Appointments dialog, opened on Paste list for this patient
+    const pasteBtn = `<div class="ph-appthist-bar"><button type="button" class="ph-name-link ph-paste-pill" data-ph-appt-paste-for="${esc(name)}"><svg class="ph-cc-svgic" aria-hidden="true" focusable="false"><use href="#i-clipboard"/></svg>Paste appointments</button></div>`;
+    if (!rows.length) return pasteBtn + `<div class="ph-hx-constit-note">No appointments on file yet.</div>`;
     const plans = phTpPlans(name).filter(p => p.status === "active");
     const today = keyOf(TODAY);
-    return `<div class="ph-appthist">${rows.map(a => {
+    return pasteBtn + `<div class="ph-appthist">${rows.map(a => {
       const when = `${esc(phShortDate(a.date))}${a.time ? ` ${esc(phCkTime12(a.time))}` : ""}`;
       const future = a.date > today;
       const picked = phApptPlanFor(a, plans);
