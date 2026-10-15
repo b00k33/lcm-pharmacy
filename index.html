@@ -41672,7 +41672,23 @@
         // so a typed figure must never be silently overwritten again by an
         // ingredient edit. gramsMode="manual" is the one flag
         // presCommitTemplateFields checks before re-deriving it.
-        if (t) { t.totalGrams = parseFloat(e.target.value) || 0; t.gramsMode = "manual"; phDefer("savePresc", savePresc, 400); presSupplyRefresh(t); }
+        // her 2026-10-15 report ("i can't dispense just 123g ... it
+        // dispenses 164g"): a genuine ingredient edit after this (presGramsFollowHerbs,
+        // below) still has to recompute SOMETHING from the herb total, and
+        // it fell back to t.gramsMultiple -- which this handler never
+        // touched, so it kept whatever stale x1/x2/x3 figure was left over
+        // from before she went manual (82g herb total x a leftover x2 =
+        // 164g, discarding the 123g she had just typed). Keep it an
+        // accurate reflection of what she just typed, so a later edit
+        // scales her own figure proportionally instead of jumping to an
+        // unrelated one.
+        const herbTotal0 = t ? phRound2((t.ingredients || []).reduce((a, i) => a + (i.grams || 0), 0)) : 0;
+        if (t) {
+          t.totalGrams = parseFloat(e.target.value) || 0;
+          t.gramsMode = "manual";
+          if (herbTotal0 > 0) t.gramsMultiple = Math.round((t.totalGrams / herbTotal0) * 10000) / 10000;
+          phDefer("savePresc", savePresc, 400); presSupplyRefresh(t);
+        }
         phClearConfirms(); renderPresCalc(); presFuRefresh(); presDoseDurationRefresh(); return;
       }
       // Supply "other" box (ask28 2026-10-01 Q2): typed days × g a day = grams
@@ -95684,7 +95700,17 @@ Dosage: {dosage}
     // re-derive from days × grams a day and stay in days mode
     if (st.mode === "days") { presGramsApplyDays(t, st.days); presRefreshGramsFieldIfAttached(t); return; }
     const multiple = st.mode === "multiple" ? (st.multiple || 1) : (t.gramsMultiple || seedMultiple || 1);
-    t.gramsMode = "multiple"; t.gramsMultiple = multiple;
+    // her 2026-10-15 report (other half, see the #presGrams input handler above): a
+    // custom typed bag size (t.gramsMode explicitly "manual") used to be PROMOTED to
+    // "= Nx herb total" multiple mode the instant any ingredient changed -- relabelling
+    // an arbitrary scaling ratio as if she'd tapped a x1/x2/x3 pill she never touched
+    // (the hint read "x3.7273 x 32g", and none of the x1/x2/x3 pills showed as picked
+    // any more). It now stays described as "manual" (the hint keeps reading "set by
+    // you - herb total is Xg"), while still resyncing the NUMBER on every edit, her
+    // unchanged 2026-09-21 "always auto-update, never freeze" rule. A script whose
+    // gramsMode was never explicitly set either way (undefined -- the pre-this-feature
+    // default) still joins ordinary x1 multiple mode on its first edit, exactly as before.
+    t.gramsMode = t.gramsMode === "manual" ? "manual" : "multiple"; t.gramsMultiple = multiple;
     const herbTotal = phRound2((t.ingredients || []).reduce((a, i) => a + (i.grams || 0), 0));
     t.totalGrams = phRound2(herbTotal * multiple);
     presRefreshGramsFieldIfAttached(t);
