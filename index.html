@@ -15458,6 +15458,10 @@
   #pharmacyPage .ph-cc3-menu button { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 0; padding: 7px 10px; border: 0; border-radius: 10px; background: none; text-align: left; font: 600 var(--fs-13) var(--font-body); cursor: pointer; }
   #pharmacyPage .ph-cc3-menu button.hl, #pharmacyPage .ph-cc3-menu button:hover { background: var(--ph-herb-tint); }
   #pharmacyPage .ph-cc3-menu small { margin-left: auto; font-size: var(--fs-11); font-weight: 500; color: var(--ph-faint); }
+  /* her 2026-10-16 "add option to type in something not from fang bing ren": a quiet last row,
+     not a sign match -- hairline above it, muted/plain weight so it never reads as another pick */
+  #pharmacyPage .ph-cc3-menu button.alt { margin-top: 2px; padding-top: 9px; border-top: 1px solid var(--ph-line); font-weight: 500; color: var(--ph-faint); }
+  #pharmacyPage .ph-cc3-menu button.alt:hover, #pharmacyPage .ph-cc3-menu button.alt.hl { background: var(--ph-herb-tint); color: var(--ph-ink); }
   @media (prefers-reduced-motion: reduce) { #pharmacyPage .ph-cc3-menu, #pharmacyPage .ph-cc2, #pharmacyPage .ph-cc2-sv, #pharmacyPage .ph-pf-plantile .pips i, #pharmacyPage .ph-pf-plantile .ph-pres-stage-next span { animation: none; transition: none; } }
   /* bigger (her ask 2026-10-09, "make profile picture bigger" -- mock G):
      56px read as a small icon beside this column's fields -- 88px gives her
@@ -66871,7 +66875,11 @@ or changing anything in Cliniko.
     const opts = phCcSecSignOptions(inp.value); box._secOpts = opts;
     if (!opts.length) return;
     if (phCcSecMenuHl >= opts.length) phCcSecMenuHl = 0;
-    box.insertAdjacentHTML("beforeend", `<div class="ph-cc3-menu ph-cc-secmenu" role="listbox">${opts.map((o, k) => `<button type="button" role="option" class="${k === phCcSecMenuHl ? "hl" : ""}" data-cc-secpick="${esc(o.r[0])}">${esc(o.r[1])}</button>`).join("")}</div>`);
+    // her 2026-10-16 ask: a match showing must never block typing her own words -- a quiet last
+    // row adds the literal text instead of a sign (Enter still takes the top match, as "+ Add"
+    // always has; this is the escape hatch for a mouse/touch tap with no keyboard override)
+    const typed = inp.value.trim();
+    box.insertAdjacentHTML("beforeend", `<div class="ph-cc3-menu ph-cc-secmenu" role="listbox">${opts.map((o, k) => `<button type="button" role="option" class="${k === phCcSecMenuHl ? "hl" : ""}" data-cc-secpick="${esc(o.r[0])}">${esc(o.r[1])}</button>`).join("")}${typed ? `<button type="button" role="option" class="alt" data-cc-secaddtyped="1">+ Add "${esc(typed)}" as typed</button>` : ""}</div>`);
   }
   function phCcSecMenuClose() { const m = document.querySelector("#pharmacyPage .ph-cc-secmenu"); if (m) m.remove(); }
   // tick the sign (if it has no answer yet -- never flip an existing Yes back off from a pick),
@@ -66918,7 +66926,12 @@ or changing anything in Cliniko.
     if (phCcMenuHl >= opts.length) phCcMenuHl = 0;
     box.insertAdjacentHTML("beforeend", `<div class="ph-cc3-menu" role="listbox">${opts.map((o, k) => `<button type="button" role="option" class="${k === phCcMenuHl ? "hl" : ""}" data-cc-addfam="${o.f.id}">${phCcIcHtml(o.f.ic)}${esc(o.f.label)}${o.hit.length ? `<small>${esc(o.hit.join(", "))}</small>` : ""}</button>`).join("")}</div>`);
   }
-  function phCcMenuClose() { const m = document.querySelector("#pharmacyPage .ph-cc3-menu"); if (m) m.remove(); }
+  // scoped to EXCLUDE .ph-cc-secmenu: that one also carries .ph-cc3-menu (shared base look), so
+  // the un-scoped selector used to grab the SECONDARY dropdown by mistake whenever only it was
+  // open -- detaching whatever she'd just clicked inside it (e.g. a Fang Bing Ren sign pick)
+  // before the real click handler ever saw it. "when i select diagnosis nothing happens" (her
+  // 2026-10-16 report) traced to exactly this.
+  function phCcMenuClose() { const m = document.querySelector("#pharmacyPage .ph-cc3-menu:not(.ph-cc-secmenu)"); if (m) m.remove(); }
   function phCcAddFam(id) { phCcMenuClose(); phCcSetPrimary(id); const el = document.querySelector("#pharmacyPage [data-cc-main-since]"); if (el) el.focus({ preventScroll: true }); }
   function phCcClick(e) {
     const T = e.target; let el;
@@ -66940,6 +66953,13 @@ or changing anything in Cliniko.
     // picking a Fang Bing Ren sign from the secondary-complaint search: add it as a complaint AND
     // tick the sign (phCcSecPickSign handles both)
     if ((el = T.closest("[data-cc-secpick]"))) { const key = el.dataset.ccSecpick; phCcSecMenuClose(); phCcSecPickSign(key, phSignLabel(key)); return true; }
+    // her 2026-10-16 ask: a match showing must never block her own words -- the menu's own last
+    // row adds the literal typed text with no sign tick, same as a plain "+ Add" with no match
+    if ((el = T.closest("[data-cc-secaddtyped]"))) {
+      const box = el.closest(".ph-cc-add"), inp = box && box.querySelector("[data-cc-sec-in]");
+      phCcSecMenuClose(); if (inp) phCcSecAdd(inp.value.trim());
+      return true;
+    }
     // her 2026-10-15 pick: the plan type is a pill she taps to change (no x any more); "No plan
     // type" is the last row of its own menu, so a stray tap can no longer clear the chief complaint
     if (T.closest("[data-cc-plan-tog]")) { phCcPlanOpen = !phCcPlanOpen; phCcRefresh(true); return true; }
