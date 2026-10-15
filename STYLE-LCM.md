@@ -69,6 +69,7 @@ card margin/radius on a full-width section without asking; it was a deliberate r
 an oversight.
 
 ### Chips
+> 2026-10-15: CLAUDE.md "TAPPABLE THINGS" now sets the chip look (pill, 28px tall, 1px line, white; picked = solid herb) and wins where it differs from the line below. The phone label size stays 14px (`--m-fs-label`); the desktop chip text is 13px.
 `font-size: var(--m-fs-label); background: var(--ph-surface); border-radius: 999px; padding:
 2px 8px;` — no border. Family-history chips use a cool grey-blue tint instead of an outline,
 so the two groups separate by tone, not by two different border styles.

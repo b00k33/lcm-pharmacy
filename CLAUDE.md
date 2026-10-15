@@ -58,6 +58,30 @@ reads it; do not render it again.
 **Audit step 4 (2026-10-15, her "yes to 1-6"):** the last on-screen "e.g." went (the template manager's "Paste phases as JSON" hover text, the IVF "Egg collection cycle" option now "(eggs or embryos frozen)", the iron reference note now "such as"); the Ren photo popover reads "→ <type>" like its quiet tag (no "suggests"); placeholders are the field's name again (Medical history paste box "Referral, note or shorthand", the relocation notice hand-over line has its label only, the Journey message box "Message"); the relocation search box and the plan review's Tongue / Pulse / Abdomen boxes lost their emoji (icons are the sprite, never emoji).
 
 <!-- ============================================================ -->
+# ★★ TAPPABLE THINGS — standing rule (her 2026-10-14 "i dont like links, i prefer chips" + her 2026-10-15 audit: all 8 picks = the recommended option) ★★
+<!-- ============================================================ -->
+> Audit report with counts, pictures and the full lists: `chip-audit-2026-10-15.html`. Where an older line anywhere below
+> (or in STYLE-LCM.md / DESIGN-CONVENTIONS.md) defines a chip, button, link, corner or caption differently, **this rule wins**.
+
+**Everything tappable is one of five shapes. Nothing else taps.**
+1. **Chip = pick.** Pill (999px), 28px tall, 13px text (14px on a phone, STYLE-LCM's label size), 1px `--ph-line` line, white. Picked = solid `--ph-herb`, white text. One size everywhere.
+2. **Button = act.** 6px corners, 28px, 13px bold, 1.5px `--ph-herb` line, white. ONE solid button per screen = the main step. An action is never an outlined pill.
+3. **Dropdown = pick from many.** A chip ending ▾ that shows what is picked. **More than 6 options, or they wrap onto a second line at 375px = dropdown.** Several picks: ticks inside, the chip says "Build · 2" (picked answers may also show as chips under it). Stay chips: Mon–Sun toggles, calendars, stat strips, tab bars of 5 or fewer, the pulse brush bar.
+4. **Field = a value you edit.** Faint tint (`--ph-herb-tint`), 6px corners, no outline. A number, supplier or note you tap to edit is a field, never bare text (Inventory stock, low-at, notes).
+5. **Row = open something.** The whole row is the target, on a faint surface. A herb name or code in a list stays plain text inside its row (Dashboard, Inventory, Refill, To order).
+
+**Menus** (sidebar, patient rail, tabs): each item a full-width row on a faint surface with its icon or number; the open item is filled.
+**0–10 scores:** one joined bar of 11 cells, one tap. Never 11 separate chips.
+**NEVER:** underlined, dotted, arrowed OR PLAIN COLOURED text that taps; a tap target the same colour as the words beside it; a new chip size, corner or font size; a sentence under a control that explains it. A trailing › / → stays only where audit step 5 kept it (flow-wide "Next: ..." buttons, earlier / later pair, arrow-only buttons, data arrows).
+**Why this exists:** audit step 5 (2026-10-15) fixed underlines and arrows but her words also banned plain coloured text, so 458 names, words and numbers (124 identical to the text beside them) and 155 button styles stayed unshaped; the chip rules disagreed (pill vs square vs 10px outlined vs "no outlines"), giving 36 chip looks on 25 screens.
+
+**Terse (widens "No standing how-to-use captions", her 2026-10-15):** no sentence on screen that explains what a thing is or how it works; use a hover title. Keep only a warning that stops a mistake (red flags, below-zero stock, a sign clash, the merge check, save failures, label text) and data facts. An empty state = two words + the chip that fills it ("No recipes" + [+ New recipe]).
+**Screens follow code7's order (Remove → Combine → Infer → Group → Collapse → Contextualise → Hide → Reveal) and code3's brief, polite tone.** (The code3 section below is message wording; this line gives screens the same restraint. Re-grep it before a UI persona is named.)
+
+**Superseded by this rule (still below as history):** Components "ONE pill/chip style ... square outlined buttons"; Separation "avoid outlined pills"; Locked conventions "Pill shape = something she PICKS"; the 10/10 smoothing "outlined pill = everything else"; audit step 5's "33 former links read as the outlined pill, 10px corners" (its no-underline, no-arrow rules stand); STYLE-LCM.md "Chips" look; DESIGN-CONVENTIONS.md "Secondary/quiet: text links". Corners still follow the scale (6 / 10 / 16 / pill): chips use pill and 6 only.
+**Build order (her go, 2026-10-15; each step its own commit, sandbox-tested at 1280 and 375px with a scan of every tappable's real look, NO PUSH until she says):** 1 this rule (done 2026-10-15) · 2 plain-text taps become rows / fields / chips · 3 chip walls become dropdowns and joined 0–10 bars · 4 explaining lines out. Steps 2–4 are NOT started; check `git log` before assuming any is live.
+
+<!-- ============================================================ -->
 # ★★★ PATIENT WORKFLOW — THE LAW (her design, 2026-10-10) ★★★
 <!-- ============================================================ -->
 > **Read this before touching ANY patient page** (Patient details, Ren,
@@ -204,7 +228,7 @@ several small ones nearby (see "Remove → Combine → Infer → Group → Colla
 → Contextualise → Hide → Reveal" under code7 below) — restraint is the
 default, not an afterthought pass at the end.
 
-**No standing how-to-use captions anywhere in the app** (2026-10-09, her
+**No standing how-to-use captions anywhere in the app** (WIDENED 2026-10-15 by TAPPABLE THINGS above: no sentence that explains what a thing is or how it works, and an empty state is two words + a chip; the exemptions in the last sentence here no longer cover explaining sentences) (2026-10-09, her
 words: "not having explanation and instructions in app" — found first on
 the photo circle-tool's permanent "drag on the photo to circle an area ·
 drag a circle to move it, or its edge to resize" line, removed). A control
@@ -363,12 +387,12 @@ update STYLE-LCM.md to match so future builds don't undo it.
 ## Separation & grouping — colour and space, NOT boxes and lines
 - Show where sections begin and end using background tone and spacing, NOT
   borders, outlines or divider lines.
-- Never put a box inside a box. Avoid nested cards, outlined pills and
-  clutter. Reserve a visible border only where colour and space genuinely
+- Never put a box inside a box. Avoid nested cards and
+  clutter. (Outlined pills are no longer banned or required: chip shapes follow TAPPABLE THINGS at the top.) Reserve a visible border only where colour and space genuinely
   can't separate.
 
 ## Components — one system, no one-offs
-- ONE pill/chip style, ONE button style, ONE card style, reused everywhere.
+- (SUPERSEDED for chips and buttons by TAPPABLE THINGS at the top: five shapes, buttons have 6px corners, plain coloured text never taps.) ONE pill/chip style, ONE button style, ONE card style, reused everywhere.
   The tab toggle, filter pills and status counts all belong to the same
   visual family — no different looks fighting. Pills = things she PICKS
   (points, chips, phases); square outlined buttons = things that ACT (change,
@@ -1627,7 +1651,7 @@ what's on the "never" side.
   a visible border is a last resort, not a first instinct.
 - Pill shape = something she PICKS; square outlined button = something
   that ACTS; one solid button = the primary commit — apply this everywhere,
-  not just where it was first built.
+  not just where it was first built. (Shapes, sizes and the no-plain-text-taps rule now live in TAPPABLE THINGS at the top; where this line disagrees, that wins.)
 - **No underlined, dotted or arrow text links anywhere** (her 2026-10-14
   universal rule, applied app-wide in audit step 5): a tap target is a chip
   or a button; a trailing › / → stays only on the flow-wide "Next: …"
@@ -2453,6 +2477,7 @@ The audit found seven message mechanisms. Now: **`presSavedToast(msg, opt)` is t
 - Left as it is (found during step 5): the photo-delete toast `#phRenUndoToast` ("Photo deleted · Undo", `phRenUndoToastRefresh`) is still its own element; folding it into `presSavedToast` is a small follow-up, not done.
 
 ## Links to chips, arrows off (audit step 5, 2026-10-15; LIVE in build 20261015-900000)
+> Superseded in part by TAPPABLE THINGS at the top: the "33 former links read as the outlined pill, 10px corners" look is replaced by the five shapes (chip pill 28px, button 6px). The no-underline and no-arrow rules below stand.
 Her universal rule (2026-10-14, "i dont like links, i prefer chips"): no underlined, dotted or arrow text links anywhere; every tap target is a chip or a button. The Cycle page got it first; this step applies it to the whole app.
 - **One rule, placed just before the PHONE REDESIGN block** ("audit step 5" comment): the 33 former underlined text links read as the outlined pill of the 10/10 one-button system (1.5px `--ph-herb` line, white, 10px corners, bold, `padding: 2px 9px`, tint on hover), each at its own font-size and in its own place. The list repeats each original selector so it wins by order alone. **A new tap target never gets `text-decoration: underline`; add its selector to that list, or give it an existing chip class.** Media-scoped ones were changed in place: the Photos section's actions on a phone (`.ph-pres-panel .ph-tmpl-sec-act`, <=480px) and the photo-delete toast's Undo (`.ph-ren-undo-btn`, a chip in the toast's own light-teal-on-ink colours).
 - **Gone:** every `text-decoration: underline` on a text link (46 rules de-underlined, 23 hover-only rules that said nothing else deleted), and the hover underline on `.ph-name-link`, `.tab-link`, `.ph-os-lnk`, `.ph-ck-lnk`, `.ph-shell-link`, `.ph-dose-link`, `.ph-mc-lnk`, `.ph-tp-book` and the other quiet links (where the hover also set a colour, the colour stays; where it only underlined, the hover now does nothing but the pointer). Words that are not tap targets lost just the underline: `.ph-hx-action` (the action word inside a Medical history row button), `.ph-ccrib-since` (how long, in the complaint ribbon), `.ph-acu-herbchange` ("change" inside the instruct chip), `.ph-apptpop-plan b`.
