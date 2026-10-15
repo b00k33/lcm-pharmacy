@@ -1876,10 +1876,15 @@
   #pharmacyPage .ph-os-gbar i.ease { animation: phOsGrow .5s ease-out; }
   @keyframes phOsGrow { from { width: var(--from, 0%); } }
   /* her 2026-10-15 "add to order" box -- reuses .ph-cc-act/.ph-cc3-add/.ph-cc3-menu
-     wholesale, just a top margin and a width cap so the pill doesn't stretch edge to edge */
+     wholesale, just a top margin and a width cap so the pill doesn't stretch edge to edge.
+     The dropdown itself is NOT nested under .ph-os-add in the DOM (phOsAddMenuPaint
+     appends it to #phRestockWrap instead) -- .ph-shell-topblock (this box's real
+     ancestor) is overflow:hidden and wraps tightly around its own header content, so
+     an absolutely-positioned dropdown below it would be clipped out of existence no
+     matter its z-index. #phRestockWrap is still inside #pharmacyPage (so the shared
+     .ph-cc3-menu look still applies) but sits outside that clip. */
   #pharmacyPage .ph-os-addrow { margin-top: 10px; }
   #pharmacyPage .ph-os-add { max-width: 300px; }
-  #pharmacyPage .ph-os-add .ph-cc3-menu { top: 40px; }
   #pharmacyPage .ph-osheet-wrap.polish.ph-os-card { padding: 0; background: var(--ph-white); border: 1px solid var(--ph-line); border-radius: 10px; box-shadow: none; }
   #pharmacyPage .ph-os-card .ph-osheet-head { width: 100%; max-width: none; margin: 0; background: var(--ph-paper); border-bottom: 1px solid var(--ph-line); }
   #pharmacyPage .ph-os-card .ph-osheet-head th { padding: 8px 12px; }
@@ -44483,13 +44488,19 @@
   }
   function phOsAddMenuPaint(inp) {
     const box = inp.closest(".ph-cc3-add"); if (!box) return;
-    const old = box.querySelector(".ph-cc3-menu"); if (old) old.remove();
+    phOsAddMenuClose();
     const opts = phOsAddOptions(inp.value); box._opts = opts;
     if (!opts.length) return;
     if (phOsAddHl >= opts.length) phOsAddHl = 0;
-    box.insertAdjacentHTML("beforeend", `<div class="ph-cc3-menu" role="listbox">${opts.map((h, k) => `<button type="button" role="option" class="${k === phOsAddHl ? "hl" : ""}" data-os-add-pick="${h.id}">${esc(phHerbLabel(h))}</button>`).join("")}</div>`);
+    const host = document.getElementById("phRestockWrap") || document.body;
+    const r = inp.getBoundingClientRect();
+    const menu = document.createElement("div");
+    menu.id = "phOsAddMenu"; menu.className = "ph-cc3-menu"; menu.setAttribute("role", "listbox");
+    menu.style.cssText = `position:fixed; left:${r.left}px; top:${r.bottom + 4}px; width:${r.width}px; right:auto; z-index:50;`;
+    menu.innerHTML = opts.map((h, k) => `<button type="button" role="option" class="${k === phOsAddHl ? "hl" : ""}" data-os-add-pick="${h.id}">${esc(phHerbLabel(h))}</button>`).join("");
+    host.appendChild(menu);
   }
-  function phOsAddMenuClose() { const m = document.querySelector("#pharmacyPage .ph-os-add .ph-cc3-menu"); if (m) m.remove(); }
+  function phOsAddMenuClose() { const m = document.getElementById("phOsAddMenu"); if (m) m.remove(); }
   function phOsAddPick(id) {
     phOsAddMenuClose();
     const h = PHARMACY.herbs.find(x => x.id === id);
@@ -44524,6 +44535,10 @@
     else if (e.key === "Enter" && opts[phOsAddHl]) { e.preventDefault(); phOsAddPick(opts[phOsAddHl].id); }
     else if (e.key === "Escape") { e.preventDefault(); e.stopImmediatePropagation(); phOsAddOpen = false; renderPhRestock(); }
   });
+  // the dropdown is position:fixed (see phOsAddMenuPaint) so it never tracks a
+  // scroll or resize on its own -- close it rather than let it drift from the input.
+  window.addEventListener("scroll", () => { if (document.getElementById("phOsAddMenu")) phOsAddMenuClose(); }, true);
+  window.addEventListener("resize", () => { if (document.getElementById("phOsAddMenu")) phOsAddMenuClose(); });
 
   /* ---- 📜 Log — every stock movement on its own page (her ask: out of the
      inventory's basement). Dispenses, refills and arrivals, filterable by
