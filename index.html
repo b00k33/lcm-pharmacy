@@ -95585,6 +95585,25 @@ Dosage: {dosage}
     // actually commit a drop to zero. opts.allowEmptyIngs is how those two
     // call sites opt out of the guard; every autosave path stays protected.
     if (ings && (ings.length || !t.ingredients.length || (opts && opts.allowEmptyIngs))) {
+      // her 2026-10-15 report ("i dispense 123 and then when i press log it
+      // logs 82"): this block used to call presGramsFollowHerbs -- which
+      // always re-derives Grams from the herb total -- on EVERY Save / Log
+      // tap, even when the ingredients on screen are byte-for-byte what was
+      // already stored. That silently turned "press Log" itself into "an
+      // ingredient edit" for the one rule that's only meant to fire on a
+      // real one (presGramsFollowHerbs's own notes: "only the ACT of
+      // editing an ingredient joins it in"). Traced: she typed a manual
+      // 123 g into #presGrams, dispensed (stock deducted and the label
+      // printed at 123 g), then pressed Log with the ingredient list
+      // untouched -- and Log silently rewrote Grams to the raw 82 g herb
+      // total before reading it back out for the permanent log entry, so
+      // what got logged disagreed with what was actually measured out and
+      // already deducted. Fix: only let Grams follow the herbs when the
+      // parsed list genuinely differs from what is already stored.
+      const ingsChanged = ings.length !== t.ingredients.length || ings.some((x, i) => {
+        const o = t.ingredients[i];
+        return !o || (o.herb || "") !== (x.herb || "") || phRound2(o.grams || 0) !== phRound2(x.grams || 0);
+      });
       t.ingredients = ings;
       // Grams prescribed (#presGrams below) is her deliberately-typed dispense
       // figure, not always a live ingredient total -- her report (2026-08-06):
@@ -95598,7 +95617,9 @@ Dosage: {dosage}
       // into, one that predates this feature entirely, and one she's
       // already dispensed before. The one thing that still never moves from
       // here: opening an old script and merely LOOKING at it changes
-      // nothing -- only the act of editing an ingredient joins it in.
+      // nothing -- only the act of editing an ingredient joins it in (and,
+      // since 2026-10-15, pressing Save / Log with the list untouched is
+      // "merely looking" too -- see ingsChanged above).
       // her ask 2026-08-17 (formula recipe editor rework): a formula has no
       // separate "prescribed today" figure at all -- its Grams/pricing box
       // is gone -- so totalGrams IS just its own ingredient sum, always
@@ -95606,7 +95627,7 @@ Dosage: {dosage}
       if (presIsFormula(t)) {
         t.totalGrams = phRound2(t.ingredients.reduce((a, i) => a + (i.grams || 0), 0));
         presRefreshGramsFieldIfAttached(t);
-      } else {
+      } else if (ingsChanged) {
         // the seed + follow rule lives in presGramsFollowHerbs (2026-09-16,
         // so the Treatment plan's Link-formula pour applies the identical
         // rule rather than a second copy of it) -- the spec notes are there
