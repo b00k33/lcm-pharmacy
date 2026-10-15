@@ -7334,6 +7334,13 @@
   @keyframes phFbbSpotIn { from { opacity: 0; transform: scale(0); } }
   #pharmacyPage .ph-fbb-tpbox .pulse { width: 64px; height: 26px; flex: none; }
   #pharmacyPage .ph-fbb-tpbox .pulse .tr { stroke-dasharray: 6 60; animation: phFbbSweep 1.6s linear infinite; }
+  /* her 2026-10-15 ask: the Face/Body boxes show a real photo (or a quiet camera/loading icon) instead of a drawing */
+  #pharmacyPage .ph-fbb-tpbox.photo .ph-fbb-ph-img, #pharmacyPage .ph-fbb-tpbox.photo .ph-fbb-ph-ic { width: 34px; height: 34px; flex: none; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  #pharmacyPage .ph-fbb-tpbox.photo .ph-fbb-ph-img img { width: 100%; height: 100%; border-radius: 8px; object-fit: cover; display: block; }
+  #pharmacyPage .ph-fbb-tpbox.photo .ph-fbb-ph-ic { background: var(--ph-paper); font-size: var(--fs-16); }
+  #pharmacyPage .ph-fbb-tpbox.photo.empty { border-style: dashed; border-color: var(--ph-line); }
+  #pharmacyPage .ph-fbb-tpbox.photo.empty .ts, #pharmacyPage .ph-fbb-tpbox.photo.loading .ts { color: var(--ph-faint); }
+  #pharmacyPage .ph-fbb-tpbox.photo.loading { cursor: default; }
   @keyframes phFbbSweep { from { stroke-dashoffset: 66; } to { stroke-dashoffset: 0; } }
   /* the signs list beside the figures: a group per place, strongest first, Bing | Ren lanes */
   #pharmacyPage .ph-fbb-list { display: grid; gap: 8px; max-height: 680px; overflow: auto; padding-right: 4px; min-width: 0; }
@@ -16267,6 +16274,8 @@
   .ph-ren-undo-btn { background: none; border: 1.5px solid currentColor; border-radius: 10px; padding: 2px 9px; font: inherit; font-size: var(--fs-13); font-weight: 700; color: var(--ph-herb-card, #4599B5); cursor: pointer; }
   #pharmacyPage .ph-photos-addrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 10px; }
   #pharmacyPage .ph-photos-addhint { font-size: var(--fs-11-5); color: var(--ph-faint); }
+  /* her 2026-10-15 ask: Face / Body group labels inside a wrapping chip row -- flex-basis 100% forces each onto its own line */
+  #pharmacyPage .ph-phgroup-lab { flex: 0 0 100%; font-size: var(--fs-10-5); font-weight: 700; color: var(--ph-faint); text-transform: uppercase; letter-spacing: .02em; margin: 2px 0 -2px; }
   /* the drop box (her 2026-10-13: drag and drop or paste photos) and the full-page veil shown while a file is dragged over a patient */
   #pharmacyPage .ph-photos-drop { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 10px; padding: 18px 14px; border: 2px dashed var(--ph-herb); border-radius: 10px; background: var(--ph-herb-tint); color: var(--ph-herb-deep); font-size: var(--fs-13); }
   #pharmacyPage .ph-photos-drop b { font-weight: 800; }
@@ -53947,7 +53956,7 @@ or changing anything in Cliniko.
     });
     return [...map.values()];
   }
-  const PH_CAP_TYPE_EMOJI = { unsorted: "📥", tongue: "👅", abdomen: "🤲", eyelid: "👁", eyes: "👀", faceshape: "🙂", skin: "🖐", nails: "💅", bbt: "🌡", full: "🧍", other: "📎",
+  const PH_CAP_TYPE_EMOJI = { unsorted: "📥", tongue: "👅", abdomen: "🤲", eyelid: "👁", eyes: "👀", faceshape: "🙂", skin: "🖐", nails: "💅", bbt: "🌡", full: "🧍", face: "😊", body: "👕", other: "📎",
     // the five facial-nerve movements -- each emoji is the movement being
     // asked for, so the chip reads as an instruction to the patient
     fpSmile: "😀", fpEyes: "😌", fpCheeks: "😮", fpBrows: "🤨", fpFrown: "🙁" };
@@ -54364,6 +54373,8 @@ or changing anything in Cliniko.
     phPfAvatarRefresh(patientKey);
     // the Musculoskeletal page's posture photo slots (her 2026-10-12 ask)
     try { phMskPhotosRefresh(patientKey); } catch (e) { /* only when that page is on screen */ }
+    // the Fang Bing Ren body chart's Face/Body photo boxes (her 2026-10-15 ask), only when that modal is open
+    try { phFbbPhotosRefresh(patientKey); } catch (e) { /* only when that chart is on screen */ }
   }
   // Undo (her synth22 Stage D ask, 2026-09-15, Records page: "confirm first,
   // then an undo toast too"). The real record (blob included) is kept in
@@ -54446,6 +54457,11 @@ or changing anything in Cliniko.
     { key: "fpBrows",   label: "Raise eyebrows", face: true },
     { key: "fpFrown",   label: "Frown", face: true },
     { key: "full",      label: "Full photo" },
+    // general face/body photos (her 2026-10-15 ask, "sections for the photos of their face body") --
+    // universal, no gating flag. Feed the Fang Bing Ren body chart's new Face/Body boxes
+    // (phFbbPhotoBoxHtml), which fall back to faceshape/full when a patient has none of these yet.
+    { key: "face",      label: "Face" },
+    { key: "body",      label: "Body" },
     { key: "other",     label: "Other" },
     // Musculoskeletal Posture (her ask 2026-09-28: "neck upper back hip etc",
     // reviewed and confirmed -- gated the same way as the facial movements
@@ -54467,6 +54483,23 @@ or changing anything in Cliniko.
     { key: "hands", label: "Hands" },
   ];
   const PH_REN_TYPE_LABEL = PH_REN_PHOTO_TYPES.reduce((m, t) => (m[t.key] = t.label, m), {});
+  // her 2026-10-15 ask: group the specific types under "Face"/"Body" headings wherever a type picker lists
+  // every one flat (the Photos section's own "+Add" row -- the one surface with no existing "common types
+  // first, rest behind a fold" curation of its own; the other pickers' folds/scroll-strips already manage
+  // their length a different way and were left alone). unsorted/tongue/nails/bbt/full/other stay ungrouped.
+  const PH_REN_TYPE_GROUP = {
+    face: "Face", faceshape: "Face", eyelid: "Face", eyes: "Face",
+    fpSmile: "Face", fpEyes: "Face", fpCheeks: "Face", fpBrows: "Face", fpFrown: "Face",
+    body: "Body", abdomen: "Body", skin: "Body", feet: "Body", hands: "Body",
+    mskFront: "Body", mskBack: "Body", mskSideL: "Body", mskSideR: "Body", mskNeck: "Body",
+    mskShoulder: "Body", mskUpperBack: "Body", mskLowerBack: "Body", mskHip: "Body", mskKnee: "Body",
+  };
+  function phRenTypeGroupedHtml(items, keyOf, chipFn) {
+    const groups = { "": [], Face: [], Body: [] };
+    items.forEach(it => { groups[PH_REN_TYPE_GROUP[keyOf(it)] || ""].push(it); });
+    const sec = (lab, list) => list.length ? (lab ? `<div class="ph-phgroup-lab">${esc(lab)}</div>` : "") + list.map(chipFn).join("") : "";
+    return sec("", groups[""]) + sec("Face", groups.Face) + sec("Body", groups.Body);
+  }
   // Which types to OFFER for one patient. A face:true type shows where it means
   // something -- a patient whose script Case is Neurological, the Case her
   // facial plans hang off (PH_CASE_CATEGORY) -- or wherever photos of that kind
@@ -61166,7 +61199,7 @@ or changing anything in Cliniko.
     // her 2026-10-13 ask: a drop box above the type chips -- drop photos on it (or anywhere on the patient), paste with Ctrl+V,
     // or Choose files; every photo gets its own type before anything is saved
     const dropBox = presPhotosAddOpen ? `<div class="ph-photos-drop" data-photo-drop="1"><span><b>Drop photos here</b> or paste them (Ctrl+V)</span><button type="button" class="ph-tmpl-sec-act" data-photo-choose="1">Choose files</button><input type="file" id="phPhotoDropInput" accept="image/*" multiple hidden></div>` : "";
-    const addRow = presPhotosAddOpen ? `${dropBox}<div class="ph-photos-addrow"><span class="ph-photos-addhint">Or pick the type first</span>${phRenRowsFor(() => false).map(tp => `<button type="button" class="ph-ck-chip" data-ren-cap-type="${tp.type}"${tp.shot ? ` data-ren-cap-shot="${tp.shot}"` : ""} data-ren-cap-patient="${esc(key)}" data-ren-cap-name="${esc(name)}">${esc(tp.label)}</button>`).join("")}</div>` : "";
+    const addRow = presPhotosAddOpen ? `${dropBox}<div class="ph-photos-addrow"><span class="ph-photos-addhint">Or pick the type first</span>${phRenTypeGroupedHtml(phRenRowsFor(() => false), tp => tp.type, tp => `<button type="button" class="ph-ck-chip" data-ren-cap-type="${tp.type}"${tp.shot ? ` data-ren-cap-shot="${tp.shot}"` : ""} data-ren-cap-patient="${esc(key)}" data-ren-cap-name="${esc(name)}">${esc(tp.label)}</button>`)}</div>` : "";
     let body;
     if (!list) body = `<div class="ph-photos-empty">Loading photos…</div>`;
     else if (!n) body = "";   // the header now carries "none yet" (her pick 2026-09-09)
@@ -72460,10 +72493,34 @@ or changing anything in Cliniko.
     return `<svg class="pulse" viewBox="0 0 24 14" aria-hidden="true" style="color:${pick ? M.col.ink : "#B7C3C7"}"><g stroke="currentColor" fill="none">${shape}</g>${pick ? `<line class="tr" x1="2" y1="7" x2="22" y2="7" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".9" pathLength="66"/>` : ""}</svg>`;
   }
   const phFbbGly = signs => `<span class="gly">${signs.map(g => `<i class="${g.kind === "d" ? "gd" : "gr"}${g.on ? " on" : ""}"></i>`).join("")}</span>`;
-  function phFbbTpHtml(M) {
+  // her 2026-10-15 ask ("include sections for the photos of their face body"): two more boxes beside Tongue
+  // and Pulse, showing her own uploaded photos rather than a drawing. The two new general types, "face" and
+  // "body" (PH_REN_PHOTO_TYPES), feed them; a patient with none of those yet still shows an existing Face
+  // shape / Full photo, so the box is never empty on day one. These are a pure photo door, not a sign
+  // surface -- there is no PH_FBB_PLACE "body" (adding one would reshuffle where dozens of existing signs
+  // plot), so tapping one opens the real viewer or starts a capture, never the sign-lane popover Tongue and
+  // Pulse open (guarded in the card's own click handler below, not here).
+  const PH_FBB_PHOTO_TYPES = { face: ["face", "faceshape"], body: ["body", "full"] };
+  function phFbbPhotoBest(pk, types) {
+    const photos = phRenPhotosFor(pk);
+    if (photos == null) return undefined;   // not loaded yet
+    for (const ty of types) {
+      const list = photos.filter(r => phRenTypeOf(r) === ty).sort((a, b) => phRenDateKeyOf(b).localeCompare(phRenDateKeyOf(a)) || (b.createdAt || 0) - (a.createdAt || 0));
+      if (list.length) return list[0];
+    }
+    return null;
+  }
+  function phFbbPhotoBoxHtml(id, label, name, pk) {
+    const best = phFbbPhotoBest(pk, PH_FBB_PHOTO_TYPES[id]);
+    if (best === undefined) { phRenLoadPhotosFor(pk); return `<button type="button" class="ph-fbb-tpbox photo loading" disabled><span class="ph-fbb-ph-ic">🖼</span><span class="tt"><span class="tn">${esc(label)}</span><span class="ts">loading…</span></span></button>`; }
+    if (best) return `<button type="button" class="ph-fbb-tpbox photo" data-ren-tl-open="${esc(best.id)}" data-ren-tl-row="${esc(phRenRowKeyOf(best))}" data-ren-tl-patient="${esc(pk)}"><span class="ph-fbb-ph-img"><img src="${best.objectUrl}" alt="${esc(label)}"></span><span class="tt"><span class="tn">${esc(label)}</span><span class="ts">${esc(phRenPhotoDateLabel(phRenDateKeyOf(best)))}</span></span></button>`;
+    return `<button type="button" class="ph-fbb-tpbox photo empty" data-ren-cap-type="${esc(PH_FBB_PHOTO_TYPES[id][0])}" data-ren-cap-patient="${esc(pk)}" data-ren-cap-name="${esc(name)}"><span class="ph-fbb-ph-ic">📷</span><span class="tt"><span class="tn">${esc(label)}</span><span class="ts">add a photo</span></span></button>`;
+  }
+  function phFbbTpHtml(M, name) {
     const box = (id, draw, nm) => { const p = M.pl[id]; if (!p) return "";
       return `<button type="button" class="ph-fbb-tpbox" data-fbb-pl="${id}">${draw}<span class="tt"><span class="tn">${nm}</span><span class="ts">${phFbbGly(p.signs)} ${p.nt} of ${p.n}</span><span class="ts">${esc(p.signs.filter(s => s.on).map(s => s.desc).join(", ") || "none ticked")}</span></span></button>`; };
-    const h = box("tongue", phFbbTongueSvg(M), "Tongue") + box("wrist", phFbbPulseSvg(M), "Pulse");
+    const pk = phPatientKey(name);
+    const h = box("tongue", phFbbTongueSvg(M), "Tongue") + box("wrist", phFbbPulseSvg(M), "Pulse") + phFbbPhotoBoxHtml("face", "Face", name, pk) + phFbbPhotoBoxHtml("body", "Body", name, pk);
     return h ? `<div class="ph-fbb-tp">${h}</div>` : "";
   }
   function phFbbWholeHtml(M) {
@@ -72487,7 +72544,7 @@ or changing anything in Cliniko.
     const glow = op => `<svg width="22" height="14" aria-hidden="true"><ellipse cx="11" cy="7" rx="10" ry="6" fill="url(#phFbbLg)" opacity="${op}"/></svg>`;
     return `<div class="ph-rfx-hd" style="--fc:${c.ink};--fco:${c.on}"><span class="ph-fbr-dot ph-fbb-hdot" style="--c:${(PH_FBR_HERB_COLOUR[famId] || { bg: c.bg }).bg}"></span><b>${esc(f.name || famId)}</b><span class="ph-rfx-sub"><span class="pc${roll}">${Math.round(((M.fit && M.fit.fit) || 0) * 100)}%</span> match · where its signs show on the body</span><button type="button" class="ph-stocktake-close" data-rf-close="1" aria-label="Close">✕</button></div>
       <div class="ph-fbb-wrap" style="--fc:${c.ink};--fco:${c.on}">
-        <div class="ph-fbb-figcol"><div class="ph-fbb-figs"><div class="ph-fbb-figbox"><div class="ph-fbb-vlab">Front</div>${phFbbSvg(M, "front", false, chg)}</div><div class="ph-fbb-figbox"><div class="ph-fbb-vlab">Back</div>${phFbbSvg(M, "back", false, chg)}</div></div>${phFbbWholeHtml(M)}${phFbbTpHtml(M)}</div>
+        <div class="ph-fbb-figcol"><div class="ph-fbb-figs"><div class="ph-fbb-figbox"><div class="ph-fbb-vlab">Front</div>${phFbbSvg(M, "front", false, chg)}</div><div class="ph-fbb-figbox"><div class="ph-fbb-vlab">Back</div>${phFbbSvg(M, "back", false, chg)}</div></div>${phFbbWholeHtml(M)}${phFbbTpHtml(M, name)}</div>
         <div class="ph-fbb-list">${phFbbListHtml(M, chg)}</div>
       </div>
       <div class="ph-fbb-legend"><svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><radialGradient id="phFbbLg"><stop offset="0" stop-color="${c.bg}" stop-opacity=".9"/><stop offset="1" stop-color="${c.bg}" stop-opacity="0"/></radialGradient></defs></svg>
@@ -72551,6 +72608,13 @@ or changing anything in Cliniko.
     phFbbSpotNow = undefined; if (phFbbPin) phFbbSpot(phFbbPin);
     if (pop) phFbbPopOpen(pop.id, 0, 0, pop);
   }
+  // the Face/Body photo boxes load lazily (phFbbPhotoBest reads phRenPhotosFor, null until loaded) -- once
+  // phRenLoadPhotosFor resolves, repaint the chart in place if it's open on this same patient. Same idiom
+  // as phMskPhotosRefresh/phBbtRefresh/phPfAvatarRefresh, called from phRenLoadPhotosFor's own refresh list.
+  function phFbbPhotosRefresh(patientKey) {
+    const card = phFbbCard(), name = phPfwName(); if (!card || !name || phPatientKey(name) !== patientKey) return;
+    phFbbPaint();
+  }
   function phFbbTick(tk, at) {
     const name = phPfwName(); if (!name) return;
     const i = tk.indexOf(":"), kind = tk.slice(0, i), key = tk.slice(i + 1), fam = phTriFam(name), y = window.scrollY;
@@ -72566,7 +72630,10 @@ or changing anything in Cliniko.
     const card = t.closest(".ph-fbbx"); if (!card) return;
     let el;
     if ((el = t.closest("[data-fbb-tk]"))) { phFbbTick(el.dataset.fbbTk, el.dataset.fbbAt); return; }
-    if (t.closest(".ph-fbb-pop") || t.closest("[data-rf-close]")) return;
+    // the Face/Body photo boxes are a pure photo door (see phFbbTpHtml) -- let the app's own generic
+    // data-ren-tl-open/data-ren-cap-type handlers do their job rather than falling into the tpbox pin/spot
+    // logic below, which would read a nonexistent data-fbb-pl and clear whatever was pinned for nothing.
+    if (t.closest(".ph-fbb-pop") || t.closest("[data-rf-close]") || t.closest("[data-ren-tl-open]") || t.closest("[data-ren-cap-type]")) return;
     if ((el = t.closest(".ph-fbb-fig [data-fbb-pl], .ph-fbb-wchip, .ph-fbb-tpbox"))) {
       const id = el.dataset.fbbPl;
       if (phFbbPin === id) { phFbbPin = null; phFbbPopClose(); phFbbSpot(null); return; }
