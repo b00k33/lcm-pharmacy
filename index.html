@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261016-1009000">
+<meta name="lcm-build" content="20261016-1010000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -61876,10 +61876,26 @@ or changing anything in Cliniko.
   // the round CURRENTLY open on this plan (her write-through rule: the
   // plan's Egg retrieval / Embryo transfer inputs target this row, and only
   // this row -- never a second copy). Read-only; never creates.
+  //
+  // her ask 2026-10-16 ("sync timeline with ivf history ... egg collection,
+  // transfer, blood test ... make it cohesive"): a round logged the ORDINARY
+  // way -- IVF history's own "+ Egg collection"/"+ Transfer" buttons -- never
+  // gets linkedPlanId/linkedRound; only typing a date through the plan's own
+  // Cycle-page widget (phIvfLinkedCollectionWritable) ever stamps that. So
+  // the Timeline showed every IVF item as "Not planned" except the one
+  // (beta hCG) that reads rec.ivfCycles with no link check at all --
+  // phTlPregTestRead and the partner-timeline fallback (phTlPtnData) already
+  // use that same "just take her latest round" reading. Fall back to it here
+  // too, once no explicitly-linked round exists, so logging a round through
+  // IVF history is enough on its own -- never claims a round already linked
+  // to a DIFFERENT plan.
   function phIvfLinkedCollection(name, plan) {
     if (!plan) return null;
     const round = plan.ivfRoundSeq || 0;
-    return phIvfCyclesSorted(phPatientPeek(name)).filter(r => r.linkedPlanId === plan.id && (r.linkedRound || 0) === round).slice(-1)[0] || null;
+    const rows = phIvfCyclesSorted(phPatientPeek(name));
+    return rows.filter(r => r.linkedPlanId === plan.id && (r.linkedRound || 0) === round).slice(-1)[0]
+      || rows.filter(r => r.kind !== "freeze" && !r.linkedPlanId).slice(-1)[0]
+      || null;
   }
   // same, but creates the row the first time a date is typed for this round
   // -- called only from write paths (the milestone change handler), never
@@ -77383,6 +77399,14 @@ or changing anything in Cliniko.
     // the egg count of this plan's own collection (partner link 2026-10-14: "12 Dec · 9 eggs", on her timeline and his)
     const ivfRow = kind === "ivf" && plan ? phIvfLinkedCollection(name, plan) : null;
     const eggsTxt = ivfRow && ivfRow.eggs != null && ivfRow.eggs !== "" ? `${ivfRow.eggs} egg${+ivfRow.eggs === 1 ? "" : "s"}` : "";
+    // her same 2026-10-16 ask: the Fertilisation report item used to be a
+    // bare date with no result -- the round already carries the numbers
+    // (fertilised/day3/blastocysts), same fields phIvfConvParts reads.
+    const fertTxt = ivfRow ? [
+      ivfRow.fertilised != null && ivfRow.fertilised !== "" ? `${ivfRow.fertilised} fertilised` : "",
+      ivfRow.day3 != null && ivfRow.day3 !== "" ? `${ivfRow.day3} on day 3` : "",
+      ivfRow.blastocysts != null && ivfRow.blastocysts !== "" ? `${ivfRow.blastocysts} blastocyst${+ivfRow.blastocysts === 1 ? "" : "s"}` : "",
+    ].filter(Boolean).join(" · ") : "";
     // weeks-of-the-plan items (Men's fertility): the plan's first phase start, else the day it was made
     const planStart = plan ? ((plan.phases || []).map(p => p.sinceKey || "").concat([plan.createdDate || ""]).filter(phTlOkDate).sort()[0] || "") : "";
     const pt = phTlPregTestRead(rec);
@@ -77426,7 +77450,7 @@ or changing anything in Cliniko.
           }
           else if (d.ivf === "retr" && R) { k = R.key; it.est = R.est; if (!R.est && k <= todayKey) auto = { date: k, res: eggsTxt, by: "ivf" }; }
           else if (d.ivf === "xfer" && X) { k = X.key; it.est = X.est; if (!X.est && k <= todayKey) auto = { date: k, res: "", by: "ivf" }; }
-          else if (d.ivf === "retr+1" && R) { k = phTpDayAdd(R.key, 1); it.est = true; }
+          else if (d.ivf === "retr+1" && R) { k = phTpDayAdd(R.key, 1); it.est = true; if (fertTxt && k <= todayKey) { auto = { date: k, res: fertTxt, by: "ivf" }; it.est = false; } }
           else if (/^xfer\+\d+$/.test(d.ivf) && X) { k = phTpDayAdd(X.key, +d.ivf.slice(5)); it.est = true; }
         }
         if (d.wk) {
