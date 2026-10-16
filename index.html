@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261016-996000">
+<meta name="lcm-build" content="20261016-997000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -13299,10 +13299,14 @@
   }
   #pharmacyPage .ph-tng2-seg .ph-ltr-qual.on { background: var(--ph-herb); color: #fff; }
   #pharmacyPage .ph-tng2-seg > *:last-child .ph-ltr-qual, #pharmacyPage .ph-tng2-seg > .ph-ltr-qual:last-child { border-right: 0; }
-  /* Abdomen Temp/Sounds/Feel rows aren't joined bars like Tension (the where-tag adjacency problem,
-     see CLAUDE.md), but a picked chip should still fill teal like every other picked chip, not the
-     plain .ph-ltr-qual.on default gold -- found on the 2026-10-16 chip audit. */
+  /* Abdomen Temp/Sounds/Feel rows (her 2026-10-16 "make this the standard"): now joined bars like
+     Tension too. The where-tag adjacency problem (a zone tag / "where" button with nothing naming
+     which sign it belongs to, once it's no longer sitting right after that sign's own chip) is fixed
+     by naming the sign on each one instead ("Water sounds — where", "Water sounds Epi ✕") -- see
+     markRow() in phVisitAbdHtml and .ph-tng2-extras below. This rule is now redundant with
+     .ph-tng2-seg .ph-ltr-qual.on above (same specificity, same colour) but kept as a safety net. */
   #pharmacyPage .ph-abd2-tsf .ph-ltr-qual.on { background: var(--ph-herb); color: #fff; }
+  #pharmacyPage .ph-tng2-extras { flex: 1 0 100%; display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
   #pharmacyPage .ph-rtng-meta .ph-ltr-qual { height: 26px; font-size: var(--fs-11-5); padding: 0 10px; }
   #pharmacyPage .ph-expast-tag { font-style: normal; font-weight: 600; color: var(--ph-faint); font-size: var(--fs-10); margin-left: 5px; }
   #pharmacyPage .ph-ren-mark-list li .tp { font-weight: 700; color: var(--ph-green-deep); }
@@ -90414,14 +90418,20 @@ or changing anything in Cliniko.
       ? PH_ABD_TENSION.map(([k, l, hex]) => chip("tensionAt", k, l, a.tensionAt[reg] === k, `<i style="background:${hex}"></i>`)).join("")
       : PH_ABD_TENSION.map(([k, l, hex]) => chip("tension", k, l, a.tension === k, `<i style="background:${hex}"></i>`)).join("")}</div>`;
     const atRegion = Object.keys(a.tensionAt).filter(k => a.tensionAt[k] && k !== reg).map(k => `<span class="ph-tng2-at">${esc(a.tensionAt[k])} ${esc(phAbdZoneLabel(k))} <button type="button" data-visit-abd2="tensionAtClear:${k}" aria-label="Remove">✕</button></span>`).join("");
-    const markRow = list => list.map(([k, l]) => {
-      const on = !!a.marks[k];
-      if (!on || k === "xiaxin") return chip("marks", k, l, on);
-      const zonesHtml = (a.marks[k] || []).map(z => `<span class="ph-tng2-at">${esc(PH_ABD_ZONE_SHORT[z] || z)} <button type="button" data-visit-abd2="where:${k}:${z}" aria-label="Remove">✕</button></span>`).join("");
-      const armed = !!(brush && brush.attr === "marks" && brush.val === k);
-      const whereBtn = reg ? "" : `<button type="button" class="ph-abd2-wherebtn${armed ? " on" : ""}" data-visit-abd2="pick:${k}">${armed ? "tap the map" : "where"}</button>`;
-      return chip("marks", k, l, on) + zonesHtml + whereBtn;
-    }).join("");
+    const markRow = list => {
+      const extras = [];
+      const chips = list.map(([k, l]) => {
+        const on = !!a.marks[k];
+        const c = chip("marks", k, l, on);
+        if (!on || k === "xiaxin") return c;
+        const zonesHtml = (a.marks[k] || []).map(z => `<span class="ph-tng2-at"><b>${esc(l)}</b> ${esc(PH_ABD_ZONE_SHORT[z] || z)} <button type="button" data-visit-abd2="where:${k}:${z}" aria-label="Remove">✕</button></span>`).join("");
+        const armed = !!(brush && brush.attr === "marks" && brush.val === k);
+        const whereBtn = reg ? "" : `<button type="button" class="ph-abd2-wherebtn${armed ? " on" : ""}" data-visit-abd2="pick:${k}">${esc(l)} — ${armed ? "tap the map" : "where"}</button>`;
+        if (zonesHtml || whereBtn) extras.push(zonesHtml + whereBtn);
+        return c;
+      }).join("");
+      return { bar: `<div class="ph-tng2-seg">${chips}</div>`, extras: extras.join("") };
+    };
     const summary = phAbd2Summary(a, draft.zones);
     return `<div class="ph-tng2 abd">
       <div class="ph-tng2-left">
@@ -90435,9 +90445,10 @@ or changing anything in Cliniko.
       </div>
       <div class="ph-tng2-rows">
         <div class="ph-tng2-row"><i>${reg ? "Tension here" : "Tension"}</i><div class="ph-ltr-quals ph-visit-quals">${tensionRow}${atRegion}</div></div>
-        <div class="ph-tng2-row"><i>Temp</i><div class="ph-ltr-quals ph-visit-quals ph-abd2-tsf">${markRow(PH_ABD_TEMP)}</div></div>
-        <div class="ph-tng2-row"><i>Sounds</i><div class="ph-ltr-quals ph-visit-quals ph-abd2-tsf">${markRow(PH_ABD_SOUNDS)}</div></div>
-        <div class="ph-tng2-row"><i>Feel</i><div class="ph-ltr-quals ph-visit-quals ph-abd2-tsf">${markRow(PH_ABD_FEEL)}</div></div>
+        ${[["Temp", PH_ABD_TEMP], ["Sounds", PH_ABD_SOUNDS], ["Feel", PH_ABD_FEEL]].map(([lbl, list]) => {
+          const m = markRow(list);
+          return `<div class="ph-tng2-row"><i>${lbl}</i><div class="ph-ltr-quals ph-visit-quals ph-abd2-tsf">${m.bar}${m.extras ? `<div class="ph-tng2-extras">${m.extras}</div>` : ""}</div></div>`;
+        }).join("")}
         ${reg ? `<div class="ph-tng2-hint">Signs you tap now land on the ${esc(phAbdZoneLabel(reg))}.</div>` : ""}
         <div class="ph-tng2-sum">${summary ? `<b>Reads as</b> ${esc(summary)}` : `<span class="faint">Nothing marked yet.</span>`}</div>
         <div class="ph-tng2-acts">${!phAbd2Empty(a) ? `<button type="button" class="tab-link cancel" data-visit-abd2="clear:">Clear</button>` : ""}</div>
