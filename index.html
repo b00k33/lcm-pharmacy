@@ -59627,12 +59627,22 @@ or changing anything in Cliniko.
   // file to choose from; a patient with nothing yet goes straight to the camera as before (her
   // earlier "nothing happens" complaint about an extra tap for no reason).
   let phPfAvatarMenuFor = null;   // patient key whose menu is open, or null -- one at a time
+  // her ask (2026-10-17): "use face shape photos of patients as their profile photo" -- a pure
+  // display-time fallback, never a write (this stays a read, same rule as every other render
+  // function here). An explicit pick (the menu above, or a tap in the picker sheet) always wins;
+  // only while NOTHING has been explicitly picked does the newest "Face shape" photo stand in for
+  // initials, since it's the one photo type that's actually a picture of her face.
+  function phPfAvatarPhotoFor(list) {
+    const pick = list.filter(r => r.isProfile).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
+    if (pick) return pick;
+    return list.filter(r => phRenTypeOf(r) === "faceshape").sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0] || null;
+  }
   function phPfAvatarHtml(name) {
     const pk = phPatientKey(name);
     const photos = phRenPhotosFor(pk);
     if (photos == null) phRenLoadPhotosFor(pk);
     const list = photos || [];
-    const pic = list.filter(r => r.isProfile).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
+    const pic = phPfAvatarPhotoFor(list);
     const hasOthers = list.length > (pic ? 1 : 0);
     const menuOpen = hasOthers && phPfAvatarMenuFor === pk;
     const menu = menuOpen ? `<div class="ph-pf-avatar-menu" role="menu">
@@ -59660,14 +59670,15 @@ or changing anything in Cliniko.
   // writes through the same `isProfile` flag the avatar itself already reads -- a photo already
   // on file is never re-stored a second time just to become the avatar.
   let phPfAvatarPickKey = null, phPfAvatarPickName = "";
-  function phPfAvatarPickTileHtml(r) {
+  function phPfAvatarPickTileHtml(r, curId) {
     const shot = phRenShotOf(r);
     const label = phRenTypeOf(r) === "tongue" && shot ? `Tongue · ${esc(PH_REN_SHOT_LABEL[shot] || shot)}` : esc(PH_REN_TYPE_LABEL[phRenTypeOf(r)] || "Photo");
     const day = esc(presBandDay(phRenDateKeyOf(r)));
-    return `<button type="button" class="ph-pfav-tile${r.isProfile ? " cur" : ""}" data-pf-avpick-tile="${esc(r.id)}" title="${label} · ${day}${r.isProfile ? " · current avatar" : ""}">
+    const cur = r.id === curId;
+    return `<button type="button" class="ph-pfav-tile${cur ? " cur" : ""}" data-pf-avpick-tile="${esc(r.id)}" title="${label} · ${day}${cur ? " · current avatar" : ""}">
       <span class="ph-pfav-th"><img src="${r.objectUrl}" alt=""></span>
       <span class="ph-pfav-cap">${label}<i>${day}</i></span>
-      ${r.isProfile ? `<svg class="ph-pfav-tick" aria-hidden="true"><use href="#i-check"/></svg>` : ""}
+      ${cur ? `<svg class="ph-pfav-tick" aria-hidden="true"><use href="#i-check"/></svg>` : ""}
     </button>`;
   }
   function phPfAvatarPickBodyHtml(name) {
@@ -59675,7 +59686,8 @@ or changing anything in Cliniko.
     const photos = phRenPhotosFor(pk);
     const list = (photos || []).slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     if (!list.length) return `<p class="ph-pfav-empty">${photos == null ? "Loading photos…" : "No photos on file yet."}</p>`;
-    return `<div class="ph-pfav-grid">${list.map(phPfAvatarPickTileHtml).join("")}</div>`;
+    const cur = phPfAvatarPhotoFor(list);
+    return `<div class="ph-pfav-grid">${list.map(r => phPfAvatarPickTileHtml(r, cur && cur.id)).join("")}</div>`;
   }
   function phPfAvatarPickHtml(name) {
     const pro = phPro(name);
