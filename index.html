@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261016-1007000">
+<meta name="lcm-build" content="20261016-1008000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -58856,7 +58856,7 @@ or changing anything in Cliniko.
     const profSecs = presAssessSections(t);
     const profSel = (profSecs.find(s => s.id === presAssessTab) || profSecs[0] || {}).id;
     return {
-      plan, name,
+      plan, name, tlKind, tlDone,
       profSubs: profSecs.map(s => ({ id: s.id, grp: s.grp || "file", label: s.label, flags: s.flags || 0, flagTitle: s.flagTitle || (s.flags ? `${s.flags} flagged` : ""), dn: presSecDnHtml(name, s.id), on: presStage === "profile" && s.id === profSel, locked: phPfwLocked(name, s.id) })),
       steps: [
         { id: "profile", label: "Profile", small: "details · history", done: profileDone, on: presStage === "profile", stage: "profile" },
@@ -58867,11 +58867,10 @@ or changing anything in Cliniko.
         // carry it where it's shown once, not four times.
         { id: "today", label: "Today's visit", small: "re-check · exam", done: todayDone, on: onPlan && !!plan && tab === "today", go: "today" },
         { id: "patterns", label: "Fang Bing Ren", small: "pattern · formula type", done: patAgreed, on: onPlan && !!plan && (tab === "patterns" || tab === "patdx"), go: "patterns", flags: (sections.find(x => x.id === "patdx") || {}).flags || 0 },
-        // Timeline (her 2026-10-16 pick): its own step, between Fang Bing Ren and Treatment Care Plan --
-        // tracking data feeds the plan, so it reads before it, matching the rest of the app's own exam
-        // -> diagnosis -> plan flow. Only on a plan that carries one (phTlKindOf); numbered by position
-        // below, so a patient with no Timeline simply keeps the old 1-6 numbering.
-        ...(tlKind ? [{ id: "timeline", label: "Timeline", small: "cycle · milestones", done: tlDone, on: onPlan && !!plan && tab === "timeline", go: "timeline" }] : []),
+        // Timeline STOPPED being its own numbered step here 2026-10-16 (her pick, Mock 2 of
+        // fertility-rail-mock-*-2026-10-16.html): it now sits in the unnumbered "Fertility & cycle"
+        // group below, alongside Cycle and IVF history -- see fertSubs. The page itself, phTlKindOf
+        // and tlDone are unchanged; only its rail presentation moved.
         { id: "plan", label: "Treatment Care Plan", small: "phases · sessions", done: planDone, on: onPlan && (!plan || tab === "plan"), go: "plan" },
         { id: "treatment", label: "Treatment", small: "today's session", done: treatDone, on: onPlan && !!plan && tab === "treatment", go: "treatment" },
         { id: "dispense", label: "Dispense", small: "herbs · label", done: dispDone, on: presStage === "dispense", stage: "dispense", last: true },
@@ -58880,12 +58879,36 @@ or changing anything in Cliniko.
         { id: "log", label: "Treatment log", sub: subOf("log"), on: onPlan && tab === "log" },
         { id: "notes", label: "Notes", sub: subOf("notes"), on: onPlan && tab === "notes" },
       ] : [],
-      // Cycle / Tongue / Pulse / Abdomen: each its own page (her pick, law
+      // Tongue / Pulse / Abdomen: each its own page (her pick, law
       // 2026-10-10), listed under Today's visit with a tick when done today.
       // Pre-filtered from `sections` so the rail can't list a page that
-      // presTpMainSections would not also show as a tab (Cycle only when on).
-      examSubs: plan ? ["cycle", "tongue", "pulse", "abdomen", "msk", "askher"].map(id => sections.find(s => s.id === id)).filter(Boolean)
+      // presTpMainSections would not also show as a tab. Cycle moved out to
+      // fertSubs below (her 2026-10-16 pick).
+      examSubs: plan ? ["tongue", "pulse", "abdomen", "msk", "askher"].map(id => sections.find(s => s.id === id)).filter(Boolean)
         .map(s => ({ id: s.id, label: s.label, sub: s.sub, done: !!rec && (s.id === "askher" ? phAhDone(name) : phTodayDonePart(rec, s.id)), on: onPlan && tab === s.id })) : [],
+      // "Fertility & cycle" (her ask 2026-10-16, "make a fertility/cycle/menstrual category section
+      // and put the ivf cycle etc stuff there"; Mock 2 of fertility-rail-mock-*-2026-10-16.html, her
+      // picks: the unnumbered-group layout, just these three, same gating as today, sits before Fang
+      // Bing Ren). An unnumbered caption group like File/Log, not a numbered step -- nothing here
+      // blocks "Today's visit" from completing. Cycle and Timeline are Plan-tab pages (data-flow-go,
+      // same as examSubs); IVF history is a Profile-stage page (data-flow-prof, same mechanism as
+      // profSubs) -- fertSubBtn below switches on `kind` to use the right attribute for each. The
+      // Usual period card she also asked to fold in needs no separate entry: it already lives
+      // embedded on the Cycle page itself (presPfwSetHtml(name,"period")), so it rides along with
+      // Cycle for free. The meno/men "Usual" page (Change of life / Energy & sleep) is a different,
+      // broader constitutional set, not fertility-specific, and stays under File.
+      fertSubs: (() => {
+        const out = [];
+        if (plan) {
+          const cycleSec = sections.find(s => s.id === "cycle");
+          if (cycleSec) out.push({ kind: "go", id: "cycle", label: cycleSec.label, sub: cycleSec.sub, done: !!rec && phTodayDonePart(rec, "cycle"), on: onPlan && tab === "cycle" });
+          const tlSec = tlKind ? sections.find(s => s.id === "timeline") : null;
+          if (tlSec) out.push({ kind: "go", id: "timeline", label: tlSec.label, sub: tlSec.sub, done: tlDone, on: onPlan && tab === "timeline" });
+        }
+        const ivfSec = profSecs.find(s => s.id === "ivf");
+        if (ivfSec) out.push({ kind: "prof", id: "ivf", label: ivfSec.label, on: presStage === "profile" && profSel === "ivf" });
+        return out;
+      })(),
       // her 2026-10-12 pick D: Fang Bing Ren lists its two pages under it, like Today's visit lists its exam pages
       patSubs: plan && sections.find(s => s.id === "patdx") ? [
         { id: "patterns", label: "Fang Bing Ren", on: onPlan && tab === "patterns" },
@@ -58922,7 +58945,6 @@ or changing anything in Cliniko.
     const planStep = f.steps.find(s => s.id === "plan");
     const todayStep = f.steps.find(s => s.id === "today");
     const patStep = f.steps.find(s => s.id === "patterns");
-    const tlStep = f.steps.find(s => s.id === "timeline");   // only present on a Pregnancy / Natural fertility / IVF plan
     const treat = f.steps.find(s => s.id === "treatment");
     const dispStep = f.steps.find(s => s.id === "dispense");
     const prof = f.steps[0];
@@ -58981,11 +59003,16 @@ or changing anything in Cliniko.
     // presTpMainSections wouldn't also show as a tab.
     const examSubBtn = s => `<button type="button" class="${s.on ? "on" : ""}${s.done ? " done" : ""}" data-flow-go="${s.id}" role="tab" aria-selected="${s.on ? "true" : "false"}">${esc(s.label)}${s.done ? `<i class="tk" aria-hidden="true">✓</i>` : ""}${s.sub ? `<span class="sub">${esc(s.sub)}</span>` : ""}</button>`;
     const examSubHtml = f.examSubs.length ? `<div class="ph-flow-sub keep plan${todayStep.done ? " done" : ""}">${f.examSubs.map(examSubBtn).join("")}</div>` : "";
+    // "Fertility & cycle" (her 2026-10-16 pick, Mock 2): Cycle and Timeline navigate like the exam
+    // pages above (data-flow-go, Plan-tab tabs); IVF history navigates like a File/Log page
+    // (data-flow-prof, Profile-stage tab) -- fertSubBtn picks the right attribute per item.
+    const fertSubBtn = s => `<button type="button" class="${s.on ? "on" : ""}${s.done ? " done" : ""}" data-flow-${s.kind === "prof" ? "prof" : "go"}="${s.id}" role="tab" aria-selected="${s.on ? "true" : "false"}">${esc(s.label)}${s.done ? `<i class="tk" aria-hidden="true">✓</i>` : ""}${s.sub ? `<span class="sub">${esc(s.sub)}</span>` : ""}</button>`;
+    const fertHtml = f.fertSubs.length ? `<div class="ph-flow-sub keep plan${todayStep.done ? " done" : ""}"><span class="cap">Fertility &amp; cycle</span>${f.fertSubs.map(fertSubBtn).join("")}</div>` : "";
     // Fang Bing Ren's two pages (her 2026-10-12 pick D); the gold count stays on the parent row, as in the mock
     const patSubBtn = s => `<button type="button" class="${s.on ? "on" : ""}${s.done ? " done" : ""}" data-flow-go="${s.id}" role="tab" aria-selected="${s.on ? "true" : "false"}">${esc(s.label)}${s.done ? `<i class="tk" aria-hidden="true">✓</i>` : ""}</button>`;
     const patSubHtml = f.patSubs.length ? `<div class="ph-flow-sub keep plan${patStep.done ? " done" : ""}">${f.patSubs.map(patSubBtn).join("")}</div>` : "";
     const planSubHtml = f.planSubs.length ? `<div class="ph-flow-sub keep plan${planStep.done ? " done" : ""}">${f.planSubs.map(examSubBtn).join("")}</div>` : "";
-    const inner = `${visitHead}${nextHtml}${stepHtml(prof)}${fileHtml}${checkHtml}${sumHtml}${stepHtml(todayStep)}${examSubHtml}${stepHtml(patStep)}${patSubHtml}${tlStep ? stepHtml(tlStep) : ""}${stepHtml(planStep)}${planSubHtml}${stepHtml(treat)}${stepHtml(dispStep)}${logHtml}`;
+    const inner = `${visitHead}${nextHtml}${stepHtml(prof)}${fileHtml}${checkHtml}${sumHtml}${stepHtml(todayStep)}${examSubHtml}${fertHtml}${stepHtml(patStep)}${patSubHtml}${stepHtml(planStep)}${planSubHtml}${stepHtml(treat)}${stepHtml(dispStep)}${logHtml}`;
     let sig = 0; for (let i = 0; i < inner.length; i++) sig = (sig * 31 + inner.charCodeAt(i)) | 0;   // lets a repaint skip an identical rail
     return `<div class="ph-flow-rail" id="presFlowRail" role="tablist" aria-label="Where you are" data-sig="${sig}">
       ${inner}
@@ -59108,8 +59135,10 @@ or changing anything in Cliniko.
     }
     // Timeline (her 2026-10-16 pick): unlike patterns/plan above, it's not a one-line glance on a return
     // visit -- an ongoing menstrual/IVF/pregnancy tracker matters every visit, so it stays in the walk
-    // whether this is a first or a return visit.
-    if (hasPlan && f.plan && phTlKindOf(f.plan) && !step("timeline").done) tail.push({ id: "timeline", label: "Timeline", attr: `data-flow-go="timeline"` });
+    // whether this is a first or a return visit. Reads f.tlDone directly (not the step() lookup above) --
+    // Timeline left f.steps the same day this was written, when it moved into the unnumbered
+    // "Fertility & cycle" group (fertSubs) instead of being its own numbered step.
+    if (hasPlan && f.plan && f.tlKind && !f.tlDone) tail.push({ id: "timeline", label: "Timeline", attr: `data-flow-go="timeline"` });
     if (!step("plan").done && !(back && hasPlan)) tail.push({ id: "plan", label: "Treatment Care Plan", attr: `data-flow-go="plan"` });
     if (hasPlan && !step("treatment").done) tail.push({ id: "treatment", label: "Treatment", attr: `data-flow-go="treatment"` });
     if (!step("dispense").done && phHerbsOn(rec, phTpShownPlan(name))) tail.push({ id: "dispense", label: "Dispense", attr: `data-pres-stage="dispense"` });
@@ -60013,7 +60042,12 @@ or changing anything in Cliniko.
     const RANK = { patient: 1, ren: 2, medhx: 3, usual: 5, sleep: 6, supplements: 7, checklist: 8,
       bloods: 7.5, log: 30, checks: 30.5, photos: 31, apptshist: 32, messages: 33, ivf: 34 };
     const GRP = n => n < 10 ? "file" : n < 20 ? "check" : n < 30 ? "sum" : "log";
-    sections.forEach(s => { s.grp = GRP(RANK[s.id] || 8); });
+    // IVF history keeps its RANK (for its position if anything else ever reads one), but her
+    // 2026-10-16 ask pulls it out of the "log" caption group into the rail's own "Fertility &
+    // cycle" group instead (presFlowSteps' fertSubs reads it straight off presAssessSections,
+    // not off this grp) -- "fert" just has to be anything other than "file"/"check"/"sum"/"log"
+    // so logItems' filter in presFlowRailHtml no longer catches it.
+    sections.forEach(s => { s.grp = s.id === "ivf" ? "fert" : GRP(RANK[s.id] || 8); });
     return sections.map((s, i) => [s, i]).sort((a, b) => (RANK[a[0].id] || 8) - (RANK[b[0].id] || 8) || a[1] - b[1]).map(x => x[0]);
   }
   // ---- the Log page (her pick Mock B, 2026-10-06): every dated record for her, newest first, one
