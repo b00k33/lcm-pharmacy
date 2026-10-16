@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261016-1014000">
+<meta name="lcm-build" content="20261016-1015000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -9500,7 +9500,8 @@
   #pharmacyPage .ph-bld-tbl td.none { color: var(--ph-faint); }
   #pharmacyPage .ph-bld-tbl td.low, #pharmacyPage .ph-bld-tbl td.high { color: var(--ph-low-deep); font-weight: 600; }
   #pharmacyPage .ph-bld-tbl td i { font-style: normal; margin-right: 4px; }
-  #pharmacyPage .ph-bld-dh { background: none; border: 0; padding: 0; cursor: pointer; text-align: left; font: inherit; color: inherit; text-transform: none; letter-spacing: 0; }
+  #pharmacyPage .ph-bld-dh { background: none; border: 0; padding: 0; cursor: pointer; text-align: left; font: inherit; color: inherit; text-transform: none; letter-spacing: 0; display: block; }
+  #pharmacyPage .ph-bld-dh.ro { cursor: default; }
   #pharmacyPage .ph-bld-dh b { font-size: var(--fs-12-5); }
   /* result age (law 2026-10-10): always shown; over 12 months = "not counted", dimmed, never hidden */
   #pharmacyPage .ph-bld-dh small.age { font-weight: 600; }
@@ -60325,7 +60326,9 @@ or changing anything in Cliniko.
   const phBldFlag = (meta, v) => meta.lo != null && v < meta.lo ? "low" : meta.hi != null && v > meta.hi ? "high" : "";
   const phBldNum = s => { const v = parseFloat(String(s == null ? "" : s).replace(",", ".")); return isFinite(v) ? v : null; };
   function phBldList(rec) {
-    return ((rec && rec.bloods) || []).filter(b => b && /^\d{4}-\d{2}-\d{2}$/.test(b.date || "")).slice().sort((a, b) => b.date.localeCompare(a.date) || (b.at || 0) - (a.at || 0));
+    const own = ((rec && rec.bloods) || []).filter(b => b && /^\d{4}-\d{2}-\d{2}$/.test(b.date || ""));
+    const all = rec ? own.concat(phIvfScanBldRows(rec)) : own;
+    return all.sort((a, b) => b.date.localeCompare(a.date) || (b.at || 0) - (a.at || 0));
   }
   // PATIENT WORKFLOW LAW (CLAUDE.md 2026-10-10, her pick): a result's age always shows, and one over
   // 12 months old is marked "old" and gives Fang Bing Ren no clue. It is still listed, never deleted.
@@ -60374,7 +60377,16 @@ or changing anything in Cliniko.
     const keys = [];
     PH_BLD_MARKERS.forEach(m => { if (list.some(b => b.vals && b.vals[m[0]])) keys.push(m[0]); });
     list.forEach(b => Object.keys(b.vals || {}).forEach(k => { if (k.indexOf("c:") === 0 && keys.indexOf(k) < 0) keys.push(k); }));
-    const head = list.map(b => { const d = parseKey(b.date), old = phBldIsOld(b.date); return `<th scope="col"${old ? ` class="old"` : ""}><button type="button" class="ph-bld-dh" data-bld-edit="${esc(b.id)}" title="${old ? "Over 12 months old: not counted in Fang Bing Ren. Edit this result" : "Edit this result"}"><b>${d.getDate()} ${MON_SHORT[d.getMonth()]}</b><small>${d.getFullYear()}</small><small class="age">${esc(phBldAgeText(b.date))}${old ? " · not counted" : ""}</small>${b.lab ? `<small class="lab">${esc(b.lab)}</small>` : ""}</button></th>`; }).join("");
+    const head = list.map(b => {
+      const d = parseKey(b.date), old = phBldIsOld(b.date);
+      const inner = `<b>${d.getDate()} ${MON_SHORT[d.getMonth()]}</b><small>${d.getFullYear()}</small><small class="age">${esc(phBldAgeText(b.date))}${old ? " · not counted" : ""}</small>${b.lab ? `<small class="lab">${esc(b.lab)}</small>` : ""}`;
+      // an IVF-scan row is read-only here (her IVF redesign 2026-10-16, item 2): it has no id inside
+      // rec.bloods to edit or delete, so it is never the data-bld-edit button -- the scan itself, on
+      // the Treatment Care Plan page, is the one place to change it.
+      return b.ivf
+        ? `<th scope="col"${old ? ` class="old"` : ""}><span class="ph-bld-dh ro" title="From an IVF monitoring scan — edit it on the Treatment Care Plan page">${inner}</span></th>`
+        : `<th scope="col"${old ? ` class="old"` : ""}><button type="button" class="ph-bld-dh" data-bld-edit="${esc(b.id)}" title="${old ? "Over 12 months old: not counted in Fang Bing Ren. Edit this result" : "Edit this result"}">${inner}</button></th>`;
+    }).join("");
     const rows = keys.map(k => {
       const first = list.map(b => b.vals && b.vals[k]).find(Boolean);
       const m = phBldMeta(k, first, rec.sex);
@@ -62227,6 +62239,28 @@ or changing anything in Cliniko.
   const phIvfNextScan = list => { const today = keyOf(TODAY); return list.find(s => s.date && s.date >= today && !phIvfScanHasResults(s)) || null; };
   const phIvfLatestScan = list => { const today = keyOf(TODAY); return list.filter(s => s.date && s.date <= today && phIvfScanHasResults(s)).slice(-1)[0] || null; };
   const phIvfNextScanKey = rec => { const s = phIvfNextScan(phIvfScanListAll(rec)); return s ? s.date : ""; };
+  // her IVF redesign 2026-10-16, item 2 ("merge scan bloods into the shared
+  // Blood-tests store"): an IVF monitoring scan's e2/lh/p4/fsh/amh are the
+  // SAME markers the Blood-tests page and the Natural-fertility Timeline's
+  // own "Day 2-3 hormones"/"AMH" items already track (PH_BLD_MARKERS,
+  // PH_TL_DEFAULTS.nat) -- derived here on every read, through phBldList,
+  // never copied into a second stored record, so editing the scan stays
+  // the one edit and nothing can drift out of sync with it. hCG is
+  // deliberately left OUT: it has no PH_BLD_MARKERS catalog entry, is rare
+  // on a monitoring scan, and a pregnancy hCG already has its own correct,
+  // separate home (t.pregHcg on the transfer) -- merging it here would
+  // risk reading as a second, competing source for the same fact.
+  function phIvfScanBldRows(rec) {
+    const out = [];
+    phIvfScanListAll(rec).forEach(s => {
+      if (!s.date || !/^\d{4}-\d{2}-\d{2}$/.test(s.date)) return;
+      const vals = {};
+      PH_IVF_SCAN_BLOODS.forEach(b => { if (b[0] !== "hcg" && s[b[0]] != null) vals[b[0]] = { v: s[b[0]] }; });
+      if (!Object.keys(vals).length) return;
+      out.push({ id: "ivf:" + s.id, date: s.date, lab: "IVF monitoring scan", note: "", vals, at: s.at || 0, ivf: true });
+    });
+    return out;
+  }
   // her IVF redesign 2026-10-16, item 1 ("quick-log by moment, not the
   // whole funnel"): four single-purpose doors onto these same rows -- never
   // a second record, just a faster way onto the one that already exists.
