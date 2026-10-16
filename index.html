@@ -15607,7 +15607,29 @@
   #pharmacyPage .ph-pf-avatar-add:active { transform: scale(.9); }
   #pharmacyPage .ph-pf-avatar-add.nudge { animation: phPfAvatarNudge 2.4s ease-in-out infinite; }
   @keyframes phPfAvatarNudge { 0%, 100% { box-shadow: 0 0 0 0 rgba(217,174,71,.5); } 50% { box-shadow: 0 0 0 6px rgba(217,174,71,0); } }
+  #pharmacyPage .ph-pf-avatar-add.on { background: var(--ph-herb); color: #fff; }
   @media (prefers-reduced-motion: reduce) { #pharmacyPage .ph-pf-avatar-add { transition: none; animation: none; } #pharmacyPage .ph-pf-avatar-add:active { transform: none; } }
+  /* her 2026-10-16 ask: let her pick the avatar from a photo already on file, not just take a
+     fresh one -- the camera badge opens this tiny menu once there's something to choose from
+     (a brand-new patient's badge still goes straight to the camera, unchanged). */
+  #pharmacyPage .ph-pf-avatar-menu { position: absolute; left: 0; right: auto; top: calc(100% + 4px); z-index: 20; min-width: 172px; padding: 4px; border: 1px solid var(--ph-line); border-radius: 10px; background: var(--ph-white); box-shadow: 0 10px 28px rgba(20,31,35,.14); animation: phPfwRise .15s ease both; }
+  #pharmacyPage .ph-pf-avatar-menu button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 10px; border: 0; border-radius: 8px; background: none; text-align: left; font: 600 var(--fs-13) var(--font-body); color: var(--ph-ink); cursor: pointer; white-space: nowrap; }
+  #pharmacyPage .ph-pf-avatar-menu button:hover { background: var(--ph-herb-tint); }
+  #pharmacyPage .ph-pf-avatar-menu .ph-cc-svgic { width: 15px; height: 15px; color: var(--ph-herb); flex: none; }
+  @media (prefers-reduced-motion: reduce) { #pharmacyPage .ph-pf-avatar-menu { animation: none; } }
+  /* the "choose a profile photo" sheet (.ph-lk-sheet/.ph-lk-card, the app's own shared overlay
+     shell -- the same one the "All formulas & criteria" and Linked symptoms sheets use) */
+  #pharmacyPage .ph-lk-card.ph-pfav { width: min(620px, 100%); max-height: 86vh; overflow-y: auto; }
+  #pharmacyPage .ph-pfav-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; }
+  #pharmacyPage .ph-pfav-tile { position: relative; border: 1.5px solid var(--ph-line); border-radius: 10px; background: var(--ph-white); padding: 0; overflow: hidden; cursor: pointer; text-align: left; transition: border-color .15s ease; }
+  #pharmacyPage .ph-pfav-tile:hover { border-color: var(--ph-herb-card); }
+  #pharmacyPage .ph-pfav-tile.cur { border-color: var(--ph-herb); border-width: 2px; }
+  #pharmacyPage .ph-pfav-th { display: block; width: 100%; aspect-ratio: 1; background: var(--ph-herb-tint); overflow: hidden; }
+  #pharmacyPage .ph-pfav-th img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #pharmacyPage .ph-pfav-cap { display: block; padding: 4px 6px 6px; font-size: var(--fs-10-5); font-weight: 600; color: var(--ph-ink); line-height: 1.3; }
+  #pharmacyPage .ph-pfav-cap i { display: block; font-style: normal; font-weight: 500; color: var(--ph-faint); }
+  #pharmacyPage .ph-pfav-tick { position: absolute; top: 5px; right: 5px; width: 18px; height: 18px; border-radius: 50%; background: var(--ph-herb); color: #fff; padding: 3px; }
+  #pharmacyPage .ph-pfav-empty { font-size: var(--fs-13); color: var(--ph-faint); text-align: center; padding: 24px 0; }
   /* the Insurance row's labelled variant (phInsFieldsLabeledHtml) -- the
      original .ph-ins-fields flex-row rules below target the inputs directly
      (its other caller has no labels), so this needs its own column track now
@@ -34720,6 +34742,9 @@
         const mm = document.querySelector(".ph-pres-more-menu");
         if (mm) mm.remove();
       }
+      // her 2026-10-16 avatar menu: an outside tap closes it (same convention as every other
+      // menu in this app)
+      if (phPfAvatarMenuFor && !e.target.closest(".ph-pf-avatar")) { const pk = phPfAvatarMenuFor; phPfAvatarMenuFor = null; phPfAvatarRefresh(pk); }
       if (e.target.id === "presLogToggle") { presLogAll = !presLogAll; renderPresLog(); return; }
       // the three collapsible sections (her ask 2026-07-30) — plain visibility
       // toggles, no data to move, so a straight re-render is safe here (unlike the
@@ -34747,11 +34772,41 @@
       if (e.target.closest("[data-hx-sendintake]")) { phIntakeOpen(presHxScreenName); return; }
       const pfSend = e.target.closest("[data-pf-sendintake]");
       if (pfSend) { phIntakeOpen(pfSend.dataset.pfSendintake); return; }
-      // the Patient details avatar's own 📷: straight to the file/camera
-      // picker, pre-tagged "full" + profile -- the confirm modal's own
-      // checkbox (pre-checked) is still there if she wants to change her mind
+      // the Patient details avatar's own camera badge: a patient with nothing on file yet still
+      // goes straight to the file/camera picker (pre-tagged "full" + profile, unchanged -- her
+      // earlier "nothing happens" complaint about an extra tap for no reason); once something IS
+      // on file the same tap opens a tiny two-item menu instead (her 2026-10-16 ask: let her pick
+      // an existing photo too, not just take a fresh one) -- the confirm modal's own checkbox
+      // (pre-checked) is still there on "Take a new photo" if she wants to change her mind
       const pfAvAdd = e.target.closest("[data-pf-avatar-add]");
-      if (pfAvAdd) { const n = pfAvAdd.dataset.pfAvatarAdd; phRenCaptureStart(phPatientKey(n), n, "full", keyOf(TODAY), { profile: true }); return; }
+      if (pfAvAdd) {
+        const n = pfAvAdd.dataset.pfAvatarAdd, pk = phPatientKey(n);
+        const list = phRenPhotosFor(pk) || [];
+        const hasOthers = list.length > (list.some(r => r.isProfile) ? 1 : 0);
+        if (hasOthers) { phPfAvatarMenuFor = phPfAvatarMenuFor === pk ? null : pk; phPfAvatarRefresh(pk); }
+        else phRenCaptureStart(pk, n, "full", keyOf(TODAY), { profile: true });
+        return;
+      }
+      const pfAvMenuNew = e.target.closest("[data-pf-avatar-menu-new]");
+      if (pfAvMenuNew) {
+        const n = pfAvMenuNew.dataset.pfAvatarMenuNew, pk = phPatientKey(n);
+        phPfAvatarMenuFor = null; phPfAvatarRefresh(pk);
+        phRenCaptureStart(pk, n, "full", keyOf(TODAY), { profile: true });
+        return;
+      }
+      const pfAvMenuPick = e.target.closest("[data-pf-avatar-menu-pick]");
+      if (pfAvMenuPick) {
+        const n = pfAvMenuPick.dataset.pfAvatarMenuPick, pk = phPatientKey(n);
+        phPfAvatarMenuFor = null; phPfAvatarRefresh(pk);
+        phPfAvatarPickOpen(n);
+        return;
+      }
+      const pfAvPickTile = e.target.closest("[data-pf-avpick-tile]");
+      if (pfAvPickTile) {
+        const id = pfAvPickTile.dataset.pfAvpickTile, pk = phPfAvatarPickKey;
+        if (pk) phPfAvatarSetProfilePhoto(pk, id).then(() => { phPfAvatarPickClose(); presSavedToast("Profile photo updated."); });
+        return;
+      }
       if (e.target.closest("[data-hx-paste-open]")) { phHxPaste = { raw: "", parsed: null }; renderHxScreen(); const ta = document.getElementById("phHxPasteInput"); if (ta) ta.focus(); return; }
       if (e.target.closest("[data-hx-paste-cancel]")) { phHxPaste = null; renderHxScreen(); return; }
       if (e.target.closest("[data-hx-paste-back]")) { if (phHxPaste) phHxPaste.parsed = null; renderHxScreen(); return; }
@@ -54684,6 +54739,8 @@ or changing anything in Cliniko.
     if (phRecPhotosCache && !phRecPhotosQuiet) phRecPhotosLoad();
     // Patient details' own avatar (her ask 2026-10-09) -- same in-place idiom
     phPfAvatarRefresh(patientKey);
+    // the "choose a profile photo" sheet (her ask 2026-10-16), only while it's open for THIS patient
+    if (phPfAvatarPickKey === patientKey) phPfAvatarPickRender();
     // the Musculoskeletal page's posture photo slots (her 2026-10-12 ask)
     try { phMskPhotosRefresh(patientKey); } catch (e) { /* only when that page is on screen */ }
     // the Fang Bing Ren body chart's Face/Body photo boxes (her 2026-10-15 ask), only when that modal is open
@@ -59539,17 +59596,30 @@ or changing anything in Cliniko.
   // load off and renders the placeholder meanwhile; phPfAvatarRefresh (hooked
   // into phRenLoadPhotosFor alongside the other photo-dependent refreshers)
   // patches this one span in place once the real answer is in.
+  // her ask (2026-10-16): let her choose the avatar from a photo already on file, alongside
+  // taking a fresh one. Tapping the badge opens a tiny two-item menu once there's something on
+  // file to choose from; a patient with nothing yet goes straight to the camera as before (her
+  // earlier "nothing happens" complaint about an extra tap for no reason).
+  let phPfAvatarMenuFor = null;   // patient key whose menu is open, or null -- one at a time
   function phPfAvatarHtml(name) {
     const pk = phPatientKey(name);
     const photos = phRenPhotosFor(pk);
     if (photos == null) phRenLoadPhotosFor(pk);
-    const pic = (photos || []).filter(r => r.isProfile).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
+    const list = photos || [];
+    const pic = list.filter(r => r.isProfile).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
+    const hasOthers = list.length > (pic ? 1 : 0);
+    const menuOpen = hasOthers && phPfAvatarMenuFor === pk;
+    const menu = menuOpen ? `<div class="ph-pf-avatar-menu" role="menu">
+      <button type="button" role="menuitem" data-pf-avatar-menu-new="${esc(name)}"><svg class="ph-cc-svgic" aria-hidden="true" focusable="false"><use href="#i-camera"/></svg>Take a new photo</button>
+      <button type="button" role="menuitem" data-pf-avatar-menu-pick="${esc(name)}"><svg class="ph-cc-svgic" aria-hidden="true" focusable="false"><use href="#i-camera"/></svg>Choose from photos</button>
+    </div>` : "";
     // quiet nudge (her ask 2026-10-09, mock L): the camera badge pulses only
     // while there's no photo on file yet -- a nudge to add one with no
     // banner or popup, gone the moment a profile photo exists.
     return `<span class="ph-pf-avatar" data-pf-avatar-host="${esc(name)}">
       ${pic ? `<img src="${pic.objectUrl}" alt="">` : `<span class="ph-pf-avatar-in">${esc(phJourneyInitials(name))}</span>`}
-      <button type="button" class="ph-pf-avatar-add${pic ? "" : " nudge"}" data-pf-avatar-add="${esc(name)}" aria-label="${pic ? "Change" : "Add"} profile photo" title="${pic ? "Change" : "Add"} profile photo"><svg class="ph-cc-svgic" aria-hidden="true" focusable="false"><use href="#i-camera"/></svg></button>
+      <button type="button" class="ph-pf-avatar-add${pic ? "" : " nudge"}${menuOpen ? " on" : ""}" data-pf-avatar-add="${esc(name)}" aria-haspopup="${hasOthers ? "true" : "false"}" aria-expanded="${menuOpen ? "true" : "false"}" aria-label="${pic ? "Change" : "Add"} profile photo" title="${pic ? "Change" : "Add"} profile photo"><svg class="ph-cc-svgic" aria-hidden="true" focusable="false"><use href="#i-camera"/></svg></button>
+      ${menu}
     </span>`;
   }
   function phPfAvatarRefresh(patientKey) {
@@ -59557,6 +59627,67 @@ or changing anything in Cliniko.
       if (phPatientKey(el.dataset.pfAvatarHost) === patientKey) el.outerHTML = phPfAvatarHtml(el.dataset.pfAvatarHost);
     });
   }
+  // ---- choose an EXISTING photo as the profile avatar (her ask 2026-10-16) --------------------
+  // One sheet, cloned from the app's own shared .ph-lk-sheet/.ph-lk-card overlay shell (the "All
+  // formulas & criteria" / Linked symptoms sheets) rather than a second modal style. It reads the
+  // same per-patient photo list the gallery/Photos section already caches (phRenPhotosFor) and
+  // writes through the same `isProfile` flag the avatar itself already reads -- a photo already
+  // on file is never re-stored a second time just to become the avatar.
+  let phPfAvatarPickKey = null, phPfAvatarPickName = "";
+  function phPfAvatarPickTileHtml(r) {
+    const shot = phRenShotOf(r);
+    const label = phRenTypeOf(r) === "tongue" && shot ? `Tongue · ${esc(PH_REN_SHOT_LABEL[shot] || shot)}` : esc(PH_REN_TYPE_LABEL[phRenTypeOf(r)] || "Photo");
+    const day = esc(presBandDay(phRenDateKeyOf(r)));
+    return `<button type="button" class="ph-pfav-tile${r.isProfile ? " cur" : ""}" data-pf-avpick-tile="${esc(r.id)}" title="${label} · ${day}${r.isProfile ? " · current avatar" : ""}">
+      <span class="ph-pfav-th"><img src="${r.objectUrl}" alt=""></span>
+      <span class="ph-pfav-cap">${label}<i>${day}</i></span>
+      ${r.isProfile ? `<svg class="ph-pfav-tick" aria-hidden="true"><use href="#i-check"/></svg>` : ""}
+    </button>`;
+  }
+  function phPfAvatarPickBodyHtml(name) {
+    const pk = phPatientKey(name);
+    const photos = phRenPhotosFor(pk);
+    const list = (photos || []).slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    if (!list.length) return `<p class="ph-pfav-empty">${photos == null ? "Loading photos…" : "No photos on file yet."}</p>`;
+    return `<div class="ph-pfav-grid">${list.map(phPfAvatarPickTileHtml).join("")}</div>`;
+  }
+  function phPfAvatarPickHtml(name) {
+    const pro = phPro(name);
+    return `<div class="ph-lk-card ph-pfav" role="dialog" aria-label="Choose a profile photo">
+      <div class="ph-lk-card-hd"><h3>Choose a profile photo</h3><button type="button" data-pf-avpick-close="1" aria-label="Close">✕</button></div>
+      <p class="ph-lk-card-sub">Every photo already on file for ${esc(name)} -- tap one to use it as ${pro.p} avatar.</p>
+      <div data-pf-avpick-body="1">${phPfAvatarPickBodyHtml(name)}</div>
+    </div>`;
+  }
+  function phPfAvatarPickRender() {
+    const host = document.getElementById("phPfAvatarPickSheet");
+    if (host && !host.hidden && phPfAvatarPickName) host.innerHTML = `<div class="ph-lk-backdrop" data-pf-avpick-close="1"></div>${phPfAvatarPickHtml(phPfAvatarPickName)}`;
+  }
+  function phPfAvatarPickOpen(name) {
+    let host = document.getElementById("phPfAvatarPickSheet");
+    if (!host) { host = document.createElement("div"); host.id = "phPfAvatarPickSheet"; host.className = "ph-lk-sheet"; (document.getElementById("pharmacyPage") || document.body).appendChild(host); }
+    phPfAvatarPickKey = phPatientKey(name); phPfAvatarPickName = name;
+    host.hidden = false; phPfAvatarPickRender();
+    if (phRenPhotosFor(phPfAvatarPickKey) == null) phRenLoadPhotosFor(phPfAvatarPickKey);
+  }
+  function phPfAvatarPickClose() { const host = document.getElementById("phPfAvatarPickSheet"); if (host) host.hidden = true; phPfAvatarPickKey = null; phPfAvatarPickName = ""; }
+  // the one write door: clears `isProfile` off whichever photo currently holds it (straight
+  // against the DB, same precaution phRenCaptureSave's own "profile" tag takes), sets it on the
+  // one she picked -- never a duplicate of the image bytes, just a reference into the one store.
+  async function phPfAvatarSetProfilePhoto(patientKey, photoId) {
+    const all = await phRenPhotoGetAllForPatient(patientKey);
+    for (const r of all) {
+      if (r.id === photoId) { if (!r.isProfile) { r.isProfile = true; await phRenPhotoPut(r); } }
+      else if (r.isProfile) { delete r.isProfile; await phRenPhotoPut(r); }
+    }
+    await phRenLoadPhotosFor(patientKey);   // reloads the cache + repaints the avatar in place
+  }
+  document.addEventListener("click", e => {
+    const el = e.target.closest && e.target.closest("[data-pf-avpick-close]");
+    if (!el || !(el.closest("#pharmacyPage") || el.closest("#phPfAvatarPickSheet"))) return;
+    phPfAvatarPickClose();
+  });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") { const h = document.getElementById("phPfAvatarPickSheet"); if (h && !h.hidden) phPfAvatarPickClose(); else if (phPfAvatarMenuFor) { const pk = phPfAvatarMenuFor; phPfAvatarMenuFor = null; phPfAvatarRefresh(pk); } } });
   // Patient header, cut to two things (her ask 2026-10-09, after the earlier
   // 4-tile grid still read as five separate facts once Fang Bing Ren's own
   // side panel sat beside it): ONE hero action card -- whatever's next to
