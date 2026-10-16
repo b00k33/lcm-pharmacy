@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261016-1000000">
+<meta name="lcm-build" content="20261016-1002000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6070,9 +6070,14 @@
   #pharmacyPage .ph-tlx .src { color: var(--ph-faint); font-size: var(--fs-10-5); }
   #pharmacyPage .ph-tlx-form { display: flex; gap: 6px 8px; align-items: flex-end; flex-wrap: wrap; }
   #pharmacyPage .ph-tlx-form label { display: flex; flex-direction: column; gap: 2px; font-size: var(--fs-10-5); color: var(--ph-faint); font-weight: 600; }
-  #pharmacyPage .ph-tlx-form input[type=text], #pharmacyPage .ph-tlx-form input[type=date], #pharmacyPage .ph-tlx-form input[type=number], #pharmacyPage .ph-tlx-form select { font: inherit; font-size: var(--fs-12); height: 26px; border: 1px solid var(--ph-line); border-radius: 10px; padding: 0 8px; background: var(--ph-white); color: var(--ph-ink); min-width: 0; }
+  #pharmacyPage .ph-tlx-form input[type=text], #pharmacyPage .ph-tlx-form input[type=date], #pharmacyPage .ph-tlx-form input[type=month], #pharmacyPage .ph-tlx-form input[type=number], #pharmacyPage .ph-tlx-form select { font: inherit; font-size: var(--fs-12); height: 26px; border: 1px solid var(--ph-line); border-radius: 10px; padding: 0 8px; background: var(--ph-white); color: var(--ph-ink); min-width: 0; }
   #pharmacyPage .ph-tlx-form input[type=number] { width: 64px; }
   #pharmacyPage .ph-tlx-form input.r { flex: 1 1 96px; min-width: 96px; }
+  /* her 2026-10-16 ask ("give option to give approximate date e.g. month/year"), Schedule form only: a
+     checkbox swaps the date box for a month box; stored as the 1st of that month + approx:true, read
+     back everywhere a scheduled date shows (phTlSchedTxt) as "Sep 2026", never a misleading exact day. */
+  #pharmacyPage .ph-tlx-form label.ph-tlx-approx { flex-direction: row; align-items: center; gap: 4px; font-weight: 500; white-space: nowrap; }
+  #pharmacyPage .ph-tlx-form label.ph-tlx-approx input[type=checkbox] { margin: 0; }
   #pharmacyPage .ph-tlx .schl { display: block; margin-bottom: 4px; }
   #pharmacyPage .ph-tlx-edrow td { background: var(--ph-herb-tint); }
   #pharmacyPage .ph-tlx-add { margin-top: 8px; }
@@ -58806,6 +58811,14 @@ or changing anything in Cliniko.
     const planDone = plans.some(p => p.status === "active" && (p.phases || []).some(ph => ph.status === "current") && (p.phases || []).some(ph => phTpSessionsOf(ph) > 0));
     const treatDone = !!(rec && (rec.acuSessions || []).some(s => s.date === today));
     const dispDone = !!(t.lastDispensedAt && keyOf(new Date(t.lastDispensedAt)) === today);
+    // her ask (2026-10-16, "i need a menstrual/ivf/cycle step/section purely for tracking that"): the
+    // Timeline page (egg collection/transfer/scans/bloods, pregnancy weeks) was a sub-tab buried under
+    // Treatment Care Plan -- promoted to its own numbered step, only on the plan types that already
+    // carry one (Pregnancy / Natural fertility / IVF -- phTlKindOf). "Done" = nothing on it overdue,
+    // read live off the same model the page itself draws from, never stored.
+    const tlKind = plan && phTlKindOf(plan);
+    let tlDone = false;
+    if (tlKind && rec) { try { const tlItems = phTlModel(rec, name, plan, tlKind).items; tlDone = tlItems.length > 0 && tlItems.every(i => i.status !== "over"); } catch (e) {} }
     // PATIENT WORKFLOW LAW (CLAUDE.md, 2026-10-10): Today's visit -> Fang Bing
     // Ren -> Treatment Care Plan -> Treatment -> Dispense. The Review step is
     // retired (folded into Today's visit). "Today's visit" is done when every
@@ -58827,18 +58840,23 @@ or changing anything in Cliniko.
       plan, name,
       profSubs: profSecs.map(s => ({ id: s.id, grp: s.grp || "file", label: s.label, flags: s.flags || 0, flagTitle: s.flagTitle || (s.flags ? `${s.flags} flagged` : ""), dn: presSecDnHtml(name, s.id), on: presStage === "profile" && s.id === profSel, locked: phPfwLocked(name, s.id) })),
       steps: [
-        { id: "profile", n: 1, label: "Profile", small: "details · history", done: profileDone, on: presStage === "profile", stage: "profile" },
+        { id: "profile", label: "Profile", small: "details · history", done: profileDone, on: presStage === "profile", stage: "profile" },
         // the rail's own small caption stops repeating the phase name here
         // (her ask 2026-09-28, "collapse the 4 every-tab repeats") -- the
         // header already says "<plan> · <phase>", and the Plan/Treatment
         // tabs' own inline sub-labels (subOf, in presTpMainSections) still
         // carry it where it's shown once, not four times.
-        { id: "today", n: 2, label: "Today's visit", small: "re-check · exam", done: todayDone, on: onPlan && !!plan && tab === "today", go: "today" },
-        { id: "patterns", n: 3, label: "Fang Bing Ren", small: "pattern · formula type", done: patAgreed, on: onPlan && !!plan && (tab === "patterns" || tab === "patdx"), go: "patterns", flags: (sections.find(x => x.id === "patdx") || {}).flags || 0 },
-        { id: "plan", n: 4, label: "Treatment Care Plan", small: "phases · sessions", done: planDone, on: onPlan && (!plan || tab === "plan" || tab === "timeline"), go: "plan" },
-        { id: "treatment", n: 5, label: "Treatment", small: "today's session", done: treatDone, on: onPlan && !!plan && tab === "treatment", go: "treatment" },
-        { id: "dispense", n: 6, label: "Dispense", small: "herbs · label", done: dispDone, on: presStage === "dispense", stage: "dispense", last: true },
-      ],
+        { id: "today", label: "Today's visit", small: "re-check · exam", done: todayDone, on: onPlan && !!plan && tab === "today", go: "today" },
+        { id: "patterns", label: "Fang Bing Ren", small: "pattern · formula type", done: patAgreed, on: onPlan && !!plan && (tab === "patterns" || tab === "patdx"), go: "patterns", flags: (sections.find(x => x.id === "patdx") || {}).flags || 0 },
+        // Timeline (her 2026-10-16 pick): its own step, between Fang Bing Ren and Treatment Care Plan --
+        // tracking data feeds the plan, so it reads before it, matching the rest of the app's own exam
+        // -> diagnosis -> plan flow. Only on a plan that carries one (phTlKindOf); numbered by position
+        // below, so a patient with no Timeline simply keeps the old 1-6 numbering.
+        ...(tlKind ? [{ id: "timeline", label: "Timeline", small: "cycle · milestones", done: tlDone, on: onPlan && !!plan && tab === "timeline", go: "timeline" }] : []),
+        { id: "plan", label: "Treatment Care Plan", small: "phases · sessions", done: planDone, on: onPlan && (!plan || tab === "plan"), go: "plan" },
+        { id: "treatment", label: "Treatment", small: "today's session", done: treatDone, on: onPlan && !!plan && tab === "treatment", go: "treatment" },
+        { id: "dispense", label: "Dispense", small: "herbs · label", done: dispDone, on: presStage === "dispense", stage: "dispense", last: true },
+      ].map((s, i) => ({ ...s, n: i + 1 })),
       subs: plan ? [
         { id: "log", label: "Treatment log", sub: subOf("log"), on: onPlan && tab === "log" },
         { id: "notes", label: "Notes", sub: subOf("notes"), on: onPlan && tab === "notes" },
@@ -58854,11 +58872,9 @@ or changing anything in Cliniko.
         { id: "patterns", label: "Fang Bing Ren", on: onPlan && tab === "patterns" },
         { id: "patdx", label: "Patterns · Diagnosis", on: onPlan && tab === "patdx", flags: (sections.find(s => s.id === "patdx") || {}).flags || 0, done: patAgreed },
       ] : [],
-      // the Care Plan lists its fertility Timeline page under it (her 2026-10-13), only when the plan has one
-      planSubs: plan && sections.find(s => s.id === "timeline") ? [
-        { id: "plan", label: "Phases", on: onPlan && tab === "plan" },
-        { id: "timeline", label: "Timeline", sub: subOf("timeline"), on: onPlan && tab === "timeline" },
-      ] : [],
+      // Timeline moved out from under the Care Plan to its own step above (her 2026-10-16 pick) --
+      // planSubs is retired, kept as an empty list so presFlowRailHtml's existing planSubHtml draws nothing.
+      planSubs: [],
     };
   }
   function presFlowRailHtml(t, isNew) {
@@ -58887,6 +58903,7 @@ or changing anything in Cliniko.
     const planStep = f.steps.find(s => s.id === "plan");
     const todayStep = f.steps.find(s => s.id === "today");
     const patStep = f.steps.find(s => s.id === "patterns");
+    const tlStep = f.steps.find(s => s.id === "timeline");   // only present on a Pregnancy / Natural fertility / IVF plan
     const treat = f.steps.find(s => s.id === "treatment");
     const dispStep = f.steps.find(s => s.id === "dispense");
     const prof = f.steps[0];
@@ -58949,7 +58966,7 @@ or changing anything in Cliniko.
     const patSubBtn = s => `<button type="button" class="${s.on ? "on" : ""}${s.done ? " done" : ""}" data-flow-go="${s.id}" role="tab" aria-selected="${s.on ? "true" : "false"}">${esc(s.label)}${s.done ? `<i class="tk" aria-hidden="true">✓</i>` : ""}</button>`;
     const patSubHtml = f.patSubs.length ? `<div class="ph-flow-sub keep plan${patStep.done ? " done" : ""}">${f.patSubs.map(patSubBtn).join("")}</div>` : "";
     const planSubHtml = f.planSubs.length ? `<div class="ph-flow-sub keep plan${planStep.done ? " done" : ""}">${f.planSubs.map(examSubBtn).join("")}</div>` : "";
-    const inner = `${visitHead}${nextHtml}${stepHtml(prof)}${fileHtml}${checkHtml}${sumHtml}${stepHtml(todayStep)}${examSubHtml}${stepHtml(patStep)}${patSubHtml}${stepHtml(planStep)}${planSubHtml}${stepHtml(treat)}${stepHtml(dispStep)}${logHtml}`;
+    const inner = `${visitHead}${nextHtml}${stepHtml(prof)}${fileHtml}${checkHtml}${sumHtml}${stepHtml(todayStep)}${examSubHtml}${stepHtml(patStep)}${patSubHtml}${tlStep ? stepHtml(tlStep) : ""}${stepHtml(planStep)}${planSubHtml}${stepHtml(treat)}${stepHtml(dispStep)}${logHtml}`;
     let sig = 0; for (let i = 0; i < inner.length; i++) sig = (sig * 31 + inner.charCodeAt(i)) | 0;   // lets a repaint skip an identical rail
     return `<div class="ph-flow-rail" id="presFlowRail" role="tablist" aria-label="Where you are" data-sig="${sig}">
       ${inner}
@@ -58988,8 +59005,10 @@ or changing anything in Cliniko.
       const name = t ? presPatientFor(t) || t.name || "" : "";
       const plan = name && presTpInlinePlanId ? phTpFindPlan(name, presTpInlinePlanId) : null;
       if (plan) {
-        const order = ["today", "cycle", "tongue", "pulse", "abdomen", "msk", "askher", "patterns", "patdx", "plan", "treatment"];
-        const at = order.indexOf(presTpMainTab === "timeline" ? "plan" : (presTpMainTab || "plan"));   // the Timeline page sits under the Care Plan, so its Next is the Care Plan's
+        // Timeline sits between Fang Bing Ren and the Care Plan now (her 2026-10-16 pick, its own step) --
+        // its own Next therefore goes straight to the Care Plan, same as every other spot in this order.
+        const order = ["today", "cycle", "tongue", "pulse", "abdomen", "msk", "askher", "patterns", "patdx", "timeline", "plan", "treatment"];
+        const at = order.indexOf(presTpMainTab || "plan");
         if (at >= 0) {
           const secs = presTpMainSections(name, plan);
           // return visit: Fang Bing Ren and the Care Plan are glances on Today's visit, not steps (her pick 2026-10-10)
@@ -59068,6 +59087,10 @@ or changing anything in Cliniko.
       try { nothingToAgree = !phPatCompute(name).shown.length; } catch (e) { nothingToAgree = true; }
       if (!nothingToAgree) tail.push({ id: "patterns", label: "Fang Bing Ren", attr: `data-flow-go="patterns"` });
     }
+    // Timeline (her 2026-10-16 pick): unlike patterns/plan above, it's not a one-line glance on a return
+    // visit -- an ongoing menstrual/IVF/pregnancy tracker matters every visit, so it stays in the walk
+    // whether this is a first or a return visit.
+    if (hasPlan && f.plan && phTlKindOf(f.plan) && !step("timeline").done) tail.push({ id: "timeline", label: "Timeline", attr: `data-flow-go="timeline"` });
     if (!step("plan").done && !(back && hasPlan)) tail.push({ id: "plan", label: "Treatment Care Plan", attr: `data-flow-go="plan"` });
     if (hasPlan && !step("treatment").done) tail.push({ id: "treatment", label: "Treatment", attr: `data-flow-go="treatment"` });
     if (!step("dispense").done && phHerbsOn(rec, phTpShownPlan(name))) tail.push({ id: "dispense", label: "Dispense", attr: `data-pres-stage="dispense"` });
@@ -77178,12 +77201,21 @@ or changing anything in Cliniko.
   }
   const phTlLay = () => { try { return localStorage.getItem("daybook-ph-tl-lay") === "b" ? "b" : "a"; } catch (e) { return "a"; } };
   const phTlFoldGet = kind => { try { const v = localStorage.getItem("daybook-ph-tl-fold-" + kind); return v === null ? kind !== "preg" : v === "1"; } catch (e) { return kind !== "preg"; } };
-  let phTlUi = { sel: null, edit: null, sch: null, itemEdit: null, add: false, menu: false, hist: false };
+  // schApprox/schDraft (her 2026-10-16 "approximate date" ask): view state for the ONE Schedule form that
+  // can be open at a time -- schApprox is whether its month/year checkbox is ticked, schDraft holds what
+  // she's typed so toggling the checkbox mid-edit (date <-> month input) never drops her note or her date.
+  let phTlUi = { sel: null, edit: null, sch: null, schApprox: false, schDraft: null, itemEdit: null, add: false, menu: false, hist: false };
   const phTlTodayKey = () => keyOf(phLiveToday());
   const phTlDiffDays = (a, b) => Math.round((parseKey(a) - parseKey(b)) / 86400000);
   const phTlDm = k => { if (!k) return ""; const d = parseKey(k); return `${d.getDate()} ${MON_SHORT[d.getMonth()]}`; };
   const phTlDmY = k => (k && parseKey(k).getFullYear() !== phLiveToday().getFullYear()) ? phShortDate(k) : phTlDm(k);
   const phTlOkDate = v => /^\d{4}-\d{2}-\d{2}$/.test(v || "") && +v.slice(0, 4) >= 1900 && +v.slice(0, 4) <= 2100;
+  // month/year only (her 2026-10-16 "give option to give approximate date e.g. month/year"): a scheduled
+  // date she's only roughly sure of (`sched.approx`) is stored as the 1st of that month and always shown
+  // as "Sep 2026", never a day she never gave. phTlOkMonth validates the <input type=month> box itself.
+  const phTlMonY = k => { if (!k) return ""; const d = parseKey(k); return `${MON_SHORT[d.getMonth()]} ${d.getFullYear()}`; };
+  const phTlOkMonth = v => /^\d{4}-\d{2}$/.test(v || "") && +v.slice(0, 4) >= 1900 && +v.slice(0, 4) <= 2100;
+  const phTlSchedTxt = s => s.approx ? phTlMonY(s.date) : phTlDmY(s.date);
   // a real test date only: the Pregnant? popup's "weeks" / "due date" modes store an anchor, not an event
   function phTlPregTestRead(rec) {
     const pt = rec && rec.pregTest;
@@ -77239,7 +77271,7 @@ or changing anything in Cliniko.
     defs.forEach(d => {
       const key = kind + ":" + d.id, e = editMap[key] || null;
       if (e && e.off) { removed.push({ key, n: d.n, custom: d.custom }); return; }
-      const sm = schedMap[key], sch = sm && phTlOkDate(sm.date) ? { date: sm.date, note: sm.note || "" } : null;
+      const sm = schedMap[key], sch = sm && phTlOkDate(sm.date) ? { date: sm.date, note: sm.note || "", approx: !!sm.approx } : null;
       const it = { key, id: d.id, n: (e && e.n) || d.n, t: PH_TL_TYPES[d.t] ? d.t : "test", note: d.note || "", custom: d.custom,
         edited: !!(e && (e.n || e.a != null || e.b != null || e.date)), mk: d.mk || null, lo: null, hi: null, dLo: "", dHi: "", win: "", est: false, done: null, status: "none", dSet: "", cdTxt: "", sched: sch,
         ivf: d.ivf || "", pt: !!d.pt };
@@ -77283,7 +77315,7 @@ or changing anything in Cliniko.
         if (it.dSet) { k = it.dSet; hiK = ""; it.est = false; }
         if (sch) { k = sch.date; hiK = ""; it.est = false; }
         if (k) { it.dLo = k; it.dHi = hiK || k; }
-        it.win = k ? `${it.cdTxt && !it.dSet && !sch ? it.cdTxt + " · " : ""}${it.est ? "~" : ""}${phTlDmY(k)}` : (it.cdTxt || "");
+        it.win = k ? `${it.cdTxt && !it.dSet && !sch ? it.cdTxt + " · " : ""}${it.est ? "~" : ""}${sch && sch.approx ? phTlMonY(k) : phTlDmY(k)}` : (it.cdTxt || "");
         if (!auto && d.pt && pt && (!ivfD || !ivfD.xfer || pt.date >= ivfD.xfer.key)) auto = { date: pt.date, res: pt.text, by: "test" };
         if (!auto) auto = phTlBloodFor(rec, d.mk, "", "", false);
         // her pick 7 (partner link): the partner's own semen analysis, from his Men's fertility timeline
@@ -77318,7 +77350,7 @@ or changing anything in Cliniko.
   }
   const phTlPct = (ax, u) => Math.max(0, Math.min(100, u / ax.span * 100));
   function phTlStLbl(kind, st) { return st === "done" ? "Done" : st === "sched" ? "Scheduled" : st === "due" ? (kind === "preg" ? "Due now" : "This week") : st === "over" ? "Overdue" : st === "up" ? "Coming up" : (kind === "preg" ? "—" : "Not planned"); }
-  const phTlTip = it => it.sched ? `${it.n} · scheduled ${phTlDmY(it.sched.date)}${it.sched.note ? " · " + it.sched.note : ""}` : `${it.n} · ${it.win}`;
+  const phTlTip = it => it.sched ? `${it.n} · scheduled ${phTlSchedTxt(it.sched)}${it.sched.note ? " · " + it.sched.note : ""}` : `${it.n} · ${it.win}`;
   function phTlRulerHtml(m, ax, lay) {
     const band = ax.bands ? `<div class="ph-tlx-bands">${ax.bands.map(b => `<i class="${b[3]}" style="flex:${b[1] - b[0]}">${b[2]}</i>`).join("")}</div>`
       : `<div class="ph-tlx-dline"><span class="fill" style="width:${ax.today == null ? 0 : phTlPct(ax, ax.today)}%"></span></div>`;
@@ -77403,10 +77435,16 @@ or changing anything in Cliniko.
     if (P.br) out += `<div class="ph-tlx-ll brl">Sperm cycle</div><div class="ph-tlx-lane brl">${grid}${phTlBrHtml(ax, P)}</div>`;
     return out;
   }
-  // booked for a day (her 2026-10-14, "give option to mark scheduled tests"): a date and a short note, kept in rec.tl.sched
+  // booked for a day (her 2026-10-14, "give option to mark scheduled tests"): a date and a short note, kept in rec.tl.sched.
+  // Month/year only (her 2026-10-16): the checkbox swaps the date box for a month box; phTlUi.schDraft
+  // carries whatever she's typed across that swap so toggling it never drops her note or her date.
   function phTlSchedFormHtml(it) {
-    const s = it.sched;
-    return `<span class="ph-tlx-form"><input type="date" data-tl-sd value="${esc(s ? s.date : "")}" min="1900-01-01" max="2100-12-31" aria-label="Scheduled date"><input type="text" class="r" data-tl-sn maxlength="80" value="${esc(s ? s.note : "")}" placeholder="Note" aria-label="Note"><button type="button" class="ph-tlx-btn fill" data-tl-sch-save="${esc(it.key)}">Save</button><button type="button" class="ph-tlx-btn" data-tl-sch-cancel="1">Cancel</button>${s ? `<button type="button" class="ph-tlx-btn" data-tl-sch-clear="${esc(it.key)}">Clear</button>` : ""}</span>`;
+    const s = it.sched, draft = phTlUi.schDraft, approx = phTlUi.schApprox;
+    const dateVal = draft ? draft.date : (s ? s.date : ""), noteVal = draft ? draft.note : (s ? s.note : "");
+    const dateField = approx
+      ? `<input type="month" data-tl-sd-m value="${esc(dateVal ? dateVal.slice(0, 7) : "")}" min="1900-01" max="2100-12" aria-label="Scheduled month">`
+      : `<input type="date" data-tl-sd value="${esc(dateVal)}" min="1900-01-01" max="2100-12-31" aria-label="Scheduled date">`;
+    return `<span class="ph-tlx-form">${dateField}<label class="ph-tlx-approx"><input type="checkbox" data-tl-sd-approx${approx ? " checked" : ""}> Month/year only</label><input type="text" class="r" data-tl-sn maxlength="80" value="${esc(noteVal)}" placeholder="Note" aria-label="Note"><button type="button" class="ph-tlx-btn fill" data-tl-sch-save="${esc(it.key)}">Save</button><button type="button" class="ph-tlx-btn" data-tl-sch-cancel="1">Cancel</button>${s ? `<button type="button" class="ph-tlx-btn" data-tl-sch-clear="${esc(it.key)}">Clear</button>` : ""}</span>`;
   }
   function phTlDoneFormHtml(it) {
     const today = phTlTodayKey(), d0 = it.sched && it.sched.date <= today ? it.sched.date : today;   // a booked day that has come reads as the day it was done
@@ -77420,7 +77458,7 @@ or changing anything in Cliniko.
     if (phTlUi.edit === it.key) return phTlDoneFormHtml(it);
     if (phTlUi.sch === it.key) return phTlSchedFormHtml(it);
     const mark = `<button type="button" class="ph-tlx-btn" data-tl-done-open="${esc(it.key)}">Mark done</button>`;
-    if (it.sched) return `<span class="schl"><span class="res"><b>${esc(phTlDmY(it.sched.date))}</b>${it.sched.note ? ` · ${esc(it.sched.note)}` : ""}</span> <span class="src">scheduled</span></span><button type="button" class="ph-tlx-btn" data-tl-sch-open="${esc(it.key)}">Reschedule</button> ${mark}`;
+    if (it.sched) return `<span class="schl"><span class="res"><b>${esc(phTlSchedTxt(it.sched))}</b>${it.sched.note ? ` · ${esc(it.sched.note)}` : ""}</span> <span class="src">scheduled</span></span><button type="button" class="ph-tlx-btn" data-tl-sch-open="${esc(it.key)}">Reschedule</button> ${mark}`;
     return `${it.t === "blood" && it.mk ? `<button type="button" class="ph-tlx-btn" data-flow-go="bloods">Add result</button> ` : ""}<button type="button" class="ph-tlx-btn" data-tl-sch-open="${esc(it.key)}">Schedule</button> ${mark}`;
   }
   function phTlEditRowHtml(it, m) {
@@ -77529,7 +77567,7 @@ or changing anything in Cliniko.
     dn = Math.min(done.length, 4 - on);
     const pick = done.slice(done.length - dn).concat(open.slice(0, on));
     const due = open.filter(i => i.status === "due").length, over = open.filter(i => i.status === "over").length;
-    const when = it => it.done ? phTlDmY(it.done.date) : it.sched ? ["Scheduled " + phTlDmY(it.sched.date), it.status === "over" ? "overdue" : ""].filter(Boolean).join(" · ") : [it.win, it.status === "due" ? (kind === "preg" ? "due now" : "this week") : it.status === "over" ? "overdue" : ""].filter(Boolean).join(" · ") || phTlStLbl(kind, it.status);
+    const when = it => it.done ? phTlDmY(it.done.date) : it.sched ? ["Scheduled " + phTlSchedTxt(it.sched), it.status === "over" ? "overdue" : ""].filter(Boolean).join(" · ") : [it.win, it.status === "due" ? (kind === "preg" ? "due now" : "this week") : it.status === "over" ? "overdue" : ""].filter(Boolean).join(" · ") || phTlStLbl(kind, it.status);
     const li = it => `<li class="${it.status}"><i class="m">${it.done ? "✓" : ""}</i><span class="n">${esc(it.n)}</span><span class="w">${esc(when(it))}</span></li>`;
     const more = m.items.length - pick.length;
     return `<div class="ph-tp-tls" data-tl-host="${esc(name)}" data-tl-plan="${esc(plan.id)}" data-tl-kind="${kind}" data-tl-side="1">
@@ -77643,7 +77681,7 @@ or changing anything in Cliniko.
     (prec.ivfCycles || []).forEach(r => (r.transfers || []).forEach(t => { if (t && t.pregResult === "positive" && phTlOkDate(t.pregTestDate) && (!best || t.pregTestDate > best.date)) best = { date: t.pregTestDate, hcg: t.pregHcg }; }));
     return best;
   }
-  const phPtnTip = it => `${it.n} · ${it.done ? phTlDmY(it.done.date) + (it.done.res ? " · " + it.done.res : "") : it.sched ? "scheduled " + phTlDmY(it.sched.date) : (it.win || it.lab || "not planned")}`;
+  const phPtnTip = it => `${it.n} · ${it.done ? phTlDmY(it.done.date) + (it.done.res ? " · " + it.done.res : "") : it.sched ? "scheduled " + phTlSchedTxt(it.sched) : (it.win || it.lab || "not planned")}`;
   // everything of hers his Men's fertility timeline shows (her picks 3, 5, 6): her own timeline (her current Pregnancy /
   // Natural fertility / IVF plan; the partner semen row is his own result, so it is left out), the latest IVF round when
   // her plan has none, her pregnancy test, and her fertile window. Read from a shallow copy of her record: phCycleFor can
@@ -77718,7 +77756,7 @@ or changing anything in Cliniko.
         const src = { bloods: "Blood tests", ivf: "IVF history", test: "pregnancy test" }[it.done.by] || "";
         return `<span class="res"><b>${esc(phTlDmY(it.done.date))}</b>${it.done.res ? ` · ${esc(it.done.res)}` : ""}</span>${src ? ` <span class="src">from ${esc(src)}</span>` : ""}`;
       }
-      if (it.sched) return `<span class="res"><b>${esc(phTlDmY(it.sched.date))}</b>${it.sched.note ? ` · ${esc(it.sched.note)}` : ""}</span> <span class="src">scheduled</span>`;
+      if (it.sched) return `<span class="res"><b>${esc(phTlSchedTxt(it.sched))}</b>${it.sched.note ? ` · ${esc(it.sched.note)}` : ""}</span> <span class="src">scheduled</span>`;
       return `<span class="src nil">—</span>`;
     };
     const rows = P.items.map(it => `<tr><td><span class="ph-tlx-pn">${esc(it.n)}</span>${it.note ? `<span class="ph-tlx-note">${esc(it.note)}</span>` : ""}</td>
@@ -77911,16 +77949,41 @@ or changing anything in Cliniko.
     }
     if (T.closest("[data-tl-hist]")) { phTlUi.hist = !phTlUi.hist; rep(); return; }
     // Schedule / Reschedule: a date (required) and a short note; Clear takes the booking off again
-    if ((el = T.closest("[data-tl-sch-open]"))) { phTlUi.sch = el.dataset.tlSchOpen; phTlUi.edit = null; phTlUi.itemEdit = null; rep(); const d = document.querySelector(`[data-tl-host="${CSS.escape(name)}"] [data-tl-sd]`); if (d) d.focus(); return; }
-    if (T.closest("[data-tl-sch-cancel]")) { phTlUi.sch = null; rep(); return; }
-    if ((el = T.closest("[data-tl-sch-save]"))) {
-      const key = el.dataset.tlSchSave, box = el.closest(".ph-tlx-form");
-      const dEl = box && box.querySelector("[data-tl-sd]"), nEl = box && box.querySelector("[data-tl-sn]");
-      if (!dEl || !phTlOkDate(dEl.value)) { if (dEl) { dEl.classList.add("bad"); dEl.focus(); } return; }
-      if (phTlWrite(name, tl => { tl.sched = tl.sched || {}; tl.sched[key] = { date: dEl.value, note: nEl ? nEl.value.trim() : "", at: Date.now() }; })) { phTlUi.sch = null; rep(); }
+    if ((el = T.closest("[data-tl-sch-open]"))) {
+      const key = el.dataset.tlSchOpen;
+      phTlUi.sch = key; phTlUi.edit = null; phTlUi.itemEdit = null;
+      const rec0 = phPatientPeek(name), s0 = rec0 && rec0.tl && rec0.tl.sched && rec0.tl.sched[key];
+      phTlUi.schApprox = !!(s0 && s0.approx); phTlUi.schDraft = null;
+      rep();
+      const d = document.querySelector(`[data-tl-host="${CSS.escape(name)}"] [data-tl-sd],[data-tl-host="${CSS.escape(name)}"] [data-tl-sd-m]`);
+      if (d) d.focus();
       return;
     }
-    if ((el = T.closest("[data-tl-sch-clear]"))) { phTlWrite(name, tl => { if (tl.sched) delete tl.sched[el.dataset.tlSchClear]; }); phTlUi.sch = null; rep(); return; }
+    if (T.closest("[data-tl-sch-cancel]")) { phTlUi.sch = null; phTlUi.schApprox = false; phTlUi.schDraft = null; rep(); return; }
+    // her 2026-10-16 "approximate date e.g. month/year": the checkbox swaps the date box for a month
+    // box -- carry across whatever she's already typed (date <-> the 1st of that month) and her note.
+    if ((el = T.closest("[data-tl-sd-approx]"))) {
+      const box = el.closest(".ph-tlx-form");
+      const dEl = box && box.querySelector("[data-tl-sd]"), mEl = box && box.querySelector("[data-tl-sd-m]"), nEl = box && box.querySelector("[data-tl-sn]");
+      const curDate = el.checked
+        ? (dEl && phTlOkDate(dEl.value) ? dEl.value : "")
+        : (mEl && phTlOkMonth(mEl.value) ? mEl.value + "-01" : "");
+      phTlUi.schDraft = { date: curDate, note: nEl ? nEl.value : "" };
+      phTlUi.schApprox = el.checked;
+      rep();
+      return;
+    }
+    if ((el = T.closest("[data-tl-sch-save]"))) {
+      const key = el.dataset.tlSchSave, box = el.closest(".ph-tlx-form");
+      const dEl = box && box.querySelector("[data-tl-sd]"), mEl = box && box.querySelector("[data-tl-sd-m]"), nEl = box && box.querySelector("[data-tl-sn]");
+      const approxEl = box && box.querySelector("[data-tl-sd-approx]"), approx = !!(approxEl && approxEl.checked);
+      const date = approx ? (mEl && phTlOkMonth(mEl.value) ? mEl.value + "-01" : "") : (dEl ? dEl.value : "");
+      const badEl = approx ? mEl : dEl;
+      if (!badEl || (approx ? !phTlOkMonth(badEl.value) : !phTlOkDate(badEl.value))) { if (badEl) { badEl.classList.add("bad"); badEl.focus(); } return; }
+      if (phTlWrite(name, tl => { tl.sched = tl.sched || {}; tl.sched[key] = { date, note: nEl ? nEl.value.trim() : "", approx, at: Date.now() }; })) { phTlUi.sch = null; phTlUi.schApprox = false; phTlUi.schDraft = null; rep(); }
+      return;
+    }
+    if ((el = T.closest("[data-tl-sch-clear]"))) { phTlWrite(name, tl => { if (tl.sched) delete tl.sched[el.dataset.tlSchClear]; }); phTlUi.sch = null; phTlUi.schApprox = false; phTlUi.schDraft = null; rep(); return; }
     if ((el = T.closest("[data-tl-done-open]"))) { phTlUi.edit = el.dataset.tlDoneOpen; phTlUi.sch = null; phTlUi.itemEdit = null; rep(); const r = document.querySelector(`[data-tl-host="${CSS.escape(name)}"] [data-tl-r]`); if (r) r.focus(); return; }
     if (T.closest("[data-tl-done-cancel]")) { phTlUi.edit = null; rep(); return; }
     if ((el = T.closest("[data-tl-done-save]"))) {
@@ -81844,9 +81907,11 @@ or changing anything in Cliniko.
       // two pages joined by the pill switch (her 2026-10-12 picks A + D): the constitution Triangle, then Patterns · Diagnosis (which carries the gold count)
       ...(name && openT && !presIsFormula(openT) ? [{ id: "patterns", label: "Fang Bing Ren", body: () => presPatternsTabBodyHtml(openT, name) },
         { id: "patdx", label: "Patterns · Diagnosis", sub: patSub, flags: patFlags, flagTitle: `${patFlags} likely, not yet agreed`, body: () => presPatDxTabBodyHtml(openT, name, plan) }] : []),
-      { id: "plan", label: "Treatment Care Plan", sub: sel ? sel.label : "", body: () => phGlanceHtml("plan", name, plan) + presTpPlanTabBodyHtml(name, plan) },
-      // the fertility timeline on its own rail page too (her 2026-10-13 "both 1 and 2"), only on a Pregnancy / Natural fertility / IVF plan
+      // the fertility timeline, own rail page too (her 2026-10-13 "both 1 and 2", promoted to its own
+      // numbered step 2026-10-16), only on a Pregnancy / Natural fertility / IVF plan -- sits before the
+      // Care Plan (tracking data feeds the plan), matching the rail's own order
       ...(phTlKindOf(plan) ? [{ id: "timeline", label: "Timeline", sub: phTlCountText(rec, name, plan), body: () => phTlHtml(phPatientPeek(name), name, plan, true) }] : []),
+      { id: "plan", label: "Treatment Care Plan", sub: sel ? sel.label : "", body: () => phGlanceHtml("plan", name, plan) + presTpPlanTabBodyHtml(name, plan) },
       { id: "treatment", label: "Treatment", sub: treatSub, body: () => phTsDxStripHtml(name, plan) + phMskWarnHtml(rec) + presBandHtml("treat", name, plan.id) + presTpTreatmentTabBodyHtml(name, plan) },
       { id: "log", label: "Treatment log", sub: sessCount ? `${sessCount}` : "", body: () => presBandHtml("log", name, plan.id) + phTpVrLogTabHtml(name, plan) },
       { id: "notes", label: "Notes", sub: (plan.reviews || []).length ? `${(plan.reviews || []).length}` : "", body: () => presBandHtml("notes", name, plan.id) + presTpNotesTabBodyHtml(name, plan) },
