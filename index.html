@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261016-1012000">
+<meta name="lcm-build" content="20261016-1013000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -12752,7 +12752,17 @@
     #pharmacyPage .ph-tc-grid { grid-template-columns: 1fr; }
     #pharmacyPage .ph-tc-past { border-left: 0; padding-left: 0; }
     #pharmacyPage .ph-tc-pg { grid-template-columns: repeat(4, 1fr); }
+    #pharmacyPage .ph-tc-sec { grid-template-columns: 1fr; }
   }
+  /* her 2026-10-16 ask ("add another row below photos for sublingual and
+     flash ... show the chips related"): two fixed sections, always
+     Sublingual then Flash below the switch-driven top one, each a photo
+     pair + its own chips, no manual picker -- reuses .ph-tc-tile/.ph-tc-hd/
+     .ph-tc-open/.ph-tc-empty as-is, only the outer grid is new. */
+  #pharmacyPage .ph-tc-sec { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 22px; align-items: start; margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--ph-line); }
+  #pharmacyPage .ph-tc-sec-photos { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  #pharmacyPage .ph-tc-sec-chips { min-width: 0; }
+  #pharmacyPage .ph-tc-flashnote { font-size: var(--fs-11-5); color: var(--ph-faint); line-height: 1.5; }
   /* Ask her (her 2026-10-13, mock ask-her-mock-2026-10-13.html): one card per topic, tap-to-pick answers with a checkbox, a dot for each
      top-3 family an answer supports. Desktop-first; the card grid wraps to fewer columns by itself. */
   #pharmacyPage .ph-ah { min-width: 0; }
@@ -90940,12 +90950,22 @@ or changing anything in Cliniko.
     const d = Math.round((new Date(b.getFullYear(), b.getMonth(), b.getDate()) - new Date(a.getFullYear(), a.getMonth(), a.getDate())) / 864e5);
     return d <= 0 ? "today" : d === 1 ? "yesterday" : d < 14 ? `${d} days ago` : d < 60 ? `${Math.round(d / 7)} wk ago` : `${Math.round(d / 30)} mo ago`;
   }
+  // her 2026-10-16 ask ("add another row below photos for sublingual and
+  // flash"): a third kind, "flash" -- and "t" (plain Tongue) now excludes
+  // BOTH sublingual and flash, so a flash-only day can never hijack the
+  // main Tongue row's "today" pick.
+  const PH_TNG_CMP_SHOT_MATCH = {
+    t: r => phRenShotOf(r) !== "sublingual" && phRenShotOf(r) !== "flash",
+    sub: r => phRenShotOf(r) === "sublingual",
+    flash: r => phRenShotOf(r) === "flash",
+  };
   // { cur: today's best photo | null, last: most recent earlier one | null, pick: the one compared, rest: every other photo of this kind, newest first }
   function phTngCmpPick(name, kind, selId) {
     const pk = phPatientKey(name), photos = phRenPhotosFor(pk);
     if (photos == null) { phRenLoadPhotosFor(pk); return null; }
     const today = keyOf(TODAY), rank = r => PH_TONGUE_SHOT_RANK[phRenShotOf(r)];
-    const list = photos.filter(r => phRenTypeOf(r) === "tongue" && ((phRenShotOf(r) === "sublingual") === (kind === "sub")))
+    const match = PH_TNG_CMP_SHOT_MATCH[kind] || PH_TNG_CMP_SHOT_MATCH.t;
+    const list = photos.filter(r => phRenTypeOf(r) === "tongue" && match(r))
       .sort((a, b) => phRenDateKeyOf(b).localeCompare(phRenDateKeyOf(a)) || (b.createdAt || 0) - (a.createdAt || 0));
     const cur = list.filter(r => phRenDateKeyOf(r) === today).sort((a, b) => rank(a) - rank(b))[0] || null;
     const rest = list.filter(r => r !== cur), earlier = rest.filter(r => phRenDateKeyOf(r) < today);
@@ -90955,6 +90975,33 @@ or changing anything in Cliniko.
       last = (cur && day.find(r => phRenShotOf(r) === phRenShotOf(cur))) || day.slice().sort((a, b) => rank(a) - rank(b))[0];
     }
     return { cur, last, pick: rest.find(r => String(r.id) === String(selId)) || last, rest };
+  }
+  // her same 2026-10-16 ask: a fixed section below the switch, always
+  // Sublingual then Flash, each a quiet always-latest pair with no manual
+  // Past-photos picker -- phTngCmpPick's own fallback (no selId -> last)
+  // already means "latest on file" for free, nothing new to write.
+  function phTngCmpFixedSectionHtml(name, pk, kind, label, chipsHtml) {
+    const pick = phTngCmpPick(name, kind, null), today = keyOf(TODAY), shotKey = kind === "sub" ? "sublingual" : kind;
+    const hd = (lbl, em) => `<div class="ph-tc-hd"><span class="lbl">${lbl}</span><em>${esc(em)}</em></div>`;
+    const open = r => `<button type="button" class="ph-tc-open" data-ren-tl-open="${esc(r.id)}" data-ren-tl-patient="${esc(pk)}" data-ren-tl-row="${esc(phRenRowKeyOf(r))}" data-ren-tl-shot="1" title="Open ${esc(label.toLowerCase())}"><img src="${r.objectUrl}" alt="${esc(label)}"></button>`;
+    const add = `<button type="button" class="ph-visit-photoadd" data-ren-cap-type="tongue" data-ren-cap-shot="${esc(shotKey)}" data-ren-cap-patient="${esc(pk)}" data-ren-cap-name="${esc(name)}" data-ren-cap-date="${esc(today)}">📷 Add</button>`;
+    let todayTile, pastTile;
+    if (!pick) {
+      todayTile = `<div class="ph-tc-tile">${hd(`${label} · Today`, "")}<div class="ph-tc-empty">loading…</div></div>`;
+      pastTile = `<div class="ph-tc-tile">${hd("Last", "")}<div class="ph-tc-empty">loading…</div></div>`;
+    } else {
+      todayTile = pick.cur
+        ? `<div class="ph-tc-tile">${hd(`${label} · Today`, phShortDate(today))}${open(pick.cur)}</div>`
+        : `<div class="ph-tc-tile">${hd(`${label} · Today`, "—")}<div class="ph-tc-empty">No ${esc(label.toLowerCase())} shot<br>yet today${add}</div></div>`;
+      const p = pick.pick, pd = p ? phRenDateKeyOf(p) : "";
+      pastTile = p
+        ? `<div class="ph-tc-tile">${hd("Last", pd === today ? "today" : phShortDate(pd))}${open(p)}</div>`
+        : `<div class="ph-tc-tile">${hd("Last", "—")}<div class="ph-tc-empty">No earlier photo<br>on file</div></div>`;
+    }
+    return `<div class="ph-tc-sec">
+      <div class="ph-tc-sec-photos">${todayTile}${pastTile}</div>
+      <div class="ph-tc-sec-chips">${chipsHtml}</div>
+    </div>`;
   }
   function phTngCmpHtml(name, c) {
     const { chip, t, rows: R, more, summary, fbrInfo } = c;
@@ -90988,20 +91035,31 @@ or changing anything in Cliniko.
     const coatRow = `${seg2(PH_TNG_COAT_THICK.map(k => chip("coatThick", k, k, t.coatThick === k)).join(""))}<span class="ph-tng2-sep"></span>${seg2(PH_TNG_COAT_COLOUR.map(([k, hex]) => chip("coatColour", k, k, t.coatColour === k, `<i style="background:${hex}"></i>`)).join(""))}`;
     const underRow = seg2(PH_TNG_UNDER.map(([k, l]) => chip("under", k, l, t.under === k)).join(""));
     const row = (lbl, inner) => `<div class="ph-tng2-row"><i>${lbl}</i><div class="ph-ltr-quals ph-visit-quals">${inner}</div></div>`;
+    // her ask 2026-10-16 ("add another row below photos for sublingual and
+    // flash" -> mid-turn "show the chips related e.g. coat tongue for
+    // tongue row, sublingual for sublingual row"): the top switch-driven
+    // panel now shows only the chips that belong to whichever kind is on
+    // screen (Tongue body + Coat for "t", Under alone for "sub", no More
+    // fold there -- nothing else to fold); two FIXED sections below always
+    // show Sublingual and Flash regardless of the switch.
+    const chipsHtml = kind === "sub"
+      ? `<div class="ph-tc-grp">Sublingual</div>${row("Under", underRow)}`
+      : `<div class="ph-tc-grp">Tongue body</div>
+         ${row("Colour", R.colourRow + R.atRegion)}
+         ${row("Shape · Moist", R.shapeMoistRow)}
+         ${more ? row("Thickness", R.thicknessRow + R.thickAtRegion) + row("Deviation", devRow) + row("Marks", R.markRow) : ""}
+         <div class="ph-tc-grp second">Coat</div>
+         ${row("Coat", coatRow)}
+         ${more ? row("Coat quality", R.qualRow) : ""}
+         <button type="button" class="ph-tng2-morebtn" data-visit-tng-more="1" aria-expanded="${more ? "true" : "false"}">${more ? "▾" : "▸"} More — thickness, deviation, coat quality, marks</button>`;
+    const subFixed = phTngCmpFixedSectionHtml(name, pk, "sub", "Sublingual", `<div class="ph-tc-grp">Sublingual</div>${row("Under", underRow)}`);
+    const flashFixed = phTngCmpFixedSectionHtml(name, pk, "flash", "Flash", `<div class="ph-tc-grp">Flash</div><div class="ph-tc-flashnote">No findings of its own — flash is a lighting variant of the tongue-body photo. Tap to open; its chips stay on the Tongue section above.</div>`);
     return `<div class="ph-tng2 ph-tng2-v6">
       <div class="ph-tc-top"><div class="ph-tc-seg" role="tablist"><button type="button" class="${kind === "t" ? "on" : ""}" data-tcmp-kind="t">Tongue</button><button type="button" class="${kind === "sub" ? "on" : ""}" data-tcmp-kind="sub">Sublingual</button></div><span class="ph-tc-vs">${vs}</span></div>
       <div class="ph-tc-grid">
         <div class="ph-tc-photos">${todayTile}${pastTile}</div>
         <div class="ph-tc-chips">
-          <div class="ph-tc-grp">Tongue body</div>
-          ${row("Colour", R.colourRow + R.atRegion)}
-          ${row("Shape · Moist", R.shapeMoistRow)}
-          ${more ? row("Thickness", R.thicknessRow + R.thickAtRegion) + row("Deviation", devRow) + row("Marks", R.markRow) : ""}
-          <div class="ph-tc-grp second">Coat &amp; underside</div>
-          ${row("Coat", coatRow)}
-          ${row("Under", underRow)}
-          ${more ? row("Coat quality", R.qualRow) : ""}
-          <button type="button" class="ph-tng2-morebtn" data-visit-tng-more="1" aria-expanded="${more ? "true" : "false"}">${more ? "▾" : "▸"} More — thickness, deviation, coat quality, marks</button>
+          ${chipsHtml}
           <div class="ph-tng2-sum">${summary ? `<b>Reads as</b> ${esc(summary)}` : `<span class="faint">Nothing marked yet.</span>`}</div>
           <div class="ph-tng-fbrsum" data-tng-fbrsum="1">Fang Bing Ren ${fbrInfo.done} of ${fbrInfo.total} picked up from what's ticked above — open Triangle for the full list.</div>
           <div class="ph-tng2-acts">${!phTng2Empty(t) ? `<button type="button" class="tab-link cancel" data-visit-tng2="clear:">Clear</button>` : ""}</div>
@@ -91011,6 +91069,8 @@ or changing anything in Cliniko.
           <div class="ph-tc-pg">${strip}</div>
         </div>
       </div>
+      ${subFixed}
+      ${flashFixed}
     </div>`;
   }
   function phVisitTongueHtml(name, draft) {
