@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261016-1015000">
+<meta name="lcm-build" content="20261016-1016000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -31141,6 +31141,7 @@
         <input type="search" class="ph-tl-search ph-apptcal-search" data-ph-apptcal-q="1" value="${esc(phApptCalQ)}" placeholder="Search patient…" aria-label="Search appointments">
       </div>
       ${phApptPracChipsHtml(days)}
+      ${phIvfTodayWorkBandHtml()}
       ${phFlashHtml()}
       ${view === "list" ? phApptCalListHtml(days, selKey) : (window.innerWidth > 900
         // desktop: the Up next card is a right-hand column beside the grid, and it is the
@@ -62361,6 +62362,40 @@ or changing anything in Cliniko.
       </div>
       ${acts()}
     </div>`;
+  }
+  // her IVF redesign 2026-10-16, item 6 ("a cross-patient 'today's IVF
+  // work' list"): the Appointments page's old "Cycle & IVF" lens chip row
+  // (phApptLensHit's "cycle" branch) is no longer reachable from any live
+  // UI -- the lens bar it belonged to was superseded by later redesigns and
+  // nothing still sets phApptCalLens to it -- so this reuses the SAME
+  // due-detection item 1 already built (phIvfQuickDue) rather than the
+  // dead "cycle" lens, and shows as a plain always-visible list (no fold,
+  // no new page), the same posture as the day summary's existing "Herbs to
+  // prepare today" rows. Cross-PATIENT, not cross-booking: monitoring often
+  // happens at the fertility clinic with no LCM appointment that day, so
+  // this reads every patient's own IVF history, never the day's bookings.
+  function phIvfTodayWorkRows() {
+    const dir = new Map(phDirBuild().map(r => [r.key, r.displayName]));
+    const out = [];
+    Object.keys(PHARMACY.patients || {}).forEach(key => {
+      const rec = PHARMACY.patients[key];
+      if (!rec || !Array.isArray(rec.ivfCycles) || !rec.ivfCycles.length) return;
+      const due = phIvfQuickDue(rec);
+      if (!due.kind) return;
+      const m = PH_IVF_QUICK_MOMENTS.find(x => x[0] === due.kind) || ["", "", due.kind, ""];
+      const sub = due.kind === "results" && due.transfer && due.transfer.date ? `Transfer from ${phFuDateLabel(due.transfer.date)} — ${m[3]}` : m[3];
+      out.push({ key, name: dir.get(key) || phTitle(key), label: m[2], sub });
+    });
+    return out.sort((a, b) => a.name.localeCompare(b.name));
+  }
+  function phIvfTodayWorkBandHtml() {
+    const rows = phIvfTodayWorkRows();
+    if (!rows.length) return "";
+    const cards = rows.map(r => `<div class="ph-fu-card">
+        <div class="ph-fu-card-top"><span class="ph-fu-card-name"><button type="button" class="ph-name-link" data-ph-dash-patient-open="${esc(r.name)}">${esc(r.name)}</button></span><span class="ph-fu-badge review">${esc(r.label)}</span></div>
+        <div class="ph-fu-card-line ph-fu-sub2">${esc(r.sub)}</div>
+      </div>`).join("");
+    return `<div class="ph-ds-band plan"><svg class="icn bi" aria-hidden="true"><use href="#i-egg"/></svg>Today's IVF work<span class="cnt">${rows.length} patient${rows.length === 1 ? "" : "s"}</span></div><div class="ph-cq-cards">${cards}</div>`;
   }
   // "R8 L6 · lining 7.2 · E2 1200" -- the one short form every surface shares
   function phIvfScanSummary(s, short) {
