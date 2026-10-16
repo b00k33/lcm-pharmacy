@@ -12624,6 +12624,12 @@
   #pharmacyPage .ph-pulse-refs > i { font-style: normal; font-size: var(--fs-10); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ph-faint); margin-right: 2px; }
   #pharmacyPage .ph-pulse-scores { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: var(--fs-11-5); color: var(--ph-ink); margin-top: 8px; }
   #pharmacyPage .ph-pulse-scores b { color: var(--ph-green-deep); }
+  /* "normal" reference-range toggle, synth22 Workstream C 2026-10-16 -- TAPPABLE
+     THINGS chip (pill, 28px, --ph-line outline, solid --ph-herb when picked) */
+  #pharmacyPage .ph-pulse-normal { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 6px; }
+  #pharmacyPage .ph-pulse-normal-tgl { height: 28px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--ph-line); background: #fff; color: var(--ph-herb); font-size: var(--fs-13); font-weight: 600; cursor: pointer; font-family: inherit; }
+  #pharmacyPage .ph-pulse-normal-tgl.on { background: var(--ph-herb); border-color: var(--ph-herb); color: #fff; }
+  #pharmacyPage .ph-pulse-normal-txt { font-size: var(--fs-11-5); color: var(--ph-soft); }
   /* the detailed tongue chart (2026-09-19): drawing left, rows right */
   #pharmacyPage .ph-ltr-findings .ph-ltr-fnd.wide { grid-column: 1 / -1; text-align: left; }
   #pharmacyPage .ph-tng2 { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-start; }
@@ -37748,6 +37754,9 @@
       // copy and paste"): a read-only box of what the chart reads, with one
       // Copy button -- never a page rebuild for the confirmation (presSavedToast).
       if (e.target.closest("[data-constit-pulse-copy]")) { phVisitPulseCopyNote(); return; }
+      // the opt-in "normal" reference-range toggle (synth22 batch, Workstream C,
+      // 2026-10-16): a fold, not an edit -- view state only, no save.
+      if (e.target.closest("[data-constit-pulse-normal-toggle]")) { presHxConstitPulseNormalOn = !presHxConstitPulseNormalOn; renderHxScreen(); return; }
       // Shen-Hammer exam on the constitution screen (her "yes" 2026-09-16):
       // the same four rules as the data-visit-hm* handlers, on
       // rec.constitPulse.hammer. Fold is view state only.
@@ -58251,7 +58260,7 @@ or changing anything in Cliniko.
   // carried over: "last visit" comparison (no visit series to compare a
   // baseline against). The Shen-Hammer exam form IS here (her "yes"
   // 2026-09-16 to adding it too), via the same renderer with ns "constit".
-  let presHxConstitPulseStamp = "thin", presHxConstitHmOpen = null;
+  let presHxConstitPulseStamp = "thin", presHxConstitHmOpen = null, presHxConstitPulseNormalOn = false;
   function phHxConstitPulse(rec) {
     const p = rec.constitPulse || (rec.constitPulse = { pulse: {}, pulseRef: [] });
     // hammer arrived after the first records were written -- fill in place
@@ -58264,6 +58273,51 @@ or changing anything in Cliniko.
   function phHxConstitPulseRead(rec) {
     const p = rec.constitPulse || { pulse: {}, pulseRef: [] };
     return (p.hammer && typeof p.hammer === "object") ? p : Object.assign({}, p, { hammer: phVisitFndBlank().hammer });
+  }
+  // ---- "normal" reference range toggle (synth22 batch review, Workstream C --
+  // her "show pulse changes overlapped. Give a toggle of normal pulse readings").
+  // Part one (overlap with the prior visit) was already built; this is part two
+  // only. The ONE numeric pulse-normal precedent already in this codebase is
+  // PH_PULSE_KB_SEED's "syl-15" row (Bilton SHPD Foundations Class syllabus,
+  // Dr Shen's age-appropriate resting rate) plus phPulseRestRapid's >90 rapid
+  // cutoff -- both reused here verbatim, nothing clinical invented. Off by
+  // default (her "no suggestions"/restraint rule) -- an opt-in reference aid,
+  // never a permanent addition to the default view. View state only, in-memory,
+  // same pattern this screen's own other toggles already use
+  // (presHxConstitPulseStamp / presHxConstitHmOpen above) -- never localStorage,
+  // never saved to the record.
+  const PH_PULSE_NORMAL_RATE = [
+    { lo: 0, hi: 4, label: "birth–4y", range: "84–90" },
+    { lo: 10, hi: 15, label: "10–15y", range: "78–80" },
+    { lo: 16, hi: 40, label: "16–40y", range: "72–78" },
+    { lo: 40, hi: 50, label: "40–50y", range: "72" },
+    { lo: 50, hi: 999, label: "50y+", range: "66–72" },
+  ];
+  function phPulseNormalBandFor(rec) {
+    const age = rec ? phAgeOf(rec.dob) : null;
+    return { age, band: age == null ? null : PH_PULSE_NORMAL_RATE.find(b => age >= b.lo && age <= b.hi) };
+  }
+  // the first resting rate she typed (begin / other / end, never exertion) --
+  // the exact same read phPulseRestRapid itself uses, so the two can never
+  // disagree about what "today's resting rate" means.
+  function phPulseFirstRestRate(h) {
+    const rt = (h && h.rate) || {};
+    const v = ["beg", "other", "end"].map(k => rt[k]).find(x => x != null && x !== "");
+    return v == null ? null : Number(v);
+  }
+  function phPulseNormalRefText(rec, h) {
+    const { age, band } = phPulseNormalBandFor(rec);
+    const pro = phProRec(rec);
+    const whole = PH_PULSE_NORMAL_RATE.map(b => `${b.label} ${b.range}`).join(" · ");
+    const head = band ? `Normal resting rate for ${pro.p} age (${age}): ${band.range}/min` : `Normal resting rate by age: ${whole}/min`;
+    const rate = phPulseFirstRestRate(h);
+    const ceiling = band ? Number(String(band.range).split("–").pop()) : 90;
+    const tail = rate == null ? "" : ` · today's resting rate is ${rate} — ${rate > ceiling ? "above" : "within"} the typical range`;
+    return `${head} (Bilton SHPD syllabus, Dr Shen) · over 90 reads as rapid${tail}.`;
+  }
+  function phPulseNormalToggleHtml(rec, h) {
+    const on = presHxConstitPulseNormalOn;
+    return `<div class="ph-pulse-normal"><button type="button" class="ph-pulse-normal-tgl${on ? " on" : ""}" data-constit-pulse-normal-toggle="1" aria-pressed="${on ? "true" : "false"}">Normal range</button>${on ? `<span class="ph-pulse-normal-txt">${esc(phPulseNormalRefText(rec, h))}</span>` : ""}</div>`;
   }
   function phHxConstitPulseHtml(rec, name) {
     const p = phHxConstitPulseRead(rec);
@@ -58283,6 +58337,7 @@ or changing anything in Cliniko.
           ${phVisitPulseHalfHtml("L", marks, null, refs, "data-constit-pulse-cell", "data-constit-pulse-ref")}
         </div>
         ${phVisitPulseScoresHtml(marks, null)}
+        ${phPulseNormalToggleHtml(rec, p.hammer)}
         ${phVisitPulseNoteBoxHtml(marks, refs)}
         ${phPulseKbBlockHtml(kb.grid, PH_PULSE_KB_LABEL)}
         ${phVisitHammerHtml(p.hammer, kb, "constit", presHxConstitHmOpen)}
