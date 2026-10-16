@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261016-1006000">
+<meta name="lcm-build" content="20261016-1007000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -5964,6 +5964,14 @@
   #pharmacyPage .ph-cp .ff .key .k-pms { width: 7px; height: 7px; border-radius: 50%; background: var(--cp-gold); vertical-align: 1px; }
   @media (prefers-reduced-motion: reduce) { #pharmacyPage .ph-cp .ff .ffgrid .c .pmsd.in { animation: none; } }
   #pharmacyPage .ph-cp .cp-card .cp-log .ph-cs-grid > .row > .ph-ck-chips { flex: 1 1 auto; min-width: 0; flex-wrap: wrap; }
+  /* her 2026-10-16 grouped-chips ask: a PICK-ONE row (Flow/Colour/Clots/Pain type/Discharge/LH) joins into
+     one bordered bar instead of loose gapped pills -- opt-in per call (phCycleSelectChips's `seg` flag),
+     scoped to this one card so cp-box/cp-foot/every other caller keep their existing loose-chip look.
+     flex:0 1 auto (not 1 1 0) so a lone chip that wraps onto its own line never stretches full-width --
+     the exact breakage the mock's loose-vs-joined PMS comparison showed for a tick-several row. */
+  #pharmacyPage .ph-cp .cp-card .cp-log.ph-cycle-signpop .ph-cs-grid .ph-ck-chips.seg { flex-wrap: wrap; gap: 0; border: 1px solid var(--ph-line); border-radius: 10px; overflow: hidden; }
+  #pharmacyPage .ph-cp .cp-card .cp-log.ph-cycle-signpop .ph-cs-grid .ph-ck-chips.seg .ph-ck-chip { flex: 0 1 auto; border-radius: 0; box-shadow: none; border-right: 1px solid var(--ph-line); }
+  #pharmacyPage .ph-cp .cp-card .cp-log.ph-cycle-signpop .ph-cs-grid .ph-ck-chips.seg .ph-ck-chip:last-child { border-right: 0; }
   #pharmacyPage .ph-cs-bbt.flat { margin: 0; }
   #pharmacyPage .ph-cs-bbt.flat .ph-bbt-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-width: 0; }
   #pharmacyPage .ph-cs-bbt.flat .ph-bbt-note, #pharmacyPage .ph-cs-bbt.flat .ph-bbt-src { font-size: var(--fs-11-5); color: var(--ph-faint); }
@@ -7873,6 +7881,10 @@
   /* her 2026-10-14 pick (cycle-cohesion-mocks-2026-10-14.html): every question set and the Cycle day log share ONE look:
      a short label in a left column, round pills, one deep picked colour, Skip as a quiet pill, number keys only inside the
      gold-ringed current row, and the Fang Bing Ren sign strip at the foot of the card (.ph-fbr-trail) */
+  /* her 2026-10-16 group headers (Bleeding / Discomfort / Signs & mood): same uppercase label style
+     the app already uses for a question's own left label, just promoted to a full-width section head */
+  #pharmacyPage .ph-pfw-grphd { font: 700 10.5px var(--font-disp); letter-spacing: .09em; text-transform: uppercase; color: var(--ph-herb-deep); padding: 10px 6px 4px; margin: 0; border-bottom: 1px solid var(--ph-line); }
+  #pharmacyPage .ph-pfw-grphd:first-child { padding-top: 0; }
   #pharmacyPage .ph-pfw-q { display: grid; grid-template-columns: 78px minmax(0, 1fr); column-gap: 8px; align-items: start; border-radius: 8px; padding: 5px 6px; margin: 1px 0; min-width: 0; transition: background .25s, box-shadow .25s; }
   #pharmacyPage .ph-pfw-q > :not(.ph-pfw-qt) { grid-column: 2; min-width: 0; }
   #pharmacyPage .ph-pfw-q.cur { box-shadow: 0 0 0 2px var(--ph-gold); }
@@ -65506,9 +65518,12 @@ or changing anything in Cliniko.
   const phCycSumPrev = new Map();
   const phCycSignFresh = ms => !!(phCycSignAnim && presCycleSignEdit && phCycSignAnim.dateKey === presCycleSignEdit.dateKey && Date.now() - phCycSignAnim.at < (ms || 900));
   function phCycSignMark(field, val, dateKey, on) { phCycSignAnim = { field, val, dateKey, at: Date.now(), on: !!on }; }
-  function phCycleSelectChips(field, opts, cur, attrs, cls, titles) {
+  function phCycleSelectChips(field, opts, cur, attrs, cls, titles, seg) {
     const popVal = phCycSignFresh() && phCycSignAnim.on && phCycSignAnim.field === field ? phCycSignAnim.val : null;
-    return `<div class="ph-ck-chips">${opts.map(([v, l]) => {
+    // her 2026-10-16 ask (grouped chips): a pick-one row on the Cycle page's own "All signs" card can
+    // join into one bordered bar instead of loose gapped pills -- `seg` is opt-in per call so the
+    // smaller cp-box / cp-foot / other-page popovers that share this same function are untouched.
+    return `<div class="ph-ck-chips${seg ? " seg" : ""}">${opts.map(([v, l]) => {
       const on = v === "" ? cur === "" : cur === v;
       return `<button type="button" class="ph-ck-chip${on ? " on" + (cls ? cls(v) : "") : ""}${on && popVal === v ? " pop" : ""}" data-cycle-sign-field="${field}" data-cycle-sign-val="${esc(v)}" ${attrs}${titles && titles[v] ? ` title="${esc(titles[v])}"` : ""}>${esc(l)}</button>`;
     }).join("")}</div>`;
@@ -65559,7 +65574,9 @@ or changing anything in Cliniko.
     else if (prev && v == null) note = `yesterday ${prev.temp.toFixed(2)}°`;
     const phoneNote = cur && cur.src === "phone" ? `<span class="ph-bbt-src" title="This reading came from her phone. Type a value to replace it.">📱 from her phone</span>` : "";
     // the Cycle page card (her 2026-10-14 pick): one row, the discard tick is a "Discard" chip
-    if (flat) return `<div class="row ph-cs-bbt flat"><span class="k">BBT</span><span class="ph-bbt-line">
+    // her 2026-10-16 grouped-chips ask: BBT is alone in its own group on the flat card now (full width
+    // so it doesn't pair oddly with an unrelated field beside it in the 2-col grid)
+    if (flat) return `<div class="row full ph-cs-bbt flat"><span class="k">BBT</span><span class="ph-bbt-line">
         <span class="ph-bbt-step"><button type="button" data-cycle-sign-tempstep="-0.05" ${attrs} aria-label="Down 0.05">−</button><input type="number" inputmode="decimal" class="field-bare ph-bbt-in" step="0.01" min="${PH_BBT_MIN}" max="${PH_BBT_MAX}" placeholder="36.40" value="${v != null ? v.toFixed(2) : ""}" data-cycle-sign-temp="1" ${attrs} aria-label="Basal temperature in °C"><button type="button" data-cycle-sign-tempstep="0.05" ${attrs} aria-label="Up 0.05">+</button><span class="u">°C</span></span>
         <input type="time" class="field-bare ph-bbt-at" value="${esc(cur && cur.at || "")}" data-cycle-sign-tempat="1" ${attrs} aria-label="Time the temperature was taken">
         <button type="button" class="ph-ck-chip${cur && cur.discard ? " on" : ""}" data-cyc-tempdiscard="1" ${attrs} title="Illness, poor sleep or travel"${v == null ? " disabled" : ""}>Discard</button>
@@ -66073,16 +66090,22 @@ or changing anything in Cliniko.
     // (they're pattern facts, not day-to-day signs) so they join the folded group too.
     period: { short: "Usual period", title: "Usual period", dflt: true,
       why: "One tap each. It describes a typical period, so Patterns can start before any day is logged. Once two real cycles are logged, the day log takes over.",
+      // her 2026-10-16 ask ("these two essential measure same chips - redesign the chips to group
+      // them and make the page less redundant", cycle-chips-grouped-mock-2026-10-16.html, her 8 picks
+      // all Recommended): reordered into the SAME three groups as the Cycle day log's own flat grid
+      // (phCycleSignPopHtml's opts.flat branch) -- Bleeding, Discomfort, Signs & mood, each question
+      // tagged `grp` so presPfwSetHtml can print a shared group header; a question with no `grp` (every
+      // other PH_PFW_SETS set) renders exactly as before, ungrouped.
       qs: [
-        { id: "len", s: "Cycle", q: "How long is her cycle?", range: true, d: { lo: 25, hi: 35 }, o: [] },
+        { id: "len", s: "Cycle", q: "How long is her cycle?", range: true, d: { lo: 25, hi: 35 }, o: [], grp: "Bleeding" },
         // her 2026-10-14 tidy-up (cycle-cohesion mock): the same words as the Cycle day log (Medium, Red) and short PMS names; Low mood joins PMS
-        { id: "flow", s: "Flow", q: "How heavy is the flow?", d: "mid", o: [["light", "Light", ["light_flow"]], ["mid", "Medium", []], ["heavy", "Heavy", ["heavy_flow"]]] },
-        { id: "pain", s: "Pain", q: "Period pain?", d: "none", multi: true, o: [["none", "None", []], ["cramp", "Cramping", ["cramp", "dysmen"]], ["stab", "Stabbing", ["stabbing", "dysmen"]], ["severe", "Severe", ["severe_pain", "dysmen"]], ["drag", "Dragging", ["dragging"]], ["warm", "Eased by warmth", ["pain_warm"]]] },
-        { id: "cm", s: "Discharge", q: "Mid-cycle discharge?", d: "clear", multi: true, whenField: true, o: [["clear", "Clear, stretchy", []], ["watery", "Watery, lots", ["watery_cm"]], ["creamy", "Creamy, sticky", ["damp_cm"]], ["dry", "Dry, little", ["dry_cm"]]] },
-        { id: "clot", s: "Clots", q: "Any clots?", d: "none", more: true, o: [["none", "None", []], ["small", "Small", ["clots"]], ["large", "Large", ["clots"]], ["many", "Many", ["clots"]]] },
-        { id: "col", s: "Colour", q: "What colour is the blood?", d: "red", more: true, o: [["bright", "Bright red", ["bright_blood"]], ["red", "Red", []], ["dark", "Dark red", ["dark_blood"]], ["brown", "Brown", ["dark_blood"]], ["pale", "Pale", ["pale_flow"]], ["watery", "Watery", ["pale_flow"]]] },
-        { id: "limbs", s: "Cold hands", q: "Cold hands and feet?", d: "no", more: true, o: [["no", "No", []], ["yes", "Yes", ["cold_limbs", "cold_feel"]]] },
-        { id: "pms", s: "PMS", q: "PMS symptoms?", d: "none", multi: true, more: true, o: [["none", "Nothing much", []], ["mood", "Irritable", ["pms", "stress"]], ["low", "Low mood", ["low_mood"]], ["bloat", "Bloating", ["digestive_sx"]], ["loose", "Loose stool", ["digestive_sx"]], ["const", "Constipation", ["digestive_sx"]], ["tired", "Tired", ["fatigue", "low_mood"]],
+        { id: "flow", s: "Flow", q: "How heavy is the flow?", d: "mid", grp: "Bleeding", o: [["light", "Light", ["light_flow"]], ["mid", "Medium", []], ["heavy", "Heavy", ["heavy_flow"]]] },
+        { id: "col", s: "Colour", q: "What colour is the blood?", d: "red", more: true, grp: "Bleeding", o: [["bright", "Bright red", ["bright_blood"]], ["red", "Red", []], ["dark", "Dark red", ["dark_blood"]], ["brown", "Brown", ["dark_blood"]], ["pale", "Pale", ["pale_flow"]], ["watery", "Watery", ["pale_flow"]]] },
+        { id: "clot", s: "Clots", q: "Any clots?", d: "none", more: true, grp: "Bleeding", o: [["none", "None", []], ["small", "Small", ["clots"]], ["large", "Large", ["clots"]], ["many", "Many", ["clots"]]] },
+        { id: "pain", s: "Pain", q: "Period pain?", d: "none", multi: true, grp: "Discomfort", o: [["none", "None", []], ["cramp", "Cramping", ["cramp", "dysmen"]], ["stab", "Stabbing", ["stabbing", "dysmen"]], ["severe", "Severe", ["severe_pain", "dysmen"]], ["drag", "Dragging", ["dragging"]], ["warm", "Eased by warmth", ["pain_warm"]]] },
+        { id: "cm", s: "Discharge", q: "Mid-cycle discharge?", d: "clear", multi: true, whenField: true, grp: "Discomfort", o: [["clear", "Clear, stretchy", []], ["watery", "Watery, lots", ["watery_cm"]], ["creamy", "Creamy, sticky", ["damp_cm"]], ["dry", "Dry, little", ["dry_cm"]]] },
+        { id: "limbs", s: "Cold hands", q: "Cold hands and feet?", d: "no", more: true, grp: "Signs & mood", o: [["no", "No", []], ["yes", "Yes", ["cold_limbs", "cold_feel"]]] },
+        { id: "pms", s: "PMS", q: "PMS symptoms?", d: "none", multi: true, more: true, grp: "Signs & mood", o: [["none", "Nothing much", []], ["mood", "Irritable", ["pms", "stress"]], ["low", "Low mood", ["low_mood"]], ["bloat", "Bloating", ["digestive_sx"]], ["loose", "Loose stool", ["digestive_sx"]], ["const", "Constipation", ["digestive_sx"]], ["tired", "Tired", ["fatigue", "low_mood"]],
           // 2026-10-11 (Wu Ling San audit): three fluid-type PMS signs. Fang Bing Ren only (no Patterns clue), so Patterns reads the same as before.
           ["swell", "Swelling", []], ["head", "Headache", []], ["nausea", "Nausea", []],
           // integrate33 baseline pass: the premenstrual breast sign already existed in Fang Bing Ren (Chai Hu) but had no question
@@ -68748,7 +68771,16 @@ or changing anything in Cliniko.
     // (Clots, Blood colour, Cold hands/feet, PMS) follow -- same order as the Cycle
     // day-log popover. Her follow-up ask ("make it always displayed"): no fold here
     // either, matching the day log dropping its own More/Fewer-signs toggle the same day.
-    const rows0 = `${sid === "men" ? phEnergyCardHtml(name) : ""}<div class="ph-pfw-rows">${set.qs.map(qHtml).join("")}</div>`;
+    // her 2026-10-16 ask (grouped chips, see the "period" set above): a question carrying `grp` gets a
+    // shared group header printed before it whenever the group changes -- a set with no `grp` on any
+    // question (meno/men/pain) renders exactly as it always has, one flat list, no headers.
+    let lastGrp = null;
+    const qRows = set.qs.map(q => {
+      const hd = q.grp && q.grp !== lastGrp ? `<div class="ph-pfw-grphd">${esc(q.grp)}</div>` : "";
+      lastGrp = q.grp || lastGrp;
+      return hd + qHtml(q);
+    }).join("");
+    const rows0 = `${sid === "men" ? phEnergyCardHtml(name) : ""}<div class="ph-pfw-rows">${qRows}</div>`;
     const rows = uc ? `<div class="ph-uc-body ${ucView === "chart" ? "c" : "w"}">${phUcHtml(rec, ucView)}${rows0}</div>` : rows0;
     const note = logged ? `<div class="ph-pfw-note">Two cycles are logged, so the day log now feeds Patterns. These stay as first reported.</div>` : "";
     return `<div class="ph-pfw-card${uc ? " uc" : ""}" data-pfw-host="${sid}">
@@ -74986,21 +75018,40 @@ or changing anything in Cliniko.
       // her 2026-10-14 picks (cycle-cohesion mock): the head says "CD n · phase" once (the Day 1 row drops its own "Period ·
       // day n"), Low mood moved into the PMS row, and the Fang Bing Ren strip sits at the foot (Bing reads today's log only)
       const isToday = dateKey === keyOf(TODAY);
+      // her 2026-10-16 ask (screenshots of this card beside Usual period, "these two essential measure
+      // same chips - redesign the chips to group them and make the page less redundant",
+      // cycle-chips-grouped-mock-2026-10-16.html, her 8 picks all Recommended): the SAME three group
+      // headers as the Usual period card now carries (Bleeding / Discomfort / Signs & mood), same order,
+      // so the two cards finally read as one system; BBT gets its own small group after Bleeding (no
+      // match elsewhere, and its own input shape doesn't belong inside the other three); LH/Sex/Other
+      // stay their own 4th "Other signs" group since Usual has nothing to match them; PMS stays loose
+      // chips (a joined bar visibly breaks once a picked chip lands alone on a wrapped line -- proved in
+      // the mock's A/B panel); every PICK-ONE row (Flow/Colour/Clots/Pain type/Discharge/LH) joins into
+      // one bordered bar via phCycleSelectChips's new `seg` flag, wrapping to a second line on a narrow
+      // card rather than scrolling. Scope is THIS card only (her "full Cycle page only, for now") -- the
+      // smaller cp-box day popover and every other caller of phCycleSignPopHtml/phCycleSelectChips keep
+      // their existing loose-chip look untouched.
+      const grphd = label => `<div class="full ph-pfw-grphd">${esc(label)}</div>`;
       return `<div class="ph-cycle-signpop cp-log${fade ? " fade" : ""}" role="group" aria-label="Signs for ${esc(popDateLbl)}">
       ${phCycDayHeadHtml(name, dateKey, cd, saved)}
       ${phCycDay1RowHtml(rec, name, dateKey, { noTag: true })}
       <div class="ph-cs-grid">
-        ${flatRow("Flow", phCycleSelectChips("flow", PH_CYCLE_DAYFLOW, s.flow, attrs, flowChipClass))}
-        ${painRow}
-        ${flatRow("Discharge", phCycleSelectChips("cm", shortCm, s.cm, attrs))}
-        ${flatRow("LH", phCycleSelectChips("lh", PH_CYCLE_LH, s.lh, attrs, lhChipClass))}
+        ${grphd("Bleeding")}
+        ${flatRow("Flow", phCycleSelectChips("flow", PH_CYCLE_DAYFLOW, s.flow, attrs, flowChipClass, null, true))}
+        ${flatRow("Colour", phCycleSelectChips("looks", shortLooks, s.looks || "", attrs, null, null, true))}
+        ${flatRow("Clots", phCycleSelectChips("clots", shortClots, s.clots, attrs, null, { small: "under 2 cm", large: "coin-size or bigger" }, true))}
+        ${grphd("BBT")}
         ${phCycBbtRowHtml(rec, dateKey, attrs, true)}
-        ${flatRow("Sex", `<div class="ph-ck-chips">${chip(s.sex, "sex", "Unprotected", " ph-cyc-sexchip")}</div>`)}
-        ${flatRow("Clots", phCycleSelectChips("clots", shortClots, s.clots, attrs, null, { small: "under 2 cm", large: "coin-size or bigger" }))}
-        ${flatRow("Colour", phCycleSelectChips("looks", shortLooks, s.looks || "", attrs))}
-        ${flatRow("Pain type", phCycleSelectChips("feels", PH_CYCLE_FEELS, s.feels || "", attrs))}
-        ${flatRow("Other", `<div class="ph-ck-chips">${chip(s.ov, "ov", "Ovulation twinge")}</div>`)}
+        ${grphd("Discomfort")}
+        ${painRow}
+        ${flatRow("Pain type", phCycleSelectChips("feels", PH_CYCLE_FEELS, s.feels || "", attrs, null, null, true))}
+        ${flatRow("Discharge", phCycleSelectChips("cm", shortCm, s.cm, attrs, null, null, true))}
+        ${grphd("Signs & mood")}
         <div class="row full ph-cs-pms"><span class="k">PMS</span>${pmsChips}</div>
+        ${grphd("Other signs")}
+        ${flatRow("LH", phCycleSelectChips("lh", PH_CYCLE_LH, s.lh, attrs, lhChipClass, null, true))}
+        ${flatRow("Sex", `<div class="ph-ck-chips">${chip(s.sex, "sex", "Unprotected", " ph-cyc-sexchip")}</div>`)}
+        ${flatRow("Other", `<div class="ph-ck-chips">${chip(s.ov, "ov", "Ovulation twinge")}</div>`)}
         <input type="text" class="field-bare ph-cs-note full" placeholder="Note" maxlength="140" value="${esc(s.note || "")}" data-cycle-sign-field="note" ${attrs}>
       </div>
       ${phFbrTrailHtml("d:" + phPatientKey(name) + ":" + dateKey, phCycFbrSigns(rec, name, dateKey), "Nothing ticked from this day yet", !isToday && phCycPmsIds(s).length ? "Bing reads today's log only" : "")}
