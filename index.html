@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261016-1013000">
+<meta name="lcm-build" content="20261016-1014000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -12009,6 +12009,23 @@
   #pharmacyPage .ph-pill.auto { background: var(--ph-gold-tint); color: var(--ph-gold-deep, #7A5A10); font-size: var(--fs-9-5); font-weight: 800; border-radius: 999px; padding: 2px 8px; }
   #pharmacyPage .ph-ivf-roundpick { font-size: var(--fs-11-5); border: 1px solid var(--ph-gold); border-radius: 6px; padding: 3px 6px; background: var(--ph-white); color: var(--ph-gold-deep, #7A5A10); }
   #pharmacyPage .ph-ivf-tfields { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; width: 100%; }
+  /* her IVF redesign 2026-10-16, item 1 ("quick-log by moment, not the
+     whole funnel"): four small buttons, always visible above the fold, the
+     one due today picked out in gold -- the app's own established "due
+     now" colour (the gold Next-up card, the cycle calendar's TODAY ring). */
+  #pharmacyPage .ph-ivf-quickbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  #pharmacyPage .ph-ivf-moment { flex: 1 1 150px; min-width: 150px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; border: 1.5px solid var(--ph-line); border-radius: 10px; padding: 8px 10px; background: var(--ph-white); text-align: left; }
+  #pharmacyPage .ph-ivf-moment .ic { width: 20px; height: 20px; color: var(--ph-herb); margin-bottom: 2px; }
+  #pharmacyPage .ph-ivf-moment b { font-size: var(--fs-12-5); }
+  #pharmacyPage .ph-ivf-moment span { font-size: var(--fs-10-5); color: var(--ph-soft); }
+  #pharmacyPage .ph-ivf-moment.today { border-color: var(--ph-gold); box-shadow: 0 0 0 2px var(--ph-gold-tint); }
+  #pharmacyPage .ph-ivf-moment.today .ic { color: var(--ph-gold-deep, #7A5A10); }
+  #pharmacyPage .ph-ivf-moment.on { background: var(--ph-herb-tint); border-color: var(--ph-herb); }
+  #pharmacyPage .ph-ivf-quickform { border: 1px solid var(--ph-line); border-radius: 10px; padding: 10px; margin-bottom: 10px; background: var(--ph-herb-tint); }
+  #pharmacyPage .ph-ivf-qf-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+  #pharmacyPage .ph-ivf-qf-row label { display: flex; flex-direction: column; gap: 2px; font-size: var(--fs-10-5); color: var(--ph-soft); min-width: 80px; }
+  #pharmacyPage .ph-ivf-qf-row input, #pharmacyPage .ph-ivf-qf-row select { font-size: var(--fs-12-5); border: 1px solid var(--ph-line); border-radius: 6px; padding: 4px 6px; background: var(--ph-white); }
+  #pharmacyPage .ph-ivf-qf-acts { display: flex; gap: 8px; align-items: center; }
   /* pregnancy test mini-section (her ask, weeks ago, off Sylvia Lai's IVF
      plan screenshot) -- a second row inside the same standalone card, set
      apart with the app's own dashed-divider idiom (colour/space, never a
@@ -35550,6 +35567,68 @@
         phCycleRerender();
         return;
       }
+      // her IVF redesign 2026-10-16, item 1 ("quick-log by moment"): open/
+      // close whichever tiny form a moment button asks for. A second tap
+      // on the same one closes it again (her existing fold idiom).
+      const ivfQuickTap = e.target.closest("[data-ivf-quick]");
+      if (ivfQuickTap) {
+        const k = ivfQuickTap.dataset.ivfQuick;
+        phIvfQuickOpen = phIvfQuickOpen === k ? null : k;
+        phCycleRerender();
+        return;
+      }
+      if (e.target.closest("[data-ivf-quick-cancel]")) { phIvfQuickOpen = null; phCycleRerender(); return; }
+      const ivfQuickSave = e.target.closest("[data-ivf-quick-save]");
+      if (ivfQuickSave) {
+        const kind = ivfQuickSave.dataset.ivfQuickSave;
+        const rec = phCycleTargetRec();
+        if (!rec) return;
+        const due = phIvfQuickDue(rec);
+        const g = id => document.getElementById(id);
+        const num = id => { const el = g(id); return el ? phIvfScanNum(el.value) : null; };
+        const txt = id => { const el = g(id); return el ? el.value.trim() : ""; };
+        rec.ivfCycles = rec.ivfCycles || [];
+        // the exact same blank-row shape "+ Egg collection"/"+ Transfer"
+        // create -- a quick log never invents a second shape for the same
+        // data, only a faster way to fill one in.
+        const newRound = () => ({ id: uid(), when: keyOf(TODAY), clinic: "", kind: "collection", eggs: null, mature: null,
+          fertilised: null, day3: null, blastocysts: null, pgtNormal: null, frozen: null, transfers: [], scans: [],
+          linkedPlanId: null, src: "you", confirmed: true });
+        if (kind === "scan") {
+          let round = (due.kind === "scan" && due.round) || phIvfCurrentRound(rec);
+          if (!round) { round = newRound(); rec.ivfCycles.push(round); }
+          round.scans = round.scans || [];
+          let s = (due.kind === "scan" && due.scan) || null;
+          if (!s) { s = { id: uid(), src: "me", confirmed: true, at: Date.now(), date: keyOf(TODAY) }; round.scans.push(s); }
+          s.e2 = num("phIvfQ_e2"); s.lh = num("phIvfQ_lh"); s.p4 = num("phIvfQ_p4"); s.folTotal = num("phIvfQ_folTotal");
+          s.editedAt = Date.now();
+        } else if (kind === "retrieval") {
+          let round = (due.kind === "retrieval" && due.round) || phIvfCurrentRound(rec);
+          if (!round) { round = newRound(); rec.ivfCycles.push(round); }
+          round.eggs = num("phIvfQ_eggs"); round.fertilised = num("phIvfQ_fertilised"); round.frozen = num("phIvfQ_frozen");
+        } else if (kind === "transfer") {
+          const round = (due.kind === "transfer" && due.round) || phIvfCurrentRound(rec);
+          if (!round) { phIvfQuickOpen = null; phCycleRerender(); return; }
+          round.transfers = round.transfers || [];
+          let t = (due.kind === "transfer" && due.transfer) || null;
+          if (!t) { t = { id: uid(), date: keyOf(TODAY), type: "fresh", prep: "", embryoDay: "", count: 1, outcome: "awaiting", note: "", fromPlan: false }; round.transfers.push(t); }
+          t.type = txt("phIvfQ_type") || "fresh"; t.embryoDay = txt("phIvfQ_embryoDay"); t.count = num("phIvfQ_count");
+        } else if (kind === "results") {
+          const round = (due.kind === "results" && due.round) || phIvfCurrentRound(rec);
+          const t = round && ((due.kind === "results" && due.transfer) || (round.transfers || []).slice().reverse().find(x => (x.outcome || "awaiting") === "awaiting"));
+          if (!t) { phIvfQuickOpen = null; phCycleRerender(); return; }
+          const prevPregResult = t.pregResult;
+          t.outcome = txt("phIvfQ_outcome");
+          t.pregResult = PH_IVF_OUTCOME_PREG[t.outcome] || "";
+          t.pregHcg = num("phIvfQ_hcg"); t.pregTestDate = txt("phIvfQ_testdate");
+          if (t.pregResult && !prevPregResult) phIvfPregRevealTid = t.id;
+          if (t.pregResult === "positive" && prevPregResult !== "positive") { phIvfPregPositiveCascade(rec); phIvfPregCascadeTid = t.id; }
+        }
+        phIvfQuickOpen = null;
+        if (savePharmacy() === false) { phFlashShow("That could not be saved — check the warning at the top and try again"); return; }
+        phCycleRerender();
+        return;
+      }
       // ==== Protocol switch, clinic scans (her ask 2026-09-19; the old ✎
       // Edit plan toggle this section was built around is gone -- her ask
       // 2026-09-22, "make the edit plan removed and allow direct editing")
@@ -35706,7 +35785,7 @@
         let s = scanId === "new" ? null : row.scans.find(x => x.id === scanId);
         if (!s) { s = { id: uid(), src: "me", confirmed: true, at: Date.now() }; row.scans.push(s); }
         s.date = date;
-        ["folR", "folL", "lining", "e2", "lh", "p4", "fsh", "amh", "hcg"].forEach(k => { s[k] = phIvfScanNum(txt(k)); });
+        ["folR", "folL", "folTotal", "lining", "e2", "lh", "p4", "fsh", "amh", "hcg"].forEach(k => { s[k] = phIvfScanNum(txt(k)); });
         s.sizes = txt("sizes"); s.note = txt("note"); s.editedAt = Date.now();
         phTpScanEdit = null; phTpScanDelArm = null;
         if (savePharmacy() === false) { phFlashShow("That could not be saved — check the warning at the top and try again"); return; }
@@ -62126,7 +62205,13 @@ or changing anything in Cliniko.
   // src:"patient", confirmed:false and stays marked until Linh confirms it.
   const PH_IVF_SCAN_BLOODS = [["e2", "E2", "pmol/L"], ["lh", "LH", "IU/L"], ["p4", "P4", "nmol/L"], ["fsh", "FSH", "IU/L"], ["amh", "AMH", "pmol/L"], ["hcg", "hCG", "IU/L"]];
   const phIvfScanNum = v => (v === "" || v == null || isNaN(+v)) ? null : +v;
-  const phIvfScanHasResults = s => !!s && (s.folR != null || s.folL != null || !!s.sizes || s.lining != null || PH_IVF_SCAN_BLOODS.some(b => s[b[0]] != null));
+  // her IVF redesign 2026-10-16 ("quick-log by moment"): the Scan check-in
+  // quick form asks for ONE combined follicle count, not a per-side split --
+  // faster to chart live, and honest about what was actually typed (never
+  // forced into folR so it reads as "R 11 · L –", which would misreport a
+  // combined count as one-sided). folTotal is its own field, read by every
+  // scan display alongside the existing R/L pair.
+  const phIvfScanHasResults = s => !!s && (s.folR != null || s.folL != null || s.folTotal != null || !!s.sizes || s.lining != null || PH_IVF_SCAN_BLOODS.some(b => s[b[0]] != null));
   const phIvfScanSort = list => list.slice().sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")) || (a.at || 0) - (b.at || 0));
   // this plan's round only (the plan grid, the door card, the popup)
   function phIvfScanList(name, plan) {
@@ -62142,11 +62227,113 @@ or changing anything in Cliniko.
   const phIvfNextScan = list => { const today = keyOf(TODAY); return list.find(s => s.date && s.date >= today && !phIvfScanHasResults(s)) || null; };
   const phIvfLatestScan = list => { const today = keyOf(TODAY); return list.filter(s => s.date && s.date <= today && phIvfScanHasResults(s)).slice(-1)[0] || null; };
   const phIvfNextScanKey = rec => { const s = phIvfNextScan(phIvfScanListAll(rec)); return s ? s.date : ""; };
+  // her IVF redesign 2026-10-16, item 1 ("quick-log by moment, not the
+  // whole funnel"): four single-purpose doors onto these same rows -- never
+  // a second record, just a faster way onto the one that already exists.
+  // phIvfCurrentRound is "which round a quick tap means" when nothing more
+  // specific is due: the newest round still waiting on a transfer result,
+  // else simply the newest round on file.
+  function phIvfCurrentRound(rec) {
+    const rows = phIvfCyclesSorted(rec);
+    for (let i = rows.length - 1; i >= 0; i--) {
+      if ((rows[i].transfers || []).some(t => (t.outcome || "awaiting") === "awaiting")) return rows[i];
+    }
+    return rows[rows.length - 1] || null;
+  }
+  // which of the four moments is actually due TODAY, read straight off the
+  // real rows -- never a second schedule of its own. Checked results-call
+  // first (the most time-sensitive): a result that's overdue outranks a
+  // same-day scan or transfer she may also have on. known gap, disclosed:
+  // this reads the raw IVF history only, not the Fertility Timeline's own
+  // due/overdue computation (phTlModel) -- the two can one day be merged.
+  function phIvfQuickDue(rec) {
+    const rows = phIvfCyclesSorted(rec), today = keyOf(TODAY);
+    for (let i = rows.length - 1; i >= 0; i--) {
+      const t = (rows[i].transfers || []).find(x => (x.outcome || "awaiting") === "awaiting" && x.pregTestDate && x.pregTestDate <= today);
+      if (t) return { kind: "results", round: rows[i], transfer: t };
+    }
+    for (let i = rows.length - 1; i >= 0; i--) {
+      const t = (rows[i].transfers || []).find(x => x.date === today);
+      if (t) return { kind: "transfer", round: rows[i], transfer: t };
+    }
+    for (let i = rows.length - 1; i >= 0; i--) {
+      if (rows[i].kind !== "freeze" && rows[i].when === today && rows[i].eggs == null) return { kind: "retrieval", round: rows[i] };
+    }
+    for (let i = rows.length - 1; i >= 0; i--) {
+      const s = (rows[i].scans || []).find(x => x.date === today && !phIvfScanHasResults(x));
+      if (s) return { kind: "scan", round: rows[i], scan: s };
+    }
+    return { kind: null };
+  }
+  const PH_IVF_QUICK_MOMENTS = [
+    ["scan", "i-pt-vial", "Scan check-in", "E2 · LH · P4 · follicle count"],
+    ["retrieval", "i-egg", "Retrieval day", "Eggs collected"],
+    ["transfer", "i-plus", "Transfer day", "Embryo(s) transferred"],
+    ["results", "i-phone", "Results call", "Outcome, days later"],
+  ];
+  function phIvfQuickBarHtml(rec) {
+    const due = phIvfQuickDue(rec);
+    const btns = PH_IVF_QUICK_MOMENTS.map(([k, ic, lbl, sub]) =>
+      `<button type="button" class="ph-ivf-moment${due.kind === k ? " today" : ""}${phIvfQuickOpen === k ? " on" : ""}" data-ivf-quick="${k}">
+        <svg class="ic" aria-hidden="true"><use href="#${ic}"/></svg><b>${lbl}</b><span>${sub}</span>
+      </button>`).join("");
+    return `<div class="ph-ivf-quickbar">${btns}</div>${phIvfQuickOpen ? phIvfQuickFormHtml(rec, phIvfQuickOpen, due) : ""}`;
+  }
+  function phIvfQuickFormHtml(rec, kind, due) {
+    const acts = extra => `<div class="ph-ivf-qf-acts">
+        <button type="button" class="ph-load-btn on" data-ivf-quick-save="${kind}">Save</button>
+        <button type="button" class="ph-name-link soft" data-ivf-quick-cancel="1">Cancel</button>${extra || ""}
+      </div>`;
+    if (kind === "scan") {
+      const s = (due.kind === "scan" && due.scan) || null;
+      const v = k => s && s[k] != null ? esc(String(s[k])) : "";
+      const num = (id, lbl, step) => `<label><span>${lbl}</span><input type="number" id="phIvfQ_${id}" value="${v(id)}" step="${step || 1}" min="0" inputmode="decimal"></label>`;
+      return `<div class="ph-ivf-quickform">
+        <div class="ph-ivf-qf-row">${num("e2", "E2", "0.1")}${num("lh", "LH", "0.1")}${num("p4", "P4", "0.1")}${num("folTotal", "Follicles")}</div>
+        ${acts()}
+      </div>`;
+    }
+    if (kind === "retrieval") {
+      const round = (due.kind === "retrieval" && due.round) || phIvfCurrentRound(rec);
+      const v = k => round && round[k] != null ? esc(String(round[k])) : "";
+      const num = (id, lbl) => `<label><span>${lbl}</span><input type="number" id="phIvfQ_${id}" value="${v(id)}" step="1" min="0" inputmode="decimal"></label>`;
+      return `<div class="ph-ivf-quickform">
+        <div class="ph-ivf-qf-row">${num("eggs", "Eggs")}${num("fertilised", "Fertilised")}${num("frozen", "Frozen")}</div>
+        ${acts()}
+      </div>`;
+    }
+    if (kind === "transfer") {
+      const round = (due.kind === "transfer" && due.round) || phIvfCurrentRound(rec);
+      if (!round) return `<div class="ph-ivf-quickform"><div class="ph-hx-constit-note">No round on file yet — log an egg collection first.</div>${acts()}</div>`;
+      const t = (due.kind === "transfer" && due.transfer) || null;
+      return `<div class="ph-ivf-quickform">
+        <div class="ph-ivf-qf-row">
+          <label><span>Type</span><select id="phIvfQ_type"><option value="fresh"${!t || t.type !== "frozen" ? " selected" : ""}>Fresh</option><option value="frozen"${t && t.type === "frozen" ? " selected" : ""}>Frozen</option></select></label>
+          <label><span>Embryo day</span><input type="text" id="phIvfQ_embryoDay" value="${t && t.embryoDay ? esc(t.embryoDay) : ""}" placeholder="Day 5"></label>
+          <label><span>Count</span><input type="number" id="phIvfQ_count" value="${t && t.count != null ? esc(String(t.count)) : "1"}" step="1" min="0" inputmode="decimal"></label>
+        </div>
+        ${acts()}
+      </div>`;
+    }
+    // results
+    const round = (due.kind === "results" && due.round) || phIvfCurrentRound(rec);
+    const t = round && ((due.kind === "results" && due.transfer) || (round.transfers || []).slice().reverse().find(x => (x.outcome || "awaiting") === "awaiting"));
+    if (!round || !t) return `<div class="ph-ivf-quickform"><div class="ph-hx-constit-note">No transfer is waiting on a result right now.</div>${acts()}</div>`;
+    return `<div class="ph-ivf-quickform">
+      <div class="ph-ivf-qf-row">
+        <label><span>Outcome</span><select id="phIvfQ_outcome">${PH_IVF_OUTCOMES.map(([k, l]) => `<option value="${k}"${t.outcome === k ? " selected" : ""}>${esc(l)}</option>`).join("")}</select></label>
+        <label><span>hCG</span><input type="number" id="phIvfQ_hcg" value="${t.pregHcg != null ? esc(String(t.pregHcg)) : ""}" step="0.1" min="0" inputmode="decimal"></label>
+        <label><span>Test date</span><input type="date" id="phIvfQ_testdate" value="${esc(t.pregTestDate || keyOf(TODAY))}"></label>
+      </div>
+      ${acts()}
+    </div>`;
+  }
   // "R8 L6 · lining 7.2 · E2 1200" -- the one short form every surface shares
   function phIvfScanSummary(s, short) {
     if (!s) return "";
     const bits = [];
     if (s.folR != null || s.folL != null) bits.push(`R${s.folR != null ? s.folR : "–"} L${s.folL != null ? s.folL : "–"}`);
+    else if (s.folTotal != null) bits.push(`${s.folTotal} follicles`);
     if (s.lining != null) bits.push(`lining ${s.lining}`);
     if (!short) PH_IVF_SCAN_BLOODS.forEach(b => { if (s[b[0]] != null) bits.push(`${b[1]} ${s[b[0]]}`); });
     else if (s.e2 != null) bits.push(`E2 ${s.e2}`);
@@ -81414,7 +81601,8 @@ or changing anything in Cliniko.
     // her pick 2026-10-13 (Case | Course): in the left column the scans are one short line (latest, next) with
     // + Add and "All scans" -- the full table opens under the two columns (phTpCcUi.scans) or while she is editing one
     if (compact) {
-      const bit = s => [phFuDateLabel(s.date), s.folR != null || s.folL != null ? `R ${s.folR != null ? s.folR : "–"} · L ${s.folL != null ? s.folL : "–"}` : "", s.lining != null ? `${s.lining} mm` : ""].filter(Boolean).join(" · ");
+      const folTxt = s => s.folR != null || s.folL != null ? `R ${s.folR != null ? s.folR : "–"} · L ${s.folL != null ? s.folL : "–"}` : s.folTotal != null ? `${s.folTotal} follicles` : "";
+      const bit = s => [phFuDateLabel(s.date), folTxt(s), s.lining != null ? `${s.lining} mm` : ""].filter(Boolean).join(" · ");
       const sum = all.length ? [latest ? `Latest: ${bit(latest)}` : "", nextS ? `next: ${phFuDateLabel(nextS.date)}` : ""].filter(Boolean).join(" · ") : "None yet";
       return `<div class="ph-tp-scans ph-tp-scans-side" data-tp-scans="${plan.id}">
         <div class="ph-tp-cc-h"><span class="lab">Scans${all.length ? ` · ${all.length}` : ""}${pending ? ` · ${pending} to review` : ""}</span><button type="button" class="ph-tp-dx-btn" data-tp-scan-add="${plan.id}">+ Add</button></div>
@@ -81434,7 +81622,7 @@ or changing anything in Cliniko.
         <td class="dt">${esc(schedDateStr(s.date))}${review ? `<span class="ph-tp-scanpill">from her phone</span>` : ""}</td>
         ${booked
           ? `<td colspan="4" class="bk">booked · results to come${s.note ? ` · ${esc(s.note)}` : ""}</td>`
-          : `<td>${s.folR != null || s.folL != null ? `R ${s.folR != null ? s.folR : "–"} · L ${s.folL != null ? s.folL : "–"}` : "—"}</td>
+          : `<td>${s.folR != null || s.folL != null ? `R ${s.folR != null ? s.folR : "–"} · L ${s.folL != null ? s.folL : "–"}` : s.folTotal != null ? `${s.folTotal} total` : "—"}</td>
              <td>${s.sizes ? esc(s.sizes) : "—"}</td>
              <td>${s.lining != null ? `${s.lining} mm` : "—"}</td>
              <td>${bloods ? esc(bloods) : "—"}</td>`}
@@ -81466,6 +81654,7 @@ or changing anything in Cliniko.
       <div class="ph-tp-scangrid">
         <label><span>Scan date</span><input type="date" id="phTpScan_date" value="${v("date")}"></label>
         ${num("folR", "Follicles R")}${num("folL", "Follicles L")}
+        ${num("folTotal", "Follicles (combined)")}
         <label class="wide"><span>Sizes <i>mm</i></span><input type="text" id="phTpScan_sizes" value="${v("sizes")}" placeholder=""></label>
         ${num("lining", "Lining", "0.1", "mm")}
         ${PH_IVF_SCAN_BLOODS.map(b => num(b[0], b[1], "0.1", b[2])).join("")}
@@ -83720,6 +83909,12 @@ or changing anything in Cliniko.
   const presIvfLedgerOpen = new Set();
   const phIvfSeen = new Map();   // node id -> { sig, t, cls }
   let phIvfDeleteArm = null;   // null | rowId
+  // her IVF redesign 2026-10-16, item 1: which quick-log moment form is
+  // open, if any -- view state only, never saved. Not keyed per patient
+  // (switching patient while one is open is a harmless edge, same idiom as
+  // phTpScanEdit): the save handler always re-resolves its own round/
+  // transfer fresh off the CURRENT patient, never a stale reference.
+  let phIvfQuickOpen = null;   // null | "scan" | "retrieval" | "transfer" | "results"
   // her ask, weeks old, resurfaced 2026-09-28: "make these features
   // animated? show me mock" -- Option C (her pick) on the published mock,
   // build for real. Both are transient, one-shot render flags (same shape
@@ -84060,7 +84255,15 @@ or changing anything in Cliniko.
     const nTr = rows.reduce((n, r) => n + (r.transfers || []).length, 0);
     const cnt = rows.length ? `· ${rows.length} egg collection${rows.length === 1 ? "" : "s"} · ${nTr} transfer${nTr === 1 ? "" : "s"}` : "· nothing yet";
     const open = !!rec.ivfHistOpen;
+    // her IVF redesign 2026-10-16, item 1 ("quick-log by moment"): shown
+    // whenever there's at least one round to attach a quick log to, OR a
+    // moment is actually due today (which can itself start the first
+    // round) -- visible whether the fold below is open or shut, since the
+    // whole point is charting fast without having to open everything first.
+    const due = phIvfQuickDue(rec);
+    const quickBar = (rows.length || due.kind) ? phIvfQuickBarHtml(rec) : "";
     return `<div class="ph-ivf-fold">
+      ${quickBar}
       <button type="button" class="ph-ivf-foldhd" data-ivf-fold-toggle="1" aria-expanded="${open ? "true" : "false"}">
         <span class="ic">🧬</span><b>IVF history</b><span class="cnt">${cnt}</span>
         <span class="chev">${open ? "▾" : "▸"}</span>
