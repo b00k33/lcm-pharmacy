@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261016-997000">
+<meta name="lcm-build" content="20261016-998000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -12544,6 +12544,8 @@
   #pharmacyPage .ph-pulse-half { flex: 1 1 320px; min-width: 300px; }
   #pharmacyPage .ph-pulse-sidelbl { font-size: var(--fs-12-5); font-weight: 800; letter-spacing: 0.06em; color: var(--ph-green-deep); text-align: center; margin-bottom: 6px; }
   #pharmacyPage .ph-pulse-grid { display: grid; gap: 3px; }
+  /* the Cun/Guan/Chi group label above her real organ-name columns (her 2026-10-16 ask) */
+  #pharmacyPage .ph-pulse-poslbl { font-size: var(--fs-10); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--ph-herb-deep); text-align: center; padding: 2px 2px; background: var(--ph-herb-tint); border-radius: 6px 6px 0 0; }
   #pharmacyPage .ph-pulse-collbl { font-size: var(--fs-10-5); line-height: 1.15; color: var(--ph-soft); text-align: center; padding: 3px 2px; border-bottom: 1px solid var(--ph-line); }
   #pharmacyPage .ph-pulse-rowlbl { font-size: var(--fs-11-5); font-weight: 700; color: var(--ph-green-deep); display: flex; align-items: center; justify-content: flex-end; padding-right: 7px; }
   #pharmacyPage .ph-pulse-cell { font: inherit; min-height: 40px; padding: 0; border: 1px solid var(--ph-line); background: var(--ph-white); cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--ph-soft); }
@@ -37519,6 +37521,10 @@
         renderHxScreen();
         return;
       }
+      // her ask 2026-10-16 ("make a summary box for treatment notes so i can
+      // copy and paste"): a read-only box of what the chart reads, with one
+      // Copy button -- never a page rebuild for the confirmation (presSavedToast).
+      if (e.target.closest("[data-constit-pulse-copy]")) { phVisitPulseCopyNote(); return; }
       // Shen-Hammer exam on the constitution screen (her "yes" 2026-09-16):
       // the same four rules as the data-visit-hm* handlers, on
       // rec.constitPulse.hammer. Fold is view state only.
@@ -58009,6 +58015,7 @@ or changing anything in Cliniko.
           ${phVisitPulseHalfHtml("L", marks, null, refs, "data-constit-pulse-cell", "data-constit-pulse-ref")}
         </div>
         ${phVisitPulseScoresHtml(marks, null)}
+        ${phVisitPulseNoteBoxHtml(marks, refs)}
         ${phPulseKbBlockHtml(kb.grid, PH_PULSE_KB_LABEL)}
         ${phVisitHammerHtml(p.hammer, kb, "constit", presHxConstitHmOpen)}
       </div>
@@ -76733,7 +76740,10 @@ or changing anything in Cliniko.
       const bled = !!di.f && (di.isStart || !!di.bar);
       const cls = ["c", di.isStart ? "p1" : di.bar, di.fert && !di.bar && !di.isStart ? "fert" : "", di.ov && !di.bar && !di.isStart ? "ov" : "", di.pred ? "pred" : "", spill ? "spill" : "", k === todayKey ? "today" : "", k === selKey ? "sel" : "", fut ? "fut" : "", bled && estOf(di.s) ? "est" : "", fdT && k === fdT && !spill ? "fdring" : ""];
       let style = "";
-      if (paintS && di.s === paintS && bled && !spill) { cls.push("paint"); style = ` style="--pd:${(di.cd - 1) * 70}ms"`; }
+      // her 2026-10-16 ask ("make it smoother"): painting only the bleed days left every OTHER cell this
+      // cycle touches -- fertile window, ovulation, today's own CD label -- swapping in at once with no
+      // transition, right next to the days that were staggering in; the whole cycle now paints in together
+      if (paintS && di.s === paintS && !spill) { cls.push("paint"); style = ` style="--pd:${(di.cd - 1) * 70}ms"`; }
       const dots = (sg && sg.sex ? `<i></i>` : "") + (sg && sg.cm === "eggwhite" ? `<i class="cm"></i>` : "") + (sg && sg.lh === "pos" ? `<i class="lh"></i>` : "");
       const title = `${phCycLbl(k)}${real && di.cd ? ` · cycle day ${di.cd}` : ""}${di.isStart ? " · day 1" : ""}${di.pred ? " · next period, predicted" : ""}${di.ov ? " · ovulation" : ""}${di.fert && fut ? " · fertile window, predicted" : ""}${sg ? " · " + phCycleSignLabel(sg) : ""}`;
       return `<button type="button" class="${cls.filter(Boolean).join(" ")}"${style} data-cycle-day="${k}" data-cycle-strip-name="${esc(name)}"${fut ? " disabled" : ""} title="${esc(title)}" aria-label="${esc(title)}"><span class="n">${day}</span>${di.pred ? `<svg class="pdrop" aria-hidden="true" focusable="false"><use href="#i-drop"/></svg>` : real && di.cd ? `<span class="cd">CD${di.cd}</span>` : ""}${dots && !spill ? `<span class="mk dots">${dots}</span>` : ""}${!spill && phCycPmsIds(sg).length ? `<i class="pmsd${motionOk && phCycPmsPop && phCycPmsPop.day === k && Date.now() - phCycPmsPop.at < 1200 ? " in" : ""}" aria-hidden="true"></i>` : ""}</button>`;
@@ -89871,6 +89881,15 @@ or changing anything in Cliniko.
       { id: "chempoison", label: "Chemical Poisoning", w: 2, pos: "proximal" },
     ],
   };
+  // her ask 2026-10-16 ("second column is cun right and left, then guan
+  // column, chi column"): group the six MPD organ-zone columns under their
+  // classical Cun/Guan/Chi position, reading the `pos` field each zone
+  // already carries -- a 2/2/2 split per side (distal -> Cun, distal-middle
+  // + middle -> Guan, proximal -> Chi). A label drawn ABOVE her real
+  // organ-name columns, not a replacement of them -- see the Cun/Guan/Chi
+  // wheel note a few hundred lines up: that's a different, generic diagram,
+  // not this chart.
+  const PH_PULSE_POS_GROUP = { "distal": "Cun", "distal–middle": "Guan", "middle": "Guan", "proximal": "Chi" };
   // the referred-pain line printed under each half of her chart template
   // ("Neck, shoulder, Upper Back" under R; "Lower Back, hips, Knees, ankle"
   // under L) -- fixed taps, not free text
@@ -90006,9 +90025,20 @@ or changing anything in Cliniko.
   function phVisitPulseHalfHtml(side, marks, prevMarks, refs, cellAttr, refAttr) {
     const cols = PH_PULSE_CHART[side];
     const gridCols = ["44px", ...cols.map(c => c.w === 2 ? "2fr" : "1fr")].join(" ");
+    const posRow = (() => {
+      const out = []; let i = 0;
+      while (i < cols.length) {
+        const g = PH_PULSE_POS_GROUP[cols[i].pos] || cols[i].pos;
+        let j = i; while (j < cols.length && (PH_PULSE_POS_GROUP[cols[j].pos] || cols[j].pos) === g) j++;
+        out.push(`<div class="ph-pulse-poslbl" style="grid-column:span ${j - i}">${esc(g)}</div>`);
+        i = j;
+      }
+      return out.join("");
+    })();
     return `<div class="ph-pulse-half">
       <div class="ph-pulse-sidelbl">${side === "R" ? "RIGHT" : "LEFT"}</div>
       <div class="ph-pulse-grid" style="grid-template-columns:${gridCols}">
+        <div class="ph-pulse-collbl"></div>${posRow}
         <div class="ph-pulse-collbl"></div>
         ${cols.map(c => `<div class="ph-pulse-collbl">${esc(c.label)}</div>`).join("")}
         ${PH_PULSE_LEVELS.map(level => `<div class="ph-pulse-rowlbl">${esc(level.label)}</div>${cols.map(c => phVisitPulseCellHtml(side, c, level, marks, prevMarks, cellAttr)).join("")}`).join("")}
@@ -90032,6 +90062,42 @@ or changing anything in Cliniko.
       const on = PH_PULSE_REFERRED[side].filter(([id]) => refs.includes(`${side}:${id}`)).map(([, label]) => label);
       return on.length ? `${side}: ${on.join(", ")}` : "";
     }).filter(Boolean).join(" · ");
+  }
+  // the same Depth/Diameter/Amplitude line as phVisitPulseScoresHtml, plain text
+  function phVisitPulseScoresText(marks) {
+    const s = phVisitPulseScores(marks);
+    const parts = [`Depth R ${phPulseScoreFmt(s.R)} · L ${phPulseScoreFmt(s.L)}`];
+    if (s.thin) parts.push(`Diameter Thin ×${s.thin} — blood deficiency`);
+    const amp = [s.pounding ? `Pounding ×${s.pounding} — inflammation` : "", s.slight ? `Slight pounding ×${s.slight}` : "", s.weak ? `Weak ×${s.weak} — yang deficiency` : ""].filter(Boolean).join(", ");
+    if (amp) parts.push(`Amplitude ${amp}`);
+    return parts.join(" · ");
+  }
+  // her ask 2026-10-16 ("make a summary box for treatment notes so i can copy
+  // and paste"): everything the chart reads, as one block of plain text she
+  // can paste into a visit note -- reuses the same text helpers the history
+  // views already read (phVisitPulseSummaryText/phVisitPulseRefText), never a
+  // second, parallel description of the same marks.
+  function phVisitPulseNoteText(marks, refs) {
+    const lines = [phVisitPulseScoresText(marks)];
+    const sum = phVisitPulseSummaryText(marks);
+    if (sum) lines.push(sum);
+    const ref = phVisitPulseRefText(refs);
+    if (ref) lines.push(`Referred: ${ref}`);
+    return lines.join("\n");
+  }
+  function phVisitPulseNoteBoxHtml(marks, refs) {
+    if (!Object.keys(marks || {}).length) return "";
+    const text = phVisitPulseNoteText(marks, refs);
+    return `<div class="ph-intake-linkrow msg ph-pulse-note"><div class="ph-intake-linkinput ph-intake-msgout" id="phPulseNoteOut" tabindex="0" role="textbox" aria-readonly="true" aria-label="Pulse chart summary for treatment notes">${esc(text)}</div><button type="button" class="ph-load-btn on" data-constit-pulse-copy="1"><svg class="icn" aria-hidden="true"><use href="#i-copy"/></svg> Copy</button></div>`;
+  }
+  function phVisitPulseCopyNote() {
+    const box = document.getElementById("phPulseNoteOut");
+    if (!box) return;
+    const sel = window.getSelection(), rng = document.createRange();
+    rng.selectNodeContents(box); sel.removeAllRanges(); sel.addRange(rng);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(box.textContent).then(() => presSavedToast("✓ Pulse notes copied"), () => presSavedToast("⚠ Copy blocked — select the text and copy it"));
+    }
   }
   // ---- Shen-Hammer pulse exam: the sections of her own "Lotus Healing
   // Arts - Pulse Exam" form, with the quality vocabulary per section from
