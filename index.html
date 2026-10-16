@@ -8468,6 +8468,10 @@
   #pharmacyPage .ph-tpg-ctx-inner .val { display: block; font-size: var(--fs-12-5); color: var(--ph-ink); line-height: 1.4; cursor: pointer; }
   #pharmacyPage .ph-tpg-ctx-inner .val.empty { color: var(--ph-faint); font-style: italic; }
   #pharmacyPage .ph-tpg-ctx-inner .val .quiet { color: var(--ph-faint); }
+  /* her 2026-10-16 Fang Bing Ren live-formula fill: a quiet fact line under an
+     already-typed Formula value, never a repeat offer -- see phTpLiveCtxRowHtml */
+  #pharmacyPage .ph-tpg-ctx-inner .val .ph-tpg-fbrlead { display: block; margin-top: 2px; font-size: var(--fs-9); color: var(--ph-faint); cursor: default; }
+  #pharmacyPage .ph-tpg-ctx-inner .val .tab-link { margin-left: 4px; cursor: pointer; }
   #pharmacyPage .ph-tpg-ctx-foot { display: flex; justify-content: flex-end; margin-top: 8px; }
   @media (max-width: 760px) {
     #pharmacyPage .ph-tpg-ctx-inner { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 20px; }
@@ -36464,6 +36468,28 @@
         // the freeze/unlock and Rx-wipe tombstone fixes elsewhere in this
         // file. Nothing to push here: an unlink isn't a new formula link.
         if (ph) { ph.formulaId = null; ph.formulaName = ""; savePharmacy(); phTpRepaintPhasePanel(); }
+        return;
+      }
+      // Fang Bing Ren's live formula, filled into the current phase's Formula
+      // field (her 2026-10-16 ask). Fill-when-blank only -- the button itself
+      // only ever renders while ph.formulaName is empty (phTpLiveCtxRowHtml),
+      // but the check is repeated here too, same posture as every other
+      // "never silently overwrite a typed field" fill-tap in this file.
+      const tpFbrFill = e.target.closest("[data-tp-fbr-fill]");
+      if (tpFbrFill) {
+        const [planId, phaseId] = tpFbrFill.dataset.tpFbrFill.split(":");
+        const plan = phTpFindPlan(phTpScreenPatient, planId);
+        const ph = plan && plan.phases.find(p => p.id === phaseId);
+        if (ph && !(ph.formulaName || "").trim()) {
+          const lead = phTpFbrLiveLead(phPatientPeek(phTpScreenPatient), phTpScreenPatient);
+          if (lead) {
+            ph.formulaId = null; ph.formulaName = lead.name;
+            ph.formulaHistory = ph.formulaHistory || [];
+            ph.formulaHistory.push({ id: uid(), formulaId: null, formulaName: lead.name, dateKey: keyOf(TODAY), at: Date.now(), fromFbr: true });
+            if (savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL);
+            phTpPlanRepaint();
+          }
+        }
         return;
       }
       // "Design formula" (her synth22 Stage D ask, 2026-09-15, her "yes" on
@@ -72550,6 +72576,23 @@ or changing anything in Cliniko.
     return { top, second: ranked[1], hasTicks, lead: hasTicks ? top.f : PH_FORMULAS[PH_FBR_ACTIVE], agree: phFbrAgree(ranked) };
   }
   function phFbrArchName(f) { return (PH_BTJ[f.family] && PH_BTJ[f.family].n) || f.name; }
+  // Care Plan phase Formula field (her 2026-10-16 ask, "wire Fang Bing Ren's live
+  // formula into the Care Plan"): the live Fang Bing Ren top-ranked formula, read
+  // through the SAME phFbrRank/phFbrLeadOf Fang Bing Ren's own ranking already
+  // uses, so a phase can never show a different leader to the Fang Bing Ren
+  // page. Returns null while nothing is really ticked yet (hasTicks false) --
+  // never her default lead with nothing behind it, which would read as a real
+  // signal when it is just the declaration-order fallback. Fill-when-blank only
+  // -- the caller decides whether to show/act on this; never written here.
+  function phTpFbrLiveLead(rec, name) {
+    if (!rec) return null;
+    try {
+      const today = phTriToday(rec);
+      const effD = phTriEffective(rec, name, "d", today.d, today.prevD), effP = phTriEffective(rec, name, "p", today.p);
+      const lead = phFbrLeadOf(phFbrRank(rec, phTriFam(name), effD, effP));
+      return lead.hasTicks ? { id: lead.top.id, name: lead.lead.name } : null;
+    } catch (e) { return null; }
+  }
   // The one formula a badge/label should reference when only one number fits (a tap-row's "+N",
   // the side-panel tally, an inline exam-screen strip): whichever formula currently leads, or
   // PH_FBR_ACTIVE (declaration order's first) when nothing's ticked yet, so there's always a
@@ -82458,7 +82501,20 @@ or changing anything in Cliniko.
       const v = ph[f];
       return `<div><span class="lbl">${label}</span><span class="val${v ? "" : " empty"}" data-tp-edit="${plan.id}:${ph.id}:${f}" title="Click to edit">${v ? phTpCellShow(f, v) : esc(PH_TP_FIELD_PH[f])}</span></div>`;
     };
-    const formula = ph.formulaName ? esc(ph.formulaName) : ph.suggestFormula ? `${esc(ph.suggestFormula)} <i>suggested</i>` : `<span class="quiet">—</span>`;
+    // Fang Bing Ren live formula (her 2026-10-16 ask): fill-when-blank only, same
+    // pattern as phMskPlanViewHtml's "→ plan" -- never writes on render, only on
+    // an explicit tap (data-tp-fbr-fill below). Once she's typed/picked something
+    // the field is hers; the live FBR read then shows only as a quiet fact line,
+    // never a repeat offer. A live FBR signal wins over the template's own
+    // one-time suggestFormula fallback for an empty field -- it is the more
+    // clinically current of the two sources, not a second competing suggestion.
+    const fbrLead = phTpFbrLiveLead(phPatientPeek(name), name);
+    const formula = ph.formulaName
+      ? `${esc(ph.formulaName)}${fbrLead && fbrLead.name !== ph.formulaName ? `<span class="ph-tpg-fbrlead">Fang Bing Ren's current lead: ${esc(fbrLead.name)}</span>` : ""}`
+      : fbrLead
+      ? `Fang Bing Ren's formula: <b>${esc(fbrLead.name)}</b> <button type="button" class="tab-link" data-tp-fbr-fill="${plan.id}:${ph.id}" title="Fill the Formula field with Fang Bing Ren's current lead">→ Fill</button>`
+      : ph.suggestFormula ? `${esc(ph.suggestFormula)} <span class="quiet">(this plan's own default)</span>`
+      : `<span class="quiet">—</span>`;
     return `<tr class="ph-tpg-ctx"><td colspan="${colN}">
       <div class="ph-tpg-ctx-inner">
         ${fld("aim", "Aim")}
