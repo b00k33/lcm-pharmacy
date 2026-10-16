@@ -57216,7 +57216,7 @@ or changing anything in Cliniko.
     const row = (lbl, inner) => `<div class="ph-tng2-row"><i>${lbl}</i><div class="ph-ltr-quals ph-visit-quals">${inner}</div></div>`;
     const sep = `<span class="ph-tng2-sep"></span>`;
     const seg = inner => `<div class="ph-tng2-seg">${inner}</div>`;
-    const colour = seg(PH_TNG_COLOURS.map(([k, l, hex]) => chip("colour", k, l, t.colour === k, `<i style="background:${hex}"></i>`)).join(""));
+    const colour = seg(PH_TNG_COLOURS.map(([k, l, hex]) => chip("colour", k, l, t.colour === k || t.colourMore.includes(k), `<i style="background:${hex}"></i>`)).join(""));
     const shapeMoist = seg(PH_TNG_SHAPES.map(k => chip("shape", k, k, t.shape.includes(k))).join("") + PH_TNG_SHAPE_MARKS.map(([k, l]) => chip("marks", k, l, !!t.marks[k])).join("")) + sep + seg(PH_TNG_MOIST.map(k => chip("moist", k, k, t.moist === k)).join(""));
     const coat = seg(PH_TNG_COAT_THICK.map(k => chip("coatThick", k, k, t.coatThick === k)).join("")) + sep + seg(PH_TNG_COAT_COLOUR.map(([k, hex]) => chip("coatColour", k, k, t.coatColour === k, `<i style="background:${hex}"></i>`)).join(""));
     const under = seg(PH_TNG_UNDER.map(([k, l]) => chip("under", k, l, t.under === k)).join(""));
@@ -66482,12 +66482,13 @@ or changing anything in Cliniko.
     if (visitT) {
       const t = phTng2Read(rec.visitFnd[visitT.id].tng), w = [];
       if (t.colour) w.push(t.colour);
+      (t.colourMore || []).forEach(v => w.push(v));
       Object.keys(t.colourAt || {}).forEach(k => w.push(t.colourAt[k]));
       (t.shape || []).forEach(x => w.push(x));
       if (t.coatThick) w.push(t.coatThick + " coat");
       if (t.coatColour) w.push(t.coatColour + " coat");
       Object.keys(t.coatQual || {}).forEach(k => w.push(k));
-      Object.keys(t.marks || {}).forEach(k => w.push(k === "reddots" ? "red dot" : k === "crackH" ? "crack" : k));
+      Object.keys(t.marks || {}).forEach(k => w.push(k === "reddots" ? "red dot" : k === "crackH" || k === "crackC" ? "crack" : k));
       if (t.under === "dark" || t.under === "distended") w.push("distended");
       flagFrom(lowerList(w), "visit", phCycShortLbl(visitT.date || todayKey));
     }
@@ -71929,6 +71930,7 @@ or changing anything in Cliniko.
   function phFbrTng2Words(tng) {
     const t = phTng2Read(tng), out = [];
     if (t.colour) out.push(t.colour.toLowerCase());
+    (t.colourMore || []).forEach(v => { if (v) out.push(String(v).toLowerCase()); });
     Object.values(t.colourAt).forEach(v => { if (v) out.push(String(v).toLowerCase()); });
     (t.shape || []).forEach(w => out.push(String(w).toLowerCase()));
     if (t.thickness) out.push(t.thickness.toLowerCase());
@@ -91117,7 +91119,10 @@ or changing anything in Cliniko.
   // tng on the visit's findings beside the older regions/overlays keys,
   // which are read once (phTng2Read) so older visits still draw. ====
   const PH_TNG_REGIONS = [["tip", "Tip", "Heart · Lung"], ["mid", "Centre", "Spleen · Stomach"], ["L", "Left side", "Liver · Gallbladder"], ["R", "Right side", "Liver · Gallbladder"], ["root", "Root", "Kidney · Bladder · Intestines"]];
-  const PH_TNG_COLOURS = [["pale", "pale", "#FBEEF1"], ["pink", "pink", "#F0A6B0"], ["red", "red", "#D9534F"], ["crimson", "crimson", "#8B1E2F"], ["dusky", "dusky", "#B98A9A"], ["purple", "purple", "#7B5EA7"]];
+  // "blue" added 2026-10-16 (her ask, "add purple and blue as colour options" -- purple already existed since the original chart build, 8f7e177).
+  // Left OFF PH_TNG_FBR_MAP/PH_FBR_CHART_PREFILL on purpose: the existing tongue_purple sign reads "Tongue: dark or purple", not "blue" -- wiring
+  // a blue tick to it would be inventing a clinical association she hasn't confirmed, not reusing an existing one. Disclosed gap, hers to extend.
+  const PH_TNG_COLOURS = [["pale", "pale", "#FBEEF1"], ["pink", "pink", "#F0A6B0"], ["red", "red", "#D9534F"], ["crimson", "crimson", "#8B1E2F"], ["dusky", "dusky", "#B98A9A"], ["purple", "purple", "#7B5EA7"], ["blue", "blue", "#5C7CBB"]];
   const PH_TNG_SHAPES = ["swollen", "stiff", "flaccid", "trembling", "long", "short", "tender", "soft", "v-shaped"];
   const PH_TNG_THICK = [["thin", "thin"], ["normal", "normal"], ["thick", "thick"]];
   const PH_TNG_DEVIATION = [["L", "to the left"], ["R", "to the right"]];
@@ -91126,24 +91131,38 @@ or changing anything in Cliniko.
   const PH_TNG_COAT_THICK = ["none", "thin", "thick"];
   const PH_TNG_COAT_COLOUR = [["white", "#FFFFFF"], ["yellow", "#F3E19A"], ["grey", "#BDBDBD"], ["black", "#5B5B5B"]];
   const PH_TNG_COAT_QUAL = [["greasy", "greasy"], ["dry", "dry"], ["peeled", "peeled"], ["rootless", "rootless"]];
-  const PH_TNG_MARKS = [["crack", "cracks"], ["crackH", "horizontal cracks"], ["teeth", "teeth marks"], ["reddots", "red dots"], ["purple", "purple spots"], ["patch", "patches"], ["twolines", "two lines"]];
+  // "centre crack" added 2026-10-16 (her ask): same pattern as the other crack-type entries -- a plain mark with no Fang Bing Ren wiring (crack/crackH have none either).
+  const PH_TNG_MARKS = [["crack", "cracks"], ["crackH", "horizontal cracks"], ["crackC", "centre crack"], ["teeth", "teeth marks"], ["reddots", "red dots"], ["purple", "purple spots"], ["patch", "patches"], ["twolines", "two lines"]];
   const PH_TNG_UNDER = [["normal", "veins normal"], ["dark", "dark"], ["distended", "distended"]];
   const PH_TNG_REGION_LABEL = k => (PH_TNG_REGIONS.find(r => r[0] === k) || [k, k])[1];
-  const phTng2Blank = () => ({ colour: "", colourAt: {}, shape: [], thickness: "", thickAt: {}, deviation: "", moist: "", coatThick: "", coatColour: "", coatQual: {}, marks: {}, under: "", regions: [], overlays: [] });
+  const phTng2Blank = () => ({ colour: "", colourMore: [], colourAt: {}, shape: [], thickness: "", thickAt: {}, deviation: "", moist: "", coatThick: "", coatColour: "", coatQual: {}, marks: {}, under: "", regions: [], overlays: [] });
   // the plain chip taps (no region): ONE place for what a tap on each chip does, used by the Tongue page / visit log AND the photo viewer's analysis panel.
   // shape is a list; coatQual and marks are keyed lists (a tap turns the key on as "everywhere" or off); the rest are single choices that a second tap clears.
+  // colour is now multi too (her 2026-10-16 "allow multi-select on colour/shape/coat rows" -- shape already was): `colour` stays the PRIMARY pick, exactly the
+  // same bare string every existing reader (the chart SVG body colour, the "Reads as" summary, the two Fang Bing Ren chart-word readers) already expects --
+  // never migrated, never dropped. `colourMore[]` holds any FURTHER colours ticked, the same "base + more[]" shape the Pulse chart's own multi-quality cells
+  // use (her 2026-10-13 "several qualities in one cell" build). Shape/coat were left as they already were: shape is already a list; Coat thickness/colour are
+  // single-pick still, a disclosed, deliberate scope cut (her 2026-10-16 ask named "colour/shape/coat" generically but the two already drawn distinctly in
+  // the chart SVG -- colour and shape -- are the safer, smaller surface; Coat stays single-pick until she asks to widen it).
   const PH_TNG2_PLAIN = ["colour", "shape", "thickness", "deviation", "moist", "coatThick", "coatColour", "coatQual", "marks", "under"];
   function phTng2Toggle(t, attr, val) {
     if (attr === "shape") t.shape = t.shape.includes(val) ? t.shape.filter(x => x !== val) : t.shape.concat(val);
     else if (attr === "coatQual" || attr === "marks") { if (t[attr][val]) delete t[attr][val]; else t[attr][val] = []; }
+    else if (attr === "colour") {
+      if (!Array.isArray(t.colourMore)) t.colourMore = [];
+      if (t.colour === val) t.colour = t.colourMore.shift() || "";             // untick the primary -- promote the next one ticked, if any
+      else { const i = t.colourMore.indexOf(val); if (i > -1) t.colourMore.splice(i, 1); else if (!t.colour) t.colour = val; else t.colourMore.push(val); }
+    }
     else t[attr] = t[attr] === val ? "" : val;
   }
   // the visit's tng, normalised; an older visit's regions/overlays are read
   // into the new shape once, so a chart she filled last month still draws
   function phTng2Read(tng) {
     const t = Object.assign(phTng2Blank(), tng && typeof tng === "object" ? tng : {});
-    ["shape", "regions", "overlays"].forEach(k => { if (!Array.isArray(t[k])) t[k] = []; });
+    ["shape", "regions", "overlays", "colourMore"].forEach(k => { if (!Array.isArray(t[k])) t[k] = []; });
     ["colourAt", "coatQual", "marks", "thickAt"].forEach(k => { if (!t[k] || typeof t[k] !== "object") t[k] = {}; });
+    // guard against a stray duplicate of the primary, or a bad write, ever showing the same colour ticked twice
+    t.colourMore = Array.from(new Set(t.colourMore.filter(v => v && v !== t.colour)));
     // a chart marked before Thickness / Deviation were rows: "thin" was a shape
     if (t.shape.includes("thin") && !t.thickness) { t.thickness = "thin"; t.shape = t.shape.filter(x => x !== "thin"); }
     if (!t.v2 && t.overlays.length) {
@@ -91159,7 +91178,7 @@ or changing anything in Cliniko.
   }
   function phTng2Empty(t) {
     const r = phTng2Read(t);
-    return !r.colour && !Object.keys(r.colourAt).length && !r.shape.length && !r.thickness && !Object.keys(r.thickAt).length && !r.deviation && !r.moist && !r.coatThick && !r.coatColour
+    return !r.colour && !r.colourMore.length && !Object.keys(r.colourAt).length && !r.shape.length && !r.thickness && !Object.keys(r.thickAt).length && !r.deviation && !r.moist && !r.coatThick && !r.coatColour
       && !Object.keys(r.coatQual).length && !Object.keys(r.marks).length && !r.under;
   }
   // the drawing: five tappable regions under a painted tongue
@@ -91193,6 +91212,8 @@ or changing anything in Cliniko.
     // her note 2026-09-20 ("tongue cracks can be horizontal too"): short cracks across the region
     const crackHAt = { root: "M38,30 L62,30 M40,40 L60,40", mid: "M36,66 L64,66 M38,80 L62,80", tip: "M40,106 L60,106 M42,120 L58,120", L: "M17,62 L25,62 M18,80 L26,80", R: "M75,62 L83,62 M74,80 L82,80" };
     const cracksH = (t.marks.crackH || []).map(k => crackHAt[k] ? `<path d="${crackHAt[k]}" class="ph-tng2-mark" pointer-events="none"/>` : "").join("");
+    // centre crack: a single crack straight down the middle, not per-region (same fixed-drawing shape as twolines below)
+    const crackC = (t.marks.crackC || []).length ? `<path d="M50,22 L50,130" class="ph-tng2-mark" pointer-events="none"/>` : "";
     const twolines = (t.marks.twolines || []).length ? `<path d="M42,55 L42,95 M58,55 L58,95" class="ph-tng2-mark" pointer-events="none"/>` : "";
     // teeth marks: scallops bitten into the edge itself, following the outline down to the tip
     const teethEdge = [[15.2, 24, 0], [15.8, 38, 0], [16.4, 52, 0], [17, 66, 0], [17.6, 80, 0], [18.4, 94, 4], [20.6, 108, 15], [25, 120, 26]];
@@ -91211,7 +91232,7 @@ or changing anything in Cliniko.
     // deviation: the whole drawing leans toward the side she names
     const lean = t.deviation === "L" ? ` transform="translate(10,0) skewX(-8)"` : t.deviation === "R" ? ` transform="translate(-10,0) skewX(8)"` : "";
     const ro = opts && opts.ro;
-    return `<svg viewBox="0 0 100 150" class="ph-tng2-svg${ro ? " ro" : ""}" role="img" aria-label="Tongue chart"><g${lean}>${zone("root")}${zone("mid")}${zone("tip")}${zone("L")}${zone("R")}${coat}${peeled}${greasyDots}${patch}${cracks}${cracksH}${twolines}${reddots}${purple}${thickRings}${outline}${bulges}${teeth}</g></svg>`;
+    return `<svg viewBox="0 0 100 150" class="ph-tng2-svg${ro ? " ro" : ""}" role="img" aria-label="Tongue chart"><g${lean}>${zone("root")}${zone("mid")}${zone("tip")}${zone("L")}${zone("R")}${coat}${peeled}${greasyDots}${patch}${cracks}${cracksH}${crackC}${twolines}${reddots}${purple}${thickRings}${outline}${bulges}${teeth}</g></svg>`;
   }
   // one sentence: "pale, swollen, teeth marks both sides · thin white coat,
   // greasy at root · crack in the centre · red tip · veins dark"
@@ -91220,7 +91241,7 @@ or changing anything in Cliniko.
     const where = list => { if (!list || !list.length) return ""; const s = list.slice().sort(); if (s.join() === "L,R") return " both sides"; return " " + s.map(k => k === "mid" ? "in the centre" : k === "tip" ? "at the tip" : k === "root" ? "at the root" : k === "L" ? "left side" : "right side").join(", "); };
     const bits = [];
     const regName = k => k === "mid" ? "centre" : k === "L" ? "left side" : k === "R" ? "right side" : k;
-    const bodyBits = [t.colour, t.thickness && t.thickness !== "normal" ? t.thickness : "", ...t.shape.filter(s => s !== "deviated"), t.moist].filter(Boolean);
+    const bodyBits = [t.colour, ...(t.colourMore || []), t.thickness && t.thickness !== "normal" ? t.thickness : "", ...t.shape.filter(s => s !== "deviated"), t.moist].filter(Boolean);
     Object.keys(t.thickAt).forEach(k => { if (t.thickAt[k] && t.thickAt[k] !== "normal") bodyBits.push(`${t.thickAt[k]} ${regName(k)}`); });
     if (t.deviation) bodyBits.push(`deviated ${t.deviation === "L" ? "to the left" : "to the right"}`); else if (t.shape.includes("deviated")) bodyBits.push("deviated");
     if (t.marks.bulge) bodyBits.push(`bulging${where(t.marks.bulge)}`);
@@ -91513,7 +91534,7 @@ or changing anything in Cliniko.
       return `<span class="ph-tng-chipwrap">${btn}${badge}</span>`;
     };
     const seg2 = inner => `<div class="ph-tng2-seg">${inner}</div>`;
-    const colourRow = seg2(PH_TNG_COLOURS.map(([k, l, hex]) => chip("colour", k, l, t.colour === k, `<i style="background:${hex}"></i>`)).join(""));
+    const colourRow = seg2(PH_TNG_COLOURS.map(([k, l, hex]) => chip("colour", k, l, t.colour === k || t.colourMore.includes(k), `<i style="background:${hex}"></i>`)).join(""));
     // an older visit may still carry a per-region colour/thickness tag from
     // before the diagram was retired (her ask 2026-10-09, moved to the Guide
     // as a demo model) -- shown read-only so that history isn't hidden, with
