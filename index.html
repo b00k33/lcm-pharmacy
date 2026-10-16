@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261016-1010000">
+<meta name="lcm-build" content="20261016-1012000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -12002,7 +12002,12 @@
      base rule's one regardless of source order, so margin/layout below
      always win here. */
   #pharmacyPage .ph-ivf-trow.standalone { flex-direction: column; align-items: flex-start; gap: 8px; margin: 0; }
-  #pharmacyPage .ph-ivf-tfrom { font-size: var(--fs-11-5); color: var(--ph-soft); }
+  #pharmacyPage .ph-ivf-tfrom { font-size: var(--fs-11-5); color: var(--ph-soft); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  /* her IVF redesign 2026-10-16: the "+ Transfer" button's guessed-round
+     flag and one-tap change-round select, on the one line that already
+     says which round a transfer is from. */
+  #pharmacyPage .ph-pill.auto { background: var(--ph-gold-tint); color: var(--ph-gold-deep, #7A5A10); font-size: var(--fs-9-5); font-weight: 800; border-radius: 999px; padding: 2px 8px; }
+  #pharmacyPage .ph-ivf-roundpick { font-size: var(--fs-11-5); border: 1px solid var(--ph-gold); border-radius: 6px; padding: 3px 6px; background: var(--ph-white); color: var(--ph-gold-deep, #7A5A10); }
   #pharmacyPage .ph-ivf-tfields { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; width: 100%; }
   /* pregnancy test mini-section (her ask, weeks ago, off Sylvia Lai's IVF
      plan screenshot) -- a second row inside the same standalone card, set
@@ -35521,8 +35526,20 @@
         return;
       }
       // ==== IVF history (her ask 2026-09-13) ==================================
+      // her IVF redesign 2026-10-16 ("remember it's open across visits"):
+      // this used to be a plain session-only toggle (presIvfHistOpen), reset
+      // to closed on every fresh load -- exactly the "collapses shut every
+      // time you leave and come back" she described. It's now a durable
+      // per-patient preference on the record itself; once she opens it, it
+      // stays open on this patient from then on, across any number of
+      // reloads, until she explicitly closes it again.
       const ivfFoldToggle = e.target.closest("[data-ivf-fold-toggle]");
-      if (ivfFoldToggle) { presIvfHistOpen = !presIvfHistOpen; phCycleRerender(); return; }
+      if (ivfFoldToggle) {
+        const rec = phCycleTargetRec();
+        if (rec) { rec.ivfHistOpen = !rec.ivfHistOpen; savePharmacy(); }
+        phCycleRerender();
+        return;
+      }
       // ==== Protocol switch, clinic scans (her ask 2026-09-19; the old ✎
       // Edit plan toggle this section was built around is gone -- her ask
       // 2026-09-22, "make the edit plan removed and allow direct editing")
@@ -35720,11 +35737,28 @@
       }
       // phone: one round open at a time (her answer 7) -- opening one closes
       // the rest, so the stacked list never grows into a wall of forms.
-      const ivfPhoneSolo = id => { if (window.innerWidth <= 640) presIvfOpenRows.clear(); presIvfOpenRows.add(id); };
+      //
+      // her IVF redesign 2026-10-16 ("an active round should stay open
+      // across visits"): this now reads/writes rec.ivfOpenIds, a durable
+      // per-patient array, instead of the old session-only Set -- every
+      // caller below still just calls ivfPhoneSolo(id), so a fresh load
+      // tomorrow opens exactly what was open today.
+      const ivfPhoneSolo = id => {
+        const rec = phCycleTargetRec();
+        if (!rec) return;
+        if (window.innerWidth <= 640) rec.ivfOpenIds = [id];
+        else { rec.ivfOpenIds = rec.ivfOpenIds || []; if (!rec.ivfOpenIds.includes(id)) rec.ivfOpenIds.push(id); }
+      };
       const ivfRowToggle = e.target.closest("[data-ivf-row-toggle]");
       if (ivfRowToggle) {
         const id = ivfRowToggle.dataset.ivfRowToggle;
-        if (presIvfOpenRows.has(id)) presIvfOpenRows.delete(id); else ivfPhoneSolo(id);
+        const rec = phCycleTargetRec();
+        if (rec) {
+          rec.ivfOpenIds = rec.ivfOpenIds || [];
+          if (rec.ivfOpenIds.includes(id)) rec.ivfOpenIds = rec.ivfOpenIds.filter(x => x !== id);
+          else ivfPhoneSolo(id);
+          savePharmacy();
+        }
         phCycleRerender();
         return;
       }
@@ -35733,6 +35767,7 @@
       const ivfBankOpen = e.target.closest("[data-ivf-bank-open]");
       if (ivfBankOpen) {
         ivfPhoneSolo(ivfBankOpen.dataset.ivfBankOpen);
+        savePharmacy();
         phCycleRerender();
         return;
       }
@@ -35766,6 +35801,12 @@
         if (live) {
           live.transfers = live.transfers || [];
           const t = { id: uid(), date: "", type: withFrozen.length ? "frozen" : "fresh", prep: "", embryoDay: "", count: 1, outcome: "awaiting", note: "", fromPlan: false };
+          // her IVF redesign 2026-10-16 ("show which round it picked, let me
+          // override it"): this button silently guessed a round before --
+          // flagged only when there was genuinely more than one round to
+          // guess between (a single-round patient has nothing to pick), so
+          // phIvfTransferDetailHtml shows the pick and a change-round select.
+          if (all.length > 1) t.autoRound = true;
           live.transfers.push(t);
           ivfPhoneSolo(t.id);
           if (savePharmacy() === false) { phFlashShow("That could not be saved — check the warning at the top and try again"); return; }
@@ -35839,7 +35880,8 @@
           // the new transfer now lives in its own table (her 2026-09-25
           // "2 tables" ask) -- open its chip too, same as a new egg
           // collection already auto-opens, so it's not lost in the list.
-          presIvfOpenRows.add(t.id);
+          rec.ivfOpenIds = rec.ivfOpenIds || [];
+          rec.ivfOpenIds.push(t.id);
           savePharmacy();
         }
         phCycleRerender();
@@ -42513,6 +42555,35 @@
         phCycleRerender();
         return;
       }
+      // her IVF redesign 2026-10-16: the change-round select on a transfer
+      // the "+ Transfer" button guessed between several rounds (t.autoRound).
+      // Picking a different round RE-PARENTS the same transfer object (moves
+      // it out of row.transfers and into the target's) -- every other field
+      // on it is untouched by the move. Picking the blank "keep it" option
+      // just clears the flag with no data change. Either choice clears
+      // autoRound, since she has now explicitly looked at the pick.
+      const ivfRoundPick = e.target.closest("[data-ivf-round-pick]");
+      if (ivfRoundPick) {
+        const [rowId, tid] = ivfRoundPick.dataset.ivfRoundPick.split(":");
+        const rec = phCycleTargetRec();
+        const row = rec && phIvfCycles(rec).find(r => r.id === rowId);
+        const tr = row && (row.transfers || []).find(x => x.id === tid);
+        if (tr) {
+          const targetId = ivfRoundPick.value;
+          if (targetId) {
+            const target = phIvfCycles(rec).find(r => r.id === targetId);
+            if (target) {
+              row.transfers = (row.transfers || []).filter(x => x.id !== tid);
+              target.transfers = target.transfers || [];
+              target.transfers.push(tr);
+            }
+          }
+          delete tr.autoRound;
+          if (savePharmacy() === false) { phFlashShow("That could not be saved — check the warning at the top and try again"); return; }
+        }
+        phCycleRerender();
+        return;
+      }
       // a transfer row's own fields, same pattern
       const ivfTField = e.target.closest("[data-ivf-tfield]");
       if (ivfTField) {
@@ -42534,17 +42605,26 @@
           if (raw && !(yr >= 1900 && yr <= 2100)) return;   // still typing
           tr.pregTestDate = raw;
         }
-        else if (["type", "prep", "embryoDay", "outcome", "note", "pregResult", "pregKind"].includes(f)) tr[f] = ivfTField.value;
+        // her IVF redesign 2026-10-16: outcome is now the ONE place that
+        // decides whether a pregnancy test happened -- pregResult is derived
+        // from it (PH_IVF_OUTCOME_PREG), never picked on its own any more
+        // (phIvfPregTestHtml's old "hCG test — not yet/negative/positive"
+        // select is gone). A non-destructive change: the derived value only
+        // ever overwrites pregResult when outcome itself changes, so an
+        // older record's own pregResult still displays correctly until she
+        // touches outcome again.
+        else if (f === "outcome") { tr.outcome = ivfTField.value; tr.pregResult = PH_IVF_OUTCOME_PREG[tr.outcome] || ""; }
+        else if (["type", "prep", "embryoDay", "note", "pregKind"].includes(f)) tr[f] = ivfTField.value;
         // reveal: any "" -> a result (negative or positive) fades the
         // date/hCG fields in once, the moment they first appear.
-        if (f === "pregResult" && tr.pregResult && !prevPregResult) phIvfPregRevealTid = tr.id;
+        if (f === "outcome" && tr.pregResult && !prevPregResult) phIvfPregRevealTid = tr.id;
         // "allow to log positive hcg... and add a post positive hcg
         // phase/first trimester" (her ask, weeks ago) -- a genuine transition
         // into positive advances the plan's early-pregnancy phase, the same
         // "milestone dates DRIVE the phases" rule decision 13 already uses.
         // Re-saving while it stays positive must never re-cascade or
         // re-stamp the date a second time -- gated on the transition itself.
-        const justWentPositive = f === "pregResult" && tr.pregResult === "positive" && prevPregResult !== "positive";
+        const justWentPositive = f === "outcome" && tr.pregResult === "positive" && prevPregResult !== "positive";
         if (justWentPositive) { phIvfPregPositiveCascade(rec); phIvfPregCascadeTid = tr.id; }
         if (savePharmacy() === false) { phFlashShow("That could not be saved — check the warning at the top and try again"); return; }
         phCycleRerender();
@@ -61752,6 +61832,22 @@ or changing anything in Cliniko.
     ["miscarriage", "Miscarriage"], ["ectopic", "Ectopic"], ["ongoing", "Pregnant — ongoing"],
     ["livebirth", "Live birth"], ["cancelled", "Cancelled / no transfer"], ["failedthaw", "Failed thaw"],
   ];
+  // her IVF redesign 2026-10-16 ("merge the two outcome mechanisms into one
+  // place"): the 9-word Outcome picker was never linked to the separate
+  // hCG test mini-form (t.pregResult/pregKind/pregTestDate/pregHcg), so the
+  // two could disagree. The hCG fields are now DERIVED from the one Outcome
+  // pick, never chosen separately -- awaiting/cancelled/failed-thaw mean no
+  // test ever happened (no fields show); negative means a negative test was
+  // done; every outcome that implies a positive test at some point
+  // (biochemical/miscarriage/ectopic/ongoing/livebirth -- all of them follow
+  // a positive beta hCG, even the ones that later failed) derives "positive",
+  // which is the exact value every existing downstream reader already keys
+  // off (the Early Pregnancy cascade, the partner-timeline positive-test
+  // read, the gestational-age estimate) -- nothing downstream changes.
+  const PH_IVF_OUTCOME_PREG = {
+    awaiting: "", negative: "negative", biochemical: "positive", miscarriage: "positive",
+    ectopic: "positive", ongoing: "positive", livebirth: "positive", cancelled: "", failedthaw: "",
+  };
   const phIvfCycles = rec => (rec && Array.isArray(rec.ivfCycles)) ? rec.ivfCycles : [];
   // her card 6 ("either -- month or exact") means the same history mixes
   // ISO dates (from the plan's own date input) with free text she typed
@@ -83584,7 +83680,12 @@ or changing anything in Cliniko.
   // IVF history (her ask 2026-09-13): one fold state shared by both doors
   // (Assessment Cycle row + Treatment stage), never two copies of the open
   // state any more than of the rows themselves.
-  let presIvfHistOpen = false;
+  //
+  // her IVF redesign 2026-10-16 ("remember it's open across visits"): the
+  // fold's own open/closed state moved onto rec.ivfHistOpen (a durable
+  // per-patient preference, see the data-ivf-fold-toggle click handler) --
+  // there is no session-only presIvfHistOpen any more.
+  //
   // (2026-09-18's collapsed "Diagnosis & strategy" fold -- presTpStrategyOpen
   // -- is gone: her 2026-09-19 answer is "show diagnosis and goal always,
   // one line under the plan title", see phTpFocusGoalHtml.)
@@ -83592,12 +83693,18 @@ or changing anything in Cliniko.
   // transfer... minimal display with expandable option"): collections and
   // transfers are now two separate chip strips, collapsed by default on
   // EVERY width, not just phone -- a transfer's own id lives in the same
-  // Set as a collection row's id (uid()s are unique app-wide), so the one
+  // list as a collection row's id (uid()s are unique app-wide), so the one
   // generic data-ivf-row-toggle handler already opens/closes either kind.
-  const presIvfOpenRows = new Set();   // row/transfer ids expanded, either kind
+  //
+  // her IVF redesign 2026-10-16 ("an active round should stay open across
+  // visits too"): which rows are expanded is now rec.ivfOpenIds -- a durable
+  // per-patient array, read directly off phPatientPeek in phIvfJourneyHtml,
+  // written by ivfPhoneSolo and every data-ivf-row-toggle/-bank-open/-use/
+  // -add-* branch below. There is no session-only Set for this any more.
   // the Journey's optional per-round room ("Stim, scans & embryo notes")
-  // and its embryo ledger fold -- view state only, never saved, same as
-  // presIvfOpenRows. phIvfSeen remembers what each node last showed so
+  // and its embryo ledger fold -- view state only, never saved (unlike
+  // rec.ivfOpenIds above, she hasn't asked for these to persist). phIvfSeen
+  // remembers what each node last showed so
   // motion plays only on a NEW or CHANGED node (cleared in presOpenScript).
   const presIvfRoomOpen = new Set();
   const presIvfLedgerOpen = new Set();
@@ -83925,9 +84032,13 @@ or changing anything in Cliniko.
   /* ==== IVF HISTORY rendering (her ask 2026-09-13) =========================
      Two doors, one record: presAssessSections (Assessment, its own tab) and
      presTpInlineEditorHtml (Treatment) both call phIvfHistoryFoldHtml with
-     the same patient name and read presIvfHistOpen/presIvfOpenRows --
-     there is no second copy of the fold's own state, only the two places
-     it's invited to render. */
+     the same patient name and read rec.ivfHistOpen/rec.ivfOpenIds -- there
+     is no second copy of the fold's own state, only the two places it's
+     invited to render.
+     her IVF redesign 2026-10-16 ("remember it's open across visits"): both
+     are now durable per-patient fields instead of session-only globals, so
+     a fold or round she's opened stays open on THIS patient across any
+     number of reloads, not just for the rest of today's session. */
   function phIvfHistoryFoldHtml(name) {
     const rec = phPatientPeek(name);
     const rows = phIvfCyclesSorted(rec);
@@ -83938,12 +84049,13 @@ or changing anything in Cliniko.
     if (!rows.length && !hasPlan && !phIsFemale(rec)) return "";
     const nTr = rows.reduce((n, r) => n + (r.transfers || []).length, 0);
     const cnt = rows.length ? `· ${rows.length} egg collection${rows.length === 1 ? "" : "s"} · ${nTr} transfer${nTr === 1 ? "" : "s"}` : "· nothing yet";
+    const open = !!rec.ivfHistOpen;
     return `<div class="ph-ivf-fold">
-      <button type="button" class="ph-ivf-foldhd" data-ivf-fold-toggle="1" aria-expanded="${presIvfHistOpen ? "true" : "false"}">
+      <button type="button" class="ph-ivf-foldhd" data-ivf-fold-toggle="1" aria-expanded="${open ? "true" : "false"}">
         <span class="ic">🧬</span><b>IVF history</b><span class="cnt">${cnt}</span>
-        <span class="chev">${presIvfHistOpen ? "▾" : "▸"}</span>
+        <span class="chev">${open ? "▾" : "▸"}</span>
       </button>
-      ${presIvfHistOpen ? phIvfHistoryBodyHtml(rows) : ""}
+      ${open ? phIvfHistoryBodyHtml(rec, rows) : ""}
     </div>`;
   }
   // her ask 2026-09-25: 2 tables, not one merged list -- egg collections/
@@ -83952,7 +84064,7 @@ or changing anything in Cliniko.
   // "+ transfer from these eggs" (it has no meaning without one), but every
   // transfer across every round shows here, flattened and date-sorted, so
   // she never has to open a specific round to find or edit one.
-  function phIvfHistoryBodyHtml(rows) {
+  function phIvfHistoryBodyHtml(rec, rows) {
     const addBtn = `<button type="button" class="ph-ivf-addbtn" data-ivf-add-collection="1">+ Egg collection</button>`;
     if (!rows.length) return `<div class="ph-ivf-body"><div class="ph-hx-constit-note">Nothing logged yet.</div>${addBtn}</div>`;
     // her redesign 2026-10-02 ("A Journey"): one timeline, collections and
@@ -83961,7 +84073,7 @@ or changing anything in Cliniko.
     // button sits beside "+ Egg collection"; Use ▸ on a frozen tile in the
     // bank opens a linked frozen transfer from that round.
     const addTr = `<button type="button" class="ph-ivf-addbtn" data-ivf-add-transfer-any="1">+ Transfer</button>`;
-    return `<div class="ph-ivf-body">${phIvfFrozenBankHtml(rows)}${phIvfJourneyHtml(rows)}<div class="ph-ivfj-adds">${addBtn}${addTr}</div></div>`;
+    return `<div class="ph-ivf-body">${phIvfFrozenBankHtml(rows)}${phIvfJourneyHtml(rec, rows)}<div class="ph-ivfj-adds">${addBtn}${addTr}</div></div>`;
   }
   // a node remembers its last look so motion plays only for a new node (it
   // rises) or one whose numbers changed (it nudges) -- never on a plain
@@ -83998,7 +84110,8 @@ or changing anything in Cliniko.
     }
     return bits.join(" → ");
   }
-  function phIvfJourneyHtml(rows) {
+  function phIvfJourneyHtml(rec, rows) {
+    const openIds = (rec && rec.ivfOpenIds) || [];
     const nodes = [];
     rows.forEach(r => {
       nodes.push({ k: "c", r, key: phIvfSortKey(r.when), o: 0 });
@@ -84007,7 +84120,7 @@ or changing anything in Cliniko.
     nodes.sort((a, b) => a.key.localeCompare(b.key) || a.o - b.o);
     const items = nodes.map(n => {
       const r = n.r, id = n.k === "c" ? r.id : n.t.id;
-      const open = presIvfOpenRows.has(id);
+      const open = openIds.includes(id);
       const undated = n.key === "9999-99-99";
       if (n.k === "c") {
         const live = phIvfIsLiveLink(r);
@@ -84057,7 +84170,7 @@ or changing anything in Cliniko.
   // them up into a running total -- nothing did this across rounds
   // before, she had to open every card and add it up herself. Tapping a
   // row OPENS (never toggles closed) that round's own detail card via
-  // data-ivf-bank-open, the same presIvfOpenRows a chip tap already
+  // data-ivf-bank-open, the same rec.ivfOpenIds a chip tap already
   // uses -- reuses the existing open mechanism, not a second one.
   function phIvfFrozenBankHtml(rows) {
     const withFrozen = rows.filter(r => r.frozen != null);
@@ -84129,7 +84242,7 @@ or changing anything in Cliniko.
     return !!plan && (plan.ivfRoundSeq || 0) === (r.linkedRound || 0);
   }
   // the full funnel editor -- shown for every chip currently in
-  // presIvfOpenRows, in a strip below the whole chip row (never inline
+  // rec.ivfOpenIds, in a strip below the whole chip row (never inline
   // under its own chip, so the chips themselves never move as she opens
   // and closes others -- her pick, mock 3).
   // an egg collection's own date -- Year/Month pickers + a "time unknown"
@@ -84206,6 +84319,14 @@ or changing anything in Cliniko.
   // Year/Month-only convention: unlike a retrieval/transfer date, a
   // pregnancy test's own date is realistically always known exactly, and
   // day precision is what phIvfGestAgeHtml needs to mean anything.
+  //
+  // her IVF redesign 2026-10-16 ("merge outcome tracking into one place"):
+  // this used to carry its OWN "hCG test — not yet/negative/positive"
+  // select, completely unlinked from the Outcome picker beside it -- the two
+  // could show different things for the same transfer. The select is gone;
+  // pr is now purely DERIVED from t.outcome (PH_IVF_OUTCOME_PREG, set in the
+  // data-ivf-tfield change handler), so there is only one place she ever
+  // picks a result. This function only ever decides what to show for it.
   function phIvfPregTestHtml(row, t) {
     const pr = t.pregResult || "";
     // one-time render flags, consumed the moment they're read (the
@@ -84215,12 +84336,7 @@ or changing anything in Cliniko.
     const cascade = phIvfPregCascadeTid === t.id;
     if (phIvfPregRevealTid === t.id) phIvfPregRevealTid = null;
     if (phIvfPregCascadeTid === t.id) phIvfPregCascadeTid = null;
-    const sel = `<select class="field-bare ph-ivf-pregresult" data-ivf-tfield="${row.id}:${t.id}:pregResult">
-      <option value=""${pr === "" ? " selected" : ""}>hCG test — not yet</option>
-      <option value="negative"${pr === "negative" ? " selected" : ""}>Negative</option>
-      <option value="positive"${pr === "positive" ? " selected" : ""}>Positive</option>
-    </select>`;
-    if (!pr) return `<div class="ph-ivf-tfields ph-ivf-pregtest">${sel}</div>`;
+    if (!pr) return "";   // outcome is Awaiting/Cancelled/Failed thaw -- no test to show
     const pk = t.pregKind || "";
     const kindSel = `<select class="field-bare ph-ivf-pregkind" data-ivf-tfield="${row.id}:${t.id}:pregKind" aria-label="Type of hCG test">
       <option value=""${pk === "" ? " selected" : ""}>Test type —</option>
@@ -84236,7 +84352,7 @@ or changing anything in Cliniko.
     const banner = cascade
       ? `<div class="ph-tp-announce preg in">🌸 Positive result logged — now in Early Pregnancy.</div>`
       : "";
-    return `<div class="${cls}">${sel}${kindSel}${dateField}${hcgField}${gest}</div>${banner}`;
+    return `<div class="${cls}">${kindSel}${dateField}${hcgField}${gest}</div>${banner}`;
   }
   // conversion between funnel stages -- quiet chips under the numbers
   function phIvfConvHtml(r) {
@@ -84322,8 +84438,25 @@ or changing anything in Cliniko.
     // now its own table, not nested under the round any more -- say which
     // round it's from, since that's no longer implied by position on screen.
     const fromTxt = phIvfDateLabel(row.when) || "no date yet";
+    // her IVF redesign 2026-10-16 ("show which round it picked, let me
+    // override it"): a transfer the "+ Transfer" button attached by guessing
+    // (t.autoRound, set only when there was more than one round to guess
+    // between) shows that pick plainly, with a one-tap way to move it to a
+    // different round -- the ONLY write this control makes is re-parenting
+    // the transfer object itself (no date/count/outcome copied or touched),
+    // so every other field on it survives the move untouched.
+    const roundPick = t.autoRound
+      ? `<select class="field-bare ph-ivf-roundpick" data-ivf-round-pick="${row.id}:${t.id}" aria-label="Change which round this transfer belongs to">
+          <option value="">· right round, keep it</option>
+          ${phIvfCyclesSorted(phPatientPeek(phTpScreenPatient)).filter(r2 => r2.id !== row.id).map(r2 =>
+            `<option value="${r2.id}">· move to ${esc(phIvfDateLabel(r2.when) || "no date yet")}${r2.clinic ? " · " + esc(r2.clinic) : ""}</option>`).join("")}
+        </select>`
+      : "";
+    const fromLine = t.autoRound
+      ? `<span class="ph-pill auto">picked automatically</span> attached to <b>${esc(fromTxt)}</b>${row.clinic ? ` · ${esc(row.clinic)}` : ""}${roundPick}`
+      : `from <b>${esc(fromTxt)}</b>${row.clinic ? ` · ${esc(row.clinic)}` : ""}`;
     return `<div class="ph-ivf-trow standalone">
-      <div class="ph-ivf-tfrom">from <b>${esc(fromTxt)}</b>${row.clinic ? ` · ${esc(row.clinic)}` : ""}</div>
+      <div class="ph-ivf-tfrom">${fromLine}</div>
       <div class="ph-ivf-tfields">${dateField}${typeSel}${prepField}${dayField}<span class="faint">embryo(s)</span>${countField}${outSel}${noteField}${logBtn}${del}</div>
       ${phIvfPregTestHtml(row, t)}
     </div>`;
@@ -95603,7 +95736,8 @@ Please let me know if you have any questions.`;
   // collapsed by default so the profile's default landing tab never pays
   // for the heaviest render on the page (tongue chart, pulse grid, Hammer
   // exam) just by being opened; expands in place via presAssessTabRefresh,
-  // same idiom as phIvfHistoryFoldHtml's presIvfHistOpen.
+  // same session-only-toggle idiom the IVF history fold used before its
+  // 2026-10-16 redesign moved that one onto the record (rec.ivfHistOpen).
   let presConstitFoldOpen = false;
   // 🩸 Cycle row (patient-level, 2026-09-04) open/closed in the panel
   // 🩸 period history list (her ask 2026-09-05), collapsed by default so the
