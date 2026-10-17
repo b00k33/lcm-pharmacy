@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261018-1120000">
+<meta name="lcm-build" content="20261018-1130000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -67376,6 +67376,33 @@ or changing anything in Cliniko.
     const d = new Date(y, +m[2] - 1, +m[1]);
     return isNaN(d) || d.getMonth() !== +m[2] - 1 || y < 1950 || d > phCcNow() ? null : phCcIso(d);
   }
+  // her 2026-10-18 ask ("allow me to put in 08/2026 or just 2026"): the SAME combobox also takes a
+  // bare year or "mm/yyyy" when she doesn't know the exact day -- no separate Day/Month/Year toggle
+  // needed to get that. One shared parser for every "how long" combobox in the app (Pain table,
+  // Came in for): { iso, prec, est } or null. Duration text ("2 yr") is still "worked out" (est
+  // true); a typed year or month/year is exact, just imprecise -- never shown with the "~" estimate mark.
+  function phCcParseDatePrec(t) {
+    const s = String(t || "").trim();
+    const w = /^(\d+(?:\.\d+)?)\s*(d|day|days|w|wk|wks|week|weeks|m|mo|mos|month|months|y|yr|yrs|year|years)\.?$/i.test(s);
+    if (w) { const iso = phCcParseDate(s); return iso ? { iso, prec: "d", est: true } : null; }
+    const y = /^(\d{4})$/.exec(s);
+    if (y) { const yr = +y[1]; return yr >= 1900 && yr <= phCcNow().getFullYear() ? { iso: `${y[1]}-01-01`, prec: "y", est: false } : null; }
+    const my = /^(\d{1,2})[\/.-](\d{4})$/.exec(s);
+    if (my) {
+      const mo = +my[1], yr = +my[2];
+      return mo >= 1 && mo <= 12 && yr >= 1900 && yr <= phCcNow().getFullYear() ? { iso: `${yr}-${String(mo).padStart(2, "0")}-01`, prec: "m", est: false } : null;
+    }
+    const iso = phCcParseDate(s);
+    return iso ? { iso, prec: "d", est: false } : null;
+  }
+  // the box's own displayed value, precision-aware: "2026" / "08/2026" / dd/mm/yyyy -- never expands
+  // a year/month-only date into a fake full one when she reopens the box later.
+  function phCcFmtDatePrec(s, prec) {
+    const m = /^(\d{4})-(\d\d)-(\d\d)$/.exec(s || ""); if (!m) return "";
+    if (prec === "y") return m[1];
+    if (prec === "m") return `${m[2]}/${m[1]}`;
+    return `${m[3]}/${m[2]}/${m[1]}`;
+  }
   // the Started column (her 2026-10-12): "~12 Sep" (italic) when worked out from how long, "12 Sep" when typed;
   // the year shows only when it is not this year ("~Oct 2024" / "12 Sep 2024"). her 2026-10-18 ask
   // ("give option to select year only or month year only"): a 3rd arg, prec ("d"/"m"/"y"), picks
@@ -67528,6 +67555,9 @@ or changing anything in Cliniko.
     return out;
   }
   function phCcDxListHtml() { return `<datalist id="phCcDxList">${phDxPatternOptions().map(t => `<option value="${esc(t)}">`).join("")}</datalist>`; }
+  // her 2026-10-18 ask ("do the same for all how long buttons in the app"): the same combobox
+  // mechanism as the Pain table's phPmSinceList -- one shared datalist, the day box points at it.
+  const PH_CC_SINCE_LIST_HTML = `<datalist id="phCcSinceList">${PH_SINCE_OPTS.map(q => `<option value="${esc(q[0])}">`).join("")}</datalist>`;
   // her 2026-10-17 ask ("improve display, more organised, like table format"): the complaint rows
   // are now a real <table> -- Complaint/Diagnosis/Since/star/Note/x, one row per complaint, her
   // own "a merged widget's header row is the table's own thead" rule. Mock
@@ -67550,16 +67580,11 @@ or changing anything in Cliniko.
     const whChip = (since, attr) => since ? `<button type="button" class="ph-cc-act" ${attr}>${esc(phCcRel(since))}</button>` : `<button type="button" class="ph-cc-act empty" ${attr}>How long</button>`;
     const whenTxt = (since, est, prec) => since ? `<span class="ph-cc-when">${phCcStartTxt(since, est, prec)}</span>` : "";
     const sinceCell = (since, est, prec, attr) => `<td class="snc"><span class="ph-cc-sncwrap">${whChip(since, attr)}${whenTxt(since, est, prec)}</span></td>`;
-    const openRow = (sel, precBar, input) => `<tr class="ph-cc-subrow"><td colspan="6"><div class="ph-cc-sub"><div class="ph-cc-picks">${sel}${precBar}${input}</div></div></td></tr>`;
-    // her 2026-10-18 ask ("improve chip display, make it more succinct"): the open row's 7-chip
-    // PH_CC_QUICK pill wall exceeded the app's own "more than 6 options = dropdown" rule (TAPPABLE
-    // THINGS) -- same dropdown already proven on the Pain table (data-pm-qsel, PH_SINCE_OPTS),
-    // just these two rows' own attributes. "Custom..." hands focus to the day text box above.
-    const sinceSel = (since, est, attr) => `<select class="ph-cc-in" ${attr} aria-label="How long">
-      <option value="">How long…</option>
-      ${PH_SINCE_OPTS.map((q, k) => `<option value="${k}"${est && since === phCcAgo(q[1], q[2]) ? " selected" : ""}>${esc(q[0])}</option>`).join("")}
-      <option value="custom">Custom — type it above</option>
-    </select>`;
+    const openRow = (precBar, input) => `<tr class="ph-cc-subrow"><td colspan="6"><div class="ph-cc-sub"><div class="ph-cc-picks">${precBar}${input}</div></div></td></tr>`;
+    // her 2026-10-18 ask ("do the same for all how long buttons in the app"): this row's own
+    // separate select + "Custom" chip (built earlier the same day, same pattern the Pain table had
+    // BEFORE its own combobox fix) is gone -- the day box below now carries list="phCcSinceList"
+    // itself, same single-combobox mechanism as the Pain table's data-pm-since.
     // her 2026-10-18 ask ("give option to select year only or month year only"): a Day/Month/Year
     // joined segmented bar (her 2026-10-15/16 standing "chip rows for one category join into a
     // bar" rule, reusing .ph-tng2-seg/.ph-ltr-qual verbatim) swaps which <input> below it renders;
@@ -67577,7 +67602,7 @@ or changing anything in Cliniko.
     const sinceInput = (prec, since, est, dAttr, mAttr, yAttr, label) => {
       if (prec === "y") { const y = /^(\d{4})/.exec(since || ""); return `<input type="number" class="ph-cc-in" ${yAttr} value="${y ? y[1] : ""}" placeholder="yyyy" min="1900" max="${phCcNow().getFullYear()}" step="1" inputmode="numeric" aria-label="${esc(label)} started — year">`; }
       if (prec === "m") { const ym = /^(\d{4}-\d\d)/.exec(since || ""); return `<input type="month" class="ph-cc-in" ${mAttr} value="${ym ? ym[1] : ""}" max="${phCcIso(phCcNow()).slice(0, 7)}" aria-label="${esc(label)} started — month">`; }
-      return `<input type="text" class="ph-cc-in" ${dAttr} value="${esc(phCcFmtDate(est ? "" : since))}" placeholder="dd/mm/yyyy" title="A date (dd/mm/yyyy) or how long: 2 years, 6 mo, 3 wk" autocomplete="off" aria-label="${esc(label)} started">`;
+      return `<input type="text" class="ph-cc-in" list="phCcSinceList" ${dAttr} value="${esc(phCcFmtDate(est ? "" : since))}" placeholder="dd/mm/yyyy" title="A date (dd/mm/yyyy) or how long: 2 years, 6 mo, 3 wk -- tap for quick picks" autocomplete="off" aria-label="${esc(label)} started">`;
     };
     const f = c.main && phCcFam(c.main);
     if (f) {
@@ -67591,7 +67616,6 @@ or changing anything in Cliniko.
       if (open) {
         const prec = phCcSincePrec || prec0;
         rows.push(openRow(
-          sinceSel(since, est, `data-cc-main-qsel="1"`),
           precBar(prec, `data-cc-main-prec="d"`, `data-cc-main-prec="m"`, `data-cc-main-prec="y"`),
           sinceInput(prec, since, est, `data-cc-main-since="1"`, `data-cc-main-since-m="1"`, `data-cc-main-since-y="1"`, lab)
         ));
@@ -67621,7 +67645,6 @@ or changing anything in Cliniko.
         rows.push(`<tr class="ph-cc-subrow"><td colspan="6"><div class="ph-cc-sub"><input type="text" class="ph-cc-note-in field-bare" data-cc-sec-note="${s.id}" maxlength="140" value="${esc(s.note || "")}" placeholder="More info" autocomplete="off" aria-label="More about ${esc(s.text)}"></div></td></tr>`);
         const prec = phCcSincePrec || prec0;
         rows.push(openRow(
-          sinceSel(s.since, est, `data-cc-sec-qsel="${s.id}"`),
           precBar(prec, `data-cc-sec-prec="${s.id}:d"`, `data-cc-sec-prec="${s.id}:m"`, `data-cc-sec-prec="${s.id}:y"`),
           sinceInput(prec, s.since, est, `data-cc-sec-since="${s.id}"`, `data-cc-sec-since-m="${s.id}"`, `data-cc-sec-since-y="${s.id}"`, s.text)
         ));
@@ -67633,7 +67656,7 @@ or changing anything in Cliniko.
     const addHtml = `<div class="ph-cc-add">${phCcAddOpen ? `<input type="text" class="ph-cc-sec-in" data-cc-sec-in="1" maxlength="60" placeholder="Secondary complaint" autocomplete="off" aria-label="Add a secondary complaint">` : `<button type="button" class="ph-cc-act" data-cc-add-tog="1">+ Add</button>`}</div>`;
     const road = phCcRoadHtml(pts, und);
     const tbl = `<div class="ph-cc-tblwrap"><table class="ph-cc-tbl"><thead><tr><th>Complaint</th><th>Diagnosis</th><th class="c">Since</th><th class="c">★</th><th class="c">Note</th><th></th></tr></thead><tbody>${rows.join("")}</tbody></table></div>`;
-    return `<div class="ph-cc-road${road ? " has-tl" : ""}">${road}<div class="ph-cc-list">${tbl}${addHtml}</div></div>${phCcDxListHtml()}`;
+    return `<div class="ph-cc-road${road ? " has-tl" : ""}">${road}<div class="ph-cc-list">${tbl}${addHtml}</div></div>${phCcDxListHtml()}${PH_CC_SINCE_LIST_HTML}`;
   }
   // the timeline (her pick C, 2026-10-13). One 0-100% line: a complaint's place is how many days ago it started
   // (longest ago on the left, 'Today' at the right end). Each label sits above or below the line, on the first
@@ -67991,22 +68014,9 @@ or changing anything in Cliniko.
       if (phCcWrite(name, c => { const s = (c.secondary || []).find(x => x.id === id); if (s) { if (v) s.dx = v; else delete s.dx; } })) phCcSavedFlash();
       return;
     }
-    // her 2026-10-18 ask ("improve chip display, make it more succinct"): the "How long" dropdown,
-    // same pattern as the Pain table's data-pm-qsel. "Custom..." doesn't write anything -- it just
-    // switches the open row back to the day box (above) and hands it focus, as Custom always has.
-    if (el.matches("[data-cc-main-qsel], [data-cc-sec-qsel]")) {
-      const isMainQ = el.matches("[data-cc-main-qsel]"), v = el.value;
-      if (v === "custom") {
-        phCcSincePrec = "d"; phCcRefresh(true);
-        const foc = document.querySelector(isMainQ ? "#pharmacyPage [data-cc-main-since]" : `#pharmacyPage [data-cc-sec-since="${CSS.escape(el.dataset.ccSecQsel)}"]`);
-        if (foc) foc.focus({ preventScroll: true });
-        return;
-      }
-      const q = PH_SINCE_OPTS[+v]; if (!q) return;
-      const iso = phCcAgo(q[1], q[2]);
-      isMainQ ? phCcMainSinceSet(iso, false, true, "d") : phCcSecSinceSet(el.dataset.ccSecQsel, iso, false, true, "d");
-      return;
-    }
+    // her 2026-10-18 ask ("do the same for all how long buttons in the app"): the separate select +
+    // "Custom" chip is gone -- the day box below carries list="phCcSinceList" itself now (same
+    // combobox mechanism as the Pain table's data-pm-since).
     // her 2026-10-18 ask ("give option to select year only or month year only"): month/year inputs
     // write through the same two doors, with their own precision flag so the Started column shows
     // only what she actually knows (phCcStartTxt's prec argument).
@@ -68025,13 +68035,14 @@ or changing anything in Cliniko.
     }
     const isMain = el.matches("[data-cc-main-since]"), isSec = el.matches("[data-cc-sec-since]");
     if (!isMain && !isSec) return;
-    const v = phCcParseDate(el.value);
-    if (!v && el.value.trim()) { el.classList.add("bad"); return; }
+    // her 2026-10-18 ask ("allow me to put in 08/2026 or just 2026"): this one box now also reads a
+    // bare year or mm/yyyy -- the Day/Month/Year bar above still works too, this is just a faster way
+    // to get the same result without switching tabs first. phCcParseDatePrec carries its own precision.
+    const r = phCcParseDatePrec(el.value);
+    if (!r && el.value.trim()) { el.classList.add("bad"); return; }
     el.classList.remove("bad");
-    // "3 wk" / "2 yr" is worked out from how long = an estimate; a typed date is exact
-    const est = !!v && !/[\/.-]/.test(el.value);
     // the two values sit in the table row, so repaint (the row closes, as a quick pick does)
-    isMain ? phCcMainSinceSet(v || "", false, est, "d") : phCcSecSinceSet(el.dataset.ccSecSince, v || "", false, est, "d");
+    isMain ? phCcMainSinceSet(r ? r.iso : "", false, r ? r.est : false, r ? r.prec : "d") : phCcSecSinceSet(el.dataset.ccSecSince, r ? r.iso : "", false, r ? r.est : false, r ? r.prec : "d");
   });
   document.addEventListener("input", e => {
     const el = e.target;
@@ -80811,7 +80822,7 @@ or changing anything in Cliniko.
         <td><span class="ph-pm-seg" role="group" aria-label="Side">${opts.map(([v, t]) => `<button type="button" class="${p.s === v ? "on" : ""}" data-pm-side="${pid}|${idx}|${v}" aria-pressed="${p.s === v}">${t}</button>`).join("")}</span></td>
         <td><div class="ph-pm-dwrap${feelOpen ? " on" : ""}">${feels.map(([, l]) => `<span class="ph-pm-ftag">${esc(l)}</span>`).join("")}<input type="text" class="field-bare ph-pm-detail" data-pm-detail="${pid}|${idx}" value="${esc(p.d || "")}" maxlength="200" placeholder="${feels.length ? "" : "detail"}" autocomplete="off" spellcheck="false" aria-label="Detail for ${esc(nm)}" aria-expanded="${feelOpen}"></div></td>
         <td><input type="text" class="field-bare ph-pm-diag" list="phPmDxList" data-pm-diag="${pid}|${idx}" value="${esc(p.dx || "")}" maxlength="80" placeholder="Diagnosis" autocomplete="off" spellcheck="false" aria-label="Diagnosis for ${esc(nm)}"></td>
-        <td><div class="ph-pm-since"><input type="text" class="field-bare ph-pm-sin" list="phPmSinceList" data-pm-since="${pid}|${idx}" value="${esc(phCcFmtDate(p.since || ""))}" placeholder="date or 2 yr" title="A date (dd/mm/yyyy) or how long: 2 years, 6 mo, 3 wk -- tap for quick picks" autocomplete="off" aria-label="${esc(nm)} started"><span class="rel${p.since ? "" : " empty"}">${p.since ? esc(phCcRel(p.since)) : "since when?"}</span></div></td>
+        <td><div class="ph-pm-since"><input type="text" class="field-bare ph-pm-sin" list="phPmSinceList" data-pm-since="${pid}|${idx}" value="${esc(phCcFmtDatePrec(p.since || "", p.sincePrec))}" placeholder="date, 2 yr, 08/2026 or 2026" title="A date (dd/mm/yyyy), how long (2 years, 6 mo, 3 wk), or just mm/yyyy or yyyy if that's all you know -- tap for quick picks" autocomplete="off" aria-label="${esc(nm)} started"><span class="rel${p.since ? "" : " empty"}">${p.since ? esc(phCcRel(p.since)) : "since when?"}</span></div></td>
         ${sc ? KS.map(([k]) => `<td class="c">${box(mine[k], last[k], `data-pm-sc="${pid}|${idx}|${k}"`)}</td>`).join("") : pdMode ? `<td class="c">${box(pdNow, null, "", true)}</td>` : ""}
         <td class="x"><button type="button" class="ph-pm-delx" data-pm-del="${pid}|${idx}" aria-label="Remove ${esc(nm)}">×</button></td></tr>`);
       if (palOpen) out.push(`<tr class="sub"><td></td><td></td><td colspan="${span}"><span class="ph-pm-swatches" role="group" aria-label="Colour">${PH_PM_COLOURS.map((c, k) => `<button type="button" class="ph-pm-sw${(p.c || 0) === k ? " on" : ""}" style="--c:${c}" data-pm-col="${pid}|${idx}|${k}" aria-label="${PH_PM_COLOUR_NAMES[k]}" aria-pressed="${(p.c || 0) === k}"></button>`).join("")}</span></td></tr>`);
@@ -81152,8 +81163,9 @@ or changing anything in Cliniko.
     if (!plan) return false;
     // her 2026-10-15 ask (diagnosis + main-concern star): dx and main must survive this remap too,
     // or they'd be silently dropped on the very next write (a documented past trap on this function).
-    // causes (2026-10-17, pain -> cause link) must survive it too, same reason.
-    const list = phPmList(name, plan).map(p => ({ r: p.r, s: p.s, c: p.c || 0, ...(p.d ? { d: p.d } : {}), ...(p.since ? { since: p.since } : {}), ...(Array.isArray(p.f) && p.f.length ? { f: p.f.slice() } : {}), ...(p.dx ? { dx: p.dx } : {}), ...(p.main ? { main: true } : {}), ...(Array.isArray(p.causes) && p.causes.length ? { causes: p.causes.slice() } : {}) }));
+    // causes (2026-10-17, pain -> cause link) must survive it too, same reason. sincePrec (2026-10-18,
+    // "08/2026 or just 2026") the same, once more.
+    const list = phPmList(name, plan).map(p => ({ r: p.r, s: p.s, c: p.c || 0, ...(p.d ? { d: p.d } : {}), ...(p.since ? { since: p.since } : {}), ...(p.since && p.sincePrec && p.sincePrec !== "d" ? { sincePrec: p.sincePrec } : {}), ...(Array.isArray(p.f) && p.f.length ? { f: p.f.slice() } : {}), ...(p.dx ? { dx: p.dx } : {}), ...(p.main ? { main: true } : {}), ...(Array.isArray(p.causes) && p.causes.length ? { causes: p.causes.slice() } : {}) }));
     fn(list);
     if (String(planId).startsWith("pt:")) phPatientRec(name).painSites = list;
     else { plan.painMap = list; phPatientRec(name); }
@@ -81469,13 +81481,15 @@ or changing anything in Cliniko.
     const f = e.target && e.target.closest ? e.target.closest("[data-pm-since]") : null, box = f && f.closest("[data-pm-box]");
     if (!box) return;
     const name = box.dataset.pmName, planId = box.dataset.pmBox, idx = +f.dataset.pmSince.split("|").pop();
-    const v = phCcParseDate(f.value);
-    if (!v && f.value.trim()) { f.classList.add("bad"); return; }
+    // her 2026-10-18 ask ("allow me to put in 08/2026 or just 2026"): phCcParseDatePrec also
+    // carries which precision she actually typed, so the box keeps showing exactly that next time.
+    const r = phCcParseDatePrec(f.value);
+    if (!r && f.value.trim()) { f.classList.add("bad"); return; }
     f.classList.remove("bad");
-    if (!phPmWrite(name, planId, list => { const p = list[idx]; if (!p) return; if (v) p.since = v; else delete p.since; })) return;
+    if (!phPmWrite(name, planId, list => { const p = list[idx]; if (!p) return; if (r) { p.since = r.iso; p.sincePrec = r.prec; } else { delete p.since; delete p.sincePrec; } })) return;
     try { phTpAutoBust(); } catch (x) { /* cache not built yet */ }
     const rel = f.parentElement.querySelector(".rel");
-    if (rel) { rel.textContent = v ? phCcRel(v) : "since when?"; rel.classList.toggle("empty", !v); }
+    if (rel) { rel.textContent = r ? phCcRel(r.iso) : "since when?"; rel.classList.toggle("empty", !r); }
   });
   // Pain -> cause link, the "Or write it" free-text note -- commits on change (blur/Enter), same as
   // every other typed field in this box; adding a note never closes the picker, so she can add several
@@ -84177,13 +84191,15 @@ or changing anything in Cliniko.
       : `<span class="ph-ts-dash">—</span>`;
     return `<td class="chg"><span class="ph-ts-chips">${chips}</span></td><td class="pct"><span class="ph-ts-chips">${pct}</span></td>`;
   }
-  // the since-date editor: the SAME quick picks + dd/mm/yyyy box the Came-in-for
-  // card uses for a symptom's Started date (PH_CC_QUICK, phCcAgo, phCcParseDate)
+  // the since-date editor: her 2026-10-18 ask ("do the same for all how long buttons in the app")
+  // folds the old 7-chip quick-pick row (Today, 5 of PH_CC_QUICK, First assessment) into the SAME
+  // one-combobox mechanism as the Pain table and Came in for -- a native datalist on the dd/mm/yyyy
+  // box itself. "Today" and "First assessment" are special-cased in the change handler below (they
+  // aren't a fixed offset phCcParseDate can work out on its own); a plain date, "2 yr"/"6 mo", a bare
+  // year or "mm/yyyy" all still work exactly as before/elsewhere.
   function phTsSinceEditHtml(rec, row) {
-    const quick = [`<button type="button" class="ph-ts-chip sm" data-ts="since-q" data-v="${esc(row.key)}|today">Today</button>`]
-      .concat(PH_CC_QUICK.slice(0, 5).map((q, k) => `<button type="button" class="ph-ts-chip sm" data-ts="since-q" data-v="${esc(row.key)}|${k}">${esc(q[0])}</button>`))
-      .concat(`<button type="button" class="ph-ts-chip sm" data-ts="since-q" data-v="${esc(row.key)}|first">First assessment</button>`).join("");
-    return `<tr class="ph-ts-sinceedit"><td></td><td colspan="3"><span class="ph-ts-chips">${quick}<input type="text" id="presTsSinceIn" class="ph-ts-sincein" data-ts-since-in="${esc(row.key)}" value="${esc(phCcFmtDate(row.since))}" placeholder="dd/mm/yyyy" inputmode="numeric" autocomplete="off" aria-label="${esc(row.label)} started"><button type="button" class="ph-ts-chip sm action" data-ts="since-close">Done</button></span></td></tr>`;
+    const opts = ["Today"].concat(PH_CC_QUICK.slice(0, 5).map(q => q[0])).concat("First assessment");
+    return `<tr class="ph-ts-sinceedit"><td></td><td colspan="3"><span class="ph-ts-chips"><input type="text" id="presTsSinceIn" class="ph-ts-sincein" list="phTsSinceList" data-ts-since-in="${esc(row.key)}" value="${esc(phCcFmtDate(row.since))}" placeholder="dd/mm/yyyy, 2 yr, 08/2026, Today…" title="A date, how long (2 years, 6 mo), mm/yyyy, yyyy, Today or First assessment -- tap for quick picks" inputmode="text" autocomplete="off" aria-label="${esc(row.label)} started"><datalist id="phTsSinceList">${opts.map(t => `<option value="${esc(t)}">`).join("")}</datalist><button type="button" class="ph-ts-chip sm action" data-ts="since-close">Done</button></span></td></tr>`;
   }
   // "Cycle — reported, not examined": the latest logged value of each Cycle-log
   // field this cycle, read straight off rec.cycleSigns / rec.cycle -- nothing retyped
@@ -84333,12 +84349,6 @@ or changing anything in Cliniko.
       presTsSinceOpen = presTsSinceOpen === v ? null : v;
     } else if (act === "since-close") {
       presTsSinceOpen = null;
-    } else if (act === "since-q") {
-      const [key, q] = v.split("|");
-      const rec = phPatientPeek(name) || {};
-      const iso = q === "today" ? keyOf(TODAY) : q === "first" ? phTsFirstAssess(rec) : (x => x ? phCcAgo(x[1], x[2]) : "")(PH_CC_QUICK[+q]);
-      if (iso) phTsSinceSet(name, key, iso);
-      presTsSinceOpen = null;
     } else if (act === "add") {
       presTsAddOpen = !presTsAddOpen;
     } else if (act === "tick") {
@@ -84368,13 +84378,18 @@ or changing anything in Cliniko.
     return phTriWrite(name, t => { keys.forEach(k => { t.since[k] = iso; }); });
   }
   // a typed since date commits on change (Enter / leaving the box), same rule
-  // as the Came-in-for card's Started box: an unreadable date is ignored
+  // as the Came-in-for card's Started box: an unreadable date is ignored.
+  // her 2026-10-18 ask: "Today" and "First assessment" are the two quick picks that aren't a plain
+  // offset phCcParseDate can work out -- special-cased here, same as the old chip values; everything
+  // else (a date, "2 yr", "08/2026", a bare "2026") goes through the shared combobox parser.
   document.addEventListener("change", e => {
     const el = e.target;
     if (!el || !el.matches || !el.matches("[data-ts-since-in]")) return;
     const ctx = presAcuCtx(); if (!ctx) return;
-    const iso = phCcParseDate(el.value);
+    const rec = phPatientPeek(ctx.name) || {}, typed = el.value.trim().toLowerCase();
+    const iso = typed === "today" ? keyOf(TODAY) : typed === "first assessment" ? phTsFirstAssess(rec) : (phCcParseDatePrec(el.value) || {}).iso;
     if (!iso) { el.classList.add("bad"); return; }
+    el.classList.remove("bad");
     phTsSinceSet(ctx.name, el.dataset.tsSinceIn, iso);
     presTsSinceOpen = null;
     presAcuOpenRefresh();
@@ -89422,7 +89437,7 @@ or changing anything in Cliniko.
   // the search box's list: this pain's region first, then the rest; each muscle takes R, L or Both (tap an on side to take it off)
   function phMskMuResultsHtml(rec, rk, q) {
     const plan = phMskPlanOf(rec), s = String(q || "").trim().toLowerCase();
-    const hit = PH_MSK_MUSCLES.filter(m => !s || m.name.toLowerCase().includes(s) || m.id === s);
+    const hit = PH_MSK_MUSCLES.filter(m => !s || m.name.toLowerCase().includes(s) || m.id === s || m.regions.some(r => (PH_MSK_REGION_LABEL[r] || "").toLowerCase().includes(s)));
     const first = hit.filter(m => m.regions.includes(rk)), rest = hit.filter(m => !m.regions.includes(rk));
     const row = m => `<div class="mk-mur"><span class="n">${esc(m.name)}</span><span class="r">${esc(PH_MSK_REGION_LABEL[m.regions[0]] || "")}</span>${[["R", "R"], ["L", "L"], ["B", "Both"]].map(([S, l]) => { const on = S === "B" ? plan[m.id + "R"] && plan[m.id + "L"] : plan[m.id + S]; return `<button type="button" class="mk-pk${on ? " on" : ""}" data-msk="mu-pick" data-v="${m.id}:${S}" aria-pressed="${on ? "true" : "false"}">${l}</button>`; }).join("")}</div>`;
     return first.map(row).join("") + (first.length && rest.length ? `<div class="mk-murh">Other regions</div>` : "") + rest.map(row).join("") || `<div class="mk-mur none">No muscle matches</div>`;
