@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261018-1110000">
+<meta name="lcm-build" content="20261018-1120000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -6397,8 +6397,6 @@
   #pharmacyPage .ph-pm-tbl tr.all td.k { font-weight: 700; color: var(--ph-herb-deep); }
   #pharmacyPage .ph-pm-tbl tr.all small { display: block; font-size: var(--fs-10-5); font-weight: 500; color: var(--ph-faint); }
   #pharmacyPage .ph-pm-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-  /* her 2026-10-15 "change it to dropdown to save space": the How long pill row became one select */
-  #pharmacyPage .ph-pm-sincesel select { height: 28px; padding: 0 22px 0 8px; border: 1px solid var(--ph-line); border-radius: 6px; background: #fff; font-size: var(--fs-12); font-weight: 600; color: var(--ph-soft); cursor: pointer; max-width: 100%; }
   #pharmacyPage .ph-pm-strip .lab { font-size: var(--fs-11); font-weight: 600; color: var(--ph-soft); margin-right: 4px; }
   #pharmacyPage .ph-pm-scale { display: inline-flex; flex-wrap: wrap; gap: 4px; }
   #pharmacyPage .ph-pm-scale button, #pharmacyPage .ph-pm-q { min-width: 30px; height: 28px; padding: 0 8px; border: 1px solid var(--ph-line); border-radius: 10px; background: #fff; font-size: var(--fs-12); font-weight: 600; color: var(--ph-soft); cursor: pointer; }
@@ -80261,7 +80259,6 @@ or changing anything in Cliniko.
   let phPmScoreCtx = null;         // her 2026-10-12: plan id whose pain table shows Now / Best / Worst (only on the Musculoskeletal page); set while it draws
   let phPmScoreOpen = null;        // "planId|idx|k" or "planId|all|k": the 0-10 strip open under that row
   let phPmScoreDay = {};           // her 2026-10-15 ("today 5/10, last week 3/10"): same key -> the date string that open strip is setting/viewing (default today); cleared whenever a strip opens or closes
-  let phPmSinceOpen = null;        // "planId|idx": the How long quick picks open under that row
   // her 2026-10-14 (pick C of msk_pain_feel_ticks_options): what a pain FEELS like, ticked as words that sit as tags at the start of the
   // Detail box. Several per pain; Tension is one word among the others, and a pain whose only word is Tension reads as tension (striped
   // on the map, "tension" under its name). Stored on the pain entry as p.f = [ids]. The chips open under the row while she is in its
@@ -80768,6 +80765,11 @@ or changing anything in Cliniko.
     "Lateral ankle sprain grade II", "De Quervain's tenosynovitis", "Carpal tunnel syndrome", "Trigger finger", "Trochanteric bursitis",
     "Osteoarthritis", "Fibromyalgia"];
   const PH_PM_DX_LIST_HTML = `<datalist id="phPmDxList">${PH_PM_DX_TERMS.map(t => `<option value="${esc(t)}">`).join("")}</datalist>`;
+  // her 2026-10-18 ask ("make the how long type in or dropdown, mock A: one combobox"): the quick picks
+  // are a native datalist on the SAME box instead of a separate dropdown row -- typing still works
+  // exactly as before (phCcParseDate already reads "2 yr"/"6 mo" text), and every PH_SINCE_OPTS label
+  // ("2 wk", "6 mo", ...) is already in that same accepted shape, so picking one needs no new write path.
+  const PH_PM_SINCE_LIST_HTML = `<datalist id="phPmSinceList">${PH_SINCE_OPTS.map(q => `<option value="${esc(q[0])}">`).join("")}</datalist>`;
   function phPmTableHtml(name, plan, list, pdMode) {
     if (!list.length) return "";
     const R = PH_PAIN_REGIONS.REGIONS, pid = esc(plan.id), rec = phPatientPeek(name) || {};
@@ -80795,7 +80797,7 @@ or changing anything in Cliniko.
       const reg = R[p.r], nm = phPmSideName(reg, p.s), key = `${p.r}|${p.s}`;
       const where = reg.views.length > 1 ? "front + back" : reg.views[0] === "front" ? "front view" : "back view";
       const opts = reg.central ? [["C", "Centre"], ["R", "R"], ["L", "L"]] : [["R", "R"], ["L", "L"], ["B", "Both"]];
-      const palOpen = phPmPalette === `${plan.id}|${idx}`, sinceOpen = phPmSinceOpen === `${plan.id}|${idx}`, feelOpen = phPmFeelOpen === `${plan.id}|${idx}`;
+      const palOpen = phPmPalette === `${plan.id}|${idx}`, feelOpen = phPmFeelOpen === `${plan.id}|${idx}`;
       const feels = phPmFeelsOf(p), tOnly = phPmTensionOnly(p);
       const mine = (vis && vis.pains && vis.pains[key]) || {}, last = (prev && prev.pains && prev.pains[key]) || {};
       const pdNow = pdVis && pdVis.pains && pdVis.pains[key] && pdVis.pains[key].now != null ? Number(pdVis.pains[key].now) : null;
@@ -80809,12 +80811,11 @@ or changing anything in Cliniko.
         <td><span class="ph-pm-seg" role="group" aria-label="Side">${opts.map(([v, t]) => `<button type="button" class="${p.s === v ? "on" : ""}" data-pm-side="${pid}|${idx}|${v}" aria-pressed="${p.s === v}">${t}</button>`).join("")}</span></td>
         <td><div class="ph-pm-dwrap${feelOpen ? " on" : ""}">${feels.map(([, l]) => `<span class="ph-pm-ftag">${esc(l)}</span>`).join("")}<input type="text" class="field-bare ph-pm-detail" data-pm-detail="${pid}|${idx}" value="${esc(p.d || "")}" maxlength="200" placeholder="${feels.length ? "" : "detail"}" autocomplete="off" spellcheck="false" aria-label="Detail for ${esc(nm)}" aria-expanded="${feelOpen}"></div></td>
         <td><input type="text" class="field-bare ph-pm-diag" list="phPmDxList" data-pm-diag="${pid}|${idx}" value="${esc(p.dx || "")}" maxlength="80" placeholder="Diagnosis" autocomplete="off" spellcheck="false" aria-label="Diagnosis for ${esc(nm)}"></td>
-        <td><div class="ph-pm-since"><input type="text" class="field-bare ph-pm-sin" data-pm-since="${pid}|${idx}" value="${esc(phCcFmtDate(p.since || ""))}" placeholder="date or 2 yr" title="A date (dd/mm/yyyy) or how long: 2 years, 6 mo, 3 wk" autocomplete="off" aria-label="${esc(nm)} started"><span class="rel${p.since ? "" : " empty"}">${p.since ? esc(phCcRel(p.since)) : "since when?"}</span></div></td>
+        <td><div class="ph-pm-since"><input type="text" class="field-bare ph-pm-sin" list="phPmSinceList" data-pm-since="${pid}|${idx}" value="${esc(phCcFmtDate(p.since || ""))}" placeholder="date or 2 yr" title="A date (dd/mm/yyyy) or how long: 2 years, 6 mo, 3 wk -- tap for quick picks" autocomplete="off" aria-label="${esc(nm)} started"><span class="rel${p.since ? "" : " empty"}">${p.since ? esc(phCcRel(p.since)) : "since when?"}</span></div></td>
         ${sc ? KS.map(([k]) => `<td class="c">${box(mine[k], last[k], `data-pm-sc="${pid}|${idx}|${k}"`)}</td>`).join("") : pdMode ? `<td class="c">${box(pdNow, null, "", true)}</td>` : ""}
         <td class="x"><button type="button" class="ph-pm-delx" data-pm-del="${pid}|${idx}" aria-label="Remove ${esc(nm)}">×</button></td></tr>`);
       if (palOpen) out.push(`<tr class="sub"><td></td><td></td><td colspan="${span}"><span class="ph-pm-swatches" role="group" aria-label="Colour">${PH_PM_COLOURS.map((c, k) => `<button type="button" class="ph-pm-sw${(p.c || 0) === k ? " on" : ""}" style="--c:${c}" data-pm-col="${pid}|${idx}|${k}" aria-label="${PH_PM_COLOUR_NAMES[k]}" aria-pressed="${(p.c || 0) === k}"></button>`).join("")}</span></td></tr>`);
       if (feelOpen) out.push(`<tr class="sub" data-pm-feelrow="${pid}|${idx}" style="--c:${PH_PM_COLOURS[p.c] || PH_PM_COLOURS[0]}"><td></td><td></td><td colspan="${span}"><div class="ph-pm-strip ph-pm-feels" role="group" aria-label="What ${esc(nm)} feels like">${PH_PM_FEELS.map(([k, l]) => { const on = !!(p.f && p.f.includes(k)); return `<button type="button" class="ph-pm-q ph-pm-feel${on ? " on" : ""}" data-pm-feel="${pid}|${idx}|${k}" aria-pressed="${on}">${esc(l)}</button>`; }).join("")}</div></td></tr>`);
-      if (sinceOpen) out.push(`<tr class="sub"><td></td><td></td><td colspan="${span}"><div class="ph-pm-strip ph-pm-sincesel"><select data-pm-qsel="${pid}|${idx}" aria-label="How long ago"><option value="">How long…</option>${PH_SINCE_OPTS.map((q, k) => `<option value="${k}">${esc(q[0])}</option>`).join("")}<option value="custom">Custom — type it above</option></select></div></td></tr>`);
       KS.forEach(([k, l]) => { if (sc && phPmScoreOpen === `${plan.id}|${idx}|${k}`) { const dayKey = `${plan.id}|${idx}|${k}`, day = phPmScoreDay[dayKey] || today; out.push(strip(`${nm} · ${l}`, scoreAt(idx, k, day), n => `data-pm-set="${pid}|${idx}|${k}|${n}"`, dayKey, day)); } });
       // her 2026-10-17 ask ("a muscle finding is the cause, not a secondary complaint"): a "Caused by"
       // row, Musculoskeletal page only (sc) -- that's the only place today's exam findings exist to pick from
@@ -80842,7 +80843,7 @@ or changing anything in Cliniko.
       out.push(`<tr class="all"><td class="k" colspan="6">All pains<small>the highest of each · feeds the plan’s pain score</small></td>${cells}<td></td></tr>`);
       KS.forEach(([k, l]) => { if (phPmScoreOpen === `${plan.id}|all|${k}`) { const dayKey = `${plan.id}|all|${k}`, day = phPmScoreDay[dayKey] || today; out.push(strip(`All pains · ${l}`, scoreAt("all", k, day), n => `data-pm-aset="${pid}|${k}|${n}"`, dayKey, day)); } });
     }
-    return `<table class="ph-pm-tbl" data-pm-tbl="1"><thead><tr><th class="c">Main</th><th>Pain</th><th>Side</th><th>Detail</th><th>Diagnosis</th><th>How long</th>${sc ? KS.map(([, l]) => `<th class="c">${l}</th>`).join("") : pdMode ? `<th class="c">Now</th>` : ""}<th></th></tr></thead><tbody>${out.join("")}</tbody></table>${PH_PM_DX_LIST_HTML}`;
+    return `<table class="ph-pm-tbl" data-pm-tbl="1"><thead><tr><th class="c">Main</th><th>Pain</th><th>Side</th><th>Detail</th><th>Diagnosis</th><th>How long</th>${sc ? KS.map(([, l]) => `<th class="c">${l}</th>`).join("") : pdMode ? `<th class="c">Now</th>` : ""}<th></th></tr></thead><tbody>${out.join("")}</tbody></table>${PH_PM_DX_LIST_HTML}${PH_PM_SINCE_LIST_HTML}`;
   }
   // repaint only the tables (a score tap, a How long pick) -- the figures and the 3D turn are left alone
   function phPmTblRefresh(focusSel) {
@@ -81324,7 +81325,7 @@ or changing anything in Cliniko.
     if ((b = t.closest("[data-pm-sc]"))) { const k = b.dataset.pmSc; phPmScoreOpen = phPmScoreOpen === k ? null : k; phPmScoreDay = {}; phPmTblRefresh(); return; }
     if ((b = t.closest("[data-pm-set]"))) { const [, w, k, n] = b.dataset.pmSet.split("|"); phPmScoreSet(name, planId, w, k, +n); return; }
     if ((b = t.closest("[data-pm-aset]"))) { const [, k, n] = b.dataset.pmAset.split("|"); phPmScoreSet(name, planId, "all", k, +n); return; }
-    if (t.closest("[data-pm-sclose]")) { phPmScoreOpen = null; phPmScoreDay = {}; phPmSinceOpen = null; phPmTblRefresh(); return; }
+    if (t.closest("[data-pm-sclose]")) { phPmScoreOpen = null; phPmScoreDay = {}; phPmTblRefresh(); return; }
     if ((b = t.closest("[data-pm-feel]"))) {
       const [, idx, k] = b.dataset.pmFeel.split("|"), i = +idx, key = `${planId}|${i}`;
       const inp = box.querySelector(`[data-pm-detail="${CSS.escape(key)}"]`), typed = inp ? inp.value.trim() : null;
@@ -81412,13 +81413,9 @@ or changing anything in Cliniko.
       phMskRefresh(["exam", "nprs"]); return;
     }
   });
-  // How long: the quick picks open under the row while she is in its box; a typed date or "2 yr" is saved on change, the "3 mo" read-out patched in place
-  document.addEventListener("focusin", e => {
-    const f = e.target && e.target.closest ? e.target.closest("[data-pm-since]") : null; if (!f) return;
-    const [planId, idx] = f.dataset.pmSince.split("|"), k = `${planId}|${idx}`;
-    if (phPmSinceOpen === k) return;
-    phPmSinceOpen = k; phPmTblRefresh(`[data-pm-since="${CSS.escape(f.dataset.pmSince)}"]`);
-  });
+  // How long: a typed date or "2 yr" is saved on change, the "3 mo" read-out patched in place. Her
+  // 2026-10-18 ask folded the separate quick-pick dropdown into this same box's own datalist (see
+  // PH_PM_SINCE_LIST_HTML) -- there is no separate open/closed row state to manage any more.
   // Feel words (her 2026-10-14, pick C): the chips open under the row while she is in its Detail box; a chip tap keeps the cursor in the
   // box (mousedown is held back) and writes the word; tapping or tabbing anywhere else folds them in place, AFTER that tap has landed,
   // so nothing jumps under the pointer. The ticked words stay as tags in the box.
@@ -81487,24 +81484,6 @@ or changing anything in Cliniko.
     if (!box) return;
     const name = box.dataset.pmName, planId = box.dataset.pmBox, idx = +f.dataset.pmCauseNote.split("|").pop();
     if (phPmCauseAddNote(name, planId, idx, f.value)) { phMskRefresh(["exam", "nprs"]); }
-  });
-  // How long, as a dropdown (her 2026-10-15 ask, replacing the PH_SINCE_OPTS pill row): picking a
-  // value writes it straight away; picking "Custom…" just closes the dropdown and hands focus back
-  // to the free-text box above it (which already takes a typed date or "N wk/mo/yr").
-  document.addEventListener("change", e => {
-    const sel = e.target && e.target.closest ? e.target.closest("[data-pm-qsel]") : null; if (!sel) return;
-    const [planId, idx] = sel.dataset.pmQsel.split("|"), box = sel.closest("[data-pm-box]"); if (!box) return;
-    const name = box.dataset.pmName, v = sel.value, key = `${planId}|${idx}`;
-    if (v === "custom") {
-      // she's about to type in the free-text box above -- pre-set sinceOpen to what its own
-      // focusin handler would set, so the refocus below doesn't trigger a second, redundant
-      // repaint (the handler short-circuits when phPmSinceOpen already matches this row).
-      phPmSinceOpen = key; phPmTblRefresh(`[data-pm-since="${CSS.escape(key)}"]`); return;
-    }
-    phPmSinceOpen = null;
-    const q = PH_SINCE_OPTS[+v]; if (!q) { phPmTblRefresh(); return; }
-    phPmWrite(name, planId, list => { if (list[+idx]) list[+idx].since = phCcAgo(q[1], q[2]); });
-    phPmTblRefresh(); try { phTpAutoBust(); } catch (x) { /* cache not built yet */ }
   });
   // her 2026-10-15 ("today 5/10, last week 3/10"): the date inside an open score strip -- picking a day just
   // repaints the strip against that day's own record (no implausible-year guard needed, <input type=date> already shapes it)
