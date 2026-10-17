@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261017-1090000">
+<meta name="lcm-build" content="20261018-1100000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -15468,6 +15468,12 @@
   #pharmacyPage .ph-cc-picks { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 8px; }
   #pharmacyPage .ph-cc-picks .ph-pfw-opt { padding: 3px 11px; }
   #pharmacyPage .ph-cc-picks .ph-cc-in { width: auto; height: 28px; margin-left: 2px; }
+  /* her 2026-10-18 ask ("give option to select year only or month year only"): the Day/Month/Year
+     segmented bar reuses .ph-tng2-seg/.ph-ltr-qual verbatim (her 2026-10-15/16 "chip rows for one
+     category join into a bar" standing rule); the year box alone needs a width cap, a number
+     input has no natural one the way a pill select/date/month box already does. */
+  #pharmacyPage .ph-cc-picks .ph-cc-precseg { margin-left: 2px; }
+  #pharmacyPage .ph-cc-picks input[type="number"].ph-cc-in { width: 72px; text-align: center; }
   #pharmacyPage .ph-cc-act { display: inline-flex; align-items: center; gap: 4px; min-height: 0; margin: 0; border: 1.5px solid var(--ph-herb); background: var(--ph-white); color: var(--ph-herb); border-radius: 10px; padding: 2px 9px; font: 700 var(--fs-12-5) var(--font-body); white-space: nowrap; cursor: pointer; }
   #pharmacyPage .ph-cc-act:hover { background: var(--ph-herb-tint); color: var(--ph-herb-deep); }
   #pharmacyPage .ph-cc-act.empty { border-color: var(--ph-line); color: var(--ph-soft); }
@@ -67309,6 +67315,11 @@ or changing anything in Cliniko.
   // her 2026-10-15 ask ("improve the workflow, make the chips consistent"): whether the plan-type
   // menu, and the "+ add another" box, are open -- plain view state, like phCcActive above
   var phCcPlanOpen = false, phCcAddOpen = false;
+  // her 2026-10-18 ask ("give option to select year only or month year only"): which precision the
+  // OPEN row's date editor is showing -- "d"/"m"/"y", plain view state like phCcActive above; reset
+  // to null whenever a row opens/closes so it re-derives from that complaint's own stored sincePrec
+  // (default "d") rather than carrying the last row's choice onto a different complaint.
+  var phCcSincePrec = null;
   // her follow-up ask ("make it so its searchable from fang bing ren so i can select"): which
   // result is highlighted in the secondary-complaint box's own search menu (keyboard nav), the
   // same idiom as the chief-complaint box's phCcMenuHl below
@@ -67331,13 +67342,16 @@ or changing anything in Cliniko.
   // severity; a flat list of secondary SYMPTOMS -- typed words, each with its own Started date,
   // no severity, no family grouping. One open at a time for a secondary's own date editor, same
   // accordion idiom as before, just applied to symptom entries instead of whole families.
+  // PH_CC_QUICK is kept for the Treatment table's own "since" quick picks (a 5-of-7 slice, untouched);
+  // Came in for's own row moved to the finer PH_SINCE_OPTS dropdown below, 2026-10-18 (see that ask).
   const PH_CC_QUICK = [["1 wk", 7, "d"], ["1 mo", 1, "m"], ["3 mo", 3, "m"], ["6 mo", 6, "m"], ["1 yr", 1, "y"], ["2 yr", 2, "y"], ["5 yr", 5, "y"]];
   // her 2026-10-15 ask ("change it to dropdown to save space and include custom input e.g. its
   // missing 2 weeks, or 5 weeks"): the Pain table's "How long" row of PH_CC_QUICK pills wrapped
   // onto two lines in the table's narrow Detail/Since column. A finer-grained list used only by
-  // that one dropdown (left PH_CC_QUICK itself untouched -- Came in for's own picker sits in a
-  // wider card, not a cramped table cell, so it's left as the pill row it already was; the Pain
-  // table was the one she screenshotted). "Custom…" closes the dropdown and hands focus back to
+  // that one dropdown. **Superseded 2026-10-18**: Came in for's OWN 7-chip row (main + each
+  // secondary) also exceeded the app's "more than 6 options = dropdown" rule once counted
+  // properly, so it now reuses this exact same list/dropdown shape too (phCcTableHtml's local
+  // `sinceSel`) -- one mechanism, not a second one invented for a wider card. "Custom…" closes the dropdown and hands focus back to
   // the free-text box above it, which already parses any typed "N wk/mo/yr" or an exact date.
   const PH_SINCE_OPTS = [["1 wk", 7, "d"], ["2 wk", 14, "d"], ["3 wk", 21, "d"], ["1 mo", 1, "m"], ["6 wk", 42, "d"], ["2 mo", 2, "m"], ["3 mo", 3, "m"], ["6 mo", 6, "m"], ["1 yr", 1, "y"], ["2 yr", 2, "y"], ["5 yr", 5, "y"]];
   const PH_CC_SIGNS = {
@@ -67366,11 +67380,16 @@ or changing anything in Cliniko.
     return isNaN(d) || d.getMonth() !== +m[2] - 1 || y < 1950 || d > phCcNow() ? null : phCcIso(d);
   }
   // the Started column (her 2026-10-12): "~12 Sep" (italic) when worked out from how long, "12 Sep" when typed;
-  // the year shows only when it is not this year ("~Oct 2024" / "12 Sep 2024")
-  function phCcStartTxt(s, est) {
+  // the year shows only when it is not this year ("~Oct 2024" / "12 Sep 2024"). her 2026-10-18 ask
+  // ("give option to select year only or month year only"): a 3rd arg, prec ("d"/"m"/"y"), picks
+  // what actually shows -- "2024" for year-only, "Oct 2024" for month-year (always with its year,
+  // never just the day dropped), day precision unchanged. Fixes the bug this same ask surfaced: the
+  // old same-current-year branch ignored est (and would have ignored prec too) and always printed a
+  // day it did not have.
+  function phCcStartTxt(s, est, prec) {
     const m = /^(\d{4})-(\d\d)-(\d\d)$/.exec(s || ""); if (!m) return "";
     const y = +m[1], mo = MON_SHORT[+m[2] - 1], d = +m[3], same = y === phCcNow().getFullYear();
-    const t = same ? `${d} ${mo}` : est ? `${mo} ${y}` : `${d} ${mo} ${y}`;
+    const t = prec === "y" ? `${y}` : prec === "m" ? `${mo} ${y}` : same ? `${d} ${mo}` : est ? `${mo} ${y}` : `${d} ${mo} ${y}`;
     return est ? `<span class="ph-cc-st est" title="Worked out from how long">~${t}</span>` : `<span class="ph-cc-st">${t}</span>`;
   }
   // "5 days" / "3 wk" / "8 mo" / "1.5 yr": worked out from the date, so it is right every day
@@ -67532,21 +67551,53 @@ or changing anything in Cliniko.
     // date/note pick already did); the worked-out start date is plain text beside it, hidden while
     // the timeline above already shows it.
     const whChip = (since, attr) => since ? `<button type="button" class="ph-cc-act" ${attr}>${esc(phCcRel(since))}</button>` : `<button type="button" class="ph-cc-act empty" ${attr}>How long</button>`;
-    const whenTxt = (since, est) => since ? `<span class="ph-cc-when">${phCcStartTxt(since, est)}</span>` : "";
-    const sinceCell = (since, est, attr) => `<td class="snc"><span class="ph-cc-sncwrap">${whChip(since, attr)}${whenTxt(since, est)}</span></td>`;
-    const openRow = (quick, input) => `<tr class="ph-cc-subrow"><td colspan="6"><div class="ph-cc-sub"><div class="ph-cc-picks">${quick}${input}</div></div></td></tr>`;
+    const whenTxt = (since, est, prec) => since ? `<span class="ph-cc-when">${phCcStartTxt(since, est, prec)}</span>` : "";
+    const sinceCell = (since, est, prec, attr) => `<td class="snc"><span class="ph-cc-sncwrap">${whChip(since, attr)}${whenTxt(since, est, prec)}</span></td>`;
+    const openRow = (sel, precBar, input) => `<tr class="ph-cc-subrow"><td colspan="6"><div class="ph-cc-sub"><div class="ph-cc-picks">${sel}${precBar}${input}</div></div></td></tr>`;
+    // her 2026-10-18 ask ("improve chip display, make it more succinct"): the open row's 7-chip
+    // PH_CC_QUICK pill wall exceeded the app's own "more than 6 options = dropdown" rule (TAPPABLE
+    // THINGS) -- same dropdown already proven on the Pain table (data-pm-qsel, PH_SINCE_OPTS),
+    // just these two rows' own attributes. "Custom..." hands focus to the day text box above.
+    const sinceSel = (since, est, attr) => `<select class="ph-cc-in" ${attr} aria-label="How long">
+      <option value="">How long…</option>
+      ${PH_SINCE_OPTS.map((q, k) => `<option value="${k}"${est && since === phCcAgo(q[1], q[2]) ? " selected" : ""}>${esc(q[0])}</option>`).join("")}
+      <option value="custom">Custom — type it above</option>
+    </select>`;
+    // her 2026-10-18 ask ("give option to select year only or month year only"): a Day/Month/Year
+    // joined segmented bar (her 2026-10-15/16 standing "chip rows for one category join into a
+    // bar" rule, reusing .ph-tng2-seg/.ph-ltr-qual verbatim) swaps which <input> below it renders;
+    // nothing is written by this tap alone -- it only changes the view (phCcSincePrec) until the
+    // input itself is actually filled in and committed.
+    const precBar = (prec, dAttr, mAttr, yAttr) => `<div class="ph-tng2-seg ph-cc-precseg">
+      <button type="button" class="ph-ltr-qual${prec === "d" ? " on" : ""}" ${dAttr}>Day</button>
+      <button type="button" class="ph-ltr-qual${prec === "m" ? " on" : ""}" ${mAttr}>Month</button>
+      <button type="button" class="ph-ltr-qual${prec === "y" ? " on" : ""}" ${yAttr}>Year</button>
+    </div>`;
+    // one of three <input>s, by precision -- day (unchanged, exact date or blank-while-estimated),
+    // month (<input type=month>) or year (a plain number box); each prefills from whatever ISO
+    // date is already on file, regardless of its own stored precision, so switching tabs never
+    // loses the only date she has.
+    const sinceInput = (prec, since, est, dAttr, mAttr, yAttr, label) => {
+      if (prec === "y") { const y = /^(\d{4})/.exec(since || ""); return `<input type="number" class="ph-cc-in" ${yAttr} value="${y ? y[1] : ""}" placeholder="yyyy" min="1900" max="${phCcNow().getFullYear()}" step="1" inputmode="numeric" aria-label="${esc(label)} started — year">`; }
+      if (prec === "m") { const ym = /^(\d{4}-\d\d)/.exec(since || ""); return `<input type="month" class="ph-cc-in" ${mAttr} value="${ym ? ym[1] : ""}" max="${phCcIso(phCcNow()).slice(0, 7)}" aria-label="${esc(label)} started — month">`; }
+      return `<input type="text" class="ph-cc-in" ${dAttr} value="${esc(phCcFmtDate(est ? "" : since))}" placeholder="dd/mm/yyyy" title="A date (dd/mm/yyyy) or how long: 2 years, 6 mo, 3 wk" autocomplete="off" aria-label="${esc(label)} started">`;
+    };
     const f = c.main && phCcFam(c.main);
     if (f) {
       const lab = male && f.id === "fertility" ? "Fertility" : f.label;
-      const since = c.since || "", est = !!c.sinceEst, open = phCcActive === "main";
+      const since = c.since || "", est = !!c.sinceEst, prec0 = c.sincePrec || "d", open = phCcActive === "main";
       const tog = `data-cc-main-open="1"`;
-      if (since) pts.push({ main: true, text: c.mainText || lab, since, est }); else und.push(c.mainText || lab);
+      if (since) pts.push({ main: true, text: c.mainText || lab, since, est, prec: c.sincePrec }); else und.push(c.mainText || lab);
       // her 2026-10-11 ask: the plan type only picks the plan family -- the chief complaint itself is
       // written in her own words (rec.complaint.mainText); the plan type is a small tag beside it
-      rows.push(`<tr class="ph-cc-r m"><td class="cpl"><div class="ph-cc-mline"><span class="ph-cc-maintag">Main</span><input type="text" class="ph-cc-main-text field-bare" data-cc-main-text="1" maxlength="140" value="${esc(c.mainText || "")}" placeholder="In ${(pro || phProRec(null)).p} words" autocomplete="off" aria-label="Chief complaint in ${(pro || phProRec(null)).p} words">${c.auto ? `<span class="ph-cc-fbr" title="Read from ${esc(c.auto)}. Edit it and it becomes hers.">from ${esc(c.auto)}</span>` : ""}<span class="ph-cc-planwrap"><button type="button" class="ph-cc-plan" data-cc-plan-tog="1" title="Which treatment plans lead the list">${phCcIcHtml(f.ic)}${esc(lab)} plan<span class="car">▾</span></button>${phCcPlanOpen ? phCcPlanMenuHtml(male) : ""}</span></div></td><td class="dx">${dxIn(c.dx, `data-cc-main-dx="1"`, c.mainText || lab)}</td>${sinceCell(since, est, tog)}<td class="mn"><span class="ph-cc-mainstar" title="Main complaint" aria-hidden="true">★</span></td><td class="nt"><span class="ph-cc-dash" aria-hidden="true">—</span></td><td class="rm"></td></tr>`);
+      rows.push(`<tr class="ph-cc-r m"><td class="cpl"><div class="ph-cc-mline"><span class="ph-cc-maintag">Main</span><input type="text" class="ph-cc-main-text field-bare" data-cc-main-text="1" maxlength="140" value="${esc(c.mainText || "")}" placeholder="In ${(pro || phProRec(null)).p} words" autocomplete="off" aria-label="Chief complaint in ${(pro || phProRec(null)).p} words">${c.auto ? `<span class="ph-cc-fbr" title="Read from ${esc(c.auto)}. Edit it and it becomes hers.">from ${esc(c.auto)}</span>` : ""}<span class="ph-cc-planwrap"><button type="button" class="ph-cc-plan" data-cc-plan-tog="1" title="Which treatment plans lead the list">${phCcIcHtml(f.ic)}${esc(lab)} plan<span class="car">▾</span></button>${phCcPlanOpen ? phCcPlanMenuHtml(male) : ""}</span></div></td><td class="dx">${dxIn(c.dx, `data-cc-main-dx="1"`, c.mainText || lab)}</td>${sinceCell(since, est, c.sincePrec, tog)}<td class="mn"><span class="ph-cc-mainstar" title="Main complaint" aria-hidden="true">★</span></td><td class="nt"><span class="ph-cc-dash" aria-hidden="true">—</span></td><td class="rm"></td></tr>`);
       if (open) {
-        const quick = PH_CC_QUICK.map((q, k) => `<button type="button" class="ph-pfw-opt${est && since === phCcAgo(q[1], q[2]) ? " on" : ""}" data-cc-main-q="${k}">${q[0]}</button>`).join("");
-        rows.push(openRow(quick, `<input type="text" class="ph-cc-in" data-cc-main-since="1" value="${esc(phCcFmtDate(est ? "" : since))}" placeholder="dd/mm/yyyy" title="A date (dd/mm/yyyy) or how long: 2 years, 6 mo, 3 wk" autocomplete="off" aria-label="${esc(lab)} started">`));
+        const prec = phCcSincePrec || prec0;
+        rows.push(openRow(
+          sinceSel(since, est, `data-cc-main-qsel="1"`),
+          precBar(prec, `data-cc-main-prec="d"`, `data-cc-main-prec="m"`, `data-cc-main-prec="y"`),
+          sinceInput(prec, since, est, `data-cc-main-since="1"`, `data-cc-main-since-m="1"`, `data-cc-main-since-y="1"`, lab)
+        ));
       }
     }
     list.forEach(s => {
@@ -67556,9 +67607,9 @@ or changing anything in Cliniko.
         rows.push(`<tr class="ph-cc-r ptr"><td class="cpl" colspan="5"><span class="ph-cc-note-redundant">↓ ${esc(s.text)}</span></td><td class="rm">${x("data-cc-sec-rm", s.id, s.text)}</td></tr>`);
         return;
       }
-      const open = s.id === phCcActive, est = !!s.sinceEst;
+      const open = s.id === phCcActive, est = !!s.sinceEst, prec0 = s.sincePrec || "d";
       const tog = `data-cc-sec-tog="${s.id}"`;
-      if (s.since) pts.push({ text: s.text, since: s.since, est }); else und.push(s.text);
+      if (s.since) pts.push({ text: s.text, since: s.since, est, prec: s.sincePrec }); else und.push(s.text);
       const name = `<span class="ph-cc-sec-name${phCcPop === s.id ? " pop" : ""}"${open ? "" : ` data-cc-sec-open="${s.id}"`}>${esc(s.text)}${s.fromFbr ? `<span class="ph-cc-fbr" title="Found by Fang Bing Ren">Fang Bing Ren</span>` : ""}</span>`;
       // her 2026-10-12 ask ("include option to give more info on secondary complaints"): a short note per complaint
       // (rec.complaint.secondary[].note), carried to the treatment table's Nature column. Its own
@@ -67568,11 +67619,15 @@ or changing anything in Cliniko.
       // her 2026-10-15 ask: a Main star lets her promote this secondary to be the new chief
       // complaint (phCcSecPromote -- the chief's current words become a secondary in its place).
       const mainStar = `<button type="button" class="mcp" data-cc-sec-main="${s.id}" title="Make main complaint"><span class="ic">★</span></button>`;
-      rows.push(`<tr class="ph-cc-r"><td class="cpl">${name}</td><td class="dx">${dxIn(s.dx, `data-cc-sec-dx="${s.id}"`, s.text)}</td>${sinceCell(s.since, est, tog)}<td class="mn">${mainStar}</td><td class="nt">${noteCell}</td><td class="rm">${x("data-cc-sec-rm", s.id, s.text)}</td></tr>`);
+      rows.push(`<tr class="ph-cc-r"><td class="cpl">${name}</td><td class="dx">${dxIn(s.dx, `data-cc-sec-dx="${s.id}"`, s.text)}</td>${sinceCell(s.since, est, s.sincePrec, tog)}<td class="mn">${mainStar}</td><td class="nt">${noteCell}</td><td class="rm">${x("data-cc-sec-rm", s.id, s.text)}</td></tr>`);
       if (open) {
         rows.push(`<tr class="ph-cc-subrow"><td colspan="6"><div class="ph-cc-sub"><input type="text" class="ph-cc-note-in field-bare" data-cc-sec-note="${s.id}" maxlength="140" value="${esc(s.note || "")}" placeholder="More info" autocomplete="off" aria-label="More about ${esc(s.text)}"></div></td></tr>`);
-        const quick = PH_CC_QUICK.map((q, k) => `<button type="button" class="ph-pfw-opt${est && s.since === phCcAgo(q[1], q[2]) ? " on" : ""}" data-cc-sec-q="${s.id}:${k}">${q[0]}</button>`).join("");
-        rows.push(openRow(quick, `<input type="text" class="ph-cc-in" data-cc-sec-since="${s.id}" value="${esc(phCcFmtDate(est ? "" : s.since))}" placeholder="dd/mm/yyyy" title="A date (dd/mm/yyyy) or how long: 2 years, 6 mo, 3 wk" autocomplete="off" aria-label="${esc(s.text)} started">`));
+        const prec = phCcSincePrec || prec0;
+        rows.push(openRow(
+          sinceSel(s.since, est, `data-cc-sec-qsel="${s.id}"`),
+          precBar(prec, `data-cc-sec-prec="${s.id}:d"`, `data-cc-sec-prec="${s.id}:m"`, `data-cc-sec-prec="${s.id}:y"`),
+          sinceInput(prec, s.since, est, `data-cc-sec-since="${s.id}"`, `data-cc-sec-since-m="${s.id}"`, `data-cc-sec-since-y="${s.id}"`, s.text)
+        ));
       }
     });
     // her 2026-10-15 pick: "+ Add" is a chip; tapping it opens the box (focused), Enter adds (it
@@ -67613,7 +67668,7 @@ or changing anything in Cliniko.
     const ax = 70 + Math.max(0, upN - 1) * 44, h = 150 + Math.max(0, upN - 1) * 44 + Math.max(0, dnN - 1) * 44;
     const dots = ps.map(o => {
       const to = o.side === "up" ? 12 + o.tier * 44 : 22 + o.tier * 44;
-      return `<div class="ph-cc-tl-pt t-${o.side}${o.p.main ? " main" : ""}" style="left:${o.left.toFixed(1)}%;--to:${to}px"><span class="dot"></span><div class="lab"><b title="${esc(o.p.text)}">${esc(o.p.text)}</b><span>${esc(phCcRel(o.p.since))} · ${phCcStartTxt(o.p.since, o.p.est)}</span></div></div>`;
+      return `<div class="ph-cc-tl-pt t-${o.side}${o.p.main ? " main" : ""}" style="left:${o.left.toFixed(1)}%;--to:${to}px"><span class="dot"></span><div class="lab"><b title="${esc(o.p.text)}">${esc(o.p.text)}</b><span>${esc(phCcRel(o.p.since))} · ${phCcStartTxt(o.p.since, o.p.est, o.p.prec)}</span></div></div>`;
     }).join("");
     const nodate = und.length ? `<div class="ph-cc-tl-und"><span>No date yet</span>${und.map(u => `<i>${esc(u)}</i>`).join("")}</div>` : "";
     return `<div class="ph-cc-tl" aria-hidden="true" style="--h:${h}px;--ax:${ax}px"><div class="ph-cc-tl-axis"></div><div class="ph-cc-tl-now"><span>Today</span></div>${dots}</div>${nodate}`;
@@ -67725,11 +67780,13 @@ or changing anything in Cliniko.
     if (!phCcWrite(name, c => { c.main = null; c.autoOff = true; })) return;
     phCcSaved = true; phCcFillCase(name); phCcRefresh(true);
   }
-  function phCcMainSinceSet(iso, noRepaint, est) {
+  function phCcMainSinceSet(iso, noRepaint, est, prec) {
     const name = phPfwName(); if (!name) return false;
-    // est = the date was worked out from "how long" (a quick pick or "3 wk"); a typed date is exact
-    if (!phCcWrite(name, c => { c.since = iso; if (iso && est) c.sinceEst = true; else delete c.sinceEst; })) return false;
-    phCcActive = null;
+    // est = the date was worked out from "how long" (a quick pick or "3 wk"); a typed date is exact.
+    // her 2026-10-18 ask: prec ("m"/"y") records she only knows the month or year -- day precision
+    // (the default, "d" or omitted) clears it, same as having never set it.
+    if (!phCcWrite(name, c => { c.since = iso; if (iso && est) c.sinceEst = true; else delete c.sinceEst; if (iso && prec && prec !== "d") c.sincePrec = prec; else delete c.sincePrec; })) return false;
+    phCcActive = null; phCcSincePrec = null;
     phCcFillAim(name);
     if (noRepaint) phCcSavedFlash(); else { phCcSaved = true; phCcRefresh(true); }
     return true;
@@ -67758,19 +67815,20 @@ or changing anything in Cliniko.
     if (!phCcWrite(name, c => {
       const list = c.secondary || [], idx = list.findIndex(s => s.id === id); if (idx < 0) return;
       const s = list[idx];
-      const prevText = c.mainText || "", prevSince = c.since || "", prevEst = !!c.sinceEst, prevDx = c.dx || "";
+      const prevText = c.mainText || "", prevSince = c.since || "", prevEst = !!c.sinceEst, prevDx = c.dx || "", prevPrec = c.sincePrec || "";
       const guess = phCcGuessIds(s.text)[0];
       c.main = guess || c.main || null; c.mainText = s.text; c.since = s.since || ""; c.sinceEst = !!s.sinceEst; c.dx = s.dx || ""; c.auto = undefined; c.autoOff = true;
+      if (s.sincePrec) c.sincePrec = s.sincePrec; else delete c.sincePrec;
       list.splice(idx, 1);
-      if (prevText) list.push({ id: uid(), text: prevText, since: prevSince, sinceEst: prevEst, dx: prevDx, note: "" });
+      if (prevText) { const np = { id: uid(), text: prevText, since: prevSince, sinceEst: prevEst, dx: prevDx, note: "" }; if (prevPrec) np.sincePrec = prevPrec; list.push(np); }
       c.secondary = list;
     })) return;
     phCcSaved = true; phCcFillCase(name); phCcFillAim(name); phCcRefresh(true);
   }
-  function phCcSecSinceSet(id, iso, noRepaint, est) {
+  function phCcSecSinceSet(id, iso, noRepaint, est, prec) {
     const name = phPfwName(); if (!name) return false;
-    if (!phCcWrite(name, c => { const s = (c.secondary || []).find(x => x.id === id); if (s) { s.since = iso; if (iso && est) s.sinceEst = true; else delete s.sinceEst; } })) return false;
-    phCcActive = null; phCcFillAim(name);
+    if (!phCcWrite(name, c => { const s = (c.secondary || []).find(x => x.id === id); if (s) { s.since = iso; if (iso && est) s.sinceEst = true; else delete s.sinceEst; if (iso && prec && prec !== "d") s.sincePrec = prec; else delete s.sincePrec; } })) return false;
+    phCcActive = null; phCcSincePrec = null; phCcFillAim(name);
     if (noRepaint) phCcSavedFlash(); else { phCcSaved = true; phCcRefresh(true); }
     return true;
   }
@@ -67867,13 +67925,17 @@ or changing anything in Cliniko.
     }
     if ((el = T.closest("[data-cc-sec-rm]"))) { phCcSecRemove(el.dataset.ccSecRm); return true; }
     if ((el = T.closest("[data-cc-sec-main]"))) { phCcSecPromote(el.dataset.ccSecMain); return true; }
-    // a quiet chip opens on tap; tapping the same chip again closes it (no separate "Done")
-    if (T.closest("[data-cc-main-open]")) { phCcActive = phCcActive === "main" ? null : "main"; phCcRefresh(true); return true; }
-    if ((el = T.closest("[data-cc-sec-tog]"))) { phCcActive = phCcActive === el.dataset.ccSecTog ? null : el.dataset.ccSecTog; phCcRefresh(true); return true; }
-    if ((el = T.closest("[data-cc-sec-open]"))) { phCcActive = el.dataset.ccSecOpen; phCcRefresh(true); return true; }
+    // a quiet chip opens on tap; tapping the same chip again closes it (no separate "Done"). her
+    // 2026-10-18 ask: phCcSincePrec resets on every open/close so a freshly-opened row always
+    // starts from that complaint's OWN stored precision, never the last row's leftover choice.
+    if (T.closest("[data-cc-main-open]")) { phCcActive = phCcActive === "main" ? null : "main"; phCcSincePrec = null; phCcRefresh(true); return true; }
+    if ((el = T.closest("[data-cc-sec-tog]"))) { phCcActive = phCcActive === el.dataset.ccSecTog ? null : el.dataset.ccSecTog; phCcSincePrec = null; phCcRefresh(true); return true; }
+    if ((el = T.closest("[data-cc-sec-open]"))) { phCcActive = el.dataset.ccSecOpen; phCcSincePrec = null; phCcRefresh(true); return true; }
     if ((el = T.closest("[data-cc-addfam]"))) { phCcAddFam(el.dataset.ccAddfam); return true; }
-    if ((el = T.closest("[data-cc-main-q]"))) { const q = PH_CC_QUICK[+el.dataset.ccMainQ]; phCcMainSinceSet(phCcAgo(q[1], q[2]), false, true); return true; }
-    if ((el = T.closest("[data-cc-sec-q]"))) { const [id, k] = el.dataset.ccSecQ.split(":"), q = PH_CC_QUICK[+k]; phCcSecSinceSet(id, phCcAgo(q[1], q[2]), false, true); return true; }
+    // her 2026-10-18 ask ("select year only or month year only"): the Day/Month/Year bar only
+    // SWITCHES which input shows below it -- nothing is written until that input itself commits.
+    if ((el = T.closest("[data-cc-main-prec]"))) { phCcSincePrec = el.dataset.ccMainPrec; phCcRefresh(true); return true; }
+    if ((el = T.closest("[data-cc-sec-prec]"))) { phCcSincePrec = el.dataset.ccSecPrec.split(":")[1]; phCcRefresh(true); return true; }
     // picking a Fang Bing Ren sign from the secondary-complaint search: add it as a complaint AND
     // tick the sign (phCcSecPickSign handles both)
     if ((el = T.closest("[data-cc-secpick]"))) { const key = el.dataset.ccSecpick; phCcSecMenuClose(); phCcSecPickSign(key, phSignLabel(key)); return true; }
@@ -67932,6 +67994,38 @@ or changing anything in Cliniko.
       if (phCcWrite(name, c => { const s = (c.secondary || []).find(x => x.id === id); if (s) { if (v) s.dx = v; else delete s.dx; } })) phCcSavedFlash();
       return;
     }
+    // her 2026-10-18 ask ("improve chip display, make it more succinct"): the "How long" dropdown,
+    // same pattern as the Pain table's data-pm-qsel. "Custom..." doesn't write anything -- it just
+    // switches the open row back to the day box (above) and hands it focus, as Custom always has.
+    if (el.matches("[data-cc-main-qsel], [data-cc-sec-qsel]")) {
+      const isMainQ = el.matches("[data-cc-main-qsel]"), v = el.value;
+      if (v === "custom") {
+        phCcSincePrec = "d"; phCcRefresh(true);
+        const foc = document.querySelector(isMainQ ? "#pharmacyPage [data-cc-main-since]" : `#pharmacyPage [data-cc-sec-since="${CSS.escape(el.dataset.ccSecQsel)}"]`);
+        if (foc) foc.focus({ preventScroll: true });
+        return;
+      }
+      const q = PH_SINCE_OPTS[+v]; if (!q) return;
+      const iso = phCcAgo(q[1], q[2]);
+      isMainQ ? phCcMainSinceSet(iso, false, true, "d") : phCcSecSinceSet(el.dataset.ccSecQsel, iso, false, true, "d");
+      return;
+    }
+    // her 2026-10-18 ask ("give option to select year only or month year only"): month/year inputs
+    // write through the same two doors, with their own precision flag so the Started column shows
+    // only what she actually knows (phCcStartTxt's prec argument).
+    if (el.matches("[data-cc-main-since-m], [data-cc-sec-since-m]")) {
+      const isMainM = el.matches("[data-cc-main-since-m]"), v = el.value, iso = v ? `${v}-01` : "";
+      isMainM ? phCcMainSinceSet(iso, false, false, "m") : phCcSecSinceSet(el.dataset.ccSecSinceM, iso, false, false, "m");
+      return;
+    }
+    if (el.matches("[data-cc-main-since-y], [data-cc-sec-since-y]")) {
+      const isMainY = el.matches("[data-cc-main-since-y]"), raw = el.value.trim(), y = +raw;
+      if (raw && !(y >= 1900 && y <= phCcNow().getFullYear())) { el.classList.add("bad"); return; }
+      el.classList.remove("bad");
+      const iso = raw ? `${raw}-01-01` : "";
+      isMainY ? phCcMainSinceSet(iso, false, false, "y") : phCcSecSinceSet(el.dataset.ccSecSinceY, iso, false, false, "y");
+      return;
+    }
     const isMain = el.matches("[data-cc-main-since]"), isSec = el.matches("[data-cc-sec-since]");
     if (!isMain && !isSec) return;
     const v = phCcParseDate(el.value);
@@ -67940,13 +68034,13 @@ or changing anything in Cliniko.
     // "3 wk" / "2 yr" is worked out from how long = an estimate; a typed date is exact
     const est = !!v && !/[\/.-]/.test(el.value);
     // the two values sit in the table row, so repaint (the row closes, as a quick pick does)
-    isMain ? phCcMainSinceSet(v || "", false, est) : phCcSecSinceSet(el.dataset.ccSecSince, v || "", false, est);
+    isMain ? phCcMainSinceSet(v || "", false, est, "d") : phCcSecSinceSet(el.dataset.ccSecSince, v || "", false, est, "d");
   });
   document.addEventListener("input", e => {
     const el = e.target;
     if (el && el.matches && el.matches("[data-cc-add-in]") && el.closest("#pharmacyPage")) { phCcMenuHl = 0; phCcMenuPaint(el); }
     else if (el && el.matches && el.matches("[data-cc-sec-in]") && el.closest("#pharmacyPage")) { phCcSecMenuHl = 0; phCcSecMenuPaint(el); }
-    else if (el && el.matches && (el.matches("[data-cc-main-since]") || el.matches("[data-cc-sec-since]"))) el.classList.remove("bad");
+    else if (el && el.matches && (el.matches("[data-cc-main-since]") || el.matches("[data-cc-sec-since]") || el.matches("[data-cc-main-since-y]") || el.matches("[data-cc-sec-since-y]"))) el.classList.remove("bad");
   });
   document.addEventListener("focusin", e => { const el = e.target; if (el && el.matches && el.matches("[data-cc-add-in]") && el.closest("#pharmacyPage")) { phCcMenuHl = 0; phCcMenuPaint(el); } });
   // keys, only inside the card: Enter adds a symptom / takes the top menu match, arrows move in
