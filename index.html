@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261017-1080000">
+<meta name="lcm-build" content="20261017-1090000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -15488,10 +15488,11 @@
   #pharmacyPage .ph-cc-tl-pt .dot { position: absolute; left: 50%; top: calc(var(--ax, 70px) - 4px); box-sizing: border-box; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: var(--ph-white); border: 2px solid var(--ph-herb-card); }
   #pharmacyPage .ph-cc-tl-pt.main .dot { top: calc(var(--ax, 70px) - 7px); width: 18px; height: 18px; margin-left: -9px; background: var(--ph-herb); border-color: var(--ph-herb); box-shadow: 0 0 0 4px var(--ph-herb-tint); }
   #pharmacyPage .ph-cc-tl-pt .lab { position: absolute; left: 50%; right: auto; transform: translateX(-50%); width: max-content; max-width: 170px; }
-  #pharmacyPage .ph-cc-tl-pt.t-up .lab { bottom: calc(var(--h, 150px) - var(--ax, 70px) + 12px); }
-  #pharmacyPage .ph-cc-tl-pt.t-up2 .lab { bottom: calc(var(--h, 150px) - var(--ax, 70px) + 56px); }
-  #pharmacyPage .ph-cc-tl-pt.t-dn .lab { top: calc(var(--ax, 70px) + 22px); }
-  #pharmacyPage .ph-cc-tl-pt.t-dn2 .lab { top: calc(var(--ax, 70px) + 66px); }
+  /* her 2026-10-17 "see the problem?": a 5th+ complaint dated near the others used to silently reuse one of
+     only 4 fixed tiers (t-up/t-up2/t-dn/t-dn2), landing its label on top of an earlier one. Tiers are now an
+     UNBOUNDED up/dn stack (the JS hands each dot its own --to offset), so two classes cover every tier. */
+  #pharmacyPage .ph-cc-tl-pt.t-up .lab { bottom: calc(var(--h, 150px) - var(--ax, 70px) + var(--to, 12px)); }
+  #pharmacyPage .ph-cc-tl-pt.t-dn .lab { top: calc(var(--ax, 70px) + var(--to, 22px)); }
   #pharmacyPage .ph-cc-tl-pt .lab b { display: block; white-space: normal; max-width: 170px; text-align: center; font: 600 var(--fs-13) var(--font-body); color: var(--ph-ink); }
   #pharmacyPage .ph-cc-tl-pt.main .lab b { font-size: var(--fs-15); color: var(--ph-herb-deep); }
   #pharmacyPage .ph-cc-tl-pt .lab > span { display: block; white-space: nowrap; font: 500 var(--fs-11) var(--font-body); color: var(--ph-faint); }
@@ -67585,16 +67586,30 @@ or changing anything in Cliniko.
     if (pts.length < 2) return "";
     const maxD = Math.max(30, Math.max.apply(null, pts.map(p => phCcDaysSince(p.since)))) * 1.12;
     const ps = pts.map(p => ({ p, left: 6 + (1 - Math.max(0, phCcDaysSince(p.since)) / maxD) * 72 })).sort((a, b) => a.left - b.left);
-    const last = {};
+    // her 2026-10-17 "see the problem?": several complaints dated within a few days of each other ran out of
+    // the old fixed 4 tiers (up/dn/up2/dn2) and a later label silently reused one still holding an earlier
+    // label. Tiers are now an UNBOUNDED alternating up/dn stack, each side its own array of "the left% last
+    // placed at this tier" -- a dense cluster just grows the row taller instead of ever landing two labels on
+    // top of each other. GAP is the same 22% clearance the old 4-tier version used, just no longer capped.
+    const GAP = 22, sides = { up: [], dn: [] }, cap = ps.length + 2;
     ps.forEach(o => {
-      const order = o.p.main ? ["dn", "up", "dn2", "up2"] : ["up", "dn", "up2", "dn2"];
-      let pick = order.find(k => last[k] == null || o.left - last[k] >= 22);
-      if (!pick) pick = order.reduce((b, k) => (o.left - (last[k] == null ? -99 : last[k])) > (o.left - (last[b] == null ? -99 : last[b])) ? k : b, order[0]);
-      last[pick] = o.left; o.tier = pick;
+      const order = o.p.main ? ["dn", "up"] : ["up", "dn"];
+      let side = null, tier = null;
+      for (let lvl = 0; lvl < cap && side == null; lvl++) {
+        for (const s of order) {
+          const arr = sides[s];
+          if (arr[lvl] == null || o.left - arr[lvl] >= GAP) { side = s; tier = lvl; break; }
+        }
+      }
+      if (side == null) { side = order[0]; tier = sides[side].length; } // unreachable in practice, safety only
+      sides[side][tier] = o.left; o.side = side; o.tier = tier;
     });
-    const up2 = ps.some(o => o.tier === "up2"), dn2 = ps.some(o => o.tier === "dn2");
-    const ax = 70 + (up2 ? 44 : 0), h = 150 + (up2 ? 44 : 0) + (dn2 ? 44 : 0);
-    const dots = ps.map(o => `<div class="ph-cc-tl-pt t-${o.tier}${o.p.main ? " main" : ""}" style="left:${o.left.toFixed(1)}%"><span class="dot"></span><div class="lab"><b title="${esc(o.p.text)}">${esc(o.p.text)}</b><span>${esc(phCcRel(o.p.since))} · ${phCcStartTxt(o.p.since, o.p.est)}</span></div></div>`).join("");
+    const upN = sides.up.length, dnN = sides.dn.length;
+    const ax = 70 + Math.max(0, upN - 1) * 44, h = 150 + Math.max(0, upN - 1) * 44 + Math.max(0, dnN - 1) * 44;
+    const dots = ps.map(o => {
+      const to = o.side === "up" ? 12 + o.tier * 44 : 22 + o.tier * 44;
+      return `<div class="ph-cc-tl-pt t-${o.side}${o.p.main ? " main" : ""}" style="left:${o.left.toFixed(1)}%;--to:${to}px"><span class="dot"></span><div class="lab"><b title="${esc(o.p.text)}">${esc(o.p.text)}</b><span>${esc(phCcRel(o.p.since))} · ${phCcStartTxt(o.p.since, o.p.est)}</span></div></div>`;
+    }).join("");
     const nodate = und.length ? `<div class="ph-cc-tl-und"><span>No date yet</span>${und.map(u => `<i>${esc(u)}</i>`).join("")}</div>` : "";
     return `<div class="ph-cc-tl" aria-hidden="true" style="--h:${h}px;--ax:${ax}px"><div class="ph-cc-tl-axis"></div><div class="ph-cc-tl-now"><span>Today</span></div>${dots}</div>${nodate}`;
   }
