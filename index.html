@@ -19302,6 +19302,11 @@
   #pharmacyPage .mk-dgm.on { fill: #8C3A33; opacity: .92; }
   #pharmacyPage .mk-dgdeep { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--ph-line); font: 600 var(--fs-11-5) var(--font-body); color: var(--ph-soft); }
   #pharmacyPage .mk-dgdtag { padding: 2px 8px; border-radius: 999px; background: var(--ph-paper); font-weight: 500; color: var(--ph-soft); }
+  /* her 2026-10-18 "show muscle diagram if selected": the same drawing, inline under the pain's own
+     muscle list once >=1 is on the plan -- smaller than the modal's, no card shell of its own. */
+  #pharmacyPage .mk-mudiagram { margin: 8px 0 0; padding: 10px 0 0; border-top: 1px solid var(--ph-line); }
+  #pharmacyPage .mk-mudiagram .mk-dgpanes { justify-content: flex-start; gap: 14px; }
+  #pharmacyPage .mk-mudiagram .mk-dgsvg { width: 108px; }
   #pharmacyPage .mk-muadd { display: flex; flex-direction: column; gap: 6px; width: 100%; max-width: 440px; margin: 4px 0 0 4px; }
   #pharmacyPage .mk-muaddhd { display: flex; align-items: center; gap: 10px; }
   #pharmacyPage .mk-muq { flex: 1; min-width: 0; box-sizing: border-box; margin: 0; padding: 5px 10px; border: 1px solid var(--ph-line); border-radius: 10px; background: var(--ph-paper); font: inherit; font-size: var(--fs-12); color: var(--ph-ink); box-shadow: none; }
@@ -88556,15 +88561,20 @@ or changing anything in Cliniko.
     const vb = `0 ${yr[0]} 220 ${yr[1] - yr[0]}`;
     return `<div class="mk-dgpane"><div class="mk-dgsvg" role="img" aria-label="${view === "front" ? "Front" : "Back"} view">${PH_BODY_GEOM.svg(g, view, { uid: "mskdg" + rk + view, build, shade: true, details: false, hl, viewBox: vb })}</div><span class="mk-dgcap">${view === "front" ? "Front" : "Back"}</span></div>`;
   }
-  function phMskDiagramHtml(name, rk) {
-    const rec = phPatientPeek(name) || {}, plan0 = phMskPlanOf(rec), lbl = PH_MSK_REGION_LABEL[rk] || rk;
+  // the panes + caption only, reused by the modal (phMskDiagramHtml) and the inline under-pain diagram
+  // (phMskPainMusclesHtml) -- one drawing, two places it can show up, never two copies drifting.
+  function phMskDiagramPanesHtml(rk, rec, plan0) {
     const front = phMskDiagramView("front", rk, rec, plan0), back = phMskDiagramView("back", rk, rec, plan0);
     const deep = PH_MSK_MUSCLES.filter(m => m.regions.includes(rk) && m.view === "none");
     const deepHtml = deep.length ? `<div class="mk-dgdeep"><b>Deep -- usually treated by hand</b>${deep.map(m => `<span class="mk-dgdtag">${esc(m.name)}</span>`).join("")}</div>` : "";
+    return `<div class="mk-dgsub">Maroon -- on today's plan. Grey -- not ticked. An original illustration, not a medical reference image; a draft, hers to correct.</div>
+      <div class="mk-dgpanes">${front}${back}</div>${deepHtml}`;
+  }
+  function phMskDiagramHtml(name, rk) {
+    const rec = phPatientPeek(name) || {}, plan0 = phMskPlanOf(rec), lbl = PH_MSK_REGION_LABEL[rk] || rk;
     return `<div class="ph-hx-card ph-rfx mk-dgx" role="dialog" aria-modal="true" aria-label="${esc(lbl)} muscle diagram">
       <div class="ph-rfx-hd"><b>${esc(lbl)}</b><button type="button" class="ph-stocktake-close" data-rf-close="1" aria-label="Close">✕</button></div>
-      <div class="mk-dgsub">Maroon -- on today's plan. Grey -- not ticked. An original illustration, not a medical reference image; a draft, hers to correct.</div>
-      <div class="mk-dgpanes">${front}${back}</div>${deepHtml}
+      ${phMskDiagramPanesHtml(rk, rec, plan0)}
     </div>`;
   }
   function phMskDiagramOpen(name, rk) {
@@ -89354,7 +89364,11 @@ or changing anything in Cliniko.
     const mine = mus.filter(mu => mu.m.regions.includes(rk)), lbl = (PH_MSK_REGION_LABEL[rk] || rk).toLowerCase();
     const foot = phMskMuAdd && phMskMuAdd.key === `${plan.id}|${idx}` ? phMskMuAddHtml(rec, rk) : `<button type="button" class="mk-muaddbtn" data-msk="mu-add-open" data-v="${idx}">${phMskIc("plus")}Muscle for ${esc(lbl)}</button>`;
     const dg = `<button type="button" class="mk-dgbtn" data-msk="diagram" data-v="${esc(rk)}" title="Open a picture of these muscles">⤢ Diagram</button>`;
-    return `<tr class="mu"><td colspan="${span}"><div class="mk-mus">${mine.map(mu => phMskMuLineHtml(mu)).join("")}<div class="mk-musfoot">${foot}${dg}</div></div></td></tr>`;
+    // her 2026-10-18 ask ("show muscle diagram if selected"): once at least one muscle is on the
+    // plan for this region, the same drawing shows right here -- no tap needed to see where it
+    // sits; the ⤢ Diagram button above still opens the identical picture full-size.
+    const diagram = mine.length ? `<div class="mk-mudiagram">${phMskDiagramPanesHtml(rk, rec, phMskPlanOf(rec))}</div>` : "";
+    return `<tr class="mu"><td colspan="${span}"><div class="mk-mus">${mine.map(mu => phMskMuLineHtml(mu)).join("")}<div class="mk-musfoot">${foot}${dg}</div>${diagram}</div></td></tr>`;
   }
   // muscles on the plan that fit none of the pains (a pain was removed, or last visit's plan was for another region)
   function phMskOtherMusclesHtml(list, mus, span) {
