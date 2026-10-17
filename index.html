@@ -54418,7 +54418,6 @@ or changing anything in Cliniko.
         <div class="ph-hx-head">
           <button type="button" class="ph-stocktake-close" data-cap-close="1" aria-label="Close">×</button>
           <div class="ph-hx-head-top"><div class="ph-hx-head-name">📷 Patient photo</div></div>
-          <div class="ph-tp-patient-line">today's patients first — tap one, the camera opens</div>
         </div>
         <div class="ph-hx-body">
           ${today.length ? `<div class="ph-cap-sec">Today</div>${today.map(p => `<button type="button" class="ph-cap-prow" data-cap-pick="${esc(p.name)}"><b>${esc(phTitle(p.name))}</b><span class="ctx">${p.ctx}</span><span class="cam">📷</span></button>`).join("")}` : ""}
@@ -55998,7 +55997,7 @@ or changing anything in Cliniko.
         <div class="ph-ren-review-tng">${phTongueChartSvg(t, reg)}</div>
         <div class="ph-tng2-reg">${brush
           ? ""
-          : regMeta ? `<b>${esc(regMeta[1])}</b> · ${esc(regMeta[2])} <button type="button" class="tab-link" data-ren-review-tng2="region:">whole tongue</button>` : `<span class="faint">tap a sign, then tap the drawing where it is</span>`}</div>
+          : regMeta ? `<b>${esc(regMeta[1])}</b> · ${esc(regMeta[2])} <button type="button" class="tab-link" data-ren-review-tng2="region:">whole tongue</button>` : ""}</div>
       </div>
       <div class="ph-tng2-rows">
         <div class="ph-tng2-row"><i>Colour</i><div class="ph-ltr-quals ph-visit-quals">${colourRow}${atRegion}</div></div>
@@ -70154,7 +70153,7 @@ or changing anything in Cliniko.
     }).join("");
     return { svg, rows, offSide, view, none };
   }
-  const phRenCapHtml = (offSide, view) => `<div class="ph-rf-cap" data-rf-cap aria-live="polite">Tap the body for names${offSide ? ` · ${offSide} sign${offSide === 1 ? " shows" : "s show"} on the ${view === "back" ? "front" : "back"}` : ""}</div>`;
+  const phRenCapHtml = (offSide, view) => `<div class="ph-rf-cap" data-rf-cap aria-live="polite">${offSide ? `${offSide} sign${offSide === 1 ? " shows" : "s show"} on the ${view === "back" ? "front" : "back"}` : ""}</div>`;
   function phRenFigureHtml(rec, effP, ranked, effD) {
     const p = phRenFigureParts(rec, effP, ranked, PH_REN_VIEW === "back" ? "back" : "front", "phrf", { effD, prevP: phRenPrevEff(rec, effP) });
     const seg = `<span class="ph-rf-seg" role="group" aria-label="View">${["front", "back"].map(v => `<button type="button" class="${v === p.view ? "on" : ""}" data-rf-view="${v}" aria-pressed="${v === p.view ? "true" : "false"}">${v === "front" ? "Front" : "Back"}</button>`).join("")}</span>`;
@@ -74208,18 +74207,19 @@ or changing anything in Cliniko.
   // PH_FBR_HERB_COLOUR live -- nothing duplicated, so a new family shows up here with no further
   // work. No tap writes anything; it is purely something she opens to look something up.
   var phFbrAllFilter = "";
-  function phFbrAllCardHtml(id) {
+  var phFbrAllPatient = null;   // whichever patient was open when the sheet was opened -- her 2026-10-18 pick: filter by sex like every other sign list, not a universal textbook
+  function phFbrAllCardHtml(id, sex) {
     const F = PH_FORMULAS[id]; if (!F) return "";
     const c = PH_FBR_HERB_COLOUR[id] || { bg: "#D3DEE2", fg: "#141F23" };
     const q = phFbrAllFilter.trim().toLowerCase();
-    const sideHtml = table => Object.entries(table || {}).sort((a, b) => b[1] - a[1]).map(([k, w]) => {
+    const sideHtml = table => Object.entries(table || {}).filter(([k]) => phSignSexOk(sex, k)).sort((a, b) => b[1] - a[1]).map(([k, w]) => {
       const lab = phSignLabel(k);
       if (q && !lab.toLowerCase().includes(q)) return "";
       return `<div class="ph-far-sg${w < 0 ? " neg" : ""}"><span class="w">${w > 0 ? "+" : ""}${w}</span><span class="l">${esc(lab)}</span></div>`;
     }).filter(Boolean).join("");
     const bingRows = sideHtml(F.bing), renRows = sideHtml(F.ren), nameHit = !q || F.name.toLowerCase().includes(q);
     if (q && !bingRows && !renRows && !nameHit) return "";
-    const bN = Object.keys(F.bing || {}).length, rN = Object.keys(F.ren || {}).length;
+    const bN = Object.keys(F.bing || {}).filter(k => phSignSexOk(sex, k)).length, rN = Object.keys(F.ren || {}).filter(k => phSignSexOk(sex, k)).length;
     return `<details class="ph-far-card"${q ? " open" : ""} style="--c:${c.bg};--fg:${c.fg || "#141F23"}">
       <summary><span class="dot"></span><span class="nm">${esc(F.name)}</span><span class="ct">${bN + rN} signs</span></summary>
       ${F.core ? `<p class="ph-far-core">${esc(F.core)}</p>` : ""}
@@ -74230,8 +74230,9 @@ or changing anything in Cliniko.
     </details>`;
   }
   function phFbrAllGroupsHtml() {
+    const peek = phFbrAllPatient ? phPatientPeek(phFbrAllPatient) : null, sex = peek ? peek.sex : null;
     const groups = PH_REN_FAM_GROUPS.map(g => {
-      const cards = [g.herb].concat(g.formulas).map(id => phFbrAllCardHtml(id)).filter(Boolean).join("");
+      const cards = [g.herb].concat(g.formulas).map(id => phFbrAllCardHtml(id, sex)).filter(Boolean).join("");
       if (!cards) return "";
       const c = PH_FBR_HERB_COLOUR[g.herb] || { bg: "#D3DEE2" }, famName = (PH_FORMULAS[g.herb] || {}).name || g.herb;
       return `<div class="ph-far-grp"><div class="ph-far-grphd" style="--c:${c.bg}">${esc(famName)}</div>${cards}</div>`;
@@ -74247,10 +74248,10 @@ or changing anything in Cliniko.
     </div>`;
   }
   function phFbrAllRefRender() { const host = document.getElementById("phFbrAllSheet"); if (host && !host.hidden) host.innerHTML = `<div class="ph-lk-backdrop" data-far-close="1"></div>${phFbrAllRefHtml()}`; }
-  function phFbrAllRefOpen() {
+  function phFbrAllRefOpen(name) {
     let host = document.getElementById("phFbrAllSheet");
     if (!host) { host = document.createElement("div"); host.id = "phFbrAllSheet"; host.className = "ph-lk-sheet"; (document.getElementById("pharmacyPage") || document.body).appendChild(host); }
-    host.hidden = false; phFbrAllFilter = ""; phFbrAllRefRender();
+    host.hidden = false; phFbrAllFilter = ""; phFbrAllPatient = name || null; phFbrAllRefRender();
   }
   function phFbrAllRefClose() { const host = document.getElementById("phFbrAllSheet"); if (host) host.hidden = true; }
   document.addEventListener("click", e => {
@@ -74335,7 +74336,7 @@ or changing anything in Cliniko.
     if (T.closest("[data-tri-menu]")) { const k = phPatientKey(name); if (phTriMenu.has(k)) phTriMenu.delete(k); else phTriMenu.add(k); phTriRefresh(name); return true; }
     if (T.closest("[data-tri-aud]")) { const k = phPatientKey(name); phTriMenu.delete(k); if (phLkAudOpen.has(k)) phLkAudOpen.delete(k); else phLkAudOpen.add(k); phLinkRepaint(name); return true; }
     if (T.closest("[data-tri-links]")) { phTriMenu.delete(phPatientKey(name)); phTriRefresh(name); phLinkSheetOpen(); return true; }
-    if (T.closest("[data-far-open]")) { phTriMenu.delete(phPatientKey(name)); phTriRefresh(name); phFbrAllRefOpen(); return true; }
+    if (T.closest("[data-far-open]")) { phTriMenu.delete(phPatientKey(name)); phTriRefresh(name); phFbrAllRefOpen(name); return true; }
     if ((el = T.closest("[data-fbr-expand]"))) {
       // the big body chart (her 2026-10-14 picks) in the shared expand shell (#phRfModal); closes on Esc, the x or the backdrop like the Ren one
       phFbbOpen(name, el.dataset.fbrExpand);
@@ -77428,8 +77429,8 @@ or changing anything in Cliniko.
     const barIn = n > 0 && !phTpComboBarWas;
     phTpComboBarWas = n > 0;
     phTpComboFresh = phTpComboFresh && phTpComboPicks.includes(phTpComboFresh) ? phTpComboFresh : null;
-    const sw = `<div class="ph-combo-sw${phTpComboOn ? " on" : ""}"><div><div class="t">Treating more than one thing?</div><div class="d">${phTpComboOn ? "Tick the conditions. The first one is the main one." : "Off: tap a card and that plan starts, as today."}</div></div><button type="button" class="ph-combo-tog${phTpComboOn ? " on" : ""}" data-combo-toggle="1" role="switch" aria-checked="${phTpComboOn}" aria-label="Combine conditions"></button></div>`;
-    const bar = phTpComboOn && n > 0 ? `<div class="ph-combo-bar${barIn ? " in" : ""}"><div class="sum">${esc(names[0])}${n > 1 ? ` <span class="m">(main)</span> + ${esc(names.slice(1).join(" + "))}` : ""}<small>${n > 1 ? "The main one runs the phases, the visit counts and the colour" : "Tick another to combine, or start it on its own"}</small></div><button type="button" class="ph-combo-go" data-combo-go="${esc(name)}">${n > 1 ? "Start combined plan" : "Start this plan"}</button></div>` : "";
+    const sw = `<div class="ph-combo-sw${phTpComboOn ? " on" : ""}"><div><div class="t">Treating more than one thing?</div></div><button type="button" class="ph-combo-tog${phTpComboOn ? " on" : ""}" data-combo-toggle="1" role="switch" aria-checked="${phTpComboOn}" aria-label="Combine conditions"></button></div>`;
+    const bar = phTpComboOn && n > 0 ? `<div class="ph-combo-bar${barIn ? " in" : ""}"><div class="sum">${esc(names[0])}${n > 1 ? ` <span class="m">(main)</span> + ${esc(names.slice(1).join(" + "))}` : ""}<small>${n > 1 ? "The main one runs the phases, the visit counts and the colour" : ""}</small></div><button type="button" class="ph-combo-go" data-combo-go="${esc(name)}">${n > 1 ? "Start combined plan" : "Start this plan"}</button></div>` : "";
     return `${sw}<button type="button" class="ph-tp-tmplcard blank" data-tp-inline-create="blank">
         <span class="ph-tp-tmplcard-title">Blank plan</span>
         <span class="ph-tp-tmplcard-sub">1 phase</span>
@@ -81059,7 +81060,7 @@ or changing anything in Cliniko.
             <button type="button" class="p3-expand" data-p3-full="1">${S3.full ? "✕ Close" : "⤢ Expand"}</button>
           </div>
           <div class="p3-drawer${open3 ? " open" : ""}">
-            <div class="ph-pm-rows tbl">${rows || `<div class="ph-pm-none">No pains marked — type one below or pick an area.</div>`}</div>
+            <div class="ph-pm-rows tbl">${rows || `<div class="ph-pm-none">No pains marked.</div>`}</div>
             <div class="ph-pm-add">
               <label class="ph-pm-field"><span>Add pain</span><input type="text" class="field-bare" data-pm-in="${pid}" placeholder="" autocomplete="off" spellcheck="false" aria-label="Type a pain to add"></label>
               <button type="button" class="ph-pm-addbtn" data-pm-addbtn="${pid}">Add</button>
@@ -81099,7 +81100,7 @@ or changing anything in Cliniko.
         </div>`}
         <div class="ph-pm-side">
           ${list.length ? `<div class="ph-pm-rowshead"><span>${list.length} pain${list.length === 1 ? "" : "s"}</span><button type="button" class="ph-pm-pickbtn" data-pm-pick="${pid}" aria-expanded="${!!pick}">＋ Pick areas</button></div>` : ""}
-          <div class="ph-pm-rows tbl">${rows || `<div class="ph-pm-none">No pains marked — type one below or pick an area.</div>`}</div>
+          <div class="ph-pm-rows tbl">${rows || `<div class="ph-pm-none">No pains marked.</div>`}</div>
           <div class="ph-pm-add">
             <label class="ph-pm-field"><span>Add pain</span><input type="text" class="field-bare" data-pm-in="${pid}" placeholder="" autocomplete="off" spellcheck="false" aria-label="Type a pain to add"></label>
             <button type="button" class="ph-pm-addbtn" data-pm-addbtn="${pid}">Add</button>
@@ -81210,7 +81211,7 @@ or changing anything in Cliniko.
     return `<div class="ph-pm ph-pf-pain" data-pf-pain="1" data-pm-box="${esc(pid)}" data-pm-name="${esc(name)}">
       <div class="ph-pm-head"><b>Pain</b>${phInfoDot(PH_PM_TIP)}</div>
       <div class="ph-pm-side">
-        ${list.length ? phPmTableHtml(name, pmPlan, list, true) : `<div class="ph-pm-none">No pains marked — type one below or pick an area.</div>`}
+        ${list.length ? phPmTableHtml(name, pmPlan, list, true) : `<div class="ph-pm-none">No pains marked.</div>`}
         <div class="ph-pm-add">
           <label class="ph-pm-field"><span>Add pain</span><input type="text" class="field-bare" data-pm-in="${esc(pid)}" placeholder="" autocomplete="off" spellcheck="false" aria-label="Type a pain to add"></label>
           <button type="button" class="ph-pm-addbtn" data-pm-addbtn="${esc(pid)}">Add</button>
@@ -88981,7 +88982,7 @@ or changing anything in Cliniko.
   // her 2026-10-11 "this section doesn't seem to work": with no region ticked these tabs said "Pick a region above" and the
   // chips were off-screen. The same chips now sit right here (same data-msk="region" tap, so the header chips follow).
   function phMskEmptyHtml() {
-    return `<div class="mk-empty"><div>Which regions are you examining? Tap to start.</div><div class="mk-regs" role="group" aria-label="Regions to examine" style="margin-top:8px"><div class="ph-tng2-seg">${PH_MSK_REGIONS.map(([k, l]) => `<button type="button" class="mk-chip" data-msk="region" data-v="${k}" aria-pressed="false">${esc(l)}</button>`).join("")}</div></div></div>`;
+    return `<div class="mk-empty"><div>No regions yet.</div><div class="mk-regs" role="group" aria-label="Regions to examine" style="margin-top:8px"><div class="ph-tng2-seg">${PH_MSK_REGIONS.map(([k, l]) => `<button type="button" class="mk-chip" data-msk="region" data-v="${k}" aria-pressed="false">${esc(l)}</button>`).join("")}</div></div></div>`;
   }
   function phMskNprsHtml(rec, name, plan) {
     // with pains on the map the score lives in the pain table (per pain + All pains); the card stays only for a patient with no pains named yet
@@ -89066,7 +89067,7 @@ or changing anything in Cliniko.
     }).join("");
     return `<div class="mk-split"><div class="mk-fig"><div class="mk-pills" style="margin-bottom:8px">${mkPill(phMskFig === "back", "fig", "back", "Back")}${mkPill(phMskFig === "front", "fig", "front", "Front")}</div>${phMskFigureHtml(phMskFig, rec, vis, regs)}
       <div class="mk-legend"><span><i style="background:${PH_MSK_SPOT[1]}"></i>Tender</span><span><i style="background:${PH_MSK_SPOT[2]}"></i>Taut band</span><span><i style="background:${PH_MSK_SPOT[3]}"></i>Trigger point</span></div></div>
-      <div><div class="mk-scroll"><table class="mk-tbl"><thead><tr><th>Muscle</th><th>Side</th><th>Finding</th><th>Pain?</th><th>Cause of</th><th></th></tr></thead><tbody>${rows || `<tr><td colspan="6" class="muted">Tap a muscle on the figure, or add one below.</td></tr>`}</tbody></table></div>
+      <div><div class="mk-scroll"><table class="mk-tbl"><thead><tr><th>Muscle</th><th>Side</th><th>Finding</th><th>Pain?</th><th>Cause of</th><th></th></tr></thead><tbody>${rows || `<tr><td colspan="6" class="muted">No muscles yet.</td></tr>`}</tbody></table></div>
       <div class="mk-add">${adder}</div></div></div>`;
   }
 
@@ -92055,7 +92056,7 @@ or changing anything in Cliniko.
         </div>
         <div class="ph-tng2-reg">${brush
           ? `<span class="ph-tng2-brushhint">Tap the map where it is <b>${esc(brush.label)}</b> <button type="button" class="tab-link" data-visit-abd2="brush:">done</button></span>`
-          : reg ? `<b>${esc(phAbdZoneLabel(reg))}</b> <button type="button" class="tab-link" data-visit-abd2="region:">whole abdomen</button>` : `<span class="faint">tap a sign, then tap the map where it is</span>`}</div>
+          : reg ? `<b>${esc(phAbdZoneLabel(reg))}</b> <button type="button" class="tab-link" data-visit-abd2="region:">whole abdomen</button>` : ""}</div>
       </div>
       <div class="ph-tng2-rows">
         <div class="ph-tng2-row"><i>${reg ? "Tension here" : "Tension"}</i><div class="ph-ltr-quals ph-visit-quals">${tensionRow}${atRegion}</div></div>
@@ -93880,7 +93881,6 @@ Please let me know if you have any questions.`;
       <div class="ph-hx-head">
         <button type="button" class="ph-stocktake-close" data-ltr-close="1" aria-label="Close">×</button>
         <div class="ph-hx-head-top"><div class="ph-hx-head-name">✉ Patient letter — ${esc(phTitle(ctx.name))}</div></div>
-        <div class="ph-tp-patient-line">built from this script — tap any sentence to reword it</div>
       </div>
       <div class="ph-ltr-chips">${chips}</div>
       <div class="ph-ltr-togs">${togs}</div>
