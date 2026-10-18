@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261019-1210000">
+<meta name="lcm-build" content="20261019-1220000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -14102,6 +14102,20 @@
   #pharmacyPage .ph-glance .v small { display: block; font-size: var(--fs-12); font-weight: 400; color: var(--ph-faint); }
   #pharmacyPage .ph-glance .v small b { color: var(--ph-gold-deep); }
   @media (max-width: 520px) { #pharmacyPage .ph-glance { flex-direction: column; align-items: flex-start; gap: 2px; } #pharmacyPage .ph-glance .k { min-width: 0; } }
+  /* Today's visit essentials (her 2026-10-19 "primary place" ask): the Fang Bing Ren card is phQaHtml's
+     own .ph-qa-card, unstyled further here -- only the wrapper's bottom margin and its Open button's
+     spacing are this card's own. The Care Plan card is new: phase/session head, a quiet formula line,
+     then Log + Open. */
+  #pharmacyPage .ph-today-fbr { margin: 0 0 10px; }
+  #pharmacyPage .ph-today-fbr > .ph-pfw-link { margin-top: 8px; }
+  #pharmacyPage .ph-today-tp { border: 1.5px solid var(--ph-line); background: var(--ph-white); border-radius: 10px; padding: 12px 14px; margin: 0 0 10px; }
+  #pharmacyPage .ph-today-tp-hd { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; margin: 0 0 6px; }
+  #pharmacyPage .ph-today-tp-hd b { font-size: var(--fs-14); color: var(--ph-herb-deep); }
+  #pharmacyPage .ph-today-tp-ph { font-size: var(--fs-12); color: var(--ph-soft); }
+  #pharmacyPage .ph-today-tp-form { display: flex; align-items: baseline; gap: 8px; margin: 0 0 10px; flex-wrap: wrap; }
+  #pharmacyPage .ph-today-tp-form .k { flex: none; font-size: var(--fs-10-5); font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--ph-herb); }
+  #pharmacyPage .ph-today-tp-form .v { flex: 1; min-width: 0; font-size: var(--fs-13); color: var(--ph-ink); }
+  #pharmacyPage .ph-today-tp-acts { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   /* ONE BUTTON SYSTEM on the patient pages (her "too many inconsistent buttons, underlined words",
      2026-10-10): filled = the one main step (Next); outlined pill = everything else (Change, Open,
      Add, Same as last time, Journey). No underlined words. Scoped to the patient panel. */
@@ -61295,12 +61309,15 @@ or changing anything in Cliniko.
       presStage = "profile";
       presAssessTab = null;
       try { const firstCheck = presAssessSections(t).find(s => s.grp === "check"); if (firstCheck) presAssessTab = firstCheck.id; } catch (e) { /* no check page for this patient: the rail picks its first tab */ }
-      // PATIENT WORKFLOW LAW (CLAUDE.md, Phase 4, her picks 2026-10-10): a RETURN patient (an earlier
-      // visit, last one within 12 months, sex + DOB in, a plan to open) lands on Today's visit; a new
-      // patient, or one away over 12 months, starts at Patient details as before.
+      // PATIENT WORKFLOW LAW (CLAUDE.md, Phase 4 -- widened 2026-10-19, her "every visit, no
+      // exceptions"): ANY return patient (sex + DOB in, at least one earlier visit on file --
+      // however long ago) lands on Today's visit; the old "away over 12 months starts at Patient
+      // details" cutoff is gone, since a 1000-day-away patient still wants the fast path, not the
+      // full file again. A brand-new patient (no lv yet) still starts at Patient details -- her own
+      // explicit pick, since there is nothing for Today's visit to show before the file exists.
       try {
         const nm = presPatientFor(t) || "", r0 = nm && !presIsFormula(t) ? phPatientPeek(nm) : null, lv = r0 ? phLastVisitKey(r0) : "";
-        if (r0 && r0.sex && r0.dob && lv && phBldAgeDays(lv) <= 365) {
+        if (r0 && r0.sex && r0.dob && lv) {
           presStagePlanAutoOpen(t);
           if (presTpInlinePlanId && phTpFindPlan(nm, presTpInlinePlanId)) { presStage = "plan"; presTpMainTab = "today"; }
         }
@@ -68971,7 +68988,11 @@ or changing anything in Cliniko.
     // tile. Same one source of data (phMskPid's pain-map list) either way,
     // never a second store; it self-hides (returns "") when nothing's pain-
     // related, so it costs nothing for a patient with no pain on file.
-    return `<div class="ph-today" data-today-host="1">${phTodayStripHtml(name, rec, plan)}${phCxCardHtml(t, plan)}${phTodayNudgesHtml(name, rec)}${phTodayProgHtml(t, rec)}${phMskWarnHtml(rec)}${phMskApplies(rec) ? phPfPainBlockHtml(name) : ""}${tiles}${plan ? phGlanceHtml("patterns", name, plan, true) + phGlanceHtml("plan", name, plan, true) : ""}${plan && !phMskApplies(rec) ? presRvPainHtml(name, plan) : ""}</div>`;
+    // her 2026-10-19 "Today's visit primary place" ask: the old glance+link pair (Patterns·Diagnosis,
+    // then Care Plan) is now real inline essentials for Fang Bing Ren (Triangle) and Care Plan; Dispense
+    // joins as its own glance+link (her explicit "keep Dispense a glance + link"), never shown before.
+    const essentials = plan ? phTodayFbrEssentialsHtml(name) + phTodayCarePlanEssentialsHtml(name, plan) + phTodayDispenseGlanceHtml(t, name, plan) : "";
+    return `<div class="ph-today" data-today-host="1">${phTodayStripHtml(name, rec, plan)}${phCxCardHtml(t, plan)}${phTodayNudgesHtml(name, rec)}${phTodayProgHtml(t, rec)}${phMskWarnHtml(rec)}${phMskApplies(rec) ? phPfPainBlockHtml(name) : ""}${tiles}${essentials}${plan && !phMskApplies(rec) ? presRvPainHtml(name, plan) : ""}</div>`;
   }
   // the quiet progress line above the tiles (her pick 10, 2026-10-14): one bar, "2 of 5 done" and the next step as a chip. It
   // replaced the gold next-step card and the dashed "0 of 5 done" band on this page (the rail's Next up and each page's Next
@@ -74064,6 +74085,11 @@ or changing anything in Cliniko.
   function phTriRefresh(name) {
     const h = document.querySelector("#pharmacyPage [data-tri-host]");
     if (h) h.outerHTML = phTriHtml(name);
+    // Today's visit essentials card (her 2026-10-19 "primary place" ask): a tap inside it writes
+    // through the same phTriWrite/phTriSetYes/phTriSetNo door as the full Triangle page, so it
+    // repaints the same way -- in place, never a full renderPresPanel (that would reset her scroll).
+    const qh = document.querySelector(`#pharmacyPage [data-today-qa-host="${CSS.escape(name)}"]`);
+    if (qh) qh.outerHTML = phTodayFbrEssentialsHtml(name);
     try { phFbrSwitchRefresh(name); } catch (e) { /* only when the switch is on screen */ }
     try { phPfwSideRefresh(name); } catch (e) { /* only on a wide screen */ }
   }
@@ -83061,31 +83087,36 @@ or changing anything in Cliniko.
   // hatch the old tile had. Fang Bing Ren is NOT part of this table --
   // her call 2026-10-10: it stays exactly where it already sits on this
   // tab (presPatStripHtml, called separately below), just not merged in.
+  // Fang Bing Ren live formula (her 2026-10-16 ask): fill-when-blank only, same
+  // pattern as phMskPlanViewHtml's "→ plan" -- never writes on render, only on
+  // an explicit tap (data-tp-fbr-fill below). Once she's typed/picked something
+  // the field is hers; the live FBR read then shows only as a quiet fact line,
+  // never a repeat offer. A live FBR signal wins over the template's own
+  // one-time suggestFormula fallback for an empty field -- it is the more
+  // clinically current of the two sources, not a second competing suggestion.
+  // Extracted 2026-10-19 so the Today's visit Care Plan essentials card
+  // (phTodayCarePlanEssentialsHtml) reads the exact same formula, never a
+  // second copy of this fallback chain.
+  function phTpLiveFormulaHtml(name, plan, ph) {
+    const fbrLead = phTpFbrLiveLead(phPatientPeek(name), name);
+    return ph.formulaName
+      ? `${esc(ph.formulaName)}${fbrLead && fbrLead.name !== ph.formulaName ? `<span class="ph-tpg-fbrlead">Fang Bing Ren's current lead: ${esc(fbrLead.name)}</span>` : ""}`
+      : fbrLead
+      ? `Fang Bing Ren's formula: <b>${esc(fbrLead.name)}</b> <button type="button" class="tab-link" data-tp-fbr-fill="${plan.id}:${ph.id}" title="Fill the Formula field with Fang Bing Ren's current lead">→ Fill</button>`
+      : ph.suggestFormula ? `${esc(ph.suggestFormula)} <span class="quiet">(this plan's own default)</span>`
+      : `<span class="quiet">—</span>`;
+  }
   function phTpLiveCtxRowHtml(name, plan, ph, colN) {
     if (!ph) return "";
     const fld = (f, label) => {
       const v = ph[f];
       return `<div><span class="lbl">${label}</span><span class="val${v ? "" : " empty"}" data-tp-edit="${plan.id}:${ph.id}:${f}" title="Click to edit">${v ? phTpCellShow(f, v) : esc(PH_TP_FIELD_PH[f])}</span></div>`;
     };
-    // Fang Bing Ren live formula (her 2026-10-16 ask): fill-when-blank only, same
-    // pattern as phMskPlanViewHtml's "→ plan" -- never writes on render, only on
-    // an explicit tap (data-tp-fbr-fill below). Once she's typed/picked something
-    // the field is hers; the live FBR read then shows only as a quiet fact line,
-    // never a repeat offer. A live FBR signal wins over the template's own
-    // one-time suggestFormula fallback for an empty field -- it is the more
-    // clinically current of the two sources, not a second competing suggestion.
-    const fbrLead = phTpFbrLiveLead(phPatientPeek(name), name);
-    const formula = ph.formulaName
-      ? `${esc(ph.formulaName)}${fbrLead && fbrLead.name !== ph.formulaName ? `<span class="ph-tpg-fbrlead">Fang Bing Ren's current lead: ${esc(fbrLead.name)}</span>` : ""}`
-      : fbrLead
-      ? `Fang Bing Ren's formula: <b>${esc(fbrLead.name)}</b> <button type="button" class="tab-link" data-tp-fbr-fill="${plan.id}:${ph.id}" title="Fill the Formula field with Fang Bing Ren's current lead">→ Fill</button>`
-      : ph.suggestFormula ? `${esc(ph.suggestFormula)} <span class="quiet">(this plan's own default)</span>`
-      : `<span class="quiet">—</span>`;
     return `<tr class="ph-tpg-ctx"><td colspan="${colN}">
       <div class="ph-tpg-ctx-inner">
         ${fld("aim", "Aim")}
         ${fld("points", "Points")}
-        <div><span class="lbl">Formula</span><span class="val">${formula}</span></div>
+        <div><span class="lbl">Formula</span><span class="val">${phTpLiveFormulaHtml(name, plan, ph)}</span></div>
         ${fld("watch", "Watch")}
       </div>
       <div class="ph-tpg-ctx-foot"><button type="button" class="ph-tp-tile-go" data-flow-go="treatment">Edit on Treatment</button></div>
@@ -83365,6 +83396,62 @@ or changing anything in Cliniko.
       }
     } catch (e) { /* no glance rather than a broken page */ }
     return "";
+  }
+  // ==== Today's visit, made the primary place (her 2026-10-19 ask: "make todays visit the primary
+  // place for every visit"). Her 8+ design answers in memory (project_pharmacy_todays_visit_primary):
+  // Fang Bing Ren and Care Plan both get real inline actions here now, not just the glance+link above
+  // (which stays for the Patterns·Diagnosis / "plan" kinds elsewhere); Dispense stays a glance+link on
+  // purpose (the locked "Dispense always requires opening the full script" rule); every card below
+  // reuses the exact same real functions the full pages call -- never a second scoring, tick or save
+  // mechanism, so a tap here and a tap on the full page can never drift apart. ====
+  // Fang Bing Ren essentials: her pick was the Triangle engine (leading herb family + fit%), not the
+  // Patterns·Diagnosis engine the glance above shows. phQaHtml IS the real card the full Fang Bing Ren
+  // page already shows (merged verdict + Quick assess, her "mock 2" build) -- reused whole, not rebuilt;
+  // repainted in place by phTriRefresh's own [data-today-qa-host] branch after any tap inside it.
+  function phTodayFbrEssentialsHtml(name) {
+    const rec = phPatientPeek(name);
+    if (!rec || !phLastVisitKey(rec)) return "";
+    try {
+      return `<div class="ph-today-fbr" data-today-qa-host="${esc(name)}">${phQaHtml(name)}<button type="button" class="ph-pfw-link" data-flow-go="patterns">Open full Fang Bing Ren</button></div>`;
+    } catch (e) { return ""; }
+  }
+  // Treatment Care Plan essentials: live phase (phTpTabPhaseOf, the same read the "plan" glance above
+  // uses) + session N of M (phTpSessionOrdinal) + today's formula (phTpLiveFormulaHtml, the exact
+  // fallback chain the Session grid's own live-phase strip reads) + Log today's session
+  // (data-pres-acu-log, the same save button the Treatment tab uses -- one mechanism, not a second
+  // logger). Repainted in place by phTpPlanRepaint's own [data-today-tp-host] branch after a "→ Fill"
+  // tap; Log itself already does a full renderPresPanel (phTpCompleteAnimate), same as everywhere else
+  // that button lives, so nothing extra is needed there.
+  function phTodayCarePlanEssentialsHtml(name, plan) {
+    if (!plan) return "";
+    const rec = phPatientPeek(name);
+    if (!rec) return "";
+    try {
+      const ph = phTpTabPhaseOf(plan, rec);
+      if (!ph) return "";
+      const ord = phTpSessionOrdinal(name, plan, ph);
+      const total = ord && ord.grp && ord.grp.cells ? ord.grp.cells.length : 0;
+      const sess = ord && ord.n ? `session ${ord.n}${total ? ` of ${total}` : ""}` : "";
+      const title = plan.title || plan.templateName || "Treatment Care Plan";
+      return `<div class="ph-today-tp" data-today-tp-host="${esc(name)}" data-today-tp-plan="${esc(plan.id)}">
+        <div class="ph-today-tp-hd"><b>${esc(title)}</b><span class="ph-today-tp-ph">${esc(ph.label || "Phase")}${sess ? ` · ${sess}` : ""}</span></div>
+        <div class="ph-today-tp-form"><span class="k">Today's formula</span><span class="v">${phTpLiveFormulaHtml(name, plan, ph)}</span></div>
+        <div class="ph-today-tp-acts"><button type="button" class="btn-save ph-acu-logbtn" data-pres-acu-log="1">Log today's session</button><button type="button" class="ph-pfw-link" data-flow-go="plan">Open full Care Plan</button></div>
+      </div>`;
+    } catch (e) { return ""; }
+  }
+  // Dispense: deliberately stays a glance + Open, not an inline action (her explicit "yes, keep
+  // Dispense a glance + link" -- the locked house rule "Dispense always requires opening the full
+  // script" stands). Only shows when the plan carries herbs at all (phHerbsOn, the same read the rail
+  // step uses); `t` is the open prescription record, read the same way the rail's own dispDone does.
+  function phTodayDispenseGlanceHtml(t, name, plan) {
+    try {
+      const rec = phPatientPeek(name);
+      if (!rec || !phHerbsOn(rec, plan) || !t) return "";
+      const dispDone = !!(t.lastDispensedAt && keyOf(new Date(t.lastDispensedAt)) === keyOf(phLiveToday()));
+      const fact = dispDone ? "Dispensed today" : t.pendingDispensedAt ? "Dispensed, not yet logged" : "Herbs not yet dispensed";
+      return `<div class="ph-glance" data-glance="dispense"><span class="k">Dispense</span><div class="v">${esc(fact)}</div><button type="button" class="ph-pfw-link" data-pres-stage="dispense">Open</button></div>`;
+    } catch (e) { return ""; }
   }
   function presTpMainSections(name, plan) {
     const sel = phTpTabPhaseOf(plan, phPatientPeek(name));
@@ -86650,7 +86737,16 @@ or changing anything in Cliniko.
   // Falls back to the full rerender when there is no grid on screen.
   function phTpPlanRepaint() {
     const lads = document.querySelectorAll("[data-tp-ladder]");
-    if (!lads.length) { phTpRerender(); return; }
+    // Today's visit Care Plan essentials card (her 2026-10-19 "primary place" ask) has no ladder of
+    // its own -- repaint it in place whenever it's on screen, and skip the full-rerender fallback
+    // below for it specifically, so a "→ Fill" tap made FROM Today's visit never throws her scroll
+    // spot to the top the way the fallback would.
+    const todayHosts = document.querySelectorAll("[data-today-tp-host]");
+    todayHosts.forEach(el => {
+      const plan = phTpFindPlan(el.dataset.todayTpHost, el.dataset.todayTpPlan);
+      if (plan) el.outerHTML = phTodayCarePlanEssentialsHtml(el.dataset.todayTpHost, plan);
+    });
+    if (!lads.length) { if (!todayHosts.length) phTpRerender(); return; }
     phTpSessCommitPending();
     lads.forEach(el => { const plan = phTpFindPlan(el.dataset.tpLadderName, el.dataset.tpLadder); if (plan) el.outerHTML = phTpSessionLadderHtml(el.dataset.tpLadderName, plan); });
     document.querySelectorAll("[data-tp-hero]").forEach(el => {
