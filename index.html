@@ -5972,6 +5972,21 @@
   #pharmacyPage .ph-cp .cp-card .cp-log.ph-cycle-signpop .ph-cs-grid .ph-ck-chips.seg { flex-wrap: wrap; gap: 0; border: 1px solid var(--ph-line); border-radius: 10px; overflow: hidden; }
   #pharmacyPage .ph-cp .cp-card .cp-log.ph-cycle-signpop .ph-cs-grid .ph-ck-chips.seg .ph-ck-chip { flex: 0 1 auto; border-radius: 0; box-shadow: none; border-right: 1px solid var(--ph-line); }
   #pharmacyPage .ph-cp .cp-card .cp-log.ph-cycle-signpop .ph-cs-grid .ph-ck-chips.seg .ph-ck-chip:last-child { border-right: 0; }
+  /* her 2026-10-18 pick ("mock 2", usual-today-merge-mocks-2026-10-18.html): a chip whose label matches
+     her Usual-period answer wears a ring + "usual" tag. Inside a joined segmented bar (Flow/Colour/Clots/
+     Pain type) that's an inset ring, not the mock's literal dashed border -- a per-chip border would break
+     the "joined bar, no per-chip outline" rule locked 2026-10-15/16; PMS stays loose chips (her own call)
+     so it keeps the mock's dashed ring exactly. */
+  #pharmacyPage .ph-cp .cp-card .cp-log.ph-cycle-signpop .ph-cs-grid .ph-ck-chips.seg .ph-ck-chip.ghost:not(.on) { box-shadow: inset 0 0 0 1.5px var(--ph-herb); color: var(--ph-herb-deep); font-weight: 700; }
+  #pharmacyPage .ph-cp .cp-card .cp-log.ph-cycle-signpop .ph-cs-grid .ph-ck-chips:not(.seg) .ph-ck-chip.ghost:not(.on) { border: 1.5px dashed var(--ph-herb); box-shadow: none; padding: 2.5px 10.5px; font-weight: 700; }
+  #pharmacyPage .ph-cp .cp-card .cp-log.ph-cycle-signpop .ph-cyc-ghosttag { font-size: var(--fs-10); font-weight: 700; color: var(--ph-herb); opacity: .85; }
+  #pharmacyPage .ph-cp .cp-card .cp-log.ph-cycle-signpop .ph-cyc-ghostlegend { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 14px; font-size: var(--fs-11-5); color: var(--ph-faint); margin: 2px 0 4px; }
+  #pharmacyPage .ph-cp .cp-card .cp-log.ph-cycle-signpop .ph-cyc-ghostlegend i { width: 12px; height: 12px; border-radius: 999px; display: inline-block; vertical-align: -1px; margin-right: 4px; }
+  #pharmacyPage .ph-cp .cp-card .cp-log.ph-cycle-signpop .ph-cyc-ghostlegend i.fill { background: var(--ph-herb-deep); }
+  #pharmacyPage .ph-cp .cp-card .cp-log.ph-cycle-signpop .ph-cyc-ghostlegend i.ring { background: #fff; box-shadow: inset 0 0 0 1.5px var(--ph-herb); }
+  #pharmacyPage .ph-cp .cp-card .cp-log.ph-cycle-signpop .ph-cyc-editusual { margin-left: auto; height: 26px; padding: 0 11px; border-radius: 999px; border: 1.5px solid var(--ph-herb); background: #fff; color: var(--ph-herb-deep); font-size: var(--fs-11-5); font-weight: 700; cursor: pointer; flex: none; }
+  #pharmacyPage .ph-cp .cp-card .cp-log.ph-cycle-signpop .ph-cyc-aboutusual { background: var(--ph-herb-tint); border-radius: 10px; padding: 9px 12px; font-size: var(--fs-12-5); color: var(--ph-herb-deep); margin-top: 6px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+  #pharmacyPage .ph-cp .cp-card .cp-log.ph-cycle-signpop .ph-cyc-aboutusual .ph-cyc-editusual { margin-left: 2px; }
   #pharmacyPage .ph-cs-bbt.flat { margin: 0; }
   #pharmacyPage .ph-cs-bbt.flat .ph-bbt-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-width: 0; }
   #pharmacyPage .ph-cs-bbt.flat .ph-bbt-note, #pharmacyPage .ph-cs-bbt.flat .ph-bbt-src { font-size: var(--fs-11-5); color: var(--ph-faint); }
@@ -65919,6 +65934,17 @@ or changing anything in Cliniko.
       phCycleRerender();
       return true;
     }
+    // her 2026-10-18 merge (usual-today-merge-mocks-2026-10-18.html, "mock 2"): "Edit her usual pattern"
+    // on this card always OPENS the real Usual period card (never toggles it closed) -- it reuses the
+    // exact fold state (phPfwOpen) that card's own Fold button already reads, then repaints the whole
+    // #presCycleHost so the now-open card appears right under the calendar/day log.
+    const editUsual = t.closest("[data-cyc-editusual]");
+    if (editUsual) {
+      const nm = editUsual.dataset.cycEditusual;
+      phPfwOpen.add("period:" + phPatientKey(nm));
+      phCycRepaint(editUsual, nm);
+      return true;
+    }
     // the Cycle page footer: cycle length stepper, Regular | Irregular, contraception chips
     const cLen = t.closest("[data-cyc-len]"), cReg = t.closest("[data-cyc-reg]"), cOpen = t.closest("[data-cyc-contra-open]"), cPick = t.closest("[data-cyc-contra]");
     if (cLen || cReg || cOpen || cPick) {
@@ -66336,14 +66362,19 @@ or changing anything in Cliniko.
   const phCycSumPrev = new Map();
   const phCycSignFresh = ms => !!(phCycSignAnim && presCycleSignEdit && phCycSignAnim.dateKey === presCycleSignEdit.dateKey && Date.now() - phCycSignAnim.at < (ms || 900));
   function phCycSignMark(field, val, dateKey, on) { phCycSignAnim = { field, val, dateKey, at: Date.now(), on: !!on }; }
-  function phCycleSelectChips(field, opts, cur, attrs, cls, titles, seg) {
+  function phCycleSelectChips(field, opts, cur, attrs, cls, titles, seg, ghost) {
     const popVal = phCycSignFresh() && phCycSignAnim.on && phCycSignAnim.field === field ? phCycSignAnim.val : null;
     // her 2026-10-16 ask (grouped chips): a pick-one row on the Cycle page's own "All signs" card can
     // join into one bordered bar instead of loose gapped pills -- `seg` is opt-in per call so the
     // smaller cp-box / cp-foot / other-page popovers that share this same function are untouched.
+    // her 2026-10-18 ask (merge the Usual period card into this one, mock 2): `ghost`, also opt-in, is a
+    // Set of option values whose LABEL matched her Usual-period answer for this same category -- a chip
+    // in that set wears a quiet ring + "usual" tag unless it's already today's own pick. Every other
+    // caller omits `ghost` and renders exactly as before.
     return `<div class="ph-ck-chips${seg ? " seg" : ""}">${opts.map(([v, l]) => {
       const on = v === "" ? cur === "" : cur === v;
-      return `<button type="button" class="ph-ck-chip${on ? " on" + (cls ? cls(v) : "") : ""}${on && popVal === v ? " pop" : ""}" data-cycle-sign-field="${field}" data-cycle-sign-val="${esc(v)}" ${attrs}${titles && titles[v] ? ` title="${esc(titles[v])}"` : ""}>${esc(l)}</button>`;
+      const isGhost = !!(ghost && ghost.has(v) && !on);
+      return `<button type="button" class="ph-ck-chip${on ? " on" + (cls ? cls(v) : "") : ""}${on && popVal === v ? " pop" : ""}${isGhost ? " ghost" : ""}" data-cycle-sign-field="${field}" data-cycle-sign-val="${esc(v)}" ${attrs}${titles && titles[v] ? ` title="${esc(titles[v])}"` : ""}>${esc(l)}${isGhost ? `<span class="ph-cyc-ghosttag"> · usual</span>` : ""}</button>`;
     }).join("")}</div>`;
   }
   // ---- her 2026-10-03 B3 build (Fertility-Friend-style calendar + BBT chart):
@@ -76057,27 +76088,65 @@ or changing anything in Cliniko.
       // smaller cp-box day popover and every other caller of phCycleSignPopHtml/phCycleSelectChips keep
       // their existing loose-chip look untouched.
       const grphd = label => `<div class="full ph-pfw-grphd">${esc(label)}</div>`;
+      // her 2026-10-18 ask (screenshots of this card beside the Usual period card, "this looks like it can
+      // be merged to remove redundant info", 2 mocks sent, her pick "mock 2 -- one shared card, ring =
+      // usual" -- usual-today-merge-mocks-2026-10-18.html): a chip here whose LABEL matches one of her
+      // Usual-period answers for the same category gets a quiet ring + "usual" tag, so this one card shows
+      // both facts without her needing the separate Usual period card open too. Matched by comparing real
+      // display labels, never a hand-typed equivalence table -- Discharge (Usual's "Clear, stretchy" has no
+      // match among today's Dry/Sticky/Creamy/Egg-white/Mix) correctly shows no ring, exactly as the mock.
+      // Her usual-only fields with no daily twin (cycle length, cold hands) fold into a quiet strip at the
+      // foot instead, same card, with the Edit button that opens the real Usual period survey below.
+      const usualAns = (rec.usual && rec.usual.period) || {};
+      const usualQ = qid => PH_PFW_SETS.period.qs.find(q => q.id === qid);
+      const ghostSet = (qid, opts2) => {
+        const q = usualQ(qid);
+        if (!q) return null;
+        const labels = new Set(phPfwVals(usualAns, q).map(v => { const o = q.o.find(x => x[0] === v); return o ? o[1].trim().toLowerCase() : ""; }).filter(Boolean));
+        if (!labels.size) return null;
+        const out = new Set();
+        opts2.forEach(([v, l]) => { if (labels.has(String(l).trim().toLowerCase())) out.add(v); });
+        return out.size ? out : null;
+      };
+      const anyUsual = PH_PFW_SETS.period.qs.some(q => phPfwIsAns(usualAns, q));
+      const pmsGhost = ghostSet("pms", phCycPmsOpts());
+      const pmsChipsFlat = `<div class="ph-ck-chips">${phCycPmsOpts().map(o => {
+        const on = pmsOn.includes(o[0]), ic = PH_UC_IC[o[0]] ? `<svg class="pi" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${PH_UC_IC[o[0]]}</svg>` : "";
+        const pop = on ? (o[0] === "low" ? tpop("mood") : pmsPop === o[0] ? " pop" : "") : "";
+        const isGhost = !!(pmsGhost && pmsGhost.has(o[0]) && !on);
+        return `<button type="button" class="ph-ck-chip${on ? " on" + pop : ""}${isGhost ? " ghost" : ""}" ${o[0] === "low" ? `data-cycle-sign-field="mood"` : `data-cycle-sign-pms="${esc(o[0])}"`} ${attrs}>${ic}${esc(o[1])}${isGhost ? `<span class="ph-cyc-ghosttag"> · usual</span>` : ""}</button>`;
+      }).join("")}</div>`;
+      const editUsualBtn = `<button type="button" class="ph-cyc-editusual" data-cyc-editusual="${esc(name)}">✎ Edit her usual pattern</button>`;
+      const limbsQ = usualQ("limbs"), limbsVal = phPfwVals(usualAns, limbsQ)[0];
+      const limbsLab = limbsVal ? (limbsQ.o.find(x => x[0] === limbsVal) || [])[1] : "";
+      const lenV = usualAns.len || {};
+      const aboutParts = [];
+      if (lenV.lo != null && lenV.hi != null) aboutParts.push(`cycle length <b>${lenV.lo}–${lenV.hi} days</b>`);
+      if (limbsLab) aboutParts.push(`cold hands <b>${esc(limbsLab.toLowerCase())}</b>`);
+      const aboutFold = aboutParts.length ? `<div class="full ph-cyc-aboutusual"><b>About her usual cycle</b> — ${aboutParts.join(", ")}. ${editUsualBtn}</div>` : "";
       return `<div class="ph-cycle-signpop cp-log${fade ? " fade" : ""}" role="group" aria-label="Signs for ${esc(popDateLbl)}">
       ${phCycDayHeadHtml(name, dateKey, cd, saved)}
+      <div class="ph-cyc-ghostlegend">${anyUsual ? `<span><i class="fill"></i> today's pick</span><span><i class="ring"></i> her usual answer</span>` : ""}${editUsualBtn}</div>
       ${phCycDay1RowHtml(rec, name, dateKey, { noTag: true })}
       <div class="ph-cs-grid">
         ${grphd("Bleeding")}
-        ${flatRow("Flow", phCycleSelectChips("flow", PH_CYCLE_DAYFLOW, s.flow, attrs, flowChipClass, null, true))}
-        ${flatRow("Colour", phCycleSelectChips("looks", shortLooks, s.looks || "", attrs, null, null, true))}
-        ${flatRow("Clots", phCycleSelectChips("clots", shortClots, s.clots, attrs, null, { small: "under 2 cm", large: "coin-size or bigger" }, true))}
+        ${flatRow("Flow", phCycleSelectChips("flow", PH_CYCLE_DAYFLOW, s.flow, attrs, flowChipClass, null, true, ghostSet("flow", PH_CYCLE_DAYFLOW)))}
+        ${flatRow("Colour", phCycleSelectChips("looks", shortLooks, s.looks || "", attrs, null, null, true, ghostSet("col", shortLooks)))}
+        ${flatRow("Clots", phCycleSelectChips("clots", shortClots, s.clots, attrs, null, { small: "under 2 cm", large: "coin-size or bigger" }, true, ghostSet("clot", shortClots)))}
         ${grphd("BBT")}
         ${phCycBbtRowHtml(rec, dateKey, attrs, true)}
         ${grphd("Discomfort")}
         ${painRow}
-        ${flatRow("Pain type", phCycleSelectChips("feels", PH_CYCLE_FEELS, s.feels || "", attrs, null, null, true))}
-        ${flatRow("Discharge", phCycleSelectChips("cm", shortCm, s.cm, attrs, null, null, true))}
+        ${flatRow("Pain type", phCycleSelectChips("feels", PH_CYCLE_FEELS, s.feels || "", attrs, null, null, true, ghostSet("pain", PH_CYCLE_FEELS)))}
+        ${flatRow("Discharge", phCycleSelectChips("cm", shortCm, s.cm, attrs, null, null, true, ghostSet("cm", shortCm)))}
         ${grphd("Signs & mood")}
-        <div class="row full ph-cs-pms"><span class="k">PMS</span>${pmsChips}</div>
+        <div class="row full ph-cs-pms"><span class="k">PMS</span>${pmsChipsFlat}</div>
         ${grphd("Other signs")}
         ${flatRow("LH", phCycleSelectChips("lh", PH_CYCLE_LH, s.lh, attrs, lhChipClass, null, true))}
         ${flatRow("Sex", `<div class="ph-ck-chips">${chip(s.sex, "sex", "Unprotected", " ph-cyc-sexchip")}</div>`)}
         ${flatRow("Other", `<div class="ph-ck-chips">${chip(s.ov, "ov", "Ovulation twinge")}</div>`)}
         <input type="text" class="field-bare ph-cs-note full" placeholder="Note" maxlength="140" value="${esc(s.note || "")}" data-cycle-sign-field="note" ${attrs}>
+        ${aboutFold}
       </div>
       ${phFbrTrailHtml("d:" + phPatientKey(name) + ":" + dateKey, phCycFbrSigns(rec, name, dateKey), "Nothing ticked from this day yet", !isToday && phCycPmsIds(s).length ? "Bing reads today's log only" : "")}
     </div>`;
