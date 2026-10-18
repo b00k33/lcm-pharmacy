@@ -99,7 +99,7 @@ reads it; do not render it again.
 ## 1 · Three groups, in this order
 | Group | Pages, in order | How often |
 |---|---|---|
-| **1 Her file** | Patient details → Ren → Medical history → Supplements → Blood tests (Stress & sleep left this list 2026-10-13, see §3) | Set once, kept current |
+| **1 Her file** | Patient details → Medical history → Ren → Supplements → Blood tests (her reorder, 2026-10-18, swapping Medical history and Ren; Stress & sleep left this list 2026-10-13, see §3) | Set once, kept current |
 | **2 Today's visit** | Today's visit (checklist home) → Cycle (if on) → Tongue → Pulse → Abdomen | Every visit |
 | **3 Put together & do** | Fang Bing Ren → Treatment Care Plan → Treatment → Dispense | Decide, then treat |
 
@@ -117,14 +117,22 @@ reads it; do not render it again.
 - **Timeline** (2026-10-13, her pick): a page under Treatment Care Plan in the rail, only on a Pregnancy / Natural fertility / IVF plan (see "Fertility timeline" below). It is not a numbered step and not in the Next / Up-next walk.
 - Other pages (Photos, Appointments, Messages, IVF history, Log, Visit
   checks, Checklist) are unchanged and sit outside this law.
+- **"Came in for" lives on Today's visit only (her 2026-10-18 pick).** It no
+  longer has its own copy on Patient details — `presPatientTabBodyHtml`'s
+  `.ph-pf-onebox` top now holds only the pain-map block (when pain-related)
+  and the plan tile; the one remaining card is `phCcCardHtml(t, true,
+  {today:true})` on Today's visit, unchanged. The no-plan gate (a brand-new
+  patient with no plan yet, so no Today's visit to put it on) keeps its own
+  plain `phCcCardHtml(t)` call — that is a different screen, not Patient
+  details, and was left alone.
 
 ## 2 · The order of a visit
-**First visit (her pick "Examine first"):** 1 Patient details → 2 Ren → 3
-Medical history → 4 Supplements → 5 Blood tests (if she brought any) → 6
+**First visit (her pick "Examine first"):** 1 Patient details → 2 Medical
+history → 3 Ren → 4 Supplements → 5 Blood tests (if she brought any) → 6
 Cycle (if on) → 7 Tongue · Pulse · Abdomen (and Ask her, which now holds the
 sleep and mood questions) → 8 **Fang Bing Ren** (now has data to read) → 9
 **Treatment Care Plan** → 10 Treatment → 11 Dispense. (Stress & sleep was
-step 4 until 2026-10-13.)
+step 4 until 2026-10-13; Medical history and Ren swapped 2026-10-18.)
 **Return visit:** Her-file pages show "✓ on file" and are skipped, except
 Supplements (confirm) and Blood tests (if new). Then: Re-check → Cycle (if
 on) → Tongue · Pulse · Abdomen → Fang Bing Ren as **one line: what shifted** →
