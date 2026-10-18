@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261018-1200000">
+<meta name="lcm-build" content="20261019-1210000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -12723,7 +12723,10 @@
   #pharmacyPage .ph-tng2-pair .ph-visit-phototile { margin: 0; padding: 0; border: 0; width: 176px; flex: none; }
   #pharmacyPage .ph-tng2-pair .ph-visit-phothumb { width: 176px; height: 236px; border-radius: 10px; }
   #pharmacyPage .ph-tng2-pair .ph-tng2-svg { width: 160px; }
-  #pharmacyPage .ph-tng2-pair .ph-visit-abd-map .ph-abd2-svg { width: 200px; height: 240px; }
+  #pharmacyPage .ph-tng2-pair .ph-visit-abd-map .ph-abd2-svg { width: 280px; height: 356px; }
+  /* her 2026-10-19 "too small, doesn't feel intuitive": the abdomen diagram gets its own
+     wider left column so the bigger figure sits beside the photo without overflowing */
+  #pharmacyPage .ph-tng2.abd .ph-tng2-left { flex: 0 0 480px; }
   #pharmacyPage .ph-tng2-thick { stroke: #8C3A4C; }
   #pharmacyPage .ph-tng2-thick.thick { stroke-width: 2.6; }
   #pharmacyPage .ph-tng2-thick.thin { stroke-width: .9; stroke-dasharray: 2 1.5; }
@@ -12943,13 +12946,19 @@
   #pharmacyPage .ph-visit-abd-map.ro .ph-abd2-svg { width: 84px; height: 100px; pointer-events: none; }
   #pharmacyPage .ph-visit-abd-map.ro.mini { float: left; margin: 0 8px 2px 0; }
   #pharmacyPage .ph-visit-abd-map.ro.mini .ph-abd2-svg { width: 44px; height: 53px; }
-  #pharmacyPage .ph-abd2-zone { stroke: rgba(47,94,68,.28); stroke-width: .7; transition: filter .12s; }
+  #pharmacyPage .ph-abd2-zone { stroke: rgba(47,94,68,.28); stroke-width: .7; cursor: pointer; transition: fill .3s ease, filter .12s ease, transform .12s ease; transform-box: fill-box; transform-origin: center; }
   #pharmacyPage .ph-abd2-zone:hover { filter: brightness(.94); }
+  #pharmacyPage .ph-abd2-zone:active { transform: scale(.97); }
   #pharmacyPage .ph-abd2-zone.on { stroke: #7A2F45; stroke-width: 1.6; stroke-dasharray: 3 2; }
   #pharmacyPage .ph-abd2-zone.legacy { stroke: var(--margin-rule, #E3C87A); stroke-width: 2; }
   #pharmacyPage .ph-abd2-g { stroke: var(--ph-good-deep); stroke-width: 1.1; fill: none; }
   #pharmacyPage .ph-abd2-g[r] { fill: none; }
   #pharmacyPage .ph-abd2-x { stroke: #B23A3A; stroke-width: 1.4; fill: none; }
+  /* her 2026-10-19 realism + animation pick: a slow "breathing" ring on a pulsation
+     mark so it reads at a glance -- reduced-motion override sits with the app's others */
+  @keyframes phAbd2Breathe { 0%, 100% { opacity: .6; } 50% { opacity: .15; } }
+  #pharmacyPage .ph-abd2-pulsering { animation: phAbd2Breathe 2.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  @media (prefers-reduced-motion: reduce) { #pharmacyPage .ph-abd2-zone, #pharmacyPage .ph-abd2-pulsering { transition: none; animation: none; } }
   #pharmacyPage .ph-tng2.abd .ph-tng2-row { grid-template-columns: 72px minmax(0, 1fr); }
   #pharmacyPage .ph-abd2-pick { display: inline-grid; grid-template-columns: repeat(3, 1fr); gap: 2px; margin: 2px 0 4px; flex-basis: 100%; max-width: 210px; }
   #pharmacyPage .ph-abd2-wherebtn { font: inherit; font-size: var(--fs-10-5); font-weight: 700; color: var(--ph-green-deep); background: none; border: 0; padding: 2px 4px; cursor: pointer; min-height: 0; }
@@ -19922,7 +19931,7 @@
     #pharmacyPage .ph-tng2-pair .ph-visit-phototile { width: 136px; }
     #pharmacyPage .ph-tng2-pair .ph-visit-phothumb { width: 136px; height: 180px; }
     #pharmacyPage .ph-tng2-pair .ph-tng2-svg { width: 124px; }
-    #pharmacyPage .ph-tng2-pair .ph-visit-abd-map .ph-abd2-svg { width: 136px; height: 163px; }
+    #pharmacyPage .ph-tng2-pair .ph-visit-abd-map .ph-abd2-svg { width: 150px; height: 191px; }
     #pharmacyPage .ph-ltr-findings .ph-ltr-fnd.wide { grid-column: auto; }
     /* from line 13190 */
     #pharmacyPage .ph-pulse-half { flex-basis: 100%; }
@@ -92245,46 +92254,115 @@ or changing anything in Cliniko.
     if (legacy.length) bits.push(`marked ${legacy.join(", ")}`);
     return bits.join(" · ");
   }
+  // her ask 2026-10-19 ("make the abdomen diagram more realistic", mock
+  // abdomen-redesign-mock.html, her "looks right"): a tapered organic belly
+  // silhouette whose 9 exam-zone boundaries follow the real costal-margin
+  // (rib arch) and iliac-crest (pelvic brim) curves -- the SAME two curves
+  // are drawn below as the visible "bone" landmark lines, so a zone and the
+  // landmark it's named after always line up exactly. Pure geometry, no
+  // patient state; reused by phAbdChartSvg below. All anatomy placement is
+  // a disclosed draft, not clinical reference art.
+  const PH_ABD_CX = 55;
+  function phAbdHw(y) {   // skin half-width at a given y (hourglass + hip flare)
+    const pts = [[8, 31], [35, 32], [60, 27], [95, 33], [132, 19]];
+    if (y <= pts[0][0]) return pts[0][1];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const [y0, w0] = pts[i], [y1, w1] = pts[i + 1];
+      if (y <= y1) { const t = (y - y0) / (y1 - y0); return w0 + (w1 - w0) * t; }
+    }
+    return pts[pts.length - 1][1];
+  }
+  const phAbdSkinL = y => PH_ABD_CX - phAbdHw(y);
+  const phAbdSkinR = y => PH_ABD_CX + phAbdHw(y);
+  const phAbdArchY = (x, c0, delta, span, pow) => { const t = Math.min(1, Math.abs(x - PH_ABD_CX) / span); return c0 + delta * Math.pow(t, pow); };
+  const phAbdTopGridY = x => phAbdArchY(x, 9, 3, 32, 1);
+  const phAbdCostalY = x => phAbdArchY(x, 22, 10, 32, 1.4);   // costal margin -- peaks centrally (xiphoid), dips laterally
+  const phAbdIliacY = x => phAbdArchY(x, 100, -8, 32, 1.4);   // pelvic brim -- dips centrally toward the pubis
+  const phAbdBotGridY = x => phAbdArchY(x, 128, -10, 28, 1.3);
+  const PH_ABD_COLFRAC = .34;
+  const PH_ABD_UMBW = phAbdHw(61);
+  const PH_ABD_DIVL = PH_ABD_CX - PH_ABD_COLFRAC * PH_ABD_UMBW;   // left linea-semilunaris-ish divider
+  const PH_ABD_DIVR = PH_ABD_CX + PH_ABD_COLFRAC * PH_ABD_UMBW;   // right
+  const PH_ABD_OVER = 1.3;   // small overlap so adjoining zones never show a seam gap
+  function phAbdArcControl(p0, pm, p1) { return { x: 2 * pm.x - .5 * (p0.x + p1.x), y: 2 * pm.y - .5 * (p0.y + p1.y) }; }
+  function phAbdEdgePath(fn, x0, x1) {
+    const xm = (x0 + x1) / 2;
+    const p0 = { x: x0, y: fn(x0) }, pm = { x: xm, y: fn(xm) }, p1 = { x: x1, y: fn(x1) };
+    const c = phAbdArcControl(p0, pm, p1);
+    return { p0, p1, d: `Q${c.x.toFixed(1)},${c.y.toFixed(1)} ${p1.x.toFixed(1)},${p1.y.toFixed(1)}` };
+  }
+  const PH_ABD_ZPOS = { hypoL: [0, 0], epi: [0, 1], hypoR: [0, 2], flankL: [1, 0], umb: [1, 1], flankR: [1, 2], iliacL: [2, 0], lower: [2, 1], iliacR: [2, 2] };
+  const PH_ABD_ROW_Y = [16, 61, 114];
+  function phAbdZoneGeom(r, c) {
+    const ym = PH_ABD_ROW_Y[r];
+    let xl, xr;
+    if (c === 0) { xl = phAbdSkinL(ym) - PH_ABD_OVER; xr = PH_ABD_DIVL + PH_ABD_OVER; }
+    else if (c === 1) { xl = PH_ABD_DIVL - PH_ABD_OVER; xr = PH_ABD_DIVR + PH_ABD_OVER; }
+    else { xl = PH_ABD_DIVR - PH_ABD_OVER; xr = phAbdSkinR(ym) + PH_ABD_OVER; }
+    const topFn = r === 0 ? phAbdTopGridY : (r === 1 ? phAbdCostalY : phAbdIliacY);
+    const botFn = r === 0 ? phAbdCostalY : (r === 1 ? phAbdIliacY : phAbdBotGridY);
+    const top = phAbdEdgePath(topFn, xl, xr);
+    const bot = phAbdEdgePath(botFn, xr, xl);
+    const midX = (xl + xr) / 2, ty = topFn(midX), by = botFn(midX);
+    const d = `M${top.p0.x.toFixed(1)},${top.p0.y.toFixed(1)} ${top.d} L${bot.p0.x.toFixed(1)},${bot.p0.y.toFixed(1)} ${bot.d} Z`;
+    return { d, cx: midX, cy: (ty + by) / 2, ty, w: Math.max(xr - xl - PH_ABD_OVER * 2, 10), h: Math.max(by - ty, 10) };
+  }
   function phAbdChartSvg(abd, active, opts) {
     const a = phAbd2Read(abd);
-    // her pick 2026-09-20 ("i like all three"): an anatomical torso with the rib
-    // arch and pelvic brim for bearings (B); the nine regions as soft rounded
-    // cells that fill with tension and temperature, glyphs inside, names faint
-    // (A); dashed guides making the nine (C). Cells are laid out here; the
-    // older ellipse table (PH_LTR_ZONES.abd) still serves the labels and the
-    // legacy letter map.
-    const cols = [26, 46, 66], rows = [[24, 30], [56, 32], [90, 26]], W = 18;
+    // her pick 2026-10-19 ("looks right, build and push"): an organic torso
+    // silhouette (not a box grid), zone boundaries shaped by the rib-arch /
+    // pelvic-brim geometry above, and faint "anatomy under the skin" organ
+    // shapes -- the same treatment the Ren figure already uses
+    // (phRenAnatomyHtml). Zone ids/order, the write/brush/legacy mechanisms
+    // and every data-visit-zone / data-visit-abd2 attribute are unchanged.
     const Z = {};
-    PH_ABD_ZONE_ORDER.forEach((k, i) => { const x = cols[i % 3], [y, h] = rows[Math.floor(i / 3)]; Z[k] = { x, y, w: W, h, cx: x + W / 2, cy: y + h / 2, label: phAbdZoneLabel(k) }; });
+    PH_ABD_ZONE_ORDER.forEach(k => { const [r, c] = PH_ABD_ZPOS[k]; Z[k] = Object.assign({ label: phAbdZoneLabel(k) }, phAbdZoneGeom(r, c)); });
     const legacy = new Set(((opts && opts.legacy) || []).filter(z => z.startsWith("abd:")).map(z => z.slice(4)));
     const ro = opts && opts.ro;
     const tensHex = t => (PH_ABD_TENSION.find(x => x[0] === t) || [])[2] || "";
     const zones = PH_ABD_ZONE_ORDER.map(k => {
       const z = Z[k];
-      const fill = tensHex(a.tensionAt[k] || a.tension) || "#F4EFEA";
+      const at = a.tensionAt[k] || a.tension;
+      const fill = tensHex(at) || "#EFE8DF";
+      const fillOp = at ? ".88" : ".48";
       const cold = (a.marks.cold || []).includes(k), warm = (a.marks.warm || []).includes(k);
-      const box = `x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="5"`;
-      return `<rect ${box} fill="${fill}" class="ph-abd2-zone${active === k ? " on" : ""}${legacy.has(k) ? " legacy" : ""}"${ro ? "" : ` data-visit-zone="abd:${k}" style="cursor:pointer"`}><title>${esc(z.label)}</title></rect>`
-        + (cold ? `<rect ${box} fill="rgba(90,140,220,.32)" pointer-events="none"/>` : "")
-        + (warm ? `<rect ${box} fill="rgba(240,140,70,.32)" pointer-events="none"/>` : "")
-        + `<text x="${z.cx}" y="${z.y + 5.6}" text-anchor="middle" class="ph-abd2-lbl" pointer-events="none">${esc(PH_ABD_ZONE_SHORT[k])}</text>`;
+      return `<path d="${z.d}" fill="${fill}" fill-opacity="${fillOp}" class="ph-abd2-zone${active === k ? " on" : ""}${legacy.has(k) ? " legacy" : ""}"${ro ? "" : ` data-visit-zone="abd:${k}" style="cursor:pointer"`}><title>${esc(z.label)}</title></path>`
+        + (cold ? `<path d="${z.d}" fill="rgba(90,140,220,.3)" pointer-events="none"/>` : "")
+        + (warm ? `<path d="${z.d}" fill="rgba(235,130,60,.3)" pointer-events="none"/>` : "")
+        + `<text x="${z.cx.toFixed(1)}" y="${(z.ty + 6).toFixed(1)}" text-anchor="middle" class="ph-abd2-lbl" pointer-events="none">${esc(PH_ABD_ZONE_SHORT[k])}</text>`;
     }).join("");
-    const guides = `<path d="M45,24 V116 M65,24 V116 M26,55 H84 M26,89 H84" class="ph-abd2-guide" pointer-events="none"/>`;
-    const bones = `<path d="M28,27 Q42,8 55,12 Q68,8 82,27" class="ph-abd2-bone" pointer-events="none"/><path d="M31,28 Q41,20 50,18 M79,28 Q69,20 60,18" class="ph-abd2-bone faint" pointer-events="none"/><path d="M26,112 Q40,128 55,119 Q70,128 84,112" class="ph-abd2-bone" pointer-events="none"/>`;
+    // hand-tuned smooth belly silhouette (tapers/bulges like a real torso, not a trapezoid)
+    const outerD = `M24,8 C23.7,17 22.5,26 23,35 C23.5,43.3 27.1,51.7 27,60 C26.8,71.7 20.5,83.3 22,95 C23.5,107.3 31.3,119.7 36,132 Q55,138 74,132 C78.7,119.7 86.5,107.3 88,95 C89.5,83.3 83.2,71.7 83,60 C82.9,51.7 86.5,43.3 87,35 C87.5,26 86.3,17 86,8 Q55,4 24,8 Z`;
+    // the rib-arch and pelvic-brim lines are drawn from the SAME functions that cut the
+    // zones above, so the visible landmark and the zone boundary it represents always line up
+    const costalArc = phAbdEdgePath(phAbdCostalY, phAbdSkinL(PH_ABD_ROW_Y[0]) - PH_ABD_OVER, phAbdSkinR(PH_ABD_ROW_Y[0]) + PH_ABD_OVER);
+    const iliacArc = phAbdEdgePath(phAbdIliacY, phAbdSkinL(90) - PH_ABD_OVER, phAbdSkinR(90) + PH_ABD_OVER);
+    const boneD1 = `M${costalArc.p0.x.toFixed(1)},${costalArc.p0.y.toFixed(1)} ${costalArc.d}`;
+    const boneD2 = `M${iliacArc.p0.x.toFixed(1)},${iliacArc.p0.y.toFixed(1)} ${iliacArc.d}`;
+    // faint organs under the skin -- same idea as the Ren figure's own
+    // "anatomy under the skin" (phRenAnatomyHtml); draft placement, never so
+    // strong it fights the tension-colour fill above it
+    const liver = `<path d="M66,20 C78,16 90,24 89,38 C88,50 76,54 68,50 C62,46 61,30 66,20 Z" fill="#A8734F" fill-opacity=".15" stroke="#8E5F3D" stroke-opacity=".3" stroke-width=".5"/>`;
+    const stomach = `<path d="M50,20 C40,16 28,22 27,34 C26,45 36,50 46,46 C53,42 55,28 50,20 Z" fill="#D79A80" fill-opacity=".15" stroke="#C4846A" stroke-opacity=".3" stroke-width=".5"/>`;
+    const colon = `<path d="M30,55 C24,68 24,85 32,98 C48,103 64,103 78,97 C86,85 86,67 78,54" fill="none" stroke="#BF9A72" stroke-opacity=".38" stroke-width="3" stroke-linecap="round"/>`;
+    const bladder = `<ellipse cx="55" cy="122" rx="8" ry="7" fill="#D9A07A" fill-opacity=".16"/>`;
+    const linea = `<path d="M55,16 L55,60" stroke="rgba(47,94,68,.16)" stroke-width="1"/>`;
     const glyph = (k, fn) => (a.marks[k] || []).map(zk => { const z = Z[zk]; return z ? fn(z.cx, z.cy, z) : ""; }).join("");
     const water = glyph("water", (x, y) => `<path d="M${x - 7},${y + 2} q2,-3 4,0 t4,0 t4,0" class="ph-abd2-g" pointer-events="none"/>`);
     const gas = glyph("gas", (x, y) => `<circle cx="${x - 4}" cy="${y - 4}" r="1.6" class="ph-abd2-g" pointer-events="none"/><circle cx="${x + 3}" cy="${y - 6}" r="1.2" class="ph-abd2-g" pointer-events="none"/><circle cx="${x + 5}" cy="${y + 4}" r="1.8" class="ph-abd2-g" pointer-events="none"/>`);
-    const puls = glyph("pulsation", (x, y) => `<circle cx="${x}" cy="${y}" r="2.2" fill="#7A2F45" pointer-events="none"/><circle cx="${x}" cy="${y}" r="5" fill="none" stroke="#7A2F45" stroke-width=".8" opacity=".6" pointer-events="none"/>`);
+    const puls = glyph("pulsation", (x, y) => `<circle cx="${x}" cy="${y}" r="2.2" fill="#7A2F45" pointer-events="none"/><circle cx="${x}" cy="${y}" r="5" fill="none" stroke="#7A2F45" stroke-width=".8" class="ph-abd2-pulsering" pointer-events="none"/>`);
     const tender = glyph("tender", (x, y) => `<path d="M${x - 3},${y - 3} l6,6 M${x + 3},${y - 3} l-6,6" class="ph-abd2-x" pointer-events="none"/>`);
-    const xiaxin = a.marks.xiaxin ? `<path d="M52,29 l6,6 M58,29 l-6,6" class="ph-abd2-x" pointer-events="none"/>` : "";
-    const bulge = glyph("bulging", (x, y, z) => `<path d="M${x - z.w / 2 + 1},${y + 2} q${z.w / 2 - 1},${-z.h * .7} ${z.w - 2},0" class="ph-abd2-g" stroke-width="1.4" pointer-events="none"/>`);
-    const sunk = glyph("sunken", (x, y, z) => `<path d="M${x - z.w / 2 + 1},${y - 2} q${z.w / 2 - 1},${z.h * .7} ${z.w - 2},0" class="ph-abd2-g" stroke-width="1.4" pointer-events="none"/>`);
-    return `<svg viewBox="${PH_LTR_ZONES.abd.vb}" class="ph-ltr-fndsvg ph-abd2-svg${ro ? " ro" : ""}" aria-label="Abdomen chart">
-      <path d="M24,4 L86,4 C90,40 90,90 84,128 L26,128 C20,90 20,40 24,4 Z" fill="#FDF9F7" stroke="var(--ph-green-deep)" stroke-width="2" stroke-linejoin="round"/>
-      ${bones}
+    const xiaxin = a.marks.xiaxin && Z.epi ? `<path d="M${(Z.epi.cx - 3).toFixed(1)},${(Z.epi.cy - 3).toFixed(1)} l6,6 M${(Z.epi.cx + 3).toFixed(1)},${(Z.epi.cy - 3).toFixed(1)} l-6,6" class="ph-abd2-x" pointer-events="none"/>` : "";
+    const bulge = glyph("bulging", (x, y, z) => `<path d="M${x - z.w / 2 + 1},${y + 2} q${z.w / 2 - 1},${-z.h * .5} ${z.w - 2},0" class="ph-abd2-g" stroke-width="1.4" pointer-events="none"/>`);
+    const sunk = glyph("sunken", (x, y, z) => `<path d="M${x - z.w / 2 + 1},${y - 2} q${z.w / 2 - 1},${z.h * .5} ${z.w - 2},0" class="ph-abd2-g" stroke-width="1.4" pointer-events="none"/>`);
+    return `<svg viewBox="0 0 110 140" class="ph-ltr-fndsvg ph-abd2-svg${ro ? " ro" : ""}" aria-label="Abdomen chart">
+      <defs><radialGradient id="phAbd2Shade" cx="38%" cy="28%" r="82%"><stop offset="0%" stop-color="#FFFDFB"/><stop offset="100%" stop-color="#F0E4D8"/></radialGradient></defs>
+      <path d="${outerD}" fill="url(#phAbd2Shade)" stroke="var(--ph-green-deep)" stroke-width="2" stroke-linejoin="round"/>
+      ${liver}${stomach}${colon}${bladder}${linea}
       ${zones}
-      ${guides}
-      <circle cx="55" cy="72" r="2.6" fill="none" stroke="var(--ph-green-deep)" stroke-width="1.2" pointer-events="none"/>
+      <path d="${boneD1}" class="ph-abd2-bone"/><path d="${boneD2}" class="ph-abd2-bone"/>
+      <ellipse cx="55" cy="61" rx="3" ry="2.4" fill="rgba(47,94,68,.16)"/>
+      <ellipse cx="54.6" cy="60.7" rx="1.6" ry="1.2" fill="rgba(0,0,0,.1)"/>
       ${water}${gas}${puls}${tender}${xiaxin}${bulge}${sunk}
     </svg>`;
   }
