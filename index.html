@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261019-1370000">
+<meta name="lcm-build" content="20261019-1380000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -7653,6 +7653,10 @@
   #pharmacyPage .ph-fbr-grp.enh.done .ph-fbr-grp-ic { background: var(--ph-herb); color: #fff; animation: phPfwPop .4s ease; }
   #pharmacyPage .ph-fbr-grp-cnt { flex: none; font: 700 var(--fs-10-5) var(--font-body); color: var(--ph-faint); background: var(--ph-paper); border-radius: 20px; padding: 2px 7px; }
   #pharmacyPage .ph-fbr-grp.enh.done .ph-fbr-grp-cnt { color: var(--ph-herb-deep); background: var(--ph-herb-tint); }
+  /* her 2026-10-19 ask: a subheading over a run of same-subject rows, instead of "Subject:" repeating on each one (phFbrSubRowsHtml) */
+  #pharmacyPage .ph-fbr-sub { font: 700 var(--fs-10) var(--font-disp); letter-spacing: .06em; text-transform: uppercase; color: var(--ph-faint); margin: 8px 2px 3px; }
+  #pharmacyPage .ph-fbr-grp-hd + .ph-fbr-sub, #pharmacyPage .ph-fbr-sub:first-of-type { margin-top: 0; }
+  #pharmacyPage .ph-fbr-sub-cnt { font-weight: 600; letter-spacing: 0; text-transform: none; opacity: .75; }
   /* her 2026-10-11 ask ("organise this better" -> her pick "B"): collapsible groups on Triangle's
      own Bing/Ren columns -- a native <details>/<summary> wearing the same .ph-fbr-grp-hd look, just
      with the browser's own marker swapped for a chevron that rotates open. */
@@ -73694,13 +73698,16 @@ or changing anything in Cliniko.
   // A sign she added herself has no subject: it shows plain and sorts after the rest.
   const phSignSubj = label => { const i = String(label).indexOf(": "); return i > 0 ? String(label).slice(0, i) : ""; };
   const phSignLabHtml = label => { const s = String(label), i = s.indexOf(": "); return i > 0 ? `<b class="ph-sg-sub">${esc(s.slice(0, i))}:</b> <span class="ph-sg-rest">${esc(s.slice(i + 2))}</span>` : esc(s); };
+  // her 2026-10-19 ask ("group symptoms together with a sub heading to reduce repetitive words"): the
+  // descriptor alone, no subject prefix -- used under a ph-fbr-sub heading that already names it once.
+  const phSignDescHtml = label => { const s = String(label), i = s.indexOf(": "); return i > 0 ? `<span class="ph-sg-rest">${esc(s.slice(i + 2))}</span>` : esc(s); };
   const phSignCmp = (a, b) => {
     const sa = phSignSubj(a[1]), sb = phSignSubj(b[1]), cmp = (x, y) => String(x).localeCompare(String(y), undefined, { sensitivity: "base" });
     if (!sa !== !sb) return sa ? -1 : 1;
     return cmp(sa, sb) || cmp(a[1], b[1]);
   };
   // `quiet` (her 2026-10-13): the Fang Bing Ren areas draw quiet rows: no score at all when it is 0, and the score / cross only show when they say something
-  function phFbrRowHtml(rec, name, r, kind, picks, eff, weights, prefix, prevD, filtColour, quiet) {
+  function phFbrRowHtml(rec, name, r, kind, picks, eff, weights, prefix, prevD, filtColour, quiet, noSubj) {
     const on = eff[r[0]], no = picks[r[0]] === false, auto = picks[r[0]] === undefined && on;
     const c = (typeof filtColour === "function" ? filtColour(r) : filtColour) || PH_FBR_HERB_COLOUR[phFbrSignFam(kind, r)] || { bg: "#D3DEE2", fg: "#141F23" };
     const barStyle = `background:${c.bg};${c.border ? `border:1px solid ${c.border};` : ""}`;
@@ -73724,7 +73731,7 @@ or changing anything in Cliniko.
     const ckHtml = on ? `<i class="ph-fbr-ck" aria-hidden="true"><svg class="ph-cc-svgic"><use href="#i-check"/></svg></i>` : "";
     return `<div class="ph-fbr-row${quiet ? " q" : ""}${on ? " on" : ""}${no ? " no" : ""}${auto ? " auto" : ""}${neg ? " warn" : ""}${lkAuto ? " lk-auto" : ""}${lkDer ? " lk-der" : ""}${lkConf ? " lk-conf" : ""}" style="--rc:${c.bg};--rfg:${c.fg}"${titleAttr}>
       <span class="ph-fbr-bar" style="${neg ? "" : barStyle}"></span>
-      ${ckHtml}<button type="button" class="ph-fbr-main" aria-pressed="${on ? "true" : "false"}" data-${prefix}="${kind}:${r[0]}">${phSignLabHtml(r[1])}</button>${lkChip}
+      ${ckHtml}<button type="button" class="ph-fbr-main" aria-pressed="${on ? "true" : "false"}" data-${prefix}="${kind}:${r[0]}">${noSubj ? phSignDescHtml(r[1]) : phSignLabHtml(r[1])}</button>${lkChip}
       ${no ? `<button type="button" class="ph-fbr-x on" data-${prefix}-no="${kind}:${r[0]}" aria-label="Clear ruled-out">✕</button>` : `${quiet && !pts ? "" : `<b class="ph-fbr-pt">${pts > 0 ? "+" : ""}${pts}</b>`}<button type="button" class="ph-fbr-x" data-${prefix}-no="${kind}:${r[0]}" aria-label="Rule out">✕</button>`}
     </div>`;
   }
@@ -74164,6 +74171,27 @@ or changing anything in Cliniko.
   // default; the existing enhanced-but-not-collapsible caller (the standalone Ren tab) is
   // untouched since this param defaults to falsy.
   // `lead` (her 2026-10-13, "move energy table to bing area"): an extra group block drawn first inside the board, used by the Bing column for Energy.
+  // her 2026-10-19 ask ("group symptoms together with a sub heading to reduce repetitive words"), mock
+  // fbr-ren-subheadings-mock-2026-10-19.html, her "yes, build it and push": a run of adjacent
+  // same-subject rows (already sorted together by phSignCmp/phSignCmpSubjOrder) gets ONE quiet heading
+  // instead of repeating "Build:"/"Abdominal:"/"Fever:" on every row. Only when the rows are actually
+  // subject-sorted (bySubj -- the exact same filtColour == null condition phFbrGroupedHtml already sorts
+  // under): a family-filtered or Quick-assess strength-ordered list keeps the inline "Subject:
+  // descriptor" label, since subjects are not adjacent there and a heading would flicker row to row. A
+  // subject with only one row still gets its own quiet heading, never a mix of "sometimes a heading".
+  function phFbrSubRowsHtml(rows, bySubj, rec, name, kind, picks, eff, weights, prefix, prevD, filtColour) {
+    if (!bySubj) return rows.map(r => phFbrRowHtml(rec, name, r, kind, picks, eff, weights, prefix, prevD, filtColour, true)).join("");
+    const counts = {};
+    rows.forEach(r => { const s = phSignSubj(r[1]); if (s) counts[s] = (counts[s] || 0) + 1; });
+    let out = "", prevSubj = null;
+    rows.forEach(r => {
+      const subj = phSignSubj(r[1]);
+      if (subj && subj !== prevSubj) out += `<div class="ph-fbr-sub">${esc(subj.toUpperCase())}<span class="ph-fbr-sub-cnt"> · ${counts[subj]}</span></div>`;
+      out += phFbrRowHtml(rec, name, r, kind, picks, eff, weights, prefix, prevD, filtColour, true, !!subj);
+      prevSubj = subj;
+    });
+    return out;
+  }
   function phFbrGroupedHtml(rec, name, all, kind, picks, eff, weights, prefix, prevD, groups, groupIx, filtColour, enhanced, collapsible, lead) {
     const buckets = groups.map(g => ({ lab: g.lab, icon: g.icon, sortSubj: g.sortSubj, rows: [] }));
     const other = { lab: "Other", rows: [] };
@@ -74184,7 +74212,7 @@ or changing anything in Cliniko.
           <span class="ph-fbr-grp-lab">${esc(b.lab)}</span>
           <span class="ph-fbr-grp-cnt">${ticked}/${total}</span>`;
       // quiet rows (her 2026-10-13 Fang Bing Ren pick, applied here 2026-10-14 so the Ren tab matches): no "0" on 200+ rows, the ✕ shows on hover
-      const rows = b.rows.map(r => phFbrRowHtml(rec, name, r, kind, picks, eff, weights, prefix, prevD, filtColour, true)).join("");
+      const rows = phFbrSubRowsHtml(b.rows, filtColour == null, rec, name, kind, picks, eff, weights, prefix, prevD, filtColour);
       if (collapsible) return `<details class="ph-fbr-grp enh${done ? " done" : ""}"${ticked ? " open" : ""}><summary class="ph-fbr-grp-hd">${hd}</summary>${rows}</details>`;
       return `<div class="ph-fbr-grp enh${done ? " done" : ""}"><div class="ph-fbr-grp-hd">${hd}</div>${rows}</div>`;
     }).join("")}</div>`;
