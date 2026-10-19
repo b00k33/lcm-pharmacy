@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261019-1290000">
+<meta name="lcm-build" content="20261019-1300000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -58035,6 +58035,13 @@ or changing anything in Cliniko.
     // charts on one screen would fight over which one a handler patches.
     // The modal keeps it -- there is nothing else on screen behind a modal.
     const noConstit = !!(opts && opts.noConstit);
+    // her ask 2026-10-19 ("i want the human chart on the right column"): on
+    // a wide screen this tab already sits beside the Fang Bing Ren sidebar
+    // (presPfwSideInner), which now draws this same figure there instead --
+    // the caller sets this only when that sidebar is actually showing, so a
+    // narrow screen / the modal / the Opening stage (none of which have the
+    // sidebar) still get the figure drawn right here, same as before.
+    const figureInSide = !!(opts && opts.figureInSide);
     const rec = phPatientRec(name);   // writable -- opening the screen is a deliberate act, unlike opening a script
     const prog = phHxProgress(name);
     const pct = prog.total ? Math.round(prog.answeredN / prog.total * 100) : 0;
@@ -58078,7 +58085,7 @@ or changing anything in Cliniko.
       ${inline ? phHxPrioNoteHtml(rec) : ""}
       <div class="ph-hx-bodyrow">
         <div class="ph-hx-body ph-hx-cols" id="phHxBody">${phHxBodyHtml(rec, name)}</div>
-        ${phHxFigureHtml(rec, name)}
+        ${figureInSide ? "" : phHxFigureHtml(rec, name)}
       </div>
       ${phSurgSectionHtml(name, "hx")}
       <div class="ph-hx-footer">
@@ -58291,7 +58298,7 @@ or changing anything in Cliniko.
     if (inlineEl) {
       const prevBody = inlineEl.querySelector(".ph-hx-body");
       const prevScroll = prevBody ? prevBody.scrollTop : 0;
-      inlineEl.innerHTML = phHxScreenInnerHtml(presHxScreenName, { inline: true, noConstit: true });
+      inlineEl.innerHTML = phHxScreenInnerHtml(presHxScreenName, { inline: true, noConstit: true, figureInSide: phPfwSideVisible(presHxScreenName, "medhx") });
       const newBody = inlineEl.querySelector(".ph-hx-body");
       if (newBody) newBody.scrollTop = prevScroll;
     }
@@ -60734,7 +60741,7 @@ or changing anything in Cliniko.
       presHxFreshFlag = null;
     }
     phRenEnsurePhotos(phPatientKey(name));
-    return `${presMedHxBandHtml(name)}<div id="presMedHxHost">${phHxScreenInnerHtml(name, { inline: true, noConstit: true })}</div>`;
+    return `${presMedHxBandHtml(name)}<div id="presMedHxHost">${phHxScreenInnerHtml(name, { inline: true, noConstit: true, figureInSide: phPfwSideVisible(name, "medhx") })}</div>`;
   }
   function presSupplementsTabBodyHtml(t) {
     const name = presPatientFor(t) || t.name || "";
@@ -70741,7 +70748,16 @@ or changing anything in Cliniko.
       <div class="ph-pfw-lead">${leading ? esc(top.f.name) + " leading" : "No ticks yet"}</div>
       <div class="ph-pfw-sub">${top.dS} of ${top.maxD} Bing · ${top.pS} of ${top.maxP} Ren</div>
       <span class="ph-pfw-pct">${fbrPct}% built</span>
-      <button type="button" class="ph-pfw-link" data-flow-prof="patterns">Open Fang Bing Ren</button>${presAssessTab === "ren" ? phRenFigureHtml(rec, effP, ranked, effD) : ""}`;
+      <button type="button" class="ph-pfw-link" data-flow-prof="patterns">Open Fang Bing Ren</button>${presAssessTab === "ren" ? phRenFigureHtml(rec, effP, ranked, effD)
+        // her ask 2026-10-19 ("i want the human chart on the right column"): the Medical history
+        // tab's own body-map figure (ticked history + family history, phHxFigureHtml) moves into
+        // this same sidebar rather than sitting squeezed beside the question columns -- phHxScreenInnerHtml
+        // leaves it out of its own markup whenever this sidebar is the one drawing it (figureInSide).
+        // Gated on phPfwSideVisible, not just presAssessTab, so this DOM node (built even while
+        // #presPfwSide itself is CSS-hidden below 1280px) never draws a second copy of the SAME
+        // figure -- phHxScreenInnerHtml's own fallback is the one drawing it then. Two copies
+        // sharing one SVG uid would collide on id/url(#...) regardless of which is visible.
+        : presAssessTab === "medhx" && phPfwSideVisible(name, "medhx") ? phHxFigureHtml(rec, name) : ""}`;
   }
   // Herb family = the arrow, formula = the target (her words, verbatim).
   // Approved mock "herb-family-arrow": one herb-family box, a dashed arrow
@@ -70806,6 +70822,14 @@ or changing anything in Cliniko.
   // complaint ("too busy") that shrank this side panel down to begin with.
   const phPfwSideWanted = (name, id) => !!name && (id === "ren" || id === "medhx" || id === "usual" || id === "pain" || id === "supplements" || id === "bloods" || id === "cycle") && phPfBasicsOk(name);
   // (the Patterns page's "Sharpen this picture" list of what to ask next was removed 2026-10-13: no suggestion boxes)
+  // phPfwSideWanted is pure patient-data -- it says nothing about whether #presPfwSide
+  // is actually ON SCREEN right now (the .ph-pfw-side aside only shows from the
+  // @media (min-width: 1280px) breakpoint up; below that it's CSS display:none, same
+  // literal). A caller deciding whether to draw something INTO that sidebar instead of
+  // inline (the Medical history figure, 2026-10-19) needs this stronger check, or its
+  // content silently vanishes into a hidden aside on a narrower window -- found live
+  // while verifying the figure-relocation build, not assumed.
+  const phPfwSideVisible = (name, id) => phPfwSideWanted(name, id) && window.innerWidth >= 1280;
   // ---- doing things
   function phPfwFly(from, n) {
     // `from` is a rect measured BEFORE the card repainted (the tapped button is gone by now)
