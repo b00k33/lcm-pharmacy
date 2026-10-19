@@ -16490,6 +16490,24 @@
   #pharmacyPage .ph-gal-tile .t { font-size: var(--fs-11-5); font-weight: 600; color: var(--ph-ink); line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #pharmacyPage .ph-gal-tile .t.needs { color: var(--ph-low-deep); }
   #pharmacyPage .ph-gal-tile .d { font-size: var(--fs-10-5); color: var(--ph-faint); line-height: 1.2; }
+  /* her 2026-10-19 photo-organising redesign: a one-tap type chip + date fix
+     on every grid tile (By visit/By type). .ph-gal-tile is now a plain
+     wrapper div holding the thumb button, the date-fix row and the type
+     chips -- Select mode is untouched, still a single <button>. */
+  #pharmacyPage .ph-gal-thumb { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 0; margin: 0; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; min-height: 0; }
+  #pharmacyPage .ph-gal-fixrow { display: flex; }
+  #pharmacyPage .ph-gal-datebtn { display: inline-flex; align-items: center; gap: 3px; border: none; background: none; padding: 0; font: inherit; font-size: var(--fs-10-5); color: var(--ph-faint); cursor: pointer; }
+  #pharmacyPage .ph-gal-datebtn:hover { color: var(--ph-herb); }
+  #pharmacyPage .ph-gal-datebtn .ic { flex: none; }
+  #pharmacyPage .ph-gal-chips2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+  #pharmacyPage .ph-gal-chips2 .ph-cap-tchip { box-sizing: border-box; height: 24px; line-height: 14px; padding: 4px 6px; font-size: var(--fs-10-5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; text-align: center; background: var(--ph-cream); border: 1px solid var(--ph-line); }
+  #pharmacyPage .ph-gal-chips2 .ph-cap-tchip.type { grid-column: 1 / -1; background: none; color: var(--ph-soft); }
+  #pharmacyPage .ph-gal-chips2 .ph-cap-tchip.need { background: var(--ph-low-tint); border-color: var(--ph-low-tint); color: var(--ph-low-deep); }
+  #pharmacyPage .ph-gal-chips2 .ph-cap-tchip.type.need { background: none; border-color: var(--ph-low-deep); }
+  #pharmacyPage .ph-gal-chips2 .ph-cap-tchip.on { background: var(--ph-green-deep); border-color: var(--ph-green-deep); color: var(--ph-cream); }
+  #pharmacyPage .ph-gal-chips2 .ph-cap-tchip:hover { filter: brightness(.96); }
+  #pharmacyPage .ph-gal-chips2.types .ph-cap-tchip { background: var(--ph-green-tint); border-color: var(--ph-green-tint); color: var(--ph-green-deep); }
+  #pharmacyPage .ph-gal-chips2.types .ph-cap-tchip.type { background: none; border-color: var(--ph-line); color: var(--ph-soft); }
   #pharmacyPage .ph-gal-panel { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--ph-line); border-radius: 10px; background: var(--ph-paper); }
   #pharmacyPage .ph-gal-panel .lab { font-size: var(--fs-12); font-weight: 700; color: var(--ph-ink); margin-right: 4px; }
   #pharmacyPage .ph-gal-tablewrap { overflow-x: auto; border: 1px solid var(--ph-line); border-radius: 10px; }
@@ -38719,6 +38737,50 @@
       }
       const galShot = e.target.closest("[data-gal-shot]");
       if (galShot) { phRenGalShot = galShot.dataset.galShot || ""; phRenPhotosSecRefresh(); return; }
+      // her 2026-10-19 photo-organising redesign: a one-tap type chip + a
+      // one-tap date fix on every grid tile (By visit/By type), not buried
+      // in Select mode -- mirrors Records → Photos' own phRecPhotosChipsHtml taps.
+      const galTypeOpen = e.target.closest("[data-gal-type-open]");
+      if (galTypeOpen) {
+        const id = galTypeOpen.dataset.galTypeOpen;
+        phRenGalTypeOpen = phRenGalTypeOpen === id ? "" : id;
+        const sec0 = galTypeOpen.closest("[data-ren-photos]");
+        phRenPhotosSecRefresh(sec0 ? sec0.dataset.renPhotos : null);
+        return;
+      }
+      const galType2 = e.target.closest("[data-gal-type]");
+      if (galType2) {
+        const [id, kind] = galType2.dataset.galType.split("|");
+        const sec0 = galType2.closest("[data-ren-photos]"), key0 = sec0 ? sec0.dataset.renPhotos : null;
+        phRenGalTypeOpen = "";
+        if (!key0) { phRenPhotosSecRefresh(); return; }
+        const before = (phRenPhotosFor(key0) || []).find(r => r.id === id);
+        const beforeKind = before ? before.kind : "", beforeShot = before ? before.shot : "";
+        phRenBulkPatch([id], key0, w => { w.kind = kind; delete w.shot; })
+          .then(() => { phRenPhotosSecRefresh(key0); presSavedToast(`Filed as ${PH_REN_TYPE_LABEL[kind] || kind}`, { undo: () => phRenBulkPatch([id], key0, w => { w.kind = beforeKind; if (beforeShot) w.shot = beforeShot; else delete w.shot; }).then(() => phRenPhotosSecRefresh(key0)) }); })
+          .catch(() => { phRenPhotosSecRefresh(key0); presSavedToast("Couldn't relabel that photo"); });
+        return;
+      }
+      const galShot2 = e.target.closest("[data-gal-shot2]");
+      if (galShot2) {
+        const [id, shot] = galShot2.dataset.galShot2.split("|");
+        const sec0 = galShot2.closest("[data-ren-photos]"), key0 = sec0 ? sec0.dataset.renPhotos : null;
+        if (!key0) return;
+        const before = (phRenPhotosFor(key0) || []).find(r => r.id === id);
+        const beforeKind = before ? before.kind : "", beforeShot = before ? before.shot : "";
+        const next = before && before.kind === "tongue" && before.shot === shot ? "" : shot;
+        phRenBulkPatch([id], key0, w => { w.kind = "tongue"; if (next) w.shot = next; else delete w.shot; })
+          .then(() => { phRenPhotosSecRefresh(key0); presSavedToast(next ? `Filed as Tongue · ${PH_REN_SHOT_LABEL[next] || next}` : "Shot removed", { undo: () => phRenBulkPatch([id], key0, w => { w.kind = beforeKind; if (beforeShot) w.shot = beforeShot; else delete w.shot; }).then(() => phRenPhotosSecRefresh(key0)) }); })
+          .catch(() => { phRenPhotosSecRefresh(key0); presSavedToast("Couldn't relabel that photo"); });
+        return;
+      }
+      const galDateOpen = e.target.closest("[data-gal-dateopen]");
+      if (galDateOpen) {
+        const row = galDateOpen.closest(".ph-gal-tile, .ph-gal-fixrow") || galDateOpen.parentElement;
+        const inp = row ? row.querySelector("[data-gal-datefix]") : galDateOpen.nextElementSibling;
+        if (inp) { try { if (inp.showPicker) inp.showPicker(); else inp.click(); } catch (err) { inp.click(); } }
+        return;
+      }
       const galRel = e.target.closest("[data-gal-relabel]");
       if (galRel) {
         const sec = galRel.closest("[data-ren-photos]");
@@ -61716,6 +61778,12 @@ or changing anything in Cliniko.
   let phRenGalSize = 104;                // tile px, the slider
   let phRenGalTblSize = 3;               // Comparison table size: 0 small, 1 medium, 2 large, 3 fit the page (her 2026-10-12 "make the photos larger")
   const phRenGalCmp = new Map();         // patient key -> the (up to two) date columns she picked; none = every date
+  // her 2026-10-19 photo-organising redesign ("not efficient or easy for
+  // date and type"): a one-tap type chip + a one-tap date-fix on every grid
+  // tile, not buried in Select mode. phRenGalTypeOpen = the one tile (By
+  // visit/By type grid only) whose type list is unfolded, same idiom as
+  // Records → Photos' own phRecPhotosTypeOpen.
+  let phRenGalTypeOpen = "";
   let presPhotosRelabelOpen = false;     // the Relabel chip row is showing
   let presPhotosDateOpen = false;        // the Change date row is showing
   // "unsorted" = still needs her: the Unsorted type, or a tongue photo whose
@@ -61815,16 +61883,44 @@ or changing anything in Cliniko.
       return true;
     });
   }
+  // one-tap type chip on a grid tile (By visit/By type only; the Comparison
+  // table and Select mode are their own mechanisms): a tongue tile = the
+  // four shots + "Tongue ▾"; any other tile = its type chip, tap to unfold
+  // the type list -- mirrors phRecPhotosChipsHtml's own shape so both
+  // screens read the same (her "one mechanism" integrative rule).
+  function phRenGalChipsHtml(r, key) {
+    const kind = phRenTypeOf(r), id = esc(r.id), need = phRenNeedsSort(phRenRowKeyOf(r));
+    const curLabel = PH_REN_TYPE_LABEL[kind] || "Photo";
+    if (phRenGalTypeOpen === r.id) {
+      const types = phRenTypesFor(key, () => false).filter(t => t.key !== "unsorted" && t.key !== kind);
+      return `<div class="ph-gal-chips2 types">${types.map(t => `<button type="button" class="ph-cap-tchip" data-gal-type="${id}|${t.key}">${esc(t.label)}</button>`).join("")}<button type="button" class="ph-cap-tchip type" data-gal-type-open="${id}" aria-expanded="true">Keep ${esc(curLabel.toLowerCase())}</button></div>`;
+    }
+    const typeChip = `<button type="button" class="ph-cap-tchip type${kind === "unsorted" ? " need" : ""}" data-gal-type-open="${id}" aria-expanded="false">${esc(curLabel)} ▾</button>`;
+    if (kind !== "tongue") return `<div class="ph-gal-chips2">${typeChip}</div>`;
+    const shot = r.shot || "";
+    return `<div class="ph-gal-chips2">${PH_REN_TONGUE_SHOTS.map(s => `<button type="button" class="ph-cap-tchip${shot === s.key ? " on" : need ? " need" : ""}" data-gal-shot2="${id}|${s.key}" aria-pressed="${shot === s.key}">${esc(s.short)}</button>`).join("")}${typeChip}</div>`;
+  }
+  // the matching one-tap date fix: a quiet 📅 button beside the date label
+  // opens the browser's own native picker on a hidden input (the
+  // Appointments dialog's own convention) -- no popover to build or close.
+  function phRenGalDateBtnHtml(r, key) {
+    const dk = phRenDateKeyOf(r), id = esc(r.id);
+    return `<button type="button" class="ph-gal-datebtn" data-gal-dateopen="${id}" title="Fix this photo's date" aria-label="Fix this photo's date"><svg class="ic" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-cal"/></svg>${esc(phRenPhotoDateLabel(dk))}</button><input type="date" class="ph-gal-dateinput" hidden data-gal-datefix="${id}|${esc(key)}" value="${dk}" max="${keyOf(TODAY)}" min="2000-01-01">`;
+  }
   function phRenGalTileHtml(r, key, selecting) {
     const rk = phRenRowKeyOf(r), needs = phRenNeedsSort(rk), d = phRenPhotoDateLabel(phRenDateKeyOf(r));
     const lbl = rk === "tongue" ? "Tongue · unsorted" : phRenRowLabel(rk);
-    const cap = `<span class="t${needs ? " needs" : ""}">${esc(lbl)}</span><span class="d">${esc(d)}</span>`;
     if (selecting) {
       const on = presPhotosPicked.has(r.id);
+      const cap = `<span class="t${needs ? " needs" : ""}">${esc(lbl)}</span><span class="d">${esc(d)}</span>`;
       return `<button type="button" class="ph-gal-tile${needs ? " unsorted" : ""}${on ? " on" : ""}" data-pres-photo-pick="${esc(r.id)}" aria-pressed="${on ? "true" : "false"}" title="${esc(lbl)} · ${esc(d)}"><span class="ph-gal-img"><img src="${r.objectUrl || ""}" alt=""><span class="ph-gal-tick" aria-hidden="true">✓</span></span>${cap}</button>`;
     }
     const cmp = phRenCompare.some(c => c.id === r.id);
-    return `<button type="button" class="ph-gal-tile${needs ? " unsorted" : ""}${cmp ? " on" : ""}" data-ren-tl-open="${esc(r.id)}" data-ren-tl-row="${rk}" data-ren-tl-patient="${esc(key)}" title="${esc(lbl)} · ${esc(d)}"><span class="ph-gal-img"><img src="${r.objectUrl || ""}" alt="">${phRenMarkCountBadge(r)}</span>${cap}</button>`;
+    return `<div class="ph-gal-tile${needs ? " unsorted" : ""}${cmp ? " on" : ""}">
+      <button type="button" class="ph-gal-thumb" data-ren-tl-open="${esc(r.id)}" data-ren-tl-row="${rk}" data-ren-tl-patient="${esc(key)}" title="${esc(lbl)} · ${esc(d)}"><span class="ph-gal-img"><img src="${r.objectUrl || ""}" alt="">${phRenMarkCountBadge(r)}</span><span class="t${needs ? " needs" : ""}">${esc(lbl)}</span></button>
+      <div class="ph-gal-fixrow">${phRenGalDateBtnHtml(r, key)}</div>
+      ${phRenGalChipsHtml(r, key)}
+    </div>`;
   }
   // her 2026-10-12 ask ("make the photos larger - large enough to see the differences side by side ... change tongue table to comparison
   // table and include all pictures"), both mock designs: A the photos share the page (Size slider: small / medium / large / fit the page),
@@ -62025,6 +62121,23 @@ or changing anything in Cliniko.
     phRenGalSize = v;
     const g = sl.closest(".ph-gal");
     if (g) g.style.setProperty("--ph-gal-th", v + "px");
+  });
+  // her 2026-10-19 photo-organising redesign: the one-tap date-fix input on
+  // every grid tile -- a hidden native <input type="date"> opened by its own
+  // 📅 button (showPicker(), the Appointments dialog's own convention);
+  // this fires once she actually picks a day.
+  document.addEventListener("change", e => {
+    const inp = e.target.closest ? e.target.closest("[data-gal-datefix]") : null;
+    if (!inp) return;
+    const [id, key] = inp.dataset.galDatefix.split("|");
+    const v = inp.value;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(v) || v < "2000-01-01" || v > keyOf(TODAY)) { presSavedToast("Pick a real date, not in the future"); return; }
+    const before = (phRenPhotosFor(key) || []).find(r => r.id === id);
+    const beforeDate = before ? phRenDateKeyOf(before) : v;
+    if (v === beforeDate) return;
+    phRenBulkPatch([id], key, w => { w.dateKey = v; })
+      .then(() => { phRenPhotosSecRefresh(key); presSavedToast(`Moved to ${phRenPhotoDateLabel(v)}`, { undo: () => phRenBulkPatch([id], key, w => { w.dateKey = beforeDate; }).then(() => phRenPhotosSecRefresh(key)) }); })
+      .catch(() => { phRenPhotosSecRefresh(key); presSavedToast("Couldn't change that date"); });
   });
   function phRenPhotosSecScrollEnd() {
     document.querySelectorAll("#pharmacyPage .ph-photos-tl .ph-ren-tl-scroll").forEach(el => { el.scrollLeft = el.scrollWidth; });
