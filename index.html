@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261019-1400000">
+<meta name="lcm-build" content="20261019-1410000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -73071,7 +73071,29 @@ or changing anything in Cliniko.
     Eyes: [["Look", ["bright_eyes", "eyes_round", "eyes_red_tend", "eye_sockets_dark"]],
            ["Vision", ["photophobia_tend", "vision_blurdouble_tend", "vision_floaters_tend"]]],
     Muscles: [["Tone", ["soft_loose_muscle", "muscle_toned", "muscle_hard_only_tend", "muscle_tight_tend"]],
-              ["Symptom", ["spasms", "muscle_sore_tend", "muscle_heavy_tend"]]]
+              ["Symptom", ["spasms", "muscle_sore_tend", "muscle_heavy_tend"]]],
+    // her 2026-10-19 ask ("organise the symptoms in ascending order e.g. thin emaciated to robust then
+    // full figured. try to do the same for all categories"), mock ren-signs-ascending-order-mock-2026-10-19.html,
+    // her "yes, build it and push": nine more subjects get the same light/mild-to-severe ordering. These
+    // signs are read by phSignCmpSpectrum (below), NOT phSignCmpSubjOrder -- they are not added to
+    // PH_RQ_SUBJ_ORDER, so a subject here never jumps ahead of a sibling subject sharing its group; only
+    // its OWN signs reorder, wherever in the board they appear. All orders are Claude-drafted, hers to correct.
+    Abdominal: [["Tone", ["abd_wall_weak_tend", "flat_belly", "abd_resist_tend", "tight_belly", "lowabd_weak_numb_tend", "lowabd_tight_tend"]],
+                ["Fullness", ["epigastric_soft_tend", "epigastric_heavy_tend", "bloating_tend", "epigastric_full_tend", "abd_full_pain_tend", "bloating_severe_tend"]],
+                ["Pain", ["epigastric_pain_mild_tend", "belly_pain_tend", "belly_pain_severe_tend"]],
+                ["Other", ["umb_enlarged_tend", "pulsate_upsurge_tend", "abd_hot_tend", "flatus_foul_tend"]]],
+    Bowels: [["Stool", ["constipation_tend", "constipation_fissure_tend", "stool_dry_then_watery_tend", "stool_sticky_tend", "stool_smelly_tend", "stool_watery_tend"]],
+             ["Symptom", ["borborygmus_tend", "diarrhea_accum_tend", "diarrhea_heat_tend", "anus_burning_tend"]]],
+    "Cold & heat": [["Cold", ["cold_sens", "wind_averse_tend", "cold_aggravates_tend", "chills_tend"]],
+                    ["Mixed", ["temp_sensitive", "cold_heat_mixed_tend", "heat_cold_limbs_tend"]],
+                    ["Heat", ["dreads_heat", "body_hot_tend", "hot_irritable_tend"]]],
+    Energy: [["Level", ["vitality_intact_tend", "fatigue_tend", "listless_tend", "weak_after_illness_tend", "fatigue_lower_weak", "fatigue_pulse_sunken_lax"]]],
+    Fever: [["Pattern", ["mild_fever_tend", "fever_chills_tend", "alt_fever_chill_tend", "fever_high_tend", "fever_sweat_tend", "fever_persist_after_sweat_tend"]]],
+    "Mind & mood": [["Mood", ["emotional", "timid_introverted_tend", "mood_low_tend", "irritable_mood", "pms_irritable_tend", "irritable_restless_tend", "anxiety_tend", "startle_tend"]],
+                    ["Mind", ["demeanor_sullen_tend", "forgetful_tend", "confused_speech_tend", "mental_disturb_tend", "delirium_tend"]]],
+    Periods: [["Pattern", ["period_early_red_tend", "menstrual_irreg_tend", "amenorrhea_tend", "heavy_bleed_tend", "period_heavy_bright_tend", "dark_clots_tend", "menstrual_pain_tend", "faint_period_tend"]]],
+    "Sex & fertility": [["Pattern", ["libido_low_tend", "dyspareunia_tend", "impotence_tend", "infertility_tend", "miscarriage_tend"]]],
+    Urine: [["Pattern", ["urine_retention_tend", "urine_difficult_tend", "urine_reduced_tend", "urine_yellow_scanty_tend", "urine_copious_clear_tend", "urine_frequent_tend", "nocturia_tend", "incontinence_tend"]]]
   };
   const PH_RQ_ORDER_IX = {};
   Object.keys(PH_RQ_SUBGROUPS).forEach(subj => PH_RQ_SUBGROUPS[subj].forEach(([, keys]) => keys.forEach(k => { PH_RQ_ORDER_IX[k] = Object.keys(PH_RQ_ORDER_IX).length; })));
@@ -73083,6 +73105,20 @@ or changing anything in Cliniko.
     const rank = r => { const i = order.indexOf(phSignSubj(r[1])); return i < 0 ? order.length : i; };
     const ra = rank(a), rb = rank(b);
     if (ra !== rb) return ra - rb;
+    const oa = PH_RQ_ORDER_IX[a[0]], ob = PH_RQ_ORDER_IX[b[0]];
+    if (oa != null && ob != null) return oa - ob;
+    if ((oa != null) !== (ob != null)) return oa != null ? -1 : 1;
+    return phSignCmp(a, b);
+  };
+  // her 2026-10-19 ascending-order ask (see PH_RQ_SUBGROUPS above): a lighter-weight comparator for every
+  // OTHER group (one with no sortSubj) -- between-subject order is the exact same alphabetical order
+  // phSignCmp already gives (so no group's subheading sequence moves), but two signs of the SAME subject
+  // sort by PH_RQ_ORDER_IX's ordinal when one has been drafted, instead of falling straight to alphabetical.
+  const phSignCmpSpectrum = (a, b) => {
+    const sa = phSignSubj(a[1]), sb = phSignSubj(b[1]), cmp = (x, y) => String(x).localeCompare(String(y), undefined, { sensitivity: "base" });
+    if (!sa !== !sb) return sa ? -1 : 1;
+    const c = cmp(sa, sb);
+    if (c) return c;
     const oa = PH_RQ_ORDER_IX[a[0]], ob = PH_RQ_ORDER_IX[b[0]];
     if (oa != null && ob != null) return oa - ob;
     if ((oa != null) !== (ob != null)) return oa != null ? -1 : 1;
@@ -74468,8 +74504,9 @@ or changing anything in Cliniko.
     // her 2026-10-13: rows sort by subject inside each group. A family filter keeps "strongest first" (the points are the point there).
     // her 2026-10-16: a group may carry its own subject order (sortSubj, e.g. "Build, skin & complexion" --
     // keeps Abdominal from sorting ahead of Build/Skin/Complexion/Lips/Eyes/Muscles alphabetically); every
-    // other group has no sortSubj and sorts exactly as before.
-    if (filtColour == null) list.forEach(b => b.rows.sort(b.sortSubj ? phSignCmpSubjOrder(b.sortSubj) : phSignCmp));
+    // other group sorts by phSignCmpSpectrum (her 2026-10-19 ask) -- same alphabetical between-subject
+    // order as plain phSignCmp, but a drafted subject's own signs (PH_RQ_SUBGROUPS) read in ascending order.
+    if (filtColour == null) list.forEach(b => b.rows.sort(b.sortSubj ? phSignCmpSubjOrder(b.sortSubj) : phSignCmpSpectrum));
     if (!enhanced) {
       return list.map(b => `<div class="ph-fbr-grp"><div class="ph-fbr-grp-lab">${esc(b.lab)}</div>${b.rows.map(r => phFbrRowHtml(rec, name, r, kind, picks, eff, weights, prefix, prevD, filtColour)).join("")}</div>`).join("");
     }
