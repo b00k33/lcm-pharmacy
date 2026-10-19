@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261019-1380000">
+<meta name="lcm-build" content="20261019-1390000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -70796,6 +70796,31 @@ or changing anything in Cliniko.
       head: P("Head", "path", `d="M${x(-11)},30 C${x(-11)},17 ${x(-6)},12 ${x(0)},12 C${x(6)},12 ${x(11)},17 ${x(11)},30 C${x(11)},39 ${x(6)},44 ${x(0)},44 C${x(-6)},44 ${x(-11)},39 ${x(-11)},30Z"`, "heart") } : { belly: "", kid: "", head: "" };
     return ribHit + pelvHit + extra.belly + extra.kid + ribs + pel + lungs + liver + stomach + colon + heart + pelvic + extra.head;
   }
+  // her 2026-10-19 "make this chart more visually accurate of the ren signs" (mock ren-figure-looks-mock-2026-10-19.html, her pick A, "draw the sign", real proportions):
+  // the build words change the SHAPE of the body (regional widths, the same { w, sxm } shape phBodyBuild returns) and a sign that has a look is drawn as it looks.
+  // The widths and every colour below are DRAFT, hers to correct.
+  const PH_REN_BUILD_BASE = ["weight_loss_tend", "thin_body", "build_slim_tend", "obesity_tend", "full_figured_tend", "robust_build", "robust_firm_build", "build_heavyset_tend", "soft_loose_muscle"];
+  const PH_REN_BUILD_MOD = ["build_upper_heavy_tend", "build_thin_legs_tend", "muscle_toned"];
+  const PH_REN_BUILD_KEYS = PH_REN_BUILD_BASE.concat(PH_REN_BUILD_MOD);
+  const PH_REN_BUILD_LAB = { weight_loss_tend: "emaciated build", thin_body: "thin build", build_slim_tend: "slim build", obesity_tend: "heavy build", full_figured_tend: "full-figured build", robust_build: "robust build", robust_firm_build: "robust, firm build", build_heavyset_tend: "slightly heavy build", soft_loose_muscle: "soft, loose muscle", build_upper_heavy_tend: "large upper body", build_thin_legs_tend: "thin legs", muscle_toned: "toned, firm muscles" };
+  // signs phRenFigureParts draws as they look, so their mark is a thin tap ring instead of a glow (a row only counts when EVERY ticked sign in it is here)
+  const PH_REN_LOOK = new Set(["lips_pale_tend", "lips_red_tend", "lips_dark_tend", "lips_swollen_painful_tend", "eye_sockets_dark", "face_edema_eyes_tend", "umb_enlarged_tend", "lowabd_weak_numb_tend", "lowabd_tight_tend", "edema_tend", "cold_extrem"]);
+  // on = the tick test; bld = her measured build (phBodyBuild) or null. A measured build is the base when she has typed height and weight; the words add their regional shape on top.
+  function phRenBuildProfile(on, bld) {
+    const BASE = { weight_loss_tend: .76, thin_body: .86, build_slim_tend: .93, obesity_tend: 1.2, full_figured_tend: 1.14, robust_build: 1.12, robust_firm_build: 1.12, build_heavyset_tend: 1.08, soft_loose_muscle: 1.03 };
+    const bk = PH_REN_BUILD_BASE.find(on);
+    const up = on("build_upper_heavy_tend") ? .22 : 0, tl = on("build_thin_legs_tend") ? .2 : 0, mu = (on("muscle_toned") || on("robust_firm_build")) ? .05 : 0, so = on("soft_loose_muscle") ? .04 : 0;
+    if (!bk && !up && !tl && !mu && !so) return bld || null;
+    const bell = (y, m, s) => Math.exp(-((y - m) * (y - m)) / (2 * s * s)), sstep = (y, a, b) => { const t = Math.max(0, Math.min(1, (y - a) / (b - a))); return t * t * (3 - 2 * t); };
+    const w = y => {
+      const d = up * bell(y, 118, 48) - tl * sstep(y, 250, 300) + mu * (bell(y, 110, 30) + .6 * bell(y, 290, 40)) + so * bell(y, 200, 34);
+      const k = y < 64 ? .15 : y > 435 ? .5 : 1;   // the head and the feet barely change
+      const v = bld ? bld.w(y) + d * k : 1 + ((bk ? BASE[bk] : 1) + d - 1) * k;
+      return Math.max(.62, Math.min(1.5, v));
+    };
+    let s = 0, n = 0; for (let y = 110; y <= 240; y += 10) { s += w(y); n++; }
+    return { w, sxm: s / n, sex: bld && bld.sex, bmi: bld && bld.bmi };
+  }
   // Every mark takes the colour of the herb family its sign points to -- the same colour as the bar
   // on the left of that sign's row (PH_FBR_HERB_COLOUR via phFbrSignFam), her 2026-10-11 ask:
   // "correspond the symptoms visually to the herb family color". Looks of the body itself (skin tone,
@@ -70810,29 +70835,34 @@ or changing anything in Cliniko.
     const famsWeighing = (kind, ks) => Object.keys(PH_FORMULAS).filter(id => ks.some(k => (((PH_FORMULAS[id] || {})[kind] || {})[k] || 0) > 0));
     const bestOf = (kind, ks, pool) => { let b = pool[0], bw = 0; pool.forEach(m => ks.forEach(k => { const w = (((PH_FORMULAS[m] || {})[kind] || {})[k] || 0); if (w > bw) { bw = w; b = m; } })); return b; };
     const bld = phBodyBuild(rec);   // her measured build, when she has typed height and weight; else the old tick-based stretch below
-    const G = PH_BODY_GEOM, CX = G.CX, female = phIsFemale(rec), g = female ? "f" : "m", path = G.outline(g, view, bld);
+    // her 2026-10-19 "make this chart more visually accurate of the ren signs": the build words now change the SHAPE (large upper body, thin legs, slim, ...), not one even stretch
+    const prof = phRenBuildProfile(on, bld);
+    const G = PH_BODY_GEOM, CX = G.CX, female = phIsFemale(rec), g = female ? "f" : "m", path = G.outline(g, view, prof);
     const legend = [];
     // family of a sign (first ticked key of a group); records it in the legend
     const famOf = ks => phRenFamActive() ? phRenFamColourId(ks.find(on) || ks[0]) : phFbrSignFam("p", [ks.find(on) || ks[0]]);
     const colOf = id => (PH_FBR_HERB_COLOUR[id] || { bg: "#D3DEE2" }).bg;
     const note = (id, lab) => { legend.push({ id, lab }); return colOf(id); };
     const RING = "rgba(63,74,79,.55)";
-    // build: one reading, the heaviest wins
-    const buildKey = on("obesity_tend") ? "obesity_tend" : on("robust_build") ? "robust_build" : on("robust_firm_build") ? "robust_firm_build" : on("soft_loose_muscle") ? "soft_loose_muscle" : on("thin_body") ? "thin_body" : "";
-    const sx = bld ? bld.sxm : ({ obesity_tend: 1.2, robust_build: 1.12, robust_firm_build: 1.12, soft_loose_muscle: 1.06, thin_body: .86 }[buildKey] || 1);
+    // build: the SHAPE is the profile above (phRenBuildProfile); the outline wears the colour of the first build word ticked
+    const buildKey = PH_REN_BUILD_KEYS.find(on) || "";
+    const sx = prof ? prof.sxm : 1;
     let outline = "#6f6053", outlineW = 1.05;
-    if (buildKey) { outline = note(famOf([buildKey]), { obesity_tend: "heavy build", robust_build: "robust build", robust_firm_build: "robust, firm build", soft_loose_muscle: "soft, loose muscle", thin_body: "thin build" }[buildKey]); outlineW = 2.2; }
+    PH_REN_BUILD_KEYS.filter(on).forEach((k, i) => { const c = note(famOf([k]), PH_REN_BUILD_LAB[k]); if (!i) { outline = c; outlineW = 2.2; } });
     // face and skin
     const faceDef = (on("complexion_red_tend") || on("complexion_oily_tend")) ? ["complexion_red_tend", "#E9876F", "red, oily complexion"] : on("skin_face_red_tend") ? ["skin_face_red_tend", "#EFA08C", "redness in the face"] : (on("complexion_dark_yellow_tend") || on("complexion_greenish_tend")) ? ["complexion_dark_yellow_tend", "#A9B27A", "dark yellow / greenish complexion"]
+      : on("complexion_dark_tend") ? ["complexion_dark_tend", "#9A735F", "dark complexion"] : on("complexion_dark_slight_tend") ? ["complexion_dark_slight_tend", "#C9A98F", "slightly dark complexion"] : on("skin_pale_white_tend") ? ["skin_pale_white_tend", "#F7F3EE", "pale, white skin", .9]
       : on("complexion_sallow") ? ["complexion_sallow", "#E0C46F", "sallow complexion"] : on("complexion_lusterless_tend") ? ["complexion_lusterless_tend", "#D9D6C0", "pale, lusterless complexion"] : on("complexion_pale_tend") ? ["complexion_pale_tend", "#E8E2D8", "pale complexion"]
       : on("complexion_puffy") ? ["complexion_puffy", "#E7DDCB", "puffy complexion"] : null;
     const faceRing = faceDef ? note(famOf([faceDef[0]]), faceDef[2]) : "";
     const fair = on("skin_finetext_tend") || on("skin_fair_tend"); if (fair) { const c = note(famOf(["skin_finetext_tend", "skin_fair_tend"]), "fine, fair skin"); if (!buildKey) { outline = c; outlineW = 2.2; } }
     const dry = on("dry_skin"), dryCol = dry ? note(famOf(["dry_skin"]), "dry skin") : "";
     const lipDark = on("lips_dark_tend") || on("lips_purplish_red_tend");
-    const lipKey = lipDark ? "lips_dark_tend" : on("lips_pale_tend") ? "lips_pale_tend" : "";
-    const lipCol = lipDark ? "#7B3B5A" : lipKey ? "#D9A9A3" : "#C98F8A";
-    const lipRing = lipKey ? note(famOf([lipKey]), lipDark ? "dark, purplish lips" : "pale lips") : "";
+    const lipRed = on("lips_red_tend"), lipSwell = on("lips_swollen_painful_tend");
+    const lipKey = lipDark ? "lips_dark_tend" : lipRed ? "lips_red_tend" : on("lips_pale_tend") ? "lips_pale_tend" : lipSwell ? "lips_swollen_painful_tend" : "";
+    const lipCol = lipDark ? "#7B3B5A" : lipRed ? "#C2303A" : lipKey === "lips_pale_tend" ? "#E6CBC4" : lipSwell ? "#D27C7C" : "#C98F8A";
+    const lipRing = lipKey ? note(famOf([lipKey]), lipDark ? "dark, purplish lips" : lipRed ? "red lips" : lipSwell ? "swollen, painful lips" : "pale lips") : "";
+    const sockets = on("eye_sockets_dark"), socketCol = sockets ? note(famOf(["eye_sockets_dark"]), "dark eye sockets") : "", lidPuff = on("face_edema_eyes_tend"), lidCol = lidPuff ? note(famOf(["face_edema_eyes_tend"]), "swelling around the eyes") : "";
     const bright = on("bright_eyes"), round = on("eyes_round");
     const brightCol = bright ? note(famOf(["bright_eyes"]), "bright, spirited eyes") : "", roundCol = round ? note(famOf(["eyes_round"]), "round eyes") : "";
     // belly shape
@@ -70867,8 +70897,10 @@ or changing anything in Cliniko.
       const nm = esc(lab) + (ghost ? " · not ticked yet" : "") + " · " + esc((PH_FORMULAS[id] || {}).name || id);
       let one = "";
       const sp = spotsOf(at, only);
+      const look = !ghost && keys.filter(on).every(k => PH_REN_LOOK.has(k));   // drawn as it looks below, so no glow here: a thin ring stays as the tap target
       sp.forEach(([x, y, rx, ry]) => {
         one += ghost ? `<ellipse class="rf-ring" cx="${x}" cy="${y}" rx="${(rx * 1.05).toFixed(1)}" ry="${(ry * 1.05).toFixed(1)}" fill="none" stroke="${dark(colOf(id))}" stroke-width="1.1" stroke-dasharray="2.4 1.8" opacity=".85"/>`
+          : look ? `<ellipse class="rf-ring" cx="${x}" cy="${y}" rx="${(rx * 1.05).toFixed(1)}" ry="${(ry * 1.05).toFixed(1)}" fill="transparent" stroke="${RING}" stroke-width=".6" stroke-opacity=".5"/>`
           : `<ellipse cx="${x}" cy="${y}" rx="${(rx * 1.45).toFixed(1)}" ry="${(ry * 1.45).toFixed(1)}" fill="url(#${u}-g-${id})"/><ellipse class="rf-ring" cx="${x}" cy="${y}" rx="${(rx * 1.05).toFixed(1)}" ry="${(ry * 1.05).toFixed(1)}" fill="none" stroke="${RING}" stroke-width=".8"/>`;
       });
       if (sp[0]) one += badge(sp[0][0], sp[0][1], sp[0][2], sp[0][3], itemNum(site), id, ghost);
@@ -70903,18 +70935,58 @@ or changing anything in Cliniko.
     const famIds = new Set(legend.map(l => l.id));
     const radial = id => { const c = colOf(id); return `<radialGradient id="${u}-g-${id}"><stop offset="0" stop-color="${c}" stop-opacity=".95"/><stop offset=".55" stop-color="${c}" stop-opacity=".6"/><stop offset="1" stop-color="${c}" stop-opacity="0"/></radialGradient>`; };
     const gx = `translate(${CX} 0) scale(${sx} 1) translate(${-CX} 0)`;
-    const face = faceDef && !back ? `<ellipse cx="${CX}" cy="34" rx="19" ry="26" fill="${faceDef[1]}" fill-opacity=".62" pointer-events="none"/>` : "";
+    const face = faceDef && !back ? `<ellipse cx="${CX}" cy="34" rx="19" ry="26" fill="${faceDef[1]}" fill-opacity="${faceDef[3] || .62}" pointer-events="none"/>` : "";
     const faceLine = faceDef && !back ? `<ellipse cx="${CX}" cy="34" rx="19.5" ry="26.5" fill="none" stroke="${faceRing}" stroke-width="1.6" stroke-opacity=".95" pointer-events="none"/>` : "";
     const belly = back ? "" : (tight ? `<g pointer-events="none" stroke="${tightCol}" stroke-width="1.5" fill="none" stroke-linecap="round"><path d="M${CX},160 V232"/><path d="M${CX - 14},172 H${CX + 14} M${CX - 15},190 H${CX + 15} M${CX - 15},208 H${CX + 15}"/></g>` : "")
-      + (bloat ? `<ellipse pointer-events="none" cx="${CX}" cy="200" rx="32" ry="26" fill="${bloatCol}" fill-opacity=".35" stroke="${bloatCol}" stroke-width="1.6" stroke-dasharray="3 2"/>` : "")
+      + (bloat ? `<ellipse pointer-events="none" cx="${CX}" cy="200" rx="32" ry="26" fill="url(#${u}-bulge)" stroke="${bloatCol}" stroke-width="1.5"/>` : "")
       + (soft ? `<path pointer-events="none" d="M${CX - 27},206 Q${CX},238 ${CX + 27},206" fill="none" stroke="${softCol}" stroke-width="1.8" stroke-dasharray="3 2"/>` : "");
-    const eyes = back ? "" : [-7, 7].map(d => round
-      ? `<circle cx="${CX + d}" cy="30" r="3.3" fill="#fff" stroke="${roundCol}" stroke-width="1.5"/><circle cx="${CX + d}" cy="30" r="1.5" fill="#5a4636"/>`
-      : `<ellipse cx="${CX + d}" cy="30" rx="2.4" ry="${bright ? 2 : 1.3}" fill="#5a4636"/>${bright ? `<circle cx="${CX + d + .8}" cy="29.2" r=".7" fill="#fff"/>` : ""}`).join("")
+    // eyes: dark sockets are a soft shadow under the eye, swelling is a puffy lid above and below it, then the eye itself
+    const eyes = back ? "" : [-7, 7].map(d => (sockets ? `<ellipse pointer-events="none" cx="${CX + d}" cy="33.6" rx="5.6" ry="2.9" fill="#4d3a55" fill-opacity=".5" filter="url(#${u}-blur2)"/>` : "")
+      + (lidPuff ? `<path pointer-events="none" d="M${CX + d - 5},29 q5,-5 10,0" fill="#E7DDCB" fill-opacity=".7" stroke="${lidCol}" stroke-opacity=".8" stroke-width=".8"/><path pointer-events="none" d="M${CX + d - 5},32.5 q5,5 10,0" fill="#E7DDCB" fill-opacity=".7" stroke="${lidCol}" stroke-opacity=".8" stroke-width=".8"/>` : "")
+      + (round
+        ? `<circle cx="${CX + d}" cy="30" r="3.3" fill="#fff" stroke="${roundCol}" stroke-width="1.5"/><circle cx="${CX + d}" cy="30" r="1.5" fill="#5a4636"/>`
+        : `<ellipse cx="${CX + d}" cy="30" rx="2.4" ry="${bright ? 2 : 1.3}" fill="#5a4636"/>${bright ? `<circle cx="${CX + d + .8}" cy="29.2" r=".7" fill="#fff"/>` : ""}`)).join("")
       + (bright ? `<g stroke="${brightCol}" stroke-width="1.3" stroke-linecap="round"><path d="M${CX - 13},24 l-2,-2 M${CX - 10},22.5 v-3 M${CX + 13},24 l2,-2 M${CX + 10},22.5 v-3"/></g>` : "");
-    const mouth = back ? "" : `<ellipse cx="${CX}" cy="46" rx="5" ry="1.9" fill="${lipCol}"/>${lipRing ? `<ellipse cx="${CX}" cy="46" rx="7.5" ry="3.8" fill="none" stroke="${lipRing}" stroke-width="1.3"/>` : ""}`;
+    // lips: the colour she ticked, a fuller shape for red or swollen, a faint edge on pale lips so they do not vanish into the skin
+    const mouth = back ? "" : `<ellipse cx="${CX}" cy="46" rx="${lipSwell ? 6 : 5.2}" ry="${lipSwell ? 3.1 : lipRed ? 2.3 : 1.9}" fill="${lipCol}"${lipKey === "lips_pale_tend" ? ' stroke="#c7a9a2" stroke-width=".4"' : ""}/>${lipRing ? `<ellipse cx="${CX}" cy="46" rx="7.5" ry="3.8" fill="none" stroke="${lipRing}" stroke-width="1.3"/>` : ""}`;
+    // a plain "Age N" tag by the head when the age sign is on (her pick: a small tag, no hair)
+    const ageN = on("age_middle_elderly") && rec ? phAgeOf(rec.dob) : null;
+    const ageTag = ageN != null && !back ? `<g pointer-events="none"><rect x="${CX + 22}" y="6" width="${String(ageN).length > 2 ? 34 : 30}" height="11" rx="5.5" fill="#fff" stroke="${RING}" stroke-width=".7"/><text x="${CX + 22 + (String(ageN).length > 2 ? 17 : 15)}" y="13.8" text-anchor="middle" font-size="6.2" font-weight="700" fill="#0B3B4B">Age ${ageN}</text></g>` : "";
     const aura = (cold ? `<path pointer-events="none" d="${path}" fill="none" stroke="${coldCol}" stroke-width="9" stroke-opacity=".55" stroke-linejoin="round" filter="url(#${u}-blur)"/>` : "")
       + (heat ? `<path pointer-events="none" d="${path}" fill="none" stroke="${heatCol}" stroke-width="9" stroke-opacity=".55" stroke-linejoin="round" filter="url(#${u}-blur)"/>` : "");
+    // signs drawn as they look (her pick A): a plain picture of the sign, named on tap, never a call-out label. A sign that already has a tap ring
+    // (PH_REN_DRAW) keeps it on top, so its picture takes no taps; one with no ring (dark spots, muscle tone, ribs) is the tap target itself.
+    const named = (nm, inner, tap) => inner ? `<g${tap ? ` class="rf-part" data-rf-name="${esc(nm)}"` : ' pointer-events="none"'}>${tap ? `<title>${esc(nm)}</title>` : ""}${inner}</g>` : "";
+    const spotsOn = on("skin_dark_spots_tend"), toned = on("muscle_toned"), thinBody = on("weight_loss_tend");
+    if (spotsOn) note(famOf(["skin_dark_spots_tend"]), "dark or purple spots");
+    if (ageN != null) note(famOf(["age_middle_elderly"]), "age " + ageN);
+    let looks = "";
+    if (on("cold_extrem")) looks += named("Cold hands and feet", [62, -62].map(dx => `<ellipse cx="${CX + dx}" cy="268" rx="9" ry="16" fill="url(#${u}-cold)"/>`).join("") + [17, -17].map(dx => `<ellipse cx="${CX + dx}" cy="446" rx="11" ry="10" fill="url(#${u}-cold)"/>`).join(""));
+    if (on("edema_tend")) looks += named("Swollen feet and lower legs", [20, -20].map(dx => `<ellipse cx="${CX + dx}" cy="424" rx="10" ry="11" fill="#E7DDCB" fill-opacity=".6" stroke="#9c8a74" stroke-opacity=".6" stroke-width="1"/><circle cx="${CX + dx + (dx > 0 ? 1 : -1)}" cy="418" r="2" fill="#8b6a55" fill-opacity=".35"/>`).join(""));
+    if (spotsOn) looks += named("Skin: dark or purple spots", [[-20, 120], [14, 134], [-8, 176], [22, 196], [-26, 214], [-58, 160], [58, 176], [-52, 110], [60, 128], [-18, 150], [8, 226]].map(([dx, y], i) => `<circle cx="${CX + dx}" cy="${y}" r="${1.5 + (i % 3) * .5}" fill="#5b3a4a" fill-opacity=".7"/>`).join(""), true);
+    if (!back) {
+      if (thinBody) looks += `<g pointer-events="none" fill="#8b6a55" fill-opacity=".22" filter="url(#${u}-blur2)"><ellipse cx="${CX - 12}" cy="40" rx="4" ry="6"/><ellipse cx="${CX + 12}" cy="40" rx="4" ry="6"/></g>`;
+      if (toned) looks += named("Muscles: toned, firm", `<g fill="none" stroke="#8b6a55" stroke-opacity=".5" stroke-width=".9" stroke-linecap="round"><path d="M${CX - 3},118 C${CX - 12},112 ${CX - 26},114 ${CX - 34},124"/><path d="M${CX + 3},118 C${CX + 12},112 ${CX + 26},114 ${CX + 34},124"/><path d="M${CX},124 V190"/><path d="M${CX - 12},146 H${CX + 12} M${CX - 12},162 H${CX + 12} M${CX - 12},178 H${CX + 12}"/><path d="M${CX - 50},110 q-6,16 -2,32 M${CX + 50},110 q6,16 2,32"/></g>`, true);
+      if (thinBody) looks += named("Build: emaciated, ribs and collarbones show", `<g fill="none" stroke="#7a6a5d" stroke-opacity=".6" stroke-width="1" stroke-linecap="round"><path d="M${CX - 5},94 C${CX - 20},90 ${CX - 32},92 ${CX - 42},98 M${CX + 5},94 C${CX + 20},90 ${CX + 32},92 ${CX + 42},98"/><path d="M${CX - 8},128 q-14,6 -24,2 M${CX - 8},138 q-14,6 -24,2 M${CX - 8},148 q-13,6 -22,2 M${CX + 8},128 q14,6 24,2 M${CX + 8},138 q14,6 24,2 M${CX + 8},148 q13,6 22,2"/></g>`, true);
+      if (on("umb_enlarged_tend")) looks += named("Abdominal: enlarged around the navel", `<ellipse cx="${CX}" cy="196" rx="19" ry="16" fill="url(#${u}-bulge)" stroke="#8b6a55" stroke-opacity=".55" stroke-width="1"/><ellipse cx="${CX}" cy="196" rx="4.2" ry="5" fill="#7a5a48" fill-opacity=".5"/><path d="M${CX - 3},194 q3,-3 6,0" stroke="#5b4636" stroke-width=".8" fill="none"/>`);
+      if (on("lowabd_weak_numb_tend")) looks += named("Abdominal: lower belly weak, soft", `<path d="M${CX - 27},214 Q${CX},252 ${CX + 27},214 Q${CX},228 ${CX - 27},214Z" fill="url(#${u}-sag)" stroke="#8b6a55" stroke-opacity=".55" stroke-width=".9" stroke-dasharray="3 2"/><path d="M${CX - 16},226 q4,4 8,0 t8,0 t8,0" fill="none" stroke="#8b6a55" stroke-opacity=".4" stroke-width=".8"/>`);
+      if (on("lowabd_tight_tend")) looks += named("Abdominal: lower belly tight", `<g stroke="#6b4a3c" stroke-width="1.6" stroke-linecap="round" fill="none"><path d="M${CX - 22},218 H${CX + 22} M${CX - 20},228 H${CX + 20} M${CX - 16},238 H${CX + 16}"/></g><g stroke="#6b4a3c" stroke-width="1" fill="none"><path d="M${CX - 26},216 l-4,2 m4,8 l-4,2 M${CX + 26},216 l4,2 m-4,8 l4,2"/></g>`);
+    }
+    // the build her picked family expects but she has not ticked, as a dashed outline in that family's colour (only while a family is picked, like the ghost marks)
+    let ghostBuild = "";
+    if (famMs) {
+      // a build word counts as expected when the family weighs it 3 or more (its key signs); the strongest base build word only when she ticked none
+      const wOf = k => Math.max(0, ...famMs.map(m => (((PH_FORMULAS[m] || {}).ren || {})[k]) || 0));
+      const expKeys = PH_REN_BUILD_MOD.filter(k => !on(k) && wOf(k) >= 3).map(k => ({ key: k, w: wOf(k) }));
+      const expBase = PH_REN_BUILD_BASE.some(on) ? null : PH_REN_BUILD_BASE.map(k => ({ key: k, w: wOf(k) })).filter(a => a.w >= 3).sort((a, b) => b.w - a.w)[0];
+      if (expBase) expKeys.unshift(expBase);
+      if (expKeys.length) {
+        const eSet = new Set(expKeys.map(i => i.key)), eProf = phRenBuildProfile(k => on(k) || eSet.has(k), bld), eFam = phRenFamColourId(expKeys[0].key);
+        const eCol = dark(colOf(eFam)), eNm = "Expected build, not ticked yet: " + expKeys.map(i => PH_REN_BUILD_LAB[i.key]).join(", ") + " · " + ((PH_FORMULAS[eFam] || {}).name || eFam);
+        const eD = G.outline(g, view, eProf), eX = `translate(${CX} 0) scale(${eProf.sxm.toFixed(4)} 1) translate(${-CX} 0)`;
+        ghostBuild = `<g class="rf-part" data-rf-name="${esc(eNm)}" transform="${eX}"><title>${esc(eNm)}</title><path d="${eD}" fill="none" stroke="${eCol}" stroke-width="1.4" stroke-dasharray="1.6 2.8" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" opacity=".9" pointer-events="none"/><path d="${eD}" fill="none" stroke="transparent" stroke-width="9" stroke-linejoin="round" vector-effect="non-scaling-stroke" pointer-events="stroke"/></g>`;
+      }
+    }
     const none = !legend.length && !bingMarks;
     const zones = back ? { under: "", lines: "" } : phRenZonesHtml(hot, hotLab, colOf);
     const ruler = phBodyRulerSvg(rec);
@@ -70922,6 +70994,10 @@ or changing anything in Cliniko.
       <defs>
         <linearGradient id="${u}-skin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${fair ? "#FBF7F2" : "#F5F0EA"}"/><stop offset="1" stop-color="${fair ? "#F1E9E0" : "#E7DDD2"}"/></linearGradient>
         <filter id="${u}-blur" x="-20%" y="-10%" width="140%" height="120%"><feGaussianBlur stdDeviation="5"/></filter>
+        <filter id="${u}-blur2" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.2"/></filter>
+        <radialGradient id="${u}-cold"><stop offset="0" stop-color="#5B8DC0" stop-opacity=".6"/><stop offset="1" stop-color="#5B8DC0" stop-opacity="0"/></radialGradient>
+        <radialGradient id="${u}-bulge" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="#fff" stop-opacity=".75"/><stop offset=".6" stop-color="#d9b9a2" stop-opacity=".16"/><stop offset="1" stop-color="#8b6a55" stop-opacity=".35"/></radialGradient>
+        <radialGradient id="${u}-sag" cx="50%" cy="25%" r="80%"><stop offset="0" stop-color="#c79a86" stop-opacity=".05"/><stop offset="1" stop-color="#8b6a55" stop-opacity=".38"/></radialGradient>
         <clipPath id="${u}-clip"><path d="${path}"/></clipPath>
         <pattern id="${u}-dry" width="7" height="6" patternUnits="userSpaceOnUse"><path d="M1,2 l3,1.2 M4,5 l2.6,-1" stroke="${dryCol || "#9c8a74"}" stroke-width=".9" stroke-linecap="round" fill="none"/></pattern>
         ${[...famIds].map(radial).join("")}
@@ -70930,12 +71006,13 @@ or changing anything in Cliniko.
         ${aura}
         <path d="${path}" fill="url(#${u}-skin)" pointer-events="none"/>
         <g pointer-events="none">${G.detailSvg(g, view, "#6f6053")}</g>
-        <g clip-path="url(#${u}-clip)">${dry ? `<rect pointer-events="none" x="0" y="62" width="220" height="400" fill="url(#${u}-dry)" opacity=".55"/>` : ""}${face}${zones.under}${phRenAnatomyHtml(view, female)}${zones.lines}${marks}${belly}</g>
+        <g clip-path="url(#${u}-clip)">${dry ? `<rect pointer-events="none" x="0" y="62" width="220" height="400" fill="url(#${u}-dry)" opacity=".55"/>` : ""}${face}${zones.under}${phRenAnatomyHtml(view, female)}${zones.lines}${looks}${marks}${belly}</g>
         ${faceLine}
         <path d="${path}" fill="none" stroke="${outline}" stroke-width="${outlineW}" stroke-linejoin="round" vector-effect="non-scaling-stroke" pointer-events="none"/>
         ${eyes}${mouth}
         ${drops}
       </g>
+      ${ghostBuild}${ageTag}
       ${phPmRlLabels(view).replace("<g ", '<g pointer-events="none" ')}
       ${ruler}
     </svg>`;
