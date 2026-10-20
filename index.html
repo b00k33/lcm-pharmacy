@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261020-1500000">
+<meta name="lcm-build" content="20261020-1520000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -8618,7 +8618,13 @@
   #pharmacyPage .ph-tpg td.tw .hint { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-12); font-weight: 700; color: var(--ph-herb-deep); }
   #pharmacyPage .ph-tpg td.tw .hint svg { flex: none; animation: phTpNudge 1.6s ease-in-out infinite; }
   /* her ask28 2026-10-10: the four rhythms in the open row + a gold "Your turn" + "Same for all phases" */
-  #pharmacyPage .ph-tpg-rhs { display: inline-flex; flex-wrap: wrap; gap: 4px; max-width: 150px; }
+  /* her 2026-10-20 ("i cant change that the treatment is once a week for menses"): the choices wrap to two rows in one
+     joined box using the whole phase cell (nothing clipped); "Cycle days" joins them on a cycle plan */
+  #pharmacyPage .ph-tpg-rhs { display: block; max-width: 100%; }
+  #pharmacyPage .ph-tpg .cntrow:has(.ph-tpg-rhs) { margin-left: 0; }
+  #pharmacyPage .ph-tng2-seg.wrap .ph-tpg-p3.rh { flex: none; white-space: nowrap; padding: 2px 5px; border-right: 0; border-left: 1px solid var(--ph-line); border-bottom: 1px solid var(--ph-line); }
+  #pharmacyPage .ph-tpg-ddbox .oth .seg.cdd button { min-width: 28px; padding: 4px 6px; text-align: center; font-variant-numeric: tabular-nums; }
+  #pharmacyPage .ph-tpg-ddbox .oth .seg.cdd button.gone { opacity: .4; cursor: default; }
   #pharmacyPage .ph-tpg-p3.rh { padding: 2px 9px; font-size: var(--fs-11); background: #fff; color: var(--ph-soft); }
   #pharmacyPage .ph-tpg-p3.rh:hover { background: var(--ph-herb-tint); }
   #pharmacyPage .ph-tpg-p3.rh.on { background: var(--ph-herb-deep); color: #fff; box-shadow: none; }
@@ -35828,7 +35834,7 @@
       }
       // the Plan button (her pick 2026-10-01, v5): one pill per phase sets how
       // often and how many together; tapping a card picks it and closes
-      const tpPlanEl = e.target.closest("[data-tp-plan-open],[data-tp-plan-pick],[data-tp-plan-custom],[data-tp-plan-rh],[data-tp-plan-d],[data-tp-plan-done],[data-tp-plan-later],[data-tp-plan-slot],[data-tp-plan-prev],[data-tp-plan-all]");
+      const tpPlanEl = e.target.closest("[data-tp-plan-open],[data-tp-plan-pick],[data-tp-plan-custom],[data-tp-plan-rh],[data-tp-plan-d],[data-tp-plan-done],[data-tp-plan-later],[data-tp-plan-slot],[data-tp-plan-prev],[data-tp-plan-all],[data-tp-plan-cd],[data-tp-plan-cdn],[data-tp-plan-cdgo]");
       if (tpPlanEl) {
         const lad = tpPlanEl.closest("[data-tp-ladder]");
         const nm = lad ? lad.dataset.tpLadderName : phTpScreenPatient;
@@ -35836,7 +35842,16 @@
         if (ds.tpPlanSlot) {
           // Plan-it B: tapping the last visit wanted fills every square up to it
           const [planId, phaseId, rh, n] = ds.tpPlanSlot.split(":");
-          phTpPlanCommit(nm, planId, phaseId, rh, +n);
+          if (rh === "cd") {
+            // cycle days: the visits already picked, else that many spread down the days still open
+            const plan = phTpFindPlan(nm, planId), ph = plan && plan.phases.find(p => p.id === phaseId), cdx = ph && phTpCdCtx(nm, plan);
+            if (ph && cdx) {
+              const own = phTpPlanCdDraft(plan, ph, cdx), open = phTpPlanCdAvail(cdx, ph).filter(x => !x.gone).map(x => x.d);
+              const cds = +n <= own.length ? own.slice(0, +n) : phTpCdSpread(open, +n);
+              if (cds.length) phTpPlanCommit(nm, planId, phaseId, "cd", cds.length, cds);
+              delete phTpPlanUi.cd[`${planId}:${phaseId}`]; delete phTpPlanUi.rh[`${planId}:${phaseId}`];
+            }
+          } else phTpPlanCommit(nm, planId, phaseId, rh, +n);
           phTpPlanUi.dd = null; phTpPlanUi.custom = false;
           phTpPlanRepaint();
         } else if (ds.tpPlanPrev) {
@@ -35863,8 +35878,36 @@
           phTpPlanUi.custom = true; phTpPlanRepaint();
         } else if (ds.tpPlanRh) {
           const [planId, phaseId, rh] = ds.tpPlanRh.split(":");
-          phTpPlanWrite(nm, planId, phaseId, { rh });
+          if (rh === "cd") {
+            const plan = phTpFindPlan(nm, planId), ph = plan && plan.phases.find(p => p.id === phaseId), cdx = ph && phTpCdCtx(nm, plan);
+            if (ph && cdx) phTpPlanWrite(nm, planId, phaseId, { cd: phTpPlanCdDraft(plan, ph, cdx) });
+          } else phTpPlanWrite(nm, planId, phaseId, { rh });
           phTpPlanRepaint();
+        } else if (ds.tpPlanCd || ds.tpPlanCdn) {
+          // cycle days: a day chip toggles it, the stepper spreads that many visits down the days still open
+          const [planId, phaseId, v] = (ds.tpPlanCd || ds.tpPlanCdn).split(":");
+          const plan = phTpFindPlan(nm, planId), ph = plan && plan.phases.find(p => p.id === phaseId), cdx = ph && phTpCdCtx(nm, plan);
+          if (ph && cdx && cdx.by.get(ph.id)) {
+            const planned = phTpSessionsOf(ph) > 0;
+            const open = phTpPlanCdAvail(cdx, ph).filter(x => !x.gone).map(x => x.d);
+            const cur = planned ? (phTpCadenceCdList(ph.cadence || "") || []) : phTpPlanCdDraft(plan, ph, cdx);
+            const next = ds.tpPlanCd
+              ? (cur.includes(+v) ? cur.filter(d => d !== +v) : [...cur, +v].sort((a, b) => a - b))
+              : phTpCdSpread(open, cur.length + (+v));
+            if (next.length) { if (planned) phTpPlanWrite(nm, planId, phaseId, { cd: next }); else phTpPlanUi.cd[`${planId}:${phaseId}`] = next; }
+            phTpPlanRepaint();
+          }
+        } else if (ds.tpPlanCdgo) {
+          // "Plan" on the open phase: the days picked become its plan
+          const [planId, phaseId] = ds.tpPlanCdgo.split(":");
+          const plan = phTpFindPlan(nm, planId), ph = plan && plan.phases.find(p => p.id === phaseId), cdx = ph && phTpCdCtx(nm, plan);
+          if (ph && cdx) {
+            const cds = phTpPlanCdDraft(plan, ph, cdx);
+            if (cds.length) phTpPlanCommit(nm, planId, phaseId, "cd", cds.length, cds);
+            delete phTpPlanUi.cd[`${planId}:${phaseId}`]; delete phTpPlanUi.rh[`${planId}:${phaseId}`];
+            phTpPlanUi.dd = null; phTpPlanUi.custom = false;
+            phTpPlanRepaint();
+          }
         } else if (ds.tpPlanD) {
           const [planId, phaseId, d] = ds.tpPlanD.split(":");
           const plan = phTpFindPlan(nm, planId), ph = plan && plan.phases.find(p => p.id === phaseId);
@@ -83929,7 +83972,8 @@ or changing anything in Cliniko.
   // per phase (view state, nothing written until she taps a square), undo = the
   // last square-tap's snapshot for the toast, quiet = phases seen waiting on
   // the one before (so one that opens rises in once)
-  const phTpPlanUi = { dd: null, custom: false, askLater: new Set(), askSeen: new Set(), rh: {}, undo: null, undoTok: 0, quiet: new Set() };
+  // cd = the open phase's cycle days still being picked ("plan:phase" -> [1, 3]), view state like rh
+  const phTpPlanUi = { dd: null, custom: false, askLater: new Set(), askSeen: new Set(), rh: {}, cd: {}, undo: null, undoTok: 0, quiet: new Set() };
   // her ask 2026-10-03 ("let me delete phases", on the Session grid): the
   // phase whose Remove? strip is open under its grid row (view state only)
   let phTpGridDelArm = null;
@@ -87389,11 +87433,21 @@ or changing anything in Cliniko.
       // visit has already passed (a booking overtook it: the booking wins)
       const lastReal = cells.length ? cells[cells.length - 1].date : "";
       const pins = (Array.isArray(p.plannedDates) ? p.plannedDates : []).filter(k => k >= today && k > lastReal).sort();
+      // a cycle-day list ("CD 1, 3") lands on the real days those cycle days fall on, counted from her period;
+      // anything else, or no period logged, runs on by the rhythm below
+      const cdList = phTpCadenceCdList(p.cadence || "");
+      const cdQueue = cdList ? phTpCdDates(name, cdList, today, lastReal, n + cdList.length) : null;
       // then the rhythm runs on from the last date, never before today
       // (calendar days via setDate, not ms -- the clocks change 4 Oct)
       while (cells.length < n) {
         const pin = pins.shift();
-        let nx = pin || phTpDayAdd(last, days);
+        let nx = pin;
+        if (!nx && cdQueue) {
+          const after = cells.length ? cells[cells.length - 1].date : "";
+          while (cdQueue.length && cdQueue[0] <= after) cdQueue.shift();
+          nx = cdQueue.shift();
+        }
+        if (!nx) nx = phTpDayAdd(last, days);
         if (nx < today) nx = today;
         last = nx;
         cells.push({ k: "next", date: nx, pinned: !!pin });
@@ -87962,7 +88016,12 @@ or changing anything in Cliniko.
     if (!ph) return false;
     const r = o.rh ? PH_TP_RHYTHMS[o.rh] : null;
     if (r) { ph.cadence = phTpCadenceCompose(r.n, r.per, phTpPlanForWhat(ph), null); delete ph.plannedDates; }
-    if (o.n != null) { if (o.n > 0) ph.sessions = Math.min(o.n, 99); else delete ph.sessions; }
+    // cycle days: the list IS the plan ("CD 1, 3" = two visits), so the count follows it
+    if (o.cd && o.cd.length) {
+      ph.cadence = phTpCadenceCompose(0, "cd", phTpPlanForWhat(ph), null, o.cd);
+      ph.sessions = phTpCadenceCdList(ph.cadence).length;
+      delete ph.plannedDates;
+    } else if (o.n != null) { if (o.n > 0) ph.sessions = Math.min(o.n, 99); else delete ph.sessions; }
     if (savePharmacy() === false) phFlashShow("⚠ That could not be saved — check the warning at the top and try again");
     return true;
   }
@@ -87981,8 +88040,52 @@ or changing anything in Cliniko.
   }
   // the rhythm the open phase is previewing: her last pill tap, else its own,
   // else the suggestion
-  function phTpPlanOpenRh(plan, ph) {
-    return phTpPlanUi.rh[`${plan.id}:${ph.id}`] || phTpRhKeyOf(ph) || phTpPlanSuggest(plan, ph)[0].rh;
+  function phTpPlanOpenRh(plan, ph, cdx) {
+    const set = phTpPlanUi.rh[`${plan.id}:${ph.id}`] || phTpRhKeyOf(ph);
+    if (set) return set;
+    // her 2026-10-20 ("i cant change that the treatment is once a week for menses"): a phase of a week or less on a
+    // cycle plan is planned by its days, not by a weekly rhythm it never had
+    const cw = cdx && cdx.by.get(ph.id);
+    if (cw && cw.w[1] - cw.w[0] < 7) return "cd";
+    return phTpPlanSuggest(plan, ph)[0].rh;
+  }
+  // ---- Cycle days: plan an open phase by the cycle days it covers, or by a number of visits spread across them ----
+  // The cadence text stays the one truth ("CD 1, 3"): Communications, the Treatment tab and the squares all read it.
+  // The days still pickable in a phase: today's cycle day is inside its window = the days already gone are not offered.
+  function phTpPlanCdAvail(cdx, ph) {
+    const cw = cdx && cdx.by.get(ph.id);
+    if (!cw) return [];
+    const today = cdx.comp.day, inside = today >= cw.w[0] && today <= cw.w[1];
+    const out = [];
+    for (let d = cw.w[0]; d <= cw.w[1]; d++) out.push({ d, gone: inside && d < today });
+    return out;
+  }
+  // n visits spread evenly down the days still open, starting on the first
+  function phTpCdSpread(days, n) {
+    const L = days.length;
+    if (!L) return [];
+    n = Math.max(1, Math.min(n, L));
+    return Array.from({ length: n }, (_, i) => days[Math.floor(i * L / n)]);
+  }
+  // the days being picked for the open phase: her own taps, else one visit on the first day open
+  function phTpPlanCdDraft(plan, ph, cdx) {
+    const open = phTpPlanCdAvail(cdx, ph).filter(x => !x.gone).map(x => x.d);
+    const own = (phTpPlanUi.cd[`${plan.id}:${ph.id}`] || []).filter(d => open.includes(d));
+    return own.length ? own : phTpCdSpread(open, 1);
+  }
+  // the dates these cycle days fall on, counting forward: the next time each comes round on or after `from`,
+  // later than `after`. Null when there is no period to count from.
+  function phTpCdDates(name, cds, from, after, count) {
+    const rec = phPatientPeek(name), cyc = rec && phCycleFor(rec);
+    if (!cyc || !cyc.lmp || !cds.length) return null;
+    const len = Math.max(14, cyc.cycleLen || 28), lmp = parseKey(cyc.lmp), out = [];
+    for (let c = 0; c < 26 && out.length < count; c++) {
+      cds.forEach(cd => {
+        const k = keyOf(new Date(lmp.getFullYear(), lmp.getMonth(), lmp.getDate() + c * len + (cd - 1)));
+        if (k >= from && k > after) out.push(k);
+      });
+    }
+    return out.sort().slice(0, count);
   }
   // how many squares the suggestion would fill at a rhythm
   function phTpPlanSugN(plan, ph, rh) {
@@ -87997,7 +88100,13 @@ or changing anything in Cliniko.
     if (!cp) return [];
     const r = PH_TP_RHYTHMS[rh];
     if (r) cp.cadence = phTpCadenceCompose(r.n, r.per, phTpPlanForWhat(cp), null);
-    cp.sessions = count;
+    if (rh === "cd") {
+      // the days she has picked (or the default) date the first squares; the rest wait undated
+      const cds = phTpPlanCdDraft(plan, ph, phTpCdCtx(name, plan));
+      if (!cds.length) return [];
+      cp.cadence = phTpCadenceCompose(0, "cd", phTpPlanForWhat(cp), null, cds);
+      cp.sessions = cds.length;
+    } else cp.sessions = count;
     delete cp.plannedDates;
     const g = phTpSessionCells(name, c).find(x => x.p.id === ph.id);
     return g ? g.cells.map(x => x.date) : [];
@@ -88024,16 +88133,16 @@ or changing anything in Cliniko.
     } });
   }
   // a pick (a tapped square or a quick card): write it, then say so
-  function phTpPlanCommit(name, planId, phaseId, rh, n) {
+  function phTpPlanCommit(name, planId, phaseId, rh, n, cds) {
     const plan = phTpFindPlan(name, planId), ph = plan && plan.phases.find(x => x.id === phaseId);
     if (!ph) return false;
     const snap = {
       cadence: ph.cadence, sessions: ph.sessions, plannedDates: ph.plannedDates ? ph.plannedDates.slice() : undefined,
       had: { cadence: "cadence" in ph, sessions: "sessions" in ph, plannedDates: "plannedDates" in ph }
     };
-    if (!phTpPlanWrite(name, planId, phaseId, { rh, n })) return false;
+    if (!phTpPlanWrite(name, planId, phaseId, cds && cds.length ? { cd: cds } : { rh, n })) return false;
     const r = PH_TP_RHYTHMS[rh];
-    phTpPlanToastShow(name, planId, phaseId, snap, `Planned ${ph.label || "this phase"}${r ? ` · ${r.label}` : ""} × ${n}`);
+    phTpPlanToastShow(name, planId, phaseId, snap, cds && cds.length ? `Planned ${ph.label || "this phase"} · CD ${cds.join(", ")}` : `Planned ${ph.label || "this phase"}${r ? ` · ${r.label}` : ""} × ${n}`);
     return true;
   }
   // "Same for all phases" (her ask28 2026-10-10): every phase still to come that has no sessions yet takes the rhythm the open
@@ -88042,7 +88151,8 @@ or changing anything in Cliniko.
     const plan = phTpFindPlan(name, planId), open = plan && plan.phases.find(x => x.id === openPhaseId);
     if (!open) return false;
     phTpSugName = name;
-    const rh = phTpPlanOpenRh(plan, open), r = PH_TP_RHYTHMS[rh];
+    const rh = phTpPlanOpenRh(plan, open, phTpCdCtx(name, plan)), r = PH_TP_RHYTHMS[rh];
+    if (!r) return false;   // cycle days are for the one phase they were picked on
     const todo = plan.phases.filter(p => !p.skipped && p.status !== "done" && !phTpSessionsOf(p));
     if (!todo.length) return false;
     const snaps = todo.map(ph => ({
@@ -88065,10 +88175,29 @@ or changing anything in Cliniko.
     }).join("");
   }
   // "Other…": how often + how many, only when she asks for it
-  function phTpPlanOtherHtml(plan, ph) {
+  function phTpPlanOtherHtml(name, plan, ph, cdx) {
     const key = `${plan.id}:${ph.id}`, cur = phTpRhKeyOf(ph), n = phTpSessionsOf(ph);
-    const seg = Object.keys(PH_TP_RHYTHMS).map(k => `<button type="button" class="${k === cur ? "on" : ""}" data-tp-plan-rh="${key}:${k}">${esc(PH_TP_RHYTHMS[k].label)}</button>`).join("");
-    return `<div class="oth"><span class="lb">How often</span><span class="seg">${seg}</span><span class="lb">How many</span><span class="step"><button type="button" data-tp-plan-d="${key}:-1" aria-label="Fewer sessions"${n <= 0 ? " disabled" : ""}>−</button><b>${n || 0}</b><button type="button" data-tp-plan-d="${key}:1" aria-label="More sessions">+</button></span><button type="button" class="dn" data-tp-plan-done="1">Done</button></div>`;
+    const cw = cdx && cdx.by.get(ph.id), cdOwn = cw ? phTpCadenceCdList(ph.cadence || "") : null;
+    const seg = Object.keys(PH_TP_RHYTHMS).map(k => `<button type="button" class="${k === cur ? "on" : ""}" data-tp-plan-rh="${key}:${k}">${esc(PH_TP_RHYTHMS[k].label)}</button>`).join("")
+      + (cw ? `<button type="button" class="${cdOwn ? "on" : ""}" data-tp-plan-rh="${key}:cd">Cycle days</button>` : "");
+    const how = cdOwn ? phTpPlanCdInnerHtml(name, plan, ph, cdx, cdOwn)
+      : `<span class="lb">How many</span><span class="step"><button type="button" data-tp-plan-d="${key}:-1" aria-label="Fewer sessions"${n <= 0 ? " disabled" : ""}>−</button><b>${n || 0}</b><button type="button" data-tp-plan-d="${key}:1" aria-label="More sessions">+</button></span>`;
+    return `<div class="oth"><span class="lb">How often</span><span class="seg">${seg}</span>${how}<button type="button" class="dn" data-tp-plan-done="1">Done</button></div>`;
+  }
+  // the cycle days of a phase as chips (a day she can no longer reach this cycle is dimmed) and a visits stepper; the
+  // picks write at once on a planned phase and are a draft, until "Plan", on the open one
+  function phTpPlanCdInnerHtml(name, plan, ph, cdx, cds) {
+    const key = `${plan.id}:${ph.id}`, today = keyOf(TODAY), avail = phTpPlanCdAvail(cdx, ph);
+    const chips = avail.map(x => {
+      const on = cds.includes(x.d), dt = x.gone ? "" : (phTpCdDates(name, [x.d], today, "", 1) || [])[0];
+      const tip = x.gone ? "Already passed this cycle" : dt ? `${DAY_SHORT[parseKey(dt).getDay()]} ${phTpSd2(dt)}` : `Cycle day ${x.d}`;
+      return `<button type="button" class="${on ? "on" : ""}${x.gone ? " gone" : ""}" data-tp-plan-cd="${key}:${x.d}"${x.gone ? " disabled" : ""} aria-pressed="${on ? "true" : "false"}" title="${esc(tip)}">${x.d}</button>`;
+    }).join("");
+    const openN = avail.filter(x => !x.gone).length;
+    return `<span class="lb">Cycle day</span><span class="seg cdd">${chips}</span><span class="lb">Visits</span><span class="step"><button type="button" data-tp-plan-cdn="${key}:-1" aria-label="Fewer visits"${cds.length <= 1 ? " disabled" : ""}>−</button><b>${cds.length}</b><button type="button" data-tp-plan-cdn="${key}:1" aria-label="More visits"${cds.length >= openN ? " disabled" : ""}>+</button></span>`;
+  }
+  function phTpPlanCdOpenHtml(name, plan, ph, cdx) {
+    return `<div class="oth cd">${phTpPlanCdInnerHtml(name, plan, ph, cdx, phTpPlanCdDraft(plan, ph, cdx))}<button type="button" class="dn" data-tp-plan-cdgo="${plan.id}:${ph.id}">Plan</button></div>`;
   }
   // the ladder (her pick B): every planned session of every phase with its
   // date -- done ✓ · today · booked · projected (tilde) from the phase's rhythm
@@ -88179,7 +88308,7 @@ or changing anything in Cliniko.
     // phase is OPEN -- its empty squares are the plan -- and the unplanned
     // ones after it wait. Enough columns that a whole course can be tapped.
     const openPh = phTpPlanOpenPhase(plan);
-    const openRh = openPh ? phTpPlanOpenRh(plan, openPh) : "";
+    const openRh = openPh ? phTpPlanOpenRh(plan, openPh, cdx) : "";
     const slotsN = Math.min(12, Math.max(openPh ? 6 : 4, maxN));
     const slotDates = openPh ? phTpPlanSlotDates(name, plan, openPh, openRh, slotsN) : [];
     phTpSugName = name;
@@ -88222,7 +88351,7 @@ or changing anything in Cliniko.
       // plans every phase still to come at the same rhythm
       if (openPh && p.id === openPh.id) {
         const laterN = phs.filter(x => x.id !== p.id && !x.skipped && x.status !== "done" && !phTpSessionsOf(x)).length;
-        return `<span class="badge your">Your turn</span>${laterN ? `<button type="button" class="ph-tp-dx-btn ph-tpg-all" data-tp-plan-all="${plan.id}:${p.id}" title="Plan every phase still to come at this rhythm">Same for all phases</button>` : ""}`;
+        return `<span class="badge your">Your turn</span>${laterN && openRh !== "cd" ? `<button type="button" class="ph-tp-dx-btn ph-tpg-all" data-tp-plan-all="${plan.id}:${p.id}" title="Plan every phase still to come at this rhythm">Same for all phases</button>` : ""}`;
       }
       if (isLive && n) {
         const { cells } = allCells[i];
@@ -88255,7 +88384,7 @@ or changing anything in Cliniko.
       if (n && allCells[i].cells.length) {
         const c0 = allCells[i].cells[0];
         const cL = allCells[i].cells[allCells[i].cells.length - 1];
-        return `<span class="quiet">Starts ${c0.k === "next" && !c0.pinned ? String.fromCharCode(126) : ""}${esc(sd2(c0.date))}</span><span class="sub">${n} visits${cL ? ` · to ${esc(sd2(cL.date))}` : ""}</span>`;
+        return `<span class="quiet">Starts ${c0.k === "next" && !c0.pinned ? String.fromCharCode(126) : ""}${esc(sd2(c0.date))}</span><span class="sub">${n} visit${n === 1 ? "" : "s"}${cL ? ` · to ${esc(sd2(cL.date))}` : ""}</span>`;
       }
       const prev = phs.slice(0, i).reverse().find(x => !x.skipped);
       return prev && prev.status !== "done" ? `<span class="quiet">Starts after ${esc(prev.label || "the phase before")}</span>` : `<span class="quiet">—</span>`;
@@ -88269,12 +88398,18 @@ or changing anything in Cliniko.
       // often (1×/wk ↻ → 2×/wk ↻ …) and re-dates the squares live; a phase
       // still waiting has no pill at all
       // her ask28 2026-10-10: the four rhythms sit in the row, one tap picks and the squares re-date
-      if (!n && openPh && p.id === openPh.id) return `<span class="ph-tpg-rhs" role="group" aria-label="How often"><div class="ph-tng2-seg">${PH_TP_RH_ORDER.map(k => `<button type="button" class="ph-tpg-p3 rh${k === openRh ? " on" : ""}" data-tp-plan-prev="${plan.id}:${p.id}:${k}" aria-pressed="${k === openRh ? "true" : "false"}" title="Preview ${esc(PH_TP_RHYTHMS[k].label)} — the squares re-date">${esc(PH_TP_RHYTHMS[k].label)}</button>`).join("")}</div></span>`;
+      // her 2026-10-20: the choices wrap to two rows inside one joined box (nothing clipped); a phase on a cycle
+      // plan adds "Cycle days"
+      if (!n && openPh && p.id === openPh.id) {
+        const rhKeys = cdx && cdx.by.get(p.id) ? [...PH_TP_RH_ORDER, "cd"] : PH_TP_RH_ORDER;
+        const rhLab = k => k === "cd" ? "Cycle days" : PH_TP_RHYTHMS[k].label;
+        return `<span class="ph-tpg-rhs" role="group" aria-label="How often"><div class="ph-tng2-seg wrap"><span class="ph-tng2-wr">${rhKeys.map(k => `<button type="button" class="ph-tpg-p3 rh${k === openRh ? " on" : ""}" data-tp-plan-prev="${plan.id}:${p.id}:${k}" aria-pressed="${k === openRh ? "true" : "false"}" title="${k === "cd" ? "Pick the cycle days — or how many visits — in this phase" : `Preview ${esc(rhLab(k))} — the squares re-date`}">${esc(rhLab(k))}</button>`).join("")}</span></div></span>`;
+      }
       if (!n) return "";
       // her pick 2026-10-01 (v5 "Plan button"): ONE pill sets how often and
       // how many together
-      const key = `${plan.id}:${p.id}`, rk = phTpRhKeyOf(p), open = phTpPlanUi.dd === key;
-      const label = !n ? "Plan" : rk ? `${PH_TP_RHYTHMS[rk].label} · ${n}` : p.cadence ? `Custom · ${n}` : `${n} session${n === 1 ? "" : "s"}`;
+      const key = `${plan.id}:${p.id}`, rk = phTpRhKeyOf(p), open = phTpPlanUi.dd === key, cdOwn = phTpCadenceCdList(p.cadence || "");
+      const label = !n ? "Plan" : rk ? `${PH_TP_RHYTHMS[rk].label} · ${n}` : cdOwn ? (cdOwn.length <= 4 ? `CD ${cdOwn.join(", ")}` : `CD ${cdOwn[0]}–${cdOwn[cdOwn.length - 1]} · ${cdOwn.length}`) : p.cadence ? `Custom · ${n}` : `${n} session${n === 1 ? "" : "s"}`;
       return `<button type="button" class="ph-tpg-p3${n ? "" : " empty"}${open ? " open" : ""}" data-tp-plan-open="${key}" aria-expanded="${open ? "true" : "false"}" title="How often, and how many sessions">${esc(label)} ▾</button>`;
     };
     // the drop-down under a phase's row: three quick plans with their dates
@@ -88285,10 +88420,13 @@ or changing anything in Cliniko.
       const rk = phTpRhKeyOf(p);
       const prose = !rk && p.cadence ? `<div class="now">Now: ${esc(p.cadence)} — a pick below replaces it.</div>` : "";
       const inner = phTpPlanUi.custom
-        ? phTpPlanOtherHtml(plan, p)
+        ? phTpPlanOtherHtml(name, plan, p, cdx)
         : `<div class="cards">${phTpPlanCardsHtml(name, plan, p)}</div><button type="button" class="lnk" data-tp-plan-custom="${key}">Other…</button>`;
       return `<tr class="dd"><td colspan="${slotsN + 2}"><div class="ph-tpg-ddbox">${prose}${inner}</div></td></tr>`;
     };
+    // the open phase in cycle-day mode: its days and visits sit under its row until she taps "Plan"
+    const cdRow = p => openPh && p.id === openPh.id && openRh === "cd"
+      ? `<tr class="dd cdp"><td colspan="${slotsN + 2}"><div class="ph-tpg-ddbox">${phTpPlanCdOpenHtml(name, plan, p, cdx)}</div></td></tr>` : "";
     const rowsHtml = phs.map((p, i) => {
       const isLive = live && live.id === p.id, isDone = p.status === "done";
       const phFrozen = isDone && !phTpUnlockDone.has(p.id);
@@ -88299,7 +88437,7 @@ or changing anything in Cliniko.
       const rkOf = phTpRhKeyOf(p);
       const cadenceHtml = p.skipped ? `Doesn't apply`
         : phFrozen ? esc(p.cadence || "")
-        : rkOf || !p.cadence ? ""
+        : rkOf || !p.cadence || phTpCadenceCdList(p.cadence) ? ""
         : `<span class="ph-tp-ladder-cad" data-tp-edit="${plan.id}:${p.id}:cadence" title="Click to change how often, and for how long">${esc(p.cadence)}</span>`;
       const cells = p.skipped ? [] : allCells[i].cells;
       const on = selPh && selPh.id === p.id;
@@ -88322,7 +88460,7 @@ or changing anything in Cliniko.
         const rg = phTpCdRange(cw.w), onC = cdSel === cw.fam;
         return `<button type="button" class="ph-cdr cdk-${cw.fam}${onC ? " on" : ""}" data-tp-cdsel="${plan.id}:${cw.fam}" aria-pressed="${onC ? "true" : "false"}" title="${esc(`${p.label || "Phase"} covers ${rg} of a ${cdx.comp.cycleLen}-day cycle`)}">${rg}</button>`;
       })() : "";
-      return `${ctxRow}<tr class="${st}${on ? " on" : ""}${isOpenRow ? " openph" : ""}${(gAnim && !gSeen) || (isOpenRow && openRise) ? " rise" : ""}${cw && cdSel === cw.fam ? " cdl" : ""}"${cw ? ` data-cdk="${cw.fam}"` : ""} style="--i:${i + 1}"><th><div class="pn"><span class="no ${st}">${st === "done" ? "✓" : st === "skip" ? "⊘" : i + 1}</span><div class="nm"><button type="button" class="nmb" data-tp-tab="${plan.id}:${p.id}" title="Open this phase">${nm}</button>${cdChip}${cadenceHtml ? `<small>${cadenceHtml}</small>` : ""}${p.skipped ? "" : sinceLineFor(p, false)}</div>${delBtn}</div><div class="cntrow">${countCtl(p)}</div></th>${slotCells(p, cells)}<td class="tw">${weekCell(p, i)}</td></tr>${ddRow(p)}${delRow}`;
+      return `${ctxRow}<tr class="${st}${on ? " on" : ""}${isOpenRow ? " openph" : ""}${(gAnim && !gSeen) || (isOpenRow && openRise) ? " rise" : ""}${cw && cdSel === cw.fam ? " cdl" : ""}"${cw ? ` data-cdk="${cw.fam}"` : ""} style="--i:${i + 1}"><th><div class="pn"><span class="no ${st}">${st === "done" ? "✓" : st === "skip" ? "⊘" : i + 1}</span><div class="nm"><button type="button" class="nmb" data-tp-tab="${plan.id}:${p.id}" title="Open this phase">${nm}</button>${cdChip}${cadenceHtml ? `<small>${cadenceHtml}</small>` : ""}${p.skipped ? "" : sinceLineFor(p, false)}</div>${delBtn}</div><div class="cntrow">${countCtl(p)}</div></th>${slotCells(p, cells)}<td class="tw">${weekCell(p, i)}</td></tr>${ddRow(p)}${cdRow(p)}${delRow}`;
     }).join("");
     const table = `<div class="ph-tpg-wrap"><table class="ph-tpg" style="--n:${slotsN}"><colgroup><col class="ph">${Array.from({ length: slotsN }, () => "<col class=\"s\">").join("")}<col class="tw"></colgroup><thead><tr><th>Phase</th>${Array.from({ length: slotsN }, (_, j) => `<th class="slh">${j + 1}</th>`).join("")}<th>This week</th></tr></thead><tbody>${rowsHtml}</tbody></table></div>`;
     // extra content (a booking beyond the planned count, one marked "not
