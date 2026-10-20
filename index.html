@@ -19882,6 +19882,9 @@
      is saved. The phone rules sit in the one 640px block (PHONE REDESIGN). ============ */
   #pharmacyPage .ph-pres-band { --ps-x: 18px; --ps-b: 12px; }
   #pharmacyPage .ph-pres-panel.ph-dsp-fit .ph-pres-band { position: relative; }   /* the results panel hangs off the band */
+  /* The panel clips with overflow:hidden, which makes IT the band's scroll container and so the sticky band never
+     pins. While a search is on, clip instead (no scroll container) so the box, results and find strip stay in view. */
+  #pharmacyPage #presPanel.ph-pres-full .ph-pres-panel:not(.ph-dsp-fit):has(.ph-pres-band.ph-ps-pin) { overflow: clip; display: flow-root; }
   #pharmacyPage .ph-ps { flex: none; display: flex; align-items: center; gap: 6px; height: 36px; width: 230px; padding: 0 6px 0 10px; border-radius: 999px; background: rgba(255,255,255,.14); color: var(--ph-cream); transition: width .22s ease, background .15s, color .15s; }
   #pharmacyPage .ph-ps:focus-within, #pharmacyPage .ph-ps.has { background: var(--ph-white); color: var(--ph-ink); }
   #pharmacyPage .ph-ps:focus-within { width: 360px; }
@@ -19921,7 +19924,7 @@
   #pharmacyPage .ph-ps-more:hover { background: var(--ph-herb-tint); }
   #pharmacyPage .ph-ps-none { padding: 18px 12px; color: var(--ph-soft); font-size: var(--fs-13); font-weight: 600; }
   /* the find strip: a wrapping child of the band, pulled out over the band's own padding so it runs edge to edge */
-  #pharmacyPage .ph-ps-find { display: none; flex: 1 0 100%; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 calc(-1 * var(--ps-x)) calc(-1 * var(--ps-b)); padding: 8px var(--ps-x); background: var(--ph-herb-tint); color: var(--ph-herb-deep); font-size: var(--fs-13); }
+  #pharmacyPage .ph-ps-find { display: none; flex: 1 0 100%; min-width: 0; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 calc(-1 * var(--ps-x)) calc(-1 * var(--ps-b)); padding: 8px var(--ps-x); background: var(--ph-herb-tint); color: var(--ph-herb-deep); font-size: var(--fs-13); }
   #pharmacyPage .ph-ps-find.on { display: flex; }
   #pharmacyPage .ph-ps-find.pop { animation: phPsRise .16s ease both; }
   #pharmacyPage .ph-ps-find .cnt { font-weight: 600; }
@@ -21213,7 +21216,8 @@
     #pharmacyPage .ph-pres-panel .ph-pres-band.ph-ps-hasfind { flex-wrap: wrap; }
     #pharmacyPage .ph-pres-panel .ph-pres-band.ph-ps-hasfind .ph-band-titlewrap { flex: 1 1 0; }
     #pharmacyPage .ph-ps-res { left: 8px; right: 8px; width: auto; max-height: 70vh; }
-    #pharmacyPage .ph-ps-find .ph-ps-seg { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+    #pharmacyPage .ph-ps-find .ph-ps-seg { max-width: 100%; overflow-x: auto; scrollbar-width: none; order: 3; }   /* count + stepper on the first row, the page chips scroll on the second */
+    #pharmacyPage .ph-ps-find .ph-ps-seg.one { display: none; }   /* one page: the stepper already says it; the pinned strip stays one row */
     @media (max-width: 480px) {
       #pharmacyPage .ph-pres-band { --ps-x: 10px; --ps-b: 8px; }
       #pharmacyPage .ph-ps:not(.open), #pharmacyPage .ph-ps:not(.open):focus-within { width: 28px; height: 28px; background: none; color: var(--ph-cream); border: 1.5px solid rgba(217,174,71,.75); }
@@ -62495,6 +62499,580 @@ or changing anything in Cliniko.
   function presDspFit(t, isF) {
     return !isF && !!t && presStage === "dispense" && window.innerWidth > 900;
   }
+  // ---------------------------------------------------------------------------
+  // Profile search (her 2026-10-20 "include a search box so i can quickly search inside profile e.g. surgery
+  // pain etc"; mock profile-search-mock-2026-10-20.html, her 8 picks). A field in the patient band beside the
+  // camera. Typing drops a results list under the band, grouped by page (File, Exam, Plan, Log); a tapped row
+  // opens its page, marks every match and rings the line; a find strip steps through the rest; the rail counts
+  // matches per page. Related words count (surgery also finds arthroscopy, repair; pain also finds aching,
+  // sharp). READ ONLY: it reads the record through phPatientPeek and the same readers the pages draw from and
+  // writes nothing; everything below is view state. The index is rebuilt fresh (cached 1.5 s), each source in
+  // its own try so one failing never blocks the rest; the page list comes from the LIVE rail, so a page that is
+  // not on the rail for this patient is simply not searched. `var` and function declarations on purpose:
+  // phPsFieldHtml() runs inside the band's template and must never hit a TDZ.
+  // ---------------------------------------------------------------------------
+  var PH_PS_ALIAS = {   // DRAFT, hers to correct: a typed word that starts with the key also finds these
+    surg: ["surgery", "surgeries", "surgical", "operation", "arthroscopy", "repair"],
+    pain: ["pain", "ache", "aching", "painful", "sharp", "sore"]
+  };
+  var PH_PS_GROUPS = [["file", "File"], ["exam", "Exam"], ["plan", "Plan"], ["log", "Log"]];
+  var phPsS = null, phPsIdx = null, phPsMemo = null, phPsObs = null, phPsObsEl = null, phPsTimer = 0, phPsReCache = {};
+  function phPsEnsure() {
+    const id = presOpenId || "";
+    if (!phPsS || phPsS.id !== id) {
+      phPsS = { id, q: "", open: false, res: false, scope: "all", more: {}, cur: -1, bi: 0, page: "", ring: "", opened: false, flash: false, scroll: false, asked: false };
+      phPsIdx = null; phPsMemo = null;
+      phPsWatch(false);
+    }
+    return phPsS;
+  }
+  function phPsToks(q) { return String(q || "").toLowerCase().split(/\s+/).filter(t => t.length >= 2); }
+  function phPsVars(t) {
+    const k = Object.keys(PH_PS_ALIAS).find(a => t.indexOf(a) === 0), l = k ? PH_PS_ALIAS[k].slice() : [];
+    if (l.indexOf(t) < 0) l.push(t);
+    return l;
+  }
+  function phPsRe(toks) {
+    if (!toks.length) return null;
+    const key = toks.join("|");
+    if (phPsReCache[key]) return phPsReCache[key];
+    const vs = [];
+    toks.forEach(t => phPsVars(t).forEach(v => { if (vs.indexOf(v) < 0) vs.push(v); }));
+    vs.sort((a, b) => b.length - a.length);
+    if (Object.keys(phPsReCache).length > 12) phPsReCache = {};
+    return (phPsReCache[key] = new RegExp(vs.map(v => v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"), "gi"));
+  }
+  function phPsHit(it, toks) { return toks.every(t => phPsVars(t).some(v => it.hay.indexOf(v) > -1)); }
+  function phPsHl(text, toks) {
+    const s = String(text == null ? "" : text), re = phPsRe(toks);
+    if (!re) return esc(s);
+    let out = "", last = 0, m;
+    re.lastIndex = 0;
+    while ((m = re.exec(s))) {
+      if (!m[0]) { re.lastIndex++; continue; }
+      out += esc(s.slice(last, m.index)) + `<mark class="ph-ps-mark">${esc(m[0])}</mark>`;
+      last = m.index + m[0].length;
+    }
+    return out + esc(s.slice(last));
+  }
+  function phPsHash(s) { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
+  function phPsTextOwn(el) { let s = ""; el.childNodes.forEach(n => { if (n.nodeType === 3) s += n.nodeValue; }); return s.replace(/\s+/g, " ").trim(); }
+  // ---- the page list, read off the live rail (key "p:<id>" = a profile page, "g:<id>" = a plan page, "s:<stage>")
+  function phPsPages() {
+    const rail = document.getElementById("presFlowRail"), out = [], seen = {};
+    if (!rail) return out;
+    rail.querySelectorAll("button[data-flow-prof], button[data-flow-go], button[data-pres-stage]").forEach(b => {
+      if (b.closest(".ph-flow-next")) return;
+      const prof = b.getAttribute("data-flow-prof"), go = b.getAttribute("data-flow-go"), st = b.getAttribute("data-pres-stage");
+      const key = prof ? "p:" + prof : go ? "g:" + go : "s:" + st;
+      if (key === "s:profile" || seen[key]) return;
+      const step = b.classList.contains("ph-flow-step"), lb = step ? b.querySelector("b") : b;
+      const name = lb ? phPsTextOwn(lb) : "";
+      if (!name) return;
+      const sub = b.closest(".ph-flow-sub"), id = key.slice(2);
+      let grp;
+      if (sub && sub.classList.contains("log")) grp = "log";
+      else if (sub && sub.classList.contains("prof")) grp = sub.classList.contains("g-file") ? "file" : sub.classList.contains("g-check") ? "exam" : "plan";
+      else grp = /^(today|tongue|pulse|abdomen|msk|askher|cycle|ivf)$/.test(id) ? "exam" : "plan";
+      seen[key] = 1;
+      out.push({ key, sel: `button[${prof ? "data-flow-prof" : go ? "data-flow-go" : "data-pres-stage"}="${prof || go || st}"]`, name, grp, ord: out.length });
+    });
+    out.sort((a, b) => (PH_PS_GROUPS.findIndex(g => g[0] === a.grp) - PH_PS_GROUPS.findIndex(g => g[0] === b.grp)) || (a.ord - b.ord));
+    return out;
+  }
+  // the page she is on: the last lit rail button is the most specific (a sub-page under its step)
+  function phPsCurPage() {
+    const rail = document.getElementById("presFlowRail");
+    if (!rail) return "";
+    const on = Array.from(rail.querySelectorAll("button.on[data-flow-prof], button.on[data-flow-go], button.on[data-pres-stage]")).filter(b => !b.closest(".ph-flow-next"));
+    const b = on[on.length - 1];
+    if (!b) return "";
+    const prof = b.getAttribute("data-flow-prof"), go = b.getAttribute("data-flow-go"), st = b.getAttribute("data-pres-stage");
+    return prof ? "p:" + prof : go ? "g:" + go : "s:" + st;
+  }
+  // ---- the index: [{ pg: [page keys to try], g: group, t: title, m: meta, x: extra words, rk: text to ring }]
+  function phPsBuild(t) {
+    const name = presPatientFor(t) || t.name || "", rec = name ? phPatientPeek(name) : null, items = [], today = keyOf(TODAY);
+    if (!rec) return items;
+    const add = (pg, g, title, meta, extra, ring) => {
+      title = String(title == null ? "" : title).replace(/\s+/g, " ").trim();
+      if (!title) return;
+      items.push({ pg, g: String(g || ""), t: title.slice(0, 220), m: String(meta == null ? "" : meta).replace(/\s+/g, " ").trim().slice(0, 220), x: String(extra == null ? "" : extra), rk: String(ring || title) });
+    };
+    const src = fn => { try { fn(); } catch (e) { /* one source failing never blocks the rest */ } };
+    const since = (s, est, prec) => String(phCcStartTxt(s, est, prec) || "").replace(/<[^>]*>/g, "");   // phCcStartTxt returns markup
+    // File: Came in for, contact
+    src(() => {
+      const c = phCcOf(name) || {}, ri = phCcRibItems(name);
+      if (ri) {   // Came in for lives on Today's visit (her 2026-10-18 pick); Patient details no longer draws it
+        add(["g:today"], "Came in for", ri.main.text, ["Main", ri.main.since ? since(ri.main.since, c.sinceEst, c.sincePrec) : "", c.dx, c.note].filter(Boolean).join(" · "), "");
+        (c.secondary || []).forEach(s => { if (s && String(s.text || "").trim()) add(["g:today"], "Came in for", s.text, [s.since ? since(s.since, s.sinceEst, s.sincePrec) : "", s.dx, s.note].filter(Boolean).join(" · "), ""); });
+      }
+    });
+    src(() => {
+      if (rec.phone) add(["p:patient"], "Contact", rec.phone, "Phone", "mobile");
+      if (rec.email) add(["p:patient"], "Contact", rec.email, "Email", "");
+      (Array.isArray(rec.addresses) ? rec.addresses : []).forEach(a => { if (a && a.text) add(["p:patient"], "Contact", a.text, a.label || "Address", "address"); });
+    });
+    // the pain table: on the Musculoskeletal page when she has one, else the Care Plan's pain map tile
+    src(() => {
+      phPmPainsOf(rec).forEach(p => {
+        const reg = PH_PAIN_REGIONS.REGIONS[p.r];
+        if (!reg) return;
+        const nm = phPmSideName(reg, p.s), ws = phPmFeelWords(p);
+        add(["g:msk", "g:plan"], "Pain table", nm + (ws ? " · " + ws : ""), [p.d, p.since ? since(p.since, false, p.sincePrec) : "", p.dx].filter(Boolean).join(" · "), "", nm);
+        const last = items[items.length - 1];
+        if (last && last.g === "Pain table") last.reg = p.r;   // the table row carries its region, so the ring finds the row whatever the side is called
+      });
+    });
+    src(() => {
+      const vs = (rec.msk && rec.msk.visits) || {}, days = Object.keys(vs).sort().reverse();
+      for (let i = 0; i < days.length; i++) {
+        const tr = vs[days[i]] && vs[days[i]].treat, ks = tr ? Object.keys(tr) : [];
+        if (!ks.length) continue;
+        ks.forEach(k => {
+          const side = /[RL]$/.test(k) ? k.slice(-1) : "", mu = PH_MSK_MUSCLES.find(x => x[0] === (side ? k.slice(0, -1) : k));
+          if (mu) add(["g:msk", "g:treatment"], "Muscle plan", mu[1] + (side ? ` (${side})` : ""), "On the plan" + (days[i] === today ? "" : " · " + phShortDate(days[i])), `${mu[6]} ${mu[8]}`, mu[1]);
+        });
+        break;
+      }
+    });
+    // File: medical history, supplements, bloods
+    src(() => {
+      phSgList(rec).forEach(sg => add(["p:medhx"], "Surgeries", sg.what, [sg.when, phSgWhere(sg), sg.note].filter(Boolean).join(" · "), "surgery surgeries surgical operation"));
+    });
+    src(() => {
+      phHxApplicableItems(rec).forEach(it => {
+        const v = phHxVal(rec, it.k);
+        if (v === "unasked") return;
+        const nt = phHxNote(rec, it.k);
+        add(["p:medhx"], phHxGroupLabel(rec, it.group), it.label, (v === "yes" ? "Yes" : "No") + (nt ? " · " + nt : ""), "");
+      });
+    });
+    // rec.medicalHistoryNotes has no box on any page since the dead-code sweep, so a hit would land on nothing: not indexed
+    src(() => {
+      const su = rec.supplements || {};
+      PH_SUPPLEMENTS.forEach(s => { const e = su[s.id]; if (e && e.on) add(["p:supplements"], "Supplements", s.name, e.dose || s.dose || "", ""); });
+    });
+    src(() => {
+      phBldList(rec).forEach(b => Object.keys(b.vals || {}).forEach(k => {
+        const e = b.vals[k], mt = phBldMeta(k, e, rec.sex), nv = phBldNum(e && e.v), fl = nv == null ? "" : phBldFlag(mt, nv);
+        add(["p:bloods"], mt.n, `${e.v}${mt.u ? " " + mt.u : ""}${fl ? " · " + fl : ""}`, [phShortDate(b.date), b.lab, b.note].filter(Boolean).join(" · "), "", mt.n);
+      }));
+    });
+    // Plan: Fang Bing Ren signs she ticked, the Treatment Care Plan
+    src(() => {
+      const tri = rec.tri || {};
+      Object.keys(tri.p || {}).forEach(k => { if (tri.p[k] === true) add(["g:patterns"], "Ren · ticked", phFbrSignLabel("p", k), "Usually", ""); });
+      if (tri.date === today) Object.keys(tri.d || {}).forEach(k => { if (tri.d[k] === true) add(["g:patterns"], "Bing · ticked today", phFbrSignLabel("d", k), "Today", ""); });
+    });
+    src(() => {
+      phTpPlans(name).forEach(pl => {
+        if (!pl) return;
+        const ttl = pl.title || pl.templateName || pl.name || "Plan";
+        let dx = "", gl = "";
+        try { dx = phTpDxText(name, pl); } catch (e) { /* derived text unavailable: skip it */ }
+        try { gl = phTpGoalText(name, pl); } catch (e) { /* same */ }
+        if (dx) add(["g:plan"], "Diagnosis & goal", dx, "Diagnosis · " + ttl, "");
+        if (gl) add(["g:plan"], "Diagnosis & goal", gl, "Goal · " + ttl, "");
+        (pl.phases || []).forEach((ph, i) => {
+          const g = `Phase ${i + 1}${ph.label ? " · " + ph.label : ""}`;
+          [["Aim", ph.aim], ["Points", ph.points], ["Press", ph.pressPoints], ["Cadence", ph.cadence], ["Watch", ph.watch], ["Formula", ph.formulaName]].forEach(f => {
+            const v = f[1] && String(f[1]).trim();
+            if (v) {
+              add(["g:plan"], g, `${f[0]} · ${v}`, ttl, "", v);
+              const last = items[items.length - 1];
+              if (last && last.g === g) last.alt = ph.label || "";   // a phase that is not open shows only its name: ring that
+            }
+          });
+        });
+      });
+    });
+    // Log: everything dated, photos
+    src(() => {
+      presLogEntries(t, name).slice(0, 250).forEach(e => add(["p:log"], (PRES_LOG_TYPES.find(x => x[0] === e.k) || [0, e.k])[1], e.txt, phShortDate(e.d), "", e.txt));
+    });
+    src(() => {
+      (phRenPhotosFor(phPatientKey(name)) || []).forEach(p => {
+        const kl = PH_REN_TYPE_LABEL[p.kind] || p.kind || "Photo", sh = p.shot ? (PH_REN_SHOT_LABEL[p.shot] || p.shot) : "";
+        const dk = p.dateKey || (p.createdAt ? keyOf(new Date(p.createdAt)) : "");
+        const mk = (Array.isArray(p.marks) ? p.marks : []).map(m => { try { return phRenMarkLabel(m); } catch (e) { return ""; } }).filter(Boolean).join("; ");
+        add(["p:photos"], "Photos", kl + (sh ? " · " + sh : ""), [dk ? phShortDate(dk) : "", mk].filter(Boolean).join(" · "), mk, kl);
+      });
+    });
+    return items;
+  }
+  function phPsIndexDrop() { phPsIdx = null; phPsMemo = null; }
+  function phPsIndex() {
+    const s = phPsEnsure(), now = Date.now();
+    if (phPsIdx && phPsIdx.sid === s.id && now - phPsIdx.at < 1500) return phPsIdx;
+    const t = PRESC.items.find(x => x.id === presOpenId), reg = phPsPages(), byKey = {};
+    reg.forEach(p => { byKey[p.key] = p; });
+    let items = [];
+    if (t && !presIsFormula(t)) { try { items = phPsBuild(t); } catch (e) { items = []; } }
+    const used = {};
+    items.forEach((it, i) => {
+      it.n = i;
+      it.page = it.pg.find(k => byKey[k]) || "";
+      it.grp = it.page ? byKey[it.page].grp : "";
+      it.hay = (it.t + " " + it.m + " " + it.g + " " + it.x).toLowerCase();
+      let id = "h" + phPsHash(it.pg[0] + "|" + it.g + "|" + it.t + "|" + it.m);   // the first candidate page, not the resolved one: opening a plan adds rail pages and must not rename a result
+      while (used[id]) id += "x";
+      used[id] = 1; it.id = id;
+    });
+    phPsMemo = null;
+    return (phPsIdx = { sid: s.id, at: now, reg, byKey, items: items.filter(it => it.page) });
+  }
+  function phPsMatches() {
+    const s = phPsEnsure(), toks = phPsToks(s.q);
+    if (!toks.length) return [];
+    const idx = phPsIndex();
+    if (phPsMemo && phPsMemo.idx === idx && phPsMemo.q === s.q) return phPsMemo.ms;
+    const order = {};
+    idx.reg.forEach((p, i) => { order[p.key] = i; });
+    const ms = idx.items.filter(it => phPsHit(it, toks)).sort((a, b) => (order[a.page] - order[b.page]) || (a.n - b.n));
+    phPsMemo = { idx, q: s.q, ms };
+    return ms;
+  }
+  // ---- markup the band renders from state (a full band repaint puts the field back as it was)
+  function phPsFieldHtml() {
+    try {
+      const s = phPsEnsure();
+      return `<div class="ph-ps${s.q ? " has" : ""}${s.open ? " open" : ""}" data-ps-box="1"><button type="button" class="ph-ps-ic" data-ps-ic="1" aria-label="Search this profile" title="Search this profile ( / )"><svg class="icn" aria-hidden="true"><use href="#i-search"/></svg></button><input type="search" class="ph-ps-q field-bare" data-ps-q="1" value="${esc(s.q)}" placeholder="Search profile" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" aria-label="Search this profile"><button type="button" class="ph-ps-x" data-ps-x="1" aria-label="Clear search"><svg class="icn" aria-hidden="true"><use href="#i-x"/></svg></button></div>`;
+    } catch (e) { return ""; }
+  }
+  function phPsBandCls() {
+    try { const s = phPsEnsure(), tk = phPsToks(s.q).length; return (s.open ? " ph-ps-sopen" : "") + (s.opened && tk ? " ph-ps-hasfind" : "") + (tk ? " ph-ps-pin" : ""); } catch (e) { return ""; }
+  }
+  function phPsQuietRun(fn) {
+    try { fn(); } finally { if (phPsObs) { try { phPsObs.takeRecords(); } catch (e) { /* nothing queued */ } } }
+  }
+  function phPsRenderRes(pop) {
+    const s = phPsEnsure(), host = document.getElementById("phPsRes");
+    if (!host) return;
+    const toks = phPsToks(s.q);
+    if (!toks.length || !s.res) { host.className = "ph-ps-res"; host.innerHTML = ""; return; }
+    const all = phPsMatches(), idx = phPsIndex(), cnt = {};
+    PH_PS_GROUPS.forEach(g => { cnt[g[0]] = all.filter(m => m.grp === g[0]).length; });
+    const list = s.scope === "all" ? all : all.filter(m => m.grp === s.scope);
+    let h = `<div class="ph-ps-rh"><b>${all.length} result${all.length === 1 ? "" : "s"}</b><div class="ph-ps-seg">` +
+      [["all", "All"]].concat(PH_PS_GROUPS).map(g => `<button type="button" data-ps-sc="${g[0]}" class="${s.scope === g[0] ? "on" : ""}">${g[1]}<span class="n">${g[0] === "all" ? all.length : cnt[g[0]]}</span></button>`).join("") + `</div></div>`;
+    if (!list.length) h += `<div class="ph-ps-none">Nothing found</div>`;
+    const keys = [];
+    list.forEach(m => { const k = m.page + "|" + m.g; if (keys.indexOf(k) < 0) keys.push(k); });
+    let ri = 0;
+    keys.forEach(k => {
+      const its = list.filter(m => m.page + "|" + m.g === k), open = s.more[k], shown = open ? its : its.slice(0, 3);
+      h += `<div class="ph-ps-gh">${esc(its[0].g)}<em>${its.length}</em><span class="gp">${esc(idx.byKey[its[0].page].name)}</span></div>`;
+      shown.forEach(m => { h += `<button type="button" class="ph-ps-row${s.cur === ri ? " cur" : ""}" data-ps-row="${esc(m.id)}" data-ps-ri="${ri}"><span class="t">${phPsHl(m.t, toks)}</span>${m.m ? `<span class="m">${phPsHl(m.m, toks)}</span>` : ""}</button>`; ri++; });
+      if (its.length > 3 && !open) h += `<button type="button" class="ph-ps-more" data-ps-more="${esc(k)}">+ ${its.length - 3} more</button>`;
+    });
+    host.innerHTML = h;
+    host.className = "ph-ps-res on" + (pop ? " pop" : "");
+  }
+  function phPsRenderFind() {
+    const s = phPsEnsure(), f = document.getElementById("phPsFind");
+    if (!f) return;
+    const band = f.closest(".ph-pres-band"), toks = phPsToks(s.q), show = !!(s.opened && toks.length);
+    if (band) { band.classList.toggle("ph-ps-hasfind", show); band.classList.toggle("ph-ps-pin", toks.length > 0); }   // pin = the band stays on screen while a search is on (results and find strip hang off it)
+    if (!show) { f.className = "ph-ps-find"; f.innerHTML = ""; return; }
+    const ms = phPsMatches(), idx = phPsIndex(), x = `<button type="button" class="ph-ps-sq" data-ps-fx="1" aria-label="Clear search"><svg class="icn" aria-hidden="true"><use href="#i-x"/></svg></button>`;
+    if (!ms.length) { f.className = "ph-ps-find on"; f.innerHTML = `<span class="cnt"><b>Nothing found</b></span><span class="stp">${x}</span>`; return; }
+    if (s.bi >= ms.length) s.bi = 0;
+    const pages = [];
+    ms.forEach(m => { if (pages.indexOf(m.page) < 0) pages.push(m.page); });
+    f.innerHTML = `<span class="cnt"><b>${ms.length}</b> match${ms.length === 1 ? "" : "es"} · ${pages.length} page${pages.length === 1 ? "" : "s"}</span>` +
+      `<div class="ph-ps-seg${pages.length === 1 ? " one" : ""}">${pages.map(k => `<button type="button" data-ps-fp="${esc(k)}" class="${s.page === k ? "on" : ""}">${esc(idx.byKey[k].name)}<span class="n">${ms.filter(m => m.page === k).length}</span></button>`).join("")}</div>` +
+      `<span class="stp"><button type="button" class="ph-ps-sq" data-ps-st="-1" aria-label="Previous match">&lsaquo;</button><span>${s.bi + 1} of ${ms.length}</span><button type="button" class="ph-ps-sq" data-ps-st="1" aria-label="Next match">&rsaquo;</button>${x}</span>`;
+    f.className = "ph-ps-find on";
+  }
+  // the rail counts matches per page while a search is on (zero shows dim); gone when cleared
+  function phPsBadges(ms) {
+    const rail = document.getElementById("presFlowRail");
+    if (!rail) return;
+    rail.querySelectorAll(".ph-ps-n").forEach(n => n.remove());
+    if (!ms) return;
+    const cnt = {};
+    ms.forEach(m => { cnt[m.page] = (cnt[m.page] || 0) + 1; });
+    phPsIndex().reg.forEach(p => {
+      rail.querySelectorAll(p.sel).forEach(b => {
+        if (b.closest(".ph-flow-next")) return;
+        const n = cnt[p.key] || 0, host = b.classList.contains("ph-flow-step") ? (b.querySelector("b") || b) : b, el = document.createElement("i");
+        el.className = "ph-ps-n" + (n ? "" : " z");
+        el.textContent = n;
+        host.appendChild(el);
+      });
+    });
+  }
+  // ---- marks on the page itself, and the ring on the tapped line
+  function phPsMarkRoot() { const p = presPanelEl(); return p ? p.querySelector(".ph-flow-body") : null; }
+  function phPsUnmark(root) {
+    root.querySelectorAll("mark.ph-ps-mark").forEach(m => {
+      const par = m.parentNode;
+      if (!par) return;
+      par.replaceChild(document.createTextNode(m.textContent), m);
+      par.normalize();
+    });
+    root.querySelectorAll(".ph-ps-ring").forEach(e => e.classList.remove("ph-ps-ring", "ph-ps-flash"));
+  }
+  function phPsMark(root, toks) {
+    const re = phPsRe(toks);
+    if (!re) return 0;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode(n) {
+        const v = n.nodeValue;
+        if (!v || !v.trim()) return NodeFilter.FILTER_REJECT;
+        const p = n.parentElement;
+        if (!p || p.closest("script, style, textarea, input, select, option, svg, mark.ph-ps-mark, .ph-ps-res, .ph-ps-find")) return NodeFilter.FILTER_REJECT;
+        re.lastIndex = 0;
+        return re.test(v) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+      }
+    });
+    const nodes = [];
+    let n;
+    while ((n = walker.nextNode()) && nodes.length < 600) nodes.push(n);
+    let count = 0;
+    nodes.forEach(node => {
+      const v = node.nodeValue, frag = document.createDocumentFragment();
+      let m, last = 0;
+      re.lastIndex = 0;
+      while ((m = re.exec(v))) {
+        if (!m[0]) { re.lastIndex++; continue; }
+        if (m.index > last) frag.appendChild(document.createTextNode(v.slice(last, m.index)));
+        const mk = document.createElement("mark");
+        mk.className = "ph-ps-mark"; mk.textContent = m[0];
+        frag.appendChild(mk); last = m.index + m[0].length; count++;
+      }
+      if (last < v.length) frag.appendChild(document.createTextNode(v.slice(last)));
+      if (node.parentNode) node.parentNode.replaceChild(frag, node);
+    });
+    return count;
+  }
+  function phPsScrollTo(el) {
+    const panel = presPanelEl();
+    if (!panel || !el) return;
+    if (panel.scrollHeight <= panel.clientHeight + 2) { el.scrollIntoView({ block: "nearest" }); return; }
+    const band = panel.querySelector(".ph-pres-band"), pr = panel.getBoundingClientRect(), r = el.getBoundingClientRect();
+    const top = (band ? band.getBoundingClientRect().bottom : pr.top) + 10;
+    if (r.top < top) panel.scrollTop -= (top - r.top);
+    else if (r.bottom > pr.bottom - 12) panel.scrollTop += (r.bottom - pr.bottom + 24);
+  }
+  function phPsRingApply(root) {
+    const s = phPsEnsure(), idx = phPsIdx, it = idx && idx.items.find(x => x.id === s.ring);
+    if (!it || (phPsCurPage() !== it.page && it.pg.indexOf(phPsCurPage()) < 0)) return;   // any page the item may live on (opening a plan can move it from the Care Plan to Musculoskeletal)
+    const want = it.rk.replace(/\s+/g, " ").trim().toLowerCase().slice(0, 60);
+    if (!want) return;
+    const bare = s => s.toLowerCase().replace(/[^a-z0-9]+/g, ""), wantBare = bare(want);   // a page that splits the text into chips drops the commas and spaces between them
+    const seen = [];
+    root.querySelectorAll("*").forEach(c => {
+      if (c.childElementCount > 40 || /^(SCRIPT|STYLE|OPTION|TEXTAREA|INPUT)$/i.test(c.tagName) || c.closest("svg") || !c.getClientRects().length) return;   // a drawing's own <title> text is never the line to ring
+      const tx = c.textContent;
+      if (tx.replace(/\s+/g, " ").toLowerCase().indexOf(want) > -1 || (wantBare.length >= 6 && bare(tx).indexOf(wantBare) > -1)) seen.push(c);
+    });
+    const deep = seen.filter(a => !seen.some(b => b !== a && a.contains(b)));
+    let el = deep[0] || null, cell = null;
+    if (it.g === "Pain table") {   // the pain's row in the table, not the body drawing that carries the same name
+      const row = it.reg ? Array.from(root.querySelectorAll("tr.ph-pm-tr[data-mk-reg]")).find(r => r.getAttribute("data-mk-reg") === it.reg && r.getClientRects().length) : null;
+      const inTbl = row ? row.cells[0] : deep.find(a => a.closest("td"));
+      if (inTbl) { el = inTbl; cell = inTbl.closest("td") || inTbl; }
+    }
+    if (!el && !cell && it.alt) {
+      const a = it.alt.replace(/\s+/g, " ").trim().toLowerCase(), hits = [];
+      if (a) root.querySelectorAll("*").forEach(c => {
+        if (c.childElementCount > 6 || /^(SCRIPT|STYLE|OPTION|TEXTAREA|INPUT)$/i.test(c.tagName) || c.closest("svg, .ph-ps-res, .ph-ps-find") || !c.getClientRects().length) return;
+        const tx = c.textContent.replace(/\s+/g, " ").trim().toLowerCase();
+        if (tx.length < 90 && tx.indexOf(a) > -1) hits.push(c);
+      });
+      el = hits.filter(h => !hits.some(b => b !== h && h.contains(b)))[0] || null;
+    }
+    if (cell) el = cell;
+    else if (el) {
+      let line = el;
+      for (let k = 0; k < 4 && line.parentElement && line.parentElement !== root; k++) {   // out to the whole line: while it is inline, tiny, or the row around it is still one short line
+        const par = line.parentElement;
+        if (getComputedStyle(line).display.indexOf("inline") === 0 || line.offsetHeight < 18 || (par.offsetHeight < 64 && par.offsetHeight <= line.offsetHeight * 2 && par.childElementCount <= 4)) line = par; else break;
+      }
+      el = line.offsetHeight > 320 ? el : line;
+    } else {
+      root.querySelectorAll("input, textarea").forEach(f => {
+        if (!el && /^(text|search|email|tel)?$/i.test(f.getAttribute("type") || "") && f.getClientRects().length && String(f.value || "").replace(/\s+/g, " ").toLowerCase().indexOf(want) > -1) el = f;
+      });
+    }
+    if (!el) return;
+    el.classList.add("ph-ps-ring");
+    if (s.flash) {
+      s.flash = false;
+      el.classList.add("ph-ps-flash");
+      setTimeout(() => { el.classList.remove("ph-ps-flash"); }, 1300);
+    }
+    if (s.scroll) { s.scroll = false; phPsScrollTo(el); }
+  }
+  // one pass: clean the page, then (a search is on) badge the rail, and (a page is open) mark and ring
+  function phPsApplyInner() {
+    const s = phPsEnsure(), toks = phPsToks(s.q), root = phPsMarkRoot();
+    if (root) phPsUnmark(root);
+    phPsBadges(toks.length ? phPsMatches() : null);
+    const band = presPanelEl() && presPanelEl().querySelector(".ph-pres-band"), box = band && band.querySelector("[data-ps-box]");
+    if (band) band.classList.toggle("ph-ps-sopen", !!s.open);
+    if (box) { box.classList.toggle("open", !!s.open); box.classList.toggle("has", !!s.q); }
+    phPsRenderFind();
+    if (!root || !toks.length || !s.opened) return;
+    phPsMark(root, toks);
+    phPsRingApply(root);
+  }
+  function phPsApply() { try { phPsQuietRun(phPsApplyInner); } catch (e) { /* a search pass never breaks the page */ } }
+  // the panel's own repaints (a tab switch, a tap that rebuilds the rail) drop marks and badges: put them back
+  function phPsWatch(on) {
+    const p = on ? presPanelEl() : null;
+    if (phPsObs && phPsObsEl !== p) { phPsObs.disconnect(); phPsObs = null; phPsObsEl = null; }
+    if (on && p && !phPsObs) {
+      phPsObs = new MutationObserver(function () { clearTimeout(phPsTimer); phPsTimer = setTimeout(phPsApply, 70); });
+      phPsObs.observe(p, { childList: true, subtree: true });
+      phPsObsEl = p;
+    }
+  }
+  function phPsAfterRender() {
+    try {
+      const s = phPsEnsure(), toks = phPsToks(s.q);
+      phPsIndexDrop();
+      phPsWatch(toks.length > 0);
+      if (!toks.length) return;
+      phPsQuietRun(() => { phPsApplyInner(); phPsRenderRes(false); });
+    } catch (e) { /* the page renders without the search */ }
+  }
+  // ---- doing things
+  function phPsAsk() {   // photos load on the first look, so they are in the next search
+    const s = phPsEnsure();
+    if (s.asked) return;
+    s.asked = true;
+    try { const t = PRESC.items.find(x => x.id === presOpenId), nm = t && presPatientFor(t); if (nm) phRenEnsurePhotos(phPatientKey(nm)); } catch (e) { /* photos are optional */ }
+  }
+  function phPsNavigate(it) {
+    const s = phPsEnsure();
+    s.page = it.page; s.ring = it.id; s.opened = true; s.res = false; s.flash = true; s.scroll = true;
+    setTimeout(() => { if (phPsS) { phPsS.flash = false; phPsS.scroll = false; } }, 1800);
+    if (it.page === "p:log" && presLogFilter !== "all") { presLogFilter = "all"; if (phPsCurPage() === "p:log") { try { presAssessTabRefresh(); } catch (e) { /* the log shows the next time it opens */ } } }
+    phPsQuietRun(() => { phPsRenderRes(false); phPsRenderFind(); });
+    phPsWatch(true);
+    const idx = phPsIndex(), pg = idx.byKey[it.page];
+    if (pg && phPsCurPage() !== it.page) setTimeout(() => { const b = document.querySelector(`#presFlowRail ${pg.sel}`); if (b) b.click(); }, 0);   // deferred: a same-tick click is swallowed by the click-in-progress guard
+    setTimeout(phPsApply, 90); setTimeout(phPsApply, 360);
+    phPsApply();
+    const q = document.querySelector("[data-ps-q]");
+    if (q && window.matchMedia && matchMedia("(hover: hover)").matches) q.focus({ preventScroll: true });
+  }
+  function phPsOpenItem(id) {
+    const ms = phPsMatches(), it = ms.find(m => m.id === id);
+    if (!it) return;
+    phPsEnsure().bi = ms.indexOf(it);
+    phPsNavigate(it);
+  }
+  function phPsGoto(i) {
+    const ms = phPsMatches();
+    if (!ms.length) return;
+    const s = phPsEnsure();
+    s.bi = ((i % ms.length) + ms.length) % ms.length;
+    phPsNavigate(ms[s.bi]);
+  }
+  function phPsOpenBox() {
+    const s = phPsEnsure();
+    s.open = true;
+    const box = document.querySelector("[data-ps-box]"), q = document.querySelector("[data-ps-q]");
+    phPsQuietRun(() => { if (box) { box.classList.add("open"); const band = box.closest(".ph-pres-band"); if (band) band.classList.add("ph-ps-sopen"); } });
+    if (q) q.focus();
+    phPsAsk();
+  }
+  function phPsCloseBoxIfEmpty() {
+    const s = phPsS;
+    if (!s || s.q || !s.open) return;
+    const q = document.querySelector("[data-ps-q]");
+    if (q && document.activeElement === q) return;
+    s.open = false;
+    phPsQuietRun(() => { const box = document.querySelector("[data-ps-box]"); if (box) { box.classList.remove("open"); const band = box.closest(".ph-pres-band"); if (band) band.classList.remove("ph-ps-sopen"); } });
+  }
+  function phPsClear(refocus) {
+    const s = phPsEnsure();
+    s.q = ""; s.cur = -1; s.opened = false; s.ring = ""; s.res = false; s.more = {}; s.open = false; s.scope = "all";
+    const q = document.querySelector("[data-ps-q]");
+    if (q) q.value = "";
+    phPsWatch(false);
+    phPsQuietRun(() => { phPsApplyInner(); phPsRenderRes(false); phPsRenderFind(); });
+    if (refocus && q && window.matchMedia && matchMedia("(hover: hover)").matches) q.focus();
+  }
+  document.addEventListener("input", function (e) {
+    const q = e.target;
+    if (!q || !q.matches || !q.matches("[data-ps-q]")) return;
+    const s = phPsEnsure(), was = s.res && phPsToks(s.q).length > 0;
+    s.q = q.value; s.cur = -1; s.opened = false; s.ring = ""; s.more = {}; s.res = true;
+    phPsWatch(phPsToks(s.q).length > 0);
+    phPsAsk();
+    phPsQuietRun(() => { phPsApplyInner(); phPsRenderRes(!was); phPsRenderFind(); });
+  });
+  document.addEventListener("focusin", function (e) {
+    const q = e.target;
+    if (!q || !q.matches || !q.matches("[data-ps-q]")) return;
+    const s = phPsEnsure();
+    phPsAsk();
+    if (phPsToks(s.q).length && !s.opened && !s.res) { s.res = true; phPsQuietRun(() => phPsRenderRes(true)); }
+  });
+  document.addEventListener("focusout", function (e) {
+    if (e.target && e.target.matches && e.target.matches("[data-ps-q]")) setTimeout(phPsCloseBoxIfEmpty, 160);
+  });
+  document.addEventListener("click", function (e) {
+    const tg = e.target;
+    if (!tg || !tg.closest) return;
+    if (tg.closest("[data-ps-ic]")) { phPsOpenBox(); return; }
+    if (tg.closest("[data-ps-x]")) { phPsClear(true); return; }
+    if (tg.closest("[data-ps-fx]")) { phPsClear(true); return; }
+    const s = phPsS;
+    if (!s) return;
+    const row = tg.closest("[data-ps-row]"), more = tg.closest("[data-ps-more]"), sc = tg.closest("[data-ps-sc]"), st = tg.closest("[data-ps-st]"), fp = tg.closest("[data-ps-fp]");
+    if (row) { phPsOpenItem(row.getAttribute("data-ps-row")); return; }
+    if (more) { s.more[more.getAttribute("data-ps-more")] = 1; phPsQuietRun(() => phPsRenderRes(false)); return; }
+    if (sc) { s.scope = sc.getAttribute("data-ps-sc"); s.cur = -1; phPsQuietRun(() => phPsRenderRes(false)); return; }
+    if (st) { phPsGoto(s.bi + parseInt(st.getAttribute("data-ps-st"), 10)); return; }
+    if (fp) { const ix = phPsMatches().findIndex(m => m.page === fp.getAttribute("data-ps-fp")); if (ix > -1) phPsGoto(ix); return; }
+    if (tg.closest("[data-ps-q]")) {   // a tap in the field brings the list back after a page was opened
+      if (phPsToks(s.q).length && !s.res) { s.res = true; phPsQuietRun(() => phPsRenderRes(true)); }
+      return;
+    }
+    if (s.res && !tg.closest(".ph-ps-res, .ph-ps")) { s.res = false; phPsQuietRun(() => phPsRenderRes(false)); }
+  });
+  // keys: "/" jumps to the box; arrows walk the list; Enter opens (or steps once a page is open); Esc closes the list, then clears
+  document.addEventListener("keydown", function (e) {
+    if (e.isComposing || e.ctrlKey || e.metaKey || e.altKey) return;
+    const tg = e.target, inQ = !!(tg && tg.matches && tg.matches("[data-ps-q]"));
+    if (!inQ) {
+      if (e.key !== "/" || !document.querySelector("#presPanel [data-ps-q], #refPresPanel [data-ps-q]")) return;
+      if (tg && (/^(INPUT|TEXTAREA|SELECT)$/.test(tg.tagName) || tg.isContentEditable)) return;
+      e.preventDefault(); e.stopPropagation();   // the Prescriptions list's own "/" must not take it
+      phPsOpenBox();
+      return;
+    }
+    const s = phPsEnsure(), host = document.getElementById("phPsRes"), showing = !!(host && host.classList.contains("on"));
+    if (e.key === "Escape") {
+      e.preventDefault(); e.stopPropagation();
+      if (showing) { s.res = false; phPsQuietRun(() => phPsRenderRes(false)); }
+      else { phPsClear(false); tg.blur(); }
+      return;
+    }
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      if (!showing) return;
+      e.preventDefault();
+      const rows = Array.from(host.querySelectorAll("[data-ps-row]"));
+      if (!rows.length) return;
+      s.cur = (s.cur + (e.key === "ArrowDown" ? 1 : -1) + rows.length) % rows.length;
+      rows.forEach((r, i) => r.classList.toggle("cur", i === s.cur));
+      rows[s.cur].scrollIntoView({ block: "nearest" });
+      return;
+    }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (showing) { const rows = host.querySelectorAll("[data-ps-row]"), r = rows[Math.max(0, s.cur)]; if (r) phPsOpenItem(r.getAttribute("data-ps-row")); }
+      else if (s.opened) phPsGoto(s.bi + (e.shiftKey ? -1 : 1));
+      else if (phPsToks(s.q).length) { s.res = true; phPsQuietRun(() => phPsRenderRes(true)); }
+    }
+  }, true);
   function renderPresPanel() {
     const el = presPanelEl();
     const keep = el && el.id === "presPanel" && presOpenId && presScrollKey === presScrollKeyNow() ? el.scrollTop : 0;
@@ -62628,7 +63206,7 @@ or changing anything in Cliniko.
       presDspLastLogged = loggedNow;
     }
     el.innerHTML = `<div class="ph-listing ph-pres-panel${!isF ? phCaseAccentClass(t) : ""}${fit ? " ph-dsp-fit" : ""}">
-      <div class="ph-pres-band">
+      <div class="ph-pres-band${!isF ? phPsBandCls() : ""}">
         <button type="button" class="ph-band-back" data-pres-close="1" aria-label="Close">‹</button>
         <div class="ph-band-titlewrap">
           <span class="ph-band-nameline"><button type="button" class="ph-band-name" data-pres-name-jump="1" title="Tap to edit the name">${esc(phDispName(t.name, isF))}</button>${presBandAgeHtml(t, isF)}</span>
@@ -62637,7 +63215,9 @@ or changing anything in Cliniko.
         ${isF ? `<span class="ph-pres-type formula">🏺 formula</span>` : ""}
         ${isF && ab ? `<span class="ph-pres-abbr">${esc(ab)}</span>` : ""}
         ${isF ? `<span class="ph-band-meta" id="presBandMeta">${bandMeta}</span>` : ""}
+        ${!isF ? phPsFieldHtml() : ""}
         ${!isF ? `<button type="button" class="ph-band-cam" data-cap-for="${esc(presPatientFor(t) || t.name)}" title="Take patient photos" aria-label="Take photos of ${esc(t.name)}"><svg class="icn" aria-hidden="true"><use href="#i-camera"/></svg></button>` : ""}
+        ${!isF ? `<div class="ph-ps-res" id="phPsRes"></div><div class="ph-ps-find" id="phPsFind"></div>` : ""}
       </div>
       ${!isF ? `<div id="phCcRib" class="ph-ccrib-host">${phCcRibHtml(t)}</div>` : ""}
       ${!isF ? `<div class="ph-flow">${presFlowRailHtml(t, isNew)}<div class="ph-flow-body${presFlowBodyClass()}">` : ""}
@@ -62777,6 +63357,7 @@ or changing anything in Cliniko.
       const inp = el.querySelector("[data-ph-log-date-edit]");
       if (inp) inp.focus();
     }
+    if (!isF) phPsAfterRender();
   }
   // ---- saved addresses panel (her ask 2026-08-20) -- the patient's address
   // book: several saved addresses, exactly one Default while any exist. Lives
