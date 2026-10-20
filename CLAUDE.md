@@ -1011,8 +1011,9 @@ off; Goal from the complaint family, main complaint and secondaries.
 Watch = the template's **Red flags** first, then chips from the main
 complaint, secondaries, cycle (women who track a cycle only) and findings;
 Aim = her preset per template phase with `{main}` `{sec}` `{cyc}` tokens.
-All four are derived on read, never stored; her own typing makes a field
-hers, with "back to auto". Wording lives in Settings → "Goal wording" and
+All four are derived on read, never stored; her own typing, or a + Watch
+/ + Aim tap on a finding (through `phTpFieldCommit`), makes a field hers,
+with "back to auto". Wording lives in Settings → "Goal wording" and
 "Watch wording", her lines first, all DRAFT [Watch and Aim write
 themselves from the patient].
 
@@ -1555,11 +1556,6 @@ origin/main:index.html`; don't trust this list's age.
 **Built on my reading — hers to confirm:** the pulse chart starts blank each
 day; abdomen tension is one whole-abdomen value; Usual period shows Wheel |
 Chart.
-
-**Known gap, found in the 2026-10-21 audit:** the Care Plan's + Watch /
-+ Aim (`phTpFxAddToggle`) writes the phase's stored Watch / Aim directly
-instead of through `phTpFieldCommit`, so one tap on an auto Watch can make
-it "hers" (frozen) with only the appended line. Fix through the write door.
 
 **Paused or not built:**
 - The template editor "One table" (mock approved, paused) and templates in
