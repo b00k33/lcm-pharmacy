@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261020-1430000">
+<meta name="lcm-build" content="20261020-1450000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -7953,7 +7953,11 @@
   #pharmacyPage .ph-rq-z-skin { top: 12%; height: 30%; }
   #pharmacyPage .ph-rq-z-muscles { top: 48%; bottom: 8%; }
   #pharmacyPage .ph-rq-ztag { font: 700 var(--fs-10) var(--font-body); letter-spacing: .04em; text-transform: uppercase; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.55); pointer-events: none; }
-  #pharmacyPage .ph-rq-basetag { position: absolute; left: 6px; top: 6px; background: rgba(20,31,35,.45); padding: 2px 7px; border-radius: 999px; }
+  #pharmacyPage .ph-rq-basetag { position: absolute; left: 6px; top: 6px; border: 0; cursor: pointer; font: 700 var(--fs-10) var(--font-body); letter-spacing: .04em; text-transform: uppercase; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.55); background: rgba(20,31,35,.45); padding: 2px 7px; border-radius: 999px; }
+  /* the zone her last tap sent her to (its LOOK row is the current one): a brighter ring, its tag on a deep pill -- the same cue on the Face / Build tag */
+  #pharmacyPage .ph-rq-z-eyes.on, #pharmacyPage .ph-rq-z-lips.on, #pharmacyPage .ph-rq-z-skin.on, #pharmacyPage .ph-rq-z-muscles.on { background: rgba(255,255,255,.3); box-shadow: inset 0 0 0 2.5px #fff, 0 0 0 1px rgba(20,31,35,.45); }
+  #pharmacyPage .ph-rq-zone.on .ph-rq-ztag { background: var(--ph-herb-deep); text-shadow: none; padding: 1px 6px; border-radius: 999px; }
+  #pharmacyPage .ph-rq-basetag.on { background: var(--ph-herb-deep); text-shadow: none; box-shadow: 0 0 0 1.5px #fff; }
   #pharmacyPage .ph-rq-pdate { position: absolute; left: 6px; bottom: 6px; font-size: var(--fs-10); color: #fff; background: rgba(20,31,35,.55); padding: 2px 6px; border-radius: 999px; pointer-events: none; }
   @media (prefers-reduced-motion: reduce) { #pharmacyPage .ph-rq-zone { transition: none; } }
   /* several questions at once (her 2026-10-13, mock fbr-quick-assess-multi-mock-2026-10-13.html, A Rows): one card, one row per question
@@ -76291,6 +76295,7 @@ or changing anything in Cliniko.
   var phRqOpen = new Map();      // patient key -> true / false when she opened or folded the card herself (else: open until found)
   var phRqLookOpen = new Set();  // patient keys whose six rows are shown again after "Change"
   var phRqStay = new Map();      // patient key -> the look row she is picking in: it keeps the gold ring and the number keys until she presses Enter / taps next / picks "none of these" (so several can be picked in one row)
+  var phRqFocus = new Map();     // patient key -> the look row a photo zone sent her to (her 2026-10-20 "when i click eyes, connect it with the eyes q's"): it is the current row, and lights its zone, until next / none of these / another zone / Undo
   var phRqLast = new Map();      // patient key -> the "what the last answer changed" line
   var phRqGlow = new Set();      // patient keys whose next paint plays the found glow (once)
   const phRqSubj = lab => (lab.indexOf(":") > 0 ? lab.slice(0, lab.indexOf(":")) : "");
@@ -76337,20 +76342,24 @@ or changing anything in Cliniko.
   // There is only ONE photo per panel -- Eyes/Lips and Skin/Muscles are a labelled hint of which feature
   // she means, drawn as nested zones over the SAME face/body photo, not three separate photos, so every
   // zone in a panel opens/captures that one panel's one photo.
+  // Her 2026-10-20 "when i click eyes, i want it to connect with the eyes q's in ren": every LABELLED zone (Face, Eyes, Lips /
+  // Build, Skin, Muscles) now takes her to its own LOOK row instead of the photo viewer -- the third item of a zone is the LOOK
+  // row's sign subject (PH_RQ_LOOK). The BARE photo (the base button under the zones) is still the viewer door, so the picture
+  // stays one tap from full size. A zone carries data-rq-zone (handled in phRqClick) and no photo attributes.
   const PH_RQ_PHOTO_PANELS = [
-    { id: "face", label: "Face photo", zones: [["face", "Face"], ["eyes", "Eyes"], ["lips", "Lips"]] },
-    { id: "body", label: "Build photo", zones: [["build", "Build"], ["skin", "Skin"], ["muscles", "Muscles"]] },
+    { id: "face", label: "Face photo", zones: [["face", "Face", "Complexion"], ["eyes", "Eyes", "Eyes"], ["lips", "Lips", "Lips"]] },
+    { id: "body", label: "Build photo", zones: [["build", "Build", "Build"], ["skin", "Skin", "Skin"], ["muscles", "Muscles", "Muscles"]] },
   ];
   function phRqPhotoPanelHtml(panel, name, pk) {
-    const types = PH_FBB_PHOTO_TYPES[panel.id], best = phFbbPhotoBest(pk, types), [baseZone, ...subZones] = panel.zones;
+    const types = PH_FBB_PHOTO_TYPES[panel.id], best = phFbbPhotoBest(pk, types), [baseZone, ...subZones] = panel.zones, focus = phRqFocus.get(pk);
     let box;
     if (best === undefined) {
       phRenLoadPhotosFor(pk);
       box = `<div class="ph-rq-pbox loading"><span class="ph-rq-pic">🖼</span><span class="ph-rq-ptxt">loading…</span></div>`;
     } else if (best) {
       const attrs = `data-ren-tl-open="${esc(best.id)}" data-ren-tl-row="${esc(phRenRowKeyOf(best))}" data-ren-tl-patient="${esc(pk)}"`;
-      const subs = subZones.map(([key, lbl]) => `<button type="button" class="ph-rq-zone ph-rq-z-${esc(key)}" ${attrs} title="${esc(lbl)}"><span class="ph-rq-ztag">${esc(lbl)}</span></button>`).join("");
-      box = `<div class="ph-rq-pbox has"><button type="button" class="ph-rq-zone ph-rq-zbase" ${attrs} title="${esc(baseZone[1])}"><img class="ph-rq-pimg" src="${best.objectUrl}" alt="${esc(panel.label)}"><span class="ph-rq-ztag ph-rq-basetag" aria-hidden="true">${esc(baseZone[1])}</span></button>${subs}<span class="ph-rq-pdate">${esc(phRenPhotoDateLabel(phRenDateKeyOf(best)))}</span></div>`;
+      const subs = subZones.map(([key, lbl, subj]) => `<button type="button" class="ph-rq-zone ph-rq-z-${esc(key)}${focus === subj ? " on" : ""}" data-rq-zone="${esc(subj)}" title="${esc(lbl)}" aria-pressed="${focus === subj ? "true" : "false"}"><span class="ph-rq-ztag">${esc(lbl)}</span></button>`).join("");
+      box = `<div class="ph-rq-pbox has"><button type="button" class="ph-rq-zone ph-rq-zbase" ${attrs} title="${esc(panel.label)}"><img class="ph-rq-pimg" src="${best.objectUrl}" alt="${esc(panel.label)}"></button><button type="button" class="ph-rq-zone ph-rq-basetag${focus === baseZone[2] ? " on" : ""}" data-rq-zone="${esc(baseZone[2])}" title="${esc(baseZone[1])}" aria-pressed="${focus === baseZone[2] ? "true" : "false"}">${esc(baseZone[1])}</button>${subs}<span class="ph-rq-pdate">${esc(phRenPhotoDateLabel(phRenDateKeyOf(best)))}</span></div>`;
     } else {
       box = `<button type="button" class="ph-rq-pbox empty" data-ren-cap-type="${esc(types[0])}" data-ren-cap-patient="${esc(pk)}" data-ren-cap-name="${esc(name)}"><span class="ph-rq-pic">📷</span><span class="ph-rq-ptxt">+ add ${esc(panel.label.toLowerCase())}</span></button>`;
     }
@@ -76381,8 +76390,9 @@ or changing anything in Cliniko.
     } else {
       let curSet = false;
       const stayKey = phRqStay.get(pk), stayRow = rows.find(r => r.subject === stayKey && r.signs.some(s => S.eff.p[s[0]] === true));
+      const focusRow = rows.find(r => r.subject === phRqFocus.get(pk));   // sent here by a tap on its photo zone: wins over the row she was picking in
       lookHtml = `<div class="ph-rq-sec">Look</div>` + rows.map(r => {
-        const done = phRqRowDone(S, r), stayHere = stayRow === r, cur = stayRow ? stayHere : (!done && !curSet); if (cur) curSet = true;
+        const done = phRqRowDone(S, r), focusHere = focusRow === r, stayHere = !focusRow && stayRow === r, cur = focusRow ? focusHere : stayRow ? stayHere : (!done && !curSet); if (cur) curSet = true;
         // her 2026-10-16: chips cluster by subgroup (e.g. Face's Colour vs Texture), a quiet inline label
         // ahead of each cluster, same wrapping row as before -- no extra line, no box. kbd numbering 1-9
         // still runs continuously across the whole row, same as before the split.
@@ -76397,7 +76407,7 @@ or changing anything in Cliniko.
           return chips.length ? `<span class="ph-rq-grp">${label}${chips[0]}</span>${chips.slice(1).join("")}` : label;
         }).join("");
         const noneOn = done && !r.signs.some(s => S.eff.p[s[0]] === true);
-        return `<div class="ph-pfw-q${cur ? " cur" : ""}${done ? " done" : ""}"${cur ? ' data-rq-cur="1"' : ""}><div class="ph-pfw-qt" title="${esc(r.subject)}">${esc(r.short)}</div><div class="ph-pfw-opts">${opts}<button type="button" class="ph-pfw-opt ph-pfw-skip${noneOn ? " on" : ""}" data-rq-none="${esc(r.subject)}"><kbd>0</kbd>none of these</button>${stayHere ? `<button type="button" class="ph-pfw-opt ph-pfw-skip" data-rq-next="1" title="Next row"><kbd>&#8629;</kbd>next</button>` : ""}</div></div>`;
+        return `<div class="ph-pfw-q${cur ? " cur" : ""}${done ? " done" : ""}"${cur ? ' data-rq-cur="1"' : ""}><div class="ph-pfw-qt" title="${esc(r.subject)}">${esc(r.short)}</div><div class="ph-pfw-opts">${opts}<button type="button" class="ph-pfw-opt ph-pfw-skip${noneOn ? " on" : ""}" data-rq-none="${esc(r.subject)}"><kbd>0</kbd>none of these</button>${stayHere || focusHere ? `<button type="button" class="ph-pfw-opt ph-pfw-skip" data-rq-next="1" title="Next row"><kbd>&#8629;</kbd>next</button>` : ""}</div></div>`;
       }).join("") + (allLooked ? `<div class="ph-rq-foldrow"><button type="button" class="ph-qa-lnk" data-rq-change="1">Fold</button></div>` : "");
     }
     let askHtml = "";
@@ -76435,6 +76445,15 @@ or changing anything in Cliniko.
     return `<div class="ph-rq-fam">${phFbrGroupedHtml(rec, name, famRows, "p", p, effP, fw, "rentab", undefined, [{ lab: `${F.name} · ${ticked} of ${famRows.length}` }], ix, PH_FBR_HERB_COLOUR[id], true)}</div>`
       + phFbrGroupedHtml(rec, name, rest, "p", p, effP, lead.ren, "rentab", undefined, PH_REN_GROUPS, PH_REN_GROUP_IX, undefined, true);
   }
+  // after a photo zone sends her to its row: bring the row in by the least amount, and only if it is off screen or under the sticky
+  // patient band (the Photos page rule: never centred, never smooth)
+  function phRqShowCur() {
+    const row = document.querySelector("#pharmacyPage [data-rq-card] [data-rq-cur]"); if (!row) return;
+    const sc = phHxScrollerOf(row), box = phHxScrollerBox(sc), band = document.querySelector("#pharmacyPage .ph-pres-band"), r = row.getBoundingClientRect();
+    const top = Math.max(box.top, band && getComputedStyle(band).position === "sticky" ? band.getBoundingClientRect().bottom : 0);
+    if (r.top < top + 8) sc.scrollBy(0, r.top - top - 8);
+    else if (r.bottom > box.bottom - 8) sc.scrollBy(0, r.bottom - box.bottom + 8);
+  }
   function phRqClick(e, name) {
     const T = e.target; let el;
     if (!T.closest("[data-rq-card]")) return false;
@@ -76453,9 +76472,20 @@ or changing anything in Cliniko.
       if (!R0.sure && R1.sure) { phTriFilt.set(pk, [R1.top]); phTriMulti.delete(pk); phRqKeep.delete(pk); phRqOpen.delete(pk); phRqGlow.add(pk); }
       phRenTabRefresh(name);
     };
+    // a labelled spot on a photo -> its own LOOK row becomes the current one (her 2026-10-20): rows come back out of the "Looked:" line,
+    // the row takes the ring and the number keys, and the page moves only if the row is off screen
+    if ((el = T.closest("[data-rq-zone]"))) {
+      const subj = el.dataset.rqZone, row = R0.rows.find(r => r.subject === subj); if (!row) return true;
+      if (R0.rows.every(r => phRqRowDone(R0.S, r))) phRqLookOpen.add(pk);
+      phRqFocus.set(pk, subj); phRqStay.delete(pk);
+      phRenTabRefresh(name);
+      phRqShowCur();
+      return true;
+    }
     if ((el = T.closest("[data-rq-look]"))) {
       const key = el.dataset.rqLook, row = R0.rows.find(r => r.signs.some(s => s[0] === key)); if (!row) return true;
       const clearing = R0.S.picks.p[key] === true;
+      if (phRqFocus.get(pk) !== row.subject) phRqFocus.delete(pk);   // picking in another row moves on; picking in the zone's own row keeps it
       phRqStay.set(pk, row.subject);
       write(key, phSignLabel(key), clearing ? null : true, t => {
         const m = t.p, auto = phTriAutoMap(t, "p");
@@ -76473,7 +76503,7 @@ or changing anything in Cliniko.
     if ((el = T.closest("[data-rq-none]"))) {
       const row = R0.rows.find(r => r.subject === el.dataset.rqNone); if (!row) return true;
       const allNo = row.signs.every(s => R0.S.picks.p[s[0]] === false);
-      phRqStay.delete(pk);
+      phRqStay.delete(pk); phRqFocus.delete(pk);
       write(row.signs[0][0], `${row.subject}: none of these`, allNo ? null : false, t => {
         const m = t.p;
         row.signs.forEach(s => { if (m[s[0]] === true) phTriClearYes(t, "p", s[0]); });
@@ -76491,7 +76521,7 @@ or changing anything in Cliniko.
     if (T.closest("[data-rq-undo]")) {
       const st = phRqUndo.get(pk) || [], last = st.pop();
       if (last && phTriWrite(name, t => { const s = JSON.parse(last.snap); t.d = s[0]; t.p = s[1]; if (s[2]) t.auto = s[2]; else delete t.auto; t.since = s[3]; t.audit = s[4]; })) {
-        phRqLast.delete(pk); phLinkAsk.delete(pk); phRqStay.delete(pk);
+        phRqLast.delete(pk); phLinkAsk.delete(pk); phRqStay.delete(pk); phRqFocus.delete(pk);
         phRqSlots.set(pk, (JSON.parse(last.slots || "[]")).map(sl => Object.assign(sl, { phase: "", born: 0 })));
         if (last.filt && last.filt.length) phTriFilt.set(pk, last.filt); else phTriFilt.delete(pk);
         phRenTabRefresh(name);
@@ -76510,8 +76540,8 @@ or changing anything in Cliniko.
       const id = el.dataset.rqEv; if (s.has(id)) s.delete(id); else s.add(id);
       phRenTabRefresh(name); return true;
     }
-    if (T.closest("[data-rq-next]")) { phRqStay.delete(pk); phRenTabRefresh(name); return true; }
-    if (T.closest("[data-rq-change]")) { if (phRqLookOpen.has(pk)) phRqLookOpen.delete(pk); else phRqLookOpen.add(pk); phRenTabRefresh(name); return true; }
+    if (T.closest("[data-rq-next]")) { phRqStay.delete(pk); phRqFocus.delete(pk); phRenTabRefresh(name); return true; }
+    if (T.closest("[data-rq-change]")) { if (phRqLookOpen.has(pk)) { phRqLookOpen.delete(pk); phRqFocus.delete(pk); } else phRqLookOpen.add(pk); phRenTabRefresh(name); return true; }
     if (T.closest("[data-rq-toggle]")) { phRqOpen.set(pk, !(phRqOpen.has(pk) ? phRqOpen.get(pk) : !R0.found)); phRenTabRefresh(name); return true; }
     return false;
   }
