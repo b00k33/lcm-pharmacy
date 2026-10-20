@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261021-1590000">
+<meta name="lcm-build" content="20261021-1600000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -105932,6 +105932,41 @@ Dosage: {dosage}
     PHARMACY.labelTemplate = tpl.replace(/^Formula: \{objective\}$/m, "Formula Objective: {objective}");
     savePharmacy();
   })();
+  // Her ask 2026-10-21 ("yes clear old acu points", answering whether her own saved copies should be
+  // emptied the way the built-in templates were on 2026-10-20): ONCE, empty the Points field of every
+  // phase in her edits of the built-in templates (tpTemplateOverrides) and in her own saved templates
+  // (tpTemplates). Plans already made keep theirs. Nothing she types after this build ships is touched:
+  // an override is cleared only while its edit stamp is older than the cut-off, a saved template only
+  // while its id (a base-36 timestamp, see uid) is older than it. What was removed is kept in
+  // PHARMACY.tpPointsCleared.was, which is also the "already ran" flag (or-merged in mergeTemplateOverrides).
+  (function phMigrateTemplatePointsClear() {
+    if (PHARMACY.tpPointsCleared) return;
+    const CUT = 1792504079162;
+    const ovs = PHARMACY.tpTemplateOverrides || {}, ats = PHARMACY.tpTemplateOverridesAt || {};
+    const users = Array.isArray(PHARMACY.tpTemplates) ? PHARMACY.tpTemplates : [];
+    if (!Object.keys(ovs).length && !users.length) return;
+    const idTime = id => { const n = parseInt(String(id || "").slice(0, -5), 36); return n > 1.4e12 && n < 2.5e12 ? n : 0; };
+    const was = {};
+    let phases = 0, tmpls = 0;
+    const wipe = (key, list) => {
+      const kept = [];
+      list.forEach(p => { if (p && typeof p.points === "string" && p.points.trim()) { kept.push([p.label || "", p.points]); p.points = ""; } });
+      if (kept.length) { was[key] = kept; phases += kept.length; tmpls++; }
+      return kept.length;
+    };
+    Object.keys(ovs).forEach(id => {
+      const ov = ovs[id];
+      if (!ov || !Array.isArray(ov.phases) || (+ats[id] || 0) >= CUT) return;
+      if (wipe(id, ov.phases)) (PHARMACY.tpTemplateOverridesAt || (PHARMACY.tpTemplateOverridesAt = {}))[id] = Date.now();
+    });
+    users.forEach(t => {
+      if (!t || !Array.isArray(t.phases) || idTime(t.id) >= CUT) return;
+      wipe("user:" + t.id, t.phases);
+    });
+    PHARMACY.tpPointsCleared = { at: Date.now(), templates: tmpls, phases, was };
+    savePharmacy();
+    if (phases) setTimeout(() => { try { presSavedToast("Old points cleared · " + tmpls + (tmpls === 1 ? " template, " : " templates, ") + phases + (phases === 1 ? " phase" : " phases"), 6000); } catch (e) {} }, 2500);
+  })();
   (function phMigratePatientAddresses() {
     if (PHARMACY.patientAddrMigrated) return;
     let imported = 0;
@@ -106684,13 +106719,17 @@ Dosage: {dosage}
       if (ta || tb) outAt[id] = Math.max(ta, tb);
     });
     var migrated = !!((l && l.tpTemplateOverridesMigrated) || (c && c.tpTemplateOverridesMigrated));
+    // "old template points cleared" (2026-10-21) is a one-way flag too: either side having run it counts
+    var cleared = (l && l.tpPointsCleared) || (c && c.tpPointsCleared) || null;
     var same = JSON.stringify(out) === JSON.stringify(po)
       && JSON.stringify(outAt) === JSON.stringify(obj(pick, "tpTemplateOverridesAt"))
-      && (!migrated || pick.tpTemplateOverridesMigrated);
+      && (!migrated || pick.tpTemplateOverridesMigrated)
+      && (!cleared || pick.tpPointsCleared);
     if (same) return pickStr;
     pick.tpTemplateOverrides = out;
     if (Object.keys(outAt).length) pick.tpTemplateOverridesAt = outAt;
     if (migrated) pick.tpTemplateOverridesMigrated = true;
+    if (cleared && !pick.tpPointsCleared) pick.tpPointsCleared = cleared;
     return JSON.stringify(pick);
   }
 
