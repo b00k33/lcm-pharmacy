@@ -1,7 +1,26 @@
 # LCM Pharmacy — design rules (read before ANY UI change)
 Also read ABOUT-ME.md before any work — build to this user's preferences.
 
-**Where the rest lives (2026-10-21):** the dated build history is in **BUILD-NOTES.md** (one section per build, from 2026-10-10). Before changing a feature, grep it for the feature's function names. A new build note goes at the END of BUILD-NOTES.md, never in this file.
+**The four files (audited 2026-10-21):**
+- **CLAUDE.md** (this file) = the standing rules and what each part of the app is today. Read it in full.
+- **BUILD-NOTES.md** = the dated build history (one section per build, from 2026-10-10). Before changing a feature, grep it for the feature's function names and read its note. **A new build note goes at the END of BUILD-NOTES.md, never in this file.** When a build changes a standing rule or what an area is today, fix that line here in the same commit.
+- **STYLE-LCM.md** = the phone type scale (≤480px) only.
+- **ABOUT-ME.md** = how she likes to work.
+DESIGN-CONVENTIONS.md was merged into this file and retired on 2026-10-21.
+**When two lines disagree:** her newest word wins, then the ★ rules at the top of this file, then the rest of this file, then STYLE-LCM.md, then BUILD-NOTES.md (history). When you find a disagreement, fix the losing line in the same commit.
+
+# ★★★ ONE APP, WELL INTEGRATED — standing rule (her 2026-10-10 "all builds and developments are integrative. the same information needs to present in all places that reference it ... i want this app to be integratively heavy"; restated in her 2026-10-21 audit ask)
+> Every page reads the same facts from the same place. Applies to every build, every page.
+
+1. **Find where the fact lives and what already draws it, and call that.** Never a second renderer, mini-chart, summary or wording of the same record. The one read for each: tongue `phTongueChartSvg` (best photo by `PH_TONGUE_SHOT_RANK`), abdomen `phAbdChartSvg`, pulse `phVisitPulseSummaryText` / `phVisitPulseDotsHtml`, dated findings `phVisitFndRead`, pain map `phPainMapHtml` / `phPmList`, current phase `phTpLivePhase`, today's plan `phTpPlanForToday`, Fang Bing Ren lead `phFbrRank` / `phFbrLeadOf`, ticked signs `phTriEffective`, complaints `phCcRibItems`, blood results `phBldList`, Watch / Aim `phTpFieldView`, Diagnosis / Goal `phTpAutoDx` / `phTpAutoGoal`, a patient record for drawing `phPatientPeek` (never the mutating `phPatientRec`).
+2. **One write door per fact:** `phTriWrite` + `phTriSetYes` / `phTriSetNo` / `phTriClearYes` (signs and links), `phPmWrite` (pains), `phCcWrite` (Came in for), `phMskWrite`, `phTlWrite`, `phEnWrite`, `phCxWrite`, `phTngWrite`, `phHxConstitPulse` (pulse chart), `phRenPhotoPut` (photos), `phTpFieldCommit` (Watch / Aim). A new field on one of these records goes into its door's whitelist (`phPmWrite` silently drops unknown keys).
+3. **Derived on read, never copied.** A value worked out from other data (auto Diagnosis / Goal / Watch / Aim; Fang Bing Ren pre-fills from charts, history, bloods, the intake form, pain words, cycle, age and sex; Came in for from the pain map; IVF scan bloods in Blood tests; timeline items from IVF history) is computed when drawn and never stored. Only her own taps and typing are saved, and **her own value always wins** over the derived one, with a "back to auto" way out.
+4. **Wire a new thing everywhere in one pass.** A new Fang Bing Ren formula, sign or clue = her code word **integrate33** (memory `feedback_integrate33_protocol`): add it, then wire it into the tongue / pulse / abdomen charts, Ask her, Medical history, bloods, cycle answers, Patterns, links and twins, the body chart and search aliases, with a matrix HTML of what was and was not wired. Checklists: a new sign uses a subject in `PH_FBR_SUBJ_AREA` (and `PH_FBB_SUBJ`), a women-only one goes in `PH_SIGN_ONLY_F`, its twin in `PH_FBR_TWINS_DRAFT`; a new formula joins `PH_REN_FAM_GROUPS` (its colour shades itself); a new plan category follows the checklist in BUILD-NOTES "Dermatology plan category".
+5. **One shared component per job:** one toast (`presSavedToast`), one sheet shell (`.ph-lk-sheet`), one joined chip bar (`.ph-tng2-seg`), one undo, one compare, one photo viewer, one message composer. Never build a second.
+6. **Every place that shows the fact repaints when it changes**, through that host's scoped refresh (never a full `renderPresPanel()`, which jumps to the top). A "nothing happens" bug is usually a missing repaint, not a missing write.
+7. **Pages link to each other for real:** a finding opens its own page (`data-flow-prof` / `data-flow-go`); the rail's counts and ticks read the same done-state the page uses; a Timeline item reads IVF history, Blood tests and the pregnancy test instead of asking twice.
+
+**Before you finish**, look at the fact on every page that shows it (Patient details, Today's visit, Care Plan, Treatment, Dispense, Messages, Fang Bing Ren, Patterns, Timeline, letters and print) and name in the build note which ones you checked.
 
 <!-- ============================================================ -->
 # ★★ NO SUGGESTIONS — standing rule (her 2026-10-13: "i dont like suggestions. it clutters the screen.") ★★
@@ -63,7 +82,7 @@ reads it; do not render it again.
 # ★★ TAPPABLE THINGS — standing rule (her 2026-10-14 "i dont like links, i prefer chips" + her 2026-10-15 audit: all 8 picks = the recommended option) ★★
 <!-- ============================================================ -->
 > Audit report with counts, pictures and the full lists: `chip-audit-2026-10-15.html`. Where an older line anywhere below
-> (or in STYLE-LCM.md / DESIGN-CONVENTIONS.md) defines a chip, button, link, corner or caption differently, **this rule wins**.
+> (or in STYLE-LCM.md) defines a chip, button, link, corner or caption differently, **this rule wins**.
 
 **Everything tappable is one of five shapes. Nothing else taps.**
 1. **Chip = pick.** Pill (999px), 28px tall, 13px text (14px on a phone, STYLE-LCM's label size), 1px `--ph-line` line, white. Picked = solid `--ph-herb`, white text. One size everywhere.
@@ -79,11 +98,11 @@ reads it; do not render it again.
 **Why this exists:** audit step 5 (2026-10-15) fixed underlines and arrows but her words also banned plain coloured text, so 458 names, words and numbers (124 identical to the text beside them) and 155 button styles stayed unshaped; the chip rules disagreed (pill vs square vs 10px outlined vs "no outlines"), giving 36 chip looks on 25 screens.
 **Fixed, 2026-10-18 (her screenshot of the Usual Period card's Flow/Clots/Pain rows + "fix it now")** — see the dated build note in BUILD-NOTES.md for the full writeup. Two corrections, both now standing: (1) a solid vertical line/bracket beside a chip-group's row label is a NO, same family as a border used where colour/space should separate instead; (2) one question's own options are ONE category and now join into a single bordered, no-gap bar — scoped to `.ph-pfw-opts`/`.ph-pfw-opt` (Usual period, meno/men's sets, Pain intake, any `presPfwSetHtml`-driven card), explicitly NOT Find the Ren's own Look-card chips, which she separately asked to keep as loose individual pills (2026-10-16).
 
-**Terse (widens "No standing how-to-use captions", her 2026-10-15):** no sentence on screen that explains what a thing is or how it works; use a hover title. Keep only a warning that stops a mistake (red flags, below-zero stock, a sign clash, the merge check, save failures, label text) and data facts. An empty state = two words + the chip that fills it ("No recipes" + [+ New recipe]).
-**Screens follow code7's order (Remove → Combine → Infer → Group → Collapse → Contextualise → Hide → Reveal) and code3's brief, polite tone.** (The code3 section below is message wording; this line gives screens the same restraint. Re-grep it before a UI persona is named.)
+**Terse (her 2026-10-09 "not having explanation and instructions in app", widened 2026-10-15; this is the one wording):** no sentence on screen that explains what a thing is or how it works; a control is self-evident, or carries its affordance in a hover `title` / `aria-label`. Keep only a warning that stops a mistake (red flags, below-zero stock, a sign clash, the merge check, save failures), label text, data facts, and a legend that decodes a chart's own symbols (the pulse grid's △ / degree key). An empty state = two words + the chip that fills it ("No recipes" + [+ New recipe]).
+**Screens follow code7's order (Remove → Combine → Infer → Group → Collapse → Contextualise → Hide → Reveal) and code3's brief, polite tone.** (The code3 section below is message wording; this line gives screens the same restraint.)
 
-**Superseded by this rule (still below as history):** Components "ONE pill/chip style ... square outlined buttons"; Separation "avoid outlined pills"; Locked conventions "Pill shape = something she PICKS"; the 10/10 smoothing "outlined pill = everything else"; audit step 5's "33 former links read as the outlined pill, 10px corners" (its no-underline, no-arrow rules stand); STYLE-LCM.md "Chips" look; DESIGN-CONVENTIONS.md "Secondary/quiet: text links". Corners still follow the scale (6 / 10 / 16 / pill): chips use pill and 6 only.
-**Build order (her go, 2026-10-15; each step its own commit, sandbox-tested at 1280 and 375px with a scan of every tappable's real look):** 1 this rule (done 2026-10-15) · 2 plain-text taps become rows / fields / chips · 3 chip walls become dropdowns and joined 0–10 bars · 4 explaining lines out. **Steps 2–4 are NO LONGER "not started" (audited 2026-10-18)** — all three have had extensive, page-by-page work since (chips not links, the multi-round segmented-bar audits, the How-long dropdown+combobox run, multiple how-to-caption removals), confirmed live on `main`, not just drafted. This was never a single commit that finishes a step outright; a page not yet named in a dated build note in BUILD-NOTES.md may still be unconverted — check `git log`/the live app for a SPECIFIC page, not this line, before assuming either way.
+**Superseded by this rule (the old lines were removed in the 2026-10-21 audit):** "ONE pill/chip style ... square outlined buttons", "Pill shape = something she PICKS", the 10/10 smoothing "outlined pill = everything else", audit step 5's "outlined pill, 10px corners" (its no-underline, no-arrow rules stand), and the retired DESIGN-CONVENTIONS.md "text links". Corners still follow the scale (6 / 10 / 16 / pill): chips use pill and 6 only.
+**Build order (her go, 2026-10-15):** 1 this rule · 2 plain-text taps become rows / fields / chips · 3 chip walls become dropdowns and joined 0–10 bars · 4 explaining lines out. All four have been worked page by page since (live on `main`, audited 2026-10-18); a page not named in a BUILD-NOTES.md note may still be unconverted, so check that page in the live app before assuming.
 
 <!-- ============================================================ -->
 # ★★★ PATIENT WORKFLOW — THE LAW (her design, 2026-10-10) ★★★
@@ -104,12 +123,14 @@ reads it; do not render it again.
 |---|---|---|
 | **1 Her file** | Patient details → Medical history → Ren → Supplements → Blood tests (her reorder, 2026-10-18, swapping Medical history and Ren; Stress & sleep left this list 2026-10-13, see §3) | Set once, kept current |
 | **2 Today's visit** | Today's visit (checklist home) → Cycle (if on) → Tongue → Pulse → Abdomen | Every visit |
-| **3 Put together & do** | Fang Bing Ren → Treatment Care Plan → Treatment → Dispense | Decide, then treat |
+| **3 Put together & do** | Fang Bing Ren → Timeline (fertility plans) → Treatment Care Plan → Treatment → Dispense | Decide, then treat |
 
 - **Today's visit** is a checklist home: a one-line strip on top (last visit
   date · likely pattern · phase and visit number · flagged history), the
-  **Re-check** (Better/Same/Worse/New + note), then Cycle / Tongue / Pulse /
-  Abdomen as tiles with a ✓ when done today and last visit's finding beside
+  **complaint compass** (each complaint scored every visit, Energy 1–10 under
+  it; it replaced the Re-check on 2026-10-14 and still writes `rec.recheck`),
+  the return-visit "Worth a look" questions and one progress line, then
+  Cycle / Tongue / Pulse / Abdomen as tiles with a ✓ when done today and last visit's finding beside
   today's. Each tile opens its own page. Pain / MSK patients also get a **Musculoskeletal** tile and page after Abdomen (2026-10-11,
   see "Musculoskeletal Assessments page" in BUILD-NOTES.md): the pain map + Pain intake moved onto it, so "Where it hurts" no longer sits on Today's visit for them.
 - **Tongue, Pulse, Abdomen and Cycle are each their own page** (her pick,
@@ -117,32 +138,31 @@ reads it; do not render it again.
   reached from its Today's visit tile. No second Cycle tab.
 - **The Review step is retired** — folded into Today's visit (strip + pain
   map + pain intake). Nothing lost, only repeats removed.
-- **Timeline** (2026-10-13, her pick): a page under Treatment Care Plan in the rail, only on a Pregnancy / Natural fertility / IVF plan (see "Fertility timeline" in BUILD-NOTES.md). It is not a numbered step and not in the Next / Up-next walk.
+- **Timeline** (her picks 2026-10-13 and 2026-10-16): its own numbered rail step right after Fang Bing Ren, before Treatment Care Plan, and in the Next walk, only on a Pregnancy / Natural fertility / IVF plan (see "Timeline promoted to its own rail step" in BUILD-NOTES.md).
 - Other pages (Photos, Appointments, Messages, IVF history, Log, Visit
   checks, Checklist) are unchanged and sit outside this law.
-- **"Came in for" lives on Today's visit only (her 2026-10-18 pick).** It no
-  longer has its own copy on Patient details — `presPatientTabBodyHtml`'s
-  `.ph-pf-onebox` top now holds only the pain-map block (when pain-related)
-  and the plan tile; the one remaining card is `phCcCardHtml(t, true,
-  {today:true})` on Today's visit, unchanged. The no-plan gate (a brand-new
-  patient with no plan yet, so no Today's visit to put it on) keeps its own
-  plain `phCcCardHtml(t)` call — that is a different screen, not Patient
-  details, and was left alone.
+- **The complaints live on Today's visit only (her 2026-10-18 pick).** There
+  the complaint compass (`phCxCardHtml`) is their card; a patient with no
+  chief complaint on file gets the plain Came in for card instead. Patient
+  details (hero + 3 cards) has no complaint card. The no-plan gate (a
+  brand-new patient with no plan yet) keeps its own plain `phCcCardHtml(t)`.
 
 ## 2 · The order of a visit
 **First visit (her pick "Examine first"):** 1 Patient details → 2 Medical
 history → 3 Ren → 4 Supplements → 5 Blood tests (if she brought any) → 6
 Cycle (if on) → 7 Tongue · Pulse · Abdomen (and Ask her, which now holds the
-sleep and mood questions) → 8 **Fang Bing Ren** (now has data to read) → 9
+sleep and mood questions) → 8 **Fang Bing Ren** (now has data to read) →
+(Timeline, on a fertility plan) → 9
 **Treatment Care Plan** → 10 Treatment → 11 Dispense. (Stress & sleep was
 step 4 until 2026-10-13; Medical history and Ren swapped 2026-10-18.)
 **Return visit:** Her-file pages show "✓ on file" and are skipped, except
-Supplements (confirm) and Blood tests (if new). Then: Re-check → Cycle (if
-on) → Tongue · Pulse · Abdomen → Fang Bing Ren as **one line: what shifted** →
+Supplements (confirm) and Blood tests (if new). Then: the complaint compass →
+Cycle (if on) → Tongue · Pulse · Abdomen → Fang Bing Ren as **one line: what
+shifted** → (Timeline, on a fertility plan) →
 Treatment Care Plan as **one line: phase, session** → Treatment → Dispense.
 **Order of WORK, not of record creation:** a plan shell still exists from the
 door (the "plan is the spine" no-plan gate, decision 3), because the exam pages
-live on the plan stage's tabs. Step 10 is when she shapes and uses that shell
+live on the plan stage's tabs. Step 9 is when she shapes and uses that shell
 after Fang Bing Ren, not when it is first created.
 **Why:** Fang Bing Ren READS tongue, pulse, abdomen. It must come after
 them. (The Oct 10 tab order put it before, so it opened empty on a first
@@ -157,7 +177,7 @@ visit. That is fixed by this law.)
 | Stress & sleep | **No page any more (her pick A, 2026-10-13, `stress-sleep-audit-2026-10-13.html`).** It was "asked once for EVERY patient"; it now lives on **Ask her** (every visit, Usually and Right now): the Sleep topic gained *Hard to fall asleep* and *Wakes in the night or very early*, the Mood topic gained *Low, flat or tearful* and is now always shown. Each answer ticks a new Fang Bing Ren sign (`sleep_onset_hard`, `sleep_wakes`, `mood_low` + `_tend` twins) that makes the Patterns clue `sl_hard` / `sl_wake` / `low_mood`; tapping "hard to fall asleep" or "wakes" also shows the broad sleep sign pre-ticked (`PH_TRI_IMPLIED_BY`). The Energy grid and throat lump were not carried over (Energy is on Today's visit and Fang Bing Ren; throat lump is already a Fang Bing Ren sign). Answers saved before still count and still pre-tick (`PH_PFW_RETIRED`). The mood question on the men's page and the Change of life "Sleep and mood" question went with it. |
 | Supplements | Confirm every return visit with one tap "Same as last time" / "Changed" on Today's visit (the Supplements page itself is unchanged). |
 | Blood tests | When a new result arrives. Each result shows its age ("9 months old"); a result **over 12 months old** is still listed and dated but marked "not counted" and gives Fang Bing Ren no clue (`PH_BLD_OLD_DAYS`, `phBldIsOld`). |
-| Re-check, Cycle, Tongue, Pulse, Abdomen | Every visit (Cycle while on). |
+| Complaint compass, Cycle, Tongue, Pulse, Abdomen | Every visit (Cycle while on). |
 | Fang Bing Ren | Recalculated live on every render, never stored; only her Agree / Not this patient taps are saved. |
 | Treatment Care Plan | Built after Fang Bing Ren; reviewed at the end of each phase. |
 | Treatment, Dispense | Every visit (Dispense when herbs). |
@@ -173,8 +193,9 @@ do not add one.
 - Fang Bing Ren → Treatment Care Plan: **fills the Diagnosis / Goal as editable text only**
   (never a proposal box). → Treatment: **no point-suggestion chips** (removed 2026-10-13, see "NO SUGGESTIONS"
   at the top). → Dispense: **never suggests a formula; the formula is always hers.**
-- Re-check → Treatment Care Plan: saved and shown on Today's visit only.
-  **She declined a flag on the plan** (Phase 3): do not add one.
+- The complaint compass (Today's visit) → the Log and the Treatment tab's
+  Response (pre-filled). **She declined a flag on the plan** (Phase 3): do
+  not add one.
 - Cycle → Fang Bing Ren, Treatment Care Plan (phase by cycle day, IVF), Treatment.
 - Treatment saved → files the dated visit (and its dated findings) to the Log.
 - Complaint → reorders the plan picker and picks which question sets show.
@@ -224,9 +245,9 @@ on her "push live". Update the status column when a phase lands.
 - "Cycle in Today's visit AND its own tab" → one home (§1).
 - Stress & sleep "only when the complaint says so" → asked for everyone (§3) → **retired 2026-10-13: its questions are on Ask her (§3).**
 <!-- ===================== END OF THE LAW ====================== -->
-This is a single-page mobile web app. It must always look clean, symmetrical,
-aligned, organized, calm, sleek and minimal. Follow every rule, then re-check
-your work.
+This is a single-page web app: **desktop leads, the phone covers the
+essentials** (see lcm6). It must always look clean, symmetrical, aligned,
+organized, calm, sleek and minimal. Follow every rule, then re-check your work.
 
 **Standing preference, every build: terse, succinct wording and a sleek,
 minimal design, by default — cut filler, don't pad.** Applies to everything
@@ -240,20 +261,11 @@ several small ones nearby (see "Remove → Combine → Infer → Group → Colla
 → Contextualise → Hide → Reveal" under code7 below) — restraint is the
 default, not an afterthought pass at the end.
 
-**No standing how-to-use captions anywhere in the app** (WIDENED 2026-10-15 by TAPPABLE THINGS above: no sentence that explains what a thing is or how it works, and an empty state is two words + a chip; the exemptions in the last sentence here no longer cover explaining sentences) (2026-10-09, her
-words: "not having explanation and instructions in app" — found first on
-the photo circle-tool's permanent "drag on the photo to circle an area ·
-drag a circle to move it, or its edge to resize" line, removed). A control
-must be self-evident from its own design, or carry its affordance in a
-hover `title`/`aria-label`, never a permanently-visible sentence of
-UI-mechanics text sitting on screen ("tap a zone to apply it", "drag here
-to resize"). Does NOT cover: an empty-state prompt telling her what to do
-when a section has no data yet ("tap a day to log her period"), or a
-legend decoding a chart's own symbols (e.g. the pulse grid's △/degree
-key) — both stay, since they explain content, not interaction mechanics.
+**No how-to text on screen:** the one wording is "Terse" under TAPPABLE
+THINGS at the top.
 
-For LCM Pharmacy, follow STYLE-LCM.md. If a request conflicts with a rule in it,
-update STYLE-LCM.md to match so future builds don't undo it.
+**Phone type scale:** STYLE-LCM.md (≤480px). If a request conflicts with a
+rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
 
 ## Theme — keep the current TEAL & WHITE look (do NOT go dark)
 - The primary colour is deep **True Teal**, not green: `--ph-herb: #165C74`,
@@ -280,27 +292,45 @@ update STYLE-LCM.md to match so future builds don't undo it.
   To Order herb-jar art uses each supplier's real brand colours (Koda =
   forest + yellow, GMP = white + bright green). These are one-off brand/
   legibility exceptions, never a precedent for reintroducing green elsewhere.
-  `--ph-gold` itself is reserved and never used for a status/error state —
-  give a new status its own `-tint`/`-deep` pair instead.
+  `--ph-gold` itself is reserved (the brand accent, the one primary action
+  disc, "you are here") and never used for a status/error state — give a new
+  status its own `-tint`/`-deep` pair instead.
 - **The one status green is `--ph-good`** (`-deep` / `-tint` / `-soft` /
   `-line` / `-hi`, defined beside the other status tokens; audit step 2,
   2026-10-15): better / agreed / ok / done marks, the "better" response chip,
   the Visit checks "better" cell, the abdomen chart's green mark, the
-  follicular segment's pale fill on the cycle bars and calendars, and the pale
-  outline of the visit table's square action buttons all read it. Never a raw
+  follicular segment's pale fill on the cycle bars and calendars, and the
+  pale outline of the visit table's square action buttons all read it. Never a raw
   green hex for any of those again. Kept raw on purpose: her named herb-row
   green `#15803D` ("green 3", her own pick on the visit table), the Dispense
   head and jar art above, Acupreg's `#8AAB99`, the Cliniko type colours and
   the Cycle page's own palette (`--cp-*`, her picks).
+- **Case / category colour families**, one per condition, each with `-tint` /
+  `-card` / `-deep` / `-press` / `-solid`; reuse one before inventing a new
+  one: Musculoskeletal `--ph-msk*`, Gynaecology `--ph-gyn*`, Stress
+  `--ph-purple*`, Metabolic `--ph-metab*`, Acute `--ph-acute*` (browner than
+  the status amber), Facial `--ph-facial*`, Dermatology `--ph-derm*` (clay),
+  Men's health `--ph-mens*` (indigo). Only gynae and MSK recolour the patient
+  panel (`.case-gyn` / `.case-msk`, both the `--ph-green*` and `--ph-herb*`
+  token families).
+- **Contrast:** text on a tinted card uses the family's `-press` step when
+  `-deep` fails 4.5:1. Hover lifts (brighter), never deepens. Never mix toward
+  a pale tint to make a "stronger" fill (tints have almost no chroma).
+- **Type:** sizes come from the `--fs-*` tokens, never a one-off px; display
+  numerals (gauges, big counts) use `--font-disp` (Barlow Semi Condensed).
+- **Icons:** one family, the app's own sprite (`<svg><use href="#i-...">`) —
+  never emoji, never a second icon set.
 
-## Fit the screen (mobile-first)
-- Design for a phone ~360px wide. Nothing wider than the screen or overflowing.
+## Fit the screen
+- Check every screen at desktop (1280px) and phone (~360-375px) width:
+  nothing wider than the screen, nothing cut off, overlapping or scrolling
+  sideways. A wide table scrolls inside its own card.
 - **Be space saving**: mobile screen space is scarce — compact stat rows over
   tall tile blocks, one-line rows, tight paddings, no duplicated numbers, the
   first screen should carry real work. Never trim real data to save space
   (counts stay), trim the chrome around it.
 - Respect safe areas (`env(safe-area-inset-top/bottom)`). Nothing cut off
-  under the status bar or above the phone's bottom nav.
+  under the status bar or at the phone's bottom edge.
 - Every dropdown/menu/popover/filter panel MUST open fully on-screen; if it
   would run off an edge, flip or shift it; if taller than the screen, it
   scrolls inside itself and is NEVER cut off. Tapping outside closes it.
@@ -346,13 +376,10 @@ update STYLE-LCM.md to match so future builds don't undo it.
   header row must be the table's own `<thead>` — never split a header off
   into a separate div above the table** (hit repeatedly on the Treatment
   Plan Session grid; her explicit, repeated complaint every time it drifted).
-- **Spacing is a standing preference, desktop included** (not just a mobile
-  "be space saving" note): actively compress leading dead space in a
-  scrollable grid/timeline (default the visible range to where real data
-  starts, not hours of nothing first) and tighten excess vertical gaps
-  between stacked header/toolbar rows — removing space that isn't doing a
-  job, not a license to cram content or remove whitespace that's genuinely
-  doing layout work (grouping, touch targets, tabular alignment).
+  Give a data table `table-layout: fixed` and a `<colgroup>` (or declared
+  widths), so the first column read cannot take the space a later select or
+  action cell needs. Rows alternate a faint tint; the row she is on gets a
+  tint AND a left accent bar, never one without the other.
 - **Her work phone is a BlackBerry Key2** — design phone screens against
   360 × 469 (not 360 × 780) when a feature is specifically phone-targeted;
   Android 8.1 / Chrome 138 is a speed constraint, not a capability one (the
@@ -362,19 +389,6 @@ update STYLE-LCM.md to match so future builds don't undo it.
   loud.** Reuse an existing semantic colour before inventing a new one; a
   column that silently inherits a Case/kind colour with no visible label is
   a bug, not a shortcut.
-- **44px minimum tap target is RETIRED** (her call): a page-by-page 44px
-  audit made every phone control too large. Keep controls at the compact
-  sizes she's approved; don't reintroduce a tap floor without asking.
-- **Reduced motion**: every animation added to this app must be disabled
-  under `prefers-reduced-motion: reduce` — keep doing this for new ones.
-- **Changing an app icon needs a new FILENAME.** Android bakes the
-  launcher-tile icon in at install and only refreshes when the manifest
-  points at a new URL. Rename (e.g. `-v2`), update manifest.json + link
-  tags + the sw.js SHELL list.
-- **Every push bumps BOTH version markers**: `sw.js` `CACHE_VERSION` AND the
-  `<meta name="lcm-build">` stamp in index.html — the meta stamp is what the
-  gold Update button compares to detect a new version; bumping only sw.js
-  ships code her app never offers her to update to.
 
 ## Spacing & size (one scale, no random numbers)
 - Margins/padding/gaps use the app's own density scale: **4 / 6 / 8 / 10 / 12 / 18px**
@@ -383,14 +397,27 @@ update STYLE-LCM.md to match so future builds don't undo it.
   audit (finding 2): this scale IS the rule. The old "only 4/8/12/16/24/32" line was
   never how the app was built (about 57% of spacing settings were off it) and is retired.
   Leftover 2 / 3 / 5 / 7 / 14px values are not to be copied into new code; fix them
-  only when already editing that rule. Dead space stays tight everywhere (standing pref).
+  only when already editing that rule.
 - Corners come in three steps plus the pill: **6px** small (tags, inputs, buttons,
   small chips), **10px** card / panel / tile / popover, **16px** sheet or question box,
   **999px** pill; 2px for hairline bars. Set 2026-10-13 (audit finding 3, her pick
   "apply the three steps"; 620 radius settings moved, plus `--field-radius-sm`
   11 to 10px and `--field-radius-area` 14 to 16px; about 15 near-pill 18/20/99px
-  shapes were left as they are). Fields stay pills (`--field-radius`). One type
-  scale (title/body/label).
+  shapes were left as they are). Text boxes still read `--field-radius` (999px
+  pill) in the code; a value she taps to edit follows TAPPABLE THINGS' Field
+  shape (6px, tinted), and TAPPABLE wins where the two disagree. One type scale
+  (title / body / label).
+- **Dead space is a standing preference, desktop included** (her 2026-09-16):
+  start a scrollable grid or timeline where real data starts (not hours of
+  nothing first) and close up excess gaps between stacked header / toolbar
+  rows. This removes space doing no job; it is not licence to cram content or
+  to remove spacing that groups things, keeps a tap target or aligns a table.
+- **A full-bleed panel still insets its own content** (her 2026-10-09 "the
+  overall border of words and text at the top and left side are too close to
+  the edges"): a container that cancels the page's ambient padding (e.g.
+  `.ph-pres-panel`'s `--ph-pres-bleed`) gives its content `padding: 16px 0 0
+  16px`, scoped `@media (min-width: 641px)`. Reuse this number and scoping
+  (canonical example: `.ph-flow`'s own rule).
 
 ## Alignment & symmetry
 - Equal left/right padding, balanced top/bottom. Items share one left edge and
@@ -398,51 +425,39 @@ update STYLE-LCM.md to match so future builds don't undo it.
 
 ## Separation & grouping — colour and space, NOT boxes and lines
 - Show where sections begin and end using background tone and spacing, NOT
-  borders, outlines or divider lines.
-- Never put a box inside a box. Avoid nested cards and
-  clutter. (Outlined pills are no longer banned or required: chip shapes follow TAPPABLE THINGS at the top.) Reserve a visible border only where colour and space genuinely
-  can't separate.
+  borders, outlines or divider lines. A visible border is a last resort, only
+  where colour and space genuinely can't separate.
+- Never put a box inside a box. Avoid nested cards and clutter.
+- No solid line or bracket beside a row label or a chip group (her
+  2026-10-18; see TAPPABLE THINGS).
+- **Say a fact once.** A fact shown near the top of a page (a phase or cycle
+  day in the band) is not repeated in a section header below it; if two places
+  would say the same thing, drop the second or make it say something new.
 
 ## Components — one system, no one-offs
-- (SUPERSEDED for chips and buttons by TAPPABLE THINGS at the top: five shapes, buttons have 6px corners, plain coloured text never taps.) ONE pill/chip style, ONE button style, ONE card style, reused everywhere.
-  The tab toggle, filter pills and status counts all belong to the same
-  visual family — no different looks fighting. Pills = things she PICKS
-  (points, chips, phases); square outlined buttons = things that ACT (change,
-  edit, +add, dispense, instruct); one solid button = the primary commit
-  action (e.g. Log). This pick-vs-action distinction by shape is a standing
-  convention, applied everywhere, not just where it was first built.
-- One shared component per concept — never invent a second compare
-  mechanism, a second undo mechanism, or a second message-kind when an
-  existing one already fits the job.
+- Tappable things: the five shapes of TAPPABLE THINGS at the top. (The older
+  "pills pick, square outlined buttons act" split is retired.)
+- One card style, one sheet, one toast, one undo, one compare, one message
+  kind per job (★★★ rule 5). Screens with different jobs can look different
+  inside the same system, but never a second look for the same job.
 
-## Integrative builds — one source of truth, shown everywhere
-**Her standing instruction (2026-10-10): "all builds and developments are
-integrative. the same information needs to present in all places that
-reference it ... i want this app to be integratively heavy."** This is
-broader than the Components rule above (reused UI widgets) — it's about the
-underlying DATA. The same real fact — a tongue photo, an abdomen finding, a
-pulse reading, a pain map, a plan's current phase — must look the same and
-come from the same read wherever it's shown, not get re-derived or
-reinvented per screen. Concretely: before building any new view that shows
-information already captured elsewhere, find the existing function that
-already renders/reads it and call that, rather than writing a parallel
-summary, a second mini-chart, or a fresh text description of the same
-underlying record. If no reusable function exists yet for something new,
-build it once and have every surface that needs it call that one function —
-don't let a second screen quietly duplicate the logic.
-
-Real examples already following this (use as the precedent, not photos or
-text reinvented per screen): the Tongue/Pulse/Abdomen tiles on Today's
-visit, the Treatment log's "All" filter mini-charts, and the Review step's
-mindmap all read tongue findings through the same `phTongueChartSvg` +
-best-photo-on-file resolution (`PH_TONGUE_SHOT_RANK`) rather than three
-different tongue renderers; abdomen through the one `phAbdChartSvg`; pulse
-through the one `phVisitPulseDotsHtml`/`phVisitPulseSummaryText`; the pain
-map through the one `phPainMapHtml`. A patient's current phase, pattern
-clues, or flagged history item should read the same way everywhere they
-surface, for the same reason. When a new feature's design calls for
-"showing X," the first question is always "where does X already live, and
-what already renders it" — not "what's the best way to draw X here."
+## Motion — only on a real change
+- **Never put an entrance animation on a base class.** A scoped repaint
+  rebuilds the node, so a mount animation on a class every render prints
+  replays on every tap and the screen "flashes" (her 2026-10-17 app-wide fix).
+  Motion runs on a transient class the handler adds for that one change
+  (`.in`, `.pop`, `.fresh`, `.new`, `.glow`, `.lit`).
+- A first sight of a widget may rise or count up once per open (a "seen"
+  signature cleared in `presOpenScript`); a repaint of the same data plays
+  nothing.
+- A real change animates only the thing that changed: a chip pops, a row
+  slides in, a count rolls, a ring grows.
+- **Every animation is off under `prefers-reduced-motion: reduce`**, in the
+  CSS and through `phTpReduceMotion()` in JS. Add it with the motion, not after.
+- Anything timed in a hidden tab needs a `setTimeout` way out
+  (`requestAnimationFrame` barely fires there).
+- Motion never costs her scroll position or an open edit (see "Navigation
+  continuity" under lcm6).
 
 ## Status colours — quiet and consistent
 - The inventory status counts (Zero / Low / Phasing out / Temporarily
@@ -561,7 +576,7 @@ screen, never the phone. Her words: **"Desktop leads, mobile covers the
 essentials."** New deep-clinical features get built desktop-first and may
 not get a full phone treatment; mobile stays strong for what it already does
 well (Appointments/schedule, quick check-in, quick logging). This is a SCOPE
-split, not a contradiction of the mobile-first rules above, which govern the
+split, not a contradiction of the phone rules above, which govern the
 surfaces mobile actually owns (Appointments, Dashboard, quick check-in, the
 at-the-door card, Communications' Due tab) and stay exactly as built. A
 genuinely deep-clinical new feature can be designed/built desktop-first with
@@ -622,9 +637,9 @@ panels, split views, contextual drawers, hover/right-click actions. Don't
 waste desktop space with oversized mobile-style cards.
 
 **Space is a resource, not a target for density for its own sake.** Maximum
-useful information with minimum cognitive load, in order: remove → combine
-→ group → collapse → contextualise → hide → reveal, rather than continually
-adding UI.
+useful information with minimum cognitive load, in order: Remove → Combine
+→ Infer → Group → Collapse → Contextualise → Hide → Reveal, rather than
+continually adding UI.
 
 **The "Hogwarts" principle** (shared with code7 below): LCM Pharmacy should
 feel like a beautifully organised professional space — main rooms simple,
@@ -800,36 +815,6 @@ rather than requiring me to repeat myself. I describe the destination. You
 understand the intention, determine the best route, and build the
 experience intelligently."*
 
-### Spacing — a standing preference, code7+code3 (2026-09-16)
-Flagged on two desktop screens specifically (the Appointments week/day
-grid's dead space before the first appointment; the gap between the header
-bar and the date-nav/Grid·List/search row under it) but stated as broader
-than the earlier mobile-only "be space saving" note — desktop screens count
-too. On any screen: actively compress leading dead space in a scrollable
-grid/timeline (default the visible range to where real data starts) and
-tighten excess vertical gaps between stacked header/toolbar rows. This is
-about removing space that isn't doing a job, not a license to cram content
-or remove whitespace that's genuinely doing layout work.
-
-**Edge padding on full-bleed panels — the opposite failure mode, added
-2026-10-09.** Compressing dead space (above) is about removing gaps that do
-no work; it is never licence to strip a full-bleed panel's own top/left
-content padding down to zero. A panel that deliberately cancels the page's
-ambient ~40px chrome padding to sit flush against the window (e.g.
-`.ph-pres-panel`'s `--ph-pres-bleed`, see "FULL BLEED" below) still owes
-its OWN inner content a baseline inset — without one, every label sits
-flush against the CARD's inner edge too, not just the window edge. Her
-words: "the overall border of words and text at the top and left side are
-too close to the edges." Fixed app-wide 2026-10-09: every full-bleed /
-zero-padding top-level container gets `padding: 16px 0 0 16px` (top+left
-only — right/bottom already get breathing room from sibling content or
-existing rules), scoped `@media (min-width: 641px)` so phone's own already-
-tuned spacing is untouched, matching the pre-existing `.ph-pres-stage-body`
-16px side-padding precedent. Reuse this exact number and this exact
-scoping for any new full-bleed container rather than inventing a new one;
-see `.ph-flow`'s own rule (search `.ph-flow { display: flex`) as the
-canonical example.
-
 ## code3 — Communications Expert (established 2026-09-09)
 
 Her instruction: **"code3 in lcm is communications expert."** Named
@@ -921,9 +906,9 @@ the worst message on the list, so Post-ET still wins there.
 **Private health rebates are a mailing SEGMENT, not a decorative note.**
 `rec.insuranceGood` (tick) + `rec.insuranceNote` (free text) feed Compose's
 "+ Add everyone with good rebates (N)". Ticked = good; unticked = NOT
-RECORDED, not poor — no third state. **Still missing: the actual rebate
-message wording** — a maintenance/future-appointment nudge and a seasonal
-Nov–Dec/July rebate note — ask her for both in her own words, don't invent.
+RECORDED, not poor — no third state. No rebate message wording exists: she
+took the two rebate messages off the backlog on 2026-10-06 — never draft or
+raise them.
 
 **"Lives out of town"** (`rec.livesOutOfTown`) drops the return-visit
 clause from outgoing messages and swaps "not booked" display text to "out
@@ -931,32 +916,18 @@ of town" on her own screens. Confirmed covering Check-in/Rebook/Acupuncture
 follow-up/Gone-quiet/Review as of 2026-10-01 ("approve all for now") —
 she can still correct individual lines later.
 
-**Open, unresolved — ask before building, don't guess:**
-- Whether Supportive applies anywhere outside the cycle track (stress/
-  anxiety plans are a live guess, not confirmed).
-- Whether Formal/Casual should be a per-patient tag she sets once, computed
-  from how long she's known them, or both with a manual override.
-- Linking a treatment-plan phase to which message fires automatically is a
-  data-model decision that has since been built (a message offer now fires
-  on any phase change, manual or cycle/IVF cascade) — this persona section
-  stays the voice/content spec, the wiring itself lives in the Treatment
-  Plan area notes below.
-
-**Deploying from this shared tree: push the branch ref
-(`git push origin session-a:main`), never checkout/merge/checkout** — a
-checkout refuses while another session has uncommitted work, and
-stashing/committing on its behalf is how a real edit-war incident started.
-A ref push fast-forwards `main` without touching the working tree. Anything
-committed on `session-a` rides along on the next push, whoever makes it —
-a commit is a publish decision here even when someone else pushes it.
+**Open:** the Formal / Casual tag and Supportive outside the cycle track are
+in OPEN at the end. The phase → message wiring is built (Communications,
+under Current state); this section stays the voice and content spec.
 
 ---
 
 # Current state, by area
 
-The sections below describe what each part of the app IS today — not the
-history of how it got there. Where something is explicitly unsettled or
-not yet live, it's flagged **OPEN**.
+What each part of the app IS today (checked against `origin/main` and
+BUILD-NOTES.md on 2026-10-21). For how a part got here, or its function
+names in detail, grep BUILD-NOTES.md for the heading named in brackets.
+Anything unsettled is in OPEN at the end.
 
 ## Appointments & calendar
 The app opens on this page. It mirrors Cliniko's day view: solid colour
@@ -965,525 +936,365 @@ types, 21 types read live), a time gutter, the page scrolls, no inner
 scroller. Grid opens by default at every width (List is a tap away). A
 "long day" (≥600 min span) gets a scaled minute-precision map
 (1.5px/min, 45+min gaps fold to free bands); a normal day keeps a fixed
-66px/hr ruler. The grid's visible range auto-starts 30 minutes before the
-day's earliest booking (no fixed 7am wall of empty hours). 3+-way
-overlapping appointments cluster consistently via union-find over direct
-overlaps (not just direct neighbours), so every block in one real cluster
-shares the same column width. A live per-minute "now" line lights the
-current time (ticks only while the tab is visible). Grid height is derived
-from measured chrome (everything above/below the calendar body, incl. the
-shell footer, which is hidden while this tab is open) so a short day's grid
-stretches to fill the screen rather than leaving blank space.
+66px/hr ruler. The visible range starts 30 minutes before the day's
+earliest booking. 3+-way overlaps cluster via union-find, so every block in
+one cluster shares a column width. A live "now" line ticks only while the
+tab is visible. Grid height comes from measured chrome, so a short day
+fills the screen.
 
-**Appointment popup** ("Command Deck" card) is the one place tapping any
-booking anywhere lands: avatar, name, time/kind/ET pills, a plan picker
-(button/select/"no plan yet"), a gold "✦ New to you" flag, rows for Visit N
-of M, Focus, Last seen, Aim, Herbs, Logged/Cycle/Scan state, then Full
-profile/Call/Text buttons and a footer of Book another/Edit/Cancel as quiet
-text links. A positive-hCG pink flag (🌸 + gestational week) shows in the
-popup's meta row and on Grid blocks (not on List or the Up-next card) once
-`rec.pregTest.result === "positive"`. Edit opens straight onto an
-autofocused Date field — there is deliberately no separate Reschedule
-button (would duplicate Edit). The booking-edit Service field is a
-`<select>` of the 21 Cliniko types + Home Visit/Break + an "Other — type
-it…" escape hatch with its own text box; a legacy typed value shows as its
-own "(as typed)" option.
+**Appointment popup** is where tapping any booking lands: avatar, name,
+time/kind/ET pills, a plan picker, a gold "✦ New to you" flag, the action
+chips Full profile / Call / Text / Cancel, then one summary line that
+unfolds the detail rows (Focus, Herbs, Logged, Cycle, Scan) with Book
+another / Edit at its foot. A positive-hCG flag (🌸 + gestational week)
+shows in the popup and on Grid blocks once `rec.pregTest.result ===
+"positive"`. Edit opens on an autofocused Date field (no separate
+Reschedule). The Service field is a `<select>` of the 21 Cliniko types +
+Home Visit/Break + "Other — type it…".
 
-**List view** shows every day's full agenda: Cliniko-colour strip, time+
-duration bar, dashed "free" gap lines, done rows shown green+✓ (never
-greyed out). Desktop row = Time/Patient/Status/Presenting focus/Treatment
-goal (5 columns — a 4-column "at the door facts" version was tried and
-reverted on her "bring back the presenting focus and treatment goal
-column"). A compact 29px one-line row (time · kind pill · name · focus
-text) applies at ≤900px. A single-day List view appends a day-stats strip +
-"Herbs to prepare today" list.
+**List view**, desktop (>900px) = a lean list with a sticky card beside it
+(row: colour strip, time, name + practitioner tag + one line of focus, the
+plan as a pill in its family colour, a status dot; the card holds plan
+buttons, cycle day, focus and goal in full) [The Appointments List: a lean
+list with a card beside it]. At ≤900px the compact one-line row and the
+phone stack are the older code. A single-day List appends the day stats +
+"Herbs to prepare today" and the cross-patient **Today's IVF work** list.
 
-**"Up next" card**: the next booking today, a countdown ring, a cycle/
-phase/IVF gauge, a visit ring, herb-jar state; tapping a patient focuses the
-card on them; "No one else today" quiet state; lens chips (Everyone/Herbs/
-Cycle & IVF/New to you/Home visits) dim or highlight matching blocks; an
-"✉ Send online form" button opens the intake-link flow directly.
+**"Up next" card**: the next booking today, countdown ring, cycle/IVF
+gauge, visit ring, herb-jar state, "✉ Send online form". The old lens chips
+(Everyone/Herbs/Cycle & IVF/New to you/Home visits) are gone; at Acupreg
+only, a practitioner chip row (Everyone · Anni · Charlie · Christine ·
+Linh) dims the other bookings, and each booking's practitioner comes from
+the weekday [Practitioners on the Acupreg calendar].
 
-**Home Visit** is its own colour family (`PH_LCM_OWN_TYPE_COLOURS`,
-separate table from the Cliniko-read one) with an away bar on every
-surface a booking shows (List, Dashboard, week table, popup) — a deliberate
-bridge until she books home visits in Cliniko like everything else, at
-which point move the entry into `PH_CLINIKO_TYPE_COLOURS` and delete the
-own-table. **Acupreg** paints every booking at that login a raw (untoned)
-sage `#8AAB99` — it's a LOCATION colour, not a type colour, so it lives in
-`phCkStyle`, not `phCkTypeColour`; Home Visit still wins over it (travel
-beats location). Enquiry/Meeting rows (pasted, non-clinical) get a quiet
-grey "not a treatment" pill rather than disappearing.
+**The Appointments dialog** is built once and patched in place: two panes
+(add | booked ahead), a Quick add | Paste list switch, day chips, Home
+visit / Repeat toggles, trash + Undo toast; never `phFlashShow` or
+`renderPharmacy` inside it [The Appointments dialog: built once, patched in
+place]. One paste can hold many patients (a name line above each block)
+[Many patients in ONE paste]; a patient's own Appointments page has
+"Paste appointments", which opens the same dialog for that patient only
+[Paste appointments from inside a patient's profile].
 
-**The 60-day appointment prune is gone permanently** (her call: "stop
-pruning, keep everything") — it was deleting the very evidence a phase's
-visit count reads. If the shared ~5MB origin quota is ever hit, the fix is
-a slim stub (date+patient+service), never a new cutoff.
+**Home Visit** is its own colour family (`PH_LCM_OWN_TYPE_COLOURS`) with an
+away bar on every surface a booking shows — a bridge until she books home
+visits in Cliniko, then move it into `PH_CLINIKO_TYPE_COLOURS`. **Acupreg**
+paints every booking sage `#8AAB99` (a LOCATION colour, in `phCkStyle`, not
+`phCkTypeColour`); Home Visit still wins over it. Enquiry/Meeting rows get
+a quiet grey "not a treatment" pill.
 
-On the Patient Profile's Opening/Patient-details fields, a RETURNING
-patient's Sex/DOB/Phone/Email are muted by default and highlight amber +
-bold once changed since the script opened this visit (gated on `returning`
-specifically, to avoid false "changed" noise on a brand-new patient's first
-entry) — deliberately scoped to those four fields only, not Name/Addresses/
-Insurance/Supplements.
+**The 60-day appointment prune is gone permanently** (her "stop pruning,
+keep everything"); if the ~5MB quota is ever hit, the fix is a slim stub,
+never a cutoff.
 
-A pasted appointment block (profile timeline footer / Today's Timeline /
-check-in panel) also parses Cliniko's per-patient history-tab format; a
-name missing from the pasted block prompts her to type one rather than
-guessing.
+## Treatment Care Plan
+**The plan is the spine**: patient → plan → prescriptions. Every phase
+carries Aim / Points / Formula / Watch / Cadence, dated automatically
+(`sinceKey`/`doneKey`).
 
-## Treatment Plan tab & session planning
-**The plan is the spine**: patient → treatment plan → prescriptions. Every
-plan's phases carry Aim/Points/Formula/Watch/Cadence, dated automatically
-(`sinceKey`/`doneKey`) as they become current/close.
+**The page** (`presTpPlanTabBodyHtml`) = a band (title, stage pill, ⋯) over
+two columns: **Findings** (Came in for, Ren, Tongue, Pulse, Abdomen, Cycle,
+Ask her, Blood tests, History, Musculoskeletal; each read through the
+app's own renderer, a purple dot = changed since last visit; tap a row =
+its drawer, + Watch / + Aim, and lines to the diagnosis it feeds) beside
+**the plan** (the Diagnosis card: Likely / Possible bars, the leading
+formula, Goal; then the Session grid; then scans and the pain map / Also
+treating tiles). Side by side from 1280px, stacked below [Care Plan = the
+findings beside the plan]. The plan ⋯ menu is short with a More ▸ fold,
+one function (`phTpPlanMenuHtml`) for the Care Plan, Treatment and Dispense
+menus [Care Plan page "Case | Course"].
 
-**Current page layout** (Plan tab rail = five sections: Plan / Treatment /
-Treatment log / Photos / Notes — default landing is always **Plan**, never
-auto-defaulting to Treatment): Instrument band (a segmented-ring gauge +
-phase pips + a next-visit gauge, all reading the same `phTpSessionCells`
-source the grid and calendar read, so the numbers can never disagree) →
-plan head → tiles (Focus/Goal click-to-edit, "This phase," a pain map) →
-**Session grid** + Appointment history, side by side on desktop → a course
-calendar (collapsed by default, "Calendar ▾") → scans/schedule.
+**Diagnosis + Goal write themselves** (`phTpAutoDx`, `phTpAutoGoal`): every
+Likely or Possible pattern (plus any she agreed) minus the ones she took
+off; Goal from the complaint family, main complaint and secondaries.
+**Watch + Aim write themselves too** (`phTpFieldView` is the one read):
+Watch = the template's **Red flags** first, then chips from the main
+complaint, secondaries, cycle (women who track a cycle only) and findings;
+Aim = her preset per template phase with `{main}` `{sec}` `{cyc}` tokens.
+All four are derived on read, never stored; her own typing makes a field
+hers, with "back to auto". Wording lives in Settings → "Goal wording" and
+"Watch wording", her lines first, all DRAFT [Watch and Aim write
+themselves from the patient].
 
-**Session grid** (`phTpSessionLadderHtml`): phase rows × visit-number
-columns (capped at 12, "+N" overflow opens the calendar), each cell a
-square showing done/today/booked/planned. The header row is the table's
-own `<thead>` — never split into a separate div (a repeated, explicit
-complaint every time this drifted). The current build-and-plan interaction
-("Plan-it B," tap-the-squares): empty squares are dashed "+" slots; tapping
-the LAST wanted visit cascade-fills every square before it, writing
-`phase.cadence` + `phase.sessions` together; a cadence pill (1×/wk ·
-2×/wk · Fortnightly · Monthly) re-dates the whole row live. Any edit
-repaints through `phTpPlanRepaint()` (scoped to `[data-tp-ladder]`/
-`[data-tp-hero]`) — never a full rerender, which resets scroll to the top.
+**Session grid** (`phTpSessionLadderHtml`): phase rows × visit columns
+(capped at 12, "+N" opens the calendar), a square each for done / today /
+booked / planned. The header row is the table's own `<thead>`. Tap the
+LAST wanted square and every square before it fills ("Plan-it B"); the open
+phase shows the rhythm pills (1×/wk · 2×/wk · Fortnightly · Monthly) and
+"Same for all phases". On a cycle plan every phase can also be planned by
+**cycle days** (CD chips + a visits stepper; the cadence string stays the
+one truth, e.g. `"CD 3, 5 acupuncture · herbs"`) [Session grid on a cycle
+plan]. Edits repaint through `phTpPlanRepaint()`, never a full rerender.
 
-**The Treatment tab** carries a session stepper, the phase's own visit
-table, and a Complete/"Then" band; completing a session there triggers the
-same underlying save as "Log today's session" (`data-pres-acu-log`) — one
-mechanism, two entry points.
+**Formula on a phase**: a typed name is hers; "→ Fill" fills from Fang
+Bing Ren's live top formula when blank [Care Plan phase Formula].
+
+**The Treatment tab** carries the session stepper, the phase's visit table
+and a Complete band; completing a session there is the same save as "Log
+today's session" (`data-pres-acu-log`).
 
 **"Alive" phase resolution (locked, load-bearing)**: `phTpLivePhase(rec,
-plan, asOfKey?)` is THE one read for "patient's current phase" — live
-cycle-day phase → IVF CD suggestion → persisted pointer, with an optional
-as-of date for back-dated write-ups. Used everywhere a phase is displayed.
-Always render from `phPatientPeek`, never `phPatientRec` (which mutates on
-every call) — a render path that calls the mutating accessor silently
-rewrites plan fields with no save. `phTpPlanForToday(name, explicitId)`
-resolves which plan today's visit belongs to: booking's `a.planId` (only if
-it names an existing ACTIVE plan) → calendar-treated active plan → last
-session's plan → first active.
+plan, asOfKey?)` is THE read for the current phase — live cycle-day phase →
+IVF CD suggestion → persisted pointer, with an optional as-of date for
+back-dated write-ups. Render from `phPatientPeek`, never `phPatientRec`
+(which mutates on every call). `phTpPlanForToday(name, explicitId)`:
+booking's `a.planId` (if it names an ACTIVE plan) → calendar-treated active
+plan → last session's plan → first active.
 
-**Cascade/pointer-advance rules** (`phTpCascadeTo`/`phTpSetPhaseStatus`):
-re-entering a previously-done phase resets `sinceKey` to today (never keeps
-the old one, or visit-window counts would swallow a whole prior cycle); a
-phase can never be pulled BACKWARD by a live/cycle read once manually or
-clinically advanced past it. **IVF Protocol has its OWN non-cascading
-helpers** (`phTpIvfCdSuggest` read-only, `phTpIvfCdSync` its write twin,
-called independently alongside `phCycleSyncPlan`, never as an else-if) —
-the natural-cycle "overdue → splice Prolonged luteal phase" logic is
-clinically meaningless on a medicated IVF cycle and must never touch an IVF
-plan. `phTpSyncPlansOnOpen(name)` runs the same cascade simply on opening a
-patient, so a calendar rollover between visits never leaves the persisted
-pointer stale.
+**Cascade rules** (`phTpCascadeTo`/`phTpSetPhaseStatus`): re-entering a
+done phase resets `sinceKey` to today; a phase is never pulled BACKWARD by
+a live/cycle read once advanced past. **IVF Protocol has its OWN
+non-cascading helpers** (`phTpIvfCdSuggest` read-only, `phTpIvfCdSync` its
+write twin, called beside `phCycleSyncPlan`, never as an else-if); the
+natural-cycle "overdue → Prolonged luteal" splice never touches an IVF
+plan. `phTpSyncPlansOnOpen(name)` runs the cascade on opening a patient.
 
-Bookings can be hand-filed onto a specific phase (`a.phaseId`+`a.planId`
-via `phTpApptFile`), overriding date-based auto-assignment. **Fill-when-
-blank rule**: logging a visit silently fills an EMPTY Points/Press/Formula
-field on the treated phase; if it's not empty and genuinely differs, an
-amber "→ plan" tap pushes the new value in — existing content is never
-silently overwritten.
+Bookings can be hand-filed onto a phase (`a.phaseId`+`a.planId` via
+`phTpApptFile`). **Fill-when-blank**: logging a visit fills an EMPTY
+Points/Press/Formula on the treated phase; a different existing value gets
+an amber "→ plan" tap, never a silent overwrite.
 
 **"Also treating" / Combine plans**: `plan.also[]` holds up to 3 secondary
-conditions; the MAIN plan's template still drives phases/colour/title,
-`also[].phases` is a lightweight shadow copy for the "Also treating" tile
-only, not a full plan. A "Treated today" row lets her untick a condition
-per visit (`session.notTreated`). Off by default. **LIVE on main** (2026-10-18
-audit: `plan.also` is wired throughout `origin/main`'s `index.html` —
-this was still correct when first written, but is since pushed).
+conditions; the MAIN plan's template drives phases/colour/title,
+`also[].phases` is a shadow copy for the tile only. "Treated today" lets
+her untick a condition per visit (`session.notTreated`).
 
-**Findings and herbs-only logging** (see Visit logging section below for
-the chart detail): a "No acupuncture — herbs only today" toggle saves the
-session with `noTreatment:true` and must never be counted by acupuncture
-session-package usage. Herbs-dispensed is always computed from the dispense
-log, never typed.
+**Announce cards** on the phase panel (never two at once, fertility wins):
+a teal calendar-mismatch card (the 4 cycle-synced templates), a gold MSK
+visit-count card (active MSK plans), and a purple "Today's visit is
+pending on X" card.
 
-**Two animated "announce" cards** can appear on the phase panel (never both
-at once — the fertility card wins if both would apply): a teal **calendar-
-mismatch** card (scoped to the 4 cycle-synced templates) when she's
-overridden off the calendar-computed phase, and a gold **MSK visit-count-
-verify** card (scoped to MSK plans, requires `plan.status==="active"`) once
-a phase's visit count reaches its target. A third, independent purple
-**"Today's visit is pending on X"** card appears whenever a Today's-visit
-override is active on a phase other than the one on screen.
+**Pain map**: front/back figure with zone highlights (never pins), side
+view, close-ups gated to recorded regions; derived from the complaint text
+until she edits it (`plan.painMap`). An absent `painMap` is not "no pain":
+recompute from the text first.
 
-**Pain map**: front/back figure with zone highlights (never pins), a side
-view, close-up panes (hand/knee/foot) gated to recorded regions; derived
-live from the complaint/diagnosis text until she edits it directly
-(`plan.painMap`), colour-customisable per pain. Don't treat an absent
-`painMap` as "no pain" — recompute from the complaint text first.
-
-**Dot-point display**: Aim/Watch text is split into bullets for display
-only (`phTpDotParts`) — the stored string is never silently rewritten;
-editing opens one point per line and rejoins with `"; "` only when she's
-actually changed something.
-
-**MSK plans** get an Objective exam tracker (ROM/MMT/special tests) on the
-merged visit table, directly after Subjective. MMT uses a 3-point Weak/
-Mildly-weak/Strong scale — never a 0–5 clinical grade (her explicit
-correction). A test row snapshots purpose/technique/position/source from
-the library at add-time and is never retroactively rewritten by a later
-library edit (same snapshot principle as `formulaHistory`).
+**Dot points**: Aim/Watch split into bullets for display only
+(`phTpDotParts`); the stored string is rejoined with `"; "` only when she
+changed something.
 
 **Detour phases** (Flare/High-risk/Crisis/Plateau/FacialFlare/Postpartum/
-FET Prep Natural & Medicated) are a proven, repeatable pattern: one
-`PH_TP_PHASE` content entry (Claude-drafted, hers to correct) + one category
-check (`phTpDetourKindsFor`) + one `PH_TP_DETOUR_META` entry + one dispatch
-branch — the "+ Add a phase" picker needs no new markup since it maps
-generically over the category check.
+FET Prep Natural & Medicated): one `PH_TP_PHASE` entry + one
+`phTpDetourKindsFor` check + one `PH_TP_DETOUR_META` entry + one dispatch
+branch.
 
 ## Treatment plan templates editor
-Settings → Prescriptions → "Treatment plan templates" (folded into the
-newer All-templates hub alongside Communications' message/letter editors).
-**Architecture: an override layer, never a rewrite.** `PH_TP_TEMPLATES`
-itself is never mutated; her edits live in
-`PHARMACY.tpTemplateOverrides[id]` and layer on top. Her own saved
-templates are edited directly (no override/reset concept, since there's no
-built-in underneath them). **A built-in's Name is permanently read-only**
-— renaming would silently break dozens of literal-string matches elsewhere
-in the file (`phTpIsFacialPlan`, `phCaseHintOfPlan`,
-`PH_TP_CYCLE_TEMPLATES`, IVF-track detection, etc.); her own templates keep
-full rename since nothing else keys off their name. `phaseKey` is stamped
-as a real own-property the first time a built-in phase is copied into an
-override, so it survives every further plain-object copy regardless of
-object identity — IVF transfer-track detection depends on finding "the OPU
-phase" by this key, not by its (editable) label.
+Settings → Prescriptions → "Treatment plan templates" (inside the
+All-templates hub with the message and letter editors). **An override
+layer, never a rewrite**: `PH_TP_TEMPLATES` is never mutated; her edits live
+in `PHARMACY.tpTemplateOverrides[id]`. A built-in's Name is read-only
+(literal-string matches elsewhere depend on it); her own templates rename
+freely. `phaseKey` is stamped as an own-property on first copy (IVF
+transfer-track detection finds "the OPU phase" by it). Sync conflicts are
+settled per template by `tpTemplateOverridesAt[id]` (newer edit wins).
+**Built-in templates carry no acupuncture points** (she designs them);
+her saved copies were cleared once on 2026-10-21. **No template wording
+changes unless she asks.** The Watch row is labelled "Red flags"; the Aim
+row has the three token chips. The "One table" editor and templates in the
+Care Plan shape are mocks only (OPEN).
 
-The editor now wears the same "cockpit" look as the Plan tab (gauge band →
-tiles → a grid shaped like the Session grid → phase add/reset → detail rows
-→ a folded-away JSON-paste fallback for anything the pickers can't
-represent). `PH_TP_DEFAULT_SESSIONS` stamps default session counts onto
-built-in phases — **OPEN: she has approved building this but has not yet
-reviewed the actual numbers.** Template-edit conflicts on cloud sync are
-resolved by a per-template `tpTemplateOverridesAt[id]` timestamp (the
-newer edit wins), not a whole-blob "keep local."
+## Cycle & IVF
+**The Cycle page** = a plain sentence, three tabs, a Day 1 chip, a "Today
+is day [ ]" finder, a box under the tapped day, PMS on every day, and a
+**Menopause** chip (sets `rec.cycleOn = false`; the Change of life card has
+"Tracking a cycle again?") [Cycle PAGE redesign; Cycle page: the Day 1
+chip; Cycle page: an option to select menopause]. Its calendar is the
+Fertility-Friend-style calendar + BBT chart (`phCycFFHtml`), the one cycle
+view everywhere, opening on the month of her last period. The Care Plan
+shows a slim cycle bar that never folds. **A man never tracks a cycle**;
+`PH_CYCLE_CUT_AGE` is 48.
 
-## Cycle tracking & IVF
-**The current main cycle view, used everywhere** (Profile → Cycle,
-Treatment Plan tab's Cycle block, the fertility door popup, the check-in
-popover, the "not tracking" block) **is a Fertility-Friend-style calendar +
-BBT chart** (`phCycFFHtml`) — this replaced the older week-strip and
-tessellated layouts as the one universal view. **LIVE on main** (2026-10-18
-audit: confirmed in `origin/main`'s `index.html`, extended by every Cycle
-build since, e.g. the Day-1 chip/finder run and the Cohesion grouping below).
-Colour-coded flow fill, a fertile-window green frame, a
-ringed ovulation day, corner marks for sex/egg-white/LH; shows next month
-too with a predicted-period outline; month nav can go one month past today
-only here. BBT: `rec.cycleSigns[dateKey].temp`, a typed value always wins
-over a phone-sourced reading; the coverline is computed from up to 6
-pre-ovulation readings.
+The cycle-day popover is built from ONE function, `phCycFacts`. BBT:
+`rec.cycleSigns[dateKey].temp`, a typed value beats a phone reading; the
+coverline uses up to 6 pre-ovulation readings. **Two Flow/Pain concepts
+stay separate**: a whole-PERIOD intensity (`PH_CYCLE_FLOW`/`PH_CYCLE_PAIN`,
+period-start day only) vs a PER-DAY value (`PH_CYCLE_DAYFLOW`/
+`PH_CYCLE_DAYPAIN`). "Cervical mucus" shows as **Discharge**; the key stays
+`cm`.
 
-The cycle-day popover (opened by tapping a day) is built from ONE function,
-`phCycFacts`, so the ribbon/summary/table can never disagree with each
-other: a whole-cycle ribbon navigator, four summary lines, Bleeding/
-Fertility folding boxes, and an LH test result (−/±/+; a positive moves the
-ovulation estimate). A **"Know her cycle day instead?" calculator** (date +
-CD number → counts back to day 1, opens the same log-period popover the
-day-tap flow uses) lives inside the cycle strip everywhere it appears, so
-it's reachable from every one of those surfaces, not a one-off control.
+**IVF history** shows for every woman, with a quick-log; scans live on
+`row.scans[]` of the linked round (a RECORD ONLY, never moves a phase);
+scan bloods show in Blood tests; embryo accounting is always DERIVED; the
+Timeline reads IVF history, unlinked rounds included [IVF history: visible
+for every female patient; IVF history redesign; Fertility timeline: real
+sync with IVF history]. Starting an IVF Protocol plan opens its
+questionnaire; milestone dates are written BEFORE the start-phase cascade
+runs. A positive hCG cascades an IVF plan to "Early Pregnancy" once, on
+first transition only. `whenEst`/`dateEst` flags mark estimates; their
+absence means confirmed.
 
-**Two distinct Flow/Pain concepts are kept deliberately separate — don't
-conflate them**: a whole-PERIOD intensity (`PH_CYCLE_FLOW`/`PH_CYCLE_PAIN`,
-set only on the period-start day) vs. a PER-DAY value
-(`PH_CYCLE_DAYFLOW`/`PH_CYCLE_DAYPAIN`, stored in
-`rec.cycleSigns[dateKey]`). "Cervical mucus" is labelled **Discharge** in
-the UI but the underlying field key stays `cm` — a rename-label-keep-key
-precedent used elsewhere too.
+## Dispense, Refill & To Order
+Dispense always opens the full script (her "No, keep the friction").
+**Three numbered steps**: 1 Calculate, 2 Dispense & copy label (calculates
+first when needed), 3 Log; Log is always its own tap, never automatic. The Total
+line always shows grams · days · cost · profit. Live on desktop (≥901px):
+the one-screen `.ph-dsp-fit` layout, supply-by-days chips (7/10/14/21/28),
+one Blood-moving caution line (`.ph-dsp-caution`), the "Plan formula"
+pour-in, and the script + label in full in the right column [Dispense: the
+script moved into the right column]. **Not built:** the per-herb
+shelf→after-stock bar. Grams follow the herb total, and a manual Grams
+figure survives Log [Dispense: Log silently discarded a manual Grams
+figure; Dispense: the OTHER half]. A substitute picker includes
+stopped/phasing-out herbs when stock allows.
 
-**The cycle-tracking age cutoff is 48, not 50** (`PH_CYCLE_CUT_AGE`) —
-existing women aged 48–49 with no explicit on/off choice now default to
-OFF (a real behaviour change on this build).
+**Formula refill** is one card grammar across To make / Below the line /
+Snoozed / All recipes. Phone = a weighing table; desktop = a week-banded
+list with "Fix short ▾". "When" is WEEKS ("Wk 39"; overdue = "last week" in
+amber, sorted first); Plan ▾ = This week / Next week / Pick a week. The
+date popover is mounted globally; no `window.prompt()` anywhere.
 
-**IVF**: scans live on `row.scans[]` of the IVF history's linked round row
-(never copied onto the plan) — a scan is a RECORD ONLY, it never moves a
-phase by itself. IVF history is one interleaved "Journey" timeline of
-collections+transfers by date; embryo accounting (frozen/remaining/used) is
-always DERIVED, never stored. **IVF history "Journey" redesign — LIVE on
-main** (confirmed 2026-10-18: `phIvfLinkedCollectionWritable` etc. are present
-in `origin/main`, and the later "IVF history redesign: the full 6-point
-rebuild" 2026-10-16 build and the "Fertility timeline: real sync with IVF
-history" 2026-10-16 fix both assume and build on top of this). Starting an
-IVF Protocol plan opens a 7-point (plus an "Egg collection cycle" 4th)
-questionnaire first; its last question sets visits-per-phase; milestone
-dates are written BEFORE the start-phase cascade runs (ordering matters, or
-the cascade could move the very dates just written). Positive hCG
-(`t.pregResult`/`pregHcg`/`pregTestDate` on a transfer, or the broader
-patient-level `rec.pregTest` which mirrors onto the latest transfer)
-auto-cascades an IVF plan to "Early Pregnancy" on first-time transition
-only — never pulls back, never re-cascades on a repeat positive. Egg-
-retrieval/transfer dates carry additive `whenEst`/`dateEst` estimate flags —
-their ABSENCE means "confirmed," so every pre-existing date reads as
-confirmed by default. A frozen-embryo total is summed across ALL of a
-patient's IVF rounds and shown as a stepper tile; a Frozen Bank panel lists
-every round with a frozen count.
+**To Order, desktop** (>900px) = a 3-column board that fills the window:
+**Needs ordering** (a To order | Running low switch, rows A to Z in fixed
+spots, Snoozed N ▾), **On the way** (bottle counts, Copy for email, All
+arrived), **Arrived** (last 14 days). Nothing scrolls a column on any board
+move; details pop out beside the row; a formula card has "Refill ▾"
+[To Order: the desktop board is 3 columns; To Order column 1: C · Switch].
+**The phone To Order is the older layout, untouched.** Dashboard's
+Order/Refill cards are TWO PLAIN LISTS, empty first then fewest days of
+cover. Picking a supplier pulls in that supplier's recorded price.
 
-## Dispense & Refill/To Order
-Dispense always requires opening the full script — confirmed deliberate
-("No, keep the friction"), not a missing shortcut. A substitute picker now
-includes stopped/phasing-out herbs when stock is sufficient (tagged
-"· stopped"/"· phasing out", sorted after normal herbs).
+## Patient details & the patient file
+**Patient details** = a hero + 3 cards (`phPdPageHtml`): tap to edit in
+place, age from DOB, BMI bar, a filled-in ring (n of 11), Call / Text /
+Email chips, a Rebate bar None / Low / Good / 50%+ [Patient details = hero
++ 3 cards]. A returning patient's Sex/DOB/Phone/Email turn amber once
+changed this visit. **Came in for** shows on Today's visit (the complaint
+compass) and the complaint priority ribbon sits on every patient page.
+A **profile search** box in the header band searches the whole file
+(nothing saved; free-text history notes not searched) [Profile search].
+A patient can be linked to their partner [Partner link]. The no-plan gate
+has "Skip for now" (in memory only). The read-only **Patient Directory**
+unions six sources keyed by `phPatientKey`. (The early-October
+"Profile-first" plan is history: the Patient Workflow LAW replaced it.)
 
-**A full Dispense-page redesign ("Cockpit"/ask28) — status genuinely mixed,
-re-verified 2026-10-18, don't assume either way.** `origin/main` already
-carries an EARLIER, simpler "Cockpit" visual treatment (teal/gold work
-surface, Bag·Lasts·Total deep-teal strip, dated 2026-10-01 in its own CSS
-comment) AND a live `.ph-dsp-fit` desktop (≥901px) one-screen layout mode —
-both actively read and fixed by the 2026-10-15 "Dosage & Price" build note
-below, so at least the one-screen desktop SHAPE has landed. But a grep of
-`origin/main` for this paragraph's more specific features (supply-by-days
-chips, a shelf→after-stock bar, a formula-from-plan pour-in) found none —
-those parts are still unconfirmed, possibly still pending. Check a live
-render before assuming this whole paragraph is either fully shipped or
-fully pending. Its shape:
-no top Formula/Price/Stock band; the Total line reads grams·days·cost·
-profit; supply-by-days opt-in chips (7/10/14/21/28); a shelf→after stock
-bar per herb row with inline fixes (± steppers, Use-what's-left, Add-to-
-order, Substitute); one caution line (not a per-herb chip) for Blood-moving
-herbs during heavy flow/pregnancy/early-pregnancy; a formula-from-plan
-suggestion that pours herbs in with one tap; an always-open small/
-expandable label preview; numbered prescription status cards; a one-screen
-desktop layout (≥901px) with history/follow-up/message as side tiles. Until
-she says push live, the shipped Dispense page is the earlier, simpler
-layout — don't assume the Cockpit language is what she's currently seeing.
+## Musculoskeletal page
+A picture row (pain figure | the region's muscle diagram front + back |
+the view controls), the pain table full width under it; tap a muscle belly
+= add / remove it from the plan; one add door (Areas ▾); + Cause links a
+finding as a pain's cause; motor-point muscles sit under each pain and the
+Treatment tab reads the same list (`phMskPlanOf`) [Musculoskeletal page:
+"B · Picture row"; Musculoskeletal motor-point muscle plan]. MMT is a
+3-point Weak / Mildly weak / Strong scale. A test row snapshots the library
+at add-time. MSK libraries are append-only.
 
-**Formula refill** is consolidated into ONE card/one-row grammar across
-four tabs (To make / Below the line / Snoozed / All recipes) with tab
-counts, Undo, and plan-for-week chips — this part IS live. Phone = a
-weighing table with tick-to-weigh rows + a filling-jar/running-scale total;
-desktop = a week-banded list with an inline "Fix short ▾" (smaller batch /
-substitute / add to order / use-what's-left). The refill "When" column is
-WEEKS, not dates — "Wk 39" wording, an overdue week reads "last week" in
-amber and sorts to the top; the Plan ▾ menu is This week / Next week / Pick
-a week. The date-picking popover is mounted globally, reachable from every
-surface (Dashboard, Inventory, Refill) — there is no `window.prompt()`
-fallback anywhere any more.
+## Fang Bing Ren, Find the Ren & Patterns
+**Fang Bing Ren** (the Triangle) is the one place constitutional-family
+scoring happens: one merged header (verdict + Quick assess), signs in ten
+shared areas with a "For this complaint" filter, ticked chips that clear,
+a body chart, a reference sheet; formulas rank by `phFbrRank`, the leader
+is `phFbrLeadOf`; pre-fills come from charts, history, bloods, the intake
+form, pain words, cycle, age and sex (derived, a tap always wins). A new
+formula or sign = **integrate33**. **Find the Ren**: look first, then two
+questions at a time, with two photo panels whose zones open their LOOK row.
+(Locked details: "Locked conventions" below.)
 
-**To Order** matches the refill "cockpit" language: jar/level-bar rows,
-bands (To order/On the way/Arrived/Low), a gold progress bar, brand-
-specific jar art for Koda (forest+yellow) and GMP (white+bright green).
-The desktop sheet has real per-column drag-to-reorder (`.ph-osheet`,
-distinct from the separate mobile CSS-grid card view's own drag system —
-don't confuse the two if asked about "column drag").
-
-Dashboard's Order/Refill cards are TWO PLAIN LISTS (her explicit pick, not
-a merged table) sorted empty-items-first then ascending days-of-cover.
-Picking a supplier on a herb now pulls in that supplier's own recorded
-price (a reversal of an older "never alter cost" rule, confirmed deliberate).
-
-## Patient profile & profile-first journey
-**"Profile-first" is an early-October initiative — largely SUPERSEDED, not
-simply "not yet pushed" (audited 2026-10-18).** Its own four-group rail
-(below) was overtaken by the ★★★ PATIENT WORKFLOW — THE LAW ★★★ section's
-THREE-group rail (§1, top of this file, dated 2026-10-10, explicitly "where
-older text further down this file disagrees, this section wins") — the
-rail actually live today follows that law, not this paragraph's grouping.
-Its Re-check card and "Up next" gold card are both since explicitly
-REMOVED (see "Today's visit = the complaint compass" below, her 2026-10-14
-"remove the dead up-next bare branch too" — `presUpNextHtml`/`presVisitNext`
-survive, their card markup doesn't). Read this paragraph as history, not as
-a pending build; its individual claims are checked line-by-line below where
-a later entry corrects them. Its shape: any patient missing sex or DOB gets a Start-here card; Cycle/
-Change-of-life/Medical history/Patterns stay locked until both are set
-(with a "Later, open it anyway" override available per visit). The patient
-rail reorganises into four groups: **Her file** (set once: Patient details,
-Ren, Medical history, Her pain, Supplements) / **Today's check** (every
-visit: Re-check, Tongue, Pulse, Abdomen, Cycle, Bloods) / **Putting it
-together** (Patterns) / **Log** (dated entries — visits/re-checks/cycle/
-photos/appointments, filterable). An "Examine" page merges tongue+pulse+
-body-type+abdomen into one screen, positioned right after Patient details
-and BEFORE Medical history (her rule: examine before history). "Complaint
-first" (`rec.complaint`: tiles, main pick, free text, duration) feeds/
-replaces the Case dropdown, reorders the plan-template picker to lead with
-her stated complaint's category, and feeds Patterns as a weak clue.
-One-screen question sets (period for women under 48, change-of-life for
-48+, men's 2 questions, Her pain; Stress & sleep and the men's / change-of-life mood questions were retired 2026-10-13, their saved answers
-still count via `PH_PFW_RETIRED`) are gated by sex/age/
-complaint and stored under `rec.usual.*`, sharing one `usual.at` stamp. Each
-profile section shows a live "✓ done" stamp (read from existing data, never
-double-stored); an "Up next" card on Patient details surfaces the next
-incomplete section with a reason and a Skip-for-today; a return-visit
-re-check card offers 4 chips (Better/Same/Worse/Something new) + a note,
-resets daily.
-
-**What IS live today**: a returning patient's identity fields mute/
-highlight as described under Appointments above. The no-plan blocking gate
-has a "Skip for now" escape hatch (in-memory only, cleared by picking a plan
-later; a fresh load always re-shows the gate). A small, read-only **Patient
-Directory** page unions six data sources (scripts, follow-ups, dispense
-log, `PHARMACY.patients`, intake queue, appointment book) keyed by
-`phPatientKey`, defaulting to a "Missing a script" filter. The larger,
-originally-planned patient-first architecture (default-view placement,
-a "+ New patient" CTA label swap — the label swap IS live — and quieter
-in-profile scripts) stays its own separate, larger piece beyond the small
-directory slice; as the status fix above notes, most of what THIS
-"Profile-first" section originally proposed for patient pages was
-superseded by the Patient Workflow LAW and its many follow-on builds
-rather than built as first drafted here — this one specific slice
-(Directory, label swap) is the part that stayed its own track.
+**Patterns** (`phPatCompute(name)`) derives candidate TCM patterns live
+from the file, **never stored**; only her Agree / Not this patient writes
+`rec.patterns.agreed`/`.dismissed`. Strength is words (Likely / Possible /
+A hint) + a clue count, never a percentage. A card shows only its clues and
+Agree / Not this patient (no letters, food, points or supplement chips).
+One pattern can be ★ main. Formula ideas are OFF (she dislikes suggested
+herbs). A rule she overrode in Settings never gains new clue keys later
+(deliberate). All pattern wording is Claude-drafted, hers to correct.
 
 ## Photos
-A full-screen viewer/comparer genuinely fills the viewport at every width.
-The gallery has three views (By visit / By type / Tongue table), filter
-chips with counts, an always-visible "⚠ Unsorted N" chip, a tile-size
-slider, and a bulk Select mode (Relabel / Change date / Delete with Undo —
-never a hard delete with no undo). Unsorted photos (and shot-less tongue
-photos) always sort first, amber-labelled. Tongue shots rank natural light
-→ unlabelled → side → sublingual → flash (`PH_TONGUE_SHOT_RANK`, shared
-between the per-visit findings tile and the info-letter picture picker) —
-the per-visit tile retrieves her BEST photo on file by this rank, any date,
-not only one taken today; Abdomen has no shot-type concept and falls back
-to most-recent-by-date. MSK posture gets 10 case-gated (Case = Pain) photo
-types; Feet/Hands are universal, not case-gated. Records → Photos is a
-whole-clinic gallery (reusing the existing whole-clinic read, not a second
-gallery system) kept in sync with the per-patient cache on every mutation.
-Backup restore now reads patient photos back in (a ticked-by-default row
-in the restore chooser). Compare must be wired into every surface that
-shows a photo tile — this has been a recurring source of "the button does
-nothing on this one screen" bugs, since each surface renders its own
-markup around the shared compare mechanism.
-
-## Patterns / diagnosis suggestions
-**A major feature — LIVE on main** (2026-10-18 audit: `phPatCompute` is
-wired throughout `origin/main`'s `index.html`; `main`'s own commit history
-shows continuing Patterns refinement, e.g. "Patterns: flag the agreed
-diagnosis when the last 2 visits both logged Worse" and "Patterns: abdomen
-now reads the latest visit's chart too" — confirming it's a real, used
-feature today, not still gated on a push). `phPatCompute(name)` derives candidate TCM patterns live
-from profile data (cycle log, history checklist, tongue/pulse, abdomen,
-body type, supplements/notes) on every render — **never stored**; only her
-explicit tap (Agree / Not this patient) writes `rec.patterns.agreed`/
-`.dismissed`. The starter pattern set (`PH_PAT_DEFS`: blood stasis, blood
-deficiency, yang deficiency/cold, heat, qi stagnation, qi deficiency, yin
-deficiency, damp, plus Dang Gui Si Ni and Mei He Qi) — **all wording is
-Claude-drafted, hers to correct, not yet reviewed line by line.** Strength
-shows as plain words (Likely/Possible/A hint) + a clue count, never a
-percentage. **Formula-idea suggestions are OFF by default per-device** —
-she dislikes auto-suggested herbs (the per-device "Show a formula idea" switch is gone too). A pattern card shows only its clues and
-Agree / Not this patient: the letters, food advice and points lists, the supplement-to-consider chips, the "Sharpen this
-picture" box, the Treatment-tab "From the patterns" point chips and the "Plan takes shape · Draft" card's principle and
-letters were all removed 2026-10-13 (see "NO SUGGESTIONS" at the top). Several patterns can be agreed at once; one is
-flagged ★ main, shown on a single "Main ★ <pattern>" row with "Make X main" buttons (the plan's Diagnosis writes itself
-from the patterns; this row writes nothing). **A rule she's overridden in Settings does NOT retroactively
-gain new clue keys added by later feature work** — this is a deliberate,
-repeatedly-disclosed trade-off, not a bug to fix. Body-type (Jing Fang, 7
-types, 5 questions) is derived until she taps Save. Abdomen exam is ported
-onto the same chart component the visit log uses, stored separately from
-the older simple picks (both are kept and read together).
-
-Because some Patterns-era follow-on pieces have since been individually
-pushed live on her word while the bulk of the feature has not, **a future
-session must diff `session-a` against `main` before assuming any one part
-of Patterns is or isn't live** — don't trust a single build note in
-isolation.
-
-## Treatment Care Plan head: Diagnosis + Goal write themselves (her ask28, 2026-10-10)
-**Her ask:** "i need this page to require little to no effort" -- the only thing she sets is each phase's
-frequency. Her picks are in memory `project_pharmacy_autofill_diagnosis_goal_2026_10_10`; do not re-ask.
-- **Diagnosis / pattern** = every Fang Bing Ren pattern that is **Likely or Possible** (plus any she agreed),
-  minus the ones she removed with the chip's x (that writes `rec.patterns.dismissed`, the same "Not this
-  patient"). Main (★) = `phPatMainId`, else the top-ranked. A dashed "+ Name" chip puts a removed one back.
-  The old Plan-tab Fang Bing Ren strip is GONE (folded into this row; its "Open Fang Bing Ren" link sits at
-  the row's end). The Patterns page no longer asks "also add to Diagnosis?" and `phPatAgree` never writes
-  `plan.diagnosis`; "Put diagnosis + principle in the plan" and its Undo were removed.
-- **Goal** = (1) the plan template's complaint family (`phCcFamOfPlan`), (2) her main complaint if different,
-  (3) one bullet per secondary symptom via `PH_CC_GOAL_WORDS`; no match reads "Ease <her words>"; nothing
-  recorded falls back to the template's own sentence. Main lines `PH_CC_GOAL_MAIN`. **All wording is DRAFT, hers
-  to correct**: Settings -> Patients -> "Goal wording" (`PHARMACY.goalWording = { main:{famId:text}, rules:"words = goal" }`,
-  her lines tried first). No phase tail on Goal any more (the top band says it).
-- **Derived on read, never stored** (`phTpAutoDx`, `phTpAutoGoal`; `var` tables + try/catch because
-  `phApptBrief` can call them during boot). `plan.diagnosis` / `plan.goal` are HERS only when she typed them:
-  `plan.dxHers` / `plan.goalHers`, or (older plans) text that is not just pattern names / not the template's
-  own seeded sentence (`phTpDxHersText`, `phTpGoalHersText`). Typing the auto text back unchanged, or clearing
-  the row, returns it to auto ("back to auto" button). Editing starts from what she sees.
-- **One source everywhere:** `phApptBrief` (door card, popup, day list, `focusSrc/goalSrc = "auto"`), letters
-  (`planDiagnosis` / `planGoal`, goal bullets joined "a; b; c"), the printed plan record and the pain map all read
-  hers-else-auto. A booking's own pasted/typed focus/goal still wins on the card. Memo: 1.5 s for `phApptBrief`
-  reads, busted by `phPatEnsureState` and every edit here; the card itself reads fresh.
-- **"Updated today" gold line:** a pattern that joined AFTER she first looked today shows "Updated today -
-  <Pattern> added (from tongue)" with Undo (= dismiss it). Baseline `plan.dxSeen = {day, ids, keys}` is written
-  once per day by `phTpDxSeenSet`, deferred (setTimeout) after the card draws, never from inside a render.
-  Changes made between days are not announced (by design: she asked about changes after she has looked).
-- **Frequency** (Session grid): the open (first unplanned) phase shows the four rhythms as pills in its row
-  (`data-tp-plan-prev`, preview only, squares re-date), a gold "Your turn" in This week, and **"Same for all
-  phases"** (`phTpPlanCommitAll`: every phase with no sessions takes the previewed rhythm and its suggested
-  count; ONE Undo restores them all). Tapping the last square still plans one phase as before (Plan-it B).
-- **Known edges:** Likely + Possible can list 4+ chips and a long sentence (her call); a new `PHARMACY.goalWording`
-  key has no cloud-merge protection yet (same as `patternOverrides`); "Same for all" gives each phase the
-  rhythm's suggested count (1x/wk = 4, 2x/wk = 6), including herbs-only phases, so she tidies rows after.
+**The patient's Photos page** opens on the Comparison table (one row per
+type, a date column each); By visit / By type are a tap away; each tile has
+one-tap type / shot chips and a date button [Patient Photos page:
+Comparison table is now the default view; Photo organising redesign,
+increment 1]. **Records → Photos** (whole clinic) labels with one tap or a
+key, rings the next unlabelled photo, and has Select + one label for many
+[Records → Photos: label with one tap]. Tongue shots rank natural →
+unlabelled → side → sublingual → flash (`PH_TONGUE_SHOT_RANK`). The tongue
+photo viewer carries the tongue chips on every photo, Sublingual and Flash
+as their own sections, past photos at the bottom. Compare and the viewer are
+ONE mechanism each, wired into every surface that shows a photo tile.
+**Never delete a photo** (her hard rule); the store asks the browser to keep
+it (`phStoragePersist`), and backups carry photos.
 
 ## Communications / messaging
-See the code3 persona above for tone/voice rules. Mechanically: a message
-offer fires automatically whenever a plan's phase changes (manual move or a
-cycle/IVF cascade), evaluated at render time rather than hooked to the
-mutation, so both paths are caught by one code path; a session-only map
-(keyed by plan+phase+`sinceKey`) prevents re-offering the same transition
-repeatedly while still re-offering if the calendar genuinely drifts again.
-"My Cycle — gone quiet" lives on Communications' **Due** tab (never the
-Dashboard, which stays herbs-only), built as its own system separate from
-the general herb/acu "gone quiet" machinery since the signal (chart-entry
-recency) is different. Patient messaging has its own "Messages" tab on the
-Patient Profile now (moved out of the Dispense Follow-up sheet, which keeps
-only a teaser + jump button); the Check-in panel is a separate, untouched
-composer. An All-templates hub unifies message templates, information
-letters, and the treatment-plan template manager behind one page with a
-small group sidebar, each card folded to its heading by default.
+Tone and voice: code3 above. **One composer** on the patient's Messages page
+(a bubble + slim band, synced to the plan, its phase and her Fang Bing Ren
+answers); "Copy message" copies the message only [The Messages composer].
+A message offer fires on any phase change (manual or cycle/IVF cascade),
+evaluated at render time; a session-only map (plan + phase + `sinceKey`)
+stops repeats. "My Cycle — gone quiet" lives on Communications' **Due**
+tab, never the Dashboard. The Check-in panel is its own composer. The
+All-templates hub holds message templates, letters and the plan template
+manager. Message dates carry no year; `{{nextAppt}}` reads the date in her
+words.
 
 ## Visit logging & findings charts
-"Log today's session" is reached from inside the Treatment tab's session
-stepper / Complete flow now (the once-standalone acu-log panel was merged
-into — and has since moved further inside — the Treatment Plan area; the
-save path, `data-pres-acu-log`, is the same mechanism regardless of entry
-point). A **"No acupuncture — herbs only today"** toggle saves the session
-with `noTreatment:true` (no phase label, no findings) — every reader of
-`rec.acuSessions` (the printable record, Patient Journey, the plan's
-Visits table, Communications' quiet-patient detector, and critically
-acupuncture **session-package usage counting**) must branch on this flag;
-a herbs-only visit must never consume a prepaid acupuncture credit.
+**Today's visit** opens with the **complaint compass** (`phCxCardHtml`):
+the main and secondary complaints scored each visit (0–10 or % better),
+charted over time, Energy 1–10 under it. It replaced the Re-check card on
+2026-10-14 and still mirrors into `rec.recheck` [Today's visit = the
+complaint compass]. "Log today's session" lives in the Treatment tab's
+stepper / Complete flow (`data-pres-acu-log`). **"No acupuncture — herbs
+only today"** saves `noTreatment:true`; every reader of `rec.acuSessions`
+(the printable record, Patient Journey, the Visits table, the quiet-patient
+detector, and **session-package counting**) branches on it.
 
-**Clinical findings charts** (tongue/abdomen/pulse) are the app's own
-detailed, tappable anatomical diagrams with a "brush" interaction (tap a
-sign/attribute first, then tap the regions it applies to — no separate
-where-picker dialog). The tongue chart is a 3-column layout (photo+drawing
-| findings+detail fold | sublingual); data shape
+**Findings charts** (tongue / abdomen / pulse) are the app's own tappable
+diagrams with a "brush" (pick a sign, then tap its regions). Data shapes:
 `visitFnd[id].tng = {colour, colourAt, shape, moist, coatThick, coatColour,
-coatQual{}, marks{}, under, thickAt{}, deviation, v2}`, abdomen
-`visitFnd[id].abd = {tension, tensionAt{}, marks{sign:[zones]}, v2}` — older
-flat `zones`/overlay data is migrated on read, never bulk-rewritten. The
-pulse chart is a comprehensive three-system record: her own organ-zone grid
-× 4 depth rows, MPD protocol scores (averaged per side, with the prior
-visit's marks shown dashed for comparison), and a full Shen-Hammer exam —
-plus a read-only pulse-quality knowledge base (`PH_PULSE_KB_SEED`, from her
-own reference files) that surfaces matching hints under a mark but never
-writes anything itself. All findings are read through `phVisitFndRead`
-(never the raw record) so older visits still render under the current
-shape.
+coatQual{}, marks{}, under, thickAt{}, deviation, v2}`, `visitFnd[id].abd =
+{tension, tensionAt{}, marks{sign:[zones]}, v2}`. The exam pages are the
+ONE entry; `phExamMirrorToday` copies today's exam into the dated record.
+Pulse: each tick is dated and each new day starts blank; abdomen tension is
+one whole-abdomen value. Read every finding through `phVisitFndRead`. A
+**Findings trend** sheet (Grid | Trail) shows dated tongue and abdomen
+findings from the exam pages. The pulse knowledge base
+(`PH_PULSE_KB_SEED`) only shows hints, never writes. Bell's palsy is scored
+none / partial / normal (don't change the scale).
 
-The Visit Record "All" filter shows real mini-charts (tongue/abdomen SVGs,
-plus a compact pulse dot-chip built specifically because the full pulse
-grid doesn't fit a quarter-width box) rather than text. A "Visit checks"
-page lists one row per logged visit with these mini-charts + response +
-points, display-only.
+## Timeline & intake form
+**Timeline** is its own rail step, right after Fang Bing Ren, on IVF /
+Natural fertility / Pregnancy plans only (`phTlKindOf`); "done" = nothing
+overdue. It reads IVF history, Blood tests and the pregnancy test (nothing
+asked twice) and takes month/year dates on Schedule [Timeline promoted to
+its own rail step]. **The intake form** arrives
+pre-filled from her file (details, cycle, Yes / No history) and can carry
+Fang Bing Ren questions (`PH_INTAKE_FBR_P` must match `PH_FBR_Q.p`); the
+link dialogs include a text message to copy. Creating a link never depends
+on the database SQL.
 
-The **Bell's Palsy / facial paralysis checklist** is scored on a strict
-none/partial/normal 3-state scale (don't "upgrade" without asking), 7
-scored movements + 6 present/absent symptoms, always in a "more is better"
-direction with her own deficit-named labels kept verbatim. It lives on the
-Assessment/Examine screen only, with a read-only summary strip on the plan.
+---
 
-An **Objective exam tracker** (ROM/MMT/special tests, MSK plans only) and a
-**symptom-progression tracker** (severity dots + a "% Better" slider, on
-the Today column's own Ask/Subjective cell) round out the per-visit record
-— see the Treatment Plan section above for the data-model specifics of each.
+# Deploy & git
+- **Push live only when she says "push live"**, each time, for that change
+  (the 4pm daily auto-deploy was removed 2026-10-05). Commit freely on
+  `session-a`; a push is her call.
+- **How:** `.github/scripts/publish-live.sh` — a dry run by default; `--yes`
+  only after her word. It needs a clean tracked tree, bumps both version
+  markers, commits, pushes `session-a:main`, checks the result, and never
+  force-pushes.
+- **Every push bumps BOTH version markers**: `sw.js` `CACHE_VERSION` AND the
+  `<meta name="lcm-build">` stamp in index.html. The gold Update button
+  compares the meta stamp; bumping only sw.js ships an update her app never
+  offers her.
+- **Push the branch ref** (`git push origin session-a:main`), never
+  checkout / merge / reset / stash: other sessions work in this same tree.
+  Anything committed on `session-a` rides along on the next push, whoever
+  makes it, so a commit is a publish decision.
+- **Stage only your own hunks:** `git diff -U3 > p`, trim it to your hunks,
+  `git apply --cached p`, then `git commit` with NO paths. Never `git add -A`
+  and never `git commit -- <paths>` (it commits the whole working copy of
+  those paths, sweeping in another session's unfinished edits). A `-U0`
+  patch can misplace insert-only hunks; use `-U3`.
+- **Grep to confirm every edit landed.** An Edit success is not proof with
+  several sessions on one file; one Edit per file per message.
+- **Never rewrite source with PowerShell** `Get-Content` / `Set-Content`
+  (encoding damage); use Edit, perl / awk, or .NET UTF-8.
+- Write the CSS before the markup that needs it, so a half-landed commit
+  never shows unstyled markup.
+- **Changing an app icon needs a new FILENAME** (Android bakes the launcher
+  icon in at install): rename (`-v2`), update manifest.json, the link tags
+  and the sw.js SHELL list.
+- GitHub Pages (`b00k33/lcm-pharmacy`) publishes only index.html,
+  intake.html, chart.html, chart.webmanifest, manifest.json, sw.js, icons/
+  and screenshots/ (`.github/workflows/pages.yml`). The .md files, mocks and
+  backups are never published. Never Netlify.
 
 ---
 
@@ -1614,30 +1425,42 @@ before touching an area that smells similar.
 - A local scratch dev server registering only `localhost:PORT` (not
   `127.0.0.1:PORT`) can silently reject the equivalent request — a
   test-harness issue, not an app bug, but costly to misdiagnose.
-- `git commit -- <paths>` commits the WHOLE current working-tree content
-  of those paths, not just staged hunks — this can sweep a concurrent
-  session's unrelated unfinished edits into your commit. Stage explicit
-  hunks, then commit with no paths. `git apply --unidiff-zero` on a `-U0`
-  patch can misplace insert-only hunks — use a `-U3` context patch instead.
-  An Edit tool success is not proof a change persisted, especially with
-  concurrent sessions on the same file — grep to confirm every edit landed.
 - A sandbox browser tab can silently keep serving a stale in-memory copy of
   the app across many prior edits even with no service worker registered —
   always force a real reload before concluding a feature is "still missing."
+- A `var(--x)` whose token is defined only inside `#pharmacyPage { ... }`
+  is invalid on a body-level element (the one toast, a fly, a popover
+  appended to `<body>`), and the property silently falls back. Give it a
+  fallback (`var(--ph-cream, #EEF5F7)`) or append inside `#pharmacyPage`.
+- `animation-fill-mode: both` (or `forwards`) ending on `transform: none`
+  still leaves a stacking context, so a later popover can sit under it.
+- Moving a CSS block changes which rule wins at equal specificity, and
+  `!important` order with it — re-check the moved rules' winners.
+- A computed value read in the hidden Browser pane mid-transition reports
+  the old value (throttled transitions); turn the transition off or wait
+  before measuring.
+- Never reuse an existing class name for a new wrapper: one class with two
+  jobs overlapped the Ren and Fang Bing Ren sign rows.
+- A write door with a whitelist (`phPmWrite`) silently drops a new field
+  until the field is added to it.
+- `PH_INTAKE_FBR_P` (the intake form's Fang Bing Ren questions) must match
+  `PH_FBR_Q.p` in the app, or an answer lands on nothing.
+- The sandbox draws the sign-in overlay over the page and there is no
+  signed-in account (never create one): test through real function calls
+  and DOM checks, or the headless-Edge phone harness, and say what was not
+  exercised.
 
 ---
 
 # Locked conventions — do not re-litigate
-One-line rules she has already decided; don't re-ask or quietly reintroduce
-what's on the "never" side.
+One-line decisions she has already made; don't re-ask or quietly bring back
+what's on the "never" side. Rules already stated above (the ★ rules, Theme,
+Fit the screen, Motion, NEVER break these, Deploy & git, Current state) are
+not repeated here.
 
-- Never reintroduce the 44px minimum-tap-target rule (made every phone
-  control too large; explicitly retired).
-- "Desktop leads, mobile covers the essentials" — new deep-clinical
-  features are built desktop-first with no phone mock; schedule/check-in/
-  logging-shaped features still get full mobile care.
-- The 60-day appointment prune is gone for good — never bring back a
-  cutoff; fix a future storage crunch with a slimmer stub, not deletion.
+- Never reintroduce the 44px minimum-tap-target rule (it made every phone
+  control too large; explicitly retired). Chips and buttons are 28px; a few
+  phone Dispense chips are 40px on purpose (`.ph-days-opt` / `.ph-pm-opt`).
 - Check-in drafts stay throwaway, never wired to Prepared/Sent — only an
   explicit "Send later" files a real draft.
 - Never delete cross-account duplicate scripts without her say.
@@ -1648,214 +1471,118 @@ what's on the "never" side.
 - **Triangle (the Disease/Constitution/Patient card on the Fang Bing Ren tab)
   is the one place constitutional-family scoring happens — not the general
   pattern engine, not Ren's own survey.** (2026-10-08, her words: "triangle
-  IS fang bing ren".) Ren's 24 Gui Zhi yes/no questions were retired for the
-  same reason the general engine's separate "guizhi" PH_PAT_DEFS entry was
-  retired — both duplicated Triangle and were never connected to it. Never
-  reintroduce either. Ren's general 5-question survey (Build/Skin/
-  Temperament/Hot-cold/Gut) still decides the OTHER 6 constitution
-  archetypes on its own; only its Gui Zhi weight also counts toward
-  Triangle's Gui Zhi Patient total (phBtqGuizhiPts).
-- **PH_FORMULAS entries (Phase 3, 2026-10-08+) are constitutional families,
-  named after the herb — "Gui Zhi", "Chai Hu", "Ma Huang", "Da Huang" — NOT
-  specific prescribable formulas** (her correction, after an early draft
-  mis-named one "Xiao Chai Hu Tang"). Bing and Ren signs are two SHARED
-  pools (PH_BING_SIGNS/PH_REN_SIGNS, label-only); what a sign is worth lives
-  in each family's own weight table in PH_FORMULAS, so the same tap can
-  score differently per family, including negative (a disqualifier — Ma
-  Huang's cautions are the first real example: thin_body/sweats_easy/
-  complexion_red_oily/dreads_heat/dry_mouth_tend/hypertension_tend all
-  argue against it; Ban Xia's explicit tongue contraindication — a dry,
-  burnt, or shiny red tongue — is the second, negative on tongue_red_firm/
-  tongue_very_dry_tend). Triangle's Formula card is a ranked list over
-  every PH_FORMULAS entry (phFbrRank), scored against the same shared
-  ticks; tap-row point badges, the side-panel tally, and the inline
-  exam-screen strips (Pulse/Abdomen/Tongue) all reference whichever family
-  currently leads (phFbrTop), not a fixed one. A sign's weight toward a
-  family (phFbrPts) falls back to 0, not undefined, when that family
-  doesn't use it — don't revert that, it's what keeps an unrelated
-  family's sign from corrupting another family's score to NaN. There is
-  no fixed point ceiling any more — phFbrMax sums each family's own
-  positive weights dynamically; never assume "X of 56" everywhere, that
-  was Gui Zhi's own total before Phase 3, not an engine rule. Triangle
-  rows pre-fill from phPatClues where a real existing source exists
-  (PH_TRI_PREFILL) and carry forward day-to-day for Disease ticks only
-  (phTriToday/phTriEffective's `prevD`, her "quick recheck" ask) — a tap
-  always overrides either. **All 7 of Huang Huang's original families are
-  built** (Gui Zhi, Chai Hu, Ma Huang, Da Huang, Huang Qi, Ban Xia, Fu
-  Zi), plus Shi Gao and Huang Lian as an 8th and 9th (Wu Ling San 10th and Xiao Qing Long Tang 11th, 2026-10-11) on her call to extend
-  the set beyond the original 7 — all sent the same way, incrementally
-  (her passage → extracted into the shared pools + a new PH_FORMULAS
-  entry), and all nine now have a matching PH_BTJ archetype-display entry.
-  The other 13 PH_PAT_DEFS patterns (Blood stasis, Blood deficiency, etc.)
-  still run on the older automatic engine, untouched — a separate,
-  unrelated project.
-- Teal only, no green hex anywhere except the two disclosed brand
-  exceptions (Dispense herb-table head, Koda/GMP jar art) — `--ph-gold` is
-  never a status colour.
-- No box inside a box; separate sections with colour/space, not borders —
-  a visible border is a last resort, not a first instinct.
-- Pill shape = something she PICKS; square outlined button = something
-  that ACTS; one solid button = the primary commit — apply this everywhere,
-  not just where it was first built. (Shapes, sizes and the no-plain-text-taps rule now live in TAPPABLE THINGS at the top; where this line disagrees, that wins.)
-- **No underlined, dotted or arrow text links anywhere** (her 2026-10-14
-  universal rule, applied app-wide in audit step 5): a tap target is a chip
-  or a button; a trailing › / → stays only on the flow-wide "Next: …"
-  buttons, the earlier / later pair, arrow-only buttons and data arrows.
-  Never add `text-decoration: underline` to a new control (see "Links to
-  chips, arrows off" near the end of this file).
-- **One 640px block** (audit step 6, 2026-10-15): every phone rule lives inside
-  the PHONE REDESIGN block's `@media (max-width: 640px)`; a new one goes there,
-  below anything it must beat. Never open a `@media (max-width: 640px)` of its
-  own anywhere else (see "Phone rules in ONE block" in BUILD-NOTES.md).
-- Koda and GMP herb suppliers get their own brand-coloured jar glyphs as a
-  disclosed, deliberate exception to teal-everywhere.
-- A dispense with a patient on it is always a sale — never test
-  `e.patient !== e.what` again.
-- Grams always auto-follow the herb total, even on a dispensed script — no
-  sticky override, no freeze (her explicit reversal of the older safety
-  guard; don't reintroduce `presGramsFrozen`).
-- Dispense keeps exactly 3 steps (Calculate → Dispense & log → Log) and
-  always shows cost·profit on the Total line — survives every redesign.
-- Session grid / any merged widget's header row is the table's own
-  `<thead>` — never split off into a separate div.
-- A scan (IVF) or any passive record never moves a phase by itself —
-  phases only move via the explicit cycle/CD-sync or a manual pick.
-- IVF Protocol never joins the natural-cycle cascade (`PH_TP_CYCLE_SYNC`)
-  — it needs its own parallel, stricter, non-backward-pulling sync.
-  A phase, once advanced past by a manual or clinical action, can never be
-  pulled backward by a live/cycle read.
-- Phase Started/Ended dates are read-only/auto-stamped, not hand-typeable
-  (reverted back after a brief experiment — don't turn typing back on).
-- Never silently overwrite a Planned-phase field that already has
-  different content from what today's visit shows — fill blanks only,
-  else offer an explicit "→ plan" tap.
-- A render function must never mutate plan/patient data; render from
-  `phPatientPeek`, never `phPatientRec`.
-- MMT strength is a 3-point Weak/Mildly-weak/Strong scale — never a 0–5
-  clinical grade.
-- No formula/herb-recipe auto-suggestion outside the plan-phase formula
-  picker and Dispense's pour-in — she dislikes auto-suggested herbs;
-  Patterns' own formula ideas stay opt-in, off by default.
-- **No suggestion chips, suggestion text, "e.g." example text, proposed rows or "recommended" options on any page**
-  (her 2026-10-13, whole-app audit) — full rule, exceptions and the removal list at the very top of this file.
-- A Patterns rule she's overridden in Settings never automatically gains a
-  new clue key added by a later build — a deliberate, repeated trade-off,
-  not a bug to "fix".
-- Dashboard stays herbs-only — any contact/triage widget belongs on
-  Communications' Due tab.
-- Dashboard's Order/Refill cards are two plain lists, never a merged table.
-- No "Start over"/bulk-reset button on the Medical History checklist.
-- Never auto-delete a photo — always confirm, always offer Undo.
-- **NEVER DELETE A PATIENT PHOTO, keep every one no matter what** (her firm hard rule, 2026-10-14, after Chrome evicted the photo store): no code path, clean-up, dedupe, migration, storage trim or Claude action may remove a photo; a "delete" she taps herself keeps its confirm + Undo. Protect the store (`phStoragePersist`) and keep the backups that carry photos.
+  IS fang bing ren".) Ren's 24 Gui Zhi yes/no questions and the general
+  engine's "guizhi" PH_PAT_DEFS entry were retired for duplicating it; never
+  reintroduce either. Ren's 5-question survey (Build/Skin/Temperament/
+  Hot-cold/Gut) still decides the OTHER 6 constitution archetypes; only its
+  Gui Zhi weight also counts toward Triangle's Gui Zhi total (phBtqGuizhiPts).
+- **PH_FORMULAS entries are constitutional families, named after the herb —
+  "Gui Zhi", "Chai Hu", "Ma Huang", "Da Huang" — NOT specific prescribable
+  formulas** (her correction). Bing and Ren signs are two SHARED pools
+  (PH_BING_SIGNS/PH_REN_SIGNS, label-only); a sign's worth lives in each
+  family's own weight table, so one tap can score differently per family,
+  including negative (a disqualifier: Ma Huang's cautions, Ban Xia's dry /
+  burnt / shiny red tongue). The ranked list is `phFbrRank` over every
+  entry; badges, the tally and the exam-page strips follow whichever family
+  leads. A sign a family doesn't use weighs 0, never undefined (keeps scores
+  from turning NaN). There is no fixed ceiling: `phFbrMax` sums each family's
+  own positive weights. Rows pre-fill from `phPatClues` where a real source
+  exists (PH_TRI_PREFILL) and Disease ticks carry forward day to day
+  (`phTriEffective`'s `prevD`); a tap always overrides either. The family set
+  started with Huang Huang's 7 and has grown on her call, one integrate33
+  run each (see BUILD-NOTES) — count `PH_FORMULAS`, never trust a number
+  written here. The other PH_PAT_DEFS patterns (Blood stasis, Blood
+  deficiency, etc.) run on the older Patterns engine, a separate project.
+- Phase Started/Ended dates are read-only and auto-stamped (typing them was
+  tried and reverted).
+- **Never hand-type she / her / his about a patient**: use `phPro(name)` /
+  `phProRec(rec)`, or neutral words where no patient is in scope.
+- Phase labels are identity keys (`msgWording`, `phaseKey`, group names such
+  as "Subjective — how they feel"): change every use together, never one.
+- Sign labels read "Subject: descriptors" ("Sweat: easily").
+- A new Medical history count reads `phHxApplicableItems`, so it matches the
+  page.
+- Never `phFlashShow` on a patient page, a sheet or a dialog: the one toast
+  (`presSavedToast`) only.
 - Claude-authored patient-facing or clinical wording is DRAFT until she's
   explicitly read and corrected it — "build it" is not "approve the
   wording," even after a broad "ok build all."
 - Never dump a large backlog of questions on her at once — curate a small,
   genuinely tap-ready batch.
-- Deploy from the shared tree by pushing the branch ref
-  (`git push origin session-a:main`) — never checkout/merge/checkout.
-- Reduced-motion must disable every animation added to this app.
-- A full-bleed container (one that cancels the page's own ambient chrome
-  padding) must still give its own content a 16px top+left inset, desktop-
-  scoped (`@media (min-width: 641px)`) — never ship one at zero padding.
+- **NEVER DELETE A PATIENT PHOTO, keep every one no matter what** (her firm
+  hard rule, 2026-10-14, after Chrome evicted the photo store): no code path,
+  clean-up, dedupe, migration, storage trim or Claude action may remove a
+  photo; a delete she taps herself keeps its confirm + Undo. Protect the
+  store (`phStoragePersist`) and keep the backups that carry photos.
 - Zygomatic branch stays at one checklist item on the facial-paralysis
   checklist — she's declined a second, twice.
 
 ---
 
 # OPEN — needs her word
-**This list was audited against `origin/main` on 2026-10-18** (git ancestry
-check + targeted `grep` of the real pushed `index.html`): most of the
-items this list used to carry as "committed, not live" turned out to
-already be live — some since early October — and have been corrected or
-removed below. What's left here is either a genuine open DECISION
-(wording she hasn't reviewed, a question asked but not answered) or a
-status item I could not confirm either way from this audit; the mixed-
-status Dispense Cockpit note explains why that one is neither. Re-run the
-same check (`git merge-base --is-ancestor <commit> origin/main`, or grep
-the function/class name straight out of a fresh `git show origin/main:
-index.html`) rather than trusting this list's own age next time, since a
-"push live" can land on `main` with no corresponding edit here.
+Rewritten 2026-10-21 against `origin/main`. **Never list here (or anywhere)
+the items she took off the backlog on 2026-10-06:** the draft-wording review
+bucket, the two rebate messages, the two-computer sync / restore timing, and
+pre-loading the Treatment step. To check whether a build is live, run
+`git merge-base --is-ancestor <commit> origin/main` or grep `git show
+origin/main:index.html`; don't trust this list's age.
 
-- **Dispense "Cockpit" redesign ("ask28")** — status genuinely mixed, see
-  the full note under "Dispense & Refill/To Order" above (2026-10-18 audit):
-  an earlier, simpler Cockpit visual treatment and a `.ph-dsp-fit` one-
-  screen desktop layout are confirmed live; supply-by-days chips, a
-  shelf→after-stock bar and a formula-from-plan pour-in were not found in
-  `origin/main` and may still be pending — check a live render, don't
-  assume either way.
-- ~~Combine plans ("Also treating," up to 2 secondary conditions on one
-  plan)~~ — **LIVE** (2026-10-18 audit: `plan.also` is wired throughout
-  `origin/main`'s `index.html`, not just drafted on `session-a`).
-- ~~Fertility-Friend-style cycle calendar as the universal cycle view~~ —
-  **LIVE** (2026-10-18 audit: `phCycFFHtml` is live and has been the base
-  every Cycle-page build since has extended, e.g. the 2026-10-14 "Usual
-  period: the cycle picture" and the whole 2026-10-16 Day-1-chip/finder
-  run below).
-- ~~IVF history "Journey" redesign and IVF plan questionnaire~~ — **LIVE**
-  (2026-10-18 audit, see the corrected note under IVF above); wording is
-  still Claude-drafted, hers to correct.
-- **"Profile-first" workflow** — largely **SUPERSEDED**, not simply
-  pending; see the corrected note under "Patient profile & profile-first
-  journey" above (2026-10-18 audit) for what actually shipped in its place
-  (the Patient Workflow LAW's three-group rail, the Complaint compass).
-- ~~Patterns / diagnosis suggestions, the feature as a whole~~ — **LIVE**
-  (2026-10-18 audit: `phPatCompute` is wired in `origin/main`, and `main`'s
-  own history shows ongoing Patterns refinement — e.g. "Patterns: flag the
-  agreed diagnosis when the last 2 visits both logged Worse" — confirming
-  it's a real, used feature, not still gated). All pattern-definition
-  wording, the IVF Prep template phase text, and new period/pain/sleep
-  question wording remain Claude-drafted, not yet reviewed line-by-line by
-  her — that review is still open, the push is not.
-- ~~Blood tests page (`rec.bloods[]`, typical-range flags)~~ — **LIVE**
-  (2026-10-18 audit: `phBldList`/`phBldMeta` are wired in `origin/main`,
-  and later builds — e.g. "Men's fertility plan + blood ranges by sex" —
-  actively extend it). Typical ranges are still DRAFT; not yet linked into
-  Patterns beyond what that same later build added.
-- **`PH_TP_DEFAULT_SESSIONS`** — the mechanism itself is confirmed live and
-  in active use (new templates keep extending it, e.g. Men's fertility and
-  Breech correction below both stamp their own counts into it) — only her
-  review of the ORIGINAL built-in templates' numbers is still open.
-- **IVF per-field conflict UI for intake-reported IVF cycles** — needs her
-  answer on HOW an incoming intake-reported cycle should try to match an
-  existing `rec.ivfCycles` row (no round/plan id exists on the intake
-  payload today; a wrong guess risks conflating two different rounds' egg/
-  embryo counts).
-- **Rebate message wording** — two messages needed (a maintenance/future-
-  appointment nudge, and a seasonal Nov–Dec/July rebate note); ask her for
-  the words, don't draft them.
-- **Supportive tone outside the cycle track** (e.g. stress/anxiety plans) —
-  a live guess, not confirmed.
-- **Whether Formal/Casual should be a settable per-patient tag, computed
-  from time-known, or both with an override** — asked, not answered.
-- **Dashboard "stocktake" always-shown pair of cards** — any Dashboard
-  layout change needs a mock + her sign-off first; not yet shown to her.
-- **Two-computer sync/relay subsystem** (the shrink-window timing, the
-  relay race) — real incident history here; stays untouched without a
-  fresh, reproducible failure in hand or her explicit go-ahead; cannot be
-  exercised in this sandbox at all (no signed-in Supabase account, and the
-  standing rule forbids ever creating one with her real credentials).
-- **"Post Ovulation" house-blend formula**, missing from her live
-  inventory — not recoverable by any code change (no delete/restore
-  function exists in this app); her call to either recreate it via "+ Add
-  formula" or restore from an on-device backup.
-- Larger, knowingly-parked feature work, none of it attempted: a real
-  desktop installable build beyond the PWA; AI-assisted intake extraction
-  via the Claude API (confirmed off — no backend, no safe place for a key
-  in this static client-only app; don't re-raise without an architecture
-  change); automatic treatment-plan-phase-to-message wiring beyond what's already
-  built; bulk multi-past-period entry from the patient's own phone.
+**Her decisions:**
+- Whether Formal / Casual is a per-patient tag she sets, worked out from how
+  long she's known them, or both with an override (code3).
+- Whether the Supportive tone applies outside the cycle track (stress /
+  anxiety plans are a guess).
+- How an intake-reported IVF cycle should match an existing `rec.ivfCycles`
+  row (the intake has no round id; a wrong guess mixes two rounds' counts).
+- Her review of the `PH_TP_DEFAULT_SESSIONS` numbers on the original
+  built-in templates (the mechanism is live).
+- A Dashboard "stocktake" pair of cards (needs a mock and her sign-off).
+- The "Post Ovulation" house-blend formula is missing from her live
+  inventory: recreate it with "+ Add formula" or restore it from a backup
+  (no code can bring it back).
+- Fang Bing Ren reference formulas waiting on her tables: Wen Jing Tang,
+  Gui Zhi Fu Ling Wan, Chai Hu Gui Zhi Tang, Ling Gui Zhu Gan Tang, Huang
+  Lian Jie Du Tang, Da Chai Hu Tang.
+
+**Built on my reading — hers to confirm:** the pulse chart starts blank each
+day; abdomen tension is one whole-abdomen value; Usual period shows Wheel |
+Chart.
+
+**Known gap, found in the 2026-10-21 audit:** the Care Plan's + Watch /
++ Aim (`phTpFxAddToggle`) writes the phase's stored Watch / Aim directly
+instead of through `phTpFieldCommit`, so one tap on an auto Watch can make
+it "hers" (frozen) with only the appended line. Fix through the write door.
+
+**Paused or not built:**
+- The template editor "One table" (mock approved, paused) and templates in
+  the Care Plan shape (mock only).
+- Photo organising increments 2+ (the Comparison table's calendar date
+  picker and before/after swap, Records → Photos grouping by shot and date
+  fixing).
+- The per-herb shelf→after-stock bar on Dispense.
+- The cycle Day log `.ph-ck-chip` rows as joined bars.
+- Whether the standing tongue / abdomen charts carry over day to day
+  (unchecked).
+- A heartbeat field on IVF scans; folding `#phRenUndoToast` into the one
+  toast; the ~19px title-bar shift; baking `PH_HERB_SEED`.
+- Larger work, knowingly parked: a desktop build beyond the PWA; AI intake
+  extraction (no backend, no safe place for a key; don't re-raise without an
+  architecture change); bulk past-period entry from the patient's phone.
 
 ---
 
 ## Before finishing
-- Confirm every rule is met. Check at 360px: nothing cut off, overlapping,
-  or running off-screen. Confirm every colour comes from the variables (no
-  off-palette shades) and the teal & white theme still looks clean.
-- **Changing an app icon = new FILENAME.** Rename (e.g. `-v2`), update
-  manifest.json + link tags + the sw.js SHELL list.
-- **Every push bumps BOTH version markers**: `sw.js` `CACHE_VERSION` AND
-  the `<meta name="lcm-build">` stamp in index.html — the meta stamp is
-  what the gold Update button compares; bumping only one ships an update
-  her app never offers her.
-
+- Every rule above is met. Check at 360 / 375px and at desktop width:
+  nothing cut off, overlapping or scrolling sideways; every colour from the
+  tokens; the teal & white look intact.
+- **Integration check (★★★):** look at the changed fact on every page that
+  shows it, and name in the build note which pages you checked.
+- Grep the screens you touched for `suggest`, `e.g.`, `starter`,
+  `text-decoration: underline` and `placeholder="`.
+- Motion: no entrance animation on a base class; all of it off under
+  reduced motion.
+- Write the build's note at the END of BUILD-NOTES.md (her words, her
+  picks, where the code lives, what was tested and what was NOT); fix any
+  standing rule or Current-state line here in the same commit; update
+  memory.
+- Commit your own hunks only (Deploy & git). Push only on her "push live".
