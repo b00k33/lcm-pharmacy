@@ -1197,6 +1197,14 @@ One pattern can be ★ main. Formula ideas are OFF (she dislikes suggested
 herbs). A rule she overrode in Settings never gains new clue keys later
 (deliberate). All pattern wording is Claude-drafted, hers to correct.
 
+## Guide — Families (study + edit)
+The Guide is **[Families] [Tongue map] [Pulse]**: a herb card is the body type with its formulas under it, notes-only formulas are dashed tiles, a
+study card sits on the right. **The card's rows ARE the Fang Bing Ren tables** (`PH_FORMULAS[id]`): her edits live in `PHARMACY.fbrEdits[id]`
+(+ `fbrEditsAt`), and `phFbrEditsApply()` rebuilds `.ren/.bing/.or/.core` in place from `phFbrPristine`; `phFbrEditsSync()` (top of `renderPharmacy`)
+re-applies when the saved edits change. **Nothing else may write to `PH_FORMULAS`.** Every Guide edit goes snapshot → change → `phGdfDone` (tidy,
+stamp, save with rollback, sync, repaint, Undo). A learned `a_` sign off a formula is written as 0, and lists filter `w !== 0`. Cloud: `mergeFbrEdits`
+beside `mergeTemplateOverrides`. Notes-only rows: `gdNoteEdits`. Details and what was tested: BUILD-NOTES.md, "Guide Families".
+
 ## Photos
 **The patient's Photos page** opens on the Comparison table (one row per
 type, a date column each); By visit / By type are a tap away; each tile has
