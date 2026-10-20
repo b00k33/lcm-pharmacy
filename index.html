@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261021-1580000">
+<meta name="lcm-build" content="20261021-1590000">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -8709,6 +8709,29 @@
   #pharmacyPage .ph-tpg-ctx-inner .val .ph-tpg-fbrlead { display: block; margin-top: 2px; font-size: var(--fs-9); color: var(--ph-faint); cursor: default; }
   #pharmacyPage .ph-tpg-ctx-inner .val .tab-link { margin-left: 4px; cursor: pointer; }
   #pharmacyPage .ph-tpg-ctx-foot { display: flex; justify-content: flex-end; margin-top: 8px; }
+  /* her 2026-10-20 Watch and Aim from the patient: Watch = the template's red flags first, then one tagged chip
+     per fact read from the patient (facts, not suggestions); the same chips tick off on the Treatment tab */
+  #pharmacyPage .ph-tpg-ctx-inner .wide { grid-column: 1 / -1; }
+  #pharmacyPage .ph-wch-flags { display: flex; align-items: flex-start; gap: 6px; color: var(--ph-zero-deep); }
+  #pharmacyPage .ph-wch-ic { flex: none; width: 14px; height: 14px; margin-top: 2px; fill: none; stroke: currentColor; }
+  #pharmacyPage .ph-wch-row { display: flex; flex-wrap: wrap; gap: 4px 6px; margin-top: 6px; }
+  #pharmacyPage .ph-wch { display: inline-flex; align-items: baseline; gap: 6px; padding: 4px 10px; border-radius: 999px; background: var(--ph-herb-tint); color: var(--ph-herb-deep); font-size: var(--fs-12); line-height: 1.4; }
+  #pharmacyPage .ph-wch b, #pharmacyPage .ph-wch-src { font-size: var(--fs-9); font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+  #pharmacyPage .ph-wch-src { margin-right: 6px; opacity: .8; }
+  #pharmacyPage .ph-wch.t-red { background: var(--ph-zero-tint); color: var(--ph-zero-deep); }
+  #pharmacyPage .ph-wch.t-also { background: var(--ph-blue-tint); color: var(--ph-blue-deep); }
+  #pharmacyPage .ph-wch.t-cycle { background: var(--ph-purple-tint); color: var(--ph-purple-deep); }
+  #pharmacyPage .ph-wch.t-tongue, #pharmacyPage .ph-wch.t-pulse, #pharmacyPage .ph-wch.t-abd,
+  #pharmacyPage .ph-wch.t-bloods, #pharmacyPage .ph-wch.t-hx, #pharmacyPage .ph-wch.t-ask { background: var(--ph-paper); color: var(--ph-soft); box-shadow: inset 0 0 0 1px var(--ph-line); }
+  #pharmacyPage .ph-wch-src.t-red { color: var(--ph-zero-deep); }
+  #pharmacyPage .ph-wch-src.t-also { color: var(--ph-blue-deep); }
+  #pharmacyPage .ph-wch-src.t-cycle { color: var(--ph-purple-deep); }
+  #pharmacyPage .ph-ww-h { margin: 12px 0 6px; font-size: var(--fs-11); font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--ph-faint); }
+  /* the template editor's Aim: her preset with tap-in words from the patient */
+  #pharmacyPage .ph-tp-mgr-aimcell { display: flex; flex-direction: column; gap: 6px; }
+  #pharmacyPage .ph-tp-mgr-aimtoks { display: flex; flex-wrap: wrap; gap: 6px; }
+  #pharmacyPage .ph-tp-mgr-aimtok { height: 28px; padding: 0 10px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px var(--ph-line); color: var(--ph-herb-deep); font: inherit; font-size: var(--fs-13); cursor: pointer; }
+  #pharmacyPage .ph-tp-mgr-aimtok:hover { background: var(--ph-herb-tint); }
   @media (max-width: 760px) {
     #pharmacyPage .ph-tpg-ctx-inner { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 20px; }
   }
@@ -28503,6 +28526,7 @@
     { key: "lettertemplates", group: "patients", label: "✉ Letter templates", html: phLtrTemplatesSectionHtml },
     { key: "patterns", group: "patients", label: "🧭 Fang Bing Ren (方病人)", html: phPatSettingsHtml },
     { key: "goalwording", group: "patients", label: "🎯 Goal wording", html: phGoalWordSettingsHtml },
+    { key: "watchwording", group: "patients", label: "👁 Watch wording", html: phWatchWordSettingsHtml },
     { key: "photorelay", group: "device", label: "📷 Photo relay (phone → desktop)", html: phPhotoRelaySectionHtml },
     { key: "storage", group: "device", label: "💾 Storage", html: phSettingsStorageHtml },
   ];
@@ -36003,6 +36027,8 @@
       }
       // ---- the phase grid (2026-09-08): click-to-edit cells, fold/unfold a
       // done phase ----
+      const tpFauto = e.target.closest("[data-tp-fauto]");
+      if (tpFauto) { phTpFieldBackToAuto(tpFauto); return; }
       const tpEdit = e.target.closest("[data-tp-edit]");
       if (tpEdit && !e.target.closest("[data-tp-phase-field]") && !e.target.closest("[data-tp-fbr-fill]")) { phTpCellEditOpen(tpEdit); return; }
       const tpFutPlan = e.target.closest("[data-tp-futplan]");
@@ -40046,7 +40072,7 @@
       // above toggles one at a time.
       if (e.target.closest("[data-pres-acu-watchall]")) {
         const ctx = presAcuCtx();
-        if (ctx && ctx.treatedPhase) presAcuWatchChecked = phAcuWatchChips(ctx.treatedPhase.watch).slice();
+        if (ctx && ctx.treatedPhase) presAcuWatchChecked = phAcuWatchItems(ctx.name, ctx.activePlan, ctx.treatedPhase).map(i => i.text);
         presAcuOpenRefresh();
         return;
       }
@@ -40940,6 +40966,23 @@
       // since a template has no plan/patient identity of its own
       const tpMgrPhaseSel = e.target.closest("[data-tp-mgr-phase-sel]");
       if (tpMgrPhaseSel) { const [id, idx] = tpMgrPhaseSel.dataset.tpMgrPhaseSel.split(":"); phTpMgrPhaseSel[id] = +idx; phTplHostRerender(); return; }
+      // Build 4 (Watch and Aim from the patient): a token chip puts its words into the phase's Aim box at the
+      // caret, shown as [main complaint] and stored as {main}; it is written at once like any other phase field
+      const tpMgrTok = e.target.closest("[data-tp-mgr-aimtok]");
+      if (tpMgrTok) {
+        const [id, idx, tk] = tpMgrTok.dataset.tpMgrAimtok.split(":");
+        const tokDef = PH_AIM_TOKENS.find(x => x[0] === tk);
+        const box = tpMgrTok.closest(".ph-tp-mgr-aimcell");
+        const ta = box && box.querySelector("textarea");
+        if (tokDef && ta) {
+          const v = ta.value, a = typeof ta.selectionStart === "number" ? ta.selectionStart : v.length, z = typeof ta.selectionEnd === "number" ? ta.selectionEnd : a;
+          const lead = a > 0 && !/\s$/.test(v.slice(0, a)) ? " " : "";
+          const next = v.slice(0, a) + lead + "[" + tokDef[1] + "]" + v.slice(z);
+          phTpMgrSetPhaseField(id, +idx, "aim", phAimTokFromDisplay(next.replace(/\r\n/g, "\n").trim()));
+          phTplHostRerender();
+        }
+        return;
+      }
       const tpMgrPhaseAdd = e.target.closest("[data-tp-mgr-phase-add]");
       if (tpMgrPhaseAdd) { const id = tpMgrPhaseAdd.dataset.tpMgrPhaseAdd; phTpMgrAddPhase(id); phTpMgrPhaseSel[id] = phTpMgrPhases(id).length - 1; phTplHostRerender(); return; }
       const tpMgrPhaseDel = e.target.closest("[data-tp-mgr-phase-del]");
@@ -51202,7 +51245,8 @@ or changing anything in Cliniko.
     const pEl = e.target && e.target.closest ? e.target.closest("[data-tp-mgr-phase-field]") : null;
     if (pEl) {
       const [id, idx, field] = pEl.dataset.tpMgrPhaseField.split(":");
-      const val = pEl.value.replace(/\r\n/g, "\n").trim();
+      let val = pEl.value.replace(/\r\n/g, "\n").trim();
+      if (field === "aim") val = phAimTokFromDisplay(val);   // the Aim box shows [main complaint], the template stores {main}
       phTpMgrSetPhaseField(id, +idx, field, val);
       // her Visits picker's own "Type instead" escape hatch (2026-09-22):
       // if the words she typed can be read back by the pickers after all,
@@ -62790,7 +62834,7 @@ or changing anything in Cliniko.
         if (gl) add(["g:plan"], "Diagnosis & goal", gl, "Goal · " + ttl, "");
         (pl.phases || []).forEach((ph, i) => {
           const g = `Phase ${i + 1}${ph.label ? " · " + ph.label : ""}`;
-          [["Aim", ph.aim], ["Points", ph.points], ["Press", ph.pressPoints], ["Cadence", ph.cadence], ["Watch", ph.watch], ["Formula", ph.formulaName]].forEach(f => {
+          [["Aim", phTpFieldText(name, pl, ph, "aim")], ["Points", ph.points], ["Press", ph.pressPoints], ["Cadence", ph.cadence], ["Watch", phTpFieldText(name, pl, ph, "watch")], ["Formula", ph.formulaName]].forEach(f => {
             const v = f[1] && String(f[1]).trim();
             if (v) {
               add(["g:plan"], g, `${f[0]} · ${v}`, ttl, "", v);
@@ -66244,7 +66288,7 @@ or changing anything in Cliniko.
       : `${nph} phase${nph === 1 ? "" : "s"} · no set length`;
     const course = `<div class="g visit">${total ? phTpHeroRingSvg(cls, grow) : ""}<div><div class="lab">Course</div><div class="big n4">${total ? `<span class="gold"${count ? ` data-pf-count="${total}"` : ""}>${total}</span><span class="of"> session${total === 1 ? "" : "s"}</span>` : `<span class="gold">—</span>`}</div><div class="sm">${esc(courseSm)}</div></div></div>`;
     const p = phases[sel] || {};
-    const aim = phTpDotParts(p.aim)[0] || "";
+    const aim = phTpDotParts(phTpAimNeutral(p.aim))[0] || "";
     const pips = tim.map((t, i) => `<i class="${i === sel ? "l" : ""}" style="--n:${Math.max(1, t.n)}"></i>`).join("");
     const pipTitle = phases.map((x, i) => `${x.label || `Phase ${i + 1}`} ${tim[i].n || "–"}`).join(" · ");
     const phName = p.label || `Phase ${sel + 1}`;
@@ -66330,13 +66374,15 @@ or changing anything in Cliniko.
     const sel = phTpMgrPhaseIdx(id);
     const p = phases[sel] || {};
     const field = (f, kind) => {
-      const val = p[f] || "";
+      const val = f === "aim" ? phAimTokToDisplay(p[f] || "") : (p[f] || "");
       const ph = PH_TP_FIELD_PH[f] || "";
       return kind === "area"
         ? `<textarea class="ph-tp-mgr-in" rows="2" data-tp-mgr-phase-field="${esc(id)}:${sel}:${f}" placeholder="${esc(ph)}">${esc(val)}</textarea>`
         : `<input type="text" class="ph-tp-mgr-in" data-tp-mgr-phase-field="${esc(id)}:${sel}:${f}" placeholder="${esc(ph)}" value="${esc(val)}">`;
     };
-    const row = (f, kind, label) => `<tr><td class="ph-tp-lbl">${esc(label || PH_TP_FIELD_LABELS[f])}</td><td class="ph-tp-cell">${field(f, kind)}</td></tr>`;
+    // the Aim is her preset with tap-in words from the patient (Build 4): chips put [main complaint] etc. at the caret
+    const aimCell = `<div class="ph-tp-mgr-aimcell">${field("aim", "area")}<span class="ph-tp-mgr-aimtoks">${PH_AIM_TOKENS.map(([k, w]) => `<button type="button" class="ph-tp-mgr-aimtok" data-tp-mgr-aimtok="${esc(id)}:${sel}:${k}">+ ${esc(w)}</button>`).join("")}</span></div>`;
+    const row = (f, kind, label) => `<tr><td class="ph-tp-lbl">${esc(label || PH_TP_FIELD_LABELS[f])}</td><td class="ph-tp-cell">${f === "aim" ? aimCell : field(f, kind)}</td></tr>`;
     return `<table class="ph-tp-grid two ph-tp-mgr-grid">
         <colgroup><col class="c-lbl"><col class="c-val2"></colgroup>
         ${row("aim", "area")}
@@ -66345,7 +66391,7 @@ or changing anything in Cliniko.
         <tr class="ph-tp-reciperow"><td colspan="2">${phTpMgrRecipeEditorHtml(id, sel)}</td></tr>
         <tr><td colspan="2" class="ph-tp-mgr-band">Formula action${phInfoDot("Chosen per patient, not on the template.")}</td></tr>
         <tr class="ph-tp-therrow"><td colspan="2">${phTpMgrTherapiesHtml(id, sel)}</td></tr>
-        ${row("watch", "area")}
+        ${row("watch", "area", "Red flags")}
       </table>`;
   }
   function phTpMgrEditHtml(id) {
@@ -66614,7 +66660,8 @@ or changing anything in Cliniko.
       tongue: "", pulse: "", abdomen: "",
       createdDate: keyOf(TODAY), templateName: tpl ? tpl.name : null,
       phases: phases.map((p, i) => ({
-        id: uid(), label: p.label, aim: p.aim, points: p.points || "", pressPoints: p.pressPoints || "",
+        // an Aim with tokens is stored in plain words (the plan writes the real one on read), so nothing that reads the raw text shows a bracket
+        id: uid(), label: p.label, aim: phTpAimNeutral(p.aim), points: p.points || "", pressPoints: p.pressPoints || "",
         cadence: p.cadence || "", watch: p.watch || "",
         // her ask 2026-09-23: a template's own default Sessions count
         // (phTpMgrSessionsFieldHtml) travels onto a new plan's phase the
@@ -69516,6 +69563,8 @@ or changing anything in Cliniko.
     const rec = phPatientRec(name); if (!rec) return;
     const plan = (rec.treatmentPlans || []).find(p => p.id === shown.id); if (!plan) return;
     const phase = phTpLivePhase(rec, plan); if (!phase || (phase.aim || "").trim()) return;
+    // a template phase with its own Aim already writes itself from the complaints (phTpFieldView); a stored copy would read as hers
+    const tpAim = phTpTplPhaseOf(plan, phase); if (tpAim && String(tpAim.aim || "").trim()) return;
     const c = rec.complaint; if (!c) return;
     const fam = c.main ? phCcFam(c.main) : null;
     const bits = [];
@@ -79322,6 +79371,16 @@ or changing anything in Cliniko.
   function phAcuWatchChips(text) {
     return String(text || "").split(/[;,]/).map(s => s.trim()).filter(Boolean).map(s => s.charAt(0).toUpperCase() + s.slice(1));
   }
+  // the phase's Watch for the Treatment tab and the "plan to ask" box: [{ text, tag }]. Red flags first, then the
+  // patient's own chips (main, also, cycle, findings); Watch she typed herself is split into plain chips with no tag.
+  function phAcuWatchItems(name, plan, ph) {
+    if (!ph) return [];
+    const v = phTpFieldView(name, plan, ph, "watch"), seen = new Set(), out = [];
+    const put = (text, tag) => { if (text && !seen.has(text)) { seen.add(text); out.push({ text, tag }); } };
+    if (v.hers) phAcuWatchChips(v.text).forEach(t => put(t, ""));
+    else { phAcuWatchChips(v.flags).forEach(t => put(t, "red")); v.items.forEach(i => put(i.text, i.tag)); }
+    return out;
+  }
   // Treatment therapies recorded for THIS VISIT (session.treatmentTherapies) --
   // reads/writes presAcuTherapiesDraft, adapted from phTpTherapyBoxHtml/
   // phTpTherapiesHtml (below, ~PH_TP_THERAPIES) which do the identical thing
@@ -79725,7 +79784,8 @@ or changing anything in Cliniko.
         ${PH_CYCLE_CM.filter(([v]) => v === "eggwhite" || v === "milky" || v === "mix").map(([v, l]) => `<button type="button" class="ph-ck-chip${todaySign && todaySign.cm === v ? " on" : ""}" data-pres-acu-mucus="${v}">${esc(l)}</button>`).join("")}
       </div>` : "";
 
-    const watchChips = phAcuWatchChips(treatedPhase && treatedPhase.watch);
+    const watchItems = phAcuWatchItems(name, activePlan, treatedPhase), watchChips = watchItems.map(i => i.text);
+    const watchBtn = it => `<button type="button" class="ph-ck-chip${presAcuWatchChecked.includes(it.text) ? " on" : ""}" data-pres-acu-watch="${esc(it.text)}">${it.tag ? `<b class="ph-wch-src t-${it.tag}">${esc(PH_WATCH_TAG[it.tag] || "")}</b>` : ""}${esc(it.text)}</button>`;
     // her pick 2026-09-19 ("Yes, add the checklist"): the phase's own plan
     // as today's to-do -- ask, needle, herbs, book, log. The app ticks what
     // it can see (herbs given or instructed, a visit booked, today's session
@@ -79752,7 +79812,7 @@ or changing anything in Cliniko.
       ? `${watchChips.length ? `<div class="ph-acu-row2 ph-acu-lifestylerow">
             <span class="lbl">Lifestyle</span>
             <span class="ph-acu-lifestyle-chips">
-              ${watchChips.map(w => `<button type="button" class="ph-ck-chip${presAcuWatchChecked.includes(w) ? " on" : ""}" data-pres-acu-watch="${esc(w)}">${esc(w)}</button>`).join("")}
+              ${watchItems.map(watchBtn).join("")}
               <button type="button" class="tab-link ph-acu-watchall" data-pres-acu-watchall="1">Apply the usual</button>
             </span>
           </div>` : ""}
@@ -79762,7 +79822,7 @@ or changing anything in Cliniko.
           </div>`
       : (watchChips.length ? `<div class="ph-acu-row2 ph-acu-watchrow">
           <span class="lbl">Watch for</span>
-          ${watchChips.map(w => `<button type="button" class="ph-ck-chip${presAcuWatchChecked.includes(w) ? " on" : ""}" data-pres-acu-watch="${esc(w)}">${esc(w)}</button>`).join("")}
+          ${watchItems.map(watchBtn).join("")}
         </div>` : "");
 
     // compact: the booking as a row of its own (the checklist carried it)
@@ -79801,7 +79861,7 @@ or changing anything in Cliniko.
           ? `<div class="k treatas"><span class="lbl">Phase</span><span><b>${treatedPhase ? esc(treatedPhase.label) : "—"}</b>${phaseChoices.length > 1 ? ` <button type="button" class="ph-acu-pickopen" data-pres-acu-phasepick="1">${presAcuPhasePickOpen || isOverride ? "Hide phases" : "Change phase"}</button>` : ""}</span></div>${presAcuPhasePickOpen || isOverride ? phasePickHtml : ""}`
           : `<div class="k">From the active plan —${esc(activePlan.title || "Treatment Care Plan")}${comp ? ` · CD ${comp.day}` : ""}</div>
         ${phasePickHtml || (treatedPhase ? `<div class="planphase">Current phase: ${esc(treatedPhase.label)}</div>` : "")}
-        ${treatedPhase && treatedPhase.aim ? `<div class="aim">${esc(treatedPhase.aim)}</div>` : ""}`}
+        ${treatedPhase && phTpFieldText(name, activePlan, treatedPhase, "aim") ? `<div class="aim">${esc(phTpFieldText(name, activePlan, treatedPhase, "aim"))}</div>` : ""}`}
         ${pointsHtml}
         ${pressHtml}
         ${therapiesHtml}
@@ -84727,6 +84787,352 @@ or changing anything in Cliniko.
     if (savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return; }
     phTpFgRefresh(name, planId);
   }
+  /* ==== Watch + Aim written from the patient (her 2026-10-20: "i want the templates watch to be from chief complaints and
+     secondary complaints and findings e.g. cycle etc, aim needs to link as well. aim - i can preset") ====
+     Watch = the template phase's own text first (now "Red flags", fixed per template phase), then one chip per fact on file:
+             her main complaint, each secondary complaint, the cycle (day, phase, late period, the flow and clots logged) and other
+             findings (flagged history, tongue, pulse, abdomen, bloods, today's Ask her answers). Every chip names its source.
+     Aim   = her preset per template phase, with tokens {main} {sec} {cyc} filled in from the same record. A template with no
+             tokens reads exactly as it always did.
+     DERIVED ON READ, never stored. A plan phase's Aim / Watch is HERS only when she typed it (ph.aimHers / ph.watchHers, or older
+     text that differs from the template's own): then it stays as written, with a "back to auto" chip. `var` tables and try/catch
+     on purpose, same as Diagnosis / Goal. All wording below is DRAFT, hers to correct in Settings -> Watch wording. */
+  var PH_WATCH_MAIN = {
+    periods: "Flow, clots and period pain", fertility: "Cycle length, mucus and ovulation signs", meno: "Flushes, night sweats and sleep",
+    pain: "Pain score, range of movement and night pain", sleep: "Time to fall asleep, waking and mood", weight: "Appetite, energy and bowels",
+    face: "Eye closure, movement and any new pain", skin: "Spread, itch and any infection", acute: "Fever, breathing and any worsening"
+  };
+  // her complaint words (main or secondary): first matching row wins; the broad pain rule is last
+  var PH_WATCH_WORDS = [
+    [/insomnia|sleep|dream|wakes?\b|waking/i, "Time to fall asleep and waking"],
+    [/anxi|panic|worr/i, "Anxiety, palpitations and sleep"],
+    [/stress|overwhelm|burn.?out/i, "Stress load and sleep"],
+    [/hot flush|night sweat/i, "Flushes, night sweats and sleep"],
+    [/period pain|dysmen|cramp|^painful$|painful (?:period|menses|cycle)/i, "Period pain and flow"],
+    [/irregular (?:period|cycle)|^irregular$|late period|^late$|missed period|amenorr|no period/i, "Cycle length and any missed period"],
+    [/heavy (?:period|flow|bleed)|^heavy$|clot|flooding/i, "Flow, clots and dizziness"],
+    [/trying to conceive|infertil|conceiv/i, "Cycle length, mucus and ovulation signs"],
+    [/recurrent (?:loss|miscarr)|miscarr/i, "Any bleeding or cramping"],
+    [/ivf/i, "Bloating, pain and response to the cycle"],
+    [/fatigue|tired|exhaust|energy/i, "Energy through the day and sleep"],
+    [/bloat|digest|reflux|heartburn|nause|constipat|diarr|\bgut\b|\bibs\b/i, "Appetite, bowels and bloating"],
+    [/migraine|headache/i, "How often, and any new pattern"],
+    [/sore throat/i, "Fever and difficulty swallowing"],
+    [/cough/i, "Breathing, fever and phlegm colour"],
+    [/cold hands|cold feet/i, "Warmth of the hands and feet"],
+    [/feels hot|sweat|flushing/i, "Heat, sweating and thirst"],
+    [/feels cold/i, "Cold sensitivity and energy"],
+    [/dizz/i, "Dizziness on standing"],
+    [/low mood|mood/i, "Mood and sleep"],
+    [/palpitat|startle/i, "Palpitations and sleep"],
+    [/dryness|thirst/i, "Thirst and dryness"],
+    [/hair loss|brittle nails/i, "Hair fall"],
+    [/(?:short|long|irregular) (?:cycle|cycles)|cycle length|missing periods/i, "Cycle length"],
+    [/light periods/i, "Flow"],
+    [/\bpms\b/i, "PMS symptoms and mood"],
+    [/catches? colds?|immune|\bcolds?\b|\bflu\b/i, "Fever and chest symptoms"],
+    [/numb|tingl/i, "Spread, and any weakness"],
+    [/droop|bell'?s|palsy/i, "Eye closure and any new pain"],
+    [/\bacne|pimple|breakout|breaking out/i, "New breakouts and scarring"],
+    [/psoria|plaque|scaly|flaky/i, "Spread of plaques and any joint pain"],
+    [/eczema|dermat|\brash/i, "Spread, weeping and infection"],
+    [/hives|urticaria/i, "Any lip or throat swelling"],
+    [/\bitch/i, "Itch and sleep"],
+    [/dry skin|dry patches/i, "Cracking and infection"],
+    [/\b(?:pain|ache|aches|aching|sore|soreness|stiff|stiffness|neck|shoulders?|back|knees?|hips?|elbows?|wrists?|ankles?|heels?|jaw|sciatica|spine|feet|foot|hands?|thighs?|calf|legs?|arms?)\b/i, "Pain score, range of movement and night pain"]
+  ];
+  var PH_WATCH_CYCLE = { period: "flow, clots and pain", foll: "mucus and energy", ov: "ovulation signs", luteal: "spotting, PMS and sleep" };
+  // the cycle-log clues worth a chip (the day log's own tallies, last four months)
+  var PH_WATCH_CYCLE_KEYS = ["clots", "heavy_flow", "light_flow", "dark_blood", "severe_pain", "stabbing"];
+  // flagged history items (a Yes answer on Medical history)
+  var PH_WATCH_HX = {
+    blood_thinning_medication: "Blood thinner", known_drug_allergy: "Drug allergy", known_food_allergy: "Food allergy",
+    allergic_to_herbs: "Herb allergy", taking_prescribed_medication: "Prescribed medication"
+  };
+  var PH_WATCH_TAG = { red: "Red flag", main: "Main", also: "Also", cycle: "Cycle", tongue: "Tongue", pulse: "Pulse", abd: "Abdomen", bloods: "Bloods", hx: "History", ask: "Ask her" };
+  var PH_AIM_NEUTRAL = { main: "the main complaint", sec: "other symptoms", cyc: "the cycle" };
+  function phWatchParse(src) {
+    const rules = [];
+    String(src || "").split("\n").forEach(line => {
+      const i = line.indexOf("=");
+      if (i < 1) return;
+      const words = line.slice(0, i).split(",").map(w => w.trim()).filter(Boolean), out = line.slice(i + 1).trim();
+      if (words.length && out) rules.push([new RegExp(words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"), "i"), out]);
+    });
+    return rules;
+  }
+  var phWatchRulesCache = { src: null, rules: [] }, phWatchFindCache = { src: null, rules: [] };
+  function phWatchRules() {
+    const s = String((PHARMACY.watchWording && PHARMACY.watchWording.rules) || "");
+    if (phWatchRulesCache.src !== s) phWatchRulesCache = { src: s, rules: phWatchParse(s) };
+    return phWatchRulesCache.rules;
+  }
+  function phWatchFind() {
+    const s = String((PHARMACY.watchWording && PHARMACY.watchWording.find) || "");
+    if (phWatchFindCache.src !== s) phWatchFindCache = { src: s, rules: phWatchParse(s) };
+    return phWatchFindCache.rules;
+  }
+  function phWchCap(s) { s = String(s || ""); return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+  function phWchLow(s) { s = String(s || "").trim(); return /^[A-Z][a-z]/.test(s) ? s.charAt(0).toLowerCase() + s.slice(1) : s; }
+  function phWatchWord(text) {
+    const t = String(text || "").trim();
+    if (!t) return "";
+    const table = phWatchRules().concat(PH_WATCH_WORDS);
+    for (let i = 0; i < table.length; i++) if (table[i][0].test(t)) return table[i][1];
+    return "";
+  }
+  function phWatchMainLine(famId) {
+    const ov = PHARMACY.watchWording && PHARMACY.watchWording.main && String(PHARMACY.watchWording.main[famId] || "").trim();
+    return ov || PH_WATCH_MAIN[famId] || "";
+  }
+  // a short memo so the live strip, the Planned cells and the Treatment tab share one read per repaint
+  var phWatchMemo = { t: 0, m: Object.create(null) };
+  function phWatchMemoGet(k, fn) {
+    const now = Date.now();
+    if (now - phWatchMemo.t > 300) { phWatchMemo.m = Object.create(null); phWatchMemo.t = now; }
+    return k in phWatchMemo.m ? phWatchMemo.m[k] : (phWatchMemo.m[k] = fn());
+  }
+  // no cycle chip for a man, a pregnant patient, or a plan that is not about the natural cycle (IVF, Pregnancy)
+  function phWatchCycleOk(rec, plan) {
+    if (!rec || rec.sex === "M") return false;
+    if (plan && /^(?:IVF Protocol|Cycle & IVF Protocol|Pregnancy)$/.test(String(plan.templateName || ""))) return false;
+    return !!phCycleTracked(rec);
+  }
+  function phWatchCycle(rec, plan, clues) {
+    const out = [];
+    if (!phWatchCycleOk(rec, plan)) return out;
+    const comp = phCycleComp(Object.assign({}, rec));   // a copy: phCycleFor hangs .cycle on the record it is given
+    const ov = (PHARMACY.watchWording && PHARMACY.watchWording.cycle) || {};
+    if (comp) {
+      if (comp.overdue) { const n = comp.day - comp.cycleLen; out.push({ tag: "cycle", text: `Period ${n} day${n === 1 ? "" : "s"} late` }); }
+      else { const line = String(ov[comp.phaseKey] || "").trim() || PH_WATCH_CYCLE[comp.phaseKey] || ""; out.push({ tag: "cycle", text: `Day ${comp.day}, ${comp.phaseLabel.toLowerCase()}${line ? ": " + line : ""}` }); }
+    }
+    (clues || []).filter(c => c.src === "cycle" && PH_WATCH_CYCLE_KEYS.includes(c.key)).slice(0, 3).forEach(c => out.push({ tag: "cycle", text: c.text }));
+    return out;
+  }
+  function phWatchFindings(rec, clues) {
+    const out = [], fr = phWatchFind(), seen = new Set();
+    const put = (tag, raw) => {
+      let s = String(raw || "").replace(/\s*\((?:visit chart|constitution read|abdomen[^)]*)\)\s*$/i, "").replace(/^Blood test shows (?:an? )?/i, "").trim();
+      for (let i = 0; i < fr.length; i++) if (fr[i][0].test(s)) { s = fr[i][1]; break; }
+      s = phWchCap(s);
+      if (!s || seen.has(tag + "|" + s)) return;
+      seen.add(tag + "|" + s);
+      out.push({ tag, text: s });
+    };
+    Object.keys(PH_WATCH_HX).forEach(k => {
+      if (phHxVal(rec, k) !== "yes") return;
+      const note = String(phHxNote(rec, k) || "").trim();
+      put("hx", PH_WATCH_HX[k] + (note ? ": " + (note.length > 40 ? note.slice(0, 38).trim() + "…" : note) : ""));
+    });
+    ["tongue", "pulse", "abd", "bloods"].forEach(src => (clues || []).filter(c => c.src === src).forEach(c => put(src, c.text)));
+    // today's Ask her answers (raw ticks only; a read must never call phTriToday, which migrates)
+    const tri = rec.tri || {};
+    if (tri.date === keyOf(TODAY)) Object.keys(tri.d || {}).filter(k => tri.d[k] === true).slice(0, 4).forEach(k => put("ask", phSignLabel(k)));
+    return out;
+  }
+  // the patient's chips: main, each secondary, cycle, findings (read-only; a short memo per patient + plan)
+  function phWatchItems(name, plan) {
+    return phWatchMemoGet(`${phPatientKey(name)}|${plan ? plan.id : ""}`, () => {
+      const out = [];
+      try {
+        const rec = name ? phPatientPeek(name) : null;
+        if (!rec) return out;
+        const it = phCcRibItems(name);
+        if (it && it.main) {
+          out.push({ tag: "main", text: phWchCap(phWatchWord(it.main.text) || phWatchMainLine(it.main.id) || it.main.text) });
+          it.others.filter(o => String(o.text || "").trim() !== PH_CC_PAIN_POINTER).forEach(o => {
+            const l = phWatchWord(o.text);
+            out.push({ tag: "also", text: phWchCap(o.text) + (l ? ": " + phWchLow(l) : "") });
+          });
+        }
+        let clues = [];
+        try { clues = phPatClues(rec, name) || []; } catch (e) { clues = []; }
+        phWatchCycle(rec, plan, clues).forEach(x => out.push(x));
+        phWatchFindings(rec, clues).forEach(x => out.push(x));
+      } catch (e) { /* nothing recorded reads as no chips */ }
+      return out;
+    });
+  }
+  // ---- the template phase a plan phase came from (by phaseKey, else label) ----
+  function phTpTplPhaseOf(plan, ph) {
+    try {
+      if (!plan || !ph || !plan.templateName) return null;
+      const tpl = phTpAllTemplates().find(x => x.name === plan.templateName);
+      if (!tpl || !Array.isArray(tpl.phases)) return null;
+      if (ph.phaseKey != null) { const hit = tpl.phases.find(p => phTpMgrPhaseKeyOf(p) === ph.phaseKey); if (hit) return hit; }
+      return tpl.phases.find(p => (p.label || "") === (ph.label || "")) || null;
+    } catch (e) { return null; }
+  }
+  // the same phase as the template SHIPPED it, before any edit she made to that template: a plan made earlier still
+  // holds that wording, and it is not her typing (so a later template edit, e.g. adding tokens, reaches that plan too)
+  function phTpBuiltinPhaseOf(plan, ph) {
+    try {
+      const tpl = PH_TP_TEMPLATES.find(x => x.name === plan.templateName);
+      if (!tpl || !Array.isArray(tpl.phases)) return null;
+      if (ph.phaseKey != null) { const hit = tpl.phases.find(p => phTpMgrPhaseKeyOf(p) === ph.phaseKey); if (hit) return hit; }
+      return tpl.phases.find(p => (p.label || "") === (ph.label || "")) || null;
+    } catch (e) { return null; }
+  }
+  // ---- Aim: tokens ----
+  function phTpAimValues(name, plan) {
+    const out = { main: "", sec: "", cyc: "" };
+    try {
+      const it = phCcRibItems(name);
+      if (it && it.main) out.main = phWchLow(it.main.text);
+      if (it) out.sec = phTpListAnd(it.others.map(o => String(o.text || "").trim()).filter(t => t && t !== PH_CC_PAIN_POINTER).map(phWchLow));
+      const rec = phPatientPeek(name);
+      if (rec && phWatchCycleOk(rec, plan)) { const c = phCycleComp(Object.assign({}, rec)); if (c && !c.overdue) out.cyc = c.phaseLabel.toLowerCase() + " phase"; }
+    } catch (e) { /* tokens with nothing behind them drop out */ }
+    return out;
+  }
+  // an empty token drops out with the word that joined it; a clause left with one word goes too; nothing left = neutral words
+  function phTpAimResolve(src, vals, neutral) {
+    const text = String(src || "");
+    if (text.indexOf("{") < 0) return text;
+    const val = k => String((vals && vals[k]) || "") || (neutral ? PH_AIM_NEUTRAL[k] : "");
+    let out = text.split(/;\s*/).map(clause => {
+      let c = clause, had = false;
+      ["main", "sec", "cyc"].forEach(k => {
+        if (c.indexOf("{" + k + "}") < 0) return;
+        const v = val(k);
+        if (v) { c = c.split("{" + k + "}").join(v); return; }
+        had = true;
+        const tk = "\\{" + k + "\\}";
+        const pre = "\\s*(?:\\b(?:and|with|for|plus)\\b|,)\\s*" + tk, post = tk + "\\s*(?:\\b(?:and|with|plus)\\b|,)\\s*";
+        if (new RegExp(pre, "i").test(c)) c = c.replace(new RegExp(pre, "gi"), "");
+        else if (new RegExp(post, "i").test(c)) c = c.replace(new RegExp(post, "gi"), "");
+        else c = c.split("{" + k + "}").join("");
+      });
+      c = c.replace(/\s{2,}/g, " ").replace(/\s+([,.])/g, "$1").replace(/^[\s,]+|[\s,]+$/g, "");
+      return had && c.split(/\s+/).filter(Boolean).length <= 1 ? "" : c;
+    }).filter(Boolean).join("; ");
+    if (!out && !neutral) return phTpAimResolve(text, vals, true);
+    return phWchCap(out);
+  }
+  // function declarations and `var` on purpose: a render can run during boot, before later consts have been reached
+  function phTpAimNeutral(t) { return phTpAimResolve(t, {}, true); }
+  // template editor: tokens show as chips-with-words, never curly brackets (also used by the One-table editor)
+  var PH_AIM_TOKENS = [["main", "main complaint"], ["sec", "secondary complaints"], ["cyc", "cycle phase"]];
+  function phAimTokToDisplay(s) { return PH_AIM_TOKENS.reduce((a, [k, w]) => a.split("{" + k + "}").join("[" + w + "]"), String(s || "")); }
+  function phAimTokFromDisplay(s) { return PH_AIM_TOKENS.reduce((a, [k, w]) => a.split("[" + w + "]").join("{" + k + "}"), String(s || "")); }
+  // ---- hers or auto ----
+  function phTpFieldHersText(plan, ph, f) {
+    const stored = String((ph && ph[f]) || "").trim();
+    if (!stored) return "";
+    if (ph[f + "Hers"] === true) return stored;
+    const tp = phTpTplPhaseOf(plan, ph);
+    if (!tp) return f === "aim" && /\{(?:main|sec|cyc)\}/.test(stored) ? "" : stored;   // a frozen or custom phase: what is written is what she sees, as before (an Aim still carrying tokens writes itself)
+    const t = String(tp[f] || "").trim();
+    if (stored === t || stored === (f === "aim" ? phTpAimNeutral(t) : t)) return "";
+    const bi = phTpBuiltinPhaseOf(plan, ph), t0 = bi ? String(bi[f] || "").trim() : "";
+    if (t0 && (stored === t0 || stored === (f === "aim" ? phTpAimNeutral(t0) : t0))) return "";
+    return stored;
+  }
+  function phTpAimText(name, plan, ph) {
+    const tp = phTpTplPhaseOf(plan, ph);
+    return phTpAimResolve(tp ? String(tp.aim || "") : String(ph.aim || ""), phTpAimValues(name, plan), false);
+  }
+  function phTpWatchModel(name, plan, ph) {
+    const tp = phTpTplPhaseOf(plan, ph);
+    return { flags: String((tp ? tp.watch : ph.watch) || "").trim(), items: phWatchItems(name, plan) };
+  }
+  function phTpWatchText(m) { return [m.flags].concat(m.items.map(i => i.text)).filter(Boolean).join("; "); }
+  // what the app would write for this field, ignoring anything she typed
+  function phTpFieldAuto(name, plan, ph, f) {
+    try {
+      if (f === "aim") return { text: phTpAimText(name, plan, ph), flags: "", items: [] };
+      const m = phTpWatchModel(name, plan, ph);
+      return { text: phTpWatchText(m), flags: m.flags, items: m.items };
+    } catch (e) { return { text: "", flags: "", items: [] }; }
+  }
+  // the one answer every reader asks for Aim / Watch: hers if she typed it, else what the record writes
+  function phTpFieldView(name, plan, ph, f) {
+    if (!ph) return { hers: false, auto: true, text: "", flags: "", items: [] };
+    try {
+      if (f !== "aim" && f !== "watch") return { hers: true, auto: false, text: String(ph[f] || ""), flags: "", items: [] };
+      const hers = phTpFieldHersText(plan, ph, f);
+      if (hers) return { hers: true, auto: false, text: hers, flags: "", items: [] };
+      const a = phTpFieldAuto(name, plan, ph, f);
+      return { hers: false, auto: true, text: a.text, flags: a.flags, items: a.items };
+    } catch (e) { return { hers: true, auto: false, text: String((ph && ph[f]) || ""), flags: "", items: [] }; }
+  }
+  function phTpFieldText(name, plan, ph, f) { return phTpFieldView(name, plan, ph, f).text; }
+  // a dated record (the plan's history) keeps the phase's own Watch: hers as typed, else the red flags, never today's patient chips
+  function phTpWatchFixedText(name, plan, ph) { const v = phTpFieldView(name, plan, ph, "watch"); return v.hers ? v.text : v.flags; }
+  // writes: typing her own makes it hers; typing the auto text back (or clearing it) goes back to auto
+  function phTpFieldCommit(name, plan, ph, f, val) {
+    if (f !== "aim" && f !== "watch") { ph[f] = val; return; }
+    const v = String(val || "").trim(), norm = s => phTpDotParts(s).join("; ").toLowerCase();
+    const tp = phTpTplPhaseOf(plan, ph);
+    if (!v || norm(v) === norm(phTpFieldAuto(name, plan, ph, f).text)) {
+      ph[f] = tp ? (f === "aim" ? phTpAimNeutral(tp.aim) : String(tp.watch || "")) : v;
+      delete ph[f + "Hers"];
+      return;
+    }
+    ph[f] = v; ph[f + "Hers"] = true;
+  }
+  // the inside of an Aim / Watch cell: { html, empty }
+  function phWatchChipsHtml(items) {
+    return items.map(i => `<span class="ph-wch t-${i.tag}"><b>${esc(PH_WATCH_TAG[i.tag] || "")}</b>${esc(i.text)}</span>`).join("");
+  }
+  // frozen = a closed phase: it keeps the template's red flags but no longer follows the patient
+  function phTpFieldCellHtml(name, plan, ph, f, frozen) {
+    const v = phTpFieldView(name, plan, ph, f), ph0 = esc(PH_TP_FIELD_PH[f] || "");
+    if (v.hers) {
+      const au = frozen ? { text: "" } : phTpFieldAuto(name, plan, ph, f);
+      const back = au.text && au.text !== v.text ? `<button type="button" class="ph-tp-dx-btn back" data-tp-fauto="${plan.id}:${ph.id}:${f}" title="Go back to the automatic wording">↺ back to auto</button>` : "";
+      return { html: (v.text ? phTpCellShow(f, v.text) : ph0) + back, empty: !v.text };
+    }
+    if (f === "aim") return { html: v.text ? phTpCellShow("aim", v.text) : ph0, empty: !v.text };
+    const flag = v.flags ? `<span class="ph-wch-flags"><svg class="ph-wch-ic" aria-label="Red flags"><use href="#i-warn"/></svg>${phTpCellShow("watch", v.flags)}</span>` : "";
+    const chips = !frozen && v.items.length ? `<span class="ph-wch-row">${phWatchChipsHtml(v.items)}</span>` : "";
+    return { html: flag + chips || ph0, empty: !flag && !chips };
+  }
+  // the "↺ back to auto" chip on a cell
+  function phTpFieldBackToAuto(el) {
+    const [planId, phId, f] = String(el.dataset.tpFauto || "").split(":");
+    const name = phTpScreenPatient, plan = phTpFindPlan(name, planId), ph = plan && plan.phases.find(p => p.id === phId);
+    if (!ph || (f !== "aim" && f !== "watch")) return;
+    phTpFieldCommit(name, plan, ph, f, "");
+    phTpAutoBust();
+    if (savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return; }
+    document.querySelectorAll(`[data-tp-edit="${planId}:${phId}:${f}"]`).forEach(c => {
+      const r = phTpFieldCellHtml(name, plan, ph, f);
+      c.classList.remove("editing"); c.classList.toggle("empty", r.empty); c.innerHTML = r.html;
+    });
+  }
+  // ---- Settings -> Watch wording ----
+  function phWatchWordSettingsHtml() {
+    const g = PHARMACY.watchWording || {}, main = g.main || {}, cyc = g.cycle || {};
+    const rows = PH_CC_FAMS.map(f => `<label class="ph-gd-field"><span>${esc(f.label)}</span><input type="text" class="field-bare" data-ww-main="${f.id}" value="${esc(main[f.id] || "")}" placeholder="${esc(PH_WATCH_MAIN[f.id] || "")}" aria-label="Watch line for ${esc(f.label)}"></label>`).join("");
+    const cy = [["period", "Period"], ["foll", "Follicular"], ["ov", "Ovulation"], ["luteal", "Luteal"]]
+      .map(([k, l]) => `<label class="ph-gd-field"><span>${l}</span><input type="text" class="field-bare" data-ww-cycle="${k}" value="${esc(cyc[k] || "")}" placeholder="${esc(PH_WATCH_CYCLE[k])}" aria-label="Watch line for the ${l.toLowerCase()} phase"></label>`).join("");
+    return `<div class="ph-settings-sec">
+      <h3>Watch wording</h3>
+      <p class="ph-settings-hint">Draft wording, yours to correct. Each line follows the complaint or phase it is named for.</p>
+      ${rows}
+      <h4 class="ph-ww-h">By cycle phase</h4>
+      ${cy}
+      <label class="ph-gd-field"><span>Complaint words → Watch</span><textarea rows="5" class="field-bare" data-ww-rules="1" placeholder="words, words = line" aria-label="Complaint words and the Watch line each one gives">${esc(g.rules || "")}</textarea></label>
+      <label class="ph-gd-field"><span>Finding words → Watch</span><textarea rows="4" class="field-bare" data-ww-find="1" placeholder="words, words = line" aria-label="Finding words and the Watch line each one gives">${esc(g.find || "")}</textarea></label>
+    </div>`;
+  }
+  document.addEventListener("change", e => {
+    const el = e.target && e.target.closest ? e.target.closest("[data-ww-main],[data-ww-cycle],[data-ww-rules],[data-ww-find]") : null;
+    if (!el || !el.closest("#pharmacyPage")) return;
+    if (!PHARMACY.watchWording || typeof PHARMACY.watchWording !== "object") PHARMACY.watchWording = { main: {}, cycle: {}, rules: "", find: "" };
+    const g = PHARMACY.watchWording;
+    if (!g.main) g.main = {};
+    if (!g.cycle) g.cycle = {};
+    const v = String(el.value || "").trim();
+    if (el.dataset.wwMain) { const id = el.dataset.wwMain; if (!v || v === PH_WATCH_MAIN[id]) delete g.main[id]; else g.main[id] = v; }
+    else if (el.dataset.wwCycle) { const k = el.dataset.wwCycle; if (!v || v === PH_WATCH_CYCLE[k]) delete g.cycle[k]; else g.cycle[k] = v; }
+    else if (el.dataset.wwRules != null) g.rules = String(el.value || "");
+    else g.find = String(el.value || "");
+    phTpAutoBust(); phWatchMemo.m = Object.create(null);
+    if (savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL);
+  });
   function phTpFocusGoalHtml(name, plan, modal) {
     const appt = phApptNearestNow(name);
     const brief = phApptBrief(appt || { patient: name }, plan);
@@ -85165,7 +85571,7 @@ or changing anything in Cliniko.
     const flip = anim && seen && live && seen.liveId && seen.liveId !== live.id;
     const phLab = allDone ? "All phases done" : live ? `Phase ${liveIdx + 1} of ${phs.length}` : `Phase — of ${phs.length}`;
     const phName = allDone ? "Complete" : live ? (live.label || `Phase ${liveIdx + 1}`) : (phs[0].label || "Phase 1");
-    const phSm = allDone ? "" : live ? (phTpDotParts(live.aim)[0] || "") : "not started yet";
+    const phSm = allDone ? "" : live ? (phTpDotParts(phTpFieldText(name, plan, live, "aim"))[0] || "") : "not started yet";
     const phase = `<div class="g phase"><div class="lab">${esc(phLab)}</div><div class="big nm${flip ? " flip" : ""}" title="${esc(phName)}">${esc(phName)}</div>${phSm ? `<div class="sm clip" title="${esc(phSm)}">${esc(phSm)}</div>` : ""}<div class="pips" title="${esc(pipTitle)} sessions">${pips}</div></div>`;
     // -- the next gauge
     const from = idxToday >= 0 ? idxToday + 1 : cells.findIndex(c => c.k === "booked" || c.k === "next");
@@ -85874,6 +86280,11 @@ or changing anything in Cliniko.
   function phTpLiveCtxRowHtml(name, plan, ph, colN) {
     if (!ph) return "";
     const fld = (f, label) => {
+      if (f === "aim" || f === "watch") {
+        // Aim / Watch write themselves from the record unless she typed her own (phTpFieldView)
+        const r = phTpFieldCellHtml(name, plan, ph, f);
+        return `<div${f === "watch" ? ` class="wide"` : ""}><span class="lbl">${label}</span><span class="val${r.empty ? " empty" : ""}" data-tp-edit="${plan.id}:${ph.id}:${f}" title="Click to edit">${r.html}</span></div>`;
+      }
       const v = ph[f];
       return `<div><span class="lbl">${label}</span><span class="val${v ? "" : " empty"}" data-tp-edit="${plan.id}:${ph.id}:${f}" title="Click to edit">${v ? phTpCellShow(f, v) : esc(PH_TP_FIELD_PH[f])}</span></div>`;
     };
@@ -87043,7 +87454,16 @@ or changing anything in Cliniko.
   }
   function phTpPlanCells(plan, phase) {
     const frozen = phase.status === "done" && !phTpUnlockDone.has(phase.id);
-    const cell = (f, tag) => { tag = tag || "td"; return frozen
+    const cell = (f, tag) => {
+      tag = tag || "td";
+      if (f === "aim" || f === "watch") {
+        // Aim / Watch write themselves from the record unless she typed her own
+        const r = phTpFieldCellHtml(phTpScreenPatient, plan, phase, f, frozen);
+        return frozen
+          ? `<${tag} class="ph-tp-cell frozen${r.empty ? " empty" : ""}" title="This phase is closed — unlock it on the phase line to edit">${r.empty ? "—" : r.html}</${tag}>`
+          : `<${tag} class="ph-tp-cell${r.empty ? " empty" : ""}" data-tp-edit="${plan.id}:${phase.id}:${f}" title="Click to edit">${r.html}</${tag}>`;
+      }
+      return frozen
       ? `<${tag} class="ph-tp-cell frozen${phase[f] ? "" : " empty"}" title="This phase is closed — unlock it on the phase line to edit">${phase[f] ? phTpCellShow(f, phase[f]) : "—"}</${tag}>`
       : `<${tag} class="ph-tp-cell${phase[f] ? "" : " empty"}" data-tp-edit="${plan.id}:${phase.id}:${f}" title="Click to edit">${phase[f] ? phTpCellShow(f, phase[f]) : esc(PH_TP_FIELD_PH[f])}</${tag}>`; };
     const picking = phTpFormulaPickPhase === phase.id;
@@ -88651,11 +89071,11 @@ or changing anything in Cliniko.
       const when = ph.sinceKey ? `${pd(ph.sinceKey)} → ${ph.doneKey ? pd(ph.doneKey) : ph.status === "current" ? "now" : ""}` : "";
       const planned = [
         // dot points on paper too (her synth22 "all treatment plans ... in dot point format")
-        line("Aim", ph.aim ? phTpDotsHtml(ph.aim) : ""),
+        line("Aim", phTpFieldText(name, plan, ph, "aim") ? phTpDotsHtml(phTpFieldText(name, plan, ph, "aim")) : ""),
         line("Visits", ph.cadence ? esc(ph.cadence) : ""),
         line("Points", ph.points ? esc(ph.points) : ""),
         line("Formula", ph.formulaName ? esc(ph.formulaName) : ""),
-        line("Watch", ph.watch ? phTpDotsHtml(ph.watch) : ""),
+        line("Watch", phTpFieldText(name, plan, ph, "watch") ? phTpDotsHtml(phTpFieldText(name, plan, ph, "watch")) : ""),
       ].filter(Boolean);
       const done = !rc ? [] : [
         line("Visits", st ? `${st.done} done${st.booked ? `, ${st.booked} booked` : ""}` : ""),
@@ -91269,7 +91689,7 @@ or changing anything in Cliniko.
       </div>
       <div class="ph-tp-spine-col watch">
         <div class="ph-tp-spine-colhead">Watch · Acu &amp; herbs</div>
-        ${ph && ph.watch ? `<div class="ph-tp-spine-row"><b>Watch:</b> ${esc(ph.watch)}</div>` : ""}
+        ${ph && phTpWatchFixedText(name, plan, ph) ? `<div class="ph-tp-spine-row"><b>Watch:</b> ${esc(phTpWatchFixedText(name, plan, ph))}</div>` : ""}
         ${ph && phTpSymSummary(ph) ? `<div class="ph-tp-spine-row"><b>Symptoms:</b> ${esc(phTpSymSummary(ph))}</div>` : ""}
         ${acu ? `<div class="ph-tp-spine-row"><b>Points:</b> ${esc(acu.points || "—")}${acu.outcome ? ` <span class="out">${outLabel(acu.outcome)}</span>` : ""}</div>` : `<div class="ph-tp-spine-row"><span class="ph-tp-rec-none">No acupuncture logged this day.</span></div>`}
         ${herbs ? `<div class="ph-tp-spine-row"><b>Herbs:</b> ${esc(herbs)}</div>` : ""}
@@ -91482,8 +91902,9 @@ or changing anything in Cliniko.
   function phTpSymptomsHtml(plan, phase, frozen, hideLegacy, compact) {
     const key = `${plan.id}:${phase.id}`;
     const rows = phase.symptoms || [];
-    const legacy = !hideLegacy && (phase.watch || "").trim()
-      ? `<div class="ph-tp-sym-legacy${frozen ? "" : " editable"}"${frozen ? "" : ` data-tp-edit="${key}:watch" title="Click to edit"`}>${esc(phase.watch)}</div>`
+    const lr = hideLegacy ? null : phTpFieldCellHtml(phTpScreenPatient, plan, phase, "watch", frozen);   // Watch writes itself from the record unless she typed her own
+    const legacy = lr && !lr.empty
+      ? `<div class="ph-tp-sym-legacy${frozen ? "" : " editable"}"${frozen ? "" : ` data-tp-edit="${key}:watch" title="Click to edit"`}>${lr.html}</div>`
       : "";
     const cards = rows.length ? `<div class="ph-tp-sym-cards${frozen || compact ? " lines" : ""}">${rows.map(r => phTpSymRowHtml(key, r, frozen, compact)).join("")}</div>` : "";
     // her ask 2026-09-24: on the vtab table (compact=true) existing rows are
@@ -93127,9 +93548,18 @@ or changing anything in Cliniko.
     // gate to the exact identity actually on screen for this render.
     const tvGate = phTpTodaysVisitGate(plan, phase, frozen);
     const showTodaysVisit = tvGate.show, acuSessionsForToday = tvGate.sessions;
-    const cell = (f, extra) => frozen
+    const cell = (f, extra) => {
+      if (f === "aim" || f === "watch") {
+        // Aim / Watch write themselves from the record unless she typed her own
+        const r = phTpFieldCellHtml(phTpScreenPatient, plan, phase, f, frozen);
+        return frozen
+          ? `<td class="ph-tp-cell frozen${r.empty ? " empty" : ""}"${extra || ""} title="This phase is closed — unlock it on the phase line to edit">${r.empty ? "—" : r.html}</td>`
+          : `<td class="ph-tp-cell${r.empty ? " empty" : ""}"${extra || ""} data-tp-edit="${plan.id}:${phase.id}:${f}" title="Click to edit">${r.html}</td>`;
+      }
+      return frozen
       ? `<td class="ph-tp-cell frozen${phase[f] ? "" : " empty"}"${extra || ""} title="This phase is closed — unlock it on the phase line to edit">${phase[f] ? phTpCellShow(f, phase[f]) : "—"}</td>`
       : `<td class="ph-tp-cell${phase[f] ? "" : " empty"}"${extra || ""} data-tp-edit="${plan.id}:${phase.id}:${f}" title="Click to edit">${phase[f] ? phTpCellShow(f, phase[f]) : esc(PH_TP_FIELD_PH[f])}</td>`;
+    };
     /* Her report 2026-09-10, "why can't i edit this?", on a phase not yet
        started: five rows each saying "not started" is the same non-fact five
        times, and it reads like five broken fields rather than one section that
@@ -93716,7 +94146,8 @@ or changing anything in Cliniko.
     const inp = document.createElement(multi ? "textarea" : "input");
     if (!multi) inp.type = "text"; else inp.rows = 1;
     inp.className = "ph-tp-cellin field-bare";
-    const seed = phTpCellSeed(field, ph[field] || "");
+    // Aim / Watch open on what she sees: the text the record writes, or her own words
+    const seed = phTpCellSeed(field, (field === "aim" || field === "watch") ? phTpFieldText(phTpScreenPatient, plan, ph, field) : (ph[field] || ""));
     inp.value = seed;
     inp.placeholder = PH_TP_FIELD_PH[field] || "";
     inp.setAttribute("data-tp-phase-field", key);
@@ -93756,8 +94187,10 @@ or changing anything in Cliniko.
         }
         el.classList.remove("editing"); phTpPlanRepaint(); return;
       }
-      // untouched = keep her stored wording exactly; the dot-point seed is display only
-      if (live && inp.value !== seed) live[field] = phTpCellUnseed(field, inp.value);
+      // untouched = keep her stored wording exactly; the dot-point seed is display only.
+      // Aim / Watch: typing her own makes it hers; typing the auto text back (or clearing it) goes back to auto
+      const livePlan = phTpFindPlan(phTpScreenPatient, planId);
+      if (live && inp.value !== seed) phTpFieldCommit(phTpScreenPatient, livePlan, live, field, phTpCellUnseed(field, inp.value));
       phPatientRec(phTpScreenPatient);
       savePharmacy();
       /* Her report 2026-09-10: "when i type then click outside the box, screen
@@ -93773,6 +94206,12 @@ or changing anything in Cliniko.
          chip is computed from it, so that one still needs its row rebuilt. */
       el.classList.remove("editing");
       if (field === "aim" || field === "watch") phTpFxRefreshAll();
+      if (live && livePlan && (field === "aim" || field === "watch")) {
+        const r = phTpFieldCellHtml(phTpScreenPatient, livePlan, live, field);
+        el.classList.toggle("empty", r.empty);
+        el.innerHTML = r.html;
+        return;
+      }
       const shown = live ? live[field] : inp.value;
       el.classList.toggle("empty", !shown);
       el.innerHTML = shown ? phTpCellShow(field, shown) : esc(PH_TP_FIELD_PH[field] || "");
@@ -93837,7 +94276,7 @@ or changing anything in Cliniko.
       return;
     }
     if (field === "ask") {
-      const chips = phAcuWatchChips(ph.watch);
+      const chips = phAcuWatchItems(phTpScreenPatient, plan, ph).map(i => i.text);
       const checked = new Set(spNow().ask || []);
       const custom = (spNow().ask || []).filter(a => !chips.includes(a));
       let adding = false;
@@ -93971,24 +94410,26 @@ or changing anything in Cliniko.
   // linked formula, so a plan full of cadence / points / what-to-watch
   // printed "As discussed" on every stage. One composer, used by the
   // in-app view, the PDF doc and the email text alike.
-  function phTpPhaseDoingParts(p) {
+  function phTpPhaseDoingParts(p, name, plan) {
     const parts = [];
     if (p.formulaName) parts.push(`Herbs: ${p.formulaName}`);
     if ((p.cadence || "").trim()) parts.push(p.cadence.trim());
     if ((p.points || "").trim()) parts.push(`Acupuncture: ${p.points.trim()}`);
-    if ((p.watch || "").trim()) parts.push(`Watch for: ${p.watch.trim()}`);
+    // the patient's own letter never carries findings: Watch is the phase's red flags, or what she typed
+    const w = (name ? phTpWatchFixedText(name, plan, p) : String(p.watch || "")).trim();
+    if (w) parts.push(`Watch for: ${w}`);
     if (phTpSymSummary(p)) parts.push(`Watching: ${phTpSymSummary(p)}`);
     return parts;
   }
-  const phTpPhaseDoingHtml = p => { const parts = phTpPhaseDoingParts(p); return parts.length ? parts.map(esc).join("<br>") : "As discussed"; };
+  const phTpPhaseDoingHtml = (p, name, plan) => { const parts = phTpPhaseDoingParts(p, name, plan); return parts.length ? parts.map(esc).join("<br>") : "As discussed"; };
   function phTpLetterText(name, plan) {
     const cur = phTpPlanCurrentPhase(plan);
     // her pick 3, 2026-09-22 (soft skip): a phase that doesn't apply to her
     // never appears in the patient-facing letter -- omit it entirely
     // rather than describe a stage she isn't actually going through.
     const lines = (plan.phases || []).filter(p => !p.skipped).map(p => {
-      const doing = phTpPhaseDoingParts(p);
-      return `• ${p.label}${p.aim ? `\n  ${p.aim}` : ""}${doing.length ? `\n  ${doing.join("\n  ")}` : ""}`;
+      const doing = phTpPhaseDoingParts(p, name, plan), aim = phTpFieldText(name, plan, p, "aim");
+      return `• ${p.label}${aim ? `\n  ${aim}` : ""}${doing.length ? `\n  ${doing.join("\n  ")}` : ""}`;
     });
     return `Dear ${phTpFirstName(name)},\n\n`
       + `Here's the treatment plan I've put together for you. Let me know if anything doesn't make sense, or if anything changes for you along the way.\n\n`
@@ -94025,7 +94466,7 @@ or changing anything in Cliniko.
       <table class="strip"><tr>${strip}</tr></table>` : ""}
       <h2>Your plan, stage by stage</h2>
       <table class="plan"><thead><tr><th>Stage</th><th>What I'm doing</th><th>What it's for</th></tr></thead>
-      <tbody>${phs.map(p => `<tr><td><b>${esc(p.label)}</b></td><td>${phTpPhaseDoingHtml(p)}</td><td>${esc(p.aim || "")}</td></tr>`).join("")}</tbody></table>
+      <tbody>${phs.map(p => `<tr><td><b>${esc(p.label)}</b></td><td>${phTpPhaseDoingHtml(p, name, plan)}</td><td>${esc(phTpFieldText(name, plan, p, "aim"))}</td></tr>`).join("")}</tbody></table>
       ${phTpIsFertilityPlan(plan) ? `<h2>After your pregnancy test</h2>
       <p>Please book a longer review appointment once you've tested, so we can go through the result properly together.</p>
       <p><b>If it's positive</b> — I'll move you into weekly support for early pregnancy and talk through what to expect.<br>
@@ -94067,7 +94508,7 @@ or changing anything in Cliniko.
         <div class="ph-tp-lstrip">${strip}</div>` : ""}
         <div class="ph-tp-lh">Your plan, stage by stage</div>
         <table class="ph-tp-ltable"><thead><tr><th>Stage</th><th>What I'm doing</th><th>What it's for</th></tr></thead>
-        <tbody>${phs.map(p => `<tr><td><b>${esc(p.label)}</b></td><td>${phTpPhaseDoingHtml(p)}</td><td>${esc(p.aim || "")}</td></tr>`).join("")}</tbody></table>
+        <tbody>${phs.map(p => `<tr><td><b>${esc(p.label)}</b></td><td>${phTpPhaseDoingHtml(p, name, plan)}</td><td>${esc(phTpFieldText(name, plan, p, "aim"))}</td></tr>`).join("")}</tbody></table>
         ${phTpIsFertilityPlan(plan) ? `<div class="ph-tp-lh">After your pregnancy test</div>
         <p>Please book a longer review appointment once you've tested, so we can go through the result properly together.</p>
         <p><b>If it's positive</b> — I'll move you into weekly support for early pregnancy and talk through what to expect.<br>
