@@ -86925,6 +86925,7 @@ or changing anything in Cliniko.
       const r = phTpFieldCellHtml(name, plan, ph, f);
       c.classList.remove("editing"); c.classList.toggle("empty", r.empty); c.innerHTML = r.html;
     });
+    phTpFxRefreshAll();   // the findings column's ✓ Watch / ✓ Aim follow the field back to auto
   }
   // ---- Settings -> Watch wording ----
   function phWatchWordSettingsHtml() {
@@ -87923,7 +87924,9 @@ or changing anything in Cliniko.
     const dtxt = r.d === "today" ? "today" : r.d ? presBandDay(r.d) : "";
     const chg = r.chg ? `<i class="chg" title="Changed since last visit"></i>` : "";
     const seg = r.phrase ? phTpFxSeg(r) : "";
-    const inW = !!(ph && seg && phTpFxHas(ph.watch, seg)), inA = !!(ph && seg && phTpFxHas(ph.aim, seg));
+    // ✓ reads the field as she sees it (her text, or the auto red flags and chips), never the raw stored text
+    const plan = ph && seg ? phTpFindPlan(ctx.name, pid) : null;
+    const inW = !!(plan && phTpFxHas(phTpFieldText(ctx.name, plan, ph, "watch"), seg)), inA = !!(plan && phTpFxHas(phTpFieldText(ctx.name, plan, ph, "aim"), seg));
     const add = (w, on, lab) => `<button type="button" class="ph-tp-fxb${on ? " on" : ""}" data-tp-fx-add="${w}" data-tp-fx-id="${pid}|${r.id}" aria-pressed="${on}" title="${esc(on ? `Take “${seg}” off ${lab}` : `Add “${seg}” to this phase's ${lab}`)}">${on ? "✓" : "+"} ${lab}</button>`;
     const lines = `<span class="dl">${esc(r.now.dl)}</span><span>${r.now.t}</span>${r.was ? `<span class="dl">${esc(r.was.dl)}</span><span class="${r.chg ? "was" : ""}">${r.was.t}</span>` : ""}`;
     return `<div class="ph-tp-fr${cls}" data-tp-fr="${r.id}">
@@ -88041,24 +88044,31 @@ or changing anything in Cliniko.
       phTpFxPaint(planId, false, false);
     });
   }
-  // + Watch / + Aim: adds (or takes off) "<finding>: <phrase>" as one point of the live phase's field
+  // + Watch / + Aim: adds (or takes off) "<finding>: <phrase>" as one point of the live phase's field. It starts from
+  // what she sees (phTpFieldView) and writes through the one door (phTpFieldCommit): her pick makes the field hers,
+  // with the auto chips kept as her text; taking her last pick off, while the auto text is unchanged, puts it back on auto
   function phTpFxAddToggle(btn) {
     const C = btn.closest("[data-tp-fxcols]"); if (!C) return;
     const name = C.dataset.tpFxName, [planId, rowId] = btn.dataset.tpFxId.split("|"), which = btn.dataset.tpFxAdd === "a" ? "aim" : "watch";
     const plan = phTpFindPlan(name, planId), ctx = plan && phTpFxCtxGet(name, plan);
     const r = ctx && ctx.rows.find(x => x.id === rowId), ph = phTpFxLivePh(name, planId);
     if (!r || !ph || !r.phrase) return;
-    const seg = phTpFxSeg(r), before = ph[which] || "", has = phTpFxHas(before, seg);
-    const next = has ? phTpFxParts(before).filter(s => s.toLowerCase() !== seg.toLowerCase()).join("; ") : (before.trim() ? before.replace(/[\s;]+$/, "") + "; " + seg : seg);
-    const from = btn.getBoundingClientRect();
-    ph[which] = next;
+    const seg = phTpFxSeg(r), shown = phTpFieldText(name, plan, ph, which), has = phTpFxHas(shown, seg);
+    const next = has ? phTpFxParts(shown).filter(s => s.toLowerCase() !== seg.toLowerCase()).join("; ") : (shown.trim() ? shown.replace(/[\s;]+$/, "") + "; " + seg : seg);
+    // the stored text and her "hers" mark exactly as they were, so a failed save and Undo put back precisely that
+    const hk = which + "Hers", own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+    const snap = p => ({ v: p[which], h: p[hk], hasV: own(p, which), hasH: own(p, hk) });
+    const put = (p, s) => { if (s.hasV) p[which] = s.v; else delete p[which]; if (s.hasH) p[hk] = s.h; else delete p[hk]; };
+    const was = snap(ph), from = btn.getBoundingClientRect();
+    phTpFieldCommit(name, plan, ph, which, next);
     phPatientRec(name);
-    if (savePharmacy() === false) { ph[which] = before; presSavedToast(PH_PAT_SAVE_FAIL); return; }
+    if (savePharmacy() === false) { put(ph, was); presSavedToast(PH_PAT_SAVE_FAIL); return; }
     const lab = which === "aim" ? "Aim" : "Watch";
     presSavedToast(has ? `Taken off ${lab}` : `Added to ${lab}`, { undo: () => {
-      const live = phTpFxLivePh(name, planId); if (!live) return;
-      live[which] = before; phPatientRec(name);
-      if (savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return; }
+      const p0 = phTpFindPlan(name, planId), live = p0 && p0.phases.find(p => p.id === ph.id); if (!live) return;
+      const cur = snap(live);
+      put(live, was); phPatientRec(name);
+      if (savePharmacy() === false) { put(live, cur); presSavedToast(PH_PAT_SAVE_FAIL); return; }
       phTpPlanRepaint();
     } });
     phTpPlanRepaint();
