@@ -1286,7 +1286,12 @@ each head ONE column (R: Up. Resp / Stomach / Bladder, L: Heart / Liver /
 Adrenals, `PH_PULSE_POS_COL`), short column names show the full name on
 hover, and her normal pulse (`PH_PULSE_TPL`: Cun Qi, Guan Blood, Chi Organ,
 arches; Left Guan wiry) is always drawn dashed grey under her ticks
-(`phPulseBase`; no toggle). Abdomen tension is
+(`phPulseBase`; no toggle). Under the chart, **Pulse in action**
+(`phPulseAnimHtml`, drawn on the concept pictures' runner as `PH_PP.SC.pulse`)
+is HER radial pulse picture: an arch per ticked depth under Cun / Guan / Chi
+lifting by amplitude at her Hammer at-rest rate (72 when none, a Slowed chip),
+following the Hammer rhythm; last visit dashed grey, an empty position her
+normal arch faint grey; still under reduced motion. Abdomen tension is
 one whole-abdomen value. Read every finding through `phVisitFndRead`. A
 **Findings trend** sheet (Grid | Trail) shows dated tongue and abdomen
 findings from the exam pages. The pulse knowledge base
