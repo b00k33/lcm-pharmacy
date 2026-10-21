@@ -1192,7 +1192,10 @@ scoring happens: one merged header (verdict + Quick assess), signs in ten
 shared areas with a "For this complaint" filter, ticked chips that clear,
 a body chart, a reference sheet; formulas rank by `phFbrRank`, the leader
 is `phFbrLeadOf`; pre-fills come from charts, history, bloods, the intake
-form, pain words, cycle, age and sex (derived, a tap always wins). A new
+form, pain words, cycle, age and sex (derived, a tap always wins). The board
+groups its rows under quiet subject headings (a twin pair's heading is its
+Bing subject); the complaint search box's "+ Add as complaint" adds the typed
+words as a secondary complaint through Came in for's own add. A new
 formula or sign = **integrate33**. **Find the Ren**: look first, then two
 questions at a time, with two photo panels whose zones open their LOOK row.
 (Locked details: "Locked conventions" below.)
@@ -1246,7 +1249,12 @@ words.
 the main and secondary complaints scored each visit (0–10 or % better),
 charted over time, Energy 1–10 under it. It replaced the Re-check card on
 2026-10-14 and still mirrors into `rec.recheck` [Today's visit = the
-complaint compass]. "Log today's session" lives in the Treatment tab's
+complaint compass]. Its scores are joined 0–10 bars and "n of m done" sits
+in its header. The checks are compact rows, two across, each with Open and
+Skip ▾ (Not today / Always for this patient); a skipped check folds into the
+"Skipped" line and counts as done (`phTodayPartOk`). Quick assess shows 8
+questions in 2 columns on Today's visit and Fang Bing Ren [synth22: Today's
+visit tidy ...]. "Log today's session" lives in the Treatment tab's
 stepper / Complete flow (`data-pres-acu-log`). **"No acupuncture — herbs
 only today"** saves `noTreatment:true`; every reader of `rec.acuSessions`
 (the printable record, Patient Journey, the Visits table, the quiet-patient
