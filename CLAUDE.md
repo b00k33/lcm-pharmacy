@@ -1523,6 +1523,9 @@ not repeated here.
   A diagnosis may keep words that describe the condition itself (cold-type, watery discharge).
   The same holds for any sign (her "yes, split them", same day): swelling or scant urine riding on
   a headache are their own rows; words about the same subject stay together ("Urine: yellow, scanty").
+  "Tongue" (body) and "Tongue coat" are two subjects. A classical one-name sign stays one row
+  (her keep: xiao ke "Thirst: with wasting", fan re "feels hot and irritable", the lower back and
+  belly heavy and cold, and Huang Qin Tang's against-pair "low energy, sunken lax pulse").
 - A new Medical history count reads `phHxApplicableItems`, so it matches the
   page.
 - Never `phFlashShow` on a patient page, a sheet or a dialog: the one toast
