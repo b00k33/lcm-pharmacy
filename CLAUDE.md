@@ -1296,7 +1296,10 @@ one frame (her pick 2026-10-21): equal 44px rows, RIGHT / LEFT in the label
 column on the organ-names row; each wrist of the picture is the chart's own
 grid (`phPaSideHtml`), drawn by measuring its cells (`phPaLay`, again on a
 width change), Cun = Lungs + Up. Resp, Guan = Thyroid + Stomach, Chi =
-Bladder + Chem., each arch on a dashed line through its row. Abdomen tension is
+Bladder + Chem., each arch on a dashed line through its row. The chart keeps
+its boxes over the picture's frame (grey bar, black base, Cun / Guan / Chi
+lines, a dashed line per row; `.ph-pulse-fr/-gl/-dl`) and every drawing sits
+level with its row's line like the picture (`plv-*` on `phPulseShapeSvg`). Abdomen tension is
 one whole-abdomen value. Read every finding through `phVisitFndRead`. A
 **Findings trend** sheet (Grid | Trail) shows dated tongue and abdomen
 findings from the exam pages. The pulse knowledge base
