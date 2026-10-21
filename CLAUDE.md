@@ -1513,6 +1513,10 @@ not repeated here.
 - Phase labels are identity keys (`msgWording`, `phaseKey`, group names such
   as "Subjective — how they feel"): change every use together, never one.
 - Sign labels read "Subject: descriptors" ("Sweat: easily").
+- A "Diagnosis:" sign names the condition only (her 2026-10-21, "fatty liver is not related to
+  diarrhoea"). Symptoms a source lists with it are their own signs, reused from the pool and
+  weighted on the formula; a condition the pool already has is that one row, never a second one.
+  A diagnosis may keep words that describe the condition itself (cold-type, watery discharge).
 - A new Medical history count reads `phHxApplicableItems`, so it matches the
   page.
 - Never `phFlashShow` on a patient page, a sheet or a dialog: the one toast
