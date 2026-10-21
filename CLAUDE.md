@@ -1239,7 +1239,7 @@ unlabelled → side → sublingual → flash (`PH_TONGUE_SHOT_RANK`). The tongue
 photo viewer carries the tongue chips on every photo, Sublingual and Flash
 as their own sections, past photos at the bottom. Compare and the viewer are
 ONE mechanism each, wired into every surface that shows a photo tile.
-**Never delete a photo** (her hard rule); the store asks the browser to keep
+The photo sheet has a Date field (today by default, never later): every photo on it saves under the date picked [Photo sheet: the date can be changed before saving]. **Never delete a photo** (her hard rule); the store asks the browser to keep
 it (`phStoragePersist`), and backups carry photos.
 
 ## Communications / messaging
