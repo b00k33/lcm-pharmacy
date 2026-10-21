@@ -1291,7 +1291,12 @@ arches; Left Guan wiry) is always drawn under her ticks (`phPulseBase`; no toggl
 is HER radial pulse picture: an arch per ticked depth under Cun / Guan / Chi
 lifting by amplitude at her Hammer at-rest rate (72 when none, a Slowed chip),
 following the Hammer rhythm; last visit solid grey, an empty position her
-normal arch solid green; still under reduced motion. Abdomen tension is
+normal arch solid green; still under reduced motion. Chart and picture share
+one frame (her pick 2026-10-21): equal 44px rows, RIGHT / LEFT in the label
+column on the organ-names row; each wrist of the picture is the chart's own
+grid (`phPaSideHtml`), drawn by measuring its cells (`phPaLay`, again on a
+width change), Cun = Lungs + Up. Resp, Guan = Thyroid + Stomach, Chi =
+Bladder + Chem., each arch on a dashed line through its row. Abdomen tension is
 one whole-abdomen value. Read every finding through `phVisitFndRead`. A
 **Findings trend** sheet (Grid | Trail) shows dated tongue and abdomen
 findings from the exam pages. The pulse knowledge base
