@@ -12,7 +12,7 @@ DESIGN-CONVENTIONS.md was merged into this file and retired on 2026-10-21.
 # ★★★ ONE APP, WELL INTEGRATED — standing rule (her 2026-10-10 "all builds and developments are integrative. the same information needs to present in all places that reference it ... i want this app to be integratively heavy"; restated in her 2026-10-21 audit ask)
 > Every page reads the same facts from the same place. Applies to every build, every page.
 
-1. **Find where the fact lives and what already draws it, and call that.** Never a second renderer, mini-chart, summary or wording of the same record. The one read for each: tongue `phTongueChartSvg` (best photo by `PH_TONGUE_SHOT_RANK`), abdomen `phAbdChartSvg`, pulse `phVisitPulseSummaryText` / `phVisitPulseDotsHtml`, dated findings `phVisitFndRead`, pain map `phPainMapHtml` / `phPmList`, current phase `phTpLivePhase`, today's plan `phTpPlanForToday`, Fang Bing Ren lead `phFbrRank` / `phFbrLeadOf`, ticked signs `phTriEffective`, complaints `phCcRibItems`, blood results `phBldList`, Watch / Aim `phTpFieldView`, Diagnosis / Goal `phTpAutoDx` / `phTpAutoGoal`, a patient record for drawing `phPatientPeek` (never the mutating `phPatientRec`).
+1. **Find where the fact lives and what already draws it, and call that.** Never a second renderer, mini-chart, summary or wording of the same record. The one read for each: tongue `phTongueChartSvg` (best photo by `PH_TONGUE_SHOT_RANK`), abdomen `phAbdChartSvg`, pulse `phVisitPulseSummaryText` / `phVisitPulseDotsHtml`, dated findings `phVisitFndRead`, pain map `phPainMapHtml` / `phPmList`, current phase `phTpLivePhase`, today's plan `phTpPlanForToday`, Fang Bing Ren lead `phFbrRank` / `phFbrLeadOf`, ticked signs `phTriEffective`, complaints `phCcRibItems`, blood results `phBldList`, Watch / Aim `phTpFieldView`, Diagnosis / Goal `phTpAutoDx` / `phTpAutoGoal`, a pattern's concept picture `phPpHtml` / `phPpSvg` (`PH_PP`, one per pattern), a patient record for drawing `phPatientPeek` (never the mutating `phPatientRec`).
 2. **One write door per fact:** `phTriWrite` + `phTriSetYes` / `phTriSetNo` / `phTriClearYes` (signs and links), `phPmWrite` (pains), `phCcWrite` (Came in for), `phMskWrite`, `phTlWrite`, `phEnWrite`, `phCxWrite`, `phTngWrite`, `phHxConstitPulse` (pulse chart), `phRenPhotoPut` (photos), `phTpFieldCommit` + `phTpFieldPick` (Watch / Aim). A new field on one of these records goes into its door's whitelist (`phPmWrite` silently drops unknown keys).
 3. **Derived on read, never copied.** A value worked out from other data (auto Diagnosis / Goal / Watch / Aim; Fang Bing Ren pre-fills from charts, history, bloods, the intake form, pain words, cycle, age and sex; Came in for from the pain map; IVF scan bloods in Blood tests; timeline items from IVF history) is computed when drawn and never stored. Only her own taps and typing are saved, and **her own value always wins** over the derived one, with a "back to auto" way out.
 4. **Wire a new thing everywhere in one pass.** A new Fang Bing Ren formula, sign or clue = her code word **integrate33** (memory `feedback_integrate33_protocol`): add it, then wire it into the tongue / pulse / abdomen charts, Ask her, Medical history, bloods, cycle answers, Patterns, links and twins, the body chart and search aliases, with a matrix HTML of what was and was not wired. Checklists: a new sign uses a subject in `PH_FBR_SUBJ_AREA` (and `PH_FBB_SUBJ`), a women-only one goes in `PH_SIGN_ONLY_F`, its twin in `PH_FBR_TWINS_DRAFT`; a new formula joins `PH_REN_FAM_GROUPS` (its colour shades itself); a new plan category follows the checklist in BUILD-NOTES "Dermatology plan category".
@@ -997,8 +997,8 @@ two columns: **Findings** (Came in for, Ren, Tongue, Pulse, Abdomen, Cycle,
 Ask her, Blood tests, History, Musculoskeletal; each read through the
 app's own renderer, a purple dot = changed since last visit; tap a row =
 its drawer, + Watch / + Aim, and lines to the diagnosis it feeds) beside
-**the plan** (the Diagnosis card: Likely / Possible bars, the leading
-formula, Goal; then the Session grid; then scans and the pain map / Also
+**the plan** (the Diagnosis card: Likely / Possible bars with a small concept picture
+per pattern that opens big, the leading formula, Goal; then the Session grid; then scans and the pain map / Also
 treating tiles). Side by side from 1280px, stacked below [Care Plan = the
 findings beside the plan]. The plan ⋯ menu is short with a More ▸ fold,
 one function (`phTpPlanMenuHtml`) for the Care Plan, Treatment and Dispense
@@ -1194,7 +1194,7 @@ tile she tapped; a complaint lifts its signs and fades the rest, nothing
 hidden, view state only; Today's visit shows the complaints) that Quick
 assess follows (`phQaFocus`), ticked chips that clear, a body chart whose
 big view zooms to a place when she points at its list group (organ plates
-under it, header click pins; `phFbbZoomShow`, `PH_FBBP`), a reference sheet
+under it with the concept picture of the pattern her signs there point to, header click pins; `phFbbZoomShow`, `PH_FBBP`, `phPpFbbFor`), a reference sheet
 [synth22: the "Looking at" line ... body map close-ups]; formulas rank by `phFbrRank`, the leader
 is `phFbrLeadOf`; pre-fills come from charts, history, bloods, the intake
 form, pain words, cycle, age and sex (derived, a tap always wins). The board
@@ -1209,14 +1209,15 @@ questions at a time, with two photo panels whose zones open their LOOK row.
 from the file, **never stored**; only her Agree / Not this patient writes
 `rec.patterns.agreed`/`.dismissed`. Strength is words (Likely / Possible /
 A hint) + a clue count, never a percentage. A card shows only its clues and
-Agree / Not this patient (no letters, food, points or supplement chips).
+Agree / Not this patient (no letters, food, points or supplement chips); an open card also shows the pattern's concept picture
+[Concept pictures].
 One pattern can be ★ main. Formula ideas are OFF (she dislikes suggested
 herbs). A rule she overrode in Settings never gains new clue keys later
 (deliberate). All pattern wording is Claude-drafted, hers to correct.
 
 ## Guide — Families (study + edit)
 The Guide is **[Families] [Tongue map] [Pulse]**: a herb card is the body type with its formulas under it, notes-only formulas are dashed tiles, a
-study card sits on the right. **The card's rows ARE the Fang Bing Ren tables** (`PH_FORMULAS[id]`): her edits live in `PHARMACY.fbrEdits[id]`
+study card sits on the right (in Study, the concept picture of the pattern(s) the family counts for, under the pearl). **The card's rows ARE the Fang Bing Ren tables** (`PH_FORMULAS[id]`): her edits live in `PHARMACY.fbrEdits[id]`
 (+ `fbrEditsAt`), and `phFbrEditsApply()` rebuilds `.ren/.bing/.or/.core` in place from `phFbrPristine`; `phFbrEditsSync()` (top of `renderPharmacy`)
 re-applies when the saved edits change. **Nothing else may write to `PH_FORMULAS`.** Every Guide edit goes snapshot → change → `phGdfDone` (tidy,
 stamp, save with rollback, sync, repaint, Undo). A learned `a_` sign off a formula is written as 0, and lists filter `w !== 0`. Cloud: `mergeFbrEdits`
