@@ -1006,7 +1006,9 @@ menus [Care Plan page "Case | Course"].
 
 **Diagnosis + Goal write themselves** (`phTpAutoDx`, `phTpAutoGoal`): every
 Likely or Possible pattern (plus any she agreed) minus the ones she took
-off; Goal from the complaint family, main complaint and secondaries.
+off; Goal = one line per complaint in the Compass's order (her own Goal
+cell, else auto; a pain names the place: "Reduce upper back pain", never
+bare "Reduce pain"), the plan's own line first when no complaint carries it.
 **Watch + Aim write themselves too** (`phTpFieldView` is the one read):
 Watch = the template's **Red flags** first, then chips from the main
 complaint, secondaries, cycle (women who track a cycle only) and findings;
@@ -1140,7 +1142,9 @@ line always shows grams · days · cost · profit. Live on desktop (≥901px):
 the one-screen `.ph-dsp-fit` layout, supply-by-days chips (7/10/14/21/28),
 one Blood-moving caution line (`.ph-dsp-caution`), the "Plan formula"
 pour-in, and the script + label in full in the right column [Dispense: the
-script moved into the right column]. **Not built:** the per-herb
+script moved into the right column]. Since 2026-10-21 (her pick A) every herb
+shows with no inner scroll, the label in full under it, and the right
+column is the one scroller [synth22 batch 2]. **Not built:** the per-herb
 shelf→after-stock bar. Grams follow the herb total, and a manual Grams
 figure survives Log [Dispense: Log silently discarded a manual Grams
 figure; Dispense: the OTHER half]. A substitute picker includes
@@ -1256,7 +1260,12 @@ the main and secondary complaints scored each visit (0–10 or % better),
 charted over time, Energy 1–10 under it. It replaced the Re-check card on
 2026-10-14 and still mirrors into `rec.recheck` [Today's visit = the
 complaint compass]. Its scores are joined 0–10 bars and "n of m done" sits
-in its header. The checks are compact rows, two across, each with Open and
+in its header. Since 2026-10-21 it is a table: Complaint | Since | Goal |
+Today | Change | Note. The Goal cell is editable per complaint
+(`phCxGoal`, hers in `complaint.mainGoal` / `secondary.goal` through
+`phCcWrite`, "↺ auto" returns it) and the Care Plan Goal reads the same
+lines; the Note box is always open and saves as she types (`phCxTypeSave`)
+[synth22 batch 2]. The checks are compact rows, two across, each with Open and
 Skip ▾ (Not today / Always for this patient); a skipped check folds into the
 "Skipped" line and counts as done (`phTodayPartOk`). Quick assess shows 8
 questions in 2 columns on Today's visit and Fang Bing Ren [synth22: Today's
@@ -1272,7 +1281,12 @@ diagrams with a "brush" (pick a sign, then tap its regions). Data shapes:
 coatArea[] (root / mid = centre), coatQual{}, marks{}, under, thickAt{}, deviation, v2}`, `visitFnd[id].abd =
 {tension, tensionAt{}, marks{sign:[zones]}, v2}`. The exam pages are the
 ONE entry; `phExamMirrorToday` copies today's exam into the dated record.
-Pulse: each tick is dated and each new day starts blank; abdomen tension is
+Pulse: each tick is dated and each new day starts blank; Cun / Guan / Chi
+each head ONE column (R: Up. Resp / Stomach / Bladder, L: Heart / Liver /
+Adrenals, `PH_PULSE_POS_COL`), short column names show the full name on
+hover, and her normal pulse (`PH_PULSE_TPL`: Cun Qi, Guan Blood, Chi Organ,
+arches; Left Guan wiry) is always drawn dashed grey under her ticks
+(`phPulseBase`; no toggle). Abdomen tension is
 one whole-abdomen value. Read every finding through `phVisitFndRead`. A
 **Findings trend** sheet (Grid | Trail) shows dated tongue and abdomen
 findings from the exam pages. The pulse knowledge base
