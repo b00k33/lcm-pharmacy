@@ -1288,18 +1288,20 @@ Cun / Guan / Chi row right above the cells (her pick B), each position and
 each short column name showing the full organ name on hover, and her normal pulse (`PH_PULSE_TPL`: Cun Qi, Guan Blood, Chi Organ,
 arches; Left Guan wiry) is always drawn under her ticks (`phPulseBase`; no toggle). One cell shows three inks over each other (her pick 2026-10-21): the normal pulse solid green (widest), last visit solid grey (middle, `.ph-pulse-prevl`, shown even when today is ticked), today blue (thinnest, blue-tint cell), with a legend Normal · Today · <date> over the chart. Under the chart, **Pulse in action**
 (`phPulseAnimHtml`, drawn on the concept pictures' runner as `PH_PP.SC.pulse`)
-is HER radial pulse picture: an arch per ticked depth under Cun / Guan / Chi
+is HER radial pulse picture: an arch per ticked depth in each of the six columns
 lifting by amplitude at her Hammer at-rest rate (72 when none, a Slowed chip),
-following the Hammer rhythm; last visit solid grey, an empty position her
-normal arch solid green; still under reduced motion. Chart and picture share
-one frame (her pick 2026-10-21): equal 44px rows, RIGHT / LEFT in the label
-column on the organ-names row; each wrist of the picture is the chart's own
-grid (`phPaSideHtml`), drawn by measuring its cells (`phPaLay`, again on a
-width change), Cun = Lungs + Up. Resp, Guan = Thyroid + Stomach, Chi =
-Bladder + Chem., each arch on a dashed line through its row. The chart keeps
-its boxes over the picture's frame (grey bar, black base, Cun / Guan / Chi
-lines, a dashed line per row; `.ph-pulse-fr/-gl/-dl`) and every drawing sits
-level with its row's line like the picture (`plv-*` on `phPulseShapeSvg`). Abdomen tension is
+following the Hammer rhythm; last visit solid grey, an empty primary column her
+normal arch solid green; still under reduced motion. Chart and picture are
+HER TABLE (her 2026-10-21 picks): 6 columns, 3 PRIMARY (Cun / Guan / Chi,
+lightly shaded) and 3 SECONDARY -- never pair a secondary column with a
+primary one; a charcoal line between every column, ONE solid grey line through
+each word (Skin / Qi / Blood / Organ) with the drawings sitting on it, no
+boxes, her grey bar and base, equal 44px rows, lines and words in one
+charcoal, RIGHT / LEFT in the label column. Each wrist of the picture is the
+chart's own grid (`phPaSideHtml`), drawn by measuring its cells (`phPaLay`,
+again on a width change); the chart's frame is CSS on its grid
+(`.ph-pulse-fr/-vl/-pc/-dl`). Drawings level with the line (`plv-*` on
+`phPulseShapeSvg`) and wider in the wide columns (its `vw` argument). Abdomen tension is
 one whole-abdomen value. Read every finding through `phVisitFndRead`. A
 **Findings trend** sheet (Grid | Trail) shows dated tongue and abdomen
 findings from the exam pages. The pulse knowledge base
