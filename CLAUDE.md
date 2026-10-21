@@ -1097,8 +1097,10 @@ changes unless she asks.** The editor is a full page in the Care Plan shape
 whose phases open in place). The phase's Watch row is labelled "Red flags";
 the Aim row has the three token chips. Standard course shows only on a
 template with a category other than gynae, facial or men's (`phTpxStdOk`).
-Its old Skeleton | Detailed editor (`phTpMgrEditHtml`) is dead code awaiting a
-sweep.
+The old Skeleton | Detailed editor (`phTpMgrEditHtml`, its band, tiles and grid,
+the `data-tp-mgr-view` switch) was swept out on 2026-10-21; the shared pieces
+(`phTpMgrSetField` and the other `phTpMgr*` write helpers, the rhythm, Sessions,
+Recipe and Therapies fields, `phTpMgrRailHtml`) are the full-page editor's own.
 
 ## Cycle & IVF
 **The Cycle page** = a plain sentence, three tabs, a Day 1 chip, a "Today
@@ -1568,7 +1570,6 @@ day; abdomen tension is one whole-abdomen value; Usual period shows Wheel |
 Chart.
 
 **Paused or not built:**
-- Sweeping the dead old template editor (`phTpMgrEditHtml` and its CSS).
 - Photo organising increments 2+ (the Comparison table's calendar date
   picker and before/after swap, Records → Photos grouping by shot and date
   fixing).
