@@ -1189,8 +1189,13 @@ at add-time. MSK libraries are append-only.
 ## Fang Bing Ren, Find the Ren & Patterns
 **Fang Bing Ren** (the Triangle) is the one place constitutional-family
 scoring happens: one merged header (verdict + Quick assess), signs in ten
-shared areas with a "For this complaint" filter, ticked chips that clear,
-a body chart, a reference sheet; formulas rank by `phFbrRank`, the leader
+shared areas, ONE "Looking at" line (Everything · her complaints · the
+tile she tapped; a complaint lifts its signs and fades the rest, nothing
+hidden, view state only; Today's visit shows the complaints) that Quick
+assess follows (`phQaFocus`), ticked chips that clear, a body chart whose
+big view zooms to a place when she points at its list group (organ plates
+under it, header click pins; `phFbbZoomShow`, `PH_FBBP`), a reference sheet
+[synth22: the "Looking at" line ... body map close-ups]; formulas rank by `phFbrRank`, the leader
 is `phFbrLeadOf`; pre-fills come from charts, history, bloods, the intake
 form, pain words, cycle, age and sex (derived, a tap always wins). The board
 groups its rows under quiet subject headings (a twin pair's heading is its
