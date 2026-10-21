@@ -1283,8 +1283,9 @@ coatArea[] (root / mid = centre), coatQual{}, marks{}, under, thickAt{}, deviati
 ONE entry; `phExamMirrorToday` copies today's exam into the dated record.
 Pulse: each tick is dated and each new day starts blank; Cun / Guan / Chi
 each head ONE column (R: Up. Resp / Stomach / Bladder, L: Heart / Liver /
-Adrenals, `PH_PULSE_POS_COL`), short column names show the full name on
-hover, and her normal pulse (`PH_PULSE_TPL`: Cun Qi, Guan Blood, Chi Organ,
+Adrenals, `PH_PULSE_POS_COL`), the organ-name row on top and the
+Cun / Guan / Chi row right above the cells (her pick B), each position and
+each short column name showing the full organ name on hover, and her normal pulse (`PH_PULSE_TPL`: Cun Qi, Guan Blood, Chi Organ,
 arches; Left Guan wiry) is always drawn dashed grey under her ticks
 (`phPulseBase`; no toggle). Under the chart, **Pulse in action**
 (`phPulseAnimHtml`, drawn on the concept pictures' runner as `PH_PP.SC.pulse`)
