@@ -1254,8 +1254,8 @@ detector, and **session-package counting**) branches on it.
 
 **Findings charts** (tongue / abdomen / pulse) are the app's own tappable
 diagrams with a "brush" (pick a sign, then tap its regions). Data shapes:
-`visitFnd[id].tng = {colour, colourAt, shape, moist, coatThick, coatColour,
-coatQual{}, marks{}, under, thickAt{}, deviation, v2}`, `visitFnd[id].abd =
+`visitFnd[id].tng = {colour, colourMore[], colourAt, shape, moist, coatThick, coatColour,
+coatArea[] (root / mid = centre), coatQual{}, marks{}, under, thickAt{}, deviation, v2}`, `visitFnd[id].abd =
 {tension, tensionAt{}, marks{sign:[zones]}, v2}`. The exam pages are the
 ONE entry; `phExamMirrorToday` copies today's exam into the dated record.
 Pulse: each tick is dated and each new day starts blank; abdomen tension is
