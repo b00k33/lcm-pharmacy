@@ -8781,6 +8781,7 @@
   #pharmacyPage .ph-wch.t-cycle { background: var(--ph-purple-tint); color: var(--ph-purple-deep); }
   #pharmacyPage .ph-wch.t-tongue, #pharmacyPage .ph-wch.t-pulse, #pharmacyPage .ph-wch.t-abd,
   #pharmacyPage .ph-wch.t-bloods, #pharmacyPage .ph-wch.t-hx, #pharmacyPage .ph-wch.t-ask { background: var(--ph-paper); color: var(--ph-soft); box-shadow: inset 0 0 0 1px var(--ph-line); }
+  #pharmacyPage .ph-wch.t-pick { background: var(--ph-paper); color: var(--ph-herb-deep); box-shadow: inset 0 0 0 1px var(--ph-herb-card); }
   #pharmacyPage .ph-wch-src.t-red { color: var(--ph-zero-deep); }
   #pharmacyPage .ph-wch-src.t-also { color: var(--ph-blue-deep); }
   #pharmacyPage .ph-wch-src.t-cycle { color: var(--ph-purple-deep); }
@@ -81230,13 +81231,15 @@ or changing anything in Cliniko.
     return String(text || "").split(/[;,]/).map(s => s.trim()).filter(Boolean).map(s => s.charAt(0).toUpperCase() + s.slice(1));
   }
   // the phase's Watch for the Treatment tab and the "plan to ask" box: [{ text, tag }]. Red flags first, then the
-  // patient's own chips (main, also, cycle, findings); Watch she typed herself is split into plain chips with no tag.
+  // patient's own chips (main, also, cycle, findings); Watch she typed herself is split into plain chips with no tag;
+  // her picks from the Care Plan's findings come last, each one whole.
   function phAcuWatchItems(name, plan, ph) {
     if (!ph) return [];
     const v = phTpFieldView(name, plan, ph, "watch"), seen = new Set(), out = [];
     const put = (text, tag) => { if (text && !seen.has(text)) { seen.add(text); out.push({ text, tag }); } };
-    if (v.hers) phAcuWatchChips(v.text).forEach(t => put(t, ""));
+    if (v.hers) phAcuWatchChips(v.base).forEach(t => put(t, ""));
     else { phAcuWatchChips(v.flags).forEach(t => put(t, "red")); v.items.forEach(i => put(i.text, i.tag)); }
+    (v.picks || []).forEach(t => put(t, ""));
     return out;
   }
   // Treatment therapies recorded for THIS VISIT (session.treatmentTherapies) --
@@ -86906,24 +86909,39 @@ or changing anything in Cliniko.
       return { text: phTpWatchText(m), flags: m.flags, items: m.items };
     } catch (e) { return { text: "", flags: "", items: [] }; }
   }
-  // the one answer every reader asks for Aim / Watch: hers if she typed it, else what the record writes
+  // her own picks from the findings column (+ Watch / + Aim): a list on the phase, shown after the field, that never makes
+  // the field hers, so an auto Watch / Aim keeps following the patient (her 2026-10-21 pick)
+  function phTpFieldPicks(ph, f) { const a = ph && ph[f + "Picks"]; return Array.isArray(a) ? a.map(s => String(s || "").trim()).filter(Boolean) : []; }
+  // the one answer every reader asks for Aim / Watch: hers if she typed it, else what the record writes, then her picks.
+  // text = all she sees; base = the field without the picks
   function phTpFieldView(name, plan, ph, f) {
-    if (!ph) return { hers: false, auto: true, text: "", flags: "", items: [] };
+    if (!ph) return { hers: false, auto: true, text: "", base: "", flags: "", items: [], picks: [] };
     try {
-      if (f !== "aim" && f !== "watch") return { hers: true, auto: false, text: String(ph[f] || ""), flags: "", items: [] };
-      const hers = phTpFieldHersText(plan, ph, f);
-      if (hers) return { hers: true, auto: false, text: hers, flags: "", items: [] };
-      const a = phTpFieldAuto(name, plan, ph, f);
-      return { hers: false, auto: true, text: a.text, flags: a.flags, items: a.items };
-    } catch (e) { return { hers: true, auto: false, text: String((ph && ph[f]) || ""), flags: "", items: [] }; }
+      if (f !== "aim" && f !== "watch") { const t = String(ph[f] || ""); return { hers: true, auto: false, text: t, base: t, flags: "", items: [], picks: [] }; }
+      const hers = phTpFieldHersText(plan, ph, f), a = hers ? null : phTpFieldAuto(name, plan, ph, f);
+      const base = hers || a.text, low = s => s.toLowerCase(), have = new Set(base.split(/\s*;\s*/).map(low));
+      const picks = phTpFieldPicks(ph, f).filter(p => !have.has(low(p)));
+      const text = [base.replace(/[\s;]+$/, "")].concat(picks).filter(Boolean).join("; ");
+      return hers ? { hers: true, auto: false, text, base, flags: "", items: [], picks } : { hers: false, auto: true, text, base, flags: a.flags, items: a.items, picks };
+    } catch (e) { const t = String((ph && ph[f]) || ""); return { hers: true, auto: false, text: t, base: t, flags: "", items: [], picks: [] }; }
   }
   function phTpFieldText(name, plan, ph, f) { return phTpFieldView(name, plan, ph, f).text; }
-  // a dated record (the plan's history) keeps the phase's own Watch: hers as typed, else the red flags, never today's patient chips
-  function phTpWatchFixedText(name, plan, ph) { const v = phTpFieldView(name, plan, ph, "watch"); return v.hers ? v.text : v.flags; }
-  // writes: typing her own makes it hers; typing the auto text back (or clearing it) goes back to auto
+  // a dated record (the plan's history) keeps the phase's own Watch: hers as typed, else the red flags, never today's
+  // patient chips; her picks are hers, so they stay
+  function phTpWatchFixedText(name, plan, ph) { const v = phTpFieldView(name, plan, ph, "watch"); return v.hers ? v.text : [v.flags].concat(v.picks).filter(Boolean).join("; "); }
+  // writes: typing her own makes it hers; typing the auto text back (or clearing it) goes back to auto. The text she edits
+  // carries her picks: a pick still in it stays a pick, one she deleted goes, and only the rest is the field itself
   function phTpFieldCommit(name, plan, ph, f, val) {
     if (f !== "aim" && f !== "watch") { ph[f] = val; return; }
-    const v = String(val || "").trim(), norm = s => phTpDotParts(s).join("; ").toLowerCase();
+    let v = String(val || "").trim();
+    const picks = phTpFieldPicks(ph, f);
+    if (picks.length) {
+      const low = s => s.toLowerCase(), parts = v.split(/\s*;\s*/).map(s => s.trim()).filter(Boolean);
+      const keep = picks.filter(p => parts.some(x => low(x) === low(p)));
+      v = parts.filter(x => !picks.some(p => low(p) === low(x))).join("; ");
+      if (keep.length) ph[f + "Picks"] = keep; else delete ph[f + "Picks"];
+    }
+    const norm = s => phTpDotParts(s).join("; ").toLowerCase();
     const tp = phTpTplPhaseOf(plan, ph);
     if (!v || norm(v) === norm(phTpFieldAuto(name, plan, ph, f).text)) {
       ph[f] = tp ? (f === "aim" ? phTpAimNeutral(tp.aim) : String(tp.watch || "")) : v;
@@ -86932,29 +86950,41 @@ or changing anything in Cliniko.
     }
     ph[f] = v; ph[f + "Hers"] = true;
   }
+  // + Watch / + Aim from the findings column: puts one pick on (or takes it off); the field's own text is untouched
+  function phTpFieldPick(ph, f, seg, on) {
+    if (!ph || (f !== "aim" && f !== "watch")) return;
+    const s = String(seg || "").trim(), low = s.toLowerCase();
+    const list = phTpFieldPicks(ph, f).filter(x => x.toLowerCase() !== low);
+    if (on && s) list.push(s);
+    if (list.length) ph[f + "Picks"] = list; else delete ph[f + "Picks"];
+  }
   // the inside of an Aim / Watch cell: { html, empty }
   function phWatchChipsHtml(items, name) {
     return items.map(i => `<span class="ph-wch t-${i.tag}"><b>${esc(phWatchTag(i.tag, name))}</b>${esc(i.text)}</span>`).join("");
   }
-  // frozen = a closed phase: it keeps the template's red flags but no longer follows the patient
+  // her picks: whole chips after the field, in her colour (no source tag: the line names its finding)
+  function phTpPicksHtml(picks) { return picks.map(p => `<span class="ph-wch t-pick" title="Added from Findings">${esc(p)}</span>`).join(""); }
+  // frozen = a closed phase: it keeps the template's red flags but no longer follows the patient (her picks stay)
   function phTpFieldCellHtml(name, plan, ph, f, frozen) {
     const v = phTpFieldView(name, plan, ph, f), ph0 = esc(PH_TP_FIELD_PH[f] || "");
+    const picks = v.picks.length ? phTpPicksHtml(v.picks) : "", pickRow = picks ? `<span class="ph-wch-row">${picks}</span>` : "";
     if (v.hers) {
       const au = frozen ? { text: "" } : phTpFieldAuto(name, plan, ph, f);
-      const back = au.text && au.text !== v.text ? `<button type="button" class="ph-tp-dx-btn back" data-tp-fauto="${plan.id}:${ph.id}:${f}" title="Go back to the automatic wording">↺ back to auto</button>` : "";
-      return { html: (v.text ? phTpCellShow(f, v.text) : ph0) + back, empty: !v.text };
+      const back = au.text && au.text !== v.base ? `<button type="button" class="ph-tp-dx-btn back" data-tp-fauto="${plan.id}:${ph.id}:${f}" title="Go back to the automatic wording">↺ back to auto</button>` : "";
+      return { html: (v.base ? phTpCellShow(f, v.base) : picks ? "" : ph0) + pickRow + back, empty: !v.text };
     }
-    if (f === "aim") return { html: v.text ? phTpCellShow("aim", v.text) : ph0, empty: !v.text };
+    if (f === "aim") return { html: (v.base ? phTpCellShow("aim", v.base) : picks ? "" : ph0) + pickRow, empty: !v.text };
     const flag = v.flags ? `<span class="ph-wch-flags"><svg class="ph-wch-ic" aria-label="Red flags"><use href="#i-warn"/></svg>${phTpCellShow("watch", v.flags)}</span>` : "";
-    const chips = !frozen && v.items.length ? `<span class="ph-wch-row">${phWatchChipsHtml(v.items, name)}</span>` : "";
+    const items = !frozen && v.items.length ? phWatchChipsHtml(v.items, name) : "";
+    const chips = items || picks ? `<span class="ph-wch-row">${items}${picks}</span>` : "";
     return { html: flag + chips || ph0, empty: !flag && !chips };
   }
-  // the "↺ back to auto" chip on a cell
+  // the "↺ back to auto" chip on a cell: her typing goes, her picks stay
   function phTpFieldBackToAuto(el) {
     const [planId, phId, f] = String(el.dataset.tpFauto || "").split(":");
     const name = phTpScreenPatient, plan = phTpFindPlan(name, planId), ph = plan && plan.phases.find(p => p.id === phId);
     if (!ph || (f !== "aim" && f !== "watch")) return;
-    phTpFieldCommit(name, plan, ph, f, "");
+    phTpFieldCommit(name, plan, ph, f, phTpFieldPicks(ph, f).join("; "));
     phTpAutoBust();
     if (savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return; }
     document.querySelectorAll(`[data-tp-edit="${planId}:${phId}:${f}"]`).forEach(c => {
@@ -88080,23 +88110,28 @@ or changing anything in Cliniko.
       phTpFxPaint(planId, false, false);
     });
   }
-  // + Watch / + Aim: adds (or takes off) "<finding>: <phrase>" as one point of the live phase's field. It starts from
-  // what she sees (phTpFieldView) and writes through the one door (phTpFieldCommit): her pick makes the field hers,
-  // with the auto chips kept as her text; taking her last pick off, while the auto text is unchanged, puts it back on auto
+  // + Watch / + Aim: puts "<finding>: <phrase>" on (or takes it off) the live phase's field as HER pick (phTpFieldPick),
+  // shown after the field, so an auto Watch / Aim keeps following the patient (her 2026-10-21 pick). A line an older tap
+  // wrote into the field's own text comes off through phTpFieldCommit
   function phTpFxAddToggle(btn) {
     const C = btn.closest("[data-tp-fxcols]"); if (!C) return;
     const name = C.dataset.tpFxName, [planId, rowId] = btn.dataset.tpFxId.split("|"), which = btn.dataset.tpFxAdd === "a" ? "aim" : "watch";
     const plan = phTpFindPlan(name, planId), ctx = plan && phTpFxCtxGet(name, plan);
     const r = ctx && ctx.rows.find(x => x.id === rowId), ph = phTpFxLivePh(name, planId);
     if (!r || !ph || !r.phrase) return;
-    const seg = phTpFxSeg(r), shown = phTpFieldText(name, plan, ph, which), has = phTpFxHas(shown, seg);
-    const next = has ? phTpFxParts(shown).filter(s => s.toLowerCase() !== seg.toLowerCase()).join("; ") : (shown.trim() ? shown.replace(/[\s;]+$/, "") + "; " + seg : seg);
-    // the stored text and her "hers" mark exactly as they were, so a failed save and Undo put back precisely that
-    const hk = which + "Hers", own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
-    const snap = p => ({ v: p[which], h: p[hk], hasV: own(p, which), hasH: own(p, hk) });
-    const put = (p, s) => { if (s.hasV) p[which] = s.v; else delete p[which]; if (s.hasH) p[hk] = s.h; else delete p[hk]; };
+    const seg = phTpFxSeg(r), low = seg.toLowerCase(), v = phTpFieldView(name, plan, ph, which);
+    const inPick = phTpFieldPicks(ph, which).some(s => s.toLowerCase() === low), inBase = !inPick && phTpFxHas(v.base, seg), has = inPick || inBase;
+    // the stored text, her "hers" mark and her picks exactly as they were, so a failed save and Undo put back precisely that
+    const hk = which + "Hers", pk = which + "Picks", own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+    const snap = p => ({ v: p[which], h: p[hk], k: Array.isArray(p[pk]) ? p[pk].slice() : p[pk], hasV: own(p, which), hasH: own(p, hk), hasK: own(p, pk) });
+    const put = (p, s) => {
+      if (s.hasV) p[which] = s.v; else delete p[which];
+      if (s.hasH) p[hk] = s.h; else delete p[hk];
+      if (s.hasK) p[pk] = Array.isArray(s.k) ? s.k.slice() : s.k; else delete p[pk];
+    };
     const was = snap(ph), from = btn.getBoundingClientRect();
-    phTpFieldCommit(name, plan, ph, which, next);
+    if (inBase) phTpFieldCommit(name, plan, ph, which, phTpFxParts(v.text).filter(s => s.toLowerCase() !== low).join("; "));
+    else phTpFieldPick(ph, which, seg, !inPick);
     phPatientRec(name);
     if (savePharmacy() === false) { put(ph, was); presSavedToast(PH_PAT_SAVE_FAIL); return; }
     const lab = which === "aim" ? "Aim" : "Watch";

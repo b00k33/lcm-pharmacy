@@ -13,7 +13,7 @@ DESIGN-CONVENTIONS.md was merged into this file and retired on 2026-10-21.
 > Every page reads the same facts from the same place. Applies to every build, every page.
 
 1. **Find where the fact lives and what already draws it, and call that.** Never a second renderer, mini-chart, summary or wording of the same record. The one read for each: tongue `phTongueChartSvg` (best photo by `PH_TONGUE_SHOT_RANK`), abdomen `phAbdChartSvg`, pulse `phVisitPulseSummaryText` / `phVisitPulseDotsHtml`, dated findings `phVisitFndRead`, pain map `phPainMapHtml` / `phPmList`, current phase `phTpLivePhase`, today's plan `phTpPlanForToday`, Fang Bing Ren lead `phFbrRank` / `phFbrLeadOf`, ticked signs `phTriEffective`, complaints `phCcRibItems`, blood results `phBldList`, Watch / Aim `phTpFieldView`, Diagnosis / Goal `phTpAutoDx` / `phTpAutoGoal`, a patient record for drawing `phPatientPeek` (never the mutating `phPatientRec`).
-2. **One write door per fact:** `phTriWrite` + `phTriSetYes` / `phTriSetNo` / `phTriClearYes` (signs and links), `phPmWrite` (pains), `phCcWrite` (Came in for), `phMskWrite`, `phTlWrite`, `phEnWrite`, `phCxWrite`, `phTngWrite`, `phHxConstitPulse` (pulse chart), `phRenPhotoPut` (photos), `phTpFieldCommit` (Watch / Aim). A new field on one of these records goes into its door's whitelist (`phPmWrite` silently drops unknown keys).
+2. **One write door per fact:** `phTriWrite` + `phTriSetYes` / `phTriSetNo` / `phTriClearYes` (signs and links), `phPmWrite` (pains), `phCcWrite` (Came in for), `phMskWrite`, `phTlWrite`, `phEnWrite`, `phCxWrite`, `phTngWrite`, `phHxConstitPulse` (pulse chart), `phRenPhotoPut` (photos), `phTpFieldCommit` + `phTpFieldPick` (Watch / Aim). A new field on one of these records goes into its door's whitelist (`phPmWrite` silently drops unknown keys).
 3. **Derived on read, never copied.** A value worked out from other data (auto Diagnosis / Goal / Watch / Aim; Fang Bing Ren pre-fills from charts, history, bloods, the intake form, pain words, cycle, age and sex; Came in for from the pain map; IVF scan bloods in Blood tests; timeline items from IVF history) is computed when drawn and never stored. Only her own taps and typing are saved, and **her own value always wins** over the derived one, with a "back to auto" way out.
 4. **Wire a new thing everywhere in one pass.** A new Fang Bing Ren formula, sign or clue = her code word **integrate33** (memory `feedback_integrate33_protocol`): add it, then wire it into the tongue / pulse / abdomen charts, Ask her, Medical history, bloods, cycle answers, Patterns, links and twins, the body chart and search aliases, with a matrix HTML of what was and was not wired. Checklists: a new sign uses a subject in `PH_FBR_SUBJ_AREA` (and `PH_FBB_SUBJ`), a women-only one goes in `PH_SIGN_ONLY_F`, its twin in `PH_FBR_TWINS_DRAFT`; a new formula joins `PH_REN_FAM_GROUPS` (its colour shades itself); a new plan category follows the checklist in BUILD-NOTES "Dermatology plan category".
 5. **One shared component per job:** one toast (`presSavedToast`), one sheet shell (`.ph-lk-sheet`), one joined chip bar (`.ph-tng2-seg`), one undo, one compare, one photo viewer, one message composer. Never build a second.
@@ -1011,9 +1011,11 @@ off; Goal from the complaint family, main complaint and secondaries.
 Watch = the template's **Red flags** first, then chips from the main
 complaint, secondaries, cycle (women who track a cycle only) and findings;
 Aim = her preset per template phase with `{main}` `{sec}` `{cyc}` tokens.
-All four are derived on read, never stored; her own typing, or a + Watch
-/ + Aim tap on a finding (through `phTpFieldCommit`), makes a field hers,
-with "back to auto". Wording lives in Settings → "Goal wording" and
+All four are derived on read, never stored; her own typing makes a field
+hers, with "back to auto". A + Watch / + Aim tap on a finding adds her own
+line after the auto ones (`ph.watchPicks` / `ph.aimPicks`, `phTpFieldPick`)
+and the field keeps following the patient; back to auto keeps those lines.
+Wording lives in Settings → "Goal wording" and
 "Watch wording", her lines first, all DRAFT [Watch and Aim write
 themselves from the patient].
 
