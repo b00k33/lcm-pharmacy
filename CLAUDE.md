@@ -1090,9 +1090,13 @@ transfer-track detection finds "the OPU phase" by it). Sync conflicts are
 settled per template by `tpTemplateOverridesAt[id]` (newer edit wins).
 **Built-in templates carry no acupuncture points** (she designs them);
 her saved copies were cleared once on 2026-10-21. **No template wording
-changes unless she asks.** The Watch row is labelled "Red flags"; the Aim
-row has the three token chips. The "One table" editor and templates in the
-Care Plan shape are mocks only (OPEN).
+changes unless she asks.** The editor is a full page in the Care Plan shape
+(`phTpxEditHtml`: findings column, Diagnosis, the Session grid as one table
+whose phases open in place). The phase's Watch row is labelled "Red flags";
+the Aim row has the three token chips. Standard course shows only on a
+template with a category other than gynae, facial or men's (`phTpxStdOk`).
+Its old Skeleton | Detailed editor (`phTpMgrEditHtml`) is dead code awaiting a
+sweep.
 
 ## Cycle & IVF
 **The Cycle page** = a plain sentence, three tabs, a Day 1 chip, a "Today
@@ -1558,8 +1562,7 @@ day; abdomen tension is one whole-abdomen value; Usual period shows Wheel |
 Chart.
 
 **Paused or not built:**
-- The template editor "One table" (mock approved, paused) and templates in
-  the Care Plan shape (mock only).
+- Sweeping the dead old template editor (`phTpMgrEditHtml` and its CSS).
 - Photo organising increments 2+ (the Comparison table's calendar date
   picker and before/after swap, Records → Photos grouping by shot and date
   fixing).
