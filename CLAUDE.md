@@ -1521,6 +1521,8 @@ not repeated here.
   diarrhoea"). Symptoms a source lists with it are their own signs, reused from the pool and
   weighted on the formula; a condition the pool already has is that one row, never a second one.
   A diagnosis may keep words that describe the condition itself (cold-type, watery discharge).
+  The same holds for any sign (her "yes, split them", same day): swelling or scant urine riding on
+  a headache are their own rows; words about the same subject stay together ("Urine: yellow, scanty").
 - A new Medical history count reads `phHxApplicableItems`, so it matches the
   page.
 - Never `phFlashShow` on a patient page, a sheet or a dialog: the one toast
