@@ -71083,18 +71083,29 @@ or changing anything in Cliniko.
       const t = mk("text", { x: tx + (an === "start" ? 2 : an === "end" ? -2 : 0), y: ty + 3, "text-anchor": an || "middle", class: "lbl-t" }, g); t.textContent = text;
     };
     const labOn = (lg, k) => lg.setAttribute("opacity", cl((k - .5) * 2, 0, 1).toFixed(2));
-    const rbc = (g, rx) => { const e = mk("g", {}, g); const b = mk("ellipse", { rx: rx || 6, ry: (rx || 6) * .62 }, e); mk("ellipse", { rx: (rx || 6) * .46, ry: (rx || 6) * .25, fill: "#fff", opacity: .22 }, e); return { e, b }; };
+    // a red cell as it is (her 2026-10-22 "more anatomically accurate"): a disc with the dimple in its middle, a small sheen; a capsule path for
+    // the hand's fingers; F = one decimal
+    const F = n => (+n).toFixed(1);
+    const cap = (x0, y0, x1, y1, hw, tw) => { tw = tw == null ? hw : tw; const dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L, nx = -uy, ny = ux; return `M${F(x0 + nx * hw)},${F(y0 + ny * hw)} L${F(x1 + nx * tw)},${F(y1 + ny * tw)} A${F(tw)},${F(tw)} 0 0 0 ${F(x1 - nx * tw)},${F(y1 - ny * tw)} L${F(x0 - nx * hw)},${F(y0 - ny * hw)} A${F(hw)},${F(hw)} 0 0 0 ${F(x0 + nx * hw)},${F(y0 + ny * hw)} Z`; };
+    const rbc = (g, rx) => { const r = rx || 6, e = mk("g", {}, g); const b = mk("ellipse", { rx: r, ry: r * .62 }, e); mk("ellipse", { rx: r * .5, ry: r * .26, fill: "#000", opacity: .14 }, e); mk("ellipse", { rx: r * .28, ry: r * .1, cx: -r * .25, cy: -r * .22, fill: "#fff", opacity: .3 }, e); return { e, b }; };
+    // the vessel wall's three coats (outer, muscle, lining) behind a lumen, and the flat lining cells along its edge; platelets and a white cell
+    // for the blood pictures (her 2026-10-22 "real cells and wall")
+    const coats = (svg, T, B) => [mk("path", { d: bandD(x => T(x) - 9, x => B(x) + 9), fill: "#E9C9C0" }, svg), mk("path", { d: bandD(x => T(x) - 5, x => B(x) + 5), fill: "#DDA9A1" }, svg)];
+    const lining = (svg, T, B) => { const out = []; [T, B].forEach((G, i) => { for (let x = 4; x < 300; x += 22) out.push({ x, i, e: mk("ellipse", { cx: x, cy: G(x) + (i ? -2 : 2), rx: 9, ry: 2, fill: "#F9E4DE", stroke: "#C98B80", "stroke-width": .6 }, svg) }); }); return out; };
+    const platelets = (g, n, y0, y1) => { const out = []; for (let i = 0; i < n; i++) out.push({ e: mk("ellipse", { rx: 2, ry: 1.2, fill: "#C9B8C4", stroke: "#9A8698", "stroke-width": .5 }, g), x: rnd() * 300, y: y0 + rnd() * (y1 - y0), ph: rnd() * 6.3 }); return out; };
+    const whiteCell = g => { const wb = mk("g", {}, g); mk("circle", { r: 8, fill: "#EFE6F0", stroke: "#B59BC2", "stroke-width": .8 }, wb); [[-2.5, -1], [1.5, -2], [1, 2.5]].forEach(([x, y]) => mk("circle", { cx: x, cy: y, r: 2.6, fill: "#8E6BA8" }, wb)); return wb; };
     const SC = {};
     // Blood stasis: blood slows, darkens and backs up behind a clot; little gets through; the pain is fixed and stabbing
     SC.stasis = (S, svg) => {
       const T = x => 30 + 2.5 * Math.sin(x / 38), B = x => 100 + 2.5 * Math.sin(x / 38 + .8), u = uid();
       svg.innerHTML = `<defs><radialGradient id="${u}c" cx="45%" cy="40%" r="70%"><stop offset="0" stop-color="#8A3A62"/><stop offset="1" stop-color="#4A1A36"/></radialGradient><radialGradient id="${u}s" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#7B3FA0" stop-opacity=".5"/><stop offset="1" stop-color="#7B3FA0" stop-opacity="0"/></radialGradient></defs>`;
-      mk("rect", { width: 300, height: 130, fill: "#F8EEE9" }, svg); mk("path", { d: bandD(T, B), fill: "#F4D3CC" }, svg);
+      mk("rect", { width: 300, height: 130, fill: "#F8EEE9" }, svg); coats(svg, T, B); mk("path", { d: bandD(T, B), fill: "#F4D3CC" }, svg); lining(svg, T, B);
       const st = mk("ellipse", { cx: 204, cy: 65, rx: 80, ry: 62, fill: `url(#${u}s)`, opacity: 0 }, svg);
       [T, B].forEach(F => { mk("path", { d: lineD(F), fill: "none", stroke: "#DDA9A1", "stroke-width": 5 }, svg); mk("path", { d: lineD(F), fill: "none", stroke: "#B86F68", "stroke-width": 1.2 }, svg); });
       const cg = mk("g", {}, svg), L3 = [47, 65, 83].map(y => ({ y, c: [] }));
       L3.forEach(L => { for (let i = 0; i < 10; i++) L.c.push(Object.assign(rbc(cg), { x: 300 - i * 31 - rnd() * 8, v0: .9 + rnd() * .2, ph: rnd() * 6.3, f: 0 })); });
       const cT = mk("g", {}, svg), cB = mk("g", {}, svg);
+      const pl = platelets(cg, 8, 40, 90), wb = whiteCell(cg); let wbx = -20;   // platelets slow with the cells; the white cell stays before the clot
       cT.innerHTML = `<path d="M175,31 C180,47 190,58 202,58 C214,58 223,48 229,32 Z" fill="url(#${u}c)"/><ellipse cx="193" cy="44" rx="5" ry="3" fill="#5E2240"/><ellipse cx="208" cy="50" rx="5" ry="3" fill="#6A2848"/><path d="M182,38 L222,53 M186,53 L224,37" stroke="#D9B3C6" stroke-width=".6" opacity=".7"/>`;
       cB.innerHTML = `<path d="M175,101 C182,86 192,73 204,73 C216,73 224,84 229,101 Z" fill="url(#${u}c)"/><ellipse cx="196" cy="87" rx="5" ry="3" fill="#5E2240"/><ellipse cx="211" cy="81" rx="5" ry="3" fill="#6A2848"/><path d="M184,95 L224,79 M188,79 L222,96" stroke="#D9B3C6" stroke-width=".6" opacity=".7"/>`;
       const sp = mk("path", { d: starD(204, 15, 9, 3.4, 7), fill: "#E04A3A", opacity: 0 }, svg), lg = mk("g", { opacity: 0 }, svg);
@@ -71106,6 +71117,8 @@ or changing anything in Cliniko.
         st.setAttribute("opacity", (k * .9).toFixed(2));
         cT.setAttribute("transform", `translate(0,31) scale(1,${k.toFixed(3)}) translate(0,-31)`); cB.setAttribute("transform", `translate(0,101) scale(1,${k.toFixed(3)}) translate(0,-101)`);
         sp.setAttribute("opacity", ((k < .6 ? 0 : RM() ? 1 : .3 + .7 * Math.max(0, Math.sin(t * 4.2))) * k).toFixed(2)); labOn(lg, k);
+        pl.forEach(p => { const f = p.x < 178 ? 1 - .62 * k : p.x < 226 ? 1 - .5 * k : 1 - .1 * k; p.x += 50 * f * dt; if (p.x > 306) p.x = -6; p.e.setAttribute("cx", F(p.x)); p.e.setAttribute("cy", F(p.y + 1.5 * Math.sin(t * 3 + p.ph))); });
+        wbx += 40 * (1 - .5 * k) * dt; if (wbx > 168) wbx = -20; wb.setAttribute("transform", `translate(${F(wbx)},${F(65 + 3 * Math.sin(t))})`);
         if (stk) { ab += dt; if (ab > 1.5) { ab = 0; side = 2 - side; const f = L3[side].c.filter(c => !c.f && c.x > 160 && c.x <= 178).sort((a, b) => b.x - a.x)[0]; if (f) f.f = .001; } }
         L3.forEach((L, li) => {
           const cs = L.c.sort((a, b) => b.x - a.x), mn = cs[cs.length - 1].x; let ah = Infinity;
@@ -71137,6 +71150,8 @@ or changing anything in Cliniko.
       for (let r = 0; r < 2; r++) for (let i = 0; i < 13; i++) { const x = -6 + i * 24 + (r ? 12 : 0), y = 88 + r * 14; tis.push(mk("rect", { x, y, width: 21, height: 12, rx: 5, "stroke-width": .8 }, svg)); mk("path", { d: `M${x + 5},${y + 3} l4,3 l-2,3 l6,2` }, cr); }
       svg.appendChild(cr);
       const lu = mk("path", {}, svg), wT = mk("path", { fill: "none", "stroke-width": 4.5 }, svg), wB = mk("path", { fill: "none", "stroke-width": 4.5 }, svg), cg = mk("g", {}, svg), cs = [];
+      const co = [mk("path", { fill: "#E9C9C0" }, svg), mk("path", { fill: "#DDA9A1" }, svg)]; co.forEach(c => svg.insertBefore(c, lu));   // the wall's outer and muscle coats, thinning with the vessel
+      const li = lining(svg, T0, B0), pl = platelets(cg, 7, 36, 62), wb = whiteCell(cg); let wbx = 120;
       [32, 44, 56].forEach((y, li) => { for (let i = 0; i < 10; i++) cs.push(Object.assign(rbc(cg), { x: 300 - i * 31 - li * 10, y, ph: rnd() * 6.3, i: i + li })); });
       const lg = mk("g", { opacity: 0 }, svg); lab(lg, null, null, 150, 9, "Too few, pale cells", "middle"); lab(lg, null, null, 150, 124, "Tissue under-fed: pale, dry", "middle");
       S.step = (dt, t) => {
@@ -71146,6 +71161,10 @@ or changing anything in Cliniko.
         caps.forEach(c => { c.setAttribute("stroke", mix("#C8463F", "#E9C2BC", k)); c.setAttribute("opacity", (1 - .55 * k).toFixed(2)); });
         tis.forEach(r => { r.setAttribute("fill", mix("#EBB0A6", "#F5E8E4", k)); r.setAttribute("stroke", mix("#C77D73", "#DCCBC6", k)); });
         cr.setAttribute("opacity", k.toFixed(2)); labOn(lg, k);
+        co[0].setAttribute("d", bandD(x => T(x) - 9, x => B(x) + 9)); co[1].setAttribute("d", bandD(x => T(x) - 5, x => B(x) + 5));
+        li.forEach(o => o.e.setAttribute("cy", F((o.i ? B(o.x) - 2 : T(o.x) + 2))));
+        pl.forEach(p => { p.x += 44 * (1 - .4 * k) * dt; if (p.x > 306) p.x = -6; p.e.setAttribute("cx", F(p.x)); p.e.setAttribute("cy", F(cl(p.y + 1.5 * Math.sin(t * 3 + p.ph), T(p.x) + 4, B(p.x) - 4))); });
+        wbx += 36 * (1 - .4 * k) * dt; if (wbx > 320) wbx = -20; wb.setAttribute("transform", `translate(${F(wbx)},${F(44 + 2 * Math.sin(t))}) scale(${F(1 - .15 * k)})`); wb.setAttribute("opacity", F(1 - .35 * k));
         cs.forEach(c => {
           c.x += 52 * (1 - .15 * k) * dt; if (c.x > 310) c.x -= 320;
           c.b.setAttribute("fill", mix("#C8463F", "#E5A79F", k)); c.e.setAttribute("opacity", (1 - (c.i % 3 ? k : 0)).toFixed(2));
@@ -71154,7 +71173,7 @@ or changing anything in Cliniko.
       };
     };
     // the qi channel: Qi stagnation (a knot that swells, stop-start) and Qi deficiency (a weak push, qi sags and fades)
-    const chan = (S, svg, m) => {
+    const chan = (S, svg, m, noLab) => {
       const u = uid();
       svg.innerHTML = `<defs><radialGradient id="${u}k" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#9BD08A" stop-opacity=".9"/><stop offset="1" stop-color="#9BD08A" stop-opacity="0"/></radialGradient><radialGradient id="${u}o" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#FFE7A0"/><stop offset=".55" stop-color="#F2C75C"/><stop offset="1" stop-color="#F2C75C" stop-opacity="0"/></radialGradient></defs>`;
       mk("rect", { width: 300, height: 130, fill: "#F2F8F6" }, svg);
@@ -71162,7 +71181,8 @@ or changing anything in Cliniko.
       const kn = mk("circle", { cx: 150, cy: 65, r: 30, fill: `url(#${u}k)`, opacity: 0 }, svg), orb = m === "def" ? mk("circle", { cx: 14, cy: 65, r: 16, fill: `url(#${u}o)` }, svg) : null, pg = mk("g", {}, svg), ps = [];
       for (let i = 0; i < 46; i++) { const g = mk("g", {}, pg); mk("circle", { r: 5.5, fill: "#2F9E8C", opacity: .16 }, g); const c = mk("circle", { r: 2.3, fill: "#2F9E8C" }, g); ps.push({ g, c, i, x: rnd() * 300, y0: 42 + rnd() * 46, ph: rnd() * 6.3, v0: .85 + rnd() * .3, o: 0 }); }
       const lg = mk("g", { opacity: 0 }, svg);
-      if (m === "stag") { lab(lg, 163, 54, 214, 16, "Qi knots here", "start"); lab(lg, null, null, 150, 125, "Distension builds", "middle"); lab(lg, null, null, 54, 125, "Stop–start", "middle"); }
+      if (noLab) { }
+      else if (m === "stag") { lab(lg, 163, 54, 214, 16, "Qi knots here", "start"); lab(lg, null, null, 150, 125, "Distension builds", "middle"); lab(lg, null, null, 54, 125, "Stop–start", "middle"); }
       else { lab(lg, 22, 54, 44, 16, "Weak push", "start"); lab(lg, null, null, 236, 125, "Sags and fades", "middle"); }
       S.step = (dt, t) => {
         const k = S.k, pu = RM() ? .6 : .2 + .8 * Math.max(0, Math.sin(t * 2.6)), b = m === "stag" ? k * (13 + (RM() ? 0 : 3 * Math.sin(t * 2.6))) : 0;
@@ -71192,7 +71212,14 @@ or changing anything in Cliniko.
       };
     };
     SC.qistag = (S, svg) => chan(S, svg, "stag");
-    SC.qidef = (S, svg) => chan(S, svg, "def");
+    // Qi deficiency (her 2026-10-22 "add it to three more"): the channel with its weak push, and the person it leaves tired and slumped
+    SC.qidef = (S, svg) => {
+      mk("rect", { width: 300, height: 130, fill: "#F2F8F6" }, svg);
+      const g = mk("g", { transform: "translate(0,24) scale(.62)" }, svg), S2 = { k: S.k }; chan(S2, g, "def", true);
+      const B = body(svg, 100, 0, .92, { tired: 1 }), lg = mk("g", { opacity: 0 }, svg);
+      lab(lg, 9, 64, 40, 12, "Weak push", "start"); lab(lg, null, null, 110, 122, "Sags and fades", "middle"); lab(lg, 256, 40, 296, 104, "Tired, slumped", "end");
+      S.step = (dt, t) => { S2.k = S.k; S2.step(dt, t); B.step(t, S.k); labOn(lg, S.k); };
+    };
     // the fluid pipe: Damp / phlegm (heavy, slow, sticky, foggy) and Cold-damp (cold contracts it, damp pools, cramping pain)
     const pipe = (S, svg, cold) => {
       mk("rect", { width: 300, height: 130, fill: "#F3F6F7" }, svg);
@@ -71228,63 +71255,128 @@ or changing anything in Cliniko.
     };
     SC.damp = (S, svg) => pipe(S, svg, false);
     SC.colddamp = (S, svg) => pipe(S, svg, true);
-    // the pot over the fire: Balanced = a steady flame, water up, gentle steam; yang deficiency = fire low; yin deficiency = water low; heat = fire high
+    // the pot over the fire: Balanced = a steady flame, water up, gentle steam; yang deficiency = fire low; yin deficiency = water low; heat = fire high.
+    // Since her 2026-10-22 picks (Heat C "pot + body", "add it to three more") the pot sits on the left at .9 and the person on the right; the
+    // Heat pot is the rich one: a lid that rattles, foam spilling down the sides, a red glow at the bottom, five flames, shimmer above, less water
     const PO = { bal: { fl: 16, fo: "#F29B38", fi: "#FFD66B", lv: 58, wc: "#7FB6D5", st: .8, sc: "#C9D3D8", sp: 1, gl: .25, bu: 0, ic: 0 },
       yang: { fl: 5, fo: "#8FB0D8", fi: "#DCE9F7", lv: 58, wc: "#A8BACB", st: 0, sc: "#C9D3D8", sp: 1, gl: 0, bu: 0, ic: 1 },
       yin: { fl: 16, fo: "#F29B38", fi: "#FFD66B", lv: 92, wc: "#7FB6D5", st: .75, sc: "#E7A2A2", sp: 1.8, gl: .7, bu: 0, ic: 0 },
-      heat: { fl: 30, fo: "#E2452F", fi: "#F9A23A", lv: 56, wc: "#6FA6C8", st: 1, sc: "#E9876A", sp: 2.1, gl: .8, bu: 1, ic: 0 } };
-    const pot = (S, svg, w) => {
+      heat: { fl: 30, fo: "#E2452F", fi: "#F9A23A", lv: 64, wc: "#5E98BF", st: 1, sc: "#E9876A", sp: 2.1, gl: .8, bu: 1, ic: 0 } };
+    const pot = (svg, w, ox, oy, sc, rich) => {
       const u = uid(), P0 = PO.bal, P1 = PO[w], PD = "M98,44 L202,44 L198,92 C196,101 188,105 176,105 L124,105 C112,105 104,101 102,92 Z";
-      svg.innerHTML = `<defs><clipPath id="${u}p"><path d="${PD}"/></clipPath><radialGradient id="${u}g" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#F06A3A" stop-opacity=".9"/><stop offset="1" stop-color="#F06A3A" stop-opacity="0"/></radialGradient></defs>`;
-      mk("rect", { width: 300, height: 130, fill: "#F7F4EE" }, svg);
-      const stm = [0, 1, 2, 3, 4].map(i => ({ e: mk("path", { fill: "none", "stroke-linecap": "round" }, svg), x: 116 + i * 17, ph: rnd() }));
-      mk("path", { d: PD, fill: "#EFE8DA" }, svg);
-      const wg = mk("g", { "clip-path": `url(#${u}p)` }, svg), wa = mk("rect", { x: 90, width: 120, height: 80 }, wg), gw = mk("ellipse", { cx: 150, cy: 104, rx: 46, ry: 9, fill: `url(#${u}g)` }, wg);
-      const bu = Array.from({ length: 9 }, () => ({ e: mk("circle", { fill: "none", stroke: "#fff", "stroke-width": 1 }, wg), x: 112 + rnd() * 76, ph: rnd(), r: 1.6 + rnd() * 2 }));
+      const root = mk("g", { transform: `translate(${ox},${oy}) scale(${sc})` }, svg);
+      root.innerHTML = `<defs><clipPath id="${u}p"><path d="${PD}"/></clipPath><radialGradient id="${u}g" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#F06A3A" stop-opacity=".9"/><stop offset="1" stop-color="#F06A3A" stop-opacity="0"/></radialGradient><linearGradient id="${u}r" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E2452F" stop-opacity="0"/><stop offset="1" stop-color="#E2452F" stop-opacity=".55"/></linearGradient></defs>`;
+      const shim = rich ? [0, 1, 2].map(() => mk("path", { fill: "none", stroke: "#E9876A", "stroke-width": 1.4, "stroke-linecap": "round", opacity: 0 }, root)) : [];
+      const stm = [0, 1, 2, 3, 4].map(i => ({ e: mk("path", { fill: "none", "stroke-linecap": "round" }, root), x: 116 + i * 17, ph: rnd() }));
+      mk("path", { d: PD, fill: "#EFE8DA" }, root);
+      const wg = mk("g", { "clip-path": `url(#${u}p)` }, root), wa = mk("rect", { x: 90, width: 120, height: 80 }, wg), gw = mk("ellipse", { cx: 150, cy: 104, rx: 46, ry: 9, fill: `url(#${u}g)` }, wg);
+      const glow = rich ? mk("rect", { x: 90, y: 70, width: 120, height: 40, fill: `url(#${u}r)`, opacity: 0 }, wg) : null;
+      const bu = Array.from({ length: rich ? 16 : 9 }, () => ({ e: mk("circle", { fill: "none", stroke: "#fff", "stroke-width": 1 }, wg), x: 108 + rnd() * 84, ph: rnd(), r: 1.6 + rnd() * 2.2 }));
+      const surf = rich ? mk("path", { fill: "none", stroke: "#fff", "stroke-width": 1.6, opacity: 0 }, wg) : null;
       const ic = mk("path", { stroke: "#5F8DB8", "stroke-width": 1.1, fill: "none" }, wg);
-      mk("path", { d: PD, fill: "none", stroke: "#5A463B", "stroke-width": 2.6 }, svg);
-      mk("path", { d: "M90,44 L210,44 M98,52 C88,52 86,60 94,62 M202,52 C212,52 214,60 206,62", fill: "none", stroke: "#5A463B", "stroke-width": 2.6, "stroke-linecap": "round" }, svg);
-      mk("path", { d: "M108,124 L192,124 M116,124 L112,129 M184,124 L188,129", stroke: "#5A463B", "stroke-width": 3, "stroke-linecap": "round" }, svg);
-      const fl = [[132, 8], [150, 11], [168, 8]].map(([x, wd]) => ({ x, wd, o: mk("path", {}, svg), i: mk("path", {}, svg) })), lg = mk("g", { opacity: 0 }, svg);
-      if (w === "yang") { lab(lg, 168, 116, 222, 116, "Fire too low", "start"); lab(lg, 112, 70, 94, 60, "Water stays cold", "end"); lab(lg, null, null, 150, 15, "Nothing rises", "middle"); }
-      if (w === "yin") { lab(lg, 184, 98, 226, 88, "Water too low", "start"); lab(lg, null, null, 150, 12, "Empty heat rises", "middle"); lab(lg, 150, 104, 82, 116, "Bottom scorches", "end"); }
-      if (w === "heat") { lab(lg, 172, 104, 222, 116, "Fire too high", "start"); lab(lg, null, null, 150, 12, "Boils over", "middle"); }
-      S.step = (dt, t) => {
-        const k = S.k, P = {}; for (const q of ["fl", "lv", "st", "sp", "gl", "bu", "ic"]) P[q] = lerp(P0[q], P1[q], k);
-        wa.setAttribute("y", P.lv.toFixed(1)); wa.setAttribute("fill", mix(P0.wc, P1.wc, k)); gw.setAttribute("opacity", (P.gl * (RM() ? 1 : .8 + .2 * Math.sin(t * 5))).toFixed(2));
-        ic.setAttribute("d", [110, 136, 166, 190].map(x => flake(x, P.lv + 2, 3.6)).join(" ")); ic.setAttribute("opacity", P.ic.toFixed(2));
-        bu.forEach(b => { const q = (RM() ? b.ph : t * .9 + b.ph) % 1, y = lerp(102, P.lv + 3, q); b.e.setAttribute("cx", (b.x + 2 * Math.sin(q * 9)).toFixed(1)); b.e.setAttribute("cy", y.toFixed(1)); b.e.setAttribute("r", b.r.toFixed(1)); b.e.setAttribute("opacity", (P.bu * (1 - q * .5)).toFixed(2)); });
+      const over = rich ? [[99, -1], [201, 1]].map(([x, s]) => ({ e: mk("path", { fill: "none", stroke: "#7FB6D5", "stroke-width": 2.2, "stroke-linecap": "round", opacity: 0 }, root), x, s, q: rnd() })) : [];
+      mk("path", { d: PD, fill: "none", stroke: "#5A463B", "stroke-width": 2.6 }, root);
+      mk("path", { d: "M90,44 L210,44 M98,52 C88,52 86,60 94,62 M202,52 C212,52 214,60 206,62", fill: "none", stroke: "#5A463B", "stroke-width": 2.6, "stroke-linecap": "round" }, root);
+      const lid = rich ? mk("path", { d: "M100,40 L200,40 M146,40 C146,34 154,34 154,40", fill: "none", stroke: "#5A463B", "stroke-width": 2.6, "stroke-linecap": "round" }, root) : null;
+      mk("path", { d: "M108,124 L192,124 M116,124 L112,129 M184,124 L188,129", stroke: "#5A463B", "stroke-width": 3, "stroke-linecap": "round" }, root);
+      const fl = (rich ? [[112, 6], [132, 8], [150, 11], [168, 8], [188, 6]] : [[132, 8], [150, 11], [168, 8]]).map(([x, wd]) => ({ x, wd, o: mk("path", {}, root), i: mk("path", {}, root) }));
+      return { step: (t, k) => {
+        const P = {}; for (const q of ["fl", "lv", "st", "sp", "gl", "bu", "ic"]) P[q] = lerp(P0[q], P1[q], k);
+        const boil = RM() ? .5 : .5 + .5 * Math.sin(t * 7);
+        wa.setAttribute("y", F(P.lv - (rich ? 3 * k * boil : 0))); wa.setAttribute("fill", mix(P0.wc, P1.wc, k)); gw.setAttribute("opacity", F(P.gl * (RM() ? 1 : .8 + .2 * Math.sin(t * 5))));
+        ic.setAttribute("d", [110, 136, 166, 190].map(x => flake(x, P.lv + 2, 3.6)).join(" ")); ic.setAttribute("opacity", F(P.ic));
+        if (glow) glow.setAttribute("opacity", F(k * (RM() ? .8 : .7 + .3 * Math.sin(t * 4))));
+        bu.forEach((b, i) => { const q = (RM() ? b.ph : t * (.9 + .5 * k) + b.ph) % 1, y = lerp(102, P.lv + 2, q); b.e.setAttribute("cx", F(b.x + 2 * Math.sin(q * 9))); b.e.setAttribute("cy", F(y)); b.e.setAttribute("r", F(b.r * (1 + .6 * k * q))); b.e.setAttribute("opacity", F((i < 9 ? P.bu : k) * (1 - q * .5))); });
+        if (surf) { let d = ""; for (let x = 100; x <= 200; x += 8) d += (x === 100 ? "M" : " L") + x + "," + F(P.lv - 3 * k * boil + 2.5 * k * Math.sin(x / 6 + t * 9)); surf.setAttribute("d", d); surf.setAttribute("opacity", F(k * .8)); }
+        over.forEach(o => { if (!RM()) { o.q += .55 * k * (1 / 30); if (o.q > 1) o.q -= 1; } const y2 = 44 + 50 * o.q; o.e.setAttribute("d", `M${o.x},44 C${o.x + o.s * 3},52 ${o.x + o.s * 2},58 ${o.x + o.s},${F(y2)}`); o.e.setAttribute("opacity", F(k * (1 - o.q) * .9)); });
+        if (lid) { const j = RM() ? 0 : k * 2.2 * Math.max(0, Math.sin(t * 11)); lid.setAttribute("transform", `translate(${F(k * 2)} ${F(-j - 1.5 * k)}) rotate(${F(-3 * k)} 150 40)`); lid.setAttribute("opacity", F(k)); }
         fl.forEach((f, i) => {
-          const h = P.fl * (f.wd / 11) * (RM() ? 1 : 1 + .1 * Math.sin(t * 13 + i * 2)), wd = f.wd * lerp(1, 1.25, Math.max(0, (P.fl - 16) / 14));
+          const side = rich && (i === 0 || i === 4), h = (side ? P.fl * .55 * k : P.fl * (f.wd / 11)) * (RM() ? 1 : 1 + .1 * Math.sin(t * 13 + i * 2)), wd = f.wd * lerp(1, 1.25, Math.max(0, (P.fl - 16) / 14));
           f.o.setAttribute("d", flameD(f.x, 122, h, wd)); f.o.setAttribute("fill", mix(P0.fo, P1.fo, k)); f.i.setAttribute("d", flameD(f.x, 122, h * .55, wd * .5)); f.i.setAttribute("fill", mix(P0.fi, P1.fi, k));
+          if (side) { f.o.setAttribute("opacity", F(k)); f.i.setAttribute("opacity", F(k)); }
         });
         stm.forEach((s, i) => {
           const q = (RM() ? s.ph : t * .45 * P.sp + s.ph) % 1, y0 = 40 - q * 34, x = s.x + 3 * Math.sin(q * 6 + i);
-          s.e.setAttribute("d", `M${x.toFixed(1)},${y0.toFixed(1)} c-5,-4 5,-8 0,-12 c-5,-4 5,-8 0,-12`); s.e.setAttribute("stroke", mix(P0.sc, P1.sc, k));
-          s.e.setAttribute("stroke-width", lerp(2.2, w === "heat" ? 3.4 : w === "yin" ? 1.4 : 2.2, k).toFixed(1)); s.e.setAttribute("opacity", (P.st * (1 - q) * .9).toFixed(2));
+          s.e.setAttribute("d", `M${F(x)},${F(y0)} c-5,-4 5,-8 0,-12 c-5,-4 5,-8 0,-12`); s.e.setAttribute("stroke", mix(P0.sc, P1.sc, k));
+          s.e.setAttribute("stroke-width", F(lerp(2.2, w === "heat" ? 3.4 : w === "yin" ? 1.4 : 2.2, k))); s.e.setAttribute("opacity", F(P.st * (1 - q) * .9));
         });
-        labOn(lg, k);
-      };
+        shim.forEach((s, i) => { const x = 128 + i * 22, ph = i * 2.1; let d = ""; for (let y = 36; y >= 4; y -= 4) d += (y === 36 ? "M" : " L") + F(x + 3 * Math.sin(y / 5 + (RM() ? ph : t * 6 + ph))) + "," + y; s.setAttribute("d", d); s.setAttribute("opacity", F(k * .55)); });
+      } };
     };
-    SC.yang = (S, svg) => pot(S, svg, "yang");
-    SC.yindef = (S, svg) => pot(S, svg, "yin");
-    SC.heat = (S, svg) => pot(S, svg, "heat");
-    // Kidney yang deficiency: the root fire between the kidneys burns low; the kidneys go cold; clear urine runs often
+    // the person (her pick 2026-10-22): drawn once, shown with what the pattern does to them. m = { flush, cheeks, sweat, cracks, waves, pale, shiver, tired }
+    const body = (svg, ox, oy, sc, m) => {
+      const u = uid(), base = `translate(${ox},${oy}) scale(${sc})`, g = mk("g", { transform: base }, svg);
+      g.innerHTML = `<defs><radialGradient id="${u}c" cx="50%" cy="60%" r="55%"><stop offset="0" stop-color="#E2452F" stop-opacity=".55"/><stop offset="1" stop-color="#E2452F" stop-opacity="0"/></radialGradient><radialGradient id="${u}t" cx="50%" cy="20%" r="70%"><stop offset="0" stop-color="#E2452F" stop-opacity=".45"/><stop offset="1" stop-color="#E2452F" stop-opacity="0"/></radialGradient></defs>`;
+      const TD = sh => `M150,58 C160,58 166,62 176,${F(66 + sh)} C196,${F(72 + sh)} 206,${F(84 + sh)} 208,${F(104 + sh)} L208,130 L92,130 L92,${F(104 + sh)} C94,${F(84 + sh)} 104,${F(72 + sh)} 124,${F(66 + sh)} C134,62 140,58 150,58 Z`;
+      const torso = mk("path", { d: TD(0), "stroke-width": 1 }, g), tf = m.flush ? mk("path", { d: TD(0), fill: `url(#${u}t)`, opacity: 0 }, g) : null;
+      const neck = mk("path", { d: "M138,44 L138,64 C144,68 156,68 162,64 L162,44 Z", "stroke-width": 1 }, g);
+      const hd = mk("g", {}, g), head = mk("ellipse", { cx: 150, cy: 30, rx: 22, ry: 26, "stroke-width": 1 }, hd);
+      const fl = m.flush ? mk("ellipse", { cx: 150, cy: 34, rx: 24, ry: 22, fill: `url(#${u}c)`, opacity: 0 }, hd) : null;
+      const ch = m.cheeks ? [141, 159].map(x => mk("ellipse", { cx: x, cy: 38, rx: 5, ry: 3.4, fill: "#E2452F", opacity: 0 }, hd)) : [];
+      mk("path", { d: "M128,26 C128,8 172,8 172,26 C166,16 134,16 128,26 Z", fill: "#5A463B" }, hd);
+      const lids = [140, 160].map(x => { mk("path", { d: `M${x - 5},32 Q${x},28 ${x + 5},32 Q${x},36 ${x - 5},32 Z`, fill: "#fff", stroke: "#5A463B", "stroke-width": 1 }, hd); mk("circle", { cx: x, cy: 32, r: 1.7, fill: "#5A463B" }, hd); return m.tired ? mk("path", { "stroke-width": .8 }, hd) : null; });
+      [140, 160].forEach(x => mk("path", { d: `M${x - 5},25 Q${x},23 ${x + 5},25`, fill: "none", stroke: "#5A463B", "stroke-width": 1.2, "stroke-linecap": "round" }, hd));
+      mk("path", { d: "M150,35 L148,41 L152,41", fill: "none", stroke: "#C58F80", "stroke-width": 1 }, hd);
+      const lips = mk("path", { d: "M145,46.5 Q150,49 155,46.5", fill: "none", "stroke-width": 1.4, "stroke-linecap": "round" }, hd);
+      const crack = m.cracks ? mk("path", { d: "M148,46.6 v2.2 M150,47.2 v2.4 M152,46.6 v2.2", fill: "none", stroke: "#8B2E24", "stroke-width": .7, opacity: 0 }, hd) : null;
+      const sw = m.sweat ? [[132, 20], [168, 22], [140, 14], [160, 12], [172, 40]].map(([x, y]) => ({ x, y, ph: rnd(), e: mk("path", { d: "M0,-3 C2,-1 2.6,1 0,2.6 C-2.6,1 -2,-1 0,-3 Z", fill: "#7FB6D5", stroke: "#fff", "stroke-width": .5, opacity: 0 }, g) })) : [];
+      const hw = m.waves ? [0, 1, 2].map(() => mk("path", { fill: "none", stroke: "#E9876A", "stroke-width": 1.4, "stroke-linecap": "round", opacity: 0 }, g)) : [];
+      const fr = m.pale ? mk("path", { d: flake(118, 24, 4) + " " + flake(184, 20, 4) + " " + flake(104, 88, 3.5) + " " + flake(198, 92, 3.5), stroke: "#5F8DB8", "stroke-width": 1.1, fill: "none", opacity: 0 }, g) : null;
+      return { step: (t, k) => {
+        const sk = m.pale ? mix("#F2C9BC", "#E6E3E8", k * .6) : m.tired ? mix("#F2C9BC", "#EADFCB", k * .5) : mix("#F2C9BC", "#F0A48E", k * .5);
+        const ss = m.pale ? mix("#C58F80", "#9FA8B8", k * .6) : mix("#C58F80", "#B9655A", k * .5);
+        [torso, neck, head].forEach(e => { e.setAttribute("fill", sk); e.setAttribute("stroke", ss); });
+        const pu = RM() ? .85 : .75 + .25 * Math.sin(t * 2.2);
+        if (fl) fl.setAttribute("opacity", F(k * pu)); if (tf) tf.setAttribute("opacity", F(k * pu * .9));
+        ch.forEach(c => c.setAttribute("opacity", F(k * pu * .8)));
+        lips.setAttribute("stroke", m.pale ? mix("#C9847A", "#9FA3B8", k) : mix("#C9847A", "#B24A3B", k)); if (crack) crack.setAttribute("opacity", F(k));
+        sw.forEach(s => { const q = (RM() ? s.ph : t * .35 + s.ph) % 1; s.e.setAttribute("transform", `translate(${F(s.x)},${F(s.y + q * 14)})`); s.e.setAttribute("opacity", F(k * (q < .1 ? q * 10 : 1 - q) * .95)); });
+        hw.forEach((h, i) => { const x = 136 + i * 14, ph = i * 1.9; let d = ""; for (let y = 2; y >= -22; y -= 4) d += (y === 2 ? "M" : " L") + F(x + 2.6 * Math.sin(y / 4 + (RM() ? ph : t * 6 + ph))) + "," + y; h.setAttribute("d", d); h.setAttribute("opacity", F(k * .6)); });
+        if (fr) fr.setAttribute("opacity", F(k));
+        if (m.shiver) g.setAttribute("transform", base + ` translate(${F(RM() || k < .4 ? 0 : .7 * k * Math.sin(t * 40))},0)`);
+        if (m.tired) { hd.setAttribute("transform", `rotate(${F(-9 * k)} 150 48)`); torso.setAttribute("d", TD(6 * k)); lids.forEach((l, i) => { const x = i ? 160 : 140; l.setAttribute("d", `M${x - 5},32 Q${x},28 ${x + 5},32 Q${x},${F(28 + 4.5 * k)} ${x - 5},32 Z`); l.setAttribute("fill", sk); l.setAttribute("stroke", ss); }); }
+      } };
+    };
+    // the three pot pictures: the pot on the left, the person on the right (Balanced: a steady pot, a calm person)
+    SC.yang = (S, svg) => {
+      mk("rect", { width: 300, height: 130, fill: "#F7F4EE" }, svg);
+      const P = pot(svg, "yang", -46, 6, .9, false), B = body(svg, 96, 0, .92, { pale: 1, shiver: 1 }), lg = mk("g", { opacity: 0 }, svg);
+      lab(lg, 89, 112, 40, 124, "Fire too low", "middle"); lab(lg, null, null, 89, 12, "Nothing rises", "middle"); lab(lg, 250, 30, 296, 16, "Cold, pale", "end"); lab(lg, 262, 70, 296, 104, "Shivers", "end");
+      S.step = (dt, t) => { P.step(t, S.k); B.step(t, S.k); labOn(lg, S.k); };
+    };
+    SC.yindef = (S, svg) => {
+      mk("rect", { width: 300, height: 130, fill: "#F7F4EE" }, svg);
+      const P = pot(svg, "yin", -46, 6, .9, false), B = body(svg, 96, 0, .92, { cheeks: 1, sweat: 1, cracks: 1 }), lg = mk("g", { opacity: 0 }, svg);
+      lab(lg, 60, 90, 40, 124, "Water too low", "middle"); lab(lg, null, null, 89, 12, "Empty heat rises", "middle"); lab(lg, 250, 35, 296, 18, "Hot cheeks", "end"); lab(lg, 217, 20, 206, 10, "Night sweats", "end"); lab(lg, 234, 46, 296, 104, "Dry mouth", "end");
+      S.step = (dt, t) => { P.step(t, S.k); B.step(t, S.k); labOn(lg, S.k); };
+    };
+    SC.heat = (S, svg) => {
+      mk("rect", { width: 300, height: 130, fill: "#F7F4EE" }, svg);
+      const P = pot(svg, "heat", -46, 6, .9, true), B = body(svg, 96, 0, .92, { flush: 1, sweat: 1, cracks: 1, waves: 1 }), lg = mk("g", { opacity: 0 }, svg);
+      lab(lg, null, null, 89, 12, "Fire too high, boils over", "middle"); lab(lg, 252, 33, 296, 18, "Flushed, hot", "end"); lab(lg, 217, 18, 206, 10, "Sweats", "end"); lab(lg, 234, 46, 296, 104, "Dry mouth", "end");
+      S.step = (dt, t) => { P.step(t, S.k); B.step(t, S.k); labOn(lg, S.k); };
+    };
+    // Kidney yang deficiency: the root fire between the kidneys burns low; the kidneys go cold; clear urine runs often. Her 2026-10-22 "more
+    // anatomy": adrenal caps, the renal pelvis, the medullary pyramids, discs between the vertebrae, a real bladder
     SC.kidneyyang = (S, svg) => {
       const u = uid();
       svg.innerHTML = `<defs><radialGradient id="${u}h" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#F2A65A" stop-opacity=".8"/><stop offset="1" stop-color="#F2A65A" stop-opacity="0"/></radialGradient></defs>`;
       mk("rect", { width: 300, height: 130, fill: "#F7F4EE" }, svg);
       const halo = mk("ellipse", { cx: 150, cy: 62, rx: 96, ry: 46, fill: `url(#${u}h)` }, svg);
-      for (let y = 12; y <= 100; y += 12) mk("rect", { x: 142, y, width: 16, height: 9, rx: 2, fill: "#EFE8DA", stroke: "#A3967F", "stroke-width": .8 }, svg);
-      const kid = (cx, cy, s) => { const X = a => (cx + a * s).toFixed(1); return `M${X(4)},${cy - 24} C${X(-14)},${cy - 26} ${X(-20)},${cy - 8} ${X(-18)},${cy + 6} C${X(-16)},${cy + 22} ${X(-2)},${cy + 28} ${X(8)},${cy + 20} C${X(12)},${cy + 16} ${X(8)},${cy + 8} ${X(4)},${cy + 4} C${X(2)},${cy + 1} ${X(2)},${cy - 3} ${X(5)},${cy - 6} C${X(12)},${cy - 12} ${X(14)},${cy - 22} ${X(4)},${cy - 24} Z`; };
+      for (let y = 10; y <= 100; y += 13) { mk("rect", { x: 141, y, width: 18, height: 9, rx: 2.5, fill: "#EFE8DA", stroke: "#A3967F", "stroke-width": .8 }, svg); mk("rect", { x: 143, y: y + 9.5, width: 14, height: 2.6, rx: 1, fill: "#D9CDB8" }, svg); }
+      const kid = (cx, cy, s) => { const X = a => F(cx + a * s); return `M${X(4)},${cy - 24} C${X(-14)},${cy - 26} ${X(-20)},${cy - 8} ${X(-18)},${cy + 6} C${X(-16)},${cy + 22} ${X(-2)},${cy + 28} ${X(8)},${cy + 20} C${X(12)},${cy + 16} ${X(8)},${cy + 8} ${X(4)},${cy + 4} C${X(2)},${cy + 1} ${X(2)},${cy - 3} ${X(5)},${cy - 6} C${X(12)},${cy - 12} ${X(14)},${cy - 22} ${X(4)},${cy - 24} Z`; };
       const UR = [[[116, 58], [118, 80], [136, 96], [142, 108]], [[184, 58], [182, 80], [164, 96], [158, 108]]];
       UR.forEach(p => mk("path", { d: `M${p[0]} C${p[1]} ${p[2]} ${p[3]}`, fill: "none", stroke: "#D9B8A0", "stroke-width": 3.2, "stroke-linecap": "round" }, svg));
-      mk("ellipse", { cx: 150, cy: 118, rx: 20, ry: 11, fill: "#EBCB8A", stroke: "#B48A3A", "stroke-width": .8 }, svg);
+      mk("path", { d: "M130,112 C130,100 170,100 170,112 C170,124 160,128 150,128 C140,128 130,124 130,112 Z", fill: "#EBCB8A", stroke: "#B48A3A", "stroke-width": .8 }, svg);
       const kL = mk("path", { d: kid(112, 50, 1), "stroke-width": 1 }, svg), kR = mk("path", { d: kid(188, 50, -1), "stroke-width": 1 }, svg);
-      const fr = mk("path", { d: flake(104, 44, 5) + " " + flake(196, 44, 5) + " " + flake(108, 60, 3.5) + " " + flake(192, 60, 3.5), stroke: "#5F8DB8", "stroke-width": 1.1, fill: "none" }, svg);
+      const pyr = mk("g", { opacity: .35, fill: "#fff" }, svg);
+      [[106, 38], [103, 50], [106, 62], [194, 38], [197, 50], [194, 62]].forEach(([x, y], i) => mk("path", { d: `M${x},${y - 4} L${x + (i < 3 ? 7 : -7)},${y} L${x},${y + 4} Z` }, pyr));
+      [[113, 50, 1], [187, 50, -1]].forEach(([x, y, s]) => mk("path", { d: `M${x + 2 * s},${y - 7} C${x + 6 * s},${y - 2} ${x + 6 * s},${y + 2} ${x + 2 * s},${y + 7}`, fill: "none", stroke: "#F3E5D9", "stroke-width": 2.6, "stroke-linecap": "round" }, svg));
+      [[108, 24, 1], [192, 24, -1]].forEach(([x, y, s]) => mk("path", { d: `M${x - 10 * s},${y + 3} C${x - 4 * s},${y - 6} ${x + 6 * s},${y - 6} ${x + 10 * s},${y + 1} C${x + 4 * s},${y + 5} ${x - 4 * s},${y + 6} ${x - 10 * s},${y + 3} Z`, fill: "#EAC46A", stroke: "#B48A3A", "stroke-width": .8 }, svg));
+      const fr = mk("path", { d: flake(100, 44, 5) + " " + flake(200, 44, 5) + " " + flake(106, 62, 3.5) + " " + flake(194, 62, 3.5), stroke: "#5F8DB8", "stroke-width": 1.1, fill: "none" }, svg);
       const fo = mk("path", {}, svg), fi = mk("path", {}, svg), dr = [];
       for (let s = 0; s < 2; s++) for (let i = 0; i < 8; i++) dr.push({ s, i, q: i / 8, e: mk("ellipse", { rx: 2, ry: 2.6 }, svg) });
-      const lg = mk("g", { opacity: 0 }, svg); lab(lg, 157, 72, 214, 72, "Root fire low", "start"); lab(lg, 98, 40, 62, 20, "Kidneys cold", "end"); lab(lg, 170, 118, 214, 112, "Clear urine, often", "start");
+      const lg = mk("g", { opacity: 0 }, svg); lab(lg, 157, 72, 214, 72, "Root fire low", "start"); lab(lg, 98, 40, 62, 20, "Kidneys cold", "end"); lab(lg, 170, 118, 214, 112, "Clear urine, often", "start"); lab(lg, 198, 24, 236, 14, "Adrenal", "start");
       S.step = (dt, t) => {
         const k = S.k; halo.setAttribute("opacity", lerp(.75, 0, k).toFixed(2));
         const kc = mix("#B4574A", "#8FA4B8", k), ks = mix("#7A2E24", "#5F7890", k); [kL, kR].forEach(e => { e.setAttribute("fill", kc); e.setAttribute("stroke", ks); }); fr.setAttribute("opacity", k.toFixed(2));
@@ -71295,94 +71387,145 @@ or changing anything in Cliniko.
         labOn(lg, k);
       };
     };
-    // Middle deficient cold: the stomach sits over a low middle fire; food just sits, a dull ache
+    // Middle deficient cold: the stomach sits over a low middle fire; food just sits, a dull ache. Her 2026-10-22 "more anatomy": the real
+    // stomach (oesophagus in, fundus, body with its folds, pylorus, the duodenum's loop); food pools low and barely moves on
     SC.xjzt = (S, svg) => {
-      const u = uid();
-      svg.innerHTML = `<defs><radialGradient id="${u}h" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#F2A65A" stop-opacity=".7"/><stop offset="1" stop-color="#F2A65A" stop-opacity="0"/></radialGradient></defs>`;
+      const u = uid(), SD = "M136,36 C118,30 98,44 96,70 C94,98 118,118 152,116 C178,114 196,102 208,92 C214,86 216,78 212,74 C206,70 196,72 184,78 C168,86 152,86 148,66 C146,56 146,46 150,40 Z";
+      svg.innerHTML = `<defs><radialGradient id="${u}h" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#F2A65A" stop-opacity=".7"/><stop offset="1" stop-color="#F2A65A" stop-opacity="0"/></radialGradient><clipPath id="${u}c"><path d="${SD}"/></clipPath></defs>`;
       mk("rect", { width: 300, height: 130, fill: "#F7F4EE" }, svg);
-      const halo = mk("ellipse", { cx: 152, cy: 74, rx: 84, ry: 46, fill: `url(#${u}h)` }, svg);
-      const P = [[128, 18], [124, 42], [114, 66], [118, 88], [138, 100], [164, 98], [184, 86], [194, 66]], D = [[194, 66], [218, 62], [300, 62]], pd = a => "M" + a.map(p => p.join(",")).join(" L");
-      const wall = mk("path", { d: pd(P), fill: "none", "stroke-width": 38, "stroke-linecap": "round", "stroke-linejoin": "round" }, svg), lum = mk("path", { d: pd(P), fill: "none", "stroke-width": 32, "stroke-linecap": "round", "stroke-linejoin": "round" }, svg);
-      const dw = mk("path", { d: pd(D), fill: "none", "stroke-width": 15, "stroke-linecap": "round" }, svg), dl = mk("path", { d: pd(D), fill: "none", "stroke-width": 10, "stroke-linecap": "round" }, svg);
-      const ALL = P.concat(D.slice(1)), seg = []; let tot = 0;
-      for (let i = 1; i < ALL.length; i++) { const l = Math.hypot(ALL[i][0] - ALL[i - 1][0], ALL[i][1] - ALL[i - 1][1]); seg.push(l); tot += l; }
-      const at = s => { let d = s * tot; for (let i = 0; i < seg.length; i++) { if (d <= seg[i]) { const f = d / seg[i]; return [lerp(ALL[i][0], ALL[i + 1][0], f), lerp(ALL[i][1], ALL[i + 1][1], f), i]; } d -= seg[i]; } return [300, 62, 9]; };
-      const rings = [0, 1].map(() => mk("circle", { cx: 150, cy: 78, fill: "none", stroke: "#E07B39", "stroke-width": 1.2 }, svg)), pg = mk("g", {}, svg), ps = [];
-      for (let i = 0; i < 34; i++) ps.push({ s: rnd(), j: rnd() - .5, ph: rnd() * 6.3, e: mk("rect", { rx: 1.4 }, pg) });
+      const halo = mk("ellipse", { cx: 152, cy: 80, rx: 84, ry: 46, fill: `url(#${u}h)` }, svg);
+      const OD = "M134,2 C134,18 136,28 140,38", DD = "M212,76 C232,70 252,78 254,96 C256,110 244,118 232,114";
+      const oes = mk("path", { d: OD, fill: "none", "stroke-width": 16, "stroke-linecap": "round" }, svg), oesl = mk("path", { d: OD, fill: "none", "stroke-width": 10, "stroke-linecap": "round" }, svg);
+      const duo = mk("path", { d: DD, fill: "none", "stroke-width": 15, "stroke-linecap": "round" }, svg), duol = mk("path", { d: DD, fill: "none", "stroke-width": 9, "stroke-linecap": "round" }, svg);
+      const wall = mk("path", { d: SD, "stroke-width": 7, "stroke-linejoin": "round" }, svg), lum = mk("path", { d: SD, stroke: "none" }, svg);
+      const rug = mk("g", { "clip-path": `url(#${u}c)`, fill: "none", "stroke-width": 1.1, opacity: .55 }, svg);
+      [[104, 56], [100, 72], [104, 88], [116, 102]].forEach(([x, y]) => mk("path", { d: `M${x},${y} c8,-4 14,4 22,0 c8,-4 14,4 22,0 c8,-4 14,4 22,0` }, rug));
+      mk("ellipse", { cx: 211, cy: 76, rx: 3, ry: 6, transform: "rotate(-20 211 76)", fill: "#C9846F", opacity: .8 }, svg);
+      const pg = mk("g", { "clip-path": `url(#${u}c)` }, svg), ps = [];
+      for (let i = 0; i < 26; i++) ps.push({ x: 108 + rnd() * 70, y: 84 + rnd() * 26, ph: rnd() * 6.3, s: rnd(), e: mk("rect", { rx: 1.4 }, pg) });
+      const rings = [0, 1].map(() => mk("circle", { cx: 150, cy: 84, fill: "none", stroke: "#E07B39", "stroke-width": 1.2 }, svg));
       const fo = mk("path", {}, svg), fi = mk("path", {}, svg), lg = mk("g", { opacity: 0 }, svg);
-      lab(lg, 158, 116, 214, 118, "Middle fire low", "start"); lab(lg, 186, 84, 226, 30, "Food just sits", "start"); lab(lg, 136, 78, 92, 78, "Dull ache", "end");
+      lab(lg, 150, 118, 206, 124, "Middle fire low", "start"); lab(lg, 140, 96, 60, 108, "Food just sits", "end"); lab(lg, 128, 62, 60, 50, "Dull ache", "end"); lab(lg, 240, 90, 282, 60, "Little moves on", "end");
       S.step = (dt, t) => {
         const k = S.k; halo.setAttribute("opacity", lerp(.8, 0, k).toFixed(2));
-        const wc = mix("#D9907A", "#C9B4AE", k), lc = mix("#F3C5B2", "#EEE2DD", k); wall.setAttribute("stroke", wc); dw.setAttribute("stroke", wc); lum.setAttribute("stroke", lc); dl.setAttribute("stroke", lc);
+        const wc = mix("#D9907A", "#C9B4AE", k), lc = mix("#F3C5B2", "#EEE2DD", k); [wall, oes, duo].forEach(e => e.setAttribute("stroke", wc)); [oesl, duol].forEach(e => e.setAttribute("stroke", lc)); wall.setAttribute("fill", lc); lum.setAttribute("fill", lc);
+        rug.setAttribute("stroke", mix("#C9846F", "#C9B4AE", k));
         const h = lerp(14, 4, k) * (RM() ? 1 : 1 + .1 * Math.sin(t * 12));
-        fo.setAttribute("d", flameD(150, 128, h, lerp(8, 4, k))); fo.setAttribute("fill", mix("#F29B38", "#8FB0D8", k)); fi.setAttribute("d", flameD(150, 128, h * .55, lerp(4, 2, k))); fi.setAttribute("fill", mix("#FFD66B", "#DCE9F7", k));
+        fo.setAttribute("d", flameD(152, 128, h, lerp(8, 4, k))); fo.setAttribute("fill", mix("#F29B38", "#8FB0D8", k)); fi.setAttribute("d", flameD(152, 128, h * .55, lerp(4, 2, k))); fi.setAttribute("fill", mix("#FFD66B", "#DCE9F7", k));
         rings.forEach((r, i) => { const q = RM() ? .5 : (t * .6 + i * .5) % 1; r.setAttribute("r", (6 + q * 22).toFixed(1)); r.setAttribute("opacity", (k * (1 - q) * .8).toFixed(2)); });
-        const v = lerp(.11, .012, k);
         ps.forEach(p => {
-          if (!RM()) { p.s += v * dt; if (p.s > 1) p.s -= 1; }
-          const [x, y, i] = at(p.s), jw = i >= 7 ? 3 : 10, sz = lerp(3.2, 6, k), wb = RM() ? 0 : Math.sin(t * 1.5 + p.ph) * (1 - k * .6);
-          p.e.setAttribute("x", (x - sz / 2 + wb).toFixed(1)); p.e.setAttribute("y", (y - sz / 2 + p.j * jw * 2).toFixed(1)); p.e.setAttribute("width", sz.toFixed(1)); p.e.setAttribute("height", sz.toFixed(1)); p.e.setAttribute("fill", mix("#C98B5A", "#D2BE9C", k));
+          if (!RM()) { p.s += dt * lerp(.09, .012, k); if (p.s > 1) { p.s = 0; p.x = 108 + rnd() * 30; p.y = 84 + rnd() * 26; } }
+          const x = p.x + p.s * 100 * (1 - .6 * k), y = p.y + (x > 190 ? (x - 190) * -.4 : 0) + (RM() ? 0 : Math.sin(t * 1.5 + p.ph) * (1 - .6 * k)), sz = lerp(3.2, 5.5, k);
+          p.e.setAttribute("x", F(x - sz / 2)); p.e.setAttribute("y", F(y - sz / 2)); p.e.setAttribute("width", F(sz)); p.e.setAttribute("height", F(sz)); p.e.setAttribute("fill", mix("#C98B5A", "#D2BE9C", k));
         });
         labOn(lg, k);
       };
     };
-    // Cold in the channels: cold tightens the vessel; blood slows, a small clot, and it can't reach the cold fingers
+    // Cold in the channels: cold tightens the vessel; blood slows, a small clot, and it can't reach the cold fingers. Her 2026-10-22 pick A: the
+    // channel as before (with its wall coats and lining) and a real hand: palm, a two-segment thumb, knuckle creases, nails, the palm's arch
+    // and a finger artery each, blood stopping short of the fingertips, which go white then blue
+    const FING = [[58, -24, 108, -28, 7.2, 6.2], [62, -8, 118, -10, 7.4, 6.4], [62, 8, 112, 10, 7, 6], [58, 22, 98, 26, 6.2, 5.3]], ASTART = [[54, -12], [55, 2], [50, 13], [40, 18]];
+    const hand = (svg, ox, oy, s) => {
+      const SKIN = "#F2C9BC", SKIN_S = "#C58F80", u = uid(), g = mk("g", { transform: `translate(${ox},${oy}) scale(${s})` }, svg), defs = mk("defs", {}, g);
+      const thumb = mk("path", { d: cap(4, 20, 23, 40, 8.6, 7.4), "stroke-width": 1 }, g), thumb2 = mk("path", { d: cap(21, 38, 36, 52, 7.4, 6), "stroke-width": 1 }, g);
+      const tnail = mk("ellipse", { cx: 33.4, cy: 49.6, rx: 3.6, ry: 3.7, transform: "rotate(43 33.4 49.6)", fill: "#F9E3DA", "stroke-width": .6 }, g), tcr = mk("path", { d: "M16,42 Q21,38 26,44", fill: "none", "stroke-width": .8, opacity: .5 }, g);
+      const palm = mk("path", { d: "M0,-27 C6,-31 18,-34 34,-34 C50,-34 59,-28 61,-18 L61,20 C59,30 51,36 38,38 C26,40 12,37 4,31 C-4,25 -4,-19 0,-27 Z", "stroke-width": 1 }, g);
+      const then = mk("path", { d: "M10,0 C5,10 8,22 20,30", fill: "none", "stroke-width": .8, opacity: .45 }, g);
+      const fl = FING.map(([x0, y0, x1, y1, hw, tw], i) => {
+        const f = mk("path", { d: cap(x0, y0, x1, y1, hw, tw), "stroke-width": 1 }, g);
+        const dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L, nx = -uy, ny = ux;
+        const cr = [.36, .68].map(q => { const px = x0 + dx * q, py = y0 + dy * q, w = lerp(hw, tw, q) * .72; return mk("path", { d: `M${F(px + nx * w)},${F(py + ny * w)} Q${F(px + ux * 1.6)},${F(py + uy * 1.6)} ${F(px - nx * w)},${F(py - ny * w)}`, fill: "none", "stroke-width": .8, opacity: .5 }, g); });
+        const nx1 = x0 + dx * .86, ny1 = y0 + dy * .86, ang = Math.atan2(dy, dx) * 180 / Math.PI;
+        const nail = mk("ellipse", { cx: nx1, cy: ny1, rx: tw * .6, ry: tw * .62, transform: `rotate(${F(ang)} ${F(nx1)} ${F(ny1)})`, fill: "#F9E3DA", "stroke-width": .6 }, g);
+        const gr = mk("linearGradient", { id: u + "f" + i, gradientUnits: "userSpaceOnUse", x1: x0, y1: y0, x2: x1, y2: y1 }, defs);
+        [[0, "#E6ECF2", 0], [.45, "#E6ECF2", 0], [.72, "#E8EEF3", .85], [1, "#8FA8C4", .95]].forEach(([o, c, a]) => mk("stop", { offset: o, "stop-color": c, "stop-opacity": a }, gr));
+        const cold = mk("path", { d: cap(x0, y0, x1, y1, hw - .5, tw - .5), fill: `url(#${u}f${i})`, opacity: 0 }, g);
+        const [ax, ay] = ASTART[i], art = mk("path", { d: `M${ax},${ay} Q${x0 - 4},${ay} ${x0},${y0} L${F(x1 - ux * 6)},${F(y1 - uy * 6)}`, fill: "none", "stroke-width": 1.5, "stroke-linecap": "round" }, g);
+        const cells = [0, 1, 2].map(j => ({ e: mk("circle", { r: 1.5 }, g), q: j / 3 + rnd() * .2 }));
+        return { f, cr, nail, cold, art, cells, x0, y0, x1, y1, ux, uy };
+      });
+      const arch = mk("path", { d: "M0,3 C10,3 16,12 26,16 C36,20 46,18 54,8 C56,4 56,-6 54,-12", fill: "none", "stroke-width": 1.8, "stroke-linecap": "round" }, g);
+      g.insertBefore(arch, fl[0].art);
+      const fr = mk("path", { d: FING.map(f => flake(f[2] + 7, f[3] - 2, 3.2)).join(" "), stroke: "#5F8DB8", "stroke-width": 1, fill: "none", opacity: 0 }, g);
+      return { step: (k, t, dt) => {
+        const sk = mix(SKIN, "#E9DCD8", k * .4), ss = mix(SKIN_S, "#8FA7BC", k * .6), ac = mix("#C8463F", "#B9C6D3", k * .85);
+        [palm, thumb, thumb2].forEach(e => { e.setAttribute("fill", sk); e.setAttribute("stroke", ss); });
+        then.setAttribute("stroke", ss); tcr.setAttribute("stroke", ss); tnail.setAttribute("stroke", ss); tnail.setAttribute("fill", mix("#F9E3DA", "#C9D6E4", k * .5)); arch.setAttribute("stroke", ac);
+        fl.forEach(f => {
+          f.f.setAttribute("fill", sk); f.f.setAttribute("stroke", ss); f.cr.forEach(c => c.setAttribute("stroke", ss)); f.nail.setAttribute("stroke", ss); f.nail.setAttribute("fill", mix("#F9E3DA", "#C9D6E4", k));
+          f.cold.setAttribute("opacity", F(k)); f.art.setAttribute("stroke", ac); f.art.setAttribute("opacity", F(lerp(1, .6, k)));
+          f.cells.forEach(c => {
+            if (!RM()) { c.q += dt * (.28 - .17 * k); if (c.q > 1) c.q -= 1; }
+            const qm = 1 - .5 * k, q = Math.min(c.q, qm), x = f.x0 + (f.x1 - 6 * f.ux - f.x0) * q, y = f.y0 + (f.y1 - 6 * f.uy - f.y0) * q;
+            c.e.setAttribute("cx", F(x)); c.e.setAttribute("cy", F(y)); c.e.setAttribute("fill", mix("#C8463F", "#6E2E4A", k * .7)); c.e.setAttribute("opacity", c.q > qm ? "0" : "1");
+          });
+        });
+        fr.setAttribute("opacity", F(k));
+      } };
+    };
     SC.dgsn = (S, svg) => {
+      const x2 = 190, cx = 118, y = 66;
       mk("rect", { width: 300, height: 130, fill: "#F8EEE9" }, svg);
-      const pal = mk("rect", { x: 222, y: 36, width: 42, height: 60, rx: 12, "stroke-width": 1 }, svg), fg = [38, 51, 64, 77].map(y => mk("rect", { x: 256, y, width: 38, height: 10, rx: 5, "stroke-width": 1 }, svg));
-      const th = mk("ellipse", { cx: 236, cy: 100, rx: 14, ry: 6.5, transform: "rotate(-24 236 100)", "stroke-width": 1 }, svg);
-      const caps = [43, 56, 69, 82].map(y => mk("path", { d: `M226,66 C244,66 250,${y} 290,${y}`, fill: "none", "stroke-width": 1.3 }, svg));
+      const oT = mk("path", { fill: "none", "stroke-width": 10 }, svg), oB = mk("path", { fill: "none", "stroke-width": 10 }, svg);
       const lu = mk("path", {}, svg), wT = mk("path", { fill: "none", "stroke-width": 4.5 }, svg), wB = mk("path", { fill: "none", "stroke-width": 4.5 }, svg);
-      const fr = mk("path", { d: flake(140, 44, 4) + " " + flake(176, 44, 4) + " " + flake(158, 88, 4) + " " + flake(270, 32, 3.5) + " " + flake(286, 92, 3.5), stroke: "#5F8DB8", "stroke-width": 1.1, fill: "none" }, svg);
-      const clot = mk("ellipse", { cx: 162, cy: 66, fill: "#5E2240" }, svg), cg = mk("g", {}, svg), cs = [];
-      [-5, 5].forEach((o, li) => { for (let i = 0; i < 9; i++) cs.push(Object.assign(rbc(cg, 5.4), { x: 228 - i * 27 - li * 12, o, ph: rnd() * 6.3 })); });
-      const lg = mk("g", { opacity: 0 }, svg); lab(lg, null, null, 128, 14, "Cold tightens the channel", "middle"); lab(lg, null, null, 128, 124, "Blood can't reach the fingers", "middle"); lab(lg, 284, 82, 286, 116, "Cold fingers", "end");
+      const li = []; for (let x = 6; x < x2 - 6; x += 22) [0, 1].forEach(i => li.push({ x, i, e: mk("ellipse", { cx: x, rx: 9, ry: 2, fill: "#F9E4DE", stroke: "#C98B80", "stroke-width": .6 }, svg) }));
+      const fr = mk("path", { d: flake(cx - 20, y - 22, 4) + " " + flake(cx + 16, y - 22, 4) + " " + flake(cx - 2, y + 22, 4), stroke: "#5F8DB8", "stroke-width": 1.1, fill: "none" }, svg);
+      const clot = mk("ellipse", { cx: cx + 2, cy: y, fill: "#5E2240" }, svg), cg = mk("g", {}, svg), cs = [];
+      [-5, 5].forEach((o, li2) => { for (let i = 0; i < 8; i++) cs.push(Object.assign(rbc(cg, 5.4), { x: x2 - i * 27 - li2 * 12, o, ph: rnd() * 6.3 })); });
+      const H = hand(svg, 190, 66, .85);
+      const lg = mk("g", { opacity: 0 }, svg); lab(lg, null, null, 100, 14, "Cold tightens the channel", "middle"); lab(lg, null, null, 100, 124, "Blood can't reach the fingers", "middle"); lab(lg, 283, 41, 296, 14, "Cold fingertips", "end");
       S.step = (dt, t) => {
-        const k = S.k, g = x => Math.exp(-Math.pow((x - 160) / 34, 2)), W = x => x > 224 ? 0 : 16 - k * 9 * g(x);
-        let d = "M0," + (66 - W(0)).toFixed(1); for (let x = 10; x <= 226; x += 8) d += " L" + x + "," + (66 - W(x)).toFixed(1); for (let x = 226; x >= 0; x -= 8) d += " L" + x + "," + (66 + W(x)).toFixed(1);
+        const k = S.k, g = x => Math.exp(-Math.pow((x - cx) / 34, 2)), W = x => x > x2 ? 0 : 16 - k * 9 * g(x);
+        let d = "M0," + F(y - W(0)); for (let x = 8; x <= x2; x += 8) d += " L" + x + "," + F(y - W(x)); for (let x = x2; x >= 0; x -= 8) d += " L" + x + "," + F(y + W(x));
         lu.setAttribute("d", d + " Z"); lu.setAttribute("fill", mix("#F4D3CC", "#EEDFE3", k));
-        let a = "M0," + (66 - W(0)).toFixed(1), b = "M0," + (66 + W(0)).toFixed(1); for (let x = 8; x <= 224; x += 8) { a += " L" + x + "," + (66 - W(x)).toFixed(1); b += " L" + x + "," + (66 + W(x)).toFixed(1); }
-        wT.setAttribute("d", a); wB.setAttribute("d", b); const wc = mix("#DDA9A1", "#B9C6D3", k); wT.setAttribute("stroke", wc); wB.setAttribute("stroke", wc);
-        const sk = mix("#F2C9BC", "#D5E0EA", k), ss = mix("#C58F80", "#8FA7BC", k); [pal, th].concat(fg).forEach(e => { e.setAttribute("fill", sk); e.setAttribute("stroke", ss); });
-        caps.forEach(c => { c.setAttribute("stroke", mix("#C8463F", "#C9D6E4", k)); c.setAttribute("opacity", lerp(1, .5, k).toFixed(2)); }); fr.setAttribute("opacity", k.toFixed(2));
-        clot.setAttribute("rx", (k * 6).toFixed(1)); clot.setAttribute("ry", (k * 4.5).toFixed(1));
+        let a = "M0," + F(y - W(0)), b = "M0," + F(y + W(0)); for (let x = 8; x <= x2; x += 8) { a += " L" + x + "," + F(y - W(x)); b += " L" + x + "," + F(y + W(x)); }
+        wT.setAttribute("d", a); wB.setAttribute("d", b); oT.setAttribute("d", a); oB.setAttribute("d", b);
+        const wc = mix("#DDA9A1", "#B9C6D3", k), oc = mix("#E9C9C0", "#D3DBE3", k); wT.setAttribute("stroke", wc); wB.setAttribute("stroke", wc); oT.setAttribute("stroke", oc); oB.setAttribute("stroke", oc);
+        li.forEach(o => o.e.setAttribute("cy", F(o.i ? y + W(o.x) - 2 : y - W(o.x) + 2)));
+        fr.setAttribute("opacity", F(k)); clot.setAttribute("rx", F(k * 6)); clot.setAttribute("ry", F(k * 4.5));
         cs.forEach(c => {
-          const f = c.x < 120 ? 1 - .55 * k : c.x < 200 ? 1 - .8 * k : 1 - .3 * k; c.x += 46 * f * dt; if (c.x > 228) c.x -= 246;
-          const y = 66 + c.o * (W(c.x) / 16) + 1.4 * Math.sin(t * 2 + c.ph);
-          c.b.setAttribute("fill", mix("#C8463F", "#6E2E4A", k * (c.x < 200 ? .8 : .4))); c.e.setAttribute("opacity", c.x > 212 ? (1 - (c.x - 212) / 16).toFixed(2) : "1");
-          c.e.setAttribute("transform", `translate(${c.x.toFixed(1)},${y.toFixed(1)}) scale(${(1 - .25 * k * g(c.x)).toFixed(2)})`);
+          const f = c.x < cx - 40 ? 1 - .55 * k : c.x < cx + 40 ? 1 - .8 * k : 1 - .3 * k; c.x += 46 * f * dt; if (c.x > x2 + 4) c.x -= x2 + 22;
+          const yy = y + c.o * (W(c.x) / 16) + 1.4 * Math.sin(t * 2 + c.ph);
+          c.b.setAttribute("fill", mix("#C8463F", "#6E2E4A", k * (c.x < cx + 40 ? .8 : .4))); c.e.setAttribute("opacity", c.x > x2 - 12 ? F(1 - (c.x - x2 + 12) / 16) : "1");
+          c.e.setAttribute("transform", `translate(${F(c.x)},${F(yy)}) scale(${F(1 - .25 * k * g(c.x))})`);
         });
-        labOn(lg, k);
+        H.step(k, t, dt); labOn(lg, k);
       };
     };
-    // Plum-pit qi: qi circles a lump in the throat that won't go down or come up; the throat tightens with stress
+    // Plum-pit qi: qi circles a lump in the throat that won't go down or come up; the throat tightens with stress. Her 2026-10-22 "more anatomy":
+    // the real throat from the front (hyoid, the voice box's thyroid cartilage, the cricoid, windpipe rings) with the gullet behind; the lump
+    // sits at the voice-box level
     SC.meihe = (S, svg) => {
       mk("rect", { width: 300, height: 130, fill: "#F2F8F6" }, svg);
-      mk("path", { d: "M96,0 C108,16 128,22 155,22 C182,22 202,16 214,0", fill: "none", stroke: "#B9A99A", "stroke-width": 2 }, svg);
-      mk("path", { d: "M114,18 C110,50 108,90 102,130 M196,18 C200,50 202,90 208,130", fill: "none", stroke: "#B9A99A", "stroke-width": 2 }, svg);
-      mk("path", { d: "M40,124 C90,112 126,116 146,124 M270,124 C220,112 184,116 164,124", fill: "none", stroke: "#C9BBA8", "stroke-width": 3, "stroke-linecap": "round" }, svg);
-      const bd = mk("path", { fill: "#E1F1EC" }, svg), wl = mk("path", { fill: "none", stroke: "#6FB3A6", "stroke-width": 1.6, "stroke-dasharray": "5 4" }, svg), wr = mk("path", { fill: "none", stroke: "#6FB3A6", "stroke-width": 1.6, "stroke-dasharray": "5 4" }, svg);
-      const pit = mk("ellipse", { cx: 155, cy: 60, fill: "#C9B46A", stroke: "#9C8540", "stroke-width": .9 }, svg), hl = mk("ellipse", { cx: 152, cy: 57, fill: "#fff", opacity: .35 }, svg);
+      mk("path", { d: "M92,0 C104,14 124,20 150,20 C176,20 196,14 208,0", fill: "none", stroke: "#B9A99A", "stroke-width": 2 }, svg);
+      const nl = mk("path", { fill: "none", stroke: "#B9A99A", "stroke-width": 2 }, svg), nr = mk("path", { fill: "none", stroke: "#B9A99A", "stroke-width": 2 }, svg);
+      mk("path", { d: "M40,126 C90,112 126,116 146,126 M260,126 C210,112 174,116 154,126", fill: "none", stroke: "#C9BBA8", "stroke-width": 3, "stroke-linecap": "round" }, svg);
+      const oe = mk("path", { d: "M162,24 L162,130", fill: "none", stroke: "#CFC2B3", "stroke-width": 12, "stroke-linecap": "round", opacity: .55 }, svg);
+      mk("path", { d: "M162,24 L162,130", fill: "none", stroke: "#E9DFD4", "stroke-width": 6, "stroke-linecap": "round", opacity: .7 }, svg);
+      mk("path", { d: "M132,30 C140,25 160,25 168,30", fill: "none", stroke: "#B9A99A", "stroke-width": 2.4, "stroke-linecap": "round" }, svg);
+      mk("path", { d: "M134,40 L166,40 L170,56 C166,64 134,64 130,56 Z M150,40 L150,50", fill: "#E8E1D8", stroke: "#A89A8B", "stroke-width": 1.4, "stroke-linejoin": "round" }, svg);
+      mk("path", { d: "M136,70 C140,66 160,66 164,70 L164,76 C160,80 140,80 136,76 Z", fill: "#E8E1D8", stroke: "#A89A8B", "stroke-width": 1.2 }, svg);
+      [84, 96, 108, 120].forEach(y => mk("path", { d: `M138,${y} C142,${y - 4} 158,${y - 4} 162,${y} L162,${y + 6} C158,${y + 10} 142,${y + 10} 138,${y + 6} Z`, fill: "#E8E1D8", stroke: "#A89A8B", "stroke-width": 1.1 }, svg));
+      const pit = mk("ellipse", { cx: 162, cy: 60, fill: "#C9B46A", stroke: "#9C8540", "stroke-width": .9 }, svg), hl = mk("ellipse", { cx: 159, cy: 57, fill: "#fff", opacity: .35 }, svg);
       const pg = mk("g", {}, svg), ps = [];
-      for (let i = 0; i < 26; i++) { const g = mk("g", {}, pg); mk("circle", { r: 5, fill: "#2F9E8C", opacity: .16 }, g); const c = mk("circle", { r: 2.1, fill: "#2F9E8C" }, g); ps.push({ g, c, y: rnd() * 130, xo: (rnd() - .5) * 14, ph: rnd() * 6.3, o: 0 }); }
-      const lg = mk("g", { opacity: 0 }, svg); lab(lg, 146, 60, 92, 46, "Feels like a lump", "end"); lab(lg, 166, 62, 212, 84, "Won't go down or up", "start"); lab(lg, 143, 74, 92, 98, "Tightens with stress", "end");
+      for (let i = 0; i < 22; i++) { const g = mk("g", {}, pg); mk("circle", { r: 4.5, fill: "#2F9E8C", opacity: .16 }, g); const c = mk("circle", { r: 2, fill: "#2F9E8C" }, g); ps.push({ g, c, y: 22 + rnd() * 108, xo: (rnd() - .5) * 4, ph: rnd() * 6.3, o: 0 }); }
+      const lg = mk("g", { opacity: 0 }, svg); lab(lg, 154, 60, 100, 46, "Feels like a lump", "end"); lab(lg, 172, 62, 296, 84, "Won't go down or up", "end"); lab(lg, 128, 72, 92, 98, "Tightens with stress", "end"); lab(lg, 170, 32, 222, 24, "Voice box", "start");
       S.step = (dt, t) => {
-        const k = S.k, pu = RM() ? .5 : .5 + .5 * Math.sin(t * 2.4), sq = y => k * (3 + 3 * pu) * Math.exp(-Math.pow((y - 60) / 18, 2)), W = y => 13 - sq(y);
-        let L = "M" + (155 - W(22)).toFixed(1) + ",22", R = "M" + (155 + W(22)).toFixed(1) + ",22";
-        for (let y = 30; y <= 130; y += 8) { L += " L" + (155 - W(y)).toFixed(1) + "," + y; R += " L" + (155 + W(y)).toFixed(1) + "," + y; }
-        let Bd = L; for (let y = 130; y >= 22; y -= 8) Bd += " L" + (155 + W(y)).toFixed(1) + "," + y;
-        bd.setAttribute("d", Bd + " Z"); wl.setAttribute("d", L); wr.setAttribute("d", R);
-        pit.setAttribute("rx", (k * 10).toFixed(1)); pit.setAttribute("ry", (k * 8).toFixed(1)); hl.setAttribute("rx", (k * 3.5).toFixed(1)); hl.setAttribute("ry", (k * 2.4).toFixed(1));
+        const k = S.k, pu = RM() ? .5 : .5 + .5 * Math.sin(t * 2.4), sq = y => k * (3 + 3 * pu) * Math.exp(-Math.pow((y - 60) / 20, 2));
+        let L = "M114,18", R = "M186,18"; for (let y = 24; y <= 130; y += 8) { L += " L" + F(112 + .1 * (y - 18) + sq(y)) + "," + y; R += " L" + F(188 - .1 * (y - 18) - sq(y)) + "," + y; }
+        nl.setAttribute("d", L); nr.setAttribute("d", R);
+        oe.setAttribute("stroke", mix("#CFC2B3", "#B9A99A", k)); oe.setAttribute("stroke-width", F(12 - 3 * k * pu));
+        pit.setAttribute("rx", F(k * 8)); pit.setAttribute("ry", F(k * 6.5)); hl.setAttribute("rx", F(k * 2.8)); hl.setAttribute("ry", F(k * 2));
         ps.forEach(p => {
           let x, y, co = "#2F9E8C";
-          if (p.o) { p.a += dt * (2.6 + p.ph * .1); p.ot -= dt; x = 155 + p.r * Math.cos(p.a); y = 60 + p.r * .9 * Math.sin(p.a); co = "#5DAE4E"; if (p.ot <= 0 || k < .3) { p.o = 0; p.y = rnd() < .5 ? 78 : 42; p.dir = p.y > 60 ? 1 : -1; } }
+          if (p.o) { p.a += dt * (2.6 + p.ph * .1); p.ot -= dt; x = 162 + p.r * Math.cos(p.a); y = 60 + p.r * .9 * Math.sin(p.a); co = "#5DAE4E"; if (p.ot <= 0 || k < .3) { p.o = 0; p.y = rnd() < .5 ? 76 : 44; p.dir = p.y > 60 ? 1 : -1; } }
           else {
             p.y += (p.dir || 1) * 40 * (1 - .5 * k) * dt;
-            if (p.y > 132 || p.y < 20) { p.y = 22; p.dir = 1; p.c2 = 0; }
-            if (k > .3 && !p.c2 && p.dir !== -1 && p.y > 40 && p.y < 46) { p.c2 = 1; p.o = 1; p.r = 12 + rnd() * 6; p.a = -Math.PI / 2; p.ot = (1.2 + rnd() * 2.4) * k; }
-            x = 155 + p.xo * (W(p.y) / 13) + (RM() ? 0 : 1.5 * Math.sin(t * 2 + p.ph)); y = p.y;
+            if (p.y > 132 || p.y < 20) { p.y = 24; p.dir = 1; p.c2 = 0; }
+            if (k > .3 && !p.c2 && p.dir !== -1 && p.y > 42 && p.y < 48) { p.c2 = 1; p.o = 1; p.r = 10 + rnd() * 5; p.a = -Math.PI / 2; p.ot = (1.2 + rnd() * 2.4) * k; }
+            x = 162 + p.xo + (RM() ? 0 : 1.2 * Math.sin(t * 2 + p.ph)); y = p.y;
           }
-          p.c.setAttribute("fill", co); p.g.setAttribute("transform", `translate(${x.toFixed(1)},${y.toFixed(1)})`);
+          p.c.setAttribute("fill", co); p.g.setAttribute("transform", `translate(${F(x)},${F(y)})`);
         });
         labOn(lg, k);
       };
