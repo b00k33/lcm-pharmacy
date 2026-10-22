@@ -1747,7 +1747,7 @@ Her synth22 (screenshots of the Compass and the Pain card): "a well integrated w
 
 Her words, on a screenshot of her real Compass: "how to see that the signs are grouped". The signs were inside their body-area group, but nothing marked them as a set and the ↳ arrow made loose signs look like they belonged to the row above. Her pick (A of three, popup with previews): each group lists its complaints first, then one quiet "Signs · n" line over its signs; no ↳. **Code:** the group's rows in `phCxModel` are complaints, then the signs (the ones tied to a complaint first, then the loose ones, same caps); `phCxCardHtml` draws the `.ph-cx-row.cap` line before the first sign and puts the pain foot (Add pain, Pick areas, Close-ups · Surgeries · Pain intake) right under the pain rows, before the Signs line; CSS drops the arrow. The gold "now asking" order is now all complaints, then signs. **Tested** (real app, seeded patient): the line shows in each group with signs, no arrow, the foot sits under the pain rows, 1280 and 360 px, no overflow. **Not tested:** her real data. Wording "Signs" is DRAFT.
 
-## Baseline Compass: score an earlier visit (2026-10-23, session-a)
+## Baseline Compass: score an earlier visit (2026-10-23, LIVE since build 20261022-232900)
 
 Her words, on screenshots of a neck and shoulder patient whose Compass said "first visit · today sets the baseline" while the Care Plan's appointment table listed 4 done bookings: "ive treated this person multiple sessions. how do i set baseline from earlier appointments?"
 
