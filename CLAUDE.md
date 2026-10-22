@@ -1301,7 +1301,16 @@ charcoal, RIGHT / LEFT in the label column. Each wrist of the picture is the
 chart's own grid (`phPaSideHtml`), drawn by measuring its cells (`phPaLay`,
 again on a width change); the chart's frame is CSS on its grid
 (`.ph-pulse-fr/-vl/-pc/-dl`). Drawings level with the line (`plv-*` on
-`phPulseShapeSvg`) and wider in the wide columns (its `vw` argument). Abdomen tension is
+`phPulseShapeSvg`) and wider in the wide columns (its `vw` argument). Since her 2026-10-22 picks
+(memory project_pharmacy_pulse_quality_drawings_2026_10_22) every quality has its
+own drawing in the picture (`phPaModel` picks the shape, `phPaDraw` draws one frame);
+amplitude is HER ARROW SCALE: ↓ Soft / ↓↓ Weak / ↓↓↓ Flat, ↑ Slight pounding / ↑↑ Pounding /
+↑↑↑ Robust pounding (chips, chart glyphs and arch height all follow the count);
+Thin / Narrow is one chip; Loose is gone; Blocked = walls both sides + her loop; Ropy =
+thick wiry line; Small compressed holds up to 3 per cell (`n` on the mark). DEEP and
+FLOATING ARE READ FROM THE DRAWING (`phPulseAutoDepth`, never stored): below the
+position's normal depth = Deep, Skin row = Floating; their chips light up (`.auto`) and
+Patterns, Fang Bing Ren and the SHPD notes read them as if ticked. Abdomen tension is
 one whole-abdomen value. Read every finding through `phVisitFndRead`. A
 **Findings trend** sheet (Grid | Trail) shows dated tongue and abdomen
 findings from the exam pages. The pulse knowledge base
