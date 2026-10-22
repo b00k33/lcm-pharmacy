@@ -1287,8 +1287,9 @@ BUILD-NOTES.md) the Compass is the one "how have things been" table:** the Goal
 sits under the complaint name (tap to edit), Today is a slider with a number
 (a % box takes any number on % better), every visit's note is kept and last
 visit's shows under today's box, Fang Bing Ren signs she has ANSWERED (never
-ones the app only works out: `phCxSignList`) sit under their complaint, or
-under Other signs, each rated Gone · Better · Same · Worse
+ones the app only works out: `phCxSignList`) sit in their body-area group under one
+"Signs · n" line (after the group's complaints; her 2026-10-22 "how to see that the signs are
+grouped", pick A), each rated Gone · Better · Same · Worse
 (`rec.ccTrack.days[day].sx`; a Gone after her last Yes tap turns today's Bing
 tick off, `phCxGoneToday`; Ren is never touched). The gold row is the one being
 asked now; number keys, G B S W and ↓ drive it. Her order is

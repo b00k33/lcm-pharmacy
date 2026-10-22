@@ -7319,10 +7319,7 @@
   #pharmacyPage .ph-cx-pctbox { width: 44px; height: 22px; min-height: 0; margin: 0; padding: 0 2px; border: 1px solid var(--ph-line); border-radius: 6px; font: 600 var(--fs-11-5) var(--font-body); color: var(--ph-herb-deep); text-align: center; background: var(--ph-white); }
   #pharmacyPage .ph-cx-pctbox:focus { outline: none; border-color: var(--ph-herb); }
   /* a sign row: ↳ Subject: wording · since ▾ across the name and Since columns, then Gone · Better · Same · Worse */
-  #pharmacyPage .ph-cx-row.sx .sxn { grid-column: 1 / 2; display: flex; align-items: center; gap: 6px; min-width: 0; padding-left: 18px; position: relative; }
-  #pharmacyPage .ph-cx-row.sx .sxn::before { content: "↳"; position: absolute; left: 2px; color: var(--ph-faint); font-size: var(--fs-12); }
-  #pharmacyPage .ph-cx-row.sx.other .sxn { padding-left: 6px; }
-  #pharmacyPage .ph-cx-row.sx.other .sxn::before { content: ""; }
+  #pharmacyPage .ph-cx-row.sx .sxn { grid-column: 1 / 2; display: flex; align-items: center; gap: 6px; min-width: 0; padding-left: 12px; position: relative; }
   #pharmacyPage .ph-cx-row .slab { font: 500 var(--fs-12-5) var(--font-body); color: var(--ph-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
   #pharmacyPage .ph-cx-row .slab i { font-style: normal; color: var(--ph-faint); }
   #pharmacyPage .ph-cx-row.gone .slab { color: var(--ph-faint); transition: color .4s; }
@@ -75839,7 +75836,7 @@ or changing anything in Cliniko.
       const gid = phCxGid(phCxAreaOfSign(x)), g = grp(gid);
       g.sxAll.push({ kind: "sx", key: k, x, under: x.under, gid, cb, cl, sxdev: dev, bday, over: o, hist, tv, rated: !!tv, nest: !!x.under && g.cc.some(s => s.key === x.under) });
     });
-    // the rows in the order she asks them: each complaint then its signs, the group's other signs last (her picks Q3, Q4)
+    // the rows in the order she asks them: the group's complaints, then its signs under one "Signs" line (her picks Q3, Q4; her 2026-10-22 "how to see that the signs are grouped")
     const more = !!phCxMore[key]; let hidden = 0;
     const cap = (list, n) => {
       if (more) return list;
@@ -75852,10 +75849,12 @@ or changing anything in Cliniko.
     if (pst && !G[phCxGid(PH_CX_PAIN_IX)] && (pst.list.length || phPfPainRelated(name))) { const g = grp(phCxGid(PH_CX_PAIN_IX)); g.rank = 999; groups.push(g); groups.sort((a, b) => (a.cc.length ? a.rank : 1000 + a.ix) - (b.cc.length ? b.rank : 1000 + b.ix)); }
     const rows = [];
     groups.forEach(g => {
+      const owned = [];
       g.cc.forEach(s => {
         g.rows.push({ kind: "cc", key: s.key, s, gid: g.id, rated: s.rated, cb: s.cb, cl: s.cl });
-        cap(g.sxAll.filter(r => r.nest && r.under === s.key), PH_CX_SX_CAP).forEach(r => g.rows.push(r));
+        cap(g.sxAll.filter(r => r.nest && r.under === s.key), PH_CX_SX_CAP).forEach(r => owned.push(r));
       });
+      owned.forEach(r => g.rows.push(r));
       cap(g.sxAll.filter(r => !r.nest), PH_CX_SX_CAP_OTHER).forEach(r => g.rows.push(r));
       g.rows.forEach(r => rows.push(r));
     });
@@ -76179,8 +76178,15 @@ or changing anything in Cliniko.
       const open = phCxFoldOpen(M, g, narrow);
       rows += phCxGroupHeadHtml(g, M, open, !open && M.askGid === g.id);
       if (!open) return;
-      g.rows.forEach(r => { rows += r.kind === "cc" ? phCxRowHtml(r.s, M, name) : phCxSignRowHtml(r, M, name); if (M.dr === r.key) rows += phCxDrawerHtml(r, M); });
-      if (g.ix === PH_CX_PAIN_IX && M.pain) rows += phCxPainFootHtml(name, M);
+      const nSx = g.rows.filter(r => r.kind === "sx").length;
+      let sxSeen = false, footDone = false;
+      const foot = () => { if (!footDone && g.ix === PH_CX_PAIN_IX && M.pain) rows += phCxPainFootHtml(name, M); footDone = true; };
+      g.rows.forEach(r => {
+        if (r.kind === "sx" && !sxSeen) { sxSeen = true; foot(); rows += `<div class="ph-cx-row cap" data-cx-cap="${esc(g.id)}"><span>Signs · ${nSx}</span></div>`; }
+        rows += r.kind === "cc" ? phCxRowHtml(r.s, M, name) : phCxSignRowHtml(r, M, name);
+        if (M.dr === r.key) rows += phCxDrawerHtml(r, M);
+      });
+      foot();
     });
     if (M.hidden && !M.more) rows += `<div class="ph-cx-row more"><div><button type="button" class="ph-cx-chip" data-cx-more="1">+ ${M.hidden} more</button></div></div>`;
     // the foot: + add (a complaint, or a sign to watch), the Not watching line, the keys
