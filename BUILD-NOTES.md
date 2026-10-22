@@ -1746,3 +1746,21 @@ Her synth22 (screenshots of the Compass and the Pain card): "a well integrated w
 ## Baseline Compass: signs under one "Signs" line (2026-10-22, LIVE since build 20261022-215300)
 
 Her words, on a screenshot of her real Compass: "how to see that the signs are grouped". The signs were inside their body-area group, but nothing marked them as a set and the ↳ arrow made loose signs look like they belonged to the row above. Her pick (A of three, popup with previews): each group lists its complaints first, then one quiet "Signs · n" line over its signs; no ↳. **Code:** the group's rows in `phCxModel` are complaints, then the signs (the ones tied to a complaint first, then the loose ones, same caps); `phCxCardHtml` draws the `.ph-cx-row.cap` line before the first sign and puts the pain foot (Add pain, Pick areas, Close-ups · Surgeries · Pain intake) right under the pain rows, before the Signs line; CSS drops the arrow. The gold "now asking" order is now all complaints, then signs. **Tested** (real app, seeded patient): the line shows in each group with signs, no arrow, the foot sits under the pain rows, 1280 and 360 px, no overflow. **Not tested:** her real data. Wording "Signs" is DRAFT.
+
+## Baseline Compass: score an earlier visit (2026-10-23, session-a)
+
+Her words, on screenshots of a neck and shoulder patient whose Compass said "first visit · today sets the baseline" while the Care Plan's appointment table listed 4 done bookings: "ive treated this person multiple sessions. how do i set baseline from earlier appointments?"
+
+**Why it said first visit:** Today's visit strip, `phTodayParts` and the Compass counted only visits logged in LCM (`rec.acuSessions`) and scored Compass days, never bookings; the Up next card already counted bookings. There was no way to score a past date in the Compass.
+
+**Her 8 picks** (mock `earlier-visit-baseline-mock-2026-10-23.html`, all as recommended): her notes have a score for each visit; option A, a "Scoring" bar of visit chips; done bookings count as visits; dates = done bookings only; an earlier visit shows complaints + pains only (signs and Energy sit out); a gold line + the Today column takes the date; a quiet "N earlier visits · none scored" hint; computer only.
+
+**Built:**
+- `phSeenDays(who, day)`: the days a patient was seen before a day (logged sessions + bookings, not Break), oldest first; takes a name or the record. Read by `phTodayParts` (Re-check joins a return visit), `phTodayStripHtml` ("Last visit 10 Oct"; the phase's "visit N", else the visit count the way the Up next card counts) and `phCxModel` (`back`).
+- `phPastBookDays(name)`: the bookings alone, newest first, for the Scoring bar.
+- Compass: `phCxAt = { pk, day }` view state (never stored; cleared on a phone width or another patient's card) and `phCxDayOf(name)`. `phCxModel` scores `today` = that day and keeps `now` for the real today; earlier-visit mode drops Energy rows and sign rows, hides "Same as last time" and the drawer's "Move baseline to today". Writes follow the day: `phCxScoreWrite`, the note box (`data-cx-day`, `phCxTypeSave`), the ↓ skip, and pains through `phPmScoreSet(..., atDay)` (that day's pain store; today's severity is untouched, as before). Bar: Today + up to 5 bookings as chips, the rest under an "Older ▾" select (more than 6). Gold line "Scoring an earlier visit: Mon 7 Sep · Back to today"; the header reads "7 Sep" and "Note · 7 Sep".
+- Meta line: "4 earlier visits · none scored" until any earlier day has a score; then "N visits · baseline 7 Sep" as before.
+
+**Tested** in the real app (Browser pane, seeded patient with 4 then 8 past bookings, real handlers): bar and hint shown; 7 Sep scored by slider, number key and note, all stored on 7 Sep (Compass + pain store); baseline moved to 7 Sep; 12 Sep showed "1 better", today "3 better" with the chart and Re-check mirror; drawer has no rebase button on an earlier visit; Older ▾ picks 2 Jul; 375 px: no bar, scores today; no new console errors. Not tested on her real data or her phone.
+
+**Judgment calls (disclosed):** more than 6 past bookings = the 5 latest as chips + Older ▾ (keeps the bar one line); when a phase has no planned visit number, the strip shows the overall visit count; the Re-check check now joins Today's visit for a patient with earlier bookings (the return-visit rule).
