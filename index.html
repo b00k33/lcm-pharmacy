@@ -39348,14 +39348,16 @@
         (async () => {
           let ok = 0, dups = 0;
           const failed = [];
+          let lastErr = "";
           const patientKey = phRenCapture.patientKey;
           for (const x of st.batch) {
             phRenCapture.type = x.type || "other";
             phRenCapture.shot = (phRenCapture.type === "tongue" && x.shot) || "";
+            window.__phRenLastSaveErr = "";
             const r = await phRenCaptureSave(x.file, true);
             if (r === "dup") dups++;
             else if (r) ok++;
-            else failed.push(x);
+            else { failed.push(x); if (window.__phRenLastSaveErr) lastErr = window.__phRenLastSaveErr; }
           }
           // her ask 2026-09-12 ("save the photos fast"): quiet=true above
           // skips phRenCaptureSave's own per-photo reload+re-render (see
@@ -39371,7 +39373,12 @@
           if (failed.length) {
             st.batch = failed; cfAll.disabled = false;
             renderPhRenConfirmModal();
-            phFlashShow(`Saved ${ok}${dups ? ` (+${dups} already on file)` : ""} of ${ok + dups + failed.length} — ${failed.length} didn't save and ${failed.length === 1 ? "is" : "are"} still here. Tap Save again, or × to leave ${failed.length === 1 ? "it" : "them"} out.`);
+            const reason = lastErr === "couldn't open that image" ? " (image couldn't be read — try downloading it to the device first)"
+              : lastErr === "compress failed" ? " (image couldn't be processed)"
+              : /quota|exceeded|full/i.test(lastErr) ? " (device storage is full)"
+              : lastErr ? ` (${lastErr})`
+              : "";
+            phFlashShow(`Saved ${ok}${dups ? ` (+${dups} already on file)` : ""} of ${ok + dups + failed.length} — ${failed.length} didn't save${reason} and ${failed.length === 1 ? "is" : "are"} still here. Tap Save again, or × to leave ${failed.length === 1 ? "it" : "them"} out.`);
             return;
           }
           phRenConfirmClose(); phRenCapture = null;
@@ -57342,7 +57349,8 @@ or changing anything in Cliniko.
       phCapRelayPush(cap, blob, recId);
       return true;
     } catch (e) {
-      phFlashShow(phRenSaveErrorText(e, "photo"));
+      window.__phRenLastSaveErr = (e && e.message) || "unknown error";
+      if (!quiet) phFlashShow(phRenSaveErrorText(e, "photo"));
       return false;
     }
   }
