@@ -127,8 +127,9 @@ reads it; do not render it again.
 
 - **Today's visit** is a checklist home: a one-line strip on top (last visit
   date · likely pattern · phase and visit number · flagged history), the
-  **complaint compass** (each complaint scored every visit, Energy 1–10 under
-  it; it replaced the Re-check on 2026-10-14 and still writes `rec.recheck`),
+  **complaint compass** (each complaint scored every visit, with the Fang Bing Ren
+  signs she has answered rated under their complaint, Energy as the fatigue
+  complaint's own score; it replaced the Re-check on 2026-10-14 and still writes `rec.recheck`),
   the return-visit "Worth a look" questions and one progress line, then
   Cycle / Tongue / Pulse / Abdomen as tiles with a ✓ when done today and last visit's finding beside
   today's. Each tile opens its own page. Pain / MSK patients also get a **Musculoskeletal** tile and page after Abdomen (2026-10-11,
@@ -1193,7 +1194,7 @@ at add-time. MSK libraries are append-only.
 ## Fang Bing Ren, Find the Ren & Patterns
 **Fang Bing Ren** (the Triangle) is the one place constitutional-family
 scoring happens: one merged header (verdict + Quick assess), signs in ten
-shared areas, ONE "Looking at" line (Everything · her complaints · the
+shared areas, ONE "Looking at" line (on the Fang Bing Ren page only since 2026-10-22; on Today's visit a tap on a complaint's name on the Compass sets the same pick) (Everything · her complaints · the
 tile she tapped; a complaint lifts its signs and fades the rest, nothing
 hidden, view state only; Today's visit shows the complaints) that Quick
 assess follows (`phQaFocus`), ticked chips that clear, a body chart whose
@@ -1265,7 +1266,22 @@ Today | Change | Note. The Goal cell is editable per complaint
 (`phCxGoal`, hers in `complaint.mainGoal` / `secondary.goal` through
 `phCcWrite`, "↺ auto" returns it) and the Care Plan Goal reads the same
 lines; the Note box is always open and saves as she types (`phCxTypeSave`)
-[synth22 batch 2]. The checks are compact rows, two across, each with Open and
+[synth22 batch 2]. **Since 2026-10-22 (her 18 picks, "Today's visit Compass" in
+BUILD-NOTES.md) the Compass is the one "how have things been" table:** the Goal
+sits under the complaint name (tap to edit), Today is a slider with a number
+(a % box takes any number on % better), every visit's note is kept and last
+visit's shows under today's box, Fang Bing Ren signs she has ANSWERED (never
+ones the app only works out: `phCxSignList`) sit under their complaint, or
+under Other signs, each rated Gone · Better · Same · Worse
+(`rec.ccTrack.days[day].sx`; a Gone after her last Yes tap turns today's Bing
+tick off, `phCxGoneToday`; Ren is never touched). The gold row is the one being
+asked now; number keys, G B S W and ↓ drive it. Her order is
+`rec.complaint.secondary` (drag ⋮⋮ or ▾ Move). The Treatment tab's Subjective
+table is gone: one read-only "Today's ratings" line (`phTsRatingsLineHtml`),
+Watch = the template's Red flags only, no "Apply the usual". The Care Plan Goal
+reads complaints only (derived Fang Bing Ren "complaints" are gone from
+`phCcSecAll`); the letter's "Watching:" = complaints + the sign rows she can
+see (DRAFT wording). The checks are compact rows, two across, each with Open and
 Skip ▾ (Not today / Always for this patient); a skipped check folds into the
 "Skipped" line and counts as done (`phTodayPartOk`). Quick assess shows 8
 questions in 2 columns on Today's visit and Fang Bing Ren [synth22: Today's
