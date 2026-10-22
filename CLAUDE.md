@@ -1220,7 +1220,7 @@ One pattern can be ★ main. Formula ideas are OFF (she dislikes suggested
 herbs). A rule she overrode in Settings never gains new clue keys later
 (deliberate). All pattern wording is Claude-drafted, hers to correct.
 
-**Formula pictures (`PH_FP`, 2026-10-22):** Ban Xia Hou Po Tang and Huang Lian Jie Du Tang each have a moving picture of the body (three burners, Also drawn: Xiao Chai Hu Tang, Wen Dan Tang, Wu Ling San.
+**Formula pictures (`PH_FP`, 2026-10-22):** Ban Xia Hou Po Tang and Huang Lian Jie Du Tang each have a moving picture of the body (three burners, Also drawn: Xiao Chai Hu Tang, Wen Dan Tang, Wu Ling San, and every other formula in the Fang Bing Ren list (22 in all; see BUILD-NOTES 2026-10-22 batch 3).
 trouble, herbs at work, tongue + pulse inset), three stops Trouble / Formula at work / Settled, tap-a-herb chips. It replaces the pattern picture on
 the Guide card for those formulas and also shows on Dispense (end of the right column) and the Care Plan formula cell. Same runner as the pattern
 pictures. A new formula = one `PH_FP.SC[id]` scene + `PH_FP.HERBS[id]` + `PH_FP.PAT[id]`; no scene = the pattern picture stays. BUILD-NOTES.md,
