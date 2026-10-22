@@ -1313,7 +1313,12 @@ Pain card is gone from Today's visit while the Compass holds them. One model (`p
 rows, the chart (From baseline | Score, a group filter), the glance line and the live paint while a
 slider moves (`phCxLiveRun`); the view state (From baseline | From last visit, chart mode, filter,
 folds, open drawer) is per patient and never stored. Phone: no chart, groups fold, short group
-names. The checks are compact rows, two across, each with Open and
+names. **Earlier visits (her 2026-10-23 picks, mock earlier-visit-baseline-mock-2026-10-23.html):** a
+done booking counts as a visit (`phSeenDays` = logged sessions + bookings; Today's visit strip,
+`phTodayParts` and the Compass read it), and on a computer a "Scoring" bar (Today, then the
+patient's done bookings newest first, `phPastBookDays`; 5 chips + Older ▾) scores an earlier visit in
+the same table under a gold line (`phCxAt` view state, `phCxDayOf`; complaints + pains + notes only,
+the earliest scored day becomes the baseline); "N earlier visits · none scored" until one is. The checks are compact rows, two across, each with Open and
 Skip ▾ (Not today / Always for this patient); a skipped check folds into the
 "Skipped" line and counts as done (`phTodayPartOk`). Quick assess shows 8
 questions in 2 columns on Today's visit and Fang Bing Ren [synth22: Today's

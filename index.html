@@ -7247,6 +7247,20 @@
   #pharmacyPage .ph-cx-sw { display: inline-flex; border: 1px solid var(--ph-line); border-radius: 999px; padding: 2px; gap: 2px; }
   #pharmacyPage .ph-cx-sw button { border: 0; background: none; border-radius: 999px; padding: 2px 9px; font: 600 var(--fs-11) var(--font-body); color: var(--ph-soft); cursor: pointer; min-height: 0; }
   #pharmacyPage .ph-cx-sw button.on { background: var(--ph-herb-deep); color: #fff; }
+  /* the Scoring bar (her 2026-10-23 picks, mock earlier-visit-baseline-mock-2026-10-23.html): Today, then her done bookings, newest
+     first; a tap scores that visit in the same table under a gold line, and the Today column takes its date. Computer only. */
+  #pharmacyPage .ph-cx-vbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 2px 0 8px; }
+  #pharmacyPage .ph-cx-vbar .k { font: 700 var(--fs-11) var(--font-body); letter-spacing: .06em; text-transform: uppercase; color: var(--ph-faint); }
+  #pharmacyPage .ph-cx-seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--ph-line); border-radius: 8px; overflow: hidden; }
+  #pharmacyPage .ph-cx-seg > button, #pharmacyPage .ph-cx-seg > select { height: 28px; min-height: 0; margin: 0; padding: 0 11px; border: 0; border-left: 1px solid var(--ph-line); border-radius: 0; background: var(--ph-white); font: 600 var(--fs-12-5) var(--font-body); color: var(--ph-ink); white-space: nowrap; cursor: pointer; }
+  #pharmacyPage .ph-cx-seg > :first-child { border-left: 0; }
+  #pharmacyPage .ph-cx-seg > button i { font-style: normal; font-weight: 400; opacity: .75; margin-left: 4px; }
+  #pharmacyPage .ph-cx-seg > .on { background: var(--ph-herb-deep); color: #fff; }
+  #pharmacyPage .ph-cx-seg > :not(.on):hover { background: var(--ph-herb-tint); }
+  #pharmacyPage .ph-cx-atband { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; padding: 5px 6px 5px 10px; background: var(--ph-gold-tint); border: 1px solid var(--ph-gold); border-radius: 8px; font: 600 var(--fs-13) var(--font-body); color: var(--ph-gold-deep); }
+  #pharmacyPage .ph-cx-atband .ph-cx-chip { margin-left: auto; }
+  #pharmacyPage .ph-cx-row.hd span.hot { color: var(--ph-gold-deep); }
+  @container (max-width: 640px) { #pharmacyPage .ph-cx-vbar, #pharmacyPage .ph-cx-atband { display: none; } }
   #pharmacyPage .ph-cx-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
   #pharmacyPage .ph-cx-chart .grid { stroke: var(--ph-line); stroke-width: 1; }
   #pharmacyPage .ph-cx-chart .ax { font: 500 11px var(--font-body); fill: var(--ph-faint); }
@@ -75399,8 +75413,8 @@ or changing anything in Cliniko.
   function phCxSxToday(rec, signKey) { const e = phCxEntry(phCxDays(rec)[keyOf(TODAY)], "x:" + signKey); return e && e.v ? String(e.v) : ""; }
   // every day a sign was rated, oldest first: [{ day, v, n }]
   function phCxSxHist(rec, signKey) { const days = phCxDays(rec); return Object.keys(days).sort().map(d => { const e = phCxEntry(days[d], "x:" + signKey); return e && e.v ? { day: d, v: String(e.v), n: e.n || "" } : null; }).filter(Boolean); }
-  // the notes on a row from earlier days, newest first: [{ day, n }] (her pick Q15: every visit's note is kept and shown)
-  function phCxNotesBefore(rec, key) { const days = phCxDays(rec), today = keyOf(TODAY); return Object.keys(days).filter(d => d < today).sort().reverse().map(d => { const e = phCxEntry(days[d], key); return e && e.n && String(e.n).trim() ? { day: d, n: String(e.n).trim() } : null; }).filter(Boolean); }
+  // the notes on a row from earlier days, newest first: [{ day, n }] (her pick Q15: every visit's note is kept and shown); before `day`, default today
+  function phCxNotesBefore(rec, key, day) { const days = phCxDays(rec), today = day || keyOf(TODAY); return Object.keys(days).filter(d => d < today).sort().reverse().map(d => { const e = phCxEntry(days[d], key); return e && e.n && String(e.n).trim() ? { day: d, n: String(e.n).trim() } : null; }).filter(Boolean); }
   function phCxSxOff(rec) { return (rec && rec.ccTrack && rec.ccTrack.sxOff) || {}; }
   function phCxSxPin(rec) { return (rec && rec.ccTrack && rec.ccTrack.sxPin) || {}; }
   // the complaints the card tracks: the main one (typed, else read off her file, the same read as the ribbon) then her typed secondaries
@@ -75649,6 +75663,10 @@ or changing anything in Cliniko.
   var phCxFil = {};        // view state: patient key -> "all" | group id (the chart's group chips)
   var phCxFold = {};       // view state: patient key -> { group id: true (open) | false }
   var phCxDr = {};         // view state: patient key -> the row key whose history drawer is open
+  var phCxAt = null;       // view state: { pk, day } -- the earlier visit the table is scoring (her picks 2026-10-23); null = today
+  // the day the Compass scores: today, or the earlier visit picked on the Scoring bar
+  function phCxDayOf(name) { const now = keyOf(TODAY); return phCxAt && phCxAt.pk === phPatientKey(name) && phCxAt.day < now ? phCxAt.day : now; }
+  const phCxYr = k => { const y = parseKey(k).getFullYear(); return y !== TODAY.getFullYear() ? " " + y : ""; };
   var phCxDrFx = "";       // one-shot: the drawer that just opened slides in once
   var phCxCache = null;    // { pk, ccl, signs }: the slow reads, kept while a slider is dragged
   const phCxR1 = n => Math.round(n * 10) / 10;
@@ -75771,14 +75789,16 @@ or changing anything in Cliniko.
     const rec = phPatientPeek(name) || {}, st = phCxPainState(name, rec, phCxItems(name)); if (!st) return false;
     const idx = st.list.findIndex(p => "p:" + p.r + "|" + p.s === key); if (idx < 0) return false;
     phCxFx = { key };
-    const ok = phPmScoreSet(name, st.pid, idx, "now", n, true);
+    const ok = phPmScoreSet(name, st.pid, idx, "now", n, true, false, phCxDayOf(name));   // an earlier visit on the Scoring bar: that day's pain store
     if (!ok) phCxFx = null;
     return ok;
   }
   const PH_CX_SX_CAP = 2, PH_CX_SX_CAP_OTHER = 6;   // signs shown per complaint / loose in a group before "+ N more" (her pick Q4)
   function phCxModel(name, plan, opts) {
     opts = opts || {};
-    const rec = phPatientPeek(name) || {}, scale = phCxScale(rec), key = phPatientKey(name), today = keyOf(TODAY);
+    // today = the day the table scores: today, or the earlier visit picked on the Scoring bar (her picks 2026-10-23); now = the real today
+    const rec = phPatientPeek(name) || {}, scale = phCxScale(rec), key = phPatientKey(name), now = keyOf(TODAY), today = phCxDayOf(name), at = today !== now ? today : "";
+    const seen = phSeenDays(name, now);
     const ov = opts.ov || null, over = (rec.ccTrack && rec.ccTrack.base) || {};
     const items = phCxItems(name), start = phCxPlanStart(plan);
     const allDays = Object.keys(phCxDays(rec)).sort();
@@ -75792,11 +75812,12 @@ or changing anything in Cliniko.
     if (!cached) { try { signs = phCxSignList(name, rec, ccl); } catch (e) { signs = []; } phCxCache = { pk: key, ccl, signs }; }
     const pst = phCxPainState(name, rec, items), mainItem = items[0] || null;
     const painItems = pst ? phCxPainItems(rec, pst) : [];
-    // a return visit: an earlier logged session, or an earlier scored day. Sign rows are rated from the next visit on
-    // (her pick Q2: Gone · Better · Same · Worse needs a visit to compare with)
-    const back = ((rec.acuSessions || []).some(s => s.date && s.date < today)) || allDays.some(d => d < today);
-    // her order: the main complaint first (the starred pain when the map stands in for it), then her secondaries, then the other pains
-    const order = items.filter(it => !(pst && pst.hide.has(it.key))).map((it, n) => ({ it, rank: n }))
+    // a return visit: an earlier logged session or booking (her pick 2026-10-23: done bookings count as visits), or an earlier scored
+    // day. Sign rows are rated from the next visit on (her pick Q2: Gone · Better · Same · Worse needs a visit to compare with)
+    const back = seen.some(d => d < today) || allDays.some(d => d < today);
+    // her order: the main complaint first (the starred pain when the map stands in for it), then her secondaries, then the other pains;
+    // an earlier visit scores complaints and pains only (her pick 2026-10-23): Energy and the signs sit it out
+    const order = items.filter(it => !(pst && pst.hide.has(it.key)) && !(at && phCxIsEnergy(it))).map((it, n) => ({ it, rank: n }))
       .concat(painItems.map(it => ({ it, rank: it.main ? -1 : 100 + it.pain.idx }))).sort((a, b) => a.rank - b.rank);
     const mk = (it, i) => {
       let hist = it.pain ? it.hist : phCxHist(rec, it.key);
@@ -75815,7 +75836,7 @@ or changing anything in Cliniko.
       const todayE = hist.find(h => h.day === today) || noteOnly;
       const rated = energy ? enR.todayAvg != null : !!(todayE && todayE.v != null);
       return Object.assign({}, it, { i, hist, pts, chg, today: todayE, goal: it.pain ? phCxPainGoal(name, it, mainItem) : phCxGoal(name, it), energy, enAvg: energy ? enR.todayAvg : null, enRated: energy ? enR.todayAvg != null : false,
-        trk, cb, cl, gid, over: o, rated, isNew: !o && trk.pts.length === 1 && !!trk.base && trk.base.day === today });
+        trk, cb, cl, gid, over: o, rated, isNew: !o && (at || trk.pts.length === 1) && !!trk.base && trk.base.day === today });
     };
     const series = order.map((a, i) => mk(a.it, i));
     const days = [...new Set(series.reduce((a, s) => a.concat(s.pts.map(p => p.day)), []))].sort();
@@ -75824,7 +75845,7 @@ or changing anything in Cliniko.
     const grp = gid => G[gid] || (G[gid] = Object.assign({ cc: [], sxAll: [], rank: 1e6, rows: [] }, defs.find(g => g.id === gid)));
     series.forEach((s, n) => { const g = grp(s.gid); g.cc.push(s); g.rank = Math.min(g.rank, n); });
     const dayList = [...new Set(allDays.concat((rec.acuSessions || []).map(s => s.date).filter(Boolean)))].sort();
-    signs.forEach(x => {
+    if (!at) signs.forEach(x => {
       const hist = phCxSxMerged(rec, x), k = "x:" + x.key, o = over[k] || null;
       const cnt = hist.filter(h => !o || h.day > o.day), first = cnt[0];
       const bday = o ? o.day : first ? (dayList.filter(d => d < first.day).pop() || first.day) : "";
@@ -75873,10 +75894,13 @@ or changing anything in Cliniko.
     // the card's own time line: first day of any score to today, for the little trend lines
     const dset = new Set(); series.forEach(s => s.trk.pts.forEach(p => dset.add(p.day))); rows.forEach(r => { if (r.kind === "sx") r.hist.forEach(h => dset.add(h.day)); });
     const first = [...dset].sort()[0] || "";
-    const t0 = parseKey(first || today).getTime(), t1 = parseKey(today).getTime();
+    const t0 = parseKey(first || now).getTime(), t1 = parseKey(now).getTime();
     let lit = phCxLitKey(name); if (lit === "main" && pst && pst.mainIdx >= 0) lit = "p:" + pst.list[pst.mainIdx].r + "|" + pst.list[pst.mainIdx].s;
     const dr0 = phCxDr[key] || ""; if (!lit && dr0 && rows.some(r => r.kind === "cc" && r.key === dr0)) lit = dr0;
+    // the quiet hint (her pick 2026-10-23): earlier visits, none of them scored on any row
+    const scoredBefore = allDays.some(d => d < now) || series.some(s => s.hist.some(h => h.day < now)) || phCxEnPts(rec).some(p => p.day < now);
     return { rec, scale, key, items, series, days, range, hasEarlier, first, nVisits: dset.size, lit, back, rows, groups, signs, hidden, more, ask: askRow ? askRow.key : "", askGid: askRow ? askRow.gid : "",
+      now, at, seen, backNow: seen.length > 0 || allDays.some(d => d < now), unscored: scoredBefore ? 0 : seen.length,
       askKind: askRow ? (askRow.kind === "sx" ? "sx" : askRow.s.energy ? "en" : askRow.s.pain ? "pn" : "cc") : "", glance, hasEnergyRow: series.some(s => s.energy), enR,
       from, cmp, cmode: phCxChartM[key] === "score" ? "score" : "dev", fil: fil && groups.some(g => g.id === fil) ? fil : "all", dr: phCxDr[key] || "", pain: pst, t0, tspan: Math.max(1, t1 - t0), today };
   }
@@ -75968,10 +75992,10 @@ or changing anything in Cliniko.
   // the Note cell: today's box (saves as she types), last visit's note faint under it, "+N" opens every earlier note (her pick Q15)
   function phCxNoteCellHtml(M, name, key, label) {
     const typing = phCxTyping && phCxTyping.name === name && phCxTyping.key === key && phCxTyping.kind === "note" ? phCxTyping : null;
-    const raw = phCxEntry(phCxDays(M.rec)[keyOf(TODAY)], key), note = typing ? typing.value : (raw && raw.n ? raw.n : "");
-    const before = phCxNotesBefore(M.rec, key), last = before[0];
+    const raw = phCxEntry(phCxDays(M.rec)[M.today], key), note = typing ? typing.value : (raw && raw.n ? raw.n : "");
+    const before = phCxNotesBefore(M.rec, key, M.today), last = before[0];
     const pop = last && phCxNotes === key ? `<span class="ph-cx-npop" role="dialog" aria-label="Earlier notes"><div class="k">Earlier notes</div>${before.map(n => `<div class="r"><b>${esc(phCycShortLbl(n.day))}</b>${esc(n.n)}</div>`).join("")}</span>` : "";
-    return `<span class="note"><input type="text" class="ph-cx-note-in field-bare" data-cx-note-in="${esc(key)}" maxlength="140" value="${esc(note)}" placeholder="Note" aria-label="Note for ${esc(label)} today">${last ? `<button type="button" class="ph-cx-lastn" data-cx-notes="${esc(key)}" aria-expanded="${pop ? "true" : "false"}" title="Earlier notes"><b>${esc(phCycShortLbl(last.day))}</b> ${esc(last.n)}${before.length > 1 ? ` <i>+${before.length - 1}</i>` : ""}</button>${pop}` : ""}</span>`;
+    return `<span class="note"><input type="text" class="ph-cx-note-in field-bare" data-cx-note-in="${esc(key)}" data-cx-day="${M.today}" maxlength="140" value="${esc(note)}" placeholder="Note" aria-label="Note for ${esc(label)} ${M.at ? "on " + esc(phCycShortLbl(M.at)) : "today"}">${last ? `<button type="button" class="ph-cx-lastn" data-cx-notes="${esc(key)}" aria-expanded="${pop ? "true" : "false"}" title="Earlier notes"><b>${esc(phCycShortLbl(last.day))}</b> ${esc(last.n)}${before.length > 1 ? ` <i>+${before.length - 1}</i>` : ""}</button>${pop}` : ""}</span>`;
   }
   // ---- cells ----
   // Baseline: the first score and its date (a sign: "present" and the visit it was first watched from)
@@ -75986,14 +76010,15 @@ or changing anything in Cliniko.
     if (c.d == null) return "";
     if (r.kind === "sx") return M.cmp === "last" ? "Today against the last visit" : `Net of every rating since the baseline (${phCycShortLbl(r.bday)}): ${c.d > 0 ? "+" : ""}${c.d}`;
     const s = r.s, b = s.trk.base, lastP = s.trk.pts[s.trk.pts.length - 1], now = c.stale ? lastP : (s.trk.pts.find(p => p.day === M.today) || lastP);
-    if (M.cmp === "last") return c.ref ? `${phCycShortLbl(c.ref)} → today` : "";
-    return b && now ? `Baseline ${phCxR1(b.v)} (${phCycShortLbl(b.day)}) → ${phCxR1(now.v)}${c.stale ? " (" + phCycShortLbl(c.as) + ")" : " today"}` : "";
+    const tw = M.at ? phCycShortLbl(M.at) : "today";
+    if (M.cmp === "last") return c.ref ? `${phCycShortLbl(c.ref)} → ${tw}` : "";
+    return b && now ? `Baseline ${phCxR1(b.v)} (${phCycShortLbl(b.day)}) → ${phCxR1(now.v)}${c.stale ? " (" + phCycShortLbl(c.as) + ")" : M.at ? " on " + tw : " today"}` : "";
   };
   // From baseline / From last visit: a small bar (the centre mark is the baseline, green right = better, red left = worse) and its words
   function phCxDvHtml(r, M, fxKey) {
     const sx = r.kind === "sx", k = esc(r.key);
     if (!M.back && (sx || !r.s.isNew || !r.rated)) return "";
-    if (!sx && r.s.isNew && r.rated) return `<div class="dv same" data-cx-dv="${k}"><span class="dt">baseline set ✓</span></div>`;
+    if (!sx && r.s.isNew && r.rated) return `<div class="dv same" data-cx-dv="${k}"><span class="dt">${M.at ? "baseline" : "baseline set ✓"}</span></div>`;
     const c = M.cmp === "last" ? r.cl : r.cb, d = c.d;
     let cls = "na", bar = "", txt = "";
     if (d != null) {
@@ -76098,7 +76123,7 @@ or changing anything in Cliniko.
     const roll = !M.back ? `<span class="s">${rated} of ${n} set</span>`
       : `<span class="b" title="Better than ${M.cmp === "last" ? "last visit" : "baseline"}">↑ ${st.cnt.better}</span><span class="s" title="${M.cmp === "last" ? "Same as last visit" : "At baseline"}">→ ${st.cnt.same}</span><span class="w" title="Worse than ${M.cmp === "last" ? "last visit" : "baseline"}">↓ ${st.cnt.worse}</span>`;
     const restable = r => !r.rated && (r.kind === "sx" || (!r.s.energy && r.s.hist.some(h => h.day < M.today)));
-    const rest = M.back && g.rows.some(restable) ? `<button type="button" class="ph-cx-chip" data-cx-rest="${esc(g.id)}">Same as last time</button>` : "";
+    const rest = M.back && !M.at && g.rows.some(restable) ? `<button type="button" class="ph-cx-chip" data-cx-rest="${esc(g.id)}">Same as last time</button>` : "";
     return `<div class="ph-cx-row gh${ask ? " ask" : ""}" data-cx-gh="${esc(g.id)}"><button type="button" class="gn" data-cx-fold="${esc(g.id)}" aria-expanded="${open ? "true" : "false"}" aria-label="${esc(g.name)}"><span class="chev${open ? " open" : ""}" aria-hidden="true">▸</span><i class="dot" style="background:${g.col}"></i><b><span class="gfull">${esc(g.name)}</span><span class="gshort">${esc(g.sh)}</span></b><span class="ct">${n}</span></button><span class="gsp spk">${M.back ? phCxMiniSvg(M, st.dev, g.col) : ""}</span><span class="rollc roll">${roll}</span><div class="gdv">${dv}</div><span class="gnt">${rest}</span></div>`;
   }
   // a row's history drawer (her pick g: tap a name): every score against the baseline, the notes, "Move baseline to today"; a pain adds its own fields
@@ -76117,12 +76142,12 @@ or changing anything in Cliniko.
       <label></label><span class="ph-cx-pbtns"><button type="button" class="ph-cx-chip${p.main ? " on" : ""}" data-pm-main="${id}" aria-pressed="${!!p.main}">★ Main</button><button type="button" class="ph-cx-chip" data-pm-del="${id}">Remove</button></span></div>`;
   }
   function phCxDrawerHtml(r, M) {
-    const key = r.key, rec = M.rec, today = M.today, fx = phCxDrFx === key;
+    const key = r.key, rec = M.rec, today = M.now, fx = phCxDrFx === key;
     const sx = r.kind === "sx", nm = sx ? `${r.x.subj}: ${r.x.desc}` : r.s.text;
     let left;
     const canRebase = sx ? (!!r.over || (!!r.tv && r.bday !== today)) : (!!r.s.over || (!!r.s.trk.base && r.s.trk.base.day !== today && r.rated));
     const moved = sx ? r.over : r.s.over, bday = sx ? r.bday : (r.s.trk.base ? r.s.trk.base.day : "");
-    const btn = `<button type="button" class="ph-cx-btn" data-cx-rebase="${esc(key)}"${canRebase ? "" : " disabled"}>${moved ? "↺ Back to first baseline" : "Move baseline to today"}</button>`;
+    const btn = M.at ? "" : `<button type="button" class="ph-cx-btn" data-cx-rebase="${esc(key)}"${canRebase ? "" : " disabled"}>${moved ? "↺ Back to first baseline" : "Move baseline to today"}</button>`;
     const btxt = moved ? (bday === today ? "Baseline is today's score" : `Baseline is the score of ${esc(phCycShortLbl(bday))}`) : `Baseline = first ${sx ? "rating" : "score"}${bday ? ", " + esc(phCycShortLbl(bday)) : ""}`;
     if (sx) {
       const sym = { g: ["g", "✓"], b: ["b", "↑"], s: ["", "→"], w: ["w", "↓"] };
@@ -76155,17 +76180,21 @@ or changing anything in Cliniko.
     if (!name || presIsFormula(t)) return "";
     const rec = phPatientPeek(name) || {};
     if (!(rec.sex && rec.dob)) return "";
-    const M = phCxModel(name, plan);
-    // no chief complaint yet: the Came in for card (with its "What brought her in?" box) stands in until she types one
-    if (!M.series.length) return `<div class="ph-cx empty" data-cx-host="1" data-cx-name="${esc(name)}" data-cx-plan="${esc(plan ? plan.id : "")}">${phCcCardHtml(t, true, { today: true })}${phEnergyLineHtml(name)}</div>`;
     if (!w) { const sb = document.querySelector("#pharmacyPage .ph-pres-stage-body"); w = sb && sb.clientWidth ? sb.clientWidth - 32 : Math.min(920, (window.innerWidth || 920) - (window.innerWidth <= 640 ? 44 : 380)); }
     w = Math.max(300, Math.min(1100, w - 30));
     const narrow = w + 30 <= 640;   // the same cut as the card's container query
+    // an earlier visit picked on the Scoring bar belongs to this patient, on a computer (her pick 2026-10-23: a phone always scores today)
+    if (phCxAt && (narrow || phCxAt.pk !== phPatientKey(name))) phCxAt = null;
+    const M = phCxModel(name, plan);
+    // no chief complaint yet: the Came in for card (with its "What brought her in?" box) stands in until she types one
+    if (!M.series.length) return `<div class="ph-cx empty" data-cx-host="1" data-cx-name="${esc(name)}" data-cx-plan="${esc(plan ? plan.id : "")}">${phCcCardHtml(t, true, { today: true })}${phEnergyLineHtml(name)}</div>`;
     const sw = (on, attr, lab, dot) => `<button type="button" class="${on ? "on" : ""}" ${attr} aria-pressed="${on ? "true" : "false"}">${dot ? `<i style="background:${dot}"></i>` : ""}${lab}</button>`;
     const scaleSw = `<span class="ph-cx-sw" role="group" aria-label="Scale">${sw(M.scale === "ten", `data-cx-scale="ten"`, "0–10")}${sw(M.scale === "pct", `data-cx-scale="pct"`, "% better")}</span>`;
     const rangeSw = M.hasEarlier ? `<span class="ph-cx-sw" role="group" aria-label="Visits shown">${sw(M.range === "plan", `data-cx-range="plan"`, "This plan")}${sw(M.range === "all", `data-cx-range="all"`, "All")}</span>` : "";
     const cmpSw = M.back ? `<span class="ph-cx-sw" role="group" aria-label="Compare with">${sw(M.cmp === "base", `data-cx-cmp="base"`, "From baseline")}${sw(M.cmp === "last", `data-cx-cmp="last"`, "From last visit")}</span>` : "";
-    const meta = M.back && M.nVisits ? `${M.nVisits} visit${M.nVisits === 1 ? "" : "s"}${M.first ? ` · baseline ${esc(phCycShortLbl(M.first))}` : ""}` : M.back ? "" : "first visit · today sets the baseline";
+    // earlier visits nobody scored say so, quietly, until one is filled in (her pick 2026-10-23)
+    const meta = M.unscored ? `${M.unscored} earlier visit${M.unscored === 1 ? "" : "s"} · none scored`
+      : M.backNow && M.nVisits ? `${M.nVisits} visit${M.nVisits === 1 ? "" : "s"}${M.first ? ` · baseline ${esc(phCycShortLbl(M.first))}` : ""}` : M.backNow ? "" : "first visit · today sets the baseline";
     // the chart: from baseline (one line per group) or the 0-10 scores, narrowed by group; a phone has none (her pick h)
     const svg = M.back ? phCxChartSvg(M, w) : "";
     const modeSw = `<span class="ph-cx-sw" role="group" aria-label="Chart">${sw(M.cmode === "dev", `data-cx-cm="dev"`, "From baseline")}${sw(M.cmode === "score", `data-cx-cm="score"`, "Score")}</span>`;
@@ -76173,7 +76202,20 @@ or changing anything in Cliniko.
     const litOn = !!(svg && M.lit && phCxChartLines(M).some(l => l.id === M.lit));
     const chart = svg ? `<div class="ph-cx-chartwrap"><div class="ph-cx-cbar">${modeSw}${filSw}</div><div class="ph-cx-chart" data-cx-chart="1">${svg}</div></div>` : "";
     if (chart) setTimeout(phCxChartRepaint, 0);   // once the card is in the page its real width is known; redraw only if it differs
-    let rows = `<div class="ph-cx-row hd" aria-hidden="true"><span>Complaint</span><span>Baseline</span><span class="spk">${M.back ? "Trend" : ""}</span><span>Today</span><span>${M.cmp === "last" ? "From last visit" : "From baseline"}</span><span>Note</span></div>`;
+    // the Scoring bar (her picks 2026-10-23): Today, then her done bookings, newest first -- the five latest as chips, the rest under Older ▾.
+    // A pick scores that visit in this same table under a gold line; Today (or Back to today) returns. A phone has none.
+    let vbar = "", atBand = "";
+    const books = narrow ? [] : phPastBookDays(name);
+    if (books.length) {
+      const dl = d => esc(phCycShortLbl(d) + phCxYr(d));
+      const shown = books.length > 6 ? books.slice(0, 5) : books, older = books.slice(shown.length), oldOn = older.includes(M.today);
+      const chip = d => `<button type="button" class="${M.today === d ? "on" : ""}" data-cx-at="${d}" aria-pressed="${M.today === d ? "true" : "false"}">${dl(d)}</button>`;
+      const sel = older.length ? `<select class="${oldOn ? "on" : ""}" data-cx-atsel="1" aria-label="An older visit"><option value=""${oldOn ? "" : " selected"}>Older ▾</option>${older.map(d => `<option value="${d}"${M.today === d ? " selected" : ""}>${dl(d)}</option>`).join("")}</select>` : "";
+      vbar = `<div class="ph-cx-vbar"><span class="k">Scoring</span><span class="ph-cx-seg" role="group" aria-label="Which visit you are scoring"><button type="button" class="${M.at ? "" : "on"}" data-cx-at="" aria-pressed="${M.at ? "false" : "true"}">Today<i>${esc(phCycShortLbl(M.now))}</i></button>${shown.map(chip).join("")}${sel}</span></div>`;
+    }
+    if (M.at) atBand = `<div class="ph-cx-atband" role="status"><span>Scoring an earlier visit: ${esc(phDashShortDate(parseKey(M.at)) + phCxYr(M.at))}</span><button type="button" class="ph-cx-chip" data-cx-at="">Back to today</button></div>`;
+    const colDay = M.at ? esc(phCycShortLbl(M.at)) : "";
+    let rows = `<div class="ph-cx-row hd" aria-hidden="true"><span>Complaint</span><span>Baseline</span><span class="spk">${M.back ? "Trend" : ""}</span><span${M.at ? ` class="hot"` : ""}>${M.at ? colDay : "Today"}</span><span>${M.cmp === "last" ? "From last visit" : "From baseline"}</span><span>Note${M.at ? " · " + colDay : ""}</span></div>`;
     M.groups.forEach(g => {
       const open = phCxFoldOpen(M, g, narrow);
       rows += phCxGroupHeadHtml(g, M, open, !open && M.askGid === g.id);
@@ -76198,10 +76240,10 @@ or changing anything in Cliniko.
     const keys = !narrow ? `<span class="ph-cx-keys">keys: <kbd>0</kbd>–<kbd>9</kbd> score · <kbd>G</kbd> <kbd>B</kbd> <kbd>S</kbd> <kbd>W</kbd> sign · <kbd>↓</kbd> skip</span>` : "";
     const foot = `<div class="ph-cx-foot">${add}${nw}${keys}<span class="ph-cc2-sv${phCcSaved ? " show" : ""}">Saved ✓</span></div>`;
     const pm = M.pain ? ` data-pm-box="${esc(M.pain.pid)}" data-pm-name="${esc(name)}" data-cx-pain="1"${M.pain.mainIdx >= 0 ? ` data-cx-pmain="p:${esc(M.pain.list[M.pain.mainIdx].r + "|" + M.pain.list[M.pain.mainIdx].s)}"` : ""}` : "";
-    return `<div class="ph-cx" data-cx-host="1" data-cx-name="${esc(name)}" data-cx-plan="${esc(plan ? plan.id : "")}" data-cx-w="${w}"${litOn ? ` data-cx-lit="${esc(M.lit)}"` : ""} data-cx-ask="${esc(M.ask)}" data-cx-askk="${esc(M.askKind)}"${pm}>
+    return `<div class="ph-cx" data-cx-host="1" data-cx-name="${esc(name)}" data-cx-plan="${esc(plan ? plan.id : "")}" data-cx-w="${w}"${litOn ? ` data-cx-lit="${esc(M.lit)}"` : ""} data-cx-ask="${esc(M.ask)}" data-cx-askk="${esc(M.askKind)}" data-cx-day="${M.today}"${pm}>
       <div class="ph-cx-hd"><span class="ph-cx-cap">Compass · came in for</span>${cmpSw}${rangeSw}${scaleSw}<span class="ph-cx-meta">${meta}</span>${phTodayProgHtml(t, rec)}</div>
-      ${phCxGlanceHtml(M)}${chart}
-      <div class="ph-cx-rows">${rows}</div>${foot}${M.hasEnergyRow ? "" : phEnergyLineHtml(name)}${M.pain ? PH_PM_DX_LIST_HTML + PH_PM_SINCE_LIST_HTML : ""}
+      ${vbar}${atBand}${phCxGlanceHtml(M)}${chart}
+      <div class="ph-cx-rows">${rows}</div>${foot}${M.hasEnergyRow || M.at ? "" : phEnergyLineHtml(name)}${M.pain ? PH_PM_DX_LIST_HTML + PH_PM_SINCE_LIST_HTML : ""}
     </div>`;
   }
   function phCxNameOf(el) { const h = el.closest("[data-cx-host]"); return (h && h.dataset.cxName) || phPfwName() || ""; }
@@ -76259,7 +76301,7 @@ or changing anything in Cliniko.
   // a score written from the slider, the % box or a number key: today's entry in the card's scale; the same value again clears it
   function phCxScoreWrite(name, key, n, clear) {
     if (key.indexOf("p:") === 0) return phCxPainScoreWrite(name, key, n);
-    const rec0 = phPatientPeek(name) || {}, scale = phCxScale(rec0), today = keyOf(TODAY);
+    const rec0 = phPatientPeek(name) || {}, scale = phCxScale(rec0), today = phCxDayOf(name);   // today, or the earlier visit on the Scoring bar
     const was = phCxEntry(phCxDays(rec0)[today], key), same = !!(clear && was && was.v === n && (was.sc || "ten") === scale);
     if (!phCxWrite(name, tr => { const d = tr.days[today] || (tr.days[today] = {}); const en = phCxEntryMake(d, key); if (same) en.v = null; else { en.v = n; en.sc = scale; } })) return false;
     phCxFx = same ? null : { key };
@@ -76367,6 +76409,7 @@ or changing anything in Cliniko.
   function phCxClick(e) {
     const T = e.target; let el;
     if (!T || !T.closest) return false;
+    if ((el = T.closest("[data-cx-at]"))) { const name = phCxNameOf(el), d = el.dataset.cxAt; phCxAt = d && d < keyOf(TODAY) ? { pk: phPatientKey(name), day: d } : null; phCxRefresh(name); return true; }
     if ((el = T.closest("[data-cx-fold]"))) { const name = phCxNameOf(el), pk = phPatientKey(name), g = el.dataset.cxFold, f = phCxFold[pk] || (phCxFold[pk] = {}); f[g] = el.getAttribute("aria-expanded") !== "true"; phCxRefresh(name); return true; }
     if ((el = T.closest("[data-cx-cmp]"))) { const name = phCxNameOf(el); if (name) { phCxCmp[phPatientKey(name)] = el.dataset.cxCmp === "last" ? "last" : "base"; phCxRefresh(name); } return true; }
     if ((el = T.closest("[data-cx-cm]"))) { const name = phCxNameOf(el); if (name) { phCxChartM[phPatientKey(name)] = el.dataset.cxCm === "score" ? "score" : "dev"; phCxRefresh(name); } return true; }
@@ -76488,6 +76531,7 @@ or changing anything in Cliniko.
   document.addEventListener("change", e => {
     const el = e.target;
     if (!el || !el.matches || !el.closest || !el.closest("#pharmacyPage")) return;
+    if (el.matches("[data-cx-atsel]")) { const name = phCxNameOf(el), d = el.value; phCxAt = d && d < keyOf(TODAY) ? { pk: phPatientKey(name), day: d } : null; phCxRefresh(name); return; }
     if (el.matches("[data-cx-sl]")) { phCxScoreWrite(phCxNameOf(el), el.dataset.cxSl, +el.value, false); return; }
     if (el.matches("[data-cx-pct]")) { const n = parseInt(el.value, 10); if (isNaN(n)) { el.value = ""; return; } phCxScoreWrite(phCxNameOf(el), el.dataset.cxPct, Math.max(0, Math.min(100, n)), false); }
   });
@@ -76517,7 +76561,7 @@ or changing anything in Cliniko.
   function phCxTypeSave(p) {
     if (!p || !p.name) return;
     if (p.kind === "note") {
-      const txt = String(p.value || "").trim().slice(0, 140), today = keyOf(TODAY);
+      const txt = String(p.value || "").trim().slice(0, 140), today = p.day || keyOf(TODAY);   // the box's own day (an earlier visit on the Scoring bar)
       const was = phCxEntry(phCxDays(phPatientPeek(p.name) || {})[today], p.key);
       if (String((was && was.n) || "") === txt) return;
       phCxWrite(p.name, tr => { const d = tr.days[today] || (tr.days[today] = {}); phCxEntryMake(d, p.key).n = txt; });
@@ -76538,7 +76582,7 @@ or changing anything in Cliniko.
     }
   }
   function phCxTypeFlush() { clearTimeout(phCxTypeT); const p = phCxTyping; phCxTyping = null; if (p) phCxTypeSave(p); }
-  function phCxTypeOf(el) { return { name: phCxNameOf(el), key: el.dataset.cxNoteIn || el.dataset.cxGoalIn, kind: el.matches("[data-cx-note-in]") ? "note" : "goal", value: el.value, el }; }
+  function phCxTypeOf(el) { return { name: phCxNameOf(el), key: el.dataset.cxNoteIn || el.dataset.cxGoalIn, kind: el.matches("[data-cx-note-in]") ? "note" : "goal", value: el.value, day: el.dataset.cxDay || "", el }; }
   document.addEventListener("input", e => {
     const el = e.target;
     if (!el || !el.matches || !el.matches("[data-cx-note-in],[data-cx-goal-in]") || !el.closest("#pharmacyPage")) return;
@@ -76604,7 +76648,7 @@ or changing anything in Cliniko.
     if (isSign && /^[gbsw]$/i.test(k)) { e.preventDefault(); phCxSxWrite(name, ak.slice(2), k.toLowerCase(), false); return; }
     if (k === "ArrowDown") {
       e.preventDefault();
-      const pk = phPatientKey(name), today = keyOf(TODAY), cur = phCxAskSkip[pk] && phCxAskSkip[pk].day === today ? phCxAskSkip[pk].keys : [];
+      const pk = phPatientKey(name), today = phCxDayOf(name), cur = phCxAskSkip[pk] && phCxAskSkip[pk].day === today ? phCxAskSkip[pk].keys : [];
       phCxAskSkip[pk] = { day: today, keys: cur.concat(ak) };
       phCxRefresh(name);
     }
@@ -76631,9 +76675,26 @@ or changing anything in Cliniko.
   ];
   const PH_TODAY_CYCLE_PART = { id: "cycle", label: "Cycle" };
   const PH_TODAY_MSK_PART = { id: "msk", label: "Musculoskeletal" };
+  // the days this patient was seen before `day` (default today), oldest first: a visit logged here, or a booking in the calendar (her pick
+  // 2026-10-23: done bookings count as visits -- a patient seen four times never reads "First visit"). `who` = a name, or the record itself.
+  function phSeenDays(who, day) {
+    day = day || keyOf(TODAY);
+    let rec = null, k = "";
+    if (who && typeof who === "object") { rec = who; const P = PHARMACY.patients || {}; k = Object.keys(P).find(x => P[x] === rec) || ""; }
+    else { k = phPatientKey(who); rec = phPatientPeek(who); }
+    const out = new Set();
+    ((rec && rec.acuSessions) || []).forEach(s => { if (s && s.date && s.date < day) out.add(s.date); });
+    if (k) phApptList().forEach(a => { if (a && a.date && a.date < day && a.service !== "Break" && phPatientKey(a.patient) === k) out.add(a.date); });
+    return [...out].sort();
+  }
+  // the bookings alone, newest first: the Compass's Scoring bar (her pick 2026-10-23: done bookings only)
+  function phPastBookDays(name) {
+    const k = phPatientKey(name), today = keyOf(TODAY), out = new Set();
+    if (k) phApptList().forEach(a => { if (a && a.date && a.date < today && a.service !== "Break" && phPatientKey(a.patient) === k) out.add(a.date); });
+    return [...out].sort().reverse();
+  }
   function phTodayParts(rec) {
-    const today = keyOf(TODAY);
-    const back = ((rec && rec.acuSessions) || []).some(s => s.date && s.date < today);
+    const back = phSeenDays(rec).length > 0;
     // Musculoskeletal (her ask 2026-10-11): after Abdomen, only for pain / MSK patients
     return [].concat(back ? [PH_TODAY_RECHECK_PART] : [], phCycleTracked(rec) ? [PH_TODAY_CYCLE_PART] : [], PH_TODAY_EXAM_PARTS, phMskApplies(rec) ? [PH_TODAY_MSK_PART] : []);
   }
@@ -76954,8 +77015,9 @@ or changing anything in Cliniko.
   // step's pain map and pain intake. Everything is read, nothing is stored.
   function phTodayStripHtml(name, rec, plan) {
     const today = keyOf(TODAY), bits = [];
-    const last = (rec.acuSessions || []).filter(s => s.date && s.date < today).sort((a, b) => b.date.localeCompare(a.date))[0];
-    bits.push(last ? `Last visit <em>${esc(phCycShortLbl(last.date))}</em>` : `<em>First visit</em>`);
+    // a visit logged here, or a done booking (her pick 2026-10-23)
+    const seen = phSeenDays(name, today), last = seen[seen.length - 1];
+    bits.push(last ? `Last visit <em>${esc(phCycShortLbl(last))}</em>` : `<em>First visit</em>`);
     try {
       const top = phPatCompute(name).shown.find(p => p.level === "likely" && !p.dismissed);
       if (top) bits.push(`${esc(top.def.name)} likely`);
@@ -76963,7 +77025,9 @@ or changing anything in Cliniko.
     const phase = plan ? phTpLivePhase(rec, plan) : null;
     if (phase) {
       const ord = phTpSessionOrdinal(name, plan, phase);
-      bits.push(`<em>${esc(phase.label || "Phase")}${ord && ord.n ? ` · visit ${esc(ord.n)}` : ""}</em>`);
+      // the visit within the phase, else (visits filed as extras) the visit count, the way the Up next card counts it
+      const vn = ord && ord.n ? ord.n : seen.length ? seen.length + 1 : 0;
+      bits.push(`<em>${esc(phase.label || "Phase")}${vn ? ` · visit ${esc(vn)}` : ""}</em>`);
     }
     const hx = phHxProgress(name), flag = (hx.yesItems || [])[0];
     if (flag) bits.push(`${esc(flag.label)}${hx.yesItems.length > 1 ? ` +${hx.yesItems.length - 1}` : ""} flagged`);
@@ -90626,10 +90690,10 @@ or changing anything in Cliniko.
     });
   }
   // one score: a pain's own box (which = its row number) or the All pains row (which = "all", used while no pain carries a value for that measure)
-  function phPmScoreSet(name, planId, which, k, n, force, quiet) {   // force: set, never toggle (the Compass slider); quiet: no repaint (the caller does it once)
+  function phPmScoreSet(name, planId, which, k, n, force, quiet, atDay) {   // force: set, never toggle (the Compass slider); quiet: no repaint (the caller does it once); atDay: the Compass's Scoring bar day
     const plan = phPmPlanFor(name, planId); if (!plan) return false;
     const list = phPmList(name, plan);
-    const dayKey = `${planId}|${which}|${k}`, day = phPmScoreDay[dayKey] || phMskDay(), isToday = day === phMskDay();
+    const dayKey = `${planId}|${which}|${k}`, day = atDay || phPmScoreDay[dayKey] || phMskDay(), isToday = day === phMskDay();
     const ok = phMskWrite(name, vis => {
       vis.nprs = vis.nprs || {};
       if (which === "all") { if (vis.nprs[k] === n && !force) delete vis.nprs[k]; else vis.nprs[k] = n; }
