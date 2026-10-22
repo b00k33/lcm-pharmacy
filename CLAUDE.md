@@ -999,7 +999,7 @@ Ask her, Blood tests, History, Musculoskeletal; each read through the
 app's own renderer, a purple dot = changed since last visit; tap a row =
 its drawer, + Watch / + Aim, and lines to the diagnosis it feeds) beside
 **the plan** (the Diagnosis card: Likely / Possible bars with a small concept picture
-per pattern, and first one for the plan's own condition (the women's health, pain / muscle and face / skin plans so far), each opening big, the leading formula, Goal; then the Session grid; then scans and the pain map / Also
+per pattern, and first one for the plan's own condition (all 29 plan conditions: women's health, pain / muscle, face / skin, and stress / sleep / weight / immune / men's), each opening big, the leading formula, Goal; then the Session grid; then scans and the pain map / Also
 treating tiles). Side by side from 1280px, stacked below [Care Plan = the
 findings beside the plan]. The plan ⋯ menu is short with a More ▸ fold,
 one function (`phTpPlanMenuHtml`) for the Care Plan, Treatment and Dispense
