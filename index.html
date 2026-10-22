@@ -7703,11 +7703,7 @@
   #pharmacyPage .ph-pa-svg .pc { fill: rgba(20, 31, 35, .05); }
   #pharmacyPage .ph-pa-svg .gb { fill: #8E969B; }
   #pharmacyPage .ph-pa-svg .bs { fill: var(--ph-ink); }
-  #pharmacyPage .ph-pa-svg .pa { fill: none; stroke: #8B1A0B; stroke-width: 7; stroke-linecap: round; }
-  #pharmacyPage .ph-pa-svg .pa.th { stroke-width: 3.5; stroke-linecap: butt; stroke-dasharray: 7 5; }
-  #pharmacyPage .ph-pa-svg .ar { fill: #8B1A0B; opacity: .8; }
   /* the chart's own inks (her pick 2026-10-21): last visit solid grey, the normal pulse solid green */
-  #pharmacyPage .ph-pa-svg .pv { fill: none; stroke: var(--ph-faint); stroke-width: 3; stroke-linecap: round; }
   #pharmacyPage .ph-pa-svg .tp { fill: none; stroke: var(--ph-good); stroke-width: 2; stroke-linecap: round; }   /* thin, like the chart's green line (her pick C) */
   /* her 2026-10-21 concept pictures (mock concept-pictures-mock-2026-10-21.html): one moving picture per pattern, drawn by PH_PP. The bar is the one
      joined chip bar; the labels inside a picture use the organ plates' own label style. Every picture moves on one JS clock (phPpTick), which
@@ -13359,6 +13355,9 @@
      larger"): the drawings, cells, labels and toolbar chips are all stepped up roughly 1.5x */
   #pharmacyPage .ph-pulse-stamp { font: inherit; font-size: var(--fs-12-5); font-weight: 700; color: var(--ph-ink); background: var(--ph-white); border: 1px solid var(--ph-line); border-radius: 999px; padding: 4px 12px; cursor: pointer; }
   #pharmacyPage .ph-pulse-stamp:hover { border-color: var(--ph-green); }
+  /* Deep / Floating lit from her drawing (her 2026-10-22), a small dot before the word; tapping one still picks it as a stamp */
+  #pharmacyPage .ph-pulse-stamp.auto { background: #EDF5F8; border-color: #165C74; color: #0B3B4B; }
+  #pharmacyPage .ph-pulse-stamp.auto::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #165C74; margin-right: 6px; vertical-align: 1px; }
   #pharmacyPage .ph-pulse-stamp.on { background: var(--margin-rule); border-color: var(--ph-gold-deep); color: var(--ph-green-press); }
   /* the bigger min-width below (her 2026-10-15 size bump) no longer fits a narrow phone column at full
      scale -- a real anatomical chart, not decoration, so it scrolls sideways in its own box rather than
@@ -60937,7 +60936,9 @@ or changing anything in Cliniko.
     // the legend for the chart's three inks (her pick 2026-10-21): normal green, today blue, last visit grey
     const keySw = cls => `<span class="${cls}">${phPulseShapeSvg("normal")}</span>`;
     const priorKey = `<div class="ph-pulse-priorkey"><span>${keySw("n")}Normal</span><span>${keySw("t")}Today</span>${prior ? `<span>${keySw("p")}${esc(phCycShortLbl(prior.date))}</span>` : ""}</div>`;
-    const stampBtn = (id, label) => `<button type="button" class="ph-pulse-stamp${presHxConstitPulseStamp === id ? " on" : ""}" data-constit-pulse-stamp="${esc(id)}" aria-pressed="${presHxConstitPulseStamp === id ? "true" : "false"}">${esc(label)}</button>`;
+    // her 2026-10-22 ("sync chart to chips to auto select"): Deep and Floating light up by themselves from where she draws (phPulseAutoDepth)
+    const autoD = phPulseAutoDepth(marks), autoOn = { Deep: autoD.deep.length, Floating: autoD.floating.length };
+    const stampBtn = (id, label) => `<button type="button" class="ph-pulse-stamp${presHxConstitPulseStamp === id ? " on" : ""}${autoOn[id] ? " auto" : ""}"${autoOn[id] ? ` title="On from your drawing"` : ""} data-constit-pulse-stamp="${esc(id)}" aria-pressed="${presHxConstitPulseStamp === id ? "true" : "false"}">${esc(label)}</button>`;
     const shapeLab = {}; PH_PULSE_SHAPES.forEach(s => { shapeLab[s.id] = s.label; });
     const kb = phVisitPulseKbHits(p);
     const tplOn = true;   // the normal pulse is always drawn (her 2026-10-21); the old "Normal pulse template" toggle is gone
@@ -70974,17 +70975,19 @@ or changing anything in Cliniko.
       if (/tight/.test(q)) pq.add("p_tight");
       if (/string/.test(q)) pq.add("p_string");
       if (/slippery/.test(q)) pq.add("p_slippery");
-      if (/thin|choppy|rough/.test(q) && !/choppy/.test(q)) pq.add("p_thin");
+      if (/thin|narrow|choppy|rough/.test(q) && !/choppy/.test(q)) pq.add("p_thin");
       if (/choppy|hesitant/.test(q)) pq.add("p_choppy");
       if (/weak|empty|feeble|yielding/.test(q)) pq.add("p_weak");
       if (/deep|sunken|sink/.test(q)) pq.add("p_deep");
       if (/slow/.test(q)) pq.add("p_slow");
       if (/rapid|fast|heat/.test(q)) pq.add("p_rapid");
     }));
-    pulseWords(phHxConstitPulseRead(rec).pulse);
+    // her 2026-10-22: an arch drawn below its position's normal depth is a deep pulse, the same as ticking Deep (phPulseAutoDepth)
+    const pulseDeep = marks => { if (phPulseAutoDepth(marks).deep.length) pq.add("p_deep"); };
+    pulseWords(phHxConstitPulseRead(rec).pulse); pulseDeep(phHxConstitPulseRead(rec).pulse);
     if (phPulseRestRapid(phHxConstitPulseRead(rec).hammer)) pq.add("p_rapid");   // integrate33 batch 10: a resting rate over 90 a minute
     const pv = phVisitPrevPulse(rec);
-    if (pv) pulseWords(pv.marks);
+    if (pv) { pulseWords(pv.marks); pulseDeep(pv.marks); }
     const pLbl = { p_wiry: "Pulse is wiry", p_tense: "Pulse is tense", p_tight: "Pulse is tight", p_string: "Pulse is string", p_slippery: "Pulse is slippery", p_thin: "Pulse is thin", p_choppy: "Pulse is choppy", p_weak: "Pulse is weak or empty",
       p_deep: "Pulse is deep", p_slow: "Pulse is slow", p_rapid: "Pulse is rapid" };
     pq.forEach(k => add(k, "pulse", pLbl[k], { tab: "patient", fold: "constit" }, pv && pv.session ? phCycShortLbl(pv.session.date || todayKey) : "", /^p_(wiry|tense|tight|string)$/.test(k) ? "pulse:wiry-family" : null));
@@ -71512,19 +71515,42 @@ or changing anything in Cliniko.
     (PH_PULSE_CHART[side] || []).forEach(c => { const g = PH_PA_NEAR[c.pos]; if (g) out[g].push(c.id); });
     return out;
   }
-  // one arch per depth that has marks (her pick: two zones at one depth make one arch with both qualities)
+  // one arch per depth that has marks (her pick: two zones at one depth make one arch with both qualities). sh = each quality's shape id,
+  // else its word, lower case; sc = how many Small compressed points (her 2026-10-22: up to three in one cell)
   function phPaArches(marks, side, cols) {
     const by = {};
-    (cols || []).forEach(cid => PH_PULSE_LEVELS.forEach(l => { const q = phPulseQuals((marks || {})[`${side}:${cid}:${l.id}`]); if (q.length) (by[l.id] = by[l.id] || []).push(...q.map(x => String(x.shape || x.quality).toLowerCase())); }));
-    return PH_PULSE_LEVELS.map((l, i) => by[l.id] ? { lv: i, sh: by[l.id] } : null).filter(Boolean);
+    (cols || []).forEach(cid => PH_PULSE_LEVELS.forEach(l => {
+      const q = phPulseQuals((marks || {})[`${side}:${cid}:${l.id}`]); if (!q.length) return;
+      const a = by[l.id] = by[l.id] || { sh: [], sc: 0 };
+      q.forEach(x => { a.sh.push(String(x.shape || x.quality).toLowerCase()); if (x.shape === "smallcomp") a.sc = Math.max(a.sc, x.n || 1); });
+    }));
+    return PH_PULSE_LEVELS.map((l, i) => by[l.id] ? { lv: i, sh: by[l.id].sh, sc: by[l.id].sc } : null).filter(Boolean);
   }
-  // amplitude from her Intensity stamps: Pounding tall, Slight pounding less, Weak barely lifts (her heights, kept 2026-10-21)
-  const phPaAmp = sh => sh.includes("pounding") || sh.includes("robust pounding") ? 1.7 : sh.includes("slightpound") || sh.includes("slight pounding") ? 1.35 : sh.includes("weak") ? .4 : 1;
-  const phPaKind = sh => sh.includes("pounding") || sh.includes("robust pounding") ? "up3" : sh.includes("slightpound") || sh.includes("slight pounding") ? "up1" : sh.includes("weak") ? "down" : "";
+  // her 2026-10-22 ("i dont use the deep chip. i just draw on chart. sync chart to chips to auto select"): Deep and Floating come from where
+  // she draws. Deep = below that position's normal depth (PH_PULSE_TPL: Cun Qi, Guan Blood, Chi Organ; "deep is depth below the normal
+  // standard, not necessarily organ depth"), Floating = on the Skin row. A column with no position of its own reads the nearest one (PH_PA_NEAR).
+  // Derived on read, never stored: the Pulse page's Deep / Floating chips light up from it, and so do the Patterns clues, Fang Bing Ren's
+  // sinking / floating signs and her SHPD notes.
+  function phPulseAutoDepth(marks) {
+    const out = { deep: [], floating: [] };
+    Object.keys(marks || {}).forEach(k => {
+      if (!phPulseQuals(marks[k]).length) return;
+      const [side, cid, lv] = k.split(":"), col = (PH_PULSE_CHART[side] || []).find(c => c.id === cid);
+      const pos = col && PH_PA_NEAR[col.pos], tpl = pos && PH_PULSE_TPL[side + ":" + pos];
+      if (lv === "skin") out.floating.push(k);
+      else if (tpl && PH_PULSE_LEVELS.findIndex(l => l.id === lv) > PH_PULSE_LEVELS.findIndex(l => l.id === tpl.level)) out.deep.push(k);
+    });
+    return out;
+  }
+  // her arrow scales (2026-10-22): ↑ Slight pounding / ↑↑ Pounding / ↑↑↑ Robust pounding stand taller, ↓ Soft / ↓↓ Weak / ↓↓↓ Flat lower;
+  // the arch height follows the count
+  const PH_PA_AMP = { up1: 1.3, up2: 1.6, up3: 1.9, dn1: .75, dn2: .5, dn3: .25 };
   const phPaSm = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
   // one beat, u seconds after it reaches the arch: a quick rise and fall with a small second swell; wiry holds flat, then lets go
   const phPaKern = (u, wi) => u < 0 ? 0 : wi ? phPaSm(0, .05, u) * (1 - phPaSm(.2, .27, u)) : Math.exp(-Math.pow((u - .085) / .065, 2)) + .2 * Math.exp(-Math.pow((u - .28) / .06, 2));
-  // her arch (Normal) and her flat line (Wiry), k = how far into the beat
+  const phPaHold = (u, a, b) => u < 0 ? 0 : phPaSm(0, a, u) * (1 - phPaSm(b, b + .12, u));   // rises and stays up (Forceful, Inflated)
+  const phPaSeed = (i, n) => { const x = Math.sin(i * 127.1 + n * 311.7) * 43758.5453; return x - Math.floor(x); };
+  // her arch (Normal) and her flat line (Wiry), k = how far into the beat -- still used for her normal pulse (the green arch)
   function phPaArchD(o, k) {
     const x1 = o.x1, x2 = o.x2, w = x2 - x1, y = o.y;
     const z = o.z || 1;   // a narrow column draws a lower arch (her 2026-10-21 "proportionate pulse drawings")
@@ -71532,20 +71558,118 @@ or changing anything in Cliniko.
     const h = ((o.a < .6 ? 4 : 8) + 12 * o.a * k) * z, c = y + 2 - 1.33 * (h + 2);
     return `M${x1.toFixed(1)},${(y + 2).toFixed(1)}C${(x1 + w * .12).toFixed(1)},${c.toFixed(2)} ${(x2 - w * .12).toFixed(1)},${c.toFixed(2)} ${x2.toFixed(1)},${(y + 2).toFixed(1)}`;
   }
-  // her arrows, hung under the line (phPulseShapeSvg's own shapes, drawn bigger): up = pounding, down = weak
+  // her arrows, hung under the line (phPulseShapeSvg's own shapes, drawn bigger): up = pounding, down = shorter
   const phPaUp = (c, y, s) => `M${(c - 2.3 * s).toFixed(1)},${(y + 3.4 * s).toFixed(1)}L${c.toFixed(1)},${y.toFixed(1)}L${(c + 2.3 * s).toFixed(1)},${(y + 3.4 * s).toFixed(1)}Z M${(c - .9 * s).toFixed(1)},${(y + 3 * s).toFixed(1)}h${(1.8 * s).toFixed(1)}v${(4.2 * s).toFixed(1)}h${(-1.8 * s).toFixed(1)}Z`;
   const phPaDown = (c, y, s) => `M${(c - .9 * s).toFixed(1)},${y.toFixed(1)}h${(1.8 * s).toFixed(1)}v${(4.2 * s).toFixed(1)}h${(-1.8 * s).toFixed(1)}Z M${(c - 2.3 * s).toFixed(1)},${(y + 3.8 * s).toFixed(1)}L${(c + 2.3 * s).toFixed(1)},${(y + 3.8 * s).toFixed(1)}L${c.toFixed(1)},${(y + 7.2 * s).toFixed(1)}Z`;
+  // her 2026-10-22 ("improve the animations designs to correspond with pulse types and qualities"; mock pulse_in_action_quality_drawings_mock_v2,
+  // her picks in memory project_pharmacy_pulse_quality_drawings_2026_10_22): every quality draws the way her Shen-Hammer and Doane notes
+  // describe it. One arch carries every quality ticked at its depth: the SHAPE comes from the strongest kind (Blocked, Small / Medium
+  // compressed, Wiry or Ropy, Leather-hard, Tight, Tense, a bump on the Skin row, else her arch), the ARROWS set the height, the rest change the line
+  function phPaModel(n) {
+    const s = n.sh, has = (...x) => x.some(v => s.includes(v));
+    const up = has("robust", "robust pounding") ? 3 : has("pounding") ? 2 : has("slightpound", "slight pounding") ? 1 : 0;
+    const dn = has("flatamp", "flat") ? 3 : has("weak") ? 2 : has("soft") ? 1 : 0;
+    const kind = has("blocked") ? "blocked" : n.sc ? "peaks" : has("medcomp") ? "dome" : has("wiry", "ropy") ? "flat" : has("leather-hard") ? "leather"
+      : has("tight") ? "tight" : has("tense") ? "tense" : n.lv === 0 ? "bump" : "arch";
+    return { lv: n.lv, kind, sc: n.sc || 1, amp: up ? PH_PA_AMP["up" + up] : dn ? PH_PA_AMP["dn" + dn] : 1, ar: up ? ["up", up] : dn ? ["dn", dn] : null,
+      thin: has("thin", "narrow"), thick: has("thick"), ropy: has("ropy"), empty: has("empty"), infl: has("inflated"), muddy: has("muddy"), diffuse: has("diffuse"),
+      muffled: has("muffled"), heat: has("heat"), feeble: has("feeble-absent"), reduced: has("reduced substance"), forceful: has("forceful"), ampch: has("amplitude change"),
+      svib: has("smooth vibration"), rvib: has("rough vibration"), choppy: has("choppy"), slip: has("slippery"), long: has("long") };
+  }
+  // one arch, one frame. c = its column ({ gx, gw, y }), k = how far into the beat, u = seconds since the beat reached it, bn = that beat's
+  // count, T = the clock. pv = last visit: still, thin, grey, no arrows
+  function phPaDraw(c, o, k, u, bn, T, pv) {
+    const F = n => n.toFixed(1), gx = c.gx, gw = c.gw, y = c.y, S = gw / 110, z = Math.min(1, gw / 70), zw = Math.max(.55, z);
+    const RED = pv ? "var(--ph-faint)" : "#8B1A0B", INK = pv ? "var(--ph-faint)" : "var(--ph-ink)", wf = pv ? .45 : 1, out = [];
+    const st = (w, col, x) => `fill:none;stroke:${pv ? RED : col || RED};stroke-width:${F(Math.max(pv ? 1.6 : .8, w * zw * wf))};stroke-linecap:round;stroke-linejoin:round;${x || ""}`;
+    const P = (d, s) => out.push(`<path d="${d}" style="${s}"/>`);
+    const poly = p => "M" + p.map(q => F(q[0]) + "," + F(q[1])).join("L");
+    const kw = phPaKern(u, 1), ksl = f => phPaKern(u / f, 0);
+    if (o.kind === "blocked") {   // her 2026-10-22 pick G1: a wall on both sides of the column bowing out on the beat, her own loop in the centre throbbing, slow and dull
+      const kb = phPaKern((u - .04) / 1.7, 0), bow = 2.4 * kb * S, sc = (.34 + .03 * kb) * S, cx = gx + gw / 2, cy = y - 10 * z;
+      out.push(`<g transform="translate(${F(cx - sc * 72.5)} ${F(cy - sc * 63)}) scale(${sc.toFixed(3)})"><path d="M92 22 C86 44 80 64 70 82 C62 96 54 104 46 102 C36 100 29 88 29 70 C29 58 28 48 36 46 C48 44 66 54 80 62 C94 70 108 76 116 88" style="fill:none;stroke:${pv ? RED : "#5E1A12"};stroke-width:${F(5.5 * zw * wf / sc)};stroke-linecap:round;stroke-linejoin:round"/></g>`);
+      [[gx + gw * .11, -bow], [gx + gw * .89, bow]].forEach(([x, b]) => P(`M${F(x)},${F(y - 20 * z)}Q${F(x + b)},${F(y - 8 * z)} ${F(x)},${F(y + 4 * z)}`, st(6, INK)));
+      return out.join("");
+    }
+    if (o.kind === "peaks") {   // Small compressed: a tiny hard point, nearly rigid; 2 or 3 spread across the column
+      const xs = o.sc === 2 ? [.336, .664] : o.sc === 3 ? [.255, .5, .745] : [.5], h = (12 + 3 * k) * z, sg = Math.max(2.5, 4.5 * S);
+      xs.forEach(f => { const cx = gx + gw * f, p = []; for (let i = -12; i <= 12; i++) { const x = cx + i * S; p.push([x, y + 2 - h * Math.exp(-Math.pow((x - cx) / sg, 2))]); } P(poly(p), st(5)); });
+      return out.join("");
+    }
+    if (o.kind === "dome") {   // Medium compressed: a rounded dome on her dotted baseline, a gentle swell
+      const h = (8 + 10 * ksl(1.3)) * z, cx = gx + gw / 2, sg = 13 * S, p = [];
+      for (let x = gx + gw * .16; x <= gx + gw * .84; x += 1.5) p.push([x, y - h * Math.exp(-Math.pow((x - cx) / sg, 2))]);
+      P(`M${F(gx + gw * .07)},${F(y)}L${F(gx + gw * .93)},${F(y)}`, st(2.2, 0, "stroke-linecap:butt;stroke-dasharray:3 3"));
+      P(poly(p), st(6));
+      return out.join("");
+    }
+    // the line's run: Long runs past both column lines into the neighbours; Inflated sits a little inside
+    let x1 = gx + gw * .07, x2 = gx + gw * .93;
+    if (o.long) { x1 = gx - gw * .18; x2 = gx + gw * 1.18; } else if (o.infl) { x1 += 6 * S; x2 -= 6 * S; }
+    if (o.diffuse) { x1 -= 4 * S; x2 += 4 * S; }
+    // the height: her arrows' amplitude (Amplitude change: a new height each beat), then each quality's own beat (the mock's numbers)
+    const a = o.ampch ? [1.6, .55, 1.2, .35, 1.45, .8][bn % 6] : o.amp * (o.reduced ? .85 : 1) * (o.thick ? .9 : 1) * (o.diffuse ? .95 : 1);
+    const gone = o.feeble && bn % 3 === 2;   // Feeble-absent: faint, and every third beat drops out
+    let kk = gone ? 0 : o.forceful ? phPaHold(u, .07, .3) : o.infl ? phPaHold(u, .09, .32) : o.muddy ? phPaKern((u - .05) / 1.7, 0) : o.muffled ? ksl(1.3) : o.thick ? ksl(1.2) : k;
+    const hA = (o.forceful ? 8 + 16 * kk * a : o.infl ? 7 + 11 * kk * a : o.muddy ? 4 + 7 * kk * a : o.muffled ? 6 + 8 * kk * a : o.feeble ? 3 + 4 * kk * a : (a < .6 ? 4 : 8) + 12 * a * kk) * z;
+    const cub = (h, cp, f, n, j) => { const w = x2 - x1, cc = y + 2 - f * (h + 2) + (j || 0), Q = [[x1, y + 2], [x1 + w * cp, cc], [x2 - w * cp, cc], [x2, y + 2]], p = [];
+      n = n || 48; for (let i = 0; i <= n; i++) { const t = i / n, A = (1 - t) ** 3, B = 3 * (1 - t) ** 2 * t, C = 3 * (1 - t) * t * t, D = t ** 3; p.push([A * Q[0][0] + B * Q[1][0] + C * Q[2][0] + D * Q[3][0], A * Q[0][1] + B * Q[1][1] + C * Q[2][1] + D * Q[3][1], t]); }
+      return p; };
+    let p, w = o.forceful || o.empty ? (o.empty ? 9 : 8) : o.svib || o.rvib ? 6 : 7, col = RED, x = "";
+    if (o.kind === "flat") {   // Wiry: her flat line, taut, a small twitch while it holds; Ropy = "thick wiry pulse" (her 2026-10-22)
+      const h = (5 + 9 * a * kw) * z, j = pv ? 0 : Math.sin(T * 170) * .7 * Math.min(1, kw);
+      p = [[x1, y - h + j, 0], [x2, y - h - j, 1]]; w = o.ropy ? 13 : 7;
+    } else if (o.kind === "leather") { p = cub((6 + 1.5 * kw) * z, .04, 1.2); w = 8; col = "#3A0A04"; x = "stroke-linecap:butt;"; }   // very hard, no flex
+    else if (o.kind === "tight") { p = cub((4 + 5 * ksl(.75)) * z * Math.max(.5, a), .03, 1.2, 0, pv ? 0 : Math.sin(T * 150) * .4 * Math.min(1, k)); w = 5; }   // narrow, very taut, a fine tremor
+    else if (o.kind === "tense") p = cub((6 + 8 * ksl(.8)) * z * Math.max(.5, a), .04, 1.2);   // harder, flatter top, a quick taut rise
+    else if (o.kind === "bump") {   // Floating: drawn on the Skin row, a low bump with no full wave
+      const h = (2 + 2 * ksl(1.4)) * z * a, bx1 = gx + gw * .244, bx2 = gx + gw * .756; p = [];
+      for (let i = 0; i <= 24; i++) { const t = i / 24; p.push([bx1 + (bx2 - bx1) * t, y - 4 * h * t * (1 - t), t]); }
+      w = 6;
+    } else p = cub(hA, .12, 1.33, o.svib ? 90 : o.rvib ? 26 : 48);
+    if (o.reduced) { const wob = u > .12 && !pv ? 2.2 * Math.exp(-(u - .12) * 5) * Math.sin((u - .12) * 30) : 0; p = p.map(q => [q[0], q[1] + (4.5 - 2 * kk + wob) * z * Math.pow(Math.sin(Math.PI * q[2]), 6), q[2]]); }   // limp wall, sags
+    if (o.svib && !pv) p = p.map(q => [q[0], q[1] + 1.2 * z * Math.sin(q[2] * Math.PI * 22 - T * 45) * Math.sin(Math.PI * q[2]), q[2]]);   // fine fast buzz
+    if (o.rvib && !pv) { const fr = Math.floor(T * 14); p = p.map((q, i) => [q[0], q[1] + (phPaSeed(i, fr) - .5) * 5 * z * Math.sin(Math.PI * q[2]), q[2]]); x += "stroke-linejoin:miter;"; }   // coarse shudder
+    if (o.choppy && p.length > 2) {   // uneven, grating: an uneven jagged line, new each beat
+      const ch = []; let t = 0, i = 0;
+      while (t < 1) { const q = p[Math.round(t * (p.length - 1))]; ch.push([q[0], q[1] + (i % 2 ? -1 : 1) * (1 + 4.5 * phPaSeed(i, bn)) * z * Math.sin(Math.PI * q[2]), q[2]]); t += .05 + .09 * phPaSeed(i + 7, bn); i++; }
+      ch.push(p[p.length - 1]); p = ch; w = Math.min(w, 4.5); x += "stroke-linejoin:miter;";
+    }
+    if (o.thin) { w = 3.5; x += "stroke-linecap:butt;stroke-dasharray:7 5;"; }   // her dotted Thin / Narrow
+    if (o.thick) w = 9 + 6 * kk;   // widens as it rises
+    if (o.feeble) { w = 2.5; x += `stroke-dasharray:2 6;opacity:${gone ? .2 : .6};`; }
+    if (o.heat) { w += 6 * Math.min(1, kk); col = "#C0331A"; }   // swells, like hot water
+    if (o.muffled) { col = "#8A5550"; x += "opacity:.7;"; }   // as if through cloth
+    if (o.muddy) { col = "#6E2A14"; w = Math.max(w, 9); }   // thick blood, slow, blurred
+    const d = poly(p);
+    if (!pv) {
+      if (o.muddy) P(d, st(17, "#6E2A14", "opacity:.2"));
+      if (o.muffled) P(d, st(16, "#8A6A66", "opacity:.22"));
+      if (o.diffuse) { P(d, st(24, RED, "opacity:.08")); P(d, st(15, RED, "opacity:.14")); w = Math.min(w, 3.2); }   // a clear core, the edges lost
+      if (o.infl) out.push(`<path d="${d}Z" style="fill:#EBC1B8;stroke:none"/>`);   // a ball-like bulge that holds
+      if (o.ar) {   // her arrows: up for pounding, down for shorter
+        const cx = gx + gw / 2, s = Math.min(1.7, gw / 28), sp = Math.min(16, gw * .24), n = o.ar[1];
+        const xs = n === 1 ? [cx] : n === 2 ? [cx - sp / 2, cx + sp / 2] : [cx - sp, cx, cx + sp], upw = o.ar[0] === "up";
+        out.push(`<path style="fill:#8B1A0B;opacity:.8"${upw ? ` transform="translate(0 ${F(-4 * Math.min(1.2, kk))})"` : ""} d="${xs.map(c2 => upw ? phPaUp(c2, y + 6, s) : phPaDown(c2, y + 6, s)).join(" ")}"/>`);
+      }
+    }
+    P(d, st(o.infl ? 4.5 : w, col, x));
+    if (o.empty && !pv) P(d, st(4.2, "#fff"));   // clear on top, hollow inside
+    if (o.slip && !pv) { const q = p[Math.round(Math.min(1, Math.max(0, u / .55)) * (p.length - 1))]; out.push(`<circle cx="${F(q[0])}" cy="${F(q[1] - 1)}" r="${F(5.6 * zw)}" style="fill:#C9452C;stroke:#fff;stroke-width:1.2"/>`); }   // a bead sliding one way
+    return out.join("");
+  }
   // one wrist: the chart's own grid (same columns, same header cells, same row labels), the drawing in one area over the four rows; each
   // column its own arch, the primary ones (pr) shaded, an empty primary column showing her normal pulse
   function phPaSideHtml(side, marks, prior, tplShow, rate, rhy) {
     const cols = PH_PULSE_CHART[side] || [], heads = (typeof PH_PULSE_POS_COL !== "undefined" && PH_PULSE_POS_COL[side]) || {};
     const gridCols = ["44px", ...cols.map(c => c.w === 2 ? "2fr" : "1fr")].join(" ");
-    const arc = n => ({ lv: n.lv, a: phPaAmp(n.sh), wi: n.sh.includes("wiry") ? 1 : 0, th: n.sh.includes("thin") ? 1 : 0, k: phPaKind(n.sh) });
     const groups = cols.map((c, i) => {
-      const p = heads[c.id], at = PH_PA_POS.indexOf(PH_PA_NEAR[c.pos]);
-      const now = phPaArches(marks, side, [c.id]), t = p && !now.length && tplShow ? PH_PULSE_TPL[side + ":" + p] : null;
-      return { c0: i, c1: i, pr: p ? 1 : 0, dl: (2 - Math.max(0, at)) * .05, now: now.map(arc), pv: prior ? phPaArches(prior, side, [c.id]).map(arc) : [],
-        tp: t ? { lv: PH_PULSE_LEVELS.findIndex(l => l.id === t.level), wi: t.quality === "wiry" ? 1 : 0 } : null };
+      const p = heads[c.id], at = PH_PA_POS.indexOf(PH_PA_NEAR[c.pos]), now = phPaArches(marks, side, [c.id]);
+      // her normal pulse in thin green: in an empty primary column, and (her 2026-10-22 Deep) beside an arch drawn below it
+      const t0 = p && tplShow ? PH_PULSE_TPL[side + ":" + p] : null, tl = t0 ? PH_PULSE_LEVELS.findIndex(l => l.id === t0.level) : -1;
+      const t = t0 && (!now.length || now.some(n => n.lv > tl)) ? t0 : null;
+      return { c0: i, c1: i, pr: p ? 1 : 0, dl: (2 - Math.max(0, at)) * .05, now, pv: prior ? phPaArches(prior, side, [c.id]) : [],
+        tp: t ? { lv: tl, wi: t.quality === "wiry" ? 1 : 0 } : null };
     });
     return `<div class="ph-pa-side"><div class="ph-pulse-grid ph-pa-grid" style="grid-template-columns:${gridCols}">
       <div class="ph-pulse-collbl ph-pulse-sidein">${side === "R" ? "RIGHT" : "LEFT"}</div>${cols.map(() => `<div class="ph-pulse-collbl ph-pa-blank"><span class="l">&nbsp;</span></div>`).join("")}
@@ -71563,26 +71687,23 @@ or changing anything in Cliniko.
     let groups = []; try { groups = JSON.parse(svg.dataset.paG || "[]"); } catch (e) { groups = []; }
     if (!cols.length || rows.length < 4) return null;
     svg.setAttribute("viewBox", `-8 0 ${(W + 8).toFixed(1)} ${(H + 10).toFixed(1)}`);
-    const f = n => n.toFixed(1), out = [];
+    const f = n => n.toFixed(1), out = [], items = [];
     groups.forEach(g => { const a = cols[g.c0]; if (g.pr && a) out.push(`<rect class="pc" x="${f(a.x)}" y="0" width="${f(a.w)}" height="${f(H)}"/>`); });   // the primary columns, shaded like the table
     out.push(`<line class="fr" x1="0" x2="${f(W)}" y1="0" y2="0"/>`);
     rows.forEach(y => out.push(`<line class="dl" x1="0" x2="${f(W)}" y1="${f(y)}" y2="${f(y)}"/>`));
     groups.forEach((g, i) => { if (i) { const a = cols[g.c0 - 1], b = cols[g.c0]; if (a && b) { const x = (a.x + a.w + b.x) / 2; out.push(`<line class="cl" x1="${f(x)}" x2="${f(x)}" y1="0" y2="${f(H)}"/>`); } } });
     out.push(`<line class="cl" x1="${f(W)}" x2="${f(W)}" y1="0" y2="${f(H)}"/><rect class="gb" x="-8" y="0" width="8" height="${f(H + 10)}"/><rect class="bs" x="-8" y="${f(H)}" width="${f(W + 8)}" height="10"/>`);
-    groups.forEach((g, gi) => {
+    groups.forEach(g => {
       const a = cols[g.c0], b = cols[g.c1]; if (!a || !b) return;
-      const gx = a.x, gw = b.x + b.w - gx, x1 = gx + gw * .07, x2 = gx + gw * .93, cx = gx + gw / 2, z = +Math.min(1, gw / 70).toFixed(2);   // z: a narrow column's arch, lower and thinner
-      // last visit: still, solid grey, at its own depth and height; nothing ticked: her normal pulse, thin green
-      g.pv.forEach(n => out.push(`<path class="pv" d="${phPaArchD({ x1, x2, y: rows[n.lv], a: n.a, wi: n.wi, z }, .5)}"/>`));
-      if (g.tp) out.push(`<path class="tp" d="${phPaArchD({ x1, x2, y: rows[g.tp.lv], a: 1, wi: g.tp.wi, z }, 0)}"/>`);
-      g.now.forEach(n => {
-        const y = rows[n.lv], s = Math.min(1.7, gw / 28), sp = Math.min(16, gw * .24), xs = n.k === "up1" ? [cx] : [cx - sp, cx, cx + sp];   // a narrow column: smaller, closer arrows
-        const ar = n.k ? `<path class="ar"${n.k === "down" ? "" : ` data-up="1"`} d="${xs.map(c => n.k === "down" ? phPaDown(c, y + 6, s) : phPaUp(c, y + 6, s)).join(" ")}"/>` : "";
-        out.push(`<g data-pa="${f(x1)} ${f(x2)} ${f(y)} ${n.a} ${n.wi} ${g.dl} ${z}">${ar}<path class="pa${n.th ? " th" : ""}" style="stroke-width:${((n.th ? 3.5 : 7) * Math.max(.55, z)).toFixed(1)}px" d="${phPaArchD({ x1, x2, y, a: n.a, wi: n.wi, z }, 0)}"/></g>`);
-      });
+      const gx = a.x, gw = b.x + b.w - gx, z = +Math.min(1, gw / 70).toFixed(2);   // z: a narrow column's arch, lower and thinner
+      // last visit: still, thin, grey, its own shape at its own depth; her normal pulse in thin green
+      g.pv.forEach(n => out.push(phPaDraw({ gx, gw, y: rows[n.lv] }, phPaModel(n), .5, .15, 0, 0, true)));
+      if (g.tp) out.push(`<path class="tp" d="${phPaArchD({ x1: gx + gw * .07, x2: gx + gw * .93, y: rows[g.tp.lv], a: 1, wi: g.tp.wi, z }, 0)}"/>`);
+      g.now.forEach(n => { items.push({ c: { gx, gw, y: rows[n.lv] }, o: phPaModel(n), dl: g.dl }); out.push(`<g data-pa-i="${items.length - 1}"></g>`); });
     });
     svg.innerHTML = out.join("");
-    return [...svg.querySelectorAll("g[data-pa]")].map(g => { const [x1, x2, y, a, wi, dl, z] = g.dataset.pa.split(" ").map(Number); return { x1, x2, y, a, wi: !!wi, dl, z: z || 1, p: g.querySelector(".pa"), ar: g.querySelector(".ar[data-up]") }; });
+    items.forEach((it, i) => { it.g = svg.querySelector(`g[data-pa-i="${i}"]`); });
+    return items;
   }
   // the Pulse page block: shown once today's chart has a mark under Cun, Guan or Chi
   function phPulseAnimHtml(rec, marks, h, prior) {
@@ -71596,23 +71717,24 @@ or changing anything in Cliniko.
     return `<div class="ph-pa"><div class="ph-pa-hd"><span class="ph-pa-t">Pulse in action</span><div class="ph-tng2-seg ph-pa-spd">${spd(1, rate + " / min")}${spd(0, "Slowed")}</div></div>
       <div class="ph-pa-sides">${phPaSideHtml("R", marks, prior, tplShow, rate, rhy)}${phPaSideHtml("L", marks, prior, tplShow, rate, rhy)}</div></div>`;
   }
-  // the beat clock: her rate, halved when Slowed; Interrupted drops beats at uneven times, Intermittent every fourth, Rate change @ rest drifts
+  // the beat clock: her rate, halved when Slowed; Interrupted drops beats at uneven times, Intermittent every fourth, Rate change @ rest drifts.
+  // Each beat keeps its count (n), so Amplitude change and Feeble-absent can tell one beat from the next
   const phPaSkip = (n, rhy) => (rhy.includes("int") && [4, 11, 15, 23, 27].includes(n % 30)) || (rhy.includes("itm") && n % 4 === 3);
   function phPaAdvance(dt) {
     const P = PH_PA, d = dt * (P.slow ? .5 : 1); P.T += d;
     P.acc += d * P.rate * (P.rhy.includes("chg") ? 1 + .16 * Math.sin(P.T * .8) : 1) / 60;
-    while (P.acc >= 1) { P.acc -= 1; P.n++; if (!phPaSkip(P.n, P.rhy)) P.beats.push(P.T); }
-    if (P.beats.length > 4) P.beats = P.beats.filter(b => P.T - b < 1.5);
+    while (P.acc >= 1) { P.acc -= 1; P.n++; if (!phPaSkip(P.n, P.rhy)) P.beats.push({ t: P.T, n: P.n }); }
+    if (P.beats.length > 4) P.beats = P.beats.filter(b => P.T - b.t < 1.5);
   }
   PH_PP.SC.pulse = (S, svg) => {
     S.warm = [1, 0];   // a still first frame: every arch at rest
     PH_PA.rate = +svg.dataset.paRate || 72; PH_PA.rhy = svg.dataset.paRhy || "";
     let items = phPaLay(svg), w0 = svg.parentElement ? svg.parentElement.clientWidth : 0;
-    const draw = () => (items || []).forEach(o => {
-      let k = 0; PH_PA.beats.forEach(tb => { k = Math.max(k, phPaKern(PH_PA.T - tb - o.dl, o.wi)); });
-      o.j = o.wi ? Math.sin(PH_PA.T * 170) * .7 * Math.min(1, k) : 0;   // wiry: a taut tremor while it holds
-      o.p.setAttribute("d", phPaArchD(o, k));
-      if (o.ar) o.ar.setAttribute("transform", `translate(0 ${(-4 * Math.min(1.2, k)).toFixed(2)})`);
+    // each arch: the latest beat that has reached it (the beat starts at Chi), how far into it, and that beat's count
+    const draw = () => (items || []).forEach(it => {
+      let b = null; PH_PA.beats.forEach(x => { if (PH_PA.T - x.t - it.dl >= 0 && (!b || x.t > b.t)) b = x; });
+      const u = b ? PH_PA.T - b.t - it.dl : 9;
+      it.g.innerHTML = phPaDraw(it.c, it.o, phPaKern(u, 0), u, b ? b.n : 0, PH_PA.T, false);
     });
     // a new width (window resized, the page shown after being hidden): draw it again at the new size
     if (typeof ResizeObserver === "function" && svg.parentElement) {
@@ -77612,6 +77734,8 @@ or changing anything in Cliniko.
   function phFbrPulseWords(p) {
     const out = [];
     Object.values((p && p.pulse) || {}).forEach(m => phPulseQuals(m).forEach(q => out.push(String(q.quality).toLowerCase())));
+    // her 2026-10-22: Deep and Floating come from where she draws too (phPulseAutoDepth), the same as ticking them
+    const dp = phPulseAutoDepth((p && p.pulse) || {}); if (dp.deep.length) out.push("deep"); if (dp.floating.length) out.push("floating");
     const h = (p && p.hammer) || {};
     (h.rhythm || []).forEach(w => out.push(String(w).toLowerCase()));
     (h.impressions || []).forEach(w => out.push(String(w).toLowerCase()));
@@ -98970,45 +99094,57 @@ or changing anything in Cliniko.
   // the three LINES and Pounding is the arrows laid over one of them.
   const PH_PULSE_SHAPES = [
     { id: "normal", quality: "Normal", label: "⌒ Normal" },
-    { id: "thin", quality: "Thin", label: "〰 Thin" },
+    // her 2026-10-22 "thin and narrow are the same, change to thin/narrow": one chip (an old Narrow tick draws as Thin)
+    { id: "thin", quality: "Thin", label: "〰 Thin / Narrow" },
     { id: "wiry", quality: "Wiry", label: "― Wiry" },
     // her words: "arrow up = pounding, 1 arrow slight pounding, 3 arrows strong pounding"
     { id: "slightpound", quality: "Slight pounding", label: "↑ Slight pounding" },
-    { id: "pounding", quality: "Pounding", label: "↑↑↑ Pounding" },
+    // her 2026-10-22 "pounding 1, 2 3 arrows": ↑ Slight pounding, ↑↑ Pounding, ↑↑↑ Robust pounding
+    { id: "pounding", quality: "Pounding", label: "↑↑ Pounding" },
+    { id: "robust", quality: "Robust Pounding", label: "↑↑↑ Robust pounding" },
     // also hers (2026-10-13): Blocked = a loop that crosses itself; Small / Large
     // compressed = a narrow / a wide red peak standing on a dotted baseline
     // Weak = three DOWN arrows over a dashed arch (the mirror of Pounding's up arrows)
-    { id: "weak", quality: "Weak", label: "↓↓↓ Weak" },
+    // her 2026-10-22 "weak/soft/flat - they all have shorter amplitude. can use arrows going down 1, 2, and 3", by how much it gives:
+    // ↓ Soft, ↓↓ Weak, ↓↓↓ Flat (Flat left Concavity for here)
+    { id: "soft", quality: "Soft", label: "↓ Soft" },
+    { id: "weak", quality: "Weak", label: "↓↓ Weak" },
+    { id: "flatamp", quality: "Flat", label: "↓↓↓ Flat" },
     { id: "blocked", quality: "Blocked", label: "α Blocked" },
     { id: "smallcomp", quality: "Small compressed", label: "▴ Small compressed" },
     { id: "medcomp", quality: "Medium compressed", label: "▲ Medium compressed" },
   ];
   // a quality typed before it had a drawing (older marks hold Wiry as plain text)
   // still draws as its shape
-  const PH_PULSE_SHAPE_OF_Q = { normal: "normal", thin: "thin", wiry: "wiry", pounding: "pounding", "slight pounding": "slightpound", weak: "weak", blocked: "blocked", "small compressed": "smallcomp", "medium compressed": "medcomp" };
+  const PH_PULSE_SHAPE_OF_Q = { normal: "normal", thin: "thin", wiry: "wiry", pounding: "pounding", "slight pounding": "slightpound", weak: "weak", blocked: "blocked", "small compressed": "smallcomp", "medium compressed": "medcomp",
+    narrow: "thin", "robust pounding": "robust", soft: "soft", flat: "flatamp" };
   // drawings that stand on their own (no arrows laid over them)
   const PH_PULSE_STANDALONE = ["blocked", "smallcomp", "medcomp"];
   // every quality in one grid cell, in the order she added them: the cell's own
   // {quality, shape} first, then `more` (a cell can hold several, e.g. Thin + Weak)
   function phPulseQuals(m) {
     if (!m || !m.quality) return [];
-    const out = [{ quality: m.quality, shape: m.shape || null }];
-    (Array.isArray(m.more) ? m.more : []).forEach(x => { if (x && x.quality) out.push({ quality: x.quality, shape: x.shape || null }); });
-    return out.map(q => ({ quality: q.quality, shape: q.shape || PH_PULSE_SHAPE_OF_Q[String(q.quality).toLowerCase()] || null }));
+    const out = [{ quality: m.quality, shape: m.shape || null, n: m.n }];
+    (Array.isArray(m.more) ? m.more : []).forEach(x => { if (x && x.quality) out.push({ quality: x.quality, shape: x.shape || null, n: x.n }); });
+    // n: how many Small compressed points the cell holds (her 2026-10-22), only kept when more than one
+    return out.map(q => Object.assign({ quality: q.quality, shape: q.shape || PH_PULSE_SHAPE_OF_Q[String(q.quality).toLowerCase()] || null }, q.n > 1 ? { n: Math.min(3, q.n) } : {}));
   }
-  const phPulseQualText = m => phPulseQuals(m).map(q => q.quality).join(" + ");
+  const phPulseQualText = m => phPulseQuals(m).map(q => q.quality + (q.n > 1 ? " ×" + q.n : "")).join(" + ");
   // tap a stamp on a cell: adds that quality to the cell, or takes just that one
-  // off if it is already there (her pick 2026-10-13, "keep adding"); erase clears the cell
+  // off if it is already there (her pick 2026-10-13, "keep adding"); erase clears the cell. Small compressed is the one exception
+  // (her 2026-10-22 "can have multiple in the same cell"): tapping it again adds a point, up to three, and a fourth tap takes it off
   function phPulseCellToggle(marks, key, stamp) {
     if (stamp === "erase") { delete marks[key]; return; }
     const known = PH_PULSE_SHAPES.find(s => s.id === stamp);
     const add = known ? { quality: known.quality, shape: known.id } : { quality: stamp, shape: null };
     const cur = phPulseQuals(marks[key]);
     const has = cur.findIndex(q => q.quality.toLowerCase() === add.quality.toLowerCase());
-    const list = has >= 0 ? cur.filter((q, i) => i !== has) : cur.concat(add);
+    const list = has >= 0 && cur[has].shape === "smallcomp" && (cur[has].n || 1) < 3 ? cur.map((q, i) => i === has ? Object.assign({}, q, { n: (q.n || 1) + 1 }) : q)
+      : has >= 0 ? cur.filter((q, i) => i !== has) : cur.concat(add);
     if (!list.length) { delete marks[key]; return; }
-    const next = { quality: list[0].quality, shape: list[0].shape };
-    if (list.length > 1) next.more = list.slice(1).map(q => ({ quality: q.quality, shape: q.shape }));
+    const one = q => Object.assign({ quality: q.quality, shape: q.shape }, q.n > 1 ? { n: q.n } : {});
+    const next = one(list[0]);
+    if (list.length > 1) next.more = list.slice(1).map(one);
     marks[key] = next;
   }
   // named-quality stamps: Dr Hammer's "First Impressions" vocabulary in his
@@ -99018,17 +99154,18 @@ or changing anything in Cliniko.
   // new (her 2026-10-15 grouping ask named it as an Arterial radius example,
   // not in her reference tables) -- it renders as a plain text tag like any
   // other word here, DRAFT, hers to correct or remove.
-  const PH_PULSE_OTHER_Q = ["Tense", "Tight", "Robust Pounding", "Amplitude Change", "Smooth Vibration", "Rough Vibration", "Choppy", "Reduced Substance",
-    "Muffled", "Diffuse", "Slippery", "Leather-Hard", "Ropy", "Feeble-Absent", "Inflated", "Flat", "Narrow", "Heat", "Thick", "Deep", "Floating", "Empty", "Restricted", "Long", "Soft", "Forceful", "Loose", "Muddy"];
+  // her 2026-10-22: Robust Pounding, Flat, Narrow and Soft became drawn chips (PH_PULSE_SHAPES), Loose was removed ("Remove it")
+  const PH_PULSE_OTHER_Q = ["Tense", "Tight", "Amplitude Change", "Smooth Vibration", "Rough Vibration", "Choppy", "Reduced Substance",
+    "Muffled", "Diffuse", "Slippery", "Leather-Hard", "Ropy", "Feeble-Absent", "Inflated", "Heat", "Thick", "Deep", "Floating", "Empty", "Restricted", "Long", "Forceful", "Muddy"];
   // her 2026-10-15 "group the pulse details" ask: her own 4 names and
   // examples (concavity: normal/wiry; arterial radius: thin/blocked/muddy;
   // intensity: pounding/weak; additional textures: compressed); every other
   // quality's placement here is MY clinical read, DRAFT, hers to move.
   const PH_PULSE_GROUPS = [
-    { label: "Concavity", q: ["normal", "wiry", "Flat"] },
-    { label: "Arterial radius", q: ["thin", "blocked", "Muddy", "Narrow", "Thick", "Inflated", "Empty", "Restricted"] },
-    { label: "Intensity", q: ["slightpound", "pounding", "weak", "Robust Pounding", "Amplitude Change", "Reduced Substance", "Feeble-Absent", "Soft", "Forceful"] },
-    { label: "Additional textures", q: ["smallcomp", "medcomp", "Tense", "Tight", "Smooth Vibration", "Rough Vibration", "Choppy", "Muffled", "Diffuse", "Slippery", "Leather-Hard", "Ropy", "Heat", "Deep", "Floating", "Long", "Loose"] },
+    { label: "Concavity", q: ["normal", "wiry"] },
+    { label: "Arterial radius", q: ["thin", "blocked", "Muddy", "Thick", "Inflated", "Empty", "Restricted"] },
+    { label: "Intensity", q: ["soft", "weak", "flatamp", "slightpound", "pounding", "robust", "Amplitude Change", "Reduced Substance", "Feeble-Absent", "Forceful"] },
+    { label: "Additional textures", q: ["smallcomp", "medcomp", "Tense", "Tight", "Smooth Vibration", "Rough Vibration", "Choppy", "Muffled", "Diffuse", "Slippery", "Leather-Hard", "Ropy", "Heat", "Deep", "Floating", "Long"] },
   ];
   // her real paper chart (photo, 2026-09-13): two mirrored wrist halves, each
   // a row of organ-zone columns (narrow = one system, wide = 2-3 stacked).
@@ -99136,14 +99273,15 @@ or changing anything in Cliniko.
   // lighter) for Weak. The arrows are their own layer: alone they are just the
   // arrows, and she stacks a line under them (Normal / Wiry / Thin).
   // Blocked, Small and Medium compressed are drawings of their own.
-  function phPulseShapeSvg(shape, arrows, dashed, vw) {
+  function phPulseShapeSvg(shape, arrows, dashed, vw, n) {
     // vw: a wider box for the Pulse page chart's wide columns (her 2026-10-21 "proportionate pulse drawings to be wider"): the same shapes,
     // longer, the same height
     // the arrows are a layer of their own (her 2026-10-13: "separate pounding from pulse so I can
     // layer it"): alone they draw just the arrows, with no line under them
-    if (shape === "pounding") { shape = null; arrows = "up"; }
-    else if (shape === "slightpound") { shape = null; arrows = "up1"; }
-    else if (shape === "weak") { shape = null; arrows = "down"; }
+    // her 2026-10-22 arrow scales: up1 / up2 / up3 = Slight pounding / Pounding / Robust pounding, dn1 / dn2 / dn3 = Soft / Weak / Flat
+    const ARR = { slightpound: "up1", pounding: "up2", robust: "up3", soft: "dn1", weak: "dn2", flatamp: "dn3" };
+    if (arrows === "up") arrows = "up3"; else if (arrows === "down") arrows = "dn3";
+    if (ARR[shape]) { arrows = ARR[shape]; shape = null; }
     else if (shape === "wiry") shape = "flat";
     else if (shape === "thin") { shape = "flat"; dashed = true; }
     if (shape === "blocked") return `<svg viewBox="20 14 104 100" class="ph-pulse-shape sq" aria-hidden="true"><path d="M92 22 C86 44 80 64 70 82 C62 96 54 104 46 102 C36 100 29 88 29 70 C29 58 28 48 36 46 C48 44 66 54 80 62 C94 70 108 76 116 88" fill="none" stroke="currentColor" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
@@ -99151,7 +99289,9 @@ or changing anything in Cliniko.
       const half = shape === "smallcomp" ? 1.6 : 8;   // a narrow peak / a wide one, same height, on a dotted baseline
       // her call: the small peak needs no dotted baseline; the medium one keeps it
       const base = shape === "medcomp" ? `<line x1="1" y1="11.5" x2="23" y2="11.5" stroke="currentColor" stroke-width="1.1" stroke-dasharray="1.5 1.5"/>` : "";
-      return `<svg viewBox="0 0 24 14" class="ph-pulse-shape plv-c" aria-hidden="true">${base}<path d="M12 2.2 L${12 + half} 11.5 L${12 - half} 11.5 Z" fill="currentColor"/></svg>`;
+      // Small compressed: one peak for each point in the cell (n, up to three), spread evenly
+      const xs = shape === "smallcomp" && n === 2 ? [7.5, 16.5] : shape === "smallcomp" && n === 3 ? [4.5, 12, 19.5] : [12];
+      return `<svg viewBox="0 0 24 14" class="ph-pulse-shape plv-c" aria-hidden="true">${base}<path d="${xs.map(x => `M${x} 2.2 L${x + half} 11.5 L${x - half} 11.5 Z`).join(" ")}" fill="currentColor"/></svg>`;
     }
     const W = vw || 24, c = W / 2, e = W - 2, gap = W > 24 ? 8 : 6;   // the box's width, its middle, the line's far end, the arrows' spacing
     const lift = arrows ? 1 : 0;   // arrows hang under the line, so the line moves up to make room
@@ -99162,7 +99302,8 @@ or changing anything in Cliniko.
     if (!line && !arrows) return "";
     const upArrow = cx =>`<path d="M${cx - 2.3} 9.8 L${cx} 6.4 L${cx + 2.3} 9.8 Z" fill="currentColor"/><rect x="${cx - 0.9}" y="9.4" width="1.8" height="4.2" fill="currentColor"/>`;
     const downArrow = cx => `<rect x="${cx - 0.9}" y="6.4" width="1.8" height="4.2" fill="currentColor"/><path d="M${cx - 2.3} 10.2 L${cx + 2.3} 10.2 L${cx} 13.6 Z" fill="currentColor"/>`;
-    const arrowSet = arrows === "up" ? [c - gap, c, c + gap].map(upArrow).join("") : arrows === "up1" ? upArrow(c) : arrows === "down" ? `<g opacity=".8">${[c - gap, c, c + gap].map(downArrow).join("")}</g>` : "";
+    const ac = arrows ? +String(arrows).slice(-1) || 0 : 0, axs = ac === 1 ? [c] : ac === 2 ? [c - gap / 2, c + gap / 2] : [c - gap, c, c + gap];
+    const arrowSet = !ac ? "" : String(arrows).startsWith("up") ? axs.map(upArrow).join("") : `<g opacity=".8">${axs.map(downArrow).join("")}</g>`;
     // arrows with no line under them sit in the middle of the box instead of hanging low
     const plv = !line ? "plv-r" : shape === "normal" ? (lift ? "plv-aa" : "plv-a") : (lift ? "plv-fa" : "plv-f");   // arch / flat line, with or without arrows, arrows alone
     return `<svg viewBox="0 0 ${W} 14" class="ph-pulse-shape ${plv}" aria-hidden="true">${line}${line ? arrowSet : `<g transform="translate(0 -3.2)">${arrowSet}</g>`}</svg>`;
@@ -99174,21 +99315,24 @@ or changing anything in Cliniko.
   // itself; Blocked / Small / Medium compressed follow
   function phPulseGlyphs(quals, vw) {
     const shapes = quals.map(q => q.shape).filter(Boolean), has = s => shapes.includes(s);
-    const pound = has("pounding"), slight = has("slightpound"), weak = has("weak"), thin = has("thin"), lines = [];
+    const thin = has("thin"), lines = [];
     if (has("normal")) lines.push("normal");
     if (has("wiry")) lines.push("flat");
     // her 2026-10-15 correction: Thin alone keeps Normal's concave arch, just dotted --
     // only Thin WITH Wiry (handled above) is the straight dotted line
     if (!lines.length && thin) lines.push("normal");
-    const out = [], upKind = pound ? "up" : slight ? "up1" : null;   // 3 arrows = strong, 1 arrow = slight
+    // her 2026-10-22 arrow scales: the most arrows ticked wins, up (taller) and down (shorter) each
+    const upKind = has("robust") ? "up3" : has("pounding") ? "up2" : has("slightpound") ? "up1" : null;
+    const dnKind = has("flatamp") ? "dn3" : has("weak") ? "dn2" : has("soft") ? "dn1" : null, out = [];
     if (lines.length) {
-      lines.forEach((k, i) => out.push(phPulseShapeSvg(k, i === 0 ? (upKind || (weak ? "down" : null)) : null, thin, vw)));
-      if (upKind && weak) out.push(phPulseShapeSvg("weak", null, false, vw));
+      lines.forEach((k, i) => out.push(phPulseShapeSvg(k, i === 0 ? (upKind || dnKind) : null, thin, vw)));
+      if (upKind && dnKind) out.push(phPulseShapeSvg(null, dnKind, false, vw));
     } else {
-      if (upKind) out.push(phPulseShapeSvg(pound ? "pounding" : "slightpound", null, false, vw));
-      if (weak) out.push(phPulseShapeSvg("weak", null, false, vw));
+      if (upKind) out.push(phPulseShapeSvg(null, upKind, false, vw));
+      if (dnKind) out.push(phPulseShapeSvg(null, dnKind, false, vw));
     }
-    PH_PULSE_STANDALONE.filter(has).forEach(s => out.push(phPulseShapeSvg(s)));
+    const sc = quals.find(q => q.shape === "smallcomp");
+    PH_PULSE_STANDALONE.filter(has).forEach(s => out.push(phPulseShapeSvg(s, null, false, undefined, s === "smallcomp" && sc ? sc.n || 1 : 1)));
     return out;
   }
   // what goes inside a grid cell: the drawings first, then a small word for each
@@ -99214,7 +99358,7 @@ or changing anything in Cliniko.
   // = yang deficiency. Counts, never a made-up composite.
   function phVisitPulseScores(marks) {
     const levelIdx = {}; PH_PULSE_LEVELS.forEach((l, i) => { levelIdx[l.id] = i + 1; });
-    const out = { R: null, L: null, thin: 0, pounding: 0, slight: 0, weak: 0 };
+    const out = { R: null, L: null, thin: 0, pounding: 0, slight: 0, weak: 0, soft: 0, flat: 0 };
     ["R", "L"].forEach(side => {
       const perCol = {};
       Object.keys(marks || {}).forEach(k => {
@@ -99228,7 +99372,8 @@ or changing anything in Cliniko.
     // a cell with several qualities counts each one once (her pick 2026-10-13); Normal adds to nothing
     Object.values(marks || {}).forEach(m => phPulseQuals(m).forEach(({ quality }) => {
       const q = String(quality || "").toLowerCase();
-      if (q === "thin") out.thin++; else if (q === "pounding" || q === "robust pounding") out.pounding++; else if (q === "slight pounding") out.slight++; else if (q === "weak") out.weak++;
+      if (q === "thin" || q === "narrow") out.thin++; else if (q === "pounding" || q === "robust pounding") out.pounding++; else if (q === "slight pounding") out.slight++; else if (q === "weak") out.weak++;
+      else if (q === "soft") out.soft++; else if (q === "flat") out.flat++;
     }));
     return out;
   }
@@ -99237,7 +99382,7 @@ or changing anything in Cliniko.
     const s = phVisitPulseScores(marks), p = prevMarks ? phVisitPulseScores(prevMarks) : null;
     const depth = `<span><b>Depth</b> R ${phPulseScoreFmt(s.R)} · L ${phPulseScoreFmt(s.L)}${p ? ` <span class="faint">(last visit R ${phPulseScoreFmt(p.R)} · L ${phPulseScoreFmt(p.L)})</span>` : ""}</span>`;
     const dia = s.thin ? `<span><b>Diameter</b> Thin ×${s.thin} · blood deficiency</span>` : "";
-    const amp = s.pounding || s.slight || s.weak ? `<span><b>Amplitude</b> ${[s.pounding ? `Pounding ×${s.pounding} · inflammation` : "", s.slight ? `Slight pounding ×${s.slight}` : "", s.weak ? `Weak ×${s.weak} · yang deficiency` : ""].filter(Boolean).join(", ")}</span>` : "";
+    const amp = s.pounding || s.slight || s.weak || s.soft || s.flat ? `<span><b>Amplitude</b> ${[s.pounding ? `Pounding ×${s.pounding} · inflammation` : "", s.slight ? `Slight pounding ×${s.slight}` : "", s.soft ? `Soft ×${s.soft}` : "", s.weak ? `Weak ×${s.weak} · yang deficiency` : "", s.flat ? `Flat ×${s.flat}` : ""].filter(Boolean).join(", ")}</span>` : "";
     return `<div class="ph-pulse-scores">${depth}${dia}${amp}</div>`;
   }
   // the most recent SAVED session with pulse marks -- her spreadsheet's
@@ -99322,7 +99467,7 @@ or changing anything in Cliniko.
     const s = phVisitPulseScores(marks);
     const parts = [`Depth R ${phPulseScoreFmt(s.R)} · L ${phPulseScoreFmt(s.L)}`];
     if (s.thin) parts.push(`Diameter Thin ×${s.thin} — blood deficiency`);
-    const amp = [s.pounding ? `Pounding ×${s.pounding} — inflammation` : "", s.slight ? `Slight pounding ×${s.slight}` : "", s.weak ? `Weak ×${s.weak} — yang deficiency` : ""].filter(Boolean).join(", ");
+    const amp = [s.pounding ? `Pounding ×${s.pounding} — inflammation` : "", s.slight ? `Slight pounding ×${s.slight}` : "", s.soft ? `Soft ×${s.soft}` : "", s.weak ? `Weak ×${s.weak} — yang deficiency` : "", s.flat ? `Flat ×${s.flat}` : ""].filter(Boolean).join(", ");
     if (amp) parts.push(`Amplitude ${amp}`);
     return parts.join(" · ");
   }
@@ -100563,13 +100708,15 @@ or changing anything in Cliniko.
   // every note the current draft triggers, keyed by the row it belongs under
   function phVisitPulseKbHits(f) {
     const notes = phPulseNotes(), h = f.hammer;
-    const out = { grid: [], rhythm: [], rate: [], impressions: [], wave: [], depths: {}, positions: {} };
+    const out = { grid: [], rhythm: [], rate: [], impressions: [], wave: [], depths: {}, positions: {} }, dp = phPulseAutoDepth(f.pulse || {});
     Object.keys(f.pulse || {}).forEach(k => {
       const [side, colId, level] = k.split(":");
       const col = (PH_PULSE_CHART[side] || []).find(c => c.id === colId);
       const wheres = ["any", `side:${side}`, `depth:${PH_PULSE_LEVEL_DEPTH[level] || level}`];
       (col ? col.pos.split("–") : []).forEach(p => { wheres.push(`grid:${side}:${p}`); if (p === "proximal") wheres.push("grid:proximal"); });
       phPulseQuals(f.pulse[k]).forEach(q => out.grid.push(...phPulseKbFind(notes, wheres, q.quality)));
+      if (dp.deep.includes(k)) out.grid.push(...phPulseKbFind(notes, wheres, "Deep"));   // drawn below its normal depth (her 2026-10-22)
+      if (dp.floating.includes(k)) out.grid.push(...phPulseKbFind(notes, wheres, "Floating"));
     });
     h.rhythm.forEach(q => out.rhythm.push(...phPulseKbFind(notes, ["rhythm"], q)));
     const tags = phPulseKbRateTags(h.rate);
