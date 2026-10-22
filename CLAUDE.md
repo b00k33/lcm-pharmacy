@@ -1214,7 +1214,7 @@ from the file, **never stored**; only her Agree / Not this patient writes
 `rec.patterns.agreed`/`.dismissed`. Strength is words (Likely / Possible /
 A hint) + a clue count, never a percentage. A card shows only its clues and
 Agree / Not this patient (no letters, food, points or supplement chips); an open card also shows the pattern's concept picture
-[Concept pictures].
+[Concept pictures; since 2026-10-22 drawn from the body: a natural hand, a real stomach / throat / kidney, vessel walls with cells, and a person beside the pot on Heat, Yang, Yin and Qi deficiency].
 One pattern can be ★ main. Formula ideas are OFF (she dislikes suggested
 herbs). A rule she overrode in Settings never gains new clue keys later
 (deliberate). All pattern wording is Claude-drafted, hers to correct.
@@ -1279,7 +1279,9 @@ detector, and **session-package counting**) branches on it.
 diagrams with a "brush" (pick a sign, then tap its regions). Data shapes:
 `visitFnd[id].tng = {colour, colourMore[], colourAt, shape, moist, coatThick, coatColour,
 coatArea[] (root / mid = centre), coatQual{}, marks{}, under, thickAt{}, deviation, v2}`, `visitFnd[id].abd =
-{tension, tensionAt{}, marks{sign:[zones]}, v2}`. The exam pages are the
+{tension, tensionAt{} (read-only legacy: nothing new is written), tempC{epi, lower} (°C at CV12 / CV4, 28–40, no navel),
+marks{sign:[zones]} (Seen signs distended / bulging / sunken / vispulse sit by ROW: whole, epi, umb, lower), v2}`
+(her 2026-10-22 Abdomen redesign, see BUILD-NOTES). The exam pages are the
 ONE entry; `phExamMirrorToday` copies today's exam into the dated record.
 Pulse: each tick is dated and each new day starts blank; Cun / Guan / Chi
 each head ONE column (R: Up. Resp / Stomach / Bladder, L: Heart / Liver /
@@ -1625,7 +1627,7 @@ origin/main:index.html`; don't trust this list's age.
   Lian Jie Du Tang, Da Chai Hu Tang.
 
 **Built on my reading — hers to confirm:** the pulse chart starts blank each
-day; abdomen tension is one whole-abdomen value; Usual period shows Wheel |
+day; Usual period shows Wheel |
 Chart.
 
 **Paused or not built:**
