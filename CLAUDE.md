@@ -127,7 +127,8 @@ reads it; do not render it again.
 
 - **Today's visit** is a checklist home: a one-line strip on top (last visit
   date · likely pattern · phase and visit number · flagged history), the
-  **complaint compass** (each complaint scored every visit, with the Fang Bing Ren
+  **complaint compass** (each complaint scored every visit against its baseline, grouped by
+  body area, with the pains from the pain map as rows and the Fang Bing Ren
   signs she has answered rated under their complaint, Energy as the fatigue
   complaint's own score; it replaced the Re-check on 2026-10-14 and still writes `rec.recheck`),
   the return-visit "Worth a look" questions and one progress line, then
@@ -1276,8 +1277,8 @@ the main and secondary complaints scored each visit (0–10 or % better),
 charted over time, Energy 1–10 under it. It replaced the Re-check card on
 2026-10-14 and still mirrors into `rec.recheck` [Today's visit = the
 complaint compass]. Its scores are joined 0–10 bars and "n of m done" sits
-in its header. Since 2026-10-21 it is a table: Complaint | Since | Goal |
-Today | Change | Note. The Goal cell is editable per complaint
+in its header. Since 2026-10-21 it is a table (columns: see "Baseline Compass"
+below). The Goal cell is editable per complaint
 (`phCxGoal`, hers in `complaint.mainGoal` / `secondary.goal` through
 `phCcWrite`, "↺ auto" returns it) and the Care Plan Goal reads the same
 lines; the Note box is always open and saves as she types (`phCxTypeSave`)
@@ -1296,7 +1297,22 @@ table is gone: one read-only "Today's ratings" line (`phTsRatingsLineHtml`),
 Watch = the template's Red flags only, no "Apply the usual". The Care Plan Goal
 reads complaints only (derived Fang Bing Ren "complaints" are gone from
 `phCcSecAll`); the letter's "Watching:" = complaints + the sign rows she can
-see (DRAFT wording). The checks are compact rows, two across, each with Open and
+see (DRAFT wording). **Baseline Compass (her 2026-10-22 synth22 and 8 picks, "Baseline Compass"
+in BUILD-NOTES.md; the table is now Complaint | Baseline | Trend | Today | From baseline | Note):**
+every row keeps a BASELINE = its FIRST score (derived on read, with its date; the one stored thing
+is `rec.ccTrack.base[rowKey] = { day }` from "Move baseline to today", `phCxRebase`) and shows how far
+it is from it, + = better on every row (a sign is a running total: Better +1, Worse −1, Same 0, Gone
+counts better). Rows sit in the nine Fang Bing Ren body areas (`phCxGroups`; headings always shown,
+each with ↑ → ↓ counts, an average bar, a fold and "Same as last time" = `phCxRestSame`; a
+complaint nothing places goes to Other); Energy is its own group. **The pain map's rows are the pain
+rows** (group "Pain, muscles & joints"): the score is the pain store's own
+(`rec.msk.visits[day].pains["region|side"].now`, written through `phPmScoreSet(..., force)`), the
+Goal is `painMap[i].goal`, the starred pain stands in for a typed pain complaint, and the separate
+Pain card is gone from Today's visit while the Compass holds them. One model (`phCxModel`) feeds the
+rows, the chart (From baseline | Score, a group filter), the glance line and the live paint while a
+slider moves (`phCxLiveRun`); the view state (From baseline | From last visit, chart mode, filter,
+folds, open drawer) is per patient and never stored. Phone: no chart, groups fold, short group
+names. The checks are compact rows, two across, each with Open and
 Skip ▾ (Not today / Always for this patient); a skipped check folds into the
 "Skipped" line and counts as done (`phTodayPartOk`). Quick assess shows 8
 questions in 2 columns on Today's visit and Fang Bing Ren [synth22: Today's
