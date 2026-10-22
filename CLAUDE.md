@@ -1220,6 +1220,12 @@ One pattern can be ★ main. Formula ideas are OFF (she dislikes suggested
 herbs). A rule she overrode in Settings never gains new clue keys later
 (deliberate). All pattern wording is Claude-drafted, hers to correct.
 
+**Formula pictures (`PH_FP`, 2026-10-22):** Ban Xia Hou Po Tang and Huang Lian Jie Du Tang each have a moving picture of the body (three burners,
+trouble, herbs at work, tongue + pulse inset), three stops Trouble / Formula at work / Settled, tap-a-herb chips. It replaces the pattern picture on
+the Guide card for those formulas and also shows on Dispense (end of the right column) and the Care Plan formula cell. Same runner as the pattern
+pictures. A new formula = one `PH_FP.SC[id]` scene + `PH_FP.HERBS[id]` + `PH_FP.PAT[id]`; no scene = the pattern picture stays. BUILD-NOTES.md,
+"Formula pictures".
+
 ## Guide — Families (study + edit)
 The Guide is **[Families] [Tongue map] [Pulse]**: a herb card is the body type with its formulas under it, notes-only formulas are dashed tiles, a
 study card sits on the right (in Study, the concept picture of the pattern(s) the family counts for, under the pearl). **The card's rows ARE the Fang Bing Ren tables** (`PH_FORMULAS[id]`): her edits live in `PHARMACY.fbrEdits[id]`
