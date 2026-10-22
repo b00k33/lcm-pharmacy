@@ -1156,6 +1156,15 @@ Snoozed / All recipes. Phone = a weighing table; desktop = a week-banded
 list with "Fix short ▾". "When" is WEEKS ("Wk 39"; overdue = "last week" in
 amber, sorted first); Plan ▾ = This week / Next week / Pick a week. The
 date popover is mounted globally; no `window.prompt()` anywhere.
+Since 2026-10-22 (her 8 picks, refill-redesign-mock-2026-10-22.html): jar
+rows (jar filled to the stock line, grams + days under the name); week tiles
+(Overdue / This week / Next week, tap filters); **Make weighs in the row**
+(tap each herb, ring fills, Finish = the same phDispenseGate → refMakeCommit
+save) then "Made today" with Undo; a planned formula **leaves by itself**
+when its stock went UP after planning (`h.refillQty` stamped at planning;
+older plans: week passed + above its line) with Undo; header primary is the
+gold "+ Plan a formula" (search sheet); New formula recipe sits in ⋯ and
+opens as a side sheet (#refPresPanel), never inside the card.
 
 **To Order, desktop** (>900px) = a 3-column board that fills the window:
 **Needs ordering** (a To order | Running low switch, rows A to Z in fixed
