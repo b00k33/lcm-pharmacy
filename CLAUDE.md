@@ -1361,8 +1361,9 @@ row lit = her words as a complaint. The checks are compact rows, two across, eac
 Skip ▾ (Not today / Always for this patient); a skipped check folds into the
 "Skipped" line and counts as done (`phTodayPartOk`). Quick assess shows 8
 questions in 2 columns on Today's visit and Fang Bing Ren [synth22: Today's
-visit tidy ...]. "Log today's session" lives in the Treatment tab's
-stepper / Complete flow (`data-pres-acu-log`). **"No acupuncture — herbs
+visit tidy ...]. A visit is finished in ONE place, the Treatment tab's "✓ Complete session N"
+(`data-pres-acu-log`; her 2026-10-23 pick: no "Log" wording, Today's visit shows "Open Treatment"
+then "Session N complete"). **"No acupuncture — herbs
 only today"** saves `noTreatment:true`; every reader of `rec.acuSessions`
 (the printable record, Patient Journey, the Visits table, the quiet-patient
 detector, and **session-package counting**) branches on it.

@@ -1910,3 +1910,16 @@ Compass", list stays open; Usu Yes; No (no row); Yes again clears and unpins; �
 "cold" = 8 + "Show all 27" (scrolls); Enter adds "Heartburn" as a complaint; "Add to Watch" makes a Watching chip; G typed in the box
 doesn't rate a sign; desktop + 375 px pictures; no console errors (only the harness's CDN ones). **Not tested:** her real patients,
 her phone.
+
+## 2026-10-23 · One way to finish a visit: "✓ Complete session N" (the "Log" wording goes)
+Her words, on the Today's visit Acupuncture step ("Logged today"): "what does logging session do?", then "i dont like this feature".
+Her popup picks: what she disliked = "Unclear what it does"; a visit counts as done "When I finish Treatment"; build = "Yes, build it".
+- Today's visit Treat step (`phTodayCarePlanEssentialsHtml`): the Acupuncture step's "Log today's session" button became
+  **Open Treatment** (`data-flow-go="treatment"`); once done it reads "Session N complete".
+- Treatment tab: the card's button reads "✓ Complete this session" / "Complete herbs check-in" and the band's "✓ Complete session N" /
+  "✓ Complete herbs check-in" (the herbs regex in `phTpBandHtml` still matches); "log another session" → "add another session". Both carry
+  the hover note "Saves today's visit: points, response and findings, and fills this session on the Session grid".
+- The save itself is unchanged (`data-pres-acu-log` handler).
+**Tested (sandbox):** a pain patient's Today's visit shows Open Treatment → Treatment shows "✓ Complete session 1" with the hover note →
+tap → band "✓ Session 1 complete", exactly one new session saved → Today's visit shows "Session 1 complete"; no console errors.
+**Not tested:** her phone; the herbs-only check-in label in the browser.
