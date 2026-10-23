@@ -13026,6 +13026,8 @@
   #pharmacyPage .ph-ivfs .pc { font-size: var(--fs-11); color: var(--ph-faint); min-height: 14px; text-align: center; }
   #pharmacyPage .ph-ivfs .c.empty .big { color: #B3BEC3; font-weight: 600; }
   #pharmacyPage .ph-ivfs .c.empty svg.cell { opacity: .45; }
+  /* her 2026-10-23 "auto calculate if possible": a stage worked out from its neighbours (phIvfFilled) -- its number in the soft ink, "worked out" under it */
+  #pharmacyPage .ph-ivfs .big.inf { color: var(--ph-soft); font-weight: 600; }
   #pharmacyPage .ph-ivfs .c.frz { background: var(--ph-blue-tint); }
   #pharmacyPage .ph-ivfs .c.frz .big { color: var(--ph-blue-deep); }
   #pharmacyPage .ph-ivfs .c.edit { background: var(--ph-gyn-tint); box-shadow: inset 0 0 0 1.5px var(--ph-gyn); }
@@ -89303,7 +89305,7 @@ or changing anything in Cliniko.
     const ivfD = kind === "ivf" ? phIvfDatesRead(name, plan) : null;
     const scans = kind === "ivf" ? phIvfScanList(name, plan) : [];
     // the egg count of this plan's own collection (partner link 2026-10-14: "12 Dec · 9 eggs", on her timeline and his)
-    const ivfRow = kind === "ivf" && plan ? phIvfLinkedCollection(name, plan) : null;
+    const ivfRow = kind === "ivf" && plan ? phIvfFilled(phIvfLinkedCollection(name, plan)) : null;
     const eggsTxt = ivfRow && ivfRow.eggs != null && ivfRow.eggs !== "" ? `${ivfRow.eggs} egg${+ivfRow.eggs === 1 ? "" : "s"}` : "";
     // her same 2026-10-16 ask: the Fertilisation report item used to be a
     // bare date with no result -- the round already carries the numbers
@@ -97136,6 +97138,7 @@ or changing anything in Cliniko.
     return chips.length ? `<span class="ph-ivfj-acct">${chips.join("")}</span>` : "";
   }
   function phIvfFunnelLine(r) {
+    r = phIvfFilled(r);
     const bits = [];
     if (r.eggs != null) bits.push(`${r.eggs} egg${r.eggs === 1 ? "" : "s"}`);
     if (r.mature != null) bits.push(`${r.mature} mature`);
@@ -97228,6 +97231,7 @@ or changing anything in Cliniko.
   // after a day-5 transfer, 11-13 after a day-3 one
   const phIvfHcgDays = t => /(^|\D)3(\D|$)/.test(String(t.embryoDay || "")) ? [11, 13] : [9, 11];
   function phIvfRailSteps(r) {
+    r = phIvfFilled(r);   // stages worked out from their neighbours count too
     const trs = (r.transfers || []).slice().sort((a, b) => phIvfSortKey(a.date).localeCompare(phIvfSortKey(b.date)));
     const t = trs[trs.length - 1] || null;
     const nScans = (r.scans || []).length;
@@ -97334,15 +97338,40 @@ or changing anything in Cliniko.
     ["blastocysts", "Blasts", "ivc-blast"], ["pgtNormal", "PGT ok", "ivc-pgt"], ["frozen", "Frozen", "ivc-frz"],
   ];
   const PH_IVF_COUNT_FIELDS = PH_IVF_STAGES.map(s => s[0]);
+  // her 2026-10-23 "auto calculate if possible e.g. 1 collected 1 blastocyst means 1 matured 1 fertilised": every lab stage is at most the
+  // stage before it and at least the stage after it (eggs ≥ mature ≥ fertilised ≥ day 3 ≥ blasts; PGT ok and frozen only push the
+  // earlier stages up). A blank stage whose two bounds meet can only be that number, so it is worked out on read, never stored; her typed
+  // number always wins. Returns a copy of the round with those stages filled and `_inf` = { field: "from X and Y" }.
+  function phIvfFilled(r) {
+    if (!r || r._inf) return r;
+    const chain = r.kind === "freeze" ? ["eggs", "mature", "frozen"] : ["eggs", "mature", "fertilised", "day3", "blastocysts"];
+    const floors = r.kind === "freeze" ? [] : [["pgtNormal", 4], ["frozen", 2]];   // [field, last chain index it bounds from below]
+    const val = f => (r[f] == null || r[f] === "" || !isFinite(+r[f])) ? null : +r[f];
+    const lbl = (f, n) => f === "eggs" ? (n === 1 ? "egg" : "eggs") : f === "blastocysts" ? (n === 1 ? "blast" : "blasts") : { mature: "mature", fertilised: "fertilised", day3: "on day 3", pgtNormal: "PGT ok", frozen: "frozen" }[f];
+    const out = Object.assign({}, r), inf = {};
+    chain.forEach((f, i) => {
+      if (val(f) != null) return;
+      let hi = null, hiF = "", lo = null, loF = "";
+      for (let j = i - 1; j >= 0; j--) { const v = val(chain[j]); if (v != null && (hi == null || v < hi)) { hi = v; hiF = chain[j]; } }
+      for (let j = i + 1; j < chain.length; j++) { const v = val(chain[j]); if (v != null && (lo == null || v > lo)) { lo = v; loF = chain[j]; } }
+      floors.forEach(([g, upTo]) => { const v = val(g); if (i <= upTo && v != null && (lo == null || v > lo)) { lo = v; loF = g; } });
+      if (hi != null && lo != null && hi === lo) { out[f] = hi; inf[f] = `${hi} ${lbl(hiF, hi)} and ${lo} ${lbl(loF, lo)}`; }
+    });
+    out._inf = inf;
+    return out;
+  }
   function phIvfStripHtml(r, fill) {
+    const raw = r; r = phIvfFilled(r); const inf = r._inf || {};   // a stage worked out from its neighbours shows its number, marked
     const st = r.kind === "freeze" ? PH_IVF_STAGES.filter(s => s[0] === "eggs" || s[0] === "mature" || s[0] === "frozen") : PH_IVF_STAGES;
     const remain = phIvfFrozenRemaining(r);
     let prev = null;   // the nearest earlier stage with a number
     const cells = st.map(([f, label, ic], i) => {
       const v = r[f], name = f === "frozen" && r.kind === "freeze" ? "Eggs frozen" : label;
+      const isInf = !!inf[f];
       const key = `${r.id}:${f}`, editing = phIvfNumEdit === key;
       let pc = "";
-      if (v != null) {
+      if (isInf) pc = "worked out";
+      else if (v != null) {
         if (f === "eggs") pc = "collected";
         else if (f === "frozen") pc = `still frozen ${remain}`;
         else if (f === "blastocysts" && r.fertilised > 0) pc = `${Math.round(v / r.fertilised * 100)}% of fert.`;
@@ -97354,8 +97383,8 @@ or changing anything in Cliniko.
         if (total > 0 && total <= 36) dots = `<span class="dots" style="--s:${i};--dc:${total > 16 ? 6 : 4}" aria-hidden="true">${"<i></i>".repeat(v)}${`<i class="x"></i>`.repeat(total - v)}</span>`;
       }
       const num = editing
-        ? `<span class="stp"><button type="button" data-ivf-num-step="${key}:-1" aria-label="One fewer">−</button><input type="number" min="0" inputmode="numeric" class="field-bare" value="${v == null ? "" : v}" placeholder="–" data-ivf-field="${key}" aria-label="${esc(name)}"><button type="button" data-ivf-num-step="${key}:1" aria-label="One more">+</button></span>`
-        : `<button type="button" class="big" data-ivf-num-edit="${key}" title="Tap to change" aria-label="${esc(name)}: ${v == null ? "not typed" : v}">${v == null ? "–" : v}</button>`;
+        ? `<span class="stp"><button type="button" data-ivf-num-step="${key}:-1" aria-label="One fewer">−</button><input type="number" min="0" inputmode="numeric" class="field-bare" value="${raw[f] == null ? "" : raw[f]}" placeholder="${isInf ? v : "–"}" data-ivf-field="${key}" aria-label="${esc(name)}"><button type="button" data-ivf-num-step="${key}:1" aria-label="One more">+</button></span>`
+        : `<button type="button" class="big${isInf ? " inf" : ""}" data-ivf-num-edit="${key}" title="${isInf ? esc(`Worked out from ${inf[f]} · tap to type it`) : "Tap to change"}" aria-label="${esc(name)}: ${v == null ? "not typed" : isInf ? v + ", worked out" : v}">${v == null ? "–" : v}</button>`;
       if (v != null) prev = { v, lb: label.toLowerCase(), i };
       return `<div class="c${v == null ? " empty" : ""}${f === "frozen" ? " frz" : ""}${editing ? " edit" : ""}">
         <svg class="cell" aria-hidden="true"><use href="#${ic}"/></svg><span class="nm">${esc(name)}</span>${num}<span class="pc">${esc(pc)}</span>${dots}
@@ -97693,6 +97722,7 @@ or changing anything in Cliniko.
   function phIvfHistoryPrintHtml(name) {
     const rows = phIvfCyclesSorted(phPatientPeek(name));
     const rowsHtml = rows.map(r => {
+      r = phIvfFilled(r);
       const trs = (r.transfers || []).map(t => `<tr><td>${esc(phIvfDateLabel(t.date) || "—")}</td><td>${t.type === "frozen" ? "Frozen" : "Fresh"}${t.prep ? " · " + esc(t.prep) : ""}</td><td>${t.count || 1}</td><td>${esc((PH_IVF_OUTCOMES.find(x => x[0] === (t.outcome || "awaiting")) || [])[1] || "")}</td></tr>`).join("");
       return `<tr><td><b>${esc(phIvfDateLabel(r.when) || "—")}</b>${r.clinic ? `<br><span class="d">${esc(r.clinic)}</span>` : ""}${r.kind === "freeze" ? ` <span class="d">(egg freeze)</span>` : ""}</td>
         <td>${r.eggs ?? "—"} → ${r.fertilised ?? "—"} → ${r.frozen ?? "—"} frozen</td>

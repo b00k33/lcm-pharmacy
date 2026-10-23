@@ -1932,3 +1932,17 @@ Her ask (screenshot of the Usual period card): "how to undo usual period", then 
 - `phPfwAnswer`: tapping a single-answer option that is already picked clears that row (multi-pick rows already untick).
 **Tested (sandbox):** one answer, then Nothing unusual (8 answers) → Undo → back to the one answer; re-tap that answer → blank; no
 console errors. **Not tested:** her phone; Undo after the auto-move bar has already moved to the next page.
+
+## 2026-10-23 · IVF history: a stage worked out from its neighbours
+Her ask (screenshot of two egg collections, May 3 eggs → 1 blast, Jul 5 → 3): "auto calculate if possible e.g. 1 collected 1 blastocyst
+means 1 matured 1 fertilised etc".
+- `phIvfFilled(r)` (before `phIvfStripHtml`): eggs ≥ mature ≥ fertilised ≥ day 3 ≥ blasts; PGT ok bounds blasts and earlier from below,
+  frozen bounds fertilised and earlier (an egg freeze: eggs ≥ mature ≥ eggs frozen). A blank stage whose upper and lower bounds meet is
+  that number. Derived on read, never stored; her typed number wins; returns a copy with `_inf[field]` = "1 egg and 1 blast".
+- Read by: the strip (soft-ink number, "worked out" under it, hover "Worked out from 1 egg and 1 blast · tap to type it"; tapping opens
+  the stepper on her own blank value with the worked-out number as its placeholder), `phIvfFunnelLine`, `phIvfRailSteps`, the Timeline's
+  fertilisation line and the printed IVF history. Embryo accounting, the export and the intake merge keep reading the typed values.
+**Tested (sandbox, a copy with only this change: another session's Compass edit was mid-way and stopped the app loading):** 1 egg + 1
+blast → mature / fertilised / day 3 = 1; 3 eggs + 1 blast → stays blank; 5 / 3 mature / 3 blasts → fertilised + day 3 = 3; 2 eggs +
+2 PGT ok → all 2; typed 0 fertilised kept; egg freeze 4 eggs + 4 frozen → 4 mature; funnel line "1 egg → 1 mature → 1 fert. → 1 blast".
+**Not tested:** inside her real IVF history page; her phone.
