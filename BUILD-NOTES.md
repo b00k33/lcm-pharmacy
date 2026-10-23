@@ -2108,3 +2108,14 @@ handler); Up next's Open moved into one row with Profile / Edit. The Add appoint
 dropdown opens, picks 3 days (label and date follow), closes on a tap elsewhere; › greys nothing and lights Today; Today
 returns and greys itself; phone 375px wraps to three rows with no sideways scroll. **Not tested:** on her phone, or the Up
 next circles with a real phone number (the test patient had none, so they showed faded as before).
+
+## 2026-10-23 · Patient details chips, one height (Zanda as inspiration)
+Her ask: "audit the chips on this page and mock it to be like zanda chips" (screenshot of Patient details), then "build it"
+and "and push". Audit: 7 looks at 24 / 26 / 28 / 30 px (joined pills, white pills, a crimson-outlined + Partner at 12px bold,
+two circle sizes, bare "Add" values). Mock `pd-chips-mock-2026-10-23.html`. Built as in the mock (CSS only, scoped to `.ph-pd`,
+after `.ph-pd-foot`): every control 32px; Paste contact, the Call / Text / Email copy chips, + Add and + Partner one 6px box;
+F | M | – and Rebate joined 6px bars (picked solid in the page colour); the send-the-form circle 32px; every value a white
+32px box with a thin line (her "build it" took the mock's white boxes over the old tinted field); the calendar inside the
+DOB box; the changed-this-visit tint kept.
+**Tested (sandbox):** every control measures 32px (bar segments 30 inside the 1px frame); phone 375px has no sideways
+scroll. **Not tested:** on her phone; with Call / Text / Email copy chips showing (the test patient had no phone).
