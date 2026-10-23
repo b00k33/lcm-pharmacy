@@ -1957,7 +1957,7 @@ transfer from egg collection cycle".
 **Tested (sandbox, a copy with only this change; another session's edit was mid-way):** May round → Fresh transfer "from May 2026",
 type Fresh, date May 2026, fields open; the May button goes, Jul keeps it; Jul still 2 frozen left. **Not tested:** her phone.
 
-## 2026-10-23 · Compass: one simple table
+## 2026-10-23 · Compass: one simple table (e3382fb1, LIVE since build 20261023-053600)
 Her ask (screenshot of the two-list mock C): "this looks too busy too many bullets buttons - are signs to be watched or why does it
 need to be separate from complaitns table? just animation design to iprove workflowa nd make it more simple. show mock", and mid-turn
 "build animations and diagrams where relevant". Mock `compass-simple-mock-2026-10-23.html`; her 8 picks, then "Yes, build it".
