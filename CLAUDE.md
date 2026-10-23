@@ -1421,6 +1421,11 @@ on the database SQL.
   only after her word. It needs a clean tracked tree, bumps both version
   markers, commits, pushes `session-a:main`, checks the result, and never
   force-pushes.
+- **One publisher at a time (her rule, 2026-10-23):** before every
+  `publish-live.sh --yes` (or a hand-made publish), run
+  `mkdir .git/lcm-publish.lock`. If that fails, another session is
+  publishing: wait 30 seconds and retry. When the script prints LIVE or
+  fails, run `rmdir .git/lcm-publish.lock`.
 - **Every push bumps BOTH version markers**: `sw.js` `CACHE_VERSION` AND the
   `<meta name="lcm-build">` stamp in index.html. The gold Update button
   compares the meta stamp; bumping only sw.js ships an update her app never
