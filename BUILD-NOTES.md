@@ -2169,7 +2169,7 @@ Her words: "build it and push" (mock `tl-msg-chips-mock-2026-10-23.html`). One d
 **Kept:** the timeline chart's dots and the status counts; the phone.
 **Tested (sandbox, 1280, Rf Test pregnancy plan):** every control on both pages measured 32px (symptom chips at least 32px, they wrap their words); the item cell tap lands on its name; the IVF dropdown opens (239x258, in the flow, nothing cut off), closes on an outside tap, and picking "IVF Menstruation" fills the message and shows it as the dropdown's label; picking Rebook inside the Herbs dropdown works; no sideways scroll; no new console errors. **Not tested:** the Check-in panel on Communications by eye, her real data, tablet widths.
 
-## 2026-10-23 · Patient pages: no band (her pick C, all pages)
+## 2026-10-23 · Patient pages: no band (her pick C, all pages; 8afbd9b1, LIVE since build 20261023-112200)
 Her words (screenshot of the Medical history band, Asked 38/39 · By group 6/7 · Last updated): "i dont like this deisgn. with the zanda design in mind, make 3 mocks", then mid-build "i want more visually succinct images/diagrams/animations/icons and less words".
 Mock `hx-band-mock-2026-10-23.html` (artifact DPcWX6s415S2XsufwEnLpD): A icon boxes · B group circles · C no band. **Her picks: C · No band, on every page that has the band.**
 **What changed:** the dark three-gauge band (`.ph-tp-hero.ph-pb-band` / `.ph-hx-band`, ring, big Barlow numbers, count-up) is gone. Each page's facts are now one quiet row of icon + number (`.ph-fx`), the words in each fact's hover title; a fact whose value changed pops its number once (`.nudge`, off under reduced motion).
