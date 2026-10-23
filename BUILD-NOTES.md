@@ -2191,7 +2191,7 @@ Her words: "build it and push" (mock `msk-chips-mock-2026-10-23.html`). One desk
 **Kept:** the body figures, muscle drawings, photo boxes, red-flag tick boxes, posture findings (`.mk-pills.wrap`) as separate boxes; the phone.
 **Tested (sandbox, 1280, Rf Test with a test neck pain added then removed):** every listed control measured 32px (bars' end cells 6px corners); picked side fills the page colour; the score bar 11 x 32 = 352px; no sideways scroll. **Not tested:** her real data, an MSK-coloured (blue) patient by eye, the Musculoskeletal close-up sheet, tablet widths.
 
-## Guide chips, one height (2026-10-23)
+## Guide chips, one height (2026-10-23, LIVE build 20261023-113500)
 Her words: "build it and push" (mock `guide-chips-mock-2026-10-23.html`). One desktop `@media (min-width: 641px)` block after "Musculoskeletal chips".
 - Families | Tongue map | Pulse (`.ph-gd-tabbar`, were 44px pills) one 32px joined bar; the search 6px corners.
 - Formula list `.gf-t` 32px 6px; the open one (`.sel`) is solid teal with a white ring round its family dot (was the family's pale colour); notes-only keep the dashed line.
