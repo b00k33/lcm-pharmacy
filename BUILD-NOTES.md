@@ -1855,3 +1855,17 @@ story, stage chips light the steps, Lining still lights its steps, back to Pregn
 Breech · Turning; Care Plan thumbnails on a Pregnancy plan in Breech Presentation / Labor Induction; the Labour thumbnail opened big (no bar,
 safety line); week lines at 34 and 38 weeks and with no patient; 375px sheet; no console errors. **Not tested:** on her real patients and
 phone, reduced-motion in a real browser setting, the Pregnancy picture inside the live Care Plan page (thumbnails tested by their HTML).
+
+## Tongue / Pulse / Abdomen stay in the rail, greyed, until sex + date of birth are in (2026-10-23)
+Her question (screenshot of Brie Harris on Fang Bing Ren): "where are my tongue pulse adominal pages?" The pages need sex AND date of
+birth (`presTpMainSections`' `examOn`); Brie's Patient details wasn't finished, so the three silently vanished from the rail. Her pick
+(popup, Recommended): "Yes, show them greyed".
+- `presFlowSteps` `examSubs`: on a plan, with a patient record that is missing sex or DOB, Tongue / Pulse / Abdomen come back as
+  `{ locked: true }` (Musculoskeletal / Ask her stay hidden, as in her preview).
+- `examSubBtn`: a locked one is `<button class="locked" data-flow-locked="<id>" title="Add sex and date of birth first">`, NOT
+  `data-flow-go`, so profile search (`phPsPages`) never offers a page that can't open.
+- Click: `[data-flow-locked]` -> `phFlashShow("Add sex and date of birth first")` (the File pages' own message), page doesn't change.
+- CSS: `.ph-flow-sub.plan button.locked` joins the File pages' `.locked` rule (opacity .45, not-allowed).
+**Tested (sandbox, no sign-in):** a Pregnancy-plan patient with sex but no DOB: three greyed rows under Today's visit, a tap shows the
+message and stays on Fang Bing Ren; DOB added -> Tongue / Pulse / Abdomen / Musculoskeletal / Ask her are normal links again.
+**Not tested:** her real patients, phone.
