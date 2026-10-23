@@ -2056,7 +2056,7 @@ Therapies and back; Same as last visit lit 5 chips; unticking a planned chip lea
 outcome "better" from the Compass, no exam picks), band ticked, line moved to Session 3; Care Plan findings still open/light.
 **Not tested:** her real patients, her phone, a finding with a purple changed dot (no seeded exam history).
 
-## 2026-10-23 · Appointments paste: Zanda's own list of one patient's appointments (her "how can you get copy paste to read this")
+## 2026-10-23 · Appointments paste: Zanda's own list of one patient's appointments (her "how can you get copy paste to read this"; 7a22a98f, LIVE since build 20261023-065300)
 Her paste (Charmaine Mari-De) read nothing: each booking is "28/10/2026 Wed 10:00 AM-10:30 AM", the end time again on its own
 line, then the billed items ("Alexandria Acupuncture FOLLOW UP 50 minutes"), a line missing when nothing was billed yet.
 New `phApptParseClientList` (after `phApptParseList` in `phApptParse`): one booking per date-led time-range line; the end-time
@@ -2068,6 +2068,9 @@ rows copied as tab-separated cells read the same.
 added all 11 (both 4 Sep and both 8 Aug kept); the tab-separated copy parses identically; an Alexandria day list, the
 tab list and a dated day list still go to their own readers.
 **Not tested:** at the acupreg location (ACU+CHM pills and pre/post transfer tags show there, not on the test copy).
+**Published alone:** 845917a0 (Red flags) sat on session-a above it, held for her word, so publish commit 89e3f633 was built
+on 7a22a98f in a private index (GIT_INDEX_FILE) and pushed to main; merge 271acde0 joined it into session-a with session-a's
+own tree (no file changes), so the next publish-live.sh still fast-forwards.
 
 ## 2026-10-23 · Red flags in Watch and on Today's visit
 Her asks: "how to have groups of condition watch/red flags e.g. for pregnancy 1st trimester" (answer: each template
