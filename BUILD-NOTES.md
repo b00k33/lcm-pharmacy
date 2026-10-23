@@ -2027,3 +2027,31 @@ Left as they are: the Timeline / blood-test items that read a test as a dated EV
 **Tested (sandbox, a copy with only this change; another session's work was mid-way):** test at week 24 → week 24, plan opens on
 Second Trimester with no question; plan date 20 weeks ago → button "Pregnant · 20w 0d", appointment "🌸 20w0d"; transfer result only →
 11 weeks (button, picture); negative test → not pregnant, the question still shows. **Not tested:** her real patients, her phone.
+
+## 2026-10-23 · Treatment page: one summary beside today's treatment (her 12 picks, NOT LIVE)
+Her words (screenshot of Charmaine's Treatment page, FET Prep — Medicated): "make this page more simple. integrate all the complaints and
+summary of all the findings and signs - show mock first". Mock `treatment-simple-mock-2026-10-23.html`; she took every recommended pick.
+**Now (`phTpVisitTableHtml`, rewritten; the Planned | Today | Session N table is gone):**
+- One session line inside the visit box (`phTpPhaseLineInner(plan, phase, { sess, chips })`): phase name once, Current ▾, "Session N ·
+  today", Herbs only today, Change phase (the treat-as override, kept as a quiet chip), Doesn't apply?. The Phase row is gone. The
+  announce / "Text <name> about…" offer sit under it (`opts.mid`, carried across `presAcuOpenRefresh`).
+- Left, "How <name> is": the Compass's complaint and sign lines read-only (`phTxCxHtml`, area edges, SIGN tag, today's score counting up or
+  the last one faded with its date, the Compass's own change), one "Score on Today's visit" chip; her-words box; then the Care Plan's
+  finding lines and drawers (`phTxFxHtml` → `phTpFxRowHtml`, template order, hidden ones as More chips that open their page; Came in for
+  left out; a Fang Bing Ren line `phTxFbrRow`). No Better / Same / Worse / % on Tongue, Pulse, Abdomen (`phTsObjHtml`, `phTsOutCells`,
+  `phTsRatingsLineHtml`, the exam history helpers and `presTsRollup` removed; an old draft's "o:" picks are dropped on restore).
+- Right: Aim; navy Therapies (`phTxSeedTherapies` lights the phase's planned set once per patient/day/phase into an empty draft; a planned
+  one she unticks shows dashed; "Same as last visit" = the old Copy from last visit, its chips light one by one; each lit therapy is one
+  slim line, Left / Right open while typing in it; "Which muscle?" for pain patients, `phTxMuscleHtml`); green Herbs (today's buttons +
+  the plan's formula); Watch; Notes (was Comments); "Plan ahead · Session N" (`presTsAheadOpen`) opens the per-session boxes.
+- Complete band unchanged (`phTpBandHtml(..., 0)` returns the band without a table row); Complete fades the right column out and back.
+- Motion: lines rise once on the first draw of the day (`phTxDrawn`), bars grow, a changed finding's dot pings; off under reduced motion.
+- Phone (container ≤ 520 px): stacked, summary first, only Tongue / Pulse / Abdomen / Musculoskeletal lines, the rest under one More chip.
+**My calls:** Change phase kept as a chip; Next row dropped (the band says the next session and books it); a phase's own Comments shows
+as "Plan note" only when it has text; the MSK Objective line shows only when no Musculoskeletal finding line says it; planned
+therapies are edited on a no-visit day (Planned table), as before.
+**Tested (real app, seeded test patients, headless Edge + Browser pane):** IVF patient and low-back patient at 1400 / 1000 / phone width;
+drawer opens (Open Abdomen, + Watch, + Aim; + Watch repaints in place); Plan ahead opens Session 3's boxes; Herbs only today hides
+Therapies and back; Same as last visit lit 5 chips; unticking a planned chip leaves it dashed; Complete saved the visit (5 therapies,
+outcome "better" from the Compass, no exam picks), band ticked, line moved to Session 3; Care Plan findings still open/light.
+**Not tested:** her real patients, her phone, a finding with a purple changed dot (no seeded exam history).
