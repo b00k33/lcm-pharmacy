@@ -1348,7 +1348,16 @@ with a baseline before the day being scored follows the switch (slider 0-100% + 
 her % is kept as `vis.pains[r|s].pct` beside the `now` worked out from the baseline (7, 50% = 3.5),
 so the Musculoskeletal page keeps a number; any other "now" score drops `pct`. With no baseline yet a
 pain stays 0-10. On "% better" + From baseline, every complaint and pain row (and the group average)
-reads its distance in % (`phCxPctOf`); Energy, signs and From last visit stay as they were. The checks are compact rows, two across, each with Open and
+reads its distance in % (`phCxPctOf`); Energy, signs and From last visit stay as they were.
+**Sign search (her 2026-10-23 picks, mock fbr-sign-search-mock-2026-10-23.html, "Compass sign search" in
+BUILD-NOTES.md):** an always-visible box under "Compass · came in for" (`phCxsHtml`); it replaced "+ add".
+Typing searches the Fang Bing Ren signs (`phCxsOptions`, the Fang Bing Ren page's `phCsToks` / `phCsScore`);
+each result is that page's question row, Now Yes / No · Usu Yes / No (a Bing sign and its Ren twin = one
+row), saved through `phTriWrite` (the same answer again clears it); a Yes pins its row under the lit
+complaint. Which signs get a Compass row is still `phCxSignList`'s ANSWERED rule (her pick: a Usu Yes adds
+one too). The list stays open for the next tick (Esc / a tap elsewhere closes it), 8 rows then "Show all N",
+then "Add as a complaint" / "Add to Watch"; ↑↓ + Enter = Now Yes, Shift+Enter = Usu Yes, Enter with no
+row lit = her words as a complaint. The checks are compact rows, two across, each with Open and
 Skip ▾ (Not today / Always for this patient); a skipped check folds into the
 "Skipped" line and counts as done (`phTodayPartOk`). Quick assess shows 8
 questions in 2 columns on Today's visit and Fang Bing Ren [synth22: Today's
