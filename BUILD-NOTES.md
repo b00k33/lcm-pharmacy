@@ -1999,3 +1999,15 @@ The dialog already imports across several days ("Import N appointments across D 
 **Tested (sandbox, `phApptParse`):** Alexandria list over Fri 24 Oct / Tue 28 Oct / "4/11" → 3 dates; Zanda over "Mon 27 Oct" /
 "Tue 28/10" → 2 dates, service "Acupuncture" only; Cliniko list over Fri 31 Oct / Mon 3 Nov → 2 dates; no date lines → the picked day.
 **Not handled:** a date and a time on the SAME line ("Tue 28 Oct 4pm Acupuncture"). **Not tested:** her real paste.
+
+## 2026-10-23 · Appointments paste: a patient's own appointment list (date, time, place, service, status, note)
+Her paste for Charmaine Mari-De Leon ("add this to Charmaine Mari-De"): 11 tab rows like
+"28/10/2026<TAB>10:00 AM<TAB>Alexandria<TAB>Acupuncture — Follow-up, 50 min<TAB>Pending<TAB>note". `phApptParse` read NOTHING from it:
+`phApptParseTable` only knows time RANGES, and the date led each row.
+- `phApptParseList(text)` (before `phApptParse`, tried right after the table reader): rows of ≥ 4 tab cells whose first cell is a date
+  (`phApptParseDateLine`, dd/mm/yyyy) and second a single clock time, on ≥ 60% of the lines. service = column 4 + "; " + the note;
+  "50 min" → `durationMin`; a Cancelled / no-show status (`PH_APPT_HIST_SKIP`) is left out; no name column, so each row is
+  `needsName` and takes the patient the dialog was opened from (`historyName` = `forPatient`).
+**Tested (sandbox):** her exact paste → 10 appointments (27 Oct cancelled left out), each on its own date; opened from the patient
+"Charmaine Mari-De Leon", Paste list → Import → 10 on her record; pasting again → still 10 (same date + time + patient refreshes).
+**Not done by me:** adding them to her live record (her sign-in): she pastes it once this is live.

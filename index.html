@@ -31503,9 +31503,38 @@
     });
     return out.length ? out : null;
   }
+  // ---- a patient's own appointment LIST (her paste 2026-10-23, "add this to Charmaine Mari-De"): one row per booking,
+  // "28/10/2026<TAB>10:00 AM<TAB>Alexandria<TAB>Acupuncture — Follow-up, 50 min<TAB>Pending<TAB>note". The date leads the row and the time
+  // is a single clock time, never a range, so phApptParseTable never saw it as a table (it read nothing). No name column: like the
+  // history paste, each row waits for the name (the dialog opened from a patient fills it). Cancelled rows are left out (never a visit).
+  // Columns: date, time, practitioner or place, service, status, note; the note rides on the service after "; ". ----
+  function phApptParseList(text) {
+    const lines = String(text || "").replace(/[​-‍﻿ ‪-‮⁦-⁩]/g, " ").split(/\r?\n/).filter(l => l.trim());
+    const clock = c => { const m = String(c || "").trim().match(/^(\d{1,2})[:.](\d{2})\s*(am|pm)?$/i); if (!m) return null; let h = +m[1]; const mer = (m[3] || "").toLowerCase(); if (mer === "pm") h = (h % 12) + 12; else if (mer === "am") h = h % 12; return h < 24 && +m[2] < 60 ? `${String(h).padStart(2, "0")}:${m[2]}` : null; };
+    const rows = lines.map(l => {
+      const c = l.split("\t").map(x => x.replace(/\s+/g, " ").trim());
+      if (c.length < 4) return null;
+      const d = phApptParseDateLine(c[0]), t = clock(c[1]);
+      return d && t ? { d, t, c } : null;
+    });
+    const ok = rows.filter(Boolean);
+    if (ok.length < 1 || ok.length < Math.ceil(lines.length * 0.6)) return null;
+    const out = [];
+    ok.forEach(({ d, t, c }) => {
+      const status = c[4] || "", note = c[5] || "";
+      if (PH_APPT_HIST_SKIP.test(status)) return;   // Cancelled etc
+      const service = [c[3] || "", note].filter(Boolean).join("; ");
+      const en = { date: d, time: t, service, phone: "", needsName: true };
+      const mins = (c[3] || "").match(/(\d{2,3})\s*min/i); if (mins) en.durationMin = +mins[1];
+      out.push(en);
+    });
+    return out.length ? out : null;
+  }
   function phApptParse(text, fallbackDateKey) {
     const table = phApptParseTable(text, fallbackDateKey);
     if (table && table.length) return table;
+    const list = phApptParseList(text);
+    if (list && list.length) return list;
     const hist = phApptParseHistory(text);
     if (hist && hist.length) return hist;
     const lines = String(text || "").replace(/[\u200B-\u200D\uFEFF\u00A0\u202A-\u202E\u2066-\u2069]/g, " ")
