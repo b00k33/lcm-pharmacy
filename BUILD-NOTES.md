@@ -2119,3 +2119,14 @@ F | M | – and Rebate joined 6px bars (picked solid in the page colour); the se
 DOB box; the changed-this-visit tint kept.
 **Tested (sandbox):** every control measures 32px (bar segments 30 inside the 1px frame); phone 375px has no sideways
 scroll. **Not tested:** on her phone; with Call / Text / Email copy chips showing (the test patient had no phone).
+
+## Shared chip fixes, one height (2026-10-23)
+Her words: "make a list of all the pages of the app and audit the chips one by one page by page" → audit `chip-audit-pages-2026-10-23.html`; her pick "Shared fixes first"; mock `chip-shared-fixes-mock-2026-10-23.html`; "build it".
+**What changed (CSS only, one `@media (min-width: 641px)` block just above PHONE REDESIGN, "Shared chip fixes"):**
+- Next button (`.ph-pres-stage-next`, not the Patient details plan tile): 32px, 6px corners, its own width.
+- Patient rail: step rows 40px (was 49) with 6px corners, page rows 32px (was 20), the "Next up" Open 32px; band search 32px 6px, back + camera 32px circles.
+- Search boxes (`#presSearch`, `#phSearch`, `#presLogSearch`, `#phRecPhotosSearch`, `#phLogSearch`, `#phDirSearch`, Guide, Communications, Formula refill): 32px white 6px box, the magnifier drawn in; dropdowns `#presSortSel`, `#phKindSel`, `#phRecPhotosTypeSel`, `#phLogKindSel` and Filters 32px 6px. `!important` on height / radius because the app-wide field rule is `!important`.
+- Small pills: `.ph-load-btn` (outside tables) = 32px white 6px box; `.ph-msg-seg` and `.ph-recphotos-seg` tab sets = one joined 6px bar, picked solid.
+**Kept on purpose:** her solid pill for the rail page she is on (her 2026-10-13 pick B; the mock showed a tint); rail text sizes; `.ph-load-btn`s that a page styles as plain text; table cells (Inventory etc. come with their page); the 44px header disc; phone.
+**Not done (later pages):** Communications filter chips `.ph-ck-chip` (shared with the cycle Day log), Ren / Fang Bing Ren sign chips, exam answer chips, 0–10 cells.
+**Tested (sandbox, 1280):** measured every changed control at 32px / 6px; rail 40 / 32; the Open button fits its card; no sideways scroll; Prescriptions search still filters live (12 → 3 → 12). **Not tested:** her real data, tablet 641–900px widths in detail.
