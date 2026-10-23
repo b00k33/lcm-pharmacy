@@ -1283,7 +1283,7 @@ from the file, **never stored**; only her Agree / Not this patient writes
 `rec.patterns.agreed`/`.dismissed`. Strength is words (Likely / Possible /
 A hint) + a clue count, never a percentage. A card shows only its clues and
 Agree / Not this patient (no letters, food, points or supplement chips); an open card also shows the pattern's concept picture
-[Concept pictures; since 2026-10-22 drawn from the body: a natural hand, a real stomach / throat / kidney, vessel walls with cells, and a person beside the pot on Heat, Yang, Yin and Qi deficiency].
+[Concept pictures; since 2026-10-22 drawn from the body: a natural hand, a real stomach / throat / kidney, vessel walls with cells, and a person beside the pot on Heat, Yang, Yin and Qi deficiency]. Since 2026-10-23 Yang deficiency, Yin deficiency and Heat are drawn on the body chart itself (organs at true size, `anat` in `PH_PP`, a 300 x 200 frame); her rule: this anatomical model is the model for every picture, the rest move over in batches [Concept pictures on the anatomical body].
 One pattern can be ★ main. Formula ideas are OFF (she dislikes suggested
 herbs). A rule she overrode in Settings never gains new clue keys later
 (deliberate). All pattern wording is Claude-drafted, hers to correct.
