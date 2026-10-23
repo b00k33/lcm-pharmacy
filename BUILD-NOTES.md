@@ -2217,3 +2217,13 @@ Her words: "build it and push" (mock `toorder-chips-mock-2026-10-23.html`). One 
 - Ren header line: "Points toward …", "No family leads yet", "No ticks yet" (the explaining "— every family starts level" went, Terse rule).
 **Tested (sandbox, Linh Test, 1280):** no row or Look chip starts lowercase; header reads "Points toward Dang Gui Shao Yao San". **Not tested:** the phone.
 **Her second ask (signs that do not go together):** 10 candidate rows sent to her as Split / Keep picks; nothing split yet.
+
+## Every other page, one height (2026-10-23)
+Her words: "work on all pages at the same time and push in one go" (no mock this round, her call). One desktop `@media (min-width: 641px)` block after "To Order board chips", covering Dashboard, Communications, Inventory, Formula refill, Stocktake, Stock statistics, Photos, Stock movements, Price review, Suppliers, End of day, All templates, Relocation, Settings and the Prescriptions list.
+- 32px 6px: `.ph-rp-menubtn` (Plan ▾, was a 36px pill), `.ph-ck-chip` everywhere (was 22–26px pills), `.ph-cap-tchip` (photo labels), `.add-btn`, Price review's start button and End of day's Copy prompt (were 44–48px), the refill and Communications searches.
+- Plain-text taps now boxes: Dashboard "See all N" and the card's "To order", Communications "N not shown" and Contact, `.ph-load-btn` (Columns · N hidden, Made in house, + Schedule a dispense...), `.ph-os-lnk` (See refill history), Stock statistics' date button and "see the N never..." link, Price review's upload link, Relocation's Edit the move and Open the full list, All templates' + New template, refill's "N below the line".
+- Joined bars: Stock statistics' By month | By patient tabs (were bare text); Stocktake's order switch 32px with 6px corners.
+- Circles 32px: `.ph-os-chev`, `.ph-os-dots`, `.ph-page-btn`, `.ph-arr-editbtn`, Relocation's ⋯, Suppliers' ✎.
+- Menus: Settings' side menu and the template rail are 32px rows, 6px corners.
+**Kept:** names and codes in list rows as plain text, code tags, table sort headers, Inventory's table cells (rows stay 32px), Stocktake's scope cards, Relocation / Settings card heads (rows), the Formula refill tabs (her 10-22 design), emoji in Settings / Stocktake / Relocation labels (not touched this round), the phone.
+**Tested (sandbox, 1280):** a scan of every control on all 19 pages finds nothing off 32px / 6px outside the kept list; no page scrolls sideways; Dashboard and Inventory checked by eye. **Not tested:** pages with real data (Communications' Due list, Photos with many shots), tablet widths. **Seen, not fixed (not this work):** Formula refill's Below the line tab throws in `refSuggestRecipe` when a prescription has no `ingredients` array (`t.ingredients.length`), found on sandbox data.
