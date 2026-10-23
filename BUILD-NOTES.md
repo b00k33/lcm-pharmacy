@@ -1946,3 +1946,13 @@ means 1 matured 1 fertilised etc".
 blast → mature / fertilised / day 3 = 1; 3 eggs + 1 blast → stays blank; 5 / 3 mature / 3 blasts → fertilised + day 3 = 3; 2 eggs +
 2 PGT ok → all 2; typed 0 fertilised kept; egg freeze 4 eggs + 4 frozen → 4 mature; funnel line "1 egg → 1 mature → 1 fert. → 1 blast".
 **Not tested:** inside her real IVF history page; her phone.
+
+## 2026-10-23 · IVF history: "+ Fresh transfer" on each egg collection
+Her ask (screenshot: a May fresh transfer the plain "+ Transfer" had attached to Jul 2026 as frozen): "make it easier to mark fresh
+transfer from egg collection cycle".
+- Each egg collection card (not an egg freeze) has **+ Fresh transfer** in its footer beside "Use a frozen embryo" and "Stim, scans &
+  embryo notes", until that round has a fresh transfer. It adds `{ type: "fresh", date: the round's month (when it is YYYY or YYYY-MM),
+  count 1, awaiting }` to THAT round (no `autoRound` guess), opens its fields (`phIvfTEdit`) and repaints (`phCycleRerender`).
+  Handler `[data-ivf-fresh]` beside `[data-ivf-use]`. Frozen counts are untouched (`phIvfFrozenRemaining` counts frozen transfers only).
+**Tested (sandbox, a copy with only this change; another session's edit was mid-way):** May round → Fresh transfer "from May 2026",
+type Fresh, date May 2026, fields open; the May button goes, Jul keeps it; Jul still 2 frozen left. **Not tested:** her phone.
