@@ -2184,7 +2184,7 @@ Mock `hx-band-mock-2026-10-23.html` (artifact DPcWX6s415S2XsufwEnLpD): A icon bo
 **Not tested:** the Messages "Planned" roll after planning a message; Photos with real photos (thumbs + Compare); the opening-stage inline Medical history copy.
 **Integration (★★★):** the facts read the same builders and `phHxProgress` as before; the rail's "1 left" for Medical history is unchanged.
 
-## Musculoskeletal chips, one height (2026-10-23)
+## Musculoskeletal chips, one height (2026-10-23, LIVE build 20261023-112900)
 Her words: "build it and push" (mock `msk-chips-mock-2026-10-23.html`). One desktop `@media (min-width: 641px)` block after "Timeline + Messages chips", every rule scoped `.ph-pres-panel .ph-msk`.
 - Joined 32px bars, picked solid: body region (`.ph-tng2-seg .mk-chip`), the examination tabs (`.mk-tabs`, were underlined; all 9 fit at 1280, 894px), the pain row's side and the add bar's side (`.ph-pm-seg`; the picked side was ink-black, now the page colour), the view controls as one stacked bar (`.ph-pm-layout`), the area tabs (`.ph-pm-pktab`), every answer row (`.mk-pills:not(.wrap)`: Severity, Strength, Neuro, Range of motion, Special tests, Function; Weak / Positive keep red, Mildly weak amber), the 0-10 pain score (`.mk-scale`, one bar of 11), Close-ups | Surgeries | Pain intake.
 - Boxes 32px 6px: Labels (its 🏷 emoji removed from the markup) / Enlarge, + Pain map, + Muscle, + Cause, Areas ▾ (was plain text), Add, Now / Best / Worst, body places (`.ph-pm-chip`, picked solid instead of pale), Pain intake's Open, All photos, `.mk-btn`. Circles: ★ (its own inner circle sized to 32) and the pain ×. Fields tinted 32px: Type a pain, detail, Diagnosis, How long, `.mk-in`; `.mk-sel` dropdowns 32px boxes; the summary box 6px corners.
