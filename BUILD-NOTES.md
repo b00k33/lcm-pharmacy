@@ -1869,3 +1869,18 @@ birth (`presTpMainSections`' `examOn`); Brie's Patient details wasn't finished, 
 **Tested (sandbox, no sign-in):** a Pregnancy-plan patient with sex but no DOB: three greyed rows under Today's visit, a tap shows the
 message and stays on Fang Bing Ren; DOB added -> Tongue / Pulse / Abdomen / Musculoskeletal / Ask her are normal links again.
 **Not tested:** her real patients, phone.
+
+## 2026-10-23 · Photo batch: every picked photo saves (the "Saved 0 of 3 — image couldn't be read" error)
+Her report (screenshot from her Android phone, 3 tongue photos, "Saved 0 of 3 — 3 didn't save (image couldn't be read ...)"): "i keep
+getting this error periodically on my mobile. i need to be able to upload multiple photos at once and have it all save".
+**Cause:** a picked gallery photo is a pointer back into the phone's gallery; Save re-opened it later through `<img>` in
+`phRenCompressToBlob`. On Android that read can fail (the gallery's hold on the file lapsing after a while, or a big camera photo decoded
+while memory is tight), and one failed decode failed the photo outright; all of a batch at once matches the hold lapsing.
+**Fix:** (1) `phRenHold(x)` copies each picked photo's bytes into memory straight away (`x.ready`); used by `phRenConfirmOpen`,
+`phRenConfirmOpenBatch` and `phRenConfirmAdd` (+ Add more / paste / drop); Save all and the single Save wait for the copy. A copy that
+fails keeps the original file. (2) `phRenCompressToBlob` tries three ways before giving up: `<img>`, `createImageBitmap` after 300 ms,
+then the bytes copied into a fresh Blob; each canvas is emptied after use. The failure message and the "still here, tap Save again" rows
+are unchanged for a truly broken file.
+**Tested (sandbox):** forced `<img>` failure → saved through the fallback; a 3-byte fake JPEG still fails with "couldn't open that image";
+a 3-photo batch (3000×4000) copies all three at pick time and Save all files 3 of 3, modal closes. **Not tested:** on her phone (the lapse
+can't be reproduced in a desktop browser).

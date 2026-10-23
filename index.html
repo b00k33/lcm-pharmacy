@@ -40123,6 +40123,7 @@
           let lastErr = "";
           const patientKey = phRenCapture.patientKey;
           for (const x of st.batch) {
+            if (x.ready) await x.ready;   // its bytes copied in at pick time (phRenHold)
             phRenCapture.type = x.type || "other";
             phRenCapture.shot = (phRenCapture.type === "tongue" && x.shot) || "";
             window.__phRenLastSaveErr = "";
@@ -40175,7 +40176,7 @@
         phRenConfirmSaving = true;
         const modal = document.getElementById("phRenCropModal");
         modal.querySelectorAll("[data-ren-confirm-save], [data-ren-confirm-again], [data-ren-confirm-retake]").forEach(b => b.disabled = true);
-        phRenCaptureSave(st.file).then(ok => {
+        Promise.resolve(st.ready).then(() => phRenCaptureSave(st.file)).then(ok => {
           phRenConfirmSaving = false;
           phRenConfirmClose();
           // "Save & take another" keeps capture open so tongue -> eyelid ->
@@ -57187,21 +57188,33 @@ or changing anything in Cliniko.
   // resize-to-maxDim + JPEG re-encode -- the "resize/compress cap is
   // required, not optional" rule from her spec. source is a File/Blob;
   // returns a Promise<Blob>.
+  // her 2026-10-23 report ("i keep getting this error periodically on my mobile ... saved 0 of 3, image couldn't be read"): one decode
+  // failing on Android (a big camera photo while memory is tight, or the gallery's hold on the file lapsing) failed the photo outright.
+  // Now it tries three ways before giving up: the <img> decode, createImageBitmap after a short pause, then the file's own bytes copied
+  // into memory and decoded again. Each canvas is emptied after use so a batch doesn't pile up memory.
   function phRenCompressToBlob(source, maxDim, quality) {
-    return new Promise((resolve, reject) => {
-      const url = URL.createObjectURL(source);
-      const img = new Image();
-      img.onload = () => {
-        let w = img.naturalWidth, h = img.naturalHeight;
-        if (Math.max(w, h) > maxDim) { const s = maxDim / Math.max(w, h); w = Math.round(w * s); h = Math.round(h * s); }
-        const c = document.createElement("canvas");
-        c.width = w; c.height = h;
-        c.getContext("2d").drawImage(img, 0, 0, w, h);
-        c.toBlob(b => { URL.revokeObjectURL(url); b ? resolve(b) : reject(new Error("compress failed")); }, "image/jpeg", quality);
-      };
+    const fit = (w, h) => { if (Math.max(w, h) > maxDim) { const s = maxDim / Math.max(w, h); return [Math.round(w * s), Math.round(h * s)]; } return [w, h]; };
+    const encode = (pic, w0, h0) => new Promise((resolve, reject) => {
+      const [w, h] = fit(w0, h0), c = document.createElement("canvas");
+      c.width = w; c.height = h;
+      c.getContext("2d").drawImage(pic, 0, 0, w, h);
+      c.toBlob(b => { c.width = 0; c.height = 0; b ? resolve(b) : reject(new Error("compress failed")); }, "image/jpeg", quality);
+    });
+    const viaImg = src => new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(src), img = new Image();
+      img.onload = () => { encode(img, img.naturalWidth, img.naturalHeight).then(b => { URL.revokeObjectURL(url); resolve(b); }, e => { URL.revokeObjectURL(url); reject(e); }); };
       img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("couldn't open that image")); };
       img.src = url;
     });
+    const viaBitmap = async src => {
+      if (typeof createImageBitmap !== "function") throw new Error("couldn't open that image");
+      const bm = await createImageBitmap(src);
+      try { return await encode(bm, bm.width, bm.height); } finally { if (bm.close) bm.close(); }
+    };
+    const pause = ms => new Promise(r => setTimeout(r, ms));
+    return viaImg(source)
+      .catch(() => pause(300).then(() => viaBitmap(source)))
+      .catch(() => (source.arrayBuffer ? source.arrayBuffer() : Promise.reject(new Error("couldn't open that image"))).then(b => viaImg(new Blob([b], { type: source.type || "image/jpeg" }))));
   }
   // crops a NATURAL-pixel rect out of an already-loaded <img>, own
   // compression pass (crops are close-ups, don't need the full photo's max
@@ -58329,6 +58342,14 @@ or changing anything in Cliniko.
      maintain, not a fifth. The image is shown WHOLE (a framing guide is a
      guide, not a crop -- her §2), so nothing is cut off. */
   let phRenConfirmState = null;   // {file, objectUrl} | {batch: [{file, objectUrl}]}
+  // her 2026-10-23 "upload multiple photos at once and have it all save": a picked gallery photo is a pointer back into the phone's
+  // gallery, and Android can stop letting the app read it a while later -- so Save found nothing to read ("saved 0 of 3"). Each
+  // pick now copies its bytes into memory straight away (x.ready); the save waits for that copy. A copy that fails keeps the original.
+  function phRenHold(x) {
+    const f = x.file;
+    x.ready = (f && f.arrayBuffer ? f.arrayBuffer() : Promise.reject()).then(b => { if (b && b.byteLength) x.file = new File([b], f.name || "photo.jpg", { type: f.type || "image/jpeg", lastModified: f.lastModified || Date.now() }); }).catch(() => {});
+    return x;
+  }
   // her report 2026-09-11, "when i press save, it saves twice" -- ✓ Save ran
   // straight into the async compress+store with nothing blocking a second
   // tap landing before the modal had closed, so a real double-tap (easy on a
@@ -58341,7 +58362,7 @@ or changing anything in Cliniko.
   let phRenConfirmSaving = false;
   function phRenConfirmOpen(file) {
     phRenConfirmRevoke();
-    phRenConfirmState = { file, objectUrl: URL.createObjectURL(file) };
+    phRenConfirmState = phRenHold({ file, objectUrl: URL.createObjectURL(file) });
     phRenCropState = null;
     document.getElementById("phRenCropBackdrop").hidden = false;
     document.getElementById("phRenCropModal").hidden = false;
@@ -58363,7 +58384,7 @@ or changing anything in Cliniko.
     const t = target || (phRenCapture && { patientKey: phRenCapture.patientKey, patientName: phRenCapture.patientName, dateKey: phRenCapture.dateKey });
     if (!t) return;
     phRenConfirmState = {
-      batch: files.map(f => ({ file: f, objectUrl: URL.createObjectURL(f),
+      batch: files.map(f => phRenHold({ file: f, objectUrl: URL.createObjectURL(f),
         type: (phRenCapture && phRenCapture.type) || t.defaultType || "other", shot: (phRenCapture && phRenCapture.shot) || "" })),
       target: t,
     };
@@ -59756,7 +59777,7 @@ or changing anything in Cliniko.
     const all = [...(files || [])], imgs = all.filter(phRenIsImageFile).filter(f => f.size);
     if (!imgs.length) { presSavedToast(all.length ? "Those weren't photos — pictures only (JPG, PNG, WebP)." : "No photo found."); return false; }
     const t = S.target || {};
-    imgs.forEach(f => S.batch.push({ file: f, objectUrl: URL.createObjectURL(f), type: (phRenCapture && phRenCapture.type) || t.defaultType || "other", shot: (phRenCapture && phRenCapture.shot) || "", fresh: true }));
+    imgs.forEach(f => S.batch.push(phRenHold({ file: f, objectUrl: URL.createObjectURL(f), type: (phRenCapture && phRenCapture.type) || t.defaultType || "other", shot: (phRenCapture && phRenCapture.shot) || "", fresh: true })));
     renderPhRenConfirmModal();
     if (imgs.length < all.length) presSavedToast(`${all.length - imgs.length} of ${all.length} weren't photos and were left out.`);
     return true;
