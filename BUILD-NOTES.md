@@ -1885,7 +1885,7 @@ are unchanged for a truly broken file.
 a 3-photo batch (3000×4000) copies all three at pick time and Save all files 3 of 3, modal closes. **Not tested:** on her phone (the lapse
 can't be reproduced in a desktop browser).
 
-## Compass sign search: type a Fang Bing Ren sign on Today's visit (2026-10-23)
+## Compass sign search: type a Fang Bing Ren sign on Today's visit (2026-10-23, faee7fb7, LIVE since build 20261023-042800)
 Her ask (screenshot of Today's visit, Ask): "to save me going to the fang bing ren page, allow me to type in and search/select fang bing
 ren signs". The Compass "+ add" box could already do this, but it was hidden behind a button, listed the now and usual twins as
 two identical names, didn't mark signs she had already answered, closed after each pick and could only say Yes. Mock
