@@ -1829,3 +1829,29 @@ Her words: "i need to be able to add watch signs - not complaints or signs" and 
 - **Remove a complaint:** a secondary complaint row's ▾ menu has Remove (`phCxRemoveSec`, through `phCcWrite`, toast with Undo that puts it back in place). The main complaint and pain rows have no ▾ (as before). Signs already had ▾ > Not watching.
 - **Fix found on the way:** the ▾ menu was built as buttons inside a button, which the browser splits apart (the menu items floated beside the ▾). Now `<span class="ph-cx-ddw"><button>▾</button>menu</span>` for complaint and sign rows.
 - Tested in the real app with a seeded patient: remove + Undo, add Watch (chip, stored pick, shows in the phase's Watch text), the menu list. NOT tested: phone width, removing a Watch chip by tap, the Care Plan page repaint while open.
+
+## 2026-10-23 · Moving pictures: Turning a breech baby + Preparing for labour
+Her ask: "design interactive animations of how acupuncture can help with labor prep and treating breech babies", then "make mock before
+building". Mock `birth-prep-breech-animation-mock-2026-10-23.html`; her 8 picks (memory `project_pharmacy_breech_labour_pictures_2026_10_23`):
+both places; moxa + needles; her pregnancy week drives it; named points; needle at Zhiyin BL67 itself; kicks + week ruler; evidence like Lining;
+26 s loop.
+- **Story tabs generalised.** The Lining-only third tab is now a list: `PH_PP_TABS` (base picture → its story tabs; flip 2 + i = tab i:
+  IVF / Natural → Lining; Pregnancy → Lining · Breech · Labour; Breech correction → Breech, labelled "Turning" there because its own tab is
+  already "Breech") and `PH_PP_STORY[id]` (`col`, `at` stage times, `steps`, `note`, `safe`, `week(name)`). `phPpStoryHtml(sid, big, shown,
+  name)` replaces `phPpLiningHtml` (`data-pp-lin` now carries the story id). `phPpSvg` / `phPpBarHtml` / `phPpHtml` / `phPpFlipTo` read the
+  tabs; a story picture opened by itself (the Care Plan thumbnail) has no bar and shows its story. `PH_PP_LINING` is gone.
+- **Scenes** `PH_PP.SC.cd_breech_turn` and `PH_PP.SC.cd_labour`, ported from the mock, sharing `phPpBlKit` (helpers, the curled baby, the
+  runner hooks S.go / S.step / S.ui, unique defs ids). Reduced motion holds on After (15).
+- **Her week:** `phPpPregWeek(name)` = `phTpPregWeeksOn(phTpPregFor(rec).start, today)`, else a positive `rec.pregTest` date (+28 days);
+  none = teaching pictures at 34 / 37 weeks. Drives the ruler marker, the week line under the picture, past 37 weeks the baby only partly
+  turns (no "Head down" label), before 36 the head and cervix only part-change.
+- **Care Plan Diagnosis:** `phPpDxRowHtml` adds the phase's own picture while the live phase key is `breech` (Breech) or `birth` (Labour);
+  thumbnails now carry the patient's name (so the Lining thumbnail reads her findings too).
+- CSS: `.lbl-s` (5.6px), the two scenes' `.lbl-t` at 7.4px as in the mock, `.ph-pp-lwk` (week line), `.ph-pp-lsafe` (safety line, zero tokens).
+- Wording: steps, evidence, notes and week lines are the mock's; the evidence for each step sits in its card (Lining's shape). Left out: the
+  mock's "(her app's own rule for pregnancy phases)" after the point-safety line. All DRAFT wording, hers to correct.
+**Tested (sandbox, no sign-in):** a patient at 34 weeks: bar Balanced · Pregnancy · Lining · Breech · Labour, each tab swaps picture and
+story, stage chips light the steps, Lining still lights its steps, back to Pregnancy hides all stories; Breech correction bar Balanced ·
+Breech · Turning; Care Plan thumbnails on a Pregnancy plan in Breech Presentation / Labor Induction; the Labour thumbnail opened big (no bar,
+safety line); week lines at 34 and 38 weeks and with no patient; 375px sheet; no console errors. **Not tested:** on her real patients and
+phone, reduced-motion in a real browser setting, the Pregnancy picture inside the live Care Plan page (thumbnails tested by their HTML).

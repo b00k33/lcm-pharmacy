@@ -1252,6 +1252,8 @@ One pattern can be ★ main. Formula ideas are OFF (she dislikes suggested
 herbs). A rule she overrode in Settings never gains new clue keys later
 (deliberate). All pattern wording is Claude-drafted, hers to correct.
 
+**Story tabs on the condition pictures (2026-10-23):** a picture can carry story tabs after Balanced | the condition (`PH_PP_TABS`, `PH_PP_STORY`): IVF and Natural fertility have Lining; Pregnancy has Lining, Breech and Labour; Breech correction has Breech ("Turning"). Breech and Labour follow her pregnancy week (`phPpPregWeek`), and the Care Plan Diagnosis adds their picture during the Breech Presentation / Labor Induction phase. A new story = one `PH_PP.SC` scene + one `PH_PP_STORY` entry + its base in `PH_PP_TABS`. BUILD-NOTES.md, "Turning a breech baby + Preparing for labour".
+
 **Formula pictures (`PH_FP`, 2026-10-22):** Ban Xia Hou Po Tang and Huang Lian Jie Du Tang each have a moving picture of the body (three burners, Also drawn: Xiao Chai Hu Tang, Wen Dan Tang, Wu Ling San, and every other formula in the Fang Bing Ren list (22 in all; see BUILD-NOTES 2026-10-22 batch 3).
 trouble, herbs at work, tongue + pulse inset), three stops Trouble / Formula at work / Settled, tap-a-herb chips. It replaces the pattern picture on
 the Guide card for those formulas and also shows on Dispense (end of the right column) and the Care Plan formula cell. Same runner as the pattern
