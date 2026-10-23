@@ -125,6 +125,15 @@ reads it; do not render it again.
 | **2 Today's visit** | Today's visit (checklist home) → Cycle (if on) → Tongue → Pulse → Abdomen | Every visit |
 | **3 Put together & do** | Fang Bing Ren → Timeline (fertility plans) → Treatment Care Plan → Treatment → Dispense | Decide, then treat |
 
+- **Today's visit layout since 2026-10-23 (her 8 picks, mock `today-visit-mock-2026-10-23.html`, BUILD-NOTES "Today's visit:
+  Ask · Look · Treat"):** the Journey card on top (plan phases, ▼ today, this phase's visit dots, next visit / next period /
+  egg collection / formula / likely pattern / flagged history) replaces the one-line strip; a step bar that stays in view
+  (Ask · Look · Treat, counts); **Ask** = the compass (its own progress line and "next:" chip are gone: one Next);
+  **Look** = the cycle card (the Cycle page's sentence, Day 1 chip + finder, a 2-week slice of its calendar with the same
+  day card, plan dates as tags) + Tongue / Pulse / Abdomen picture tiles (Skip in ⋯; Musculoskeletal a tile only for pain
+  patients, otherwise "+ Pain"; "+ Ask her"), folding to one line when all done; **Treat** = Formula → Acupuncture →
+  Dispense in one card (Dispense still opens the full prescription). The older description below is kept for the parts
+  that did not change.
 - **Today's visit** is a checklist home: a one-line strip on top (last visit
   date · likely pattern · phase and visit number · flagged history), the
   **complaint compass** (each complaint scored every visit against its baseline, grouped by
