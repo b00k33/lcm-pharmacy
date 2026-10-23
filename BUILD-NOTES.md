@@ -2140,3 +2140,15 @@ Her words: "mock Fang Bing Ren and Ren next" → mock `fbr-ren-chips-mock-2026-1
 - Find the Ren look answers stay loose (her 2026-10-16 pick), now 32px with 6px corners, "none of these" too.
 **Trade-off told to her:** about 600 sign rows grow from 24px to 32px, so the page is longer. Her 2026-10-16 "make chips smaller to fit more" is superseded by today's pick.
 **Tested (sandbox, 1280):** every changed control measured 32px / 6px; tap a sign ticks it (solid), tap again clears, ✕ rules out (grey, crossed), ✕ again clears; Quick assess rows don't overflow (0 of 8); no sideways scroll on either page. **Not tested:** her real data, a gynae / MSK case colour page by eye, tablet widths, the phone (unchanged).
+
+## Exam pages chips, one height (2026-10-23)
+Her words: "mock the exam pages next" → mock `exam-chips-mock-2026-10-23.html` → "build it and push".
+**What changed (CSS only, one `@media (min-width: 641px)` block after "Fang Bing Ren + Ren chips"):** 32px, 6px corners, one category = one joined bar, icon-only = circle, a picked chip solid teal (the case colour on a gynae / MSK page).
+- Today's visit: 0–10 | % better (`.ph-cx-sw`) joined; Compass and Energy score cells 30px in 6px bars; sign search `.ph-cxs-w` and the Note (`.ph-cx-note-in`, now a box, was an underline) 32px; ▾ (`.ph-cx-dd`) and ⋯ (`.ph-today-skip.ph-tv-more`) circles; red-flag No · Yes 32px; `.ph-today-btn` 32px; Ask · Look · Treat cards 40px rows.
+- Ask her: answers `.ph-ah-a` 32px 6px; `.ph-tc-seg` (Usually | Right now, Tongue | Sublingual) one joined bar, picked solid.
+- Tongue / Abdomen / Pulse referred: `.ph-exam-page .ph-tng2-seg` 6px corners, cells 32px; "Add today's" photo, Findings trend, Normal range 32px.
+- Pulse: quality chips `.ph-pulse-stamp` stay loose, 32px 6px; the picked one is now solid teal (was gold). Fang Bing Ren lines `.ph-tri-inline-rows .ph-tri-row` 32px, ticked = solid.
+- Abdomen: temperature − / °C / + one 32px bar; "Nothing unusual" box; the note box 32px.
+- Medical history: question rows `.ph-hx-qrow` are 32px boxes (a "yes" row solid); Asked all, Send intake link, None of these, + Add surgery, ✓ Save (was a 44px pill) 32px boxes; Full history | Allergies only | Not needed joined; Front | Back joined.
+**Kept:** the pulse chart cells, the drawings, the Compass sliders, the phone.
+**Tested (sandbox, 1280):** measured every control on the six pages (only the pulse chart cells, sliders, two-line wrapped rows and the "▸ More" rows are off 32px, on purpose); no sideways scroll on any; a Medical history row tapped turns solid with white text. **Not tested:** her real data, a teal (non-gynae) patient by eye, tablet widths.
