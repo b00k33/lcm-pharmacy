@@ -1047,9 +1047,24 @@ plan]. Edits repaint through `phTpPlanRepaint()`, never a full rerender.
 **Formula on a phase**: a typed name is hers; "→ Fill" fills from Fang
 Bing Ren's live top formula when blank [Care Plan phase Formula].
 
-**The Treatment tab** carries the session stepper, the phase's visit table
+**The Treatment tab** carries the session stepper, the visit (`phTpVisitTableHtml`)
 and a Complete band; "✓ Complete session N" there is the one place a visit is
-saved (`data-pres-acu-log`; Today's visit only opens it).
+saved (`data-pres-acu-log`; Today's visit only opens it). **Simpler since
+2026-10-23 (her 12 picks, treatment-simple-mock-2026-10-23.html):** no Planned |
+Today | Session N table any more. One session line (the phase named once,
+Current ▾, "Session N · today", Herbs only today, Change phase), then "How
+<name> is" on the left (the Compass's complaint and sign lines read-only,
+`phTxCxHtml` -- today's score or the last one faded with its date, one "Score on
+Today's visit" chip; then the Care Plan's own finding lines and drawers,
+`phTxFxHtml` over `phTpFxRowHtml`, Came in for left out, a Fang Bing Ren line
+added, template-hidden ones under More) beside today's treatment on the right
+(Aim, the navy Therapies block with the phase's planned therapies lit once per
+visit by `phTxSeedTherapies` and a dashed chip for a planned one she unticks,
+"Same as last visit", "Which muscle?" for pain patients; the green Herbs block;
+Watch; Notes; one "Plan ahead · Session N" chip opening the per-session boxes).
+Tongue / Pulse / Abdomen have **no Better / Same / Worse** here any more; the
+visit's result comes from the Compass (`phCxOutcomeToday`). Phone: stacked,
+summary first, only the exam lines shown with the rest under one More chip.
 
 **"Alive" phase resolution (locked, load-bearing)**: `phTpLivePhase(rec,
 plan, asOfKey?)` is THE read for the current phase — live cycle-day phase →
@@ -1320,7 +1335,7 @@ each rated Gone · Better · Same · Worse from the next visit on
 tick off, `phCxGoneToday`; Ren is never touched). The gold row is the one being
 asked now; number keys, G B S W and ↓ drive it. Her order is
 `rec.complaint.secondary` (drag ⋮⋮ or ▾ Move). The Treatment tab's Subjective
-table is gone: one read-only "Today's ratings" line (`phTsRatingsLineHtml`),
+table is gone: the Compass's own lines, read-only, in its "How <name> is" card (`phTxCxHtml`, 2026-10-23),
 Watch = the template's Red flags only, no "Apply the usual". The Care Plan Goal
 reads complaints only (derived Fang Bing Ren "complaints" are gone from
 `phCcSecAll`); the letter's "Watching:" = complaints + the sign rows she can
