@@ -2202,7 +2202,7 @@ Her words: "build it and push" (mock `guide-chips-mock-2026-10-23.html`). One de
 **Kept:** body-type pictures, the tongue drawing, importance dots, the learned bar, quiz colours; the phone.
 **Tested (sandbox, 1280):** every control on Families (Study + Edit), Tongue map and Pulse measured 32px; all 7 tongue bars fit (scrollWidth = width); no sideways scroll. **Not tested:** Quiz answers by eye, the Guide's notes-only editor, tablet widths.
 
-## To Order board chips, one height (2026-10-23)
+## To Order board chips, one height (2026-10-23, LIVE build 20261023-115400)
 Her words: "build it and push" (mock `toorder-chips-mock-2026-10-23.html`). One desktop `@media (min-width: 641px)` block after "Guide chips"; the board's own classes (`.ph-osb-*`) only, so the phone To Order is untouched.
 - `.ph-osb-hbtn` (+ Add to order, Add to order, Order now, Mark ordered, Arrived, Copy for email, Mark all ordered) and `.ph-osb-chip` (Clear) 32px 6px; the outlined ones now a 1px line (Order now keeps its red).
 - To order | Running low (`.ph-osb-seg`) 6px corners.
@@ -2218,7 +2218,7 @@ Her words: "build it and push" (mock `toorder-chips-mock-2026-10-23.html`). One 
 **Tested (sandbox, Linh Test, 1280):** no row or Look chip starts lowercase; header reads "Points toward Dang Gui Shao Yao San". **Not tested:** the phone.
 **Her second ask (signs that do not go together):** 10 candidate rows sent to her as Split / Keep picks; nothing split yet.
 
-## Every other page, one height (2026-10-23)
+## Every other page, one height (2026-10-23, LIVE build 20261023-115400)
 Her words: "work on all pages at the same time and push in one go" (no mock this round, her call). One desktop `@media (min-width: 641px)` block after "To Order board chips", covering Dashboard, Communications, Inventory, Formula refill, Stocktake, Stock statistics, Photos, Stock movements, Price review, Suppliers, End of day, All templates, Relocation, Settings and the Prescriptions list.
 - 32px 6px: `.ph-rp-menubtn` (Plan ▾, was a 36px pill), `.ph-ck-chip` everywhere (was 22–26px pills), `.ph-cap-tchip` (photo labels), `.add-btn`, Price review's start button and End of day's Copy prompt (were 44–48px), the refill and Communications searches.
 - Plain-text taps now boxes: Dashboard "See all N" and the card's "To order", Communications "N not shown" and Contact, `.ph-load-btn` (Columns · N hidden, Made in house, + Schedule a dispense...), `.ph-os-lnk` (See refill history), Stock statistics' date button and "see the N never..." link, Price review's upload link, Relocation's Edit the move and Open the full list, All templates' + New template, refill's "N below the line".
