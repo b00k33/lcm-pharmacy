@@ -1884,3 +1884,29 @@ are unchanged for a truly broken file.
 **Tested (sandbox):** forced `<img>` failure → saved through the fallback; a 3-byte fake JPEG still fails with "couldn't open that image";
 a 3-photo batch (3000×4000) copies all three at pick time and Save all files 3 of 3, modal closes. **Not tested:** on her phone (the lapse
 can't be reproduced in a desktop browser).
+
+## Compass sign search: type a Fang Bing Ren sign on Today's visit (2026-10-23)
+Her ask (screenshot of Today's visit, Ask): "to save me going to the fang bing ren page, allow me to type in and search/select fang bing
+ren signs". The Compass "+ add" box could already do this, but it was hidden behind a button, listed the now and usual twins as
+two identical names, didn't mark signs she had already answered, closed after each pick and could only say Yes. Mock
+`fbr-sign-search-mock-2026-10-23.html` (real-app screenshots: today's box, A / B / C placements, phone). Her 8 picks, all Recommended:
+A (top of the Compass) · Now + Usu Yes / No rows · stays open · answered = lit + "✓ in Compass" · "+ add" removed · ↑↓ + Enter = Now Yes,
+Shift+Enter = Usu Yes · 8 then "Show all N". Her pick 5 ("only Now: Yes adds a row") clashed with the 22 Oct ANSWERED rule (a Ren tap
+anywhere already gives a row); asked again, she chose "One rule: Usu Yes adds a row", so `phCxSignList` is unchanged.
+- `phCxsHtml(name)` under `.ph-cx-hd` in `phCxCardHtml`; view state `phCxSq` (words per patient), `phCxSqAll` (Show all), `phCxAddHl`
+  (the ↑↓ row). The input has `field-bare` (the app's opt-out of the global field padding).
+- `phCxsOptions`: PH_BING_SIGNS + PH_REN_SIGNS (sex filter), `phCsScore` + half a point when the word is in the sign's own heading
+  ("Thirst: ..." before "After alcohol: ... thirst"), shorter labels first; twins folded through `phFbrTwins` (row keeps `b` + `p`).
+- `phCxsResHtml`: `.ph-qr` rows inside `.ph-cxs-res.ph-nq > .ph-qa-rows` (so they fold on a phone like Quick assess), matched words bold,
+  "✓ in Compass" when `phCxSignList` has a row for either key, a sign with only one side shows that side.
+- `phCxsAnswer(name, kind, key, yes)`: `phTriWrite` with `phTriClearYes` / `phTriSetYes` / `phTriSetNo` (+ `phLinkAfterWrite`); a new
+  Yes pins `sxPin[b || p] = { cc: lit complaint }` and clears Not watching; when neither side is Yes any more the pin goes. Repaints the
+  card (`phCxRefresh`, which now keeps the search box's cursor) and `phCxTriSync`; on a mouse the cursor goes back to the box.
+- Close: Esc, or a `pointerdown` anywhere outside the box (`phCxsClose`, clears the words). Enter with no row lit = `phCxAddSecondary`.
+- Removed: `phCxAddOpen`, `phCxAddPaint`, `phCxAddSign`, the `data-cx-add*` handlers and the `.ph-cx-add*` CSS. `phCcSecSignOptions`
+  stays (the Came in for box still uses it).
+**Tested (sandbox, no sign-in, test patient):** "thirst" lists 7 rows, no doubles, Thirst rows first; Now Yes ticks + pins + "✓ in
+Compass", list stays open; Usu Yes; No (no row); Yes again clears and unpins; ↓ Enter, ↓ Shift+Enter, Esc, a tap outside;
+"cold" = 8 + "Show all 27" (scrolls); Enter adds "Heartburn" as a complaint; "Add to Watch" makes a Watching chip; G typed in the box
+doesn't rate a sign; desktop + 375 px pictures; no console errors (only the harness's CDN ones). **Not tested:** her real patients,
+her phone.
