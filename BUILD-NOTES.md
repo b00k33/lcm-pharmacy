@@ -2072,7 +2072,7 @@ tab list and a dated day list still go to their own readers.
 on 7a22a98f in a private index (GIT_INDEX_FILE) and pushed to main; merge 271acde0 joined it into session-a with session-a's
 own tree (no file changes), so the next publish-live.sh still fast-forwards.
 
-## 2026-10-23 · Red flags in Watch and on Today's visit
+## 2026-10-23 · Red flags in Watch and on Today's visit (LIVE build 20261023-074600)
 Her asks: "how to have groups of condition watch/red flags e.g. for pregnancy 1st trimester" (answer: each template
 phase already has its own Red flags box; list of all 29 conditions / 102 phases with Claude's DRAFT additions published
 as an artifact), then "give option to add those red flags in the watch section - show mock" and "incorporate into todays
