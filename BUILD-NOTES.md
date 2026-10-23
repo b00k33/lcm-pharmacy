@@ -2028,7 +2028,7 @@ Left as they are: the Timeline / blood-test items that read a test as a dated EV
 Second Trimester with no question; plan date 20 weeks ago → button "Pregnant · 20w 0d", appointment "🌸 20w0d"; transfer result only →
 11 weeks (button, picture); negative test → not pregnant, the question still shows. **Not tested:** her real patients, her phone.
 
-## 2026-10-23 · Treatment page: one summary beside today's treatment (her 12 picks, NOT LIVE)
+## 2026-10-23 · Treatment page: one summary beside today's treatment (her 12 picks; fdf7dca4, LIVE since build 20261023-063900)
 Her words (screenshot of Charmaine's Treatment page, FET Prep — Medicated): "make this page more simple. integrate all the complaints and
 summary of all the findings and signs - show mock first". Mock `treatment-simple-mock-2026-10-23.html`; she took every recommended pick.
 **Now (`phTpVisitTableHtml`, rewritten; the Planned | Today | Session N table is gone):**
