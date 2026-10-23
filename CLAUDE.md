@@ -99,6 +99,7 @@ reads it; do not render it again.
 **Fixed, 2026-10-18 (her screenshot of the Usual Period card's Flow/Clots/Pain rows + "fix it now")** — see the dated build note in BUILD-NOTES.md for the full writeup. Two corrections, both now standing: (1) a solid vertical line/bracket beside a chip-group's row label is a NO, same family as a border used where colour/space should separate instead; (2) one question's own options are ONE category and now join into a single bordered, no-gap bar — scoped to `.ph-pfw-opts`/`.ph-pfw-opt` (Usual period, meno/men's sets, Pain intake, any `presPfwSetHtml`-driven card), explicitly NOT Find the Ren's own Look-card chips, which she separately asked to keep as loose individual pills (2026-10-16).
 
 **Terse (her 2026-10-09 "not having explanation and instructions in app", widened 2026-10-15; this is the one wording):** no sentence on screen that explains what a thing is or how it works; a control is self-evident, or carries its affordance in a hover `title` / `aria-label`. Keep only a warning that stops a mistake (red flags, below-zero stock, a sign clash, the merge check, save failures), label text, data facts, and a legend that decodes a chart's own symbols (the pulse grid's △ / degree key). An empty state = two words + the chip that fills it ("No recipes" + [+ New recipe]).
+**Pictures over words (her 2026-10-23: "i want more visually succinct images/diagrams/animations/icons and less words"):** lead with an icon from the sprite, a small diagram (dots, rings, bars) and motion on a real change; a label or sub-line moves into the hover `title`. Mocks and questions to her follow it too (short option names, a picture each).
 **Screens follow code7's order (Remove → Combine → Infer → Group → Collapse → Contextualise → Hide → Reveal) and code3's brief, polite tone.** (The code3 section below is message wording; this line gives screens the same restraint.)
 
 **Superseded by this rule (the old lines were removed in the 2026-10-21 audit):** "ONE pill/chip style ... square outlined buttons", "Pill shape = something she PICKS", the 10/10 smoothing "outlined pill = everything else", audit step 5's "outlined pill, 10px corners" (its no-underline, no-arrow rules stand), and the retired DESIGN-CONVENTIONS.md "text links". Corners still follow the scale (6 / 10 / 16 / pill): chips use pill and 6 only.
@@ -1242,6 +1243,11 @@ A patient can be linked to their partner [Partner link]. The no-plan gate
 has "Skip for now" (in memory only). The read-only **Patient Directory**
 unions six sources keyed by `phPatientKey`. (The early-October
 "Profile-first" plan is history: the Patient Workflow LAW replaced it.)
+**No band on patient pages (her 2026-10-23 pick C, `hx-band-mock-2026-10-23.html`):** the dark three-gauge band is gone
+from Medical history, Supplements, Photos, IVF history, Appointments, Messages, Treatment, Treatment log and Notes. Each
+page's facts are an icon + a number on its own first row, the words in the hover title (`.ph-fx`; `presBandHtml` +
+`PRES_BANDS`, sync unchanged). Medical history's ✓ asked and 🕒 updated sit in its toolbar (`presMedHxBandHtml`); "By group"
+went (each group heading says ✓ asked) [Patient pages: no band].
 
 ## Musculoskeletal page
 A picture row (pain figure | the region's muscle diagram front + back |
