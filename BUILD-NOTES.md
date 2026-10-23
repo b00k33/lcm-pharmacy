@@ -2011,3 +2011,19 @@ Her paste for Charmaine Mari-De Leon ("add this to Charmaine Mari-De"): 11 tab r
 **Tested (sandbox):** her exact paste → 10 appointments (27 Oct cancelled left out), each on its own date; opened from the patient
 "Charmaine Mari-De Leon", Paste list → Import → 10 on her record; pasting again → still 10 (same date + time + patient refreshes).
 **Not done by me:** adding them to her live record (her sign-in): she pastes it once this is live.
+
+## 2026-10-23 · Her pregnancy is one fact (plan date, Pregnant? test, IVF transfer result)
+Her words (screenshot of "Before Nyssa's plan starts" asking her week): "this data is already in her file. can you connect it? make
+the pregnant data universal for all relevant input in app".
+**Before:** two stores never read each other: the Pregnancy plan's date (`rec.pregnancy.start`, week 0) and the Pregnant? test
+(`rec.pregTest.date`, the "4 weeks" anchor); an IVF transfer's positive result counted only for the appointment flag and the cycle pause.
+**Now (derived on read, nothing copied):** `phPregStartOf(rec)` = the plan date, else a positive test's date − 28, else the latest
+positive IVF transfer's `pregTestDate` − 28 (a negative test with no plan date = not pregnant). `phTpPregFor(rec)` returns it, so every
+reader of the plan date follows (the Pregnancy block, timeline items, the plan list's "week N", the Breech / Labour pictures, the
+trimester sync). `phPregPositive` / `phPregAnchor` feed the Pregnant? button, the appointment 🌸 week and the cycle pause.
+The "Before her plan starts" popup (`phPregQOpen`) no longer asks when her file already has it: the plan starts on that date's trimester
+with "Pregnancy plan started at week N · from her file". Her plan date always wins; typing it in the Pregnancy block still writes it.
+Left as they are: the Timeline / blood-test items that read a test as a dated EVENT, and the "test logged" banner.
+**Tested (sandbox, a copy with only this change; another session's work was mid-way):** test at week 24 → week 24, plan opens on
+Second Trimester with no question; plan date 20 weeks ago → button "Pregnant · 20w 0d", appointment "🌸 20w0d"; transfer result only →
+11 weeks (button, picture); negative test → not pregnant, the question still shows. **Not tested:** her real patients, her phone.
