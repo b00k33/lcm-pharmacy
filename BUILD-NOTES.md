@@ -2131,7 +2131,7 @@ Her words: "make a list of all the pages of the app and audit the chips one by o
 **Not done (later pages):** Communications filter chips `.ph-ck-chip` (shared with the cycle Day log), Ren / Fang Bing Ren sign chips, exam answer chips, 0–10 cells.
 **Tested (sandbox, 1280):** measured every changed control at 32px / 6px; rail 40 / 32; the Open button fits its card; no sideways scroll; Prescriptions search still filters live (12 → 3 → 12). **Not tested:** her real data, tablet 641–900px widths in detail.
 
-## Fang Bing Ren + Ren chips, one height (2026-10-23)
+## Fang Bing Ren + Ren chips, one height (2026-10-23, LIVE build 20261023-102100)
 Her words: "mock Fang Bing Ren and Ren next" → mock `fbr-ren-chips-mock-2026-10-23.html` → "build it and push" (white boxes, the mock's default).
 **What changed (CSS only, one `@media (min-width: 641px)` block after "Shared chip fixes"):**
 - Sign rows (`.ph-fbr-row.q`, the one shared sign row: Fang Bing Ren board, Ren tab, Quick assess evidence): one 32px white box, 6px corners, 3px colour edge, the ✕ its own 32px end with a divider and ALWAYS shown (it used to appear on mouse-over). Ticked = solid `--rc` as before; ruled out = grey + crossed through as before. The Bing / Ren cells (`.ph-sh-cell.bing/.ren`) lost their tint; the column headings keep it.
