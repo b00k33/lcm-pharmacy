@@ -1456,7 +1456,9 @@ on the database SQL.
   `publish-live.sh --yes` (or a hand-made publish), run
   `mkdir .git/lcm-publish.lock`. If that fails, another session is
   publishing: wait 30 seconds and retry. When the script prints LIVE or
-  fails, run `rmdir .git/lcm-publish.lock`.
+  fails, run `rmdir .git/lcm-publish.lock`. Only remove a lock YOU made: never chain
+  `mkdir ...; ...; rmdir ...` with `;` (a failed mkdir still runs the rmdir and deletes another
+  session's lock); use `if mkdir .git/lcm-publish.lock; then ...; rmdir .git/lcm-publish.lock; fi`.
 - **Every push bumps BOTH version markers**: `sw.js` `CACHE_VERSION` AND the
   `<meta name="lcm-build">` stamp in index.html. The gold Update button
   compares the meta stamp; bumping only sw.js ships an update her app never
