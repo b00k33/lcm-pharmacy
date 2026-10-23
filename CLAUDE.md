@@ -943,6 +943,12 @@ names in detail, grep BUILD-NOTES.md for the heading named in brackets.
 Anything unsettled is in OPEN at the end.
 
 ## Appointments & calendar
+**Toolbar + Up next buttons (her 2026-10-23 picks, Zanda as inspiration, appt-chips-final-mock-2026-10-23.html):** every
+control is 32px; text controls are 6px boxes (white, thin line, picked solid), icon-only buttons stay circles, text at the
+app's own sizes; ‹ › then the date in full in teal (`phApptCalDateLong`), Today always there (greyed on this week), the day
+count a "7 days ▾" dropdown (`.ph-atb-dd`), Grid | List a joined box bar, search with the magnifier; Up next = Open (solid) ·
+Profile · Edit in one row, then Call · Text · Email circles (`.un-row3`, `.un-icons.circ`). This page departs from TAPPABLE
+THINGS' pill chips on her word; other pages follow page by page [Appointments chips, one height].
 The app opens on this page. It mirrors Cliniko's day view: solid colour
 blocks read off `PH_CLINIKO_TYPE_COLOURS` (her Settings → Appointment
 types, 21 types read live), a time gutter, the page scrolls, no inner
