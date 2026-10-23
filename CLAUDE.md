@@ -1033,6 +1033,12 @@ and the field keeps following the patient; back to auto keeps those lines.
 Wording lives in Settings → "Goal wording" and
 "Watch wording", her lines first, all DRAFT [Watch and Aim write
 themselves from the patient].
+**Red flags (her 2026-10-23 picks, mock watch-red-flags-mock-2026-10-23.html):** Watch has a "Red flags ▾" dropdown
+(this phase's template lines, this condition's other phases, every other condition) that ticks a line onto the phase
+(`ph.rfPicks`, red chips with ×). Today's visit asks them at the BOTTOM of the Compass, No · Yes each
+(`phRfCxRowsHtml`; the template phase's lines that send her somewhere + her ticks; answers in
+`rec.ccTrack.days[day].rf`). A Yes puts "⚠ Red flag today" on the patient band and a red line in that day's visit row
+[Red flags in Watch and on Today's visit].
 
 **Session grid** (`phTpSessionLadderHtml`): phase rows × visit columns
 (capped at 12, "+N" opens the calendar), a square each for done / today /
