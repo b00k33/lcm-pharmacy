@@ -2055,3 +2055,16 @@ drawer opens (Open Abdomen, + Watch, + Aim; + Watch repaints in place); Plan ahe
 Therapies and back; Same as last visit lit 5 chips; unticking a planned chip leaves it dashed; Complete saved the visit (5 therapies,
 outcome "better" from the Compass, no exam picks), band ticked, line moved to Session 3; Care Plan findings still open/light.
 **Not tested:** her real patients, her phone, a finding with a purple changed dot (no seeded exam history).
+
+## 2026-10-23 · Appointments paste: Zanda's own list of one patient's appointments (her "how can you get copy paste to read this")
+Her paste (Charmaine Mari-De) read nothing: each booking is "28/10/2026 Wed 10:00 AM-10:30 AM", the end time again on its own
+line, then the billed items ("Alexandria Acupuncture FOLLOW UP 50 minutes"), a line missing when nothing was billed yet.
+New `phApptParseClientList` (after `phApptParseList` in `phApptParse`): one booking per date-led time-range line; the end-time
+line and a bare status word are skipped; Cancelled etc. leave the booking out; the rest is the service. Length comes from the
+range (30 min), not the "50 minutes" in the service name. No name in the paste, so rows wait for it (needsName), filled when
+the sheet is opened from the patient. Steps aside unless most time-range lines in the paste are these date-led ones. The same
+rows copied as tab-separated cells read the same.
+**Tested (real app on localhost, not signed in):** her exact paste, opened from the patient: 11 rows across 9 days; Import
+added all 11 (both 4 Sep and both 8 Aug kept); the tab-separated copy parses identically; an Alexandria day list, the
+tab list and a dated day list still go to their own readers.
+**Not tested:** at the acupreg location (ACU+CHM pills and pre/post transfer tags show there, not on the test copy).
