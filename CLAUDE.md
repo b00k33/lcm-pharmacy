@@ -144,6 +144,8 @@ reads it; do not render it again.
   Cycle / Tongue / Pulse / Abdomen as tiles with a ✓ when done today and last visit's finding beside
   today's. Each tile opens its own page. Pain / MSK patients also get a **Musculoskeletal** tile and page after Abdomen (2026-10-11,
   see "Musculoskeletal Assessments page" in BUILD-NOTES.md): the pain map + Pain intake moved onto it, so "Where it hurts" no longer sits on Today's visit for them.
+- **Ask her comes first after Today's visit (her 2026-10-23 "i need this page to appear sooner. after todays visit"):** the
+  rail lists Ask her, Tongue, Pulse, Abdomen, Musculoskeletal; the Next chain is Today's visit → Ask her → Cycle → Tongue → ...
 - **Tongue, Pulse, Abdomen and Cycle are each their own page** (her pick,
   reversing the earlier one-card fold). Cycle has ONE home: its own page,
   reached from its Today's visit tile. No second Cycle tab.

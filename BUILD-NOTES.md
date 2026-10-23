@@ -1979,3 +1979,10 @@ sign):** 1280, 1000 and 375 wide (headless Edge); order IVF · stress · Digesti
 Heat & sweat sign; scoring IVF → ✓, gold band on stress, "Asked 1 of 6 · 1 worse", bar 17%; a search Yes with stress tapped lands
 right under stress and pops the head glow; first visit: "Baseline set 0 of 3", sign cells empty; drawer keeps the area edge.
 **Not tested:** her real patients; her phone (long-press); the glide's feel by eye (pictures are still frames).
+
+## 2026-10-23 · Ask her comes straight after Today's visit
+Her words (screenshot of the Ask her page, low in the rail): "i need this page to appear sooner. after todays visit".
+- Rail (`examSubs`): Ask her, Tongue, Pulse, Abdomen, Musculoskeletal. Next chain (`order` in the plan-stage Next): today → askher →
+  cycle → tongue → pulse → abdomen → msk → … Tabs (`presTpMainSections`): Ask her right after Today's visit.
+- Not changed: "Next up" (`presVisitNext`) never walked Ask her (it is not in "n of m done").
+**Tested (sandbox):** a Natural fertility patient: rail order as above; Today's visit Next = "Ask her", Ask her's Next = "Cycle".
