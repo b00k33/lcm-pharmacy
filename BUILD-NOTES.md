@@ -2120,7 +2120,7 @@ DOB box; the changed-this-visit tint kept.
 **Tested (sandbox):** every control measures 32px (bar segments 30 inside the 1px frame); phone 375px has no sideways
 scroll. **Not tested:** on her phone; with Call / Text / Email copy chips showing (the test patient had no phone).
 
-## Shared chip fixes, one height (2026-10-23)
+## Shared chip fixes, one height (2026-10-23, LIVE build 20261023-094500)
 Her words: "make a list of all the pages of the app and audit the chips one by one page by page" → audit `chip-audit-pages-2026-10-23.html`; her pick "Shared fixes first"; mock `chip-shared-fixes-mock-2026-10-23.html`; "build it".
 **What changed (CSS only, one `@media (min-width: 641px)` block just above PHONE REDESIGN, "Shared chip fixes"):**
 - Next button (`.ph-pres-stage-next`, not the Patient details plan tile): 32px, 6px corners, its own width.
