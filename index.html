@@ -24121,6 +24121,10 @@
     });
   }
 
+  // a booking's status word at the end of a pasted name ("Christall Giannas Confirmed", her 2026-10-23):
+  // never part of the name. phApptCleanName drops it from every paste; loadPharmacy drops it from
+  // bookings saved before that, on every load and cloud pull.
+  const PH_APPT_STATUS_TAIL = /(?:\s+(?:confirmed|pending|arrived|cancelled|canceled|completed|did not arrive|did not wait|in progress|not arrived))+$/i;
   function loadPharmacy() {
     const empty = { herbs: [], formulas: [], log: [], suppliers: [], markup: 100, hideStopped: false,
       presPricing: { method: "gram", gramPrice: 0.71, markup: 3 },   // her Galcott selling setup
@@ -24158,6 +24162,14 @@
         const st = { ...empty, ...v };
         // one-time seed for a store created before the import existed
         if (!st.seeded && !st.herbs.length) { st.herbs = seedHerbs(); st.seeded = true; }
+        // her ask 2026-10-23 ("do not include confirmed in the patient name"): bookings pasted before the
+        // paste learned the status words keep their name minus the word, so they link to the real patient
+        // and a re-paste of the same day matches them instead of adding a second booking
+        if (Array.isArray(st.appointments)) st.appointments.forEach(a => {
+          if (!a || typeof a.patient !== "string") return;
+          const c = a.patient.replace(PH_APPT_STATUS_TAIL, "").trim();
+          if (c && c !== a.patient) a.patient = c;
+        });
         // what's really on disk right now -- the baseline the save-time
         // shrink guard compares against (items 1+2, 2026-08-13)
         phSavedCounts.herbs = st.herbs.length; phSavedCounts.log = (st.log || []).length;
@@ -31167,7 +31179,7 @@
   // group that repeats the group before it, then title-case
   function phApptCleanName(s) {
     // a booking's status word is never part of the name ("Christall Giannas Confirmed", her 2026-10-23): drop it from the end
-    const w = String(s || "").replace(/\s+/g, " ").trim().replace(/(?:\s+(?:confirmed|pending|arrived|cancelled|canceled|completed|did not arrive|did not wait|in progress|not arrived))+$/i, "").split(" ");
+    const w = String(s || "").replace(/\s+/g, " ").trim().replace(PH_APPT_STATUS_TAIL, "").split(" ");
     for (let n = Math.floor(w.length / 2); n >= 1; n--) {
       const a = w.slice(-2 * n, -n).join(" ").toLowerCase(), b = w.slice(-n).join(" ").toLowerCase();
       if (a === b) { w.splice(-n); break; }
