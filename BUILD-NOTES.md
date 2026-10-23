@@ -1856,7 +1856,7 @@ Breech · Turning; Care Plan thumbnails on a Pregnancy plan in Breech Presentati
 safety line); week lines at 34 and 38 weeks and with no patient; 375px sheet; no console errors. **Not tested:** on her real patients and
 phone, reduced-motion in a real browser setting, the Pregnancy picture inside the live Care Plan page (thumbnails tested by their HTML).
 
-## Tongue / Pulse / Abdomen stay in the rail, greyed, until sex + date of birth are in (2026-10-23)
+## Tongue / Pulse / Abdomen stay in the rail, greyed, until sex + date of birth are in (2026-10-23, 66d532b5, LIVE since build 20261023-034500)
 Her question (screenshot of Brie Harris on Fang Bing Ren): "where are my tongue pulse adominal pages?" The pages need sex AND date of
 birth (`presTpMainSections`' `examOn`); Brie's Patient details wasn't finished, so the three silently vanished from the rail. Her pick
 (popup, Recommended): "Yes, show them greyed".
