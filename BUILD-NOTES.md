@@ -2190,3 +2190,14 @@ Her words: "build it and push" (mock `msk-chips-mock-2026-10-23.html`). One desk
 - Boxes 32px 6px: Labels (its 🏷 emoji removed from the markup) / Enlarge, + Pain map, + Muscle, + Cause, Areas ▾ (was plain text), Add, Now / Best / Worst, body places (`.ph-pm-chip`, picked solid instead of pale), Pain intake's Open, All photos, `.mk-btn`. Circles: ★ (its own inner circle sized to 32) and the pain ×. Fields tinted 32px: Type a pain, detail, Diagnosis, How long, `.mk-in`; `.mk-sel` dropdowns 32px boxes; the summary box 6px corners.
 **Kept:** the body figures, muscle drawings, photo boxes, red-flag tick boxes, posture findings (`.mk-pills.wrap`) as separate boxes; the phone.
 **Tested (sandbox, 1280, Rf Test with a test neck pain added then removed):** every listed control measured 32px (bars' end cells 6px corners); picked side fills the page colour; the score bar 11 x 32 = 352px; no sideways scroll. **Not tested:** her real data, an MSK-coloured (blue) patient by eye, the Musculoskeletal close-up sheet, tablet widths.
+
+## Guide chips, one height (2026-10-23)
+Her words: "build it and push" (mock `guide-chips-mock-2026-10-23.html`). One desktop `@media (min-width: 641px)` block after "Musculoskeletal chips".
+- Families | Tongue map | Pulse (`.ph-gd-tabbar`, were 44px pills) one 32px joined bar; the search 6px corners.
+- Formula list `.gf-t` 32px 6px; the open one (`.sel`) is solid teal with a white ring round its family dot (was the family's pale colour); notes-only keep the dashed line.
+- Study card: `.gf-seg` (Study | Edit, Cover, Balanced | Deficiency) 6px bars, 32px; `.gf-chip`, `.gf-btn` (now a 1px line), Compare with… dropdown, `.gf-nc` 32px boxes. Edit mode's ⊘ / ✕ (`.gf-ib`) 32px circles.
+- Tongue map: Reset (was text) a box; the rows 32px 6px bars; the controls column widened 480 → 640px so the Colour bar shows all 7 (blue and purple were cut off); the add form's fields tinted 32px and "+ Add note" a box (were 44px).
+- Pulse: section rows 32px, the open one solid; each note's ✕ a 32px circle.
+- **Emoji out (rule: icons are the sprite, never emoji):** the source type icons 💬 📖 📝 📘 (`PH_SOURCE_TYPES`) no longer print on source chips (`phSourceChip` line) or in the two source pickers; the map still holds them, unused.
+**Kept:** body-type pictures, the tongue drawing, importance dots, the learned bar, quiz colours; the phone.
+**Tested (sandbox, 1280):** every control on Families (Study + Edit), Tongue map and Pulse measured 32px; all 7 tongue bars fit (scrollWidth = width); no sideways scroll. **Not tested:** Quiz answers by eye, the Guide's notes-only editor, tablet widths.
