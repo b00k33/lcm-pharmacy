@@ -2093,7 +2093,7 @@ Treatment page, tick adds a red chip + a Compass row, × and untick take it off;
 lines; desktop 1280 and phone 375 (no sideways scroll). **Not tested:** the visit table line on a real logged visit,
 on her phone, or with her own edited templates. Pages checked: Today's visit, Care Plan, Treatment.
 
-## 2026-10-23 · Appointments chips, one height (Zanda as inspiration)
+## 2026-10-23 · Appointments chips, one height (Zanda as inspiration) (LIVE build 20261023-083400)
 Her ask: "audit the chips on the app page and make it uniform. use the zanda screenshot as inspo". Audit (sandbox 1280px):
 8 looks on the page, heights 23/28/29/30/31/32/40/44px, corners round/10px/pill. Mocks `appt-chips-mock-2026-10-23.html`
 (Now · A · B) and `appt-chips-final-mock-2026-10-23.html`. Her picks: A (Zanda boxes), Appointments first, the day count a
