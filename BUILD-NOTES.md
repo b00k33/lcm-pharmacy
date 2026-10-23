@@ -2161,7 +2161,7 @@ Her words: "build it and push, and take out both lines" (mock `tp-tx-chips-mock-
 **Kept:** the session grid squares, the session stepper circles, the block colours, the phone.
 **Tested (sandbox, 1280, Rf Test pregnancy plan):** every listed control measured 32px and 6px (or a 32px circle); no `.ph-tp-sugg` on the page; the header reads "How Rf is"; no sideways scroll on either page. **Not tested:** her real data, a gynae-coloured patient by eye, tablet widths.
 
-## Timeline + Messages chips, one height (2026-10-23)
+## Timeline + Messages chips, one height (2026-10-23, LIVE build 20261023-112200)
 Her words: "build it and push" (mock `tl-msg-chips-mock-2026-10-23.html`). One desktop `@media (min-width: 641px)` block after "Treatment + Care Plan chips".
 - Timeline: every `.ph-tlx-btn` (+ Add, Add result, Schedule, Mark done, Save, Change, ...) a 32px 6px box, ⋯ (`[data-tl-menu]`) a circle; Checklist | Lanes (`.ph-tlx-head .ph-cycle-unit`, was 14px tall) one 32px joined bar, picked solid; the Schedule / Done form's date and note are 32px fields. The item name stays plain text but its whole cell is the tap area (`.ph-tlx-nm::after` stretched over the cell), tinted on hover.
 - Messages (the one composer, so the Check-in panel follows): plan tab, phase pills (`.ph-mc-pp`, now one joined bar), Phases ↔ wording (`.ph-mc-lnk`, was text, now a box), Formal | Casual and Wording | Plan phases (`.ph-mc-seg`: 6px, the sliding thumb now solid), every `.ph-mc-chip` and `.ph-mc-btn` 32px 6px; "Save for that day" a white box (Messages stays the one solid button); the Send later date a field.
