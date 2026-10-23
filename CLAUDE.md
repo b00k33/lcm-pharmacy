@@ -1143,7 +1143,20 @@ sync with IVF history]. Starting an IVF Protocol plan opens its
 questionnaire; milestone dates are written BEFORE the start-phase cascade
 runs. A positive hCG cascades an IVF plan to "Early Pregnancy" once, on
 first transition only. `whenEst`/`dateEst` flags mark estimates; their
-absence means confirmed.
+absence means confirmed. **Animated + drawn (her 12 picks, 2026-10-23,
+mock `ivf-history-animated-mock-2026-10-23.html`):** a workflow rail for
+her current round (`phIvfRailHtml`, a step is done once it or anything
+after it is typed) and "one egg through the lab" (`phIvfEggHtml`, CSS
+loop, tap a day to start there); a round reads first (`phIvfStripHtml`:
+lab-stage drawing, count, % from the stage before, blasts against
+fertilised, one dot per egg/embryo, tap a number for − / +; a blank
+count's − does nothing); date / clinic / egg freeze / delete / "typed"
+sit behind the ✎; the bank is straws (`phIvfFrozenBankHtml`); a transfer
+reads first with the uterus drawing + Transfer → blood hCG → 6–7 wk scan
+(`phIvfTransferViewHtml`), its fields behind its ✎ (open by themselves
+while it has no date); scans drawn as ovaries (`phIvfScanDrawHtml`,
+counts only). The drawings are the `ivc-*` sprite symbols. "+ transfer
+from these eggs" is gone: Use ▸ and "+ Transfer" stay.
 
 ## Dispense, Refill & To Order
 Dispense always opens the full script (her "No, keep the friction").
