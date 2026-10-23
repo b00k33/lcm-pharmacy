@@ -1788,3 +1788,23 @@ Built in `phTodayVisitHtml` and its helpers (`phTodayJourneyHtml`, `phTodayStepM
 Sticky trap: `.ph-pres-panel` has `overflow: hidden`, which stops `position: sticky`; Today's visit sets it to `overflow: clip` (`:has(.ph-tv)`), and the bar sits under the name band by `--ph-tv-top` (measured in `phTodayStickyTop`).
 
 Judgment calls (disclosed): there is no stored "IVF cycle start" date, so the Journey card and the calendar tags show the egg collection (and transfer once set) dates the plan does keep; the cycle card has its own ⋯ (Not today / Always) so the cycle check can still be skipped; Musculoskeletal stays a counted tile for pain / MSK patients. Tested in the sandbox (seeded IVF patient, 1280 px and 390 px): render, sticky bar, step jump, day card open/close without a scroll jump, ⋯ skip and ↺, Fill it in, Log today's session, the Look fold and Open. Not tested on her real data or phone.
+
+## IVF history, animated and drawn (2026-10-23, BUILT 7651e57a, not pushed)
+
+Her ask: "improve this page design - use animations and workflow to illustrate it. use enhanced medical accurate diagrams and animations where relevant", then "show mock before build". Mock `ivf-history-animated-mock-2026-10-23.html`; her 12 picks were all the recommended option, then "Yes, build it".
+
+1. Workflow rail for her current round (`phIvfCurrentRound`): Stimulation → Egg collection → Fertilised → Blastocysts → PGT & frozen → Transfer → Result (an egg freeze: Stimulation → Egg freeze → Mature → Eggs frozen). A step is done once it or anything after it is typed; the gold ring pulses on the next. Plus "One egg, through the lab": GV, MII, 2PN, day 2, day 3, morula, blastocyst, a stage every 2 s (CSS loop from `--k`; a day chip restarts it there).
+2. A round reads first: `phIvfStripHtml` draws each stage (`ivc-*` symbols), its count, the % from the nearest earlier typed stage ("% of eggs" when one is skipped; blasts against fertilised), and one dot per egg/embryo (hollow = didn't make it), filling once per opening (`phIvfFillSeen`). Tap a number: − / + in place around the same `data-ivf-field` input (`data-ivf-num-step`; a blank count's − does nothing, + starts at 1). Desktop focuses the number to type over.
+3. Untyped stages: faded drawing + grey "–".
+4. ✎ on a round (`phIvfHdEdit`): date picker, clinic, egg freeze, delete, and "typed <date>" (or "✓ Log this collection"). The "✓ logged" stamp is off the card.
+5. Frozen bank: straws per embryo in a −196 °C cane per round (cap in the round's colour, dashed = used, max 10 + "+N"); the next straw "+ Transfer" would take lifts. Cane tap opens the round; Use ▸ unchanged.
+6. Transfer reads first (`phIvfTransferViewHtml`): uterus from the front, catheter through the cervix, embryo ~1–2 cm below the fundus, lining from her last scan on that round up to the transfer; facts chips; Transfer → Blood hCG (her test date + IU/L, else ~9–11 days after a day-5 transfer, 11–13 after day 3) → 6–7 wk scan (outcome word, else 2–3 weeks after a positive test); result pill (ongoing shows weeks from her test, the same ~4w0d convention). Fields behind its ✎ (`phIvfTEdit`), open by themselves while it has no date or a result has just landed.
+7. Stim room: scans drawn as both ovaries (her right on the viewer's left), one follicle per counted one (max 12 a side), growing scan to scan by order; a combined count reads "N follicles, both sides"; the last scan 1–3 days before a dated collection is marked "trigger".
+8. Motion as the mock (rail fill, gold pulse, egg loop, straw lift, catheter + embryo, follicles); dots fill once. Reduced motion: still pictures (the egg holds on the blastocyst or her tapped day).
+9.–10. "+ transfer from these eggs" removed (handler too); "Use a frozen embryo ▸" sits in the round's footer beside the room button.
+11. A round with no month asks quietly: "add month & clinic ✎" (opens the round with its ✎ row).
+12. Phone: stages and rail wrap 4 + 3, dots and the footer note hidden.
+
+Removed as dead: `phIvfFunnelCellsHtml`, `phIvfFrozenTileHtml`, `phIvfConvHtml`, the `data-ivf-frozen-step` and `data-ivf-add-transfer` handlers, and their CSS. The closed round keeps its one-line funnel; the closed transfer line drops "fresh/frozen" (now in its title).
+
+Judgment calls (disclosed): a "Current round · date · clinic" caption above the rail; the bank straw lifts on a loop like the mock; the transfer gets the same read-first ✎ as a round; blastocyst % is per fertilised egg; "trigger" is inferred from timing. Tested with a seeded patient at desktop and 375 px; not on her real data or phone.
