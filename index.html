@@ -31210,7 +31210,7 @@
     let m = s.match(/(?:^|\s)(\d{1,2})(?:st|nd|rd|th)?\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*(?:\s+(\d{4}))?(?:\s|$)/);
     if (m) { day = +m[1]; mon = PH_APPT_MONS.indexOf(m[2]); year = m[3] ? +m[3] : null; }
     else {
-      m = s.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/);
+      m = s.match(/^(?:[a-z]{3,9}\s+)?(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/);   // "28/10", and "tue 28/10" (her 2026-10-23 multi-date paste)
       if (!m) return null;
       day = +m[1]; mon = +m[2] - 1;
       year = m[3] ? (+m[3] < 100 ? 2000 + +m[3] : +m[3]) : null;
@@ -31558,14 +31558,17 @@
       }
       return "";
     };
+    // her 2026-10-23 "paste multiple appointments on multiple dates": each line's date = the nearest date line above it (the
+    // day-view branches below used to read only the date above the FIRST appointment, so a paste of several days landed on one)
+    const dkAt = []; { let d0 = fallbackDateKey; lines.forEach((l, i) => { const d = l ? phApptParseDateLine(l) : null; if (d) d0 = d; dkAt[i] = d0; }); }
+    const isDateLine = l => !!(l && phApptParseDateLine(l));
     const tIdx = lines.map((l, i) => phApptParseTime(l) ? i : -1).filter(i => i >= 0);
     const zShaped = tIdx.filter(i => zTime(lines[i])).length;
     const zNamed = tIdx.filter(i => nameAbove(i)).length;
     if (tIdx.length >= 2 && zShaped >= Math.ceil(tIdx.length * 0.6) && zNamed >= Math.ceil(tIdx.length * 0.5)) {
       const outZ = [];
-      let dk = fallbackDateKey;
-      for (let i = 0; i < tIdx[0]; i++) { const d = phApptParseDateLine(lines[i]); if (d) dk = d; }
       tIdx.forEach((ti, n) => {
+        const dk = dkAt[ti];
         const name = nameAbove(ti);
         if (!name) return;
         // service forced to the literal "Break" marker -- phApptKind,
@@ -31579,7 +31582,7 @@
         let phone = "";
         const svc = [];
         lines.slice(ti + 1, end).forEach(l => {
-          if (!l || /^\d{1,2}:\d{2}$/.test(l)) return;                       // gutter time
+          if (!l || /^\d{1,2}:\d{2}$/.test(l) || isDateLine(l)) return;      // gutter time, or the next day's date line
           // an Australian number is 0 + 9 digits (or +61 + 9) -- bounded so
           // "0478 099 048 13F. Alexandria…" keeps its "13F." in the service
           const m = l.match(/^((?:\+?61|0)(?:\s?\d){9})(?=\s|$)\s*(.*)$/) || l.match(/^(\+?\d[\d ]{6,}\d)\s*(.*)$/);
@@ -31626,13 +31629,13 @@
     const aHasRest = aIdx.filter(i => alexTimeLead(lines[i]).rest).length;
     if (aIdx.length >= 2 && aHasRest >= Math.ceil(aIdx.length * 0.5)) {
       const outA = [];
-      let dk = fallbackDateKey;
-      for (let i = 0; i < aIdx[0]; i++) { const d = phApptParseDateLine(lines[i]); if (d) dk = d; }
       aIdx.forEach((ai, n) => {
+        const dk = dkAt[ai];
         const blockEnd = aIdx[n + 1] != null ? aIdx[n + 1] : lines.length;
         const lead = alexTimeLead(lines[ai]);
         const blockLines = [lead.rest, ...lines.slice(ai + 1, blockEnd)]
           .filter(l => l != null && l !== "")
+          .filter(l => !isDateLine(l))
           .filter(l => !/^time\s+client\s+status\s+service\s+contact\s+comments$/i.test(l));
         let name = "", detailLines = [], found = false;
         for (let si = 0; si < blockLines.length && !found; si++) {

@@ -1986,3 +1986,16 @@ Her words (screenshot of the Ask her page, low in the rail): "i need this page t
   cycle → tongue → pulse → abdomen → msk → … Tabs (`presTpMainSections`): Ask her right after Today's visit.
 - Not changed: "Next up" (`presVisitNext`) never walked Ask her (it is not in "n of m done").
 **Tested (sandbox):** a Natural fertility patient: rail order as above; Today's visit Next = "Ask her", Ask her's Next = "Cycle".
+
+## 2026-10-23 · Appointments paste: several dates in one paste
+Her ask (the Appointments dialog's Paste list, opened from a patient): "make it possible to paste multiple appointments on multiple dates
+and have it added".
+**Cause:** the Acupreg (Zanda) day-view and Alexandria day-list branches of `phApptParse` read only the date line ABOVE THE FIRST
+appointment, so every appointment in a several-day paste landed on that one date (the Cliniko day / week branch already switched date
+at each date line). A date line between two appointments was also swept into the earlier one's service text.
+**Fix:** `dkAt[i]` = the nearest date line above line i (else the picked day); both branches read it per appointment and leave date
+lines out of the appointment text (`isDateLine`). `phApptParseDateLine` also takes a weekday before a numeric date ("Tue 28/10").
+The dialog already imports across several days ("Import N appointments across D days").
+**Tested (sandbox, `phApptParse`):** Alexandria list over Fri 24 Oct / Tue 28 Oct / "4/11" → 3 dates; Zanda over "Mon 27 Oct" /
+"Tue 28/10" → 2 dates, service "Acupuncture" only; Cliniko list over Fri 31 Oct / Mon 3 Nov → 2 dates; no date lines → the picked day.
+**Not handled:** a date and a time on the SAME line ("Tue 28 Oct 4pm Acupuncture"). **Not tested:** her real paste.
