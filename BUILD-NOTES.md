@@ -2141,7 +2141,7 @@ Her words: "mock Fang Bing Ren and Ren next" → mock `fbr-ren-chips-mock-2026-1
 **Trade-off told to her:** about 600 sign rows grow from 24px to 32px, so the page is longer. Her 2026-10-16 "make chips smaller to fit more" is superseded by today's pick.
 **Tested (sandbox, 1280):** every changed control measured 32px / 6px; tap a sign ticks it (solid), tap again clears, ✕ rules out (grey, crossed), ✕ again clears; Quick assess rows don't overflow (0 of 8); no sideways scroll on either page. **Not tested:** her real data, a gynae / MSK case colour page by eye, tablet widths, the phone (unchanged).
 
-## Exam pages chips, one height (2026-10-23)
+## Exam pages chips, one height (2026-10-23, LIVE build 20261023-104500)
 Her words: "mock the exam pages next" → mock `exam-chips-mock-2026-10-23.html` → "build it and push".
 **What changed (CSS only, one `@media (min-width: 641px)` block after "Fang Bing Ren + Ren chips"):** 32px, 6px corners, one category = one joined bar, icon-only = circle, a picked chip solid teal (the case colour on a gynae / MSK page).
 - Today's visit: 0–10 | % better (`.ph-cx-sw`) joined; Compass and Energy score cells 30px in 6px bars; sign search `.ph-cxs-w` and the Note (`.ph-cx-note-in`, now a box, was an underline) 32px; ▾ (`.ph-cx-dd`) and ⋯ (`.ph-today-skip.ph-tv-more`) circles; red-flag No · Yes 32px; `.ph-today-btn` 32px; Ask · Look · Treat cards 40px rows.
