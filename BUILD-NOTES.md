@@ -1764,3 +1764,15 @@ Her words, on screenshots of a neck and shoulder patient whose Compass said "fir
 **Tested** in the real app (Browser pane, seeded patient with 4 then 8 past bookings, real handlers): bar and hint shown; 7 Sep scored by slider, number key and note, all stored on 7 Sep (Compass + pain store); baseline moved to 7 Sep; 12 Sep showed "1 better", today "3 better" with the chart and Re-check mirror; drawer has no rebase button on an earlier visit; Older ▾ picks 2 Jul; 375 px: no bar, scores today; no new console errors. Not tested on her real data or her phone.
 
 **Judgment calls (disclosed):** more than 6 past bookings = the 5 latest as chips + Older ▾ (keeps the bar one line); when a phase has no planned visit number, the strip shows the overall visit count; the Re-check check now joins Today's visit for a patient with earlier bookings (the return-visit rule).
+
+## Baseline Compass: pain rows on "% better" (2026-10-23, session-a)
+
+Her words, on a screenshot of the Compass on "% better" with only pain rows (Neck, Shoulder both sides, Left shoulder): "i cant see the % option". Cause: pain rows always scored 0-10, so the switch changed nothing on a pain-only table.
+
+**Her picks** (mock `pain-pct-better-mock-2026-10-23.html`): "Both A and B" (A: a pain takes % like every row, her % kept and the 0-10 score worked out from the baseline; B: a 0-10 score reads as % in From baseline) and "Ask for 0-10 first" when a pain has no baseline yet.
+
+**Built:** `phCxPctBase(hist, moved, day)` = the baseline a % counts from (a score before the day being scored, above 0; a baseline moved to that day or later = none). The model marks such a pain `pctOk`: its slider is 0-100% with the % box, number keys score tens (`data-cx-askk="pnp"`), live drag converts. `phCxPainScoreWrite` turns a % into `now = baseline × (1 − %)` (one decimal) and passes the % to `phPmScoreSet(..., atDay, pct)`, which keeps it as `vis.pains[r|s].pct`; any other "now" write for that day (0-10 on the Compass, the Musculoskeletal page) drops it. `phCxPctOf` reads a row's distance from baseline in % on "% better" + From baseline: her own % for the day, a complaint's own % entry, else (baseline − now) / baseline; a pain entered as % adds "= 3.5 / 10". The group average reads in % too. The 0-10 bubble shows one decimal (3.5).
+
+**Tested** in the real app (seeded patient: Neck 7 and Shoulder 6 on 7 Sep, Left shoulder new): Neck and Shoulder took %, Left shoulder stayed 0-10; key "5" = 50% → stored now 3.5 + pct 50, "50% better = 3.5 / 10"; % box 35 → 3.9; a 0-10 write of 3 dropped the % and read "50% better"; 0-10 switch shows 3.5 / 3 / 4 and step distances; From last visit unchanged; the Musculoskeletal page shows 3.5 / 3 / 4; phone layout fine; no console errors. Not tested on her real data.
+
+**Judgment calls (disclosed):** the % reading on "% better" applies to typed complaints too (one switch, every row), not only pains; the group's average line reads in % on "% better"; a pain's % is stored next to its score in the pain store (one entry), not in the Compass's own days.

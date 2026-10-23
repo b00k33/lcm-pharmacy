@@ -1318,7 +1318,13 @@ done booking counts as a visit (`phSeenDays` = logged sessions + bookings; Today
 `phTodayParts` and the Compass read it), and on a computer a "Scoring" bar (Today, then the
 patient's done bookings newest first, `phPastBookDays`; 5 chips + Older ▾) scores an earlier visit in
 the same table under a gold line (`phCxAt` view state, `phCxDayOf`; complaints + pains + notes only,
-the earliest scored day becomes the baseline); "N earlier visits · none scored" until one is. The checks are compact rows, two across, each with Open and
+the earliest scored day becomes the baseline); "N earlier visits · none scored" until one is.
+**Pain on "% better" (her 2026-10-23 "i cant see the % option", picks "Both A and B"):** a pain row
+with a baseline before the day being scored follows the switch (slider 0-100% + box, `phCxPctBase`);
+her % is kept as `vis.pains[r|s].pct` beside the `now` worked out from the baseline (7, 50% = 3.5),
+so the Musculoskeletal page keeps a number; any other "now" score drops `pct`. With no baseline yet a
+pain stays 0-10. On "% better" + From baseline, every complaint and pain row (and the group average)
+reads its distance in % (`phCxPctOf`); Energy, signs and From last visit stay as they were. The checks are compact rows, two across, each with Open and
 Skip ▾ (Not today / Always for this patient); a skipped check folds into the
 "Skipped" line and counts as done (`phTodayPartOk`). Quick assess shows 8
 questions in 2 columns on Today's visit and Fang Bing Ren [synth22: Today's
