@@ -2210,3 +2210,10 @@ Her words: "build it and push" (mock `toorder-chips-mock-2026-10-23.html`). One 
 - The count stepper (`.ph-osb-col .ph-os-step`) one 32px bar with dividers; ⋮ (`.ph-osb-act .ph-os-dots`) a 32px circle.
 **Kept:** the three columns, jars, stock bars and %, supplier tags, the header's round button, herb names as plain text in their row.
 **Tested (sandbox, 1280, test herbs added to the order, one marked ordered and arrived):** every board button measured 32px; Mark all ordered ends at 541px inside a 591px column, its text not clipped; no sideways scroll. **Not tested:** 641–900px (the older layout shows there), the Snoozed ▾ list, her real data.
+
+## 2026-10-23 · Ren page: capital first letters (her "audit the text of the page and capitalise first letter")
+- `phCap1` (beside `phSignDescHtml`): a sign's words shown under their subject heading start with a capital ("Thin, delicate", not "thin, delicate"). Display only; the stored labels, keys and search are unchanged. The same row renderer serves the Fang Bing Ren board, so it reads the same there.
+- Find the Ren: the Look chips and the "Looked:" line capitalised; "Look first, then ask", "None of these", "Next", "None".
+- Ren header line: "Points toward …", "No family leads yet", "No ticks yet" (the explaining "— every family starts level" went, Terse rule).
+**Tested (sandbox, Linh Test, 1280):** no row or Look chip starts lowercase; header reads "Points toward Dang Gui Shao Yao San". **Not tested:** the phone.
+**Her second ask (signs that do not go together):** 10 candidate rows sent to her as Split / Keep picks; nothing split yet.
