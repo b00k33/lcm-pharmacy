@@ -75752,9 +75752,10 @@ or changing anything in Cliniko.
     return st.list.filter(p => R[p.r]).map((p, idx) => {
       const k = p.r + "|" + p.s, key = "p:" + k, reg = R[p.r];
       const hist = visits.map(v => {
-        const n = v.pains && v.pains[k] && v.pains[k].now; if (n == null) return null;
-        const e = phCxEntry(days[v.day], key);
-        return { day: v.day, v: +n, sc: "ten", n: (e && e.n) || "" };
+        const P = v.pains && v.pains[k], n = P && P.now; if (n == null) return null;
+        const e = phCxEntry(days[v.day], key), h = { day: v.day, v: +n, sc: "ten", n: (e && e.n) || "" };
+        if (P.pct != null) h.pct = +P.pct;   // her own "% better" words, kept beside the score worked out from them
+        return h;
       }).filter(Boolean);
       return { key, id: k, text: phPmSideName(reg, p.s), since: p.since || "", fam: "pain", main: idx === st.mainIdx, pain: { idx, p, reg, pid: st.pid }, hist };
     });
@@ -75784,12 +75785,26 @@ or changing anything in Cliniko.
       return phCxPainItems(rec, st).filter(s => !s.main).map(s => phCxPainGoal(name, s, null).text).filter(Boolean);
     } catch (e) { return []; }
   }
-  // a pain's score from the slider or a number key: the pain store's "now" for today, set (not toggled)
+  // on "% better" a pain with a baseline before the day being scored is entered as % (her picks 2026-10-23, "Both A and B"); with no
+  // baseline yet it keeps its 0-10 slider (her pick: 0-10 first). A baseline moved to that day or later counts as none.
+  function phCxPctBase(hist, o, day) {
+    if (o && o.day >= day) return null;
+    const b = phCxTrack(phCxPts10(hist), false, o).base;
+    return b && b.day < day && b.v > 0 ? b : null;
+  }
+  // a pain's score from the slider or a number key: the pain store's "now" for the day being scored, set (not toggled). A % becomes the 0-10
+  // score from the pain's baseline (7 at baseline, 50% better = 3.5) with her % kept beside it, so the Musculoskeletal page keeps a number
   function phCxPainScoreWrite(name, key, n) {
     const rec = phPatientPeek(name) || {}, st = phCxPainState(name, rec, phCxItems(name)); if (!st) return false;
     const idx = st.list.findIndex(p => "p:" + p.r + "|" + p.s === key); if (idx < 0) return false;
+    const day = phCxDayOf(name);
+    let v = n, pct;
+    if (phCxScale(rec) === "pct") {
+      const it = phCxPainItems(rec, st).find(x => x.key === key), b = it ? phCxPctBase(it.hist, ((rec.ccTrack && rec.ccTrack.base) || {})[key] || null, day) : null;
+      if (b) { pct = Math.max(0, Math.min(100, Math.round(n))); v = phCxR1(b.v * (1 - pct / 100)); }
+    }
     phCxFx = { key };
-    const ok = phPmScoreSet(name, st.pid, idx, "now", n, true, false, phCxDayOf(name));   // an earlier visit on the Scoring bar: that day's pain store
+    const ok = phPmScoreSet(name, st.pid, idx, "now", v, true, false, day, pct);   // an earlier visit on the Scoring bar: that day's pain store
     if (!ok) phCxFx = null;
     return ok;
   }
@@ -75822,9 +75837,14 @@ or changing anything in Cliniko.
     const mk = (it, i) => {
       let hist = it.pain ? it.hist : phCxHist(rec, it.key);
       const sc0 = it.pain ? "ten" : scale;
-      if (ov && ov[it.key] != null) { const was = hist.find(h => h.day === today); hist = hist.filter(h => h.day !== today).concat([{ day: today, v: +ov[it.key], sc: sc0, n: (was && was.n) || "" }]); }
+      // a pain on "% better" with a baseline before the day being scored takes % (her picks 2026-10-23); while a slider moves, its % becomes the 0-10 score
+      const pb = it.pain && scale === "pct" ? phCxPctBase(hist, over[it.key] || null, today) : null;
+      if (ov && ov[it.key] != null) {
+        const was = hist.find(h => h.day === today), nv = +ov[it.key], nt = (was && was.n) || "";
+        hist = hist.filter(h => h.day !== today).concat([pb ? { day: today, v: phCxR1(pb.v * (1 - Math.max(0, Math.min(100, nv)) / 100)), sc: "ten", pct: nv, n: nt } : { day: today, v: nv, sc: sc0, n: nt }]);
+      }
       const energy = !it.pain && phCxIsEnergy(it);
-      const pts = energy || (it.pain && scale === "pct") ? [] : hist.filter(h => !from || h.day >= from).map(h => ({ day: h.day, v: phCxVal(h, hist, scale), raw: h }));
+      const pts = energy ? [] : hist.filter(h => !from || h.day >= from).map(h => ({ day: h.day, v: scale === "pct" && h.pct != null ? h.pct : phCxVal(h, hist, scale), raw: h }));
       // a note on a day with no score yet still belongs to today (her "cant type in note and save", 2026-10-21)
       const raw = phCxEntry(phCxDays(rec)[today], it.key), noteOnly = raw && raw.n ? { day: today, v: null, sc: sc0, n: raw.n } : null;
       const chg = energy ? phCxEnergyChg(rec) : phCxChangeH(hist, sc0);
@@ -75836,7 +75856,7 @@ or changing anything in Cliniko.
       const todayE = hist.find(h => h.day === today) || noteOnly;
       const rated = energy ? enR.todayAvg != null : !!(todayE && todayE.v != null);
       return Object.assign({}, it, { i, hist, pts, chg, today: todayE, goal: it.pain ? phCxPainGoal(name, it, mainItem) : phCxGoal(name, it), energy, enAvg: energy ? enR.todayAvg : null, enRated: energy ? enR.todayAvg != null : false,
-        trk, cb, cl, gid, over: o, rated, isNew: !o && (at || trk.pts.length === 1) && !!trk.base && trk.base.day === today });
+        trk, cb, cl, gid, over: o, rated, pctOk: !!pb, isNew: !o && (at || trk.pts.length === 1) && !!trk.base && trk.base.day === today });
     };
     const series = order.map((a, i) => mk(a.it, i));
     const days = [...new Set(series.reduce((a, s) => a.concat(s.pts.map(p => p.day)), []))].sort();
@@ -75901,7 +75921,7 @@ or changing anything in Cliniko.
     const scoredBefore = allDays.some(d => d < now) || series.some(s => s.hist.some(h => h.day < now)) || phCxEnPts(rec).some(p => p.day < now);
     return { rec, scale, key, items, series, days, range, hasEarlier, first, nVisits: dset.size, lit, back, rows, groups, signs, hidden, more, ask: askRow ? askRow.key : "", askGid: askRow ? askRow.gid : "",
       now, at, seen, backNow: seen.length > 0 || allDays.some(d => d < now), unscored: scoredBefore ? 0 : seen.length,
-      askKind: askRow ? (askRow.kind === "sx" ? "sx" : askRow.s.energy ? "en" : askRow.s.pain ? "pn" : "cc") : "", glance, hasEnergyRow: series.some(s => s.energy), enR,
+      askKind: askRow ? (askRow.kind === "sx" ? "sx" : askRow.s.energy ? "en" : askRow.s.pain ? (askRow.s.pctOk ? "pnp" : "pn") : "cc") : "", glance, hasEnergyRow: series.some(s => s.energy), enR,
       from, cmp, cmode: phCxChartM[key] === "score" ? "score" : "dev", fil: fil && groups.some(g => g.id === fil) ? fil : "all", dr: phCxDr[key] || "", pain: pst, t0, tspan: Math.max(1, t1 - t0), today };
   }
   function phCxLineStyle(s) { return s.main ? ["var(--ph-herb)", ""] : PH_CX_LINES[(s.i - 1 + PH_CX_LINES.length) % PH_CX_LINES.length]; }
@@ -76014,6 +76034,16 @@ or changing anything in Cliniko.
     if (M.cmp === "last") return c.ref ? `${phCycShortLbl(c.ref)} → ${tw}` : "";
     return b && now ? `Baseline ${phCxR1(b.v)} (${phCycShortLbl(b.day)}) → ${phCxR1(now.v)}${c.stale ? " (" + phCycShortLbl(c.as) + ")" : M.at ? " on " + tw : " today"}` : "";
   };
+  // on "% better", how far a row is from its baseline in % (her pick B, 2026-10-23): her own % that day when she gave one, else worked out
+  // from the 0-10 numbers. null for Energy, a sign, From last visit, or a baseline of 0.
+  function phCxPctOf(s, c, M) {
+    if (M.scale !== "pct" || M.cmp === "last" || !s || s.energy || c.d == null) return null;
+    const b = s.trk.base; if (!b || !(b.v > 0)) return null;
+    const day = c.stale ? c.as : M.today, h = s.hist.find(x => x.day === day) || null;
+    if (h && h.pct != null) return { p: Math.round(h.pct), h };
+    if (h && h.sc === "pct") return { p: Math.round(h.v), h };
+    return { p: Math.round(c.d / b.v * 100), h };
+  }
   // From baseline / From last visit: a small bar (the centre mark is the baseline, green right = better, red left = worse) and its words
   function phCxDvHtml(r, M, fxKey) {
     const sx = r.kind === "sx", k = esc(r.key);
@@ -76031,7 +76061,9 @@ or changing anything in Cliniko.
       txt = sx && r.tv === "g" ? "✓ gone" : d == null ? "not yet today" : d === 0 ? "same" : said(d);
       if (!sx && d != null && c.ref) txt += `<small>vs ${esc(phCycShortLbl(c.ref))}</small>`;
     } else {
-      txt = sx && r.tv === "g" ? "✓ gone" : d == null ? "" : d === 0 ? "at baseline" : said(d);
+      const pq = sx ? null : phCxPctOf(r.s, c, M), pc = pq ? pq.p : null;
+      txt = sx && r.tv === "g" ? "✓ gone" : d == null ? "" : pc != null ? (pc === 0 ? "at baseline" : `${Math.abs(pc)}% ${pc > 0 ? "better" : "worse"}`) : d === 0 ? "at baseline" : said(d);
+      if (pq && r.s.pain && pq.h && pq.h.pct != null) txt += `<small>= ${phCxR1(pq.h.v)} / 10</small>`;
       if (c.stale) txt += `<small>${esc(phCycShortLbl(c.as))}</small>`;
     }
     const count = fxKey === r.key && d && !c.stale && !(sx && r.tv === "g");
@@ -76050,10 +76082,11 @@ or changing anything in Cliniko.
   const phCxGrpCol = gid => phCxGroups().find(g => g.id === gid).col;
   const phCxSpkHtml = (r, M) => `<span class="spk" data-cx-spk="${esc(r.key)}">${M.back ? phCxMiniSvg(M, r.kind === "sx" ? r.sxdev : r.s.trk.dev, phCxGrpCol(r.gid)) : ""}</span>`;
   function phCxRowHtml(s, M, name) {
-    const scale = M.scale, today = M.today, key = s.key, pain = !!s.pain, unit = pain || scale === "ten" ? "" : "%";
-    const sc = pain ? "ten" : scale;
-    const todayV = s.today && s.today.v != null ? phCxVal(s.today, s.hist, sc) : null;
-    const prev = s.hist.filter(h => h.day < today).pop(), prevV = prev ? phCxVal(prev, s.hist, sc) : null;
+    // a pain is 0-10 until it has a baseline before this day, then it follows "% better" like every row (her picks 2026-10-23)
+    const scale = M.scale, today = M.today, key = s.key, pain = !!s.pain, sc = pain && !s.pctOk ? "ten" : scale, unit = sc === "ten" ? "" : "%";
+    const inSc = h => sc === "pct" && h.pct != null ? h.pct : phCxVal(h, s.hist, sc);   // her own % when she gave one
+    const todayV = s.today && s.today.v != null ? inSc(s.today) : null;
+    const prev = s.hist.filter(h => h.day < today).pop(), prevV = prev ? inSc(prev) : null;
     // the Goal sits under the name (her pick Q18): a faint line, tap = the box; hers keeps "↺ auto"
     const typing = phCxTyping && phCxTyping.name === name && phCxTyping.key === key && phCxTyping.kind === "goal" ? phCxTyping : null;
     const g = s.goal || { text: "", hers: false }, goalV = typing ? typing.value : g.text;
@@ -76071,9 +76104,10 @@ or changing anything in Cliniko.
     if (s.energy) score = `<span class="pillcell"><b class="ph-cx-slv${s.enRated ? "" : " na"}" title="Today's energy, 10 = best">${s.enRated ? `Energy ${s.enAvg}` : "Energy –"}</b></span>`;
     else {
       const max = sc === "ten" ? 10 : 100, step = sc === "ten" ? 1 : 10, val = todayV != null ? Math.round(todayV) : null;
+      const shown = todayV != null && sc === "ten" ? phCxR1(todayV) : val;   // a pain worked out from a % can be 3.5
       const init = val != null ? Math.round(val / step) * step : prevV != null ? Math.round(prevV / step) * step : (sc === "ten" ? 5 : 0);
       const fx = phCxFx && phCxFx.key === key;
-      score = `<span class="pillcell"><span class="ph-cx-sl"><input type="range" class="ph-cx-range" min="0" max="${max}" step="${step}" value="${init}" data-cx-sl="${esc(key)}" aria-label="${esc(s.text)}, today, 0 to ${max}${unit}" title="${sc === "ten" ? "0 = none · 10 = as bad as it gets" : "% better since the start"}"><b class="ph-cx-slv${val == null ? " na" : ""}${fx ? " pop" : ""}" data-cx-slv="${esc(key)}">${val != null ? val + unit : "–"}</b>${val == null && prevV != null ? `<span class="last">last ${Math.round(prevV)}${unit}</span>` : ""}${sc === "pct" ? `<input type="text" class="ph-cx-pctbox" data-cx-pct="${esc(key)}" inputmode="numeric" maxlength="3" value="${val != null && val % 10 ? val : ""}" placeholder="%" aria-label="Any percent better for ${esc(s.text)}">` : ""}</span></span>`;
+      score = `<span class="pillcell"><span class="ph-cx-sl"><input type="range" class="ph-cx-range" min="0" max="${max}" step="${step}" value="${init}" data-cx-sl="${esc(key)}" aria-label="${esc(s.text)}, today, 0 to ${max}${unit}" title="${sc === "ten" ? "0 = none · 10 = as bad as it gets" : "% better since the start"}"><b class="ph-cx-slv${val == null ? " na" : ""}${fx ? " pop" : ""}" data-cx-slv="${esc(key)}">${val != null ? shown + unit : "–"}</b>${val == null && prevV != null ? `<span class="last">last ${Math.round(prevV)}${unit}</span>` : ""}${sc === "pct" ? `<input type="text" class="ph-cx-pctbox" data-cx-pct="${esc(key)}" inputmode="numeric" maxlength="3" value="${val != null && val % 10 ? val : ""}" placeholder="%" aria-label="Any percent better for ${esc(s.text)}">` : ""}</span></span>`;
     }
     const r = { kind: "cc", key, s, gid: s.gid, rated: s.rated, cb: s.cb, cl: s.cl };
     const ask = M.ask === key;
@@ -76103,14 +76137,14 @@ or changing anything in Cliniko.
   }
   // a group's header row: fold, its count, its trend line, ↑ → ↓ counts, the average distance, "Same as last time" (her pick c)
   function phCxGroupStats(g, M) {
-    const cnt = { better: 0, same: 0, worse: 0 }, ds = [], by = {};
+    const cnt = { better: 0, same: 0, worse: 0 }, ds = [], pcs = [], by = {};
     g.rows.forEach(r => {
       const c = M.cmp === "last" ? r.cl : r.cb;
-      if (c.d != null) { cnt[phCxDir(r, c.d)]++; if (r.kind === "cc") ds.push(c.d); }
+      if (c.d != null) { cnt[phCxDir(r, c.d)]++; if (r.kind === "cc") { ds.push(c.d); const pq = phCxPctOf(r.s, c, M); if (pq) pcs.push(pq.p); } }
       if (r.kind === "cc") r.s.trk.dev.forEach(p => { (by[p.day] = by[p.day] || []).push(p.d); });
     });
     const dev = Object.keys(by).sort().map(day => ({ day, d: by[day].reduce((a, b) => a + b, 0) / by[day].length }));
-    return { cnt, avg: ds.length ? ds.reduce((a, b) => a + b, 0) / ds.length : null, dev };
+    return { cnt, avg: ds.length ? ds.reduce((a, b) => a + b, 0) / ds.length : null, pct: pcs.length ? Math.round(pcs.reduce((a, b) => a + b, 0) / pcs.length) : null, dev };
   }
   function phCxGroupHeadHtml(g, M, open, ask) {
     const st = phCxGroupStats(g, M), n = g.rows.length, rated = g.rows.filter(r => r.rated).length;
@@ -76118,7 +76152,7 @@ or changing anything in Cliniko.
     if (M.back && st.avg != null) {
       const a = st.avg, pct = Math.min(Math.abs(a), 5) / 5 * 50, cls = a >= .5 ? "better" : a <= -.5 ? "worse" : "same";
       const bar = Math.abs(a) < .05 ? "" : `<b style="left:${a > 0 ? 50 : 50 - pct}%;width:${pct}%;background:${a > 0 ? "var(--ph-good)" : "var(--ph-zero)"}"></b>`;
-      dv = `<div class="dv ${cls}" title="Average of the group, ${M.cmp === "last" ? "against last visit" : "against baseline"}"><span class="trk">${bar}</span><span class="dt">${Math.abs(a) < .5 ? "at baseline" : `${phCxNum(a)} ${a > 0 ? "better" : "worse"}`}</span></div>`;
+      dv = `<div class="dv ${cls}" title="Average of the group, ${M.cmp === "last" ? "against last visit" : "against baseline"}"><span class="trk">${bar}</span><span class="dt">${st.pct != null ? (st.pct === 0 ? "at baseline" : `${Math.abs(st.pct)}% ${st.pct > 0 ? "better" : "worse"}`) : Math.abs(a) < .5 ? "at baseline" : `${phCxNum(a)} ${a > 0 ? "better" : "worse"}`}</span></div>`;
     }
     const roll = !M.back ? `<span class="s">${rated} of ${n} set</span>`
       : `<span class="b" title="Better than ${M.cmp === "last" ? "last visit" : "baseline"}">↑ ${st.cnt.better}</span><span class="s" title="${M.cmp === "last" ? "Same as last visit" : "At baseline"}">→ ${st.cnt.same}</span><span class="w" title="Worse than ${M.cmp === "last" ? "last visit" : "baseline"}">↓ ${st.cnt.worse}</span>`;
@@ -76635,14 +76669,14 @@ or changing anything in Cliniko.
     if (!host || !host.offsetParent) return;
     const name = host.dataset.cxName, ak = host.dataset.cxAsk || "", kind = host.dataset.cxAskk || ""; if (!name) return;
     const scale = phCxScale(phPatientPeek(name) || {}), k = e.key, now = Date.now(), buf = phCxTenBuf;
-    // a "0" right after a lone "1" makes that row 10 (100 on % better; a pain is always 0-10) -- the gold row has already moved on by then, so this comes first
-    if (k === "0" && buf && now - buf.t < 600) { phCxTenBuf = null; e.preventDefault(); phCxScoreWrite(name, buf.key, buf.pn || scale !== "pct" ? 10 : 100, false); return; }
+    // a "0" right after a lone "1" makes that row 10 (100 on % better; a pain with no baseline yet is 0-10) -- the gold row has already moved on by then, so this comes first
+    if (k === "0" && buf && now - buf.t < 600) { phCxTenBuf = null; e.preventDefault(); phCxScoreWrite(name, buf.key, buf.ten ? 10 : 100, false); return; }
     if (!ak) return;
-    const isSign = ak.indexOf("x:") === 0, isPn = ak.indexOf("p:") === 0;
+    const isSign = ak.indexOf("x:") === 0, ten = kind === "pn" || scale !== "pct";   // "pnp" = a pain on % better (her picks 2026-10-23)
     if (!isSign && kind !== "en" && /^[0-9]$/.test(k)) {
       e.preventDefault();
-      phCxTenBuf = k === "1" ? { key: ak, t: now, pn: isPn } : null;
-      phCxScoreWrite(name, ak, isPn || scale !== "pct" ? +k : +k * 10, false);
+      phCxTenBuf = k === "1" ? { key: ak, t: now, ten } : null;
+      phCxScoreWrite(name, ak, ten ? +k : +k * 10, false);
       return;
     }
     if (isSign && /^[gbsw]$/i.test(k)) { e.preventDefault(); phCxSxWrite(name, ak.slice(2), k.toLowerCase(), false); return; }
@@ -90690,7 +90724,7 @@ or changing anything in Cliniko.
     });
   }
   // one score: a pain's own box (which = its row number) or the All pains row (which = "all", used while no pain carries a value for that measure)
-  function phPmScoreSet(name, planId, which, k, n, force, quiet, atDay) {   // force: set, never toggle (the Compass slider); quiet: no repaint (the caller does it once); atDay: the Compass's Scoring bar day
+  function phPmScoreSet(name, planId, which, k, n, force, quiet, atDay, pct) {   // force: set, never toggle (the Compass slider); quiet: no repaint (the caller does it once); atDay: the Compass's Scoring bar day; pct: her "% better" words for that "now"
     const plan = phPmPlanFor(name, planId); if (!plan) return false;
     const list = phPmList(name, plan);
     const dayKey = `${planId}|${which}|${k}`, day = atDay || phPmScoreDay[dayKey] || phMskDay(), isToday = day === phMskDay();
@@ -90703,6 +90737,8 @@ or changing anything in Cliniko.
         vis.pains = vis.pains || {};
         const o = vis.pains[key] || (vis.pains[key] = {});
         if (o[k] === n && !force) delete o[k]; else o[k] = n;
+        // her own "% better" words sit beside the "now" score the Compass worked out from them; any other "now" score drops them
+        if (k === "now") { if (pct != null && o.now === n) o.pct = pct; else delete o.pct; }
         if (!Object.keys(o).length) delete vis.pains[key];
         const vs = list.map(q => (vis.pains[`${q.r}|${q.s}`] || {})[k]).filter(v => v != null);
         if (vs.length) vis.nprs[k] = Math.max(...vs); else delete vis.nprs[k];
