@@ -31689,11 +31689,48 @@
     });
     return out.length ? out : null;
   }
+  // ---- Zanda's own appointment list for ONE patient (her paste 2026-10-23, "how can you get copy paste to read this"): newest
+  // first, a booking per block -- "28/10/2026 Wed 10:00 AM-10:30 AM", the end time again on its own ("10:30 AM"), then what was
+  // billed ("Alexandria Acupuncture FOLLOW UP 50 minutes", several items joined by ", "), a line that is missing when nothing
+  // was billed yet. Date, weekday and time range share ONE line, a shape none of the readers above take (they read nothing).
+  // No name anywhere: each waits for the name like the list above (the dialog opened from a patient fills it). The same rows
+  // copied as tab-separated cells read the same. Cancelled etc. are left out (never a visit). ----
+  function phApptParseClientList(text) {
+    const lines = String(text || "").replace(/[​-‍﻿ ‪-‮⁦-⁩]/g, " ").split(/\r?\n|\t/)
+      .map(l => l.replace(/\s+/g, " ").trim()).filter(Boolean);
+    const head = l => {
+      const m = l.match(/^(\d{1,2}\/\d{1,2}\/\d{2,4}),?\s+(?:[a-z]{3,9},?\s+)?(\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*[–—-]\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)?)$/i);
+      const d = m && phApptParseDateLine(m[1]), t = m && phApptParseTime(m[2]);
+      return d && t ? { d, t, dur: phApptParseDuration(m[2]) } : null;
+    };
+    const hIdx = lines.map((l, i) => head(l) ? i : -1).filter(i => i >= 0);
+    // most lines holding a time range must be these date-led ones -- otherwise it is some other paste, left to the readers below
+    const ranges = lines.filter(l => /\d{1,2}:\d{2}\s*(?:am|pm)?\s*[–—-]\s*\d{1,2}:\d{2}/i.test(l)).length;
+    if (!hIdx.length || hIdx.length < Math.ceil(ranges * 0.6)) return null;
+    const out = [];
+    hIdx.forEach((hi, n) => {
+      const h = head(lines[hi]), svc = [];
+      let skip = false;
+      lines.slice(hi + 1, hIdx[n + 1] != null ? hIdx[n + 1] : lines.length).forEach(l => {
+        if (/^\d{1,2}[:.]\d{2}\s*(?:am|pm)?$/i.test(l)) return;                                        // the end time again
+        if (PH_APPT_HIST_SKIP.test(l)) { skip = true; return; }                                        // Cancelled etc
+        if (/^(confirmed|pending|arrived|completed|not\s*arrived|in\s*progress)$/i.test(l)) return;   // a bare status word
+        svc.push(l);
+      });
+      if (skip) return;
+      const en = { date: h.d, time: h.t, service: svc.join(" "), phone: "", needsName: true };
+      if (h.dur) en.durationMin = h.dur;
+      out.push(en);
+    });
+    return out.length ? out : null;
+  }
   function phApptParse(text, fallbackDateKey) {
     const table = phApptParseTable(text, fallbackDateKey);
     if (table && table.length) return table;
     const list = phApptParseList(text);
     if (list && list.length) return list;
+    const client = phApptParseClientList(text);
+    if (client && client.length) return client;
     const hist = phApptParseHistory(text);
     if (hist && hist.length) return hist;
     const lines = String(text || "").replace(/[\u200B-\u200D\uFEFF\u00A0\u202A-\u202E\u2066-\u2069]/g, " ")
