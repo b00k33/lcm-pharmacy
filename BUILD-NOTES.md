@@ -1765,7 +1765,7 @@ Her words, on screenshots of a neck and shoulder patient whose Compass said "fir
 
 **Judgment calls (disclosed):** more than 6 past bookings = the 5 latest as chips + Older ▾ (keeps the bar one line); when a phase has no planned visit number, the strip shows the overall visit count; the Re-check check now joins Today's visit for a patient with earlier bookings (the return-visit rule).
 
-## Baseline Compass: pain rows on "% better" (2026-10-23, session-a)
+## Baseline Compass: pain rows on "% better" (2026-10-23, LIVE since build 20261023-010200)
 
 Her words, on a screenshot of the Compass on "% better" with only pain rows (Neck, Shoulder both sides, Left shoulder): "i cant see the % option". Cause: pain rows always scored 0-10, so the switch changed nothing on a pain-only table.
 
