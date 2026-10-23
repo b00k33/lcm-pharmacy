@@ -7941,6 +7941,8 @@
   #pharmacyPage .ph-pp-svg .lbl-l { fill: none; stroke: var(--ph-herb-deep); stroke-width: .7; }
   #pharmacyPage .ph-pp-svg .lbl-d { fill: var(--ph-herb-deep); }
   #pharmacyPage .ph-pp-svg .lbl-t { font: 600 8.5px var(--font-body); fill: var(--ph-herb-deep); paint-order: stroke; stroke: #fff; stroke-width: 2.4px; stroke-linejoin: round; }
+  #pharmacyPage .ph-pp-svg .lbl-s { font: 600 5.6px var(--font-body); fill: var(--ph-herb-deep); paint-order: stroke; stroke: #FBF6EE; stroke-width: 2px; stroke-linejoin: round; }
+  #pharmacyPage .ph-pp-svg:is([data-pp="cd_breech_turn"], [data-pp="cd_labour"]) .lbl-t { font: 700 7.4px var(--font-body); stroke: #F9EEF1; stroke-width: 2.6px; }
   #pharmacyPage .ph-pp-bar { align-self: flex-end; flex: none; }
   #pharmacyPage .ph-pp-bar .ph-ltr-qual { height: 26px; padding: 0 10px; font-size: var(--fs-12); gap: 5px; white-space: nowrap; }
   #pharmacyPage .ph-pp-bar .ph-ltr-qual i { width: 8px; height: 8px; border-radius: 50%; flex: none; box-shadow: 0 0 0 1px rgba(255, 255, 255, .7); }
@@ -7958,6 +7960,9 @@
   #pharmacyPage .ph-pp-lctl input[type=range] { flex: 1; min-width: 120px; accent-color: var(--ph-herb); }
   #pharmacyPage .ph-pp-lctl .ph-ltr-qual { height: 26px; padding: 0 10px; font-size: var(--fs-12); }
   #pharmacyPage .ph-pp-lnote { font-size: var(--fs-11-5); color: var(--ph-soft); background: var(--ph-bg, #F7EFE3); border-radius: 8px; padding: 6px 9px; line-height: 1.4; }
+  /* her 2026-10-23 Breech + Labour tabs: the line for her pregnancy week under the picture, and the safety line on the sheet */
+  #pharmacyPage .ph-pp-lwk { font: 600 var(--fs-12) var(--font-body); color: var(--ph-herb-deep); line-height: 1.35; }
+  #pharmacyPage .ph-pp-lsafe { color: var(--ph-zero-deep); background: var(--ph-zero-tint); }
   @media (max-width: 640px) { #pharmacyPage .ph-pp-lstep { grid-template-columns: 9px minmax(0, 1fr); } #pharmacyPage .ph-pp-lstep em { grid-column: 2; justify-self: start; } }
   #pharmacyPage .ph-pp-why { min-height: 16px; font-size: var(--fs-11-5); color: var(--ph-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   /* in the body map close-up: one more plate beside the organ plates, the bar in its header */
@@ -73257,19 +73262,22 @@ or changing anything in Cliniko.
     return best;
   }
   var phPpFlip = new Map();   // picture key -> 0 = Balanced; a picture opens on the pattern (her pick), view state only
+  const phPpTabsOf = id => PH_PP_TABS[id] || [];   // a picture's story tabs after Balanced | the pattern (Lining, Breech, Labour)
   const phPpSvg = (id, key, name) => {
-    const lin = PH_PP_LINING.has(id), alt = lin && phPpFlip.get(key) === 2, shown = alt ? "cd_lining" : id;
-    return `<svg class="ph-pp-svg" viewBox="0 0 300 130" data-pp="${esc(shown)}"${lin ? ` data-pp-base="${esc(id)}" data-pp-pt="${esc(name || "")}"` : ""} data-pp-key="${esc(key)}" role="img" aria-label="${esc((phPpDef(shown) || {}).name || id)}"></svg>`;
+    const tabs = phPpTabsOf(id), f = phPpFlip.get(key), shown = f >= 2 && tabs[f - 2] ? tabs[f - 2] : id;
+    return `<svg class="ph-pp-svg" viewBox="0 0 300 130" data-pp="${esc(shown)}"${tabs.length ? ` data-pp-base="${esc(id)}"` : ""}${name ? ` data-pp-pt="${esc(name)}"` : ""} data-pp-key="${esc(key)}" role="img" aria-label="${esc((phPpDef(shown) || {}).name || id)}"></svg>`;
   };
   function phPpBarHtml(id, key) {
-    const cur = phPpFlip.has(key) ? phPpFlip.get(key) : 1;   // 0 Balanced, 1 the pattern / condition, 2 Lining (the fertility pictures)
+    const cur = phPpFlip.has(key) ? phPpFlip.get(key) : 1;   // 0 Balanced, 1 the pattern / condition, 2+ its story tabs (Lining, Breech, Labour)
     const b = (v, inner) => `<button type="button" class="ph-ltr-qual${cur === v ? " on" : ""}" data-pp-flip="${v}" aria-pressed="${cur === v}">${inner}</button>`;
-    return `<div class="ph-tng2-seg ph-pp-bar">${b(0, "Balanced")}${b(1, `<i style="background:${phPpCol(id)}"></i>${esc(PH_PP_SHORT[id] || (phPpDef(id) || { name: id }).name)}`)}${PH_PP_LINING.has(id) ? b(2, `<i style="background:#E79BAE"></i>Lining`) : ""}</div>`;
+    const nm = PH_PP_SHORT[id] || (phPpDef(id) || { name: id }).name;
+    return `<div class="ph-tng2-seg ph-pp-bar">${b(0, "Balanced")}${b(1, `<i style="background:${phPpCol(id)}"></i>${esc(nm)}`)}${phPpTabsOf(id).map((s, i) => b(2 + i, `<i style="background:${PH_PP_STORY[s].col}"></i>${esc(PH_PP_SHORT[s] === nm ? "Turning" : PH_PP_SHORT[s])}`)).join("")}</div>`;
   }
-  // one picture: the drawing, its Balanced | pattern bar, and (o.why) the signs it explains
+  // one picture: the drawing, its Balanced | pattern bar, and (o.why) the signs it explains; a story picture opened by itself has no bar, its story under it
   function phPpHtml(id, o) {
-    o = o || {}; const key = o.key || "pp:" + id;
-    return `<div class="ph-pp${o.cls ? " " + o.cls : ""}" data-pp-wrap="${esc(key)}" style="--pc:${phPpCol(id)}">${phPpSvg(id, key, o.name)}${o.bar === false ? "" : phPpBarHtml(id, key)}${PH_PP_LINING.has(id) && o.bar !== false ? phPpLiningHtml(key, !!o.big, phPpFlip.get(key) === 2) : ""}${o.why ? `<div class="ph-pp-why" title="${esc(o.why)}">${esc(o.why)}</div>` : ""}</div>`;
+    o = o || {}; const key = o.key || "pp:" + id, solo = !!PH_PP_STORY[id], f = phPpFlip.get(key);
+    const story = o.bar === false ? "" : solo ? phPpStoryHtml(id, !!o.big, true, o.name) : phPpTabsOf(id).map((s, i) => phPpStoryHtml(s, !!o.big, f === 2 + i, o.name)).join("");
+    return `<div class="ph-pp${o.cls ? " " + o.cls : ""}" data-pp-wrap="${esc(key)}" style="--pc:${phPpCol(id)}">${phPpSvg(id, key, o.name)}${o.bar === false || solo ? "" : phPpBarHtml(id, key)}${story}${o.why ? `<div class="ph-pp-why" title="${esc(o.why)}">${esc(o.why)}</div>` : ""}</div>`;
   }
   // the body map close-up: the pattern HER signs at this place point to (the pointed sign alone while she points at one; the place's
   // signs when she has none ticked there); under it, the place's signs that pattern explains, hers first
@@ -73285,8 +73293,10 @@ or changing anything in Cliniko.
   // the Care Plan Diagnosis: a small picture for the plan's own condition (when it has one) and for each Likely / Possible pattern; a tap opens it big
   function phPpDxRowHtml(name, pats, plan) {
     const tpl = plan ? phTpxTplOfPlan(plan) : null, cd = tpl && PH_PP.SC["cd_" + tpl.id] ? [{ def: PH_PP_COND["cd_" + tpl.id] }] : [];
+    let st = null; try { const rec = plan && name ? phPatientPeek(name) : null, pk = rec ? phTpPhaseKeyOf(phTpLivePhase(rec, plan)) : null; st = pk === "breech" ? "cd_breech_turn" : pk === "birth" ? "cd_labour" : null; } catch (e) { st = null; }   // Breech Presentation / Labor Induction: that phase's story too
+    if (st) cd.push({ def: PH_PP_COND[st] });
     const list = cd.concat((pats || []).filter(p => PH_PP.SC[p.def.id])); if (!list.length) return "";
-    return `<div class="ph-pp-dx">${list.map(p => `<button type="button" class="ph-pp-thumb" data-pp-big="${esc(p.def.id)}" data-pp-name="${esc(name)}" title="${esc(p.def.name)}" aria-label="${esc(p.def.name)}: open the picture">${phPpSvg(p.def.id, "dx:" + p.def.id)}<span>${esc(p.def.name.replace(/\s*\(.*\)\s*$/, ""))}</span></button>`).join("")}</div>`;
+    return `<div class="ph-pp-dx">${list.map(p => `<button type="button" class="ph-pp-thumb" data-pp-big="${esc(p.def.id)}" data-pp-name="${esc(name)}" title="${esc(p.def.name)}" aria-label="${esc(p.def.name)}: open the picture">${phPpSvg(p.def.id, "dx:" + p.def.id, name)}<span>${esc(p.def.name.replace(/\s*\(.*\)\s*$/, ""))}</span></button>`).join("")}</div>`;
   }
   // the Guide card: the pattern(s) a family is counted for on the Patterns page (its bt_ clue, else its herb's), and the family's own signs that match
   function phPpGdfHtml(id) {
@@ -74100,7 +74110,8 @@ or changing anything in Cliniko.
   // (a teaching card) all three show. A 26 second loop, still on After under reduced motion; the big sheet adds Before / Treating / After chips
   // and a slider. Evidence tags sit under the picture and on the sheet; the honest note is on the sheet only. ----
   var phPpLinUn = 0;
-  const PH_PP_LINING = new Set(["cd_cycle_ivf", "cd_natural", "cd_pregnancy"]);
+  const PH_PP_TABS = { cd_cycle_ivf: ["cd_lining"], cd_natural: ["cd_lining"], cd_pregnancy: ["cd_lining", "cd_breech_turn", "cd_labour"], cd_breech_correction: ["cd_breech_turn"] };   // flip 2 + i = tab i
+  const PH_PP_STORY = {};
   PH_PP_COND.cd_lining = { id: "cd_lining", name: "Preparing the lining", fam: "pink" };
   PH_PP_SHORT.cd_lining = "Lining";
   const PH_PP_LIN_STEPS = [
@@ -74121,14 +74132,19 @@ or changing anything in Cliniko.
     try { f.flow = phPatCompute(name).pats.some(p => (p.def.id === "stasis" || p.def.id === "bdef") && !p.dismissed && (p.agreed || p.level === "likely" || p.level === "possible")); } catch (e) { /* no patterns */ }
     return f;
   }
-  // under the picture: the four steps (lit as the story reaches them) each with its evidence tag; the sheet adds the TCM line, the research line, the
-  // Before / Treating / After chips + slider and the honest note
-  function phPpLiningHtml(key, big, shown) {
-    const rows = PH_PP_LIN_STEPS.map(r => `<div class="ph-pp-lstep" data-lin-step="${r.k}"><i style="background:${r.c}"></i><div><b>${esc(r.t)}</b>${big ? `<small>${esc(r.tcm)}</small><small>${esc(r.res)}</small>` : ""}</div><em>${esc(r.tag)}</em></div>`).join("");
+  // a story tab (Lining, Breech, Labour): under the picture its four steps (lit as the story reaches them) each with its evidence tag, and the line
+  // for her pregnancy week where the story has one; the sheet adds the TCM line, the research line, the Before / Treating / After chips + slider,
+  // the honest note and the safety line
+  PH_PP_STORY.cd_lining = { col: "#E79BAE", at: [1.6, 7, 14.6], steps: PH_PP_LIN_STEPS,
+    note: "Honest note: large human trials of acupuncture around IVF have so far not shown more live births. The picture shows what the treatment aims to do and what small studies suggest, not a promise." };
+  function phPpStoryHtml(sid, big, shown, name) {
+    const D = PH_PP_STORY[sid]; if (!D) return "";
+    const rows = D.steps.map(r => `<div class="ph-pp-lstep" data-lin-step="${r.k}"><i style="background:${r.c}"></i><div><b>${esc(r.t)}</b>${big ? `<small>${esc(r.tcm)}</small><small>${esc(r.res)}</small>` : ""}</div><em>${esc(r.tag)}</em></div>`).join("");
     const st = (t, i, l) => `<button type="button" class="ph-ltr-qual" data-pp-stage="${t}" data-lin-st="${i}">${l}</button>`;
-    const ctl = big ? `<div class="ph-pp-lctl"><div class="ph-tng2-seg">${st(1.6, 0, "Before")}${st(7, 1, "Treating")}${st(14.6, 2, "After")}<button type="button" class="ph-ltr-qual" data-pp-stage="play">Play</button></div><input type="range" min="0" max="18" step="0.05" value="0" data-pp-scrub="1" aria-label="Moment in the story"></div>` : "";
-    const note = big ? `<div class="ph-pp-lnote">Honest note: large human trials of acupuncture around IVF have so far not shown more live births. The picture shows what the treatment aims to do and what small studies suggest, not a promise.</div>` : "";
-    return `<div class="ph-pp-lin" data-pp-lin="1"${shown ? "" : " hidden"}>${ctl}<div class="ph-pp-lsteps">${rows}</div>${note}</div>`;
+    const ctl = big ? `<div class="ph-pp-lctl"><div class="ph-tng2-seg">${st(D.at[0], 0, "Before")}${st(D.at[1], 1, "Treating")}${st(D.at[2], 2, "After")}<button type="button" class="ph-ltr-qual" data-pp-stage="play">Play</button></div><input type="range" min="0" max="18" step="0.05" value="0" data-pp-scrub="1" aria-label="Moment in the story"></div>` : "";
+    let wk = ""; if (D.week) { try { wk = `<div class="ph-pp-lwk">${esc(D.week(name || ""))}</div>`; } catch (e) { wk = ""; } }
+    const note = big ? `<div class="ph-pp-lnote">${esc(D.note)}</div>${D.safe ? `<div class="ph-pp-lnote ph-pp-lsafe">${esc(D.safe)}</div>` : ""}` : "";
+    return `<div class="ph-pp-lin" data-pp-lin="${esc(sid)}"${shown ? "" : " hidden"}>${ctl}${wk}<div class="ph-pp-lsteps">${rows}</div>${note}</div>`;
   }
   PH_PP.SC.cd_lining = (S, svg) => {
     const NS = "http://www.w3.org/2000/svg";
@@ -74281,7 +74297,7 @@ or changing anything in Cliniko.
   }
     // the lit steps, the stage chips and the slider under the picture follow the story (only while that block is showing)
     S.ui = (t, act) => {
-      const w = svg.closest("[data-pp-wrap]"), lin = w && w.querySelector("[data-pp-lin]"); if (!lin || lin.hidden) return;
+      const w = svg.closest("[data-pp-wrap]"), lin = w && w.querySelector("[data-pp-lin=\"cd_lining\"]"); if (!lin || lin.hidden) return;
       const on = { needle: act.needle || (t > 5 && t < 9), moxa: act.moxa, herb: act.herb, ready: t >= 11 }, st = t < 3 ? 0 : t < 11 ? 1 : 2, sig = [on.needle, on.moxa, on.herb, on.ready, st].join();
       if (sig !== S.sig) { S.sig = sig; lin.querySelectorAll("[data-lin-step]").forEach(e => e.classList.toggle("on", !!on[e.dataset.linStep])); lin.querySelectorAll("[data-lin-st]").forEach(b => b.classList.toggle("on", +b.dataset.linSt === st)); }
       const r = lin.querySelector("[data-pp-scrub]"); if (r && document.activeElement !== r) r.value = t;
@@ -74294,6 +74310,241 @@ or changing anything in Cliniko.
       draw(S.t);
     };
     words(); S.t = .01; S.dist = 0; S.hold = false; S.sig = ""; S.warm = [1, 0];
+  };
+  // ---- her 2026-10-23 "design interactive animations of how acupuncture can help with labor prep and treating breech babies" (mock
+  // birth-prep-breech-animation-mock-2026-10-23.html; her 8 picks are in memory project_pharmacy_breech_labour_pictures_2026_10_23): two more
+  // story tabs in the Lining mould -- Breech (moxa + needle at Zhiyin BL67, the baby moving more, then turning head down; a circle with kicks
+  // per hour and her week on a 30-40 ruler) and Labour (weekly from 36 weeks; Sanyinjiao SP6, Hegu LI4, Ciliao BL32; the head settling into
+  // the pelvis and a close-up of the cervix softening and shortening). On the Pregnancy picture (Balanced | Pregnancy | Lining | Breech |
+  // Labour), on the Breech correction picture, and as a picture on the Care Plan Diagnosis while the live phase is Breech Presentation /
+  // Labor Induction. HER pregnancy week drives both (the ruler, the week line, and past 37 weeks the baby only partly turns / the cervix only
+  // starts to soften before 36); with no patient they are teaching pictures at 34 and 37 weeks. 26 second loop like Lining. ----
+  function phPpPregWeek(name) {
+    if (!name) return null;
+    const rec = phPatientPeek(name); if (!rec) return null;
+    const today = keyOf(phLiveToday());
+    const w = phTpPregWeeksOn(phTpPregFor(rec).start, today); if (w) return w.week;
+    const pt = rec.pregTest;
+    if (pt && pt.result === "positive" && /^\d{4}-\d{2}-\d{2}$/.test(pt.date || "")) { const d = Math.round((parseKey(today) - parseKey(pt.date)) / 86400000); if (d >= 0) return Math.floor((28 + d) / 7); }
+    return null;
+  }
+  PH_PP_COND.cd_breech_turn = { id: "cd_breech_turn", name: "Turning a breech baby", fam: "pink" };
+  PH_PP_SHORT.cd_breech_turn = "Breech";
+  PH_PP_COND.cd_labour = { id: "cd_labour", name: "Preparing for labour", fam: "pink" };
+  PH_PP_SHORT.cd_labour = "Labour";
+  PH_PP_STORY.cd_breech_turn = { col: "#F2994A", at: [1.6, 7, 15],
+    steps: [
+      { k: "moxa", c: "#F26B2D", t: "Needle + moxa at Zhiyin (BL67)", tcm: "Needle, then warm the outer corner of each little toe, 15–20 minutes a side, daily for 7–10 days.", res: "Pooled trials: fewer babies still breech at birth and fewer caesareans than with no treatment.", tag: "pooled trials, low certainty" },
+      { k: "chan", c: "#E0A040", t: "Warmth moves up the channel", tcm: "Zhiyin is where the Bladder channel meets the Kidney, and the Kidney governs the womb.", res: "The Bladder-Kidney link to the womb is a TCM principle, not something measured.", tag: "TCM principle" },
+      { k: "move", c: "#7E8591", t: "Baby moves more", tcm: "Mothers often feel more kicks while the moxa is on.", res: "A trial of first-time mothers at 33 weeks counted more fetal movements during moxa.", tag: "one trial" },
+      { k: "turn", c: "#C9607B", t: "Room to turn head down", tcm: "An active baby somersaults so the head sits over the cervix.", res: "Moxa alone: some trials found more babies head down at birth; pooled together the result was not clear.", tag: "mixed results" }],
+    note: "Honest note: many breech babies turn by themselves before 37 weeks. Moxa is used alongside her midwife's or obstetrician's care and does not replace a scan or the option of turning by hand (ECV).",
+    safe: "Before starting: a scan confirms the baby is breech; not with placenta praevia, bleeding, high blood pressure, twins or a scarred womb unless her obstetrician agrees.",
+    week(name) {
+      const w = phPpPregWeek(name);
+      if (w == null) return "A teaching picture at 34 weeks: the usual window for moxa (32–35 weeks).";
+      return w < 32 ? `${w} weeks: most breech babies still turn by themselves; moxa usually starts from 32–34 weeks.`
+        : w < 36 ? `${w} weeks: the usual window for moxa (32–35 weeks).`
+        : w < 37 ? `${w} weeks: still worth trying; her obstetrician may offer turning by hand (ECV) from 36–37 weeks.`
+        : `${w} weeks: less likely to turn by itself now; moxa can still be tried alongside her obstetrician's plan.`;
+    } };
+  PH_PP_STORY.cd_labour = { col: "#3A6EA5", at: [1.6, 7, 15],
+    steps: [
+      { k: "weekly", c: "#3A6EA5", t: "Weekly from 36 weeks", tcm: "One visit a week until the birth; the strong points wait until term.", res: "An observational study in New Zealand: fewer medical inductions in first-time mothers than the local average.", tag: "observational, no control group" },
+      { k: "ripen", c: "#7E8591", t: "Needles: ripen and soften", tcm: "Sanyinjiao (SP6), Hegu (LI4) and Ciliao (BL32) move Qi and Blood down to the womb.", res: "A Cochrane review: acupuncture may help the cervix ripen; no clear change in caesarean rates.", tag: "review, low certainty" },
+      { k: "settle", c: "#E0A040", t: "Baby settles into the pelvis", tcm: "The head drops and presses evenly on the cervix.", res: "Some small trials found a shorter first stage; others found no difference.", tag: "small trials, mixed" },
+      { k: "ready", c: "#C9607B", t: "Ready for labour", tcm: "A soft, short cervix and a calm, rested mother.", res: "Settling the Shen (mind) before the birth is a TCM aim; women report feeling calmer.", tag: "TCM principle" }],
+    note: "Honest note: acupuncture supports her body's own preparation; it does not start labour on demand and is used alongside her midwife's care.",
+    safe: "Point safety: Sanyinjiao, Hegu and the sacral points are left out before 37 weeks.",
+    week(name) {
+      const w = phPpPregWeek(name);
+      if (w == null) return "A teaching picture at 37 weeks: weekly pre-birth sessions; the head settles and the cervix softens.";
+      return w < 36 ? `${w} weeks: not yet. Weekly sessions start at 36 weeks; the strong points wait until 37.`
+        : w < 40 ? `${w} weeks: weekly pre-birth sessions; the head settles and the cervix softens.`
+        : `${w} weeks: past her due date: sessions can be closer together alongside her midwife's induction plan.`;
+    } };
+  var phPpBlUn = 0;
+  // the shared pieces of the two scenes: helpers, a curled-up baby drawn head UP around 0,0, the runner hooks
+  function phPpBlKit(S, svg, sid) {
+    const NS = "http://www.w3.org/2000/svg";
+    const K = {};
+    K.mk = (tag, a, p) => { const e = document.createElementNS(NS, tag); for (const k in a) e.setAttribute(k, a[k]); if (p) p.appendChild(e); return e; };
+    K.sm = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+    K.lerp = (a, b, t) => a + (b - a) * t;
+    const hx = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+    K.mix = (a, b, t) => { const A = hx(a), B = hx(b); return "rgb(" + A.map((v, i) => Math.round(v + (B[i] - v) * t)).join(",") + ")"; };
+    K.F = n => (+n).toFixed(1);
+    K.lab = (g, x, y, tx, ty, text, an, cls) => {
+      if (x != null) { K.mk("path", { d: `M${x},${y} L${tx},${ty}`, class: "lbl-l" }, g); K.mk("circle", { cx: x, cy: y, r: 1.6, class: "lbl-d" }, g); }
+      const t = K.mk("text", { x: tx + (an === "start" ? 2 : an === "end" ? -2 : 0), y: ty + 3, "text-anchor": an || "middle", class: cls || "lbl-t" }, g); t.textContent = text; return t;
+    };
+    K.u = "pb" + (++phPpBlUn);
+    K.week = phPpPregWeek(svg.dataset.ppPt || "");
+    K.baby = p => {
+      const g = K.mk("g", {}, p);
+      K.mk("path", { d: "M-15,-6 C-18,8 -12,22 0,24 C12,22 18,8 15,-6 C12,-16 -12,-16 -15,-6 Z", fill: "#F2C9B5", stroke: "#B98068", "stroke-width": .9 }, g);
+      K.mk("path", { d: "M-10,14 C-16,20 -8,28 2,25 M10,12 C16,18 12,27 4,26", fill: "none", stroke: "#B98068", "stroke-width": 2.6, "stroke-linecap": "round" }, g);
+      const kick = K.mk("path", { d: "M10,12 C18,16 20,22 16,27", fill: "none", stroke: "#B98068", "stroke-width": 2.4, "stroke-linecap": "round" }, g);
+      K.mk("path", { d: "M-11,-8 C-8,-2 -2,2 5,3", fill: "none", stroke: "#B98068", "stroke-width": 2, "stroke-linecap": "round" }, g);
+      K.mk("circle", { cx: 0, cy: -24, r: 13, fill: "#F5D3C1", stroke: "#B98068", "stroke-width": .9 }, g);
+      K.mk("path", { d: "M-5,-25 q2,-1.5 4,0 M3,-25 q2,-1.5 4,0", fill: "none", stroke: "#8A5A48", "stroke-width": .7, "stroke-linecap": "round" }, g);
+      K.mk("path", { d: "M-1,-20 q2,1.4 4,0", fill: "none", stroke: "#8A5A48", "stroke-width": .7, "stroke-linecap": "round" }, g);
+      K.mk("path", { d: "M0,24 C2,32 -2,38 4,44", fill: "none", stroke: "#D9A0AC", "stroke-width": 1.6 }, g);
+      return { g, kick };
+    };
+    // the lit steps, the stage chips and the slider under the picture follow the story (only while that block is showing)
+    K.hook = (draw, onOf) => {
+      const LOOP = 18, AFTER = PH_PP_STORY[sid].at[2];
+      S.ui = t => {
+        const w = svg.closest("[data-pp-wrap]"), lin = w && w.querySelector(`[data-pp-lin="${sid}"]`); if (!lin || lin.hidden) return;
+        const on = onOf(t), st = t < 3 ? 0 : t < 10 ? 1 : 2, sig = Object.keys(on).map(k => on[k] ? 1 : 0).join("") + st;
+        if (sig !== S.sig) { S.sig = sig; lin.querySelectorAll("[data-lin-step]").forEach(e => e.classList.toggle("on", !!on[e.dataset.linStep])); lin.querySelectorAll("[data-lin-st]").forEach(b => b.classList.toggle("on", +b.dataset.linSt === st)); }
+        const r = lin.querySelector("[data-pp-scrub]"); if (r && document.activeElement !== r) r.value = t;
+      };
+      const full = t => { draw(t); S.ui(t); svg.style.opacity = t > LOOP - .6 ? K.F((LOOP - t) / .6) : t < .5 ? K.F(.4 + .6 * (t / .5)) : 1; };
+      S.go = t => { S.t = t; S.sig = ""; full(t); };
+      S.step = dt => {
+        if (phTpReduceMotion()) { if (!S.hold) S.t = AFTER; }
+        else if (!S.hold) { S.t += dt * 18 / 26; if (S.t >= LOOP) S.t = 0; }
+        full(S.t);
+      };
+      S.t = .01; S.hold = false; S.sig = ""; S.warm = [1, 0];
+    };
+    return K;
+  }
+  PH_PP.SC.cd_breech_turn = (S, svg) => {
+    const K = phPpBlKit(S, svg, "cd_breech_turn"), { mk, sm, mix, F, lab } = K, u = K.u;
+    const wk = K.week == null ? 34 : K.week, turnOK = wk < 37;
+    mk("rect", { width: 300, height: 130, fill: "#F9EEF1" }, svg);
+    mk("defs", {}, svg).innerHTML = `<radialGradient id="${u}g" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#F7A65A" stop-opacity=".8"/><stop offset="1" stop-color="#F7A65A" stop-opacity="0"/></radialGradient><clipPath id="${u}w"><ellipse cx="128" cy="62" rx="50" ry="50"/></clipPath><clipPath id="${u}z"><circle cx="252" cy="64" r="44"/></clipPath>`;
+    // the womb: wall, waters, placenta at the top, cervix at the bottom
+    mk("ellipse", { cx: 128, cy: 62, rx: 54, ry: 54, fill: "#EBB6C2" }, svg);
+    const wall = mk("ellipse", { cx: 128, cy: 62, rx: 52, ry: 52, fill: "#F4C9D1", stroke: "#C9607B", "stroke-width": 1.2 }, svg);
+    mk("ellipse", { cx: 128, cy: 62, rx: 48, ry: 48, fill: "#FBEDEF" }, svg);
+    mk("path", { d: "M100,22 C112,13 144,13 158,24 C150,24 140,20 128,20 C116,20 108,22 100,22 Z", fill: "#C7637D", opacity: .85 }, svg);
+    mk("path", { d: "M122,112 L134,112 L132,120 L124,120 Z", fill: "#E7A9B6", stroke: "#C9607B", "stroke-width": .8 }, svg);
+    const glow = mk("ellipse", { cx: 128, cy: 62, rx: 54, ry: 54, fill: `url(#${u}g)`, opacity: 0 }, svg);
+    const kid = K.baby(mk("g", { "clip-path": `url(#${u}w)` }, svg));
+    const motion = mk("g", { stroke: "#B98068", "stroke-width": .8, fill: "none", "stroke-linecap": "round" }, svg);
+    [[150, 92], [106, 92], [156, 80]].forEach(([x, y]) => mk("path", { d: `M${x},${y} q3,-3 6,0 M${x + 1},${y + 4} q3,-3 6,0` }, motion));
+    // the foot (sole up), Zhiyin at the outer corner of the little toe
+    const foot = mk("g", { transform: "translate(6 74)" }, svg);
+    mk("path", { d: "M8,4 C2,10 2,30 10,40 C16,46 26,44 28,36 C30,24 30,10 24,4 C20,0 12,0 8,4 Z", fill: "#F3D1C3", stroke: "#B98068", "stroke-width": .9 }, foot);
+    [[10, 1, 3.6], [15.5, -1, 3], [20.5, 0, 2.7], [24.5, 2, 2.4], [28, 5, 2.1]].forEach(([x, y, r]) => mk("circle", { cx: x, cy: y, r, fill: "#F3D1C3", stroke: "#B98068", "stroke-width": .8 }, foot));
+    const zhiyin = mk("circle", { cx: 29.8, cy: 3.6, r: 1.6, fill: "#F26B2D", stroke: "#fff", "stroke-width": .5 }, foot);
+    const moxa = mk("g", {}, svg);
+    moxa.innerHTML = `<line x1="58" y1="66" x2="42" y2="76" stroke="#A9794F" stroke-width="3.6" stroke-linecap="round"/><circle class="mtip" cx="40.5" cy="77" r="2.6" fill="#F26B2D"/><path class="msm" d="M44,70 C42,66 46,64 44,60" fill="none" stroke="#B8B2AC" stroke-width=".9" stroke-linecap="round"/><path class="msm" d="M48,68 C46,64 50,62 48,58" fill="none" stroke="#B8B2AC" stroke-width=".9" stroke-linecap="round"/>`;
+    const needle = mk("g", {}, svg);
+    needle.innerHTML = `<line x1="44" y1="70" x2="36.5" y2="77" stroke="#8A909B" stroke-width="1.1" stroke-linecap="round"/><circle cx="44.6" cy="69.4" r="1.6" fill="#6C727D"/>`;
+    const heat = [0, 1].map(() => mk("circle", { cx: 36, cy: 78, r: 3, fill: "none", stroke: "#F26B2D", "stroke-width": 1.2, opacity: 0 }, svg));
+    const ch = mk("path", { d: "M36,78 C44,96 60,104 74,98 C84,94 86,82 92,74 C96,68 100,66 104,66", fill: "none", stroke: "#E0A040", "stroke-width": 1.1, "stroke-dasharray": "3 3", opacity: .25 }, svg);
+    const chL = ch.getTotalLength(), sparks = []; for (let i = 0; i < 6; i++) sparks.push(mk("circle", { r: 1.5, fill: "#F2994A" }, svg));
+    // the circle: kicks per hour, and her week on a 30-40 ruler with the moxa and ECV windows
+    const Z = mk("g", { "clip-path": `url(#${u}z)` }, svg);
+    mk("rect", { x: 206, y: 18, width: 92, height: 92, fill: "#FBF6EE" }, Z);
+    const wx = w => 224 + (w - 30) * 5.6;
+    mk("rect", { x: F(wx(32)), y: 72, width: F(wx(36) - wx(32)), height: 7, rx: 2, fill: "#F7C9A4" }, Z);
+    mk("rect", { x: F(wx(36)), y: 72, width: F(wx(37.5) - wx(36)), height: 7, rx: 2, fill: "#C9DAF0" }, Z);
+    mk("rect", { x: 224, y: 75, width: 56, height: 1.2, fill: "#9BA6A0" }, Z);
+    [30, 32, 34, 36, 38, 40].forEach(w => { mk("rect", { x: F(wx(w) - .4), y: 79, width: .8, height: 3, fill: "#7A857F" }, Z); mk("text", { x: F(wx(w)), y: 88, "text-anchor": "middle", class: "lbl-s" }, Z).textContent = w; });
+    mk("text", { x: F(wx(34)), y: 70, "text-anchor": "middle", class: "lbl-s", fill: "#9A5A20" }, Z).textContent = "moxa";
+    mk("text", { x: F(wx(36.75)), y: 70, "text-anchor": "middle", class: "lbl-s" }, Z).textContent = "ECV";
+    const mark = mk("g", { transform: `translate(${F(wx(Math.min(40, Math.max(30, wk))))} 72)` }, Z);
+    mk("path", { d: "M0,0 L0,13", stroke: "#C9607B", "stroke-width": .8, "stroke-dasharray": "1.5 1.5" }, mark); mk("path", { d: "M0,13 L3,18 L-3,18 Z", fill: "#C9607B" }, mark);
+    mk("text", { x: 252, y: 30, "text-anchor": "middle", class: "lbl-s" }, Z).textContent = "Kicks felt per hour";
+    const bars = [0, 1, 2, 3, 4, 5, 6].map(i => mk("rect", { x: 222 + i * 9, width: 6, rx: 1.5, fill: "#D9A0AC" }, Z));
+    mk("circle", { cx: 252, cy: 64, r: 44, fill: "none", stroke: "#1F4D3A", "stroke-width": 1.1 }, svg);
+    const lbA = mk("g", {}, svg), lbC = mk("g", {}, svg);
+    lab(lbA, null, null, 128, 7, "Bottom down (breech)", "middle"); lab(lbA, null, null, 128, 124, "Quiet baby", "middle", "lbl-s");
+    lab(lbC, null, null, 128, 7, "Head down", "middle"); lab(lbC, null, null, 128, 124, "Turned", "middle", "lbl-s");
+    lab(svg, 36, 78, 40, 104, "Zhiyin BL67 · needle + moxa", "start", "lbl-s");
+    const onOf = t => { const act = t > 3 && t < 10.5; return { moxa: act, chan: t > 4 && t < 10.5, move: t > 5 && t < 12, turn: t >= 10 && turnOK }; };
+    K.hook(t => {
+      const act = t > 3 && t < 10.5, turn = sm(10, 13.6, t) * (turnOK ? 1 : .35);
+      const activity = sm(3, 6, t) * (1 - sm(12, 15, t)) + .12;
+      kid.g.setAttribute("transform", `translate(128 62) rotate(${F(180 * turn + Math.sin(t * 7) * 6 * activity)}) translate(${F(Math.sin(t * 3) * 1.5 * activity)} 0)`);
+      kid.kick.setAttribute("d", `M10,12 C${F(18 + 4 * Math.sin(t * 11) * activity)},16 20,22 ${F(16 + 5 * Math.sin(t * 11) * activity)},27`);
+      motion.setAttribute("opacity", F(activity > .3 ? (.5 + .5 * Math.sin(t * 9)) * activity : 0));
+      motion.setAttribute("transform", turn > .5 ? "rotate(180 128 62)" : "");
+      const tip = moxa.querySelector(".mtip"); tip.setAttribute("r", F(act ? 2.9 + .5 * Math.sin(t * 9) : 2.2)); tip.setAttribute("fill", act ? "#FF8A3D" : "#B8643A");
+      moxa.querySelectorAll(".msm").forEach((e, i) => e.setAttribute("opacity", act ? F(.4 + .4 * Math.sin(t * 5 + i)) : 0));
+      moxa.setAttribute("opacity", act ? 1 : .6); needle.setAttribute("opacity", act ? 1 : .6);
+      needle.setAttribute("transform", act ? `rotate(${F(4 * Math.sin(t * 14))} 40 74)` : "");
+      zhiyin.setAttribute("r", F(act ? 1.6 + .6 * Math.sin(t * 6) : 1.6));
+      heat.forEach((w, i) => { const ph = (t * .9 + i * .5) % 1; w.setAttribute("r", F(3 + ph * 12)); w.setAttribute("opacity", act ? F((1 - ph) * .7) : 0); });
+      ch.setAttribute("opacity", act ? .85 : .25); ch.setAttribute("stroke-dashoffset", F(-t * 10));
+      sparks.forEach((c, j) => { const d = ((j / sparks.length) * chL + t * 22) % chL, p = ch.getPointAtLength(d); c.setAttribute("cx", F(p.x)); c.setAttribute("cy", F(p.y)); c.setAttribute("opacity", act ? F(.9 * Math.sin((d / chL) * 3.14)) : 0); });
+      glow.setAttribute("opacity", F(act ? .35 + .15 * Math.sin(t * 2) : 0));
+      wall.setAttribute("fill", mix("#F4C9D1", "#F7C6C2", act ? .8 : 0));
+      bars.forEach((b, i) => { const h = 4 + (i / 6) * 4 + 18 * activity * (.6 + .4 * Math.sin(t * 3 + i)); b.setAttribute("height", F(h)); b.setAttribute("y", F(62 - h)); b.setAttribute("fill", mix("#D9C2C8", "#D96A86", activity)); });
+      lbA.setAttribute("opacity", F(1 - sm(9.5, 11, t))); lbC.setAttribute("opacity", F(sm(12.5, 14, t) * (turnOK ? 1 : 0)));
+    }, onOf);
+  };
+  PH_PP.SC.cd_labour = (S, svg) => {
+    const K = phPpBlKit(S, svg, "cd_labour"), { mk, sm, lerp, mix, F, lab } = K, u = K.u;
+    const wk = K.week == null ? 37 : K.week, term = wk >= 36;
+    mk("rect", { width: 300, height: 130, fill: "#F9EEF1" }, svg);
+    const W = "M128,8 C162,8 178,34 176,62 C174,84 160,98 146,104 L110,104 C96,98 82,84 80,62 C78,34 94,8 128,8 Z";
+    mk("defs", {}, svg).innerHTML = `<clipPath id="${u}w"><path d="${W}"/></clipPath><clipPath id="${u}z"><circle cx="252" cy="64" r="44"/></clipPath>`;
+    // the pelvis (front view) and the womb at term, head down
+    const pel = "M74,86 C66,96 70,112 86,118 L102,122 M182,86 C190,96 186,112 170,118 L154,122";
+    mk("path", { d: pel, fill: "none", stroke: "#CFC2B4", "stroke-width": 6, "stroke-linecap": "round" }, svg);
+    mk("path", { d: pel, fill: "none", stroke: "#A89684", "stroke-width": 1, "stroke-linecap": "round" }, svg);
+    mk("path", { d: "M110,124 C118,118 138,118 146,124", fill: "none", stroke: "#A89684", "stroke-width": 3, "stroke-linecap": "round" }, svg);
+    mk("path", { d: W, fill: "#EBB6C2", transform: "translate(128 56) scale(1.04) translate(-128 -56)" }, svg);
+    mk("path", { d: W, fill: "#F4C9D1", stroke: "#C9607B", "stroke-width": 1.2 }, svg);
+    mk("path", { d: "M128,13 C156,13 171,36 170,62 C168,82 156,94 144,99 L112,99 C100,94 88,82 86,62 C85,36 100,13 128,13 Z", fill: "#FBEDEF" }, svg);
+    mk("path", { d: "M150,16 C162,22 170,34 171,46 C166,38 158,28 150,22 Z", fill: "#C7637D", opacity: .85 }, svg);
+    const cervix = mk("path", { fill: "#E7A9B6", stroke: "#C9607B", "stroke-width": .8 }, svg);
+    const kid = K.baby(mk("g", { "clip-path": `url(#${u}w)` }, svg));
+    // the three needle spots on the left, named (her pick 4)
+    const toks = [["ankle", 30, "Sanyinjiao SP6", "Inner ankle"], ["hand", 64, "Hegu LI4", "Hand"], ["back", 98, "Ciliao BL32", "Low back"]].map(([k, y, nm, ar]) => {
+      const g = mk("g", { transform: `translate(14 ${y})` }, svg);
+      mk("circle", { r: 9, fill: "#FFFFFF", stroke: "#C9607B", "stroke-width": .8 }, g);
+      const d = k === "ankle" ? "M-3,-6 L-2,3 C-2,6 4,6 6,5" : k === "hand" ? "M-5,4 L-5,-3 M-2,4 L-2,-5 M1,4 L1,-5 M4,4 L4,-3 M-5,4 C-3,7 3,7 4,4 M-5,1 L-7,-2" : "M0,-6 L0,6 M-4,-2 L4,-2 M-3,2 L3,2";
+      mk("path", { d, fill: "none", stroke: "#B98068", "stroke-width": k === "ankle" ? 1.8 : k === "back" ? 1.4 : 1.3, "stroke-linecap": "round" }, g);
+      const nd = mk("line", { x1: 6, y1: -7, x2: 1, y2: -1, stroke: "#8A909B", "stroke-width": 1, "stroke-linecap": "round" }, g);
+      mk("text", { x: 12, y: -1, class: "lbl-s" }, g).textContent = nm;
+      mk("text", { x: 12, y: 6, class: "lbl-s", fill: "#6B7A72" }, g).textContent = ar;
+      return { g, nd };
+    });
+    const beams = [[24, 30, 100, 70], [24, 64, 96, 76], [24, 98, 106, 92]].map(([a, b, c, d]) => mk("path", { d: `M${a},${b} L${c},${d}`, stroke: "#7E8591", "stroke-width": 1.1, "stroke-dasharray": "3 3", fill: "none", opacity: 0 }, svg));
+    // the circle: the cervix from the side, the head pressing on it
+    const Z = mk("g", { "clip-path": `url(#${u}z)` }, svg);
+    mk("rect", { x: 206, y: 18, width: 92, height: 92, fill: "#FBF3F4" }, Z);
+    const zHead = mk("circle", { cx: 252, r: 26, fill: "#F5D3C1", stroke: "#B98068", "stroke-width": 1 }, Z);
+    const zL = mk("path", { stroke: "#C9607B", "stroke-width": .9 }, Z), zR = mk("path", { stroke: "#C9607B", "stroke-width": .9 }, Z);
+    const zCan = mk("path", { fill: "none", stroke: "#9B3F58", "stroke-width": 1, "stroke-dasharray": "2 1.5" }, Z);
+    const zLen = mk("text", { x: 280, "text-anchor": "end", class: "lbl-s" }, Z);
+    mk("circle", { cx: 252, cy: 64, r: 44, fill: "none", stroke: "#1F4D3A", "stroke-width": 1.1 }, svg);
+    mk("circle", { cx: 128, cy: 104, r: 3.4, fill: "none", stroke: "#1F4D3A", "stroke-width": .8 }, svg);
+    mk("path", { d: "M131,103 L208,80", stroke: "#1F4D3A", "stroke-width": .7, "stroke-dasharray": "2 2", fill: "none" }, svg);
+    const lbA = mk("g", {}, svg), lbC = mk("g", {}, svg);
+    lab(lbA, null, null, 128, 6, "Head high, not engaged", "middle"); lab(lbA, null, null, 252, 12, "Long, firm, closed", "middle");
+    lab(lbC, null, null, 128, 6, "Head settled in the pelvis", "middle"); lab(lbC, null, null, 252, 12, "Soft, short, ready", "middle");
+    const onOf = t => ({ weekly: t > 2 && t < 11, ripen: t > 3 && t < 10.5, settle: t > 6 && t < 13, ready: t >= 11 });
+    K.hook(t => {
+      const k = sm(3, 11, t), act = t > 3 && t < 10.5, zk = k * (term ? 1 : .3), drop = k * (term ? 1 : .4);
+      kid.g.setAttribute("transform", `translate(128 ${F(lerp(52, 64, drop))}) rotate(180) scale(1.18)`);
+      kid.kick.setAttribute("d", `M10,12 C${F(18 + 2 * Math.sin(t * 6))},16 20,22 ${F(16 + 2 * Math.sin(t * 6))},27`);
+      const cl = lerp(9, 3, zk), cw = lerp(3, 6.5, k);
+      cervix.setAttribute("d", `M${F(128 - cw)},104 L${F(128 + cw)},104 L${F(128 + cw - 1)},${F(104 + cl)} L${F(128 - cw + 1)},${F(104 + cl)} Z`);
+      cervix.setAttribute("fill", mix("#E7A9B6", "#F2C2CC", k));
+      toks.forEach((x, i) => {
+        const on = act && (t > 8 || (((t - 3) % 2.4) / .8 >= i && ((t - 3) % 2.4) / .8 < i + 1));
+        x.g.setAttribute("opacity", act ? (on ? 1 : .75) : .55);
+        x.nd.setAttribute("transform", on ? `rotate(${F(4 * Math.sin(t * 14))})` : "");
+        beams[i].setAttribute("opacity", on ? .9 : 0); beams[i].setAttribute("stroke-dashoffset", F(-t * 14));
+      });
+      const len = lerp(44, 18, zk), top = 62, gap = lerp(1.2, 5, zk), th = lerp(11, 6, zk);
+      zHead.setAttribute("cy", F(lerp(26, 36, zk)));
+      zL.setAttribute("d", `M${F(252 - gap - th)},${top} L${F(252 - gap)},${top} L${F(252 - gap * .6)},${F(top + len)} L${F(252 - gap - th - 2)},${F(top + len)} Z`);
+      zR.setAttribute("d", `M${F(252 + gap)},${top} L${F(252 + gap + th)},${top} L${F(252 + gap + th + 2)},${F(top + len)} L${F(252 + gap * .6)},${F(top + len)} Z`);
+      [zL, zR].forEach(e => e.setAttribute("fill", mix("#D98FA2", "#F3C3CE", zk)));
+      zCan.setAttribute("d", `M252,${top} L252,${F(top + len)}`);
+      zLen.setAttribute("y", F(top + len - 2)); zLen.textContent = zk > .5 ? "short" : "long";
+      lbA.setAttribute("opacity", F(1 - sm(5, 9, t))); lbC.setAttribute("opacity", F(sm(9, 12, t)));
+    }, onOf);
   };
   // the sheet's Before / Treating / After chips, Play and the slider: pause the story on a moment (reduced motion: the picture stays on After and these still step through it)
   document.addEventListener("click", e => {
@@ -74336,9 +74587,10 @@ or changing anything in Cliniko.
     const key = w.dataset.ppWrap, svg = w.querySelector("svg[data-pp]"), base = svg && svg.dataset.ppBase;
     if (v === 1) phPpFlip.delete(key); else phPpFlip.set(key, v);
     w.querySelectorAll("[data-pp-flip]").forEach(b => { const on = +b.dataset.ppFlip === v; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on ? "true" : "false"); });
-    const lin = w.querySelector("[data-pp-lin]"); if (lin) lin.hidden = v !== 2;
-    if (base && PH_PP_LINING.has(base)) {   // Balanced | IVF | Lining: the Lining tab is its own picture in the same frame
-      const want = v === 2 ? "cd_lining" : base;
+    const tabs = base ? phPpTabsOf(base) : [], tab = v >= 2 ? tabs[v - 2] || null : null;
+    if (tabs.length) w.querySelectorAll("[data-pp-lin]").forEach(l => { l.hidden = l.dataset.ppLin !== tab; });
+    if (tabs.length) {   // Balanced | Pregnancy | Lining | Breech | Labour: each story tab is its own picture in the same frame
+      const want = tab || base;
       if (svg.dataset.pp !== want) {
         const old = svg.__pp; if (old) { phPpLive = phPpLive.filter(x => x !== old); if (phPpIo) phPpIo.unobserve(svg); }
         svg.__pp = null; svg.innerHTML = ""; svg.style.opacity = ""; svg.dataset.pp = want; svg.setAttribute("aria-label", (phPpDef(want) || {}).name || want);
