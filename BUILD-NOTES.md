@@ -1789,7 +1789,7 @@ Sticky trap: `.ph-pres-panel` has `overflow: hidden`, which stops `position: sti
 
 Judgment calls (disclosed): there is no stored "IVF cycle start" date, so the Journey card and the calendar tags show the egg collection (and transfer once set) dates the plan does keep; the cycle card has its own ⋯ (Not today / Always) so the cycle check can still be skipped; Musculoskeletal stays a counted tile for pain / MSK patients. Tested in the sandbox (seeded IVF patient, 1280 px and 390 px): render, sticky bar, step jump, day card open/close without a scroll jump, ⋯ skip and ↺, Fill it in, Log today's session, the Look fold and Open. Not tested on her real data or phone.
 
-## IVF history, animated and drawn (2026-10-23, BUILT 7651e57a, not pushed)
+## IVF history, animated and drawn (2026-10-23, BUILT 7651e57a, LIVE since build 20261023-015200)
 
 Her ask: "improve this page design - use animations and workflow to illustrate it. use enhanced medical accurate diagrams and animations where relevant", then "show mock before build". Mock `ivf-history-animated-mock-2026-10-23.html`; her 12 picks were all the recommended option, then "Yes, build it".
 
