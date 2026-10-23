@@ -80074,7 +80074,10 @@ or changing anything in Cliniko.
     let added = true;
     if (!phPfwWrite(name, rec => {
       rec.usual[sid] = rec.usual[sid] || {};
-      if (!(q && q.multi)) { rec.usual[sid][qid] = val; return; }
+      if (!(q && q.multi)) {   // her 2026-10-23: tapping the picked answer again clears it (the row goes back to blank)
+        if (rec.usual[sid][qid] === val) { delete rec.usual[sid][qid]; added = false; } else rec.usual[sid][qid] = val;
+        return;
+      }
       const cur = phPfwVals(rec.usual[sid], q);
       let next;
       if (cur.includes(val)) { next = cur.filter(v => v !== val); added = false; }
@@ -80088,11 +80091,14 @@ or changing anything in Cliniko.
     phPfwRefresh(name, sid); if (!phFbrTrailUsed) phPfwFly(el, added ? clues.length : 0);
     if (phPfwSetDone(name, sid)) phPfwArm(name, phPfwTabOf(sid), "All answered.");
   }
+  // her 2026-10-23 "how to undo usual period": the fill keeps a copy of the card as it was, and the toast's Undo puts it back (blanks included)
   function phPfwNormal(sid) {
     const name = phPfwName(); if (!name) return;
+    let before = null;
     phPfwDisarm();
     if (!phPfwWrite(name, rec => {
       rec.usual[sid] = rec.usual[sid] || {};
+      before = JSON.parse(JSON.stringify(rec.usual[sid]));
       PH_PFW_SETS[sid].qs.forEach(q => {
         const vals = phPfwVals(rec.usual[sid], q);
         if (!vals.length || vals.every(v => v === "skip")) rec.usual[sid][q.id] = q.multi ? [q.d] : q.d;
@@ -80103,7 +80109,10 @@ or changing anything in Cliniko.
     // the picture builds in layer by layer instead of all at once
     phUcStagger = true;
     try { phPfwRefresh(name, sid); } finally { phUcStagger = false; }
-    presSavedToast("Filled with typical answers. Tap any row to change it.");
+    presSavedToast("Filled with typical answers.", { undo: () => {
+      if (!phPfwWrite(name, rec => { rec.usual = rec.usual || {}; rec.usual[sid] = before || {}; })) return;
+      phPfwDisarm(); phPfwFed = []; phPfwRefresh(name, sid); presSavedToast("Put back as it was.");
+    } });
     if (phPfwSetDone(name, sid)) phPfwArm(name, phPfwTabOf(sid), "Filled.");
   }
   // Same short/long/varies thresholds phPatClues already applies to real logged cycle

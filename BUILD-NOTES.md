@@ -1923,3 +1923,12 @@ Her popup picks: what she disliked = "Unclear what it does"; a visit counts as d
 **Tested (sandbox):** a pain patient's Today's visit shows Open Treatment → Treatment shows "✓ Complete session 1" with the hover note →
 tap → band "✓ Session 1 complete", exactly one new session saved → Today's visit shows "Session 1 complete"; no console errors.
 **Not tested:** her phone; the herbs-only check-in label in the browser.
+
+## 2026-10-23 · Usual period: Undo for "Nothing unusual", and a picked answer clears on a second tap
+Her ask (screenshot of the Usual period card): "how to undo usual period", then "yes build it".
+- `phPfwNormal` keeps a copy of the card's answers before it fills the blanks; the "Filled with typical answers." toast (the one toast)
+  has **Undo**, which writes the copy back through `phPfwWrite` (blanks included) and repaints the card ("Put back as it was.").
+  Same for every question set that has the button (period, change of life, men's, pain).
+- `phPfwAnswer`: tapping a single-answer option that is already picked clears that row (multi-pick rows already untick).
+**Tested (sandbox):** one answer, then Nothing unusual (8 answers) → Undo → back to the one answer; re-tap that answer → blank; no
+console errors. **Not tested:** her phone; Undo after the auto-move bar has already moved to the next page.
