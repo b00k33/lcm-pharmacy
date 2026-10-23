@@ -1956,3 +1956,26 @@ transfer from egg collection cycle".
   Handler `[data-ivf-fresh]` beside `[data-ivf-use]`. Frozen counts are untouched (`phIvfFrozenRemaining` counts frozen transfers only).
 **Tested (sandbox, a copy with only this change; another session's edit was mid-way):** May round → Fresh transfer "from May 2026",
 type Fresh, date May 2026, fields open; the May button goes, Jul keeps it; Jul still 2 frozen left. **Not tested:** her phone.
+
+## 2026-10-23 · Compass: one simple table
+Her ask (screenshot of the two-list mock C): "this looks too busy too many bullets buttons - are signs to be watched or why does it
+need to be separate from complaitns table? just animation design to iprove workflowa nd make it more simple. show mock", and mid-turn
+"build animations and diagrams where relevant". Mock `compass-simple-mock-2026-10-23.html`; her 8 picks, then "Yes, build it".
+- ONE table, complaints and signs together. The area heading rows (dot, count, fold, mini chart, ↑ → ↓, average bar) and the
+  "Signs · n" lines are gone (`phCxGroupHeadHtml`, `phCxGroupStats`, `phCxFoldOpen`, `phCxFold` removed). Each area is a thin
+  coloured edge down its rows with its short name small on the first row; "Same as last time" moved beside that name, shown on
+  mouse-over / long-press (my call: it had no other home once the heading rows went).
+- Sign rows: indented, SIGN tag in the sign's own area colour, no "rated from next visit" (empty on a first visit).
+- A sign added while a complaint is tapped (`sxPin[key].cc`) sits right under that complaint even in another area (`r.host`).
+- ⋮⋮ ▸ ▾ in `.ph-cx-hov` at the end of the name: mouse-over, long-press (`.lp`, 480 ms, the tap after it is swallowed), an open
+  drawer or menu. Keys line removed; its hint is the search box tooltip.
+- Motion: the gold "now asking" band glides behind the rows (`.ph-cx-askbar`, `phCxAskGlide`, re-placed by a ResizeObserver); a ✓
+  pops on a scored row; "Asked n of m · better · worse · gone" at the header's right with a gold bar under it that fills
+  (`phCxProgGrow`); a new sign slides in with a gold flash. `phCxSettle` runs once per paint (also after a full-page paint).
+- The small body beside the search (`phCxFigHtml`, 62 x 108, computer only): each row's place glows in its area colour, the asked row's
+  place breathes, a just-added sign's place pops; the figure node is kept through repaints while the same places glow.
+**Tested (local copy, seeded IVF patient with stress, a pinned Digestion sign, an earlier migraine sign, a low-back pain, a sweat
+sign):** 1280, 1000 and 375 wide (headless Edge); order IVF · stress · Digestion sign (under stress) · migraine · pain · Add pain ·
+Heat & sweat sign; scoring IVF → ✓, gold band on stress, "Asked 1 of 6 · 1 worse", bar 17%; a search Yes with stress tapped lands
+right under stress and pops the head glow; first visit: "Baseline set 0 of 3", sign cells empty; drawer keeps the area edge.
+**Not tested:** her real patients; her phone (long-press); the glide's feel by eye (pictures are still frames).

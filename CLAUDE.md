@@ -1311,9 +1311,9 @@ BUILD-NOTES.md) the Compass is the one "how have things been" table:** the Goal
 sits under the complaint name (tap to edit), Today is a slider with a number
 (a % box takes any number on % better), every visit's note is kept and last
 visit's shows under today's box, Fang Bing Ren signs she has ANSWERED (never
-ones the app only works out: `phCxSignList`) sit in their body-area group under one
-"Signs · n" line (after the group's complaints; her 2026-10-22 "how to see that the signs are
-grouped", pick A), each rated Gone · Better · Same · Worse
+ones the app only works out: `phCxSignList`) sit under their body area's complaints,
+indented with a SIGN tag (see "One table" below; the "Signs · n" line went 2026-10-23),
+each rated Gone · Better · Same · Worse from the next visit on
 (`rec.ccTrack.days[day].sx`; a Gone after her last Yes tap turns today's Bing
 tick off, `phCxGoneToday`; Ren is never touched). The gold row is the one being
 asked now; number keys, G B S W and ↓ drive it. Her order is
@@ -1327,17 +1327,16 @@ in BUILD-NOTES.md; the table is now Complaint | Baseline | Trend | Today | From 
 every row keeps a BASELINE = its FIRST score (derived on read, with its date; the one stored thing
 is `rec.ccTrack.base[rowKey] = { day }` from "Move baseline to today", `phCxRebase`) and shows how far
 it is from it, + = better on every row (a sign is a running total: Better +1, Worse −1, Same 0, Gone
-counts better). Rows sit in the nine Fang Bing Ren body areas (`phCxGroups`; headings always shown,
-each with ↑ → ↓ counts, an average bar, a fold and "Same as last time" = `phCxRestSame`; a
-complaint nothing places goes to Other); Energy is its own group. **The pain map's rows are the pain
+counts better). Rows sit in the nine Fang Bing Ren body areas (`phCxGroups`; a complaint nothing
+places goes to Other; since 2026-10-23 an area is a coloured edge, not a heading row: see "One table"
+below); Energy is its own group. **The pain map's rows are the pain
 rows** (group "Pain, muscles & joints"): the score is the pain store's own
 (`rec.msk.visits[day].pains["region|side"].now`, written through `phPmScoreSet(..., force)`), the
 Goal is `painMap[i].goal`, the starred pain stands in for a typed pain complaint, and the separate
 Pain card is gone from Today's visit while the Compass holds them. One model (`phCxModel`) feeds the
-rows, the chart (From baseline | Score, a group filter), the glance line and the live paint while a
+rows, the chart (From baseline | Score, a group filter), the header counts and the live paint while a
 slider moves (`phCxLiveRun`); the view state (From baseline | From last visit, chart mode, filter,
-folds, open drawer) is per patient and never stored. Phone: no chart, groups fold, short group
-names. **Earlier visits (her 2026-10-23 picks, mock earlier-visit-baseline-mock-2026-10-23.html):** a
+open drawer) is per patient and never stored. Phone: no chart, no body figure. **Earlier visits (her 2026-10-23 picks, mock earlier-visit-baseline-mock-2026-10-23.html):** a
 done booking counts as a visit (`phSeenDays` = logged sessions + bookings; Today's visit strip,
 `phTodayParts` and the Compass read it), and on a computer a "Scoring" bar (Today, then the
 patient's done bookings newest first, `phPastBookDays`; 5 chips + Older ▾) scores an earlier visit in
@@ -1357,7 +1356,27 @@ row), saved through `phTriWrite` (the same answer again clears it); a Yes pins i
 complaint. Which signs get a Compass row is still `phCxSignList`'s ANSWERED rule (her pick: a Usu Yes adds
 one too). The list stays open for the next tick (Esc / a tap elsewhere closes it), 8 rows then "Show all N",
 then "Add as a complaint" / "Add to Watch"; ↑↓ + Enter = Now Yes, Shift+Enter = Usu Yes, Enter with no
-row lit = her words as a complaint. The checks are compact rows, two across, each with Open and
+row lit = her words as a complaint.
+**One table (her 2026-10-23 picks, mock compass-simple-mock-2026-10-23.html, "Compass: one simple table"
+in BUILD-NOTES.md; she found the area headings, "Signs · n" lines and buttons too busy):** complaints and
+signs are ONE table. No area heading rows, folds, counts or "n of m set" pills: each area is a thin
+coloured edge down its rows (`.ga`, `--gc` = the area colour) with its short name small on its first row
+(`phCxAreaLabHtml`, which also holds "Same as last time" = `phCxRestSame`, shown on mouse-over or a
+long-press). Sign rows are indented with a SIGN tag in their OWN area's colour; a sign she added while a
+complaint was tapped (`sxPin[key].cc`) sits RIGHT UNDER that complaint even in another area (`r.host` in
+`phCxModel`), any other sign after its area's complaints. ⋮⋮ ▸ ▾ sit in `.ph-cx-hov` at the end of the
+name, shown only on mouse-over, a long-press on a phone (`.lp`), an open drawer or an open menu. No keys
+line (the hint is the search box's tooltip); no "rated from next visit" (a first visit leaves the sign's
+cell empty). Motion (all off under reduced motion): the gold "now asking" line is ONE band behind the rows
+(`.ph-cx-askbar`, `phCxAskGlide`; until it has found its row the `.ask` row itself is gold) that glides to
+the next row; a ✓ pops on a scored row (`PH_CX_TICK`); "Asked n of m · better · worse · gone" sits at the
+right of the header (`phCxGlanceHtml`; "Now asking" went) with a gold bar under the header that fills
+(`phCxProgGrow`); a new sign row slides in with a gold flash. `phCxSettle` runs these once per paint
+(`phCxAfter`, or a timer after a full-page paint). The small body beside the search (`phCxFigHtml`, the
+Fang Bing Ren page's drawing, front view, computer only) glows each row's place in its area colour (a
+sign: `phFbbPlaceOf`; a complaint: its area's place; a pain: its words, `PH_CX_PAIN_PL`; Energy, Heat &
+sweat, Skin and whole-person signs: a ring); the asked row's place breathes, a just-added sign's pops; the
+node is kept through a repaint while the same places glow, so the breathing never jumps. The checks are compact rows, two across, each with Open and
 Skip ▾ (Not today / Always for this patient); a skipped check folds into the
 "Skipped" line and counts as done (`phTodayPartOk`). Quick assess shows 8
 questions in 2 columns on Today's visit and Fang Bing Ren [synth22: Today's
