@@ -2130,3 +2130,13 @@ Her words: "make a list of all the pages of the app and audit the chips one by o
 **Kept on purpose:** her solid pill for the rail page she is on (her 2026-10-13 pick B; the mock showed a tint); rail text sizes; `.ph-load-btn`s that a page styles as plain text; table cells (Inventory etc. come with their page); the 44px header disc; phone.
 **Not done (later pages):** Communications filter chips `.ph-ck-chip` (shared with the cycle Day log), Ren / Fang Bing Ren sign chips, exam answer chips, 0–10 cells.
 **Tested (sandbox, 1280):** measured every changed control at 32px / 6px; rail 40 / 32; the Open button fits its card; no sideways scroll; Prescriptions search still filters live (12 → 3 → 12). **Not tested:** her real data, tablet 641–900px widths in detail.
+
+## Fang Bing Ren + Ren chips, one height (2026-10-23)
+Her words: "mock Fang Bing Ren and Ren next" → mock `fbr-ren-chips-mock-2026-10-23.html` → "build it and push" (white boxes, the mock's default).
+**What changed (CSS only, one `@media (min-width: 641px)` block after "Shared chip fixes"):**
+- Sign rows (`.ph-fbr-row.q`, the one shared sign row: Fang Bing Ren board, Ren tab, Quick assess evidence): one 32px white box, 6px corners, 3px colour edge, the ✕ its own 32px end with a divider and ALWAYS shown (it used to appear on mouse-over). Ticked = solid `--rc` as before; ruled out = grey + crossed through as before. The Bing / Ren cells (`.ph-sh-cell.bing/.ren`) lost their tint; the column headings keep it.
+- Joined 6px bars: Fang Bing Ren | Patterns switch (`.ph-fbr-switch .seg`), the Looking at line (`.ph-fbr-look-seg`), All | Ticked (`.ph-fbr-show`), Yes | No | N/S (`.ph-qr-ans`, N/S now the bar's third segment), Energy cells (`.ph-en-chips`), Front | Back (`.ph-rf-seg`).
+- 32px boxes: Pick several, sign search (magnifier), the Add row, formula tiles (`.ph-fbr-t`), the Now / Usu twin answers (`.ph-qr-ans2`). ⋯ and ⤢ are 32px circles. Family rows on the Ren side are 32px rows.
+- Find the Ren look answers stay loose (her 2026-10-16 pick), now 32px with 6px corners, "none of these" too.
+**Trade-off told to her:** about 600 sign rows grow from 24px to 32px, so the page is longer. Her 2026-10-16 "make chips smaller to fit more" is superseded by today's pick.
+**Tested (sandbox, 1280):** every changed control measured 32px / 6px; tap a sign ticks it (solid), tap again clears, ✕ rules out (grey, crossed), ✕ again clears; Quick assess rows don't overflow (0 of 8); no sideways scroll on either page. **Not tested:** her real data, a gynae / MSK case colour page by eye, tablet widths, the phone (unchanged).
