@@ -2109,7 +2109,7 @@ dropdown opens, picks 3 days (label and date follow), closes on a tap elsewhere;
 returns and greys itself; phone 375px wraps to three rows with no sideways scroll. **Not tested:** on her phone, or the Up
 next circles with a real phone number (the test patient had none, so they showed faded as before).
 
-## 2026-10-23 · Patient details chips, one height (Zanda as inspiration)
+## 2026-10-23 · Patient details chips, one height (Zanda as inspiration) (LIVE build 20261023-084400)
 Her ask: "audit the chips on this page and mock it to be like zanda chips" (screenshot of Patient details), then "build it"
 and "and push". Audit: 7 looks at 24 / 26 / 28 / 30 px (joined pills, white pills, a crimson-outlined + Partner at 12px bold,
 two circle sizes, bare "Add" values). Mock `pd-chips-mock-2026-10-23.html`. Built as in the mock (CSS only, scoped to `.ph-pd`,
