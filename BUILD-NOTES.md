@@ -2201,3 +2201,12 @@ Her words: "build it and push" (mock `guide-chips-mock-2026-10-23.html`). One de
 - **Emoji out (rule: icons are the sprite, never emoji):** the source type icons 💬 📖 📝 📘 (`PH_SOURCE_TYPES`) no longer print on source chips (`phSourceChip` line) or in the two source pickers; the map still holds them, unused.
 **Kept:** body-type pictures, the tongue drawing, importance dots, the learned bar, quiz colours; the phone.
 **Tested (sandbox, 1280):** every control on Families (Study + Edit), Tongue map and Pulse measured 32px; all 7 tongue bars fit (scrollWidth = width); no sideways scroll. **Not tested:** Quiz answers by eye, the Guide's notes-only editor, tablet widths.
+
+## To Order board chips, one height (2026-10-23)
+Her words: "build it and push" (mock `toorder-chips-mock-2026-10-23.html`). One desktop `@media (min-width: 641px)` block after "Guide chips"; the board's own classes (`.ph-osb-*`) only, so the phone To Order is untouched.
+- `.ph-osb-hbtn` (+ Add to order, Add to order, Order now, Mark ordered, Arrived, Copy for email, Mark all ordered) and `.ph-osb-chip` (Clear) 32px 6px; the outlined ones now a 1px line (Order now keeps its red).
+- To order | Running low (`.ph-osb-seg`) 6px corners.
+- Supplier line (`.ph-osb-suph`): its two buttons drop to their own line, so Mark all ordered is never cut off (it was, "Mark all orde", at 1280).
+- The count stepper (`.ph-osb-col .ph-os-step`) one 32px bar with dividers; ⋮ (`.ph-osb-act .ph-os-dots`) a 32px circle.
+**Kept:** the three columns, jars, stock bars and %, supplier tags, the header's round button, herb names as plain text in their row.
+**Tested (sandbox, 1280, test herbs added to the order, one marked ordered and arrived):** every board button measured 32px; Mark all ordered ends at 541px inside a 591px column, its text not clipped; no sideways scroll. **Not tested:** 641–900px (the older layout shows there), the Snoozed ▾ list, her real data.
