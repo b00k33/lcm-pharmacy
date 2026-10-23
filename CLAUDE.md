@@ -1046,8 +1046,8 @@ plan]. Edits repaint through `phTpPlanRepaint()`, never a full rerender.
 Bing Ren's live top formula when blank [Care Plan phase Formula].
 
 **The Treatment tab** carries the session stepper, the phase's visit table
-and a Complete band; completing a session there is the same save as "Log
-today's session" (`data-pres-acu-log`).
+and a Complete band; "✓ Complete session N" there is the one place a visit is
+saved (`data-pres-acu-log`; Today's visit only opens it).
 
 **"Alive" phase resolution (locked, load-bearing)**: `phTpLivePhase(rec,
 plan, asOfKey?)` is THE read for the current phase — live cycle-day phase →
