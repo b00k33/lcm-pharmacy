@@ -67148,7 +67148,9 @@ or changing anything in Cliniko.
     {
       id: "natural", name: "Natural fertility", category: "gynae", caseHint: "fertility",
       goal: "Support a full, regular cycle — Build a receptive lining — Conceive naturally",
-      phases: ["menses", "foll1", "foll2", "ov", "tww", "early"].map(k => PH_TP_PHASE[k]),
+      // no Early Pregnancy phase (her ask 2026-10-23: "i will start pregnancy
+      // plan if patient is pregnant") -- same for IVF Protocol below
+      phases: ["menses", "foll1", "foll2", "ov", "tww"].map(k => PH_TP_PHASE[k]),
     },
     {
       // id kept as cycle_ivf so plans and the Settings template-editor
@@ -67159,7 +67161,7 @@ or changing anything in Cliniko.
       // ivfPrep first (her yes 2026-10-04): it shows, and is editable, in
       // Settings -> Treatment plan templates. Not in PH_IVF_ROUND_KEYS, so a
       // track switch (phIvfSetTrack) leaves it alone.
-      phases: ["ivfPrep", "menses", "foll1", "foll2", "opu", "preEt", "postEt", "tww", "early"].map(k => PH_TP_PHASE[k]),
+      phases: ["ivfPrep", "menses", "foll1", "foll2", "opu", "preEt", "postEt", "tww"].map(k => PH_TP_PHASE[k]),
     },
     {
       id: "pregnancy", name: "Pregnancy", category: "gynae", caseHint: "fertility",
@@ -67770,9 +67772,14 @@ or changing anything in Cliniko.
       return b ? { ...p, sessions: b.sessions } : p;
     });
   }
+  // her ask 2026-10-23: Natural fertility / IVF Protocol never carry Early
+  // Pregnancy (she starts a Pregnancy plan instead); a saved Settings copy
+  // made before that still lists it, so it is left out on read
+  const PH_TP_NO_EARLY = ["natural", "cycle_ivf"];
+  const phTpMgrDropEarly = (id, phases) => PH_TP_NO_EARLY.includes(id) && Array.isArray(phases) ? phases.filter(p => !(p && (p.phaseKey === "early" || p.label === "Early Pregnancy"))) : phases;
   const phTpBuiltinTemplates = () => PH_TP_TEMPLATES.map(t => {
     const ov = phTpMgrOverrides()[t.id];
-    return ov ? { ...t, ...ov, phases: ov.phases ? phTpMgrFillSessions(t.phases, ov.phases) : t.phases } : t;
+    return ov ? { ...t, ...ov, phases: ov.phases ? phTpMgrDropEarly(t.id, phTpMgrFillSessions(t.phases, ov.phases)) : t.phases } : t;
   });
   const phTpMgrIsBuiltin = id => PH_TP_TEMPLATES.some(t => t.id === id);
   // the one object the editor (and everything downstream of it) shows for
@@ -67780,7 +67787,7 @@ or changing anything in Cliniko.
   // template object itself
   function phTpMgrCurrent(id) {
     const base = PH_TP_TEMPLATES.find(t => t.id === id);
-    if (base) { const ov = phTpMgrOverrides()[id] || {}; return { ...base, ...ov, phases: ov.phases ? phTpMgrFillSessions(base.phases, ov.phases) : base.phases }; }
+    if (base) { const ov = phTpMgrOverrides()[id] || {}; return { ...base, ...ov, phases: ov.phases ? phTpMgrDropEarly(id, phTpMgrFillSessions(base.phases, ov.phases)) : base.phases }; }
     return phTpUserTemplates().find(t => t.id === id) || null;
   }
   let phTpMgrSel = null, phTpMgrUndo = [], phTpMgrDeleteArm = null;
@@ -69492,6 +69499,7 @@ or changing anything in Cliniko.
     // any active plan with an Early Pregnancy phase moves onto it (the
     // "Pregnant?" button on the Plan tab works for every patient, not only IVF)
     phPregCascadeAny(rec);
+    phIvfPregMoved = phPregOnEarly(rec);
   }
   // count-up companion to phIvfGestAgeHtml's animate=true render: races the
   // gest-age span from "0w 0d" up to its real value, ease-out cubic, ~550ms
@@ -93091,7 +93099,7 @@ or changing anything in Cliniko.
     const wk = phPregWk(pt.date);
     const src = pt.kind === "blood" ? "Positive blood test logged" : pt.kind === "urine" ? "Positive urine test logged"
       : pt.kind === "due" ? "Pregnancy recorded from her due date" : pt.kind === "weeks" ? "Pregnancy recorded from her stated week" : "Positive test logged";
-    return `<div class="ph-preg-banner${phPregIsFresh(name, 1600) ? " in" : ""}">🌸 ${src}${d ? ` (${esc(d)})` : ""} · plan moved to Early Pregnancy${wk ? ` · <span data-preg-gest="${esc(wk)}">${esc(wk)}</span> pregnant` : ""}</div>`;
+    return `<div class="ph-preg-banner${phPregIsFresh(name, 1600) ? " in" : ""}">🌸 ${src}${d ? ` (${esc(d)})` : ""}${phPregOnEarly(rec) ? " · plan moved to Early Pregnancy" : ""}${wk ? ` · <span data-preg-gest="${esc(wk)}">${esc(wk)}</span> pregnant` : ""}</div>`;
   }
   // count the "Xw Yd" up from 0 once, right after the repaint that logged it
   // (timer, not rAF: frames stall in a background tab)
@@ -93112,6 +93120,9 @@ or changing anything in Cliniko.
       }, 45);
     });
   }
+  // is any active plan on Early Pregnancy now? (fertility / IVF templates no
+  // longer carry that phase, 2026-10-23, so the messages only say "moved" when one did)
+  const phPregOnEarly = rec => !!(rec && (rec.treatmentPlans || []).some(plan => plan.status === "active" && (plan.phases || []).some(p => p.status === "current" && phTpPhaseKeyOf(p) === "early")));
   // any active plan with an Early Pregnancy phase moves onto it (never pulls a
   // plan back from a later pregnancy phase)
   function phPregCascadeAny(rec) {
@@ -93184,7 +93195,7 @@ or changing anything in Cliniko.
       if (savePharmacy() === false) { presSavedToast("That could not be saved — check the warning at the top and try again"); return true; }
       phPregUi.open = false;
       if (result === "positive") phPregFresh = { key, at: Date.now() };
-      presSavedToast(result === "positive" ? "✓ Pregnancy saved — plan moved to Early Pregnancy" : "✓ Negative test saved");
+      presSavedToast(result === "positive" ? (phPregOnEarly(rec) ? "✓ Pregnancy saved — plan moved to Early Pregnancy" : "✓ Pregnancy saved") : "✓ Negative test saved");
       // a positive moves the plan's phase, so the Plan tab's own tiles and
       // grid move too even though she's on the Cycle tab right now: swap
       // the whole tab host in place (never renderPresPanel, which resets
@@ -94231,7 +94242,6 @@ or changing anything in Cliniko.
     { id: "opu", t: "Egg collection done", s: "The retrieval is over" },
     { id: "fet", t: "Frozen transfer coming", s: "Her embryos are waiting" },
     { id: "wait", t: "After transfer", s: "In the two-week wait" },
-    { id: "preg", t: "Pregnant", s: "A positive test" },
   ];
   const PH_IVFQ_CYCLES = [
     { id: "fresh", t: "Fresh IVF / ICSI", s: "Stimulation, collection, then transfer" },
@@ -94242,7 +94252,7 @@ or changing anything in Cliniko.
   ];
   // phases after the transfer: with "not yet" ticked on the transfer date they
   // default to no visits (her ask 2026-10-04); she can still raise any count
-  const PH_IVFQ_POST_XFER = ["postEt", "postEtFrozen", "tww", "early"];
+  const PH_IVFQ_POST_XFER = ["postEt", "postEtFrozen", "tww"];
   const PH_IVFQ_TREATS = [
     { id: "both", t: "Acupuncture + herbs", s: "The usual for the plan" },
     { id: "acu", t: "Acupuncture only", s: "No herbs on this plan" },
@@ -94250,7 +94260,7 @@ or changing anything in Cliniko.
   ];
   // the standard visit counts (editable on the last question); the two timed
   // phases around transfer are one visit each, the wait phases a short run
-  const PH_IVFQ_DEF = { menses: 0, foll1: 1, foll2: 1, opu: 1, preEt: 1, postEt: 1, fetPrepNatural: 3, fetPrepMedicated: 3, preEtFrozen: 1, postEtFrozen: 1, tww: 2, early: 8 };
+  const PH_IVFQ_DEF = { menses: 0, foll1: 1, foll2: 1, opu: 1, preEt: 1, postEt: 1, fetPrepNatural: 3, fetPrepMedicated: 3, preEtFrozen: 1, postEtFrozen: 1, tww: 2 };
   const PH_IVFQ_PREP_WEEKS = [4, 6, 8, 12];
   const phIvfQFmt = k => { const d = new Date(String(k) + "T00:00:00"); return isNaN(d) ? "" : d.toLocaleDateString("en-AU", { day: "numeric", month: "short" }); };
   const phIvfQDayOk = v => /^\d{4}-\d{2}-\d{2}$/.test(String(v || "")) && +String(v).slice(0, 4) >= 1900 && +String(v).slice(0, 4) <= 2100;
@@ -94260,7 +94270,7 @@ or changing anything in Cliniko.
     if (S.cycle === "egg") return S.start === "prep" ? ["ivfPrep", "menses", "foll1", "foll2", "opu"] : ["menses", "foll1", "foll2", "opu"];
     const k = S.cycle === "fresh" ? ["menses", "foll1", "foll2", "opu", "preEt", "postEt"]
       : [S.cycle === "fetmed" ? "fetPrepMedicated" : "fetPrepNatural", "preEtFrozen", "postEtFrozen"];
-    k.push("tww", "early");
+    k.push("tww");
     return S.start === "prep" ? ["ivfPrep"].concat(k) : k;
   }
   // which phase she is on now, from where she says she is
@@ -94273,7 +94283,6 @@ or changing anything in Cliniko.
     if (S.start === "stim") return fresh ? "foll1" : first;
     if (S.start === "opu") return fresh ? "opu" : "preEtFrozen";
     if (S.start === "fet") return fresh ? "preEt" : first;
-    if (S.start === "preg") return "early";
     // after transfer: the wait, or further on once the transfer was 3+ days ago
     const post = fresh ? "postEt" : "postEtFrozen";
     if (S.xfer && !S.xferNot && phIvfQDayOk(S.xfer)) {
@@ -94386,7 +94395,7 @@ or changing anything in Cliniko.
       S.cycle = keys.includes("fetPrepMedicated") ? "fetmed" : keys.some(k => PH_IVF_FROZEN_KEYS.includes(k)) ? "fetnat" : noXfer ? "egg" : "fresh";
       const cur = plan.phases.find(p => p.status === "current");
       const frozen = S.cycle === "fetmed" || S.cycle === "fetnat";
-      const map = { ivfPrep: "prep", menses: "start", fetPrepNatural: "start", fetPrepMedicated: "start", foll1: "stim", foll2: "stim", opu: "opu", preEt: "fet", preEtFrozen: "opu", postEt: "wait", postEtFrozen: "wait", tww: "wait", early: "preg" };
+      const map = { ivfPrep: "prep", menses: "start", fetPrepNatural: "start", fetPrepMedicated: "start", foll1: "stim", foll2: "stim", opu: "opu", preEt: "fet", preEtFrozen: "opu", postEt: "wait", postEtFrozen: "wait", tww: "wait", early: "wait" };
       S.start = (cur && map[cur.phaseKey]) || "start";
       S.startFrom = S.start; S.keepKey = cur && cur.phaseKey || "";
       if (!frozen && cur && cur.phaseKey === "preEt") S.start = S.startFrom = "fet";
@@ -95618,6 +95627,7 @@ or changing anything in Cliniko.
   // phIvfPregTestHtml renders them, so the animation plays exactly once,
   // on the actual transition, never on a later edit to the same transfer.
   let phIvfPregRevealTid = null;    // tid whose date/hCG fields should fade in this render (any "" -> a result)
+  let phIvfPregMoved = false;   // did that positive move a plan onto Early Pregnancy? (set by phIvfPregPositiveCascade)
   let phIvfPregCascadeTid = null;   // tid that just went "" -> positive this render (banner + pink flash + count-up)
   /* done phases she has unlocked for editing this session (her pick 2026-09-09:
      "Freeze it, but let me unlock"). Session-only on purpose -- a closed phase
@@ -96259,7 +96269,7 @@ or changing anything in Cliniko.
     const gest = pr === "positive" ? phIvfGestAgeHtml(t.pregTestDate, t.id, cascade) : "";
     const cls = "ph-ivf-tfields ph-ivf-pregtest" + (reveal ? " in" : "") + (cascade ? " flash" : "");
     const banner = cascade
-      ? `<div class="ph-tp-announce preg in">🌸 Positive result logged — now in Early Pregnancy.</div>`
+      ? `<div class="ph-tp-announce preg in">🌸 Positive result logged${phIvfPregMoved ? " — now in Early Pregnancy" : ""}.</div>`
       : "";
     return `<div class="${cls}">${kindSel}${dateField}${hcgField}${gest}</div>${banner}`;
   }
