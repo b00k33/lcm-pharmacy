@@ -2068,3 +2068,24 @@ rows copied as tab-separated cells read the same.
 added all 11 (both 4 Sep and both 8 Aug kept); the tab-separated copy parses identically; an Alexandria day list, the
 tab list and a dated day list still go to their own readers.
 **Not tested:** at the acupreg location (ACU+CHM pills and pre/post transfer tags show there, not on the test copy).
+
+## 2026-10-23 · Red flags in Watch and on Today's visit
+Her asks: "how to have groups of condition watch/red flags e.g. for pregnancy 1st trimester" (answer: each template
+phase already has its own Red flags box; list of all 29 conditions / 102 phases with Claude's DRAFT additions published
+as an artifact), then "give option to add those red flags in the watch section - show mock" and "incorporate into todays
+visit too". Mock `watch-red-flags-mock-2026-10-23.html`. Her picks: rows at the BOTTOM of the Compass; No · Yes bar;
+a Yes adds a red line to the visit write-up AND a red mark on the patient header; the list = template + ticked in Watch.
+Then "build it" (A + C; the draft flag wording is NOT written into templates until she reviews it).
+**Where:** one block before `phWatchChipsHtml`: `phRfParts` (a template phase's Red flags split at ";", kept only when
+the line sends her somewhere: `PH_RF_REFER`), `phRfOfPhase`, `phRfCellHtml` (red chips + "Red flags ▾" inside the
+Watch cell, through `phTpFieldCellHtml`, so the Care Plan grid and the Treatment page both get it), `phRfPopHtml` /
+`phRfPopPaint` (fixed popover: this phase's template lines locked on, this condition's other phases, Other conditions),
+`phRfPickSet` (`ph.rfPicks`, Undo toast), `phRfCxRowsHtml` + `phRfAnswer` (Compass rows, `rec.ccTrack.days[day].rf`
+via `phCxWrite`, whose tidy now keeps the `rf` bucket), `phRfBandHtml` / `phRfBandSync` (band), `phRfVisitLineHtml`
+(the plan's visit table rows). Taps go through one capture-phase click listener, so a tap inside the click-to-edit
+Watch cell never opens the editor. `phTpWatchFixedText` (the dated record) carries her ticked flags.
+**Tested (sandbox, seeded Pregnancy patient in Third Trimester):** two rows at the bottom of the Compass; Yes stores,
+turns the row red, band shows "⚠ Red flag today"; dropdown opens beside the button on the Care Plan grid and the
+Treatment page, tick adds a red chip + a Compass row, × and untick take it off; visit-line helper returns the Yes
+lines; desktop 1280 and phone 375 (no sideways scroll). **Not tested:** the visit table line on a real logged visit,
+on her phone, or with her own edited templates. Pages checked: Today's visit, Care Plan, Treatment.
