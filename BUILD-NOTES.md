@@ -2092,3 +2092,19 @@ turns the row red, band shows "⚠ Red flag today"; dropdown opens beside the bu
 Treatment page, tick adds a red chip + a Compass row, × and untick take it off; visit-line helper returns the Yes
 lines; desktop 1280 and phone 375 (no sideways scroll). **Not tested:** the visit table line on a real logged visit,
 on her phone, or with her own edited templates. Pages checked: Today's visit, Care Plan, Treatment.
+
+## 2026-10-23 · Appointments chips, one height (Zanda as inspiration)
+Her ask: "audit the chips on the app page and make it uniform. use the zanda screenshot as inspo". Audit (sandbox 1280px):
+8 looks on the page, heights 23/28/29/30/31/32/40/44px, corners round/10px/pill. Mocks `appt-chips-mock-2026-10-23.html`
+(Now · A · B) and `appt-chips-final-mock-2026-10-23.html`. Her picks: A (Zanda boxes), Appointments first, the day count a
+dropdown, the date in full in teal + Today always there; then "i actually like the apps circles" (icon-only buttons stay
+round) and "and the apps font size" (13px text, 12px search, the date 13px bold, not 17px); "build it".
+**Where:** CSS after `.ph-apptcal-viewseg .ph-msg-seg-opt` (`.ph-atb*`, scoped to the toolbar) and after `.ph-un.vc .un-acts`
+(`.un-row3`, `.un-icons.circ`, the 32px `.un-send`); `phApptCalDateLong` (beside `phApptCalWeekLabel`, which other code may
+still read) plus a document click / Escape that closes the dropdown; the toolbar markup in the Appointments render
+(`ph-apptcal-toolbar ph-atb`); the day-count `<details class="ph-atb-dd">` whose items keep `data-ph-apptcal-days` (the old
+handler); Up next's Open moved into one row with Profile / Edit. The Add appointments disc stays in the header.
+**Tested (sandbox):** every toolbar control and Up next button measures 32px (Grid | List 30 inside its 1px frame); the
+dropdown opens, picks 3 days (label and date follow), closes on a tap elsewhere; › greys nothing and lights Today; Today
+returns and greys itself; phone 375px wraps to three rows with no sideways scroll. **Not tested:** on her phone, or the Up
+next circles with a real phone number (the test patient had none, so they showed faded as before).
