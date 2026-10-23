@@ -32305,13 +32305,9 @@
     // A positive logged on an IVF transfer counts too (the transfer is where
     // IVF results are typed), so the sign never misses one.
     let pt = r && r.pregTest;
-    if (!pt || pt.result !== "positive") {
-      let tr = null;
-      ((r && r.ivfCycles) || []).forEach(row => (row.transfers || []).forEach(t => {
-        if (t.pregResult === "positive" && t.pregTestDate && (!tr || t.pregTestDate > tr.pregTestDate)) tr = t;
-      }));
-      if (!tr) return "";
-      pt = { result: "positive", date: tr.pregTestDate };
+    if (!pt || pt.result !== "positive" || phPregAnchor(r)) {   // the one pregnancy read (phPregStartOf): plan date, test or transfer
+      if (!phPregAnchor(r)) return "";
+      pt = { result: "positive", date: phPregAnchor(r) };
     }
     // a booking from before the positive test was not pregnant yet -- no sign
     if (a.date && pt.date && a.date < pt.date) return "";
@@ -64002,7 +63998,7 @@ or changing anything in Cliniko.
     const tick = `<svg class="ph-cc-svgic" aria-hidden="true" focusable="false"><use href="#i-check"/></svg>`;
     // a Pregnancy plan also says which week she is in (rec.pregnancy.start, the same date the Pregnancy block uses)
     let wkTxt = "";
-    if (plan.templateName === "Pregnancy") { const wk = phTpPregWeeksOn((rec.pregnancy || {}).start, keyOf(TODAY)); if (wk) wkTxt = ` · week ${wk.week}`; }
+    if (plan.templateName === "Pregnancy") { const wk = phTpPregWeeksOn(phTpPregFor(rec).start, keyOf(TODAY)); if (wk) wkTxt = ` · week ${wk.week}`; }
     const done = phPfPlanDone(plan);
     const phaseHtml = done ? `<span class="ph-pf-plantile-phase ok">${tick}Completed</span>`
       : (live && live.label ? `<span class="ph-pf-plantile-phase">${esc(live.label + (li >= 0 ? ` · phase ${li + 1} of ${phs.length}` : "") + wkTxt)}</span>`
@@ -69659,7 +69655,7 @@ or changing anything in Cliniko.
   // her report 2026-10-07 (Sylvia Lai): a pregnant patient was shown "late".
   // A positive pregnancy test (Pregnant? button, or an IVF transfer result)
   // means no period is expected, so the cycle is never "overdue" for her.
-  const phCyclePregnantPositive = rec => !!(rec && ((rec.pregTest && rec.pregTest.result === "positive") ||
+  const phCyclePregnantPositive = rec => !!(rec && (phPregPositive(rec) ||
     (Array.isArray(rec.ivfCycles) && rec.ivfCycles.some(r => (r.transfers || []).some(t => t && t.pregResult === "positive")))));
   // her 2026-10-13 ask ("pregnant patients dont need to track menstrual details anymore"): once a pregnancy test or transfer result is
   // positive, nothing asks her to log the cycle -- no Cycle tile / page / checklist step, no "Cycle -- reported, not examined" rows on the
@@ -74442,11 +74438,8 @@ or changing anything in Cliniko.
   function phPpPregWeek(name) {
     if (!name) return null;
     const rec = phPatientPeek(name); if (!rec) return null;
-    const today = keyOf(phLiveToday());
-    const w = phTpPregWeeksOn(phTpPregFor(rec).start, today); if (w) return w.week;
-    const pt = rec.pregTest;
-    if (pt && pt.result === "positive" && /^\d{4}-\d{2}-\d{2}$/.test(pt.date || "")) { const d = Math.round((parseKey(today) - parseKey(pt.date)) / 86400000); if (d >= 0) return Math.floor((28 + d) / 7); }
-    return null;
+    const w = phTpPregWeeksOn(phTpPregFor(rec).start, keyOf(phLiveToday()));   // the one pregnancy read
+    return w ? w.week : null;
   }
   PH_PP_COND.cd_breech_turn = { id: "cd_breech_turn", name: "Turning a breech baby", fam: "pink" };
   PH_PP_SHORT.cd_breech_turn = "Breech";
@@ -89160,7 +89153,32 @@ or changing anything in Cliniko.
   // lives on the patient" rule applies here too. `rec.pregnancy = {start}`
   // is a new, separate field (not folded into rec.cycle, which is real
   // menstrual-cycle data that stops applying once she's pregnant).
-  function phTpPregFor(rec) { return (rec && rec.pregnancy) || {}; }
+  // her 2026-10-23 "this data is already in her file. can you connect it? make the pregnant data universal for all relevant input in
+  // app": her pregnancy is ONE fact read from wherever she entered it -- the Pregnancy plan's own date (rec.pregnancy.start, week 0
+  // day 0), else the Pregnant? test (rec.pregTest: its date is the "4 weeks" anchor phPregWk reads), else a positive IVF transfer
+  // result (pregTestDate, the same anchor). Derived on read, never copied; her plan date always wins. A later NEGATIVE test with no
+  // plan date means not pregnant.
+  function phPregTransferPos(rec) {
+    let tr = null;
+    ((rec && rec.ivfCycles) || []).forEach(row => (row.transfers || []).forEach(t => {
+      if (t && t.pregResult === "positive" && /^\d{4}-\d{2}-\d{2}$/.test(t.pregTestDate || "") && (!tr || t.pregTestDate > tr.pregTestDate)) tr = t;
+    }));
+    return tr;
+  }
+  function phPregStartOf(rec) {
+    if (!rec) return null;
+    const own = rec.pregnancy && rec.pregnancy.start;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(own || "")) return own;
+    const pt = rec.pregTest;
+    if (pt && pt.result === "positive" && /^\d{4}-\d{2}-\d{2}$/.test(pt.date || "")) return phTpDayAdd(pt.date, -28);
+    if (pt && pt.result === "negative") return null;
+    const tr = phPregTransferPos(rec);
+    return tr ? phTpDayAdd(tr.pregTestDate, -28) : null;
+  }
+  const phPregPositive = rec => !!phPregStartOf(rec) || !!(rec && rec.pregTest && rec.pregTest.result === "positive");
+  // the "4 weeks" anchor every week badge reads (phPregWk), from the one start
+  const phPregAnchor = rec => { const s = phPregStartOf(rec); return s ? phTpDayAdd(s, 28) : ""; };
+  function phTpPregFor(rec) { const p = (rec && rec.pregnancy) || {}, start = phPregStartOf(rec); return start && start !== p.start ? Object.assign({}, p, { start, derived: true }) : p; }
   function phTpPregWeeksOn(start, dateKey) {
     if (!start) return null;
     const days = Math.round((parseKey(dateKey) - parseKey(start)) / 86400000);
@@ -94345,9 +94363,8 @@ or changing anything in Cliniko.
   function phPregIsFresh(name, ms) { return phPregFresh.key === phPatientKey(name) && Date.now() - phPregFresh.at < ms; }
   function phPregRowHtml(name, rec) {
     if (!phPregGate(rec)) return "";
-    const pt = rec.pregTest;
-    const pos = !!(pt && pt.result === "positive");
-    const wk = pos ? phPregWk(pt.date) : "";
+    const pos = phPregPositive(rec);   // the one pregnancy read: the plan's date or a test
+    const wk = pos ? phPregWk(phPregAnchor(rec)) : "";
     const btn = pos
       ? `<button type="button" class="ph-preg-btn pos${phPregIsFresh(name, 1600) ? " pop" : ""}" data-preg-open="1" title="Her pregnancy test, tap to change it">🌸 Pregnant${wk ? ` · <span data-preg-gest="${esc(wk)}">${esc(wk)}</span>` : ""}</button>`
       : `<button type="button" class="ph-preg-btn" data-preg-open="1">🌸 Pregnant?</button>`;
@@ -95706,6 +95723,9 @@ or changing anything in Cliniko.
   function phPregQOpen(name, templateId, opts) {
     opts = opts || {};
     phPregQ = { name, templateId, from: opts.from || "inline", alsoIds: opts.alsoIds || null, pre: opts.pre || null };
+    // her 2026-10-23: the date is already in her file (a test, an IVF transfer result, an earlier plan) -- start the plan on it, no question
+    const known = phPregStartOf(phPatientPeek(name));
+    if (known) { const w = phTpPregWeeksOn(known, keyOf(TODAY)); phPregQFinish(null); presSavedToast(`Pregnancy plan started${w ? ` at week ${w.week}` : ""} · from her file`); return; }
     if (!phTpPregCalc[name]) phTpPregCalc[name] = { mode: "week", date: keyOf(TODAY), week: "", edd: "" };
     phPregQRender();
     document.getElementById("phPregQBackdrop").hidden = false;
@@ -95771,7 +95791,7 @@ or changing anything in Cliniko.
     // the plan now exists, created on its default first phase -- with a start
     // date on hand, move it straight to the trimester her week actually falls in,
     // same sync the calculator's own Go button runs after an existing plan's date changes
-    if (startOrNull) {
+    if (startOrNull || phPregStartOf(phPatientPeek(name))) {   // a date she typed now, or the one already in her file
       const rec = phPatientRec(name);
       if (rec && phTpPregSyncAll(rec)) {
         if (savePharmacy() === false) presSavedToast("That could not be saved — check the warning at the top and try again.");
