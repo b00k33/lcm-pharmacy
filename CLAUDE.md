@@ -1288,7 +1288,10 @@ Bing subject); the complaint search box's "+ Add as complaint" adds the typed
 words as a secondary complaint through Came in for's own add. A new
 formula or sign = **integrate33**. **Find the Ren**: look first, then two
 questions at a time, with two photo panels whose zones open their LOOK row.
-(Locked details: "Locked conventions" below.)
+(Locked details: "Locked conventions" below.) **The Ren page board** (her pick A,
+2026-10-24): 26px one-line signs, auto No's folded per subject, and a sticky
+search bar (words, All · Yes · No · Open, area, count; / ↑ ↓ Enter Shift+Enter
+Esc) [Ren page: compact rows + a search bar].
 
 **Patterns** (`phPatCompute(name)`) derives candidate TCM patterns live
 from the file, **never stored**; only her Agree / Not this patient writes
