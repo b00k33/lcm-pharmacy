@@ -1336,7 +1336,10 @@ key, rings the next unlabelled photo, and has Select + one label for many
 [Records → Photos: label with one tap]. Tongue shots rank natural →
 unlabelled → side → sublingual → flash (`PH_TONGUE_SHOT_RANK`). The tongue
 photo viewer carries the tongue chips on every photo, Sublingual and Flash
-as their own sections, past photos at the bottom. Compare and the viewer are
+as their own sections, past photos at the bottom. A face / build photo full
+screen carries Find the Ren's own rows (Face · Eyes · Lips / Build · Skin ·
+Muscles) and its spots as corners (her 2026-10-24 "b and c") [Photo spots as
+corners + the photo's own chips full screen]. Compare and the viewer are
 ONE mechanism each, wired into every surface that shows a photo tile.
 The photo sheet has a Date field (today by default, never later): every photo on it saves under the date picked [Photo sheet: the date can be changed before saving]. **Never delete a photo** (her hard rule); the store asks the browser to keep
 it (`phStoragePersist`), and backups carry photos.
