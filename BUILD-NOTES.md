@@ -2532,3 +2532,21 @@ Her words, with a screenshot of the Records → Photos tiles: "when i click drop
 - **Tested** (sandbox, 1280 and 375): painting with a picked quality, let go by tap and by Esc (panel stays open), box popup open / tab / write / clear / outside tap / Esc / second tap, ▶ off and on, the beat over the right cells, all four lower tabs, the Fang Bing Ren tab's chips and count (thin → "Pulse: thin"), the sticky bar under the name band, no page overflow at 375, no new console errors, Prescriptions search narrows and returns.
 - **Not tested:** the beat actually moving (the pane is hidden, so the runner does not tick; a still frame was checked); a real touch device; the constitution tab host by eye. **Seen, not mine:** a 15px horizontal scrollbar under the chart at this sandbox width, the same in the committed version.
 - **Pages checked:** Pulse page; Today's visit and Care Plan findings read `phVisitPulseSummaryText`, unchanged.
+
+## 2026-10-25 · Readable text: app-wide contrast audit
+- **Her ask:** "audit app to correct text that is not readable" (screenshot: the Fang Bing Ren Quick assess bar, white words on a near-white box). Audit = measure and fix all, one pass.
+- **How it was measured:** a throwaway script walked every visible text run in `#pharmacyPage` (22 tabs, 24 patient pages, Quick assess open), with animations finished first, against its real composited background: 4.5:1, or 3:1 for large text. 77 spots failed at first; about 15 were not real (white text on a navy gradient the script cannot read, the Messages tone switch's sliding thumb, the composer's invisible text mirror, the Fang Bing Ren bar's clipped overlay label).
+- **Fixed:**
+  - Quick assess bar: the chip sweep had put a paper box behind white words; it is now a faint white box on the navy header (`.ph-qa2-tog`).
+  - Fang Bing Ren colours: Fu Zi and Huang Lian now take ink words, Chai Hu (`#478052`) and Ma Huang (`#8C7046`) are a shade deeper so white words read, the grey fallback takes ink. `fgOf` picks white or ink at the true crossover (0.207, was 0.34), and a formula shade in the dead band (0.18–0.24, readable with neither) is nudged a step lighter or darker (`readable`). A ticked row's ✕ and point pill are solid, no 75% fade, no white wash.
+  - Amber text: new `--ph-low-press #8A5708` (5.4:1 on the amber tint); all 87 text uses of `--ph-low-deep` read it ("Low", "Not dispensed yet", "low", stock %, price review badge, restock bands). Fills and lines keep `--ph-low-deep`.
+  - Treatment's green and navy blocks and the visit table's green rows: their soft / faint words were 82% / 62% white, now white / 94% white; the "+ Add" formula action is a see-through chip there (it was white on white).
+  - Patterns: green, orange and sand patterns put ink on their colour (`--on`), so "Agree with this pattern", the bubbles and Likely tags read.
+  - Faded labels lost their fade: page header counts (`.ph-shell-sub`), Fang Bing Ren group counts, All templates counts, Dispense band counts; the pain-map caption under the idle figure stays readable (only the drawing fades); the Compass "Goal" and "–", the relocation date label, the Messages tab tag and the Stats "Usage" head now read the faint / soft ink.
+  - Count badges on a picked tab (Tongue, Pulse, Fang Bing Ren switches, To Order segments) darken instead of whitening.
+  - Appointments now-line time: ink on gold. Find the Ren ★: gold-deep. The "i" dots: ink on grey.
+  - Cycle calendar days from the next month: 80% (was 50% × 85%).
+- **Left on purpose:** disabled controls (the empty price-review start button, future cycle days): WCAG exempts them.
+- **Tested** (sandbox): full rescan at 1280 (22 tabs, 24 patient pages, Quick assess open) and 375 (13 tabs + 4 patient pages): no real failures left; Quick assess bar by eye; Prescriptions search narrows (Tess shown, Zara hidden) and returns.
+- **Not tested:** pages that need data the seed lacks (an IVF round, a full stock list with every status, Settings editors opened deep), by eye at phone width beyond the scan.
+- **Pages checked:** every tab above and Patient details, Today's visit, Ask her, Tongue, Pulse, Abdomen, Musculoskeletal, Cycle, Fang Bing Ren, Patterns, Care Plan, Treatment, Log, Notes, Medical history, Ren, Supplements, Blood tests, IVF history, Visit checks, Photos, Appointments, Messages.

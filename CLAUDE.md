@@ -332,6 +332,12 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
 - **Contrast:** text on a tinted card uses the family's `-press` step when
   `-deep` fails 4.5:1. Hover lifts (brighter), never deepens. Never mix toward
   a pale tint to make a "stronger" fill (tints have almost no chroma).
+  Amber TEXT reads `--ph-low-press` (`--ph-low-deep` stays for fills and
+  lines). Every text colour is solid, never a token at reduced opacity on a
+  label; a count badge on a solid chip darkens it (`rgba(0,0,0,.2)`), never a
+  white wash. Fang Bing Ren colours pick white or ink by luminance (0.207) and
+  a formula shade in the dead band is nudged out (`phFbrShadeFormulas`).
+  Measured app-wide 2026-10-25: every text 4.5:1 (BUILD-NOTES "Readable text").
 - **Type:** sizes come from the `--fs-*` tokens, never a one-off px; display
   numerals (gauges, big counts) use `--font-disp` (Barlow Semi Condensed).
 - **Icons:** one family, the app's own sprite (`<svg><use href="#i-...">`) —
