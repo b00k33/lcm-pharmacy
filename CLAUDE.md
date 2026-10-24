@@ -1489,9 +1489,16 @@ has "flat" (whole belly, no place); Temp is cold · cool · warm in BLUE / PALE 
 grey), one temperature per place; Feel is tender · tight hypochondrium (`tighthypo`, R / L hypo only, ticks the Chest & ribs pair)
 · pulsation · tight rectus · thin wall. There is no Xia Xin chip: tender at epi IS Xia Xin tender, and `phAbd2Read` reads an old
 `marks.xiaxin` as tender@epi. Fang Bing Ren the Tongue page's way (her "Same as Tongue now"; no sign list): a chip that reaches a
-sign carries the plum link bar (`.tfp-lk`) and its signs on hover (`phAbdChipLinks`, off the `abd:` specs), and the card header
-shows "Fang Bing Ren · N ticked" (`phAbdFbrTicked`, a fact). `phAbdChartWordsOf` is the one read of a chart's Fang Bing Ren
-words. The exam pages are the
+sign carries the plum link bar (`.tfp-lk`) and its signs on hover (`phAbdChipLinks`, off the `abd:` specs), and the
+"Fang Bing Ren · N ticked" count (`phAbdFbrTicked`, a fact) sits on its tab. `phAbdChartWordsOf` is the one read of a chart's Fang
+Bing Ren words. **The Abdomen page is the Pulse page's way since her 2026-10-25 picks** (mock `abdomen-page-mock-2026-10-25.html`,
+BUILD-NOTES "Abdomen page: the Pulse page's way"): one tab bar Seen · Temp · Sounds · Tension · Feel + ✕ Erase that stays in view
+(`.ph-pls-tool`), only the open group's chips under it, °C steppers in the Temp row; a picked sign stays picked and taps places on
+and off (Esc lets go); with none picked a place opens its own signs beside it (`phAbdPopHtml`: only what can sit there, Clear
+place); "Whole abdomen" is a place (stored as `"whole"`; an empty list still reads as whole; a whole temperature washes every zone
+without its own, `phAbdTWashes`); the side view's rows tap too (`data-abd-band`); one tab panel beside the charts: Summary (still
+"Reads as") · Note · Photo · Fang Bing Ren. The page handles its own taps (`phAbdClick` → `phAbdChartWrite` → `phAbdWrite`); the
+old shared `data-visit-abd2` handlers and the `phAbdExam` borrow are gone. The exam pages are the
 ONE entry; `phExamMirrorToday` copies today's exam into the dated record.
 Pulse: each tick is dated and each new day starts blank; Cun / Guan / Chi
 each head ONE column (R: Up. Resp / Stomach / Bladder, L: Heart / Liver /
