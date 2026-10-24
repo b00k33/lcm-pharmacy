@@ -57327,11 +57327,13 @@ or changing anything in Cliniko.
       ["pcos", "PCOS"], ["infertility_unexplained", "Infertility (unexplained)"],
       ["history_of_miscarriage", "History of miscarriage"], ["pregnant", "Pregnant"],
       ["breastfeeding", "Breastfeeding"] ] },
+    // her 2026-10-24 "split all as you picked" (the Medical history audit): "Asthma or respiratory condition", "Kidney or liver
+    // condition" and Family history's "Endometriosis or PCOS" became two rows each; old answers carry over (PH_HX_SPLIT)
     { g: "General health", items: [
       ["diabetes", "Diabetes"], ["high_blood_pressure", "High blood pressure"],
       ["thyroid_condition", "Thyroid condition"], ["heart_condition", "Heart condition"],
-      ["asthma_respiratory", "Asthma or respiratory condition"], ["digestive_condition", "Digestive condition"],
-      ["kidney_or_liver_condition", "Kidney or liver condition"], ["autoimmune_condition", "Autoimmune condition"],
+      ["asthma", "Asthma"], ["lung_condition", "Other lung condition"], ["digestive_condition", "Digestive condition"],
+      ["kidney_condition", "Kidney condition"], ["liver_condition", "Liver condition"], ["autoimmune_condition", "Autoimmune condition"],
       ["cancer", "Cancer (current or past)"] ] },
     // her answer 2026-10-21 (integrate33 batch 14): a Yes pre-fills Fang Bing Ren Ren "Diagnosis: tinea" (PH_TRI_PREFILL_HX)
     { g: "Skin", items: [
@@ -57350,7 +57352,7 @@ or changing anything in Cliniko.
       ["fh_diabetes", "Diabetes"], ["fh_heart_disease_stroke", "Heart disease or stroke"],
       ["fh_high_blood_pressure", "High blood pressure"], ["fh_cancer", "Cancer"],
       ["fh_thyroid_condition", "Thyroid condition"], ["fh_autoimmune_condition", "Autoimmune condition"],
-      ["fh_endometriosis_pcos", "Endometriosis or PCOS"], ["fh_early_menopause", "Early menopause"] ] },
+      ["fh_endometriosis", "Endometriosis"], ["fh_pcos", "PCOS"], ["fh_early_menopause", "Early menopause"] ] },
   ];
   // groups that only make sense for a female patient -- everything else
   // (General health / Medication & allergies / Family history) applies to
@@ -57417,6 +57419,50 @@ or changing anything in Cliniko.
     const v = presSanitizeNoteText(String(note || "").trim());
     if (v) rec.historyNotes[k] = v; else delete rec.historyNotes[k];
     rec.historyUpdatedAt = Date.now();
+  }
+  // her 2026-10-24 "split all as you picked" (the Medical history audit): three rows held two conditions each. The old key is
+  // never deleted; phHxSplitCarry gives its answer to the two new rows once per record, and rec.historyMoved[old] keeps the answer
+  // it carried, so a later answer under the old key (an older device or form) carries again. An old No is No on both rows; an old
+  // Yes goes to the row its note names (the smart-paste words), or to both when the note names neither or both, the note copied
+  // with it; a row already answered is never touched. Kidney / liver: her two separate answers from before 2026-08
+  // (rec.medicalHistory) decide each organ while they still add up to the joined answer. No updatedAt stamp: a carry is not an
+  // edit, so it never wins a sync over a real edit made on another device (it runs again there at boot).
+  const PH_HX_SPLIT = {
+    asthma_respiratory: ["asthma", "lung_condition"],
+    kidney_or_liver_condition: ["kidney_condition", "liver_condition"],
+    fh_endometriosis_pcos: ["fh_endometriosis", "fh_pcos"],
+  };
+  function phHxSplitCarry(rec) {
+    if (!rec || !rec.history) return false;
+    let changed = false;
+    Object.keys(PH_HX_SPLIT).forEach(old => {
+      const v = rec.history[old];
+      if ((v !== "yes" && v !== "no") || (rec.historyMoved && rec.historyMoved[old] === v)) return;
+      const kids = PH_HX_SPLIT[old], note = phHxNote(rec, old), pick = {};
+      const named = v === "yes" && note ? kids.filter(k => (PH_HX_PASTE_RULES[k] || PH_HX_PASTE_FAMILY[k]).test(note)) : [];
+      (named.length === 1 ? named : kids).forEach(k => { pick[k] = v; });
+      if (old === "kidney_or_liver_condition") {
+        const mh = rec.medicalHistory || {}, yn = x => x === "yes" || x === "no";
+        const was = (mh.kidney_disease === "yes" || mh.liver_disease === "yes") ? "yes" : (yn(mh.kidney_disease) || yn(mh.liver_disease)) ? "no" : null;
+        if (was === v) { if (yn(mh.kidney_disease)) pick.kidney_condition = mh.kidney_disease; if (yn(mh.liver_disease)) pick.liver_condition = mh.liver_disease; }
+      }
+      kids.forEach(k => {
+        if (!pick[k] || phHxVal(rec, k) !== "unasked") return;
+        rec.history[k] = pick[k];
+        if (pick[k] === "yes" && note && !phHxNote(rec, k)) (rec.historyNotes = rec.historyNotes || {})[k] = note;
+      });
+      rec.historyMoved = Object.assign({}, rec.historyMoved, { [old]: v });
+      changed = true;
+    });
+    return changed;
+  }
+  // an intake form filled before the split answers the old key: that answer stands for each new row the form left blank
+  function phHxSplitHist(hist) {
+    const h = Object.assign({}, hist || {});
+    Object.keys(PH_HX_SPLIT).forEach(old => {
+      if (h[old] === "yes" || h[old] === "no") PH_HX_SPLIT[old].forEach(k => { if (h[k] !== "yes" && h[k] !== "no") h[k] = h[old]; });
+    });
+    return h;
   }
   // Quick-pick presets for a "yes" row's note (her ask 2026-09-25: "give
   // option to select diabetes type 1 or 2"). A chip TOGGLES its label into
@@ -57532,8 +57578,8 @@ or changing anything in Cliniko.
     breastfeeding: ["breastfeed", "lactation", "nursing"],
     diabetes: ["diabet"], high_blood_pressure: ["hypertension", "high blood pressure"],
     thyroid_condition: ["thyroid"], heart_condition: ["heart", "cardiac"],
-    asthma_respiratory: ["asthma", "respiratory"], digestive_condition: ["digestive", "digestion", "ibs", "gastric"],
-    kidney_or_liver_condition: ["kidney", "renal", "liver", "hepatic"], autoimmune_condition: ["autoimmune"],
+    asthma: ["asthma", "respiratory"], lung_condition: ["respiratory", "copd"], digestive_condition: ["digestive", "digestion", "ibs", "gastric"],
+    kidney_condition: ["kidney", "renal"], liver_condition: ["liver", "hepatic"], autoimmune_condition: ["autoimmune"],
     cancer: ["cancer", "oncolog"],
     tinea_fungal_skin: ["tinea", "ringworm", "fungal", "athlete"],
     taking_prescribed_medication: ["prescribed medication", "prescription medication"],
@@ -57542,7 +57588,7 @@ or changing anything in Cliniko.
     fh_diabetes: ["diabet"], fh_heart_disease_stroke: ["heart", "cardiac", "stroke"],
     fh_high_blood_pressure: ["hypertension", "high blood pressure"], fh_cancer: ["cancer", "oncolog"],
     fh_thyroid_condition: ["thyroid"], fh_autoimmune_condition: ["autoimmune"],
-    fh_endometriosis_pcos: ["endometriosis", "pcos", "polycystic"], fh_early_menopause: ["menopause"],
+    fh_endometriosis: ["endometriosis"], fh_pcos: ["pcos", "polycystic"], fh_early_menopause: ["menopause"],
   };
   // the active keys behind phHistorySignals' display labels -- kept separate
   // so the keyword map above can stay keyed on the same ids as
@@ -57711,8 +57757,8 @@ or changing anything in Cliniko.
       const rel = isRel(gr);
       return { w: rows.length + 1, html: `<div class="ph-hx-group${quiet ? " quiet" : ""}${rel ? " rel" : ""}">
         <div class="ph-tmpl-sec ph-hx-group-h">
-          <span>${esc(phHxGroupLabel(rec, gr.g))}${gr.family ? " (blood relatives)" : ""}${rel ? ` <span class="ph-hx-maintag" title="Counts for the main complaint">Main</span>` : ""}${quiet ? ` <span class="ph-quiet-tag">not typical for this case</span>` : ""}</span>
-          <button type="button" class="ph-hx-markno${unaskedLeft ? "" : " done"}" data-hx-markno="${esc(gr.g)}"${unaskedLeft ? "" : " disabled"}>${unaskedLeft ? "✓ Asked all" : "✓ asked"}</button>
+          <span>${esc(phHxGroupLabel(rec, gr.g))}${gr.family ? " (blood relatives)" : ""}${rel ? ` <span class="ph-hx-maintag" title="Counts for the main complaint">Main</span>` : ""}${quiet ? ` <span class="ph-quiet-tag">Not typical for this case</span>` : ""}</span>
+          <button type="button" class="ph-hx-markno${unaskedLeft ? "" : " done"}" data-hx-markno="${esc(gr.g)}"${unaskedLeft ? "" : " disabled"}>${unaskedLeft ? "✓ Asked all" : "✓ Asked"}</button>
         </div>
         <div class="ph-hx-grouprows">
         ${rows.map(([k, label]) => {
@@ -57731,12 +57777,12 @@ or changing anything in Cliniko.
             <button type="button" class="ph-hx-qrow ${val}${animCls}" data-hx-set="${k}" aria-pressed="${val === "yes" ? "true" : "false"}"${delayAttr}>
               <span class="ph-hx-dot ${val}" aria-hidden="true"></span>
               <span class="ph-hx-qlabel">${esc(label)}</span>
-              ${prioTag[k] ? `<span class="ph-pfw-tag">feeds ${esc(prioTag[k])}</span>` : ""}
-              ${PH_TRI_HX_FBR_KEYS.has(k) ? `<span class="ph-pfw-tag fbr">feeds Fang Bing Ren</span>` : ""}
+              ${prioTag[k] ? `<span class="ph-pfw-tag">Feeds ${esc(prioTag[k])}</span>` : ""}
+              ${PH_TRI_HX_FBR_KEYS.has(k) ? `<span class="ph-pfw-tag fbr">Feeds Fang Bing Ren</span>` : ""}
             </button>
             ${val === "yes" ? `<div class="ph-hx-rowextra">
               ${presets ? `<span class="ph-hx-presets">${presets.map(p => `<button type="button" class="ph-ck-chip${phHxNoteHasPreset(note, p) ? " on" : ""}" data-hx-notepreset="${k}:${esc(p)}">${esc(p)}</button>`).join("")}</span>` : ""}
-              <input type="text" class="ph-hx-note" data-hx-note="${k}" value="${esc(note)}" placeholder="Optional note…" aria-label="Note for ${esc(label)}">
+              <input type="text" class="ph-hx-note" data-hx-note="${k}" value="${esc(note)}" placeholder="Note" aria-label="Note for ${esc(label)}">
             </div>` : ""}
           </div>`;
         }).join("")}
@@ -57775,12 +57821,12 @@ or changing anything in Cliniko.
     const own = (typeof PHARMACY !== "undefined" && PHARMACY && PHARMACY.hxFor) || {};
     const rows = PH_CC_FAMS.map(f => {
       const cur = phHxForList(f.id), edited = Array.isArray(own[f.id]);
-      return `<div class="ph-lk-link"><div class="ph-lk-link-hd"><span class="nm" style="font-weight:700;color:var(--ph-herb-deep)">${esc(f.label)}</span><span class="ph-lk-own">${edited ? "edited" : "draft"}</span>${edited ? `<button type="button" class="ph-pfw-link" data-hxs-reset="${f.id}">Back to the draft</button>` : ""}</div>
+      return `<div class="ph-lk-link"><div class="ph-lk-link-hd"><span class="nm" style="font-weight:700;color:var(--ph-herb-deep)">${esc(f.label)}</span><span class="ph-lk-own">${edited ? "Edited" : "Draft"}</span>${edited ? `<button type="button" class="ph-pfw-link" data-hxs-reset="${f.id}">Back to the draft</button>` : ""}</div>
         <div class="ph-fbs-fams">${PH_HISTORY_GROUPS.map(g => `<button type="button" class="ph-rc-chip${cur.includes(g.g) ? " on" : ""}" aria-pressed="${cur.includes(g.g) ? "true" : "false"}" data-hxs-grp="${f.id}|${esc(g.g)}">${esc(g.g)}</button>`).join("")}</div></div>`;
     }).join("");
     return `<div class="ph-lk-card" role="dialog" aria-label="Groups for each complaint">
-      <div class="ph-lk-card-hd"><h3>Groups for each complaint</h3><button type="button" data-hxs-close="1" aria-label="Close">✕</button></div>
-      <p class="ph-lk-card-sub">On Medical history, the groups ticked for the main complaint go first and wear a Main chip. Every group is still shown. The first lists are a draft: change them freely.</p>${rows}</div>`;
+      <div class="ph-lk-card-hd"><h3 title="The groups ticked for the main complaint go first on Medical history, with a Main chip. Every group is still shown.">Groups for each complaint</h3><button type="button" data-hxs-close="1" aria-label="Close">✕</button></div>
+      ${rows}</div>`;
   }
   function phHxSheetRender() { const host = document.getElementById("phHxSheet"); if (host && !host.hidden) host.innerHTML = `<div class="ph-lk-backdrop" data-hxs-close="1"></div>${phHxSheetHtml()}`; }
   function phHxSheetOpen() {
@@ -57827,7 +57873,7 @@ or changing anything in Cliniko.
       return `<div class="ph-hx-flag${fresh === it.k ? " fresh" : ""}${open ? " open" : ""}">
         <button type="button" class="ph-hx-flag-jump" data-hx-flag-jump="${it.k}">${esc(it.label)}${PH_TRI_HX_FBR_KEYS.has(it.k) ? `<span class="ph-pfw-tag fbr">FBR</span>` : ""}</button>
         ${open
-          ? `<input type="text" class="ph-hx-flag-note" data-hx-note="${it.k}" value="${esc(note)}" placeholder="Note…" aria-label="Note for ${esc(it.label)}">`
+          ? `<input type="text" class="ph-hx-flag-note" data-hx-note="${it.k}" value="${esc(note)}" placeholder="Note" aria-label="Note for ${esc(it.label)}">`
           : `<button type="button" class="ph-hx-flag-ntog" data-hx-flag-note-tog="${it.k}" aria-label="Add a note for ${esc(it.label)}" title="Add a note"><svg class="ph-cc-svgic" aria-hidden="true" focusable="false"><use href="#i-plus"/></svg></button>`}
       </div>`;
     }).join("") : `<div class="ph-hx-flags-empty">Nothing flagged yet.</div>`;
@@ -57843,7 +57889,7 @@ or changing anything in Cliniko.
     const left = items.filter(it => phHxVal(rec, it.id) === "unasked");
     if (!items.length || !left.length) return "";
     return `<div class="ph-hx-prio-note">${items.length - left.length} of ${items.length} priority items answered
-      <button type="button" class="ph-hx-prio-skip" data-hx-prio-none="1">✨ None of these</button></div>`;
+      <button type="button" class="ph-hx-prio-skip" data-hx-prio-none="1" title="The rest of these are No">None of these</button></div>`;
   }
   // ---- STEP 9 (方病人, her ask 2026-08-20): body constitution / personality
   // are recorded SEPARATELY -- "you can have a ban xia personality but a ma
@@ -61640,13 +61686,13 @@ or changing anything in Cliniko.
   // chips: tapping one makes the body outline pulse. DRAFT, hers to correct:
   // every key -> organ choice below.
   const PH_HX_ORGAN_MAP = {
-    heart_condition: ["heart"], high_blood_pressure: ["heart"], asthma_respiratory: ["lung"], thyroid_condition: ["thyroid"],
-    digestive_condition: ["stomach", "bowel"], kidney_or_liver_condition: ["liver", "kidney"], diabetes: ["pancreas"],
+    heart_condition: ["heart"], high_blood_pressure: ["heart"], asthma: ["lung"], lung_condition: ["lung"], thyroid_condition: ["thyroid"],
+    digestive_condition: ["stomach", "bowel"], kidney_condition: ["kidney"], liver_condition: ["liver"], diabetes: ["pancreas"],
     heavy_menstrual_bleeding: ["uterus"], dysmenorrhoea: ["uterus"], irregular_menstruation: ["uterus"], amenorrhoea: ["uterus"],
     uterine_fibroids: ["uterus"], adenomyosis: ["uterus"], ovarian_cysts: ["uterus"], endometriosis: ["uterus"], pcos: ["uterus"],
     infertility_unexplained: ["uterus"], history_of_miscarriage: ["uterus"], pregnant: ["uterus"], breastfeeding: ["breast"],
     fh_heart_disease_stroke: ["heart"], fh_high_blood_pressure: ["heart"], fh_thyroid_condition: ["thyroid"],
-    fh_diabetes: ["pancreas"], fh_endometriosis_pcos: ["uterus"],
+    fh_diabetes: ["pancreas"], fh_endometriosis: ["uterus"], fh_pcos: ["uterus"],
   };
   // name, colour (the organ's own lit colour) and the views it is drawn in
   const PH_HX_ORGANS = {
@@ -61905,8 +61951,8 @@ or changing anything in Cliniko.
                  (⚙ menu on Prescriptions, built 2026-09-05) rather than a new
                  one -- same form, same cloud review-before-merge, prefilled
                  with the name she's already looking at. -->
-            <button type="button" class="ph-hx-actchip" data-hx-sendintake="1" title="Text ${esc(phTitle(name))} a link to fill this in from their own phone">✉ Send intake link</button>
-            <button type="button" class="ph-hx-actchip" data-hx-paste-open="1" title="Paste a referral or your own note — the checklist fills itself">📋 Paste a note</button>
+            <button type="button" class="ph-hx-actchip" data-hx-sendintake="1" title="Text ${esc(phTitle(name))} a link to fill this in from their own phone"><svg class="ph-cc-svgic" aria-hidden="true" focusable="false"><use href="#i-mail"/></svg>Send intake link</button>
+            <button type="button" class="ph-hx-actchip" data-hx-paste-open="1" title="Paste a referral or your own note — the checklist fills itself"><svg class="ph-cc-svgic" aria-hidden="true" focusable="false"><use href="#i-clipboard"/></svg>Paste a note</button>
             ${inline ? `<button type="button" class="ph-hx-actchip" data-hx-forsheet="1">Which groups count for each complaint</button>` : ""}
           </span>
           ${inline ? presMedHxBandHtml(name) : ""}
@@ -61961,9 +62007,11 @@ or changing anything in Cliniko.
     high_blood_pressure: /hypertens|high blood pressure|\bhbp\b|\bhtn\b/i,
     thyroid_condition: /thyroid|hashimoto|graves|hypothyroid|hyperthyroid/i,
     heart_condition: /heart (condition|disease|problem)|cardiac|arrhythm|palpitation|atrial|\bafib\b/i,
-    asthma_respiratory: /asthma|\bcopd\b|respiratory|bronchi/i,
+    asthma: /asthma/i,
+    lung_condition: /\bcopd\b|respiratory|bronch|emphysema|lung (condition|disease)/i,
     digestive_condition: /\bibs\b|reflux|\bgerd\b|\bgord\b|crohn|colitis|coeliac|celiac|gastritis|digestive (condition|problem|issue)/i,
-    kidney_or_liver_condition: /kidney|renal|\bliver\b|hepat|fatty liver/i,
+    kidney_condition: /kidney|\brenal\b/i,
+    liver_condition: /\bliver\b|hepat|cirrho/i,
     autoimmune_condition: /autoimmun|lupus|rheumatoid|sjogren|psoriasis|multiple sclerosis|\bms\b/i,
     cancer: /cancer|carcinoma|tumou?r|malignan|chemo|lymphoma|leuk(a)?emia/i,
     tinea_fungal_skin: /tinea|ringworm|fungal (skin|infection)|athlete'?s foot|jock itch/i,
@@ -61977,7 +62025,7 @@ or changing anything in Cliniko.
   const PH_HX_PASTE_FAMILY = {
     fh_diabetes: /diabet/i, fh_heart_disease_stroke: /heart|cardiac|stroke/i, fh_high_blood_pressure: /hypertens|blood pressure/i,
     fh_cancer: /cancer|carcinoma|tumou?r/i, fh_thyroid_condition: /thyroid/i, fh_autoimmune_condition: /autoimmun|lupus|rheumatoid|coeliac|celiac/i,
-    fh_endometriosis_pcos: /endometrio|\bpcos\b|polycystic/i, fh_early_menopause: /early menopause|premature (ovarian|menopause)/i,
+    fh_endometriosis: /endometrio/i, fh_pcos: /\bpcos\b|polycystic/i, fh_early_menopause: /early menopause|premature (ovarian|menopause)/i,
   };
   const PH_HX_PASTE_FAMILY_RE = /\b(family|familial|mother|father|mum|dad|sister|brother|sibling|grand\w*|aunt|uncle|parents?|maternal|paternal|runs in)\b/i;
   const PH_HX_PASTE_NEG_RE = /\b(no|not|never|denies|denied|nil|without|negative for|free of|ruled out|no history of|no hx of)\b/i;
@@ -62068,16 +62116,15 @@ or changing anything in Cliniko.
     const cyc = Object.entries(d.cycle);
     const cycLabel = ([k, v]) => k === "cycleLen" ? `Cycle length ${v} days` : k === "flowIntensity" ? `Flow: ${v}` : k === "pain" ? `Period pain: ${v}` : k === "regular" ? (v ? "Regular cycles" : "Irregular cycles") : k === "ttcMonths" ? `Trying for ${v} month${v === 1 ? "" : "s"}` : `${k}: ${v}`;
     const nothing = !d.history.length && !cyc.length;
-    const row = (id, label, why, already, detail) => `<label class="ph-hx-paste-row${already ? " already" : ""}"><input type="checkbox" data-hx-paste-tick="${esc(id)}"${already ? "" : " checked"}> <span><b>${esc(label)}${detail ? ` <span class="why">→ ${esc(detail)}</span>` : ""}</b>${already ? ` <em>already yes</em>` : ""}${why ? `<span class="why">${esc(why)}</span>` : ""}</span></label>`;
+    const row = (id, label, why, already, detail) => `<label class="ph-hx-paste-row${already ? " already" : ""}"><input type="checkbox" data-hx-paste-tick="${esc(id)}"${already ? "" : " checked"}> <span><b>${esc(label)}${detail ? ` <span class="why">→ ${esc(detail)}</span>` : ""}</b>${already ? ` <em>Already yes</em>` : ""}${why ? `<span class="why">${esc(why)}</span>` : ""}</span></label>`;
     const own = d.history.filter(h => !h.family), fam = d.history.filter(h => h.family);
     return `<div class="ph-cpaste ph-hx-paste">
-      ${nothing ? `<p class="ph-cpaste-none">Nothing in that matched the checklist or the cycle questions — the text will still be kept in the History notes.</p>` : `
-      ${own.length ? `<div class="ph-hx-paste-h">${phProRec(rec).P} history — tick what to record as <b>Yes</b></div>${own.map(h => row("hx:" + h.k, h.label, h.why, phHxVal(rec, h.k) === "yes", h.detail)).join("")}` : ""}
+      ${nothing ? `<p class="ph-cpaste-none" title="The note is still kept in History notes">No matches</p>` : `
+      ${own.length ? `<div class="ph-hx-paste-h" title="Ticked rows are saved as Yes">${phProRec(rec).P} history</div>${own.map(h => row("hx:" + h.k, h.label, h.why, phHxVal(rec, h.k) === "yes", h.detail)).join("")}` : ""}
       ${fam.length ? `<div class="ph-hx-paste-h">Family history</div>${fam.map(h => row("hx:" + h.k, h.label, h.why, phHxVal(rec, h.k) === "yes", h.detail)).join("")}` : ""}
       ${cyc.length ? `<div class="ph-hx-paste-h">Cycle</div>${cyc.map(([k, v]) => row("cyc:" + k, cycLabel([k, v]), "", false)).join("")}` : ""}`}
-      <p class="ph-hx-paste-note">The whole note is also saved, word for word, under History notes.</p>
       <div class="ph-cpaste-acts">
-        <button type="button" class="btn-save" data-hx-paste-apply="1">${nothing ? "Keep the note" : "Apply"}</button>
+        <button type="button" class="btn-save" data-hx-paste-apply="1" title="The whole note is also saved, word for word, under History notes">${nothing ? "Keep the note" : "Apply"}</button>
         <button type="button" class="tab-link" data-hx-paste-back="1">‹ Edit the text</button>
         <button type="button" class="btn-cancel" data-hx-paste-cancel="1">Cancel</button>
       </div>
@@ -66724,7 +66771,7 @@ or changing anything in Cliniko.
            left column now wears; the "On screen only — never printed" caption
            that used to close the left column is gone (fewer words) -->
       <div class="${isF ? "" : "ph-sheet ph-sheet-herbs"}">
-      ${ingQuiet ? `<button type="button" class="ph-sec-toggle quiet" data-pres-ing-quiet-toggle="1" aria-expanded="${presIngQuietOpen ? "true" : "false"}">${presIngQuietOpen ? "▾" : "▸"} Herbs <span class="ph-quiet-tag">not typical for this case</span></button>` : ""}
+      ${ingQuiet ? `<button type="button" class="ph-sec-toggle quiet" data-pres-ing-quiet-toggle="1" aria-expanded="${presIngQuietOpen ? "true" : "false"}">${presIngQuietOpen ? "▾" : "▸"} Herbs <span class="ph-quiet-tag">Not typical for this case</span></button>` : ""}
       <div${ingQuiet && !presIngQuietOpen ? " hidden" : ""}>${presIngredientsEditorHtml(t, { showSummary: false })}</div>
       ${isF ? `<div class="ph-tmpl-sec"><span>Formula</span></div>${presNameTypeFieldsHtml(t)}` : ""}
       </div>
@@ -83018,9 +83065,9 @@ or changing anything in Cliniko.
   // hypothyroidism specifically, the opposite direction entirely).
   const PH_TRI_PREFILL_HX = {
     hypertension_tend: ["high_blood_pressure"], allergy_tend: ["known_drug_allergy", "known_food_allergy", "allergic_to_herbs"],
-    // integrate33 baseline pass: "Asthma or respiratory condition" -> "Tends to wheeze". Mostly the same fact (asthma,
-    // COPD); a respiratory condition that does not wheeze is a miss her tap on the row corrects.
-    wheeze_tend: ["asthma_respiratory"],
+    // integrate33 baseline pass: "Asthma or respiratory condition" -> "Tends to wheeze". Since her 2026-10-24 split only the
+    // Asthma row feeds it ("Other lung condition" does not always wheeze); a tap on the Ren row still wins.
+    wheeze_tend: ["asthma"],
     // integrate33 batch 10 (Huang Qin Tang): "Heavy menstrual bleeding" is her heavy bleeding. It already reached the sign through the heavy_flow clue; listed here
     // too so the question wears its "feeds Fang Bing Ren" tag.
     heavy_bleed_tend: ["heavy_menstrual_bleeding"],
@@ -92511,7 +92558,7 @@ or changing anything in Cliniko.
     const pm = host === "pm";
     const rows = list.map((sg, i) => `<div class="ph-sg-row"${pm ? ` data-pm-row="s${i}"` : ""}>
         <b class="ph-sg-n">S${i + 1}</b>
-        <span class="ph-sg-what">${esc(sg.what)}${sg.when ? ` <em>${esc(sg.when)}</em>` : ""}<small>${esc(phSgWhere(sg) || "not on the body map")}${sg.note ? ` · ${esc(sg.note)}` : ""}</small></span>
+        <span class="ph-sg-what">${esc(sg.what)}${sg.when ? ` <em>${esc(sg.when)}</em>` : ""}<small>${esc(phSgWhere(sg) || "Not on the body map")}${sg.note ? ` · ${esc(sg.note)}` : ""}</small></span>
         <button type="button" class="ph-pm-x" data-sg-del="${esc(sg.id)}" aria-label="Remove ${esc(sg.what)}">×</button>
       </div>`).join("");
     const reg = d && d.r ? R[d.r] : null;
@@ -92521,7 +92568,7 @@ or changing anything in Cliniko.
         <label class="ph-sg-f"><span>When</span><input type="text" class="field-bare" data-sg-f="when" value="${esc(d.when || "")}" placeholder="" maxlength="40" autocomplete="off" aria-label="When"></label>
         <label class="ph-sg-f"><span>Where</span><select class="field-bare" data-sg-f="r" aria-label="Where on the body"><option value="">Not on the body map</option>${PH_PM_GROUPS.map(([gl, rs]) => `<optgroup label="${esc(gl)}">${rs.map(opt).join("")}</optgroup>`).join("")}</select></label>
         ${reg && !reg.central ? `<span class="ph-pm-seg ph-sg-side" role="group" aria-label="Side"><span class="cap">Side</span>${[["R", "R"], ["L", "L"], ["B", "Both"]].map(([v, t]) => `<button type="button" class="${d.s === v ? "on" : ""}" data-sg-side="${v}" aria-pressed="${d.s === v}">${t}</button>`).join("")}</span>` : ""}
-        <label class="ph-sg-f wide"><span>Note</span><input type="text" class="field-bare" data-sg-f="note" value="${esc(d.note || "")}" placeholder="optional" maxlength="160" autocomplete="off" aria-label="Note"></label>
+        <label class="ph-sg-f wide"><span>Note</span><input type="text" class="field-bare" data-sg-f="note" value="${esc(d.note || "")}" placeholder="" maxlength="160" autocomplete="off" aria-label="Note"></label>
         <div class="ph-sg-actions"><button type="button" class="ph-pm-addbtn" data-sg-add="1">Add surgery</button><button type="button" class="ph-pm-pickbtn" data-sg-cancel="1">Cancel</button></div>
         <div class="ph-sg-msg" aria-live="polite"></div>
       </div>` : "";
@@ -108686,7 +108733,7 @@ Please let me know if you have any questions.`;
   // loses a value, a real conflict always gets an explicit per-field choice.
   function phIntakeComputeDiff(row) {
     const rec = phPatientPeek(row.patient_name);
-    const demo = row.demographics || {}, hist = row.history || {}, cyc = row.cycle || {};
+    const demo = row.demographics || {}, hist = phHxSplitHist(row.history), cyc = row.cycle || {};
     const demoNew = [], demoConflicts = [];
     if (demo.sex === "F" || demo.sex === "M") {
       const lbl = demo.sex === "F" ? "Female" : "Male";
@@ -108882,7 +108929,7 @@ Please let me know if you have any questions.`;
         PRESC.items.unshift(t);
         savePresc();
       }
-      const demo = row.demographics || {}, hist = row.history || {}, cyc = row.cycle || {};
+      const demo = row.demographics || {}, hist = phHxSplitHist(row.history), cyc = row.cycle || {};
       const winner = c => phIntakeReviewChoices[c.key] === "new";
       d.demoNew.forEach(n => { if (n.key === "sex") rec.sex = demo.sex; else if (n.key === "dob") rec.dob = demo.dob; else if (n.key === "mobile") { rec.phone = demo.mobile.trim(); rec.phoneSrc = "intake"; } else if (n.key === "email") rec.email = demo.email.trim(); else if (n.key === "address") phPatientSaveAddress(row.patient_name, demo.address); });
       d.demoConflicts.forEach(c => { if (!winner(c)) return; if (c.key === "sex") rec.sex = demo.sex; else if (c.key === "dob") rec.dob = demo.dob; else if (c.key === "mobile") { rec.phone = demo.mobile.trim(); rec.phoneSrc = "intake"; } else if (c.key === "email") rec.email = demo.email.trim(); });
@@ -116413,6 +116460,14 @@ Dosage: {dosage}
     savePharmacy();
     if (touched) console.log(`[lcm] Medical history v2: migrated ${touched} patient${touched === 1 ? "" : "s"} forward from the old fields (originals left untouched).`);
     if (orphans) console.log(`[lcm] Medical history v2: found ${orphans} old Infection & pain / Life stage answer(s), not carried into the new screen (her 2026-08-20 call) -- still intact in the old conditions[] field.`);
+  })();
+  // her 2026-10-24 Medical history split: each patient's answer under a row that split goes to its two new rows, once (phHxSplitCarry)
+  (function phHxSplitCarryAll() {
+    let n = 0;
+    Object.values(PHARMACY.patients || {}).forEach(rec => { try { if (phHxSplitCarry(rec)) n++; } catch (err) { console.warn("[lcm] Medical history split:", err); } });
+    if (!n) return;
+    if (savePharmacy() === false) console.warn("[lcm] Medical history split: could not save the carried answers");
+    else console.log(`[lcm] Medical history split: ${n} patient${n === 1 ? "" : "s"}' old answers carried to the new rows (the old answers are kept).`);
   })();
 
   // ---- 方病人 seed content (her ask 2026-08-20) -- EXACTLY her STEP 4 /
