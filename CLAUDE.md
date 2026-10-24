@@ -1480,8 +1480,10 @@ marks{sign:[zones]} (Seen signs distended / bulging / sunken / vispulse sit by R
 has "flat" (whole belly, no place); Temp is cold · cool · warm in BLUE / PALE BLUE / RED (temperature only; water and gas ink stay
 grey), one temperature per place; Feel is tender · tight hypochondrium (`tighthypo`, R / L hypo only, ticks the Chest & ribs pair)
 · pulsation · tight rectus · thin wall. There is no Xia Xin chip: tender at epi IS Xia Xin tender, and `phAbd2Read` reads an old
-`marks.xiaxin` as tender@epi. Under the chart sits the Abdomen's Fang Bing Ren panel (`phAbdFbrPanelHtml`, the tongue panel's
-shape, `data-afp-*`); `phAbdChartWordsOf` is the one read of a chart's Fang Bing Ren words. The exam pages are the
+`marks.xiaxin` as tender@epi. Fang Bing Ren the Tongue page's way (her "Same as Tongue now"; no sign list): a chip that reaches a
+sign carries the plum link bar (`.tfp-lk`) and its signs on hover (`phAbdChipLinks`, off the `abd:` specs), and the card header
+shows "Fang Bing Ren · N ticked" (`phAbdFbrTicked`, a fact). `phAbdChartWordsOf` is the one read of a chart's Fang Bing Ren
+words. The exam pages are the
 ONE entry; `phExamMirrorToday` copies today's exam into the dated record.
 Pulse: each tick is dated and each new day starts blank; Cun / Guan / Chi
 each head ONE column (R: Up. Resp / Stomach / Bladder, L: Heart / Liver /
