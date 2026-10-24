@@ -1472,7 +1472,7 @@ coatArea[] (root / mid = centre), coatAt{} (coat colour per zone), coatQual{}, m
 (the Tongue page since 2026-10-24: photos beside four tabs Body · Coat · Jiao · Sublingual, Shape and Marks as dropdowns, a
 red tip chip, a Jiao tab with a tongue map and one line per zone (Upper / Middle / Lower / Left / Right) that opens its own
 colour, coat, form and mark bars; a linked chip carries its Fang Bing Ren signs in its hover and the thin plum bar under it (`.tfp-lk`, the Find the Ren link mark), the
-"Fang Bing Ren · N ticked" pill opens the page; zone colours (red tip) are record only, `phTngChipKeys` skips `colourAt`;
+"Fang Bing Ren · N ticked" tab opens every linked chip in place (her 2026-10-24 "just open the chips", never the Fang Bing Ren page); zone colours (red tip) are record only, `phTngChipKeys` skips `colourAt`;
 BUILD-NOTES "Tongue page: tabs + the three jiaos"), `visitFnd[id].abd =
 {tension, tensionAt{} (read-only legacy: nothing new is written), tempC{epi, lower} (°C at CV12 / CV4, 28–40, no navel),
 marks{sign:[zones]} (Seen signs distended / bulging / sunken / vispulse sit by ROW: whole, epi, umb, lower), v2}`

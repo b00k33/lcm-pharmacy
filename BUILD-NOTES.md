@@ -2477,3 +2477,11 @@ Her ask: a screenshot of the Guide's Gui Zhi card, "include more animations and 
 - **Tested** (sandbox, seeded "Tess Tongue"): every tab and count; zone opens from its line and the map; saves of coat at the root, sunken tip, white coat at the tip, teethmarks left; dropdown stays open across a tap, ✕ removes; red tip toggles; Sublingual swaps photos and saves `under`; Reads as; linked chips carry titles; Fang Bing Ren count 17 → 20 after two linked picks; 1280 desktop and 375 phone (no sideways scroll); no console errors; Prescriptions search narrows and returns.
 - **Pages checked:** Tongue page, Today's visit (tongue summary shows "white coat at the tip", "sunken tip"), Care Plan findings (same `phTng2Summary`).
 - **Not tested / left:** the tongue photo viewer keeps its own Fang Bing Ren panel (her pick after the build, "Keep the viewer's list"; Abdomen will match this page instead); a real touch device; (keyboard: zone lines open with Enter / Space and keep focus through the repaint, `phTngRefresh`; tested); the zone wording (Heart · Lung etc.) is DRAFT.
+
+## 2026-10-24 · Tongue page: the Fang Bing Ren tab opens the chips
+**Her words:** "i want the fang bing ren tab to not take to fbr page. just open the chips".
+- "Fang Bing Ren · N ticked" is now a fifth tab (`data-tcmp-tab="fbr"`, `st.tab`, view only). It no longer leaves for the Fang Bing Ren page (`data-flow-go="patterns"` is gone from it). Its panel (`fbrP` in `phTngCmpHtml`) lists every tongue chip that reaches a Fang Bing Ren sign (`phTngChipLinks`), one joined bar per category: colour, shape, moist, marks, coat, coat colour, coat type, coat at. These are the same chips and the same writes (`data-visit-tng2`) as the other tabs, with the signs on hover and no sign list. The gold count follows each tap.
+- Phone: the 2×2 tab grid is scoped to the Tongue tablist (`.seg[aria-label="Tongue"]`), so the Fang Bing Ren tab keeps its own row.
+- Also fixed: the Flash section's "Add" button had a 📷 emoji; it now uses the sprite camera icon.
+- **Tested** (sandbox): the tab opens in place and stays on the Tongue page; tapping greasy saves it, shows it as picked with its hover signs, and the count goes 10 → 15; desktop 1280 and phone 375 with no sideways scroll.
+- **Not tested:** a real touch device.
