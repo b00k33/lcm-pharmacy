@@ -41827,14 +41827,14 @@
       if (rpTypeOpen) {
         const id = rpTypeOpen.dataset.recphotosTypeOpen, was = phRecPhotosTypeOpen;
         phRecPhotosTypeOpen = was === id ? "" : id;   // one tile open at a time
-        if (was && was !== id) phRecPhotosTileRefresh(was);
-        phRecPhotosTileRefresh(id);
+        // the tapped tile stays put when another tile's list folds away above it (her 2026-10-25 "the screen jumps up")
+        phRecPhotosKeepStill(id, () => { if (was && was !== id) phRecPhotosTileRefresh(was); phRecPhotosTileRefresh(id); });
         return;
       }
       const rpType = e.target.closest("[data-recphotos-type]");
       if (rpType) {
         const [id, kind] = rpType.dataset.recphotosType.split("|");
-        phRecPhotosLabel(id, w => { w.kind = kind; if (kind !== "tongue") delete w.shot; }, `Filed as ${PH_REN_TYPE_LABEL[kind] || kind}`);
+        phRecPhotosTypePick(id, kind);
         return;
       }
       const rpPick = e.target.closest("[data-recphotos-pick]");
@@ -49791,7 +49791,8 @@
     if (sortBtn) { sortBtn.textContent = need ? `Sort ${need}` : "All labelled ✓"; sortBtn.disabled = !need; }
     if (selBtn) { selBtn.classList.toggle("on", phRecPhotosSelect); selBtn.textContent = phRecPhotosSelect ? "Done" : "Select"; }
   }
-  // her pick: after a tap, the next photo still needing a label is rung and scrolled to
+  // her pick: after a label, the next photo still needing one is rung. Since her 2026-10-25 "the screen
+  // jumps up. stop this" only the keys scroll to it; a tap rings the next one already on screen, or none.
   // the ring = the one photo the keys act on. Her 2026-10-15 "screen keeps
   // popping down" (working along the top row): the page stays put while the
   // ringed photo is already on screen; one out of view is brought in by the
@@ -49806,14 +49807,33 @@
       if (r.top < 0 || r.bottom > vh) el.scrollIntoView({ block: "nearest", behavior: "auto" });
     } catch (e) {}
   }
-  function phRecPhotosFocusNext(fromId) {
+  // still = a tap: the ring may only move to a photo already on screen (true while another photo still needs a label)
+  function phRecPhotosFocusNext(fromId, still) {
     const tiles = [...document.querySelectorAll("[data-recphotos-tile]")];
     if (!tiles.length) { phRecPhotosRing(null); return false; }
     const at = tiles.findIndex(t => t.dataset.recphotosTile === fromId);
     const order = tiles.slice(at + 1).concat(tiles.slice(0, Math.max(0, at + 1)));
-    const next = order.find(t => t.classList.contains("need") && t.dataset.recphotosTile !== fromId);
-    phRecPhotosRing(next || null);
-    return !!next;
+    const needs = order.filter(t => t.classList.contains("need") && t.dataset.recphotosTile !== fromId);
+    phRecPhotosRing((still ? needs.find(phRecPhotosOnScreen) : needs[0]) || null);
+    return needs.length > 0;
+  }
+  function phRecPhotosOnScreen(el) {
+    const r = el.getBoundingClientRect(), vh = window.innerHeight || document.documentElement.clientHeight;
+    return r.top >= 0 && r.bottom <= vh;
+  }
+  // repaint, then scroll back by however far that moved the tile she tapped, so it stays under her pointer
+  function phRecPhotosKeepStill(id, paint) {
+    const q = () => document.querySelector(`[data-recphotos-tile="${CSS.escape(id)}"]`);
+    const el = q(), top = el ? el.getBoundingClientRect().top : null;
+    paint();
+    const now = q();
+    if (top === null || !now) return;
+    const d = now.getBoundingClientRect().top - top;
+    if (Math.abs(d) >= 1) window.scrollBy(0, d);
+  }
+  // file a tile as a type from its list (a tap, or the 1-9 keys with the list open)
+  function phRecPhotosTypePick(id, kind, byKey) {
+    phRecPhotosLabel(id, w => { w.kind = kind; if (kind !== "tongue") delete w.shot; }, `Filed as ${PH_REN_TYPE_LABEL[kind] || kind}`, byKey);
   }
   // ---- keys (her 2026-10-15 "let me use keyboard to organise the photos";
   // reverses her 2026-10-14 "taps only") ----
@@ -49862,18 +49882,18 @@
     if (/^[1-9]$/.test(k)) {
       e.preventDefault();
       const n = +k;
-      if (listOpen) { const items = cur.querySelectorAll("[data-recphotos-type]"); if (items[n - 1]) items[n - 1].click(); return; }
+      if (listOpen) { const items = cur.querySelectorAll("[data-recphotos-type]"); if (items[n - 1]) phRecPhotosTypePick(id, items[n - 1].dataset.recphotosType.split("|")[1], true); return; }
       const s = PH_REN_TONGUE_SHOTS[n - 1], r = (phRecPhotosCache || []).find(x => x.id === id);
       if (!s || !r) return;
       const next = r.kind === "tongue" && r.shot === s.key ? "" : s.key;
-      phRecPhotosLabel(id, w => { w.kind = "tongue"; if (next) w.shot = next; else delete w.shot; }, next ? `Tongue · ${PH_REN_SHOT_LABEL[next] || next}` : "Shot removed");
+      phRecPhotosLabel(id, w => { w.kind = "tongue"; if (next) w.shot = next; else delete w.shot; }, next ? `Tongue · ${PH_REN_SHOT_LABEL[next] || next}` : "Shot removed", true);
     }
   }
   document.addEventListener("keydown", phRecPhotosKey);
   // the one write for a tile chip: put, keep the patient's own surfaces in
   // step (quietly: no whole-page rebuild), patch the flat record, repaint the
   // tile, ring the next one, offer Undo
-  async function phRecPhotosLabel(id, fn, msg) {
+  async function phRecPhotosLabel(id, fn, msg, byKey) {
     const r = (phRecPhotosCache || []).find(x => x.id === id);
     if (!r) return;
     const before = { kind: r.kind, shot: r.shot };
@@ -49884,9 +49904,11 @@
     try { if (phRenPhotoCache[r.patientKey]) { delete phRenPhotoCache[r.patientKey]; await phRenLoadPhotosFor(r.patientKey); } } catch (e) {} finally { phRecPhotosQuiet = false; }
     phRecPhotosTypeOpen = "";
     const moved = phRecPhotosGroupBy === "type" && before.kind !== r.kind;
-    if (moved) phRecPhotosRefresh(); else phRecPhotosTileRefresh(id);
+    // the page stays put (her 2026-10-25 "stop this"): a regrouped photo leaves the scroll where it was, a repainted tile keeps its spot
+    if (moved) { const y = window.scrollY; phRecPhotosRefresh(); if (window.scrollY !== y) window.scrollTo(0, y); }
+    else phRecPhotosKeepStill(id, () => phRecPhotosTileRefresh(id));
     phRecPhotosHeadRefresh();
-    const more = phRecPhotosFocusNext(id);
+    const more = phRecPhotosFocusNext(id, !byKey);
     phCycToast(msg + (more ? "" : " · all labelled ✓"), () => phRecPhotosLabel(id, w => { w.kind = before.kind; if (before.shot) w.shot = before.shot; else delete w.shot; }, "Put back"));
   }
   // C: tick several, one label. The bar sits at the top of the body.

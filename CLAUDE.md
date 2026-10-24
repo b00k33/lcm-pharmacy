@@ -1340,8 +1340,10 @@ type, a date column each); By visit / By type are a tap away; each tile has
 one-tap type / shot chips and a date button [Patient Photos page:
 Comparison table is now the default view; Photo organising redesign,
 increment 1]. **Records → Photos** (whole clinic) labels with one tap or a
-key, rings the next unlabelled photo, and has Select + one label for many
-[Records → Photos: label with one tap]. Tongue shots rank natural →
+key, rings the next unlabelled photo (a tap never moves the page: it rings
+one already on screen or none; only the keys scroll to it), and has Select +
+one label for many [Records → Photos: label with one tap; Records → Photos:
+a tap never moves the page]. Tongue shots rank natural →
 unlabelled → side → sublingual → flash (`PH_TONGUE_SHOT_RANK`). The tongue
 photo viewer carries the tongue chips on every photo, Sublingual and Flash
 as their own sections, past photos at the bottom. A face / build photo full
