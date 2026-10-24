@@ -1492,20 +1492,24 @@ each head ONE column (R: Up. Resp / Stomach / Bladder, L: Heart / Liver /
 Adrenals, `PH_PULSE_POS_COL`), the organ-name row on top and the
 Cun / Guan / Chi row right above the cells (her pick B), each position and
 each short column name showing the full organ name on hover, and her normal pulse (`PH_PULSE_TPL`: Cun Qi, Guan Blood, Chi Organ,
-arches; Left Guan wiry) is always drawn under her ticks (`phPulseBase`; no toggle). One cell shows three inks over each other (her pick 2026-10-21): the normal pulse solid green (widest), last visit solid grey (middle, `.ph-pulse-prevl`, shown even when today is ticked), today blue (thinnest, blue-tint cell), with a legend Normal · Today · <date> over the chart. Under the chart, **Pulse in action**
-(`phPulseAnimHtml`, drawn on the concept pictures' runner as `PH_PP.SC.pulse`)
-is HER radial pulse picture: an arch per ticked depth in each of the six columns
-lifting by amplitude at her Hammer at-rest rate (72 when none, a Slowed chip),
-following the Hammer rhythm; last visit solid grey, an empty primary column her
-normal arch solid green; still under reduced motion. Chart and picture are
+arches; Left Guan wiry) is always drawn under her ticks (`phPulseBase`; no toggle). One cell shows three inks over each other (her pick 2026-10-21): the normal pulse solid green (widest), last visit solid grey (middle, `.ph-pulse-prevl`, shown even when today is ticked), today blue (thinnest, blue-tint cell), with a legend Normal · Today · <date> over the chart. **The Pulse page since her 2026-10-24 picks**
+(mock `pulse-page-mock-2026-10-24.html`, BUILD-NOTES "Pulse page: tabs, the chart moves itself"): the four
+quality groups are one tab bar (Concavity · Radius · Intensity · Texture + Erase) with only the open group's
+chips under it, the bar staying in view; a picked quality stays picked until tapped off (or Esc); with none
+picked, tapping a box opens that box's own qualities beside it (`phPulsePopHtml`). Under the chart one tab
+shows: Summary · Rate & rhythm (the Shen-Hammer exam, open) · Note · Fang Bing Ren (the qualities that tick
+a sign, signs on hover, `phPulseChipLinks`; the sign list left this page). **Pulse in action** is
+"▶ In action" on the legend line: the beat is drawn over the chart's own cells (`phPaOverHtml`, the concept
+pictures' runner as `PH_PP.SC.pulse`), today's arches in the chart's blue lifting by amplitude at her
+Hammer at-rest rate (72 when none, a Slowed chip), following the Hammer rhythm; the chart's own today
+drawing steps aside while it runs; still under reduced motion. The chart is
 HER TABLE (her 2026-10-21 picks): 6 columns, 3 PRIMARY (Cun / Guan / Chi,
 lightly shaded) and 3 SECONDARY -- never pair a secondary column with a
 primary one; a charcoal line between every column, ONE solid grey line through
 each word (Skin / Qi / Blood / Organ) with the drawings sitting on it, no
 boxes, her grey bar and base, equal 44px rows, lines and words in one
-charcoal, RIGHT / LEFT in the label column. Each wrist of the picture is the
-chart's own grid (`phPaSideHtml`), drawn by measuring its cells (`phPaLay`,
-again on a width change); the chart's frame is CSS on its grid
+charcoal, RIGHT / LEFT in the label column. The beat is measured off the chart's own
+column and row labels (`phPaLay`, again on a width change); the chart's frame is CSS on its grid
 (`.ph-pulse-fr/-vl/-pc/-dl`). Drawings level with the line (`plv-*` on
 `phPulseShapeSvg`) and wider in the wide columns (its `vw` argument). Since her 2026-10-22 picks
 (memory project_pharmacy_pulse_quality_drawings_2026_10_22) every quality has its
