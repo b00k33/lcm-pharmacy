@@ -2485,3 +2485,9 @@ Her ask: a screenshot of the Guide's Gui Zhi card, "include more animations and 
 - Also fixed: the Flash section's "Add" button had a 📷 emoji; it now uses the sprite camera icon.
 - **Tested** (sandbox): the tab opens in place and stays on the Tongue page; tapping greasy saves it, shows it as picked with its hover signs, and the count goes 10 → 15; desktop 1280 and phone 375 with no sideways scroll.
 - **Not tested:** a real touch device.
+
+## 2026-10-24 · Ask her: every topic always shown, no small sign pictures
+**Her words** (Ask her screenshot of Thirst & mouth / Sweat / Head & chest): "make thirst sweat etc appear always instead of hiding. the small animations dont really serve a puporse."
+- `phAhState`: every topic with an answer in the current version is asked (`topics.forEach(t => ask(t.id))`); the top 3 families' topics still sort first (the existing sort). "n of m" now counts every topic (13 for a woman on Usually), so the rail tick needs all of them answered.
+- The small key sign pictures are gone from Ask her answers and Compass sign rows (`phKsThumbHtml` and its `.ph-ks-th` CSS removed). The big Guide picture, the Guide tiles and the Fang Bing Ren board popover (`data-ks-pop`) stay.
+- **Tested** (sandbox): Ask her shows all 13 topics, no `svg[data-ks]` on the page, no new console errors. **Not checked:** the Compass row's left edge without the empty thumb placeholder (it was a 40px spacer, now gone).
