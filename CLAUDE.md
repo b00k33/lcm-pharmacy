@@ -1057,6 +1057,10 @@ phase shows the rhythm pills (1×/wk · 2×/wk · Fortnightly · Monthly) and
 **cycle days** (CD chips + a visits stepper; the cadence string stays the
 one truth, e.g. `"CD 3, 5 acupuncture · herbs"`) [Session grid on a cycle
 plan]. Edits repaint through `phTpPlanRepaint()`, never a full rerender.
+On a cycle-synced plan a visit is filed on the phase its cycle day names
+(`phTpCycPhaseOn`), each to-come square lands on its phase's cycle days (this
+cycle or the next), shows its CD and opens the Cycle page on that day [Session
+grid follows the cycle].
 
 **Formula on a phase**: a typed name is hers; "→ Fill" fills from Fang
 Bing Ren's live top formula when blank [Care Plan phase Formula].
@@ -1155,7 +1159,11 @@ chip; Cycle page: an option to select menopause]. Its calendar is the
 Fertility-Friend-style calendar + BBT chart (`phCycFFHtml`), the one cycle
 view everywhere, opening on the month of her last period. The Care Plan
 shows a slim cycle bar that never folds. **A man never tracks a cycle**;
-`PH_CYCLE_CUT_AGE` is 48.
+`PH_CYCLE_CUT_AGE` is 48. There is no Usual period card on the page (her 2026-10-24
+pick): the footer asks the length once (stepper, or the shortest–longest range
+when Irregular) and a **Usually** line is worked out from her logged periods
+(`phCycUsual`; her old answers until two are logged) [Session grid follows the
+cycle; Cycle page loses the Usual period card].
 
 The cycle-day popover is built from ONE function, `phCycFacts`. BBT:
 `rec.cycleSigns[dateKey].temp`, a typed value beats a phone reading; the
