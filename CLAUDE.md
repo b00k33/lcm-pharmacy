@@ -1476,7 +1476,12 @@ colour, coat, form and mark bars; a linked chip carries its Fang Bing Ren signs 
 BUILD-NOTES "Tongue page: tabs + the three jiaos"), `visitFnd[id].abd =
 {tension, tensionAt{} (read-only legacy: nothing new is written), tempC{epi, lower} (°C at CV12 / CV4, 28–40, no navel),
 marks{sign:[zones]} (Seen signs distended / bulging / sunken / vispulse sit by ROW: whole, epi, umb, lower), v2}`
-(her 2026-10-22 Abdomen redesign, see BUILD-NOTES). The exam pages are the
+(her 2026-10-22 Abdomen redesign, see BUILD-NOTES). Since 2026-10-24 (BUILD-NOTES "Abdomen: Fang Bing Ren panel ..."): Seen
+has "flat" (whole belly, no place); Temp is cold · cool · warm in BLUE / PALE BLUE / RED (temperature only; water and gas ink stay
+grey), one temperature per place; Feel is tender · tight hypochondrium (`tighthypo`, R / L hypo only, ticks the Chest & ribs pair)
+· pulsation · tight rectus · thin wall. There is no Xia Xin chip: tender at epi IS Xia Xin tender, and `phAbd2Read` reads an old
+`marks.xiaxin` as tender@epi. Under the chart sits the Abdomen's Fang Bing Ren panel (`phAbdFbrPanelHtml`, the tongue panel's
+shape, `data-afp-*`); `phAbdChartWordsOf` is the one read of a chart's Fang Bing Ren words. The exam pages are the
 ONE entry; `phExamMirrorToday` copies today's exam into the dated record.
 Pulse: each tick is dated and each new day starts blank; Cun / Guan / Chi
 each head ONE column (R: Up. Resp / Stomach / Bladder, L: Heart / Liver /
