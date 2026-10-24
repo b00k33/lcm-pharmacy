@@ -1165,6 +1165,10 @@ when Irregular) and a **Usually** line is worked out from her logged periods
 (`phCycUsual`; her old answers until two are logged) [Session grid follows the
 cycle; Cycle page loses the Usual period card].
 
+**Period pain is ONE read** (her 2026-10-24 picks): `phCycPeriodPain` = each
+period's worst day (0-10) from the Cycle page; the Compass "Periods: painful"
+row, the Bing (latest period) and Ren (2 of last 3) pre-fills and the Usually
+line read it [Period pain: one read from the Cycle page].
 The cycle-day popover is built from ONE function, `phCycFacts`. BBT:
 `rec.cycleSigns[dateKey].temp`, a typed value beats a phone reading; the
 coverline uses up to 6 pre-ovulation readings. **Two Flow/Pain concepts
