@@ -1393,6 +1393,15 @@ complaint. Which signs get a Compass row is still `phCxSignList`'s ANSWERED rule
 one too). The list stays open for the next tick (Esc / a tap elsewhere closes it), 8 rows then "Show all N",
 then "Add as a complaint" / "Add to Watch"; ↑↓ + Enter = Now Yes, Shift+Enter = Usu Yes, Enter with no
 row lit = her words as a complaint.
+**Pain for every plan (her 2026-10-24 "allow for adding pain symptoms for all types of treatment plans",
+"Compass: add a pain on any plan" in BUILD-NOTES.md):** words that name a place on the body
+(`PH_PAIN_REGIONS.parse`) put "Add pain · <place>" on top of the search list (`phCxsPainOpt`), and Enter with
+no row lit adds the pain instead of a complaint (`phCxPainAdd`, the pain map of the plan on screen through
+`phPmWrite`, Undo in the toast). A pain map makes any patient a pain patient (`phMskApplies`, which also
+counts `rec.painSites`), so the Pain group, its row and the Musculoskeletal tile appear. A typed complaint the
+new pain stands in for hands it its scores, notes, baseline, earliest start and Goal (`phCxPainAbsorb`,
+copies only); a typed complaint whose words are only places (her "tmj") counts as one (`phCxPainDup`), and
+the Care Plan Goal skips the complaints the Compass hides.
 **One table (her 2026-10-23 picks, mock compass-simple-mock-2026-10-23.html, "Compass: one simple table"
 in BUILD-NOTES.md; she found the area headings, "Signs · n" lines and buttons too busy):** complaints and
 signs are ONE table. No area heading rows, folds, counts or "n of m set" pills: each area is a thin

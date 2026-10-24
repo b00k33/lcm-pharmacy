@@ -7414,6 +7414,11 @@
   #pharmacyPage .ph-cxs-res .k { font: 700 var(--fs-10) var(--font-body); letter-spacing: .06em; text-transform: uppercase; color: var(--ph-faint); padding: 6px 6px 2px; border-top: 1px solid var(--ph-line); margin-top: 4px; }
   #pharmacyPage .ph-cxs-res .alt { display: block; width: 100%; min-height: 0; margin: 0; padding: 5px 6px; border: 0; border-radius: 6px; background: none; text-align: left; font: 500 var(--fs-12-5) var(--font-body); color: var(--ph-ink); cursor: pointer; }
   #pharmacyPage .ph-cxs-res .alt:hover { background: var(--ph-herb-tint); }
+  /* her 2026-10-24 "allow for adding pain symptoms for all types of treatment plans": words naming a place on the body give an Add pain row
+     on top of the results, edged in the Compass's pain-area colour (phCxsPainOpt) */
+  #pharmacyPage .ph-cxs-res .alt.pain { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; border-left: 3px solid var(--gc, var(--ph-herb)); border-radius: 0 6px 6px 0; background: var(--ph-herb-tint); }
+  #pharmacyPage .ph-cxs-res .alt.pain b { font-weight: 700; color: var(--ph-herb-deep); }
+  #pharmacyPage .ph-cxs-res .alt.pain .on { margin-left: auto; font: 600 var(--fs-10) var(--font-body); color: var(--ph-good-deep); background: var(--ph-good-tint); border-radius: 10px; padding: 1px 7px; white-space: nowrap; }
   /* Energy as one line under the complaints (her pick 4), rated 1-10 (her 2026-10-14) */
   #pharmacyPage .ph-en-line { display: flex; align-items: center; gap: 6px 14px; flex-wrap: wrap; border-top: 1px solid var(--ph-line); margin-top: 8px; padding-top: 8px; }
   #pharmacyPage .ph-en-line .lab { font: 700 var(--fs-11) var(--font-body); letter-spacing: .08em; text-transform: uppercase; color: var(--ph-faint); min-width: 46px; }
@@ -77465,8 +77470,10 @@ or changing anything in Cliniko.
       if (it.fam !== "pain") return false;
       const f = phCcFam("pain");
       if (!text || (f && text.toLowerCase() === f.label.toLowerCase())) return true;
-    } else if (!phCcGuessIds(text).includes("pain")) return false;
+    }
     const res = PH_PAIN_REGIONS.parse(text);
+    // a secondary counts when it reads as a pain, or (her 2026-10-24 "tmj" beside "jaw pain") when its words are only places on the body
+    if (!it.main && !phCcGuessIds(text).includes("pain") && res.unknown.length) return false;
     return res.items.length > 0 && res.items.every(x => list.some(p => p.r === x.region));
   }
   // { pid, pm, list, hide: Set of typed row keys the map replaces, mainIdx: the pain that carries Main (-1 = the typed main stays) }
@@ -78238,6 +78245,15 @@ or changing anything in Cliniko.
       });
     return out;
   }
+  // her 2026-10-24 "allow me to add pain symptoms ... for all types of treatment plans": the words she typed, read by the pain map's own
+  // reader (PH_PAIN_REGIONS.parse); null when they name no place on the body
+  function phCxsPainOpt(name, q) {
+    const res = PH_PAIN_REGIONS.parse(String(q || "")), R = PH_PAIN_REGIONS.REGIONS, its = res.items.filter(x => R[x.region]);
+    if (!its.length) return null;
+    const pid = phMskPid(name, phTpShownPlan(name)), pm = phPmPlanFor(name, pid), have = pm ? phPmList(name, pm) : [];
+    const label = its.map(x => { const reg = R[x.region], s = reg.central ? (x.side === "B" ? "C" : x.side || "C") : (x.side === "C" || !x.side ? "B" : x.side); return phPmSideName(reg, s); }).join(" · ");
+    return { label, on: its.every(x => have.some(p => p.r === x.region)), col: (phCxGroups()[PH_CX_PAIN_IX] || {}).col || "" };
+  }
   function phCxsResHtml(name, q) {
     q = String(q || "").trim();
     if (!q) return "";
@@ -78260,7 +78276,9 @@ or changing anything in Cliniko.
       return `<div class="ph-qr${i === phCxAddHl ? " hl" : ""}" data-cxs-row="${i}" data-cxs-b="${esc(o.b)}" data-cxs-p="${esc(o.p)}"><span class="ph-qr-bar" style="background:var(--ph-herb)"></span><span class="ph-qr-q">${grp ? `<span class="grp">${hi(grp)}:</span> ` : ""}${hi(rest)}</span>${inc}<span class="ph-qr-ans2">${now}${usu}</span></div>`;
     }).join("");
     const more = !all && opts.length > shown.length ? `<button type="button" class="ph-cx-chip" data-cxs-all="1">Show all ${opts.length}</button>` : "";
-    return `<div class="ph-cxs-res ph-nq"><div class="ph-qa-rows">${rows}</div>${more}<div class="k">${rows ? "Not a sign?" : "No matching sign"}</div><button type="button" class="alt" data-cxs-typed="1">Add “${esc(q)}” as a complaint</button><button type="button" class="alt" data-cxs-watch="1">Add “${esc(q)}” to Watch</button></div>`;
+    const po = phCxsPainOpt(name, q);
+    const pain = po ? `<button type="button" class="alt pain" data-cxs-pain="1" style="--gc:${esc(po.col)}" title="Adds it to the pain map; Enter does the same"><b>Add pain</b><span>${esc(po.label)}</span>${po.on ? `<span class="on">✓ on the pain map</span>` : ""}</button>` : "";
+    return `<div class="ph-cxs-res ph-nq">${pain}<div class="ph-qa-rows">${rows}</div>${more}<div class="k">${rows ? "Not a sign?" : "No matching sign"}</div><button type="button" class="alt" data-cxs-typed="1">Add “${esc(q)}” as a complaint</button><button type="button" class="alt" data-cxs-watch="1">Add “${esc(q)}” to Watch</button></div>`;
   }
   const PH_CXS_MAG = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="7" cy="7" r="4.6"/><path d="M10.4 10.4 14 14" stroke-linecap="round"/></svg>`;
   function phCxsHtml(name) {
@@ -78370,6 +78388,58 @@ or changing anything in Cliniko.
     phCcSaved = true; phCcRibSync();
     return true;
   }
+  // her 2026-10-24 "allow me to add pain symptoms - allow for adding pain symptoms for all types of treatment plans": the words go on the
+  // pain map of the plan on screen (the one pain store, phPmWrite), whatever kind of plan it is; the pain map then makes her a pain patient
+  // (phMskApplies), so the Compass shows the Pain group with the new row, scored like any pain. A typed complaint the new pain now stands in
+  // for (the map is its source, phCxPainDup) first hands the pain its scores, notes, baseline, start date and Goal (phCxPainAbsorb), so
+  // nothing she scored drops out of sight; the typed complaint itself is kept. Undo puts the pain map back as it was.
+  function phCxPainAdd(name, text) {
+    const res = PH_PAIN_REGIONS.parse(String(text || "")); if (!res.items.length) return false;
+    const pid = phMskPid(name, phTpShownPlan(name)), pm0 = phPmPlanFor(name, pid); if (!pm0) return false;
+    const pt = String(pid).startsWith("pt:"), rec0 = phPatientPeek(name) || {};
+    const was = JSON.parse(JSON.stringify(pt ? (rec0.painSites === undefined ? null : rec0.painSites) : (pm0.painMap === undefined ? null : pm0.painMap)));
+    const items = phCxItems(name), before = phPmList(name, pm0), hid0 = new Set(items.filter(it => phCxPainDup(it, before)).map(it => it.key));
+    if (!phPmWrite(name, pid, list => res.items.forEach(it => phPmPush(list, it.region, it.side)))) return false;
+    const after = phPmList(name, phPmPlanFor(name, pid));
+    items.filter(it => !it.main && !hid0.has(it.key) && phCxPainDup(it, after)).forEach(it => { try { phCxPainAbsorb(name, pid, it, after); } catch (e) { console.warn("[lcm] pain absorb:", e); } });
+    try { phTpAutoBust(); } catch (e) { /* cache not built yet */ }
+    phCcRibSync();
+    const R = PH_PAIN_REGIONS.REGIONS, added = after.filter(p => !before.some(b => b.r === p.r && b.s === p.s));
+    presSavedToast(added.length ? `Pain added · ${added.map(p => R[p.r] ? phPmSideName(R[p.r], p.s) : p.r).join(" · ")}` : "Already on the pain map", added.length ? { undo: () => {
+      const pm = phPmPlanFor(name, pid), r = phPatientRec(name); if (!pm || !r) return;
+      if (pt) { if (was === null) delete r.painSites; else r.painSites = was; } else if (was === null) delete pm.painMap; else pm.painMap = was;
+      if (savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return; }
+      try { phTpAutoBust(); } catch (e) { /* cache not built yet */ }
+      phCcRibSync(); phCxRefresh(name); try { phTodayTilesRefresh(name); } catch (e) { /* Today's visit is not open */ }
+    } } : undefined);
+    return true;
+  }
+  // a typed pain complaint the map now draws: its Compass scores go into the pain store on the days the pain has no score of its own (a "%
+  // better" score through its first 0-10 score), its notes, baseline, start date and Goal go across where the pain has none. Copies only.
+  function phCxPainAbsorb(name, pid, it, list) {
+    const rec = phPatientPeek(name) || {}, regs = PH_PAIN_REGIONS.parse(it.text).items.map(x => x.region);
+    const idxs = list.map((p, i) => regs.includes(p.r) ? i : -1).filter(i => i >= 0); if (!idxs.length) return;
+    const hist = phCxHist(rec, it.key), f10 = (hist.find(h => h.sc !== "pct") || {}).v, root = phMskRoot(rec) || {};
+    hist.forEach(h => {
+      const v = h.sc === "pct" ? (f10 != null ? phCxR1(f10 * (1 - Math.max(0, Math.min(100, h.v)) / 100)) : null) : h.v; if (v == null) return;
+      idxs.forEach(i => { const k = list[i].r + "|" + list[i].s, P = root[h.day] && root[h.day].pains && root[h.day].pains[k]; if (!P || P.now == null) phPmScoreSet(name, pid, String(i), "now", v, true, true, h.day, h.sc === "pct" ? h.v : null); });
+    });
+    const days = phCxDays(rec), noted = Object.keys(days).filter(d => { const e = phCxEntry(days[d], it.key); return e && e.n; }), b = rec.ccTrack && rec.ccTrack.base && rec.ccTrack.base[it.key];
+    if (noted.length || b) phCxWrite(name, tr => {
+      idxs.forEach(i => {
+        const pk = "p:" + list[i].r + "|" + list[i].s;
+        noted.forEach(d => { const n = phCxEntry(tr.days[d], it.key).n, e = phCxEntryMake(tr.days[d], pk); if (!e.n) e.n = n; });
+        if (b && !(tr.base && tr.base[pk])) (tr.base || (tr.base = {}))[pk] = { day: b.day };
+      });
+    });
+    const sec = ((phCcOf(name) || {}).secondary || []).find(s => s && "s:" + s.id === it.key) || {}, goal = String(sec.goal || "").trim();
+    // the earliest start wins: a pain never began after a complaint about it
+    if ((it.since || goal) && idxs.some(i => (it.since && (!list[i].since || it.since < list[i].since)) || (!list[i].goal && goal))) phPmWrite(name, pid, l => idxs.forEach(i => {
+      if (!l[i]) return;
+      if (it.since && (!l[i].since || it.since < l[i].since)) { l[i].since = it.since; delete l[i].sincePrec; }
+      if (!l[i].goal && goal) l[i].goal = goal;
+    }));
+  }
   function phCxClick(e) {
     const T = e.target; let el;
     if (!T || !T.closest) return false;
@@ -78395,6 +78465,7 @@ or changing anything in Cliniko.
     // the sign search (her 2026-10-23 picks): a Yes / No on a result, Show all, or her words as a complaint / a Watch item
     if ((el = T.closest("[data-cxs-ans]"))) { const name = phCxNameOf(el); if (name) phCxsAnswer(name, el.dataset.cxsKind, el.dataset.cxsKey, el.dataset.cxsAns === "yes"); return true; }
     if ((el = T.closest("[data-cxs-all]"))) { const name = phCxNameOf(el), pk = phPatientKey(name), i = document.querySelector("#pharmacyPage [data-cxs-in]"); phCxSqAll = pk + "|" + String(phCxSq[pk] || "").trim(); if (i) phCxsPaint(i); return true; }
+    if ((el = T.closest("[data-cxs-pain]"))) { const name = phCxNameOf(el), pk = phPatientKey(name), q = phCxSq[pk] || ""; phCxSq[pk] = ""; phCxAddHl = -1; if (phCxPainAdd(name, q)) { phCxRefresh(name); try { phTodayTilesRefresh(name); } catch (e2) { /* Today's visit is not open */ } } else phCxSq[pk] = q; return true; }
     if ((el = T.closest("[data-cxs-typed]"))) { const name = phCxNameOf(el), pk = phPatientKey(name), q = phCxSq[pk] || ""; phCxSq[pk] = ""; phCxAddHl = -1; if (phCxAddSecondary(name, q)) phCxRefresh(name); else phCxSq[pk] = q; return true; }
     if ((el = T.closest("[data-cxs-watch]"))) { const name = phCxNameOf(el), pk = phPatientKey(name), q = phCxSq[pk] || ""; phCxSq[pk] = ""; phCxAddHl = -1; if (!phCxWatchSet(name, q, true)) phCxSq[pk] = q; phCxRefresh(name); return true; }
     if ((el = T.closest("[data-cx-wch]"))) { const name = phCxNameOf(el); phCxWatchSet(name, el.dataset.cxWch, false); return true; }
@@ -78586,14 +78657,16 @@ or changing anything in Cliniko.
       }
       else if (e.key === "Enter") {
         e.preventDefault();
-        // her pick 7: Enter = Now Yes on the row she arrowed to, Shift+Enter = Usu Yes (Enter never clears one); no row lit = her words as a complaint
+        // her pick 7: Enter = Now Yes on the row she arrowed to, Shift+Enter = Usu Yes (Enter never clears one); no row lit = her words as a complaint,
+        // or as a pain when they name a place on the body (her 2026-10-24 "allow me to add pain symptoms")
         const row = phCxAddHl >= 0 ? rows[phCxAddHl] : null;
         if (row) {
           const b = row.dataset.cxsB, p = row.dataset.cxsP, kind = e.shiftKey ? (p ? "p" : "d") : (b ? "d" : "p"), key = kind === "d" ? b : p, tp = phTriToday(phPatientPeek(name) || {});
           if (key && (kind === "d" ? tp.d : tp.p)[key] !== true) phCxsAnswer(name, kind, key, true);
         } else {
           const pk = phPatientKey(name), q = el.value.trim();
-          if (q) { phCxSq[pk] = ""; phCxAddHl = -1; if (phCxAddSecondary(name, q)) phCxRefresh(name); else phCxSq[pk] = q; }
+          if (q && phCxsPainOpt(name, q)) { phCxSq[pk] = ""; phCxAddHl = -1; if (phCxPainAdd(name, q)) { phCxRefresh(name); try { phTodayTilesRefresh(name); } catch (e2) { /* Today's visit is not open */ } } else phCxSq[pk] = q; }
+          else if (q) { phCxSq[pk] = ""; phCxAddHl = -1; if (phCxAddSecondary(name, q)) phCxRefresh(name); else phCxSq[pk] = q; }
         }
       }
       else if (e.key === "Escape") { e.preventDefault(); phCxsClose(name); }
@@ -94118,7 +94191,9 @@ or changing anything in Cliniko.
         // order (its Goal cell: hers, else auto -- synth22 2026-10-21). Complaints only since 2026-10-22: Fang Bing Ren's signs are
         // rated on the Compass, they are not goals. A pain plan's bare "Reduce pain" gives way to the specific pain line a complaint already names.
         const pf = phCcFamOfPlan(plan), sx = (phPatientPeek(name) || {}).sex, items = phCxItems(name);
-        const rows = items.map(it => phCxGoal(name, it).text);
+        // a typed complaint the pain map stands in for (the Compass hides it) gives its line through the pain row, never twice (2026-10-24)
+        let pst = null; try { pst = phCxPainState(name, phPatientPeek(name), items); } catch (e) { /* no pain map */ }
+        const rows = items.filter(it => !(pst && pst.hide.has(it.key))).map(it => phCxGoal(name, it).text);
         const mainFam = items.length ? items[0].fam : null;
         if (pf && pf.id !== mainFam && !(pf.id === "pain" && rows.some(g => /pain|headache|migraine/i.test(g)))) addPart(phCcGoalMain(pf.id, sx));
         rows.forEach(addPart);
@@ -102395,6 +102470,7 @@ or changing anything in Cliniko.
     if (!rec) return false;
     if (phMskRoot(rec) && Object.keys(phMskRoot(rec)).length) return true;
     try { const c = rec.complaint; if (c && phCcMainId(c) === "pain") return true; } catch (e) { /* no complaint yet */ }
+    if (Array.isArray(rec.painSites) && rec.painSites.length) return true;   // pains marked before any plan existed (phPmPlanFor's "pt:" map)
     return (rec.treatmentPlans || []).some(p => p && (p.status === "active" || !p.status) && (phTpIsMskPlan(p) || (Array.isArray(p.painMap) && p.painMap.length > 0)));
   }
 
