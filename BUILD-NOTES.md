@@ -2364,3 +2364,21 @@ Her ask: "improve space saving of this page - make 3 mocks. maybe make a good se
 - **Tested** (sandbox, seeded patient, 1280 and 375): rows 26px; 6 seeded auto No's fold to one line and open on tap; "fever" → 7 of 306 with highlights and focus kept; ↓ + Enter ticked "With chills" and kept the box focused; Yes filter, Esc, area (Tongue → 27 of 306) work; sticky bar holds while scrolling; no sideways scroll at 375; no console errors; Prescriptions search 12 → 2 → 12.
 - **Not tested:** a real link-filled auto No (seeded by hand), the phone by touch, the "Show its signs" family block under a search.
 - **Integration:** the board reads the same signs and writes through the same buttons; group counts in the area headers count the rows shown while a filter is on.
+
+## 2026-10-24 · Find the Ren: one row at a time
+Her words, with a screenshot of Find the Ren on a gynae patient: "improve this ui - make it more space saving, let me move where the eyes are, make mock, make the chips more organised and easier to navigate quickly". Mock `ren-look-mock-2026-10-24.html`. Her 8 picks: B · One row; joined bars; body scale for Weight; drag any time; spots saved on this photo; no build photo = the face stays + a slim "+ Build"; short chip words; tabs show name + her picks.
+- **The look** (`phRqLookHtml`): the photo column (`phRqPhotoColHtml`) beside six tabs Build / Face / Skin / Lips / Eyes / Muscles (`phRqTabsHtml`, `data-rq-tab`; a looked tab reads "✓ Lips Red" or "✓ Eyes None") and ONE open row (`phRqOneHtml`). Each group is a joined bar (`.ph-tng2-seg.wrap`) with short words (`PH_RQ_SHORT`, the full sign in the hover title), a colour dot on colour signs (`PH_RQ_DOT`) and a small body that widens on Weight (`PH_RQ_FIG_W`, `phRqFigSvg`), then None and Next. The open row = the tab she tapped, else the row with a yes, else the first row not looked at; tapping the open tab folds it. Once every row is looked at, only the tabs stay (no photo). Next and None move to the next row not looked at; a second None on a row clears it and stays.
+- **Keys:** 1–9 pick, 0 None, Enter Next, ← → tabs (the handler's input guard is unchanged).
+- **Spots:** Eyes / Lips / Skin / Muscles sit on the photo at `PH_RQ_ZONE_DEF` (% of the photo). Drag to move; the corner dot resizes (`phRqDrag` pointer handlers). A tap still opens the row; `phRqDragEnd` drops the click that ends a drag. Spots are saved on that photo's own record as `rqZones` through `phRenPhotoPut`; `phRqZoneSave` reads the record fresh and keeps its image. A new photo starts where the last photo of that type with spots had them (`phRqZoneBox`). ↺ on the photo clears that photo's spots. A failed save shows the one toast.
+- **Header:** one line: the toggle, the family found + % (or "Look first, then ask"), "n/6 looks · n answers", Undo, Show its signs / Keep asking. The separate found line is gone.
+- **Widths:** photo 190px | row. On the 1280px Ren card (733px beside the figure), `@container (max-width: 780px)` gives a 150px photo with each group's name over its bar. Phone: 140px photo + the Add button, tabs 3 × 2, groups stacked.
+- Replaces the two photo panels (`phRqPhotoPanelHtml` / `phRqPhotoPanelsHtml`, gone) and CLAUDE.md's 2026-10-16 line that kept the Look chips as loose pills (her newest pick is joined bars; fixed there).
+- Short words, dot colours and body widths are DRAFT.
+- Tested (sandbox, a synthetic patient with a drawn face photo, both removed after):
+  - 1280: the Weight bar fits in 2 lines; the Lips tab opens its row with its spot lit; a chip pick gives "✓ Lips Red".
+  - Keys: Enter, 3, ← →, 0. None moves on.
+  - Drag saves the spot on the photo (image kept, 14019 bytes); ↺ clears it.
+  - All looked = tabs only; phone 375 by screenshot.
+  - Prescriptions search 34 → 2 → 34.
+  - Integration: answers still write through `phTriWrite`; Fang Bing Ren's board on the same page repaints with them (checked there only; Find the Ren shows nowhere else).
+- **Not tested:** a real patient's photo, a Build photo, a touch drag on a real phone, the phone by eye.
