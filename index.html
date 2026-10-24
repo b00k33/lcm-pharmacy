@@ -21349,6 +21349,13 @@
     #pharmacyPage .ph-msg-seg-opt + .ph-msg-seg-opt, #pharmacyPage .ph-recphotos-segbtn + .ph-recphotos-segbtn { border-left: 1px solid var(--ph-line); }
     #pharmacyPage .ph-msg-seg-opt.on, #pharmacyPage .ph-recphotos-segbtn.on { background: var(--ph-herb); color: #fff; }
   }
+  /* the Compass period-pain row reads the Cycle page (her 2026-10-24 picks): small bars, one per period's worst day, then the latest */
+  #pharmacyPage .ph-cx-cyct { display: inline-flex; align-items: flex-end; gap: 6px; margin-right: 8px; white-space: nowrap; }
+  #pharmacyPage .ph-cx-cyct b { font: 700 var(--fs-13) var(--font-body); color: var(--ph-ink); line-height: 1; }
+  #pharmacyPage .ph-cx-cyct small { font-size: var(--fs-11); color: var(--ph-faint); line-height: 1; }
+  #pharmacyPage .ph-cx-cycb { display: inline-flex; align-items: flex-end; gap: 2px; height: 16px; }
+  #pharmacyPage .ph-cx-cycb i { width: 4px; border-radius: 2px 2px 0 0; background: var(--ph-herb); opacity: .75; }
+  #pharmacyPage .ph-cx-cycb i:last-child { opacity: 1; }
   /* ==== Ren page board: compact rows + a search bar (her 2026-10-24 pick "A", fbr-board-space-mock-2026-10-24.html). A sign is one
      26px line (her newest word over the 2026-10-23 32px white box, on this board only); the ✕ shows on hover; two or more auto No's in
      one subject fold into one grey line. All widths. ==== */
@@ -72786,6 +72793,13 @@ or changing anything in Cliniko.
     cyc("dry_cm", 2, n => `Dry, little discharge on ${dayWord(n)}`);
     cyc("low_mood", 2, n => `Low mood or energy on ${dayWord(n)}`);
     cyc("severe_pain", 1, n => `Severe pain logged on ${dayWord(n)}`);
+    // period pain per period (her 2026-10-24 picks, phCycPeriodPain): the latest period painful (4/10+, Cramping or Stabbing) = now,
+    // if it started within ~2 months; two of the last three logged periods painful = usually
+    {
+      const pp = phCycPeriodPain(rec), lastP = pp[pp.length - 1], l3 = pp.slice(-3), nP = l3.filter(x => x.painful).length;
+      if (lastP && lastP.painful && lastP.start >= phCycAdd(todayKey, -60)) add("dysmen_now", "cycle", `Last period painful${lastP.worst != null ? `, worst day ${lastP.worst}/10` : ""}`, { tab: "cycle" }, phCycShortLbl(lastP.start));
+      if (nP >= 2) add("dysmen_usu", "cycle", `${nP} of the last ${l3.length} periods painful`, { tab: "cycle" }, phCycShortLbl(lastP.start));
+    }
     const gaps = phCycGaps5(rec);
     if (gaps.length >= 2) {
       const lens = gaps.map(g => g.len), avg = Math.round(lens.reduce((a, b) => a + b, 0) / lens.length);
@@ -76031,7 +76045,7 @@ or changing anything in Cliniko.
         { id: "flow", s: "Flow", q: "How heavy is the flow?", d: "mid", grp: "Bleeding", o: [["light", "Light", ["light_flow"]], ["mid", "Medium", []], ["heavy", "Heavy", ["heavy_flow"]]] },
         { id: "col", s: "Colour", q: "What colour is the blood?", d: "red", more: true, grp: "Bleeding", o: [["bright", "Bright red", ["bright_blood"]], ["red", "Red", []], ["dark", "Dark red", ["dark_blood"]], ["brown", "Brown", ["dark_blood"]], ["pale", "Pale", ["pale_flow"]], ["watery", "Watery", ["pale_flow"]]] },
         { id: "clot", s: "Clots", q: "Any clots?", d: "none", more: true, grp: "Bleeding", o: [["none", "None", []], ["small", "Small", ["clots"]], ["large", "Large", ["clots"]], ["many", "Many", ["clots"]]] },
-        { id: "pain", s: "Pain", q: "Period pain?", d: "none", multi: true, grp: "Discomfort", o: [["none", "None", []], ["cramp", "Cramping", ["cramp", "dysmen"]], ["stab", "Stabbing", ["stabbing", "dysmen"]], ["severe", "Severe", ["severe_pain", "dysmen"]], ["drag", "Dragging", ["dragging"]], ["warm", "Eased by warmth", ["pain_warm"]]] },
+        { id: "pain", s: "Pain", q: "Period pain?", d: "none", multi: true, grp: "Discomfort", o: [["none", "None", []], ["cramp", "Cramping", ["cramp", "dysmen"]], ["stab", "Stabbing", ["stabbing", "dysmen"]], ["severe", "Severe", ["severe_pain", "dysmen"]], ["drag", "Dragging", ["dragging", "dysmen"]], ["warm", "Eased by warmth", ["pain_warm"]]] },
         { id: "cm", s: "Discharge", q: "Mid-cycle discharge?", d: "clear", multi: true, whenField: true, grp: "Discomfort", o: [["clear", "Clear, stretchy", []], ["watery", "Watery, lots", ["watery_cm"]], ["creamy", "Creamy, sticky", ["damp_cm"]], ["dry", "Dry, little", ["dry_cm"]]] },
         { id: "limbs", s: "Cold hands", q: "Cold hands and feet?", d: "no", more: true, grp: "Signs & mood", o: [["no", "No", []], ["yes", "Yes", ["cold_limbs", "cold_feel"]]] },
         { id: "pms", s: "PMS", q: "PMS symptoms?", d: "none", multi: true, more: true, grp: "Signs & mood", o: [["none", "Nothing much", []], ["mood", "Irritable", ["pms", "stress"]], ["low", "Low mood", ["low_mood"]], ["bloat", "Bloating", ["digestive_sx"]], ["loose", "Loose stool", ["digestive_sx"]], ["const", "Constipation", ["digestive_sx"]], ["tired", "Tired", ["fatigue", "low_mood"]],
@@ -77775,9 +77789,13 @@ or changing anything in Cliniko.
       cnt.forEach(h => { n += PH_CX_SXV[h.v] || 0; dev.push({ day: h.day, d: n }); });
       const tv = x.keys.map(kk => phCxSxToday(rec, kk)).find(Boolean) || "";
       const cb = tv ? { d: cnt.some(h => h.day === today) ? n : 0 } : cnt.length ? { d: n, stale: true, as: cnt[cnt.length - 1].day } : { d: null };
-      const cl = tv ? { d: PH_CX_SXV[tv], ref: "last visit", g: tv === "g" } : { d: null };
+      let cl = tv ? { d: PH_CX_SXV[tv], ref: "last visit", g: tv === "g" } : { d: null };
       const gid = phCxGid(phCxAreaOfSign(x)), g = grp(gid);
-      g.sxAll.push({ kind: "sx", key: k, x, under: x.under, gid, cb, cl, sxdev: dev, bday, over: o, hist, tv, rated: !!tv, nest: !!x.under && g.cc.some(s => s.key === x.under) });
+      // her 2026-10-24 picks: the period-pain sign reads the Cycle page (worst day of each period, phCycPeriodPain); her own tap today still wins
+      const cyc = phCxCycPain(rec, x, o);
+      let cbX = cb, bdayX = bday;
+      if (cyc && !tv) { cbX = { d: cyc.base.v - cyc.last.v, cyc: true }; bdayX = cyc.base.day; cl = cyc.prev ? { d: cyc.prev.v - cyc.last.v, ref: cyc.prev.day, cyc: true } : { d: null }; }
+      g.sxAll.push({ kind: "sx", key: k, x, under: x.under, gid, cb: cbX, cl, sxdev: dev, bday: bdayX, over: o, hist, tv, rated: !!tv, cyc, nest: !!x.under && g.cc.some(s => s.key === x.under) });
     });
     // the rows in the order she asks them: the group's complaints, then its signs under one "Signs" line (her picks Q3, Q4; her 2026-10-22 "how to see that the signs are grouped")
     const more = !!phCxMore[key]; let hidden = 0;
@@ -77927,8 +77945,22 @@ or changing anything in Cliniko.
   }
   // ---- cells ----
   // Baseline: the first score and its date (a sign: "present" and the visit it was first watched from)
+  // the period-pain sign's numbers from the Cycle page: every scored period (worst day), the baseline (the first, or the first on or
+  // after a moved baseline), the latest and the one before it. null when the sign is not period pain or no period carries a score.
+  const PH_CX_CYCPAIN = new Set(["dysmenorrhea_now", "menstrual_pain_tend"]);
+  function phCxCycPain(rec, x, over) {
+    if (!x || !(x.keys || []).some(k => PH_CX_CYCPAIN.has(k))) return null;
+    const pts = phCycPeriodPain(rec).filter(p => p.worst != null).map(p => ({ day: p.start, v: p.worst }));
+    if (!pts.length) return null;
+    const from = over ? pts.filter(p => p.day >= over.day) : pts, use = from.length ? from : pts.slice(-1);
+    return { pts, base: use[0], last: pts[pts.length - 1], prev: pts.length > 1 ? pts[pts.length - 2] : null };
+  }
+  function phCxCycBarsHtml(c) {
+    return `<span class="ph-cx-cycb" aria-hidden="true">${c.pts.slice(-6).map(p => `<i style="height:${Math.max(2, Math.round(p.v / 10 * 16))}px"></i>`).join("")}</span>`;
+  }
   function phCxBsHtml(r, M) {
     const k = esc(r.key);
+    if (r.kind === "sx" && r.cyc && r.cb.cyc) return `<span class="bs" data-cx-bs="${k}" title="Cycle page · worst day of each period">${phCxR1(r.cyc.base.v)}<small>${esc(phCycShortLbl(r.cyc.base.day))}${r.over ? " · moved" : ""}</small></span>`;
     if (r.kind === "sx") return `<span class="bs${r.bday ? "" : " na"}" data-cx-bs="${k}">${r.bday ? "present" : "–"}${r.bday ? `<small>${esc(phCycShortLbl(r.bday))}${r.over ? " · moved" : ""}</small>` : ""}</span>`;
     const s = r.s, b = s.trk.base, unit = s.pain || M.scale === "ten" ? "" : "%";
     const v = b ? (s.pain || s.energy ? phCxR1(b.v) : Math.round(phCxVal({ v: b.v, sc: "ten" }, s.hist, M.scale))) : null;
@@ -77936,6 +77968,8 @@ or changing anything in Cliniko.
   }
   const phCxDvTip = (r, M, c) => {
     if (c.d == null) return "";
+    if (r.kind === "sx" && c.cyc) return M.cmp === "last" ? `Cycle page: worst day ${phCycShortLbl(c.ref)} ${phCxR1(r.cyc.prev.v)} → ${phCycShortLbl(r.cyc.last.day)} ${phCxR1(r.cyc.last.v)}`
+      : `Cycle page: worst day ${phCycShortLbl(r.cyc.base.day)} ${phCxR1(r.cyc.base.v)} → ${phCycShortLbl(r.cyc.last.day)} ${phCxR1(r.cyc.last.v)}`;
     if (r.kind === "sx") return M.cmp === "last" ? "Today against the last visit" : `Net of every rating since the baseline (${phCycShortLbl(r.bday)}): ${c.d > 0 ? "+" : ""}${c.d}`;
     const s = r.s, b = s.trk.base, lastP = s.trk.pts[s.trk.pts.length - 1], now = c.stale ? lastP : (s.trk.pts.find(p => p.day === M.today) || lastP);
     const tw = M.at ? phCycShortLbl(M.at) : "today";
@@ -77955,7 +77989,7 @@ or changing anything in Cliniko.
   // From baseline / From last visit: a small bar (the centre mark is the baseline, green right = better, red left = worse) and its words
   function phCxDvHtml(r, M, fxKey) {
     const sx = r.kind === "sx", k = esc(r.key);
-    if (!M.back && (sx || !r.s.isNew || !r.rated)) return "";
+    if (!M.back && !(sx && r.cyc && r.cb.cyc) && (sx || !r.s.isNew || !r.rated)) return "";
     if (!sx && r.s.isNew && r.rated) return `<div class="dv same" data-cx-dv="${k}"><span class="dt">${M.at ? "baseline" : "baseline set ✓"}</span></div>`;
     const c = M.cmp === "last" ? r.cl : r.cb, d = c.d;
     let cls = "na", bar = "", txt = "";
@@ -78051,7 +78085,7 @@ or changing anything in Cliniko.
     return `<div class="ph-cx-row sx${phCxAreaCls(g, first)}${v === "g" ? " gone" : ""}${ask ? " ask" + (phCxLastAsk !== key ? " askin" : "") : ""}${phCxOpen === key ? " open" : ""}${M.dr === key ? " dro" : ""}${x.fresh ? " slide" : ""}" data-cx-row="${esc(key)}"${phCxAreaSty(g)}>
       ${first ? phCxAreaLabHtml(g, M) : ""}<span class="sxn"><i class="sg" style="--sc:${own.col || "var(--ph-faint)"}" title="${esc(own.name || "")} sign, from Fang Bing Ren">Sign</i><span class="slab" data-cx-rn="${esc(key)}" title="${esc(x.source || "")}"><i>${esc(x.subj)}:</i> ${esc(x.desc)}</span>${x.since ? `<span class="ssince">· ${esc(x.since)}</span>` : ""}<span class="ph-cx-hov"><span class="ph-cx-ddw"><button type="button" class="ph-cx-dd" data-cx-dd="${esc(key)}" aria-haspopup="menu" aria-expanded="${menu ? "true" : "false"}" aria-label="More for this sign">▾</button>${menu}</span></span></span>
       ${phCxBsHtml(r, M)}
-      <span class="pillcell pc">${bar}</span>
+      <span class="pillcell pc">${r.cyc ? `<span class="ph-cx-cyct" title="Cycle page · worst day of each period, latest ${esc(phCycShortLbl(r.cyc.last.day))}">${phCxCycBarsHtml(r.cyc)}<b>${phCxR1(r.cyc.last.v)}</b><small>${esc(phCycShortLbl(r.cyc.last.day))}</small></span>` : ""}${bar}</span>
       <span class="dvcell">${phCxDvHtml(r, M, phCxFx && phCxFx.key)}</span>
       ${phCxNoteCellHtml(M, name, key, x.label)}
     </div>`;
@@ -83193,7 +83227,7 @@ or changing anything in Cliniko.
     if (phEnWrite(name, d => { if (d[k] === +n) delete d[k]; else d[k] = +n; })) phEnRefresh(name);
   });
   const PH_TRI_PREFILL = {
-    cold_feel: "cold_feel", dizzy: "dizzy", cold_sens: "cold_feel", menstrual_pain_tend: ["dysmen", "stabbing", "cramp", "dragging", "severe_pain"], menstrual_irreg_tend: ["irregular_hx", "irregular_len", "long_cycle"],
+    cold_feel: "cold_feel", dizzy: "dizzy", cold_sens: "cold_feel", menstrual_pain_tend: ["dysmen", "dysmen_usu"], dysmenorrhea_now: "dysmen_now", menstrual_irreg_tend: ["irregular_hx", "irregular_len", "long_cycle"],
     fatigue_tend: "fatigue", dizzy_tend: "dizzy", sweats_easy: "spont_sweat", wind_averse_tend: "wind_averse", colds: "wind_averse", palp_tend: "palp",
     startle_tend: "startle", shallow_sleep: ["insomnia_dream", "sl_hard", "sl_wake"], spasms: "tight", tight: "tight", neck_shoulder_ache_tend: ["neck_tension", "pr_shoulder"],
     // her 2026-10-14 pain feel audit: the Pain intake's "Weather: cold" and "Heat: hot, red or swollen" answers reach the signs that say the same
@@ -88751,6 +88785,31 @@ or changing anything in Cliniko.
   // worked out from the days she logged, never stored. Each period gives its heaviest flow and its most-picked colour, clots
   // and pain; discharge and PMS count over every logged day. Until two periods carry a log, her old Usual period answers
   // (rec.usual.period) stand in. Returns labels per category (the day card's rings read them) + the line's parts.
+  // Period pain, ONE read (her 2026-10-24 picks, period-pain-integration-map-2026-10-24.html): each logged period's WORST day, 0-10, from
+  // the Cycle page's day log (the 0-10 slider; a Mild / Moderate / Severe word without a number reads 3 / 5 / 8, MY mapping), else the
+  // period-start card's whole-period word. A period is "painful" at 4/10 or more, or when Cramping or Stabbing was logged. Worked out on
+  // read, never stored. Read by the Compass row, the Fang Bing Ren / Ren pre-fills (clues dysmen_now, dysmen_usu) and the Usually line.
+  const PH_CYC_PAIN_NUM = { mild: 3, moderate: 5, severe: 8 }, PH_CYC_PAIN_ON = 4;
+  function phCycPeriodPain(rec) {
+    const cs = (rec && rec.cycleSigns) || {}, cyc = phCycleFor(rec) || {}, fd = Math.max(3, cyc.flowDays || 5), todayKey = keyOf(TODAY);
+    const logBy = {}; ((rec && rec.cycleLog) || []).forEach(x => { if (x && x.lmp) logBy[x.lmp] = x; });
+    const out = [];
+    phBbtCycleStarts(rec).filter(s => s <= todayKey).forEach(s => {
+      const d0 = parseKey(s); let worst = null, feels = false;
+      for (let i = 0; i < fd + 2; i++) {
+        const k = keyOf(new Date(d0.getFullYear(), d0.getMonth(), d0.getDate() + i)), d = cs[k];
+        if (!d || k > todayKey) continue;
+        const n = d.painN != null && d.painN !== "" ? +d.painN : PH_CYC_PAIN_NUM[d.pain];
+        if (n != null && !isNaN(n) && (worst == null || n > worst)) worst = n;
+        if (d.feels === "cramping" || d.feels === "stabbing") feels = true;
+      }
+      const w = logBy[s] && logBy[s].pain;
+      if (worst == null && w) worst = w === "none" ? 0 : PH_CYC_PAIN_NUM[w] != null ? PH_CYC_PAIN_NUM[w] : null;
+      if (worst == null && !feels) return;
+      out.push({ start: s, worst, painful: (worst || 0) >= PH_CYC_PAIN_ON || feels });
+    });
+    return out;
+  }
   function phCycUsual(rec) {
     const cs = (rec && rec.cycleSigns) || {}, cyc = phCycleFor(rec) || {}, fd = Math.max(3, cyc.flowDays || 5);
     const lab = (list, v) => { const o = list.find(x => x[0] === v); return o ? o[1] : ""; };
@@ -88768,7 +88827,7 @@ or changing anything in Cliniko.
         const r = flowRank.indexOf(d.flow);
         if (r > top) top = r;
         add(per.col, d.looks); add(per.clot, d.clots); add(per.pain, d.feels);
-        if (r >= 0 || d.looks || d.clots || d.feels) any = true;
+        if (r >= 0 || d.looks || d.clots || d.feels || d.painN || d.pain) any = true;
       }
       if (!any) return;
       n++;
@@ -88796,7 +88855,9 @@ or changing anything in Cliniko.
     if (u.flow.length) parts.push(`${u.flow[0]} flow`);
     parts.push(...u.col);
     if (u.clot.length) parts.push(`${u.clot[0]} clots`);
-    parts.push(...u.pain);
+    // her 2026-10-24 pick: how bad, beside how it feels -- the worst day of each scored period, averaged (phCycPeriodPain, last 3)
+    const pw = phCycPeriodPain(rec).filter(x => x.worst != null).slice(-3), pAvg = pw.length >= 2 ? Math.round(pw.reduce((a, x) => a + x.worst, 0) / pw.length) : null;
+    if (u.pain.length) parts.push(u.pain.join(" · ") + (pAvg ? ` ~${pAvg}/10` : "")); else if (pAvg) parts.push(`Pain ~${pAvg}/10`);
     if (u.cm.length) parts.push(`Discharge ${u.cm.join(", ").toLowerCase()}`);
     if (u.pms.length) parts.push(`PMS ${u.pms.join(", ").toLowerCase()}`);
     if (!parts.length) return "";
