@@ -85,6 +85,7 @@ reads it; do not render it again.
 > (or in STYLE-LCM.md) defines a chip, button, link, corner or caption differently, **this rule wins**.
 
 **Everything tappable is one of five shapes. Nothing else taps.**
+**Zanda finish (her 2026-10-24 picks, desktop):** controls are 32px with **4px** corners (not 6), an icon-only button is a 4px **square** like every other box (colour swatches and the avatar badge stay round), a button that ACTS says its word in **capitals** (TODAY, ADD RESULT; long ones and dropdowns, picks, fields stay as written), text stays teal. Where a line below says 6px or circle for a control, this wins [Zanda finish].
 1. **Chip = pick.** Pill (999px), 28px tall, 13px text (14px on a phone, STYLE-LCM's label size), 1px `--ph-line` line, white. Picked = solid `--ph-herb`, white text. One size everywhere.
 2. **Button = act.** 6px corners, 28px, 13px bold, 1.5px `--ph-herb` line, white. ONE solid button per screen = the main step. An action is never an outlined pill.
 3. **Dropdown = pick from many.** A chip ending ▾ that shows what is picked. **More than 6 options, or they wrap onto a second line at 375px = dropdown.** Several picks: ticks inside, the chip says "Build · 2" (picked answers may also show as chips under it). Stay chips: Mon–Sun toggles, calendars, stat strips, tab bars of 5 or fewer, the pulse brush bar.
