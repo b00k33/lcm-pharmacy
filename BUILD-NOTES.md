@@ -2411,3 +2411,11 @@ Her ask (screenshots of the Find the Ren face card and the full-screen Face phot
 - **Viewer buttons (audit):** Change type / Change date = 32px, 6px, outlined white on the dark header, sprite icons (i-tag, i-cal); Compare / Delete = 32px, 6px, sprite icons (i-copy, i-trash), Delete in red; the 🗑 emoji and ⇄ text arrow are gone. The words shortened to "Compare" / "Delete" (full words in the hover title).
 - **Tested** (sandbox, a drawn test face photo, deleted after): card corners, Eyes tab lights the eyes spot with its label; full screen shows Face · Lips · Eyes, ticking Bright there ticked it in the card too ("✓ Eyes Bright"), the Lips tab lit the lips spot; buttons 32px / 6px; no console errors; Prescriptions search 12 → 2 → 12.
 - **Not tested:** the build photo full screen, a real photo, the phone, keyboard number keys inside the viewer.
+
+## The gold Update button, audited (2026-10-24)
+Her ask: "audit the update button chip", then "yes fix it and push live".
+- **Computer top bar** (`.ph-tbm-update`, desktop only): 32px, 6px corners, the sprite's refresh icon (was 🔄), a 1.5px gold line on the pale gold fill (was solid gold 38px pill), so the page's own main button stays the one solid button.
+- **Fallback bar** (`#phUpdateBtn`): the same shape, says "Update" (was "Update available"); the hover title is shorter.
+- **Phone ⋯ menu** (`.ph-more-upd`): refresh icon + "Update" + the new version small (`phNewBuild`); it used to print the button's whole explaining sentence and the 🔄 emoji. The phone's 31px circle is unchanged (icon-only circles kept, her "no" to the Zanda finish).
+- **Tested** (sandbox, button forced visible): 32px / 6px / gold line at 1400px; the phone sheet row reads "Update" with no emoji; no sideways scroll at 375; no console errors; Prescriptions search 12 → 2 → 12. **Not tested:** a real update run (the button's click path is unchanged), the version number in the phone row (no new build in the sandbox).
+- A stray perl match briefly put text before `<!doctype html>`; removed and checked before commit (the file starts with the doctype).
