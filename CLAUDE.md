@@ -1468,7 +1468,12 @@ detector, and **session-package counting**) branches on it.
 **Findings charts** (tongue / abdomen / pulse) are the app's own tappable
 diagrams with a "brush" (pick a sign, then tap its regions). Data shapes:
 `visitFnd[id].tng = {colour, colourMore[], colourAt, shape, moist, coatThick, coatColour,
-coatArea[] (root / mid = centre), coatQual{}, marks{}, under, thickAt{}, deviation, v2}`, `visitFnd[id].abd =
+coatArea[] (root / mid = centre), coatAt{} (coat colour per zone), coatQual{}, marks{}, under, thickAt{}, deviation, v2}`
+(the Tongue page since 2026-10-24: photos beside four tabs Body · Coat · Jiao · Sublingual, Shape and Marks as dropdowns, a
+red tip chip, a Jiao tab with a tongue map and one line per zone (Upper / Middle / Lower / Left / Right) that opens its own
+colour, coat, form and mark bars; a linked chip carries its Fang Bing Ren signs in its hover and the thin plum bar under it (`.tfp-lk`, the Find the Ren link mark), the
+"Fang Bing Ren · N ticked" pill opens the page; zone colours (red tip) are record only, `phTngChipKeys` skips `colourAt`;
+BUILD-NOTES "Tongue page: tabs + the three jiaos"), `visitFnd[id].abd =
 {tension, tensionAt{} (read-only legacy: nothing new is written), tempC{epi, lower} (°C at CV12 / CV4, 28–40, no navel),
 marks{sign:[zones]} (Seen signs distended / bulging / sunken / vispulse sit by ROW: whole, epi, umb, lower), v2}`
 (her 2026-10-22 Abdomen redesign, see BUILD-NOTES). The exam pages are the
