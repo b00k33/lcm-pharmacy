@@ -2344,3 +2344,14 @@ Her words: "today is her cd16 and its putting the appointment during menstrual p
 Her words: "yes fix all 11 and push live". One block after the Inventory cells rules in the sweep's desktop `@media (min-width: 641px)` block.
 - The patient name in the band is a 32px faint field (tap to edit, as before); the profile search icon a 32px circle inside its box; Appointments' search fills its 32px box; Suppliers' pack size / price cells are 32px fields; the Log filters (they had no styles at all, native grey buttons) are one joined 32px bar; Abdomen's °C boxes 32px fields; Treatment's "Skip" a 32px button and the phase × a 32px circle; Patient details' add-photo and calendar circles 32px; the Care Plan's CD tags 32px chips; Diagnosis' "Colour key ▸" a 32px box; the IVF history fold header 32px tall.
 - Tested (sandbox, 1280): every one measures 32px; band 56px tall; no sideways scroll; the Prescriptions search filters (6 → 1 → 6). **Not tested:** the phone (desktop only), real data.
+
+## The last 17 controls at 32px (2026-10-24)
+Her "yes fix all 17 and push live", after the per-page chip progress report against her 10-23 image. Desktop only, in the
+"Chip audit sweep" block after `.ph-ivf-foldhd`: Suppliers' in-house restock size (`table.ph-inhouse-spec .ph-qty-lock`,
+32px field); Care Plan "+ Pick areas" (`.ph-pm-pickbtn`, a 32px button, no dashed pill), the status `.ph-tp-bandst`, the
+Session grid "Next · ~date" badge (`.badge.next.can`) and the plan name (`b[data-tp-titlebox]`, a tinted field); Ask her
+answers (`.ph-ah-a`, one line at 32px, the full answer in its hover title); the Compass Goal (`.ph-cx-gl`, a 32px field);
+Fang Bing Ren's Quick assess header (`.ph-qa2-tog`) and result bars (`.ph-nq-bar`); Ren's "Find the Ren ▾" (`.ph-qa-t`).
+Also: the Zanda finish (square icons, 4px, capitals; d091b28b) was declined ("no") and reverted in 7798a122, never pushed.
+Tested in the sandbox (Audit Pat, 1280px): every one measures 32px / 6px; no sideways scroll; Prescriptions search 12 → 2 → 12.
+Not tested: the phone (desktop-only rules), a long Ask her answer's hover on a real mouse.
