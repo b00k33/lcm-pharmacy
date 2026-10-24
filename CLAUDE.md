@@ -85,8 +85,9 @@ reads it; do not render it again.
 > (or in STYLE-LCM.md) defines a chip, button, link, corner or caption differently, **this rule wins**.
 
 **Everything tappable is one of five shapes. Nothing else taps.**
-1. **Chip = pick.** Pill (999px), 28px tall, 13px text (14px on a phone, STYLE-LCM's label size), 1px `--ph-line` line, white. Picked = solid `--ph-herb`, white text. One size everywhere.
-2. **Button = act.** 6px corners, 28px, 13px bold, 1.5px `--ph-herb` line, white. ONE solid button per screen = the main step. An action is never an outlined pill.
+**One size for all of them (her chip audit, 2026-10-23, applied app-wide by 2026-10-24; this line wins over any older size below):** **32px tall, 6px corners, a thin line, 13px text** (a search box: 32px, 12px text, the search icon); picked = solid; **icon-only = a 32px circle**; one category's chips join into one bar. **Kept as they are:** the 44px header disc (the page's one main action), stat tiles, rows and step rows over 52px, pulse chart cells, calendar days. Phone sizes: STYLE-LCM.md. Her "no" to the Zanda finish (2026-10-24) keeps circles, 6px corners and normal case.
+1. **Chip = pick.** 6px corners, 32px tall, 13px text (14px on a phone, STYLE-LCM's label size), 1px `--ph-line` line, white. Picked = solid `--ph-herb`, white text. One size everywhere.
+2. **Button = act.** 6px corners, 32px, 13px bold, 1.5px `--ph-herb` line, white. ONE solid button per screen = the main step. An action is never an outlined pill.
 3. **Dropdown = pick from many.** A chip ending ▾ that shows what is picked. **More than 6 options, or they wrap onto a second line at 375px = dropdown.** Several picks: ticks inside, the chip says "Build · 2" (picked answers may also show as chips under it). Stay chips: Mon–Sun toggles, calendars, stat strips, tab bars of 5 or fewer, the pulse brush bar.
 4. **Field = a value you edit.** Faint tint (`--ph-herb-tint`), 6px corners, no outline. A number, supplier or note you tap to edit is a field, never bare text (Inventory stock, low-at, notes).
 5. **Row = open something.** The whole row is the target, on a faint surface. A herb name or code in a list stays plain text inside its row (Dashboard, Inventory, Refill, To order).
@@ -103,7 +104,7 @@ reads it; do not render it again.
 **Pictures over words (her 2026-10-23: "i want more visually succinct images/diagrams/animations/icons and less words"):** lead with an icon from the sprite, a small diagram (dots, rings, bars) and motion on a real change; a label or sub-line moves into the hover `title`. Mocks and questions to her follow it too (short option names, a picture each).
 **Screens follow code7's order (Remove → Combine → Infer → Group → Collapse → Contextualise → Hide → Reveal) and code3's brief, polite tone.** (The code3 section below is message wording; this line gives screens the same restraint.)
 
-**Superseded by this rule (the old lines were removed in the 2026-10-21 audit):** "ONE pill/chip style ... square outlined buttons", "Pill shape = something she PICKS", the 10/10 smoothing "outlined pill = everything else", audit step 5's "outlined pill, 10px corners" (its no-underline, no-arrow rules stand), and the retired DESIGN-CONVENTIONS.md "text links". Corners still follow the scale (6 / 10 / 16 / pill): chips use pill and 6 only.
+**Superseded by this rule (the old lines were removed in the 2026-10-21 audit):** "ONE pill/chip style ... square outlined buttons", "Pill shape = something she PICKS", the 10/10 smoothing "outlined pill = everything else", audit step 5's "outlined pill, 10px corners" (its no-underline, no-arrow rules stand), and the retired DESIGN-CONVENTIONS.md "text links". Corners still follow the scale (6 / 10 / 16 / pill): a chip, button, dropdown or field is 6px; only an icon-only control is round.
 **Build order (her go, 2026-10-15):** 1 this rule · 2 plain-text taps become rows / fields / chips · 3 chip walls become dropdowns and joined 0–10 bars · 4 explaining lines out. All four have been worked page by page since (live on `main`, audited 2026-10-18); a page not named in a BUILD-NOTES.md note may still be unconverted, so check that page in the live app before assuming.
 
 <!-- ============================================================ -->
@@ -1720,7 +1721,7 @@ Fit the screen, Motion, NEVER break these, Deploy & git, Current state) are
 not repeated here.
 
 - Never reintroduce the 44px minimum-tap-target rule (it made every phone
-  control too large; explicitly retired). Chips and buttons are 28px; a few
+  control too large; explicitly retired). Chips and buttons are 32px (6px corners); a few
   phone Dispense chips are 40px on purpose (`.ph-days-opt` / `.ph-pm-opt`).
 - Check-in drafts stay throwaway, never wired to Prepared/Sent — only an
   explicit "Send later" files a real draft.
