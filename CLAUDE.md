@@ -1324,7 +1324,9 @@ herbs). A rule she overrode in Settings never gains new clue keys later
 trouble, herbs at work, tongue + pulse inset), three stops Trouble / Formula at work / Settled, tap-a-herb chips. It replaces the pattern picture on
 the Guide card for those formulas and also shows on Dispense (end of the right column) and the Care Plan formula cell. Same runner as the pattern
 pictures. A new formula = one `PH_FP.SC[id]` scene + `PH_FP.HERBS[id]` + `PH_FP.PAT[id]`; no scene = the pattern picture stays. BUILD-NOTES.md,
-"Formula pictures".
+"Formula pictures". Since 2026-10-25 the person is drawn at .88 (`ZK`, labels follow through `ZP`), the tongue inset's shape follows its trouble
+words (`tngFeat` / `tngD`: swollen = wide, round tip, scalloped teeth marks; wet = shine; red tip; dry = cracks), and every formula, pattern and
+Guide key-sign picture has an expand button in its top-left corner (`phPpXpHtml`) opening the one sheet at up to 1100px (`phKsSheetOpen` for signs).
 
 ## Guide — Families (study + edit)
 The Guide is **[Families] [Tongue map] [Pulse]**: a herb card is the body type with its formulas under it, notes-only formulas are dashed tiles, a
