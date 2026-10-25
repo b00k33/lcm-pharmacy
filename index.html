@@ -4112,6 +4112,19 @@
      phPinApptZones() (header + nav rows above, card/page padding + footer
      below); the fallback only matters for the first paint before it runs. */
   #pharmacyPage .ph-apptcal-body { max-height: calc(100dvh - var(--ph-apptcal-chrome, 300px)); min-height: 220px; overflow-y: auto; position: relative; }
+  /* whole day (her pick B, 2026-10-25, whole-day-mock-2026-10-25.html; see WHOLE DAY in the script): the grid runs from
+     her first item to her last at the clinic's own scale and scrolls inside itself; the hours outside the clinic sit on a
+     faint grey; "^ n" / "v n" at the top and bottom edges count the blocks out of view */
+  #pharmacyPage .ph-apptcal-body.wd > .ph-apptcal-gutter { display: flex; flex-direction: column; }
+  #pharmacyPage .ph-apptcal-wdm { position: sticky; top: 0; z-index: 40; height: 0; }
+  #pharmacyPage .ph-apptcal-wdm.dn { top: auto; bottom: 0; margin-top: auto; }
+  #pharmacyPage .ph-apptcal-wdm[hidden] { display: none; }
+  #pharmacyPage .ph-apptcal-wdm button { position: absolute; left: 6px; top: 6px; height: 26px; padding: 0 9px; display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--ph-line); border-radius: 6px; background: var(--ph-white); color: var(--ph-herb-deep); font: 700 var(--fs-12)/1 var(--font-body, inherit); font-variant-numeric: tabular-nums; white-space: nowrap; cursor: pointer; box-shadow: 0 2px 6px rgba(11,59,75,.12); }
+  #pharmacyPage .ph-apptcal-wdm.dn button { top: auto; bottom: 6px; }
+  #pharmacyPage .ph-apptcal-wdm button:hover { background: var(--ph-herb-tint); }
+  #pharmacyPage .ph-apptcal-wdm svg { width: 12px; height: 12px; }
+  #pharmacyPage .ph-apptcal-wdm:not(.dn) svg { transform: rotate(180deg); }
+  #pharmacyPage .ph-apptcal-off { position: absolute; left: 0; right: 0; background: var(--ph-cream, #EEF5F7); mix-blend-mode: multiply; pointer-events: none; z-index: 0; }
   /* her ask 2026-09-22 ("extend calendar to bottom of screen"): the body's
      own height is set inline to whatever the shown hour range actually
      needs (gridHeight, in phApptCalGridHtml) -- on a day whose blocks don't
@@ -34107,6 +34120,76 @@
     return Math.min(24 * 60, Math.max(phApptCalStart + 4 * 60, Math.ceil(latest / 30) * 30));
   }
   const phApptCalFits = () => window.innerWidth > 640 && phApptCalAvail > 120;
+  // ==== WHOLE DAY (her pick B, 2026-10-25: "improve the ui so i can view the whole calendar including morning hours out
+  // of clinic hours", mock whole-day-mock-2026-10-25.html) ====
+  // On a computer with her own things showing, the grid runs from her first timed item on the days shown (from the hour
+  // before it) to her last (an overnight one, Sleep, shows as it starts), at the clinic's own scale: the clinic's hours
+  // still fill the window, every hour is the same size (no long-day map), and the grid scrolls inside itself. It opens on
+  // the clinic's start (on now, when today is shown and now is outside the clinic's hours) and keeps her scroll, as a
+  // minute, through every repaint; a new set of days opens on the clinic again. The hours outside the clinic sit on a
+  // faint grey; "^ n" / "v n" at the top and bottom edges count the blocks out of view and a tap scrolls to them. Her
+  // things then sit at their own times, so the rows above and below keep only the untimed ones (birthdays, all-day).
+  // The phone keeps the rows above and below as before (its page scrolls, never the grid).
+  let phApptCalWd = null;   // this paint: { lo, hi } = the clinic's hours, + top (the opening scroll) and key; null = not whole day
+  let phApptCalWdKey = "", phApptCalWdAt = null;   // the days the opening scroll was made for; the minute at the top since
+  // { lo, hi } = the whole range; { vlo, vhi } = the clinic's hours (cLo, cHi) widened to any item of hers that runs over
+  // their edges: the window that fills the screen and that the grid opens on, so it never opens on half a block
+  function phApptCalWdSpan(days, cLo, cHi) {
+    let lo = Infinity, hi = -1, vlo = cLo, vhi = cHi;
+    days.forEach(d => phC22ItemsFor(d.key, true).forEach(it => {
+      if (it.s == null) return;
+      const e = it.el != null ? it.s + 30 : it.e;   // overnight: shown as it starts
+      if (it.s < lo) lo = it.s;
+      if (e > hi) hi = e;
+      if (it.s < cLo && e > cLo) vlo = Math.min(vlo, it.s);
+      if (it.s < cHi && e > cHi) vhi = Math.max(vhi, e);
+    }));
+    return hi < 0 ? null : { lo: Math.max(0, Math.floor((lo - 30) / 60) * 60), hi: Math.min(24 * 60, Math.ceil(hi / 30) * 30), vlo, vhi };
+  }
+  function phApptCalOffHtml() {
+    const w = phApptCalWd, a = phApptCalY(w.lo), z = phApptCalY(w.hi), h = phApptCalY(phApptCalEnd);
+    return (a > 0 ? `<div class="ph-apptcal-off" style="top:0;height:${a}px"></div>` : "") + (h > z ? `<div class="ph-apptcal-off" style="top:${z}px;height:${h - z}px"></div>` : "");
+  }
+  const phApptCalWdChip = dir => `<div class="ph-apptcal-wdm${dir === "dn" ? " dn" : ""}" hidden><button type="button" data-ph-apptcal-wd="${dir}"><svg aria-hidden="true" focusable="false"><use href="#i-chev-d"/></svg><span></span></button></div>`;
+  // counts the blocks (visits and hers) wholly above and below the view; each chip keeps where its farthest one is
+  function phApptCalWdMore(b) {
+    const t = b.scrollTop, h = b.clientHeight, up = [], dn = [];
+    b.querySelectorAll(".ph-apptcal-daycol > [data-ph-appt-pop], .ph-apptcal-daycol > [data-ph-oth], .ph-apptcal-daycol > .ph-c22-life").forEach(el => {
+      const y0 = el.offsetTop, y1 = y0 + el.offsetHeight;
+      if (y1 <= t + 2) up.push(y0); else if (y0 >= t + h - 2) dn.push(y1);
+    });
+    [["up", up], ["dn", dn]].forEach(([k, l]) => {
+      const m = b.querySelector(k === "dn" ? ".ph-apptcal-wdm.dn" : ".ph-apptcal-wdm:not(.dn)");
+      if (!m) return;
+      m.hidden = !l.length;
+      if (!l.length) return;
+      const lbl = `${l.length} ${k === "up" ? "earlier" : "later"}`, btn = m.firstElementChild;
+      btn.lastElementChild.textContent = l.length;
+      btn.title = lbl; btn.setAttribute("aria-label", lbl);
+      m.dataset.y = k === "up" ? Math.min(...l) : Math.max(...l);
+    });
+  }
+  function phApptCalWdGo(dir) {
+    const b = document.querySelector("#pharmacyPage .ph-apptcal-body.wd"), m = b && b.querySelector(dir === "dn" ? ".ph-apptcal-wdm.dn" : ".ph-apptcal-wdm:not(.dn)");
+    if (!m || m.hidden || m.dataset.y == null) return;
+    const y = +m.dataset.y, top = dir === "dn" ? y - b.clientHeight + 8 : y - 8;
+    b.scrollTo({ top: Math.max(0, top), behavior: phTpReduceMotion() ? "auto" : "smooth" });
+  }
+  // after every paint of the page: the opening scroll for a new set of days, else her own spot (as a minute, so a refit
+  // at a new scale keeps the same hour at the top)
+  function phApptCalWdSettle() {
+    const w = phApptCalWd, b = w && document.querySelector("#pharmacyPage .ph-apptcal-body.wd");
+    if (!b) return;
+    if (phApptCalWdKey !== w.key) { phApptCalWdKey = w.key; phApptCalWdAt = null; }
+    b.scrollTop = phApptCalWdAt == null ? w.top : phApptCalY(phApptCalWdAt);
+    phApptCalWdMore(b);
+  }
+  document.addEventListener("scroll", e => {
+    const b = e.target;
+    if (!b || !b.classList || !b.classList.contains("wd") || !b.classList.contains("ph-apptcal-body") || !b.isConnected) return;
+    phApptCalWdAt = phApptCalStart + b.scrollTop / phApptCalPxm;
+    phApptCalWdMore(b);
+  }, true);
   function phApptCalStartFor(days) {
     let earliest = Infinity;
     days.forEach(d => phApptCalDayBlocks(d.key).forEach(it => { if (it.start < earliest) earliest = it.start; }));
@@ -36246,7 +36329,7 @@
     renderPhAppointmentsPage();
     phPinApptZones();
     if (se) se.scrollTop = y;
-    const b1 = document.querySelector("#pharmacyPage .ph-apptcal-body"); if (b1) b1.scrollTop = by;
+    const b1 = document.querySelector("#pharmacyPage .ph-apptcal-body"); if (b1 && !b1.classList.contains("wd")) b1.scrollTop = by;   // a whole day keeps its own (phApptCalWdSettle)
   }
   // ==== DRAG (her picks 8-10 + 13, 2026-10-25, one-calendar-mock-2026-10-25.html) ====
   // A block lifts after 6px (a 450ms hold on a touch, so a swipe still scrolls the page), moves in 15-minute steps with a
@@ -38976,12 +39059,19 @@
     const n = days.length;
     const slide = phApptCalSlide; phApptCalSlide = 0;
     const lensAnim = phApptLensAnim; phApptLensAnim = false;
+    const wd0 = document.querySelector("#pharmacyPage .ph-apptcal-body.wd");   // WHOLE DAY: her spot on the grid being replaced, read at its own scale
+    if (wd0 && wd0.clientHeight) phApptCalWdAt = phApptCalStart + wd0.scrollTop / phApptCalPxm;
     phApptCalStart = phApptCalStartFor(days);
     phApptCalEnd = phApptCalEndFor(days);
     const room = phApptCalAvail || (window.innerWidth > 640 ? window.innerHeight - 190 : 0);   // first open: a guess the measure corrects
     phApptCalAvailUsed = window.innerWidth > 640 && room > 120 ? room : 0;   // the room this paint was drawn for (phPinApptZones redraws once if it changed)
-    phApptCalPxm = phApptCalAvailUsed ? Math.min(3, Math.max(34 / 60, (phApptCalAvailUsed - 2) / (phApptCalEnd - phApptCalStart))) : PH_APPTCAL_PX_PER_MIN;
-    phApptCalMap = phApptCalMapFor(days);   // null unless the days on screen are long (see PH_APPTCAL_LONG_MIN)
+    // whole day (her pick B, see WHOLE DAY): from her first item to her last at the clinic's scale, no long-day map
+    const wdSpan = phApptCalAvailUsed && phC22On() && phApptCalEnsureView() === "grid" ? phApptCalWdSpan(days, phApptCalStart, phApptCalEnd) : null;
+    phApptCalWd = wdSpan ? { lo: phApptCalStart, hi: phApptCalEnd, vlo: wdSpan.vlo } : null;
+    const span = wdSpan ? wdSpan.vhi - wdSpan.vlo : phApptCalEnd - phApptCalStart;
+    phApptCalPxm = phApptCalAvailUsed ? Math.min(3, Math.max(34 / 60, (phApptCalAvailUsed - 2) / span)) : PH_APPTCAL_PX_PER_MIN;
+    if (wdSpan) { phApptCalStart = Math.min(phApptCalStart, wdSpan.lo); phApptCalEnd = Math.max(phApptCalEnd, wdSpan.hi); }
+    phApptCalMap = phApptCalWd ? null : phApptCalMapFor(days);   // null unless the days on screen are long (see PH_APPTCAL_LONG_MIN)
     const hours = phApptCalHourLabels();
     const gridHeight = phApptCalMap ? phApptCalMap.total : (phApptCalEnd - phApptCalStart) * phApptCalPxm;
     // the hour rules are a repeating gradient from the grid's top; a half-hour top shifts them down to the real hour marks
@@ -39006,6 +39096,11 @@
     const rangeKey = days.map(d => d.key).join(",");
     const enter = phApptCalEnterKey !== rangeKey;
     phApptCalEnterKey = rangeKey;
+    if (phApptCalWd) {
+      const out = isCurrent && (nowMin < phApptCalWd.lo || nowMin > phApptCalWd.hi) && nowMin >= phApptCalStart && nowMin <= phApptCalEnd;
+      phApptCalWd.top = Math.max(0, Math.round(out ? phApptCalY(nowMin) - phApptCalAvailUsed / 3 : phApptCalY(phApptCalWd.vlo)));
+      phApptCalWd.key = rangeKey;
+    }
     // her C22 events (see "C22 ON THE APPOINTMENTS GRID"): laid out per day against the grid's own window --
     // the patients' hours -- so they never move where the grid starts
     const c22 = phC22On() && phApptCalEnsureView() === "grid";
@@ -39022,7 +39117,7 @@
       c22Fold.before.push(lay ? { k: d.key, items: lay.before, rt: phC22RtCount(d.key), unf: phC22Unf.has(d.key) } : null);
       c22Fold.after.push(lay ? { k: d.key, items: lay.after } : null);
       return `<div class="ph-apptcal-daycol${d.today ? " today" : ""}"${c22 ? phTripDayAttr(d.key) : ""}>
-        ${phApptCalRulesHtml(di === 0)}${c22 ? phTripTzHtml(d.key) : ""}
+        ${phApptCalRulesHtml(di === 0)}${phApptCalWd ? phApptCalOffHtml() : ""}${c22 ? phTripTzHtml(d.key) : ""}
         ${blocks.map((it, i) => it.a.oth ? phOthBlockHtml(it, i, enter, di) : phApptCalBlockHtml(it, i, enter, di)).join("")}
         ${lay ? lay.grid.map((it, i) => phC22LifeHtml(d.key, it, c22Lo, c22Hi, i, c22Dim)).join("") : ""}
         ${d.today ? phFastBarHtml(d.key, c22Lo, c22Hi) : ""}
@@ -39055,8 +39150,8 @@
         </div>
         ${c22 ? phTripRowHtml(days, colsTemplate, c22Dim) : ""}
         ${c22 ? phC22FoldRowHtml("before", c22Fold.before, colsTemplate, c22Dim) : ""}
-        <div class="ph-apptcal-body" style="height:${gridHeight}px;grid-template-columns:${colsTemplate}">
-          <div class="ph-apptcal-gutter">${hours.map(h => `<div class="ph-apptcal-hour" style="top:${phApptCalY(h.min)}px">${h.label}</div>`).join("")}${nowLbl}</div>
+        <div class="ph-apptcal-body${phApptCalWd ? " wd" : ""}" style="height:${gridHeight}px;grid-template-columns:${colsTemplate}${phApptCalWd ? `;grid-template-rows:minmax(${gridHeight}px, auto)` : ""}">
+          <div class="ph-apptcal-gutter">${phApptCalWd ? phApptCalWdChip("up") : ""}${hours.map(h => `<div class="ph-apptcal-hour" style="top:${phApptCalY(h.min)}px">${h.label}</div>`).join("")}${nowLbl}${phApptCalWd ? phApptCalWdChip("dn") : ""}</div>
           <div class="ph-apptcal-grid${phApptCalLens !== "all" && !phApptCalQ.trim() ? " lensing" : ""}" style="grid-template-columns:repeat(${n}, minmax(0, 1fr));--ph-hr-off:${hourRuleOffset}px;--ph-hh:${(60 * phApptCalPxm).toFixed(2)}px">${dayCols}</div>
         </div>
         ${c22 ? phC22FoldRowHtml("after", c22Fold.after, colsTemplate, c22Dim) : ""}
@@ -39095,6 +39190,7 @@
     headWrap.innerHTML = phShellHead("Appointments", `${n} booked ahead`, "");
     const link = phApptDeepLinkBefore();   // C22's "Open in LCM": that day, that booking
     bodyWrap.innerHTML = phApptCalGridHtml();
+    phApptCalWdSettle();   // WHOLE DAY: the opening scroll, or her own spot
     // desktop shows the booking in the Up next card beside the grid; a narrower screen opens its card
     if (link && link.open && window.innerWidth <= 900) setTimeout(() => phApptPopOpen(link.open), 0);
     phLcmDigestSoon();
@@ -42472,6 +42568,8 @@
       const mePeriod = e.target.closest("[data-ph-me-period]");
       if (mePeriod) { phMePeriodLog(mePeriod.dataset.phMePeriod); return; }
       if (e.target.closest("[data-ph-me-cycle]")) { phMeCycleOpen(); return; }
+      const wdGo = e.target.closest("[data-ph-apptcal-wd]");
+      if (wdGo) { phApptCalWdGo(wdGo.dataset.phApptcalWd); return; }
       const c22More = e.target.closest("[data-ph-c22-more]");
       if (c22More) { const s = c22More.dataset.phC22More; phC22FoldOpen[s] = !phC22FoldOpen[s]; phApptCalRepaintKeep(); return; }
       const c22Open = e.target.closest("[data-ph-c22-open]");
