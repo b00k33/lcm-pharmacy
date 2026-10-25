@@ -1031,7 +1031,9 @@ focus / goal for 14 days, keyed by a hash of the login; local only, never synced
 `clearLocalData`, skipped while `lcm-data-owner` is empty) and reads C22's `book33-cal-digest`. Her C22
 events draw in a quiet tint (pale group colour, dashed edge, the group glyph `i-c22-*`); outside the
 patients' hours they fold to 22px chips in a row above / below the grid (two at most, then "+N"); an event
-that meets a booking takes the right 26% lane and that booking's cluster narrows to 74%; C22's Clinic block
+that meets a booking takes the right 26% lane and that booking's cluster narrows to 74%; items that would split
+the lane (2+ beside a booking, 4+ on an open day) share one stack (the count + each one's glyph), its card a row
+each that opens that item's own card (`phC22StkHtml` / `phC22StkPopHtml`, "stk:" ids); C22's Clinic block
 is left out on a day this login has bookings; a birthday is a cake on the day header; a tap opens a small
 card with "Open in C22" (`?nday=`). A Sunday she does not work returns to the
 7-day view while it has a one-off of hers (not on a login with fewer than 5 work days). C22's "Open in LCM"
