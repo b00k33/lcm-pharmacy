@@ -15065,6 +15065,12 @@
   #pharmacyPage .ph-pulse-priorkey .n { color: var(--ph-good); }
   #pharmacyPage .ph-pulse-priorkey .t { color: var(--ph-blue); }
   #pharmacyPage .ph-pulse-priorkey .p { color: var(--ph-faint); }
+  /* her 2026-10-26 pick A: Normal and the last visit's date in the key are chips; off = faded and crossed out */
+  #pharmacyPage .ph-pulse-priorkey .ph-pulse-lay { height: 32px; padding: 0 10px 0 6px; border: 1px solid var(--ph-line); border-radius: 6px; background: var(--ph-white); color: var(--ph-soft); font: 500 var(--fs-12) var(--font-body, inherit); display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: opacity .2s; }
+  #pharmacyPage .ph-pulse-priorkey .ph-pulse-lay.on { background: var(--ph-herb-tint); border-color: var(--ph-herb); color: var(--ph-ink); }
+  #pharmacyPage .ph-pulse-priorkey .ph-pulse-lay:not(.on) { opacity: .55; }
+  #pharmacyPage .ph-pulse-priorkey .ph-pulse-lay:not(.on) .lbl { text-decoration: line-through; }
+  #pharmacyPage .ph-pulse-priorkey .ph-pulse-lay:focus-visible { outline: 2px solid var(--ph-herb); outline-offset: 1px; }
   /* ==== the Pulse page (her 2026-10-24 picks, mock pulse-page-mock-2026-10-24.html): the quality tabs + one chip row stay in view, the
      legend line carries ▶ In action (the beat drawn over the chart, phPaOverHtml; the chart's own today drawing steps aside while it
      runs), one tab under the chart, and a box's own popup beside the box ==== */
@@ -47648,6 +47654,8 @@
         else PH_PA.play = PH_PA.play === false;
         renderHxScreen(); return;
       }
+      const plsLay = e.target.closest("[data-pulse-lay]");   // the key's Normal / last-visit chips (her 2026-10-26)
+      if (plsLay) { const k = plsLay.dataset.pulseLay; phPulseLayerSet(k, !phPulseLayer(k)); renderHxScreen(); return; }
       if (e.target.closest("[data-pls-popx]")) { phPulsePopClose(); return; }
       // a quality in a box's popup: that box only, the same toggle as painting it
       const plsPq = e.target.closest("[data-pls-pq], [data-pls-popclear]");
@@ -69180,6 +69188,13 @@ or changing anything in Cliniko.
     const tail = rate == null ? "" : ` · today's resting rate is ${rate} — ${rate > ceiling ? "above" : "within"} the typical range`;
     return `${head} (Bilton SHPD syllabus, Dr Shen) · over 90 reads as rapid${tail}.`;
   }
+  // the chart's Normal ("n") and last-visit ("p") lines, shown unless switched off; this device only ("lcm-pulse-layers")
+  function phPulseLayer(k) { try { const v = JSON.parse(localStorage.getItem("lcm-pulse-layers") || "{}"); return !(v && v[k] === 0); } catch (e) { return true; } }
+  function phPulseLayerSet(k, on) {
+    let v = {}; try { v = JSON.parse(localStorage.getItem("lcm-pulse-layers") || "{}") || {}; } catch (e) {}
+    if (on) delete v[k]; else v[k] = 0;
+    try { localStorage.setItem("lcm-pulse-layers", JSON.stringify(v)); } catch (e) {}
+  }
   function phHxConstitPulseHtml(rec, name) {
     // a chart last written on an earlier day shows BLANK for today's exam, with last time in grey in its cells (read side only:
     // nothing is written until the first tap, which moves it aside -- phHxConstitPulse). A chart written today shows as is, with
@@ -69189,11 +69204,15 @@ or changing anything in Cliniko.
     const marks = p.pulse || {}, refs = p.pulseRef || [];
     // the legend for the chart's three inks (her pick 2026-10-21): normal green, today blue, last visit grey
     const keySw = cls => `<span class="${cls}">${phPulseShapeSvg("normal")}</span>`;
-    const priorKey = `<div class="ph-pulse-priorkey"><span>${keySw("n")}Normal</span><span>${keySw("t")}Today</span>${prior ? `<span>${keySw("p")}${esc(phCycShortLbl(prior.date))}</span>` : ""}</div>`;
+    // her 2026-10-26 pick A (pulse-layers-toggle-mock-2026-10-26.html): the key is the switch: Normal and the last visit's date are
+    // chips, a tap hides / shows that line on every chart, remembered on this device (phPulseLayer); today's blue always shows
+    const showN = phPulseLayer("n"), showP = !!prior && phPulseLayer("p");
+    const layBtn = (k, lbl, on) => `<button type="button" class="ph-pulse-lay${on ? " on" : ""}" data-pulse-lay="${k}" aria-pressed="${on}" title="${on ? "Hide" : "Show"} ${esc(lbl)}">${keySw(k)}<span class="lbl">${esc(lbl)}</span></button>`;
+    const priorKey = `<div class="ph-pulse-priorkey">${layBtn("n", "Normal", showN)}<span>${keySw("t")}Today</span>${prior ? layBtn("p", phCycShortLbl(prior.date), showP) : ""}</div>`;
     // her 2026-10-22 ("sync chart to chips to auto select"): Deep and Floating light up by themselves from where she draws (phPulseAutoDepth)
     const autoD = phPulseAutoDepth(marks), autoOn = { Deep: autoD.deep.length, Floating: autoD.floating.length };
     const kb = phVisitPulseKbHits(p);
-    const tplOn = true;   // the normal pulse is always drawn (her 2026-10-21); the old "Normal pulse template" toggle is gone
+    const tplOn = showN;   // the normal pulse: drawn unless she switched it off in the key (her 2026-10-26)
     // her 2026-10-24 Pulse page (mock pulse-page-mock-2026-10-24.html, her 8 picks): the four quality groups are one tab bar (the
     // Tongue page's), only the open group's chips show; the bar stays in view. A picked quality stays picked until tapped off; with
     // none picked, a box opens its own qualities beside it (phPulsePopHtml). The chart moves itself ("▶ In action": the beat drawn
@@ -69237,8 +69256,8 @@ or changing anything in Cliniko.
         ${tool}
         <div class="ph-pls-legend">${priorKey}${motion}</div>
         <div class="ph-pulse-halves${play ? " pa-on" : ""}">
-          ${phVisitPulseHalfHtml("R", marks, prior && prior.marks, refs, "data-constit-pulse-cell", "data-constit-pulse-ref", tplOn, over("R"))}
-          ${phVisitPulseHalfHtml("L", marks, prior && prior.marks, refs, "data-constit-pulse-cell", "data-constit-pulse-ref", tplOn, over("L"))}
+          ${phVisitPulseHalfHtml("R", marks, showP ? prior.marks : null, refs, "data-constit-pulse-cell", "data-constit-pulse-ref", tplOn, over("R"))}
+          ${phVisitPulseHalfHtml("L", marks, showP ? prior.marks : null, refs, "data-constit-pulse-cell", "data-constit-pulse-ref", tplOn, over("L"))}
         </div>
         <div class="ph-pls-below">${belowTabs}<div class="ph-pls-panel" role="tabpanel">${panel}</div></div>
         ${phPulsePopHtml(marks)}
