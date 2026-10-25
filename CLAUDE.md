@@ -1455,6 +1455,9 @@ ONE mechanism each, wired into every surface that shows a photo tile.
 The photo sheet has a Date field (today by default, never later): every photo on it saves under the date picked [Photo sheet: the date can be changed before saving]. **Never delete a photo** (her hard rule); the store asks the browser to keep
 it (`phStoragePersist`), and backups carry photos.
 
+## Fasting (her own clock)
+Since 2026-10-25 (her 8 picks, mock `fasting-mock-2026-10-25.html`, BUILD-NOTES "Fasting: her own clock"): C22's fasting clock lives in LCM, only for her. Its data is in her Me row (`d.fasts`, merged entry by entry; no `e` = running; `fastGoal`), so both logins show it. A Fasting step on the record she names in My profile (ring, goal bar, Stop + Undo, Continue last fast, last 14 / 30 / 90 days by cycle phase, history), a line in the Me drawer, a toolbar chip on the Appointments page (computer only) and the fast drawn down today's column (solid to now, pale to the goal, a flag at the goal; a visit over it sits 10px in); the ⋯ menu has Fasting. C22's fasts come in once (Bring in). No cheer lines, no cycle advice.
+
 ## Communications / messaging
 Tone and voice: code3 above. **One composer** on the patient's Messages page
 (a bubble + slim band, synced to the plan, its phase and her Fang Bing Ren
