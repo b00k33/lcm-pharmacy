@@ -2690,6 +2690,7 @@ Her synth22 after the Me build went live: "as the only person that uses lcm, i w
 - **Not tested:** the `profile` field syncing between the two logins through the cloud row; the Key2's 360 × 469; a real finger's long-press (synthetic pointer events only); her real C22-brought routines; a Cliniko re-check after a patient drop (Save is the existing Edit's).
 - **Harness note:** headless Edge lays the page out at one viewport and captures at another, so a window-fitted grid looks fitted to the wrong room in a plain `--screenshot`; shoot inside a same-origin iframe of the wanted size (`scratchpad fr.html?w=&h=`).
 - **Docs:** CLAUDE.md "Appointments & calendar" (the C22 paragraph's lane / cake lines, the Me paragraph, a new "One calendar, work + life" paragraph).
+- **LIVE:** build 20261025-105600 (her "push live"; commits 982b1cda + 48c6c960 rode in the fasting session's publish c123eb31).
 
 ## Fasting: her own clock (2026-10-25)
 Her ask: "i want to include a fasting clock for me to track - make a mock for a fasting page for my profile linh quach and show the clock on my calendar view", then "use cd22 to help with this" (C22's fasting feature is the model). Mock `fasting-mock-2026-10-25.html` (artifact Uq8b4LshaX1gpjDUgeKNnY); her 8 picks; "build it".
