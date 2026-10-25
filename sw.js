@@ -81,12 +81,17 @@ self.addEventListener("fetch", function (e) {
   var req = e.request;
   if (req.method !== "GET") return;
   if (isSupabase(req.url)) return;
+  // The page's update check (phUpdateCheck, "?probe=1") goes straight to the
+  // network the browser's own way: never answered from this cache, never
+  // stored in it. The cache-first branch below used to keep a 7-10 MB copy
+  // of the page for every check (found 2026-10-26).
+  if (/[?&]probe=/.test(req.url)) return;
 
   // Navigations (the app HTML itself): network-first, always -- an update
   // must be visible the moment it's live, never masked by a stale cached
   // copy while online. Cache is a pure offline fallback, refreshed
   // opportunistically whenever the network does succeed.
-  // cache:"no-store" is required here, not optional -- plain fetch(req) is
+  // The cache mode is required here, not optional -- plain fetch(req) is
   // still subject to the BROWSER's ordinary HTTP cache (GitHub Pages serves
   // this file with Cache-Control: max-age=600), so "network-first" alone
   // could still silently hand back a same-origin disk-cached response up to
@@ -94,14 +99,23 @@ self.addEventListener("fetch", function (e) {
   // live (2026-08-19): a real fix was deployed and confirmed on the server,
   // but a plain reload kept showing the old, broken page for several
   // minutes because of exactly this gap.
+  // "no-cache", not "no-store" (2026-10-26): both ask the server every time,
+  // but "no-store" also threw the answer away, so every open downloaded the
+  // whole 1.8 MB page; "no-cache" lets an unchanged page come back as a 304
+  // with no body (checked on GitHub Pages: ETag + 304).
+  // Each page is kept under its own key: the app (any query) as "./", others
+  // (chart.html, intake.html) as their own path, so opening one of them can
+  // no longer overwrite the app's offline copy.
   if (req.mode === "navigate") {
-    var freshReq = new Request(req, { cache: "no-store" });
+    var navPath = new URL(req.url).pathname;
+    var navKey = /\/(index\.html)?$/.test(navPath) ? "./" : navPath;
+    var freshReq = new Request(req, { cache: "no-cache" });
     e.respondWith(
       timeoutFetch(freshReq, NAV_TIMEOUT_MS).then(function (res) {
         // clone BEFORE returning: once the response is handed to the browser
         // its body is used up, and a clone taken later throws
         var copy = res.clone();
-        caches.open(CACHE_VERSION).then(function (c) { c.put("./", copy); });
+        caches.open(CACHE_VERSION).then(function (c) { c.put(navKey, copy); });
         return res;
       }).catch(function () {
         // She is being served the OLD copy for this one open. Keep pulling the
@@ -112,9 +126,9 @@ self.addEventListener("fetch", function (e) {
         // exactly how her Key2 got stuck (see NAV_TIMEOUT_MS above).
         try {
           e.waitUntil(
-            fetch(new Request(req, { cache: "no-store" })).then(function (res) {
+            fetch(new Request(req, { cache: "no-cache" })).then(function (res) {
               if (res && res.ok) {
-                return caches.open(CACHE_VERSION).then(function (c) { return c.put("./", res.clone()); });
+                return caches.open(CACHE_VERSION).then(function (c) { return c.put(navKey, res.clone()); });
               }
             }).catch(function () {})
           );

@@ -122969,14 +122969,49 @@ Dosage: {dosage}
     if (!el) return;
     el.textContent = phVersionLineText();
   }
-  // Background detection. Fetches this same page bypassing cache and compares
-  // build stamps. It NEVER reloads, never applies anything -- it only unhides
-  // the button. Silent no-op offline, on file://, or on any fetch failure.
+  // Background detection. Asks the server whether this page changed and
+  // compares build stamps. It NEVER reloads, never applies anything -- it only
+  // unhides the button. Silent no-op offline, on file://, or on any fetch failure.
+  //
+  // Light on purpose (2026-10-26, her "look at what makes LCM heavy"). It used
+  // to fetch the whole page (1.8 MB) at a new "?probe=<time>" address with
+  // cache:"no-store" 20 s after opening, every 5 minutes and on every return
+  // to the tab, and the service worker's cache-first branch kept every one of
+  // those copies (7-10 MB each) until the next Update. Now: ONE fixed address
+  // with cache:"no-cache", so the browser asks "changed since?" and an
+  // unchanged build answers 304 with no body; only the page's head is read;
+  // and stored probe copies are swept out of LCM's own caches before and
+  // after, so an older service worker (cache-first, until the gold Update
+  // activates the new one) can neither answer from its cache nor pile them up.
+  const PH_PROBE_URL = location.pathname + "?probe=1";
+  function phProbeSweep() {
+    if (!window.caches) return Promise.resolve();
+    return caches.keys()
+      .then(keys => Promise.all(keys.filter(k => k.indexOf("lcm-") === 0).map(k => caches.open(k)
+        .then(c => c.keys().then(reqs => Promise.all(reqs.filter(q => /[?&]probe=/.test(q.url)).map(q => c.delete(q))))))))
+      .catch(() => {});
+  }
+  // the stamp sits in the first few hundred bytes: read until it shows, then stop
+  function phProbeHead(r) {
+    if (!r.body || !r.body.getReader) return r.text();
+    const rd = r.body.getReader(), dec = new TextDecoder();
+    let text = "";
+    const pump = () => rd.read().then(({ done, value }) => {
+      if (value) text += dec.decode(value, { stream: true });
+      if (done || /<meta name="lcm-build" content="[^"]+">/.test(text) || text.length > 65536) {
+        if (!done) rd.cancel().catch(() => {});
+        return text;
+      }
+      return pump();
+    });
+    return pump();
+  }
   function phUpdateCheck() {
     if (!/^https?:$/.test(location.protocol)) return;
     if (phNewBuild) return;                     // already offered; don't nag again
-    fetch(location.pathname + "?probe=" + Date.now(), { cache: "no-store" })
-      .then(r => (r.ok ? r.text() : Promise.reject(new Error(r.status))))
+    phProbeSweep()
+      .then(() => fetch(PH_PROBE_URL, { cache: "no-cache" }))
+      .then(r => (r.ok ? phProbeHead(r) : Promise.reject(new Error(r.status))))
       .then(text => {
         const m = text.match(/<meta name="lcm-build" content="([^"]+)">/);
         if (!m || !m[1] || m[1] === PH_BUILD) return;
@@ -122986,7 +123021,8 @@ Dosage: {dosage}
         const btn = document.getElementById("phUpdateBtn");
         if (btn) btn.hidden = false;
       })
-      .catch(() => {});
+      .catch(() => {})
+      .then(phProbeSweep);
   }
 
   /* ---- the update itself: four steps, in her exact order, each one visible,
