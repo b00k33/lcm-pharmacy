@@ -522,6 +522,9 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   clinic is saved on THIS login's own row (`PHARMACY.apptHandoff`); the other
   login takes it into its OWN row when it reads this one (`phOthTake`). Each
   login still writes only its own row: keep it that way.
+  **Her own things are shared on purpose (Me, 2026-10-25):** `public.lcm_me` is ONE row both logins read
+  and write (her events, routines, birthdays, to-dos; never herbs, patients or money), gated by
+  `window.__lcmOwnerOk` and RLS on the two addresses. Never put pharmacy data in it.
 - **The Prescriptions search MUST always filter the list live as typed**, by
   patient name (and herb/notes). This has broken before. After ANY change,
   type a known patient name, confirm the list narrows to matches, clear it,
@@ -1030,10 +1033,25 @@ events draw in a quiet tint (pale group colour, dashed edge, the group glyph `i-
 patients' hours they fold to 22px chips in a row above / below the grid (two at most, then "+N"); an event
 that meets a booking takes the right 26% lane and that booking's cluster narrows to 74%; C22's Clinic block
 is left out on a day this login has bookings; a birthday is a cake on the day header; a tap opens a small
-card with "Open in C22" (`?nday=`). The **Me** chip (Grid only, shown once C22 has written its digest)
-turns the layer off, remembered on this device (`lcm-me-layer`). A Sunday she does not work returns to the
-7-day view while it has C22 events (not on a login with fewer than 5 work days). C22's "Open in LCM" lands
-as `?appt=&d=` (`phApptDeepLinkBefore`). Code: "C22 ON THE APPOINTMENTS GRID".
+card with "Open in C22" (`?nday=`). A Sunday she does not work returns to the
+7-day view while it has a one-off of hers (not on a login with fewer than 5 work days). C22's "Open in LCM"
+lands as `?appt=&d=` (`phApptDeepLinkBefore`). Code: "C22 ON THE APPOINTMENTS GRID".
+
+**Me: her own things live here** (her picks 2026-10-25, "i dont use c22. i use lcm calendar the most. i want
+things to be in one place"; mock `one-place-mock-2026-10-25.html`, BUILD-NOTES "Me: her own things live in
+LCM"). Her events, routines, birthdays and to-dos are LCM's own, in `lcm-me` (NOT daybook-prefixed: both
+logins show it, it survives a location switch) and ONE cloud row `public.lcm_me` id `linh`
+(`supabase/me_setup.sql`; RLS = the two login addresses in `members`), merged entry by entry (`up` stamps,
+`del` tombstones, `rev` for crossed writes; every write waits on `window.__lcmOwnerOk`). "Bring in" in the Me
+drawer copies C22 once (C22's keys only READ; C22 is then set aside: its digest stops drawing here). The grid
+shows **Events** by default: one-offs and cakes; routines fold to a ⟳ n chip per day (tap = that day's
+routines); Off · Events · All in the drawer (`lcm-me-layer` 0 / 1 / 2). The **Me** chip (Grid and List)
+opens the Me drawer (non-modal, right side under the title bar; a bottom sheet on a phone): the level bar,
+Bring in, to-dos (type + Enter, tick = done with Undo) and the next 14 days of birthdays. Her item's card =
+Done · Edit; a cake = the birthday card. **+ then Patient | Me:** the Appointments dialog's title bar
+switches to the Me pane (Event · To-do · Birthday, This day | Every day on a repeating thing, colours = her
+C22 Modes then C22's groups, "Coming up" beside it); every save and delete has Undo in the one toast. Code:
+"ME · HER OWN THINGS LIVE IN LCM".
 
 **Both clinics on one calendar** (her 8 picks + the Friday hand-off, 2026-10-25; mock
 `both-clinics-mock-2026-10-25.html`, BUILD-NOTES "Both clinics on one calendar"). Each login keeps its own
