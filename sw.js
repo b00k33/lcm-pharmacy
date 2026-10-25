@@ -28,7 +28,9 @@ self.addEventListener("install", function (e) {
 self.addEventListener("activate", function (e) {
   e.waitUntil(
     caches.keys().then(function (keys) {
-      var olds = keys.filter(function (k) { return k !== CACHE_VERSION; });
+      // Only LCM's own old caches ("lcm-..."): every app on b00k33.github.io shares one Cache Storage,
+      // and sweeping all of it wiped C22's "b33-" and C7's "c7-" caches (found 2026-10-25).
+      var olds = keys.filter(function (k) { return k.indexOf("lcm-") === 0 && k !== CACHE_VERSION; });
       return Promise.all(olds.map(function (name) { return caches.delete(name); }));
     }).then(function () { return self.clients.claim(); })
   );
