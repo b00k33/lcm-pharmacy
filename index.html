@@ -36501,20 +36501,42 @@
   }
   // [["meals", key], ["shop", id]] -> those entries as they are now (null = not there yet)
   const phMealSnap = keys => keys.map(([c, id]) => [c, id, JSON.parse(JSON.stringify((phMeD()[c] || {})[id] || null))]);
-  function phMealRestore(snap) { phMealSave((d, now) => snap.forEach(([c, id, prev]) => { d[c][id] = Object.assign({}, prev || { id, del: 1 }, { up: now }); })); }
+  function phMealRestore(snap) {
+    if (phMealSave((d, now) => snap.forEach(([c, id, prev]) => { (d[c] = d[c] || {})[id] = Object.assign({}, prev || { id, del: 1 }, { up: now }); })) && snap.some(([c]) => c === "fasts")) phMealFastPaint();
+  }
   // one meal entry, changed in place (made when it is not there)
   function phMealPut(d, key, now, fn) {
     const e = Object.assign({ id: key }, d.meals[key] && !d.meals[key].del ? d.meals[key] : {});
     fn(e); e.up = now; delete e.del;
     d.meals[key] = e;
   }
-  function phMealHadSet(dayKey, sl, v) {
-    const key = dayKey + "|" + sl, at = Date.now(), ate = typeof v === "string" ? v : phMealPlan(dayKey, sl).v;
-    phMealPop = key; phDietFresh = key;
-    return phMealSave((d, now) => phMealPut(d, key, now, e => { e.had = { at }; if (typeof v === "string") e.had.v = v; }),
-      `✓ ${phMealWord(sl)} · ${phMealName(ate) || "had it"}`, [["meals", key]]);
+  // her pick (2026-10-25): Had it on today's Breakfast ends the fast that is running, in the same save, at the same
+  // moment (FASTING · HER OWN CLOCK); its Undo, or unticking that Breakfast, sets the fast running again
+  const phMealFastOf = (dayKey, sl, ate) => sl === "b" && ate !== "skip" && dayKey === keyOf(new Date()) && phFastOn() ? phFastActive() : null;
+  function phMealFastPaint() {
+    if (document.querySelector("#pharmacyPage [data-fast-host]")) { if (!presAssessTabRefresh()) renderPresPanel(); }
+    try { presFlowRailRefresh(); } catch (e) { /* the rail repaints on the next render */ }
   }
-  const phMealHadClear = (dayKey, sl) => phMealSave((d, now) => phMealPut(d, dayKey + "|" + sl, now, e => { delete e.had; }));
+  function phMealHadSet(dayKey, sl, v) {
+    const key = dayKey + "|" + sl, at = Date.now(), ate = typeof v === "string" ? v : phMealPlan(dayKey, sl).v, fast = phMealFastOf(dayKey, sl, ate);
+    phMealPop = key; phDietFresh = key;
+    const ok = phMealSave((d, now) => {
+      phMealPut(d, key, now, e => { e.had = { at }; if (typeof v === "string") e.had.v = v; });
+      if (fast) phFastPut(d, Object.assign(phFastNoEnd(fast), { e: new Date(at).toISOString() }), now);
+    }, `✓ ${phMealWord(sl)} · ${phMealName(ate) || "had it"}${fast ? ` · fast ${phFastHrs((at - Date.parse(fast.s)) / PH_FAST_H)}` : ""}`, [["meals", key]].concat(fast ? [["fasts", fast.id]] : []));
+    if (ok && fast) phMealFastPaint();
+    return ok;
+  }
+  function phMealHadClear(dayKey, sl) {
+    const had = phMealHad(dayKey, sl), end = had && sl === "b" ? new Date(had.at).toISOString() : "";
+    const fast = end && phFastOn() && !phFastActive() ? phFastDone().find(f => f.e === end) || null : null;   // the fast this Breakfast ended
+    const ok = phMealSave((d, now) => {
+      phMealPut(d, dayKey + "|" + sl, now, e => { delete e.had; });
+      if (fast) phFastPut(d, phFastNoEnd(fast), now);
+    });
+    if (ok && fast) phMealFastPaint();
+    return ok;
+  }
   // a meal planned: "all" = her usual one for that meal (the day's own value goes, so the day follows it) · "day" = that day only
   function phMealPlanSet(dayKey, sl, v, scope) {
     const key = dayKey + "|" + sl, def = "def|" + sl, nm = phMealName(v) || "nothing planned";
