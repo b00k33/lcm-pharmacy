@@ -1049,7 +1049,9 @@ drawer copies C22 once (C22's keys only READ; C22 is then set aside: its digest 
 shows **Events** by default: one-offs and cakes; routines fold to a ⟳ n chip per day (tap = that day's
 routines); Off · Events · All in the drawer (`lcm-me-layer` 0 / 1 / 2). The **Me** chip (Grid and List)
 opens the Me drawer (non-modal, right side under the title bar; a bottom sheet on a phone): the level bar,
-Bring in, to-dos (type + Enter, tick = done with Undo) and the next 14 days of birthdays. Her item's card =
+Bring in, to-dos (type + Enter, tick = done with Undo), the next 14 days of birthdays, and her **Routines**
+(today's first, then by time; 5 then "All N ▾"; a row opens the whole routine in Edit, `rt:<id>`, with no
+This day | Every day). Her item's card =
 Done · Edit; a cake = the birthday card. **+ then Patient | Me:** the Appointments dialog's title bar
 switches to the Me pane (Event · To-do · Birthday, This day | Every day on a repeating thing, colours = her
 C22 Modes then C22's groups, "Coming up" beside it); every save and delete has Undo in the one toast. Code:

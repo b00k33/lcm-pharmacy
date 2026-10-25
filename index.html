@@ -4325,6 +4325,10 @@
   #pharmacyPage .ph-me-x:hover { background: var(--ph-white); color: var(--ph-ink); }
   #pharmacyPage .ph-me-x svg { width: 14px; height: 14px; }
   #pharmacyPage .ph-me-bd { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 12px 16px 24px; display: grid; gap: 16px; align-content: start; }
+  /* once the drawer scrolls: its scrollbar takes 15px, so the sections shrink instead of pushing out sideways, and the
+     Off · Events · All bar (overflow hidden for its corners) keeps its height instead of folding to nothing */
+  #pharmacyPage .ph-me-bd > * { min-width: 0; }
+  #pharmacyPage .ph-me-bd > .ph-me-lv { min-height: 34px; box-sizing: border-box; }
   #pharmacyPage .ph-me-lv, #pharmacyPage #phApptModal .ap-bar { display: inline-flex; justify-self: start; align-self: flex-start; max-width: 100%; border: 1px solid var(--ph-line); border-radius: 6px; overflow: hidden; background: var(--ph-white); }
   #pharmacyPage .ph-me-lv button, #pharmacyPage #phApptModal .ap-bar button { height: 32px; min-height: 0; margin: 0; padding: 0 12px; display: inline-flex; align-items: center; gap: 5px; border: 0; border-radius: 0; background: none; color: var(--ph-soft); font: 600 var(--fs-13)/1 var(--font-body); white-space: nowrap; cursor: pointer; transition: background .18s ease, color .18s ease; }
   #pharmacyPage .ph-me-lv button + button, #pharmacyPage #phApptModal .ap-bar button + button { border-left: 1px solid var(--ph-line); }
@@ -4356,6 +4360,8 @@
   #pharmacyPage span.ph-me-txt { cursor: inherit; }
   #pharmacyPage .ph-me-when { flex: none; font: 600 var(--fs-11)/1 var(--font-disp, inherit); color: var(--ph-soft); font-variant-numeric: tabular-nums; }
   #pharmacyPage .ph-me-bdrow .ph-me-ic { color: color-mix(in srgb, var(--c22-g-together) 80%, #000); }
+  /* a routine's row: its mark, the title, its rule in soft text, the start time */
+  #pharmacyPage .ph-me-rtrow .ph-me-txt em { margin-left: 6px; font-style: normal; color: var(--ph-soft); }
   #pharmacyPage .ph-me-more { justify-self: start; height: 32px; min-height: 0; margin: 4px 0 0; padding: 0 12px; border: 1px solid var(--ph-line); border-radius: 6px; background: var(--ph-white); color: var(--ph-herb-deep); font: 600 var(--fs-13)/1 var(--font-body); cursor: pointer; }
   #pharmacyPage .ph-me-more:hover { border-color: var(--ph-herb); }
   #pharmacyPage .ph-me-empty { display: flex; align-items: center; gap: 8px; font-size: var(--fs-13); color: var(--ph-soft); }
@@ -35551,7 +35557,7 @@
     phMeRepaint(true);
   }
   // ---- the Me drawer: Off · Events · All, the one-time Bring in, to-dos, birthdays ----
-  let phMeDrwOpen = false, phMeTdAll = false, phMeBdAll = false, phMeBringRes = null;
+  let phMeDrwOpen = false, phMeTdAll = false, phMeBdAll = false, phMeRtAll = false, phMeBringRes = null;
   function phMeDrwEl() {
     let el = document.getElementById("phMeDrw");
     if (!el) {
@@ -35609,6 +35615,11 @@
     const tdShown = phMeTdAll ? todos : todos.slice(0, 5);
     const ahead = phMeBdaysAhead(), soonTo = keyOf(new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() + 13));
     const soon = ahead.filter(b => b.k <= soonTo), bdShown = phMeBdAll ? ahead : soon;
+    // her routines (anything that repeats and has not ended): today's first, then by start time; a row opens it in Edit
+    const tk = keyOf(TODAY), rts = ok ? phMeLive(phMeD().items).filter(it => it.rep && !(it.rep.until && it.rep.until < tk))
+      .map(it => ({ it, s: phC22Min(it.s), on: phMeOccurs(it, tk) ? 1 : 0 }))
+      .sort((a, b) => (b.on - a.on) || ((a.s == null ? -1 : a.s) - (b.s == null ? -1 : b.s)) || String(a.it.t).localeCompare(String(b.it.t))) : [];
+    const rtShown = phMeRtAll ? rts : rts.slice(0, 5);
     const lvBar = [["off", "Off", ""], ["ev", "Events", "c22-cal"], ["all", "All", "refresh"]].map(([v, l, ic]) =>
       `<button type="button" class="${lv === v ? "on" : ""}" data-ph-me-lv="${v}" aria-pressed="${lv === v}">${ic ? phMeIc(ic) : ""}${l}</button>`).join("");
     const dayLbl = k => { const d = parseKey(k); return k === keyOf(TODAY) ? "Today" : `${DOW_SHORT[d.getDay()]} ${d.getDate()}`; };
@@ -35627,6 +35638,12 @@
           ${bdShown.map(b => `<${b.id ? `button type="button" data-ph-me-edit="${esc("bd:" + b.id)}"` : "div"} class="ph-me-row ph-me-bdrow">${phMeIc("c22-cake")}<span class="ph-me-txt">${esc(b.n)}${b.age ? ` · ${b.age}` : ""}</span><span class="ph-me-when">${esc(dayLbl(b.k))}</span></${b.id ? "button" : "div"}>`).join("")}
           ${!ahead.length && ok ? `<div class="ph-me-empty"><span>No birthdays</span><button type="button" class="ph-me-more" data-ph-me-new="bd">+ Birthday</button></div>` : ""}
           ${ahead.length > soon.length ? `<button type="button" class="ph-me-more" data-ph-me-bdall="1" aria-expanded="${phMeBdAll}">${phMeBdAll ? "Fewer ▴" : `All ${ahead.length} ▾`}</button>` : ""}
+        </section>
+        <section class="ph-me-sec">
+          <h4>${phMeIc("refresh")}Routines<em>${rts.length}</em></h4>
+          ${rtShown.map(o => { const r = phMeRuleText(o.it), tm = o.s == null ? "" : phCkTime12(o.it.s); return `<button type="button" class="ph-me-row ph-me-rtrow" data-ph-me-edit="${esc("rt:" + o.it.id)}" title="${esc([o.it.t, r, tm].filter(Boolean).join(" · "))}">${phC22Mark(o.it)}<span class="ph-me-txt">${esc(o.it.t)}${r ? `<em>${esc(r)}</em>` : ""}</span>${tm ? `<span class="ph-me-when">${esc(tm)}</span>` : ""}</button>`; }).join("")}
+          ${!rts.length && ok ? `<div class="ph-me-empty"><span>No routines</span><button type="button" class="ph-me-more" data-ph-me-new="rt">+ Routine</button></div>` : ""}
+          ${rts.length > 5 ? `<button type="button" class="ph-me-more" data-ph-me-rtall="1" aria-expanded="${phMeRtAll}">${phMeRtAll ? "Fewer ▴" : `All ${rts.length} ▾`}</button>` : ""}
         </section>
       </div>`;
   }
@@ -36784,14 +36801,16 @@
     const f = { kind: "ev", edit: null, scope: "all", t: "", d: dayKey || keyOf(TODAY), dTouched: false, s: "", e: "", rf: "o", wd: [], n: 2, u: "w", c: "", g: "", mode: "", note: "", bn: "", bd: "", bm: "", by: "", tday: "" };
     const v = String(spec || "");
     if (/^new:(ev|td|bd)$/.test(v)) { f.kind = v.slice(4); return f; }
-    const m = /^(it|td|bd):([^|]+)(?:\|(\d{4}-\d{2}-\d{2}))?$/.exec(v);
+    if (v === "new:rt") { f.rf = "d"; return f; }   // the drawer's "+ Routine": an event that repeats daily
+    // "it:<id>|<day>" = one day of it (a grid card); "rt:<id>" = the whole routine (the drawer's Routines list)
+    const m = /^(it|rt|td|bd):([^|]+)(?:\|(\d{4}-\d{2}-\d{2}))?$/.exec(v);
     if (!m) return f;
     const D = phMeD(), id = m[2];
-    if (m[1] === "it") {
+    if (m[1] === "it" || m[1] === "rt") {
       const it = D.items[id];
       if (!it || it.del) return f;
-      const day = m[3] || it.d, ex = it.ex && it.ex[day], o = ex && typeof ex === "object" ? ex : {};
-      Object.assign(f, { edit: { type: "it", id, day }, scope: it.rep ? "day" : "all", t: o.t || it.t || "", d: it.rep ? day : it.d, s: ("s" in o ? o.s : it.s) || "", e: ("e" in o ? o.e : it.e) || "", c: it.c || "", g: it.g || "", mode: it.mode || "", note: it.note || "" });
+      const day = m[1] === "rt" ? null : m[3] || it.d, ex = day && it.ex && it.ex[day], o = ex && typeof ex === "object" ? ex : {};
+      Object.assign(f, { edit: { type: "it", id, day }, scope: it.rep && day ? "day" : "all", t: o.t || it.t || "", d: it.rep && day ? day : it.d, s: ("s" in o ? o.s : it.s) || "", e: ("e" in o ? o.e : it.e) || "", c: it.c || "", g: it.g || "", mode: it.mode || "", note: it.note || "" });
       const r = it.rep;
       if (r && r.f === "d") f.rf = "d";
       else if (r && r.f === "w") { f.rf = "w"; f.wd = Array.isArray(r.wd) ? r.wd.slice() : []; }
@@ -36843,7 +36862,7 @@
       // a repeating thing asks This day | Every day first; This day changes only its title and time, so the rest steps out
       const col = phMeColNow(f), wdNow = (f.wd.length ? f.wd : [parseKey(f.d).getDay()]).map(String), dayOnly = rep && f.scope === "day";
       body = `<label class="ap-f">${phApptIc("c22-cal")}<input type="text" class="field-bare" data-me-f="t" value="${esc(f.t)}" placeholder="Title" aria-label="Title" autocomplete="off"></label>
-        ${rep ? phMeBar("data-ap-me-scope", [["day", "This day"], ["all", "Every day"]], f.scope) : ""}
+        ${rep && ed.day ? phMeBar("data-ap-me-scope", [["day", "This day"], ["all", "Every day"]], f.scope) : ""}
         <div class="ap-me-when">
           <label class="ap-f ap-me-day"><input type="date" class="field-bare" data-me-f="d" value="${esc(f.d)}" aria-label="Day"></label>
           <label class="ap-f ap-f-time">${phApptIc("clock")}<input type="time" class="field-bare" data-me-f="s" value="${esc(f.s)}" aria-label="Starts"></label>
@@ -39556,6 +39575,7 @@
       if (meTd) { phMeTodoDone(meTd.dataset.phMeTd); return; }
       if (e.target.closest("[data-ph-me-tdall]")) { phMeTdAll = !phMeTdAll; phMeDrwPaint(); return; }
       if (e.target.closest("[data-ph-me-bdall]")) { phMeBdAll = !phMeBdAll; phMeDrwPaint(); return; }
+      if (e.target.closest("[data-ph-me-rtall]")) { phMeRtAll = !phMeRtAll; phMeDrwPaint(); return; }
       const meNew = e.target.closest("[data-ph-me-new]");
       if (meNew) { phMeEditOpen("new:" + meNew.dataset.phMeNew); return; }
       const meEdit = e.target.closest("[data-ph-me-edit]");
