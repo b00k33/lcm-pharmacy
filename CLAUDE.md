@@ -979,8 +979,8 @@ it changes; a phone keeps 66px an hour); blocks edge to edge, 6px corners,
 a 1px white seam, no shadow, hour hairlines only, no today wash; hover
 brightens, nothing grows; overlapping visits nest (a later one sits over
 the earlier from 45% across), visits that start together share in halves
-(`it.same`); her own events sit behind and a visit over one is drawn 10px
-in (`it.under`) so the event's colour shows; the day head is a small MON
+(`it.same`); her own events are solid blocks that share the time with the
+visits (see "My events: solid blocks" below); the day head is a small MON
 over a big date, today's in a teal circle, no count. A live "now" line
 ticks only while the tab is visible.
 
@@ -1031,9 +1031,8 @@ its own keys (never a `book33-*` key here). This app writes `lcm-appt-digest` (b
 focus / goal for 14 days, keyed by a hash of the login; local only, never synced, swept by
 `clearLocalData`, skipped while `lcm-data-owner` is empty) and reads C22's `book33-cal-digest`. Her own
 events (C22's and the Me store's alike, `phC22DayLayout`) draw in a solid 16% tint of the group colour with
-the group glyph `i-c22-*`, no edge, never dashed, FULL WIDTH behind the patients (a visit over one is drawn
-10px in; since the one-calendar build 2026-10-25, which retired the right-hand lane and the narrowed
-cluster); 4+ of hers in one hour share one stack (the count + each one's glyph), its card a row each that
+the group glyph `i-c22-*`, no edge, never dashed (now SOLID and beside the visits: "My events: solid blocks"
+below); 4+ of hers in one hour share one stack (the count + each one's glyph), its card a row each that
 opens that item's own card (`phC22StkHtml` / `phC22StkPopHtml`, "stk:" ids); outside the patients' hours a
 one-off folds to a 22px chip in the row above / below the grid (two at most, then "+N"); C22's Clinic block
 is left out on a day this login has bookings; a tap opens a small card with "Open in C22" (`?nday=`). A
@@ -1062,9 +1061,8 @@ BUILD-NOTES "One calendar: work + life"). **The row above each day** (`phC22Fold
 cake + name + the age it turns (`phC22BdayChipHtml`, tap = the birthday card), then the day's one-offs outside
 the patients' hours, then ONE ⟳ chip for its routines whose ring fills as they are ticked (`phC22RtChipHtml`;
 tap unfolds that day's chips, ▴ folds; at All they are plain chips); the row below holds the evening the same
-way. **A routine that meets the patients is a faint full-width BAND behind them** (`phC22BandHtml`, solid soft
-edge top and bottom), its name a pill at the right edge over them: tap the pill = tick (the second tap undoes),
-✎ = its card; bands sharing an hour stack their pills. **Her cycle day in the date line** (`phC22CdHtml`): "CD
+way. A routine that meets the patients is a block like any of her events (the band + pill went 2026-10-25,
+"My events: solid blocks" below). **Her cycle day in the date line** (`phC22CdHtml`): "CD
 n" beside the big date, read from HER OWN patient record through the Cycle page's own reads (`phMeCycleAt` =
 `phBbtCycleStarts` → `phCycFacts` → `phTpCycleCompute`; derived on read, nothing stored but the record's
 name); a period day is rose with the drop, the expected period a dashed rose pill, nothing three weeks past an
@@ -1077,6 +1075,14 @@ rest, so both logins read it) with a Cycle row "Day n · Phase · L-day" that op
 (`presSavedToast` `o.acts`); a dragged PATIENT block drops into Edit prefilled with the new day and time and
 Save confirms (Cliniko stays the truth, nothing moves silently); on a phone a long-press lifts (the page held
 still). Code: "ONE CALENDAR, WORK + LIFE".
+
+**My events: solid blocks** (her picks 2026-10-25, "my personal events look too small and insignificant and hard
+to differentiate", then "solid block like patient blocks"; mock `my-events-mock-2026-10-25.html`, BUILD-NOTES "My events:
+solid blocks"). Her events (one-offs and routines) are SOLID in their own colour (her Mode colour or group), white or ink
+words by measured contrast (`phC22Ink` → `phCkInkByContrast`), and share the time with the visits like another booking
+(`phC22JointLay`): blocks that start together split the width evenly, a later one sits over the earlier from 45% across;
+a cluster of visits alone keeps its own layout. A tap opens the card (Done · Edit); done = faded + ✓. The chips above
+and below the day are solid too, 26px. In a narrow block the name wins over the time.
 
 **Both clinics on one calendar** (her 8 picks + the Friday hand-off, 2026-10-25; mock
 `both-clinics-mock-2026-10-25.html`, BUILD-NOTES "Both clinics on one calendar"). Each login keeps its own
