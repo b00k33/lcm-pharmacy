@@ -371,8 +371,10 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
      phone (not List); List is a tap away via the Grid|List toggle.
 - **Dashboard + landing laws** (phone AND desktop alike): the app OPENS on
   Appointments (her daily schedule check). The Dashboard is drastically
-  simple: Today's patients → next clinic day → Going out today → Urgent
-  stock → Order/Refill cards. NO week calendar, no month view, no "Recent
+  simple and herbs-only (her 2026-09-15 "exclusive for herbal inventory
+  management, i rely on appointments page to organise appointments"): Wrap up
+  the day → Going out today → Urgent stock → Order/Refill cards (+ the
+  stocktake nudge while a count is open). NO patient lists, NO week calendar, no month view, no "Recent
   activity" feed, no Monday bands — several sections have been explicitly
   removed on her word (Communications-due strip, a day-list, a chart); don't
   add any section back without a mock and her sign-off. **Dashboard stays
@@ -518,6 +520,11 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   **Her own things are shared on purpose (Me, 2026-10-25):** `public.lcm_me` is ONE row both logins read
   and write (her events, routines, birthdays, to-dos; never herbs, patients or money), gated by
   `window.__lcmOwnerOk` and RLS on the two addresses. Never put pharmacy data in it.
+- **LCM never updates itself** (her spec after the Aug 2026 data losses: "a
+  new version NEVER installs itself behind my back"). No auto-reload or
+  auto-refresh on a stale build, ever; a new build only reveals the gold Update
+  button, and `phDoControlledUpdate()` saves, flushes to the cloud, backs up,
+  then reloads. Bump BOTH version markers on every push (Deploy & git).
 - **The Prescriptions search MUST always filter the list live as typed**, by
   patient name (and herb/notes). This has broken before. After ANY change,
   type a known patient name, confirm the list narrows to matches, clear it,
@@ -1399,7 +1406,7 @@ from the file, **never stored**; only her Agree / Not this patient writes
 `rec.patterns.agreed`/`.dismissed`. Strength is words (Likely / Possible /
 A hint) + a clue count, never a percentage. A card shows only its clues and
 Agree / Not this patient (no letters, food, points or supplement chips); an open card also shows the pattern's concept picture
-[Concept pictures; since 2026-10-22 drawn from the body: a natural hand, a real stomach / throat / kidney, vessel walls with cells, and a person beside the pot on Heat, Yang, Yin and Qi deficiency]. Since 2026-10-23 Yang deficiency, Yin deficiency and Heat are drawn on the body chart itself (organs at true size, `anat` in `PH_PP`, a 300 x 200 frame); her rule: this anatomical model is the model for every picture, the rest move over in batches [Concept pictures on the anatomical body]. The Her build person (its pale organs and its face, `FACE` in `PH_BODY_GEOM.svg` on every front view, the patient's measured build) is the universal person for the whole app [The Her build person is the universal person]; the formula pictures and Qi deficiency draw it too [Next batch: formula pictures and Qi deficiency on the Her build person].
+[Concept pictures; since 2026-10-22 drawn from the body: a natural hand, a real stomach / throat / kidney, vessel walls with cells, and, until 2026-10-23, a person beside the pot on Heat, Yang, Yin and Qi deficiency]. Since 2026-10-23 Yang deficiency, Yin deficiency and Heat are drawn on the body chart itself (organs at true size, `anat` in `PH_PP`, a 300 x 200 frame); her rule: this anatomical model is the model for every picture, the rest move over in batches [Concept pictures on the anatomical body]. The Her build person (its pale organs and its face, `FACE` in `PH_BODY_GEOM.svg` on every front view, the patient's measured build) is the universal person for the whole app [The Her build person is the universal person]; the formula pictures and Qi deficiency draw it too [Next batch: formula pictures and Qi deficiency on the Her build person].
 One pattern can be ★ main. Formula ideas are OFF (she dislikes suggested
 herbs). A rule she overrode in Settings never gains new clue keys later
 (deliberate). All pattern wording is Claude-drafted, hers to correct.
@@ -1947,11 +1954,11 @@ origin/main:index.html`; don't trust this list's age.
   long she's known them, or both with an override (code3).
 - Whether the Supportive tone applies outside the cycle track (stress /
   anxiety plans are a guess).
-- How an intake-reported IVF cycle should match an existing `rec.ivfCycles`
-  row (the intake has no round id; a wrong guess mixes two rounds' counts).
 - Her review of the `PH_TP_DEFAULT_SESSIONS` numbers on the original
   built-in templates (the mechanism is live).
 - A Dashboard "stocktake" pair of cards (needs a mock and her sign-off).
+- Ma Huang, Da Huang and Fu Zi Ren rows were never checked against her own
+  tables (Ren audit 2026-10-13): she needs to re-send them.
 - The "Post Ovulation" house-blend formula is missing from her live
   inventory: recreate it with "+ Add formula" or restore it from a backup
   (no code can bring it back).
