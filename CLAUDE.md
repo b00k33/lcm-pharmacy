@@ -975,13 +975,21 @@ The app opens on this page. It mirrors Cliniko's day view: solid colour
 blocks read off `PH_CLINIKO_TYPE_COLOURS` (her Settings → Appointment
 types, 21 types read live), a time gutter, the page scrolls, no inner
 scroller. Grid opens by default at every width (List is a tap away). A
-"long day" (≥600 min span) gets a scaled minute-precision map
-(1.5px/min, 45+min gaps fold to free bands); a normal day keeps a fixed
-66px/hr ruler. The visible range starts 30 minutes before the day's
-earliest booking. 3+-way overlaps cluster via union-find, so every block in
-one cluster shares a column width. A live "now" line ticks only while the
-tab is visible. Grid height comes from measured chrome, so a short day
-fills the screen.
+"long day" (≥600 min span) gets a minute-precision map (45+min gaps fold
+to free bands). The visible range starts 30 minutes before the earliest
+booking on screen and ends at the last booking's end (half hour; 4 hours
+at least; nothing booked = 7 AM to 9 PM). **Seamless since 2026-10-25 (her
+8 picks, mock `calendar-seamless-mock-2026-10-25.html`, BUILD-NOTES
+"Appointments grid: seamless"):** on a computer the hours fill the window
+(`phApptCalPxm` from the room `phPinApptZones` measured, one redraw when
+it changes; a phone keeps 66px an hour); blocks edge to edge, 6px corners,
+a 1px white seam, no shadow, hour hairlines only, no today wash; hover
+brightens, nothing grows; overlapping visits nest (a later one sits over
+the earlier from 45% across), visits that start together share in halves
+(`it.same`); her own events sit behind and a visit over one is drawn 10px
+in (`it.under`) so the event's colour shows; the day head is a small MON
+over a big date, today's in a teal circle, no count. A live "now" line
+ticks only while the tab is visible.
 
 **Appointment popup** is where tapping any booking lands: avatar, name,
 time/kind/ET pills, a plan picker, a gold "✦ New to you" flag, the action
