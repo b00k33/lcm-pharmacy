@@ -1012,6 +1012,20 @@ paints every booking sage `#8AAB99` (a LOCATION colour, in `phCkStyle`, not
 `phCkTypeColour`); Home Visit still wins over it. Enquiry/Meeting rows get
 a quiet grey "not a treatment" pill.
 
+**C22 on the grid** (her 14 picks, 2026-10-25, mock `c22-merge-mock-2026-10-25.html`; BUILD-NOTES
+"C22 + LCM Appointments"): both apps share one origin, each READS the other's localStorage and writes only
+its own keys (never a `book33-*` key here). This app writes `lcm-appt-digest` (bookings today-7..+35,
+focus / goal for 14 days, keyed by a hash of the login; local only, never synced, swept by
+`clearLocalData`, skipped while `lcm-data-owner` is empty) and reads C22's `book33-cal-digest`. Her C22
+events draw in a quiet tint (pale group colour, dashed edge, the group glyph `i-c22-*`); outside the
+patients' hours they fold to 22px chips in a row above / below the grid (two at most, then "+N"); an event
+that meets a booking takes the right 26% lane and that booking's cluster narrows to 74%; C22's Clinic block
+is left out on a day this login has bookings; a birthday is a cake on the day header; a tap opens a small
+card with "Open in C22" (`?nday=`). The **Me** chip (Grid only, shown once C22 has written its digest)
+turns the layer off, remembered on this device (`lcm-me-layer`). A Sunday she does not work returns to the
+7-day view while it has C22 events (not on a login with fewer than 5 work days). C22's "Open in LCM" lands
+as `?appt=&d=` (`phApptDeepLinkBefore`). Code: "C22 ON THE APPOINTMENTS GRID".
+
 **The 60-day appointment prune is gone permanently** (her "stop pruning,
 keep everything"); if the ~5MB quota is ever hit, the fix is a slim stub,
 never a cutoff.
