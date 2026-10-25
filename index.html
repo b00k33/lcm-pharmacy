@@ -4245,6 +4245,18 @@
   #pharmacyPage .ph-c22-life.sel, #pharmacyPage .ph-c22-fc.sel { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--ph-ink); z-index: 6; opacity: 1; }
   #pharmacyPage .ph-c22-life.dim, #pharmacyPage .ph-c22-fc.dim { opacity: .25; }
   #pharmacyPage .ph-c22-ic { width: 12px; height: 12px; flex: none; color: color-mix(in srgb, var(--g, var(--c22-g-none)) 70%, #000); }
+  /* a stack: where items would split the lane into slivers they share one block, the count then each item's mark;
+     its card lists them, a row each (phC22StkHtml / phC22StkPopHtml) */
+  #pharmacyPage .ph-c22-life.ph-c22-stk { display: flex; flex-wrap: wrap; align-content: flex-start; align-items: center; gap: 4px; padding: 4px 5px; }
+  #pharmacyPage .ph-c22-stk .n { font: 700 var(--fs-12)/12px var(--font-disp, inherit); color: var(--ph-ink); font-variant-numeric: tabular-nums; }
+  #pharmacyPage .ph-c22-mk { width: 12px; height: 12px; flex: none; display: grid; place-items: center; }
+  #pharmacyPage .ph-c22-mk i { width: 8px; height: 8px; border-radius: 999px; background: var(--g); }
+  #pharmacyPage .ph-c22-sl { display: grid; gap: 4px; }
+  #pharmacyPage .ph-c22-sr { width: 100%; height: 32px; min-height: 0; margin: 0; padding: 0 8px; box-sizing: border-box; display: flex; align-items: center; gap: 6px; border: 0; border-radius: 6px; background: color-mix(in srgb, var(--g) 10%, #fff); color: var(--ph-ink); font: 600 var(--fs-13)/1 var(--font-body, inherit); text-align: left; cursor: pointer; }
+  #pharmacyPage .ph-c22-sr span { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #pharmacyPage .ph-c22-sr b { flex: none; font: 600 var(--fs-12)/1 var(--font-disp, inherit); color: var(--ph-soft); font-variant-numeric: tabular-nums; }
+  #pharmacyPage .ph-c22-sr:hover, #pharmacyPage .ph-c22-sr:focus-visible { background: color-mix(in srgb, var(--g) 22%, #fff); outline: none; }
+  #pharmacyPage .ph-c22-sr.done { opacity: .6; }
   /* the rows above / below the grid: one cell per day, the same columns as the header */
   #pharmacyPage .ph-c22-fold { display: grid; border-bottom: 1px solid var(--ph-line); background: var(--ph-white); }
   #pharmacyPage .ph-c22-fold.aft { border-bottom: 0; border-top: 1px solid var(--ph-line); }
@@ -34239,19 +34251,20 @@
     const sel = phApptCalOpenId.startsWith("day:")
       ? `[data-ph-apptcal-day="${CSS.escape(phApptCalOpenId.slice(4))}"]`
       : phApptCalOpenId.startsWith("oth:") ? `[data-ph-oth="${CSS.escape(phApptCalOpenId.slice(4))}"]`   // the other clinic's booking
-      : phApptCalOpenId.startsWith("life:") ? `[data-ph-c22-life="${CSS.escape(phApptCalOpenId.slice(5))}"]`   // a C22 event's card
+      : phApptCalOpenId.startsWith("life:") ? `[data-ph-c22-life="${CSS.escape(phApptCalOpenId.slice(5))}"], [data-ph-c22-ids~="${CSS.escape(phApptCalOpenId.slice(5))}"]`   // a C22 event's card (or the stack it sits in)
+      : phApptCalOpenId.startsWith("stk:") ? `[data-ph-c22-stk="${CSS.escape(phApptCalOpenId.slice(4))}"]`   // a stack's card
       : phApptCalOpenId.startsWith("bday:") ? `[data-ph-me-bday="${CSS.escape(phApptCalOpenId.slice(5))}"]`   // a cake's card (ME · HER OWN THINGS)
       : `[data-ph-appt-pop="${CSS.escape(phApptCalOpenId)}"]`;
     // the Up next card carries the same id once it shows that patient, and it
     // sits above the grid -- the card hangs off the block/row, the Up next
     // card only when there is nothing else on screen
-    const laid = [...document.querySelectorAll(`#pharmacyPage ${sel}`)].filter(el => el.offsetParent !== null);
+    const laid = [...document.querySelectorAll(`#pharmacyPage ${sel}`)].filter(el => el.offsetParent !== null && !el.closest("#phApptPop"));   // never a row inside the card itself (a stack's list)
     return laid.find(el => !el.classList.contains("ph-un")) || laid[0] || null;
   }
   function phApptPopOpen(id, mode) {
     if (!phApptList().some(x => x.id === id)) return;
     phApptCalOpenId = id; phApptPopMode = mode || "view"; phApptPopEnter = true; phApptPopDetailOpen = false;
-    document.querySelectorAll("#pharmacyPage [data-ph-appt-pop].sel, #pharmacyPage [data-ph-apptcal-day].sel").forEach(el => el.classList.remove("sel"));
+    document.querySelectorAll("#pharmacyPage [data-ph-appt-pop].sel, #pharmacyPage [data-ph-apptcal-day].sel, #pharmacyPage [data-ph-c22-life].sel, #pharmacyPage [data-ph-c22-stk].sel, #pharmacyPage [data-ph-oth].sel, #pharmacyPage [data-ph-me-bday].sel").forEach(el => el.classList.remove("sel"));
     const anchor = phApptPopAnchorEl();
     if (anchor) anchor.classList.add("sel");
     phApptPopRender();
@@ -34270,9 +34283,9 @@
       pop.focus({ preventScroll: true });
       return;
     }
-    // a cake on a day header: "bday:<day>" (phMeBdayPopHtml)
-    if (pop && scrim && phApptCalOpenId && phApptCalOpenId.startsWith("bday:")) {
-      const html = phMeBdayPopHtml(phApptCalOpenId.slice(5));
+    // a cake on a day header: "bday:<day>" (phMeBdayPopHtml); a stack on the grid: "stk:<day>|<id>|…" (phC22StkPopHtml)
+    if (pop && scrim && phApptCalOpenId && /^(bday|stk):/.test(phApptCalOpenId)) {
+      const html = phApptCalOpenId.startsWith("bday:") ? phMeBdayPopHtml(phApptCalOpenId.slice(5)) : phC22StkPopHtml(phApptCalOpenId.slice(4));
       if (!html) { phApptPopClose(); return; }
       phApptPopEnter = false;
       pop.innerHTML = `<div class="ph-apptpop-in">${html}</div>`;
@@ -34307,7 +34320,7 @@
     const wasOpen = pop && !pop.hidden;
     if (pop) { pop.hidden = true; pop.innerHTML = ""; pop.className = "ph-apptpop"; pop.style.cssText = ""; }
     if (scrim) scrim.hidden = true;
-    document.querySelectorAll("#pharmacyPage [data-ph-appt-pop].sel, #pharmacyPage [data-ph-apptcal-day].sel, #pharmacyPage [data-ph-c22-life].sel, #pharmacyPage [data-ph-oth].sel, #pharmacyPage [data-ph-me-bday].sel").forEach(el => el.classList.remove("sel"));
+    document.querySelectorAll("#pharmacyPage [data-ph-appt-pop].sel, #pharmacyPage [data-ph-apptcal-day].sel, #pharmacyPage [data-ph-c22-life].sel, #pharmacyPage [data-ph-c22-stk].sel, #pharmacyPage [data-ph-oth].sel, #pharmacyPage [data-ph-me-bday].sel").forEach(el => el.classList.remove("sel"));
     if (wasOpen) { const anchor = phApptPopAnchorEl(); if (anchor && anchor.focus) anchor.focus({ preventScroll: true }); }
     phApptCalOpenId = null; phApptPopMode = "view"; phApptPopDetailOpen = false;
   }
@@ -34321,7 +34334,7 @@
     pop.classList.remove("side-r", "side-l", "below", "above", "sheet");
     if (window.innerWidth <= 640) { pop.style.cssText = ""; pop.classList.add("sheet"); return; }
     const vw = window.innerWidth, vh = window.innerHeight, GAP = 10, PAD = 12;
-    const w = Math.min(phApptCalOpenId && /^(life|oth|bday):/.test(phApptCalOpenId) ? 240 : 360, vw - PAD * 2);   // a C22 event's card is small
+    const w = Math.min(phApptCalOpenId && /^(life|oth|bday|stk):/.test(phApptCalOpenId) ? 240 : 360, vw - PAD * 2);   // a C22 event's card is small
     pop.style.width = w + "px";
     const h = pop.offsetHeight;
     const anchor = phApptPopAnchorEl();
@@ -35371,10 +35384,39 @@
     const narrow = new Set();
     g.forEach((it, i) => { const c = cl[find(i)]; it.of = c.max + 1; it.side = c.side; if (c.side) it.ov.forEach(b => narrow.add(b.cl)); });
     blocks.forEach(b => { if (narrow.has(b.cl)) b.narrow = true; });
+    // never narrower than the lane: a cluster whose columns would split it (2+ beside a booking, 4+ on an open
+    // day) folds into ONE stack over its whole span, its card a row per item (phC22StkHtml / phC22StkPopHtml)
+    const stk = {};
+    g.forEach((it, i) => { if (it.of > (it.side ? 1 : 3)) { const r = find(i); (stk[r] || (stk[r] = [])).push(it); } });
+    out.grid = g.filter((it, i) => !stk[find(i)]);
+    Object.values(stk).forEach(list => out.grid.push({ stk: list, s: Math.min(...list.map(it => it.s)), e: Math.max(...list.map(it => it.e)), side: list[0].side }));
+    out.grid.sort((a, b) => a.s - b.s);
     return out;
   }
   const phC22Src22 = x => x.me ? "" : ", from C22";
+  // an item's mark in a stack and its card: its glyph in its own colour, a dot when it has none
+  const phC22Mark = x => `<span class="ph-c22-mk" style="--g:${phC22Col(x)}">${phC22Ic(x) || "<i></i>"}</span>`;
+  // a stack (phC22DayLayout): the lane's whole width over its span, the count, then each item's mark
+  function phC22StkHtml(dayKey, it, lo, hi, n, dimCls) {
+    const top = phApptCalY(Math.max(it.s, lo)), h = Math.max(22, phApptCalY(Math.min(it.e, hi)) - top - 2);
+    const ids = it.stk.map(s => dayKey + "|" + s.x.id), v = dayKey + "|" + it.stk.map(s => s.x.id).join("|");
+    const open = phApptCalOpenId === "stk:" + v || ids.some(k => phApptCalOpenId === "life:" + k);
+    const cls = `ph-c22-life ph-c22-stk${it.s < lo ? " ct" : ""}${it.e > hi ? " cb" : ""}${it.stk.every(s => s.x.d) ? " done" : ""}${dimCls}${open ? " sel" : ""}`;
+    const tip = it.stk.map(s => `${s.x.t} · ${phC22When(s)}`).join("\n");
+    return `<div class="${cls}" style="top:${top}px;height:${h}px;left:${it.side ? 74 : 0}%;width:calc(${it.side ? 26 : 100}% - 3px);--dl:${n * 30}ms" role="button" tabindex="0" data-ph-c22-stk="${esc(v)}" data-ph-c22-ids="${esc(ids.join(" "))}" title="${esc(tip)}" aria-label="${esc(it.stk.length + ": " + it.stk.map(s => s.x.t).join(", "))}"><b class="n">${it.stk.length}</b>${it.stk.map(s => phC22Mark(s.x)).join("")}</div>`;
+  }
+  // a stack's card ("stk:<day>|<id>|<id>…"): the day and span, then a row per item that opens its own card
+  function phC22StkPopHtml(v) {
+    const p = v.split("|"), dayKey = p[0], list = p.slice(1).map(id => phC22Find(dayKey, id)).filter(Boolean);
+    if (!list.length) return "";
+    const span = phC22When({ s: Math.min(...list.map(it => it.s)), e: Math.max(...list.map(it => it.e)) });
+    return `<div class="ph-apptpop-tools"><button type="button" class="ph-apptpop-ic x" data-ph-apptpop-close="1" title="Close" aria-label="Close"><svg class="icn" aria-hidden="true"><use href="#i-x"/></svg></button></div>
+      <div class="ph-apptpop-title ph-c22-pt"><h3>${esc(phMeDayLbl(dayKey))}</h3></div>
+      <div class="ph-c22-pw">${esc(span)}</div>
+      <div class="ph-c22-sl">${list.map(it => `<button type="button" class="ph-c22-sr${it.x.d ? " done" : ""}" style="--g:${phC22Col(it.x)}" data-ph-c22-life="${esc(dayKey + "|" + it.x.id)}" title="${esc(it.x.t + " · " + phC22When(it))}">${phC22Mark(it.x)}<span>${esc(it.x.t)}</span><b>${esc(phApptCalClock(it.s))}</b></button>`).join("")}</div>`;
+  }
   function phC22LifeHtml(dayKey, it, lo, hi, n, dimCls) {
+    if (it.stk) return phC22StkHtml(dayKey, it, lo, hi, n, dimCls);
     const x = it.x, top = phApptCalY(Math.max(it.s, lo));
     const h = Math.max(22, phApptCalY(Math.min(it.e, hi)) - top - 2);
     const w = (it.side ? 26 : 100) / it.of, left = (it.side ? 74 : 0) + it.col * w;
@@ -37235,7 +37277,7 @@
   }
   // keyboard: a row is a div[role=button]; Enter / Space open it like a tap
   document.addEventListener("keydown", e => {
-    if ((e.key === "Enter" || e.key === " ") && e.target && e.target.matches && e.target.matches("[data-ph-dash-patient-open][role=button], [data-ph-appt-pop][role=button], [data-ph-apptcal-day][role=button], [data-ph-c22-life][role=button], .ph-tgz-zl[role=button]")) { e.preventDefault(); e.target.click(); }
+    if ((e.key === "Enter" || e.key === " ") && e.target && e.target.matches && e.target.matches("[data-ph-dash-patient-open][role=button], [data-ph-appt-pop][role=button], [data-ph-apptcal-day][role=button], [data-ph-c22-life][role=button], [data-ph-c22-stk][role=button], .ph-tgz-zl[role=button]")) { e.preventDefault(); e.target.click(); }
   });
   function renderPhDashboardPage() {
     const wrap = document.getElementById("phDashboardWrap");
@@ -39536,13 +39578,25 @@
       if (c22More) { const s = c22More.dataset.phC22More; phC22FoldOpen[s] = !phC22FoldOpen[s]; phApptCalRepaintKeep(); return; }
       const c22Open = e.target.closest("[data-ph-c22-open]");
       if (c22Open) { window.open(PH_C22_URL + "?nday=" + encodeURIComponent(c22Open.dataset.phC22Open), "_blank", "noopener"); phApptPopClose(); return; }
+      // a stack: its card lists the items; a row there opens that item's own card, still hanging off the stack
+      const c22Stk = e.target.closest("[data-ph-c22-stk]");
+      if (c22Stk) {
+        const v = "stk:" + c22Stk.dataset.phC22Stk;
+        if (phApptCalOpenId === v) { phApptPopClose(); return; }
+        phApptPopClose();
+        phApptCalOpenId = v; phApptPopMode = "view"; phApptPopDetailOpen = false;
+        c22Stk.classList.add("sel");
+        phApptPopRender();
+        return;
+      }
       const c22Life = e.target.closest("[data-ph-c22-life]");
       if (c22Life) {
         const v = c22Life.dataset.phC22Life;
         if (phApptCalOpenId === "life:" + v) { phApptPopClose(); return; }
         phApptCalOpenId = "life:" + v; phApptPopMode = "view"; phApptPopDetailOpen = false;
-        document.querySelectorAll("#pharmacyPage [data-ph-appt-pop].sel, #pharmacyPage [data-ph-apptcal-day].sel, #pharmacyPage [data-ph-c22-life].sel").forEach(el => el.classList.remove("sel"));
-        c22Life.classList.add("sel");
+        document.querySelectorAll("#pharmacyPage [data-ph-appt-pop].sel, #pharmacyPage [data-ph-apptcal-day].sel, #pharmacyPage [data-ph-c22-life].sel, #pharmacyPage [data-ph-c22-stk].sel").forEach(el => el.classList.remove("sel"));
+        const an = c22Life.closest("#phApptPop") ? phApptPopAnchorEl() : c22Life;
+        if (an) an.classList.add("sel");
         phApptPopRender();
         return;
       }
