@@ -1877,6 +1877,13 @@ before touching an area that smells similar.
   signed-in account (never create one): test through real function calls
   and DOM checks, or the headless-Edge phone harness, and say what was not
   exercised.
+- A service worker's cache-first branch stores EVERY GET the page makes through it: a
+  fetch with a fresh query each time (the old update check's `?probe=<time>`) kept one
+  full 7-10 MB copy of the page per check until the next Update; and `cache:"no-store"`
+  throws away the browser's 304, so every open downloaded the whole page. The check now
+  uses one fixed `?probe=1` + `cache:"no-cache"` and sweeps stored probes, and sw.js passes
+  `probe=` through and fetches navigations with `no-cache` (2026-10-26, BUILD-NOTES
+  "Lighter update check").
 
 ---
 
