@@ -513,6 +513,15 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   Cloud sync must never bundle one-time migration "already ran" flag keys
   (`PH_MIGRATION_FLAG_KEYS`) — a second device pulling `flag=1` from the
   cloud would skip a migration it never actually ran locally.
+  **The one sanctioned crossing (Both clinics, 2026-10-25):** `othRead` reads
+  the OTHER saved login's row with a second, memory-only Supabase client
+  (`storageKey: "lcm-oth-auth"`, no persistence): ONE `select`, never an
+  upsert, never `signOut()` (that revokes her saved login); a rotated token
+  pair goes straight back into `lcm-locations`, and `switchTo` re-reads its
+  entry from `lcm-locations` for the same reason. A pasted line for the other
+  clinic is saved on THIS login's own row (`PHARMACY.apptHandoff`); the other
+  login takes it into its OWN row when it reads this one (`phOthTake`). Each
+  login still writes only its own row: keep it that way.
 - **The Prescriptions search MUST always filter the list live as typed**, by
   patient name (and herb/notes). This has broken before. After ANY change,
   type a known patient name, confirm the list narrows to matches, clear it,
@@ -1025,6 +1034,20 @@ card with "Open in C22" (`?nday=`). The **Me** chip (Grid only, shown once C22 h
 turns the layer off, remembered on this device (`lcm-me-layer`). A Sunday she does not work returns to the
 7-day view while it has C22 events (not on a login with fewer than 5 work days). C22's "Open in LCM" lands
 as `?appt=&d=` (`phApptDeepLinkBefore`). Code: "C22 ON THE APPOINTMENTS GRID".
+
+**Both clinics on one calendar** (her 8 picks + the Friday hand-off, 2026-10-25; mock
+`both-clinics-mock-2026-10-25.html`, BUILD-NOTES "Both clinics on one calendar"). Each login keeps its own
+herbs, patients and prescriptions. On BOTH logins the grid and the List also show the other saved login's
+bookings that are hers (that clinic's own weekday rule, `phOthHers`), in that clinic's own colour (Acupreg
+sage, else Cliniko type colours) with a clinic tag where a practitioner sits; a tap opens a small card with
+"Open in <clinic>" (switches login, lands on that booking). The **Both clinics** chip (beside Me, Grid and
+List) hides them, remembered on this device (`lcm-both-clinics`). Day-header counts include both clinics;
+Up next, the Day summary, herbs to prepare, the Dashboard and Communications stay this login's. **Paste:**
+each pasted line carries a clinic chip (tap to flip): on CBD a Friday goes to Acupreg; on Acupreg a
+non-Friday goes to CBD unless it is a colleague's day; a paste from a patient's own page, and a Break,
+stay. A line sent over is saved on this login (`apptHandoff`), shows at once as the other clinic's, and the
+other login takes it into its own bookings (same id, through `phApptImport`) the next time it is open
+anywhere. The device needs both logins saved. Code: "BOTH CLINICS ON ONE CALENDAR" (app) + `othRead` (sync).
 
 **The 60-day appointment prune is gone permanently** (her "stop pruning,
 keep everything"); if the ~5MB quota is ever hit, the fix is a slim stub,
