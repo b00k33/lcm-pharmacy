@@ -1340,7 +1340,13 @@ the Guide card for those formulas and also shows on Dispense (end of the right c
 pictures. A new formula = one `PH_FP.SC[id]` scene + `PH_FP.HERBS[id]` + `PH_FP.PAT[id]`; no scene = the pattern picture stays. BUILD-NOTES.md,
 "Formula pictures". Since 2026-10-25 the person is drawn at .88 (`ZK`, labels follow through `ZP`), the tongue inset's shape follows its trouble
 words (`tngFeat` / `tngD`: swollen = wide, round tip, scalloped teeth marks; wet = shine; red tip; dry = cracks), and every formula, pattern and
-Guide key-sign picture has an expand button in its top-left corner (`phPpXpHtml`) opening the one sheet at up to 1100px (`phKsSheetOpen` for signs).
+Guide key-sign picture has an expand button in its top-left corner (`phPpXpHtml`) opening the one sheet at up to 1100px.
+**The big sheet steps through the pictures it sat with** (her 8 picks 2026-10-25, mock `picture-cycle-mock-2026-10-25.html`; one opener,
+`phPxOpen` → `phPxPaint`): arrows on the picture's edges AND a strip of the pictures right under it (a phone: strip + swipe, no arrows), ← →
+too, round from the last to the first, no count. The set is where it opened: a Guide card = its formula or pattern picture(s), then its Key +
+Strong signs; a formula opened alone (Dispense, the Care Plan formula cell) = it, then its signs; the Care Plan Diagnosis = its pictures; the
+Patterns page (whose open-card picture now has the expand button too) = every pattern on it with a picture. Every picture is one size
+(`--px-h`), so nothing moves; a sign's name is said once, in the header with its Ren / Bing marks and weight dots.
 
 ## Guide — Families (study + edit)
 The Guide is **[Families] [Tongue map] [Pulse]**: a herb card is the body type with its formulas under it, notes-only formulas are dashed tiles, a
