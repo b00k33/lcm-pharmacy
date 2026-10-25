@@ -1036,16 +1036,17 @@ a quiet grey "not a treatment" pill.
 "C22 + LCM Appointments"): both apps share one origin, each READS the other's localStorage and writes only
 its own keys (never a `book33-*` key here). This app writes `lcm-appt-digest` (bookings today-7..+35,
 focus / goal for 14 days, keyed by a hash of the login; local only, never synced, swept by
-`clearLocalData`, skipped while `lcm-data-owner` is empty) and reads C22's `book33-cal-digest`. Her C22
-events draw in a quiet tint (pale group colour, dashed edge, the group glyph `i-c22-*`); outside the
-patients' hours they fold to 22px chips in a row above / below the grid (two at most, then "+N"); an event
-that meets a booking takes the right 26% lane and that booking's cluster narrows to 74%; items that would split
-the lane (2+ beside a booking, 4+ on an open day) share one stack (the count + each one's glyph), its card a row
-each that opens that item's own card (`phC22StkHtml` / `phC22StkPopHtml`, "stk:" ids); C22's Clinic block
-is left out on a day this login has bookings; a birthday is a cake on the day header; a tap opens a small
-card with "Open in C22" (`?nday=`). A Sunday she does not work returns to the
-7-day view while it has a one-off of hers (not on a login with fewer than 5 work days). C22's "Open in LCM"
-lands as `?appt=&d=` (`phApptDeepLinkBefore`). Code: "C22 ON THE APPOINTMENTS GRID".
+`clearLocalData`, skipped while `lcm-data-owner` is empty) and reads C22's `book33-cal-digest`. Her own
+events (C22's and the Me store's alike, `phC22DayLayout`) draw in a solid 16% tint of the group colour with
+the group glyph `i-c22-*`, no edge, never dashed, FULL WIDTH behind the patients (a visit over one is drawn
+10px in; since the one-calendar build 2026-10-25, which retired the right-hand lane and the narrowed
+cluster); 4+ of hers in one hour share one stack (the count + each one's glyph), its card a row each that
+opens that item's own card (`phC22StkHtml` / `phC22StkPopHtml`, "stk:" ids); outside the patients' hours a
+one-off folds to a 22px chip in the row above / below the grid (two at most, then "+N"); C22's Clinic block
+is left out on a day this login has bookings; a tap opens a small card with "Open in C22" (`?nday=`). A
+Sunday she does not work returns to the 7-day view while it has a one-off of hers (not on a login with fewer
+than 5 work days). C22's "Open in LCM" lands as `?appt=&d=` (`phApptDeepLinkBefore`). Code: "C22 ON THE
+APPOINTMENTS GRID".
 
 **Me: her own things live here** (her picks 2026-10-25, "i dont use c22. i use lcm calendar the most. i want
 things to be in one place"; mock `one-place-mock-2026-10-25.html`, BUILD-NOTES "Me: her own things live in
@@ -1054,16 +1055,35 @@ logins show it, it survives a location switch) and ONE cloud row `public.lcm_me`
 (`supabase/me_setup.sql`; RLS = the two login addresses in `members`), merged entry by entry (`up` stamps,
 `del` tombstones, `rev` for crossed writes; every write waits on `window.__lcmOwnerOk`). "Bring in" in the Me
 drawer copies C22 once (C22's keys only READ; C22 is then set aside: its digest stops drawing here). The grid
-shows **Events** by default: one-offs and cakes; routines fold to a ⟳ n chip per day (tap = that day's
-routines); Off · Events · All in the drawer (`lcm-me-layer` 0 / 1 / 2). The **Me** chip (Grid and List)
-opens the Me drawer (non-modal, right side under the title bar; a bottom sheet on a phone): the level bar,
-Bring in, to-dos (type + Enter, tick = done with Undo), the next 14 days of birthdays, and her **Routines**
-(today's first, then by time; 5 then "All N ▾"; a row opens the whole routine in Edit, `rt:<id>`, with no
-This day | Every day). Her item's card =
-Done · Edit; a cake = the birthday card. **+ then Patient | Me:** the Appointments dialog's title bar
-switches to the Me pane (Event · To-do · Birthday, This day | Every day on a repeating thing, colours = her
-C22 Modes then C22's groups, "Coming up" beside it); every save and delete has Undo in the one toast. Code:
-"ME · HER OWN THINGS LIVE IN LCM".
+shows **Events** by default; Off · Events · All in the drawer (`lcm-me-layer` 0 / 1 / 2). The **Me** chip
+(Grid and List) opens the Me drawer (non-modal, right side under the title bar; a bottom sheet on a phone):
+the level bar, **My profile** (below), Bring in, to-dos (type + Enter, tick = done with Undo), the next 14
+days of birthdays, and her **Routines** (today's first, then by time; 5 then "All N ▾"; a row opens the whole
+routine in Edit, `rt:<id>`, with no This day | Every day). Her item's card = Done · Edit. **+ then Patient |
+Me:** the Appointments dialog's title bar switches to the Me pane (Event · To-do · Birthday, This day | Every
+day on a repeating thing, colours = her C22 Modes then C22's groups, "Coming up" beside it); every save and
+delete has Undo in the one toast. Code: "ME · HER OWN THINGS LIVE IN LCM".
+
+**One calendar, work + life** (her 13 picks, 2026-10-25; mock `one-calendar-mock-2026-10-25.html`,
+BUILD-NOTES "One calendar: work + life"). **The row above each day** (`phC22FoldRowHtml`): a birthday is a
+cake + name + the age it turns (`phC22BdayChipHtml`, tap = the birthday card), then the day's one-offs outside
+the patients' hours, then ONE ⟳ chip for its routines whose ring fills as they are ticked (`phC22RtChipHtml`;
+tap unfolds that day's chips, ▴ folds; at All they are plain chips); the row below holds the evening the same
+way. **A routine that meets the patients is a faint full-width BAND behind them** (`phC22BandHtml`, solid soft
+edge top and bottom), its name a pill at the right edge over them: tap the pill = tick (the second tap undoes),
+✎ = its card; bands sharing an hour stack their pills. **Her cycle day in the date line** (`phC22CdHtml`): "CD
+n" beside the big date, read from HER OWN patient record through the Cycle page's own reads (`phMeCycleAt` =
+`phBbtCycleStarts` → `phCycFacts` → `phTpCycleCompute`; derived on read, nothing stored but the record's
+name); a period day is rose with the drop, the expected period a dashed rose pill, nothing three weeks past an
+unlogged period; its card = Day n · phase, one line ("Period in ~3 days · 28-day cycle"), **Period started**
+(the Cycle page's `phCycleLogPeriod`, days up to today only; corrections on the Cycle page) · **Cycle** (her
+own Cycle page). Which record is hers = **My profile** in the Me drawer (`lcm-me` `profile`, synced like the
+rest, so both logins read it) with a Cycle row "Day n · Phase · L-day" that opens the same page. **Drag**
+(`phDg*`): her own blocks and bands move (15-minute snap, a time tag, across days in the week view) and stretch
+(bottom edge); a routine's drop is a this-day change and the toast offers "Every day" beside Undo
+(`presSavedToast` `o.acts`); a dragged PATIENT block drops into Edit prefilled with the new day and time and
+Save confirms (Cliniko stays the truth, nothing moves silently); on a phone a long-press lifts (the page held
+still). Code: "ONE CALENDAR, WORK + LIFE".
 
 **Both clinics on one calendar** (her 8 picks + the Friday hand-off, 2026-10-25; mock
 `both-clinics-mock-2026-10-25.html`, BUILD-NOTES "Both clinics on one calendar"). Each login keeps its own
@@ -1434,6 +1454,9 @@ corners + the photo's own chips full screen]. Compare and the viewer are
 ONE mechanism each, wired into every surface that shows a photo tile.
 The photo sheet has a Date field (today by default, never later): every photo on it saves under the date picked [Photo sheet: the date can be changed before saving]. **Never delete a photo** (her hard rule); the store asks the browser to keep
 it (`phStoragePersist`), and backups carry photos.
+
+## Fasting (her own clock)
+Since 2026-10-25 (her 8 picks, mock `fasting-mock-2026-10-25.html`, BUILD-NOTES "Fasting: her own clock"): C22's fasting clock lives in LCM, only for her. Its data is in her Me row (`d.fasts`, merged entry by entry; no `e` = running; `fastGoal`), so both logins show it. A Fasting step on the record she names in My profile (ring, goal bar, Stop + Undo, Continue last fast, last 14 / 30 / 90 days by cycle phase, history), a line in the Me drawer, a toolbar chip on the Appointments page (computer only) and the fast drawn down today's column (solid to now, pale to the goal, a flag at the goal; a visit over it sits 10px in); the ⋯ menu has Fasting. C22's fasts come in once (Bring in). No cheer lines, no cycle advice.
 
 ## Communications / messaging
 Tone and voice: code3 above. **One composer** on the patient's Messages page
