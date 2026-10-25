@@ -1057,7 +1057,7 @@ logins show it, it survives a location switch) and ONE cloud row `public.lcm_me`
 drawer copies C22 once (C22's keys only READ; C22 is then set aside: its digest stops drawing here). The grid
 shows **Events** by default; Off · Events · All in the drawer (`lcm-me-layer` 0 / 1 / 2). The **Me** chip
 (Grid and List) opens the Me drawer (non-modal, right side under the title bar; a bottom sheet on a phone):
-the level bar, **My profile** (below), Bring in, to-dos (type + Enter, tick = done with Undo), the next 14
+the level bar, Today's meals + Shopping ("Meals + the Diet log" below), **My profile** (below), Bring in, to-dos (type + Enter, tick = done with Undo), the next 14
 days of birthdays, and her **Routines** (today's first, then by time; 5 then "All N ▾"; a row opens the whole
 routine in Edit, `rt:<id>`, with no This day | Every day). Her item's card = Done · Edit. **+ then Patient |
 Me:** the Appointments dialog's title bar switches to the Me pane (Event · To-do · Birthday, This day | Every
@@ -1457,6 +1457,9 @@ it (`phStoragePersist`), and backups carry photos.
 
 ## Fasting (her own clock)
 Since 2026-10-25 (her 8 picks, mock `fasting-mock-2026-10-25.html`, BUILD-NOTES "Fasting: her own clock"): C22's fasting clock lives in LCM, only for her. Its data is in her Me row (`d.fasts`, merged entry by entry; no `e` = running; `fastGoal`), so both logins show it. A Fasting step on the record she names in My profile (ring, goal bar, Stop + Undo, Continue last fast, last 14 / 30 / 90 days by cycle phase, history), a line in the Me drawer, a toolbar chip on the Appointments page (computer only) and the fast drawn down today's column (solid to now, pale to the goal, a flag at the goal; a visit over it sits 10px in); the ⋯ menu has Fasting. C22's fasts come in once (Bring in). No cheer lines, no cycle advice.
+
+## Meals + the Diet log
+Since 2026-10-25 (her 12 picks, mock `diet-log-mock-2026-10-25.html`, BUILD-NOTES "Meals + the Diet log"): C22's meal prep lives in LCM. A Breakfast / Lunch / Dinner event of hers (`phMealSlot` reads the title) holds the meal planned for it: her usual one per meal, or that day's own ("↺ Every <meal>" back), prep ticks, ingredients (a tap = Shopping), one-tap **Had it** (the grid's ✓ IS Had it: band pill, fold chip, card; Undo) and "Something else"; the dish shows under the event. Data in her Me row (`d.dishes` = "My dishes" with nature warm · neutral · cool and nutrients per serve, `d.meals`, `d.shop`; merged entry by entry). The Me drawer has Today's meals (a tick per meal, water +1) and Shopping. **Every patient has a Diet page** under Log (`phDietPageHtml`): hers (the My profile record, else her signature name; a Me tag on her band) is the week filled from her meals (usual row, Mon–Sun, snacks · drinks, water dots, protein · iron · choline · vitamin C against C22's targets, warm · cool, a Week row; phone = a card a day); a patient's is their usual diet + days she notes (`rec.diet`, `phDietWrite`). Nutrients, nature and the week are worked out on read. Diet feeds Patterns (`diet_cool` / `diet_warm`, source Diet, DRAFT wording); Fang Bing Ren has no diet sign.
 
 ## Communications / messaging
 Tone and voice: code3 above. **One composer** on the patient's Messages page
