@@ -4272,6 +4272,10 @@
   #pharmacyPage .ph-c22-pw { margin: 4px 0 10px; font: 600 var(--fs-13)/1.3 var(--font-disp, inherit); color: var(--ph-soft); }
   #pharmacyPage .ph-c22-go { height: 32px; min-height: 0; margin: 0; padding: 0 12px; box-sizing: border-box; border: 1.5px solid var(--ph-herb); border-radius: 6px; background: var(--ph-white); color: var(--ph-herb); font: 700 var(--fs-13)/1 var(--font-body); cursor: pointer; }
   #pharmacyPage .ph-c22-go:hover { background: var(--ph-herb-tint); }
+  /* the other clinic's bookings (BOTH CLINICS ON ONE CALENDAR): its own colour, its clinic tag where a practitioner sits */
+  #pharmacyPage .ph-atb-box.ph-oth-chip.on { background: var(--ph-herb); border-color: var(--ph-herb); color: #fff; }
+  #pharmacyPage .ph-oth-pt i { flex: none; width: 10px; height: 10px; border-radius: 999px; background: var(--ck, var(--ph-line)); }
+  #pharmacyPage .ph-oth-pt .loc { color: var(--ph-soft); }
   /* Me on: the items step in once (a transient class on the wrap); Me off: they step out before the repaint */
   #pharmacyPage .ph-apptcal-wrap.c22-in .ph-c22-life, #pharmacyPage .ph-apptcal-wrap.c22-in .ph-c22-fc { animation: phC22In .3s ease backwards; animation-delay: var(--dl, 0ms); }
   #pharmacyPage .ph-apptcal-wrap.c22-out .ph-c22-life, #pharmacyPage .ph-apptcal-wrap.c22-out .ph-c22-fc { opacity: 0; transform: scale(.94); pointer-events: none; }
@@ -13972,6 +13976,12 @@
   #pharmacyPage #phApptModal .ap-prow .match { flex: none; display: inline-flex; align-items: center; gap: 3px; font-size: var(--fs-10); font-weight: 800; color: var(--ph-green-deep); }
   #pharmacyPage #phApptModal .ap-prow .match svg { width: 11px; height: 11px; }
   #pharmacyPage #phApptModal .ap-prow .match.new { color: var(--ph-soft); }
+  /* which clinic a pasted line goes to (BOTH CLINICS ON ONE CALENDAR): a chip, filled in that clinic's colour when it goes to the other one */
+  #pharmacyPage #phApptModal .ap-prow .ap-loc { flex: none; height: 28px; min-height: 0; margin: 0; padding: 0 10px; box-sizing: border-box; border: 1px solid var(--ph-line); border-radius: 999px; background: var(--ph-white); color: var(--ph-herb-deep); font: 700 var(--fs-12)/1 var(--font-body, inherit); white-space: nowrap; cursor: pointer; transition: background .15s ease, color .15s ease; }
+  #pharmacyPage #phApptModal .ap-prow .ap-loc.oth { background: var(--ck, var(--ph-herb)); border-color: transparent; color: var(--ck-ink, #fff); }
+  #pharmacyPage #phApptModal .ap-prow.off .ap-loc { opacity: .45; }
+  #pharmacyPage #phApptModal .ap-prow:has(.ap-loc) .nm { min-width: 96px; }
+  #pharmacyPage #phApptModal .ap-prow:has(.ap-loc) .svc { flex-shrink: 8; min-width: 0; }
   #pharmacyPage #phApptModal .ap-prow .x { flex: none; width: 26px; height: 26px; border: none; border-radius: 999px; background: none; color: var(--ph-faint); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: background .15s ease, color .15s ease; }
   #pharmacyPage #phApptModal .ap-prow .x:hover { background: var(--ph-zero-tint); color: var(--ph-zero); }
   #pharmacyPage #phApptModal .ap-prow .x svg { width: 11px; height: 11px; pointer-events: none; }
@@ -33152,7 +33162,7 @@
       // Focus / Goal as "Cliniko", against text she typed in the popup
       // ("typed") or text derived from the plan (never stored) -- phApptBrief
       if (dupe) { if (en.service) dupe.service = en.service; if (en.phone) dupe.phone = en.phone; if (en.focus) dupe.focus = en.focus; if (en.goal) dupe.goal = en.goal; if (en.focus || en.goal) dupe.briefSrc = "paste"; if (en.durationMin) dupe.durationMin = en.durationMin; return; }
-      const rec = { id: uid(), date: en.date, time: en.time, patient: en.patient, service: en.service || "", phone: en.phone || "" };
+      const rec = { id: en.keepId || uid(), date: en.date, time: en.time, patient: en.patient, service: en.service || "", phone: en.phone || "" };   // keepId: a booking handed over by the other clinic keeps its id (phOthTake)
       if (en.focus) rec.focus = en.focus; if (en.goal) rec.goal = en.goal; if (en.focus || en.goal) rec.briefSrc = "paste"; if (en.durationMin) rec.durationMin = en.durationMin;
       list.push(rec);
       added++;
@@ -33508,14 +33518,14 @@
       // her C22 pick 13: a Sunday she doesn't work comes back while it holds C22 events (Me on, a 5+ day week)
       return week.filter(d => {
         const dow = parseKey(d.key).getDay();
-        if (cfg.includes(dow)) return true;
+        if (cfg.includes(dow) || phOthFor(d.key).length) return true;   // + a day holding the other clinic's bookings (BOTH CLINICS ON ONE CALENDAR)
         if (dow !== 0 || cfg.length < 5 || !phC22On() || phApptCalEnsureView() !== "grid" || !phC22ItemsFor(d.key).length) return false;
         d.c22 = true;
         return true;
       });
     }
     const workSet = phApptCalWorkDaySet(n);
-    return week.filter(d => workSet.includes(parseKey(d.key).getDay()));
+    return week.filter(d => workSet.includes(parseKey(d.key).getDay()) || phOthFor(d.key).length > 0);
   }
   // the toolbar's date, said in full (her 2026-10-23 pick): "Fri 23 October 2026", "19 – 25 October 2026", "28 September – 4 October 2026"
   function phApptCalDateLong(days) {
@@ -33577,7 +33587,7 @@
   // calendar (Cliniko included) lays out a 3+-way overlap.
   function phApptCalDayBlocks(dayKey) {
     const toMin = t => { const [h, m] = (t || "0:00").split(":").map(Number); return (h || 0) * 60 + (m || 0); };
-    const items = phApptFor(dayKey).map(a => {
+    const items = phApptFor(dayKey).concat(phOthFor(dayKey)).sort((x, y) => x.time < y.time ? -1 : x.time > y.time ? 1 : 0).map(a => {   // + the other clinic's, laid out as one day
       const start = toMin(a.time);
       return { a, start, end: start + phApptMins(a) };
     });
@@ -34103,6 +34113,7 @@
     // "day:<key>" = the Day summary card hanging off a day header (Stage A)
     const sel = phApptCalOpenId.startsWith("day:")
       ? `[data-ph-apptcal-day="${CSS.escape(phApptCalOpenId.slice(4))}"]`
+      : phApptCalOpenId.startsWith("oth:") ? `[data-ph-oth="${CSS.escape(phApptCalOpenId.slice(4))}"]`   // the other clinic's booking
       : phApptCalOpenId.startsWith("life:") ? `[data-ph-c22-life="${CSS.escape(phApptCalOpenId.slice(5))}"]`   // a C22 event's card
       : `[data-ph-appt-pop="${CSS.escape(phApptCalOpenId)}"]`;
     // the Up next card carries the same id once it shows that patient, and it
@@ -34122,6 +34133,17 @@
   function phApptPopRender() {
     const pop = document.getElementById("phApptPop"), scrim = document.getElementById("phApptPopScrim");
     const dayKey = phApptCalOpenId && phApptCalOpenId.startsWith("day:") ? phApptCalOpenId.slice(4) : null;
+    // the other clinic's booking: "oth:<id>" -- read-only here, its own small card (phOthPopHtml)
+    if (pop && scrim && phApptCalOpenId && phApptCalOpenId.startsWith("oth:")) {
+      const a = phOthOn() ? phOthFind(phApptCalOpenId.slice(4)) : null;
+      if (!a) { phApptPopClose(); return; }
+      phApptPopEnter = false;
+      pop.innerHTML = `<div class="ph-apptpop-in">${phOthPopHtml(a)}</div>`;
+      pop.hidden = false; scrim.hidden = false;
+      phApptPopPlace();
+      pop.focus({ preventScroll: true });
+      return;
+    }
     // a C22 event: "life:<day>|<C22 id>" -- read-only here, its own card (phC22PopHtml)
     if (pop && scrim && phApptCalOpenId && phApptCalOpenId.startsWith("life:")) {
       const v = phApptCalOpenId.slice(5), cut = v.indexOf("|"), lk = v.slice(0, cut), it = cut > 0 ? phC22Find(lk, v.slice(cut + 1)) : null;
@@ -34148,7 +34170,7 @@
     const wasOpen = pop && !pop.hidden;
     if (pop) { pop.hidden = true; pop.innerHTML = ""; pop.className = "ph-apptpop"; pop.style.cssText = ""; }
     if (scrim) scrim.hidden = true;
-    document.querySelectorAll("#pharmacyPage [data-ph-appt-pop].sel, #pharmacyPage [data-ph-apptcal-day].sel, #pharmacyPage [data-ph-c22-life].sel").forEach(el => el.classList.remove("sel"));
+    document.querySelectorAll("#pharmacyPage [data-ph-appt-pop].sel, #pharmacyPage [data-ph-apptcal-day].sel, #pharmacyPage [data-ph-c22-life].sel, #pharmacyPage [data-ph-oth].sel").forEach(el => el.classList.remove("sel"));
     if (wasOpen) { const anchor = phApptPopAnchorEl(); if (anchor && anchor.focus) anchor.focus({ preventScroll: true }); }
     phApptCalOpenId = null; phApptPopMode = "view"; phApptPopDetailOpen = false;
   }
@@ -34162,7 +34184,7 @@
     pop.classList.remove("side-r", "side-l", "below", "above", "sheet");
     if (window.innerWidth <= 640) { pop.style.cssText = ""; pop.classList.add("sheet"); return; }
     const vw = window.innerWidth, vh = window.innerHeight, GAP = 10, PAD = 12;
-    const w = Math.min(phApptCalOpenId && phApptCalOpenId.startsWith("life:") ? 240 : 360, vw - PAD * 2);   // a C22 event's card is small
+    const w = Math.min(phApptCalOpenId && /^(life|oth):/.test(phApptCalOpenId) ? 240 : 360, vw - PAD * 2);   // a C22 event's card is small
     pop.style.width = w + "px";
     const h = pop.offsetHeight;
     const anchor = phApptPopAnchorEl();
@@ -34544,7 +34566,7 @@
       phApptLsEnterKey = rk;
     }
     const body = days.map(d => {
-      const appts = phApptFor(d.key);
+      const appts = phApptFor(d.key).concat(phOthFor(d.key)).sort((x, y) => x.time < y.time ? -1 : x.time > y.time ? 1 : 0);   // + the other clinic's (BOTH CLINICS ON ONE CALENDAR)
       // an empty day in a multi-day range is ONE quiet line, not a head plus
       // a "Nothing booked." row (a week of them was most of the screen)
       if (!appts.length && showDayHead) return `<div class="ph-apptls-day empty${d.today ? " today" : ""}${d.key === selKey ? " sel" : ""}"${dayAttrs(d)}>${esc(phFuDateLabel(d.key))}<span class="sub">· nothing booked</span></div>`;
@@ -34556,7 +34578,7 @@
         prevEnd = Math.max(prevEnd == null ? 0 : prevEnd, s + phApptMins(a));
         let now = "";
         if (needNow && s > nowMin) { needNow = false; now = phApptLsNowHtml(nowMin); }
-        return now + free + phApptCalListRowHtml(a);
+        return now + free + (a.oth ? phOthListRowHtml(a) : phApptCalListRowHtml(a));
       }).join("") + (needNow ? phApptLsNowHtml(nowMin) : "");
       return `${dayHead}${appts.length ? (lean ? `<div class="ph-apptls-grp">${rows}</div>` : rows) : `<div class="ph-dash-empty">Nothing booked.</div>`}`;
     }).join("");
@@ -34991,7 +35013,7 @@
   function phC22ItemsFor(dayKey) {
     const d = (phC22Days() || {})[dayKey];
     if (!d || !Array.isArray(d.i)) return [];
-    const booked = phApptFor(dayKey).some(a => a.service !== "Break" && a.patient);
+    const booked = phApptFor(dayKey).some(a => a.service !== "Break" && a.patient) || phOthFor(dayKey).length > 0;   // the other clinic's bookings fill the day too (BOTH CLINICS ON ONE CALENDAR)
     return d.i.filter(x => x && x.id != null && x.t && !(x.k === "clinic" && booked)).map(x => {
       const s = phC22Min(x.s), e = phC22Min(x.e);
       return { x, s, e: s == null ? null : e != null && e > s ? e : s + 30 };
@@ -35169,6 +35191,210 @@
     try { const q = new URLSearchParams(location.search); q.delete("appt"); q.delete("d"); history.replaceState(null, "", location.pathname + (q.toString() ? "?" + q : "") + location.hash); } catch (e) {}
     return L;
   }
+  /* ============================================================
+     BOTH CLINICS ON ONE CALENDAR (her 8 picks + the Friday hand-off, 2026-10-25; the spec is
+     both-clinics-mock-2026-10-25.html). Each login keeps its own data -- herbs, patients and prescriptions never
+     mix -- and each login writes only its OWN cloud row. The sync layer reads the OTHER saved login's row (othRead,
+     read only) and hands it to phOthTake, which keeps two things:
+       - phOthData: that clinic's bookings that are hers (by its own weekday rule), drawn on the grid and in the
+         List in its own colour (Acupreg sage, a Cliniko type colour elsewhere) with a clinic tag; a tap opens a
+         small card with "Open in <clinic>". Cached in lcm-oth-cache (this device, this login).
+       - the hand-off (her "when i paste appointments on friday, it automatically syncs to acupreg" and "can you
+         save on both?"): a pasted line tagged for the other clinic is saved on THIS login's record
+         (PHARMACY.apptHandoff) and shows at once as that clinic's; when that clinic's login next reads this row it
+         takes the line into its own bookings through the paste's own door (phApptImport, keeping the id) and notes
+         it in PHARMACY.apptImported; when this login then sees it there, it lets its copy go.
+     Up next, the Day summary, herbs to prepare, the Dashboard and Communications stay this login's own (pick 8).
+     The chip "Both clinics" starts on (lcm-both-clinics, this device).
+     ============================================================ */
+  const PH_OTH_ON_KEY = "lcm-both-clinics", PH_OTH_CACHE_KEY = "lcm-oth-cache";
+  let phOthData = null, phOthCacheRead = false, phOthMemo = null, phOthMemoSig = null, phOthSig = "";
+  const phOthK3 = a => `${a.date}|${a.time}|${phPatientKey(a.patient)}`;
+  const phOthPending = () => Array.isArray(PHARMACY.apptHandoff) ? PHARMACY.apptHandoff : [];
+  // the other clinic as the calendar shows it: { email, name, acupreg, at, list } -- its bookings that are hers,
+  // plus what this login handed it that it has not taken yet
+  function phOthV() {
+    if (!phOthData && !phOthCacheRead) {
+      phOthCacheRead = true;
+      try { const c = JSON.parse(localStorage.getItem(PH_OTH_CACHE_KEY) || "null"); if (c && c.data && Array.isArray(c.data.list) && c.owner && c.owner === localStorage.getItem("lcm-data-owner")) phOthData = c.data; } catch (e) {}
+    }
+    const hs = phOthPending();
+    const sig = `${phOthData ? phOthData.at : ""}|${hs.map(h => h.id + h.date + h.time).join(",")}`;
+    if (sig === phOthMemoSig) return phOthMemo;
+    phOthMemoSig = sig;
+    if (!phOthData && !hs.length) return (phOthMemo = null);
+    const base = phOthData || { email: hs[0].to, name: hs[0].toName || "", acupreg: !!hs[0].toAcupreg, at: 0, list: [] };
+    const ids = new Set(base.list.map(a => a.id)), k3 = new Set(base.list.map(phOthK3));
+    const extra = hs.filter(h => h.to === base.email && !ids.has(h.id) && !k3.has(phOthK3(h)))
+      .map(h => ({ id: h.id, date: h.date, time: h.time, patient: h.patient, service: h.service || "", durationMin: h.durationMin, oth: true }));
+    return (phOthMemo = Object.assign({}, base, { list: base.list.concat(extra) }));
+  }
+  function phOthPref() { try { return localStorage.getItem(PH_OTH_ON_KEY) !== "0"; } catch (e) { return true; } }
+  const phOthHas = () => { const O = phOthV(); return !!(O && O.list.length); };
+  const phOthOn = () => phOthHas() && phOthPref();
+  const phOthFor = dayKey => phOthOn() ? phOthV().list.filter(a => a.date === dayKey) : [];
+  const phOthFind = id => { const O = phOthV(); return O ? O.list.find(a => a.id === id) || null : null; };
+  const phOthCanOpen = () => typeof window.__lcmOthSwitch === "function";
+  // a clinic's short name for its tag: "Acupreg", "CBD", else its first word
+  const phLocShort = (name, acu) => acu ? "Acupreg" : /\bcbd\b/i.test(name || "") ? "CBD" : String(name || "").trim().split(/\s+/)[0] || "";
+  const phOthShort = () => { const O = phOthV(); return O ? phLocShort(O.name, O.acupreg) : ""; };
+  const phOthTagHtml = () => `<span class="prac loc" title="${esc(phOthV().name)}">${esc(phOthShort())}</span>`;
+  // its own clinic's colour: phCkStyle's two rules, decided by THAT clinic, not this login
+  function phOthCk(a) {
+    if (phOthV().acupreg && !phCkIsAway(a.service)) return `--ck:${PH_ACUPREG_COLOUR};--ck-ink:${phCkInkByContrast(PH_ACUPREG_COLOUR)};`;
+    const c = phCkTypeColour(a.service);
+    return c ? `--ck:${c.bg};--ck-ink:${c.ink};` : "";
+  }
+  // is this booking of the other clinic hers? phApptPractitioner's rule, with THAT clinic's settings
+  function phOthHers(P, acupreg, a) {
+    const raw = Array.isArray(P.practitioners) ? P.practitioners : (acupreg ? PH_PRAC_ACUPREG : []);
+    const others = raw.filter(p => p && String(p.name || "").trim());
+    if (!others.length) return true;
+    if (a.practitioner) return a.practitioner === PH_CK_ME;
+    const dow = parseKey(a.date).getDay(), mine = Array.isArray(P.clinicWorkDays) && P.clinicWorkDays.length ? P.clinicWorkDays : null;
+    if (mine && mine.includes(dow)) return true;
+    if (others.some(p => (p.days || []).includes(dow))) return false;
+    return !mine;
+  }
+  // one booking on the grid: this clinic's block (time, name), the clinic tag where a practitioner sits; the service is on its card
+  function phOthBlockHtml(it, idx, enter, dayIdx) {
+    const a = it.a, ck = phOthCk(a), h = phApptCalBlockH(it), sz = h < 30 ? "xs" : h < 54 ? "sm" : "lg", nm = phOthV().name;
+    const clock = phApptBlockClock(a, it), who = esc(a.patient || "");
+    const q = phApptCalQ.trim().toLowerCase();
+    const dim = q ? (String(a.patient || "").toLowerCase().includes(q) ? " match" : " dim") : phApptCalLens !== "all" ? " dim" : "";
+    const tm = `<span class="tm">${esc(phApptShortTime(a.time))}</span>`;
+    const inner = sz === "lg" ? `<div class="r1">${tm}${phOthTagHtml()}</div><div class="nm">${who}</div>` : `<div class="r1">${tm}<span class="nm">${who}</span>${phOthTagHtml()}</div>`;
+    const sm = /^(\d{1,2}):(\d{2})/.exec(a.time || "");
+    const spanAttr = a.date === keyOf(new Date()) && sm ? ` data-ph-appt-span="${+sm[1] * 60 + +sm[2]}-${+sm[1] * 60 + +sm[2] + phApptMins(a)}"` : "";
+    const inkt = ck && !/--ck-ink:\s*#fff/i.test(ck) ? " inkt" : "";
+    const cls = `ph-appt-block ${sz} oth${ck ? " ck" : ""}${inkt}${phCkIsAway(a.service) ? " away" : ""}${clock ? " " + clock : ""}${phApptCalOpenId === "oth:" + a.id ? " sel" : ""}${enter ? " enter" : ""}${dim}`;
+    const dl = enter ? `--dl:${(dayIdx || 0) * 60 + (idx || 0) * 45}ms;` : "";
+    return `<div class="${cls}" style="${phApptCalBlockStyle(it)}${ck}${dl}" role="button" tabindex="0" data-ph-oth="${esc(a.id)}"${spanAttr} title="${who} — ${esc(nm)}${a.service ? " · " + esc(a.service) : ""}" aria-label="${who}, ${esc(phCkTime12(a.time))}, ${esc(nm)}">${inner}</div>`;
+  }
+  // one booking in the List: its colour strip, time, name + clinic tag, the service where the focus sits
+  function phOthListRowHtml(a) {
+    const q = phApptCalQ.trim().toLowerCase();
+    const st = `${phApptCalOpenId === "oth:" + a.id ? " sel" : ""}${q && !String(a.patient || "").toLowerCase().includes(q) ? " dim" : ""}`;
+    const col = `<span class="col" style="${phOthCk(a)}" aria-hidden="true"></span>`, tm = `<span class="tm">${esc(phCkTime12(a.time))}</span>`;
+    const nm = `${esc(phTitle(a.patient))}${phOthTagHtml()}`, lab = `${esc(phTitle(a.patient))}, ${esc(phOthV().name)}`;
+    if (window.innerWidth > 900) return `<div class="ph-apptls-row lean oth${st}" role="button" tabindex="0" data-ph-oth="${esc(a.id)}" data-ph-ls-min="${phApptListMin(a.time)}" aria-label="${lab}">${col}${tm}<span class="pt"><span class="nm">${nm}</span><span class="fl">${esc(a.service || "")}</span></span><span></span><span></span></div>`;
+    return `<div class="ph-apptls-row compact oth${st}" role="button" tabindex="0" data-ph-oth="${esc(a.id)}" aria-label="${lab}">${col}${tm}<span></span><span class="nm">${nm}</span><span class="fg1">${esc(a.service || "")}</span></div>`;
+  }
+  // what #phApptPop shows for an "oth:<id>" open
+  function phOthPopHtml(a) {
+    const d = parseKey(a.date);
+    const bits = [`${DOW_SHORT[d.getDay()]} ${d.getDate()} ${MON_SHORT[d.getMonth()]}`, phApptTimeRangeLabel(a), a.service || ""].filter(Boolean);
+    return `<div class="ph-apptpop-tools"><button type="button" class="ph-apptpop-ic x" data-ph-apptpop-close="1" title="Close" aria-label="Close"><svg class="icn" aria-hidden="true"><use href="#i-x"/></svg></button></div>
+      <div class="ph-apptpop-title ph-oth-pt"><i style="${phOthCk(a)}" aria-hidden="true"></i><h3>${esc(phTitle(a.patient))}</h3>${phOthTagHtml()}</div>
+      <div class="ph-c22-pw">${esc(bits.join(" · "))}</div>
+      ${phOthCanOpen() ? `<button type="button" class="ph-c22-go" data-ph-oth-open="${esc(a.id)}">Open in ${esc(phOthShort())}</button>` : ""}`;
+  }
+  function phOthChipHtml() {
+    if (!phOthHas()) return "";
+    const on = phOthPref();
+    return `<button type="button" class="ph-atb-box ph-oth-chip${on ? " on" : ""}" data-ph-oth-chip="1" aria-pressed="${on}" title="${esc(phOthV().name)}">Both clinics</button>`;
+  }
+  function phOthToggle() {
+    try { localStorage.setItem(PH_OTH_ON_KEY, phOthPref() ? "0" : "1"); } catch (e) {}
+    if (phApptCalOpenId && phApptCalOpenId.startsWith("oth:")) phApptPopClose();
+    phApptCalRepaintKeep();
+  }
+  function phOthOpen(id) {
+    const a = phOthFind(id);
+    if (!a || !phOthCanOpen()) return;
+    phApptPopClose();
+    window.__lcmOthSwitch(phOthV().email, a);   // the sync layer: switch to that login, then this booking's day and card (?appt=&d=)
+  }
+  // repaint the calendar when what it shows of the other clinic changed -- never under an open card, the paste
+  // dialog, or while she is typing (phC22Refresh's rule)
+  function phOthRepaint() {
+    const O = phOthV(), sig = O ? O.email + "|" + O.list.map(a => [a.id, a.date, a.time, a.patient, a.service, a.durationMin || ""].join("~")).join("^") : "";
+    if (sig === phOthSig) return;
+    phOthSig = sig;
+    if (PHARMACY.activeTab !== "appointments" || phApptCalOpenId) return;
+    const md = document.getElementById("phApptModal");
+    if (md && !md.hidden) return;
+    const ae = document.activeElement;
+    if (ae && ae.matches && ae.matches("#pharmacyPage input, #pharmacyPage textarea, #pharmacyPage select")) return;
+    phApptCalRepaintKeep();
+  }
+  // the sync layer's read of the other login: email = that login, P = its pharmacy store, me = this login (only
+  // passed while this tab's data is this login's own, ownerOk). Writes only THIS login's record.
+  window.phOthTake = (email, P, me) => {
+    if (!email || !P || typeof P !== "object" || !me || email === me || localStorage.getItem("lcm-data-owner") !== me) return;
+    const acupreg = /acu\s*preg|acupuncture\s+pregnancy/i.test(String(P.locName || ""));
+    const lo = keyOf(new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() - 180)), hi = keyOf(new Date(TODAY.getFullYear() + 1, TODAY.getMonth(), TODAY.getDate()));
+    const list = (Array.isArray(P.appointments) ? P.appointments : [])
+      .filter(a => a && a.id && /^\d{4}-\d{2}-\d{2}$/.test(a.date || "") && a.date >= lo && a.date <= hi && a.time && a.patient && a.service !== "Break" && phOthHers(P, acupreg, a))
+      .map(a => { const o = { id: String(a.id), date: a.date, time: a.time, patient: a.patient, service: a.service || "", oth: true }; if (a.durationMin) o.durationMin = a.durationMin; return o; });
+    phOthData = { email, name: String(P.locName || email), acupreg, at: Date.now(), list };
+    try { localStorage.setItem(PH_OTH_CACHE_KEY, JSON.stringify({ owner: me, data: phOthData })); } catch (e) {}
+    let dirty = false;
+    // 1 · what it handed THIS login that this login has not taken: taken now, through the paste's own door, keeping the id
+    const taken = new Set(Array.isArray(PHARMACY.apptImported) ? PHARMACY.apptImported : []);
+    const inc = (Array.isArray(P.apptHandoff) ? P.apptHandoff : []).filter(h => h && h.id && h.to === me && !taken.has(String(h.id)) && /^\d{4}-\d{2}-\d{2}$/.test(h.date || "") && h.time && h.patient);
+    if (inc.length) {
+      phApptImport(inc.map(h => ({ keepId: String(h.id), date: h.date, time: h.time, patient: h.patient, service: h.service || "", phone: h.phone || "", focus: h.focus || "", goal: h.goal || "", durationMin: h.durationMin || 0 })));
+      PHARMACY.apptImported = [...taken, ...inc.map(h => String(h.id))].slice(-400);
+      dirty = true;
+    }
+    // 2 · what THIS login handed it and it has taken: this login's copy goes
+    const got = new Set((Array.isArray(P.apptImported) ? P.apptImported : []).map(String));
+    (Array.isArray(P.appointments) ? P.appointments : []).forEach(a => { if (a && a.id) got.add(String(a.id)); });
+    const hs = phOthPending(), keep = hs.filter(h => !(h.to === email && got.has(String(h.id))));
+    if (keep.length !== hs.length) { PHARMACY.apptHandoff = keep; dirty = true; }
+    if (dirty) phOthSig = "";   // this login's own bookings changed too: repaint
+    if (dirty && savePharmacy() === false) phShowSaveError("Couldn't save the bookings shared with " + phLocShort(P.locName, acupreg) + " on this device. Reload the page; they come back on the next read.");
+    phOthRepaint();
+  };
+  // ---- the paste dialog's hand-off (her picks: Fridays only, both ways, a tag on each line she can flip) ----
+  const phLocHereShort = () => phLocShort(PHARMACY.locName, phIsAcupregLoc());
+  function phOthRouteDefault(date) {
+    const O = phOthV();
+    if (!O || !/^\d{4}-\d{2}-\d{2}$/.test(date || "")) return false;
+    const dow = parseKey(date).getDay();
+    if (O.acupreg) return dow === 5;   // on CBD: a Friday goes to Acupreg
+    if (phIsAcupregLoc()) return dow !== 5 && !phPracOthers().some(p => (p.days || []).includes(dow));   // on Acupreg: a non-Friday goes to CBD, unless it is a colleague's day
+    return false;
+  }
+  // null = no tag (no other clinic known, a Break, or a paste from a patient's own profile, which stays with that patient)
+  function phOthRouteOf(st, en) {
+    if (!st || st.forPatient || !en || en.service === "Break" || !phOthV()) return null;
+    const k = `${en.date}|${en.time}|${en.patient || ""}`;
+    return st.pLoc && Object.prototype.hasOwnProperty.call(st.pLoc, k) ? st.pLoc[k] : phOthRouteDefault(en.date);
+  }
+  function phApptLocTagHtml(r) {
+    const there = phOthShort(), here = phLocHereShort();
+    return `<button type="button" class="ap-loc${r.to ? " oth" : ""}" data-ap-ploc="1" style="${r.to ? phOthCk({ service: r.service }) : ""}" title="${esc(r.to ? `Keep at ${here}` : `Send to ${there}`)}" aria-pressed="${r.to}">${esc(r.to ? there : here)}</button>`;
+  }
+  function phApptPLoc(btn) {
+    const st = phApptState, row = btn.closest(".ap-prow");
+    if (!st || !row) return;
+    const r = phApptPreviewModel().rows.find(x => x.i === +row.dataset.pi);
+    if (!r || r.to == null) return;
+    (st.pLoc || (st.pLoc = {}))[`${r.src.date}|${r.src.time}|${r.src.patient || ""}`] = !r.to;
+    phApptPreviewSync();
+  }
+  // the lines she sent to the other clinic: held on THIS login's record until that clinic takes them (phOthTake)
+  function phOthHandoff(entries) {
+    const O = phOthV();
+    if (!O) return [];
+    if (!Array.isArray(PHARMACY.apptHandoff)) PHARMACY.apptHandoff = [];
+    const have = new Set(O.list.map(phOthK3)), ids = [];
+    entries.forEach(en => {
+      if (!en.date || !en.time || !en.patient || have.has(phOthK3(en))) return;
+      const h = { id: uid(), to: O.email, toName: O.name, toAcupreg: !!O.acupreg, at: Date.now(), date: en.date, time: en.time, patient: en.patient, service: en.service || "" };
+      if (en.phone) h.phone = en.phone; if (en.focus) h.focus = en.focus; if (en.goal) h.goal = en.goal; if (en.durationMin) h.durationMin = en.durationMin;
+      PHARMACY.apptHandoff.push(h); have.add(phOthK3(en)); ids.push(h.id);
+    });
+    if (ids.length && savePharmacy() === false) { PHARMACY.apptHandoff = PHARMACY.apptHandoff.filter(h => !ids.includes(h.id)); phShowSaveError("Couldn't save the appointments for " + phOthShort() + ". Nothing was sent; try the paste again."); return []; }
+    return ids;
+  }
+  function phOthHandoffUndo(ids) {
+    const s = new Set(ids);
+    PHARMACY.apptHandoff = phOthPending().filter(h => !s.has(h.id));
+    savePharmacy();
+  }
   function phApptCalGridHtml() {
     const days = phApptCalVisibleDays();
     const n = days.length;
@@ -35213,7 +35439,7 @@
       c22Fold.after.push(lay ? { k: d.key, items: lay.after } : null);
       return `<div class="ph-apptcal-daycol${d.today ? " today" : ""}">
         ${phApptCalRulesHtml(di === 0)}
-        ${blocks.map((it, i) => phApptCalBlockHtml(it, i, enter, di)).join("")}
+        ${blocks.map((it, i) => it.a.oth ? phOthBlockHtml(it, i, enter, di) : phApptCalBlockHtml(it, i, enter, di)).join("")}
         ${lay ? lay.grid.map((it, i) => phC22LifeHtml(d.key, it, c22Lo, c22Hi, i, c22Dim)).join("") : ""}
         ${d.today && showNow ? `<div class="ph-apptcal-now" style="top:${nowTop}px"></div>` : ""}
       </div>`;
@@ -35240,7 +35466,7 @@
     const gridHtml = `<div class="ph-apptcal-wrap${slide < 0 ? " slide-l" : slide > 0 ? " slide-r" : ""}${lensAnim ? " lens-pop" : ""}${phApptCalMap ? " cmp" : ""}${c22In ? " c22-in" : ""}">
         <div class="ph-apptcal-head" style="grid-template-columns:${colsTemplate}">
           <div class="ph-apptcal-gutter"></div>
-          ${days.map(d => { const cnt = phApptFor(d.key).filter(a => a.service !== "Break" && a.patient).length, cake = c22 ? phC22CakeHtml(d.key) : ""; return `<div class="ph-apptcal-daylabel${d.today ? " today" : ""}${d.key === selKey ? " sel" : ""}${d.c22 ? " c22day" : ""}${cake ? " cake" : ""}" role="button" tabindex="0" data-ph-apptcal-day="${d.key}" aria-label="Day summary · ${esc(phApptDayLabel(d.key))}"><span>${esc(d.dow)}</span><b>${d.dnum}<i class="mo"> ${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][parseKey(d.key).getMonth()]}</i></b>${cake}${cnt ? `<em title="${cnt} booked">${cnt}</em>` : ""}</div>`; }).join("")}
+          ${days.map(d => { const cnt = phApptFor(d.key).filter(a => a.service !== "Break" && a.patient).length + phOthFor(d.key).length, cake = c22 ? phC22CakeHtml(d.key) : ""; return `<div class="ph-apptcal-daylabel${d.today ? " today" : ""}${d.key === selKey ? " sel" : ""}${d.c22 ? " c22day" : ""}${cake ? " cake" : ""}" role="button" tabindex="0" data-ph-apptcal-day="${d.key}" aria-label="Day summary · ${esc(phApptDayLabel(d.key))}"><span>${esc(d.dow)}</span><b>${d.dnum}<i class="mo"> ${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][parseKey(d.key).getMonth()]}</i></b>${cake}${cnt ? `<em title="${cnt} booked">${cnt}</em>` : ""}</div>`; }).join("")}
         </div>
         ${c22 ? phC22FoldRowHtml("before", c22Fold.before, colsTemplate, c22Dim) : ""}
         <div class="ph-apptcal-body" style="height:${gridHeight}px;grid-template-columns:${colsTemplate}">
@@ -35259,7 +35485,7 @@
         <button type="button" class="ph-atb-box" data-ph-apptcal-nav="0"${isCurrent ? ` disabled title="Showing this week"` : ""}>Today</button>
         ${dayCountSel}
         ${viewSeg}
-        ${view === "grid" ? phC22MeChipHtml() : ""}
+        ${view === "grid" ? phC22MeChipHtml() : ""}${phOthChipHtml()}
         <label class="ph-atb-search"><svg aria-hidden="true"><use href="#i-search"/></svg><input type="search" class="ph-tl-search ph-apptcal-search" data-ph-apptcal-q="1" value="${esc(phApptCalQ)}" placeholder="Search patient" aria-label="Search appointments"></label>
       </div>
       ${phApptPracChipsHtml(days)}
@@ -35395,7 +35621,7 @@
       const patient = o.patient || (en.needsName ? histName : en.patient) || "";
       // opened from a patient's profile: a line that names someone else starts out left off; the x puts it back (pKeep)
       const other = !!(fpKey && patient && phPatientKey(patient) !== fpKey);
-      return { i, src: en, date: en.date, time: o.time || en.time, service: en.service, patient, other, dropped: other ? !st.pKeep.has(i) : st.pDrop.has(i) };
+      return { i, src: en, date: en.date, time: o.time || en.time, service: en.service, patient, other, dropped: other ? !st.pKeep.has(i) : st.pDrop.has(i), to: phOthRouteOf(st, en) };
     });
     // a paste headed by several names (2026-10-14) can still hold a few lines above the first heading with no
     // name: those wait for a typed name, while every named line shows and imports as it is. Only a paste where
@@ -35443,6 +35669,7 @@
         ${phApptKindHtml(r.service)}${phApptEtHtml(r, live)}
         ${r.service ? `<span class="svc" title="${esc(r.service)}">${esc(r.service)}</span>` : ""}
         ${!r.patient ? `<span class="match new" title="No name above this line, so it is not imported until it has one">no name</span>` : r.other ? `<span class="match new" title="This line names someone else, so it is left out of ${esc(phTitle(st.forPatient))}'s appointments">someone else</span>` : `<span class="match${isKnown ? "" : " new"}" title="${isKnown ? "Matched to an existing patient" : "Not seen before — imports fine anyway"}">${isKnown ? phApptIc("check") + "matched" : "new name"}</span>`}
+        ${r.to != null && r.patient ? phApptLocTagHtml(r) : ""}
         <button type="button" class="x" data-ap-pdrop="1" title="${xTitle}" aria-label="${xTitle}">${phApptIc(r.dropped ? "undo" : "x")}</button>
       </div>`;
     };
@@ -35807,19 +36034,22 @@
     const m = phApptPreviewModel();
     const rows = m.waiting ? [] : m.rows.filter(r => !r.dropped && r.patient);
     if (!rows.length) return;
-    const entries = rows.map(r => { const en = Object.assign({}, r.src, { time: r.time, patient: st.forPatient && !r.other ? st.forPatient : r.patient }); delete en.needsName; return en; });
+    const all = rows.map(r => { const en = Object.assign({}, r.src, { time: r.time, patient: st.forPatient && !r.other ? st.forPatient : r.patient }); delete en.needsName; return { en, to: !!r.to }; });
+    // a line tagged for the other clinic is saved on this login's record until that clinic takes it (BOTH CLINICS ON ONE CALENDAR)
+    const entries = all.filter(x => !x.to).map(x => x.en), sent = all.filter(x => x.to).map(x => x.en), ens = all.map(x => x.en);
     const before = new Set(phApptList().map(a => a.id));
-    const added = phApptImport(entries);
+    const added = entries.length ? phApptImport(entries) : 0;
     const ids = phApptList().filter(a => !before.has(a.id)).map(a => a.id);
-    const daysN = new Set(entries.map(p => p.date)).size;
-    const patsN = new Set(entries.map(p => phPatientKey(p.patient))).size;
+    const hIds = sent.length ? phOthHandoff(sent) : [];
+    const daysN = new Set(ens.map(p => p.date)).size;
+    const patsN = new Set(ens.map(p => phPatientKey(p.patient))).size;
     st.text = ""; st.historyName = st.forPatient || ""; st.pEdit = {}; st.pDrop = new Set(); st.pKeep = new Set(); st.dirty = true;
     const ta = phApptEl("phApptPaste"), hn = phApptEl("phApptHistName");
     if (ta) ta.value = "";
     if (hn) hn.value = st.historyName;
     phApptPreviewSync(); phApptListSync(); phApptClearBtnSync();
-    phApptToast(`${entries.length} appointment${entries.length === 1 ? "" : "s"}${patsN > 1 ? ` for ${patsN} patients` : ""} across ${daysN} day${daysN === 1 ? "" : "s"} — ${added} new, ${entries.length - added} refreshed${phApptLastAccounts ? ` · ${phApptLastAccounts} patient account${phApptLastAccounts === 1 ? "" : "s"} made` : ""}`,
-      ids.length ? () => { phApptDeleteIds(ids); st.dirty = true; phApptListSync(); } : null);
+    phApptToast(`${ens.length} appointment${ens.length === 1 ? "" : "s"}${patsN > 1 ? ` for ${patsN} patients` : ""} across ${daysN} day${daysN === 1 ? "" : "s"} — ${added} new, ${entries.length - added + sent.length - hIds.length} refreshed${hIds.length ? ` · ${hIds.length} to ${phOthShort()}` : ""}${phApptLastAccounts ? ` · ${phApptLastAccounts} patient account${phApptLastAccounts === 1 ? "" : "s"} made` : ""}`,
+      ids.length || hIds.length ? () => { if (ids.length) phApptDeleteIds(ids); if (hIds.length) phOthHandoffUndo(hIds); st.dirty = true; phApptListSync(); } : null);
   }
   function phApptClearPaste() {
     const st = phApptState;
@@ -35854,6 +36084,7 @@
     if (t.closest("[data-ph-appt-import]")) { phApptImportNow(); return true; }
     if ((el = t.closest("[data-ap-pedit]"))) { phApptPEditStart(el); return true; }
     if ((el = t.closest("[data-ap-pdrop]"))) { phApptPDrop(el); return true; }
+    if ((el = t.closest("[data-ap-ploc]"))) { phApptPLoc(el); return true; }
     if (t.closest("[data-ap-clear]")) { phApptClearPaste(); return true; }
     return false;
   }
@@ -38308,6 +38539,20 @@
       // List C: the card's plan buttons -- which plan this visit is for (the popup picker's own a.planId)
       const lsPlan = e.target.closest("[data-ph-ls-plan]");
       if (lsPlan) { const v = lsPlan.dataset.phLsPlan, i = v.indexOf("|"); phApptLsSetPlan(v.slice(0, i), v.slice(i + 1)); return; }
+      // ---- the other clinic's bookings (BOTH CLINICS ON ONE CALENDAR) ----
+      if (e.target.closest("[data-ph-oth-chip]")) { phOthToggle(); return; }
+      const othOpen = e.target.closest("[data-ph-oth-open]");
+      if (othOpen) { phOthOpen(othOpen.dataset.phOthOpen); return; }
+      const othBk = e.target.closest("[data-ph-oth]");
+      if (othBk) {
+        const v = othBk.dataset.phOth;
+        if (phApptCalOpenId === "oth:" + v) { phApptPopClose(); return; }
+        phApptCalOpenId = "oth:" + v; phApptPopMode = "view"; phApptPopDetailOpen = false;
+        document.querySelectorAll("#pharmacyPage [data-ph-appt-pop].sel, #pharmacyPage [data-ph-apptcal-day].sel, #pharmacyPage [data-ph-c22-life].sel, #pharmacyPage [data-ph-oth].sel").forEach(el => el.classList.remove("sel"));
+        othBk.classList.add("sel");
+        phApptPopRender();
+        return;
+      }
       // ---- her C22 events on the grid (2026-10-25, see "C22 ON THE APPOINTMENTS GRID") ----
       if (e.target.closest("[data-ph-c22-me]")) { phC22MeToggle(); return; }
       const c22More = e.target.closest("[data-ph-c22-more]");
@@ -120450,7 +120695,8 @@ Dosage: {dosage}
     var ks = [];
     for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && k.indexOf("daybook") === 0) ks.push(k); }
     ks.push(BASE_KEY);   // the sync merge base is this login's bookkeeping too -- must not survive a switch/sign-out
-    ks.push("lcm-appt-digest");   // the bookings handed to C22 (lcm-appt-digest, see "C22 ON THE APPOINTMENTS GRID") belong to this login too
+    ks.push("lcm-appt-digest");
+    ks.push("lcm-oth-cache");   // the other clinic as THIS login last read it (BOTH CLINICS ON ONE CALENDAR)   // the bookings handed to C22 (lcm-appt-digest, see "C22 ON THE APPOINTMENTS GRID") belong to this login too
     suppress = true;
     try { ks.forEach(function (k) { localStorage.removeItem(k); }); } finally { suppress = false; }
     setDataOwner("");                                        // no data, no owner -- re-tagged when the next row is adopted
@@ -120513,6 +120759,9 @@ Dosage: {dosage}
   }
   function switchTo(entry) {
     if (switching || !entry) return;
+    // the saved tokens, read fresh: the calendar's read of that login (othRead) may have rotated them since the menu was drawn
+    var regNow = loadReg();
+    for (var ri = 0; ri < regNow.length; ri++) if (regNow[ri].email && regNow[ri].email === entry.email) { entry = regNow[ri]; break; }
     switching = true; ready = false; menuOpen = false;
     overlay('<p style="color:#BCCFD6;font-size:var(--fs-14);margin:12px 0">Switching to ' + esc(entry.label || entry.email) + '…</p>');
     flushPush().then(function () {
@@ -120993,6 +121242,61 @@ Dosage: {dosage}
       '<p style="' + F.note + '">Your data is still safely in the cloud — this is just a connection problem loading it. Nothing has been changed or deleted.</p>');
     document.getElementById("lcmRetryLoad").onclick = function () { afterAuth(); };
   }
+  /* ---- BOTH CLINICS ON ONE CALENDAR: read the OTHER saved login's row, read only (her picks, 2026-10-25) ----
+     The calendar shows the other clinic's bookings, and a Friday paste is handed between the two logins
+     (phOthTake, in the app). That needs the other login's row, which row-level security shows only to that
+     login: so a SECOND client, signed in with the other login's saved tokens (REG_KEY), held in memory only
+     (its own storageKey, no persistence, no auto-refresh), used for ONE select and dropped. It never upserts,
+     and it never calls signOut() -- that would revoke the saved login. A refresh rotates that login's refresh
+     token, so the new pair goes straight back into REG_KEY (or the next switch would ask for the password),
+     and a lock across tabs (OTH_LOCK) keeps two tabs from refreshing the same token at once. Only while this
+     tab is ready, online and ownerOk(); at most every 3 minutes unless forced. */
+  var OTH_LOCK = "lcm-oth-lock", othBusy = false, othLast = 0;
+  function othEntry() {
+    var reg = loadReg();
+    for (var i = 0; i < reg.length; i++) if (reg[i].email && reg[i].email !== myEmail && reg[i].refresh_token) return reg[i];
+    return null;
+  }
+  function othRead(force) {
+    if (othBusy || switching || !ready || offlineMode || !navigator.onLine || !ownerOk() || typeof window.phOthTake !== "function") return;
+    if (!force && Date.now() - othLast < 180000) return;
+    var e = othEntry(), cfg = loadCfg();
+    if (!e || !cfg || !window.supabase) return;
+    try { if (Date.now() - (+localStorage.getItem(OTH_LOCK) || 0) < 30000) return; _setItem.call(localStorage, OTH_LOCK, String(Date.now())); } catch (x) {}
+    othBusy = true; othLast = Date.now();
+    var me = myEmail, oc;
+    try { oc = window.supabase.createClient(cfg.url, cfg.key, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: "lcm-oth-auth" } }); }
+    catch (x) { othBusy = false; try { localStorage.removeItem(OTH_LOCK); } catch (y) {} return; }
+    oc.auth.setSession({ access_token: e.access_token || "", refresh_token: e.refresh_token }).then(function (r) {
+      var s = r && r.data && r.data.session;
+      if (!s || !s.user || s.user.email !== e.email) throw new Error("no session");
+      if (s.refresh_token !== e.refresh_token || s.access_token !== e.access_token) {   // rotated: the saved login keeps working
+        var reg = loadReg();
+        reg.forEach(function (x) { if (x.email === e.email) { x.access_token = s.access_token; x.refresh_token = s.refresh_token; } });
+        saveReg(reg);
+      }
+      return oc.from("settings").select("data").maybeSingle();
+    }).then(function (r) {
+      if (!r || r.error || !r.data || !r.data.data || myEmail !== me || !ownerOk()) return;   // switched meanwhile: drop it
+      var P = null;
+      try { P = JSON.parse(r.data.data[PH_KEY] || "null"); } catch (x) {}
+      if (P && typeof P === "object") window.phOthTake(e.email, P, me);
+    }).catch(function () {}).then(function () {
+      othBusy = false;
+      try { localStorage.removeItem(OTH_LOCK); } catch (x) {}
+    });
+  }
+  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") othRead(false); });
+  setInterval(function () { if (document.visibilityState === "visible") othRead(false); }, 300000);
+  // "Open in <clinic>" on the other clinic's booking: switch to that login, landing on this booking (?appt=&d=, phApptDeepLinkBefore)
+  window.__lcmOthSwitch = function (email, a) {
+    if (switching || !ready || !email || !a) return;
+    var e = null, reg = loadReg();
+    for (var i = 0; i < reg.length; i++) if (reg[i].email === email) e = reg[i];
+    if (!e) return;
+    try { var q = new URLSearchParams(location.search); q.set("appt", a.id); q.set("d", a.date); history.replaceState(null, "", location.pathname + "?" + q + location.hash); } catch (x) {}
+    switchTo(e);
+  };
   function afterAuth() {
     // Cloud is the source of truth. If it has data, adopt it; else offer first import.
     overlay('<p style="color:#BCCFD6;font-size:var(--fs-14);margin:12px 0">Loading your pharmacy…</p>');
@@ -121066,6 +121370,7 @@ Dosage: {dosage}
     if (!localStorage.getItem(BASE_KEY)) setBaseFrom(sectionsFrom(localSnapshotObj()));
     hideOverlay(); badge(); renderSwitcher(); recordSession(); subscribe(); renderSavedAt();
     pullMergePush(false);   // catch up on anything that changed while this device was away
+    setTimeout(function () { othRead(true); }, 2500);   // the other clinic's bookings (BOTH CLINICS ON ONE CALENDAR)
   }
 
   function boot() {
