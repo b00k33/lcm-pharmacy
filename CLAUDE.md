@@ -118,8 +118,7 @@ reads it; do not render it again.
 > implementation detail, Phase 1). If a request conflicts with it, **ask her,
 > then update this section** — never quietly drift. Every line below is her
 > pick from the design session (12 popups + two visual guides); do not re-ask.
-> Where older text further down this file disagrees, **this section wins**
-> (see "Superseded" at the end of it).
+> Where older text further down this file disagrees, **this section wins**.
 
 ## 1 · Three groups, in this order
 | Group | Pages, in order | How often |
@@ -238,28 +237,22 @@ headers, buttons, popups). Patient letters and messages are NOT touched. If the
 rail text cuts off at 360px, only the rail may use "Care Plan" — and tell her.
 Never call it "Treatment plan", "Plan tab" or bare "Plan" in new UI text.
 
-## 8 · Build phases (status)
-| # | Phase | Status |
-|---|---|---|
-| 0 | Write this law | **DONE 2026-10-10** |
-| 1 | Names + order: rename, reorder rail, fold Review into Today's visit, Tongue/Pulse/Abdomen/Cycle as separate pages | **BUILT 2026-10-10 — LIVE on main** (confirmed 2026-10-18: `phTodayStripHtml`/`presRvPainHtml`/`phExamPageHtml` are all present in `origin/main`; sandbox-verified at the time: rail order, Next chain, taps repaint + tick, return-visit Re-check, 375px). Disclosed: the tiles show today's finding only — "last visit's finding beside today's" waits for Phase 2; the default landing tab is still Treatment Care Plan (her 9/28 "Plan is the door" rule) — landing on Today's visit is a Phase 4 call; remaining prose that says "treatment plan" (messages, printed plan record, comments) is untouched on purpose; `grep phTodayStripHtml`, `presRvPainHtml`, `phExamPageHtml` |
-| 2 | One home each: Cycle single door; trace then unify the two finding copies | **BUILT 2026-10-10 — LIVE on main** (confirmed 2026-10-18: `phExamMirrorToday`/`phVisitFndLineHtml` are present in `origin/main`; her pick "A" + "last visit on pages and tiles"). Cycle: already one page after Phase 1, nothing more. Findings: the exam pages are the ONE entry; `phExamMirrorToday(rec)` mirrors today's exam into the dated `rec.visitFnd[session.id]` of every session logged today (hooks: `phTngWrite`, `phAbdWrite`, the Pulse repaint in `renderHxScreen`, and visit save), so history keeps building and nothing is typed twice; earlier dated copies are never touched. The Treatment tab's findings row is a read-only line (`phVisitFndLineHtml`) with a Change link; the old chart panel is no longer shown anywhere. History lines: `phExamPast` / `phExamPastHtml` under each exam page, and "last: …" on each Today's visit tile. Known edge: a part cleared AFTER it was mirrored stays in that day's dated copy. `phVisitFndPanelHtml` + its `[data-visit-fnd-wrap]` refresh branch are now unreachable dead code — remove in Phase 5 with care (the exam pages borrow `presVisitFndDraft`, so the chart handlers stay) |
-| 3 | Wire influence (scaled to her answers): Stress & sleep for everyone, blood result age | **BUILT 2026-10-10 — LIVE on main** (confirmed 2026-10-18; note this is since superseded, see §3's "retired 2026-10-13" line). Stress & sleep now a rail page for every non-formula patient, right after Medical history (Next chain: Patient details → Medical history → Stress & sleep). Blood tests header shows each result's age; over 12 months = "not counted" and `phPatClues` ignores it (fresh ones still count; sandbox-verified old-only → no clue, fresh → low_iron). **Her answers: supplements unchanged, NO "fed by" strip, NO re-check flag on the plan** — do not build these. Supplements "Same as last time" tap is a Phase 4 item |
-| 4 | Guided path (her picks 2026-10-10) | **BUILT 2026-10-10 — LIVE on main** (confirmed 2026-10-18: `presVisitNext`/`phGlanceHtml` are present in `origin/main`; **but see (b)'s "gold card" below — it was explicitly removed on 2026-10-14, "Today's visit = the complaint compass" build; `presVisitNext` itself survived, just without the card markup**). (a) **Landing:** a RETURN patient (an earlier visit within 12 months, sex + DOB, exactly one plan or a booked one -- `presStagePlanAutoOpen`'s own rule) opens on Today's visit; a new patient, one away over 12 months, or one with several plans and none booked opens on the profile as before (`renderPresPanel`, only when a DIFFERENT script opened -- reopening the same script keeps its last stage, old behaviour). (b) **Up next walks the whole visit:** `presVisitNext(t)` -> rail "Next up" + the gold card (Patient details page, and a bare copy on Today's visit); first visit = file gaps, exam, Fang Bing Ren, Care Plan, Treatment, Dispense; return visit = exam first, file gaps after it; skip = memory only (`presUpSkip`); Fang Bing Ren counts as done when nothing is left to agree; Dispense only when herbs; Supplements/Blood tests are not in the walk (no done-state). (c) **Worth a look** on Today's visit, return visits only (`phTodayNudgesHtml`): supplements "Same as last time / Changed" (stamps `rec.suppSeenAt`; changing them today counts) and history "Anything new since <date>? Nothing new / Add" EVERY return visit (stamps `rec.hxSeenAt`). **Ren photo nudge: she SKIPPED it -- do not add.** (d) **One-line glances** on a return visit (`phGlanceHtml`): top of Fang Bing Ren (main agreed pattern + date + "new clues since", from the clue keys `phPatAgree` now saves in `agreed[id].clues`; older agreements say only the date) and top of Treatment Care Plan (phase, session x of y, next visit); the full page stays below. Also fixed: Re-check pick left the "n of m done" gate and rail stale (`phTodayChromeRefresh`) |
-| 6 | Smoothing (her "not smooth", 2026-10-10) | **BUILT — LIVE on main** (confirmed 2026-10-18; note the "ONE button system" in (a) is since superseded by the TAPPABLE THINGS rule at the top of this file, 2026-10-14/15). (a) ONE button system on the patient panel: filled = the one main step (Next), outlined pill = everything else (Change, Open, Add, Same as last time, Journey); no underlined words, no "›" on Change/Open (CSS block after `.ph-glance`, scoped to `.ph-pres-panel`; `.ph-name-link` and dense treatment `.tab-link`s untouched). (b) No jumps: page-body slide-in, Up-next fade/pulse/entrance and rail "next step" pulse removed; rail repaint skips when its `data-sig` is unchanged. (c) Return-visit Next chain skips Fang Bing Ren + Care Plan (reach them from the two glance lines with Open on Today's visit); no Next to Dispense when the plan has no herbs |
-| 5 | Audit + cleanup (2026-10-10) | **DONE — LIVE on main** (confirmed 2026-10-18). Walked a new, a return and an IVF patient through every profile page, plan tab and Dispense (22-23 pages each) in the sandbox: no errors, no "undefined/NaN" text; 360px checked on Details, Today's visit (IVF). Removed the dead `phVisitFndPanelHtml` + its `[data-visit-fnd-wrap]` refresh branch (the draft/handlers the exam pages borrow stay). In-app labels now say Treatment Care Plan ("No Treatment Care Plan yet", "+ New Treatment Care Plan", the no-plan gate, an appointment-source tooltip). **Left on purpose:** patient letters, printed plan records, message templates/tags, and the stored default plan title "New treatment plan" (code compares to it). Known: on a phone the gold Up next card on Patient details sits low on the page (the rail's Next up is hidden on phones; Today's visit has the card at the top and every page has its Next button) |
-Each phase: build in the sandbox, show her, check 360px + desktop, push only
-on her "push live". Update the status column when a phase lands.
+## 8 · Build phases — all built and LIVE
+Phases 0-6 were built on 2026-10-10 and confirmed on `origin/main` 2026-10-18 (the phase table was folded on
+2026-10-25; its detail is in git history). What they left that still holds:
+- **Landing:** a return patient (a visit within 12 months, sex + DOB, one plan or a booked one:
+  `presStagePlanAutoOpen`) opens on Today's visit; anyone else opens on the profile.
+- **Next walk** (`presVisitNext`): first visit = file gaps → exam → Fang Bing Ren → Care Plan → Treatment →
+  Dispense; return visit = exam first, file gaps after, and Next skips Fang Bing Ren + Care Plan (their one-line
+  glances, `phGlanceHtml`, open them); Dispense only when herbs; a skip is memory only (`presUpSkip`). The gold
+  Up next card is gone (2026-10-14).
+- **Worth a look** (`phTodayNudgesHtml`, return visits): supplements Same / Changed (`rec.suppSeenAt`), history
+  "Anything new since <date>?" (`rec.hxSeenAt`).
+- **Findings:** `phExamMirrorToday`'s known edge: a part cleared after it was mirrored stays in that day's dated copy.
+- **Left on purpose:** the stored default plan title "New treatment plan" (code compares to it); letters, printed
+  plan records and message templates keep "treatment plan".
+A new phase-sized change: build in the sandbox, show her, check 360px + desktop, push only on her "push live".
 
-## 9 · Superseded by this law (older text below is stale where it says…)
-- "Examine page merges tongue+pulse+body-type+abdomen" and "Re-check, Tongue,
-  Pulse, Abdomen folded into ONE checklist card" → now separate pages (§1).
-- "Examine comes BEFORE Medical history" (Oct 3) → Medical history is in her
-  file first; the examine comes after her file, before Fang Bing Ren (§2).
-- "Fang Bing Ren, Plan, Review, Today's visit, Treatment" (Oct 10 tab order)
-  → §2 order. Review step → retired.
-- "Cycle in Today's visit AND its own tab" → one home (§1).
-- Stress & sleep "only when the complaint says so" → asked for everyone (§3) → **retired 2026-10-13: its questions are on Ask her (§3).**
 <!-- ===================== END OF THE LAW ====================== -->
 This is a single-page web app: **desktop leads, the phone covers the
 essentials** (see lcm6). It must always look clean, symmetrical, aligned,
