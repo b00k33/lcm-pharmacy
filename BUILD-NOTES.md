@@ -2674,3 +2674,4 @@ Her ask (Google Calendar beside the LCM week): "i ike the spacing from google ca
 - **Tested (Browser pane, localhost:8994, seeded bookings + her events through a stubbed `phC22Src`):** 1280x800 week: the grid ends at the last booking, body 614px = room 614px, no inner scroll; 9:30 / 10:30 / 11:00 nest (11:00 at 45%), two 2:00s in halves, a visit over Travel 10px in; teal circle on today. 375x760: 66px an hour, no sideways scroll, circles 28px. Prescriptions search narrows live and returns. No console errors from the grid.
 - **Pages checked:** Appointments (week grid desktop + phone, day head), Prescriptions (search).
 - **Not tested:** her real week with Cliniko colours; the Key2's 360 x 469; her own events drawn behind (waits on the one-calendar session's `phC22LifeHtml` change).
+- **LIVE:** build 20261025-100100 (her "push live"; the stack fold 5ffbcb1d and the Me Routines list 71234172 rode along).
