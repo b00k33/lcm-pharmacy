@@ -975,7 +975,8 @@ The app opens on this page. It mirrors Cliniko's day view: solid colour
 blocks read off `PH_CLINIKO_TYPE_COLOURS` (her Settings → Appointment
 types, 21 types read live; each block's words white or dark, whichever
 measures higher, `phCkInkByContrast`, her yes 2026-10-25), a time gutter,
-the page scrolls, no inner scroller. Grid opens by default at every width (List is a tap away). A
+the page scrolls, no inner scroller (on a computer with her own things showing, the grid scrolls inside
+itself: "Whole day" below). Grid opens by default at every width (List is a tap away). A
 "long day" (≥600 min span) gets a minute-precision map (45+min gaps fold
 to free bands). The visible range starts 30 minutes before the earliest
 booking on screen and ends at the last booking's end (half hour; 4 hours
@@ -1091,6 +1092,17 @@ words by measured contrast (`phC22Ink` → `phCkInkByContrast`), and share the t
 (`phC22JointLay`): blocks that start together split the width evenly, a later one sits over the earlier from 45% across;
 a cluster of visits alone keeps its own layout. A tap opens the card (Done · Edit); done = faded + ✓. The chips above
 and below the day are solid too, 26px. In a narrow block the name wins over the time.
+
+**Whole day** (her pick B, 2026-10-25, "improve the ui so i can view the whole calendar including morning hours out of
+clinic hours"; mock `whole-day-mock-2026-10-25.html`, BUILD-NOTES "Whole day: the grid scrolls"). On a computer with her own
+things showing, the grid runs from the hour before her first timed item on the days shown to her last (an overnight one, Sleep,
+shows as it starts), every hour the same size (no long-day map). The clinic's hours (widened to any of her blocks that run over
+their edges) still fill the window, so the grid scrolls inside itself: it opens there (on now when today is shown and now is
+outside the clinic's hours) and keeps her spot, as a minute, through every repaint; a new set of days opens on the clinic
+again. The hours outside the clinic sit on a faint grey; a "^ n" / "v n" chip at the top / bottom edge counts the blocks out of
+view, a tap scrolls to them. Her timed things therefore sit at their own times, and the rows above and below keep only the
+untimed ones (birthdays, all-day, trip to-dos); the ⟳ routine chip shows only for an untimed routine. **The phone is
+unchanged** (its page scrolls, never the grid): the rows above / below and the ⟳ as before. Code: "WHOLE DAY" (`phApptCalWd*`).
 
 **Both clinics on one calendar** (her 8 picks + the Friday hand-off, 2026-10-25; mock
 `both-clinics-mock-2026-10-25.html`, BUILD-NOTES "Both clinics on one calendar"). Each login keeps its own
