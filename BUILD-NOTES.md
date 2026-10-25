@@ -2580,3 +2580,8 @@ Her words, with a screenshot of the Records → Photos tiles: "when i click drop
 - **Tested** (sandbox, 1280 and 375): Zhen Wu Tang inline and big ("Pale, swollen": wide, scalloped); Settled goes back to the normal outline; the four hand-drawn scenes run with no error; the key-sign sheet (title, moving picture); the Gui Zhi pattern picture opens big; the sheet fits at 375 with no sideways scroll; Prescriptions search narrows and returns. Shapes also rendered on their own (normal / wet / swollen) with headless Edge.
 - **Not tested:** every one of the 22 formulas by eye (the shape only reads words, so a formula with none of them keeps the normal outline); a real touch device.
 - **Pages checked:** Guide card (formula, pattern and key-sign pictures), Dispense and the Care Plan formula cell use the same `phFpHtml` / thumbs.
+
+## 2026-10-25 · Da Chai Hu Tang under Da Huang too
+- **Her ask:** "where is da chai hu tang?" (looking under Da Huang), then "show it under both".
+- **Built:** a family group can list `also: [...]`, formulas shown in its card that belong to another family. Da Huang's group has `also: ["dachaihu"]`. Only the lists read it: the Guide mosaic (`phGdfMosaicHtml`), the Fang Bing Ren family cards (`mosaicHtml`), the Ren family list and its group pick (`phRenFamMembers`, the group spot), and the all-signs sheet (`phFbrAllGroupsHtml`). Its colour (the Chai Hu shade), scoring and home group (`phGdfGroupOf`) stay with Chai Hu, so nothing counts twice.
+- **Tested** (sandbox): the Guide shows it in both cards, and picking it in either selects both tiles and opens its card; the Fang Bing Ren page lists it under Chai Hu and Da Huang; its colour is unchanged.
