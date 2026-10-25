@@ -973,8 +973,9 @@ THINGS' pill chips on her word; other pages follow page by page [Appointments ch
 Since 2026-10-23 the Next button, patient rail, search boxes and small pills app-wide follow the same 32px look [Shared chip fixes, one height]. Fang Bing Ren and Ren too: each sign a white 32px box with the ✕ as its own end [Fang Bing Ren + Ren chips, one height]. The exam pages (Today's visit, Ask her, Tongue, Pulse, Abdomen, Medical history) too [Exam pages chips, one height]. Treatment and the Care Plan too [Treatment + Care Plan chips, one height]. Timeline and Messages too; a message group over 6, or one that would wrap, is a dropdown [Timeline + Messages chips, one height]. Musculoskeletal too [Musculoskeletal chips, one height]. The Guide too [Guide chips, one height]. The To Order board too [To Order board chips, one height]. Every other page too [Every other page, one height]. The leftovers the re-audit found too (Cycle, Care Plan pain map, Treatment, visit filters, Diagnosis colours, Today's visit, Dashboard, Up next fold) [Chip audit sweep]. Inventory's in-row cells too [Inventory in-row cells at 32px]. No emoji on any page (icons are the sprite) [Emoji out of the pages + Formula refill crash fix].
 The app opens on this page. It mirrors Cliniko's day view: solid colour
 blocks read off `PH_CLINIKO_TYPE_COLOURS` (her Settings → Appointment
-types, 21 types read live), a time gutter, the page scrolls, no inner
-scroller. Grid opens by default at every width (List is a tap away). A
+types, 21 types read live; each block's words white or dark, whichever
+measures higher, `phCkInkByContrast`, her yes 2026-10-25), a time gutter,
+the page scrolls, no inner scroller. Grid opens by default at every width (List is a tap away). A
 "long day" (≥600 min span) gets a minute-precision map (45+min gaps fold
 to free bands). The visible range starts 30 minutes before the earliest
 booking on screen and ends at the last booking's end (half hour; 4 hours
