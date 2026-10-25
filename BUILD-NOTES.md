@@ -2729,3 +2729,4 @@ Her ask (screenshot of the "Breakfast · break my fast 5:30" chip): "i want this
 - **Not tested:** drag on the new blocks (the `data-ph-drag="me"` and handle are unchanged); her real data on the live grid; the Key2 360 × 469; a meal event's dish line on a solid block (CSS only).
 - **Pages checked:** Appointments grid (week + one day). The List view, Me drawer and cards are unchanged.
 - **LIVE:** build 20261025-114600 (her "push live"; the Meals + Diet log commits rode along).
+- **Then (her "make the routine chips bigger too"):** the ⟳ routine chip and the "+N" chip in the rows above / below the day are 26px, 12px bold, with a 20px ring, like the solid chips beside them. Checked in the sandbox (fold cells: Breakfast / Gym 26, ⟳ 26).
