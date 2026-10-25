@@ -1499,8 +1499,13 @@ BUILD-NOTES "Abdomen page: the Pulse page's way"): one tab bar Seen · Temp · S
 and off (Esc lets go); with none picked a place opens its own signs beside it (`phAbdPopHtml`: only what can sit there, Clear
 place); "Whole abdomen" is a place (stored as `"whole"`; an empty list still reads as whole; a whole temperature washes every zone
 without its own, `phAbdTWashes`); the side view's rows tap too (`data-abd-band`); one tab panel beside the charts: Summary (still
-"Reads as") · Note · Photo · Fang Bing Ren. The page handles its own taps (`phAbdClick` → `phAbdChartWrite` → `phAbdWrite`); the
-old shared `data-visit-abd2` handlers and the `phAbdExam` borrow are gone. The exam pages are the
+"Reads as") · Note · Fang Bing Ren, today's photo over it (`phAbdPhotoHtml`, Today | Last flips, `phAbdPhotoRefresh` on a photo
+load). Last visit draws in grey under today's marks, front and side (`phAbdLast` = the newest dated finding before today;
+`opts.prev` on both charts, `phAbdGrey`; still, always on), with a "Today · Last · <date>" key over the charts (her 2026-10-25
+batch 2, BUILD-NOTES "Abdomen batch 2"). Every sign is drawn: tight rectus (red dashes by row), thin wall (dotted ring), and a
+Whole abdomen sign once, big. Phone: the sign tabs one sideways row (edge fades), Erase at the end of the chip row. The page
+handles its own taps (`phAbdClick` → `phAbdChartWrite` → `phAbdWrite`); the old shared `data-visit-abd2` handlers and the
+`phAbdExam` borrow are gone. The exam pages are the
 ONE entry; `phExamMirrorToday` copies today's exam into the dated record.
 Pulse: each tick is dated and each new day starts blank; Cun / Guan / Chi
 each head ONE column (R: Up. Resp / Stomach / Bladder, L: Heart / Liver /
