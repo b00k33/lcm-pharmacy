@@ -3188,3 +3188,4 @@ sheet, Health, Patterns, + Food. Not on Fang Bing Ren (her pick).
 another session (Meals planner) on 2026-10-26: it keeps `phRxMarkFor` on had cells and `phRxByFoodHtml` under the week.
 **Wording is DRAFT** (Claude's): the chip words, "After it" / "Usually after it", "Reactions by food", "Reactions · 30 days", the
 two clue lines.
+- **LIVE** in build 20261026-121900 (2026-10-26, her "push live"; the invoices-are-not-workouts fix 8cc2e00d rode along, its session's ok). The live page carries `phRxSecHtml`, `phRxMarkFor`.
