@@ -3365,4 +3365,6 @@ long words without one.
 **LIVE** 2026-10-27 (her "push live"), build 20261026-213400 (64620652): the spacing audit ONLY, made on top of the live build in a
 private index; Meals planner, Habits + Steps and the Herbs table (537be4c1, c48e8cdf, 13c437d4, cadd25fa) stayed held on session-a
 (their new functions confirmed absent from the served page). Joined back into session-a as 4134a726 (tree unchanged), so the next
-publish-live.sh still fast-forwards and carries the held work when she says so.
+publish-live.sh still fast-forwards and carries the held work when she says so. That happened a minute later: build
+20261027-083500 (a83c744d, another session, her yes) took Meals, Habits + Steps and the Herbs table live; the served page carries
+phDishTb, phHabBandHtml and phHbXRow, and the spacing rules.
