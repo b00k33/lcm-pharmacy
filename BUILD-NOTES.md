@@ -3038,3 +3038,4 @@ Inventory and Appointments; the Appointments toolbar chip; a patient's record (u
 every single page (checked on Inventory and Appointments), a trip heading's › (the sandbox had no trip).
 **Left as it was (said to her):** the phone's This week stays the sideways-scrolling table (the mock drew day cards); at her
 1220px window the To-dos sit under the table instead of beside it.
+**LIVE** in build 20261026-094000 (her "push live", 2026-10-26; with the Patient profile list audit above). The live page carries `phMineBandHtml`, `PRES_MINE_RANK`, `phMeCardHtml`, `presMineCycleNorm`, the Birthdays / Routines pages and `.ph-tbm-me`.
