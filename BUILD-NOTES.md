@@ -3515,3 +3515,38 @@ Me drawer's Today's meals, the planner's cells and the Diet page lines read the 
 session's tracked mock edit blocks publish-live.sh, then joined into session-a as 99340b4e (tree unchanged). Checked on the live
 site: both stamps, `phMealAddHtml` / `ph-mlk-row` / "Add food or drink" served (comments are stripped on publish, so search code,
 not the "A CALMER MEAL" comment).
+
+## Fitness + Exercises: C22's fitness, plan + log (2026-10-27)
+Her synth22 2026-10-26 ("wheres the page for exercises?" + "move fitness page from c22 to lcm so i cna plan and log my
+exercise"), picks 9 to 13 on `meals-fitness-plan-2026-10-26.html`, round 2 on `meals-fitness-mock-2026-10-26.html`; her
+answers 2026-10-27: the workout week on Fitness AND Habits (one tick, both pages), the C22 Steps plan under the Steps card,
+"Yes, build it" (mock 2); her animations round, Fitness card A + week dots A. Step 1 of 2 (pick 11): plan + log.
+**Built:** Fitness (Body) and Exercises (Body, after Fitness), on her own record only. Code: "FITNESS + EXERCISES" (CSS after
+the hub block, JS replacing the old `phHubFitHtml`). Data in her Me row, entry by entry (`PH_HUB_MAPS` + fex, ftp, fwo, fpl,
+fsp; `hubset.stride`, `hubset.fitIn`); shapes in the code comment.
+- Bring in (`phFitBringIn`): reads C22's book33-fitness-log / templates / exlib / exmodes / planned / stairs / week-plan once
+  (never writes them); C22's seed list when her library is empty there; C22's days Mon=0 become Sun=0; climbs skipped.
+- Weekly plan (`phFitPlanApply`) is her calendar's routines: the other routines lose that weekday (their done days stay, today
+  included), a routine left with no days ends yesterday (or goes, if made today and never done), the chosen type's routine gains
+  the day (made in g-fitness with another workout's time if she has none); the last 8 weeks of that day are marked not planned
+  so they never read as missed. Undo on every change.
+- Today (`phFitTodayHtml`): the plan's session until she changes it, then kept (`phFitWoSave`); sets tick, timed holds, rest
+  ring (one 250 ms ticker, buzz at zero, a long buzz on the last set), left mirrors to right, pain areas + note, stars; Finish
+  also ticks today's routine of that type. ▶ Workout Mode: a full-screen overlay, Esc closes it.
+**My calls (disclosed):** Wed / Sat not locked to a type (her plan decides); climbs wait for step 2; C22's seed list as the
+fallback library; a Fitness-group routine counts as a workout (`phHubKind`); Finish ticks the routine; the 8-week history guard;
+the buzz at zero. Wording is DRAFT.
+**Fixed on the way:** Steps row class `st` → `stp` and the field class `.in` → `.fin` (clashed with the set circle and the Steps
+ring); number spinners hidden (they cut "10"); the Steps card ran 6 px past its edge at 360 (pre-existing; ph-stp-top 96 px,
+field 60 px). Phone: no double padding, week table th 28 px, "rest 1:30" in its own grid area, segments wrap, the Weekly plan
+two columns with the label above (the 16 px phone field rule cut "Bouldering").
+**Tested** (scratch copy, made-up local data, test C22 keys only in the localhost sandbox, no sign-in): Bring in; a week dot
+ticks on Fitness and shows on Habits; Weekly plan Tue Gym → Pilates (today's done Gym kept), Rest, Undo; a set tick, the rest
+ring to zero, a timed hold, the last set's gold; pain + stars; Finish; Workout Mode open / Esc; Steps plan walk + stairs;
+Upcoming add; Exercises search, groups, Hide, a new exercise, a template's sets. Headless Edge at 1220 and 360 (shots-fit.ps1):
+Fitness top, Today, Steps, Upcoming, Workout Mode, Exercises, a template.
+**Not tested:** her real C22 data (Bring in runs on the device where C22 holds it), a real cloud merge between her two logins,
+the buzz on a real phone, the Key2 itself.
+**LIVE** 2026-10-27 (her "push"), build 20261027-105500 (main 2671b929; commit 7166da59); hand-stamped in a private index
+because another session's tracked edits block publish-live.sh, then joined into session-a as 2347eeac (tree unchanged).
+Checked on the live site: the build stamp and `phHubExHtml` served.
