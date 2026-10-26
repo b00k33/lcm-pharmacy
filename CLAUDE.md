@@ -1479,9 +1479,10 @@ key, rings the next unlabelled photo (a tap never moves the page: it rings
 one already on screen or none; only the keys scroll to it), and has Select +
 one label for many [Records → Photos: label with one tap; Records → Photos:
 a tap never moves the page]. Tongue shots rank natural →
-unlabelled → side → sublingual → flash (`PH_TONGUE_SHOT_RANK`). The tongue
-photo viewer carries the tongue chips on every photo, Sublingual and Flash
-as their own sections, past photos at the bottom. A face / build photo full
+unlabelled → side → sublingual → flash (`PH_TONGUE_SHOT_RANK`). The Tongue
+page puts today's photo beside the last (the Sublingual tab flips the pair),
+the Flash pair under them in the same photo column (2026-10-26 tidy-up), past
+photos at the bottom. A face / build photo full
 screen carries Find the Ren's own rows (Face · Eyes · Lips / Build · Skin ·
 Muscles) and its spots as corners (her 2026-10-24 "b and c") [Photo spots as
 corners + the photo's own chips full screen]. Compare and the viewer are
