@@ -4624,6 +4624,7 @@
   #pharmacyPage .ph-hbt-tm { display: flex; flex-direction: column; gap: 3px; }
   #pharmacyPage .ph-hbt-tm .ph-fast-fld { width: 100%; height: 28px; padding: 0 6px; box-sizing: border-box; }
   #pharmacyPage .ph-hbt-tm input[type=time] { width: 100%; font-variant-numeric: tabular-nums; }
+  #pharmacyPage .ph-hbt-tset { height: 28px; min-width: 56px; padding: 0 10px; border: 0; border-radius: 6px; background: var(--ph-herb-tint); color: var(--ph-soft); font: 600 var(--fs-13)/1 var(--font-body, inherit); cursor: pointer; }
   #pharmacyPage .ph-hbt-ticks { display: flex; gap: 4px; flex-wrap: wrap; }
   #pharmacyPage .ph-hbt-ticks .ph-hb-dose { height: 30px; padding: 0 8px 0 5px; gap: 5px; font-size: var(--fs-12); }
   #pharmacyPage .ph-hbt-ticks .ph-hb-dose .bx { width: 16px; height: 16px; }
@@ -41556,7 +41557,7 @@
   // ---- the page, on her own record (her synth22 picks 7 + 8, mock 2): ONE table, Formula · Dose · Times · Today · 7 days ·
   // Left · Dispense (dispensed) or Edit (typed); + Formula = a short line (name + times a day + Add, More ▾ for the dose, days,
   // start and supply). No Stop: a row leaves by itself (phHbStays); a typed one's Edit holds Remove ----
-  let phHbxAdd = null, phHbxEd = null, phHbxFresh = "";   // the add line's values · the typed row open in Edit · the row just added (this visit only)
+  let phHbxAdd = null, phHbxEd = null, phHbxFresh = "", phHbTmOpen = "";   // the add line's values · the typed row open in Edit · the row just added · the row whose time fields she opened (this visit only)
   const phHbxBlank = () => ({ n: "", t: 2, q: 1, u: "pills", wd: [], from: keyOf(new Date()), sup: 0, more: false });
   const phHbxObj = x => ({ n: String(x.n || ""), t: Math.max(1, Math.min(6, Math.round(+x.t) || 1)), q: Math.max(0, Math.round(+x.q) || 0), u: PH_HBX_UNITS.includes(x.u) ? x.u : "pills", wd: Array.isArray(x.wd) ? x.wd.slice() : [], from: /^\d{4}-\d{2}-\d{2}$/.test(x.from || "") ? x.from : keyOf(new Date()), sup: Math.max(0, Math.round(+x.sup) || 0) });
   const phHbxStep = (f, v, min, max, lbl) => `<span class="ph-hbt-st" role="group" aria-label="${esc(lbl)}"><button type="button" data-hbx-st="${f}|-1"${v <= min ? " disabled" : ""} aria-label="${esc(lbl)}: fewer">−</button><b>${v || "–"}</b><button type="button" data-hbx-st="${f}|1"${v >= max ? " disabled" : ""} aria-label="${esc(lbl)}: more">+</button></span>`;
@@ -41596,7 +41597,9 @@
       const sub = ty ? `<span class="tg">typed</span>from ${esc(phHubDm(r.from))}` : r.dk ? `dispensed ${esc(phHubDm(r.dk))}` : "";
       const fn = `<div class="ph-hbt-fn"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-${ty ? "pill" : "jar"}"/></svg><span><b>${esc(r.name)}</b>${sub ? `<small>${sub}</small>` : ""}</span></div>`;
       const dose = `<span title="${esc([r.dose, r.ins].filter(Boolean).join(" · "))}">${esc(r.doseS || r.dose || "–")}</span><small>${esc(r.days)}</small>`;
-      const times = `<div class="ph-hbt-tm">${Array.from({ length: r.n }, (_, i) => `<label class="ph-fast-fld"><input type="time" value="${esc(r.times[i])}" data-hb-time="${esc(r.sid + "|" + i)}" aria-label="Dose ${i + 1} time"></label>`).join("")}</div>`;
+      // her answer (2026-10-26): "herbs needs taken twice a day. not specific dose times": no times = one quiet "–" field; a tap opens them
+      const times = r.times.some(Boolean) || phHbTmOpen === r.sid ? `<div class="ph-hbt-tm">${Array.from({ length: r.n }, (_, i) => `<label class="ph-fast-fld"><input type="time" value="${esc(r.times[i])}" data-hb-time="${esc(r.sid + "|" + i)}" aria-label="Dose ${i + 1} time"></label>`).join("")}</div>`
+        : `<button type="button" class="ph-hbt-tset" data-hb-tmopen="${esc(r.sid)}" title="Dose times" aria-label="Dose times: ${esc(r.name)}">–</button>`;
       const today = on ? `<div class="ph-hbt-ticks">${Array.from({ length: r.n }, (_, i) => {
         const tkn = phHbTaken(tk, r.sid, i);
         return `<button type="button" class="ph-hb-dose${tkn ? " on" : ""}${phHbDue(r, tk, i) ? " due" : ""}" data-ph-hb-tk="${esc(phHbKey(tk, r.sid, i))}" aria-pressed="${!!tkn}" title="${esc(phHbLbl(r, i))}${tkn ? ` · taken ${esc(phFastClock(new Date(tkn.at)))}` : ""}"><i class="bx">${tkn ? phMealSvg("check") : ""}</i>${esc(phHbLblS(r, i))}</button>`;
@@ -41661,6 +41664,12 @@
     let el;
     if (T.closest("[data-hbx-add]")) { phHbxAdd = phHbxAdd ? null : phHbxBlank(); phHbxEd = null; phHbRepaint(); if (phHbxAdd) phHbxFocus(); return; }
     if (T.closest("[data-hbx-go]")) { phHbxAddGo(); return; }
+    if ((el = T.closest("[data-hb-tmopen]"))) {
+      const sid = el.dataset.hbTmopen;
+      phHbTmOpen = sid; phHbRepaint();
+      setTimeout(() => { const f = document.querySelector(`#pharmacyPage [data-hb-time="${CSS.escape(sid + "|0")}"]`); if (f) f.focus(); }, 0);
+      return;
+    }
     if (T.closest("[data-hbx-more]")) { if (phHbxAdd) { phHbxAdd.more = !phHbxAdd.more; phHbRepaint(); } return; }
     if ((el = T.closest("[data-hbx-ed]"))) { phHbxEd = phHbxEd === el.dataset.hbxEd ? null : el.dataset.hbxEd; phHbxAdd = null; phHbRepaint(); return; }
     if ((el = T.closest("[data-hbx-rm]"))) { phHbxRm(el.dataset.hbxRm); return; }

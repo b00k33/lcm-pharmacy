@@ -3315,7 +3315,8 @@ replaces only the SAME formula); round 2: one table, a short + Formula, no Stop 
 a newer dispense of the same name replaces one); `phHbStays` = a fortnight after it runs out, a dispense with no run-out 4 weeks, a
 typed one with no supply until Remove. `phHbTimes` borrows times only from the same formula (before: any latest set, so a second
 formula would have taken the first one's). The page (`phHbPageHtml`) is one table, Formula (jar or pill, "dispensed 4 Oct" /
-TYPED from 20 Oct) · Dose ("3 spoons × 2", the days under it, the long dose in its hover) · Times (fields) · Today (a tick per dose,
+TYPED from 20 Oct) · Dose ("3 spoons × 2", the days under it, the long dose in its hover) · Times (her answer earlier that day, "herbs needs taken twice a day. not specific dose times":
+a row with no times shows one quiet "–" field, a tap opens its time fields; set times show as fields) · Today (a tick per dose,
 "8:00" or "1") · 7 days (dots: full, half, dashed missed, a dash = no dose) · Left ("16 days" green, "Ran out 13 Oct" amber) ·
 Dispense or Edit. + Formula: name (native list of her prescriptions + the formula list; any name) + times a day + Add (Enter adds),
 More ▾ amount + unit (pills, capsules, spoons, g, ml, sachets) · days · from · supply. Edit row: the same fields, each change saved
