@@ -3368,3 +3368,41 @@ private index; Meals planner, Habits + Steps and the Herbs table (537be4c1, c48e
 publish-live.sh still fast-forwards and carries the held work when she says so. That happened a minute later: build
 20261027-083500 (a83c744d, another session, her yes) took Meals, Habits + Steps and the Herbs table live; the served page carries
 phDishTb, phHabBandHtml and phHbXRow, and the spacing rules.
+
+## Phone calendar: Google's spacing (2026-10-27)
+
+Her ask: "improve my mobile ui calendar view, it feels too squished. use google calendar mobile as a guide for spacing.
+- make mock". Measured on her screenshots (360 x 780 CSS px): LCM spent 268px above the first hour, Google 126; LCM's
+gutter 40 with 9.5px hours, a 1px white seam, time / name / focus on three lines. Mock
+`calendar-phone-spacing-mock-2026-10-27.html` (artifact T4BzKuua1H7xkV5mkjWLou, names fictional), her 9 picks then "Yes,
+build it": 1 B one toolbar row · 2 A one date row · 3 A time column 64px, 11px hours · 4 A 3px gap · 5 A name first, 2
+lines · 6 B text inset stays 7px · 7 A an hour stays 66px · 8 A no card · 9 A Saved pill shows 3 s.
+
+Built, phone only (≤640px; the computer and tablet widths untouched):
+- `phApptCalPhoneBarHtml(days, dcNow, viewSeg)`: ‹ [date ▾] › · today's date in a circle (`data-ph-apptcal-nav="0"`) ·
+  Me · 🔍. The date ▾ is a `.ph-atb-dd` whose menu holds the day counts (same `data-ph-apptcal-days` buttons), the
+  Grid | List segment and Both clinics. 🔍 / ✕ are `data-ph-apptcal-srch="1|0"` (click handler beside the nav one):
+  open adds `.srch` (the row shows only the search box, focused); ✕ clears `phApptCalQ` and repaints. `phApptCalSrch`
+  keeps it open through the repaints typing makes.
+- `phApptCalGridHtml`: `phone` / `one` (phone + 1 day). Gutter 64px on a phone. `one`: the head has no gutter cell; the
+  day label (MON + date) sits in the time column, `.ph-apptcal-hd1` holds `phC22FoldRowHtml("before", …, bare=true)`
+  (the one day's `.ph-c22-fd` cell, its ▴ inside when open), the fast chip and the CD chip (right). The separate "before"
+  fold row is skipped; the trip row and the "after" row stay.
+- CSS (PHONE REDESIGN block, "the calendar with Google Calendar's spacing"): wrap `margin: 0 -12px`, no border or
+  radius, white; head / body / fold / trip rows `padding-right: 13px` (blocks end 16px from the edge), a `::after` on
+  the grid carries the hour lines to the edge; hours 11px body font, `right: 12px`; the selected-day underline moved to
+  `.hd1` (to the screen edge). Gap: blocks and her events get a transparent 1px top + right border with
+  `background-clip: padding-box` on top of the grid's own 2px (the white seam ring stays, overlapping blocks still part).
+  Name first: `.lg` blocks are a wrapping flex (name 100%, then the time, then the focus line with a "·" before it);
+  sm / xs reorder their one line (name, then time; a narrow column drops the time whole: `:not(.lg) .r1` wraps at 18px);
+  the herbs "!" moves to the block's top-right. Her events: name 14px / 600, time 12px; a tall one (time on its own
+  line, `:has(> .tm)`) clamps the name to two lines. Selectors carry `.ph-apptcal-daycol` so they outrank the spacing
+  audit's later rules.
+- Not changed: the Saved pill. Q9 was asked as "always on now"; the CSS already fades it after 2 s (`phSavedOut`), so
+  her pick's effect already holds and lengthening it to 3 s would cover the blocks longer. Told her; 3 s on her word.
+
+Tested in the Browser pane at 360 x 780 with sample bookings (and a meta line, a cycle day and a second-clinic booking
+patched in): one row, menu (Day 3 5 6 7 · Grid | List · Both clinics), 3-day view (two head rows, names kept), search
+open → type → match / dim → ✕ clears, block tap → popup + outline, CD tap → cycle card, date tap → Day summary; 1220
+wide: the old toolbar, 52px gutter, no phone rules. Screenshot `shots/phone-calendar-built-2026-10-27.jpg`. Not tested:
+her real phone, the Key2, reduced motion (nothing new moves).
