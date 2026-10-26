@@ -3233,3 +3233,4 @@ is saved; Photos opens Records by itself; the leaf minimises (key "1", title "Sh
 clears Find; minimised shows every icon with the pill + gear stacked; the drawer shows Find and "Settings" on the left.
 Prescriptions search "Cx Test" 5 -> 1 -> 5. No console errors.
 **Not tested:** her real window height and the Key2; the badge counts at 4 digits.
+- **LIVE** in build 20261026-123700 (2026-10-26, her "push live"; the trip-pauses commit 2a6ecb59 rode along). The live page carries `phSbFoldsPaint`, `phSbFind`, `phMeTripPauses`.
