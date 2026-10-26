@@ -3107,3 +3107,42 @@ Diet page and rail (unchanged).
 **Wording is DRAFT** (Claude's): "Every day that follows your usual", the not-counted lines, "Clinic dated", the Targets tags,
 "nib extras left", "Not a visit".
 **LIVE** in build 20261026-101500 (2026-10-26; published by a sibling session, then her "push" here). The live page carries `phHubHealthHtml`, `phHlRows`, `PH_FOOD`, `phTbByo*`, `phDietNlHtml`, `phMealWhenHtml`, `phDietGoalSet`. (A sibling's line here said the Patient profile list audit 2cfd22ea and One Me 63ec7ee1 went live in 101500; both were already in 094000, as noted under One Me.)
+
+## Yang deficiency picture (2026-10-26)
+Her ask: "show yang deficiency mock". Mock `yang-def-mock-2026-10-26.html` (artifact TJbxo1kLeje2gxpE5s1Sdt); her 8 popup picks, all the
+recommended option: Kidney · Spleen · Heart tabs + all at once; signs as words on the body; the tongue + pulse strip; full motion; also on
+Fang Bing Ren, Today's visit, Tongue + Pulse and the patient letter; the Kidney yang close-up becomes the Kidney tab; sign words as drafted;
+"Yes, build it".
+**What it is:** `yangBody` in `PH_PP` (the mock's `YangPic` on PH_PP's own helpers): the Her build person (`anat`, now with `{ s, y0, h }`
+so it can draw at 212/466 in a 300 x 252 frame) with three fires (Ming Men between the kidneys, the Spleen fire, the Heart fire), warmth
+flowing up the trunk, out the arms and down the legs; Yang deficiency = the fires low and frosted, the flow short and slow, cold climbing
+from the hands and feet, a cold belly and back, a pale face and lips, puffy ankles, clear urine falling, a slow heart that skips every
+fourth beat, a shiver now and then. 15 sign words (DRAFT) each on its place, the "fire low" lines in blue (`.lbl-t.c`); Balanced has its
+own 6 words. A strip under the body: the tongue (pink -> pale, swollen, teeth marks) and the pulse trace (even -> deep, slow, weak).
+**Tabs:** `PH_PP_TABS.yang = [yang_kid, yang_spl, yang_hrt]`; unlike the story tabs (their own scene each) a Yang tab is a VIEW of the same
+picture: `phPpFlipTo` calls `S.setView` and the picture glides (the other two fires fade to .15, their words fade out); the big sheet's
+title follows the tab. `PH_PP_VTAB` sends a door that names a tab (or `kidneyyang`) to the Yang picture opened on that tab. `PH_PP_COND`
+has the three tab names and colours; `PH_PP.XL` = the 252-high pictures (`phPpSvg`). The old `SC.kidneyyang` close-up and the Yang
+branches of `anatPot` were removed (it draws Yin deficiency and Heat only now); the Guide card shows Yang once when a family counts for
+both (`phPpGdfHtml`). The bar label is "Yang deficiency" (was "Cold"); `.ph-pp-bar` now scrolls inside itself when it is wider than its
+card (the 5-tab bar on a phone, Pregnancy's too).
+**Where else:** `phPpYangThumbHtml` (a 132px tile that opens it big): Fang Bing Ren under the body figure while Fu Zi / Si Ni Tang (whole
+picture) or Zhen Wu Tang / Shen Qi Wan (Kidney tab) lead with real ticks (`PH_FBR_YANG_PP`, `phFbrFigureHtml`'s 4th argument); the
+Tongue page under "Reads as" for a pale tongue that is swollen or teeth-marked (Spleen tab); the Pulse page's Summary tab for a deep
+pulse (drawn or ticked) that is weak / soft / flat / empty / feeble or slow (rest rate under 60) (Kidney tab). Today's visit: the Journey
+card's "likely" pattern is a chip with a still picture when it is Yang or Kidney yang (`.ph-tj-pp`). The Food letter: a still JPEG
+(`phPpStillJpg`, the picture drawn once with inline label styles) under the text, captioned "When the body's warmth runs low" (DRAFT),
+on by default; the "Yang picture" chip takes it out; other letters never show it.
+**Tested** (sandbox, Cx Test, data in memory, `savePharmacy` stubbed): the picture mounts at 300 x 252, the bar reads Balanced | Yang
+deficiency | Kidney | Spleen | Heart, Spleen then Balanced keep the same running picture (view spl, then k 0); Kidney yang opens on the
+Kidney tab (sheet title "Kidney yang deficiency"); Heart tab title follows. Tongue page: pale + swollen and pale + teeth marks show the
+tile, pale alone does not; tap opens the sheet on Spleen. Pulse: Deep + weak at R Chi shows it, Deep alone does not. Fang Bing Ren with
+Zhen Wu Tang leading: the tile under the figure at 1280px; Gui Zhi leading: none. Journey card with Yang likely: the chip. Food letter:
+chip on, picture + caption in the printed document, off removes it, the Iron letter has neither. Phone (375px): the sheet's bar stays in
+the card and scrolls. Guide: Fu Zi family shows one Yang picture. Prescriptions search "Cx Test" 5 -> 1 -> 5. No new console errors.
+**Integration check:** Patterns page card (open), the Care Plan Diagnosis tiles (the same `phPpSvg`), the Fang Bing Ren body-map plates
+(`phPpFbbHtml`, Kidney yang keeps Balanced | Kidney yang), the Guide card, the big sheet and its strip.
+**Not tested:** her real patients, the Key2, the letter picture inside a real email (Gmail strips some images: it is a JPEG data URL like
+the tongue photo), a man's body (the scene uses `anat`'s male drawing; the organ marks sit at the same places).
+**Wording is DRAFT** (Claude's): the 15 sign words, the 6 Balanced words, "Pink, thin white coat" / "Pale, swollen, teeth marks", "Even,
+steady" / "Deep, slow, weak", the tab names "Kidney / Spleen / Heart yang deficiency", the letter caption.
