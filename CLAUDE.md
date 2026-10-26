@@ -1385,6 +1385,13 @@ move; details pop out beside the row; a formula card has "Refill ▾"
 Order/Refill cards are TWO PLAIN LISTS, empty first then fewest days of
 cover. Picking a supplier pulls in that supplier's recorded price.
 
+**Patient profile list on a computer (her 2026-10-26 audit, "make it more space saving make it cleaner"; BUILD-NOTES "Patient
+profile list audit"):** the five tiles are the filters (tap again = all; "No history" only while anyone has none), no
+Filters button or chip row; "Schedule" sits in the toolbar while nothing is scheduled (the quiet line hides); no list head
+line unless searching ("N match ..."); bands carry sprite icons; a row says each fact once ("never" / the amber date carry
+not-dispensed and not-seen-6-months, in their hover), short condition names (2 then +N), one 18px pill look, 44px rows.
+Her 9/4 bones stay: fold bands, timeline rows, the two round buttons. The phone keeps its chips and Scheduled line.
+
 ## Patient details & the patient file
 **Patient details** = a hero + 3 cards (since 2026-10-23, her picks, every control 32px Zanda-style: 6px boxes, joined 6px bars, white value boxes, the send-the-form circle)  (`phPdPageHtml`): tap to edit in
 place, age from DOB, BMI bar, a filled-in ring (n of 11), Call / Text /
