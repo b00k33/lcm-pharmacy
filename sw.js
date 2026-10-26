@@ -43,6 +43,22 @@ self.addEventListener("message", function (e) {
   if (e.data && e.data.type === "SKIP_WAITING") self.skipWaiting();
 });
 
+// Her after-meal check-in (2026-10-27, food-checkin-mock-2026-10-27.html): a tap on the phone's "How did Break Fast sit?" opens
+// that meal's card in LCM -- the LCM window already open is told which meal (only LCM's own: the origin is shared with C22 and
+// C7), else LCM opens with the meal in its address (#rxck=<day>|<meal>), which the app reads once and clears.
+self.addEventListener("notificationclick", function (e) {
+  var key = e.notification && e.notification.data && e.notification.data.rxck;
+  e.notification.close();
+  if (!key) return;
+  e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(function (list) {
+    for (var i = 0; i < list.length; i++) {
+      var c = list[i];
+      if (c.url.indexOf(self.registration.scope) === 0 && "focus" in c) { c.postMessage({ type: "RXCK_OPEN", key: key }); return c.focus(); }
+    }
+    return self.clients.openWindow("./index.html#rxck=" + encodeURIComponent(key));
+  }));
+});
+
 // A hung connection (flaky clinic wifi, captive portal) must never leave a
 // navigation pending forever -- race the network against a timer and fall
 // back to the cached shell either way.
