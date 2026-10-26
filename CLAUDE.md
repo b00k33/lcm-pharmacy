@@ -436,6 +436,11 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   `.ph-pres-panel`'s `--ph-pres-bleed`) gives its content `padding: 16px 0 0
   16px`, scoped `@media (min-width: 641px)`. Reuse this number and scoping
   (canonical example: `.ph-flow`'s own rule).
+- **No text over text, nothing cut** (her 2026-10-27 spacing audit; the fixes are one dated "Spacing audit" block
+  at the end of the main `<style>`). A row holding a 32px control is at least 36px tall; a column holds its widest
+  real value (a full date, both action buttons); a word longer than its tile breaks inside it (`overflow-wrap:
+  anywhere; hyphens: auto`) and never runs under a neighbour; a time either shows whole or drops out whole; a
+  secondary item (a code beside a name) gives way before the data it sits beside.
 
 ## Alignment & symmetry
 - Equal left/right padding, balanced top/bottom. Items share one left edge and

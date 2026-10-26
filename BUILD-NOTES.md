@@ -3331,3 +3331,34 @@ Undo brings it back; a tick on Gui Zhi counts on the band (1 of 8); a time on Gu
 grid (`phHbDayItems`) and the Appointments column list the typed formula; 1220 x 800 and 360 x 760 shots; no console errors.
 **Integration check:** Herbs page, Me drawer, today band, Appointments grid + column, Habits (its Herbs habit reads `phHbRows`).
 **Not tested:** the cloud row, a real dispense through Dispense (seeded `lastDispensedAt`), the Key2.
+
+## Spacing audit: no text over text, nothing cut, no dead space (2026-10-27)
+**Her words:** "do a full audit of the app to assess for spacing consistently so there isnt dead empty space and overlapping text".
+**How:** a measurer run on 43 pages (every sheet, every record step, Dispense, the calendar, the Me drawer) at 1280, 375 and 360 x 469:
+text over text (own and ancestor clips, elementFromPoint), text cut without an ellipsis, gaps over 26px, a gap doubled by a margin,
+boxes much taller than their content. Every finding fixed or ruled out; one dated block at the end of the main `<style>` ("Spacing
+audit"), last on purpose so each rule wins over the one it corrects, plus one JS word.
+**Fixed:** calendar block time whole or hidden ("7:0"), and a timed all-day chip ("Dinner with Duc 7:0"); Me drawer lines inside the
+drawer; Inventory name + code onto two lines when they can't share one (they ran over Supplier), the supplier code box fits
+"100045-2"; Formula refill's empty list no longer holds 220px; Stock statistics captions take their band (were a 136px column
+spilling over the table) and tile labels go under the number; section headings lose the browser's h2 margin, stacked cards the doubled
+16px (Suppliers, Made in house, Stocktake, Journey); Medical history "Feeds …" tags go under the condition and a long word breaks by its
+dot; record steps one 16px edge (a nested stage body doubled it); diagnosis chip wraps inside itself; Communications: When 144px
+(whole date), Action 208px ("Check in ✓ Done" measured 204), Patient keeps 192px, rows 36px for the 32px buttons, the "due" + date
+space (`phCommWhyHtml`: "next visit dueMon"); Dispense: "Dosage & price" at the card's 12px, the grams strip fits its row, the
+chosen price pill's rate white on the dark pill (was dark on dark); Fang Bing Ren tiles break a long word instead of running under ✕.
+Phone only: stat tiles at least their longest word; record tabs full width and as wide as their word; Communications tabs as wide as
+their word ("Templa…"), a plain date on the card's edge, Contact 32px like Done; Up next full width; "+ Add to order" off the screen
+edge; Fang Bing Ren compare one box fewer (+17px a column, "Hyperthyroidism" fits at 360); the floating ⋯ dot hidden (the Q6 "☰
+only" rule `#pharmacyPage .ph-pres-fab` never reached it: it sits outside #pharmacyPage, floated over every page's last line once a
+record was opened, and with the tab bar hidden its tap did nothing). At 400px and under the gold "Plan a formula" pill drops its +
+so "Formula refill" reads whole.
+**Ruled out (by design):** empty calendar day columns, kanban columns, the Appointments right column, the record panel and Refill
+sheet filling the screen, the End of day prompt's fade, the Fu Zi two-tone label, the textarea mirror, the transparent phase select,
+the Session grid (LOCKED), the inventory sheet's sideways scroll, the Me drawer over the page on a phone, an empty "+ Face" photo slot.
+**Left for her:** the Fang Bing Ren herb groups sit in a 3-across grid, so a short group under a long one leaves a gap (180px under Ma
+Huang); a packed (masonry) layout would change the reading order, so it waits for her word.
+**Tested** (sandbox seed, made-up patients): every page re-measured clean at 1280, 375 and 360 on the edited file (only the ruled-out
+kinds left); Communications also at 748 (her window) and 1440 (the seven-column sheet); before/after headless shots of 16 views.
+**Not tested:** her real data (longer names than the seed), the Key2 itself; hyphens show on Android, the desktop test browser broke
+long words without one.
