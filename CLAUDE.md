@@ -1017,6 +1017,13 @@ gauge, visit ring, herb-jar state, "✉ Send online form". The old lens chips
 only, a practitioner chip row (Everyone · Anni · Charlie · Christine ·
 Linh) dims the other bookings, and each booking's practitioner comes from
 the weekday [Practitioners on the Acupreg calendar].
+**The column beside the grid (her 10 picks, 2026-10-26, mock `appt-column-mock-2026-10-26.html`, BUILD-NOTES
+"Appointments column"):** on a computer the Up next card (the ring beside the name, the phase bars in the visit line)
+sits over one joined bar **Herbs · Patient · Me** and one panel that scrolls inside itself; the column is as tall as
+the grid. Herbs = today's herb bookings (time · name · jar, a tap opens the prescription, "✓ n dispensed" folds);
+Patient = plan · focus · goal · herbs · logged · last · scan + Book another (opens first; a booking tap shows that
+patient here); Me = today's doses, meals, fasting, to-dos (the Me chip still opens the drawer). On 5–7 days the column
+folds to a 44 px rail that opens it over the grid. The day's numbers stay behind the day-head tap (her pick).
 
 **The Appointments dialog** is built once and patched in place: two panes
 (add | booked ahead), a Quick add | Paste list switch, day chips, Home
