@@ -1579,6 +1579,22 @@ her words "add a steps count to my fitness page ... use james clear atomic habit
   average, best, 14 bars against the goal line). Goal 8,000, ✎ changes it (`hubset.stg`, 500–100,000).
 - Data: `d.hab`, `d.stp`, `d.idn` are in `PH_HUB_MAPS` (entry by entry). Code: "HABITS + STEPS" (`phHab*`, `phStp*`).
 
+## Fitness + Exercises (C22's fitness, moved in)
+Since 2026-10-27 (her synth22 "wheres the page for exercises?" + "move fitness page from c22 to lcm so i cna plan and log my
+exercise", picks 9 to 13 on `meals-fitness-plan-2026-10-26.html`, round 2 on `meals-fitness-mock-2026-10-26.html`, her answers
+10/27 + "Yes, build it"; BUILD-NOTES "Fitness + Exercises"). **Only on her own record.** Step 1 of 2 (plan + log); climbs wait for step 2.
+- **Fitness** (Body, `phHubFitHtml`): Bring in (her C22 fitness, once: library, templates, log, planned, stairs, week plan; C22's
+  keys are READ, never written) · This week (workout + rehab routines and Steps, a dot a day = the Habits reads and ticks, one tick
+  both pages) · **Weekly plan** = her calendar's routines (`phFitPlanApply`: a day set to a type moves that weekday to the routine of
+  that type, made in g-fitness if she has none; done days stay; the past never reads as missed; Undo) · Steps + Weight · Steps plan
+  (walks + stairs, under the Steps card) · Today (type, template, sets, timed hold, rest ring, pain + stars, ▶ Workout Mode) ·
+  Upcoming + Recent. Finish also ticks today's routine of that type.
+- **Exercises** (Body, after Fitness, `phHubExHtml`): her library (search, groups, Hide) + workout templates.
+- Motion: a set pops and its tick draws, the rest ring counts down and buzzes at zero, gold once when the day's sets are done, the
+  week's dots pop and link (the Habits way); all off under reduced motion.
+- A routine in g-fitness counts as a workout (`phHubKind`, after the money words). Data: `d.fex`, `d.ftp`, `d.fwo`, `d.fpl`,
+  `d.fsp`, `hubset.stride`, `hubset.fitIn` in `PH_HUB_MAPS` (shapes in the code comment). Code: "FITNESS + EXERCISES" (`phFit*`).
+
 ## One Me (her record joined up)
 Since 2026-10-26 (her ask "i want my personal profile to be well integrated"; guide `profile-integration-guide-2026-10-26.html`,
 her 9 picks on `profile-integration-mock-2026-10-26.html`, all the recommended ones; BUILD-NOTES "One Me"). **Only on her own
