@@ -3511,3 +3511,7 @@ Eating out in the foot, Every Breakfast makes it her usual. Phone (a 360 px fram
 Me drawer's Today's meals, the planner's cells and the Diet page lines read the same saved list (unchanged).
 **Not tested:** her real meals and dishes, a real cloud merge between her two logins, the Key2 phone itself, the snack picker
 (Snacks · drinks: one tap adds a snack; left as it was).
+**LIVE** 2026-10-27 (her "push live"), build 20261027-103400 (main 4bcf00c7); hand-stamped in a private index because another
+session's tracked mock edit blocks publish-live.sh, then joined into session-a as 99340b4e (tree unchanged). Checked on the live
+site: both stamps, `phMealAddHtml` / `ph-mlk-row` / "Add food or drink" served (comments are stripped on publish, so search code,
+not the "A CALMER MEAL" comment).
