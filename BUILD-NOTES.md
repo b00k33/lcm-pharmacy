@@ -2915,3 +2915,10 @@ Her synth22 (screenshot of the day card): "group things together/near each other
 - **Not tested:** her real patients' photos; a real camera capture from the Flash button; "See all" (it needs over 6 past photos).
 - **Integration:** layout only, on the Tongue page; no fact moved. Today's visit's tongue tile and the Care Plan's tongue row read the same `phTongueChartSvg` / summary, unchanged.
 - **LIVE** 2026-10-26 on her "push live": build 20261026-040500 (publish 4d35f0c5, commit 89a33392; hand-published, since another session had an unsaved mock file open).
+
+
+## Appointments: a booking tap opens the popup only (2026-10-26)
+Her words, with screenshots of the popup and of the column card both showing Morgan: "have these two seems excessive. i only need one. i like the floating ui more than the column design."
+- A block or List row on Appointments now opens the popup at every width; the Up next column (and the 5-7 day rail's float) no longer swaps to "Selected · <tapped patient>" or opens. The column keeps the Up next patient and Herbs · Patient · Me. C22's "Open in LCM" (`phApptDeepLinkBefore`) opens the popup instead of setting `phApptUpNextFocus`. The Up next card's own Open button still opens the popup. The List view's card beside the list (List C) is unchanged.
+- Code: the click handler for `[data-ph-appt-pop]` (the `phApptUpNextFocus = id` branch removed), `renderPhAppointmentsPage`.
+- Tested in the sandbox at 1440 px: 7 days (the rail): a tap opened the popup, the rail stayed closed; Day: a tap opened the popup while the column kept "Up next · Morgan"; Open in the card opened the popup; Prescriptions search narrowed and came back; no console errors. Not tested: her real bookings.
