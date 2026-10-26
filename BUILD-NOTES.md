@@ -3106,3 +3106,4 @@ Diet page and rail (unchanged).
 `hlim` / dish `fd` entries (they ride the existing entry-by-entry merge), Thisbowl's drinks in a meal, the phone's calendar popup.
 **Wording is DRAFT** (Claude's): "Every day that follows your usual", the not-counted lines, "Clinic dated", the Targets tags,
 "nib extras left", "Not a visit".
+- **LIVE** 2026-10-26 on her "push live": build 20261026-101500 (commit 2cfd22ea), published together with "One Me" (63ec7ee1, her "Send both").
