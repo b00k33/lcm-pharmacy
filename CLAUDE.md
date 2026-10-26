@@ -964,6 +964,9 @@ BUILD-NOTES.md on 2026-10-21). For how a part got here, or its function
 names in detail, grep BUILD-NOTES.md for the heading named in brackets.
 Anything unsettled is in OPEN at the end.
 
+## Sidebar (the app's menu)
+Since 2026-10-26 (her 8 picks, BUILD-NOTES "Sidebar tidy-up"): "The clinic" over her name, a **Find a page** box (filters, gold letters, Enter opens, Esc clears), Every day + Every week open in her "Grouped by rhythm" order, **Records · Reference · Admin** each one folded line (label · count · chevron; remembered on this device in `daybook-ph-sb-folds`, the page's own fold opens), no Minimise row (the leaf at the top minimises), and one bottom row: the clinic pill + a gear for Settings (the drawer: "Settings" with its word). Code: `phSbFoldsPaint`, `phSbFind`, `phSbNavFit` above `renderPhShellNav`.
+
 ## Appointments & calendar
 **Toolbar + Up next buttons (her 2026-10-23 picks, Zanda as inspiration, appt-chips-final-mock-2026-10-23.html):** every
 control is 32px; text controls are 6px boxes (white, thin line, picked solid), icon-only buttons stay circles, text at the
