@@ -1094,7 +1094,10 @@ own Cycle page). Which record is hers = **My profile** in the Me drawer (`lcm-me
 rest, so both logins read it) with a Cycle row "Day n · Phase · L-day" that opens the same page. Since 2026-10-26 (her
 picks A + B, mock `me-profile-diet-mock-2026-10-26.html`): once named, her name is a row that opens her record
 (`phMineOpen`, past the no-plan gate) and a ✎ circle opens the box to change it (`phMeProfEd`); Today's meals carries
-a **Diet** chip that opens her Diet page. Fasting and This week open through the same `phMineOpen`. **Drag**
+a **Diet** chip that opens her Diet page. Fasting and This week open through the same `phMineOpen`. Every card of hers on the grid
+(an event, a routine, a meal, a herb dose, a trip row, her cycle day) has **My profile** in its top row (`phMeProfGoHtml`, her
+2026-10-26 "i want to access my personal profile by clicking on my personal events"): it opens her record, or the Me drawer
+to name it when none is named. **Drag**
 (`phDg*`): her own blocks and bands move (15-minute snap, a time tag, across days in the week view) and stretch
 (bottom edge); a routine's drop is a this-day change and the toast offers "Every day" beside Undo
 (`presSavedToast` `o.acts`); a dragged PATIENT block drops into Edit prefilled with the new day and time and
