@@ -3407,6 +3407,11 @@ open → type → match / dim → ✕ clears, block tap → popup + outline, CD 
 wide: the old toolbar, 52px gutter, no phone rules. Screenshot `shots/phone-calendar-built-2026-10-27.jpg`. Not tested:
 her real phone, the Key2, reduced motion (nothing new moves).
 
+**LIVE** 2026-10-27 (her "push live"), build 20261027-090300 (6fe49c82): the phone calendar ONLY, made on the live build in a
+private index; Food reactions round 2 (1df5a902, f773748f, docs 5768b3d1) and the motion round (e94f3092) stay held on
+session-a for their own "push live". Joined into session-a as 113ce658 (tree unchanged), so publish-live.sh still
+fast-forwards. Note: Git Bash ignores `TZ=Australia/Sydney` (it gives UTC), so the local clock made the stamp.
+
 ## Food reactions → Fang Bing Ren + after-meal check-in (2026-10-27)
 **Her words:** "Build the food reactions guide checks next", then "fang bing ren and after meal chekin" (her newest word: it
 replaces the 10/25 "Not now" and the 10/26 pick 9 "Patterns clue only"). Guide `food-reactions-guide-2026-10-26.html` round 2
