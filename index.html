@@ -4261,6 +4261,15 @@
   #pharmacyPage .ph-appt-block.trip-away { box-shadow: inset 0 0 0 2px var(--ph-zero), 0 0 0 1px #fff; }
   #pharmacyPage .ph-trip-tdc .bx { width: 11px; height: 11px; flex: none; box-sizing: border-box; border: 1.5px solid currentColor; border-radius: 3px; }
   #pharmacyPage .ph-trip-tdc.done .bx { background: currentColor; }
+  /* her 2026-10-26 picks (trip-pause-mock-2026-10-26.html): a trip pauses her routines. One ⏸ n chip on each paused day (a status
+     in the trip's tint, not one of her things), the Me drawer's one line, and "away" on Fitness, This week and the fast week */
+  #pharmacyPage .ph-c22-fc.ph-trip-pz { --tc: var(--ph-trip); background: color-mix(in srgb, var(--tc) 14%, #fff); color: color-mix(in srgb, var(--tc) 72%, #000); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tc) 35%, #fff); }
+  #pharmacyPage .ph-trip-pz svg, #pharmacyPage .ph-trip-pzrow svg { width: 12px; height: 12px; flex: none; }
+  #pharmacyPage button.ph-me-row.ph-trip-pzrow { background: var(--ph-trip-tint); color: var(--ph-trip-deep); }
+  #pharmacyPage .ph-hub-dots i.aw { width: 14px; height: 4px; border: 0; border-radius: 2px; background: var(--ph-trip); opacity: 1; }
+  #pharmacyPage .ph-hub .aw { color: var(--ph-trip-deep); font-weight: 600; }
+  #pharmacyPage .ph-fast-wk7 .aw i { width: 16px; height: 4px; margin: 6px 0; border-radius: 2px; box-shadow: none; background: var(--ph-trip); }
+  #pharmacyPage .ph-fast-wk.trip b { color: var(--ph-trip-deep); }
   /* the Me drawer's Trips */
   #pharmacyPage .ph-trip-merow .ph-me-ic { color: var(--tc); }
   #pharmacyPage .ph-trip-need { font-size: var(--fs-12); color: var(--ph-faint); }
@@ -37020,7 +37029,7 @@
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") setTimeout(() => phMeSync(false), 600); });
   window.addEventListener("storage", e => { if (e.key === PH_ME_KEY) { phMeCache = null; phMeRepaint(false); } });
   // ---- which days a thing falls on ----
-  function phMeOccurs(it, k) {
+  function phMeOccursRaw(it, k) {
     if (!it || it.del || !/^\d{4}-\d{2}-\d{2}$/.test(it.d || "")) return false;
     const r = it.rep;
     if (!r) return it.d === k;
@@ -37046,6 +37055,43 @@
     }
     return false;
   }
+  // ---- a trip pauses her routines (her 9 picks 2026-10-26, trip-pause-mock-2026-10-26.html) ----
+  // From her flight out until she lands home (no flight typed = the trip's whole days). Meals (her Breakfast / Lunch / Dinner)
+  // and a routine she ticked "Keep on trips" (kt) keep going; one-offs, birthdays and her herb doses are not routines here.
+  // Worked out on read (a trip's dates or flights moving moves it; only the tick is stored). phMeOccurs is the one read every
+  // page uses (the grid, meals, the drawer, This week, Fitness, Health), so they all pause together.
+  function phMeTripWin(t) {
+    let a = null, b = null;
+    (t.flights || []).forEach(f => {
+      if (phTripOut(t, f)) { const m = phTripMin(f.dt); if (phTripIsDay(f.dd) && m != null && (!a || f.dd < a[0] || (f.dd === a[0] && m < a[1]))) a = [f.dd, m]; }
+      else { const ad = phTripIsDay(f.ad) ? f.ad : f.dd, m = phTripMin(f.at); if (phTripIsDay(ad) && m != null && ad >= t.from && (!b || ad > b[0] || (ad === b[0] && m > b[1]))) b = [ad, m]; }
+    });
+    return { a: a || [t.from, 0], b: b || [t.to, 1440] };
+  }
+  const phMeTripRt = it => !!(it && it.rep && !it.kt && !phMealSlot({ t: it.t, s: it.s }));
+  function phMeTripPauses(it, k) {
+    if (!phMeTripRt(it)) return null;
+    try {
+      const ex = it.ex && it.ex[k], o = ex && typeof ex === "object" ? ex : {};
+      if (o.t && phMealSlot({ t: o.t, s: "s" in o ? o.s : it.s })) return null;
+      const m = phC22Min("s" in o ? o.s : it.s), mm = m == null ? 720 : m;   // an untimed one counts as midday
+      for (const t of phTripsAll()) {
+        const w = phMeTripWin(t);
+        if ((k > w.a[0] || (k === w.a[0] && mm >= w.a[1])) && (k < w.b[0] || (k === w.b[0] && mm < w.b[1]))) return t;
+      }
+    } catch (e) {}   // the trip reads sit further down the script: until they exist nothing pauses
+    return null;
+  }
+  function phMeOccurs(it, k) { return phMeOccursRaw(it, k) && !phMeTripPauses(it, k); }
+  // the routines her trip pauses on a day ([{ it, t }]): the ⏸ chip, the drawer's line, "away" on Fitness and This week
+  function phMeTripPausedOn(k) {
+    if (!phMeOk()) return [];
+    const out = [];
+    phMeLive(phMeD().items).forEach(it => { if (!phMeTripRt(it) || !phMeOccursRaw(it, k) || (it.ex && it.ex[k] === 0)) return; const t = phMeTripPauses(it, k); if (t) out.push({ it, t }); });
+    return out;
+  }
+  // a day inside one of her trips (the fast week: a trip week neither counts nor breaks her run)
+  function phMeTripDay(k) { try { return phMeOk() && phTripOn(k).length > 0; } catch (e) { return false; } }
   // one day's things, in the shape the grid's C22 layer draws ("me." ids)
   function phMeDayItems(k) {
     const out = [];
@@ -37241,7 +37287,8 @@
     const rtOf = k => ((phC22Lay[k] || {}).rt || {})[side] || [];
     const bdOf = k => side === "before" ? phC22BdayList(k) : [];
     const tdOf = k => side === "before" ? phTripTdsOn(k) : [];   // her trip's to-dos on the day they fall due (TRIPS)
-    const has = c => !!c && (c.items.length > 0 || rtOf(c.k).length > 0 || bdOf(c.k).length > 0 || tdOf(c.k).length > 0);
+    const pzOf = k => side === "before" ? phMeTripPausedOn(k) : [];   // the routines her trip pauses that day (her 2026-10-26 pick 4)
+    const has = c => !!c && (c.items.length > 0 || rtOf(c.k).length > 0 || bdOf(c.k).length > 0 || tdOf(c.k).length > 0 || pzOf(c.k).length > 0);
     if (!cells.some(has)) return "";
     const open = phC22FoldOpen[side], all = phMeLevel() === "all";
     let more = false;
@@ -37250,7 +37297,7 @@
       const rts = rtOf(c.k), rt = rts.length && !all ? phC22RtChipHtml(c.k, rts, phC22Unf.has(c.k)) : "";
       if (c.items.length > 2) more = true;
       const cut = !open && c.items.length > 2;
-      return `<div class="ph-c22-fd">${bdOf(c.k).map(b => phC22BdayChipHtml(c.k, b)).join("")}${tdOf(c.k).map(phTripTdChipHtml).join("")}${(cut ? c.items.slice(0, 1) : c.items).map((it, i) => phC22FoldHtml(c.k, it, i, dimCls)).join("")}${cut ? `<button type="button" class="ph-c22-more" data-ph-c22-more="${side}" aria-label="Show all ${c.items.length}">+${c.items.length - 1}</button>` : ""}${rt}</div>`;
+      return `<div class="ph-c22-fd">${bdOf(c.k).map(b => phC22BdayChipHtml(c.k, b)).join("")}${tdOf(c.k).map(phTripTdChipHtml).join("")}${(L => L.length ? phTripPzChipHtml(L) : "")(pzOf(c.k))}${(cut ? c.items.slice(0, 1) : c.items).map((it, i) => phC22FoldHtml(c.k, it, i, dimCls)).join("")}${cut ? `<button type="button" class="ph-c22-more" data-ph-c22-more="${side}" aria-label="Show all ${c.items.length}">+${c.items.length - 1}</button>` : ""}${rt}</div>`;
     }).join("");
     const lbl = open ? "Show fewer" : "Show all";
     const tog = more ? `<button type="button" class="ph-c22-more" data-ph-c22-more="${side}" aria-expanded="${open}" aria-label="${lbl}" title="${lbl}">${open ? "▴" : "▾"}</button>` : "";
@@ -37659,7 +37706,7 @@
     const tdShown = phMeTdAll ? todos : todos.slice(0, 5);
     const ahead = phMeBdaysAhead(), soonTo = keyOf(new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() + 13));
     const soon = ahead.filter(b => b.k <= soonTo), bdShown = phMeBdAll ? ahead : soon;
-    const tk = keyOf(TODAY), rts = ok ? phMeRoutines(tk) : [];
+    const tk = keyOf(TODAY), rts = ok ? phMeRoutines(tk) : [], pz = ok ? phMeTripPausedOn(tk) : [];   // her trip pauses them today (pick 5)
     const rtShown = phMeRtAll ? rts : rts.slice(0, 5);
     const lvBar = [["off", "Off", ""], ["ev", "Events", "c22-cal"], ["all", "All", "refresh"]].map(([v, l, ic]) =>
       `<button type="button" class="${lv === v ? "on" : ""}" data-ph-me-lv="${v}" aria-pressed="${lv === v}">${ic ? phMeIc(ic) : ""}${l}</button>`).join("");
@@ -37687,9 +37734,9 @@
         </section>
         <section class="ph-me-sec">
           ${phMeH4("refresh", "Routines", `<em>${rts.length}</em>`, "routines")}
-          ${rtShown.map(phMeRtRowHtml).join("")}
+          ${pz.length ? phTripPzRowHtml(pz) : ""}${(pz.length && !phMeRtAll ? [] : rtShown).map(phMeRtRowHtml).join("")}
           ${!rts.length && ok ? `<div class="ph-me-empty"><span>No routines</span><button type="button" class="ph-me-more" data-ph-me-new="rt">+ Routine</button></div>` : ""}
-          ${rts.length > 5 ? `<button type="button" class="ph-me-more" data-ph-me-rtall="1" aria-expanded="${phMeRtAll}">${phMeRtAll ? "Fewer ▴" : `All ${rts.length} ▾`}</button>` : ""}
+          ${rts.length > 5 || (pz.length && rts.length) ? `<button type="button" class="ph-me-more" data-ph-me-rtall="1" aria-expanded="${phMeRtAll}">${phMeRtAll ? "Fewer ▴" : `All ${rts.length} ▾`}</button>` : ""}
         </section>
       </div>`;
   }
@@ -40053,7 +40100,7 @@
     for (let i = 0; i < 7; i++) {
       const d = new Date(m); d.setDate(m.getDate() + i);
       const k = keyOf(d), fs = done.filter(f => keyOf(new Date(f.s)) === k), run = !!a && keyOf(new Date(a.s)) === k;
-      out.push({ k, d, fs, run, met: fs.some(phFastMet) || (run && phFastMet(a)), plan: wd.includes(d.getDay()) });
+      out.push({ k, d, fs, run, met: fs.some(phFastMet) || (run && phFastMet(a)), plan: wd.includes(d.getDay()), trip: phMeTripDay(k) });
     }
     return out;
   }
@@ -40061,7 +40108,7 @@
   function phFastWeeksOn() {
     const lo = phFastAim().lo;
     let n = 0;
-    for (let w = 0; w < 104; w++) { const c = phFastWeek(w).filter(x => x.met).length; if (c >= lo) n++; else if (w) break; }
+    for (let w = 0; w < 104; w++) { const W = phFastWeek(w), c = W.filter(x => x.met).length; if (c >= lo) n++; else if (w && !W.some(x => x.trip)) break; }   // a trip week neither counts nor breaks it
     return n;
   }
   // a Dinner a fast covers (her pick: it reads "Skipped · fasting"; worked out on read, nothing saved): that fast
@@ -40253,12 +40300,13 @@
     const wk = phFastWeek(0), aim = phFastAim(), tk = keyOf(new Date()), met = wk.filter(x => x.met).map(x => x.k), seen = phFastWkSeen;
     phFastWkSeen = met;
     const dots = wk.map(x => {
-      const cls = x.met ? "m" : x.run ? "r" : x.fs.length ? "sh" : x.plan ? "p" : "";
+      const cls = x.met ? "m" : x.run ? "r" : x.fs.length ? "sh" : x.trip ? "aw" : x.plan ? "p" : "";
       const hrs = x.fs.length ? Math.max(...x.fs.map(f => (Date.parse(f.e) - Date.parse(f.s)) / PH_FAST_H)) : 0;
-      const what = x.run ? "fasting now" : x.fs.length ? phFastHrs(hrs) + (x.met ? "" : " · short of the goal") : x.plan ? "planned" : "no fast";
+      const what = x.run ? "fasting now" : x.fs.length ? phFastHrs(hrs) + (x.met ? "" : " · short of the goal") : x.trip ? "away" : x.plan ? "planned" : "no fast";
       return `<span class="${cls}${x.k === tk ? " t" : ""}${seen && x.met && !seen.includes(x.k) ? " pop" : ""}" title="${esc(phFastDay(x.d))} · ${what}"><i></i>${"SMTWTFS"[x.d.getDay()]}</span>`;
     }).join("");
-    return `<div class="ph-fast-wk${met.length >= aim.lo ? " met" : ""}"><div class="ph-fast-wk7">${dots}</div><div><b>${met.length} / ${phFastAimTxt(aim)}</b><span>This week</span></div></div>`;
+    const trip = met.length < aim.lo && wk.some(x => x.trip);   // a trip week reads "–", never short
+    return `<div class="ph-fast-wk${met.length >= aim.lo ? " met" : ""}${trip ? " trip" : ""}"><div class="ph-fast-wk7">${dots}</div><div><b>${trip ? "–" : `${met.length} / ${phFastAimTxt(aim)}`}</b><span>${trip ? "This week · trip" : "This week"}</span></div></div>`;
   }
 
   // the page, on her own record
@@ -40831,7 +40879,8 @@
       meals: PH_MEAL_SLOTS.filter(s => phMealHad(k, s[0])).length, tds,
       // ONE ME (her pick 2026-10-26): the day's cycle day, its meals planned, its herb doses [taken, due]
       cy: (c => c ? c.day : 0)(phMeCycleAt(k)), mealsP: (ev => PH_MEAL_SLOTS.filter(s => ev[s[0]]).length)(phMealEvents(k)),
-      hb: phHbRows().reduce((s, r) => { if (phHbDoseDay(r, k)) for (let i = 0; i < r.n; i++) { s[1]++; if (phHbTaken(k, r.sid, i)) s[0]++; } return s; }, [0, 0]) };
+      hb: phHbRows().reduce((s, r) => { if (phHbDoseDay(r, k)) for (let i = 0; i < r.n; i++) { s[1]++; if (phHbTaken(k, r.sid, i)) s[0]++; } return s; }, [0, 0]),
+      away: phMeTripPausedOn(k).map(x => x.it) };   // the routines her trip paused that day (pick 6)
     X.memo.set(k, D);
     return D;
   }
@@ -40955,7 +41004,7 @@
     const W = phHubWeek(phHubWk), tk = keyOf(TODAY), aim = phFastAim(), openK = phHubDayOpen === null ? (W.keys.includes(tk) ? tk : "") : phHubDayOpen;
     const rows = W.days.map(D => {
       const plan = D.k > tk, op = !plan && openK === D.k, f0 = D.fit[0];
-      const wo = f0 ? `<span class="${f0.d ? "ok" : "mute"}">${f0.d ? "✓" : "○"} ${esc(f0.t)}</span>${D.fit.length > 1 ? ` <span class="mute">+${D.fit.length - 1}</span>` : ""}` : "";
+      const wo = f0 ? `<span class="${f0.d ? "ok" : "mute"}">${f0.d ? "✓" : "○"} ${esc(f0.t)}</span>${D.fit.length > 1 ? ` <span class="mute">+${D.fit.length - 1}</span>` : ""}` : (A => A.length ? `<span class="aw" title="${esc(A.map(y => y.t).join(", "))}">away</span>` : "")(D.away.filter(y => phHubKind(y) === "fit"));
       const inc = plan ? null : phHubInc(D.k);
       return `<tr class="day${D.today ? " today" : ""}${plan ? " plan" : ""}${op ? " open" : ""}"${plan ? "" : ` data-hub-day="${D.k}" tabindex="0" aria-expanded="${op}"`}>
         <td><span class="dn">${plan ? "" : `<span class="car">▶</span>`}<b>${parseKey(D.k).getDate()}</b>${DOW_SHORT[parseKey(D.k).getDay()]}</span></td>
@@ -41735,6 +41784,16 @@
   }
   // a booking on a trip day: the red Away tag on its block (her pick 4)
   const phTripAwayTagHtml = a => phMeOk() && phTripAwayOn(a) ? `<span class="ph-trip-away" title="${esc(phTripOn(a.date)[0].t || "Away")}">Away</span>` : "";
+  // her 2026-10-26 picks: the ⏸ n chip in the row above a day her trip pauses routines on (a tap opens the trip), and the Me
+  // drawer's one line while she is away ("Paused · back <the day she lands>")
+  function phTripPzChipHtml(L) {
+    const t = L[0].t, tip = `${L.length} paused · ${t.t || phTripCity(t) || "Trip"} · ${L.map(x => x.it.t).join(", ")}`;
+    return `<button type="button" class="ph-c22-fc ph-trip-pz" style="--tc:${phTripCol(t)}" data-ph-trip-open="${esc(t.id)}" title="${esc(tip)}" aria-label="${esc(tip)}"><svg aria-hidden="true" focusable="false"><use href="#i-pause"/></svg>${L.length}</button>`;
+  }
+  function phTripPzRowHtml(L) {
+    const t = L[0].t, w = phMeTripWin(t), back = w.b[1] >= 1440 ? phTripAdd(w.b[0], 1) : w.b[0];
+    return `<button type="button" class="ph-me-row ph-trip-pzrow" data-ph-trip-open="${esc(t.id)}" title="${esc(L.map(x => x.it.t).join(", "))}"><svg aria-hidden="true" focusable="false"><use href="#i-pause"/></svg><span class="ph-me-txt">Paused · back ${esc(phTripDl(back))}</span><span class="ph-me-when">${L.length}</span></button>`;
+  }
   // a trip to-do on its due day, in the row above: a tap ticks it (Undo in the toast)
   function phTripTdChipHtml(x) {
     const t = phTripGet(x.trip), tip = `${x.t} · ${t ? t.t || phTripCity(t) : ""}`;
@@ -42965,7 +43024,7 @@
   // st.me = { kind "ev" | "td" | "bd", edit null | { type "it" | "td" | "bd", id, day }, scope "day" | "all", t, d, dTouched,
   //           s, e, rf "o" | "d" | "w" | "m" | "n", wd [JS days], n, u, c, g, mode, note, bn, bd, bm, by, tday }
   function phMeFormInit(spec, dayKey) {
-    const f = { kind: "ev", edit: null, scope: "all", t: "", d: dayKey || keyOf(TODAY), dTouched: false, trn: "", trf: dayKey || keyOf(TODAY), trt: dayKey || keyOf(TODAY), trc: "", trz: "", s: "", e: "", rf: "o", wd: [], n: 2, u: "w", c: "", g: "", mode: "", note: "", bn: "", bd: "", bm: "", by: "", tday: "" };
+    const f = { kind: "ev", edit: null, scope: "all", t: "", d: dayKey || keyOf(TODAY), dTouched: false, trn: "", trf: dayKey || keyOf(TODAY), trt: dayKey || keyOf(TODAY), trc: "", trz: "", s: "", e: "", rf: "o", wd: [], n: 2, u: "w", c: "", g: "", mode: "", note: "", bn: "", bd: "", bm: "", by: "", tday: "", kt: false };
     const v = String(spec || "");
     if (/^new:(ev|td|bd|tr)$/.test(v)) { f.kind = v.slice(4); return f; }
     if (v === "new:rt") { f.rf = "d"; return f; }   // the drawer's "+ Routine": an event that repeats daily
@@ -42978,7 +43037,7 @@
       const it = D.items[id];
       if (!it || it.del) return f;
       const day = m[1] === "rt" ? null : m[3] || it.d, ex = day && it.ex && it.ex[day], o = ex && typeof ex === "object" ? ex : {};
-      Object.assign(f, { edit: { type: "it", id, day }, scope: it.rep && day ? "day" : "all", t: o.t || it.t || "", d: it.rep && day ? day : it.d, s: ("s" in o ? o.s : it.s) || "", e: ("e" in o ? o.e : it.e) || "", c: it.c || "", g: it.g || "", mode: it.mode || "", note: it.note || "" });
+      Object.assign(f, { edit: { type: "it", id, day }, scope: it.rep && day ? "day" : "all", t: o.t || it.t || "", d: it.rep && day ? day : it.d, s: ("s" in o ? o.s : it.s) || "", e: ("e" in o ? o.e : it.e) || "", c: it.c || "", g: it.g || "", mode: it.mode || "", note: it.note || "", kt: !!it.kt });
       const r = it.rep;
       if (r && r.f === "d") f.rf = "d";
       else if (r && r.f === "w") { f.rf = "w"; f.wd = Array.isArray(r.wd) ? r.wd.slice() : []; }
@@ -43040,6 +43099,7 @@
         ${dayOnly ? "" : `${phMeBar("data-ap-me-rf", [["o", "Once"], ["d", "Daily"], ["w", "Weekly"], ["m", "Monthly"], ["n", "Every…"]], f.rf)}
         ${f.rf === "w" ? phMeBar("data-ap-me-wd", [["1", "Mon"], ["2", "Tue"], ["3", "Wed"], ["4", "Thu"], ["5", "Fri"], ["6", "Sat"], ["0", "Sun"]], wdNow, "ap-me-wd") : ""}
         ${f.rf === "n" ? `<div class="ap-me-every"><span class="ap-step"><button type="button" data-ap-me-step="-1" aria-label="Fewer">${phApptIc("minus")}</button><input type="number" class="field-bare" data-me-f="n" min="1" max="99" value="${esc(f.n)}" aria-label="Every how many"><button type="button" data-ap-me-step="1" aria-label="More">${phApptIc("plus")}</button></span>${phMeBar("data-ap-me-u", [["d", "days"], ["w", "weeks"], ["m", "months"]], f.u)}</div>` : ""}
+        ${f.rf !== "o" ? phMeBar("data-ap-me-kt", [["1", "Keep on trips", "plane"]], f.kt ? "1" : "") : ""}
         <div class="ap-me-row2">
           <details class="ph-atb-dd ap-me-dd"><summary class="ph-atb-box" aria-label="Colour"><i style="background:${col.css}"></i>${esc(col.l)} ▾</summary><div class="ph-atb-menu" role="menu">${phMeColours().map(o => `<button type="button" role="menuitemradio" class="${o.key === col.key ? "on" : ""}" data-ap-me-col="${esc(o.key)}" aria-checked="${o.key === col.key}"><i style="background:${o.css}"></i>${esc(o.l)}</button>`).join("")}</div></details>
           <label class="ap-f ap-me-note"><input type="text" class="field-bare" data-me-f="note" value="${esc(f.note)}" placeholder="Note" aria-label="Note" autocomplete="off"></label>
@@ -43150,6 +43210,7 @@
         if (rep) it.rep = rep; else { delete it.rep; delete it.ex; }
         if (f.g) { it.g = f.g; delete it.c; } else if (f.c) { it.c = f.c; delete it.g; }
         if (f.mode) it.mode = f.mode; else if (f.g || f.c) delete it.mode;
+        if (rep && f.kt) it.kt = 1; else delete it.kt;   // "Keep on trips": a trip does not pause it (her 2026-10-26 pick 2)
         const note = f.note.trim();
         if (note) it.note = note.slice(0, 500); else delete it.note;
         it.up = now;
@@ -43204,6 +43265,7 @@
       f.wd = cur; phMePaneSync(); return true;
     }
     if ((el = t.closest("[data-ap-me-u]"))) { f.u = el.dataset.apMeU; phMePaneSync(); return true; }
+    if ((el = t.closest("[data-ap-me-kt]"))) { f.kt = !f.kt; phMePaneSync(); return true; }
     if ((el = t.closest("[data-ap-me-step]"))) { f.n = Math.max(1, Math.min(99, (Math.round(+f.n) || 1) + (+el.dataset.apMeStep))); phMePaneSync(); return true; }
     if ((el = t.closest("[data-ap-me-col]"))) { const o = phMeColours().find(x => x.key === el.dataset.apMeCol); if (o) { f.mode = o.mode; f.c = o.c; f.g = o.g; } phMePaneSync(); return true; }
     if ((el = t.closest("[data-ap-me-scope]"))) {
