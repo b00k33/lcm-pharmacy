@@ -2837,3 +2837,4 @@ Her ask (screenshot of the Pulse chart): "allow me to toggle on and off the last
 - **Tested** (sandbox 8994, the real chart mounted with a last chart from 2 days ago): both on = 6 green normal lines + 3 grey last-visit cells; Normal off = 0 green, grey kept; last off = 0 grey, green kept; both off then a reopen = both still off (stored `{"n":0,"p":0}`), back on = `{}`; a patient with no last chart shows only the Normal chip; no console errors. Shots `shots/pulse-layers-1-both.png`, `-2-normal-off.png`, `-3-last-off.png`.
 - **Not tested:** her real patients' charts; the Today's visit route to the Pulse page (the chart and its handler are the same ones).
 - **LIVE** 2026-10-26 on her "push live": build 20261025-234900 (publish 5cc18907; the Pulse chart key commit c8855017 went out with it).
+- **LIVE** in build 20261025-234900 (published with "Herbs: her own doses"), current build 20261026-001500 (2026-10-26, her "push live").
