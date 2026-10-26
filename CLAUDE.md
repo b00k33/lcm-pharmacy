@@ -1570,7 +1570,7 @@ rows, the chart (From baseline | Score, a group filter), the header counts and t
 slider moves (`phCxLiveRun`); the view state (From baseline | From last visit, chart mode, filter,
 open drawer) is per patient and never stored. Phone: no chart, no body figure. **Earlier visits (her 2026-10-23 picks, mock earlier-visit-baseline-mock-2026-10-23.html):** a
 done booking counts as a visit (`phSeenDays` = logged sessions + bookings; Today's visit strip,
-`phTodayParts` and the Compass read it), and on a computer a "Scoring" bar (Today, then the
+`phTodayParts` and the Compass read it), and on a computer a "Scoring" bar (on the wide card the "Today ▾" dropdown since 2026-10-26; Today, then the
 patient's done bookings newest first, `phPastBookDays`; 5 chips + Older ▾) scores an earlier visit in
 the same table under a gold line (`phCxAt` view state, `phCxDayOf`; complaints + pains + notes only,
 the earliest scored day becomes the baseline); "N earlier visits · none scored" until one is.
@@ -1611,7 +1611,7 @@ line (the hint is the search box's tooltip); no "rated from next visit" (a first
 cell empty). Motion (all off under reduced motion): the gold "now asking" line is ONE band behind the rows
 (`.ph-cx-askbar`, `phCxAskGlide`; until it has found its row the `.ask` row itself is gold) that glides to
 the next row; a ✓ pops on a scored row (`PH_CX_TICK`); "Asked n of m · better · worse · gone" sits at the
-right of the header (`phCxGlanceHtml`; "Now asking" went) with a gold bar under the header that fills
+right of the header (`phCxGlanceHtml`; "Now asking" went; not on the wide card) with a gold bar under the header that fills
 (`phCxProgGrow`); a new sign row slides in with a gold flash. `phCxSettle` runs these once per paint
 (`phCxAfter`, or a timer after a full-page paint). The small body beside the search (`phCxFigHtml`, the
 Fang Bing Ren page's drawing, front view, computer only) glows each row's place in its area colour (a
@@ -1627,6 +1627,8 @@ then "Session N complete"). **"No acupuncture — herbs
 only today"** saves `noTreatment:true`; every reader of `rec.acuSessions`
 (the printable record, Patient Journey, the Visits table, the quiet-patient
 detector, and **session-package counting**) branches on it.
+
+**Table + panel on a computer (her 11 picks 2026-10-26, mock `compass-tidy-mock-2026-10-26.html`, BUILD-NOTES "Compass: table + panel"; her "this looks messy ... improve organisation and ui"):** when the card is 900 px or wider (`phCxCardBHtml`; narrower and the phone keep the layout above) the Compass is ONE header line (Came in for + the search · a **Today ▾** dropdown of her done visits that replaces the Scoring bar, gold on an earlier one · From Baseline | Last visit · 0–10 | % better · **Chart ▾**, the chart folded until tapped) over a 3-column table **Complaint · Today · Change** (Change = baseline → today with a small line and the +/− pill, `phCxChgHtml`; no Baseline / Trend / From baseline / Note columns there), Energy its last row ("am · pm · ev", its 1–10 bars in the panel), the pain tools one joined bar under it (＋ Pick areas · Close-ups · Surgeries · Pain intake). Beside it a **panel** (`phCxPnlHtml`) holds the asked row large: area, name, Goal (the Goal lives only here), Today, the body drawing, Baseline · Last · Since + its chart, last visit's note, then ✎ Note · Details ▾ (side, detail, Move baseline) · Next: X ›. A tap on a row puts it in the panel; a score moves the gold row and the panel on. The count is said once, on the Ask step: no "Asked n of m", no gold progress line, no count pill on the Ask / Look / Treat headings (`phTodaySecHd`).
 
 **Copy notes** (her 9 picks 2026-10-26, mock `copy-notes-mock-2026-10-26.html`, BUILD-NOTES "Copy notes: today's visit as text"): one tap copies today's visit as labelled lines for her Cliniko treatment note (date · visit · cycle day, Scores, Tongue, Pulse = the Note tab's text, Abdomen, Acupuncture = points + press + therapy lines, each Formula with its herb lines + Total + Dosage · take-days · lasts N days) and shows what went in a box under the button (✕ closes). Every line is that fact's own read; a part with nothing today is left out; the formula = dispensed today, else the one Dispense opens. Doors: the Today's visit step bar, the Treatment band, the ⋯ menus (Care Plan / Treatment / Dispense), the toast after Complete session. Code: "COPY NOTES" (`phCn*`).
 **Findings charts** (tongue / abdomen / pulse) are the app's own tappable
