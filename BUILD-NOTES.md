@@ -3473,4 +3473,41 @@ it lists only signs she answered, and a pre-tick is not an answer.
 check-in covers Breakfast, Lunch and Dinner; reactions on snacks would come first, if she wants them.
 **Wording is DRAFT** (Claude's): "How did <meal> sit?", Fine, "… noted", Done, the why lines, "Ask how a meal sat, on this phone"
 and its hover, the notification's lines.
-**Built on session-a, not live:** waits for her "push live".
+**LIVE** 2026-10-27 (her "push both live too"), build 20261027-095400 (c72f56e7), with the motion round (e94f3092: Meals,
+Herbs and the Life pages move on a real change only); hand-stamped in a private index because a sibling's tracked mock edit
+blocks publish-live.sh, then joined into session-a (tree unchanged).
+
+## A calmer meal: the meal first, + Add under it (2026-10-27)
+**Her words:** two screenshots (the planner's Breakfast picker, then the Break Fast card in the calendar column) with "improve ui
+layout - too busy. improve workflow - make 3 mocks" and "do same for this". Mock `meal-picker-mock-2026-10-27.html` (A one group
+at a time · B meal first, then + Add · C one list, beside Now, both places; things to tap on open: planner 35 now → 15; card 39
+while adding). She liked all three, so they are combined, with her 10 picks: 1 the meal first as a small table · 2 a thing in the
+meal shows once (it leaves the list) · 3 the small numbers behind a tap · 4 Just <day> | Every <meal> on top, before any change ·
+5 one bar Everyday | Drinks | Thisbowl | My dishes with a row a food (its usual amount, +) · 6 + Add opens under the meal, which
+stays in view; Done adding folds it · 7 Eating out | Skipped one bar beside Had it (card) / + Add (planner) · 8 food and drinks one
+table, a cup marks a drink · 9 ✎ Usual (was Edit breakfast) beside the Just | Every bar · 10 the cursor in Search when adding opens,
+on the computer only. Then "Yes, build it".
+**How:** one set of parts drawn everywhere a meal's list shows: her meal card (the calendar column and the sheet), the planner's
+picker, her usual meal (✎ Usual) and a patient's Diet sheet. `phMealListHtml` = the Just | Every bar (+ ✎ Usual on her card) ·
+`phMealTblHtml` / `phMealRowHtml` (name with its mark, − amount +, kJ in the planner, ✕; a dish's name opens the dish) · + Add food
+or drink (`data-meal-add` with no kind, so a food keeps its own; Food / Drinks sections are gone) · `phMealNumsHtml` (one line; a
+tap opens the ten small numbers, `phMealMic`, this visit) · `phMealInstHtml` (Eating out takes "where" from the open search; a
+second tap takes it out; Skipped for today or before, any day of a patient's). `phMealAddHtml` draws every group's rows at once
+(`phMealTab` picks the one showing, switched in place); typing searches all groups (`.srch`, the bar steps aside) through the same
+`phFoodFilter`. The planner's picker (`phMplPickHtml`) opens on the meal; an empty meal opens straight onto adding; its foot is
++ Add · Eating out | Skipped · Done. Removed: `phMealItHtml`, `phMealListPickHtml`, `phMplListHtml` (no callers left). On the
+phone's inline picker the kJ column steps aside; a long name takes a second line (never cut). CSS: "A CALMER MEAL" after
+`.ph-mpl-pick .foot .go`.
+**Changed on purpose:** Skipped on her card now shows only for today or a day gone by (the planner's rule; a future day's Skipped
+was a Had it on a meal not yet eaten). The usual-meal sheet's small-numbers grid is behind the same tap now (pick 3).
+**Tested** (scratch copy, made-up local data, no sign-in): her card in the calendar column at 360 / 320 / 300 px (nothing cut or
+past the edge); + Add → Banana in the table and gone from the list, the list stays open; Drinks → Soy milk with its cup; search
+"sal" → every group's matches, Spicy Salmon R in, the search kept; Eating out with "Thai place" typed → "out:Thai place", a second
+tap takes it out; egg + → 4; the small numbers open; Done adding folds; Skipped → Had it · Skipped, Undo; ✎ Usual opens her usual
+breakfast in the sheet (+ Add, Eating out); a patient's Diet sheet (Same as usual, + Add → Oats saved on that day). The planner:
+Tue's Breakfast opens on the meal (Just Tue lit), empty Dinner opens on adding, Salmon added (1617 kJ), Done adding / + Add,
+Eating out in the foot, Every Breakfast makes it her usual. Phone (a 360 px frame): the inline picker and the card sheet.
+**Integration check:** her card (calendar column + sheet), the planner's picker, the usual-meal sheet, a patient's Diet sheet. The
+Me drawer's Today's meals, the planner's cells and the Diet page lines read the same saved list (unchanged).
+**Not tested:** her real meals and dishes, a real cloud merge between her two logins, the Key2 phone itself, the snack picker
+(Snacks · drinks: one tap adds a snack; left as it was).
