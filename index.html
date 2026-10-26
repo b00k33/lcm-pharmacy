@@ -72810,8 +72810,29 @@ or changing anything in Cliniko.
     if (!host) return false;
     const t = PRESC.items.find(x => x.id === presOpenId);
     if (!t) return false;
+    const rows = presAssessRowsKeep();
     host.outerHTML = presAssessTabsHtml(t);
+    rows();
     return true;
+  }
+  // on the phone a record's sections are one sideways row (Patient details … Messages). A repaint built it new at its start,
+  // so a section to the right (Diet, Fasting, This week from the Me drawer, or one she had scrolled to and tapped) sat out of
+  // view or half cut. Call before the repaint; the function it returns, after: the same record keeps where its row was, and
+  // the chosen section is always shown in its row (to the middle, only when it is not already in view). Wide screens' rows
+  // are a column, not a sideways strip, so they are left alone.
+  function presAssessRowsKeep() {
+    // the same record as the last full paint (presScrollKey starts with its id): a record opened fresh starts its row at the start
+    const same = !!presOpenId && String(presScrollKey).split("|")[0] === String(presOpenId), xs = {};
+    document.querySelectorAll("#pharmacyPage .ph-assess-tabsrow").forEach(r => { xs[r.getAttribute("aria-label")] = r.scrollLeft; });
+    return () => document.querySelectorAll("#pharmacyPage .ph-assess-tabsrow").forEach(r => {
+      if (r.scrollWidth <= r.clientWidth) return;
+      const x = same ? xs[r.getAttribute("aria-label")] : 0;
+      if (x) r.scrollLeft = x;
+      const on = r.querySelector(".ph-assess-tab.on");
+      if (!on) return;
+      const a = r.getBoundingClientRect(), b = on.getBoundingClientRect();
+      if (b.left < a.left || b.right > a.right) r.scrollLeft += b.left - a.left - (a.width - b.width) / 2;
+    });
   }
   function presStageTreatmentHtml(t) {
     // the acu-log now lives ONLY embedded inside the Grid's own phase row
@@ -73561,8 +73582,10 @@ or changing anything in Cliniko.
   function renderPresPanel() {
     const el = presPanelEl();
     const keep = el && el.id === "presPanel" && presOpenId && presScrollKey === presScrollKeyNow() ? el.scrollTop : 0;
+    const rows = presAssessRowsKeep();
     renderPresPanelCore();
     if (keep && el && el.id === "presPanel") el.scrollTop = keep;
+    rows();
     presScrollKey = presOpenId ? presScrollKeyNow() : "";
   }
   function renderPresPanelCore() {
@@ -105130,7 +105153,9 @@ or changing anything in Cliniko.
     const name = presPatientFor(t);
     const plan = name && presTpInlinePlanId ? phTpFindPlan(name, presTpInlinePlanId) : null;
     if (!plan) return false;
+    const rows = presAssessRowsKeep();
     host.outerHTML = presTpMainTabsHtml(name, plan);
+    rows();
     // the "Next: …" button sits OUTSIDE the host, and its label now follows the
     // page she is on (law 2026-10-10), so it is re-read here with the tab
     const nb = document.querySelector("#pharmacyPage [data-plan-next]");

@@ -2923,3 +2923,9 @@ Her words, with screenshots of the popup and of the column card both showing Mor
 - Code: the click handler for `[data-ph-appt-pop]` (the `phApptUpNextFocus = id` branch removed), `renderPhAppointmentsPage`.
 - Tested in the sandbox at 1440 px: 7 days (the rail): a tap opened the popup, the rail stayed closed; Day: a tap opened the popup while the column kept "Up next · Morgan"; Open in the card opened the popup; Prescriptions search narrowed and came back; no console errors. Not tested: her real bookings.
 - **LIVE** 2026-10-26 on her "push": build 20261026-041000 (commit 5628f321; hand-published, another session had unsaved edits in index.html and a mock).
+
+
+## A record's section row keeps the chosen section in view on the phone (2026-10-26)
+Found while checking her Diet chip live (build 20261026-040500): on the phone (360 px) a record's sections are one sideways row (Patient details … Messages), and every repaint built it new at its start. Diet, Fasting and This week opened from the Me drawer sat out of view on the right; a section she had scrolled to and tapped (Blood tests, Diet, Photos) jumped back and showed half cut.
+- `presAssessRowsKeep()`: called before a repaint, its returned function after. The same record keeps where its row was; the chosen section is brought to the middle only when it is not already in view; a record opened fresh starts at the start. Wide screens (the row is a column there, or hidden for the left rail) are left alone. Wraps `presAssessTabRefresh`, `presTpMainTabRefresh` (the Care Plan's row) and `renderPresPanel`.
+- Tested in the sandbox at 360 px: Diet from the Me drawer showed Diet in the middle of the row; scrolled right and tapped Visit checks, the row stayed put; 1024 px: no change, no console errors. Not tested: her real record, the Care Plan row with a real plan.
