@@ -2996,3 +2996,45 @@ Her words with a screenshot of the list at ~1220 px: "audit this page and improv
 | Pills in three looks (9 px caps, 10.5 px, 16–18 px tall) | One: 18 px, 10.5 px, sentence case |
 | Rows 49–77 px | 44 px, two lines at most |
 Measured in the sandbox at 1218 × 880 (in-memory test herbs, booking and an old dispense, never saved): the first patient row moved up from 297 px to 217 px, every row 44 px; tiles filter and come back (Drafts, Not seen, again = All); search shows "1 match"; Schedule opens the form and comes back on Cancel. Phone 360 px: no sideways scroll, Schedule hidden, its Scheduled line and chips as before. No console errors. Not tested on her real list (890 patients).
+
+## One Me: her record joined up (2026-10-26)
+Her words: "i want my personal profile to be well integrated". Guide first (`profile-integration-guide-2026-10-26.html`, every
+place her things showed), then 4 understanding popups: all four problems real (A only Appointments had a door to her things,
+B they sat in 3 groups (Mine, Diet in Log, Cycle on the Plan step; birthdays and routines not on her record at all), C the same
+thing in 3–4 places, D her pages did not share: This week had no cycle day, meals or doses); patient parts on her record =
+"Keep, my life first"; she goes to the Me drawer first; phone and computer equally. Then the mock
+(`profile-integration-mock-2026-10-26.html`) and her 9 picks, every one the recommended option, then "Yes, build it".
+
+| Pick | Built |
+|---|---|
+| 1 B · Me chip everywhere | `phTitlebarMerge` adds `.ph-tbm-me` (`data-ph-me-drw`, count of today's open things in `b`) to every page's bar except Appointments (its toolbar chip stays). Phone: ☰ · title · primary · Me · ⋯ (count hidden ≤900px); computer: Me · ⋯ · primary. `phMeDrwTop` now sits the drawer under whichever top bar is visible (it used to take Appointments' hidden head and covered the bar on other pages). |
+| 2 A · Her card first | `phMeCardHtml`: initials (`phMeIni`, also used by `phMeRecRowHtml`), name, "Day n · phase · Fasting h:mm" (or "My record"); tap = `phMineOpen()`, ✎ = `phMeProfEd`. The old My profile section is `phMeProfSecHtml` (the "No cycle · Cycle" door, the Fasting row, This week row). |
+| 3 A · Headings open pages | `phMeH4(icon, label, em, tab)` → `<button data-ph-me-go>` with a › (only once her record is named): Today's meals → diet (the Diet chip went), Herbs → herbs, To-do → hub-week, Trips → `trip-<id>`, Birthdays → bdays, Routines → routines. |
+| 4 B · Body · Life | `PRES_MINE_RANK` (cycle .1, diet .2, fasting .3, herbs .4, hub-fit .5, hub-week .6 … hub-code .63, trips .7, bdays .8, routines .81); in `presAssessSections` her rank < .55 = grp `body`, < 1 = `life`. `presFlowRailHtml` draws Body + Life where a patient has the visit box. A `cycle` section (body `presCycleSectionBodyHtml`) joins her record; `presTpMainSections` drops cycle for her (`!phFastIsMe(name)`), and `presMineCycleNorm()` (start of `renderPresPanel` and `presTpMainTabRefresh`) turns plan + cycle into profile + cycle, so `phMeCycleOpen`, `phFlowGoPlanTab('cycle')` and every other Cycle door land on her Body page. Phone row captions `.ph-assess-tabcap` Body · Life · File · Log (hers only). |
+| 5 A · A page each | `phMeBdaysPageHtml` (by month, + Birthday = `data-ph-me-new="bd"`), `phMeRtsPageHtml` (Morning < 12:00, Afternoon < 17:00, Evening, Any time; + Routine); rows shared with the drawer (`phMeBdRowHtml`, `phMeRtRowHtml`, `phMeRoutines`). `presProfNextBtnHtml`: a page of hers leads to her next page, her last to the file. |
+| 6 A · Opens at This week | `presAssessFirst(secs, t)` = hub-week on her record, else the first section (tabs row, `presFlowSteps`). |
+| 7 A · Today band | `phMineBandHtml(t)` under the `phCcRib` host on every page of her record (not formulas): cycle day, fast, doses (`phHbToday`), meals x of y, workout (`phHubDay().fit`), next patient today (`phApptUpNextPick` + `phUnDays` = 0 → `data-ph-mine-appts` = Appointments). `phMineBandPaint` from `phMeDrwPaint`. Phone: one sideways row. |
+| 8 A+B+C · Columns | `phHubDay` gains `cy`, `mealsP`, `hb`; `phHubWeek` `mlH` / `mlP` / `hbN` / `hbP`; the week table has Cycle (CD n), Meals (had of planned) and Herbs (taken of due), colgroup 76 · 52 · 104 · 68 · 40 · 84 · auto · 56 · 48 · 48 · 52 · 52, journal row colspan 12. Below 1500px the To-dos go under the table (`.ph-hub-cols.wk`: 12 columns beside the 300px panel overlapped at her 1220px window); phone min-width 760px. |
+| 9 A · Hide on yours | `presFlowRailHtml`: no "This visit · Next up" box when `isMe`. |
+
+Code: "ONE ME" blocks (CSS + JS, before "// repainted in place…"), `PRES_MINE_RANK` / `presAssessFirst` before `presAssessSections`,
+`presMineCycleNorm` beside `renderPresPanel`. Commit 63ec7ee1.
+
+**Tested in the sandbox** (seeded record "Linh Quach" named in My profile, cycle logged, Me items, to-dos, birthdays, routines):
+computer 1280 and 1220: the Me chip on Inventory opens the drawer under the bar (chip solid); card first; › headings; the card opens
+her record at This week, Body + Life on the rail, no visit box, the band "Day 23 Luteal · Fasting 0 of 3–5 · Meals 0 of 2 · Gym";
+the week table fits at 1220 with To-dos below; the band's Day 23 opens Cycle under Body (Temperature works there);
+`phMeCycleOpen()` and `phFlowGoPlanTab('cycle')` land on profile → cycle; Birthdays heading → the Birthdays page; the Next chip
+(a stand-in booking at 3:30 pm) reads "Next 3:30 pm Cx T." and opens Appointments. Phone 360 × 469: Inventory bar one row
+(☰ · Inventory · + · Me · ⋯); Me = the bottom sheet, card first; the card opens This week, the band scrolls sideways, the row
+shows the captions and keeps Week / Routines in view, no sideways page scroll; Routines page grouped. A normal patient (Cx Test,
+40F, cycle on): no band, no captions, Diet under Log, opens at Patient details, the visit box there, Cycle still on the Plan step.
+Prescriptions search: typing "Linh" narrowed 6 → 1, clearing brought 6 back. No console errors. (The sandbox's "Dev check:
+Prescriptions search" toast came from its test names: before her record was seeded all 5 began "Cx", so the load check's
+3-letter term matched everyone; the real search test above passed.)
+**Integration check:** her record's This week, Cycle, Diet, Fasting, Herbs, Birthdays, Routines pages; the Me drawer on
+Inventory and Appointments; the Appointments toolbar chip; a patient's record (unchanged).
+**Not tested:** her real data (real trips, real herb doses, a real fast running in the band), the Key2 itself, the drawer on
+every single page (checked on Inventory and Appointments), a trip heading's › (the sandbox had no trip).
+**Left as it was (said to her):** the phone's This week stays the sideways-scrolling table (the mock drew day cards); at her
+1220px window the To-dos sit under the table instead of beside it.
