@@ -3039,3 +3039,70 @@ every single page (checked on Inventory and Appointments), a trip heading's › 
 **Left as it was (said to her):** the phone's This week stays the sideways-scrolling table (the mock drew day cards); at her
 1220px window the To-dos sit under the table instead of beside it.
 **LIVE** in build 20261026-094000 (her "push live", 2026-10-26; with the Patient profile list audit above). The live page carries `phMineBandHtml`, `PRES_MINE_RANK`, `phMeCardHtml`, `presMineCycleNorm`, the Birthdays / Routines pages and `.ph-tbm-me`.
+
+## Mine, Health and food numbers (2026-10-26)
+
+Her synth22 batch: "group my personal together, including log stuff. i want to log things like e.g. i had chiro appointment
+today, i want it to count towards my healthcare" · "make it easier for me to edit my 'every breakfast'" · "find food data to add
+to help me count my macros and micros for common foods i eat e.g. eggs milk coco etc etc" · "search fishbowl menu and macros
+micros so i can log my food". Guide `mine-food-plan-2026-10-26.html` (11 lettered questions), her 11 picks (all A), mock
+`mine-food-mock-2026-10-26.html`, then "Yes, build it".
+
+| Pick | Built |
+|---|---|
+| 1 A · Mine at the top | One Me (built the same day, her newer picks) already leads her record with Body + Life, so Health and her Log join **Body** after Fitness (`PRES_MINE_RANK` `"hub-health": 0.52`, `log: 0.53`); her bottom group's caption reads **Clinic dated** (`presFlowRailHtml`, `isMe`), the phone row's caption "Clinic". A patient's rail is unchanged. |
+| 2 A–D · Health | A new hub page `hub-health` (`phHubHealthHtml`): ‹ year ›, Show $; tiles this month · this year · paid · nib paid back · yours (3 on a phone); a table Date · Kind · With · Paid · nib back · Yours · From · ×, 8 rows then "N earlier ▾" (a card a visit on a phone); **nib extras left** card (Chiro / Physio / Massage, Limits ✎ = a $ a year field each, a bar of nib back against it, gold at 80%). Money's page gets a line "Health <year> · $ paid · $ nib back" that opens Health; a logged visit shows in the Week journal (`--hub-health` #9A82E0). Rail mini "N this month". |
+| 3 A · Counts itself + Log | `phHlRows(y)`: her Me items whose title (or a day's own title) names Chiro / Physio / Massage (remedial, myotherapy) / GP (doctor) / Scan (ultrasound, x-ray, MRI), each day they fall up to today (`phMeOccurs`, `ex`), With = the title less its kind word; "+ Log today" chips (with this year's counts) + Other (type, Enter). × = Removed (logged) or "Not a visit" (calendar; the calendar keeps it), both with Undo. |
+| 4 A · Edit breakfast | The meal card's second button is **Edit breakfast** (`data-meal-def`), opening Every Breakfast as one card (`phDietSheetHtml` pick on `def`: its foods, its numbers line + the small grid, Done). The time is a 32px field "7:45 – 8:15 ✎" (`phMealWhenHtml`, opens the event's Edit) on the card, the popup (`phC22PopHtml`, a repeat keeps "Daily") and the meal sheet. The Diet page's Every day row has Edit on each meal; the phone has an Every day card first. |
+| 5 A · Kitchen words | `food:<id>*<q>` items; − amount + and ✕ (`phMealItHtml`, `.ph-meal-amt`); each food its own step and unit (`PH_FOOD` cols 3–6: 1 egg = 50 g, ml for milk, tbsp for cocoa = 7 g, ½ cup oats); a dish `dish:<id>*<q>` steps in serves. `phMealAmtStep` (+ Undo through `phMealListPut`). |
+| 6 A–D · Nutrients | 17 numbers (`PH_NUT`): kJ · protein · carbs · fat · fibre · sugar · sodium · iron · choline · vit C · folate · iodine · zinc · vit D · B12 · omega-3 · calcium. |
+| 7 A · One line, bars on open | Her Diet page: one line a day "kJ · P · C · F" (`phDietNlHtml`, a 32px button), a tap opens the bars row (`phDietBarsHtml`, 4 across; phone 1 across, the 4 most under target then "+ n more"); sodium is a limit (red past it); "not counted" where no source gives one, never 0, and one line naming what was not counted (`phNutWhoTxt`). Today opens by itself. A Week row averages the days with numbers. Rail mini = today's kJ. |
+| 8 A · FSANZ + USDA choline | `PH_FOOD` numbers per 100 g from the Australian Food Composition Database Release 3 (FSANZ, CC BY-SA 3.0 AU: credited on the Targets card), choline from USDA FoodData Central (SR Legacy). Downloads stayed in the scratchpad; only the ~190 rows are in the app. |
+| 9 A · ~150 foods | 193 rows: everyday foods in groups (`PH_FOOD_GRP`), aliases for search ("coco" → cocoa), `phFoodMatch` turns a typed ingredient into a food ("coco powder" → 1 tbsp cocoa). The picker: Everyday (what she has most, then the usual 10) · All foods ▾ · search · My dishes. |
+| 10 A · Thisbowl | Every bowl R / L (one chip with an R | L segment, `.ph-meal-rl`), the boxes and drinks, and **Build your own** (`phTbByo*`: Regular | Large, base up to 2 (two = half each), protein 1, dressing up to 2, extras up to 7; Add makes a dish "Thisbowl · <protein> · R" and puts it in the meal). Numbers from Thisbowl's June 2026 sheet (kJ, protein, carbs, fat, sugar, sodium; no micros, so those say not counted). |
+| 11 A · Targets | `PH_DIET_GOAL0` keeps C22's protein 50 · iron 18 · choline 425 · vit C 75 · water 8 and adds NHMRC women 31–50 (folate 400 µg, iodine 150, zinc 8, vit D 5, B12 2.4, omega-3 90 mg, calcium 1000, fibre 25 g, sodium under 2000 mg); kJ / carbs / fat / sugar only when she sets one. **Targets** chip on her Diet page opens a grid of fields (tag yours / NHMRC / under / none set), saved on leaving a field (the next field keeps focus), empty = back to the start amount. |
+
+**A dish's Made of** (her mock's card c): foods with − / + per serve, + Food opens the list in the editor, the numbers add
+themselves ("From milk + cocoa"); a dish with no foods and no typed numbers has its typed ingredients matched once in the draft
+(Save keeps them). Typed numbers sit folded under "Typed · a serve" (all 17) for anything not on the list.
+
+**My calls (not in the mock or her words):** the time is a 32px tinted field (TAPPABLE), with the app's pencil icon for "✎";
+the Every day row's Edit is the pencil + "Edit"; Targets is a text chip; the mock's "Also shows in" box and its explaining notes
+are left out (Terse); Health money is hidden until Show $ like the rest of the hub; a dish at 1 serve reads its plain name; a
+Build-your-own's two bases count half each; ✕ stays on the calendar card's steppers; a food picked under Food or Drinks keeps
+that side (`~f` / `~d`); the "not counted" line is short facts, not a sentence; Health's limits are per calendar year and only
+the three extras (GP and Scan are not nib extras); her Log page sits in Body after Health.
+
+**Code:** "FOOD NUMBERS" header + `PH_FOOD` + `PH_NUT*` + `phFood*` / `phNut*` / `phMealQ` after `PH_DIET_GOAL0`; the meal
+helpers (`phMealIsDrink`, `phDishOf`, `phDishIngAll`, `phMealName`, `phDietGoal`, `phDietSum` → `{t, m, who}`, `phMealListTog`
+with a side, `phMealAmtStep`); the card (`phMealCardHtml`, `phMealListHtml(c, o)`, `phMealItHtml`, `phMealListPickHtml`,
+`phFoodPickHtml`, `phFoodFilter`, `phMealPickHtml`); the sheet (`phDietSheetHtml`, `phMealWhenHtml`, `phDishEdOpen` /
+`phDishEdHtml`, `phTbByo*`); her Diet page (`PH_DIET_COLS_ME`, `phDietNlHtml`, `phDietBarsHtml`, `phDietTgHtml`,
+`phDietGoalSet`, `phDietMini`, `phDietMineHtml`); handlers in the meal click / input / keydown listeners + a change listener for
+`data-diet-goal`; `phMealRepaint` now also refreshes her rail. "HEALTH" block before `phHubCodeHtml` (`PH_HLTH`, `phHl*`),
+`PH_HUB_MAPS` + `hlth` / `hlim`, `PH_HUB_PAGES.health`, `phHubSections`, `phHubMini`, the Money line, the journal line, Health
+clauses in the hub click / change / keydown listeners. CSS: "FOOD NUMBERS" + "HEALTH" blocks before the Me-dialog CSS; phone rules
+in the PHONE REDESIGN block after the Mine hub's.
+
+**Tested in the sandbox** (no sign-in; her record "Linh Quach" in My profile, a Chiro event today and on 28 Sep, a Remedial
+massage on 14 Oct, a typed "Cocoa milk latte" dish, Breakfast 2 eggs + the latte), live in the Browser pane and as real pixels
+through a temporary headless-Edge harness at 1280 and 360:
+Health: 3 calendar visits counted, With pre-filled "Surry Hills", Show $, Paid / nib back typed (yours $40), + Log today Chiro
+(toast + Undo), + Other "Acupuncture" (Enter), limits Chiro 500 / Massage 300 ($455 / $240 left), × on a calendar row = "Not a
+visit" and Undo, × on a logged row and Undo, the next field keeps focus after a save, ‹ 2025, rail "4 this month", Money's line
+"$280 paid · $105 nib back" opens Health, the Week journal shows the logged Chiro + Acupuncture. Meals: the calendar popup's
+Breakfast (Daily · 7:45 – 8:15 ✎, steppers, Edit breakfast), + on eggs = "Every Breakfast · 3 eggs" with Undo, Edit breakfast →
+the Every Breakfast card, + Food, search "salm" (5 hits, the bowls R | L), clear, Spinach in at its usual amount, a Thisbowl R in,
+Build your own (L, two bases, protein, dressing → "Thisbowl · Poached chicken · L", 1868 kJ, added to Breakfast, back on Every
+Breakfast); the latte's editor matched "milk" → 250 ml milk and "coco powder" → 1 tbsp cocoa (788 kJ). Diet page: Had it on
+today's Breakfast → "533 kJ · P 13 · C 0 · F 9" and the bars (sodium red past 2000, the latte "no numbers, not counted"), rail
+"Diet 533 kJ" (after the `phMealRepaint` fix); Targets: iron 20 saved ("yours"), focus moved to zinc and kept, kJ 7500 set, both
+cleared back to 18 / none. A patient (Cx Test): Diet under "Log everything dated" as before, usual Breakfast + oats + banana
+("½ cup oats · 1 banana", P 7.2 Fe 1.9 …). Prescriptions search "Nopain" 12 → 2 → 12. No console errors.
+**Integration check:** her record's Health, Diet, Money, Week (journal) and Log pages; the rail (Body / Life / Clinic dated) and
+its minis; the Appointments grid's meal popup; the Diet sheet (Every Breakfast, picker, dish editor, Build your own); a patient's
+Diet page and rail (unchanged).
+**Not tested:** her real data (real events, dishes and money), the Key2 itself, a sync between two devices of the new `hlth` /
+`hlim` / dish `fd` entries (they ride the existing entry-by-entry merge), Thisbowl's drinks in a meal, the phone's calendar popup.
+**Wording is DRAFT** (Claude's): "Every day that follows your usual", the not-counted lines, "Clinic dated", the Targets tags,
+"nib extras left", "Not a visit".
