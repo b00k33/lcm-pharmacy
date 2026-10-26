@@ -3362,3 +3362,7 @@ Huang); a packed (masonry) layout would change the reading order, so it waits fo
 kinds left); Communications also at 748 (her window) and 1440 (the seven-column sheet); before/after headless shots of 16 views.
 **Not tested:** her real data (longer names than the seed), the Key2 itself; hyphens show on Android, the desktop test browser broke
 long words without one.
+**LIVE** 2026-10-27 (her "push live"), build 20261026-213400 (64620652): the spacing audit ONLY, made on top of the live build in a
+private index; Meals planner, Habits + Steps and the Herbs table (537be4c1, c48e8cdf, 13c437d4, cadd25fa) stayed held on session-a
+(their new functions confirmed absent from the served page). Joined back into session-a as 4134a726 (tree unchanged), so the next
+publish-live.sh still fast-forwards and carries the held work when she says so.
