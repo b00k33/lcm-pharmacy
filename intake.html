@@ -57,6 +57,17 @@
   .hx-group-h { font-size: 12.5px; font-weight: 700; color: var(--ph-green-deep); margin: 14px 0 6px; }
   .hx-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 2px; border-bottom: 1px solid var(--ph-line); }
   .hx-row:last-child { border-bottom: none; }
+  /* her 2026-10-26 picks: a Yes opens a details box on its row; family history has Don't know; supplements are rows */
+  .hx-row { flex-wrap: wrap; }
+  .hx-note { flex: 1 0 100%; margin-top: 2px; min-height: 40px; padding: 8px 10px; font-size: 13px; }
+  .hx-sub { font-size: 12px; font-weight: 400; color: var(--ph-soft); margin: -2px 0 6px; }
+  .hx-btn.unsure.on { background: #EEF0EF; border-color: #8A958F; color: var(--ph-ink); }
+  .supp-block { flex: 1 0 100%; margin-top: 4px; }
+  .supp-block .q { display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 6px; }
+  .supp-row { display: grid; grid-template-columns: minmax(0, 1fr) 110px 32px; gap: 6px; margin-bottom: 6px; align-items: center; }
+  .supp-row input { padding: 9px 10px; font-size: 13px; }
+  .supp-row .rm { width: 32px; height: 32px; border: none; background: none; color: var(--ph-soft); font-size: 18px; line-height: 1; cursor: pointer; border-radius: 50%; }
+  .again { background: #FBF3DC; border-color: #E3C87A; }
   .hx-label { font-size: 13.5px; flex: 1; min-width: 0; }
   .hx-toggle { display: flex; gap: 6px; flex: 0 0 auto; }
   .hx-btn, .fbr-btn { padding: 7px 14px; border-radius: 999px; border: 1px solid var(--ph-line); background: var(--ph-white); font: inherit; font-size: 12.5px; font-weight: 600; color: var(--ph-soft); cursor: pointer; }
@@ -121,17 +132,31 @@
       ["asthma", "Asthma"], ["lung_condition", "Other lung condition"], ["digestive_condition", "Digestive condition"],
       ["kidney_condition", "Kidney condition"], ["liver_condition", "Liver condition"], ["autoimmune_condition", "Autoimmune condition"],
       ["cancer", "Cancer (current or past)"] ] },
+    { g: "Skin", items: [
+      ["tinea_fungal_skin", "Tinea / fungal skin (ringworm, athlete's foot)"] ] },
     { g: "Medication & allergies", items: [
       ["taking_prescribed_medication", "Taking prescribed medication"], ["taking_supplements", "Taking supplements"],
       ["known_drug_allergy", "Known drug allergy"], ["known_food_allergy", "Known food allergy"],
       ["allergic_to_herbs", "Allergic to any herbs"], ["blood_thinning_medication", "Blood-thinning medication"] ] },
-    { g: "Family history", items: [
+    { g: "Family history", f: 1, items: [
       ["fh_diabetes", "Diabetes"], ["fh_heart_disease_stroke", "Heart disease or stroke"],
       ["fh_high_blood_pressure", "High blood pressure"], ["fh_cancer", "Cancer"],
       ["fh_thyroid_condition", "Thyroid condition"], ["fh_autoimmune_condition", "Autoimmune condition"],
       ["fh_endometriosis", "Endometriosis"], ["fh_pcos", "PCOS"], ["fh_early_menopause", "Early menopause"] ] },
   ];
   var PH_HX_FEMALE_GROUPS = { "Cycle & bleeding": 1, "Structural": 1, "Reproductive": 1 };
+  PH_HISTORY_GROUPS.forEach(function (gr) { gr.fem = !!PH_HX_FEMALE_GROUPS[gr.g]; });
+  // her 2026-10-26 report ("it doesnt show the tinea question"): this page kept its own copy of the questions and the app's grew. The app now
+  // sends its list with every link (prefill.qs: [{ g, f = family, fem = women only, items: [[key, words]] }]); the copy above is only used when
+  // a link arrives without one. A list that is not well formed is ignored.
+  function questionsFrom(p) {
+    var qs = p && Array.isArray(p.qs) ? p.qs : null;
+    if (!qs || !qs.length) return PH_HISTORY_GROUPS;
+    var ok = qs.every(function (gr) {
+      return gr && typeof gr.g === "string" && Array.isArray(gr.items) && gr.items.every(function (it) { return Array.isArray(it) && /^[a-z0-9_]+$/.test(it[0] || "") && typeof it[1] === "string"; });
+    });
+    return ok ? qs.map(function (gr) { return { g: gr.g, f: !!gr.f, fem: !!gr.fem, items: gr.items }; }) : PH_HISTORY_GROUPS;
+  }
   // her ask 2026-10-13 (the short Fang Bing Ren questions): [sign key, the patient's words, "F" = women only]. Keys are rows of
   // PH_REN_SIGNS ("p", how she usually is) and PH_BING_SIGNS ("d", the last few weeks) in index.html; only a Yes travels, as
   // history.fbr = { v, p: [keys], d: [keys] }, and the app puts it straight onto her signs when the form is applied. Optional:
@@ -181,25 +206,55 @@
     }).join("") + "</select>";
   }
 
+  // her 2026-10-26 picks (the medical history link): a Yes opens a details box on its own row (the one Medication & allergies box it
+  // replaces asked "which ones" for six rows at once); "Taking supplements" Yes opens supplement rows instead (name + dose, + Add another);
+  // family history rows add Don't know, with one "Unsure about anything?" box under the group.
   function historyGroupsHtml(groups) {
     return groups.map(function (gr) {
-      // her ask 2026-09-20 (backlog walk-through, "Yes, add a notes field"):
-      // the yes/no toggles above only say WHETHER she's on medication/has an
-      // allergy/takes supplements, never WHICH ones -- a practitioner reading
-      // this before a visit has no way to check for interactions. Free text,
-      // scoped to this one group only (not a generic per-group hook), since
-      // no other group needs it yet.
-      var extra = gr.g === "Medication & allergies"
-        ? '<div class="field" style="margin-top:10px"><label class="q" for="fMedNotes">Which medications, allergies or supplements?</label>' +
-          '<textarea id="fMedNotes" rows="3" placeholder=""></textarea>' +
-          '<p class="hint">Only needed if you answered Yes to anything above — helps your practitioner check for interactions.</p></div>'
-        : '';
-      return '<div class="hx-group"><div class="hx-group-h">' + esc(gr.g) + '</div>' +
+      var fam = !!gr.f;
+      return '<div class="hx-group"' + (fam ? ' data-hx-fam="1"' : '') + '><div class="hx-group-h">' + esc(gr.g) + '</div>' +
+        (fam ? '<p class="hx-sub">Parents, brothers, sisters, children</p>' : '') +
         gr.items.map(function (it) {
+          var supp = it[0] === "taking_supplements";
           return '<div class="hx-row" data-hx-item="' + it[0] + '"><span class="hx-label">' + esc(it[1]) + '</span>' +
-            '<div class="hx-toggle"><button type="button" class="hx-btn" data-hx-val="yes">Yes</button><button type="button" class="hx-btn" data-hx-val="no">No</button></div></div>';
-        }).join("") + extra + "</div>";
+            '<div class="hx-toggle"><button type="button" class="hx-btn" data-hx-val="yes">Yes</button><button type="button" class="hx-btn" data-hx-val="no">No</button>' +
+            (fam ? '<button type="button" class="hx-btn unsure" data-hx-val="unsure">Don’t know</button>' : '') + '</div>' +
+            (supp
+              ? '<div class="supp-block" id="suppBlock" hidden><span class="q">All the supplements you take, with the dose if you know it</span><div id="suppRows"></div><button type="button" class="chip" id="suppAdd">+ Add another</button></div>'
+              : '<textarea class="hx-note" data-hx-note="' + it[0] + '" rows="1" placeholder="Details" aria-label="Details: ' + esc(it[1]) + '" hidden></textarea>') +
+            '</div>';
+        }).join("") +
+        (fam ? '<div class="field" style="margin-top:10px"><label class="q" for="fFhNote">Unsure about anything?</label><textarea id="fFhNote" rows="2" placeholder=""></textarea></div>' : '') +
+        "</div>";
     }).join("");
+  }
+  // a row's details box shows while its Yes is picked (the text is kept if she flips it, and only sent while Yes); the supplement rows the same
+  function hxRowSync(row) {
+    var yes = !!row.querySelector('.hx-btn.on[data-hx-val="yes"]');
+    var note = row.querySelector(".hx-note");
+    if (note) note.hidden = !yes;
+    if (row.dataset.hxItem === "taking_supplements") {
+      document.getElementById("suppBlock").hidden = !yes;
+      if (yes && !suppRows.length) suppAddRow();
+    }
+  }
+  // ---- supplements: one row per supplement, name + dose ----
+  var suppRows = [];
+  function suppAddRow() { suppRows.push({ name: "", dose: "" }); suppRenderRows(); }
+  function suppRenderRows() {
+    var wrap = document.getElementById("suppRows");
+    if (!wrap) return;
+    wrap.innerHTML = suppRows.map(function (r, i) {
+      return '<div class="supp-row" data-supp-idx="' + i + '"><input type="text" data-supp-f="name" value="' + esc(r.name) + '" placeholder="Supplement" aria-label="Supplement">' +
+        '<input type="text" data-supp-f="dose" value="' + esc(r.dose) + '" placeholder="Dose" aria-label="Dose">' +
+        '<button type="button" class="rm" data-supp-rm="' + i + '" aria-label="Remove">×</button></div>';
+    }).join("");
+    wrap.querySelectorAll("[data-supp-f]").forEach(function (input) {
+      input.addEventListener("input", function () { suppRows[+input.closest("[data-supp-idx]").dataset.suppIdx][input.dataset.suppF] = input.value; });
+    });
+    wrap.querySelectorAll("[data-supp-rm]").forEach(function (btn) {
+      btn.addEventListener("click", function () { suppRows.splice(+btn.dataset.suppRm, 1); suppRenderRows(); });
+    });
   }
 
   function fbrRowsHtml(kind) {
@@ -215,15 +270,18 @@
     document.querySelectorAll("[data-fbr-f]").forEach(function (r) { r.hidden = !isF; });
   }
 
-  function renderForm(name, prefill) {
-    var alwaysGroups = PH_HISTORY_GROUPS.filter(function (gr) { return !PH_HX_FEMALE_GROUPS[gr.g]; });
-    var femaleGroups = PH_HISTORY_GROUPS.filter(function (gr) { return PH_HX_FEMALE_GROUPS[gr.g]; });
+  // again = { at } when the patient reopens a form she already sent (her 2026-10-26 pick "Same link reopens"): her own answers are back on it
+  function renderForm(name, prefill, again) {
+    var groupsAll = questionsFrom(prefill);
+    var alwaysGroups = groupsAll.filter(function (gr) { return !gr.fem; });
+    var femaleGroups = groupsAll.filter(function (gr) { return gr.fem; });
     app.innerHTML =
       '<div class="card">' +
         '<p class="lead">Hi ' + esc(titleCase(name)) + ' — a few questions before your visit.</p>' +
         '<p class="note">This takes about 5 minutes. Your answers go straight to your practitioner’s private review — nothing else on this device is shared, and there’s nothing else to see here. Every question in Your details and Medical history needs an answer before you can send it — pick Yes or No for each one. The last two lists are optional: tap Yes for anything that fits you.</p>' +
         '<p class="note" id="pfNote" hidden>Some answers are already filled in from your file. Please check them and change anything that is out of date.</p>' +
       '</div>' +
+      (again ? '<div class="card again"><p class="lead">These are the answers you sent' + (again.at ? ' on ' + esc(longDate(again.at)) : '') + '.</p><p class="note">Change anything that is out of date, then send again.</p></div>' : '') +
       '<form id="intakeForm">' +
         '<div class="section-h">Your details</div>' +
         '<div class="card">' +
@@ -268,7 +326,7 @@
         '<div class="card">' + fbrRowsHtml("d") + '</div>' +
         '<p class="note" id="missNote" aria-live="polite"></p>' +
         '<p class="err" id="formErr" hidden></p>' +
-        '<div class="submitbar"><button type="submit" class="submitbtn" id="submitBtn">Submit</button></div>' +
+        '<div class="submitbar"><button type="submit" class="submitbtn" id="submitBtn">' + (again ? "Send again" : "Submit") + '</button></div>' +
       '</form>';
 
     document.querySelectorAll(".hx-btn").forEach(function (btn) {
@@ -277,8 +335,13 @@
         var wasOn = btn.classList.contains("on");
         row.querySelectorAll(".hx-btn").forEach(function (b) { b.classList.remove("on"); });
         if (!wasOn) btn.classList.add("on");
+        hxRowSync(row);
+        var note = row.querySelector(".hx-note");
+        if (note && !note.hidden && !wasOn) note.focus();
       });
     });
+    var suppAddBtn = document.getElementById("suppAdd");
+    if (suppAddBtn) suppAddBtn.addEventListener("click", function () { suppAddRow(); var rows = document.querySelectorAll("#suppRows [data-supp-f=name]"); if (rows.length) rows[rows.length - 1].focus(); });
     document.querySelectorAll(".fbr-btn").forEach(function (btn) {
       btn.addEventListener("click", function () {
         var row = btn.closest("[data-fbr-item]");
@@ -316,7 +379,13 @@
     intakeForm.addEventListener("change", gateChanged);
     intakeForm.addEventListener("click", function () { setTimeout(gateChanged, 0); });
     applyPrefill(prefill);
+    if (again) document.getElementById("pfNote").hidden = true;
+    document.querySelectorAll("[data-hx-item]").forEach(hxRowSync);
     refreshGate();
+  }
+  function longDate(iso) {
+    var d = new Date(iso);
+    return isNaN(d) ? "" : d.getDate() + " " + PH_MONTHS[d.getMonth()] + " " + d.getFullYear();
   }
 
   // her ask 2026-10-13 ("prefill details if patient already has it in their file"): what her practitioner's file
@@ -340,7 +409,7 @@
     if (typeof p.mobile === "string") document.getElementById("fPhone").value = p.mobile;
     if (typeof p.email === "string") document.getElementById("fEmail").value = p.email;
     if (typeof p.address === "string") document.getElementById("fAddress").value = p.address;
-    document.getElementById("pfNote").hidden = !Object.keys(p).length;
+    document.getElementById("pfNote").hidden = !Object.keys(p).filter(function (k) { return k !== "qs"; }).length;
     // her ask 2026-10-13 ("integrate the form with her profile"): the cycle answers and the Yes / No medical history her file already holds.
     // The app only sends values that carry real information (never its own starting values), so a blank here is a question still to answer.
     var cy = p.cycle && typeof p.cycle === "object" ? p.cycle : null;
@@ -355,7 +424,7 @@
     }
     var hx = p.history && typeof p.history === "object" ? p.history : null;
     if (hx) Object.keys(hx).forEach(function (k) {
-      if ((hx[k] !== "yes" && hx[k] !== "no") || !/^[a-z0-9_]+$/.test(k)) return;
+      if ((hx[k] !== "yes" && hx[k] !== "no" && hx[k] !== "unsure") || !/^[a-z0-9_]+$/.test(k)) return;
       var btn = document.querySelector('[data-hx-item="' + k + '"] .hx-btn[data-hx-val="' + hx[k] + '"]');
       if (btn) btn.classList.add("on");
     });
@@ -365,9 +434,25 @@
       var yes = document.querySelector('[data-fbr-item="' + k + '"][data-fbr-kind="p"] .fbr-btn[data-fbr-val="yes"]');
       if (yes) yes.classList.add("on");
     });
-    // the medications / allergies / supplements note, written by her app from the same file
-    var medBox = document.getElementById("fMedNotes");
-    if (medBox && typeof p.medNotes === "string" && p.medNotes.trim()) medBox.value = p.medNotes;
+    // the details beside a Yes (her app sends only the medication and allergy rows' own notes; a resend brings back every box she wrote)
+    if (p.notes && typeof p.notes === "object") Object.keys(p.notes).forEach(function (k) {
+      if (!/^[a-z0-9_]+$/.test(k) || typeof p.notes[k] !== "string") return;
+      var box = document.querySelector('[data-hx-note="' + k + '"]');
+      if (box) box.value = p.notes[k];
+    });
+    if (Array.isArray(p.supps)) {
+      suppRows = p.supps.filter(function (r) { return r && typeof r.name === "string" && r.name.trim(); }).slice(0, 30)
+        .map(function (r) { return { name: r.name, dose: typeof r.dose === "string" ? r.dose : "" }; });
+      suppRenderRows();
+    }
+    var fhBox = document.getElementById("fFhNote");
+    if (fhBox && typeof p.fhNote === "string") fhBox.value = p.fhNote;
+    // the "last few weeks" rows come back only on a resend (her app never sends them: they go stale)
+    if (p.fbr && Array.isArray(p.fbr.d)) p.fbr.d.forEach(function (k) {
+      if (!/^[a-z0-9_]+$/.test(k)) return;
+      var yes = document.querySelector('[data-fbr-item="' + k + '"][data-fbr-kind="d"] .fbr-btn[data-fbr-val="yes"]');
+      if (yes) yes.classList.add("on");
+    });
     // her IVF / egg collection / egg freezing rounds already on file: the question reads Yes with each round filled in. Each row keeps `ref`
     // (her app's id for that round) so an unchanged round is recognised on the review screen and a changed one is matched to the right round.
     if (Array.isArray(p.ivf) && p.ivf.length) {
@@ -380,6 +465,10 @@
       if (ivfYes) ivfYes.classList.add("on");
       document.getElementById("ivfList").hidden = false;
       ivfRenderRows();
+    } else if (p.ivfNo) {
+      // a resend: she answered No to the IVF question last time
+      var ivfNoBtn = document.querySelector('#ivfSeg .sexbtn[data-ivf="no"]');
+      if (ivfNoBtn) ivfNoBtn.classList.add("on");
     }
   }
 
@@ -507,12 +596,20 @@
       var on = row.querySelector(".hx-btn.on");
       if (on) history[row.dataset.hxItem] = on.dataset.hxVal;
     });
-    // her ask 2026-09-20: which medications/allergies/supplements, not just
-    // whether. A plain key on the same jsonb blob -- no SQL change needed,
-    // same reasoning already used for cycle.ivfCycles (see submit_intake_form
-    // below): submit_intake_form's p_history is already jsonb.
-    var medNotesEl = document.getElementById("fMedNotes");
-    if (medNotesEl && medNotesEl.value.trim()) history.medNotes = medNotesEl.value.trim();
+    // her 2026-10-26 picks: the details beside each Yes (history.notes = { key: text }), the supplement rows (history.supps = [{ name, dose }])
+    // and the family box (history.fhNote). Plain keys on the same jsonb blob, like medNotes before them: no SQL change.
+    var notes = {};
+    document.querySelectorAll("[data-hx-note]").forEach(function (box) {
+      var row = box.closest("[data-hx-item]"), v = box.value.trim();
+      if (v && row && row.querySelector('.hx-btn.on[data-hx-val="yes"]')) notes[box.dataset.hxNote] = v.slice(0, 1000);
+    });
+    if (Object.keys(notes).length) history.notes = notes;
+    if (history.taking_supplements === "yes") {
+      var supps = suppRows.filter(function (r) { return r.name.trim(); }).map(function (r) { return { name: r.name.trim().slice(0, 120), dose: r.dose.trim().slice(0, 120) }; });
+      if (supps.length) history.supps = supps;
+    }
+    var fhEl = document.getElementById("fFhNote");
+    if (fhEl && fhEl.value.trim()) history.fhNote = fhEl.value.trim().slice(0, 1000);
     // her ask 2026-10-13: the short Fang Bing Ren lists. ONLY a Yes travels (a No or a skipped row stays blank on her side), as one more
     // plain key on the same jsonb blob (no SQL change, like medNotes). A row hidden for her sex is not sent.
     var fbr = { v: 1, p: [], d: [] };
@@ -533,7 +630,7 @@
       var menarcheAge = numOrNull("fMenarche");
       var contraception = document.getElementById("fContraception").value;
       var ttcMonths = numOrNull("fTtc");
-      var symptoms = Array.prototype.map.call(document.querySelectorAll(".chip.on"), function (c) { return c.dataset.symptom; });
+      var symptoms = Array.prototype.map.call(document.querySelectorAll("#symptomChips .chip.on"), function (c) { return c.dataset.symptom; });
       // her card 11: only rows with SOMETHING typed travel -- an added-then-
       // left-blank card is not a reported cycle. No SQL change needed:
       // submit_intake_form's p_cycle is already a jsonb blob (a nested key
@@ -565,7 +662,7 @@
     sb.rpc("submit_intake_form", { p_token: token, p_demographics: payload.demographics, p_history: payload.history, p_cycle: payload.cycle }).then(function (res) {
       if (res.error) throw res.error;
       if (res.data !== true) {
-        centerScreen("Already submitted", "Looks like this was already sent — thank you! If you need to change anything, contact your practitioner directly.");
+        centerScreen("Already sent", "This was already sent — thank you! If you need to change anything, contact your practitioner directly.");
         return;
       }
       centerScreen("Thank you", "Your information has been sent to your practitioner for review before your visit. You can close this page now.");
@@ -578,6 +675,20 @@
     });
   }
 
+  // her own answers, in the shape applyPrefill reads (a resend: her 2026-10-26 pick "Same link reopens")
+  function answersAsPrefill(row) {
+    var d = row.demographics || {}, h = row.history || {}, c = row.cycle || null, p = { history: {} };
+    if (row.prefill && Array.isArray(row.prefill.qs)) p.qs = row.prefill.qs;
+    ["sex", "dob", "mobile", "email", "address"].forEach(function (k) { if (d[k]) p[k] = d[k]; });
+    Object.keys(h).forEach(function (k) { if (h[k] === "yes" || h[k] === "no" || h[k] === "unsure") p.history[k] = h[k]; });
+    if (h.notes) p.notes = h.notes;
+    if (Array.isArray(h.supps)) p.supps = h.supps;
+    if (typeof h.fhNote === "string") p.fhNote = h.fhNote;
+    if (h.fbr) p.fbr = h.fbr;
+    if (c) { p.cycle = c; if (Array.isArray(c.ivfCycles) && c.ivfCycles.length) p.ivf = c.ivfCycles; else if (Array.isArray(c.ivfCycles)) p.ivfNo = true; }
+    return p;
+  }
+
   if (!token) {
     centerScreen("Link incomplete", "This link looks incomplete. Please check you copied the whole link your practitioner sent you.");
     return;
@@ -586,7 +697,11 @@
     if (res.error) throw res.error;
     var row = Array.isArray(res.data) ? res.data[0] : res.data;
     if (!row) { centerScreen("Link not found", "This link isn’t valid. Check you copied the whole link, or ask your practitioner to send a new one."); return; }
-    if (row.status === "submitted" || row.status === "applied") { centerScreen("Already submitted", "You’ve already submitted this — thank you! If you need to make changes, contact your practitioner directly."); return; }
+    if (row.status === "submitted" || row.status === "applied") {
+      if (!row.history && !row.demographics) { centerScreen("Already submitted", "You’ve already submitted this — thank you! If you need to make changes, contact your practitioner directly."); return; }
+      renderForm(row.patient_name || "there", answersAsPrefill(row), { at: row.submitted_at });
+      return;
+    }
     if (row.status === "dismissed") { centerScreen("Link no longer active", "This link is no longer active. Please contact your practitioner for a new one."); return; }
     renderForm(row.patient_name || "there", row.prefill);
   }).catch(function () {
