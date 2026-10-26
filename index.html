@@ -637,6 +637,8 @@
      .ph-ck-msg above -- Chrome 123+, min-height covers everything else). */
   #pharmacyPage textarea.ph-cyc-in.dose { resize: none; min-height: 34px; field-sizing: content; max-height: 120px; overflow-y: auto; font-family: inherit; line-height: 1.4; padding-top: 7px; padding-bottom: 7px; }
   #pharmacyPage .ph-supp-item.on { flex-basis: 100%; }
+  /* her 2026-10-26: supplements the patient listed on her form that are not one of the four (rec.suppOwn) */
+  #pharmacyPage .ph-supp-item.own .ph-ck-chip { cursor: default; }
   /* her ask (2026-08-14): row density -- the Zero/Low/Phasing/Stopped/Snoozed
      listing (#phListing) had no width of its own (100% of #phInvWidget) and
      forced its table to width:100% on top of that, so on a wide screen the
@@ -12722,6 +12724,19 @@
   }
   #pharmacyPage .ph-hx-dot.no { border-color: var(--ph-green); background: var(--ph-green); }
   #pharmacyPage .ph-hx-dot.yes { border-color: var(--ph-blue); background: var(--ph-blue); }
+  /* her 2026-10-26 picks (the medical history link): a family row the patient answered Don't know is grey with a "?", never a Yes;
+     the patient's group boxes (Family history "Unsure about anything?", an older form's medication note) sit under their group */
+  #pharmacyPage .ph-hx-dot.unsure { border-color: var(--ph-soft); background: var(--ph-line); }
+  #pharmacyPage .ph-hx-qrow.unsure .ph-hx-qlabel { color: var(--ph-soft); }
+  #pharmacyPage .ph-hx-unsure { flex: none; font-size: var(--fs-11); font-weight: 600; color: var(--ph-soft); }
+  #pharmacyPage .ph-hx-gnotes { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+  #pharmacyPage .ph-hx-gnote { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "tag rm" "t rm"; align-items: start; gap: 2px 6px; padding: 6px 4px 6px 10px; border-radius: 6px; background: var(--ph-paper); font-size: var(--fs-12-5); line-height: 1.4; }
+  #pharmacyPage .ph-hx-gnote .ph-pfw-tag { grid-area: tag; justify-self: start; }
+  #pharmacyPage .ph-hx-gnote .t { grid-area: t; min-width: 0; overflow-wrap: anywhere; }
+  #pharmacyPage .ph-hx-gnote .ph-hx-gnote-rm { grid-area: rm; }
+  #pharmacyPage .ph-hx-gnote-rm, #pharmacyPage .ph-supp-own-rm { flex: none; width: 28px; height: 28px; border: 0; border-radius: 50%; background: none; color: var(--ph-soft); font: inherit; cursor: pointer; }
+  #pharmacyPage .ph-hx-gnote-rm:hover, #pharmacyPage .ph-supp-own-rm:hover { background: var(--ph-white); color: var(--ph-ink); }
+  #pharmacyPage .ph-hx-rowextra .ph-pfw-tag.form { flex: none; }
   #pharmacyPage .ph-hx-qlabel { flex: 1 1 auto; min-width: 0; font-size: var(--fs-12-5); }
   /* "Asked all" sweep + a fresh single-row "yes" pop (her ask28 spec,
      "animations only on change" -- staggered per row via inline
@@ -47727,6 +47742,24 @@
         if (inp) inp.focus({ preventScroll: true });
         return;
       }
+      const hxGnoteRm = e.target.closest("[data-hx-gnote-rm]");
+      if (hxGnoteRm) {
+        const rec = phPatientRec(presHxScreenName);
+        if (!rec) return;
+        const v = hxGnoteRm.dataset.hxGnoteRm, i = v.lastIndexOf("|"), g = v.slice(0, i), n = +v.slice(i + 1);
+        if (g === "old") {
+          const old = phHxOldIntakeNotes(rec)[n];
+          if (!old) return;
+          rec.medicalHistoryNotes = rec.medicalHistoryNotes.replace(old.raw, "").replace(/\n{3,}/g, "\n\n").trim();
+        } else {
+          const list = phHxGroupNotes(rec, g);
+          if (!list[n]) return;
+          list.splice(n, 1);
+          if (!list.length) delete rec.historyGroupNotes[g];
+        }
+        rec.historyUpdatedAt = Date.now();
+        savePharmacy(); renderHxScreen(); return;
+      }
       const hxSetBtn = e.target.closest("[data-hx-set]");
       if (hxSetBtn) {
         const rec = phPatientRec(presHxScreenName);
@@ -49098,6 +49131,18 @@
         presStage = "plan"; presTpMainTab = flowGo.dataset.flowGo;
         phCcSeedOpen();
         if (!(wasPlan && presTpMainTabRefresh() && presFlowRailRefresh())) renderPresPanel();
+        return;
+      }
+      const suppOwnRm = e.target.closest("[data-supp-own-rm]");
+      if (suppOwnRm) {
+        const rec = phCycleTargetRec();
+        if (!rec) return;
+        rec.suppOwn = phSuppOwn(rec).filter(o => o.id !== suppOwnRm.dataset.suppOwnRm);
+        if (!rec.suppOwn.length) delete rec.suppOwn;
+        rec.suppAt = Date.now();
+        if (savePharmacy() === false) { phFlashShow("That could not be saved — check the warning at the top and try again."); return; }
+        if (!presAssessTabRefresh()) renderPresPanel();
+        presFlowRailRefresh();
         return;
       }
       const suppToggleBtn = e.target.closest("[data-supp-toggle]");
@@ -64466,6 +64511,40 @@ or changing anything in Cliniko.
       .replace(/&amp;/gi, "&")
       .trim();
   }
+  // her 2026-10-26 picks (the medical history link): a box the patient wrote for a whole group, never for one row: Family history's
+  // "Unsure about anything?" (and an older form's one medications note, before each Yes had its own box). rec.historyGroupNotes =
+  // { group: [{ id, text, at }] }, shown under that group with the form's date and a ✕. The older forms' medication notes went into
+  // rec.medicalHistoryNotes, which has had no box anywhere since the dead-code sweep, so they were never seen: they show here too.
+  function phHxGroupNotes(rec, g) { return (rec && rec.historyGroupNotes && Array.isArray(rec.historyGroupNotes[g])) ? rec.historyGroupNotes[g] : []; }
+  function phHxGroupNoteAdd(rec, g, text, at) {
+    const v = presSanitizeNoteText(String(text || "").trim());
+    if (!v) return false;
+    rec.historyGroupNotes = rec.historyGroupNotes || {};
+    const list = rec.historyGroupNotes[g] = phHxGroupNotes(rec, g);
+    if (list.some(n => n.text === v)) return false;
+    list.push({ id: uid(), text: v, at: at || keyOf(TODAY) });
+    rec.historyUpdatedAt = Date.now();
+    return true;
+  }
+  function phHxOldIntakeNotes(rec) {
+    const s = String((rec && rec.medicalHistoryNotes) || ""), out = [], re = /\[from intake ([^\]\n]+)\]\n([\s\S]*?)(?=\n\n|$)/g;
+    let m;
+    while ((m = re.exec(s))) if (m[2].trim()) out.push({ raw: m[0], at: m[1], text: m[2].trim() });
+    return out;
+  }
+  // the form's date on a patient's note: "26 Oct" this year, "26 Oct 2025" before
+  function phHxFormDay(k) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(k || "")) return "";
+    const d = parseKey(k);
+    return `${d.getDate()} ${MON_SHORT[d.getMonth()]}${d.getFullYear() === TODAY.getFullYear() ? "" : ` ${d.getFullYear()}`}`;
+  }
+  function phHxGroupNotesHtml(rec, g) {
+    const list = phHxGroupNotes(rec, g).map((n, i) => ({ t: n.text, when: phHxFormDay(n.at), rm: `${g}|${i}` }));
+    if (g === "Medication & allergies") phHxOldIntakeNotes(rec).forEach((n, i) => list.push({ t: n.text, when: n.at, rm: `old|${i}` }));
+    if (!list.length) return "";
+    const tag = g === "Family history" ? "Patient unsure" : "From the patient's form";
+    return `<div class="ph-hx-gnotes">${list.map(n => `<div class="ph-hx-gnote"><span class="ph-pfw-tag">${tag}${n.when ? ` · ${esc(n.when)}` : ""}</span><span class="t">${esc(n.t)}</span><button type="button" class="ph-hx-gnote-rm" data-hx-gnote-rm="${esc(n.rm)}" aria-label="Remove this note">✕</button></div>`).join("")}</div>`;
+  }
   function phHxSetNote(rec, k, note) {
     if (!rec.historyNotes) rec.historyNotes = {};
     const v = presSanitizeNoteText(String(note || "").trim());
@@ -64829,16 +64908,19 @@ or changing anything in Cliniko.
             <button type="button" class="ph-hx-qrow ${val}${animCls}" data-hx-set="${k}" aria-pressed="${val === "yes" ? "true" : "false"}"${delayAttr}>
               <span class="ph-hx-dot ${val}" aria-hidden="true"></span>
               <span class="ph-hx-qlabel">${esc(label)}</span>
+              ${val === "unsure" ? `<span class="ph-hx-unsure" title="The patient answered Don't know">? Don’t know</span>` : ""}
               ${prioTag[k] ? `<span class="ph-pfw-tag">Feeds ${esc(prioTag[k])}</span>` : ""}
               ${PH_TRI_HX_FBR_KEYS.has(k) ? `<span class="ph-pfw-tag fbr">Feeds Fang Bing Ren</span>` : ""}
             </button>
             ${val === "yes" ? `<div class="ph-hx-rowextra">
               ${presets ? `<span class="ph-hx-presets">${presets.map(p => `<button type="button" class="ph-ck-chip${phHxNoteHasPreset(note, p) ? " on" : ""}" data-hx-notepreset="${k}:${esc(p)}">${esc(p)}</button>`).join("")}</span>` : ""}
               <input type="text" class="ph-hx-note" data-hx-note="${k}" value="${esc(note)}" placeholder="Note" aria-label="Note for ${esc(label)}">
+              ${note && rec.historyNoteFrom && rec.historyNoteFrom[k] ? `<span class="ph-pfw-tag form" title="Written by the patient on the medical history link">Form ${esc(phHxFormDay(rec.historyNoteFrom[k]))}</span>` : ""}
             </div>` : ""}
           </div>`;
         }).join("")}
         </div>
+        ${phHxGroupNotesHtml(rec, gr.g)}
       </div>` };
     }).filter(Boolean);
     if (!groupHtml.length) return `<div class="fam-empty">Nothing recorded yet.</div>`;
@@ -67445,6 +67527,15 @@ or changing anything in Cliniko.
     // history entry behind even after she finished typing the date she
     // actually meant. Moved to "focusout" below: nothing happens until she
     // actually leaves the field, so only her final value is ever acted on.
+    if (t.matches("[data-supp-own-dose]")) {
+      const rec = phCycleTargetRec();
+      const o = rec && phSuppOwn(rec).find(x => x.id === t.dataset.suppOwnDose);
+      if (!o) return;
+      o.dose = t.value.trim();
+      rec.suppAt = Date.now();
+      savePharmacy(); presBandsSyncSoon();
+      return;
+    }
     if (t.matches("[data-supp-dose]")) {
       const rec = phCycleTargetRec();
       if (!rec) return;
@@ -72267,13 +72358,13 @@ or changing anything in Cliniko.
   PRES_BANDS.supp = (name, ctx) => {
     const rec = phPatientPeek(name) || {};
     const supps = rec.supplements || {};
-    const on = PH_SUPPLEMENTS.filter(s => supps[s.id] && supps[s.id].on);
-    const names = on.map(s => PH_SUPP_SHORT[s.id] || s.name);
+    const on = PH_SUPPLEMENTS.filter(s => supps[s.id] && supps[s.id].on), own = phSuppOwn(rec);
+    const names = on.map(s => PH_SUPP_SHORT[s.id] || s.name).concat(own.map(o => o.name));
     const at = rec.suppAt ? new Date(rec.suppAt) : null;
     return [
-      { cls: "take", sig: names.join(","), ic: "vitamin", v: on.length, of: PH_SUPPLEMENTS.length, t: names.length ? `Taking · ${names.join(" · ")}` : "None switched on" },
+      { cls: "take", sig: names.join(","), ic: "vitamin", v: names.length, of: PH_SUPPLEMENTS.length + own.length, t: names.length ? `Taking · ${names.join(" · ")}` : "None switched on" },
       { cls: "upd", sig: rec.suppAt || "", ic: "clock", v: at ? presBandDay(at) : "—", t: at ? `Last changed ${phAgo(at)}` : "No date on record" },
-      { cls: "vit", sig: on.length ? "ready" : "", html: on.length ? `<button type="button" class="ph-pf-chip on" data-supp-vitaly-copy="1">Copy for vital.ly</button>` : "" },
+      { cls: "vit", sig: names.length ? "ready" : "", html: names.length ? `<button type="button" class="ph-pf-chip on" data-supp-vitaly-copy="1">Copy for vital.ly</button>` : "" },
     ];
   };
   // ---- Photos (profile): Photos · To sort · Tongue over time
@@ -73301,6 +73392,7 @@ or changing anything in Cliniko.
     src(() => {
       const su = rec.supplements || {};
       PH_SUPPLEMENTS.forEach(s => { const e = su[s.id]; if (e && e.on) add(["p:supplements"], "Supplements", s.name, e.dose || s.dose || "", ""); });
+      phSuppOwn(rec).forEach(o => add(["p:supplements"], "Supplements", o.name, o.dose || "", ""));
     });
     src(() => {
       phBldList(rec).forEach(b => Object.keys(b.vals || {}).forEach(k => {
@@ -87506,9 +87598,9 @@ or changing anything in Cliniko.
     const today = keyOf(TODAY), dayOf = ms => ms ? keyOf(new Date(ms)) : "", lbl = ms => phCycShortLbl(dayOf(ms));
     const rows = [];
     const supps = rec.supplements || {};
-    const on = PH_SUPPLEMENTS.filter(s => supps[s.id] && supps[s.id].on);
+    const on = PH_SUPPLEMENTS.filter(s => supps[s.id] && supps[s.id].on).map(s => PH_SUPP_SHORT[s.id] || s.name).concat(phSuppOwn(rec).map(o => o.name));
     if (on.length && dayOf(rec.suppSeenAt) !== today && dayOf(rec.suppAt) !== today) {
-      const names = on.map(s => PH_SUPP_SHORT[s.id] || s.name).join(" · ");
+      const names = on.join(" · ");
       rows.push(`<div class="ph-today-nudge" data-today-nudge="supp"><div class="t"><b>Supplements: still ${esc(names)}?</b><span>${rec.suppAt ? `Last changed ${esc(lbl(rec.suppAt))}` : "No change date on record"}</span></div><div class="b"><button type="button" class="ph-today-nbtn fill" data-today-nudge-ok="supp">Same as last time</button><button type="button" class="ph-today-nbtn" data-flow-prof="supplements">Changed</button></div></div>`);
     }
     const hx = phHxProgress(name), hxAt = Math.max(hx.updatedAt || 0, rec.hxSeenAt || 0);
@@ -97361,9 +97453,17 @@ or changing anything in Cliniko.
   // she's actually taking, and at what dose. Always shown open on the
   // Opening stage (see presStageOpeningHtml) -- no separate collapsed-row
   // wrapper needed since that's its only caller.
+  // her 2026-10-26 ("can include all supplements you consume"): supplements from the patient's form that are not one of the four
+  // above, rec.suppOwn = [{ id, name, dose, src: "intake", at }]; each shows on, with its dose and a ✕
+  function phSuppOwn(rec) { return (rec && Array.isArray(rec.suppOwn) ? rec.suppOwn : []).filter(o => o && o.name); }
   function phSuppEditorHtml(rec) {
     const supps = (rec && rec.supplements) || {};
-    return `<div class="ph-supp-chips">${PH_SUPPLEMENTS.map(s => {
+    const own = phSuppOwn(rec).map(o => `<div class="ph-supp-item on own">
+        <span class="ph-ck-chip on" title="${o.src === "intake" ? `From the patient's form${o.at ? ` · ${esc(phShortDate(o.at))}` : ""}` : ""}">${esc(o.name)}</span>
+        <textarea class="ph-cyc-in field-bare dose" data-supp-own-dose="${esc(o.id)}" rows="1" placeholder="dose" aria-label="${esc(o.name)} dose">${esc(o.dose || "")}</textarea>
+        <button type="button" class="ph-supp-own-rm" data-supp-own-rm="${esc(o.id)}" aria-label="Remove ${esc(o.name)}">✕</button>
+      </div>`).join("");
+    return `<div class="ph-supp-chips">${own}${PH_SUPPLEMENTS.map(s => {
       const st = supps[s.id];
       const on = !!(st && st.on);
       return `<div class="ph-supp-item${on ? " on" : ""}">
@@ -97383,7 +97483,8 @@ or changing anything in Cliniko.
   function phSuppVitalyText(rec) {
     const supps = (rec && rec.supplements) || {};
     return PH_SUPPLEMENTS.filter(s => supps[s.id] && supps[s.id].on)
-      .map(s => `${s.name} — ${(supps[s.id] && supps[s.id].dose) || s.dose}`).join("\n");
+      .map(s => `${s.name} — ${(supps[s.id] && supps[s.id].dose) || s.dose}`)
+      .concat(phSuppOwn(rec).map(o => o.dose ? `${o.name} — ${o.dose}` : o.name)).join("\n");
   }
   // ============ Treatment plan row (round-3 redesign, 2026-09-03, her steer:
   // "keep history, but move the treatment notes in its own row below
@@ -117469,6 +117570,11 @@ Please let me know if you have any questions.`;
         into.ivfCycles = into.ivfCycles || [];
         from.ivfCycles.forEach(r => { if (!into.ivfCycles.some(x => x.id === r.id)) into.ivfCycles.push(r); });
       }
+      // her 2026-10-26 stores from the medical history link (the patient's own supplements, group boxes, a note's form date)
+      phSuppOwn(from).forEach(o => { into.suppOwn = phSuppOwn(into); if (!into.suppOwn.some(x => x.name.trim().toLowerCase() === o.name.trim().toLowerCase())) into.suppOwn.push(o); });
+      if (from.supplements) { into.supplements = into.supplements || {}; Object.keys(from.supplements).forEach(k => { if (!into.supplements[k]) into.supplements[k] = from.supplements[k]; }); }
+      Object.keys(from.historyGroupNotes || {}).forEach(g => phHxGroupNotes(from, g).forEach(n => phHxGroupNoteAdd(into, g, n.text, n.at)));
+      if (from.historyNoteFrom) into.historyNoteFrom = Object.assign({}, from.historyNoteFrom, into.historyNoteFrom || {});
       if (from.historyUpdatedAt && (!into.historyUpdatedAt || from.historyUpdatedAt > into.historyUpdatedAt)) into.historyUpdatedAt = from.historyUpdatedAt;
       delete PHARMACY.patients[fromKey];
     }
@@ -117651,7 +117757,12 @@ Please let me know if you have any questions.`;
   let phIntakeName = "", phIntakeBusy = false, phIntakeError = "", phIntakeResult = null;
   // what went into the link from her file: the list of field keys, "missing" (the one-time setup is not done), or ""
   let phIntakePrefillState = "";
-  const PH_INTAKE_PREFILL_LABEL = { sex: "sex", dob: "date of birth", mobile: "mobile", email: "email", address: "address", cycle: "cycle answers", history: "medical history answers", ivf: "IVF history", medNotes: "medications and allergies note", fbr: "Fang Bing Ren answers" };
+  const PH_INTAKE_PREFILL_LABEL = { sex: "sex", dob: "date of birth", mobile: "mobile", email: "email", address: "address", cycle: "cycle answers", history: "medical history answers", ivf: "IVF history", medNotes: "medications and allergies note", notes: "medication and allergy details", supps: "supplements", fbr: "Fang Bing Ren answers" };
+  // her 2026-10-26 report ("it doesnt show the tinea question"): the form kept its own copy of these questions and this list grew. The
+  // link now carries this list (prefill.qs), so a question added here is on the next link sent; intake.html's copy is only a fallback.
+  function phIntakeQs() {
+    return PH_HISTORY_GROUPS.map(gr => ({ g: gr.g, f: !!gr.family, fem: PH_HX_FEMALE_GROUPS.has(gr.g), items: gr.items.map(([k, l]) => [k, l]) }));
+  }
   // the details her file already holds for the "Your details" box of the form. Only what is really there: nothing
   // is guessed, a blank stays blank for the patient to fill. Read-only (phPatientPeek), never writes.
   function phIntakePrefillFor(name) {
@@ -117703,11 +117814,16 @@ Please let me know if you have any questions.`;
     // MEDICAL HISTORY every question she has really answered (Yes or No); a question never asked stays blank on the form. A supplement she has
     // switched on in Supplements answers "Taking supplements" Yes while that question is unasked (never over an answer she gave).
     const hx = {}, supps = PH_SUPPLEMENTS.filter(s => rec.supplements && rec.supplements[s.id] && rec.supplements[s.id].on);
-    PH_HX_ALL_ITEMS.forEach(it => { const v = phHxVal(rec, it.k); if (v === "yes" || v === "no") hx[it.k] = v; });
-    if (supps.length && !hx.taking_supplements) hx.taking_supplements = "yes";
+    PH_HX_ALL_ITEMS.forEach(it => { const v = phHxVal(rec, it.k); if (v === "yes" || v === "no" || v === "unsure") hx[it.k] = v; });
+    // her 2026-10-26 picks: the supplement rows (the four she switches on and the patient's own) and, beside each medication and allergy
+    // Yes, that row's own note. Never another row's note: those are her clinical words, not the patient's.
+    const suppRows = supps.map(s => ({ name: s.name, dose: String(rec.supplements[s.id].dose || "").trim() })).concat(phSuppOwn(rec).map(o => ({ name: o.name, dose: o.dose || "" })));
+    if (suppRows.length && !hx.taking_supplements) hx.taking_supplements = "yes";
     if (Object.keys(hx).length) out.history = hx;
-    const med = phIntakeMedNoteFor(rec);
-    if (med) out.medNotes = med;
+    if (suppRows.length) out.supps = suppRows;
+    const notes = {};
+    PH_INTAKE_MED_NOTE_ITEMS.forEach(([k]) => { if (k !== "taking_supplements" && phHxVal(rec, k) === "yes" && phHxNote(rec, k)) notes[k] = presSanitizeNoteText(phHxNote(rec, k)); });
+    if (Object.keys(notes).length) out.notes = notes;
     // FANG BING REN "How you usually are" rows (the short questions on the form): a row reads Yes when her file already has that Ren sign as a
     // Yes of her own (a tap on Fang Bing Ren / Ask her, or the patient's earlier form answer) or in the patient's usual answers. Never a sign
     // derived from her tongue, pulse or belly exam, and never the "last few weeks" rows (those go stale).
@@ -117815,15 +117931,14 @@ Please let me know if you have any questions.`;
       // her ask 2026-10-13 ("prefill details if patient already has it in their file"): what her file already holds
       // travels with the link. Needs the one-time prefill column (supabase/intake_prefill_setup.sql); without it the
       // link is made without the prefill and the dialog says so, never a failed link.
-      const prefill = phIntakePrefillFor(name);
-      const row = { owner: uid, patient_name: name };
-      if (prefill) row.prefill = prefill;
+      const prefill = Object.assign(phIntakePrefillFor(name) || {}, { qs: phIntakeQs() });
+      const row = { owner: uid, patient_name: name, prefill };
       let ins = await sb.from("intake_forms").insert(row).select("id").single();
-      if (ins.error && prefill && /prefill/i.test(ins.error.message || "")) {
+      if (ins.error && /prefill/i.test(ins.error.message || "")) {
         phIntakePrefillState = "missing";
         delete row.prefill;
         ins = await sb.from("intake_forms").insert(row).select("id").single();
-      } else if (prefill) phIntakePrefillState = Object.keys(prefill);
+      } else phIntakePrefillState = Object.keys(prefill).filter(k => PH_INTAKE_PREFILL_LABEL[k]);
       const { data, error } = ins;
       if (error) {
         // her setup runs the SQL in her own time -- a clear message here
@@ -117949,7 +118064,7 @@ Please let me know if you have any questions.`;
     return `<div class="ph-listing ph-intake-qrow">
       <div class="ph-intake-qrow-main">
         <span class="ph-intake-qrow-name">${esc(phTitle(r.patient_name))}</span>
-        <span class="ph-intake-qrow-meta">Submitted ${esc(phIntakeRelTime(r.submitted_at))}${phPatientPeek(r.patient_name) ? "" : " · new patient"}</span>
+        <span class="ph-intake-qrow-meta">${r.applied_at ? "Updated" : "Submitted"} ${esc(phIntakeRelTime(r.submitted_at))}${phPatientPeek(r.patient_name) ? "" : " · new patient"}</span>
       </div>
       <button type="button" class="ph-load-btn on" data-intake-review-open="${esc(r.id)}">Review</button>
     </div>`;
@@ -118010,12 +118125,38 @@ Please let me know if you have any questions.`;
     if (demo.address && demo.address.trim() && !(rec && Array.isArray(rec.addresses) && rec.addresses.some(a => phAddrNorm(a.text) === phAddrNorm(demo.address)))) demoNew.push({ key: "address", label: "Address", display: `Address: ${demo.address.trim()}` });
 
     const historyNew = [], historyConflicts = [];
+    const yn = v => v === "yes" ? "Yes" : v === "no" ? "No" : "Don’t know";
     PH_HX_ALL_ITEMS.forEach(it => {
       const val = hist[it.k];
-      if (val !== "yes" && val !== "no") return;
+      if (val !== "yes" && val !== "no" && val !== "unsure") return;
       const cur = rec ? phHxVal(rec, it.k) : "unasked";
-      if (cur === "unasked") historyNew.push({ key: it.k, label: it.label, display: `${it.label}: ${val === "yes" ? "Yes" : "No"}` });
-      else if (cur !== val) historyConflicts.push({ key: it.k, label: it.label, current: cur === "yes" ? "Yes" : "No", value: val === "yes" ? "Yes" : "No" });
+      if (cur === "unasked") historyNew.push({ key: it.k, label: it.label, display: `${it.label}: ${yn(val)}` });
+      else if (cur !== val) historyConflicts.push({ key: it.k, label: it.label, current: yn(cur), value: yn(val) });
+    });
+    // her 2026-10-26 picks: the details beside each Yes land on that Medical history row's note (only text the note does not already hold),
+    // and Family history's "Unsure about anything?" box under that group
+    const notes = hist.notes && typeof hist.notes === "object" ? hist.notes : {};
+    PH_HX_ALL_ITEMS.forEach(it => {
+      const v = typeof notes[it.k] === "string" ? notes[it.k].trim() : "";
+      if (v && !(rec && phHxNote(rec, it.k).includes(presSanitizeNoteText(v)))) historyNew.push({ key: `note:${it.k}`, label: it.label, display: `${it.label} · details: "${v}"` });
+    });
+    if (typeof hist.fhNote === "string" && hist.fhNote.trim() && !phHxGroupNotes(rec, "Family history").some(n => n.text === presSanitizeNoteText(hist.fhNote.trim()))) {
+      historyNew.push({ key: "fhNote", label: "Family history", display: `Family history, unsure: "${hist.fhNote.trim()}"` });
+    }
+    // her 2026-10-26 ("can include all supplements you consume"): each supplement row goes onto the Supplements page. One of the four turns
+    // that one on with the patient's dose; any other joins the patient's own list. A row her file already holds as it is, is not offered.
+    const PH_SUPP_MATCH = { prenatal: /pre-?natal|elevit/i, vitd: /vit(amin)?\.?\s*d\b|\bd3\b|cholecalciferol/i, iron: /\biron\b|ferro|ferrous|ferric/i, coq10: /co-?q-?10|ubiquinol|coenzyme/i };
+    const norm = x => String(x || "").trim().toLowerCase();
+    const suppNew = [];
+    (Array.isArray(hist.supps) ? hist.supps : []).slice(0, 30).forEach((r, i) => {
+      const nm = r && typeof r.name === "string" ? r.name.trim() : "", dose = r && typeof r.dose === "string" ? r.dose.trim() : "";
+      if (!nm) return;
+      const id = Object.keys(PH_SUPP_MATCH).find(k => PH_SUPP_MATCH[k].test(nm)) || "";
+      if (id) {
+        const st = rec && rec.supplements && rec.supplements[id];
+        if (st && st.on && (!dose || norm(st.dose) === norm(dose))) return;
+      } else if (rec && phSuppOwn(rec).some(o => norm(o.name) === norm(nm) && (!dose || norm(o.dose) === norm(dose)))) return;
+      suppNew.push({ key: `supp:${i}`, label: nm, display: `${nm}${dose ? ` — ${dose}` : ""}${id ? ` (turns on ${PH_SUPP_SHORT[id]})` : ""}`, data: { id, name: nm, dose } });
     });
     // her ask 2026-09-20 (backlog walk-through): the intake form's free-text
     // medication/allergy/supplement note -- always offered as a "new" item,
@@ -118027,7 +118168,7 @@ Please let me know if you have any questions.`;
     if (hist.medNotes && hist.medNotes.trim()) {
       const note = hist.medNotes.trim();
       // the form arrives with this box written from her file (phIntakeMedNoteFor): sent back unchanged it is not a new note
-      if (note !== phIntakeMedNoteFor(rec) && (!rec || !(rec.medicalHistoryNotes || "").includes(note))) {
+      if (note !== phIntakeMedNoteFor(rec) && (!rec || !(rec.medicalHistoryNotes || "").includes(note)) && !phHxGroupNotes(rec, "Medication & allergies").some(n => n.text === presSanitizeNoteText(note))) {
         historyNew.push({ key: "medNotes", label: "Medications/allergies/supplements", display: `Note: "${note}"` });
       }
     }
@@ -118043,6 +118184,8 @@ Please let me know if you have any questions.`;
           const sg = pool.find(r => r[0] === k);
           if (!sg || fbrData[kind].includes(k)) return;
           fbrData[kind].push(k);
+          // a resend (her 2026-10-26 "Same link reopens"): an answer already on her signs from the form before is not offered again
+          if (rec && rec.fbrForm && rec.fbrForm[kind] && rec.fbrForm[kind][k] === true) return;
           fbrNew.push({ key: `fbr:${kind}:${k}`, label: sg[1], display: `${kind === "d" ? "Lately" : "Usually"} · ${sg[1]}` });
         });
       });
@@ -118060,8 +118203,10 @@ Please let me know if you have any questions.`;
       if (curVal == null || curVal === "") cycleNew.push({ key: k, label: CF[k], display: `${CF[k]}: ${value}` });
       else cycleConflicts.push({ key: k, label: CF[k], current: dispCyc(k, curVal), value });
     });
-    if (Array.isArray(cyc.symptoms) && cyc.symptoms.length) {
-      const names = cyc.symptoms.map(s => (PH_CYCLE_SYMPTOMS.find(x => x[0] === s) || [s, s])[1]).join(", ");
+    // found 2026-10-26: the form's symptom list read every ".chip.on" on the page, so a form could send a null symptom; only real ones count
+    const newSymptoms = (Array.isArray(cyc.symptoms) ? cyc.symptoms : []).filter(s => PH_CYCLE_SYMPTOMS.some(x => x[0] === s) && !(curCyc.symptoms || []).includes(s));
+    if (newSymptoms.length) {
+      const names = newSymptoms.map(s => (PH_CYCLE_SYMPTOMS.find(x => x[0] === s) || [s, s])[1]).join(", ");
       cycleNew.push({ key: "symptoms", label: "Typical symptoms", display: `Typical symptoms: ${names}` });
     }
     // her card 11 ("Intake form too, marked until you confirm"): a LIST, not
@@ -118097,7 +118242,7 @@ Please let me know if you have any questions.`;
         diffs.forEach(([f, lbl]) => ivfConflicts.push({ key: `ivf${i}:${f}`, matchId: match.id, field: f, label: `Round of ${mLabel} · ${lbl}`, current: f === "when" ? phIvfDateLabel(match[f]) : String(match[f]), value: f === "when" ? phIvfDateLabel(c[f]) : String(c[f]) }));
       });
     }
-    return { rec, demoNew, demoConflicts, historyNew, historyConflicts, cycleNew, cycleConflicts, ivfNew, ivfConflicts, fbrNew, fbrData, hasCycle: !!Object.keys(cyc).length };
+    return { rec, demoNew, demoConflicts, historyNew, historyConflicts, cycleNew, cycleConflicts, ivfNew, ivfConflicts, fbrNew, fbrData, suppNew, hasCycle: !!Object.keys(cyc).length };
   }
   let phIntakeReviewRow = null, phIntakeReviewDiffData = null, phIntakeReviewChoices = {}, phIntakeReviewBusy = false;
   function phIntakeReviewOpen(id) {
@@ -118139,12 +118284,14 @@ Please let me know if you have any questions.`;
     const row = phIntakeReviewRow, d = phIntakeReviewDiffData;
     const isNewPatient = !d.rec;
     const totalConflicts = d.demoConflicts.length + d.historyConflicts.length + d.cycleConflicts.length + (d.ivfConflicts || []).filter(c => !c.rowChoice).length;
-    const totalNew = d.demoNew.length + d.historyNew.length + d.cycleNew.length + (d.ivfNew || []).length + (d.fbrNew || []).length;
+    const totalNew = d.demoNew.length + d.historyNew.length + d.cycleNew.length + (d.ivfNew || []).length + (d.fbrNew || []).length + (d.suppNew || []).length;
     const body = `
       <p class="ph-merge-lead">${isNewPatient ? `No existing record for <b>${esc(phTitle(row.patient_name))}</b> — applying creates one.` : `Comparing against <b>${esc(phTitle(row.patient_name))}</b>'s existing record.`}</p>
+      ${row.applied_at ? `<p class="ph-merge-note">Updated answers: the patient opened the link again and sent it again. Only what changed is shown.</p>` : ""}
       ${totalConflicts ? `<p class="ph-merge-note">⚠ ${totalConflicts} field${totalConflicts === 1 ? "" : "s"} already ${totalConflicts === 1 ? "has" : "have"} a different answer on record — pick which to keep for each.</p>` : ""}
       ${phIntakeDiffSectionHtml("Your details", d.demoNew, d.demoConflicts)}
       ${phIntakeDiffSectionHtml("Medical history", d.historyNew, d.historyConflicts)}
+      ${(d.suppNew || []).length ? phIntakeDiffSectionHtml("Supplements — onto the Supplements page", d.suppNew, []) : ""}
       ${d.hasCycle ? phIntakeDiffSectionHtml("Cycle & fertility", d.cycleNew, d.cycleConflicts) : ""}
       ${(d.ivfNew || []).length ? `${phIntakeDiffSectionHtml("IVF history — from the patient's own answers", d.ivfNew, d.ivfConflicts || [])}<p class="ph-merge-note">Rows are marked "from intake · unconfirmed" in the IVF history until you confirm each one.</p>` : ""}
       ${(d.fbrNew || []).length ? phIntakeDiffSectionHtml("Fang Bing Ren answers (Yes only)", d.fbrNew, []) : ""}
@@ -118185,24 +118332,43 @@ Please let me know if you have any questions.`;
       const winner = c => phIntakeReviewChoices[c.key] === "new";
       d.demoNew.forEach(n => { if (n.key === "sex") rec.sex = demo.sex; else if (n.key === "dob") rec.dob = demo.dob; else if (n.key === "mobile") { rec.phone = demo.mobile.trim(); rec.phoneSrc = "intake"; } else if (n.key === "email") rec.email = demo.email.trim(); else if (n.key === "address") phPatientSaveAddress(row.patient_name, demo.address); });
       d.demoConflicts.forEach(c => { if (!winner(c)) return; if (c.key === "sex") rec.sex = demo.sex; else if (c.key === "dob") rec.dob = demo.dob; else if (c.key === "mobile") { rec.phone = demo.mobile.trim(); rec.phoneSrc = "intake"; } else if (c.key === "email") rec.email = demo.email.trim(); });
+      const sentAt = row.submitted_at ? new Date(row.submitted_at) : null, sentKey = keyOf(sentAt && isFinite(sentAt) ? sentAt : TODAY);
       d.historyNew.forEach(n => {
-        if (n.key === "medNotes") {
-          const note = presSanitizeNoteText(hist.medNotes.trim());
-          if (note && !(rec.medicalHistoryNotes || "").includes(note)) {
-            const dd = TODAY, stamp = `${dd.getDate()} ${MON_SHORT[dd.getMonth()]} ${dd.getFullYear()}`;
-            rec.medicalHistoryNotes = `${(rec.medicalHistoryNotes || "").trim()}${rec.medicalHistoryNotes && rec.medicalHistoryNotes.trim() ? "\n\n" : ""}[from intake ${stamp}]\n${note}`;
-          }
+        // an older form's one medications note: under Medication & allergies now (rec.medicalHistoryNotes has no box anywhere)
+        if (n.key === "medNotes") { phHxGroupNoteAdd(rec, "Medication & allergies", hist.medNotes, sentKey); return; }
+        if (n.key === "fhNote") { phHxGroupNoteAdd(rec, "Family history", hist.fhNote, sentKey); return; }
+        if (n.key.startsWith("note:")) {
+          const k = n.key.slice(5), cur = phHxNote(rec, k), v = presSanitizeNoteText(String(hist.notes[k]).trim());
+          phHxSetNote(rec, k, cur ? `${cur}; ${v}` : v);
+          rec.historyNoteFrom = Object.assign(rec.historyNoteFrom || {}, { [k]: sentKey });
           return;
         }
         phHxSet(rec, n.key, hist[n.key]);
       });
+      if ((d.suppNew || []).length) {
+        d.suppNew.forEach(n => {
+          const { id, name: nm, dose } = n.data;
+          if (id) {
+            rec.supplements = rec.supplements || {};
+            const def = PH_SUPPLEMENTS.find(s => s.id === id), cur = rec.supplements[id];
+            rec.supplements[id] = { on: true, dose: dose || (cur && cur.dose) || (def ? def.dose : "") };
+            return;
+          }
+          rec.suppOwn = phSuppOwn(rec);
+          const have = rec.suppOwn.find(o => o.name.trim().toLowerCase() === nm.toLowerCase());
+          if (have) { if (dose) have.dose = dose; }
+          else rec.suppOwn.push({ id: uid(), name: nm, dose, src: "intake", at: sentKey });
+        });
+        rec.suppAt = Date.now();
+      }
       d.historyConflicts.forEach(c => { if (winner(c)) phHxSet(rec, c.key, hist[c.key]); });
       if (d.hasCycle) {
         rec.cycle = rec.cycle || {};
         const applyField = k => { if (k === "lmp") phCycleAddHistoryDate(rec, cyc.lmp); else rec.cycle[k] = cyc[k]; };
         d.cycleNew.forEach(n => { if (n.key !== "symptoms") applyField(n.key); });
         d.cycleConflicts.forEach(c => { if (winner(c)) applyField(c.key); });
-        if (Array.isArray(cyc.symptoms) && cyc.symptoms.length) rec.cycle.symptoms = Array.from(new Set([...(rec.cycle.symptoms || []), ...cyc.symptoms]));
+        const okSymptoms = (Array.isArray(cyc.symptoms) ? cyc.symptoms : []).filter(s => PH_CYCLE_SYMPTOMS.some(x => x[0] === s));
+        if (okSymptoms.length) rec.cycle.symptoms = Array.from(new Set([...(rec.cycle.symptoms || []), ...okSymptoms]));
       }
       // her card 11: each reported collection lands as its own row, marked
       // unconfirmed -- src:"intake" so phIvfCollectionDetailHtml shows the
@@ -118238,8 +118404,7 @@ Please let me know if you have any questions.`;
       // her ask 2026-10-13: the patient's Fang Bing Ren Yes answers go straight onto her signs (no per-answer choice): rec.fbrForm, dated the day
       // she sent the form (the Bing list is "the last few weeks"), read by phTriEffective as a pre-tick her own tap overrides. A newer form replaces it.
       if ((d.fbrNew || []).length) {
-        const sent = row.submitted_at ? new Date(row.submitted_at) : null;
-        rec.fbrForm = { v: 1, at: keyOf(sent && isFinite(sent) ? sent : TODAY), p: {}, d: {} };
+        rec.fbrForm = { v: 1, at: sentKey, p: {}, d: {} };
         d.fbrData.p.forEach(k => { rec.fbrForm.p[k] = true; });
         d.fbrData.d.forEach(k => { rec.fbrForm.d[k] = true; });
       }

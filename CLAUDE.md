@@ -1714,6 +1714,16 @@ pre-filled from her file (details, cycle, Yes / No history) and can carry
 Fang Bing Ren questions (`PH_INTAKE_FBR_P` must match `PH_FBR_Q.p`); the
 link dialogs include a text message to copy. Creating a link never depends
 on the database SQL.
+**The medical history link (her synth22 picks 2026-10-26, BUILD-NOTES "Medical history link"):** every link
+carries the app's own question list (`prefill.qs` from `phIntakeQs()`), so a question added to
+`PH_HISTORY_GROUPS` is on the next link; intake.html's copy is only the fallback. A Yes opens a details box on
+its row (lands as that row's note, "Form <date>" tag); Family history has Yes / No / Don't know ("unsure",
+a grey "? Don't know", never a Yes) and one "Unsure about anything?" box (`rec.historyGroupNotes`, shown under
+the group); "Taking supplements" Yes opens rows of name + dose that land on the Supplements page (one of the
+four turns on, any other joins `rec.suppOwn`). The same link reopens with the patient's answers and "Send
+again" once `supabase/intake_resubmit_setup.sql` is run (90 days); a resend shows in Intake review as
+"Updated" with only the changes. `rec.medicalHistoryNotes` has no box: older forms' notes in it show under
+Medication & allergies.
 
 ---
 
