@@ -3473,4 +3473,6 @@ it lists only signs she answered, and a pre-tick is not an answer.
 check-in covers Breakfast, Lunch and Dinner; reactions on snacks would come first, if she wants them.
 **Wording is DRAFT** (Claude's): "How did <meal> sit?", Fine, "… noted", Done, the why lines, "Ask how a meal sat, on this phone"
 and its hover, the notification's lines.
-**Built on session-a, not live:** waits for her "push live".
+**LIVE** 2026-10-27 (her "push both live too"), build 20261027-095400 (c72f56e7), with the motion round (e94f3092: Meals,
+Herbs and the Life pages move on a real change only); hand-stamped in a private index because a sibling's tracked mock edit
+blocks publish-live.sh, then joined into session-a (tree unchanged).
