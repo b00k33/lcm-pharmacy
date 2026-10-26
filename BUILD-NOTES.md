@@ -3268,3 +3268,65 @@ scrim that closes it, the drawer's Habits section; a normal patient's record unc
 **Integration check:** Habits page, Fitness, the today band (every page of her record), Me drawer (computer + phone), Appointments grid,
 This week, a patient's record. **Not tested:** the cloud row (no sign-in in the sandbox), the Key2 itself, the Herbs habit (no
 prescription in the sandbox), reduced motion in the pane (the CSS block and `phTpReduceMotion()` guards are in), a trip pausing a habit.
+
+## Meals planner: her week with her fast (2026-10-26)
+**Her words (synth22, 2026-10-26 evening):** "change diet to Meals. merge Meals page and Intermittent fasting together and mock a
+table format that i can use to map out/plan my meals"; "invoice is not fitness, its financials". Guide
+`meals-fitness-plan-2026-10-26.html`, her 13 picks, then round 2 ("No, change the mock first"; every option), mock 2
+`meals-fitness-mock-2026-10-26.html` (Meals · Herbs · Fitness · Exercises), then "Yes, build it". Built in this order: invoices off
+Fitness (commit 8cc2e00d, live in 20261026-123700), Meals (537be4c1), Herbs (next note); Fitness + Exercises wait on her word (below).
+**Invoices off Fitness:** `PH_HUB_RX.money` (invoice, bank, BAS, tax, rtax, bills, payments, payroll, lease, rent, super, QuickBooks,
+Xero) is tested first in `phHubKind`, and `fit`'s "run" no longer matches "auto-run" (`(?:^|[^\w-])run`). The band's workout chip,
+This week and Fitness stopped showing "Nabih invoice + bank match · Claude auto-run" as a workout.
+**Her picks built:** 1 A one page (clock bar on top, the week under it; "Your fasts ›" holds the history) · 2 A "Meals" on her record
+only · 3 A days across, Breakfast / Lunch / Dinner down, the phone a day at a time · 4 A+B+C+D a tap = the picker there (Just <day> |
+Every <meal>), ⧉ Copy a day, Copy last week, Shopping list from the plan into the drawer's Shopping · 5 A Dinner reads "Fast", the Fast
+row (round 2: a 5 am → 5 am bar a day) · 6 A her dishes count by themselves (Spicy Salmon Fishbowl = Thisbowl Spicy Salmon R; Cocoa milk
+latte = its typed ingredients matched). Round 2: fewer rows (Snacks · drinks, Fast, More), times in each cell, several things a cell,
+names on one line (Barlow, 12.5 px at her 1220 px window so "Spicy Salmon Fishbowl" is whole), the thin clock bar, no history on Meals,
+✎ Usual per row instead of an Every day column.
+**Where:** CSS "MEALS PLANNER" before "HEALTH (her synth22 picks 2 + 3)" (token `--ph-mpl-eat`), its phone rules in PHONE REDESIGN after
+`.ph-diet-pday h4`; JS "MEALS PLANNER" where `phDietMineHtml` was (`phMpl*`: `phMplHtml`, `phMplCellHtml`, `phMplFastHtml`,
+`phMplClockHtml`, `phMplPickHtml` / `phMplPlace` / `phMplClose`, `phMplCopyDays`, `phMplShopMake`, `phMplFastPl` / `phMplFastSet`),
+`phDietBodyHtml` picks it for her record. Joined in: `phFastWeek` plan = `phMplFastPl`; `phShopSrc` reads `from`; `phDishNut` falls back
+to `phDishAuto` (memoised; `phDishTb` finds the Thisbowl bowl in the name) and `phDishEdOpen` fills Made of with it; `phFastOpen` →
+Meals; the band's Fasting chip opens Meals, "Doses" reads "Herbs"; sections: her diet label "Meals", fasting "Your fasts", grp `off`
+(left out of the rail and the tab row unless open), the fasting page a ‹ Meals chip; `PH_DIET_COLS_ME` gone; the week arrows clamp to
+−8…104 weeks. Esc closes the picker only (`stopImmediatePropagation`; it used to close her record page too: found in testing).
+`.ph-diet-bars .nc` got 2px so the italic "not counted" keeps its last letter (every Diet page).
+**My calls, hers to change:** the picker opens over its cell when there is more room above and is as tall as the window allows (her
+1220 x 800 window cut its Done off); Copy last week copies a day's own meals and its night fast, never a day already had; a dish's
+match is shown in its Made of, which she can change.
+**Tested** (sandbox, a seeded Me row: routines Break Fast 5:30 · Lunch 3 pm, two dishes, a running fast; headless Edge 1220 x 800,
+1280 x 860, 360 x 760, and the pane): the week draws with times, had-it, Fast chips Mon / Tue / Thu, fast bars, More; nothing
+overflows at 1220 (no cell scrolls sideways); picker under a cell and over one near the foot, Done always visible; Just Wed Fast →
+planned count 3 → 4; Goal ▾ 16 h; snacks picker; More on Tuesday; Copy Sat → Sun gives Sun "2 eggs + Cocoa milk latte"; Copy last
+week + its toast with Undo; Shopping list = Cocoa 7 tbsp · Eggs 2 · Milk 1.75 L; Your fasts › and ‹ Meals; Esc + a tap elsewhere close
+the picker and leave the page; a patient's Diet page has no planner; Prescriptions search narrows and returns; no console errors.
+**Integration check:** her Meals page, Your fasts, the today band, Me drawer (Today's meals, Shopping), This week (meals column),
+Appointments grid (meal under its event), a patient's Diet page. **Not tested:** the cloud row (no sign-in), the Key2 itself,
+reduced motion in the pane (guards in).
+
+## Herbs: every formula in one table (2026-10-26)
+**Her words:** "i need to add more formulas" + "that i am taking" (her Herbs page showed only Ge Gen Qin Lian Tang). Picks 7 A+B (her
+formulas dispensed on other days AND ones not from LCM) and 8 A (every current dispense shows by itself + "+ Formula"; a newer dispense
+replaces only the SAME formula); round 2: one table, a short + Formula, no Stop (a typed one's Edit holds Remove). Mock 2 section 2.
+**Built:** `phHbRows` = each formula's newest dispense to her (by name, `phHbNk`), oldest first, then her typed ones (`d.hbx`, `phHbXRow`;
+a newer dispense of the same name replaces one); `phHbStays` = a fortnight after it runs out, a dispense with no run-out 4 weeks, a
+typed one with no supply until Remove. `phHbTimes` borrows times only from the same formula (before: any latest set, so a second
+formula would have taken the first one's). The page (`phHbPageHtml`) is one table, Formula (jar or pill, "dispensed 4 Oct" /
+TYPED from 20 Oct) · Dose ("3 spoons × 2", the days under it, the long dose in its hover) · Times (fields) · Today (a tick per dose,
+"8:00" or "1") · 7 days (dots: full, half, dashed missed, a dash = no dose) · Left ("16 days" green, "Ran out 13 Oct" amber) ·
+Dispense or Edit. + Formula: name (native list of her prescriptions + the formula list; any name) + times a day + Add (Enter adds),
+More ▾ amount + unit (pills, capsules, spoons, g, ml, sachets) · days · from · supply. Edit row: the same fields, each change saved
+with Undo, Remove with Undo; Esc folds it (never closes her record). Rail "N taking". `.ph-hb-left` is green / amber everywhere (the
+drawer's too); the old card CSS (`ph-hb-card`, `-hd`, `-jar`, `-acts`, `-times`, `-wk*`, `-sum`) went. Data merge: `hbx` joins
+`phHbNorm` / `phHbMerge` / `phHbAhead`.
+**Tested** (sandbox: Ge Gen dispensed 22 days ago, Gui Zhi Fu Ling Wan 5 days ago, Xiao Yao Wan typed): three rows in the mock's
+order, Ge Gen "Ran out 13 Oct" with "–" today, Gui Zhi 9 days, Xiao Yao 24 days with half dots; + Formula focuses the name, Add
+enables as she types, the stepper keeps the typed name, More, days S + S off = Mon – Fri, supply 1, Enter adds "Bao He Wan" (toast
+with Undo, the row flashes once); Edit: amount 8 → 9 and pills → capsules saved, Esc folds Edit and the page stays; Remove → toast →
+Undo brings it back; a tick on Gui Zhi counts on the band (1 of 8); a time on Gui Zhi does not reach Ge Gen; the Me drawer, the
+grid (`phHbDayItems`) and the Appointments column list the typed formula; 1220 x 800 and 360 x 760 shots; no console errors.
+**Integration check:** Herbs page, Me drawer, today band, Appointments grid + column, Habits (its Herbs habit reads `phHbRows`).
+**Not tested:** the cloud row, a real dispense through Dispense (seeded `lastDispensedAt`), the Key2.
