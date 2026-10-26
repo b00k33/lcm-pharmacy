@@ -1273,7 +1273,7 @@ Recipe and Therapies fields, `phTpMgrRailHtml`) are the full-page editor's own.
 
 ## Cycle & IVF
 **The Cycle page** = a plain sentence, three tabs, a Day 1 chip, a "Today
-is day [ ]" finder, a box under the tapped day, PMS on every day, and a
+is day [ ]" finder, PMS on every day, and a
 **Menopause** chip (sets `rec.cycleOn = false`; the Change of life card has
 "Tracking a cycle again?") [Cycle PAGE redesign; Cycle page: the Day 1
 chip; Cycle page: an option to select menopause]. Its calendar is the
@@ -1285,6 +1285,11 @@ pick): the footer asks the length once (stepper, or the shortest–longest range
 when Irregular) and a **Usually** line is worked out from her logged periods
 (`phCycUsual`; her old answers until two are logged) [Session grid follows the
 cycle; Cycle page loses the Usual period card].
+**Since her 2026-10-26 pick B** (mock `cycle-flow-mock-2026-10-26.html`, BUILD-NOTES "Cycle page: the questions in her
+order"): the Calendar tab is a picture of the cycle (wheel + hormone / lining strip, `phCycDgHtml`) top left, the day card
+ALWAYS under it (today until she taps a day), the two months stacked on the right. The card asks in her order: Last period,
+How was it (Flow, Colour, Clots = Size Small / Large + Amount A few / Many, `clotSz` / `clotAmt`, read through `phCycClots`),
+Painful? No / Yes (`painYN`; Yes opens How bad + Pain type), Between periods, PMS & mood.
 
 **Period pain is ONE read** (her 2026-10-24 picks): `phCycPeriodPain` = each
 period's worst day (0-10) from the Cycle page; the Compass "Periods: painful"
