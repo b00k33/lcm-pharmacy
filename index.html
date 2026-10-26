@@ -5432,6 +5432,14 @@
   #pharmacyPage .ph-aps-float.in { animation: phApsIn .18s ease-out; }
   @keyframes phApsIn { from { opacity: 0; transform: translateX(8px); } }
   @media (prefers-reduced-motion: reduce) { #pharmacyPage .ph-aps-float.in { animation: none; } }
+  /* RAIL DOCK (her 2026-10-26 picks, appt-rail-card-mock-2026-10-26.html: "move floating card to the rail", "remove floating
+     card", "Card inside the strip"): on a computer the column is the 44px rail on every view; a booking's card (and the rail's
+     own Up next · Herbs · Patient · Me) opens IN the column, which widens while the calendar narrows. Nothing floats over the grid. */
+  #pharmacyPage .ph-apptpage:not(.rail), #pharmacyPage .ph-apptpage.dock, #pharmacyPage .ph-apptpage.dock:has(.ph-apptpage-side:empty) { grid-template-columns: minmax(0, 1fr) 360px; }
+  #pharmacyPage .ph-apptpage.dock .ph-apptpage-side { display: flex; visibility: hidden; }
+  #pharmacyPage .ph-apptpop.dock { z-index: 30; box-shadow: 0 0 0 1px rgba(11,59,75,.08); overflow-y: auto; overscroll-behavior: contain; }
+  #pharmacyPage .ph-apptpop.dock.in { animation: phApsIn .18s ease-out; }
+  @media (prefers-reduced-motion: reduce) { #pharmacyPage .ph-apptpop.dock.in { animation: none; } }
   @keyframes unEnvBob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
   @keyframes unEnvFlap { 0%,100% { transform: rotate(0) translateY(0); } 25% { transform: rotate(-6deg) translateY(-1px); } 75% { transform: rotate(6deg) translateY(-1px); } }
   @keyframes unEnvPulse { 0% { opacity: .55; transform: scale(.85); } 100% { opacity: 0; transform: scale(1.35); } }
@@ -35447,6 +35455,7 @@
     const pop = document.getElementById("phApptPop"), scrim = document.getElementById("phApptPopScrim");
     const wasOpen = pop && !pop.hidden;
     if (pop) { pop.hidden = true; pop.innerHTML = ""; pop.className = "ph-apptpop"; pop.style.cssText = ""; }
+    document.querySelectorAll("#phAppointmentsWrap .ph-apptpage.dock").forEach(pg => pg.classList.remove("dock"));   // RAIL DOCK
     if (scrim) scrim.hidden = true;
     document.querySelectorAll("#pharmacyPage [data-ph-appt-pop].sel, #pharmacyPage [data-ph-apptcal-day].sel, #pharmacyPage [data-ph-c22-life].sel, #pharmacyPage [data-ph-c22-stk].sel, #pharmacyPage [data-ph-oth].sel, #pharmacyPage [data-ph-me-bday].sel, #pharmacyPage [data-ph-me-cd].sel").forEach(el => el.classList.remove("sel"));
     if (wasOpen) { const anchor = phApptPopAnchorEl(); if (anchor && anchor.focus) anchor.focus({ preventScroll: true }); }
@@ -35461,6 +35470,7 @@
     if (!pop || pop.hidden) return;
     pop.classList.remove("side-r", "side-l", "below", "above", "sheet");
     if (window.innerWidth <= 640) { pop.style.cssText = ""; pop.classList.add("sheet"); return; }
+    if (phApptPopDock(pop)) return;
     const vw = window.innerWidth, vh = window.innerHeight, GAP = 10, PAD = 12;
     const w = Math.min(phApptCalOpenId && /^(life|oth|bday|stk|cd):/.test(phApptCalOpenId) ? (pop.querySelector(".ph-meal-acts, .ph-meal-done") ? 300 : 240) : 360, vw - PAD * 2);   // a C22 event's card is small
     pop.style.width = w + "px";
@@ -35495,6 +35505,32 @@
     const arrowX = Math.min(Math.max(anchorX + (wide ? 40 : Math.min(r.width / 2, 40)) - left - 7, 14), Math.max(14, w - 28));
     pop.style.setProperty("--ph-pop-arrow", `${Math.round(arrowY)}px`);
     pop.style.setProperty("--ph-pop-arrow-x", `${Math.round(arrowX)}px`);
+  }
+  // RAIL DOCK (her 2026-10-26 "Card inside the strip"): on the Appointments grid on a computer the card sits IN the column,
+  // which widens to 360px while the calendar narrows; no scrim, so the next booking's tap swaps the card. False = not here.
+  function phApptPopDockPg() {
+    if (window.innerWidth <= 900 || PHARMACY.activeTab !== "appointments") return null;
+    const pg = document.querySelector("#phAppointmentsWrap .ph-apptpage");
+    return pg && pg.getClientRects().length && pg.querySelector(".ph-apptpage-side") ? pg : null;
+  }
+  function phApptPopDock(pop) {
+    const pg = phApptPopDockPg();
+    if (!pg) return false;
+    const fresh = !pg.classList.contains("dock");
+    if (phApsFloatOpen) { phApsFloatOpen = false; phApsPaint(); }
+    pg.classList.add("dock");
+    const scrim = document.getElementById("phApptPopScrim");
+    if (scrim) scrim.hidden = true;
+    const r = pg.querySelector(".ph-apptpage-side").getBoundingClientRect(), vh = window.innerHeight, PAD = 8;
+    const top = Math.max(PAD, r.top);
+    pop.classList.add("dock");
+    if (fresh && !phTpReduceMotion()) { pop.classList.remove("in"); void pop.offsetWidth; pop.classList.add("in"); }
+    pop.style.width = Math.round(r.width) + "px";
+    pop.style.left = Math.round(r.left) + "px";
+    pop.style.top = Math.round(top) + "px";
+    pop.style.maxHeight = Math.max(160, Math.round(Math.min(r.bottom, vh - PAD) - top)) + "px";
+    if (fresh) phApptPopReplace();   // the calendar just narrowed: measure the column once more
+    return true;
   }
   // the card follows its anchor through the grid's own scroller and a
   // window resize (capture: the day grid scrolls inside itself on desktop)
@@ -36313,7 +36349,7 @@
   const phApsIc = id => `<svg class="icn" aria-hidden="true" focusable="false"><use href="#i-${id}"/></svg>`;
   const phApsJar = st => `<span class="ph-aps-jar ${st}" title="${st === "done" ? "Dispensed" : st === "short" ? "Short on stock" : st === "ready" ? "Herbs ready" : "No herbs yet"}">${phApsIc(st === "done" ? "check" : "jar")}</span>`;
   // the column shows on a computer only; 5 to 7 days fold it to the rail
-  const phApsRail = () => window.innerWidth > 900 && phApptCalEnsureDayCount() >= 5;
+  const phApsRail = () => window.innerWidth > 900;   // RAIL DOCK: the rail on every view (was 5 to 7 days)
   function phApsHerbRows(dayKey) {
     return phApptPrepDay(dayKey).map(a => { const k = phPatientKey(a.patient), t = phApptScriptFor(k), st = phApptCalDotCls(a); return { a, k, t, st, done: st === "done" }; });
   }
@@ -36394,13 +36430,10 @@
   // what the side column holds: nothing while Up next is folded, the rail on 5 to 7 days, else the column
   function phApsHtml() {
     if (phUnFolded()) return "";
-    return phApsRail() ? phApsRailHtml() : phApsInnerHtml();
+    return phApsRail() && !phApsFloatOpen ? phApsRailHtml() : phApsInnerHtml();
   }
-  function phApsFloatHtml(shown) {
-    if (!shown || !phApsFloatOpen || phUnFolded() || !phApsRail()) return "";
-    const inner = phApsInnerHtml();
-    return inner ? `<div class="ph-aps-float${phTpReduceMotion() ? "" : " in"}" id="phApsFloat">${inner}</div>` : "";
-  }
+  // RAIL DOCK: the rail's tap opens the column in place (the calendar narrows), never a float over the grid
+  function phApsFloatHtml() { return ""; }
   // repaint the column (and the float) in place; the panel keeps its spot unless the tab changed. False = no column here.
   function phApsPaint(wrap, top) {
     wrap = wrap || document.getElementById("phAppointmentsWrap");
@@ -36409,6 +36442,7 @@
     const pg = side.parentElement, p0 = pg.querySelector(".ph-aps-panel"), y = p0 && !top ? p0.scrollTop : 0;
     const html = phApsHtml();
     if (side.innerHTML !== html) side.innerHTML = html;
+    pg.classList.toggle("rail", phApsRail() && !phApsFloatOpen);
     const fl = pg.querySelector(":scope > .ph-aps-float"), want = phApsFloatHtml(true);
     if (fl) fl.remove();
     if (want) side.insertAdjacentHTML("afterend", fl ? want.replace(' in"', '"') : want);
@@ -36438,10 +36472,10 @@
     if (tb) { if (phApsTab !== tb.dataset.phApsTab) { phApsTab = tb.dataset.phApsTab; phApsPaint(null, true); } return; }
     if (e.target.closest("[data-ph-aps-done]")) { phApsDoneOpen = !phApsDoneOpen; phApsPaint(); return; }
     if (e.target.closest("[data-ph-aps-rail]")) { phApsFloatOpen = !phApsFloatOpen; phApsPaint(); return; }
-    // a tap anywhere else closes the float (a booking tap keeps it: it shows that patient)
-    if (phApsFloatOpen && !e.target.closest("#phApsFloat, [data-ph-appt-pop], #presSavedToast, #phApptPop, #phApptModal")) { phApsFloatOpen = false; phApsPaint(); }
+    // a tap anywhere else folds the opened column back to the rail (a booking's own card takes its place)
+    if (phApsFloatOpen && phApsRail() && !e.target.closest(".ph-apptpage-side, [data-ph-appt-pop], #presSavedToast, #phApptPop, #phApptModal")) { phApsFloatOpen = false; phApsPaint(); }
   });
-  document.addEventListener("keydown", e => { if (e.key === "Escape" && phApsFloatOpen && document.getElementById("phApsFloat")) { phApsFloatOpen = false; phApsPaint(); } });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && phApsFloatOpen && phApsRail() && document.querySelector("#phAppointmentsWrap .ph-apptpage-side .ph-aps")) { phApsFloatOpen = false; phApsPaint(); } });
   /* ============================================================
      C22 ON THE APPOINTMENTS GRID (her 14 picks, 2026-10-25; the spec is c22-merge-mock-2026-10-25.html).
      Both apps sit on one origin (b00k33.github.io), so each READS the other's own localStorage and writes
@@ -40926,7 +40960,7 @@
       ${phFlashHtml()}
       ${view === "list" ? phApptCalListHtml(days, selKey) : (window.innerWidth > 900
         // desktop: the Up next card is a right-hand column beside the grid; a tapped booking opens its popup
-        ? `<div class="ph-apptpage${phApsRail() ? " rail" : ""}"><div class="ph-apptpage-cal">${phUnFolded() && (isCurrent || phApptUpNextFocus) ? `<button type="button" class="ph-un-reopen" data-ph-un-fold aria-expanded="false">Show Up next ⌄</button>` : ""}${gridHtml}</div><div class="ph-apptpage-side">${isCurrent || phApptUpNextFocus ? phApsHtml() : ""}</div>${phApsFloatHtml(isCurrent || phApptUpNextFocus)}</div>`
+        ? `<div class="ph-apptpage${phApsRail() && !phApsFloatOpen ? " rail" : ""}"><div class="ph-apptpage-cal">${phUnFolded() && (isCurrent || phApptUpNextFocus) ? `<button type="button" class="ph-un-reopen" data-ph-un-fold aria-expanded="false">Show Up next ⌄</button>` : ""}${gridHtml}</div><div class="ph-apptpage-side">${isCurrent || phApptUpNextFocus ? phApsHtml() : ""}</div>${phApsFloatHtml(isCurrent || phApptUpNextFocus)}</div>`
         : (isCurrent || phApptUpNextFocus ? phApptUpNextHtml() : "") + gridHtml)}
     </div>
     <div id="phApptDayInline" class="ph-apptday">${phApptDayCardsHtml(dayKey, true)}</div>`;
@@ -44530,6 +44564,7 @@
       // the Up next card's "Up next ›": drop the tapped patient, show the next one
       if (e.target.closest("[data-ph-un-back]")) { phApptUpNextFocus = null; phApptUpNextShow(); return; }
       // fold / expand the Up next card in place (never opens the popup)
+      if (e.target.closest("[data-ph-un-fold]") && phApsFloatOpen && phApsRail() && e.target.closest(".ph-apptpage-side")) { phApsFloatOpen = false; phApsPaint(); return; }
       if (e.target.closest("[data-ph-un-fold]")) { phUnFoldSet(!phUnFolded()); if (document.querySelector("#phAppointmentsWrap .ph-apptpage")) phApptCalRepaintKeep(); else phApptUpNextShow(); return; }
       const unSend = e.target.closest("[data-ph-un-send]"); if (unSend) { phIntakeOpen(unSend.dataset.phUnSend); return; }
       const unEdit = e.target.closest("[data-ph-un-edit]"); if (unEdit) { phApptPopOpen(unEdit.dataset.phUnEdit, "edit"); return; }

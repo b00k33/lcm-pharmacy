@@ -1021,11 +1021,15 @@ the weekday [Practitioners on the Acupreg calendar].
 "Appointments column"):** on a computer the Up next card (the ring beside the name, the phase bars in the visit line)
 sits over one joined bar **Herbs · Patient · Me** and one panel that scrolls inside itself; the column is as tall as
 the grid. Herbs = today's herb bookings (time · name · jar, a tap opens the prescription, "✓ n dispensed" folds);
-Patient = plan · focus · goal · herbs · logged · last · scan + Book another for the Up next patient (opens first); Me = today's doses, meals, fasting, to-dos (the Me chip still opens the drawer). On 5–7 days the column
-folds to a 44 px rail that opens it over the grid. The day's numbers stay behind the day-head tap (her pick).
-**A booking tap opens the popup only** (her 2026-10-26 "have these two seems excessive. i only need one. i like the
-floating ui more than the column design"): the column never swaps to the tapped patient ("Selected") or floats open,
-at every width; C22's "Open in LCM" opens the popup too.
+Patient = plan · focus · goal · herbs · logged · last · scan + Book another for the Up next patient (opens first); Me = today's doses, meals, fasting, to-dos (the Me chip still opens the drawer). Since her 2026-10-26
+picks (mock `appt-rail-card-mock-2026-10-26.html`, BUILD-NOTES "Appointments: the card inside the column") the column is a
+44 px rail on EVERY view; a tap on the rail opens the column in place (360 px, the calendar narrows; the chevron or a tap
+elsewhere folds it). The day's numbers stay behind the day-head tap (her pick).
+**A booking tap opens its card INSIDE the column** (her 2026-10-26 "i only need one", then "move floating card to the
+rail", "remove floating card", "Card inside the strip"): on a computer (over 900 px) on the Grid, the one appointment card
+(`#phApptPop`, `phApptPopDock`) sits in the column, which widens to 360 px while the calendar narrows; no scrim, so the
+next booking's tap swaps the card, the same booking again / ✕ / Esc closes it. The column never shows a "Selected"
+patient. At 900 px or less the card floats beside the block as before (a bottom sheet on a phone).
 
 **The Appointments dialog** is built once and patched in place: two panes
 (add | booked ahead), a Quick add | Paste list switch, day chips, Home
