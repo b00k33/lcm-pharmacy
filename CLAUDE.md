@@ -1002,6 +1002,21 @@ visits (see "My events: solid blocks" below); the day head is a small MON
 over a big date, today's in a teal circle, no count. A live "now" line
 ticks only while the tab is visible.
 
+**On a phone, Google Calendar's spacing (her 9 picks 2026-10-27, mock
+`calendar-phone-spacing-mock-2026-10-27.html`, BUILD-NOTES "Phone calendar:
+Google's spacing"; ≤640px only, the computer unchanged):** ONE toolbar row
+(`phApptCalPhoneBarHtml`): ‹ [Tue 27 Oct ▾] › · today's date in a circle ·
+Me · 🔍. The date ▾ holds Day 3 5 6 7, Grid | List and Both clinics; 🔍 swaps
+the row for the search box, its ✕ closes it and clears the search
+(`phApptCalSrch`). The Day view has ONE date row (`.ph-apptcal-head.one`):
+MON over the date in the time column, the day's chips (birthdays, ⟳, the
+before-hours items: `phC22FoldRowHtml(…, bare)`) beside it, the cycle day at
+the right; 3+ days keep the two rows. Time column 64px, hours 11px; 3px
+between blocks (a clear 1px top and right edge); the name first (14px), then
+"10:00 · focus" (12px); her events' names 14px, two lines when tall; no card
+(edge to edge, blocks stop 16px short of the right edge). Text inset 7px and
+66px an hour stay. The Saved pill was left as it is (it already fades after 2 s).
+
 **Appointment popup** is where tapping any booking lands: avatar, name,
 time/kind/ET pills, a plan picker, a gold "✦ New to you" flag, the action
 chips Full profile / Call / Text / Cancel, then one summary line that
