@@ -1085,7 +1085,10 @@ name); a period day is rose with the drop, the expected period a dashed rose pil
 unlogged period; its card = Day n · phase, one line ("Period in ~3 days · 28-day cycle"), **Period started**
 (the Cycle page's `phCycleLogPeriod`, days up to today only; corrections on the Cycle page) · **Cycle** (her
 own Cycle page). Which record is hers = **My profile** in the Me drawer (`lcm-me` `profile`, synced like the
-rest, so both logins read it) with a Cycle row "Day n · Phase · L-day" that opens the same page. **Drag**
+rest, so both logins read it) with a Cycle row "Day n · Phase · L-day" that opens the same page. Since 2026-10-26 (her
+picks A + B, mock `me-profile-diet-mock-2026-10-26.html`): once named, her name is a row that opens her record
+(`phMineOpen`, past the no-plan gate) and a ✎ circle opens the box to change it (`phMeProfEd`); Today's meals carries
+a **Diet** chip that opens her Diet page. Fasting and This week open through the same `phMineOpen`. **Drag**
 (`phDg*`): her own blocks and bands move (15-minute snap, a time tag, across days in the week view) and stretch
 (bottom edge); a routine's drop is a this-day change and the toast offers "Every day" beside Undo
 (`presSavedToast` `o.acts`); a dragged PATIENT block drops into Edit prefilled with the new day and time and
