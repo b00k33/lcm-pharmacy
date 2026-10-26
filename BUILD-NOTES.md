@@ -3146,3 +3146,4 @@ the card and scrolls. Guide: Fu Zi family shows one Yang picture. Prescriptions 
 the tongue photo), a man's body (the scene uses `anat`'s male drawing; the organ marks sit at the same places).
 **Wording is DRAFT** (Claude's): the 15 sign words, the 6 Balanced words, "Pink, thin white coat" / "Pale, swollen, teeth marks", "Even,
 steady" / "Deep, slow, weak", the tab names "Kidney / Spleen / Heart yang deficiency", the letter caption.
+- **LIVE** in build 20261026-111600 (2026-10-26, her "push live"). The live page carries `yangBody`, `phPpYangThumbHtml`, `phPpStillJpg`.
