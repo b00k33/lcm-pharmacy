@@ -3199,3 +3199,37 @@ two clue lines.
 - **Tested** (Browser pane, localhost:8995, a seeded Me row: Gym Mon/Wed/Fri/Sat 6:30, Break Fast 5:30, Code weekdays 3 pm, Meditate 8:30 pm ticked Keep on trips, Walk 6 am, Read 8 pm, a one-off Dentist; trip Sun 25 – Thu 29 Oct, out 10:30 am, home lands 1:40 pm): Mon paused Gym / Code / Walk / Read, kept Break Fast + Meditate; fly-out day Walk runs, Read paused; home day Walk paused, Read + Code run; the day before and after untouched; the one-off untouched; no flights = whole days and "back Fri 30 Oct"; the grid's row above shows ⏸ 4 / ⏸ 3 / ⏸ 4 (Mon–Wed, 3-day view) with the names on hover; the drawer shows "Paused · back Thu 29 Oct · 4" and All 6 ▾; This week's away list; the fast week "1111000" and "– · This week · trip"; Keep on trips: the bar shows on a routine, not on a one-off, a tap + Save stores `kt: 1` and Gym then runs on the trip.
 - **Not tested:** her phone; her real Me row and the sync between logins; the fold row on the 7-day and Day views by eye; the This week page by eye.
 - **Pages checked:** Appointments grid (3 days), the Me drawer, the Me Edit dialog. Not pushed.
+
+## Sidebar tidy-up (2026-10-26)
+Her ask: "help organise/declutter/filter this list - show mock". Mock `lcm-sidebar-declutter-mock.html` (session d873e98f's
+scratchpad), options A / B / C; her 8 picks, all the recommended ones (memory `project_lcm_sidebar_tidy_2026_10_26`; built in a
+later session because the first one's Edit tool was blocked):
+1. **A · Fold the rare.** Every day + Every week stay open in her "Grouped by rhythm" order; Records (6), Reference (3), Admin (3)
+   each fold to one line: label · count · chevron (`.ph-sb-fold`, `data-sb-fold`, a `button.ph-sb-fold-hd` that keeps the
+   `.ph-sb-group-label` class). The count is the pages showing in it (Admin reads 4 while Install app shows).
+2. **Find a page** on top (`#phSbFind`, between the brand and the list, outside the scrolling list): filters every page's name as
+   she types, the matched letters gold (`<mark>`), a group with no match hides, folds stand open while finding; Enter opens the first
+   match, Esc clears, picking a page clears it (`phSbFind`).
+3. **Folds remember** per device (`daybook-ph-sb-folds`, `{records: 1, ...}`, like `daybook-ph-preslist-folds`); a new page opens
+   the fold that holds it (`phSbFoldsPaint(tab)` in `renderPhShellNav`; her own open / shut stands until the page changes).
+4. **"Communications"** shows in full beside a 100: the list's badges are 2px narrower and sit 4px closer (`.ph-sb-nav
+   .ph-nav-badge`), and when the list scrolls the scrollbar takes the right padding's place (`.ph-sb-nav.scrolls`, `phSbNavFit`,
+   run on render, fold, find and resize), so the rows keep their width. Measured: label 131px for 129px of text, with and without
+   the scrollbar.
+5. **Eyebrow** "The clinic management" → "The clinic".
+6. **The « Minimise row is gone**; the leaf toggles (`sbToggle` inside the shell bind, its title says Hide / Show sidebar from boot,
+   `leafTip`). The `.ph-sb-collapse` CSS went with it.
+7. **One bottom row** (`.ph-sb-foot`): the clinic pill (`#phSidebarSwitchSlot`) + a 32px gear circle for Settings (`i-gear`, new).
+   Minimised: the pill and the gear stack. The drawer (900px or less, where the pill lives in the page header): the empty slot hides
+   and the gear carries "Settings".
+8. **Relocation stays in Reference.**
+Audit fixes with it: Suppliers has a truck (`i-truck`, new; it shared `i-tag` with Price review), Restore has `i-undo` (it shared
+`i-clock` with Communications). Minimised (60px, a computer): every icon shows (the folds stand open, their lines hidden), Find
+hides. Chevron motion off under reduced motion.
+**Tested** (sandbox + headless Edge at 1220 x 800 and a 375px drawer): the list at 1220 with the folds shut needs no scroll in a
+768px-tall window (608 of 608px); Records / Reference / Admin read 6 / 3 / 3; "sto" shows Stocktake, Stock statistics, Dispense
+history, Stock movements, Restore with gold letters and Enter opens Stocktake; Reference opened stays open after a page change and
+is saved; Photos opens Records by itself; the leaf minimises (key "1", title "Show sidebar") and back; the gear opens Settings; Esc
+clears Find; minimised shows every icon with the pill + gear stacked; the drawer shows Find and "Settings" on the left.
+Prescriptions search "Cx Test" 5 -> 1 -> 5. No console errors.
+**Not tested:** her real window height and the Key2; the badge counts at 4 digits.
