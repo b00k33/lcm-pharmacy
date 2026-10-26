@@ -3147,3 +3147,44 @@ the tongue photo), a man's body (the scene uses `anat`'s male drawing; the organ
 **Wording is DRAFT** (Claude's): the 15 sign words, the 6 Balanced words, "Pink, thin white coat" / "Pale, swollen, teeth marks", "Even,
 steady" / "Deep, slow, weak", the tab names "Kidney / Spleen / Heart yang deficiency", the letter caption.
 - **LIVE** in build 20261026-111600 (2026-10-26, her "push live"). The live page carries `yangBody`, `phPpYangThumbHtml`, `phPpStillJpg`.
+
+## Food reactions (2026-10-26)
+Her words: "i want to be able to make notes of food e.g. the food made me gassy or bloating or abdominal pain". Guide
+`food-reactions-guide-2026-10-26.html`, mock `food-reactions-mock-2026-10-26.html`; her 14 picks, all the recommended ones: her own
+meals AND every patient's Diet page; a reaction belongs to the meal, with an optional From (which thing in it); every chip set (Gut:
+Gassy · Bloated · Belly pain · Nausea · Reflux · Loose stool · Constipated; Body: Sleepy, foggy · Headache · Itchy, rash; Felt good;
++ Own, which stays as a chip); ONE How strong bar for the meal (Mild · Moderate · Strong); Started (Soon · 1–2 h · Later); chips + a
+short Note; seen in four places (the card, the Me drawer, the Diet page, Health) plus a mark on the calendar block; a count per food
+(twice or more) under the week and in a food's hover in + Food; a Patterns clue only (NOT Fang Bing Ren: her 10/25 "Not now" stands);
+the mark = the first reaction's picture in a pale red circle, green for Felt good; a patient's usual row can carry one ("Milk ·
+bloated, usually").
+**Data:** hers on the day's meal entry in her Me row, `d.meals["<day>|<sl>"].rx` (merged entry by entry like the rest of the meal);
+a patient's on the record, `rec.diet.days[day].rx[sl]` or `rec.diet.usual.rx[sl]` (through `phDietPtChange` / `phDietWrite`, Undo =
+the whole diet as it was). `rx = {k [keys; "o:<word>" = an own word], s, w, f [bases, none = the whole meal], n, at}`. Her own words:
+`d.meals.rxown = {w: [...]}` (one list, shown on patients' sheets too). Nothing picked = the `rx` goes.
+**Code ("FOOD REACTIONS", after `phMealHadClear`):** `PH_RX` (key, chip, word), `phRxOf` (the one read), `phRxSet` (the one write;
+a chip tap has the toast + Undo, the bars and From are silent), `phRxTog`, `phRxOwnAdd`, `phRxNoteSet` (on leaving the field, no
+repaint), `phRxSecHtml` (After it: on her card under Had it, `phMealCardHtml`; on a patient's sheet through `phRxPtSec`, "Usually
+after it" on the usual meal), `phRxMarkFor` (the mark; hover "Egg · bloated, gassy"), `phRxMine` / `phRxPtMeals` / `phRxTally` /
+`phRxLines` / `phRxByFoodHtml` (Reactions by food: hers = the last 30 days under her week, a patient's = noted days under their
+table), `phRxTip` (the hover on a food or dish chip in + Food, hers only), `phRxHlInner` (Health: Reactions · 30 days, under the
+visits; the meal name opens its card; repainted by `phMealRepaint` → `phRxHlPaint`), `phRxClue` (called first in `phDietClues`:
+Gassy / Bloated / Belly pain / Nausea / Loose stool twice or more, or on a patient's usual meal, files the existing `digestive_sx`
+clue with source Diet: "Bloated after food · 3 times in 30 days", "Milk · bloated, usually"; DRAFT wording; no pattern rule
+changed). Marks: `phMealMark` sets `x.mr` (the grid block's sub-line, or its one line when the block is short; the fold chip /
+band pill through `phMealChipT`), the Me drawer row, `phDietCellHtml`'s new 6th argument. Sprite `i-rx-*` (12), tokens `--ph-rx`
+/ `--ph-rx-tint` / `--ph-rx-deep`, CSS block "FOOD REACTIONS".
+**Tested** (sandbox, `savePharmacy` stubbed; her Me data is the sandbox's): today's Breakfast card: 11 chips, Bloated picks (toast
+"✓ Breakfast · Bloated" + Undo), How strong / Started / From (Egg · Cocoa milk latte) / Note appear, Moderate, 1–2 h, From Egg saved;
++ Own "Wheezy" + Enter adds a chip that stays; the note kept on leaving the field. The mark on the calendar block (also on a 22px
+block), the Me drawer row, her Diet cell; Reactions by food "Egg · bloated 3 of 4" (2 days seeded); the + Food hover "bloated 3 of 4
+· 30 days"; Health's list 3 rows; Patterns `digestive_sx` "Bloated after food · 3 times in 30 days". Patient (Cx Test, in memory):
+usual Breakfast Toast + Milk, Bloated + From Milk → the usual cell's mark "Milk · bloated, usually" and the clue "Milk · bloated,
+usually". Phone (375px): the card 351px, nothing past the edge, the bars inside; Health's table scrolls inside its card (460px).
+Prescriptions search "Cx Test" 5 -> 1 -> 5. No console errors.
+**Integration check:** the meal card (grid card + sheet), the grid block, the Me drawer, her Diet page, a patient's Diet page and
+sheet, Health, Patterns, + Food. Not on Fang Bing Ren (her pick).
+**Not tested:** the Key2, a real cloud merge of `rx` between her two logins, her real meals. Her Diet page is being rebuilt by
+another session (Meals planner) on 2026-10-26: it keeps `phRxMarkFor` on had cells and `phRxByFoodHtml` under the week.
+**Wording is DRAFT** (Claude's): the chip words, "After it" / "Usually after it", "Reactions by food", "Reactions · 30 days", the
+two clue lines.
