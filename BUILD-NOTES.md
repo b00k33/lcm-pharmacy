@@ -3406,3 +3406,66 @@ patched in): one row, menu (Day 3 5 6 7 · Grid | List · Both clinics), 3-day v
 open → type → match / dim → ✕ clears, block tap → popup + outline, CD tap → cycle card, date tap → Day summary; 1220
 wide: the old toolbar, 52px gutter, no phone rules. Screenshot `shots/phone-calendar-built-2026-10-27.jpg`. Not tested:
 her real phone, the Key2, reduced motion (nothing new moves).
+
+## Food reactions → Fang Bing Ren + after-meal check-in (2026-10-27)
+**Her words:** "Build the food reactions guide checks next", then "fang bing ren and after meal chekin" (her newest word: it
+replaces the 10/25 "Not now" and the 10/26 pick 9 "Patterns clue only"). Guide `food-reactions-guide-2026-10-26.html` round 2
+(Q11–22, artifact H165EEHe8SSh4yW4mGXrDm), mock `food-checkin-mock-2026-10-27.html` (artifact UBukTMwe7ZryhcBKG9eUqU, M1–M4),
+then "Yes, build it".
+**Her 16 picks** (all the recommended option except 14 and 17): 11 A Now = Bing (a reaction in the last 7 days) + Usually = Ren ·
+12 A Ren = the same reaction twice in 30 days, or on a patient's usual meal · 13 A gut only: Bloated → `bloating_now` /
+`bloating_tend`, Belly pain → `abd_disc` / `belly_pain_tend`, Nausea → `nausea_vomit` / `nausea_tend`, Reflux → `acid_reflux_now`
+/ `acid_reflux_tend`, Loose stool → `diarrhea` / `stool_watery_tend`, Constipated → `constipation_now` / `constipation_tend` · 14
+A + B + C Gassy → bloating + rumbling (`borborygmus_*`) + belching (`belching_*`) · 15 A any gut reaction also ticks Digestion:
+worse after eating (`worse_after_eating_now` / `_tend`) · 16 A the check-in 1½ h after Had it · 17 ALL gold in place (the Me
+drawer row, the band's Meals chip, the calendar block) + a card at the top of the Me drawer + a phone notification · 18 A Fine
+first · 19 A every meal she had, "snacks too" (see Not built) · 20 A unanswered goes quietly at the next meal's ask, or at
+midnight · 21 A Fine leaves no mark · 22 A a Settings switch · M1 Fine always first in After it on her meals · M2 the drawer card
+at the top · M3 a tap on the notification opens the card · M4 the long "why" line.
+**Fang Bing Ren:** derived on read, never stored (`phRxFbrSigns(rec, name, kind)` → `phRxFbrCalc`, a 1.5 s memo cleared by
+`phMealRepaint` and `phDietPtChange`). Hers = her meals of the last 30 days (`phRxMine(30)`); a patient's = the days noted on
+their Diet page in the last 30 days + their usual meal (`phRxPtMeals`, `rec.diet.usual.rx`). `phTriEffective` ORs it in
+(`rxSigns`), so it is a ring tick like the intake form's and the pain map's; her own tap always wins; `phTriAutoWhy` gives the
+hover: "From food reactions: bloated after Breakfast today" (Bing), "bloated 2 times in 30 days (Breakfast today, Breakfast Sun
+18)" (Ren), "Milk · bloated, usually" (a usual meal), "a gut reaction 3 times in 30 days (…)" (worse after eating, Ren). Body
+reactions and Felt good tick nothing. The Patterns clue `digestive_sx` is unchanged. A pre-ticked sign counts as answered in the
+Ask her flow, like every other pre-fill.
+**The check-in:** `phRxCkAsk()` = today's latest meal she had (Breakfast · Lunch · Dinner) once 90 min have passed
+(`PH_RXCK_MIN`), unless it has a reaction, Fine or was closed; so a later meal takes over and the earlier one goes quietly, and a
+new day starts clean. It shows: gold on its Me drawer row (`phMealDrwHtml`, `data-rx-ck`), the band's Meals chip
+(`phMineBandHtml`: opens that meal's card), the calendar block and fold chip (`phRxCkBlkCls` / `phRxCkBlkAttr` in `phC22LifeHtml`
+/ `phC22FoldHtml`), and a card at the top of the Me drawer and the Appointments column's Me tab (`phRxCkCardHtml` in
+`phMeDrwHtml` / `phApsMeHtml`): "How did Lunch sit?" + "Soup · had 7:18 am", Fine, the seven gut chips, More (opens the meal's
+card), ×; after a tap "Bloated noted" + Done. A chip there is the same write as After it (`phRxSet`, toast + Undo).
+**Fine** (`phRxFineChip`, `phRxFineTog`): the first chip in After it on her own meals (not a patient's, not her usual meal);
+`e.fine` on the meal entry, no mark anywhere; picking a reaction clears it, Fine clears the reactions (Undo).
+**The phone:** Settings → Device → "Check-in on the phone" (`phRxCkSetHtml`, `PH_SETTINGS_CARDS` key `rxck`), off until she turns
+it on (the browser asks once; blocked / unsupported shows its warning). `phRxCkTick` (every 30 s and on visibility) repaints and,
+while the page is hidden, shows one notification per meal through the service worker (`phRxCkNotify`, tag `lcm-rxck`). sw.js
+`notificationclick` posts RXCK_OPEN to an open LCM window (its own scope only: the origin is shared with C22 and C7) or opens
+`index.html#rxck=<day>|<meal>`, which the app reads once and clears (`phRxCkOpen` → `phDietSheetOpen`). A web page can only
+notify while it is open (even in the background): nothing arrives once LCM is closed.
+**Data:** on her day's meal entry in her Me row, `e.fine` (Fine) and `e.ckx` (closed with × or Done), merged entry by entry with
+the rest of the meal. On this device only: `daybook-ph-rxck-ntf` (the switch), `daybook-ph-rxck-sent` (meals already notified).
+**Code:** "FOOD REACTIONS → FANG BING REN" and "AFTER-MEAL CHECK-IN" before `// a meal planned:`; CSS `.ph-rx-ch.fine` / `.more`,
+`.ph-rxck*`, and the herb dose's gold `.due` ring extended to `.ph-meal-mrow`, `.ph-c22-life.rxck`, `.ph-c22-fc.rxck`,
+`.ph-mine-bch`, `.ph-rxck` (off under reduced motion). Commits 1df5a902 + f773748f (the switch's how-it-works line in its hover).
+**Tested** (sandbox, `savePharmacy` / `phMePushSoon` stubbed, the sandbox's own Me data, restored after): Breakfast had 100 min ago
+→ the drawer card on top, gold row, gold block; Bloated → toast + Undo, "Bloated noted", the gold goes, the mark shows; Bing
+`bloating_now` + `worse_after_eating_now` and Ren `bloating_tend` (with a seeded day 9 days back) with their why lines; Gassy →
+rumbling + belching; Fine → no reactions, `bloating_now` off (the memo fix); a patient (Cx Test, in memory): usual Milk bloated →
+`bloating_tend` "Milk · bloated, usually", a noted day 2 days back with Reflux → `acid_reflux_now`; the real Fang Bing Ren rows
+show the ring tick; the band's Meals chip gold, opening the card with Fine first; Lunch had after Breakfast → Lunch asks,
+Breakfast goes quietly; with the browser's permission, the service worker and a hidden page stood in: one notification "How did
+Lunch sit?" / "Soup · had 7:18 am", not repeated; RXCK_OPEN and `#rxck=` both open the card; the Settings switch renders. Phone
+(375): the card 343px in the drawer, three chip rows, nothing past the edge. Prescriptions search "Cx Test" 10 → 2 → 10.
+**Integration check:** the Me drawer, the Appointments column's Me tab, the band, the calendar (block + fold chip), her meal card
+and the Diet sheet, Fang Bing Ren (the board's ticks and hover, Ask her's count), Patterns (unchanged). The Compass is unchanged:
+it lists only signs she answered, and a pre-tick is not an answer.
+**Not tested:** a real notification and its tap on her phone (the Key2), the browser's permission prompt, a real cloud merge of
+`fine` / `ckx` between her two logins, her real meals.
+**Not built:** snacks. Her pick 19 said "snacks too", but snacks have no Had it or After it in LCM (they are a list per day), so the
+check-in covers Breakfast, Lunch and Dinner; reactions on snacks would come first, if she wants them.
+**Wording is DRAFT** (Claude's): "How did <meal> sit?", Fine, "… noted", Done, the why lines, "Ask how a meal sat, on this phone"
+and its hover, the notification's lines.
+**Built on session-a, not live:** waits for her "push live".
