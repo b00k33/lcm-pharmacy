@@ -3234,3 +3234,37 @@ clears Find; minimised shows every icon with the pill + gear stacked; the drawer
 Prescriptions search "Cx Test" 5 -> 1 -> 5. No console errors.
 **Not tested:** her real window height and the Key2; the badge counts at 4 digits.
 - **LIVE** in build 20261026-123700 (2026-10-26, her "push live"; the trip-pauses commit 2a6ecb59 rode along). The live page carries `phSbFoldsPaint`, `phSbFind`, `phMeTripPauses`.
+
+## Habits + Steps (2026-10-26)
+Her ask: "add a steps count to my fitness page. i want you to add relevant animations and interactive integrations to my personal
+profile to make it interesting for me to view it. use james clear atomic habits as inspiration for my habits tracking features".
+Guide `habits-guide-2026-10-26.html`, mock `habits-mock-2026-10-26.html` (MOCK = BUILD); her answers: steps come from her WATCH
+(she types the number), ticks are missed because she forgets, skips AND ticking is a hassle; her habits = Movement (Gym, Rehab, Steps),
+Sleep (Sleep, Night), Care (Skincare, Fasting, Herbs, Break Fast), not Code. **Her 10 picks**, then "Yes, build it": 1 A a Habits page
+in Body after Fitness (Fitness keeps Steps + Weight; its routine dots move to Habits) · 2 A table + panel · 3 A+B+C steps typed from the
+band, the Me drawer and This week · 4 A goal 8,000 with ✎ · 5 A+B+C+D one-tap tick from the band, the drawer, the Habits page and the
+calendar block · 6 A+B+C+D never miss twice, two-minute version, habit stack (After), place (Where) · 7 A "I am someone who …" per group,
+every tick a vote · 8 B pop + link draws + in a row rolls + "+1" vote + a gold ring every 7 in a row, no words · 9 A Votes chart (12
+weeks, lines draw up) · 10 A+B+C+D band: Steps ring, Habits ring (replaces the Gym chip), due glow, in-a-row on the habit chip.
+**Where:** one module "HABITS + STEPS" before the HEALTH module (`phHab*`, `phStp*`), one CSS block "HABITS + STEPS" after the
+`ph-hub-cols` 1180px rule, its phone rules in the PHONE REDESIGN block, symbols `i-steps` `i-habit` `i-vote` `i-link`. Joined in:
+`PH_HUB_MAPS` + `hab` `stp` `idn`; `PH_HUB_PAGES` / `phHubSections` / `PRES_MINE_RANK` "hub-hab" 0.51; `phHubMini` (fit = today's steps,
+hab = n/of); `phHubFitHtml` (steps tile + `phStpCardHtml`; the routine-dots card and the "meals today" tile left, as in the mock);
+`phHubWeekHtml` (Steps column, days on goal in the Week row, phone table 836px); `phMineBandHtml` (`phHabBandHtml` in the workout
+chip's place); `phMeDrwHtml` (`phHabDrwHtml`; Routines lists only routines that are not habits); `phC22LifeHtml` (`phHabCalTk`) +
+`phDgPick` (the circle never drags); `phMeDoneToggle(v, val)` (val 2 = two-minute; the days it trims after its window are kept as
+`it.vb` so votes never shrink).
+**My calls, hers to change:** the group bar and "Not a habit" (with Undo) in the panel and the "+ Habit" picker were added so her picks
+can be undone; the due glow starts AT the habit's time (or once its After habit is done), not 2.5 h before as the mock drew it; Break
+Fast ticks itself from Had it (a meal's tick IS Had it); Herbs shows only while she has a prescription; Steps counts as done at the goal.
+**Tested** (sandbox, her routines seeded with example ticks; 1220 x 860 and 360 x 469): the list matches her groups; chains, in a row,
+this week, Today ticks, gold due glow, red never-miss-twice; the panel (facts, 4 weeks with links, After / 2 min / Where saved and shown
+in the sub line, group bar, Not a habit + Undo); a Rehab tick pops, the row rolls to 18, "+1" rises, the band says 3 of 8 and moves to
+Skincare; Done | 2 min saves 2 and draws a half dot; steps typed in the band (Enter, with the pane unfocused: `phHabCommit`), the drawer
+and This week show everywhere; Fitness ring counts up, bars against the goal line; calendar: a circle tap ticks without opening the
+card, a block tap still opens it; the identity line saves; phone: rows fit 298px with no sideways scroll, the panel is a sheet over a
+scrim that closes it, the drawer's Habits section; a normal patient's record unchanged (no band, no Habits); Prescriptions search
+"Test" 2 -> 1 -> 2; together with the Meals planner commit 537be4c1: every page draws, no console errors.
+**Integration check:** Habits page, Fitness, the today band (every page of her record), Me drawer (computer + phone), Appointments grid,
+This week, a patient's record. **Not tested:** the cloud row (no sign-in in the sandbox), the Key2 itself, the Herbs habit (no
+prescription in the sandbox), reduced motion in the pane (the CSS block and `phTpReduceMotion()` guards are in), a trip pausing a habit.
