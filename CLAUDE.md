@@ -1603,6 +1603,7 @@ only today"** saves `noTreatment:true`; every reader of `rec.acuSessions`
 (the printable record, Patient Journey, the Visits table, the quiet-patient
 detector, and **session-package counting**) branches on it.
 
+**Copy notes** (her 9 picks 2026-10-26, mock `copy-notes-mock-2026-10-26.html`, BUILD-NOTES "Copy notes: today's visit as text"): one tap copies today's visit as labelled lines for her Cliniko treatment note (date · visit · cycle day, Scores, Tongue, Pulse = the Note tab's text, Abdomen, Acupuncture = points + press + therapy lines, each Formula with its herb lines + Total + Dosage · take-days · lasts N days) and shows what went in a box under the button (✕ closes). Every line is that fact's own read; a part with nothing today is left out; the formula = dispensed today, else the one Dispense opens. Doors: the Today's visit step bar, the Treatment band, the ⋯ menus (Care Plan / Treatment / Dispense), the toast after Complete session. Code: "COPY NOTES" (`phCn*`).
 **Findings charts** (tongue / abdomen / pulse) are the app's own tappable
 diagrams with a "brush" (pick a sign, then tap its regions). Data shapes:
 `visitFnd[id].tng = {colour, colourMore[], colourAt, shape, moist, coatThick, coatColour,
