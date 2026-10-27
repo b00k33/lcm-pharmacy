@@ -4214,3 +4214,9 @@ Her report: "the app has been freezing and taking a long time to load on the des
 the live build, read-only on her records (670 patients, 267 bookings), opens on Appointments with no errors; busy about
 2 s at first, then a few short busy moments (0.4 to 1 s) over the next 10 s. She closes the frozen window and opens LCM
 again to get it.
+
+**LIVE 2026-10-27, build 20261027-180700 (main 4f3644fb):** her "push live the Compass change too": 70c34045 (Care Plan part 2,
+step 1: every Watch row on the Compass) on top of live 180100 (the freeze fix stays), index.html + sw.js only; joined back as
+8055236d. Checked BEFORE main moved: the candidate (a temporary branch, deleted after) run read-only on her records opened
+on Appointments with no errors; across her 99 patients with plans (103 plans): Compass model at most 95 ms, Watch 59 ms, the
+symptom seed at most 308 ms, 102 told rows, the freeze guard never needed.
