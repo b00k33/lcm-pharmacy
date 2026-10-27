@@ -1220,8 +1220,14 @@ behind it under it as quiet tags with their `PH_PAT_SRC` icon), then **Watch** (
 `phCxModel`: each concern's first score → latest + Better / Same / Worse, the signs rated on the Compass, then the
 diagnosis's told-signs (`PH_TP_WATCH_SRC`: Fang Bing Ren answers, cycle log, notes, diet; "New" when not in the plan's first
 progress snapshot), then the live phase's red flags with their last answer), then the formula. An empty part reads a faded
-"not yet". The door starts the plan from the main concern (no template pick, LAW §2). Still to build: Formula + Points
-under Course.
+"not yet". The door starts the plan from the main concern (no template pick, LAW §2). Formula + Points already sit under
+Course: the Session grid's live-phase row (Aim · Points · Formula · Watch); the grid is LOCKED, so they were not moved.
+**Shorter profile (step 3, first pass, outside the grid; her "minimise any redundant display and messages"):** a finding
+with nothing on file is not a row of its own: it folds into one faded "not yet" line of chips that open their pages
+(`phTpFxNoneSplit` / `phTpFxNoneHtml`, on the Care Plan Findings and Treatment's "How <name> is"); Progress before the first
+visit = "Progress · not yet"; Today's visit tiles read "not yet"; Medical history rows tag "FBR" (the words in the hover);
+Visit checks' empty cell is "–"; Patterns' "Only on one side" band lost its explaining line. Inside the grid (the live
+row's Watch / Formula / Red flags repeat the Watch list and the Fang Bing Ren row; phase names overlap at 360): her word first.
 
 **Diagnosis + Goal write themselves** (`phTpAutoDx`, `phTpAutoGoal`): every
 Likely or Possible pattern (plus any she agreed) minus the ones she took
