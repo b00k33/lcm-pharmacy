@@ -5069,3 +5069,16 @@ line). Commit ad52b866 on session-a, NOT live.
 - **Seen, not changed:** `phMskShort` cuts a name at " /", so "Toe extensors (EDL / EHL)" shows as "Toe extensors (EDL" (and the
   combined "Anterior / middle deltoid", "Middle / lower trapezius" as "Anterior", "Middle"; another session's muscle split was
   hiding those two for new taps, uncommitted at the time).
+
+## Toe extensors full name; the ⚠ fix live (2026-10-28)
+
+- **Full name** (her "full name, then push live"; 414d28c5): `phMskShort` cut every muscle name at " /", so "Toe extensors (EDL /
+  EHL)" showed as "Toe extensors (EDL", and its motor-point label "Toe extensors (EDL MP R" left an open bracket: the points
+  reader (`phAcuPointParts`, commas inside brackets stay together) then ran every later point of a saved list into that one.
+  The cut now skips a slash inside brackets (`/ \/[^()]*$/`); "Teres minor / major" → "Teres minor" etc. as before. Checked on
+  Mia Testcase: the panel says "Toe extensors (EDL / EHL)", ✓ Complete session saved 8 points and the Care Plan phase reads 8.
+- **LIVE** 2026-10-28, build 20261028-105500 (main 6a0ec7ef), on her "push live": the ⚠ fix (ad52b866), the full name
+  (414d28c5) and docs, on top of live 102300. Published from session-a's committed tip with only the two stamps changed, built
+  in a private index (another session's muscle-picture work was open, uncommitted, in index.html and stayed out); joined into
+  session-a with its tree unchanged (dd3e621b). The served page has `mk2-nw`, the phone grid and the new `phMskShort`, and no
+  `PH_MSK_ATLAS`. The saved build was opened in the sandbox first (Musculoskeletal page, no errors).
