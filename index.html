@@ -37151,7 +37151,9 @@
   // Focus and the plan's own goal line + current phase for Goal (her Q5),
   // tagged "plan" (or "case" when only the Case contributed) so she can tell
   // derived text from her own. Derived text is never written back.
-  function phApptBrief(a, planOverride) {
+  // focusOnly: the complaint without the goal. The pain map reads the complaint through here, and the goal is written from
+  // the complaints, so asking for both closed a circle that froze the app on load with her real records (2026-10-27).
+  function phApptBrief(a, planOverride, focusOnly) {
     const k = phPatientKey(a.patient);
     // her correction 2026-09-19 (Grainne Meade, a Friday booking): "its zanda
     // not cliniko". A pasted briefing table never says which system it came
@@ -37182,6 +37184,7 @@
       const f = [caseLabel, dx].filter(Boolean).join(" · ");
       if (f) { out.focus = f; out.focusSrc = dx ? "plan" : "case"; }
     }
+    if (focusOnly) return out;
     if (!out.goal && plan) {
       const phase = phTpLivePhase(phPatientPeek(a.patient), plan);   // one phase truth (2026-09-18)
       const phBit = phase ? (/^phase\s*\d*$/i.test((phase.label || "").trim()) ? (phase.aim || "").trim() : (phase.label || "").trim()) : "";
@@ -109064,7 +109067,7 @@ or changing anything in Cliniko.
 
   function phPmComplaint(name, plan) {
     const appt = phApptNearestNow(name);
-    const brief = phApptBrief(appt || { patient: name }, plan);
+    const brief = phApptBrief(appt || { patient: name }, plan, true);   // the complaint only, never the goal (see phApptBrief)
     return String(brief.focus || phTpDxHersText(plan) || "");
   }
   function phPmFromText(text) {
@@ -110706,12 +110709,19 @@ or changing anything in Cliniko.
     return t;
   }
   var phTpAutoMemo = { t: 0, m: Object.create(null) };
+  // keys still being worked out: asked again before they finish, they answer empty instead of starting over. The brief,
+  // the goal and the complaints read each other; one circle among them (now cut in phApptBrief) froze the app on load,
+  // each turn's overflow caught and retried, with her real records (2026-10-27). Not cleared by the 1.5 s reset.
+  var phTpAutoBusy = new Set();
   function phTpAutoBust() { phTpAutoMemo.m = Object.create(null); }
   // phApptBrief asks for these once per booking row, so reads from there share a 1.5 s memo; the card itself reads fresh
   function phTpAutoMemoGet(k, fn) {
     const now = Date.now();
     if (now - phTpAutoMemo.t > 1500) { phTpAutoMemo.m = Object.create(null); phTpAutoMemo.t = now; }
-    return k in phTpAutoMemo.m ? phTpAutoMemo.m[k] : (phTpAutoMemo.m[k] = fn());
+    if (k in phTpAutoMemo.m) return phTpAutoMemo.m[k];
+    if (phTpAutoBusy.has(k)) return { pats: [], ghosts: [], keys: [], parts: [], text: "" };
+    phTpAutoBusy.add(k);
+    try { return (phTpAutoMemo.m[k] = fn()); } finally { phTpAutoBusy.delete(k); }
   }
   function phTpAutoDx(name, plan, fresh) {
     const run = () => {
