@@ -4408,3 +4408,36 @@ before: blood tests entered for 0 of 670 patients; IVF histories 8 (egg / embryo
   count included) drawn for all 670 patients, no errors, at most 3 ms; the paste form drawn for 40; `phBldParse` read a
   report-shaped sample right (ferritin, Hb, TSH, vitamin D with ranges, the collected date); Today's visit for 12 patients
   0.9-2.1 s (190200: 0.9-1.9 s).
+
+## Care Plan part 2, step 6: the plan for the patient (2026-10-27)
+
+Her pick 8 ("Plan to give the patient": one page or email from Treat, Course and what to look out for at home, built from the
+same plan, no retyping; out by Print AND email, from Messages, to the address on file, she sees it before it sends), mock
+`care-plan-part2-mock-2026-10-27.html` section 7.
+
+- **Where:** "📋 Patient plan" in the Care Plan's ⋯ menu (above "✉ Patient letter") and beside "✉ Patient letter" on the full
+  plan page. It opens in the letter's place (`phTpLetterOpen = "plan"`; ← Back to plan as before). The stage-by-stage Patient
+  letter is unchanged: it stays the longer letter in her words.
+- **The page** (`phTpCplModel` → `phTpCplSheetHtml`; the screen and the printed copy draw the same markup):
+  - "Your care plan · Low back pain" (the main concern) and the date.
+  - What we're treating: each Treat row with its Compass target in the patient's words ("Lower back pain: to 2 out of 10 or
+    less"; % better; 8 out of 10 or more; 0 = "gone"); a row with no number shows its goal.
+  - Your course · about N visits: each phase "Acute · weekly × 4" (`phTpPrvShort`, `phTpPrvCad`, 1×/wk read as weekly), the
+    live one gold, done ones faded; N = the phases' planned visits.
+  - See your GP straight away if: the live phase's red flags up to the " — " (the part after it is her instruction, "refer
+    for imaging immediately"), or her own Watch wording when she typed one. The flags print in the template's words.
+  - Your herbs (herbs on for this plan): the phase's formula, else the prescription's, with the label's dose sentence.
+  - Her sign-off and signature (`phSignoffFor`, `PH_SIGNATURE`).
+- **🖨 Print:** `phPrintDoc(phTpCplDocHtml)`, the page with print styles, saved as "Care plan <name> <date>".
+- **✉ Email:** a mailto to the email on file, subject "Your care plan · Low back pain", the page as text ("Dear Lou," first,
+  `phTpCplText`): her mail app shows it, she sends it. The same message is kept in Messages as prepared (`phMsgPrepare`,
+  context { type: "careplan", id }, label "Care plan"), to tick Sent there as with every message; "✓ In Messages". No email on
+  file: the button reads "✉ No email on file" and does nothing.
+- **Tested (sandbox, "Lou Testback": Low back pain course of 4 / 3 / 2 from step 4, Compass 7 → 4, Du Huo Ji Sheng Tang):**
+  - Page as in the mock: Lower back pain: to 2 out of 10 or less; Acute · weekly × 4 (gold), Subacute · fortnightly × 3,
+    Maintenance · monthly × 2, about 9 visits; the red flag without "refer for imaging immediately"; Du Huo Ji Sheng Tang ·
+    3 spoons provided, 2 times a day; Warmly, Linh Quach, BHSc MChinMed.
+  - Email (the mail app held back in the test): one prepared message in Messages, subject and body as above, on the
+    Communications list. No email: "✉ No email on file", disabled. The printed page builds (1.3 KB).
+  - 1280, and 375 (the phases wrap 2 + 1, nothing past the edge). No console errors.
+- **Not checked:** the print dialog itself and a real mail app; her real records; the Key2.

@@ -1288,6 +1288,17 @@ value (a blood result under 12 months; the latest round with that IVF number), a
 eggs, 2 rounds · low") and on the Patterns page, whose clue list now has Blood tests and IVF history groups (blood clues counted
 before but were never listed). In Watch a blood result behind the diagnosis by her rule is measured against her number.
 
+**Part 2, step 6: the plan for the patient (her pick "Print AND email, from Messages, she sees it before it sends"; BUILD-NOTES
+"Care Plan part 2, step 6"):** "📋 Patient plan" in the plan's ⋯ menu and beside "✉ Patient letter" opens one page in the
+letter's place (`phTpLetterOpen === "plan"`, `phTpCplModel` / `phTpCplSheetHtml`): Your care plan · <main concern>, the date;
+What we're treating (each Treat row with its target in the patient's words: "to 2 out of 10 or less", "80% better", "8 out of 10
+or more"); Your course · about N visits (each phase · weekly / fortnightly / monthly × visits, the live one gold); See your GP
+straight away if (the live phase's red flags up to the dash, or her own Watch wording); Your herbs (the phase's formula, else the
+prescription's, with its dose sentence); her sign-off. 🖨 Print = `phPrintDoc` of the same page. ✉ Email = a mailto to the
+address on file with the page as text ("Dear <first name>," first), and the same message kept in Messages as prepared
+(`phMsgPrepare`, context careplan, label "Care plan") for her to tick Sent; no address = "No email on file". The stage-by-stage
+Patient letter is unchanged.
+
 **Diagnosis + Goal write themselves** (`phTpAutoDx`, `phTpAutoGoal`): every
 Likely or Possible pattern (plus any she agreed) minus the ones she took
 off; Goal = one line per complaint in the Compass's order (her own Goal

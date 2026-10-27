@@ -17447,6 +17447,18 @@
   #pharmacyPage .ph-tp-ltable td { padding: 10px 10px 10px 0; border-bottom: 1px solid var(--ph-line); vertical-align: top; }
   #pharmacyPage .ph-tp-ltable tr:last-child td { border-bottom: none; }
   #pharmacyPage .ph-tp-lnote { font-size: var(--fs-11-5); font-style: italic; color: var(--ph-soft); margin-top: 16px; }
+  /* the plan for the patient (Care Plan part 2, step 6): the mock's page */
+  #pharmacyPage a.ph-load-btn[data-tp-cpl-mail] { display: inline-flex; align-items: center; text-decoration: none; }
+  #pharmacyPage .ph-tp-cpl { max-width: 620px; box-sizing: border-box; padding: 18px 22px; background: var(--ph-white); border: 1px solid var(--ph-line); border-radius: 6px; font: var(--fs-13-5)/1.55 Georgia, "Times New Roman", serif; color: var(--ph-ink); }
+  #pharmacyPage .ph-tp-cpl h4 { margin: 0 0 2px; font: 700 17px/1.3 Georgia, serif; color: var(--ph-herb-deep); }
+  #pharmacyPage .ph-tp-cpl .sub { font-size: var(--fs-12); color: var(--ph-soft); }
+  #pharmacyPage .ph-tp-cpl h5 { margin: 14px 0 4px; font: 700 var(--fs-11) var(--font-body); text-transform: uppercase; letter-spacing: .06em; color: var(--ph-faint); }
+  #pharmacyPage .ph-tp-cpl ul { margin: 0; padding-left: 18px; }
+  #pharmacyPage .ph-tp-cpl .steps { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  #pharmacyPage .ph-tp-cpl .steps span { flex: 1 1 120px; padding: 6px 4px; border-radius: 6px; background: var(--ph-herb-tint); color: var(--ph-herb-deep); text-align: center; font: 600 var(--fs-11-5) var(--font-body); }
+  #pharmacyPage .ph-tp-cpl .steps span.now { background: var(--ph-gold); color: #fff; }
+  #pharmacyPage .ph-tp-cpl .steps span.past { opacity: .55; }
+  #pharmacyPage .ph-tp-cpl .sig { margin: 18px 0 0; font-size: var(--fs-12-5); color: var(--ph-soft); }
 
   /* Ren (人) observations -- her ask 2026-08-22: Eyes/Build (single-select,
      same field shape as Body constitution/Personality above) and Skin/
@@ -52403,6 +52415,22 @@
       // screen modal or inline in presTpInlineHtml (round-4, 2026-09-03) ----
       if (e.target.closest("[data-tp-close]")) { phTpClose(); return; }
       if (e.target.closest("[data-tp-letter-open]")) { phTpLetterOpen = true; phTpRerender(); return; }
+      if (e.target.closest("[data-tp-cpl-open]")) { phTpLetterOpen = "plan"; phTpRerender(); return; }
+      if (e.target.closest("[data-tp-cpl-print]")) {
+        const plan = phTpFindPlan(phTpScreenPatient, phTpScreenPlanId);
+        if (plan) phPrintDoc(phTpCplDocHtml(phTpScreenPatient, plan), `Care plan ${phTitle(phTpScreenPatient)} ${phFileDate()}`);
+        return;
+      }
+      // Email: the link opens her mail app with the page as text; Messages keeps the copy she is about to send
+      if (e.target.closest("[data-tp-cpl-mail]")) {
+        const plan = phTpFindPlan(phTpScreenPatient, phTpScreenPlanId);
+        if (plan) {
+          const stats = phMsgPrepare({ names: [phTpScreenPatient], subject: phTpCplModel(phTpScreenPatient, plan).title, body: phTpCplText(phTpScreenPatient, plan), channel: "email", context: { type: "careplan", id: plan.id }, label: "Care plan" });
+          phFlashShow(stats && stats.ready && stats.ready.length ? "✓ In Messages" : "Not in Messages: no email on file, or they asked not to be contacted");
+        }
+        return;
+      }
+
       if (e.target.closest("[data-tp-letter-back]")) { phTpLetterOpen = false; phTpRerender(); return; }
       const tpLetterCopy = e.target.closest("[data-tp-letter-copy]");
       if (tpLetterCopy) {
@@ -116304,6 +116332,7 @@ or changing anything in Cliniko.
           <option value="off"${plan.herbsOverride === false ? " selected" : ""}>Herbs off for this course</option>
         </select>
       </label>
+      ${item(`data-tp-cpl-open="1"`, "📋 Patient plan")}
       ${item(`data-tp-letter-open="1"`, "✉ Patient letter")}
       <details class="ph-pres-menu-more"><summary class="ph-pres-menu-item">More</summary>${more}</details>
       ${item(`data-tp-plan-del="${plan.id}"`, "Delete plan", "danger")}`;
@@ -121774,7 +121803,71 @@ or changing anything in Cliniko.
       <b>If it's negative</b> — I'll go through this cycle in detail with you and adjust the plan before the next one.</p>` : ""}
       <p class="sig">${phSignoffFor(plan.id)}<br>${esc(PH_SIGNATURE)}</p>`;
   }
-  let phTpLetterOpen = false;
+  // ==== PLAN FOR THE PATIENT (Care Plan part 2, step 6; her pick 8, care-plan-part2-mock-2026-10-27.html section 7) ====
+  // One page built from the same plan, no retyping: what we're treating (each Treat row with its target in the patient's words),
+  // the course (each phase · how often × visits, about N visits in all), when to see a GP straight away (the live phase's red
+  // flags without the instruction for her after the dash, or her own Watch wording when she typed one) and the herbs with their
+  // dose. Print = this page; Email = the same as text, kept in Messages (phMsgPrepare) and opened in her mail app to the address
+  // on file, so she sees it before it goes. Shown in the Patient letter's place (phTpLetterOpen === "plan").
+  function phTpCplModel(name, plan) {
+    const rec = phPatientPeek(name) || {}, it = phCcRibItems(name), ph = phTpLivePhase(rec, plan) || (plan.phases || []).find(p => !p.skipped) || null;
+    let M = null; const keepAt = phCxAt; phCxAt = null;   // today's Compass, whatever visit its Scoring bar has open
+    try { M = phCxModel(name, plan); } catch (e) { M = null; } finally { phCxAt = keepAt; }
+    const ser = new Map(M ? M.series.filter(s => s.track !== "bar").map(s => [s.key, s]) : []);
+    const words = x => x.k === "hi" ? `${x.v} out of 10 or more` : x.k === "pct" ? `${x.v}% better` : x.v ? `to ${x.v} out of 10 or less` : "gone";
+    let rows = []; try { rows = phTpTreatRows(name); } catch (e) { rows = []; }
+    const treat = rows.map(r => { const s = ser.get(r.key), lbl = s && s.pain && !/pain/i.test(r.text) ? `${r.text} pain` : r.text; return s ? `${lbl}: ${words(phCxTgt(name, s, M.scale))}` : (r.goal || r.text); });
+    const cad = p => phTpPrvCad(p).replace(/^1×\/wk\b/i, "weekly").replace(/^(\d)×\/wk\b/i, "$1 times a week");
+    const phs = (plan.phases || []).filter(p => !p.skipped).map(p => ({ txt: [phTpPrvShort(p), cad(p)].filter(Boolean).join(" · "), now: !!ph && p.id === ph.id, past: p.status === "done", n: phTpSessionsOf(p) }));
+    const fv = ph ? phTpFieldView(name, plan, ph, "watch") : null;
+    const gp = !ph ? [] : fv && fv.hers ? String(fv.text || "").split(/\s*;\s*/).filter(Boolean) : phRfOfPhase(plan, ph).map(x => String(x.text || "").split(/\s+[—–]\s+/)[0].trim()).filter(Boolean);
+    let herbs = "";
+    if (phHerbsOn(rec, plan)) {
+      const t = (PRESC.items || []).find(x => !presIsFormula(x) && phPatientKey(presPatientFor(x)) === phPatientKey(name));
+      const fm = (ph && ph.formulaName) || (t ? presActualFormula(t) : "");
+      if (fm) herbs = [fm, t ? schedPrepDosageText(t) : ""].filter(Boolean).join(" · ");
+    }
+    return { title: `Your care plan${it ? ` · ${it.main.text}` : ""}`, date: TODAY.toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }),
+      first: phTpFirstName(name), treat, phs, visits: phs.reduce((a, p) => a + (p.n || 0), 0), gp, herbs, email: String(rec.email || "").trim() };
+  }
+  function phTpCplText(name, plan) {
+    const C = phTpCplModel(name, plan), sec = (h, list) => list.length ? `${h}\n${list.map(x => `• ${x}`).join("\n")}\n\n` : "";
+    return `Dear ${C.first},\n\n${C.title}\n${C.date}\n\n`
+      + sec("What we're treating", C.treat)
+      + sec(`Your course${C.visits ? ` · about ${C.visits} visits` : ""}`, C.phs.map(p => p.txt + (p.now ? " (now)" : "")))
+      + sec("See your GP straight away if", C.gp)
+      + (C.herbs ? `Your herbs\n${C.herbs}\n\n` : "")
+      + `${phSignoffFor(plan.id)}\n${PH_SIGNATURE}\n`;
+  }
+  // the page itself: the screen and the printed copy draw the same markup
+  function phTpCplSheetHtml(C, plan) {
+    const ul = list => `<ul>${list.map(x => `<li>${esc(x)}</li>`).join("")}</ul>`;
+    return `<h4>${esc(C.title)}</h4><div class="sub">${esc(C.date)}</div>`
+      + (C.treat.length ? `<h5>What we're treating</h5>${ul(C.treat)}` : "")
+      + (C.phs.length ? `<h5>Your course${C.visits ? ` · about ${C.visits} visits` : ""}</h5><div class="steps">${C.phs.map(p => `<span${p.now ? ` class="now"` : p.past ? ` class="past"` : ""}>${esc(p.txt)}</span>`).join("")}</div>` : "")
+      + (C.gp.length ? `<h5>See your GP straight away if</h5>${ul(C.gp)}` : "")
+      + (C.herbs ? `<h5>Your herbs</h5><div>${esc(C.herbs)}</div>` : "")
+      + `<p class="sig">${esc(phSignoffFor(plan.id))}<br>${esc(PH_SIGNATURE)}</p>`;
+  }
+  function phTpCplDocHtml(name, plan) {
+    return `<title>Care plan — ${esc(phTitle(name))}</title>
+      <style>body{font-family:Georgia,serif;padding:32px;max-width:620px;color:#162428;line-height:1.55;font-size:14px}
+      h4{font-size:19px;margin:0 0 2px;color:#0B3B4B}.sub{color:#555;font-size:12px}
+      h5{font-family:system-ui,sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#6B7A80;margin:18px 0 6px}
+      ul{margin:0;padding-left:18px}.steps{display:flex;gap:6px}
+      .steps span{flex:1;text-align:center;font-family:system-ui,sans-serif;font-size:11.5px;font-weight:600;padding:6px 4px;border-radius:6px;background:#EEF4F2;color:#0B3B4B}
+      .steps span.now{background:#B08D3E;color:#fff}.steps span.past{opacity:.55}.sig{margin-top:24px}</style>
+      ${phTpCplSheetHtml(phTpCplModel(name, plan), plan)}`;
+  }
+  function phTpCplViewHtml(name, plan) {
+    const C = phTpCplModel(name, plan);
+    const mail = C.email
+      ? `<a class="ph-load-btn on" data-tp-cpl-mail="1" href="${esc(`mailto:${encodeURIComponent(C.email)}?subject=${encodeURIComponent(C.title)}&body=${encodeURIComponent(phTpCplText(name, plan))}`)}">✉ Email</a>`
+      : `<button type="button" class="ph-load-btn" disabled>✉ No email on file</button>`;
+    return `<div class="ph-tp-letter-acts"><button type="button" class="ph-load-btn" data-tp-letter-back="1">← Back to plan</button><button type="button" class="ph-load-btn on" data-tp-cpl-print="1">🖨 Print</button>${mail}</div>
+      <div class="ph-tp-cpl">${phTpCplSheetHtml(C, plan)}</div>`;
+  }
+  let phTpLetterOpen = false;   // true = the Patient letter; "plan" = the plan for the patient
   function phTpLetterCopy(btn, name, plan) {
     const text = phTpLetterText(name, plan);
     const flash = msg => { if (btn) { const orig = btn.textContent; btn.textContent = msg; setTimeout(() => { if (btn.isConnected) btn.textContent = orig; }, 1600); } };
@@ -121792,6 +121885,7 @@ or changing anything in Cliniko.
     } else { flash("⚠ Copy blocked"); }
   }
   function phTpLetterViewHtml(name, plan) {
+    if (phTpLetterOpen === "plan") return phTpCplViewHtml(name, plan);   // the one-page plan for the patient (part 2, step 6)
     // her pick 3, 2026-09-22 (soft skip): same omission as phTpLetterDocHtml
     // -- this on-screen preview and the exported letter must always agree.
     const phs = (plan.phases || []).filter(p => !p.skipped);
@@ -121902,6 +121996,7 @@ or changing anything in Cliniko.
           ${phTpIvfTrackHtml(plan)}
         </div>
         <div class="ph-tp-delzone">
+          <button type="button" class="ph-load-btn on" data-tp-cpl-open="1">📋 Patient plan</button>
           <button type="button" class="ph-load-btn on" data-tp-letter-open="1">✉ Patient letter</button>
           <button type="button" class="ph-load-btn" data-tp-save-tmpl="${plan.id}">Save as template</button>
           ${armingPlan
