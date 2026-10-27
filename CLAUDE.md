@@ -1597,14 +1597,26 @@ her words "add a steps count to my fitness page ... use james clear atomic habit
 Since 2026-10-27 (her synth22 "wheres the page for exercises?" + "move fitness page from c22 to lcm so i cna plan and log my
 exercise", picks 9 to 13 on `meals-fitness-plan-2026-10-26.html`, round 2 on `meals-fitness-mock-2026-10-26.html`, her answers
 10/27 + "Yes, build it"; BUILD-NOTES "Fitness + Exercises"). **Only on her own record.** Step 1 of 2 (plan + log) + climbing (LIVE 10/27, build 20261027-112700).
-Step 2 (her pick 11: Muscles & exercises, My don'ts, Goals, Personal bests, Progression, Volume) is NOT built: it waits for her word.
+Step 2 (her pick 11, her "build step 2" 10/27; BUILD-NOTES "Fitness step 2") is BUILT, committed on session-a (a80ee554 +
+4cf7f3e2), NOT live: it goes live only on her "push live".
 - **Fitness** (Body, `phHubFitHtml`): Bring in (her C22 fitness, once: library, templates, log, planned, stairs, week plan; C22's
   keys are READ, never written) · This week (workout + rehab routines and Steps, a dot a day = the Habits reads and ticks, one tick
   both pages) · **Weekly plan** = her calendar's routines (`phFitPlanApply`: a day set to a type moves that weekday to the routine of
   that type, made in g-fitness if she has none; done days stay; the past never reads as missed; Undo) · Steps + Weight · Steps plan
   (walks + stairs, under the Steps card) · Today (type, template, sets, timed hold, rest ring, pain + stars, ▶ Workout Mode) ·
-  Upcoming + Recent. Finish also ticks today's routine of that type.
-- **Exercises** (Body, after Fitness, `phHubExHtml`): her library (search, groups, Hide) + workout templates.
+  Upcoming + Recent. Finish also ticks today's routine of that type. Step 2 adds, below: **Goals** (one per exercise: reps / hold /
+  weight / tick, `d.fgl`; reached on a ticked set = toast + buzz + gold; a flag on Today's row, in Workout Mode and in the exercise
+  panel) · **Personal bests** · **Weekly volume** (8 weeks) · **Progression** (one exercise's last 7 sessions).
+- **Exercises** (Body, after Fitness, `phHubExHtml`): her library (search, groups, Hide) + workout templates; step 2 adds
+  **Muscles & exercises** (C22's reference, `phMu*`: two figures tinted by group, Muscles · Exercises · Checks · Where it hurts,
+  C22's entries word for word with their sources; an entry opens in place under the card with Back; C22's moving figures; Where
+  it hurts reads her pain log and lights her side; doors: "What is around the ..." beside a ticked pain area, a Reference row in
+  her exercise) and **My don'ts** (`phDn*`, `d.fdn` / `d.fdk` / `d.fdx`: her list in her words, a table with its header row as its
+  own first row, Never | Rather not, links to a pain area or exercise, a journal where Happened again is a grey ring, never red;
+  Prompts join only on Make it mine; Hide, then Delete for good from Hidden; a quiet line on Today and in Workout Mode, "Make this
+  a don't" beside a ticked pain area). The muscle shapes live once in `#phMuDefs` in `<body>`; their four shape rules
+  (`.tpe-mus`, `.tpe-shd`, `.tpe-fib`, `.tpe-base`) are unscoped on purpose (a `<use>` copy takes its shape's rules); `--mi`
+  (not `--i`, which LCM already uses) is registered with `@property`.
 - **Climbing** (her "build the climbing step", 2026-10-27; BUILD-NOTES "Fitness: climbing"): a climbing type's session (Bouldering,
   `phFitIsClimbTy`) adds routes = name · grade (V0–V10 offered, any typed) · tries − + · Sent (`{c: 1, n, g, a, ok}` in a session's
   or template's `ex`). Sent counts as a done set (`phFitSets`); routes never join her library. Bring in brings C22's climbs; when
@@ -1612,7 +1624,8 @@ Step 2 (her pick 11: Muscles & exercises, My don'ts, Goals, Personal bests, Prog
 - Motion: a set pops and its tick draws, the rest ring counts down and buzzes at zero, gold once when the day's sets are done, the
   week's dots pop and link (the Habits way); all off under reduced motion.
 - A routine in g-fitness counts as a workout (`phHubKind`, after the money words). Data: `d.fex`, `d.ftp`, `d.fwo`, `d.fpl`,
-  `d.fsp`, `hubset.stride`, `hubset.fitIn` in `PH_HUB_MAPS` (shapes in the code comment). Code: "FITNESS + EXERCISES" (`phFit*`).
+  `d.fsp`, `d.fgl`, `d.fdn`, `d.fdk`, `d.fdx`, `hubset.stride`, `hubset.fitIn` in `PH_HUB_MAPS` (shapes in the code comment).
+  Code: "FITNESS + EXERCISES" (`phFit*`, `phDn*`, `phMu*`).
 
 ## One Me (her record joined up)
 Since 2026-10-26 (her ask "i want my personal profile to be well integrated"; guide `profile-integration-guide-2026-10-26.html`,

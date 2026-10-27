@@ -3667,3 +3667,35 @@ a row, the Treat boxes stack, the cycle line wraps.
 **LIVE** 2026-10-27 (her "push live"), build 20261027-114700 (main 96acb2c7); hand-stamped in a private index because another
 session's tracked mock edit blocks publish-live.sh, then joined into session-a as e892d931 (tree unchanged). Checked on the live
 site: both stamps (meta lcm-build, sw.js CACHE_VERSION) and `phTodayCycShort`, `phCxPtClose`, `phCxModeFix` served.
+
+## Fitness step 2: Goals, bests, volume, progression, My don'ts, Muscles & exercises (2026-10-27)
+Her "build step 2" = pick 11 on `meals-fitness-plan-2026-10-26.html` (Muscles & exercises, My don'ts, Goals, Personal bests,
+Progression, Volume; "Step 2 adds C22's muscle figures") + pick 12 (Exercises = my exercises · templates · muscles; Fitness =
+this week · plan · steps · today · recent). C22's already-approved designs, moved into the Fitness look. Commits a80ee554 (parts
+1 + 2) and 4cf7f3e2 (part 3) on session-a.
+**Fitness page, below Upcoming / Recent:** Goals (`phFitGlHtml`; `d.fgl`, one goal per exercise: reps / hold / weight / tick;
+a ring per goal, Aiming at | Reached; reached when a ticked set meets it = toast + buzz + gold, `phFitGoalCheck`; "I can do it"
+for a tick goal; the flag on Today's row, the Workout Mode card line and the Goal row in her exercise's panel) · Personal bests
+(`phFitPbHtml`, top 10 + All, "new" within 6 days) · Weekly volume (`phFitVolHtml`, 8 Monday weeks) · Progression
+(`phFitPgHtml`, one exercise's last 7 sessions: a line + volume bars + its best).
+**Exercises page:** Muscles & exercises (`phMuHtml`; C22's TPE_ART figures as `PH_MU_ART`, its entries as `PH_MU_*` word for
+word, its moving figures as `PH_MU_RIG`), then My don'ts (`phDnHtml`; `d.fdn` don'ts, `d.fdk` her kinds, `d.fdx` prompts set
+aside). Doors: a quiet don't line on Today and in Workout Mode (`phDnLineHtml`), "Make this a don't" (`phDnPainChips`) and
+"What is around the ..." (`phMuPainDoor`) beside a ticked pain area, a Reference row in her exercise's panel.
+**My calls (disclosed):** C22's slide-up sheet is an in-place entry under the card with Back (every Fitness panel opens in
+place); the gym-equipment drawings are not ported (the entry says "Barbell · Legs" in words); each exercise chip carries its
+group's dot, not C22's small figure (36 figures made a repaint of the page ~0.35 s slower; 0.09 s now at 1220px); C22's
+routine chip on Where it hurts is left out (LCM's routines differ); C22's rest-day don't prompt reads her LCM week plan;
+"Make this a don't" hides for an area a don't already names; prompts' "Make it mine" is the light dashed button.
+Wording DRAFT: "Tap one to open it", "Nothing under this kind yet", "Saved as you type", "Kind name".
+**Tested** (localhost sandbox copy, C22 test keys in the sandbox only, no sign-in): goals made, reached by a ticked set (toast,
+buzz, gold), "Reached already" for an old best, a second goal for one exercise opens the first; bests, volume and progression
+read the seeded log; a don't from a pain-log prompt (Shoulder in 3 of 6 sessions), from + Add a don't, from the pain chip in
+Workout Mode (Workout Mode closes, the Exercises page opens on the panel); kinds + a new kind, Never | Rather not, links to an
+area and an exercise, Happened again ×2 with notes (each note on its own line), Hide → Hidden → Delete for good → Undo, Not me
+→ Undo; the don't lines on Today and in Workout Mode; Muscles & exercises: every tab, an exercise (lit p / s, the squat on a
+loop), a muscle from a chip and from a tap on the figure, Back, a check (scarf with its trust numbers), Where it hurts lit on
+her right side from her log, the source chip opens its page, the pain door from Today and from Workout Mode, the Reference row
+in Goblet squat. 1220px and 360px headless Edge shots; nothing past the edge at 360; no console errors.
+**Not tested:** the Key2 itself (repaint ~0.09 s at 1220 on this PC with an entry open), her real record.
+**NOT LIVE**: waits for her "push live".
