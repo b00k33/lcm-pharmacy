@@ -1266,7 +1266,8 @@ The last phase: **Close plan** / **Stay N more**, neither picked. Her pick waits
 v}`); logging the visit carries it out (the 2026-09-20 move-on is the Move; Stay adds the visits; Close closes the plan) and
 writes the review into `plan.reviews` (note + `prv: {ph, head, sum, out}`), so Review notes and the printed plan show it; the
 card then reads "✓ Moved to Subacute". Undo on the Treatment tab's banner removes that review. Cycle plans get none (they follow
-the calendar). A Compass score or a target change repaints the card in place.
+the calendar). A Compass score or a target change repaints the card in place. (Part 3, step 1 changed how it acts: see
+"Part 3, step 1" below.)
 
 **Part 2, step 4: course length (her pick "How long" chips at the door; BUILD-NOTES "Care Plan part 2, step 4"):** under Came
 in for on the no-plan door, "How long" Weeks / Months / 6–12 months / 1–3 years / Longer (`PH_CC_LEN`). They ARE the main
@@ -1310,6 +1311,18 @@ an empty Visit record is the faded "not yet". **Copy notes** ends with the plan 
 target), Dx (her words, else Likely, then "possible: …"), Watch (`phTpWatchData(...).txt`: first → latest and its word, a rated
 sign's word, the measured rows, a red flag answered Yes), Phase (`phCnPhaseText`: "Acute 2/4"; the day the review moved it
 "Acute 4/4 → Subacute" / "· staying 2 more visits" / "· plan closed"; a cycle plan names its phase only).
+
+**Part 3, step 1: the phase review asks, and her tap does it (her pick "Bookings count as visits", her answer "Ask me first";
+mock `care-plan-part3-mock-2026-10-27.html` section 1; BUILD-NOTES "Care Plan part 3, step 1"):** bookings already counted as
+visits (`phTpPhaseSessionDates`), but the phase only moved when a visit was LOGGED in LCM, so 15 of her 40 course plans sat
+past their phase's visits. Now the review card on Today's visit (`phTpPrvHtml`) comes on the last planned visit or any day
+after it, logged or not, with nothing picked: **Move to Subacute · fortnightly × 2** / **Stay N more visits** (last phase:
+**Close plan** / **Stay**). Her tap does it there and then (`phTpPrvDo`): writes the review into `plan.reviews` (with
+`prv.undo`), moves / adds visits / closes, and the card reads "✓ Moved to Subacute" with **Undo** (`phTpPrvUndo` puts the
+phase, the count or the plan back and removes the review). A Move past the planned visits ends the phase on its planned-th
+visit and starts the next the day after, so the visits since count for the next phase; Close ends the phase today.
+**Logging a visit moves nothing any more** (the 2026-09-20 move-on in the session log is gone; `plan.prv` is no longer used,
+the Treatment tab's auto-move banner, `phTpAutoAdv`, no longer comes). Cycle plans: no card, as before.
 
 **Diagnosis + Goal write themselves** (`phTpAutoDx`, `phTpAutoGoal`): every
 Likely or Possible pattern (plus any she agreed) minus the ones she took
