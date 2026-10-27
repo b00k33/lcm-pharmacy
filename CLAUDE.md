@@ -1377,6 +1377,12 @@ is the patient plan's page and doors (🖨 Print, ✉ Email into Messages as "En
 date and visits, Where you started, where you are ("Low back pain: 7 out of 10 → 2 out of 10"), From here = the last phase's own
 Aim, See your GP straight away if, her sign-off. Patient only (no GP copy).
 
+**Part 3, step 8: your outcomes by condition (her pick "Your outcomes by condition", her answer "Mine · Work"; mock section 8;
+BUILD-NOTES "Care Plan part 3, step 8"):** Mine · Work ends with a read-only card (`phHubOutcomesHtml`, `phHubOutcomes`): per
+condition (the plan's template, "Custom" for her own) Courses · Main concern (the average first score → the average latest) ·
+Visits to target (the average visit days up to the first score at its target, of those that reached it) · Reached target ("3
+of 6"). Only plans whose main concern was scored on two days count; nothing is stored.
+
 **Diagnosis + Goal write themselves** (`phTpAutoDx`, `phTpAutoGoal`): every
 Likely or Possible pattern (plus any she agreed) minus the ones she took
 off; Goal = one line per complaint in the Compass's order (her own Goal
