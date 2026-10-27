@@ -4960,3 +4960,28 @@ they were.
 - **Not checked:** her real records; Undo of → plan by tap; a visit with points on a plan whose phase she switched with Change phase;
   "Which muscle?"'s own ✓ (done) tick still means what it did and is not tied to the Points row.
 - **Not live:** waits for her "push live".
+
+## Gym card: its week, today's session, Workout Mode and the Body pages (2026-10-27)
+Her ask (a photo of the Gym routine's card on her phone, which had only Done · Edit · My record): "Integrate gym with health
+pages and give direct links". Built as a competence call on the app's own pieces (no mock): commit 189e77a6.
+- **Which cards:** a routine of hers that `phHubKind` reads as a workout (`fit`: Gym, F45, Pilates …, or g-fitness) or `rehab`.
+  `phFitRtBits(dayKey, m)` returns `{ wk, wm, go }` for `phC22PopHtml`'s routine branch; every other routine card is unchanged.
+- **Its week:** the Habits chain for that routine (`phHabChainHtml`, the same ticks Fitness's This week and Habits read), with a
+  letter under each dot (`.dl`: each day's slot in the chain is 12px with a 5px link, measured: centres match to the pixel), then
+  "n of n this week" (`phHabWk`; another week says its dates, `phHubWkLbl`) and "🔥 n weeks in a row" at 2+ (`phFitStreak`, the
+  Fitness page's own rule). Today's dot rings red after a missed day (`phHabWarn`), as on Habits.
+- **Today's session** (today's card, workouts only, when today's session is this routine's type): template · n exercises · n sets
+  (`phFitToday`, `phFitTot`), or once begun "n of n sets" / "finished".
+- **Workout Mode** before Done on today's card (`data-ph-fit-wm`): opens her Fitness page, then Workout Mode over it
+  (`phMineOpen("hub-fit")` + `phFitWmOpen(true)`). Rehab has none (Workout Mode is for workouts).
+- **Doors:** Fitness · Exercises · Habits · Health (`data-ph-me-go`; Habits uses `data-hab-go` so it opens at this routine).
+- **Width:** `phApptPopPlace` gives a card with `.ph-c22-pgo` 320px on a computer (other C22 cards stay 240, meals 300); on the
+  phone it is the bottom sheet. The Done row wraps (`.fw`) rather than cut a word.
+- **Tested (sandbox, made-up "Test Me", a Gym routine Mon Tue Thu Fri Sun 7:30 and an "Upper body" template):** the card at 800
+  (popover) and 360 (sheet), no button cut, all 32px; Done ticks and the chain + count change in place (1 → 2 of 5, and back);
+  Workout Mode opens over Fitness with Upper body's 8 sets; each door lands on its page (Habits with Gym open); Thursday's card
+  (no Workout Mode, no Today line), last week's ("4 of 5 · 19–25 Oct"), next week's; a "Knee rehab" routine (doors, no Workout
+  Mode); a "Code" routine (nothing added). No console errors. Pictures: shots/gym-card-phone-2026-10-27.jpg,
+  shots/gym-card-desktop-2026-10-27.jpg.
+- **Not checked:** her real records; a routine paused by a trip (the chain shows it as Habits does, with no "away").
+- **Not live:** waits for her "push live".
