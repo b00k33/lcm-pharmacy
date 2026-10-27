@@ -4802,3 +4802,41 @@ were made up: only 10 of her patients have Compass scores today, so the table fi
   1000px) and 3 + 3 + Tongue under 620px (`@container`, not the photo viewer's three); measured at 800 / 1000 / 1220 / 1280 /
   1600: nothing over its tab, one row of 7 at 1220 and wider. Pictures: `shots/ren-exam-later-2026-10-27.jpg` (a new patient:
   the Ask, three Later lines) and `shots/ren-tongue-tab-2026-10-27.jpg` (the Tongue tab after a look), both at 800px.
+
+## Tidy-up: the folder and the code (2026-10-27)
+
+Her ask: "check the folder and codes and tidy up anything repetitive redundant outdated - give me a report". Nothing a
+screen shows changed.
+
+- **Folder.** 284 finished mocks, guides and audits, with their pictures and mock data scripts, moved from the root into
+  `mocks/` (local only, `.gitignore`). 110 of them had been tracked in this public repo; they are untracked now (git history
+  keeps them). Six data snapshots moved from the root into `backups/`: five `LCM-pharmacy-*-before-update.json` (625 MB) and
+  `task.json` (the 2026-08-15 export). A second 10/25 snapshot with the same name as one already there was kept as
+  "(2305)". The DESIGN-CONVENTIONS.md stub went to the Recycle Bin. Kept in the root: the app, the docs, the six September
+  specs (code comments and memory notes name them), `fang-bing-ren-questionnaire.html`, and the mocks still being worked on
+  (msk-redesign guide + mock, ren-tongue-later, and abdomen-exam with its `_files` folder, which another session has open).
+- **Code nothing calls (132 lines):** `phDietNlHtml`, `phCyclePlanScheduleHtml` (its comment already said "unreachable ... for a
+  future cleanup pass"), `phPaArchD`, `phCcWordsOf` + `PH_CC_STOP`, `phCxLit`, `phFbrAllRefHtml` + `phFbrAllRefRender`,
+  `phAimTokToDisplay`, `phTsSinceText`, `phVisitPhotoTileHtml`, `phRfcChipsHtml`; the constants `phC22Has`, `presBandBig`,
+  `PH_CX_TEN`, `PH_CX_PCT`, `PH_TODAY_AH_PART`, `PH_ABD_ROWSPOTS`. Also the old auto-move banner: `phTpAutoAdv`, its card in
+  the phase panel and its four buttons' handlers (`data-tp-adv-ok` / `-close` / `-extend` / `-undo`). It has not been shown since
+  Care Plan part 3 step 1. The phase panel's announce card is now `phTpPhaseMismatchHtml(...) || phTpPhaseMskVerifyHtml(...) ||
+  ""`.
+- **Found by:** a scan of every `function` whose name is mentioned only inside its own body or inside other dead ones (the bodies
+  found by indentation), and every top-level constant mentioned once. Named one-time migrations that run themselves at boot
+  (`(function phMigrate...() {...})()`) are live and stay.
+- **Styles nothing draws (641 rules, 94.5 KB):** in the page's own two `<style>` blocks, a rule went only when EVERY selector in
+  its list has a class, outside any brackets, that appears nowhere else in the file. A class the code builds is kept: a prefix
+  the code completes (`pre-${`, `"pre-" +`) or a suffix it adds (`"-suffix"`). Lists where only some selectors are dead (44) were
+  left as they are; an `@media` block left empty went too. Families that went include `ph-rp-*` (an old refill search), `ph-os-*`
+  (the old order sheet), `ph-ref-*`, `ph-rfc-*`, `ph-gd-*`, `ph-sched-*`, `ph-fu-*`, `ph-presguard-*`.
+- **Tested (sandbox, made-up patients):** the 641 removed selectors (with :hover / ::before and the like stripped) were run
+  against the page after each render: boot, all 21 top tabs, Appointments Grid and List, then Nora Test and Zz Sweep Test
+  through Today's visit's 13 tabs, the 12 file pages and Dispense, at 1220 px; 22 more views at 375 px. 74 views, no selector
+  matched an element, and no error came from the change. index.html went from 137,519 to 136,468 lines (11,425,618 to
+  11,319,066 bytes).
+- **Seen, not changed:** `phTongueChartSvg` stops when a record's `marks.teeth` is `true` instead of a list. Only the
+  hand-made Zz Sweep Test record has that; every writer in the app writes a list.
+- **Not checked:** her real records. Screens the test data never reaches (some popovers and sheets) are covered only by the
+  scan.
+- **Not live:** waits for her "push live".
