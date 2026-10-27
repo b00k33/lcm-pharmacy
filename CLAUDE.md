@@ -1343,6 +1343,15 @@ flag of the live phase never asked; the whole flag in the hover), **Herbs ran ou
 follow-up's run-out day, within 60 days). Where: the List (the lean row's name cell; the compact 29px row gets them as a second
 line only on such a booking), the List's card under Treatment plan, the Grid's popup under the condition, and Up next.
 
+**Part 3, step 4: herbs follow the phase (her pick "Herbs follow the phase", her answer "Fill it in, ready"; mock section 4;
+BUILD-NOTES "Care Plan part 3, step 4"):** the due prescription (`phApptScriptFor`, which Dispense from the Dashboard / Up next /
+the List, the Dashboard's herbs to prepare and Up next's formula line all read) is the live phase's own formula (`formulaId`)
+when the patient has it, ahead of the phase-tag and last-dispensed rules: when her tap moves the phase, the next phase's
+prescription is the one that opens. The review card's "✓ Moved to Subacute" adds "🌿 <formula> · ready to dispense" when the new
+phase has one. A phase with no formula, after one with hers, offers **Same as <that phase>** beside Design / Link formula (one
+tap links the same formula, `formulaHistory` keeps it). Nothing clinical from the app: a phase she never gave a formula stays
+empty. The Next visit line adds "Herbs last to Sun 8 Nov" when the latest dispense runs out before that visit.
+
 **Diagnosis + Goal write themselves** (`phTpAutoDx`, `phTpAutoGoal`): every
 Likely or Possible pattern (plus any she agreed) minus the ones she took
 off; Goal = one line per complaint in the Compass's order (her own Goal

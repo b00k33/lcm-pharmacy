@@ -36797,6 +36797,13 @@
   function phApptScriptFor(patientKey) {
     const cands = PRESC.items.filter(t => !presIsFormula(t) && phPatientKey(presPatientFor(t)) === patientKey);
     if (cands.length <= 1) return cands[0] || null;
+    // Care Plan part 3, step 4 (her "Fill it in, ready"): the live phase's own formula is the due one, so when the phase
+    // moves, Dispense, the Dashboard's herbs due and Up next open the next phase's prescription by themselves
+    {
+      const nm = presPatientFor(cands[0]), plan = phTpShownPlan(nm), cur = plan && phTpLivePhase(phPatientPeek(nm), plan);
+      const own = cur && cur.formulaId ? cands.find(t => t.id === cur.formulaId) : null;
+      if (own) return own;
+    }
     // phase-tagged scripts (her ask 2026-09-07, "2 prescriptions inside the
     // same treatment plan e.g. for fertility"; her pick: the current phase's
     // script opens): when the patient's plan has a current phase and one
@@ -54071,6 +54078,20 @@
         const phaseId = tpFHistToggle.dataset.tpFormulaHistToggle;
         if (phTpFormulaHistOpen.has(phaseId)) phTpFormulaHistOpen.delete(phaseId); else phTpFormulaHistOpen.add(phaseId);
         phTpRepaintPhasePanel();
+        return;
+      }
+      // Care Plan part 3, step 4: "Same as <the phase before>" links that phase's formula here
+      const tpFSame = e.target.closest("[data-tp-formula-same]");
+      if (tpFSame) {
+        const [planId, phaseId] = tpFSame.dataset.tpFormulaSame.split(":");
+        const plan = phTpFindPlan(phTpScreenPatient, planId), i = plan ? plan.phases.findIndex(p => p.id === phaseId) : -1;
+        const ph = i > 0 ? plan.phases[i] : null, prev = i > 0 ? plan.phases[i - 1] : null;
+        if (ph && prev && prev.formulaName && !ph.formulaName) {
+          ph.formulaId = prev.formulaId || null; ph.formulaName = prev.formulaName;
+          if (!Array.isArray(ph.formulaHistory)) ph.formulaHistory = [];
+          ph.formulaHistory.push({ id: uid(), formulaId: ph.formulaId, formulaName: ph.formulaName, dateKey: keyOf(TODAY), at: Date.now() });
+          savePharmacy(); phTpRepaintPhasePanel();
+        }
         return;
       }
       const tpFUnlink = e.target.closest("[data-tp-formula-unlink]");
@@ -112590,6 +112611,11 @@ or changing anything in Cliniko.
   const phTpPrvShort = ph => String((ph && ph.label) || "").split(/\s+[—–\/]\s+|\s*\(/)[0].trim() || "Phase";
   const phTpPrvHead = (ph, n) => { const s = phTpPrvShort(ph); return `${s}${/\bphase\b/i.test(s) ? "" : " phase"} done · ${n} of ${n} visits`; };
   const phTpPrvStayN = planned => Math.max(1, Math.ceil(planned / 2));   // half the phase again (3 -> 2, as in the mock)
+  // Care Plan part 3, step 4: a phase with no formula, after one that has hers, offers that same formula in one tap
+  function phTpFormulaSameHtml(plan, phase) {
+    const i = plan && plan.phases ? plan.phases.indexOf(phase) : -1, prev = i > 0 ? plan.phases[i - 1] : null;
+    return prev && prev.formulaName ? `<button type="button" class="ph-tp-formula-chip empty" data-tp-formula-same="${plan.id}:${phase.id}" title="${esc(`${prev.formulaName}, as in ${phTpPrvShort(prev)}`)}">Same as ${esc(phTpPrvShort(prev))}</button> ` : "";
+  }
   function phTpPrvCad(ph) {   // "Fortnightly for 4 weeks" + 2 visits -> "fortnightly × 2"
     const c = String((ph && ph.cadence) || "").split(/\s+for\s+|\s*[·,;(]/i)[0].trim(), n = phTpSessionsOf(ph), w = c && c.length <= 16 ? c.charAt(0).toLowerCase() + c.slice(1) : "";
     return w && n ? `${w} × ${n}` : w || (n ? `${n} visit${n === 1 ? "" : "s"}` : "");
@@ -112622,7 +112648,9 @@ or changing anything in Cliniko.
     const S = done ? done.prv.sum || {} : phTpPrvSum(name, plan);
     const tags = `<span class="tg better">${S.b || 0} better</span><span class="tg same">${S.s || 0} same</span><span class="tg worse">${S.w || 0} worse</span>${S.main ? `<span class="mn">${esc(S.main)}</span>` : ""}`;
     const pick = (v, txt) => `<button type="button" class="ph-today-btn" data-tp-prv-pick="${esc(plan.id)}|${esc(C.ph.id)}|${v}">${esc(txt)}</button>`;
-    const acts = done ? `<span class="ok">✓ ${esc(done.prv.out || "Review saved")}</span>${done.prv.undo ? `<button type="button" class="ph-today-btn q" data-tp-prv-undo="${esc(plan.id)}|${esc(done.id)}">Undo</button>` : done.prv.out ? "" : `<button type="button" class="ph-today-btn q" data-flow-go="plan">Care Plan ›</button>`}`
+    const nowPh = done && done.prv.undo && done.prv.undo.v === "move" ? (plan.phases || []).find(p => p.status === "current") : null;
+    const herbs = nowPh && nowPh.formulaName ? `<span class="mn">🌿 ${esc(nowPh.formulaName)} · ready to dispense</span>` : "";   // part 3, step 4
+    const acts = done ? `<span class="ok">✓ ${esc(done.prv.out || "Review saved")}</span>${herbs}${done.prv.undo ? `<button type="button" class="ph-today-btn q" data-tp-prv-undo="${esc(plan.id)}|${esc(done.id)}">Undo</button>` : done.prv.out ? "" : `<button type="button" class="ph-today-btn q" data-flow-go="plan">Care Plan ›</button>`}`
       : (C.next ? pick("move", ["Move to " + phTpPrvShort(C.next), phTpPrvCad(C.next)].filter(Boolean).join(" · ")) : pick("close", "Close plan"))
         + pick("stay", `Stay ${C.more} more visit${C.more === 1 ? "" : "s"}`);
     return `<div class="ph-tp-prv" data-tp-prv="${esc(plan.id)}" data-tp-prv-name="${esc(name)}"><h3>${esc(done ? done.prv.head : phTpPrvHead(C.ph, C.planned))}</h3><div class="sum">${tags}</div><div class="acts">${acts}</div></div>`;
@@ -114903,7 +114931,7 @@ or changing anything in Cliniko.
           ? `<span class="ph-tp-formula-chip designed"><button type="button" class="ph-tp-formula-open" data-tp-formula-open="${designedScript.id}" title="Open this prescription">🌿 ${esc(phase.formulaName)}</button><button type="button" class="ph-tp-formula-x" data-tp-formula-unlink="${plan.id}:${phase.id}" title="Unlink" aria-label="Unlink formula">✕</button></span>`
           : `<button type="button" class="ph-tp-formula-chip" data-tp-formula-unlink="${plan.id}:${phase.id}" title="Click to unlink">🌿 ${esc(phase.formulaName)} ✕</button>`)
       : frozen ? `<span class="ph-tp-rec-none">—</span>`
-      : `<button type="button" class="ph-tp-formula-chip design" data-tp-formula-design="${plan.id}:${phase.id}">✎ Design formula</button> <button type="button" class="ph-tp-formula-chip empty" data-tp-formula-pick-open="${plan.id}:${phase.id}">Link formula</button>`;
+      : `${phTpFormulaSameHtml(plan, phase)}<button type="button" class="ph-tp-formula-chip design" data-tp-formula-design="${plan.id}:${phase.id}">✎ Design formula</button> <button type="button" class="ph-tp-formula-chip empty" data-tp-formula-pick-open="${plan.id}:${phase.id}">Link formula</button>`;
     const watchOpen = phTpVtabWatchOpen.has(phase.id);
     // her ask 2026-09-24 ("i want to edit the notes directly on the table"):
     // existing symptom rows are now always directly editable (phTpSymptomsHtml's
@@ -117269,7 +117297,10 @@ or changing anything in Cliniko.
     const what = nx.k === "booked" ? "" : [phTpPrvShort(ph), phTpCadWord(ph)].filter(Boolean).join(", ");   // a booking says it all
     const acts = nx.k === "booked" ? `<span class="ok">✓ booked · ${esc(day)}</span>`
       : `<button type="button" class="ph-today-btn solid" data-tp-nv-copy="${esc(name)}" data-tp-nv-day="${nx.date}" data-tp-nv-tm="${esc(tm)}" title="Copy for Cliniko">${esc(day)}</button><button type="button" class="ph-today-btn" data-tp-nv-pick="1">Pick a day</button><input type="date" data-tp-nv-in="1" value="${nx.date}" min="${today}" aria-label="Pick a day" tabindex="-1">`;
-    return `<div class="ph-tv-nv" data-tv-nv="1"><span class="k">Next visit</span><span class="w">${esc(what)}</span>${acts}</div>`;
+    // part 3, step 4: herbs that run out before that visit say so (the latest dispense's own run-out day)
+    const fu = (PHARMACY.followups || []).filter(r => r.patientKey === key && r.ok && r.emptyOn).sort((p, q) => (q.dispensedAt || 0) - (p.dispensedAt || 0))[0];
+    const short = fu && fu.emptyOn >= today && fu.emptyOn < nx.date ? `<span class="ph-appt-due"><span class="tg warn" title="${esc(`${fu.formulaLabel || "Herbs"}, dispensed ${fu.dispensedDate || ""}`)}">Herbs last to ${esc(phTpDayLabel(fu.emptyOn))}</span></span>` : "";
+    return `<div class="ph-tv-nv" data-tv-nv="1"><span class="k">Next visit</span><span class="w">${esc(what)}</span>${acts}${short}</div>`;
   }
   const phTpNvCopyText = (name, k, tm) => { const d = parseKey(k); return `${name} — ${DAY_SHORT[d.getDay()]} ${d.getDate()} ${MON_SHORT[d.getMonth()]} ${d.getFullYear()}${tm ? ` · ${tm}` : ""}`; };
   document.addEventListener("click", e => {
@@ -121365,7 +121396,7 @@ or changing anything in Cliniko.
           ? `<span class="ph-tp-formula-chip designed"><button type="button" class="ph-tp-formula-open" data-tp-formula-open="${designedScript.id}" title="Open this prescription">🌿 ${esc(phase.formulaName)}</button><button type="button" class="ph-tp-formula-x" data-tp-formula-unlink="${plan.id}:${phase.id}" title="Unlink" aria-label="Unlink formula">✕</button></span>`
           : `<button type="button" class="ph-tp-formula-chip" data-tp-formula-unlink="${plan.id}:${phase.id}" title="Click to unlink">🌿 ${esc(phase.formulaName)} ✕</button>`)
       : frozen ? `<span class="ph-tp-rec-none">—</span>`
-      : `<button type="button" class="ph-tp-formula-chip design" data-tp-formula-design="${plan.id}:${phase.id}">✎ Design formula</button> <button type="button" class="ph-tp-formula-chip empty" data-tp-formula-pick-open="${plan.id}:${phase.id}">Link formula</button>`;
+      : `${phTpFormulaSameHtml(plan, phase)}<button type="button" class="ph-tp-formula-chip design" data-tp-formula-design="${plan.id}:${phase.id}">✎ Design formula</button> <button type="button" class="ph-tp-formula-chip empty" data-tp-formula-pick-open="${plan.id}:${phase.id}">Link formula</button>`;
     // her pick 2026-09-19 ("first thing you see: Today's visit"): while
     // today's visit is being logged its merged cell LEADS each row and the
     // Planned pair follows -- same four columns, same rowspan, other order
