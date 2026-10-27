@@ -3627,3 +3627,41 @@ Workout Mode put Sent on a second line (gap 8 px, padding 14 px).
 **LIVE** 2026-10-27 (her "push live"), build 20261027-112700 (main 3a300196); hand-stamped in a private index because another
 session's tracked mock edit blocks publish-live.sh, then joined into session-a as bc4e19d3 (tree unchanged). Checked on the live
 site: both stamps (meta lcm-build, sw.js CACHE_VERSION) and `phFitAddRoute` served.
+
+## Today's visit, calmer (2026-10-27)
+Her words (a screenshot of a first visit, a neck and shoulder patient): "improve page, its too messy too many things i cant
+edit the ain coplaint the calendar looks to wide, i want it more minimal", then "make mock before building". Mock
+`today-visit-calm-mock-2026-10-27.html` (Artifact "Today's Visit Calmer", her 1220px window, a neck patient and a fertility
+patient), her 8 picks (popups, all as recommended) + "Yes, build it". Before / after: `shots/today-visit-as-now-2026-10-27.png`,
+`shots/today-visit-calmer-2026-10-27.png`; built: `shots/today-visit-built-neck-2026-10-27.jpg`,
+`shots/today-visit-built-fertility-2026-10-27.jpg`.
+**The bug behind "i cant edit the main complaint":** `phCxCardHtml` picks the table + panel (her 10/26 pick B, holding
+Details ▾) from a 900px card, but on a first paint `.ph-pres-stage-body` is not on the page yet and the fallback
+(window − 380, at most 920) read 840 at her 1220px window: the narrow Compass was drawn and never re-measured, so the panel
+and Details never showed. Now the fallback measures `#presPanel` less the rail (16 + 172 + 16) and `phCxSettle` checks the
+card's real width once (`phCxModeFix`) and calls `phCxRefresh` if the layout is the wrong one.
+**Her picks:** 1 A the ASK / LOOK / TREAT headings go (`.ph-tv-hd` is a 0-height scroll target, 12px gap); 2 A the Journey
+card in one line (`.ph-tj-ttl`, `.ph-tj-sub`, `.ph-tj-bar` = the phases, this one wider with its visits so far in gold, names
+in the tooltip; the "▼ today" glide and visit dots are gone); 3 A a short joined step bar (`.ph-tv-seg`: Ask 0/2 · Look 0/5 ·
+Treat 0/3, ✓ when full, the old long line in the tooltip); 4 B the cycle in one line on a cycle plan (`phTodayCycHtml(rec, name,
+true)`, `.ph-tv-cycline`: Cycle · `phTodayCycShort` (the cycle chip's wording) · this week from `phCycFFHtml(..., "wk1")`, the
+same cells and day card · Day 1 · the finder · Cycle › · ⋯); 5 A on any other plan a small Cycle tile (`phTodayCycTileHtml`,
+first in the row, opens the Cycle page, ⋯ skips it); 6 A small tiles, no drawings (`PH_TODAY_PIC` removed; `repeat(auto-fit,
+minmax(170px, 1fr))`, two a row on a phone); 7 A the pain tools in a ⋯ (`data-cx-pt`; `phCxPtClose`): the menu is read off the
+bar's own buttons when it opens and an item taps that button, so nothing opens or saves a second way; the bar (`.ph-cx-pbar`,
+wide card only) shows only while a part is open; 8 A Treat in one line (`.ph-tv-step` boxes: Formula · Fill in, Acupuncture ·
+Session n of m · Open, Dispense · Not yet · Open; the reasons and the points in each box's tooltip; Care Plan › last).
+**By rule:** the "Add when needed:" caption and the "⋯ on a tile = Not today / Always skip" hint are gone (terse); a long
+complaint name ("Shoulder, both sides") wraps in the wide Compass's 180px name column, never cut.
+**My calls (disclosed):** "a fertility patient" = a plan in `PH_TP_CYCLE_TEMPLATES` (fertility, IVF, PCOS, endometriosis,
+period pain, amenorrhoea); the cycle line drops the plan-date tags (phase · visit, next visit CD, egg collection CD): the
+Journey card keeps next visit, next period and the IVF dates; the phone keeps its narrow Compass with the pain foot as before.
+Wording DRAFT ("No period logged", "Fill in", "Open", "Not yet", "Care Plan ›").
+**Tested** (localhost sandbox, made-up patients Mia Test (neck & shoulder) and Ava Test (natural fertility), no sign-in):
+1220px: the Compass is wide with the panel on the first paint, Details opens Side · Detail · Diagnosis · How long · ★ Main;
+the ⋯ menu lists the four tools, Close-ups opens its section under the table and a second tap hides the bar, Pick areas opens
+the picker; a day in the cycle week opens its day card under the line and a second tap closes it; the step bar scrolls to
+Treat; the cycle tile on the neck patient, the cycle line on the fertility patient. 360px: nothing past the edge, tiles two
+a row, the Treat boxes stack, the cycle line wraps.
+**Not tested:** her real patients, a return visit with scores and the Fang Bing Ren quick assess above Treat, the Key2 itself.
+Built, NOT live: waits for her "push live".
