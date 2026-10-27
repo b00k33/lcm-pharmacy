@@ -1334,6 +1334,15 @@ the plan's next session day, and a plan day landing on today only when she has n
 adds "· next due 10 Nov · not booked" (or "today") while nothing is booked ahead. The Treatment page's Then band, once today is
 logged, names the same day, and its main button is **Copy for Cliniko** (with the time); "book in LCM" is the quiet one.
 
+**Part 3, step 3: today's patients, plan first (her pick "Today's patients, plan first", her answer: the List, the booking card
+and Up next; mock section 3; BUILD-NOTES "Care Plan part 3, step 3"):** a booking TODAY says where its plan is and what is due at
+this visit (`phApptPlanDue`, read on demand, nothing stored; other days show nothing new; the Dashboard stays herbs-only): the
+live phase and its visit ("Acute · visit 3 of 3", List rows only: the cards already say it) and tags: **Review today** (gold, the
+phase review card is waiting, `phTpPrvCtx`), **Re-score N** (Compass rows not scored today), **Ask: <first phrase>** (a red
+flag of the live phase never asked; the whole flag in the hover), **Herbs ran out 20 Oct** / **run out today** (the latest
+follow-up's run-out day, within 60 days). Where: the List (the lean row's name cell; the compact 29px row gets them as a second
+line only on such a booking), the List's card under Treatment plan, the Grid's popup under the condition, and Up next.
+
 **Diagnosis + Goal write themselves** (`phTpAutoDx`, `phTpAutoGoal`): every
 Likely or Possible pattern (plus any she agreed) minus the ones she took
 off; Goal = one line per complaint in the Compass's order (her own Goal
