@@ -3770,3 +3770,26 @@ Built, NOT live: waits for her "push live".
 **LIVE** 2026-10-27 (her "push live"), build 20261027-131600 (main 2503a119), joined into session-a as 6cdbdb54 (tree unchanged),
 under the publish lock. Checked on the live site: the new stamp in index.html and sw.js, the Other condition code in index.html,
 "+ Something else" in intake.html.
+
+## Ask her: several answers per topic, the cards stay put (2026-10-27)
+Her words, on a screenshot of Ask her: "allow for multiple selections", then "when i select something the screen rearranges the
+tiles, stop that". Built: `shots/ask-her-multi-built-2026-10-27.png`. Commit e381d113.
+**What I measured first:** every sign answer was already its own tick (Mood took 4, Sleep 4, Bowels 4 in the sandbox). What read
+as pick-one: the round tick marks; the normal answer ("Daily, soft", "Even", "Sleeps well", "Comfortable", "Normal") switched off
+when anything else was picked and switched the rest off when it was picked; an opposite answer greys itself (the Fang Bing Ren
+link rule, unchanged: a tap on it still ticks it, both stay on). The cards re-sorted by how many of the top 3 lean on each topic,
+so a tap that moved the top 3 moved the cards.
+**Now:** square tick boxes (`.ph-ah-a .ck` 3px corners); the normal answer is a plain tick beside the others (`phAhTap`; `none`
+in `phAhState` no longer needs every other answer off; "Last time:" lists it with the rest), except where it means "none of these"
+(`PH_AH_NONE_ONLY`: Head & chest "None", Phlegm "None", Throat "Nothing", Cough & breathing "None", Upper belly "Nothing"), which
+works as before; a Right now normal from another day goes when today's first answer is ticked (it would otherwise come back as
+today's). The cards keep ONE order: the basics (Bowels, Appetite, Heat & cold, Sleep, Mood), then the rest, in `PH_AH_TOPICS`
+order (the family dots on each card still show who leans on it). The "moved into the top 3" note stays on the strip's line
+(`flex: 1 1 0`); when it does not fit, "(instead of ...)" drops out whole, then the note (`phAhNoteFit`; the words in its title).
+**My calls (disclosed):** which normals mean "none of these"; the fixed order (basics first); the opposite greying left as it is.
+**Tested** (localhost sandbox, made-up patient Nora Test, no sign-in): Daily, soft + Piles + Smelly stools; Daily, soft off leaves
+the other two; Comfortable + Cold hands or feet; Even + Sensitive; Head & chest Dizzy → None (alone) → Heavy head (None goes); the
+top 3 changed completely over 15 taps while every card kept its order and position (measured); the strip stayed 43px with the
+note on; Right now: Sleeps well + Hard to fall asleep, a stale normal from 20 Oct not revived; tick boxes 3px; no console errors.
+**Not tested:** her real patients, the phone, the Key2.
+Built, NOT live: waits for her "push live".
