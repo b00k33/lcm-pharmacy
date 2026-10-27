@@ -1226,8 +1226,12 @@ Course: the Session grid's live-phase row (Aim · Points · Formula · Watch); t
 with nothing on file is not a row of its own: it folds into one faded "not yet" line of chips that open their pages
 (`phTpFxNoneSplit` / `phTpFxNoneHtml`, on the Care Plan Findings and Treatment's "How <name> is"); Progress before the first
 visit = "Progress · not yet"; Today's visit tiles read "not yet"; Medical history rows tag "FBR" (the words in the hover);
-Visit checks' empty cell is "–"; Patterns' "Only on one side" band lost its explaining line. Inside the grid (the live
-row's Watch / Formula / Red flags repeat the Watch list and the Fang Bing Ren row; phase names overlap at 360): her word first.
+Visit checks' empty cell is "–"; Patterns' "Only on one side" band lost its explaining line. **Her 3 Session grid picks
+(2026-10-27, the lock lifted for exactly these; nothing else in the grid changed):** the live phase row's Watch shows the red
+flags only (`phTpFieldCellHtml(..., { flagsOnly: true })`, cell marked `data-tp-flagsonly` so back-to-auto and an edit repaint
+it the same; every other copy of Watch keeps its chips); its Formula cell shows her own formula only ("→ Fill" when empty,
+"<lead> auto" in a phase that follows Fang Bing Ren), the Fang Bing Ren line under Watch keeps the lead; at ≤480 the Phase
+column is 182px and the table 32px wider (it scrolls there anyway), so a phase name's longest word fits beside the ×.
 
 **Diagnosis + Goal write themselves** (`phTpAutoDx`, `phTpAutoGoal`): every
 Likely or Possible pattern (plus any she agreed) minus the ones she took
