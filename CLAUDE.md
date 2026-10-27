@@ -1223,10 +1223,10 @@ treats it (or a plan with no course), else the course's name; `plan.title` itsel
 rename; the band's **Course · <template> ▾** chip opens the course picker (`phTpProtocolPickHtml`, "⇄ Change course" in ⋯).
 The plan column reads in visit order: **Treat** (`phTpTreatHtml`: one row per Compass concern, ★ where starred, its Goal;
 her typed or a booking's Goal still wins), then **Diagnosis** (each pattern on its own line with its level, the signs
-behind it under it as quiet tags with their `PH_PAT_SRC` icon), then **Watch** (`phTpWatchHtml`, one list read from
-`phCxModel`: each concern's first score → latest + Better / Same / Worse, the signs rated on the Compass, then the
-diagnosis's told-signs (`PH_TP_WATCH_SRC`: Fang Bing Ren answers, cycle log, notes, diet; "New" when not in the plan's first
-progress snapshot), then the live phase's red flags with their last answer), then the formula. An empty part reads a faded
+behind it under it as quiet tags with their `PH_PAT_SRC` icon), then **Watch** (`phTpWatchHtml`: the Compass's own
+rows in its order, `phCxModel(..., { all: true })`: each concern's first score → latest + Better / Same / Worse, the signs,
+the diagnosis's told signs (part 2 below; one not rated yet reads Yes, or "New" when not in the plan's first progress snapshot),
+then the live phase's red flags with their last answer), then the formula. An empty part reads a faded
 "not yet". The door starts the plan from the main concern (no template pick, LAW §2). Formula + Points already sit under
 Course: the Session grid's live-phase row (Aim · Points · Formula · Watch); the grid is LOCKED, so they were not moved.
 **Shorter profile (step 3, first pass, outside the grid; her "minimise any redundant display and messages"):** a finding
@@ -1239,6 +1239,14 @@ flags only (`phTpFieldCellHtml(..., { flagsOnly: true })`, cell marked `data-tp-
 it the same; every other copy of Watch keeps its chips); its Formula cell shows her own formula only ("→ Fill" when empty,
 "<lead> auto" in a phase that follows Fang Bing Ren), the Fang Bing Ren line under Watch keeps the lead; at ≤480 the Phase
 column is 182px and the table 32px wider (it scrolls there anyway), so a phase name's longest word fits beside the ×.
+**Part 2, step 1: every Watch row on the Compass (her pick "Inside the Compass card", 2026-10-27; mock
+`care-plan-part2-mock-2026-10-27.html`, BUILD-NOTES "Care Plan part 2, step 1"):** the signs behind the Diagnosis that the
+patient tells her (the cycle log, usual answers, notes, diet: `phCxToldList`) are Compass sign rows in their body area (their own
+subject, else the area of a Fang Bing Ren sign that files the same clue), rated Gone · Better · Same · Worse from the next visit,
+saved with the signs under `pc:<clue key>`, never behind "+ N more"; their ▾ has Not watching only. Left out because another
+row stands for them: Fang Bing Ren answers (the sign list's own rows), the pain map's words, Energy, "Came in for", the period-pain
+clue beside the period-pain row. Not on the letter's symptom rows (`phCcSeedSymptoms`). Measured findings (tongue, pulse, abdomen,
+bloods, range and tests) come in step 2.
 
 **Diagnosis + Goal write themselves** (`phTpAutoDx`, `phTpAutoGoal`): every
 Likely or Possible pattern (plus any she agreed) minus the ones she took
