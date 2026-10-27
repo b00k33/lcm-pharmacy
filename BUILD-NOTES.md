@@ -4033,3 +4033,28 @@ labels on Patterns / Ren (data, not repeats).
 Watch list) and the Fang Bing Ren formula (its FORMULA cell against the formula row under Watch); phase names overlap at 360.
 **Tested** (sandbox, seeded): re-count after: the five texts above gone from every page measured; a not-yet chip opens its
 page (Pulse → the Pulse tab); 1280 looked at (Findings line, Progress); 360 measured (no page overflow); no console errors.
+
+## LIVE 2026-10-27, build 20261027-161500 (main df65fda3): the Care Plan from the visit + the one-size top bar
+Her "push live" (after "Say push live for both"): the Care Plan writes itself, parts 2a to 2c (aee7479b, b972383c, 118afce2,
+89eac3af), and the top bar at 32px (43fb5096). Published from session-a 43fb5096 through a private index, joined back as
+f391b801. The publish commit's message wrongly repeats the font build's title ("one font on screen"): a text swap in the
+publish script failed. The content is the commits named here (never force-pushed to fix a message).
+
+## The recipe sheet stacks (2026-10-27)
+Her ask: a screenshot of Yu Ping Feng San open from Formula refill, "see the problem? fix this page. i cant edit the formula
+at all".
+- **Cause:** the open-script panel's two columns (`.ph-pres-body`: 480px + an ingredients column of at least 320px) follow the
+  WINDOW: they stack only at 900px or less. In Formula refill the recipe opens in the 640px side sheet (#refPresPanel), so on
+  a computer the 800px split sat inside a 600px box. The ingredients column ran off the sheet's edge (herb names a letter a
+  line, the grams cut off), beside a left column holding only Label preview and Make refill.
+- **Fixed** (CSS after the sheet's own rule): in #refPresPanel the body is always one column, the way it is on a phone:
+  Label preview, grams + Make refill + ⋯, then Ingredients at the sheet's full width (568px: Code 64, Herb 246, Qty 92,
+  In stock 132, ✕). Also, anywhere: "not in inventory" in a narrow In stock cell wraps instead of running under the ✕ (it
+  did on the phone).
+- **Tested** (sandbox, a made-up Yu Ping Feng San, 5 herbs):
+  - Before / after pictures at 1280; the after has no sideways scroll (sheet 640, content 640).
+  - Grams 50 → 60 on Bai Zhu: total 300 → 310 g. Remove Sheng Jiang: 4 herbs · 280 g. Add Bai Shao (Chao) from the search
+    list: 5 herbs. The search list sits inside the sheet (568px).
+  - Phone 360: unchanged apart from the wrap.
+  - Prescriptions search 6 → 0 → 3 → 6.
+- **Not tested:** her real recipes, Label preview opened in the sheet, the Key2.
