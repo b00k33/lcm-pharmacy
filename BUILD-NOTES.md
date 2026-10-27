@@ -3983,3 +3983,29 @@ Follow-up the same day: the band's Course chip clipped a long course mid-word at
 was a bare text node in an inline-flex button, so `text-overflow` never applied. It now sits in a `<span>` (min-width 0,
 ellipsis) and the ≤480 cap went 160 → 220px. Checked at 360: Neck & shoulder and PCOS show whole, General
 musculoskeletal / pain and Post stroke — facial weakness end in "…", the ⋯ stays inside the card.
+
+## The top bar's buttons: one size (2026-10-27)
+Her ask: a screenshot of Formula refill's dark bar (Me, ⋯, + Plan a formula) and "audit these chips size".
+- **Measured** (sandbox, all 22 pages at 1240 / 768 / 360):
+  - On a computer, Me and the ⋯ were 32px but each page's main button was 44px, left from the old tap floor (since retired).
+    The icon-only disc was a 49 × 44 oval. + Plan a formula was 139 × 44 with 14px text.
+  - So the bar was 70px on the 8 pages that have a main button, and 58px on the rest.
+  - On a narrow window (641–900): Me and the icon-only Update were 34 × 32, the main button 34px, the clinic switcher 44px (bar 70).
+  - The Me chip's own 6px rule (min-width 901) had lost to the later `.ph-tbm-ic` pill rule (source order). So on Dashboard it
+    was a pill beside the 6px To order / Formula refill.
+  - The phone's bar (31px) was even. But ← Back to Relocation (Relocation notices) was squeezed into a 31px circle, its words
+    spilling out; it was 34px wide on a narrow window too.
+- **Fixed** (one CSS block after the Update button's rule, plus three edits: Me, the switcher, the pill):
+  - From 641px up, every control in the bar is 32px.
+  - The main button: icon only = a 32px circle, still the one solid button. With words = the Button: 32px, 6px corners, 13px
+    bold. + Plan a formula is now a gold 6px button at every width.
+  - Me is a 6px Button with 13px text (`.ph-tbm-ic.ph-tbm-me`).
+  - Narrow window: Me and Update are 32px circles; the switcher is 32px, 6px, 13px.
+  - Phone: a words-only main button keeps its words.
+- **Tested** (sandbox, every page re-measured):
+  - 1240: all 32px, bar 58 on all 22 pages.
+  - 768: all 32px, bar 58.
+  - 360: unchanged (31px, bar 47) apart from Plan a formula's corners.
+  - ← Back to Relocation: 156 × 32 on a computer, 156 × 31 on the phone, inside the bar. No sideways scroll.
+  - Before / after pictures: Formula refill, Inventory, Dashboard at 1240; Formula refill, Inventory at 768 and 360.
+- **Not tested:** the Update button on screen (no update waiting in the sandbox; checked by its rules), the Key2 by touch.
