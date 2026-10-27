@@ -5046,3 +5046,26 @@ session-a, NOT live.
   visit, Musculoskeletal (a card per area, Today's points on the right), Care Plan, Treatment and Log open with no errors. The
   served page has `phFitRtBits` and `phMskAreasToday`. **Not checked:** the Gym card itself (it needs her own record with a
   workout routine), her real records, the phone.
+
+## Musculoskeletal panel: the ⚠ stays beside the muscle name (2026-10-28)
+
+Her "fix the warning icon wrapping in the panel" (after the motor-point note above said a long name pushes its ⚠ onto the next
+line). Commit ad52b866 on session-a, NOT live.
+
+- **Desktop (panel 360px, name column 124px, no spare width: side 36, technique 121, ✕ 36):** `nmHtml` in `phMskPanelHtml`
+  puts the name's last word and the ⚠ in one inline-block (`.mk2-nw`), so a name that does not fit wraps as "Levator /
+  scapulae ⚠", never "Levator scapulae / ⚠". A single long word (Sternocleidomastoid, 130px) still breaks inside the word, with
+  the ⚠ beside the last part. An unticked row strikes the inline-block too (`tr.off td.p .mk2-nw`: line-through does not reach
+  into an inline-block).
+- **Phone (≤520 container):** the app's `@media (max-width: 640px)` rule makes every select 16px `!important` (no zoom on tap),
+  so the technique menu was 128px and the name 69px: the ⚠ and even "Supraspinatus" could not fit. The points table becomes
+  blocks and each row a grid (name | side | ✕, `minmax(0, 1fr) auto 32px`), a motor point's technique on its own line under the
+  name; an empty technique cell (a point row) is hidden. The name gets ~193px at 375 and keeps 13px (the 12px phone override
+  went). Motor-point rows 76px (were up to ~90), point rows 41px.
+- **Checked** on the made-up Mia Testcase with Upper trapezius, Levator scapulae (unticked), Sternocleidomastoid, Supraspinatus,
+  Thoracic erector spinae, Brachioradialis, First dorsal interosseous: every ⚠ on the same line as its last word at 1280 and
+  375; tables 316/316, no sideways overflow on the panel or the page; no console errors. Pictures
+  `shots/msk-warn-panel-desktop.png`, `shots/msk-warn-panel-phone360.png`.
+- **Seen, not changed:** `phMskShort` cuts a name at " /", so "Toe extensors (EDL / EHL)" shows as "Toe extensors (EDL" (and the
+  combined "Anterior / middle deltoid", "Middle / lower trapezius" as "Anterior", "Middle"; another session's muscle split was
+  hiding those two for new taps, uncommitted at the time).
