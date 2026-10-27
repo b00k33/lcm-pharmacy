@@ -1515,17 +1515,29 @@ amber, sorted first); Plan ▾ = This week / Next week / Pick a week. The
 date popover is mounted globally; no `window.prompt()` anywhere.
 Since 2026-10-22 (her 8 picks, refill-redesign-mock-2026-10-22.html): jar
 rows (jar filled to the stock line, grams + days under the name); week tiles
-(Overdue / This week / Next week, tap filters); **Make weighs in the row**
-(tap each herb, ring fills, Finish = the same phDispenseGate → refMakeCommit
-save) then "Made today" with Undo; a planned formula **leaves by itself**
+(Overdue / This week / Next week, tap filters); **Make weighs in the panel beside the list** (synth22 below;
+Finish = the same phDispenseGate → refMakeCommit save) then "Made today" with Undo; a planned formula **leaves by itself**
 when its stock went UP after planning (`h.refillQty` stamped at planning;
 older plans: week passed + above its line) with Undo; header primary is the
 gold "+ Plan a formula" (search sheet); New formula recipe sits in ⋯ and
 opens as a side sheet (#refPresPanel), never inside the card; in the sheet the editor always stacks (Make refill, then the ingredients at its full width; her 2026-10-27 "i cant edit the formula at all": its two columns had split inside the 640px sheet). Every row with
 a recipe ends in a "Recipe" button (pencil icon, `phRfcRecipeBtn`, `data-pres-open`) that opens
-that recipe's herbs and grams in the same side sheet; the name still opens
-the jar (her 2026-10-24 "how do i edit recipes?") [Formula refill: a Recipe
+that recipe's herbs and grams in the same side sheet (her 2026-10-24 "how do i edit recipes?") [Formula refill: a Recipe
 button on every row].
+**One line per formula, its facts beside the list (her synth22 picks 2026-10-27, mock
+`formula-refill-synth22-mock-2026-10-27.html`, BUILD-NOTES "Formula refill: one line, facts beside"):** a row = tick (Below
+the line, All recipes) · jar · name (plain text, wraps) with grams · 12 weekly bars + patients · next booking ("Today · 2
+booked", the patients in the hover) · its step (Wk + Make on To make; This week | Next week | ▾ elsewhere) · Recipe. Ticks
+plan many at once from a dark bar at the foot (This week | Next week | ▾ pick a week, Clear; one Undo). Below the line lists
+"Dispensed in 12 weeks" first (soonest booking first) and folds the rest to one line. A row tap opens ONE panel beside the
+list (above it on a card under 860 px, a phone included): **1 Use** (12 weeks of grams, bars grow once per formula) · **2
+Who's on it** (patient · their plan in its family colour · last given · next booking; a row opens the profile) · **3
+Treating** (the plan families as one bar) · **4 Batch** (last made, how long a batch lasts at this rate, herbs on the shelf,
+Jar + Recipe). Make opens the same panel as the bench's own weighing rows (`refWeighRowsHtml`): tick · herb · grams · what
+the scale reads, ring, jar 0 → N g, the bowl count, tick all, Not now, Finish (the jar fills and the row glows). All of it is
+read from the dispense log, the plans and the bookings (`phFormulaUse`, 12 weeks, Break bookings left out, "(X)" name tags
+merged); nothing new is stored. Motion off under reduced motion. The Dashboard's Refill rows carry the same next booking
+and Dispense's In stock cell says "To make · Wk N" for a planned formula jar (`presIngToMakeHtml`).
 
 **To Order, desktop** (>900px) = a 3-column board that fills the window:
 **Needs ordering** (a To order | Running low switch, rows A to Z in fixed
@@ -1535,7 +1547,8 @@ move; details pop out beside the row; a formula card has "Refill ▾"
 [To Order: the desktop board is 3 columns; To Order column 1: C · Switch].
 **The phone To Order is the older layout, untouched.** Dashboard's
 Order/Refill cards are TWO PLAIN LISTS, empty first then fewest days of
-cover. Picking a supplier pulls in that supplier's recorded price.
+cover; a Refill row also shows the formula's next booking (her synth22 pick 8 A, 2026-10-27), and a long name wraps on
+both. Picking a supplier pulls in that supplier's recorded price.
 
 **Patient profile list on a computer (her 2026-10-26 audit, "make it more space saving make it cleaner"; BUILD-NOTES "Patient
 profile list audit"):** the five tiles are the filters (tap again = all; "No history" only while anyone has none), no
