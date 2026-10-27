@@ -1622,6 +1622,27 @@ small figure on each exercise chip (`PH_MU_ART.tileSvg` drawn once per group as 
 29 Dec 2025, weeks 5, 9, 14, 18: Monday light, Sunday extra rest; `phFitGoalOn`); planned / done days per week (`phFitWkSt`,
 rest days never planned); the week streak (`phFitStreak`, memo on `phMeS()`; one short week forgiven; 8 empty weeks end it;
 toast at 4, 8, 12, 26, 52 via `phFitStkSay`). No new stored data.
+**Step 4** (her "build step 4", 10/27: what C22's Fitness still had; her 13 picks, all of them; BUILD-NOTES "Fitness step 4"):
+BUILT 07fc13b7, **not live** (waits for her "push live"). Templates: set presets (`PH_FIT_PRE`, `phFitPreHtml` / `phFitTpPreset`,
+Undo) and − / + on every number (`o.st` in `phFitSetTbl`, `PH_FIT_STEP` reps 1 · kg 2.5 · s 5; on the phone − + sit under the
+number); ▲ ▼ move an exercise (`phFitTpMove`, the open one follows); sets by type under the muscle groups (`phFitTyLeg`,
+`phFitTyHl`, never lit together with `phFitHl`). Types: her own after C22's five (`phFitXts`, memo on `phMeS()`; `d.fxt`; + New
+type in each Type row, the type tabs and the shelf; one of hers goes only when no exercise has it, `phFitXtRm`); C22's glyphs
+(`PH_FIT_XT_GL`); a type set in a Type row starts an UNTUNED exercise as that type usually is (`phFitTyFill` / `phFitFresh`,
+C22's XT_FRESH: Isometric Timer + 1:00, Flexibility Timer + Left & right + 0:30, Plyometric 2:00; `xd` remembers what the type
+set; 1:30 counts as untouched because Bring in writes it; a logged weight or her own rest / Timer / sides = tuned, left alone;
+Undo); Sort (`phFitSortHtml`, `phFitLibSet(…, plain)` = no fill). My exercises: type tabs (`phFitLt`), Merge into another
+(`phFitMerge`: fwo + ftp rows, fgl, fdn take the kept one, the duplicate is deleted, one Undo restores every touched doc). The
+picker (`phFitPickHtml`, Today + templates, one open at a time): figures lit by group (a muscle tap picks its group), search,
+ticks in place (`phFitPkBar`), Add n in one save (`phFitAddMany` via `phFitExRow`). Templates' shelf (`phFitShelfHtml`,
+`phFitTs`, `phFitTsSet`): All · types · No type yet · Goals (→ Fitness, its Goals) · + New type · Sort; the templates holding the
+type with k/m; the type lights its rows. Calendar (`phFitDayItems` in `phC22Src`, BEFORE the herb doses so an all-day one shows
+first; memo on `phMeS()`): a workout she ticked on a day with no routine of its kind = a done block at its ticked time (else all
+day), a planned one (`fpl`) = a pale all-day chip (`" fpl"` via `phHbCls`); card `phFitPopHtml`, Fitness opens the page
+(`data-fit-cal`). Fitness page: C22's posture tip under This week (`PH_FIT_TIPS` = BIOMECH_TIPS word for word + her session /
+pain notes ≥ 15 characters; C22's weighting and date-seeded pick; ♥ / ✕ with Undo in `d.fbt`, `shown` keeps a ♥'d tip all day;
+C22's `book33-biomech-ratings` READ, never written). Pilates milestones (`phFitPilN` / `phFitPilSay`, hooked in `phMeDoneToggle`
+and `phFitWoSave`): the tick that lands her Pilates days on 7, 30, 50, 100, 200, 365 toasts.
 - **Fitness** (Body, `phHubFitHtml`): Bring in (her C22 fitness, once: library, templates, log, planned, stairs, week plan; C22's
   keys are READ, never written) · This week (workout + rehab routines and Steps, a dot a day = the Habits reads and ticks, one tick
   both pages) · **Weekly plan** = her calendar's routines (`phFitPlanApply`: a day set to a type moves that weekday to the routine of
@@ -1647,7 +1668,7 @@ toast at 4, 8, 12, 26, 52 via `phFitStkSay`). No new stored data.
 - Motion: a set pops and its tick draws, the rest ring counts down and buzzes at zero, gold once when the day's sets are done, the
   week's dots pop and link (the Habits way); all off under reduced motion.
 - A routine in g-fitness counts as a workout (`phHubKind`, after the money words). Data: `d.fex`, `d.ftp`, `d.fwo`, `d.fpl`,
-  `d.fsp`, `d.fgl`, `d.fdn`, `d.fdk`, `d.fdx`, `hubset.stride`, `hubset.fitIn` in `PH_HUB_MAPS` (shapes in the code comment).
+  `d.fsp`, `d.fgl`, `d.fdn`, `d.fdk`, `d.fdx`, `d.fxt` (her own types), `d.fbt` (posture-tip ratings), `hubset.stride`, `hubset.fitIn` in `PH_HUB_MAPS` (shapes in the code comment).
   Code: "FITNESS + EXERCISES" (`phFit*`, `phDn*`, `phMu*`).
 
 ## One Me (her record joined up)
