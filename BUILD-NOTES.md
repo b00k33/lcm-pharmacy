@@ -3550,3 +3550,45 @@ the buzz on a real phone, the Key2 itself.
 **LIVE** 2026-10-27 (her "push"), build 20261027-105500 (main 2671b929; commit 7166da59); hand-stamped in a private index
 because another session's tracked edits block publish-live.sh, then joined into session-a as 2347eeac (tree unchanged).
 Checked on the live site: the build stamp and `phHubExHtml` served.
+
+## Came in for: edit in Details, any number of Mains, a sign on the bar (2026-10-27)
+Her synth22 batch (closed with "fiinshed"): (1) the Compass header "From Baseline | Last visi" was cut; (2) "how to have more
+than one main complaint"; (3) "how to choose if a sign can be tracked with the bar like complaints"; (4) "or select the sign as a
+complaint too"; (5) "how to edit the chief complaint and complaints". One plan, mock `complaints-batch-mock-2026-10-27.html`
+(artifact TEhyLsTvSsSYYgj491pf2J), her 8 picks, all the recommended ones, then "Yes, build it". Built in the order 1, 5, 2, 4, 3.
+- **Header (item 1, no question):** the cut could not be made to happen at 360 / 1024 / 1160 / 1280 / 1440, so it is locked: a
+  switch never shrinks (`.ph-cx-hd .ph-cx-sw { flex: none }`, nowrap words; `overflow: hidden` on a flex item let it shrink and
+  clip), and From · the switches · Chart ▾ sit in one `.ph-cx-tools` group that moves down a line together.
+- **Details on every row (Q4 Details ▾ in the panel, Q5 Name · How long · ★ Main · Remove):** `phCxCcFormHtml` for a typed
+  complaint (the chief too), the pain's own form for a pain, `phCxSxTrackHtml` for a sign; the narrow card's drawer carries the
+  same form. Name and How long save on change and update in place (`phCcWrite`; a tap that ends the typing is never lost); How
+  long reads `phCcParseDatePrec` like the pain form. Remove on a secondary = `phCxRemoveSec` (Undo); on the chief =
+  `phCxRemoveMain`: the next complaint (a Main one first) takes the slot with its own scores, notes, baseline and Goal (ccTrack
+  `sec[id]` moves to `main`), none left = the slot empties and Came in for reads the pain map / plan again; Undo restores both
+  records.
+- **Any number of Mains (Q1 any number, Q3 each Main first in its own group, groups with a Main first):** `star` on every item
+  (`phCxItems`): the chief's is `!c.mainOff`, a secondary's `s.main`, a pain's `p.main` (with no pain starred, the pain that
+  carries a hidden chief shows Main by `st.chiefStar`). `main` still means the chief's slot (key, family, Goal), which never
+  moves, so every complaint keeps its own scores. `phCxStarToggle` is the one switch (the panel, the drawer, the pain form, the
+  Musculoskeletal pain table through `phPmSetMain`, which no longer clears the other pains or overwrites a typed chief); one
+  complaint always stays Main ("One complaint stays Main"). The old table's ★ (`phCcSecPromote`) is the same switch now: its
+  2026-10-15 swap left the score history with the slot, not the complaint (fixed on the way).
+- **One-line places (Q2 every Main joined):** `phCxMainsOf` / `phCxCcMulti` / `phCxAlsoOf`; with more than one Main (or a Main
+  that is not the chief) the Care Plan's Came in for row reads "★ Poor sleep + Headaches · Bloating", Aim "poor sleep and
+  headaches", Watch a "main" line per Main, `phCcFillAim` addresses every Main; with one Main they read exactly as before. Copy
+  notes has no Main line (it lists every score), so nothing changed there. The File search tags a Main secondary "Main".
+- **A sign's two doors (Q6 both, Q7 stays in its Signs line, Q8 stays ticked + Sign tag):** Track with Better · Same · Worse |
+  Bar 0–10 (`phCxSxTrack`, `rec.ccTrack.sxBar[signKey] = { id, at }`, back = `{ id, off }` so its bar scores return with it);
+  on the bar it is scored like a complaint under `s:<id>` (its first bar score is its baseline), drawn after its group's
+  complaints with its Sign tag (`.sxbar`), its earlier ratings under "Before" in Details, its pills row hidden (`phCxSignList`);
+  no Goal (the Care Plan Goal skips it), never a pain (`phCxPainDup`). Make it a complaint (`phCxSignToComplaint`, now in
+  Details too) keeps a bar sign's id and scores, leaves the Fang Bing Ren tick, and the complaint wears a small Sign tag;
+  Remove drops the complaint and the sign row comes back.
+- **Phone:** the Details label column is 60px in the PHONE REDESIGN block, so How long shows its whole date.
+- **Tested** in the sandbox with a fictional patient (Poor sleep chief, two typed complaints, Neck + Shoulder pains, one
+  answered sign), wide card at 1440 and 1280, narrow card at 1024, phone 375: star on / off and the last-Main refusal, a pain
+  as Main (and from the pain table), rename + How long (and a bad date), Remove on the chief with Undo (scores moved and put
+  back), sign → bar → score → back → bar again (same id, score back) → make a complaint (id and score kept, Fang Bing Ren still
+  Yes) → Remove (sign row back); the Care Plan Came in for row, Aim and Watch; no console errors. **Not tested:** a signed-in
+  account with real records and cloud sync of `sxBar` / `mainOff` / `s.main` (they ride inside the patient record like the
+  rest of `ccTrack` and `complaint`). Pages checked: Today's visit (wide, narrow, phone), Care Plan Came in for row, Watch, Aim.
