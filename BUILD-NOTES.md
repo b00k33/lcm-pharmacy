@@ -3979,3 +3979,7 @@ Natural fertility, "IVF in March" → IVF Protocol (tap opens the questionnaire,
 hands" → Eczema; focus stays in "In her words" while the button follows; tap → plan "Low back pain" with its 3 phases,
 band Course · Low back pain, then her period questions; "+ New" still 30 cards; 1280 + 360 looked at; no console errors.
 **Not tested:** her Key2, her real records.
+Follow-up the same day: the band's Course chip clipped a long course mid-word at 360 ("Course · Neck & should"): the label
+was a bare text node in an inline-flex button, so `text-overflow` never applied. It now sits in a `<span>` (min-width 0,
+ellipsis) and the ≤480 cap went 160 → 220px. Checked at 360: Neck & shoulder and PCOS show whole, General
+musculoskeletal / pain and Post stroke — facial weakness end in "…", the ⋯ stays inside the card.
