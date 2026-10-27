@@ -3592,3 +3592,6 @@ complaint too"; (5) "how to edit the chief complaint and complaints". One plan, 
   Yes) → Remove (sign row back); the Care Plan Came in for row, Aim and Watch; no console errors. **Not tested:** a signed-in
   account with real records and cloud sync of `sxBar` / `mainOff` / `s.main` (they ride inside the patient record like the
   rest of `ccTrack` and `complaint`). Pages checked: Today's visit (wide, narrow, phone), Care Plan Came in for row, Watch, Aim.
+- **LIVE** 2026-10-27 (her "push live"), build 20261027-110900 (main 52d130c3, index.html only: this batch on top of build 20261027-105500;
+  made in a private index because another session's tracked edit blocks publish-live.sh), joined into session-a as db8d266a (tree
+  unchanged). Checked on the live site: the build stamp, sw.js `CACHE_VERSION` and `phCxStarToggle` served.
