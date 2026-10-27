@@ -4850,3 +4850,55 @@ screen shows changed.
   with all six looks done showed 7 tabs, a ✓ Tongue tab with her chart's words, two questions and no Later line (all three
   charts on file); 14 patients have a charted tongue.
 - The site served 222700 within 20 s; the served page holds `phRqExamPart` and `phRqTngOneHtml`, sw.js `lcm-20261027-222700`.
+
+## Musculoskeletal page, step 1: palpation-led, a card per area, Today's points (2026-10-27)
+
+- **Her words:** "im struggling to use this page. work with me and redesign it to help with my workflow. do a dligent job and be
+  thorough", then "i need this page to closely connect with acupuncture treatmentment based on diagnosis and integrate with
+  treatment plan and log". Guide `msk-redesign-guide-2026-10-27.html`, mock `msk-redesign-mock-2026-10-27.html` ("i ike it but
+  can you make it easier and faster to select the muscles"). Her 12 picks + 4 round-2 picks are in memory
+  `project_lcm_msk_redesign_2026_10_27`; she chose to build in two steps. **This is step 1** (the page + her sets). Step 2
+  (Treatment, Care Plan phase Points, the Log fed from it) waits until she has looked at step 1.
+- **The page now:** a head (title, Same as last time, a Screen line: red flags · needling safety · Open, and a 5-step bar Pain ·
+  Palpate · Diagnosis · Points · Re-test that ticks itself, a tap goes to the next area that needs it); the picture card (the
+  pain figures, the lit area's muscle diagram front + back, the view controls, Add pain · Areas ▾ · Add); then ONE card per area
+  beside **Today's points**. A first visit with no pain shows the figures large and centred under "Tap where it hurts": a tap
+  on the body adds that area on the side tapped (`phMskHitsSvg`, `phMskBodyTap`, 165 unseen zones, outlined on hover).
+- **An area card** (`phMskAreaHtml`): name, side bar, How long, ★ main, ✕; **Pain** Base · Last · Today · After (▼ / ▲ against
+  last and against today); **Palpate** = the area's muscles as chips, her most-marked first (`phMskUseRank`, counted from
+  visits before today, never labelled): one tap = Tender + its motor point, then Taut, then Trigger, then off; a muscle marked
+  last visit shows dashed "last Taut" and its first tap confirms it today; the chip's MP end takes the motor point out and keeps
+  the finding (`phMskMuState`, `phMskClick2` "cyc" / "mpt"); a belly on the diagram is the same chip (colour by level, a name
+  tag on the drawing). **Move** = + Movement (a menu of the area's movements), Base · Last · Today degrees with ▲ / ▼, End | Arc
+  joined; **Tests** = the area's first card only, + Test, a tap cycles + / − / off; **Diagnosis** (Western, her words, the
+  existing datalist) with "your set · LI15, SJ14" or "No set saved" under it. A muscle in no listed area goes to an "Other
+  muscles" card (a removed pain's findings land there).
+- **Today's points** (`phMskPanelHtml`, 360px, sticky; under the cards below 860px): per area its motor points (technique
+  select, a red ⚠ = the muscle's caution, hover), then her typed points (side button R → L → Both (→ Centre on a central area),
+  ✕), "+ point" (Enter; "gb 21, si3" → GB21, SI3), **Ashi** (on / off, one per area), **Save as my set / Update my set / from
+  your set**. Her set (`PHARMACY.mskSets[dx key] = {dx, pts: [{p, rel: same | opp | both}], at}`) fills the next patient with
+  that diagnosis on their side (`phMskSetFill`, `phMskAcuOf`: today's own → last visit's carried → the set). The app never picks
+  a point. The foot says "Treatment · N motor points · Open". The count badge is every point and motor point shown.
+- **Data:** `rec.msk.visits[day].acu["region|side"] = {pts: [{p, s, src: own | set | ashi}], from, edited}`; scores still go
+  through `phPmScoreSet` (each area's `pains[r|s]`, rolled up into `nprs` as before). A side change re-keys today's score and
+  points (`phMskRekey`). Same as last time also copies each area's score, last visit's points and motor points.
+- **Gone from the page:** the region chips, the Re-measure table, the NPRS card, the 9 exam tabs (Observation, Strength, Neuro and
+  Function sit behind "More exam", the 4th segment of the Close-ups · Surgeries · Pain intake bar).
+- **Also changed:** `phMskSummary` (the Today's visit tile and Care Plan line) reads the areas' scores ("pain 5–6/10") and the
+  same motor-point list as the panel and the Treatment tab (`phMskPlanOf`, carried ones included: it said 2 where the panel
+  said 4).
+- **Where:** CSS block "her 2026-10-27 redesign" after `.mk-dgm.on[data-v]:hover`; JS block of the same name before
+  `phMskClick` (state, `phMskHeadHtml`, card parts, `phMskPanelHtml`, `phMskColsHtml` / `phMskColsPaint`, `phMskClick2`, its
+  listeners); `phPainMapHtml`'s `mskCtx` branch; `phMskPageHtml`, `phMskRefresh`, `phMskExamHtml` (`PH_MSK_MORE`).
+- **Tested (sandbox, made-up Mia Testcase, real handlers):** first visit (empty, then a body tap adds Right shoulder, two muscles
+  cycled, a score); return visit (chips cycle from carried, MP out and back, belly tap, Today / After scores and their ▼, a
+  degree with ▲ 12°, + Movement and + Test menus, a test cycled, a diagnosis filling her set, typed point, Ashi on / off, side
+  button, ✕, Save as my set (Ashi kept as Ashi), Same as last time on a clean day, Screen open / close, a step tap, More exam
+  open / close, neck R → L re-keyed, shoulder removed with its findings kept). No console errors. Pictures at 1220 (first,
+  first-tap, return-done) and 375 / 360. Fixed on the way: movement names right-aligned, How long cut, Treatment count, long
+  names breaking mid-word in the panel, and at 375 the card head, the movement table (scrolls in its card) and the tools bar
+  (one sideways row).
+- **Integration checked:** Today's visit tile line, the Treatment tab's "Which muscle?" (same four muscles), the Care Plan
+  summary line. The Compass pain rows read the same `pains` store (checked in the data, not drawn).
+- **Not checked:** her real records; 3D, Enlarge and + Cause inside the new cards; keyboard-only use; reduced motion by eye.
+- **Not live:** waits for her "push live".

@@ -1653,14 +1653,18 @@ page's facts are an icon + a number on its own first row, the words in the hover
 went (each group heading says ✓ asked) [Patient pages: no band].
 
 ## Musculoskeletal page
-A picture row (pain figure | the region's muscle diagram front + back |
-the view controls), the pain table full width under it; tap a muscle belly
-= add / remove it from the plan; one add door (Areas ▾); + Cause links a
-finding as a pain's cause; motor-point muscles sit under each pain and the
-Treatment tab reads the same list (`phMskPlanOf`) [Musculoskeletal page:
-"B · Picture row"; Musculoskeletal motor-point muscle plan]. MMT is a
-3-point Weak / Mildly weak / Strong scale. A test row snapshots the library
-at add-time. MSK libraries are append-only.
+**Palpation-led since 2026-10-27, step 1 of 2 (her 12 picks + round 2, mock `msk-redesign-mock-2026-10-27.html`, memory
+`project_lcm_msk_redesign_2026_10_27`, BUILD-NOTES "Musculoskeletal page, step 1"):** a head (Same as last time, the Screen
+line, a 5-step bar Pain · Palpate · Diagnosis · Points · Re-test), the picture card (pain figures | the lit area's muscle
+diagram | view controls; Add pain · Areas ▾; a first visit taps the body to add a pain), then ONE card per area (Pain Base ·
+Last · Today · After; Palpate = the area's muscles as chips, hers first: one tap Tender + its motor point, then Taut, Trigger,
+off, MP end = motor point out; + Movement; + Test; Diagnosis + her set) beside **Today's points** (motor points, her typed
+points, Ashi on / off, Save as my set per diagnosis, `PHARMACY.mskSets`; the app never picks a point; points in
+`visits[day].acu`). The region chips, the Re-measure table and the 9 exam tabs are gone (Observation, Strength, Neuro,
+Function sit behind "More exam"). Motor-point muscles are ONE list (`phMskPlanOf`, carried included) for the panel, the
+Treatment tab and `phMskSummary`. **Step 2** (Treatment, Care Plan phase Points and the Log fed from Today's points) waits
+for her look at step 1. Kept: tap a belly = the same chip, + Cause, Enlarge, 3D. MMT is a 3-point Weak / Mildly weak /
+Strong scale. A test row snapshots the library at add-time. MSK libraries are append-only.
 
 ## Fang Bing Ren, Find the Ren & Patterns
 **Fang Bing Ren** (the Triangle) is the one place constitutional-family
