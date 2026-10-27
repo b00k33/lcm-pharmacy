@@ -18620,7 +18620,7 @@
   #pharmacyPage .ph-tp-prv { border: 1.5px solid var(--ph-gold); background: var(--ph-gold-tint); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; }
   #pharmacyPage .ph-tp-prv h3 { margin: 0; font: 700 var(--fs-14) var(--font-body); color: var(--ph-herb-deep); }
   #pharmacyPage .ph-tp-prv .sum { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: 8px 0 10px; }
-  #pharmacyPage .ph-tp-prv .sum .mn { font-size: var(--fs-12); color: var(--ph-soft); }
+  #pharmacyPage .ph-tp-prv .sum .mn, #pharmacyPage .ph-tp-prv .acts .mn { font-size: var(--fs-12); color: var(--ph-soft); }   /* .acts: the herbs after a Move, the cycle review saved line (part 3) */
   #pharmacyPage .ph-tp-prv .acts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
   #pharmacyPage .ph-tp-prv .acts .ph-today-btn { height: 32px; }
   #pharmacyPage .ph-tp-prv .acts .ok { font-size: var(--fs-13); font-weight: 700; color: var(--ph-good); }
@@ -95826,7 +95826,7 @@ or changing anything in Cliniko.
     const cx = phCxCardHtml(t, plan);
     const ask = cx + phTodayNudgesHtml(name, rec) + phMskWarnHtml(rec) + (phMskApplies(rec) && cx.indexOf('data-cx-pain="1"') < 0 ? phPfPainBlockHtml(name) : "");
     // Treat: Fang Bing Ren's quick assess (return visits) above the three steps; the phase review on a phase's last visit (part 2)
-    const treat = plan ? phTodayFbrEssentialsHtml(name) + phTpPrvHtml(name, plan) + phTodayCarePlanEssentialsHtml(name, plan) : "";
+    const treat = plan ? phTodayFbrEssentialsHtml(name) + phTpPrvHtml(name, plan) + phCycRvHtml(name, plan) + phTodayCarePlanEssentialsHtml(name, plan) : "";   // + the cycle review (part 3, step 5)
     setTimeout(phTodayStickyTop, 0);
     return `<div class="ph-today ph-tv" data-today-host="1">${phTodayJourneyHtml(name, rec, plan)}${phTodayStepsHtml(S)}${phTodaySecHd("ask", S)}${ask}${phTodaySecHd("look", S)}${phTodayLookHtml(name, rec)}${treat && S.treat ? phTodaySecHd("treat", S) + treat : ""}</div>`;
   }
@@ -112600,6 +112600,51 @@ or changing anything in Cliniko.
   function phTpWatchHtml(name, plan) {
     const rows = phTpWatchData(name, plan).rows;
     return `<div class="kv kvx ph-tp-watch"><b title="The same rows Today's visit scores">Watch${rows.length ? ` <span class="cnt">${rows.length}</span>` : ""}</b><div class="vx">${rows.join("") || `<span class="ph-tp-notyet">not yet</span>`}</div></div>`;
+  }
+  // ==== CYCLE REVIEW (Care Plan part 3, step 5; her pick "Cycle review writes itself", her answer "At her next booking") ====
+  // On a cycle plan, once a new period has started, Today's visit sets the cycle that just ended against the one before:
+  // its length, its period's flow and pain (the cycle history's own entries) and the most clots logged on its days. The
+  // first day it shows it is saved into plan.reviews (Review notes, the printed plan), one per period; on later days it is
+  // not shown again. Pain and clots that went down read better, up worse; length and flow are only said (nothing clinical
+  // from the app).
+  const PH_CYC_RV_CLOT = ["none", "small", "large", "many"];
+  function phCycRvModel(rec, plan) {
+    if (!rec || !plan || plan.status !== "active" || !PH_TP_CYCLE_TEMPLATES.includes(plan.templateName)) return null;
+    const st = phBbtCycleStarts(rec), k = st.length - 1;   // oldest first; st[k] = the period that started the cycle she is in
+    if (k < 2) return null;
+    const log = new Map((rec.cycleLog || []).filter(x => x && x.lmp).map(x => [x.lmp, x]));
+    const cyc = j => {
+      const from = st[j], to = st[j + 1], x = log.get(from) || {};
+      let clot = 0;
+      Object.keys(rec.cycleSigns || {}).forEach(d => { if (d >= from && d < to) { const c = phCycClots(rec.cycleSigns[d]); clot = Math.max(clot, c.amt === "many" ? 3 : c.sz.includes("large") ? 2 : c.sz.includes("small") ? 1 : 0); } });
+      return { from, len: Math.round((parseKey(to) - parseKey(from)) / 864e5), flow: x.flowIntensity || "", pain: x.pain || "", clot };
+    };
+    return { n: k, lmp: st[k], a: cyc(k - 2), b: cyc(k - 1) };
+  }
+  function phCycRvRows(M) {
+    const lab = (list, v) => { const h = list.find(([x]) => x === v); return h ? h[1].toLowerCase() : ""; };
+    const dir = (p, q) => q < p ? "better" : q > p ? "worse" : "same", out = [{ t: `Length ${M.a.len} → ${M.b.len} days`, k: "same" }];
+    const fa = lab(PH_CYCLE_FLOW, M.a.flow), fb = lab(PH_CYCLE_FLOW, M.b.flow);
+    if (fa || fb) out.push({ t: `Flow ${fa || "–"} → ${fb || "–"}`, k: "same" });
+    const pi = v => PH_CYCLE_PAIN.findIndex(([x]) => x === v), pa = lab(PH_CYCLE_PAIN, M.a.pain), pb = lab(PH_CYCLE_PAIN, M.b.pain);
+    if (pa || pb) out.push({ t: `Pain ${pa || "–"} → ${pb || "–"}`, k: pa && pb ? dir(pi(M.a.pain), pi(M.b.pain)) : "same" });
+    if (M.a.clot || M.b.clot) out.push({ t: `Clots ${PH_CYC_RV_CLOT[M.a.clot]} → ${PH_CYC_RV_CLOT[M.b.clot]}`, k: dir(M.a.clot, M.b.clot) });
+    return out;
+  }
+  function phCycRvHtml(name, plan) {
+    let M = null; try { M = phCycRvModel(phPatientPeek(name), plan); } catch (e) { M = null; }
+    if (!M) return "";
+    const saved = (plan.reviews || []).find(r => r.cyc && r.cyc.lmp === M.lmp);
+    if (saved && saved.date !== keyOf(TODAY)) return "";   // said once, at the booking after the new period
+    if (!saved) setTimeout(() => phCycRvSave(name, plan.id, M.lmp), 0);
+    return `<div class="ph-tp-prv cyc" data-cyc-rv="${esc(plan.id)}"><h3>Cycle ${M.n} against cycle ${M.n - 1}</h3><div class="sum">${phCycRvRows(M).map(r => `<span class="tg ${r.k}">${esc(r.t)}</span>`).join("")}</div><div class="acts"><span class="mn">Saved into the plan's reviews</span></div></div>`;
+  }
+  function phCycRvSave(name, planId, lmp) {
+    const plan = phTpFindPlan(name, planId), M = plan ? phCycRvModel(phPatientPeek(name), plan) : null;
+    if (!M || M.lmp !== lmp || (plan.reviews || []).some(r => r.cyc && r.cyc.lmp === lmp)) return;
+    plan.reviews = plan.reviews || [];
+    plan.reviews.push({ id: uid(), date: keyOf(TODAY), note: [`Cycle ${M.n} against cycle ${M.n - 1}`].concat(phCycRvRows(M).map(r => r.t.toLowerCase())).join(" · "), cyc: { lmp, n: M.n } });
+    savePharmacy();
   }
   // ==== PHASE REVIEW (Care Plan part 2, step 3; her pick 4, care-plan-part2-mock-2026-10-27.html section 4) ====
   // On the visit that completes a phase's planned visits, Today's visit shows the Watch in three counts and the next step:

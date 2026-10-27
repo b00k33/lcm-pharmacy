@@ -1352,6 +1352,14 @@ phase has one. A phase with no formula, after one with hers, offers **Same as <t
 tap links the same formula, `formulaHistory` keeps it). Nothing clinical from the app: a phase she never gave a formula stays
 empty. The Next visit line adds "Herbs last to Sun 8 Nov" when the latest dispense runs out before that visit.
 
+**Part 3, step 5: the cycle review (her pick "Cycle review writes itself", her answer "At her next booking"; mock section 5;
+BUILD-NOTES "Care Plan part 3, step 5"):** on a cycle plan (`PH_TP_CYCLE_TEMPLATES`) with three or more period starts, Today's
+visit shows a gold card above the Treat steps (`phCycRvHtml`): "Cycle 4 against cycle 3" with Length 33 → 29 days, Flow heavy →
+moderate, Pain severe → moderate (lower = better, higher = worse), Clots many → small (the most clots logged on that cycle's
+days, `rec.cycleSigns`; lower = better). Length and flow are only said. The first day it shows it is saved into `plan.reviews`
+(`cyc: {lmp, n}`, the note = the same words), one per period; after that day it is not shown again. No BBT shift (no per-cycle
+read in the app yet).
+
 **Diagnosis + Goal write themselves** (`phTpAutoDx`, `phTpAutoGoal`): every
 Likely or Possible pattern (plus any she agreed) minus the ones she took
 off; Goal = one line per complaint in the Compass's order (her own Goal
