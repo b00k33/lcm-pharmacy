@@ -3793,3 +3793,5 @@ top 3 changed completely over 15 taps while every card kept its order and positi
 note on; Right now: Sleeps well + Hard to fall asleep, a stale normal from 20 Oct not revived; tick boxes 3px; no console errors.
 **Not tested:** her real patients, the phone, the Key2.
 Built, NOT live: waits for her "push live".
+**LIVE** 2026-10-27 (her "push live"), build 20261027-132600 (main c3f6c09e), joined into session-a as 08420850 (tree unchanged),
+under the publish lock. Checked on the live site: the new stamp in index.html and sw.js, `PH_AH_NONE_ONLY` / `phAhNoteFit` in index.html.
