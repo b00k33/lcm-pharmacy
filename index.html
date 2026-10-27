@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261027-180700">
+<meta name="lcm-build" content="20261027-183900">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -9981,6 +9981,7 @@
   #pharmacyPage .ph-cxs-res .ph-qr-q b { font-weight: 700; color: var(--ph-herb-deep); }
   #pharmacyPage .ph-cxs-res .ph-qr-q .grp { color: var(--ph-faint); }
   #pharmacyPage .ph-cxs-inc { font: 600 var(--fs-10) var(--font-body); color: var(--ph-good-deep); background: var(--ph-good-tint); border-radius: 10px; padding: 1px 7px; white-space: nowrap; }
+  #pharmacyPage .ph-cxs-inc.fx { color: var(--ph-faint); background: var(--ph-soft); }
   #pharmacyPage .ph-cxs-na { display: inline-block; width: 92px; }
   #pharmacyPage .ph-cxs-res > .ph-cx-chip { margin: 4px 4px 0; }
   #pharmacyPage .ph-cxs-res .k { font: 700 var(--fs-10) var(--font-body); letter-spacing: .06em; text-transform: uppercase; color: var(--ph-faint); padding: 6px 6px 2px; border-top: 1px solid var(--ph-line); margin-top: 4px; }
@@ -92257,7 +92258,8 @@ or changing anything in Cliniko.
      tapped Not watching; rec.ccTrack.sxPin[signKey] = { cc, at } for a sign she added herself. Which signs get a row is
      ANSWERED-ONLY (phCxSignList): her own taps, Ask her, Quick assess, the intake form, usual answers, the cycle log, a
      history Yes -- never a sign the app only worked out. A Gone rating turns today's Bing tick off (phTriEffective reads
-     it); her own Fang Bing Ren tap always wins; the Ren side is never touched. ==== */
+     it); her own Fang Bing Ren tap always wins; the Ren side is never touched. A FIXED sign (phCxFixedKey: how she is built, a
+     fact of her history or of the illness's course) never gets a row: it has nothing to rate (her 2026-10-27). ==== */
   var phCxOpen = "";          // phone: the row whose Note is open (its key)
   var phCxNotes = "";         // the row whose earlier-notes popover is open
   var phCxMenu = "";          // the row whose ▾ menu is open
@@ -92398,6 +92400,14 @@ or changing anything in Cliniko.
   }
   function phCxSx(rec, day) { const d = phCxDays(rec)[day]; return (d && d.sx) || {}; }
   // an exam finding, a lab number or a fact of build / age / sex: never a "how has it been" row
+  // fixed signs (her 2026-10-27: "signs like eye shape cannot be updated as better or worse"; her picks: off the Compass, and a
+  // tendency to miscarry, the illness's course and "spirit intact" are fixed too): how she is built, a fact of her history or of the
+  // illness's course. They still count for Fang Bing Ren and the diagnosis; only the Gone · Better · Same · Worse row goes, and the
+  // Compass search tags them Fixed. Temperament (sensitive, timid) stays rateable (her pick). The build, age and sex keys repeat
+  // phCxExamKey's, which left them out before.
+  function phCxFixedKey(key) {
+    return /^(eyes_(round|almond|big|downturned)|lips_large_tend|skin_(fair|finetext)_tend|full_figured(_tend)?|build_(heavyset|upper_heavy|slim|thin_legs)_tend|muscle_toned|soft_muscle|soft_loose_muscle|thin_body|obesity_tend|robust_build|robust_firm_build|age_middle_elderly|sex_female|bupleurum_type_tend|dx_diabetes_fh|miscarriage_(now|tend)|chronic_illness_tend|recur_fluctuate(_tend)?|cyclical_illness|episodic_tend|vitality_intact_tend)$/.test(key);
+  }
   function phCxExamKey(key) {
     return phFbrAreaOf(phSignKind(key) || "d", [key, phSignLabel(key)]) === PH_FBR_TP_IX || !!PH_TRI_BLOOD[key] || !!phTngSignChips()[key]
       || PH_FBR_CHART_PREFILL.some(x => x.key === key) || /^(thin_body|obesity_tend|soft_loose_muscle|robust_firm_build|robust_build|age_middle_elderly|sex_female)$/.test(key);
@@ -92471,6 +92481,7 @@ or changing anything in Cliniko.
       const keys = twin ? [key, twin] : [key];
       keys.forEach(x => seen.add(x));
       if (keys.some(phCxExamKey)) return;
+      if (keys.some(phCxFixedKey)) return;   // how she is built or a fact of her history: nothing to rate (her 2026-10-27)
       if (hasEnergyCc && keys.some(x => x === "fatigue_now" || x === "fatigue_tend")) return;   // the Energy bars are that fact's one home (her pick Q6)
       const label = phSignLabel(key), subj = phSignSubj(label), isTap = keys.some(x => tapped(phSignKind(x), x));
       if (!isTap && !phSignSexOk(rec.sex, key, label)) return;
@@ -93849,7 +93860,8 @@ or changing anything in Cliniko.
       const c = o.label.indexOf(": "), grp = c > 0 ? o.label.slice(0, c) : "", rest = c > 0 ? o.label.slice(c + 2) : o.label;
       const now = o.b ? `<span class="ph-qr-lbl" title="Now — how things are today">Now</span>${seg("d", o.b)}` : `<span class="ph-cxs-na"></span>`;
       const usu = o.p ? `<span class="ph-qr-lbl" title="Usually — the general pattern">Usu</span>${seg("p", o.p)}` : `<span class="ph-cxs-na"></span>`;
-      const inc = [o.b, o.p].some(x => x && inCx.has(x)) ? `<span class="ph-cxs-inc">✓ in Compass</span>` : "";
+      const inc = [o.b, o.p].some(x => x && inCx.has(x)) ? `<span class="ph-cxs-inc">✓ in Compass</span>`
+        : [o.b, o.p].some(x => x && phCxFixedKey(x)) ? `<span class="ph-cxs-inc fx" title="Fixed: it counts for the diagnosis; nothing to rate">Fixed</span>` : "";
       return `<div class="ph-qr${i === phCxAddHl ? " hl" : ""}" data-cxs-row="${i}" data-cxs-b="${esc(o.b)}" data-cxs-p="${esc(o.p)}"><span class="ph-qr-bar" style="background:var(--ph-herb)"></span><span class="ph-qr-q">${grp ? `<span class="grp">${hi(grp)}:</span> ` : ""}${hi(rest)}</span>${inc}<span class="ph-qr-ans2">${now}${usu}</span></div>`;
     }).join("");
     const more = !all && opts.length > shown.length ? `<button type="button" class="ph-cx-chip" data-cxs-all="1">Show all ${opts.length}</button>` : "";
