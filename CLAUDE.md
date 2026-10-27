@@ -351,8 +351,8 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   AND numbers, `--font-body`; `--font-disp` stays only as an alias of it. Every control inherits it (no browser
   Arial), SVG labels and canvas text name Inter, herb codes and supplier tags are Inter with `tabular-nums`. Never
   load or name a second screen font. Kept apart on purpose: printed letters and records (Georgia, print only), the
-  bottle label text and its template, and copy-paste text or template tokens (monospace), and Fitness's C22 look
-  (Manrope, her 2026-10-27 Fitness pick) until she says otherwise.
+  bottle label text and its template, and copy-paste text or template tokens (monospace). Fitness joined too (her
+  "Inter there too", same day): `--font-c22` is an alias of `--font-body`, Manrope is no longer loaded.
 - **Icons:** one family, the app's own sprite (`<svg><use href="#i-...">`) —
   never emoji, never a second icon set.
 

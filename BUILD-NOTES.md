@@ -3908,3 +3908,6 @@ unchanged). Published ALONE from a private index under the publish lock: live ma
 the tested build but for the stamp line); the other session's font commit 1f69a9e3 stays on session-a, NOT live. Checked on
 the live site: the stamp in index.html and sw.js, `phFitTipHtml`, `phFitPickHtml`, `phFitShelfHtml`, `phFitDayItems`,
 `PH_FIT_MILES`, `"fxt", "fbt"`; the font change absent.
+**Follow-up, same day (her "Inter there too" for Fitness):** `--font-c22` (Fitness, Exercises, Workout Mode) is an alias of
+`--font-body`; Manrope leaves the font load. Fitness and Exercises measured at 1280 and 360 against Manrope put back: no cut,
+overlap, ellipsis or sideways scroll added. Workout Mode not opened.
