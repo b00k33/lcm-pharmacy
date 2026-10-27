@@ -4449,3 +4449,43 @@ same plan, no retyping; out by Print AND email, from Messages, to the address on
   127 ms; text 115-1,022 characters, never "undefined" / "NaN" / "null". 33 plans offer "✉ Email" (a link, not a button), 68
   read "✉ No email on file". The plan view opened through the app (`phTpLetterOpen = "plan"`) for 6 patients: 0.8-2.7 s, no
   errors. Today's visit for 12 patients 1.0-2.3 s (191000: 0.9-2.1 s).
+
+## Care Plan part 2, step 7: the profile's second pass + Copy notes carries the plan (2026-10-27)
+
+Her pick 8 ("Shorter profile, second pass": Patterns band names 9×, Ren "Present" 5×, "Asked all" 7×, the last explaining lines;
+plus Copy notes carrying the new plan to Cliniko), mock `care-plan-part2-mock-2026-10-27.html` section 8. Her "push live step 7 /
+step 8 too" came through the B33 C4 LCM session.
+
+- **Measured first** (the pass 1 counter, re-made in the console; "Zed Testtwo", 22 pages): Fang Bing Ren "Same fact, today and
+  usually" 9×, "Only on one side" 9×, "Present" 9×, "Tongue:" 20×, "Tongue coat:" 19×, "Pulse:" 19×, "No Bing sign here" 6×;
+  Ren "Present" 5×; Medical history "✓ Asked all" 7×. After: each 0 (the band names once, at the top).
+- **Fang Bing Ren board** (`phFbrBoardHtml`): the band headers inside each area are gone; one line over the board, after the
+  Energy rating, says them once (`.ph-bd-key`: "Same fact, today and usually · then · Only on one side", the second only when an
+  area has both). Inside an area the twin rows come first; the one-side lists start under a dashed line (`.ph-bd-band.after`,
+  the board's own dashed style). The "N twins" count went with its header.
+- **Tongue & pulse area** (`phFbrTpAreaHtml`): rows under "Body of the tongue", "Coat" and "Pulse" drop their subject word
+  (`noSubj`, as the other areas since 2026-10-21); "More tongue and pulse signs" keeps it. An empty run reads "–" (was "No Bing
+  sign here" on runs of two or more rows), the words in the hover.
+- **"Present"** (`phSignDescHtml`, the board and the Ren tab): a sign whose words are only "present" (Allergy, Cough, Phlegm,
+  Vaginal discharge, Thirst) shows a ✓ under its subject heading; the full label in the hover. Ticking it works as before (the
+  row fills, the check badge shows).
+- **Medical history:** the group pill "✓ Asked all" reads "✓ All", hover "Asked all: the rest are No" (as pass 1's "FBR"
+  tags); the done state "✓ Asked" is unchanged.
+- **Last explaining lines:** the no-plan door's "Skip for now — see her profile without a plan" → "Skip for now" (the rest in
+  the hover); the Ren heading "Points toward Dang Gui Shao Yao San" → "→ Dang Gui Shao Yao San" (the board's own form); an empty
+  Visit record "No visits logged on this plan yet." → the faded "not yet" (both Visit record cards).
+- **Copy notes carries the plan** (`phCnPlanLines`, after Formula + Dosage; the button's hover adds "and the plan"):
+  - Treat: each Treat row with its target ("Period pain (target 2 or less)"), `phTpTreatRows` + `phCxTgt`.
+  - Dx: her own words when she typed them, else the Diagnosis card's split: Likely (main first), then "possible: …".
+  - Watch: `phTpWatchData` now also returns `txt`: a concern "Period pain 7 → 4 better" (one score: "Period pain 7"), a rated
+    sign's word ("Cycle: clots better"), each measured row as Watch shows it ("Ferritin 18 → 22 µg/L better", "Low back flexion
+    40° → 70° better"), a red flag answered Yes ("⚠ Leg pain past the knee…: yes", cut at the dash). A sign behind the diagnosis
+    never rated is left out (the Dx line names its pattern).
+  - Phase (`phCnPhaseText`): the live phase's visits so far ("Acute 2/4"); on the day the phase review moved it, from that
+    review: "Acute 4/4 → Subacute", "Acute 4/4 · staying 2 more visits", "Acute 4/4 · plan closed". A cycle plan names its phase
+    only ("Menstruation"): it follows the calendar, so a count across cycles would mislead.
+- **Tested (sandbox, Wren / Zed / Lou):** the counts above; the Copy notes button on Today's visit shows Treat / Dx / Watch /
+  Phase under the visit lines; the three review outcomes (set for today in memory, not saved); a cycle plan; a plan with no
+  scores (Treat + Phase only). 800 wide and 375 (no page overflow on the six changed pages). "Zed Testtwo": plan 0.16 s, Fang
+  Bing Ren 0.31 s, Today 0.20 s. No console errors.
+- **Not checked:** her real records; pasting into Cliniko itself (the sandbox pane blocks the clipboard: the box shows the text).
