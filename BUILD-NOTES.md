@@ -4728,3 +4728,20 @@ of 103. Already there: the last phase's review card offered Close plan / Stay (p
   line, the sign-off), Print = "end", no email on file → the disabled button; the print document's title "Ending letter — …".
   The plan was put back after; no console errors.
 - **Not checked:** the email itself (no address on the test patient), her real plans.
+
+## Care Plan part 3, step 8: your outcomes by condition (2026-10-27)
+
+Her pick 8 and her ask28 answer "Mine · Work" (not a page of its own, not under the Care Plans list). Mock section 8 (its numbers
+were made up: only 10 of her patients have Compass scores today, so the table fills as she re-scores).
+
+- **`phHubOutcomes()`**: every patient record with two or more Compass days (`phCxDays`), every plan of theirs
+  (`phTpPlans(key)`): the main concern's `cc` row (`phCxModel(key, plan, {all: true})`, never the Scoring bar's day), its
+  base and latest point (two different days, else left out). Grouped by `plan.templateName` ("Custom" without one): n, the
+  base and latest values (averaged), reached = the first point at its target (`phCxTgt`: `lo` = at or under, else at or
+  over), visits to target = the plan's visit days (`phTpPhaseSessionDates` of every phase) up to that point's day (averaged
+  over those that reached it). Sorted by courses, then name.
+- **`phHubOutcomesHtml()`**: a `.ph-fast-card.ph-hub-out` under Acupreg and Work + travel on `phHubWorkHtml`, the hub's own
+  `.ph-hub-tbl`; empty: "No course has its main concern scored on two visits yet".
+- **Tested (sandbox):** one scored plan ("Zz Sweep Test", Low back pain): "Low back pain · 1 · 7 → 5 · – · 0 of 1"; the card in
+  the Work page's markup; 0.13 s.
+- **Not checked:** her real records (10 patients with scores), a plan that reached its target (none in the sandbox).

@@ -18627,6 +18627,7 @@
   #pharmacyPage .ph-tp-prv .ph-tp-crs { width: 100%; border-collapse: collapse; margin: 8px 0 10px; background: var(--ph-white); border-radius: 8px; font-size: var(--fs-13); }
   #pharmacyPage .ph-tp-prv .ph-tp-crs th { text-align: left; font: 700 var(--fs-10-5) var(--font-body); letter-spacing: .06em; text-transform: uppercase; color: var(--ph-soft); padding: 6px 8px; }
   #pharmacyPage .ph-tp-prv .ph-tp-crs td { padding: 6px 8px; border-top: 1px solid var(--ph-line); }
+  #pharmacyPage .ph-hub-out { margin-top: 12px; }   /* Mine · Work: your outcomes by condition (part 3, step 8) */
   @container (max-width: 640px) {
     #pharmacyPage .ph-tj-foot { margin-left: 0; }
     #pharmacyPage .ph-tv-seg button { padding: 0 10px; }
@@ -43970,6 +43971,45 @@
       </div>
     </div>`;
   }
+  // ==== YOUR OUTCOMES BY CONDITION (Care Plan part 3, step 8; her pick "Your outcomes by condition", her answer "Mine ·
+  // Work") ====
+  // Read only, from each plan's own Compass: per condition (the plan's template, "Custom" for her own), how many courses,
+  // the main concern from its first score to its latest (the average), the visits it took to reach its target (the average
+  // of those that reached it: the plan's visit days up to the first score at target) and how many reached it. Only plans
+  // whose main concern was scored on two days count.
+  function phHubOutcomes() {
+    const G = new Map(), avg = a => a.length ? a.reduce((s, x) => s + x, 0) / a.length : null;
+    Object.keys(PHARMACY.patients || {}).forEach(k => {
+      const rec = PHARMACY.patients[k];
+      if (!rec || Object.keys(phCxDays(rec)).length < 2) return;
+      (phTpPlans(k) || []).forEach(plan => {
+        let M = null; const keepAt = phCxAt; phCxAt = null;
+        try { M = phCxModel(k, plan, { all: true }); } catch (e) { M = null; } finally { phCxAt = keepAt; }
+        const r = M && M.rows.find(x => x.kind === "cc" && x.s.main && x.s.track !== "bar");
+        const s = r && r.s, pts = (s && s.trk && s.trk.pts) || [], base = s && s.trk && s.trk.base, last = pts[pts.length - 1];
+        if (!base || !last || last.day === base.day) return;
+        const cond = plan.templateName || "Custom", g = G.get(cond) || { n: 0, a: [], b: [], hit: 0, vis: [] };
+        g.n++; g.a.push(+base.v); g.b.push(+last.v);
+        let tg = null; try { tg = phCxTgt(k, s, M.scale); } catch (e) { tg = null; }
+        const at = tg ? pts.find(p => tg.k === "lo" ? +p.v <= tg.v : +p.v >= tg.v) : null;
+        if (at) {
+          g.hit++;
+          const days = new Set();
+          (plan.phases || []).forEach(p => { try { phTpPhaseSessionDates(k, plan, p).done.forEach(d => { if (d.date <= at.day) days.add(d.date); }); } catch (e) {} });
+          if (days.size) g.vis.push(days.size);
+        }
+        G.set(cond, g);
+      });
+    });
+    return [...G.entries()].map(([cond, g]) => ({ cond, n: g.n, a: avg(g.a), b: avg(g.b), vis: avg(g.vis), hit: g.hit })).sort((x, y) => y.n - x.n || x.cond.localeCompare(y.cond));
+  }
+  function phHubOutcomesHtml() {
+    let R = []; try { R = phHubOutcomes(); } catch (e) { R = []; }
+    const r1 = v => v == null ? "–" : String(Math.round(v * 10) / 10);
+    return `<div class="ph-fast-card ph-hub-out"><div class="ph-fast-ch">Your outcomes by condition<em class="ph-hub-sub">each plan's main concern, from its own Compass</em></div>
+      ${R.length ? `<div class="ph-fast-tw"><table class="ph-hub-tbl"><thead><tr><th>Condition</th><th>Courses</th><th>Main concern</th><th>Visits to target</th><th>Reached target</th></tr></thead><tbody>${R.map(x => `<tr><td>${esc(x.cond)}</td><td>${x.n}</td><td>${r1(x.a)} → ${r1(x.b)}</td><td>${x.vis == null ? "–" : Math.round(x.vis)}</td><td>${x.hit} of ${x.n}</td></tr>`).join("")}</tbody></table></div>` : `<div class="ph-fast-empty">No course has its main concern scored on two visits yet</div>`}
+    </div>`;
+  }
   function phHubWorkHtml() {
     const t0 = new Date(TODAY.getFullYear(), TODAY.getMonth() - phHubMonOff, 1), n = new Date(t0.getFullYear(), t0.getMonth() + 1, 0).getDate(), tk = keyOf(TODAY);
     const keys = Array.from({ length: n }, (_, i) => keyOf(new Date(t0.getFullYear(), t0.getMonth(), i + 1)));
@@ -44004,6 +44044,7 @@
           <div class="ph-fast-key"><span><i style="background:var(--hub-cbd)"></i>CBD</span><span><i style="background:var(--hub-acu)"></i>Acupreg</span><span><i style="background:var(--ph-trip)"></i>Trip</span></div>
         </div>
       </div>
+      ${phHubOutcomesHtml()}
     </div>`;
   }
   function phHubMoneyHtml() {
