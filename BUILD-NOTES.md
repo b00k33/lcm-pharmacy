@@ -4985,3 +4985,18 @@ pages and give direct links". Built as a competence call on the app's own pieces
   shots/gym-card-desktop-2026-10-27.jpg.
 - **Not checked:** her real records; a routine paused by a trip (the chain shows it as Habits does, with no "away").
 - **Not live:** waits for her "push live".
+
+## Rules file: three lines checked against the app (2026-10-28)
+
+Her "show me" on the three lines the shortening left as they were. Each was checked in the code and on screen (sandbox,
+made-up patient and bookings; pictures in `shots/notes-check-*`), and the line now says what the app does. Nothing in the app
+changed.
+
+- **Day heading:** no count is drawn on it (MON over the date, the cycle day, the fast); its hover (`phHubDayTitle`) lists each
+  clinic's hours and patients, and the List's days include the other clinic's bookings. The Both clinics line said
+  "Day-header counts include both clinics".
+- **Formula refill:** one list at every width; the phone stacks each row (tick, jar, name + grams, then This week | Next week |
+  ▾). To make is banded by week (Overdue / This week / Next week / Later / No week yet) with "Fix short ▾" on a short row. The
+  old line said "Phone = a weighing table" (the weighing now happens in the panel, above the list on a phone).
+- **Compass scores:** each complaint and pain is a slider + number (`phCxSlHtml`); only Energy keeps 1–10 bars (am · pm · ev,
+  in the panel on the wide card). The old line said "Scores are joined 0–10 bars".

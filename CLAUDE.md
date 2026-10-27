@@ -1030,7 +1030,7 @@ ticks only while the tab is visible.
 `phPinApptZones` measured, one redraw when it changes; a phone keeps 66px an hour); blocks edge to edge, 6px corners, a 1px white
 seam, no shadow, hour hairlines only, no today wash; hover brightens, nothing grows; overlapping visits nest (a later one over the
 earlier from 45% across), visits that start together share in halves (`it.same`); her events are solid blocks sharing the time
-with the visits ("My events" below); the day head is a small MON over a big date, today's in a teal circle, no count.
+with the visits ("My events" below); the day head is a small MON over a big date, today's in a teal circle, no count on it (its hover, `phHubDayTitle`, lists each clinic's hours and patients).
 **Toolbar + Up next buttons (her picks, Zanda as inspiration) [Appointments chips, one height]:** every control 32px; text
 controls are 6px boxes (white, thin line, picked = solid), icon-only buttons stay circles, text at the app's own sizes; ‹ › then
 the date in full in teal (`phApptCalDateLong`), Today always there (greyed on this week), the day count a "7 days ▾" dropdown
@@ -1154,8 +1154,8 @@ only the untimed ones (birthdays, all-day, trip to-dos); the ⟳ chip shows only
 patients and prescriptions. On BOTH logins the grid and the List also show the other saved login's bookings that are hers (that
 clinic's own weekday rule, `phOthHers`), in that clinic's own colour (Acupreg sage, else Cliniko type colours) with a clinic tag
 where a practitioner sits; a tap opens a small card with "Open in <clinic>" (switches login, lands on that booking). The **Both
-clinics** chip (beside Me, Grid and List) hides them, remembered on this device (`lcm-both-clinics`). Day-header counts include
-both clinics; Up next, the Day summary, herbs to prepare, the Dashboard and Communications stay this login's. **Paste:** each
+clinics** chip (beside Me, Grid and List) hides them, remembered on this device (`lcm-both-clinics`). The day heading's hover and the
+List count both clinics; Up next, the Day summary, herbs to prepare, the Dashboard and Communications stay this login's. **Paste:** each
 pasted line carries a clinic chip (tap to flip): on CBD a Friday goes to Acupreg; on Acupreg a non-Friday goes to CBD unless it is
 a colleague's day; a paste from a patient's own page, and a Break, stay. A line sent over is saved on this login (`apptHandoff`),
 shows at once as the other clinic's, and the other login takes it into its own bookings (same id, through `phApptImport`) the next
@@ -1431,8 +1431,9 @@ right column]. **Not built:** the per-herb shelf→after-stock bar. Grams follow
 Log [Dispense: Log silently discarded a manual Grams figure]. A substitute picker includes stopped/phasing-out herbs when stock
 allows.
 
-**Formula refill** is one card grammar across To make / Below the line / Snoozed / All recipes. Phone = a weighing table; desktop
-= a week-banded list with "Fix short ▾". "When" is WEEKS ("Wk 39"; overdue = "last week" in amber, sorted first); Plan ▾ = This
+**Formula refill** is one card grammar across To make / Below the line / Snoozed / All recipes. One list at every width (a phone
+stacks each row: tick, jar, name + grams, then its week chips); To make is banded by week (Overdue / This week / Next
+week / Later / No week yet), a short row with "Fix short ▾". "When" is WEEKS ("Wk 39"; overdue = "last week" in amber, sorted first); Plan ▾ = This
 week / Next week / Pick a week. The date popover is mounted globally; no `window.prompt()` anywhere. Week tiles (Overdue / This
 week / Next week, tap filters); the header primary is the gold "+ Plan a formula" (search sheet).
 **One line per formula, its facts beside the list (her picks) [Formula refill: one line, facts beside]:** a row = tick (Below the
@@ -1860,8 +1861,9 @@ reads the date in her words.
 ## Visit logging & findings charts
 **Today's visit** opens with the **complaint compass** (`phCxCardHtml`), the one "how have things been" table [Today's visit = the
 complaint compass]: main + secondary complaints scored each visit (0–10 or % better), charted over time; Energy 1–10 is its own
-group. It replaced the Re-check card and still mirrors into `rec.recheck`. Scores are joined 0–10 bars; Today = a slider + number
-(a % box takes any number on % better). Columns: Complaint | Baseline | Trend | Today | From baseline | Note. Goal under the name,
+group. It replaced the Re-check card and still mirrors into `rec.recheck`. Each complaint and pain is scored with a slider +
+number (`phCxSlHtml`; a % box takes any number on % better); Energy keeps its own 1–10 bars, am · pm · ev (in the panel
+on the wide card). Columns: Complaint | Baseline | Trend | Today | From baseline | Note. Goal under the name,
 tap to edit (`phCxGoal`; hers in `complaint.mainGoal` / `secondary.goal` via `phCcWrite`; "↺ auto" returns it). The Note box is
 always open and saves as she types (`phCxTypeSave`); every visit's note is kept, last visit's under today's box. Gold row = the
 one asked now (number keys, G B S W, ↓ drive it). Her order = `rec.complaint.secondary` (drag ⋮⋮ or ▾ Move).
