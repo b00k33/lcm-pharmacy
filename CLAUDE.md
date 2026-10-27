@@ -6,7 +6,13 @@ Also read ABOUT-ME.md before any work — build to this user's preferences.
 - **BUILD-NOTES.md** = the dated build history (one section per build, from 2026-10-10). Before changing a feature, grep it for the feature's function names and read its note. **A new build note goes at the END of BUILD-NOTES.md, never in this file.** When a build changes a standing rule or what an area is today, fix that line here in the same commit.
 - **STYLE-LCM.md** = the phone type scale (≤480px) only.
 - **ABOUT-ME.md** = how she likes to work.
-DESIGN-CONVENTIONS.md was merged into this file and retired on 2026-10-21.
+DESIGN-CONVENTIONS.md was merged into this file on 2026-10-21; its stub went to the Recycle Bin on 2026-10-27 (git history keeps it).
+**The folder (tidy 2026-10-27):** the root holds the app (index.html, intake.html, chart.html, manifest.json,
+chart.webmanifest, sw.js, icons/, screenshots/, supabase/), these docs, the September specs the code and memory point to
+(CLINIKO-LETTERS, FACIAL-PARALYSIS-SPEC, INTAKE-LINK-FROM-HISTORY-SPEC, PHASE-VISITS-SPEC, SCRIPT-NAME-REVIEW, VISIT-NOTE-SPEC),
+and only the mocks still being worked on. A mock, guide or audit named anywhere in these docs or the code lives in `mocks/`
+under the same name once its work is live (move it there then). Data snapshots and app exports go in `backups/`, screenshots
+in `shots/`, price lists and recordings in `refs/`. All four folders are local only (`.gitignore`; this repo is public).
 **When two lines disagree:** her newest word wins, then the ★ rules at the top of this file, then the rest of this file, then STYLE-LCM.md, then BUILD-NOTES.md (history). When you find a disagreement, fix the losing line in the same commit.
 
 # ★★★ ONE APP, WELL INTEGRATED — standing rule (her 2026-10-10 "all builds and developments are integrative. the same information needs to present in all places that reference it ... i want this app to be integratively heavy"; restated in her 2026-10-21 audit ask)
@@ -1258,16 +1264,13 @@ Energy = 8 or more; a "target … ▾" dropdown on each Treat row, hers bold wit
 `{ v, k }`, another kind reads auto); Watch draws a bar from baseline to the gold target mark. Signs carry no target.
 
 **Part 2, step 3: the phase review (her pick "When the phase's planned visits are done"; BUILD-NOTES "Care Plan part 2, step
-3"):** on the visit that completes the live phase's planned visits (logged ones before today + today >= planned, nothing logged
-today), Today's visit shows a gold card above the Treat row (`phTpPrvHtml`): "Acute phase done · 3 of 3 visits", the Watch in
-three counts (better / same / worse, from `phTpWatchData`, the Watch's own reading) and the main concern's line with its target,
-then **Move to Subacute · fortnightly × 2** (pre-filled, solid) and **Stay 2 more visits** (half the phase again, rounded up).
-The last phase: **Close plan** / **Stay N more**, neither picked. Her pick waits on the plan for today only (`plan.prv = {ph, day,
-v}`); logging the visit carries it out (the 2026-09-20 move-on is the Move; Stay adds the visits; Close closes the plan) and
-writes the review into `plan.reviews` (note + `prv: {ph, head, sum, out}`), so Review notes and the printed plan show it; the
-card then reads "✓ Moved to Subacute". Undo on the Treatment tab's banner removes that review. Cycle plans get none (they follow
-the calendar). A Compass score or a target change repaints the card in place. (Part 3, step 1 changed how it acts: see
-"Part 3, step 1" below.)
+3"):** once the live phase's planned visits are done, Today's visit shows a gold card above the Treat row (`phTpPrvHtml`):
+"Acute phase done · 3 of 3 visits", the Watch in three counts (better / same / worse, from `phTpWatchData`, the Watch's own
+reading) and the main concern's line with its target, then **Move to Subacute · fortnightly × 2** and **Stay 2 more visits**
+(half the phase again, rounded up); the last phase: **Close plan** / **Stay N more**. Nothing is picked; her tap acts at once
+(Part 3, step 1 below) and writes the review into `plan.reviews` (note + `prv: {ph, head, sum, out, undo}`), so Review notes and
+the printed plan show it. Cycle plans get none (they follow the calendar). A Compass score or a target change repaints the card
+in place.
 
 **Part 2, step 4: course length (her pick "How long" chips at the door; BUILD-NOTES "Care Plan part 2, step 4"):** under Came
 in for on the no-plan door, "How long" Weeks / Months / 6–12 months / 1–3 years / Longer (`PH_CC_LEN`). They ARE the main
@@ -1321,8 +1324,8 @@ after it, logged or not, with nothing picked: **Move to Subacute · fortnightly 
 `prv.undo`), moves / adds visits / closes, and the card reads "✓ Moved to Subacute" with **Undo** (`phTpPrvUndo` puts the
 phase, the count or the plan back and removes the review). A Move past the planned visits ends the phase on its planned-th
 visit and starts the next the day after, so the visits since count for the next phase; Close ends the phase today.
-**Logging a visit moves nothing any more** (the 2026-09-20 move-on in the session log is gone; `plan.prv` is no longer used,
-the Treatment tab's auto-move banner, `phTpAutoAdv`, no longer comes). Cycle plans: no card, as before.
+**Logging a visit moves nothing any more** (the 2026-09-20 move-on in the session log is gone; the Treatment tab's old
+auto-move banner was taken out of the code on 2026-10-27). Cycle plans: no card, as before.
 
 **Part 3, step 2: next visit due (her pick "Next visit due", her answer "Show the date to book"; mock section 2; BUILD-NOTES
 "Care Plan part 3, step 2"):** once today is logged (✓ Complete session), Today's visit has a **Next visit** line under the
