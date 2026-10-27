@@ -1864,6 +1864,15 @@ four turns on, any other joins `rec.suppOwn`). The same link reopens with the pa
 again" once `supabase/intake_resubmit_setup.sql` is run (90 days); a resend shows in Intake review as
 "Updated" with only the changes. `rec.medicalHistoryNotes` has no box: older forms' notes in it show under
 Medication & allergies.
+**Other condition (her 2026-10-27 "include a other option to add unusual conditions in medical history"; her 4 picks, all A,
+mock `hx-other-mock-2026-10-27.html`; BUILD-NOTES "Medical history: Other condition"):** "+ Other condition" at the end of
+General health and of Family history: type, Add (or Enter) and it is its own Yes row with an Added tag, a ✕ (Undo in the toast)
+and its note. Data `rec.historyOther[k] = { n, fam, at, src }` (k = `ox_…`); its answer, note and Form tag are the ordinary
+`rec.history[k]` / `historyNotes[k]` / `historyNoteFrom[k]`, so it is a Yes everywhere: `phHxApplicableItems` (the counts, the
+flags strip, profile search), the figure (a whole-body chip), the condition chips, Today's visit, the Care Plan History row, the
+herb caution (on its own words). The same words as a list row answer that row instead. Not in Allergies only. The link has
+"+ Something else" in the same two groups (`history.others = [{ n, f, note }]`); it comes in as an Added Yes row, the details on
+its note tagged Form, and a later link brings back the patient's own conditions (her own typed ones never go to the patient).
 
 ---
 

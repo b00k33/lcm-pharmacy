@@ -3727,3 +3727,43 @@ live as it stood on session-a; no code of mine in it. Live main differed from se
 **LIVE** 2026-10-27, build 20261027-125400 (main dadbcfe5), joined into session-a as 888f097f (tree unchanged), under the publish
 lock. Checked on the live site: the new stamp in index.html and sw.js, `myelodysplastic_syndrome` in index.html, the MDS row in
 intake.html. The same session's "Other condition" work (her 4 picks) is not part of this build.
+
+## Medical history: Other condition (2026-10-27)
+Her words: "include a other option to add unusual conditions in medical history". Mock `hx-other-mock-2026-10-27.html`
+(Artifact "History Other Condition"), her 4 picks, all A, then "Yes, build it". Built: `shots/hx-other-built-desktop-2026-10-27.png`,
+`shots/hx-other-built-phone-2026-10-27.png`, `shots/hx-other-built-link-form-2026-10-27.png`.
+**Her picks:** 1 A "+ Other condition" at the end of General health: type, Add, it is its own Yes row (Added tag, ✕ removes it) with
+its note; 2 A the same at the end of Family history (blood relatives); 3 A the patient's history link gets "+ Something else" and it
+arrives as an Added Yes row with the patient's words, tagged Form; 4 A a typed condition shows everywhere a Yes shows.
+**Code (index.html):** `phHxOtherItems` (the typed rows that are Yes, oldest first), `phHxWithOther` (puts them where their group
+ends; `phHxApplicableItems` and the figure's `phHxItems` read it), `phHxOtherFind` (a list row of the same words and kind, else a
+typed row of that name), `phHxOtherPut` (Yes on that row, making the typed row when there is none), `phHxOtherFromForm`,
+`phHxOtherRemove` (returns the Undo), `phHxOtherRowHtml` / `phHxOtherAddHtml` / `phHxOtherCommit` beside `phHxBodyHtml`; taps
+`data-hx-oadd` / `data-hx-ook` / `data-hx-orm` before `data-hx-set`; Enter / Esc on `data-hx-oin` (a window capture listener, so
+Esc closes the box and not the history sheet); view state `presHxOtherAdd`. CSS `.ph-hx-orow`, `.ph-hx-otag`, `.ph-hx-orm`,
+`.ph-hx-oadd`, `.ph-hx-oadd-box`, `.ph-hx-ook` (beside the group-note rules). The herb caution (`phClinicalFlag`) matches a typed
+condition on its own words (4 letters or more), own or family, as the list's family rows already do.
+**The link:** intake.html `otherRows` / `otherAddRow` / `otherRenderRows` (Condition + Details, ×), sent as `history.others = [{ n,
+f: 1 = family, note }]` (20 at most; a plain key on the jsonb blob, no SQL); a resend brings the rows back with their details. The
+app sends `prefill.others` = the conditions the PATIENT wrote before (`src: "form"`, names only); her own typed conditions and every
+note stay in the app. Review: a new one = "X: Yes (added by the patient) · details"; one on file as a Yes only brings details its
+note lacks; a list row of the same words answered No or Don't know is a Keep / Use new choice (key `other-<i>`: the choice buttons
+split their key on ":"); the same condition twice on one form is listed once.
+**Found and fixed (disclosed):** `phPatientMerge` never carried `rec.history` (the Yes / No answers; only the older
+`medicalHistory` store): a merged-in record's answers were dropped. It now carries every answer the kept record has not asked,
+and the typed conditions (one of the same words on the kept record takes its Yes and note).
+**My calls (disclosed):** the typed row looks like the app's own Yes rows (solid on her computer, the mock drew an outline); the
+Added tag follows the name and drops under a long one, the ✕ stays on the name's line; the same words as a list row answer that
+row; Removed toast "Removed · <name>" with Undo. Wording DRAFT ("Other condition", "Something else", "Condition", "Details",
+"Added", "Removed").
+**Tested** (localhost sandbox, made-up patient Nora Test, no sign-in, the cloud call of Apply switched off in the test tab):
+add by Enter and by Add, the note focused, an empty Add and Esc close the box, "asthma" answered the list row, a second
+"gilbert's SYNDROME" made no second row; ✕ removed row + note, Undo put both back; Allergies only hides the rows and the + and
+they leave the count; "Asked all" left the typed row Yes; counts ("6 of 45 asked · 6 flagged"), flags strip, condition chips,
+figure (whole-body chips, family dashed), Today's visit ("Diabetes +5 flagged"), Care Plan History row, profile search, herb
+caution (Gilbert's / haemochromatosis match, pregnancy does not); merge (answers, typed rows, a same-name row's note joined);
+the link in a frame with a stand-in database: both "+ Something else", the patient's earlier condition back, the sent
+`history.others`, a resend bringing the rows and details back; review + Apply (new, details only, nothing, the No → Yes choice).
+Pictures: headless Edge at her 1220px window and a 360px phone.
+**Not tested:** her real patients, a real link sent and opened on a phone, the Key2.
+Built, NOT live: waits for her "push live".
