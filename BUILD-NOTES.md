@@ -3903,3 +3903,8 @@ F45 done block 10:30 – 11:20, pale F45 chip first on Thu, card + Fitness → t
 Headless Edge 1220 + 360 (shots-s9.ps1). At 360 nothing past the edge on Exercises (Sort, shelf, template + picker + merge) or
 Fitness (picker); the set table fits (261 / 261). Re-checked on the committed build with the new font. No console errors.
 **Not tested:** the Key2, her real record (her own C22 ratings, notes and Pilates count), a merge while another device edits.
+**LIVE** 2026-10-27 (her "push live"), build 20261027-153300 (main 4c09f199), joined into session-a as 760b749f (tree
+unchanged). Published ALONE from a private index under the publish lock: live main + the same 43 blocks + the stamps (equal to
+the tested build but for the stamp line); the other session's font commit 1f69a9e3 stays on session-a, NOT live. Checked on
+the live site: the stamp in index.html and sw.js, `phFitTipHtml`, `phFitPickHtml`, `phFitShelfHtml`, `phFitDayItems`,
+`PH_FIT_MILES`, `"fxt", "fbt"`; the font change absent.
