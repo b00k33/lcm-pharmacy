@@ -57186,33 +57186,8 @@
           // uses. Independent of any override above: her per-visit
           // treatment choice never redefines where the cycle actually is.
           if (activePlan) phCycleSyncPlans(rec);
-          // her ask 2026-09-20 (sessions per phase): logging the last planned
-          // session of a phase moves the plan on by itself; the line above
-          // the table says so and offers Undo. Cycle plans keep following
-          // the calendar.
-          if (activePlan && treatedPhase && !session.noTreatment && activePlan.status === "active" && treatedPhase.status === "current" && !PH_TP_CYCLE_TEMPLATES.includes(activePlan.templateName)) {
-            const planned = phTpSessionsOf(treatedPhase);
-            const idx = activePlan.phases.indexOf(treatedPhase), next = idx >= 0 ? activePlan.phases[idx + 1] : null;
-            if (planned && phTpPhaseSessionDates(name, activePlan, treatedPhase).done.length >= planned) {
-              // her pick on today's phase review card (plan.prv, part 2 step 3): Stay N more or Close plan; Move on is the
-              // pre-filled one. The review writes itself first, saying what this visit did.
-              const pv = activePlan.prv && activePlan.prv.ph === treatedPhase.id && activePlan.prv.day === keyOf(TODAY) ? activePlan.prv.v : "", more = phTpPrvStayN(planned);
-              phTpPrvWrite(name, activePlan, treatedPhase, planned, pv === "stay" ? `Staying ${more} more visit${more === 1 ? "" : "s"}` : next ? `Moved to ${phTpPrvShort(next)}` : pv === "close" ? "Plan closed" : "");
-              delete activePlan.prv;
-              if (pv === "stay") {
-                treatedPhase.sessions = planned + more;
-              } else if (next) {
-                phTpAutoAdv = { planId: activePlan.id, fromId: treatedPhase.id, toId: next.id, planned };
-                phTpTabPhase.delete(activePlan.id);
-                phTpSetPhaseStatus(activePlan, next, "current");
-              } else if (pv === "close") {
-                activePlan.status = "done"; treatedPhase.status = "done"; if (!treatedPhase.doneKey) treatedPhase.doneKey = keyOf(TODAY);
-              } else {
-                // the last phase: nothing to move to -- say so and offer the three real next steps
-                phTpAutoAdv = { planId: activePlan.id, fromId: treatedPhase.id, toId: null, planned, complete: true };
-              }
-            }
-          }
+          // her "Ask me first" (Care Plan part 3, step 1, 2026-10-27): logging the last planned visit no longer moves the
+          // plan by itself (it did from 2026-09-20). The phase review card on Today's visit waits for her tap (phTpPrvDo).
           // her ask 2026-10-10 (Treatment-tab audit, "Response feels redundant
           // with Re-check"): both ask the same Better/Same/Worse question --
           // Response is per SESSION (feeds the instrument band's "Response ·
@@ -112556,11 +112531,12 @@ or changing anything in Cliniko.
     return `<div class="kv kvx ph-tp-watch"><b title="The same rows Today's visit scores">Watch${rows.length ? ` <span class="cnt">${rows.length}</span>` : ""}</b><div class="vx">${rows.join("") || `<span class="ph-tp-notyet">not yet</span>`}</div></div>`;
   }
   // ==== PHASE REVIEW (Care Plan part 2, step 3; her pick 4, care-plan-part2-mock-2026-10-27.html section 4) ====
-  // On the visit that completes a phase's planned visits, Today's visit shows the Watch in three counts and the next step
-  // already picked: Move to the next phase (what logging that visit has done by itself since 2026-09-20) or Stay N more;
-  // on the last phase, Close plan or Stay, neither picked. Her pick waits on the plan for today only (plan.prv = {ph, day, v});
-  // logging the visit carries it out and writes the review into plan.reviews (Review notes, the printed plan), and the card
-  // then says what was done. Cycle plans follow the calendar, so they get none, as with the move itself.
+  // On the visit that completes a phase's planned visits, Today's visit shows the Watch in three counts and the next step:
+  // Move to the next phase or Stay N more; on the last phase, Close plan or Stay. Part 3, step 1 (her "Ask me first"):
+  // bookings count as visits (phTpPhaseSessionDates), so the card comes on the last planned booking whether or not a visit
+  // is logged in LCM; nothing is picked for her, and her tap does it there and then (phTpPrvDo), writes the review into
+  // plan.reviews (Review notes, the printed plan, Copy notes) and the card says what was done, with Undo. Logging a visit
+  // moves nothing. Cycle plans follow the calendar, so they get none.
   const phTpPrvShort = ph => String((ph && ph.label) || "").split(/\s+[—–\/]\s+|\s*\(/)[0].trim() || "Phase";
   const phTpPrvHead = (ph, n) => { const s = phTpPrvShort(ph); return `${s}${/\bphase\b/i.test(s) ? "" : " phase"} done · ${n} of ${n} visits`; };
   const phTpPrvStayN = planned => Math.max(1, Math.ceil(planned / 2));   // half the phase again (3 -> 2, as in the mock)
@@ -112579,12 +112555,14 @@ or changing anything in Cliniko.
     const ctx = presAcuCtx(name, plan.id), ph = ctx && ctx.activePlan && ctx.activePlan.id === plan.id ? ctx.treatedPhase : null;
     if (!ph || ph.status !== "current") return null;
     const planned = phTpSessionsOf(ph), today = keyOf(TODAY);
-    if (!planned || (ctx.rec.acuSessions || []).some(s => s.date === today && !s.noTreatment && (!s.planId || s.planId === plan.id))) return null;
-    // today is the phase's last planned visit (or past it, when nothing moved last time)
-    if (phTpPhaseSessionDates(name, plan, ph).done.filter(x => x.date !== today).length + 1 < planned) return null;
+    if (!planned) return null;
+    // today is the phase's last planned visit, or past it (the bookings went on and nothing moved)
+    const done = phTpPhaseSessionDates(name, plan, ph).done;
+    if (done.filter(x => x.date !== today).length + 1 < planned) return null;
     const idx = plan.phases.indexOf(ph), next = idx >= 0 ? plan.phases[idx + 1] || null : null;
-    const v = plan.prv && plan.prv.ph === ph.id && plan.prv.day === today ? plan.prv.v : "";
-    return { ph, next, planned, v: v || (next ? "move" : ""), more: phTpPrvStayN(planned) };
+    // the planned-th visit ends the phase; the visits after it belong to the next one
+    const last = done.length >= planned ? done[planned - 1].date : today;
+    return { ph, next, planned, last, more: phTpPrvStayN(planned) };
   }
   function phTpPrvHtml(name, plan) {
     if (!plan) return "";
@@ -112593,31 +112571,63 @@ or changing anything in Cliniko.
     if (!done && !C) return "";
     const S = done ? done.prv.sum || {} : phTpPrvSum(name, plan);
     const tags = `<span class="tg better">${S.b || 0} better</span><span class="tg same">${S.s || 0} same</span><span class="tg worse">${S.w || 0} worse</span>${S.main ? `<span class="mn">${esc(S.main)}</span>` : ""}`;
-    const pick = (v, txt) => `<button type="button" class="ph-today-btn${C.v === v ? " solid" : ""}" data-tp-prv-pick="${esc(plan.id)}|${esc(C.ph.id)}|${v}" aria-pressed="${C.v === v}">${esc(txt)}</button>`;
-    const acts = done ? `<span class="ok">✓ ${esc(done.prv.out || "Review saved")}</span>${done.prv.out ? "" : `<button type="button" class="ph-today-btn q" data-flow-go="plan">Care Plan ›</button>`}`
+    const pick = (v, txt) => `<button type="button" class="ph-today-btn" data-tp-prv-pick="${esc(plan.id)}|${esc(C.ph.id)}|${v}">${esc(txt)}</button>`;
+    const acts = done ? `<span class="ok">✓ ${esc(done.prv.out || "Review saved")}</span>${done.prv.undo ? `<button type="button" class="ph-today-btn q" data-tp-prv-undo="${esc(plan.id)}|${esc(done.id)}">Undo</button>` : done.prv.out ? "" : `<button type="button" class="ph-today-btn q" data-flow-go="plan">Care Plan ›</button>`}`
       : (C.next ? pick("move", ["Move to " + phTpPrvShort(C.next), phTpPrvCad(C.next)].filter(Boolean).join(" · ")) : pick("close", "Close plan"))
         + pick("stay", `Stay ${C.more} more visit${C.more === 1 ? "" : "s"}`);
     return `<div class="ph-tp-prv" data-tp-prv="${esc(plan.id)}" data-tp-prv-name="${esc(name)}"><h3>${esc(done ? done.prv.head : phTpPrvHead(C.ph, C.planned))}</h3><div class="sum">${tags}</div><div class="acts">${acts}</div></div>`;
   }
-  // logging the visit: the review writes itself, with what the visit did
-  function phTpPrvWrite(name, plan, ph, planned, out) {
+  // her tap: the review writes itself, with what the tap did and what Undo puts back
+  function phTpPrvWrite(name, plan, ph, planned, out, undo) {
     const sum = phTpPrvSum(name, plan), head = phTpPrvHead(ph, planned);
     plan.reviews = plan.reviews || [];
-    plan.reviews.push({ id: uid(), date: keyOf(TODAY), note: [head, `${sum.b} better · ${sum.s} same · ${sum.w} worse`, sum.main, out].filter(Boolean).join(" · "), prv: { ph: ph.id, head, sum, out } });
+    plan.reviews.push({ id: uid(), date: keyOf(TODAY), note: [head, `${sum.b} better · ${sum.s} same · ${sum.w} worse`, sum.main, out].filter(Boolean).join(" · "), prv: Object.assign({ ph: ph.id, head, sum, out }, undo ? { undo } : {}) });
+  }
+  function phTpPrvDo(name, plan, C, v) {
+    const ph = C.ph, today = keyOf(TODAY);
+    delete plan.prv;   // part 2's wait-for-the-log pick, gone with it
+    if (v === "stay") {
+      phTpPrvWrite(name, plan, ph, C.planned, `Staying ${C.more} more visit${C.more === 1 ? "" : "s"}`, { v, sessions: ph.sessions == null ? null : ph.sessions });
+      ph.sessions = C.planned + C.more;
+    } else if (v === "move" && C.next) {
+      const nx = C.next;
+      phTpPrvWrite(name, plan, ph, C.planned, `Moved to ${phTpPrvShort(nx)}`, { v });
+      phTpTabPhase.delete(plan.id);
+      phTpPhaseStatusData(plan, nx, "current");
+      // past the planned visits: the phase ended on its last planned one, the visits since count for the next
+      if (C.last < today) { const d = parseKey(C.last); d.setDate(d.getDate() + 1); ph.doneKey = C.last; nx.sinceKey = keyOf(d); }
+    } else if (v === "close" && !C.next) {
+      phTpPrvWrite(name, plan, ph, C.planned, "Plan closed", { v });
+      plan.status = "done"; ph.status = "done"; if (!ph.doneKey) ph.doneKey = today;   // the visits past the planned ones stay with the plan
+    }
+  }
+  function phTpPrvUndo(plan, rvId) {
+    const rv = (plan.reviews || []).find(r => r.id === rvId), u = rv && rv.prv && rv.prv.undo, ph = u && plan.phases.find(p => p.id === rv.prv.ph);
+    if (!ph) return false;
+    plan.reviews = plan.reviews.filter(r => r !== rv);
+    if (u.v === "stay") { if (u.sessions == null) delete ph.sessions; else ph.sessions = u.sessions; }
+    else if (u.v === "move") phTpPhaseStatusData(plan, ph, "current");
+    else if (u.v === "close") { plan.status = "active"; ph.status = "current"; ph.doneKey = null; }
+    return true;
   }
   function phTpPrvRepaint(name) {
     document.querySelectorAll("#pharmacyPage [data-tp-prv]").forEach(el => { const p = phTpFindPlan(el.dataset.tpPrvName || name, el.dataset.tpPrv), h = p ? phTpPrvHtml(el.dataset.tpPrvName || name, p) : ""; if (h) el.outerHTML = h; else el.remove(); });
   }
   document.addEventListener("click", e => {
-    const b = e.target && e.target.closest ? e.target.closest("#pharmacyPage [data-tp-prv-pick]") : null;
+    const b = e.target && e.target.closest ? e.target.closest("#pharmacyPage [data-tp-prv-pick],#pharmacyPage [data-tp-prv-undo]") : null;
     if (!b) return;
-    const host = b.closest("[data-tp-prv]"), name = host && host.dataset.tpPrvName, [planId, phId, v] = b.dataset.tpPrvPick.split("|");
-    const plan = name ? phTpFindPlan(name, planId) : null;
-    if (!plan) return;
-    const today = keyOf(TODAY), cur = plan.prv && plan.prv.ph === phId && plan.prv.day === today ? plan.prv.v : "";
-    if (v === "move" || cur === v) delete plan.prv; else plan.prv = { ph: phId, day: today, v };   // Move is the pre-filled one; a second tap takes a pick back
+    const host = b.closest("[data-tp-prv]"), name = host && host.dataset.tpPrvName;
+    if (b.dataset.tpPrvUndo) {
+      const [planId, rvId] = b.dataset.tpPrvUndo.split("|"), plan = name ? phTpFindPlan(name, planId) : null;
+      if (plan && phTpPrvUndo(plan, rvId)) { savePharmacy(); renderPresPanel(); }
+      return;
+    }
+    const [planId, phId, v] = b.dataset.tpPrvPick.split("|"), plan = name ? phTpFindPlan(name, planId) : null;
+    let C = null; try { C = plan ? phTpPrvCtx(name, plan) : null; } catch (err) { C = null; }
+    if (!C || C.ph.id !== phId) return;
+    phTpPrvDo(name, plan, C, v);
     savePharmacy();
-    phTpPrvRepaint(name);
+    renderPresPanel();   // the phase, its points and the Course line all follow; the panel keeps its scroll
   });
   function phTpTitleHtml(name, plan) {
     if (phTpRenameOpen === plan.id) {

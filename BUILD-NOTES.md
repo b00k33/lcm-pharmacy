@@ -4559,3 +4559,30 @@ then "Yes, all 4 steps".
   shown); facts opened for 3 used formulas (0.02-0.05 s, the panel's headings shown); Make opened the weighing list (6 herbs,
   Finish) with no errors, closed without Finish (the log unchanged at 4,191 entries). Dashboard 0.3 s, no errors. Dispense for
   the 12 latest prescriptions 0.4-0.9 s, no errors, 2 show "To make · Wk".
+
+## Care Plan part 3, step 1: the phase review asks, her tap does it (2026-10-27)
+
+Her pick 1 of part 3 ("Bookings count as visits") and her ask28 answer "Ask me first" (not the mock's move-by-itself with
+Undo). Mock `care-plan-part3-mock-2026-10-27.html` section 1.
+
+- **Measured first** (her backup 2026-10-27 16:25, read in the browser only): 156 past bookings since each plan began against
+  14 logged visits; 15 of 40 course plans past their phase's planned visits and still in it. Reading the code: bookings
+  already counted (`phTpPhaseSessionDates`, `phTpPhaseVisitStats`); the move lived only in the session-log save hook.
+- **The card** (`phTpPrvCtx` / `phTpPrvHtml`): shows when the visits before today + today reach the planned count, whether or
+  not today is logged (part 2 hid it once today was logged, because the log carried out the pick). Nothing is pre-picked (part
+  2 had Move solid). `ctx.last` = the date of the planned-th visit (today when it is today's).
+- **The tap** (`phTpPrvDo`, the click handler on `data-tp-prv-pick`): Stay = `ph.sessions` + half again, review "Staying 2 more
+  visits"; Move = `phTpPhaseStatusData(plan, next, "current")`, review "Moved to Subacute", and when the planned-th visit was
+  before today the old phase's `doneKey` = that day and the next phase's `sinceKey` = the day after (so the visits since count
+  for the next phase); Close (last phase) = plan done, phase `doneKey` today. Each review carries `prv.undo` ({v, sessions}).
+  Then `savePharmacy()` + `renderPresPanel()` (keeps the scroll).
+- **Undo** (`data-tp-prv-undo`, `phTpPrvUndo`): removes that review; Stay puts the old count back; Move makes the old phase
+  current again (`phTpPhaseStatusData`, later phases upcoming); Close reopens the plan and the phase.
+- **Logging a visit** (the `data-pres-acu-log` save) no longer moves the plan, writes a review or sets `phTpAutoAdv`; the
+  card stays until her tap. The Treatment tab banner code for `phTpAutoAdv` is left in place, unreached.
+- **Tested (sandbox, "Zz Sweep Test": Acute since 1 Aug, 3 planned, 4 logged + today's booking):** the card with two plain
+  buttons; Move (Acute done 29 Sep, Subacute from 30 Sep, the header and Treat line follow, "✓ Moved to Subacute · Undo");
+  Undo (all back, no review); Stay (count 3 → 5) and Undo (3); "✓ Complete session" logs the visit and nothing moves, the card
+  still asks; the last phase's Close (plan done, phase ends today) and Undo; a cycle plan has no card. 375 wide: no overflow.
+  No console errors. Shots: `shots/care-plan-p3-step1-moved-undo.jpg`, `shots/care-plan-p3-step1-ask-phone.jpg`.
+- **Not checked:** her real records (the 15 stuck plans will show the card on their next Today's visit).
