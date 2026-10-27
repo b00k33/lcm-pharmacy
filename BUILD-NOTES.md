@@ -3700,3 +3700,20 @@ in Goblet squat. 1220px and 360px headless Edge shots; nothing past the edge at 
 **Not tested:** the Key2 itself (repaint ~0.09 s at 1220 on this PC with an entry open), her real record.
 **LIVE** 2026-10-27 (her "push live"), build 20261027-122700 (main e2fc50dd), joined into session-a as 2ca8bc75 (tree
 unchanged); published from a private index (another session's tracked mock edit blocks publish-live.sh), under the publish lock.
+
+## Fitness: equipment drawings (2026-10-27)
+Her "put the gym equipment drawings back in" (after the step 2 note "I left out C22's gym-equipment drawings"). C22's TPE_ART
+equipment code joins `PH_MU_ART` (gradients, the five drawings, the trophy symbol unused, `eq`, `loaded`). Commit 4b963702.
+**Where (as in C22):** a drawn pill beside the name in her exercise's panel and a template exercise (`.eqp`); an Equipment row of
+five drawn chips in both (`phFitGearRow`, writes `gr` through `phFitLibSet`; C22's "Equipment" tags); the drawing before the
+subtitle on Workout Mode's cards (C22's `wo-cttl`; a light outline on the dark card, C22's dark-theme rule); a reference exercise
+entry reads "[drawing] Barbell · Legs" (C22's `tpe-sub`); a template's barbell exercise shows the bar loaded with the plates for
+its heaviest set, "Bar 20 + n each side" (C22's `tpePlateHtml`).
+**My calls (disclosed):** with no choice of hers, the reference entry for that exercise is read before C22's name rule (C22's
+rule alone calls a Pistol squat "Barbell" because it says squat; the reference says Bodyweight); the trophy (C22's PR coach line
+and "Workout complete" strip) is not added: neither line exists in LCM's Fitness; Today's rows stay as C22's logger (no drawing).
+**Tested** (localhost sandbox, C22 test keys in the sandbox only): Bring in keeps her C22 choice (Goblet squat = Kettlebell);
+Pistol squat reads Bodyweight; Barbell chip changes it and the pill follows; Back squat 60 / 62.5 kg in a template shows the bar
+with 20 + 1.25 each side, "Bar 20 + 21.25 each side"; Workout Mode cards carry the drawings; the squat entry reads Barbell · Legs.
+1220px and 360px (the phone chips three lines, nothing past the edge); no console errors.
+**NOT LIVE**: waits for her "push live".
