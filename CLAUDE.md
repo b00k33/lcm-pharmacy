@@ -1324,6 +1324,16 @@ visit and starts the next the day after, so the visits since count for the next 
 **Logging a visit moves nothing any more** (the 2026-09-20 move-on in the session log is gone; `plan.prv` is no longer used,
 the Treatment tab's auto-move banner, `phTpAutoAdv`, no longer comes). Cycle plans: no card, as before.
 
+**Part 3, step 2: next visit due (her pick "Next visit due", her answer "Show the date to book"; mock section 2; BUILD-NOTES
+"Care Plan part 3, step 2"):** once today is logged (✓ Complete session), Today's visit has a **Next visit** line under the
+three steps (`phTpNextVisitHtml`): "Subacute, fortnightly" + a chip with the next day at the time of today's booking ("Tue 10
+Nov · 09:00") that copies "<name> — Tue 10 Nov 2026 · 09:00" for Cliniko, and **Pick a day** (a date picker that changes the
+chip in place, not saved). LCM books nothing: the Cliniko paste brings the booking in. A booking already ahead reads "✓ booked
+· Tue 10 Nov · 10:00". The day comes from `phTpNextDue`: her next booking first (any, whichever phase window it fell in), else
+the plan's next session day, and a plan day landing on today only when she has no visit today. The Care Plan's live phase line
+adds "· next due 10 Nov · not booked" (or "today") while nothing is booked ahead. The Treatment page's Then band, once today is
+logged, names the same day, and its main button is **Copy for Cliniko** (with the time); "book in LCM" is the quiet one.
+
 **Diagnosis + Goal write themselves** (`phTpAutoDx`, `phTpAutoGoal`): every
 Likely or Possible pattern (plus any she agreed) minus the ones she took
 off; Goal = one line per complaint in the Compass's order (her own Goal

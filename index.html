@@ -18607,6 +18607,11 @@
   #pharmacyPage .ph-tv-stepsrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
   #pharmacyPage .ph-tv-step { flex: 1 1 auto; min-width: 0; min-height: 44px; display: flex; align-items: center; gap: 8px; background: var(--ph-paper); border-radius: 8px; padding: 6px 6px 6px 10px; }
   #pharmacyPage .ph-tv-step .k { flex: none; font: 700 var(--fs-10-5) var(--font-body); letter-spacing: .06em; text-transform: uppercase; color: var(--ph-herb-deep); }
+  #pharmacyPage .ph-tv-nv { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 8px; min-height: 44px; background: var(--ph-paper); border-radius: 8px; padding: 6px 6px 6px 10px; }
+  #pharmacyPage .ph-tv-nv > .k { flex: none; font: 700 var(--fs-10-5) var(--font-body); letter-spacing: .06em; text-transform: uppercase; color: var(--ph-herb-deep); }
+  #pharmacyPage .ph-tv-nv > .w { flex: 1 1 auto; min-width: 0; color: var(--ph-soft); font-size: var(--fs-13); }
+  #pharmacyPage .ph-tv-nv > .ok { color: var(--ph-herb-deep); font: 700 var(--fs-13) var(--font-body); }
+  #pharmacyPage .ph-tv-nv input[data-tp-nv-in] { position: absolute; right: 6px; bottom: 6px; width: 1px; height: 1px; padding: 0; border: 0; opacity: 0; pointer-events: none; }
   #pharmacyPage .ph-tv-step .v { flex: 1 1 auto; min-width: 0; font-size: var(--fs-13); font-weight: 500; }
   #pharmacyPage .ph-tv-step.ok { background: var(--ph-good-tint); }
   #pharmacyPage .ph-tv-step.ok .k { color: var(--ph-good); }
@@ -114000,7 +114005,7 @@ or changing anything in Cliniko.
         logged ? "" : `<button type="button" class="ph-today-btn" data-flow-go="treatment">Open</button>`, logged, [T.ph.label || "Phase", logged ? `Session ${T.ord.n || ""} complete` : "", pts].filter(Boolean).join(" · ")));
       if (T.herbs) out.push(step("Dispense", T.disp === "done" ? "Dispensed today" : T.disp === "pending" ? "Dispensed, not yet logged" : "Not yet",
         `<button type="button" class="ph-today-btn" data-pres-stage="dispense">Open</button>`, T.disp === "done", "Opens the full prescription"));
-      return `<div class="ph-today-tp ph-tv-treat" data-today-tp-host="${esc(name)}" data-today-tp-plan="${esc(plan.id)}"><div class="ph-tv-stepsrow">${out.join("")}<button type="button" class="ph-today-btn q" data-flow-go="plan">Care Plan ›</button></div></div>`;
+      return `<div class="ph-today-tp ph-tv-treat" data-today-tp-host="${esc(name)}" data-today-tp-plan="${esc(plan.id)}"><div class="ph-tv-stepsrow">${out.join("")}<button type="button" class="ph-today-btn q" data-flow-go="plan">Care Plan ›</button></div>${logged ? phTpNextVisitHtml(name, plan) : ""}</div>`;
     } catch (e) { return ""; }
   }
   function presTpMainSections(name, plan) {
@@ -117194,6 +117199,53 @@ or changing anything in Cliniko.
     }
     return { n: cur + 1, cell: grp.cells[cur], next, nextN, nextPhase, loggedToday, grp, all, cur, gi };
   }
+  // ==== NEXT VISIT DUE (Care Plan part 3, step 2; her pick "Next visit due", her answer "Show the date to book") ====
+  // After ✓ Complete session, Today's visit says the next visit the plan asks for, at the time of today's booking, as a
+  // chip that copies it for Cliniko; Pick a day changes the day first (not saved: the Cliniko paste brings the real
+  // booking in, and LCM books nothing here). The Care Plan's live phase line adds "next due 10 Nov · not booked" while
+  // nothing is booked ahead.
+  const phTpCadWord = ph => { const c = String((ph && ph.cadence) || "").split(/\s+for\s+|\s*[·,;(]/i)[0].trim(); return c && c.length <= 16 ? c.charAt(0).toLowerCase() + c.slice(1) : ""; };
+  const phTpDayLabel = k => { const d = parseKey(k); return `${DAY_SHORT[d.getDay()]} ${d.getDate()} ${MON_SHORT[d.getMonth()]}`; };
+  function phTpNextDue(name, plan) {   // the first visit ahead: her next booking, else the plan's own next day
+    const today = keyOf(TODAY), key = phPatientKey(name), mine = phApptList().filter(a => phPatientKey(a.patient) === key);
+    const ahead = mine.filter(a => a.date > today).sort((x, y) => (x.date + (x.time || "")).localeCompare(y.date + (y.time || "")))[0];
+    if (ahead) return { k: "booked", date: ahead.date, id: ahead.id, p: null };
+    // a plan day on today (a plan behind its rhythm) is due today only when she has no visit today
+    const seen = mine.some(a => a.date === today) || ((phPatientPeek(name) || {}).acuSessions || []).some(s => s.date === today);
+    for (const g of phTpSessionCells(name, plan)) for (const c of g.cells) if (c.k === "next" && (c.date > today || !seen)) return Object.assign({ p: g.p }, c);
+    return null;
+  }
+  function phTpNextVisitHtml(name, plan) {
+    const nx = phTpNextDue(name, plan), ph = nx && (nx.p || (plan.phases || []).find(p => p.status === "current"));
+    if (!nx || !ph) return "";
+    const today = keyOf(TODAY), key = phPatientKey(name);
+    const ap = nx.k === "booked" ? phApptList().find(a => a.id === nx.id) : phApptList().find(a => a.date === today && phPatientKey(a.patient) === key);
+    const tm = (ap && ap.time) || "", day = `${phTpDayLabel(nx.date)}${tm ? ` · ${tm}` : ""}`;
+    const what = nx.k === "booked" ? "" : [phTpPrvShort(ph), phTpCadWord(ph)].filter(Boolean).join(", ");   // a booking says it all
+    const acts = nx.k === "booked" ? `<span class="ok">✓ booked · ${esc(day)}</span>`
+      : `<button type="button" class="ph-today-btn solid" data-tp-nv-copy="${esc(name)}" data-tp-nv-day="${nx.date}" data-tp-nv-tm="${esc(tm)}" title="Copy for Cliniko">${esc(day)}</button><button type="button" class="ph-today-btn" data-tp-nv-pick="1">Pick a day</button><input type="date" data-tp-nv-in="1" value="${nx.date}" min="${today}" aria-label="Pick a day" tabindex="-1">`;
+    return `<div class="ph-tv-nv" data-tv-nv="1"><span class="k">Next visit</span><span class="w">${esc(what)}</span>${acts}</div>`;
+  }
+  const phTpNvCopyText = (name, k, tm) => { const d = parseKey(k); return `${name} — ${DAY_SHORT[d.getDay()]} ${d.getDate()} ${MON_SHORT[d.getMonth()]} ${d.getFullYear()}${tm ? ` · ${tm}` : ""}`; };
+  document.addEventListener("click", e => {
+    const b = e.target && e.target.closest ? e.target.closest("#pharmacyPage [data-tp-nv-copy],#pharmacyPage [data-tp-nv-pick]") : null;
+    if (!b) return;
+    if (b.dataset.tpNvPick) {
+      const i = b.closest("[data-tv-nv]") && b.closest("[data-tv-nv]").querySelector("[data-tp-nv-in]");
+      if (i) { try { i.showPicker(); } catch (err) { i.focus(); } }
+      return;
+    }
+    const txt = phTpNvCopyText(b.dataset.tpNvCopy, b.dataset.tpNvDay, b.dataset.tpNvTm);
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(() => phFlashShow("Copied to book in Cliniko: " + txt), () => phFlashShow("⚠ Copy blocked — " + txt));
+    else phFlashShow("⚠ Copy blocked — " + txt);
+  });
+  document.addEventListener("change", e => {
+    const i = e.target && e.target.closest ? e.target.closest("#pharmacyPage [data-tp-nv-in]") : null;
+    const b = i && i.closest("[data-tv-nv]") ? i.closest("[data-tv-nv]").querySelector("[data-tp-nv-copy]") : null;
+    if (!b || !/^\d{4}-\d{2}-\d{2}$/.test(i.value)) return;
+    b.dataset.tpNvDay = i.value;   // in place: the day she will book
+    b.textContent = `${phTpDayLabel(i.value)}${b.dataset.tpNvTm ? ` · ${b.dataset.tpNvTm}` : ""}`;
+  });
   // one-shot: set by the log handler right before the render that follows a
   // completed session, read by the Treatment tab's own render so the stepper
   // can pop the chip that just ticked and the Today column can fade back in
@@ -117243,16 +117295,23 @@ or changing anything in Cliniko.
     const draftbar = draftEl ? draftEl.outerHTML : "";
     const label = herbsCheckin ? "✓ Complete herbs check-in" : ord.n ? `✓ Complete session ${ord.n}` : "✓ Complete this session";
     const logBtn = `<button type="button" class="btn-save ph-acu-logbtn" data-pres-acu-log="1" title="Saves today\x27s visit: points, response and findings, and fills this session on the Session grid">${label}</button>`;
-    const nx = ord.next;
+    let nx = ord.next;
+    // part 3, step 2: once today is logged, the next day is the one Today's visit shows (her bookings first, never today again)
+    const nd = ord.loggedToday && nx && nx.k !== "booked" ? phTpNextDue(name, plan) : null;
+    if (nd && nd.date !== nx.date) nx = Object.assign({}, nx, { date: nd.date, k: nd.k === "booked" ? "booked" : nx.k });
     const nxDate = nx ? phTpSd2(nx.date) : "";
     const nxWord = nx ? (nx.k === "booked" ? `booked · ${nxDate}` : nx.pinned ? `planned · ${nxDate}` : `~${nxDate}`) : "";
     const otherPhase = nx && ord.nextPhase && ord.nextPhase.id !== phase.id ? `<b>${esc(ord.nextPhase.label || "next phase")}</b> · ` : "";
     const nxLabel = nx ? `${otherPhase}session ${ord.nextN} · ${esc(nxWord)}` : `<span class="mut">no session planned after this one</span>`;
-    const copyTxt = nx ? (() => { const d = parseKey(nx.date); return `${name} — ${DAY_SHORT[d.getDay()]} ${d.getDate()} ${MON_SHORT[d.getMonth()]} ${d.getFullYear()}`; })() : "";
+    // part 3, step 2 (her "Show the date to book"): the copy carries the time of today's booking
+    const tdAp = phApptList().find(a => a.date === keyOf(TODAY) && phPatientKey(a.patient) === phPatientKey(name));
+    const copyTxt = nx ? phTpNvCopyText(name, nx.date, (tdAp && tdAp.time) || "") : "";
     const acts = nx
       ? (nx.k === "booked"
         ? `<span class="booked">✓ booked</span>`
-        : `<button type="button" class="ph-tp-band-book${ord.loggedToday ? " primary" : ""}" data-tp-book="${esc(name)}|${nx.date}" title="Book ${esc(name)} on ${esc(nxDate)}">${ord.loggedToday ? "Book the follow-up" : "+ Book it"}</button><button type="button" class="ph-tp-book" data-tp-band-copy="${esc(copyTxt)}" title="Copy the date for Cliniko">copy the date</button>`)
+        : ord.loggedToday
+          ? `<button type="button" class="ph-tp-band-book primary" data-tp-band-copy="${esc(copyTxt)}" title="${esc(copyTxt)}">Copy for Cliniko</button><button type="button" class="ph-tp-book" data-tp-book="${esc(name)}|${nx.date}" title="Book ${esc(name)} on ${esc(nxDate)} in LCM">book in LCM</button>`
+          : `<button type="button" class="ph-tp-band-book" data-tp-book="${esc(name)}|${nx.date}" title="Book ${esc(name)} on ${esc(nxDate)}">+ Book it</button><button type="button" class="ph-tp-book" data-tp-band-copy="${esc(copyTxt)}" title="Copy the date for Cliniko">copy the date</button>`)
       : "";
     const left = ord.loggedToday
       ? `<span class="conf"><i class="ck">✓</i> Session ${ord.n || ""} complete</span><button type="button" class="tab-link ph-tp-band-again" data-pres-acu-log="1">${herbsCheckin ? "add a herbs check-in" : "add another session"}</button>${phCnBtnHtml()}`
@@ -117825,7 +117884,8 @@ or changing anything in Cliniko.
     // her "too busy" fix: one line per phase, not two
     const sinceLineFor = (p, inline) => (live && live.id === p.id && p.sinceKey) ? (() => {
       const d = parseKey(p.sinceKey);
-      const txt = [`Since ${d.getDate()} ${MON_SHORT[d.getMonth()]}`, phTpVisitShort(name, plan, p)].filter(Boolean).join(" · ");
+      const nd = phTpNextDue(name, plan), due = nd && nd.k === "next" ? `next due ${nd.date === keyOf(TODAY) ? "today" : phTpDayLabel(nd.date).replace(/^\S+ /, "")} · not booked` : "";   // part 3, step 2
+      const txt = [`Since ${d.getDate()} ${MON_SHORT[d.getMonth()]}`, phTpVisitShort(name, plan, p), due].filter(Boolean).join(" · ");
       return inline ? `<span class="since">· ${esc(txt)}</span>` : `<div class="since">${esc(txt)}</div>`;
     })() : "";
     // her pick 2026-10-01 (v5 Plan button): a phase with no plan yet shows
