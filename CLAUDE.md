@@ -1381,7 +1381,7 @@ Aim, See your GP straight away if, her sign-off. Patient only (no GP copy).
 BUILD-NOTES "Care Plan part 3, step 8"):** Mine · Work ends with a read-only card (`phHubOutcomesHtml`, `phHubOutcomes`): per
 condition (the plan's template, "Custom" for her own) Courses · Main concern (the average first score → the average latest) ·
 Visits to target (the average visit days up to the first score at its target, of those that reached it) · Reached target ("3
-of 6"). Only plans whose main concern was scored on two days count; nothing is stored.
+of 6"). Only plans whose main concern was scored on two days count; nothing is stored. **Part 3, steps 1-8: LIVE 10/27 (her "push live"), build 20261027-213900 (main 8317ab6a).**
 
 **Diagnosis + Goal write themselves** (`phTpAutoDx`, `phTpAutoGoal`): every
 Likely or Possible pattern (plus any she agreed) minus the ones she took

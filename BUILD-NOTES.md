@@ -4745,3 +4745,18 @@ were made up: only 10 of her patients have Compass scores today, so the table fi
 - **Tested (sandbox):** one scored plan ("Zz Sweep Test", Low back pain): "Low back pain · 1 · 7 → 5 · – · 0 of 1"; the card in
   the Work page's markup; 0.13 s.
 - **Not checked:** her real records (10 patients with scores), a plan that reached its target (none in the sandbox).
+
+## Care Plan part 3 is live (2026-10-27)
+
+- **LIVE** 2026-10-27, build 20261027-213900 (main 8317ab6a), on her "push live": steps 1-8 together (8df97404 ...
+  4314e849), on top of 204000; nothing else rode along (the only other change against main was the two stamp lines).
+- **How:** a hand publish under the lock (another session's mock file was open, so publish-live.sh would stop): the two stamp
+  lines bumped in blobs from session-a's tip, the tree built in a private index, pushed as main, then joined into session-a with
+  its tree unchanged (c92a8f4c). The site served 213900 within a few minutes; the served page holds `phTpPrvDo`,
+  `phTpNextVisitHtml`, `phApptPlanDue`, `phTpFormulaSameHtml`, `phCycRvHtml`, `phIvfDaySync`, `phTpCelSheetHtml` and
+  `phHubOutcomesHtml`.
+- **Not checked:** her real records. A read-only run on a copy of her 16:25 backup in the sandbox was refused by the session's
+  permission check (patient data), so nothing of hers was loaded. Things to look at when she opens it: the 15 course plans past
+  their phase's visits now show the review card on their Today's visit (nothing moves until she taps); an IVF plan whose Stims,
+  egg collection or transfer day has passed moves forward by itself when Today's visit or the Appointments tags read it;
+  Mine · Work's outcomes card fills only for plans whose main concern was scored on two days (10 patients have scores).
