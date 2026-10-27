@@ -4401,3 +4401,10 @@ before: blood tests entered for 0 of 670 patients; IVF histories 8 (egg / embryo
   - 1280 and 375 (nothing past the edge). "Zed Testtwo": plan 0.4 s, Patterns 0.2 s. No console errors.
 - **Not checked:** her real records and real lab reports (the parser was tried on report-shaped text, not her labs' own
   layouts), the Key2.
+- **LIVE** 2026-10-27, build 20261027-191000 (main 26a45c45), on her "push live step 5 too", alone on top of 190200.
+- **Checked first, read-only on her records** (the candidate from a temporary branch, in a frame on the C6 icon page; nothing
+  saved, no sending): opens in 2.1 s + 0.8 s + 0.5 s, no errors; every open Care Plan (101, 99 patients) through `phTpAutoDx`,
+  `phTpAutoGoal`, `phCxModel`, `phTpPrvHtml`, no errors, slowest 95 ms; the Blood tests page (`presBloodsHtml`, results that
+  count included) drawn for all 670 patients, no errors, at most 3 ms; the paste form drawn for 40; `phBldParse` read a
+  report-shaped sample right (ferritin, Hb, TSH, vitamin D with ranges, the collected date); Today's visit for 12 patients
+  0.9-2.1 s (190200: 0.9-1.9 s).
