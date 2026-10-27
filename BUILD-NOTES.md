@@ -4923,3 +4923,40 @@ they were.
 - **Left for her or a later pass (not changed):** the day head says "no count" while Both clinics says the day-header counts
   include both clinics; Formula refill's "Phone = a weighing table; desktop = a week-banded list" may predate the one-line rows;
   "Scores are joined 0–10 bars" sits beside the Today slider.
+
+## Musculoskeletal page, step 2: Today's points go to Treatment, the Care Plan and the Log (2026-10-27)
+
+- **Her words:** "Build step 2" (after step 1, ecf5c5f2). Her picks 9 ("all three": Treatment, Care Plan phase Points, the Log per
+  area) and 10 (After per area, to the Log as the response); built to the mock's "where it lands" cards
+  (`msk-redesign-mock-2026-10-27.html`, `renderLands`).
+- **One list:** `phMskAreasToday(name, plan)` = the panel's own list by area (`phMskAcuOf` + the motor points under each area,
+  carried ones included, + "Other muscles"); `phMskAreaLbls` / `phMskPtLbls` turn it into "GB20 R", "Ashi R", "Upper trapezius MP R".
+  Every reader below calls it; nothing is copied until ✓ Complete session.
+- **Treatment tab:** a **Points** row in the navy block (`phTxPtsHtml`), between the therapies and "Which muscle?": a chip per point,
+  ticked; a tap = not needled today (`phMskClick2` "txpt" writes `off: true` on the point in `visits[day].acu`, so the Musculoskeletal
+  panel shows it faded with "not today" and leaves it out of its count). Motor points stay in "Which muscle?" (said once).
+- **✓ Complete session:** on a pain visit with points, `session.points` = the ticked list (+ anything typed through the old "+ add"),
+  in place of the phase's planned points (the Treatment tab no longer shows a Points row of its own, so those were saved unseen);
+  `session.mskAreas = [{r, s, dx, pts, b (today), a (after)}]`. A blank Care Plan phase Points fills from `session.points` (the
+  existing fill-when-blank).
+- **The panel's foot** (the mock's three lines): Treatment "5 points · 4 motor points" · Open; Care Plan "<phase> · blank" (hover:
+  fills at ✓ Complete session) / "✓ same" / "other points" + **→ plan** (`phMskClick2` "toplan": today's list replaces the phase's
+  Points, Undo in the toast; the plan's points in the hover); Log "2 areas" / "✓ filed today". The phase = the one picked for today on
+  the Treatment tab, else the live one (`phMskPhaseOf`).
+- **The Log:** the visit line carries Area · Diagnosis · Points · Pain before → after (`phLogMskAreasHtml`). The patient's Log page
+  had no styles of its own since its 2026-10-06 build (its rows drew as bare browser buttons, and on a phone its filter bar too): its
+  rows now take the Row shape (faint surface, date · words · kind), its filter bar the computer's joined bar as one sideways row, and a
+  narrow card stacks each area.
+- **Copy notes** (`phCnAcuLines`, now given the name): before the visit is saved, the same ticked list (it used to need a saved
+  draft); after, `session.points`.
+- **Also:** a point carried from last visit, or copied by Same as last time, starts ticked again (`off` is not carried).
+- **Tested (sandbox, made-up Mia Testcase, real handlers):** chips drawn and ticked, SI3 unticked (record, panel faded, count 6 → 5),
+  Copy notes before saving, ✓ Complete session (`session.points` without SI3, `mskAreas` neck 5 → 3 and shoulder 6, the blank Acute
+  phase filled, the foot then "✓ same" and "✓ filed today"), LI4 added (foot "other points"), → plan (phase replaced, toast with
+  Undo, foot "✓ same"), the Log through its own rail button. Step 1 re-run: no errors. Pictures at 1220 (Treatment, panel, Log) and
+  375 (Log, panel).
+- **Integration checked:** Musculoskeletal panel, Treatment tab, Care Plan phase Points, the Log, Copy notes; Visit checks' Points
+  column reads `session.points` (not drawn).
+- **Not checked:** her real records; Undo of → plan by tap; a visit with points on a plan whose phase she switched with Change phase;
+  "Which muscle?"'s own ✓ (done) tick still means what it did and is not tied to the Points row.
+- **Not live:** waits for her "push live".
