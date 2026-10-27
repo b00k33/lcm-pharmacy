@@ -1582,7 +1582,7 @@ her words "add a steps count to my fitness page ... use james clear atomic habit
 ## Fitness + Exercises (C22's fitness, moved in)
 Since 2026-10-27 (her synth22 "wheres the page for exercises?" + "move fitness page from c22 to lcm so i cna plan and log my
 exercise", picks 9 to 13 on `meals-fitness-plan-2026-10-26.html`, round 2 on `meals-fitness-mock-2026-10-26.html`, her answers
-10/27 + "Yes, build it"; BUILD-NOTES "Fitness + Exercises"). **Only on her own record.** Step 1 of 2 (plan + log) + climbing (10/27).
+10/27 + "Yes, build it"; BUILD-NOTES "Fitness + Exercises"). **Only on her own record.** Step 1 of 2 (plan + log) + climbing (LIVE 10/27, build 20261027-112700).
 Step 2 (her pick 11: Muscles & exercises, My don'ts, Goals, Personal bests, Progression, Volume) is NOT built: it waits for her word.
 - **Fitness** (Body, `phHubFitHtml`): Bring in (her C22 fitness, once: library, templates, log, planned, stairs, week plan; C22's
   keys are READ, never written) · This week (workout + rehab routines and Steps, a dot a day = the Habits reads and ticks, one tick

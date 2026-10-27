@@ -3624,4 +3624,6 @@ Upcoming and Recent. Headless Edge at 1220 and 360; nothing past the edge or cut
 **Fixed on the way:** the app's text-field padding squeezed the grade box (now `field-bare`, the number boxes' look); phone
 Workout Mode put Sent on a second line (gap 8 px, padding 14 px).
 **Not tested:** her real C22 climbs, a real cloud merge between her two logins, the Key2 itself.
-**Not live:** waits for her "push live".
+**LIVE** 2026-10-27 (her "push live"), build 20261027-112700 (main 3a300196); hand-stamped in a private index because another
+session's tracked mock edit blocks publish-live.sh, then joined into session-a as bc4e19d3 (tree unchanged). Checked on the live
+site: both stamps (meta lcm-build, sw.js CACHE_VERSION) and `phFitAddRoute` served.
