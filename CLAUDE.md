@@ -1600,7 +1600,7 @@ exercise", picks 9 to 13 on `meals-fitness-plan-2026-10-26.html`, round 2 on `me
 Step 2 (her pick 11, her "build step 2" 10/27; BUILD-NOTES "Fitness step 2") is LIVE 10/27 (her "push live"), build
 20261027-122700 (main e2fc50dd; commits a80ee554 + 4cf7f3e2).
 **Equipment drawings** (her "put the gym equipment drawings back in", 10/27; BUILD-NOTES "Fitness: equipment drawings"): BUILT
-4b963702, NOT live (waits for "push live"). C22's barbell / dumbbell / kettlebell / cable-machine / bodyweight drawings
+4b963702, LIVE 10/27 (her "push live"), build 20261027-124800 (main ff8a5642). C22's barbell / dumbbell / kettlebell / cable-machine / bodyweight drawings
 (`PH_MU_ART.eq`, `.loaded`; `phFitEq`): her exercise's equipment = `gr` (her C22 choice, set in its Equipment row of drawn chips,
 else the reference entry for that exercise, else C22's name rule, else Bodyweight); the drawing sits beside the name in her
 exercise, a template exercise, Workout Mode's cards and a reference entry; a template's barbell exercise shows the bar loaded

@@ -3716,4 +3716,6 @@ and "Workout complete" strip) is not added: neither line exists in LCM's Fitness
 Pistol squat reads Bodyweight; Barbell chip changes it and the pill follows; Back squat 60 / 62.5 kg in a template shows the bar
 with 20 + 1.25 each side, "Bar 20 + 21.25 each side"; Workout Mode cards carry the drawings; the squat entry reads Barbell · Legs.
 1220px and 360px (the phone chips three lines, nothing past the edge); no console errors.
-**NOT LIVE**: waits for her "push live".
+**LIVE** 2026-10-27 (her "push live"), build 20261027-124800 (main ff8a5642), joined into session-a as a3908455 (tree unchanged).
+Published from live main + this change only: another session's commit 24e36673 (Medical history: Myelodysplastic syndrome, plus
+intake.html) sat on session-a without a "push live" of its own, so it stays on session-a, NOT live, for its own word.
