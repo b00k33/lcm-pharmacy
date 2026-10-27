@@ -4347,3 +4347,44 @@ Her pick 5 ("How long" chips at the door; a longer history adds visits to the fi
   - Change course to Neck & shoulder (swap): 4 / 3 / 2. Endometriosis (cycle): +0.
   - 1280 (as the mock) and 375 (chips on two lines, nothing cut, page 375 wide). No console errors.
 - **Not checked:** her real records, the Key2, the IVF and Pregnancy questionnaires' own plan starts (cycle courses, +0 anyway).
+
+## Care Plan part 2, step 5: blood tests and IVF history in the diagnosis (2026-10-27)
+
+Her picks 6 ("Paste the report": her results live in lab PDFs and emails) and 7 ("Results that count" starts from what is
+wired; she adds every other row; nothing clinical from me), mock `care-plan-part2-mock-2026-10-27.html` section 6. Measured
+before: blood tests entered for 0 of 670 patients; IVF histories 8 (egg / embryo counts).
+
+- **Paste the report** (`PH_BLD_ALIAS`, `phBldParse`, `phBldPasteFill`): a button beside + Add result opens the new-result form
+  with a paste box on top (the form from + Add result has it too, two lines tall). On paste it fills, per line: the first marker
+  name it knows (more specific first: transferrin saturation before iron, HbA1c before haemoglobin, LDL / HDL before
+  cholesterol), the number after it (a "(Hb)" or "(25-OH)" after the name skipped), the lab's range on that line ("30-200",
+  "<5.5", ">1.0") into the form's own lab-range boxes, and the collection date (a "Collected" line first, never a line with
+  DOB / birth). Lines with "non-HDL" or "ratio" are skipped; total iron binding capacity is not iron. Filled boxes turn gold.
+  The line under the box: "N filled · date · check the unit: … · not read: …" (a unit unlike the form's, after ug/L = µg/L,
+  ng/mL = µg/L, mU/L = mIU/L; result lines with a unit it could not name). Nothing saves until Save result. A second paste
+  clears the first paste's numbers.
+- **Results that count · every patient** (`phRcTableHtml`, under the results table): the wired rows first, read-only and read
+  from the code (Uric acid · high, Cholesterol / LDL / Triglycerides · high, Haemoglobin · low → their Fang Bing Ren signs;
+  Iron / Ferritin / Transferrin saturation / Haemoglobin · low or low end → the patterns that read low_iron / iron_low; the
+  thyroid row shows only when a pattern reads it, none does now). Then hers, with ×; "+ Add a result" opens one row: Result
+  (every blood marker, then IVF: eggs collected, mature eggs, fertilised, blastocysts, frozen) · below / above · number ·
+  Counts for (her shown patterns). `PHARMACY.resultRules = [{ id, m, op: "<"|">", v, pat }]`, every patient.
+- **In the diagnosis** (`phRcClues`, in `phPatCompute`): a rule met by the patient's latest value (a blood result under 12
+  months old, as the law says; the latest round with that IVF number) is a clue "rc:<id>" with `.pat`, which counts for that
+  pattern alongside its own clue keys. Text "AMH 6 pmol/L · low", "IVF: 3 eggs, 2 rounds · low"; a tap on the Patterns page
+  opens Blood tests / IVF history.
+- **Patterns page:** `PH_PAT_SRC` gains Blood tests (vial) and IVF history (egg), and the clue list shows those groups. Found on
+  the way: the iron and thyroid blood clues counted for patterns but were never listed (their source was not in the list).
+- **Watch:** a blood result that counts for the diagnosis by her rule is measured against her number ("AMH 6 pmol/L · target 7
+  or more"). IVF numbers do not join Watch: they do not change from visit to visit.
+- **Fixed in testing:** at 375 the table ran sideways (the × and Add off the edge): fixed columns, words wrap, the selects fill
+  their cell. "+ Add a result" sat right-aligned (the last cell's rule): now left, as in the mock.
+- **Tested (sandbox, "Wren Testcase"):**
+  - A Laverty-style report (24 lines): 15 markers, their ranges and the date 21 Oct filled (DOB skipped); "check the unit:
+    HbA1c mmol/mol"; "not read: Total iron binding capacity, Sodium, Potassium". Saved as a result with 15 markers.
+  - Rules AMH below 7 → Kidney yang deficiency, Eggs collected below 5 → Kidney yang deficiency (rounds of 5 and 3 eggs):
+    Kidney yang 2 of 4, Possible; Diagnosis tags "AMH 6 pmol/L · low" (vial) and "IVF: 3 eggs, 2 rounds · low" (egg);
+    the Patterns page lists Blood tests and IVF history; Watch "AMH 6 pmol/L target 7 or more".
+  - 1280 and 375 (nothing past the edge). "Zed Testtwo": plan 0.4 s, Patterns 0.2 s. No console errors.
+- **Not checked:** her real records and real lab reports (the parser was tried on report-shaped text, not her labs' own
+  layouts), the Key2.

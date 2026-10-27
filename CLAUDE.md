@@ -1276,6 +1276,18 @@ phases when a course starts (`presTpInlineCreate`, `phTpCreate`) or is swapped (
 1–3 years +1 / +1, longer +2 / +2, only to a phase that has a count; cycle courses keep theirs. Start reads "Course · Low back
 pain · 3 phases · 9 visits".
 
+**Part 2, step 5: blood tests and IVF in the diagnosis (her picks "Paste the report" and "Results that count from what is wired";
+BUILD-NOTES "Care Plan part 2, step 5"):** Blood tests has **Paste the report** beside + Add result: the new-result form takes the
+report's text (`phBldParse`: a marker's name, the number after it, the lab's range on that line, the collection date, never the
+date of birth), fills the form gold for her to check, lists units to check and lines not read; nothing saves by itself. Under
+the results, **Results that count · every patient** (`phRcTableHtml`): the wired rows first, read-only (Fang Bing Ren's blood signs,
+`PH_TRI_BLOOD`; the Patterns' iron and thyroid reads, `PH_BLD_PAT_IRON` / `PH_BLD_PAT_THY`), then hers: a blood marker or an IVF
+number (`PH_IVF_NUMS`) below / above her number → a pattern (`PHARMACY.resultRules = [{id, m, op, v, pat}]`). Met by the latest
+value (a blood result under 12 months; the latest round with that IVF number), a rule is a Patterns clue "rc:<id>" with `.pat`
+(`phRcClues`, added in `phPatCompute`): it counts for that pattern, shows as a tag in the Diagnosis ("AMH 6 pmol/L · low", "IVF: 3
+eggs, 2 rounds · low") and on the Patterns page, whose clue list now has Blood tests and IVF history groups (blood clues counted
+before but were never listed). In Watch a blood result behind the diagnosis by her rule is measured against her number.
+
 **Diagnosis + Goal write themselves** (`phTpAutoDx`, `phTpAutoGoal`): every
 Likely or Possible pattern (plus any she agreed) minus the ones she took
 off; Goal = one line per complaint in the Compass's order (her own Goal
