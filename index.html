@@ -13962,6 +13962,20 @@
   #pharmacyPage .ph-hx-gnote-rm, #pharmacyPage .ph-supp-own-rm { flex: none; width: 28px; height: 28px; border: 0; border-radius: 50%; background: none; color: var(--ph-soft); font: inherit; cursor: pointer; }
   #pharmacyPage .ph-hx-gnote-rm:hover, #pharmacyPage .ph-supp-own-rm:hover { background: var(--ph-white); color: var(--ph-ink); }
   #pharmacyPage .ph-hx-rowextra .ph-pfw-tag.form { flex: none; }
+  /* Other condition (her 2026-10-27 picks, hx-other-mock-2026-10-27.html): a typed row reads as a Yes row with an Added tag and a ✕;
+     "+ Other condition" is a dashed 32px button at the end of General health and Family history, its box a field + Add */
+  #pharmacyPage .ph-hx-orow { cursor: default; }
+  #pharmacyPage .ph-hx-qrow.ph-hx-orow { flex-wrap: nowrap; gap: 6px; }   /* ✕ stays on the name's line; Added follows the name and drops under a long one */
+  #pharmacyPage .ph-hx-orow .ph-hx-qlabel { flex: 1 1 0; min-width: 0; overflow-wrap: anywhere; hyphens: auto; }
+  #pharmacyPage .ph-hx-otag { display: inline-block; margin-left: 2px; vertical-align: 1px; padding: 3px 6px; border: 1px solid var(--ph-line); border-radius: 999px; background: var(--ph-white); color: var(--ph-herb-deep); font-size: var(--fs-10); font-weight: 600; line-height: 1; }
+  #pharmacyPage .ph-hx-orm { flex: none; display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 1px solid var(--ph-line); border-radius: 50%; background: var(--ph-white); color: var(--ph-soft); font: inherit; font-size: var(--fs-11); line-height: 1; cursor: pointer; }
+  #pharmacyPage .ph-hx-orm:hover { border-color: var(--ph-herb); color: var(--ph-ink); }
+  #pharmacyPage .ph-hx-oadd { display: inline-flex; align-items: center; gap: 6px; height: 32px; margin-top: 6px; padding: 0 12px; border: 1.5px dashed var(--ph-herb); border-radius: 6px; background: none; color: var(--ph-herb-deep); font: inherit; font-size: var(--fs-13); font-weight: 600; cursor: pointer; box-sizing: border-box; }
+  #pharmacyPage .ph-hx-oadd:hover { background: var(--ph-herb-tint); }
+  #pharmacyPage .ph-hx-oadd .ph-cc-svgic { width: 14px; height: 14px; }
+  #pharmacyPage .ph-hx-oadd-box { display: flex; gap: 6px; margin-top: 6px; }
+  #pharmacyPage .ph-hx-oadd-box .ph-hx-oin { flex: 1 1 auto; min-width: 0; height: 32px; min-height: 0; box-sizing: border-box; }
+  #pharmacyPage .ph-hx-ook { flex: none; height: 32px; padding: 0 12px; border: 0; border-radius: 6px; background: var(--ph-herb); color: #fff; font: inherit; font-size: var(--fs-13); font-weight: 700; cursor: pointer; }
   #pharmacyPage .ph-hx-qlabel { flex: 1 1 auto; min-width: 0; font-size: var(--fs-12-5); }
   /* "Asked all" sweep + a fresh single-row "yes" pop (her ask28 spec,
      "animations only on change" -- staggered per row via inline
@@ -53775,6 +53789,28 @@
         rec.historyUpdatedAt = Date.now();
         savePharmacy(); renderHxScreen(); return;
       }
+      // Other condition (her 2026-10-27 picks): + opens the box, Add makes the row (Yes, its note ready), ✕ removes it with Undo
+      const hxOAdd = e.target.closest("[data-hx-oadd]");
+      if (hxOAdd) {
+        presHxOtherAdd = { name: phPatientKey(presHxScreenName), w: hxOAdd.dataset.hxOadd, text: "" };
+        renderHxScreen();
+        const inp = document.querySelector(`#presMedHxHost [data-hx-oin], #phHxModal:not([hidden]) [data-hx-oin]`);
+        if (inp) { inp.focus({ preventScroll: true }); phHxRevealNearest(inp); }
+        return;
+      }
+      const hxOOk = e.target.closest("[data-hx-ook]");
+      if (hxOOk) { phHxOtherCommit(hxOOk.dataset.hxOok); return; }
+      const hxORm = e.target.closest("[data-hx-orm]");
+      if (hxORm) {
+        const k = hxORm.dataset.hxOrm, nm = presHxScreenName, cur = phPatientPeek(nm), label = cur && cur.historyOther && cur.historyOther[k] ? cur.historyOther[k].n : "";
+        const undo = phHxOtherRemove(nm, k);
+        if (!undo) return;
+        const ok = savePharmacy() !== false;
+        renderHxScreen();
+        if (!ok) { presSavedToast(PH_PAT_SAVE_FAIL); return; }
+        presSavedToast(`Removed · ${label}`, { undo: () => { undo(); if (savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL); renderHxScreen(); } });
+        return;
+      }
       const hxSetBtn = e.target.closest("[data-hx-set]");
       if (hxSetBtn) {
         const rec = phPatientRec(presHxScreenName);
@@ -70498,7 +70534,83 @@ or changing anything in Cliniko.
   function phHxGroupLabel(rec, g) { return (phHxScope(rec) === "allergies" && g === "Medication & allergies") ? "Allergies" : g; }
   function phHxApplicableItems(rec) {
     const allergiesOnly = !!(rec && rec.historyScope === "allergies");
-    return PH_HX_ALL_ITEMS.filter(it => (!allergiesOnly || PH_HX_ALLERGY_KEYS.has(it.k)) && (phIsFemale(rec) || !PH_HX_FEMALE_GROUPS.has(it.group)));
+    const base = PH_HX_ALL_ITEMS.filter(it => (!allergiesOnly || PH_HX_ALLERGY_KEYS.has(it.k)) && (phIsFemale(rec) || !PH_HX_FEMALE_GROUPS.has(it.group)));
+    return allergiesOnly ? base : phHxWithOther(rec, base);
+  }
+  // her 2026-10-27 "include a other option to add unusual conditions in medical history" (her 4 picks, all A, mock
+  // hx-other-mock-2026-10-27.html): a condition the list does not have is typed at the end of General health or Family history and
+  // becomes its own Yes row ("Added", ✕ removes it). rec.historyOther = { [k]: { n: its words, fam: true = a blood relative, at,
+  // src: "form" when the patient wrote it on the history link } }, k = "ox_" + uid(). Its answer, note and Form tag are the ordinary
+  // rec.history[k] ("yes") / historyNotes[k] / historyNoteFrom[k], so every reader of a Yes takes it like a list row: the counts, the
+  // flags strip, the figure (a whole-body chip), the condition chips, Today's visit, the Care Plan History row, profile search and the
+  // herb caution (on its own words). Not in Allergies only (its two groups are not asked then).
+  function phHxOtherItems(rec) {
+    const o = (rec && rec.historyOther) || {};
+    return Object.keys(o).filter(k => o[k] && String(o[k].n || "").trim() && phHxVal(rec, k) === "yes")
+      .sort((a, b) => (o[a].at || 0) - (o[b].at || 0))
+      .map(k => ({ k, label: String(o[k].n).trim(), group: o[k].fam ? "Family history" : "General health", family: !!o[k].fam, other: true }));
+  }
+  // a list in group order with the typed rows placed where their group ends (before the first row of a later group)
+  function phHxWithOther(rec, list) {
+    const extra = phHxOtherItems(rec);
+    if (!extra.length) return list;
+    const ord = g => PH_HISTORY_GROUPS.findIndex(gr => gr.g === g), out = list.slice();
+    ["General health", "Family history"].forEach(g => {
+      const add = extra.filter(it => it.group === g);
+      if (!add.length) return;
+      let at = out.findIndex(it => ord(it.group) > ord(g));
+      if (at < 0) at = out.length;
+      out.splice(at, 0, ...add);
+    });
+    return out;
+  }
+  // the row a typed condition is: a list row of that kind (own or family) with the same words, else a typed row of that name
+  function phHxOtherFind(rec, n, fam) {
+    const low = String(n || "").trim().toLowerCase();
+    if (!low) return "";
+    const it = PH_HX_ALL_ITEMS.find(x => !!x.family === !!fam && x.label.toLowerCase() === low);
+    if (it) return it.k;
+    const o = (rec && rec.historyOther) || {};
+    return Object.keys(o).find(k => o[k] && !!o[k].fam === !!fam && String(o[k].n || "").trim().toLowerCase() === low) || "";
+  }
+  // Yes on that row, making the typed row first when there is none; returns its key
+  function phHxOtherPut(rec, n, fam, src) {
+    const name = presSanitizeNoteText(String(n || "").trim()).slice(0, 120);
+    if (!rec || !name) return "";
+    let k = phHxOtherFind(rec, name, fam);
+    if (!k) {
+      k = "ox_" + uid();
+      rec.historyOther = rec.historyOther || {};
+      rec.historyOther[k] = Object.assign({ n: name, fam: !!fam, at: Date.now() }, src ? { src } : {});
+    }
+    if (!phHxSet(rec, k, "yes")) rec.historyUpdatedAt = Date.now();
+    return k;
+  }
+  // a condition the patient wrote under "+ Something else" on the link: its row (Yes) and the patient's details on its note, tagged Form
+  function phHxOtherFromForm(rec, r, sentKey) {
+    const k = r && typeof r.n === "string" ? phHxOtherPut(rec, r.n, !!r.f, "form") : "";
+    const v = k ? presSanitizeNoteText(String((r && r.note) || "").trim()) : "";
+    if (!v) return;
+    const cur = phHxNote(rec, k);
+    if (cur.includes(v)) return;
+    phHxSetNote(rec, k, cur ? `${cur}; ${v}` : v);
+    rec.historyNoteFrom = Object.assign(rec.historyNoteFrom || {}, { [k]: sentKey });
+  }
+  // ✕ on a typed row: the row, its note and its Form tag go; the function returned puts all of them back (Undo)
+  function phHxOtherRemove(name, k) {
+    const rec = phPatientRec(name), o = rec && rec.historyOther && rec.historyOther[k];
+    if (!o) return null;
+    const keep = { o, v: (rec.history || {})[k], note: (rec.historyNotes || {})[k], from: (rec.historyNoteFrom || {})[k] };
+    delete rec.historyOther[k];
+    ["history", "historyNotes", "historyNoteFrom"].forEach(f => { if (rec[f]) delete rec[f][k]; });
+    rec.historyUpdatedAt = Date.now();
+    return () => {
+      const r = phPatientRec(name);
+      if (!r) return;
+      r.historyOther = Object.assign(r.historyOther || {}, { [k]: keep.o });
+      [["history", keep.v], ["historyNotes", keep.note], ["historyNoteFrom", keep.from]].forEach(([f, v]) => { if (v) r[f] = Object.assign(r[f] || {}, { [k]: v }); });
+      r.historyUpdatedAt = Date.now();
+    };
   }
   // storage: only a question that's actually been answered takes any space
   // at all -- "unasked" is never written, it's simply the key's absence.
@@ -70758,7 +70870,9 @@ or changing anything in Cliniko.
     const notes = ((h && h.clinicalNotes) || "").trim();
     if (!notes) return null;
     const low = notes.toLowerCase();
-    const matched = phActiveHistoryKeys(name).some(k => (PH_CLINICAL_KEYWORDS[k] || []).some(kw => low.includes(kw)));
+    // a typed condition (Other condition, 2026-10-27) matches on its own words, four letters or more
+    const rec = phPatientPeek(name), own = k => { const o = rec && rec.historyOther && rec.historyOther[k], w = o ? String(o.n || "").trim().toLowerCase() : ""; return w.length >= 4 ? [w] : []; };
+    const matched = phActiveHistoryKeys(name).some(k => (PH_CLINICAL_KEYWORDS[k] || own(k)).some(kw => low.includes(kw)));
     return { notes, matched };
   }
   // the small pill next to an ingredient's name in the editor -- blue "has a
@@ -70886,6 +71000,56 @@ or changing anything in Cliniko.
   }
   // the main complaint's category id, the same reading the ribbon uses (typed first, else read off what is on file)
   function phHxMainFam(name) { const it = name ? phCcRibItems(name) : null; return it ? it.main.id : null; }
+  // a typed condition's row: a Yes row (not a toggle) with Added and ✕, its note always open like any Yes
+  function phHxOtherRowHtml(rec, it, fresh) {
+    const k = it.k, note = phHxNote(rec, k), form = rec.historyOther[k].src === "form";
+    return `<div class="ph-hx-rowwrap" data-hx-row="${k}">
+            <div class="ph-hx-qrow yes ph-hx-orow${fresh === k ? " fresh" : ""}">
+              <span class="ph-hx-dot yes" aria-hidden="true"></span>
+              <span class="ph-hx-qlabel">${esc(it.label)} <span class="ph-hx-otag"${form ? ` title="Added by the patient on the medical history link"` : ""}>Added</span></span>
+              <button type="button" class="ph-hx-orm" data-hx-orm="${k}" aria-label="Remove ${esc(it.label)}" title="Remove">✕</button>
+            </div>
+            <div class="ph-hx-rowextra">
+              <input type="text" class="ph-hx-note" data-hx-note="${k}" value="${esc(note)}" placeholder="Note" aria-label="Note for ${esc(it.label)}">
+              ${note && rec.historyNoteFrom && rec.historyNoteFrom[k] ? `<span class="ph-pfw-tag form" title="Written by the patient on the medical history link">Form ${esc(phHxFormDay(rec.historyNoteFrom[k]))}</span>` : ""}
+            </div>
+          </div>`;
+  }
+  // "+ Other condition", or its box while open (presHxOtherAdd: view state, never saved)
+  function phHxOtherAddHtml(w) {
+    const st = presHxOtherAdd && presHxOtherAdd.name === phPatientKey(presHxScreenName) && presHxOtherAdd.w === w ? presHxOtherAdd : null;
+    return st
+      ? `<div class="ph-hx-oadd-box"><input type="text" class="ph-hx-note ph-hx-oin" data-hx-oin="${w}" value="${esc(st.text || "")}" placeholder="Condition" aria-label="${w === "fam" ? "Condition in the family" : "Condition"}" maxlength="120"><button type="button" class="ph-hx-ook" data-hx-ook="${w}">Add</button></div>`
+      : `<button type="button" class="ph-hx-oadd" data-hx-oadd="${w}"><svg class="ph-cc-svgic" aria-hidden="true" focusable="false"><use href="#i-plus"/></svg>Other condition</button>`;
+  }
+  // Add (or Enter): the typed words become a Yes row with its note ready; the same words as a list row (or a typed row) answer that
+  // row instead, so nothing is there twice. An empty Add closes the box.
+  function phHxOtherCommit(w) {
+    const inp = document.querySelector(`#presMedHxHost [data-hx-oin], #phHxModal:not([hidden]) [data-hx-oin]`);
+    const text = String(inp ? inp.value : (presHxOtherAdd && presHxOtherAdd.text) || "").trim();
+    presHxOtherAdd = null;
+    const rec = text ? phPatientRec(presHxScreenName) : null;
+    const had = rec ? phHxOtherFind(rec, text, w === "fam") : "", wasYes = !!had && phHxVal(rec, had) === "yes";
+    const k = rec ? phHxOtherPut(rec, text, w === "fam") : "";
+    if (!k) { renderHxScreen(); return; }
+    if (!wasYes) presHxFreshFlag = k;
+    if (savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL);
+    renderHxScreen();
+    const noteEl = document.querySelector(`#presMedHxHost [data-hx-row="${CSS.escape(k)}"] [data-hx-note], #phHxModal:not([hidden]) [data-hx-row="${CSS.escape(k)}"] [data-hx-note]`);
+    if (noteEl) { noteEl.focus({ preventScroll: true }); const len = noteEl.value.length; noteEl.setSelectionRange(len, len); phHxRevealNearest(noteEl); }
+  }
+  // Enter adds, Esc closes the box (caught before the page's own Esc, which would close the history sheet); the words are kept through a repaint
+  window.addEventListener("keydown", e => {
+    const inp = e.target && e.target.closest && e.target.closest("[data-hx-oin]");
+    if (!inp || (e.key !== "Enter" && e.key !== "Escape")) return;
+    e.preventDefault(); e.stopPropagation();
+    if (e.key === "Enter") phHxOtherCommit(inp.dataset.hxOin);
+    else { presHxOtherAdd = null; renderHxScreen(); }
+  }, true);
+  document.addEventListener("input", e => {
+    const inp = e.target && e.target.closest && e.target.closest("[data-hx-oin]");
+    if (inp && presHxOtherAdd) presHxOtherAdd.text = inp.value;
+  });
   function phHxBodyHtml(rec, name) {
     // the 5 "shapes the picture first" items (her merge, 2026-10-09): they live in their
     // real group now, not a second card -- this is just the "feeds X" tag they carried there
@@ -70911,7 +71075,10 @@ or changing anything in Cliniko.
       const quiet = reproQuiet && PH_HX_CASE_QUIET_GROUPS.has(gr.g);
       const unaskedLeft = gr.items.some(([k]) => phHxVal(rec, k) === "unasked");
       const rel = isRel(gr);
-      return { w: rows.length + 1, html: `<div class="ph-hx-group${quiet ? " quiet" : ""}${rel ? " rel" : ""}">
+      // Other condition (her 2026-10-27 picks 1 + 2): the typed rows and "+ Other condition" close General health and Family history
+      const oxW = phHxScope(rec) === "allergies" ? "" : gr.family ? "fam" : gr.g === "General health" ? "own" : "";
+      const ox = oxW ? phHxOtherItems(rec).filter(it => it.family === !!gr.family) : [];
+      return { w: rows.length + 1 + (oxW ? ox.length + 1 : 0), html: `<div class="ph-hx-group${quiet ? " quiet" : ""}${rel ? " rel" : ""}">
         <div class="ph-tmpl-sec ph-hx-group-h">
           <span>${esc(phHxGroupLabel(rec, gr.g))}${gr.family ? " (blood relatives)" : ""}${rel ? ` <span class="ph-hx-maintag" title="Counts for the main complaint">Main</span>` : ""}${quiet ? ` <span class="ph-quiet-tag">Not typical for this case</span>` : ""}</span>
           <button type="button" class="ph-hx-markno${unaskedLeft ? "" : " done"}" data-hx-markno="${esc(gr.g)}"${unaskedLeft ? "" : " disabled"}>${unaskedLeft ? "✓ Asked all" : "✓ Asked"}</button>
@@ -70944,7 +71111,9 @@ or changing anything in Cliniko.
             </div>` : ""}
           </div>`;
         }).join("")}
+        ${ox.map(it => phHxOtherRowHtml(rec, it, fresh)).join("")}
         </div>
+        ${oxW ? phHxOtherAddHtml(oxW) : ""}
         ${phHxGroupNotesHtml(rec, gr.g)}
       </div>` };
     }).filter(Boolean);
@@ -74879,7 +75048,7 @@ or changing anything in Cliniko.
   const phHxX = d => +(PH_BODY_GEOM.CX + d).toFixed(1);
   function phHxItems(rec) {
     const female = phIsFemale(rec);
-    return PH_HX_ALL_ITEMS.filter(it => (female || !PH_HX_FEMALE_GROUPS.has(it.group)) && phHxVal(rec, it.k) === "yes")
+    return phHxWithOther(rec, PH_HX_ALL_ITEMS.filter(it => (female || !PH_HX_FEMALE_GROUPS.has(it.group)) && phHxVal(rec, it.k) === "yes"))
       .map(it => ({ k: it.k, label: it.label, fam: !!it.family, o: PH_HX_ORGAN_MAP[it.k] || [] }));
   }
   function phHxLit(items) {
@@ -123972,6 +124141,22 @@ Please let me know if you have any questions.`;
         if (!into.medicalHistory[k] || into.medicalHistory[k] === "unasked") into.medicalHistory[k] = from.medicalHistory[k];
       });
       if (from.historyNotes) { into.historyNotes = into.historyNotes || {}; Object.keys(from.historyNotes).forEach(k => { if (!into.historyNotes[k]) into.historyNotes[k] = from.historyNotes[k]; }); }
+      // found building Other condition (2026-10-27): the Yes / No answers (rec.history) never came over, only the older medicalHistory
+      // store. An answer the kept record has not asked comes over now, and each typed condition with it (one of the same words on the
+      // kept record takes its Yes and note instead of a second row).
+      const oxSkip = new Set();
+      Object.keys(from.historyOther || {}).forEach(k => {
+        const o = from.historyOther[k];
+        if (!o || !String(o.n || "").trim()) return;
+        const same = phHxOtherFind(into, o.n, o.fam);
+        if (!same) { into.historyOther = Object.assign(into.historyOther || {}, { [k]: o }); return; }
+        oxSkip.add(k);
+        if (into.historyNotes) delete into.historyNotes[k];
+        if (phHxVal(from, k) === "yes" && phHxVal(into, same) !== "yes") into.history = Object.assign(into.history || {}, { [same]: "yes" });
+        const nt = phHxNote(from, k), cur = phHxNote(into, same);
+        if (nt && !cur.includes(nt)) phHxSetNote(into, same, cur ? `${cur}; ${nt}` : nt);
+      });
+      Object.keys(from.history || {}).forEach(k => { if (!oxSkip.has(k) && phHxVal(into, k) === "unasked") into.history = Object.assign(into.history || {}, { [k]: from.history[k] }); });
       if (from.medicalHistoryNotes) {
         into.medicalHistoryNotes = into.medicalHistoryNotes
           ? (into.medicalHistoryNotes.includes(from.medicalHistoryNotes) ? into.medicalHistoryNotes : into.medicalHistoryNotes + "\n" + from.medicalHistoryNotes)
@@ -124186,7 +124371,7 @@ Please let me know if you have any questions.`;
   let phIntakeName = "", phIntakeBusy = false, phIntakeError = "", phIntakeResult = null;
   // what went into the link from her file: the list of field keys, "missing" (the one-time setup is not done), or ""
   let phIntakePrefillState = "";
-  const PH_INTAKE_PREFILL_LABEL = { sex: "sex", dob: "date of birth", mobile: "mobile", email: "email", address: "address", cycle: "cycle answers", history: "medical history answers", ivf: "IVF history", medNotes: "medications and allergies note", notes: "medication and allergy details", supps: "supplements", fbr: "Fang Bing Ren answers" };
+  const PH_INTAKE_PREFILL_LABEL = { sex: "sex", dob: "date of birth", mobile: "mobile", email: "email", address: "address", cycle: "cycle answers", history: "medical history answers", others: "conditions the patient added", ivf: "IVF history", medNotes: "medications and allergies note", notes: "medication and allergy details", supps: "supplements", fbr: "Fang Bing Ren answers" };
   // her 2026-10-26 report ("it doesnt show the tinea question"): the form kept its own copy of these questions and this list grew. The
   // link now carries this list (prefill.qs), so a question added here is on the next link sent; intake.html's copy is only a fallback.
   function phIntakeQs() {
@@ -124250,6 +124435,10 @@ Please let me know if you have any questions.`;
     if (suppRows.length && !hx.taking_supplements) hx.taking_supplements = "yes";
     if (Object.keys(hx).length) out.history = hx;
     if (suppRows.length) out.supps = suppRows;
+    // her 2026-10-27 pick 3 (Other condition): a condition the patient wrote on an earlier link comes back on the next one (the words
+    // only; a condition she typed herself, and every note, stay in the app)
+    const others = phHxOtherItems(rec).filter(it => rec.historyOther[it.k].src === "form").map(it => ({ n: it.label, f: it.family ? 1 : 0 }));
+    if (others.length) out.others = others.slice(0, 20);
     const notes = {};
     PH_INTAKE_MED_NOTE_ITEMS.forEach(([k]) => { if (k !== "taking_supplements" && phHxVal(rec, k) === "yes" && phHxNote(rec, k)) notes[k] = presSanitizeNoteText(phHxNote(rec, k)); });
     if (Object.keys(notes).length) out.notes = notes;
@@ -124572,6 +124761,19 @@ Please let me know if you have any questions.`;
     if (typeof hist.fhNote === "string" && hist.fhNote.trim() && !phHxGroupNotes(rec, "Family history").some(n => n.text === presSanitizeNoteText(hist.fhNote.trim()))) {
       historyNew.push({ key: "fhNote", label: "Family history", display: `Family history, unsure: "${hist.fhNote.trim()}"` });
     }
+    // her 2026-10-27 pick 3 (Other condition): each condition the patient wrote under "+ Something else" comes in as its own Added Yes row
+    // in General health or Family history, the patient's details as its note (tagged Form). One her file already has as a Yes only brings
+    // details its note lacks; a list row of the same words answered No or Don't know is a choice, like any other answer that differs.
+    const oxSeen = new Set();   // the same condition written twice on one form is listed once
+    (Array.isArray(hist.others) ? hist.others : []).slice(0, 20).forEach((r, i) => {
+      const n = r && typeof r.n === "string" ? r.n.trim().slice(0, 120) : "", note = r && typeof r.note === "string" ? r.note.trim() : "", fam = !!(r && r.f);
+      if (!n || oxSeen.has((fam ? "f:" : "o:") + n.toLowerCase())) return;
+      oxSeen.add((fam ? "f:" : "o:") + n.toLowerCase());
+      const k = rec ? phHxOtherFind(rec, n, fam) : "", cur = k ? phHxVal(rec, k) : "unasked", lbl = `${fam ? "Family: " : ""}${n}`;
+      if (cur === "no" || cur === "unsure") { historyConflicts.push({ key: `other-${i}`, label: lbl, current: yn(cur), value: "Yes" }); return; }
+      if (cur === "yes" && (!note || phHxNote(rec, k).includes(presSanitizeNoteText(note)))) return;
+      historyNew.push({ key: `other-${i}`, label: lbl, display: `${lbl}${cur === "yes" ? "" : ": Yes (added by the patient)"}${note ? ` · details: "${note}"` : ""}` });
+    });
     // her 2026-10-26 ("can include all supplements you consume"): each supplement row goes onto the Supplements page. One of the four turns
     // that one on with the patient's dose; any other joins the patient's own list. A row her file already holds as it is, is not offered.
     const PH_SUPP_MATCH = { prenatal: /pre-?natal|elevit/i, vitd: /vit(amin)?\.?\s*d\b|\bd3\b|cholecalciferol/i, iron: /\biron\b|ferro|ferrous|ferric/i, coq10: /co-?q-?10|ubiquinol|coenzyme/i };
@@ -124772,6 +124974,7 @@ Please let me know if you have any questions.`;
           rec.historyNoteFrom = Object.assign(rec.historyNoteFrom || {}, { [k]: sentKey });
           return;
         }
+        if (n.key.startsWith("other-")) { phHxOtherFromForm(rec, hist.others[+n.key.slice(6)], sentKey); return; }
         phHxSet(rec, n.key, hist[n.key]);
       });
       if ((d.suppNew || []).length) {
@@ -124790,7 +124993,7 @@ Please let me know if you have any questions.`;
         });
         rec.suppAt = Date.now();
       }
-      d.historyConflicts.forEach(c => { if (winner(c)) phHxSet(rec, c.key, hist[c.key]); });
+      d.historyConflicts.forEach(c => { if (!winner(c)) return; if (c.key.startsWith("other-")) phHxOtherFromForm(rec, hist.others[+c.key.slice(6)], sentKey); else phHxSet(rec, c.key, hist[c.key]); });
       if (d.hasCycle) {
         rec.cycle = rec.cycle || {};
         const applyField = k => { if (k === "lmp") phCycleAddHistoryDate(rec, cyc.lmp); else rec.cycle[k] = cyc[k]; };
@@ -126999,6 +127202,8 @@ Please let me know if you have any questions.`;
   // the row the last tap landed on -- read once by renderHxScreen (phHxAnchorTake) to hold that
   // row's place on screen through the rebuild, then cleared (her 2026-10-15 "the page jumps")
   let presHxAnchorKey = null;
+  // the open "+ Other condition" box: { name: patient key, w: "own" | "fam", text } (her 2026-10-27 picks); view state only
+  let presHxOtherAdd = null;
   // the patient whose history is open INLINE on the profile right now (a
   // new patient, presStageOpeningHtml). Her first answer makes her "not
   // new" -- without this the next field edit on the same stage (the panel
