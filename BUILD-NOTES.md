@@ -5008,3 +5008,30 @@ changed.
   card (189e77a6) on session-a were NOT in it (no "push live" for them yet); joined into session-a with its tree unchanged
   (9e4bf5f8). The served page went from 8.86 MB (213900) to 8.78 MB; it has none of the removed names and still has the part 3
   and Find the Ren code.
+
+## Musculoskeletal page: motor points start ticked, like the points (2026-10-28)
+
+Her "ok" to "Would you like the motor points to start ticked too, so both lists work the same way?" (after step 2, where the
+Treatment tab's Points row started ticked and the motor points under "Which muscle?" started unticked). Commit 8d549bdf on
+session-a, NOT live.
+
+- **Start ticked:** a motor point coming onto the plan (`phMskPlanAdd`) and last visit's carried ones (`phMskPlanOf`) are
+  `done: true`. Untick under "Which muscle?" = not needled today (`done: false`, today's own entry). Old saved entries keep the
+  `done` they had.
+- **Left out when unticked:** `phMskAreasToday` lists only ticked motor points, so Points, `session.points`,
+  `session.mskAreas`, the Log's per-area table, the Care Plan comparison / → plan / blank-phase fill and Copy notes all drop it.
+  The panel count, its foot ("N motor points") and `phMskSummary`'s "N to motor" count ticked ones. The draft
+  (`phMskSyncDraft`) and the log's `session.msk.muscles` = ticked ones, carried included (before: only today's own entries,
+  ticked or not); `session.msk.detail` keeps every one with its `done`.
+- **Shown:** the Treatment row and the old muscle line fade an unticked name (the line-through that used to mean "done" is gone).
+  Today's points panel: an unticked motor point or point is struck through with "MP · not today" / "not today" (last visit's
+  rows are already faded, so the strike tells them apart).
+- **Rows keep their place:** `phMskPlanOf` lists last visit's order first, so unticking a carried one (it becomes today's own)
+  no longer moves it to the bottom.
+- **Checked** on the made-up Mia Testcase (last visit: Upper trapezius + Levator scapulae, GB21, SI3; today: + Supraspinatus):
+  all start ticked; untick Levator → Points / count / draft drop it, panel strikes it, row stays second; tick / untick again;
+  ✓ Complete session → `session.points` "Upper trapezius MP R, GB21 R, SI3 R, Supraspinatus MP R", the blank phase filled the
+  same, Log table without Levator, `msk.detail` Levator `done: false`; no console errors. Pictures
+  `shots/msk-mp-ticks-panel.png`, `shots/msk-mp-ticks-treatment.png`. Not checked on her records.
+- **Seen, not changed:** in the 360px panel a long muscle name pushes its ⚠ onto the next line (the name column is ~124px); it
+  did so before this change.
