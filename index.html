@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261027-180100">
+<meta name="lcm-build" content="20261027-180700">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -91596,7 +91596,8 @@ or changing anything in Cliniko.
       phCcSecAll(name).forEach(s => cc.push({ cx: "s:" + s.id, k: "s:" + s.id, text: s.text, since: s.since || "", note: s.note || "" }));
       // the sign rows the Compass shows now (phCxModel's visible rows: answered or rated signs only, minus Not watching and Gone twice, within the
       // 2-per-complaint / 6-other cap), each under its complaint, Other signs last. What the Compass hides never writes in here.
-      let sxRows = []; try { sxRows = phCxModel(name, shown).rows.filter(r => r.kind === "sx"); } catch (e) { sxRows = []; }
+      // a told row (phCxToldList, part 2) stays on the Compass and Watch only: its words are the cycle log's or her notes', not a sign for the letter
+      let sxRows = []; try { sxRows = phCxModel(name, shown).rows.filter(r => r.kind === "sx" && !r.x.told); } catch (e) { sxRows = []; }
       const sxOf = u => sxRows.filter(r => String(r.under || "") === u).map(r => ({ k: r.key, text: r.x.label, since: "", note: "", sign: true }));
       cc.forEach(x => { want.push(x); sxOf(x.cx).forEach(w => want.push(w)); });
       sxOf("").forEach(w => want.push(w));
@@ -92406,6 +92407,45 @@ or changing anything in Cliniko.
   // made before, or a sign she pinned. Never one the app only infers (Patterns clues, implied / linked / compound, charts, pain map, bloods, build,
   // age, sex). A Bing / Ren twin pair is ONE row keyed by its Bing key; a Ren-only sign keeps its Ren key (its rating never touches a tick).
   // A complaint's own signs have the complaint row, so no row; a sign of the same subject sits under that complaint (my rule, hers to correct).
+  // Watch's told rows on the Compass (her part-2 pick 2026-10-27 "Inside the Compass card": the Compass holds every Watch row). The
+  // signs behind the Diagnosis that come from what the patient tells her (the cycle log, the usual answers, notes, diet) and that no
+  // Compass row stands for already. Each is a sign row rated Gone · Better · Same · Worse from the next visit on, saved with the signs
+  // under "pc:<clue key>" (rec.ccTrack.days[day].sx). A Fang Bing Ren answer is the sign list's own row (its Not watching and gone-twice
+  // rules hold); the pain map's words, Energy and "Came in for" have their own rows; the Cycle page's period pain has the period-pain
+  // row. Read on every paint, never stored.
+  const PH_CX_TOLD_SRC = new Set(["cycle", "usual", "notes", "diet"]);
+  const PH_CX_TOLD_SUBJ = { cycle: ["Cycle", "Periods"], usual: ["Usual", ""], notes: ["Notes", ""], diet: ["Diet", "Digestion"] };
+  function phCxToldList(name, rec, plan, signs, items) {
+    let dx = null; try { dx = phTpAutoDx(name, plan); } catch (e) { dx = null; }
+    if (!dx || !dx.pats || !dx.pats.length) return [];
+    const off = (rec.ccTrack || {}).sxOff || {}, today = keyOf(TODAY), out = [], seen = new Set();
+    const norm = s => String(s || "").replace(/\s*\([^)]*\)\s*$/, "").trim().toLowerCase();
+    items.forEach(it => seen.add(norm(it.text)));
+    signs.forEach(x => seen.add(norm(x.label)));
+    const usu = new Set(signs.filter(x => /usual answers/.test(x.source || "")).map(x => String(x.subj || "").toLowerCase()));
+    const cycPain = signs.some(x => (x.keys || []).some(k => PH_CX_CYCPAIN.has(k)));
+    const days = Object.keys(phCxDays(rec)).filter(d => d < today).sort();
+    dx.pats.forEach(p => (p.matched || []).forEach(c => {
+      const grp = String(c.group || ""), key = "pc:" + c.key;
+      if (!PH_CX_TOLD_SRC.has(c.src) || seen.has(key) || off[key] || /^(pain|energy)/.test(grp) || /^Came in for\b/.test(c.text || "")) return;
+      if (cycPain && /^dysmen_/.test(c.key)) return;
+      const t = String(c.text || "").replace(/\s*\([^)]*\)\s*$/, "").trim(); if (!t || seen.has(t.toLowerCase())) return;
+      const ci = t.indexOf(": "), own = ci > 0 && ci < 28, sj = PH_CX_TOLD_SUBJ[c.src] || ["Notes", ""];
+      const subj = own ? t.slice(0, ci) : sj[0];
+      let desc = own ? t.slice(ci + 2) : t.replace(new RegExp("^" + subj + "\\s+", "i"), "");
+      if (!own) desc = desc.charAt(0).toLowerCase() + desc.slice(1);
+      if (/^ans:/.test(grp) && usu.has(subj.toLowerCase())) return;   // the usual answer's own Fang Bing Ren row is there
+      seen.add(key); seen.add(t.toLowerCase());
+      // its body area: its own subject, else the area of a Fang Bing Ren sign that files the same clue, else its source's
+      const fs = PH_FBR_SUBJ_AREA[subj] == null ? ((PH_FBR_TO_CLUE.find(([, cl]) => cl.includes(c.key)) || [[]])[0].find(phSignKind) || "") : "";
+      const area = PH_FBR_SUBJ_AREA[subj] != null ? PH_FBR_SUBJ_AREA[subj] : fs ? phFbrAreaOf(phSignKind(fs), [fs, phSignLabel(fs)]) : sj[1] && PH_FBR_SUBJ_AREA[sj[1]] != null ? PH_FBR_SUBJ_AREA[sj[1]] : 0;
+      const rated = days.filter(d => phCxSx(rec, d)[key] && phCxSx(rec, d)[key].v), lastD = rated[rated.length - 1] || "", lastE = lastD ? phCxSx(rec, lastD)[key] : null;
+      const src = (PH_PAT_SRC[c.src] || PH_PAT_SRC.notes)[0];
+      out.push({ key, kind: "c", keys: [key], label: `${subj}: ${desc}`, subj, desc, text: t, ck: c.key, since: "", source: src, told: src, area: area === PH_FBR_TP_IX ? 0 : area,
+        under: "", rated: lastE ? { day: lastD, v: lastE.v, n: lastE.n || "" } : null, today: phCxSx(rec, today)[key] || null, goneTwice: false, pin: false, fresh: phCxFresh === key });
+    }));
+    return out;
+  }
   function phCxSignList(name, rec, ccl) {
     rec = rec || phPatientPeek(name) || {};
     const tp = phTriToday(rec), tw = phFbrTwins(), today = keyOf(TODAY), tr = rec.tri || {}, auto = tr.auto || {}, since = tr.since || {};
@@ -92540,7 +92580,7 @@ or changing anything in Cliniko.
   function phCxDayOf(name) { const now = keyOf(TODAY); return phCxAt && phCxAt.pk === phPatientKey(name) && phCxAt.day < now ? phCxAt.day : now; }
   const phCxYr = k => { const y = parseKey(k).getFullYear(); return y !== TODAY.getFullYear() ? " " + y : ""; };
   var phCxDrFx = "";       // one-shot: the drawer that just opened slides in once
-  var phCxCache = null;    // { pk, ccl, signs }: the slow reads, kept while a slider is dragged
+  var phCxCache = null;    // { pk, ccl, signs, told }: the slow reads, kept while a slider is dragged
   const phCxR1 = n => Math.round(n * 10) / 10;
   const phCxNum = n => String(Math.abs(phCxR1(n)));
   // the area a complaint belongs in: Energy is its own; else the area most of its own signs sit in; else its family; else Other
@@ -92556,7 +92596,7 @@ or changing anything in Cliniko.
     if (fam === "weight" && /bloat|digest|gut|ibs|constipat|diarrh|reflux|nausea|appetite|stool|bowel/i.test(it.text || "")) return 4;
     return PH_CX_FAM_AREA[fam] != null ? PH_CX_FAM_AREA[fam] : 9;
   }
-  function phCxAreaOfSign(x) { const a = phFbrAreaOf(x.kind, [x.key, x.label]); return a === PH_FBR_TP_IX ? 0 : a; }
+  function phCxAreaOfSign(x) { if (x.area != null) return x.area; const a = phFbrAreaOf(x.kind, [x.key, x.label]); return a === PH_FBR_TP_IX ? 0 : a; }
   // ---- the numbers ----
   // a row's scores as 0-10 numbers, oldest first (a % entry is read through the first 0-10 score, as phCxVal does)
   function phCxPts10(hist) { return hist.map(h => ({ day: h.day, v: phCxVal(h, hist, "ten") })).filter(p => p.v != null); }
@@ -92700,8 +92740,8 @@ or changing anything in Cliniko.
     // the slow reads (the sign list, the complaints' sign matches) are kept while a slider is dragged
     const cached = ov && phCxCache && phCxCache.pk === key ? phCxCache : null;
     const ccl = cached ? cached.ccl : phFbrCcList(name);
-    let signs = cached ? cached.signs : [];
-    if (!cached) { try { signs = phCxSignList(name, rec, ccl); } catch (e) { signs = []; } phCxCache = { pk: key, ccl, signs }; }
+    let signs = cached ? cached.signs : [], told = cached ? cached.told : [];
+    if (!cached) { try { signs = phCxSignList(name, rec, ccl); } catch (e) { signs = []; } try { told = phCxToldList(name, rec, plan, signs, items); } catch (e) { told = []; } phCxCache = { pk: key, ccl, signs, told }; }
     const pst = phCxPainState(name, rec, items), mainItem = items[0] || null;
     const painItems = pst ? phCxPainItems(rec, pst) : [];
     // a return visit: an earlier logged session or booking (her pick 2026-10-23: done bookings count as visits), or an earlier scored
@@ -92745,7 +92785,7 @@ or changing anything in Cliniko.
     const grp = gid => G[gid] || (G[gid] = Object.assign({ cc: [], sxAll: [], rank: 1e6, rows: [] }, defs.find(g => g.id === gid)));
     series.forEach((s, n) => { const g = grp(s.gid); g.cc.push(s); g.rank = Math.min(g.rank, n); });
     const dayList = [...new Set(allDays.concat((rec.acuSessions || []).map(s => s.date).filter(Boolean)))].sort();
-    if (!at) signs.forEach(x => {
+    if (!at) signs.concat(told).forEach(x => {
       const hist = phCxSxMerged(rec, x), k = "x:" + x.key, o = over[k] || null;
       const cnt = hist.filter(h => !o || h.day > o.day), first = cnt[0];
       const bday = o ? o.day : first ? (dayList.filter(d => d < first.day).pop() || first.day) : "";
@@ -92762,10 +92802,10 @@ or changing anything in Cliniko.
       g.sxAll.push({ kind: "sx", key: k, x, under: x.under, gid, cb: cbX, cl, sxdev: dev, bday: bdayX, over: o, hist, tv, rated: !!tv, cyc, nest: !!x.under && g.cc.some(s => s.key === x.under) });
     });
     // the rows in the order she asks them: the group's complaints, then its signs under one "Signs" line (her picks Q3, Q4; her 2026-10-22 "how to see that the signs are grouped")
-    const more = !!phCxMore[key]; let hidden = 0;
+    const more = !!phCxMore[key] || !!opts.all; let hidden = 0;   // opts.all: the Care Plan Watch reads every row
     const cap = (list, n) => {
       if (more) return list;
-      const must = list.filter(r => r.x.rated || r.x.pin), rest = list.filter(r => !(r.x.rated || r.x.pin)), room = Math.max(0, n - must.length);
+      const keep = r => r.x.rated || r.x.pin || r.x.told, must = list.filter(keep), rest = list.filter(r => !keep(r)), room = Math.max(0, n - must.length);   // a told row is Watch: never behind "+ N more"
       hidden += Math.max(0, rest.length - room);
       return list.filter(r => must.includes(r) || rest.indexOf(r) < room);
     };
@@ -92815,7 +92855,7 @@ or changing anything in Cliniko.
     const dr0 = phCxDr[key] || ""; if (!lit && dr0 && rows.some(r => r.kind === "cc" && r.key === dr0)) lit = dr0;
     // the quiet hint (her pick 2026-10-23): earlier visits, none of them scored on any row
     const scoredBefore = allDays.some(d => d < now) || series.some(s => s.hist.some(h => h.day < now)) || phCxEnPts(rec).some(p => p.day < now);
-    return { rec, scale, key, items, series, days, range, hasEarlier, first, nVisits: dset.size, lit, back, rows, groups, signs, hidden, more, ask: askRow ? askRow.key : "", askGid: askRow ? askRow.gid : "",
+    return { rec, scale, key, items, series, days, range, hasEarlier, first, nVisits: dset.size, lit, back, rows, groups, signs, told, hidden, more, ask: askRow ? askRow.key : "", askGid: askRow ? askRow.gid : "",
       now, at, seen, backNow: seen.length > 0 || allDays.some(d => d < now), unscored: scoredBefore ? 0 : seen.length,
       askKind: askRow ? (askRow.kind === "sx" ? "sx" : askRow.s.energy ? "en" : askRow.s.pain ? (askRow.s.pctOk ? "pnp" : "pn") : "cc") : "", glance, hasEnergyRow: series.some(s => s.energy), enR,
       from, cmp, cmode: phCxChartM[key] === "score" ? "score" : "dev", fil: fil && groups.some(g => g.id === fil) ? fil : "all", dr: phCxDr[key] || "", pain: pst, t0, tspan: Math.max(1, t1 - t0), today, foc: foc ? foc.key : "" };
@@ -93104,7 +93144,8 @@ or changing anything in Cliniko.
   // from the next visit on (her pick Q2; a first visit only records it, so that cell stays empty), the running total, its note
   function phCxSignRowHtml(r, M, name, g, first) {
     const x = r.x, key = r.key, v = r.tv, ask = M.ask === key, own = phCxGroups().find(a => a.id === r.gid) || {};
-    const menu = phCxMenu === key ? `<span class="ph-cx-menu" role="menu"><button type="button" role="menuitem" data-cx-mk="${esc(x.key)}">Make it a complaint</button><button type="button" role="menuitem" data-cx-nw="${esc(x.key)}">Not watching</button></span>` : "";
+    const menu = phCxMenu === key ? `<span class="ph-cx-menu" role="menu">${x.told ? "" : `<button type="button" role="menuitem" data-cx-mk="${esc(x.key)}">Make it a complaint</button>`}<button type="button" role="menuitem" data-cx-nw="${esc(x.key)}">Not watching</button></span>` : "";
+    const sgT = `${esc(own.name || "")} sign, from ${esc(x.told || "Fang Bing Ren")}`;
     const fx = !!v && phCxFx && phCxFx.key === key;
     const bar = M.back
       ? `<span class="pills w" role="group" aria-label="${esc(x.label)}, today">${PH_CX_SX.map(([k, lab]) => `<button type="button" class="ph-cx-pill${v === k ? " on" : ""}${v === k && fx ? " pop" : ""}" data-cx-sx="${esc(x.key)}:${k}" aria-pressed="${v === k ? "true" : "false"}">${lab}</button>`).join("")}</span>${v ? PH_CX_TICK(fx) : ""}`
@@ -93113,12 +93154,12 @@ or changing anything in Cliniko.
     const ddw = `<span class="ph-cx-hov"><span class="ph-cx-ddw"><button type="button" class="ph-cx-dd" data-cx-dd="${esc(key)}" aria-haspopup="menu" aria-expanded="${menu ? "true" : "false"}" aria-label="More for this sign">▾</button>${menu}</span></span>`;
     // a wide card (her 2026-10-26 pick B): Complaint | Today | Change, the note and the history in the panel
     if (M.b) return `<div class="ph-cx-row sx${phCxAreaCls(g, first)}${v === "g" ? " gone" : ""}${M.pnl === key ? " ask" + (phCxLastAsk !== key ? " askin" : "") : ""}${x.fresh ? " slide" : ""}" data-cx-row="${esc(key)}"${phCxAreaSty(g)}>
-      ${first ? phCxAreaLabHtml(g, M) : ""}<span class="sxn"><i class="sg" style="--sc:${own.col || "var(--ph-faint)"}" title="${esc(own.name || "")} sign, from Fang Bing Ren">Sign</i><span class="slab" data-cx-rn="${esc(key)}" title="${esc(x.source || "")}"><i>${esc(x.subj)}:</i> ${esc(x.desc)}</span>${x.since ? `<span class="ssince">· ${esc(x.since)}</span>` : ""}${phCxNoteMk(M, name, key)}${ddw}</span>
+      ${first ? phCxAreaLabHtml(g, M) : ""}<span class="sxn"><i class="sg" style="--sc:${own.col || "var(--ph-faint)"}" title="${sgT}">Sign</i><span class="slab" data-cx-rn="${esc(key)}" title="${esc(x.source || "")}"><i>${esc(x.subj)}:</i> ${esc(x.desc)}</span>${x.since ? `<span class="ssince">· ${esc(x.since)}</span>` : ""}${phCxNoteMk(M, name, key)}${ddw}</span>
       <span class="pillcell pc">${cycT}${bar}</span>
       <span class="chgcell">${phCxChgHtml(r, M, phCxFx && phCxFx.key)}</span>
     </div>`;
     return `<div class="ph-cx-row sx${phCxAreaCls(g, first)}${v === "g" ? " gone" : ""}${ask ? " ask" + (phCxLastAsk !== key ? " askin" : "") : ""}${phCxOpen === key ? " open" : ""}${M.dr === key ? " dro" : ""}${x.fresh ? " slide" : ""}" data-cx-row="${esc(key)}"${phCxAreaSty(g)}>
-      ${first ? phCxAreaLabHtml(g, M) : ""}<span class="sxn"><i class="sg" style="--sc:${own.col || "var(--ph-faint)"}" title="${esc(own.name || "")} sign, from Fang Bing Ren">Sign</i><span class="slab" data-cx-rn="${esc(key)}" title="${esc(x.source || "")}"><i>${esc(x.subj)}:</i> ${esc(x.desc)}</span>${x.since ? `<span class="ssince">· ${esc(x.since)}</span>` : ""}${ddw}</span>
+      ${first ? phCxAreaLabHtml(g, M) : ""}<span class="sxn"><i class="sg" style="--sc:${own.col || "var(--ph-faint)"}" title="${sgT}">Sign</i><span class="slab" data-cx-rn="${esc(key)}" title="${esc(x.source || "")}"><i>${esc(x.subj)}:</i> ${esc(x.desc)}</span>${x.since ? `<span class="ssince">· ${esc(x.since)}</span>` : ""}${ddw}</span>
       ${phCxBsHtml(r, M)}
       <span class="pillcell pc">${cycT}${bar}</span>
       <span class="dvcell">${phCxDvHtml(r, M, phCxFx && phCxFx.key)}</span>
@@ -93722,6 +93763,7 @@ or changing anything in Cliniko.
   }
   // a sign's Details (her picks Q6 + Q7): Track with Better · Same · Worse | Bar 0–10, and Make it a complaint; on the bar, its ratings before
   function phCxSxTrackHtml(signKey, M, s) {
+    if (/^pc:/.test(signKey)) return "";   // a told row (phCxToldList) is rated Better · Same · Worse only
     const k = esc(signKey), bar = !!s, sym = { g: ["g", "✓"], b: ["b", "↑"], s: ["", "→"], w: ["w", "↓"] };
     const seg = `<span class="ph-pm-seg" role="group" aria-label="Track with"><button type="button" class="${bar ? "" : "on"}" data-cx-track="${k}|pills" aria-pressed="${!bar}">Better · Same · Worse</button><button type="button" class="${bar ? "on" : ""}" data-cx-track="${k}|bar" aria-pressed="${bar}">Bar 0–10</button></span>`;
     const h = bar ? phCxSxHist(M.rec, signKey) : [];
@@ -94006,7 +94048,7 @@ or changing anything in Cliniko.
     if ((el = T.closest("[data-cx-star]"))) { const name = phCxNameOf(el); if (name) phCxStarToggle(name, el.dataset.cxStar); return true; }
     if ((el = T.closest("[data-cx-ccrm]"))) { const name = phCxNameOf(el), k = el.dataset.cxCcrm; if (name) { if (k === "main") phCxRemoveMain(name); else if (!phCxRemoveSec(name, k)) phCxRefresh(name); } return true; }
     if ((el = T.closest("[data-cx-track]"))) { const name = phCxNameOf(el), v = el.dataset.cxTrack, cut = v.lastIndexOf("|"); if (name) phCxSxTrack(name, v.slice(0, cut), v.slice(cut + 1) === "bar"); return true; }
-    if ((el = T.closest("[data-cx-nw]"))) { const name = phCxNameOf(el), k = el.dataset.cxNw; phCxMenu = ""; if (phCxWrite(name, tr => { (tr.sxOff || (tr.sxOff = {}))[k] = keyOf(TODAY); })) { phCxRefresh(name); phCxTriSync(name); presSavedToast(`${phSignLabel(k)} · not watching`); } return true; }
+    if ((el = T.closest("[data-cx-nw]"))) { const name = phCxNameOf(el), k = el.dataset.cxNw, lab = /^pc:/.test(k) ? ((((phCxCache || {}).told || []).find(x => x.key === k) || {}).label || "Sign") : phSignLabel(k); phCxMenu = ""; if (phCxWrite(name, tr => { (tr.sxOff || (tr.sxOff = {}))[k] = keyOf(TODAY); })) { phCxRefresh(name); phCxTriSync(name); presSavedToast(`${lab} · not watching`); } return true; }
     if ((el = T.closest("[data-cx-unw]"))) { const name = phCxNameOf(el), k = el.dataset.cxUnw; if (phCxWrite(name, tr => { if (tr.sxOff) delete tr.sxOff[k]; })) { phCxFresh = k; phCxRefresh(name); phCxTriSync(name); } return true; }
     if ((el = T.closest("[data-cx-more]"))) { const name = phCxNameOf(el); phCxMore[phPatientKey(name)] = true; phCxRefresh(name); return true; }
     if ((el = T.closest("[data-cx-notes]"))) { const name = phCxNameOf(el), k = el.dataset.cxNotes; phCxNotes = phCxNotes === k ? "" : k; phCxMenu = ""; phCxRefresh(name); return true; }
@@ -111694,15 +111736,15 @@ or changing anything in Cliniko.
       : `<span class="ph-tp-notyet">not yet</span>`;
     return `<div class="kv kvx ph-tp-treat"><b>Treat${rows.length ? ` <span class="cnt">${rows.length}</span>` : ""}</b><div class="vx">${body}<div class="ph-tp-dxmore"><span class="ph-tp-dx-acts"><button type="button" class="ph-tp-dx-btn" data-tp-fg="goal" ${fgIds}>Edit</button></span></div></div></div>`;
   }
-  // Watch, one list (her 2026-10-27 picks "One list" and "6 → 4 Better"): the rows Today's visit scores (each concern's first
-  // score against its latest, the signs she rated there), then the signs behind the diagnosis that come from what the patient
-  // tells her (Fang Bing Ren answers, the cycle log, notes, diet; an exam finding is re-checked on its own page), then the
-  // red flags with their last answer. Read from the Compass model and the plan, never stored.
-  const PH_TP_WATCH_SRC = new Set(["tri", "cycle", "usual", "notes", "diet"]);
+  // Watch, one list (her 2026-10-27 picks "One list" and "6 → 4 Better"): the Compass's own rows in its order (each concern's first
+  // score against its latest; the signs, and since part 2 (her pick "Inside the Compass card") the told signs behind the diagnosis,
+  // phCxToldList, rated there), then a Fang Bing Ren answer the Compass leaves to an exam page, then the red flags with their last
+  // answer. Read from the Compass model and the plan, never stored.
   function phTpWatchHtml(name, plan) {
     let M = null; const keepAt = phCxAt; phCxAt = null;   // always today here, whatever visit the Scoring bar has open
-    try { M = phCxModel(name, plan); } catch (e) { M = null; } finally { phCxAt = keepAt; }
+    try { M = phCxModel(name, plan, { all: true }); } catch (e) { M = null; } finally { phCxAt = keepAt; }
     const word = Object.fromEntries(PH_CX_SX), rows = [], seen = new Set(), low = s => String(s || "").replace(/\s*\([^)]*\)\s*$/, "").trim().toLowerCase();
+    const snaps = (plan && plan.progressSnaps) || [], first = snaps[0], had = new Set(first ? first.dx.flatMap(d => d.keys || []) : []);
     const tag = d => d ? `<span class="tg ${d}">${d === "better" ? "Better" : d === "worse" ? "Worse" : "Same"}</span>` : "<span></span>";
     if (M) M.rows.forEach(r => {
       if (r.kind === "cc") {
@@ -111711,14 +111753,15 @@ or changing anything in Cliniko.
         rows.push(`<div class="wt${s.main ? " mn" : ""}"><span class="n">${esc(s.text)}</span><span class="v">${!last ? "–" : moved ? `${phCxR1(base.v)} → ${phCxR1(last.v)}` : phCxR1(last.v)}</span>${tag(moved && s.cb ? phCxDir(r, s.cb.d) : null)}</div>`);
       } else if (r.kind === "sx" && r.x) {
         const h = (r.hist || []).filter(x => x && word[x.v]), a = h[0], z = h[h.length - 1], lab = `${r.x.subj}: ${r.x.desc}`;
-        seen.add(low(lab));
-        rows.push(`<div class="wt"><span class="n">${esc(lab)}</span><span class="v">${!z ? "–" : a.day !== z.day ? `${esc(word[a.v])} → ${esc(word[z.v])}` : esc(word[z.v])}</span>${tag(z && r.cb ? phCxDir(r, r.cb.d) : null)}</div>`);
+        seen.add(low(lab)); if (r.x.told) { seen.add(r.x.key); seen.add(low(r.x.text)); }
+        const m = r.x.told ? PH_PAT_SRC[Object.keys(PH_PAT_SRC).find(s => PH_PAT_SRC[s][0] === r.x.told)] : null, ic = m ? phPatIc(m[1]) : "";
+        const none = r.x.told ? (!first || had.has(r.x.ck) ? "Yes" : "New") : "–";
+        rows.push(`<div class="wt"><span class="n"${m ? ` title="${esc(m[0])}"` : ""}>${ic}${esc(lab)}</span><span class="v">${!z ? none : a.day !== z.day ? `${esc(word[a.v])} → ${esc(word[z.v])}` : esc(word[z.v])}</span>${tag(z && r.cb && a.day !== z.day ? phCxDir(r, r.cb.d) : null)}</div>`);   // one rating: its word says it once
       }
     });
     let dx = null; try { dx = phTpAutoDx(name, plan, true); } catch (e) { dx = null; }
-    const snaps = (plan && plan.progressSnaps) || [], first = snaps[0], had = new Set(first ? first.dx.flatMap(d => d.keys || []) : []);
     if (dx) dx.pats.forEach(p => (p.matched || []).forEach(c => {
-      const k = low(c.text); if (!PH_TP_WATCH_SRC.has(c.src) || !k || seen.has(k)) return; seen.add(k);
+      const k = low(c.text), fk = String(c.group || "").replace(/^tri:/, ""); if (c.src !== "tri" || !phCxExamKey(fk) || !k || seen.has(k)) return; seen.add(k);
       const m = PH_PAT_SRC[c.src] || PH_PAT_SRC.notes;
       rows.push(`<div class="wt"><span class="n" title="${esc(m[0])}">${phPatIc(m[1])}${esc(c.text)}</span><span class="v">${!first ? "Yes" : had.has(c.key) ? "Yes → Yes" : "New"}</span>${tag(first && had.has(c.key) ? "same" : null)}</div>`);
     }));
