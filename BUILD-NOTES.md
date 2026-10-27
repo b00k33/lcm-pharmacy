@@ -4498,3 +4498,56 @@ step 8 too" came through the B33 C4 LCM session.
   Today's visit opened through the app for 6 patients: no errors, the window never wider than itself; times match the live
   build before (191600) on the same 6 (Fang Bing Ren 1.9-3.2 s vs 1.1-3.0 s; Ren, Medical history, Today's visit within
   0.1 s).
+
+## Formula refill: one line, facts beside (2026-10-27)
+Her synth22, four asks: "i do not like this make formula show. too small, i like it as a list" (the in-row weighing tiles);
+Below the line "make the rows more space saving, redesign it for a better workflow"; "add relevant animations and integrative
+elements"; "add some elements where there is an integration of the formula with the conditions being treated/dispensing rate/
+etc - use your expertise and mock everything before building". Mock `formula-refill-synth22-mock-2026-10-27.html` (measured on
+her 27 Oct records: Ban Xia Hou Po Tang 6 patients in 12 weeks, Chai Hu Jia Long Gu Mu Li Tang 320 g, 4 of 8 below-the-line
+formulas not dispensed in 12 weeks). Her 8 picks: 1 A the bench's own list · 2 B in a side sheet · 3 C one line + ticks to plan
+many · 4 A in use first · 5 B facts beside the list · 6 all four facts blocks · 7 all the motion · 8 A Dashboard + B Dispense;
+then "Yes, all 4 steps".
+- **Rows** (`phRfcRowHtml`, CSS "Formula refill, her synth22 picks"): one grid per row with named areas (tick · jar · name ·
+  use · next · step · Recipe); the narrow tiers move cells: under 860 px of list the bars go, under 720 two lines, under 460
+  three. The name is plain text and wraps (the row is the target); a row tap or Enter opens the facts, a second tap closes.
+- **Below the line** (`phRfcListHtml`): "Dispensed in 12 weeks" first, by next booking, then grams, then use; "Not dispensed in
+  12 weeks" is one fold line with the names and grams (`phRfcQuietOpen`, view state). A search shows the old grouping.
+- **Ticks + bulk bar** (`phRfcTicked`, `phRfcBulkHtml`, `phRfcApplyMany`, `phRfcBulkPopClick`): on Below the line and All
+  recipes (To make rows are already planned). This week | Next week | ▾ (the shared week popover, anchored to the bar: weeks,
+  More weeks, Snooze, Take off the list, Clear = the week cleared on every picked one); one Undo puts them all back
+  (`phRfcToast.many`).
+- **One read** (`phFuAll`, `phFormulaUse(h)`): 12 weekly gram totals per jar from the dispense log (the jar resolved like
+  usage: code, then name), each patient with their last date, plan title (`phTpTitleShown`) and family (`phApptLsFamOf`), and
+  their next booking (`phApptList`, Break left out). Cached on the log / herbs / bookings size and today. A trailing "(X)" tag
+  on a name is merged with the name. Derived, nothing stored.
+- **The panel** (`phRfcSide` = facts | weigh, `phRfcPaintSide`, `#phRfcSide` beside `.ph-rfc-main` in `#phRfcBody`): 440 px
+  (360 at least, 44% of the card) beside the list; on a card under 860 px it sits ABOVE the list in the flow (a size container
+  makes `position: fixed` relative to the card) and scrolls into view when it opened out of sight. Facts
+  (`phRfcFactsHtml`): head = jar, name, code, grams · line · "To make · Wk N"; 1 Use (`phRfcUseChartSvg`, the bars grow once
+  per formula, `phRfcFactsSeen`); 2 Who's on it (a row opens `phPatientProfileOpen`); 3 Treating (one bar of plan families,
+  `PH_RFC_FAM_LABEL`); 4 Batch (last make by `targetId`, a batch's weeks at this rate, herbs for that batch on the shelf
+  or short, Jar = the herb form, Recipe = the side sheet). A recipe with no jar shows "No jar yet" + "+ Add jar".
+- **Weighing in the panel** (`phRfcMk`, `phRfcMkHtml`): Make opens it; the rows are the bench's own (`refWeighRowsHtml`,
+  pulled out of `refWeighHtml`, which now calls it with `data-wg-tick`; the panel passes `data-rfc-weigh`). Ring, jar 0 → N g,
+  the bowl count rolls (the clock starts on the first frame and never leaves 0..1: headless virtual time showed "-5079 g"
+  before), the gold line, tick all, Not now, Finish = the row glows and its jar fills, then the same `refMakeCommit`. The row
+  says "Weighing…" (a button back to the panel).
+- **Motion** (all off under reduced motion): the panel slides in once, Plan flies a gold dot to the To make count
+  (`phRfcFly`), ticks pop, the weigh tick pops and the next row lights, bars grow once, the family bar grows once.
+- **Dashboard** (her 8 A): the Refill card's rows carry the next booking chip (`phFuNextHtml(phFormulaUse(h))`), "—" when none;
+  the rest of her 9/18 plain list kept (no jar, no bars). Names in both plain lists now wrap instead of cutting.
+- **Dispense** (her 8 B): the In stock cell of a planned formula jar adds "To make · Wk N" on its own line
+  (`presIngToMakeHtml`; `presIngStockCellCore` is the old cell), herb tint (gold stays the brand accent).
+- **Disclosed calls:** the mock's "Book" chip was not built (no booking opener takes a formula); the jar now opens from the
+  panel's Jar button (the name is plain text by TAPPABLE THINGS); Recipe still opens its side sheet; "Wed · 3 booked" = the
+  next booking's day · the number booked to the end of this week; all wording DRAFT (Use, Who's on it, Treating, Batch, At
+  this rate, No one in 12 weeks).
+- **Tested (sandbox, made-up formulas, patients, plans and bookings in memory; pictures from headless Edge at 1280, 1000 and
+  375):** rows at 1280 (50 px), 1220 with and without the panel, 1000 (panel above), 375 (three lines, no sideways scroll);
+  ticks → bulk This week / Next week / a week from ▾, each with Undo; the fold opens and closes; Enter opens a row; a second
+  tap closes; Jar opens the herb form; a patient row opens the profile; Make → tick two → tick all → Finish: jar 0 → 200 g,
+  five herbs deducted, Made today, the toast; the bench's weighing rows still tick at 375; the Dashboard Refill card at 1280;
+  Dispense with a planned empty jar (the tag fits its 150 px cell); the Prescriptions search (10 → 1 → 10); no console errors.
+- **Pages checked for the same facts:** Formula refill (all four tabs), Dashboard (Refill card), Dispense (In stock), the
+  bench. **Not checked:** her real records, her phone, the To Order board's formula "Refill ▾", Inventory, a screen reader.
