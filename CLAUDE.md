@@ -1786,7 +1786,8 @@ BUILD-NOTES.md) the Compass is the one "how have things been" table:** the Goal
 sits under the complaint name (tap to edit), Today is a slider with a number
 (a % box takes any number on % better), every visit's note is kept and last
 visit's shows under today's box, Fang Bing Ren signs she has ANSWERED (never
-ones the app only works out: `phCxSignList`) sit under their body area's complaints,
+ones the app only works out: `phCxSignList`; never a FIXED sign, `phCxFixedKey`, her 2026-10-27: how she is built, family
+history, a tendency to miscarry, the illness's course, "spirit intact" have nothing to rate; temperament keeps its row) sit under their body area's complaints,
 indented with a SIGN tag (see "One table" below; the "Signs · n" line went 2026-10-23),
 each rated Gone · Better · Same · Worse from the next visit on
 (`rec.ccTrack.days[day].sx`; a Gone after her last Yes tap turns today's Bing
@@ -1829,7 +1830,7 @@ Typing searches the Fang Bing Ren signs (`phCxsOptions`, the Fang Bing Ren page'
 each result is that page's question row, Now Yes / No · Usu Yes / No (a Bing sign and its Ren twin = one
 row), saved through `phTriWrite` (the same answer again clears it); a Yes pins its row under the lit
 complaint. Which signs get a Compass row is still `phCxSignList`'s ANSWERED rule (her pick: a Usu Yes adds
-one too). The list stays open for the next tick (Esc / a tap elsewhere closes it), 8 rows then "Show all N",
+one too); a fixed sign's result says "Fixed" where others say "✓ in Compass". The list stays open for the next tick (Esc / a tap elsewhere closes it), 8 rows then "Show all N",
 then "Add as a complaint" / "Add to Watch"; ↑↓ + Enter = Now Yes, Shift+Enter = Usu Yes, Enter with no
 row lit = her words as a complaint.
 **Pain for every plan (her 2026-10-24 "allow for adding pain symptoms for all types of treatment plans",
