@@ -4551,3 +4551,11 @@ then "Yes, all 4 steps".
   Dispense with a planned empty jar (the tag fits its 150 px cell); the Prescriptions search (10 → 1 → 10); no console errors.
 - **Pages checked for the same facts:** Formula refill (all four tabs), Dashboard (Refill card), Dispense (In stock), the
   bench. **Not checked:** her real records, her phone, the To Order board's formula "Refill ▾", Inventory, a screen reader.
+- **LIVE** 2026-10-27, build 20261027-204000 (main abb8510e), on her "push live the formula refill too" + "push live" (said in
+  the "B33 C4 LCM" session, which published it under the lock), alone on top of 194300.
+- **Checked first, read-only on her records** (the candidate from a temporary branch, in a frame on the C6 icon page; nothing
+  saved, no sending): opens with no errors. 90 formulas: `phFormulaUse` and `phRfcFactsHtml` for each, no errors, no negative
+  or NaN grams; 18 used in the last 12 weeks, 9 with a next booking. Formula refill drawn in 0.37 s (Below the line, This week
+  shown); facts opened for 3 used formulas (0.02-0.05 s, the panel's headings shown); Make opened the weighing list (6 herbs,
+  Finish) with no errors, closed without Finish (the log unchanged at 4,191 entries). Dashboard 0.3 s, no errors. Dispense for
+  the 12 latest prescriptions 0.4-0.9 s, no errors, 2 show "To make · Wk".
