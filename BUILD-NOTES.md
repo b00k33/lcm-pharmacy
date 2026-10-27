@@ -4348,6 +4348,19 @@ Her pick 5 ("How long" chips at the door; a longer history adds visits to the fi
   - 1280 (as the mock) and 375 (chips on two lines, nothing cut, page 375 wide). No console errors.
 - **Not checked:** her real records, the Key2, the IVF and Pregnancy questionnaires' own plan starts (cycle courses, +0 anyway).
 
+## Care Plan part 2, steps 2-4 live (2026-10-27)
+- **LIVE** build 20261027-190200 (main 9e77507b) on her "ok push live": steps 2 (58c050a5), 3 (a0dca7e8), 4 (b4364dd1) on top
+  of live 183900; index.html = session-a's at 8f9d35e9. Anything after that (step 5 on) is not in it.
+- **Checked first, read-only on her records** (the candidate from a temporary branch via raw.githubusercontent.com, in a frame on
+  the C6 icon page; nothing saved, no sending):
+  - Opens: busy 2.0 s + 0.4 s + 0.7 s after the page was written, then free; no errors.
+  - Every open Care Plan (101 plans, 99 patients): `phTpAutoDx`, `phTpAutoGoal`, `phCxModel`, `phTpPrvSum`, `phTpPrvHtml`, no
+    errors; slowest `phCxModel` 108 ms. 25 plans have measured rows, 21 show the phase review card today, 8 patients have a How
+    long band.
+  - Today's visit drawn for 12 patients (6 with the review card): 0.9-1.9 s each, Compass and card shown, no errors. The live
+    build before (183900), same 12: 0.9-1.8 s.
+- **Not checked:** the Key2.
+
 ## Care Plan part 2, step 5: blood tests and IVF history in the diagnosis (2026-10-27)
 
 Her picks 6 ("Paste the report": her results live in lab PDFs and emails) and 7 ("Results that count" starts from what is
