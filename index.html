@@ -23313,7 +23313,7 @@
   #pharmacyPage .mk-treat { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; min-width: 0; }
   #pharmacyPage .mk-trow { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 2px 10px; align-items: start; width: 100%; padding: 6px 0; border-top: 1px solid var(--ph-line); }
   #pharmacyPage .mk-trow:first-child { border-top: 0; padding-top: 0; }
-  #pharmacyPage .mk-trow.done .mk-trname { text-decoration: line-through; color: var(--ph-faint); }
+  #pharmacyPage .mk-trow.off .mk-trname { color: var(--ph-faint); }
   #pharmacyPage .mk-tick { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--ph-line); background: var(--ph-white); color: transparent; font-size: var(--fs-11); cursor: pointer; padding: 0; margin-top: 1px; }
   #pharmacyPage .mk-tick.on { background: var(--ph-herb); border-color: var(--ph-herb); color: #fff; }
   #pharmacyPage .mk-trmain { min-width: 0; }
@@ -23373,7 +23373,7 @@
   #pharmacyPage .mk-mu .mk-tick.part { border-color: var(--ph-herb); background: var(--ph-herb-tint); color: var(--ph-herb); }
   #pharmacyPage .mk-muname { padding: 0; min-height: 0; border: 0; background: none; font: 600 var(--fs-12-5) var(--font-body); color: var(--ph-ink); cursor: pointer; text-align: left; }
   #pharmacyPage .mk-muname:hover { color: var(--ph-msk-deep); }
-  #pharmacyPage .mk-mu.done .mk-muname { color: var(--ph-faint); text-decoration: line-through; }
+  #pharmacyPage .mk-mu.off .mk-muname { color: var(--ph-faint); }
   #pharmacyPage .mk-sds { display: inline-flex; gap: 4px; flex: none; }
   #pharmacyPage .mk-sd { width: 22px; height: 22px; min-height: 0; padding: 0; border: 1px solid var(--ph-line); border-radius: 999px; background: var(--ph-white); color: var(--ph-faint); font: 700 var(--fs-10-5) var(--font-body); cursor: pointer; transition: background .15s, color .15s, border-color .15s; }
   #pharmacyPage .mk-sd.on { background: var(--ph-msk); border-color: var(--ph-msk); color: #fff; }
@@ -23597,7 +23597,8 @@
   #pharmacyPage .ph-msk .mk2-goes .mk2-btn { border-color: rgba(255, 255, 255, .45); background: transparent; color: #fff; }
   #pharmacyPage .ph-msk .mk2-goes .mk2-btn:hover { background: rgba(255, 255, 255, .1); }
   /* step 2: a point unticked on the Treatment tab (not needled today) */
-  #pharmacyPage .ph-msk .mk2-ptbl tr.off td.p { color: var(--ph-faint); font-weight: 500; }
+  #pharmacyPage .ph-msk .mk2-ptbl tr.off td.p { color: var(--ph-faint); font-weight: 500; text-decoration: line-through; }
+  #pharmacyPage .ph-msk .mk2-ptbl tr.off td.p small { display: inline-block; width: 100%; }
   /* step 2: the Log's visit line, today's points per area */
   #pharmacyPage .ph-log-mska { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, 2fr) auto; gap: 2px 12px; margin-top: 6px; font-size: var(--fs-12); text-align: left; }
   #pharmacyPage .ph-log-mska > span { display: contents; }
@@ -56601,10 +56602,11 @@
           // Musculoskeletal page (2026-10-11): which muscles were done, with what, and which day's exam it was
           try {
             const mv = phMskToday(rec);
-            if (mv && !presAcuNoTreatment) {
-              const done = Object.keys(mv.treat || {}).map(k => ({ k, label: phMskTreatSide(k), tech: mv.treat[k].tech || "", done: !!mv.treat[k].done }));
-              if (done.length) { session.msk = session.msk || { region: "", muscles: [] }; session.msk.detail = done; }
-              if (phMskCount(mv)) session.mskDay = mv.day;
+            if ((mv || phMskApplies(rec)) && !presAcuNoTreatment) {
+              // her 2026-10-28 (motor points start ticked, like the points): the whole list, last visit's carried ones too; unticked = not needled
+              const tr = phMskPlanOf(rec, mv), done = Object.keys(tr).map(k => ({ k, label: phMskTreatSide(k), tech: tr[k].tech || "", done: !!tr[k].done }));
+              if (done.length) { session.msk = session.msk || { region: "", muscles: [] }; session.msk.detail = done; session.msk.muscles = session.msk.muscles.filter(m => !/ [RL]$/.test(m)).concat(done.filter(d => d.done).map(d => d.label)); }
+              if (mv && phMskCount(mv)) session.mskDay = mv.day;
             }
           } catch (e) { /* the exam page never blocks logging */ }
           // her 2026-10-14 ("the dated Log entry ... yes"): what each pain felt like on the day, kept with the visit (the words on the pain
@@ -119874,7 +119876,7 @@ or changing anything in Cliniko.
     const rom = Object.keys(v.rom || {}).length; if (rom) bits.push(`${rom} ROM`);
     const mm = Object.keys(v.mmt || {}).length; if (mm) bits.push(`${mm} strength`);
     const ts = Object.values(v.tests || {}).filter(x => x === "pos").length; if (ts) bits.push(`${ts} test${ts === 1 ? "" : "s"} +ve`);
-    const tr = Object.keys(phMskPlanOf(rec, v)).length; if (tr) bits.push(`${tr} to motor`);
+    const pv = phMskPlanOf(rec, v), tr = Object.keys(pv).filter(k => pv[k].done).length; if (tr) bits.push(`${tr} to motor`);
     return bits.join(" · ") || "Recorded";
   }
   function phMskLastLine(rec) {
@@ -120385,12 +120387,12 @@ or changing anything in Cliniko.
   const phMskMpLbl = k => { const m = PH_MSK_MU[k.slice(0, -1)]; return m ? `${phMskShort(m)} MP ${k.slice(-1)}` : k; };
   function phMskAreasToday(name, plan) {
     const list = phMskPainsFor(name, plan), rec = phPatientPeek(name) || {}, vis = phMskToday(rec), prev = phMskPrev(rec), plan0 = phMskPlanOf(rec, vis);
-    const mpsOf = key => Object.keys(plan0).filter(k => { if (!PH_MSK_MU[k.slice(0, -1)]) return false; const o = phMskMuPain(list, k); return key == null ? !o : !!o && phMskPainKey(o) === key; });
+    const mpsOf = key => Object.keys(plan0).filter(k => { if (!PH_MSK_MU[k.slice(0, -1)] || !plan0[k].done) return false; const o = phMskMuPain(list, k); return key == null ? !o : !!o && phMskPainKey(o) === key; });
     const out = list.map(p => { const key = phMskPainKey(p), sc = (vis && vis.pains && vis.pains[key]) || {}; return { p, key, dx: String(p.dx || "").trim(), pts: phMskAcuOf(rec, vis, prev, p).pts, mps: mpsOf(key), now: sc.now, after: sc.after }; });
     const rest = mpsOf(null); if (rest.length) out.push({ p: null, key: "", dx: "", pts: [], mps: rest });
     return out;
   }
-  // what an area sends on: its motor points, then the points she did not untick (every area: one list, no repeats)
+  // what an area sends on: its motor points, then its points, each one she did not untick (every area: one list, no repeats)
   const phMskAreaLbls = a => a.mps.map(phMskMpLbl).concat(a.pts.filter(x => !x.off).map(phMskPtLbl));
   const phMskPtLbls = areas => [...new Set(areas.flatMap(phMskAreaLbls))];
   // the Care Plan phase today's points belong to: the phase picked for today on the Treatment tab, else the live one
@@ -120532,24 +120534,24 @@ or changing anything in Cliniko.
   function phMskPanelHtml(ctx) {
     const mpKeys = PH_MSK_MUSCLES.flatMap(m => [m.id + "R", m.id + "L"]).filter(k => ctx.plan0[k]);
     const tech = (k, e) => `<select class="mk2-tech" data-msk-tech="${k}" aria-label="Technique">${PH_MSK_TECH.map(([v, l]) => `<option value="${v}"${e.tech === v ? " selected" : ""}>${l}</option>`).join("")}</select>`;
-    const mpRow = k => { const m = PH_MSK_MU[k.slice(0, -1)], e = ctx.plan0[k], car = !!e.carried; return `<tr class="${phMskFresh.has("m:" + k) ? "new" : ""}${car ? " carried" : ""}"><td class="p">${esc(phMskShort(m))}${m.caution ? `<span class="mk2-warn" title="${esc(m.caution)}">${phMskIc("warn")}</span>` : ""}<small>MP · near ${esc(m.acu)}${car && ctx.prev ? " · " + esc(phCycShortLbl(ctx.prev.day)) : ""}</small></td><td class="s">${k.slice(-1)}</td><td>${tech(k, e)}</td><td><button type="button" class="mk2-x" data-msk="mpt" data-v="${k}" aria-label="Take out the motor point, ${esc(m.name)}" title="Motor point out (keeps the finding)">✕</button></td></tr>`; };
+    const mpRow = k => { const m = PH_MSK_MU[k.slice(0, -1)], e = ctx.plan0[k], car = !!e.carried; return `<tr class="${phMskFresh.has("m:" + k) ? "new" : ""}${car ? " carried" : ""}${e.done ? "" : " off"}"><td class="p">${esc(phMskShort(m))}${m.caution ? `<span class="mk2-warn" title="${esc(m.caution)}">${phMskIc("warn")}</span>` : ""}${e.done ? `<small>MP · near ${esc(m.acu)}${car && ctx.prev ? " · " + esc(phCycShortLbl(ctx.prev.day)) : ""}</small>` : `<small title="Unticked on the Treatment tab">MP · not today</small>`}</td><td class="s">${k.slice(-1)}</td><td>${tech(k, e)}</td><td><button type="button" class="mk2-x" data-msk="mpt" data-v="${k}" aria-label="Take out the motor point, ${esc(m.name)}" title="Motor point out (keeps the finding)">✕</button></td></tr>`; };
     let total = 0;
     const groups = ctx.list.map(p => {
       const key = phMskPainKey(p), reg = PH_PAIN_REGIONS.REGIONS[p.r], ek = esc(key);
       const mine = mpKeys.filter(k => { const o = phMskMuPain(ctx.list, k); return o && phMskPainKey(o) === key; });
       const acu = phMskAcuOf(ctx.rec, ctx.vis, ctx.prev, p);
-      total += mine.length + acu.pts.filter(x => !x.off).length;
+      total += mine.filter(k => ctx.plan0[k].done).length + acu.pts.filter(x => !x.off).length;
       const pts = acu.pts.map((x, i) => `<tr class="${phMskFresh.has(`p:${key}|${i}`) ? "new" : ""}${acu.carried ? " carried" : ""}${x.off ? " off" : ""}"><td class="p">${esc(x.p)}${x.off ? `<small title="Unticked on the Treatment tab">not today</small>` : x.src === "set" ? `<small>your set</small>` : x.src === "ashi" ? `<small>tender spot</small>` : acu.carried ? `<small>${esc(phCycShortLbl(acu.carried))}</small>` : ""}</td><td class="s"><button type="button" class="mk2-sd" data-msk="pside" data-v="${ek}|${i}" aria-label="${esc(x.p)} side ${x.s}" title="Side">${x.s === "B" ? "Both" : x.s === "C" ? "Centre" : x.s}</button></td><td></td><td><button type="button" class="mk2-x" data-msk="prm" data-v="${ek}|${i}" aria-label="Remove ${esc(x.p)}">✕</button></td></tr>`).join("");
       const sk = phMskSetKey(p.dx), set = sk && phMskSets()[sk];
       const setBtn = sk && acu.pts.length ? (!set ? `<button type="button" class="mk2-btn gold" data-msk="setsave" data-v="${ek}">Save as my set</button>` : acu.from !== sk || acu.edited ? `<button type="button" class="mk2-btn gold" data-msk="setsave" data-v="${ek}">Update my set</button>` : `<span class="mk2-tag">from your set</span>`) : "";
       return `<div class="mk2-pg${ctx.lit === key ? " lit" : ""}" data-mk-pg="${ek}"${PH_MSK_PAINREG[p.r] ? ` data-mk-reg="${PH_MSK_PAINREG[p.r]}"` : ""}><div class="mk2-pgh"><b>${esc(phMskCap(reg.label))} · ${p.s === "C" ? "centre" : p.s === "B" ? "both" : p.s}</b><span>${esc(p.dx || "no diagnosis yet")}</span></div>${mine.length || acu.pts.length ? `<table class="mk2-ptbl"><tbody>${mine.map(mpRow).join("")}${pts}</tbody></table>` : ""}<div class="mk2-padd"><input type="text" class="field-bare" data-mk-padd="${ek}" placeholder="+ point" autocomplete="off" spellcheck="false" aria-label="Add a point, ${esc(phPmSideName(reg, p.s))}"><button type="button" class="mk2-btn${acu.pts.some(x => x.src === "ashi") ? " on" : ""}" data-msk="ashi" data-v="${ek}" aria-pressed="${acu.pts.some(x => x.src === "ashi")}">Ashi</button>${setBtn}</div></div>`;
     }).join("");
     const rest = mpKeys.filter(k => !phMskMuPain(ctx.list, k));
-    total += rest.length;
+    total += rest.filter(k => ctx.plan0[k].done).length;
     // where today's points go (the mock's three lines): the Treatment tab (the same list), the Care Plan phase's Points (a blank one fills
     // at ✓ Complete session; different ones are replaced only on her → plan tap), the Log (per area, at ✓ Complete session)
     const pl = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
-    const nMp = mpKeys.length, nPt = ctx.list.reduce((n, p) => n + phMskAcuOf(ctx.rec, ctx.vis, ctx.prev, p).pts.filter(x => !x.off).length, 0);
+    const nMp = mpKeys.filter(k => ctx.plan0[k].done).length, nPt = ctx.list.reduce((n, p) => n + phMskAcuOf(ctx.rec, ctx.vis, ctx.prev, p).pts.filter(x => !x.off).length, 0);
     const want = phMskPtLbls(phMskAreasToday(ctx.name, ctx.plan)).join(", "), ph = phMskPhaseOf(ctx.rec, ctx.plan), cur = ph ? phAcuSplitList(ph.points).join(", ") : "";
     const cpTxt = !want ? "—" : !cur ? "blank" : cur === want ? "✓ same" : "other points";
     const cp = ph ? `<div class="r"><b>Care Plan</b><span${!want ? "" : !cur ? ` title="Fills at ✓ Complete session"` : cur !== want ? ` title="${esc(cur)}"` : ""}>${esc(ph.label)} · ${cpTxt}</span>${cur && want && cur !== want ? `<button type="button" class="mk2-btn" data-msk="toplan">→ plan</button>` : "<span></span>"}</div>` : "";
@@ -120756,15 +120758,15 @@ or changing anything in Cliniko.
   }
   // the Treatment tab's "Muscles to motor" draft (presTsMsk -> session.msk) follows the page's ticks
   function phMskSyncDraft(rec) {
-    const v = phMskToday(rec), keys = Object.keys((v && v.treat) || {}), labels = keys.map(phMskTreatSide);
+    const tr = phMskPlanOf(rec), labels = Object.keys(tr).filter(k => tr[k].done).map(phMskTreatSide);
     const keep = ((presTsMsk && presTsMsk.muscles) || []).filter(m => !/ [RL]$/.test(m));
     presTsMsk = labels.length || keep.length ? { region: (presTsMsk && presTsMsk.region) || "", muscles: keep.concat(labels) } : null;
   }
   /* ---- the motor-point muscle plan (her 2026-10-14, "motor point treatment muscle plan next to pain ... sync to the treatment page") ----
-     ONE list drawn under each pain on the page, on the Summary tab and on the Treatment tab. It is today's own ticks (vis.treat) plus last
-     visit's muscles carried in, unticked: the carried ones are derived on read and become today's own entry the moment she touches them
-     (tick, technique, side); a removed one is remembered in vis.treatOff. Only today's OWN entries reach the Treatment tab draft
-     (phMskSyncDraft) and the Log, so a carried muscle she never touched is never logged. */
+     ONE list drawn under each pain on the page, on the Summary tab and on the Treatment tab. It is today's own entries (vis.treat) plus last
+     visit's muscles carried in: the carried ones are derived on read and become today's own entry the moment she touches them
+     (tick, technique, side); a removed one is remembered in vis.treatOff. Her 2026-10-28 ("ok", so both lists work the same way): every
+     motor point starts ticked, carried ones too; untick = not needled today, left out of the draft (phMskSyncDraft), Points and the Log. */
   const PH_MSK_TECH_NAME = Object.fromEntries(PH_MSK_TECH);
   var phMskMuAdd = null;               // view state: { key: "planId|painIdx", q } the open "Muscle" search box
   var phMskMuOpen = new Set();         // view state: muscle ids whose detail is open
@@ -120817,8 +120819,9 @@ or changing anything in Cliniko.
   }
   function phMskPlanOf(rec, vis) {
     const v = vis || phMskToday(rec), own = (v && v.treat) || {}, off = (v && v.treatOff) || {}, prev = phMskPrev(rec), out = {};
-    if (prev && prev.treat) Object.keys(prev.treat).forEach(k => { if (!own[k] && !off[k] && PH_MSK_MU[k.slice(0, -1)]) out[k] = { tech: prev.treat[k].tech != null ? prev.treat[k].tech : "mp", done: false, carried: true }; });
-    Object.keys(own).forEach(k => { out[k] = own[k]; });
+    // last visit's order first, so a carried one she unticks (it becomes today's own) keeps its row
+    if (prev && prev.treat) Object.keys(prev.treat).forEach(k => { if (own[k]) out[k] = own[k]; else if (!off[k] && PH_MSK_MU[k.slice(0, -1)]) out[k] = { tech: prev.treat[k].tech != null ? prev.treat[k].tech : "mp", done: true, carried: true }; });
+    Object.keys(own).forEach(k => { if (!out[k]) out[k] = own[k]; });
     return out;
   }
   // the plan grouped by muscle (library order): { id, m, sides: { R?: entry, L?: entry } }
@@ -120832,7 +120835,7 @@ or changing anything in Cliniko.
     return PH_MSK_MUSCLES.map(m => by[m.id]).filter(Boolean);
   }
   // writes act on today's own record (called inside phMskWrite)
-  function phMskPlanAdd(vis, key, tech) { vis.treat = vis.treat || {}; if (!vis.treat[key]) vis.treat[key] = { tech: tech != null ? tech : "mp", done: false }; if (vis.treatOff) delete vis.treatOff[key]; }
+  function phMskPlanAdd(vis, key, tech) { vis.treat = vis.treat || {}; if (!vis.treat[key]) vis.treat[key] = { tech: tech != null ? tech : "mp", done: true }; if (vis.treatOff) delete vis.treatOff[key]; }
   function phMskPlanEntry(vis, rec, key) {
     if (!(vis.treat && vis.treat[key])) { const c = phMskPlanOf(rec, vis)[key]; phMskPlanAdd(vis, key, c ? c.tech : "mp"); }
     return vis.treat[key];
@@ -120849,8 +120852,8 @@ or changing anything in Cliniko.
     const tech = mu.sides[sides[0]].tech, tn = PH_MSK_TECH_NAME[tech] || "Technique";
     const sd = S => `<button type="button" class="mk-sd${mu.sides[S] ? " on" : ""}" data-msk="mu-side" data-v="${m.id}:${S}" aria-pressed="${mu.sides[S] ? "true" : "false"}" aria-label="${S === "R" ? "Right" : "Left"} side">${S}</button>`;
     const det = open ? `<div class="mk-mudet"><div class="mk-sub"><b>Motor point</b> ${esc(m.mp)}</div><div class="mk-sub"><b>Nerve</b> ${esc(m.nerve)}</div>${m.caution ? `<div class="mk-care">${esc(m.caution)}</div>` : ""}<div class="mk-pills">${PH_MSK_TECH.map(([id, l]) => `<button type="button" class="mk-pill sm${tech === id ? " on" : ""}" data-msk="mu-tech" data-v="${m.id}:${id}" aria-pressed="${tech === id ? "true" : "false"}">${l}</button>`).join("")}</div></div>` : "";
-    return `<div class="mk-mu${all ? " done" : ""}${phMskMuFresh === m.id ? " in" : ""}" data-mu="${m.id}"><div class="mk-muline">
-      <button type="button" class="mk-tick${all ? " on" : part ? " part" : ""}" data-msk="mu-done" data-v="${m.id}" aria-pressed="${all ? "true" : "false"}" aria-label="Done today">✓</button>
+    return `<div class="mk-mu${nDone ? "" : " off"}${phMskMuFresh === m.id ? " in" : ""}" data-mu="${m.id}"><div class="mk-muline">
+      <button type="button" class="mk-tick${all ? " on" : part ? " part" : ""}" data-msk="mu-done" data-v="${m.id}" aria-pressed="${all ? "true" : "false"}" aria-label="Needled today" title="Untick = not needled today">✓</button>
       <button type="button" class="mk-muname" data-msk="mu-open" data-v="${m.id}" aria-expanded="${open}">${esc(m.name)}</button>
       <span class="mk-sds" role="group" aria-label="Side">${sd("R")}${sd("L")}</span>
       <button type="button" class="mk-tpill${tech ? " on" : ""}" data-msk="mu-open" data-v="${m.id}" tabindex="-1">${esc(tn)}</button>
@@ -121246,7 +121249,7 @@ or changing anything in Cliniko.
   function phMskTreatRowHtml(name, rec, plan) {
     const v = phMskToday(rec), tr = phMskPlanOf(rec), keys = Object.keys(tr), measured = phMskCount(v) > 0;
     const techPills = k => PH_MSK_TECH.map(([id, l]) => `<button type="button" class="mk-pill sm${tr[k].tech === id ? " on" : ""}" data-msk="ttech" data-v="${k}:${id}" aria-pressed="${tr[k].tech === id ? "true" : "false"}">${l}</button>`).join("");
-    const list = keys.map(k => { const m = PH_MSK_MU[k.slice(0, -1)]; if (!m) return ""; return `<div class="mk-trow${tr[k].done ? " done" : ""}"><button type="button" class="mk-tick${tr[k].done ? " on" : ""}" data-msk="tdone" data-v="${k}" aria-pressed="${tr[k].done ? "true" : "false"}" aria-label="Done">✓</button>
+    const list = keys.map(k => { const m = PH_MSK_MU[k.slice(0, -1)]; if (!m) return ""; return `<div class="mk-trow${tr[k].done ? "" : " off"}"><button type="button" class="mk-tick${tr[k].done ? " on" : ""}" data-msk="tdone" data-v="${k}" aria-pressed="${tr[k].done ? "true" : "false"}" aria-label="Needled today" title="Untick = not needled today">✓</button>
         <div class="mk-trmain"><div class="mk-trtop"><b class="mk-trname">${esc(m.name)}</b> <span class="mk-side">${k.slice(-1)}</span> <span class="mk-tracu">${esc(m.acu)}</span></div><div class="mk-sub">${esc(m.mp)}</div>${m.caution ? `<div class="mk-care">${esc(m.caution)}</div>` : ""}</div><span class="mk-pills">${techPills(k)}</span></div>`; }).join("");
     const extra = ((presTsMsk && presTsMsk.muscles) || []).filter(x => !/ [RL]$/.test(x));
     return `<tr class="mk-trrow"><td>Range of motion / MSK</td><td class="since${measured ? "" : " empty"}">${measured ? esc(phMskSummary(rec)) : "not examined today"}</td><td colspan="2"><span class="ph-ts-chips">${extra.map(x => `<button type="button" class="ph-ts-chip on" data-ts="muscle" data-v="|${esc(x)}">Motor points: ${esc(x)}</button>`).join("")}<button type="button" class="ph-ts-chip action" data-flow-go="msk">Open Musculoskeletal</button></span></td></tr>${list ? `<tr class="mk-trlist"><td colspan="4"><div class="mk-treat">${list}</div></td></tr>` : ""}`;
