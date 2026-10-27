@@ -4489,3 +4489,12 @@ step 8 too" came through the B33 C4 LCM session.
   scores (Treat + Phase only). 800 wide and 375 (no page overflow on the six changed pages). "Zed Testtwo": plan 0.16 s, Fang
   Bing Ren 0.31 s, Today 0.20 s. No console errors.
 - **Not checked:** her real records; pasting into Cliniko itself (the sandbox pane blocks the clipboard: the box shows the text).
+- **LIVE** 2026-10-27, build 20261027-194300 (main 569e53b3), on her "push live step 7 too" + "push live step 8 too", alone on
+  top of 191600; built from the commit (another session's unsaved Formula refill work in the working file is not in it).
+- **Checked first, read-only on her records** (the candidate from a temporary branch, in a frame on the C6 icon page; nothing
+  saved, no sending, clipboard / print / new windows stubbed): opens with no errors. `phCnText` for the 99 patients with an
+  open plan: no errors, slowest 182 ms, never "undefined" / "NaN" / "null"; Treat line 92, Phase 94, Dx 32, Watch 29.
+  `phCnPlanLines`, `phCnPhaseText`, `phTpWatchData` for all 101 plans: no errors. Fang Bing Ren, Ren, Medical history and
+  Today's visit opened through the app for 6 patients: no errors, the window never wider than itself; times match the live
+  build before (191600) on the same 6 (Fang Bing Ren 1.9-3.2 s vs 1.1-3.0 s; Ren, Medical history, Today's visit within
+  0.1 s).
