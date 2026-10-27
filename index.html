@@ -26801,6 +26801,20 @@
 #pharmacyPage .ph-tp-dxsg .ph-pat-ic { width: 12px; height: 12px; flex: none; color: var(--ph-herb); }
 #pharmacyPage .ph-tp-dxw .ph-tp-dxgrp + .ph-tp-dxgrp { margin-top: 4px; }
 #pharmacyPage .ph-tp-notyet { color: var(--ph-faint); opacity: .8; }
+#pharmacyPage .ph-tp-watch > b .cnt { color: var(--ph-herb); }
+#pharmacyPage .ph-tp-watch .wt { display: grid; grid-template-columns: minmax(0, 1fr) auto 64px; gap: 10px; align-items: center; padding: 5px 8px; border-radius: 6px; }
+#pharmacyPage .ph-tp-watch .wt:nth-child(odd) { background: var(--ph-paper); }
+#pharmacyPage .ph-tp-watch .wt .n { min-width: 0; display: inline-flex; align-items: center; gap: 6px; color: var(--ph-ink); }
+#pharmacyPage .ph-tp-watch .wt.mn .n { font-weight: 600; }
+#pharmacyPage .ph-tp-watch .wt .n .ph-pat-ic { width: 12px; height: 12px; flex: none; color: var(--ph-herb); }
+#pharmacyPage .ph-tp-watch .wt .v { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+#pharmacyPage .ph-tp-watch .wt.rf .n { color: var(--ph-zero-deep); }
+#pharmacyPage .ph-tp-watch .tg { justify-self: end; height: 20px; padding: 0 8px; border-radius: 999px; display: inline-flex; align-items: center; font-size: var(--fs-11); font-weight: 700; }
+#pharmacyPage .ph-tp-watch .tg.better { background: var(--ph-good-tint); color: var(--ph-good-deep); }
+#pharmacyPage .ph-tp-watch .tg.same { background: var(--ph-paper); color: var(--ph-soft); box-shadow: inset 0 0 0 1px var(--ph-line); }
+#pharmacyPage .ph-tp-watch .tg.worse { background: var(--ph-zero-tint); color: var(--ph-zero-deep); }
+@media (max-width: 480px) { #pharmacyPage .ph-tp-watch .wt { grid-template-columns: minmax(0, 1fr) auto; } #pharmacyPage .ph-tp-watch .wt .tg, #pharmacyPage .ph-tp-watch .wt > span:empty { display: none; } }
+
 @media (max-width: 480px) { #pharmacyPage .ph-tp-treat .tr { grid-template-columns: 14px minmax(0, 1fr); } #pharmacyPage .ph-tp-treat .tr .g { grid-column: 2; text-align: left; } #pharmacyPage .ph-tp-coursedd { max-width: 160px; } }
 
 #pharmacyPage .ph-tp-ccband .id .ph-tp-bandst { margin-left: 0; vertical-align: 0; }
@@ -111332,6 +111346,7 @@ or changing anything in Cliniko.
     return `<div class="ph-tp-fg" data-tp-fgbox="${plan.id}" data-tp-fgname="${esc(name)}">
       ${modal ? "" : goalRow}
       ${focusRow}
+      ${modal ? "" : phTpWatchHtml(name, plan)}
       ${modal ? "" : phTpFxFmRowHtml(name, plan)}
       ${modal ? goalRow : ""}
     </div>`;
@@ -111550,6 +111565,42 @@ or changing anything in Cliniko.
       ? rows.map(r => `<div class="tr">${r.star ? `<i class="st" title="Main">★</i>` : "<i></i>"}<b>${esc(r.text)}</b><span class="g">${esc(r.goal || "")}</span></div>`).join("")
       : `<span class="ph-tp-notyet">not yet</span>`;
     return `<div class="kv kvx ph-tp-treat"><b>Treat${rows.length ? ` <span class="cnt">${rows.length}</span>` : ""}</b><div class="vx">${body}<div class="ph-tp-dxmore"><span class="ph-tp-dx-acts"><button type="button" class="ph-tp-dx-btn" data-tp-fg="goal" ${fgIds}>Edit</button></span></div></div></div>`;
+  }
+  // Watch, one list (her 2026-10-27 picks "One list" and "6 → 4 Better"): the rows Today's visit scores (each concern's first
+  // score against its latest, the signs she rated there), then the signs behind the diagnosis that come from what the patient
+  // tells her (Fang Bing Ren answers, the cycle log, notes, diet; an exam finding is re-checked on its own page), then the
+  // red flags with their last answer. Read from the Compass model and the plan, never stored.
+  const PH_TP_WATCH_SRC = new Set(["tri", "cycle", "usual", "notes", "diet"]);
+  function phTpWatchHtml(name, plan) {
+    let M = null; const keepAt = phCxAt; phCxAt = null;   // always today here, whatever visit the Scoring bar has open
+    try { M = phCxModel(name, plan); } catch (e) { M = null; } finally { phCxAt = keepAt; }
+    const word = Object.fromEntries(PH_CX_SX), rows = [], seen = new Set(), low = s => String(s || "").replace(/\s*\([^)]*\)\s*$/, "").trim().toLowerCase();
+    const tag = d => d ? `<span class="tg ${d}">${d === "better" ? "Better" : d === "worse" ? "Worse" : "Same"}</span>` : "<span></span>";
+    if (M) M.rows.forEach(r => {
+      if (r.kind === "cc") {
+        const s = r.s, pts = (s.trk && s.trk.pts) || [], base = s.trk && s.trk.base, last = pts[pts.length - 1], moved = !!(base && last && last.day !== base.day);
+        seen.add(low(s.text));
+        rows.push(`<div class="wt${s.main ? " mn" : ""}"><span class="n">${esc(s.text)}</span><span class="v">${!last ? "–" : moved ? `${phCxR1(base.v)} → ${phCxR1(last.v)}` : phCxR1(last.v)}</span>${tag(moved && s.cb ? phCxDir(r, s.cb.d) : null)}</div>`);
+      } else if (r.kind === "sx" && r.x) {
+        const h = (r.hist || []).filter(x => x && word[x.v]), a = h[0], z = h[h.length - 1], lab = `${r.x.subj}: ${r.x.desc}`;
+        seen.add(low(lab));
+        rows.push(`<div class="wt"><span class="n">${esc(lab)}</span><span class="v">${!z ? "–" : a.day !== z.day ? `${esc(word[a.v])} → ${esc(word[z.v])}` : esc(word[z.v])}</span>${tag(z && r.cb ? phCxDir(r, r.cb.d) : null)}</div>`);
+      }
+    });
+    let dx = null; try { dx = phTpAutoDx(name, plan, true); } catch (e) { dx = null; }
+    const snaps = (plan && plan.progressSnaps) || [], first = snaps[0], had = new Set(first ? first.dx.flatMap(d => d.keys || []) : []);
+    if (dx) dx.pats.forEach(p => (p.matched || []).forEach(c => {
+      const k = low(c.text); if (!PH_TP_WATCH_SRC.has(c.src) || !k || seen.has(k)) return; seen.add(k);
+      const m = PH_PAT_SRC[c.src] || PH_PAT_SRC.notes;
+      rows.push(`<div class="wt"><span class="n" title="${esc(m[0])}">${phPatIc(m[1])}${esc(c.text)}</span><span class="v">${!first ? "Yes" : had.has(c.key) ? "Yes → Yes" : "New"}</span>${tag(first && had.has(c.key) ? "same" : null)}</div>`);
+    }));
+    let ph = null; try { ph = plan ? phTpFxLivePh(name, plan.id) : null; } catch (e) { ph = null; }
+    const rec = phPatientPeek(name), days = rec ? Object.keys(phCxDays(rec)).sort().reverse() : [];
+    phRfOfPhase(plan, ph).forEach(fl => {
+      let v = ""; for (const d of days) { const x = phRfDay(rec, d)[fl.key]; if (x && x.v) { v = x.v; break; } }
+      rows.push(`<div class="wt rf"><span class="n">⚠ ${esc(fl.text)}</span><span class="v">${v === "y" ? "Yes" : v === "n" ? "No" : "–"}</span><span></span></div>`);
+    });
+    return `<div class="kv kvx ph-tp-watch"><b title="The same rows Today's visit scores">Watch${rows.length ? ` <span class="cnt">${rows.length}</span>` : ""}</b><div class="vx">${rows.join("") || `<span class="ph-tp-notyet">not yet</span>`}</div></div>`;
   }
   function phTpTitleHtml(name, plan) {
     if (phTpRenameOpen === plan.id) {
