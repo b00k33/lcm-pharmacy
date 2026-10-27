@@ -4208,3 +4208,9 @@ Her report: "the app has been freezing and taking a long time to load on the des
   Scores line with a told row rated (it reads `r.x.label` and the word), the letter, her real records, the Key2.
 - **Disclosed:** the mock drew Tongue / Pulse rows with Better / Same / Worse; those are measured on their own pages, so step 2
   brings them in read from those pages (first → latest), a tap opening the page, never rated twice.
+
+**LIVE 2026-10-27, build 20261027-180100 (main b537f7e4):** her "push live": the freeze fix (10af1050) alone on top of live
+165700 (index.html + sw.js); the Compass commit 70c34045 on session-a is not in it. Joined back as d02d48e5. Checked after:
+the live build, read-only on her records (670 patients, 267 bookings), opens on Appointments with no errors; busy about
+2 s at first, then a few short busy moments (0.4 to 1 s) over the next 10 s. She closes the frozen window and opens LCM
+again to get it.
