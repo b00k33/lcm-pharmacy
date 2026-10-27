@@ -3767,3 +3767,6 @@ the link in a frame with a stand-in database: both "+ Something else", the patie
 Pictures: headless Edge at her 1220px window and a 360px phone.
 **Not tested:** her real patients, a real link sent and opened on a phone, the Key2.
 Built, NOT live: waits for her "push live".
+**LIVE** 2026-10-27 (her "push live"), build 20261027-131600 (main 2503a119), joined into session-a as 6cdbdb54 (tree unchanged),
+under the publish lock. Checked on the live site: the new stamp in index.html and sw.js, the Other condition code in index.html,
+"+ Something else" in intake.html.
