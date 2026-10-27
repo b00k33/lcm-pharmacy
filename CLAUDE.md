@@ -1299,6 +1299,18 @@ address on file with the page as text ("Dear <first name>," first), and the same
 (`phMsgPrepare`, context careplan, label "Care plan") for her to tick Sent; no address = "No email on file". The stage-by-stage
 Patient letter is unchanged.
 
+**Part 2, step 7: the profile's second pass + Copy notes carries the plan (her pick "Shorter profile, second pass"; BUILD-NOTES
+"Care Plan part 2, step 7"):** Fang Bing Ren's two band names are said once, over the board ("Same fact, today and usually then
+Only on one side", `.ph-bd-key`); inside an area the twins come first and a dashed line starts the one-side lists. The Tongue &
+pulse area's rows drop "Tongue:" / "Tongue coat:" / "Pulse:" under their group's heading (noSubj, as the other areas). A sign that
+is only "present" (Cough: present) is a ✓ under its heading, the words in the hover (`phSignDescHtml`). The empty runs in Tongue &
+pulse read "–" (the words in the hover). Medical history's "✓ Asked all" reads "✓ All" (hover "Asked all: the rest are No"). The
+door's "Skip for now" lost "— see her profile without a plan" (hover); the Ren heading reads "→ <formula>" (was "Points toward");
+an empty Visit record is the faded "not yet". **Copy notes** ends with the plan (`phCnPlanLines`): Treat (each concern with its
+target), Dx (her words, else Likely, then "possible: …"), Watch (`phTpWatchData(...).txt`: first → latest and its word, a rated
+sign's word, the measured rows, a red flag answered Yes), Phase (`phCnPhaseText`: "Acute 2/4"; the day the review moved it
+"Acute 4/4 → Subacute" / "· staying 2 more visits" / "· plan closed"; a cycle plan names its phase only).
+
 **Diagnosis + Goal write themselves** (`phTpAutoDx`, `phTpAutoGoal`): every
 Likely or Possible pattern (plus any she agreed) minus the ones she took
 off; Goal = one line per complaint in the Compass's order (her own Goal
