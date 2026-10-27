@@ -3837,3 +3837,6 @@ numbers, Legs / Shoulder light only their group and exercises, a muscle tap and 
 ring 2/9, numbers, coach per card, ribbon done 2/9, Legs dims the other cards, all sets → trophy. Headless Edge 1220 + 360
 (shots-s7.ps1); at 360 nothing past the edge on Fitness, Exercises, Where it hurts, Workout Mode; no console errors.
 **Not tested:** the Key2, her real record, a real deload week on the calendar (next week, 2 Nov).
+**LIVE** 2026-10-27 (her "push live"), build 20261027-141000 (main 48b67ec8), joined into session-a as 1b33bdfd (tree
+unchanged); published from a private index under the publish lock (live main differed from session-a only by step 3 and the
+stamps). Checked on the live site: the stamp in index.html and sw.js, `phFitWmHero`, `phFitSumHtml`, `PH_FIT_RESTWD`, `tileSvg`.

@@ -1606,7 +1606,7 @@ else the reference entry for that exercise, else C22's name rule, else Bodyweigh
 exercise, a template exercise, Workout Mode's cards and a reference entry; a template's barbell exercise shows the bar loaded
 for its heaviest set (`phFitPlatesHtml`).
 **Step 3** (her "build step 3", 10/27: the plan had two steps, so step 3 = the rest of C22's Fitness; her 10 picks, all of them;
-BUILD-NOTES "Fitness step 3"): BUILT 9551472c, not live. The coach line (`phFitCoach`: Last · PR with the trophy, gold past it ·
+BUILD-NOTES "Fitness step 3"): BUILT 9551472c, LIVE 10/27 (her "push live"), build 20261027-141000 (main 48b67ec8). The coach line (`phFitCoach`: Last · PR with the trophy, gold past it ·
 "▲ n kg vs last time" · "No history yet") on a template exercise, her exercise and each Workout Mode card (before today there);
 the ribbon (`phFitRib`) in a template and on each card; a template's summary (`phFitSumHtml`: map, numbers, group buttons;
 `phFitHl` lights a group's exercises, a tap on a muscle does too); Workout Mode's top (`phFitWmWeek` dots, `phFitWmHero`: figures
