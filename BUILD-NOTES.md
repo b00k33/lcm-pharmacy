@@ -4316,7 +4316,13 @@ are fixed too; temperament (sensitive, timid, sullen) stays rateable.
 - **Tested (sandbox, made-up "Fay Test": eyes round, full-figured, family diabetes, miscarriage, lips large, irritable, heavy
   bleeding, sensitive):** before, 7 sign rows (Ask 0/8); after, 3 (heavy bleeding, irritable, sensitive; Ask 0/4). The search
   shows "Eyes: round · Fixed". Prescriptions search: 10 → "Fay" 1 → cleared 10.
-- **Not checked:** her real records with the new build, the Key2.
+- **LIVE** 2026-10-27, build 20261027-183900 (main 2e3a6972), published alone on her "push live"; Care Plan part 2 steps 2-4
+  (58c050a5, a0dca7e8, b4364dd1) not in it.
+- **Her records, read-only, the live build** (C6 icon host, nothing saved): opened with no errors; 670 patients, Compass sign
+  rows 270 → 235 (the 35 fixed rows gone: family diabetes 10, eyes round 5, full-figured 5, muscle toned 3, heavyset 2,
+  upper-heavy 2, lips 2, and 1 each of miscarriage, fair skin, slim, thin legs, eyes downturned, eyes almond); 4 patients had
+  only fixed rows and now have none; temperament rows kept (4).
+- **Not checked:** the Key2.
 
 ## Care Plan part 2, step 4: course length from the patient (2026-10-27)
 
