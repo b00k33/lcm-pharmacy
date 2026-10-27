@@ -1597,8 +1597,8 @@ her words "add a steps count to my fitness page ... use james clear atomic habit
 Since 2026-10-27 (her synth22 "wheres the page for exercises?" + "move fitness page from c22 to lcm so i cna plan and log my
 exercise", picks 9 to 13 on `meals-fitness-plan-2026-10-26.html`, round 2 on `meals-fitness-mock-2026-10-26.html`, her answers
 10/27 + "Yes, build it"; BUILD-NOTES "Fitness + Exercises"). **Only on her own record.** Step 1 of 2 (plan + log) + climbing (LIVE 10/27, build 20261027-112700).
-Step 2 (her pick 11, her "build step 2" 10/27; BUILD-NOTES "Fitness step 2") is BUILT, committed on session-a (a80ee554 +
-4cf7f3e2), NOT live: it goes live only on her "push live".
+Step 2 (her pick 11, her "build step 2" 10/27; BUILD-NOTES "Fitness step 2") is LIVE 10/27 (her "push live"), build
+20261027-122700 (main e2fc50dd; commits a80ee554 + 4cf7f3e2).
 - **Fitness** (Body, `phHubFitHtml`): Bring in (her C22 fitness, once: library, templates, log, planned, stairs, week plan; C22's
   keys are READ, never written) · This week (workout + rehab routines and Steps, a dot a day = the Habits reads and ticks, one tick
   both pages) · **Weekly plan** = her calendar's routines (`phFitPlanApply`: a day set to a type moves that weekday to the routine of

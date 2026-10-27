@@ -3698,4 +3698,5 @@ loop), a muscle from a chip and from a tap on the figure, Back, a check (scarf w
 her right side from her log, the source chip opens its page, the pain door from Today and from Workout Mode, the Reference row
 in Goblet squat. 1220px and 360px headless Edge shots; nothing past the edge at 360; no console errors.
 **Not tested:** the Key2 itself (repaint ~0.09 s at 1220 on this PC with an entry open), her real record.
-**NOT LIVE**: waits for her "push live".
+**LIVE** 2026-10-27 (her "push live"), build 20261027-122700 (main e2fc50dd), joined into session-a as 2ca8bc75 (tree
+unchanged); published from a private index (another session's tracked mock edit blocks publish-live.sh), under the publish lock.
