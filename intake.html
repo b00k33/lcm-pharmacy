@@ -67,6 +67,13 @@
   .supp-row { display: grid; grid-template-columns: minmax(0, 1fr) 110px 32px; gap: 6px; margin-bottom: 6px; align-items: center; }
   .supp-row input { padding: 9px 10px; font-size: 13px; }
   .supp-row .rm { width: 32px; height: 32px; border: none; background: none; color: var(--ph-soft); font-size: 18px; line-height: 1; cursor: pointer; border-radius: 50%; }
+  /* her 2026-10-27 pick 3: "+ Something else" at the end of General health and Family history; a row = the condition + its details */
+  .ox-block { margin-top: 8px; }
+  .ox-row { display: grid; grid-template-columns: minmax(0, 1fr) 32px; gap: 6px; margin-bottom: 6px; align-items: start; }
+  .ox-row .f { display: grid; gap: 6px; min-width: 0; }
+  .ox-row input, .ox-row textarea { padding: 9px 10px; font-size: 13px; }
+  .ox-row .rm { width: 32px; height: 32px; border: none; background: none; color: var(--ph-soft); font-size: 18px; line-height: 1; cursor: pointer; border-radius: 50%; }
+  .ox-add { padding: 7px 13px; border-radius: 999px; border: 1px dashed var(--ph-green); background: var(--ph-white); font: inherit; font-size: 12.5px; font-weight: 600; color: var(--ph-green-deep); cursor: pointer; }
   .again { background: #FBF3DC; border-color: #E3C87A; }
   .hx-label { font-size: 13.5px; flex: 1; min-width: 0; }
   .hx-toggle { display: flex; gap: 6px; flex: 0 0 auto; }
@@ -211,7 +218,7 @@
   // family history rows add Don't know, with one "Unsure about anything?" box under the group.
   function historyGroupsHtml(groups) {
     return groups.map(function (gr) {
-      var fam = !!gr.f;
+      var fam = !!gr.f, ow = fam ? "fam" : gr.g === "General health" ? "own" : "";
       return '<div class="hx-group"' + (fam ? ' data-hx-fam="1"' : '') + '><div class="hx-group-h">' + esc(gr.g) + '</div>' +
         (fam ? '<p class="hx-sub">Parents, brothers, sisters, children</p>' : '') +
         gr.items.map(function (it) {
@@ -224,6 +231,7 @@
               : '<textarea class="hx-note" data-hx-note="' + it[0] + '" rows="1" placeholder="Details" aria-label="Details: ' + esc(it[1]) + '" hidden></textarea>') +
             '</div>';
         }).join("") +
+        (ow ? '<div class="ox-block"><div id="oxRows-' + ow + '"></div><button type="button" class="ox-add" data-ox-add="' + ow + '">+ Something else</button></div>' : '') +
         (fam ? '<div class="field" style="margin-top:10px"><label class="q" for="fFhNote">Unsure about anything?</label><textarea id="fFhNote" rows="2" placeholder=""></textarea></div>' : '') +
         "</div>";
     }).join("");
@@ -254,6 +262,26 @@
     });
     wrap.querySelectorAll("[data-supp-rm]").forEach(function (btn) {
       btn.addEventListener("click", function () { suppRows.splice(+btn.dataset.suppRm, 1); suppRenderRows(); });
+    });
+  }
+
+  // ---- her 2026-10-27 pick 3 (Other condition): a condition the list does not have, at the end of General health and Family history.
+  // A row = the condition + its details; sent as history.others = [{ n, f: 1 = family, note }]. Optional: never a missing answer.
+  var otherRows = { own: [], fam: [] };
+  function otherAddRow(w) { otherRows[w].push({ n: "", note: "" }); otherRenderRows(w); }
+  function otherRenderRows(w) {
+    var wrap = document.getElementById("oxRows-" + w);
+    if (!wrap) return;
+    wrap.innerHTML = otherRows[w].map(function (r, i) {
+      return '<div class="ox-row" data-ox-idx="' + i + '"><div class="f"><input type="text" data-ox-f="n" value="' + esc(r.n) + '" placeholder="Condition" aria-label="Condition" maxlength="120">' +
+        '<textarea data-ox-f="note" rows="1" placeholder="Details" aria-label="Details">' + esc(r.note) + '</textarea></div>' +
+        '<button type="button" class="rm" data-ox-rm="' + i + '" aria-label="Remove">×</button></div>';
+    }).join("");
+    wrap.querySelectorAll("[data-ox-f]").forEach(function (input) {
+      input.addEventListener("input", function () { otherRows[w][+input.closest("[data-ox-idx]").dataset.oxIdx][input.dataset.oxF] = input.value; });
+    });
+    wrap.querySelectorAll("[data-ox-rm]").forEach(function (btn) {
+      btn.addEventListener("click", function () { otherRows[w].splice(+btn.dataset.oxRm, 1); otherRenderRows(w); });
     });
   }
 
@@ -342,6 +370,9 @@
     });
     var suppAddBtn = document.getElementById("suppAdd");
     if (suppAddBtn) suppAddBtn.addEventListener("click", function () { suppAddRow(); var rows = document.querySelectorAll("#suppRows [data-supp-f=name]"); if (rows.length) rows[rows.length - 1].focus(); });
+    document.querySelectorAll("[data-ox-add]").forEach(function (b) {
+      b.addEventListener("click", function () { var w = b.dataset.oxAdd; otherAddRow(w); var ins = document.querySelectorAll("#oxRows-" + w + " [data-ox-f=n]"); if (ins.length) ins[ins.length - 1].focus(); });
+    });
     document.querySelectorAll(".fbr-btn").forEach(function (btn) {
       btn.addEventListener("click", function () {
         var row = btn.closest("[data-fbr-item]");
@@ -447,6 +478,12 @@
     }
     var fhBox = document.getElementById("fFhNote");
     if (fhBox && typeof p.fhNote === "string") fhBox.value = p.fhNote;
+    // the conditions she added on an earlier link (her app sends their words; a resend brings back her details too)
+    if (Array.isArray(p.others)) {
+      otherRows = { own: [], fam: [] };
+      p.others.slice(0, 20).forEach(function (r) { if (r && typeof r.n === "string" && r.n.trim()) otherRows[r.f ? "fam" : "own"].push({ n: r.n, note: typeof r.note === "string" ? r.note : "" }); });
+      otherRenderRows("own"); otherRenderRows("fam");
+    }
     // the "last few weeks" rows come back only on a resend (her app never sends them: they go stale)
     if (p.fbr && Array.isArray(p.fbr.d)) p.fbr.d.forEach(function (k) {
       if (!/^[a-z0-9_]+$/.test(k)) return;
@@ -610,6 +647,11 @@
     }
     var fhEl = document.getElementById("fFhNote");
     if (fhEl && fhEl.value.trim()) history.fhNote = fhEl.value.trim().slice(0, 1000);
+    var others = [];
+    ["own", "fam"].forEach(function (w) {
+      otherRows[w].forEach(function (r) { var n = r.n.trim(); if (n) others.push({ n: n.slice(0, 120), f: w === "fam" ? 1 : 0, note: r.note.trim().slice(0, 1000) }); });
+    });
+    if (others.length) history.others = others.slice(0, 20);
     // her ask 2026-10-13: the short Fang Bing Ren lists. ONLY a Yes travels (a No or a skipped row stays blank on her side), as one more
     // plain key on the same jsonb blob (no SQL change, like medNotes). A row hidden for her sex is not sent.
     var fbr = { v: 1, p: [], d: [] };
@@ -684,6 +726,7 @@
     if (h.notes) p.notes = h.notes;
     if (Array.isArray(h.supps)) p.supps = h.supps;
     if (typeof h.fhNote === "string") p.fhNote = h.fhNote;
+    if (Array.isArray(h.others)) p.others = h.others;
     if (h.fbr) p.fbr = h.fbr;
     if (c) { p.cycle = c; if (Array.isArray(c.ivfCycles) && c.ivfCycles.length) p.ivf = c.ivfCycles; else if (Array.isArray(c.ivfCycles)) p.ivfNo = true; }
     return p;
