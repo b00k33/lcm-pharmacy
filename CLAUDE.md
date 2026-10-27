@@ -192,8 +192,15 @@ shifted** → (Timeline, on a fertility plan) →
 Treatment Care Plan as **one line: phase, session** → Treatment → Dispense.
 **Order of WORK, not of record creation:** a plan shell still exists from the
 door (the "plan is the spine" no-plan gate, decision 3), because the exam pages
-live on the plan stage's tabs. Step 9 is when she shapes and uses that shell
-after Fang Bing Ren, not when it is first created.
+live on the plan stage's tabs. **The door has no template to pick (her pick
+"From the concern", 2026-10-27):** Came in for, then one **Start Care Plan ·
+<main concern>** button on the main concern's own course (`phTpDoorStartHtml`,
+`phTpCourseFor`: of the family's courses, the one whose words match hers, else
+its general one, else its first; a man's Fertility = Men's fertility). No
+concern yet = Came in for only; no sex + DOB yet = Start here only. IVF and
+Pregnancy still ask their questions first; the band's Course ▾ switches it
+after. "+ New" (a second plan) keeps the course cards. Step 9 is when she
+shapes and uses that shell after Fang Bing Ren, not when it is first created.
 **Why:** Fang Bing Ren READS tongue, pulse, abdomen. It must come after
 them. (The Oct 10 tab order put it before, so it opened empty on a first
 visit. That is fixed by this law.)
@@ -1213,7 +1220,8 @@ behind it under it as quiet tags with their `PH_PAT_SRC` icon), then **Watch** (
 `phCxModel`: each concern's first score → latest + Better / Same / Worse, the signs rated on the Compass, then the
 diagnosis's told-signs (`PH_TP_WATCH_SRC`: Fang Bing Ren answers, cycle log, notes, diet; "New" when not in the plan's first
 progress snapshot), then the live phase's red flags with their last answer), then the formula. An empty part reads a faded
-"not yet". Still to build: Formula + Points under Course, the door without a template pick.
+"not yet". The door starts the plan from the main concern (no template pick, LAW §2). Still to build: Formula + Points
+under Course.
 
 **Diagnosis + Goal write themselves** (`phTpAutoDx`, `phTpAutoGoal`): every
 Likely or Possible pattern (plus any she agreed) minus the ones she took

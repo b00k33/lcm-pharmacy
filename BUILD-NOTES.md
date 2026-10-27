@@ -3958,3 +3958,24 @@ Watch 7 rows ("Trying to conceive 7 → 5 Better", "period pain 8 → 4 Better",
 Yes", the template's red flag "–"); 1280 and 360 no cut / overlap from it (the Session grid's phase-name overlap at 360 is
 the older one); no console errors.
 **Not tested:** her Key2, her real record, a plan with saved progress snapshots (the "Yes → Yes" / "New" path).
+
+### Care Plan writes itself, part 2c: the door starts from the concern (2026-10-27)
+Her synth22 pick "From the concern" (no template pick at the door). The no-plan gate lost its explaining title and sub
+("… doesn't have a Treatment Care Plan yet", "Start one to bring …", ✎ Manage templates) and the template cards with the
+combine switch. It now reads: Start here (until sex + DOB) → Came in for → one **Start Care Plan · <main concern>** button
+(`phTpDoorStartHtml`, small "Course · <course>" under it) → Skip for now. No main concern = Came in for only.
+`phTpCourseFor(name)`: the main concern's family (`PH_CC_FAMS[].plans`, a man's gynae = `mens_fert`, a woman never gets
+`mens_fert`), then the first course whose `PH_TP_COURSE_KW` words match her own words (the concern as she typed it, and the
+starred pain's place from `phTpTreatRows`; the family label itself is ignored), else the family's `_general` course, else
+its first. Read on every render, never stored. The button repaints in place (`phTpDoorRepaint`) from `phCcRefresh` and the
+"In her words" change handler, so typing keeps its focus. The tap uses the existing `data-tp-inline-create` →
+`presTpInlineCreate`, so IVF opens its questionnaire, Pregnancy asks the due date, and the cycle / change-of-life / men's
+questions follow as before. "+ New" (a second plan) keeps the cards. LAW §2 in CLAUDE.md updated.
+**Tested** (sandbox, seeded no-plan patient): no concern → Came in for + Skip only; no sex/DOB → Start here only, then M +
+DOB typed → button appears; words → course: "Right shoulder pain" Neck & shoulder, "Low back ache" Low back pain, "Knee"
+Knee & lower limb, "Migraines" Headaches, "Tennis elbow" Elbow, "Sore everywhere" / bare Pain → General, bare Fertility (F) →
+Natural fertility, "IVF in March" → IVF Protocol (tap opens the questionnaire, no plan until answered), "Pregnant, 12 weeks"
+→ Pregnancy, man's Fertility → Men's fertility, bare Stress & sleep → General stress, "Can't sleep" → Insomnia, "Eczema on
+hands" → Eczema; focus stays in "In her words" while the button follows; tap → plan "Low back pain" with its 3 phases,
+band Course · Low back pain, then her period questions; "+ New" still 30 cards; 1280 + 360 looked at; no console errors.
+**Not tested:** her Key2, her real records.

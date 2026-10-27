@@ -13659,9 +13659,10 @@
   /* decision 3's full-screen no-plan gate -- same template cards as the
      inline "+ New" flow, just the whole panel instead of a collapsed row */
   #pharmacyPage .ph-noplan-gate-body { padding: 16px; }
-  #pharmacyPage .ph-noplan-gate-title { font-size: var(--fs-15); font-weight: 700; color: var(--ph-ink); }
-  #pharmacyPage .ph-noplan-gate-sub { font-size: var(--fs-12); color: var(--ph-soft); margin: 4px 0 16px; line-height: 1.4; }
-  #pharmacyPage .ph-noplan-gate-skip { margin-top: 16px; text-align: center; }
+  #pharmacyPage .ph-noplan-start { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; max-width: 420px; margin-top: 16px; padding: 10px 16px; border-radius: 6px; text-align: left; }
+  #pharmacyPage .ph-noplan-start b { font-size: var(--fs-14); font-weight: 700; }
+  #pharmacyPage .ph-noplan-start small { font-size: var(--fs-12); font-weight: 500; opacity: .8; }
+  #pharmacyPage .ph-noplan-gate-skip { margin-top: 12px; }
   #pharmacyPage .ph-noplan-gate-skip .tab-link.faint { color: var(--ph-faint); font-size: var(--fs-12); }
   #pharmacyPage .ph-dsp-sugg { color: var(--ph-soft); }
   #pharmacyPage .ph-dsp-sugg b { color: var(--ph-ink); }
@@ -91762,6 +91763,7 @@ or changing anything in Cliniko.
     phCcPop = null; phCcSaved = false;
     // on the "no plan yet" screen the plan list below re-orders by the new complaint
     if (document.getElementById("phTpComboHost")) phTpComboRepaint();
+    phTpDoorRepaint();   // the no-plan gate's Start button follows the main concern
     // the Plan tile's "Also noting" line is a sibling render, not inside this card's own host
     if (t) presPfPlanTileRefresh(t);
     phCcRibSync();
@@ -92018,7 +92020,7 @@ or changing anything in Cliniko.
     // chief complaint in her own words: saved quietly, no repaint (it would steal the focus)
     if (el.matches("[data-cc-main-text]")) {
       const name = phPfwName(); if (!name) return;
-      if (phCcWrite(name, c => { c.mainText = el.value.trim(); })) { phTpAutoBust(); phCcSavedFlash(); }
+      if (phCcWrite(name, c => { c.mainText = el.value.trim(); })) { phTpAutoBust(); phCcSavedFlash(); phTpDoorRepaint(); }
       return;
     }
     if (el.matches("[data-cc-sec-note]")) {
@@ -105790,7 +105792,44 @@ or changing anything in Cliniko.
   // she skips isn't silently forgotten forever, just out of her way for
   // this session. Picking a plan later removes her from this set for free
   // (phTpPlans(name).length stops being 0, the gate condition short-circuits).
+  // her 2026-10-27 pick "From the concern": the template cards left the gate. Came in for, then one Start button on the
+  // main concern's own course (phTpDoorStartHtml); no concern yet = Came in for only. "+ New" keeps the cards.
   const presNoPlanGateSkip = new Set();
+  // The door's one Start button (her 2026-10-27 pick "From the concern"): no template to pick. The main concern picks its
+  // own course: of its family's courses (a man's Fertility = Men's fertility), the first whose words its own words share
+  // (the concern as she typed it, and the starred pain's place), else the family's general one, else its first. Read on
+  // every render, never stored; the band's Course ▾ chip switches it afterwards.
+  const PH_TP_COURSE_KW = {
+    msk_lowback: /\b(low(er)? back|lumbar|sacr|sciatic|lbp)/, msk_neckshoulder: /\b(neck|shoulder|cervical|trap|rotator|frozen)/,
+    msk_kneelower: /\b(knee|ankle|foot|feet|calf|shin|hamstring|hip|plantar|achilles|leg)/, msk_elbow: /\b(elbow|tennis|golfer|wrist|forearm)/,
+    msk_headache: /\b(head|migraine)/, msk_pelvic: /\b(pelvi|groin|pubic|coccyx)/,
+    natural: /\b(natural|ttc|conceiv|trying)/, cycle_ivf: /\b(ivf|icsi|fet|transfer|egg collection|retrieval)/,
+    pregnancy: /\b(pregnan|trimester|morning sickness)/, breech_correction: /\bbreech/,
+    pcos: /\b(pcos|polycystic)/, endo: /\bendometrio/, dysmen: /\b(period pain|dysmen|cramp)/, amen: /\b(amenor|no period|absent period|missing period)/,
+    stress_insomnia: /\b(insomnia|sleep)/, stress_anxiety: /\b(anxi|panic|worry)/, stress_burnout: /\b(burn ?out|fatigue|exhaust|tired)/,
+    facial_bells: /\bbell/, facial_ramsay: /\b(ramsay|shingles)/, facial_stroke: /\bstroke/,
+    derm_acne: /\b(acne|pimple|breakout)/, derm_psoriasis: /\bpsoria/, derm_eczema: /\b(eczema|dermatitis)/
+  };
+  function phTpCourseFor(name) {
+    const it = phCcRibItems(name), f = it ? phCcFam(it.main.id) : null; if (!f) return null;
+    const man = (phPatientPeek(name) || {}).sex === "M", all = phTpAllTemplates();
+    const ids = (man && f.cat === "gynae" ? ["mens_fert"] : f.plans.filter(id => man || id !== "mens_fert")).filter(id => all.some(x => x.id === id));
+    let star = null; try { star = phTpTreatRows(name).find(r => r.star); } catch (e) { star = null; }
+    const words = [it.main.text, star ? star.text : ""].filter(s => s && s !== f.label).join(" ").toLowerCase();   // the family name itself says nothing
+    return ids.find(id => PH_TP_COURSE_KW[id] && PH_TP_COURSE_KW[id].test(words)) || ids.find(id => /_general$/.test(id)) || ids[0] || null;
+  }
+  function phTpDoorStartHtml(name) {
+    const rec = phPatientPeek(name) || {};
+    if (!(rec.sex && rec.dob) && !phPfwLater.has(phPatientKey(name))) return "";   // Start here first, as Came in for waits
+    const it = phCcRibItems(name); if (!it) return "";
+    const id = phTpCourseFor(name), tpl = id ? phTpAllTemplates().find(x => x.id === id) : null;
+    return `<button type="button" class="btn-save ph-noplan-start" data-tp-inline-create="${esc(id || "blank")}"><b>Start Care Plan · ${esc(it.main.text)}</b><small>Course · ${esc(tpl ? tpl.name : "Custom")}</small></button>`;
+  }
+  // repaint just the gate's Start button: a sibling of the Came in for card, so the field she is typing in keeps its focus
+  function phTpDoorRepaint() {
+    const door = document.querySelector("#pharmacyPage [data-noplan-door]");
+    if (door) door.innerHTML = phTpDoorStartHtml(door.dataset.noplanDoor);
+  }
   function presNoPlanGateHtml(t, name) {
     return `<div class="ph-listing ph-pres-panel${phCaseAccentClass(t)} ph-noplan-gate">
       <div class="ph-pres-band">
@@ -105801,9 +105840,7 @@ or changing anything in Cliniko.
       </div>
       <div class="ph-noplan-gate-body">
         ${presPfwStartHtml(t)}${phCcCardHtml(t)}
-        <div class="ph-noplan-gate-title">${esc(phDispName(t.name, false))} doesn't have a Treatment Care Plan yet</div>
-        <div class="ph-noplan-gate-sub">Start one to bring ${phPro(t.name).p} prescriptions, phases and history together. <button type="button" class="tab-link" data-tp-mgr-jump="1">✎ Manage templates</button></div>
-        ${presTpTemplatePickCardsHtml(name, t)}
+        <div class="ph-noplan-door" data-noplan-door="${esc(name)}">${phTpDoorStartHtml(name)}</div>
         <div class="ph-noplan-gate-skip"><button type="button" class="tab-link faint" data-noplan-skip="${esc(name)}">Skip for now — see ${phPro(name).p} profile without a plan</button></div>
       </div>
     </div>`;
