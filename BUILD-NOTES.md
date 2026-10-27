@@ -3862,3 +3862,44 @@ scroll that Inter adds: 1280 = the "This week" ellipsis only, 360 = the visit-ta
 clean. Computed fonts on Dashboard, Patient details, Care Plan, Today's visit and Dispense: every text Inter except the codes
 before they moved. No console errors.
 **Not tested:** her Key2, her real record, the print windows (untouched), Workout Mode.
+
+## Fitness step 4: what C22's Fitness still had (her "build step 4", 2026-10-27; her 13 picks, all of them)
+**Her picks** (AskUserQuestion, four groups): Templates (1 presets + − / +, 2 move up / down, 3 sets by type, 4 a type fills an
+untuned row) · Library (5 type tabs, 6 Sort my exercises, 7 her own types, 8 merge duplicates) · Picking + calendar (9 the map
+picker, 10 templates by type, 11 workouts on the calendar) · Extras (12 posture tip of the day, 13 Pilates milestones).
+**Built** (commit 07fc13b7, one file; CLAUDE.md "Fitness + Exercises" › Step 4 has the names):
+- Templates: four presets under Mode (3 × 8 · 4 × 10 · 5 × 5 · 3 × 12; a timed exercise 3 × 30 · 3 × 45 · 4 × 20 · 2 × 60 s; the
+  one that matches is green; the weight carries over; Undo); − and + beside every number (reps 1, kg 2.5, seconds 5; an empty
+  number starts at 10 reps / 30 s / 2.5 kg); ▲ ▼ on the open row and on hover; a second legend row "sets by type" (C22's glyphs).
+- Types: her own types after C22's five (`d.fxt`, synced like every Me map); a type tapped in an exercise's Type row starts an
+  untuned exercise as C22 did (Isometric: Timer, rest 1:00; Flexibility: Timer + Left & right, rest 0:30; Plyometric: rest 2:00;
+  Strength or Stabilising after one of those: back to plain reps and 1:30), toast + Undo; never touches one she tuned (her own
+  rest other than 1:30, Timer against its name, Left & right, or any weight logged). Sort sets the type only.
+- My exercises: a type row under the groups (+ No type yet, + New type, Sort · n left ›); Sort my exercises in place of the chips
+  (n of m sorted bar, glyph key, a row each with its picture, where it is used, a glyph button per type, Done); Merge into
+  another ›: her other exercises, ones sharing a word first in gold; a tap folds it in (sessions, templates, goals, don'ts) with
+  one Undo.
+- The picker (From my exercises ›, Today and templates): her figures lit by the group (Core · Legs · Push · Pull or a tap on a
+  muscle), search, chips that tick in place, ones already in say "· in", "n picked", Add n in one save.
+- Templates' shelf: All n · each type n · No type yet n · Goals n · + New type · Sort n left ›; a type shows only the templates
+  that hold it with k/m and lights that type's rows; Goals opens Fitness at its Goals.
+- Calendar: a workout she ticked on a day with no routine of its kind is a done block at its ticked time (all day without one); a
+  planned session (Upcoming's + Plan a session) is a pale all-day chip, before the herb doses so it shows first; its card says
+  what she did or plans, the template, the first five exercises, and Fitness opens the page.
+- Fitness: C22's posture tip of the day under This week (32 tips word for word + her session and pain notes of 15+ characters;
+  ♥ More like this / ✕ Less like this with Undo; her ratings in `d.fbt`; C22's own ratings read, never written). Pilates
+  milestones: the tick that lands her Pilates days on 7, 30, 50, 100, 200 or 365 says so.
+**Found while testing:** Bring in writes rest 1:30 on every exercise C22 had no rest for, so at first no brought-in exercise
+counted as untuned; 1:30 now counts as untouched. Her herb doses have no set times, so a planned session sat under "+5" in the
+all-day row; workouts now come before the doses.
+**Shared file:** the other session's font audit was uncommitted in index.html when I came to commit, then committed as 1f69a9e3;
+step 4 was re-applied on top of it (all 43 blocks) and committed alone; the working file = that commit exactly.
+**Tested** (localhost sandbox, seeded made-up data via Bring in, no sign-in): shelf Isometric → first edition 1/3 with Plank lit;
+presets 4 × 10 keeps 12 kg; kg + → 14.5, reps − → 9; move down / up with the open row following; + New type "Mobility" on Goblet
+squat; Flexibility / Plyometric / Strength / Isometric fill and undo on Pistol squat, her own 0:45 rest left alone, a weighted
+Romanian deadlift left alone; Sort (order steady, no fill); type tab filter; merge Romanian deadlift into Goblet squat (3 + 6 → 9
+rows) and Undo (3 / 6); picker groups, a muscle tap → Push, 2 ticked → Add 2 → 5 exercises; posture tip ♥ / ✕ / Undo; calendar:
+F45 done block 10:30 – 11:20, pale F45 chip first on Thu, card + Fitness → the page; Pilates 6 → 7 toast, untick quiet.
+Headless Edge 1220 + 360 (shots-s9.ps1). At 360 nothing past the edge on Exercises (Sort, shelf, template + picker + merge) or
+Fitness (picker); the set table fits (261 / 261). Re-checked on the committed build with the new font. No console errors.
+**Not tested:** the Key2, her real record (her own C22 ratings, notes and Pilates count), a merge while another device edits.
