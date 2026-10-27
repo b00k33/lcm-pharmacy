@@ -1582,7 +1582,8 @@ her words "add a steps count to my fitness page ... use james clear atomic habit
 ## Fitness + Exercises (C22's fitness, moved in)
 Since 2026-10-27 (her synth22 "wheres the page for exercises?" + "move fitness page from c22 to lcm so i cna plan and log my
 exercise", picks 9 to 13 on `meals-fitness-plan-2026-10-26.html`, round 2 on `meals-fitness-mock-2026-10-26.html`, her answers
-10/27 + "Yes, build it"; BUILD-NOTES "Fitness + Exercises"). **Only on her own record.** Step 1 of 2 (plan + log); climbs wait for step 2.
+10/27 + "Yes, build it"; BUILD-NOTES "Fitness + Exercises"). **Only on her own record.** Step 1 of 2 (plan + log) + climbing (10/27).
+Step 2 (her pick 11: Muscles & exercises, My don'ts, Goals, Personal bests, Progression, Volume) is NOT built: it waits for her word.
 - **Fitness** (Body, `phHubFitHtml`): Bring in (her C22 fitness, once: library, templates, log, planned, stairs, week plan; C22's
   keys are READ, never written) · This week (workout + rehab routines and Steps, a dot a day = the Habits reads and ticks, one tick
   both pages) · **Weekly plan** = her calendar's routines (`phFitPlanApply`: a day set to a type moves that weekday to the routine of
@@ -1590,6 +1591,10 @@ exercise", picks 9 to 13 on `meals-fitness-plan-2026-10-26.html`, round 2 on `me
   (walks + stairs, under the Steps card) · Today (type, template, sets, timed hold, rest ring, pain + stars, ▶ Workout Mode) ·
   Upcoming + Recent. Finish also ticks today's routine of that type.
 - **Exercises** (Body, after Fitness, `phHubExHtml`): her library (search, groups, Hide) + workout templates.
+- **Climbing** (her "build the climbing step", 2026-10-27; BUILD-NOTES "Fitness: climbing"): a climbing type's session (Bouldering,
+  `phFitIsClimbTy`) adds routes = name · grade (V0–V10 offered, any typed) · tries − + · Sent (`{c: 1, n, g, a, ok}` in a session's
+  or template's `ex`). Sent counts as a done set (`phFitSets`); routes never join her library. Bring in brings C22's climbs; when
+  `hubset.fitIn` has no `v: 2` (step 1 brought the rest in), its banner offers the climbs only, into the C22 sessions/templates.
 - Motion: a set pops and its tick draws, the rest ring counts down and buzzes at zero, gold once when the day's sets are done, the
   week's dots pop and link (the Habits way); all off under reduced motion.
 - A routine in g-fitness counts as a workout (`phHubKind`, after the money words). Data: `d.fex`, `d.ftp`, `d.fwo`, `d.fpl`,

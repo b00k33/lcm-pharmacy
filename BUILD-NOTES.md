@@ -3595,3 +3595,33 @@ complaint too"; (5) "how to edit the chief complaint and complaints". One plan, 
 - **LIVE** 2026-10-27 (her "push live"), build 20261027-110900 (main 52d130c3, index.html only: this batch on top of build 20261027-105500;
   made in a private index because another session's tracked edit blocks publish-live.sh), joined into session-a as db8d266a (tree
   unchanged). Checked on the live site: the build stamp, sw.js `CACHE_VERSION` and `phCxStarToggle` served.
+
+## Fitness: climbing, C22's way (2026-10-27)
+Her "build the climbing step" (after my ship note called climbing "the second step": loose wording. Her pick 11's step 2 is
+Muscles & exercises, My don'ts, Goals, Personal bests, Progression and Volume; climbing was the part of C22's log that step 1
+left out). Built from C22's own climb log (`climbExerciseHtml`, `setClimbField`, `setTemplateClimbField`).
+**Built** (commit 24cd8ebf): a climbing type's session (Bouldering) adds routes. A route = its name, its grade (C22's V0 to V10
+offered, any grade typed; "v4" reads V4), its tries (− +, at least 1) and Sent. Sent pops and its tick draws (a set's way);
+everything done rings gold with the long buzz. Workout Mode: a card a route (grade, tries, Sent), the current one ringed,
+"Next: route · grade". Templates (Exercises): a climbing template's routes read "V4 · 2 tries"; the panel has Grade and Tries;
++ Add route. A route she climbed before comes back with its last grade. Today reads "1 of 3 sent" (routes), "1 of 5 done" (sets
+and routes mixed). Upcoming: "2 routes planned". Recent: "2 of 3 sent · top V5" (the hardest V grade sent). Data: a route is
+`{c: 1, n, g, a, ok}` in a session's or template's `ex`; Sent counts in `phFitSets`, so This week, Finish and the gold read it.
+Code: "FITNESS + EXERCISES" (`phFitSent`, `phFitTry`, `phFitGrSet`, `phFitAddRoute`, `phFitTpTry`, `phFitTpGr`, `phFitTryHtml`,
+`phFitSentBtn`, `phFitGrIn`, `phFitRtDlHtml`); CSS after `.ced[aria-expanded]`, Workout Mode before `.wnext`, phone in the 640 block.
+**Bring in:** C22's climbs come with the rest (`hubset.fitIn.v = 2`). When step 1 already brought her C22 fitness in (no `v`),
+the banner reads "your climbs: routes, grades, tries and sends" and Bring in adds ONLY the climbs, into the sessions and
+templates that came from C22 (`c22w…` / `c22t…`) and still have none; nothing else is touched; Undo puts each one back.
+**My calls (disclosed):** a climbing session keeps "From my exercises ›" (warm-ups, hangs) beside + Add route; routes never join
+her exercise library (C22 kept route names apart too); the grade list's arrow is hidden (it took the room "Grade" needs; the
+grades still show as she types). Wording DRAFT.
+**Tested** (scratch copy, made-up local data, test C22 keys only in the localhost sandbox, no sign-in): first Bring in (3 routes
+in a session, 2 in a template, "v4" → V4, the library unchanged); the second Bring in (5 routes added, a session's other edits
+kept, nothing doubled, Undo restores); Bouldering today: tries − +, Sent (pop + draw), grade typed, + Add route by Enter (last
+grade V5 came back), Remove + Undo, all sent → gold + buzz 300; Workout Mode tries + Sent, "3 of 3 sent"; a mixed session
+("1 of 5 done"); This week counts the day; the template panel (Grade, Tries, + Add route; a Gym template keeps + Add exercise);
+Upcoming and Recent. Headless Edge at 1220 and 360; nothing past the edge or cut at 360 and 320 (Today, Workout Mode, templates).
+**Fixed on the way:** the app's text-field padding squeezed the grade box (now `field-bare`, the number boxes' look); phone
+Workout Mode put Sent on a second line (gap 8 px, padding 14 px).
+**Not tested:** her real C22 climbs, a real cloud merge between her two logins, the Key2 itself.
+**Not live:** waits for her "push live".
