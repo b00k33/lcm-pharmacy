@@ -1537,7 +1537,8 @@ Jar + Recipe). Make opens the same panel as the bench's own weighing rows (`refW
 the scale reads, ring, jar 0 → N g, the bowl count, tick all, Not now, Finish (the jar fills and the row glows). All of it is
 read from the dispense log, the plans and the bookings (`phFormulaUse`, 12 weeks, Break bookings left out, "(X)" name tags
 merged); nothing new is stored. Motion off under reduced motion. The Dashboard's Refill rows carry the same next booking
-and Dispense's In stock cell says "To make · Wk N" for a planned formula jar (`presIngToMakeHtml`).
+and Dispense's In stock cell says "To make · Wk N" for a planned formula jar (`presIngToMakeHtml`). LIVE 10/27, build
+20261027-204000.
 
 **To Order, desktop** (>900px) = a 3-column board that fills the window:
 **Needs ordering** (a To order | Running low switch, rows A to Z in fixed
