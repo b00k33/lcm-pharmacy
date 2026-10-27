@@ -9746,6 +9746,11 @@
   #pharmacyPage .ph-cx.b { position: relative; padding: 12px 14px; }
 #pharmacyPage .ph-cx.b .ph-cx-foot:not(:has(.ph-cx-nw)) { position: absolute; right: 14px; bottom: 2px; padding: 0; pointer-events: none; }
   #pharmacyPage .ph-cx.b > .ph-cx-hd { gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  /* the header's switches never squeeze (her synth22 item 1, 2026-10-27: "From Baseline | Last visi" was cut; a switch clips its words,
+     so it could shrink): each keeps its width, and From · the switches · Chart ▾ move down a line together when the card is tight */
+  #pharmacyPage .ph-cx-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 0 1 auto; min-width: 0; }
+  #pharmacyPage .ph-cx-hd .ph-cx-sw { flex: none; }
+  #pharmacyPage .ph-cx-hd .ph-cx-sw button { white-space: nowrap; }
   #pharmacyPage .ph-cx.b .ph-cx-cap { margin-right: 2px; white-space: nowrap; }
   #pharmacyPage .ph-cx.b .ph-cx-meta { margin-left: 0; }
   #pharmacyPage .ph-cx.b .ph-cxs { flex: 1 1 240px; min-width: 200px; margin: 0; }
@@ -25987,6 +25992,8 @@
     #pharmacyPage .ph-nq .ph-qa-body.ph-qa-rows { grid-template-columns: minmax(0, 1fr); padding: 2px 10px; }
     #pharmacyPage .ph-nq .ph-qa-rows .ph-qr:nth-child(2) { border-top: 1px solid rgba(20, 31, 35, .06); }
     #pharmacyPage .ph-cx-hd .ph-today-prog { flex-wrap: wrap; }
+    /* a Compass row's Details (2026-10-27): a narrower label column, so How long shows its whole date beside "7 wk" */
+    #pharmacyPage :is(.ph-cx-dr, .ph-cx-pnl) .pf { grid-template-columns: 60px minmax(0, 1fr); gap: 5px 6px; }
     #pharmacyPage .mk-xseg .ph-ltr-qual { padding: 0 8px; }
     /* the whole row opens its page on a phone, so the Open button goes (the name keeps its room); Skip ▾ stays */
     #pharmacyPage .ph-today-row .ph-today-btn { display: none; }
@@ -77918,7 +77925,7 @@ or changing anything in Cliniko.
       const c = phCcOf(name) || {}, ri = phCcRibItems(name);
       if (ri) {   // Came in for lives on Today's visit (her 2026-10-18 pick); Patient details no longer draws it
         add(["g:today"], "Came in for", ri.main.text, ["Main", ri.main.since ? since(ri.main.since, c.sinceEst, c.sincePrec) : "", c.dx, c.note].filter(Boolean).join(" · "), "");
-        (c.secondary || []).forEach(s => { if (s && String(s.text || "").trim()) add(["g:today"], "Came in for", s.text, [s.since ? since(s.since, s.sinceEst, s.sincePrec) : "", s.dx, s.note].filter(Boolean).join(" · "), ""); });
+        (c.secondary || []).forEach(s => { if (s && String(s.text || "").trim()) add(["g:today"], "Came in for", s.text, [s.main ? "Main" : "", s.since ? since(s.since, s.sinceEst, s.sincePrec) : "", s.dx, s.note].filter(Boolean).join(" · "), ""); });
       }
     });
     src(() => {
@@ -88883,9 +88890,11 @@ or changing anything in Cliniko.
     const tpAim = phTpTplPhaseOf(plan, phase); if (tpAim && String(tpAim.aim || "").trim()) return;
     const c = rec.complaint; if (!c) return;
     const fam = c.main ? phCcFam(c.main) : null;
-    const bits = [];
-    if (fam) bits.push(`Address ${fam.label.toLowerCase()}${c.since ? ` (${phCcRel(c.since)})` : ""}`);
-    const sec = (c.secondary || []).map(s => s.text).filter(Boolean);
+    const bits = [], live = (c.secondary || []).filter(s => s && s.text);
+    // every Main is addressed, the rest monitored (her pick 2026-10-27 Q2, any number of Mains)
+    const addr = (fam ? [fam.label.toLowerCase() + (c.since ? ` (${phCcRel(c.since)})` : "")] : []).concat(live.filter(s => s.main).map(s => s.text.toLowerCase()));
+    if (addr.length) bits.push(`Address ${phTpListAnd(addr)}`);
+    const sec = live.filter(s => !s.main).map(s => s.text);
     if (sec.length) bits.push(`monitor ${sec.join(", ")}`);
     if (!bits.length) return;
     phase.aim = bits.join("; ");
@@ -89246,7 +89255,8 @@ or changing anything in Cliniko.
       const noteCell = open ? "" : s.note ? `<span class="ph-cc-note" data-cc-sec-open="${s.id}">${esc(s.note)}</span>` : `<button type="button" class="ph-cc-act" data-cc-sec-open="${s.id}">+ Note</button>`;
       // her 2026-10-15 ask: a Main star lets her promote this secondary to be the new chief
       // complaint (phCcSecPromote -- the chief's current words become a secondary in its place).
-      const mainStar = `<button type="button" class="mcp" data-cc-sec-main="${s.id}" title="Make main complaint"><span class="ic">★</span></button>`;
+      // since 2026-10-27 (her pick: any number of Mains) the star is a switch on this complaint, never a swap
+      const mainStar = `<button type="button" class="mcp${s.main ? " on" : ""}" data-cc-sec-main="${s.id}" aria-pressed="${!!s.main}" title="${s.main ? "Main complaint" : "Make main complaint"}"><span class="ic">★</span></button>`;
       rows.push(`<tr class="ph-cc-r"><td class="cpl">${name}</td><td class="dx">${dxIn(s.dx, `data-cc-sec-dx="${s.id}"`, s.text)}</td>${sinceCell(s.since, est, s.sincePrec, tog)}<td class="mn">${mainStar}</td><td class="nt">${noteCell}</td><td class="rm">${x("data-cc-sec-rm", s.id, s.text)}</td></tr>`);
       if (open) {
         rows.push(`<tr class="ph-cc-subrow"><td colspan="6"><div class="ph-cc-sub"><input type="text" class="ph-cc-note-in field-bare" data-cc-sec-note="${s.id}" maxlength="140" value="${esc(s.note || "")}" placeholder="More info" autocomplete="off" aria-label="More about ${esc(s.text)}"></div></td></tr>`);
@@ -89443,20 +89453,13 @@ or changing anything in Cliniko.
     if (phCcActive === id) phCcActive = null;
     phCcSaved = true; phCcFillAim(name); phCcRefresh(true);
   }
-  // her 2026-10-15 ask: the Main star on a secondary row promotes it to the chief complaint; the
-  // chief's current words (if any) become a secondary in its place -- a swap, nothing lost.
+  // the Main star on a secondary row: since 2026-10-27 (her synth22 pick, any number of Mains) a switch on that complaint (s.main), so
+  // every complaint keeps its own scores. It replaced her 2026-10-15 swap into the chief's slot, which left the scores with the slot.
   function phCcSecPromote(id) {
     const name = phPfwName(); if (!name) return;
     if (!phCcWrite(name, c => {
-      const list = c.secondary || [], idx = list.findIndex(s => s.id === id); if (idx < 0) return;
-      const s = list[idx];
-      const prevText = c.mainText || "", prevSince = c.since || "", prevEst = !!c.sinceEst, prevDx = c.dx || "", prevPrec = c.sincePrec || "";
-      const guess = phCcGuessIds(s.text)[0];
-      c.main = guess || c.main || null; c.mainText = s.text; c.since = s.since || ""; c.sinceEst = !!s.sinceEst; c.dx = s.dx || ""; c.auto = undefined; c.autoOff = true;
-      if (s.sincePrec) c.sincePrec = s.sincePrec; else delete c.sincePrec;
-      list.splice(idx, 1);
-      if (prevText) { const np = { id: uid(), text: prevText, since: prevSince, sinceEst: prevEst, dx: prevDx, note: "" }; if (prevPrec) np.sincePrec = prevPrec; list.push(np); }
-      c.secondary = list;
+      const s = (c.secondary || []).find(x => x && x.id === id); if (!s) return;
+      if (s.main) delete s.main; else s.main = true;
     })) return;
     phCcSaved = true; phCcFillCase(name); phCcFillAim(name); phCcRefresh(true);
   }
@@ -89791,8 +89794,13 @@ or changing anything in Cliniko.
   function phCxItems(name) {
     const it = phCcRibItems(name), c = phCcOf(name);
     if (!it) return [];
-    const out = [{ key: "main", id: "main", fam: it.main.id, text: it.main.text, since: it.main.since, main: true }];
-    ((c && c.secondary) || []).filter(s => s && String(s.text || "").trim()).forEach(s => out.push({ key: "s:" + s.id, id: s.id, text: s.text, since: s.since || "" }));
+    // ★ Main is a switch on every complaint (her pick 2026-10-27, "any number"): star = shows Main. The chief's is c.mainOff, a secondary's
+    // s.main; main stays "the chief complaint's slot" (its key, family and Goal), which never moves, so every complaint keeps its own scores
+    const out = [{ key: "main", id: "main", fam: it.main.id, text: it.main.text, since: it.main.since, main: true, star: !(c && c.mainOff) }];
+    ((c && c.secondary) || []).filter(s => s && String(s.text || "").trim()).forEach(s => out.push({ key: "s:" + s.id, id: s.id, text: s.text, since: s.since || "", star: !!s.main, fbrKey: s.fbrKey || "" }));
+    // a sign tracked on the bar (her picks 2026-10-27): scored 0-10 like a complaint under its own id (ccTrack.sxBar), drawn in its Signs line
+    const rec = phPatientPeek(name), bar = (rec && rec.ccTrack && rec.ccTrack.sxBar) || {}, tsince = ((rec && rec.tri) || {}).since || {}, ids = new Set(out.map(x => x.id));
+    Object.keys(bar).forEach(k => { const b = bar[k]; if (b && b.id && !b.off && !ids.has(b.id)) out.push({ key: "s:" + b.id, id: b.id, text: phSignLabel(k), since: tsince[k] || "", star: false, fbrKey: k, track: "bar" }); });
     return out;
   }
   /* each complaint carries its own Goal (her synth22 pick 2026-10-21: "a table of complaint column, goals column, and
@@ -89939,6 +89947,7 @@ or changing anything in Cliniko.
       const offDay = keys.map(x => off[x]).find(Boolean);
       if (offDay && !(pinned && dayOf(pinned.at) > offDay)) return;   // Not watching, unless she added it back on a later day
       if (cc.some(c => keys.some(x => c.keys.has(x)))) return;   // the complaint row stands in for its own sign
+      if (keys.some(x => ct.sxBar && ct.sxBar[x] && !ct.sxBar[x].off)) return;   // so does its own row on the bar (her pick 2026-10-27 Q7)
       const e = d => keys.map(x => phCxSx(rec, d)[x]).find(Boolean) || null;
       const lastD = ratedDays[ratedDays.length - 1] || "", lastE = lastD ? e(lastD) : null, todayE = e(today);
       const two = ratedDays.slice(-2).map(e), goneTwice = two.length === 2 && two.every(x => x && x.v === "g");
@@ -90096,7 +90105,7 @@ or changing anything in Cliniko.
   }
   // a typed pain complaint the map already draws is not drawn twice (her pick: the pain map is the source); the "pain-auto" pointer row goes with it
   function phCxPainDup(it, list) {
-    if (!list.length) return false;
+    if (!list.length || it.track === "bar") return false;   // a sign on the bar is a sign, never a pain the map draws
     if (it.id === "pain-auto") return true;
     const text = String(it.text || "").trim();
     if (it.main) {
@@ -90115,7 +90124,8 @@ or changing anything in Cliniko.
     const hide = new Set(); items.forEach(it => { if (phCxPainDup(it, info.list)) hide.add(it.key); });
     let mainIdx = -1;
     if (hide.has("main") && info.list.length) { mainIdx = info.list.findIndex(p => p.main); if (mainIdx < 0) mainIdx = 0; }
-    return Object.assign(info, { hide, mainIdx });
+    // chiefStar: the chief complaint is Main (no c.mainOff); with no pain starred, the pain that carries the chief shows Main by it
+    return Object.assign(info, { hide, mainIdx, chiefStar: !(items[0] && items[0].main && items[0].star === false) });
   }
   // the pains as rows: one per pain-map entry, scores from the pain store (every Musculoskeletal visit), notes from the Compass
   function phCxPainItems(rec, st) {
@@ -90128,7 +90138,8 @@ or changing anything in Cliniko.
         if (P.pct != null) h.pct = +P.pct;   // her own "% better" words, kept beside the score worked out from them
         return h;
       }).filter(Boolean);
-      return { key, id: k, text: phPmSideName(reg, p.s), since: p.since || "", fam: "pain", main: idx === st.mainIdx, pain: { idx, p, reg, pid: st.pid }, hist };
+      const star = !!p.main || (idx === st.mainIdx && st.chiefStar && !st.list.some(q => q.main));   // ★ Main, any number (her pick 2026-10-27)
+      return { key, id: k, text: phPmSideName(reg, p.s), since: p.since || "", fam: "pain", main: idx === st.mainIdx, star, pain: { idx, p, reg, pid: st.pid }, hist };
     });
   }
   const phCxPainAutoGoal = text => phCcGoalFor(text + " pain", true) || ("Reduce " + String(text).toLowerCase() + " pain");
@@ -90204,8 +90215,10 @@ or changing anything in Cliniko.
     const back = seen.some(d => d < today) || allDays.some(d => d < today);
     // her order: the main complaint first (the starred pain when the map stands in for it), then her secondaries, then the other pains;
     // an earlier visit scores complaints and pains only (her pick 2026-10-23): Energy and the signs sit it out
-    const order = items.filter(it => !(pst && pst.hide.has(it.key)) && !(at && phCxIsEnergy(it))).map((it, n) => ({ it, rank: n }))
-      .concat(painItems.map(it => ({ it, rank: it.main ? -1 : 100 + it.pain.idx }))).sort((a, b) => a.rank - b.rank);
+    // every Main (★, any number: her picks 2026-10-27 Q1 + Q3) comes first in that order, so each Main leads its own group and the groups
+    // holding a Main come first; a sign on the bar sits the earlier visit out like the other signs
+    const order = items.filter(it => !(pst && pst.hide.has(it.key)) && !(at && (phCxIsEnergy(it) || it.track === "bar"))).map((it, n) => ({ it, rank: (it.star ? 0 : 1000) + n }))
+      .concat(painItems.map(it => ({ it, rank: (it.star ? 0 : 1000) + (it.main ? -1 : 100 + it.pain.idx) }))).sort((a, b) => a.rank - b.rank);
     const mk = (it, i) => {
       let hist = it.pain ? it.hist : phCxHist(rec, it.key);
       const sc0 = it.pain ? "ten" : scale;
@@ -90224,7 +90237,8 @@ or changing anything in Cliniko.
       const trk = phCxTrack(t10, energy, o), cb = phCxCur(trk.dev, today);
       const tn = t10.find(p => p.day === today), lp = t10.filter(p => p.day < today).pop();
       const cl = tn && lp ? { d: phCxR1(energy ? tn.v - lp.v : lp.v - tn.v), ref: lp.day } : { d: null };
-      const gid = it.pain ? phCxGid(PH_CX_PAIN_IX) : phCxGid(phCxAreaOfCc(it, ccl.find(c => c.id === (it.main ? "main" : String(it.id)))));
+      const gid = it.pain ? phCxGid(PH_CX_PAIN_IX) : it.track === "bar" ? phCxGid(phCxAreaOfSign({ kind: phSignKind(it.fbrKey), key: it.fbrKey, label: it.text }))
+        : phCxGid(phCxAreaOfCc(it, ccl.find(c => c.id === (it.main ? "main" : String(it.id)))));
       const todayE = hist.find(h => h.day === today) || noteOnly;
       const rated = energy ? enR.todayAvg != null : !!(todayE && todayE.v != null);
       return Object.assign({}, it, { i, hist, pts, chg, today: todayE, goal: it.pain ? phCxPainGoal(name, it, mainItem) : phCxGoal(name, it), energy, enAvg: energy ? enR.todayAvg : null, enRated: energy ? enR.todayAvg != null : false,
@@ -90273,11 +90287,14 @@ or changing anything in Cliniko.
     groups.forEach(g => {
       const owned = [];
       g.cc.forEach(s => {
+        if (s.track === "bar") return;
         g.rows.push({ kind: "cc", key: s.key, s, gid: g.id, rated: s.rated, cb: s.cb, cl: s.cl });
         (hosted[s.key] || []).forEach(r => g.rows.push(r));
         cap(g.sxAll.filter(r => !r.host && r.nest && r.under === s.key), PH_CX_SX_CAP).forEach(r => owned.push(r));
       });
       owned.forEach(r => g.rows.push(r));
+      // a sign on the bar stays in its Signs line, ahead of the signs rated Gone · Better · Same · Worse (her pick 2026-10-27 Q7)
+      g.cc.forEach(s => { if (s.track === "bar") g.rows.push({ kind: "cc", key: s.key, s, gid: g.id, rated: s.rated, cb: s.cb, cl: s.cl, bar: true }); });
       cap(g.sxAll.filter(r => !r.host && !r.nest), PH_CX_SX_CAP_OTHER).forEach(r => g.rows.push(r));
       g.rows.forEach(r => rows.push(r));
     });
@@ -90552,13 +90569,19 @@ or changing anything in Cliniko.
   function phCxRowHtml(s, M, name, ar, first) {
     const key = s.key, pain = !!s.pain;
     const goal = phCxGoalHtml(s, name);
-    const handle = s.main || pain ? "" : `<span class="hdl" draggable="true" data-cx-drag="${esc(key)}" title="Drag to change the order" aria-hidden="true">⋮⋮</span>`;
+    const fixed = s.main || pain || s.track === "bar";   // a sign on the bar is not in her complaint order
+    const handle = fixed ? "" : `<span class="hdl" draggable="true" data-cx-drag="${esc(key)}" title="Drag to change the order" aria-hidden="true">⋮⋮</span>`;
     const menu = phCxMenu === key ? `<span class="ph-cx-menu" role="menu"><button type="button" role="menuitem" data-cx-move="${esc(key)}:-1">Move up</button><button type="button" role="menuitem" data-cx-move="${esc(key)}:1">Move down</button>${key.indexOf("s:") === 0 && key !== "s:pain-auto" ? `<button type="button" role="menuitem" data-cx-rm="${esc(key)}">Remove</button>` : ""}</span>` : "";
-    const dd = s.main || pain ? "" : `<span class="ph-cx-ddw"><button type="button" class="ph-cx-dd" data-cx-dd="${esc(key)}" aria-haspopup="menu" aria-expanded="${menu ? "true" : "false"}" aria-label="More for ${esc(s.text)}">▾</button>${menu}</span>`;
+    const dd = fixed ? "" : `<span class="ph-cx-ddw"><button type="button" class="ph-cx-dd" data-cx-dd="${esc(key)}" aria-haspopup="menu" aria-expanded="${menu ? "true" : "false"}" aria-label="More for ${esc(s.text)}">▾</button>${menu}</span>`;
+    // Main shows on every Main (her pick 2026-10-27, any number); a sign on the bar leads with its Sign tag, a complaint made from a
+    // sign wears a small one after its name (her pick Q8: still ticked on Fang Bing Ren)
+    const sgc = (ar && ar.col) || "var(--ph-faint)";
+    const lead = s.track === "bar" ? `<i class="sg" style="--sc:${sgc}" title="Fang Bing Ren sign, on the bar">Sign</i>` : s.star ? `<i class="mn">Main</i>` : "";
+    const tail = s.fbrKey && s.track !== "bar" ? `<i class="sg" style="--sc:${sgc}" title="From a Fang Bing Ren sign, still ticked there">Sign</i>` : "";
     const side = pain ? `<span class="sd" title="${esc(s.pain.p.s === "C" ? "Centre" : s.pain.p.s === "B" ? "Both sides" : s.pain.p.s === "R" ? "Right" : "Left")}">${s.pain.p.s === "B" ? "Both" : s.pain.p.s === "C" ? "C" : s.pain.p.s}</span>` : "";
     const open = M.dr === key;
     // ⋮⋮ ▸ ▾ sit in one small group at the end of the name, shown on mouse-over or a long-press (her pick 2026-10-23)
-    const nm = `<span class="nmwrap"><span class="nm" data-cx-rn="${esc(key)}" title="${esc(s.text)}">${s.main ? `<i class="mn">Main</i>` : ""}<span class="t">${esc(s.text)}</span>${side}<span class="ph-cx-hov">${handle}<span class="caret" aria-hidden="true">▸</span>${dd}</span></span><span class="gline"><span class="since">${esc(s.since ? phCcRel(s.since) : "")}</span>${goal}</span></span>`;
+    const nm = `<span class="nmwrap"><span class="nm" data-cx-rn="${esc(key)}" title="${esc(s.text)}">${lead}<span class="t">${esc(s.text)}</span>${side}${tail}<span class="ph-cx-hov">${handle}<span class="caret" aria-hidden="true">▸</span>${dd}</span></span><span class="gline"><span class="since">${esc(s.since ? phCcRel(s.since) : "")}</span>${goal}</span></span>`;
     let score;
     const fx = phCxFx && phCxFx.key === key;
     if (s.energy) score = `<span class="pillcell"><b class="ph-cx-slv${s.enRated ? "" : " na"}" title="Today's energy, 10 = best">${s.enRated ? `Energy ${s.enAvg}` : "Energy –"}</b>${s.enRated ? PH_CX_TICK(fx) : ""}</span>`;
@@ -90567,14 +90590,14 @@ or changing anything in Cliniko.
     if (M.b) {
       if (s.energy) score = `<span class="pillcell">${phCxEnNumsHtml(M.rec)}${s.enRated ? PH_CX_TICK(fx) : ""}</span>`;
       const rb = { kind: "cc", key, s, gid: s.gid, rated: s.rated, cb: s.cb, cl: s.cl }, on = M.pnl === key;
-      return `<div class="ph-cx-row cc${phCxAreaCls(ar, first)}${s.main ? " main" : ""}${s.energy ? " en" : ""}${pain ? " pn" : ""}${on ? " ask" + (phCxLastAsk !== key ? " askin" : "") : ""}" data-cx-row="${esc(key)}"${phCxAreaSty(ar)}>
-      ${first ? phCxAreaLabHtml(ar, M) : ""}<span class="nmwrap"><span class="nm" data-cx-rn="${esc(key)}" title="${esc(s.text)}">${s.main ? `<i class="mn">Main</i>` : ""}<span class="t">${esc(s.text)}</span>${side}${phCxNoteMk(M, name, key)}<span class="ph-cx-hov">${handle}${dd}</span></span></span>
+      return `<div class="ph-cx-row cc${phCxAreaCls(ar, first)}${s.star ? " main" : ""}${s.energy ? " en" : ""}${pain ? " pn" : ""}${s.track === "bar" ? " sxbar" : ""}${on ? " ask" + (phCxLastAsk !== key ? " askin" : "") : ""}" data-cx-row="${esc(key)}"${phCxAreaSty(ar)}>
+      ${first ? phCxAreaLabHtml(ar, M) : ""}<span class="nmwrap"><span class="nm" data-cx-rn="${esc(key)}" title="${esc(s.text)}">${lead}<span class="t">${esc(s.text)}</span>${side}${tail}${phCxNoteMk(M, name, key)}<span class="ph-cx-hov">${handle}${dd}</span></span></span>
       ${score}<span class="chgcell">${phCxChgHtml(rb, M, phCxFx && phCxFx.key)}</span>
     </div>`;
     }
     const r = { kind: "cc", key, s, gid: s.gid, rated: s.rated, cb: s.cb, cl: s.cl };
     const ask = M.ask === key;
-    return `<div class="ph-cx-row cc${phCxAreaCls(ar, first)}${s.main ? " main" : ""}${s.energy ? " en" : ""}${pain ? " pn" : ""}${ask ? " ask" + (phCxLastAsk !== key ? " askin" : "") : ""}${phCxOpen === key ? " open" : ""}${open ? " dro" : ""}" data-cx-row="${esc(key)}"${phCxAreaSty(ar)}>
+    return `<div class="ph-cx-row cc${phCxAreaCls(ar, first)}${s.star ? " main" : ""}${s.energy ? " en" : ""}${pain ? " pn" : ""}${ask ? " ask" + (phCxLastAsk !== key ? " askin" : "") : ""}${phCxOpen === key ? " open" : ""}${open ? " dro" : ""}" data-cx-row="${esc(key)}"${phCxAreaSty(ar)}>
       ${first ? phCxAreaLabHtml(ar, M) : ""}${nm}
       ${phCxBsHtml(r, M)}
       ${phCxSpkHtml(r, M)}
@@ -90621,7 +90644,7 @@ or changing anything in Cliniko.
       <label>Diagnosis</label><input type="text" class="ph-cx-pin" list="phPmDxList" data-pm-diag="${id}" value="${esc(p.dx || "")}" maxlength="80" autocomplete="off" spellcheck="false" aria-label="Diagnosis for ${nmE}">
       <label>How long</label><div class="ph-cx-since2"><input type="text" class="ph-cx-pin" list="phPmSinceList" data-pm-since="${id}" value="${esc(phCcFmtDatePrec(p.since || "", p.sincePrec))}" placeholder="date, 2 yr, 08/2026 or 2026" autocomplete="off" aria-label="${nmE} started"><span class="rel${p.since ? "" : " empty"}">${p.since ? esc(phCcRel(p.since)) : "since when?"}</span></div>
       <label>Best · Worst</label><span class="meta">${bwTxt}</span>
-      <label></label><span class="ph-cx-pbtns"><button type="button" class="ph-cx-chip${p.main ? " on" : ""}" data-pm-main="${id}" aria-pressed="${!!p.main}">★ Main</button><button type="button" class="ph-cx-chip" data-pm-del="${id}">Remove</button></span></div>`;
+      <label></label><span class="ph-cx-pbtns"><button type="button" class="ph-cx-chip${s.star ? " on" : ""}" data-cx-star="${esc(s.key)}" aria-pressed="${!!s.star}">★ Main</button><button type="button" class="ph-cx-chip" data-pm-del="${id}">Remove</button></span></div>`;
   }
   // "Move baseline to today" / "↺ Back to first baseline" and what the baseline is: a row's drawer, or the panel's Details on a wide card
   function phCxRebaseToolHtml(r, M) {
@@ -90645,7 +90668,9 @@ or changing anything in Cliniko.
       : `<h4>${esc(nm)} · score every visit</h4><div class="ph-cx-dchart">${phCxRowChartSvg(r.s)}</div>${phCxRebaseToolHtml(r, M)}`;
     const before = phCxNotesBefore(rec, key).slice().reverse(), raw = phCxEntry(phCxDays(rec)[today], key);
     const notes = before.map(n => `<div class="nl"><b>${esc(phCycShortLbl(n.day))}</b>${esc(n.n)}</div>`).join("") + (raw && raw.n ? `<div class="nl"><b>Today</b>${esc(raw.n)}</div>` : "");
-    const right = `<h4>Notes</h4>${notes || `<div class="meta">No notes</div>`}${!sx && r.s.pain ? phCxPainFormHtml(r.s, M) : ""}`;
+    // the same Details as the wide card's panel (her picks 2026-10-27): a pain's, a typed complaint's, a sign's Track with
+    const form = sx ? phCxSxTrackHtml(r.x.key, M, null) : r.s.pain ? phCxPainFormHtml(r.s, M) : r.s.track === "bar" ? phCxSxTrackHtml(r.s.fbrKey, M, r.s) : phCxCcFormHtml(r.s, M);
+    const right = `<h4>Notes</h4>${notes || `<div class="meta">No notes</div>`}${form}`;
     return `<div class="ph-cx-dr${g ? " ga" : ""}${fx ? " in" : ""}" data-cx-dr="${esc(key)}"${phCxAreaSty(g)}><div>${left}</div><div>${right}</div></div>`;
   }
   // under the pain rows: Add pain, + Pick areas, Close-ups · Surgeries · Pain intake (the pain map's own pieces, drawn here); the Pain area's
@@ -90840,7 +90865,7 @@ or changing anything in Cliniko.
     const pm = M.pain ? ` data-pm-box="${esc(M.pain.pid)}" data-pm-name="${esc(name)}" data-cx-pain="1"${M.pain.mainIdx >= 0 ? ` data-cx-pmain="p:${esc(M.pain.list[M.pain.mainIdx].r + "|" + M.pain.list[M.pain.mainIdx].s)}"` : ""}` : "";
     setTimeout(phCxSettle, 0);
     return `<div class="ph-cx b" data-cx-host="1" data-cx-name="${esc(name)}" data-cx-plan="${esc(plan ? plan.id : "")}" data-cx-w="${w}"${litOn ? ` data-cx-lit="${esc(M.lit)}"` : ""} data-cx-ask="${esc(M.ask)}" data-cx-askk="${esc(M.askKind)}" data-cx-day="${M.today}"${pm}>
-      <div class="ph-cx-hd"><span class="ph-cx-cap">Came in for</span>${phCxsHtml(name)}${vsel}${cmpSw}${rangeSw}${scaleSw}${chartBtn}${meta}</div>${chart}
+      <div class="ph-cx-hd"><span class="ph-cx-cap">Came in for</span>${phCxsHtml(name)}${vsel}<span class="ph-cx-tools">${cmpSw}${rangeSw}${scaleSw}${chartBtn}</span>${meta}</div>${chart}
       <div class="ph-cx-split"><div class="ph-cx-tcol"><div class="ph-cx-rows"><i class="ph-cx-askbar" aria-hidden="true"></i>${rows}</div>${pbar}</div>${phCxPnlHtml(M, name)}</div>${foot}${M.pain ? PH_PM_DX_LIST_HTML + PH_PM_SINCE_LIST_HTML : ""}
     </div>`;
   }
@@ -90860,7 +90885,10 @@ or changing anything in Cliniko.
     if (!sx) {
       const s = r.s, p = s.pain ? s.pain.p.s : "";
       const side = p ? `<span class="sd">${p === "B" ? "Both" : p}</span>` : "";
-      head = `<div class="pt">${s.main ? `<i class="mn">Main</i>` : ""}<span class="t">${esc(s.text)}</span>${side}</div><span class="gline">${phCxGoalHtml(s, name)}</span>`;
+      // a sign on the bar heads like a sign (no Goal: signs are not goals); a complaint shows Main when it is one, and its Sign tag
+      const sj = s.track === "bar" ? phSignSubj(s.text) : "", sgc = g.col || "var(--ph-faint)";
+      head = s.track === "bar" ? `<div class="pt"><i class="sg" style="--sc:${sgc}">Sign</i><span class="t">${esc(sj || s.text)}</span></div>${sj ? `<div class="psub">${esc(s.text.slice(sj.length + 2))}</div>` : ""}`
+        : `<div class="pt">${s.star ? `<i class="mn">Main</i>` : ""}<span class="t">${esc(s.text)}</span>${side}${s.fbrKey ? `<i class="sg" style="--sc:${sgc}" title="From a Fang Bing Ren sign, still ticked there">Sign</i>` : ""}</div><span class="gline">${phCxGoalHtml(s, name)}</span>`;
       today = s.energy ? phEnergyLineHtml(name, { inRow: true }) : phCxSlHtml(s, M, true);
       const b = s.trk.base, last = s.trk.pts.filter(q => q.day < M.today).pop(), since = s.since ? `<span>Since <b>${esc(phCcRel(s.since))}</b></span>` : "";
       if (M.back && (b || since)) facts = `<div class="pfacts">${b ? `<span>Baseline <b>${phCxR1(b.v)}</b> · ${esc(phCycShortLbl(b.day))}${s.over ? " · moved" : ""}</span>` : ""}${last && (!b || last.day !== b.day) ? `<span>Last <b>${phCxR1(last.v)}</b> · ${esc(phCycShortLbl(last.day))}</span>` : ""}${since}</div>${s.trk.pts.length > 1 ? `<div class="pchart ph-cx-dchart">${phCxRowChartSvg(s)}</div>` : ""}`;
@@ -90874,7 +90902,10 @@ or changing anything in Cliniko.
     const note = phCxNoteToday(M, name, key), nOpen = phCxNoteBox === key, dOpen = phCxDet === key;
     const last = phCxLastNoteHtml(M, key);
     const box = nOpen ? `<div class="pnote">${phCxNoteInHtml(M, name, key, sx ? r.x.label : r.s.text)}</div>` : "";
-    const det = dOpen ? `<div class="pdet">${!sx && r.s.pain ? phCxPainFormHtml(r.s, M) : ""}${phCxRebaseToolHtml(r, M)}</div>` : "";
+    // Details = one form for every row (her picks 2026-10-27): a pain's own, a typed complaint's Name · How long · ★ Main · Remove, a
+    // sign's Track with + Make it a complaint; then Move baseline
+    const detF = sx ? phCxSxTrackHtml(r.x.key, M, null) : r.s.pain ? phCxPainFormHtml(r.s, M) : r.s.track === "bar" ? phCxSxTrackHtml(r.s.fbrKey, M, r.s) : phCxCcFormHtml(r.s, M);
+    const det = dOpen ? `<div class="pdet">${detF}${phCxRebaseToolHtml(r, M)}</div>` : "";
     const noteBtn = nOpen ? "" : btn(`data-cx-nbox="${k}"${note ? ` title="${esc(note)}"` : ""}`, `<svg class="icn" aria-hidden="true"><use href="#i-edit"/></svg>${note ? `<span class="nt">${esc(note)}</span>` : "Note"}`, note ? "ntx" : "");
     const detBtn = btn(`data-cx-det="${k}" aria-expanded="${dOpen ? "true" : "false"}"`, `Details ${dOpen ? "▴" : "▾"}`, dOpen ? "on" : "");
     return `<aside class="ph-cx-pnl" style="--gc:${g.col || "var(--ph-faint)"}" data-cx-pnl="${k}"><div class="ptop"><div class="pmain"><span class="palab">${esc(g.sh || "")}</span>${head}${today || day ? `<div class="ptoday">${day}${today}</div>` : ""}</div>${fig}</div>
@@ -91050,6 +91081,143 @@ or changing anything in Cliniko.
     presSavedToast(`${gone.text || "Complaint"} removed`, { undo: () => { if (phCcWrite(name, c => { const a = Array.isArray(c.secondary) ? c.secondary : (c.secondary = []); if (!a.some(s => s && s.id === id)) a.splice(Math.min(at, a.length), 0, gone); })) after(); } });
     return true;
   }
+  /* ==== COMPLAINTS IN DETAILS (her synth22 batch 2026-10-27, mock complaints-batch-mock-2026-10-27.html, her 8 picks, all the
+     recommended ones): every row's Details ▾ in the panel edits it in place; ★ Main is a switch on each complaint (any number, one at
+     least stays Main); a sign goes on the 0-10 bar or becomes a complaint. One write door each: phCcWrite (complaints), phPmWrite (pains),
+     phCxWrite (ccTrack.sxBar = { [signKey]: { id, at } | { id, off } }). ==== */
+  // every Main, in the card's order (the chief, or the pain that carries it, first): the one-line places join them (her pick Q2)
+  function phCxMainsOf(name) {
+    try {
+      const rec = phPatientPeek(name) || {}, items = phCxItems(name), st = phCxPainState(name, rec, items), pains = st ? phCxPainItems(rec, st) : [];
+      // the pain that carries the chief says the chief's own words, unless they are only the family's name ("Pain")
+      const cw = items[0] ? String(items[0].text || "").trim() : "", f = items[0] ? phCcFam(items[0].fam) : null, bare = !cw || !!(f && cw.toLowerCase() === f.label.toLowerCase());
+      const out = pains.filter(p => p.star && p.main).map(p => ({ key: p.key, text: bare ? p.text + " pain" : cw, chief: true }));
+      items.forEach(it => { if (it.star && it.track !== "bar" && !(st && st.hide.has(it.key))) out.push({ key: it.key, text: it.text, chief: !!it.main }); });
+      pains.forEach(p => { if (p.star && !p.main) out.push({ key: p.key, text: p.text + " pain" }); });
+      return out;
+    } catch (e) { return []; }
+  }
+  // the complaints that are not Main, for the "Also" places (the chief too, once it is switched off)
+  function phCxAlsoOf(name) {
+    const it = phCcRibItems(name); if (!it) return [];
+    const c = phCcOf(name) || {}, mains = new Set(phCxMainsOf(name).map(m => m.key)), out = [];
+    if (!mains.has("main") && c.mainOff) out.push(it.main.text);
+    ((c.secondary) || []).forEach(s => { if (s && String(s.text || "").trim() && !s.main) out.push(s.text); });
+    return out;
+  }
+  // more than one Main, or a Main that is not the chief: the one-line places say every Main (her pick Q2); else null and they read as before
+  function phCxCcMulti(name) { const ms = phCxMainsOf(name); return ms.length > 1 || (ms.length === 1 && !ms[0].chief) ? ms : null; }
+  // want = the state to set (the pain table's star passes it: there only a pain's own p.main shows); else it flips
+  function phCxStarToggle(name, key, want) {
+    const rec = phPatientPeek(name) || {}, items = phCxItems(name), st = phCxPainState(name, rec, items), pains = st ? phCxPainItems(rec, st) : [];
+    const rows = items.filter(it => it.track !== "bar" && !(st && st.hide.has(it.key))).concat(pains), row = rows.find(r => r.key === key);
+    if (!row) return false;
+    const on = want != null ? !!want : !row.star;
+    if (!on && !rows.some(r => r !== row && r.star)) { presSavedToast("One complaint stays Main"); return false; }
+    let ok;
+    if (row.pain) {
+      const idx = st.list.findIndex(p => "p:" + p.r + "|" + p.s === key), hid = st.hide.has("main"); if (idx < 0) return false;
+      if (!on && !row.pain.p.main) ok = phCcWrite(name, c => { c.mainOff = true; });   // it showed Main only for the chief
+      else {
+        // the first star beside the chief's own pain keeps that pain Main too; the last star off = the chief is no longer Main
+        const keepIdx = on && hid && st.chiefStar && !st.list.some(p => p.main) ? st.mainIdx : -1;
+        ok = phPmWrite(name, st.pid, list => { const p = list[idx]; if (!p) return; if (on) p.main = true; else delete p.main; if (keepIdx >= 0 && list[keepIdx]) list[keepIdx].main = true; });
+        if (ok && hid) { const left = on || st.list.some((p, i) => i !== idx && p.main); phCcWrite(name, c => { if (left) delete c.mainOff; else c.mainOff = true; }); }
+      }
+    } else if (row.main) ok = phCcWrite(name, c => { if (on) delete c.mainOff; else c.mainOff = true; });
+    else ok = phCcWrite(name, c => { const s = (c.secondary || []).find(x => x && x.id === row.id); if (!s) return; if (on) s.main = true; else delete s.main; });
+    if (!ok) return false;
+    try { phTpAutoBust(); } catch (e) { /* cache not built yet */ }
+    phCcSaved = true; phCcRibSync(); phCxRefresh(name);
+    return true;
+  }
+  // Remove on the chief complaint: the next complaint (a Main one first) takes its place with its own scores, notes, baseline and Goal;
+  // none left = the slot empties and Came in for reads the pain map or plan again. Undo puts both records back.
+  function phCxRemoveMain(name) {
+    const rec0 = phPatientPeek(name) || {}, cp = o => o ? JSON.parse(JSON.stringify(o)) : null, c0 = cp(rec0.complaint), t0 = cp(rec0.ccTrack);
+    const gone = (phCxItems(name)[0] || {}).text || "Complaint";
+    let nxId = "";
+    const ok = phCcWrite(name, c => {
+      const a = Array.isArray(c.secondary) ? c.secondary : [], live = s => s && s.id !== "pain-auto" && String(s.text || "").trim();
+      const nx = a.find(s => live(s) && s.main) || a.find(live);
+      ["mainOff", "mainGoal", "dx", "sinceEst", "sincePrec"].forEach(f => delete c[f]);
+      if (!nx) { c.main = null; c.mainText = ""; c.since = ""; c.autoOff = false; return; }
+      nxId = nx.id;
+      c.main = phCcGuessIds(nx.text)[0] || c.main || null; c.mainText = nx.text; c.since = nx.since || ""; c.autoOff = true;
+      if (nx.sinceEst) c.sinceEst = true; if (nx.sincePrec) c.sincePrec = nx.sincePrec; if (nx.dx) c.dx = nx.dx; if (nx.goal) c.mainGoal = nx.goal;
+      c.secondary = a.filter(s => s !== nx);
+    });
+    if (!ok) return false;
+    // ccTrack's "main" belongs to whoever holds the slot: the removed one's scores go, the one that moved up brings its own
+    phCxWrite(name, tr => {
+      Object.keys(tr.days).forEach(d => { const r = tr.days[d]; delete r.main; if (nxId && r.sec && r.sec[nxId]) { r.main = r.sec[nxId]; delete r.sec[nxId]; } });
+      if (tr.base) { delete tr.base.main; if (nxId && tr.base["s:" + nxId]) { tr.base.main = tr.base["s:" + nxId]; delete tr.base["s:" + nxId]; } }
+    });
+    const after = () => { try { phTpAutoBust(); phCcSeedSymptoms(name); } catch (e) { /* no plan yet */ } phCcSaved = true; phCcRibSync(); phCcFillCase(name); phCxRefresh(name); };
+    after();
+    presSavedToast(`${gone} removed`, { undo: () => {
+      const r = phPatientRec(name); if (!r) return;
+      if (c0) r.complaint = c0; else delete r.complaint;
+      if (t0) r.ccTrack = t0; else delete r.ccTrack;
+      if (savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return; }
+      after();
+    } });
+    return true;
+  }
+  // a sign onto the bar or back (her picks Q6 + Q7): on the bar it is scored 0-10 under its own id from today (its first bar score is its
+  // baseline); back to Better · Same · Worse keeps the id, so its bar scores come back with it. Its ratings are never touched.
+  function phCxSxTrack(name, signKey, on) {
+    const rec = phPatientPeek(name) || {}, b = ((rec.ccTrack || {}).sxBar || {})[signKey] || null;
+    if (!!(b && !b.off) === on) return true;
+    const used = new Set(((phCcOf(name) || {}).secondary || []).map(s => s && s.id)), id = b && b.id && !used.has(b.id) ? b.id : uid();
+    if (!phCxWrite(name, tr => { const m = tr.sxBar || (tr.sxBar = {}); m[signKey] = on ? { id, at: keyOf(TODAY) } : { id, off: true }; })) return false;
+    const k = on ? "s:" + id : "x:" + signKey, pk = phPatientKey(name);
+    phCxFocSet(name, k); phCxDet = k;   // the panel stays on the sign, Details open (a narrow card: its drawer stays open)
+    if (phCxDr[pk] === (on ? "x:" + signKey : "s:" + id)) phCxDr[pk] = k;
+    phCxRefresh(name);
+    return true;
+  }
+  // a typed complaint's Details (her pick Q5): Name · How long · ★ Main · Remove
+  function phCxCcFormHtml(s, M) {
+    const c = (M.rec && M.rec.complaint) || {}, own = s.main ? c : (Array.isArray(c.secondary) ? c.secondary : []).find(x => x && x.id === s.id) || {};
+    const k = esc(s.key), nmE = esc(s.text), since = s.since || "";
+    const rm = s.key === "s:pain-auto" ? "" : `<button type="button" class="ph-cx-chip" data-cx-ccrm="${k}">Remove</button>`;
+    return `<div class="pf"><label>Name</label><input type="text" class="ph-cx-pin" data-cx-ccname="${k}" value="${nmE}" maxlength="60" autocomplete="off" spellcheck="false" aria-label="Name">
+      <label>How long</label><div class="ph-cx-since2"><input type="text" class="ph-cx-pin" list="phPmSinceList" data-cx-ccsince="${k}" value="${esc(phCcFmtDatePrec(since, own.sincePrec))}" placeholder="date, 2 yr, 08/2026 or 2026" autocomplete="off" aria-label="${nmE} started"><span class="rel${since ? "" : " empty"}">${since ? esc(phCcRel(since)) : "since when?"}</span></div>
+      <label></label><span class="ph-cx-pbtns"><button type="button" class="ph-cx-chip${s.star ? " on" : ""}" data-cx-star="${k}" aria-pressed="${!!s.star}">★ Main</button>${rm}</span></div>`;
+  }
+  // a sign's Details (her picks Q6 + Q7): Track with Better · Same · Worse | Bar 0–10, and Make it a complaint; on the bar, its ratings before
+  function phCxSxTrackHtml(signKey, M, s) {
+    const k = esc(signKey), bar = !!s, sym = { g: ["g", "✓"], b: ["b", "↑"], s: ["", "→"], w: ["w", "↓"] };
+    const seg = `<span class="ph-pm-seg" role="group" aria-label="Track with"><button type="button" class="${bar ? "" : "on"}" data-cx-track="${k}|pills" aria-pressed="${!bar}">Better · Same · Worse</button><button type="button" class="${bar ? "on" : ""}" data-cx-track="${k}|bar" aria-pressed="${bar}">Bar 0–10</button></span>`;
+    const h = bar ? phCxSxHist(M.rec, signKey) : [];
+    const before = h.length ? `<label>Before</label><div class="trail">${h.map(x => { const y = sym[x.v] || ["", "•"]; return `<div><i class="${y[0]}">${y[1]}</i>${esc(phCycShortLbl(x.day))}</div>`; }).join("")}</div>` : "";
+    return `<div class="pf"><label>Track with</label>${seg}${before}<label></label><span class="ph-cx-pbtns"><button type="button" class="ph-cx-chip" data-cx-mk="${k}">Make it a complaint</button></span></div>`;
+  }
+  // Name and How long save on change (Enter or leaving the box) and update in place, so a tap that ends the typing is never lost
+  document.addEventListener("change", e => {
+    const el = e.target && e.target.closest ? e.target.closest("[data-cx-ccname],[data-cx-ccsince]") : null; if (!el) return;
+    const name = phCxNameOf(el); if (!name) return;
+    const isName = el.dataset.cxCcname != null, key = isName ? el.dataset.cxCcname : el.dataset.cxCcsince, isMain = key === "main", id = key.slice(2);
+    const at = c => isMain ? c : (Array.isArray(c.secondary) ? c.secondary : []).find(s => s && s.id === id);
+    if (isName) {
+      const v = el.value.trim().slice(0, 60);
+      if (!v) { const it = phCxItems(name).find(x => x.key === key); el.value = it ? it.text : ""; return; }
+      if (!phCcWrite(name, c => { const o = at(c); if (!o) return; if (isMain) o.mainText = v; else o.text = v; })) return;
+      try { phTpAutoBust(); phCcSeedSymptoms(name); } catch (x) { /* no plan yet */ }
+      document.querySelectorAll(`#pharmacyPage [data-cx-row="${CSS.escape(key)}"] .nm .t, #pharmacyPage [data-cx-pnl="${CSS.escape(key)}"] .pt .t`).forEach(x => { x.textContent = v; });
+      phCcRibSync(); phCcSavedFlash();
+      return;
+    }
+    const r = phCcParseDatePrec(el.value);
+    if (!r && el.value.trim()) { el.classList.add("bad"); return; }
+    el.classList.remove("bad");
+    if (!phCcWrite(name, c => { const o = at(c); if (!o) return; delete o.sinceEst; if (r) { o.since = r.iso; if (r.prec && r.prec !== "d") o.sincePrec = r.prec; else delete o.sincePrec; } else { o.since = ""; delete o.sincePrec; } })) return;
+    try { phTpAutoBust(); } catch (x) { /* cache not built yet */ }
+    const rel = el.parentElement.querySelector(".rel");
+    if (rel) { rel.textContent = r ? phCcRel(r.iso) : "since when?"; rel.classList.toggle("empty", !r); }
+    phCcSavedFlash();
+  });
   /* ==== SIGN SEARCH at the top of the Compass (her 2026-10-23 ask: "to save me going to the fang bing ren page, allow me to type in
      and search/select fang bing ren signs"; mock fbr-sign-search-mock-2026-10-23.html, her 8 picks + 1). An always-visible box under
      "Compass · came in for"; it replaced "+ add". Typing searches the Fang Bing Ren signs with that page's own search (phCsToks /
@@ -91163,10 +91331,14 @@ or changing anything in Cliniko.
   var phCxFresh = "";   // the sign row added a moment ago (it slides open once)
   // a sign becomes a complaint of its own (▾ Make it a complaint): a secondary with that sign as its own key, since = the sign's start
   function phCxSignToComplaint(name, signKey) {
-    const rec = phPatientPeek(name) || {}, label = phSignLabel(signKey), since = ((rec.tri || {}).since || {})[signKey] || keyOf(TODAY), id = uid();
+    const rec = phPatientPeek(name) || {}, label = phSignLabel(signKey), since = ((rec.tri || {}).since || {})[signKey] || keyOf(TODAY);
+    // a sign on the bar keeps its 0-10 scores as the complaint (same id); its Fang Bing Ren tick stays (her pick 2026-10-27 Q8)
+    const b = ((rec.ccTrack || {}).sxBar || {})[signKey], used = new Set(((phCcOf(name) || {}).secondary || []).map(s => s && s.id));
+    const id = b && b.id && !used.has(b.id) ? b.id : uid(), det = phCxDet === "x:" + signKey || !!(b && phCxDet === "s:" + b.id);
     if (!phCcWrite(name, c => { if (!Array.isArray(c.secondary)) c.secondary = []; c.secondary.push({ id, text: label, since, sinceEst: since !== keyOf(TODAY), fbrKey: signKey }); })) return false;
-    phCxWrite(name, tr => { if (tr.sxPin) delete tr.sxPin[signKey]; if (tr.sxOff) delete tr.sxOff[signKey]; });
+    phCxWrite(name, tr => { if (tr.sxPin) delete tr.sxPin[signKey]; if (tr.sxOff) delete tr.sxOff[signKey]; if (tr.sxBar && tr.sxBar[signKey]) tr.sxBar[signKey] = { id, off: true }; });
     try { phTpAutoBust(); phCcSeedSymptoms(name); } catch (e) { /* no plan yet */ }
+    if (det) { phCxFocSet(name, "s:" + id); phCxDet = "s:" + id; }   // made from its Details: the panel follows it
     phCcSaved = true; phCcRibSync();
     phCxRefresh(name);
     return true;
@@ -91296,6 +91468,10 @@ or changing anything in Cliniko.
     if ((el = T.closest("[data-cx-move]"))) { const name = phCxNameOf(el), v = el.dataset.cxMove, cut = v.lastIndexOf(":"); phCxMenu = ""; if (!phCxReorder(name, v.slice(0, cut), "", +v.slice(cut + 1))) phCxRefresh(name); return true; }
     if ((el = T.closest("[data-cx-rm]"))) { const name = phCxNameOf(el); phCxMenu = ""; if (!phCxRemoveSec(name, el.dataset.cxRm)) phCxRefresh(name); return true; }
     if ((el = T.closest("[data-cx-mk]"))) { const name = phCxNameOf(el); phCxMenu = ""; if (!phCxSignToComplaint(name, el.dataset.cxMk)) phCxRefresh(name); return true; }
+    // Details (her synth22 picks 2026-10-27): ★ Main switches, Remove, a sign's Track with
+    if ((el = T.closest("[data-cx-star]"))) { const name = phCxNameOf(el); if (name) phCxStarToggle(name, el.dataset.cxStar); return true; }
+    if ((el = T.closest("[data-cx-ccrm]"))) { const name = phCxNameOf(el), k = el.dataset.cxCcrm; if (name) { if (k === "main") phCxRemoveMain(name); else if (!phCxRemoveSec(name, k)) phCxRefresh(name); } return true; }
+    if ((el = T.closest("[data-cx-track]"))) { const name = phCxNameOf(el), v = el.dataset.cxTrack, cut = v.lastIndexOf("|"); if (name) phCxSxTrack(name, v.slice(0, cut), v.slice(cut + 1) === "bar"); return true; }
     if ((el = T.closest("[data-cx-nw]"))) { const name = phCxNameOf(el), k = el.dataset.cxNw; phCxMenu = ""; if (phCxWrite(name, tr => { (tr.sxOff || (tr.sxOff = {}))[k] = keyOf(TODAY); })) { phCxRefresh(name); phCxTriSync(name); presSavedToast(`${phSignLabel(k)} · not watching`); } return true; }
     if ((el = T.closest("[data-cx-unw]"))) { const name = phCxNameOf(el), k = el.dataset.cxUnw; if (phCxWrite(name, tr => { if (tr.sxOff) delete tr.sxOff[k]; })) { phCxFresh = k; phCxRefresh(name); phCxTriSync(name); } return true; }
     if ((el = T.closest("[data-cx-more]"))) { const name = phCxNameOf(el); phCxMore[phPatientKey(name)] = true; phCxRefresh(name); return true; }
@@ -107052,10 +107228,14 @@ or changing anything in Cliniko.
   function phPmSetMain(name, planId, idx) {
     const plan = phPmPlanFor(name, planId); if (!plan) return false;
     const was = phPmList(name, plan)[idx]; if (!was) return false;
+    // since 2026-10-27 (her synth22 pick: any number of Mains) ★ is a switch on this pain, never clearing the others: on the plan the
+    // Compass shows it is the Compass's own switch (one complaint stays Main; a typed chief complaint stays as it is)
+    let shown = ""; try { shown = phMskPid(name, phTpShownPlan(name)); } catch (e) { /* no plan on screen */ }
+    if (shown && String(shown) === String(planId)) { const ok1 = phCxStarToggle(name, "p:" + was.r + "|" + was.s, !was.main); phPmRefresh(name, planId); phCcRefresh(true); return ok1; }
     const turnOn = !was.main;
-    const ok = phPmWrite(name, planId, list => { list.forEach((p, i) => { if (i === idx && turnOn) p.main = true; else delete p.main; }); });
+    const ok = phPmWrite(name, planId, list => { const p = list[idx]; if (!p) return; if (turnOn) p.main = true; else delete p.main; });
     if (!ok) return false;
-    if (turnOn) {
+    if (turnOn && !(phCcOf(name) || {}).main) {
       const reg = PH_PAIN_REGIONS.REGIONS[was.r];
       const text = reg ? phPmMainText(reg, was) : "";
       if (text) {
@@ -107959,7 +108139,7 @@ or changing anything in Cliniko.
         const pf = phCcFamOfPlan(plan), sx = (phPatientPeek(name) || {}).sex, items = phCxItems(name);
         // a typed complaint the pain map stands in for (the Compass hides it) gives its line through the pain row, never twice (2026-10-24)
         let pst = null; try { pst = phCxPainState(name, phPatientPeek(name), items); } catch (e) { /* no pain map */ }
-        const rows = items.filter(it => !(pst && pst.hide.has(it.key))).map(it => phCxGoal(name, it).text);
+        const rows = items.filter(it => it.track !== "bar" && !(pst && pst.hide.has(it.key))).map(it => phCxGoal(name, it).text);   // a sign on the bar is not a goal
         const mainFam = items.length ? items[0].fam : null;
         if (pf && pf.id !== mainFam && !(pf.id === "pain" && rows.some(g => /pain|headache|migraine/i.test(g)))) addPart(phCcGoalMain(pf.id, sx));
         rows.forEach(addPart);
@@ -108181,11 +108361,14 @@ or changing anything in Cliniko.
         if (!rec) return out;
         const it = phCcRibItems(name);
         if (it && it.main) {
-          out.push({ tag: "main", text: phWchCap(phWatchWord(it.main.text) || phWatchMainLine(it.main.id) || it.main.text) });
-          it.others.filter(o => String(o.text || "").trim() !== PH_CC_PAIN_POINTER).forEach(o => {
-            const l = phWatchWord(o.text);
-            out.push({ tag: "also", text: phWchCap(o.text) + (l ? ": " + phWchLow(l) : "") });
-          });
+          // more than one Main (her pick 2026-10-27 Q2): each Main is a "main" line, the chief too while it is one; the rest "also"
+          const mm = phCxCcMulti(name), chiefMain = !mm || mm.some(m => m.chief);
+          const chiefLine = { tag: chiefMain ? "main" : "also", text: phWchCap(phWatchWord(it.main.text) || phWatchMainLine(it.main.id) || it.main.text) };
+          const line = (t, tag) => { const l = phWatchWord(t); out.push({ tag, text: phWchCap(t) + (l ? ": " + phWchLow(l) : "") }); };
+          if (chiefMain) out.push(chiefLine);
+          if (mm) mm.filter(m => !m.chief).forEach(m => line(m.text, "main"));
+          if (!chiefMain) out.push(chiefLine);
+          (mm ? phCxAlsoOf(name).filter(t => t !== it.main.text) : it.others.map(o => o.text)).filter(t => String(t || "").trim() !== PH_CC_PAIN_POINTER).forEach(t => line(t, "also"));
         }
         let clues = [];
         try { clues = phPatClues(rec, name) || []; } catch (e) { clues = []; }
@@ -108219,9 +108402,9 @@ or changing anything in Cliniko.
   function phTpAimValues(name, plan) {
     const out = { main: "", sec: "", cyc: "" };
     try {
-      const it = phCcRibItems(name);
-      if (it && it.main) out.main = phWchLow(it.main.text);
-      if (it) out.sec = phTpListAnd(it.others.map(o => String(o.text || "").trim()).filter(t => t && t !== PH_CC_PAIN_POINTER).map(phWchLow));
+      const it = phCcRibItems(name), mm = it ? phCxCcMulti(name) : null;   // more than one Main: "neck pain and poor sleep" (her pick 2026-10-27 Q2)
+      if (it && it.main) out.main = mm ? phTpListAnd(mm.map(m => phWchLow(m.text))) : phWchLow(it.main.text);
+      if (it) out.sec = phTpListAnd((mm ? phCxAlsoOf(name) : it.others.map(o => o.text)).map(t => String(t || "").trim()).filter(t => t && t !== PH_CC_PAIN_POINTER).map(phWchLow));
       const rec = phPatientPeek(name);
       if (rec && phWatchCycleOk(rec, plan)) { const c = phCycleComp(Object.assign({}, rec)); if (c && !c.overdue) out.cyc = c.phaseLabel.toLowerCase() + " phase"; }
     } catch (e) { /* tokens with nothing behind them drop out */ }
@@ -109492,11 +109675,13 @@ or changing anything in Cliniko.
     try {
     const it = phCcRibItems(name);
     if (it) {
-      const rel = it.main.since ? phCcRel(it.main.since) : "";
-      const others = it.others.map(o => o.text);
+      // more than one Main: every Main joined, the rest under Also (her pick 2026-10-27 Q2)
+      const mm = phCxCcMulti(name), mt = mm ? mm.map(m => m.text).join(" + ") : it.main.text;
+      const rel = !mm && it.main.since ? phCcRel(it.main.since) : "";
+      const others = mm ? phCxAlsoOf(name) : it.others.map(o => o.text);
       rows.push({ id: "cc", k: "Came in for", nav: "today", pg: "Today's visit", mini: phTpFxIc("i-clipboard"), big: phTpFxIc("i-clipboard", "lg"),
-        v: `<b class="mn">★</b> ${esc(it.main.text)}${rel ? ` · ${esc(rel)}` : ""}${others.length ? ` · ${esc(others.join(", "))}` : ""}`, d: "", old: false, chg: false,
-        now: { dl: "Main", t: `${esc(it.main.text)}${rel ? ` · ${esc(rel)}` : ""}` }, was: others.length ? { dl: "Also", t: esc(others.join(", ")) } : null, phrase: phTpFxPhrase(it.main.text) });
+        v: `<b class="mn">★</b> ${esc(mt)}${rel ? ` · ${esc(rel)}` : ""}${others.length ? ` · ${esc(others.join(", "))}` : ""}`, d: "", old: false, chg: false,
+        now: { dl: "Main", t: `${esc(mt)}${rel ? ` · ${esc(rel)}` : ""}` }, was: others.length ? { dl: "Also", t: esc(others.join(", ")) } : null, phrase: phTpFxPhrase(it.main.text) });
     } else rows.push({ id: "cc", k: "Came in for", nav: "today", pg: "Today's visit", mini: phTpFxIc("i-clipboard"), big: phTpFxIc("i-clipboard", "lg"), v: `<span class="faint">Nothing recorded</span>`, d: "", old: true, chg: false, now: { dl: "Main", t: "Nothing recorded" }, was: null, phrase: "" });
     } catch (e) { /* line left out */ }
     // Ren: the family her Ren signs lean to + what her build looks like
