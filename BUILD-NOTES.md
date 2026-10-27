@@ -4441,3 +4441,11 @@ same plan, no retyping; out by Print AND email, from Messages, to the address on
     Communications list. No email: "✉ No email on file", disabled. The printed page builds (1.3 KB).
   - 1280, and 375 (the phases wrap 2 + 1, nothing past the edge). No console errors.
 - **Not checked:** the print dialog itself and a real mail app; her real records; the Key2.
+- **LIVE** 2026-10-27, build 20261027-191600 (main be44d3c6), on her "push live the next step too" + "push live", alone on
+  top of 191000.
+- **Checked first, read-only on her records** (the candidate from a temporary branch, in a frame on the C6 icon page; nothing
+  saved, no sending, print and new windows stubbed; Email never tapped): opens in 2.0 s + 0.5 + 0.7 + 0.5 s, no errors. All
+  101 open plans: `phTpCplModel`, `phTpCplText`, `phTpCplSheetHtml`, `phTpCplDocHtml`, `phTpCplViewHtml`, no errors, slowest
+  127 ms; text 115-1,022 characters, never "undefined" / "NaN" / "null". 33 plans offer "✉ Email" (a link, not a button), 68
+  read "✉ No email on file". The plan view opened through the app (`phTpLetterOpen = "plan"`) for 6 patients: 0.8-2.7 s, no
+  errors. Today's visit for 12 patients 1.0-2.3 s (191000: 0.9-2.1 s).
