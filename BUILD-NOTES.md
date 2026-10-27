@@ -4078,3 +4078,7 @@ Asked first (the grid is LOCKED); she picked the recommended option on all three
 **Tested** (sandbox, seeded, Low back pain plan): live row = Aim · Points · Formula "→ Fill" · Watch (red flags + Red flags ▾);
 Formula set → "Gui Zhi Fu Ling Wan" only; fbr mode → "Fu Zi auto"; 360: three phase names whole-word, none under the ×, the
 cadence chips on one line; 1280 unchanged (no overlap); no console errors.
+
+**LIVE 2026-10-27, build 20261027-164200 (main f202a26b):** her "push live the profile changes too": the shorter profile, step 3 first
+pass (bd5e2c39) alone on live main; the Session grid commit d93ab774 (her 3 picks on its repeats) stays on session-a, not live.
+Joined back as 7122b3eb.
