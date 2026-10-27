@@ -1492,9 +1492,13 @@ Trigger, off, MP end = motor point out; + Movement; + Test; Diagnosis + her set)
 typed points, Ashi on / off, Save as my set per diagnosis in `PHARMACY.mskSets`; points in `visits[day].acu`). The app never picks
 a point. No region chips, Re-measure table or 9 exam tabs; Observation, Strength, Neuro, Function sit behind "More exam". Kept:
 tap a belly = the same chip, + Cause, Enlarge, 3D. Motor-point muscles = ONE list (`phMskPlanOf`, carried included) for the panel,
-the Treatment tab and `phMskSummary`. **NOT BUILT** (waits for her look at this page): Treatment, Care Plan phase Points and the
-Log fed from Today's points. MMT = a 3-point Weak / Mildly weak / Strong scale. A test row snapshots the library at add-time. MSK
-libraries are append-only.
+the Treatment tab and `phMskSummary`. **Today's points go on** [Musculoskeletal page, step 2] (`phMskAreasToday` = the panel's list
+by area): the Treatment tab's navy block has a **Points** row of them, ticked (a tap = not needled today, `off: true` on the page's
+own list, shown faded "not today" there); ✓ Complete session saves them as `session.points` (motor points as "Upper trapezius MP
+R") and each area as `session.mskAreas` (`{r, s, dx, pts, b, a}`), and a blank Care Plan phase Points fills from them; the panel's
+foot says Treatment · Care Plan (blank / ✓ same / other points + **→ plan**, Undo) · Log; the Log's visit line shows Area ·
+Diagnosis · Points · Pain before → after. Copy notes reads the same list. MMT = a 3-point Weak / Mildly weak / Strong scale. A test
+row snapshots the library at add-time. MSK libraries are append-only.
 
 ## Fang Bing Ren, Find the Ren & Patterns
 **Fang Bing Ren** (the Triangle) is the one place constitutional-family scoring happens: one merged header (verdict + Quick
