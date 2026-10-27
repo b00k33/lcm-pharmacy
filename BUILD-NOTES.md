@@ -4840,3 +4840,13 @@ screen shows changed.
 - **Not checked:** her real records. Screens the test data never reaches (some popovers and sheets) are covered only by the
   scan.
 - **Not live:** waits for her "push live".
+
+## Find the Ren, the tongue waits: live (2026-10-27)
+
+- **LIVE** 2026-10-27, build 20261027-222700 (main 89c0c8db), on her "Push": 2738fc85 + 73b3b5bf alone, on top of live 213900
+  (index.html = live + those two commits, checked line by line, stamp aside; the Tidy commits 058a867a / bab030c3 are NOT in it).
+- **Checked first, read-only on her records** (the candidate in a guarded frame on the C6 icon host, sync off, no writes): it
+  opened with no errors; Find the Ren drew for all 955 patients (about 5 ms each, no errors, no exam sign asked); the one patient
+  with all six looks done showed 7 tabs, a ✓ Tongue tab with her chart's words, two questions and no Later line (all three
+  charts on file); 14 patients have a charted tongue.
+- The site served 222700 within 20 s; the served page holds `phRqExamPart` and `phRqTngOneHtml`, sw.js `lcm-20261027-222700`.
