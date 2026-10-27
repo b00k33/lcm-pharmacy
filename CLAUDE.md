@@ -346,8 +346,13 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   white wash. Fang Bing Ren colours pick white or ink by luminance (0.207) and
   a formula shade in the dead band is nudged out (`phFbrShadeFormulas`).
   Measured app-wide 2026-10-25: every text 4.5:1 (BUILD-NOTES "Readable text").
-- **Type:** sizes come from the `--fs-*` tokens, never a one-off px; display
-  numerals (gauges, big counts) use `--font-disp` (Barlow Semi Condensed).
+- **Type:** sizes come from the `--fs-*` tokens, never a one-off px. **One font on screen: Inter** (her 2026-10-27
+  "i dont like this font" about Barlow Semi Condensed on the Care Plan title; her pick "Inter on screen"): words
+  AND numbers, `--font-body`; `--font-disp` stays only as an alias of it. Every control inherits it (no browser
+  Arial), SVG labels and canvas text name Inter, herb codes and supplier tags are Inter with `tabular-nums`. Never
+  load or name a second screen font. Kept apart on purpose: printed letters and records (Georgia, print only), the
+  bottle label text and its template, and copy-paste text or template tokens (monospace), and Fitness's C22 look
+  (Manrope, her 2026-10-27 Fitness pick) until she says otherwise.
 - **Icons:** one family, the app's own sprite (`<svg><use href="#i-...">`) —
   never emoji, never a second icon set.
 
