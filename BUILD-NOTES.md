@@ -4797,3 +4797,8 @@ were made up: only 10 of her patients have Compass scores today, so the table fi
 - **Pages checked for the tongue fact:** Find the Ren, the Tongue page (`phTngHtml`), Today's visit's done state, Fang Bing
   Ren's Ren ticks. **Not checked:** her real records; a real camera capture from + Tongue (the same door as every photo add);
   the Care Plan Findings tongue row on screen.
+- **Narrow card (same day):** at 800px the tabs ran their names into each other (six in one row already did below about 620px:
+  "Muscles" 42px over its tab). The tabs now run 4 + 3 when the card is under 780px (her 1280px window with the side figure,
+  1000px) and 3 + 3 + Tongue under 620px (`@container`, not the photo viewer's three); measured at 800 / 1000 / 1220 / 1280 /
+  1600: nothing over its tab, one row of 7 at 1220 and wider. Pictures: `shots/ren-exam-later-2026-10-27.jpg` (a new patient:
+  the Ask, three Later lines) and `shots/ren-tongue-tab-2026-10-27.jpg` (the Tongue tab after a look), both at 800px.
