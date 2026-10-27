@@ -1678,7 +1678,7 @@ formula or sign = **integrate33**. **Find the Ren**: look first, then two
 questions at a time. The look is one row at a time (her 2026-10-24 picks): the face photo with
 Eyes / Lips / Skin / Muscles spots she drags (saved on that photo, `rqZones`), six tabs that show
 her picks ("✓ Lips Red"), the open row's groups as joined bars with short words, colour dots and a
-body scale on Weight; keys 1–9, 0 None, Enter Next, ← → [Find the Ren: one row at a time].
+body scale on Weight; keys 1–9, 0 None, Enter Next, ← → [Find the Ren: one row at a time]. **Exam signs wait** (her 2026-10-27 pick "both", mock `ren-tongue-later-mock-2026-10-27.html`): the Ask never asks a Tongue, Pulse or exam-only belly sign (`phRqExamPart`; bloating, rumbling, sloshing, fullness are still asked; a part skipped "Always" is asked); a part never charted shows a **Later** line (its most telling sign · Tongue › / Pulse › / Abdomen ›); a 7th tab **Tongue** (optional: the six looks still open the Ask) holds the newest tongue photo and the Tongue page's own Ren-linked chips, written through `phTngWrite` [Find the Ren: the tongue waits, or is looked at here].
 (Locked details: "Locked conventions" below.) **The Ren page board** (her pick A,
 2026-10-24): 26px one-line signs, auto No's folded per subject, and a sticky
 search bar (words, All · Yes · No · Open, area, count; / ↑ ↓ Enter Shift+Enter
