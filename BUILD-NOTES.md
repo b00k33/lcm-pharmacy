@@ -4902,3 +4902,24 @@ screen shows changed.
   summary line. The Compass pain rows read the same `pains` store (checked in the data, not drawn).
 - **Not checked:** her real records; 3D, Enlarge and + Cause inside the new cards; keyboard-only use; reduced motion by eye.
 - **Not live:** waits for her "push live".
+
+## Rules file: the current-state part shortened (2026-10-27)
+
+Her "yes" to shortening CLAUDE.md after the tidy-up report. Only "Current state, by area" was rewritten; the ★ rules, THE LAW,
+the personas (lcm6, code7, code3), Fit the screen, NEVER break these, Deploy & git, Traps, Locked conventions and OPEN are as
+they were.
+
+- **What changed:** each part now says what it is today, once: mock file names, build numbers, commit hashes, "Part N, step N"
+  labels, "her N picks" and chains of "since <date>" went; where a later paragraph replaced an earlier one (the phase review,
+  the Compass table, the Abdomen and Pulse pages, the meal card, her events' colour) only the merged current behaviour stays.
+  Her decisions stay as "(her pick)" / "(her word)" with her quote where her words set the rule. At most one or two
+  [BUILD-NOTES heading] pointers per feature.
+- **Checked:** the same 22 headings in the same order; all 1,037 backticked code names still there; rule words (never, always,
+  only, wins, locked, NOT) the same, bar three that only described history ("blood clues ... were never listed", a duplicate
+  pointer, an old "wins over"). CLAUDE.md 231,486 to about 214,500 bytes (the section 129 KB to 111 KB). Most of it is current
+  fact, so it shrank less than hoped.
+- **New line at the top of the section:** rewrite a part's paragraph when a build changes it; never add a dated paragraph after
+  it, so the section does not grow back.
+- **Left for her or a later pass (not changed):** the day head says "no count" while Both clinics says the day-header counts
+  include both clinics; Formula refill's "Phone = a weighing table; desktop = a week-banded list" may predate the one-line rows;
+  "Scores are joined 0–10 bars" sits beside the Today slider.
