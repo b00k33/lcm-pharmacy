@@ -3942,3 +3942,19 @@ name nowhere else; no cut / overlap at 1280 and 360; no console errors. A Sessio
 **Not tested:** her Key2, her real record, the full-screen plan modal (unchanged order), print.
 **Not built yet (parts 2b, 2c):** Watch as one list scored on Today's visit; Formula + Points under Course; the door
 without a template pick (changes the LAW §2).
+
+## Care Plan writes itself, part 2b: Watch as one list (her 2026-10-27 picks "One list" and "6 → 4 Better")
+**Built:** `phTpWatchHtml(name, plan)` after Diagnosis on the Care Plan (not the modal). It reads `phCxModel` with the
+Scoring bar's date set aside (always today, like `phTxCxHtml`): each concern row = first score (`s.trk.base`) → latest
+(last point) + `phCxDir` as Better / Same / Worse (one score = the score alone); each Compass sign row = first word → latest
+word (`PH_CX_SX`). Then the clues behind the diagnosis whose source is something the patient tells her
+(`PH_TP_WATCH_SRC`: tri, cycle, usual, notes, diet; exam, bloods, body type and history are left to their own pages), once
+each (a clue whose words match a row above is skipped), "Yes" / "Yes → Yes" / "New" against the plan's first progress
+snapshot; then the live phase's red flags (`phRfOfPhase`) with their last answer on any day. Nothing is stored. "The Compass
+scores the same rows": concerns, rated signs and red flags already are those rows; the told-signs are re-asked through Fang
+Bing Ren / Ask her as now (a Compass row for every diagnosis clue was not added: disclosed call).
+**Tested** (sandbox, seeded): Low back pain plan for the fertility test patient: Treat · Diagnosis · Watch in that order;
+Watch 7 rows ("Trying to conceive 7 → 5 Better", "period pain 8 → 4 Better", the rated signs, "Notes mention tiredness
+Yes", the template's red flag "–"); 1280 and 360 no cut / overlap from it (the Session grid's phase-name overlap at 360 is
+the older one); no console errors.
+**Not tested:** her Key2, her real record, a plan with saved progress snapshots (the "Yes → Yes" / "New" path).

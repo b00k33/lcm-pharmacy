@@ -1209,8 +1209,11 @@ treats it (or a plan with no course), else the course's name; `plan.title` itsel
 rename; the band's **Course · <template> ▾** chip opens the course picker (`phTpProtocolPickHtml`, "⇄ Change course" in ⋯).
 The plan column reads in visit order: **Treat** (`phTpTreatHtml`: one row per Compass concern, ★ where starred, its Goal;
 her typed or a booking's Goal still wins), then **Diagnosis** (each pattern on its own line with its level, the signs
-behind it under it as quiet tags with their `PH_PAT_SRC` icon), then the formula. An empty part reads a faded "not yet".
-Still to build: Watch as one list scored on Today's visit, Formula + Points under Course, the door without a template pick.
+behind it under it as quiet tags with their `PH_PAT_SRC` icon), then **Watch** (`phTpWatchHtml`, one list read from
+`phCxModel`: each concern's first score → latest + Better / Same / Worse, the signs rated on the Compass, then the
+diagnosis's told-signs (`PH_TP_WATCH_SRC`: Fang Bing Ren answers, cycle log, notes, diet; "New" when not in the plan's first
+progress snapshot), then the live phase's red flags with their last answer), then the formula. An empty part reads a faded
+"not yet". Still to build: Formula + Points under Course, the door without a template pick.
 
 **Diagnosis + Goal write themselves** (`phTpAutoDx`, `phTpAutoGoal`): every
 Likely or Possible pattern (plus any she agreed) minus the ones she took
