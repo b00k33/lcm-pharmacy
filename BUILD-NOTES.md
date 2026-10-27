@@ -4705,3 +4705,26 @@ the moment of typing; a date typed ahead never moved anything when it came.
   typed 5 Nov (ahead) → no move; moved by hand to Post-ET → the day sync left it; Post-OPU with the transfer day set to today
   without typing → reading the day's booking moved it to Post-ET (2WW starts on the transfer day). Plan and round removed after.
 - **Not checked:** her real IVF patients; the popover's new button by eye.
+
+## Care Plan part 3, step 7: course end and the ending letter (2026-10-27)
+
+Her pick 7 and her ask28 answer "The patient only" (not patient + GP, not no letter). Mock section 7. Measured: plans closed 2
+of 103. Already there: the last phase's review card offered Close plan / Stay (part 2 step 3, acting on her tap since step 1).
+
+- **`phTpPrvHtml`**: `last` = the live phase has no next (or today's review closed the plan). Then the head is "Course done ·
+  N visits over W weeks" (`phTpCourseStats`), the better / same / worse counts give way to the course table
+  (`phTpCourseHtml`, `.ph-tp-crs`) when there are scores, and the actions add "Ending letter" (`data-tp-cel-open`).
+- **`phTpCourseRows`**: the Compass's `cc` rows (`phCxModel(..., {all: true})`, never the Scoring bar's day), base and latest
+  value (`phCxR1`), the target progress (`phCxTgtProg(s, phCxTgt(...))`: `ok`, `txt`).
+- **Ending letter**: the click sets `phTpLetterOpen = "end"` and opens the plan tab; `phTpLetterViewHtml` → `phTpCplViewHtml(name,
+  plan, "end")`. `phTpCplDocHtml` / the Print and Email handlers take the kind (`data-tp-cpl-print="end"`,
+  `data-tp-cpl-mail="end"`; Messages context `careend`, label "Ending letter"). The text: Dear <first name>, title, date ·
+  visits, Where you started, where you are (only concerns with a first and a latest score; "% better" on a percent scale),
+  From here (the last non-skipped phase's `aim`, her words), See your GP straight away if (the patient plan's own GP lines),
+  sign-off.
+- **Tested (sandbox, "Zz Sweep Test" with its last phase made current in memory):** the card "Course done · 10 visits over 12
+  weeks", Trying to conceive 7 → 5 not yet, period pain 8 → 4 not yet; Close plan → "✓ Plan closed · Undo · Ending letter";
+  Ending letter → the page (title, date · 10 visits, the two rows in out-of-10 words, From here = Maintenance's aim, the GP
+  line, the sign-off), Print = "end", no email on file → the disabled button; the print document's title "Ending letter — …".
+  The plan was put back after; no console errors.
+- **Not checked:** the email itself (no address on the test patient), her real plans.

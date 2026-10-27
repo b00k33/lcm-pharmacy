@@ -1368,6 +1368,15 @@ stimulation phase, Follicular — Week 1 or a phase named for stims, on the Stim
 before; now the day ARRIVING moves it too (`phIvfDaySync`, read by Today's visit and the Appointments tags), forward only, so a
 phase she moved past by hand stays. Today's visit's IVF line adds "Stims <day>". No test day (not her pick).
 
+**Part 3, step 7: course end (her pick "Course end writes itself", her answer "The patient only"; mock section 7; BUILD-NOTES
+"Care Plan part 3, step 7"):** the last phase's review card (and the closed plan's, the same day) is the course: "Course done · 10
+visits over 12 weeks" (`phTpCourseStats`: every phase's visits, weeks since the first phase began), a Treat · Start · Now ·
+Target table (`phTpCourseRows`: each Compass concern's first score and latest, "✓ 2 or less" / "not yet"), then Close plan ·
+Stay N more · **Ending letter**. The letter (`phTpLetterOpen === "end"`, `phTpCelModel` / `phTpCelSheetHtml` / `phTpCelText`)
+is the patient plan's page and doors (🖨 Print, ✉ Email into Messages as "Ending letter"): Your treatment · <main concern>, the
+date and visits, Where you started, where you are ("Low back pain: 7 out of 10 → 2 out of 10"), From here = the last phase's own
+Aim, See your GP straight away if, her sign-off. Patient only (no GP copy).
+
 **Diagnosis + Goal write themselves** (`phTpAutoDx`, `phTpAutoGoal`): every
 Likely or Possible pattern (plus any she agreed) minus the ones she took
 off; Goal = one line per complaint in the Compass's order (her own Goal
