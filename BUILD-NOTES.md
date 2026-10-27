@@ -4300,3 +4300,20 @@ plan reviews written = 0 of 103 plans, while 28 plans had moved phase.
   - A cycle plan (Period pain): no card. "Zed Testtwo" (the freeze rule's patient): Today's visit 0.2 s, Care Plan 0.2 s.
     No console errors.
 - **Not checked:** her real records, the Key2, a phase whose planned count comes from cycle days.
+
+## Fixed signs leave the Compass (2026-10-27)
+Her report, with a picture of the Compass: "signs like eye shape cannot be updated as better or worse. do an audit and see what
+signs are fixed". Her picks: fixed signs go **off the Compass**; a tendency to miscarry, the illness's course and "spirit intact"
+are fixed too; temperament (sensitive, timid, sullen) stays rateable.
+- **Audit** (every Fang Bing Ren sign; her records read-only for which ones she has answered): eyes round 5 patients, full-figured
+  5, family history of diabetes 10, muscle toned 3, heavyset 2, upper-heavy 2, lips large 2, miscarriage 1, fair skin 1, slim 1,
+  thin legs 1, downturned eyes 1, almond eyes 1. Already left out before: tongue shape and flat belly (exam findings), and
+  thin / robust / obesity / soft muscle / age / sex. The told rows (`phCxToldList`) can carry none of them.
+- **Built** (commit 2ba80e24): `phCxFixedKey` lists them (eyes, lips, skin, build, muscle, age, sex, the Bupleurum type, family
+  diabetes, miscarriage now / tendency, chronic / recurring / cyclical / episodic course, vitality intact). `phCxSignList` skips
+  them. They still count for Fang Bing Ren and the diagnosis; ratings she gave before stay in the record, unshown. The Compass
+  search tags them "Fixed" (grey) instead of "✓ in Compass".
+- **Tested (sandbox, made-up "Fay Test": eyes round, full-figured, family diabetes, miscarriage, lips large, irritable, heavy
+  bleeding, sensitive):** before, 7 sign rows (Ask 0/8); after, 3 (heavy bleeding, irritable, sensitive; Ask 0/4). The search
+  shows "Eyes: round · Fixed". Prescriptions search: 10 → "Fay" 1 → cleared 10.
+- **Not checked:** her real records with the new build, the Key2.
