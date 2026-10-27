@@ -4117,3 +4117,6 @@ its own look and is left out (`:not(.ph-cockpit *)`).
   - Prescriptions search 24 → 0 → 6 → 24.
   - Before / after pictures, computer and phone.
 - **Not tested:** her real patient's form, the Dispense cockpit (left as it was), the Key2.
+
+**LIVE 2026-10-27, build 20261027-165600 (main 89a80203):** her "push live": the prescription form chips alone on live main (the
+Session grid commit d93ab774 stays on session-a, not live). Joined back as bbd38974.
