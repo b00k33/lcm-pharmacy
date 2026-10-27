@@ -4586,3 +4586,30 @@ Undo). Mock `care-plan-part3-mock-2026-10-27.html` section 1.
   still asks; the last phase's Close (plan done, phase ends today) and Undo; a cycle plan has no card. 375 wide: no overflow.
   No console errors. Shots: `shots/care-plan-p3-step1-moved-undo.jpg`, `shots/care-plan-p3-step1-ask-phone.jpg`.
 - **Not checked:** her real records (the 15 stuck plans will show the card on their next Today's visit).
+
+## Care Plan part 3, step 2: next visit due (2026-10-27)
+
+Her pick 2 ("Next visit due") and her ask28 answer "Show the date to book" (not "Add the booking in LCM"). Mock
+`care-plan-part3-mock-2026-10-27.html` section 2. Measured: 79 of 99 active plans had nothing booked ahead; 44 patients seen
+within 6 weeks with nothing booked. Already there: the Communications "Book in" reminders (`phAcuFollowupCalc`), the Then band.
+
+- **`phTpNextDue(name, plan)`**: the first visit ahead. Her next booking after today wins (`{k: "booked"}`), wherever it fell:
+  a plan stuck past its visits keeps later bookings in the old phase's window, outside `phTpSessionCells`. Else the first
+  `next` cell; a cell clamped to today (a plan behind its rhythm) counts only when she has no booking or logged visit today.
+- **Today's visit** (`phTodayCarePlanEssentialsHtml`): once today is logged, `.ph-tv-nv` under the steps row: NEXT VISIT ·
+  "<phase>, <cadence word>" (`phTpPrvShort`, `phTpCadWord`) · the day chip (`data-tp-nv-copy`, solid, the time of today's
+  booking) · Pick a day (`data-tp-nv-pick` → `showPicker()` on a hidden `input[type=date]`; its change rewrites the chip in
+  place). The copy is `phTpNvCopyText` ("Zz Sweep Test — Tue 10 Nov 2026 · 09:00"), flash "Copied to book in Cliniko: …"
+  (blocked: "⚠ Copy blocked — …"). Booked ahead: "✓ booked · Tue 10 Nov · 10:00", no chips.
+- **Care Plan, live phase line** (`sinceLineFor`): "Since 1 Aug · 1 of 3 visits · next due 10 Nov · not booked" when
+  `phTpNextDue` is a plan day.
+- **Treatment page Then band** (`phTpBandHtml`): once today is logged the next day is `phTpNextDue`'s (it said "~27 Oct",
+  today, on a plan stuck past its visits); the copy carries today's booking time; the main button is "Copy for Cliniko", "book
+  in LCM" (the old "Book the follow-up") is the quiet link. Before logging: unchanged ("+ Book it" · "copy the date").
+- **Tested (sandbox, "Zz Sweep Test", booked today 09:00):** the Course line "next due 10 Nov · not booked" (booked today) and
+  "next due today" (booking moved off today in memory); "✓ Complete session" → Today's visit "NEXT VISIT · Subacute,
+  fortnightly · Tue 10 Nov · 09:00 · Pick a day", the band "~10 Nov · Copy for Cliniko · book in LCM", copy text with 09:00;
+  Pick a day → 12 Nov rewrites the chip; a booking added on 10 Nov 10:00 → "✓ booked · Tue 10 Nov · 10:00" and no "not
+  booked". No console errors. The logged test visit was removed after.
+- **Not checked:** the clipboard itself (blocked in the sandbox pane), her real records; no picture (the pane's capture was
+  cropping that evening; checked by the page text).
