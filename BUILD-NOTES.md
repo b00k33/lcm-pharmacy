@@ -4261,3 +4261,42 @@ symptom seed at most 308 ms, 102 told rows, the freeze guard never needed.
   - The freeze rule's test patient ("Zed Testtwo": two open Care Plans, no pain map, a booking today) still opens; brief 24 ms.
 - **Checked pages:** Today's visit (Compass), Care Plan (Treat, Diagnosis, Watch), Blood tests / Tongue / Musculoskeletal (taps).
   Not checked: her real records, the Key2, Copy notes (step 8 adds the plan to it).
+
+## Care Plan part 2, step 3: the phase review (2026-10-27)
+
+Her pick 4 ("When the phase's planned visits are done"), mock `care-plan-part2-mock-2026-10-27.html` section 4. Measured before:
+plan reviews written = 0 of 103 plans, while 28 plans had moved phase.
+
+- **When:** the live phase (the one logging today would file under, `presAcuCtx`) is current, the plan active and not a cycle
+  plan, and today is its last planned visit: logged visits before today + today >= planned, nothing logged today. Read on every
+  render (`phTpPrvCtx`), nothing stored for it.
+- **The card** (`phTpPrvHtml`, Today's visit, above the Treat row; gold, as in the mock):
+  - "Acute phase done · 3 of 3 visits" (`phTpPrvHead`: the phase name up to " — ", " / " or "(", "phase" added unless it has it).
+  - The Watch in three counts: better / same / worse (`phTpPrvSum`, from `phTpWatchData`, which `phTpWatchHtml` now wraps:
+    one reading for both), then the main concern "Period pain 7 → 4 · target 2 or less not yet" (✓ once reached).
+  - **Move to Subacute · fortnightly × 2** (pre-filled, solid; `phTpPrvCad` = the cadence's rhythm word × the next phase's
+    visits) and **Stay 2 more visits**. Last phase: **Close plan** and **Stay N more**, neither picked.
+  - Stay N = half the phase's planned visits, rounded up (3 → 2, as in the mock). Mine: her pick named no number.
+- **Her pick** is saved on the plan for today only, `plan.prv = { ph, day, v }` ("stay" / "close"; none = Move). A second tap on
+  a picked button takes it back. Repainted in place, no jump.
+- **Logging the visit** (the session save, where the plan has moved itself on since 2026-09-20): Stay → the phase's planned
+  visits + N, no move; Move → the move as before (banner, Undo); Close → plan and phase done, dated today; the last phase with
+  nothing picked → the old "complete" banner as before. Before any of it, the review writes itself (`phTpPrvWrite`) into
+  `plan.reviews`: note "Acute phase done · 3 of 3 visits · 5 better · 2 same · 0 worse · Period pain 7 → 4 · target 2 or less not
+  yet · Moved to Subacute", plus `prv: { ph, head, sum, out }`. Review notes, the Notes band and the printed plan read the note.
+- **After logging,** the card reads today's review: the same counts and "✓ Moved to Subacute" / "✓ Staying 2 more visits" /
+  "✓ Plan closed" ("✓ Review saved" + Care Plan › when the last phase was left open). Undo on the Treatment tab's banner removes
+  that review with the move.
+- **Repaint:** a Compass score (`phCxRefresh`) and a target change repaint the card in place (`phTpPrvRepaint`).
+- **Tested (sandbox, "Wren Testcase" on the Low back pain template, 2 of 3 Acute visits logged, today the third):**
+  - Card text as above; 1280: one card under Fang Bing Ren, above the Treat row; 375: wraps, nothing cut, page 375 wide.
+  - Stay → saved `{ v: "stay" }`, solid; tapped again → back to Move. Logged with Stay: Acute 3 → 5 planned, still current,
+    review "… Staying 2 more visits", card "✓ Staying 2 more visits".
+  - Logged with Move: Acute done, Subacute current, banner "… now in Subacute · OK · Undo", review "… Moved to Subacute";
+    Undo: Acute current again, review gone.
+  - Last phase (Maintenance 1 of 2 + today): Close plan / Stay 1 more visit, neither picked. Nothing picked → the old banner,
+    "✓ Review saved"; Close → plan done, phase done today, review "… Plan closed".
+  - Main score 4 → 9 on the Compass: counts 5 / 2 / 0 → 4 / 2 / 1 and "7 → 9" in place, no scroll jump.
+  - A cycle plan (Period pain): no card. "Zed Testtwo" (the freeze rule's patient): Today's visit 0.2 s, Care Plan 0.2 s.
+    No console errors.
+- **Not checked:** her real records, the Key2, a phase whose planned count comes from cycle days.

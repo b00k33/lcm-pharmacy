@@ -1257,6 +1257,17 @@ and Watch, a tap opens the page (`data-flow-prof`). The tongue / pulse reads are
 Energy = 8 or more; a "target … ▾" dropdown on each Treat row, hers bold with ↺ auto (`mainTgt` / `secondary[].tgt` / `painMap[i].tgt`,
 `{ v, k }`, another kind reads auto); Watch draws a bar from baseline to the gold target mark. Signs carry no target.
 
+**Part 2, step 3: the phase review (her pick "When the phase's planned visits are done"; BUILD-NOTES "Care Plan part 2, step
+3"):** on the visit that completes the live phase's planned visits (logged ones before today + today >= planned, nothing logged
+today), Today's visit shows a gold card above the Treat row (`phTpPrvHtml`): "Acute phase done · 3 of 3 visits", the Watch in
+three counts (better / same / worse, from `phTpWatchData`, the Watch's own reading) and the main concern's line with its target,
+then **Move to Subacute · fortnightly × 2** (pre-filled, solid) and **Stay 2 more visits** (half the phase again, rounded up).
+The last phase: **Close plan** / **Stay N more**, neither picked. Her pick waits on the plan for today only (`plan.prv = {ph, day,
+v}`); logging the visit carries it out (the 2026-09-20 move-on is the Move; Stay adds the visits; Close closes the plan) and
+writes the review into `plan.reviews` (note + `prv: {ph, head, sum, out}`), so Review notes and the printed plan show it; the
+card then reads "✓ Moved to Subacute". Undo on the Treatment tab's banner removes that review. Cycle plans get none (they follow
+the calendar). A Compass score or a target change repaints the card in place.
+
 **Diagnosis + Goal write themselves** (`phTpAutoDx`, `phTpAutoGoal`): every
 Likely or Possible pattern (plus any she agreed) minus the ones she took
 off; Goal = one line per complaint in the Compass's order (her own Goal

@@ -18553,6 +18553,14 @@
   #pharmacyPage .ph-tv-step.ok { background: var(--ph-good-tint); }
   #pharmacyPage .ph-tv-step.ok .k { color: var(--ph-good); }
   #pharmacyPage .ph-tv .ph-today-fbr { margin-bottom: 10px; }
+  /* the phase review (Care Plan part 2, step 3): the mock's gold card, above the Treat row */
+  #pharmacyPage .ph-tp-prv { border: 1.5px solid var(--ph-gold); background: var(--ph-gold-tint); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; }
+  #pharmacyPage .ph-tp-prv h3 { margin: 0; font: 700 var(--fs-14) var(--font-body); color: var(--ph-herb-deep); }
+  #pharmacyPage .ph-tp-prv .sum { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: 8px 0 10px; }
+  #pharmacyPage .ph-tp-prv .sum .mn { font-size: var(--fs-12); color: var(--ph-soft); }
+  #pharmacyPage .ph-tp-prv .acts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  #pharmacyPage .ph-tp-prv .acts .ph-today-btn { height: 32px; }
+  #pharmacyPage .ph-tp-prv .acts .ok { font-size: var(--fs-13); font-weight: 700; color: var(--ph-good); }
   @container (max-width: 640px) {
     #pharmacyPage .ph-tj-foot { margin-left: 0; }
     #pharmacyPage .ph-tv-seg button { padding: 0 10px; }
@@ -26890,10 +26898,10 @@
 #pharmacyPage .ph-tp-watch .wt .n .ph-pat-ic { width: 12px; height: 12px; flex: none; color: var(--ph-herb); }
 #pharmacyPage .ph-tp-watch .wt .v { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 #pharmacyPage .ph-tp-watch .wt.rf .n { color: var(--ph-zero-deep); }
-#pharmacyPage .ph-tp-watch .tg, #pharmacyPage .ph-cx-row.ms .tg { justify-self: end; height: 20px; padding: 0 8px; border-radius: 999px; display: inline-flex; align-items: center; font-size: var(--fs-11); font-weight: 700; }
-#pharmacyPage .ph-tp-watch .tg.better, #pharmacyPage .ph-cx-row.ms .tg.better { background: var(--ph-good-tint); color: var(--ph-good-deep); }
-#pharmacyPage .ph-tp-watch .tg.same, #pharmacyPage .ph-cx-row.ms .tg.same { background: var(--ph-paper); color: var(--ph-soft); box-shadow: inset 0 0 0 1px var(--ph-line); }
-#pharmacyPage .ph-tp-watch .tg.worse, #pharmacyPage .ph-cx-row.ms .tg.worse { background: var(--ph-zero-tint); color: var(--ph-zero-deep); }
+#pharmacyPage .ph-tp-watch .tg, #pharmacyPage .ph-cx-row.ms .tg, #pharmacyPage .ph-tp-prv .tg { justify-self: end; height: 20px; padding: 0 8px; border-radius: 999px; display: inline-flex; align-items: center; font-size: var(--fs-11); font-weight: 700; }
+#pharmacyPage .ph-tp-watch .tg.better, #pharmacyPage .ph-cx-row.ms .tg.better, #pharmacyPage .ph-tp-prv .tg.better { background: var(--ph-good-tint); color: var(--ph-good-deep); }
+#pharmacyPage .ph-tp-watch .tg.same, #pharmacyPage .ph-cx-row.ms .tg.same, #pharmacyPage .ph-tp-prv .tg.same { background: var(--ph-paper); color: var(--ph-soft); box-shadow: inset 0 0 0 1px var(--ph-line); }
+#pharmacyPage .ph-tp-watch .tg.worse, #pharmacyPage .ph-cx-row.ms .tg.worse, #pharmacyPage .ph-tp-prv .tg.worse { background: var(--ph-zero-tint); color: var(--ph-zero-deep); }
 @media (max-width: 480px) { #pharmacyPage .ph-tp-watch .wt { grid-template-columns: minmax(0, 1fr) auto; } #pharmacyPage .ph-tp-watch .wt .tg, #pharmacyPage .ph-tp-watch .wt > span:empty { display: none; } #pharmacyPage .ph-tp-watch .wt .tgc { grid-column: 1 / -1; } }
 #pharmacyPage .ph-tp-watch .wt .tgc { display: grid; gap: 2px; min-width: 0; }
 #pharmacyPage .ph-tp-watch .wt .tgc small { font-size: var(--fs-11); color: var(--ph-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -52640,7 +52648,7 @@
         const adv = phTpAutoAdv; phTpAutoAdv = null;
         const plan = adv && phTpFindPlan(phTpScreenPatient, adv.planId);
         const from = plan && plan.phases.find(p => p.id === adv.fromId);
-        if (plan && from) { phTpTabPhase.delete(plan.id); phTpSetPhaseStatus(plan, from, "current"); }
+        if (plan && from) { plan.reviews = (plan.reviews || []).filter(r => !(r.prv && r.prv.ph === from.id && r.date === keyOf(TODAY))); phTpTabPhase.delete(plan.id); phTpSetPhaseStatus(plan, from, "current"); }   // the phase review it wrote goes too
         else phTpRerender();
         return;
       }
@@ -56869,10 +56877,19 @@
             const planned = phTpSessionsOf(treatedPhase);
             const idx = activePlan.phases.indexOf(treatedPhase), next = idx >= 0 ? activePlan.phases[idx + 1] : null;
             if (planned && phTpPhaseSessionDates(name, activePlan, treatedPhase).done.length >= planned) {
-              if (next) {
+              // her pick on today's phase review card (plan.prv, part 2 step 3): Stay N more or Close plan; Move on is the
+              // pre-filled one. The review writes itself first, saying what this visit did.
+              const pv = activePlan.prv && activePlan.prv.ph === treatedPhase.id && activePlan.prv.day === keyOf(TODAY) ? activePlan.prv.v : "", more = phTpPrvStayN(planned);
+              phTpPrvWrite(name, activePlan, treatedPhase, planned, pv === "stay" ? `Staying ${more} more visit${more === 1 ? "" : "s"}` : next ? `Moved to ${phTpPrvShort(next)}` : pv === "close" ? "Plan closed" : "");
+              delete activePlan.prv;
+              if (pv === "stay") {
+                treatedPhase.sessions = planned + more;
+              } else if (next) {
                 phTpAutoAdv = { planId: activePlan.id, fromId: treatedPhase.id, toId: next.id, planned };
                 phTpTabPhase.delete(activePlan.id);
                 phTpSetPhaseStatus(activePlan, next, "current");
+              } else if (pv === "close") {
+                activePlan.status = "done"; treatedPhase.status = "done"; if (!treatedPhase.doneKey) treatedPhase.doneKey = keyOf(TODAY);
               } else {
                 // the last phase: nothing to move to -- say so and offer the three real next steps
                 phTpAutoAdv = { planId: activePlan.id, fromId: treatedPhase.id, toId: null, planned, complete: true };
@@ -93634,6 +93651,7 @@ or changing anything in Cliniko.
     }
     phCxFx = null; phCxFresh = ""; phCxDrFx = "";
     phTodayChromeRefresh();
+    phTpPrvRepaint(name);   // the phase review's counts follow the scores
     try { phTpAutoBust(); } catch (e) { /* cache not built yet */ }
     try { phCcSeedSymptoms(name); } catch (e) { /* no plan yet */ }   // the letter's line and phase.symptoms follow the visible sign rows
     // the Treatment tab's Response follows the compass while it is the compass that filled it (never over her own pick)
@@ -95234,8 +95252,8 @@ or changing anything in Cliniko.
     // table for a pain patient whose compass has no pain rows yet (her 2026-10-19 ask, phPfPainBlockHtml)
     const cx = phCxCardHtml(t, plan);
     const ask = cx + phTodayNudgesHtml(name, rec) + phMskWarnHtml(rec) + (phMskApplies(rec) && cx.indexOf('data-cx-pain="1"') < 0 ? phPfPainBlockHtml(name) : "");
-    // Treat: Fang Bing Ren's quick assess (return visits) above the three steps
-    const treat = plan ? phTodayFbrEssentialsHtml(name) + phTodayCarePlanEssentialsHtml(name, plan) : "";
+    // Treat: Fang Bing Ren's quick assess (return visits) above the three steps; the phase review on a phase's last visit (part 2)
+    const treat = plan ? phTodayFbrEssentialsHtml(name) + phTpPrvHtml(name, plan) + phTodayCarePlanEssentialsHtml(name, plan) : "";
     setTimeout(phTodayStickyTop, 0);
     return `<div class="ph-today ph-tv" data-today-host="1">${phTodayJourneyHtml(name, rec, plan)}${phTodayStepsHtml(S)}${phTodaySecHd("ask", S)}${ask}${phTodaySecHd("look", S)}${phTodayLookHtml(name, rec)}${treat && S.treat ? phTodaySecHd("treat", S) + treat : ""}</div>`;
   }
@@ -111901,6 +111919,7 @@ or changing anything in Cliniko.
     const s = M && M.series.find(x => x.key === key);
     if (s) el.outerHTML = phTpTgtSelHtml(name, s, M.scale);
     if (plan) document.querySelectorAll("#pharmacyPage .ph-tp-watch").forEach(n => { n.outerHTML = phTpWatchHtml(name, plan); });
+    phTpPrvRepaint(name);
     phCcSavedFlash();
   });
   function phTpTreatHtml(name, fgIds) {
@@ -111917,27 +111936,32 @@ or changing anything in Cliniko.
   // score against its latest with its target bar; the signs, and since part 2 (her pick "Inside the Compass card") the told signs behind
   // the diagnosis, phCxToldList, rated there), then the measured rows (phCxMeasList), then the red flags with their last answer. Read
   // from the Compass model and the plan, never stored.
-  function phTpWatchHtml(name, plan) {
+  // phTpWatchData also hands the phase review (part 2, step 3) each row's word (dirs) and the main concern's line (main)
+  function phTpWatchData(name, plan) {
     let M = null; const keepAt = phCxAt; phCxAt = null;   // always today here, whatever visit the Scoring bar has open
     try { M = phCxModel(name, plan, { all: true }); } catch (e) { M = null; } finally { phCxAt = keepAt; }
-    const word = Object.fromEntries(PH_CX_SX), rows = [], seen = new Set(), low = s => String(s || "").replace(/\s*\([^)]*\)\s*$/, "").trim().toLowerCase();
+    const word = Object.fromEntries(PH_CX_SX), rows = [], dirs = [], seen = new Set(), low = s => String(s || "").replace(/\s*\([^)]*\)\s*$/, "").trim().toLowerCase();
     const snaps = (plan && plan.progressSnaps) || [], first = snaps[0], had = new Set(first ? first.dx.flatMap(d => d.keys || []) : []);
     const tag = d => d ? `<span class="tg ${d}">${d === "better" ? "Better" : d === "worse" ? "Worse" : "Same"}</span>` : "<span></span>";
+    let main = null;
     if (M) M.rows.forEach(r => {
       if (r.kind === "cc") {
         const s = r.s, pts = (s.trk && s.trk.pts) || [], base = s.trk && s.trk.base, last = pts[pts.length - 1], moved = !!(base && last && last.day !== base.day);
-        seen.add(low(s.text));
-        rows.push(`<div class="wt${s.main ? " mn" : ""}"><span class="n">${esc(s.text)}</span><span class="v">${!last ? "–" : moved ? `${phCxR1(base.v)} → ${phCxR1(last.v)}` : phCxR1(last.v)}</span>${s.track === "bar" ? "<span></span>" : phCxTgtBarHtml(phCxTgtProg(s, phCxTgt(name, s, M.scale)))}${tag(moved && s.cb ? phCxDir(r, s.cb.d) : null)}</div>`);
+        const v = !last ? "" : moved ? `${phCxR1(base.v)} → ${phCxR1(last.v)}` : `${phCxR1(last.v)}`, tg = s.track === "bar" ? null : phCxTgtProg(s, phCxTgt(name, s, M.scale)), d = moved && s.cb ? phCxDir(r, s.cb.d) : null;
+        seen.add(low(s.text)); dirs.push(d);
+        if (s.main && !main) main = { text: s.text, v, tgt: tg };
+        rows.push(`<div class="wt${s.main ? " mn" : ""}"><span class="n">${esc(s.text)}</span><span class="v">${v || "–"}</span>${tg ? phCxTgtBarHtml(tg) : "<span></span>"}${tag(d)}</div>`);
       } else if (r.kind === "sx" && r.x) {
         const h = (r.hist || []).filter(x => x && word[x.v]), a = h[0], z = h[h.length - 1], lab = `${r.x.subj}: ${r.x.desc}`;
         seen.add(low(lab)); if (r.x.told) { seen.add(r.x.key); seen.add(low(r.x.text)); }
         const m = r.x.told ? PH_PAT_SRC[Object.keys(PH_PAT_SRC).find(s => PH_PAT_SRC[s][0] === r.x.told)] : null, ic = m ? phPatIc(m[1]) : "";
-        const none = r.x.told ? (!first || had.has(r.x.ck) ? "Yes" : "New") : "–";
-        rows.push(`<div class="wt"><span class="n"${m ? ` title="${esc(m[0])}"` : ""}>${ic}${esc(lab)}</span><span class="v">${!z ? none : a.day !== z.day ? `${esc(word[a.v])} → ${esc(word[z.v])}` : esc(word[z.v])}</span><span></span>${tag(z && r.cb && a.day !== z.day ? phCxDir(r, r.cb.d) : null)}</div>`);   // one rating: its word says it once
+        const none = r.x.told ? (!first || had.has(r.x.ck) ? "Yes" : "New") : "–", d = z && r.cb && a.day !== z.day ? phCxDir(r, r.cb.d) : null;
+        dirs.push(d);
+        rows.push(`<div class="wt"><span class="n"${m ? ` title="${esc(m[0])}"` : ""}>${ic}${esc(lab)}</span><span class="v">${!z ? none : a.day !== z.day ? `${esc(word[a.v])} → ${esc(word[z.v])}` : esc(word[z.v])}</span><span></span>${tag(d)}</div>`);   // one rating: its word says it once
       }
     });
     // the measured rows (part 2), read from their own pages; a tap opens the page
-    ((M && M.meas) || []).forEach(m => { const S = PH_CX_MEAS_SRC[m.src];
+    ((M && M.meas) || []).forEach(m => { const S = PH_CX_MEAS_SRC[m.src]; dirs.push(m.dir || null);
       rows.push(`<div class="wt ms" data-flow-prof="${m.go}" title="${esc(S[0])}"><span class="n">${phPatIc(S[1])}${esc(m.label)}</span><span class="v">${esc(m.val)}${m.unit ? ` <small>${esc(m.unit)}</small>` : ""}</span>${m.tgt ? phCxTgtBarHtml(m.tgt) : "<span></span>"}${tag(m.dir)}</div>`); });
     let ph = null; try { ph = plan ? phTpFxLivePh(name, plan.id) : null; } catch (e) { ph = null; }
     const rec = phPatientPeek(name), days = rec ? Object.keys(phCxDays(rec)).sort().reverse() : [];
@@ -111945,8 +111969,76 @@ or changing anything in Cliniko.
       let v = ""; for (const d of days) { const x = phRfDay(rec, d)[fl.key]; if (x && x.v) { v = x.v; break; } }
       rows.push(`<div class="wt rf"><span class="n">⚠ ${esc(fl.text)}</span><span class="v">${v === "y" ? "Yes" : v === "n" ? "No" : "–"}</span><span></span><span></span></div>`);
     });
+    return { rows, dirs, main };
+  }
+  function phTpWatchHtml(name, plan) {
+    const rows = phTpWatchData(name, plan).rows;
     return `<div class="kv kvx ph-tp-watch"><b title="The same rows Today's visit scores">Watch${rows.length ? ` <span class="cnt">${rows.length}</span>` : ""}</b><div class="vx">${rows.join("") || `<span class="ph-tp-notyet">not yet</span>`}</div></div>`;
   }
+  // ==== PHASE REVIEW (Care Plan part 2, step 3; her pick 4, care-plan-part2-mock-2026-10-27.html section 4) ====
+  // On the visit that completes a phase's planned visits, Today's visit shows the Watch in three counts and the next step
+  // already picked: Move to the next phase (what logging that visit has done by itself since 2026-09-20) or Stay N more;
+  // on the last phase, Close plan or Stay, neither picked. Her pick waits on the plan for today only (plan.prv = {ph, day, v});
+  // logging the visit carries it out and writes the review into plan.reviews (Review notes, the printed plan), and the card
+  // then says what was done. Cycle plans follow the calendar, so they get none, as with the move itself.
+  const phTpPrvShort = ph => String((ph && ph.label) || "").split(/\s+[—–\/]\s+|\s*\(/)[0].trim() || "Phase";
+  const phTpPrvHead = (ph, n) => { const s = phTpPrvShort(ph); return `${s}${/\bphase\b/i.test(s) ? "" : " phase"} done · ${n} of ${n} visits`; };
+  const phTpPrvStayN = planned => Math.max(1, Math.ceil(planned / 2));   // half the phase again (3 -> 2, as in the mock)
+  function phTpPrvCad(ph) {   // "Fortnightly for 4 weeks" + 2 visits -> "fortnightly × 2"
+    const c = String((ph && ph.cadence) || "").split(/\s+for\s+|\s*[·,;(]/i)[0].trim(), n = phTpSessionsOf(ph), w = c && c.length <= 16 ? c.charAt(0).toLowerCase() + c.slice(1) : "";
+    return w && n ? `${w} × ${n}` : w || (n ? `${n} visit${n === 1 ? "" : "s"}` : "");
+  }
+  function phTpPrvSum(name, plan) {
+    let W = null; try { W = phTpWatchData(name, plan); } catch (e) { W = null; }
+    const d = (W && W.dirs) || [], c = k => d.filter(x => x === k).length, m = W && W.main;
+    const main = m && m.v ? [`${m.text} ${m.v}`, m.tgt && `target ${m.tgt.txt}${m.tgt.ok ? " ✓" : " not yet"}`].filter(Boolean).join(" · ") : "";
+    return { b: c("better"), s: c("same"), w: c("worse"), main };
+  }
+  function phTpPrvCtx(name, plan) {
+    if (!plan || plan.status !== "active" || PH_TP_CYCLE_TEMPLATES.includes(plan.templateName)) return null;
+    const ctx = presAcuCtx(name, plan.id), ph = ctx && ctx.activePlan && ctx.activePlan.id === plan.id ? ctx.treatedPhase : null;
+    if (!ph || ph.status !== "current") return null;
+    const planned = phTpSessionsOf(ph), today = keyOf(TODAY);
+    if (!planned || (ctx.rec.acuSessions || []).some(s => s.date === today && !s.noTreatment && (!s.planId || s.planId === plan.id))) return null;
+    // today is the phase's last planned visit (or past it, when nothing moved last time)
+    if (phTpPhaseSessionDates(name, plan, ph).done.filter(x => x.date !== today).length + 1 < planned) return null;
+    const idx = plan.phases.indexOf(ph), next = idx >= 0 ? plan.phases[idx + 1] || null : null;
+    const v = plan.prv && plan.prv.ph === ph.id && plan.prv.day === today ? plan.prv.v : "";
+    return { ph, next, planned, v: v || (next ? "move" : ""), more: phTpPrvStayN(planned) };
+  }
+  function phTpPrvHtml(name, plan) {
+    if (!plan) return "";
+    const today = keyOf(TODAY), done = (plan.reviews || []).filter(r => r.prv && r.date === today).pop();
+    let C = null; if (!done) { try { C = phTpPrvCtx(name, plan); } catch (e) { C = null; } }
+    if (!done && !C) return "";
+    const S = done ? done.prv.sum || {} : phTpPrvSum(name, plan);
+    const tags = `<span class="tg better">${S.b || 0} better</span><span class="tg same">${S.s || 0} same</span><span class="tg worse">${S.w || 0} worse</span>${S.main ? `<span class="mn">${esc(S.main)}</span>` : ""}`;
+    const pick = (v, txt) => `<button type="button" class="ph-today-btn${C.v === v ? " solid" : ""}" data-tp-prv-pick="${esc(plan.id)}|${esc(C.ph.id)}|${v}" aria-pressed="${C.v === v}">${esc(txt)}</button>`;
+    const acts = done ? `<span class="ok">✓ ${esc(done.prv.out || "Review saved")}</span>${done.prv.out ? "" : `<button type="button" class="ph-today-btn q" data-flow-go="plan">Care Plan ›</button>`}`
+      : (C.next ? pick("move", ["Move to " + phTpPrvShort(C.next), phTpPrvCad(C.next)].filter(Boolean).join(" · ")) : pick("close", "Close plan"))
+        + pick("stay", `Stay ${C.more} more visit${C.more === 1 ? "" : "s"}`);
+    return `<div class="ph-tp-prv" data-tp-prv="${esc(plan.id)}" data-tp-prv-name="${esc(name)}"><h3>${esc(done ? done.prv.head : phTpPrvHead(C.ph, C.planned))}</h3><div class="sum">${tags}</div><div class="acts">${acts}</div></div>`;
+  }
+  // logging the visit: the review writes itself, with what the visit did
+  function phTpPrvWrite(name, plan, ph, planned, out) {
+    const sum = phTpPrvSum(name, plan), head = phTpPrvHead(ph, planned);
+    plan.reviews = plan.reviews || [];
+    plan.reviews.push({ id: uid(), date: keyOf(TODAY), note: [head, `${sum.b} better · ${sum.s} same · ${sum.w} worse`, sum.main, out].filter(Boolean).join(" · "), prv: { ph: ph.id, head, sum, out } });
+  }
+  function phTpPrvRepaint(name) {
+    document.querySelectorAll("#pharmacyPage [data-tp-prv]").forEach(el => { const p = phTpFindPlan(el.dataset.tpPrvName || name, el.dataset.tpPrv), h = p ? phTpPrvHtml(el.dataset.tpPrvName || name, p) : ""; if (h) el.outerHTML = h; else el.remove(); });
+  }
+  document.addEventListener("click", e => {
+    const b = e.target && e.target.closest ? e.target.closest("#pharmacyPage [data-tp-prv-pick]") : null;
+    if (!b) return;
+    const host = b.closest("[data-tp-prv]"), name = host && host.dataset.tpPrvName, [planId, phId, v] = b.dataset.tpPrvPick.split("|");
+    const plan = name ? phTpFindPlan(name, planId) : null;
+    if (!plan) return;
+    const today = keyOf(TODAY), cur = plan.prv && plan.prv.ph === phId && plan.prv.day === today ? plan.prv.v : "";
+    if (v === "move" || cur === v) delete plan.prv; else plan.prv = { ph: phId, day: today, v };   // Move is the pre-filled one; a second tap takes a pick back
+    savePharmacy();
+    phTpPrvRepaint(name);
+  });
   function phTpTitleHtml(name, plan) {
     if (phTpRenameOpen === plan.id) {
       return `<input type="text" class="ph-tp-title-inline field-bare" data-tp-titlebox="${plan.id}" data-tp-rename-in="${plan.id}" data-tp-rename-name="${esc(name)}" value="${esc(phTpTitleShown(name, plan))}" placeholder="Plan title" aria-label="Plan title">`;
