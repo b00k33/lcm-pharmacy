@@ -4659,3 +4659,26 @@ Design / Link formula on the Treatment tab's phase panel, and by a dispense file
   running out 8 Nov → "Herbs last to Sun 8 Nov" on the Next visit line; on the Treatment tab's Subacute panel "Same as Acute"
   beside Link formula, its tap linked Acute's formula. All put back after; no console errors.
 - **Not checked:** her real records (one plan had a next-phase formula).
+
+## Care Plan part 3, step 5: the cycle review (2026-10-27)
+
+Her pick 5 and her ask28 answer "At her next booking" (not when the period is logged). Mock section 5. Measured: 26 cycle plans
+(22 with an LMP, 8 with cycle day logs); 9 of 12 had a period in the last 90 days. Already there: the cycle history table
+(`phCycleHistoryHtml`: starts from `phBbtCycleStarts`, flow / pain from `rec.cycleLog`).
+
+- **`phCycRvModel(rec, plan)`**: an active cycle-template plan with three or more starts. `st[k]` is the period that began the
+  cycle she is in; the cycle that just ended is `st[k-1]`..`st[k]`, the one before `st[k-2]`..`st[k-1]`. Each: length in
+  days, the period's `flowIntensity` and `pain` from its `cycleLog` entry, `clot` = the most clots on its days
+  (`phCycClots` of `rec.cycleSigns[d]`: many 3, large 2, small 1).
+- **`phCycRvRows`**: Length / Flow (said only), Pain and Clots (`better` when lower, `worse` when higher, `same`), the part 2
+  `.tg` tags of the review card.
+- **`phCycRvHtml`** (Today's visit, after the phase review card; cycle plans never get that one): the `.ph-tp-prv cyc` card,
+  "Saved into the plan's reviews". Shown while no review for that period exists or the saved one is from today; the first show
+  saves it (`phCycRvSave`, after the paint, re-checking it is still not saved): `plan.reviews` gets `{ date, note: "Cycle 2
+  against cycle 1 · length 33 → 29 days · …", cyc: {lmp, n} }`. `.ph-tp-prv .acts .mn` is now the small soft line (also the
+  step 4 herbs line after a Move).
+- **Tested (sandbox, "Nora Test", Natural fertility, three periods typed in memory: 22 Aug heavy / severe, many clots; 24 Sep
+  heavy / severe, small clots; 23 Oct):** "Cycle 2 against cycle 1 · Length 33 → 29 days · Flow heavy → heavy · Pain severe →
+  severe · Clots many → small (better)", one review saved, a second paint saved no second; the saved review dated another day
+  → no card. The test periods, signs and review were removed after. Shot: `shots/care-plan-p3-step5-cycle-review.png`.
+- **Not checked:** her real cycle patients; BBT shift day (the mock's last tag) is left out.
