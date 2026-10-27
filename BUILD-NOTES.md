@@ -3664,4 +3664,6 @@ the picker; a day in the cycle week opens its day card under the line and a seco
 Treat; the cycle tile on the neck patient, the cycle line on the fertility patient. 360px: nothing past the edge, tiles two
 a row, the Treat boxes stack, the cycle line wraps.
 **Not tested:** her real patients, a return visit with scores and the Fang Bing Ren quick assess above Treat, the Key2 itself.
-Built, NOT live: waits for her "push live".
+**LIVE** 2026-10-27 (her "push live"), build 20261027-114700 (main 96acb2c7); hand-stamped in a private index because another
+session's tracked mock edit blocks publish-live.sh, then joined into session-a as e892d931 (tree unchanged). Checked on the live
+site: both stamps (meta lcm-build, sw.js CACHE_VERSION) and `phTodayCycShort`, `phCxPtClose`, `phCxModeFix` served.
