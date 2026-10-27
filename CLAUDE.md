@@ -1623,7 +1623,7 @@ small figure on each exercise chip (`PH_MU_ART.tileSvg` drawn once per group as 
 rest days never planned); the week streak (`phFitStreak`, memo on `phMeS()`; one short week forgiven; 8 empty weeks end it;
 toast at 4, 8, 12, 26, 52 via `phFitStkSay`). No new stored data.
 **Step 4** (her "build step 4", 10/27: what C22's Fitness still had; her 13 picks, all of them; BUILD-NOTES "Fitness step 4"):
-BUILT 07fc13b7, **not live** (waits for her "push live"). Templates: set presets (`PH_FIT_PRE`, `phFitPreHtml` / `phFitTpPreset`,
+BUILT 07fc13b7, LIVE 10/27 (her "push live"), build 20261027-153300 (main 4c09f199; published alone, without the font commit). Templates: set presets (`PH_FIT_PRE`, `phFitPreHtml` / `phFitTpPreset`,
 Undo) and − / + on every number (`o.st` in `phFitSetTbl`, `PH_FIT_STEP` reps 1 · kg 2.5 · s 5; on the phone − + sit under the
 number); ▲ ▼ move an exercise (`phFitTpMove`, the open one follows); sets by type under the muscle groups (`phFitTyLeg`,
 `phFitTyHl`, never lit together with `phFitHl`). Types: her own after C22's five (`phFitXts`, memo on `phMeS()`; `d.fxt`; + New
