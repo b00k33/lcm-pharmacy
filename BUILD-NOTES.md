@@ -4760,3 +4760,40 @@ were made up: only 10 of her patients have Compass scores today, so the table fi
   their phase's visits now show the review card on their Today's visit (nothing moves until she taps); an IVF plan whose Stims,
   egg collection or transfer day has passed moves forward by itself when Today's visit or the Appointments tags read it;
   Mine · Work's outcomes card fills only for plans whose main concern was scored on two days (10 patients have scores).
+
+## Find the Ren: the tongue waits, or is looked at here (2026-10-27)
+
+- **Her words:** "in the workflow, i cant answer tongue photos esp for new patients if i need to do tongue analysis in later steps.
+  how to rconcile that ? show 2 mocks" (her screenshot: Find the Ren asking "Tongue coat: thick, dry?"). Mock
+  `ren-tongue-later-mock-2026-10-27.html` (A: the tongue question waits; B: the tongue is a look in Find the Ren). Her pick: "both".
+- **Measured first:** of the Ren signs, 28 are tongue (all filled by the Tongue chart), 13 pulse (all by the Pulse chart), 19 belly
+  (by the Abdomen chart); a blank made-up patient got 3 exam signs among its first 12 Ren questions.
+- **Built (index.html, the Find the Ren block):**
+  - The Ask leaves out every Tongue, Pulse and exam-only belly sign (`phRqExamPart`: tongue = a `phTngSignChips` key or a Tongue /
+    Tongue coat subject; pulse = a Pulse subject; belly = a `PH_FBR_CHART_PREFILL` abd: sign with no distended / water / gas mark,
+    so bloating, rumbling, sloshing and fullness, which the patient can tell, are still asked). `phRqCardHtml` wraps
+    `phQaSkipSet`; a part skipped "Always for this patient" on Today's visit is asked as before (`phRqExamOut`).
+  - **Later** lines under the questions (`phRqLaterHtml`): for each part never charted (`phRqExamCharted`: the standing chart or
+    any visit's), the sign of that part the Ask would pick first (`phQaPickRow` over that part's signs alone) · "from the X chart"
+    · Tongue › (opens the Tongue tab here, `data-rq-tgo`) / Pulse › / Abdomen › (`data-flow-prof`). A charted part has no line:
+    its chart's ticks are already in.
+  - The **Tongue** tab, 7th (`phRqTngTabHtml`, `.t7`; on a phone the six run 3 + 3 and Tongue takes the third row): ✓ and
+    `phTng2Summary` once `rec.tongueExam` has marks. Open, it shows the newest day's best tongue photo (`PH_TONGUE_SHOT_RANK`)
+    with + Tongue (`phRqTngPhotoHtml`), and the Tongue page's chips that reach a Ren sign (`phRqTngGroups`, derived from
+    `phTngChipLinks`: Colour · Shape + marks · Coat thickness, colour, quality, at root · Moisture) as joined bars, keys 1-9,
+    Enter Next (`phRqTngOneHtml`). A tap = `phTng2Toggle` on a copy of `rec.tongueExam`, written through `phTngWrite` (stamps
+    today, mirrors into today's visit); a second tap takes it off; no card Undo entry. Optional: the six looks still open the
+    Ask, and the header still counts 6 looks.
+  - `phRenLoadPhotosFor` repaints the Ren page once the patient's photos arrive while Find the Ren's photo column is on screen
+    (a first open could stay on "loading…"; this covers the face / build photo too).
+- **Tested (sandbox, made-up "Nia Newlook", no sign-in):** the six looks from her screenshot → the Ask asked mood questions only,
+  with three Later lines (tongue, pulse, belly); Tongue › opened the tab; red + thick + yellow + dry wrote `rec.tongueExam` ("red,
+  dry · thick yellow coat", today), ticked coat_thick_dry, tongue_red, coat_yellow, coat_dry_yellow_tend and
+  tongue_very_dry_tend, moved the bars (Huang Lian 44 → 56%) and the tongue Later line went; the Tongue page's own renderer shows
+  the same chips on; Today's visit counts the tongue as done; keys 3 (Red off / on) and Enter; pulse skipped Always → its Later
+  line went and its signs could be asked, back on undoing the skip; a made-up tongue photo showed in the tab, and a cleared photo
+  cache repainted from "loading…"; 375px: no sideways scroll; one card paint 28 ms (the Later lines ~3 ms of it); the
+  Prescriptions search filters live (6 → 2 → 6); no console errors.
+- **Pages checked for the tongue fact:** Find the Ren, the Tongue page (`phTngHtml`), Today's visit's done state, Fang Bing
+  Ren's Ren ticks. **Not checked:** her real records; a real camera capture from + Tongue (the same door as every photo add);
+  the Care Plan Findings tongue row on screen.
