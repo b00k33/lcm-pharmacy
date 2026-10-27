@@ -4124,3 +4124,45 @@ Session grid commit d93ab774 stays on session-a, not live). Joined back as bbd38
 **LIVE 2026-10-27, build 20261027-165700 (main 4c089ddf):** her "push live": the Session grid picks (d93ab774) published on
 top of live 165600 (the prescription chips stay), index.html + sw.js only; joined back into session-a (tree unchanged).
 With 161500 (Care Plan 2a-2c) and 164200 (shorter profile, first pass), all of synth22 part 1 is live.
+
+## The freeze on load (2026-10-27)
+Her report: "the app has been freezing and taking a long time to load on the desktop - find out how to resolve this".
+- **Seen:** her LCM window (the installed app, Chrome) sat on "Loading your pharmacy..." under Chrome's "Page Unresponsive";
+  its page process used a whole core and grew 660 → 776 MB. The live build in a Chrome tab froze the same way. The sandbox
+  (made-up data) started in 2 s, so it was her records.
+- **How it was found (read-only, reusable for the next freeze):**
+  - Host: a same-site page outside every app's scope with no security rule (the C6 icon,
+    `b00k33.github.io/c6-jingfang/assets/favicon-32.png`). Any `/lcm-pharmacy/` address opens in her app window instead,
+    and GitHub's 404 page blocks scripts.
+  - The probe: her installed build's text (from the `lcm-` cache) written into a frame on that page. Every save went to a
+    memory copy, IndexedDB and cache writes were no-ops, sending was blocked, sync was off, the worker was not registered.
+  - Every loop head and function entry was counted. Every 300 ms a short progress note (counts and the call chain, no
+    records) was written to `zzprobe-trail`, read after the frozen tab was ended, then removed.
+  - Scripts: scratchpad build9 probe2.js to probe4.js.
+- **Cause:** a circle among the written-from-the-record summaries:
+  - The booking brief asks the Care Plan for its goal (`phApptBrief` → `phTpAutoGoal`, 10-10).
+  - The goal reads the complaints (`phCxItems` → `phCcRibItems` → `phCcAuto`, 10-21).
+  - The complaints read each open plan's pain map (`phPmList`).
+  - A plan with no saved pain map asks the booking brief for its complaint (`phPmComplaint` → `phApptBrief`), and around
+    again.
+  - Each overflow was caught (`try`/`catch` in `run` and `phCcAuto`) and the next plan tried, so it branched once per open
+    plan. With her records (670 patients, 99 with plans, about 800 prescriptions) a turn outlasted the 1.5 s memo window,
+    the memo emptied, and it never settled. On smaller data it settled, slowly.
+- **Fixed** (commit 10af1050):
+  - `phPmComplaint` asks `phApptBrief(..., true)`: the complaint only (`focusOnly`), never the goal it did not use. This
+    cuts the circle.
+  - `phTpAutoMemoGet`: a key still being worked out answers empty (`phTpAutoBusy`, apart from the 1.5 s reset) instead of
+    starting again.
+- **Tested:**
+  - Her records, read-only, the fix as text swaps on her build:
+    - It opens: busy 1.2 s + 0.4 s after the page was written, then free.
+    - Every Care Plan summary of her 103 plans (99 patients): at most 41 ms each, no errors.
+    - The empty answer was never needed (0 hits): the cut alone ends it.
+  - Sandbox, a made-up "Zed Test" (2 open Care Plans, no pain map, a booking today), with a fast clock standing in for her
+    record size:
+    - The build before: still frozen at 45 s.
+    - The fix: opens, auto goal "Reduce neck, lower back pain", 1 pain found.
+  - The Appointments picture.
+- **Not tested:** her real window with sync on (it goes live only on her word), the Key2.
+- **Getting it:** a fresh open loads the live page (navigations are network-first), so once live she closes the frozen
+  window and opens LCM again; the gold Update button is for a window already open.

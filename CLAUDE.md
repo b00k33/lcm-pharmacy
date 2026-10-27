@@ -557,6 +557,13 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   auto-refresh on a stale build, ever; a new build only reveals the gold Update
   button, and `phDoControlledUpdate()` saves, flushes to the cloud, backs up,
   then reloads. Bump BOTH version markers on every push (Deploy & git).
+- **The written-from-the-record summaries never read each other in a circle** (her 2026-10-27 freeze: "Loading your
+  pharmacy..." then Chrome's "Page Unresponsive", on her real records only). The booking brief (`phApptBrief`), the Care
+  Plan's auto diagnosis and goal (`phTpAutoDx`, `phTpAutoGoal`), the complaints (`phCxItems`, `phCcRibItems`, `phCcAuto`)
+  and the pain map (`phPmList`) read one another: a new read from one into another must never lead back to itself.
+  `phPmComplaint` asks `phApptBrief(a, plan, true)` for the complaint only; `phTpAutoMemoGet` answers empty for a key
+  still being worked out (`phTpAutoBusy`). Test: a made-up patient with two open Care Plans, no pain map and a booking
+  today must open (BUILD-NOTES "The freeze on load").
 - **The Prescriptions search MUST always filter the list live as typed**, by
   patient name (and herb/notes). This has broken before. After ANY change,
   type a known patient name, confirm the list narrows to matches, clear it,
