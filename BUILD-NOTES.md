@@ -4637,3 +4637,25 @@ from the Dashboard to Appointments before she saw it (the Dashboard stays herbs-
   others one more line), the List card, the Grid popup, Up next (focused on that booking). 7 bookings read in ~110 ms. No
   console errors, no page overflow. Shot: `shots/care-plan-p3-step3-list-tags.jpg`.
 - **Not checked:** her real day (her bookings come from the Cliniko paste; a real day with herbs run out was not in the sandbox).
+
+## Care Plan part 3, step 4: herbs follow the phase (2026-10-27)
+
+Her pick 4 and her ask28 answer "Fill it in, ready" (Dispense opens with the new phase's formula; the Dashboard shows it under
+herbs due). Mock section 4. Measured: the current phase had a formula on 29 of 95 plans, the next phase on 1 of 79; herb
+follow-ups for 33 plan patients, 21 past their run-out day. Already there: a phase's formula (`formulaId` / `formulaName`, set by
+Design / Link formula on the Treatment tab's phase panel, and by a dispense filed on the live phase), phase-tagged scripts.
+
+- **`phApptScriptFor`**: before the phase-tag rule, a patient with two or more prescriptions gets the one whose id is the live
+  phase's `formulaId` (`phTpShownPlan` + `phTpLivePhase`). Everything that asks "which prescription is due" follows: the
+  Dashboard / List "Prepare" (`data-ph-dash-pres-open`), herbs to prepare, Up next's formula line, the List card.
+- **Review card** (`phTpPrvHtml`, done state after a Move): "🌿 <the now-current phase's formulaName> · ready to dispense".
+- **Same as <phase before>** (`phTpFormulaSameHtml`, both phase tables: `phTpPlanCells`, `phTpPhaseBodyRows`): only when this
+  phase has no formula and the one before has; the click (`data-tp-formula-same`, beside the unlink handler) copies
+  `formulaId` / `formulaName` and pushes a `formulaHistory` row.
+- **Next visit line** (`phTpNextVisitHtml`): "Herbs last to Sun 8 Nov" (warn tag) when the patient's latest follow-up record
+  runs out today or later but before the next visit's day.
+- **Tested (sandbox, "Zz Sweep Test", a second prescription added in memory):** due prescription zzsw1 (Acute's) → after the
+  Move tap p3t2 (Subacute's); the card "✓ Moved to Subacute · 🌿 Gui Zhi Fu Ling Wan · ready to dispense · Undo"; a follow-up
+  running out 8 Nov → "Herbs last to Sun 8 Nov" on the Next visit line; on the Treatment tab's Subacute panel "Same as Acute"
+  beside Link formula, its tap linked Acute's formula. All put back after; no console errors.
+- **Not checked:** her real records (one plan had a next-phase formula).
