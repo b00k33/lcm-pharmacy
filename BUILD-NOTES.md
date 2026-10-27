@@ -3911,3 +3911,8 @@ the live site: the stamp in index.html and sw.js, `phFitTipHtml`, `phFitPickHtml
 **Follow-up, same day (her "Inter there too" for Fitness):** `--font-c22` (Fitness, Exercises, Workout Mode) is an alias of
 `--font-body`; Manrope leaves the font load. Fitness and Exercises measured at 1280 and 360 against Manrope put back: no cut,
 overlap, ellipsis or sideways scroll added. Workout Mode not opened.
+**LIVE** 2026-10-27 (her "push live the font change too"): build 20261027-154200 (main ac6c3ed9, joined afa1b8d2), from
+session-a HEAD: 1f69a9e3 + 8ad24b2a + the Fitness picker fix b60294c4 (with Inter the picker could not shrink below its search
+box, so Today's card ran 4 px past the edge at 360; `.cpick` min-width 0, `.cpside` minmax(0, 1fr); re-measured at 360 and 1220,
+every Fitness / Exercises card clean against its own edge). Checked on the live site (it serves a copy without comments):
+`--font-disp` and `--font-c22` = `var(--font-body)`, controls inherit, no Manrope or Barlow load, the stamp in sw.js.

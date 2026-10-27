@@ -352,7 +352,7 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   Arial), SVG labels and canvas text name Inter, herb codes and supplier tags are Inter with `tabular-nums`. Never
   load or name a second screen font. Kept apart on purpose: printed letters and records (Georgia, print only), the
   bottle label text and its template, and copy-paste text or template tokens (monospace). Fitness joined too (her
-  "Inter there too", same day): `--font-c22` is an alias of `--font-body`, Manrope is no longer loaded.
+  "Inter there too", same day): `--font-c22` is an alias of `--font-body`, Manrope is no longer loaded. LIVE 10/27, build 20261027-154200.
 - **Icons:** one family, the app's own sprite (`<svg><use href="#i-...">`) —
   never emoji, never a second icon set.
 
