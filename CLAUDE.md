@@ -1226,7 +1226,7 @@ her typed or a booking's Goal still wins), then **Diagnosis** (each pattern on i
 behind it under it as quiet tags with their `PH_PAT_SRC` icon), then **Watch** (`phTpWatchHtml`: the Compass's own
 rows in its order, `phCxModel(..., { all: true })`: each concern's first score → latest + Better / Same / Worse, the signs,
 the diagnosis's told signs (part 2 below; one not rated yet reads Yes, or "New" when not in the plan's first progress snapshot),
-then the live phase's red flags with their last answer), then the formula. An empty part reads a faded
+the measured rows, then the live phase's red flags with their last answer; a scored concern carries its target bar), then the formula. An empty part reads a faded
 "not yet". The door starts the plan from the main concern (no template pick, LAW §2). Formula + Points already sit under
 Course: the Session grid's live-phase row (Aim · Points · Formula · Watch); the grid is LOCKED, so they were not moved.
 **Shorter profile (step 3, first pass, outside the grid; her "minimise any redundant display and messages"):** a finding
@@ -1245,8 +1245,17 @@ patient tells her (the cycle log, usual answers, notes, diet: `phCxToldList`) ar
 subject, else the area of a Fang Bing Ren sign that files the same clue), rated Gone · Better · Same · Worse from the next visit,
 saved with the signs under `pc:<clue key>`, never behind "+ N more"; their ▾ has Not watching only. Left out because another
 row stands for them: Fang Bing Ren answers (the sign list's own rows), the pain map's words, Energy, "Came in for", the period-pain
-clue beside the period-pain row. Not on the letter's symptom rows (`phCcSeedSymptoms`). Measured findings (tongue, pulse, abdomen,
-bloods, range and tests) come in step 2.
+clue beside the period-pain row. Not on the letter's symptom rows (`phCcSeedSymptoms`). LIVE 10/27, build 20261027-180700.
+**Part 2, step 2: measured rows + targets (her picks "Behind the diagnosis + flagged" and "Filled from the kind of score"; BUILD-NOTES
+"Care Plan part 2, step 2"):** `phCxMeasList` = the tongue, pulse and abdomen signs behind the Diagnosis (and a Fang Bing Ren
+answer that is one of them), each against the plan's first dated chart of that part when it has two or more (Yes → Yes Same, New,
+Gone Better), a blood marker out of range on a result under 12 months old (first flagged → latest, target = its range), a movement
+under 80% of its normal range (target = the normal degrees), a positive test. They are READ from their pages, never rated (one
+read per fact; the mock drew Better / Same / Worse on Tongue and Pulse): the Compass's **Measured** block (before the red flags)
+and Watch, a tap opens the page (`data-flow-prof`). The tongue / pulse reads are shared with Patterns (`phPatTngFlags`,
+`phPatTngVisitWords`, `phPatPulseKeys`). **Targets** (`phCxTgt`): pain and a complaint on 0–10 = 2 or less, on % better = 80% better,
+Energy = 8 or more; a "target … ▾" dropdown on each Treat row, hers bold with ↺ auto (`mainTgt` / `secondary[].tgt` / `painMap[i].tgt`,
+`{ v, k }`, another kind reads auto); Watch draws a bar from baseline to the gold target mark. Signs carry no target.
 
 **Diagnosis + Goal write themselves** (`phTpAutoDx`, `phTpAutoGoal`): every
 Likely or Possible pattern (plus any she agreed) minus the ones she took
