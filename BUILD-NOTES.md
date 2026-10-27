@@ -4220,3 +4220,44 @@ step 1: every Watch row on the Compass) on top of live 180100 (the freeze fix st
 8055236d. Checked BEFORE main moved: the candidate (a temporary branch, deleted after) run read-only on her records opened
 on Appointments with no errors; across her 99 patients with plans (103 plans): Compass model at most 95 ms, Watch 59 ms, the
 symptom seed at most 308 ms, 102 told rows, the freeze guard never needed.
+
+## Care Plan part 2, step 2: measured rows + targets (2026-10-27)
+- **Her picks** (round 1, do not re-ask): 2 "Which measured findings join Watch by themselves?" = **Behind the diagnosis + flagged**
+  (blood out of range, limited range or a positive test); 3 "Where does each target come from?" = **Filled from the kind of score**
+  (pain 0–10 = 2 or less, blood = its normal range, range = full), hers to change, back to auto. Mock sections 2 and 3.
+- **Built, measured rows** (`phCxMeasList`, beside `phCxToldList`; `M.meas`, cached with the told rows while a slider moves):
+  - Tongue, pulse, abdomen: the Diagnosis's clues from those charts, plus a Fang Bing Ren answer that is one of those exam
+    findings (`phCxExamKey`, by its subject). Each against the plan's first dated chart of that part when the plan has two or more
+    (from `rec.visitFnd`): Yes → Yes (Same), New, or Gone (Better: in that first chart, read by one of the listed patterns'
+    `def.keys`, not there now; label `PH_PAT_CLUE_LBL`). One chart only = Yes.
+  - Blood tests: a marker out of range on a result under 12 months old; first flagged result → latest, with its unit; Better when
+    back in range or nearer it. Target = its range ("30–200", "30 or more").
+  - Musculoskeletal (this plan's visits): a movement under 80% of its normal range at some visit (first limited → latest, degrees,
+    target = the normal degrees); a positive test (Positive → Negative = Better).
+  - **Read, never rated** (one read per fact; the mock drew Better / Same / Worse chips on Tongue and Pulse, disclosed to her). On
+    the Compass they are one **Measured** block before the red flags (`phCxMeasRowsHtml`, both layouts; not asked, not counted);
+    in Watch after the told rows. A tap opens the page through `data-flow-prof` (Blood tests is a file page; the exam pages are
+    plan tabs, which that link also routes).
+  - Shared with Patterns, output unchanged: `PH_PAT_TNG_RX` + `phPatTngFlags` (a tongue's words), `phPatTngVisitWords` (one dated
+    chart), `phPatPulseKeys` (a pulse chart, the auto-deep rule included). Checked: `phPatClues` gave the same clues before and
+    after on the test patient and on two richer tongue + pulse charts.
+- **Built, targets** (`PH_CX_TGT`, `phCxTgt`, `phCxTgtProg`, `phCxTgtWrite`): pain and a complaint on 0–10 = 2 or less; a
+  complaint (or a pain with a baseline) on % better = 80% better; Energy (higher is better) = 8 or more. Mine where her picks named
+  no number: 80% better and 8 or more (the mirror of 2 of 10). Hers: `complaint.mainTgt` / `secondary[].tgt` (through `phCcWrite`)
+  or `painMap[i].tgt` (`phPmWrite`'s whitelist now keeps `tgt`), `{ v, k }`; one saved on another kind of score reads auto.
+  - Treat row: a "target 2 or less ▾" dropdown (`phTpTgtSelHtml`, `.ph-cx-vsel` look); hers is bold with "↺ auto"; picking the
+    auto value is back to auto. The change repaints the dropdown and Watch in place.
+  - Watch: a target column with a bar from the baseline (0) toward the gold target mark, "target … ✓" once reached; measured rows
+    with a range or degrees carry theirs. A sign carries none (her mock: none on sign rows). Phone: the bar on its own line.
+- **Also fixed:** a long Diagnosis sign tag (`.ph-tp-dxsg`, part 1) ran past the card at 375; it wraps inside its tag now.
+- **Tested (sandbox, "Wren Testcase" + tongue / pulse charts on two visits, ferritin 18 → 42, low back flexion 40° → 70°, SLR
+  positive → negative):**
+  - Measured: Tongue is pale Yes → Yes Same, Pulse is wiry Yes → Yes Same, Deep pulse Gone Better (an organ-level slippery mark on
+    the first chart), Ferritin 18 → 42 µg/L Better ✓ 30–200, Low back flexion 40° → 70° Better ✓ 60°, SLR Positive → Negative.
+  - Taps: Ferritin → Blood tests, Tongue → Tongue, flexion → Musculoskeletal.
+  - Target: Period pain 7 → 4, target 2 or less (bar 43%, mark 71%); 3 or less saved as `{ v: 3, k: "lo" }`, bold, mark 57%;
+    ↺ auto removed it. A pain's target saved through `phPmWrite` (`painMap[0].tgt`).
+  - 1280 (table + panel) and 375 (no row past the card, page 375 wide). 12 ms per Compass read. No console errors.
+  - The freeze rule's test patient ("Zed Testtwo": two open Care Plans, no pain map, a booking today) still opens; brief 24 ms.
+- **Checked pages:** Today's visit (Compass), Care Plan (Treat, Diagnosis, Watch), Blood tests / Tongue / Musculoskeletal (taps).
+  Not checked: her real records, the Key2, Copy notes (step 8 adds the plan to it).
