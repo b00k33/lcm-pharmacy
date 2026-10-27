@@ -4166,3 +4166,45 @@ Her report: "the app has been freezing and taking a long time to load on the des
 - **Not tested:** her real window with sync on (it goes live only on her word), the Key2.
 - **Getting it:** a fresh open loads the live page (navigations are network-first), so once live she closes the frozen
   window and opens LCM again; the gold Update button is for a window already open.
+
+## Care Plan part 2, step 1: every Watch row on the Compass (2026-10-27)
+- **Her words / picks:** part 2 = her 8 picks on "make suggestions for what to do in part 2" (all of them). Pick 1, "Where should
+  the one-tap re-score sit on Today's visit?" = **Inside the Compass card**: the Compass she already scores holds every Watch row.
+  Mock `care-plan-part2-mock-2026-10-27.html` section 1. Build order: this step, then measured rows + targets, phase review,
+  course length, bloods + IVF in the diagnosis, the patient plan, profile pass 2 + Copy notes.
+- **What was missing:** the Compass already scored the concerns, the pains, Energy, the Fang Bing Ren signs she answered and the
+  red flags. Watch also listed the signs behind the Diagnosis that come from what the patient tells her (cycle log, usual
+  answers, notes, diet), with nowhere to re-score them.
+- **Built:**
+  - `phCxToldList(name, rec, plan, signs, items)` (before `phCxSignList`): the Diagnosis's clues from `PH_CX_TOLD_SRC`
+    (cycle, usual, notes, diet) that no Compass row stands for. Left out: Fang Bing Ren answers (the sign list's own rows, so
+    its Not watching and gone-twice rules hold), the pain map's words (`pain*` groups), Energy, "Came in for", the period-pain
+    clue when the period-pain row is there, a usual answer whose subject already has a usual-answer sign row, Not watching.
+  - Each is a sign-shaped row (`kind "c"`, key `pc:<clue key>`, label "Cycle: clots logged on 6 days"), so `phCxModel` draws,
+    rates, notes, rebases and charts it with the sign machinery: ratings in `rec.ccTrack.days[day].sx["pc:…"]` through
+    `phCxSxWrite`. Its area (`x.area`, read first by `phCxAreaOfSign`): its own subject, else the area of a Fang Bing Ren sign
+    that files the same clue (`PH_FBR_TO_CLUE`), else its source's (cycle = Periods, diet = Digestion).
+  - Never behind "+ N more" (the cap keeps it like a rated row). ▾ = Not watching only; Details has no Track with / Make it a
+    complaint (`phCxSxTrackHtml` returns nothing for `pc:`). The Not watching toast names the row.
+  - `phCxModel(..., { all: true })` skips the cap; `M.told` beside `M.signs` (the cache keeps both while a slider moves).
+  - **Watch** (`phTpWatchHtml`) = the Compass's rows in its order (told rows with their `PH_PAT_SRC` icon; not rated yet = Yes,
+    or New against the first progress snapshot), then only a Fang Bing Ren answer the Compass leaves to an exam page (until step 2),
+    then the red flags. `PH_TP_WATCH_SRC` is gone. A sign rated once shows its word once (the tag comes with a second rating).
+  - `phCcSeedSymptoms` leaves told rows out of `phase.symptoms` (the letter's "Watching:" line keeps its confirmed shape).
+- **Read-loop check** (the freeze on load, 10af1050): the new read is `phCxModel` → `phTpAutoDx`; nothing in the brief / goal /
+  complaints / pain-map / Patterns chain calls `phCxModel` (its callers are the card, Today's step model, Copy notes, Watch,
+  Treatment and the symptom seed), and `phTpAutoBusy` guards the dx key.
+- **Tested (sandbox, made-up "Wren Testcase": Period pain, a dysmen plan, clots + dark flow + stabbing pain logged on 3 periods,
+  an "irritable" history note, a visit 13 Oct):**
+  - Compass rows: Period pain, then Cycle: clots / dark or brown flow / stabbing pain / heavy flow (Periods), Notes: mention stress
+    or irritability (Mind & sleep). Better on clots wrote `sx["pc:clots"] = { v: "b" }`; the panel moved to the next row.
+  - 1280: table + panel, the panel's Sign head, Details. 375: no row wider than the card, page 375 wide.
+  - Not watching on the Notes row: toast "Notes: mention stress or irritability · not watching", gone from the Compass, Watch and
+    the Treatment tab alike. Care Plan Watch and Treatment "How Wren is" list the same rows in the same order.
+  - The freeze rule's test: made-up "Zed Testtwo" (two open Care Plans, no pain map, a booking today, the same cycle log): the
+    brief answers in 8 ms, Today's visit 0.46 s, Care Plan 0.30 s, Appointments 0.08 s; stored and reloaded, the app opens.
+  - No console errors.
+- **Checked pages:** Today's visit (Compass, Ask count), Care Plan (Watch), Treatment ("How <name> is"). Not checked: Copy notes'
+  Scores line with a told row rated (it reads `r.x.label` and the word), the letter, her real records, the Key2.
+- **Disclosed:** the mock drew Tongue / Pulse rows with Better / Same / Worse; those are measured on their own pages, so step 2
+  brings them in read from those pages (first → latest), a tap opening the page, never rated twice.
