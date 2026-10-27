@@ -18624,6 +18624,9 @@
   #pharmacyPage .ph-tp-prv .acts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
   #pharmacyPage .ph-tp-prv .acts .ph-today-btn { height: 32px; }
   #pharmacyPage .ph-tp-prv .acts .ok { font-size: var(--fs-13); font-weight: 700; color: var(--ph-good); }
+  #pharmacyPage .ph-tp-prv .ph-tp-crs { width: 100%; border-collapse: collapse; margin: 8px 0 10px; background: var(--ph-white); border-radius: 8px; font-size: var(--fs-13); }
+  #pharmacyPage .ph-tp-prv .ph-tp-crs th { text-align: left; font: 700 var(--fs-10-5) var(--font-body); letter-spacing: .06em; text-transform: uppercase; color: var(--ph-soft); padding: 6px 8px; }
+  #pharmacyPage .ph-tp-prv .ph-tp-crs td { padding: 6px 8px; border-top: 1px solid var(--ph-line); }
   @container (max-width: 640px) {
     #pharmacyPage .ph-tj-foot { margin-left: 0; }
     #pharmacyPage .ph-tv-seg button { padding: 0 10px; }
@@ -52724,15 +52727,17 @@
       if (e.target.closest("[data-tp-letter-open]")) { phTpLetterOpen = true; phTpRerender(); return; }
       if (e.target.closest("[data-tp-cpl-open]")) { phTpLetterOpen = "plan"; phTpRerender(); return; }
       if (e.target.closest("[data-tp-cpl-print]")) {
-        const plan = phTpFindPlan(phTpScreenPatient, phTpScreenPlanId);
-        if (plan) phPrintDoc(phTpCplDocHtml(phTpScreenPatient, plan), `Care plan ${phTitle(phTpScreenPatient)} ${phFileDate()}`);
+        const plan = phTpFindPlan(phTpScreenPatient, phTpScreenPlanId), end = e.target.closest("[data-tp-cpl-print]").dataset.tpCplPrint === "end";
+        if (plan) phPrintDoc(phTpCplDocHtml(phTpScreenPatient, plan, end ? "end" : ""), `${end ? "Ending letter" : "Care plan"} ${phTitle(phTpScreenPatient)} ${phFileDate()}`);
         return;
       }
       // Email: the link opens her mail app with the page as text; Messages keeps the copy she is about to send
       if (e.target.closest("[data-tp-cpl-mail]")) {
-        const plan = phTpFindPlan(phTpScreenPatient, phTpScreenPlanId);
+        const plan = phTpFindPlan(phTpScreenPatient, phTpScreenPlanId), end = e.target.closest("[data-tp-cpl-mail]").dataset.tpCplMail === "end";
         if (plan) {
-          const stats = phMsgPrepare({ names: [phTpScreenPatient], subject: phTpCplModel(phTpScreenPatient, plan).title, body: phTpCplText(phTpScreenPatient, plan), channel: "email", context: { type: "careplan", id: plan.id }, label: "Care plan" });
+          const stats = end
+            ? phMsgPrepare({ names: [phTpScreenPatient], subject: phTpCelModel(phTpScreenPatient, plan).title, body: phTpCelText(phTpScreenPatient, plan), channel: "email", context: { type: "careend", id: plan.id }, label: "Ending letter" })
+            : phMsgPrepare({ names: [phTpScreenPatient], subject: phTpCplModel(phTpScreenPatient, plan).title, body: phTpCplText(phTpScreenPatient, plan), channel: "email", context: { type: "careplan", id: plan.id }, label: "Care plan" });
           phFlashShow(stats && stats.ready && stats.ready.length ? "✓ In Messages" : "Not in Messages: no email on file, or they asked not to be contacted");
         }
         return;
@@ -112722,7 +112727,12 @@ or changing anything in Cliniko.
     const acts = done ? `<span class="ok">✓ ${esc(done.prv.out || "Review saved")}</span>${herbs}${done.prv.undo ? `<button type="button" class="ph-today-btn q" data-tp-prv-undo="${esc(plan.id)}|${esc(done.id)}">Undo</button>` : done.prv.out ? "" : `<button type="button" class="ph-today-btn q" data-flow-go="plan">Care Plan ›</button>`}`
       : (C.next ? pick("move", ["Move to " + phTpPrvShort(C.next), phTpPrvCad(C.next)].filter(Boolean).join(" · ")) : pick("close", "Close plan"))
         + pick("stay", `Stay ${C.more} more visit${C.more === 1 ? "" : "s"}`);
-    return `<div class="ph-tp-prv" data-tp-prv="${esc(plan.id)}" data-tp-prv-name="${esc(name)}"><h3>${esc(done ? done.prv.head : phTpPrvHead(C.ph, C.planned))}</h3><div class="sum">${tags}</div><div class="acts">${acts}</div></div>`;
+    // part 3, step 7: the last phase's review (and the closed plan's) is the course -- its visits and weeks, each concern
+    // from its first score to now against its target, and the Ending letter
+    const last = done ? done.prv.out === "Plan closed" : !C.next, crs = last ? phTpCourseStats(name, plan) : null;
+    const head = last ? `Course done · ${crs.n} visit${crs.n === 1 ? "" : "s"}${crs.wk ? ` over ${crs.wk} week${crs.wk === 1 ? "" : "s"}` : ""}` : done ? done.prv.head : phTpPrvHead(C.ph, C.planned);
+    const end = last ? `<button type="button" class="ph-today-btn q" data-tp-cel-open="${esc(plan.id)}">Ending letter</button>` : "";
+    return `<div class="ph-tp-prv${last ? " crs" : ""}" data-tp-prv="${esc(plan.id)}" data-tp-prv-name="${esc(name)}"><h3>${esc(head)}</h3>${last && phTpCourseRows(name, plan).length ? phTpCourseHtml(name, plan) : `<div class="sum">${tags}</div>`}<div class="acts">${acts}${end}</div></div>`;
   }
   // her tap: the review writes itself, with what the tap did and what Undo puts back
   function phTpPrvWrite(name, plan, ph, planned, out, undo) {
@@ -122331,6 +122341,56 @@ or changing anything in Cliniko.
   // flags without the instruction for her after the dash, or her own Watch wording when she typed one) and the herbs with their
   // dose. Print = this page; Email = the same as text, kept in Messages (phMsgPrepare) and opened in her mail app to the address
   // on file, so she sees it before it goes. Shown in the Patient letter's place (phTpLetterOpen === "plan").
+  // ==== COURSE END (Care Plan part 3, step 7; her pick "Course end writes itself", her answer "The patient only") ====
+  // The course in numbers (the Compass's own scores: each concern's first score and its latest, against its target) and
+  // the Ending letter: the patient plan's page and doors (Print, Email into Messages), with where she started and where she
+  // is, the last phase's own Aim as "From here", the GP line and the sign-off. Nothing clinical is written by the app.
+  function phTpCourseRows(name, plan) {
+    let M = null; const keepAt = phCxAt; phCxAt = null;
+    try { M = phCxModel(name, plan, { all: true }); } catch (e) { M = null; } finally { phCxAt = keepAt; }
+    if (!M) return [];
+    return M.rows.filter(r => r.kind === "cc" && r.s.track !== "bar").map(r => {
+      const s = r.s, pts = (s.trk && s.trk.pts) || [], base = s.trk && s.trk.base, last = pts[pts.length - 1];
+      let tg = null; try { tg = phCxTgtProg(s, phCxTgt(name, s, M.scale)); } catch (e) { tg = null; }
+      return { text: s.text, a: base ? String(phCxR1(base.v)) : "", b: last ? String(phCxR1(last.v)) : "", tg, pct: M.scale === "pct" };
+    }).filter(x => x.a || x.b);
+  }
+  function phTpCourseStats(name, plan) {
+    const phs = (plan.phases || []).filter(p => !p.skipped);
+    let n = 0; phs.forEach(p => { try { n += phTpPhaseSessionDates(name, plan, p).done.length; } catch (e) {} });
+    const from = phs.map(p => p.sinceKey).filter(Boolean).sort()[0];
+    return { n, wk: from ? Math.max(1, Math.round((parseKey(keyOf(TODAY)) - parseKey(from)) / 6048e5)) : 0 };
+  }
+  function phTpCourseHtml(name, plan) {
+    const R = phTpCourseRows(name, plan);
+    return R.length ? `<table class="ph-tp-crs"><thead><tr><th>Treat</th><th>Start</th><th>Now</th><th>Target</th></tr></thead><tbody>${R.map(r => `<tr><td>${esc(r.text)}</td><td>${esc(r.a || "–")}</td><td>${esc(r.b || "–")}</td><td>${r.tg ? `<span class="tg ${r.tg.ok ? "better" : "same"}">${r.tg.ok ? `✓ ${esc(r.tg.txt)}` : "not yet"}</span>` : ""}</td></tr>`).join("")}</tbody></table>` : "";
+  }
+  function phTpCelModel(name, plan) {
+    const it = phCcRibItems(name), C = phTpCplModel(name, plan), S = phTpCourseStats(name, plan), lastPh = (plan.phases || []).filter(p => !p.skipped).slice(-1)[0] || null;
+    const rows = phTpCourseRows(name, plan).filter(r => r.a && r.b).map(r => r.pct ? `${r.text}: ${r.b}% better` : `${r.text}: ${r.a} out of 10 → ${r.b} out of 10`);
+    return { title: `Your treatment${it ? ` · ${it.main.text}` : ""}`, date: C.date, visits: S.n, first: C.first, rows, aim: String((lastPh && lastPh.aim) || "").trim(), gp: C.gp, email: C.email };
+  }
+  function phTpCelText(name, plan) {
+    const E = phTpCelModel(name, plan), sec = (h, list) => list.length ? `${h}\n${list.map(x => `• ${x}`).join("\n")}\n\n` : "";
+    return `Dear ${E.first},\n\n${E.title}\n${E.date}${E.visits ? ` · ${E.visits} visits` : ""}\n\n`
+      + sec("Where you started, where you are", E.rows)
+      + (E.aim ? `From here\n${E.aim}\n\n` : "")
+      + sec("See your GP straight away if", E.gp)
+      + `${phSignoffFor(plan.id)}\n${PH_SIGNATURE}\n`;
+  }
+  function phTpCelSheetHtml(E, plan) {
+    const ul = list => `<ul>${list.map(x => `<li>${esc(x)}</li>`).join("")}</ul>`;
+    return `<h4>${esc(E.title)}</h4><div class="sub">${esc(E.date)}${E.visits ? ` · ${E.visits} visits` : ""}</div>`
+      + (E.rows.length ? `<h5>Where you started, where you are</h5>${ul(E.rows)}` : "")
+      + (E.aim ? `<h5>From here</h5><div>${esc(E.aim)}</div>` : "")
+      + (E.gp.length ? `<h5>See your GP straight away if</h5>${ul(E.gp)}` : "")
+      + `<p class="sig">${esc(phSignoffFor(plan.id))}<br>${esc(PH_SIGNATURE)}</p>`;
+  }
+  document.addEventListener("click", e => {
+    const b = e.target && e.target.closest ? e.target.closest("#pharmacyPage [data-tp-cel-open]") : null;
+    if (!b) return;
+    phTpLetterOpen = "end"; presTpMainTab = "plan"; renderPresPanel();   // the Care Plan, showing the letter in the Patient letter's place
+  });
   function phTpCplModel(name, plan) {
     const rec = phPatientPeek(name) || {}, it = phCcRibItems(name), ph = phTpLivePhase(rec, plan) || (plan.phases || []).find(p => !p.skipped) || null;
     let M = null; const keepAt = phCxAt; phCxAt = null;   // today's Compass, whatever visit its Scoring bar has open
@@ -122371,23 +122431,23 @@ or changing anything in Cliniko.
       + (C.herbs ? `<h5>Your herbs</h5><div>${esc(C.herbs)}</div>` : "")
       + `<p class="sig">${esc(phSignoffFor(plan.id))}<br>${esc(PH_SIGNATURE)}</p>`;
   }
-  function phTpCplDocHtml(name, plan) {
-    return `<title>Care plan — ${esc(phTitle(name))}</title>
+  function phTpCplDocHtml(name, plan, kind) {
+    return `<title>${kind === "end" ? "Ending letter" : "Care plan"} — ${esc(phTitle(name))}</title>
       <style>body{font-family:Georgia,serif;padding:32px;max-width:620px;color:#162428;line-height:1.55;font-size:14px}
       h4{font-size:19px;margin:0 0 2px;color:#0B3B4B}.sub{color:#555;font-size:12px}
       h5{font-family:system-ui,sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#6B7A80;margin:18px 0 6px}
       ul{margin:0;padding-left:18px}.steps{display:flex;gap:6px}
       .steps span{flex:1;text-align:center;font-family:system-ui,sans-serif;font-size:11.5px;font-weight:600;padding:6px 4px;border-radius:6px;background:#EEF4F2;color:#0B3B4B}
       .steps span.now{background:#B08D3E;color:#fff}.steps span.past{opacity:.55}.sig{margin-top:24px}</style>
-      ${phTpCplSheetHtml(phTpCplModel(name, plan), plan)}`;
+      ${kind === "end" ? phTpCelSheetHtml(phTpCelModel(name, plan), plan) : phTpCplSheetHtml(phTpCplModel(name, plan), plan)}`;
   }
-  function phTpCplViewHtml(name, plan) {
-    const C = phTpCplModel(name, plan);
+  function phTpCplViewHtml(name, plan, kind) {
+    const end = kind === "end", C = end ? phTpCelModel(name, plan) : phTpCplModel(name, plan), k = end ? "end" : "1";
     const mail = C.email
-      ? `<a class="ph-load-btn on" data-tp-cpl-mail="1" href="${esc(`mailto:${encodeURIComponent(C.email)}?subject=${encodeURIComponent(C.title)}&body=${encodeURIComponent(phTpCplText(name, plan))}`)}">✉ Email</a>`
+      ? `<a class="ph-load-btn on" data-tp-cpl-mail="${k}" href="${esc(`mailto:${encodeURIComponent(C.email)}?subject=${encodeURIComponent(C.title)}&body=${encodeURIComponent(end ? phTpCelText(name, plan) : phTpCplText(name, plan))}`)}">✉ Email</a>`
       : `<button type="button" class="ph-load-btn" disabled>✉ No email on file</button>`;
-    return `<div class="ph-tp-letter-acts"><button type="button" class="ph-load-btn" data-tp-letter-back="1">← Back to plan</button><button type="button" class="ph-load-btn on" data-tp-cpl-print="1">🖨 Print</button>${mail}</div>
-      <div class="ph-tp-cpl">${phTpCplSheetHtml(C, plan)}</div>`;
+    return `<div class="ph-tp-letter-acts"><button type="button" class="ph-load-btn" data-tp-letter-back="1">← Back to plan</button><button type="button" class="ph-load-btn on" data-tp-cpl-print="${k}">🖨 Print</button>${mail}</div>
+      <div class="ph-tp-cpl">${end ? phTpCelSheetHtml(C, plan) : phTpCplSheetHtml(C, plan)}</div>`;
   }
   let phTpLetterOpen = false;   // true = the Patient letter; "plan" = the plan for the patient
   function phTpLetterCopy(btn, name, plan) {
@@ -122408,6 +122468,7 @@ or changing anything in Cliniko.
   }
   function phTpLetterViewHtml(name, plan) {
     if (phTpLetterOpen === "plan") return phTpCplViewHtml(name, plan);   // the one-page plan for the patient (part 2, step 6)
+    if (phTpLetterOpen === "end") return phTpCplViewHtml(name, plan, "end");   // the ending letter (part 3, step 7)
     // her pick 3, 2026-09-22 (soft skip): same omission as phTpLetterDocHtml
     // -- this on-screen preview and the exported letter must always agree.
     const phs = (plan.phases || []).filter(p => !p.skipped);
