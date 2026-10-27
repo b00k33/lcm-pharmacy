@@ -4082,3 +4082,38 @@ cadence chips on one line; 1280 unchanged (no overlap); no console errors.
 **LIVE 2026-10-27, build 20261027-164200 (main f202a26b):** her "push live the profile changes too": the shorter profile, step 3 first
 pass (bd5e2c39) alone on live main; the Session grid commit d93ab774 (her 3 picks on its repeats) stays on session-a, not live.
 Joined back as 7122b3eb.
+
+## Prescription form chips, one height (2026-10-27)
+Her ask: a screenshot of a new prescription (band "✎ <name>", Name, Ingredients, Notes, ✓ Save) and "audit chips on this page".
+The same form (`renderPresEditForm`, `presNameTypeFieldsHtml`, `presIngredientsEditorHtml`) is New formula recipe and New
+patient, and its add row (`.ph-build-add`) is the open recipe's in the Formula refill sheet. The Dispense cockpit's add row has
+its own look and is left out (`:not(.ph-cockpit *)`).
+- **Measured (1440):**
+  - Name, the herb box, g and Notes were white pills (30px, 999px corners; g 28px at 10px; Notes 16px corners).
+  - The herb box ran the page's width (1283px).
+  - "+ Add" was a second solid button (61 × 26).
+  - ✓ Save was a 28px pill.
+  - "Paste contact card" (10.5px) and "✎ Edit as a plain list ▾" were plain text that taps.
+  - The band's "✎ <name>" looked like the tap-to-rename field (tint, pointer) but does nothing here.
+  - Explaining words: "add from the inventory below" beside Ingredients; the placeholders "Add a herb — or a formula
+    abbreviation, its ingredients pour in" and "Anything worth remembering about this one…".
+  - In New formula recipe: Type cut "Herbal formula" at 90px, the plain list was 177px wide, Cancel × a 25px pill.
+  - In the open recipe the add row was a block line (herb box 191px).
+  - Phone: the add row, Edit as a plain list, the match line, Notes and Save sat on the screen's edge.
+- **Fixed** (one block after the chip sweep's band-name rule, one in the PHONE REDESIGN block, three markup lines):
+  - Fields are 32px, 6px corners, the faint tint, no line, 13px; focus = a 2px herb outline.
+  - The herb box is at most 420px with g and + Add beside it. The open recipe's row is a flex row too.
+  - + Add is a Button (white, 1.5px herb line, 32px, 6px, 13px bold); ✓ Save is the one solid button (herb, 32px, 6px).
+  - Paste contact card and Edit as a plain list are 32px boxes. The plain list is solid while open.
+  - A band title that does not tap is plain text.
+  - "add from the inventory below" is gone. Placeholders: "Herb or formula" (what pours in moved to the hover title);
+    Notes has none, as its label shows.
+  - Type takes its words; the plain list takes the form's width; Cancel × is a 32px box.
+  - Phone: 12px gutter on those rows, + Add outlined; the phone keeps its own sizes, as every chip audit has.
+- **Tested** (sandbox, made-up "Mia Test" and two made-up recipes; 1440 / 1280 / 360):
+  - Every control measured 32px, 6px corners.
+  - New formula recipe: Type 140px fits its words, the list 584px, Cancel 82 × 32.
+  - Open recipe add row: 420 + 64 + 64, no sideways scroll; Bai Shao (Chao) 12 g added from the list (3 herbs · 212 g).
+  - Prescriptions search 24 → 0 → 6 → 24.
+  - Before / after pictures, computer and phone.
+- **Not tested:** her real patient's form, the Dispense cockpit (left as it was), the Key2.
