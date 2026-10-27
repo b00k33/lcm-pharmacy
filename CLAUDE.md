@@ -1605,6 +1605,18 @@ Step 2 (her pick 11, her "build step 2" 10/27; BUILD-NOTES "Fitness step 2") is 
 else the reference entry for that exercise, else C22's name rule, else Bodyweight); the drawing sits beside the name in her
 exercise, a template exercise, Workout Mode's cards and a reference entry; a template's barbell exercise shows the bar loaded
 for its heaviest set (`phFitPlatesHtml`).
+**Step 3** (her "build step 3", 10/27: the plan had two steps, so step 3 = the rest of C22's Fitness; her 10 picks, all of them;
+BUILD-NOTES "Fitness step 3"): BUILT 9551472c, not live. The coach line (`phFitCoach`: Last · PR with the trophy, gold past it ·
+"▲ n kg vs last time" · "No history yet") on a template exercise, her exercise and each Workout Mode card (before today there);
+the ribbon (`phFitRib`) in a template and on each card; a template's summary (`phFitSumHtml`: map, numbers, group buttons;
+`phFitHl` lights a group's exercises, a tap on a muscle does too); Workout Mode's top (`phFitWmWeek` dots, `phFitWmHero`: figures
+lit as sets are ticked, sets ring, numbers, `phFitWmHl` dims the other cards, the trophy strip when every set is done); C22's
+small figure on each exercise chip (`PH_MU_ART.tileSvg` drawn once per group as a blob picture, `phMuTileSrc`; a repaint stays
+~0.09 s); Where it hurts: her rehab routine chip (`phMuRehabChips` → `data-hab-go`). Week rules: Wed + Sat rest every week
+(`PH_FIT_RESTWD`, locked in the Weekly plan, `phFitPlanSet` refuses a type); deload weeks (`PH_FIT_DL`: 18-week cycle from Mon
+29 Dec 2025, weeks 5, 9, 14, 18: Monday light, Sunday extra rest; `phFitGoalOn`); planned / done days per week (`phFitWkSt`,
+rest days never planned); the week streak (`phFitStreak`, memo on `phMeS()`; one short week forgiven; 8 empty weeks end it;
+toast at 4, 8, 12, 26, 52 via `phFitStkSay`). No new stored data.
 - **Fitness** (Body, `phHubFitHtml`): Bring in (her C22 fitness, once: library, templates, log, planned, stairs, week plan; C22's
   keys are READ, never written) · This week (workout + rehab routines and Steps, a dot a day = the Habits reads and ticks, one tick
   both pages) · **Weekly plan** = her calendar's routines (`phFitPlanApply`: a day set to a type moves that weekday to the routine of

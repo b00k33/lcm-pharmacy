@@ -3795,3 +3795,45 @@ note on; Right now: Sleeps well + Hard to fall asleep, a stale normal from 20 Oc
 Built, NOT live: waits for her "push live".
 **LIVE** 2026-10-27 (her "push live"), build 20261027-132600 (main c3f6c09e), joined into session-a as 08420850 (tree unchanged),
 under the publish lock. Checked on the live site: the new stamp in index.html and sw.js, `PH_AH_NONE_ONLY` / `phAhNoteFit` in index.html.
+
+## Fitness step 3: the rest of C22's Fitness (2026-10-27)
+Her "build step 3". The plan (pick 11) had two steps, so step 3 = what C22's Fitness still had; one popup round, her 10 picks
+(all of them). Commit 9551472c. Code: "step 3" block before `phFitModes` (FITNESS + EXERCISES); CSS after the equipment rules.
+- **Coach line** (C22's tpeHistory + tpeCoachHtml, `phFitCoach`): "Last 3 × 10 · 12 kg · 24 Oct", "PR 12 kg" with the trophy
+  (grey; gold once the sets in front of her beat it), "▲ 2 kg vs last time", or "No history yet, this is the first time". On a
+  template exercise, her exercise (library panel) and each Workout Mode card: C22's three places. Workout Mode reads days
+  before today; the others include today.
+- **Workout Mode's top** (C22's woWeekHtml + woHeroHtml): the week's dots (done, planned, missed, rest), the two figures lit
+  per group as its sets are ticked, the sets ring, exercises / elapsed / kg moved, group buttons (a tap dims the other cards; a
+  tap on a muscle does the same), and "Workout complete" with the trophy once every set is ticked (it arrives with the gold).
+- **Ribbon** (C22's tpeRibHtml, `phFitRib`): each set and rest to its length (a rep ~3 s, a hold its seconds, both sides
+  counted) and "≈ m:ss"; in a template, and thin on each Workout Mode card with the done sets green.
+- **Template summary** (C22's tpeSumHtml, `phFitSumHtml`): the map of the whole template, "3 exercises · 9 sets", "≈ 13 min ·
+  380 kg lifted", group buttons that light their exercises (others fade); routes for a climbing template.
+- **Chip figures**: C22's small tile on each exercise chip. Drawn as live figures they cost ~0.35 s a repaint (step 2), so each
+  group's tile is one standalone SVG (`PH_MU_ART.tileSvg`, its own colour rules inside) made once into a blob URL
+  (`phMuTileSrc`); 36 chips = 36 images; the Exercises page repaints in ~0.09 s, as with the dots.
+- **Where it hurts**: her rehab routine(s) on Habits as a chip, "Shoulder Rehab routine ›" (`data-hab-go` opens it on Habits);
+  one whose name holds the area first, else every rehab routine.
+- **Week rules**: Wed + Sat rest every week (her C22 rule 10/13): the Weekly plan shows them locked "Rest", a type is refused
+  (`phFitPlanSet`); a routine already on her calendar there stays and its select offers it or Rest. Deload weeks (C22's
+  FITNESS_GOAL): 18-week cycle from the Monday week of 1 Jan 2026, weeks 5, 9, 14, 18: Monday light, Sunday extra rest, "Deload
+  week · lighter by design" on This week, Today says "light day · deload week" etc. Rest days are never planned days; a day she
+  trains still counts done. The week streak (C22's fitnessWeekStreak): weeks meeting their planned days, one short week
+  forgiven, this week counts once met, weeks with no plan skipped; "🔥 n weeks in a row" on This week from 2; a toast at 4, 8,
+  12, 26, 52 when it grows to one in the session.
+**My calls (disclosed):** the deload days follow C22's code (Monday light, Sunday extra rest; the popup's picture said Sat /
+Sun); a route counts as one set in the map and ring (LCM's "n of m sets"; C22 counted tries); 8 weeks in a row with no plan end
+the streak search (speed); the trophy's time follows the Workout Mode clock; rest days show quiet in This week's header.
+Wording DRAFT: the coach line, "Deload week · lighter by design", "🔥 n weeks in a row", "🔥 n weeks of fitness fulfilment in
+a row", "rest day", "extra rest day · deload week", "light day · deload week", "… routine ›", "Workout complete".
+**Fixed on the way:** the lit group's rule ranked below the dim rule (the lit group faded too); a `.tpe-fig` in the lit
+selectors fixes it. The Workout Mode clock ticker updated one clock; now every `[data-fit-clk]` in Workout Mode.
+**Tested** (localhost sandbox copy, C22 test keys in the sandbox only, no sign-in): Bring in; Wed / Sat rest and next week's
+deload (Mon 2 Nov light, Sun 8 Nov extra rest) read right; Weekly plan Wed refuses Gym, Sat offers Rest + its Bouldering, Tue →
+Pilates still works; streak with a stub week list = 4 with one short week forgiven, toast at 4 (Undo hidden); template summary
+numbers, Legs / Shoulder light only their group and exercises, a muscle tap and a second tap; coach: PR gold + "▲ 2 kg" at
+14 kg, "No history yet" on a new one; ribbon ≈ 4:30; 36 chip images load; rehab chip on Right shoulder; Workout Mode: dots,
+ring 2/9, numbers, coach per card, ribbon done 2/9, Legs dims the other cards, all sets → trophy. Headless Edge 1220 + 360
+(shots-s7.ps1); at 360 nothing past the edge on Fitness, Exercises, Where it hurts, Workout Mode; no console errors.
+**Not tested:** the Key2, her real record, a real deload week on the calendar (next week, 2 Nov).
