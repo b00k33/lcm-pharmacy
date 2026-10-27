@@ -4120,3 +4120,7 @@ its own look and is left out (`:not(.ph-cockpit *)`).
 
 **LIVE 2026-10-27, build 20261027-165600 (main 89a80203):** her "push live": the prescription form chips alone on live main (the
 Session grid commit d93ab774 stays on session-a, not live). Joined back as bbd38974.
+
+**LIVE 2026-10-27, build 20261027-165700 (main 4c089ddf):** her "push live": the Session grid picks (d93ab774) published on
+top of live 165600 (the prescription chips stay), index.html + sw.js only; joined back into session-a (tree unchanged).
+With 161500 (Care Plan 2a-2c) and 164200 (shorter profile, first pass), all of synth22 part 1 is live.
