@@ -4317,3 +4317,27 @@ are fixed too; temperament (sensitive, timid, sullen) stays rateable.
   bleeding, sensitive):** before, 7 sign rows (Ask 0/8); after, 3 (heavy bleeding, irritable, sensitive; Ask 0/4). The search
   shows "Eyes: round · Fixed". Prescriptions search: 10 → "Fay" 1 → cleared 10.
 - **Not checked:** her real records with the new build, the Key2.
+
+## Care Plan part 2, step 4: course length from the patient (2026-10-27)
+
+Her pick 5 ("How long" chips at the door; a longer history adds visits to the first two phases), mock
+`care-plan-part2-mock-2026-10-27.html` section 5. Measured before: complaint "how long" filled for 8 of 27.
+
+- **One fact:** the chips are the main concern's own How long (`complaint.since`, the Came in for row's box), not a second
+  answer. `phCcLenBand(since)` = the band by whole months back: under 2 = Weeks, under 6 = Months, under 12 = 6–12 months, under
+  36 = 1–3 years, else Longer. A chip writes 3 weeks / 3 months / 9 months / 2 years / 5 years back as a "~" worked-out date
+  (`phCcMainSinceSet(iso, false, true)`, which repaints Came in for and the door); the chip of the band her own date is already
+  in does nothing, so a typed date is never overwritten by its own band. The Weeks / Months line (2 months) is mine; both add 0.
+- **The door** (`phTpDoorStartHtml`, under Came in for): "How long" + the five chips (32 px, the lit one solid), then Start, now
+  "Course · Low back pain · 3 phases · 9 visits" (the course's planned visits with the band's extra).
+- **The course** (`phTpCourseLenApply`): when a course starts (`presTpInlineCreate`: the door and "+ New"; `phTpCreate`) or is
+  swapped (Change course → Swap the phases), the band adds visits to phase 1 / phase 2: 6–12 months +1 / 0, 1–3 years +1 / +1,
+  Longer +2 / +2 (the mock's table: Low back pain 7 → 8 → 9 → 11). Only a phase that has a count gets more. Cycle courses
+  (`PH_TP_CYCLE_TEMPLATES`) keep theirs: they follow the calendar. Written once into `phase.sessions`, hers to change after.
+- **Tested (sandbox, "Lou Testback", Low back pain, no plan yet):**
+  - No how long: 7 visits. 6–12 months → ~27 Jan, 8; 1–3 years → ~Oct 2024, 9; Longer → ~Oct 2021, 11; Weeks → ~6 Oct, 7.
+    Came in for showed the same "~" date each time.
+  - Her own date 15 Mar 2025 (exact): 1–3 years lit, tapping it kept her date. Start → Acute 4, Subacute 3, Maintenance 2.
+  - Change course to Neck & shoulder (swap): 4 / 3 / 2. Endometriosis (cycle): +0.
+  - 1280 (as the mock) and 375 (chips on two lines, nothing cut, page 375 wide). No console errors.
+- **Not checked:** her real records, the Key2, the IVF and Pregnancy questionnaires' own plan starts (cycle courses, +0 anyway).

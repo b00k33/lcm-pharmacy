@@ -13669,6 +13669,13 @@
   #pharmacyPage .ph-noplan-start { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; max-width: 420px; margin-top: 16px; padding: 10px 16px; border-radius: 6px; text-align: left; }
   #pharmacyPage .ph-noplan-start b { font-size: var(--fs-14); font-weight: 700; }
   #pharmacyPage .ph-noplan-start small { font-size: var(--fs-12); font-weight: 500; opacity: .8; }
+  /* How long (Care Plan part 2, step 4): the main concern's own How long as five chips, over the Start button */
+  #pharmacyPage .ph-tp-dlen { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; max-width: 520px; margin-top: 16px; }
+  #pharmacyPage .ph-tp-dlen .k { margin-right: 4px; font-size: var(--fs-13); color: var(--ph-soft); }
+  #pharmacyPage .ph-tp-dlen button { height: 32px; min-height: 0; margin: 0; padding: 0 12px; border-radius: 6px; border: 1.5px solid var(--ph-line); background: var(--ph-white); color: var(--ph-ink); font: 600 var(--fs-13) var(--font-body); cursor: pointer; }
+  #pharmacyPage .ph-tp-dlen button:hover { border-color: var(--ph-herb); }
+  #pharmacyPage .ph-tp-dlen button.on { background: var(--ph-herb); border-color: var(--ph-herb); color: #fff; }
+  #pharmacyPage .ph-tp-dlen + .ph-noplan-start { margin-top: 10px; }
   #pharmacyPage .ph-noplan-gate-skip { margin-top: 12px; }
   #pharmacyPage .ph-noplan-gate-skip .tab-link.faint { color: var(--ph-faint); font-size: var(--fs-12); }
   #pharmacyPage .ph-dsp-sugg { color: var(--ph-soft); }
@@ -53017,6 +53024,7 @@
         if (!phTpGoalHersText(plan)) plan.goal = "";   // the old template's own sentence is not hers: reseed from the new one
         plan.phases = fresh.phases;
         plan.templateName = fresh.templateName;
+        phTpCourseLenApply(phTpScreenPatient, plan);   // the new course's visits follow how long too (part 2, step 4)
         if (!renamed) plan.title = fresh.title;
         if (!plan.goal) plan.goal = fresh.goal;
         delete plan.startPhasePicked;
@@ -106128,13 +106136,52 @@ or changing anything in Cliniko.
     const words = [it.main.text, star ? star.text : ""].filter(s => s && s !== f.label).join(" ").toLowerCase();   // the family name itself says nothing
     return ids.find(id => PH_TP_COURSE_KW[id] && PH_TP_COURSE_KW[id].test(words)) || ids.find(id => /_general$/.test(id)) || ids[0] || null;
   }
+  // ==== COURSE LENGTH (Care Plan part 2, step 4; her pick 5, care-plan-part2-mock-2026-10-27.html section 5) ====
+  // How long the main concern has gone on is the complaint's own How long (c.since; a chip fills it as a "~" worked-out date,
+  // the same as the Came in for box): its band adds visits to the course's first two phases when the course starts (or is
+  // swapped): 6–12 months +1 / 0, 1–3 years +1 / +1, longer +2 / +2, the mock's table (Low back pain 7 → 8 → 9 → 11).
+  // Cycle courses follow the calendar, so they keep theirs. upTo = whole months back; ago = the date a chip writes.
+  const PH_CC_LEN = [
+    { id: "wk", label: "Weeks", upTo: 2, add: [0, 0], ago: [21, "d"] },
+    { id: "mo", label: "Months", upTo: 6, add: [0, 0], ago: [3, "m"] },
+    { id: "6m", label: "6–12 months", upTo: 12, add: [1, 0], ago: [9, "m"] },
+    { id: "1y", label: "1–3 years", upTo: 36, add: [1, 1], ago: [2, "y"] },
+    { id: "3y", label: "Longer", upTo: Infinity, add: [2, 2], ago: [5, "y"] }
+  ];
+  function phCcLenBand(since) {
+    const d = since ? parseKey(since) : null; if (!d || isNaN(d)) return null;
+    const n = phCcNow(), mo = (n.getFullYear() - d.getFullYear()) * 12 + n.getMonth() - d.getMonth() - (n.getDate() < d.getDate() ? 1 : 0);
+    return PH_CC_LEN.find(b => mo < b.upTo) || null;
+  }
+  const phTpCourseLenAdd = (name, tplName) => {
+    if (PH_TP_CYCLE_TEMPLATES.includes(tplName)) return [0, 0];
+    const it = phCcRibItems(name), b = it ? phCcLenBand(it.main.since) : null; return b ? b.add : [0, 0];
+  };
+  // a new (or swapped) course takes its visits from how long: only a phase that has a count gets more
+  function phTpCourseLenApply(name, plan) {
+    const add = plan ? phTpCourseLenAdd(name, plan.templateName) : [0, 0];
+    (plan ? plan.phases || [] : []).slice(0, 2).forEach((ph, i) => { const k = phTpSessionsOf(ph); if (k && add[i]) ph.sessions = k + add[i]; });
+  }
   function phTpDoorStartHtml(name) {
     const rec = phPatientPeek(name) || {};
     if (!(rec.sex && rec.dob) && !phPfwLater.has(phPatientKey(name))) return "";   // Start here first, as Came in for waits
     const it = phCcRibItems(name); if (!it) return "";
     const id = phTpCourseFor(name), tpl = id ? phTpAllTemplates().find(x => x.id === id) : null;
-    return `<button type="button" class="btn-save ph-noplan-start" data-tp-inline-create="${esc(id || "blank")}"><b>Start Care Plan · ${esc(it.main.text)}</b><small>Course · ${esc(tpl ? tpl.name : "Custom")}</small></button>`;
+    const b = phCcLenBand(it.main.since), phs = tpl ? tpl.phases || [] : [], add = tpl ? phTpCourseLenAdd(name, tpl.name) : [0, 0];
+    const n = phs.reduce((a, p, i) => { const k = phTpSessionsOf(p); return a + k + (k && i < 2 ? add[i] : 0); }, 0);
+    const len = `<div class="ph-tp-dlen" role="group" aria-label="How long"><span class="k">How long</span>${PH_CC_LEN.map(x => `<button type="button"${b && b.id === x.id ? ` class="on"` : ""} data-tp-door-len="${x.id}" aria-pressed="${!!(b && b.id === x.id)}">${x.label}</button>`).join("")}</div>`;
+    const sub = [`Course · ${esc(tpl ? tpl.name : "Custom")}`, phs.length ? `${phs.length} phase${phs.length === 1 ? "" : "s"}` : "", n ? `${n} visits` : ""].filter(Boolean).join(" · ");
+    return `${len}<button type="button" class="btn-save ph-noplan-start" data-tp-inline-create="${esc(id || "blank")}"><b>Start Care Plan · ${esc(it.main.text)}</b><small>${sub}</small></button>`;
   }
+  // a chip writes the main concern's How long as a worked-out date ("~"); the band her own date is already in keeps her date
+  document.addEventListener("click", e => {
+    const b = e.target && e.target.closest ? e.target.closest("#pharmacyPage [data-tp-door-len]") : null;
+    if (!b) return;
+    const x = PH_CC_LEN.find(y => y.id === b.dataset.tpDoorLen), name = phPfwName(), it = name ? phCcRibItems(name) : null;
+    if (!x || !it) return;
+    const cur = phCcLenBand(it.main.since); if (cur && cur.id === x.id) return;
+    phCcMainSinceSet(phCcAgo(x.ago[0], x.ago[1]), false, true);   // repaints Came in for and this door (phCcRefresh)
+  });
   // repaint just the gate's Start button: a sibling of the Came in for card, so the field she is typing in keeps its focus
   function phTpDoorRepaint() {
     const door = document.querySelector("#pharmacyPage [data-noplan-door]");
@@ -114046,6 +114093,7 @@ or changing anything in Cliniko.
     // app already knows, offered not asked (code7)
     const cur = PRESC.items.find(t => !presIsFormula(t) && phPatientKey(presPatientFor(t)) === phPatientKey(name));
     const plan = phTpNewPlan(templateId, { suggestFormula: (cur && presActualFormula(cur)) || "" });
+    phTpCourseLenApply(name, plan);   // a longer history, more visits in the first two phases (part 2, step 4)
     phTpApplyAlso(plan, alsoIds);   // her combine-conditions pick: the others ride along (plan.also)
     phTpComboReset();
     rec.treatmentPlans.push(plan);
@@ -114089,6 +114137,7 @@ or changing anything in Cliniko.
     // app already knows, offered not asked (code7)
     const cur = PRESC.items.find(t => !presIsFormula(t) && phPatientKey(presPatientFor(t)) === phPatientKey(name));
     const plan = phTpNewPlan(templateId, { suggestFormula: (cur && presActualFormula(cur)) || "" });
+    phTpCourseLenApply(name, plan);   // a longer history, more visits in the first two phases (part 2, step 4)
     rec.treatmentPlans.push(plan);
     phTpApplyInterrupt(rec, plan, templateId);   // an acute plan pauses the course it interrupts
     phTpAutoFillCase(templateId, presOpenId);

@@ -1268,6 +1268,14 @@ writes the review into `plan.reviews` (note + `prv: {ph, head, sum, out}`), so R
 card then reads "✓ Moved to Subacute". Undo on the Treatment tab's banner removes that review. Cycle plans get none (they follow
 the calendar). A Compass score or a target change repaints the card in place.
 
+**Part 2, step 4: course length (her pick "How long" chips at the door; BUILD-NOTES "Care Plan part 2, step 4"):** under Came
+in for on the no-plan door, "How long" Weeks / Months / 6–12 months / 1–3 years / Longer (`PH_CC_LEN`). They ARE the main
+concern's own How long (`complaint.since`): the lit chip is the band its date falls in (`phCcLenBand`), a tap writes a "~"
+worked-out date through `phCcMainSinceSet` (the band her own date is in keeps her date). The band adds visits to the first two
+phases when a course starts (`presTpInlineCreate`, `phTpCreate`) or is swapped (`phTpCourseLenApply`): 6–12 months +1 / 0,
+1–3 years +1 / +1, longer +2 / +2, only to a phase that has a count; cycle courses keep theirs. Start reads "Course · Low back
+pain · 3 phases · 9 visits".
+
 **Diagnosis + Goal write themselves** (`phTpAutoDx`, `phTpAutoGoal`): every
 Likely or Possible pattern (plus any she agreed) minus the ones she took
 off; Goal = one line per complaint in the Compass's order (her own Goal
