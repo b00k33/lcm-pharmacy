@@ -4058,3 +4058,6 @@ at all".
   - Phone 360: unchanged apart from the wrap.
   - Prescriptions search 6 → 0 → 3 → 6.
 - **Not tested:** her real recipes, Label preview opened in the sheet, the Key2.
+
+**LIVE 2026-10-27, build 20261027-162500 (main e978f490):** her "push live" for the recipe sheet alone, published on live main (the
+shorter-profile commit bd5e2c39 stays on session-a); joined back as bbc29c3c.
