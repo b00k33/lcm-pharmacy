@@ -5035,3 +5035,14 @@ session-a, NOT live.
   `shots/msk-mp-ticks-panel.png`, `shots/msk-mp-ticks-treatment.png`. Not checked on her records.
 - **Seen, not changed:** in the 360px panel a long muscle name pushes its ⚠ onto the next line (the name column is ~124px); it
   did so before this change.
+
+## Musculoskeletal page + Gym card live (2026-10-28)
+
+- **LIVE** 2026-10-28, build 20261028-102300 (main afcf373d), on her "push live the gym card and msk too" (said in the "B33 C4
+  LCM bugs" session, which published it under the lock): Musculoskeletal page steps 1 and 2 (ecf5c5f2, 7b554c06), motor points
+  start ticked (8d549bdf, saved at 10:17, before her word) and the Gym card (189e77a6), on top of the tidy-up build 101300.
+  Joined into session-a with its tree unchanged (f1c44265).
+- **Checked first (sandbox, made-up patient, 1280 px):** the app opens with no errors, 13 top pages, and a pain patient's Today's
+  visit, Musculoskeletal (a card per area, Today's points on the right), Care Plan, Treatment and Log open with no errors. The
+  served page has `phFitRtBits` and `phMskAreasToday`. **Not checked:** the Gym card itself (it needs her own record with a
+  workout routine), her real records, the phone.

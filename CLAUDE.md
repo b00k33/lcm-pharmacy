@@ -1804,7 +1804,7 @@ Fitness + Exercises), the rest in Life.
   links"): that week's Habits chain with a letter under each dot + n of n (another week: its dates), the streak at 2+ weeks,
   today's session (template · exercises · sets), ▶ Workout Mode before Done on today's card (`data-ph-fit-wm`: her Fitness
   page, Workout Mode over it), then doors Fitness · Exercises · Habits (`data-hab-go`, opens at this routine) · Health. The card
-  is 320px on a computer (other C22 cards 240), the bottom sheet on the phone. Built, NOT live.
+  is 320px on a computer (other C22 cards 240), the bottom sheet on the phone.
 - **Pilates milestones** (`phFitPilN` / `phFitPilSay`, hooked in `phMeDoneToggle` and `phFitWoSave`): the tick that lands her
   Pilates days on 7, 30, 50, 100, 200, 365 toasts.
 - **Exercises** (Body, after Fitness, `phHubExHtml`): her library (search, groups, Hide) + workout templates; C22's small figure on
