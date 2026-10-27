@@ -11982,6 +11982,10 @@
   #pharmacyPage .ph-tpg .no.skip { color: var(--ph-faint); }
   #pharmacyPage .ph-tpg .nm { min-width: 0; }
   #pharmacyPage .ph-tpg .nmb { display: block; border: 0; background: none; padding: 0; font: inherit; font-weight: 700; font-size: var(--fs-13-5); line-height: 1.2; color: var(--ph-ink); text-align: left; cursor: pointer; min-height: 0; }
+  /* her pick 2026-10-27 "fix the overlap": at phone width the Phase column gets room for its longest word ("Maintenance" ran
+     under the ×); the table already scrolls sideways there, so the visit cells keep their width. A word longer than that breaks. */
+  #pharmacyPage .ph-tpg .nmb { max-width: 100%; overflow-wrap: anywhere; }
+  @media (max-width: 480px) { #pharmacyPage table.ph-tpg { min-width: calc(332px + var(--n, 0) * 46px); } #pharmacyPage table.ph-tpg col.ph { width: 182px; } }
   #pharmacyPage .ph-tpg .nmb:hover { color: var(--ph-herb); }
   #pharmacyPage .ph-tpg tr.on .nmb { color: var(--ph-herb-deep); }
   #pharmacyPage .ph-tpg .nm small { display: block; font-size: var(--fs-11-5); color: var(--ph-faint); margin-top: 2px; }
@@ -111260,7 +111264,7 @@ or changing anything in Cliniko.
   // her picks: whole chips after the field, in her colour (no source tag: the line names its finding)
   function phTpPicksHtml(picks) { return picks.map(p => `<span class="ph-wch t-pick" title="Added from Findings">${esc(p)}</span>`).join(""); }
   // frozen = a closed phase: it keeps the template's red flags but no longer follows the patient (her picks stay)
-  function phTpFieldCellHtml(name, plan, ph, f, frozen) {
+  function phTpFieldCellHtml(name, plan, ph, f, frozen, opts) {
     const v = phTpFieldView(name, plan, ph, f), ph0 = esc(PH_TP_FIELD_PH[f] || "");
     const picks = v.picks.length ? phTpPicksHtml(v.picks) : "", pickRow = picks ? `<span class="ph-wch-row">${picks}</span>` : "";
     if (v.hers) {
@@ -111271,7 +111275,8 @@ or changing anything in Cliniko.
     }
     if (f === "aim") return { html: (v.base ? phTpCellShow("aim", v.base) : picks ? "" : ph0) + pickRow, empty: !v.text };
     const flag = v.flags ? `<span class="ph-wch-flags"><svg class="ph-wch-ic" aria-label="Red flags"><use href="#i-warn"/></svg>${phTpCellShow("watch", v.flags)}</span>` : "";
-    const items = !frozen && v.items.length ? phWatchChipsHtml(v.items, name) : "";
+    // the Session grid's live row keeps the red flags only (her pick 2026-10-27: the Watch list above has the rest)
+    const items = !frozen && !(opts && opts.flagsOnly) && v.items.length ? phWatchChipsHtml(v.items, name) : "";
     const rf = phRfCellHtml(plan, ph, frozen);
     const chips = items || picks || rf ? `<span class="ph-wch-row">${items}${picks}${rf}</span>` : "";
     return { html: (flag || items || picks || phRfPicks(ph).length ? flag : ph0) + chips, empty: !flag && !items && !picks && !phRfPicks(ph).length };
@@ -111285,7 +111290,7 @@ or changing anything in Cliniko.
     phTpAutoBust();
     if (savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return; }
     document.querySelectorAll(`[data-tp-edit="${planId}:${phId}:${f}"]`).forEach(c => {
-      const r = phTpFieldCellHtml(name, plan, ph, f);
+      const r = phTpFieldCellHtml(name, plan, ph, f, false, c.dataset.tpFlagsonly === "1" ? { flagsOnly: true } : null);
       c.classList.remove("editing"); c.classList.toggle("empty", r.empty); c.innerHTML = r.html;
     });
     phTpFxRefreshAll();   // the findings column's ✓ Watch / ✓ Aim follow the field back to auto
@@ -112225,11 +112230,11 @@ or changing anything in Cliniko.
   function phTpLiveFormulaHtml(name, plan, ph) {
     const fbrLead = phTpFbrLiveLead(phPatientPeek(name), name);
     // a phase whose template starts it from Fang Bing Ren (fmode "fbr", her pick 2026-10-21): the live lead IS the formula until she types one
-    if (!ph.formulaName && ph.fmode === "fbr" && fbrLead) return `<span class="ph-tp-fmauto">${esc(fbrLead.name)}<em>Fang Bing Ren</em></span>`;
+    if (!ph.formulaName && ph.fmode === "fbr" && fbrLead) return `<span class="ph-tp-fmauto">${esc(fbrLead.name)}<em title="Follows Fang Bing Ren until you type one">auto</em></span>`;
     return ph.formulaName
-      ? `${esc(ph.formulaName)}${fbrLead && fbrLead.name !== ph.formulaName ? `<span class="ph-tpg-fbrlead">Fang Bing Ren's current lead: ${esc(fbrLead.name)}</span>` : ""}`
+      ? esc(ph.formulaName)   // hers only (her pick 2026-10-27): the Fang Bing Ren line under Watch shows the lead
       : fbrLead
-      ? `Fang Bing Ren's formula: <b>${esc(fbrLead.name)}</b> <button type="button" class="tab-link" data-tp-fbr-fill="${plan.id}:${ph.id}" title="Fill the Formula field with Fang Bing Ren's current lead">→ Fill</button>`
+      ? `<button type="button" class="tab-link" data-tp-fbr-fill="${plan.id}:${ph.id}" title="Fill with Fang Bing Ren's formula, ${esc(fbrLead.name)}">→ Fill</button>`
       : ph.suggestFormula ? `${esc(ph.suggestFormula)} <span class="quiet">(this plan's own default)</span>`
       : `<span class="quiet">—</span>`;
   }
@@ -112706,8 +112711,8 @@ or changing anything in Cliniko.
     const fld = (f, label) => {
       if (f === "aim" || f === "watch") {
         // Aim / Watch write themselves from the record unless she typed her own (phTpFieldView)
-        const r = phTpFieldCellHtml(name, plan, ph, f);
-        return `<div${f === "watch" ? ` class="wide"` : ""}><span class="lbl">${label}</span><span class="val${r.empty ? " empty" : ""}" data-tp-edit="${plan.id}:${ph.id}:${f}" title="Click to edit">${r.html}</span></div>`;
+        const r = phTpFieldCellHtml(name, plan, ph, f, false, f === "watch" ? { flagsOnly: true } : null);
+        return `<div${f === "watch" ? ` class="wide"` : ""}><span class="lbl">${label}</span><span class="val${r.empty ? " empty" : ""}" data-tp-edit="${plan.id}:${ph.id}:${f}"${f === "watch" ? ` data-tp-flagsonly="1"` : ""} title="Click to edit">${r.html}</span></div>`;
       }
       const v = ph[f];
       return `<div><span class="lbl">${label}</span><span class="val${v ? "" : " empty"}" data-tp-edit="${plan.id}:${ph.id}:${f}" title="Click to edit">${v ? phTpCellShow(f, v) : esc(PH_TP_FIELD_PH[f])}</span></div>`;
@@ -120896,7 +120901,7 @@ or changing anything in Cliniko.
       el.classList.remove("editing");
       if (field === "aim" || field === "watch") phTpFxRefreshAll();
       if (live && livePlan && (field === "aim" || field === "watch")) {
-        const r = phTpFieldCellHtml(phTpScreenPatient, livePlan, live, field);
+        const r = phTpFieldCellHtml(phTpScreenPatient, livePlan, live, field, false, el.dataset.tpFlagsonly === "1" ? { flagsOnly: true } : null);
         el.classList.toggle("empty", r.empty);
         el.innerHTML = r.html;
         return;

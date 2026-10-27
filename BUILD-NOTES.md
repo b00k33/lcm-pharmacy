@@ -4061,3 +4061,20 @@ at all".
 
 **LIVE 2026-10-27, build 20261027-162500 (main e978f490):** her "push live" for the recipe sheet alone, published on live main (the
 shorter-profile commit bd5e2c39 stays on session-a); joined back as bbc29c3c.
+
+### Session grid: her 3 picks on its repeats (2026-10-27)
+Asked first (the grid is LOCKED); she picked the recommended option on all three. Nothing else in the grid changed.
+- **Live phase row's Watch = red flags only.** `phTpFieldCellHtml(name, plan, ph, f, frozen, opts)` gained `opts.flagsOnly`
+  (drops the auto Main / Also / Cycle / finding chips; the template's red-flag text, her own picks, her typed text, the
+  red-flag picks ▾ and ↺ back to auto all stay). `phTpLiveCtxRowHtml` passes it and marks the cell `data-tp-flagsonly="1"`;
+  the two repaint paths (back to auto, `phTpFieldBackToAuto`; a committed edit, the live-cell branch of the field commit) read
+  that mark, so an edit never brings the chips back. Planned cells, the symptoms block, Treatment chips and print keep all.
+- **Formula cell = hers only** (`phTpLiveFormulaHtml`): set → her formula alone (the "Fang Bing Ren's current lead: X" span is
+  gone); empty with a lead → just "→ Fill" (the lead named in its hover); a phase that follows Fang Bing Ren (`fmode "fbr"`)
+  → "<lead> auto" (was "<lead> Fang Bing Ren"). The Fang Bing Ren line under Watch is unchanged (the findings' lines draw to it).
+- **Phase names at 360:** "Maintenance" ran under the ×: `.ph-tpg .nmb` was a block button whose min-content (its longest
+  word, 86px) beat its 60px column. At ≤480 `col.ph` is 182px and the table's min-width 32px more (it scrolls sideways there
+  anyway; the visit cells stay 58px); `overflow-wrap: anywhere` breaks only a word longer than the new 92px name box.
+**Tested** (sandbox, seeded, Low back pain plan): live row = Aim · Points · Formula "→ Fill" · Watch (red flags + Red flags ▾);
+Formula set → "Gui Zhi Fu Ling Wan" only; fbr mode → "Fu Zi auto"; 360: three phase names whole-word, none under the ×, the
+cadence chips on one line; 1280 unchanged (no overlap); no console errors.
