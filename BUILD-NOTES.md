@@ -4009,3 +4009,27 @@ Her ask: a screenshot of Formula refill's dark bar (Me, ⋯, + Plan a formula) a
   - ← Back to Relocation: 156 × 32 on a computer, 156 × 31 on the phone, inside the bar. No sideways scroll.
   - Before / after pictures: Formula refill, Inventory, Dashboard at 1240; Formula refill, Inventory at 768 and 360.
 - **Not tested:** the Update button on screen (no update waiting in the sandbox; checked by its rules), the Key2 by touch.
+
+### Shorter profile, step 3 first pass: repeats and explaining lines out (2026-10-27)
+Her synth22 request 2 ("minimise any redundant display and messages in the patient profile") with her "faded not yet" pick
+for an empty part. Measured first: a script (temp `_zz-trim.js`) counted every repeated visible text and every explaining
+sentence on 11 patient pages of the seeded test patient. Applied, all outside the LOCKED Session grid:
+- **Findings** (Care Plan `phTpFxColInner` and Treatment `phTxFxHtml`): a row whose value is the faint empty text and has no
+  phrase (Nothing recorded / Not looked yet / Not asked yet / No values) leaves the list; they share one line
+  `.ph-tp-fxmore.ph-tp-fxnone`: faded "not yet" + a `.ph-tp-fxmc` chip each (`data-flow-prof` = its page, as the drawer's
+  Open button). Helpers `phTpFxNoneSplit(rows)` (in place) and `phTpFxNoneHtml(none, attrs)`. The header count is the rows
+  left. "Nothing recorded" ×4 → 0 on both pages.
+- **Progress** with no snapshot: the Treat / Watch label style (`.ph-tp-fg .kv.kvx`) "Progress" + faded "not yet" (was
+  "Progress appears after the first visit"). Filled Progress (rings, bars) unchanged: it charts the diagnosis's signs, not
+  the concern scores, so it does not repeat Watch.
+- **Today's visit** exam tiles: "Not yet today" → faded "not yet".
+- **Medical history**: the 15 "Feeds Fang Bing Ren" tags read "FBR" (the flag list's own short tag), the words in the hover.
+- **Visit checks**: an empty cell "not recorded" (12 on the test patient) → faint "–" with "Not recorded" in the hover.
+- **Patterns**: the "Only on one side" band header lost its repeated "no twin on the other side" line.
+**Left alone, on purpose:** the rail's "This visit · Next up" pill (her pick A, 2026-10-09); a sign under two diagnosis
+patterns (her "signs under each pattern" pick); the Watch chips' "Red flag" tags (her 2026-10-20 source-tag pick); question
+labels on Patterns / Ren (data, not repeats).
+**Her word first (Session grid LOCKED):** the live-phase row repeats Watch (its WATCH field and Red flags ▾ against the
+Watch list) and the Fang Bing Ren formula (its FORMULA cell against the formula row under Watch); phase names overlap at 360.
+**Tested** (sandbox, seeded): re-count after: the five texts above gone from every page measured; a not-yet chip opens its
+page (Pulse → the Pulse tab); 1280 looked at (Findings line, Progress); 360 measured (no page overflow); no console errors.
