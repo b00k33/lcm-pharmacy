@@ -5000,3 +5000,11 @@ changed.
   old line said "Phone = a weighing table" (the weighing now happens in the panel, above the list on a phone).
 - **Compass scores:** each complaint and pain is a slider + number (`phCxSlHtml`); only Energy keeps 1–10 bars (am · pm · ev,
   in the panel on the wide card). The old line said "Scores are joined 0–10 bars".
+
+## Tidy-up live (2026-10-28)
+
+- **LIVE** 2026-10-28, build 20261028-101300 (main b4ac2b36), on her "push live" after the tidy-up report: the code and styles
+  nothing uses (bab030c3's index.html) on top of live 222700, alone. The Musculoskeletal steps (ecf5c5f2, 7b554c06) and the Gym
+  card (189e77a6) on session-a were NOT in it (no "push live" for them yet); joined into session-a with its tree unchanged
+  (9e4bf5f8). The served page went from 8.86 MB (213900) to 8.78 MB; it has none of the removed names and still has the part 3
+  and Find the Ren code.
