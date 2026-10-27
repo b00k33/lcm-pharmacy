@@ -4613,3 +4613,27 @@ within 6 weeks with nothing booked. Already there: the Communications "Book in" 
   booked". No console errors. The logged test visit was removed after.
 - **Not checked:** the clipboard itself (blocked in the sandbox pane), her real records; no picture (the pane's capture was
   cropping that evening; checked by the page text).
+
+## Care Plan part 3, step 3: today's patients, plan first (2026-10-27)
+
+Her pick 3 and her ask28 answer (all three: Appointments List, the booking card, Up next on the phone). Mock section 3, moved
+from the Dashboard to Appointments before she saw it (the Dashboard stays herbs-only).
+
+- **`phApptPlanDue(a)`** (beside `phApptLsPillHtml`): `{ line, tags }`, empty unless `a.date` is today. The plan is the one
+  the List / popup already shows (`phApptLsPlanOf`). `line` = the live phase (`phTpFxLivePh`) · "visit N of M": N = that
+  phase's visits up to today from `phTpPhaseSessionDates` (bookings + logged, as the review card counts), "of M" only while
+  N ≤ M. Tags: `rv` Review today (no review today and `phTpPrvCtx`), Re-score N (`phCxModel(...).glance` total − asked, a
+  Compass with scores), `warn` Ask: (the first unasked `phRfOfPhase` flag, cut at its dash and first comma, ≤ 30 characters;
+  "+N" for more; the hover lists them all), `warn` Herbs ran out (the patient's latest `PHARMACY.followups` record with an
+  `emptyOn` on or before today, within 60 days). Each part sits in its own try: a row never breaks on it.
+- **`phApptDueTagsHtml(D, cls)`**: `.ph-appt-due` of `.tg` (22px, 6px corners; gold for the review, red for warn).
+- **Where:** the lean List row (over 900px) adds `.du` under the focus line (the tags flow beside the line, `display:
+  contents`); the compact row (900px and under) gets `has-du` and the same `.du` as a second line, other rows keep 29px;
+  `phApptLsCardHtml` under Treatment plan (`.ph-lsc-due`); `phApptPopHtml` under the condition row (`.ph-apptpop-due`);
+  `phApptUpNextHtml` under the formula line (`.un-due`).
+- **Tested (sandbox, 7 bookings today):** "Zz Sweep Test" → "Acute · visit 5 · Review today · Re-score 6 · Ask: Leg pain past
+  the knee"; two Compass patients → "Re-score 1"; patients with no plan → nothing; every booking on another day → nothing. The
+  compact rows at 543 wide (others stay 29px), the lean rows at 1280 (the Sweep row is three lines in the 223px name cell; the
+  others one more line), the List card, the Grid popup, Up next (focused on that booking). 7 bookings read in ~110 ms. No
+  console errors, no page overflow. Shot: `shots/care-plan-p3-step3-list-tags.jpg`.
+- **Not checked:** her real day (her bookings come from the Cliniko paste; a real day with herbs run out was not in the sandbox).
