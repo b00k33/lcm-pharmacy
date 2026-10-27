@@ -3719,3 +3719,11 @@ with 20 + 1.25 each side, "Bar 20 + 21.25 each side"; Workout Mode cards carry t
 **LIVE** 2026-10-27 (her "push live"), build 20261027-124800 (main ff8a5642), joined into session-a as a3908455 (tree unchanged).
 Published from live main + this change only: another session's commit 24e36673 (Medical history: Myelodysplastic syndrome, plus
 intake.html) sat on session-a without a "push live" of its own, so it stays on session-a, NOT live, for its own word.
+
+## Medical history MDS: published (2026-10-27)
+Her "push live the MDS change too" (after the equipment publish left it off). Another session's commit 24e36673 (Myelodysplastic
+syndrome (MDS) row after Cancer in General health, its paste rule and herb caution words, intake.html's fallback list) went
+live as it stood on session-a; no code of mine in it. Live main differed from session-a only by those lines and the stamps.
+**LIVE** 2026-10-27, build 20261027-125400 (main dadbcfe5), joined into session-a as 888f097f (tree unchanged), under the publish
+lock. Checked on the live site: the new stamp in index.html and sw.js, `myelodysplastic_syndrome` in index.html, the MDS row in
+intake.html. The same session's "Other condition" work (her 4 picks) is not part of this build.
