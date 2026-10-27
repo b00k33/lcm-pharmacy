@@ -1439,7 +1439,7 @@ save) then "Made today" with Undo; a planned formula **leaves by itself**
 when its stock went UP after planning (`h.refillQty` stamped at planning;
 older plans: week passed + above its line) with Undo; header primary is the
 gold "+ Plan a formula" (search sheet); New formula recipe sits in ⋯ and
-opens as a side sheet (#refPresPanel), never inside the card. Every row with
+opens as a side sheet (#refPresPanel), never inside the card; in the sheet the editor always stacks (Make refill, then the ingredients at its full width; her 2026-10-27 "i cant edit the formula at all": its two columns had split inside the 640px sheet). Every row with
 a recipe ends in a "Recipe" button (pencil icon, `phRfcRecipeBtn`, `data-pres-open`) that opens
 that recipe's herbs and grams in the same side sheet; the name still opens
 the jar (her 2026-10-24 "how do i edit recipes?") [Formula refill: a Recipe
