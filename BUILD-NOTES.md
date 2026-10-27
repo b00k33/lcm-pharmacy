@@ -3840,3 +3840,25 @@ ring 2/9, numbers, coach per card, ribbon done 2/9, Legs dims the other cards, a
 **LIVE** 2026-10-27 (her "push live"), build 20261027-141000 (main 48b67ec8), joined into session-a as 1b33bdfd (tree
 unchanged); published from a private index under the publish lock (live main differed from session-a only by step 3 and the
 stamps). Checked on the live site: the stamp in index.html and sw.js, `phFitWmHero`, `phFitSumHtml`, `PH_FIT_RESTWD`, `tileSvg`.
+
+## One font on screen: Inter (her 2026-10-27 synth22 part 1, item 10: "i also need a visual audit so that the font is consistent. i dont like this font" + a screenshot of the Care Plan title "New treatment plan"; her pick "Inter on screen")
+**What she saw:** the Care Plan band title is `--font-disp`, Barlow Semi Condensed 700 (her 2026-09-30 cockpit pick for
+numerals, used by 284 rules: titles, counts, tiles). Measured before: Inter 211 text runs + Barlow 24 + Arial 7 (controls
+that never inherited a font fall back to the browser's Arial) + system fonts in SVG labels, canvas text and banners.
+**Built:** `--font-disp` is now an alias of `--font-body` (Inter), so every Barlow rule turns Inter with no other edit; Barlow
+and Cormorant Garamond leave the font load, Inter gains 800 (rules ask for 800). `button, input, select, textarea {
+font-family: inherit }` after the body rule. Inter replaces the system / Arial fonts in the pain-map and session-grid badges,
+the Patterns figure labels, the period-wheel labels, the height ruler, the pulse trace's bpm, the canvas list image, the
+muscle diagram labels, the update widget, sync and storage banners, the boot sign-in banner and the splash. Herb codes
+(Dispense ingredients, the herb picker, the prep list, the dispense check) and the supplier tag are Inter with
+`tabular-nums` (were monospace). Two fits after the switch: the Care Plan visit table's phone columns (≤560px, cycle
+patients) now give Appointment 36% and CD 17% (the header "APPOINTMENT" ran into "STATUS" at 360px); the Me drawer's "This
+week" row has a 6px gap (its label lost 2px to the wider numbers at 1280).
+**Kept apart on purpose (CLAUDE.md "Type"):** printed letters and records (Georgia), the bottle label text and its template,
+copy-paste text and template tokens (monospace), and Fitness's C22 Manrope look (her 2026-10-27 Fitness pick; asked her).
+**Tested** (localhost sandbox, seeded made-up data, no sign-in): all 43 pages of the spacing-audit list at 1280, 375 and 360,
+each measured twice in the same page (Inter, then Barlow put back), reporting only cuts, overlaps, ellipses and sideways
+scroll that Inter adds: 1280 = the "This week" ellipsis only, 360 = the visit-table header only; both fixed and re-measured
+clean. Computed fonts on Dashboard, Patient details, Care Plan, Today's visit and Dispense: every text Inter except the codes
+before they moved. No console errors.
+**Not tested:** her Key2, her real record, the print windows (untouched), Workout Mode.
