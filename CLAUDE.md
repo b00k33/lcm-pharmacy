@@ -1491,7 +1491,7 @@ the lit area's muscle diagram | view controls; Add pain · Areas ▾; a first vi
 (Pain Base · Last · Today · After; Palpate = the area's muscles as chips, hers first: one tap Tender + its motor point, then Taut,
 Trigger, off, MP end = motor point out; + Movement; + Test; Diagnosis + her set) beside **Today's points** (motor points, her
 typed points, Ashi on / off, Save as my set per diagnosis in `PHARMACY.mskSets`; points in `visits[day].acu`). The app never picks
-a point. No region chips, Re-measure table or 9 exam tabs; Observation, Strength, Neuro, Function sit behind "More exam". Kept:
+a point (a muscle's ⚠ rides with its name's last word; on a phone each Today's points row is a grid, the technique under the name). No region chips, Re-measure table or 9 exam tabs; Observation, Strength, Neuro, Function sit behind "More exam". Kept:
 tap a belly = the same chip, + Cause, Enlarge, 3D. Motor-point muscles = ONE list (`phMskPlanOf`, carried included) for the panel,
 the Treatment tab and `phMskSummary`. **Today's points go on** [Musculoskeletal page, step 2] (`phMskAreasToday` = the panel's list
 by area): the Treatment tab's navy block has a **Points** row of them, ticked (a tap = not needled today, `off: true` on the page's
