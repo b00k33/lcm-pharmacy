@@ -1495,7 +1495,9 @@ a point. No region chips, Re-measure table or 9 exam tabs; Observation, Strength
 tap a belly = the same chip, + Cause, Enlarge, 3D. Motor-point muscles = ONE list (`phMskPlanOf`, carried included) for the panel,
 the Treatment tab and `phMskSummary`. **Today's points go on** [Musculoskeletal page, step 2] (`phMskAreasToday` = the panel's list
 by area): the Treatment tab's navy block has a **Points** row of them, ticked (a tap = not needled today, `off: true` on the page's
-own list, shown faded "not today" there); ✓ Complete session saves them as `session.points` (motor points as "Upper trapezius MP
+own list), and the motor points under "Which muscle?" start ticked the same way (`treat[key].done`, carried ones too; their
+rows keep their place); an unticked one is struck through "not today" in the panel and left out of everything below; ✓
+Complete session saves them as `session.points` (motor points as "Upper trapezius MP
 R") and each area as `session.mskAreas` (`{r, s, dx, pts, b, a}`), and a blank Care Plan phase Points fills from them; the panel's
 foot says Treatment · Care Plan (blank / ✓ same / other points + **→ plan**, Undo) · Log; the Log's visit line shows Area ·
 Diagnosis · Points · Pain before → after. Copy notes reads the same list. MMT = a 3-point Weak / Mildly weak / Strong scale. A test
