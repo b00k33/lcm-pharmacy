@@ -38133,6 +38133,7 @@
     const out = { line: "", tags: [] }, today = keyOf(TODAY);
     if (!a || !a.patient || a.service === "Break" || a.date !== today) return out;
     const name = a.patient, plan = phApptLsPlanOf(a).plan;
+    try { phIvfDaySync(name, plan); } catch (e) {}   // step 6: an IVF date that arrived today has moved the plan
     const tag = (k, txt, tip) => out.tags.push({ k, t: txt, tip: tip || txt });
     if (plan && plan.status === "active") {
       try { const ph = phTpFxLivePh(name, plan.id), n = ph ? phTpSessionsOf(ph) : 0, k = ph ? phTpPhaseSessionDates(name, plan, ph).done.filter(x => x.date <= today).length : 0; if (ph) out.line = `${phTpPrvShort(ph)} · visit ${Math.max(k, 1)}${n && k <= n ? ` of ${n}` : ""}`; } catch (e) { /* the line is a nicety */ }
@@ -82937,18 +82938,37 @@ or changing anything in Cliniko.
     const retrKey = row ? phIvfFullDate(row.when) : "";
     const t = row ? phIvfXferTarget(row) : null;
     const xferKey = t ? phIvfFullDate(t.date) : "";
+    const stimsKey = row ? phIvfFullDate(row.stimsStart) : "";   // part 3, step 6: her Stims start day
     return {
       retr: retrKey ? { key: retrKey, est: row.whenEst === true } : null,
       xfer: xferKey ? { key: xferKey, est: t.dateEst === true } : null,
+      stims: stimsKey ? { key: stimsKey, est: row.stimsEst === true } : null,
     };
+  }
+  // the phases her clinic dates put on a day: the cadence ones (retrieval, transfer, as phTpCadenceDate reads them) and,
+  // part 3 step 6, the stimulation phase (Follicular — Week 1, else a phase named for stims) on her Stims start day
+  function phIvfDatedPhases(name, plan) {
+    const out = (plan.phases || []).map(p => ({ p, d: phTpCadenceDate(p.cadence, plan, name) })).filter(x => x.d).map(x => ({ p: x.p, key: x.d.key }));
+    const st = phIvfDatesRead(name, plan).stims, sp = st ? (plan.phases || []).find(p => phTpPhaseKeyOf(p) === "foll1") || (plan.phases || []).find(p => /\bstim/i.test(p.label || "")) : null;
+    if (sp && !out.some(x => x.p === sp)) out.push({ p: sp, key: st.key });
+    return out.sort((a, b) => a.key.localeCompare(b.key));
+  }
+  // on the day a date arrives the plan is in that phase, no logged visit needed: Today's visit and the List read it, and
+  // it only ever moves FORWARD (a phase she moved past by hand stays where she put it)
+  function phIvfDaySync(name, plan) {
+    if (!plan || plan.status !== "active" || !phTodayIsIvf(plan)) return;
+    const today = keyOf(phLiveToday()), cur = (plan.phases || []).findIndex(p => p.status === "current");
+    const arrived = phIvfDatedPhases(name, plan).filter(x => x.key <= today), tgt = arrived.length ? arrived[arrived.length - 1].p : null;
+    if (!tgt || plan.phases.indexOf(tgt) <= cur) return;
+    phTpPhaseStatusData(plan, tgt, "current");
+    setTimeout(() => savePharmacy(), 0);
   }
   // the phase that has arrived (the same rule as phTpMilestoneSync) moves to
   // "current" -- data only, no repaint, so an in-place edit never scrolls her
   function phIvfMilestonePhaseSync(name, plan) {
     if (!plan || !Array.isArray(plan.phases)) return false;
     const today = keyOf(phLiveToday());
-    const dated = plan.phases.map(p => ({ p, d: phTpCadenceDate(p.cadence, plan, name) })).filter(x => x.d).sort((a, b) => a.d.key.localeCompare(b.d.key));
-    const arrived = dated.filter(x => x.d.key <= today);
+    const arrived = phIvfDatedPhases(name, plan).filter(x => x.key <= today);
     const target = arrived.length ? arrived[arrived.length - 1].p : null;
     if (!target || target.status === "current") return false;
     phTpPhaseStatusData(plan, target, "current");
@@ -82957,7 +82977,7 @@ or changing anything in Cliniko.
   // set (or clear, raw = "") one of the two dates. Returns false when the day
   // was refused or could not be saved, so the caller can leave the screen as it was.
   function phIvfDatesSet(name, plan, kind, raw, est) {
-    if (!plan || (kind !== "retrieval" && kind !== "transfer")) return false;
+    if (!plan || (kind !== "retrieval" && kind !== "transfer" && kind !== "stims")) return false;
     raw = String(raw || "");
     if (raw) {
       const yr = +raw.slice(0, 4);
@@ -82966,7 +82986,9 @@ or changing anything in Cliniko.
     let row;
     if (raw) row = phIvfLinkedCollectionWritable(name, plan).row;
     else { row = phIvfLinkedCollection(name, plan); if (!row) return true; }   // nothing to clear
-    if (kind === "retrieval") {
+    if (kind === "stims") {
+      if (raw) { row.stimsStart = raw; row.stimsEst = !!est; } else { delete row.stimsStart; delete row.stimsEst; }
+    } else if (kind === "retrieval") {
       row.when = raw;
       if (raw) row.whenEst = !!est; else delete row.whenEst;
     } else {
@@ -83002,7 +83024,7 @@ or changing anything in Cliniko.
     const plan = phIvfdPlanOf(t.dataset.ivfdName, t.dataset.ivfdPlan);
     if (!plan) return;
     const [kind, dayKey] = t.dataset.ivfdMark.split("|");
-    const cur = phIvfDatesRead(t.dataset.ivfdName, plan)[kind === "retrieval" ? "retr" : "xfer"];
+    const cur = phIvfDatesRead(t.dataset.ivfdName, plan)[kind === "retrieval" ? "retr" : kind === "stims" ? "stims" : "xfer"];
     if (cur && cur.key === dayKey) phIvfdApply(t.dataset.ivfdName, plan, kind, "", true);        // tap the tick again: off
     else phIvfdApply(t.dataset.ivfdName, plan, kind, dayKey, cur ? cur.est : dayKey > keyOf(phLiveToday()));
   });
@@ -95457,6 +95479,7 @@ or changing anything in Cliniko.
     }
     if (phTodayIsIvf(plan)) {
       const dr = phIvfDatesRead(name, plan);
+      if (dr.stims) foot.push(`Stims <b>${dr.stims.est ? "~" : ""}${esc(presBandDay(dr.stims.key))}</b>`);
       foot.push(`Egg collection <b>${dr.retr ? `${dr.retr.est ? "~" : ""}${esc(presBandDay(dr.retr.key))}` : "not set"}</b>`);
       if (dr.xfer) foot.push(`Transfer <b>${dr.xfer.est ? "~" : ""}${esc(presBandDay(dr.xfer.key))}</b>`);
     }
@@ -95820,6 +95843,7 @@ or changing anything in Cliniko.
     if (!name || presIsFormula(t)) return "";
     const rec = phPatientPeek(name) || {};
     if (!(rec.sex && rec.dob)) return "";
+    try { phIvfDaySync(name, plan); } catch (e) { /* the visit never breaks on it */ }   // part 3, step 6
     const S = phTodayStepModel(t, name, rec, plan);
     // Ask: the compass card (chart · rows · Energy line), the return-visit nudges, the MSK warning, and the lean Pain
     // table for a pain patient whose compass has no pain rows yet (her 2026-10-19 ask, phPfPainBlockHtml)
@@ -104972,9 +104996,9 @@ or changing anything in Cliniko.
     if (ivfPlan && dateKey) {
       ivfFuture = dateKey > keyOf(phLiveToday());
       const cur = phIvfDatesRead(name, ivfPlan);
-      const mk = (kind, label, v, tail) => `<button type="button" class="sq${kind === "retrieval" ? " egg" : ""}" data-ivfd-mark="${kind}|${esc(dateKey)}" data-ivfd-name="${esc(name)}" data-ivfd-plan="${esc(ivfPlan.id)}">${v && v.key === dateKey ? (kind === "retrieval" ? "✓ Egg retrieval day" : "✓ Embryo transfer day") : `Mark as ${label}${tail}`}</button>`;
+      const mk = (kind, label, v, tail) => `<button type="button" class="sq${kind === "retrieval" ? " egg" : ""}" data-ivfd-mark="${kind}|${esc(dateKey)}" data-ivfd-name="${esc(name)}" data-ivfd-plan="${esc(ivfPlan.id)}">${v && v.key === dateKey ? (kind === "retrieval" ? "✓ Egg retrieval day" : kind === "stims" ? "✓ Stims start day" : "✓ Embryo transfer day") : `Mark as ${label}${tail}`}</button>`;
       const tail = ivfFuture ? " (estimated)" : "";
-      ivfBtns = `<div class="ph-ivfd-mark">${mk("retrieval", "egg retrieval", cur.retr, tail)}${mk("transfer", "embryo transfer", cur.xfer, tail)}</div>`;
+      ivfBtns = `<div class="ph-ivfd-mark">${mk("stims", "stims start", cur.stims, tail)}${mk("retrieval", "egg retrieval", cur.retr, tail)}${mk("transfer", "embryo transfer", cur.xfer, tail)}</div>`;
     }
     if (ivfFuture) {
       return `<div class="ph-cycle-signpop ph-ivfd-pop${fade ? " fade" : ""}" role="group" aria-label="${esc(popDateLbl)}">

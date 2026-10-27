@@ -1360,6 +1360,14 @@ days, `rec.cycleSigns`; lower = better). Length and flow are only said. The firs
 (`cyc: {lmp, n}`, the note = the same words), one per period; after that day it is not shown again. No BBT shift (no per-cycle
 read in the app yet).
 
+**Part 3, step 6: IVF dates move the IVF plan (her pick "IVF dates move the IVF plan", her answer: egg collection + transfer +
+Stims start; mock section 6; BUILD-NOTES "Care Plan part 3, step 6"):** the calendar day popover on an IVF plan has a third
+mark, **Mark as stims start** (`row.stimsStart` / `stimsEst` on the plan's IVF history round, `phIvfDatesRead().stims`), beside
+egg retrieval and embryo transfer. `phIvfDatedPhases` = the phases her clinic dates put on a day (the cadence ones, plus the
+stimulation phase, Follicular — Week 1 or a phase named for stims, on the Stims start day). Typing a date moves the plan as
+before; now the day ARRIVING moves it too (`phIvfDaySync`, read by Today's visit and the Appointments tags), forward only, so a
+phase she moved past by hand stays. Today's visit's IVF line adds "Stims <day>". No test day (not her pick).
+
 **Diagnosis + Goal write themselves** (`phTpAutoDx`, `phTpAutoGoal`): every
 Likely or Possible pattern (plus any she agreed) minus the ones she took
 off; Goal = one line per complaint in the Compass's order (her own Goal

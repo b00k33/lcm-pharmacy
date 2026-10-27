@@ -4682,3 +4682,26 @@ Her pick 5 and her ask28 answer "At her next booking" (not when the period is lo
   severe · Clots many → small (better)", one review saved, a second paint saved no second; the saved review dated another day
   → no card. The test periods, signs and review were removed after. Shot: `shots/care-plan-p3-step5-cycle-review.png`.
 - **Not checked:** her real cycle patients; BBT shift day (the mock's last tag) is left out.
+
+## Care Plan part 3, step 6: IVF dates move the IVF plan (2026-10-27)
+
+Her pick 6 and her ask28 answer: egg collection + transfer (the two dates LCM keeps) + Stims start (new); Test day not picked.
+Mock section 6. Measured: 14 IVF plans; 3 with a collection date, 4 with a transfer date. Already there: typing a retrieval /
+transfer date moved the plan to the phase that date had reached (`phIvfMilestonePhaseSync`, `phTpMilestoneSync`), but only at
+the moment of typing; a date typed ahead never moved anything when it came.
+
+- **Stims start**: `phIvfDatesRead` returns `stims` (`row.stimsStart`, `row.stimsEst`); `phIvfDatesSet(name, plan, "stims",
+  day, est)` writes it on the same plan-linked round (`phIvfLinkedCollectionWritable`); the day popover's
+  `.ph-ivfd-mark` row is Stims start · Egg retrieval · Embryo transfer (`data-ivfd-mark="stims|<day>"`, "✓ Stims start day").
+- **`phIvfDatedPhases(name, plan)`**: `[{ p, key }]` sorted: every phase whose cadence `phTpCadenceDate` resolves, plus the
+  stims phase (`phTpPhaseKeyOf(p) === "foll1"`, else a label with "stim") on the Stims start day.
+  `phIvfMilestonePhaseSync` (typing) now reads it, so a typed Stims start moves the plan too.
+- **`phIvfDaySync(name, plan)`** (active IVF plans, `phTodayIsIvf`): the latest dated phase whose day has come; moves only when
+  it is AFTER the current phase (`phTpPhaseStatusData`, saved after the paint). Called at the top of `phTodayVisitHtml` and in
+  `phApptPlanDue`, so opening Today's visit or the day's Appointments on that day puts the plan there.
+- **Today's visit IVF line**: "Stims <day>" before "Egg collection".
+- **Tested (sandbox, a temporary IVF Protocol plan on "Zz Door Test": IVF Prep → Follicular ×2 → Post-OPU → Pre-ET →
+  Post-ET):** Stims 20 Oct → Follicular; retrieval typed 3 Nov (ahead) → no move; retrieval 24 Oct → Post-OPU; transfer
+  typed 5 Nov (ahead) → no move; moved by hand to Post-ET → the day sync left it; Post-OPU with the transfer day set to today
+  without typing → reading the day's booking moved it to Post-ET (2WW starts on the transfer day). Plan and round removed after.
+- **Not checked:** her real IVF patients; the popover's new button by eye.
