@@ -136,6 +136,20 @@ reads it; do not render it again.
   patients, otherwise "+ Pain"; "+ Ask her"), folding to one line when all done; **Treat** = Formula → Acupuncture →
   Dispense in one card (Dispense still opens the full prescription). The older description below is kept for the parts
   that did not change.
+- **Calmer since 2026-10-27 (her "improve page, its too messy too many things i cant edit the ain coplaint the calendar
+  looks to wide, i want it more minimal"; her 8 picks on `today-visit-calm-mock-2026-10-27.html` + "Yes, build it";
+  BUILD-NOTES "Today's visit, calmer"):** the Journey card is ONE line (visit · phase, visit n of m, the phases as a small
+  bar, then next visit / formula …); the step bar is short (Ask 0/2 · Look 0/5 · Treat 0/3, the part to do now filled);
+  the ASK / LOOK / TREAT headings are gone (kept only as the bar's scroll targets); on a **cycle plan**
+  (`PH_TP_CYCLE_TEMPLATES`) the cycle is ONE line (Day 9 · Follicular, this week's cells with the same day card, Day 1,
+  the finder, Cycle ›, ⋯), on any other plan a small **Cycle tile** beside Tongue · Pulse · Abdomen; **the cycle never
+  hides** for a menstruating patient (her standing rule); the tiles are small rows with no drawings; the "Add when needed"
+  words are gone; the pain tools (Pick areas · Close-ups · Surgeries · Pain intake) sit in a **⋯ at the end of the Came in
+  for line** and their bar shows under the table only while one part is open; **Treat** is one line of three (Formula ·
+  Acupuncture · Dispense, one button each) with Care Plan › at its end. The Compass draws its table + panel (Details) from
+  the first paint at her 1220px window (`phCxCardHtml` measures `#presPanel` less the rail before the stage body exists;
+  `phCxSettle` puts a wrong guess right once). Do not bring back the big Journey card, the two-week calendar on Today's
+  visit, the picture tiles or the headings without her word.
 - **Today's visit** is a checklist home: a one-line strip on top (last visit
   date · likely pattern · phase and visit number · flagged history), the
   **complaint compass** (each complaint scored every visit against its baseline, grouped by
