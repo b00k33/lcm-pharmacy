@@ -3916,3 +3916,29 @@ session-a HEAD: 1f69a9e3 + 8ad24b2a + the Fitness picker fix b60294c4 (with Inte
 box, so Today's card ran 4 px past the edge at 360; `.cpick` min-width 0, `.cpside` minmax(0, 1fr); re-measured at 360 and 1220,
 every Fitness / Exercises card clean against its own edge). Checked on the live site (it serves a copy without comments):
 `--font-disp` and `--font-c22` = `var(--font-body)`, controls inherit, no Manrope or Barlow load, the stamp in sw.js.
+
+## Care Plan writes itself, part 2a: title, Course, Treat, the signs behind the diagnosis (her 2026-10-27 synth22 part 1, items 1 and 3 to 9; her picks "From the concern", "Signs under it", then on `care-plan-from-visit-mock-2026-10-27.html`: title = main concern, Course switch in the title band, order Treat · Diagnosis · Watch · Course, sign chips with a source icon, empty parts as a faded "not yet")
+**Why:** her "the premade templates are not customised and i find myself either not using it or correcting it". Measured on
+her 10/27 backup: 102 plans, 91 from a template, 6 still "New treatment plan", Aim / Watch never edited, 14 visits logged.
+**Built:** `phTpTitleShown(name, plan)` is the one read for the title she sees: her rename wins; else the main concern's
+words (`phCcRibItems`) on the plan whose course family matches the main concern (`phCcFamOfPlan`) or has no course; else the
+course name. Wired into the 16 display sites (band, rename input, patient header line `presBandSubText`, plan tabs and
+cards, appointment pill / select / list / popup / history chips, Earlier plans, Today's visit "From the active plan",
+the script switcher, the printed record's Plan row); `plan.title` is never rewritten (a rename typed back to the shown
+title is not stored, so it keeps following the concern). Logic sites (matching keys, message tracks) still read the stored
+title. The band title now taps to rename; a new **Course · <template> ▾** chip (`.ph-tp-coursedd`) opens the existing course
+picker (header "Course", ⋯ item "⇄ Change course"; the swap keeps her values as before). `phTpFocusGoalHtml` (Care Plan,
+not the modal) draws **Treat** first (`phTpTreatRows` / `phTpTreatHtml`: the Compass's concerns minus bar signs and the
+complaints a pain row stands in for, plus the pain rows, the main pain first; each with `phCxGoal` / `phCxPainGoal`; Edit
+opens the plan Goal as before), then **Diagnosis**: each pattern is its own bar + level, the clues behind it under it
+(`p.matched`, `PH_PAT_SRC` label in the hover + its icon), the concept pictures, actions unchanged. "Fills in after the
+exam" became a faded "not yet" (`.ph-tp-notyet`).
+**Tested** (sandbox, seeded made-up data): a fertility patient with a Natural fertility plan and a Neck & shoulder plan:
+"Trying to conceive" on the first, "Neck & shoulder" kept on the second, a rename shows hers; Course chip opens the picker
+(aria-expanded), the title opens rename with the shown title, Enter unchanged stores nothing; Treat 3 rows with goals and ★;
+Diagnosis Likely / Possible with 4 sign tags; the title on Today's visit, Treatment and the appointment list, the template
+name nowhere else; no cut / overlap at 1280 and 360; no console errors. A Session grid overlap at 360 (a phase name over its
+×) was there before (same with Barlow): left for the profile audit (step 3).
+**Not tested:** her Key2, her real record, the full-screen plan modal (unchanged order), print.
+**Not built yet (parts 2b, 2c):** Watch as one list scored on Today's visit; Formula + Points under Course; the door
+without a template pick (changes the LAW §2).

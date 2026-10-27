@@ -1202,6 +1202,16 @@ findings beside the plan]. The plan ⋯ menu is short with a More ▸ fold,
 one function (`phTpPlanMenuHtml`) for the Care Plan, Treatment and Dispense
 menus [Care Plan page "Case | Course"].
 
+**The plan writes itself from the visit (her synth22 part 1, 2026-10-27; mock `care-plan-from-visit-mock-2026-10-27.html`):**
+the title she sees is `phTpTitleShown(name, plan)` everywhere (band, patient header, plan tabs, appointment pills and lists,
+Today's visit, Treatment, print record): hers once she renamed the plan, else the main concern's words on the plan that
+treats it (or a plan with no course), else the course's name; `plan.title` itself is never rewritten. The title taps to
+rename; the band's **Course · <template> ▾** chip opens the course picker (`phTpProtocolPickHtml`, "⇄ Change course" in ⋯).
+The plan column reads in visit order: **Treat** (`phTpTreatHtml`: one row per Compass concern, ★ where starred, its Goal;
+her typed or a booking's Goal still wins), then **Diagnosis** (each pattern on its own line with its level, the signs
+behind it under it as quiet tags with their `PH_PAT_SRC` icon), then the formula. An empty part reads a faded "not yet".
+Still to build: Watch as one list scored on Today's visit, Formula + Points under Course, the door without a template pick.
+
 **Diagnosis + Goal write themselves** (`phTpAutoDx`, `phTpAutoGoal`): every
 Likely or Possible pattern (plus any she agreed) minus the ones she took
 off; Goal = one line per complaint in the Compass's order (her own Goal
