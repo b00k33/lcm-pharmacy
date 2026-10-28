@@ -554,8 +554,11 @@ concept picture of the pattern her signs there point to, header click pins; `phF
 sheet [synth22: the "Looking at" line ... body map close-ups]. Formulas rank by `phFbrRank`, the leader is `phFbrLeadOf`;
 pre-fills come from charts, history, bloods, the intake form, pain words, food reactions, cycle, age and sex (derived, a tap
 always wins). The board groups its rows under quiet subject headings (a twin pair's heading is its Bing subject); the complaint
-search box's "+ Add as complaint" adds the typed words as a secondary complaint through Came in for's own add. A new formula or
-sign = **integrate33**.
+search box's "+ Add as complaint" adds the typed words as a secondary complaint through Came in for's own add. The same box
+("Search signs or formulas") finds a formula by any word's start or its initials ("wen dan", "xcht"; `phFbrFormMatch`): its block
+wears a ring, the rest fade (never hidden), a Formulas chip row under the box (best fit first); a chip, Enter or its block looks at
+that formula and empties the box; words that find a formula and no sign leave the signs as they are (her ask, BUILT, not live).
+A new formula or sign = **integrate33**.
 **Find the Ren**: look first, then two questions at a time. The look is one row at a time (her picks): the face photo with Eyes /
 Lips / Skin / Muscles spots she drags (saved on that photo, `rqZones`), six tabs that show her picks ("✓ Lips Red"), the open
 row's groups as joined bars with short words, colour dots and a body scale on Weight; keys 1–9, 0 None, Enter Next, ← → [Find the

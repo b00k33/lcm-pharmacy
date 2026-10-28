@@ -5550,3 +5550,25 @@ Ren's formulas, 4 + New formula). Memory `project_lcm_herbs_block_formula_pick_2
   the Key2 phone, the older non-merged visit box (`phTpPhaseBodyRows`' Today's visit cell), which shares the markup with base
   styles.
 - **Not live:** waits for her "push live".
+
+## Fang Bing Ren: search a formula (2026-10-28)
+- **Her words** (screenshot of the formula blocks + the "Looking at" line): "i need to be able to search a formula from the fang
+  bing ren list". Built straight in (a search on an existing box; no layout change; the blocks' masonry still waits for her word).
+- **How:** the "Looking at" search box (placeholder now "Search signs or formulas"; the old "Search signs, or add a complaint"
+  would be cut on her screen with the longer wording, and "+ Add as complaint" still shows once she types) also finds formulas.
+  `phFbrFormMatch(q)`: 2+ letters, capitals and spaces ignored, a match from the start of any word of the name ("chai hu",
+  "wen dan", "hu tang") or the initials ("xcht", "XC", "dcqt").
+  - The blocks keep their place: found ones wear a 2px herb ring (`.fq-hit`), the rest fade to .35 (`.fq-miss`), never hidden;
+    toggled in place on each keystroke (input handler), and drawn by `mosaicTile` on a repaint.
+  - Under the box a **Formulas** chip row (`.ph-fbr-fq`, chips `.ph-fbr-fqc` 32px / 6px / 13px, herb dot + name + fit %), best fit
+    first (`ranked`). A chip (`data-fbr-fqp`) looks at that formula (sets `phTriFilt`, never toggles it off; Pick several adds),
+    empties the box, so its signs show. Enter in the box = the first chip. Tapping a block the search found also empties the box.
+  - Words that find a formula and NO sign leave the signs as they are (`csOn` false; no "No matching signs here."); words that
+    find both keep the sign search ("chai hu" finds 1 sign + 4 formulas).
+- **Tested** (sandbox, made-up patient "Test Searchpatient", a few ticks, an MSK plan): "wen dan", "xcht", "XC", "chai hu" (4 chips,
+  5 rings: Da Chai Hu Tang sits in two cards), "bloat" (8 signs, no formula row), "w" (nothing); chip, Enter and block each set the
+  filter + empty the box; a sign search kept by a block tap; focus and caret stay while typing; 1280 (box 298px, placeholder needs
+  ~190px) and 360 (chips wrap, page not wider, placeholder fits the 278px box); no console errors beyond the sandbox CDN 404s.
+  Picture: shots/fbr-formula-search-2026-10-28.png.
+- **Not checked:** her real records; the Key2 phone.
+- **Not live:** waits for her "push live".

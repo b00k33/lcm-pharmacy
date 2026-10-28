@@ -10204,6 +10204,17 @@
   #pharmacyPage .ph-fbr-t.zero:hover { box-shadow: inset 0 0 0 1px var(--c); }
   #pharmacyPage .ph-fbr-t.lead { box-shadow: inset 0 0 0 1px var(--ph-line), 0 0 0 2px var(--ph-gold); }
   #pharmacyPage .ph-fbr-t.filt { box-shadow: inset 0 0 0 1px var(--ph-line), 0 0 0 2px var(--ph-herb-deep), 0 0 0 4px var(--ph-gold); }
+  /* her 2026-10-28 "search a formula from the fang bing ren list": the formulas the search box finds wear a ring, the rest fade (never hidden); their chips sit under the box */
+  #pharmacyPage .ph-fbr-t { transition: opacity .15s; }
+  #pharmacyPage .ph-fbr-t.fq-hit { box-shadow: inset 0 0 0 1px var(--ph-line), 0 0 0 2px var(--ph-herb); }
+  #pharmacyPage .ph-fbr-t.fq-miss { opacity: .35; }
+  #pharmacyPage .ph-fbr-fq { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  #pharmacyPage .ph-fbr-fq .ph-fbr-look-lab { margin-right: 4px; }
+  #pharmacyPage .ph-fbr-fqc { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-height: 32px; margin: 0; padding: 0 12px; box-sizing: border-box; border: 1px solid var(--ph-line); border-radius: 6px; background: var(--ph-white); font: 600 var(--fs-13) var(--font-body); color: var(--ph-ink); text-align: left; cursor: pointer; }
+  #pharmacyPage .ph-fbr-fqc:hover, #pharmacyPage .ph-fbr-fqc:focus-visible { border-color: var(--c); }
+  #pharmacyPage .ph-fbr-fqc i { width: 9px; height: 9px; border-radius: 50%; flex: none; background: var(--c); box-shadow: inset 0 0 0 1px rgba(20, 31, 35, .2); }
+  #pharmacyPage .ph-fbr-fqc .n { font: 700 var(--fs-11) var(--font-body); font-variant-numeric: tabular-nums; color: var(--ph-faint); }
+  @media (prefers-reduced-motion: reduce) { #pharmacyPage .ph-fbr-t { transition: none; } }
   /* her 2026-10-12 "make the diagram smaller and this section more compact vertically - give option to expand the diagram":
      small figure (the ⤢ button opens the big labelled one in the shared expand shell), tighter cards, the long family card
      (4+ formulas) spans two columns so its formulas sit two across, and the three tool buttons share one row */
@@ -10690,7 +10701,7 @@
   #pharmacyPage .ph-fbr-look-fam .nm i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: none; }
   #pharmacyPage .ph-fbr-look-fam .x { padding: 0 10px 0 6px; }
   #pharmacyPage .ph-fbr-look-srch { flex: 1 1 240px; min-width: 0; }
-  #pharmacyPage .ph-fbr-look .ph-cs-chips-wrap { flex: 1 0 100%; margin-top: 0; }
+  #pharmacyPage .ph-fbr-look .ph-cs-chips-wrap { flex: 1 0 100%; margin-top: 0; display: grid; gap: 6px; min-width: 0; }
   #pharmacyPage .ph-fbr-look .ph-cs-chips-wrap:empty { display: none; }
   #pharmacyPage .ph-fbr-look .ph-cs-empty { margin-top: 0; }
   #pharmacyPage .ph-fbr-look.today { margin: 0 0 10px; }
@@ -101058,9 +101069,9 @@ or changing anything in Cliniko.
     const q = phCsQuery.get(pk) || "";
     const show = [["all", "All"], ["ticked", "Ticked"], ["ask", "Still to ask"]].map(x => `<button type="button" class="${ctx.show === x[0] ? "on" : ""}" aria-pressed="${ctx.show === x[0] ? "true" : "false"}" data-fbr-show="${x[0]}">${x[1]}</button>`).join("");
     return `<div class="ph-fbr-look" data-cs-host="1"><span class="ph-fbr-look-lab">Looking at</span>${segHtml}${fam}
-      <span class="ph-cs-bar ph-fbr-look-srch"><input type="text" class="ph-tri-in ph-cs-in" data-cs-input="1" maxlength="60" placeholder="Search signs, or add a complaint" aria-label="Search signs, or add a complaint" value="${esc(q)}"><span class="ph-cs-addhost" data-cs-add-host="1">${phCsAddHtml(name, q)}</span></span>
+      <span class="ph-cs-bar ph-fbr-look-srch"><input type="text" class="ph-tri-in ph-cs-in" data-cs-input="1" maxlength="60" placeholder="Search signs or formulas" aria-label="Search signs or formulas, or add a complaint" value="${esc(q)}"><span class="ph-cs-addhost" data-cs-add-host="1">${phCsAddHtml(name, q)}</span></span>
       <div class="ph-fbr-show" role="group" aria-label="Show">${show}</div>
-      <div class="ph-cs-chips-wrap" data-cs-chips-host="1">${phCsChipsHtml(name, q, ctx.n)}</div></div>`;
+      <div class="ph-cs-chips-wrap" data-cs-chips-host="1">${phCsChipsHtml(name, q, ctx.n, ctx.fq)}</div></div>`;
   }
   // the Twins sheet (her 2026-10-13, "my draft, you correct it"): every pair of signs that shares a row, per area. Split a pair that does not match, put a split one
   // back, or pair two signs yourself (only signs with no twin yet are offered). Saved in PHARMACY.fbrTwins; phFbrTwins reads it.
@@ -102194,8 +102205,11 @@ or changing anything in Cliniko.
       const all = csOn ? allFam.filter(r => csMax > 0 && phCsScore(r, csToks) === csMax) : allFam;
       return { fw, all, rowWeights: fw || weights };
     };
-    const csToks = phCsToks(phCsQuery.get(pkey)), csOn = csToks.length > 0;
-    const csMax = csOn ? Math.max(0, ...["d", "p"].flatMap(k => phTriAll(k, fam, name, fresh).filter(r => phSignSexOk(rec.sex, r[0], r[1])).map(r => phCsScore(r, csToks)))) : 0;
+    // her 2026-10-28: the box also finds formulas (phFbrFormMatch). Words that find a formula and no sign leave the signs as they are.
+    const csQ = phCsQuery.get(pkey), fqM = phFbrFormMatch(csQ), fqHits = fqM ? ranked.filter(r => fqM(r.id)) : [], fqSet = fqHits.length ? new Set(fqHits.map(r => r.id)) : null;
+    const csToks = phCsToks(csQ);
+    const csMax = csToks.length ? Math.max(0, ...["d", "p"].flatMap(k => phTriAll(k, fam, name, fresh).filter(r => phSignSexOk(rec.sex, r[0], r[1])).map(r => phCsScore(r, csToks)))) : 0;
+    const csOn = csToks.length > 0 && !(csMax === 0 && fqSet);
     const bingS = shownFor("d", lead.bing), renS = shownFor("p", lead.ren);
     // her 2026-10-11 ask ("organise this better" -> her pick "B", grouped & collapsed): the old
     // top-6-then-"Show all" flat list (and the separate paired-by-theme board it swapped in once
@@ -102244,7 +102258,7 @@ or changing anything in Cliniko.
       const c = PH_FBR_HERB_COLOUR[r.id] || { bg: "#D3DEE2", fg: "#141F23" }, total = fitOf(r);
       const p = total > 0 ? Math.min(100, total * 3) : 0;
       const lab = `<span class="ph-fbr-t-nm"><i class="ph-fbr-t-dot" style="--c:${c.bg}"></i>${esc(r.f.name)}</span>${total > 0 ? `<span class="ph-fbr-t-n">${total}%</span>` : ""}`;
-      return `<button type="button" class="ph-fbr-t${herbHead ? " herb" : ""}${total > 0 ? "" : " zero"}${r === ranked[0] && hasTicks ? " lead" : ""}${filtSet.has(r.id) ? " filt" : ""}" style="--c:${c.bg};--fg:${c.fg};--p:${p}%;--cb:${c.border || "transparent"}" aria-pressed="${filtSet.has(r.id) ? "true" : "false"}" data-tri-filt="${r.id}" title="${esc(r.f.name)}: fits ${total}%. Bing ${r.dS} of ${r.maxD}, Ren ${r.pS} of ${r.maxP}. Tap to filter to it only${esc(phFbrCautionTitle(r.id, effD, effP))}">${p ? `<span class="ph-fbr-t-fill"></span>` : ""}<span class="ph-fbr-t-lab lo">${lab}</span>${p ? `<span class="ph-fbr-t-lab hi" aria-hidden="true">${lab}</span>` : ""}</button>`;
+      return `<button type="button" class="ph-fbr-t${herbHead ? " herb" : ""}${total > 0 ? "" : " zero"}${r === ranked[0] && hasTicks ? " lead" : ""}${filtSet.has(r.id) ? " filt" : ""}${fqSet ? (fqSet.has(r.id) ? " fq-hit" : " fq-miss") : ""}" style="--c:${c.bg};--fg:${c.fg};--p:${p}%;--cb:${c.border || "transparent"}" aria-pressed="${filtSet.has(r.id) ? "true" : "false"}" data-tri-filt="${r.id}" title="${esc(r.f.name)}: fits ${total}%. Bing ${r.dS} of ${r.maxD}, Ren ${r.pS} of ${r.maxP}. Tap to filter to it only${esc(phFbrCautionTitle(r.id, effD, effP))}">${p ? `<span class="ph-fbr-t-fill"></span>` : ""}<span class="ph-fbr-t-lab lo">${lab}</span>${p ? `<span class="ph-fbr-t-lab hi" aria-hidden="true">${lab}</span>` : ""}</button>`;
     };
     const mosaicHtml = (() => {
       const listed = new Set(PH_REN_FAM_GROUPS.flatMap(g => [g.herb, ...g.formulas]));
@@ -102274,7 +102288,7 @@ or changing anything in Cliniko.
       <div class="ph-pfw-hd ph-fbr-hd"><h3>Fang Bing Ren (方病人)</h3><div class="ph-fbr-tools"><button type="button" class="ph-fbr-pick${multiOn ? " on" : ""}" aria-pressed="${multiOn ? "true" : "false"}" data-tri-multi="1">Pick several</button><span class="ph-fbr-menuwrap"><button type="button" class="ph-fbr-more" data-tri-menu="1" aria-expanded="${menuOpen ? "true" : "false"}" aria-label="More" title="More">⋯</button>${menuOpen ? `<div class="ph-fbr-menu" role="menu"><button type="button" role="menuitem" data-tri-aud="1">${audOpen ? "Hide who answered what" : "Who answered what"}</button><button type="button" role="menuitem" data-tri-links="1">Linked symptoms</button><button type="button" role="menuitem" data-far-open="1">All formulas &amp; criteria</button></div>` : ""}</span></div></div>
       ${audOpen ? phLinkAuditHtml(name) : ""}
       ${phLinkStripHtml(name)}
-      <div class="ph-fbr-mainwrap"><div class="ph-fbr-layout">${mosaicHtml}${phFbrLookHtml(name, Object.assign({ n: bingS.all.length + renS.all.length }, forCtx))}${phQaHtml(name, ranked)}${phFbrFigureHtml(name, figFam, { effD, effP }, hasTicks ? PH_FBR_YANG_PP[top.id] : null)}</div></div>
+      <div class="ph-fbr-mainwrap"><div class="ph-fbr-layout">${mosaicHtml}${phFbrLookHtml(name, Object.assign({ n: bingS.all.length + renS.all.length, fq: { hits: fqHits, only: !csOn } }, forCtx))}${phQaHtml(name, ranked)}${phFbrFigureHtml(name, figFam, { effD, effP }, hasTicks ? PH_FBR_YANG_PP[top.id] : null)}</div></div>
       <div class="ph-tri-cols${csOn ? " csq" : ""}">
         ${phFbrBoardHtml(rec, name, { d: { all: bingS.all, picks: d, eff: effD, w: bingS.rowWeights }, p: { all: renS.all, picks: p, eff: effP, w: renS.rowWeights } }, today.prevD, filtColour, forCtx, enLead)}
         ${emptyMsg}
@@ -102767,8 +102781,16 @@ or changing anything in Cliniko.
     // Family filter (her "Mock 1" ask, 2026-10-09): tapping a mosaic tile a second time clears it,
     // same tap-again-to-clear shape as the main Bing/Ren tap above. View state only -- no write,
     // no save, just a repaint.
+    // a formula the search box found (her 2026-10-28): look at it (a second tap never clears it), and the box empties so its signs show
+    if ((el = T.closest("[data-fbr-fqp]"))) {
+      const fid = el.dataset.fbrFqp, k = phPatientKey(name), cur = phTriFiltIds(k);
+      phTriFilt.set(k, !phTriMulti.has(k) ? [fid] : cur.includes(fid) ? cur : cur.concat(fid));
+      phCsQuery.delete(k); phFbrFocus.delete(k);
+      phTriRefresh(name); return true;
+    }
     if ((el = T.closest("[data-tri-filt]"))) {
       const fid = el.dataset.triFilt, k = phPatientKey(name);
+      const fm = phFbrFormMatch(phCsQuery.get(k)); if (fm && fm(fid)) phCsQuery.delete(k);   // a block the search found: the box empties so its signs show
       const cur = phTriFiltIds(k), looking = phFbrFocusOf(name).k === "fam";
       if (phTriMulti.has(k)) {            // "Pick several": a tap adds or removes one family
         const next = cur.includes(fid) ? cur.filter(x => x !== fid) : cur.concat(fid);
@@ -103501,9 +103523,26 @@ or changing anything in Cliniko.
     const label = (r[1] + " " + (PH_BING_ALIAS[r[0]] || "") + " " + (PH_BING_ALIAS[String(r[0]).replace(/_(tend|now)$/, "")] || "")).toLowerCase();
     return toks.reduce((s, t) => s + (label.includes(t) ? 1 : 0), 0);
   }
-  function phCsChipsHtml(name, q, n) {
-    if (!q || !q.trim() || !phCsToks(q).length) return "";
-    return `<div class="ph-cs-empty">${n ? `Showing the ${n} sign${n === 1 ? "" : "s"} that match` : "No matching sign yet."}</div>`;
+  // her 2026-10-28 ("i need to be able to search a formula from the fang bing ren list"): the same box finds a formula by its name typed from the start of
+  // any of its words ("chai hu", "wen dan") or by its initials ("xcht"); spaces and capitals do not count. null while fewer than 2 letters are typed.
+  function phFbrFormMatch(q) {
+    const qn = String(q || "").toLowerCase().replace(/[^a-z]/g, "");
+    if (qn.length < 2) return null;
+    return id => {
+      const w = String((PH_FORMULAS[id] || {}).name || "").toLowerCase().split(/[^a-z]+/).filter(Boolean);
+      return w.map(x => x[0]).join("").startsWith(qn) || w.some((x, i) => w.slice(i).join("").startsWith(qn));
+    };
+  }
+  // fq = { hits: the ranked families the box finds, best fit first; only: no sign matches }. A formula chip looks at that formula (data-fbr-fqp).
+  function phCsChipsHtml(name, q, n, fq) {
+    if (!q || !q.trim()) return "";
+    const fh = fq && fq.hits.length ? fq.hits : [];
+    const signs = phCsToks(q).length && !(fh.length && fq.only) ? `<div class="ph-cs-empty">${n ? `Showing the ${n} sign${n === 1 ? "" : "s"} that match` : "No matching sign yet."}</div>` : "";
+    const forms = fh.length ? `<div class="ph-fbr-fq" data-fbr-fq="1"><span class="ph-fbr-look-lab">Formulas</span>${fh.map(r => {
+      const c = PH_FBR_HERB_COLOUR[r.id] || { bg: "#D3DEE2" }, pc = Math.round(r.fit * 100);
+      return `<button type="button" class="ph-fbr-fqc" style="--c:${c.bg}" data-fbr-fqp="${esc(r.id)}" title="Look at ${esc(r.f.name)}'s signs"><i aria-hidden="true"></i>${esc(r.f.name)}${pc > 0 ? `<span class="n">${pc}%</span>` : ""}</button>`;
+    }).join("")}</div>` : "";
+    return signs + forms;
   }
   // her synth22 2026-10-21 ("make it so this search bar can also act as a secondary complaint addition integrated into the full complaint
   // system"; pick "add my words as a complaint"): "+ Add as complaint" beside the box adds the typed words as a secondary complaint through
@@ -103546,6 +103585,17 @@ or changing anything in Cliniko.
     if (chips) chips.innerHTML = nchips ? nchips.innerHTML : phCsChipsHtml(name, el.value);
     const add = host && host.querySelector("[data-cs-add-host]");
     if (add) add.innerHTML = phCsAddHtml(name, el.value);
+    // the formula blocks above keep their place: only their ring / fade changes (her 2026-10-28 formula search)
+    const fm = phFbrFormMatch(el.value), tiles = document.querySelectorAll("#pharmacyPage [data-tri-host] .ph-fbr-cards [data-tri-filt]");
+    const any = !!fm && Array.from(tiles).some(t => fm(t.dataset.triFilt));
+    tiles.forEach(t => { const hit = any && fm(t.dataset.triFilt); t.classList.toggle("fq-hit", !!hit); t.classList.toggle("fq-miss", any && !hit); });
+  });
+  // Enter in the box looks at the first formula it found (the best fit)
+  document.addEventListener("keydown", e => {
+    const el = e.target;
+    if (e.key !== "Enter" || !(el && el.matches && el.matches("#pharmacyPage [data-cs-input]"))) return;
+    const b = el.closest("[data-cs-host]") && el.closest("[data-cs-host]").querySelector("[data-fbr-fqp]");
+    if (b) { e.preventDefault(); b.click(); }
   });
   // ---- Quick assess (2026-10-08): the "fast-look -> family-guess -> a few questions" entry
   // point from the plan, built as an honest first pass exactly as scoped there -- re-rank the
