@@ -913,7 +913,9 @@ Fitness + Exercises), the rest in Life.
   row = her calendar's routines (`phFitPlanApply`: a day set to a type moves that weekday to the routine of that type, made in
   g-fitness if none; done days stay; the past never reads as missed; Undo) · Steps + Weight · Steps plan (walks + stairs, under the
   Steps card) · Today (type, template, sets, timed hold, rest ring, pain + stars, ▶ Workout Mode; Finish also ticks today's routine
-  of that type) · Upcoming + Recent · **Goals** (one per exercise: reps / hold / weight / tick, `d.fgl`; reached on a ticked set =
+  of that type; an open exercise starts with **Name** and **Type** rows, the same library write as its Exercises card, so a rename
+  shows everywhere; a blank seconds box shows the 30 the timer uses, a right side the left's, `phFitSetShown`, templates too; her
+  2026-10-29 "how do i edit this?") · Upcoming + Recent · **Goals** (one per exercise: reps / hold / weight / tick, `d.fgl`; reached on a ticked set =
   toast + buzz + gold; a flag on Today's row, in Workout Mode, in the exercise panel) · **Personal bests** · **Weekly volume**
   (8 weeks) · **Progression** (one exercise's last 7 sessions).
 - **Week rules** (no stored data): a rest day = a day her plan has no workout on (`phFitIsRest`, memo on `phMeS()`; her 2026-10-28

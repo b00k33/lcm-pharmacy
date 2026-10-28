@@ -6125,3 +6125,23 @@ live page: the stamp in index.html and sw.js, `phMealHadPut`, the had list in `p
   takes it off; at 360 the card is 12–348 px, nothing cut, the page not wider. Picture: shots/meals-recipes-list-2026-10-28.png.
 - **LIVE 2026-10-28, build 20261028-233200** (her "push"; main 9b8cd31d, joined ef41a0ae). Live site checked: both stamps,
   `phRecipesHtml` and the Recipes buttons served.
+
+## Fitness Today: change an open exercise's name and type (2026-10-29)
+- **Her words:** a screenshot of today's open "concentric external shoulder rotation" (a blank Secs box beside "1 × 30 s", no
+  name or type in sight) and "how do i edit this?"; then "yes" to the box showing the 30 it uses and the name and type changing
+  right there instead of on the Exercises tab.
+- **How:** today's open exercise (`phFitTodayHtml`, `.exopen`) starts with a **Name** row (`data-fit-lf="<id>|n"`, the Exercises
+  card's own box and write, `phFitLibSet`: a name already in her exercises is refused with its toast) and a **Type** row
+  (`phFitTyRow(X, "td")`, the Exercises card's chips and + New type). A blank box in a set reads what the timer uses
+  (`phFitSetShown`: 30 s, a right side the left's), in Today and in templates; − / + in a template steps from that number
+  (`phFitTpStep`). Nothing new is stored: typing writes the set as before, clearing it shows the 30 again. CSS beside the open
+  exercise's rule: the label 40px, the name box up to 480px (a long name shows whole on a computer).
+- **Tested** (sandbox, made-up "Zz Fit Edit" as her profile; two library exercises, one timed): SECS shows 30; 45 typed stores
+  45 and the row reads 1 × 45 s; cleared stores "" and shows 30; renamed to "External rotation (concentric)" changes the library
+  and today's row and the panel stays open; renamed to "pistol squat" (already hers) is refused with the toast; Isometric
+  changes the type and the row's tag; at 1280 the whole name fits (480px); at 375 labels sit above their boxes, nothing wider
+  than the page (the name box scrolls a long name, as the Exercises card does); Prescriptions search narrows and comes back;
+  no console errors. Pictures: shots/fitness-today-name-type-2026-10-29.jpg, shots/fitness-today-name-type-phone-2026-10-29.jpg.
+  **Checked where the name shows:** today's row, the Exercises library (the one record). **Not tested:** her real records; Workout
+  Mode's cards after a rename (they read the same library entry).
+- **Not live:** waits for her "push live".
