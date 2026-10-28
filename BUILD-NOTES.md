@@ -5609,4 +5609,41 @@ Ren's formulas, 4 + New formula). Memory `project_lcm_herbs_block_formula_pick_2
   0–10 set 5 (word "moderate", 1–4 pale) and cleared; Loose stool and Low mood ticked; Egg-white, LH Positive (green), Large
   clots, Unprotected sex, BBT +0.05, Discard, Painful? No (the bar goes); scroll stayed put; no console errors. Pictures:
   `shots/cycle-card-built-desktop.png`, `shots/cycle-card-built-phone360.png`.
-- **Not live:** waits for her "push live".
+- **LIVE** 2026-10-28 on her "push": build 20261028-192500 (main fb6afe77, a hand publish under the lock; others' open
+  index.html edits stayed local). The saved version was booted first: the card rendered with no console errors.
+
+## Muscle marks: names beside the picture, a Tools bar (2026-10-28)
+- **Her words** (screenshot of the Shoulder picture, five "· Tender" tags over the muscles): "the words cover the muscles too much.
+  i want to mark them for acu or trigger release or motor from the visual". Guide: `mocks/muscle-marks-mock-2026-10-28.html`
+  (artifact https://claude.ai/artifact/SS1UosjCL6UDNWtbmx1pzu, v3 matches the build); memory `project_lcm_muscle_marks_2026_10_28`.
+- **Her picks (popups, do not re-ask):** names in the **Margin**; marking by **Tools** (Finding · Acu · Trigger release · Motor
+  point); marks as **Symbols** (● Acu, ✕ Trigger release, ◎ Motor point); **Tender still adds its motor point**; Acu = **the
+  classical point near the muscle** (its `acu`); Trigger release = **"A Shi Needling"** (her words); **Needle & move dropped**;
+  **several** marks per muscle; after I measured her real width (the pictures get 492px at her 1220 window): **A1, the view buttons
+  move under the pain figure** so the pictures keep near full size (280px; one per row on a phone).
+- **Code:** `PH_MSK_TX` / `PH_MSK_TX_NAME` / `phMskTx` (replaces `PH_MSK_TECH`; an older `tech` reads as a mark: "dn" = Trigger
+  release, else Motor point), `phMskTxGlyph` / `phMskTxIc` / `phMskTxMarks` (the one drawing of a mark: picture, Tools bar, Today's
+  points, chips), `phMskTxLbl` (acu "GB21 R", trigger release "Upper trapezius Ashi R", motor point "Upper trapezius MP R"; these
+  flow through `phMskAreasToday`'s `mpl` to session points, `mskAreas`, Copy notes, the Care Plan's → plan and Today's points),
+  `phMskTxFlip` (one mark on / off; the last off removes the muscle, the finding stays), `phMskTool` + acts `dg-tool` / `dg-tap` →
+  `mtx` ("key:mark"); `cyc`: Tender adds `mp` beside marks already there, off takes only `mp` out. `phMskDiagramView` gains
+  `sides` (`phMskDgSides`): an outer svg with the body nested at the margin's width (inline width / height, or `.mk-dgsvg svg`
+  stretches it), names + lines in the margin, the marks only on the muscle (kept inside the crop by their own size), nothing on
+  the read-only Fang Bing Ren plate. `phMskPicDgHtml` = the head (region · muscles + the Tools bar, `.ph-tng2-seg mk2-jb`) + the
+  panes; `.mk-picctl` moved inside `.mk-picfig` (CSS block "her 2026-10-28 marks and names"; phone in its `@container (max-width:
+  560px)`). Removed: the technique select (`data-msk-tech`), `phMskTagFree`. Treatment tab "Which muscle?" pills toggle the marks.
+- **How it went live early (not her word):** another session's publish (build 20261028-143700, commit 136b4716, 19:00) ran
+  `git add index.html` while this build sat unfinished in the shared working copy, so the first cut went live inside it. That cut
+  lacked: the nested picture's size (the body stretched under the names), the view buttons' two columns, Tender's motor point beside
+  an Acu, the marks kept inside the crop, and the phone fixes. Those are this commit, **not live**: they wait for her "push live".
+- **Tested** (sandbox, made-up patient "Zz Shoulder Test", right posterior shoulder pain, 1220 and 390 wide): Finding on upper trap
+  (Tender + MP), Acu, Trigger release on infraspinatus and levator, Motor point on middle deltoid, a left-side tap (asks for a pain),
+  finding cycled off (MP out, Acu + Ashi stay) and back to Tender (MP back), Today's points rows + ✕, chips' marks and MP end,
+  Treatment tab "Which muscle?" pills (levator Motor point on), Copy notes line ("GB21 R, Upper trapezius Ashi R, ..."), Enlarge
+  (marks + names + Tools), neck side view (margin opposite the face, Right and Left), Fang Bing Ren plate (no names, no marks),
+  phone 390 (one picture per row, view buttons and Tools fit, no sideways scroll); no console errors.
+  Pictures: `shots/muscle-marks-built-2026-10-28.jpg`, `shots/muscle-marks-points-2026-10-28.jpg`, `shots/muscle-marks-phone-2026-10-28.jpg`.
+- **Not checked:** her real records, the Key2 phone, a saved visit reopened on another day (carried marks), print.
+- **Draft wording (hers to correct):** "Acu · <muscle>", "Ashi · trigger release", "MP · near <point>", "N to needle", the
+  Tools short labels on a phone (Release, Motor), "Mark a pain on that side first".
+- **Seen, not mine:** Enlarge draws the back pain figure black (its cloned picture's ids); left for its own fix.

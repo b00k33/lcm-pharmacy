@@ -515,16 +515,17 @@ hover title (`.ph-fx`; `presBandHtml` + `PRES_BANDS`, sync unchanged). Medical h
 (Same as last time, the Screen line, a 5-step bar Pain · Palpate · Diagnosis · Points · Re-test); the picture card (pain figures |
 the lit area's muscle diagram | view controls; Add pain · Areas ▾; a first visit taps the body to add a pain); ONE card per area
 (Pain Base · Last · Today · After; Palpate = the area's muscles as chips, hers first: one tap Tender + its motor point, then Taut,
-Trigger, off, MP end = motor point out; + Movement; + Test; Diagnosis + her set) beside **Today's points** (motor points, her
+Trigger, off, MP end = motor point out; + Movement; + Test; Diagnosis + her set) beside **Today's points** (her marks from the
+picture: Acu = the classical point near the muscle, Ashi = trigger release, motor points; her
 typed points, Ashi on / off, Save as my set per diagnosis in `PHARMACY.mskSets`; points in `visits[day].acu`). The app never picks
-a point (a muscle's ⚠ rides with its name's last word; on a phone each Today's points row is a grid, the technique under the name). No region chips, Re-measure table or 9 exam tabs; Observation, Strength, Neuro, Function sit behind "More exam". Kept:
+a point (a muscle's ⚠ rides with its name's last word; on a phone each Today's points row is a grid, the mark under the name). No region chips, Re-measure table or 9 exam tabs; Observation, Strength, Neuro, Function sit behind "More exam". Kept:
 tap a belly = the same chip, + Cause, Enlarge, 3D. Motor-point muscles = ONE list (`phMskPlanOf`, carried included) for the panel,
 the Treatment tab and `phMskSummary`. **Today's points go on** [Musculoskeletal page, step 2] (`phMskAreasToday` = the panel's list
 by area): the Treatment tab's navy block has a **Points** row of them, ticked (a tap = not needled today, `off: true` on the page's
 own list), and the motor points under "Which muscle?" start ticked the same way (`treat[key].done`, carried ones too; their
 rows keep their place); an unticked one is struck through "not today" in the panel and left out of everything below; ✓
 Complete session saves them as `session.points` (motor points as "Upper trapezius MP
-R") and each area as `session.mskAreas` (`{r, s, dx, pts, b, a}`), and a blank Care Plan phase Points fills from them; the panel's
+R", Acu as "GB21 R", a trigger release as "Upper trapezius Ashi R") and each area as `session.mskAreas` (`{r, s, dx, pts, b, a}`), and a blank Care Plan phase Points fills from them; the panel's
 foot says Treatment · Care Plan (blank / ✓ same / other points + **→ plan**, Undo) · Log; the Log's visit line shows Area ·
 Diagnosis · Points · Pain before → after. Copy notes reads the same list. MMT = a 3-point Weak / Mildly weak / Strong scale. A test
 row snapshots the library at add-time. MSK libraries are append-only.
@@ -533,8 +534,18 @@ me to tap") [Muscle picture: true shapes]: the **shoulder and mid back** are dra
 grid (`PH_MSK_ATLAS`, regions in `PH_MSK_ATLAS_REG`, drawn by `phMskAtlasHl`), in **two rows, Surface then Deep** (the deep row
 keeps the surface muscles' edges dashed; pec minor, serratus, the rhomboids, levator, supraspinatus, the erectors and QL sit
 there), pale grey with fibre lines, bones for
-bearings (never tapped); every drawn muscle taps (one tap cycles Tender → Taut → Trigger → off, the same as its chip); a name
-tag only on a marked muscle (`PH_MSK_TAGN` short names, never one over another, `phMskTagFree`), hover names on a computer. A
+bearings (never tapped); every drawn muscle taps (one tap cycles Tender → Taut → Trigger → off, the same as its chip); **names beside
+the picture, marks on it** (her picks 2026-10-28) [Muscle marks: names beside the picture, Tools bar]: a marked muscle's name
+(`PH_MSK_TAGN` short names) sits in a margin on the pain's side (front + Right = the left edge, back + Right = the right edge, the
+side view's edge opposite the face, pain both sides = two margins; `phMskDgSides`), a thin line to the muscle and a finding dot in
+the name, so no word covers a muscle; on the muscle only its **marks**: ● Acu (the classical point near it, the muscle's `acu`), ✕
+Trigger release (Ashi needling), ◎ Motor point, several at once (`tx` on its `vis.treat` entry, `PH_MSK_TX`, `phMskTxGlyph`; an
+older entry's `tech` reads as one: dry needle = Trigger release, else Motor point; Needle & move is gone). A **Tools bar** over the
+picture (Finding · Acu · Trigger release · Motor point, one joined bar; `phMskTool`, view state) sets what a tap does: Finding
+cycles the finding (Tender still brings in its motor point, off takes only the motor point out), a mark tool turns that mark on or
+off (`phMskTxFlip`; the last mark off takes the muscle off the list, the finding stays; a side with no pain asks for one first).
+The **view buttons sit under the pain figure** (two columns on a computer, one joined row on a phone), so the pictures keep near
+full size (280px; one per row on a phone). The read-only Fang Bing Ren plate draws no names and no marks. Hover names on a computer. A
 muscle in parts is **tapped part by part** (her pick "Split"): pec major clavicular / sternal, deltoid anterior / middle /
 posterior, trapezius upper / middle / lower, teres minor / major, rhomboid minor / major: each part is its own `PH_MSK_MUSCLES`
 row with `of` = its whole; the whole is `hide` (off every list, chip and search) and an older mark on it shows on each part with
