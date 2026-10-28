@@ -1675,9 +1675,10 @@ meal is NOT listed; Done adding) · one numbers line, small numbers behind a tap
 her card, beside + Add in the planner's foot). No sideways scroll; long names wrap, never cut; the cursor goes to Search on the
 computer only. The snack picker (Snacks · drinks) is unchanged. Code: "A CALMER MEAL" (`phMealListHtml`, `phMealTblHtml`,
 `phMealAddHtml`, `phMealNumsHtml`, `phMealInstHtml`).
-**Food numbers**: foods from `PH_FOOD` (208 rows: the Australian Food Composition Database Release 3 by FSANZ, CC BY-SA 3.0 AU,
-credited on Targets; AUSNUT 2023 by FSANZ for what AFCD lacks: the curry meat pie, the kebab wraps, creamy milk; choline from USDA
-FoodData Central; Thisbowl's June 2026 sheet; groups include **Snacks** (packet chips) and **Takeaway** (pies, sausage roll, kebabs,
+**Food numbers**: foods from `PH_FOOD` (210 rows: the Australian Food Composition Database Release 3 by FSANZ, CC BY-SA 3.0 AU,
+credited on Targets; AUSNUT 2023 by FSANZ for what AFCD lacks: the curry meat pie, the kebab wraps, creamy milk; choline and beef
+bacon from USDA FoodData Central; matcha powder from the Standard Tables of Food Composition in Japan 2020 (MEXT); Thisbowl's June
+2026 sheet; groups include **Snacks** (packet chips) and **Takeaway** (pies, sausage roll, kebabs,
 hot chips), her word), stored `food:<id>*<q>`, shown in kitchen
 words with − / + (each food its own step; a dish `dish:<id>*<q>` steps in serves). A dish's **Made of** adds its numbers itself
 (typed numbers only for what is not on the list); with no Made of a dish counts by itself (`phDishAuto`: the Thisbowl bowl in its
