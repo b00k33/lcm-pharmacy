@@ -5987,3 +5987,17 @@ adds MP, one drawing everywhere, one picture per row on a phone.
 - **Not tested:** her real records; the Key2; a finger drag on a real phone; the Appointments grid drawn on screen (its data read
   was checked); Habits / Week pages with the new rest rule (they read `phFitWkSt`); Workout Mode's week dots.
 - **Not live:** waits for her "push live".
+
+## Meals: no "Every <meal>" or "Use every day" on the day's line (2026-10-28)
+- **Her words** (screenshot of the planner's Lunch picker, Wed 28, "Today only" + ✎ Every Lunch, ↺ Undo + Use every day): "i dont
+  need an every lunch and everyday button".
+- **How:** `phMealDayTopHtml(c)` draws "<Thu> only" + ↺ Undo on one row (a day's own list) or "Same as every <meal>"; its `ed`
+  param, the card's `edit` (✎ Every <meal>, `o.usual`), the picker's ✎ Every <meal> (`data-mpl-view="us"`) and Use every day
+  (`data-meal-every`, its handler and selector entry) are gone, with the CSS only they used (`.ph-meal-top .ed`,
+  `.ph-meal-top .ph-c22-go`). Both places that drew them changed: her meal card and the planner's picker. Her usual meal is
+  still changed from the planner's ✎ Usual at each row's head (`data-meal-def`, a sheet "Every Lunch"); the picker still opens on
+  her usual list while she has none (`phMplUs`).
+- **Tested** (sandbox, her Wed 28 rebuilt): the Lunch picker reads "Today only ↺ Undo", no Every / Use every day; ↺ Undo puts the
+  day back ("Same as every lunch", the day's own list gone); her Break Fast card's line "Today only ↺ Undo", Had it | Eating out |
+  Skipped unchanged; the row head's ✎ Usual opens "Every Lunch"; no console errors.
+- **Not live:** waits for her "push live".
