@@ -5491,3 +5491,62 @@ drawing everywhere (the neck shapes also at the top of Shoulder and Mid back); a
   harness with the card's size container): side and back next to each other, nothing past the card. The Fang Bing Ren plate
   `@msk:cervical:back` draws. **Not tested:** her records; a real phone; the Treatment tab's Points row with the new rows ticked.
 - **Not live:** waits for her "push live".
+
+## Treatment tab: the Herbs block is one formula dropdown (2026-10-28, her pick A)
+
+Her ask, with a screenshot of the green Herbs block (Dispense new herbs ↗ · Instruct to continue BAN XIA XIE XIN TANG change ·
+✎ Design formula · Link formula · ▸ 1 earlier · FORMULA ACTION + Add): "improve this so i can add/select the formula i think is
+most suitable". Two inline mocks (A one dropdown, B a Today line + a Plan line), then her answers: "what does continue at home
+mean", "what is plan?" (the plan = the Care Plan phase's own Formula cell; today = given or still taking), and her picks:
+**A**, the button says **"Still taking"**, the list holds **all four groups** (1 this patient's, 2 recipes + jars, 3 Fang Bing
+Ren's formulas, 4 + New formula). Memory `project_lcm_herbs_block_formula_pick_2026_10_28`.
+
+- **The block** (`presAcuOpenHtml`'s Herbs rows, composed by `phTpVisitTableHtml`): `[🌿 formula ▾] [Dispense] [Still taking]` at
+  32px / 6px / 13px, then `[Action ▾]` and the plan line (`.ph-acu-hplan`). The header note reads "none today" / "✓ still taking"
+  / "✓ given today". Design formula, Link formula and "▸ N earlier" are gone from this block (they are rows in the list now); the
+  Care Plan's Session grid Formula cell (LOCKED) is untouched and still has them.
+- **The list** (`phAcuFPickHtml` / `phAcuFPickListHtml`; helpers `phAcuFNorm`, `phAcuFPickMine`, `phAcuFPickStock`,
+  `phAcuFPickFbr`): This patient (each formula once by letters-only name, newest dispense first, "given 14 Oct"); Your recipes +
+  jars (recipes A–Z, then jars A–Z, codes and abbreviations searchable); Fang Bing Ren's formulas (`PH_FORMULAS` names ending Tang /
+  San / Wan, so the herb families Gui Zhi, Chai Hu ... stay out; A–Z; a name she stocks shows "jar" / "recipe" and pours from it,
+  otherwise "not stocked"); "Name it “x”" only when nothing matches (as in the mock); "+ New formula from herbs". Search filters in
+  place as she types (`#presAcuFPickQ`, an `input` listener patches `#presAcuFPickList`); Enter picks the first row, Escape
+  closes. The box is `field-bare` (out of the app-wide pill rule) with the sprite search icon. NO SUGGESTIONS: fixed group order,
+  no rank, no labels.
+- **Her pick** sets `presAcuInstructFormula` + `presAcuInstructSrc` (`log:` / `jar:` / `refill:` / `name:`), both kept in the
+  visit draft and cleared at the three visit resets. Picking does not tick Still taking. The chip pops once (`.pop`, off under
+  reduced motion via `phTpReduceMotion` and the media query).
+- **Dispense** pours her pick into the open prescription (`phAcuFPour`): a jar or recipe through `phTpPourIntoScript` (Link
+  formula's own pour); a past formula from the prescription whose `lastDispenseLogId` is that dispense, else from that day's
+  dispense record (its herbs in proportion, divided by the multiple `presGramsFollowHerbs` will use, so the bag comes out the
+  same as that day); a bare name = an empty list under that name. Never over herbs already off the shelf (`pendingDispensedAt`,
+  `presPending`), never into a formula's own recipe, not when the name already matches. Toast "✓ X in the Dispense list" with Undo
+  (restores the whole prescription object). The herbs editor opens unfolded (`presIngQuietOpen`).
+- **+ New formula from herbs**: while the phase names no formula, the Design route (`data-tp-formula-design`, as the old button;
+  it now closes the list and finds the patient from the visit box when the plan screen did not set `phTpScreenPatient`). When the
+  phase names a formula, Design would have renamed the plan "Untitled formula" (the old button never showed then), so the row
+  instead clears this prescription's herb list (`data-pres-acu-fnew`, same guards, Undo) and leaves the plan alone.
+- **Still taking** = the old instruct toggle (`presAcuHerbInstruct`, `session.herbInstructedFormula` at save, unchanged).
+- **Action ▾** (`data-pres-acu-fact` / `-opt`, `.ph-tx-actpop`): the treated phase's `formulaAction`, every `PH_TP_FORMULA_ACTIONS`
+  item plus any typed one already stored; label "Action" / the one action / "N actions"; a closed phase shows the actions as text.
+- **The plan line** replaces `formulaToPlan`: "Plan: X  → plan" only when the phase's formula differs (letters-only compare, so case
+  no longer reads as a difference), "✓ same as plan" when equal, nothing while the plan names none (her 2026-09-18 "C · Both":
+  a blank one still fills at save). → plan now also clears `formulaId` (as typing a name on the plan does), repaints in place
+  (`presAcuOpenRefresh`; the phase panel only when one is on screen) and gives an Undo toast. On a day herbs were given, the line
+  names the dispensed formula (newest dispense, never an earlier pick) and → plan pushes that one.
+- **Removed:** `presAcuInstructPickerOpen`, the "change" span and its picker (`data-pres-acu-instructpick` / `-instructformula`), CSS
+  `.ph-acu-herbchange`, `.ph-acu-formulapicker`, `.ph-acu-formularow` (+ `.d`, `.on`, `.hlbl`), `.ph-tx-hplan .ph-tp-fcell`, the
+  tx-blk `.ph-acu-toplan` colour rule (now a 32px chip there).
+- **Tested** (sandbox, made-up patient "Testa Herbwell", an MSK plan, two made-up dispenses, a made-up recipe): the list's groups
+  and search ("xiao yao", "wu ling", "blossom", a no-match name), pick → chip + pop + list closes + scroll kept; Dispense for a jar,
+  a recipe, a typed name and a 30 Sep formula (100 g bag, as that day) each with Undo; Still taking on / off and its save
+  (`herbInstructedFormula` = the pick, the named plan untouched); → plan + Undo (history entry added and removed); Action ▾ with
+  1 / 2 / 0 actions; Enter / Escape; + New with a named plan (no second prescription, plan kept, Undo) and a blank plan (Design as
+  before); a given-today day; draft save + restore of the pick and its source; 375px (nothing off the edge; grid columns
+  `minmax(0, 1fr)` so long names end in "…"); 1280px; the Prescriptions search filters live; no console errors.
+- **Integration:** the pick is visit state until save (Treatment tab only); → plan writes the phase formula that the Session grid
+  Formula cell, Dispense's "Plan formula" and the phase record read; Action writes `phase.formulaAction`, the field the phase
+  record's Formula action reads. Checked: Treatment tab, Dispense, the Care Plan's phase record. **Not checked:** her real records,
+  the Key2 phone, the older non-merged visit box (`phTpPhaseBodyRows`' Today's visit cell), which shares the markup with base
+  styles.
+- **Not live:** waits for her "push live".
