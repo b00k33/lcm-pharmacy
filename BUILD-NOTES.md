@@ -6145,3 +6145,7 @@ live page: the stamp in index.html and sw.js, `phMealHadPut`, the had list in `p
   **Checked where the name shows:** today's row, the Exercises library (the one record). **Not tested:** her real records; Workout
   Mode's cards after a rename (they read the same library entry).
 - **Not live:** waits for her "push live".
+
+## 2026-10-29 · Live: build 20261029-103400
+Her "push" (publish 27269dcc). Went live: Fitness Today's open exercise has Name and Type rows and a blank seconds box shows the 30
+it uses (583365a4). Checked on the live page: both stamps, `phFitSetShown`, the Type row and the name box's CSS.
