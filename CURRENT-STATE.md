@@ -780,7 +780,10 @@ solid = had, pale = still planned, the % in it, the amount, "of" + the goal as a
 returns it to the rest), "n to go" / "n over" / "✓ goal". **The Macros row** (`phMacCellHtml`, before More, computer): four short bars
 a day with the number; a day to come as planned, pale (a plan over its goal = a deep number). Over the goal = deep for all four, under
 60% = amber (today: only when the plan also falls short). Worked out on read (`phMacDay` = `phDietMyDay` + `phMplPlanSum`); only the
-goals are stored. Code: "MACROS" (`phMac*`).
+goals are stored. Code: "MACROS" (`phMac*`). **What counts as eaten** in every number of hers (kJ, macros, water, warm · cool;
+`phMealEaten`, her "these kj dont look right" 2026-10-28): a meal with Had it at once; any other meal once its time on her calendar has
+passed (an earlier day: all of it); Skipped and a fast night's Dinner never. Had it itself (the ✓, Today's meals, the meal habit) is
+unchanged. NOT live.
 **Food reactions**: a meal she had (her card, under Had it) and a patient's noted day or usual meal (Diet sheet, "Usually after it")
 take an **After it**: Gut / Body / Felt good chips + her own words (+ Own, they stay), ONE How strong bar, Started, From (which
 thing), a Note. The mark (the first reaction's picture in a pale red circle, green for Felt good) shows on the grid block, the Me

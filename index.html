@@ -40428,11 +40428,25 @@
   const phMealWater = dayKey => { const e = phMealE(dayKey + "|w"); return e ? Math.max(0, Math.round(+e.n || 0)) : 0; };
   // a food that is plain water (FOOD NUMBERS' Water, a shop water with next to no kJ): what she logs of it is water she drank
   const phFoodIsWater = id => { const f = PH_FOOD[id]; return !!f && f[3] === "ml" && !!f[7] && /\bwater\b/i.test(f[0]) && Array.isArray(f[9]) && f[9][0] != null && f[9][0] <= 20; };
-  // her day's water, ml: the glasses she tapped (250 ml each) + the plain water in the meals she had and her drinks · [all, logged]
+  // what she ate of a meal, for her numbers -> [v, nut] or null: Had it at once; else (her 2026-10-28 "these kj dont look right":
+  // her 5:30 am breakfast and 3 pm KFC wings, never ticked, still counted as planned) what is planned there once its time has
+  // passed (an earlier day: all of it; today: from the meal's time on her calendar, ev). Skipped and a fast night's Dinner never
+  // count. Her Had it tick itself (Today's meals, the meal habit) is unchanged.
+  function phMealEaten(dayKey, sl, ev) {
+    const h = phMealHad(dayKey, sl);
+    if (h) { const v = phMealAte(dayKey, sl); return v !== "skip" ? [v, h.nut] : null; }
+    const tk = keyOf(new Date());
+    if (dayKey > tk || (sl === "d" && (phMplFastPl(dayKey) || (ev && phFastNightOf(dayKey, ev.s))))) return null;
+    if (dayKey === tk) { const m = ev ? phC22Min(ev.s) : null, n = new Date(); if (m == null || m > n.getHours() * 60 + n.getMinutes()) return null; }
+    const v = phMealPlan(dayKey, sl).v;
+    return v && v !== "skip" ? [v, null] : null;
+  }
+  // her day's water, ml: the glasses she tapped (250 ml each) + the plain water in the meals she ate (phMealEaten) and her drinks · [all, logged]
   function phMealWaterMl(dayKey) {
     let lg = 0;
     const add = v => phMealVs(v).forEach(x => { const p = phMealQ(x); if (p.k === "food" && phFoodIsWater(p.id)) lg += p.q * (PH_FOOD[p.id][4] || 1); });
-    PH_MEAL_SLOTS.forEach(([sl]) => { const h = phMealHad(dayKey, sl), v = phMealAte(dayKey, sl); if (h && v !== "skip") add(v); });
+    const evs = phMealEvents(dayKey);
+    PH_MEAL_SLOTS.forEach(([sl]) => { const e = phMealEaten(dayKey, sl, evs[sl]); if (e) add(e[0]); });
     phMealSnacks(dayKey).forEach(s => add(s.v));
     lg = Math.round(lg);
     return [phMealWater(dayKey) * PH_WATER_GLASS + lg, lg];
@@ -40469,10 +40483,10 @@
     });
     return { t, m, who };
   }
-  // her day: every meal she had (a skipped one adds nothing) and every snack or drink
+  // her day: every meal she ate (phMealEaten: Had it, or its time has passed; a skipped one adds nothing) and every snack or drink
   function phDietMyDay(dayKey) {
-    const items = [];
-    PH_MEAL_SLOTS.forEach(([sl]) => { const h = phMealHad(dayKey, sl), v = phMealAte(dayKey, sl); if (h && v !== "skip") items.push([v, h.nut]); });
+    const items = [], evs = phMealEvents(dayKey);
+    PH_MEAL_SLOTS.forEach(([sl]) => { const e = phMealEaten(dayKey, sl, evs[sl]); if (e) items.push(e); });
     phMealSnacks(dayKey).forEach(s => items.push([s.v, s.nut]));
     return phDietSum(items);
   }
