@@ -5688,3 +5688,19 @@ Matrix: `fbr-integrate33-wenjingtang-2026-10-28.html` (root until live, then moc
   menopausal symptoms) at 4 like Da Chai Hu; a Dark-pale cycle colour; DRAFT words (card line, Ask her answers, picture labels incl. "Thin pulse",
   not from her table); the Gui Zhi filing.
 - **Not live:** waits for her "push live".
+
+## 2026-10-28 · Wen Jing Tang: her answers
+Her popup answers to the run-16 list, all four the recommended option: minus points "−3 a line", conditions "Yes, 4 each", "Yes, add" Dark-pale,
+"Under Gui Zhi". Matrix updated: `fbr-integrate33-wenjingtang-2026-10-28.html`.
+- **Conditions at 4 (Bing):** `dysmenorrhea_now`, `period_early_now` (frequent / two periods a month), `heavy_bleed_spotting` (menorrhagia),
+  `menopause_sx`. Bing ceiling 66 → 82; `core` says which four score. Complaint fallback re-measured: 49 on the period area, so Wen Jing Tang sits
+  third in periods / fertility / meno (ahead of Xue Fu Zhu Yu Tang 43).
+- **Dark-pale on the cycle day card:** `PH_CYCLE_LOOKS` + `darkpale` between Brown and Pale (swatch `#9A6470` in `PH_UC_BLOOD`), the Usual set's
+  `col` too (clues dark_blood + pale_flow). Logged today it ticks `period_dark_pale_now` (`phCycDayBing`); any logged day bumps the Patterns
+  clues dark blood + pale blood. **Fixed on the way:** the pale-blood clue tested `looks === "pink"`, a value the day card never stores ("pale"),
+  so a logged Pale period never gave it; it now reads "pale" (and still "pink").
+- **Kept:** −3 a line; under Gui Zhi (comments now cite her answer).
+- **Tested** (sandbox, synthetic patient, deleted): 34 families still lead their own picture; ceilings 82 / 34; her key picture 43% (next 10%);
+  the day card shows Dark-pale with its swatch in the folded Colour grid; a tap stores `darkpale`, ticks the dark-pale row on Bing and the day
+  strip, and gives the dark-blood + pale-blood clues; no console errors. **Not checked:** the phone day card; her real records.
+- **Still hers:** the DRAFT words (card line, Ask her answers, picture labels incl. "Thin pulse"). **Not live:** waits for her "push live".
