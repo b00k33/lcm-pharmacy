@@ -6123,4 +6123,5 @@ live page: the stamp in index.html and sw.js, `phMealHadPut`, the had list in `p
   Spicy Salmon Fishbowl 2,910 kJ · 2 prep, names in line; "salm" narrows to one, "zzz" to none; a rename + Save shows on the list
   and in the store; ✕ in the editor back to the list; + New recipe "Bone broth" saved onto the list, no meal changed; Delete
   takes it off; at 360 the card is 12–348 px, nothing cut, the page not wider. Picture: shots/meals-recipes-list-2026-10-28.png.
-- **Not live:** waits for her "push live".
+- **LIVE 2026-10-28, build 20261028-233200** (her "push"; main 9b8cd31d, joined ef41a0ae). Live site checked: both stamps,
+  `phRecipesHtml` and the Recipes buttons served.

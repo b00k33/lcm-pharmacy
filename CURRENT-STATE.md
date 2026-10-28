@@ -777,7 +777,7 @@ it when more room above; fits the window), on the meal (empty = on adding): the 
 the Me drawer's Shopping (`src: "plan"`); Targets. **Recipes** (her 2026-10-28 "where can i edit my recipes?" → yes; before
 Shopping list on the computer and the phone's chips; `phRecipesHtml`, sheet kind "recipes"): every dish of hers in one list (a
 mark's own slot, name wraps, kJ a serve · n prep, ✎), Search recipes, a row = the dish editor, + New recipe; the editor's Save /
-Delete / ✕ come back to the list. NOT live. **Supplements · herbs** (her 2026-10-28 "add a row for supplements and herbs"; today and the days before): a chip a thing
+Delete / ✕ come back to the list. LIVE build 20261028-233200. **Supplements · herbs** (her 2026-10-28 "add a row for supplements and herbs"; today and the days before): a chip a thing
 she took (a tap takes it out, with Undo), + opens a list: Today (✓), Taking (her Supplements page: the four switched on and her
 own), Before (her earlier days); as she types, the supplements list and her LCM formulas and jars (`phAcuFPickStock`), and Add
 "<typed>" (Enter too). Stored `"<day>|h"` {list [{n, at, src?}]}; not counted in her numbers. Code: `phMplSupp*`, `phMealSupp*`.
