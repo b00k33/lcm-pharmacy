@@ -5272,3 +5272,35 @@ breakfast of today". The third report on this spot (10/26 "make it easier for me
   Undo → Thu follows again; Thu − banana → Use every day → every day without banana; the card's ↺ Undo and ✎ Every Breakfast;
   1024 and 360 wide, nothing wider than its box; no console errors. Picture `shots/meal-day-or-every-phone-2026-10-28.jpg`.
 - **Not checked:** her real records, the Key2, a Dinner with a fast night planned (its picker keeps the Fast row on the day).
+
+## Meals macros against goal (2026-10-28)
+
+Her ask, with a screenshot of her Meals week planner: "show the macros consumption vs goal - show 3 mocks". Mock
+`meals-macros-mock-2026-10-28.html` (published as an artifact: A in the table, B today on top, C a week chart). Her picks: **A + B
+together**; all four numbers (kJ, protein, carbs, fat); goals = **kJ + a split** with her own grams winning (protein: her 50 g wins);
+over the goal = **deep for all four**, under 60% = amber; the rings **under the clock bar**; days to come **as planned, pale**; "Yes,
+build it". Mid-build, her word: **"set carbs to 50g a day"**.
+
+- **Goals** (`phDietGoal`): `PH_DIET_GOAL0.cb = 50` (her word; Targets tags it "yours"); fat = her own, else (kJ − 17 × protein − 17
+  × carbs) / 37 (FSANZ energy factors), only while she has a kJ goal (Targets tags it "from kJ"). With protein and carbs both fixed
+  in grams the split leaves fat as the rest, so no % fields were built. kJ has no goal until she types one. Clearing fat's box
+  says "Fat · the rest of your kJ".
+- **Today's rings** (`phMacRingsHtml`, added to `fbar` in `phMplHtml`): "Today · Wed 28" + had / planned key, four rings (solid =
+  had via `phDietMyDay`, pale = with what is planned via `phMplPlanSum`), the %, the amount, "of" + the goal as a 26px tinted field
+  (`.gf.field-bare`, the app's opt-out from the field rule; `data-diet-goal` so the same change handler and `phDietGoalSet` save it),
+  "n to go" / "n over" / "✓ goal". The focus after a save comes back to the box she moved to, in the rings or in Targets
+  (`phDietTgFocus` is now a selector). On a phone the rings are the day it shows (‹ ›), four across 360px.
+- **The Macros row** (`phMacCellHtml`, a `<tr class="mac">` before More on the computer's week table): kJ / P / C / F, each a short
+  bar (solid had, pale the rest of the plan) and its number (`data-roll`, so it counts as a meal is had: the More button's kJ roll
+  moved here). A day to come is pale; a plan over its goal shows a deep number. The table's key gained had / under 60% / over goal /
+  planned.
+- **Colours** (`phMacOne`): over the goal = `--ph-herb-deep`; under 60% = `--ph-low`, on today only when what is planned also falls
+  short (the morning would otherwise always read amber). Tokens `--ph-mac-*` on `.ph-mpl`, so her gynae page draws them crimson.
+- **More**: its button shows the day's glasses only (its kJ is on the Macros row and the rings); the row's label reads "water".
+- **Tested** (sandbox, made-up "Zoe Mock" with a fertility case, a week of meals, goal 7,500 kJ): rings and row at 1280 and 360
+  (headless Edge pictures in crimson; four rings on one line at 360); kJ 6,500 typed in a ring → fat follows to 130 g, the toast,
+  focus moves on to protein; fat 80 typed → hers; cleared → 130 again; lunch marked Had it → kJ 1,321 → 3,433, carbs 80 of 50 deep
+  in the ring and the row; Targets reads Carbs "yours" 50, Fat "from kJ" 130; no console errors.
+- **Not checked:** her real records and her real goals (if she typed a carbs target before, hers still wins over 50 until she
+  clears it), the Key2 at 360 × 469 (the rings take ~140px under the clock bar), the Me drawer (unchanged).
+- **Not live:** waits for her "push live".

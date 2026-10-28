@@ -1682,7 +1682,7 @@ hot chips), her word), stored `food:<id>*<q>`, shown in kitchen
 words with − / + (each food its own step; a dish `dish:<id>*<q>` steps in serves). A dish's **Made of** adds its numbers itself
 (typed numbers only for what is not on the list); with no Made of a dish counts by itself (`phDishAuto`: the Thisbowl bowl in its
 name, else its typed ingredients matched) and Made of starts filled with that bowl. Nutrients add every item. The time is a small
-✎ field. A day's numbers line (kJ · P · C · F) opens 17 bars against **Targets** (C22's four + NHMRC women 31–50, each hers);
+✎ field. A day's numbers line (kJ · P · C · F) opens 17 bars against **Targets** (C22's four + NHMRC women 31–50 + carbs 50 g, each hers);
 "not counted" where no source gives a number, never 0. Thisbowl bowls R | L + Build your own. Code: "FOOD NUMBERS" (`phFood*`,
 `phNut*`, `phTb*`).
 **Shop foods** (her "download woolworth and coles and aldi food database because i buy from them"; her pick "Search as I type"):
@@ -1697,14 +1697,23 @@ fibre, sugar, sodium, and a mineral or vitamin only when the label gives it). Bu
 line, ↺ Same as usual on a day of its own. On HER record (the My profile record, else her signature name; a Me tag on her band) it is
 **Meals**, in her Body group; patients keep Diet, unchanged. Nutrients, nature and the week are worked out on read. Diet feeds
 Patterns (`diet_cool` / `diet_warm`, source Diet, DRAFT wording); Fang Bing Ren has no diet sign (food reactions pre-tick its signs).
-**Meals planner** (her Diet page, her word "change diet to Meals", fasting merged in): the clock bar on top, then a week table, days
-across: Breakfast · Lunch · Dinner · Snacks · drinks · Fast · More. A cell = its meal's time (a day's own bold) + its things one per
+**Meals planner** (her Diet page, her word "change diet to Meals", fasting merged in): the clock bar on top, today's macro rings
+under it, then a week table, days across: Breakfast · Lunch · Dinner · Snacks · drinks · Fast · Macros · More. A cell = its meal's time (a day's own bold) + its things one per
 line (pale = usual, bold = the day's own, ✓ + the time she had it); ✎ Usual on each row. A tap opens the picker under the cell (over
 it when more room above; fits the window), on the meal (empty = on adding): the meal's list (Eating out / Skipped today or before)
 + Done; on Dinner **Fast this night** (see Fasting). Esc closes the picker only. ⧉ on a day = Copy a day (pick days, Copy to N days);
 **Copy last week**; **Shopping list** = the week's list from the plan (each food added up, a dish's foods; Thisbowl's left out) into
-the Me drawer's Shopping (`src: "plan"`); Targets. **More** a day = water +1, the numbers line, warm · cool, the 17 bars (today's
-open by itself). Phone: a day at a time (‹ ›), the picker inline. Code: "MEALS PLANNER" (`phMpl*`).
+the Me drawer's Shopping (`src: "plan"`); Targets. **More** a day = water +1 (the button shows the glasses), the numbers line, warm ·
+cool, the 17 bars (today's open by itself). Phone: a day at a time (‹ ›), the picker inline. Code: "MEALS PLANNER" (`phMpl*`).
+**Macros against her goal** (her picks: the Macros row AND today's rings) [Meals macros against goal]: energy, protein, carbs, fat.
+**Goals** (`phDietGoal`): kJ is hers to type; protein 50 g and carbs 50 g are hers (her word: "set carbs to 50g a day"); fat is hers,
+else the rest of her kJ goal after protein and carbs (FSANZ: 17 kJ a gram of protein or carbs, 37 of fat; her grams win over a
+split); Targets tags it "from kJ". **Today's rings** (`phMacRingsHtml`, under the clock bar; a phone: the day it shows): a ring each,
+solid = had, pale = still planned, the % in it, the amount, "of" + the goal as a field (`data-diet-goal`, `phDietGoalSet`; clearing fat
+returns it to the rest), "n to go" / "n over" / "✓ goal". **The Macros row** (`phMacCellHtml`, before More, computer): four short bars
+a day with the number; a day to come as planned, pale (a plan over its goal = a deep number). Over the goal = deep for all four, under
+60% = amber (today: only when the plan also falls short). Worked out on read (`phMacDay` = `phDietMyDay` + `phMplPlanSum`); only the
+goals are stored. Code: "MACROS" (`phMac*`).
 **Food reactions**: a meal she had (her card, under Had it) and a patient's noted day or usual meal (Diet sheet, "Usually after it")
 take an **After it**: Gut / Body / Felt good chips + her own words (+ Own, they stay), ONE How strong bar, Started, From (which
 thing), a Note. The mark (the first reaction's picture in a pale red circle, green for Felt good) shows on the grid block, the Me
