@@ -5942,3 +5942,48 @@ adds MP, one drawing everywhere, one picture per row on a phone.
   no console errors. Picture: shots/meals-kj-count-2026-10-28.png.
 - **Not checked:** her real records (her past days' untouched usual meals now count too); the Key2 phone.
 - **Not live:** waits for her "push live".
+
+## Her body week: Fitness tabs, booked gym times, Cycle side column off (synth22, 2026-10-28)
+- **Her words (one synth22 batch):** (Cycle page) "the last column is not needed" (popup: the Fang Bing Ren column); (Weekly plan,
+  Wed + Sat "Rest 🔒") "make this editable"; "i want the gym to integrate with calendar. calendar needs it booked"; (Fitness) "make
+  this page more organised and integrated. i like table format show me 3 mocks"; (rail) "use your expertise to integrate fitness
+  exercise and health together with the calendar. show me options first before buiding"; "done". Mocks A (week table, days
+  across) · B (one page with tabs, days down) · C (calendar week): `mocks/body-week-synth22-mock-2026-10-28.html`, artifact
+  https://claude.ai/artifact/LZ91R4S2ms3NhFPgmFnuP6. **Her picks:** layout **Combine** (B's tabs + A's table + C's calendar as a
+  Table | Calendar switch, phone = days down); **a time per day**; a clash **shows** (amber, still books, nothing moved); **keep
+  deload weeks**; "Build the whole plan?" = **Yes, build it**.
+- **Built:**
+  1. Cycle: `phPfwSideWanted` leaves out "cycle" (the other pages keep their side column).
+  2. Rest days: `PH_FIT_RESTWD`, the lock and `phFitPlanSet`'s refusal are gone; `phFitIsRest(k)` (memo on `phMeS()`) = no
+     workout routine or planned session that day; `phFitGoalOn` keeps the deload Monday light / Sunday extra rest.
+  3. Booked: `it.wt = { weekday: { s, e, tp } }` on a weekly workout / rehab routine (`phFitWtOk`); `phMeExO(it, k)` is the one
+     read of a routine's day time (`phMeDayItems`, `phMeTripPauses`, `phHlRows`, the Me form's day and scope reads), so
+     Appointments draws each weekday at its own time; `phFitDayTm` adds the routine's own time under it. Writes:
+     `phFitBkWrite` / `phFitBkSet` (Booked editor), `phFitWtpSet` (Workout), `phFitBook` (calendar gap: plan + time in one save),
+     `phFitHlBook` (a health visit event), the calendar drag. `phFitPlanApply` carries the weekday's time to the new type; the Me
+     form's whole-routine time clears weekday times (keeps `tp`); `phDgMeDrop` says "Every Thursday" for a weekly workout / rehab.
+     Clash: `phFitClash` (her patients both clinics, `phFitAppts`, then her clinic routines); `phFitClinicSpan` for the shading.
+  4 + 5. `phHubFitHtml` = tabs (`phFitTab`; Exercises / Health are their own pages inside `.ph-fitx`, datalists only once);
+     `phHubSections` drops ex + health; `phFitTabNorm` maps the old doors. Week: `phFitWkHeadHtml`, `phFitWkTblHtml` (table +
+     the phone's `.fwph`), `phFitCalHtml` / `phFitCalItems`; taps in `phFitWkTap` (first in the Fitness click handler); the
+     Booked editor saves on Enter, a tap away, another day's Booked or focusout (`phFitBkFromEd`, once). Today pre-fills the
+     weekday's template (`phFitPlanOn` returns `wt[wd].tp`). Times read "6:00–7:00 pm" (`phFitWhen` on `phHubClk`). Old
+     `phFitWeekHtml` / `phFitPlanHtml` and their CSS (`.cwk`, `.ph-fit-wp`) removed. Colours: workout green (`--c-gy*`), rehab
+     gold, health the Health page's purple (`--hub-health`, text `--c-hl` #5E44B8, 6.1:1 on its tint; the mock's teal was a mock
+     colour), clash `--ph-low-tint` / `--ph-low-press`. A narrow table drops the Booked icon (`@container` on `.fwt-wrap`) and
+     a long time folds, never cut.
+- **Tested** (sandbox, a made-up record of hers: Gym Mon / Thu / Fri 7–8 am, Pilates Tue 6 pm, Shoulder rehab Mon / Wed / Fri
+  8 pm, Chiro Thu 4 pm, CBD clinic routine Tue 9–5, four patients Thu, one Fri 7:30 am): rail Meals · Herbs · Fitness · Habits ·
+  Log; Wednesday Rest → Gym saves (Today "Gym planned"); Thursday 6:00–7:00 am by Enter → this and next Thursday at 6, Monday
+  still 7; 10:15 → "Clashes with 10:00 am patient" (amber, saved); Friday 7–8 → "Clashes with 7:30 am patient"; Workout Wed =
+  Legs B → Today's template Legs B; Wed Gym → Pilates keeps 12:00–1:00 pm; Calendar: blocks at their times, clinic shaded, clash
+  amber, gap menu fully on screen (Sat's opens leftwards), Massage booked Sat 10 am, Gym booked Sun 9 am, drag Thursday +2 h =
+  every Thursday with Undo (restores), Appointments' drag offers "Every Thursday"; tabs Exercises / Health (a Physio logged
+  inside the tab, stays there) / Progress; `phMineOpen("hub-ex" | "hub-health")` land on those tabs; week ‹ › (ahead stops at
+  next week); phone 375: days down, today open, a tap opens Thursday, booking from the phone, Calendar with no sideways scroll.
+  No new console errors (an old "Identifier 'w' has already been declared" shows on the pre-build copy too). Pages checked:
+  Fitness (Week, Exercises, Health, Progress), Today's card, the Appointments data read (`phMeDayItems`), Health's rows, the Me
+  form reads. Pictures: `shots/body-week-table-1000.png`, `-calendar-1000.png`, `-phone-375.png`.
+- **Not tested:** her real records; the Key2; a finger drag on a real phone; the Appointments grid drawn on screen (its data read
+  was checked); Habits / Week pages with the new rest rule (they read `phFitWkSt`); Workout Mode's week dots.
+- **Not live:** waits for her "push live".

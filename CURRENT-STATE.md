@@ -423,7 +423,9 @@ No / Yes (`painYN`; Yes opens How bad + Pain type), Between periods, PMS & mood 
 each option with its picture beside the word (Flow, Colour and Clots the picture alone, the word in its hover title, the pick
 read out at the row's end, her "icon without words for flow color clots"), a line joining the numbered steps (filled once answered), the usual ring alone (a key
 in the head), How bad a 0–10 bar, BBT and its time as tinted fields, Fang Bing Ren a band at the foot [Cycle day card: lined up,
-pictures, rail]. **No Usual period card** (her pick, 2026-10-24):
+pictures, rail]. **No Fang Bing Ren side column on the Cycle page** (her 2026-10-28 "the last column is not needed":
+`phPfwSideWanted` leaves out "cycle"; Ren, Medical history, Usual period, Pain, Supplements and Blood tests keep it).
+**No Usual period card** (her pick, 2026-10-24):
 the footer asks the length once (stepper, or shortest–longest range when Irregular); a **Usually** line is worked out from her
 logged periods (`phCycUsual`; her old answers until two are logged) [Cycle page loses the Usual period card]. The Care Plan shows
 a slim cycle bar that never folds. **A man never tracks a cycle**; `PH_CYCLE_CUT_AGE` is 48.
@@ -840,7 +842,7 @@ Fitness + Exercises), the rest in Life.
 - Workouts / rehab / code / travel = her routines read by title (`PH_HUB_RX`); a title with a money word (invoice, bank, BAS, tax,
   bills, payments, lease, rent …, `PH_HUB_RX.money`) is never a workout (her "invoice is not fitness, its financials": "Claude
   auto-run" had matched "run"). A "This week" line in the Me drawer. Code: "MINE HUB" (`phHub*`).
-- **Health** (Body; "i want it to count towards my healthcare"): her events titled Chiro / Physio / Massage / GP / Scan count
+- **Health** (Fitness's Health tab since 2026-10-28; "i want it to count towards my healthcare"): her events titled Chiro / Physio / Massage / GP / Scan count
   themselves up to today, "+ Log today" (+ Other) for the rest; per visit With · Paid · nib back (hidden until Show $), Yours worked
   out; nib extras left a year for Chiro / Physio / Massage (limits typed once); a line on Money; a logged visit in the Week journal.
   Code: "HEALTH" (`phHl*`).
@@ -871,19 +873,40 @@ Fitness + Exercises), the rest in Life.
 ## Fitness + Exercises (C22's fitness, moved in)
 **Only on her own record.** C22's Fitness, moved in so she can plan and log her exercise (her word); all of it is live.
 [BUILD-NOTES "Fitness + Exercises"]
-- **Fitness** (Body, `phHubFitHtml`): Bring in (her C22 fitness, once: library, templates, log, planned, stairs, week plan; C22's
-  keys are READ, never written) · This week (workout + rehab routines and Steps; a dot a day = what Habits reads and ticks, one
-  tick both pages) · a posture tip under it
+- **Fitness = one page, four tabs** (her body week, synth22 2026-10-28, her "Combine" of three mocks; BUILD-NOTES "Her body week"):
+  **Week · Exercises · Health · Progress** (`phFitTab`; `.ftabs`). Exercises and Health left the rail; every door to them
+  (`phMineOpen("hub-ex" | "hub-health")`, the Gym card's doors, the Body heading) lands on Fitness at that tab (`phFitTabNorm`,
+  run by `presMineCycleNorm` and `presAssessTabRefresh`). The Exercises and Health tabs are those whole pages inside it
+  (`.ph-fitx`). **Week tab:** ‹ week › (`phFitWo`, back as far as she likes, one week ahead) · "n of m this week" · **Table |
+  Calendar** (`phFitView`). Table (`phFitWkTblHtml`, days across): **Plan** (a type or Rest, any weekday) · **Booked** (that
+  weekday's time; tap = two time fields + No set time, kept on Enter, a tap away or leaving them; the clinic's hours under it, or
+  "Clashes with 10:00 am patient" in amber: it still books, her pick) · **Workout** (a template per weekday; Today starts from it)
+  · **Done** (today's dot is the tick) · a row per rehab routine (its dots and time) · **Health** (that day's visits; a tap opens
+  the Health tab) · **Steps** (today a field). Row names Workout / Health are doors to their tab. Phone (≤640): the days run down
+  (`.fwph`), today open in place with the same fields, a tap opens another. Calendar (`phFitCalHtml`): the week as hours (6 am to
+  10 pm, wider when a block sits outside), the clinic shaded (first patient to last from Appointments, else her clinic routine),
+  workout / rehab / health blocks (a clash amber); a tap on a time opens a menu (her workout types · Chiro … Scan · Rest) that books
+  it (`phFitBook`: the plan and the time in one save; `phFitHlBook`: a visit event); a workout or rehab block drags up or down in
+  15 minutes for that weekday (`data-fit-cdrag`). Under the week: Today, Steps + Weight, Steps plan, the posture tip. **Progress
+  tab:** Goals, Personal bests + Weekly volume, Progression, Upcoming + Recent.
+- **Booked times live on the routine** (`it.wt = { weekday: { s, e, tp } }`, her pick "a time per day"): every read of a
+  routine's day time goes through `phMeExO(it, k)` (that day's own change over the weekday's time; `phMeDayItems`,
+  `phMeTripPauses`, `phHlRows`, the Me form), so Appointments draws each weekday at its own time. The Me form's "whole routine"
+  time clears the weekday times (keeps the workouts); a drag on Appointments offers **Every Thursday** (not Every day) for a weekly
+  workout or rehab (`phDgMeDrop`, `phFitWtOk`); a weekday moved to another type keeps its time (`phFitPlanApply`).
+- **Old Fitness page parts still there:** Bring in (her C22 fitness, once: library, templates, log, planned, stairs, week plan; C22's
+  keys are READ, never written) · a posture tip
   (`PH_FIT_TIPS` = C22's BIOMECH_TIPS word for word + her session / pain notes ≥ 15 characters; C22's weighting and date-seeded pick;
-  ♥ / ✕ with Undo in `d.fbt`, `shown` keeps a ♥'d tip all day; C22's `book33-biomech-ratings` READ, never written) · **Weekly
-  plan** = her calendar's routines (`phFitPlanApply`: a day set to a type moves that weekday to the routine of that type, made in
+  ♥ / ✕ with Undo in `d.fbt`, `shown` keeps a ♥'d tip all day; C22's `book33-biomech-ratings` READ, never written) · the **Plan**
+  row = her calendar's routines (`phFitPlanApply`: a day set to a type moves that weekday to the routine of that type, made in
   g-fitness if none; done days stay; the past never reads as missed; Undo) · Steps + Weight · Steps plan (walks + stairs, under the
   Steps card) · Today (type, template, sets, timed hold, rest ring, pain + stars, ▶ Workout Mode; Finish also ticks today's routine
   of that type) · Upcoming + Recent · **Goals** (one per exercise: reps / hold / weight / tick, `d.fgl`; reached on a ticked set =
   toast + buzz + gold; a flag on Today's row, in Workout Mode, in the exercise panel) · **Personal bests** · **Weekly volume**
   (8 weeks) · **Progression** (one exercise's last 7 sessions).
-- **Week rules** (no stored data): Wed + Sat rest every week (`PH_FIT_RESTWD`, locked in the Weekly plan, `phFitPlanSet` refuses a
-  type); deload weeks (`PH_FIT_DL`: 18-week cycle from Mon 29 Dec 2025, weeks 5, 9, 14, 18: Monday light, Sunday extra rest;
+- **Week rules** (no stored data): a rest day = a day her plan has no workout on (`phFitIsRest`, memo on `phMeS()`; her 2026-10-28
+  "make this editable": Wed + Sat are no longer fixed, any day can be Rest or a workout); deload weeks kept (her pick; `PH_FIT_DL`:
+  18-week cycle from Mon 29 Dec 2025, weeks 5, 9, 14, 18: Monday light, Sunday extra rest;
   `phFitGoalOn`); planned / done days a week (`phFitWkSt`, rest days never planned); the week streak (`phFitStreak`, memo on
   `phMeS()`; one short week forgiven; 8 empty weeks end it; toast at 4, 8, 12, 26, 52 via `phFitStkSay`).
 - **Coach + Workout Mode**: the coach line (`phFitCoach`: Last · PR with the trophy, gold past it · "▲ n kg vs last time" · "No
@@ -919,7 +942,7 @@ Fitness + Exercises), the rest in Life.
   is 320px on a computer (other C22 cards 240), the bottom sheet on the phone.
 - **Pilates milestones** (`phFitPilN` / `phFitPilSay`, hooked in `phMeDoneToggle` and `phFitWoSave`): the tick that lands her
   Pilates days on 7, 30, 50, 100, 200, 365 toasts.
-- **Exercises** (Body, after Fitness, `phHubExHtml`): her library (search, groups, Hide) + workout templates; C22's small figure on
+- **Exercises** (Fitness's Exercises tab since 2026-10-28, `phHubExHtml`): her library (search, groups, Hide) + workout templates; C22's small figure on
   each exercise chip (`PH_MU_ART.tileSvg` drawn once per group as a blob picture, `phMuTileSrc`; a repaint stays ~0.09 s).
   **Muscles & exercises** (C22's reference, `phMu*`): two figures tinted by group, Muscles · Exercises · Checks · Where it hurts,
   C22's entries word for word with their sources; an entry opens in place under the card with Back; C22's moving figures; Where it
@@ -950,7 +973,7 @@ Fitness + Exercises), the rest in Life.
   the name. Each drawer heading of hers ends in › to its page (`phMeH4` → `data-ph-me-go` → `phMineOpen(tab)`): Today's meals →
   Diet (Meals), Herbs → Herbs, To-do → This week, Trips → the trip, Birthdays, Routines; the rows stay today's ticks.
 - **Her rail: Body · Life first** (`PRES_MINE_RANK`, grp `body` / `life`): Body = Cycle, Meals (her Diet page; Fasting is off the
-  rail, opened from Meals' Your fasts ›), Herbs, Fitness (Exercises right after it), Habits, Health, Log; Life = Week, Work, Money,
+  rail, opened from Meals' Your fasts ›), Herbs, Fitness (its tabs hold Exercises and Health), Habits, Log; Life = Week, Work, Money,
   Code, trips, Birthdays, Routines; then her file and the visit steps; her bottom group reads "Clinic dated". Cycle leaves the Plan
   step on her record (`presMineCycleNorm` turns plan + cycle into profile + cycle, so every Cycle door lands there); Diet leaves Log.
   Phone's sideways row: Body · Life · File · Clinic captions. **Birthdays** (by month, + Birthday) and **Routines** (Morning ·
