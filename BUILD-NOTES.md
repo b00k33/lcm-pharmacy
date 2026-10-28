@@ -6024,4 +6024,5 @@ rows.
 - **Tested** (sandbox, her Wed 28 rebuilt): bars Fat 133.2 / 170 g · Protein 107.4 / 50 g · Choline 83 / 425 mg · Iron, then the
   rest; nothing cut at 1280; phone list Fat · Protein · Choline · Iron + 11 more; Targets start fa · p · ch. Picture:
   shots/meals-fat-protein-choline-first-2026-10-28.png.
-- **Not live:** waits for her "push live".
+- **LIVE 2026-10-28, build 20261028-215100** (her "push"; main 9922d805, joined 5c44339b). Live site checked: both stamps and
+  `PH_NUT_TOP` served.
