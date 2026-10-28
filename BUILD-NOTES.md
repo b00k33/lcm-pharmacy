@@ -6003,3 +6003,12 @@ adds MP, one drawing everywhere, one picture per row on a phone.
   day back ("Same as every lunch", the day's own list gone); her Break Fast card's line "Today only ↺ Undo", Had it | Eating out |
   Skipped unchanged; the row head's ✎ Usual opens "Every Lunch"; no console errors.
 - **Not live:** waits for her "push live".
+
+## 2026-10-28 · Live: build 20261028-214300
+Her "push live" (publish 6c87ffb3), with her yes ("Both live") to taking the body week along. Went live: the muscle picture for
+legs, low back and belly (0b29f7bb), her body week (946e8e37: Fitness tabs, booked gym times, rest days, the Cycle side column off)
+and Meals with no Every / Use every day on the day's line (53646eb1, committed in the last seconds before the publish). Checked on
+the live page: the stamp in index.html and sw.js, `PH_MSK_LEG`, `PH_MSK_SIDE_ROW`, `phMskRegOf`, `PH_MSK_PICKREG`, the Belly
+muscles chip (`data-pm-mk`), "No motor point here", `phFitIsRest`, `phPfwSideWanted`. The page there has its comments stripped, so a
+search for a comment's words finds nothing. Still hers: the DRAFT nerve, motor point, point and caution words of the 35 new muscle
+rows.
