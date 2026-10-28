@@ -6012,3 +6012,15 @@ the live page: the stamp in index.html and sw.js, `PH_MSK_LEG`, `PH_MSK_SIDE_ROW
 muscles chip (`data-pm-mk`), "No motor point here", `phFitIsRest`, `phPfwSideWanted`. The page there has its comments stripped, so a
 search for a comment's words finds nothing. Still hers: the DRAFT nerve, motor point, point and caution words of the 35 new muscle
 rows.
+
+## Meals: fat, protein and choline first (2026-10-28)
+- **Her words** (screenshot of Wed 28's open numbers: Protein · Iron · Choline · Vitamin C first, no Fat bar): "prioritise fat
+  protein and choline".
+- **How:** `PH_NUT_TOP = ["fa", "p", "ch"]` leads `PH_NUT_BARS` (a day's bars; Fat is a bar now, against `phDietGoal().fa`, the
+  rest of her kJ goal unless she typed one) and `PH_DIET_TG` (Targets); on a phone (`few`) the three always show, then the first
+  other one still under its goal, then "+ n more"; a meal's small numbers (`PH_NUT_MIC`) start with choline (fat and protein are
+  in its line already). The Macros row, the rings and the kJ · P · C · F lines keep their order (her MACROS picks).
+- **Tested** (sandbox, her Wed 28 rebuilt): bars Fat 133.2 / 170 g · Protein 107.4 / 50 g · Choline 83 / 425 mg · Iron, then the
+  rest; nothing cut at 1280; phone list Fat · Protein · Choline · Iron + 11 more; Targets start fa · p · ch. Picture:
+  shots/meals-fat-protein-choline-first-2026-10-28.png.
+- **Not live:** waits for her "push live".
