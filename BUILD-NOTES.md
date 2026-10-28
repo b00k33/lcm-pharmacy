@@ -5718,3 +5718,5 @@ Her popup answers to the run-16 list, all four the recommended option: minus poi
 - **Tested** (sandbox, made-up patient, card forced to 503 and 643 px): Heavy, None, Brown, Large, Many, Small taps set and clear,
   the read-out follows every tap, scroll stays put, no console errors. Pictures: `shots/cycle-card-iconsonly-503.png`, `-643.png`.
   **Not checked:** her real records, the Key2 phone.
+- **LIVE** 2026-10-28 on her "push": build 20261028-195700 (main 47f02070, published ALONE on top of 192500: the Wen Jing Tang and
+  MSK marks commits already on session-a stayed off main; joined back as b6de215d). The publish version was booted first.
