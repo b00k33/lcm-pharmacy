@@ -5304,3 +5304,21 @@ build it". Mid-build, her word: **"set carbs to 50g a day"**.
 - **Not checked:** her real records and her real goals (if she typed a carbs target before, hers still wins over 50 until she
   clears it), the Key2 at 360 × 469 (the rings take ~140px under the clock bar), the Me drawer (unchanged).
 - **Not live:** waits for her "push live".
+
+## Food list: beef bacon + matcha powder (2026-10-28)
+
+Her ask: "add beef bacon strips, matcha powder". Neither is in AFCD or AUSNUT 2023, so each comes from the nearest official table:
+- **Beef bacon** (`beef_bacon`, Protein group, a strip 11 g, usually 3): USDA FoodData Central SR Legacy 170198 "Beef, cured,
+  breakfast strips, cooked", per 100 g: 1,879 kJ, protein 31.3 g, carbs 1.4 g, fat 34.4 g, sodium 2,253 mg, choline 119.2 mg, B12
+  3.45 µg; no iodine given (not counted). The strip is USDA's own portion (3 slices = 34 g). New unit plural "strips"
+  (`PH_FOOD_UNITS`). Search words: beef strips, breakfast strips.
+- **Matcha powder** (`matcha`, Pantry group beside Cocoa, a teaspoon 2 g, steps of ½): Standard Tables of Food Composition in
+  Japan 2020, 8th edition (MEXT) 16035 "Matcha", per 100 g: 984 kJ, protein 29.6 g, carbs 1.6 g (its available carbohydrate, as
+  AFCD's carbs are), fat 5.3 g, fibre 38.5 g, iron 17 mg, calcium 420 mg, vitamin C 60 mg, folate 1,200 µg; no sugars, choline,
+  iodine or omega-3 given (not counted). Search words: green tea powder, powdered green tea.
+- The Targets source line credits USDA for beef bacon and MEXT for matcha.
+- **Tested** (sandbox): 1 tsp matcha = 19.7 kJ, P 0.6, C 0.03, F 0.1, iron 0.34 mg; 3 strips beef bacon = 620 kJ, P 10.3, C 0.5,
+  F 11.4, sodium 743 mg; names read "1 tsp matcha powder", "3 strips beef bacon"; the add list finds them by "matcha", "green
+  tea powder", "beef bacon", "breakfast strips", "bacon" (beside Bacon) and "beef"; no console errors.
+- **Not checked:** her real meals (a dish of hers that already types "matcha" in its ingredients now counts it on its own).
+- **Not live:** waits for her "push live".
