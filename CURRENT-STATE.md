@@ -568,7 +568,7 @@ chips that clear; a body chart whose big view zooms to a place when she points a
 concept picture of the pattern her signs there point to, header click pins; `phFbbZoomShow`, `PH_FBBP`, `phPpFbbFor`); a reference
 sheet [synth22: the "Looking at" line ... body map close-ups]. Formulas rank by `phFbrRank`, the leader is `phFbrLeadOf`;
 pre-fills come from charts, history, bloods, the intake form, pain words, food reactions, cycle, age and sex (derived, a tap
-always wins); today's cycle day log answers the Bing period rows (clots or dark blood, Spotting, Bright red; `phCycDayBing`). The board groups its rows under quiet subject headings (a twin pair's heading is its Bing subject); the complaint
+always wins); today's cycle day log answers the Bing period rows (clots or dark blood, Spotting, Bright red, Dark-pale; `phCycDayBing`). The day card's Colour has Dark-pale (her 2026-10-28 answer). The board groups its rows under quiet subject headings (a twin pair's heading is its Bing subject); the complaint
 search box's "+ Add as complaint" adds the typed words as a secondary complaint through Came in for's own add. The same box
 ("Search signs or formulas") finds a formula by any word's start or its initials ("wen dan", "xcht"; `phFbrFormMatch`): its block
 wears a ring, the rest fade (never hidden), a Formulas chip row under the box (best fit first); a chip, Enter or its block looks at

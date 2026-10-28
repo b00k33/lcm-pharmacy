@@ -1315,10 +1315,8 @@ origin/main:index.html`; don't trust this list's age.
 - Fang Bing Ren reference formulas waiting on her tables: Gui Zhi Fu Ling
   Wan, Chai Hu Gui Zhi Tang, Ling Gui Zhu Gan Tang (Huang Lian Jie Du Tang,
   Da Chai Hu Tang and Wen Jing Tang are families now).
-- Wen Jing Tang (integrate33 run 16, 2026-10-28): the minus size (-3 a line),
-  whether her unrated conditions score (4 each, as for Da Chai Hu), a
-  Dark-pale colour on the cycle card, Gui Zhi filing, and the DRAFT card
-  line, Ask her answers and picture labels.
+- Wen Jing Tang (integrate33 run 16, 2026-10-28): the DRAFT card line, Ask her
+  answers and picture labels (her four other answers are built).
 
 **Built on my reading — hers to confirm:** the pulse chart starts blank each
 day; Usual period shows Wheel |
