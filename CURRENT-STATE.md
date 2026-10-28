@@ -747,7 +747,7 @@ name, else its typed ingredients matched) and Made of starts filled with that bo
 ✎ field. A day's numbers line (kJ · P · C · F) opens 15 bars against **Targets** (C22's four + NHMRC women 31–50 + carbs 50 g, each hers);
 "not counted" where no source gives a number, never 0. **Fat · Protein · Choline lead** (her word 2026-10-28, "prioritise fat
 protein and choline"; `PH_NUT_TOP`): first in the bars (Fat a bar of its own against the fat goal), always shown on a phone,
-first in Targets; a meal's small numbers start with choline. NOT live. Thisbowl bowls R | L + Build your own. Code: "FOOD NUMBERS" (`phFood*`,
+first in Targets; a meal's small numbers start with choline. LIVE build 20261028-215100. Thisbowl bowls R | L + Build your own. Code: "FOOD NUMBERS" (`phFood*`,
 `phNut*`, `phTb*`).
 **Shop foods** (her "download woolworth and coles and aldi food database because i buy from them"; her pick "Search as I type"):
 the shops share no product data and FSANZ's Branded Food Database is not public, so the products are Open Food Facts' Australian
