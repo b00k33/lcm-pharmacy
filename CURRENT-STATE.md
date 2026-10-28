@@ -718,7 +718,10 @@ Her own prescription's doses at clock times SHE types, nothing pre-filled ("i ne
 ## Meals + the Diet log
 C22's meal prep lives in LCM. Her Breakfast / Lunch / Dinner event (`phMealSlot` reads the title) holds its meal: her usual one, or
 that day's own; prep ticks per dish (`preps`); ingredients (a tap = Shopping); one **Had it** for the whole meal (keeps the list;
-the grid's ✓ IS Had it: band pill, fold chip, card; Undo). The meal shows under the event; the calendar reads "first + count", food
+the grid's ✓ IS Had it: band pill, fold chip, card; Undo). A meal she had is edited as what she had (her 2026-10-28 "why cant i edit
+the spicy salmon fishbowl"): its picker and her card list `had.v` (`phMealList` → `phMealHadPut`), with no day line, and her plan
+stays as it was; C22's numbers (`had.nut`) cover its own words, a food or dish added to it counts its own, and they go with the
+last of its own words. The meal shows under the event; the calendar reads "first + count", food
 first. A meal value is one item or a list (`phMealVs` / `phMealV`). A dish can be a **Drink** (Dish | Drink on its editor); a
 dish's name in the meal opens the dish. "Something else" is gone. Data in her Me row, entry by entry (`d.dishes` = "My dishes",
 nature warm · neutral · cool + nutrients per serve; `d.meals`; `d.shop`). Me drawer: Today's meals (a tick per meal, water in ml, +250 ml),
