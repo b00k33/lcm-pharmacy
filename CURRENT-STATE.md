@@ -575,7 +575,7 @@ longus / brevis; FDL, FHL. The ITB, patellar tendon, Achilles tendon and thoraco
 motor point (drawn beige, `tdn`; the Motor point tool says "No motor point here"; Tender adds MP only where a muscle has one). Names
 say Peroneus. A muscle two areas share shows under the first pain it belongs to; a tap on it keeps the picture on the area she has
 open when it belongs there too (Psoas in Belly) and otherwise turns the picture to its own area. The new rows' nerve, motor point,
-point and caution words are Claude's DRAFT until she reads them. **Not built:** the arm (elbow, wrist) keeps its grey bellies until
+point and caution words are hers (her yes, all as written, 2026-10-28). **Not built:** the arm (elbow, wrist) keeps its grey bellies until
 drawn.
 
 ## Fang Bing Ren, Find the Ren & Patterns
