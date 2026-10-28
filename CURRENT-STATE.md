@@ -418,7 +418,11 @@ the Fertility-Friend-style calendar + BBT chart (`phCycFFHtml`), the one cycle v
 period. **Calendar tab** (her pick): a cycle picture (wheel + hormone / lining strip, `phCycDgHtml`) top left, the day
 card ALWAYS under it (today until she taps a day), the two months stacked on the right. The card asks in her order: Last period,
 How was it (Flow, Colour, Clots = Size Small / Large + Amount A few / Many, `clotSz` / `clotAmt`, read via `phCycClots`), Painful?
-No / Yes (`painYN`; Yes opens How bad + Pain type), Between periods, PMS & mood. **No Usual period card** (her pick, 2026-10-24):
+No / Yes (`painYN`; Yes opens How bad + Pain type), Between periods, PMS & mood (Mood · Gut · Body). **Its look** (her 2026-10-28
+"Combine" pick): one label column, every joined bar filling its line (a bar too long folds into an even joined grid, `phCsFit`),
+each option with its picture beside the word, a line joining the numbered steps (filled once answered), the usual ring alone (a key
+in the head), How bad a 0–10 bar, BBT and its time as tinted fields, Fang Bing Ren a band at the foot [Cycle day card: lined up,
+pictures, rail]. **No Usual period card** (her pick, 2026-10-24):
 the footer asks the length once (stepper, or shortest–longest range when Irregular); a **Usually** line is worked out from her
 logged periods (`phCycUsual`; her old answers until two are logged) [Cycle page loses the Usual period card]. The Care Plan shows
 a slim cycle bar that never folds. **A man never tracks a cycle**; `PH_CYCLE_CUT_AGE` is 48.
