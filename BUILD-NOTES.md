@@ -5850,3 +5850,16 @@ Matrix: `fbr-integrate33-zhigancao-2026-10-28.html` (root until live, then mocks
 - **Her answers** (same day, all four as built): weak or faint; two lines, 4 + 4; conditions 4 each; -3 a line, thin AND choppy. Still hers:
   the Gui Zhi filing and the DRAFT words.
 - **Not live:** waits for her "push live".
+
+## 2026-10-28 · A new device opens her own record (blank Me row)
+Found in passing while testing Meals (her yes, "go"): on a device that has never kept her Me row, her own record (My profile) did not
+draw: `phHubSeed` wrote `d.hubset.start` into a Me row that had no `hubset`. `phMeS` made the blank from `phMeBlank()` alone, and
+`phMeNormData` returned that bare blank for an empty row, so none of the parts (meals, fasts, trips, Mine hub, herb doses) had their
+maps until the row came back from storage. Now a blank row is normalised like any other (`phMeNormData` treats a missing row as `{}`;
+`phMeS` uses `phMeNormData(null)`), so every part has its maps from the first draw.
+- **Tested** (sandbox, no Me row, a sandbox owner tag; both removed after): the old bare blank throws "reading 'start'" from
+  `phHubSeed(true)`; the new blank does not, seeds the start day and the six tax items, and all eight of her own-record pages (Week,
+  Work, Money, Fitness, Exercises, Habits, Health, Code) draw; Patient profile opens with no error; Prescriptions search narrows to
+  the typed name and comes back.
+- **Not checked:** a real new device signed in; the Key2.
+- **Not live:** waits for her "push live".
