@@ -5161,3 +5161,30 @@ her 8 picks were all the recommended A, then "Yes, build it".
 - **Not checked:** her real records, the Key2 at 360 × 469, a plan whose pain map is in 3D mode (the small card would show the 3D
   view), the lines from a finding to a pattern (the test patient had no pattern yet).
 - **Not live:** waits for her "push live".
+
+## Tongue photo viewer: the chips organised like the Tongue page (2026-10-28)
+
+Her ask, with a screenshot of the viewer beside a tongue photo (a dated review): "organise this tongue chips, similar to the tongue
+page". Commit 1cf53f59 on session-a, NOT live.
+
+- **Before:** one long list of labelled rows (Colour, Shape · Moist, Coat, Coat area, Under, Marks), then "More — thickness,
+  deviation, coat quality" (the screenshot had those three rows open as well), then Reads as, then Same as / Clear.
+- **Now (`phRenTngSecHtml`):** the Tongue page's (`phTngCmpHtml`) tabs with counts, Body · Coat · Jiao · Sublingual. Body = colour
+  bar + red tip; Shape ▾ (shape + teethmarks) with its picks as ✕ chips, moist, thickness, deviation; Marks ▾ (no sunken: those
+  are Jiao zone signs) + picks. Coat = thickness, colour; quality. Jiao = the tongue map + one line per zone; a zone line or a
+  zone on the map opens its colour / coat / form / mark bars. Sublingual = veins. One row under: Reads as · ⟲ Same as · Clear.
+  "More" and the Coat area row are gone (as on the Tongue page; zone coat in Jiao writes coatArea too).
+- **Writes:** unchanged target (`phTngViewTarget`: today = the Tongue page's finding, else that day's visit or dated review). New
+  taps here: `redtip:` and `jz:z:g:k` (through `phTngJzToggle`, the Tongue page's own), `zone:` and the map's `data-tng-region`
+  (view state `st.tngZone`), tabs `data-vtp-tab` (`st.tngTab`; a sublingual shot opens on Sublingual). The viewer's handler
+  runs before the Tongue page's, so its map taps never reach the visit draft. Its dropdowns keep their own open key (`v-shape`,
+  `v-marks` in `phTjDdOpen`) so the page's Shape stays shut. Drawing (the small read-only chart) hides on Jiao.
+- **Also:** a colour / coat-colour chip's swatch had no size on the Tongue page's tab lines (the old rows sized it), so the dots
+  had vanished there too: `.ph-tgz-line .ph-ltr-qual i` / `.ph-tgz-zo` sized again (both pages). `.ph-rtng-acts` (the old Same
+  as / Clear row) went with its row.
+- **Checked** on Mia Testcase with drawn test photos (not a real tongue): 22 Oct (a dated review) — pale, Shape ▾ swollen +
+  teethmarks (the dropdown stays open between picks), red tip, Jiao Middle greasy, a map tap opens Lower, Sublingual dark: all
+  written to the dated review, the visit draft untouched, counts Body 4 · Coat 1 · Jiao 2 · Sublingual 1; today's photo —
+  "same finding as the Tongue page", ⟲ Same as 22 Oct copied it into the Tongue page's finding, the Fang Bing Ren underlines +
+  panel show, Drawing on Body and off on Jiao; no console errors. Pictures `shots/tongue-viewer-{body,coat,jiao}.png`,
+  `shots/tongue-page-dots.png`. The phone (360) was looked at in the pane (tabs 2 × 2, chips wrap). Not checked on her records.
