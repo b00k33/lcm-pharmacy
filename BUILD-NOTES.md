@@ -5704,3 +5704,17 @@ Her popup answers to the run-16 list, all four the recommended option: minus poi
   the day card shows Dark-pale with its swatch in the folded Colour grid; a tap stores `darkpale`, ticks the dark-pale row on Bing and the day
   strip, and gives the dark-blood + pale-blood clues; no console errors. **Not checked:** the phone day card; her real records.
 - **Still hers:** the DRAFT words (card line, Ask her answers, picture labels incl. "Thin pulse"). **Not live:** waits for her "push live".
+
+## Cycle day card: Flow, Colour and Clots as pictures alone (2026-10-28)
+- **Her words** (screenshot of the live 20261028-192500 card at her width, about 503 px, so the narrow stacked layout): "i liked
+  the icons from before. mock again". Cause: below 480 px the build hid the filling flow drops and the cramping womb. Mock page
+  `mocks/cycle-card-pictures-mock-2026-10-28.html` (artifact, real-app shots `shots/cycle-card-icons-{before,A,B}.png`); her own
+  answer: **"icon without words for flow color clots"**, i.e. the 2026-10-28 mock B's picture-only cells.
+- **Built:** those three rows are `.row.ph-cs-icrow` (`icRow` in `phCycleSignPopHtml`'s flat branch): a grid of label | 38 px
+  picture cells | `.ph-cs-ra`, the pick read out (`flowRead`, the colour's label, `clotRead` "Small, a few"; "—" when none).
+  Narrow card: label and read-out on one line, the cells under. The word stays in each button (font-size 0) as its spoken name and
+  hover title; None is a drop with a slash; clot titles "Small · under 2 cm". `phCsFit` skips icon rows. The womb shows at every
+  width again. Unpicked pictures in ink, as mock B drew them. Other rows keep the word.
+- **Tested** (sandbox, made-up patient, card forced to 503 and 643 px): Heavy, None, Brown, Large, Many, Small taps set and clear,
+  the read-out follows every tap, scroll stays put, no console errors. Pictures: `shots/cycle-card-iconsonly-503.png`, `-643.png`.
+  **Not checked:** her real records, the Key2 phone.
