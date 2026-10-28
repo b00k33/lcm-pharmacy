@@ -6084,3 +6084,23 @@ muscle words (notes only). Checked on the live page: `class="ftk`.
 ## 2026-10-28 · Live: build 20261028-224600
 Her "push" (publish 69f06e9f): Meals, Skipped on any meal any day (171ee1c6). Checked on the live page (comments are stripped there):
 `hd && hd.v === "skip"` twice, `phMealHadClear` 5 times (4 before).
+
+## Meals: a meal she had can be edited (2026-10-28)
+Her words, with a screenshot of the planner's Mon 26 Dinner ("7:50 pm · had it · Spicy Salmon Fishbowl"): "why cant i edit the spicy
+salmon fishbowl?". Why: Had it keeps the meal as it was (`had.v`), and the cell shows that, but the picker read and wrote the day's
+plan (`phMealPlan` / `e.v`). The Fishbowl came in from C22's log as her own words with its own numbers (`had.nut`) and no plan, so the
+picker opened on "Same as every dinner" with her usual dinner (or nothing), and any change went to the plan while the cell kept
+showing the Fishbowl.
+- Fix: `phMealList` gives a meal she had (her own, a day, not Skipped) as `{ v: had.v, own, had }`; `phMealListPut` sends it to the new
+  `phMealHadPut` (writes `had.v` only, toast + Undo as before); `phMealDayTopHtml` draws no day line for it ("Same as every …" and
+  "<Day> only ↺ Undo" are about the plan). One read and one write, so the planner's picker, her meal card, − / +, Eating out and the
+  ✕ all follow. `phDietSum`: C22's numbers cover her own words (`own:`); a food or dish added to such a meal counts its own; the
+  numbers go when the last of her own words is taken out. Skipped on a had meal is unchanged (`phMealHadSet(…, "skip")`).
+- **Tested** (sandbox `_meal-test.html`, a made-up "Zz Meal Edit" as My profile, a sandbox owner tag, Mon 26 Dinner seeded as C22
+  brings it: `own:Spicy Salmon Fishbowl` with numbers; at 1280): the cell reads as in her screenshot; its picker lists Spicy Salmon
+  Fishbowl with ✕, + Add, Eating out | Skipped, Done; + 1 cup white rice → cell "Spicy Salmon Fishbowl · 1 cup white rice", toast
+  "✓ Dinner · Mon 26 Oct · + 1 cup white rice", numbers = C22's + the rice's, the day's plan untouched; ✕ Fishbowl → cell "1 cup white
+  rice", C22's numbers gone; Undo brings it back; a meal not had (Thu 29) still writes the plan; Prescriptions search narrows and
+  comes back; no console errors. **Not tested:** her real records (her own Fishbowl entry); the phone picker; her Today card on a
+  had meal (the same list code).
+- **Not live:** waits for her "push live".

@@ -40586,7 +40586,7 @@
     items.forEach(([v, nut]) => {
       if (nut) { const o = phNutNone(); PH_NUT_MINE.forEach(k => { o[k] = +nut[k] || 0; }); add(o, PH_NUT_K.filter(k => o[k] == null), phMealName(v), false, false); }
       phMealVs(v).forEach(x => {
-        if (!nut) { const r = phNutOf(x); add(r.v, r.miss, phMealName(x), r.tb, r.dish); }
+        if (!nut || !/^own/.test(x)) { const r = phNutOf(x); add(r.v, r.miss, phMealName(x), r.tb, r.dish); }   // C22's numbers cover its own words; a food or dish added to it counts its own
         const tc = phMealTcm(x); if (tc) m[tc]++;
       });
     });
@@ -40683,6 +40683,19 @@
     });
     if (ok && fast) phMealFastPaint();
     return ok;
+  }
+  // what she had, changed after Had it (her 2026-10-28 "why cant i edit the spicy salmon fishbowl": the picker edited the plan
+  // while the cell showed had.v): the list is had.v, her plan stays as it was; numbers brought in from C22 (had.nut) stay with
+  // its own words and go once none of them is left
+  function phMealHadPut(dayKey, sl, v, say) {
+    const key = dayKey + "|" + sl, nm = phMealName(v) || "nothing", msg = say || (w => `✓ ${w} · ${nm}`);
+    phDietFresh = key;
+    return phMealSave((d, now) => phMealPut(d, key, now, e => {
+      if (!e.had) return;
+      const had = Object.assign({}, e.had, { v });
+      if (had.nut && !phMealVs(v).some(x => /^own/.test(x))) delete had.nut;
+      e.had = had;
+    }), msg(`${phMealWord(sl)} · ${phMeDayLbl(dayKey)}`), [["meals", key]]);
   }
   // ---- FOOD REACTIONS (her 14 picks 2026-10-26, mock food-reactions-mock-2026-10-26.html; her words "make notes of food e.g.
   // the food made me gassy or bloating or abdominal pain"). A reaction belongs to a meal she had (hers: rx on that day's meal
@@ -41131,7 +41144,10 @@
   const phMealScope = c => c.pt || c.day === "def" ? "all" : "day";
   // the list as it reads now, and whether it is that day's own (a patient's day with none follows their usual)
   function phMealList(c) {
-    if (!c.pt) return phMealPlan(c.day, c.sl);
+    if (!c.pt) {   // a meal she had: its list is what she had (had.v), so the planner's picker and her card change that
+      const h = c.day !== "def" ? phMealHad(c.day, c.sl) : null;
+      return h && phMealIsV(h.v) && h.v !== "skip" ? { v: h.v, own: true, had: true } : phMealPlan(c.day, c.sl);
+    }
     const D = phDietPt(c.pt), u = phMealIsV(D.usual[c.sl]) ? D.usual[c.sl] : "";
     if (c.day === "def") return { v: u, own: true };
     const o = D.days[c.day] || {};
@@ -41139,6 +41155,7 @@
   }
   function phMealListPut(c, vs, say) {
     const v = phMealV(vs);
+    if (!c.pt && phMealList(c).had) return phMealHadPut(c.day, c.sl, v, say);
     return c.pt ? phDietPtSet(c.pt, c.day, c.sl, v, say) : phMealPlanSet(c.day, c.sl, v, phMealScope(c), say);
   }
   // one item in or out (how: "add" | "rm" | a toggle), with its toast and Undo. A food is the same food at any amount; it comes
@@ -41244,6 +41261,7 @@
   // the planner's ✎ Usual (each row's head). A day's own list: "<Thu> only" and ↺ Undo on one row.
   const phMealOnly = day => (day === keyOf(TODAY) ? "Today" : DOW_SHORT[parseKey(day).getDay()]) + " only";
   function phMealDayTopHtml(c) {
+    if (!c.pt && phMealList(c).had) return "";   // a meal she had: the list is what she had, not her plan (the ✓ is on its cell and card)
     const lid = esc(phMealLid(c)), w = phMealWord(c.sl).toLowerCase(), own = phMealPlan(c.day, c.sl).own;
     return `<div class="ph-meal-top">${own ? `<span class="ph-meal-only">${phMealOnly(c.day)}</span><button type="button" class="ph-meal-back" data-meal-back="${lid}" title="Back to every ${w}">↺ Undo</button>` : `<span class="ph-meal-same">Same as every ${w}</span>`}</div>`;
   }
