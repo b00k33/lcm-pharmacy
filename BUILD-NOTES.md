@@ -5322,3 +5322,13 @@ Her ask: "add beef bacon strips, matcha powder". Neither is in AFCD or AUSNUT 20
   tea powder", "beef bacon", "breakfast strips", "bacon" (beside Bacon) and "beef"; no console errors.
 - **Not checked:** her real meals (a dish of hers that already types "matcha" in its ingredients now counts it on its own).
 - **Not live:** waits for her "push live".
+
+## Published build 20261028-134400 (2026-10-28)
+
+Her word: "push" (right after "it goes live ... when you say push live"). Hand-made publish under the lock (another session's
+tracked mock file had open edits, so publish-live.sh would stop): the two stamps bumped in blobs from HEAD, `session-a:main`, the
+site served 20261028-134400 within the wait. Live with it, everything committed on session-a since build 20261028-105500: the Care
+Plan page tidied, the Meals macros against her goal (carbs 50 g), beef bacon + matcha powder, the muscle picture's true shapes
+(shoulder + mid back), the tongue photo viewer's chips, a meal's day or every day (her pick B), and the food list's pies, kebabs,
+chips, creamy milk + shop products (foods-au.json serves). Each one's own note above says what was and was not checked; none was
+checked on her real records.

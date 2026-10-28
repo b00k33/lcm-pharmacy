@@ -1521,7 +1521,7 @@ muscle in parts is **tapped part by part** (her pick "Split"): pec major clavicu
 posterior, trapezius upper / middle / lower, teres minor / major, rhomboid minor / major: each part is its own `PH_MSK_MUSCLES`
 row with `of` = its whole; the whole is `hide` (off every list, chip and search) and an older mark on it shows on each part with
 nothing of its own (`phMskMuState`). On a narrow card each row stays a front + back pair. **Not built:** neck, arm, low back, hip,
-knee and ankle keep their grey bellies until drawn. Built, NOT live.
+knee and ankle keep their grey bellies until drawn.
 
 ## Fang Bing Ren, Find the Ren & Patterns
 **Fang Bing Ren** (the Triangle) is the one place constitutional-family scoring happens: one merged header (verdict + Quick
@@ -1693,7 +1693,7 @@ ones (shoppers' label scans, ODbL, credited on Targets) in `foods-au.json`, fetc
 whole, the last one a start; her shops' products and Australian barcodes first; "woolworths", "coles", "aldi" find what each
 sells, an Aldi own brand counts as Aldi). One she adds is kept in her Me row (`d.sfood["sh_<code>"]`, entry by entry) and joins
 `PH_FOOD` as group "From the shops" (`phSfReg`), at its label serve; numbers per 100 g / ml are the label's (kJ, protein, carbs, fat,
-fibre, sugar, sodium, and a mineral or vitamin only when the label gives it). Built, NOT live. Code: "SHOP FOODS" (`phSf*`).
+fibre, sugar, sodium, and a mineral or vitamin only when the label gives it). Code: "SHOP FOODS" (`phSf*`).
 **Diet page** under Log for every patient (`phDietPageHtml`): usual diet + days she notes (`rec.diet`, `phDietWrite`), one thing per
 line, ↺ Same as usual on a day of its own. On HER record (the My profile record, else her signature name; a Me tag on her band) it is
 **Meals**, in her Body group; patients keep Diet, unchanged. Nutrients, nature and the week are worked out on read. Diet feeds
