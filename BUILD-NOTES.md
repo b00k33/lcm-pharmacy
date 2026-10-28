@@ -6080,3 +6080,7 @@ opens the picker, so she could not find it.
 ## 2026-10-28 · Live: build 20261028-223000
 Her "push" (publish b6645a76): the body week's Done row into Workout as a tick (fc8c23f0) went live, with the neck and lower body
 muscle words (notes only). Checked on the live page: `class="ftk`.
+
+## 2026-10-28 · Live: build 20261028-224600
+Her "push" (publish 69f06e9f): Meals, Skipped on any meal any day (171ee1c6). Checked on the live page (comments are stripped there):
+`hd && hd.v === "skip"` twice, `phMealHadClear` 5 times (4 before).
