@@ -568,7 +568,7 @@ chips that clear; a body chart whose big view zooms to a place when she points a
 concept picture of the pattern her signs there point to, header click pins; `phFbbZoomShow`, `PH_FBBP`, `phPpFbbFor`); a reference
 sheet [synth22: the "Looking at" line ... body map close-ups]. Formulas rank by `phFbrRank`, the leader is `phFbrLeadOf`;
 pre-fills come from charts, history, bloods, the intake form, pain words, food reactions, cycle, age and sex (derived, a tap
-always wins). The board groups its rows under quiet subject headings (a twin pair's heading is its Bing subject); the complaint
+always wins); today's cycle day log answers the Bing period rows (clots or dark blood, Spotting, Bright red; `phCycDayBing`). The board groups its rows under quiet subject headings (a twin pair's heading is its Bing subject); the complaint
 search box's "+ Add as complaint" adds the typed words as a secondary complaint through Came in for's own add. The same box
 ("Search signs or formulas") finds a formula by any word's start or its initials ("wen dan", "xcht"; `phFbrFormMatch`): its block
 wears a ring, the rest fade (never hidden), a Formulas chip row under the box (best fit first); a chip, Enter or its block looks at
@@ -634,6 +634,8 @@ pearl). **The card's rows ARE the Fang Bing Ren tables** (`PH_FORMULAS[id]`): he
 `renderPharmacy`) re-applies when the saved edits change. **Nothing else may write to `PH_FORMULAS`.** Every Guide edit goes
 snapshot → change → `phGdfDone` (tidy, stamp, save with rollback, sync, repaint, Undo). A learned `a_` sign off a formula is
 written as 0, and lists filter `w !== 0`. Cloud: `mergeFbrEdits` beside `mergeTemplateOverrides`. Notes-only rows: `gdNoteEdits`.
+A notes-only formula that has become a scoring family (Wen Jing Tang, 2026-10-28) leaves Notes only; its memory aid, distinction,
+conditions and source show on the family's card (`phGdfNoteIsFam`, `phGdfFamNoteId`).
 Details and tests: [Guide Families].
 **Key sign pictures (her picks):** every sign a family weighs 4 or 5 has ONE picture (`phKsDesc` / `phKsSvgHtml`; a Bing sign and
 its Ren twin share it): hand-drawn for Gui Zhi's Key signs (`PH_KS_SC`), else her Tongue / Abdomen chart, the wrist with her pulse
