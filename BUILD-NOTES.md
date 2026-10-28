@@ -6104,3 +6104,7 @@ showing the Fishbowl.
   comes back; no console errors. **Not tested:** her real records (her own Fishbowl entry); the phone picker; her Today card on a
   had meal (the same list code).
 - **Not live:** waits for her "push live".
+
+## 2026-10-28 · Live: build 20261028-230000
+Her "push live" (publish 975e683b). Went live: a meal she had can be edited (5ef60c71, her Spicy Salmon Fishbowl). Checked on the
+live page: the stamp in index.html and sw.js, `phMealHadPut`, the had list in `phMealList`.
