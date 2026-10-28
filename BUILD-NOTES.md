@@ -5237,3 +5237,38 @@ shop foods = **Search as I type**; AUSNUT 2023 download = **Yes**; chips = **Bot
 - **Not checked:** her own Meals planner (needs My profile), the shopping list from a plan with a shop product, her real records,
   the Key2. Searching "creamy milk" lists creamy soy / evaporated milk first; Pauls Farmhouse Gold is found by "farmhouse" or
   "pauls" (its label says "full cream"). "pie" as the last word still finds "pieces" (the last word is a start, by design).
+
+## A meal: that day or every day (2026-10-28)
+
+Her words, with a screenshot of the planner's picker (Breakfast · Thu 29 · 5:30 am, the bar Just Thu | Every Breakfast with
+Every Breakfast on, + Add · Eating out · Done, nothing in the meal): "it is very confusing how to set the daily breakfast vs just
+breakfast of today". The third report on this spot (10/26 "make it easier for me to edit my 'every breakfast'" gave ✎ Usual;
+10/27 pick 4 put the bar on top), so the way it works changed, not its place. NOT live.
+
+- **Why it confused:** the bar was a hidden switch for her NEXT change, not two lists. Just <day> changed nothing she could see
+  (a this-visit-only flag, `phMealSc`); Every <meal> on a day with its own list silently made that list her usual one; her own
+  meals had no way back to the usual.
+- **Her picks** (popup on a working three-option widget: A two tabs, B this day + one button, C asks on the first change):
+  **B**; goals: all four (set my usual, change one day, undo a one-day change, see what each day gets); opens on the day, on
+  Every <meal> while she has no usual one yet; changing Every <meal> leaves a day's own list as it is.
+- **Now (`phMealDayTopHtml`, "MEAL DAY OR EVERY DAY"):** a day's list changes that day only (`phMealScope`: "day" for any day of
+  hers, "all" only for "def"). The line on top reads "Same as every breakfast" while the day follows her usual; once changed,
+  "Thu only" (today: "Today only") with ✎ Every Breakfast on the same row and **↺ Undo** (`data-meal-back` → `phMealDayBack`: the
+  day's `v` goes, Had it and prep ticks stay) + **Use every day** (`data-meal-every` → `phMealPlanSet(.., "all")`) on a row under it
+  (two rows on purpose: four buttons need 361px, the picker has 341 on the computer and 254 on a 360 phone). Toasts say it:
+  "✓ Breakfast · Thu only · + 2 eggs", "↺ Thu 29 Oct · same as every breakfast", "✓ Every Breakfast · …".
+- **The planner's picker:** ✎ Every Breakfast swaps the picker to her usual list in place (`phMplCell.us`, `data-mpl-view`):
+  heading "Every Breakfast" + ‹ Thu 29, the line "Every day without its own", no time and no Fast row; an empty list opens on
+  adding. A cell opens on Every <meal> while she has no usual one and the day has none of its own (`phMplUsFirst`).
+- **Her card** (calendar / Today's meals): the same line; ✎ Usual is now ✎ Every Breakfast (still her usual meal as one card,
+  whose line now says "Every day without its own", as the picker).
+- **Fixed on the way:** on a 360 phone the picker's foot (+ Add · Eating out | Skipped · Done, 310px, no wrap) made the whole
+  picker 310px inside 278, so it scrolled sideways on today and the days before: the picker's column is `minmax(0, 1fr)` and
+  the foot wraps (Done goes under).
+- **Gone:** `phMealScopeHtml`, `phMealSc`, `data-meal-scope` and its handler, `.ph-meal-top .ph-meal-bar.full`.
+- **Tested (sandbox, made-up "Zz Meal Test" as My profile, sandbox owner tag only):** Thu 29 with no usual opened on Every
+  Breakfast; oats + banana went to every day (Wed / Thu / Fri pale); ‹ Thu 29 → "Same as every breakfast"; + eggs → Thu only,
+  Thu bold, Wed / Fri unchanged; toast added to Every Breakfast while Thu had its own → Thu kept its own, Wed / Fri got toast; ↺
+  Undo → Thu follows again; Thu − banana → Use every day → every day without banana; the card's ↺ Undo and ✎ Every Breakfast;
+  1024 and 360 wide, nothing wider than its box; no console errors. Picture `shots/meal-day-or-every-phone-2026-10-28.jpg`.
+- **Not checked:** her real records, the Key2, a Dinner with a fast night planned (its picker keeps the Fast row on the day).

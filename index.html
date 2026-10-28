@@ -6282,10 +6282,15 @@
      The planner's picker, the meal card, her usual meal and a patient's Diet sheet all draw it ---- */
   #pharmacyPage .ph-meal-top { display: flex; align-items: center; gap: 6px; min-width: 0; }
   #pharmacyPage .ph-meal-bar.full { display: flex; width: 100%; max-width: 100%; }
-  #pharmacyPage .ph-meal-top .ph-meal-bar.full { flex: 1 1 auto; width: auto; min-width: 0; }
   #pharmacyPage .ph-meal-bar.full button { flex: 1 1 auto; min-width: 0; justify-content: center; padding: 0 6px; }
   #pharmacyPage .ph-meal-top .ph-c22-go { flex: none; display: inline-flex; align-items: center; gap: 4px; padding: 0 10px; white-space: nowrap; }
   #pharmacyPage .ph-meal-top .ph-c22-go .ph-meal-ic { width: 12px; height: 12px; }
+  #pharmacyPage .ph-meal-top { flex-wrap: wrap; }   /* MEAL DAY OR EVERY DAY: the day's line wraps on a narrow card */
+  #pharmacyPage .ph-meal-top .ed { margin-left: auto; }
+  #pharmacyPage .ph-meal-same { font: 600 var(--fs-12)/1.3 var(--font-body); color: var(--ph-faint); }
+  #pharmacyPage .ph-meal-only { height: 24px; padding: 0 8px; display: inline-flex; align-items: center; border-radius: 6px; background: var(--ph-herb-tint); color: var(--ph-herb); font: 700 var(--fs-12)/1 var(--font-body); white-space: nowrap; }
+  #pharmacyPage .ph-mpl-pick { grid-template-columns: minmax(0, 1fr); }   /* the picker keeps its width: + Add · Eating out | Skipped · Done made it 310px on a 360 phone */
+  #pharmacyPage .ph-mpl-pick .foot { flex-wrap: wrap; }
   #pharmacyPage .ph-meal-tbl { display: grid; min-width: 0; border-top: 1px solid var(--ph-hair, var(--ph-line)); }
   #pharmacyPage .ph-meal-tr { min-height: 40px; display: grid; grid-template-columns: minmax(0, 1fr) auto 32px; align-items: center; gap: 8px; border-bottom: 1px solid var(--ph-hair, var(--ph-line)); }
   #pharmacyPage .ph-meal-tbl.kj .ph-meal-tr { grid-template-columns: minmax(0, 1fr) auto 52px 32px; }
@@ -39418,7 +39423,7 @@
      have it contribute to my diet- allow me to plan my breakfast - make a diet log page" + "do the same for lunch and
      dinner events" + "use c22 to help with this"; her 12 picks on diet-log-mock-2026-10-25.html, then "build it").
      C22's meal prep moved in: a Breakfast / Lunch / Dinner event of hers holds the meal planned for it (her usual one, or
-     that day's own: "Just today | Every <meal>" for the whole set), its prep ticks and ingredients, one-tap Had it.
+     that day's own: a day's sheet changes that day only, Use every day makes it her usual), its prep ticks and ingredients, one-tap Had it.
      Several things a meal (her 2026-10-26 "i want to be able to add multiple dishes with drinks etc in breakfast lunch
      dinner"; her 9 picks on meal-items-mock-2026-10-26.html): Food and Drinks lists, each with its own + Food / + Drink
      (the picker stays open, ✓ on what is in, her own typed in + Enter), a cup on a drink, one Had it for the whole meal.
@@ -40472,7 +40477,7 @@
       phMealPut(d, def, now, e => { e.v = v; });
       if (dayKey !== "def" && d.meals[key] && !d.meals[key].del) phMealPut(d, key, now, e => { delete e.v; });
     }, msg(`Every ${phMealWord(sl)}`), [["meals", def], ["meals", key]]);
-    return phMealSave((d, now) => phMealPut(d, key, now, e => { e.v = v; }), msg(phMealWord(sl)), [["meals", key]]);
+    return phMealSave((d, now) => phMealPut(d, key, now, e => { e.v = v; }), msg(`${phMealWord(sl)} · ${phMealOnly(dayKey)}`), [["meals", key]]);
   }
   function phMealPrepTick(dayKey, sl, dishId, i) {
     const key = dayKey + "|" + sl, dish = phMealDishesOf(phMealPlan(dayKey, sl).v).find(d => d.id === dishId);
@@ -40523,13 +40528,12 @@
     return phMealListTog(pk, v, "add");
   }
   // ---- a meal's list (her picks 2026-10-26): Food and Drinks, each with its own add; the picker stays open ----
-  // c = {day, sl, pt?}: her meal, or a patient's diet (pt = their name). Hers: "Just today" edits that day's own list, "Every
-  // <meal>" her usual one; a day follows her usual until she makes it its own
-  const phMealSc = {};   // "day|sl" -> "day": she tapped Just today on a day that still follows her usual (this visit only)
+  // c = {day, sl, pt?}: her meal, or a patient's diet (pt = their name). Hers: a day's list changes that day only (it follows
+  // her usual until she changes it); day "def" is her usual one (MEAL DAY OR EVERY DAY)
   const phMealLid = c => [c.day, c.sl].concat(c.pt ? [c.pt] : []).join("|");
   const phMealCtx = s => { const p = phMealSplit(s); return { day: p.day, sl: p.sl, pt: p.rest || "" }; };
   const phMealPkIs = (pk, c) => !!pk && pk.mode !== "snack" && pk.day === c.day && pk.sl === c.sl && (pk.pt || "") === (c.pt || "");
-  const phMealScope = c => c.pt || c.day === "def" ? "all" : phMealPlan(c.day, c.sl).own || phMealSc[c.day + "|" + c.sl] === "day" ? "day" : "all";
+  const phMealScope = c => c.pt || c.day === "def" ? "all" : "day";
   // the list as it reads now, and whether it is that day's own (a patient's day with none follows their usual)
   function phMealList(c) {
     if (!c.pt) return phMealPlan(c.day, c.sl);
@@ -40593,10 +40597,10 @@
   let phMealPk = null;   // the picker open on a meal's list: {day, sl, pt?, k "f" (Food) | "d" (Drinks)}
   function phMealCardHtml(dayKey, x, sl) {
     const key = dayKey + "|" + sl, had = phMealHad(dayKey, sl), word = phMealWord(sl);
-    // her pick 4 (2026-10-26): a button opens her usual meal in one card; since her pick 9 (2026-10-27) it is ✎ Usual beside
-    // Just today | Every <meal>, and Had it shares its row with Eating out | Skipped (pick 7). The time is its own small ✎ on
+    // her pick 4 (2026-10-26): a button opens her usual meal in one card; since her pick B (2026-10-28) it is ✎ Every <meal> at
+    // the end of the day's line (MEAL DAY OR EVERY DAY), and Had it shares its row with Eating out | Skipped (pick 7). The time is its own small ✎ on
     // the when line (phMealWhenHtml)
-    const edit = x.me ? `<button type="button" class="ph-c22-go" data-meal-def="${sl}" title="Every ${word}" aria-label="Edit your usual ${word.toLowerCase()}">${phMealSvg("edit")}Usual</button>` : "";
+    const edit = x.me ? `<button type="button" class="ph-c22-go ed" data-meal-def="${sl}" title="Your usual ${word.toLowerCase()}" aria-label="Edit your usual ${word.toLowerCase()}">${phMealSvg("edit")}Every ${word}</button>` : "";
     if (had) {
       const ate = phMealAte(dayKey, sl), [n, all] = phMealPrepAll(key, ate);
       const sub = [keyOf(new Date(had.at)) === dayKey ? "Had it · " + phMealClock(had.at) : "Had it"].concat(all ? [`prep ${n} of ${all}`] : []).join(" · ");
@@ -40625,23 +40629,37 @@
   // bar Everyday | Drinks | Thisbowl | My dishes with a row a food (its usual amount, +), a thing in the meal shows once (it
   // leaves the list), the small numbers behind a tap, Eating out | Skipped one bar. Drawn by her meal card, the planner's
   // picker, her usual meal and a patient's Diet sheet ----
-  // a meal's list: hers (Just today | Every <meal> on top, before any change; o.usual = her card's ✎ Usual beside it) or a
+  // a meal's list: hers (the day's line on top, phMealDayTopHtml; o.usual = her card's ✎ Every <meal> at its end) or a
   // patient's (↺ Same as usual on a day of its own), the table + Add, its numbers, Eating out | Skipped (o.inst === false: the
   // card puts that bar beside Had it)
   function phMealListHtml(c, o) {
     o = o || {};
     const lid = phMealLid(c), L = phMealList(c), vs = phMealVs(L.v), open = phMealPkIs(phMealPk, c);
     let top = "";
-    if (!c.pt && c.day !== "def") top = `<div class="ph-meal-top">${phMealScopeHtml(c, c.day === keyOf(TODAY) ? "Just today" : "Just this day")}${o.usual || ""}</div>`;
+    if (!c.pt && c.day !== "def") top = phMealDayTopHtml(c, o.usual);
     else if (c.pt && c.day !== "def") {
       top = L.own ? `<div class="ph-meal-src">${L.v === "skip" ? "Skipped" : "This day"}<button type="button" class="ph-meal-back" data-meal-same="${esc(lid)}">↺ Same as usual</button></div>` : `<div class="ph-meal-src">Same as usual</div>`;
     }
     const add = open ? phMealAddHtml(c, vs) : `<button type="button" class="ph-meal-addrow" data-meal-add="${esc(lid)}" data-meal-k="" aria-expanded="false">${phMealSvg("plus")}Add food or drink</button>`;
     return `<div class="ph-meal-ls">${top}<div>${phMealTblHtml(lid, vs, false)}${add}</div>${phMealNumsHtml(lid, vs)}${o.inst === false ? "" : phMealInstHtml(c, vs)}</div>`;
   }
-  // Just <day> | Every <meal>: the whole set (her pick); Just makes the next change that day's own, Every on a day's own list
-  // makes it her usual one
-  const phMealScopeHtml = (c, dayWord) => { const lid = phMealLid(c), sc = phMealScope(c); return `<div class="ph-meal-bar full" role="group" aria-label="Which days">${[["day", dayWord], ["all", "Every " + phMealWord(c.sl)]].map(([k, l]) => `<button type="button" class="${sc === k ? "on" : ""}" data-meal-scope="${k}" data-meal-l="${esc(lid)}" aria-pressed="${sc === k}">${l}</button>`).join("")}</div>`; };
+  // ---- MEAL DAY OR EVERY DAY (her pick B 2026-10-28, "it is very confusing how to set the daily breakfast vs just breakfast
+  // of today"; the Just <day> | Every <meal> switch is gone): a day's list changes that day only. Its line reads "Same as
+  // every <meal>" until she changes it, then "<Thu> only" with ↺ Undo (back to her usual) and Use every day (that list
+  // becomes her usual; a day with its own keeps it). ed = ✎ Every <meal> at the end (her card: a sheet; the picker: in place)
+  const phMealOnly = day => (day === keyOf(TODAY) ? "Today" : DOW_SHORT[parseKey(day).getDay()]) + " only";
+  function phMealDayTopHtml(c, ed) {
+    const lid = esc(phMealLid(c)), w = phMealWord(c.sl).toLowerCase(), own = phMealPlan(c.day, c.sl).own;
+    // ✎ Every <meal> keeps its place at the end of the first row; a day's own list gets its two buttons on a row under it
+    const st = own ? `<span class="ph-meal-only">${phMealOnly(c.day)}</span>` : `<span class="ph-meal-same">Same as every ${w}</span>`;
+    return `<div class="ph-meal-top">${st}${ed || ""}</div>` + (own ? `<div class="ph-meal-top"><button type="button" class="ph-meal-back" data-meal-back="${lid}" title="Back to every ${w}">↺ Undo</button><button type="button" class="ph-c22-go solid" data-meal-every="${lid}" title="Every ${w} from now on">Use every day</button></div>` : "");
+  }
+  // back to her usual: the day's own list goes (Had it and the prep ticks stay)
+  function phMealDayBack(day, sl) {
+    const key = day + "|" + sl;
+    phDietFresh = key;
+    phMealSave((d, now) => phMealPut(d, key, now, e => { delete e.v; }), `↺ ${phMeDayLbl(day)} · same as every ${phMealWord(sl).toLowerCase()}`, [["meals", key]]);
+  }
   // the meal as a small table: a row a thing, its mark (a cup on a drink, else its nature's dot) and name (a dish's opens the
   // dish), − amount + (each thing its own step, her pick 5), kJ (the planner, kj), ✕
   const phMealTblHtml = (lid, vs, kj) => vs.length ? `<div class="ph-meal-tbl${kj ? " kj" : ""}">${vs.map(x => phMealRowHtml(lid, x, kj)).join("")}</div>` : "";
@@ -40882,7 +40900,7 @@
       if (s.pk.mode === "snack") return `<div class="ph-lk-card ph-meal-sh" role="dialog" aria-label="${esc(t)}">${hd(t)}${phMealPickHtml(s.pk)}</div>`;
       // Every <meal> (her pick 4): her usual meal in one card, its numbers and the small grid, then Done
       const every = !s.pk.pt && s.pk.day === "def";
-      return `<div class="ph-lk-card ph-meal-sh" role="dialog" aria-label="${esc(t)}">${hd(t)}${every ? `<div class="ph-c22-pw"><span>Every day that follows your usual</span></div>` : ""}<div class="ph-meal-lst">${phMealListHtml(s.pk, { full: true })}${phRxPtSec(s.pk)}</div><div class="ph-meal-acts"><button type="button" class="ph-c22-go solid" data-meal-shx="1">Done</button></div></div>`;
+      return `<div class="ph-lk-card ph-meal-sh" role="dialog" aria-label="${esc(t)}">${hd(t)}${every ? `<div class="ph-c22-pw"><span>Every day without its own</span></div>` : ""}<div class="ph-meal-lst">${phMealListHtml(s.pk, { full: true })}${phRxPtSec(s.pk)}</div><div class="ph-meal-acts"><button type="button" class="ph-c22-go solid" data-meal-shx="1">Done</button></div></div>`;
     }
     const x = phMeDayItems(s.day).find(y => y.me === s.me);
     if (!x || !x.ml) return "";
@@ -41214,7 +41232,8 @@
      - The thin clock bar on top: her fast's time, its goal, her aim, Your fasts › (the old Fasting page, out of the rail).
      - The week DAYS ACROSS: Breakfast · Lunch · Dinner · Snacks · drinks · Fast · More. A cell = its time (bold when that day
        moved it) and one line a thing (bold = that day's own, pale = her usual, ✓ = had it). A tap opens the picker over the
-       cell: its things (− / + / ✕), their numbers, the food list, Just <day> | Every <meal>, Done. Dinner's picker plans a
+       cell: the day's line (Same as every <meal> | <Thu> only ↺ Undo · Use every day · ✎ Every <meal>), its things (− / + / ✕),
+       their numbers, the food list, Done. Dinner's picker plans a
        fast (Just <day> | Every <weekday>); the cell then reads "Fast".
      - The Fast row: 5 am that day to 5 am the next; cream = eating, green = fasted, striped = to come, a line = now.
      - More (a day): water, the numbers line, warm · cool, the bars; today's opens by itself (phDietOpenMap).
@@ -41373,7 +41392,7 @@
     const nx = !(own && e.fp === 1), def = wd.includes(dow);
     phMealSave((d, now) => phMealPut(d, key, now, x => { if (!nx && !def) delete x.fp; else x.fp = nx ? 1 : 0; }), nx ? `✓ Fast · ${phMeDayLbl(k)}` : `${phMeDayLbl(k)} · no fast`, [["meals", key]]);
   }
-  // the picker over a tapped cell (A CALMER MEAL, her picks 2026-10-27): Just <day> | Every <meal> on top, the meal as a table
+  // the picker over a tapped cell (A CALMER MEAL, her picks 2026-10-27): the day's line on top (MEAL DAY OR EVERY DAY), the meal as a table
   // with kJ, its numbers, + Add (the list opens under the meal; an empty meal opens with it), Eating out | Skipped and Done in
   // the foot (a snack's: the snack picker, one tap adds it). It keeps the meal picker's own state (phMealPk) on its cell
   function phMplPickHtml(inl) {
@@ -41386,19 +41405,24 @@
       phMealPk = { day: c.day, sl: "s", mode: "snack" };
       return `<div class="ph-mpl-pick${inl ? " inl" : ""}${op}"${pos} role="dialog" aria-label="Snacks · drinks · ${esc(dl)}"><div class="hdr"><b>Snacks · drinks</b><small>${esc(dl)}</small>${x}</div>${phMealPickHtml(phMealPk)}</div>`;
     }
-    const ev = phMealEvents(c.day)[c.sl], m = ev ? phC22Min(ev.s) : null, lid = phMealLid(c), vs = phMealVs(phMealList(c).v), w = phMealWord(c.sl);
-    if (fresh) { phMealPk = vs.length ? null : { day: c.day, sl: c.sl, k: "" }; phMealTab = "ev"; }
-    else if (phMealPk && !phMealPkIs(phMealPk, c)) phMealPk = null;
-    const open = phMealPkIs(phMealPk, c);
+    // MEAL DAY OR EVERY DAY: c.us = her usual one shown in place (✎ Every <meal>, ‹ <day> back), so mc = the list it changes
+    const us = !!c.us, mc = us ? { day: "def", sl: c.sl } : c;
+    const ev = phMealEvents(c.day)[c.sl], m = ev ? phC22Min(ev.s) : null, lid = phMealLid(mc), vs = phMealVs(phMealList(mc).v), w = phMealWord(c.sl), wl = w.toLowerCase();
+    if (fresh) { phMealPk = vs.length ? null : { day: mc.day, sl: c.sl, k: "" }; phMealTab = "ev"; }
+    else if (phMealPk && !phMealPkIs(phMealPk, mc)) phMealPk = null;
+    const open = phMealPkIs(phMealPk, mc);
     const tm = m != null ? `<button type="button" class="tm" data-meal-edit="${esc("it:" + ev.me + "|" + c.day)}" title="Change the time">${esc(phHubClk(m))}${phMealSvg("edit")}</button>` : "";
-    return `<div class="ph-mpl-pick${inl ? " inl" : ""}${op}"${pos} role="dialog" aria-label="${w} · ${esc(dl)}">
-      <div class="hdr"><b>${w}</b><small>${esc(dl)}</small>${tm}${x}</div>
-      ${c.sl === "d" ? phMplFastRowHtml(c.day) : ""}${phMealScopeHtml(c, `Just ${DOW_SHORT[parseKey(c.day).getDay()]}`)}
-      ${phMealTblHtml(lid, vs, true)}${phMealNumsHtml(lid, vs)}${open ? phMealAddHtml(c, vs) : ""}
-      <div class="foot">${open ? "" : `<button type="button" class="ph-c22-go" data-meal-add="${esc(lid)}" data-meal-k="" aria-expanded="false">${phMealSvg("plus")}Add</button>`}${phMealInstHtml(c, vs)}<button type="button" class="ph-c22-go solid go" data-mpl-x="1">Done</button></div></div>`;
+    const hdr = us ? `<b>Every ${w}</b><button type="button" class="ph-meal-back" data-mpl-view="day" title="Back to ${esc(dl)}">‹ ${esc(dl)}</button>` : `<b>${w}</b><small>${esc(dl)}</small>${tm}`;
+    const top = us ? `<div class="ph-meal-top"><span class="ph-meal-same">Every day without its own</span></div>`
+      : phMealDayTopHtml(c, `<button type="button" class="ph-c22-go ed" data-mpl-view="us" title="Your usual ${wl}">${phMealSvg("edit")}Every ${w}</button>`);
+    return `<div class="ph-mpl-pick${inl ? " inl" : ""}${op}"${pos} role="dialog" aria-label="${us ? "Every " + w : w + " · " + esc(dl)}">
+      <div class="hdr">${hdr}${x}</div>
+      ${c.sl === "d" && !us ? phMplFastRowHtml(c.day) : ""}${top}
+      ${phMealTblHtml(lid, vs, true)}${phMealNumsHtml(lid, vs)}${open ? phMealAddHtml(mc, vs) : ""}
+      <div class="foot">${open ? "" : `<button type="button" class="ph-c22-go" data-meal-add="${esc(lid)}" data-meal-k="" aria-expanded="false">${phMealSvg("plus")}Add</button>`}${phMealInstHtml(mc, vs)}<button type="button" class="ph-c22-go solid go" data-mpl-x="1">Done</button></div></div>`;
   }
   // the picker sits under its cell (over it when there is more room above), inside the planner's card, so it scrolls with the
-  // page; its height fits the window, so Just <day> | Every <meal> and Done always show
+  // page; its height fits the window, so the day's line and Done always show
   function phMplPlace() {
     const pick = document.querySelector("#pharmacyPage .ph-mpl-pick:not(.inl)");
     if (!pick || !phMplCell) return;
@@ -41413,6 +41437,8 @@
     pick.style.transformOrigin = `${Math.round(r.left - cr.left + r.width / 2 - phMplPos[1])}px ${up ? "100%" : "0"}`;   // it grows out of the tapped cell (her animations pick, card 4 A)
     pick.style.top = phMplPos[0] + "px"; pick.style.left = phMplPos[1] + "px";
   }
+  // her pick (2026-10-28): a meal's picker opens on that day, on Every <meal> while she has no usual one yet
+  const phMplUsFirst = (day, sl) => sl !== "s" && !phMealPlan(day, sl).own && !phMealHad(day, sl) && !(sl === "d" && phMplFastPl(day)) && !phMealVs(phMealPlan("def", sl).v).length;
   function phMplClose() { phMplCell = null; phMealPk = null; phMealSq = ""; phDietRefresh(); }
   // copies meals day to day ([from, to] pairs): each meal what she had (else that day's own plan), or her usual; the fast
   // night too. A meal she already had stays as it is
@@ -41522,19 +41548,30 @@
   document.addEventListener("click", e => {
     const T = e.target;
     if (!T || !T.closest || !T.closest("#pharmacyPage")) return;
-    const el = T.closest("[data-mpl-cell], [data-mpl-x], [data-mpl-copy], [data-mpl-cto], [data-mpl-cgo], [data-mpl-lastwk], [data-mpl-shop], [data-mpl-fast], [data-mpl-pd], [data-mpl-us]");
+    const el = T.closest("[data-mpl-cell], [data-mpl-x], [data-mpl-copy], [data-mpl-cto], [data-mpl-cgo], [data-mpl-lastwk], [data-mpl-shop], [data-mpl-fast], [data-mpl-pd], [data-mpl-us], [data-mpl-view]");
     if (!el) { if (phMplCell && T.isConnected && !T.closest(".ph-mpl-pick, #phDietSheet")) phMplClose(); return; }   // a tap anywhere else closes the picker
     e.stopImmediatePropagation();
     const ds = el.dataset;
     if (ds.mplCell) {
       const p = ds.mplCell.split("|"), same = !!phMplCell && phMplCell.day === p[0] && phMplCell.sl === p[1];
       phMealSq = ""; phMealAll = false; phMealPk = null;
-      phMplCell = same ? null : { day: p[0], sl: p[1] }; phMplNew = !same;
+      phMplCell = same ? null : { day: p[0], sl: p[1], us: phMplUsFirst(p[0], p[1]) }; phMplNew = !same;
       phDietRefresh();
       if (phMplCell) phMealOwnFocus();
       return;
     }
     if (ds.mplX) { phMplClose(); return; }
+    // MEAL DAY OR EVERY DAY: ✎ Every <meal> / ‹ <day> swap the picker's list in place (an empty one opens on adding)
+    if (ds.mplView) {
+      if (!phMplCell) return;
+      phMplCell = Object.assign({}, phMplCell, { us: ds.mplView === "us" });
+      const mc = phMplCell.us ? { day: "def", sl: phMplCell.sl } : phMplCell;
+      phMealSq = ""; phMealAll = false; phMealTab = "ev";
+      phMealPk = phMealVs(phMealList(mc).v).length ? null : { day: mc.day, sl: mc.sl, k: "" };
+      phDietRefresh();
+      if (phMealPk) phMealOwnFocus();
+      return;
+    }
     if (ds.mplFast) { if (phMplCell) phMplFastSet(phMplCell.day, ds.mplFast); return; }
     if (ds.mplCopy) { phMplCopy = phMplCopy && phMplCopy.from === ds.mplCopy ? null : { from: ds.mplCopy, to: [] }; phMplCell = null; phDietRefresh(); return; }
     if (ds.mplCto) { const c = phMplCopy; if (c) { c.to = c.to.includes(ds.mplCto) ? c.to.filter(k => k !== ds.mplCto) : c.to.concat(ds.mplCto); phDietRefresh(); } return; }
@@ -41628,7 +41665,7 @@
   document.addEventListener("click", e => {
     const T = e.target;
     if (!T || !T.closest || !T.closest("#pharmacyPage")) return;
-    const el = T.closest("[data-meal-add], [data-meal-tab], [data-meal-out], [data-meal-mic], [data-meal-tog], [data-meal-rm], [data-meal-skip],[data-meal-same], [data-meal-scope], [data-meal-pick], [data-meal-dish], [data-meal-had], [data-meal-undo], [data-meal-prep], [data-meal-ing], [data-meal-edit], [data-meal-tick], [data-meal-open], [data-meal-water], [data-meal-shop], [data-meal-bring], [data-meal-shx], [data-meal-snack], [data-meal-snackx], [data-meal-def], [data-diet-wk], [data-diet-pt], [data-diet-ptw], [data-diet-note], [data-diet-noteadd], [data-diet-notex], [data-dish-tcm], [data-dish-dk], [data-dish-prepx], [data-dish-ingx], [data-dish-save], [data-dish-del], [data-meal-q], [data-meal-byo], [data-meal-alltog], [data-tb-pick], [data-tb-sz], [data-tb-add], [data-dish-q], [data-dish-fdx], [data-dish-fadd], [data-dish-ftog], [data-dish-tn], [data-diet-nl], [data-diet-more], [data-diet-tg], [data-rx-k], [data-rx-s], [data-rx-w], [data-rx-f], [data-rx-own], [data-rx-ownadd], [data-rx-fine], [data-rxck-x], [data-rxck-go]");
+    const el = T.closest("[data-meal-add], [data-meal-tab], [data-meal-out], [data-meal-mic], [data-meal-tog], [data-meal-rm], [data-meal-skip],[data-meal-same], [data-meal-back], [data-meal-every], [data-meal-pick], [data-meal-dish], [data-meal-had], [data-meal-undo], [data-meal-prep], [data-meal-ing], [data-meal-edit], [data-meal-tick], [data-meal-open], [data-meal-water], [data-meal-shop], [data-meal-bring], [data-meal-shx], [data-meal-snack], [data-meal-snackx], [data-meal-def], [data-diet-wk], [data-diet-pt], [data-diet-ptw], [data-diet-note], [data-diet-noteadd], [data-diet-notex], [data-dish-tcm], [data-dish-dk], [data-dish-prepx], [data-dish-ingx], [data-dish-save], [data-dish-del], [data-meal-q], [data-meal-byo], [data-meal-alltog], [data-tb-pick], [data-tb-sz], [data-tb-add], [data-dish-q], [data-dish-fdx], [data-dish-fadd], [data-dish-ftog], [data-dish-tn], [data-diet-nl], [data-diet-more], [data-diet-tg], [data-rx-k], [data-rx-s], [data-rx-w], [data-rx-f], [data-rx-own], [data-rx-ownadd], [data-rx-fine], [data-rxck-x], [data-rxck-go]");
     if (!el) return;
     e.stopImmediatePropagation();
     const ds = el.dataset;
@@ -41706,15 +41743,9 @@
     if (ds.mealRm) { phMealListTog(phMealCtx(ds.mealRm), ds.mealV || "", "rm"); return; }
     if (ds.mealSkip) { const c = phMealCtx(ds.mealSkip); phMealPk = null; if (c.pt) phDietPtSet(c.pt, c.day, c.sl, "skip"); else phMealHadSet(c.day, c.sl, "skip"); return; }
     if (ds.mealSame) { const c = phMealCtx(ds.mealSame); phMealPk = null; phDietPtSet(c.pt, c.day, c.sl, "="); return; }
-    // the bar is for the whole set (her pick): Just today makes the next change that day's own; Every <meal> on a day's own
-    // list makes that list her usual one
-    if (ds.mealScope) {
-      const c = phMealCtx(ds.mealL || ""), k = c.day + "|" + c.sl, p = phMealPlan(c.day, c.sl);
-      if (ds.mealScope === "day") { if (!p.own) { phMealSc[k] = "day"; phMealCardRepaint(); } return; }
-      delete phMealSc[k];
-      if (p.own) phMealPlanSet(c.day, c.sl, p.v, "all"); else phMealCardRepaint();
-      return;
-    }
+    // MEAL DAY OR EVERY DAY: ↺ Undo = that day back to her usual; Use every day = that day's list becomes her usual
+    if (ds.mealBack) { const c = phMealCtx(ds.mealBack); phMealPk = null; phMealDayBack(c.day, c.sl); return; }
+    if (ds.mealEvery) { const c = phMealCtx(ds.mealEvery), p = phMealPlan(c.day, c.sl); phMealPk = null; if (p.own) phMealPlanSet(c.day, c.sl, p.v, "all"); return; }
     if (ds.mealPick != null && el.matches("[data-meal-pick]")) {
       const pk = phMealPkOf(el);
       if (!pk) return;
