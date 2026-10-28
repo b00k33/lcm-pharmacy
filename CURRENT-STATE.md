@@ -883,8 +883,9 @@ Fitness + Exercises), the rest in Life.
   (`.ph-fitx`). **Week tab:** ‹ week › (`phFitWo`, back as far as she likes, one week ahead) · "n of m this week" · **Table |
   Calendar** (`phFitView`). Table (`phFitWkTblHtml`, days across): **Plan** (a type or Rest, any weekday) · **Booked** (that
   weekday's time; tap = two time fields + No set time, kept on Enter, a tap away or leaving them; the clinic's hours under it, or
-  "Clashes with 10:00 am patient" in amber: it still books, her pick) · **Workout** (a template per weekday; Today starts from it)
-  · **Done** (today's dot is the tick) · a row per rehab routine (its dots and time) · **Health** (that day's visits; a tap opens
+  "Clashes with 10:00 am patient" in amber: it still books, her pick) · **Workout** (a template per weekday; Today starts from it;
+  the day's mark beside it, her pick C 2026-10-28: today a 32px tick she taps, a day done a green tick, the two-minute version a pale
+  one, away a plane, nothing else; there is no Done row) · a row per rehab routine (the same marks and its time) · **Health** (that day's visits; a tap opens
   the Health tab) · **Steps** (today a field). Row names Workout / Health are doors to their tab. Phone (≤640): the days run down
   (`.fwph`), today open in place with the same fields, a tap opens another. Calendar (`phFitCalHtml`): the week as hours (6 am to
   10 pm, wider when a block sits outside), the clinic shaded (first patient to last from Appointments, else her clinic routine),
