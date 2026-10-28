@@ -2006,8 +2006,12 @@ regions). The exam pages are the ONE entry; `phExamMirrorToday` copies today's e
 through `phVisitFndRead`. A **Findings trend** sheet (Grid | Trail) shows dated tongue and abdomen findings from the exam pages.
 **Tongue:** `visitFnd[id].tng = {colour, colourMore[], colourAt, shape, moist, coatThick, coatColour,
 coatArea[] (root / mid = centre), coatAt{} (coat colour per zone), coatQual{}, marks{}, under, thickAt{}, deviation, v2}`. The
-Tongue page [Tongue page: tabs + the three jiaos]: photos beside four tabs Body · Coat · Jiao · Sublingual; Shape and Marks as
-dropdowns; a red tip chip; the Jiao tab = a tongue map + one line per zone (Upper / Middle / Lower / Left / Right) that opens its
+Tongue page [Tongue page: tabs + the three jiaos]: photos beside eight tabs in EXAM ORDER (her pick B 2026-10-28, "i struggle to
+find the signs i need ... shape list looks random"): Colour · Shape · Movement · Moisture · Marks · Jiao · Coat · Sublingual, two
+rows (on the phone too, every name whole); inside a tab one labelled row a thing, each a scale with normal in the middle — Shape =
+Size (thin · normal · thick · swollen) · Texture · Length · Tip (the chips draw their outline); Movement + to the left / right;
+Marks = Cracks · Dots · Edges (teethmarks here, her pick) · Raised; Coat = Thickness · Colour · Type. No dropdowns. Code: "TONGUE
+EXAM ORDER" (`PH_TNG_STEPS`, `PH_TNG_STEP_ROWS`, `phTngStepHtml`), shared by both pages. A red tip chip on Colour; the Jiao tab = a tongue map + one line per zone (Upper / Middle / Lower / Left / Right) that opens its
 own colour, coat, form and mark bars; zone colours (red tip) are record only (`phTngChipKeys` skips `colourAt`). A linked chip
 carries its Fang Bing Ren signs in its hover and the thin plum bar under it (`.tfp-lk`, the Find the Ren link mark); the
 "Fang Bing Ren · N ticked" tab opens every linked chip in place (her "just open the chips", never the Fang Bing Ren page). The photo viewer's Tongue analysis (`phRenTngSecHtml`, her 2026-10-28 "similar to the tongue page") has the same

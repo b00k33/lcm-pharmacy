@@ -5332,3 +5332,43 @@ Plan page tidied, the Meals macros against her goal (carbs 50 g), beef bacon + m
 (shoulder + mid back), the tongue photo viewer's chips, a meal's day or every day (her pick B), and the food list's pies, kebabs,
 chips, creamy milk + shop products (foods-au.json serves). Each one's own note above says what was and was not checked; none was
 checked on her real records.
+
+## Tongue signs in exam order (2026-10-28)
+
+Her words, with a screenshot of the photo viewer's older Tongue analysis rows (Shape · Moist: swollen, stiff, flaccid,
+trembling, long, short, tender, soft, v-shaped, horseshoe, arrowhead, flat-tip, tilted, bulging, teethmarks): "i struggle to
+find the signs i need, find a way to organise the signs in a way that makes sense e.g. shape list looks random. show me mock".
+NOT live.
+
+- **Why it read random:** `PH_TNG_SHAPES` mixed six things (size, texture, movement, length, tip outline; teethmarks joined
+  from the marks); thickness and deviation sat on unlabelled bars beside moisture; Shape ▾ and Marks ▾ hid their lists.
+- **Her 8 picks** (two working widgets): **B · exam order** (over A "every row labelled + a Marks tab" and C "today's tabs,
+  grouped menus"); chips in **scale order, normal in the middle**; **tip outlines** on the Tip chips; **teethmarks under Marks ·
+  Edges** (over 2026-10-21's place in the Shape row); **Jiao after Marks**; phone tabs in **two rows, names whole**; a one-choice
+  tick **stays on its tab**; **build it** on the Tongue page and the photo viewer.
+- **Now ("TONGUE EXAM ORDER", after `PH_TNG_UNDER`):** `PH_TNG_STEPS` = Colour · Shape · Movement · Moisture · Marks · Jiao · Coat ·
+  Sublingual; `PH_TNG_STEP_ROWS` holds each tab's labelled rows (a row = label + bars of [attr, value]): Shape = Size (thin ·
+  normal · thick from `thickness`, swollen from `shape`) · Texture (tender · soft) · Length (short · long) · Tip (v-shaped ·
+  arrowhead · thin tip (a mark) · flat-tip · horseshoe, each with a little outline, `PH_TNG_TIP_SVG`); Movement = flaccid · stiff
+  · trembling · tilted + to the left · to the right; Moisture = dry · moist · wet; Marks = Cracks (cracks · horizontal · centre
+  crack · groove) · Dots (red dots · purple spots · patches) · Edges (teethmarks · two lines · foamy line) · Raised (bulging ·
+  junction bulge); Coat = Thickness · Colour · Type; Sublingual = Veins. `phTngStepHtml(t, tab, chip, redTip)` draws a tab with
+  the page's OWN chip (its writes, its Fang Bing Ren underline), `phTngStepN` counts a tab, `phTngStepTabs` makes the buttons.
+  Both pages call it, so they can no longer drift apart; each keeps its Jiao map, its tab bar and its taps. The data shapes and
+  the writes are unchanged (no stored key moved).
+- **Lists reordered for every user of them:** `PH_TNG_SHAPES` grouped (swollen, tender, soft, short, long, v-shaped, arrowhead,
+  flat-tip, horseshoe, flaccid, stiff, trembling, tilted), `PH_TNG_MOIST` = dry · moist · wet (also the Fang Bing Ren tab, the
+  older visit rows and the Ren questionnaire bars).
+- **Tabs:** they wrap, every name whole; on the computer the boxed bar takes two rows (each tab keeps its line); on the phone four
+  columns as wide as their longest name, a count as a plain number after the name (a corner badge was tried and covered the
+  last letter of Movement and Sublingual at 360).
+- **Gone:** the Shape ▾ / Marks ▾ dropdowns in both pages (`dd`, `item`, `picks`, `shapeItems`, `markItems`), their open key
+  `phTjDdOpen` and its two document listeners, the `.ph-tgz-dd*` styles, the Body / Coat / Sublingual panels and their counts,
+  the Tongue page's unused `seg2`.
+- **Tested (sandbox, made-up "Zz Meal Test", the Tongue page's own builder mounted in the page):** every tab in turn; pale + red
+  tip, thick + swollen + thin tip, trembling + to the left, dry, teethmarks + cracks, thick yellow greasy coat, dark veins all
+  saved to `tongueExam` in the right keys; counts Colour 2 · Shape 3 · Movement 2 · Moisture 1 · Marks 2 · Jiao 1 · Coat 3 ·
+  Sublingual 1; Reads as read them all; tab switching both ways incl. Sublingual and Fang Bing Ren; the photo viewer's section
+  rendered every tab with the same rows and counts (a stand-in photo record for that check: no photos in the sandbox); 1024 and
+  360 wide, nothing wider than its box; no console errors. Picture `shots/tongue-exam-order-2026-10-28.jpg`.
+- **Not checked:** a real tongue photo in the viewer (its taps are the unchanged `data-vtp` path), her records, the Key2.
