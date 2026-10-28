@@ -1210,6 +1210,10 @@ before touching an area that smells similar.
   uses one fixed `?probe=1` + `cache:"no-cache"` and sweeps stored probes, and sw.js passes
   `probe=` through and fetches navigations with `no-cache` (2026-10-26, BUILD-NOTES
   "Lighter update check").
+- A cloned SVG keeps its ids, and `url(#id)` resolves to the FIRST element with that id in the document (the original), so the
+  copy paints only while the original is drawn; a copy placed outside the original's container also loses every rule scoped to it (an
+  SVG shape whose only fill came from such a rule paints black). Give a copy its own ids (`phSvgOwnIds`) and diff its computed
+  styles against the original (BUILD-NOTES "MSK Enlarge: the back figure drawn black").
 
 ---
 

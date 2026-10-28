@@ -546,7 +546,7 @@ picture (Finding · Acu · Trigger release · Motor point, one joined bar; `phMs
 cycles the finding (Tender still brings in its motor point, off takes only the motor point out), a mark tool turns that mark on or
 off (`phMskTxFlip`; the last mark off takes the muscle off the list, the finding stays; a side with no pain asks for one first).
 The **view buttons sit under the pain figure** (two columns on a computer, one joined row on a phone), so the pictures keep near
-full size (280px; one per row on a phone). The read-only Fang Bing Ren plate draws no names and no marks. Hover names on a computer. A
+full size (280px; one per row on a phone). The read-only Fang Bing Ren plate draws no names and no marks. **Enlarge** copies the picture row into the shared expand shell with its own ids (`phSvgOwnIds`, "-x"), no body tap targets and the panel's case colour; a tap there (finding, mark, Tools bar, Right | Left) redraws both copies (`phMskDgPaintAll`); a narrow copy shows one picture per row [MSK Enlarge: the back figure drawn black]. Hover names on a computer. A
 muscle in parts is **tapped part by part** (her pick "Split"): pec major clavicular / sternal, deltoid anterior / middle /
 posterior, trapezius upper / middle / lower, teres minor / major, rhomboid minor / major: each part is its own `PH_MSK_MUSCLES`
 row with `of` = its whole; the whole is `hide` (off every list, chip and search) and an older mark on it shows on each part with

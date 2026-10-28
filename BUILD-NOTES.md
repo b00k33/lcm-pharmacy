@@ -5720,3 +5720,31 @@ Her popup answers to the run-16 list, all four the recommended option: minus poi
   **Not checked:** her real records, the Key2 phone.
 - **LIVE** 2026-10-28 on her "push": build 20261028-195700 (main 47f02070, published ALONE on top of 192500: the Wen Jing Tang and
   MSK marks commits already on session-a stayed off main; joined back as b6de215d). The publish version was booted first.
+
+## MSK Enlarge: the back figure drawn black (2026-10-28)
+- **Report** (seen by the muscle-marks session): the Musculoskeletal Enlarge (`data-msk="figbig"`) drew the Posterior pain figure's body
+  areas solid black; the same figure on the page was normal (light skin, red pain patch). Before: `shots/msk-enlarge-black-before-2026-10-28.jpg`.
+- **Cause, measured:** the black shapes were the body's tap targets, the `.mk2-hit` ellipses (her 10/27 pick 12, `phMskHitsSvg`). They have
+  no fill of their own; the clear fill is only `.ph-msk .ph-pm.mk .mk2-hit`, and the copy is just `.mk-picrow`, outside `.ph-pm.mk`, so SVG
+  painted its default black (the Anterior looked grey only because an idle figure is faded). A computed-style diff of page vs copy (1,100+
+  elements) found three more page-only rules the copy lost: the `.ph-pm .bg-hl` multiply blend, the Tools bar's 6px corners, and the case
+  colour (`.ph-pres-panel.case-msk` tokens).
+- **The ids, a second fault:** the copy kept the page's 64 ids (`pm-<plan>-back-skin`, clips, masks, the muscle pictures' `mskdg...`), so
+  its `url(#...)` used the page's defs, the first in the document. With the page's picture row hidden, the copy lost its skin and red patch.
+- **Built:** `figbig` drops `.mk2-hit` from the copy (they do nothing there: no `[data-pm-box]`), gives the copy its own ids
+  (`phSvgOwnIds(root, "-x")`: every id plus its `url(#...)` and `href="#..."`) and the panel's `case-msk` / `case-gyn` class; `.ph-mskx` gets
+  the multiply blend, the 6px corners (desktop, as the page) and the case tokens. `phMskDgPaintAll(rec, sel)` is the one repaint of the
+  muscle pictures (Tools bar, Right | Left) and keeps the copy's ids; `phMskDgRedraw` now repaints the copy too, so a finding, mark or name
+  tapped in the Enlarge view shows there (before, it saved and showed only on the page).
+- **Phone (found at the 375 check, older than this fix):** the copy's muscle pictures were 630 px wide in a 360 px card and centred, so the
+  Tools bar's Finding and Acu sat off the left edge with no way to scroll to them. `.ph-mskx .mk-picrow` is now a size container; at 560 px
+  and under, the pictures take the full width, one per row (as the page, her pick A1), and the Tools bar goes short (Finding · Acu ·
+  Release · Motor) through the page's own container rules.
+- **Tested** (sandbox port 8996, made-up patient, deleted): at 1280 and 375 the Posterior has skin and the red patch
+  (`shots/msk-enlarge-fixed-1280-2026-10-28.jpg`, `-fixed-375-`); 0 tap targets, 0 duplicate ids, every `url(#...)` in the copy resolves
+  inside it; the page-vs-copy diff leaves only the renamed ids, the copy's own two-pane layout, an inherited text colour nothing draws with
+  and a running animation; with the page's row hidden the copy still paints; in the copy, Motor point on infraspinatus and Tender on lower
+  trapezius show in both copies; the neck's Right | Left from the copy turns both; the page's figure is unchanged after closing;
+  Prescriptions search narrows and restores. **Pages checked:** the Musculoskeletal page and its Enlarge (no data or write path changed).
+  **Not checked:** her real records, the Key2, a gynae-case patient's copy colour, the 3D layout's Enlarge.
+- **Not live:** waits for her "push live".
