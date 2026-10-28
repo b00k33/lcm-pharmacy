@@ -733,7 +733,9 @@ word 2026-10-28, "i dont need an every lunch and everyday button"; NOT live): he
 · − amount + · kJ in the planner · ✕) · **+ Add food or drink** opens the list UNDER the meal (search or type + New; one bar
 Everyday | Drinks | Thisbowl | My dishes; a row a food with its usual amount and +; Thisbowl R | L, Build your own; a thing in the
 meal is NOT listed; Done adding) · one numbers line, small numbers behind a tap · **Eating out | Skipped** one bar (beside Had it on
-her card, beside + Add in the planner's foot). No sideways scroll; long names wrap, never cut; the cursor goes to Search on the
+her card, beside + Add in the planner's foot). **Skipped** is on every meal (her 2026-10-28 "give option to skip meals"):
+today or before = she skipped it; a day ahead = that day planned Skipped; on while so, a second tap takes it back; from the
+planner's Every <meal> view (an empty cell opens there) it is the tapped day's (`phMealInstHtml`'s `dc`). Its cell reads Skipped. No sideways scroll; long names wrap, never cut; the cursor goes to Search on the
 computer only. The snack picker (Snacks · drinks) is unchanged. Code: "A CALMER MEAL" (`phMealListHtml`, `phMealTblHtml`,
 `phMealAddHtml`, `phMealNumsHtml`, `phMealInstHtml`).
 **Food numbers**: foods from `PH_FOOD` (212 rows: the Australian Food Composition Database Release 3 by FSANZ, CC BY-SA 3.0 AU,
@@ -766,7 +768,7 @@ Patterns (`diet_cool` / `diet_warm`, source Diet, DRAFT wording); Fang Bing Ren 
 **Meals planner** (her Diet page, her word "change diet to Meals", fasting merged in): the clock bar on top, today's macro rings
 under it, then a week table, days across: Breakfast · Lunch · Dinner · Snacks · drinks · Supplements · herbs · Fast · Macros · More. A cell = its meal's time (a day's own bold) + its things one per
 line (pale = usual, bold = the day's own, ✓ + the time she had it); ✎ Usual on each row. A tap opens the picker under the cell (over
-it when more room above; fits the window), on the meal (empty = on adding): the meal's list (Eating out / Skipped today or before)
+it when more room above; fits the window), on the meal (empty = on adding): the meal's list (Eating out | Skipped, any day)
 + Done; on Dinner **Fast this night** (see Fasting). Esc closes the picker only. ⧉ on a day = Copy a day (pick days, Copy to N days);
 **Copy last week**; **Shopping list** = the week's list from the plan (each food added up, a dish's foods; Thisbowl's left out) into
 the Me drawer's Shopping (`src: "plan"`); Targets. **Supplements · herbs** (her 2026-10-28 "add a row for supplements and herbs"; today and the days before): a chip a thing

@@ -6056,3 +6056,23 @@ Three mocks (A ticks and icons, B a key line, C a tick inside Workout); her pick
   lines, today open with the tick beside Workout, no sideways scroll; Prescriptions search narrows and comes back; no console errors.
 - **Not checked:** her real week; the Key2; the Calendar view (untouched).
 - **Not live:** waits for her "push live".
+
+## 2026-10-28 · Meals: Skipped on any meal, any day
+Her words: "give option to skip meals" (screenshot: the planner's Every Dinner picker opened from Mon 26's empty Dinner cell, "skipz"
+typed in its search). Skipped was drawn only for today and the days before and never in Every <meal>, which is where an empty cell
+opens the picker, so she could not find it.
+- **Built** (`phMealInstHtml`, the `data-meal-skip` tap): Skipped is in the bar on every meal. Today and before = she skipped it (a
+  had "skip", as before); a day ahead = that day planned Skipped (`phMealPlanSet`, Undo in the toast "Dinner · Fri only · Skipped");
+  the button is on while so, and a second tap takes it back (a skip she had: `phMealHadClear`; a planned one: the day back to usual).
+  In the planner's Every <meal> view the button acts on the day she tapped (`dc` = the cell; a skipped meal is one day's), never on
+  every day; Eating out there still acts on the list shown. A patient's day keeps its own skip (a second tap = same as usual).
+- **Fixed on the way:** a day planned Skipped drew "+" in its cell (now "Skipped"); a meal she skipped read "· had it Skipped" in
+  the planner and "Had it · Skipped · Had it" on her card (now "Skipped", no "had it").
+- **Tested** (sandbox, made-up "Zz Meal Skip" as My profile; removed after): Fri 30's empty Dinner opens Every Dinner ‹ Fri 30;
+  Skipped sets Fri 30 only (Every Dinner unchanged, Thu still +), the cell reads Skipped, the button reads on, a second tap brings
+  Fri back to +; Mon 26 (before today) Skipped = a had skip, its cell "Skipped", a second tap clears it (+), a third skips again;
+  Sat 31 with water planned: Skipped replaces it, Undo brings water back; her card for a skipped meal: "Skipped · Dinner · Skipped ·
+  10:38 pm · Undo"; 375px: Eating out · Skipped · Done fit, no sideways scroll; Prescriptions search narrows and comes back; no
+  console errors.
+- **Not checked:** her real week; the Key2; a patient's Diet page (its skip path is unchanged apart from the second tap).
+- **Not live:** waits for her "push live".
