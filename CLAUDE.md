@@ -1664,8 +1664,11 @@ nature warm · neutral · cool + nutrients per serve; `d.meals`; `d.shop`). Me d
 Shopping.
 **A meal's list** (her pick 2026-10-27, "too busy"; it replaced the Food / Drinks sections, + Food / + Drink, Eating out and Skipped
 under Food, and Had it | Edit; BUILD-NOTES "A calmer meal"): every meal list (her card, the planner's picker, her usual meal, a patient's Diet sheet) =
-**Just <day> | Every <meal>** ON TOP for the whole set (Every on a day's own list makes it her usual one; no "Planned" word above
-it; her card: ✎ Usual beside it, opening her usual meal as one card) · the meal as a small table (name + its mark, a cup on a drink
+**the day's line** ON TOP (her pick B 2026-10-28, "it is very confusing how to set the daily breakfast vs just breakfast of today";
+the Just <day> | Every <meal> switch is gone): her day's list changes THAT DAY only; it reads "Same as every <meal>" until she
+changes it, then "<Thu> only" + **↺ Undo** (back to her usual) + **Use every day** (it becomes her usual; a day with its own keeps
+it); **✎ Every <Meal>** at the line's end (her card: her usual meal as one card; the planner's picker: her usual list in place,
+‹ <day> back, and it opens there while she has no usual one). Code: "MEAL DAY OR EVERY DAY" · the meal as a small table (name + its mark, a cup on a drink
 · − amount + · kJ in the planner · ✕) · **+ Add food or drink** opens the list UNDER the meal (search or type + New; one bar
 Everyday | Drinks | Thisbowl | My dishes; a row a food with its usual amount and +; Thisbowl R | L, Build your own; a thing in the
 meal is NOT listed; Done adding) · one numbers line, small numbers behind a tap · **Eating out | Skipped** one bar (beside Had it on
