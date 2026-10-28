@@ -355,6 +355,20 @@ muscle?" for pain patients; green Herbs block; Watch; Notes; one "Plan ahead · 
 / Pulse / Abdomen have **no Better / Same / Worse** here; the visit's result comes from the Compass (`phCxOutcomeToday`). Phone:
 stacked, summary first, only the exam lines, the rest under one More chip.
 
+**The green Herbs block** (her pick A, 2026-10-28): `[🌿 today's formula ▾] [Dispense] [Still taking]`, then `[Action ▾]` and the
+plan line. The ▾ opens one searchable list (`phAcuFPickListHtml`), groups in a fixed order, nothing ranked: This patient (each
+formula once, newest first, "given 14 Oct"), Your recipes + jars (recipes then jars, A–Z), Fang Bing Ren's formulas (`PH_FORMULAS`
+names ending Tang / San / Wan, A–Z, "not stocked" or the stock kind), "Name it “x”" only when nothing matches, "+ New formula from
+herbs" (the Design route while the plan names no formula; otherwise a fresh herb list in this prescription, plan untouched). Her
+pick is today's formula only (`presAcuInstructFormula` + `presAcuInstructSrc`, kept in the visit draft). **Dispense** pours it into
+the open prescription (`phAcuFPour`: jar / recipe as Link formula does; a past one from the prescription that dispensed it, else
+from that day's dispense record sized to the same bag; a bare name = an empty list), never over herbs already off the shelf or into
+a recipe, with Undo. **Still taking** records `session.herbInstructedFormula` at save. **Action ▾** is the treated phase's Formula
+action (`PH_TP_FORMULA_ACTIONS`; "Action" / the one action / "N actions"). The plan line shows "Plan: X  → plan" only when the
+phase's own formula differs ("✓ same as plan" when equal, nothing while blank: a blank one fills at save); → plan names the plan's
+formula, lets a linked prescription go, with Undo. A day the herbs were given shows the dispensed formula's name instead of the
+three chips. The Care Plan's Session grid Formula cell is unchanged.
+
 **"Alive" phase resolution (locked, load-bearing)**: `phTpLivePhase(rec, plan, asOfKey?)` is THE read for the current phase — live
 cycle-day phase → IVF CD suggestion → persisted pointer, with an optional as-of date for back-dated write-ups. Render from
 `phPatientPeek`, never `phPatientRec` (it mutates on every call). `phTpPlanForToday(name, explicitId)`: booking's `a.planId` (if
