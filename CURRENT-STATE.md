@@ -558,7 +558,23 @@ page's copy and the Enlarge copy; a tap marks the side showing). Parts: SCM ster
 posterior scalene, splenius capitis + semispinalis capitis (`of` their wholes), cervical multifidus, lateral pterygoid, the
 **suboccipitals as one tap** (four drawn, one key `sub`), the upper trapezius to the skull, levator, masseter, temporalis. The same
 neck shapes sit at the top of Shoulder and Mid back (one drawing everywhere); a neck-only muscle names itself in the Neck picture
-only. **Not built:** arm, low back, hip, knee and ankle keep their grey bellies until drawn.
+only. **The lower body and the belly** (her 8 picks 2026-10-28) [Muscle picture: legs, low back and belly]: Low back, Hip & thigh,
+Knee and Ankle & foot are true shapes too (`PH_MSK_LEG`: front, back and side shapes in leg space, placed on the figure by
+`phMskLegPts` / `phMskLegSidePts`, cached by `phMskLegShapes`; they draw in every front and back picture, Shoulder and Mid back
+included, under one drawing). Low back keeps Front + back. Hip & thigh, Knee and Ankle & foot add a **Side** row under Deep (Surface |
+Deep side by side, the Right | Left bar in its heading; `PH_MSK_SIDE_ROW`, `PH_MSK_SIDE_CROP`), so the front and back keep their full
+size. **Belly** is its own area (Front only, Surface | Deep side by side): a belly pain (epigastric, abdomen, lower abdomen) opens it
+only when she taps **Belly muscles** in its card's Palpate row (`p.mk` on the pain, through `phPmWrite`; `PH_MSK_PICKREG`;
+`phMskRegOf`, which every pain-to-area read uses), so a period or digestive pain never brings it up. Rows added after the row they
+refine: external / internal oblique, transversus, rectus abdominis; lumbar multifidus, longissimus, iliocostalis; psoas, iliacus;
+gemelli + obturator internus, quadratus femoris; sartorius; adductor longus / brevis / magnus, gracilis, pectineus; biceps femoris
+long / short head, semitendinosus, semimembranosus; vastus intermedius; gastrocnemius medial / lateral; EDL, EHL, EDB; peroneus
+longus / brevis; FDL, FHL. The ITB, patellar tendon, Achilles tendon and thoracolumbar fascia take findings and marks but have no
+motor point (drawn beige, `tdn`; the Motor point tool says "No motor point here"; Tender adds MP only where a muscle has one). Names
+say Peroneus. A muscle two areas share shows under the first pain it belongs to; a tap on it keeps the picture on the area she has
+open when it belongs there too (Psoas in Belly) and otherwise turns the picture to its own area. The new rows' nerve, motor point,
+point and caution words are Claude's DRAFT until she reads them. **Not built:** the arm (elbow, wrist) keeps its grey bellies until
+drawn.
 
 ## Fang Bing Ren, Find the Ren & Patterns
 **Fang Bing Ren** (the Triangle) is the one place constitutional-family scoring happens: one merged header (verdict + Quick
