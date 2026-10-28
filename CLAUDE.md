@@ -1168,26 +1168,34 @@ is a slim stub, never a cutoff.
 **The plan is the spine**: patient → plan → prescriptions. Each phase carries Aim / Points / Formula / Watch / Cadence, dated
 automatically (`sinceKey`/`doneKey`).
 
-**The page** (`presTpPlanTabBodyHtml`) = a band over Findings | the plan (side by side from 1280px, stacked below) [Care Plan =
-the findings beside the plan]. Band: title (tap = rename), stage pill, **Course · <template> ▾** (course picker
+**The page** (`presTpPlanTabBodyHtml`) = a band over the left column (Findings, then one card: the scans line, the pain map small,
+Also treating; `phTpCcSideHtml`) | the plan (side by side from 1280px; stacked below, that card last) [Care Plan = the findings
+beside the plan] [Care Plan page tidied]. Band: title (tap = rename), stage pill, **Course · <template> ▾** (course picker
 `phTpProtocolPickHtml`; also "⇄ Change course" in ⋯), ⋯ (short, More ▸ fold; `phTpPlanMenuHtml` = the Care Plan, Treatment and
 Dispense menus) [Care Plan page "Case | Course"]. Every shown title (band, patient header, plan tabs, appointment pills / lists,
 Today's visit, Treatment, print record) = `phTpTitleShown(name, plan)`: hers once renamed, else the main concern's words (on the
 plan treating it, or one with no course), else the course name; `plan.title` is never rewritten.
 **Findings**: Came in for, Ren, Tongue, Pulse, Abdomen, Cycle, Ask her, Blood tests, History, Musculoskeletal, each via the app's
 own renderer; purple dot = changed since last visit; tap = its drawer, + Watch / + Aim, lines to the diagnosis it feeds.
-**The plan** writes itself from the visit, in visit order: **Treat** (`phTpTreatHtml`: a row per Compass concern, ★ if starred,
-its Goal; her typed or a booking's Goal wins) · **Diagnosis** (Likely / Possible bars: a pattern per line with its level and a
-small concept picture, the first for the plan's own condition (all 29: women's health, pain / muscle, face / skin, stress / sleep
-/ weight / immune / men's), each opening big; its signs under it as quiet tags with their `PH_PAT_SRC` icon) · **Watch** · the
-leading formula · Course (Session grid) · scans, pain map / Also treating tiles. Empty part = faded "not yet". The door starts the
-plan from the main concern (no template pick, LAW §2). Formula + Points stay in the grid's live-phase row (Aim · Points · Formula
-· Watch): the grid is LOCKED.
+**The plan** writes itself from the visit, in visit order, each part's buttons on its heading line (her picks): **Treat**
+(`phTpTreatHtml`: ONE table, a row per Compass concern: ★ if starred · the concern · first → now + Better / Same / Worse · the bar
+to the gold target mark (Watch's own reading, `phTpWatchData(...).cc`) · target ▾; the Goal words sit in the hover unless she typed
+her own, which shows under the name; ✎ edits them; a plan-level Goal she typed, or a booking's, wins and replaces the table) ·
+**Diagnosis** (Patterns · Fang Bing Ren · ✎ on the heading; Likely / Possible bars: a pattern per line with its level and a small
+concept picture, the first for the plan's own condition (all 29: women's health, pain / muscle, face / skin, stress / sleep /
+weight / immune / men's), each opening big; its signs under it as quiet tags with their `PH_PAT_SRC` icon; then the leading
+formula line (`phTpFxFmRowHtml`) and Progress (`phTpProgressHtml`: one faded "Progress not yet" line until the first snapshot)) ·
+**Watch** (what Treat does not show) · Course (Session grid). **The pain map** sits small under the findings (the same figures
+only, `phTpTilesHtml(..., "sm")`); Open, or a tap on it, draws it full size under the grid with only its heading left above
+(`phTpCcUi.pmOpen`, `phTpPmToggle`, both cards repaint in place). Empty part = faded "not yet". The door starts the plan from the
+main concern (no template pick, LAW §2). Formula + Points stay in the grid's live-phase row (Aim · Points · Formula · Watch): the
+grid is LOCKED.
 
 **Watch** (`phTpWatchHtml`; its reading = `phTpWatchData`) = the Compass rows in order (`phCxModel(..., { all: true })`): each
 concern's first score → latest + Better / Same / Worse; signs; the diagnosis's told signs (unrated = Yes, or "New" if not in the
 plan's first progress snapshot); measured rows; the live phase's red flags with their last answer. A scored concern has a target
-bar (baseline → gold target mark).
+bar (baseline → gold target mark). On the Care Plan the concerns' rows show in the Treat table (`phTpWatchHtml(..., skip)`), so
+Watch draws the rest and is left out when nothing is left.
 **Told signs** (her pick): signs behind the Diagnosis that the patient tells her (cycle log, usual answers, notes, diet:
 `phCxToldList`) are Compass sign rows in their body area (own subject, else the area of a Fang Bing Ren sign filing the same
 clue), rated Gone · Better · Same · Worse from the next visit, saved with the signs under `pc:<clue key>`, never behind "+ N
@@ -1199,8 +1207,8 @@ plan's first dated chart of that part when it has 2+ (Yes → Yes Same, New, Gon
 of normal range (target = normal degrees); a positive test. READ from their pages, never rated (one read per fact; no Better /
 Same / Worse on Tongue or Pulse): the Compass's **Measured** block (before the red flags) and Watch; tap opens the page
 (`data-flow-prof`). Tongue / pulse reads are shared with Patterns (`phPatTngFlags`, `phPatTngVisitWords`, `phPatPulseKeys`).
-**Targets** (`phCxTgt`): pain or a 0–10 complaint = 2 or less, % better = 80% better, Energy = 8 or more; a "target … ▾" on each
-Treat row, hers bold with ↺ auto (`mainTgt` / `secondary[].tgt` / `painMap[i].tgt`, `{ v, k }`; another kind reads auto). Signs
+**Targets** (`phCxTgt`): pain or a 0–10 complaint = 2 or less, % better = 80% better, Energy = 8 or more; a target ▾ on each
+Treat row (its options say the value, under the Target column), hers bold with ↺ auto (`mainTgt` / `secondary[].tgt` / `painMap[i].tgt`, `{ v, k }`; another kind reads auto). Signs
 carry no target.
 
 **Diagnosis + Goal write themselves** (`phTpAutoDx`, `phTpAutoGoal`): every Likely or Possible pattern (+ any she agreed) minus

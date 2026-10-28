@@ -5127,3 +5127,37 @@ Trigger colours unchanged), **Names: Marked** only. Step 1 = the shoulder and mi
   `shots/muscle-picture-midback-2026-10-28.jpg`. **Not checked:** her real records, her phone, the Care Plan / Log / Copy notes
   lines after a Complete session with a part (they read the same `phMskAreasToday` list).
 - **Not built:** neck, arm (elbow, wrist), low back, hip, knee, ankle keep their bellies until drawn (next steps, same style).
+
+## Care Plan page tidied (2026-10-28)
+
+Her ask, with a screenshot of a Left forehead / Headaches & migraines plan: "improve the design of this page, make it more space
+saving and organised. with good worflow - show mock". Mock `care-plan-page-mock-2026-10-28.html` (published as an artifact);
+her 8 picks were all the recommended A, then "Yes, build it".
+
+- **Measured first** (sandbox, made-up patient, 1280 wide): the page was 2,530px tall; the findings column held a 295px card over
+  ~2,170px of nothing; the pain map tile took 1,082px under the grid; each concern was named 4 times (Came in for, Treat, its goal
+  words, Watch); Progress was a card that said "not yet". After: about 1,200px (the same patient, three scored pains).
+- **Left column** (`.ph-tp-cc-left`): Findings, then one card (`phTpCcSideHtml`): the scans line, the pain map small (the figures
+  only; `.ph-tp-tile.pmsm` hides its controls, table, surgeries and close-ups, stage max 300px) and Also treating. Open, or a tap
+  on the figures, draws the whole tile under the grid (`.ph-tp-cc-pmfull`, `phTpCcPmFullHtml`) and leaves "Pain map 3 · Close"
+  above; only one pain map is ever drawn. Stacked (<1280px) the card goes last (`display: contents` + `order`).
+- **Treat = one table** (`.ph-tp-trt`, a real table with a colgroup): ★ · concern · first → now + word · the target bar · target
+  ▾, read from `phTpWatchData(...).cc` (each concern's `{ v, tg, d }`, and `rk` = which Watch row is whose). Auto goal words are the
+  name's hover; her own show under the name. Phone: each row is two short lines (★ concern · first → now / bar · target).
+- **Diagnosis**: Patterns · Fang Bing Ren · ✎ on the heading line (`.ph-tp-sh`); the Fang Bing Ren line and Progress moved inside
+  it (`dxTailIn`); "● N new today" sits on the heading line too. Progress's empty state is one faded line.
+- **Watch** = the rest (signs, told and measured rows, red flags), after Diagnosis; `phTpWatchHtml(name, plan, skip)` returns ""
+  when nothing is left. The Session grid is untouched (LOCKED).
+- **Fixed on the way:** the target ▾ never saved on a pain row: its key ("p:head_frontal|L") has its own "|", and the change handler
+  split "p:head_frontal|L|lo" at the first one. It now splits at the last. The handler repaints the whole Treat / Diagnosis / Watch
+  box (`phTpFgRefresh`), so the row's bar and Watch follow the new target.
+- **Gone (nothing draws them):** the `.ph-tp-treat .tr` rules and their 480px rule, the separate Progress card (`.ph-tp-cc-prog`)
+  and its repaint in `phTpFgRefresh`.
+- **Tested (sandbox, made-up "Zoe Mock", three pains scored 6 → 3, 5 → 4, 4 → 4):** at 1280, 1100 (stacked) and 375 wide; target
+  change, hers bold, ↺ auto; ✎ on Treat and on Diagnosis open their editors and Escape closes them; Open / Close / tap the figure;
+  a typed goal shows, auto ones hover; a filled Progress draws inside Diagnosis; the findings line code finds the moved column;
+  Today's visit, Treatment, Log, Musculoskeletal and Patterns still open; no console errors. Smooth scrolling to the opened map
+  does not run in the hidden test pane (the same call the app uses in 12 other places); an instant jump does.
+- **Not checked:** her real records, the Key2 at 360 × 469, a plan whose pain map is in 3D mode (the small card would show the 3D
+  view), the lines from a finding to a pattern (the test patient had no pattern yet).
+- **Not live:** waits for her "push live".
