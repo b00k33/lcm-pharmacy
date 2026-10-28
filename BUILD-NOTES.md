@@ -5392,3 +5392,20 @@ score card:
   muscle chip tap adds its motor point (Today's points 1); Same as last time copies the pain score; + Movement → Flexion, typing
   35 saves; More exam opens; no console errors; the Prescriptions search narrows 4 → 2 and returns to 4.
 - **Not live:** waits for her "push live".
+
+## Audit: the app folder (2026-10-28)
+
+Same ask. The folder rule (CLAUDE.md "The folder"): a mock whose work is live lives in `mocks/`, app saves and exports in
+`backups/`; both local only.
+- **A saved copy of the live app sat in the public repo's place of a mock.** `abdomen-exam-mock-2026-10-22.html` in the working
+  folder had been overwritten on 10/26 by a browser save of the live app (`saved from url=https://b00k33.github.io/lcm-pharmacy/`,
+  build 20261026-004900, 8.1 MB, with an `_files` folder): never committed, but one `git add` from publishing whatever the page
+  showed. Moved, both, to `backups/` (kept, not deleted). The real mock (from git) is now `mocks/abdomen-exam-mock-2026-10-22.html`
+  and the file left the repo (the code's comments name it; the abdomen redesign is live).
+- **Five finished mocks to `mocks/`** (their work is live): care-plan-page-mock-2026-10-28, meals-macros-mock-2026-10-28,
+  ren-tongue-later-mock-2026-10-27, msk-redesign-mock-2026-10-27, msk-redesign-guide-2026-10-27. The root keeps the app, the docs,
+  the specs and `fang-bing-ren-questionnaire.html` (kept there on purpose by the 10/27 tidy).
+- **The repo's history store** (`.git`, 1.8 GB): 2,623 loose objects (1.7 GB, mostly whole copies of index.html) from the last
+  two weeks wait to be packed (the packed part, all the history before them, is 66 MB), but seven of its packs are online-only in OneDrive and OneDrive is not running, so packing
+  stops ("mmap failed"; every commit's tidy-up says so too). 1,402 loose copies already packed were cleared (`git prune-packed`).
+  Once OneDrive runs and downloads the pack folder (it is set to keep files on this device), `git gc` finishes it.
