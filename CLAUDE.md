@@ -1987,7 +1987,9 @@ Tongue page [Tongue page: tabs + the three jiaos]: photos beside four tabs Body 
 dropdowns; a red tip chip; the Jiao tab = a tongue map + one line per zone (Upper / Middle / Lower / Left / Right) that opens its
 own colour, coat, form and mark bars; zone colours (red tip) are record only (`phTngChipKeys` skips `colourAt`). A linked chip
 carries its Fang Bing Ren signs in its hover and the thin plum bar under it (`.tfp-lk`, the Find the Ren link mark); the
-"Fang Bing Ren · N ticked" tab opens every linked chip in place (her "just open the chips", never the Fang Bing Ren page).
+"Fang Bing Ren · N ticked" tab opens every linked chip in place (her "just open the chips", never the Fang Bing Ren page). The photo viewer's Tongue analysis (`phRenTngSecHtml`, her 2026-10-28 "similar to the tongue page") has the same
+tabs and lines, written to the photo's own day (today, a visit, or a dated review); no Fang Bing Ren tab there (its underline + panel
+show on today's finding); a sublingual shot opens on Sublingual; Drawing hides on Jiao.
 **Abdomen** (her redesign): `visitFnd[id].abd =
 {tension, tensionAt{} (read-only legacy: nothing new is written), tempC{epi, lower} (°C at CV12 / CV4, 28–40, no navel),
 marks{sign:[zones]} (Seen signs distended / bulging / sunken / vispulse sit by ROW: whole, epi, umb, lower), v2}`; tension is one
