@@ -6038,3 +6038,21 @@ Her words: "approve neck muscle draft". The nerve, motor point, point and cautio
 picture" (`splc`, `ssc`, `cmf`, `scms`, `scmc`, `scaa`, `scam`, `scap`, `lpt` in `PH_MSK_MUSCLES`) are hers now, no longer DRAFT;
 nothing in the code changed (the rows never carried a DRAFT comment). With the lower body's yes, every muscle row added on
 2026-10-28 is approved.
+
+## 2026-10-28 · Her body week: the Done row goes into Workout (her pick C)
+Her words: "i dont get hte done row" (a screenshot of the Week table: Workout, Done, Shoulder Rehab). The Done row drew one of eight
+circles a day (done, two-minute, today, to come, missed, away, before Habits, not planned) whose meanings lived only in the hover text.
+Three mocks (A ticks and icons, B a key line, C a tick inside Workout); her pick **C**.
+- **Built** (`phFitWkTblHtml`): no Done row. `dot()` now draws a mark, not a circle: today's is a 32px tick button (`.ftk`, the same
+  `data-fit-tk` tap and `phFitTick`; solid green once ticked, pale for the two-minute version), a day done a green tick (`.ftm`), the
+  two-minute version a pale tick, a day away a plane (`#i-plane`); a day to come, missed, not planned or before Habits shows nothing.
+  The Workout cell = its template dropdown + the mark (`.fwx`), the minutes of a logged workout under it; a rest day keeps "—".
+- **The same marks on the rehab rows** (my call, so one week reads one way: the rehab rows used the same eight circles).
+- **Phone:** a day's line shows the mark; the open day has no Done row (Workout carries the tick).
+- **Tested** (sandbox, made-up "Zz Fit Test" as My profile: Gym Mon–Fri 7 am, Shoulder Rehab Mon / Wed / Fri 7 pm, Habits begun Tue,
+  a trip Fri–Sun; all removed after): Workout reads Mon nothing (before Habits), Tue ✓, Wed the tick to tap, Thu nothing, Fri ✈,
+  Sat / Sun "—"; Shoulder Rehab Wed ✓ (today, ticked), Fri ✈; a tap on today's Workout tick saves the day (`dn`), the head reads 2
+  of 4, a second tap takes it off (1 of 4); the rehab tick goes off and on; the button is 32px; 375px: Tue ✓ and Fri ✈ on their
+  lines, today open with the tick beside Workout, no sideways scroll; Prescriptions search narrows and comes back; no console errors.
+- **Not checked:** her real week; the Key2; the Calendar view (untouched).
+- **Not live:** waits for her "push live".
