@@ -16559,6 +16559,7 @@
   #pharmacyPage .ph-visit-abd-map.ro .ph-abd2-lbl { display: none; }
   #pharmacyPage .ph-abd2-bone { stroke: var(--ph-herb); stroke-width: 1; stroke-opacity: .7; fill: none; stroke-linecap: round; }
   #pharmacyPage .ph-abd2-sternum { stroke: var(--ph-herb); stroke-width: .7; stroke-opacity: .5; stroke-dasharray: 1.6 1.6; fill: none; }
+  #pharmacyPage .ph-abd2-sternbone { fill: var(--ph-herb-tint); stroke: var(--ph-herb); stroke-width: .6; stroke-opacity: .6; pointer-events: none; }
   #pharmacyPage .ph-abd2-skin { fill: none; stroke: var(--ph-herb); stroke-width: 1.1; stroke-opacity: .65; stroke-linejoin: round; pointer-events: none; }
   #pharmacyPage .ph-abd2-pt { fill: #fff; stroke: var(--ph-herb); stroke-width: .7; pointer-events: none; }
   #pharmacyPage .ph-abd2-bone.faint { stroke-width: .8; opacity: .45; }
@@ -16859,7 +16860,7 @@
   #pharmacyPage .ph-visit-abd-map.ro .ph-abd2-svg { width: 56px; height: 105px; pointer-events: none; }
   #pharmacyPage .ph-visit-abd-map.ro.mini { float: left; margin: 0 8px 2px 0; }
   #pharmacyPage .ph-visit-abd-map.ro.mini .ph-abd2-svg { width: 29px; height: 55px; }
-  #pharmacyPage .ph-abd2-zone { stroke: rgba(90,96,96,.5); stroke-width: .7; stroke-linejoin: round; cursor: pointer; transition: fill .3s ease, filter .12s ease, transform .12s ease; transform-box: fill-box; transform-origin: center; }
+  #pharmacyPage .ph-abd2-zone { stroke: none; stroke-width: .7; stroke-linejoin: round; cursor: pointer; transition: fill .3s ease, filter .12s ease, transform .12s ease; transform-box: fill-box; transform-origin: center; }
   #pharmacyPage .ph-abd2-zone:hover { filter: brightness(.94); }
   #pharmacyPage .ph-abd2-zone:active { transform: scale(.97); }
   #pharmacyPage .ph-abd2-zone.on { stroke: #7A2F45; stroke-width: 1.6; stroke-dasharray: 3 2; }
@@ -96748,15 +96749,19 @@ or changing anything in Cliniko.
     return `<div class="ph-rf-grps" role="group" aria-label="Herb family filter">${famPill}</div>`;
   }
   // nine belly zones: under = washes and tap areas (below the organs), lines = the dashed grid (above, never tappable)
+  // her 2026-10-28 pick ("redraw it the same way", so both pictures agree): the nine places are the abdomen chart's own (PH_ABD_ZPTS: the
+  // hypochondrium a band along the rib arch, epi the pit under the xiphoid, the columns on the rectus edge), carried onto this figure by
+  // phRenAbdMap and kept inside the old box (47 either side, 145 to 241; a nested svg clips them, no id needed)
   function phRenZonesHtml(hot, hotLab, col) {
-    const CX = PH_BODY_GEOM.CX, ys = [149, 168, 206, 240], xa = [CX - 47, CX - 17, CX + 17, CX + 47];
+    const CX = PH_BODY_GEOM.CX, box = inner => `<svg x="${CX - 47}" y="145" width="94" height="96" viewBox="${CX - 47} 145 94 96">${inner}</svg>`;
     let under = "";
     PH_REN_ZONES.forEach(([id, nm, c, r]) => {
       const labs = hotLab[id] || [], name = esc(nm) + (labs.length ? " — " + esc(labs.join(", ")) : "");
-      under += `<rect class="rf-part" data-rf-name="${name}" x="${xa[c + 1]}" y="${ys[r]}" width="${xa[c + 2] - xa[c + 1]}" height="${ys[r + 1] - ys[r]}" fill="${hot[id] ? col(hot[id]) : "#fff"}" fill-opacity="${hot[id] ? .34 : 0}"><title>${name}</title></rect>`;
+      const k = PH_ABD_ZONE_ORDER.find(z => PH_ABD_ZPOS[z][0] === r && PH_ABD_ZPOS[z][1] === c + 1);
+      under += `<path class="rf-part" data-rf-name="${name}" d="${phRenAbdMap(PH_ABD_ZPTS[k])}Z" fill="${hot[id] ? col(hot[id]) : "#fff"}" fill-opacity="${hot[id] ? .34 : 0}"><title>${name}</title></path>`;
     });
-    const lines = `<g pointer-events="none" fill="none" stroke="#5d6e75" stroke-opacity=".42" stroke-width=".6" stroke-dasharray="2.4 2"><path d="M${CX - 17},149 V240 M${CX + 17},149 V240 M${CX - 47},168 H${CX + 47} M${CX - 47},206 H${CX + 47}"/></g>`;
-    return { under, lines };
+    const lines = box(`<g pointer-events="none" fill="none" stroke="#5d6e75" stroke-opacity=".42" stroke-width=".6" stroke-dasharray="2.4 2">${PH_ABD_DIV_PTS.concat(PH_ABD_DIV_REC_PTS).map(p => `<path d="${phRenAbdMap(p)}"/>`).join("")}</g>`);
+    return { under: box(under), lines };
   }
   // the ONE anatomy under the skin (her 2026-10-12 "one shared anatomy"): bones, organs, and (front) the sex-specific pelvic organs.
   // Ren draws it as tappable named parts. Patterns and Fang Bing Ren pass `opts.part(name, tag, attrs, zone, cls)` and draw the SAME shapes
@@ -124289,7 +124294,6 @@ or changing anything in Cliniko.
   }
   const PH_ABD_XIPH_Y = 24, PH_ABD_RIB_Y = 54, PH_ABD_ASIS_Y = 111, PH_ABD_PUBIS_Y = 143, PH_ABD_UMB_Y = 86;
   const PH_ABD_DX_RIB = phAbdHw(PH_ABD_RIB_Y), PH_ABD_DX_ASIS = phAbdHw(PH_ABD_ASIS_Y);
-  const PH_ABD_VD = 13;   // half-width of the centre column
   // costal margin: apex at the xiphoid, lowest at the 10th rib
   const phAbdRibTop = x => { const dx = Math.min(Math.abs(x - PH_ABD_CX), PH_ABD_DX_RIB); return PH_ABD_XIPH_Y + (PH_ABD_RIB_Y - PH_ABD_XIPH_Y) * Math.pow(dx / PH_ABD_DX_RIB, 1.15); };
   // inguinal ligaments: from each ASIS down to the pubic symphysis
@@ -124298,35 +124302,98 @@ or changing anything in Cliniko.
   const phAbdPts = arr => arr.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + "," + p[1].toFixed(1)).join("");
   const PH_ABD_OUT = (() => {   // trunk outline: down the left side, along the groin V, up the right side
     const left = [], base = [], right = [];
-    for (let y = 4; y <= PH_ABD_ASIS_Y; y += 2) left.push([PH_ABD_CX - phAbdHw(y), y]);
+    for (let y = 14; y <= PH_ABD_ASIS_Y; y += 2) left.push([PH_ABD_CX - phAbdHw(y), y]);   // open at the top, no neck (her 2026-10-28 pick)
     for (let dx = PH_ABD_DX_ASIS; dx >= 0; dx -= 1.3) base.push([PH_ABD_CX - dx, phAbdRibBot(PH_ABD_CX - dx)]);
     for (let dx = 1.3; dx <= PH_ABD_DX_ASIS + .01; dx += 1.3) base.push([PH_ABD_CX + dx, phAbdRibBot(PH_ABD_CX + dx)]);
-    for (let y = PH_ABD_ASIS_Y; y >= 4; y -= 2) right.push([PH_ABD_CX + phAbdHw(y), y]);
+    for (let y = PH_ABD_ASIS_Y; y >= 14; y -= 2) right.push([PH_ABD_CX + phAbdHw(y), y]);
     return left.concat(base, right);
   })();
   const PH_ABD_OUT_FILL = phAbdPts(PH_ABD_OUT) + "Z", PH_ABD_OUT_STROKE = phAbdPts(PH_ABD_OUT);
+  // ---- her 2026-10-28 ask ("i dont understand why the hypochondriac region is drawn like that. shouldnt it follow the space along the
+  // curve of the rib cage?"; mock abdomen-rib-curve-mocks-2026-10-28.html, her picks B "rib cage drawn"): the hypochondrium is a BAND
+  // along the inside of the rib arch, from beside the breastbone (PH_ABD_CUT off the midline) out past the 10th rib, PH_ABD_BAND deep
+  // (the arch moved in along its own normal), so epi is the pit under the xiphoid and the space below the bands; the side columns
+  // divide on the rectus edge (the muscle line, phAbdRecX) instead of two straight lines; rows 2 and 3 stay her 2026-10-20 even thirds.
+  // Before, an even 3 x 3 grid below the arch left hypo a slanted sliver and the tight-hypochondrium mark ran across the ribs. ----
+  const PH_ABD_BAND = 12, PH_ABD_CUT = 8.5;
+  const PH_ABD_FAR = PH_ABD_DX_RIB + 16;   // past the skin on purpose: the trunk clip trims every place
+  // the rectus edge (linea semilunaris) at a given y; side -1 = the patient's right (viewer's left)
+  const phAbdRecX = (s, y) => { const u = Math.max(0, Math.min(1, (y - 30) / 110)); return PH_ABD_CX + s * (15.5 - 9.5 * Math.pow(u, 2.2) + 1.2 * Math.sin(Math.PI * u)); };
+  // the rib arch, carried on straight past the 10th rib tip so the band runs out through the skin
+  const PH_ABD_RIB_K = (PH_ABD_RIB_Y - PH_ABD_XIPH_Y) / PH_ABD_DX_RIB * 1.15;
+  const phAbdArchY = x => { const d = Math.abs(x - PH_ABD_CX); return d > PH_ABD_DX_RIB ? PH_ABD_RIB_Y + PH_ABD_RIB_K * (d - PH_ABD_DX_RIB) : phAbdRibTop(x); };
+  // the point d out from the midline on side s, D in from the arch along its normal (D < 0: up over the ribs)
+  const phAbdArchPt = (s, d, D) => { const x = PH_ABD_CX + s * d, h = .05, m = (phAbdArchY(x + h) - phAbdArchY(x - h)) / (2 * h), L = Math.hypot(m, 1); return [x - m / L * D, phAbdArchY(x) + D / L]; };
+  const phAbdSeq = (a, b, st) => { const n = Math.max(1, Math.round(Math.abs(b - a) / st)), r = []; for (let i = 0; i <= n; i++) r.push(a + (b - a) * i / n); return r; };
+  const phAbdArchOff = (s, a, b, D) => phAbdSeq(a, b, .5).map(d => phAbdArchPt(s, d, D));
+  const phAbdLR = a => a.length && a[0][0] > a[a.length - 1][0] ? a.slice().reverse() : a;   // left to right, for text on a path
+  const phAbdInTrunk = (p, m) => Math.abs(p[0] - PH_ABD_CX) < phAbdHw(p[1]) - m && p[1] < phAbdRibBot(p[0]) - m;
+  const phAbdInPoly = (pts, x, y) => { let inn = false; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { const [xi, yi] = pts[i], [xj, yj] = pts[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inn = !inn; } return inn; };
+  const phAbdBisect = (lo, hi, keepLo) => { for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (keepLo(m)) lo = m; else hi = m; } return (lo + hi) / 2; };
+  // where the band's inner edge sits under the cut (DC) and where it crosses the rectus edge (DQ, at height QY)
+  const PH_ABD_DC = phAbdBisect(PH_ABD_CUT, PH_ABD_FAR, d => Math.abs(phAbdArchPt(-1, d, PH_ABD_BAND)[0] - PH_ABD_CX) < PH_ABD_CUT);
+  const PH_ABD_DQ = phAbdBisect(PH_ABD_CUT, PH_ABD_FAR, d => { const p = phAbdArchPt(-1, d, PH_ABD_BAND); return Math.abs(p[0] - PH_ABD_CX) < Math.abs(phAbdRecX(-1, p[1]) - PH_ABD_CX); });
+  const PH_ABD_QY = phAbdArchPt(-1, PH_ABD_DQ, PH_ABD_BAND)[1];
+  // where row lines 1 and 2 meet the rectus edge (the row line is nearly flat there, so this settles at once)
+  const phAbdRowRecY = r => { let y = 60; for (let i = 0; i < 30; i++) y = phAbdRowY(r, phAbdRecX(-1, y)); return y; };
+  const PH_ABD_R1Y = phAbdRowRecY(1), PH_ABD_R2Y = phAbdRowRecY(2);
   // display columns, viewer's left to right: patient's RIGHT first (her 2026-10-20 pick, as the Ren figure)
   const PH_ABD_ZPOS = { hypoR: [0, 0], epi: [0, 1], hypoL: [0, 2], flankR: [1, 0], umb: [1, 1], flankL: [1, 2], iliacR: [2, 0], lower: [2, 1], iliacL: [2, 2] };
+  // the nine places as point lists; phAbdZoneGeom adds each one's path, middle and size
+  const PH_ABD_ZPTS = (() => {
+    const Z = {}, rec = (s, y0, y1) => phAbdSeq(y0, y1, 1).map(y => [phAbdRecX(s, y), y]), row = (r, x0, x1) => phAbdSeq(x0, x1, 1).map(x => [x, phAbdRowY(r, x)]);
+    const r1 = s => phAbdRecX(s, PH_ABD_R1Y), r2 = s => phAbdRecX(s, PH_ABD_R2Y), cut = s => [PH_ABD_CX + s * PH_ABD_CUT, phAbdArchY(PH_ABD_CX + s * PH_ABD_CUT)];
+    [["R", -1], ["L", 1]].forEach(([k, s]) => {
+      const far = PH_ABD_CX + s * PH_ABD_FAR;
+      Z["hypo" + k] = phAbdArchOff(s, PH_ABD_FAR, PH_ABD_CUT, 0).concat(phAbdArchOff(s, PH_ABD_DC, PH_ABD_FAR, PH_ABD_BAND));
+      Z["flank" + k] = phAbdArchOff(s, PH_ABD_DQ, PH_ABD_FAR, PH_ABD_BAND).concat([[far, phAbdRowY(2, far)]], row(2, far, r2(s)), rec(s, PH_ABD_R2Y, PH_ABD_QY));
+      Z["iliac" + k] = row(2, r2(s), far).concat([[far, 150]], rec(s, 150, PH_ABD_R2Y));
+    });
+    Z.epi = [cut(-1)].concat(phAbdArchOff(-1, PH_ABD_CUT, 0, 0), phAbdArchOff(1, 0, PH_ABD_CUT, 0), phAbdArchOff(1, PH_ABD_DC, PH_ABD_DQ, PH_ABD_BAND),
+      rec(1, PH_ABD_QY, PH_ABD_R1Y), row(1, r1(1), r1(-1)), rec(-1, PH_ABD_R1Y, PH_ABD_QY), phAbdArchOff(-1, PH_ABD_DQ, PH_ABD_DC, PH_ABD_BAND));
+    Z.umb = rec(-1, PH_ABD_R1Y, PH_ABD_R2Y).concat(row(2, r2(-1), r2(1)), rec(1, PH_ABD_R2Y, PH_ABD_R1Y), row(1, r1(1), r1(-1)));
+    Z.lower = rec(-1, PH_ABD_R2Y, 150).concat(rec(1, 150, PH_ABD_R2Y), row(2, r2(1), r2(-1)));
+    return Z;
+  })();
+  const PH_ABD_ZG = {};
   function phAbdZoneGeom(r, c) {
-    const xa = c === 0 ? 0 : (c === 1 ? PH_ABD_CX - PH_ABD_VD : PH_ABD_CX + PH_ABD_VD);
-    const xb = c === 0 ? PH_ABD_CX - PH_ABD_VD : (c === 1 ? PH_ABD_CX + PH_ABD_VD : 120);
-    const n = 26;
-    let d = "";
-    for (let i = 0; i <= n; i++) { const x = xa + (xb - xa) * i / n; d += (i ? "L" : "M") + x.toFixed(1) + "," + phAbdRowY(r, x).toFixed(1); }
-    for (let i = n; i >= 0; i--) { const x = xa + (xb - xa) * i / n; d += "L" + x.toFixed(1) + "," + phAbdRowY(r + 1, x).toFixed(1); }
-    d += "Z";
-    let sx = 0, sy = 0, cnt = 0;   // label anchor = centroid of the part of the cell that is inside the trunk
-    for (let i = 0; i < 25; i++) {
-      const x = xa + (xb - xa) * (i + .5) / 25;
-      if (Math.abs(x - PH_ABD_CX) > phAbdHw(phAbdRowY(r, x) + 1)) continue;
-      const y0 = phAbdRowY(r, x), y1 = phAbdRowY(r + 1, x);
-      for (let j = 0; j < 9; j++) { sx += x; sy += y0 + (y1 - y0) * (j + .5) / 9; cnt++; }
-    }
-    const cx = sx / cnt, cy = sy / cnt, h = (phAbdRowY(r + 1, cx) - phAbdRowY(r, cx));
-    const w = c === 1 ? PH_ABD_VD * 2 : Math.max(phAbdHw(cy) - PH_ABD_VD, 8);
+    const k = PH_ABD_ZONE_ORDER.find(z => PH_ABD_ZPOS[z][0] === r && PH_ABD_ZPOS[z][1] === c);
+    if (PH_ABD_ZG[k]) return PH_ABD_ZG[k];
+    // the middle of the part of the place that is inside the trunk (its name sits there; its signs a little below)
+    const pts = PH_ABD_ZPTS[k], inn = [], xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+    for (let y = Math.max(14.5, Math.floor(Math.min(...ys)) + .5); y < Math.min(PH_ABD_PUBIS_Y, Math.max(...ys)); y += 1.5)
+      for (let x = Math.max(27.5, Math.floor(Math.min(...xs)) + .5); x < Math.min(93, Math.max(...xs)); x += 1.5) if (phAbdInTrunk([x, y], .3) && phAbdInPoly(pts, x, y)) inn.push([x, y]);
+    const cx = inn.reduce((a, p) => a + p[0], 0) / inn.length, cy = inn.reduce((a, p) => a + p[1], 0) / inn.length;
+    const col = inn.filter(p => Math.abs(p[0] - cx) < .76).map(p => p[1]), across = inn.filter(p => Math.abs(p[1] - cy) < .76).map(p => p[0]);
+    const h = col.length ? Math.max(...col) - Math.min(...col) + 1.5 : 10, w = across.length ? Math.max(...across) - Math.min(...across) + 1.5 : 10;
+    const d = phAbdPts(pts) + "Z", size = { ty: cy - h / 2, w: Math.max(w - 2, 8), h: Math.max(h, 10) };
+    // a hypo band's signs sit out at its side end, clear of the name written along the breastbone end
+    if (PH_ABD_ZPOS[k][0] === 0 && PH_ABD_ZPOS[k][1] !== 1) { const [gx, gy] = phAbdArchPt(PH_ABD_ZPOS[k][1] === 0 ? -1 : 1, PH_ABD_DX_RIB - 1.4, 6.3); return (PH_ABD_ZG[k] = Object.assign({ d, cx: gx, cy: gy - 3, gy }, size)); }
     // signs (water, gas, tender ...) sit a little below the name, never on top of it
-    return { d, cx, cy, gy: cy + Math.min(10, Math.max(4.5, h * .26)), ty: phAbdRowY(r, cx), w: Math.max(w - 2, 8), h: Math.max(h, 10) };
+    return (PH_ABD_ZG[k] = Object.assign({ d, cx, cy, gy: cy + Math.min(10, Math.max(4.5, h * .26)) }, size));
   }
+  // the hypo name runs along its band; a tight hypochondrium is a firm red line hugging the arch and a dashed line at the band's inner edge
+  const PH_ABD_HYPO_LINES = {};
+  [["hypoR", -1], ["hypoL", 1]].forEach(([k, s]) => { PH_ABD_HYPO_LINES[k] = {
+    lbl: phAbdPts(phAbdLR(phAbdArchOff(s, PH_ABD_CUT + 3, PH_ABD_FAR, 7.6).filter(p => phAbdInTrunk(p, .8) && Math.abs(p[0] - PH_ABD_CX) > PH_ABD_CUT + 1.2))),
+    firm: phAbdPts(phAbdLR(phAbdArchOff(s, PH_ABD_CUT + 1.2, PH_ABD_FAR, 2.4).filter(p => phAbdInTrunk(p, 1.3)))),
+    dash: phAbdPts(phAbdLR(phAbdArchOff(s, PH_ABD_DC + 1, PH_ABD_FAR, PH_ABD_BAND - 1.7).filter(p => phAbdInTrunk(p, 1.3)))) }; });
+  // the dotted lines between the places, each drawn once: the band's cut and inner edge, row 1 between the rectus edges, row 2 across;
+  // the rectus edge below the band is the muscle's own outline (PH_ABD_RECTUS), or a dotted line on the small read-only charts
+  const PH_ABD_DIV_PTS = [-1, 1].map(s => { const x = PH_ABD_CX + s * PH_ABD_CUT; return [[x, phAbdArchY(x)]].concat(phAbdArchOff(s, PH_ABD_DC, PH_ABD_FAR, PH_ABD_BAND)); })
+    .concat([phAbdSeq(phAbdRecX(-1, PH_ABD_R1Y), phAbdRecX(1, PH_ABD_R1Y), 1).map(x => [x, phAbdRowY(1, x)]), phAbdSeq(20, 100, 1).map(x => [x, phAbdRowY(2, x)])]);
+  const PH_ABD_DIV_REC_PTS = [-1, 1].map(s => phAbdSeq(PH_ABD_QY, 150, 2).map(y => [phAbdRecX(s, y), y]));
+  const PH_ABD_DIV = PH_ABD_DIV_PTS.map(p => `<path d="${phAbdPts(p)}"/>`).join(""), PH_ABD_DIV_REC = PH_ABD_DIV_REC_PTS.map(p => `<path d="${phAbdPts(p)}"/>`).join("");
+  // the same nine places on the Fang Bing Ren body figure (phRenZonesHtml, her 2026-10-28 pick "so both pictures agree"), carried over by
+  // the landmarks that figure draws: the xiphoid at 150, the 10th rib tip 33 out at 175, the pubis at 240.5
+  const phRenAbdMap = pts => phAbdPts(pts.map(([x, y]) => [PH_BODY_GEOM.CX + (x - PH_ABD_CX) * 33 / PH_ABD_DX_RIB,
+    y <= PH_ABD_RIB_Y ? 150 + (y - PH_ABD_XIPH_Y) * 25 / (PH_ABD_RIB_Y - PH_ABD_XIPH_Y) : 175 + (y - PH_ABD_RIB_Y) * 65.5 / (PH_ABD_PUBIS_Y - PH_ABD_RIB_Y)]));
+  // the bones and muscles for bearings (her pick B, as in the mock): three ribs above the arch running in to the breastbone, the two
+  // rectus muscles from the ribs to the pubis with their three tendinous bands
+  const PH_ABD_RIBS = [[7, .8, .34], [14, .7, .24], [21, .6, .16]].map(([D, w, op]) => [-1, 1].map(s => `<path d="${phAbdPts(phAbdArchOff(s, PH_ABD_FAR, 0, -D).filter(p => Math.abs(p[0] - PH_ABD_CX) > 3.4))}" stroke-width="${w}" stroke-opacity="${op}"/>`).join("")).join("");
+  const PH_ABD_REC_TOP = (() => { let y = 40; for (let i = 0; i < 40; i++) y = phAbdRibTop(phAbdRecX(-1, y)); return y; })();   // the rectus edge meets the arch
+  const PH_ABD_RECTUS = [-1, 1].map(s => { const y0 = PH_ABD_REC_TOP - 8; return `<path d="${phAbdPts(phAbdSeq(y0, 141, 2).map(y => [phAbdRecX(s, y), y]).concat(phAbdSeq(141, PH_ABD_REC_TOP - 5, 2).map(y => [PH_ABD_CX + s * .9, y])))}Q${(PH_ABD_CX + s * .9).toFixed(1)},${(PH_ABD_REC_TOP - 9.5).toFixed(1)} ${phAbdRecX(s, y0).toFixed(1)},${y0.toFixed(1)}Z" fill-opacity=".045" stroke-opacity=".3" stroke-width=".55"/>`; }).join("")
+    + `<g fill="none">${[42, 57, 72].map(y => `<path d="M${PH_ABD_CX - 14.5},${y + .8} Q${PH_ABD_CX - 7},${y - .9} ${PH_ABD_CX - .9},${y} M${PH_ABD_CX + .9},${y} Q${PH_ABD_CX + 7},${y - .9} ${PH_ABD_CX + 14.5},${y + .8}" stroke-opacity=".28" stroke-width=".5"/>`).join("")}</g>`;
   let phAbdUid = 0;
   // ---- her 2026-10-22 redesign (mock abdomen-exam-mock-2026-10-22.html; her colour rule: the drawing is plain, every colour is a finding
   // she marked -- tension grey / sand / rose, tender red, a beat maroon, sounds grey ink; since her 2026-10-24 ask the temperature is
@@ -124343,7 +124410,7 @@ or changing anything in Cliniko.
   // last visit's ink (her 2026-10-25 pick, the Pulse chart's grey): every colour of a drawing turned one grey (a gas bubble's white stays)
   const PH_ABD_LAST = "#8F9A9C";
   const phAbdGrey = s => s.replace(/#[0-9A-Fa-f]{6}\b/g, PH_ABD_LAST).replace(/rgba\((?!255,255,255,)\d+,\d+,\d+,([.\d]+)\)/g, "rgba(143,154,156,$1)");
-  const PH_ABD_ANAT = "#8A9293";                      // the faint muscle lines under the zones
+  const PH_ABD_ANAT = "#8A9293";                      // the dotted lines between the places
   // °C -> a colour, blue (cold) through pale blue and a neutral to red (warm)
   function phAbdThermal(t) {
     const stops = [[32, [59, 120, 176]], [33.5, [140, 190, 226]], [34.6, [205, 200, 192]], [35.6, [228, 128, 88]], [36.6, [200, 62, 46]]];
@@ -124385,17 +124452,18 @@ or changing anything in Cliniko.
       return `<path d="${z.d}" fill="${fill}" class="ph-abd2-zone${active === k ? " on" : ""}${legacy.has(k) ? " legacy" : ""}"${ro ? "" : ` data-visit-zone="abd:${k}" style="cursor:pointer"`}><title>${esc(z.label)}</title></path>`
         + phAbdTWashes(m, x => x === k).map(t => `<path d="${z.d}" fill="${PH_ABD_TWASH[t]}" pointer-events="none"/>`).join("");
     }).join("");
-    // faint muscle lines under the zones (her pick, "B"): linea alba, the rectus borders, three tendinous bands. Line work only.
-    const rb = (side, y0 = 30, y1 = 140) => { const p = []; for (let y = y0; ; y = Math.min(y + 4, y1)) { const u = (y - 30) / 110; p.push([PH_ABD_CX + side * (15.5 - 9.5 * Math.pow(u, 2.2) + 1.2 * Math.sin(Math.PI * u)), y]); if (y >= y1) break; } return phAbdPts(p); };
-    const anat = ro ? "" : `<g fill="none" stroke="${PH_ABD_ANAT}" pointer-events="none"><path d="M${PH_ABD_CX},${PH_ABD_XIPH_Y} L${PH_ABD_CX},${PH_ABD_PUBIS_Y}" stroke-opacity=".34" stroke-width=".6"/>
-      <path d="${rb(-1)}" stroke-opacity=".5" stroke-width=".75"/><path d="${rb(1)}" stroke-opacity=".5" stroke-width=".75"/>
-      ${[42, 57, 72].map(y => `<path d="M${PH_ABD_CX - 14.5},${y + .8} Q${PH_ABD_CX - 7},${y - .9} ${PH_ABD_CX - .3},${y} M${PH_ABD_CX + .3},${y} Q${PH_ABD_CX + 7},${y - .9} ${PH_ABD_CX + 14.5},${y + .8}" stroke-opacity=".4" stroke-width=".6"/>`).join("")}</g>`;
-    // names sized to their cell: the side zones are two small lines (R / L over the word), the
-    // centre column one line; "umb" sits above the navel
+    // the dotted lines between the places, then the bones and muscles for bearings (her 2026-10-28 pick B; not on the small read-only
+    // charts, which draw the rectus edge as a dotted line instead). rb = the rectus edge, which the tight rectus mark also draws.
+    const rb = (side, y0 = 30, y1 = 140) => { const p = []; for (let y = y0; ; y = Math.min(y + 4, y1)) { p.push([phAbdRecX(side, y), y]); if (y >= y1) break; } return phAbdPts(p); };
+    const anat = `<g fill="none" stroke="${PH_ABD_ANAT}" stroke-opacity=".75" stroke-width=".6" stroke-dasharray="1 1.3" pointer-events="none">${PH_ABD_DIV}${ro ? PH_ABD_DIV_REC : ""}</g>`
+      + (ro ? "" : `<g fill="none" stroke="var(--ph-herb)" stroke-linecap="round" pointer-events="none">${PH_ABD_RIBS}</g><g fill="var(--ph-herb)" stroke="var(--ph-herb)" pointer-events="none">${PH_ABD_RECTUS}</g>`);
+    // names sized to their place: hypo written along its band (her 2026-10-28 pick), the centre column one word, the side zones
+    // R / L over the word; "umb" sits above the navel
     const labels = PH_ABD_ZONE_ORDER.map(k => {
       const z = Z[k], parts = (PH_ABD_ZONE_SHORT[k] || k).split(" "), word = parts[parts.length - 1], side = parts.length > 1 ? parts[0] : "";
-      if (z.c === 1) return `<text x="${PH_ABD_CX}" y="${(k === "umb" ? PH_ABD_UMB_Y - 4.2 : z.cy + 1.4).toFixed(1)}" text-anchor="middle" font-size="4" class="ph-abd2-lbl" pointer-events="none">${esc(word)}</text>`;
-      return `<text text-anchor="middle" class="ph-abd2-lbl" pointer-events="none"><tspan x="${z.cx.toFixed(1)}" y="${(z.cy - .8).toFixed(1)}" font-size="3" fill-opacity=".7">${esc(side)}</tspan><tspan x="${z.cx.toFixed(1)}" y="${(z.cy + 3).toFixed(1)}" font-size="3.7">${esc(word)}</tspan></text>`;
+      if (PH_ABD_HYPO_LINES[k]) return `<text font-size="3.8" class="ph-abd2-lbl" pointer-events="none"><textPath href="#${uid}${k}" startOffset="${k === "hypoR" ? 72.5 : 27.5}%" text-anchor="middle">${esc(side + " " + word)}</textPath></text>`;
+      if (z.c === 1) return `<text x="${PH_ABD_CX}" y="${(k === "umb" ? PH_ABD_UMB_Y - 5.4 : z.cy + 1.4).toFixed(1)}" text-anchor="middle" font-size="4.2" class="ph-abd2-lbl" pointer-events="none">${esc(word)}</text>`;
+      return `<text text-anchor="middle" class="ph-abd2-lbl" pointer-events="none"><tspan x="${z.cx.toFixed(1)}" y="${(z.cy - 1.4).toFixed(1)}" font-size="3.5" fill-opacity=".62">${esc(side)}</tspan><tspan x="${z.cx.toFixed(1)}" y="${(z.cy + 3).toFixed(1)}" font-size="4.2">${esc(word)}</tspan></text>`;
     }).join("");
     const rib = [];
     for (let x = PH_ABD_CX - PH_ABD_DX_RIB; x <= PH_ABD_CX + PH_ABD_DX_RIB + .01; x += 1.5) rib.push([x, phAbdRibTop(x)]);
@@ -124403,7 +124471,7 @@ or changing anything in Cliniko.
     // can pop in once on the exam page; last visit's (opts.prev, her 2026-10-25 pick) the same drawing in grey under them, still. A sign
     // on the Whole abdomen place (or saved with no place) draws once, big, over the belly; tight rectus and thin wall draw here too
     const W = { cx: PH_ABD_CX, cy: 84, gy: 70, w: 40, h: 96, c: 1, whole: true };
-    const RXY = [[phAbdRibTop(PH_ABD_CX - 15) + 1, 63.7], [63.7, 103.3], [103.3, 136]];   // the rectus border down each row (epi / umb / lower), rib edge to groin
+    const RXY = [[PH_ABD_QY + 1, PH_ABD_R1Y], [PH_ABD_R1Y, PH_ABD_R2Y], [PH_ABD_R2Y, 136]];   // the rectus edge down each row (epi / umb / lower), below the rib band to the groin
     const marksSvg = (mk, live) => {
       const m = {}; Object.keys(mk).forEach(k => { m[k] = Array.isArray(mk[k]) && !mk[k].length ? ["whole"] : mk[k]; });
       const glyph = (k, fn) => (m[k] || []).map(zk => { const z = zk === "whole" ? W : Z[zk]; return z ? (live ? `<g data-m="${k}|${zk}">${fn(z.cx, z.gy, z, zk)}</g>` : fn(z.cx, z.gy, z, zk)) : ""; }).join("");
@@ -124414,8 +124482,9 @@ or changing anything in Cliniko.
       const puls = glyph("pulsation", (x, y, z, zk) => phAbdGPulse(nav(zk, z) ? PH_ABD_CX : x, nav(zk, z) ? PH_ABD_UMB_Y : y, 1));
       const vispulse = glyph("vispulse", (x, y, z) => z.whole ? phAbdGPulse(Z.epi.cx, Z.epi.gy, 1) : phAbdGPulse(x, y, 1));   // the whole belly draws at epi
       const tender = glyph("tender", (x, y, z) => z.whole ? `<ellipse cx="${PH_ABD_CX}" cy="84" rx="25" ry="44" fill="rgba(178,58,58,.1)" pointer-events="none"/>${phAbdGTender(PH_ABD_CX, 70)}` : phAbdGTender(x, y));
-      // a tight hypochondrium (her 2026-10-24): a firm band along the rib edge on that side, a dashed line inside it
-      const tightHypo = (m.tighthypo || []).filter(z => PH_ABD_HYPO.includes(z)).map(z => { const R = z === "hypoR"; return `<g${live ? ` data-m="tighthypo|${z}"` : ""} pointer-events="none"><path d="${R ? "M31,47 Q40,56 51,63" : "M89,47 Q80,56 69,63"}" fill="none" stroke="#A83C50" stroke-width="2.2" stroke-linecap="round" stroke-opacity=".75"/><path d="${R ? "M33.5,53 Q41,60 49.5,65.5" : "M86.5,53 Q79,60 70.5,65.5"}" fill="none" stroke="#A83C50" stroke-width=".7" stroke-dasharray="1.6 1.2" stroke-linecap="round"/></g>`; }).join("");
+      // a tight hypochondrium (her 2026-10-24; along the rib edge since her 2026-10-28 pick): a firm red line hugging the arch on that
+      // side, a dashed line at the band's inner edge
+      const tightHypo = (m.tighthypo || []).filter(z => PH_ABD_HYPO.includes(z)).map(z => `<g${live ? ` data-m="tighthypo|${z}"` : ""} pointer-events="none"><path d="${PH_ABD_HYPO_LINES[z].firm}" fill="none" stroke="#A83C50" stroke-width="2.2" stroke-linecap="round" stroke-opacity=".75"/><path d="${PH_ABD_HYPO_LINES[z].dash}" fill="none" stroke="#A83C50" stroke-width=".7" stroke-dasharray="1.6 1.2" stroke-linecap="round"/></g>`).join("");
       const bulge = glyph("bulging", (x, y, z) => z.whole ? `<path d="M37,98 q23,-30 46,0" class="ph-abd2-g" stroke-width="1.6" pointer-events="none"/>` : `<path d="M${x - z.w / 2 + 1},${y + 2} q${z.w / 2 - 1},${-z.h * .5} ${z.w - 2},0" class="ph-abd2-g" stroke-width="1.4" pointer-events="none"/>`);
       const sunk = glyph("sunken", (x, y, z) => z.whole ? `<path d="M37,76 q23,30 46,0" class="ph-abd2-g" stroke-width="1.6" pointer-events="none"/>` : `<path d="M${x - z.w / 2 + 1},${y - 2} q${z.w / 2 - 1},${z.h * .5} ${z.w - 2},0" class="ph-abd2-g" stroke-width="1.4" pointer-events="none"/>`);
       // tight rectus: the rectus border in red, dashed, down the row of the place (a side zone: that side only; the whole belly: full length)
@@ -124431,15 +124500,15 @@ or changing anything in Cliniko.
     const prev = opts && opts.prev ? (p => `<g class="ph-abd3-prev" pointer-events="none">${phAbdGrey(p.dist + p.top)}</g>`)(marksSvg(phAbd2Read(opts.prev).marks, false)) : "";
     // viewBox x 20..100 (was 0..120): the trunk is only x 27..93, so the old box was nearly half empty on each side
     return `<svg viewBox="20 0 80 150" class="ph-ltr-fndsvg ph-abd2-svg${ro ? " ro" : ""}" aria-label="Abdomen chart, front">
-      <defs><clipPath id="${uid}"><path d="${PH_ABD_OUT_FILL}"/></clipPath></defs>
+      <defs><clipPath id="${uid}"><path d="${PH_ABD_OUT_FILL}"/></clipPath>${PH_ABD_HYPO.map(k => `<path id="${uid}${k}" d="${PH_ABD_HYPO_LINES[k].lbl}"/>`).join("")}</defs>
       <path d="${PH_ABD_OUT_FILL}" fill="#FFFFFF"/>
       <g clip-path="url(#${uid})">${zones}${anat}</g>
-      <path d="${phAbdPts(rib)}" class="ph-abd2-bone"/>
-      <path d="M${PH_ABD_CX},5 L${PH_ABD_CX},${PH_ABD_XIPH_Y}" class="ph-abd2-sternum"/>
+      <path d="${phAbdPts(rib)}" class="ph-abd2-bone" style="stroke-width:1.25;stroke-opacity:.8"/>
+      <path d="M57.2,12 L62.8,12 L62.4,19.6 Q60,26.2 57.6,19.6 Z" class="ph-abd2-sternbone"/>
       <path d="${PH_ABD_OUT_STROKE}" class="ph-abd2-skin"/>
       ${prev}${now.dist}
       <circle cx="${(PH_ABD_CX - PH_ABD_DX_ASIS).toFixed(1)}" cy="${PH_ABD_ASIS_Y}" r="1.25" class="ph-abd2-pt"/><circle cx="${(PH_ABD_CX + PH_ABD_DX_ASIS).toFixed(1)}" cy="${PH_ABD_ASIS_Y}" r="1.25" class="ph-abd2-pt"/>
-      <circle cx="${PH_ABD_CX}" cy="${PH_ABD_PUBIS_Y}" r=".9" fill="var(--ph-herb)" fill-opacity=".7"/>
+      <rect x="${PH_ABD_CX - 2}" y="${PH_ABD_PUBIS_Y - 2.4}" width="4" height="4.4" rx="1.4" class="ph-abd2-sternbone"/>
       <ellipse cx="${PH_ABD_CX}" cy="${PH_ABD_UMB_Y}" rx="1.3" ry="1.8" class="ph-abd2-pt"/>
       ${labels}
       ${now.top}

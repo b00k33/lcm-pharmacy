@@ -1037,7 +1037,17 @@ side, still, always on (`phAbdLast` = the newest dated finding before today; `op
 "Today · Last · <date>" key over the charts. Every sign is drawn: tight rectus (red dashes by row), thin wall (dotted ring), a
 Whole abdomen sign once, big. Phone: the sign tabs one sideways row (edge fades), Erase at the end of the chip row. The page
 handles its own taps (`phAbdClick` → `phAbdChartWrite` → `phAbdWrite`); the old shared `data-visit-abd2` handlers and the
-`phAbdExam` borrow are gone.
+`phAbdExam` borrow are gone. **The front drawing** (her 2026-10-28 "shouldnt it follow the space along the curve of the rib cage?",
+her 8 picks on mocks/abdomen-rib-curve-mocks-2026-10-28.html, B "rib cage drawn"): R / L hypo is a **band along the inside of the rib
+arch**, from beside the breastbone (`PH_ABD_CUT` 8.5 off the midline) out through the side, `PH_ABD_BAND` 12 deep along the arch's
+normal; epi is the pit under the xiphoid and the space below the bands; the side columns divide on the **rectus edge**
+(`phAbdRecX`), rows 2 / 3 stay the 10-20 even thirds. One geometry, `PH_ABD_ZPTS` (point lists; `phAbdZoneGeom` adds path, middle,
+size, a hypo sign at its band's side end, clear of the name). Faint ribs, breastbone, rectus muscles with their bands and the pubic
+symphysis for bearings (not on the read-only minis, which draw the rectus edge dotted); dotted dividers drawn once (zones carry no
+stroke of their own); hypo names written along the band; the outline open at the top. Tight hypochondrium = a firm red line hugging the
+arch + a dashed line at the band's inner edge (`PH_ABD_HYPO_LINES`); tight rectus starts below the band (`PH_ABD_QY`). The Fang Bing
+Ren body figure's nine belly places are the same shapes (`phRenZonesHtml` through `phRenAbdMap`: xiphoid 150, 10th rib tip 33 out at
+175, pubis 240.5), so both pictures agree.
 **Pulse:** each tick is dated; each new day starts blank. The chart is HER TABLE (her pick): 6 columns, 3 PRIMARY (Cun / Guan /
 Chi, lightly shaded) and 3 SECONDARY -- never pair a secondary column with a primary one. Cun / Guan / Chi each head ONE column
 (R: Up. Resp / Stomach / Bladder, L: Heart / Liver / Adrenals, `PH_PULSE_POS_COL`): the organ-name row on top, the Cun / Guan /
