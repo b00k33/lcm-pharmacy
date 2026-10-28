@@ -5941,7 +5941,9 @@ adds MP, one drawing everywhere, one picture per row on a phone.
   yesterday not counted, the same Dinner on a normal night counted; Had it with something else counts what she had; no ✓ added;
   no console errors. Picture: shots/meals-kj-count-2026-10-28.png.
 - **Not checked:** her real records (her past days' untouched usual meals now count too); the Key2 phone.
-- **Not live:** waits for her "push live".
+- **LIVE 2026-10-28, build 20261028-213400** (her "push"): published ALONE on top of main (e9fbddda: index.html + sw.js stamps
+  only), since session-a also held work still waiting for her word; joined into session-a as 722d7c6d. Live site checked: both
+  stamps and `phMealEaten` served.
 
 ## Her body week: Fitness tabs, booked gym times, Cycle side column off (synth22, 2026-10-28)
 - **Her words (one synth22 batch):** (Cycle page) "the last column is not needed" (popup: the Fang Bing Ren column); (Weekly plan,
