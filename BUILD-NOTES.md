@@ -5082,3 +5082,48 @@ line). Commit ad52b866 on session-a, NOT live.
   in a private index (another session's muscle-picture work was open, uncommitted, in index.html and stayed out); joined into
   session-a with its tree unchanged (dd3e621b). The served page has `mk2-nw`, the phone grid and the new `phMskShort`, and no
   `PH_MSK_ATLAS`. The saved build was opened in the sandbox first (Musculoskeletal page, no errors).
+
+## Muscle picture: true shapes for the shoulder and mid back (2026-10-28)
+
+Her ask (screenshot of the "MID BACK · MUSCLES" picture of grey lens bellies, under the pain table): "draw a more accurate
+depiction of the muscles e.g. Pectoralis major minor etc for me to tap. show mock". Mock `mocks/muscle-picture-mock-2026-10-28.html`
+(artifact https://claude.ai/artifact/4ZEWVAkKyx1bSw37SmtHL8). Her 4 picks: **B · Two rows** (Surface row, then a Deep row, both on
+screen), **Split** (a muscle in parts is tapped part by part), **Grey** (her earlier pale grey + fibre lines; Tender / Taut /
+Trigger colours unchanged), **Names: Marked** only. Step 1 = the shoulder and mid back. Built, NOT live.
+
+- **Drawings** (`PH_MSK_ATLAS = {front, back} × {surface, deep, ghost}`, `PH_MSK_ATLAS_REG = shoulder, thoracic`): original
+  shapes from standard anatomy (not traced) on `PH_BODY_GEOM`'s own 220 × 462 grid, the viewer's left half, mirrored
+  (`matrix(-1 0 0 1 220 0)`); sides: front viewer-left = patient R, back viewer-left = patient L. Each shape: `k` (a
+  `PH_MSK_MUSCLES` id: taps), `ctx` (rectus abdominis, sternocleidomastoid, thoracolumbar fascia: bearings, never tapped),
+  `bone` / `bonel` (clavicle, scapular spine, ribs), `f` fibre lines, `a` the name tag's spot. Front surface: pec major
+  clavicular + sternal, anterior + middle deltoid, upper trap, biceps, serratus, obliques; front deep: pec minor, serratus;
+  back surface: upper / middle / lower trap, middle + posterior deltoid, infraspinatus, teres minor + major, lats, triceps;
+  back deep: rhomboid minor + major, levator, supraspinatus, thoracic + lumbar erectors, QL. The deep row draws the surface
+  muscles' edges dashed (`ghost`).
+- **Drawn by** `phMskAtlasHl(view, layer, vis, prev, plan0, tap, tags)` inside `phMskDiagramView(view, rk, rec, plan0, tap,
+  layer)` (the shared body outline, clipped to it); `phMskDiagramPanesHtml` returns two `.mk-dgrow` rows (Surface · Deep) for an
+  atlas region, the old single pair for the rest. A shape taps through the bellies' own door (`data-msk="dg-tap"`, `data-v="id:S"`
+  → `phMskClick2(..., "cyc", ...)`), recolours in place (`phMskDgSync`), Enlarge clones both rows. Name tags only on a marked muscle
+  (`PH_MSK_TAGN` short names, "Pec minor · Tender"); `phMskTagFree` steps a tag down until it clears the others (her no text over
+  text rule). CSS: `.mk-dgm.at` solid #C9D5DA (solid so overlaps never muddy), `.mk-dgf` fibres, `.mk-dgx` bearings, `.mk-dgb` /
+  `.mk-dgbl` bones, `.mk-dgg` ghosts, `.mk-dgrow` / `.mk-dgrc` the row and its label. On a card under 560px each row is a 2-column
+  grid (the pictures sized to the half): 135 × 165 at 375, 128 × 156 at 360; the computer keeps 290px tall pairs.
+- **Split** (her pick): new rows, each after its whole, with an 11th element `of`: `temi` / `tema` (of `tmin` "Teres minor /
+  major"), `dant` / `dmid` (of `adel` "Anterior / middle deltoid"), `pcl` / `pst` (of `pec`), `rmin` / `rmaj` (of `rho`),
+  `mtrap` / `ltrp` (of `ltrap` "Middle / lower trapezius"); upper trap and posterior deltoid were already their own. Nerve,
+  motor point, acupoint and caution text drafted from the whole (DRAFT wording). The map adds `of`, then marks each whole `hide`;
+  `!m.hide` filters the fbbp plate, the diagram list, the deep tag line, `phMskChipsHtml`, the muscle search and
+  `phMskFigureHtml`. **Old marks:** `phMskMuState` gives a part with nothing of its own (today, last visit, plan) its whole's state,
+  so a pec marked before shows on both heads; a new tap writes the part's own key. The MMT links name the parts (deltoid →
+  dant / dmid / pdel; infraspinatus / teres minor → inf / temi; rhomboid tests → rmin / rmaj / mtrap). Every whole that was split
+  sat only in shoulder / thoracic, so no undrawn region lost a muscle.
+- **Pec minor** (was `view: "none"`, a tag in the deep line) now has a place (`front`, shoulder + thoracic).
+- **Checked** (sandbox, made-up "Zz Muscle Test", pain between the shoulder blades R + front of the left shoulder): the mid back
+  and shoulder show Surface + Deep rows; taps cycle Tender → Taut → Trigger → off on the picture and the area card's chips alike
+  (parts listed by name, the wholes gone); Today's points shows the parts' motor points; an old whole-muscle mark shows on its
+  parts as carried / its level, and a part's own mark wins; Enlarge shows both rows and repaints with them; the Treatment tab's
+  "Which muscle?" lists Pectoralis minor R, Rhomboid major L, Teres major with their own motor points and cautions; 1280 (pairs
+  side by side, 290px), 375 and 360 (two per row, no sideways scroll, tags inside their picture); no console errors. Picture
+  `shots/muscle-picture-midback-2026-10-28.jpg`. **Not checked:** her real records, her phone, the Care Plan / Log / Copy notes
+  lines after a Complete session with a part (they read the same `phMskAreasToday` list).
+- **Not built:** neck, arm (elbow, wrist), low back, hip, knee, ankle keep their bellies until drawn (next steps, same style).

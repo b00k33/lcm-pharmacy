@@ -1502,6 +1502,18 @@ R") and each area as `session.mskAreas` (`{r, s, dx, pts, b, a}`), and a blank C
 foot says Treatment · Care Plan (blank / ✓ same / other points + **→ plan**, Undo) · Log; the Log's visit line shows Area ·
 Diagnosis · Points · Pain before → after. Copy notes reads the same list. MMT = a 3-point Weak / Mildly weak / Strong scale. A test
 row snapshots the library at add-time. MSK libraries are append-only.
+**The muscle picture** (her picks; her ask "draw a more accurate depiction of the muscles e.g. Pectoralis major minor etc for
+me to tap") [Muscle picture: true shapes]: the **shoulder and mid back** are drawn as true muscle shapes on the body figure's own
+grid (`PH_MSK_ATLAS`, regions in `PH_MSK_ATLAS_REG`, drawn by `phMskAtlasHl`), in **two rows, Surface then Deep** (the deep row
+keeps the surface muscles' edges dashed; pec minor, serratus, the rhomboids, levator, supraspinatus, the erectors and QL sit
+there), pale grey with fibre lines, bones for
+bearings (never tapped); every drawn muscle taps (one tap cycles Tender → Taut → Trigger → off, the same as its chip); a name
+tag only on a marked muscle (`PH_MSK_TAGN` short names, never one over another, `phMskTagFree`), hover names on a computer. A
+muscle in parts is **tapped part by part** (her pick "Split"): pec major clavicular / sternal, deltoid anterior / middle /
+posterior, trapezius upper / middle / lower, teres minor / major, rhomboid minor / major: each part is its own `PH_MSK_MUSCLES`
+row with `of` = its whole; the whole is `hide` (off every list, chip and search) and an older mark on it shows on each part with
+nothing of its own (`phMskMuState`). On a narrow card each row stays a front + back pair. **Not built:** neck, arm, low back, hip,
+knee and ankle keep their grey bellies until drawn. Built, NOT live.
 
 ## Fang Bing Ren, Find the Ren & Patterns
 **Fang Bing Ren** (the Triangle) is the one place constitutional-family scoring happens: one merged header (verdict + Quick
