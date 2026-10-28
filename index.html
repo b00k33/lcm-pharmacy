@@ -5976,6 +5976,10 @@
   #pharmacyPage .ph-meal-prow .ed { width: 32px; height: 32px; min-height: 0; margin: 0 2px 0 0; padding: 0; flex: none; display: grid; place-items: center; border: 0; border-radius: 999px; background: none; color: var(--ph-soft); cursor: pointer; }
   #pharmacyPage .ph-meal-prow .ed:hover { background: var(--ph-white); color: var(--ph-herb-deep); }
   #pharmacyPage .ph-meal-prow .ed .ph-meal-ic { width: 13px; height: 13px; }
+  /* RECIPES (her 2026-10-28): every name starts at the same place (a mark's own slot) and a long name wraps, never cut */
+  #pharmacyPage .ph-rcp .pk .mk { flex: none; width: 14px; display: inline-flex; justify-content: center; font-style: normal; }
+  #pharmacyPage .ph-rcp .pk span { white-space: normal; overflow-wrap: anywhere; padding-block: 6px; }
+  #pharmacyPage .ph-rcp .pk > .ph-meal-ic { flex: none; width: 13px; height: 13px; color: var(--ph-soft); }
   #pharmacyPage .ph-meal-add { justify-self: start; margin-top: 2px; }
   #pharmacyPage .ph-meal-fld { height: 32px; padding: 0 10px; box-sizing: border-box; display: flex; align-items: center; gap: 6px; border-radius: 6px; background: var(--ph-herb-tint); color: var(--ph-faint); }
   #pharmacyPage .ph-meal-fld:focus-within { box-shadow: 0 0 0 2px var(--ph-herb); }
@@ -41502,12 +41506,13 @@
   }
 
   // ---- the sheet (the app's one .ph-lk-sheet shell): a meal's card, a pick for a patient's diet or her usual meal, a dish ----
-  let phDietSh = null;   // {kind: "meal", day, sl, me} | {kind: "pick", pk} | {kind: "dish", dr, back}
+  let phDietSh = null;   // {kind: "meal", day, sl, me} | {kind: "pick", pk} | {kind: "dish", dr, back} | {kind: "recipes"}
   function phDietSheetHtml() {
     const s = phDietSh;
     if (!s) return "";
     const hd = t => `<div class="ph-lk-card-hd"><h3>${esc(t)}</h3><button type="button" data-meal-shx="1" aria-label="Close">✕</button></div>`;
     if (s.kind === "dish") return phDishEdHtml(s, hd);
+    if (s.kind === "recipes") return phRecipesHtml(hd);
     if (s.kind === "byo") return phTbByoHtml(s, hd);
     if (s.kind === "pick") {
       const t = phDietPickTitle(s.pk);
@@ -41628,6 +41633,29 @@
     phMealSave((d, now) => { d.dishes[x.id] = Object.assign({}, d.dishes[x.id], { del: now, up: now }); }, `${x.n} · removed`, [["dishes", x.id]]);
     if (back && back.sheet) phDietSheetOpen(back.sheet);
   }
+  // ---- RECIPES (her 2026-10-28 "where can i edit my recipes?", then "yes"): Recipes beside Shopping list on the planner opens
+  // every dish of hers in one list (search; a row = its editor; + New recipe). The editor's Save / Delete / ✕ come back here.
+  function phRecipesHtml(hd) {
+    const rows = phDishList().map(d => {
+      const v = "dish:" + d.id, kj = phDishNut(d).v.kj, n = phDishSteps(d).length;
+      const meta = [kj != null ? `${phMplKj(kj)} kJ` : "", n ? `${n} prep` : ""].filter(Boolean).join(" · ");
+      return `<div class="ph-meal-prow" data-meal-n="${esc(String(d.n || "").toLowerCase())}"><button type="button" class="pk" data-dish-ed="${esc(d.id)}" aria-label="Edit ${esc(d.n || "Dish")}"><i class="mk">${phMealDot(v)}</i><span>${esc(d.n || "Dish")}</span>${meta ? `<em>${esc(meta)}</em>` : ""}${phMealSvg("edit")}</button></div>`;
+    }).join("");
+    return `<div class="ph-lk-card ph-meal-sh" role="dialog" aria-label="Recipes">${hd("Recipes")}<div class="ph-meal-pick ph-rcp">
+      ${rows ? `<label class="ph-meal-fld">${phMealSvg("search")}<input type="text" class="field-bare" data-dish-lq="1" placeholder="Search recipes" aria-label="Search recipes" autocomplete="off" enterkeyhint="search" maxlength="60" data-meal-autofocus="1"></label>
+      <div class="ph-meal-pg" data-meal-pg>${rows}</div>` : `<div class="ph-meal-same">No recipes yet</div>`}
+      <button type="button" class="ph-meal-add" data-dish-ed="new">+ New recipe</button></div></div>`;
+  }
+  document.addEventListener("click", e => {
+    const b = e.target && e.target.closest ? e.target.closest("#pharmacyPage [data-mpl-recipes], #phDietSheet [data-dish-ed]") : null;
+    if (!b) return;
+    if (b.dataset.mplRecipes) phDietSheetOpen({ kind: "recipes" });
+    else phDishEdOpen(b.dataset.dishEd, { pk: null, sheet: { kind: "recipes" } });
+  });
+  document.addEventListener("input", e => {
+    const T = e.target;
+    if (T && T.matches && T.matches("#phDietSheet [data-dish-lq]")) phFoodFilter(T.closest(".ph-meal-pick"), T.value);
+  });
 
   // ---- Thisbowl · Build your own (her pick 10): Regular | Large, a base (two = half each), a protein, dressings (up to 2),
   //      extras; Add makes a dish of hers from the parts (its numbers add themselves) and puts it in the meal she was picking for
@@ -42247,12 +42275,12 @@
       rows += prw("Fast", "", phMplFastHtml(k, tk)) + prw("More", "", phMplMoreBtn(k, tk)) + (O[k] ? phMplMoreHtml(k, tk, goal) : "");
       const dh = `<div class="dh"><b>${esc(phHubDl(k))}</b><small>${k === tk ? "Today" : esc(MON_SHORT[parseKey(k).getMonth()])}</small>${phMplPd ? `<button type="button" class="ph-meal-back" data-mpl-pd="0">Today</button>` : ""}<span class="ph-diet-wk"><button type="button" data-mpl-pd="-1" aria-label="Day before"${phMplPd <= -30 ? " disabled" : ""}>‹</button><button type="button" data-mpl-pd="1" aria-label="Day after"${phMplPd >= 56 ? " disabled" : ""}>›</button></span></div>`;
       const cp = !!(phMplCopy && phMplCopy.from === k);
-      const chips = `<div class="ph-mpl-pchips"><button type="button" class="ph-mpl-q" data-mpl-us="1" aria-expanded="${phMplUs}">${phMealSvg("edit")}Usual</button><button type="button" class="ph-mpl-q" data-mpl-copy="${k}" aria-pressed="${cp}">${phMealSvg("copy")}Copy day</button><button type="button" class="ph-mpl-q" data-mpl-lastwk="${days[0]}">Copy last week</button><button type="button" class="ph-mpl-q" data-mpl-shop="${days[0]}">${phMealSvg("cart")}Shopping</button><button type="button" class="ph-diet-tgb" data-diet-tg="1" aria-pressed="${phDietTg}">Targets</button></div>`
+      const chips = `<div class="ph-mpl-pchips"><button type="button" class="ph-mpl-q" data-mpl-us="1" aria-expanded="${phMplUs}">${phMealSvg("edit")}Usual</button><button type="button" class="ph-mpl-q" data-mpl-copy="${k}" aria-pressed="${cp}">${phMealSvg("copy")}Copy day</button><button type="button" class="ph-mpl-q" data-mpl-lastwk="${days[0]}">Copy last week</button><button type="button" class="ph-mpl-q" data-mpl-recipes="1">${phMealSvg("pt-bowl")}Recipes</button><button type="button" class="ph-mpl-q" data-mpl-shop="${days[0]}">${phMealSvg("cart")}Shopping</button><button type="button" class="ph-diet-tgb" data-diet-tg="1" aria-pressed="${phDietTg}">Targets</button></div>`
         + (phMplUs ? `<div class="ph-mpl-pchips">${PH_MEAL_SLOTS.map(([sl, l]) => `<button type="button" class="ph-meal-ch" data-meal-def="${sl}">Every ${l}</button>`).join("")}</div>` : "");
       return `<div class="ph-mpl">${fbar}<div class="ph-mpl-card"><div class="ph-mpl-pday${cpI(k) >= 0 ? " cpf" : ""}">${dh}${rows}</div>${chips}</div>${tail}</div>`;
     }
     const td = k => { const i = cpI(k), c = [k === tk ? "td" : "", i >= 0 ? "cpf" : ""].filter(Boolean).join(" "); return c ? ` class="${c}"${i >= 0 ? ` style="--fxd:${i * 180}ms"` : ""}` : ""; };
-    const top = `<div class="ph-mpl-wkbar"><span class="ph-diet-wk"><button type="button" data-diet-wk="1" aria-label="Week before">‹</button><b>${esc(phMplSpan(days))}</b><button type="button" data-diet-wk="-1" aria-label="Week after"${phDietWk <= -8 ? " disabled" : ""}>›</button></span>${phDietWk ? `<button type="button" class="ph-meal-back" data-diet-wk="0">This week</button>` : ""}<span class="end"><button type="button" class="ph-mpl-q" data-mpl-lastwk="${days[0]}">${phMealSvg("copy")}Copy last week</button><button type="button" class="ph-mpl-q" data-mpl-shop="${days[0]}">${phMealSvg("cart")}Shopping list</button><button type="button" class="ph-diet-tgb" data-diet-tg="1" aria-pressed="${phDietTg}">Targets</button></span></div>`;
+    const top = `<div class="ph-mpl-wkbar"><span class="ph-diet-wk"><button type="button" data-diet-wk="1" aria-label="Week before">‹</button><b>${esc(phMplSpan(days))}</b><button type="button" data-diet-wk="-1" aria-label="Week after"${phDietWk <= -8 ? " disabled" : ""}>›</button></span>${phDietWk ? `<button type="button" class="ph-meal-back" data-diet-wk="0">This week</button>` : ""}<span class="end"><button type="button" class="ph-mpl-q" data-mpl-lastwk="${days[0]}">${phMealSvg("copy")}Copy last week</button><button type="button" class="ph-mpl-q" data-mpl-recipes="1">${phMealSvg("pt-bowl")}Recipes</button><button type="button" class="ph-mpl-q" data-mpl-shop="${days[0]}">${phMealSvg("cart")}Shopping list</button><button type="button" class="ph-diet-tgb" data-diet-tg="1" aria-pressed="${phDietTg}">Targets</button></span></div>`;
     const head = `<thead><tr><th scope="col"></th>${days.map(k => { const on = !!(phMplCopy && phMplCopy.from === k); return `<th scope="col"${td(k)}><span class="dn"><b>${esc(phHubDl(k))}</b><button type="button" class="cpy${on ? " on" : ""}" data-mpl-copy="${k}" aria-pressed="${on}" title="Copy ${esc(phHubDl(k))} to other days" aria-label="Copy ${esc(phHubDl(k))} to other days">${phMealSvg("copy")}</button></span>${k === tk ? "<small>Today</small>" : ""}</th>`; }).join("")}</tr></thead>`;
     const rl = (l, sub, us) => `<th class="rl" scope="row"><b>${l}</b>${sub ? `<small>${sub}</small>` : ""}${us || ""}</th>`;
     const rows = PH_MEAL_SLOTS.map(([sl, l]) => `<tr>${rl(l, uT[sl] != null ? `usual ${esc(phHubClk(uT[sl]))}` : "", `<button type="button" class="us" data-meal-def="${sl}" title="Every ${l}">${phMealSvg("edit")}Usual</button>`)}${days.map((k, j) => `<td${td(k)}>${phMplCellHtml(k, sl, evs[j][sl], uT[sl])}</td>`).join("")}</tr>`).join("")
