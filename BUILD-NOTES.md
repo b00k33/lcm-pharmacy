@@ -6026,3 +6026,9 @@ rows.
   shots/meals-fat-protein-choline-first-2026-10-28.png.
 - **LIVE 2026-10-28, build 20261028-215100** (her "push"; main 9922d805, joined 5c44339b). Live site checked: both stamps and
   `PH_NUT_TOP` served.
+
+## 2026-10-28 · Lower body muscle words: her yes, all as written
+She read the 35 new rows on a review page (artifact https://claude.ai/artifact/ALtbqtim2KiNU9YYSHHbEY: nerve, motor point, points
+and caution per muscle, a tick or an edit per row) and answered "All right as written". The words in `PH_MSK_MUSCLES` (the rows
+listed under "Muscle picture: legs, low back and belly") are hers now, no longer DRAFT; nothing in the code changed (the rows never
+carried a DRAFT comment). The neck rows' words (the "Neck muscle picture" note) are still DRAFT.
