@@ -1327,11 +1327,9 @@ origin/main:index.html`; don't trust this list's age.
   Da Chai Hu Tang and Wen Jing Tang are families now).
 - Wen Jing Tang (integrate33 run 16, 2026-10-28): the DRAFT card line, Ask her
   answers and picture labels (her four other answers are built).
-- Zhi Gan Cao Tang (integrate33 run 17, 2026-10-28): weak = weak or faint pulse;
-  "emaciation with yin-deficiency signs" as two lines; her conditions at 4 each
-  (the arrhythmia kinds folded into Arrhythmia); -3 a line against; thin AND
-  choppy for the against pulse; Gui Zhi filing; the DRAFT card line, new row
-  names, Ask her answers ("Palpitations", "Chest throbs") and picture labels.
+- Zhi Gan Cao Tang (integrate33 run 17, 2026-10-28): the Gui Zhi filing and the
+  DRAFT card line, new row names, Ask her answers ("Palpitations", "Chest
+  throbs") and picture labels (her four other answers are built).
 
 **Built on my reading — hers to confirm:** the pulse chart starts blank each
 day; Usual period shows Wheel |
