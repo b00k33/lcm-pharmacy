@@ -41196,8 +41196,9 @@
     // No ✎ Every <meal> here since her 2026-10-28 "i dont need an every lunch and everyday button" (MEAL DAY OR EVERY DAY)
     if (had) {
       const ate = phMealAte(dayKey, sl), [n, all] = phMealPrepAll(key, ate);
-      const sub = [keyOf(new Date(had.at)) === dayKey ? "Had it · " + phMealClock(had.at) : "Had it"].concat(all ? [`prep ${n} of ${all}`] : []).join(" · ");
-      return `<div class="ph-meal-lbl">Had it</div><div class="ph-meal-done"><span class="tk${phMealPop === key ? " pop" : ""}">${phMealSvg("check")}</span><div class="nm">${esc(phMealName(ate) || word)}<small>${esc(sub)}</small></div><button type="button" class="ph-c22-go" data-meal-undo="${esc(key)}">Undo</button></div>${ate === "skip" ? "" : phRxSecHtml({ day: dayKey, sl }, ate)}`;
+      const hw = ate === "skip" ? "Skipped" : "Had it";   // a meal she skipped reads Skipped, never "had it"
+      const sub = [keyOf(new Date(had.at)) === dayKey ? hw + " · " + phMealClock(had.at) : hw].concat(all ? [`prep ${n} of ${all}`] : []).join(" · ");
+      return `<div class="ph-meal-lbl">${hw}</div><div class="ph-meal-done"><span class="tk${phMealPop === key ? " pop" : ""}">${phMealSvg("check")}</span><div class="nm">${esc(ate === "skip" ? word : phMealName(ate) || word)}<small>${esc(sub)}</small></div><button type="button" class="ph-c22-go" data-meal-undo="${esc(key)}">Undo</button></div>${ate === "skip" ? "" : phRxSecHtml({ day: dayKey, sl }, ate)}`;
     }
     // a fast night (her fasting plan): Dinner reads "Skipped · fasting" on top; what is planned stays under it, for a night she eats after all
     const fn = sl === "d" && x && x.s != null ? phFastNightOf(dayKey, x.s) : null;
@@ -41274,10 +41275,13 @@
     return `<button type="button" class="ph-meal-nums" data-meal-mic="${esc(lid)}" aria-expanded="${open}" title="${esc(phNutTip(sum.t))}"><span class="ln">${esc(line)}</span><svg class="ph-meal-ic cv" aria-hidden="true" focusable="false"><use href="#i-chev-d"/></svg>${open ? `<span class="mic">${PH_NUT_MIC.map(k => `<span>${PH_NUT_OF[k][1]} <b>${phNutR(k, sum.t[k])}</b>${sum.t[k] == null ? "" : " " + PH_NUT_OF[k][2]}</span>`).join("")}</span>` : ""}</button>`;
   }
   // Eating out | Skipped, one bar (her pick 7): beside Had it on her card, beside + Add in the planner. Eating out takes where
-  // from the open search ("Out · Thai place"); Skipped for a day gone by or today (any day of a patient's)
-  function phMealInstHtml(c, vs) {
-    const lid = phMealLid(c), out = vs.some(x => /^out:/.test(x)), skip = c.day !== "def" && (!!c.pt || c.day <= keyOf(TODAY));
-    return `<span class="ph-meal-bar" role="group" aria-label="Instead"><button type="button" class="${out ? "on" : ""}" data-meal-out="${esc(lid)}" aria-pressed="${out}">Eating out</button>${skip ? `<button type="button" data-meal-skip="${esc(lid)}">Skipped</button>` : ""}</span>`;
+  // from the open search ("Out · Thai place"); Skipped on every meal (her "give option to skip meals", 2026-10-28): today and the
+  // days before = she skipped it; a day ahead = planned Skipped; on while it is planned. `dc` = the day the planner's Every <meal>
+  // was opened from: Skipped is that day's (a skipped meal is one day's), Eating out stays the list shown
+  function phMealInstHtml(c, vs, dc) {
+    const lid = phMealLid(c), out = vs.some(x => /^out:/.test(x)), s = dc || c, L = phMealList(s), hd = !s.pt && s.day !== "def" ? phMealHad(s.day, s.sl) : null;
+    const sk = (!!hd && hd.v === "skip") || (L.v === "skip" && (L.own || s.day === "def"));
+    return `<span class="ph-meal-bar" role="group" aria-label="Instead"><button type="button" class="${out ? "on" : ""}" data-meal-out="${esc(lid)}" aria-pressed="${out}">Eating out</button><button type="button" class="${sk ? "on" : ""}" data-meal-skip="${esc(phMealLid(s))}" aria-pressed="${sk}">Skipped</button></span>`;
   }
   // + Add food or drink: search (Enter adds her own; the rows narrow as she types, every group's) with + New, the bar, a row a
   // food at its usual amount (Everyday hers first · All foods behind one row · Drinks · Thisbowl's bowls R | L + Build your own
@@ -41879,11 +41883,11 @@
     const h = phMealHad(k, sl), p = phMealPlan(k, sl), v = h ? phMealAte(k, sl) : p.v, m = ev ? phC22Min(ev.s) : null;
     const sel = !!phMplCell && phMplCell.day === k && phMplCell.sl === sl, fresh = phDietFresh === k + "|" + sl ? " fresh" : "";
     const at = ` data-mpl-cell="${k}|${sl}" aria-expanded="${sel}"`, cls = c => `ph-mpl-ml ${c}${sel ? " sel" : ""}${fresh}`;
-    const tm = noT ? "" : h ? `<span class="t had"><i class="ok${phMplDrawOn(k + "|" + sl) ? " mo-draw" : ""}">${phMealSvg("check")}</i>${esc(keyOf(new Date(h.at)) === k ? phMealClock(h.at) : m != null ? phHubClk(m) : "")} · had it</span>`
+    const tm = noT || (h && v === "skip") ? "" : h ? `<span class="t had"><i class="ok${phMplDrawOn(k + "|" + sl) ? " mo-draw" : ""}">${phMealSvg("check")}</i>${esc(keyOf(new Date(h.at)) === k ? phMealClock(h.at) : m != null ? phHubClk(m) : "")} · had it</span>`
       : m != null ? `<span class="t${uT != null && m !== uT ? " mv" : ""}">${esc(phHubClk(m))}</span>` : "";
     if (sl === "d" && !h && (phMplFastPl(k) || (ev && phFastNightOf(k, ev.s)))) return `<button type="button" class="${cls("fa")}"${at} aria-label="Dinner · ${esc(phMeDayLbl(k))} · Fast">${tm}<span class="ph-mpl-fast">${phMealSvg("moon")}Fast</span></button>`;
     const vs = v === "skip" ? [] : phMealShown(v);
-    if (!h && !vs.length) return `<button type="button" class="${cls("plus")}"${at} aria-label="Plan ${phMealWord(sl)} · ${esc(phMeDayLbl(k))}">${tm}<span class="pl">+</span></button>`;
+    if (!h && !vs.length && v !== "skip") return `<button type="button" class="${cls("plus")}"${at} aria-label="Plan ${phMealWord(sl)} · ${esc(phMeDayLbl(k))}">${tm}<span class="pl">+</span></button>`;
     const lines = v === "skip" ? `<span class="i">Skipped</span>` : vs.map(x => `<span class="i">${esc(phMealName(x) || "—")}</span>`).join("");
     const mk = h && v !== "skip" ? phRxMarkFor({ day: k, sl }, v) : "";   // FOOD REACTIONS: the mark on a meal she had
     return `<button type="button" class="${cls(h ? "own had" : p.own ? "own" : "pale")}"${at} title="${esc(vs.map(x => phMealName(x)).filter(Boolean).join(" · "))}">${tm}${lines}${mk ? `<span class="rx">${mk}</span>` : ""}</button>`;
@@ -42115,7 +42119,7 @@
       <div class="hdr">${hdr}${x}</div>
       ${c.sl === "d" && !us ? phMplFastRowHtml(c.day) : ""}${top}
       ${phMealTblHtml(lid, vs, true)}${phMealNumsHtml(lid, vs)}${open ? phMealAddHtml(mc, vs) : ""}
-      <div class="foot">${open ? "" : `<button type="button" class="ph-c22-go" data-meal-add="${esc(lid)}" data-meal-k="" aria-expanded="false">${phMealSvg("plus")}Add</button>`}${phMealInstHtml(mc, vs)}<button type="button" class="ph-c22-go solid go" data-mpl-x="1">Done</button></div></div>`;
+      <div class="foot">${open ? "" : `<button type="button" class="ph-c22-go" data-meal-add="${esc(lid)}" data-meal-k="" aria-expanded="false">${phMealSvg("plus")}Add</button>`}${phMealInstHtml(mc, vs, us ? { day: c.day, sl: c.sl } : null)}<button type="button" class="ph-c22-go solid go" data-mpl-x="1">Done</button></div></div>`;
   }
   // the picker sits under its cell (over it when there is more room above), inside the planner's card, so it scrolls with the
   // page; its height fits the window, so the day's line and Done always show
@@ -42442,7 +42446,16 @@
       return;
     }
     if (ds.mealRm) { phMealListTog(phMealCtx(ds.mealRm), ds.mealV || "", "rm"); return; }
-    if (ds.mealSkip) { const c = phMealCtx(ds.mealSkip); phMealPk = null; if (c.pt) phDietPtSet(c.pt, c.day, c.sl, "skip"); else phMealHadSet(c.day, c.sl, "skip"); return; }
+    if (ds.mealSkip) {   // a planned Skipped comes off with a second tap (a day back to usual, Every to nothing planned)
+      const c = phMealCtx(ds.mealSkip), ev = c.day === "def", L = phMealList(c), sk = L.v === "skip" && (L.own || ev), hd = !c.pt && !ev ? phMealHad(c.day, c.sl) : null;
+      phMealPk = null;
+      if (hd && hd.v === "skip") { phMealHadClear(c.day, c.sl); return; }   // she skipped it: a second tap takes that back
+      if (c.pt) phDietPtSet(c.pt, c.day, c.sl, sk ? (ev ? "" : "=") : "skip", sk ? w => `${w} · Skipped removed` : null);
+      else if (!ev && c.day <= keyOf(TODAY)) phMealHadSet(c.day, c.sl, "skip");
+      else if (sk && !ev) phMealDayBack(c.day, c.sl);
+      else phMealPlanSet(c.day, c.sl, sk ? "" : "skip", phMealScope(c), sk ? w => `${w} · Skipped removed` : null);
+      return;
+    }
     if (ds.mealSame) { const c = phMealCtx(ds.mealSame); phMealPk = null; phDietPtSet(c.pt, c.day, c.sl, "="); return; }
     // MEAL DAY OR EVERY DAY: ↺ Undo = that day back to her usual
     if (ds.mealBack) { const c = phMealCtx(ds.mealBack); phMealPk = null; phMealDayBack(c.day, c.sl); return; }
