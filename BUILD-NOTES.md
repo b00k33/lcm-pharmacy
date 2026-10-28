@@ -5870,3 +5870,9 @@ answers), Meals (KFC Wicked Wings, water in ml, 8000 kJ, Supplements · herbs), 
 marks finish (ad3097c0), MSK Enlarge back figure (a65672d4), the publish script tidy (61a97b23). Checked on the live page: the stamp,
 `zhigancao`, `wenjingtang`, `p_knotted_now`, `kfc_wings`, `phMeNormData(null)`. The two matrix pages moved to `mocks/`. Still hers: the
 DRAFT words of both formulas and the Gui Zhi filing of Zhi Gan Cao Tang (CLAUDE.md OPEN).
+
+## 2026-10-28 · Wen Jing Tang and Zhi Gan Cao Tang: her yes to the wording and the filing
+Her words: "i ike your draft, yes gui zhi family". The wording of both formulas is hers now (no longer DRAFT): the card lines
+(`PH_BTJ.wenjingtang` / `.zhigancao`), the new row names, the Ask her answers ("Hot palms and soles", "Feverish in the afternoon", "Dry
+lips", "Dry heaving", "Palpitations", "Chest throbs") and both pictures' labels. Zhi Gan Cao Tang stays under Gui Zhi. Both CLAUDE.md OPEN
+lines are gone; the code's DRAFT comments now read "her yes". Nothing on screen changed.
