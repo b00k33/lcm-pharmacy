@@ -5417,3 +5417,26 @@ Same audit. Her pick (popup, "Move it out"): CLAUDE.md loads into every LCM sess
 head and "OPEN at the end of CLAUDE.md" changed). CLAUDE.md (103 KB) keeps every rule and a pointer where the section was;
 its file list says five files, "When two lines disagree" puts CURRENT-STATE.md after the rest of CLAUDE.md, and the lines that
 said "fix the Current-state line here" now say "fix that area's paragraph in CURRENT-STATE.md".
+
+## Abdomen chart: hypochondrium along the rib arch (2026-10-28)
+Her words (screenshot of the front chart): "i dont understand why the hypochondriac region is drawn like that. shouldnt it follow the
+space along the curve of the rib cage?. imprve overall ui visual, this diagram - make 3 mocks." Cause: `phAbdZoneGeom` cut an even
+3 x 3 grid below the arch (rows = thirds between `phAbdRibTop` / `phAbdRibBot`, columns straight at x 47 / 73), so hypo was a slanted
+sliver at the side, and the tighthypo glyph (hardcoded "M31,47 Q40,56 51,63") ran DOWN toward the navel, across the rib edge.
+Mock mocks/abdomen-rib-curve-mocks-2026-10-28.html (A rib band / B rib cage drawn / C palpation places, a working widget drawn from
+the app's own landmarks). Her 8 picks: B; the band starts beside the breastbone; red line + dashed inner line; columns on the rectus
+edge; names along the curve; bones as in the mock; the Fang Bing Ren figure the same; outline open at the top.
+- Geometry (after `PH_ABD_OUT`): `phAbdArchY` (the arch carried on straight past the 10th rib), `phAbdArchPt` / `phAbdArchOff`
+  (a point D in along the arch's normal), `phAbdRecX` (the rectus edge, also `rb`), intersections `PH_ABD_DC` / `PH_ABD_DQ` /
+  `PH_ABD_QY` / `PH_ABD_R1Y` / `PH_ABD_R2Y`, the nine places as point lists `PH_ABD_ZPTS` (polygons run past the skin; the trunk
+  clip trims them). `phAbdZoneGeom(r, c)` keeps its signature (the key-sign nest at `phKsFx` calls it): path + middle sampled
+  inside the trunk (1.5 grid, cached in `PH_ABD_ZG`), a hypo place's signs at its band's side end. `PH_ABD_VD` is gone.
+- Drawing (`phAbdChartSvg`): `.ph-abd2-zone` has no stroke now; `PH_ABD_DIV` dotted dividers once (+ `PH_ABD_DIV_REC` on `ro`);
+  `PH_ABD_RIBS` + `PH_ABD_RECTUS` (not on `ro`); breastbone and pubic symphysis `.ph-abd2-sternbone` (new class; `.ph-abd2-sternum`
+  stays for the side view's spine); hypo names on `<textPath>` (ids `uid + "hypoR"`), 72.5 % / 27.5 % so the breastbone end holds
+  the name; labels 4.2 (side R / L 3.5); RXY rows start below the band; outline from y 14.
+- Fang Bing Ren figure: `phRenZonesHtml` draws `PH_ABD_ZPTS` through `phRenAbdMap` (paths, still `.rf-part` + `data-rf-name`)
+  inside a nested `<svg>` box (47 either side, 145 to 241), the dividers the same way.
+- Tested in the sandbox (port 8994, a made-up patient, the page mounted with `phAbdHtml`): Feel · tight hypochondrium on R hypo
+  saved `marks.tighthypo = ["hypoR"]` and drew the arch line; on epi it shows `PH_ABD_HYPO_MSG`; tender on L hypo + R flank saved;
+  every sign drawn on a harness (all nine places, washes, last visit grey, minis 56 / 29 px); no console errors. Not on her records.
