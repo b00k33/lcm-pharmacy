@@ -5941,7 +5941,9 @@ adds MP, one drawing everywhere, one picture per row on a phone.
   yesterday not counted, the same Dinner on a normal night counted; Had it with something else counts what she had; no ✓ added;
   no console errors. Picture: shots/meals-kj-count-2026-10-28.png.
 - **Not checked:** her real records (her past days' untouched usual meals now count too); the Key2 phone.
-- **Not live:** waits for her "push live".
+- **LIVE 2026-10-28, build 20261028-213400** (her "push"): published ALONE on top of main (e9fbddda: index.html + sw.js stamps
+  only), since session-a also held work still waiting for her word; joined into session-a as 722d7c6d. Live site checked: both
+  stamps and `phMealEaten` served.
 
 ## Her body week: Fitness tabs, booked gym times, Cycle side column off (synth22, 2026-10-28)
 - **Her words (one synth22 batch):** (Cycle page) "the last column is not needed" (popup: the Fang Bing Ren column); (Weekly plan,
@@ -6000,4 +6002,26 @@ adds MP, one drawing everywhere, one picture per row on a phone.
 - **Tested** (sandbox, her Wed 28 rebuilt): the Lunch picker reads "Today only ↺ Undo", no Every / Use every day; ↺ Undo puts the
   day back ("Same as every lunch", the day's own list gone); her Break Fast card's line "Today only ↺ Undo", Had it | Eating out |
   Skipped unchanged; the row head's ✎ Usual opens "Every Lunch"; no console errors.
+- **LIVE 2026-10-28 in build 20261028-214300:** another session's publish carried it minutes after it was committed (tested
+  first, as above).
+
+## 2026-10-28 · Live: build 20261028-214300
+Her "push live" (publish 6c87ffb3), with her yes ("Both live") to taking the body week along. Went live: the muscle picture for
+legs, low back and belly (0b29f7bb), her body week (946e8e37: Fitness tabs, booked gym times, rest days, the Cycle side column off)
+and Meals with no Every / Use every day on the day's line (53646eb1, committed in the last seconds before the publish). Checked on
+the live page: the stamp in index.html and sw.js, `PH_MSK_LEG`, `PH_MSK_SIDE_ROW`, `phMskRegOf`, `PH_MSK_PICKREG`, the Belly
+muscles chip (`data-pm-mk`), "No motor point here", `phFitIsRest`, `phPfwSideWanted`. The page there has its comments stripped, so a
+search for a comment's words finds nothing. Still hers: the DRAFT nerve, motor point, point and caution words of the 35 new muscle
+rows.
+
+## Meals: fat, protein and choline first (2026-10-28)
+- **Her words** (screenshot of Wed 28's open numbers: Protein · Iron · Choline · Vitamin C first, no Fat bar): "prioritise fat
+  protein and choline".
+- **How:** `PH_NUT_TOP = ["fa", "p", "ch"]` leads `PH_NUT_BARS` (a day's bars; Fat is a bar now, against `phDietGoal().fa`, the
+  rest of her kJ goal unless she typed one) and `PH_DIET_TG` (Targets); on a phone (`few`) the three always show, then the first
+  other one still under its goal, then "+ n more"; a meal's small numbers (`PH_NUT_MIC`) start with choline (fat and protein are
+  in its line already). The Macros row, the rings and the kJ · P · C · F lines keep their order (her MACROS picks).
+- **Tested** (sandbox, her Wed 28 rebuilt): bars Fat 133.2 / 170 g · Protein 107.4 / 50 g · Choline 83 / 425 mg · Iron, then the
+  rest; nothing cut at 1280; phone list Fat · Protein · Choline · Iron + 11 more; Targets start fa · p · ch. Picture:
+  shots/meals-fat-protein-choline-first-2026-10-28.png.
 - **Not live:** waits for her "push live".

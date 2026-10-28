@@ -744,8 +744,10 @@ number 0), stored `food:<id>*<q>`, shown in kitchen
 words with − / + (each food its own step; a dish `dish:<id>*<q>` steps in serves). A dish's **Made of** adds its numbers itself
 (typed numbers only for what is not on the list); with no Made of a dish counts by itself (`phDishAuto`: the Thisbowl bowl in its
 name, else its typed ingredients matched) and Made of starts filled with that bowl. Nutrients add every item. The time is a small
-✎ field. A day's numbers line (kJ · P · C · F) opens 17 bars against **Targets** (C22's four + NHMRC women 31–50 + carbs 50 g, each hers);
-"not counted" where no source gives a number, never 0. Thisbowl bowls R | L + Build your own. Code: "FOOD NUMBERS" (`phFood*`,
+✎ field. A day's numbers line (kJ · P · C · F) opens 15 bars against **Targets** (C22's four + NHMRC women 31–50 + carbs 50 g, each hers);
+"not counted" where no source gives a number, never 0. **Fat · Protein · Choline lead** (her word 2026-10-28, "prioritise fat
+protein and choline"; `PH_NUT_TOP`): first in the bars (Fat a bar of its own against the fat goal), always shown on a phone,
+first in Targets; a meal's small numbers start with choline. NOT live. Thisbowl bowls R | L + Build your own. Code: "FOOD NUMBERS" (`phFood*`,
 `phNut*`, `phTb*`).
 **Shop foods** (her "download woolworth and coles and aldi food database because i buy from them"; her pick "Search as I type"):
 the shops share no product data and FSANZ's Branded Food Database is not public, so the products are Open Food Facts' Australian
