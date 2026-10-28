@@ -6002,7 +6002,8 @@ adds MP, one drawing everywhere, one picture per row on a phone.
 - **Tested** (sandbox, her Wed 28 rebuilt): the Lunch picker reads "Today only ↺ Undo", no Every / Use every day; ↺ Undo puts the
   day back ("Same as every lunch", the day's own list gone); her Break Fast card's line "Today only ↺ Undo", Had it | Eating out |
   Skipped unchanged; the row head's ✎ Usual opens "Every Lunch"; no console errors.
-- **Not live:** waits for her "push live".
+- **LIVE 2026-10-28 in build 20261028-214300:** another session's publish carried it minutes after it was committed (tested
+  first, as above).
 
 ## 2026-10-28 · Live: build 20261028-214300
 Her "push live" (publish 6c87ffb3), with her yes ("Both live") to taking the body week along. Went live: the muscle picture for
