@@ -5372,3 +5372,23 @@ NOT live.
   rendered every tab with the same rows and counts (a stand-in photo record for that check: no photos in the sandbox); 1024 and
   360 wide, nothing wider than its box; no console errors. Picture `shots/tongue-exam-order-2026-10-28.jpg`.
 - **Not checked:** a real tongue photo in the viewer (its taps are the unchanged `data-vtp` path), her records, the Key2.
+
+## Audit: the Musculoskeletal page's retired code out (2026-10-28)
+
+Her ask: "audit the claude folder and codes to reduce redundant or stale work and codes". Measured with three scans of
+index.html (functions nothing calls, followed through what only they call; style rules whose every class is used nowhere else;
+names declared and never read, and copy-paste twin functions). Before this cut: 3 functions nothing called, 0 orphaned style
+rules, no twins. All three were the Musculoskeletal page's, left when her 10/27 redesign retired the Re-measure table and the
+score card:
+- **Out (71 lines, 7.9 KB):** `phMskRemeasureHtml` (the Re-measure table + its tiles), `phMskNprsHtml` (the old Pain score
+  card), `phMskDir` (better / worse arrows, only the table used it); the click branch `re-pill` and the input branches `measure`
+  and `target` (their only boxes were in that table); the style rules only they drew: `.mk-nrow`, `.mk-u`, `.mk-tiles`, the five
+  `.mk-tile` rules (10 rules). The comment "pain score + tiles" now says "pain score scale".
+- **Kept:** `phMskSetMeasure` (the function-score boxes use it), `phMskTrack` / `phMskProgress` / `phMskTarget` (the head and
+  Copy notes read them), the "top" and "nprs" names in `phMskRefresh` (other callers pass them), stored `root.targets` (data is
+  never deleted; nothing writes it now).
+- **After:** the scans find 0 functions nothing calls and 0 orphaned style rules.
+- **Tested** (sandbox, a made-up patient on a return visit): the page draws (head, picture, an area card, Today's points); a
+  muscle chip tap adds its motor point (Today's points 1); Same as last time copies the pain score; + Movement → Flexion, typing
+  35 saves; More exam opens; no console errors; the Prescriptions search narrows 4 → 2 and returns to 4.
+- **Not live:** waits for her "push live".

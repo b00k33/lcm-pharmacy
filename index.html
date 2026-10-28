@@ -23281,24 +23281,17 @@
   #pharmacyPage .ph-msk .mk-in { width: 64px; border: 1px solid var(--ph-line); border-radius: 10px; padding: 4px 8px; font: 500 var(--fs-13) var(--font-body); background: var(--ph-white); color: var(--ph-ink); }
   #pharmacyPage .ph-msk .mk-in.tg { width: 44px; padding: 1px 5px; font-size: var(--fs-12); }
   #pharmacyPage .ph-msk .mk-in.wide { width: min(260px, 100%); }
-  #pharmacyPage .ph-msk .mk-u { color: var(--ph-faint); margin-left: 3px; font-size: var(--fs-12); }
   #pharmacyPage .ph-msk .mk-sel { border: 1px solid var(--ph-line); border-radius: 10px; padding: 5px 8px; font: 500 var(--fs-12-5) var(--font-body); background: var(--ph-white); color: var(--ph-ink); max-width: 100%; }
   #pharmacyPage .ph-msk .mk-sel.sm { padding: 3px 6px; font-size: var(--fs-12); }
   #pharmacyPage .mk-bar { height: 6px; background: var(--ph-line); border-radius: 6px; overflow: hidden; min-width: 70px; }
   #pharmacyPage .mk-bar i { display: block; height: 100%; background: var(--ph-msk); border-radius: 6px; }
   #pharmacyPage .mk-bar i.warn { background: var(--ph-low); } #pharmacyPage .mk-bar i.bad { background: var(--ph-zero); } #pharmacyPage .mk-bar i.good { background: var(--ph-herb); }
-  /* pain score + tiles */
-  #pharmacyPage .ph-msk .mk-nrow { display: flex; align-items: center; gap: 10px; margin: 4px 0; flex-wrap: wrap; }
+  /* pain score scale */
   #pharmacyPage .ph-msk .mk-nl { width: 108px; flex: none; color: var(--ph-soft); font-size: var(--fs-12-5); }
   #pharmacyPage .ph-msk .mk-scale { display: inline-flex; gap: 3px; }
   #pharmacyPage .ph-msk .mk-scale button { width: 26px; height: 26px; border: 1px solid var(--ph-line); background: var(--ph-white); border-radius: 6px; font: 500 var(--fs-11-5) var(--font-body); padding: 0; cursor: pointer; color: var(--ph-soft); }
   #pharmacyPage .ph-msk .mk-scale button.on { background: var(--ph-msk); border-color: var(--ph-msk); color: #fff; font-weight: 700; }
   #pharmacyPage .ph-msk .mk-scale button.was:not(.on) { border-style: dashed; border-color: var(--ph-msk); color: var(--ph-msk-deep); }
-  #pharmacyPage .ph-msk .mk-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin: 8px 0 12px; }
-  #pharmacyPage .ph-msk .mk-tile { background: var(--ph-msk-tint); border-radius: 10px; padding: 8px 12px; min-width: 0; }
-  #pharmacyPage .ph-msk .mk-tile .k { font: 600 var(--fs-10-5) var(--font-disp); letter-spacing: .09em; text-transform: uppercase; color: var(--ph-faint); }
-  #pharmacyPage .ph-msk .mk-tile .v { font: 700 var(--fs-18, 18px) var(--font-disp); color: var(--ph-msk-deep); margin-top: 2px; overflow-wrap: anywhere; }
-  #pharmacyPage .ph-msk .mk-tile .d { font-size: var(--fs-12); font-weight: 600; } #pharmacyPage .ph-msk .mk-tile .d.up { color: var(--ph-herb); } #pharmacyPage .ph-msk .mk-tile .d.down { color: var(--ph-zero); } #pharmacyPage .ph-msk .mk-tile .d.same { color: var(--ph-faint); }
   /* exam tabs */
   #pharmacyPage .ph-msk .mk-tabs { display: flex; flex-wrap: wrap; gap: 2px; border-bottom: 1px solid var(--ph-line); margin: 4px 0 12px; }
   #pharmacyPage .ph-msk .mk-tabs button { border: 0; background: none; padding: 8px 12px; border-bottom: 3px solid transparent; color: var(--ph-soft); font: 600 var(--fs-12-5) var(--font-body); display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
@@ -120347,12 +120340,6 @@ or changing anything in Cliniko.
     if (span <= 0) return (up ? now >= target : now <= target) ? 100 : 0;
     return Math.max(0, Math.min(100, Math.round(((up ? now - base : base - now) / span) * 100)));
   }
-  // +1 better, -1 worse, 0 same
-  function phMskDir(k, from, to) {
-    if (from == null || to == null || from === to) return 0;
-    const d = (phMskBetter(k) === "up" ? to - from : from - to);
-    return d > 0 ? 1 : -1;
-  }
   // baseline = first visit with a reading, last = latest earlier visit with one, now = today's
   function phMskTrack(rec, k) {
     const list = phMskView(rec), day = phMskDay();
@@ -120449,53 +120436,12 @@ or changing anything in Cliniko.
   function phMskEmptyHtml() {
     return `<div class="mk-empty"><div>No regions yet.</div><div class="mk-regs" role="group" aria-label="Regions to examine" style="margin-top:8px"><div class="ph-tng2-seg">${PH_MSK_REGIONS.map(([k, l]) => `<button type="button" class="mk-chip" data-msk="region" data-v="${k}" aria-pressed="false">${esc(l)}</button>`).join("")}</div></div></div>`;
   }
-  function phMskNprsHtml(rec, name, plan) {
-    // with pains on the map the score lives in the pain table (per pain + All pains); the card stays only for a patient with no pains named yet
-    try { if (name && plan && phPmList(name, plan).length) return `<div data-msk-nprs="1" hidden></div>`; } catch (e) { /* no pain map */ }
-    const v = phMskVisOf(rec), prev = phMskPrev(rec), pn = (prev && prev.nprs) || {};
-    const row = (k, l) => `<div class="mk-nrow"><span class="mk-nl">${l}</span>${mkScale("nprs", k, v.nprs && v.nprs[k] != null ? Number(v.nprs[k]) : null, pn[k] != null ? Number(pn[k]) : null)}${pn[k] != null ? mkHint("last " + pn[k]) : ""}</div>`;
-    return `<div class="mk-card mk-nprs" data-msk-nprs="1"><h3>Pain score · 0 none, 10 worst imaginable</h3>${row("now", "Now")}${row("best", "Best this week")}${row("worst", "Worst this week")}</div>`;
-  }
   function phMskPainCardHtml(name, plan) {
     // with no plan the page works on the patient's own pain map (the Pain section's, rec.painSites)
     const pp = plan || phPmPlanFor(name, phMskPid(name, plan));
     let inner = "";
     if (pp) { phPmScoreCtx = pp.id; try { inner = presRvPainHtml(name, pp); } finally { phPmScoreCtx = null; } }
     return inner ? `<div class="mk-card mk-pain" data-msk-pain="1">${inner}</div>` : "";
-  }
-
-  /* ---- a return visit opens on the Re-measure table ---- */
-  function phMskRemeasureHtml(name, rec) {
-    const list = phMskView(rec), prev = phMskPrev(rec);
-    if (!prev) return "";
-    const keys = phMskKeys(list), v = phMskVisOf(rec);
-    const rows = keys.map(k => ({ k, t: phMskTrack(rec, k) })).filter(r => r.t.base != null || r.t.now != null);
-    if (!rows.length) return "";
-    const dirs = rows.map(r => phMskDir(r.k, r.t.last, r.t.now != null ? r.t.now : null));
-    const better = dirs.filter(d => d > 0).length, worse = dirs.filter(d => d < 0).length, compared = rows.filter(r => r.t.last != null && r.t.now != null).length;
-    const np = rows.find(r => r.k === "nprs"), series = (np && np.t.series) || [];
-    const spark = series.length > 1 ? (() => { const w = 120, h = 34, pts = series.map((x, i) => `${4 + i * ((w - 8) / (series.length - 1))},${(h - 4 - (x / 10) * (h - 8)).toFixed(1)}`); const last = pts[pts.length - 1].split(","); return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-label="Pain over visits"><polyline points="${pts.join(" ")}" fill="none" stroke="var(--ph-msk)" stroke-width="2.2"/><circle cx="${last[0]}" cy="${last[1]}" r="3.5" fill="var(--ph-msk)"/></svg>`; })() : "";
-    const arrow = d => (d > 0 ? ["up", "▲ better"] : d < 0 ? ["down", "▼ worse"] : ["same", "— same"]);
-    const tile = (k, l, val, d) => `<div class="mk-tile"><div class="k">${l}</div><div class="v">${val}</div>${d ? `<div class="d ${d[0]}">${d[1]}</div>` : ""}</div>`;
-    const pt = np ? np.t : null, tp = rows.find(r => r.k === "tp");
-    const best = rows.filter(r => r.k.startsWith("rom") && r.t.last != null && r.t.now != null).map(r => ({ r, d: r.t.now - r.t.last })).sort((a, b) => b.d - a.d)[0];
-    const tiles = `<div class="mk-tiles">
-      ${tile("n", "Pain now", pt ? `${pt.last != null ? pt.last : "—"} → ${pt.now != null ? pt.now : "…"}` : "—", pt && pt.last != null && pt.now != null ? arrow(phMskDir("nprs", pt.last, pt.now)) : null)}
-      ${tile("i", "Improved", compared ? `${better} of ${compared}` : "…", compared ? ["up", worse ? `${worse} worse` : "none worse"] : null)}
-      ${tp ? tile("t", "Tender muscles", `${tp.t.last != null ? tp.t.last : "—"} → ${tp.t.now != null ? tp.t.now : "…"}`, tp.t.last != null && tp.t.now != null ? arrow(phMskDir("tp", tp.t.last, tp.t.now)) : null) : ""}
-      ${best && best.d ? tile("b", "Best mover", `${esc(phMskName(best.r.k).n.replace(", active", ""))}`, ["up", `${best.d > 0 ? "+" : ""}${best.d}°`]) : ""}
-      ${spark ? `<div class="mk-tile"><div class="k">Pain over ${series.length} visits</div><div class="v">${spark}</div></div>` : ""}</div>`;
-    const head = `<thead><tr><th>Measure</th><th>Baseline</th><th>Last · ${esc(phCycShortLbl(prev.day))}</th><th>Today</th><th>Change</th><th>Toward target</th></tr></thead>`;
-    const body = rows.map(({ k, t }) => {
-      const nm = phMskName(k), tg = phMskTarget(rec, k), d = phMskDir(k, t.last, t.now), prog = phMskProgress(k, t.base, t.now != null ? t.now : t.last, tg), a = arrow(d);
-      const today = k === "tp" ? `<b>${t.now != null ? t.now : "—"}</b>`
-        : phMskIsPill(k) ? (k.startsWith("mmt") ? [1, 2, 3] : [0, 1]).map(x => `<button type="button" class="mk-pill sm${t.now === x ? " on" : ""}" data-msk="re-pill" data-v="${k}|${x}">${esc(phMskFmt(k, x))}</button>`).join("")
-        : `<input type="text" inputmode="decimal" class="mk-in field-bare" data-msk-in="measure" data-k="${esc(k)}" value="${t.now != null ? t.now : ""}" placeholder="${t.last != null ? t.last : ""}" aria-label="${esc(nm.n)} today">${nm.u ? `<span class="mk-u">${nm.u}</span>` : ""}`;
-      const tgIn = phMskIsPill(k) || k === "tp" ? (tg != null ? esc(phMskFmt(k, tg)) : "—") : `<input type="text" inputmode="decimal" class="mk-in tg field-bare" data-msk-in="target" data-k="${esc(k)}" value="${tg != null ? tg : ""}" aria-label="${esc(nm.n)} target">`;
-      return `<tr data-k="${esc(k)}"><td class="n">${esc(nm.n)}<div class="mk-sub">${esc(nm.r)}</div></td><td class="muted">${esc(phMskFmt(k, t.base))}</td><td>${esc(phMskFmt(k, t.last))}</td><td>${today}</td><td class="chg ${a[0]}">${t.now != null && t.last != null ? a[1] : ""}</td><td><div class="mk-bar"><i class="${prog == null ? "" : prog >= 70 ? "good" : prog >= 35 ? "warn" : "bad"}" style="width:${prog == null ? 0 : prog}%"></i></div><span class="mk-sub">${prog == null ? "" : prog + "% · "}target ${tgIn}</span></td></tr>`;
-    }).join("");
-    return `<div class="mk-card mk-re" data-msk-top="1"><div class="mk-headrow"><h3>Re-measure · visit since ${esc(phCycShortLbl(prev.day))}</h3><button type="button" class="mk-btn" data-msk="same">Same as last time</button></div>
-      ${tiles}<div class="mk-scroll"><table class="mk-tbl">${head}<tbody>${body}</tbody></table></div></div>`;
   }
 
   /* ---- the body figure and the palpation tab ---- */
@@ -121641,10 +121587,6 @@ or changing anything in Cliniko.
       return true;
     } else if (act === "imp-reset") {
       if (!W(vis => { delete vis.imp; })) return true;
-    } else if (act === "re-pill") {
-      const [k, x] = v.split("|"), cur = phMskVal(phMskToday(rec), k);
-      if (!W(vis => phMskSetMeasure(vis, k, cur === +x ? "" : x))) return true;
-      parts = ["top", "exam"];
     } else if (act === "same") {
       const prev = phMskPrev(rec); if (!prev) return true;
       if (!W(vis => {
@@ -121700,13 +121642,8 @@ or changing anything in Cliniko.
       W(vis => { if (!txt || txt === auto) delete vis.imp; else vis.imp = txt; });
       return;
     }
-    // numbers: ROM degrees (active / passive), the Re-measure box, a target
+    // numbers: ROM degrees (active / passive)
     const kind = el.dataset.mskIn, k = el.dataset.k;
-    if (kind === "target") {
-      const n = phMskNum(el.value);
-      if (phMskWrite(name, (vis, root) => { root.targets = root.targets || {}; if (n == null) delete root.targets[k]; else root.targets[k] = n; }, c.plan && c.plan.id)) phMskRefresh(["top"]);
-      return;
-    }
     if (kind === "rom") {
       const f = el.dataset.f, n = phMskNum(el.value);
       if (!W(vis => { vis.rom = vis.rom || {}; const r = vis.rom[k] || (vis.rom[k] = { a: "", p: "", pain: "", end: "" }); r[f] = n == null ? "" : n; })) return;
@@ -121714,14 +121651,6 @@ or changing anything in Cliniko.
       phMskPatchRom(el, k, c);
       phMskRefresh(["top"]); try { phTodayChromeRefresh(); } catch (x) { /* none */ }
       return;
-    }
-    if (kind === "measure") {
-      const raw = el.value.trim();
-      if (!W(vis => {
-        phMskSetMeasure(vis, k, raw);
-        if (k === "nprs") { const row = phMskPainRow(phPatientRec(name), c.plan); if (row) row.severity = vis.nprs && vis.nprs.now != null ? vis.nprs.now : 0; }
-      })) return;
-      phMskRefresh(["nprs", "exam"]); try { phTodayChromeRefresh(); } catch (x) { /* none */ }
     }
   });
   // a ROM number changes only its own row's bar and the tab count (the box she typed in keeps focus)
