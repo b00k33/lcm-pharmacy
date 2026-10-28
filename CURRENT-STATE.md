@@ -558,7 +558,8 @@ drawn with `sideSvg(..., { neck: false })` so its own neck and jaw lines stay of
 `PH_MSK_SIDE_CROP`), one side picture with a **Right | Left** joined bar under it (`phMskSideLR`, view state; `dg-side` turns the
 page's copy and the Enlarge copy; a tap marks the side showing). Parts: SCM sternal / clavicular head, anterior / middle /
 posterior scalene, splenius capitis + semispinalis capitis (`of` their wholes), cervical multifidus, lateral pterygoid, the
-**suboccipitals as one tap** (four drawn, one key `sub`), the upper trapezius to the skull, levator, masseter, temporalis. The same
+**suboccipitals as one tap** (four drawn, one key `sub`), the upper trapezius to the skull, levator, masseter, temporalis (their nerve, motor point, point and caution words are hers: her yes,
+2026-10-28). The same
 neck shapes sit at the top of Shoulder and Mid back (one drawing everywhere); a neck-only muscle names itself in the Neck picture
 only. **The lower body and the belly** (her 8 picks 2026-10-28) [Muscle picture: legs, low back and belly]: Low back, Hip & thigh,
 Knee and Ankle & foot are true shapes too (`PH_MSK_LEG`: front, back and side shapes in leg space, placed on the figure by

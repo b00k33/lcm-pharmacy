@@ -6032,3 +6032,9 @@ She read the 35 new rows on a review page (artifact https://claude.ai/artifact/A
 and caution per muscle, a tick or an edit per row) and answered "All right as written". The words in `PH_MSK_MUSCLES` (the rows
 listed under "Muscle picture: legs, low back and belly") are hers now, no longer DRAFT; nothing in the code changed (the rows never
 carried a DRAFT comment). The neck rows' words (the "Neck muscle picture" note) are still DRAFT.
+
+## 2026-10-28 · Neck muscle words: her yes
+Her words: "approve neck muscle draft". The nerve, motor point, point and caution words of the neck rows added under "Neck muscle
+picture" (`splc`, `ssc`, `cmf`, `scms`, `scmc`, `scaa`, `scam`, `scap`, `lpt` in `PH_MSK_MUSCLES`) are hers now, no longer DRAFT;
+nothing in the code changed (the rows never carried a DRAFT comment). With the lower body's yes, every muscle row added on
+2026-10-28 is approved.
