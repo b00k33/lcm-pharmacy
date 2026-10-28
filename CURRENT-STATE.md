@@ -520,8 +520,15 @@ tag only on a marked muscle (`PH_MSK_TAGN` short names, never one over another, 
 muscle in parts is **tapped part by part** (her pick "Split"): pec major clavicular / sternal, deltoid anterior / middle /
 posterior, trapezius upper / middle / lower, teres minor / major, rhomboid minor / major: each part is its own `PH_MSK_MUSCLES`
 row with `of` = its whole; the whole is `hide` (off every list, chip and search) and an older mark on it shows on each part with
-nothing of its own (`phMskMuState`). On a narrow card each row stays a front + back pair. **Not built:** neck, arm, low back, hip,
-knee and ankle keep their grey bellies until drawn.
+nothing of its own (`phMskMuState`). On a narrow card each row stays a front + back pair. **The neck** (her picks 2026-10-28)
+[Neck muscle picture]: **Side + back** (`PH_MSK_ATLAS_VIEWS.cervical`; the side view is `PH_MSK_ATLAS.side` on SIDE's own grid,
+drawn with `sideSvg(..., { neck: false })` so its own neck and jaw lines stay off), a close window (`PH_MSK_REGION_CROP.cervical`,
+`PH_MSK_SIDE_CROP`), one side picture with a **Right | Left** joined bar under it (`phMskSideLR`, view state; `dg-side` turns the
+page's copy and the Enlarge copy; a tap marks the side showing). Parts: SCM sternal / clavicular head, anterior / middle /
+posterior scalene, splenius capitis + semispinalis capitis (`of` their wholes), cervical multifidus, lateral pterygoid, the
+**suboccipitals as one tap** (four drawn, one key `sub`), the upper trapezius to the skull, levator, masseter, temporalis. The same
+neck shapes sit at the top of Shoulder and Mid back (one drawing everywhere); a neck-only muscle names itself in the Neck picture
+only. **Not built:** arm, low back, hip, knee and ankle keep their grey bellies until drawn.
 
 ## Fang Bing Ren, Find the Ren & Patterns
 **Fang Bing Ren** (the Triangle) is the one place constitutional-family scoring happens: one merged header (verdict + Quick
