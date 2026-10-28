@@ -8,7 +8,7 @@ Also read ABOUT-ME.md before any work — build to this user's preferences.
 - **ABOUT-ME.md** = how she likes to work.
 DESIGN-CONVENTIONS.md was merged into this file on 2026-10-21; its stub went to the Recycle Bin on 2026-10-27 (git history keeps it).
 **The folder (tidy 2026-10-27):** the root holds the app (index.html, intake.html, chart.html, manifest.json,
-chart.webmanifest, sw.js, icons/, screenshots/, supabase/), these docs, the September specs the code and memory point to
+chart.webmanifest, sw.js, icons/, screenshots/, supabase/, foods-au.json), these docs, the September specs the code and memory point to
 (CLINIKO-LETTERS, FACIAL-PARALYSIS-SPEC, INTAKE-LINK-FROM-HISTORY-SPEC, PHASE-VISITS-SPEC, SCRIPT-NAME-REVIEW, VISIT-NOTE-SPEC),
 and only the mocks still being worked on. A mock, guide or audit named anywhere in these docs or the code lives in `mocks/`
 under the same name once its work is live (move it there then). Data snapshots and app exports go in `backups/`, screenshots
@@ -1672,14 +1672,24 @@ meal is NOT listed; Done adding) · one numbers line, small numbers behind a tap
 her card, beside + Add in the planner's foot). No sideways scroll; long names wrap, never cut; the cursor goes to Search on the
 computer only. The snack picker (Snacks · drinks) is unchanged. Code: "A CALMER MEAL" (`phMealListHtml`, `phMealTblHtml`,
 `phMealAddHtml`, `phMealNumsHtml`, `phMealInstHtml`).
-**Food numbers**: foods from `PH_FOOD` (193 rows: the Australian Food Composition Database Release 3 by FSANZ, CC BY-SA 3.0 AU,
-credited on Targets; choline from USDA FoodData Central; Thisbowl's June 2026 sheet), stored `food:<id>*<q>`, shown in kitchen
+**Food numbers**: foods from `PH_FOOD` (208 rows: the Australian Food Composition Database Release 3 by FSANZ, CC BY-SA 3.0 AU,
+credited on Targets; AUSNUT 2023 by FSANZ for what AFCD lacks: the curry meat pie, the kebab wraps, creamy milk; choline from USDA
+FoodData Central; Thisbowl's June 2026 sheet; groups include **Snacks** (packet chips) and **Takeaway** (pies, sausage roll, kebabs,
+hot chips), her word), stored `food:<id>*<q>`, shown in kitchen
 words with − / + (each food its own step; a dish `dish:<id>*<q>` steps in serves). A dish's **Made of** adds its numbers itself
 (typed numbers only for what is not on the list); with no Made of a dish counts by itself (`phDishAuto`: the Thisbowl bowl in its
 name, else its typed ingredients matched) and Made of starts filled with that bowl. Nutrients add every item. The time is a small
 ✎ field. A day's numbers line (kJ · P · C · F) opens 17 bars against **Targets** (C22's four + NHMRC women 31–50, each hers);
 "not counted" where no source gives a number, never 0. Thisbowl bowls R | L + Build your own. Code: "FOOD NUMBERS" (`phFood*`,
 `phNut*`, `phTb*`).
+**Shop foods** (her "download woolworth and coles and aldi food database because i buy from them"; her pick "Search as I type"):
+the shops share no product data and FSANZ's Branded Food Database is not public, so the products are Open Food Facts' Australian
+ones (shoppers' label scans, ODbL, credited on Targets) in `foods-au.json`, fetched the first time she types in a meal's add list
+(Open Food Facts' own search refuses a web page). While she types, a **Shops** block lists up to 12 under her own foods (every word
+whole, the last one a start; her shops' products and Australian barcodes first; "woolworths", "coles", "aldi" find what each
+sells, an Aldi own brand counts as Aldi). One she adds is kept in her Me row (`d.sfood["sh_<code>"]`, entry by entry) and joins
+`PH_FOOD` as group "From the shops" (`phSfReg`), at its label serve; numbers per 100 g / ml are the label's (kJ, protein, carbs, fat,
+fibre, sugar, sodium, and a mineral or vitamin only when the label gives it). Built, NOT live. Code: "SHOP FOODS" (`phSf*`).
 **Diet page** under Log for every patient (`phDietPageHtml`): usual diet + days she notes (`rec.diet`, `phDietWrite`), one thing per
 line, ↺ Same as usual on a day of its own. On HER record (the My profile record, else her signature name; a Me tag on her band) it is
 **Meals**, in her Body group; patients keep Diet, unchanged. Nutrients, nature and the week are worked out on read. Diet feeds
@@ -2103,8 +2113,8 @@ its note tagged Form; a later link brings back the patient's own conditions (her
   icon in at install): rename (`-v2`), update manifest.json, the link tags
   and the sw.js SHELL list.
 - GitHub Pages (`b00k33/lcm-pharmacy`) publishes only index.html,
-  intake.html, chart.html, chart.webmanifest, manifest.json, sw.js, icons/
-  and screenshots/ (`.github/workflows/pages.yml`). The .md files, mocks and
+  intake.html, chart.html, chart.webmanifest, manifest.json, sw.js, icons/,
+  screenshots/ and foods-au.json (`.github/workflows/pages.yml`). The .md files, mocks and
   backups are never published. Never Netlify.
 
 ---
