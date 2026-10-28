@@ -5409,3 +5409,11 @@ Same ask. The folder rule (CLAUDE.md "The folder"): a mock whose work is live li
   two weeks wait to be packed (the packed part, all the history before them, is 66 MB), but seven of its packs are online-only in OneDrive and OneDrive is not running, so packing
   stops ("mmap failed"; every commit's tidy-up says so too). 1,402 loose copies already packed were cleared (`git prune-packed`).
   Once OneDrive runs and downloads the pack folder (it is set to keep files on this device), `git gc` finishes it.
+
+## Docs: "Current state, by area" moved to CURRENT-STATE.md (2026-10-28)
+
+Same audit. Her pick (popup, "Move it out"): CLAUDE.md loads into every LCM session and was 222 KB, more than half of it the
+"Current state, by area" section. That section is now **CURRENT-STATE.md** (121 KB, word for word; only its title, a two-line
+head and "OPEN at the end of CLAUDE.md" changed). CLAUDE.md (103 KB) keeps every rule and a pointer where the section was;
+its file list says five files, "When two lines disagree" puts CURRENT-STATE.md after the rest of CLAUDE.md, and the lines that
+said "fix the Current-state line here" now say "fix that area's paragraph in CURRENT-STATE.md".
