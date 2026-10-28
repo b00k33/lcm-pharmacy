@@ -1325,7 +1325,6 @@ Chart.
   picker and before/after swap, Records → Photos grouping by shot and date
   fixing).
 - The per-herb shelf→after-stock bar on Dispense.
-- The cycle Day log `.ph-ck-chip` rows as joined bars.
 - Whether the standing tongue / abdomen charts carry over day to day
   (unchecked).
 - A heartbeat field on IVF scans; folding `#phRenUndoToast` into the one

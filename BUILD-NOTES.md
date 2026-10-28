@@ -5572,3 +5572,41 @@ Ren's formulas, 4 + New formula). Memory `project_lcm_herbs_block_formula_pick_2
   Picture: shots/fbr-formula-search-2026-10-28.png.
 - **Not checked:** her real records; the Key2 phone.
 - **Not live:** waits for her "push live".
+
+## Cycle day card: lined up, pictures, rail (2026-10-28)
+- **Her words** (screenshot of the Cycle page's "Today CD 25 · Luteal" card): "refine this visual layout more. give me 3 mocks of
+  high attention to detail premium designs". Three mocks (`cycle-day-card-mocks-2026-10-28.html`, published as an artifact; shots
+  `shots/cycle-card-mock-{A-lined-up,B-pictures,C-steps}.png`): A Lined up, B Pictures, C Steps. **Her picks:** "Combine"; all four
+  shared changes (one usual ring, colour dots + 0–10 bar, BBT + time as fields, Fang Bing Ren foot line); Mood · Gut · Body; on the
+  phone a joined grid (not a dropdown). Asked which parts to combine, she said "show me" (= build with my picks): A's lined-up rows
+  + B's pictures beside the words + C's rail line. Nothing else she chose changed (her order 1–5, the numbered steps, two columns
+  on a wide card, the usual ring's meaning).
+- **Where** (all in the flat branch of `phCycleSignPopHtml`, one CSS block after `@keyframes phCsCramp`):
+  - Rows: label column 74px (sentence case 12px), every joined bar fills its line (`.ph-cs-grid .ph-ck-chips.seg`, 32px with its
+    line, 13px). `phCsFit` (MutationObserver + resize, the `phPpScan` pattern) folds a bar too long for its line into an even
+    joined grid: 2 rows, then 2 rows with the pictures dropped (`.bare`; a colour keeps its dot), then 3 or 4; its last cell spans
+    what is left of its row. The 0–10 bar never folds. At her 643px card Discharge (4+3) and Pain type (3+2) fold; on a phone most do.
+  - Pictures (`pic`, `svg.pi`): colour dots from `PH_UC_BLOOD` (the Usual period's own colours), LH strips (test line none / faint /
+    strong), discharge textures, pain-type marks, the two Other signs; flow drops, clot dots and the symptom drawings as before.
+  - The usual ring alone: the "· usual" words left `phCycleSelectChips`, the clot and PMS chips ("Her usual" in the hover title);
+    the "today's pick / usual" legend became a small key at the head's right (`phCycDayHeadHtml(..., key)`), which also puts a dot
+    in the phase's colour before "CD n · phase" (`.ph-cyc-phd`, the cycle picture's colours) in every day head.
+  - How bad: one joined 0–10 bar (`.ph-cs-n10`, `data-cycle-painn`, a click handler beside Painful?'s): a tap sets the score (and
+    the derived word), her score again clears it, cells below it pale; a half step from the old slider shows on its nearest cell.
+    The slider stays in the older popover. The womb stays beside the bar (hidden on a phone).
+  - PMS & mood: three bars, Mood (Irritable, Low mood) · Gut (Bloating, Loose stool, Constipation, Nausea) · Body (the rest, so a
+    new option lands there). Other (Unprotected sex, Ovulation twinge) is one joined bar too.
+  - BBT: − and + 32px circles either side of one tinted field (reading + °C, no spinner), the time a tinted field, Discard a chip.
+    The Note is a tinted field. Fang Bing Ren's strip moved out of the second column to a band at the card's foot.
+  - The rail: `.ph-cs-q::before` joins each number to the next, herb once that step is answered; hidden after the last step of a
+    column on a wide (two-column) card.
+  - Picked chips stay `--ph-herb-deep` here: the Cycle page's day box, footer and card share that rule (`:is(.cp-box, .cp-foot,
+    .cp-card .cp-log...)`), so the card matches its page rather than the mock's lighter shade.
+- **Integration:** the same card opens on Today's visit (cycle-plan line, `.ph-cp` too), so it gets the same look; the day head is
+  shared with the calendar's day box. Checked: the Cycle page at 1280 and 360, the head on another day (CD 17 · Follicular).
+  **Not checked:** Today's visit's open card (my test patient showed the tile, not the line), her real records, the Key2 phone.
+- **Tested** (sandbox, made-up patient "Mia Tran", three logged periods, usual = Medium / Red / Creamy / Irritable + Bloating):
+  0–10 set 5 (word "moderate", 1–4 pale) and cleared; Loose stool and Low mood ticked; Egg-white, LH Positive (green), Large
+  clots, Unprotected sex, BBT +0.05, Discard, Painful? No (the bar goes); scroll stayed put; no console errors. Pictures:
+  `shots/cycle-card-built-desktop.png`, `shots/cycle-card-built-phone360.png`.
+- **Not live:** waits for her "push live".
