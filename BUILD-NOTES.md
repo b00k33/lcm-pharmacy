@@ -5923,3 +5923,22 @@ adds MP, one drawing everywhere, one picture per row on a phone.
   points), Enlarge, the Fang Bing Ren plates. **Not tested:** her records; a real phone or the Key2; the Treatment tab's Points row
   with the new rows; the Other muscles card; 3D; Copy notes.
 - **Not live:** waits for her "push live".
+
+## Meals: a meal counts once its time has passed (2026-10-28)
+- **Her words** (screenshot of Wed 28 in the Meals planner: 5:30 am matcha + beef bacon + milk, 3:00 pm 12 KFC Wicked Wings, 60 g
+  salt & vinegar chips; Macros 1,258 kJ · P 4 · C 26 · F 20): "these kj dont look right".
+- **Cause:** the numbers counted only meals with **Had it**, plus snacks; neither meal was ticked, so the day read as the chips
+  alone (60 g = 1,258 kJ · 4 · 26 · 20 exactly) and the two meals sat in the pale "still planned" part. Reproduced on build
+  20261028-210000 with the same foods.
+- **Fix:** `phMealEaten(day, sl, ev)` decides what she ate of a meal for her numbers: Had it at once (what she had); any other
+  meal once its time on her calendar has passed (an earlier day: all of it; today: from the meal event's start; no event today
+  = not yet); Skipped and a fast night's Dinner (`phMplFastPl` or `phFastNightOf`) never. Used by `phDietMyDay` (the Macros row,
+  today's rings, the numbers line, the kJ mini, warm · cool) and `phMealWaterMl`. `phMplPlanSum` (the pale part) is unchanged.
+  The Had it tick itself (the ✓, Today's meals "n of m", the meal habit, ending a fast) is unchanged: a meal does not get a ✓.
+- **Tested** (sandbox, her day rebuilt from her screenshot, Dinner 250 ml milk at 11:50 pm, yesterday's Breakfast 250 ml milk
+  never ticked): before 1,258 / 4 / 26 / 20; after 9,168 kJ · P 107 · C 102 · F 133 (matcha 20 + bacon 620 + milk 695 + wings
+  6,575 + chips 1,258), Dinner still pale (with the plan 9,863); yesterday 695; Lunch Skipped 2,593; a fast night's Dinner
+  yesterday not counted, the same Dinner on a normal night counted; Had it with something else counts what she had; no ✓ added;
+  no console errors. Picture: shots/meals-kj-count-2026-10-28.png.
+- **Not checked:** her real records (her past days' untouched usual meals now count too); the Key2 phone.
+- **Not live:** waits for her "push live".
