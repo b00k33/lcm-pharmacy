@@ -5863,3 +5863,10 @@ maps until the row came back from storage. Now a blank row is normalised like an
   the typed name and comes back.
 - **Not checked:** a real new device signed in; the Key2.
 - **Not live:** waits for her "push live".
+
+## 2026-10-28 · Live: build 20261028-210000
+Her "push live" (publish e3afca52). Went live: Zhi Gan Cao Tang (integrate33 run 17, with her four answers), Wen Jing Tang (run 16, with her
+answers), Meals (KFC Wicked Wings, water in ml, 8000 kJ, Supplements · herbs), a new device opens her own record (blank Me row), MSK muscle
+marks finish (ad3097c0), MSK Enlarge back figure (a65672d4), the publish script tidy (61a97b23). Checked on the live page: the stamp,
+`zhigancao`, `wenjingtang`, `p_knotted_now`, `kfc_wings`, `phMeNormData(null)`. The two matrix pages moved to `mocks/`. Still hers: the
+DRAFT words of both formulas and the Gui Zhi filing of Zhi Gan Cao Tang (CLAUDE.md OPEN).
