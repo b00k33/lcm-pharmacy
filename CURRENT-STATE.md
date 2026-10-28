@@ -702,7 +702,7 @@ that day's own; prep ticks per dish (`preps`); ingredients (a tap = Shopping); o
 the grid's ✓ IS Had it: band pill, fold chip, card; Undo). The meal shows under the event; the calendar reads "first + count", food
 first. A meal value is one item or a list (`phMealVs` / `phMealV`). A dish can be a **Drink** (Dish | Drink on its editor); a
 dish's name in the meal opens the dish. "Something else" is gone. Data in her Me row, entry by entry (`d.dishes` = "My dishes",
-nature warm · neutral · cool + nutrients per serve; `d.meals`; `d.shop`). Me drawer: Today's meals (a tick per meal, water +1),
+nature warm · neutral · cool + nutrients per serve; `d.meals`; `d.shop`). Me drawer: Today's meals (a tick per meal, water in ml, +250 ml),
 Shopping.
 **A meal's list** (her pick 2026-10-27, "too busy"; it replaced the Food / Drinks sections, + Food / + Drink, Eating out and Skipped
 under Food, and Had it | Edit; BUILD-NOTES "A calmer meal"): every meal list (her card, the planner's picker, her usual meal, a patient's Diet sheet) =
@@ -717,11 +717,12 @@ meal is NOT listed; Done adding) · one numbers line, small numbers behind a tap
 her card, beside + Add in the planner's foot). No sideways scroll; long names wrap, never cut; the cursor goes to Search on the
 computer only. The snack picker (Snacks · drinks) is unchanged. Code: "A CALMER MEAL" (`phMealListHtml`, `phMealTblHtml`,
 `phMealAddHtml`, `phMealNumsHtml`, `phMealInstHtml`).
-**Food numbers**: foods from `PH_FOOD` (210 rows: the Australian Food Composition Database Release 3 by FSANZ, CC BY-SA 3.0 AU,
+**Food numbers**: foods from `PH_FOOD` (212 rows: the Australian Food Composition Database Release 3 by FSANZ, CC BY-SA 3.0 AU,
 credited on Targets; AUSNUT 2023 by FSANZ for what AFCD lacks: the curry meat pie, the kebab wraps, creamy milk; choline and beef
 bacon from USDA FoodData Central; matcha powder from the Standard Tables of Food Composition in Japan 2020 (MEXT); Thisbowl's June
 2026 sheet; groups include **Snacks** (packet chips) and **Takeaway** (pies, sausage roll, kebabs,
-hot chips), her word), stored `food:<id>*<q>`, shown in kitchen
+hot chips, KFC Wicked Wings from CalorieKing Australia's KFC listing, a wing the unit), her word; **Water** is a drink in ml, every
+number 0), stored `food:<id>*<q>`, shown in kitchen
 words with − / + (each food its own step; a dish `dish:<id>*<q>` steps in serves). A dish's **Made of** adds its numbers itself
 (typed numbers only for what is not on the list); with no Made of a dish counts by itself (`phDishAuto`: the Thisbowl bowl in its
 name, else its typed ingredients matched) and Made of starts filled with that bowl. Nutrients add every item. The time is a small
@@ -735,21 +736,28 @@ ones (shoppers' label scans, ODbL, credited on Targets) in `foods-au.json`, fetc
 whole, the last one a start; her shops' products and Australian barcodes first; "woolworths", "coles", "aldi" find what each
 sells, an Aldi own brand counts as Aldi). One she adds is kept in her Me row (`d.sfood["sh_<code>"]`, entry by entry) and joins
 `PH_FOOD` as group "From the shops" (`phSfReg`), at its label serve; numbers per 100 g / ml are the label's (kJ, protein, carbs, fat,
-fibre, sugar, sodium, and a mineral or vitamin only when the label gives it). Code: "SHOP FOODS" (`phSf*`).
+fibre, sugar, sodium, and a mineral or vitamin only when the label gives it). A product named water is a drink in ml whatever its
+scan says (`phSfDk`); a kept product reads "shop" beside its amount in the add list. Code: "SHOP FOODS" (`phSf*`).
 **Diet page** under Log for every patient (`phDietPageHtml`): usual diet + days she notes (`rec.diet`, `phDietWrite`), one thing per
 line, ↺ Same as usual on a day of its own. On HER record (the My profile record, else her signature name; a Me tag on her band) it is
 **Meals**, in her Body group; patients keep Diet, unchanged. Nutrients, nature and the week are worked out on read. Diet feeds
 Patterns (`diet_cool` / `diet_warm`, source Diet, DRAFT wording); Fang Bing Ren has no diet sign (food reactions pre-tick its signs).
 **Meals planner** (her Diet page, her word "change diet to Meals", fasting merged in): the clock bar on top, today's macro rings
-under it, then a week table, days across: Breakfast · Lunch · Dinner · Snacks · drinks · Fast · Macros · More. A cell = its meal's time (a day's own bold) + its things one per
+under it, then a week table, days across: Breakfast · Lunch · Dinner · Snacks · drinks · Supplements · herbs · Fast · Macros · More. A cell = its meal's time (a day's own bold) + its things one per
 line (pale = usual, bold = the day's own, ✓ + the time she had it); ✎ Usual on each row. A tap opens the picker under the cell (over
 it when more room above; fits the window), on the meal (empty = on adding): the meal's list (Eating out / Skipped today or before)
 + Done; on Dinner **Fast this night** (see Fasting). Esc closes the picker only. ⧉ on a day = Copy a day (pick days, Copy to N days);
 **Copy last week**; **Shopping list** = the week's list from the plan (each food added up, a dish's foods; Thisbowl's left out) into
-the Me drawer's Shopping (`src: "plan"`); Targets. **More** a day = water +1 (the button shows the glasses), the numbers line, warm ·
+the Me drawer's Shopping (`src: "plan"`); Targets. **Supplements · herbs** (her 2026-10-28 "add a row for supplements and herbs"; today and the days before): a chip a thing
+she took (a tap takes it out, with Undo), + opens a list: Today (✓), Taking (her Supplements page: the four switched on and her
+own), Before (her earlier days); as she types, the supplements list and her LCM formulas and jars (`phAcuFPickStock`), and Add
+"<typed>" (Enter too). Stored `"<day>|h"` {list [{n, at, src?}]}; not counted in her numbers. Code: `phMplSupp*`, `phMealSupp*`.
+**More** a day = water in ml (a glass 250 ml; the button shows the day's ml: the glasses she tapped + plain water logged in a meal
+she had or as a drink, `phMealWaterMl`), +250 ml, the numbers line, warm ·
 cool, the 17 bars (today's open by itself). Phone: a day at a time (‹ ›), the picker inline. Code: "MEALS PLANNER" (`phMpl*`).
 **Macros against her goal** (her picks: the Macros row AND today's rings) [Meals macros against goal]: energy, protein, carbs, fat.
-**Goals** (`phDietGoal`): kJ is hers to type; protein 50 g and carbs 50 g are hers (her word: "set carbs to 50g a day"); fat is hers,
+**Goals** (`phDietGoal`): kJ 8000 (her word 2026-10-28, "daily energy goal is 8000kj"), hers to change; water 2000 ml (C22's 8
+glasses; a target typed in glasses reads × 250); protein 50 g and carbs 50 g are hers (her word: "set carbs to 50g a day"); fat is hers,
 else the rest of her kJ goal after protein and carbs (FSANZ: 17 kJ a gram of protein or carbs, 37 of fat; her grams win over a
 split); Targets tags it "from kJ". **Today's rings** (`phMacRingsHtml`, under the clock bar; a phone: the day it shows): a ring each,
 solid = had, pale = still planned, the % in it, the amount, "of" + the goal as a field (`data-diet-goal`, `phDietGoalSet`; clearing fat
