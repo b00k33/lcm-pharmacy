@@ -5847,4 +5847,6 @@ Matrix: `fbr-integrate33-zhigancao-2026-10-28.html` (root until live, then mocks
 - **Not checked:** her real records; the Key2 phone; a hand-drawn pulse or tongue chart (checked through the chart words).
 - **Needs her word:** weak = weak or faint; the two-line split of "emaciation with yin-deficiency signs"; conditions at 4; -3 a line; thin AND
   choppy; the Gui Zhi filing; DRAFT words (card line, row names, Ask her answers, picture labels).
+- **Her answers** (same day, all four as built): weak or faint; two lines, 4 + 4; conditions 4 each; -3 a line, thin AND choppy. Still hers:
+  the Gui Zhi filing and the DRAFT words.
 - **Not live:** waits for her "push live".
