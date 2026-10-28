@@ -5440,3 +5440,26 @@ edge; names along the curve; bones as in the mock; the Fang Bing Ren figure the 
 - Tested in the sandbox (port 8994, a made-up patient, the page mounted with `phAbdHtml`): Feel · tight hypochondrium on R hypo
   saved `marks.tighthypo = ["hypoR"]` and drew the arch line; on epi it shows `PH_ABD_HYPO_MSG`; tender on L hypo + R flank saved;
   every sign drawn on a harness (all nine places, washes, last visit grey, minis 56 / 29 px); no console errors. Not on her records.
+
+## Fix: the phone / tablet Inventory styles put back (2026-10-28)
+
+Found in the same audit. The C22 clean-up session found a bug in the scratchpad script `cssdead.pl`: its test for "this
+@media block is now empty" let one comment match run from the first `/*` to the last `*/`, so a whole @media block full of
+live rules could go. Checked every rule the 10/27 code tidy (bab030c3, live since build 20261028-101300) removed against today's
+code: one block was hit, `@media (max-width: 900px)` after the "Breakpoint moved 720px -> 900px" comment, 206 lines, 56 rules
+(54 still match something; `#refRecipeList` / `.ph-recipe-m` match nothing and come back harmless). It held Inventory's
+phone / tablet rows (`#phStock` table → blocks, `.ph-inv-compact-*`, `.ph-mchips`, `.ph-inv-listhead`, `#phInvPagination`), the
+listing's phone cards (`.ph-listing-m`, `.ph-lm-*`) and the shell's narrow padding (`.ph-app-shell .ph-shell-content`,
+`.ph-widget`). The other 7 @media blocks and every single rule that tidy removed match nothing today (checked).
+- **What she would have seen** (sandbox, 375px, before): Inventory's grams and Stocked / Low chips cut off at the right edge,
+  wide side gutters, "All herbs & formulas142" run together. **After:** the rows as before 10/28 (name + code · supplier, grams,
+  chip), the count at the row's right, 12px gutters.
+- **Put back word for word** (`restore900.pl`, from the tidy's own diff) at its old place, before `.ph-tmpl-field`. The other
+  `.ph-listing` panels (intake rows, supplements, chart rows) hold no table, so its `table { display: none }` hides nothing
+  new; the prescription panels are excluded by `:not(.ph-pres-panel)` as before.
+- **Tested** (sandbox, made-up herbs only): 21 pages at 375px, none scrolls sideways; the off-edge items on Guide (177),
+  Refill (2) and All templates (1) are the same with and without the fix (inside sideways scrollers). Desktop is untouched (the
+  block is max-width 900px).
+- Today's other style cuts (the MSK `.mk-tile` rules here, MSK Acu, C6) were checked line by line in their diffs: only the
+  named rules went. The fixed script is `scratchpad/c22dead/cssdead-final.pl`; do not use the old one for cuts.
+- **Not live:** waits for her "push live" (the bug itself is live since build 20261028-101300).
