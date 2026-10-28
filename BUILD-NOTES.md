@@ -6076,3 +6076,7 @@ opens the picker, so she could not find it.
   console errors.
 - **Not checked:** her real week; the Key2; a patient's Diet page (its skip path is unchanged apart from the second tap).
 - **Not live:** waits for her "push live".
+
+## 2026-10-28 · Live: build 20261028-223000
+Her "push" (publish b6645a76): the body week's Done row into Workout as a tick (fc8c23f0) went live, with the neck and lower body
+muscle words (notes only). Checked on the live page: `class="ftk`.
