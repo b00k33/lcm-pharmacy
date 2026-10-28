@@ -6104,3 +6104,23 @@ showing the Fishbowl.
   comes back; no console errors. **Not tested:** her real records (her own Fishbowl entry); the phone picker; her Today card on a
   had meal (the same list code).
 - **Not live:** waits for her "push live".
+
+## 2026-10-28 · Live: build 20261028-230000
+Her "push live" (publish 975e683b). Went live: a meal she had can be edited (5ef60c71, her Spicy Salmon Fishbowl). Checked on the
+live page: the stamp in index.html and sw.js, `phMealHadPut`, the had list in `phMealList`.
+
+## Meals: Recipes, one list of all her dishes (2026-10-28)
+- **Her words:** "where can i edit my recipes?" (her C22 recipes are My dishes here; the only doors were a dish's name inside a
+  meal and the ✎ in the Snacks · drinks list), then "yes" to a Recipes button beside Shopping list.
+- **How:** **Recipes** (`data-mpl-recipes`) before Shopping list in the planner's week bar and in the phone's chips opens the
+  sheet kind "recipes" (`phRecipesHtml`): Search recipes (`data-dish-lq`, `phFoodFilter`; focused on a computer), a row a dish
+  (`phDishList`, A–Z: its mark in its own 14px slot so every name starts in line, the name wrapping, kJ a serve from
+  `phDishNut` · n prep, ✎) and **+ New recipe**. A row or + New opens the dish editor (`phDishEdOpen(id, {pk: null, sheet:
+  {kind: "recipes"}})`), so Save, Delete and ✕ return to the list and a new recipe joins no meal. "No recipes yet" when she has
+  none. CSS `.ph-rcp`.
+- **Tested** (sandbox, four made-up recipes, one with a 75-letter name): the button sits beside Shopping list (computer) and in
+  the phone's chips; the list shows Cocoa milk latte (cup) 788 kJ, Meat Pie 1,950 kJ, the long one wrapped (2,650 kJ · 3 prep),
+  Spicy Salmon Fishbowl 2,910 kJ · 2 prep, names in line; "salm" narrows to one, "zzz" to none; a rename + Save shows on the list
+  and in the store; ✕ in the editor back to the list; + New recipe "Bone broth" saved onto the list, no meal changed; Delete
+  takes it off; at 360 the card is 12–348 px, nothing cut, the page not wider. Picture: shots/meals-recipes-list-2026-10-28.png.
+- **Not live:** waits for her "push live".
