@@ -5748,3 +5748,29 @@ Her popup answers to the run-16 list, all four the recommended option: minus poi
   Prescriptions search narrows and restores. **Pages checked:** the Musculoskeletal page and its Enlarge (no data or write path changed).
   **Not checked:** her real records, the Key2, a gynae-case patient's copy colour, the 3D layout's Enlarge.
 - **Not live:** waits for her "push live".
+
+## Publish script: the publish commit is the stamp and nothing else (2026-10-28)
+- **Why:** `publish-live.sh` checked the tracked tree was clean, ran the slow `git fetch`, then `sed -i` + `git add index.html
+  sw.js` on the shared working copy. An edit another session made in that window went live inside the publish: 136b4716
+  (build 20261028-143700) carried the unfinished muscle-marks build (its fixes are ad3097c0). fb6afe77 was clean because it
+  was a hand publish under the lock (plumbing, no `git add`); `.git/worktrees/publish-wt` is only an empty leftover from 10/5.
+- **Now:** the new index.html / sw.js come from session-a's committed blobs (`git cat-file blob <base>:<file>` through the
+  same sed, `git hash-object -w --stdin`), staged with `git update-index --cacheinfo` in a private index
+  (`.git/lcm-publish-index.<pid>`), and re-checked against the base before committing: only index.html and sw.js, modes
+  unchanged, one line each, exactly the old and new stamp lines. `git commit-tree -p <base>`, then `git update-ref
+  refs/heads/session-a <new> <base>` moves the branch only if no one committed meanwhile; the push is `<new>:refs/heads/main`
+  (a fast-forward, never forced), so a commit made during the run does not ride along. After that the shared index entries
+  move to the new blobs (only where still the base's), and the working copy gets the new value written at the stamp's byte
+  offset (same length, nothing else rewritten; a stamp someone changed is left alone). The clean-tree rule is gone (open
+  edits stay local; the dry run lists them); something staged still stops it. A base already carrying the next stamp (a
+  publish whose push was rejected) stops with its own message.
+- **Clock:** Git Bash has no zoneinfo, so `TZ=Australia/Sydney` meant UTC and the stamp fell back to "live + 1 minute"
+  (143700 at 19:00). Now the POSIX rule `AEST-10AEDT,M10.1.0,M4.1.0/3` (checked across both daylight-saving changes).
+- **Tested** in a scratch bare origin + clone (never GitHub): dry run; `--yes` with open edits in index.html (beside the
+  stamp line and mid-file) and sw.js: the publish commit is 2 files, 1+ 1- each, the edits stay, the stamps are written in
+  place. STOP cases: something staged; HEAD on another branch; a commit landing just before `update-ref` (nothing pushed);
+  a sed that touched another line (caught by the re-check); main moved on (push rejected, nothing forced); session-a already
+  carrying the next stamp. Another session staging sw.js mid-run: its staged entry kept. A hand-changed working stamp: left
+  alone. A writer rewriting index.html all through a run: the commit still stamp-only and every line it wrote kept (its
+  whole-file rewrite can replace the in-place stamp, which then shows as a local change, as before). Real repo: dry run only.
+- **Not done:** no `--yes` on the real repo; that waits for her "push live".

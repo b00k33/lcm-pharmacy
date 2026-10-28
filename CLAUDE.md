@@ -1013,9 +1013,15 @@ read its section there in full. When a build changes a part, rewrite that part's
   (the 4pm daily auto-deploy was removed 2026-10-05). Commit freely on
   `session-a`; a push is her call.
 - **How:** `.github/scripts/publish-live.sh` — a dry run by default; `--yes`
-  only after her word. It needs a clean tracked tree, bumps both version
-  markers, commits, pushes `session-a:main`, checks the result, and never
-  force-pushes.
+  only after her word. It builds the publish commit from session-a's
+  COMMITTED index.html and sw.js, never the working copy (2026-10-28: its old
+  `git add index.html` swept another session's unfinished build live in
+  136b4716), re-checks that the commit changes the two stamp lines and
+  nothing else, moves session-a only if no one committed meanwhile, pushes
+  exactly that commit to main as a fast-forward, checks the result, and
+  never force-pushes. Open edits stay local, so the tree need not be clean
+  (the dry run lists them); it stops if anything is staged. It then writes
+  the new stamp value into the working copy in place, nothing else.
 - **One publisher at a time (her rule, 2026-10-23):** before every
   `publish-live.sh --yes` (or a hand-made publish), run
   `mkdir .git/lcm-publish.lock`. If that fails, another session is
