@@ -5811,3 +5811,40 @@ goal is 8000kj" (two screenshots: the week table, and Every Lunch reading "Water
   (`phHubSeed` on a Me row that was never normalised), not from this build.
 - **Not checked:** her real records (her kept "Water" and her goals), the Key2, the Diet sheet on a patient page.
 - **Not live:** waits for her "push live".
+
+## 2026-10-28 · Zhi Gan Cao Tang: integrate33 run 17
+Her Zhi Gan Cao Tang table (Ren /5 with one 1/5 "argues against", Bing /5, core, conditions, against, memory aid) + "add this to fang bing ren".
+Matrix: `fbr-integrate33-zhigancao-2026-10-28.html` (root until live, then mocks/).
+- **Family** `PH_FORMULAS.zhigancao`, the 35th: Bing 16 lines + her conditions (ceiling 77), Ren 6 lines (24), her numbers as weights. `or`
+  lines: weak / faint pulse; poor sleep / vivid dreams; irritable / restless ("deficiency irritability"); the yin signs; Ren pale / lusterless.
+  "Emaciation with yin-deficiency signs" = two lines ("with" = +): emaciated 4 + hot palms and soles / afternoon fever / night sweats 4. Her
+  core, Ren line, against lines, reported uses and memory aid are in `core`.
+- **Conditions** (unrated) at 4 each, as for Da Chai Hu and Wen Jing Tang: coronary heart disease (the pool's row), viral myocarditis and
+  rheumatic heart disease (new rows). PVCs / PACs / junctional, AF, sick sinus / sinus arrest / conduction are kinds of the Arrhythmia row (5,
+  scored once); its search words now find them (pvc, pac, ectopic, af, afib, sick sinus, heart block ...). Palpitations / chest discomfort /
+  SOB and yin deficiency with palpitations are her lines already.
+- **Minus points**, -3 a line (Wen Jing Tang's size), scored once: Bing "Pulse: slippery, large" and "Pulse: thin, rough"; Ren her 1/5
+  overweight / dark-red / oily line = heavy / obesity / red / oily complexion (one line).
+- **New Bing rows:** `p_knotted_now` "Pulse: irregular or knotted (jie dai)", `chest_throb_now` "Heart: throbbing in the chest", `coat_none_now`
+  "Tongue coat: none, or peeled" (the Bing twin of Ren `coat_none`), `p_slippery_large_now`, `p_thin_rough_now`, `dx_myocarditis_now`,
+  `dx_rheumatic_heart_now`. No new Ren rows. Groups: Pulse & tongue (3 pulses + the coat), the throb after palpitations, Heart & circulation
+  (the 2 diagnoses); `PH_BING_SITE` (the throb at the heart); search words for all seven; twin pair `coat_none_now` / `coat_none`.
+- **Wired:** pulse chart (`PH_FBR_CHART_PREFILL`): rhythm Interrupted or Intermittent → knotted; Slippery AND a large / Flooding Excess wave →
+  slippery, large; Choppy or Rough AND Thin → thin, rough (a thin pulse alone never counts against); the Pulse page strip. Tongue chart: coat None
+  or Peeled → no coat on Bing (`phTngSignChips`), the Ren twin as before; the Tongue page strip; the board pairs the coat with its Ren twin.
+  Ask her, Head & chest: "Palpitations" (both views) and "Chest throbs" (Right now), DRAFT labels. Patterns: `bt_zhigancao` in Yin deficiency;
+  `PH_FBR_TO_CLUE` throb → palpitations, no coat (both rows) → peeled, slippery large → slippery, thin rough → choppy + thin. Filed under Gui
+  Zhi (`PH_REN_FAM_GROUPS`, her "Cinnamon Twig constitution" line). Formula picture `SC.zhigancao`: the heart circle skips every fourth beat
+  while troubled; 10 herbs in 4 groups; `PAT` yindef; DRAFT labels. `PH_BTJ.zhigancao` (炙甘草汤, Prepared Licorice Decoction, DRAFT line).
+- **Not wired (no honest source):** Medical history "Heart condition" (it feeds Ren rows; the heart diagnoses are Bing, as Arrhythmia is);
+  bloods; the cycle; `PH_FBR_FOR_FAMS` unchanged (measured: Zhi Gan Cao Tang is in no complaint row's top four; third on area 3 at 33).
+- **Fixed on the way:** Wen Jing Tang's `PH_BTJ` entry had no comma after it (it was last), so the new entry first broke the page.
+- **Tested** (sandbox, synthetic patient, deleted): all 35 families lead their own full picture; ceilings 77 / 24; her key picture leads 35%
+  (next Xiao Jian Zhong Tang 10%); each minus line takes 3 once (Bing 20 → 17 → 14; Ren 4 → 1); `or` lines once; chart words: Interrupted and
+  Intermittent tick knotted, the against pulses only with both parts, coat None / Peeled tick both coat rows; the board "leads: Zhi Gan Cao
+  Tang · 43% · 9 signs"; the Care Plan's auto Diagnosis read "Yin deficiency"; the picture's three stops; Ask her shows Palpitations in both
+  views and Chest throbs under Right now; the Guide lists it; 375px no sideways scroll; Prescriptions search narrows and comes back.
+- **Not checked:** her real records; the Key2 phone; a hand-drawn pulse or tongue chart (checked through the chart words).
+- **Needs her word:** weak = weak or faint; the two-line split of "emaciation with yin-deficiency signs"; conditions at 4; -3 a line; thin AND
+  choppy; the Gui Zhi filing; DRAFT words (card line, row names, Ask her answers, picture labels).
+- **Not live:** waits for her "push live".
