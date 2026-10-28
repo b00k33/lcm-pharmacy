@@ -5774,3 +5774,40 @@ Her popup answers to the run-16 list, all four the recommended option: minus poi
   alone. A writer rewriting index.html all through a run: the commit still stamp-only and every line it wrote kept (its
   whole-file rewrite can replace the in-place stamp, which then shows as a local change, as before). Real repo: dry run only.
 - **Not done:** no `--yes` on the real repo; that waits for her "push live".
+
+## 2026-10-28 · Meals: KFC Wicked Wings, water in ml, 8000 kJ, Supplements · herbs
+Her words: "add kfc wicked wings to the meals database. add a row for supplements and herbs. water needs to be in ml. daily energy
+goal is 8000kj" (two screenshots: the week table, and Every Lunch reading "Water − 120 g +").
+- **KFC Wicked Wings** (`PH_FOOD.kfc_wings`, Takeaway): CalorieKing Australia's KFC listing, one wing 38 g = 548 kJ, protein 7 g,
+  fat 7.8 g, carbs 5.1 g, sugars 0.5 g, sodium 205 mg; stored per 100 g; fibre and micronutrients not given (not counted). The unit
+  is a wing, 3 to start (a 3-piece serve). Found by kfc / wings / wicked wings / fried chicken. KFC Australia's own page could not be
+  reached.
+- **Water in ml:** her "Water 120 g" was an Open Food Facts product whose scan says food (`dk` 0). Now a product named water is a
+  drink in ml (`phSfDk`, not water crackers / chestnuts / biscuits / crispbread / cress): her kept one reads "120 ml water", its
+  numbers unchanged. A built-in **Water** drink joins the list (250 ml, step 50, every number 0; first among the everyday drinks).
+  The water tracker shows ml: a dot a glass of her target, the day's ml, **+250 ml** (Me drawer, the planner's More, a patient's usual
+  water). Stored as before (glasses), read as 250 ml each; plain water she logs in a meal she had or as a drink counts too
+  (`phMealWaterMl`: a water food under 20 kJ / 100 ml, so coconut water does not). Plain water never reads "not counted" (`phNutOf`
+  fills a label's blanks with 0). Targets: **Water · ml**, 2000 (`wml`; a C22 target in glasses reads × 250; setting it clears that).
+- **8000 kJ:** `PH_DIET_GOAL0.kj = 8000` (her typed one still wins). The kJ ring and the Macros row's kJ bar have a goal now; fat
+  becomes the rest of 8000 after protein 50 g and carbs 50 g = 170 g ("from kJ" on Targets). Targets tags kJ "yours".
+- **Supplements · herbs row** (planner, computer and phone, today and the days before; after Snacks · drinks): a chip each (a tap
+  takes it out, Undo); + opens the list: Today (✓; a tap takes it out), Taking (her Supplements page: the four switched on + her
+  own), Before (her earlier days, newest first); typing adds the supplements list and her LCM formulas and jars
+  (`phAcuFPickStock`, recipe / jar tag) and **Add "<typed>"**; Enter takes the row that is exactly what she typed, else what she
+  typed. No list shows before she types except her own things (NO SUGGESTIONS). Stored in her Me row `"<day>|h"` = {list [{n, at,
+  src?}]} (src supp:<id> | jar:<id> | refill:<id>), entry by entry; not counted in her numbers, not copied by Copy a day. Code:
+  `phMplSuppHtml`, `phMplSuppListHtml`, `phMealSupps`, `phMealSuppTog`.
+- **Fitted on the way:** "SUPPLEMENTS" is 89px of type: the planner's label column 84 → 104px (computer) and 92px (phone); "870 ml"
+  no longer breaks in the Me drawer; a kept shop product reads "shop" beside its amount in the add list (her kept Water sat beside
+  the list's own Water).
+- **Tested** (sandbox, made-up "Zz Meal Test" as My profile with Vitamin D3, Iron and Magnesium glycinate on its Supplements page,
+  sandbox owner tag only; all removed after): Taking lists the three; a tap adds Vitamin D3 (chip, toast + Undo, ✓ in the list);
+  "gui" lists her jars under LCM formulas; "Fish oil" + Enter adds it; Enter on one she has keeps one; a chip tap removes, Undo
+  brings it back; a kept shop "Water" (dk 0) reads ml and is a drink; one glass + 250 ml water + 120 ml shop water = 620 ml, title
+  "of 2,000 ml · 370 ml logged"; +250 ml → 870 ml and its toast; 3 wings = 1,644 kJ, P 21, F 23 (CalorieKing × 3); the kJ ring reads
+  21% of 8000; Targets: Energy 8000 yours, Fat 170 from kJ, Water 2000 yours · ml; a patient's water reads ml with − / +250 ml; 375px
+  no sideways scroll, the label fits; Prescriptions search narrows and comes back. Console: one error from the sandbox's blank Me row
+  (`phHubSeed` on a Me row that was never normalised), not from this build.
+- **Not checked:** her real records (her kept "Water" and her goals), the Key2, the Diet sheet on a patient page.
+- **Not live:** waits for her "push live".
