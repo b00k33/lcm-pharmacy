@@ -6314,6 +6314,9 @@
   #pharmacyPage .ph-mlk-list { max-height: 300px; overflow-y: auto; overscroll-behavior: contain; display: grid; align-content: start; min-width: 0; border-top: 1px solid var(--ph-hair, var(--ph-line)); }
   #pharmacyPage .ph-mlk-pane, #pharmacyPage .ph-mlk-sub { display: grid; min-width: 0; }
   #pharmacyPage .ph-mlk-pane[hidden], #pharmacyPage .ph-mlk-sub[hidden], #pharmacyPage .ph-mlk-row[hidden] { display: none; }
+  #pharmacyPage .ph-mlk-sf { display: grid; min-width: 0; }
+  #pharmacyPage .ph-mlk:not(.srch) .ph-mlk-sf { display: none; }   /* SHOP FOODS: only while she searches */
+  #pharmacyPage .ph-mlk-sf .ph-mlk-row { padding: 6px 0; }   /* a two-line product name keeps air above and below */
   #pharmacyPage .ph-mlk .ph-meal-pgh { margin: 0; padding: 8px 0 4px; }
   #pharmacyPage .ph-mlk-row { width: 100%; min-height: 36px; margin: 0; padding: 0; box-sizing: border-box; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; border: 0; border-bottom: 1px solid var(--ph-hair, var(--ph-line)); border-radius: 0; background: none; text-align: left; font: 500 var(--fs-13)/1.25 var(--font-body); color: var(--ph-ink); }
   #pharmacyPage button.ph-mlk-row { cursor: pointer; }
@@ -38459,11 +38462,13 @@
     phMeCache = v && typeof v === "object"
       ? { d: phMeNormData(v.d), rev: Number.isFinite(v.rev) ? v.rev : -1, who: Array.isArray(v.who) ? v.who : null, dirty: +v.dirty || 0 }
       : { d: phMeBlank(), rev: -1, who: null, dirty: 0 };
+    phSfReg(phMeCache.d);   // her kept shop products are foods (SHOP FOODS)
     return phMeCache;
   }
   function phMeWrite(S) {
     try { localStorage.setItem(PH_ME_KEY, JSON.stringify(S)); } catch (e) { return false; }
     phMeCache = S;
+    phSfReg(S.d);
     return true;
   }
   const phMeOwner = () => { try { return String(localStorage.getItem("lcm-data-owner") || "").trim().toLowerCase(); } catch (e) { return ""; } };
@@ -39425,6 +39430,7 @@
                    "<day>|s": {id, list [{v, at, nut?}], up} snacks and drinks, "<day>|w": {id, n, up} glasses of water,
                    "goal": {id, p, fe, ch, c, w, up} (C22's targets), "c22": {id, at, up} (C22's food brought in once)}
        d.shop   = {id: {id, t, dish?, day?, at, done?, up, del?}} what she still has to buy (an ingredient chip's tap)
+       d.sfood  = {"sh_<code>": {id, n, q, sv, dk, v, up, del?}} the shop products she added (SHOP FOODS)
        A meal is a value v: one item, or a list of items (2 or more): "dish:<id>" · "own:<text>" (plain food for that day) ·
        "ownd:<text>" (a plain drink) · "out:<text>" (eating out); or "skip" · "" (nothing planned). A dish with dk: 1 is a
        Drink (its cup). Had it keeps the list it was (had.v). Which meal an event is comes from its title (phMealSlot).
@@ -39437,17 +39443,17 @@
      ============================================================ */
   // her meals in the Me row: read, merged entry by entry (newest `up` wins, a removal is a `del` stamp), and ahead-checked
   function phDietNorm(v, d) {
-    ["dishes", "meals", "shop"].forEach(k => { d[k] = v[k] && typeof v[k] === "object" && !Array.isArray(v[k]) ? v[k] : {}; });
+    ["dishes", "meals", "shop", "sfood"].forEach(k => { d[k] = v[k] && typeof v[k] === "object" && !Array.isArray(v[k]) ? v[k] : {}; });
   }
   function phDietMerge(a, b, out) {
-    ["dishes", "meals", "shop"].forEach(k => {
+    ["dishes", "meals", "shop", "sfood"].forEach(k => {
       const A = a[k] || {}, B = b[k] || {};
       out[k] = {};
       Object.keys(A).concat(Object.keys(B).filter(id => !(id in A))).forEach(id => { out[k][id] = phMeNewer(A[id], B[id]); });
     });
   }
   function phDietAhead(mine, theirs) {
-    return ["dishes", "meals", "shop"].some(k => Object.keys(mine[k] || {}).some(id => { const y = (theirs[k] || {})[id]; return !y || (mine[k][id].up || 0) > (y.up || 0); }));
+    return ["dishes", "meals", "shop", "sfood"].some(k => Object.keys(mine[k] || {}).some(id => { const y = (theirs[k] || {})[id]; return !y || (mine[k][id].up || 0) > (y.up || 0); }));
   }
   const PH_MEAL_SLOTS = [["b", "Breakfast"], ["l", "Lunch"], ["d", "Dinner"]];
   const PH_DIET_TCM = { w: "Warm", n: "Neutral", c: "Cool" };
@@ -39460,6 +39466,13 @@
        Australia New Zealand, Dec 2025; CC BY-SA 3.0 AU, credited under the Diet page's Targets); choline from USDA
        FoodData Central (SR Legacy: AFCD has no choline); Thisbowl's bowls, boxes, build-your-own parts and drinks per serve
        from its own sheet (Fishbowl Nutritional Overview, June 2026: kJ, protein, carbs, fat, sugar and sodium only).
+     - Snacks + Takeaway, creamy milk, oven chips (her 2026-10-28 "include foods like: meat pie, curry meat pie, chicken kebab",
+       "include the chips from woolworths" (her pick: packet AND frozen oven chips), "and creamy milk"): AFCD where it has the food;
+       AUSNUT 2023 (FSANZ, the national survey's foods as eaten) for the curry pie (its "meat with additions" pie: vegetables,
+       cheese, sauces), the kebab wraps and creamy milk (~4.5% fat; per 100 ml by its specific gravity, 1.03). The usual amount
+       is AUSNUT's measure (a pie 175 g, a sausage roll 130 g, a kebab 300 g, a packet of chips 60 g, a small hot chips 100 g).
+       Choline from USDA where it has the same food (chips, fries, pot pies, whole milk); none for the rest (not counted).
+     - The products she buys at the shops: SHOP FOODS below.
      - A row: [name, plural, group, unit ("" = a count; Thisbowl "bowl:R" · "base:L" · "box" · "protein" · …), grams (or ml)
        a unit (0 = the numbers are a serve's), step, usual amount, drink, per 100 ml, numbers in PH_NUT's order, search words
        (Thisbowl: "|<pair>" ties a Regular to its Large)]. A null number = the source gives none: "not counted", never 0.
@@ -39472,6 +39485,7 @@
     milk: ["Milk", "", "d", "ml", 1, 50, 250, 1, 1, [278,3.4,5.5,3.5,0,5.5,36,0.02,14.7,0,5,23.6,0.34,0.08,0.4,1.06,109], "cow milk,full cream"],
     milk_lite: ["Light milk", "", "d", "ml", 1, 50, 250, 1, 1, [188,3.5,5,1.2,0,5,38,0.01,18.2,0,5,26.6,0.38,0.09,0.2,0,119], "lite milk,low fat milk"],
     milk_skim: ["Skim milk", "", "d", "ml", 1, 50, 250, 1, 1, [152,3.7,5.5,0,0,5.5,40,0,16.1,0,11,18.7,0.42,0.09,0.8,0,120], ""],
+    milk_creamy: ["Creamy milk", "", "d", "ml", 1, 50, 250, 1, 1, [313,3.6,4.94,4.63,0,4.94,36.1,0.0206,14.7,0,5.15,23.6,0.34,0.0824,0.412,1.41,109], "rich milk,extra creamy milk,cow milk"],
     soy_milk: ["Soy milk", "", "d", "ml", 1, 50, 250, 1, 1, [265,4.5,4.8,2.8,0.6,2.7,45,0.48,24.3,0,14,1.4,0.16,0,0.9,0,118], "soy"],
     almond_milk: ["Almond milk", "", "d", "ml", 1, 50, 250, 1, 1, [68,0.5,0,1.5,0.5,0,45,0,3.13,0,0,1.2,0.07,0,0,0,69], ""],
     oat_milk: ["Oat milk", "", "d", "ml", 1, 50, 250, 1, 1, [236,1.4,10.7,0.8,0.3,3.2,40,0,null,0,0,1.3,0.08,0,0,0,116], ""],
@@ -39532,6 +39546,7 @@
     capsicum: ["Capsicum", "", "v", "g", 1, 25, 75, 0, 0, [115,1.1,4.4,0.4,1.1,4.4,3,0.28,5.6,240,97,0,0.13,0,0,0,7], ""],
     sweet_potato: ["Sweet potato", "", "v", "g", 1, 50, 150, 0, 0, [333,1.8,16.1,0.2,3.2,7.1,7,0.52,13.1,14,42,0,0.61,0,0,0,33], "kumara"],
     potato: ["Potato", "", "v", "g", 1, 50, 150, 0, 0, [258,1.5,12.1,0.1,2,0.3,8,0.31,13.2,10,10,1.3,0.23,0,0,0,5], ""],
+    oven_chips: ["Oven chips", "", "v", "g", 1, 50, 100, 0, 0, [733,3.8,24.1,5.9,3.8,0,148,0.96,null,1,26,7.5,0.43,0,0,0,10], "frozen chips,chips,fries,straight cut chips,steakhouse chips"],
     pumpkin: ["Pumpkin", "", "v", "g", 1, 50, 150, 0, 0, [170,1.5,7.9,0,2.2,7,0,0.29,6.2,8,31,0,0.16,0,0,0,18], ""],
     mushrooms: ["Mushrooms", "", "v", "g", 1, 25, 75, 0, 0, [114,2.2,0.8,0.8,1.4,0.8,7,0.34,17.3,0,30,0,0.3,2.26,0,0,2], "mushroom"],
     onion: ["Onion", "", "v", "g", 1, 25, 50, 0, 0, [136,1.3,5.8,0,2.3,5.8,8,0.24,6.1,7,21,0,0.2,0,0,0,23], ""],
@@ -39586,6 +39601,19 @@
     sesame: ["Sesame seeds", "", "n", "tbsp", 10, 1, 1, 0, 0, [2620,22.2,6.2,55.6,10.1,0.6,24,5.2,25.6,0,115,0,5.5,0,0,0,62], "black sesame"],
     tahini: ["Tahini", "", "n", "tbsp", 20, 1, 1, 0, 0, [2717,20.4,1,60.7,13.5,0.7,79,5.1,25.8,0,99,0,5.53,0,0,0,330], ""],
     hemp: ["Hemp seeds", "", "n", "tbsp", 10, 1, 1, 0, 0, [2452,29.8,2.5,50.6,4.2,2.3,0,12.5,null,0,150,2.9,9.4,0,0,0,90], ""],
+    chips: ["Potato chips", "", "s", "g", 1, 10, 60, 0, 0, [2140,6,45.8,33.3,3.2,0.9,592,1.2,12.1,23,67,4.9,1,0,0,0,21], "chips,crisps,plain chips,salted chips,original chips"],
+    chips_sv: ["Salt & vinegar chips", "", "s", "g", 1, 10, 60, 0, 0, [2097,6.8,43.6,32.6,3.6,1.4,970,1,12.1,24,46,5.5,0.72,0,0,0,22], "chips,crisps,salt and vinegar"],
+    chips_flav: ["Flavoured chips", "", "s", "g", 1, 10, 60, 0, 0, [2092,6.8,43.6,32.5,3.6,1.4,664,1.85,11.5,24,46,5.4,0.84,0,0,0,24], "chips,crisps,chicken chips,barbecue chips,sour cream and chives,cheese and onion"],
+    chips_stack: ["Stacked chips", "", "s", "g", 1, 10, 50, 0, 0, [2095,5.7,55.1,28.1,2.8,1.9,591,1.25,null,10,30,0,0.61,0,0,0,54], "chips,crisps,pringles,tube chips"],
+    corn_chips: ["Corn chips", "", "s", "g", 1, 10, 60, 0, 0, [2053,7.5,56,25,5.2,0.6,420,1.3,12.1,0,20,5.4,1.5,0,0,0,130], "chips,tortilla chips,nachos"],
+    meat_pie: ["Meat pie", "meat pies", "t", "", 175, 0.5, 1, 0, 0, [952,8.9,21.2,11.4,2.4,1.3,500,1.16,19.6,0,4,8.8,0.96,0.35,0.3,9.1,15], "pie,beef pie,mince pie"],
+    curry_pie: ["Curry meat pie", "curry meat pies", "t", "", 175, 0.5, 1, 0, 0, [1026,9.2,25,11.6,2.3,2,423,1.16,19.6,0,4,8.8,0.96,0.35,0.3,9.22,15], "pie,curry pie,beef curry pie"],
+    chicken_pie: ["Chicken pie", "chicken pies", "t", "", 175, 0.5, 1, 0, 0, [988,8.2,25,11,2.1,1.2,400,0.67,12.4,0,37,4.6,0.56,0.35,0,0,30], "pie,chicken and vegetable pie"],
+    sausage_roll: ["Sausage roll", "sausage rolls", "t", "", 130, 0.5, 1, 0, 0, [1190,9.7,27.2,14.6,3,2.8,667,1.1,null,0,19,4.3,1.1,0.65,0.4,0,24], ""],
+    kebab_chicken: ["Chicken kebab", "chicken kebabs", "t", "", 300, 0.5, 1, 0, 0, [673,12.5,16,4.8,1.7,4,365,0.67,null,2,78,12.8,0.76,0.5,0.1,8.15,26], "kebab,chicken wrap,doner,souvlaki,shawarma"],
+    kebab_meat: ["Lamb or beef kebab", "lamb or beef kebabs", "t", "", 300, 0.5, 1, 0, 0, [804,11.4,16.3,8.7,1.7,4.3,391,1.23,null,2,81,12.9,1.72,0.33,0.4,32.3,26], "kebab,doner,souvlaki,shawarma,meat kebab"],
+    kebab_falafel: ["Falafel kebab", "falafel kebabs", "t", "", 320, 0.5, 1, 0, 0, [785,6.1,21,7.5,6.1,4.7,453,1.82,null,2,99,12.8,0.65,0,0,0.005,48], "kebab,felafel,falafel wrap"],
+    hot_chips: ["Hot chips", "", "t", "g", 1, 50, 100, 0, 0, [997,3.8,28.2,11.6,3,0,180,0.86,36.8,1,8,4,0.49,0,0,1.74,10], "chips,fries,french fries,takeaway chips"],
     olive_oil: ["Olive oil", "", "x", "tbsp", 20, 1, 1, 0, 1, [3399,0,0,91.9,0,0,0,0,0.28,0,0,0,0,0,0,0,0], "evoo"],
     coconut_oil: ["Coconut oil", "", "x", "tbsp", 20, 1, 1, 0, 1, [3390,0,0,91.6,0,0,0,0,0.28,0,0,0,0,0,0,0,0], ""],
     honey: ["Honey", "", "x", "tsp", 7, 1, 1, 0, 0, [1162,0.3,72.3,0,0,72.3,8,0.12,2.2,0,0,0,0.17,0,0,0,8], ""],
@@ -39669,10 +39697,87 @@
   const PH_NUT_BARS = ["p", "fe", "ch", "c", "fo", "io", "zn", "vd", "b12", "n3", "ca", "fb", "sg", "na"];   // a day's bars, in her mock's order
   const PH_NUT_MIC = ["fe", "ch", "c", "fo", "io", "zn", "vd", "b12", "n3", "ca"];   // the small grid under Every <meal>
   const PH_NUT_MINE = ["p", "fe", "ch", "c"];   // her C22 targets ("yours"); the rest start at NHMRC's
-  const PH_FOOD_GRP = [["d", "Dairy + eggs"], ["g", "Grains"], ["f", "Fruit"], ["v", "Vegetables"], ["p", "Protein"], ["n", "Nuts + seeds"], ["x", "Extras"], ["k", "Drinks"], ["tb", "Thisbowl"]];
+  const PH_FOOD_GRP = [["d", "Dairy + eggs"], ["g", "Grains"], ["f", "Fruit"], ["v", "Vegetables"], ["p", "Protein"], ["n", "Nuts + seeds"], ["s", "Snacks"], ["t", "Takeaway"], ["sh", "From the shops"], ["x", "Extras"], ["k", "Drinks"], ["tb", "Thisbowl"]];
   const PH_FOOD_TOP = { f: ["egg", "milk", "oats", "banana", "toast_wm", "yoghurt", "avocado", "salmon", "tofu", "chicken_breast"],
     d: ["milk", "soy_milk", "oat_milk", "almond_milk", "flat_white", "long_black", "green_tea", "black_tea", "orange_juice", "coconut_water"] };
   const PH_TB_TOP = ["spicy_salmon", "miso_salmon", "salmon_og"];
+  /* ==== SHOP FOODS (her 2026-10-28 "download woolworth and coles and aldi food database because i buy from them"; her pick
+     "Search as I type"). The shops share no product data and FSANZ's Branded Food Database is not public, so the products
+     are Open Food Facts' Australian ones (shoppers' label scans; ODbL, credited under Targets), taken from its export into
+     foods-au.json and fetched the first time she searches (the worker then keeps it offline). Open Food Facts' own search
+     cannot be reached from a web page, so the copy is searched here.
+     - A product: [code, name (brand first), pack size, serve g|ml (0 = none on the label), drink 0|1, kJ, protein, carbs, fat,
+       fibre|null, sugar, sodium mg|null, scans, {fe, c, fo, io, zn, vd, b12, ca} | 0, the shops that sell it (words: woolworths,
+       coles, aldi, iga, costco; an Aldi own brand counts as aldi)], per 100 g (100 ml for a drink).
+     - One she adds is kept in her Me things (d.sfood["sh_<code>"] = {id, n, q, sv, dk, v [PH_NUT's 17, null = not on the
+       label], up, del?}, entry by entry, both logins) and joins PH_FOOD as group "sh", so every count and list reads it.
+     ==== */
+  const PH_SF_URL = "foods-au.json?d=20261028";
+  let phSf = null, phSfP = null, phSfErr = false, phSfT = 0;   // the products (loaded once) · the fetch on its way · it failed · typing timer
+  const phSfNorm = s => " " + String(s || "").toLowerCase().replace(/[’']/g, "").replace(/&/g, " and ").replace(/[^a-z0-9]+/g, " ");
+  function phSfLoad() {
+    if (phSf || phSfP) return phSfP;
+    phSfErr = false;
+    phSfP = fetch(PH_SF_URL).then(r => r.ok ? r.json() : Promise.reject(r.status)).then(j => {
+      phSf = (j && Array.isArray(j.p) ? j.p : []).map(a => ({ a, s: phSfNorm(a[1] + " " + (a[14] || "")) + " " }));
+      phSfP = null;
+      return phSf;
+    }).catch(() => { phSfP = null; phSfErr = true; return null; });
+    return phSfP;
+  }
+  // every word she typed is a word of the name (the brand is in it) or of its shops, the last one (still being typed) its start;
+  // one from her shops or with an Australian barcode (93…), then a name starting with her first word, then the most scanned, first
+  function phSfFind(q, n) {
+    const w = phSfNorm(q).trim().split(" ").filter(Boolean);
+    if (!phSf || !w.length) return [];
+    const hit = phSf.filter(r => w.every((t, i) => r.s.includes(" " + t + (i < w.length - 1 ? " " : ""))));
+    const sc = r => (r.a[14] || /^93/.test(r.a[0]) ? 4e6 : 0) + (r.s.startsWith(" " + w[0]) ? 2e6 : 0) + (+r.a[12] || 0);
+    return hit.sort((x, y) => sc(y) - sc(x)).slice(0, n || 12).map(r => r.a);
+  }
+  function phSfEntry(a) {
+    const x = a[13] || {}, g = k => x[k] != null ? x[k] : null;
+    return { id: "sh_" + a[0], n: String(a[1]).slice(0, 120), q: String(a[2] || "").slice(0, 30), sv: +a[3] || 0, dk: a[4] ? 1 : 0,
+      v: [a[5], a[6], a[7], a[8], a[9], a[10], a[11], g("fe"), null, g("c"), g("fo"), g("io"), g("zn"), g("vd"), g("b12"), null, g("ca")] };
+  }
+  // a kept product as a PH_FOOD row: grams (ml for a drink), its serve on the label as the usual amount
+  function phSfRow(e) {
+    const dk = e.dk ? 1 : 0, us = e.sv > 0 && e.sv <= 1000 ? Math.round(e.sv) : dk ? 250 : 100;
+    return [e.n, "", "sh", dk ? "ml" : "g", 1, dk ? 50 : us > 100 ? 50 : 10, us, dk, dk, e.v, "shop"];
+  }
+  // her kept products join the food list: whenever her Me things are read or written (and once PH_FOOD exists)
+  function phSfReg(d) {
+    try { Object.values((d && d.sfood) || {}).forEach(e => { if (e && !e.del && e.id && Array.isArray(e.v) && !PH_FOOD[e.id]) PH_FOOD[e.id] = phSfRow(e); }); } catch (err) {}
+  }
+  // a product she taps is kept first (once), then goes in like any food. false = it could not be kept
+  function phSfEnsure(code) {
+    const id = "sh_" + code, d = phMeD(), have = d.sfood && d.sfood[id];
+    if (have && !have.del) { phSfReg(d); return true; }
+    const r = (phSf || []).find(x => x.a[0] === code);
+    if (!r) return false;
+    const e = phSfEntry(r.a);
+    if (!phMeSave((dd, now) => { dd.sfood = dd.sfood || {}; dd.sfood[id] = Object.assign(e, { up: now }); })) return false;
+    phSfReg(phMeD());
+    return true;
+  }
+  // the Shops rows under her own foods while she searches (A CALMER MEAL's list); a kept one is already among her foods
+  function phSfHtml(q) {
+    if (!String(q || "").trim()) return "";
+    if (!phSf) {
+      if (!phSfErr) { const p = phSfLoad(); if (p) p.then(() => { const b = document.querySelector("#pharmacyPage .ph-mlk .ph-mlk-sf"); if (b) b.innerHTML = phSfHtml(phMealSq); }); }
+      return `<div class="ph-meal-pgh ph-mlk-h">Shops · ${phSfErr ? "offline" : "loading"}</div>`;
+    }
+    const rows = phSfFind(q, 12).filter(a => !PH_FOOD["sh_" + a[0]]);
+    return rows.length ? `<div class="ph-meal-pgh ph-mlk-h">Shops · Open Food Facts</div>` + rows.map(a => `<button type="button" class="ph-mlk-row" data-meal-sf="${esc(a[0])}" data-meal-tog="food:sh_${esc(a[0])}" aria-label="Add ${esc(a[1])}" title="${Math.round(a[5])} kJ · 100 ${a[4] ? "ml" : "g"}"><span class="n"><span>${esc(a[1])}</span>${a[2] ? `<em>${esc(a[2])}</em>` : ""}</span><span class="pl">${phMealSvg("plus")}</span></button>`).join("") : "";
+  }
+  // as she types: the Shops rows follow (a failed load is tried again on the next word)
+  function phSfPaint(m) {
+    const box = m && m.querySelector(".ph-mlk-sf");
+    if (!box) return;
+    clearTimeout(phSfT);
+    if (!phSf) { phSfErr = false; box.innerHTML = phSfHtml(phMealSq); return; }
+    phSfT = setTimeout(() => { if (box.isConnected) box.innerHTML = phSfHtml(phMealSq); }, 120);
+  }
+  if (phMeCache) phSfReg(phMeCache.d);   // read before PH_FOOD existed: her kept shop products join now
   // ---- an amount in kitchen words (her pick 5): "2 eggs" · "250 ml milk" · "½ cup oats" · "1 tbsp cocoa" · "Spicy Salmon · R" ----
   const PH_FRAC = { 0.25: "¼", 0.5: "½", 0.75: "¾" };
   function phFoodNum(q) { const w = Math.floor(q + 1e-9), f = Math.round((q - w) * 100) / 100; return PH_FRAC[f] ? (w || "") + PH_FRAC[f] : String(Math.round(q * 100) / 100); }
@@ -40606,7 +40711,7 @@
     phRxTipT = null;
     return `<div class="ph-meal-pick ph-meal-lpk ph-mlk${q ? " srch" : ""}"><div class="ph-meal-own"><label class="ph-meal-fld">${phMealSvg("search")}<input type="text" class="field-bare" data-meal-ownl="${phMealTab === "dk" ? "d" : "f"}" value="${esc(phMealSq)}" placeholder="Search or type" aria-label="Search, or type your own and press Enter" autocomplete="off" enterkeyhint="done" maxlength="120"></label><button type="button" class="ph-meal-add" data-meal-dish="new" title="New dish">+ New</button></div>
       <div class="ph-meal-bar full ph-mlk-bar" role="group" aria-label="Food group">${PH_MEAL_TABS.map(([k, l]) => `<button type="button" class="${phMealTab === k ? "on" : ""}" data-meal-tab="${k}" aria-pressed="${phMealTab === k}">${l}</button>`).join("")}</div>
-      <div class="ph-mlk-list">${h}</div><div class="ph-mlk-foot"><button type="button" class="ph-c22-go" data-meal-add="${esc(lid)}" data-meal-k="" aria-expanded="true">Done adding</button></div></div>`;
+      <div class="ph-mlk-list">${h}<div class="ph-mlk-sf">${phSfHtml(q)}</div></div><div class="ph-mlk-foot"><button type="button" class="ph-c22-go" data-meal-add="${esc(lid)}" data-meal-k="" aria-expanded="true">Done adding</button></div></div>`;
   }
   // the food chips (a meal's list "f" / "d", a snack or a dish's Made of "all"): Everyday (what she has had most first, then the
   // everyday ones), All foods by group behind one chip, Thisbowl's bowls as R | L bars + Build your own. Each chip carries its
@@ -41035,7 +41140,7 @@
       return `<label class="ph-diet-tg"${k === "n3" ? ` title="Long-chain omega-3: EPA + DHA + DPA"` : ""}><span>${l}</span><span class="v"><input type="number" inputmode="decimal" min="0" step="any" data-diet-goal="${k}" value="${has ? esc(String(goal[k])) : ""}" aria-label="${l} a day"></span><em class="${tag.startsWith("yours") ? "y" : ""}">${tag}</em></label>`;
     };
     return `<div class="ph-diet-tgs"><div class="ph-fast-ch">Targets · a day</div><div class="grid">${PH_DIET_TG.map(row).join("")}</div>
-      <div class="ph-diet-src">Food numbers: Australian Food Composition Database, Release 3 (FSANZ, CC BY-SA 3.0 AU) · choline: USDA FoodData Central · Thisbowl's nutrition sheet, June 2026 · targets: NHMRC, women 31–50</div></div>`;
+      <div class="ph-diet-src">Food numbers: Australian Food Composition Database, Release 3 (FSANZ, CC BY-SA 3.0 AU) · AUSNUT 2023 (FSANZ) · choline: USDA FoodData Central · Thisbowl's nutrition sheet, June 2026 · shop products: Open Food Facts (ODbL) · targets: NHMRC, women 31–50</div></div>`;
   }
   let phDietTgFocus = "";
   function phDietGoalSet(k, raw) {
@@ -41584,6 +41689,7 @@
       return;
     }
     if (ds.mealMic) { if (phMealMic.has(ds.mealMic)) phMealMic.delete(ds.mealMic); else phMealMic.add(ds.mealMic); phMealCardRepaint(); return; }
+    if (ds.mealSf && !phSfEnsure(ds.mealSf)) return;   // SHOP FOODS: a product is kept before it goes in
     if (ds.mealTog != null && el.matches("[data-meal-tog]")) {
       const pk = phMealPk;
       if (!pk) return;
@@ -41678,6 +41784,7 @@
     if (T && T.dataset && (T.dataset.mealOwnl || T.dataset.mealOwn || T.dataset.dishFq) && T.closest(".ph-meal-pick")) {
       if (T.dataset.mealOwnl) phMealSq = T.value; else if (T.dataset.dishFq) phDishFq = T.value;
       phFoodFilter(T.closest(".ph-meal-pick"), T.value);
+      if (T.dataset.mealOwnl) phSfPaint(T.closest(".ph-mlk"));   // SHOP FOODS: the Shops rows follow
       const m = T.closest(".ph-mlk");   // A CALMER MEAL: typing searches every group (the bar steps aside)
       if (m) m.classList.toggle("srch", !!T.value.trim());
       return;

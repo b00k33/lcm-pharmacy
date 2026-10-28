@@ -5188,3 +5188,52 @@ page". Commit 1cf53f59 on session-a, NOT live.
   "same finding as the Tongue page", ⟲ Same as 22 Oct copied it into the Tongue page's finding, the Fang Bing Ren underlines +
   panel show, Drawing on Body and off on Jiao; no console errors. Pictures `shots/tongue-viewer-{body,coat,jiao}.png`,
   `shots/tongue-page-dots.png`. The phone (360) was looked at in the pane (tabs 2 × 2, chips wrap). Not checked on her records.
+
+## Food list: pies, kebabs, chips, creamy milk + the shops' products (2026-10-28)
+
+Her words, in order: "in the food database, include foods like: meat pie, curry meat pie, chicken kebab", "include the chips from
+woolworths", "and creamy milk", "download woolworth and coles and aldi food database because i buy from them". Her popup picks:
+shop foods = **Search as I type**; AUSNUT 2023 download = **Yes**; chips = **Both** (packet and frozen oven chips); creamy milk =
+**a brand's extra creamy milk** (no brand typed: the generic creamy milk is in, and the shop search finds the brands). NOT live.
+
+- **15 new `PH_FOOD` rows (193 → 208).** Creamy milk (with the milks), Oven chips (with the potato); new group **Snacks**: Potato
+  chips, Salt & vinegar chips, Flavoured chips, Stacked chips, Corn chips; new group **Takeaway**: Meat pie, Curry meat pie,
+  Chicken pie, Sausage roll, Chicken kebab, Lamb or beef kebab, Falafel kebab, Hot chips. Sources: AFCD Release 3 where it has the
+  food; AUSNUT 2023 (FSANZ) for the curry pie (AUSNUT's "meat with additions" pie — vegetables, cheese, sauces — the nearest to a
+  curry pie; no survey food is called curry pie), the three kebab wraps and creamy milk (~4.5% fat; its per 100 g × 1.03 for per
+  100 ml). Columns as the egg / toast rows: energy with fibre, available carbs, DFE folate, D3 equivalents, LC omega-3 equated.
+  Usual amounts are AUSNUT's measures (pie 175 g, sausage roll 130 g, kebab 300 g, chips packet 60 g, small hot chips 100 g).
+  Choline from USDA where it has the same food (chips, fries, pot pies, whole milk), otherwise not counted. Build source:
+  scratchpad session 4f11f526 `ausnut/` (rows.pl, spec.txt → rows.js).
+- **Shop foods.** Woolworths, Coles and Aldi publish no product data; FSANZ's Australian Branded Food Database is not public; Open
+  Food Facts' search refuses a web page (no CORS) and its bulk search returned 503. So the app carries a copy: `foods-au.json`,
+  from Open Food Facts' CSV export (818 MB compressed, streamed, never stored; export of 2026-10-27, read 2026-10-28). 2,117,569
+  products read → 18,413 Australian (country tag or a 930–939 barcode) with protein, carbs and fat → **17,772 kept** (415 with
+  energy more than 40% off its own macros dropped, 52 impossible; repeats of one name + energy merged, the most scanned kept; a
+  record with no energy gets it from its macros, 17 · 17 · 37 · 8 kJ/g). Shops from the record's stores and brands: Woolworths
+  ~4,770, Coles ~3,450, Aldi ~1,120 (an Aldi own brand or an Aldi barcode 40886 / 40887 / 40614 counts), IGA 43, Costco 29.
+  1.8 MB, ~0.6 MB as Pages sends it. Row: `[code, name (brand first), pack, serve g/ml, drink, kJ, P, C, F, fibre, sugar, sodium
+  mg, scans, {minerals / vitamins the label gives}, shops]` per 100 g (100 ml for a drink). Build source: `off/au.pl` (the
+  stream filter), `off/json.pl` (tidy, check, shops), `off/sf.js` + `off/food.pl` (the code; food.pl replays every edit onto a
+  HEAD copy: `perl food.pl index.html rows.js sf.js 20261028`).
+- **How it works (`phSf*`, "SHOP FOODS" after `PH_TB_TOP`):** the first time she types in a meal's add list, `phSfLoad` fetches
+  `PH_SF_URL` (the worker then keeps it, cache-first, for offline). `phSfHtml` puts a **Shops** block under her own foods while
+  she searches (heading "Shops · Open Food Facts", "· loading", "· offline"), up to 12 rows: every typed word whole, the last one
+  a start ("meat" no longer finds Meatless); her shops' products and Australian barcodes first, then a name that starts with her
+  first word, then the most scanned. A tap (`data-meal-sf`, then the usual `data-meal-tog`) keeps the product in her Me row
+  `d.sfood["sh_<code>"]` (`phSfEnsure`; merged entry by entry like dishes / meals / shop) and registers it into `PH_FOOD` as group
+  "sh" "From the shops" (`phSfReg`, also on every Me read / write and once after the food constants), at its label serve.
+  Numbers not on the label are "not counted". Credit under Targets: AUSNUT 2023 (FSANZ) · shop products: Open Food Facts (ODbL).
+  `.github/workflows/pages.yml` now copies foods-au.json (it is fetched, not linked).
+- **Refreshing the shop file:** re-run the stream (`curl -sL https://static.openfoodfacts.org/data/en.openfoodfacts.org.products.csv.gz
+  | gzip -dc | perl au.pl > au.tsv`, ~15 min), `perl json.pl au.tsv foods-au.json <date>`, and bump `PH_SF_URL`'s `?d=` so the
+  worker fetches the new copy (it serves the cached one otherwise).
+- **Tested (sandbox, made-up "Zz Muscle Test", sandbox owner tag only):** the new rows and groups show (meal add list and the snack
+  picker's All foods); "curry pie" shows "Shops · loading" then her Curry meat pie + a Boscastle curry pie; a shop product tapped
+  is kept, added at its label serve ("food:sh_9328358003216*240", numbers line 1802 kJ · P 9 · C 50 · F 20) and still there after
+  a reload (the Diet table names it, P 8.9, the rest "–"); searches on the final file: meat pie, curry pie, chicken kebab, creamy
+  milk, woolworths chips, coles chips, aldi yoghurt, farmdale, smiths; 360 and 375 wide: no sideways scroll, shop rows 36 px+;
+  no console errors. Picture `shots/shop-foods-chips-phone-2026-10-28.jpg`.
+- **Not checked:** her own Meals planner (needs My profile), the shopping list from a plan with a shop product, her real records,
+  the Key2. Searching "creamy milk" lists creamy soy / evaporated milk first; Pauls Farmhouse Gold is found by "farmhouse" or
+  "pauls" (its label says "full cream"). "pie" as the last word still finds "pieces" (the last word is a start, by design).
