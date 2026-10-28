@@ -5876,3 +5876,50 @@ Her words: "i ike your draft, yes gui zhi family". The wording of both formulas 
 (`PH_BTJ.wenjingtang` / `.zhigancao`), the new row names, the Ask her answers ("Hot palms and soles", "Feverish in the afternoon", "Dry
 lips", "Dry heaving", "Palpitations", "Chest throbs") and both pictures' labels. Zhi Gan Cao Tang stays under Gui Zhi. Both CLAUDE.md OPEN
 lines are gone; the code's DRAFT comments now read "her yes". Nothing on screen changed.
+
+## Muscle picture: legs, low back and belly (2026-10-28)
+Her words: "do the same for legss and lower body and abdomen" (after the shoulder, mid back and neck pictures). Mock
+`mocks/legs-muscles-mock-2026-10-28.html` (built from the app's own `PH_BODY_GEOM`). Her 8 picks: the belly is its own area (front
+only, Surface | Deep side by side); it opens only when she picks it (no pain-map auto-open, so period and digestive pains never bring
+it up); the leg's side view is its own row under Deep (Surface | Deep, Right | Left) so the front and back stay full size; that Side
+row on Hip & thigh, Knee and Ankle & foot; the ITB, Achilles tendon, patellar tendon and thoracolumbar fascia take findings and
+marks; the deep hip rotators (gemelli + obturator internus, quadratus femoris) tap; "Peroneus", not Fibularis; Low back keeps Front +
+back. Her earlier picks hold: two rows, split parts, grey, names in the margin on the pain's side, the Tools bar, ● ✕ ◎, Tender
+adds MP, one drawing everywhere, one picture per row on a phone.
+- Drawing: `PH_MSK_LEG` (an IIFE; shapes authored in leg space [u, y], u 0 = midline / back edge, 100 = outer / front edge, by a
+  `band()` helper), placed by `phMskLegProf` / `phMskLegPts` (front and back, mirrored for the other leg) and `phMskLegSidePts`
+  (SIDE's grid), cached per view, layer, sex and build in `phMskLegShapes`. `phMskAtlasHl` now takes `(…, rk, g, build, crop)`:
+  ghosts, then the leg shapes marked `under` (the belly wall), the old `PH_MSK_ATLAS` shapes, then the rest of the leg shapes; a
+  leg area's side view draws only leg shapes (the neck's side view keeps its own). The old atlas rectus abdominis, obliques,
+  erectors and QL went (the leg set draws them). Tags: a muscle names itself when it belongs to the area shown (the shoulder /
+  neck / mid back rule kept); one from another area whose spot is outside the window shows nothing. CSS `.mk-dgm.at.tdn` (beige).
+- Areas: `PH_MSK_REGIONS` gains Belly; `PH_MSK_ATLAS_REG` adds lumbar, belly, hip, knee, ankle; `PH_MSK_ATLAS_VIEWS.belly =
+  ["front"]`; `PH_MSK_SIDE_ROW` (hip, knee, ankle) with `PH_MSK_SIDE_CROP` windows; the ankle window moved to take the whole foot.
+  `phMskDiagramPanesHtml` draws the Surface / Deep rows (or one Front row of Surface | Deep for the belly) plus the Side row, whose
+  heading carries `phMskSideSw()` (the `ph-tng2-seg mk2-jb` Right | Left bar). `sideSvg` is drawn without the arm for a leg area.
+- The belly pick: `p.mk` on a pain (kept by `phPmWrite`), toggled by the **Belly muscles** chip (`data-pm-mk`) in the card's Palpate
+  row; `PH_MSK_PICKREG` maps epigastric / abdomen / lower abdomen to belly only then; `phMskRegOf(p)` replaced every
+  `PH_MSK_PAINREG[p.r]` read (18 + 1). A card with no Move / Tests list for its area hides those rows.
+- Rows: 35 new `PH_MSK_MUSCLES` rows after the row each refines (obliques, transversus, rectus; lumbar multifidus, longissimus,
+  iliocostalis, TL fascia; psoas, iliacus; gemelli, quadratus femoris; ITB, sartorius; adductor longus / brevis / magnus, gracilis,
+  pectineus; biceps femoris long / short, semitendinosus, semimembranosus; vastus intermedius, patellar tendon; gastrocnemius medial /
+  lateral; Achilles; EDL, EHL, EDB; peroneus longus / brevis; FDL, FHL). Tendons and fascia have no motor point: the Tools bar's Motor
+  point says "No motor point here" (`presSavedToast`), Tender adds MP only where a muscle has one, Today's points shows no "MP near".
+  Vastus lateralis now belongs to Hip and Knee. **Their nerve, motor point, point and caution words are Claude's DRAFT** (CLAUDE.md:
+  draft until she has read and corrected them). `PH_MSK_TAGN` gains the short names (Glute max, Semitend, Peroneus long, TL fascia …).
+- A muscle shared by areas (Psoas: low back, belly, hip) still shows under the first pain it belongs to (the neck / shoulder rule); a
+  tap on it in the picture now keeps the picture on the area she has open when it belongs there (`cyc` checks the lit pain first),
+  and otherwise turns the picture to its own area as before.
+- **Tested** (sandbox port 8996, `_legs-test.html` = the patched page; a made-up patient "Test Legs" with right hip, knee, ankle, low
+  back and abdomen pains, and a second run adding shoulder, mid back and neck; headless Edge at 1220 and 390 through an iframe
+  harness): Hip & thigh = Surface, Deep and Side rows, names beside, marks on; a tap cycles the finding, Tender brings MP for muscles
+  and not for the ITB; Motor point on the ITB gives the toast; Trigger release on the ITB marks it. The abdomen card shows no picture
+  until Belly muscles is tapped (the pain then reads `abdomen*`, its card `belly`), then Belly = Front · Surface | Deep with rectus,
+  external oblique, transversus and psoas named; a psoas tap there keeps Belly (it jumped to Hip before the fix). Knee, Ankle & foot
+  (side with the foot) and Low back draw and name; Left turns the side row on the page and in Enlarge. Enlarge: three rows, no shape
+  painted black. Shoulder, Mid back and Neck draw as before with the leg shapes below. Fang Bing Ren plates `@msk:hip:back`,
+  `knee:front`, `lumbar:back`, `cervical:back`, `elbow:front` draw (the first three now in the new drawing). At 390: one picture per
+  row, the page does not scroll sideways. No console errors. Pages checked: the Musculoskeletal page (picture, Palpate chips, Today's
+  points), Enlarge, the Fang Bing Ren plates. **Not tested:** her records; a real phone or the Key2; the Treatment tab's Points row
+  with the new rows; the Other muscles card; 3D; Copy notes.
+- **Not live:** waits for her "push live".

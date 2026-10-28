@@ -23846,6 +23846,7 @@
   /* the drawn regions (her 2026-10-28 picks: two rows, grey, names only on a marked muscle): an outline and fibre lines on the
      belly colours; bones and the faint bearings never take a tap; the deep row keeps the surface muscles' edges dashed */
   #pharmacyPage .mk-dgm.at { fill: #C9D5DA; stroke: #93A5AC; stroke-width: .35; opacity: 1; }   /* solid, so overlaps never muddy */
+  #pharmacyPage .mk-dgm.at.tdn { fill: #E9E0D3; stroke: #BFAE98; }   /* a tendon or fascia that taps (her 2026-10-28 legs pick) */
   #pharmacyPage .mk-dgm.at[data-v]:hover { opacity: 1; filter: brightness(.94); }
   #pharmacyPage .mk-dgm.at.lv1 { fill: #E06666; opacity: 1; } #pharmacyPage .mk-dgm.at.lv2 { fill: var(--ph-phaseout); opacity: 1; } #pharmacyPage .mk-dgm.at.lv3 { fill: var(--ph-zero-deep); opacity: 1; } #pharmacyPage .mk-dgm.at.on { opacity: 1; }
   #pharmacyPage .mk-dgm.at.lv1, #pharmacyPage .mk-dgm.at.lv2, #pharmacyPage .mk-dgm.at.lv3, #pharmacyPage .mk-dgm.at.on { stroke: #7A1C14; }
@@ -100798,7 +100799,7 @@ or changing anything in Cliniko.
       if (!pains.length) return out;
       Object.keys(tbl).forEach(key => {
         const spec = tbl[key], place = PH_PM_PLACE[spec[spec.length - 1]], words = place ? spec.slice(0, -1) : spec;
-        const hit = pains.filter(p => p.f.some(w => words.includes(w)) && (!place || place.includes(PH_MSK_PAINREG[p.r])));
+        const hit = pains.filter(p => p.f.some(w => words.includes(w)) && (!place || place.includes(phMskRegOf(p))));
         if (!hit.length) return;
         const said = [...new Set(hit.flatMap(p => p.f.filter(w => words.includes(w))))].map(w => ((PH_PM_FEELS || []).find(x => x[0] === w) || [w, w])[1].toLowerCase());
         const where = [...new Set(hit.map(p => phPmSideName(PH_PAIN_REGIONS.REGIONS[p.r], p.s).toLowerCase()))];
@@ -109762,7 +109763,7 @@ or changing anything in Cliniko.
       opts = opts || {};
       const S = SIDE[g], uid = opts.uid || ("s" + Math.random().toString(36).slice(2, 7)), SW = SIDE.W, stroke = "#6f6053";
       const t = opts.flip ? ` transform="translate(${SW} 0) scale(-1 1)"` : "";
-      const body = crPath(S.body, true), arm = crPath(S.arm, true);
+      const body = crPath(S.body, true), arm = opts.arm === false ? "" : crPath(S.arm, true);
       const det = list => list.map(([pts, op, w = .6]) => `<path d="${crPath(pts, false)}" stroke-width="${w}" stroke-opacity="${op}"/>`).join("");
       // same edge shading as the front/back figures, applied outside the mirror so the light stays top-left
       const shade = (id, sd) => `<filter id="${uid}-${id}" x="-8%" y="-4%" width="116%" height="108%" color-interpolation-filters="sRGB">
@@ -109789,7 +109790,7 @@ or changing anything in Cliniko.
         </g>
         <g filter="url(#${uid}-sha)"><g${t}><path d="${arm}" fill="url(#${uid}-skin)"/></g></g>
         <g${t}>
-          <g fill="none" stroke="${stroke}" stroke-linecap="round">${det(SIDE_DET.arm)}</g>
+          <g fill="none" stroke="${stroke}" stroke-linecap="round">${opts.arm === false ? "" : det(SIDE_DET.arm)}</g>
           <path d="${arm}" fill="none" stroke="${stroke}" stroke-width="1.05" stroke-linejoin="round"/>
           <g class="bg-hl" id="${uid}-hl" clip-path="url(#${uid}-clip)">${opts.hl || ""}</g>
         </g>
@@ -109797,7 +109798,7 @@ or changing anything in Cliniko.
       </svg>`;
     }
 
-    return { svg, sideSvg, outline, crPath, detailSvg, CX, W, H, SIDE_W: SIDE.W, SIDE_X: SIDE.X };
+    return { svg, sideSvg, outline, crPath, detailSvg, CX, W, H, SIDE_W: SIDE.W, SIDE_X: SIDE.X, SHAPES, SIDE };
   })();
 
   /* Pain regions anchored to BodyGeom coordinates. Shapes are [dx, y, rx, ry, rotDeg] with dx measured
@@ -111010,7 +111011,7 @@ or changing anything in Cliniko.
       // inside the Pain cell (its own column folded in). data-mk-reg (Musculoskeletal page only) = the
       // exam region this pain's muscles belong to -- a tap anywhere on the row turns the muscle diagram
       // in the picture row to that region (phMskDgFollow).
-      const mkReg = sc ? PH_MSK_PAINREG[p.r] || "" : "";
+      const mkReg = sc ? phMskRegOf(p) || "" : "";
       out.push(`<tr class="ph-pm-tr" data-pm-row="${idx}"${mkReg ? ` data-mk-reg="${esc(mkReg)}"` : ""} style="--c:${PH_PM_COLOURS[p.c] || PH_PM_COLOURS[0]}">
         <td><div class="ph-pm-nm"><button type="button" class="mcp${p.main ? " on" : ""}" data-pm-main="${pid}|${idx}" aria-pressed="${!!p.main}" title="${p.main ? "Main complaint" : "Make main complaint"}"><span class="ic">★</span></button><button type="button" class="ph-pm-dot" data-pm-dot="${pid}|${idx}" aria-label="Change colour of ${esc(nm)}" aria-expanded="${palOpen}"></button><span class="ph-pm-what"${sc && PH_PM_ZOOMS.some(z => z.regions.includes(p.r)) ? ` data-msk="zoom" data-v="${idx}" title="Open its close-up"` : ""}>${esc(nm)}<small>${where}${tOnly ? " · tension" : ""}</small></span></div></td>
         <td><span class="ph-pm-seg" role="group" aria-label="Side">${opts.map(([v, t]) => `<button type="button" class="${p.s === v ? "on" : ""}" data-pm-side="${pid}|${idx}|${v}" aria-pressed="${p.s === v}">${t}</button>`).join("")}</span></td>
@@ -111412,7 +111413,7 @@ or changing anything in Cliniko.
     // or they'd be silently dropped on the very next write (a documented past trap on this function).
     // causes (2026-10-17, pain -> cause link) must survive it too, same reason. sincePrec (2026-10-18,
     // "08/2026 or just 2026") the same, once more.
-    const list = phPmList(name, plan).map(p => ({ r: p.r, s: p.s, c: p.c || 0, ...(p.d ? { d: p.d } : {}), ...(p.since ? { since: p.since } : {}), ...(p.since && p.sincePrec && p.sincePrec !== "d" ? { sincePrec: p.sincePrec } : {}), ...(Array.isArray(p.f) && p.f.length ? { f: p.f.slice() } : {}), ...(p.dx ? { dx: p.dx } : {}), ...(p.goal ? { goal: p.goal } : {}), ...(p.tgt ? { tgt: p.tgt } : {}), ...(p.main ? { main: true } : {}), ...(Array.isArray(p.causes) && p.causes.length ? { causes: p.causes.slice() } : {}) }));
+    const list = phPmList(name, plan).map(p => ({ r: p.r, s: p.s, c: p.c || 0, ...(p.d ? { d: p.d } : {}), ...(p.since ? { since: p.since } : {}), ...(p.since && p.sincePrec && p.sincePrec !== "d" ? { sincePrec: p.sincePrec } : {}), ...(Array.isArray(p.f) && p.f.length ? { f: p.f.slice() } : {}), ...(p.dx ? { dx: p.dx } : {}), ...(p.goal ? { goal: p.goal } : {}), ...(p.tgt ? { tgt: p.tgt } : {}), ...(p.main ? { main: true } : {}), ...(p.mk ? { mk: 1 } : {}), ...(Array.isArray(p.causes) && p.causes.length ? { causes: p.causes.slice() } : {}) }));
     fn(list);
     if (String(planId).startsWith("pt:")) phPatientRec(name).painSites = list;
     else { plan.painMap = list; phPatientRec(name); }
@@ -111641,6 +111642,12 @@ or changing anything in Cliniko.
     if ((b = t.closest("[data-pm-main]"))) {
       const idx = +b.dataset.pmMain.split("|").pop();
       phPmSetMain(name, planId, idx); return;
+    }
+    // her 2026-10-28 legs pick: a belly pain's "Belly muscles" chip opens (or closes) its muscles
+    if ((b = t.closest("[data-pm-mk]"))) {
+      const idx = +b.dataset.pmMk.split("|").pop();
+      phPmWrite(name, planId, list => { const q = list[idx]; if (q) { if (q.mk) delete q.mk; else q.mk = 1; } });
+      phPmRefresh(name, planId); return;
     }
     if ((b = t.closest("[data-pm-col]"))) {
       const [, idx, k] = b.dataset.pmCol.split("|");
@@ -120712,7 +120719,7 @@ or changing anything in Cliniko.
      correct before it is trusted. Kept as she set them: the 3-point Weak / Mildly weak / Strong
      scale (never 0-5), no formula suggestions, derived on read, scoped repaints.
      Library indexes are APPEND-ONLY: a saved snapshot keys rows by "region:index:side". */
-  const PH_MSK_REGIONS = [["cervical", "Neck"], ["thoracic", "Mid back"], ["shoulder", "Shoulder"], ["elbow", "Elbow"], ["wrist", "Wrist & hand"], ["lumbar", "Low back"], ["hip", "Hip & thigh"], ["knee", "Knee"], ["ankle", "Ankle & foot"]];
+  const PH_MSK_REGIONS = [["cervical", "Neck"], ["thoracic", "Mid back"], ["shoulder", "Shoulder"], ["elbow", "Elbow"], ["wrist", "Wrist & hand"], ["lumbar", "Low back"], ["belly", "Belly"], ["hip", "Hip & thigh"], ["knee", "Knee"], ["ankle", "Ankle & foot"]];
   const PH_MSK_REGION_LABEL = Object.fromEntries(PH_MSK_REGIONS);
   // regions whose movements are measured on a side (right / left); the spine is measured once, its pairs are left + right
   const PH_MSK_LIMB = new Set(["shoulder", "elbow", "wrist", "hip", "knee", "ankle"]);
@@ -120728,6 +120735,10 @@ or changing anything in Cliniko.
     knee: "knee", knee_ant: "knee", knee_med: "knee", knee_lat: "knee", knee_post: "knee", shin: "knee", lower_leg: "knee",
     calf: "ankle", ankle: "ankle", ankle_lat: "ankle", ankle_med: "ankle", heel: "ankle", achilles: "ankle", foot: "ankle", toes: "ankle", big_toe: "ankle",
   };
+  // her 2026-10-28 legs pick: a belly pain opens the Belly muscles only when she picks it on its card (p.mk, the "Belly muscles" chip),
+  // so a period or digestive pain never brings them up. phMskRegOf = a pain's muscle area: the pain map's own, or her pick
+  const PH_MSK_PICKREG = { epigastric: "belly", abdomen: "belly", lower_abdomen: "belly" };
+  function phMskRegOf(p) { return !p ? "" : PH_MSK_PAINREG[p.r] || (p.mk && PH_MSK_PICKREG[p.r]) || ""; }
   // movement lists: the first entries keep the order of PH_TP_OBJ_ROM_LIB; new ones are appended
   // n = movement, normal = degrees, lr = measured left and right
   const PH_MSK_ROM = {
@@ -120866,25 +120877,60 @@ or changing anything in Cliniko.
     ["fdi", "First dorsal interosseous / adductor pollicis", ["wrist"], "back", 64, 262, "Ulnar, C8–T1", "Between the first and second metacarpals", "LI4", "LI4 is avoided in pregnancy"],
     ["qlm", "Quadratus lumborum", ["lumbar"], "back", 19, 200, "T12–L4 ventral rami", "Lateral to the erectors, between the 12th rib and the iliac crest", "BL52 / BL23–25 lateral", "Kidney lies beneath: oblique, never past the transverse process"],
     ["erec", "Erector spinae / multifidus", ["lumbar"], "back", 12, 186, "Dorsal rami", "Paraspinal, at the level of the segment", "Huatuojiaji / BL23–BL25", "At T12–L1 the kidney and pleura are close: shallow"],
+    ["lmf", "Lumbar multifidus", ["lumbar"], "back", 4, 205, "Dorsal rami (medial branches), L1–S1", "Beside the spinous process at the level of the segment, onto the lamina", "Lumbar Jiaji points", "Angle toward the spine onto the lamina: never deep between the vertebrae", "erec"],
+    ["llng", "Longissimus (lumbar)", ["lumbar"], "back", 10, 190, "Dorsal rami (lateral branches), L1–L5", "2–3 cm from the midline at L1–L3", "BL23 / BL24 / BL25", "At T12–L1 the kidney and pleura are close: shallow", "erec"],
+    ["lilc", "Iliocostalis (lumbar)", ["lumbar"], "back", 17, 186, "Dorsal rami (lateral branches), L1–L5", "4–5 cm from the midline at L1–L3, outside longissimus", "BL52 / BL51 area", "Kidney beneath at L1–L2: oblique and shallow", "erec"],
+    ["tlf", "Thoracolumbar fascia", ["lumbar"], "back", 8, 198, "Dorsal rami (sensory)", "", "BL23 / BL52 area", "A fascia, not a muscle: by hand, or shallow along it"],
     ["obl", "Abdominal obliques", ["lumbar"], "front", 31, 192, "T7–L1 ventral rami", "Lateral abdominal wall, between the ribs and the iliac crest", "GB26 / GB27 area", "Peritoneum beneath: very shallow, pinch-hold"],
+    ["eobl", "External oblique", ["lumbar", "belly"], "front", 31, 186, "T7–T12 ventral rami", "Side wall below the ribs, in line with the front of the armpit", "GB26 / LR13 area", "Peritoneum beneath: very shallow, pinch-hold", "obl"],
+    ["iobl", "Internal oblique", ["lumbar", "belly"], "front", 27, 206, "T7–L1 ventral rami", "Above the inguinal ligament, just in from the ASIS", "GB27 / GB28 area", "Peritoneum beneath: very shallow, pinch-hold", "obl"],
+    ["tva", "Transversus abdominis", ["lumbar", "belly"], "front", 24, 196, "T7–L1 ventral rami", "The deepest layer of the side wall: felt, not needled", "GB26 area", "Peritoneum beneath: treat by hand and breath"],
+    ["rab", "Rectus abdominis", ["belly"], "front", 6, 182, "T7–T12 ventral rami", "Beside the midline, between its tendinous bands", "ST25 / KI16 area", "Peritoneum beneath: shallow and oblique; not in pregnancy"],
     ["psoas", "Iliopsoas", ["lumbar", "hip"], "none", 0, 0, "Femoral / lumbar plexus, L1–3", "Deep, lateral to rectus abdominis at the level of the ASIS", "ST29 / SP13 area", "Bowel and iliac vessels: usually treat by hand and stretch, needle only with training"],
+    ["psm", "Psoas major", ["lumbar", "belly", "hip"], "front", 12, 214, "Lumbar plexus, L1–3", "Deep, outside rectus abdominis at the level of the navel", "ST26 / SP15 area", "Bowel and iliac vessels: usually treat by hand and stretch, needle only with training", "psoas"],
+    ["ilia", "Iliacus", ["lumbar", "belly", "hip"], "front", 24, 218, "Femoral, L2–3", "Inside the iliac crest, just in from the ASIS", "SP13 / ST29 area", "Bowel and iliac vessels: usually treat by hand", "psoas"],
     ["gmax", "Gluteus maximus", ["hip"], "back", 22, 232, "Inferior gluteal, L5–S2", "Mid-belly, upper-outer buttock", "BL54 / GB30", ""],
     ["gmed", "Gluteus medius", ["hip"], "back", 36, 224, "Superior gluteal, L4–S1", "Below the iliac crest, upper third of the muscle", "GB29 / GB30 upper", ""],
-    ["gmin", "Gluteus minimus", ["hip"], "none", 0, 0, "Superior gluteal, L4–S1", "Deep to gluteus medius, below the crest", "GB29 deep", "Sciatic nerve below: keep above the greater trochanter"],
+    ["gmin", "Gluteus minimus", ["hip"], "back", 34, 218, "Superior gluteal, L4–S1", "Deep to gluteus medius, below the crest", "GB29 deep", "Sciatic nerve below: keep above the greater trochanter"],
     ["piri", "Piriformis", ["hip"], "back", 18, 240, "Nerve to piriformis, L5–S2", "Midway between the sacrum and the greater trochanter", "GB30 deep / BL53", "Sciatic nerve beside it: stop on any shooting sensation"],
+    ["gem", "Gemelli + obturator internus", ["hip"], "back", 22, 240, "Nerves to obturator internus and quadratus femoris, L4–S2", "Below piriformis, from the sacrum's edge to the greater trochanter", "GB30 deep", "The sciatic nerve crosses them: stop on any shooting sensation"],
+    ["qf", "Quadratus femoris", ["hip"], "back", 26, 250, "Nerve to quadratus femoris, L4–S1", "Between the sitting bone and the back of the greater trochanter", "BL54 / GB30 lower", "The sciatic nerve beside it: stop on any shooting sensation"],
     ["tfl", "Tensor fasciae latae", ["hip"], "front", 36, 232, "Superior gluteal, L4–S1", "Just below and lateral to the ASIS", "GB29 / ST31 lateral", ""],
+    ["itb", "Iliotibial band", ["hip", "knee"], "front", 38, 285, "Lateral femoral cutaneous (skin)", "", "GB31 / GB32", "A band, not a muscle: by hand, or shallow along it"],
+    ["sart", "Sartorius", ["hip", "knee"], "front", 18, 262, "Femoral, L2–3", "Upper third, on the line from the ASIS to the inner knee", "SP11 area", "Femoral vessels inside it in the upper thigh"],
     ["add", "Adductors", ["hip"], "front", 9, 270, "Obturator, L2–4", "Mid-belly, medial thigh", "SP11 / LR10 area", "Femoral vessels in the upper medial thigh: avoid the groin"],
+    ["addl", "Adductor longus", ["hip"], "front", 10, 258, "Obturator, L2–4", "Upper third of the inner thigh, below the pubis", "LR11 / LR10", "Femoral vessels outside it: avoid the groin", "add"],
+    ["addb", "Adductor brevis", ["hip"], "front", 11, 250, "Obturator, L2–4", "Under adductor longus, high in the inner thigh", "LR11 deep", "Femoral vessels and the obturator nerve: by hand or with training", "add"],
+    ["addm", "Adductor magnus", ["hip"], "back", 6, 270, "Obturator + sciatic (tibial part), L2–4", "Mid inner thigh, behind gracilis", "LR9 / SP11 area", "Femoral vessels at the adductor hiatus (lower third): stay above it", "add"],
+    ["grac", "Gracilis", ["hip", "knee"], "front", 4, 285, "Obturator, L2–3", "Mid inner thigh, the innermost muscle", "LR9 area", "The great saphenous vein runs along it", "add"],
+    ["pect", "Pectineus", ["hip"], "front", 14, 240, "Femoral (± obturator), L2–3", "Just below the pubis, inside the femoral pulse", "LR12 area", "Femoral artery, vein and nerve beside it: by hand", "add"],
     ["ham", "Hamstrings", ["hip", "knee"], "back", 21, 286, "Sciatic, L5–S2", "Mid-belly, back of the thigh", "BL36 / BL37", ""],
+    ["bfl", "Biceps femoris · long head", ["hip", "knee"], "back", 27, 285, "Sciatic (tibial part), L5–S2", "Mid back of the thigh, outer half", "BL37 outer", "The sciatic nerve runs under it", "ham"],
+    ["bfs", "Biceps femoris · short head", ["hip", "knee"], "back", 31, 306, "Sciatic (common peroneal part), L5–S2", "Lower outer thigh, under the long head", "BL38 area", "The common peroneal nerve along its edge near the knee", "ham"],
+    ["semt", "Semitendinosus", ["hip", "knee"], "back", 15, 285, "Sciatic (tibial part), L5–S2", "Mid back of the thigh, inner half", "BL37 inner", "", "ham"],
+    ["semm", "Semimembranosus", ["hip", "knee"], "back", 10, 306, "Sciatic (tibial part), L5–S2", "Lower inner back of the thigh, either side of semitendinosus", "KI10 area", "Popliteal vessels below it at the knee", "ham"],
     ["rf", "Quadriceps (rectus femoris)", ["hip", "knee"], "front", 21, 280, "Femoral, L2–4", "Mid-thigh", "ST32 / ST33 lateral", ""],
-    ["vl", "Vastus lateralis", ["knee"], "front", 33, 290, "Femoral, L2–4", "Mid-lateral thigh", "GB31 / ST32 lateral", ""],
+    ["vl", "Vastus lateralis", ["hip", "knee"], "front", 33, 290, "Femoral, L2–4", "Mid-lateral thigh", "GB31 / ST32 lateral", ""],
     ["vmo", "Vastus medialis (VMO)", ["knee"], "front", 13, 304, "Femoral, L2–4", "Distal medial thigh, 4–5 cm above the medial patella", "SP10", ""],
-    ["pop", "Popliteus", ["knee"], "none", 0, 0, "Tibial, L4–S1", "Deep behind the knee, below the joint line", "BL40 deep", "Popliteal vessels and tibial nerve: usually treat by hand"],
+    ["vi", "Vastus intermedius", ["hip", "knee"], "front", 22, 285, "Femoral, L2–4", "Under rectus femoris, mid-thigh", "ST32 deep", ""],
+    ["pat", "Patellar tendon", ["knee"], "front", 17, 330, "Infrapatellar branch of the saphenous (skin)", "", "ST35 / Xiyan", "A tendon: beside it, shallow, never into it"],
+    ["pop", "Popliteus", ["knee"], "back", 17, 334, "Tibial, L4–S1", "Deep behind the knee, below the joint line", "BL40 deep", "Popliteal vessels and tibial nerve: usually treat by hand"],
     ["gas", "Gastrocnemius", ["knee", "ankle"], "back", 18, 355, "Tibial, S1–2", "Upper third of the calf, over each head", "BL57 / BL56", ""],
+    ["gasm", "Gastrocnemius · medial head", ["knee", "ankle"], "back", 13, 350, "Tibial, S1–2", "Upper third of the inner calf", "BL57 inner / BL56", "", "gas"],
+    ["gasl", "Gastrocnemius · lateral head", ["knee", "ankle"], "back", 24, 348, "Tibial, S1–2", "Upper third of the outer calf", "BL58 / BL56 outer", "", "gas"],
     ["sol", "Soleus", ["ankle"], "back", 15, 388, "Tibial, S1–2", "Lower calf, deep to the gastrocnemius", "BL57 / BL58", ""],
+    ["ach", "Achilles tendon", ["ankle"], "back", 17, 418, "Sural (skin)", "", "KI3 / BL60", "A tendon: beside it, shallow, never into it"],
     ["ta", "Tibialis anterior", ["ankle"], "front", 15, 372, "Deep peroneal, L4–5", "Upper third, lateral to the tibial crest", "ST36 / ST37", ""],
     ["toeext", "Toe extensors (EDL / EHL)", ["ankle"], "front", 22, 396, "Deep peroneal, L5", "Anterior leg, lateral to tibialis anterior", "ST37–ST39 region", "Anterior tibial vessels: keep to the muscle belly"],
+    ["edl", "Extensor digitorum longus", ["ankle"], "front", 22, 382, "Deep peroneal, L5–S1", "Upper-middle outer shin, between tibialis anterior and the peroneals", "ST38 / ST39 outer", "Anterior tibial vessels: keep to the muscle belly", "toeext"],
+    ["ehl", "Extensor hallucis longus", ["ankle"], "front", 17, 405, "Deep peroneal, L5", "Lower third of the shin, outside the tibialis anterior tendon", "ST40 area", "Anterior tibial vessels under it", "toeext"],
+    ["edb", "Extensor digitorum brevis", ["ankle"], "front", 22, 445, "Deep peroneal, S1–2", "Top of the foot, in front of the outer ankle bone", "GB40 / ST42 area", ""],
     ["pl", "Peroneals", ["ankle", "knee"], "front", 28, 372, "Superficial peroneal, L5–S1", "Upper third of the lateral leg, below the fibular head", "GB34 / GB35 region", "Common peroneal nerve at the fibular head: stay below it"],
-    ["tpost", "Tibialis posterior", ["ankle"], "none", 0, 0, "Tibial, L5–S1", "Deep medial calf, behind the tibia", "SP6–SP7 deep", "Neurovascular bundle: usually treat by hand"],
+    ["plon", "Peroneus longus", ["ankle", "knee"], "front", 29, 360, "Superficial peroneal, L5–S1", "Upper third of the outer leg, below the fibular head", "GB34 / GB35", "The common peroneal nerve at the fibular head: stay below it", "pl"],
+    ["pbre", "Peroneus brevis", ["ankle"], "front", 29, 400, "Superficial peroneal, L5–S1", "Lower half of the outer leg, behind the fibula", "GB37 / GB38 area", "The superficial peroneal nerve comes through the fascia here: shallow", "pl"],
+    ["tpost", "Tibialis posterior", ["ankle"], "back", 13, 405, "Tibial, L5–S1", "Deep medial calf, behind the tibia", "SP6–SP7 deep", "Neurovascular bundle: usually treat by hand"],
+    ["fdl", "Flexor digitorum longus", ["ankle"], "back", 8, 395, "Tibial, L5–S2", "Middle third of the inner calf, behind the tibia", "SP6 / KI8 area", "Posterior tibial vessels and nerve: shallow"],
+    ["fhl", "Flexor hallucis longus", ["ankle"], "back", 21, 405, "Tibial, S1–2", "Lower outer calf, deep, behind the fibula", "BL59 area", "Posterior tibial vessels deep: by hand or shallow"],
     ["plant", "Plantar foot muscles", ["ankle"], "none", 0, 0, "Medial / lateral plantar, S1–2", "Medial arch, at the point of tenderness", "KI1 / SP4 region", "Sensitive: short needle, warn the patient"],
   ].map(a => ({ id: a[0], name: a[1], regions: a[2], view: a[3], dx: a[4], y: a[5], nerve: a[6], mp: a[7], acu: a[8], caution: a[9], of: a[10] || "" }));
   // her 2026-10-28 pick "Split": a muscle drawn in parts is tapped part by part; the whole stays only to read older marks (hide),
@@ -120907,10 +120953,10 @@ or changing anything in Cliniko.
      drawn 290px tall in the picture row. [x, y, w, h] on the 220x462 body. A draft, hers to correct. */
   const PH_MSK_REGION_CROP = {
     cervical: [70, 12, 80, 98], shoulder: [45, 60, 130, 159], thoracic: [50, 68, 120, 147], elbow: [35, 81, 150, 184], wrist: [35, 136, 150, 184],
-    lumbar: [50, 116, 120, 147], hip: [50, 187, 120, 147], knee: [50, 248, 120, 147], ankle: [50, 300, 120, 147],
+    lumbar: [50, 116, 120, 147], hip: [50, 187, 120, 147], knee: [50, 248, 120, 147], ankle: [50, 316, 120, 147], belly: [55, 128, 110, 135],
   };
   // the side view's window on SIDE's own 112-wide grid (her 2026-10-28 neck pick: Side + back, Close), the same aspect as the back's
-  const PH_MSK_SIDE_CROP = { cervical: [12, 8, 70, 86] };
+  const PH_MSK_SIDE_CROP = { cervical: [12, 8, 70, 86], hip: [-3, 186, 90, 110], knee: [-3, 262, 90, 110], ankle: [-2, 340, 100, 122] };
   // hand-sized muscle-belly half-widths/half-heights [rx, ry] for these close-ups -- a draft, hers to correct
   const PH_MSK_MARK_SIZE = {
     utrap: [11, 16], lev: [7, 13], spl: [6, 12], sub: [5, 8], scm: [6, 13], mass: [5, 8], temp: [5, 8],
@@ -120938,8 +120984,10 @@ or changing anything in Cliniko.
      drawing everywhere: the neck's front and back shapes are the same ones Shoulder and Mid back draw, so their top edge gains SCM,
      the scalenes and an upper trapezius that reaches the skull. The side atlas is on SIDE's grid (her right side, not mirrored). The
      back deep row starts the semispinalis below C2 (its upper course dashed) so the suboccipital triangle shows. */
-  const PH_MSK_ATLAS_REG = new Set(["shoulder", "thoracic", "cervical"]);
-  const PH_MSK_ATLAS_VIEWS = { cervical: ["side", "back"] };
+  const PH_MSK_ATLAS_REG = new Set(["shoulder", "thoracic", "cervical", "lumbar", "belly", "hip", "knee", "ankle"]);
+  const PH_MSK_ATLAS_VIEWS = { cervical: ["side", "back"], belly: ["front"] };
+  // her 2026-10-28 legs pick: these areas add a Side row under Deep (the leg from the side, Surface | Deep)
+  const PH_MSK_SIDE_ROW = new Set(["hip", "knee", "ankle"]);
   const PH_MSK_ATLAS = {
     front: {
       surface: [
@@ -120961,9 +121009,6 @@ or changing anything in Cliniko.
           f: "M95.4,20.6 L94.8,36.8 M93.6,20 L93.4,36.9 M96.6,25 L96,36.6 M92,22.6 L92.4,36.8" },
         { k: "mass", a: [94.6, 47], d: "M96.4,38.6 L92.1,38.2 L92.1,51.4 C92.6,53 93.4,54.6 94.4,55.8 C95.2,56.8 96.2,57.6 97.2,57.8 C97.4,53 97.2,48 96.8,43.4 C96.7,41.6 96.6,40 96.4,38.6 Z",
           f: "M95.6,39.4 L93.4,53.8 M94,39.2 L92.4,48.8 M96.6,43.4 L95.6,56.8" },
-        { ctx: 1, n: "Rectus abdominis", d: "M109.5,132 C104,132.3 98.5,133.3 95,135.5 C94.6,160 94.4,190 95,216 L109.5,216 Z", f: "M95.2,158 C99,159.5 105,159.5 109.5,158.5 M95,175 C99,176.5 105,176.5 109.5,175.5 M95,192 C99,193.2 105,193.2 109.5,192.5" },
-        { k: "obl", a: [83, 190], d: "M89,136 C85,140 79.5,146 75.5,151 C75.5,170 75.6,186 73,200 C71.5,207 69.5,212 67.5,217 C74,216.5 82,216 92.5,215 C93.6,200 94,186 94.5,172 C94.6,162 93,153 90,146 Z",
-          f: "M84,150 L94,162 M78,156 L93.6,176 M76,168 L93.6,191 M75.4,182 L93.3,206 M73.6,196 L87,214 M71.5,207 L77,215" },
         { k: "serr", a: [80, 160], d: "M73,136.1 C78,137.3 83.6,139.3 88,142.1 C89.6,143.2 89.3,145.3 87.6,145.5 C83,144.7 78,143.5 73.2,142.9 Z M73.2,144.9 C78.4,146.7 84.2,149.3 89,152.3 C90.6,153.4 90.2,155.7 88.4,155.9 C83.6,154.7 78.4,152.9 73.4,151.5 Z M73.6,153.9 C78.8,156.1 84.6,158.9 89.6,162.3 C91.2,163.5 90.6,165.9 88.8,165.9 C84,164.3 79,162.3 73.8,160.5 Z M74.4,162.9 C79.2,165.3 84.4,168.3 88.8,171.9 C90.2,173.1 89.6,175.3 88,175.1 C83.6,173.1 79,170.9 74.6,169.1 Z",
           f: "M74,139.3 L88,144.3 M74.2,147.8 L89,154.3 M74.8,156.8 L89.4,164.3 M75.6,165.8 L88.2,173.5" },
         { k: "pst", a: [92, 128], d: "M109.5,85.5 L106,86.5 C92,94 80,104 70.8,111.5 C70,113.5 69.2,116 69,118 C69,120 69.2,121.5 69.6,122.5 C72.6,128.6 76.6,134.6 82.4,138.4 C90,142.6 100,142.8 109.5,140.6 Z",
@@ -121052,10 +121097,6 @@ or changing anything in Cliniko.
         { bonel: 1, d: "M96,101 C86,98.4 74,94.4 63,90.6 M110,78 L110,216" },
         { k: "terec", a: [101, 130], d: "M108.8,76 C108.3,100 108.2,135 108.4,165 L93.6,165 C94.6,150 96.6,132 98.6,115 C100.2,101 102.2,88 104.5,76 Z",
           f: "M106.5,80 L106.6,163 M103,85 L101.8,163 M100,98 L97.4,163" },
-        { k: "erec", a: [100, 190], d: "M108.4,165 C108.6,182 108.6,200 108.6,216 L90,216 C90.4,202 91.6,186 93.6,165 Z",
-          f: "M106.4,167 L106.4,214 M101.6,167 L101,214 M97,167 L95.6,214" },
-        { k: "qlm", a: [86, 192], d: "M93,166 C88.6,178 85,192 82.4,212 L90.6,214 C90.6,198 91.4,182 94.4,167 Z",
-          f: "M92,170 L84.4,209 M93.4,176 L88.4,211" },
         { k: "rmaj", a: [103, 113], d: "M110,89.5 L110,118 C106,124 102,130 97.6,135.5 L96.3,102.5 C101,98 105.5,93.5 110,89.5 Z",
           f: "M110,95 L96.6,108 M110,103 L96.9,117 M110,111 L97.2,126" },
         { k: "rmin", a: [103, 89], d: "M110,77.5 L110,88 C105,92.5 100,97 96,100.8 L95.2,92.5 C100,87.5 105,82.5 110,77.5 Z",
@@ -121120,30 +121161,319 @@ or changing anything in Cliniko.
               "M56.4,39.4 C57.2,33.6 57,28 54,23.2 C51,20.6 47.2,19.4 43.4,19.4 C39.4,19.4 35.6,20.6 33,23 C31,25 30.2,27.6 30.4,30.2 C30.6,32 31.2,33.2 32.4,34"],
     },
   };
+  // leg space onto one figure: the edges at height y, read from the outline itself (outer = arm's inner tail, torso, leg, the foot's
+  // outer branch; inner = the midline above the crotch, then the inner leg and foot), one profile per sex + view, kept
+  const phMskLegProfC = {};
+  function phMskLegProf(g, view) {
+    const ck = g + view; if (phMskLegProfC[ck]) return phMskLegProfC[ck];
+    const S = PH_BODY_GEOM.SHAPES[g], ft = view === "back" ? S.footBack : S.footFront;
+    const lo = ft.findIndex((p, i) => i && ft[i + 1] && ft[i + 1][1] < p[1]);
+    const out = S.armIn.slice(-2).reverse().concat(S.torso, S.legOut, ft.slice(0, lo < 0 ? 5 : lo + 1)).map(p => [p[1], p[0]]).sort((a, b) => a[0] - b[0]);
+    const inn = S.legIn.slice().reverse().concat(ft.slice(lo < 0 ? 5 : lo + 1).reverse().filter(p => p[1] > 432.5)).map(p => [p[1], p[0]]).sort((a, b) => a[0] - b[0]);
+    const at = (L, y, below) => { if (y <= L[0][0]) return below !== undefined && y < L[0][0] ? below : L[0][1]; for (let i = 1; i < L.length; i++) if (y <= L[i][0]) { const [y0, v0] = L[i - 1], [y1, v1] = L[i]; return v0 + (v1 - v0) * (y - y0) / (y1 - y0 || 1); } return L[L.length - 1][1]; };
+    return (phMskLegProfC[ck] = { o: y => at(out, y), i: y => at(inn, y, 0) });
+  }
+  // [u, y(, corner)] -> the viewer's left half of the figure (the other side is its mirror); with a build, the width at y as the outline has it
+  function phMskLegPts(P, g, view, build) {
+    const pr = phMskLegProf(g, view), k = y => build ? build.w(y) / build.sxm : 1;
+    return P.map(p => { const y = p[1], i = pr.i(y), o = pr.o(y); return [110 - (i + p[0] / 100 * (o - i)) * k(y), y, p[2]]; });
+  }
+  // the side view: u 0 = the back edge, 100 = the front edge, on SIDE's own grid (sideSvg scales it for the build and flips it for the left)
+  const phMskLegSideC = {};
+  function phMskLegSidePts(P, g) {
+    const pr = phMskLegSideC[g] || (phMskLegSideC[g] = (() => {
+      const B = PH_BODY_GEOM.SIDE[g].body, sole = B.findIndex(p => p[1] > 455), last = B.length - 1 - B.slice().reverse().findIndex(p => p[1] > 455);
+      return { fr: B.slice(0, sole + 1).map(p => [p[1], p[0]]), bk: B.slice(last).map(p => [p[1], p[0]]).sort((a, b) => a[0] - b[0]) };
+    })());
+    const at = (L, y) => { if (y <= L[0][0]) return L[0][1]; for (let i = 1; i < L.length; i++) if (y <= L[i][0]) { const [y0, v0] = L[i - 1], [y1, v1] = L[i]; return v0 + (v1 - v0) * (y - y0) / (y1 - y0 || 1); } return L[L.length - 1][1]; };
+    return P.map(p => { const k = at(pr.bk, p[1]), f = at(pr.fr, p[1]); return [k + p[0] / 100 * (f - k), p[1], p[2]]; });
+  }
+  // one layer of the lower body as drawn paths for this figure, kept per sex + view + build; only what reaches the window
+  const phMskLegCache = new Map();
+  function phMskLegShapes(view, layer, g, build, crop) {
+    const src = (PH_MSK_LEG[view] || {})[layer]; if (!src) return [];
+    const bk = build && view !== "side" ? [build.sxm, build.w(150), build.w(250), build.w(350), build.w(440)].map(n => (+n).toFixed(3)).join(",") : "";
+    const key = [view, layer, g, bk].join("|");
+    let all = phMskLegCache.get(key);
+    if (!all) {
+      const mp = P => view === "side" ? phMskLegSidePts(P, g) : phMskLegPts(P, g, view, build), cr = (P, closed) => PH_BODY_GEOM.crPath(mp(P), closed);
+      all = src.map(sh => {
+        const ps = [sh.p, sh.p2, sh.p3, sh.p4, sh.p5].filter(Boolean), ys = ps.flat().map(q => q[1]);
+        const c = sh.a || [sh.p.reduce((s, q) => s + q[0], 0) / sh.p.length, sh.p.reduce((s, q) => s + q[1], 0) / sh.p.length];
+        return { sh, d: ps.map(P => cr(P, !sh.open)).join(" "), f: sh.fl ? sh.fl.map(P => cr(P, false)).join(" ") : "", a: mp([c])[0], y0: Math.min(...ys), y1: Math.max(...ys) };
+      });
+      phMskLegCache.set(key, all);
+    }
+    return crop ? all.filter(o => o.y1 >= crop[1] && o.y0 <= crop[1] + crop[3]) : all;
+  }
+  /* her 2026-10-28 "do the same for legss and lower body and abdomen" (mocks/legs-muscles-mock-2026-10-28.html), her picks: Belly its own
+     area (opened only when she picks it on a belly pain), a Side row under Deep for Hip & thigh, Knee and Ankle & foot, the ITB, Achilles,
+     patellar tendon, thoracolumbar fascia and the deep hip rotators take findings and marks, Peroneus, Low back front + back. The lower body
+     is drawn in LEG SPACE [u, y]: u 0 = the medial edge (the midline above the crotch, the leg's inner edge below it), 100 = the outer
+     edge; the side view's u 0 = the back edge, 100 = the front (her right side, sideSvg flips it). phMskLegPts / phMskLegSidePts map it
+     onto the figure being drawn (sex, view, build), so one drawing fits every outline. A limb muscle is a band between shared borders
+     ([y, u] polylines), so neighbours tile with no gaps. k = the PH_MSK_MUSCLES id, tdn = a tendon or fascia that taps (drawn beige),
+     ctx / bone / bonel = bearings, under = drawn before PH_MSK_ATLAS (the belly wall under the serratus), a = where its marks sit,
+     fl = fibre lines. Original drawings from standard anatomy, not traced. */
+  const PH_MSK_LEG = (() => {
+    const at = (B, y) => { if (y <= B[0][0]) return B[0][1]; for (let i = 1; i < B.length; i++) if (y <= B[i][0]) { const [y0, u0] = B[i - 1], [y1, u1] = B[i]; return u0 + (u1 - u0) * (y - y0) / (y1 - y0 || 1); } return B[B.length - 1][1]; };
+    const C = n => typeof n === "number" ? [[0, n], [999, n]] : n;
+    const r1 = v => Math.round(v * 10) / 10;
+    // a band between borders med and lat from y0 to y1; tip0 / tip1 = a point the end runs to (a tendon), fib = fibre fractions
+    function band(med, lat, y0, y1, o) {
+      o = o || {}; med = C(med); lat = C(lat);
+      const ys = new Set([y0, y1]); [med, lat].forEach(B => B.forEach(([y]) => { if (y > y0 && y < y1) ys.add(y); }));
+      for (let y = y0 + 6; y < y1; y += 6) ys.add(y);
+      const Y = [...ys].sort((a, b) => a - b);
+      const L = Y.map(y => [r1(at(med, y)), y]), R = Y.map(y => [r1(at(lat, y)), y]).reverse();
+      const top = o.tip0 ? [[o.tip0[0], o.tip0[1], 1]] : [], bot = o.tip1 ? [[o.tip1[0], o.tip1[1], 1]] : [];
+      // an end with no tendon is rounded (a dome a third of its width), unless flat0 / flat1 keep it square against a neighbour
+      const dome = (u0, u1) => Math.min(3.2, Math.abs(u1 - u0) * .3);
+      if (!o.tip0) { if (o.flat0) { L[0][2] = 1; R[R.length - 1][2] = 1; } else if (Math.abs(L[0][0] - R[R.length - 1][0]) > .8) R.push([r1((L[0][0] + R[R.length - 1][0]) / 2), r1(y0 - dome(L[0][0], R[R.length - 1][0]))]); else R.pop(); }
+      if (!o.tip1) { if (o.flat1) { L[L.length - 1][2] = 1; R[0][2] = 1; } else if (Math.abs(L[L.length - 1][0] - R[0][0]) > .8) bot.push([r1((L[L.length - 1][0] + R[0][0]) / 2), r1(y1 + dome(L[L.length - 1][0], R[0][0]))]); else R.shift(); }
+      const p = top.concat(L, bot, R);
+      const ins = o.ins === undefined ? Math.min(5, (y1 - y0) * .12) : o.ins;
+      const fl = (o.fib || [.3, .55, .8]).map(t => { const P = []; for (let y = y0 + ins; y <= y1 - ins + .01; y += 4) P.push([r1(at(med, y) + t * (at(lat, y) - at(med, y))), r1(y)]); return P; }).filter(P => P.length > 1);
+      return { p, fl: o.fl || fl };
+    }
+    const M = (k, a, b, o) => Object.assign({ k, a: o && o.a }, b, o && o.extra);
+
+    // ---------- FRONT ----------
+    // abdomen
+    const RA_L = [[130, 37], [150, 38], [175, 37], [200, 35], [220, 30], [232, 22], [238, 14]];
+    const EO_A = [[77, 205], [64, 199], [50, 188], [42, 172], [40, 148]];
+    // thigh borders, medial to lateral
+    const GR = [[240, 7], [262, 9], [282, 9], [300, 7], [312, 4]];
+    const AL_M = [[236, 10], [246, 12], [256, 16], [266, 22], [276, 30], [281, 36]];
+    const AL_L = [[234, 20], [244, 27], [252, 33], [262, 38], [272, 39], [281, 36]];
+    const PE_L = [[230, 40], [240, 40], [250, 40], [257, 39]];
+    const PS_L = [[229, 49], [240, 48], [250, 46], [257, 43]];
+    const RF_M = [[222, 62], [232, 59], [242, 56], [252, 51], [262, 46], [275, 43], [288, 42], [298, 43], [305, 46]];
+    const RF_L = [[222, 72], [232, 76], [242, 79], [262, 80], [282, 76], [296, 68], [305, 58]];
+    const VM_M = [[262, 38], [270, 34], [280, 24], [290, 14], [300, 8], [312, 6]];
+    const VL_L = [[238, 92], [250, 94], [270, 95], [290, 96], [303, 94], [312, 86]];
+    const ITB_M = [[244, 92], [270, 94], [300, 95], [318, 90], [332, 84]];
+    const SA_M = [[207, 74], [230, 66], [250, 54], [260, 47], [275, 33], [290, 18], [300, 8], [312, 2], [325, 3], [333, 12], [340, 22]];
+    const SA_L = [[205, 80], [230, 76], [250, 66], [260, 60], [275, 46], [290, 31], [300, 20], [312, 12], [325, 13], [333, 22], [338, 32]];
+    // leg borders
+    const TIB_M = [[335, 22], [350, 20], [370, 19], [390, 18], [405, 17], [418, 17], [422, 18]];
+    const MED = [[330, 9], [350, 10], [370, 10], [390, 10], [405, 11], [418, 13]];
+    const CREST = [[333, 46], [345, 46], [370, 43], [395, 36], [412, 30], [420, 26]];
+    const TA_L = [[333, 62], [345, 75], [360, 76], [380, 69], [392, 61], [404, 51], [414, 43]];
+    const EDL_M = [[333, 62], [345, 75], [360, 76], [380, 70], [392, 68], [404, 66], [416, 62]];
+    const EDL_L = [[336, 84], [350, 88], [370, 89], [390, 88], [404, 86], [418, 82]];
+    const PL_M = [[336, 84], [350, 88], [370, 89], [392, 91]];
+    const PB_M = [[380, 89], [395, 88], [410, 88], [424, 92]];
+
+    const front = {
+      surface: [
+        // thigh first: the abdomen and the inguinal ligament lie over the tops of the groin muscles
+        Object.assign({ k: "vl", a: [86, 272] }, band(RF_L, VL_L, 238, 312, { tip1: [64, 310], fib: [.35, .65, .9] })),
+        Object.assign({ k: "rf", a: [62, 262] }, band(RF_M, RF_L, 222, 305, { tip1: [48, 306], fib: [.25, .5, .75] })),
+        Object.assign({ k: "vmo", a: [24, 298] }, band(VM_M, RF_M, 262, 312, { tip0: [42, 258], tip1: [34, 313], fib: [.3, .6] })),
+        Object.assign({ k: "addm", a: [14, 268] }, band(GR, AL_M, 250, 288, { tip1: [14, 293], fib: [.5] })),
+        Object.assign({ k: "grac", a: [4, 278] }, band(0, GR, 240, 312, { fib: [.5] })),
+        Object.assign({ k: "addl", a: [24, 255] }, band(AL_M, AL_L, 232, 281, { tip1: [36, 283], fib: [.35, .7] })),
+        Object.assign({ k: "pect", a: [32, 244] }, band(AL_L, PE_L, 222, 257, { tip1: [40, 259], fib: [.5] })),
+        Object.assign({ k: "psm", a: [44, 241] }, band(PE_L, PS_L, 214, 257, { tip1: [42, 260], fib: [.5] })),
+        Object.assign({ k: "ilia", a: [53, 236] }, band(PS_L, RF_M, 208, 257, { tip1: [44, 260], fib: [.5] })),
+        Object.assign({ k: "itb", tdn: 1, a: [96, 288] }, band(ITB_M, 100, 244, 334, { tip1: [80, 336], fib: [.5] })),
+        { k: "tfl", a: [90, 222], p: [[78, 207], [88, 202], [96, 204], [100, 213], [100, 236], [99, 248], [95, 252], [90, 246], [84, 232], [79, 218]],
+          fl: [[[82, 209], [88, 228], [94, 247]], [[88, 205], [93, 226], [97, 246]], [[94, 206], [98, 224]]] },
+        Object.assign({ k: "sart", a: [40, 276] }, band(SA_M, SA_L, 207, 338, { tip0: [77, 204], tip1: [28, 342], fib: [.5] })),
+        // abdomen
+        { ctx: 1, under: 1, n: "Linea alba", p: [[0, 128, 1], [1.5, 128, 1], [1.5, 238, 1], [0, 238, 1]] },
+        Object.assign({ k: "rab", under: 1, a: [20, 165] }, band(1.5, RA_L, 130, 238, { fl: [[[1.5, 156], [10, 154], [20, 157], [30, 154], [38, 156]], [[1.5, 173], [12, 171], [22, 174], [32, 171], [37, 173]], [[1.5, 190], [12, 188], [22, 191], [30, 188], [35.3, 190]], [[8, 132], [8, 236]], [[24, 132], [22, 232]]] })),
+        { ctx: 1, under: 1, n: "External oblique aponeurosis", p: [[37, 131], [40, 148], [42, 172], [50, 188], [64, 199], [77, 205, 1], [56, 216], [36, 227], [14, 238, 1], [22, 232], [30, 220], [35, 200], [37, 175], [38, 150]] },
+        { k: "eobl", under: 1, a: [76, 184], p: [[40, 140], [60, 136], [80, 136], [100, 140, 1], [100, 190], [98, 201], [86, 204], [77, 205, 1], [64, 199], [50, 188], [42, 172]],
+          fl: [[[46, 142], [58, 170], [68, 190]], [[62, 140], [72, 172], [80, 199]], [[78, 140], [86, 176], [91, 202]], [[92, 142], [96, 180], [97, 200]]] },
+        { bonel: 1, open: 1, p: [[77, 205], [56, 216], [36, 227], [14, 238]] },
+        // knee
+        { bone: 1, n: "Patella", p: [[44, 304], [55, 306], [60, 313], [56, 320], [44, 323], [32, 320], [28, 313], [33, 306]] },
+        { k: "pat", tdn: 1, a: [44, 329], p: [[38, 322], [50, 322], [49, 336, 1], [41, 336, 1]] },
+        // leg
+        Object.assign({ bone: 1, n: "Tibia" }, band(TIB_M, CREST, 334, 421, {})),
+        Object.assign({ k: "gasm", a: [5, 350] }, band(0, MED, 330, 372, { tip1: [3, 378], fib: [.5] })),
+        Object.assign({ k: "sol", a: [5, 392] }, band(0, MED, 372, 410, { tip1: [3, 414], fib: [.5] })),
+        Object.assign({ k: "ta", a: [60, 352] }, band(CREST, TA_L, 333, 414, { tip1: [24, 436], fib: [.3, .65] })),
+        Object.assign({ k: "ehl", a: [57, 404] }, band(TA_L, EDL_M, 380, 416, { tip1: [44, 432], fib: [.5] })),
+        Object.assign({ k: "edl", a: [80, 362] }, band(EDL_M, EDL_L, 333, 418, { tip1: [62, 434], fib: [.35, .7] })),
+        Object.assign({ k: "plon", a: [94, 358] }, band(PL_M, 100, 336, 392, { tip1: [97, 404], fib: [.5] })),
+        Object.assign({ k: "pbre", a: [95, 404] }, band(PB_M, 100, 380, 424, { tip1: [98, 432], fib: [.5] })),
+        { k: "edb", a: [74, 445], p: [[64, 440], [82, 440], [88, 446], [78, 451], [66, 448]], fl: [[[68, 442], [80, 448]]] },
+      ],
+      deep: [
+        { bonel: 1, under: 1, open: 1, p: [[0, 153], [37, 163], [60, 170], [79, 176], [89, 180.5], [100, 184]] },
+        { k: "tva", under: 1, a: [62, 176], p: [[38, 164], [60, 171], [79, 177], [89, 181.5], [100, 185, 1], [100, 193, 1], [80, 187], [60, 182], [38, 178]],
+          fl: [[[40, 171], [98, 189]]] },
+        { k: "iobl", under: 1, a: [72, 198], p: [[38, 178], [60, 182], [80, 187], [100, 193, 1], [100, 198], [98, 201], [86, 204], [77, 205, 1], [56, 216], [36, 227], [33, 210], [36, 192]],
+          fl: [[[94, 200], [70, 190], [42, 182]], [[84, 204], [60, 197], [38, 192]], [[68, 210], [50, 207], [35, 205]], [[54, 216], [42, 218], [35, 219]]] },
+        { k: "psm", a: [18, 205], p: [[6, 172], [16, 170], [24, 195], [30, 215], [38, 232], [46, 246], [44, 258], [36, 254], [26, 236], [16, 215], [8, 192]], fl: [[[11, 175], [20, 205], [34, 236], [42, 254]]] },
+        { k: "ilia", a: [62, 212], p: [[38, 200], [60, 194], [82, 198], [86, 206], [70, 222], [56, 238], [48, 252], [42, 250], [40, 234], [36, 214]],
+          fl: [[[46, 200], [44, 230], [44, 248]], [[62, 198], [54, 222], [46, 246]], [[80, 202], [64, 222], [50, 244]]] },
+        { bonel: 1, open: 1, p: [[77, 205], [56, 216], [36, 227], [14, 238]] },
+        Object.assign({ k: "addm", a: [12, 278] }, band(0, [[248, 16], [270, 26], [292, 26], [305, 18]], 248, 305, { tip1: [8, 310], fib: [.35, .7] })),
+        Object.assign({ k: "addb", a: [26, 252] }, band([[238, 14], [270, 26]], [[238, 30], [256, 37], [270, 34]], 238, 270, { tip1: [30, 274], fib: [.5] })),
+        Object.assign({ k: "vi", a: [60, 272] }, band([[240, 44], [262, 40], [290, 41], [303, 46]], [[240, 72], [262, 78], [290, 74], [303, 64]], 240, 303, { tip1: [54, 305], fib: [.3, .55, .8] })),
+        { bone: 1, n: "Patella", p: [[44, 304], [55, 306], [60, 313], [56, 320], [44, 323], [32, 320], [28, 313], [33, 306]] },
+        Object.assign({ bone: 1, n: "Tibia" }, band(TIB_M, CREST, 334, 421, {})),
+        Object.assign({ k: "ehl", a: [58, 384] }, band([[352, 52], [380, 52], [404, 48], [418, 40]], [[352, 64], [380, 68], [404, 64], [418, 56]], 352, 418, { tip1: [44, 432], fib: [.5] })),
+      ],
+    };
+
+    // ---------- BACK ----------
+    const ST_M = [[250, 24], [265, 20], [285, 16], [300, 15], [315, 14], [330, 14], [341, 18]];
+    const ST_L = [[250, 35], [265, 36], [280, 36], [292, 30], [305, 25], [320, 23], [336, 22]];
+    const BF_M = [[250, 35], [265, 36], [280, 38], [292, 52], [305, 72], [320, 82], [332, 86]];
+    const BF_L = [[250, 45], [262, 60], [275, 78], [288, 88], [300, 92], [315, 93], [328, 93], [335, 90]];
+    const GRB = [[262, 4], [290, 6], [320, 6], [334, 3]];
+    const GS = [[320, 50], [340, 51], [360, 50], [370, 51]];
+    const back = {
+      surface: [
+        { k: "eobl", a: [92, 186], p: [[80, 176], [100, 172, 1], [100, 199, 1], [92, 201], [84, 192]], fl: [[[86, 178], [94, 196]], [[94, 176], [98, 196]]] },
+        { k: "tlf", tdn: 1, a: [14, 197], p: [[0, 186, 1], [30, 186], [33, 209], [24, 206], [0, 206, 1]] },
+        { bone: 1, n: "Sacrum", p: [[0, 206, 1], [22, 206], [19, 221], [11, 233], [3, 240], [0, 241, 1]] },
+        { k: "gmed", a: [70, 212], p: [[33, 209], [60, 205], [85, 202], [96, 202], [100, 210], [100, 234, 1], [92, 230], [62, 222], [35, 213]],
+          fl: [[[44, 209], [62, 218], [90, 228]], [[60, 206], [74, 216], [96, 230]], [[84, 203], [92, 214], [99, 230]]] },
+        Object.assign({ k: "itb", tdn: 1, a: [97, 292] }, band([[256, 95], [300, 96], [320, 92], [332, 88]], 100, 256, 332, { fib: [.5] })),
+        Object.assign({ k: "vl", a: [93, 280] }, band(BF_L, [[256, 95], [300, 96], [320, 92]], 262, 318, { fib: [.5] })),
+        Object.assign({ k: "grac", a: [3, 300] }, band(0, GRB, 262, 334, { fib: [.5] })),
+        Object.assign({ k: "semm", a: [10, 300] }, band(GRB, ST_M, 272, 334, { tip1: [10, 338], fib: [.5] })),
+        Object.assign({ k: "addm", a: [10, 262] }, band([[248, 2], [262, 4], [272, 5]], ST_M, 248, 272, { tip1: [12, 284], fib: [.5] })),
+        Object.assign({ k: "semt", a: [27, 282] }, band(ST_M, ST_L, 250, 336, { tip1: [24, 344], fib: [.5] })),
+        Object.assign({ k: "bfl", a: [66, 290] }, band(BF_M, BF_L, 250, 332, { tip1: [92, 338], fib: [.35, .7] })),
+        { k: "gmax", a: [50, 234], p: [[24, 207], [34, 213], [60, 222], [86, 230], [98, 238], [100, 250], [96, 262], [88, 266], [70, 258], [50, 252], [30, 250], [12, 247], [4, 242], [12, 232], [19, 221]],
+          fl: [[[24, 213], [50, 228], [88, 240]], [[18, 224], [46, 238], [92, 251]], [[12, 234], [40, 246], [88, 259]], [[8, 241], [30, 248], [70, 255]]] },
+        // calf: soleus under, the Achilles and the two heads over it
+        { k: "sol", a: [88, 370], p: [[8, 345], [30, 340], [70, 340], [91, 346], [92, 370], [84, 392], [70, 405], [63, 411], [38, 411], [28, 402], [14, 385], [7, 365]],
+          fl: [[[12, 366], [26, 390], [40, 406]], [[88, 360], [76, 388], [62, 406]]] },
+        { k: "ach", tdn: 1, a: [50, 418], p: [[38, 384], [63, 383], [61, 410], [59, 433, 1], [43, 434, 1], [39, 410]] },
+        Object.assign({ k: "gasm", a: [28, 348] }, band([[320, 9], [332, 9], [348, 12], [362, 18], [374, 28], [380, 36]], GS, 320, 380, { tip1: [44, 384], fib: [.3, .6, .85] })),
+        Object.assign({ k: "gasl", a: [70, 340] }, band(GS, [[320, 86], [332, 88], [346, 84], [358, 74], [366, 62]], 320, 368, { tip1: [54, 372], fib: [.3, .6, .85] })),
+        Object.assign({ k: "plon", a: [95, 360] }, band([[338, 90], [360, 90], [380, 92], [392, 94]], 100, 338, 392, { tip1: [98, 400], fib: [.5] })),
+        Object.assign({ k: "pbre", a: [96, 404] }, band([[386, 92], [400, 90], [414, 91], [424, 94]], 100, 386, 424, { tip1: [98, 432], fib: [.5] })),
+        Object.assign({ k: "fdl", a: [5, 400] }, band(0, [[378, 9], [400, 13], [418, 10], [426, 6]], 378, 426, { fib: [.5] })),
+        { bone: 1, n: "Calcaneus", p: [[34, 440], [64, 440], [67, 452], [50, 457], [33, 452]] },
+      ],
+      deep: [
+        Object.assign({ k: "lmf", a: [8, 200] }, band(2, [[165, 14], [195, 15], [215, 19], [230, 20]], 165, 232, { flat0: 1, tip1: [10, 238], fl: [[[3, 176], [13, 182]], [[3, 188], [14, 194]], [[3, 200], [15, 206]], [[3, 212], [18, 218]], [[4, 224], [19.5, 230]]] })),
+        Object.assign({ k: "llng", a: [26, 188] }, band([[165, 14], [195, 15], [215, 19]], [[165, 31], [185, 37], [205, 33], [215, 26]], 165, 215, { flat0: 1, tip1: [21, 224], fib: [.3, .6, .85] })),
+        Object.assign({ k: "lilc", a: [44, 182] }, band([[165, 31], [185, 37], [205, 33]], [[165, 45], [180, 54], [196, 49], [205, 40]], 165, 205, { flat0: 1, tip1: [34, 211], fib: [.4, .75] })),
+        { k: "qlm", a: [68, 186], p: [[56, 166], [72, 168], [80, 184], [80, 200], [60, 205], [55, 190]], fl: [[[60, 169], [64, 202]], [[68, 170], [74, 200]], [[76, 178], [57, 196]]] },
+        { bone: 1, n: "Sacrum", p: [[0, 206, 1], [22, 206], [19, 221], [11, 233], [3, 240], [0, 241, 1]] },
+        { k: "gmin", a: [72, 214], p: [[40, 207], [70, 204], [96, 206], [98, 222], [90, 227], [60, 222], [42, 214]], fl: [[[50, 208], [70, 216], [92, 224]], [[70, 205], [84, 214], [96, 222]]] },
+        { k: "piri", a: [56, 228], p: [[17, 218], [32, 220], [60, 224], [90, 228], [95, 233], [88, 236], [60, 233], [32, 233], [17, 231]], fl: [[[22, 222], [60, 228], [90, 232]], [[22, 230], [60, 231], [88, 234]]] },
+        { k: "gem", a: [60, 239], p: [[28, 236], [60, 236.5], [90, 235.5], [93, 239], [60, 242], [30, 243.5]], fl: [[[32, 239.5], [88, 238]]] },
+        { k: "qf", a: [60, 250], p: [[32, 247], [60, 247], [88, 245.5], [90, 252], [60, 254], [32, 253]], fl: [[[34, 250], [88, 249]]] },
+        Object.assign({ k: "addm", a: [18, 272] }, band([[256, 0], [300, 4]], [[256, 30], [266, 40], [282, 42], [298, 34], [304, 22]], 256, 304, { tip1: [10, 308], fib: [.3, .6, .85] })),
+        Object.assign({ k: "semm", a: [16, 314] }, band([[296, 5], [330, 6]], [[296, 24], [312, 28], [324, 24], [332, 16]], 296, 332, { tip1: [10, 337], fib: [.5] })),
+        Object.assign({ k: "bfs", a: [84, 306] }, band([[282, 72], [296, 76], [312, 82], [326, 84]], [[282, 84], [296, 90], [312, 93], [326, 91]], 282, 326, { tip1: [88, 332], fib: [.5] })),
+        { k: "pop", a: [52, 336], p: [[30, 339], [60, 327], [76, 326], [72, 334], [44, 346], [32, 346]], fl: [[[34, 342], [70, 330]]] },
+        { k: "sol", a: [50, 372], p: [[8, 342], [30, 349], [70, 349], [90, 342], [91, 362], [81, 386], [67, 402], [62, 412], [40, 412], [32, 400], [16, 380], [8, 360]],
+          fl: [[[16, 352], [30, 380], [42, 408]], [[50, 352], [50, 380], [50, 408]], [[84, 352], [70, 380], [60, 408]]] },
+        Object.assign({ k: "fdl", a: [5, 392] }, band(0, [[360, 9], [390, 11], [415, 9], [428, 5]], 360, 428, { fib: [.5] })),
+        Object.assign({ k: "tpost", a: [18, 410] }, band([[392, 11], [415, 9], [428, 5]], [[392, 24], [408, 26], [420, 20], [428, 14]], 392, 428, { fib: [.5] })),
+        Object.assign({ k: "fhl", a: [70, 404] }, band([[382, 62], [410, 62], [426, 60]], [[382, 78], [400, 82], [416, 76], [426, 68]], 382, 426, { fib: [.5] })),
+        { bone: 1, n: "Calcaneus", p: [[34, 440], [64, 440], [67, 452], [50, 457], [33, 452]] },
+      ],
+    };
+    // ---------- SIDE (her right side; u 0 = the back edge, 100 = the front edge) ----------
+    const S_BF = [[250, 24], [270, 28], [290, 32], [305, 40], [316, 48]];
+    const S_RF = [[226, 86], [240, 88], [260, 86], [280, 84], [300, 84], [306, 88]];
+    const S_GA = [[318, 26], [332, 34], [348, 36], [362, 30], [374, 20]];
+    const S_PB = [[334, 50], [360, 50], [380, 46], [396, 42], [410, 38], [424, 34]];
+    const S_PF = [[334, 72], [360, 72], [380, 66], [396, 60], [410, 56], [424, 52]];
+    const S_EF = [[334, 87], [360, 86], [380, 84], [400, 80], [418, 78]];
+    const side = {
+      surface: [
+        { k: "gmed", a: [52, 216], p: [[20, 206], [40, 203], [60, 204], [76, 208], [80, 220], [72, 234], [58, 242], [44, 242], [40, 232], [32, 218], [22, 208]],
+          fl: [[[30, 208], [38, 220], [44, 234]], [[48, 205], [50, 222], [48, 236]], [[66, 207], [60, 222], [52, 236]]] },
+        Object.assign({ k: "vl", a: [62, 280] }, band([[236, 34], [250, 30], [270, 30], [295, 34], [310, 42]], S_RF, 234, 310, { tip1: [80, 314], fib: [.25, .5, .75] })),
+        Object.assign({ k: "rf", a: [93, 266] }, band(S_RF, 100, 226, 306, { tip1: [94, 310], fib: [.5] })),
+        Object.assign({ k: "bfl", a: [14, 286] }, band(0, S_BF, 250, 318, { tip1: [56, 329], fib: [.35, .7] })),
+        Object.assign({ k: "itb", tdn: 1, a: [58, 290] }, band([[236, 42], [250, 44], [270, 48], [295, 52], [315, 58], [326, 64]], [[236, 66], [250, 62], [270, 62], [295, 66], [315, 72], [326, 78]], 236, 328, { flat0: 1, fib: [.5] })),
+        { k: "tfl", a: [80, 226], p: [[76, 209], [86, 213], [90, 222], [86, 236], [78, 248], [68, 256], [62, 252], [63, 240], [67, 226], [72, 214]],
+          fl: [[[80, 214], [78, 232], [68, 250]], [[86, 220], [82, 236], [72, 252]]] },
+        { k: "gmax", a: [22, 232], p: [[0, 210], [12, 206], [25, 208], [35, 218], [43, 232], [47, 246], [49, 258], [40, 262], [24, 258], [8, 252], [0, 248]],
+          fl: [[[6, 214], [26, 232], [40, 254]], [[2, 226], [20, 240], [34, 256]], [[14, 210], [32, 226], [44, 252]]] },
+        { bone: 1, n: "Patella", p: [[84, 305], [94, 304], [99, 310], [99, 320], [94, 325], [86, 322], [82, 314]] },
+        { k: "pat", tdn: 1, a: [91, 332], p: [[86, 323], [96, 324], [97, 338], [90, 341], [86, 336]] },
+        // lower leg, back to front: the calf, the peroneals over the fibula, the shin muscles
+        Object.assign({ k: "sol", a: [40, 380] }, band([[336, 32], [348, 36], [362, 30], [374, 20], [386, 18], [400, 19], [414, 20]], S_PB, 338, 414, { tip1: [18, 422], fib: [.4, .75] })),
+        { k: "ach", tdn: 1, a: [10, 416], p: [[1, 384], [18, 384], [20, 400], [19, 420], [17, 434], [6, 438], [2, 430], [1, 410]] },
+        Object.assign({ k: "gasl", a: [16, 344] }, band(0, S_GA, 318, 376, { tip1: [8, 386], fib: [.35, .7] })),
+        Object.assign({ k: "plon", a: [60, 360] }, band(S_PB, S_PF, 334, 396, { tip0: [60, 331], tip1: [44, 404], fib: [.5] })),
+        Object.assign({ k: "pbre", a: [52, 408] }, band([[396, 42], [410, 38], [424, 34]], [[396, 60], [410, 56], [424, 52]], 392, 424, { tip1: [36, 431], fib: [.5] })),
+        { ctx: 1, n: "Peroneal tendons", p: [[30, 428], [38, 431], [36, 438], [44, 446], [54, 452], [50, 455], [38, 450], [28, 442], [24, 434]] },
+        Object.assign({ k: "edl", a: [79, 370] }, band(S_PF, S_EF, 334, 418, { tip1: [82, 428], fib: [.5] })),
+        { ctx: 1, n: "Extensor tendons", p: [[80, 424], [86, 425], [94, 436], [97, 446], [97, 452], [93, 452], [90, 446], [86, 436], [80, 430]] },
+        Object.assign({ k: "ta", a: [93, 370] }, band(S_EF, 100, 330, 420, { tip1: [96, 430], fib: [.5] })),
+        { k: "edb", a: [64, 444], p: [[46, 438], [62, 437], [78, 442], [86, 448], [84, 451], [70, 449], [56, 446], [44, 444]], fl: [[[50, 441], [66, 443], [80, 448]]] },
+        { bone: 1, n: "Fibula head", p: [[54, 326], [62, 325], [66, 330], [64, 336], [56, 337], [52, 332]] },
+        { bone: 1, n: "Lateral malleolus", p: [[40, 424], [56, 422], [64, 428], [60, 436], [46, 437], [38, 431]] },
+        { bone: 1, n: "Calcaneus", p: [[6, 442], [20, 441], [28, 446], [28, 452], [18, 454], [8, 452], [4, 447]] },
+      ],
+      deep: [
+        { k: "gmin", a: [52, 216], p: [[30, 207], [50, 204], [70, 207], [76, 214], [66, 226], [54, 236], [46, 238], [40, 230], [32, 216]],
+          fl: [[[40, 210], [46, 224], [48, 236]], [[62, 208], [58, 224], [50, 236]]] },
+        { k: "piri", a: [20, 226], p: [[0, 219], [20, 223], [40, 231], [46, 236], [42, 239], [22, 233], [0, 228]], fl: [[[4, 223], [24, 228], [42, 236]]] },
+        Object.assign({ k: "vi", a: [66, 276] }, band([[240, 44], [290, 40], [305, 50]], [[240, 82], [260, 88], [290, 86], [305, 82]], 240, 306, { tip1: [78, 310], fib: [.3, .6, .85] })),
+        Object.assign({ k: "bfs", a: [36, 300] }, band([[278, 20], [300, 26], [316, 36]], [[278, 34], [300, 40], [316, 48]], 278, 318, { tip1: [56, 329], fib: [.5] })),
+        { bone: 1, n: "Patella", p: [[84, 305], [94, 304], [99, 310], [99, 320], [94, 325], [86, 322], [82, 314]] },
+        { k: "sol", a: [28, 372], p: [[4, 338], [40, 336], [52, 340], [50, 370], [42, 396], [30, 414], [16, 416], [8, 400], [2, 370]],
+          fl: [[[10, 346], [16, 380], [20, 410]], [[30, 340], [32, 380], [26, 410]], [[46, 344], [44, 376], [34, 404]]] },
+        Object.assign({ k: "pbre", a: [52, 404] }, band([[380, 44], [396, 42], [410, 38], [424, 34]], [[380, 62], [396, 60], [410, 56], [424, 52]], 372, 424, { tip1: [36, 431], fib: [.5] })),
+        { bone: 1, n: "Fibula head", p: [[54, 326], [62, 325], [66, 330], [64, 336], [56, 337], [52, 332]] },
+        { bone: 1, n: "Lateral malleolus", p: [[40, 424], [56, 422], [64, 428], [60, 436], [46, 437], [38, 431]] },
+        { bone: 1, n: "Calcaneus", p: [[6, 442], [20, 441], [28, 446], [28, 452], [18, 454], [8, 452], [4, 447]] },
+      ],
+    };
+    return { front, back, side };
+  })();
   const PH_MSK_TAGN = { pcl: "Pec major · clav", pst: "Pec major · sternal", pmin: "Pec minor", dant: "Ant deltoid", dmid: "Mid deltoid", pdel: "Post deltoid",
     utrap: "Upper trap", mtrap: "Mid trap", ltrp: "Lower trap", temi: "Teres minor", tema: "Teres major", rmin: "Rhomboid minor", rmaj: "Rhomboid major",
     terec: "Erector spinae", erec: "Lumbar erector", lat: "Lats", obl: "Ext oblique", serr: "Serratus ant", inf: "Infraspinatus", sup: "Supraspinatus",
     lev: "Levator", qlm: "QL", bic: "Biceps", tri: "Triceps", scms: "SCM · sternal", scmc: "SCM · clav", scaa: "Ant scalene", scam: "Mid scalene",
-    scap: "Post scalene", splc: "Splenius cap", ssc: "Semispinalis", cmf: "Multifidus", sub: "Suboccipitals", lpt: "Lat pterygoid", mass: "Masseter", temp: "Temporalis" };
+    scap: "Post scalene", splc: "Splenius cap", ssc: "Semispinalis", cmf: "Multifidus", sub: "Suboccipitals", lpt: "Lat pterygoid", mass: "Masseter", temp: "Temporalis",
+    gmax: "Glute max", gmed: "Glute med", gmin: "Glute min", tfl: "TFL", rf: "Rectus fem", vl: "Vastus lat", vmo: "VMO", vi: "Vastus int", addl: "Adductor long",
+    addb: "Adductor brev", addm: "Adductor mag", psm: "Psoas", bfl: "Biceps fem · long", bfs: "Biceps fem · short", semt: "Semitend", semm: "Semimemb",
+    gasm: "Gastroc · medial", gasl: "Gastroc · lateral", ta: "Tib anterior", tpost: "Tib posterior", edl: "Ext dig long", ehl: "Ext hallucis", edb: "Ext dig brevis",
+    plon: "Peroneus long", pbre: "Peroneus brev", fdl: "Flex dig long", fhl: "Flex hallucis", lmf: "Multifidus", llng: "Longissimus", lilc: "Iliocostalis",
+    eobl: "Ext oblique", iobl: "Int oblique", tva: "Transversus", itb: "ITB", ach: "Achilles", tlf: "TL fascia", gem: "Gemelli + OI", qf: "Quadratus fem" };
   // one layer of a drawn region: each shape twice (her right and left), today's finding's colour, last visit's dashed; a marked
   // one adds its name tag to `tags` (drawn by phMskDiagramView's overlay)
   // The side view (the neck) is drawn once: the Right | Left switch (phMskSideLR) picks the side and sideSvg flips it.
-  function phMskAtlasHl(view, layer, vis, prev, plan0, tap, tags, rk) {
-    const A = PH_MSK_ATLAS[view], L = A[layer] || [], side = view === "side", M = "matrix(-1 0 0 1 220 0)", seen = new Set();
-    let out = layer === "deep" ? A.ghost.map(d => `<path class="mk-dgg" d="${d}"/>${side ? "" : `<path class="mk-dgg" d="${d}" transform="${M}"/>`}`).join("") : "";
+  function phMskAtlasHl(view, layer, vis, prev, plan0, tap, tags, rk, g, build, crop) {
+    const A = PH_MSK_ATLAS[view] || {}, side = view === "side", legSide = side && PH_MSK_SIDE_ROW.has(rk), M = "matrix(-1 0 0 1 220 0)", seen = new Set();
+    // her 2026-10-28 legs: the lower body (PH_MSK_LEG) draws in every front / back picture and in a leg area's side view, the belly wall
+    // before PH_MSK_ATLAS (under the serratus), the rest over it; the neck's side view keeps its own shapes
+    const L = legSide ? [] : A[layer] || [], LL = side && !legSide ? [] : phMskLegShapes(view, layer, g || "f", build, crop);
+    const gh = layer !== "deep" ? [] : (legSide ? [] : A.ghost || []).concat(side && !legSide ? [] : phMskLegShapes(view, "surface", g || "f", build, crop).filter(o => o.sh.k).map(o => o.d));
+    let out = gh.map(d => `<path class="mk-dgg" d="${d}"/>${side ? "" : `<path class="mk-dgg" d="${d}" transform="${M}"/>`}`).join("");
+    const UP = new Set(["cervical", "shoulder", "thoracic"]);
     (side ? [0] : [0, 1]).forEach(mir => {
       const tf = mir ? ` transform="${M}"` : "", S = side ? phMskSideLR : view === "front" ? (mir ? "L" : "R") : (mir ? "R" : "L");
-      L.forEach(sh => {
-        if (sh.bone || sh.bonel) { out += `<path class="${sh.bone ? "mk-dgb" : "mk-dgbl"}" d="${sh.d}"${tf}/>`; return; }
-        if (sh.ctx) { out += `<path class="mk-dgx" d="${sh.d}"${tf}><title>${esc(sh.n)}</title></path>${sh.f ? `<path class="mk-dgf x" d="${sh.f}"${tf}/>` : ""}`; return; }
+      const draw = (sh, d, f, a) => {
+        if (sh.bone || sh.bonel) { out += `<path class="${sh.bone ? "mk-dgb" : "mk-dgbl"}" d="${d}"${tf}/>`; return; }
+        if (sh.ctx) { out += `<path class="mk-dgx" d="${d}"${tf}><title>${esc(sh.n)}</title></path>${f ? `<path class="mk-dgf x" d="${f}"${tf}/>` : ""}`; return; }
         const m = PH_MSK_MU[sh.k]; if (!m) return;
         const k = sh.k + S, st = phMskMuState(vis, prev, plan0, k), lv = /^lv/.test(st) ? +st.slice(2) : 0, on = !!st && st !== "carried";
         const at = tap ? ` data-msk="dg-tap" data-v="${sh.k}:${S}" role="button" tabindex="0" aria-pressed="${on ? "true" : "false"}"` : "";
-        out += `<path class="mk-dgm at${st ? " " + st : ""}${phMskFresh.has("b:" + k) ? " bump" : ""}" d="${sh.d}"${tf}${at}><title>${esc(m.name)} · ${S === "R" ? "Right" : "Left"}${lv ? " · " + PH_MSK_LV[lv] : st === "carried" ? " · last visit" : st === "on" ? " · motor point" : ""}</title></path>${sh.f ? `<path class="mk-dgf" d="${sh.f}"${tf}/>` : ""}`;
-        // a neck-only muscle names itself in the Neck picture only (at the top of Shoulder / Mid back its colour shows, no tag)
+        out += `<path class="mk-dgm at${sh.tdn ? " tdn" : ""}${st ? " " + st : ""}${phMskFresh.has("b:" + k) ? " bump" : ""}" d="${d}"${tf}${at}><title>${esc(m.name)} · ${S === "R" ? "Right" : "Left"}${lv ? " · " + PH_MSK_LV[lv] : st === "carried" ? " · last visit" : st === "on" ? " · motor point" : ""}</title></path>${f ? `<path class="mk-dgf${sh.tdn ? " x" : ""}" d="${f}"${tf}/>` : ""}`;
+        // a neck-only muscle names itself in the Neck picture only (at the top of Shoulder / Mid back its colour shows, no tag); a lower
+        // body muscle names itself in its own areas' pictures, and one from another area whose spot is outside this window shows nothing
         // her 2026-10-28: a marked muscle (a finding, last visit's, or a mark) carries its marks and its name beside the picture
-        if ((lv || st) && !seen.has(k)) { seen.add(k); const e = plan0[k]; tags.push({ k, x: mir ? 220 - sh.a[0] : side && S === "L" ? PH_BODY_GEOM.SIDE_W - sh.a[0] : sh.a[0], y: sh.a[1], n: PH_MSK_TAGN[sh.k] || phMskShort(m), lv, last: st === "carried", tx: phMskTx(e), off: !!e && e.done === false, named: rk === "cervical" || m.regions.some(r => r !== "cervical") }); }
-      });
+        if ((lv || st) && !seen.has(k)) {
+          seen.add(k);
+          const x = mir ? 220 - a[0] : side && S === "L" ? PH_BODY_GEOM.SIDE_W - a[0] : a[0], y = a[1], own = m.regions.includes(rk);
+          if (!own && crop && (x < crop[0] || x > crop[0] + crop[2] || y < crop[1] || y > crop[1] + crop[3])) return;
+          const e = plan0[k];
+          tags.push({ k, x, y, n: PH_MSK_TAGN[sh.k] || phMskShort(m), lv, last: st === "carried", tx: phMskTx(e), off: !!e && e.done === false, named: own || (UP.has(rk) && m.regions.some(r => r !== "cervical" && UP.has(r))) });
+        }
+      };
+      LL.forEach(o => { if (o.sh.under) draw(o.sh, o.d, o.f, o.a); });
+      L.forEach(sh => draw(sh, sh.d, sh.f, sh.a));
+      LL.forEach(o => { if (!o.sh.under) draw(o.sh, o.d, o.f, o.a); });
     });
     return out;
   }
@@ -121151,7 +121481,7 @@ or changing anything in Cliniko.
   // region's own window, with a shaped belly per muscle (gastrocnemius gets its real two heads).
   // `tap` (her 2026-10-20 pick): a belly is the muscle itself -- tap it to put that side on the plan or
   // take it off (data-msk="dg-tap", handled in phMskClick); the hover title names it.
-  function phMskDiagramView(view, rk, rec, plan0, tap, layer, sides) {
+  function phMskDiagramView(view, rk, rec, plan0, tap, layer, sides, byLayer) {
     // the side view's left is its right mirrored, so its window mirrors too
     const c0 = (view === "side" ? PH_MSK_SIDE_CROP : PH_MSK_REGION_CROP)[rk]; if (!c0) return "";
     const crop = view === "side" && phMskSideLR === "L" ? [PH_BODY_GEOM.SIDE_W - c0[0] - c0[2], c0[1], c0[2], c0[3]] : c0;
@@ -121159,7 +121489,7 @@ or changing anything in Cliniko.
     if (!list.length && !atlas) return "";
     const g = phIsFemale(rec) ? "f" : "m", build = phBodyBuild(rec), vis = phMskToday(rec), prev = phMskPrev(rec), tags = [];
     let hl = "";
-    if (atlas) hl = phMskAtlasHl(view, layer || "surface", vis, prev, plan0, tap, tags, rk);
+    if (atlas) hl = phMskAtlasHl(view, layer || "surface", vis, prev, plan0, tap, tags, rk, g, build, crop);
     else list.forEach(m => {
       const sz = PH_MSK_MARK_SIZE[m.id] || [7, 14];
       ["R", "L"].forEach(S => {
@@ -121204,11 +121534,13 @@ or changing anything in Cliniko.
     const wrap = pic => edges.length ? `<svg viewBox="0 0 ${f(W)} ${f(H)}" xmlns="http://www.w3.org/2000/svg">${pic.replace("<svg ", `<svg x="${f(mL)}" y="0" width="${f(crop[2])}" height="${f(H)}" style="width:${f(crop[2])}px;height:${f(H)}px" `)}${names}</svg>` : pic;
     const overlay = tap ? tags.map(o => phMskTxMarks(o.tx, o.x, o.y, R0, x => `${o.off ? "off" : ""}${phMskFresh.has("x:" + o.k + x) ? " pop" : ""}`)).join("") : "";
     const uid = "mskdg" + rk + view + (layer || ""), lbl = view === "front" ? "Front" : view === "back" ? "Back" : phMskSideLR === "L" ? "Left side" : "Right side";
-    if (view !== "side") return `<div class="mk-dgpane"><div class="mk-dgsvg" role="img" aria-label="${lbl} view">${wrap(PH_BODY_GEOM.svg(g, view, { uid, build, shade: true, details: false, hl, overlay, viewBox: vb }))}</div><span class="mk-dgcap">${lbl}</span></div>`;
+    if (view !== "side") return `<div class="mk-dgpane"><div class="mk-dgsvg" role="img" aria-label="${lbl} view">${wrap(PH_BODY_GEOM.svg(g, view, { uid, build, shade: true, details: false, hl, overlay, viewBox: vb }))}</div><span class="mk-dgcap">${byLayer ? (layer === "deep" ? "Deep" : "Surface") : lbl}</span></div>`;
     // her 2026-10-28 neck pick: one side picture, the Right | Left switch under it (a tap marks the side showing)
-    const sw = tap ? `<span class="mk-dgcap mk-dgside">Side<span class="ph-tng2-seg mk2-jb" role="group" aria-label="Which side">${[["R", "Right"], ["L", "Left"]].map(([s, t]) => `<button type="button" class="ph-ltr-qual${phMskSideLR === s ? " on" : ""}" data-msk="dg-side" data-v="${s}" aria-pressed="${phMskSideLR === s}">${t}</button>`).join("")}</span></span>` : `<span class="mk-dgcap">${lbl}</span>`;
-    return `<div class="mk-dgpane"><div class="mk-dgsvg" role="img" aria-label="${lbl} view">${wrap(PH_BODY_GEOM.sideSvg(g, { uid, build, hlb: hl, overlay, viewBox: vb, flip: phMskSideLR === "L", neck: false }))}</div>${sw}</div>`;
+    const sw = byLayer ? `<span class="mk-dgcap">${layer === "deep" ? "Deep" : "Surface"}</span>` : tap ? `<span class="mk-dgcap mk-dgside">Side${phMskSideSw()}</span>` : `<span class="mk-dgcap">${lbl}</span>`;
+    return `<div class="mk-dgpane"><div class="mk-dgsvg" role="img" aria-label="${lbl} view">${wrap(PH_BODY_GEOM.sideSvg(g, { uid, build, hlb: hl, overlay, viewBox: vb, flip: phMskSideLR === "L", neck: false, arm: !PH_MSK_SIDE_ROW.has(rk) }))}</div>${sw}</div>`;
   }
+  // the side picture's Right | Left joined bar (her 2026-10-28 neck pick); a leg area carries it in its Side row's heading
+  const phMskSideSw = () => `<span class="ph-tng2-seg mk2-jb" role="group" aria-label="Which side">${[["R", "Right"], ["L", "Left"]].map(([s, t]) => `<button type="button" class="ph-ltr-qual${phMskSideLR === s ? " on" : ""}" data-msk="dg-side" data-v="${s}" aria-pressed="${phMskSideLR === s}">${t}</button>`).join("")}</span>`;
   // front + back panes and the Deep line -- drawn in the picture row (phMskPicDgHtml) and cloned from
   // there by Enlarge, never two copies drifting. Her 2026-10-20: no colour caption, "Deep" alone.
   function phMskDiagramPanesHtml(rk, rec, plan0, tap, sides) {
@@ -121216,7 +121548,14 @@ or changing anything in Cliniko.
     const deepHtml = deep.length ? `<div class="mk-dgdeep"><b>Deep</b>${deep.map(m => `<span class="mk-dgdtag">${esc(m.name)}</span>`).join("")}</div>` : "";
     // her 2026-10-28 pick B "Two rows": a drawn region shows its surface muscles, and under them its deep ones (pec minor, rhomboids ...)
     const vs = PH_MSK_ATLAS_VIEWS[rk] || ["front", "back"];
-    if (PH_MSK_ATLAS_REG.has(rk)) return ["surface", "deep"].map(L => `<div class="mk-dgrow"><span class="mk-dgrc">${L === "surface" ? "Surface" : "Deep"}</span><div class="mk-dgpanes">${vs.map(v => phMskDiagramView(v, rk, rec, plan0, tap, L, sides)).join("")}</div></div>`).join("") + deepHtml;
+    if (PH_MSK_ATLAS_REG.has(rk)) {
+      const row = (cap, panes) => `<div class="mk-dgrow"><span class="mk-dgrc">${cap}</span><div class="mk-dgpanes">${panes}</div></div>`;
+      // her 2026-10-28 legs picks: a one-view area (the belly) shows Surface | Deep side by side; Hip & thigh, Knee and Ankle & foot add
+      // a Side row under Deep (Surface | Deep, the Right | Left bar in its heading), so the front and back keep their full size
+      if (vs.length === 1) return row(vs[0] === "back" ? "Back" : "Front", ["surface", "deep"].map(L => phMskDiagramView(vs[0], rk, rec, plan0, tap, L, sides, true)).join("")) + deepHtml;
+      const side = PH_MSK_SIDE_ROW.has(rk) ? `<div class="mk-dgrow"><span class="mk-dgrc mk-dgside">${tap ? "Side" + phMskSideSw() : phMskSideLR === "L" ? "Left side" : "Right side"}</span><div class="mk-dgpanes">${["surface", "deep"].map(L => phMskDiagramView("side", rk, rec, plan0, tap, L, sides, true)).join("")}</div></div>` : "";
+      return ["surface", "deep"].map(L => row(L === "surface" ? "Surface" : "Deep", vs.map(v => phMskDiagramView(v, rk, rec, plan0, tap, L, sides)).join(""))).join("") + side + deepHtml;
+    }
     const front = phMskDiagramView("front", rk, rec, plan0, tap, null, sides), back = phMskDiagramView("back", rk, rec, plan0, tap, null, sides);
     return `<div class="mk-dgpanes">${front}${back}</div>${deepHtml}`;
   }
@@ -121301,9 +121640,9 @@ or changing anything in Cliniko.
   // regions: explicit tick for this visit, else the pain map's + last visit's + any with data
   function phMskAutoRegions(name, plan) {
     const out = new Set();
-    try { phPmList(name, plan).forEach(p => { const r = PH_MSK_PAINREG[p.r]; if (r) out.add(r); }); } catch (e) { /* no pain map */ }
+    try { phPmList(name, plan).forEach(p => { const r = phMskRegOf(p); if (r) out.add(r); }); } catch (e) { /* no pain map */ }
     // a patient with no plan keeps her pain map on the record itself (the Pain section's map)
-    try { const rec = name ? phPatientPeek(name) : null; (rec && Array.isArray(rec.painSites) ? rec.painSites : []).forEach(p => { const r = p && PH_MSK_PAINREG[p.r]; if (r) out.add(r); }); } catch (e) { /* none */ }
+    try { const rec = name ? phPatientPeek(name) : null; (rec && Array.isArray(rec.painSites) ? rec.painSites : []).forEach(p => { const r = p && phMskRegOf(p); if (r) out.add(r); }); } catch (e) { /* none */ }
     return out;
   }
   // her 2026-10-12 ("what does this do, it is not linked to anything"): every region with a pain on the pain map is ALWAYS on and cannot be
@@ -121319,7 +121658,7 @@ or changing anything in Cliniko.
   }
   // her 2026-10-12: a finding in a region that has no pain on the pain map offers to add that pain (one tap; "Came in for" and the pain
   // table follow). Findings: a positive special test, weak strength, painful movement, movement well under normal, a tender / taut / trigger muscle.
-  const PH_MSK_ADDREG = { cervical: "neck_post", thoracic: "mid_back", shoulder: "shoulder", elbow: "elbow", wrist: "wrist", lumbar: "low_back", hip: "hip", knee: "knee", ankle: "ankle" };
+  const PH_MSK_ADDREG = { cervical: "neck_post", thoracic: "mid_back", shoulder: "shoulder", elbow: "elbow", wrist: "wrist", lumbar: "low_back", belly: "abdomen", hip: "hip", knee: "knee", ankle: "ankle" };
   function phMskFindings(rec) {
     const vis = phMskToday(rec), out = {};
     if (!vis) return out;
@@ -121668,7 +122007,7 @@ or changing anything in Cliniko.
     });
     return out;
   }
-  const phMskPainSideDefault = (name, plan, rk) => { try { const s = new Set(phPmList(name, plan).filter(p => PH_MSK_PAINREG[p.r] === rk).map(p => p.s)); return s.size === 1 && (s.has("R") || s.has("L")) ? [...s][0] : "B"; } catch (e) { return "B"; } };
+  const phMskPainSideDefault = (name, plan, rk) => { try { const s = new Set(phPmList(name, plan).filter(p => phMskRegOf(p) === rk).map(p => p.s)); return s.size === 1 && (s.has("R") || s.has("L")) ? [...s][0] : "B"; } catch (e) { return "B"; } };
   function phMskRomTabHtml(name, rec, plan, vis, regs) {
     const prev = phMskPrev(rec);
     const body = regs.map(rk => {
@@ -121898,7 +122237,7 @@ or changing anything in Cliniko.
   // the card a muscle shows in: the first pain whose region lists it, on its side (a Both or Centre pain takes either side)
   function phMskMuPain(list, k) {
     const m = PH_MSK_MU[k.slice(0, -1)], S = k.slice(-1); if (!m) return null;
-    return list.find(p => m.regions.includes(PH_MSK_PAINREG[p.r]) && (p.s === S || p.s === "B" || p.s === "C")) || null;
+    return list.find(p => m.regions.includes(phMskRegOf(p)) && (p.s === S || p.s === "B" || p.s === "C")) || null;
   }
   // a muscle's look: today's finding (lv1-3), else last visit's carried in ("carried", dashed), else a motor point with no finding ("on")
   function phMskMuState(vis, prev, plan0, k) {
@@ -121911,8 +122250,8 @@ or changing anything in Cliniko.
   }
   function phMskCtxOf(name, plan, list) {
     const rec = phPatientPeek(name) || {}, vis = phMskToday(rec), prev = phMskPrev(rec), regFirst = {};
-    list.forEach(p => { const rk = PH_MSK_PAINREG[p.r]; if (rk && !regFirst[rk]) regFirst[rk] = phMskPainKey(p); });
-    const keys = list.map(phMskPainKey), onReg = list.find(p => PH_MSK_PAINREG[p.r] === phMskDgReg);
+    list.forEach(p => { const rk = phMskRegOf(p); if (rk && !regFirst[rk]) regFirst[rk] = phMskPainKey(p); });
+    const keys = list.map(phMskPainKey), onReg = list.find(p => phMskRegOf(p) === phMskDgReg);
     const lit = keys.includes(phMskLit) ? phMskLit : onReg ? phMskPainKey(onReg) : keys[0] || "";
     return { name, plan, list, rec, vis, prev, plan0: phMskPlanOf(rec, vis), view: phMskView(rec), single: list.length === 1, regFirst, lit, rank: phMskUseRank() };
   }
@@ -122039,18 +122378,18 @@ or changing anything in Cliniko.
   function phMskChipHtml(ctx, k, sideTag) {
     const m = PH_MSK_MU[k.slice(0, -1)], S = k.slice(-1), st = phMskMuState(ctx.vis, ctx.prev, ctx.plan0, k), lv = /^lv/.test(st) ? +st.slice(2) : 0;
     const last = (ctx.prev && ctx.prev.pal && ctx.prev.pal[k]) || 0, tx = phMskTx(ctx.plan0[k]), mpOn = tx.includes("mp");
-    const mps = lv || st === "on" ? `<button type="button" class="mps${mpOn ? " on" : " off"}" data-msk="mpt" data-v="${k}" aria-pressed="${mpOn}" aria-label="Motor point, ${esc(m.name)}" title="${mpOn ? "Motor point in Today's points: tap to take it out" : "Put its motor point back"}">MP</button>` : "";
+    const mps = (lv || st === "on") && m.mp ? `<button type="button" class="mps${mpOn ? " on" : " off"}" data-msk="mpt" data-v="${k}" aria-pressed="${mpOn}" aria-label="Motor point, ${esc(m.name)}" title="${mpOn ? "Motor point in Today's points: tap to take it out" : "Put its motor point back"}">MP</button>` : "";
     return `<span class="mk2-ch${lv ? " lv" + lv : st === "carried" ? " carried" : ""}${phMskFresh.has("c:" + k) ? " bump" : ""}"><button type="button" class="nm" data-msk="cyc" data-v="${k}" title="${esc(m.name)} · ${S === "R" ? "right" : "left"}${m.caution ? ". " + esc(m.caution) : ""}">${esc(phMskShort(m))}${sideTag ? " " + S : ""}${lv ? ` · ${PH_MSK_LV[lv]}` : st === "carried" && last ? `<span class="lv">last ${PH_MSK_LV[last]}</span>` : ""}</button>${tx.filter(x => x !== "mp").map(x => `<span class="tx" title="${PH_MSK_TX_NAME[x]}">${phMskTxIc(x)}</span>`).join("")}${mps}</span>`;
   }
   function phMskChipsHtml(ctx, p) {
-    const rk = PH_MSK_PAINREG[p.r], key = phMskPainKey(p), sides = p.s === "R" || p.s === "L" ? [p.s] : ["R", "L"], rank = ctx.rank;
+    const rk = phMskRegOf(p), key = phMskPainKey(p), sides = p.s === "R" || p.s === "L" ? [p.s] : ["R", "L"], rank = ctx.rank;
     const mus = PH_MSK_MUSCLES.map((m, i) => [m, i]).filter(([m]) => !m.hide && m.regions.includes(rk)).sort((a, b) => (rank[b[0].id] || 0) - (rank[a[0].id] || 0) || a[1] - b[1]).map(x => x[0]);
     const chips = sides.map(S => mus.map(m => { const k = m.id + S, own = phMskMuPain(ctx.list, k); return own && phMskPainKey(own) === key ? phMskChipHtml(ctx, k, sides.length > 1) : ""; }).join("")).join("");
     return `<div class="mk2-chips">${chips}</div><div class="mk2-key"><span><i class="k1"></i>Tender</span><span><i class="k2"></i>Taut</span><span><i class="k3"></i>Trigger</span><span>MP = in Today's points</span></div>`;
   }
   // the area's movements: the ones measured today or last visit, plus any she added; Base · Last · Today · Pain at
   function phMskMoveHtml(ctx, p, key) {
-    const rk = PH_MSK_PAINREG[p.r], lr = PH_MSK_LIMB.has(rk), sides = lr ? (p.s === "R" || p.s === "L" ? [p.s] : ["R", "L"]) : ["L", "R"];
+    const rk = phMskRegOf(p), lr = PH_MSK_LIMB.has(rk), sides = lr ? (p.s === "R" || p.s === "L" ? [p.s] : ["R", "L"]) : ["L", "R"];
     const all = []; (PH_MSK_ROM[rk] || []).forEach((e, i) => { if (!e.lr) all.push({ i, e, S: "" }); else sides.forEach(S => all.push({ i, e, S })); });
     const kOf = x => `${rk}:${x.i}:${x.S}`, has = (v, k) => !!(v && v.rom && v.rom[k] && (phMskNum(v.rom[k].a) != null || v.rom[k].pain)), day = phMskDay();
     const shown = k => has(ctx.vis, k) || has(ctx.prev, k) || phMskRomShow.has(k), ret = !!ctx.prev;
@@ -122065,7 +122404,7 @@ or changing anything in Cliniko.
   }
   // the area's tests (one region's tests are not sided: they sit on the first card of that region)
   function phMskTestsHtml(ctx, p, key) {
-    const rk = PH_MSK_PAINREG[p.r];
+    const rk = phMskRegOf(p);
     if (ctx.regFirst[rk] !== key) { const o = ctx.list.find(q => phMskPainKey(q) === ctx.regFirst[rk]); return `<span class="mk2-on">On ${esc(o ? phPmSideName(PH_PAIN_REGIONS.REGIONS[o.r], o.s).toLowerCase() : "the first card")}</span>`; }
     const T = PH_MSK_TESTS[rk] || [], tv = (ctx.vis && ctx.vis.tests) || {}, tl = (ctx.prev && ctx.prev.tests) || {}, val = (o, k) => (o[k] && o[k] !== "nt" ? o[k] : "");
     const chips = T.map((t, i) => {
@@ -122077,7 +122416,7 @@ or changing anything in Cliniko.
     return `<div class="mk2-foot top">${chips}<span class="mk2-menu"><button type="button" class="mk2-btn" data-msk="menu" data-v="test|${esc(key)}" aria-expanded="${open}">${phMskIc("plus")}Test</button>${pop}</span></div>`;
   }
   function phMskAreaHtml(ctx, idx) {
-    const p = ctx.list[idx], key = phMskPainKey(p), pid = esc(ctx.plan.id), reg = PH_PAIN_REGIONS.REGIONS[p.r], nm = phPmSideName(reg, p.s), rk = PH_MSK_PAINREG[p.r] || "";
+    const p = ctx.list[idx], key = phMskPainKey(p), pid = esc(ctx.plan.id), reg = PH_PAIN_REGIONS.REGIONS[p.r], nm = phPmSideName(reg, p.s), rk = phMskRegOf(p) || "";
     const opts = reg.central ? [["C", "Centre"], ["R", "R"], ["L", "L"]] : [["R", "R"], ["L", "L"], ["B", "Both"]];
     const sc = phMskAreaScores(ctx, p);
     const num = (k, v, lab) => `<label class="sv"${k === "after" ? ` title="Re-test after needling"` : ""}>${lab}<input type="text" class="mk2-num${k === "after" ? " after" : ""}" inputmode="numeric" maxlength="2" data-mk-sc="${pid}|${idx}|${k}" value="${v != null ? v : ""}" autocomplete="off" aria-label="${esc(nm)}, pain ${k === "after" ? "after needling" : "today"}, 0 to 10"></label>`;
@@ -122088,10 +122427,11 @@ or changing anything in Cliniko.
     const dxSrc = sk ? (set && (set.pts || []).length ? `<span class="mk2-tag">your set</span>${esc(set.pts.map(x => x.p).join(", "))}` : `<span class="mk2-on">No set saved</span>`) : "";
     const since = `<span class="mk2-since"><span class="k">How long</span><input type="text" class="field-bare ph-pm-sin" list="phPmSinceList" data-pm-since="${pid}|${idx}" value="${esc(phCcFmtDatePrec(p.since || "", p.sincePrec))}" autocomplete="off" aria-label="${esc(nm)} started" title="A date (dd/mm/yyyy), how long (2 years, 6 mo, 3 wk), or just mm/yyyy or yyyy"><span class="rel${p.since ? "" : " empty"}">${p.since ? esc(phCcRel(p.since)) : ""}</span></span>`;
     const row = (k, lab, v) => `<div class="mk2-row" data-mk-row="${k}"><div class="k">${lab}</div><div class="v">${v}</div></div>`;
+    const pick = PH_MSK_PICKREG[p.r], mkBtn = pick ? `<button type="button" class="mk2-btn${p.mk ? " on" : ""}" data-pm-mk="${pid}|${idx}" aria-pressed="${!!p.mk}">${esc(PH_MSK_REGION_LABEL[pick])} muscles</button>` : "";
     return `<div class="mk2-area${ctx.lit === key ? " lit" : ""}${phMskFresh.has("a:" + key) ? " in" : ""}" data-mk-area="${esc(key)}" data-pm-row="${idx}"${rk ? ` data-mk-reg="${rk}"` : ""} style="--c:${PH_PM_COLOURS[p.c] || PH_PM_COLOURS[0]}">
       <div class="mk2-ahd"><span class="dot" aria-hidden="true"></span><span class="nm">${esc(nm)}</span><span class="ph-tng2-seg mk2-jb" role="group" aria-label="Side">${opts.map(([v, t]) => `<button type="button" class="ph-ltr-qual${p.s === v ? " on" : ""}" data-pm-side="${pid}|${idx}|${v}" aria-pressed="${p.s === v}">${t}</button>`).join("")}</span>${since}<span class="sp"></span><button type="button" class="mk2-ic${p.main ? " on" : ""}" data-pm-main="${pid}|${idx}" aria-pressed="${!!p.main}" title="${p.main ? "Main complaint" : "Make main complaint"}">★</button><button type="button" class="mk2-ic" data-pm-del="${pid}|${idx}" aria-label="Remove ${esc(nm)}" title="Remove this pain">✕</button></div>
       ${row("pain", "Pain", score)}
-      ${rk ? row("palp", "Palpate", `${phMskChipsHtml(ctx, p)}<div class="mk2-foot"><button type="button" class="mk2-btn" data-pm-cause-toggle="${pid}|${idx}" aria-expanded="${causeOpen}">${phMskIc("plus")}Cause</button></div>${cause}`) + row("move", "Move", phMskMoveHtml(ctx, p, key)) + row("tests", "Tests", phMskTestsHtml(ctx, p, key)) : ""}
+      ${rk ? row("palp", "Palpate", `${phMskChipsHtml(ctx, p)}<div class="mk2-foot">${mkBtn}<button type="button" class="mk2-btn" data-pm-cause-toggle="${pid}|${idx}" aria-expanded="${causeOpen}">${phMskIc("plus")}Cause</button></div>${cause}`) + (PH_MSK_ROM[rk] ? row("move", "Move", phMskMoveHtml(ctx, p, key)) + row("tests", "Tests", phMskTestsHtml(ctx, p, key)) : "") : mkBtn ? row("palp", "Palpate", `<div class="mk2-foot">${mkBtn}</div>`) : ""}
       ${row("dx", "Diagnosis", `<input type="text" class="mk2-dx field-bare" list="phPmDxList" data-pm-diag="${pid}|${idx}" value="${esc(p.dx || "")}" maxlength="80" autocomplete="off" spellcheck="false" aria-label="Diagnosis for ${esc(nm)}">${dxSrc ? `<div class="mk2-dxsrc">${dxSrc}</div>` : ""}`)}
     </div>`;
   }
@@ -122117,7 +122457,7 @@ or changing anything in Cliniko.
       const pts = acu.pts.map((x, i) => `<tr class="${phMskFresh.has(`p:${key}|${i}`) ? "new" : ""}${acu.carried ? " carried" : ""}${x.off ? " off" : ""}"><td class="p">${esc(x.p)}${x.off ? `<small title="Unticked on the Treatment tab">not today</small>` : x.src === "set" ? `<small>your set</small>` : x.src === "ashi" ? `<small>tender spot</small>` : acu.carried ? `<small>${esc(phCycShortLbl(acu.carried))}</small>` : ""}</td><td class="s"><button type="button" class="mk2-sd" data-msk="pside" data-v="${ek}|${i}" aria-label="${esc(x.p)} side ${x.s}" title="Side">${x.s === "B" ? "Both" : x.s === "C" ? "Centre" : x.s}</button></td><td></td><td><button type="button" class="mk2-x" data-msk="prm" data-v="${ek}|${i}" aria-label="Remove ${esc(x.p)}">✕</button></td></tr>`).join("");
       const sk = phMskSetKey(p.dx), set = sk && phMskSets()[sk];
       const setBtn = sk && acu.pts.length ? (!set ? `<button type="button" class="mk2-btn gold" data-msk="setsave" data-v="${ek}">Save as my set</button>` : acu.from !== sk || acu.edited ? `<button type="button" class="mk2-btn gold" data-msk="setsave" data-v="${ek}">Update my set</button>` : `<span class="mk2-tag">from your set</span>`) : "";
-      return `<div class="mk2-pg${ctx.lit === key ? " lit" : ""}" data-mk-pg="${ek}"${PH_MSK_PAINREG[p.r] ? ` data-mk-reg="${PH_MSK_PAINREG[p.r]}"` : ""}><div class="mk2-pgh"><b>${esc(phMskCap(reg.label))} · ${p.s === "C" ? "centre" : p.s === "B" ? "both" : p.s}</b><span>${esc(p.dx || "no diagnosis yet")}</span></div>${mine.length || acu.pts.length ? `<table class="mk2-ptbl"><tbody>${mine.map(mpRow).join("")}${pts}</tbody></table>` : ""}<div class="mk2-padd"><input type="text" class="field-bare" data-mk-padd="${ek}" placeholder="+ point" autocomplete="off" spellcheck="false" aria-label="Add a point, ${esc(phPmSideName(reg, p.s))}"><button type="button" class="mk2-btn${acu.pts.some(x => x.src === "ashi") ? " on" : ""}" data-msk="ashi" data-v="${ek}" aria-pressed="${acu.pts.some(x => x.src === "ashi")}">Ashi</button>${setBtn}</div></div>`;
+      return `<div class="mk2-pg${ctx.lit === key ? " lit" : ""}" data-mk-pg="${ek}"${phMskRegOf(p) ? ` data-mk-reg="${phMskRegOf(p)}"` : ""}><div class="mk2-pgh"><b>${esc(phMskCap(reg.label))} · ${p.s === "C" ? "centre" : p.s === "B" ? "both" : p.s}</b><span>${esc(p.dx || "no diagnosis yet")}</span></div>${mine.length || acu.pts.length ? `<table class="mk2-ptbl"><tbody>${mine.map(mpRow).join("")}${pts}</tbody></table>` : ""}<div class="mk2-padd"><input type="text" class="field-bare" data-mk-padd="${ek}" placeholder="+ point" autocomplete="off" spellcheck="false" aria-label="Add a point, ${esc(phPmSideName(reg, p.s))}"><button type="button" class="mk2-btn${acu.pts.some(x => x.src === "ashi") ? " on" : ""}" data-msk="ashi" data-v="${ek}" aria-pressed="${acu.pts.some(x => x.src === "ashi")}">Ashi</button>${setBtn}</div></div>`;
     }).join("");
     const rest = mpKeys.filter(k => !phMskMuPain(ctx.list, k));
     total += rest.filter(k => ctx.plan0[k].done).reduce((n, k) => n + phMskTx(ctx.plan0[k]).length, 0);
@@ -122188,6 +122528,7 @@ or changing anything in Cliniko.
     if (act === "dg-tap") {
       const [id, S] = v.split(":"), k = id + S;
       if (phMskTool === "f") return phMskClick2(el, "cyc", k, c);
+      if (phMskTool === "mp" && !(PH_MSK_MU[id] || {}).mp) { presSavedToast("No motor point here"); return true; }
       if (!phMskMuPain(phMskPainsFor(name, c.plan), k) && !phMskPlanOf(rec)[k]) { presSavedToast("Mark a pain on that side first"); return true; }
       return phMskClick2(el, "mtx", k + ":" + phMskTool, c);
     }
@@ -122196,9 +122537,10 @@ or changing anything in Cliniko.
       const t = vis0 && vis0.pal ? vis0.pal[k] : undefined, lv = t > 0 ? t : 0, last = (prev && prev.pal && prev.pal[k]) || 0;
       if (!own && !lv) { presSavedToast("Mark a pain on that side first"); return true; }
       const next = !lv && t == null && last > 0 ? last : lv >= 3 ? 0 : lv + 1;
-      if (!W(vis => { vis.pal = vis.pal || {}; vis.pal[k] = next; if (next && !lv) { const e = phMskPlanEntry(vis, rec, k), cur = phMskTx(e); if (!cur.includes("mp")) { e.tx = PH_MSK_TX.map(x => x[0]).filter(x => x === "mp" || cur.includes(x)); delete e.tech; } } if (!next) { const keep = phMskTx(phMskPlanOf(rec, vis)[k]).filter(x => x !== "mp"); if (keep.length) { const e = phMskPlanEntry(vis, rec, k); e.tx = keep; delete e.tech; } else phMskPlanRemove(vis, rec, k); if (vis.refer) delete vis.refer[k]; } })) return true;
+      if (!W(vis => { vis.pal = vis.pal || {}; vis.pal[k] = next; if (next && !lv && (PH_MSK_MU[k.slice(0, -1)] || {}).mp) { const e = phMskPlanEntry(vis, rec, k), cur = phMskTx(e); if (!cur.includes("mp")) { e.tx = PH_MSK_TX.map(x => x[0]).filter(x => x === "mp" || cur.includes(x)); delete e.tech; } } if (!next) { const keep = phMskTx(phMskPlanOf(rec, vis)[k]).filter(x => x !== "mp"); if (keep.length) { const e = phMskPlanEntry(vis, rec, k); e.tx = keep; delete e.tech; } else phMskPlanRemove(vis, rec, k); if (vis.refer) delete vis.refer[k]; } })) return true;
       phMskSyncDraft(phPatientPeek(name));
-      if (own) { phMskLit = phMskPainKey(own); phMskDgReg = PH_MSK_PAINREG[own.r] || phMskDgReg; }
+      // a muscle shared by two areas (Psoas: low back, belly, hip) keeps the picture on the area she has open when it belongs there too
+      if (own) { const lit = phMskPainsFor(name, c.plan).find(p => phMskPainKey(p) === phMskLit); if (!(lit && phMskMuPain([lit], k))) { phMskLit = phMskPainKey(own); phMskDgReg = phMskRegOf(own) || phMskDgReg; } }
       phMskFresh.add("c:" + k); phMskFresh.add("b:" + k); if (next && !lv) phMskFresh.add("m:" + k);
       return done(["plan"], next && !lv);
     }
@@ -122361,13 +122703,13 @@ or changing anything in Cliniko.
   // her 2026-10-28 Tools bar over the picture: what a tap marks ("f" = the finding, or acu / trp / mp); view state, never saved
   var phMskTool = "f";
   function phMskDgRegFor(list) {
-    const regs = (list || []).map(p => PH_MSK_PAINREG[p.r]).filter(Boolean);
+    const regs = (list || []).map(p => phMskRegOf(p)).filter(Boolean);
     return regs.includes(phMskDgReg) ? phMskDgReg : (regs[0] || "");
   }
   // the sides a region's names need (her pick A1): its pains' sides and any side already marked there, so nothing moves as names come
   function phMskDgSides(rec, rk) {
     const c = phMskCtx(), out = new Set(), vis = phMskToday(rec), prev = phMskPrev(rec);
-    if (c && c.name) phMskPainsFor(c.name, c.plan).forEach(p => { if (PH_MSK_PAINREG[p.r] === rk) (p.s === "R" || p.s === "L" ? [p.s] : ["R", "L"]).forEach(s => out.add(s)); });
+    if (c && c.name) phMskPainsFor(c.name, c.plan).forEach(p => { if (phMskRegOf(p) === rk) (p.s === "R" || p.s === "L" ? [p.s] : ["R", "L"]).forEach(s => out.add(s)); });
     [vis && vis.pal, prev && prev.pal, phMskPlanOf(rec, vis)].forEach(o => Object.keys(o || {}).forEach(k => { const m = PH_MSK_MU[k.slice(0, -1)]; if (m && m.regions.includes(rk) && o[k]) out.add(k.slice(-1)); }));
     return out;
   }
@@ -122490,7 +122832,7 @@ or changing anything in Cliniko.
   }
   // under a pain (the first pain of each exam region owns that region's muscles; a muscle serving two regions shows under both)
   function phMskPainMusclesHtml(rec, plan, p, idx, mus, seen, span, extra) {
-    const rk = PH_MSK_PAINREG[p.r]; if (!rk || seen.has(rk)) return "";
+    const rk = phMskRegOf(p); if (!rk || seen.has(rk)) return "";
     seen.add(rk);
     const mine = mus.filter(mu => mu.m.regions.includes(rk)), lbl = (PH_MSK_REGION_LABEL[rk] || rk).toLowerCase();
     const foot = phMskMuAdd && phMskMuAdd.key === `${plan.id}|${idx}` ? phMskMuAddHtml(rec, rk) : `<button type="button" class="mk-muaddbtn" data-msk="mu-add-open" data-v="${idx}">${phMskIc("plus")}Muscle for ${esc(lbl)}</button>`;
@@ -122501,7 +122843,7 @@ or changing anything in Cliniko.
   }
   // muscles on the plan that fit none of the pains (a pain was removed, or last visit's plan was for another region)
   function phMskOtherMusclesHtml(list, mus, span) {
-    const covered = new Set(); list.forEach(p => { const r = PH_MSK_PAINREG[p.r]; if (r) covered.add(r); });
+    const covered = new Set(); list.forEach(p => { const r = phMskRegOf(p); if (r) covered.add(r); });
     const rest = mus.filter(mu => !mu.m.regions.some(r => covered.has(r)));
     return rest.length ? `<tr class="mu other"><td colspan="${span}"><div class="mk-mus"><div class="mk-muh">Other muscles</div>${rest.map(mu => phMskMuLineHtml(mu)).join("")}</div></td></tr>` : "";
   }
@@ -122559,7 +122901,7 @@ or changing anything in Cliniko.
       parts = ["head", "exam"];
     } else if (act === "pain-add") {
       const [rk, side] = v.split(":"), pr = PH_MSK_ADDREG[rk], pid = phMskPid(name, c.plan);
-      if (!pr || !phPmWrite(name, pid, list => phPmPush(list, pr, side || "B"))) return true;
+      if (!pr || !phPmWrite(name, pid, list => { phPmPush(list, pr, side || "B"); if (PH_MSK_PICKREG[pr]) list.forEach(q => { if (q.r === pr) q.mk = 1; }); })) return true;
       try { phTpAutoBust(); } catch (e) { /* cache not built yet */ }
       try { phPmRefresh(name, pid); } catch (e) { /* pain map not on screen */ }
       parts = ["head", "exam"];
