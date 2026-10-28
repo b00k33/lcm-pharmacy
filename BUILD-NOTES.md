@@ -5463,3 +5463,31 @@ listing's phone cards (`.ph-listing-m`, `.ph-lm-*`) and the shell's narrow paddi
 - Today's other style cuts (the MSK `.mk-tile` rules here, MSK Acu, C6) were checked line by line in their diffs: only the
   named rules went. The fixed script is `scratchpad/c22dead/cssdead-final.pl`; do not use the old one for cuts.
 - **Not live:** waits for her "push live" (the bug itself is live since build 20261028-101300).
+
+## Neck muscle picture: true shapes (2026-10-28)
+Her words (screenshot of the MSK "NECK · MUSCLES" picture, the old grey bellies and a "Deep: Scalenes" chip): "do musces for neck -
+show mock". Mock `mocks/neck-muscles-mock-2026-10-28.html` (built from the app's own `PH_MSK_ATLAS` and `PH_BODY_GEOM`). Her 8
+picks: Side + back views; a Right | Left switch under the one side picture; a close window; the suboccipitals as one tap; one
+drawing everywhere (the neck shapes also at the top of Shoulder and Mid back); add cervical multifidus and lateral pterygoid
+(longus colli not picked); bones as in the mock; on the phone side and back next to each other.
+- Rows (`PH_MSK_MUSCLES`, after their wholes): `splc`, `ssc` (`of` "spl"), `cmf`, `scms`, `scmc` (`of` "scm"), `scaa`, `scam`, `scap`
+  (`of` "scal"), `lpt`. The wholes `scm`, `scal`, `spl` are now `hide`; `sub` is not split. **Their nerve, motor point, point and
+  caution words are Claude's DRAFT** (CLAUDE.md: draft until she has read and corrected them).
+- Atlas: `PH_MSK_ATLAS_REG` adds "cervical", `PH_MSK_ATLAS_VIEWS = { cervical: ["side", "back"] }`, a new `side: {surface, deep,
+  ghost}` on SIDE's grid (not mirrored; `flip` draws the left). The neck shapes go at the start of front / back surface and deep;
+  the old front SCM shading, the old upper trap (front and back) and the old back deep levator went (the new upper trap reaches the
+  skull). `PH_MSK_TAGN` gains the short names.
+- `phMskAtlasHl(..., rk)`: the side view is one side (`phMskSideLR`), its tags mirror with the flip; a muscle whose only region is
+  cervical tags itself only when `rk === "cervical"`. `phMskDiagramView`: the side crop (`PH_MSK_SIDE_CROP`) mirrors for the left;
+  the side pane carries the `ph-tng2-seg mk2-jb` Right | Left bar (`data-msk="dg-side"`, handled in `phMskClick2`, repaints every
+  `[data-mk-dg]` host, the Enlarge copy too). `sideSvg` gains `opts.viewBox` and `opts.neck === false` (its neck and jaw detail lines,
+  marked with a 4th `1` in `SIDE_DET`, stay off under the muscles).
+- **Tested** (sandbox, port 8994, a made-up patient with a neck pain map, the real MSK page): the neck picture = Side + Back × Surface
+  / Deep, 67 tappable shapes; a tap on SCM sternal R saved `pal.scmsR = 1` and tagged "SCM · sternal · Tender"; Left mirrored the
+  window (viewBox 30 8 70 86), showed only left marks, a tap saved `scmsL`; the bar is 32px, 13px Inter, the MSK colour, the same as
+  the page's own side bar; Enlarge: the bar and a tap there (`scamR`) repaint the page too; no console errors from the new code.
+  Shoulder and Mid back draw the neck shapes with no neck-only tags; Low back unchanged. The palpation lists and Today's points
+  show the new rows ("Sternocleidomastoid · sternal head", "MP · near LI18 / SI17"). Rendered at 640 px and at phone width (a
+  harness with the card's size container): side and back next to each other, nothing past the card. The Fang Bing Ren plate
+  `@msk:cervical:back` draws. **Not tested:** her records; a real phone; the Treatment tab's Points row with the new rows ticked.
+- **Not live:** waits for her "push live".
