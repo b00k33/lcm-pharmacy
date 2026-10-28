@@ -1312,9 +1312,13 @@ origin/main:index.html`; don't trust this list's age.
 - The "Post Ovulation" house-blend formula is missing from her live
   inventory: recreate it with "+ Add formula" or restore it from a backup
   (no code can bring it back).
-- Fang Bing Ren reference formulas waiting on her tables: Wen Jing Tang,
-  Gui Zhi Fu Ling Wan, Chai Hu Gui Zhi Tang, Ling Gui Zhu Gan Tang (Huang
-  Lian Jie Du Tang and Da Chai Hu Tang are families now).
+- Fang Bing Ren reference formulas waiting on her tables: Gui Zhi Fu Ling
+  Wan, Chai Hu Gui Zhi Tang, Ling Gui Zhu Gan Tang (Huang Lian Jie Du Tang,
+  Da Chai Hu Tang and Wen Jing Tang are families now).
+- Wen Jing Tang (integrate33 run 16, 2026-10-28): the minus size (-3 a line),
+  whether her unrated conditions score (4 each, as for Da Chai Hu), a
+  Dark-pale colour on the cycle card, Gui Zhi filing, and the DRAFT card
+  line, Ask her answers and picture labels.
 
 **Built on my reading — hers to confirm:** the pulse chart starts blank each
 day; Usual period shows Wheel |

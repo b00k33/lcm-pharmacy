@@ -5647,3 +5647,44 @@ Ren's formulas, 4 + New formula). Memory `project_lcm_herbs_block_formula_pick_2
 - **Draft wording (hers to correct):** "Acu · <muscle>", "Ashi · trigger release", "MP · near <point>", "N to needle", the
   Tools short labels on a phone (Release, Motor), "Mark a pain on that side first".
 - **Seen, not mine:** Enlarge draws the back pain figure black (its cloned picture's ids); left for its own fix.
+
+## 2026-10-28 · Wen Jing Tang: integrate33 run 16
+Her Wen Jing Tang table (Ren /5, Bing /5, conditions, key distinction, "not Wen Jing Tang" clues, memory aid) + "add this to fang bing ren".
+Matrix: `fbr-integrate33-wenjingtang-2026-10-28.html` (root until live, then mocks/).
+- **Family** `PH_FORMULAS.wenjingtang`, the 34th: Bing 17 lines (ceiling 66), Ren 9 (34), her numbers as weights. Her slash lines are one `or`
+  (prolonged / spotting, tension / tenderness, wind / cold, nausea / dry heaving, dry lips / mouth, joints / body; Ren complexion pale / dull /
+  sallow, tongue dark / pale = pale, pale only, dusky, dark or purple). A comma stays one row: "Dark, pale menstrual blood" = dark-pale (her "or"
+  lines use a slash), "Cold, painful lower abdomen". Her clots line = the pool's "dark blood or clots". Her conditions (unrated), Ren pearl, key
+  distinction and not-clues are in `core`; the conditions score nothing.
+- **Minus points**, -3 a line (Dang Gui Shao Yao San's size, hers to confirm), Bing only: bright-red / purple-red / thick sticky blood (one line);
+  strong internal heat = averse to heat / intense thirst / yellow coat / red tongue (one line).
+- **New rows:** Bing `period_dark_pale_now`, `period_long_now`, `period_irreg_perimeno_now`, `lowabd_cold_pain_now`, `palms_soles_hot_now`,
+  `feverish_afternoon_now`, `dry_heave_now`, `period_purple_red_now`, `period_sticky_now`; Ren `guizhi_type_tend` ("Constitution: Cinnamon Twig
+  (Gui Zhi) type", a tap like the Chai Hu one; a fixed fact on the Compass, `phCxFixedKey`). No Ren twins (no family weighs them). Bing groups
+  Gynae / Pain & body / Subjective / Digestive, Ren Build; search words (`PH_BING_ALIAS`) for all nine.
+- **Wired:** abdomen chart Cold @ lower / iliac → the cold lower belly (`PH_FBR_CHART_PREFILL`, its most defining word; the chart has no pain
+  mark) + the Abdomen page strip; **today's cycle day log → Bing** (`phCycDayBing`, read by `phTriCycleKeys` and the day log's strip): clots or
+  dark / brown → dark blood or clots, Spotting → spotting, Bright red → bright red, for every family that weighs them; Ask her: Heat & cold +
+  "Hot palms and soles", "Feverish in the afternoon" (Right now only), Thirst & mouth + "Dry lips" (both), Appetite + "Dry heaving" (Right now),
+  DRAFT labels; Patterns: `bt_wenjingtang` in Yang deficiency / cold (its formula line already names Wen Jing Tang) + `PH_FBR_TO_CLUE` (dark-pale →
+  dark + pale blood, cold lower belly → cold-type pain, afternoon fever → feverish, perimenopausal → irregular); `PH_BING_SITE` (lower belly;
+  hands front, soles back); formula picture `SC.wenjingtang` (12 herbs in 4 groups, `PAT` yang); `PH_FBR_FOR_FAMS` periods / fertility / meno:
+  Wen Jing Tang (33 on that area) takes Dang Gui Shao Yao San's seat (22 today).
+- **No honest source:** pulse (her table names none), bloods, Medical history; the cycle card has no bleed length and no dark-pale colour; Change
+  of life answers are Ren only. Tongue rows reuse the chart's existing wiring.
+- **Filed under Gui Zhi** in `PH_REN_FAM_GROUPS` (her "Cinnamon Twig constitution"; MY pick): the deepest Gui Zhi shade `#597A86`; Wu Ling San and
+  Xiao Jian Zhong Tang re-spaced a shade lighter.
+- **Guide:** her seeded notes-only Wen Jing Tang card leaves "Notes only" (it scores now); its memory aid, distinction, conditions and source show
+  on the family card (`phGdfNoteIsFam`, `phGdfFamNoteId`). The seeded note is unchanged; "Hide this note" on the card hides them.
+- **Tested** (sandbox, synthetic patient, deleted): all 34 families lead their own full picture; ceilings 66 / 34; her highest-yield pattern
+  leads 48% (next Shen Qi Wan 10%); bright red + heat take 6 off (one line each, once); `or` lines once; today's day log (spotting, dark, small
+  clots) ticks dark blood or clots + spotting on Bing and on the strip; chart words cold@lower tick the cold lower belly, cold@epi does not; Ask
+  her shows the four answers (the Bing-only ones under Right now), Dry heaving taps on (+3) and off; Fang Bing Ren board (under Gui Zhi, 62% for
+  the test patient), Patterns (Wen Jing Tang body type under Yang deficiency / cold), Guide card (one tile, memory aid, distinction, the Against
+  rows), the picture's three stops; Prescriptions search narrows to the typed name and comes back; 375px no sideways scroll; no console errors.
+- **Not checked:** her real records; the Key2 phone; a hand-drawn abdomen chart (checked through the chart words); the Care Plan formula-row thumb
+  (the test plan's view showed the formula as text).
+- **Needs her word:** the minus size; her four unrated conditions not already in her lines (dysmenorrhea, frequent / two a month, menorrhagia,
+  menopausal symptoms) at 4 like Da Chai Hu; a Dark-pale cycle colour; DRAFT words (card line, Ask her answers, picture labels incl. "Thin pulse",
+  not from her table); the Gui Zhi filing.
+- **Not live:** waits for her "push live".
