@@ -18622,6 +18622,13 @@
   #pharmacyPage .ph-fv-cell .ph-visit-abd-map.ro.mini .ph-abd2-svg { width: 32px; height: 61px; }
   #pharmacyPage .ph-fv-pt .ph-pulse-micro { flex-direction: column; align-items: flex-start; gap: 2px; }
   #pharmacyPage .ph-tv-go .ph-today-last { grid-column: 2; font-size: var(--fs-11); color: var(--ph-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* the tongue photo flow (her 2026-10-29 picks B): today's photo on the Tongue tile; gold while it waits to be charted */
+  #pharmacyPage .ph-tv-go .ph-tv-th { grid-row: 1 / span 3; align-self: center; position: relative; width: 40px; height: 40px; border-radius: 6px; overflow: hidden; background: var(--ph-ink); }
+  #pharmacyPage .ph-tv-go .ph-tv-th img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #pharmacyPage .ph-tv-go .ph-tv-th .ok { position: absolute; right: 2px; bottom: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--ph-good); color: #fff; font: normal 700 10px/16px var(--font-body); text-align: center; }
+  #pharmacyPage .ph-tv-tile.ph-tv-wait { background: var(--ph-gold-tint); border-color: var(--ph-gold); }
+  #pharmacyPage .ph-tv-tile.ph-tv-wait .ph-today-sum { color: var(--ph-gold-deep); font-weight: 600; }
+  #pharmacyPage .ph-tv-tile.ph-tv-flash { box-shadow: 0 0 0 3px rgba(217, 174, 71, .45); border-color: var(--ph-gold); }
   #pharmacyPage .ph-acu-fndrow .tab-link { margin-left: 6px; }
   /* ==== TODAY'S SESSION, SLEEK (her locked mock treatment-tab-sleek-mock.html, 2026-10-10) ====
      ONE chip for every clickable pill/link on the redesigned Treatment tab:
@@ -57694,6 +57701,8 @@
       }
       const flowMore = e.target.closest("[data-flow-more]");
       if (flowMore) { presFlowMoreOpen = presFlowMoreOpen === flowMore.dataset.flowMore ? "" : flowMore.dataset.flowMore; presFlowRailRefresh(); return; }
+      const tngChart = e.target.closest("[data-tv-tng-chart]");   // the Tongue tile with today's photo on it (tongue photo flow, 2026-10-29)
+      if (tngChart) { phTngChartOpen(tngChart.dataset.tvTngChart); return; }
       const flowGo = e.target.closest("[data-flow-go]");
       if (flowGo) {
         const wasPlan = presStage === "plan";
@@ -73923,6 +73932,9 @@ or changing anything in Cliniko.
   }
   // the inverse -- used only by backup restore (below), turning a backup
   // file's renPhotos dataUrls back into Blobs for phRenPhotoPut.
+  // a photo record's own fields a backup file carries beside its picture (the export above, the restore below)
+  const PH_REN_BACKUP_FIELDS = ["dateKey", "shot", "isProfile", "filename", "relayedAt", "srcSize", "srcMtime"];
+  const phRenBackupFields = r => Object.fromEntries(PH_REN_BACKUP_FIELDS.filter(k => r && r[k] != null && r[k] !== "").map(k => [k, r[k]]));
   function phRenDataUrlToBlob(dataUrl) {
     return fetch(dataUrl).then(r => r.blob());
   }
@@ -74367,6 +74379,7 @@ or changing anything in Cliniko.
       const own = `_d${phCapDeviceId()}_`;
       const imported = phCapImportedLoad();
       let n = 0, delFails = 0, dupSkips = 0, unfiled = 0, errs = 0;
+      const tngToday = new Map();   // patient key -> today's tongue photos filed this round (the tongue photo flow, 2026-10-29)
       for (const it of items) {
         if (phCapOwnUploads.has(it.path) || it.path.includes(own)) continue;   // never re-import this device's own uploads
         if (imported.has(it.path)) continue;   // already filed locally -- the cloud delete may just be lagging or have failed
@@ -74395,6 +74408,7 @@ or changing anything in Cliniko.
             });
             await phRenLoadPhotosFor(it.patientKey);
             n++;
+            if (kind === "tongue" && m[2] === keyOf(TODAY)) tngToday.set(it.patientKey, (tngToday.get(it.patientKey) || 0) + 1);
           }
           // a rejected duplicate still counts as "handled" -- filed already,
           // or now correctly recognised as the same photo -- so its cloud
@@ -74414,10 +74428,21 @@ or changing anything in Cliniko.
       if (dupSkips) window.__phCapDupSkips = (window.__phCapDupSkips || 0) + dupSkips;
       if (n || dupSkips) {
         window.__phCapLastImport = { at: Date.now(), n, dupSkips };
+        // her 2026-10-29 picks (tongue photo flow, A + B): today's tongue photos name the patient, with Chart (the one toast, 6.5 s);
+        // with that patient's Today's visit or Tongue page on screen the Tongue tile flashes gold instead
+        const herePk = phTngHerePk();
+        let toastPk = "", named = 0;
+        tngToday.forEach((c, pk) => { if (pk === herePk) { named += c; phTvTngArrived(pk); } else toastPk = pk; });
+        if (toastPk) named += tngToday.get(toastPk);
+        const rest = n - named;
         const bits = [];
-        if (n) bits.push(`📷 ${n} photo${n === 1 ? "" : "s"} arrived from your phone.`);
-        if (dupSkips) bits.push(`${n ? "" : "📷 "}${dupSkips} duplicate cop${dupSkips === 1 ? "y" : "ies"} skipped — already on file.`);
-        phFlashShow(bits.join(" "));
+        if (rest) bits.push(`📷 ${rest} photo${rest === 1 ? "" : "s"} arrived from your phone.`);
+        if (dupSkips) bits.push(`${rest ? "" : "📷 "}${dupSkips} duplicate cop${dupSkips === 1 ? "y" : "ies"} skipped — already on file.`);
+        if (bits.length) phFlashShow(bits.join(" "));
+        if (toastPk) {
+          const c = tngToday.get(toastPk);
+          presSavedToast(`${c} tongue photo${c === 1 ? "" : "s"} · ${phRecPhotosPatientName(toastPk)}`, { ms: 6500, acts: [{ label: "Chart", fn: () => phTngChartOpen(toastPk) }] });
+        }
       }
     } catch (e) {}
     phCapImportBusy = false;
@@ -74449,6 +74474,39 @@ or changing anything in Cliniko.
   }
   phStoragePersist();
   setTimeout(() => { phCapRelayKick(); setInterval(phCapAutoImport, 120000); }, 8000);
+  // the tongue photo flow (her 2026-10-29 picks): while a patient's file is open the laptop looks every 10 s, so the phone's four
+  // shots are there by the time she sits down (one bucket list per look; every 2 min elsewhere, as before)
+  setInterval(() => { if (document.visibilityState === "visible" && PHARMACY.activeTab === "prescriptions" && phPfwName()) phCapAutoImport(); }, 10000);
+  // the patient whose Today's visit or Tongue page is on screen ("" when none): there the tile is the door, so no toast
+  function phTngHerePk() {
+    return PHARMACY.activeTab === "prescriptions" && presStage === "plan" && (presTpMainTab === "today" || presTpMainTab === "tongue")
+      ? phPatientKey(phPfwName() || "") : "";
+  }
+  // today's tongue shot to chart from: Natural light first (PH_TONGUE_SHOT_RANK), the newest of its kind
+  function phTngTodayShot(pk) {
+    const today = keyOf(TODAY), rank = r => { const v = PH_TONGUE_SHOT_RANK[phRenShotOf(r)]; return v == null ? 9 : v; };
+    return (phRenPhotosFor(pk) || []).filter(r => r.kind === "tongue" && phRenDateKeyOf(r) === today)
+      .sort((a, b) => (rank(a) - rank(b)) || ((b.createdAt || 0) - (a.createdAt || 0)))[0] || null;
+  }
+  // Chart (the arrival toast, the Tongue tile): her Today's visit with today's photo on top, Colour ready (the viewer's own tab
+  // rule: a Sublingual shot opens on Sublingual). From another page her file opens first, so closing the photo leaves her visit.
+  function phTngChartOpen(pk) {
+    if (phTngHerePk() !== pk) {
+      const script = phApptScriptFor(pk);
+      if (!script) { phPatientProfileOpen(phRecPhotosPatientName(pk)); return; }
+      presGoToScript(script.id, { before: () => { presStage = "plan"; presTpMainTab = "today"; } });
+    }
+    const shot = phTngTodayShot(pk);
+    if (shot) phRenViewPhoto(shot.id, pk);
+  }
+  // the photos landed while her Today's visit (or Tongue page) is on screen: the tile repaints in place and flashes gold
+  function phTvTngArrived(pk) {
+    if (phTngHerePk() !== pk) return;
+    if (presTpMainTab === "tongue") { try { phTngRefresh(phPfwName()); } catch (e) { /* the page is not drawn */ } return; }
+    try { phTodayTilesRefresh(phPfwName()); } catch (e) { /* Today's visit is not open */ }
+    const t = document.querySelector('#pharmacyPage [data-today-tile="tongue"]');
+    if (t) { t.classList.add("ph-tv-flash"); setTimeout(() => t.classList.remove("ph-tv-flash"), 1400); }
+  }
 
   // ---- photo cache bridge: IndexedDB reads are async, phHxConstitutionHtml's
   // render is not -- load once per patient into this cache (minting one
@@ -76835,8 +76893,11 @@ or changing anything in Cliniko.
       phRenCompareRefresh(pk);
       return;
     }
+    const wasTng = phRenCropState && phRenCropState.viewOnly && phRenCropState.kind === "tongue";
     phRenCropState = null;
     phRenCropDrag = null;
+    // a tongue photo charted in the viewer: the Today's visit Tongue tile shows it as the photo closes (tongue photo flow, 2026-10-29)
+    if (wasTng && presTpMainTab === "today") { const nm = phPfwName(); if (nm) { try { phTodayTilesRefresh(nm); } catch (e) { /* Today's visit is not open */ } } }
   }
   function phRenCropScale() {
     const img = document.getElementById("phRenCropImg");
@@ -97567,8 +97628,13 @@ or changing anything in Cliniko.
       const last = p.id === "msk" ? phMskLastLine(rec) : phExamPast(rec, p.id)[0];
       const lastLine = last ? `<span class="ph-today-last" title="Last visit">${esc(phCycShortLbl(last.date))} · ${esc(last.txt)}</span>` : "";   // her 2026-10-29 pick: last visit's words faint under today's
       const menu = phTodaySkipMenu === p.id ? `<div class="ph-today-skipmenu" role="menu"><button type="button" role="menuitem" data-today-skip-do="${p.id}:today">Not today</button><button type="button" role="menuitem" data-today-skip-do="${p.id}:always">Always for ${pr.o}</button></div>` : "";
-      tiles.push(`<div class="ph-today-tile ph-tv-tile${done ? " done" : ""}" data-today-tile="${p.id}">`
-        + `<button type="button" class="ph-tv-go" data-flow-go="${p.id}"><span class="ph-today-tick${pop ? " pop" : ""}">${done ? "✓" : ""}</span><span class="ph-today-label">${esc(p.label)}</span><span class="ph-today-sum">${done ? esc(phTodaySumPart(rec, p.id)) : `<span class="ph-tp-notyet">not yet</span>`}</span>${lastLine}</button>`
+      // the tongue photo flow (her 2026-10-29 picks B): today's Natural light shot sits on the Tongue tile, gold "4 photos / Chart"
+      // until charted, then the photo with its tick + the words; a tap opens that photo, Colour ready (phTngChartOpen)
+      const tp = p.id === "tongue" ? phTngTileShot(key, name) : null;
+      const tn = tp ? (phRenPhotosFor(key) || []).filter(r => r.kind === "tongue" && phRenDateKeyOf(r) === keyOf(TODAY)).length : 0;
+      tiles.push(`<div class="ph-today-tile ph-tv-tile${done ? " done" : ""}${tp && !done ? " ph-tv-wait" : ""}" data-today-tile="${p.id}">`
+        + (tp ? `<button type="button" class="ph-tv-go ph-tv-photo" data-tv-tng-chart="${esc(key)}" title="Open today's photo to chart the tongue"><span class="ph-tv-th"><img src="${tp.objectUrl}" alt="">${done ? `<i class="ok">✓</i>` : ""}</span><span class="ph-today-label">${esc(p.label)}</span><span class="ph-today-sum">${done ? esc(phTodaySumPart(rec, p.id)) : `${tn} photo${tn === 1 ? "" : "s"}<br>Chart`}</span>${lastLine}</button>`
+          : `<button type="button" class="ph-tv-go" data-flow-go="${p.id}"><span class="ph-today-tick${pop ? " pop" : ""}">${done ? "✓" : ""}</span><span class="ph-today-label">${esc(p.label)}</span><span class="ph-today-sum">${done ? esc(phTodaySumPart(rec, p.id)) : `<span class="ph-tp-notyet">not yet</span>`}</span>${lastLine}</button>`)
         + `<span class="ph-today-skipwrap"><button type="button" class="ph-today-skip ph-tv-more" data-today-skip="${p.id}" aria-haspopup="menu" aria-expanded="${menu ? "true" : "false"}" aria-label="Skip ${esc(p.label)}">⋯</button>${menu}</span></div>`);
     });
     phTodayFx.ticks.set(key, now);
@@ -97601,6 +97667,11 @@ or changing anything in Cliniko.
     tv.style.setProperty("--ph-tv-top", h + "px");
   }
   window.addEventListener("resize", () => { if (document.querySelector("#pharmacyPage .ph-tv")) phTodayStickyTop(); });
+  // today's tongue shot for the tile; a file whose photos are not read yet reads them, then repaints the tiles once
+  function phTngTileShot(pk, name) {
+    if (phRenPhotosFor(pk) == null) { phRenLoadPhotosFor(pk).then(() => { try { phTodayTilesRefresh(name); } catch (e) { /* Today's visit is not open */ } }); return null; }
+    return phTngTodayShot(pk);
+  }
   function phTodayTilesRefresh(name) {
     const host = document.querySelector("#pharmacyPage [data-today-checks]"), rec = name ? phPatientPeek(name) : null;
     if (host && rec) host.outerHTML = phTodayLookHtml(name, rec);
@@ -138002,8 +138073,11 @@ Dosage: {dosage}
     let renPhotos = [];
     try {
       const raw = await phRenPhotoGetAll();
+      // her 2026-10-29 "Yes, fix it too": each photo's own fields ride along (until now a file restore dropped every photo's date,
+      // tongue shot, profile mark and file name: the 27 Oct backup's 398 tongue photos all came back unlabelled)
       renPhotos = await Promise.all(raw.map(async r => ({
         id: r.id, patientKey: r.patientKey, kind: r.kind, mime: r.mime, createdAt: r.createdAt,
+        ...phRenBackupFields(r),
         dataUrl: await phRenBlobToDataUrl(r.blob),
       })));
     } catch (e) {}
@@ -138161,9 +138235,13 @@ Dosage: {dosage}
       // 09 lesson) -- a big photo set must never leave "Restore ticked
       // sections" looking like it silently did nothing.
       if (ch.photos && pending.photos.length) {
+        // a photo already on this device keeps what an older backup file never carried (its date, shot, profile mark, file name);
+        // a field the file does carry wins (2026-10-29)
+        let have = new Map();
+        try { have = new Map((await phRenPhotoGetAll()).map(r => [r.id, r])); } catch (e) {}
         const photosOk = await Promise.race([
           Promise.all(pending.photos.map(p => phRenDataUrlToBlob(p.dataUrl).then(blob =>
-            phRenPhotoPut({ id: p.id, patientKey: p.patientKey, kind: p.kind, mime: p.mime, createdAt: p.createdAt, blob })
+            phRenPhotoPut({ ...phRenBackupFields(have.get(p.id) || {}), id: p.id, patientKey: p.patientKey, kind: p.kind, mime: p.mime, createdAt: p.createdAt, ...phRenBackupFields(p), blob })
           ))).then(() => true, () => false),
           new Promise(r => setTimeout(() => r(false), 15000)),
         ]);

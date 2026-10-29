@@ -737,7 +737,15 @@ photo tile. The viewer's dark title bar carries the photo's Kind (a dropdown of 
 phone) and a Date field that saves on pick (her 2026-10-29 pick B); a not-yet-sorted photo keeps a wrapping row of kind chips under
 the picture. A waiting compare pick rings its photo green and marks the photos it can pair with ⧉ (the tongue rows are one group;
 `phRenCmpCls`); a tap on any other photo opens that photo and drops the pick (her 2026-10-29 "i cant click on pic to edit"). The photo sheet's Date field (today by default, never later) dates every photo saved from it. **Never delete a photo**
-(her hard rule); the store asks the browser to keep it (`phStoragePersist`); backups carry photos.
+(her hard rule); the store asks the browser to keep it (`phStoragePersist`); backups carry photos, each with its date, shot,
+profile mark and file name (`PH_REN_BACKUP_FIELDS`; a restore keeps what an older file lacks; built 2026-10-29, NOT live yet).
+**Tongue photo flow (her picks; built, NOT live yet)** [Tongue photo flow: the shots open the chart]: the phone is the camera, the
+laptop charts. While a patient's file is open the laptop looks for phone photos every 10 s (every 2 min elsewhere). Today's tongue
+photos landing on any other page give the one toast "4 tongue photos · <name>" with **Chart** (6.5 s); with her Today's visit or
+Tongue page on screen there is no toast and the Tongue tile flashes gold. The Today's visit **Tongue tile** carries today's Natural
+light shot: gold "4 photos / Chart" until charted, then the photo with its tick + the words. Chart and the tile open that photo in
+the viewer, Colour ready (a Sublingual shot on Sublingual), her Today's visit behind it; closing it repaints the tile. Code:
+`phTngChartOpen`, `phTngTodayShot`, `phTngHerePk`, `phTvTngArrived` beside `phCapAutoImport`; `phTngTileShot` in the tiles.
 
 ## Fasting (her own clock)
 C22's fasting clock lives in LCM, only for her. Her plan: "breakfast and lunch, and fast after lunch by skipping dinner ... 3-5

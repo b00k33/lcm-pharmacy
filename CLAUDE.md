@@ -1298,7 +1298,11 @@ not repeated here.
   hard rule, 2026-10-14, after Chrome evicted the photo store): no code path,
   clean-up, dedupe, migration, storage trim or Claude action may remove a
   photo; a delete she taps herself keeps its confirm + Undo. Protect the
-  store (`phStoragePersist`) and keep the backups that carry photos.
+  store (`phStoragePersist`) and keep the backups that carry photos. A
+  backup file carries each photo's own fields beside its picture
+  (`PH_REN_BACKUP_FIELDS`: date, shot, profile mark, file name ...); a new
+  field on a photo record joins that list, or a restore drops it (2026-10-29:
+  every tongue photo came back unlabelled).
 - Zygomatic branch stays at one checklist item on the facial-paralysis
   checklist — she's declined a second, twice.
 
