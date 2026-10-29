@@ -18523,6 +18523,15 @@
   #pharmacyPage .ph-tp-prv .ph-tp-crs { width: 100%; border-collapse: collapse; margin: 8px 0 10px; background: var(--ph-white); border-radius: 8px; font-size: var(--fs-13); }
   #pharmacyPage .ph-tp-prv .ph-tp-crs th { text-align: left; font: 700 var(--fs-10-5) var(--font-body); letter-spacing: .06em; text-transform: uppercase; color: var(--ph-soft); padding: 6px 8px; }
   #pharmacyPage .ph-tp-prv .ph-tp-crs td { padding: 6px 8px; border-top: 1px solid var(--ph-line); }
+  /* plans close themselves (her 2026-10-29 picks): what happens untouched, the self-closed / reopened card, the band's line */
+  #pharmacyPage .ph-tp-prv .acts .fact { font-size: var(--fs-12); color: var(--ph-soft); }
+  #pharmacyPage .ph-tp-prv .acts .fact b { color: var(--ph-ink); }
+  #pharmacyPage .ph-tp-prv.ok { border-color: var(--ph-good); background: var(--ph-good-tint); }
+  #pharmacyPage .ph-tp-prv.ok h3 { color: var(--ph-good-deep); }
+  #pharmacyPage .ph-tp-selfclosed { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: var(--fs-12-5); color: var(--ph-soft); }
+  #pharmacyPage .ph-tp-selfclosed b { color: var(--ph-ink); }
+  #pharmacyPage .ph-tp-selfclosed .ph-today-btn { height: 32px; }
+  #pharmacyPage .ph-pres-tab.pastplan small { font-weight: 500; opacity: .8; margin-left: 4px; }
   #pharmacyPage .ph-hub-out { margin-top: 12px; }   /* Mine · Work: your outcomes by condition (part 3, step 8) */
   @container (max-width: 640px) {
     #pharmacyPage .ph-tj-foot { margin-left: 0; }
@@ -38488,7 +38497,7 @@
     const tag = (k, txt, tip) => out.tags.push({ k, t: txt, tip: tip || txt });
     if (plan && plan.status === "active") {
       try { const ph = phTpFxLivePh(name, plan.id), n = ph ? phTpSessionsOf(ph) : 0, k = ph ? phTpPhaseSessionDates(name, plan, ph).done.filter(x => x.date <= today).length : 0; if (ph) out.line = `${phTpPrvShort(ph)} · visit ${Math.max(k, 1)}${n && k <= n ? ` of ${n}` : ""}`; } catch (e) { /* the line is a nicety */ }
-      try { if (!(plan.reviews || []).some(r => r.prv && r.date === today) && phTpPrvCtx(name, plan)) tag("rv", "Review today", "The phase's planned visits are done: Move or Stay, on Today's visit"); } catch (e) {}
+      try { if (!(plan.reviews || []).some(r => r.prv && r.date === today) && (phTpPrvCtx(name, plan) || phTpCycEndCtx(name, plan))) tag("rv", "Review today", "The plan's planned visits are done: Close, Stay or Another cycle, on Today's visit"); } catch (e) {}
       try { const M = phCxModel(name, plan); if (M.series.length && M.glance.total > M.glance.asked) tag("", `Re-score ${M.glance.total - M.glance.asked}`, "Compass rows not scored today"); } catch (e) {}
       try {
         const rec = phPatientPeek(name), ph = phTpFxLivePh(name, plan.id), days = Object.keys(phCxDays(rec));
@@ -57873,6 +57882,7 @@
         const plan = phTpFindPlan(pname, planId);
         if (plan && PH_TP_STATUSES.some(s => s.v === v)) {
           plan.status = v;
+          if (v === "done") plan.closedKey = keyOf(TODAY); else { delete plan.closedKey; delete plan.selfClosed; }   // the Plans row says when; Reopen plan forgets a self-close
           // an acute detour marked done hands the patient back to the plan it held (same as the pill)
           const back = phTpResumeInterrupted(pname, plan);
           if (savePharmacy() === false) { phFlashShow("That could not be saved — check the warning at the top and try again"); return; }
@@ -87668,6 +87678,7 @@ or changing anything in Cliniko.
   function phTpSyncPlansOnOpen(name) {
     if (!name) return false;
     try { phTpNeutraliseWording(name); } catch (e) { /* called before the table exists (boot): nothing to fix yet */ }
+    try { if (phTpSelfCloseSweep(name)) savePharmacy(); } catch (e) { /* plans close themselves: the sweep never blocks the open */ }
     const peek = phPatientPeek(name);
     if (!peek || !(peek.treatmentPlans || []).some(p => p.status === "active")) return false;
     return phCycleSyncPlans(phPatientRec(name));
@@ -97885,6 +97896,8 @@ or changing anything in Cliniko.
     const rec = phPatientPeek(name) || {};
     if (!(rec.sex && rec.dob)) return "";
     try { phIvfDaySync(name, plan); } catch (e) { /* the visit never breaks on it */ }   // part 3, step 6
+    // plans close themselves: a booking pasted while her file is open reopens a self-closed plan; the visit draws again once
+    try { if (phTpSelfCloseSweep(name)) { savePharmacy(); setTimeout(renderPresPanel, 0); } } catch (e) { /* the visit never breaks on it */ }
     const S = phTodayStepModel(t, name, rec, plan);
     // Ask: the compass card (chart · rows · Energy line), the return-visit nudges, the MSK warning, and the lean Pain
     // table for a pain patient whose compass has no pain rows yet (her 2026-10-19 ask, phPfPainBlockHtml)
@@ -108151,7 +108164,7 @@ or changing anything in Cliniko.
       // phase, its dates and the visit count -- the band keeps the name and
       // the status pill only. Collapsed, it still carries everything.
       const quiet = editing;   // her pick B 2026-09-20: every open plan, not only cycle ones
-      bits.push(`<b${editing ? ` data-tp-title-edit="${esc(name)}|${activePlan.id}" title="Click to rename"` : ""}>${esc(phTpTitleShown(name, activePlan))}</b>${cur && !quiet ? ` · ${esc(cur.label)}` : ""}${visitBit && !quiet ? ` · ${esc(visitBit)}` : ""} <span class="ph-tp-bandst ${esc(activePlan.status)}" data-tp-status-cycle="${esc(name)}|${activePlan.id}" title="Click to change" role="button" tabindex="0">${esc(st.label)}</span>`);
+      bits.push(`<b${editing ? ` data-tp-title-edit="${esc(name)}|${activePlan.id}" title="Click to rename"` : ""}>${esc(phTpTitleShown(name, activePlan))}</b>${cur && !quiet ? ` · ${esc(cur.label)}` : ""}${visitBit && !quiet ? ` · ${esc(visitBit)}` : ""} <span class="ph-tp-bandst ${esc(activePlan.status)}" data-tp-status-cycle="${esc(name)}|${activePlan.id}" title="Click to change" role="button" tabindex="0">${esc(st.label)}</span>${phTpSelfClosedHtml(name, activePlan)}`);
       // her ask 2026-09-14 (synth22 #1, "no need for acu log and treatment
       // plan log to be separate"): once there IS a plan to fold into,
       // presStageTreatmentHtml hides the standalone Acupuncture banner --
@@ -109059,7 +109072,7 @@ or changing anything in Cliniko.
       ${ordered.map(p => {
         const on = !presTpInlineNew && !presTpInlineLoose && presTpInlinePlanId === p.id;
         const past = p.status !== "active";
-        return `<button type="button" class="ph-pres-tab${on ? " on" : ""}${past && !on ? " pastplan" : ""}" data-tp-inline-open="${esc(name)}|${p.id}">${esc(phTpTitleShown(name, p))}</button>`;
+        return `<button type="button" class="ph-pres-tab${on ? " on" : ""}${past && !on ? " pastplan" : ""}" data-tp-inline-open="${esc(name)}|${p.id}">${esc(phTpTitleShown(name, p))}${past && p.closedKey ? ` <small>closed ${esc(phShortDate(p.closedKey))}</small>` : ""}</button>`;
       }).join("")}
       <button type="button" class="ph-pres-tab new" data-tp-inline-new-open="${esc(name)}">+ New</button>
       ${loose.length ? `<button type="button" class="ph-pres-tab loose${presTpInlineLoose ? " on" : ""}" data-tp-inline-loose-open="${esc(name)}">Not on a plan</button>` : ""}
@@ -115243,22 +115256,45 @@ or changing anything in Cliniko.
   function phTpPrvHtml(name, plan) {
     if (!plan) return "";
     const today = keyOf(TODAY), done = (plan.reviews || []).filter(r => r.prv && r.date === today).pop();
-    let C = null; if (!done) { try { C = phTpPrvCtx(name, plan); } catch (e) { C = null; } }
-    if (!done && !C) return "";
+    let C = null, E = null;
+    if (!done) { try { C = phTpPrvCtx(name, plan); } catch (e) { C = null; } }
+    if (!done && !C) { try { E = phTpCycEndCtx(name, plan); } catch (e) { E = null; } }   // a cycle plan's end (plans close themselves)
+    if (!done && !C && !E) return "";
     const S = done ? done.prv.sum || {} : phTpPrvSum(name, plan);
     const tags = `<span class="tg better">${S.b || 0} better</span><span class="tg same">${S.s || 0} same</span><span class="tg worse">${S.w || 0} worse</span>${S.main ? `<span class="mn">${esc(S.main)}</span>` : ""}`;
-    const pick = (v, txt) => `<button type="button" class="ph-today-btn" data-tp-prv-pick="${esc(plan.id)}|${esc(C.ph.id)}|${v}">${esc(txt)}</button>`;
+    const phId = C ? C.ph.id : E && E.ph ? E.ph.id : "";
+    const pick = (v, txt) => `<button type="button" class="ph-today-btn" data-tp-prv-pick="${esc(plan.id)}|${esc(phId)}|${v}">${esc(txt)}</button>`;
     const nowPh = done && done.prv.undo && done.prv.undo.v === "move" ? (plan.phases || []).find(p => p.status === "current") : null;
     const herbs = nowPh && nowPh.formulaName ? `<span class="mn">🌿 ${esc(nowPh.formulaName)} · ready to dispense</span>` : "";   // part 3, step 4
-    const acts = done ? `<span class="ok">✓ ${esc(done.prv.out || "Review saved")}</span>${herbs}${done.prv.undo ? `<button type="button" class="ph-today-btn q" data-tp-prv-undo="${esc(plan.id)}|${esc(done.id)}">Undo</button>` : done.prv.out ? "" : `<button type="button" class="ph-today-btn q" data-flow-go="plan">Care Plan ›</button>`}`
-      : (C.next ? pick("move", ["Move to " + phTpPrvShort(C.next), phTpPrvCad(C.next)].filter(Boolean).join(" · ")) : pick("close", "Close plan"))
-        + pick("stay", `Stay ${C.more} more visit${C.more === 1 ? "" : "s"}`);
+    // plans close themselves (her 2026-10-29 picks): the card says what happens untouched; a self-close / reopen is a green card
+    const auto = !!(done && done.prv.auto), reopened = auto && done.prv.undo && done.prv.undo.v === "reopen";
+    const fact = txt => `<span class="fact">${txt}</span>`, booked = phTpNextBooked(name);
+    const untouched = done || (C && C.next) || (E && E.kind === "pos") ? "" : plan.keepOpen ? fact("Kept open · closes itself the day after the next visit") : E && E.kind === "cyc" ? fact("closes itself after the next period")
+      : booked ? fact(`Booked <b>${esc(phShortDate(booked))}</b> · closes itself after it`) : fact(`Nothing booked after today · <b>closes itself tomorrow</b>`);
+    let reFact = "";
+    if (reopened) {
+      const ph = (plan.phases || []).find(p => p.id === done.prv.ph), sc = done.prv.undo.sc || {};
+      let k = 0; try { k = ph ? phTpPhaseSessionDates(name, plan, ph).done.filter(x => x.date <= today).length : 0; } catch (e) { k = 0; }
+      const n = ph ? phTpSessionsOf(ph) : 0;
+      reFact = fact([ph ? phTpPrvShort(ph) : "", k ? `visit ${k}${n ? ` of ${n}` : ""}` : "", sc.date ? `closed itself ${esc(phShortDate(sc.date))}` : ""].filter(Boolean).join(" · "));
+    }
+    const acts = done ? `${auto ? reFact : `<span class="ok">✓ ${esc(done.prv.out || "Review saved")}</span>`}${herbs}${done.prv.undo ? `<button type="button" class="ph-today-btn q" data-tp-prv-undo="${esc(plan.id)}|${esc(done.id)}">Undo</button>` : done.prv.out ? "" : `<button type="button" class="ph-today-btn q" data-flow-go="plan">Care Plan ›</button>`}${reopened ? `<button type="button" class="ph-today-btn q" data-tp-prv-newcourse="${esc(plan.id)}|${esc(done.id)}">New course instead</button>` : ""}`
+      : C ? (C.next ? pick("move", ["Move to " + phTpPrvShort(C.next), phTpPrvCad(C.next)].filter(Boolean).join(" · ")) : pick("close", "Close plan"))
+        + pick("stay", `Stay ${C.more} more visit${C.more === 1 ? "" : "s"}`)
+      : E.kind === "pos" ? pick("preg", "Start Pregnancy plan") + pick("keep", "Keep this plan")
+      : E.kind === "neg" ? pick("ivf", "Another cycle") + pick("close", "Close plan")
+      : pick("close", "Close plan") + pick("cycle", "Another cycle");
     // part 3, step 7: the last phase's review (and the closed plan's) is the course -- its visits and weeks, each concern
     // from its first score to now against its target, and the Ending letter
-    const last = done ? done.prv.out === "Plan closed" : !C.next, crs = last ? phTpCourseStats(name, plan) : null;
-    const head = last ? `Course done · ${crs.n} visit${crs.n === 1 ? "" : "s"}${crs.wk ? ` over ${crs.wk} week${crs.wk === 1 ? "" : "s"}` : ""}` : done ? done.prv.head : phTpPrvHead(C.ph, C.planned);
+    const last = done ? done.prv.out === "Plan closed" || auto : C ? !C.next : true, crs = last ? phTpCourseStats(name, plan) : null;
+    const crsTxt = crs ? `${crs.n} visit${crs.n === 1 ? "" : "s"}${crs.wk ? ` over ${crs.wk} week${crs.wk === 1 ? "" : "s"}` : ""}` : "";
+    const head = auto ? `✓ ${done.prv.head}`
+      : done ? (last ? `Course done · ${crsTxt}` : done.prv.head)
+      : C ? (C.next ? phTpPrvHead(C.ph, C.planned) : `Course done · ${crsTxt}`)
+      : E.kind === "pos" ? `🌸 Positive test ${phShortDate(E.test.date)} · ${crsTxt}` : E.kind === "neg" ? `Negative test ${phShortDate(E.test.date)} · ${crsTxt}` : `Cycle ${Math.min(E.cc.n, E.cc.want)} of ${E.cc.want} done · ${crsTxt}`;
     const end = last ? `<button type="button" class="ph-today-btn q" data-tp-cel-open="${esc(plan.id)}">Ending letter</button>` : "";
-    return `<div class="ph-tp-prv${last ? " crs" : ""}" data-tp-prv="${esc(plan.id)}" data-tp-prv-name="${esc(name)}"><h3>${esc(head)}</h3>${last && phTpCourseRows(name, plan).length ? phTpCourseHtml(name, plan) : `<div class="sum">${tags}</div>`}<div class="acts">${acts}${end}</div></div>`;
+    const mid = reopened ? "" : last && phTpCourseRows(name, plan).length ? phTpCourseHtml(name, plan) : `<div class="sum">${tags}</div>`;
+    return `<div class="ph-tp-prv${last ? " crs" : ""}${auto ? " ok" : ""}" data-tp-prv="${esc(plan.id)}" data-tp-prv-name="${esc(name)}"><h3>${esc(head)}</h3>${mid}<div class="acts">${acts}${untouched}${end}</div></div>`;
   }
   // her tap: the review writes itself, with what the tap did and what Undo puts back
   function phTpPrvWrite(name, plan, ph, planned, out, undo) {
@@ -115267,8 +115303,11 @@ or changing anything in Cliniko.
     plan.reviews.push({ id: uid(), date: keyOf(TODAY), note: [head, `${sum.b} better · ${sum.s} same · ${sum.w} worse`, sum.main, out].filter(Boolean).join(" · "), prv: Object.assign({ ph: ph.id, head, sum, out }, undo ? { undo } : {}) });
   }
   function phTpPrvDo(name, plan, C, v) {
-    const ph = C.ph, today = keyOf(TODAY);
+    const today = keyOf(TODAY);
     delete plan.prv;   // part 2's wait-for-the-log pick, gone with it
+    delete plan.keepOpen;   // her tap is a fresh decision (plans close themselves)
+    if (!C) { phTpCycEndDo(name, plan, v); return; }   // a cycle plan's end (plans close themselves)
+    const ph = C.ph;
     if (v === "stay") {
       phTpPrvWrite(name, plan, ph, C.planned, `Staying ${C.more} more visit${C.more === 1 ? "" : "s"}`, { v, sessions: ph.sessions == null ? null : ph.sessions });
       ph.sessions = C.planned + C.more;
@@ -115281,18 +115320,188 @@ or changing anything in Cliniko.
       if (C.last < today) { const d = parseKey(C.last); d.setDate(d.getDate() + 1); ph.doneKey = C.last; nx.sinceKey = keyOf(d); }
     } else if (v === "close" && !C.next) {
       phTpPrvWrite(name, plan, ph, C.planned, "Plan closed", { v });
-      plan.status = "done"; ph.status = "done"; if (!ph.doneKey) ph.doneKey = today;   // the visits past the planned ones stay with the plan
+      plan.status = "done"; ph.status = "done"; if (!ph.doneKey) ph.doneKey = today; plan.closedKey = today;   // the visits past the planned ones stay with the plan
     }
   }
   function phTpPrvUndo(plan, rvId) {
-    const rv = (plan.reviews || []).find(r => r.id === rvId), u = rv && rv.prv && rv.prv.undo, ph = u && plan.phases.find(p => p.id === rv.prv.ph);
-    if (!ph) return false;
+    const rv = (plan.reviews || []).find(r => r.id === rvId), u = rv && rv.prv && rv.prv.undo, ph = u && (plan.phases || []).find(p => p.id === rv.prv.ph);
+    if (!u || ((u.v === "stay" || u.v === "move") && !ph)) return false;
     plan.reviews = plan.reviews.filter(r => r !== rv);
     if (u.v === "stay") { if (u.sessions == null) delete ph.sessions; else ph.sessions = u.sessions; }
     else if (u.v === "move") phTpPhaseStatusData(plan, ph, "current");
-    else if (u.v === "close") { plan.status = "active"; ph.status = "current"; ph.doneKey = null; }
+    else if (u.v === "close") {
+      plan.status = "active"; delete plan.closedKey;
+      if (ph) { ph.status = "current"; ph.doneKey = null; }
+      if (rv.prv.auto) { delete plan.selfClosed; plan.keepOpen = keyOf(TODAY); if (ph) { if (u.sessions == null) delete ph.sessions; else ph.sessions = u.sessions; } }   // held open until a later visit
+    }
+    else if (u.v === "reopen") {   // back to closed itself, as it was; held closed until a booking after today
+      plan.status = "done"; plan.closedKey = u.sc.date; plan.selfClosed = Object.assign({}, u.sc, { held: keyOf(TODAY) });
+      if (ph) { ph.status = "done"; ph.doneKey = u.sc.last || u.sc.date; if (u.sessions == null) delete ph.sessions; else ph.sessions = u.sessions; }
+      if (u.sc.cyc) plan.cyclesMore = Math.max(0, (plan.cyclesMore || 0) - 1);
+    }
+    else if (u.v === "cycle") plan.cyclesMore = Math.max(0, (plan.cyclesMore || 0) - 1);
     return true;
   }
+  // ==== PLANS CLOSE THEMSELVES (her 2026-10-29 picks, plans-close-mock-2026-10-29.html, A + C; patient-profile audit finding 15) ====
+  // The last planned visit asks once (Close plan · Stay N more · Ending letter) and says what happens untouched: the plan
+  // closes itself the day after its last visit when nothing more is booked (phTpSelfCloseSweep, run when her file opens and
+  // when Today's visit draws; the close is dated that day, not the day the sweep ran). A booking after that reopens it with
+  // N more visits, nothing to tap ("✓ Reopened · 2 more visits", Undo, New course instead). A cycle plan's course is a number
+  // of cycles from the concern's How long (Weeks 1 · Months 3 · 6–12 months 6 · 1–3 years 12; Amenorrhea and a patient with
+  // no cycle data count months): the last cycle's late days (luteal, or overdue) ask Close plan · Another cycle, and it closes
+  // itself at the next period. An IVF plan ends at the pregnancy test: positive → Start Pregnancy plan · Keep this plan;
+  // negative → Another cycle · Close plan (untouched, closes the day after the test). A positive test on any cycle plan asks
+  // the same. Every self-close writes one review line (prv.auto) with Undo; the Care Plan band and the Treatment band say
+  // "Closed itself <date>" with Reopen, and the Plans row says "closed <date>" (plan.closedKey, written by every close).
+  const PH_TP_CYC_COURSE = { wk: 1, mo: 3, "6m": 6, "1y": 12, "3y": 12 };
+  const phTpIsIvfPlan = p => !!p && /\bIVF\b/.test(p.templateName || "");
+  // what keeps a plan open: a booking or a logged visit after `after`
+  function phTpBookedAfter(name, after) {
+    const key = phPatientKey(name);
+    return phApptList().some(a => a && a.date > after && a.service !== "Break" && phPatientKey(a.patient) === key)
+      || ((phPatientPeek(name) || {}).acuSessions || []).some(s => s && s.date > after && !s.noTreatment);
+  }
+  function phTpNextBooked(name) {
+    const key = phPatientKey(name), today = keyOf(TODAY);
+    return phApptList().filter(a => a && a.date > today && a.service !== "Break" && phPatientKey(a.patient) === key).map(a => a.date).sort()[0] || "";
+  }
+  const phTpPrvTouched = (plan, since) => (plan.reviews || []).some(r => r.prv && !r.prv.auto && r.date >= since);   // her tap, never the app's own line
+  // the pregnancy test that ends a fertility course: the latest IVF transfer's result or her Pregnant? test, dated on or after the plan began
+  function phTpTestCtx(name, plan) {
+    const rec = phPatientPeek(name); if (!rec || !plan) return null;
+    const ok = k => /^\d{4}-\d{2}-\d{2}$/.test(k || ""), start = phTlPlanStart(plan) || "", today = keyOf(TODAY);
+    let best = null;
+    const L = phPregLatestTransfer(rec), t = L && L.t;
+    if (t && t.pregResult && ok(t.pregTestDate)) best = { result: t.pregResult, date: t.pregTestDate, hcg: t.pregHcg };
+    const pt = rec.pregTest;
+    if (pt && pt.result && ok(pt.date) && (!best || pt.date > best.date)) best = { result: pt.result, date: pt.date, hcg: pt.hcg };
+    return best && best.date >= start && best.date <= today ? best : null;
+  }
+  // a cycle plan's course: the cycles done (period starts since the plan began; the cycle it began in counts) against the course
+  function phTpCycCourse(name, plan) {
+    if (!plan || !PH_TP_CYCLE_TEMPLATES.includes(plan.templateName) || phTpIsIvfPlan(plan)) return null;
+    const rec = phPatientPeek(name), start = phTlPlanStart(plan); if (!rec || !start) return null;
+    let b = null; try { const it = phCcRibItems(name); b = it ? phCcLenBand(it.main.since) : null; } catch (e) { b = null; }
+    const want = ((b && PH_TP_CYC_COURSE[b.id]) || 3) + (plan.cyclesMore || 0), today = keyOf(TODAY);
+    const byCycle = plan.templateName !== "Amenorrhea" && phCycleOn(rec), starts = byCycle ? phBbtCycleStarts(rec).filter(k => k > start) : [];
+    const monthAdd = n => { const d = parseKey(start); d.setMonth(d.getMonth() + n); return keyOf(d); };
+    let months = 0; while (months < 120 && monthAdd(months + 1) <= today) months++;
+    const n = 1 + (byCycle ? starts.length : months);
+    const at = i => byCycle ? (i <= 0 ? start : starts[i - 1] || "") : monthAdd(i);   // the day cycle i + 1 began
+    let comp = null; try { comp = byCycle ? phCycleComp(rec) : null; } catch (e) { comp = null; }
+    const late = comp ? comp.phaseKey === "luteal" || !!comp.overdue : true;
+    return { n, want, last: n >= want && (n > want || late), lastStart: at(want - 1), ends: n > want ? at(want) : "" };
+  }
+  // the card on a cycle plan (phTpPrvCtx gives none): a pregnancy test, else the last cycle's late days; gone once she has tapped
+  function phTpCycEndCtx(name, plan) {
+    if (!plan || plan.status !== "active" || !PH_TP_CYCLE_TEMPLATES.includes(plan.templateName)) return null;
+    const ph = (plan.phases || []).find(p => p.status === "current") || null, ivf = phTpIsIvfPlan(plan);
+    const test = phTpTestCtx(name, plan);
+    if (test && (test.result === "positive" || ivf)) return phTpPrvTouched(plan, test.date) ? null : { kind: test.result === "positive" ? "pos" : "neg", test, ivf, ph };
+    if (ivf) return null;
+    const cc = phTpCycCourse(name, plan);
+    return cc && cc.last && !phTpPrvTouched(plan, cc.lastStart) ? { kind: "cyc", cc, ph } : null;
+  }
+  function phTpCycEndDo(name, plan, v) {
+    const today = keyOf(TODAY), E = phTpCycEndCtx(name, plan); if (!E) return;
+    const ph = E.ph, S = phTpCourseStats(name, plan), crs = `${S.n} visit${S.n === 1 ? "" : "s"}${S.wk ? ` over ${S.wk} week${S.wk === 1 ? "" : "s"}` : ""}`;
+    const head = E.kind === "cyc" ? `Cycle ${Math.min(E.cc.n, E.cc.want)} of ${E.cc.want} done · ${crs}` : `${E.kind === "pos" ? "Positive" : "Negative"} test ${phShortDate(E.test.date)} · ${crs}`;
+    const write = (out, undo) => { plan.reviews = plan.reviews || []; plan.reviews.push({ id: uid(), date: today, note: `${head} · ${out}`, prv: Object.assign({ ph: ph ? ph.id : "", head, out }, undo ? { undo } : {}) }); };
+    const closeOld = () => { plan.status = "done"; plan.closedKey = today; if (ph) { ph.status = "done"; if (!ph.doneKey) ph.doneKey = today; } phTpResumeInterrupted(name, plan); };
+    if (v === "close") { write("Plan closed", { v: "close", sessions: ph ? (ph.sessions == null ? null : ph.sessions) : null }); closeOld(); }
+    else if (v === "cycle" && E.kind === "cyc") { plan.cyclesMore = (plan.cyclesMore || 0) + 1; write(`Another cycle · ${E.cc.want + 1} of ${E.cc.want + 1}`, { v: "cycle" }); }
+    else if (v === "keep") write("Kept this plan", { v: "keep" });
+    else if (v === "preg" || v === "ivf") {
+      // the new course opens its own questions first; this plan closes once they are answered (Cancel leaves it as it was)
+      const pre = () => { write(v === "preg" ? "Pregnancy plan started" : "Another IVF cycle started"); closeOld(); };
+      phTpScreenPatient = name;
+      if (v === "preg") phPregQOpen(name, "pregnancy", { from: "inline", pre }); else phIvfQOpen(name, { pre, from: "inline" });
+    }
+  }
+  // the plan closes itself: dated the day after its last visit (or the test, or at the next period), one review line, Undo
+  function phTpSelfClose(name, plan, ph, date, info) {
+    const S = phTpCourseStats(name, plan), from = (plan.phases || []).map(p => p.sinceKey).filter(Boolean).sort()[0] || plan.createdDate;
+    const wk = from && from < date ? Math.max(1, Math.round((parseKey(date) - parseKey(from)) / 6048e5)) : 0;
+    const crs = `${S.n} visit${S.n === 1 ? "" : "s"}${wk ? ` over ${wk} week${wk === 1 ? "" : "s"}` : ""}`, head = `Closed itself · ${crs}`;
+    plan.status = "done"; plan.closedKey = date;
+    if (ph) { ph.status = "done"; if (!ph.doneKey) ph.doneKey = info.last || date; }
+    plan.selfClosed = Object.assign({ date, ph: ph ? ph.id : "", last: date, crs }, info);
+    plan.reviews = plan.reviews || [];
+    plan.reviews.push({ id: uid(), date, note: head, prv: { ph: ph ? ph.id : "", head, out: "Closed itself", auto: true, undo: { v: "close", sessions: ph ? (ph.sessions == null ? null : ph.sessions) : null } } });
+    phTpResumeInterrupted(name, plan);
+  }
+  // a booking after the close reopens it with N more visits (a cycle plan: another cycle), nothing to tap
+  function phTpSelfReopen(name, plan) {
+    const sc = plan.selfClosed || {}, today = keyOf(TODAY);
+    const ph = (plan.phases || []).find(p => p.id === sc.ph) || (plan.phases || []).filter(p => !p.skipped).slice(-1)[0] || null;
+    const sessions = ph ? (ph.sessions == null ? null : ph.sessions) : null;
+    plan.status = "active"; delete plan.closedKey; delete plan.selfClosed; delete plan.keepOpen;
+    if (ph) { ph.status = "current"; ph.doneKey = null; if (!sc.cyc && sc.planned) ph.sessions = sc.planned + (sc.more || 1); }
+    if (sc.cyc) plan.cyclesMore = (plan.cyclesMore || 0) + 1;
+    const more = sc.cyc ? "another cycle" : `${sc.more || 1} more visit${(sc.more || 1) === 1 ? "" : "s"}`, head = `Reopened · ${more}`;
+    plan.reviews = plan.reviews || [];
+    plan.reviews.push({ id: uid(), date: today, note: `${head} · closed itself ${phShortDate(sc.date)}`, prv: { ph: ph ? ph.id : "", head, out: head, auto: true, undo: { v: "reopen", sc, sessions } } });
+  }
+  // the sweep: true when a plan closed or reopened itself (the caller saves)
+  function phTpSelfCloseSweep(name) {
+    const rec = name ? phPatientPeek(name) : null; if (!rec) return false;
+    const today = keyOf(TODAY), plans = rec.treatmentPlans || []; let changed = false;
+    plans.forEach(plan => {
+      if (!plan || plan.status !== "active") return;
+      const held = lastDay => !!(plan.keepOpen && plan.keepOpen >= lastDay);   // her Undo of a self-close holds it open until a later visit
+      let C = null; try { C = phTpPrvCtx(name, plan); } catch (e) { C = null; }
+      if (C) {
+        if (C.next) return;   // Move or Stay is hers to pick
+        let seen = []; try { seen = phTpPhaseSessionDates(name, plan, C.ph).done.filter(x => x.date <= today).map(x => x.date); } catch (e) { seen = []; }
+        const last = seen.length ? seen[seen.length - 1] : C.last;
+        if (last < today && !phTpBookedAfter(name, last) && !phTpPrvTouched(plan, last) && !held(last)) { phTpSelfClose(name, plan, C.ph, phTpDayAdd(last, 1), { planned: C.planned, more: C.more, last }); changed = true; }
+        return;
+      }
+      if (!PH_TP_CYCLE_TEMPLATES.includes(plan.templateName)) return;
+      const ph = (plan.phases || []).find(p => p.status === "current") || null;
+      let test = null; try { test = phTpTestCtx(name, plan); } catch (e) { test = null; }
+      if (test) {
+        if (test.result === "negative" && phTpIsIvfPlan(plan) && test.date < today && !phTpBookedAfter(name, test.date) && !phTpPrvTouched(plan, test.date) && !held(test.date)) { phTpSelfClose(name, plan, ph, phTpDayAdd(test.date, 1), { test, last: test.date }); changed = true; }
+        return;   // a positive test is hers to answer
+      }
+      let cc = null; try { cc = phTpCycCourse(name, plan); } catch (e) { cc = null; }
+      if (cc && cc.ends && cc.ends <= today && !phTpBookedAfter(name, today) && !phTpPrvTouched(plan, cc.lastStart)) {
+        const seen = phSeenDays(name, today), lastVisit = seen.length ? seen[seen.length - 1] : "", date = lastVisit && phTpDayAdd(lastVisit, 1) > cc.ends ? phTpDayAdd(lastVisit, 1) : cc.ends;
+        if (held(phTpDayAdd(date, -1))) return;
+        phTpSelfClose(name, plan, ph, date, { cyc: true, last: phTpDayAdd(date, -1) }); changed = true;
+      }
+    });
+    if (!plans.some(p => p && (p.status === "active" || p.status === "paused"))) {
+      const p = plans.filter(x => x && x.status === "done" && x.selfClosed).sort((a, b) => String(b.selfClosed.date || "").localeCompare(String(a.selfClosed.date || "")))[0];
+      if (p && phTpBookedAfter(name, p.selfClosed.held || p.selfClosed.last || p.selfClosed.date)) { phTpSelfReopen(name, p); changed = true; }
+    }
+    if (changed) phPatientRec(name);   // the record is written: mark it the way every writer does
+    return changed;
+  }
+  function phTpSelfClosedHtml(name, plan) {
+    const sc = plan && plan.status === "done" && plan.selfClosed; if (!sc) return "";
+    const more = sc.cyc ? "another cycle" : `${sc.more || 1} more visit${(sc.more || 1) === 1 ? "" : "s"}`;
+    return `<span class="ph-tp-selfclosed" data-tp-selfclosed="${esc(plan.id)}"><b>Closed itself ${esc(phShortDate(sc.date))}</b>${sc.crs ? `<span>· ${esc(sc.crs)}</span>` : ""}<button type="button" class="ph-today-btn" data-tp-reopen="${esc(name)}|${esc(plan.id)}">Reopen · ${esc(more)}</button><button type="button" class="ph-today-btn q" data-tp-cel-open="${esc(plan.id)}">Ending letter</button></span>`;
+  }
+  document.addEventListener("click", e => {
+    const b = e.target && e.target.closest ? e.target.closest("#pharmacyPage [data-tp-reopen],#pharmacyPage [data-tp-prv-newcourse]") : null;
+    if (!b) return;
+    if (b.dataset.tpReopen) {
+      const i = b.dataset.tpReopen.lastIndexOf("|"), name = b.dataset.tpReopen.slice(0, i), plan = phTpFindPlan(name, b.dataset.tpReopen.slice(i + 1));
+      if (!plan || !plan.selfClosed) return;
+      phTpSelfReopen(name, plan); phPatientRec(name);
+      if (savePharmacy() === false) { phFlashShow("That could not be saved — check the warning at the top and try again"); return; }
+      renderPresPanel(); return;
+    }
+    // New course instead: the reopen is undone (closed itself, as it was) and the new-plan cards open on the Care Plan tab
+    const host = b.closest("[data-tp-prv]"), name = host && host.dataset.tpPrvName;
+    const [planId, rvId] = b.dataset.tpPrvNewcourse.split("|"), plan = name ? phTpFindPlan(name, planId) : null;
+    if (!plan || !phTpPrvUndo(plan, rvId)) return;
+    phPatientRec(name); savePharmacy();
+    presTpInlineNew = true; presTpInlineLoose = false; presTpInlinePlanId = null; phTpTmplShowAll = true; phTpComboReset(); phTpScreenPatient = name;
+    presStage = "plan"; presStageForId = presOpenId; presTreatOpen = true; presTpMainTab = null;
+    renderPresPanel();
+  });
   function phTpPrvRepaint(name) {
     document.querySelectorAll("#pharmacyPage [data-tp-prv]").forEach(el => { const p = phTpFindPlan(el.dataset.tpPrvName || name, el.dataset.tpPrv), h = p ? phTpPrvHtml(el.dataset.tpPrvName || name, p) : ""; if (h) el.outerHTML = h; else el.remove(); });
   }
@@ -115307,7 +115516,7 @@ or changing anything in Cliniko.
     }
     const [planId, phId, v] = b.dataset.tpPrvPick.split("|"), plan = name ? phTpFindPlan(name, planId) : null;
     let C = null; try { C = plan ? phTpPrvCtx(name, plan) : null; } catch (err) { C = null; }
-    if (!C || C.ph.id !== phId) return;
+    if (!plan || (C ? C.ph.id !== phId : !phTpCycEndCtx(name, plan))) return;   // a cycle plan's end has its own context (plans close themselves)
     phTpPrvDo(name, plan, C, v);
     savePharmacy();
     renderPresPanel();   // the phase, its points and the Course line all follow; the panel keeps its scroll
@@ -116557,7 +116766,7 @@ or changing anything in Cliniko.
     return `${delStrip}
       <div class="ph-tp-cc" data-tp-cc="${plan.id}">
         <div class="ph-tp-ccband">
-          <div class="id">${phTpTitleHtml(name, plan)}<span class="ph-tp-bandst ${esc(plan.status)}" data-tp-status-cycle="${esc(name)}|${plan.id}" title="Click to change" role="button" tabindex="0">${esc(st.label)}</span></div>
+          <div class="id">${phTpTitleHtml(name, plan)}<span class="ph-tp-bandst ${esc(plan.status)}" data-tp-status-cycle="${esc(name)}|${plan.id}" title="Click to change" role="button" tabindex="0">${esc(st.label)}</span>${phTpSelfClosedHtml(name, plan)}</div>
           <span class="r"><button type="button" class="ph-tp-coursedd" data-tp-protocol-open="${plan.id}" aria-expanded="${phTpProtocolPick === plan.id}" title="Course: the phases and how often"><span>Course · ${esc(plan.templateName || "Custom")}</span></button>${acts.stageMenu}</span>
         </div>
         ${stripHtml}

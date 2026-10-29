@@ -6787,3 +6787,53 @@ a frame (its own save + `__lcmFlushBeforeReload`, so the app pushed it); her com
 app's memory equal too, still equal 15 s later. **Undo copy:** `lcm-rescue-2026-10-29` / `before-repair-1809` (her data as it was
 just before). **Her phone:** still holds the old copy until it syncs; the computer's guard now refuses an older copy and pushes
 the repaired one back, and the phone adopts it once it is on 161800+ (open LCM there, tap the gold Update).
+
+## 2026-10-29 · Plans close themselves: the last planned visit asks once, then the plan finishes itself (not live)
+Her pick 15 from the patient-profile audit (`patient-interactivity-audit-2026-10-29.html`; her answer 9 "Plans finish themselves"),
+mock `plans-close-mock-2026-10-29.html` (A ask once then it closes itself · B closes with Done · C cycle plans end too), her 8
+picks, all the recommended option: **A + C**. The gap: the gold review card (`phTpPrvCtx`) never showed on a cycle plan (32 of her
+103) and came back on every visit after the last planned one; nothing ever set `plan.status = "done"` by itself (2 of 103 finished).
+- **The ask, once, saying what happens untouched** (`phTpPrvHtml`): the last phase's card gained a fact line: "Nothing booked after
+  today · closes itself tomorrow" / "Booked 5 Nov · closes itself after it" / "Kept open · closes itself the day after the next
+  visit" (after her Undo of a close).
+- **Closes itself** (`phTpSelfCloseSweep`, run inside `phTpSyncPlansOnOpen` when her file opens and again when Today's visit draws;
+  `phTpSelfClose`): a plan whose last phase's planned visits are done, with nothing booked or logged after its last visit and no tap
+  of hers since, closes the day after that visit, dated so (never the day the sweep ran): `plan.status = "done"`, `plan.closedKey`,
+  `plan.selfClosed = {date, last, ph, planned, more, crs}`, the phase done, one review line "Closed itself · 10 visits over 12
+  weeks" (`prv.auto`, with Undo). Today's card turns green "✓ Closed itself · …" with Undo and the Ending letter. The Care Plan band
+  and the Treatment band say **Closed itself 30 Oct 2026 · 10 visits over 12 weeks · Reopen · 2 more visits · Ending letter**
+  (`phTpSelfClosedHtml`); the Plans row says "closed 30 Oct 2026" on any closed plan (`plan.closedKey`, written by the card's Close
+  plan and the ⋯ menu's Mark completed too; Reopen plan forgets a self-close).
+- **Reopens itself** (`phTpSelfReopen`): a booking or a logged visit after the close reopens the newest self-closed plan (while no
+  plan is active or paused) with N more visits (`phTpPrvStayN`, as Stay does; a cycle plan: another cycle), the phase current again,
+  one review line "Reopened · 2 more visits · closed itself 30 Oct 2026"; Today's card: "✓ Reopened · 2 more visits" · "Subacute ·
+  visit 5 of 6 · closed itself 30 Oct 2026" · Undo · New course instead (undoes the reopen and opens the new-plan cards on the Care
+  Plan tab). **An Undo holds:** undo of a reopen keeps the plan closed until a booking after today (`selfClosed.held`); undo of a
+  close keeps it open until a later visit (`plan.keepOpen`); her next tap on the card clears the hold. The app's own lines never
+  count as her tap (`phTpPrvTouched` skips `prv.auto`), so a reopened plan still closes itself after its extra visits.
+- **Cycle plans end too** (`phTpCycEndCtx`, `phTpCycCourse`, `phTpCycEndDo`): Natural fertility · PCOS · Endometriosis ·
+  Dysmenorrhea · Amenorrhea: a course = cycles from the concern's How long (Weeks 1 · Months 3 · 6–12 months 6 · 1–3 years 12 ·
+  Longer 12; no concern = 3; `PH_TP_CYC_COURSE`) + `plan.cyclesMore`; cycles done = period starts since the plan began
+  (`phBbtCycleStarts`; the cycle it began in counts; Amenorrhea, or no cycle data, counts months). The last cycle's late days
+  (luteal, or overdue) show "Cycle 3 of 3 done · 9 visits over 13 weeks" with the course table, **Close plan · Another cycle** (one
+  more cycle, with Undo) and "closes itself after the next period"; the sweep closes it at the next period's start (or the day after
+  a later visit), and the band offers "Reopen · another cycle". **IVF Protocol ends at the pregnancy test** (`phTpTestCtx`: the
+  latest transfer's result, else her Pregnant? test, dated on or after the plan began): **🌸 Positive test 28 Oct 2026 · …** → Start
+  Pregnancy plan (the due-date step, then the Pregnancy plan; the IVF plan closes with "Pregnancy plan started" only once that step
+  finishes, Cancel leaves it) · Keep this plan (with Undo); **Negative test** → Another cycle (the IVF questions; this plan closes
+  once they are answered) · Close plan; untouched, it closes the day after the test. A positive test on any cycle plan asks the
+  same. The rail's "Review today" tag counts these cards too.
+- Not built (her picks did not ask for them): B (closes with Done · Copy for Cliniko); a Timeline entry.
+**Tested** (the sandbox seed on the test copy at 1220; pictures at 1220 and 375 through a harness, `_pc-shot.html`): the ask with
+its fact line; the sweep on open closes a plan whose last visit was yesterday (green card, the band's line, the Plans row); a
+booking today reopens it (card with the fact; Undo holds it closed and a second sweep leaves it; the band's Reopen opens it; New
+course instead closes it and opens the plan cards); Undo of a close holds it open ("Kept open" fact, a second sweep leaves it); a
+Natural fertility plan on CD 24 of cycle 3 of 3 asks, Another cycle → 4 of 4 and Undo, the next period closes it, Reopen · another
+cycle; IVF: a negative test asks and closes the day after it, a positive test asks, Keep this plan and Undo, Start Pregnancy plan
+closes the IVF plan with its line and opens the Pregnancy plan, Another cycle opens the IVF questions and Cancel changes nothing;
+the Prescriptions search filters to the typed name and clears; no new console error (the sandbox's "Unexpected end of input" shows
+on the unpatched copy too). **Not tested:** her real records — on first open, an old plan past its course with nothing booked since
+closes itself, dated after its last visit (her rule, but it will happen on many files the first day); a two-device merge of
+`plan.selfClosed`; a plan weeks past its last planned visit with several phases. The slip caught on the way: a span splice that
+left `function phTpPrvRepaint` twice (the copy did not boot; found by compiling the DOM-parsed script, not a regex cut).
+Pictures shots/plans-close-build-{ask,closed,reopened,cycle,ivf,ask-375}-2026-10-29.png.
