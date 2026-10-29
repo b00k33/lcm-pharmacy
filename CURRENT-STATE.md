@@ -498,12 +498,32 @@ always stacks (Make refill, then the ingredients at full width; her "i cant edit
 640px sheet). Every row with a recipe ends in a "Recipe" button (pencil icon, `phRfcRecipeBtn`, `data-pres-open`) opening that
 recipe's herbs and grams in the same side sheet (her "how do i edit recipes?") [Formula refill: a Recipe button on every row].
 
-**To Order, desktop** (>900px) = a 3-column board that fills the window: **Needs ordering** (a To order | Running low switch, rows
-A to Z in fixed spots, Snoozed N ▾), **On the way** (bottle counts, Copy for email, All arrived), **Arrived** (last 14 days).
-Nothing scrolls a column on any board move; details pop out beside the row; a formula card has "Refill ▾" [To Order: the desktop
-board is 3 columns]. **The phone To Order is the older layout, untouched.** Dashboard's Order/Refill cards are TWO PLAIN LISTS,
+**To Order: two steps (her pick; built, NOT live yet)** [Inventory: stock truth, To order in two steps, lean Inventory, Price
+review in Suppliers]. Desktop (>900px) = a 2-column board that fills the window: **To order** (a To order | Running low switch;
+per supplier, A to Z in fixed spots, the herbs still to order AND the ordered ones, which read "ordered <date>" with an
+**Arrived** button; Snoozed N ▾) and **Arrived** (last 14 days). **Copy for email is the order**: the supplier's still-to-order
+herbs turn ordered once the copy landed (one toast, Undo; a blocked copy marks nothing). The supplier's bulk button is **All
+arrived** (its whole list, snoozed excepted). No On the way column, no Mark ordered. Nothing scrolls a column on any board move;
+details pop out beside the row; a formula card has "Refill ▾". The phone: bands To order (both stages) · Running low · Arrived ·
+Snoozed, sprite icons, 32px Buttons, a row's top opens the edit drawer. Dashboard's Order/Refill cards are TWO PLAIN LISTS,
 empty first then fewest days of cover; a Refill row also shows the formula's next booking (her pick); a long name wraps on both.
 Picking a supplier pulls in that supplier's recorded price.
+
+**Stock truth (her picks; built, NOT live yet):** every number the app trusts has a date (`phJarTrustMap`: counted, made or
+received). A made-in-house formula on the Dashboard's **Urgent stock** reads `Made [g] ✓ · Weigh`: the grams pre-fill with the
+recipe's batch, ✓ = `phBatchMade`, the same write as Formula refill's Finish (herbs out, jar up, one refill entry, Undo); Weigh
+opens the weighing panel. A **higher Stock number typed in Inventory** on a made-in-house jar asks "Made N g?" (Yes = a batch;
+"Just a count" = a count); a lower number is a quiet count. A made-in-house formula not counted, made or received in 21 days
+leaves Empty / Low for one line, "N formulas not counted in 3 weeks · Count". **Count** opens the **Formula count** grid on the
+Dashboard (formula jars with a number, in use; code · name · the app's number → the change · a scale field; Done = one
+stocktake record + a log line per changed jar, one Undo). Count lines under Urgent stock: "Formula count · N jars · last <date>"
+once a week has passed (hidden while the 3-week line shows) and "Herbs last counted <date> · Count herbs" after 6 weeks.
+A row in Urgent stock opens the edit drawer; the name is plain text.
+
+**Inventory (her pick "Lean table, the row opens the rest"; built, NOT live yet):** Name · Supplier · Bottle $ · Stock (g) ·
+Level · ⋮; the row opens the edit drawer, the name is plain text; the other columns wait in Columns (`PH_INV_LEAN_HIDDEN`; her
+saved set was moved once by `phMigrateInvLean`). The ⋮ menu holds Add to order. **Suppliers:** a row opens its herb list; each
+row ends in **Review prices** (Price review on that supplier); Price review is no longer in the sidebar.
 
 **Patient profile list on a computer (her audit: "make it more space saving make it cleaner") [Patient profile list audit]:** the
 five tiles are the filters (tap again = all; "No history" only while anyone has none), no Filters button or chip row; "Schedule"

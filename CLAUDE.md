@@ -409,8 +409,9 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   Appointments (her daily schedule check). The Dashboard is drastically
   simple and herbs-only (her 2026-09-15 "exclusive for herbal inventory
   management, i rely on appointments page to organise appointments"): Wrap up
-  the day → Going out today → Urgent stock → Order/Refill cards (+ the
-  stocktake nudge while a count is open). NO patient lists, NO week calendar, no month view, no "Recent
+  the day → Going out today → Urgent stock → the count lines (Formula count
+  grid weekly, Herbs last counted after 6 weeks; her 2026-10-29 picks) →
+  Order/Refill cards (+ the stocktake nudge while a count is open). NO patient lists, NO week calendar, no month view, no "Recent
   activity" feed, no Monday bands — several sections have been explicitly
   removed on her word (Communications-due strip, a day-list, a chart); don't
   add any section back without a mock and her sign-off. **Dashboard stays
@@ -1318,7 +1319,6 @@ origin/main:index.html`; don't trust this list's age.
   anxiety plans are a guess).
 - Her review of the `PH_TP_DEFAULT_SESSIONS` numbers on the original
   built-in templates (the mechanism is live).
-- A Dashboard "stocktake" pair of cards (needs a mock and her sign-off).
 - Ma Huang, Da Huang and Fu Zi Ren rows were never checked against her own
   tables (Ren audit 2026-10-13): she needs to re-send them.
 - The "Post Ovulation" house-blend formula is missing from her live

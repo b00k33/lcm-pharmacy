@@ -6393,3 +6393,70 @@ own colours; most controls were 32px).
 ## 2026-10-29 · Live: build 20261029-151200
 Her "push live" after the Supplements picture: the Supplements checklist table (36176f34) went live, with the build-notes commit
 0ea1d64a riding along. Publish commit feb3fdd1; https://b00k33.github.io/lcm-pharmacy/ serves 20261029-151200.
+
+## 2026-10-29 · Inventory: stock truth, To order in two steps, lean Inventory, Price review in Suppliers
+Her ask: "audit the inventory management part of lcm pharmacy and see what gets used and least used" + "and help improve
+productivity and efficiency and ui workflow". The audit (`inventory-usage-audit-2026-10-29.html`, artifact WPt5dRP1QK9CBbfWHm8JqY):
+her log shows the made-in-house jars go up by a typed Stock number far more often than by Formula refill's Finish, so most
+batches never log (no herbs come out, no date), and the jar numbers drift. Her picks (two popup rounds): log a batch on the
+Dashboard row; a 2-minute weekly count grid; all four reasons why batches go unlogged; jars are "some made in house some bought";
+To order in two steps; a lean Inventory table whose row opens the rest; Price review folds into Suppliers + a herb-count line.
+Then "build all". Built on session-a, NOT live (waits for "push live").
+- **1 Stock truth** (block "stock truth (her inventory audit picks" above `phDashUrgentStockHtml`): `PH_JAR_TRUST_DAYS` 21,
+  `PH_COUNT_DUE_DAYS` 7, `PH_HERB_COUNT_DUE_DAYS` 42. A made-in-house formula's Urgent stock row = `Made [g] ✓ · Weigh`
+  (`.ph-dash-mk`; grams pre-fill from `phBatchDefaultGrams` = the recipe's batch, else the supplier pack; the field is view state
+  `phDashMadeG`). ✓ = `phBatchMade(h, grams, repaint)`: with a recipe, `phRfcMkNums` → `phDispenseGate` → `refMakeCommit(recipe,
+  grams, cost, items, { quiet: true, jar: h })` (new opts: `jar` names the jar, `quiet` skips the refill page's own repaint + toast,
+  and it returns the entry); without one, a manual refill entry. One toast "✓ X made · N g · jar M g" with Undo
+  (`phReverseEntry`). Weigh opens Formula refill's weighing panel (`data-ph-dash-refill-open`). Inventory's typed Stock number
+  (the qty branch of the inventory input handler): HIGHER on a made-in-house formula asks `phAsk` "Made N g?" Yes · Just a count
+  (Yes = `phBatchMade` with the difference; Just a count = `phJarCountLog`, a stocktake log entry); LOWER = a quiet count entry.
+  `phJarTrustMap` = the last day each herb's number was known (refill / stocktake / arrival entries + the stocktake records'
+  `counted` and adjustments); `phJarStale` = a made-in-house formula with a number not known in 21 days: it leaves Empty / Low,
+  and the Formulas group starts with one line "N formulas not counted in 3 weeks · Count". **Formula count grid**
+  (`phDashCountOpen / RowHtml / Html / Done`, `.ph-dash-cgrid`, 2 columns, 1 on the phone): `phCountJars` = formula jars with a
+  number (an empty one too), not stopped (phasing-out stays), used this year (`phDashCover().monthly > 0`); a row = code · name
+  (a dot = not counted in 3 weeks) · the app's number, turning into the change (+ green / − amber) as she types · the scale field;
+  Done writes one stocktake record `{ kind: "formula", grid: true, counted, adjustments, checked, adjusted }`, a log entry per jar
+  that moved (with `sessionId`), one Undo. The Dashboard's count lines (`phDashCountHtml`, after Urgent stock): "Formula count ·
+  N jars · last <date> · Count" once the last formula count is ≥7 days old (hidden while the 3-week line shows, one Count door);
+  "Herbs last counted <date> · Count herbs" (opens Stocktake) once the last herb count is ≥6 weeks old (`phLastCountDate`).
+  The Stocktake page's own records now carry `counted` too. Rule fixes on the way: the Urgent stock row opens the edit drawer
+  (`data-ph-dash-herb-edit` on the row; the name is plain text; the field and buttons inside do not open it), container queries on
+  `.ph-dash-urgent` (use hides ≤980, the level bar ≤820, wrap ≤700; name min 140px), Refill's week chips `.wkb` and "Order all"
+  32px, the refill shortbar's 🛒 / 🌱 → the cart sprite / "Herbs".
+- **2 To order in two steps** (`renderPhRestock`): one list per supplier holds still-to-order AND ordered (`listN`,
+  `bySupList`, `osbListGroup`); an ordered row reads "ordered <date> · 500g × 2" and its button is **Arrived** (+pack); "Mark
+  ordered" is gone; the supplier's bulk button is **All arrived** (the whole list, snoozed excepted; `phArrive`; Undo). **Copy for
+  email marks ordered** (`phRestockCopySupplier(btn, sup, list, onDone)`: `onDone(ok)` runs only once the copy really landed;
+  then `phOsbWrite(fresh, "ordered")`, "✓ Copied · N herbs marked ordered", Undo); a blocked copy marks nothing; a list already
+  all ordered copies again unchanged. The board = 2 columns (`minmax(420px, 3fr) minmax(300px, 2fr)`: To order | Arrived); the
+  On the way column and its money roll are gone. Phone: the To order band holds both stages, the strip tile counts both, emoji
+  bands → sprite icons, Copy / All arrived / Clear are 32px Buttons, a row's name is plain text in a top that opens the drawer.
+- **3 Lean Inventory**: `PH_INV_LEAN_HIDDEN` = code, kind, cost, costFlag, low, status, usedByHH, cart, note → the table shows
+  Name · Supplier · Bottle $ · Stock (g) · Level · ⋮; `phMigrateInvLean` (IIFE, flag `PHARMACY.invLeanCols`) put that set on her
+  saved columns once; Columns still brings any back. The row opens the edit drawer (`tr[data-ph-inv-open]`, role=button, Enter /
+  Space), the name a span (`.ph-inv-nm`); the ⋮ menu (`phInvRowMenuHtml`) lost its emoji and holds "Add to order". The toolbar
+  wraps (Stocktake ran 14px off-screen at 1220, older).
+- **4 Price review in Suppliers**: the sidebar's Price review row is gone; each Suppliers row ends in **Review prices**
+  (`.ph-sup-rev`, `data-ph-sup-review`) opening Price review on that supplier; Suppliers stays lit there; the Suppliers row
+  opens / closes its herb list (name `.ph-sup-nm` plain text); column widths: actions 212, supplies 100, restock 96 / 112, on
+  order 70.
+- **One Button shape** for the new controls (`.ph-dash-srow .act, .ph-dash-btn, .ph-sup-rev`, Refill's Order all): 32px, 1.5px
+  herb line, 6px corners, white; the ✓ = a 32px circle.
+- **Tested** (sandbox copy with her seeded herbs 302 + log 4178, 1220 and 375): Made ✓ jar 10 → 160 g, 11 herbs out (150 g),
+  Undo restores exactly; a row tap opens the drawer, a tap in the grams field does not; count grid 26 jars, a match = counted
+  with no log line, changes = log entries + one record, Undo; Inventory Stock 190 on a jar asks "Made 190 g?" (Yes: 8 herbs out,
+  Undo; Just a count: a stocktake entry), a lower number = a quiet count; To order: Copy marks 3 ordered with Undo, a blocked copy
+  marks nothing, All arrived +300 g with one arrival entry and Undo; Suppliers Review prices → Price review on Koda, Suppliers
+  lit; Refill chips 32px; at 1220 every row one line, at 375 nothing cut and no sideways scroll. Pictures:
+  shots/inventory-build-desktop-2026-10-29.jpg, shots/inventory-build-phone-2026-10-29.jpg.
+  **Not tested:** her real records (the sandbox seed only); a real clipboard copy (the pane's copy path was driven, not her
+  browser's); a short herb during Made (the `phDispenseGate` sheet opening from the Dashboard); the phone's real sync; the Key2.
+- **Integration (★★★):** Made + the typed Stock number share Finish's write (`refMakeCommit`), so Formula refill's "Made today",
+  the planned row leaving by itself, and Dispense's stock all read the same entry; the count grid writes the Stocktake page's
+  own record + log shapes, so the Stocktake history and `phReverseEntry` read them; To order's stage moves stay `phOsbWrite` /
+  `phArrive`. Checked on screen: Dashboard, Inventory, To Order (desktop + phone), Suppliers, Price review, Formula refill.
+  Not checked on screen: the Stocktake page's history list showing a grid record.
+- **Mock wording changed while building:** "Weigh" has no trailing "›" (the trailing-arrow ban); the weekly count line hides
+  while the 3-week line shows (one Count door); "Add to order" sits in the Inventory row's ⋮ menu, not the drawer.
