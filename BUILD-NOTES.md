@@ -6149,3 +6149,35 @@ live page: the stamp in index.html and sw.js, `phMealHadPut`, the had list in `p
 ## 2026-10-29 · Live: build 20261029-103400
 Her "push" (publish 27269dcc). Went live: Fitness Today's open exercise has Name and Type rows and a blank seconds box shows the 30
 it uses (583365a4). Checked on the live page: both stamps, `phFitSetShown`, the Type row and the name box's CSS.
+
+## 2026-10-29 · synth22: a tap opens the photo, Copy notes bold labels, the viewer's title bar
+Her three (synth22, 2026-10-29): "i cant click on pic to edit" (screenshot: the compare view's toast "Photos can only be compared
+within the same row"); "i want the words before colon like pulse tongue etc to be bold so my notes are readable"; and on the
+Tongue · 18 Sep viewer "improve this organisation of the tags especially the tongue type and date. i dont like the sideways swipe"
+— her pick B of three mocks: "the three in the title bar, build it and push".
+- **A tap opens the photo** (`phRenComparePick`): a waiting compare pick read every photo tap as the pair's second, and when the
+  photo sat in another row it only showed that toast — so with a pick left waiting she could not open any photo. Now a photo that
+  cannot be the pair opens like any other and the waiting pick is dropped with it (the toast is gone). The photos a pick CAN pair
+  with carry a ⧉ corner mark and the picked one keeps its green ring (`phRenCmpCls` / `phRenCmpPairable`; the tongue rows are one
+  group) — on the History timeline, the clinic's Records › Photos, and the patient's Photos page's three thumbnail kinds (the
+  Tongue-over-time pile board, the comparison table's cells, the By visit / By type tiles; the pile board and the table had no
+  marks at all before).
+- **Copy notes bold labels** (`phCkCopy` takes an HTML copy; `PH_CN_LABEL`, `phCnLineHtml`, `phCnHtml`): the clipboard gets the
+  text and formatted HTML together (`ClipboardItem`; text alone where the browser refuses it), each label — the words before a
+  colon at the start of a line, a capital first, up to 23 characters — in `<b>`; herb lines and times stay plain. The "what was
+  copied" box shows the same bold.
+- **The viewer's title bar** (her pick B; `phRenViewBarHtml`, `phRenViewSetKind`, `phRenViewDateSave`; CSS `.ph-rv-bar`,
+  `.ph-rv-dd`, `.ph-rv-date`): the dark title bar carries Kind ▾ (a native select of the 13 kinds), the tongue Shot bar (Natural
+  light · Flash · Sublingual · Side; short words on the phone so it clears the ×) and a Date field that saves on pick (a half-typed
+  or future date is ignored). Gone: Change type / Change date, the tinted meta bar, the date box and the "Currently … — change to:"
+  sideways row. A not-yet-sorted photo reads "Unsorted" in the bar and keeps a wrapping row of kind chips under the picture ("Not
+  sorted yet — what is this?"). Saves say "Filed as Tongue" / "Date changed to 20 Oct" (presSavedToast).
+- **Tested** (sandbox, made-up "Zz Photo Test" with four synthetic photos; removed after): the bar at 1280 (13 kinds, Tongue
+  selected, four shots, the date, none of the old controls, the footer whole); a shot tap saves; the date saves, a half date and a
+  future date are ignored; the Kind select saves both ways; an unsorted photo: "Unsorted" in the bar, 13 wrapping chips, a chip
+  pick files it; Copy notes: 10 labels bold, herb and time lines plain, the box bold, the copy call safe where ClipboardItem is
+  missing; compare: a pick from the viewer rings its photo and marks the pair-able ones ⧉ on the pile board, the table's cells and
+  the tiles (abdomen and feet unmarked), an abdomen tap opens the abdomen photo with the pick dropped and no mark left, a
+  pile-board tap on a marked tongue opens the compare pair, Clear leaves no mark; 375px: the Shot bar's short words sit beside the
+  × with nothing wider than the page; Prescriptions search narrows and comes back; no console errors.
+- **Not checked:** the paste into Cliniko itself (her word on how it lands); her real photos; the Key2.

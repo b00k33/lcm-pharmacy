@@ -673,7 +673,10 @@ Select + one label for many. Tongue shots rank natural → unlabelled → side �
 Tongue page: today's photo beside the last (the Sublingual tab flips the pair), the Flash pair under them in the same column, past
 photos at the bottom. A face / build photo full screen carries Find the Ren's own rows (Face · Eyes · Lips / Build · Skin ·
 Muscles) and its spots as corners (her pick). Compare and the viewer are ONE mechanism each, wired into every surface that shows a
-photo tile. The photo sheet's Date field (today by default, never later) dates every photo saved from it. **Never delete a photo**
+photo tile. The viewer's dark title bar carries the photo's Kind (a dropdown of the 13 kinds), the tongue Shot bar (short words on the
+phone) and a Date field that saves on pick (her 2026-10-29 pick B); a not-yet-sorted photo keeps a wrapping row of kind chips under
+the picture. A waiting compare pick rings its photo green and marks the photos it can pair with ⧉ (the tongue rows are one group;
+`phRenCmpCls`); a tap on any other photo opens that photo and drops the pick (her 2026-10-29 "i cant click on pic to edit"). The photo sheet's Date field (today by default, never later) dates every photo saved from it. **Never delete a photo**
 (her hard rule); the store asks the browser to keep it (`phStoragePersist`); backups carry photos.
 
 ## Fasting (her own clock)
@@ -1103,7 +1106,9 @@ detector, **session-package counting**) branches on it.
 **Copy notes** (her picks; code "COPY NOTES", `phCn*`): one tap copies today's visit as labelled lines for her Cliniko treatment
 note (date · visit · cycle day, Scores, Tongue, Pulse = the Note tab's text, Abdomen, Acupuncture = points + press + therapy
 lines, each Formula with its herb lines + Total + Dosage · take-days · lasts N days) and shows what went in a box under the button
-(✕ closes). Every line is that fact's own read; a part with nothing today is left out; the formula = dispensed today, else the one
+(✕ closes). The clipboard gets the text and a formatted copy with every label (the word before the colon: Tongue, Pulse, …) in
+bold, so a paste into Cliniko's note keeps them readable (her 2026-10-29 ask; `phCnHtml`); the box shows them bold too. Every line
+is that fact's own read; a part with nothing today is left out; the formula = dispensed today, else the one
 Dispense opens. Doors: the Today's visit step bar, the Treatment band, the ⋯ menus (Care Plan / Treatment / Dispense), the toast
 after Complete session.
 
