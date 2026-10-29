@@ -292,8 +292,29 @@ phase done · 3 of 3 visits", Watch as better / same / worse counts (`phTpWatchD
 "✓ Moved to Subacute" (+ "🌿 <formula> · ready to dispense" if the new phase has one) with **Undo** (`phTpPrvUndo`: phase, count or
 plan back from `prv.undo`, review removed). A Move past the planned visits ends the phase on its planned-th visit and starts the
 next the day after (later visits count for the next phase); Close ends the phase today. A Compass score or target change repaints
-the card in place. Cycle plans: no card (they follow the calendar). **Logging a visit moves nothing** (the session-log move-on and
-the Treatment tab's auto-move banner are gone).
+the card in place. **Logging a visit moves nothing** (the session-log move-on and the Treatment tab's auto-move banner are gone).
+**Plans close themselves** (her 2026-10-29 picks, mock `plans-close-mock-2026-10-29.html` A + C): the last phase's card asks ONCE
+and says what happens untouched ("Nothing booked after today · closes itself tomorrow" / "Booked 5 Nov · closes itself after it").
+A plan whose last planned visits are done, with nothing booked or logged after its last visit and no tap of hers since, closes
+itself the day after that visit (`phTpSelfCloseSweep`, run when her file opens and when Today's visit draws; dated the day after
+the visit, never the sweep's day): `plan.status = "done"`, `plan.closedKey`, `plan.selfClosed`, one review line "Closed itself ·
+10 visits over 12 weeks" (`prv.auto`, Undo). The Care Plan band and the Treatment band read **Closed itself 30 Oct 2026 · 10
+visits over 12 weeks · Reopen · 2 more visits · Ending letter** (`phTpSelfClosedHtml`); the Plans row says "closed <date>" on any
+closed plan (`plan.closedKey`, also written by Close plan and Mark completed). A booking or visit after the close **reopens** the
+newest self-closed plan with N more visits (`phTpSelfReopen`; a cycle plan: another cycle): Today's card "✓ Reopened · 2 more
+visits" · "Subacute · visit 5 of 6 · closed itself 30 Oct 2026" · Undo · New course instead. An Undo holds (undo of a reopen:
+closed until a booking after today, `selfClosed.held`; undo of a close: open until a later visit, `plan.keepOpen`, the card then
+says "Kept open · closes itself the day after the next visit"); her next tap clears the hold; the app's own lines never count as
+her tap (`phTpPrvTouched` skips `prv.auto`). **Cycle plans end too** (`phTpCycEndCtx` / `phTpCycCourse`): Natural fertility · PCOS
+· Endometriosis · Dysmenorrhea · Amenorrhea run a course of cycles from the concern's How long (Weeks 1 · Months 3 · 6–12 months 6
+· 1–3 years 12 · Longer 12; no concern = 3; `PH_TP_CYC_COURSE` + `plan.cyclesMore`), counted as period starts since the plan began
+(the cycle it began in counts; Amenorrhea, or no cycle data, counts months): the last cycle's late days (luteal or overdue) show
+"Cycle 3 of 3 done · …" with **Close plan · Another cycle** (one more cycle, Undo) and "closes itself after the next period"; it
+closes at the next period's start (or the day after a later visit). **IVF Protocol ends at the pregnancy test** (`phTpTestCtx`:
+the latest transfer's result, else her Pregnant? test, on or after the plan began): positive → "🌸 Positive test <date>" with
+**Start Pregnancy plan** (the due-date step, then the Pregnancy plan; the IVF plan closes "Pregnancy plan started" once the step
+finishes) · **Keep this plan**; negative → **Another cycle** (the IVF questions; closes once answered) · **Close plan**; untouched,
+it closes the day after the test. A positive test on any cycle plan asks the same. The rail's "Review today" tag counts these.
 **Course end** (her answer "The patient only"): the last phase's review card (and the closed plan's, same day) shows the course:
 "Course done · 10 visits over 12 weeks" (`phTpCourseStats`: all phases' visits, weeks since the first phase began), a Treat ·
 Start · Now · Target table (`phTpCourseRows`: each Compass concern's first and latest score, "✓ 2 or less" / "not yet"), then

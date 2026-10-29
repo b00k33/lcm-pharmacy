@@ -225,7 +225,7 @@ visit. That is fixed by this law.)
 | Blood tests | When a new result arrives: the page opens on **Attach the result** (a photo or a PDF, filed with the photos as "Blood test") beside Paste the report; one table of the markers that count, the values typed in the new column; the rules table lives in the Guide (her 2026-10-29 picks, CURRENT-STATE "Blood tests"). Each result shows its age ("9 months old"); a result **over 12 months old** is still listed and dated but marked "not counted" and gives Fang Bing Ren no clue (`PH_BLD_OLD_DAYS`, `phBldIsOld`). |
 | Complaint compass, Cycle, Tongue, Pulse, Abdomen | Every visit (Cycle while on). |
 | Fang Bing Ren | Recalculated live on every render, never stored; only her Agree / Not this patient taps are saved. |
-| Treatment Care Plan | Built after Fang Bing Ren; reviewed at the end of each phase. |
+| Treatment Care Plan | Built after Fang Bing Ren; reviewed at the end of each phase. **Plans close themselves** (her 2026-10-29 picks): the last planned visit asks once (Close plan · Stay N more, and what happens untouched); the plan closes itself the day after its last visit when nothing more is booked, and a later booking reopens it with N more visits (Undo holds). Cycle plans run a course of cycles from the concern's How long (Weeks 1 · Months 3 · 6–12 months 6 · 1–3 years 12) and ask Close plan · Another cycle on the last cycle's late days; IVF ends at the pregnancy test (positive → Start Pregnancy plan · Keep this plan; negative → Another cycle · Close plan). CURRENT-STATE "Plans close themselves". |
 | Treatment, Dispense | Every visit (Dispense when herbs). |
 
 ## 4 · What feeds what (influence map)
