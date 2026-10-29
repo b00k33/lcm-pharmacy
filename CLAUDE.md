@@ -176,8 +176,10 @@ reads it; do not render it again.
 - **The Review step is retired** — folded into Today's visit (strip + pain
   map + pain intake). Nothing lost, only repeats removed.
 - **Timeline** (her picks 2026-10-13 and 2026-10-16): a rail item right after Fang Bing Ren, before Treatment Care Plan, and in the Next walk, only on a Pregnancy / Natural fertility / IVF plan (see "Timeline promoted to its own rail step" in BUILD-NOTES.md). **Since 2026-10-29 (her audit pick) it and Patterns · Diagnosis sit folded under one "⋯ More" row there** (`presFlowMoreOpen`): open on a tap or while one of them is the page, closed when she leaves.
-- Other pages (Photos, Appointments, Messages, IVF history, Log, Visit
-  checks, Checklist) are unchanged and sit outside this law.
+- Other pages (Photos, Appointments, Messages, IVF history, Log, Checklist)
+  are unchanged and sit outside this law. (Visit checks and the plan's
+  Treatment log tab went on 2026-10-29: the Treatment tab's visits table is
+  the one visit record, her pick.)
 - **The complaints live on Today's visit only (her 2026-10-18 pick).** There
   the complaint compass (`phCxCardHtml`) is their card; a patient with no
   chief complaint on file gets the plain Came in for card instead. Patient
@@ -336,7 +338,7 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
 - **The one status green is `--ph-good`** (`-deep` / `-tint` / `-soft` /
   `-line` / `-hi`, defined beside the other status tokens; audit step 2,
   2026-10-15): better / agreed / ok / done marks, the "better" response chip,
-  the Visit checks "better" cell, the abdomen chart's green mark, the
+  the visits table's "better" cell (Treatment), the abdomen chart's green mark, the
   follicular segment's pale fill on the cycle bars and calendars, and the
   pale outline of the visit table's square action buttons all read it. Never a raw
   green hex for any of those again. Kept raw on purpose: her named herb-row

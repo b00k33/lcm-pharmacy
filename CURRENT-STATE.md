@@ -229,8 +229,8 @@ and on Today's visit].
 **Shorter profile** (her "minimise any redundant display and messages"; outside the grid): a finding with nothing on file folds
 into one faded "not yet" line of chips opening their pages (`phTpFxNoneSplit` / `phTpFxNoneHtml`; Care Plan Findings, Treatment's
 "How <name> is"). Also faded "not yet": Progress before the first visit ("Progress · not yet"), Today's visit tiles, an empty
-Visit record. Medical history rows tag "FBR" (words in the hover); its "✓ All" hovers "Asked all: the rest are No". Visit checks'
-empty cell = "–"; Tongue & pulse empty runs = "–" (words in the hover). Patterns' "Only on one side" band has no explaining line.
+Visit record. Medical history rows tag "FBR" (words in the hover); its "✓ All" hovers "Asked all: the rest are No". The visits
+table's empty cell = "–"; Tongue & pulse empty runs = "–" (words in the hover). Patterns' "Only on one side" band has no explaining line.
 Fang Bing Ren's two band names are said once, over the board ("Same fact, today and usually then Only on one side",
 `.ph-bd-key`); in an area the twins come first, a dashed line starts the one-side lists. Tongue & pulse rows drop "Tongue:" /
 "Tongue coat:" / "Pulse:" under their group heading (noSubj, as other areas). A sign only "present" (Cough: present) = a ✓ under
@@ -344,16 +344,25 @@ phase following Fang Bing Ren; the Fang Bing Ren line under Watch keeps the lead
 **Formula on a phase**: a typed name is hers; "→ Fill" fills from Fang Bing Ren's live top formula when blank [Care Plan phase
 Formula].
 
-**The Treatment tab**: session stepper, the visit (`phTpVisitTableHtml`), a Complete band; its "✓ Complete session N" is the one
-place a visit is saved (`data-pres-acu-log`; Today's visit only opens it). No Planned | Today | Session N table (her picks). One
-session line (phase named once, Current ▾, "Session N · today", Herbs only today, Change phase); left, "How <name> is" (the
-Compass's complaint and sign lines read-only, `phTxCxHtml`: today's score or the last one faded with its date, one "Score on
-Today's visit" chip; then the Care Plan's finding lines and drawers, `phTxFxHtml` over `phTpFxRowHtml`, without Came in for, plus
-a Fang Bing Ren line, template-hidden ones under More); right, today's treatment (Aim; navy Therapies block, the phase's planned
-therapies lit once per visit by `phTxSeedTherapies`, a dashed chip for a planned one she unticks; "Same as last visit"; "Which
-muscle?" for pain patients; green Herbs block; Watch; Notes; one "Plan ahead · Session N" chip for the per-session boxes). Tongue
-/ Pulse / Abdomen have **no Better / Same / Worse** here; the visit's result comes from the Compass (`phCxOutcomeToday`). Phone:
-stacked, summary first, only the exam lines, the rest under one More chip.
+**The Treatment tab**: session stepper, the visit record as ONE table (`phTpVisitTableHtml` → `phTxVisitsTableHtml`, her 8 picks on
+`visits-table-mock-2026-10-29.html`, 2026-10-29), a Complete band; its "✓ Complete session N" is the one place a visit is saved
+(`data-pres-acu-log`; Today's visit only opens it). One session line (phase named once, Current ▾, "Session N · today", Herbs only
+today, Change phase), then the table: Visit · CD (cycle patients) · Phase · Response · Tongue · Pulse · Abdomen · Therapies · Herbs
+· Note; today on top (gold tint, a gold top line and left bar), logged visits newest first, one faded italic next row (the next
+booked or planned session: its date, CD on that date, the phase's points and formula). **Today's row:** the Compass score
+(`phTxScoreCellHtml`, a "Score on Today's visit" chip when unscored), the three exam cells as doors to their pages (`.ph-tx-door`;
+"not yet" until done, then the drawing + words), the navy Therapies block (the phase's planned therapies lit once per visit by
+`phTxSeedTherapies`, a dashed chip for a planned one she unticks; "Same as last visit"; "Which muscle?" for pain patients), the
+green Herbs block, the Note cell (the Comments box). **Its drawer** under the row: "How <name> is" (the Compass's complaint and
+sign lines read-only, `phTxCxHtml`: today's score or the last one faded with its date; the Care Plan's finding lines and drawers,
+`phTxFxHtml` over `phTpFxRowHtml`, without Came in for and without the exam lines, plus a Fang Bing Ren line, template-hidden ones
+under More), Aim, Watch, Plan note, one "Plan ahead · Session N" chip. **A logged visit's row** (`phTxVisitRowHtml` over
+`phTpVrData` / `phTpVrFacts`): CD, phase, response, the exam drawings + words (`phTxFndCells`), therapies + points, 🌿 formula, the
+note's first line; its date (`data-tx-vrow`) opens its record under the row (`phTpVrRowHtml`'s Ask · Found · Did · Next, the Frozen
+lock and edit form as before; `phTxVrowOpen`, repainted in place by `presAcuOpenRefresh`). Tongue / Pulse / Abdomen have **no
+Better / Same / Worse** here; the visit's result comes from the Compass (`phCxOutcomeToday`). Phone: the table (900px) scrolls
+inside its wrap. The Visit checks page and the plan's Treatment log tab are gone (2026-10-29): their doors (the trend sheet, the
+Patterns clue, `{ tab: "treatment" }`) open this tab.
 
 **The green Herbs block** (her pick A, 2026-10-28): `[🌿 today's formula ▾] [Dispense] [Still taking]`, then `[Action ▾]` and the
 plan line. The ▾ opens one searchable list (`phAcuFPickListHtml`), groups in a fixed order, nothing ranked: This patient (each
@@ -513,7 +522,7 @@ patient can be linked to their partner [Partner link]. The no-plan gate has "Ski
 **Patient Directory** unions six sources keyed by `phPatientKey`. "Profile-first" is history: the Patient Workflow LAW replaced
 it.
 **No band on patient pages (her pick):** no dark three-gauge band on Medical history, Supplements, Photos, IVF history,
-Appointments, Messages, Treatment, Treatment log, Notes; each page's facts = an icon + a number on its own first row, words in the
+Appointments, Messages, Treatment, Notes; each page's facts = an icon + a number on its own first row, words in the
 hover title (`.ph-fx`; `presBandHtml` + `PRES_BANDS`, sync unchanged). Medical history's ✓ asked and 🕒 updated sit in its toolbar
 (`presMedHxBandHtml`); no "By group" (each group heading says ✓ asked).
 
