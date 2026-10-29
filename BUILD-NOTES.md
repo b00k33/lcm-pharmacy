@@ -6871,3 +6871,19 @@ pasted version drawn (inline styles); Print wrote the page with 12 photos and th
 nothing wider than the screen; no console errors. Pictures: `shots/prg-2026-10-29-*.jpg` (local only).
 **Not tested:** her real records (a real patient's photos, scores and plan GP lines); a real paste into Gmail (the clipboard was
 captured in the sandbox); a real print window; the Key2 phone.
+
+## 2026-10-29 · Progress letter: its wording in Settings › Letter templates (her "how do i edit the letter template")
+Asked right after the letter went live. Her picks: yes, add it to Settings › Letter templates; editable = opening words, Home care,
+section headings, letter title (all four).
+**Built (not live until her "push live"):** `PH_PRG_TMPL` (id "progress", seven fields with defaults = the words the letter used),
+`PH_PRG_TOKENS`, `phPrgTpl`, `phPrgFill`, `phPrgHome` (moves the first build's `PHARMACY.prgHomeCare` into the template; the letter's
+gold box now writes through `phLtrSetApply`, which drops the old key). The editor (`phLtrTemplatesSectionHtml`) lists it after the
+herbal letters and draws its rows from `PH_PRG_TMPL` (title and headings one line); the change handler takes "progress" as its
+template; the Undo label names its field. The letter, the copy and the plain text read the title and headings from it; the opening
+words fill {back} / {onway} with the sentences the first build wrote. **✎ Template** in the letter's buttons opens Settings ›
+Patients › Letter templates with the Progress letter chosen.
+**Tested** (sandbox, the made-up palsy patient): the letter unchanged with no edits; Home care typed in the first build moved into
+the template; ✎ Template lands on the Progress letter chip with its seven rows and its own fill-ins line; a new title "{first}'s
+progress", opening "Hi {first}, look how far you have come since {since}! {back} {onway} So proud of you." and heading "Your photos"
+showed in the letter and in the copy; Undo put the heading back, ↺ Default the title; the herbal letters' rows and fill-ins unchanged
+and the herbal letter list has no Progress letter; no console errors. Picture `shots/prg-2026-10-29-template.jpg` (local only).
