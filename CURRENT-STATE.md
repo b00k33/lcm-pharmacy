@@ -1250,7 +1250,9 @@ lines, read-only; Watch = the template's Red flags only, no "Apply the usual". T
 complaints only (no derived Fang Bing Ren "complaints" in `phCcSecAll`); the letter's "Watching:" = complaints + the sign rows she can see
 (DRAFT wording).
 **The checks** are compact rows, two across, each with Open and Skip ▾ (Not today / Always for this patient); a skipped check
-folds into the "Skipped" line and counts as done (`phTodayPartOk`). Quick assess shows 8 questions in 2 columns on Today's visit
+folds into the "Skipped" line and counts as done (`phTodayPartOk`). **Face score** (her 2026-10-29 pick A, `mocks/face-score-due-mock-2026-10-29.html`): for a face palsy patient (`phFpApplies`) a
+gold tile beside Tongue · Pulse · Abdomen on the visit the score is due (`phFpDue`, every 4 visits; "score now" before the first),
+the last score faint under it; ✓ with today's % once scored; not there on other visits; it opens Profile › Checklist (`phTodayFaceOn`). Quick assess shows 8 questions in 2 columns on Today's visit
 and Fang Bing Ren. A visit is finished by ONE button, **Done · Copy for Cliniko** (Today's visit's Treat card and the Treatment band; it saves
 through `presAcuLogNow`, copies and marks the visit copied; "Ending a visit" below). **"No acupuncture — herbs only today"** saves
 `noTreatment:true`; every reader of `rec.acuSessions` (the printable record, Patient Journey, the Visits table, the quiet-patient

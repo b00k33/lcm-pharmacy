@@ -6987,3 +6987,23 @@ and its figure only. **Not exercised:** her real records, a phone's real keyboar
 ## 2026-10-29 · Live: Medical history audit (build 20261029-213500)
 On her "push live": c3fe1518 (the rule fixes) and 75ecebfd (her picks: no flags strip, no ✓ Save) went live in build
 20261029-213500, with c77299d5 (another session's notes only); the live page serves the stamp and the new styles.
+
+## 2026-10-29 · Today's visit: the face score shows when it is due (her "where is the bells palsy exam for me to reassess?")
+The facial score lives on Profile › Checklist (`presFacialSectionBodyHtml`); nothing on Today's visit said when it was due. Her
+picks: yes, show it when due (popup); then **A · Look tile** on `mocks/face-score-due-mock-2026-10-29.html` (artifact
+Gq5e9vYsj68NS7iN1D4b8b; B was a door in the dark band, C both).
+**Built (not live until her "push live"):** `PH_TODAY_FACE_PART` ("Face score") joins `phTodayParts` and the tiles after
+Musculoskeletal when `phTodayFaceOn(rec)`: the open script's patient is a face palsy patient (`phFpApplies`, the Checklist's own
+test) and the score is due (`phFpDue`), never scored, or scored today. Due: the tongue photo's gold `.ph-tv-wait` look, "due now"
+("score now" before the first score), the last score faint under it (`phTodayFaceLast`, "1 Oct · 64%"). Scored today
+(`phTodayDonePart` "face" = the newest score dated today): ✓ and `phTodaySumPart` "79% · movement 11/14". The tile, and the Next
+walk's step for it, open `data-flow-prof="checklist"`. It counts in Look's n of m, the rail's This visit, the Dispense note and
+the Look fold like the other checks; ⋯ skips it (Not today / Always). No score is read through `phFpScores` unless one exists (it
+writes an empty list).
+**Tested** (sandbox, a made-up Bell's palsy patient, Neurological case, scores 17 Sep and 1 Oct, 4 visits since): gold tile "due
+now · 1 Oct · 64%", Look 0/4; the tile opens Checklist ("DUE NOW"); scoring there and coming back: ✓ "79% · movement 11/14 · 1 Oct
+· 64%", Look 1/4; last score 22 Oct (1 visit since): no tile, Look 0/3; no scores: "score now"; ⋯ Not today: Skipped line, ↺
+brings it back; a General case with no scores: no tile, no Checklist; 800px and 360px: tiles two across, nothing past the edge
+(on the phone the ✓ line ends "…" like the other tiles). Pictures `shots/face-due-2026-10-29-{due,scored,phone}.jpg` (local only).
+Integration: Checklist (unchanged, opens from the tile), Care Plan facial strip (unchanged, reads the same `phFpDue`), the
+Progress letter (reads the same scores). Not checked on her real records.
