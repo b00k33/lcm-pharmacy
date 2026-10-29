@@ -5954,6 +5954,7 @@
   #pharmacyPage .ph-meal-ing .x:hover, #pharmacyPage .ph-meal-pr .x:hover { background: var(--ph-herb-tint); color: var(--ph-herb-deep); }
   #pharmacyPage .ph-meal-ing .x .ph-meal-ic, #pharmacyPage .ph-meal-pr .x .ph-meal-ic { width: 11px; height: 11px; }
   #pharmacyPage .ph-meal-acts { display: flex; gap: 6px; margin-top: 12px; }
+  #pharmacyPage .ph-meal-hb { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }   /* the doses riding on this meal (her pick 2026-10-29) */
   #pharmacyPage .ph-meal-acts .ph-c22-go, #pharmacyPage .ph-meal-foot .ph-c22-go { flex: 1 1 0; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
   #pharmacyPage .ph-meal-foot { display: flex; gap: 6px; margin-top: 12px; }
   #pharmacyPage .ph-meal-done { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 10px; box-sizing: border-box; border-radius: 10px; background: var(--ph-good-tint); color: var(--ph-good-deep); font: 700 var(--fs-14)/1.25 var(--font-body); }
@@ -40714,9 +40715,14 @@
   }
   // [["meals", key], ["shop", id]] -> those entries as they are now (null = not there yet)
   const phMealSnap = keys => keys.map(([c, id]) => [c, id, JSON.parse(JSON.stringify((phMeD()[c] || {})[id] || null))]);
+  const phMealUnsnap = (d, snap, now) => snap.forEach(([c, id, prev]) => { (d[c] = d[c] || {})[id] = Object.assign({}, prev || { id, del: 1 }, { up: now }); });
   function phMealRestore(snap) {
-    if (phMealSave((d, now) => snap.forEach(([c, id, prev]) => { (d[c] = d[c] || {})[id] = Object.assign({}, prev || { id, del: 1 }, { up: now }); })) && snap.some(([c]) => c === "fasts")) phMealFastPaint();
+    if (!phMealSave((d, now) => phMealUnsnap(d, snap, now))) return;
+    if (snap.some(([c]) => c === "fasts")) phMealFastPaint();
+    if (snap.some(([c]) => c === "hbk")) { phHbMemo = null; phHbRepaint(); }   // a dose put back with its meal (her pick 2026-10-29)
   }
+  // a meal's Had it as phMealHadSet writes it, for the fast's edges too (her pick 2026-10-29): one shape, one door
+  const phMealHadMark = (d, key, at, v, now) => { if (!d.meals || typeof d.meals !== "object" || Array.isArray(d.meals)) d.meals = {}; phMealPut(d, key, now, e => { e.had = { at, v }; }); };
   // one meal entry, changed in place (made when it is not there)
   function phMealPut(d, key, now, fn) {
     const e = Object.assign({ id: key }, d.meals[key] && !d.meals[key].del ? d.meals[key] : {});
@@ -40736,21 +40742,28 @@
     const key = dayKey + "|" + sl, at = Date.now(), ate = v != null ? v : phMealPlan(dayKey, sl).v, fast = phMealFastOf(dayKey, sl, ate);
     const go = phMealLunchFast(dayKey, sl, ate) ? [{ label: "Start fast", fn: () => phFastStart(at) }] : undefined;
     phMealPop = key; phDietFresh = key;
+    // her pick (2026-10-29, the Me audit): the doses riding on this meal (phHbMealOf) are taken with it, in the same save; Undo puts them back
+    const hbs = ate !== "skip" && dayKey === keyOf(new Date()) ? phHbMealDoses(dayKey, sl).filter(x => !phHbTaken(dayKey, x.r.sid, x.i)) : [];
     const ok = phMealSave((d, now) => {
       phMealPut(d, key, now, e => { e.had = { at, v: ate }; });   // the whole meal, as it was planned (a later change to her usual one leaves it)
       if (fast) phFastPut(d, Object.assign(phFastNoEnd(fast), { e: new Date(at).toISOString() }), now);
-    }, `✓ ${phMealWord(sl)} · ${phMealName(ate) || "had it"}${fast ? ` · fast ${phFastHrs((at - Date.parse(fast.s)) / PH_FAST_H)}` : ""}`, [["meals", key]].concat(fast ? [["fasts", fast.id]] : []), go);
+      hbs.forEach(x => phHbPut(d, "hbk", { id: phHbKey(dayKey, x.r.sid, x.i), at: new Date(at).toISOString() }, now));
+    }, `✓ ${phMealWord(sl)} · ${phMealName(ate) || "had it"}${fast ? ` · fast ${phFastHrs((at - Date.parse(fast.s)) / PH_FAST_H)}` : ""}${hbs.length ? ` · ${hbs.length === 1 ? "dose" : hbs.length + " doses"} taken` : ""}`, [["meals", key]].concat(fast ? [["fasts", fast.id]] : [], hbs.map(x => ["hbk", phHbKey(dayKey, x.r.sid, x.i)])), go);
     if (ok && fast) phMealFastPaint();
+    if (ok && hbs.length) { phHbMemo = null; phHbRepaint(); }
     return ok;
   }
   function phMealHadClear(dayKey, sl) {
     const had = phMealHad(dayKey, sl), end = had && sl === "b" ? new Date(had.at).toISOString() : "";
     const fast = end && phFastOn() && !phFastActive() ? phFastDone().find(f => f.e === end) || null : null;   // the fast this Breakfast ended
+    const atIso = had ? new Date(had.at).toISOString() : "", hbs = had ? phMeLive(phMeD().hbk).filter(x => x.at === atIso && String(x.id).startsWith(dayKey + "|")) : [];   // the doses taken with it (her pick 2026-10-29)
     const ok = phMealSave((d, now) => {
       phMealPut(d, dayKey + "|" + sl, now, e => { delete e.had; });
       if (fast) phFastPut(d, phFastNoEnd(fast), now);
+      hbs.forEach(x => phHbPut(d, "hbk", Object.assign({}, x, { del: 1 }), now));
     });
     if (ok && fast) phMealFastPaint();
+    if (ok && hbs.length) { phHbMemo = null; phHbRepaint(); }
     return ok;
   }
   // what she had, changed after Had it (her 2026-10-28 "why cant i edit the spicy salmon fishbowl": the picker edited the plan
@@ -41258,6 +41271,7 @@
   }
   // every place a meal shows repaints: the drawer, the grid and its open card, the sheet, the Diet page (phMeRepaint), her Patterns
   function phMealRepaint() {
+    phHubIx = null;   // the Week table reads her meals and the doses a meal ticks (her pick 2026-10-29)
     phRxFbrMemo.clear();   // Fang Bing Ren reads her reactions afresh (FOOD REACTIONS → FANG BING REN)
     phMeRepaint(true);
     phRxHlPaint();   // FOOD REACTIONS on her Health page
@@ -41284,7 +41298,7 @@
       const ate = phMealAte(dayKey, sl), [n, all] = phMealPrepAll(key, ate);
       const hw = ate === "skip" ? "Skipped" : "Had it";   // a meal she skipped reads Skipped, never "had it"
       const sub = [keyOf(new Date(had.at)) === dayKey ? hw + " · " + phMealClock(had.at) : hw].concat(all ? [`prep ${n} of ${all}`] : []).join(" · ");
-      return `<div class="ph-meal-lbl">${hw}</div><div class="ph-meal-done"><span class="tk${phMealPop === key ? " pop" : ""}">${phMealSvg("check")}</span><div class="nm">${esc(ate === "skip" ? word : phMealName(ate) || word)}<small>${esc(sub)}</small></div><button type="button" class="ph-c22-go" data-meal-undo="${esc(key)}">Undo</button></div>${ate === "skip" ? "" : phRxSecHtml({ day: dayKey, sl }, ate)}`;
+      return `<div class="ph-meal-lbl">${hw}</div><div class="ph-meal-done"><span class="tk${phMealPop === key ? " pop" : ""}">${phMealSvg("check")}</span><div class="nm">${esc(ate === "skip" ? word : phMealName(ate) || word)}<small>${esc(sub)}</small></div><button type="button" class="ph-c22-go" data-meal-undo="${esc(key)}">Undo</button></div>${ate === "skip" ? "" : phRxSecHtml({ day: dayKey, sl }, ate)}` + phMealHbHtml(dayKey, sl);
     }
     // a fast night (her fasting plan): Dinner reads "Skipped · fasting" on top; what is planned stays under it, for a night she eats after all
     const fn = sl === "d" && x && x.s != null ? phFastNightOf(dayKey, x.s) : null;
@@ -41302,7 +41316,7 @@
       const miss = id.reduce((m, d) => m + phDishIngAll(d).filter(t => phShopFor(d.id, t)).length, 0);
       h += `<div class="ph-meal-lbl">Ingredients<em>${miss ? `${miss} in Shopping` : "all in"}</em></div><div class="ph-meal-ing">${id.map(d => phDishIngAll(d).map(t => { const s = phShopFor(d.id, t); return `<button type="button" class="${s ? "miss" : ""}" data-meal-ing="${esc(dayKey + "|" + d.id)}" data-meal-t="${esc(t)}" aria-pressed="${!!s}" title="${esc(d.n)} · ${s ? "In Shopping" : "To Shopping"}">${s ? phMealSvg("cart") : ""}${esc(t)}</button>`; }).join("")).join("")}</div>`;
     }
-    return h + `<div class="ph-meal-acts"><button type="button" class="ph-c22-go solid" data-meal-had="${esc(key)}"${phMealVs(plan.v).length ? "" : " disabled"}>${phMealSvg("check")}Had it</button>${phMealInstHtml({ day: dayKey, sl }, phMealVs(plan.v))}</div>`;
+    return h + phMealHbHtml(dayKey, sl) + `<div class="ph-meal-acts"><button type="button" class="ph-c22-go solid" data-meal-had="${esc(key)}"${phMealVs(plan.v).length ? "" : " disabled"}>${phMealSvg("check")}Had it</button>${phMealInstHtml({ day: dayKey, sl }, phMealVs(plan.v))}</div>`;
   }
   // ---- A CALMER MEAL (her 10 picks 2026-10-27, meal-picker-mock-2026-10-27.html; "improve ui layout - too busy. improve
   // workflow"): the meal first as a small table, + Add food or drink opens the list under it (the meal stays in view), one
@@ -43283,18 +43297,40 @@
   }
   const phFastPut = (d, f, now) => { d.fasts = d.fasts || {}; d.fasts[f.id] = Object.assign({}, f, { up: now }); };
   const phFastNoEnd = f => { const x = Object.assign({}, f); delete x.e; delete x.del; return x; };
+  // her pick (2026-10-29, the Me audit, "both ways"): the fast's two edges tick her meals in the same save -- Stop = the first meal
+  // planned today and not had yet (her Breakfast), Start = the last meal planned today whose time has come (her Lunch; a Dinner the
+  // fast covers never counts). Undo on the toast puts the meal back too. A Start from the Lunch toast ticks nothing (that meal was
+  // just ticked). A meal with no time of its own counts for Stop, not for Start.
+  function phFastMealOf(k, last) {
+    if (!phMeOk()) return null;
+    const ev = phMealEvents(k), d = new Date(), nm = d.getHours() * 60 + d.getMinutes();
+    const ok = PH_MEAL_SLOTS.map(s => s[0]).filter(sl => {
+      if (!phMealVs(phMealPlan(k, sl).v).length || phMealHad(k, sl)) return false;
+      const m = ev[sl] ? phC22Min(ev[sl].s) : null;
+      if (sl === "d" && ev[sl] && phFastNightOf(k, ev[sl].s)) return false;
+      return !last || (m != null && m <= nm);
+    });
+    const sl = last ? ok[ok.length - 1] : ok[0];
+    return sl ? { sl, key: k + "|" + sl, v: phMealPlan(k, sl).v } : null;
+  }
   // at = a moment it started (the lunch toast's Start fast: when she had lunch); none = now
   function phFastStart(at) {
     if (phFastActive()) return;
-    const id = "f" + Date.now().toString(36), s = new Date(+at || Date.now()).toISOString();
-    phFastWrite((d, now) => phFastPut(d, { id, s }, now), at ? `✓ Fast started · ${phFastClock(new Date(s))}` : "✓ Fast started", () => phFastWrite((d, now) => phFastPut(d, { id, s, del: 1 }, now)));
+    const id = "f" + Date.now().toString(36), s = new Date(+at || Date.now()).toISOString(), k = keyOf(new Date(s));
+    const ml = at ? null : phFastMealOf(k, true), snap = ml ? phMealSnap([["meals", ml.key]]) : null;
+    phFastWrite((d, now) => { phFastPut(d, { id, s }, now); if (ml) phMealHadMark(d, ml.key, Date.parse(s), ml.v, now); },
+      `${at ? `✓ Fast started · ${phFastClock(new Date(s))}` : "✓ Fast started"}${ml ? ` · ${phMealWord(ml.sl)} had` : ""}`,
+      () => { phFastWrite((d, now) => { phFastPut(d, { id, s, del: 1 }, now); if (snap) phMealUnsnap(d, snap, now); }); if (snap) phMealRepaint(); });
+    if (ml) phMealRepaint();
   }
   function phFastStop() {
     const a = phFastActive();
     if (!a) return;
-    const e = new Date().toISOString();
-    phFastWrite((d, now) => phFastPut(d, Object.assign(phFastNoEnd(a), { e }), now), `✓ Fast saved · ${phFastHrs((Date.parse(e) - Date.parse(a.s)) / PH_FAST_H)}`,
-      () => phFastWrite((d, now) => phFastPut(d, phFastNoEnd(a), now)));
+    const e = new Date().toISOString(), k = keyOf(new Date(e)), ml = phFastMealOf(k, false), snap = ml ? phMealSnap([["meals", ml.key]]) : null;
+    phFastWrite((d, now) => { phFastPut(d, Object.assign(phFastNoEnd(a), { e }), now); if (ml) phMealHadMark(d, ml.key, Date.parse(e), ml.v, now); },
+      `✓ Fast saved · ${phFastHrs((Date.parse(e) - Date.parse(a.s)) / PH_FAST_H)}${ml ? ` · ${phMealWord(ml.sl)} had` : ""}`,
+      () => { phFastWrite((d, now) => { phFastPut(d, phFastNoEnd(a), now); if (snap) phMealUnsnap(d, snap, now); }); if (snap) phMealRepaint(); });
+    if (ml) phMealRepaint();
   }
   // Continue last fast (C22's): the fast that ended in the last 24 hours runs again from its own start
   const phFastLast = () => { const f = phFastDone()[0]; return f && Date.now() - Date.parse(f.e) < 24 * PH_FAST_H ? f : null; };
@@ -43736,6 +43772,24 @@
     phHbRows().forEach(r => { if (phHbDoseDay(r, k)) for (let i = 0; i < r.n; i++) { of++; if (phHbTaken(k, r.sid, i)) n++; } });
     return { n, of };
   }
+  // her pick (2026-10-29, the Me audit): a dose rides on the meal planned before it -- the last meal whose time is at or before the
+  // dose's (8:00 -> Breakfast, 16:00 -> Lunch); a dose before the first meal rides on that meal. That meal's card lists it, and the
+  // meal's Had it ticks it. A dose with no time, or a day with no timed meal, rides on nothing.
+  function phHbMealOf(k, r, i) {
+    const m = phC22Min(r.times[i]); if (m == null || !phMeOk()) return "";
+    const ev = phMealEvents(k), on = [];
+    PH_MEAL_SLOTS.forEach(([sl]) => { const t = ev[sl] ? phC22Min(ev[sl].s) : null; if (t != null && phMealVs(phMealPlan(k, sl).v).length) on.push([sl, t]); });
+    on.sort((a, b) => a[1] - b[1]);
+    const before = on.filter(x => x[1] <= m);
+    return before.length ? before[before.length - 1][0] : on.length ? on[0][0] : "";
+  }
+  const phHbMealDoses = (k, sl) => { const out = []; phHbRows().forEach(r => { if (phHbDoseDay(r, k)) for (let i = 0; i < r.n; i++) if (phHbMealOf(k, r, i) === sl) out.push({ r, i }); }); return out; };
+  // the meal card's dose line (today only): the same tick as the Herbs page (data-ph-hb-tk)
+  function phMealHbHtml(k, sl) {
+    if (k !== keyOf(new Date())) return "";
+    const L = phHbMealDoses(k, sl); if (!L.length) return "";
+    return `<div class="ph-meal-hb">${L.map(({ r, i }) => { const tkn = phHbTaken(k, r.sid, i); return `<button type="button" class="ph-hb-dose${tkn ? " on" : ""}${phHbDue(r, k, i) ? " due" : ""}" data-ph-hb-tk="${esc(phHbKey(k, r.sid, i))}" aria-pressed="${!!tkn}" title="${esc(r.name)} · ${esc(phHbLbl(r, i))}${tkn ? ` · taken ${esc(phFastClock(new Date(tkn.at)))}` : ""}"><i class="bx">${tkn ? phMealSvg("check") : ""}</i>${esc(r.name)} · ${esc(phHbLblS(r, i))}</button>`; }).join("")}</div>`;
+  }
   // ---- the grid: each dose a block in the shape the C22 layer draws ("hb." ids), at her time; untimed = the row above ----
   function phHbDayItems(k) {
     const out = [];
@@ -43808,6 +43862,8 @@
   // every place a dose shows repaints in place: the grid (and an open card), the Me drawer, the page, the rail
   function phHbRepaint() {
     phMeRepaint(true);
+    phHubIx = null;   // the Week table reads her doses (its Herbs column folds until one; her pick 2026-10-29)
+    try { phDietRefresh(); } catch (e) { /* her Diet page is not on screen (a meal card lists the doses riding on it) */ }
     if (document.querySelector("#pharmacyPage [data-hb-host]") && !presAssessTabRefresh()) renderPresPanel();
     try { presFlowRailRefresh(); } catch (e) { /* the rail repaints on the next render */ }
     phHbRing = "";
@@ -44126,7 +44182,7 @@
   }
   const phHubAhead = (mine, theirs) => PH_HUB_MAPS.some(k => Object.keys(mine[k] || {}).some(id => { const y = (theirs[k] || {})[id]; return !y || ((mine[k][id] || {}).up || 0) > (y.up || 0); }));
   // ---- view state (this visit only) ----
-  let phHubWk = 0, phHubMonOff = 0, phHubDayOpen = null, phHubShow = false, phHubArea = "all", phHubMr = "w", phHubApp = "all", phHubEd = null, phHubTdOn = false;
+  let phHubWk = 0, phHubMonOff = 0, phHubDayOpen = null, phHubShow = false, phHubColsOpen = false, phHubWkCols = 13, phHubArea = "all", phHubMr = "w", phHubApp = "all", phHubEd = null, phHubTdOn = false;
   // ---- reads ----
   const phHubOn = () => phFastOn();
   const phHubAdd = (k, n) => { const d = parseKey(k); d.setDate(d.getDate() + n); return keyOf(d); };
@@ -44169,6 +44225,7 @@
     return { acu: n(r && r.acu, 55), oncall: n(r && r.oncall, 50), admin: n(r && r.admin, 50) };
   }
   const phHubPrice = svc => { const p = phMeOk() ? (phMeD().price || {})[svc] : null; return p && !p.del && p.v !== "" && Number.isFinite(+p.v) ? +p.v : null; };
+  const phHubPriced = () => phMeOk() && Object.values(phMeD().price || {}).some(p => p && !p.del && p.v !== "" && Number.isFinite(+p.v));   // any price typed yet (Income shows once one is; her pick 2026-10-29)
   // a day's money: CBD visits × their type's price (65%), Herbs Linh, Acupreg hours × rate + on call
   function phHubInc(k) {
     const X = phHubIdx(), R = phHubRate(), o = { svc: 0, n: 0, miss: [], herbs: X.herbs.get(k) || 0, acuM: 0, acuN: 0, cbd: false };
@@ -44324,10 +44381,13 @@
     if (phMeOk()) phHlRows(+D.k.slice(0, 4)).filter(r => !r.ev && r.k === D.k).forEach(r => row.push([null, "var(--hub-health)", `<span class="ph-hub-blk" style="--c:var(--hub-health)">${esc(phHlLbl(r.kind, r.t))} ✓</span>${r.w ? `<em>${esc(r.w)}</em>` : ""}`]));
     row.sort((a, b) => (a[0] == null ? -1 : a[0]) - (b[0] == null ? -1 : b[0]));
     if (D.tds.length) row.push([null, "var(--ph-herb)", `<em>${D.tds.length} to-do${D.tds.length === 1 ? "" : "s"} done · ${D.tds.map(t => esc(t.t)).join(" · ")}</em>`]);
-    const note = phMeOk() ? (phMeD().jn || {})[D.k] : null;
-    return `<tr class="jr"><td colspan="13"><div class="ph-hub-jn">
+    // her pick (2026-10-29, the Me audit, "one line, both places"): on her record the day's note IS Today's visit's note (her main
+    // complaint's, 140 characters), read and written there; a note typed before that (d.jn) still reads where the record has none
+    const meN = phMeProfile(), meRec = meN ? phPatientPeek(meN) : null, cx = meRec ? phCxEntry(phCxDays(meRec)[D.k], "main") : null, jn = phMeOk() ? (phMeD().jn || {})[D.k] : null;
+    const note = cx && cx.n ? String(cx.n) : jn && !jn.del ? jn.t || "" : "";
+    return `<tr class="jr"><td colspan="${phHubWkCols}"><div class="ph-hub-jn">
       <div class="ph-hub-tl">${row.length ? row.map(([m, c, w]) => `<div class="tli"><span class="t">${m == null ? "" : phHubClk(m)}</span><i class="p" style="--c:${c}"></i><div class="w">${w}</div></div>`).join("") : `<div class="ph-fast-empty">Nothing on this day</div>`}</div>
-      <label class="ph-hub-note"><span class="ph-hub-lab">${esc(phHubDl(D.k))} · note</span><textarea data-hub-jn="${D.k}" rows="3" aria-label="Note for ${esc(phHubDl(D.k))}">${esc(note && !note.del ? note.t || "" : "")}</textarea></label>
+      <label class="ph-hub-note"><span class="ph-hub-lab">${esc(phHubDl(D.k))} · note</span><textarea data-hub-jn="${D.k}" rows="3"${meRec ? ` maxlength="140"` : ""} aria-label="Note for ${esc(phHubDl(D.k))}">${esc(note)}</textarea></label>
     </div></td></tr>`;
   }
   function phHubTodoHtml(W) {
@@ -44345,6 +44405,13 @@
   }
   function phHubWeekHtml() {
     const W = phHubWeek(phHubWk), tk = keyOf(TODAY), aim = phFastAim(), stg = phStpGoal(), openK = phHubDayOpen === null ? (W.keys.includes(tk) ? tk : "") : phHubDayOpen;
+    // her picks (2026-10-29, the Me audit): a column with nothing this week folds into "+ n more" (Income until a price, Steps until
+    // 3 typed days, Herbs until a dose, Code until code hours or a plan); a tap on the chip opens them; a column with data always shows
+    const typed = W.keys.filter(k => k <= tk && phStpOf(k) != null).length;
+    const fold = { inc: !phHubPriced() && !W.inc.tot, stp: typed < 3, hb: !W.hbN, code: !W.codeM && !phHubPlans().length };
+    const C = { inc: phHubColsOpen || !fold.inc, stp: phHubColsOpen || !fold.stp, hb: phHubColsOpen || !fold.hb, code: phHubColsOpen || !fold.code };
+    const nFold = Object.values(fold).filter(Boolean).length, foldLbl = [fold.inc && "Income", fold.stp && "Steps", fold.hb && "Herbs", fold.code && "Code"].filter(Boolean).join(" · ");
+    phHubWkCols = 9 + Object.values(C).filter(Boolean).length;
     const rows = W.days.map(D => {
       const plan = D.k > tk, op = !plan && openK === D.k, f0 = D.fit[0];
       const wo = f0 ? `<span class="${f0.d ? "ok" : "mute"}">${f0.d ? "✓" : "○"} ${esc(f0.t)}</span>${D.fit.length > 1 ? ` <span class="mute">+${D.fit.length - 1}</span>` : ""}` : (A => A.length ? `<span class="aw" title="${esc(A.map(y => y.t).join(", "))}">away</span>` : "")(D.away.filter(y => phHubKind(y) === "fit"));
@@ -44354,27 +44421,27 @@
         <td class="cy">${D.cy ? `CD ${D.cy}` : ""}</td>
         <td>${D.cl.length ? D.cl.map(c => `<span class="cl" style="--c:${phHubClCol(c)}"><i></i>${esc(c.nm)}</span>`).join(" ") : `<span class="mute">–</span>`}</td>
         <td>${D.m ? phHubH(D.m) : ""}</td><td>${D.n || ""}</td>
-        <td>${inc && inc.tot ? phHubM(inc.tot) : ""}</td>
-        <td>${wo}</td><td>${plan ? "" : (n => `<label class="ph-stp-wfld${n != null && n >= stg ? " ok" : ""}"><input type="number" class="field-bare" inputmode="numeric" min="0" max="200000" data-stp-day="${D.k}" data-stp-at="wk" value="${n == null ? "" : n}" aria-label="Steps · ${esc(phHubDl(D.k))}" enterkeyhint="done"></label>`)(phStpOf(D.k))}</td><td>${D.fastH ? `<span class="${D.met ? "ok" : ""}">${phFastHrs(D.fastH)}</span>` : D.run ? `<span class="ok">now</span>` : ""}</td>
-        <td>${plan || !D.mealsP ? "" : `<span class="${D.meals >= D.mealsP ? "ok" : ""}">${D.meals}/${D.mealsP}</span>`}</td><td>${plan || !D.hb[1] ? "" : `<span class="${D.hb[0] >= D.hb[1] ? "ok" : ""}">${D.hb[0]}/${D.hb[1]}</span>`}</td>
-        <td>${D.codeM ? phHubH(D.codeM) : ""}</td><td>${D.tds.length || ""}</td></tr>${op ? phHubJnHtml(D) : ""}`;
+        ${C.inc ? `<td>${inc && inc.tot ? phHubM(inc.tot) : ""}</td>` : ""}
+        <td>${wo}</td>${C.stp ? `<td>${plan ? "" : (n => `<label class="ph-stp-wfld${n != null && n >= stg ? " ok" : ""}"><input type="number" class="field-bare" inputmode="numeric" min="0" max="200000" data-stp-day="${D.k}" data-stp-at="wk" value="${n == null ? "" : n}" aria-label="Steps · ${esc(phHubDl(D.k))}" enterkeyhint="done"></label>`)(phStpOf(D.k))}</td>` : ""}<td>${D.fastH ? `<span class="${D.met ? "ok" : ""}">${phFastHrs(D.fastH)}</span>` : D.run ? `<span class="ok">now</span>` : ""}</td>
+        <td>${plan || !D.mealsP ? "" : `<span class="${D.meals >= D.mealsP ? "ok" : ""}">${D.meals}/${D.mealsP}</span>`}</td>${C.hb ? `<td>${plan || !D.hb[1] ? "" : `<span class="${D.hb[0] >= D.hb[1] ? "ok" : ""}">${D.hb[0]}/${D.hb[1]}</span>`}</td>` : ""}
+        ${C.code ? `<td>${D.codeM ? phHubH(D.codeM) : ""}</td>` : ""}<td>${D.tds.length || ""}</td></tr>${op ? phHubJnHtml(D) : ""}`;
     }).join("");
-    const miss = W.inc.miss.length ? `<button type="button" class="ph-hub-hint" data-hub-go="money">${W.inc.miss.length} visit type${W.inc.miss.length === 1 ? "" : "s"} without a price · Money</button>` : "";
+    const miss = W.inc.miss.length ? `<button type="button" class="ph-hub-hint" data-hub-go="money" data-hub-prices="1">${W.inc.miss.length} visit type${W.inc.miss.length === 1 ? "" : "s"} without a price · Prices</button>` : "";
     return `<div class="ph-hub" data-hub-host="1">
-      <div class="ph-hub-bar">${phHubWkBar()}${phHubShowBtn()}</div>
+      <div class="ph-hub-bar">${phHubWkBar()}${nFold ? `<button type="button" class="ph-hub-chip" data-hub-cols="1" aria-pressed="${phHubColsOpen}" title="${esc(foldLbl)}">${phHubColsOpen ? "−" : "+"} ${nFold} more</button>` : ""}${phHubShowBtn()}</div>
       <div class="ph-hub-stats">
         ${phHubStat(phHubWk ? phHubH(W.m) : `${phHubH(W.mDone).replace(" h", "")} / ${phHubH(W.m)}`, phHubWk ? "hours" : "hours · done / booked", W.m ? W.mDone / W.m * 100 : 0)}
         ${phHubStat(W.n, "patients")}
-        ${phHubStat(phHubM(W.inc.tot), "income")}
+        ${fold.inc ? "" : phHubStat(phHubM(W.inc.tot), "income")}
         ${phHubStat(`${W.wo} / ${W.woP}`, "workouts", W.woP ? W.wo / W.woP * 100 : 0, "var(--hub-gym)")}
         ${phHubStat(W.fasts, `fasts · aim ${phFastAimTxt(aim)}`)}
         ${phHubStat(phHubH(W.codeM), "code")}
       </div>
       ${miss}
       <div class="ph-hub-cols wk">
-        <div class="ph-fast-tw"><table class="ph-hub-tbl wk"><colgroup><col style="width:76px"><col style="width:52px"><col style="width:104px"><col style="width:68px"><col style="width:40px"><col style="width:84px"><col><col style="width:76px"><col style="width:56px"><col style="width:48px"><col style="width:48px"><col style="width:52px"><col style="width:52px"></colgroup>
-          <thead><tr><th>Day</th><th>Cycle</th><th>Clinic</th><th>Hours</th><th>Pts</th><th>Income</th><th>Workout</th><th>Steps</th><th>Fast</th><th>Meals</th><th>Herbs</th><th>Code</th><th>To-dos</th></tr></thead>
-          <tbody>${rows}<tr class="tot"><td>Week</td><td></td><td></td><td>${phHubH(W.m)}</td><td>${W.n}</td><td>${phHubM(W.inc.tot)}</td><td>${W.wo} of ${W.woP}</td><td>${(ks => ks.length ? `<span title="Days on goal">${ks.filter(k => phStpOf(k) >= stg).length}/${ks.length}</span>` : "")(W.keys.filter(k => k <= tk))}</td><td>${W.fasts}</td><td>${W.mlP ? `${W.mlH}/${W.mlP}` : ""}</td><td>${W.hbP ? `${W.hbN}/${W.hbP}` : ""}</td><td>${phHubH(W.codeM)}</td><td>${W.tds}</td></tr></tbody></table></div>
+        <div class="ph-fast-tw"><table class="ph-hub-tbl wk"><colgroup><col style="width:76px"><col style="width:52px"><col style="width:104px"><col style="width:68px"><col style="width:40px">${C.inc ? `<col style="width:84px">` : ""}<col>${C.stp ? `<col style="width:76px">` : ""}<col style="width:56px"><col style="width:48px">${C.hb ? `<col style="width:48px">` : ""}${C.code ? `<col style="width:52px">` : ""}<col style="width:52px"></colgroup>
+          <thead><tr><th>Day</th><th>Cycle</th><th>Clinic</th><th>Hours</th><th>Pts</th>${C.inc ? "<th>Income</th>" : ""}<th>Workout</th>${C.stp ? "<th>Steps</th>" : ""}<th>Fast</th><th>Meals</th>${C.hb ? "<th>Herbs</th>" : ""}${C.code ? "<th>Code</th>" : ""}<th>To-dos</th></tr></thead>
+          <tbody>${rows}<tr class="tot"><td>Week</td><td></td><td></td><td>${phHubH(W.m)}</td><td>${W.n}</td>${C.inc ? `<td>${phHubM(W.inc.tot)}</td>` : ""}<td>${W.wo} of ${W.woP}</td>${C.stp ? `<td>${(ks => ks.length ? `<span title="Days on goal">${ks.filter(k => phStpOf(k) >= stg).length}/${ks.length}</span>` : "")(W.keys.filter(k => k <= tk))}</td>` : ""}<td>${W.fasts}</td><td>${W.mlP ? `${W.mlH}/${W.mlP}` : ""}</td>${C.hb ? `<td>${W.hbP ? `${W.hbN}/${W.hbP}` : ""}</td>` : ""}${C.code ? `<td>${phHubH(W.codeM)}</td>` : ""}<td>${W.tds}</td></tr></tbody></table></div>
         ${phHubTodoHtml(W)}
       </div>
     </div>`;
@@ -47457,6 +47524,10 @@
     return !!a && phHabSt(a, tk) > 0;
   }
   const phHabToday = () => { const tk = phHabTk(); return phHabList().reduce((a, h) => { const s = phHabSt(h, tk); if (s !== -1) { a.of++; if (s > 0) a.n++; } return a; }, { n: 0, of: 0 }); };
+  // the today band counts only the habits that tick themselves (her pick 2026-10-29: Gym / workouts, Fasting, Herbs, Steps and a
+  // meal's own habit); the ones she ticks by hand stay on the Habits page
+  const phHabSelf = h => !!h.au || !!h.ml || h.g === "mv";
+  const phHabTodaySelf = () => { const tk = phHabTk(); return phHabList().filter(phHabSelf).reduce((a, h) => { const s = phHabSt(h, tk); if (s !== -1) { a.of++; if (s > 0) a.n++; } return a; }, { n: 0, of: 0 }); };
   // the next one to tick today: the earliest by its time
   const phHabNext = () => { const tk = phHabTk(); return phHabList().filter(h => h.tick && phHabSt(h, tk) === -2).sort((a, b) => (a.s == null ? 1e4 : a.s) - (b.s == null ? 1e4 : b.s))[0] || null; };
   // every tick is a vote: every day it was done, ever
@@ -47686,7 +47757,7 @@
     const tk = phHabTk(), n = phStpOf(tk), g = phStpGoal(), ring = phHabRing(n || 0, g, "var(--hab-stp)"), out = [];
     out.push(phStpBandEd ? `<span class="ph-mine-bch ph-stp-bch ed">${ring}<span>Steps</span><label class="ph-stp-bfld"><input type="number" class="field-bare" inputmode="numeric" min="0" max="200000" data-stp-day="${tk}" data-stp-at="band" value="${n == null ? "" : n}" aria-label="Steps today" enterkeyhint="done"></label></span>`
       : `<button type="button" class="ph-mine-bch ph-stp-bch" data-stp-band="1" title="Steps · goal ${phStpFmt(g)}">${ring}<span>Steps</span>${n != null ? `<em>${phStpFmt(n)}</em>` : ""}</button>`);
-    const t = phHabToday();
+    const t = phHabTodaySelf();
     if (t.of) out.push(`<button type="button" class="ph-mine-bch" data-flow-prof="hub-hab" title="Habits">${phHabRing(t.n, t.of, "var(--ph-herb)")}<span>Habits</span><em>${t.n} of ${t.of}</em></button>`);
     const x = phHabNext();
     if (x) {
@@ -47958,6 +48029,8 @@
   let phHubJnT = 0;
   function phHubJnSave(k, v) {
     clearTimeout(phHubJnT);
+    const meN = phMeProfile();
+    if (meN && phPatientPeek(meN)) { phCxTypeSave({ name: meN, kind: "note", key: "main", day: k, value: v }); return; }   // her record: Today's visit's note for that day (one line, both places; her pick 2026-10-29)
     const t = String(v || "").slice(0, 4000), cur = (phMeD().jn || {})[k];
     if ((cur && !cur.del ? cur.t || "" : "") === t) return;
     phMeSave((d, now) => { d.jn[k] = { id: k, t, up: now }; });
@@ -47998,7 +48071,8 @@
     else if ((el = T.closest("[data-hub-mon]"))) { phHubMonOff = Math.max(0, +el.dataset.hubMon || 0); phHubRepaint(); }
     else if ((el = T.closest("[data-hub-mr]"))) { phHubMr = el.dataset.hubMr; phHubRepaint(); }
     else if ((el = T.closest("[data-hub-app]"))) { phHubApp = el.dataset.hubApp; phHubRepaint(); }
-    else if ((el = T.closest("[data-hub-go]"))) { presAssessTab = "hub-" + el.dataset.hubGo; phHubRepaint(); }
+    else if (T.closest("[data-hub-cols]")) { phHubColsOpen = !phHubColsOpen; phHubRepaint(); }   // the Week table's folded columns (her pick 2026-10-29)
+    else if ((el = T.closest("[data-hub-go]"))) { const pr = !!el.dataset.hubPrices; if (pr) phHubShow = true; presAssessTab = "hub-" + el.dataset.hubGo; phHubRepaint(); if (pr) phHubFocus("tr.nop [data-hub-price]"); }   // the banner lands on the first price to type
     else if ((el = T.closest("[data-hub-td]"))) phHubTodoTick(el.dataset.hubTd);
     else if (T.closest("[data-hub-tdadd]")) { phHubTdOn = true; phHubRepaint(); phHubFocus("[data-hub-tdnew]"); }
     else if ((el = T.closest("[data-hub-due]"))) { const key = el.dataset.hubDue, y = (phMeD().dueT || {})[key], was = !!(y && !y.del && y.at); phHubWrite((d, now) => { d.dueT[key] = was ? { id: key, del: now, up: now } : { id: key, at: now, up: now }; }); }
@@ -57119,7 +57193,7 @@
         return;
       }
       const flowMore = e.target.closest("[data-flow-more]");
-      if (flowMore) { presFlowMoreOpen = !presFlowMoreOpen; presFlowRailRefresh(); return; }
+      if (flowMore) { presFlowMoreOpen = presFlowMoreOpen === flowMore.dataset.flowMore ? "" : flowMore.dataset.flowMore; presFlowRailRefresh(); return; }
       const flowGo = e.target.closest("[data-flow-go]");
       if (flowGo) {
         const wasPlan = presStage === "plan";
@@ -66635,7 +66709,7 @@ or changing anything in Cliniko.
     presLabelOpen = false; presMoreOpen = false; presFuOpen = false;
     presNameOpen = false; presHistOpen = false; presMedHxOpen = false;
     presTreatOpen = false; presHistMoreOpen = false;
-    presTpInlinePlanId = null; presTpInlineNew = false; presTpInlineLoose = false; presTpMainTab = null; presFlowMoreOpen = false;
+    presTpInlinePlanId = null; presTpInlineNew = false; presTpInlineLoose = false; presTpMainTab = null; presFlowMoreOpen = "";
     phTpComboReset();   // the "treating more than one thing" switch starts off for every patient
     presAcuOutcomeDraft = null; presAcuTicks = new Set();
     presAcuPhaseId = null; presAcuHerbInstruct = false;
@@ -79508,7 +79582,7 @@ or changing anything in Cliniko.
      done; the next step's circle pulses once; the body slides in when
      the stage/tab changes. presFlowLast remembers the last render per
      script so nothing replays on an ordinary repaint. ==== */
-  let presFlowLast = null, presFlowMoreOpen = false;   // the rail's "⋯ More" row (her 2026-10-29 pick: Patterns · Diagnosis and Timeline off the rail)
+  let presFlowLast = null, presFlowMoreOpen = "";   // the rail's "⋯ More" rows: "" = all closed, else the one open ("1" = Patterns · Diagnosis and Timeline, her 2026-10-29 pick; "life" · "file" · "log" = her own record's folded pages, the Me audit the same day)
   function presFlowSteps(t, isNew) {
     const name = presPatientFor(t) || t.name || "";
     const rec = phPatientPeek(name);
@@ -79684,17 +79758,22 @@ or changing anything in Cliniko.
       <div class="bar" aria-hidden="true"><i style="width:${Math.round(visitDone / visitTotal * 100)}%"></i></div>
     </div>` : "";
     const nextHtml = nextUp ? `<div class="ph-flow-next"><span>Next up: <b>${esc(nextUp.label)}</b></span><button type="button" ${nextUp.attr}>Open</button></div>` : "";
-    const grpHtml = (g, cap, extra) => {
-      const items = f.profSubs.filter(u => u.grp === g);
-      return items.length ? `<div class="ph-flow-sub prof g-${g}${prof.done ? " done" : ""}${newlyDone.includes("profile") ? " anim" : ""}"><span class="cap">${cap}</span>${items.map(profBtn).join("")}</div>` : "";
+    // her picks (2026-10-29, the Me audit): on her own record the pages she has not used fold into a "⋯ More" row of their group --
+    // Life: Code · Money · a trip (each comes out by itself once it holds data: a plan, a price or a bill, a trip running or within
+    // 30 days; phMeRailFold); File: Supplements · Blood tests; Clinic: Photos · Messages · Appointments. The page she is on never folds.
+    const isMe = phFastIsMe(f.name), foldOf = u => isMe && !u.on && phMeRailFold(u.id);
+    const moreRow = (g, cls, items) => items.length ? `<div class="ph-flow-sub ${cls} more${presFlowMoreOpen === g ? " open" : ""}"><button type="button" class="more" data-flow-more="${g}" aria-expanded="${presFlowMoreOpen === g}">⋯ More${presFlowMoreOpen === g ? "" : `<span class="sub">${items.map(u => esc(u.label)).join(" · ")}</span>`}</button>${presFlowMoreOpen === g ? items.map(profBtn).join("") : ""}</div>` : "";
+    const grpHtml = (g, cap) => {
+      const all = f.profSubs.filter(u => u.grp === g), items = all.filter(u => !foldOf(u)), fold = all.filter(foldOf);
+      return (items.length ? `<div class="ph-flow-sub prof g-${g}${prof.done ? " done" : ""}${newlyDone.includes("profile") ? " anim" : ""}"><span class="cap">${cap}</span>${items.map(profBtn).join("")}</div>` : "") + moreRow(g, `prof g-${g}`, fold);
     };
     const fileHtml = grpHtml("file", "File <i>once</i>");
     // her own record (ONE ME, her picks 2026-10-26): Body and Life lead the rail, and no "This visit" box (patients keep it)
-    const isMe = phFastIsMe(f.name), mineHtml = grpHtml("body", "Body") + grpHtml("life", "Life");
+    const mineHtml = grpHtml("body", "Body") + grpHtml("life", "Life");
     const checkHtml = grpHtml("check", "Today's check <i>every visit</i>");
     const sumHtml = grpHtml("sum", "Putting it together");
-    const logItems = f.profSubs.filter(u => u.grp === "log");
-    const logHtml = (logItems.length || f.subs.length) ? `<div class="ph-flow-sub keep log${treat.done ? " done" : ""}${newlyDone.includes("treatment") ? " anim" : ""}"><span class="cap">${isMe ? "Clinic <i>dated</i>" : "Log <i>everything dated</i>"}</span>${logItems.map(profBtn).join("")}${f.subs.map(u => `<button type="button" class="${u.on ? "on" : ""}" data-flow-go="${u.id}" role="tab" aria-selected="${u.on ? "true" : "false"}">${esc(u.label)}${u.sub ? `<span class="sub">${esc(u.sub)}</span>` : ""}</button>`).join("")}</div>` : "";
+    const logAll = f.profSubs.filter(u => u.grp === "log"), logItems = logAll.filter(u => !foldOf(u)), logFold = logAll.filter(foldOf);
+    const logHtml = ((logItems.length || f.subs.length) ? `<div class="ph-flow-sub keep log${treat.done ? " done" : ""}${newlyDone.includes("treatment") ? " anim" : ""}"><span class="cap">${isMe ? "Clinic <i>dated</i>" : "Log <i>everything dated</i>"}</span>${logItems.map(profBtn).join("")}${f.subs.map(u => `<button type="button" class="${u.on ? "on" : ""}" data-flow-go="${u.id}" role="tab" aria-selected="${u.on ? "true" : "false"}">${esc(u.label)}${u.sub ? `<span class="sub">${esc(u.sub)}</span>` : ""}</button>`).join("")}</div>` : "") + moreRow("log", "keep log", logFold);
     // PATIENT WORKFLOW LAW (CLAUDE.md, 2026-10-10): Cycle / Tongue / Pulse /
     // Abdomen are each their own page, listed under Today's visit with a tick
     // when done today. The tab row itself is hidden on desktop ("the rail IS
@@ -79717,8 +79796,8 @@ or changing anything in Cliniko.
     const patShown = f.patSubs.filter(s => s.id !== "patdx");
     const patSubHtml = patShown.length ? `<div class="ph-flow-sub keep plan${patStep.done ? " done" : ""}">${patShown.map(patSubBtn).join("")}</div>` : "";
     const onMore = moreItems.some(s => s.on);
-    if (onMore) presFlowMoreOpen = false;   // the page carries the open state while she is on it; leaving closes the row
-    const moreOpen = presFlowMoreOpen || onMore;
+    if (onMore && presFlowMoreOpen === "1") presFlowMoreOpen = "";   // the page carries the open state while she is on it; leaving closes the row
+    const moreOpen = presFlowMoreOpen === "1" || onMore;
     const moreHtml = moreItems.length ? `<div class="ph-flow-sub keep plan more${moreOpen ? " open" : ""}"><button type="button" class="more" data-flow-more="1" aria-expanded="${moreOpen}">⋯ More${moreOpen ? "" : `<span class="sub">${moreItems.map(s => esc(s.label)).join(" · ")}</span>`}</button>${moreOpen ? moreItems.map(s => s.id === "patdx" ? patSubBtn(s) : fertSubBtn(s)).join("") : ""}</div>` : "";
     const planSubHtml = f.planSubs.length ? `<div class="ph-flow-sub keep plan${planStep.done ? " done" : ""}">${f.planSubs.map(examSubBtn).join("")}</div>` : "";
     const inner = `${isMe ? mineHtml : visitHead + nextHtml}${stepHtml(prof)}${fileHtml}${checkHtml}${sumHtml}${stepHtml(todayStep)}${examSubHtml}${fertHtml}${stepHtml(patStep)}${patSubHtml}${moreHtml}${stepHtml(planStep)}${planSubHtml}${stepHtml(treat)}${stepHtml(dispStep)}${logHtml}`;
@@ -80907,6 +80986,13 @@ or changing anything in Cliniko.
   // ONE ME: her own pages' order on her record; under 0.55 = Body, under 1 = Life (her trips sit at 0.7). Health and her Log
   // follow Fitness in Body (her synth22 pick 1, 2026-10-26: "group my personal together, including log stuff")
   const PRES_MINE_RANK = { cycle: 0.1, diet: 0.2, fasting: 0.3, herbs: 0.4, "hub-fit": 0.5, "hub-ex": 0.505, "hub-hab": 0.51, "hub-health": 0.52, log: 0.53, "hub-week": 0.6, "hub-work": 0.61, "hub-money": 0.62, "hub-code": 0.63, bdays: 0.8, routines: 0.81 };
+  // her picks (2026-10-29, the Me audit): the pages of hers that fold into their group's "⋯ More" row until they hold data
+  function phMeRailFold(id) {
+    if (id === "hub-code") return !phHubPlans().length;
+    if (id === "hub-money") return !phHubPriced() && !phHubBills().length;
+    if (/^trip-/.test(id)) { const tr = phTripsAll().find(t => "trip-" + t.id === id), tk = keyOf(TODAY); return !tr || !((tr.to || tr.from) >= tk && phTripDiff(tr.from, tk) <= 30); }
+    return ["supplements", "bloods", "photos", "messages", "apptshist"].includes(id);
+  }
   // a record opens on its first page; hers on This week (ONE ME)
   const presAssessFirst = (secs, t) => (phFastIsMe(presPatientFor(t)) && secs.find(s => s.id === "hub-week")) || secs[0];
   function presAssessSections(t) {

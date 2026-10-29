@@ -6298,3 +6298,48 @@ own colours; most controls were 32px).
   table), Today's visit (the Score chip lands there), Tongue (the door), Care Plan (unchanged). Not checked on screen: Patterns'
   clue door, the trend sheet's doors, the Key2 phone (the old phone fold "summary first, the rest under More" went with the two
   columns; the table scrolls, desktop-first per lcm6).
+
+## 2026-10-29 · Her own profile: the Me audit and her nine picks (not live)
+- **Her ask** (with a Week-page screenshot): "audit my profile. this profile is unique because its not a patient, its my personal
+  profile. audit what is used often and infrequent and help me improve the integration".
+- **Measured** read-only from her browser (`lcm-me` rev 131 + her record; the 27 Oct export has no Me row). Report:
+  `me-profile-audit-2026-10-29.html` (artifact https://claude.ai/artifact/D49tHqHnEBQuEsnoAer8Yc). Daily = Meals planned every day but
+  Had it never ticked, fasts Mon · Tue · Wed, the Week page; weekly = Fitness, Routines; set once = Herbs times (0 doses ticked ever),
+  Steps (1 day), Study Tour, the tax pile, her file; never = prices (Income blank + a daily banner), bills, due ticks, Code plans,
+  Health, the Week note, habit settings, Supplements, Blood tests, photos, messages; Today's visit scored on 3 days with NO note on
+  any (the report first said "used" and was corrected). The pattern: what ticks itself gets used; tap-per-item ticks never happen.
+- **Her nine picks** (popups; every one the recommended option): 1 fast ↔ meals both ways · 2 doses ride on the meal · 3 the band's
+  Habits = the self-ticking ones · 4 Steps column after 3 typed days · 5 empty Week columns fold into "+ n more" · 6 the banner opens
+  the Prices form, Income hides until a price · 7 Life rail folds Code · Money · Study Tour under ⋯ More · 8 one note (the Week
+  journal's = Today's visit's) · 9 File / Clinic fold Supplements · Blood tests · Photos · Messages · Appointments.
+- **Built** (`mebuild.pl` + `mebuild2.pl`, this session's scratch): `phFastMealOf` + `phMealHadMark` + `phMealUnsnap` (the fast's
+  edges tick a meal in the fast's own save, Undo restores both); `phHbMealOf` / `phHbMealDoses` / `phMealHbHtml` (a dose rides on the
+  meal before it; the meal card lists it, planned and had-it states), `phMealHadSet` ticks the attached doses (undo keys `hbk`),
+  `phMealHadClear` unticks them; `phHabSelf` / `phHabTodaySelf` for the band; `phHubPriced`, `phHubColsOpen` / `phHubWkCols`, the
+  Week table's conditional `<col>` / `<th>` / `<td>` + the chip `[data-hub-cols]`, the income tile gated, the banner's
+  `data-hub-prices` → Show $ on + `phHubFocus("tr.nop [data-hub-price]")`; `phHubJnHtml` / `phHubJnSave` read and write her main
+  complaint's note via `phCxTypeSave` (maxlength 140); `presFlowMoreOpen` is a string key now ("1" | "life" | "file" | "log"),
+  `grpHtml` + `moreRow` + `phMeRailFold` fold the rail; `phHbRepaint` / `phMealRepaint` clear `phHubIx` (the Week index). CSS:
+  `.ph-meal-hb` only. No new store; no phone-block CSS.
+- **Judgment calls (disclosed):** a dose rides on the meal BEFORE it (the last meal at or before its time), not the nearest — her
+  own example 16:00 → Lunch needs that (the nearest to 16:00 was Dinner at 19:00, found in the sandbox); Start fast ticks the LAST
+  meal whose time has come, Stop the FIRST not had (no time needed); a Start from the Lunch toast ticks nothing; the "+ n more" chip
+  sits beside the week bar, not at the row's end (a 14th column would cost the width it saves), and stays open for the session;
+  Prices: each price keeps as she leaves its field (the form already existed; no Save button); one ⋯ More row open at a time; the
+  note is her main complaint's (the compass box's 140 characters), an older Week note (`d.jn`) still reads; the phone's tab row is
+  NOT folded (every page stays a tab there); the five File / Clinic pages fold whether or not they hold data (her pick named them).
+- **Tested** (sandbox, a made-up record "Zz Me Test" with meals at 8:00 / 12:30 / 19:00, a dispensed Gui Zhi Tang with doses 8:00 +
+  16:00, 1280 × 900 and 375 inside a frame): Start fast at 14:17 → "✓ Fast started · Lunch had", Undo put both back; Stop → "✓ Fast
+  saved · 0.0 h · Breakfast had", Undo set it running again; the Breakfast card listed "Gui Zhi Tang · 8:00", the Lunch card "· 4:00",
+  Dinner none; Had it on Lunch → "· dose taken", the had-it card showed the dose ticked, the card's Undo unticked it; the band's
+  Habits read 0 of 5 with the page at 0 of 6 (Journal hand-ticked); the Week table opened with 9 columns and "+ 4 more [Income ·
+  Steps · Herbs · Code]", the chip opened 13 and closed again, the journal row's colspan followed; a price → Income column + tile +
+  Money out on the rail; a dose → Herbs column; 3 typed days → Steps column; the banner path (a test button) opened Money with
+  Show $ on; the day's note saved to her record's main note (maxlength 140, no `d.jn` write) and survived a repaint; Life ⋯ More →
+  Code, on Code it sat in Life; File ⋯ More → Supplements · Blood tests, on Supplements it sat in File; no console errors; 375: the
+  chip beside the week bar, 12 columns in the scrolling table. Pictures: shots/me-week-folds-2026-10-29.jpg,
+  shots/me-lunch-card-dose-2026-10-29.jpg, shots/me-week-phone-2026-10-29.jpg.
+  **Not tested:** her real records; the Prices focus with real CBD bookings (the sandbox form read "No CBD bookings yet"); a trip
+  coming out of More within 30 days; the Key2; Today's visit's box showing the note (checked in the model only).
+- **Integration (★★★):** the same stores (meals `.had`, `hbk`, `fasts`, `price`, `stp`, `ccTrack`); the fast ↔ meal ↔ dose doors
+  share one save each way; the Week, the rail, the band, the Me drawer and the meal card all read the same entries.

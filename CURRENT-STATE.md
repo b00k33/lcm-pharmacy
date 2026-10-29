@@ -708,7 +708,10 @@ come in once (Bring in). No cheer lines, no cycle advice.
   a fast on any day counts. A night's planned fast: Dinner → Fast this night, Just <day> | Every <day> (`fp` 1 / 0 on that day's
   `|d` meal; otherwise the Aim days, `phMplFastPl`).
 - **Start / end**: Had it on today's Lunch with no fast running puts **Start fast** in the toast beside Undo (from that moment); Had
-  it on today's Breakfast ends a running fast (Undo or unticking sets it running again).
+  it on today's Breakfast ends a running fast (Undo or unticking sets it running again). **Both ways** (her pick 2026-10-29, the Me
+  audit): Stop ticks the first meal planned today and not had yet (her Breakfast) at that moment; Start ticks the last meal planned
+  today whose time has come (her Lunch; a Dinner the fast covers never counts; a Start from the Lunch toast ticks nothing). The
+  toast says which meal; its Undo puts the meal back too (`phFastMealOf`, `phMealHadMark`, one save).
 - **Counts** once it reached its goal (`phFastMet`: the hours, or it lasted to that breakfast, or that morning's Breakfast Had it
   ended it), on the day it STARTED. Tiles: **This week** (Mon–Sun dots: filled = counted, pale = short, breathing ring = running,
   dashed = planned; green from her low number) · Avg · **Weeks on aim** · Longest. The Me drawer line: this week's "n of 3–5".
@@ -732,6 +735,10 @@ Her own prescription's doses at clock times SHE types, nothing pre-filled ("i ne
 - **Elsewhere**: Me drawer Herbs (a tick per dose today); each dose its own green block on the grid (`#15803D`, leaf; today's tap =
   taken with Undo, another day's opens its card; untimed folds above the day); Herbs in the Appointments ⋯ menu. Due = a gold glow
   until ticked; a late tick counts any time that day; a fasting day keeps them. Code: "HERBS · HER OWN DOSES" (`phHb*`).
+- **A dose rides on the meal before it** (her pick 2026-10-29, the Me audit; `phHbMealOf`): the last meal planned at or before the
+  dose's time (8:00 → Breakfast, 16:00 → Lunch; a dose before the first meal rides on that meal; untimed = none). That meal's card
+  lists it with the same tick (`phMealHbHtml`, today only); the meal's Had it ticks it in the same save (the toast adds "· dose
+  taken", its Undo and the card's own Undo put the dose back). This week's Herbs column folds until a dose is taken.
 
 ## Meals + the Diet log
 C22's meal prep lives in LCM. Her Breakfast / Lunch / Dinner event (`phMealSlot` reads the title) holds its meal: her usual one, or
@@ -859,7 +866,13 @@ Five steps on HER record (the one in My profile): **Fitness** in Body (Steps + w
 Fitness + Exercises), the rest in Life.
 - **Week**: Mon–Sun table; a tap on a past day or today opens its journal under the row (a timeline written from the day + her note,
   kept as she types); her to-dos beside it by area, dropdown All · Work · Money · Code · Fit · Home · Travel. A to-do tick stores
-  when (`done` = the time).
+  when (`done` = the time). **Folded columns** (her picks 2026-10-29, the Me audit): a column with nothing this week folds into a
+  **+ n more** chip beside the week bar (Income until a price exists — the income tile hides too; Steps until 3 typed days; Herbs
+  until a dose; Code until code hours or a plan); a column with data always shows; the chip opens them all (`phHubColsOpen`; the
+  journal row's colspan follows, `phHubWkCols`). The "n visit types without a price" banner reads "… · Prices" and lands on the
+  first empty price with Show $ on (`data-hub-prices`). **One note:** on her record the note under a day IS Today's visit's note
+  for that day (her main complaint's, 140 characters, `phCxTypeSave`); an older Week note (`d.jn`) still reads where the record
+  has none.
 - **Work**: the month: hours per clinic, the Acupreg invoice table, work + travel. Hours come from BOOKINGS, never stored: first
   patient's start → last patient's end per clinic per day (this login's that are hers + the other clinic's). Each calendar day
   heading has a hover title ("CBD 8 h · 3 patients").
@@ -894,6 +907,8 @@ Fitness + Exercises), the rest in Life.
 - **One tick, four doors** (`phHabTick` → `phMeDoneToggle(tk|id, v)`, the routine's own `dn`; a meal habit's tick = Had it): band,
   Me drawer's Habits, Habits page, a circle on today's calendar block (`phHabCalTk`; never drags or opens the card). The tick pops,
   its link draws, in a row rolls, "+1" rises over the votes, a gold ring every 7 in a row; no words; all off under reduced motion.
+- **The band's Habits count** = the habits that tick themselves (Steps, Fasting, Herbs, Movement / gym, a meal's own; `phHabSelf`,
+  `phHabTodaySelf`; her pick 2026-10-29); the Habits page and its rail mini keep every habit.
 - **Steps** (`d.stp[day] = {n}`): typed from her watch (a web page cannot read it) in the band, the Me drawer's Steps row and This
   week's Steps column (days on goal in the Week row). Fitness: a steps tile + the Steps card (ring, today's field, days on goal,
   average, best, 14 bars against the goal line). Goal 8,000, ✎ changes it (`hubset.stg`, 500–100,000).
@@ -1008,6 +1023,10 @@ Fitness + Exercises), the rest in Life.
   rail, opened from Meals' Your fasts ›), Herbs, Fitness (its tabs hold Exercises and Health), Habits, Log; Life = Week, Work, Money,
   Code, trips, Birthdays, Routines; then her file and the visit steps; her bottom group reads "Clinic dated". Cycle leaves the Plan
   step on her record (`presMineCycleNorm` turns plan + cycle into profile + cycle, so every Cycle door lands there); Diet leaves Log.
+  **Folded pages** (her picks 2026-10-29, the Me audit; `phMeRailFold`): a page she has not used sits in a "⋯ More" row of its
+  group — Life: Code (until a plan), Money (until a price or a bill), a trip (until it runs or is within 30 days); File: Supplements ·
+  Blood tests; Clinic: Photos · Messages · Appointments; the page she is on never folds; one More row open at a time
+  (`presFlowMoreOpen` = its key; "1" is a patient's Patterns · Timeline row). The phone's sideways row is unchanged (every page a tab).
   Phone's sideways row: Body · Life · File · Clinic captions. **Birthdays** (by month, + Birthday) and **Routines** (Morning ·
   Afternoon · Evening · Any time, + Routine) are pages (`phMeBdaysPageHtml`, `phMeRtsPageHtml`), rows shared with the drawer
   (`phMeBdRowHtml`, `phMeRtRowHtml`). Next on one of her pages goes to her next page; her last one goes to the file.
