@@ -475,7 +475,11 @@ Who's on it** (patient · their plan in its family colour · last given · next 
 (the plan families as one bar) · **4 Batch** (last made, how long a batch lasts at this rate, herbs on the shelf, Jar + Recipe).
 **Make weighs in that panel** as the bench's own weighing rows (`refWeighRowsHtml`): tick · herb · grams · what the scale reads,
 ring, jar 0 → N g, the bowl count, tick all, Not now, Finish (the jar fills, the row glows); Finish = the same `phDispenseGate` →
-`refMakeCommit` save, then "Made today" with Undo. A planned formula **leaves by itself** when its stock went UP after planning
+`refMakeCommit` save, then "Made today" with Undo. **The grams in "Weigh [140] g of …" are a field** (her "how do i choose how
+much to make? sometimes i make 150 or 300 or 275", 2026-10-29; `phRfcMkGrams`): typing re-weighs the rows in place, the ticks
+start over, leaving the field keeps it as the plan's batch (`h.refillBatch`, cleared by Finish); a batch that is not a whole
+multiple of the recipe splits into whole grams adding up to exactly the batch (`phRfcMkNums`), and Finish deducts those grams
+[Formula refill: choose how much to make]. A planned formula **leaves by itself** when its stock went UP after planning
 (`h.refillQty` stamped at planning; older plans: week passed + above its line), with Undo. All of it is read from the dispense
 log, the plans and the bookings (`phFormulaUse`, 12 weeks, Break bookings left out, "(X)" name tags merged); nothing new is
 stored. Motion off under reduced motion. Dispense's In stock cell says "To make · Wk N" for a planned formula jar
