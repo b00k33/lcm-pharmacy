@@ -6465,3 +6465,35 @@ Then "build all". Built on session-a, NOT live (waits for "push live").
 Her "push live" after the inventory pictures: the inventory build (81514da3: stock truth, To order in two steps, lean Inventory,
 Price review in Suppliers) went live, with the build-notes commit a2163c79 riding along. Publish commit 6e3de296;
 https://b00k33.github.io/lcm-pharmacy/ serves 20261029-152500.
+
+## 2026-10-29 · Blood tests: attach the result first (not live)
+Her picks on `bloods-attach-mock-2026-10-29.html` (artifact TosajUtkXKtrs1cPutEetN; all eight the recommended option): **A**, one
+table (markers down, each result a dated column newest first, a dot on the marker's low–high bar); **Attach the result** (photo or
+PDF) beside the paste box, first on the page; rows = the markers that count + any with a value, "+ More markers" for the rest; a
+value = a dot on the bar + the number with ↓↑; the file lives with the photos as kind "Blood test" (a PDF opens in its own tab);
+the values are typed in the new column's cells (Paste fills the same cells); "Results that count" moves to the Guide behind a
+Rules · Guide chip; a result over 12 months stays in the table, faded, "not counted".
+**Where:** CSS `.ph-bld-*` (rewritten in place) + `.ph-gd-bld`; `PH_REN_PHOTO_TYPES` gains `bloods`; `phRenCaptureStart` takes
+`opts.accept`; the file input's change branch `via === "bloods"` → `phBldAttachFiles`; `phBldPhotoUrls` (a PDF record gets
+`fileUrl` + a drawn thumb, in `phRenLoadPhotosFor` and `phRecPhotosLoad`); `phRenViewPhoto` sends a PDF to `phBldOpenFile`; the
+module (`phBldCountKeys`, `phBldWhy`, `phBldClueKeys`, `phBldBarHtml`, `phBldTilesHtml` / `phBldTilesRefresh`, `phBldMore` /
+`phBldMoreHtml`, `phBldTableHtml`, `presBloodsHtml`, the drop listeners, `phBldPasteFill` / `phBldPasteApply`, `phRcClick`,
+`phBldClick`, `phBldCancel`, `phBldSave`); `PRES_BANDS.bloods`; the Guide's `bloods` tab (`phGdBloodsHtml`; `phRcRepaint` repaints
+it); the change delegate's `[data-bld-more]` and `[data-bld-paste]` branches. Gone from the page: the 31-marker form, its "Use the
+lab's own ranges" details (a pasted range still rides on the cell and saves), the Results-that-count table (now the Guide). Data
+shape unchanged (`rec.bloods[].vals`) plus `photoIds` on a result with a file; every reader (`phBldList`, Fang Bing Ren, Patterns,
+Timeline, the search index) untouched.
+**Not done on purpose:** a PDF is not relayed phone → desktop (the relay carries JPEGs); a PDF is not decoded (no pdf.js: the thumb
+is drawn, the values come from Paste or typing); the Records → Photos page shows a PDF's thumb but its own viewer path was not driven.
+**Tested** on the sandbox seed (`_ia-seed.js`, a HEAD copy `_bl-test.html`) at 1220: a pasted report (6 filled, the date, the lab
+ranges on the cells, B12 as an extra row) → Save → ↓ on ferritin / Hb / vitamin D, bars, the band "1 result · 2 clues"; Attach
+(a canvas JPEG + a tiny PDF) → two tiles (the PDF a drawn thumb), one result row holding both files, the column open, ferritin 31 →
+Save → the bar on 31; the Photos section lists "Blood test"; an old 2025 column faded "not counted", its note under the table; a
+paste with no numbers → Cancel removes the empty row; Rules · Guide → the Guide's Blood tests tab (the patient stays open), a rule
+added (AMH below 8) → back on the patient the AMH row reads "your rule · below 8"; the PDF through `phRenViewPhoto` opens a blob
+URL, no viewer; at 375 the page is 375 wide, the table scrolls in its wrap, the two tiles stack; the Prescriptions search narrows
+and clears. **Not tested:** a real lab PDF or phone photo, a real drag-and-drop from the desktop, her records, the Records → Photos
+page, a man's page (Hormones left out by code only).
+**Integration (★★★):** the fact (a blood result) is read by Fang Bing Ren (`phPatClues` iron / thyroid, `PH_TRI_BLOOD`), Patterns
+(`phRcClues`), the Diagnosis tag, the Timeline and the search index through `phBldList`, which did not change; Photos gains the new
+kind. Checked on the seed: the band's clue count, the Guide's rule back on the patient page, the Photos section.
