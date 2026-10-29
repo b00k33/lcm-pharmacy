@@ -6916,3 +6916,15 @@ Ren" paragraph updated. Waits for her "push live".
 Her "push live". Dry run listed 0f64c17f (Find the Ren Tongue tab: the three crack chips) and 49cc2fff (build notes) only; the
 committed index.html is the copy tested above (clean tree). Publish commit 98509c2d; https://b00k33.github.io/lcm-pharmacy/
 serves 20261029-205700. She installs it with the gold Update button.
+
+## 2026-10-29 · Appointments grid: the hours never fold to nothing (her "see whats wrong?")
+Her screenshot: Appointments, Thu-Sat, the Restore list (sidebar Restore) open at the top of the page; Thursday showed only her
+two C22 fold rows, no hours, no patients. Measured her data read-only first (Claude in Chrome on the c6 favicon host, storage
+only): 302 herbs, 290 bookings (11 today, 16 ahead), 72 follow-ups, 685 patients, 4,199 log, 1,001 prescriptions, stocktake
+20 Oct, build 20261029-204500, location Sydney Acupuncture CBD (owner matches); the rolling backups since 18:10 all whole.
+**Cause:** `.ph-apptcal-body` sizes to `100dvh - --ph-apptcal-chrome` (phPinApptZones: the body's top + what sits below). The
+Restore list (`#phRestorePanel`, top of `#pharmacyPage`, 20 rows) put the body's top past the window, so on desktop both
+min-height and max-height went under zero and the hours drew 0px tall (reproduced in the sandbox: 0px with the old rules).
+**Fixed:** both heights floor at 220px (`max(220px, calc(...))`), and `phRenderRestorePanel` asks `phPinApptZones` to measure
+again whenever the list opens, grows or closes. **Tested** (sandbox, 1440x900, made-up bookings today, the list made as long as
+hers): 714px at rest; list open 220px with the bookings in it; Close back to 714px by itself. Not live until her "push live".
