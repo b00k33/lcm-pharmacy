@@ -525,6 +525,16 @@ it.
 Appointments, Messages, Treatment, Notes; each page's facts = an icon + a number on its own first row, words in the
 hover title (`.ph-fx`; `presBandHtml` + `PRES_BANDS`, sync unchanged). Medical history's ✓ asked and 🕒 updated sit in its toolbar
 (`presMedHxBandHtml`); no "By group" (each group heading says ✓ asked).
+**Supplements** (her pick C on `supplements-table-mock-2026-10-29.html`, 2026-10-29; BUILD-NOTES "Supplements: the checklist
+table"): a checklist table (`phSuppEditorHtml`, `.ph-supp-tbl`): Taking · Supplement · Product · Dose · Since · From · Note, one
+row per supplement of the list (`PH_SUPP_KINDS`, 24, as she keeps it in Settings › Patients › Supplements: hide one, add one) plus
+the patient's own rows (`rec.suppOwn`: the form's, or typed in the last row "+ Other"); taking rows first, then stopped ones faded
+with their date, then her vital.ly products' kinds, then the rest A–Z. The tick starts a supplement today (her product's usual
+dose and her one product of that kind pre-fill) or stops it today; Product = her vital.ly product (`PHARMACY.suppProducts`, a
+chip, ↗ opens the link) or the patient's own brand (a field); Dose = her words; From = vital.ly · own · form. The one read of
+what the patient takes is `phSuppTaking(rec)` (the band's Taking n, Today's visit's "still the same?", the form's rows, Copy
+notes, the medication note, Copy for vital.ly). vital.ly has no way in (2026-09-11): "Copy for vital.ly" copies product — dose
+lines for its search. Patterns' iron clue reads `rec.supplements.iron.on` as before.
 
 ## Musculoskeletal page
 **Palpation-led** (her picks; full design: memory `project_lcm_msk_redesign_2026_10_27`) [Musculoskeletal page, step 1]: a head
@@ -1235,7 +1245,7 @@ depends on the database SQL.
 question added to `PH_HISTORY_GROUPS` is on the next link; intake.html's copy is only the fallback. A Yes opens a details box on
 its row (it lands as that row's note, "Form <date>" tag). Family history has Yes / No / Don't know ("unsure", a grey
 "? Don't know", never a Yes) and one "Unsure about anything?" box (`rec.historyGroupNotes`, shown under the group).
-"Taking supplements" Yes opens rows of name + dose that land on the Supplements page (one of the four turns on; any other joins
+"Taking supplements" Yes opens rows of name + dose that land on the Supplements page (a name the list knows turns that row on; any other joins
 `rec.suppOwn`). The same link reopens with the patient's answers and "Send again" once `supabase/intake_resubmit_setup.sql` is run
 (90 days); a resend shows in Intake review as "Updated" with only the changes. `rec.medicalHistoryNotes` has no box: older forms'
 notes in it show under Medication & allergies.

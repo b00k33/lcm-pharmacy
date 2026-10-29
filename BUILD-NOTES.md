@@ -6343,3 +6343,49 @@ own colours; most controls were 32px).
   coming out of More within 30 days; the Key2; Today's visit's box showing the note (checked in the model only).
 - **Integration (★★★):** the same stores (meals `.had`, `hbk`, `fasts`, `price`, `stp`, `ccTrack`); the fast ↔ meal ↔ dose doors
   share one save each way; the Week, the rail, the band, the Me drawer and the meal card all read the same entries.
+
+## 2026-10-29 · Supplements: the checklist table (not live)
+- **Her words** (the patient-profile audit, 2026-10-29): "the list doesnt include everything my patient tells me. i need to link
+  vitaly and supp to correspond products and have option to manually enter." Her 8 picks on `supplements-table-mock-2026-10-29.html`
+  (artifact Sd1fGBEyARUSr7u7Vhbiqq): **C, the checklist table** (every supplement a row, a tick turns it on); her vital.ly product
+  list in Settings, opened by a "Your products" chip; the Product cell = the product's name, a tap opens vital.ly; a stopped
+  supplement stays, faded, with its stop date; rows = taking first, then her products' kinds, then the rest A–Z; the faded rows =
+  24 common supplements, edited in Settings; Dose = her words (the product's usual dose pre-fills); From = a dot + word.
+- **Built:** `PH_SUPP_KINDS` (the four of `PH_SUPPLEMENTS` + 20: folate, fish oil, magnesium, zinc, inositol, B12, B6, probiotic,
+  Vitex, NAC, iodine, selenium, melatonin, choline, C, E, calcium, K2, evening primrose, collagen; each with `m`, the words a form
+  row matches); `phSuppKinds()` = the list as she keeps it (`PHARMACY.suppKindsOff` hides one, `PHARMACY.suppKindsOwn` adds one);
+  `phSuppProducts()` = `PHARMACY.suppProducts` [{id, name, kind, dose, url}]; `phSuppRows(rec)` = every row in her order (an
+  untouched kind an own row already names is not listed twice); `phSuppTaking(rec)` = what the patient takes now, the ONE read
+  for the band, Today's visit's "still the same?", the form's rows, Copy notes, the medication note and Copy for vital.ly (product
+  name — dose). A patient's row: `rec.supplements[kind] = { on, dose, product, brand, brandOn, since, stoppedAt, note, src }`
+  (the old `{on, dose}` still reads); the patient's own rows `rec.suppOwn` carry the same fields (`on` defaults true). The page
+  (`phSuppEditorHtml(rec, name)`, `.ph-vc-tbl.ph-supp-tbl` in `.ph-vc-wrap`): Taking · Supplement · Product · Dose · Since · From ·
+  Note; the tick (`data-supp-tick`) ○ starts it today with her product's usual dose and her one product of that kind, ✓ stops it
+  today ("stopped 29 Oct"), a stopped one starts again; Product = her product as a chip (↗ when it has a link; `data-supp-pmenu` ▾
+  opens the menu: her products of that kind, "<Her> own brand", None; `phSuppMenuKey` is "<patient>|<row>"), else a Brand field
+  (`data-supp-brand`); Dose / Note save on change as before; Since = the day it started (the form's date for a form row); From =
+  vital.ly · <her> own · <her> form, "—" for a ticked kind with no product; the last row "+ Other" (`data-supp-other-add`, Enter
+  too): a name the list knows turns that row on, any other joins the patient's own rows; an own row keeps its ✕. The band:
+  Taking n (names in the hover) · changed · Copy for vital.ly · Your products (`data-supp-products` opens Settings › Patients ›
+  Supplements). **Settings card `supps`** (`phSuppSettingsHtml`): her products as a table (Product · Kind ▾ · Usual dose · vital.ly
+  link · ✕, `data-supp-p-field`, saved on change; + Add product) and the list as 32px chips (`data-supp-kind-toggle` hides / shows;
+  "Another supplement" + Add). The form's rows coming in (`phIntakeComputeDiff` / apply) match the whole list now
+  (`phSuppKindMatch`; a hidden kind is no row) and land with since = the form's date, src "intake". The old four-chip editor and
+  `PH_SUPP_MATCH` are gone. Also: a row name in `.ph-supp-tbl` / a visit date in `.ph-tx-tbl` reads as words (the generic th rule
+  uppercased them).
+- **Tested** (sandbox copy, the made-up patient, 1220 × 1000): 26 rows (Magnesium own + Prenatal on top, then A–Z, "+ Other"
+  last); tick Vitamin D3 → on, dose from the four's words, since 29 Oct 2026; tick again → "stopped 29 Oct", the row third; "+
+  Other: omega 3" → the Fish oil row on; "B complex" + Enter → an own row on top with ✕; Your products → Settings › Patients ›
+  Supplements open; + Add product, name / kind / dose / link saved on change; Collagen hidden → gone from the table; "Spirulina"
+  added → a row; back on the patient: the Vitamin D3 ▾ menu lists the product + "Her own brand", a pick → "D3 1000 IU drops ↗"
+  (href vital.ly), From vital.ly, Copy for vital.ly reads the product name; with the product on file a fresh tick fills "2 drops
+  daily" and the product itself; Iron (a product without a link) → a plain chip; the own "Magnesium" row and the kind row list
+  once; no cell wider than its column; 375px: no sideways scroll, the table (760px) scrolls in its wrap; Prescriptions search
+  narrows (4 → 2) and comes back; no console errors. Picture: shots/supplements-table-2026-10-29.jpg. **Not tested:** the Key2;
+  a real form arriving (the intake queue; its matching code was read, not driven); the Medical history link's merge of
+  `suppOwn`; the dose-adjust letter (still the four of `PH_SUPPLEMENTS`); her real records.
+- **Integration (★★★):** one read (`phSuppTaking`) behind the band, Today's visit "Supplements: still …?", the form's pre-fill
+  (`out.supps`), the medication note, Copy notes and Copy for vital.ly; Patterns' iron clue still reads `rec.supplements.iron.on`;
+  Meals' Supplements · herbs list (her own record) still reads `PH_SUPPLEMENTS` + `suppOwn` (the four + her own; the wider list is
+  not there yet, noted). Checked on screen: Supplements, Settings › Patients › Supplements, the band. Not checked on screen:
+  Today's visit's nudge line, the intake review, Copy notes, Fang Bing Ren's iron clue.
