@@ -6844,3 +6844,30 @@ dry run listed only this build and four build-note / report commits since 174800
 them (publish commit 7966306c). https://b00k33.github.io/lcm-pharmacy/ serves 20261029-191900: plans close themselves (ab60b86b).
 She updates with the gold Update button. First open of each file: a plan past its course with nothing booked since closes itself,
 dated after its last visit (her rule; the band's Reopen is one tap).
+
+## 2026-10-29 · Progress letter for face palsy patients (her ask + 8 picks)
+Her ask, with a screenshot of a Bell's palsy patient's Photos › Comparison table (29 Oct | 6 Oct): "how to face progress photos
+to bells palsy patient to congratulate their progress and outline the followup treatment plan". Nothing did it in one place; the
+interim route told to her: Comparison table screenshot + Care Plan › Plan for the patient › Email, paste the screenshot in. Mock
+`mocks/progress-letter-mock-2026-10-29.html` (made-up patient, pencil faces; published as an artifact). Her picks: door = Photos page
+only; photos = pairs (a row per movement, then | now); score = both (one bar, then each movement); who = face palsy patients; What's
+next = course + next visit + See your GP if + Home care; opening words written from the score; Copy for email + Print; first and
+latest; "Yes, build it".
+**Built (not live until her "push live"):** one block before the IVF band (`PH_PRG_*`, `phPrg*`), the band chip (`PRES_BANDS.photos`,
+cell `prg`), the Photos section swap (`presPhotosSectionInnerHtml`: while `phPrgOpenPk` is this patient the letter shows in the
+gallery's place), CSS `.ph-prg*` after the Care Plan letter's. Reuses `phTpCplModel` (stage bar, GP lines), `phFpSorted` /
+`phFpTotals` / `phFpDue` (score, re-check), `phFpPhotosOf` (photos), `phCkCopy` (formatted + plain copy) and `phPrintDoc`. The
+copy's photos are drawn small (480 px long side, JPEG .85) once when the letter opens, so Copy and Print run inside her tap (a print
+window opened after a wait is blocked). Home care is one synced text (`PHARMACY.prgHomeCare`, saved 0.6 s after typing); the opening
+words are this letter's own (kept through a repaint, not saved). Rest (the plain Face photo) is not a row: the mock showed movements
+only.
+**Tested** (sandbox, made-up "Zz Palsy Patient" on a Bell's palsy plan, Recovery live; scores 6 Oct 3/14 and 29 Oct 12/14; six
+movements photographed both days; bookings 5, 9, 12, 16 Nov): the chip shows on the Photos band and only for a patient with such
+photos; the letter reads "8 visits since 6 October", the opening names eyebrows, smile, lips and cheeks back fully, the eye closing,
+frown and whistle on the way; 12 photos in pairs; bar + table; the stage bar with Recovery in gold; next visit Thu 5 Nov, 10:00 am;
+re-check "after 4 more visits · about Mon 16 Nov"; typed opening words and Home care survive a repaint, Home care saved; Copy put
+text/plain + text/html with 12 photos inside (135 KB) and the toast "✓ Copied with the photos · paste it into the email"; the
+pasted version drawn (inline styles); Print wrote the page with 12 photos and the print call; Back returns to the photos; 375 px:
+nothing wider than the screen; no console errors. Pictures: `shots/prg-2026-10-29-*.jpg` (local only).
+**Not tested:** her real records (a real patient's photos, scores and plan GP lines); a real paste into Gmail (the clipboard was
+captured in the sandbox); a real print window; the Key2 phone.
