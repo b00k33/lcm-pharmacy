@@ -6497,3 +6497,27 @@ page, a man's page (Hormones left out by code only).
 **Integration (★★★):** the fact (a blood result) is read by Fang Bing Ren (`phPatClues` iron / thyroid, `PH_TRI_BLOOD`), Patterns
 (`phRcClues`), the Diagnosis tag, the Timeline and the search index through `phBldList`, which did not change; Photos gains the new
 kind. Checked on the seed: the band's clue count, the Guide's rule back on the patient page, the Photos section.
+
+## 2026-10-29 · Sync guard: an older copy can't replace bookings, follow-ups or stock (live incident; her "Yes, fix it and push live")
+- **What happened** (measured read-only in her Chrome; her answer: "My phone"): between 3:42 and 3:52 pm her phone's copy,
+  last synced about 1 October, won a merge and replaced the whole `pharmacy_core`: bookings 290 → 95 (200 gone, 27 upcoming,
+  16 in the next 7 days), herb follow-ups 71 → 16 (55 gone, 17 Sep – 29 Oct), 83 herbs' stock amounts, the last stocktake
+  (20 Oct → 16 Sep), the label template, sign links, two prepared messages. Patients survived (merged one by one,
+  `mergePatientsByRecency`); the dispense log survived (its own section). Cause: `mergeSections` picks `pharmacy_core` WHOLE;
+  on a conflict (both sides changed) it keeps the device's own copy, and `sectionLooksEmptier` only counted herbs and patients,
+  so a stale copy with the same counts passed. No code change of the day touched bookings or follow-ups (checked 36176f34,
+  81514da3, a05d9e8d, 02b8c148, 44a99ce3).
+- **The good copy:** her browser's `lcmbak-daily` (15:42) holds 290 / 71; copied untouched to a new IndexedDB database
+  `lcm-rescue-2026-10-29` (store `kv`, key `daily-1542`, the whole backup entry) on the b00k33.github.io origin, which the app never
+  reads. **Data NOT repaired — her answer "Not now".** A repair = restore that copy's core, keep since 3:42: one refill (5 herbs
+  deducted), one stock arrival, 5 new bookings, 2 patient edits; then verify the CLOUD row. Her phone must be on this build first.
+- **Built:** `coreKeep(str)` (bookings count, follow-ups count, newest follow-up time; memo of 4 strings) + `coreDay`; in
+  `sectionLooksEmptier`'s `pharmacy_core` branch: bookings ≥ 10 dropping under half, follow-ups ≥ 10 dropping under half, or the
+  newest follow-up 14+ days older with at least 3 fewer = guarded (keep the fuller copy, the existing `showSyncNote`, now worded
+  "looked emptied out or out of date"). Bookings only grow (the paste adds, no prune since 2026-09-10) and shrink one by one;
+  follow-ups shrink one per deleted dispense, so these never trip on her own work.
+- **Tested** (sandbox, the guard's own source pulled from the file): the incident's numbers trip (290 → 95 bookings); the reverse
+  passes; one booking deleted, the newest dispense deleted (newest 10 days older), 2 fewer follow-ups with an old newest, a small
+  clinic's 8 → 2 bookings all pass; an older copy with 60 of 71 follow-ups and a 20-day-older newest trips; an unreadable copy
+  trips; herbs and the log keep their old checks; the app boots with the sync loaded and no console errors. **Not tested:** a
+  real two-device merge (needs her logins).

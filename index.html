@@ -139228,6 +139228,28 @@ Dosage: {dosage}
   // not just true/false -- her showSyncNote warning used to say a section
   // "looked emptied out" with no numbers at all, which her own "never round
   // counts away" rule already covers everywhere else in this app.
+  // pharmacy_core's third blind spot, found live 2026-10-29 (~3:45 pm): her phone, last synced about 1 October, won a merge with
+  // its whole OLD core -- 290 -> 95 bookings, 71 -> 16 herb follow-ups, 83 herbs' stock, the last stocktake, the label template.
+  // Herbs and patients kept their counts (patients merge one by one), so the two checks above saw nothing. Bookings and
+  // follow-ups only ever grow by a paste or a dispense and shrink one at a time, so half of them gone is never her doing; and the
+  // follow-ups are the core's clock (one per dispense): a copy whose newest follow-up is two weeks older, with at least 3 fewer,
+  // is an older copy, whatever its counts. Read once per string (a merge asks about the same strings several times).
+  var coreKeepMemo = [];
+  function coreKeep(str) {
+    for (var i = 0; i < coreKeepMemo.length; i++) if (coreKeepMemo[i][0] === str) return coreKeepMemo[i][1];
+    var v = null;
+    try {
+      var c = JSON.parse(str);
+      if (c && typeof c === "object") {
+        var fu = Array.isArray(c.followups) ? c.followups : [], newest = 0;
+        fu.forEach(function (x) { var t = x ? (+x.createdAt || Date.parse(x.dispensedAt) || 0) : 0; if (t > newest) newest = t; });
+        v = { appts: Array.isArray(c.appointments) ? c.appointments.length : 0, fu: fu.length, newest: newest };
+      }
+    } catch (e) { v = null; }
+    coreKeepMemo.unshift([str, v]); if (coreKeepMemo.length > 4) coreKeepMemo.length = 4;
+    return v;
+  }
+  function coreDay(t) { var d = new Date(t); return d.getDate() + " " + ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getMonth()]; }
   function sectionLooksEmptier(name, fromStr, toStr) {
     var a = sectionLen(name, fromStr), b = sectionLen(name, toStr);
     // a candidate that's MISSING or unparseable counts as empty (0), it
@@ -139243,6 +139265,12 @@ Dosage: {dosage}
       var pa = corePatientsLen(fromStr), pb = corePatientsLen(toStr);
       if (pb == null) pb = 0;
       if (pa != null && pa >= 3 && pb < pa * 0.5) return { from: pa, to: pb, unit: "patients" };
+      var ka = coreKeep(fromStr), kb = coreKeep(toStr) || { appts: 0, fu: 0, newest: 0 };
+      if (ka) {
+        if (ka.appts >= 10 && kb.appts < ka.appts * 0.5) return { from: ka.appts, to: kb.appts, unit: "bookings" };
+        if (ka.fu >= 10 && kb.fu < ka.fu * 0.5) return { from: ka.fu, to: kb.fu, unit: "herb follow-ups" };
+        if (ka.fu >= 10 && ka.newest && kb.newest && ka.newest - kb.newest >= 14 * 864e5 && ka.fu - kb.fu >= 3) return { from: coreDay(ka.newest), to: coreDay(kb.newest), unit: "newest herb follow-up" };
+      }
     }
     if (name === "pharmacy_log") {
       var da = logPatientDispenses(fromStr), db = logPatientDispenses(toStr);
@@ -139765,7 +139793,7 @@ Dosage: {dosage}
       var res = mergeSections(localSnapshotObj(), cloudData);
       if (row && row.updated_at) { lastSavedAt = row.updated_at; renderSavedAt(); }
       if (res.emptyGuarded.length) {
-        showSyncNote("⚠ " + emptyGuardText(res.emptyGuarded) + " looked emptied out on one side of the sync — kept the fuller copy instead. Worth a quick check.");
+        showSyncNote("⚠ " + emptyGuardText(res.emptyGuarded) + " looked emptied out or out of date on one side of the sync — kept the fuller copy instead. Worth a quick check.");
       } else if (res.conflicts.length && !isOwnEcho) {
         showSyncNote("Merged an edit made on another device (" + res.conflicts.join(", ").replace(/_/g, " ") + "). If something looks off, use 🕐 Cloud history.");
       }
@@ -140182,7 +140210,7 @@ Dosage: {dosage}
       var finalJson = JSON.stringify(finalSnap);
       if (finalJson === lastPushed) return true;            // cloud already has it
       if (res.emptyGuarded.length) {
-        showSyncNote("⚠ " + emptyGuardText(res.emptyGuarded) + " looked emptied out on this device — kept the fuller copy from the cloud.");
+        showSyncNote("⚠ " + emptyGuardText(res.emptyGuarded) + " looked emptied out or out of date on this device — kept the fuller copy from the cloud.");
       }
       return doUpsert(finalSnap, finalJson, row && row.updated_at).then(function (ok) {
         // "superseded" means another device wrote in the gap and doUpsert
