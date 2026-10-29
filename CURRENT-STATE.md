@@ -34,7 +34,7 @@ with the visits ("My events" below); the day head is a small MON over a big date
 **Toolbar + Up next buttons (her picks, Zanda as inspiration) [Appointments chips, one height]:** every control 32px; text
 controls are 6px boxes (white, thin line, picked = solid), icon-only buttons stay circles, text at the app's own sizes; ‹ › then
 the date in full in teal (`phApptCalDateLong`), Today always there (greyed on this week), the day count a "7 days ▾" dropdown
-(`.ph-atb-dd`), Grid | List a joined box bar, search with the magnifier; Up next = Open (solid) · Profile · Edit in one row, then
+(`.ph-atb-dd`), Grid | List a joined box bar, search with the magnifier; Up next = Start visit (solid; Dispense for a herbs-only booking, Open for a later day) · Profile · Edit in one row, then
 Call · Text · Email circles (`.un-row3`, `.un-icons.circ`).
 **One height, app-wide:** this 32px box look departs from TAPPABLE THINGS' pill chips on her word, and every page follows it: the
 Next button, patient rail, search boxes, small pills; Fang Bing Ren + Ren (each sign a white 32px box, the ✕ its own end); the
@@ -302,7 +302,7 @@ Close plan · Stay N more · **Ending letter**. The letter (`phTpLetterOpen === 
 concern>, date and visits, Where you started, where you are ("Low back pain: 7 out of 10 → 2 out of 10"), From here = the last
 phase's own Aim, See your GP straight away if, her sign-off. No GP copy.
 
-**Next visit** (her answer "Show the date to book"): once today is logged (✓ Complete session), Today's visit has a **Next visit**
+**Next visit** (her answer "Show the date to book"): once today is saved (Done · Copy for Cliniko), Today's visit has a **Next visit**
 line under the three steps (`phTpNextVisitHtml`): "Subacute, fortnightly" + a chip with the next day at today's booking time ("Tue
 10 Nov · 09:00") that copies "<name> — Tue 10 Nov 2026 · 09:00" for Cliniko; **Pick a day** (changes the chip in place, not
 saved); "Herbs last to Sun 8 Nov" when the latest dispense runs out before it. **LCM books nothing**: the Cliniko paste brings the
@@ -360,8 +360,8 @@ phase following Fang Bing Ren; the Fang Bing Ren line under Watch keeps the lead
 Formula].
 
 **The Treatment tab**: session stepper, the visit record as ONE table (`phTpVisitTableHtml` → `phTxVisitsTableHtml`, her 8 picks on
-`visits-table-mock-2026-10-29.html`, 2026-10-29), a Complete band; its "✓ Complete session N" is the one place a visit is saved
-(`data-pres-acu-log`; Today's visit only opens it). One session line (phase named once, Current ▾, "Session N · today", Herbs only
+`visits-table-mock-2026-10-29.html`, 2026-10-29), a band whose **Done · Copy for Cliniko** saves the visit
+(`presAcuLogNow`, the one save; Today's visit has the same button; "Ending a visit" under Visit logging). One session line (phase named once, Current ▾, "Session N · today", Herbs only
 today, Change phase), then the table: Visit · CD (cycle patients) · Phase · Response · Tongue · Pulse · Abdomen · Therapies · Herbs
 · Note; today on top (gold tint, a gold top line and left bar), logged visits newest first, one faded italic next row (the next
 booked or planned session: its date, CD on that date, the phase's points and formula). **Today's row:** the Compass score
@@ -1178,18 +1178,28 @@ complaints only (no derived Fang Bing Ren "complaints" in `phCcSecAll`); the let
 (DRAFT wording).
 **The checks** are compact rows, two across, each with Open and Skip ▾ (Not today / Always for this patient); a skipped check
 folds into the "Skipped" line and counts as done (`phTodayPartOk`). Quick assess shows 8 questions in 2 columns on Today's visit
-and Fang Bing Ren. A visit is finished in ONE place, the Treatment tab's "✓ Complete session N" (`data-pres-acu-log`; her pick: no "Log"
-wording; Today's visit shows "Open Treatment", then "Session N complete"). **"No acupuncture — herbs only today"** saves
+and Fang Bing Ren. A visit is finished by ONE button, **Done · Copy for Cliniko** (Today's visit's Treat card and the Treatment band; it saves
+through `presAcuLogNow`, copies and marks the visit copied; "Ending a visit" below). **"No acupuncture — herbs only today"** saves
 `noTreatment:true`; every reader of `rec.acuSessions` (the printable record, Patient Journey, the Visits table, the quiet-patient
 detector, **session-package counting**) branches on it.
 **Copy notes** (her picks; code "COPY NOTES", `phCn*`): one tap copies today's visit as labelled lines for her Cliniko treatment
 note (date · visit · cycle day, Scores, Tongue, Pulse = the Note tab's text, Abdomen, Acupuncture = points + press + therapy
-lines, each Formula with its herb lines + Total + Dosage · take-days · lasts N days) and shows what went in a box under the button
+lines (no Acupuncture therapy words beside points), each Formula with its herb lines + Total + Dosage · take-days · lasts N days) and shows what went in a box under the button
 (✕ closes). The clipboard gets the text and a formatted copy with every label (the word before the colon: Tongue, Pulse, …) in
 bold, so a paste into Cliniko's note keeps them readable (her 2026-10-29 ask; `phCnHtml`); the box shows them bold too. Every line
 is that fact's own read; a part with nothing today is left out; the formula = dispensed today, else the one
-Dispense opens. Doors: the Today's visit step bar, the Treatment band, the ⋯ menus (Care Plan / Treatment / Dispense), the toast
-after Complete session.
+Dispense opens. Doors: the Today's visit step bar, Done · Copy for Cliniko, the ⋯ menus (Care Plan / Treatment / Dispense), the
+toast after "add another session".
+**Ending a visit (her treatment-session audit picks, 2026-10-29; BUILD-NOTES "Treatment session: one button ends the visit"):**
+Start visit (Up next, the booking popup; `phVisitStart`) opens today's booking where an open lands (Today's visit for a return
+patient with a plan); a herbs-only booking (`phApptHerbsOnly`) opens on Dispense. Worth a look's two checks are one "Still the
+same?" line when both are due (Nothing new stamps both · Changed opens the two). Today's visit's Treat card ends with the visit's one
+**Note** (`data-visit-note` = `presAcuComment`, the same words as Treatment's Note cell) and **Done · Copy for Cliniko**
+(`phVisitDone`): saves today's visit when nothing is saved for the plan today, copies, marks `session.copiedAt` only after a real
+copy ("today · ✓ copied" on the row, "✓ Copied" on the button), and the toast names the next visit with **Next patient ›**
+(`phVisitNextAppt`). The copy's **Note:** line (`phCnNoteText`) = Ask her's words + the note + any Compass row note written today.
+Treatment's therapies block shows the phase's Points and Press tags as ticks (a pain patient's points stay Musculoskeletal's); the
+Acupuncture therapy chip has no text box. Not built yet: the visit saving itself (no button) and Same as last visit for the Look.
 
 **Findings charts** (tongue / abdomen / pulse) are the app's own tappable diagrams with a "brush" (pick a sign, then tap its
 regions). The exam pages are the ONE entry; `phExamMirrorToday` copies today's exam into the dated record. Read every finding

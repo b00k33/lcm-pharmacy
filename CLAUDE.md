@@ -221,7 +221,7 @@ visit. That is fixed by this law.)
 | Ren | Once. (She skipped the "photos ~3 months old" nudge in Phase 4: none.) |
 | Medical history | Once. One tap "Anything new since <date>?" on Today's visit EVERY return visit (Phase 4). |
 | Stress & sleep | **No page any more (her pick A, 2026-10-13, `stress-sleep-audit-2026-10-13.html`).** It was "asked once for EVERY patient"; it now lives on **Ask her** (every visit, Usually and Right now): the Sleep topic gained *Hard to fall asleep* and *Wakes in the night or very early*, the Mood topic gained *Low, flat or tearful* and is now always shown. Each answer ticks a new Fang Bing Ren sign (`sleep_onset_hard`, `sleep_wakes`, `mood_low` + `_tend` twins) that makes the Patterns clue `sl_hard` / `sl_wake` / `low_mood`; tapping "hard to fall asleep" or "wakes" also shows the broad sleep sign pre-ticked (`PH_TRI_IMPLIED_BY`). The Energy grid and throat lump were not carried over (Energy is on Today's visit and Fang Bing Ren; throat lump is already a Fang Bing Ren sign). Answers saved before still count and still pre-tick (`PH_PFW_RETIRED`). The mood question on the men's page and the Change of life "Sleep and mood" question went with it. |
-| Supplements | Confirm every return visit with one tap "Same as last time" / "Changed" on Today's visit (the Supplements page is a checklist table since 2026-10-29, CURRENT-STATE "Supplements"). |
+| Supplements | Confirm every return visit with one tap "Same as last time" / "Changed" on Today's visit (one "Still the same? · Nothing new" line with the history check when both are due, her 2026-10-29 pick) (the Supplements page is a checklist table since 2026-10-29, CURRENT-STATE "Supplements"). |
 | Blood tests | When a new result arrives: the page opens on **Attach the result** (a photo or a PDF, filed with the photos as "Blood test") beside Paste the report; one table of the markers that count, the values typed in the new column; the rules table lives in the Guide (her 2026-10-29 picks, CURRENT-STATE "Blood tests"). Each result shows its age ("9 months old"); a result **over 12 months old** is still listed and dated but marked "not counted" and gives Fang Bing Ren no clue (`PH_BLD_OLD_DAYS`, `phBldIsOld`). |
 | Complaint compass, Cycle, Tongue, Pulse, Abdomen | Every visit (Cycle while on). |
 | Fang Bing Ren | Recalculated live on every render, never stored; only her Agree / Not this patient taps are saved. |
@@ -278,7 +278,7 @@ Phases 0-6 were built on 2026-10-10 and confirmed on `origin/main` 2026-10-18 (t
   glances, `phGlanceHtml`, open them); Dispense only when herbs; a skip is memory only (`presUpSkip`). The gold
   Up next card is gone (2026-10-14).
 - **Worth a look** (`phTodayNudgesHtml`, return visits): supplements Same / Changed (`rec.suppSeenAt`), history
-  "Anything new since <date>?" (`rec.hxSeenAt`).
+  "Anything new since <date>?" (`rec.hxSeenAt`); both due = ONE line, "Still the same?" Nothing new · Changed (her 2026-10-29 pick 6).
 - **Findings:** `phExamMirrorToday`'s known edge: a part cleared after it was mirrored stays in that day's dated copy.
 - **Left on purpose:** the stored default plan title "New treatment plan" (code compares to it); letters, printed
   plan records and message templates keep "treatment plan".

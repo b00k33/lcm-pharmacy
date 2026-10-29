@@ -6576,3 +6576,53 @@ the Prescriptions search filters to the typed name and back; nothing wider than 
 Tongue, Pulse and Abdomen pages, Today's visit, the Care Plan's exam row, Fang Bing Ren, Patterns, the Findings trend sheet, the
 photo viewer's Same as. **Not tested:** her real records; the Compare screen listing a `page` review (it lists every review, so
 it will show one with no note); a two-device merge of `rec.abdomen.hist`.
+
+## Treatment session: one button ends the visit (her treatment-session audit picks, 2026-10-29)
+Her ask: "do an audit of a treatment session in patient profile and find ways to integrate and minimise my work process to make it
+more effective and efficient. the more effective i am, the more people i can help". Report `treatment-session-audit-2026-10-29.html`
+(measured read-only on her records: 52% of her visits since 1 Aug left nothing in LCM; Complete session last used 28 Sep). Her
+picks over three popup rounds: 1 yes both, 2 saves itself, 3 one tap for all three, 4 yes, 5 one note, 6 one tap, 7 KEEP the "Today's
+visit isn't finished · Dispense anyway" line (do not re-propose), 8 yes, 9 yes; build "All in one pass, then show you".
+**Built (not live until her "push live"):**
+- **Start visit (pick 1):** Up next's solid button for a booking today reads **Start visit** (Open stays for a later day) and the
+  booking popup leads with a solid **Start visit** tile on today's bookings (`data-ph-visit-start` → `phVisitStart`): the patient
+  opens where an open always lands (a return patient with a Care Plan on Today's visit, a first visit on Patient details, her
+  law), even when that prescription was open on another page. **Next patient ›** on Done's toast opens the next booking today after
+  this patient's (`phVisitNextAppt`, Up next's rule).
+- **Herbs-only bookings (pick 8):** a service matching Herbal Medicine - Sub, Telehealth, Herbal Refill or Dispensing, with no
+  acupuncture (`PH_APPT_HERBS_ONLY`, `phApptHerbsOnly`), shows **Dispense** in those two places and opens the prescription on
+  Dispense (its herbs are last time's formula).
+- **Done · Copy for Cliniko (pick 4):** one button at the foot of Today's visit's Treat card (outlined: "Next" stays the page's one
+  solid button) and in the Treatment band, where it replaced "✓ Complete session N" and the band's Copy notes (the form's Complete
+  button too). It saves today's visit when nothing is saved for this plan today: the Complete save moved out of the click handler
+  into `presAcuLogNow(opts)` unchanged (the band's "add another session" uses it too; a failed match now says so in the one toast).
+  Then it copies the notes (`phCnText`, formatted + plain), marks `session.copiedAt` only once the copy really happened (`phCkCopy`
+  takes [message, options, after-copy fn]; a blocked copy keeps the toast's Next patient), shows what went in, and the toast reads
+  "✓ Copied for Cliniko · next visit Thu 5 Nov 10:00 am" (`phTpNextDue`) with Next patient ›. Today's row reads "today · ✓ copied";
+  Today's visit's button becomes "✓ Copied". A herbs-only booking, or acupuncture tracking off, saves as a herbs check-in unless
+  she ticked or added points. Once saved, the button only copies.
+- **One note (pick 5):** the visit's Note sits beside Done on Today's visit (`data-visit-note`, the same draft words as Treatment's
+  Note cell, `presAcuComment`, kept as she types through `presAcuDraftAutosave`; `field-bare` keeps it a 6px field). The copy gains
+  a **Note:** line (`phCnNoteText`): Ask her's words, the visit's note and any Compass row note written today, each once.
+  Treatment's separate Subjective words box shows only when it already holds words today. **Kept, my call (told her):** the Compass
+  rows' own Note boxes stay, since each belongs to that complaint's score history ("+N"); the copy carries them.
+- **One "Still the same?" (pick 6):** with both checks due, Worth a look is one line, "Still the same? Supplements · history";
+  **Nothing new** stamps `suppSeenAt` and `hxSeenAt`, **Changed** opens the two lines as they were. One due = its own line.
+- **Points once (pick 9):** the Treatment table's therapies block shows the phase's Points and Press tags as ticks (the form's own
+  `.ph-acu-pointrow`s) for every patient except a pain patient, whose points stay Musculoskeletal's (`phTxPtsHtml`); the
+  Acupuncture therapy chip has no text box (`presAcuTherapiesRowHtml`); the copy prints that therapy's words only when no points.
+- **Waiting:** pick 2 (the visit saves itself, no button) and pick 3 (Same as last visit for Tongue · Pulse · Abdomen in one tap)
+  sit on the save and exam pages "Findings per visit" (6e468f98) just changed; its per-page Same as <date> is the base for pick 3.
+**Tested** (sandbox; made-up "Zz Visit Patient" on a fertility plan, phase points SP6 ST36 LI4 + press Shenmen, a 22 Oct visit,
+supplements and history on file, a booking today; "Zz Next Patient" an hour later; "Zz Herbs Only" on Herbal Medicine -
+Subsequent): Up next → Start visit lands on Today's visit; the popup's Start visit, and Dispense for the herbs-only booking (opens
+Dispense); Changed opens the two lines, Nothing new stamps both and the line goes; the Note saves to the draft and shows in
+Treatment's Note cell; LI4 unticked → the save holds "SP6, ST36"; the Acupuncture chip on → no box; Done saves once (points, press,
+note), a blocked copy leaves the visit unmarked with Next patient kept, a working copy marks it; toast "✓ Copied for Cliniko · next
+visit Thu 5 Nov 10:00 am · Next patient ›"; Next patient opens the next booking; "add another session" still saves; 375px: nothing
+wider than the screen, the note full width with Done under it; the Prescriptions search narrows to the typed name and back; no
+console errors. Pictures at 1220 by headless Edge (`shots/ts-2026-10-29-*.png`, local only).
+**Checked for the fact:** Today's visit, the Treatment table and band, Copy notes, Appointments Up next and the booking popup,
+Dispense. **Not tested:** her real records (her bookings are the stale 95 until the 29 Oct phone-sync repair, so Start visit, Next
+patient and the herbs-only route have little to show until then); a real clipboard (stubbed in the sandbox); the non-compact
+Treatment form (it carries the same Done button).
