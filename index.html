@@ -80587,7 +80587,7 @@ or changing anything in Cliniko.
     // plan shell is there from the door -- law, "order of WORK, not record creation")
     const hasPlan = !!f.plan || phTpPlans(name).length > 0;
     const exam = hasPlan ? phTodayParts(rec).filter(p => !phTodayPartOk(rec, p.id))
-      .map(p => ({ id: p.id, label: p.id === "recheck" ? "Re-check" : p.label, attr: `data-flow-go="${p.id === "recheck" ? "today" : p.id}"` })) : [];
+      .map(p => ({ id: p.id, label: p.id === "recheck" ? "Re-check" : p.label, attr: p.id === "face" ? `data-flow-prof="checklist"` : `data-flow-go="${p.id === "recheck" ? "today" : p.id}"` })) : [];
     const tail = [];
     // return visit: Fang Bing Ren and the Care Plan are one-line glances, not steps (her pick 2026-10-10)
     if (hasPlan && !back && !step("patterns").done) {
@@ -97190,6 +97190,21 @@ or changing anything in Cliniko.
   ];
   const PH_TODAY_CYCLE_PART = { id: "cycle", label: "Cycle" };
   const PH_TODAY_MSK_PART = { id: "msk", label: "Musculoskeletal" };
+  // the face score (her 2026-10-29 "where is the bells palsy exam for me to reassess?", pick A on face-score-due-mock-2026-10-29.html):
+  // a Look tile for a face palsy patient (phFpApplies, the Checklist's own test) on the visit the score is due (phFpDue, every 4
+  // visits), ticked once scored today; on other visits it is not there. A tap opens Profile › Checklist.
+  const PH_TODAY_FACE_PART = { id: "face", label: "Face score" };
+  function phTodayFaceOn(rec) {
+    const t = (PRESC.items || []).find(x => x.id === presOpenId);
+    if (!rec || !phFpApplies(t, rec)) return false;
+    if (!(rec.facialScores || []).length) return true;   // never scored: due now (read without phFpScores, which writes an empty list)
+    return phFpDue(rec).due || phTodayDonePart(rec, "face");
+  }
+  // the score before today's, for the tile's faint last line ("1 Oct · 64%")
+  function phTodayFaceLast(rec) {
+    const today = keyOf(TODAY), l = ((rec && rec.facialScores) || []).length ? phFpSorted(rec).find(s => s.date && s.date < today) : null, tt = phFpTotals(l);
+    return tt && tt.pct != null ? { date: l.date, txt: `${tt.pct}%` } : null;
+  }
   // the days this patient was seen before `day` (default today), oldest first: a visit logged here, or a booking in the calendar (her pick
   // 2026-10-23: done bookings count as visits -- a patient seen four times never reads "First visit"). `who` = a name, or the record itself.
   function phSeenDays(who, day) {
@@ -97211,7 +97226,7 @@ or changing anything in Cliniko.
   function phTodayParts(rec) {
     const back = phSeenDays(rec).length > 0;
     // Musculoskeletal (her ask 2026-10-11): after Abdomen, only for pain / MSK patients
-    return [].concat(back ? [PH_TODAY_RECHECK_PART] : [], phCycleTracked(rec) ? [PH_TODAY_CYCLE_PART] : [], PH_TODAY_EXAM_PARTS, phMskApplies(rec) ? [PH_TODAY_MSK_PART] : []);
+    return [].concat(back ? [PH_TODAY_RECHECK_PART] : [], phCycleTracked(rec) ? [PH_TODAY_CYCLE_PART] : [], PH_TODAY_EXAM_PARTS, phMskApplies(rec) ? [PH_TODAY_MSK_PART] : [], phTodayFaceOn(rec) ? [PH_TODAY_FACE_PART] : []);
   }
   function phTodayDonePart(rec, id) {
     const today = keyOf(TODAY);
@@ -97221,6 +97236,7 @@ or changing anything in Cliniko.
     if (id === "abdomen") return !!(rec.abdomen && rec.abdomen.at && keyOf(new Date(rec.abdomen.at)) === today);
     if (id === "cycle") return !!(rec.cycleSigns && rec.cycleSigns[today]);
     if (id === "msk") return phMskDoneToday(rec);
+    if (id === "face") { const l = (rec.facialScores || []).length ? phFpLast(rec) : null; return !!(l && l.date === today); }
     return false;
   }
   // SKIP A CHECK (her synth22 2026-10-21, pick "today, with an always option"): Skip ▾ on a Today's visit row = Not today
@@ -97258,6 +97274,7 @@ or changing anything in Cliniko.
     }
     if (id === "cycle") { const comp = phCycleComp(rec); return comp ? `CD ${comp.day} · ${comp.phaseLabel}` : "Not tracked yet"; }
     if (id === "msk") return phMskSummary(rec);
+    if (id === "face") { const l = (rec.facialScores || []).length ? phFpLast(rec) : null, tt = phFpTotals(l); return tt && tt.pct != null ? `${tt.pct}% · movement ${tt.got}/${tt.max}` : PH_FINDING_EMPTY; }
     return "";
   }
   /* ---- ONE FINDING PER VISIT (PATIENT WORKFLOW LAW, CLAUDE.md 2026-10-10, her pick "A"):
@@ -98124,7 +98141,7 @@ or changing anything in Cliniko.
   var phTodaySkipMenu = "";   // view state: the check whose ⋯ menu is open
   function phTodayTilesHtml(name, rec) {
     const pr = phProRec(rec), key = phPatientKey(name), msk = phMskApplies(rec);
-    const shown = PH_TODAY_EXAM_PARTS.concat(msk ? [PH_TODAY_MSK_PART] : []);
+    const shown = PH_TODAY_EXAM_PARTS.concat(msk ? [PH_TODAY_MSK_PART] : [], phTodayFaceOn(rec) ? [PH_TODAY_FACE_PART] : []);
     const seenT = phTodayFx.ticks.get(key), now = new Set(), skipped = [], tiles = [];
     shown.forEach(p => {
       const sk = phTodaySkipped(rec, p.id);
@@ -98132,16 +98149,18 @@ or changing anything in Cliniko.
       const done = phTodayDonePart(rec, p.id);
       if (done) now.add(p.id);
       const pop = done && seenT && !seenT.has(p.id) && phTodayMotion();
-      const last = p.id === "msk" ? phMskLastLine(rec) : phExamPast(rec, p.id)[0];
+      const last = p.id === "msk" ? phMskLastLine(rec) : p.id === "face" ? phTodayFaceLast(rec) : phExamPast(rec, p.id)[0];
       const lastLine = last ? `<span class="ph-today-last" title="Last visit">${esc(phCycShortLbl(last.date))} · ${esc(last.txt)}</span>` : "";   // her 2026-10-29 pick: last visit's words faint under today's
       const menu = phTodaySkipMenu === p.id ? `<div class="ph-today-skipmenu" role="menu"><button type="button" role="menuitem" data-today-skip-do="${p.id}:today">Not today</button><button type="button" role="menuitem" data-today-skip-do="${p.id}:always">Always for ${pr.o}</button></div>` : "";
       // the tongue photo flow (her 2026-10-29 picks B): today's Natural light shot sits on the Tongue tile, gold "4 photos / Chart"
       // until charted, then the photo with its tick + the words; a tap opens that photo, Colour ready (phTngChartOpen)
       const tp = p.id === "tongue" ? phTngTileShot(key, name) : null;
       const tn = tp ? (phRenPhotosFor(key) || []).filter(r => r.kind === "tongue" && phRenDateKeyOf(r) === keyOf(TODAY)).length : 0;
-      tiles.push(`<div class="ph-today-tile ph-tv-tile${done ? " done" : ""}${tp && !done ? " ph-tv-wait" : ""}" data-today-tile="${p.id}">`
+      // the face score waits in gold like the tongue photo: "due now", or "score now" before the first score
+      const face = p.id === "face";
+      tiles.push(`<div class="ph-today-tile ph-tv-tile${done ? " done" : ""}${(tp || face) && !done ? " ph-tv-wait" : ""}" data-today-tile="${p.id}">`
         + (tp ? `<button type="button" class="ph-tv-go ph-tv-photo" data-tv-tng-chart="${esc(key)}" title="Open today's photo to chart the tongue"><span class="ph-tv-th"><img src="${tp.objectUrl}" alt="">${done ? `<i class="ok">✓</i>` : ""}</span><span class="ph-today-label">${esc(p.label)}</span><span class="ph-today-sum">${done ? esc(phTodaySumPart(rec, p.id)) : `${tn} photo${tn === 1 ? "" : "s"}<br>Chart`}</span>${lastLine}</button>`
-          : `<button type="button" class="ph-tv-go" data-flow-go="${p.id}"><span class="ph-today-tick${pop ? " pop" : ""}">${done ? "✓" : ""}</span><span class="ph-today-label">${esc(p.label)}</span><span class="ph-today-sum">${done ? esc(phTodaySumPart(rec, p.id)) : `<span class="ph-tp-notyet">not yet</span>`}</span>${lastLine}</button>`)
+          : `<button type="button" class="ph-tv-go" ${face ? `data-flow-prof="checklist"` : `data-flow-go="${p.id}"`}><span class="ph-today-tick${pop ? " pop" : ""}">${done ? "✓" : ""}</span><span class="ph-today-label">${esc(p.label)}</span><span class="ph-today-sum">${done ? esc(phTodaySumPart(rec, p.id)) : face ? ((rec.facialScores || []).length ? "due now" : "score now") : `<span class="ph-tp-notyet">not yet</span>`}</span>${lastLine}</button>`)
         + `<span class="ph-today-skipwrap"><button type="button" class="ph-today-skip ph-tv-more" data-today-skip="${p.id}" aria-haspopup="menu" aria-expanded="${menu ? "true" : "false"}" aria-label="Skip ${esc(p.label)}">⋯</button>${menu}</span></div>`);
     });
     phTodayFx.ticks.set(key, now);
