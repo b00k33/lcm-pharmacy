@@ -659,6 +659,8 @@
   #pharmacyPage .ph-supp-tick { height: 32px; min-width: 32px; padding: 0 8px; border: 1px solid var(--ph-line); border-radius: 999px; background: var(--ph-white); color: var(--ph-faint); font: 600 var(--fs-13) var(--font-body); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; }
   #pharmacyPage .ph-supp-tick.on { background: var(--ph-good-tint); border-color: var(--ph-good); color: var(--ph-good); font-weight: 800; }
   #pharmacyPage .ph-supp-tick.stop { border-radius: 6px; background: var(--ph-low-tint); border-color: var(--ph-low-tint); color: var(--ph-low-press, #8A5708); font-size: var(--fs-11-5); }
+  /* "stopped 29 Oct" wraps inside the Taking column instead of running over the name (her 2026-10-29 screenshot) */
+  #pharmacyPage .ph-supp-tick.stop { white-space: normal; height: auto; min-height: 32px; max-width: 100%; padding: 3px 6px; line-height: 1.15; text-align: center; }
   #pharmacyPage .ph-supp-fld { width: 100%; max-width: none; min-width: 0; margin: 0; box-sizing: border-box; }
   #pharmacyPage textarea.ph-supp-fld { min-height: 32px; padding-top: 6px; padding-bottom: 6px; }
   #pharmacyPage input.ph-supp-fld { height: 32px; }
@@ -57793,16 +57795,34 @@
       }
       // an open Product menu closes on a tap anywhere else (the tap itself still lands)
       if (phSuppMenuKey && !e.target.closest("[data-supp-pmenu], .ph-supp-menu")) { phSuppMenuKey = ""; const m = document.querySelector(".ph-supp-menu"); if (m) m.remove(); const b = document.querySelector(".ph-supp-pmenu.on"); if (b) { b.classList.remove("on"); b.setAttribute("aria-expanded", "false"); } }
-      const suppOwnRm = e.target.closest("[data-supp-own-rm]");
-      if (suppOwnRm) {
+      // the ✕ on a row (her 2026-10-29 "i need to be able to remove this record"): the patient's own row goes, a list row's record
+      // is cleared so the row is back to ○ as if never ticked; either way one Undo puts it back
+      const suppOwnRm = e.target.closest("[data-supp-own-rm]"), suppKindRm = e.target.closest("[data-supp-kind-rm]");
+      if (suppOwnRm || suppKindRm) {
         const rec = phCycleTargetRec();
         if (!rec) return;
-        rec.suppOwn = phSuppOwn(rec).filter(o => o.id !== suppOwnRm.dataset.suppOwnRm);
-        if (!rec.suppOwn.length) delete rec.suppOwn;
+        const before = { own: rec.suppOwn, su: rec.supplements ? Object.assign({}, rec.supplements) : undefined };
+        let label = "";
+        if (suppOwnRm) {
+          const gone = phSuppOwn(rec).find(o => o.id === suppOwnRm.dataset.suppOwnRm);
+          label = gone ? gone.name : "";
+          rec.suppOwn = phSuppOwn(rec).filter(o => o.id !== suppOwnRm.dataset.suppOwnRm);
+          if (!rec.suppOwn.length) delete rec.suppOwn;
+        } else {
+          const kind = suppKindRm.dataset.suppKindRm;
+          if (!rec.supplements || !rec.supplements[kind]) return;
+          label = (phSuppKindById(kind) || {}).name || "";
+          rec.supplements = Object.assign({}, rec.supplements); delete rec.supplements[kind];
+        }
+        const repaint = () => { if (!presAssessTabRefresh()) renderPresPanel(); presFlowRailRefresh(); };
+        const putBack = () => {
+          if (before.own === undefined) delete rec.suppOwn; else rec.suppOwn = before.own;
+          if (before.su === undefined) delete rec.supplements; else rec.supplements = before.su;
+        };
         rec.suppAt = Date.now();
-        if (savePharmacy() === false) { phFlashShow("That could not be saved — check the warning at the top and try again."); return; }
-        if (!presAssessTabRefresh()) renderPresPanel();
-        presFlowRailRefresh();
+        if (savePharmacy() === false) { putBack(); phFlashShow("That could not be saved — check the warning at the top and try again."); return; }
+        repaint();
+        presSavedToast(`Removed${label ? ` · ${label}` : ""}`, { undo: () => { putBack(); rec.suppAt = Date.now(); savePharmacy(); repaint(); } });
         return;
       }
       // the table's tick: ○ starts it today (her product's usual dose; her one product of that kind), ✓ stops it today, a stopped
@@ -108316,7 +108336,7 @@ or changing anything in Cliniko.
         : r.stopped ? `<button type="button" class="ph-supp-tick stop" data-supp-tick="${key}" title="Stopped · tap to start again" aria-pressed="false">stopped ${esc(phShortDate(st.stoppedAt).replace(/ \d{4}$/, ""))}</button>`
         : `<button type="button" class="ph-supp-tick" data-supp-tick="${key}" title="Tap when taking" aria-pressed="false">○</button>`;
       const since = st.since || st.at || "";
-      return `<tr class="${r.on ? "on" : r.stopped ? "stop" : "off"}"><td class="tk">${tick}</td><th scope="row">${esc(r.name)}${r.own ? `<button type="button" class="ph-supp-own-rm" data-supp-own-rm="${esc(r.own.id)}" aria-label="Remove ${esc(r.name)}" title="Remove">✕</button>` : ""}</th><td>${pcell}</td><td>${r.touched ? fld(r.own ? `data-supp-own-dose="${esc(r.own.id)}"` : `data-supp-dose="${esc(r.kind)}"`, st.dose, "Dose") : none}</td><td class="dt">${since ? esc(phShortDate(since)) : none}</td><td>${from}</td><td>${r.touched ? fld(`data-supp-note="${key}"`, st.note, "Note") : none}</td></tr>`;
+      return `<tr class="${r.on ? "on" : r.stopped ? "stop" : "off"}"><td class="tk">${tick}</td><th scope="row">${esc(r.name)}${r.own ? `<button type="button" class="ph-supp-own-rm" data-supp-own-rm="${esc(r.own.id)}" aria-label="Remove ${esc(r.name)}" title="Remove">✕</button>` : r.touched && r.kind ? `<button type="button" class="ph-supp-own-rm" data-supp-kind-rm="${esc(r.kind)}" aria-label="Remove the ${esc(r.name)} record" title="Remove this record">✕</button>` : ""}</th><td>${pcell}</td><td>${r.touched ? fld(r.own ? `data-supp-own-dose="${esc(r.own.id)}"` : `data-supp-dose="${esc(r.kind)}"`, st.dose, "Dose") : none}</td><td class="dt">${since ? esc(phShortDate(since)) : none}</td><td>${from}</td><td>${r.touched ? fld(`data-supp-note="${key}"`, st.note, "Note") : none}</td></tr>`;
     }).join("");
     // + Other: anything the list lacks, typed here (a name the list knows turns that row on instead)
     const other = `<tr class="add"><td class="tk"><span class="ph-supp-plus">+</span></td><th scope="row" colspan="6"><div class="ph-supp-other"><input type="text" class="field-bare ph-supp-fld" data-supp-other-name="1" placeholder="Other supplement" aria-label="Other supplement" maxlength="80" autocomplete="off"><button type="button" class="ph-supp-addbtn" data-supp-other-add="1">Add</button></div></th></tr>`;

@@ -6928,3 +6928,14 @@ min-height and max-height went under zero and the hours drew 0px tall (reproduce
 **Fixed:** both heights floor at 220px (`max(220px, calc(...))`), and `phRenderRestorePanel` asks `phPinApptZones` to measure
 again whenever the list opens, grows or closes. **Tested** (sandbox, 1440x900, made-up bookings today, the list made as long as
 hers): 714px at rest; list open 220px with the bookings in it; Close back to 714px by itself. Not live until her "push live".
+
+## 2026-10-29 · Supplements: a ✕ to remove a record (her "i need to be able to remove this record from supplements page")
+Her screenshot: the Choline row with "stopped 29 Oct" in Taking, the chip running over the name; only the patient's own rows had a
+✕, so a list row ticked by mistake could only be stopped, never cleared.
+**Built (not live until her "push live"):** a list row with a record (`r.touched && r.kind`) draws the same `.ph-supp-own-rm` ✕ with
+`data-supp-kind-rm`; one handler takes both. Own row: filtered out of `rec.suppOwn` (as before). List row: `rec.supplements[kind]`
+deleted on a copy. Both save `rec.suppAt`, put the record back if the save fails, and show `presSavedToast("Removed · name")` with
+Undo (puts both stores back as they were). CSS: `.ph-supp-tick.stop` wraps (`white-space: normal`, height auto) inside its column.
+**Tested** (sandbox, a made-up patient, 1440x900 and 360x700): the stopped chip ends inside its cell (desktop 310 vs 319, phone
+106 vs 115) and two lines on both; ✕ on Choline: record gone, row ○, no ✕, toast "Removed · Choline / Undo"; Undo: the record
+back as it was (stopped 29 Oct); ✕ on the own Turmeric row: gone, toast, Undo: back; no new console errors.
