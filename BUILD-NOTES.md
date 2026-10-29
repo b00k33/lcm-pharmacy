@@ -6845,7 +6845,7 @@ them (publish commit 7966306c). https://b00k33.github.io/lcm-pharmacy/ serves 20
 She updates with the gold Update button. First open of each file: a plan past its course with nothing booked since closes itself,
 dated after its last visit (her rule; the band's Reopen is one tap).
 
-## 2026-10-29 · Progress letter for face palsy patients (her ask + 8 picks)
+## 2026-10-29 · Progress letter for face palsy patients (her ask + 8 picks) · LIVE build 20261029-201300
 Her ask, with a screenshot of a Bell's palsy patient's Photos › Comparison table (29 Oct | 6 Oct): "how to face progress photos
 to bells palsy patient to congratulate their progress and outline the followup treatment plan". Nothing did it in one place; the
 interim route told to her: Comparison table screenshot + Care Plan › Plan for the patient › Email, paste the screenshot in. Mock
@@ -6853,7 +6853,7 @@ interim route told to her: Comparison table screenshot + Care Plan › Plan for 
 only; photos = pairs (a row per movement, then | now); score = both (one bar, then each movement); who = face palsy patients; What's
 next = course + next visit + See your GP if + Home care; opening words written from the score; Copy for email + Print; first and
 latest; "Yes, build it".
-**Built (not live until her "push live"):** one block before the IVF band (`PH_PRG_*`, `phPrg*`), the band chip (`PRES_BANDS.photos`,
+**Built (LIVE 2026-10-29, build 20261029-201300, her "push live"):** one block before the IVF band (`PH_PRG_*`, `phPrg*`), the band chip (`PRES_BANDS.photos`,
 cell `prg`), the Photos section swap (`presPhotosSectionInnerHtml`: while `phPrgOpenPk` is this patient the letter shows in the
 gallery's place), CSS `.ph-prg*` after the Care Plan letter's. Reuses `phTpCplModel` (stage bar, GP lines), `phFpSorted` /
 `phFpTotals` / `phFpDue` (score, re-check), `phFpPhotosOf` (photos), `phCkCopy` (formatted + plain copy) and `phPrintDoc`. The
