@@ -680,7 +680,9 @@ Ren: one row at a time]. **Exam signs wait** (her pick "both"): the Ask never as
 (`phRqExamPart`; bloating, rumbling, sloshing, fullness are still asked; a part skipped "Always" is asked); a part never charted
 shows a **Later** line (its most telling sign · Tongue › / Pulse › / Abdomen ›); a 7th tab **Tongue** (optional: the six looks
 still open the Ask) holds the newest tongue photo and the Tongue page's own Ren-linked chips, written through `phTngWrite` [Find
-the Ren: the tongue waits, or is looked at here]. (Locked details: "Locked conventions" below.) **The Ren page board** (her pick):
+the Ren: the tongue waits, or is looked at here]. The three crack chips (Cracks · Horizontal cracks · Centre crack) sit in its
+Shape row too (her 2026-10-29 "need tongue cracks"): record only, kept by name in `phRqTngGroups`, since no Fang Bing Ren sign
+reaches a crack; they write the same chart, so the Tongue page's Marks tab and the summary show them. (Locked details: "Locked conventions" below.) **The Ren page board** (her pick):
 26px one-line signs, auto No's folded per subject, a sticky search bar (words, All · Yes · No · Open, area, count; / ↑ ↓ Enter
 Shift+Enter Esc) [Ren page: compact rows + a search bar].
 
