@@ -747,8 +747,8 @@ Tongue page on screen there is no toast and the Tongue tile flashes gold. The To
 light shot: gold "4 photos / Chart" until charted, then the photo with its tick + the words. Chart and the tile open that photo in
 the viewer, Colour ready (a Sublingual shot on Sublingual), her Today's visit behind it; closing it repaints the tile. Code:
 `phTngChartOpen`, `phTngTodayShot`, `phTngHerePk`, `phTvTngArrived` beside `phCapAutoImport`; `phTngTileShot` in the tiles.
-**Face photos for Ren and facial palsy (her 10 picks 2026-10-29, "Combined"; mock `mocks/face-photos-mock-2026-10-29.html`; built,
-NOT live yet).** Every list of kinds is grouped in one order, Tongue first: `PH_REN_PHOTO_TYPES` (`grp`) + `PH_REN_KIND_HEADS`;
+**Face photos for Ren and facial palsy (her 10 picks 2026-10-29, "Combined"; mock `mocks/face-photos-mock-2026-10-29.html`; LIVE
+2026-10-29, build 20261029-174800).** Every list of kinds is grouped in one order, Tongue first: `PH_REN_PHOTO_TYPES` (`grp`) + `PH_REN_KIND_HEADS`;
 dropdowns through `phRenKindOptsHtml` (the viewer, Records → Photos' filter, the batch confirm), the Photos "+ Add" row through
 `phRenTypeGroupedHtml`, and the Comparison table puts a heading row between groups. **Face views:** a plain Face photo is the Rest
 view; the facial-palsy movements are its other views, Rest · Brows · Frown · Eyes · Smile · Cheeks · Whistle (`PH_REN_FACE_VIEWS`;

@@ -6674,7 +6674,7 @@ the shots open the chart; the backup file keeps each photo's date and shot), wit
 index.html was booted in the sandbox first: no console error, the three exam pages and the Treat card draw, the Prescriptions
 search filters and clears. Publish commit 9d9dd0d4; https://b00k33.github.io/lcm-pharmacy/ serves 20261029-172400.
 
-## 2026-10-29 · Face photos for Ren and facial palsy (not live)
+## 2026-10-29 · Face photos for Ren and facial palsy (LIVE 2026-10-29, build 20261029-174800)
 Her ask, with a screenshot of the viewer's Kind dropdown open over a tongue photo: "help me organise photos better / i need face
 photos for ren but also for facial paralysis - mock solution". Mock `mocks/face-photos-mock-2026-10-29.html` (Artifact
 https://claude.ai/artifact/3T9sUk32GscHpdjdAfdrP8): A grouped list, B Face views, C face set, and the Combined. **Her 10 picks:**
@@ -6755,3 +6755,10 @@ screen; no console errors. The sandbox's red "Prescriptions search may not be fi
 "Zz" (the self-check's 3-letter term matches all four); a real search narrows. Pictures `shots/ts-2026-10-29-{look,same,filed}.png`
 (local). **Not tested:** her real records (her bookings are the stale 95 until the 29 Oct phone-sync repair, so pick 2 has few
 booked days to file until then); two devices filing the same left-open visit at once (the same window as two Done taps).
+
+## 2026-10-29 · Live: build 20261029-174800
+Her "push live" (to the face photos session, after being told both changes go together). `publish-live.sh --yes` under the lock
+pushed: face photos for Ren and facial palsy (d5af8065: grouped kinds, Face views, photos on the facial score, Today's set) and
+treatment session picks 2 + 3 (dc8a6a1e: the visit saves itself, one Same as last visit), with three build-note commits. Each was
+booted in the sandbox before it was committed. Publish commit 0602ef1a; https://b00k33.github.io/lcm-pharmacy/ serves
+20261029-174800 and carries both (`PH_REN_FACE_VIEWS`, `phVisitFileStale`). She updates with the gold Update button.
