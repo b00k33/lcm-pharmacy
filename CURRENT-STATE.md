@@ -610,6 +610,8 @@ patient writes `rec.patterns.agreed`/`.dismissed`. Strength is words (Likely / P
 percentage. A card shows only its clues and Agree / Not this patient (no letters, food, points or supplement chips); an open card
 also shows the pattern's concept picture. One pattern can be ★ main. Formula ideas are OFF (she dislikes suggested herbs). A rule
 she overrode in Settings never gains new clue keys later (deliberate). All pattern wording is Claude-drafted, hers to correct.
+Since 2026-10-29 (her audit pick: opened for 2 patients) Patterns · Diagnosis sits with Timeline under the rail's folded
+"⋯ More" row after Fang Bing Ren (`presFlowMoreOpen`; open on a tap or while one of them is the page, closed when she leaves).
 **Concept pictures** are drawn from the body (a natural hand, a real stomach / throat / kidney, vessel walls with cells). Her
 rule: this anatomical model is the model for every picture; the rest move over in batches. Yin deficiency and Heat are drawn on
 the body chart itself (organs at true size, `anat` in `PH_PP`, a 300 x 200 frame) [Concept pictures on the anatomical body]. The
@@ -1176,7 +1178,9 @@ last chart exists.
 Radius · Intensity · Texture + Erase) that stays in view, only the open group's chips under it; a picked quality stays picked
 until tapped off (or Esc); with none picked, tapping a box opens that box's own qualities beside it (`phPulsePopHtml`). Under the
 chart one tab shows: Summary · Rate & rhythm (the Shen-Hammer exam, open) · Note · Fang Bing Ren (the qualities that tick a sign,
-signs on hover, `phPulseChipLinks`; no sign list on this page). **Pulse in action** = "▶ In action" on the legend line: the beat
+signs on hover, `phPulseChipLinks`; no sign list on this page). The Summary's rate line is the fact alone since 2026-10-29
+("Resting rate 78/min · within | above the range for her age", `phPulseRateLineHtml`; nothing until a rate is typed; the Bilton /
+Dr Shen reference sentence is its hover). **Pulse in action** = "▶ In action" on the legend line: the beat
 is drawn over the chart's own cells (`phPaOverHtml`, the concept pictures' runner as `PH_PP.SC.pulse`), measured off the chart's
 own column and row labels (`phPaLay`, again on a width change); today's arches in the chart's blue lift by amplitude at her Hammer
 at-rest rate (72 when none, a Slowed chip), following the Hammer rhythm; the chart's own today drawing steps aside while it runs;
@@ -1189,8 +1193,9 @@ the SHPD notes read them as if ticked. The pulse knowledge base (`PH_PULSE_KB_SE
 is scored none / partial / normal (don't change the scale).
 
 ## Timeline & intake form
-**Timeline** is its own rail step, right after Fang Bing Ren, on IVF / Natural fertility / Pregnancy plans only (`phTlKindOf`);
-"done" = nothing overdue. It reads IVF history, Blood tests and the pregnancy test (nothing asked twice) and takes month/year
+**Timeline** is a rail item right after Fang Bing Ren, on IVF / Natural fertility / Pregnancy plans only (`phTlKindOf`); since
+2026-10-29 (her audit pick: 1 active patient used it) it sits with Patterns · Diagnosis under the rail's folded "⋯ More" row
+(`presFlowMoreOpen`); "done" = nothing overdue. The Today's visit band's Stims / Egg collection / Transfer facts open it. It reads IVF history, Blood tests and the pregnancy test (nothing asked twice) and takes month/year
 dates on Schedule. **The intake form** arrives pre-filled from her file (details, cycle, Yes / No history) and can carry Fang Bing Ren
 questions (`PH_INTAKE_FBR_P` must match `PH_FBR_Q.p`); the link dialogs include a text message to copy. Creating a link never
 depends on the database SQL.

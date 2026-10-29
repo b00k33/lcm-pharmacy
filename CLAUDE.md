@@ -146,7 +146,7 @@ reads it; do not render it again.
 - **Calmer since 2026-10-27 (her "improve page, its too messy too many things i cant edit the ain coplaint the calendar
   looks to wide, i want it more minimal"; her 8 picks on `today-visit-calm-mock-2026-10-27.html` + "Yes, build it";
   BUILD-NOTES "Today's visit, calmer"):** the Journey card is ONE line (visit · phase, visit n of m, the phases as a small
-  bar, then next visit / formula …); the step bar is short (Ask 0/2 · Look 0/5 · Treat 0/3, the part to do now filled);
+  bar, then next visit / formula …; since 2026-10-29 each of those facts is a 32px door to its page, `.ph-tj-door`); the step bar is short (Ask 0/2 · Look 0/5 · Treat 0/3, the part to do now filled);
   the ASK / LOOK / TREAT headings are gone (kept only as the bar's scroll targets); on a **cycle plan**
   (`PH_TP_CYCLE_TEMPLATES`) the cycle is ONE line (Day 9 · Follicular, this week's cells with the same day card, Day 1,
   the finder, Cycle ›, ⋯), on any other plan a small **Cycle tile** beside Tongue · Pulse · Abdomen; **the cycle never
@@ -175,7 +175,7 @@ reads it; do not render it again.
   (My profile) that one page sits in her Body group instead (One Me, 2026-10-26).
 - **The Review step is retired** — folded into Today's visit (strip + pain
   map + pain intake). Nothing lost, only repeats removed.
-- **Timeline** (her picks 2026-10-13 and 2026-10-16): its own numbered rail step right after Fang Bing Ren, before Treatment Care Plan, and in the Next walk, only on a Pregnancy / Natural fertility / IVF plan (see "Timeline promoted to its own rail step" in BUILD-NOTES.md).
+- **Timeline** (her picks 2026-10-13 and 2026-10-16): a rail item right after Fang Bing Ren, before Treatment Care Plan, and in the Next walk, only on a Pregnancy / Natural fertility / IVF plan (see "Timeline promoted to its own rail step" in BUILD-NOTES.md). **Since 2026-10-29 (her audit pick) it and Patterns · Diagnosis sit folded under one "⋯ More" row there** (`presFlowMoreOpen`): open on a tap or while one of them is the page, closed when she leaves.
 - Other pages (Photos, Appointments, Messages, IVF history, Log, Visit
   checks, Checklist) are unchanged and sit outside this law.
 - **The complaints live on Today's visit only (her 2026-10-18 pick).** There
