@@ -6939,3 +6939,7 @@ Undo (puts both stores back as they were). CSS: `.ph-supp-tick.stop` wraps (`whi
 **Tested** (sandbox, a made-up patient, 1440x900 and 360x700): the stopped chip ends inside its cell (desktop 310 vs 319, phone
 106 vs 115) and two lines on both; ✕ on Choline: record gone, row ○, no ✕, toast "Removed · Choline / Undo"; Undo: the record
 back as it was (stopped 29 Oct); ✕ on the own Turmeric row: gone, toast, Undo: back; no new console errors.
+
+## 2026-10-29 · Live: Appointments grid floor + Supplements remove (build 20261029-211300)
+On her "push live" (popup): 0ff9eb91 (the hours never fold to nothing with the Restore list open) and 83631b59 (a ✕ with Undo
+for every supplement record) went live together in build 20261029-211300; checked on the live page.

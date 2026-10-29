@@ -591,7 +591,7 @@ chip, ↗ opens the link) or the patient's own brand (a field); Dose = her words
 what the patient takes is `phSuppTaking(rec)` (the band's Taking n, Today's visit's "still the same?", the form's rows, Copy
 notes, the medication note, Copy for vital.ly). vital.ly has no way in (2026-09-11): "Copy for vital.ly" copies product — dose
 lines for its search. Patterns' iron clue reads `rec.supplements.iron.on` as before.
-**Remove a record (her 2026-10-29 "i need to be able to remove this record"; built, NOT live yet):** every row with a record has a
+**Remove a record (her 2026-10-29 "i need to be able to remove this record"; LIVE build 20261029-211300):** every row with a record has a
 ✕ beside its name: the patient's own row goes; a list row's record (`rec.supplements[kind]`) is cleared, so the row is back to ○ as
 if never ticked. Either way one toast "Removed · Choline" with Undo. A stopped chip ("stopped 29 Oct") wraps inside Taking.
 
