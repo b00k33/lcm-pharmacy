@@ -7049,3 +7049,8 @@ box keeps focus; "qqzz" → the Add chip (32 px); an area → that area alone; A
 "+ Face" / "+ Build" in the tab row; Next → Today's visit; Prescriptions search 1 match; 375 wraps inside the screen. Pictures
 `shots/ren-audit-build-folded/-open/-375-2026-10-29.png`. Not tested: her records (a patient with a face photo keeps the photo
 column as before). Waits for her "push live".
+
+## 2026-10-30 · Live: the Face score tile and the Ren page fold (build 20261030-101300)
+On her "push" (her answer to pushing both): 63ab51a8 (Today's visit: a Face score tile when the face score is due) and
+4c58d8ad (Ren page: the board folds behind Signs ›, another session's build) went live together in build 20261030-101300;
+checked on the live page.
