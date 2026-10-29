@@ -6526,3 +6526,53 @@ kind. Checked on the seed: the band's clue count, the Guide's rule back on the p
 Her "push live" after the Blood tests picture: the Blood tests build (f849f3e6, attach the result first) went live, with the
 audit-report note 6dd29d66 and another session's sync guard ec47a0c6 (an older device copy can no longer replace bookings,
 herb follow-ups or stock) riding along. Publish commit e6c93e61; https://b00k33.github.io/lcm-pharmacy/ serves 20261029-161800.
+
+## 2026-10-29 · Findings per visit: every day kept, last visit beside today (not live)
+Her pick 13 from the patient-profile audit (`patient-interactivity-audit-2026-10-29.html`), mock
+`findings-per-visit-mock-2026-10-29.html` (A beside · B over time · C in the rows), her 8 picks, all the recommended option: **A + B
+together**; a new day starts blank with last visit beside it and "Same as <date>" copies it (the Pulse's way); Tongue, Abdomen and
+Pulse alike (Pulse keeps its grey ink); every day with a finding counts (a visit, a photo review, the page itself); a "Since <date>"
+line (+ new, − gone); Today's visit tiles show last visit's words faint under today's; the strip draws a small belly on Abdomen and
+the dots on Pulse; the last 6 days with a finding, "+ n more" opens the rest.
+**The gap it closes:** Pulse already kept each day (`constitPulse.hist`); Tongue and Abdomen edited one standing chart in place, so
+a day was kept only when a session was logged on it (the audit found dated findings on 2 patients) and yesterday's marks opened as
+today's.
+- **Day model for Tongue and Abdomen** (`phTngStale` / `phAbdStale`, `phTngToday` / `phAbdToday`, beside `phExamPast`): a chart
+  written on an earlier day shows today BLANK, read side, nothing written (the page, Today's visit, the Care Plan row, Ask her's
+  Tongue chips, the photo viewer's "today"). The first write of the new day moves it aside: the tongue's into a dated review of its
+  day (`phTngMoveAside` → `rec.tongueReviews`, flagged `page`; skipped when a visit that day already holds the mirror), the
+  abdomen's into `rec.abdomen.hist` (`phAbdMoveAside`, the pulse's shape). `phTngWrite` skips its "same as saved" early return
+  while stale; `phAbdWrite` moves aside before `fn`. Nothing is deleted.
+- **One read of every kept day:** `phFndDays(rec, part, withToday)` → `[{date, at, src, tng | abd + abdNormal | pulse + pulseRef +
+  hammer}]`, newest first, one entry per day (a visit's copy wins, then the newest write; src = visit · page · photo · review ·
+  hist · live · today); `phFndLast` (last visit = the newest earlier day), `phFndOn(rec, part, date)`, `phFndToday`, `phFndText` /
+  `phFndDrawHtml` (the one renderers: `phTpFxTng` / `phTpFxAbd` / `phVisitPulseDotsHtml`), `phFndKeys` (labelled keys for the
+  Since line: tongue chips + a colour or coat in one zone, abdomen tension / marks by place or "nothing unusual", pulse side ·
+  column · quality). Rewired onto it, so every page reads the same days: `phPulsePrior`, `phAbdLast`, `phTngPriorFinding` (the
+  photo viewer's Same as), `phExamPast` (Today's visit tiles, the Care Plan's exam row `phTpFxExamRow`, which lost its own
+  standing-chart read), Fang Bing Ren's tongue / abdomen fallback (`phFbrChartWords`, the fertility cold-belly check,
+  `phRqExamCharted`), Patterns (`phPatClues`, the newest day including today), the Fang Bing Ren nudge `tOk`, the Treatment tab's
+  "same" tongue chip, the Findings trend sheet (`phFtDates`), `phTngViewTarget` (today = the blank-while-stale chart).
+- **The block under each page** (`phFvHtml`, `phFvClick`, `phFvRefresh`; view state `phFvSel` / `phFvMore`, never saved): the
+  strip of the last 6 days with a finding (oldest on the left, Today at the end, "+ n more"; each a small drawing + date + tag
+  last / visit / photo / review), the tapped day's cell (drawing · date · ago · words · "Same as <date>", hidden once today already
+  matches), the Since line (+ new in green, − gone in amber, "unchanged"; only once today has a finding). Pulse and Abdomen draw it
+  in the `[data-exam-past]` slot under the chart (`phExamPastInner` draws it now; `phExamPastRefresh` repaints it after a tap);
+  the Tongue page draws it inside its own host, under the rows and photos and above Past photos (`phTngCmpHtml`), so its
+  two-column grid is untouched. "Same as" writes through the part's own door (`phTngWrite`, `phAbdWrite`, `phHxConstitPulse` +
+  mirror + save) and repaints through the page's own refresh. CSS `.ph-fv*` beside the old `.ph-expast` rules; the "Recorded
+  <date> · not today" stamp and the two text lines are gone (the strip and the cell say it).
+- **Today's visit tiles:** `.ph-today-last` under today's words (`phExamPast(rec, id)[0]`: date · words), faint, one line; the
+  hover title went (the fact is on screen now); the tick spans three rows.
+- Mock A drew the last-visit cell BESIDE the Tongue rows; it is built UNDER the rows on all three pages so the three match and the
+  Tongue page keeps its full-width chip rows (a judgment call, told to her in the report).
+**Tested** (the sandbox seed on the test copy at 1024 and in the headless harness at 1220 and 375): a tongue, belly and pulse chart
+from yesterday + a 15 Oct visit copy + two photo reviews: each page opens blank today with the strip (17 Sep photo · 1 Oct photo ·
+15 Oct visit · 28 Oct last · Today), the cell "28 Oct · yesterday · last" and Same as; Same as copies it (tongue → a `page` review
+of 28 Oct and `rec.tongueExam.at` today; abdomen → `hist[0]` 28 Oct, chart copied; pulse → `constitPulse.hist[0]`, marks copied),
+Since "unchanged", the chip gone; one chip changed → "Since 28 Oct + dry − wet"; a tap on 15 Oct → its cell and "Since 15 Oct";
+Today's visit tiles show "28 Oct · …" under today's words / "not yet"; Patterns and Fang Bing Ren render with no console error;
+the Prescriptions search filters to the typed name and back; nothing wider than 375 on the phone. **Checked for the fact:** the
+Tongue, Pulse and Abdomen pages, Today's visit, the Care Plan's exam row, Fang Bing Ren, Patterns, the Findings trend sheet, the
+photo viewer's Same as. **Not tested:** her real records; the Compare screen listing a `page` review (it lists every review, so
+it will show one with no note); a two-device merge of `rec.abdomen.hist`.

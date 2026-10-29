@@ -1193,7 +1193,15 @@ after Complete session.
 
 **Findings charts** (tongue / abdomen / pulse) are the app's own tappable diagrams with a "brush" (pick a sign, then tap its
 regions). The exam pages are the ONE entry; `phExamMirrorToday` copies today's exam into the dated record. Read every finding
-through `phVisitFndRead`. A **Findings trend** sheet (Grid | Trail) shows dated tongue and abdomen findings from the exam pages.
+through `phVisitFndRead`. **Every day is kept (her 2026-10-29 picks, BUILD-NOTES "Findings per visit"):** a chart written on an
+earlier day shows today blank (`phTngStale` / `phAbdStale`, `phTngToday` / `phAbdToday`; the Pulse already worked this way) and the
+first write of the new day moves it aside (tongue → a dated review flagged `page`; abdomen → `rec.abdomen.hist`; pulse →
+`constitPulse.hist`), nothing deleted. `phFndDays(rec, part)` is the ONE read of those days (a visit's copy, a moved-aside chart,
+a photo review, the stale live chart; `phFndLast` = last visit); every page that shows a finding reads it. Under each exam page's
+chart sits the same block (`phFvHtml`): the strip of the last 6 days with a finding (small drawing + date + tag, Today at the end,
+"+ n more"), the tapped day's cell (drawing · date · ago · words · "Same as <date>", which copies it into today through the
+part's own door) and a "Since <date>" line (+ new, − gone, "unchanged"). Today's visit tiles show last visit's date and words
+faint under today's. A **Findings trend** sheet (Grid | Trail) shows the same days for tongue and abdomen.
 **Tongue:** `visitFnd[id].tng = {colour, colourMore[], colourAt, shape, moist, coatThick, coatColour,
 coatArea[] (root / mid = centre), coatAt{} (coat colour per zone), coatQual{}, marks{}, under, thickAt{}, deviation, v2}`. The
 Tongue page [Tongue page: tabs + the three jiaos]: photos beside eight tabs in EXAM ORDER (her pick B 2026-10-28, "i struggle to
@@ -1223,7 +1231,7 @@ Note · Fang Bing Ren, today's photo over it (`phAbdPhotoHtml`, Today | Last fli
 Tongue page's way (her "Same as Tongue now"; no sign list): a chip that reaches a sign carries the plum link bar (`.tfp-lk`) and
 its signs on hover (`phAbdChipLinks`, off the `abd:` specs); the "Fang Bing Ren · N ticked" count (`phAbdFbrTicked`, a fact) sits
 on its tab; `phAbdChartWordsOf` is the one read of a chart's Fang Bing Ren words. Last visit draws in grey under today's marks, front and
-side, still, always on (`phAbdLast` = the newest dated finding before today; `opts.prev` on both charts, `phAbdGrey`), with a
+side, still, always on (`phAbdLast` = `phFndLast`, the newest earlier day with a finding in any store; `opts.prev` on both charts, `phAbdGrey`), with a
 "Today · Last · <date>" key over the charts. Every sign is drawn: tight rectus (red dashes by row), thin wall (dotted ring), a
 Whole abdomen sign once, big. Phone: the sign tabs one sideways row (edge fades), Erase at the end of the chip row. The page
 handles its own taps (`phAbdClick` → `phAbdChartWrite` → `phAbdWrite`); the old shared `data-visit-abd2` handlers and the
@@ -1238,7 +1246,8 @@ stroke of their own); hypo names written along the band; the outline open at the
 arch + a dashed line at the band's inner edge (`PH_ABD_HYPO_LINES`); tight rectus starts below the band (`PH_ABD_QY`). The Fang Bing
 Ren body figure's nine belly places are the same shapes (`phRenZonesHtml` through `phRenAbdMap`: xiphoid 150, 10th rib tip 33 out at
 175, pubis 240.5), so both pictures agree.
-**Pulse:** each tick is dated; each new day starts blank. The chart is HER TABLE (her pick): 6 columns, 3 PRIMARY (Cun / Guan /
+**Pulse:** each tick is dated; each new day starts blank (since 2026-10-29 Tongue and Abdomen work the same way, and the strip of
+kept days sits under every chart: "Findings charts" above). The chart is HER TABLE (her pick): 6 columns, 3 PRIMARY (Cun / Guan /
 Chi, lightly shaded) and 3 SECONDARY -- never pair a secondary column with a primary one. Cun / Guan / Chi each head ONE column
 (R: Up. Resp / Stomach / Bladder, L: Heart / Liver / Adrenals, `PH_PULSE_POS_COL`): the organ-name row on top, the Cun / Guan /
 Chi row right above the cells (her pick B), each position and each short column name showing the full organ name on hover. A
