@@ -1328,8 +1328,7 @@ origin/main:index.html`; don't trust this list's age.
   Wan, Chai Hu Gui Zhi Tang, Ling Gui Zhu Gan Tang (Huang Lian Jie Du Tang,
   Da Chai Hu Tang and Wen Jing Tang are families now).
 
-**Built on my reading — hers to confirm:** the pulse chart starts blank each
-day; Usual period shows Wheel |
+**Built on my reading — hers to confirm:** Usual period shows Wheel |
 Chart.
 
 **Paused or not built:**
