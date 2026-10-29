@@ -27017,6 +27017,9 @@
   #pharmacyPage .ph-rfc-wg .wh .t { flex: 1; min-width: 0; }
   #pharmacyPage .ph-rfc-wg .wh .t b { display: block; font: 600 var(--fs-15) var(--font-body); color: var(--ph-herb-deep); overflow-wrap: anywhere; }
   #pharmacyPage .ph-rfc-wg .wh .t span { font-size: var(--fs-12-5); color: var(--ph-soft); }
+  /* her 2026-10-29 "how do i choose how much to make?": the batch's grams in the heading are a field */
+  #pharmacyPage .ph-rfc-wg .wh .t b .ph-rfc-wgg { width: 7ch; height: 32px; min-height: 0; margin: 0 2px; padding: 0 8px; box-sizing: border-box; border: 0; border-radius: 6px; background: var(--ph-herb-tint); box-shadow: none; color: var(--ph-herb-deep); font: 700 var(--fs-15) var(--font-body); font-variant-numeric: tabular-nums; text-align: center; vertical-align: middle; }
+  #pharmacyPage .ph-rfc-wg .wh .t b .ph-rfc-wgg:focus { outline: 2px solid var(--ph-gold); outline-offset: 0; }
   #pharmacyPage .ph-rfc-wg .wh .ph-rfc-btn { flex: none; width: auto; height: 32px; padding: 0 12px; border-radius: 6px; }
   #pharmacyPage .ph-rfc-wg .wn { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; }
   #pharmacyPage .ph-rfc-wg .jarto { display: flex; align-items: center; gap: 8px; font-size: var(--fs-12-5); color: var(--ph-soft); }
@@ -135481,10 +135484,55 @@ Dosage: {dosage}
   function phRfcMkClose() { phRfcMk = null; if (phRfcSide && phRfcSide.k === "weigh") phRfcSide = null; phRfcPaintList({}); }
   // the weighing list (her synth22 pick 1, A Bench list): ring · what is being made · jar now → after · the bowl so far,
   // a gold line, then the bench's rows: tick · herb · grams · what the scale reads once it is in
+  // the list's numbers (her 2026-10-29 "how do i choose how much to make? sometimes i make 150 or 300 or 275"): a whole
+  // multiple of the recipe weighs as before; any other batch splits into whole grams for her scale (her 2026-08-25 spec),
+  // the grams left over going to the herbs nearest their next gram, so the bowl is exactly the batch and the stock comes
+  // off as weighed. items = what Finish deducts, w = what each row shows.
+  function phRfcMkNums(recipe, grams) {
+    const r = presCalcNumbers(recipe, grams), sum = phRound2(refRecipeSum(recipe));
+    if (refIsWholeMultiple(grams, sum)) return { items: r.items, cost: r.cost, w: r.items.map(x => Math.round(x.grams || 0)) };
+    const raw = r.items.map(x => x.grams || 0), w = raw.map(g => Math.floor(g + 1e-9));
+    let left = Math.round(grams) - w.reduce((s, g) => s + g, 0);
+    const byRem = raw.map((g, i) => i).sort((a, b) => (raw[b] - w[b]) - (raw[a] - w[a]));
+    for (let k = 0; left > 0 && k < byRem.length; k++, left--) w[byRem[k]]++;
+    const items = r.items.map((x, i) => ({ ...x, grams: w[i] }));
+    return { items, cost: phRound2(items.reduce((s, x) => s + (x.h && x.h.cost ? x.grams * x.h.cost : 0), 0)), w };
+  }
+  // the grams field: each keystroke re-weighs the list in place (the field itself stays, so typing never stops), the
+  // ticks start over, and leaving the field keeps the amount as this formula's planned batch (h.refillBatch)
+  function phRfcMkGrams(el, commit) {
+    const M = phRfcMk; if (!M) return;
+    const g = Math.round(parseFloat(String(el.value).replace(/[^\d.]/g, "")));
+    if (!(g >= 1)) { if (commit) el.value = phRound2(M.grams); return; }
+    if (g !== M.grams) {
+      M.grams = g; M.done = new Set(); M.pop = -1; M.shownBowl = 0; M.shownPct = 0;
+      const host = document.getElementById("phRfcSide"), wg = host && host.querySelector(".ph-rfc-wg");
+      const tmp = document.createElement("div"); tmp.innerHTML = phRfcSideHtml();
+      if (wg) [".wh .ring", ".wh .t > span", ".wn", ".pline", ".ph-wg-table", ".ft"].forEach(s => { const a = wg.querySelector(s), b = tmp.querySelector(s); if (a && b) a.replaceWith(b); });
+      if (host) phRfcSideSettle(host);
+    }
+    if (!commit) return;
+    el.value = M.grams;
+    const h = PHARMACY.herbs.find(x => x.id === M.id);
+    if (!h || h.refillBatch === M.grams) return;
+    const had = "refillBatch" in h, old = h.refillBatch;
+    h.refillBatch = M.grams;
+    if (savePharmacy() === false) { if (had) h.refillBatch = old; else delete h.refillBatch; return; }
+    const root = document.getElementById("phRfc"), wks = root && root.querySelector("#phRfcWeeks"), sb = root && root.querySelector("#phRfcShort");
+    if (wks) wks.innerHTML = phRfcWeeksHtml();
+    if (sb) sb.innerHTML = phRfcShortbarHtml();
+  }
+  ["input", "change", "keydown", "focusin", "pointerdown", "mouseup"].forEach(ev => document.addEventListener(ev, e => {
+    const t = e.target;
+    if (!t || !t.matches || !t.matches("#phRfcSide [data-rfc-mk-g]")) return;
+    if (ev === "input" || ev === "change") phRfcMkGrams(t, ev === "change");
+    else if (ev === "keydown") { if (e.key === "Enter") { e.preventDefault(); phRfcMkGrams(t, true); t.blur(); } }
+    else if (ev === "focusin") t.select();   // the whole number is picked, so typing replaces it
+    else if (ev === "pointerdown") { if (document.activeElement !== t) t.dataset.fresh = "1"; }
+    else if (t.dataset.fresh) { e.preventDefault(); delete t.dataset.fresh; }   // the click's mouse-up would drop that pick
+  }));
   function phRfcMkHtml(h, recipe) {
-    const M = phRfcMk, { items } = presCalcNumbers(recipe, M.grams);
-    const sum = phRound2(refRecipeSum(recipe)), whole = refIsWholeMultiple(M.grams, sum);
-    const w = items.map(x => whole ? Math.round(x.grams || 0) : phRound2(x.grams || 0));
+    const M = phRfcMk, { items, w } = phRfcMkNums(recipe, M.grams);
     const total = phRound2(w.reduce((s, g) => s + g, 0));
     const done = new Set([...M.done].filter(i => i < items.length));
     const n = items.length, d = done.size, bowl = phRound2(w.reduce((s, g, i) => s + (done.has(i) ? g : 0), 0));
@@ -135495,7 +135543,7 @@ Dosage: {dosage}
     const allDone = d === n;
     return `<div class="ph-rfc-wg">
       <div class="wh"><svg class="ring" viewBox="0 0 42 42" aria-hidden="true"><circle class="bg" cx="21" cy="21" r="17"/><circle class="fg" cx="21" cy="21" r="17" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C * (1 - (M.shownPct || 0))).toFixed(1)}" data-rfc-to="${(C * (1 - pct)).toFixed(1)}"/></svg>
-        <div class="t"><b>Weigh ${phFmtG(M.grams)} g of ${esc(phRfcTitle(h.name))}</b><span>${d} of ${n} weighed</span></div>
+        <div class="t"><b>Weigh <input type="text" inputmode="numeric" class="ph-rfc-wgg field-bare" data-rfc-mk-g="1" value="${phRound2(M.grams)}" autocomplete="off" aria-label="Grams to make" title="Grams to make"> g of ${esc(phRfcTitle(h.name))}</b><span>${d} of ${n} weighed</span></div>
         <button type="button" class="ph-rfc-btn ghost" data-rfc-mk-close="1">Not now</button></div>
       <div class="wn"><span class="jarto">${phRfcJarSvg({ id: "wg" + h.id, qty: 1, low: 1 }, "").replace("<rect class=\"fill\"", `<rect data-rfc-fill="${(1 - (jarFill)).toFixed(3)}" data-rfc-fillto="${(1 - Math.min(1, (jar0 + bowl) / Math.max(1, jar0 + total))).toFixed(3)}" class="fill"`)}<span>Jar ${phFmtG(jar0)} → <b>${phFmtG(phRound2(jar0 + total))}</b> g</span></span>
         <span class="bowl"><b data-rfc-count="${M.shownBowl || 0}" data-rfc-countto="${bowl}">${phFmtG(M.shownBowl || 0)}</b> g<br>bowl of ${phFmtG(total)} g</span></div>
@@ -135517,7 +135565,7 @@ Dosage: {dosage}
   function phRfcWeighAll() {
     const M = phRfcMk; if (!M) return;
     const h = PHARMACY.herbs.find(x => x.id === M.id), recipe = h && phRefillRecipe(h); if (!recipe) return;
-    const n = presCalcNumbers(recipe, M.grams).items.length;
+    const n = phRfcMkNums(recipe, M.grams).items.length;
     M.done = M.done.size === n ? new Set() : new Set(Array.from({ length: n }, (_, j) => j)); M.pop = -1;
     phRfcPaintSide();
   }
@@ -135525,7 +135573,7 @@ Dosage: {dosage}
     const M = phRfcMk; if (!M) return;
     const h = PHARMACY.herbs.find(x => x.id === M.id), recipe = h && phRefillRecipe(h);
     if (!recipe) return;
-    const { items, cost } = presCalcNumbers(recipe, M.grams);
+    const { items, cost } = phRfcMkNums(recipe, M.grams);
     const before = h.qty == null ? 0 : h.qty;
     phDispenseGate(items, resolved => {
       // lively finish (her pick 7): the row's jar fills and the row glows, then the save runs, the panel closes and the
@@ -135588,8 +135636,8 @@ Dosage: {dosage}
     if (M && phRfcSide && phRfcSide.k === "weigh") {
       const h = PHARMACY.herbs.find(x => x.id === M.id), recipe = h && phRefillRecipe(h);
       if (recipe) {
-        const { items } = presCalcNumbers(recipe, M.grams), sum = phRound2(refRecipeSum(recipe)), whole = refIsWholeMultiple(M.grams, sum);
-        M.shownBowl = phRound2(items.reduce((s, x, i) => s + (M.done.has(i) ? (whole ? Math.round(x.grams || 0) : phRound2(x.grams || 0)) : 0), 0));
+        const { items, w } = phRfcMkNums(recipe, M.grams);
+        M.shownBowl = phRound2(w.reduce((s, g, i) => s + (M.done.has(i) ? g : 0), 0));
         M.shownPct = items.length ? M.done.size / items.length : 0;
       }
       M.pop = -1;

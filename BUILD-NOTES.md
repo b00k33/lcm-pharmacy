@@ -6218,3 +6218,28 @@ own colours; most controls were 32px).
 - **Integration (★★★):** the facts still come from the same reads (`phTodayNextVisitKey`, `phTodayFormula`, `phFbrRank`,
   `phHxApplicableItems`); only the wrapper changed. Checked for the rail: Today's visit, Fang Bing Ren, Patterns, Timeline (no IVF
   plan seeded: the More row showed Patterns · Diagnosis alone). Not checked: the Key2; the Timeline doors on a real IVF plan.
+
+## 2026-10-29 · Formula refill: choose how much to make
+- **Her words** (screenshot of the weighing panel, "Weigh 140 g of Chai Hu Jia Long Gu Mu Li Tang", Jar 10 → 150 g): "how do i
+  choose how much to make? sometimes i make 150 or 300 or 275". There was no way: Make always weighed the plan's batch
+  (`phRefillBatchFor`: the recipe × the supplier pack), and the old batch dropdown (`data-ph-refill-batch`) left the row in the
+  10/27 redesign.
+- **Built (my call, the number she wants to change is where she reads it):** the grams in the heading are a field
+  (`.ph-rfc-wgg field-bare`, `data-rfc-mk-g`; 32px, 6px, the field tint). A tap picks the whole number, so typing replaces it.
+  Each keystroke re-weighs the list in place (`phRfcMkGrams` swaps the ring, the count, the jar line, the bowl, the rows and
+  Finish; the field itself stays, so typing never stops), the ticks start over, and Enter or leaving the field keeps it as the
+  formula's planned batch (`h.refillBatch`, the field the plan already had; Finish clears it as before). An empty or 0 entry
+  goes back to the amount before.
+- **Whole grams (her 2026-08-25 spec, her scale reads whole grams):** a batch that is a whole multiple of the recipe weighs
+  exactly as before. Any other amount (150 or 275 of a 140 g recipe) splits into whole grams, the grams left over going to the
+  herbs nearest their next gram, so the bowl and the scale's last reading are exactly the batch (`phRfcMkNums`). Finish
+  deducts those same whole grams and adds the batch to the jar (before, a free amount would have shown 29.46 g).
+- **Tested** (sandbox, a made-up 140 g recipe of 11 herbs, its jar at 10 g on To make): real click + typing 275 → rows 29 · 39
+  · 10 · 20 · 20 · 29 · 10 · 20 · 20 · 39 · 39 = 275, "Jar 10 → 285 g", "Finish · add 275 g", the field kept focus; two ticks
+  then typing 300 → ticks back to 0, rows add to 300; a tap on a herb row straight after typing saved 300 AND ticked the row;
+  Not now → Make reopens at 300; tick all → Finish: log entry 300 g, every herb a whole gram, 300 g deducted, jar 10 → 310,
+  the plan cleared; 280 (× 2) = the recipe doubled exactly; 150 → whole grams adding to 150; empty / 0 + Enter → back to the
+  amount before; 375 px: the heading wraps, nothing cut, no sideways scroll. Picture: shots/refill-batch-grams-2026-10-29.png.
+- **Integration (★★★):** the batch is the same `h.refillBatch` the row's Make, the week tiles' "short" counts and the short bar
+  read (they repaint when it is kept). The bench's own Make × dropdown (`renderRefMultiplier`) is unchanged.
+  Not checked: the Key2; her real recipes.
