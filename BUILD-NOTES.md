@@ -6887,3 +6887,26 @@ the template; ✎ Template lands on the Progress letter chip with its seven rows
 progress", opening "Hi {first}, look how far you have come since {since}! {back} {onway} So proud of you." and heading "Your photos"
 showed in the letter and in the copy; Undo put the heading back, ↺ Default the title; the herbal letters' rows and fill-ins unchanged
 and the herbal letter list has no Progress letter; no console errors. Picture `shots/prg-2026-10-29-template.jpg` (local only).
+
+## 2026-10-29 · Find the Ren, Tongue tab: the crack chips (her "need tongue cracks", not live)
+
+**Her ask:** a screenshot of Find the Ren's Tongue tab beside a tongue photo with a centre crack, and "need tongue cracks". The
+tab's Shape row had Swollen · Tender · V-shaped · Flaccid · Stiff and Teethmarks · Purple spots, no crack.
+
+**Why it was missing:** the Tongue tab shows only the Tongue page's chips that reach a Ren sign (`phRqTngGroups` filters each
+chip through `phTngChipLinks` against `PH_REN_SIGNS`). No Fang Bing Ren sign names a crack (`PH_TNG_MARKS` says so for
+crack / crackH / crackC), so all three crack marks were filtered out.
+
+**Build (one edit, `phRqTngGroups`):** a `keep` list (`marks: crack, crackH, crackC`) that the bar filter honours before the
+Ren-sign test. The chips are record only: they tick nothing in Fang Bing Ren (no sign exists, and inventing one is hers to
+decide), their hover is blank, and a tap writes `rec.tongueExam` through the same `phTngWrite` door as the other chips, so the
+Tongue page, its Marks tab count and the chart summary carry them. Order follows the Tongue page: Cracks · Horizontal cracks ·
+Centre crack · Teethmarks · Purple spots. A mark tapped here has no zone (same as Teethmarks tapped here): the Marks tab shows
+the chip ticked and the summary says "centre crack"; the chart drawing adds its line once a zone is chosen on the Tongue page.
+
+**Tested** (sandbox, the seeded Zz Audit Patient, build at HEAD 6c1821ae + this edit): boots clean (no console errors beyond the
+standing 404); the Tongue tab lists the three crack chips in the Shape row; a tap on Centre crack ticks it, the tab's summary
+reads "… teethmarks both sides, centre crack · 29 Oct", `rec.tongueExam.marks.crackC` is set, the Tongue page's Marks tab shows
+"Marks 2" with centre crack and teethmarks on; Prescriptions search 1 match; at 375 the bar wraps inside the screen (scrollWidth
+375). Pictures `shots/ren-tongue-cracks-build-2026-10-29.jpg` and `…-375-2026-10-29.jpg` (local only). CURRENT-STATE "Find the
+Ren" paragraph updated. Waits for her "push live".
