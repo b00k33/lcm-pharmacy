@@ -6181,3 +6181,9 @@ Tongue · 18 Sep viewer "improve this organisation of the tags especially the to
   pile-board tap on a marked tongue opens the compare pair, Clear leaves no mark; 375px: the Shot bar's short words sit beside the
   × with nothing wider than the page; Prescriptions search narrows and comes back; no console errors.
 - **Not checked:** the paste into Cliniko itself (her word on how it lands); her real photos; the Key2.
+
+## 2026-10-29 · Live: build 20261029-122200
+Her "build it and push" (publish 9e565ac8). Went live: a tap opens the photo (a waiting compare pick is dropped; ⧉ marks what it can pair
+with), Copy notes bold labels, the viewer's title bar with Kind · Shot · Date (23d57904). Checked on the live page: the stamp, `ph-rv-bar`,
+`phRenViewBarHtml`, `phRenCmpCls`, `phCnHtml`, and the old "Photos can only be compared" toast gone. Pictures:
+shots/photo-viewer-bar-2026-10-29.jpg, shots/photo-viewer-bar-phone-2026-10-29.png, shots/photo-compare-pair-marks-2026-10-29.jpg.
