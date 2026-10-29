@@ -6762,3 +6762,28 @@ pushed: face photos for Ren and facial palsy (d5af8065: grouped kinds, Face view
 treatment session picks 2 + 3 (dc8a6a1e: the visit saves itself, one Same as last visit), with three build-note commits. Each was
 booted in the sandbox before it was committed. Publish commit 0602ef1a; https://b00k33.github.io/lcm-pharmacy/ serves
 20261029-174800 and carries both (`PH_REN_FACE_VIEWS`, `phVisitFileStale`). She updates with the gold Update button.
+
+## 2026-10-29 · Phone-sync data repair: bookings, follow-ups, stock put back (her "repair the phone sync now")
+The data half of "Sync guard" (her phone's ~1 Oct copy replaced `pharmacy_core` at ~3:45 pm; she had said "Not now"). Done at
+6:10 pm on the CBD clinic (owner, session email, `locName` checked), from a same-site tab in her Chrome with LCM 174800 running in
+a frame (its own save + `__lcmFlushBeforeReload`, so the app pushed it); her computer's LCM was already on 174800 (the guard).
+**Three copies:** R = the 15:42 good copy (`lcm-rescue-2026-10-29` / `daily-1542`), S = the app's own rolling backup at 15:52
+(right after the overwrite), C = now. Rule: R, then every change made after the overwrite (S → C) replayed on top.
+- 13 parts untouched since 15:52 came back from R whole: stocktakes (last 20 Oct), label template, column widths, body types,
+  relocation, message templates (92), prepared messages (3), sign links, timeline schedules, formula notes, appointment handoff,
+  inventory columns.
+- **Bookings 121 → 290:** R's 290. The 26 added at ~4:19 pm (a re-paste of 26–29 Oct) are the same bookings as R's (date, time,
+  patient; one had "Linh Quach " stuck to the patient name in R), so each replaced its R twin: same content, the cleaner service
+  wording. Nothing referenced either id. R's 21 other bookings those days (the 9:05 am paste: Nabih's, blocked times) stay. The 5
+  September bookings only the phone had (removed on the computer after 1 Oct) stay removed.
+- **Herb follow-ups 17 → 72:** R's 71 + the one from the 16:01 dispense.
+- **Stock (302 herbs, Zhi Da Huang back):** R's amounts plus the three movements logged since (ginger arrival +100, the Ban Xia
+  Hou Po Tang batch, one dispense): Zi Su Geng 261, Sheng Jiang 155, Hou Po 331, Fu Ling 107, Huang Bai 102, Cang Zhu 239. Two
+  were typed by hand after the overwrite and keep her typed amount: Ban Xia Hou Po Tang 75 (= R's 0 + batch − dispense anyway)
+  and Ban Xia (Zhi) 0 (R minus the batch would be 37 g; told her to check the shelf).
+- Patients (685) kept as they were (merged one by one; none newer in R). The log (4199) and prescriptions (1001) were never hit.
+- `triLearn` counts: R's 286 + the 4 started since = 289.
+**Verified on the cloud row** (the app's own client, `settings`): equal to the repaired copy key for key, local storage and the
+app's memory equal too, still equal 15 s later. **Undo copy:** `lcm-rescue-2026-10-29` / `before-repair-1809` (her data as it was
+just before). **Her phone:** still holds the old copy until it syncs; the computer's guard now refuses an older copy and pushes
+the repaired one back, and the phone adopts it once it is on 161800+ (open LCM there, tap the gold Update).
