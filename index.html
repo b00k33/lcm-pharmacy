@@ -69605,7 +69605,7 @@ or changing anything in Cliniko.
     const ta = e.target && e.target.closest ? e.target.closest("[data-ltr-tpl-field]") : null;
     if (!ta) return;
     const [tmplId, sec] = ta.dataset.ltrTplField.split(":");
-    const tmpl = phLtrAllTemplates().find(x => x.id === tmplId);
+    const tmpl = tmplId === "progress" ? PH_PRG_TMPL : phLtrAllTemplates().find(x => x.id === tmplId);
     if (!tmpl) return;
     const prev = (phLtrOverrides()[tmplId] || {})[sec];
     const val = ta.value.replace(/\r\n/g, "\n").trim();
@@ -81408,7 +81408,9 @@ or changing anything in Cliniko.
     }
     return {
       pk, first: phTpFirstName(name), pairs, from, rows, s1, s2, t1: s1 ? phFpTotals(s1) : null, t2: s2 ? phFpTotals(s2) : null,
-      title: `Your progress${P.facial && plan && plan.title ? ` · ${plan.title}` : ""}`,
+      plan: P.facial && plan && plan.title ? plan.title : "",
+      title: phPrgFill(phPrgTpl("title"), { first: phTpFirstName(name), since: from ? phPrgLong(from) : "", plan: P.facial && plan && plan.title ? plan.title : "" }) || "Your progress",
+      h: Object.fromEntries([["then", "hThen"], ["score", "hScore"], ["next", "hNext"], ["home", "hHome"]].map(([k, sec]) => [k, phPrgFill(phPrgTpl(sec), { first: phTpFirstName(name), since: from ? phPrgLong(from) : "" }) || PH_PRG_TMPL.texts[sec]])),
       sub: `${TODAY.toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" })}${visits && from ? ` · ${visits} visit${visits === 1 ? "" : "s"} since ${phPrgLong(from)}` : ""}`,
       steps: C ? C.phs : [], gp: C ? C.gp : [],
       next: ahead[0] ? `${phTpDayLabel(ahead[0].date)}${ahead[0].time ? `, ${phCkTime12(ahead[0].time)}` : ""}` : "", recheck,
@@ -81421,34 +81423,52 @@ or changing anything in Cliniko.
     const back = M.rows.filter(r => r.b === "normal" && r.a !== "normal"), eye = back.some(r => r.key === "fpEyes");
     const bw = back.filter(r => r.key !== "fpEyes").map(r => PH_PRG_WORD[r.key]);
     const ww = M.rows.filter(r => r.b === "partial" && r.a === "none").map(r => PH_PRG_WORD[r.key]);
-    if (!bw.length && !eye && !ww.length) return `Here's your face now, beside where we started${M.from ? ` on ${phPrgLong(M.from)}` : ""}.`;
-    let t = `I wanted you to see how far your face has come${M.from ? ` since ${phPrgLong(M.from)}` : ""}.`;
-    if (bw.length || eye) t += ` ${bw.length ? `Your ${lst(bw)} ${bw.length > 1 ? "have" : "has"} come back fully${eye ? ", and your eye now closes completely" : ""}` : "Your eye now closes completely"}.`;
-    if (ww.length) t += ` Your ${lst(ww)} ${ww.length > 1 ? "are" : "is"} on the way back.`;
-    return `${t} Well done for showing up for every visit. This is what that work looks like.`;
+    const since = M.from ? phPrgLong(M.from) : "";
+    const backT = bw.length || eye ? `${bw.length ? `Your ${lst(bw)} ${bw.length > 1 ? "have" : "has"} come back fully${eye ? ", and your eye now closes completely" : ""}` : "Your eye now closes completely"}.` : "";
+    const onway = ww.length ? `Your ${lst(ww)} ${ww.length > 1 ? "are" : "is"} on the way back.` : "";
+    // the built-in words keep their own line for a face with nothing back yet; her own wording is used as she wrote it
+    if (!backT && !onway && (phLtrOverrides().progress || {}).open == null) return `Here's your face now, beside where we started${since ? ` on ${since}` : ""}.`;
+    return phPrgFill(phPrgTpl("open"), { first: M.first, since, back: backT, onway, plan: M.plan });
   }
   const phPrgWordsOf = M => phPrgWords != null ? phPrgWords : phPrgOpenWords(M);
-  const phPrgHome = () => String(PHARMACY.prgHomeCare || "").trim();
+  // her template (2026-10-29, "how do i edit the letter template"; her picks: in Settings › Letter templates, all four parts): the
+  // title, the opening words with fill-ins, the four headings and Home care, kept in PHARMACY.ltrOverrides.progress beside the herbal
+  // letters' wording (the same Undo and ↺ Default). Never in phLtrAllTemplates, so it is never offered as a herbal letter.
+  const PH_PRG_TMPL = { id: "progress", name: "📷 Progress letter", secs: ["title", "open", "hThen", "hScore", "hNext", "hHome", "home"],
+    labels: { title: "Letter title", open: "Opening words", hThen: "Heading · the photos", hScore: "Heading · the score", hNext: "Heading · what's next", hHome: "Heading · home care", home: "Home care" },
+    texts: { title: "Your progress · {plan}", open: "I wanted you to see how far your face has come since {since}. {back} {onway} Well done for showing up for every visit. This is what that work looks like.",
+      hThen: "Then and now", hScore: "Your face movement", hNext: "What's next", hHome: "Home care", home: "" } };
+  const PH_PRG_TOKENS = [["first", "the patient's first name"], ["since", "the first photo's date"], ["back", "what came back fully"], ["onway", "what is on the way back"], ["plan", "the plan's name"]];
+  const phPrgTpl = sec => { const o = (phLtrOverrides().progress || {})[sec]; return o != null ? o : PH_PRG_TMPL.texts[sec]; };
+  // fill-ins, then the gaps an empty one leaves (doubled spaces, a space before a stop, a dangling " · ")
+  const phPrgFill = (s, v) => String(s || "").replace(/\{(first|since|back|onway|plan)\}/g, (m, k) => v[k] || "")
+    .replace(/[ \t]{2,}/g, " ").replace(/[ \t]+([.,;:!?])/g, "$1").replace(/^\s*·\s*|\s*·\s*$/g, "").trim();
+  // Home care: her one text. The first build kept it in PHARMACY.prgHomeCare; it moves into the template the first time it is read
+  function phPrgHome() {
+    const o = (phLtrOverrides().progress || {}).home;
+    if (o == null && String(PHARMACY.prgHomeCare || "").trim()) { phLtrSetApply("progress", "home", String(PHARMACY.prgHomeCare).trim()); return phPrgHome(); }
+    return String(o || "").trim();
+  }
   function phPrgViewHtml(pk, name) {
     const M = phPrgModel(name), home = phPrgHome();
     const ph = (r, now) => `<span class="ph-prg-ph${now ? " now" : ""}"><img src="${r.objectUrl || ""}" alt=""><i>${esc(phRenPhotoDateLabel(phRenDateKeyOf(r)))}</i></span>`;
     const v = x => x ? `<span class="ph-prg-v ${x}">${PH_PRG_VAL[x]}</span>` : "–";
     const bar = (s, t, now) => `<div${now ? ` class="now"` : ""}><span>${now ? "<b>" : ""}${esc(phRenPhotoDateLabel(s.date))}${now ? "</b>" : ""}</span><span class="t"><b style="width:${t.max ? Math.round(t.got / t.max * 100) : 0}%"></b></span><span>${now ? "<b>" : ""}${t.got} / ${t.max}${now ? "</b>" : ""}</span></div>`;
     const nx = [M.next ? `<b>Next visit</b><span>${esc(M.next)}</span>` : "", M.recheck ? `<b>Next re-check</b><span>${esc(M.recheck)}</span>` : ""].join("");
-    return `<div class="ph-tp-letter-acts"><button type="button" class="ph-load-btn" data-prg-back="1">← Back to photos</button><button type="button" class="ph-load-btn on" data-prg-copy="1">✉ Copy for email</button><button type="button" class="ph-load-btn" data-prg-print="1">🖨 Print</button></div>
+    return `<div class="ph-tp-letter-acts"><button type="button" class="ph-load-btn" data-prg-back="1">← Back to photos</button><button type="button" class="ph-load-btn on" data-prg-copy="1">✉ Copy for email</button><button type="button" class="ph-load-btn" data-prg-print="1">🖨 Print</button><button type="button" class="ph-load-btn" data-prg-tpl="1" title="Settings › Letter templates › Progress letter">✎ Template</button></div>
       <div class="ph-tp-cpl ph-prg">
         <h4>${esc(M.title)}</h4><div class="sub">${esc(M.sub)}</div>
         <p>Dear ${esc(M.first)},</p>
         <p class="ph-prg-edit" contenteditable="true" spellcheck="true" data-prg-words="1">${esc(phPrgWordsOf(M))}</p>
-        <h5>Then and now</h5>
+        <h5>${esc(M.h.then)}</h5>
         <div class="ph-prg-pairs">${M.pairs.map(p => `<div class="ph-prg-pr"><span class="mv">${esc(p.label)}</span>${ph(p.a)}${ph(p.b, true)}</div>`).join("")}</div>
-        ${M.t1 ? `<h5>Your face movement</h5><div class="ph-prg-bar">${bar(M.s1, M.t1)}${bar(M.s2, M.t2, true)}</div>
+        ${M.t1 ? `<h5>${esc(M.h.score)}</h5><div class="ph-prg-bar">${bar(M.s1, M.t1)}${bar(M.s2, M.t2, true)}</div>
         <table class="ph-prg-sc"><thead><tr><th>Movement</th><th>${esc(phRenPhotoDateLabel(M.s1.date))}</th><th>${esc(phRenPhotoDateLabel(M.s2.date))}</th></tr></thead><tbody>${M.rows.map(r => `<tr><td>${esc(r.label)}</td><td>${v(r.a)}</td><td>${v(r.b)}</td></tr>`).join("")}</tbody></table>` : ""}
-        <h5>What's next</h5>
+        <h5>${esc(M.h.next)}</h5>
         ${M.steps.length ? `<div class="steps">${M.steps.map(p => `<span${p.now ? ` class="now"` : p.past ? ` class="past"` : ""}>${esc(p.txt)}</span>`).join("")}</div>` : ""}
         ${nx ? `<div class="ph-prg-nx">${nx}</div>` : ""}
         ${M.gp.length ? `<div class="ph-prg-gp"><b>See your GP straight away if</b><ul>${M.gp.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
-        <h5>Home care</h5>
+        <h5>${esc(M.h.home)}</h5>
         <div class="ph-prg-edit ph-prg-home" contenteditable="true" spellcheck="true" data-prg-home="1" title="Your own words, kept for every palsy patient">${esc(home)}</div>
         <p class="sig">${esc(M.sign).replace("\n", "<br>")}</p>
       </div>`;
@@ -81464,25 +81484,25 @@ or changing anything in Cliniko.
     return `<div style="font-family:Georgia,'Times New Roman',serif;font-size:14.5px;line-height:1.55;color:#141F23;max-width:620px">
       <p style="font-size:19px;font-weight:bold;color:#0B3B4B;margin:0">${esc(M.title)}</p><p style="${S}font-size:12px;color:#626D71;margin:2px 0 14px">${esc(M.sub)}</p>
       <p style="margin:8px 0">Dear ${esc(M.first)},</p>${para(words)}
-      ${h5("Then and now")}<table cellpadding="0" cellspacing="0" style="border-collapse:collapse">${M.pairs.map(p => `<tr><td style="${S}font-size:12px;font-weight:bold;color:#4A575B;padding:4px 12px 4px 0;vertical-align:middle">${esc(p.label)}</td>${ph(p.a)}${ph(p.b, true)}</tr>`).join("")}</table>
-      ${M.t1 ? `${h5("Your face movement")}<table cellpadding="0" cellspacing="0" style="border-collapse:collapse">${bar(M.s1, M.t1)}${bar(M.s2, M.t2, true)}</table>
+      ${h5(esc(M.h.then))}<table cellpadding="0" cellspacing="0" style="border-collapse:collapse">${M.pairs.map(p => `<tr><td style="${S}font-size:12px;font-weight:bold;color:#4A575B;padding:4px 12px 4px 0;vertical-align:middle">${esc(p.label)}</td>${ph(p.a)}${ph(p.b, true)}</tr>`).join("")}</table>
+      ${M.t1 ? `${h5(esc(M.h.score))}<table cellpadding="0" cellspacing="0" style="border-collapse:collapse">${bar(M.s1, M.t1)}${bar(M.s2, M.t2, true)}</table>
       <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:10px"><tr><td ${td}><b>Movement</b></td><td ${td}><b>${esc(phRenPhotoDateLabel(M.s1.date))}</b></td><td ${td}><b>${esc(phRenPhotoDateLabel(M.s2.date))}</b></td></tr>${M.rows.map(r => `<tr><td ${td}>${esc(r.label)}</td><td ${td}>${v(r.a)}</td><td ${td}>${v(r.b)}</td></tr>`).join("")}</table>` : ""}
-      ${h5("What's next")}
+      ${h5(esc(M.h.next))}
       ${M.steps.length ? `<table cellpadding="0" cellspacing="4" style="border-collapse:separate"><tr>${M.steps.map(p => `<td style="${S}font-size:12px;font-weight:bold;text-align:center;padding:6px 8px;border-radius:6px;${p.now ? "background:#B08D3E;color:#ffffff" : `background:#EDF5F8;color:#0B3B4B${p.past ? ";opacity:.55" : ""}`}">${esc(p.txt)}</td>`).join("")}</tr></table>` : ""}
       ${M.next || M.recheck ? `<p style="${S}font-size:13px;margin:8px 0">${M.next ? `<b>Next visit</b> &nbsp;${esc(M.next)}` : ""}${M.next && M.recheck ? "<br>" : ""}${M.recheck ? `<b>Next re-check</b> &nbsp;${esc(M.recheck)}` : ""}</p>` : ""}
       ${M.gp.length ? `<p style="${S}font-size:13px;margin:10px 0 2px"><b>See your GP straight away if</b></p><ul style="${S}font-size:13px;margin:0;padding-left:18px">${M.gp.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
-      ${home ? `${h5("Home care")}${para(home)}` : ""}
+      ${home ? `${h5(esc(M.h.home))}${para(home)}` : ""}
       <p style="margin:18px 0 0">${esc(M.sign).replace("\n", "<br>")}</p></div>`;
   }
   function phPrgText(M, words, home) {
     const L = [M.title, M.sub, "", `Dear ${M.first},`, "", words];
-    if (M.t1) { L.push("", "Your face movement", `${phRenPhotoDateLabel(M.s1.date)}: ${M.t1.got} / ${M.t1.max}`, `${phRenPhotoDateLabel(M.s2.date)}: ${M.t2.got} / ${M.t2.max}`); M.rows.forEach(r => L.push(`• ${r.label}: ${PH_PRG_VAL[r.a] || "–"} → ${PH_PRG_VAL[r.b] || "–"}`)); }
-    L.push("", "What's next");
+    if (M.t1) { L.push("", M.h.score, `${phRenPhotoDateLabel(M.s1.date)}: ${M.t1.got} / ${M.t1.max}`, `${phRenPhotoDateLabel(M.s2.date)}: ${M.t2.got} / ${M.t2.max}`); M.rows.forEach(r => L.push(`• ${r.label}: ${PH_PRG_VAL[r.a] || "–"} → ${PH_PRG_VAL[r.b] || "–"}`)); }
+    L.push("", M.h.next);
     if (M.steps.length) L.push(M.steps.map(p => p.txt + (p.now ? " (now)" : "")).join(" → "));
     if (M.next) L.push(`Next visit: ${M.next}`);
     if (M.recheck) L.push(`Next re-check: ${M.recheck}`);
     if (M.gp.length) L.push("", "See your GP straight away if", ...M.gp.map(x => `• ${x}`));
-    if (home) L.push("", "Home care", home);
+    if (home) L.push("", M.h.home, home);
     L.push("", M.sign);
     return L.join("\n");
   }
@@ -81519,6 +81539,8 @@ or changing anything in Cliniko.
   document.addEventListener("click", e => {
     const t = e.target && e.target.closest ? e.target : null;
     if (!t) return;
+    // ✎ Template: Settings › Letter templates, the Progress letter open
+    if (t.closest("#pharmacyPage [data-prg-tpl]")) { phLtrSetTpl = "progress"; phSettingsGroup = "patients"; phSettingsOpenCards.add("lettertemplates"); PHARMACY.activeTab = "settings"; renderPharmacy(); return; }
     const op = t.closest("#pharmacyPage [data-prg-open]"), bk = t.closest("#pharmacyPage [data-prg-back]");
     const cp = t.closest("#pharmacyPage [data-prg-copy]"), pr = t.closest("#pharmacyPage [data-prg-print]"), hit = op || bk || cp || pr;
     if (!hit) return;
@@ -81537,7 +81559,7 @@ or changing anything in Cliniko.
     if (w) { phPrgWords = w.innerText; return; }
     const h = t.closest("#pharmacyPage [data-prg-home]");
     if (!h) return;
-    PHARMACY.prgHomeCare = h.innerText.replace(/\s+$/, "");
+    phLtrSetApply("progress", "home", h.innerText.replace(/\s+$/, "") || null);   // the template's Home care (Settings shows the same words)
     clearTimeout(phPrgHomeT);
     phPrgHomeT = setTimeout(() => { if (savePharmacy() === false) presSavedToast("⚠ Home care words not saved"); }, 600);
   });
@@ -126868,29 +126890,31 @@ or changing anything in Cliniko.
   let phLtrSetTpl = "course", phLtrSetUndo = [];
   function phLtrSetApply(tmplId, sec, value) {
     const all = phLtrOverrides();
+    if (tmplId === "progress" && sec === "home") delete PHARMACY.prgHomeCare;   // the Progress letter's first Home care store (2026-10-29)
     if (value == null) { if (all[tmplId]) { delete all[tmplId][sec]; if (!Object.keys(all[tmplId]).length) delete all[tmplId]; } }
     else { (all[tmplId] || (all[tmplId] = {}))[sec] = value; }
   }
   function phLtrTemplatesSectionHtml() {
-    const tmpls = phLtrAllTemplates();
-    const tmpl = tmpls.find(x => x.id === phLtrSetTpl) || tmpls[0];
+    const tmpls = [...phLtrAllTemplates(), PH_PRG_TMPL];   // the Progress letter (2026-10-29) is edited here too, never offered as a herbal letter
+    const tmpl = tmpls.find(x => x.id === phLtrSetTpl) || tmpls[0], prg = tmpl === PH_PRG_TMPL;
+    if (prg) phPrgHome();   // Home care from the first build moves in before it is shown
     const ov = phLtrOverrides()[tmpl.id] || {};
-    const secs = (tmpl.secs || []).filter(sec => PH_LTR_SECTIONS[sec] && !PH_LTR_SECTIONS[sec].fixed && phLtrDefaultText(tmpl, sec));
+    const secs = prg ? PH_PRG_TMPL.secs : (tmpl.secs || []).filter(sec => PH_LTR_SECTIONS[sec] && !PH_LTR_SECTIONS[sec].fixed && phLtrDefaultText(tmpl, sec));
     const editedN = Object.keys(ov).length;
     const last = phLtrSetUndo[phLtrSetUndo.length - 1];
     return `<div class="ph-settings-sec" id="phLtrSetSec">
       <h3>✉ Letter templates</h3>
-      <p class="ph-settings-hint">Changes apply to new letters from now on; letters already saved keep what they said. Fill-ins: ${PH_LTR_TOKENS.map(([k, l]) => `<code>{${k}}</code> ${l}`).join(" · ")}.</p>
+      <p class="ph-settings-hint">Changes apply to new letters from now on; letters already saved keep what they said. Fill-ins: ${(prg ? PH_PRG_TOKENS : PH_LTR_TOKENS).map(([k, l]) => `<code>{${k}}</code> ${l}`).join(" · ")}.</p>
       <div class="ph-ltrset-chips">${tmpls.map(x => `<button type="button" class="ph-ck-chip${x.id === tmpl.id ? " on" : ""}" data-ltr-tpl-pick="${esc(x.id)}">${esc(x.name)}${phLtrOverrides()[x.id] && Object.keys(phLtrOverrides()[x.id]).length ? " ✎" : ""}</button>`).join("")}</div>
       <div class="ph-settings-actions ph-ltrset-actions">
-        <button type="button" class="btn-cancel" data-ltr-tpl-undo="1"${last ? "" : " disabled"}>↩ Undo last change${last ? ` — ${esc((PH_LTR_SECTIONS[last.sec] || {}).label || last.sec)}` : ""}</button>
+        <button type="button" class="btn-cancel" data-ltr-tpl-undo="1"${last ? "" : " disabled"}>↩ Undo last change${last ? ` — ${esc((last.tmplId === "progress" ? PH_PRG_TMPL.labels[last.sec] : (PH_LTR_SECTIONS[last.sec] || {}).label) || last.sec)}` : ""}</button>
         ${editedN ? `<button type="button" class="btn-cancel" data-ltr-tpl-reset-all="${esc(tmpl.id)}">↺ Reset this template (${editedN} edited)</button>` : ""}
       </div>
       <div class="ph-ltrset-grid">${secs.map(sec => {
-        const s = PH_LTR_SECTIONS[sec], edited = ov[sec] != null;
+        const s = prg ? { label: PH_PRG_TMPL.labels[sec] } : PH_LTR_SECTIONS[sec], edited = ov[sec] != null;
         return `<div class="ph-ltrset-row${edited ? " edited" : ""}">
           <div class="ph-ltrset-lbl"><span>${esc(s.heading || s.label)}</span>${edited ? `<button type="button" class="tab-link" data-ltr-tpl-reset="${esc(tmpl.id)}:${sec}">↺ Default</button>` : `<span class="faint">default</span>`}</div>
-          <textarea class="ph-label-template-input ph-ltrset-ta" data-ltr-tpl-field="${esc(tmpl.id)}:${sec}" rows="${Math.min(8, Math.max(2, Math.ceil((edited ? ov[sec] : phLtrDefaultText(tmpl, sec)).length / 90)))}" spellcheck="true">${esc(edited ? ov[sec] : phLtrDefaultText(tmpl, sec))}</textarea>
+          <textarea class="ph-label-template-input ph-ltrset-ta" data-ltr-tpl-field="${esc(tmpl.id)}:${sec}" rows="${prg && /^h[A-Z]|^title$/.test(sec) ? 1 : Math.min(8, Math.max(2, Math.ceil((edited ? ov[sec] : phLtrDefaultText(tmpl, sec)).length / 90)))}" spellcheck="true">${esc(edited ? ov[sec] : phLtrDefaultText(tmpl, sec))}</textarea>
         </div>`;
       }).join("")}</div>
     </div>`;

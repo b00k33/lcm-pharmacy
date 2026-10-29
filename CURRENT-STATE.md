@@ -793,6 +793,12 @@ bar and GP lines from `phTpCplModel`, the next booking, the next re-check from `
 every palsy patient, `PHARMACY.prgHomeCare`, synced), sign-off. **Copy for email** pastes it with the photos (480 px JPEGs made when
 the letter opens, `phPrgJpegs`; inline styles, `phPrgMailHtml`; plain text beside it, `phPrgText`); **Print** is the same page
 (`phPrintDoc`). The course is a live facial plan's (else the plan today's visit uses, `phPrgPlan`).
+**Its wording (her picks 2026-10-29; built, NOT live yet):** Settings › Letter templates has a **📷 Progress letter** chip after the
+herbal letters (`PH_PRG_TMPL`, never in `phLtrAllTemplates`): Letter title, Opening words, the four headings and Home care, stored in
+`PHARMACY.ltrOverrides.progress` with the editor's own Undo / ↺ Default / Reset. Fill-ins {first} {since} {back} {onway} {plan}
+(`phPrgFill`; an empty one leaves no gap). The built-in opening keeps its own line for a face with nothing back yet; her own wording
+is used as written. Home care's gold box and the Settings row are one text (the first build's `PHARMACY.prgHomeCare` moves in when
+read, `phPrgHome`). The letter's **✎ Template** button opens that page on the Progress letter.
 
 ## Fasting (her own clock)
 C22's fasting clock lives in LCM, only for her. Her plan: "breakfast and lunch, and fast after lunch by skipping dinner ... 3-5
