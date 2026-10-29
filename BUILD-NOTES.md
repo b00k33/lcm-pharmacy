@@ -6910,3 +6910,9 @@ reads "… teethmarks both sides, centre crack · 29 Oct", `rec.tongueExam.marks
 "Marks 2" with centre crack and teethmarks on; Prescriptions search 1 match; at 375 the bar wraps inside the screen (scrollWidth
 375). Pictures `shots/ren-tongue-cracks-build-2026-10-29.jpg` and `…-375-2026-10-29.jpg` (local only). CURRENT-STATE "Find the
 Ren" paragraph updated. Waits for her "push live".
+
+## 2026-10-29 · Live: build 20261029-205700
+
+Her "push live". Dry run listed 0f64c17f (Find the Ren Tongue tab: the three crack chips) and 49cc2fff (build notes) only; the
+committed index.html is the copy tested above (clean tree). Publish commit 98509c2d; https://b00k33.github.io/lcm-pharmacy/
+serves 20261029-205700. She installs it with the gold Update button.
