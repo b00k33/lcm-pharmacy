@@ -784,7 +784,7 @@ the seven views as a joined bar (4 + 3 on a phone, a taken view green), the pose
 moves it on to the next view still to take, the last one closes it. Its photos go straight in (`via: "faceset"` → `phFpShotSave` →
 `phRenCaptureSave` quiet, one reload, the one toast); `phRenLoadPhotosFor` repaints the pairs and the sheet (`phFpPhotosRefresh`).
 
-**Progress letter (her 8 picks 2026-10-29; mock `mocks/progress-letter-mock-2026-10-29.html`; built, NOT live yet).** For a face
+**Progress letter (her 8 picks 2026-10-29; mock `mocks/progress-letter-mock-2026-10-29.html`; LIVE 2026-10-29, build 20261029-201300).** For a face
 palsy patient: the Photos band's **Progress letter** chip (beside Compare first ↔ latest; shown when a movement has photos on two
 dates, `phPrgPairs`) opens one page in the gallery's place (`phPrgOpenPk`, `phPrgViewHtml`; ← Back to photos): opening words
 written from the first and latest facial scores (what came back fully, what is on the way; editable, `phPrgWords`), each movement's
