@@ -7007,3 +7007,45 @@ brings it back; a General case with no scores: no tile, no Checklist; 800px and 
 (on the phone the ✓ line ends "…" like the other tiles). Pictures `shots/face-due-2026-10-29-{due,scored,phone}.jpg` (local only).
 Integration: Checklist (unchanged, opens from the tile), Care Plan facial strip (unchanged, reads the same `phFpDue`), the
 Progress letter (reads the same scores). Not checked on her real records.
+
+## 2026-10-29 · Ren page audit: the board folds, the search row is the door (her picks, not live)
+
+**Her ask** (screenshot of Mark Williams' Ren page): "audit this page - make it easier to navigate, most efficiency with least amount
+of effort." **Measured first** (sandbox seed at 1440; her 27 Oct export parsed in the pane): the page was 4,466 px, the 319-sign
+board 3,809 px of it (85%), 633 of 670 buttons 22 px; the lead formula named four times on one screen (head line, the card's bars,
+the panel's "leading" line, the panel's family list); the panel 1,268 px (lead lines + figure + family list). Her records: 24
+patients with Ren signs ticked by hand, 1,069 writes in 416 taps (one look tap rules up to 56 signs out); look rows 76 taps, the
+board 180, Bing on the Fang Bing Ren page 160; 42 undos, 31 within 20 s (7.5%); photo spots dragged 0 of 452; "Add a sign…" used 0
+times; a sitting = median 10 taps in under a minute. Report + mock `ren-page-audit-2026-10-29.html` (artifact
+https://claude.ai/artifact/E7Y39R8D5izjdP6zcsZBvm, before picture `ia/ren-before.png`); mock pictures
+`shots/ren-audit-mock-a/-b/-c-2026-10-29.png`. Her 8 picks (two popup rounds, all the recommended option): fold the board (her pick
+9 of the 29 Oct interactivity audit), open = lead family first + Open signs, 32 px rows, panel = figure alone, empty photo tiles →
+a chip, search-as-door, areas-as-door, Next beside the found line, "Yes, build it".
+
+**Build (22 fragments on the 63ab51a8 snapshot):**
+- `phRsbOf` state gains `open`; `phRsbShowing(s)` = typed words, an area, or the Signs chip. `phRsbBoardHtml` returns "" when
+  nothing shows it (the page ends at the search row, 552 px on the seed, was 4,466). `phRsbSignsChipHtml` ("Signs · 319 ›" /
+  "▾", `data-rsb-open`) sits on the search row; its tap opens the board with the Open filter when no filter was set
+  (`phRenTabClick`), a second tap folds it. `phRsbCntText` shows "N of 319" only while the board shows and a filter is on.
+- The lead family heads the open board: `phRqListsHtml` takes `phTriFiltIds(pk)[0] || phRsbLeadId(rec, name)` (the Fang Bing Ren
+  lead by `phFbrLeadOf`), its header counts the whole family ("Si Ni Tang · 4 of 24") whatever the filter shows; its rows flow in
+  the same three columns as the areas (`.ph-rq-fam .ph-fbr-board { columns: 3 }`, `break-inside: auto`).
+- Typing lists the matches under the box (board folded otherwise), Enter ticks the first (as before), no match → "No match ·
+  Add ‘…’ as a sign" (the same `data-rentab-add` door, label from `.ph-rsb-in`, the box clears, To check shows it with Agree).
+  The foot's "Add a sign…" row and its points field are gone. Picking an area opens that area alone (the filter already did the
+  rest); "All areas" with nothing else folds it again.
+- Rows in the open board are 32 px (`[data-rsb-board] .ph-fbr-board .ph-fbr-row.q { min-height: 32px }`, the × 22 px as before).
+  **Judgment call, told to her:** this board only; the Fang Bing Ren page keeps her 2026-10-16 compact rows.
+- No face / build photo: `phRqPhotoColHtml` returns "" and `phRqAddChipsHtml` puts "+ Face" / "+ Build" (`phRqAddBtn`, slim)
+  at the end of the tab row; the card draws `compact` (one column). A photo shows exactly as before.
+- The side panel on the Ren tab (`presPfwSideInner`): "Fang Bing Ren" + Open Fang Bing Ren + the figure only
+  (`phRenFigureHtml(…, bare)` drops `.ph-rf-keys`); other tabs unchanged.
+- The found line gains "Next: Today's visit ›" (`data-rq-next`, handled in `phRenTabClick` before `phRqClick`: the rail door's
+  own sequence, `presStage = "plan"`, `presTpMainTab = "today"`, `phCcSeedOpen`, `renderPresPanel`).
+
+**Tested** (sandbox seed, 1440 and 375, headless Edge through `_rn-shot.html`): boots clean, no console errors; folded 552 px;
+Signs → Open filter, "Si Ni Tang · 4 of 24" first, 305 rows at 32 px; typing "bloat" → 9 rows, Enter ticks Bloating and the
+box keeps focus; "qqzz" → the Add chip (32 px); an area → that area alone; All areas → folded; the panel has no lead / % / list;
+"+ Face" / "+ Build" in the tab row; Next → Today's visit; Prescriptions search 1 match; 375 wraps inside the screen. Pictures
+`shots/ren-audit-build-folded/-open/-375-2026-10-29.png`. Not tested: her records (a patient with a face photo keeps the photo
+column as before). Waits for her "push live".

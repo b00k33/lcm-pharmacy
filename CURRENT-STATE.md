@@ -692,9 +692,14 @@ shows a **Later** line (its most telling sign · Tongue › / Pulse › / Abdome
 still open the Ask) holds the newest tongue photo and the Tongue page's own Ren-linked chips, written through `phTngWrite` [Find
 the Ren: the tongue waits, or is looked at here]. The three crack chips (Cracks · Horizontal cracks · Centre crack) sit in its
 Shape row too (her 2026-10-29 "need tongue cracks"): record only, kept by name in `phRqTngGroups`, since no Fang Bing Ren sign
-reaches a crack; they write the same chart, so the Tongue page's Marks tab and the summary show them. (Locked details: "Locked conventions" below.) **The Ren page board** (her pick):
-26px one-line signs, auto No's folded per subject, a sticky search bar (words, All · Yes · No · Open, area, count; / ↑ ↓ Enter
-Shift+Enter Esc) [Ren page: compact rows + a search bar].
+reaches a crack; they write the same chart, so the Tongue page's Marks tab and the summary show them. (Locked details: "Locked conventions" below.) **The Ren page board** (her 2026-10-29 audit picks, `ren-page-audit-2026-10-29.html`): the page is Find the Ren, then ONE search
+row; the 319-sign board is FOLDED until she types, picks an area or taps **Signs · 319 ›** (`phRsbShowing`, view state per
+patient). Signs opens it with the Open filter, the lead family's own signs first in the same three columns ("Si Ni Tang · 4 of
+24", `phRsbLeadId`), rows 32 px (this board only); typing lists the matches under the box (/ ↑ ↓ Enter Shift+Enter Esc as
+before), no match → "Add ‘…’ as a sign" on the same line (the foot's Add row is gone); an area opens that area alone; "All
+areas" with nothing else folds it. The panel on this tab = Open Fang Bing Ren + the figure (no lead line, % or family list:
+the lead is named once in the head line and shown once as the card's bars). No face / build photo = "+ Face" / "+ Build"
+chips at the end of the tab row, never an empty tile. The found line carries "Next: Today's visit ›".
 
 **Patterns** (`phPatCompute(name)`) derives candidate TCM patterns live from the file, **never stored**; only her Agree / Not this
 patient writes `rec.patterns.agreed`/`.dismissed`. Strength is words (Likely / Possible / A hint) + a clue count, never a
