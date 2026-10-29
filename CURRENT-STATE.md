@@ -733,8 +733,9 @@ Select + one label for many. Tongue shots rank natural → unlabelled → side �
 Tongue page: today's photo beside the last (the Sublingual tab flips the pair), the Flash pair under them in the same column, past
 photos at the bottom. A face / build photo full screen carries Find the Ren's own rows (Face · Eyes · Lips / Build · Skin ·
 Muscles) and its spots as corners (her pick). Compare and the viewer are ONE mechanism each, wired into every surface that shows a
-photo tile. The viewer's dark title bar carries the photo's Kind (a dropdown of the 13 kinds), the tongue Shot bar (short words on the
-phone) and a Date field that saves on pick (her 2026-10-29 pick B); a not-yet-sorted photo keeps a wrapping row of kind chips under
+photo tile. The viewer's dark title bar carries the photo's Kind (a dropdown grouped Tongue · Face · Body · Records, then Unsorted ·
+Other), the tongue Shot bar (short words on the phone) or a Face photo's view bar (below), and a Date field that saves on pick (her
+2026-10-29 pick B); a not-yet-sorted photo keeps a wrapping row of kind chips under
 the picture. A waiting compare pick rings its photo green and marks the photos it can pair with ⧉ (the tongue rows are one group;
 `phRenCmpCls`); a tap on any other photo opens that photo and drops the pick (her 2026-10-29 "i cant click on pic to edit"). The photo sheet's Date field (today by default, never later) dates every photo saved from it. **Never delete a photo**
 (her hard rule); the store asks the browser to keep it (`phStoragePersist`); backups carry photos, each with its date, shot,
@@ -746,6 +747,21 @@ Tongue page on screen there is no toast and the Tongue tile flashes gold. The To
 light shot: gold "4 photos / Chart" until charted, then the photo with its tick + the words. Chart and the tile open that photo in
 the viewer, Colour ready (a Sublingual shot on Sublingual), her Today's visit behind it; closing it repaints the tile. Code:
 `phTngChartOpen`, `phTngTodayShot`, `phTngHerePk`, `phTvTngArrived` beside `phCapAutoImport`; `phTngTileShot` in the tiles.
+**Face photos for Ren and facial palsy (her 10 picks 2026-10-29, "Combined"; mock `mocks/face-photos-mock-2026-10-29.html`; built,
+NOT live yet).** Every list of kinds is grouped in one order, Tongue first: `PH_REN_PHOTO_TYPES` (`grp`) + `PH_REN_KIND_HEADS`;
+dropdowns through `phRenKindOptsHtml` (the viewer, Records → Photos' filter, the batch confirm), the Photos "+ Add" row through
+`phRenTypeGroupedHtml`, and the Comparison table puts a heading row between groups. **Face views:** a plain Face photo is the Rest
+view; the facial-palsy movements are its other views, Rest · Brows · Frown · Eyes · Smile · Cheeks · Whistle (`PH_REN_FACE_VIEWS`;
+the view IS the stored kind, `fpWhistle` new). The viewer shows such a photo as Face ▾ plus a joined view bar that files it as that
+view (`data-ren-view-face`); the movements are never their own options. The bar shows on a facial (Neurological) case or where such
+a photo already exists (`phRenFaceViewsFor` over `phRenTypesFor`); everyone else sees Face only. In the Comparison table the Face row
+reads Rest once movement rows exist. Find the Ren reads the newest Rest (`PH_FBB_PHOTO_TYPES.face`), never a movement. **The facial
+score** (Profile → Checklist, `presFacialOpenHtml`): each movement with a photo (`PH_FP_MOVES[].photo`; Lips pressed has none) shows
+its last photo before today | today's; today's empty spot is the pose in pencil (`phFpPoseSvg`) and takes that view on a tap; a photo
+opens the viewer, which walks that view by date. **Today's set** (the Movement head) is one sheet (`phFpSetOpen` / `phFpSetPaint`):
+the seven views as a joined bar (4 + 3 on a phone, a taken view green), the pose or today's photo, Skip · Take photo · Done; a photo
+moves it on to the next view still to take, the last one closes it. Its photos go straight in (`via: "faceset"` → `phFpShotSave` →
+`phRenCaptureSave` quiet, one reload, the one toast); `phRenLoadPhotosFor` repaints the pairs and the sheet (`phFpPhotosRefresh`).
 
 ## Fasting (her own clock)
 C22's fasting clock lives in LCM, only for her. Her plan: "breakfast and lunch, and fast after lunch by skipping dinner ... 3-5
