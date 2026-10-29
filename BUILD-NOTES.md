@@ -6983,3 +6983,7 @@ nothing hidden; Enter → no new line, blurred; Escape closes the Other box; the
 (solid); no sideways scroll at 375 and 360 (the scope bar 288px wide at 375); no console errors. **Integration:** no data or write door changed
 (`rec.history` / `historyNotes` as before), so Today's visit and the Care Plan History row read what they did; looked at: this page
 and its figure only. **Not exercised:** her real records, a phone's real keyboard Enter, the intake-review merge of notes.
+
+## 2026-10-29 · Live: Medical history audit (build 20261029-213500)
+On her "push live": c3fe1518 (the rule fixes) and 75ecebfd (her picks: no flags strip, no ✓ Save) went live in build
+20261029-213500, with c77299d5 (another session's notes only); the live page serves the stamp and the new styles.
