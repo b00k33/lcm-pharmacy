@@ -6837,3 +6837,10 @@ closes itself, dated after its last visit (her rule, but it will happen on many 
 `plan.selfClosed`; a plan weeks past its last planned visit with several phases. The slip caught on the way: a span splice that
 left `function phTpPrvRepaint` twice (the copy did not boot; found by compiling the DOM-parsed script, not a regex cut).
 Pictures shots/plans-close-build-{ask,closed,reopened,cycle,ivf,ask-375}-2026-10-29.png.
+
+## 2026-10-29 · Live: build 20261029-191900
+Her "push live". The committed index.html was booted in the sandbox first (`phTpSelfCloseSweep` present, no new console error); the
+dry run listed only this build and four build-note / report commits since 174800; `publish-live.sh --yes` under the lock pushed
+them (publish commit 7966306c). https://b00k33.github.io/lcm-pharmacy/ serves 20261029-191900: plans close themselves (ab60b86b).
+She updates with the gold Update button. First open of each file: a plan past its course with nothing booked since closes itself,
+dated after its last visit (her rule; the band's Reopen is one tap).
