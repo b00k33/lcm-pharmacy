@@ -6389,3 +6389,7 @@ own colours; most controls were 32px).
   Meals' Supplements · herbs list (her own record) still reads `PH_SUPPLEMENTS` + `suppOwn` (the four + her own; the wider list is
   not there yet, noted). Checked on screen: Supplements, Settings › Patients › Supplements, the band. Not checked on screen:
   Today's visit's nudge line, the intake review, Copy notes, Fang Bing Ren's iron clue.
+
+## 2026-10-29 · Live: build 20261029-151200
+Her "push live" after the Supplements picture: the Supplements checklist table (36176f34) went live, with the build-notes commit
+0ea1d64a riding along. Publish commit feb3fdd1; https://b00k33.github.io/lcm-pharmacy/ serves 20261029-151200.
