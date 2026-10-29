@@ -581,6 +581,13 @@ it.
 Appointments, Messages, Treatment, Notes; each page's facts = an icon + a number on its own first row, words in the
 hover title (`.ph-fx`; `presBandHtml` + `PRES_BANDS`, sync unchanged). Medical history's ✓ asked and 🕒 updated sit in its toolbar
 (`presMedHxBandHtml`); no "By group" (each group heading says ✓ asked).
+**Medical history** (`phHxScreenInnerHtml`, the inline card; the pop-up went 2026-10-07): one toolbar line = Send intake link ·
+Paste a note (Buttons) · the groups sheet (a sliders icon, "Which groups count for each complaint" in the hover) · ✓ asked ·
+🕒 updated · Full history | Allergies only | Not needed (one joined bar, the phone too). Then the groups in columns (the main
+complaint's groups first, tinted, a Main tag; ✓ All a Button, "✓ Asked" once done), each question a 32px row chip (a Yes solid);
+a Yes row's note is a Field that wraps and grows (`textarea.ph-hx-note`, Enter ends it); + Other condition; Surgeries. **No flags
+strip and no ✓ Save** (her 2026-10-29 audit picks): a Yes shows as its own row and as a chip under the body figure (the side
+column, `phHxFigureHtml`); every tap and note saves itself. BUILD-NOTES "Medical history audit".
 **Supplements** (her pick C on `supplements-table-mock-2026-10-29.html`, 2026-10-29; BUILD-NOTES "Supplements: the checklist
 table"): a checklist table (`phSuppEditorHtml`, `.ph-supp-tbl`): Taking · Supplement · Product · Dose · Since · From · Note, one
 row per supplement of the list (`PH_SUPP_KINDS`, 24, as she keeps it in Settings › Patients › Supplements: hide one, add one) plus
@@ -1379,8 +1386,8 @@ notes in it show under Medication & allergies.
 **Other condition** (her "include a other option to add unusual conditions in medical history"): "+ Other condition" at the end of
 General health and of Family history: type, Add (or Enter) and it is its own Yes row with an Added tag, a ✕ (Undo in the toast)
 and its note. Data `rec.historyOther[k] = { n, fam, at, src }` (k = `ox_…`); its answer, note and Form tag are the ordinary
-`rec.history[k]` / `historyNotes[k]` / `historyNoteFrom[k]`, so it is a Yes everywhere: `phHxApplicableItems` (the counts, the
-flags strip, profile search), the figure (a whole-body chip), the condition chips, Today's visit, the Care Plan History row, the
+`rec.history[k]` / `historyNotes[k]` / `historyNoteFrom[k]`, so it is a Yes everywhere: `phHxApplicableItems` (the counts,
+profile search), the figure (a whole-body chip), the condition chips, Today's visit, the Care Plan History row, the
 herb caution (on its own words). The same words as a list row answer that row instead. Not in Allergies only. The link has
 "+ Something else" in the same two groups (`history.others = [{ n, f, note }]`); it comes in as an Added Yes row, the details on
 its note tagged Form; a later link brings back the patient's own conditions (her own typed ones never go to the patient).

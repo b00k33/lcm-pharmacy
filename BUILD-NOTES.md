@@ -6943,3 +6943,43 @@ back as it was (stopped 29 Oct); ✕ on the own Turmeric row: gone, toast, Undo:
 ## 2026-10-29 · Live: Appointments grid floor + Supplements remove (build 20261029-211300)
 On her "push live" (popup): 0ff9eb91 (the hours never fold to nothing with the Restore list open) and 83631b59 (a ✕ with Undo
 for every supplement record) went live together in build 20261029-211300; checked on the live page.
+
+## Medical history audit (2026-10-29)
+Her words, on a screenshot of Mark Williams' Medical history: "audit this page". Audit = apply (her 2026-10-24): measured against
+the standing rules at 1430 / 1220 / 375 / 360 on a made-up neurological patient ("Test Mark", Bell's palsy, 8 Yes rows with notes),
+fixed every rule-covered finding, asked two (her picks: both recommended). Before / after: `shots/hx-audit-before-1430.jpg`,
+`shots/hx-audit-after-1220.jpg`, `shots/hx-audit-after-375.jpg`.
+**Found → fixed (rule):**
+- Send intake link / Paste a note: 1px blue outline, 600 → Buttons, 1.5px herb line, 13px bold (TAPPABLE 2). "Which groups count
+  for each complaint" (my draft label, 39 characters) → a 32px round sliders icon, the words in the hover (Terse, Pictures over
+  words); the toolbar is one line again.
+- "✓ All": a grey 1px chip → a Button. "✓ Asked": the same button at 40% opacity → a done fact in `--ph-good-deep` (text never at
+  reduced opacity).
+- Main tag: a 999px pill → a 6px tag. Row words 12.5px → 13px (14px on a phone, STYLE-LCM).
+- A Yes row's note: a white 999px pill with a line, cutting long notes ("steroids, testosterone, muscle re") → a Field (tint, 6px,
+  no line) that wraps and grows: `textarea.ph-hx-note.field-bare`, rows 1, `field-sizing: content`; Enter blurs it (a keydown
+  listener beside the Other condition one) so it stays one line of words as the input was. In a Main group (already the tint)
+  the field shows white. `field-bare` is needed: the app-wide `#pharmacyPage textarea:not(.field-bare)` sets a 16px radius !important.
+- "+ Other condition": dashed → solid (the Button); its Added tag 6px. The Other box's field is a Field too.
+- The body figure's chips (side column, `.ph-hxf-chip`): 26px, 14px corners, 11px, a family one dashed → 32px, 6px, 13px, solid
+  line (the dashed ring dot still marks family, as the legend says); a pinned one is solid.
+- Full history | Allergies only | Not needed: joined only from 641px up; on a phone three loose pills → one joined bar there too.
+- Boxes: the card's 1px outline went (the card sits on the page's tone); a Main group's rows lost the white plate behind each
+  row's own box.
+- The rail: "Next up: Medi…" (ellipsis) → the words wrap; and the Next up card is left out while it names the page already open
+  (`nextIsOpen` in the rail builder: the open row already says it).
+**Her picks (popup):** remove the flags strip on top (each Yes showed three times: the strip, its row, the figure chip; her
+2026-09-28 ask28 #9 "flags first" made the strip, when the list was folded) and remove ✓ Save (its handler only flashed "✓ Saved";
+every tap and note already saves). `phHxFlagsStripHtml`, the strip's + toggle handler, `phHxGhostFly` (the row → chip fly; it
+returns when there is no chip) and the `data-hx-savebtn` handler are unused now, left in place.
+**Kept, no rule covers it:** the rail's Medical history carries "9 left" and the gold flag count "8" (two different facts, her One
+list 2026-09-30); the Other row's ✕ stays 24px (a 32px circle would make the 32px row taller); phone inputs stay 16px (the
+app-wide no-zoom rule). The case colour is right: Neurological reads as musculoskeletal blue (`PH_CASE_MSK`, her 2026-09-06).
+**Code:** CSS = one dated block "Medical history audit" at the end of the main `<style>` (a 641px+ part for the card outline and
+the row plate, a 480px part for the phone's 14px words); markup in `phHxScreenInnerHtml`, `phHxBodyHtml`, `phHxOtherRowHtml`,
+`phHxOtherAddHtml`, the rail builder's `nextHtml`.
+**Tested** (sandbox): every measure above; tap a row → Yes, the note focused (a textarea), a long note typed → saved, 72px tall,
+nothing hidden; Enter → no new line, blurred; Escape closes the Other box; the groups icon opens its sheet; a figure chip pins
+(solid); no sideways scroll at 375 and 360 (the scope bar 288px wide at 375); no console errors. **Integration:** no data or write door changed
+(`rec.history` / `historyNotes` as before), so Today's visit and the Care Plan History row read what they did; looked at: this page
+and its figure only. **Not exercised:** her real records, a phone's real keyboard Enter, the intake-review merge of notes.
