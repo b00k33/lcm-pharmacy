@@ -6260,3 +6260,41 @@ own colours; most controls were 32px).
 - **Rule findings for build 1:** Dashboard names 15px links, Make ×1 / Order 24px; To order, Inventory, Suppliers names 17px links; Refill
   "🛒 Order all 3" 20px + emoji, week chips 21px.
 - **Build order:** 1 stock truth + rule fixes · 2 To order two steps · 3 lean Inventory · 4 Admin fold + herb-count line. Push on her word.
+
+## 2026-10-29 · Treatment: the visits table (not live)
+- **Her words** (the patient-profile audit, 2026-10-29, on the Treatment write-up): "i like when information is stored in table
+  format." Her 8 picks on `visits-table-mock-2026-10-29.html`: B, today's row opens a drawer, with the chips IN today's row; today
+  on top, newest first; exam cells = picture + words; the drawer holds How she is · Aim · Watch; a Note column, one line; one faded
+  next-session row; Visit checks and the plan's Treatment log both open this table and the two pages go.
+- **Built:** `phTpVisitTableHtml` now returns ONE table (`phTxVisitsTableHtml`, `.ph-vc-tbl.ph-tx-tbl` inside `.ph-vc-wrap`, so it
+  scrolls): Visit · CD (cycle patients; `.nocd` otherwise) · Phase · Response · Tongue · Pulse · Abdomen · Therapies · Herbs · Note.
+  Today's row (gold tint, a gold top line and left bar = you are here): the Compass score cell (`phTxScoreCellHtml`; a "Score on
+  Today's visit" chip when unscored), the three exam cells are doors to their pages (`.ph-tx-door`, `data-flow-go`; "not yet" until
+  done, then the drawing + words), the navy Therapies and green Herbs blocks sit in their cells unchanged, the Note cell is the
+  Comments box. Its drawer (`tr.ph-tx-vdrawer.today`) holds How <name> is (`phTxCxHtml` + `phTxFxHtml` without the exam lines,
+  `PH_TX_TBL_EXAM`), Aim, Objective, Treated, Watch, Plan note, Plan ahead. Each logged visit is a row (`phTxVisitRowHtml` over
+  `phTpVrData` / `phTpVrFacts`, newest first, today's logged sessions first): CD pill, phase, response, the exam drawings + words
+  (`phTxFndCells`, the old Visit checks cell code), therapies + points, 🌿 formula, the note's first line; its date (`.ph-tx-vopen`,
+  `data-tx-vrow`) opens its record under the row (`phTpVrRowHtml`'s body: Ask · Found · Did · Next, the Frozen lock and edit form
+  as before), through `presAcuOpenRefresh` in place (`phTxVrowOpen`). One faded italic next row from `phTpSessionOrdinal().next`
+  (+ `phTpNextDue` once today is logged): the date or "booked" / "planned", Session n, CD on that date (`phCycleCdOnDate`), the
+  phase's points and formula. Column widths are percentages on a 900px minimum (`col.c-*`); a chip inside a cell wraps; the navy
+  block's grid tracks are `minmax(0, 1fr)` so its Add row stays inside; the formula name wraps; the mini tongue / abdomen drawings
+  are 30px; the `.cd` pill rules now cover `.ph-tx-tbl .cd` too.
+- **Gone:** the Visit checks page (`presVisitChecksHtml` is a comment; its section and rank left `PRES_SECTIONS`); the plan's
+  Treatment log tab and its rail row (`phTpVrLogTabHtml` is no longer drawn; its idle in-place swap line stays). The three Visit
+  checks doors (the trend sheet's two, the Patterns clue `{ tab: "treatment" }`) open the Treatment tab; "treatment" joined
+  `PH_PLAN_TAB_IDS` so `data-flow-prof` reaches it.
+- **Tested** (sandbox copy, the made-up patient, 1220 × 1000): the table 917px in its 917px area, no cell wider than its column
+  (navy block 169px with its Add button inside, green block 124px, the formula name wrapped), today's row 375px tall; the 15 Oct
+  row's date opened its record under the row (Ask · Found · Did · Next, Frozen) and closed again in place; "Score on Today's visit"
+  → Today's visit; the Tongue door → the Tongue page; 375px: the page does not scroll sideways, the table (900px) scrolls inside
+  its wrap; Prescriptions search narrows (4 → 2) and comes back; no console errors. Picture: shots/visits-table-2026-10-29.jpg.
+  **Not tested:** the Key2; a patient with no cycle (`.nocd`); a session logged today (the "Session n · today" row and the next
+  row from `phTpNextDue`); a booked next visit; the trend-sheet and Patterns doors (their targets checked in the code only); her
+  real records.
+- **Integration (★★★):** the same reads as before (`phTpVrData`, `phVisitFndRead`, `phTongueChartSvg`, `phAbdChartSvg`,
+  `phVisitPulseDotsHtml`, `phVisitPulseSummaryText`, `phCxModel`, `phCycleCdOnDate`); no new store. Checked: Treatment (the
+  table), Today's visit (the Score chip lands there), Tongue (the door), Care Plan (unchanged). Not checked on screen: Patterns'
+  clue door, the trend sheet's doors, the Key2 phone (the old phone fold "summary first, the rest under More" went with the two
+  columns; the table scrolls, desktop-first per lcm6).
