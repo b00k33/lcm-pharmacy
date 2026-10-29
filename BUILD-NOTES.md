@@ -6674,6 +6674,54 @@ the shots open the chart; the backup file keeps each photo's date and shot), wit
 index.html was booted in the sandbox first: no console error, the three exam pages and the Treat card draw, the Prescriptions
 search filters and clears. Publish commit 9d9dd0d4; https://b00k33.github.io/lcm-pharmacy/ serves 20261029-172400.
 
+## 2026-10-29 · Face photos for Ren and facial palsy (not live)
+Her ask, with a screenshot of the viewer's Kind dropdown open over a tongue photo: "help me organise photos better / i need face
+photos for ren but also for facial paralysis - mock solution". Mock `mocks/face-photos-mock-2026-10-29.html` (Artifact
+https://claude.ai/artifact/3T9sUk32GscHpdjdAfdrP8): A grouped list, B Face views, C face set, and the Combined. **Her 10 picks:**
+Combined A+B+C · each movement's photo beside its score row · Ren reads the newest Rest · the guided set and one at a time · add a
+Whistle view (Lips pressed stays score-only) · old Face photos read as Rest · the views only for palsy patients + anyone who has
+them · compare = the same view across dates · the list Tongue first · "Yes, build it".
+**What was wrong:** the Kind list was 17 kinds in one flat list, the five movements tacked on at its end with no heading; Face (what
+Ren reads) had no link to them; the facial score showed no photos; Lips pressed and Whistle had no photo kind.
+**Built:**
+- **One grouped order.** `PH_REN_PHOTO_TYPES` now runs Unsorted · Tongue · Face (Face, the six movements, Eyes, Eyelid) · Body (MSK
+  posture last) · Records (BBT, Blood test) · Other, each with `grp`; `PH_REN_TYPE_GROUP` is derived from it. The array order is
+  every photo list's order (Comparison table rows, the strip, tiles, Records by type). `PH_REN_KIND_HEADS` names the headings
+  (`PH_REN_GROUPS` was already taken, by Ren's own groups).
+- **Grouped dropdowns:** `phRenKindOptsHtml(types, cur)` (an `<optgroup>` a heading, Unsorted and Other after) in the viewer's Kind,
+  Records → Photos' type filter and the batch confirm's per-photo tag; `phRenTypeGroupedHtml` (the Photos "+ Add" row) uses the same
+  headings in the same order. The Comparison table adds a heading row between groups once there are two (`tr.gh`, the word sticky
+  at the left).
+- **Face views** (`PH_REN_FACE_VIEWS`, `phRenIsFaceView`, `phRenFaceViewsFor`): Rest = the plain Face kind, the movements = fpBrows ·
+  fpFrown · fpEyes · fpSmile · fpCheeks · fpWhistle (new kind, face:true, 😗 on the capture sheet; `PH_FP_MOVES` Whistle has
+  `photo: "fpWhistle"`). The view IS the stored kind, so the viewer's walk, compare and letters keep working by kind; nothing is
+  rewritten (old Face photos are Rest as they stand). The viewer: a face-family photo shows Face ▾ (the movements are never their own
+  options) + a joined view bar `data-ren-view-face` that files through `phRenViewSetKind` (a movement filed back says "Filed as
+  Rest"). The bar needs two or more views offered (`phRenTypesFor`'s gate: a Neurological case, or that photo already exists).
+  The Comparison table's Face row reads Rest once a movement row is there.
+- **The facial score** (`presFacialOpenHtml`): each movement row ends in `phFpPhotoPairHtml` = the last photo before today | today's;
+  today's empty spot is the pose in pencil (`phFpPoseSvg`, the mock's graphite line faces: rest, brows up, frown, eyes shut, smile,
+  cheeks out, pucker) and `data-fp-shot` takes that one view; a photo opens the viewer (`data-ren-tl-open`). Lips pressed keeps an
+  empty spot so every scale stays in one line. Phone (560px block): the pair sits at the end of the scale's line (`:has`).
+- **Today's set** (`data-fp-set`, the Movement head): `phFpSetOpen` / `phFpSetPaint` / `phFpSetClose` on the `.ph-lk-sheet` shell
+  (`#phFpSetSheet`): the seven views as one joined grid bar (7 across, 4 + 3 under 440px by container query; picked = facial colour,
+  taken today = good tint), the pose or today's photo, Skip · Take photo · Done; Esc closes. A photo moves it on to the next view
+  still to take; none left = closed + "Today's set saved".
+- **Capture:** both doors call `phRenCaptureStart(..., { via: "faceset" })` (one file a pick); the file input's change hands it to
+  `phFpShotSave` → `phRenCaptureSave(file, true)` (compress, duplicate check, desktop relay, unchanged) → one `phRenLoadPhotosFor`,
+  which now also calls `phFpPhotosRefresh` (the pairs and the sheet repaint in place; the score being entered stays) → the one toast.
+- Ren: no change needed; `PH_FBB_PHOTO_TYPES.face` already reads only the newest "face" photo.
+**Integration (★★★), checked:** the viewer (Kind, views, Date), Profile → Checklist (pairs, set), Photos (Comparison table, "+ Add"
+row), the Find the Ren / Fang Bing Ren photo pick (`phFbbPhotoBest` → today's Rest), the option lists of Records → Photos and the
+batch confirm (by function call). **Not looked at on screen:** the Records → Photos page itself, the phone capture sheet (it lists
+kinds through `phRenTypesFor`, now in the grouped order, Whistle included on a palsy patient), letters, Today's visit.
+**Tested** (sandbox, a made-up palsy patient and a made-up plain one, drawn photos in the sandbox's own store, 1220 and 375): the
+pairs (15 Oct | pose), Rest ↔ Smile re-filing both ways with the pair repainting in place, the set opening at the first view not
+taken, a picked file (stubbed picker) saved as Rest today → bar ticks it and moves to Brows, toast "Rest saved", `multiple` off,
+Skip on the last view and Esc close it, Ren reads today's Rest, the table headings, the "+ Add" row, the plain patient's viewer has
+no view bar and no movement options, the page never wider than 375. **Not tested:** a real camera or file picker, her real records,
+the Key2, the phone→laptop relay with a Whistle photo, finger taps.
+
 ## 2026-10-29 · Treatment session picks 2 + 3: the visit saves itself, one Same as last visit (not live)
 The rest of her treatment-session audit picks ("Treatment session: one button ends the visit" above; picks 1, 4, 5, 6, 8 and 9 went
 live in build 20261029-172400). Built on the findings-per-visit doors (6e468f98), which the note above said these waited for.
