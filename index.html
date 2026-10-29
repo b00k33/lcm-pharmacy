@@ -58411,6 +58411,7 @@
       }
       // her pick 4 (treatment-session audit, 2026-10-29): the one visit save lives in presAcuLogNow; Done · Copy for Cliniko saves through it
       { const vd = e.target.closest("[data-visit-done]"); if (vd) { phVisitDone(vd); return; } }
+      { const ts = e.target.closest("[data-tv-same]"); if (ts) { const nm = phPfwName(); if (nm) phTodaySameAll(nm); return; } }   // her pick 3
       if (e.target.closest("[data-pres-acu-log]")) { presAcuLogNow(); return; }
       // ---- Request 4: per-visit findings, draft state (the old chart panel is gone, law Phase 5; the exam pages borrow this draft) ----
       // all four handlers below patch just the .ph-visit-fnd wrapper in
@@ -67112,7 +67113,7 @@ or changing anything in Cliniko.
     // her "both" pick, 2026-09-26: restore a saved draft AFTER every presAcu*
     // reset above has run, so it hydrates into a genuinely blank slate rather
     // than being immediately overwritten by the resets that follow it.
-    if (identName) presAcuDraftRestore(identName);
+    if (identName) { phVisitFileStale(identName); presAcuDraftRestore(identName); }   // a visit left open on an earlier day files itself first (pick 2)
     // a brand-new, untouched patient still lands on Medical history first --
     // the same friction reduction the old inline-on-Opening design gave her
     // (2026-09-11), now expressed as which rail tab opens by default rather
@@ -96942,20 +96943,28 @@ or changing anything in Cliniko.
     if (more) { phFvMore.add(sk); phFvRefresh(name, part); return true; }
     if (day) { if (day.dataset.fvDay) { phFvSel.set(sk, day.dataset.fvDay); phFvRefresh(name, part); } return true; }
     if (!same) return false;
-    const rec = phPatientPeek(name), d = rec ? phFndOn(rec, part, same.dataset.fvSame) : null;
-    if (!d) return true;
+    phFvSameDo(name, part, same.dataset.fvSame);
+    return true;
+  }
+  // Same as <date> for one part: the page's chip, and Today's visit's one tap for all three (her treatment-session pick 3,
+  // 2026-10-29); true when it wrote
+  function phFvSameDo(name, part, date) {
+    const rec = phPatientPeek(name), d = rec ? phFndOn(rec, part, date) : null;
+    if (!d) return false;
     const clone = x => JSON.parse(JSON.stringify(x));
     if (part === "tongue") {
       const t = Object.assign(phTng2Read(clone(d.tng)), { v2: 1 }); delete t.at; delete t.cm;
-      if (phTngWrite(name, t)) phTngRefresh(name);
+      if (!phTngWrite(name, t)) return false;
+      phTngRefresh(name);
     } else if (part === "abdomen") {
-      if (phAbdWrite(name, a => { a.chart = d.abdNormal || !d.abd ? null : Object.assign(clone(d.abd), { v2: 1 }); a.normal = !!d.abdNormal; })) phAbdRefresh(name);
+      if (!phAbdWrite(name, a => { a.chart = d.abdNormal || !d.abd ? null : Object.assign(clone(d.abd), { v2: 1 }); a.normal = !!d.abdNormal; })) return false;
+      phAbdRefresh(name);
     } else {
-      const w = phPatientRec(name); if (!w) return true;
+      const w = phPatientRec(name); if (!w) return false;
       const p = phHxConstitPulse(w);   // moves a stale chart aside first (the Pulse's own day model)
       p.pulse = clone(d.pulse || {}); p.pulseRef = (d.pulseRef || []).slice(); p.hammer = clone(d.hammer || phVisitFndBlank().hammer);
       phExamMirrorToday(w);
-      if (savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return true; }
+      if (savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return false; }
       const el = document.querySelector('#pharmacyPage [data-exam-page="pulse"]');
       if (el) el.innerHTML = phHxConstitPulseHtml(phPatientPeek(name) || {}, name);
       presFlowRailRefresh(); phExamPastRefresh(name);
@@ -97652,7 +97661,12 @@ or changing anything in Cliniko.
   function phTodayLookHtml(name, rec) {
     const key = phPatientKey(name), parts = phTodayParts(rec).filter(p => p.id !== "recheck");
     const all = parts.length > 0 && parts.every(p => phTodayPartOk(rec, p.id));
-    if (!all || phTodayLookOpen.has(key)) return phTodayTilesHtml(name, rec);
+    if (!all || phTodayLookOpen.has(key)) {
+      // her pick 3: the one Same as <date> leads the extras line (+ Pain · + Ask her), inside the tiles' own host so it repaints with them
+      const t = phTodayTilesHtml(name, rec), sb = phTodaySameBtnHtml(name, rec);
+      if (!sb) return t;
+      return t.indexOf('<div class="ph-tv-extras">') >= 0 ? t.replace('<div class="ph-tv-extras">', `<div class="ph-tv-extras">${sb}`) : t.replace(/<\/div>\s*$/, `<div class="ph-tv-extras">${sb}</div></div>`);
+    }
     const anim = phTodayMotion() && !phTodayFx.fold.has(key);
     phTodayFx.fold.add(key);
     const sum = parts.filter(p => !phTodaySkipped(rec, p.id)).map(p => phTodaySumPart(rec, p.id)).filter(x => x && x !== PH_FINDING_EMPTY).join(" · ");
@@ -108346,6 +108360,61 @@ or changing anything in Cliniko.
   // different plan than the one the calendar/booking now points at, is left
   // untouched on the record rather than forced onto the wrong phase (it
   // shows up again if she reopens that same plan later).
+  // her treatment-session pick 2 (2026-10-29, "the visit saves itself"): a visit left without Done is not lost -- a draft from an
+  // EARLIER day that had a booking for this patient, with no visit saved that day, is filed as that day's visit the next time the
+  // patient opens (the same save as Done, dated that day), so it never comes back as today's. A draft with no booking that day
+  // stays as it was.
+  function phVisitFileStale(name) {
+    const rec = phPatientPeek(name), d = rec && rec.acuDraft;
+    if (!d || !d.savedAt) return;
+    const day = keyOf(new Date(d.savedAt)), pk = phPatientKey(name);
+    if (day >= keyOf(TODAY)) return;
+    if (!phApptList().some(a => a.date === day && a.service !== "Break" && phPatientKey(a.patient) === pk)) return;
+    if ((rec.acuSessions || []).some(s => s.date === day && (!d.planId || !s.planId || s.planId === d.planId))) return;
+    presAcuDraftRestore(name);
+    if (presAcuDraftIsEmpty(presAcuDraftSnapshot())) return;   // a draft for another plan stays where it is
+    presAcuOutcomeDraft = d.outcome || null; presAcuOutcomeCx = false;   // that day's own answer, never today's compass
+    { const ap = phApptList().find(a => a.date === day && a.service !== "Break" && phPatientKey(a.patient) === pk);   // the herbs-only rule Done uses
+      if (!presAcuNoTreatment && (!rec.acuEnabled || (ap && phApptHerbsOnly(ap))) && presAcuPointsChecked === null && !presAcuPointsCustom.length) presAcuNoTreatment = true; }
+    presAcuLastLogAt = 0;
+    if (presAcuLogNow({ name, planId: d.planId || null, date: day, at: d.savedAt, after: () => {} })) { phVisitFileStaleFnd(name, day); presSavedToast(`✓ ${phTpDayLabel(day)} visit saved`, 4000); }
+  }
+  // that day's Tongue / Pulse / Abdomen (the pages are the ONE place a finding is entered; phFndOn reads that day from any store)
+  // join the filed visit's dated copy, as they would have on a Done that day; a part the visit already holds stays as it is
+  function phVisitFileStaleFnd(name, day) {
+    const w = phPatientRec(name), s = w && (w.acuSessions || []).filter(x => x.date === day).sort((a, b) => (b.at || 0) - (a.at || 0))[0];
+    if (!s) return;
+    const clone = x => JSON.parse(JSON.stringify(x)), cur = w.visitFnd && w.visitFnd[s.id] ? phVisitFndRead(w.visitFnd[s.id]) : null, add = {};
+    const t = phFndOn(w, "tongue", day);
+    if (t && !(cur && !phTng2Empty(cur.tng))) add.tng = clone(phTng2Read(clone(t.tng)));
+    const p = phFndOn(w, "pulse", day);
+    if (p && !(cur && Object.keys(cur.pulse).length)) { add.pulse = clone(p.pulse || {}); add.pulseRef = (p.pulseRef || []).slice(); add.hammer = clone(p.hammer || phVisitFndBlank().hammer); }
+    const a = phFndOn(w, "abdomen", day);
+    if (a && !(cur && (!phAbd2Empty(cur.abd) || cur.abdNormal))) { add.abd = clone(phAbd2Read(a.abd ? clone(a.abd) : null)); add.abdNormal = !!a.abdNormal; }
+    if (!Object.keys(add).length) return;
+    Object.assign(phVisitFindings(w, s.id), add);
+    if (savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL);
+  }
+  // her treatment-session pick 3 (2026-10-29): ONE tap carries the last visit's Tongue, Pulse and Abdomen into today -- only the parts
+  // not done or skipped today, each from its own last day (phFndLast), through each page's own Same as <date> write (phFvSameDo)
+  function phTodaySameParts(rec) {
+    return PH_TODAY_EXAM_PARTS.filter(p => !phTodaySkipped(rec, p.id) && !phTodayDonePart(rec, p.id)).map(p => ({ p, d: phFndLast(rec, p.id) })).filter(x => x.d);
+  }
+  function phTodaySameBtnHtml(name, rec) {
+    if (!phLastVisitKey(rec)) return "";
+    const L = phTodaySameParts(rec);
+    if (!L.length) return "";
+    const days = [...new Set(L.map(x => x.d.date))], lbl = days.length === 1 ? `Same as ${phCycShortLbl(days[0])}` : "Same as last visit";
+    return `<button type="button" class="ph-today-btn" data-tv-same="1" title="${esc(L.map(x => `${x.p.label} as on ${phCycShortLbl(x.d.date)}`).join(" · "))}">${esc(lbl)}</button>`;
+  }
+  function phTodaySameAll(name) {
+    const rec = phPatientPeek(name);
+    if (!rec) return;
+    const done = []; let failed = false;   // a failed save already showed its warning; a "✓" must not cover it
+    phTodaySameParts(rec).forEach(x => { try { if (phFvSameDo(name, x.p.id, x.d.date)) done.push(x.p.label); else failed = true; } catch (e) { failed = true; console.warn("[same as]", e); } });
+    phTodayTilesRefresh(name);
+    if (done.length && !failed) presSavedToast(`✓ ${done.join(" · ")} as last visit`);
+  }
   function presAcuDraftRestore(name) {
     const rec = phPatientPeek(name);
     const d = rec && rec.acuDraft;
@@ -133006,6 +133075,9 @@ Please let me know if you have any questions.`;
     const ctx = presAcuCtx(opts.name, opts.planId);
     if (ctx) {
       const { name, rec, activePlan, calendarPhase, treatedPhase } = ctx;
+      // the typed boxes are read only off THIS patient's own form on screen (Done on Today's visit, or a visit filed on opening,
+      // has no form; a box left in the page for someone else must never be read)
+      const liveW = presAcuLiveWrap(), byId = id => (liveW && liveW.dataset.acuName === name ? liveW.querySelector("#" + id) : null);
       // the session number and kind the toast after it names (COPY NOTES), read before the save moves them on
       const cnN = activePlan && treatedPhase ? (phTpSessionOrdinal(name, activePlan, treatedPhase).n || 0) : 0, cnHerbs = !!presAcuNoTreatment;
       const dispensedToday = phAcuHerbsOn(name, keyOf(TODAY));
@@ -133033,7 +133105,7 @@ Please let me know if you have any questions.`;
         const pointsList = phAcuSplitList(treatedPhase && treatedPhase.points).concat(presAcuPointsCustom);
         const pointsBase = pointsList.length
           ? pointsList.filter(p => presAcuPointsChecked ? presAcuPointsChecked.has(p) : true).join(", ")
-          : ((document.getElementById("presAcuPoints") || {}).value || "").trim();
+          : ((byId("presAcuPoints") || {}).value || "").trim();
         // her 2026-10-27 Musculoskeletal step 2 (pick 9): on a pain visit, Today's points on that page ARE this visit's points (one
         // unticked on the Treatment tab is left out); each area is kept as it was today for the Log (area · dx · points · pain before
         // → after). A blank phase Points still fills from `points` below, as before.
@@ -133043,13 +133115,13 @@ Please let me know if you have any questions.`;
         const points = mskL.length ? [...new Set(mskL.concat(presAcuPointsCustom))].join(", ") : pointsBase;
 
         const pressList = phAcuSplitList(treatedPhase && treatedPhase.pressPoints);
-        const pressFreeEl = document.getElementById(pressList.length ? "presAcuPressExtra" : "presAcuPressFree");
+        const pressFreeEl = byId(pressList.length ? "presAcuPressExtra" : "presAcuPressFree");
         const pressFree = ((pressFreeEl || {}).value || "").trim();
         const pressPoints = pressList.length
           ? [...pressList.filter(p => presAcuPressChecked ? presAcuPressChecked.has(p) : true), ...phAcuSplitTyped(pressFree)].join(", ")
           : pressFree;
 
-        const reason = ((document.getElementById("presAcuReason") || {}).value || "").trim();
+        const reason = ((byId("presAcuReason") || {}).value || "").trim();
 
         session = {
           id: sessionId, date: keyOf(TODAY), at: Date.now(),
@@ -133085,9 +133157,14 @@ Please let me know if you have any questions.`;
       // walk-in today onto a no-show from the day before yesterday. The
       // plan the visit was for is kept too (fix 1), so a later re-read
       // never has to guess between two concurrent plans.
-      const todayAppt = phApptNearestNow(name);
+      const todayAppt = opts.date ? null : phApptNearestNow(name);
       let linkAppt = todayAppt;
-      if (!linkAppt) {
+      if (opts.date) {   // a visit filed for an earlier day (her pick 2): that day's date and its booking
+        const pk0 = phPatientKey(name);
+        session.date = opts.date;
+        if (opts.at) session.at = opts.at;   // the time she last worked on it, so a list by time keeps it on its own day
+        linkAppt = phApptList().filter(a => a.service !== "Break" && phPatientKey(a.patient) === pk0 && a.date === opts.date).sort((a, b) => (a.time || "").localeCompare(b.time || ""))[0] || null;
+      } else if (!linkAppt) {
         const pk = phPatientKey(name), todayKey = keyOf(TODAY);
         const yKey = keyOf(new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() - 1));
         const back = phApptList().filter(a => a.service !== "Break" && phPatientKey(a.patient) === pk && a.date === yKey)

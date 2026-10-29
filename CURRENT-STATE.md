@@ -1207,7 +1207,14 @@ same?" line when both are due (Nothing new stamps both · Changed opens the two)
 copy ("today · ✓ copied" on the row, "✓ Copied" on the button), and the toast names the next visit with **Next patient ›**
 (`phVisitNextAppt`). The copy's **Note:** line (`phCnNoteText`) = Ask her's words + the note + any Compass row note written today.
 Treatment's therapies block shows the phase's Points and Press tags as ticks (a pain patient's points stay Musculoskeletal's); the
-Acupuncture therapy chip has no text box. Not built yet: the visit saving itself (no button) and Same as last visit for the Look.
+Acupuncture therapy chip has no text box. **The visit saves itself (pick 2):** a visit left without Done on a booked earlier day is
+filed as that day's visit the next time the patient opens (`phVisitFileStale`, before the draft restore): the same save as Done
+(`presAcuLogNow` with `date`/`at`), that day's booking, the time she last worked on it, and that day's Tongue / Pulse / Abdomen from
+the pages (`phVisitFileStaleFnd`, only parts the visit lacks); toast "✓ Wed 28 Oct visit saved". A draft with no booking that day
+stays as it was. **Same as last visit (pick 3):** Today's visit's Look line leads with one **Same as <date>** ("Same as last visit"
+when the parts' last days differ) before + Pain · + Ask her; one tap carries Tongue, Pulse and Abdomen into today, each from its own
+last day, through the pages' own Same as write (`phTodaySameAll` → `phFvSameDo`), only parts not done or skipped today; a failed
+save keeps its warning (no "✓" over it).
 
 **Findings charts** (tongue / abdomen / pulse) are the app's own tappable diagrams with a "brush" (pick a sign, then tap its
 regions). The exam pages are the ONE entry; `phExamMirrorToday` copies today's exam into the dated record. Read every finding
