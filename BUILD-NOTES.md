@@ -6872,10 +6872,10 @@ nothing wider than the screen; no console errors. Pictures: `shots/prg-2026-10-2
 **Not tested:** her real records (a real patient's photos, scores and plan GP lines); a real paste into Gmail (the clipboard was
 captured in the sandbox); a real print window; the Key2 phone.
 
-## 2026-10-29 · Progress letter: its wording in Settings › Letter templates (her "how do i edit the letter template")
+## 2026-10-29 · Progress letter: its wording in Settings › Letter templates (her "how do i edit the letter template") · LIVE build 20261029-204500
 Asked right after the letter went live. Her picks: yes, add it to Settings › Letter templates; editable = opening words, Home care,
 section headings, letter title (all four).
-**Built (not live until her "push live"):** `PH_PRG_TMPL` (id "progress", seven fields with defaults = the words the letter used),
+**Built (LIVE 2026-10-29, build 20261029-204500, her "push live"):** `PH_PRG_TMPL` (id "progress", seven fields with defaults = the words the letter used),
 `PH_PRG_TOKENS`, `phPrgTpl`, `phPrgFill`, `phPrgHome` (moves the first build's `PHARMACY.prgHomeCare` into the template; the letter's
 gold box now writes through `phLtrSetApply`, which drops the old key). The editor (`phLtrTemplatesSectionHtml`) lists it after the
 herbal letters and draws its rows from `PH_PRG_TMPL` (title and headings one line); the change handler takes "progress" as its
