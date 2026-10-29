@@ -248,15 +248,30 @@ two phases when a course starts (`presTpInlineCreate`, `phTpCreate`) or is swapp
 years +1 / +1, longer +2 / +2, only to a phase with a count; cycle courses keep theirs. Start reads "Course · Low back pain · 3
 phases · 9 visits".
 
-**Blood tests + IVF in the diagnosis** (her picks): **Paste the report** (beside + Add result) reads report text into the
-new-result form (`phBldParse`: marker name, the number after it, the lab range on that line, the collection date, never the date
-of birth), filled gold for her to check, listing units to check and lines not read; nothing saves by itself. Under the results,
-**Results that count · every patient** (`phRcTableHtml`): wired rows first, read-only (Fang Bing Ren's blood signs `PH_TRI_BLOOD`;
-Patterns' iron / thyroid reads `PH_BLD_PAT_IRON` / `PH_BLD_PAT_THY`), then hers: a blood marker or IVF number (`PH_IVF_NUMS`)
-below / above her number → a pattern (`PHARMACY.resultRules = [{id, m, op, v, pat}]`). Met by the latest value (blood result < 12
-months; latest round with that IVF number), a rule is a Patterns clue "rc:<id>" with `.pat` (`phRcClues`, added in
-`phPatCompute`): it counts for that pattern and is a tag in the Diagnosis ("AMH 6 pmol/L · low", "IVF: 3 eggs, 2 rounds · low")
-and on Patterns, whose clue list has Blood tests and IVF history groups.
+**Blood tests** (her 2026-10-29 picks, `bloods-attach-mock-2026-10-29.html` A; BUILD-NOTES "Blood tests: attach the result
+first"): the page opens on **Attach the result** (a photo or a PDF: `data-bld-attach` → `phRenCaptureStart(…, "bloods", {via:
+"bloods", gallery, accept: image + PDF})`, or a drop on the tile) beside **Paste the report** (`phBldPasteFill`: a paste, or typing
+then leaving the box). A file is filed with the photos as kind **"Blood test"** (`PH_REN_PHOTO_TYPES` bloods; a photo compressed and
+relayed like any other, a PDF kept as it is up to 12 MB and local only, `phRenIsPdf`, a drawn "PDF" thumb for every `<img>`,
+`phBldOpenFile` opens it in its own tab, from the viewer too); one attach = one result row (`rec.bloods[] += {id, date, lab, note,
+vals, at, photoIds}`), opened for the values. The attachments are tiles under the top row (`phBldTilesHtml`, newest first; a tap
+opens the photo or the PDF). **One table** (`phBldTableHtml`): the markers that count down (`phBldCountKeys`: `PH_TRI_BLOOD`,
+`PH_BLD_PAT_IRON` / `_THY`, her `resultRules`; the Hormones group left out for a man) plus any marker with a value; "Where it sits"
+= a dot on the marker's low–high bar from its latest counted value (`phBldBarHtml`, green inside, amber past a line); then each
+result as a dated column newest first, ↓↑ past the line, an IVF scan column read-only, a result over 12 months faded "not
+counted". The **open column** (`presBldForm = {id, extra, custom, pasteText}`: a result just attached or pasted, or a date header
+tapped) turns its cells into fields (`data-bld-v`; the lab's own range from the paste rides on `data-lo` / `data-hi`), its header
+into a date + lab field, with "+ More markers ▾" (`phBldMore`: any other marker, or "Another marker…" she names) and one Save
+(`phBldSave` reads the cells; a moved date re-dates the attachment) · Cancel (`phBldCancel`: an empty pasted row goes) · Delete (the
+attachment stays in Photos). `phBldParse` is unchanged (marker name, the number after it, the lab range on that line, the
+collection date, never the date of birth). **The band** (`PRES_BANDS.bloods`): Results · Clues (`phBldClueKeys`: a counting
+marker's latest value past its line, and her rules met) · a **Rules · Guide** chip. **Results that count · every patient**
+(`phRcTableHtml`: wired rows read-only, then hers, `PHARMACY.resultRules = [{id, m, op, v, pat}]`, a blood marker or IVF number
+`PH_IVF_NUMS` below / above her number → a pattern) lives on the **Guide's Blood tests tab** (`phGdBloodsHtml`, with the typical
+ranges by sex; `phRcClick`), no longer on the patient page. Met by the latest value (blood result < 12 months; latest round with
+that IVF number), a rule is a Patterns clue "rc:<id>" with `.pat` (`phRcClues`, added in `phPatCompute`): it counts for that
+pattern and is a tag in the Diagnosis ("AMH 6 pmol/L · low", "IVF: 3 eggs, 2 rounds · low") and on Patterns, whose clue list has
+Blood tests and IVF history groups.
 
 **Patient plan** (her pick "Print AND email, from Messages, she sees it before it sends"): "📋 Patient plan" (plan ⋯ menu, and
 beside "✉ Patient letter") opens one page in the letter's place (`phTpLetterOpen === "plan"`, `phTpCplModel` /
