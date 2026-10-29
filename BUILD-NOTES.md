@@ -6498,7 +6498,7 @@ page, a man's page (Hormones left out by code only).
 (`phRcClues`), the Diagnosis tag, the Timeline and the search index through `phBldList`, which did not change; Photos gains the new
 kind. Checked on the seed: the band's clue count, the Guide's rule back on the patient page, the Photos section.
 
-## 2026-10-29 · Sync guard: an older copy can't replace bookings, follow-ups or stock (live incident; her "Yes, fix it and push live")
+## 2026-10-29 · Sync guard: an older copy can't replace bookings, follow-ups or stock (live incident; her "Yes, fix it and push live") — LIVE build 20261029-161800 (carried by the Blood tests publish e6c93e61)
 - **What happened** (measured read-only in her Chrome; her answer: "My phone"): between 3:42 and 3:52 pm her phone's copy,
   last synced about 1 October, won a merge and replaced the whole `pharmacy_core`: bookings 290 → 95 (200 gone, 27 upcoming,
   16 in the next 7 days), herb follow-ups 71 → 16 (55 gone, 17 Sep – 29 Oct), 83 herbs' stock amounts, the last stocktake
