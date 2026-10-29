@@ -6299,7 +6299,7 @@ own colours; most controls were 32px).
   clue door, the trend sheet's doors, the Key2 phone (the old phone fold "summary first, the rest under More" went with the two
   columns; the table scrolls, desktop-first per lcm6).
 
-## 2026-10-29 · Her own profile: the Me audit and her nine picks (not live)
+## 2026-10-29 · Her own profile: the Me audit and her nine picks (LIVE build 20261029-143600, publish 85adf054)
 - **Her ask** (with a Week-page screenshot): "audit my profile. this profile is unique because its not a patient, its my personal
   profile. audit what is used often and infrequent and help me improve the integration".
 - **Measured** read-only from her browser (`lcm-me` rev 131 + her record; the 27 Oct export has no Me row). Report:
