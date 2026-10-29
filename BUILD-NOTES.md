@@ -6521,3 +6521,8 @@ kind. Checked on the seed: the band's clue count, the Guide's rule back on the p
   clinic's 8 → 2 bookings all pass; an older copy with 60 of 71 follow-ups and a 20-day-older newest trips; an unreadable copy
   trips; herbs and the log keep their old checks; the app boots with the sync loaded and no console errors. **Not tested:** a
   real two-device merge (needs her logins).
+
+## 2026-10-29 · Live: build 20261029-161800
+Her "push live" after the Blood tests picture: the Blood tests build (f849f3e6, attach the result first) went live, with the
+audit-report note 6dd29d66 and another session's sync guard ec47a0c6 (an older device copy can no longer replace bookings,
+herb follow-ups or stock) riding along. Publish commit e6c93e61; https://b00k33.github.io/lcm-pharmacy/ serves 20261029-161800.
