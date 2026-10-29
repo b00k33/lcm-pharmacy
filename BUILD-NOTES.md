@@ -6673,3 +6673,8 @@ Start visit, one Done · Copy for Cliniko, one note, one "Still the same?", poin
 the shots open the chart; the backup file keeps each photo's date and shot), with the two build-note commits. The committed
 index.html was booted in the sandbox first: no console error, the three exam pages and the Treat card draw, the Prescriptions
 search filters and clears. Publish commit 9d9dd0d4; https://b00k33.github.io/lcm-pharmacy/ serves 20261029-172400.
+
+## 2026-10-29 · Live: build 20261029-172400
+Her "push live" (after the tongue photo flow picture; another session's publish 9d9dd0d4 went first and carried it): the tongue
+photo flow + backup photo fields (c2e74d19), the treatment session build (856c3926) and findings per visit (6e468f98) are live, with
+the build-notes commits f826c4cb and 8086e824. https://b00k33.github.io/lcm-pharmacy/ serves 20261029-172400.
