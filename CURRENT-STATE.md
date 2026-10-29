@@ -793,7 +793,7 @@ bar and GP lines from `phTpCplModel`, the next booking, the next re-check from `
 every palsy patient, `PHARMACY.prgHomeCare`, synced), sign-off. **Copy for email** pastes it with the photos (480 px JPEGs made when
 the letter opens, `phPrgJpegs`; inline styles, `phPrgMailHtml`; plain text beside it, `phPrgText`); **Print** is the same page
 (`phPrintDoc`). The course is a live facial plan's (else the plan today's visit uses, `phPrgPlan`).
-**Its wording (her picks 2026-10-29; built, NOT live yet):** Settings › Letter templates has a **📷 Progress letter** chip after the
+**Its wording (her picks 2026-10-29; LIVE 2026-10-29, build 20261029-204500):** Settings › Letter templates has a **📷 Progress letter** chip after the
 herbal letters (`PH_PRG_TMPL`, never in `phLtrAllTemplates`): Letter title, Opening words, the four headings and Home care, stored in
 `PHARMACY.ltrOverrides.progress` with the editor's own Undo / ↺ Default / Reset. Fill-ins {first} {since} {back} {onway} {plan}
 (`phPrgFill`; an empty one leaves no gap). The built-in opening keeps its own line for a face with nothing back yet; her own wording
