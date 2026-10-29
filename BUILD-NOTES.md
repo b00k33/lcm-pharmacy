@@ -6722,7 +6722,7 @@ Skip on the last view and Esc close it, Ren reads today's Rest, the table headin
 no view bar and no movement options, the page never wider than 375. **Not tested:** a real camera or file picker, her real records,
 the Key2, the phone→laptop relay with a Whistle photo, finger taps.
 
-## 2026-10-29 · Treatment session picks 2 + 3: the visit saves itself, one Same as last visit (not live)
+## 2026-10-29 · Treatment session picks 2 + 3: the visit saves itself, one Same as last visit (LIVE 2026-10-29, build 20261029-174800)
 The rest of her treatment-session audit picks ("Treatment session: one button ends the visit" above; picks 1, 4, 5, 6, 8 and 9 went
 live in build 20261029-172400). Built on the findings-per-visit doors (6e468f98), which the note above said these waited for.
 - **Pick 2, the visit saves itself:** the report promised "No Complete session needed". The visits table already lists every booked
