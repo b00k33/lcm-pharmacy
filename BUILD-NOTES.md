@@ -6626,3 +6626,42 @@ console errors. Pictures at 1220 by headless Edge (`shots/ts-2026-10-29-*.png`, 
 Dispense. **Not tested:** her real records (her bookings are the stale 95 until the 29 Oct phone-sync repair, so Start visit, Next
 patient and the herbs-only route have little to show until then); a real clipboard (stubbed in the sandbox); the non-compact
 Treatment form (it carries the same Done button).
+
+## 2026-10-29 · Tongue photo flow: the shots open the chart (not live)
+Her patient-profile audit pick 8 ("chart on the photo: open it, tap colour · coat · shape there") as a flow, mock
+`tongue-photo-flow-mock-2026-10-29.html` (artifact 3tceVyD5xFeQbfeT27Q3QY). Measured from the 27 Oct backup: 398 tongue photos, 50
+patients, 100 photo days, the full four shots on 69; charted on at least 20 of the days (the Tongue page keeps only its latest
+chart), 8 of 21 the week of 19 Oct and 5 of 8 the week of 26 Oct; she charts ~9 min after the photos. The phone is the camera
+(her 2026-09-01 words), the relay brings the shots to the laptop every 2 min, and the arrival flash named no one and opened
+nothing. Her 8 picks (all the recommended option): **A + B together**; Chart opens **the photo viewer, Natural light, Colour
+ready**; the toast **fades at 6.5 s**; the charted tile = **photo + tick + words**; the waiting tile = **gold "4 photos / Chart"**;
+on her own page **no toast, the tile flashes gold**; Chart from another page lands on **her Today's visit with the photo on top**;
+the tile photo = **Natural light only**. Competence (told): every 10 s while a patient file is open.
+- **Arrival** (`phCapAutoImport`): `tngToday` counts today's tongue photos per patient; with that patient's Today's visit or Tongue
+  page on screen (`phTngHerePk`) → `phTvTngArrived` (Tongue page: `phTngRefresh`; Today's visit: `phTodayTilesRefresh` + `.ph-tv-flash`
+  for 1.4 s); otherwise the one toast `presSavedToast("4 tongue photos · <name>", { ms: 6500, acts: [Chart] })`. Every other photo
+  keeps the old flash line (its count now leaves the named ones out). A second `setInterval` (10 s) runs the import while
+  `PHARMACY.activeTab === "prescriptions"` with a patient open and the page visible (the phone role still returns at once).
+- **Chart** (`phTngChartOpen(pk)`): from another page `presGoToScript(script, { before: plan · today })` (no script → the profile
+  list, `phPatientProfileOpen`), then `phRenViewPhoto` on `phTngTodayShot(pk)` (today's tongue photos by `PH_TONGUE_SHOT_RANK`, the
+  newest of the best shot). The viewer's own tab rule stands (Colour; a Sublingual shot opens on Sublingual).
+- **The tile** (`phTodayTilesHtml`, tongue only): `phTngTileShot` (reads the patient's photos once if they are not loaded, then
+  repaints the tiles) → a `.ph-tv-photo` button `data-tv-tng-chart` with `.ph-tv-th` (40px photo; `.ok` green tick when charted),
+  label, the sum ("N photos<br>Chart" in `--ph-gold-deep` on `.ph-tv-wait` gold, else the words), the findings-per-visit
+  `.ph-today-last` line kept. No photo today → the old tile (`data-flow-go="tongue"`). `phRenCropClose` repaints the tiles when a
+  tongue photo closes over Today's visit.
+- **Backup file** (her "Yes, fix it too"): the export's photo map drops nothing now (`PH_REN_BACKUP_FIELDS`: dateKey, shot,
+  isProfile, filename, relayedAt, srcSize, srcMtime via `phRenBackupFields`); the file restore writes them back, and a photo
+  already on the device keeps fields an older file never carried (a field in the file wins). Found while measuring: the 27 Oct
+  file's 398 tongue photos all came back with no shot.
+- **Tested** (sandbox, the made-up patient, drawn photos, 1220 and 800 wide): the tile gold "4 photos / Chart" → tap → viewer on
+  Natural light, Colour; pale + swollen (+ wet, red tip) → close → tile done, the photo with its tick, "pale, swollen, wet, red tip";
+  the relay stubbed (list / download / delete) with her on Appointments → photos filed, toast "4 tongue photos · Zz Audit Patient"
+  + Chart → her Today's visit, the viewer on the newest Natural light shot, Colour; on her Today's visit → no toast, the tile
+  repainted with `.ph-tv-flash`; `phRenBackupFields` on a labelled photo, an old-format entry keeps shot + date, a newer one wins;
+  no console errors. Picture: shots/tongue-photo-flow-build-2026-10-29.jpg. **Not tested:** the real relay (needs her logins and the
+  phone), a real file export + restore round trip (the download path was not run), photos landing while she is on the Tongue
+  page, the phone, her records.
+- **Integration (★★):** one viewer (`phRenViewPhoto`), one toast, one tile builder, one import; the chart writes stay the viewer's
+  (`phTngViewWrite` → today's finding, the same one the Tongue page shows). Checked on screen: Today's visit, the viewer,
+  Appointments + the toast.
