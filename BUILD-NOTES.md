@@ -6665,3 +6665,11 @@ the tile photo = **Natural light only**. Competence (told): every 10 s while a p
 - **Integration (★★):** one viewer (`phRenViewPhoto`), one toast, one tile builder, one import; the chart writes stay the viewer's
   (`phTngViewWrite` → today's finding, the same one the Tongue page shows). Checked on screen: Today's visit, the viewer,
   Appointments + the toast.
+
+## 2026-10-29 · Live: build 20261029-172400
+Her "push live" after the findings-per-visit pictures: three builds went live together, each committed on session-a, none
+pushed before: findings per visit (6e468f98, every day kept, last visit beside today), the treatment-session build (856c3926,
+Start visit, one Done · Copy for Cliniko, one note, one "Still the same?", points once) and the tongue photo flow (c2e74d19,
+the shots open the chart; the backup file keeps each photo's date and shot), with the two build-note commits. The committed
+index.html was booted in the sandbox first: no console error, the three exam pages and the Treat card draw, the Prescriptions
+search filters and clears. Publish commit 9d9dd0d4; https://b00k33.github.io/lcm-pharmacy/ serves 20261029-172400.
