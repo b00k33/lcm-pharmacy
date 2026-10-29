@@ -6673,3 +6673,37 @@ Start visit, one Done · Copy for Cliniko, one note, one "Still the same?", poin
 the shots open the chart; the backup file keeps each photo's date and shot), with the two build-note commits. The committed
 index.html was booted in the sandbox first: no console error, the three exam pages and the Treat card draw, the Prescriptions
 search filters and clears. Publish commit 9d9dd0d4; https://b00k33.github.io/lcm-pharmacy/ serves 20261029-172400.
+
+## 2026-10-29 · Treatment session picks 2 + 3: the visit saves itself, one Same as last visit (not live)
+The rest of her treatment-session audit picks ("Treatment session: one button ends the visit" above; picks 1, 4, 5, 6, 8 and 9 went
+live in build 20261029-172400). Built on the findings-per-visit doors (6e468f98), which the note above said these waited for.
+- **Pick 2, the visit saves itself:** the report promised "No Complete session needed". The visits table already lists every booked
+  day, every dispense day and every saved visit; what was lost was a visit she worked on and never ended: its draft came back as
+  TODAY's next time (an old trap: `presAcuDraftRestore` restores a draft from any earlier day). Now `phVisitFileStale(name)` runs
+  first when a patient opens (`presOpenScript`): a draft saved on an EARLIER day that had a booking for this patient, with no visit
+  saved that day for that plan, is filed as that day's visit: the Done save (`presAcuLogNow({ name, planId, date, at })`, which now
+  takes that day's date, links that day's booking and keeps `at` = the draft's last save so lists sorted by time keep it on its own
+  day), herbs-only rule as Done (a herbs-only booking or tracking off, no points ticked = a herbs check-in), that day's own outcome,
+  and that day's Tongue / Pulse / Abdomen from the pages (`phVisitFileStaleFnd`, `phFndOn`, only parts the visit lacks; today's exam
+  is never copied onto it: `phExamMirrorToday` is today-only). Toast "✓ Wed 28 Oct visit saved". A draft with no booking that day
+  stays as it was. The typed boxes are read only off THIS patient's own form (`byId` in `presAcuLogNow`), so a filed visit or a
+  Done on Today's visit never reads another patient's boxes left in the page.
+- **Pick 3, Same as last visit:** Today's visit's Look line leads with ONE **Same as 22 Oct** (or **Same as last visit** when the
+  parts' last days differ; its title names each part's day) before + Pain · + Ask her (`phTodaySameBtnHtml`, inside the tiles' own
+  host). One tap (`phTodaySameAll`) carries Tongue, Pulse and Abdomen into today, each from its own last day (`phFndLast`), through
+  the pages' own Same as write, split out of `phFvClick` as `phFvSameDo(name, part, date)` (true when it wrote; the Abdomen branch
+  now says false on a failed save). Only parts not done or skipped today; tiles and side list tick in place; toast "✓ Tongue ·
+  Abdomen as last visit". A failed save keeps its warning. The exam pages' own Same as chip is unchanged.
+- **Not built (told her):** "a changed finding shows in bold" (the report's pick 3 line): each exam page's Since line already shows
+  what changed since the last visit.
+**Tested** (sandbox, made-up "Zz Visit Patient": a 22 Oct visit with tongue + abdomen, a booking yesterday with a draft left
+open, a booking today): opening files 28 Oct (CD 9, better, SP6 ST36 · press Shenmen, the note, the booking linked, at 11:00 that
+day), the draft gone, toast; a tongue checked on 28 Oct joins that visit's row; a draft from 2 days back with no booking stays,
+nothing filed; Start visit (Up next and the booking popup) → Look shows "Same as 22 Oct" (title "Tongue as on 22 Oct · Abdomen as
+on 22 Oct"; Pulse had none) → one tap: both copied for today, 22 Oct moved aside as the pages do, Look 2/4, side list ticks, the
+button goes, the page stays where it was; with 28 Oct's tongue the button reads "Same as last visit"; the Tongue page's own chip
+copies only the tongue; a forced Abdomen save failure leaves "That could not be saved" on screen; 375 px nothing wider than the
+screen; no console errors. The sandbox's red "Prescriptions search may not be filtering" is its own made-up names all starting
+"Zz" (the self-check's 3-letter term matches all four); a real search narrows. Pictures `shots/ts-2026-10-29-{look,same,filed}.png`
+(local). **Not tested:** her real records (her bookings are the stale 95 until the 29 Oct phone-sync repair, so pick 2 has few
+booked days to file until then); two devices filing the same left-open visit at once (the same window as two Done taps).
