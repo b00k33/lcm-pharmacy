@@ -6460,3 +6460,8 @@ Then "build all". Built on session-a, NOT live (waits for "push live").
   Not checked on screen: the Stocktake page's history list showing a grid record.
 - **Mock wording changed while building:** "Weigh" has no trailing "›" (the trailing-arrow ban); the weekly count line hides
   while the 3-week line shows (one Count door); "Add to order" sits in the Inventory row's ⋮ menu, not the drawer.
+
+## 2026-10-29 · Live: build 20261029-152500
+Her "push live" after the inventory pictures: the inventory build (81514da3: stock truth, To order in two steps, lean Inventory,
+Price review in Suppliers) went live, with the build-notes commit a2163c79 riding along. Publish commit 6e3de296;
+https://b00k33.github.io/lcm-pharmacy/ serves 20261029-152500.
