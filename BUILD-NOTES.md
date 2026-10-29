@@ -6243,3 +6243,20 @@ own colours; most controls were 32px).
 - **Integration (★★★):** the batch is the same `h.refillBatch` the row's Make, the week tiles' "short" counts and the short bar
   read (they repaint when it is kept). The bench's own Make × dropdown (`renderRefMultiplier`) is unchanged.
   Not checked: the Key2; her real recipes.
+
+## 2026-10-29 · Inventory usage audit: her picks (nothing built yet)
+- **Her words:** "audit the inventory management part of lcm pharmacy and see what gets used and least used" + "and help improve
+  productivity and efficiency and ui workflow". Report `inventory-usage-audit-2026-10-29.html` (artifact WPt5dRP1QK9CBbfWHm8JqY), read-only
+  from her 27 Oct export; the sandbox seeded with her herbs + stock log, patients anonymised.
+- **Measured, 90 days:** 95 dispenses (89 deduct; deductions only since Aug), 43 arrivals on 4 order days, 4 formula counts, herb count last
+  27 Aug, 12 batches logged vs ~25 made (the counts jump +522 / +260 / +230 g), 0 Mark ordered ever, 0 price reviews ever, Inventory kept
+  with 8 columns hidden. **Finding:** batches are logged by typing the jar's Stock number (`field === "qty"`), which writes `h.qty` only: no
+  log entry, no herb deduction; the app runs made-in-house jars to 0 between counts (Dashboard: 7 EMPTY on the shelf).
+- **Her picks:** batch on the Dashboard row ("Made [g] ✓ · Weigh ›"); the formula count as a weekly 2-minute grid on the Dashboard; some
+  formulas made in house, some bought (the jar's source decides which list); To order in two steps (Copy for email = ordered, On the way
+  folds); the lean Inventory table with a row tap opening the rest; Price review folds into Suppliers; a 6-week herb-count line.
+- **Competence calls (told):** a typed higher Stock number on a made-in-house jar asks "Made N g? Yes · Just a count" (logs + deducts);
+  Urgent stock says "count me" for a jar not counted or made in 3 weeks instead of EMPTY.
+- **Rule findings for build 1:** Dashboard names 15px links, Make ×1 / Order 24px; To order, Inventory, Suppliers names 17px links; Refill
+  "🛒 Order all 3" 20px + emoji, week chips 21px.
+- **Build order:** 1 stock truth + rule fixes · 2 To order two steps · 3 lean Inventory · 4 Admin fold + herb-count line. Push on her word.
