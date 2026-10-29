@@ -6187,3 +6187,34 @@ Her "build it and push" (publish 9e565ac8). Went live: a tap opens the photo (a 
 with), Copy notes bold labels, the viewer's title bar with Kind · Shot · Date (23d57904). Checked on the live page: the stamp, `ph-rv-bar`,
 `phRenViewBarHtml`, `phRenCmpCls`, `phCnHtml`, and the old "Photos can only be compared" toast gone. Pictures:
 shots/photo-viewer-bar-2026-10-29.jpg, shots/photo-viewer-bar-phone-2026-10-29.png, shots/photo-compare-pair-marks-2026-10-29.jpg.
+
+## 2026-10-29 · Patient profile audit: the rule fixes (not live)
+Her 2026-10-29 asks: "audit the patient profiles and see what features i use often, and what features i use the least, and make
+a plan how to improve the features/ui/workflow of features i use the least", then "include an audit of the overall design to
+improve more interactiveness of the patient profile - make a report and suggestions before building". Reports:
+`patient-usage-audit-2026-10-29.html` (her export, 86 active patients) and `patient-interactivity-audit-2026-10-29.html` (23 pages
+on a made-up patient). Her order: "rule fixes first … then a mock of each of your picks, then the new ideas". This build = the
+rule fixes, narrowed after reading the code (Findings rows and Log lines were doors already; the Treatment navy / green are her
+own colours; most controls were 32px).
+- **Today's visit band: the facts are doors** (`phTodayJourneyHtml`'s `door()`; CSS `.ph-tj-door`: 32px, 6px, a pale fill on
+  the crimson): Next visit → Appointments (`data-flow-prof="apptshist"`), Next period → Cycle, Stims / Egg collection /
+  Transfer → Timeline, Formula → Dispense (`data-pres-stage`), "<pattern> likely" → Fang Bing Ren, "<history> flagged" →
+  Medical history. Phone: one scrolling line (the last rule of the PHONE REDESIGN block), not three stacked 32px rows.
+- **Worth a look's buttons** (`.ph-today-nbtn`): 32px, 6px corners (were 26px / 10px; the shared link-button rule
+  `button.ph-today-nbtn[type]:not(.fill)` gave Changed / Add 10px corners, 6px there too now).
+- **Pulse Summary's rate line** (`phPulseRateLineHtml`, in place of the `phPulseNormalRefText` sentence on the page): "Resting
+  rate **78**/min · within | above the range for her age"; nothing until a rate is typed; the full Bilton / Dr Shen sentence is
+  the line's hover.
+- **The rail's "⋯ More" row** (`presFlowMoreOpen`, `data-flow-more`; CSS `.ph-flow-sub.more`): Patterns · Diagnosis and Timeline
+  leave the rail for one folded row after Fang Bing Ren (closed: "⋯ More" with their names small; open: the two items as they
+  were). It opens on a tap, stays open while one of them is the page, closes itself when she leaves, and starts closed for every
+  patient (`presOpenScript`).
+- **Tested** (sandbox, made-up "Zz Audit Patient" at 1220): the three band doors on the seed patient open Cycle, Appointments and
+  Dispense (the IVF, pattern and history doors share those handlers; no such data on the seed patient, so not exercised); all
+  four Worth a look buttons 32px / 6px; the rate line absent with no rate, "78/min · within" after a rate through
+  `phHxConstitPulse`, "95 · above" from the function; ⋯ More closed → open → Patterns · Diagnosis lit → Fang Bing Ren closes it →
+  the tap toggles it; 375: the band's doors one 32px scrolling line, nothing wider than the page; Prescriptions search narrows
+  and comes back; no console errors. Picture: shots/today-visit-rule-fixes-2026-10-29.jpg.
+- **Integration (★★★):** the facts still come from the same reads (`phTodayNextVisitKey`, `phTodayFormula`, `phFbrRank`,
+  `phHxApplicableItems`); only the wrapper changed. Checked for the rail: Today's visit, Fang Bing Ren, Patterns, Timeline (no IVF
+  plan seeded: the More row showed Patterns · Diagnosis alone). Not checked: the Key2; the Timeline doors on a real IVF plan.
