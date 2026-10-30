@@ -7054,3 +7054,46 @@ column as before). Waits for her "push live".
 On her "push" (her answer to pushing both): 63ab51a8 (Today's visit: a Face score tile when the face score is due) and
 4c58d8ad (Ren page: the board folds behind Signs ›, another session's build) went live together in build 20261030-101300;
 checked on the live page.
+
+## 2026-10-30 · Opens without internet
+Her words: "i want it to operate without internet including opening" (after "can lcm app work if not connected to internet?").
+The app already worked offline once open; opening was the problem. Measured on a copy of the app with the cloud cut off
+(supabase-js retries a failed token refresh for ~26 s, postgrest retries a GET for ~8 s, and a failed refresh reports
+INITIAL_SESSION with no session, which with the wifi up led to the sign-in wall):
+
+| How it opens | Before | Now |
+|---|---|---|
+| No internet, signed in within the hour | 7.9 s on "Starting…" | 0.9–1.6 s, in on this device's copy |
+| No internet, signed in longer ago | 26.3 s | 0.9–1.6 s |
+| Wifi but no internet, signed in longer ago | the sign-in wall after 26 s (no password can pass offline) | 0.9–1.6 s |
+| Wifi but no internet, recent sign-in | 7.9 s | 0.9–1.6 s |
+
+**What changed** (all in the sync IIFE, above `function boot()`; sw.js SHELL):
+- `openLocalNow(why)`: in on this device's copy (`goLocalOffline`) when it holds the pharmacy (`localReady`), never another
+  login's copy (`storedEmail()` from the saved sign-in must match the `lcm-data-owner` tag); with the wifi up but no answer, only
+  a device that has synced with this login before (`lcm-sync-base` present).
+- `bootFetch`: the cloud client's own fetch (`createClient(..., { global: { fetch: bootFetch } })`). The first failed request
+  before she is in opens the local copy; any answer sets `netAnswered`; once in on the local copy with the wifi up (no "online"
+  event will come), the first good answer calls `resumeCloud()`.
+- `boot()`: `!navigator.onLine` → `openLocalNow("offline")` at once; no answer for `OPEN_HANG_MS` (10 s) → `openLocalNow("net")`
+  (a slow phone that does answer still boots online as before); getSession's "no session" goes local when `netFail(err)` says
+  the network failed, not only when the browser says offline.
+- `onAuthStateChange`: INITIAL_SESSION with no session is ignored (getSession decides); TOKEN_REFRESHED / SIGNED_IN while in on
+  the local copy → `resumeCloud()`.
+- `afterAuth()`: `openedLocal` (set by `goLocalOffline`) = no "Loading your pharmacy…" cover over her work, and the cloud
+  answering late goes through `resumeCloud()`, **never `go()`**: `go()` sets `lastPushed` to the local data and would mark her
+  offline edits as already sent.
+- The online listener is now the named `resumeCloud()` (same body: reload if no client, record the session, subscribe,
+  `pullMergePush(true)`). `ownerOk()` and every cloud-write gate are untouched.
+- sw.js SHELL adds the sign-in library and the PDF reader (`pdf.min.mjs`, `pdf.worker.min.mjs`), so a new build opens and
+  reads PDFs offline from its first open; the photo-text reader (tesseract, ~15 MB) stays online-only.
+
+**Tested** on a copy of the app with a test script in its head (`mocks/offline-open-harness.html`, local only: `?m=off` no
+network; `?m=lie` wifi up, the cloud unreachable; `?m=late&after=5000` unreachable for 5 s, then a pretend cloud answers;
+nothing reaches the real cloud): all four cases above in 0.9–1.6 s with the offline chip, and no sign-in wall after the
+library's retries end (~26 s); `late` with an expired sign-in: token refresh at ~7.1 s → `resumeCloud` → GET + POST settings,
+no cover, "Saved"; `late` with a fresh sign-in: the GET retry lands at ~7.9 s → POST at 8.6 s; a healthy start makes the same
+calls as the old build; a signed-out device online still shows sign-in; no console errors. sw.js: a fresh install's cache holds
+the 8 shell files + the 3 jsdelivr files (CORS 200), and a reload loads `window.supabase` and `window.pdfjsLib` from the cache.
+**Not tested:** her real devices, the Key2, a real network drop; the other-login refusal in `openLocalNow` (read, not driven).
+Waits for her "push live".

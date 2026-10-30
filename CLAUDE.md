@@ -567,6 +567,15 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   auto-refresh on a stale build, ever; a new build only reveals the gold Update
   button, and `phDoControlledUpdate()` saves, flushes to the cloud, backs up,
   then reloads. Bump BOTH version markers on every push (Deploy & git).
+- **Opening never waits on the cloud when the device holds the pharmacy** (her 2026-10-30 "i want it to operate without
+  internet including opening"). No internet, a failed cloud request, or no answer for `OPEN_HANG_MS` = in on this device's
+  copy (`openLocalNow`, `bootFetch`); a token refresh that failed for want of a network is never "signed out" (INITIAL_SESSION
+  with no session is ignored, `netFail`), so never `screenAuth()` for it. After that early entry the cloud catches up only
+  through `resumeCloud()`, never `go()` (`go()` sets `lastPushed` and would mark her offline edits as already sent;
+  `openedLocal`). Test after any sync or boot change (BUILD-NOTES "Opens without internet"): the harness copy
+  (`mocks/offline-open-harness.html` in the head of an index.html copy) in `?m=off`, `?m=lie` and `?m=late&after=5000`, with
+  an expired and a fresh saved sign-in: in within 2 s, no sign-in wall after 30 s, and `late` reaches GET + POST settings with
+  no cover; a signed-out device online still shows sign-in.
 - **The written-from-the-record summaries never read each other in a circle** (her 2026-10-27 freeze: "Loading your
   pharmacy..." then Chrome's "Page Unresponsive", on her real records only). The booking brief (`phApptBrief`), the Care
   Plan's auto diagnosis and goal (`phTpAutoDx`, `phTpAutoGoal`), the complaints (`phCxItems`, `phCcRibItems`, `phCcAuto`)

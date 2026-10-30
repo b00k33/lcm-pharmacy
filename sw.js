@@ -14,7 +14,13 @@
 // "message" listener below and phDoControlledUpdate's STEP 4.
 var CACHE_VERSION = "lcm-20261030-101300";
 
-var SHELL = ["./", "./index.html", "./manifest.json", "./icons/icon-192-v2.png", "./icons/icon-512-v2.png", "./icons/apple-touch-icon-v2.png", "./icons/favicon-32-v2.png", "./icons/favicon-32-light-v2.png"];
+var SHELL = ["./", "./index.html", "./manifest.json", "./icons/icon-192-v2.png", "./icons/icon-512-v2.png", "./icons/apple-touch-icon-v2.png", "./icons/favicon-32-v2.png", "./icons/favicon-32-light-v2.png",
+  // her 2026-10-30 "i want it to operate without internet including opening": the sign-in library and the PDF reader are kept
+  // with the app, so a new build works offline from its first open (the PDF worker used to arrive only when a PDF was read).
+  // The photo-text reader (tesseract, ~15 MB with its language data) stays online-only.
+  "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2",
+  "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.min.mjs",
+  "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.worker.min.mjs"];
 
 self.addEventListener("install", function (e) {
   e.waitUntil(
