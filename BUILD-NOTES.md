@@ -7096,4 +7096,4 @@ no cover, "Saved"; `late` with a fresh sign-in: the GET retry lands at ~7.9 s â†
 calls as the old build; a signed-out device online still shows sign-in; no console errors. sw.js: a fresh install's cache holds
 the 8 shell files + the 3 jsdelivr files (CORS 200), and a reload loads `window.supabase` and `window.pdfjsLib` from the cache.
 **Not tested:** her real devices, the Key2, a real network drop; the other-login refusal in `openLocalNow` (read, not driven).
-Waits for her "push live".
+LIVE 2026-10-30 on her "push live", build 20261031-005000 (publish commit df01684e).
