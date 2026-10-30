@@ -7184,3 +7184,27 @@ Appointments, Checklist, Usual period, Ren, Diet, Today's visit, Care Plan, Trea
 no console errors; pictures of the Inventory toolbar and the face card. Integration: the face due wording on Checklist and
 the Care Plan strip; "prescription" in the diff (no code name touched) and on the scanned pages.
 **LIVE** 2026-10-31 on her "push live" (popup), build 20261031-093200 (publish commit 7759572e), with Patient details extras.
+
+## Emoji sweep (2026-10-31)
+Her yes in the audit popup ("About 400 emoji are still on screens … Swap them for the app's own icons?" → "Yes, swap them").
+Three commits: fda1bbd7 (part 1, 340), e83c739c (part 2, 76), ffec6568 (part 2b, 5). Scripts kept in the session scratchpad
+(`emo-a.pl` classifier + map, `emo-b.pl` / `emo-c.pl` exact counted replacements).
+**The rule applied:** an emoji in screen markup → its sprite icon, written `<svg class=icn aria-hidden=true><use href=#i-x></use></svg>`
+(no quotes, so it is safe inside any JS string); an emoji in a plain-text spot (toast, flash, hover title, aria-label, dropdown
+option, textContent, a Yes-label, an escaped or joined string) → dropped, its words kept. The map: ⚠ warn, 🌿🌱 leaf, 🏺🫙 jar,
+🩸💧 drop, 📷🖼 camera, ✉📮📨 mail, 📦 parcel, 🧪🔬 pt-vial, 📋 clipboard, 💊 pill, 🛒 cart, 🖨 print, 🥚 egg, 🗑 trash, 🔄🔁
+refresh, 🏠 home, 🧊 pt-snow, 🚗 car, 🔔⏰🕐 clock, 📅 cal, 💗💛🫀🌸 heart, ⚡ bolt, 🪡 needle, 😴🌙 moon, 🔥 pt-flame, 📝🖌 edit,
+📜 scroll, 👅 pt-tongue, 🏷 tag, 📖📘📚🧭 book, 📍📌 pin, 📊📈 chart, 💰💳 coin, 👤👥🧍🦴 user, 🚫 no, 🚚 truck, 🙂😊 face, 🔗 link,
+💬 msg, 📱 mobile, 🔍 search, ✋🧴 skin, ⚙ gear, 🛡🤧 shield, 💪 dumbbell, 📞 phone, 🎯 flag; Settings' Storage heading 💾 → doc.
+No sprite match → dropped (the Eyes · Face · Skin crop buttons go plain together, there is no eye icon).
+`svg.icn` got an unscoped 1em size rule, so an icon on a sheet outside `#pharmacyPage` never draws at 300 × 150.
+**Kept on purpose:** patient messages (code3 seeds, the composer), the letter's own findings and letter templates
+(`phLtrFindingsHtml`, `PH_LTR` built-ins: patient-facing), printed sheets (`refPrintSheet` and every `*DocHtml` / `*PrintHtml`:
+a print window has no sprite), the cycle chart's day marks with their day card and Fertility / Bleeding boxes (the chart's own
+symbols, decoded by its legend), her clinic-move task icons (`PH_RELOC_ICONS`, her picks), stored text (the 📌 prefix on her own
+saved items, dispense stock notes), copy-out text for Cliniko, reference notes, comments; unused fields (`PH_CK_GROUPS.emoji`,
+`PH_SETTINGS_GROUPS` icons, `PH_CAP_TYPE_EMOJI`, now drawn nowhere).
+**Tested** in the sandbox at 1220px: 64 pages (20 tabs + every rail page of the face-palsy and cycle patients): emoji on screen
+0 (one left inside a patient-message mirror, by rule), no sprite icon over 40px, no markup shown as text, no JS errors; the
+Inventory Columns cart icon draws at 13px. **Not tested:** pages the sandbox has no data for (stock order status, the phone
+capture sheet's context lines, prep-check steps, the timeline's Short chip); each is drawn raw, read in the code.

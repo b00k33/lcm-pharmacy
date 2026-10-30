@@ -370,7 +370,9 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   bottle label text and its template, and copy-paste text or template tokens (monospace). Fitness joined too (her
   "Inter there too", same day): `--font-c22` is an alias of `--font-body`, Manrope is no longer loaded. LIVE 10/27, build 20261027-154200.
 - **Icons:** one family, the app's own sprite (`<svg><use href="#i-...">`) —
-  never emoji, never a second icon set.
+  never emoji, never a second icon set. Swept 2026-10-31 (BUILD-NOTES "Emoji sweep"): emoji stay only in patient
+  messages and letters, printed sheets (a print window has no sprite), the cycle chart's day marks and her clinic-move
+  task icons. Inside a JS string write `<svg class=icn aria-hidden=true><use href=#i-x></use></svg>` (no quotes).
 
 ## Fit the screen
 - Check every screen at desktop (1280px) and phone (~360-375px) width:
