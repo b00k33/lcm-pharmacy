@@ -142016,7 +142016,8 @@ Dosage: {dosage}
   };
   function afterAuth() {
     // Cloud is the source of truth. If it has data, adopt it; else offer first import.
-    overlay('<p style="color:#BCCFD6;font-size:var(--fs-14);margin:12px 0">Loading your pharmacy…</p>');
+    // (already let in on this device's copy, the cloud slow or away: no cover over her work)
+    if (!(openedLocal && ready)) overlay('<p style="color:#BCCFD6;font-size:var(--fs-14);margin:12px 0">Loading your pharmacy…</p>');
     // Pin down WHOSE row this is before reading it (see OWNER_KEY). Local data
     // already tagged for a DIFFERENT login is another location's pharmacy
     // sitting in this browser -- it must never be merged into, or pushed to,
@@ -142030,6 +142031,9 @@ Dosage: {dosage}
       }
       return fetchCloud();
     }).then(function (row) {
+      // she was let in on this device's copy while the cloud was away: the cloud answered after all, so catch up the way
+      // reconnecting does (if that has not run already); go() here would mark her offline edits as already sent
+      if (openedLocal && ready) { if (offlineMode) resumeCloud(); setTimeout(function () { othRead(true); }, 2500); return; }
       if (row && row.data && (row.data[PH_KEY] || row.data[PR_KEY])) {
         var localHas = !!localStorage.getItem(PH_KEY);
         if (localHas && sessionStorage.getItem(APPLIED) === row.updated_at) { go(); return; }
@@ -142069,8 +142073,9 @@ Dosage: {dosage}
   // local copy instead of the old dead-end error wall. No network calls, no
   // base overwrite (same only-seed-if-missing rule as go()); the reconnect
   // listener below runs the ordinary pull-merge-push when signal returns.
+  var openedLocal = false;   // she is in on this device's copy before the cloud answered (afterAuth then never covers or re-boots)
   function goLocalOffline() {
-    offlineMode = true; ready = true;
+    offlineMode = true; ready = true; openedLocal = true;
     if (!localStorage.getItem(BASE_KEY)) setBaseFrom(sectionsFrom(localSnapshotObj()));
     hideOverlay(); badge(); renderSwitcher(); renderSavedAt(); setLive(false);
   }
@@ -142090,6 +142095,37 @@ Dosage: {dosage}
     setTimeout(function () { othRead(true); }, 2500);   // the other clinic's bookings (BOTH CLINICS ON ONE CALENDAR)
   }
 
+  // her 2026-10-30 "i want it to operate without internet including opening": opening never waits on the cloud when this
+  // device holds the pharmacy. Measured before: no internet = 8 s on "Starting…" (signed in within the hour) or 26 s
+  // (later: the sign-in library retries its token refresh for ~26 s), and wifi with no internet ended on the sign-in wall
+  // after 26 s, which no password can pass offline. Now: no internet = straight in; a cloud request that fails, or no
+  // answer at all for OPEN_HANG_MS, = in on the local copy at once; the cloud catches up behind her when it answers.
+  var OPEN_HANG_MS = 10000, netAnswered = false;
+  function localReady() { try { return !!localStorage.getItem(PH_KEY); } catch (e) { return false; } }
+  function storedEmail() {
+    try { var k = sb && sb.auth && sb.auth.storageKey, o = k && JSON.parse(localStorage.getItem(k)); return (o && o.user && o.user.email) || ""; } catch (e) { return ""; }
+  }
+  // a sign-in check that failed because the network did, not a real "signed out"
+  function netFail(err) { return !!err && (err.name === "AuthRetryableFetchError" || err.status === 0 || /fetch|network/i.test(err.message || "")); }
+  // in on this device's copy: never another login's data (the owner tag must fit the saved sign-in); with a network that is
+  // up but not answering, only a device that has synced with this login before (it has a base, so the cloud row exists)
+  function openLocalNow(why) {
+    if (ready || switching || !localReady()) return;
+    var em = storedEmail(), own = dataOwner();
+    if (em && own && em !== own) return;
+    if (why !== "offline" && !(em && localStorage.getItem(BASE_KEY))) return;
+    goLocalOffline();
+  }
+  // the cloud client's own fetch: the first request that fails before she is in opens the local copy instead of waiting
+  // out the library's retries; any answer at all (even a slow one) means the line works, so a slow phone still boots online.
+  // Once in on the local copy with the wifi up (no "online" event will come), the first good answer from the cloud catches up.
+  function bootFetch() {
+    return fetch.apply(window, arguments).then(function (res) {
+      netAnswered = true;
+      if (ready && offlineMode && navigator.onLine && res && res.ok) setTimeout(function () { if (offlineMode) resumeCloud(); }, 0);
+      return res;
+    }, function (err) { if (!ready) openLocalNow("net"); throw err; });
+  }
   function boot() {
     var cfg = loadCfg();
     if (!cfg || !cfg.url || !cfg.key) { screenConfig(); return; }
@@ -142100,19 +142136,24 @@ Dosage: {dosage}
       if (localStorage.getItem(PH_KEY)) { sb = null; goLocalOffline(); return; }
       return screenConfig("Couldn't load the sync service — connect to the internet once, then try again.");
     }
-    try { sb = window.supabase.createClient(cfg.url, cfg.key, { auth: { persistSession: true, autoRefreshToken: true } }); }
+    try { sb = window.supabase.createClient(cfg.url, cfg.key, { auth: { persistSession: true, autoRefreshToken: true }, global: { fetch: bootFetch } }); }
     catch (e) { return screenConfig("That URL/key didn't work — check them."); }
+    if (!navigator.onLine) openLocalNow("offline");
+    setTimeout(function () { if (!netAnswered) openLocalNow("net"); }, OPEN_HANG_MS);
     sb.auth.getSession().then(function (r) {
       var s = r && r.data && r.data.session; if (s) curAccessToken = s.access_token || curAccessToken;
       if (s) afterAuth();
-      // no session + offline + local data: let her in rather than an
-      // unanswerable login wall (passwords can't be checked offline)
-      else if (!navigator.onLine && localStorage.getItem(PH_KEY)) goLocalOffline();
+      // no session + no network (offline, or the refresh failed for want of one) + local data: let her in rather than an
+      // unanswerable login wall (passwords can't be checked offline); already in = stay in
+      else if (localReady() && (!navigator.onLine || netFail(r && r.error))) { if (!ready) goLocalOffline(); }
       else screenAuth();
     });
     sb.auth.onAuthStateChange(function (_e, s) {
       if (!s) {
         if (!switching) {
+          // the first report, made before the network has answered: boot's getSession above decides (a failed refresh
+          // reports "no session" here even though she is still signed in)
+          if (_e === "INITIAL_SESSION") return;
           // a token refresh failing OFFLINE is not a sign-out -- stay in,
           // flagged offline; the reconnect path re-checks properly
           if (!navigator.onLine && localStorage.getItem(PH_KEY)) { offlineMode = true; renderSavedAt(); setLive(false); return; }
@@ -142131,6 +142172,11 @@ Dosage: {dosage}
       // (only once this tab is fully booted -- before that, afterAuth's own
       // owner check handles a mismatch by starting clean from the row)
       if (ready && !switching && nowEmail && ((prevEmail && nowEmail !== prevEmail) || (dataOwner() && dataOwner() !== nowEmail))) { ownerLockdown(nowEmail); return; }
+      // the sign-in came back after she was let in on this device's copy (the refresh had failed offline): catch up now
+      if ((_e === "TOKEN_REFRESHED" || _e === "SIGNED_IN") && ready && !switching && navigator.onLine && (offlineMode || !prevEmail)) {
+        if (!offlineMode) recordSession();
+        resumeCloud(); return;
+      }
       if (_e === "TOKEN_REFRESHED" || _e === "SIGNED_IN") recordSession();
     });
   }
@@ -142138,7 +142184,8 @@ Dosage: {dosage}
   // and coming back online runs the ordinary pull-merge-push -- the same
   // catch-up every boot already does, nothing bespoke
   window.addEventListener("offline", function () { renderSavedAt(); setLive(false); });
-  window.addEventListener("online", function () {
+  window.addEventListener("online", resumeCloud);
+  function resumeCloud() {
     if (!sb) { location.reload(); return; }     // booted without the sync lib
     var wasOffline = offlineMode;
     offlineMode = false;
@@ -142149,7 +142196,7 @@ Dosage: {dosage}
       function () { syncingNow = false; renderSavedAt(); },
       function () { syncingNow = false; renderSavedAt(); }
     );
-  });
+  }
 
   // cover the app immediately, then start
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();

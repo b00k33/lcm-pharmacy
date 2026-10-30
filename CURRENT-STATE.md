@@ -19,6 +19,15 @@ Every day + Every week open, in her "Grouped by rhythm" order; **Records · Refe
 minimises); one bottom row: the clinic pill + a gear for Settings (the drawer: "Settings" with its word). Code: `phSbFoldsPaint`,
 `phSbFind`, `phSbNavFit` above `renderPhShellNav`.
 
+## Opening & the cloud (no internet)
+Her word: "i want it to operate without internet including opening" [Opens without internet]. A device that holds the
+pharmacy opens on its own copy whenever the cloud is away: no internet at once, a failed cloud request at once, no answer
+within 10 s (`OPEN_HANG_MS`) then; never the sign-in wall for a sign-in that only failed to refresh. Never another login's copy
+(the saved sign-in must match `lcm-data-owner`). The chip reads "📴 offline — saving locally"; when the cloud answers (the
+"online" event, a refreshed sign-in, or the first good reply) `resumeCloud()` pulls, merges and pushes behind her with no cover.
+The service worker keeps the app, the sign-in library and the PDF reader, so a new build works offline from its first open; the
+photo-text reader stays online-only. Code: `openLocalNow`, `bootFetch`, `netFail`, `openedLocal`, `resumeCloud` above `boot()`.
+
 ## Appointments & calendar
 The app opens here. It mirrors Cliniko's day view: solid blocks coloured from `PH_CLINIKO_TYPE_COLOURS` (her Settings →
 Appointment types, 21 types read live; words white or dark, whichever measures higher, `phCkInkByContrast`, her yes), a time
