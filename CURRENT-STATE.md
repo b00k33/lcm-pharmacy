@@ -578,12 +578,16 @@ hover), short condition names (2 then +N), one 18px pill look, 44px rows. Her 9/
 round buttons. The phone keeps its chips and Scheduled line.
 
 ## Patient details & the patient file
-**Patient details** (`phPdPageHtml`) = a hero + 3 cards (her pick), every control 32px Zanda-style (6px boxes, joined 6px bars,
-white value boxes, the send-the-form circle): tap to edit in place, age from DOB, BMI bar, a filled-in ring (n of 11), Call / Text
-/ Email chips, a Rebate bar None / Low / Good / 50%+ [Patient details = hero + 3 cards]. A returning patient's Sex / DOB / Phone /
+**Patient details** (`phPdPageHtml`) = a hero + 2 cards, Contact and Body (her 2026-10-30 pick; 3 cards from 2026-10-19), every
+control 32px Zanda-style (6px boxes, joined 6px bars, white value boxes, the send-the-form circle): tap to edit in place, age from
+DOB, BMI bar, a filled-in ring (n of 7: name, sex, DOB, phone, email, height, weight), Call / Text / Email chips [Patient details =
+hero + 2 cards]. **The extras live where they are read** (`phPdOnFileHtml`; BUILD-NOTES "Patient details extras"): the partner
+on IVF history's head, the addresses in a booking's Delivery step (Save to her file · ✎ · ×), the health fund and rebate in
+Compose's rebate list (the old note in the fund cell's hover); the page shows one grey **On file** line under the cards only
+when one is stored, each part a door to where it is kept. A returning patient's Sex / DOB / Phone /
 Email turn amber once changed this visit. **Came in for** shows on Today's visit; the complaint priority ribbon sits on every
 patient page. **Profile search** (header band) searches the whole file (nothing saved; free-text history notes not searched). A
-patient can be linked to their partner [Partner link]. The no-plan gate has "Skip for now" (in memory only). The read-only
+patient can be linked to their partner from IVF history's head, a man from his Men's fertility timeline [Partner link]. The no-plan gate has "Skip for now" (in memory only). The read-only
 **Patient Directory** unions six sources keyed by `phPatientKey`. "Profile-first" is history: the Patient Workflow LAW replaced
 it.
 **No band on patient pages (her pick):** no dark three-gauge band on Medical history, Supplements, Photos, IVF history,
@@ -1176,7 +1180,9 @@ and her Fang Bing Ren answers); "Copy message" copies the message only [The Mess
 change (manual or cycle/IVF cascade), evaluated at render time; a session-only map (plan + phase + `sinceKey`) stops repeats. "My
 Cycle — gone quiet" lives on Communications' **Due** tab, never the Dashboard. The Check-in panel is its own composer. The
 All-templates hub holds message templates, letters and the plan template manager. Message dates carry no year; `{{nextAppt}}`
-reads the date in her words.
+reads the date in her words. Compose's **Private health rebates** list (her 2026-10-30 pick) is where a patient's fund and
+None / Low / Good / 50%+ level are set: every active patient a row, good rebates first, a Find a patient box; "+ Add everyone
+with good rebates (N)" reads it. BUILD-NOTES "Patient details extras".
 
 ## Visit logging & findings charts
 **Today's visit** opens with the **complaint compass** (`phCxCardHtml`), the one "how have things been" table [Today's visit = the

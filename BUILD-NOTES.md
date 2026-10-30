@@ -7098,6 +7098,46 @@ the 8 shell files + the 3 jsdelivr files (CORS 200), and a reload loads `window.
 **Not tested:** her real devices, the Key2, a real network drop; the other-login refusal in `openLocalNow` (read, not driven).
 LIVE 2026-10-30 on her "push live", build 20261031-005000 (publish commit df01684e).
 
+
+## Patient details extras: they live where they are read (2026-10-30, her pick 17 of the 2026-10-29 patient-profile audit)
+Her 2026-10-29 export measured Patient details' three extras against 670 patients: addresses on 2, a partner on 1, insurance
+on 3 (notes on 3). They cost two card rows and a whole card on every file, and the ring counted them (n of 11) against patients
+who never need them. Mock `details-extras-mock-2026-10-30.html` (before · after · A where they are read · B folded on the page);
+her picks in two rounds: **A**, the "On file" line yes, ring of **seven**, the Cover note into the fund cell's hover; addresses
+editable and removable in the Delivery step too, the partner picker in IVF history only, Compose's list = every active patient.
+- **Patient details** (`phPdPageHtml`): Contact loses the Addresses panel and the Partner row, the Cover card goes, the grid
+  stops at two columns (the 940px `@container` rule out). `phPdFilled` = seven marks (name, sex, DOB, phone, email, height,
+  weight). New `phPdOnFileHtml(t, name, key)`: one grey line under the cards, only when something is stored —
+  **Partner** <name> (door: `data-flow-prof="ivf"` for a woman, `data-flow-go="timeline"` otherwise) · **N address(es)**
+  <Default's label, suburb> (door: `data-pd-sched="<t.id>"`: the Scheduled dispenses widget sits behind the
+  open file, so the door leaves the file as the Compose and trip doors do, then `schedOpenForm(t.id)`) · **<Fund>** <level> rebate (door:
+  `data-pd-compose="<name>"`, the stored note in its hover). Nothing when none. CSS `.ph-pd-onfile`, `.ph-pd-of` (32px doors).
+  The legacy two-column page (formulas / no id) is unchanged.
+- **Booking form, 3 · Delivery** (`schedFormHtml`): no saved cards → the typed Postal address gets a **Save to her/his/their
+  file** chip (`data-sched-addr-save`, `phPatientSaveAddress`, then the new card is the pick); saved cards each carry ✎ and ×
+  (`.ph-addr-cardw` wraps the card button + `.ph-addr-card-acts`, 32px buttons): ✎ swaps the card for an edit row
+  (`#schedAddrEditLbl/Txt`, `data-sched-addr-edit-save/-cancel`, state `schedAddrEditId`), × asks in `#schedAddrDelZone`
+  (`phConfirmStrip`, `data-sched-addr-del-yes`; the Default passes to the next card). All keyed to `schedFormPatientName()`
+  (the preset prescription's patient, else step 1's pick) — never `presOpenId`, which the generic form may not match. Each
+  handler captures `schedReadFormDraft()` first so her typed fields survive the repaint. A typed address still saves itself
+  with the booking as before.
+- **IVF history head** (`phIvfHistoryFoldHtml`): `phPtnRowHtml(name)` sits above the fold button (after the quick bar);
+  CSS `.ph-ivf-fold > .ph-ptn-row` makes it one 32px line. Same picker, same `data-ptn-*` handlers, `phPtnRepaint`
+  repaints it in place. A man's link is still made from his Men's fertility timeline (ctx "tl"), or from her side (symmetric).
+- **Compose** (`phMsgComposeHtml`): under the To chips, **Private health rebates ▸/▾** (`data-ph-msg-reb-toggle`, state
+  `phMsgRebOpen`) opens `phMsgRebListHtml()`: a Find a patient box (`#phMsgRebQ`, filters rows in place, text kept in
+  `phMsgRebQ`), then every roster patient (`phMsgAllPatientNames()` minus doNotContact) as a row = name · fund
+  (`data-ph-ins-fund`, the stored note in its hover) · None / Low / Good / 50%+ bar (`data-pd-ins` / `data-pd-rebate`, the
+  Patient details handler, which now also keeps the row's level class). Good and 50%+ rows first. "+ Add everyone with good
+  rebates (N)" stays. The "On file" door arrives here with the list open and the box pre-filled with that patient.
+- The old `.ph-pd` address/partner repaint guard in the rebate click handler is gone with the fields.
+**Tested** on the seed patient (sandbox, 1440 and 375, headless pictures `shots/details-extras-build-*.png`): ring 5/7; the On
+file line with its three doors; Delivery step: ✎ edit saves text + label, × asks then removes (Default passes on), both removed
+→ input + chip, chip saves and picks the new card; IVF head: Unlink → + Partner → picker → "Use … · not a patient" links, all
+in place; Compose: door lands on the list filtered to the patient, 50%+ tap stores `high` and recolours the row, fund change
+stores, clear filter shows all, fold hides the list; Prescriptions search 1 hit for "Zz Audit"; no console errors.
+**Not tested:** her real roster size in the list (the sandbox has one patient), the Key2.
+
 ## Consistency audit (2026-10-30)
 Her words: "audit the whole app for ui design consistencies e.g. button font terse language etc make the app better". Audit
 = apply (TAPPABLE THINGS): measured, every finding fixed in one pass, no question needed (each fix is a standing rule). Commit
