@@ -7282,3 +7282,48 @@ the page's facts, so dropping the repeat is her call.
 **Tested:** the scan before and after (above); 360px: no sideways scroll on 8 pages (Fang Bing Ren, Treatment, Energy & sleep,
 Today, Care Plan, Ask her, Checklist, MSK); no console errors. **Not tested:** the Dispense page (no herbs on the sandbox
 patients), the Key2 at 360 × 469.
+
+## 2026-10-31 — Edit where you read: Diagnosis / Goal are fields on the Treatment strip, the phase cells look like fields, the band's phase is a chip
+Idea 3 of her 2026-10-29 patient-profile audit ("Treatment Goal 'Edit on Care Plan' · Care Plan 'What this phase is for…' · the
+band's phase and visit number. The value itself is the field, in place, like Patient details."). Measured on her 27 Oct export
+first: 670 patients, goalHers 3 of 103 plans, dxHers 4, every Aim still the template's words. Mock `edit-in-place-mock-2026-10-31.html`
+(before pictures `ia/eip-before-*.png`); her two rounds of picks, all the recommended option: fields = Goal and Diagnosis; Aim a
+field in both places (drawer and Care Plan); the band's phase a chip with a menu; saving on Enter / tap away with ✓ saved; the
+template's words come back through a quiet chip by the field; moving a phase from the band works the same as Current ▾; the
+visit count stays a count; the Care Plan's ✎ editor stays.
+**Treatment strip** (`phTsDxStripHtml`): Diagnosis and Goal are 32px white fields (`input.ph-ts-in`, `data-ts-fg`), the label beside
+each; `phTsStripCommit` on change (Enter and Escape handled on keydown; Escape restores `defaultValue`) writes through the one
+Diagnosis / Goal door **`phTpFgWritePlan(name, plan, field, v)`** (new: the Care Plan's `phTpFgCommit` plan branch now calls it
+too): different words → hers (`dxHers` / `goalHers`), the auto wording or an emptied field → back to auto; `phTpAutoBust`;
+`savePharmacy() === false` → the one toast. Hers ⇄ auto repaints the strip in place (`phTsStripRepaint`), hers → hers shows
+"✓ saved" for a second (`.ph-ts-ok`, `phPdTick`, none under reduced motion). While her words differ a chip under / beside the field
+puts the auto wording back: **"Patterns’ words"** (Diagnosis) / **"Template’s words"** (Goal; the Care Plan editor's back
+button and the drawer Aim's `data-tp-fauto` say the same, the other fields keep "↺ back to auto"). "Edit on Care Plan" is gone;
+**Patterns ›** stays as the door.
+**Phase cells** look like fields: the Treatment drawer's Aim (`.ph-tx-l2.aim .ph-tp-cell[data-tp-edit]`), the Care Plan's open
+phase row (`.ph-tpg-ctx-inner .val[data-tp-edit]`: Aim · Points · Formula · Watch) and any `.ph-tp-grid .ph-tp-cell[data-tp-edit]`:
+32px, white, 1px line, 6px corners, the placeholder upright and faint inside; `.editing` drops the padding so the same
+`phTpCellEditOpen` textarea fills the box. Frozen (done-phase) cells have no `data-tp-edit` and still read as words.
+**The band's phase chip** (`.ph-band-ph` in `presBandSubText`, only when the plan has 2+ phases): a tap opens a fixed menu under
+it (`phBandPhaseMenuHtml`, `.ph-band-phmenu`): every phase, the live one marked with "since d Mon · n visits", the one after it
+"next", done ones "done"; a tap makes that phase Current with the phase line's own write (`phTpPhaseStatusData` → earlier phases
+done with today's `doneKey`, later ones upcoming, `sinceKey` today) and `renderPresPanel()`; **+ Add a phase** sets `phTpAddPhase`,
+opens the Care Plan (`presStage = "plan"`, `presTpMainTab = "plan"`, `phCcSeedOpen`) and scrolls the picker into view. Closes on
+any other tap or a scroll.
+**Found and fixed on the way:** the Care Plan page's own ⋯ "+ Add phase" set `phTpAddPhase` and rerendered, but nothing on that
+page drew `phTpAddPhaseHtml` (only the Notes tab and the old full-screen window did), so the picker never showed. It now renders at
+the top of `.ph-tp-cc-course`, above the Session ladder. Blank phase adds a phase; ✕ closes it.
+**Tested** in the sandbox (`_ia-test.html`, Zz Audit Patient): type → `goalHers` set, chip appears, ✓ saved on a second edit, Escape
+restores, the chip and an emptied field both go back to auto, the exact auto words stay auto; the Care Plan's ✎ Edit goal saves
+two lines through the same door and the strip shows them with the chip; Patterns’ words from the Care Plan card; the band chip
+32px, its menu (3 rows, 32px each), move → statuses and keys right, the reopened menu marks the new phase, + Add a phase → the
+picker on the Care Plan, Blank phase → 3 phases; the drawer Aim editor still opens and saves; Care Plan cells 32 / 50 / 70px white
+boxes; 375px: fields 32px, 16px text, the menu inside the screen (147–367), no sideways scroll (`scrollWidth` 375 = window);
+Prescriptions search "Zz Audit" 1 → 1 → 1; no console errors. Pictures `shots/eip-build-*.png`.
+**Not tested:** blur-commit in a hidden tab (the trap: `blur()` does not fire there; Enter and change were driven instead), the
+Key2 at 360 × 469, a plan whose Goal comes from a booking's typed brief (the strip shows the plan-level value either way; the
+Care Plan editor keeps its booking branch).
+**Pages checked for the fact:** Diagnosis / Goal on the Treatment strip, the Care Plan card and its editor (same door, same
+chips); the booking brief and Today's visit journey line read `phTpAutoDx` / `phTpAutoGoal` unchanged. The live phase on the band,
+the Treatment session line (Current ▾), the Care Plan ladder and Today's visit journey line all repaint from the band's move
+(full `renderPresPanel`).
