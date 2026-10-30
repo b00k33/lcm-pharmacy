@@ -978,18 +978,38 @@ Her work trips live in LCM; Nanjing is the first. Data in her Me row, entry by e
 `d.tnotes` day notes). Trip to-dos = Me to-dos with `trip` + `g` (area) + `due` (days before she flies), day worked out on read
 (`phTripTdDay`). Passport and policy numbers sync, hidden until Show numbers.
 - **Her file**: a step per trip in her Life group, ONE joined tab bar: Prepare (six area tiles + the to-do table; while away
-  "Today": day n, the hotel in Chinese + Driver card, today's plan, the day the clinic opens again) · Travel (flights, each end in
-  its own clock; hotel; getting around) · Docs · Plan (a chip per day, rows, a note, photos) · Clinic (trip-day bookings with Move =
+  "Today": day n, a gold-ringed **Next / Then** card (the next travel strip or session, its venue in Chinese and that venue's
+  solid Driver card), the rest of the day in time order, the hotel in Chinese + Driver card, the day the clinic opens again) ·
+  Travel (flights, each end in its own clock; hotel; getting around) · Docs · **Plan = the trip's program** (her 2026-10-30
+  picks, `trip-program-full-mock-2026-10-30.html`): desktop = a week bar (Mon–Sun weeks of the trip's days) + one solid Add + a
+  **week grid** (rows: breakfast = her own Me meal, a tap opens its card · travel to the first session · Morning · travel between
+  venues · Afternoon · back to the hotel · Evening = hers; a full day spans Morning to Afternoon; flights as strips; an empty
+  Morning / Afternoon / Evening cell adds into that part of the day). A **card** = its kind's stripe and tag (Observe · Lecture ·
+  Conference · Ceremony · Site visit · Case review · Mine, `PH_TRIP_KINDS`), the program notes that apply as icons, teacher + 中文,
+  time, venue. Travel strips are worked out on read from the venue (how + minutes from the hotel, `phTripLegs`): in the grid the
+  icon says the way and the word sits in the hover. A tap opens the session under the grid (kind, day, times, What, Teacher +
+  中文 or Where + 中文 for hers, Venue + 中文 + Driver card, Getting there, its notes, a note, its own photos); a day heading
+  opens the day (Add to day n, the day note, photos). Two folds under it: **Venues** (the hotel, then each venue: name, 中文,
+  Walk / Shuttle bus / Taxi / Metro + minutes, sessions, Driver card) and **Program notes** (a note On a kind or a venue, the
+  sessions it reaches; the Pack line with Prepare · Pack · n). Phone ≤640 = day chips + the day in time order, the session
+  opening in place, the folds stacked. Trip data: `venues`, `rules` on the trip; a plan row carries `k`, `sl` (am · pm · full ·
+  eve), `who` / `whoz`, `v`, `e`, `note` (`PH_TRIP_PLAN_KEYS`) · Clinic (trip-day bookings with Move =
   the booking's own Edit; herbs running out while away with Dispense; fertility Timeline items opening or closing on a trip day with
   Open; "Message the N booked patients" into the one composer) · Guide (Nanjing only). A phone during a trip opens on its Today a
   moment after load (only while still on Appointments with nothing open).
 - **Calendar**: one band across the trip's days in the row above (day n of N, a red count of bookings, a tap opens the trip); trip
-  days striped in its colour; "<city> time" on the days after she flies; flights and plan rows as her items (card: Open the trip);
-  trip to-dos as tick chips on their due day; a red Away tag + red edge on a booking on a trip day.
+  days striped in its colour; "<city> time" on the days after she flies; flights as her items (card: Open the trip); program
+  rows in their kind's colour (hers in the trip's), over their part of the day when they have no times, the card naming the kind
+  and the venue + 中文 with Plan opening that session; trip to-dos as tick chips on their due day; a red Away tag + red edge on
+  a booking on a trip day.
+- **The night before** (Settings · this device, "Trip program, the night before"): at 8 pm in the trip's city, while LCM is open
+  on the phone (even in the background), one notification for the next day's first session (venue + 中文, when to leave, its
+  notes) and one for a shuttle bus between venues; a tap opens that session on Plan (sw.js `TRIP_OPEN` / `#trip=`). Once per day
+  (`daybook-ph-trip-ntf-sent`).
 - **Me drawer**: Trips; trip to-dos tagged with the city ("by <day>", a tap opens the trip); the one-time Bring in from the old
   Nanjing app (IndexedDB `book33-nanjing`, read only; the c5-nanjing app is set aside, untouched). **+ then Me**: Trip (Name, From,
   To, City, a time zone filled from the city, Colour). Photos in her record's photo store (kind "other" + `trip` + `tday` /
-  `tpart`), the one viewer opens them.
+  `tpart` / `tses` for one session; all four ride in backups, `PH_REN_BACKUP_FIELDS`), the one viewer opens them.
 - **A trip pauses her routines**, by itself, from her flight out until she lands home (no flight = the trip's whole days). Meals and
   a routine ticked **Keep on trips** (`kt`, in its Edit) keep going; one-offs, birthdays, her herb doses untouched. `phMeOccurs`
   (the one read) = `phMeOccursRaw` minus `phMeTripPauses`, so grid, meals, drawer, This week, Habits and Health follow it.
