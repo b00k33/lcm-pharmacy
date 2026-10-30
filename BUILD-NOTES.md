@@ -7181,3 +7181,4 @@ buttons read the shared base).
 Appointments, Checklist, Usual period, Ren, Diet, Today's visit, Care Plan, Treatment); Prescriptions search 2 → 1 → 0 → 2;
 no console errors; pictures of the Inventory toolbar and the face card. Integration: the face due wording on Checklist and
 the Care Plan strip; "prescription" in the diff (no code name touched) and on the scanned pages.
+**LIVE** 2026-10-31 on her "push live" (popup), build 20261031-093200 (publish commit 7759572e), with Patient details extras.
