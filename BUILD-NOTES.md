@@ -7097,3 +7097,47 @@ calls as the old build; a signed-out device online still shows sign-in; no conso
 the 8 shell files + the 3 jsdelivr files (CORS 200), and a reload loads `window.supabase` and `window.pdfjsLib` from the cache.
 **Not tested:** her real devices, the Key2, a real network drop; the other-login refusal in `openLocalNow` (read, not driven).
 LIVE 2026-10-30 on her "push live", build 20261031-005000 (publish commit df01684e).
+
+## Consistency audit (2026-10-30)
+Her words: "audit the whole app for ui design consistencies e.g. button font terse language etc make the app better". Audit
+= apply (TAPPABLE THINGS): measured, every finding fixed in one pass, no question needed (each fix is a standing rule). Commit
+7f5da295; CSS in one dated block, "Consistency audit (her 2026-10-30 ...)", at the end of the main `<style>`.
+**Measured** in the sandbox at her 1220px: 64 pages (20 tabs + every rail page of a face-palsy and a cycle patient), 5,969
+tappables, each read for height, corners, font size, font, line, fill and underline. **Off-rule: 257 before, 0 after**
+(293 → 84 counting what her rules keep, below). One font everywhere already (Inter).
+**Shapes:**
+- The shared Save / Cancel / Add base (`#pharmacyPage .btn-save, .btn-cancel, .add-btn`, 2026-08-11) was still a 44px pill
+  from before the 32px rule: now the Button, 32px, 6px corners, 13px; with it its pill or 12px overrides (`.ph-build-add`,
+  `.ph-tmpl-actions`, `.ph-cyc-pop .acts`, `.ph-merge-pair`, `.ph-pres-actionbar` main + Cancel at 10px). The face score's
+  Save today's score (a 44px pill) follows.
+- Bare words that tapped are shapes now: the footer link (a chip on the dark band), Refill's empty-state button, Inventory's
+  Made in house · Used by HH (chips) and Select · Stocktake · Export CSV (Buttons), the Stats head, Usual period's Nothing
+  unusual (it fills every row: a Button), the formula / pain-map doors (`.ph-fp-copybtn`, `-protobtn`, `.ph-pm-pickbtn`,
+  `-doorbtn`: Buttons). No underline on Stats' open tab, the Care Plan phase bar or a hub-table name.
+- Corners 6px: Inventory's chips under 900px (were pills), `.ph-pfw-chip`, the complaint score dropdown, the paste pill, the
+  Ren page's Areas dropdown (the field rule's pill is `!important`, so `#pharmacyPage#pharmacyPage` + `!important`).
+- An icon alone = a 32px circle: Appointments ‹ ›, the cycle's ‹ › ✕, a check tile's ⋯, the water −.
+- 13px on every chip, dropdown and Button: Find the Ren ▾ (was 12px capitals, now normal case), the Quick assess head (was the
+  browser's 13.3px), both kind dropdowns (Inventory, Log), the Journey doors, + Pain / + Ask her, the pulse layer chips,
+  Treatment's log and door buttons, Not sure, check chips, the appointment-history chips.
+**Words (Terse, "prescription" never "script"):**
+- 53 on-screen "script" words on 51 lines became "prescription" (counts, Stats columns, hover titles, empty states, the
+  unlogged guard, the tablet bar, the directory); code names (`scripts`, `r.script`, `noscript`, `data-…-newscript`) unchanged.
+  The footer reads "n prescriptions dispensed"; "Short prescription · one contact".
+- Empty and due lines cut to the fact: Log "No matches" / "No movements yet"; the face score bar "No score yet · baseline" or
+  "n visits since <date> · Due now" / "next at 4", the Care Plan face strip the same; Cycle "No period logged"; Fitness "None
+  picked"; Photos compare "n of 2 picked". Bell's phenomenon's explaining note moved into its label's hover.
+**Icons:** emoji in controls became the sprite: 🌿 in the acupuncture formula dropdown and the Care Plan formula chips (6) →
+`#i-leaf`, ✨ Nothing unusual → `#i-check`, 🙂 the checklist lead → `#i-face`; 💾 Save draft and 📚 Pick a letter lost theirs.
+**Kept by her rules (not counted):** rows (Medical history questions, Log rows, the Care Plan's fold rows, Today's tiles),
+menus (sidebar, patient rail and its sub rows, ⋯ More, Settings), joined-bar segments (Yes · No · N/S), table cells and `.sm`
+chips (the appointment-history Fills dropdown fills its cell), the Session grid (LOCKED), Quick assess's bars (a chart), the
+message composer's group rows, the IVF fold head, one-character amount chips.
+**Not done:** the rest of the emoji (~400 on screens: ⚠ 161, 🌿 37, 🏺 20, 📷 16 …; the code3 emoji in patient messages are
+hers and stay), offered to her as its own pass; the face exam's per-movement instructions (her exam spec); the `.tab-link`
+plain-text base (none showed on the 64 pages); the Dispense page was not measured (the sandbox patients carry no herbs; its
+buttons read the shared base).
+**Tested:** the scan before and after (above); phone 360px: no sideways scroll on 12 pages (Inventory, Log, Dashboard, Stats,
+Appointments, Checklist, Usual period, Ren, Diet, Today's visit, Care Plan, Treatment); Prescriptions search 2 → 1 → 0 → 2;
+no console errors; pictures of the Inventory toolbar and the face card. Integration: the face due wording on Checklist and
+the Care Plan strip; "prescription" in the diff (no code name touched) and on the scanned pages.
