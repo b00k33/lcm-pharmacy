@@ -7209,3 +7209,51 @@ saved items, dispense stock notes), copy-out text for Cliniko, reference notes, 
 Inventory Columns cart icon draws at 13px. **Not tested:** pages the sandbox has no data for (stock order status, the phone
 capture sheet's context lines, prep-check steps, the timeline's Short chip); each is drawn raw, read in the code.
 **LIVE** 2026-10-31 on her "push live" (popup), build 20261031-101100 (publish commit b0f807e5).
+
+## Trip program: the Plan tab becomes the week grid (2026-10-31)
+Her words 2026-10-30: "i need to design a way for me to organise my trips where i have events that are trip related so i can
+plan well. this is the program" (3 pictures of the 2026 Canada Jingfang Advanced Study Program, Nanjing), then "include travel
+blocks and breakfast at 7am". Her 9 picks (all the recommended) on `trip-program-mock-2026-10-30.html`, "Yes, full mock first",
+then "Yes, build it" on the full mock `trip-program-full-mock-2026-10-30.html` (artifact L8zebiis7bSAbcUP2Bsukb), which is
+the contract.
+**Built (all in the TRIPS block, index.html):**
+- Data: a trip gains `venues [{id, n, nz, how, min}]` and `rules [{id, t, on "k:<kind>" | "v:<venue>"}]`; a plan row gains
+  `k`, `sl` (am · pm · full · eve), `who` / `whoz`, `v`, `e`, `atz`, `note` (whitelist `PH_TRIP_PLAN_KEYS`, `phTripPlanSet`);
+  `phTripSet` writes `v.<id>.x` / `r.<id>.x`; `phTripRowAdd` / `phTripRowDel` take `v` and `r`. Kinds `PH_TRIP_KINDS` (six of
+  the program's + Mine), parts of the day `PH_TRIP_SLOTS`, reads `phTripKind`, `phTripSlot`, `phTripStart` / `phTripEnd`,
+  `phTripWho`, `phTripVenue`, `phTripRules`. Breakfast is NOT a plan row: her Me meal (`phMealEvents(day).b`), a tap opens its
+  card (`phRxCkOpen`).
+- Desktop Plan (`phTripPlanHtml`): week bar (`phTripWeeks`, `phTripWkOf`), one solid Add, the grid (`phTripGridHtml`: breakfast
+  · go · Morning · mid · Afternoon · back · Evening; a full day spans Morning to Afternoon; strip and breakfast rows only when
+  filled; an empty cell = `data-trip-cell` and adds into that part, `phTripAddSl`), cards (`phTripCardHtml`), travel strips
+  worked out on read (`phTripLegs`, `phTripStripHtml`, flights `phTripFlightsOn`), the open session (`phTripSesHtml`) or day
+  (`phTripDayPanelHtml`), the folds (`phTripVenuesHtml`, `phTripRulesHtml`, `phTripFoldsHtml`; the Pack line opens Prepare's
+  Pack area). Phone (`phTripPlanPhoneHtml`): day chips + the day in time order (`phTripDayRows`, `phTripTlrHtml`), the session
+  opening in place, the folds stacked (CSS in the phone block).
+- Today (`phTripTodayHtml`): the Next / Then card with the next venue's 中文 and its solid Driver card; the Driver card is per
+  venue (`phTripDrvOn` = false · "1" the hotel · a venue id).
+- Calendar (`phTripDayItems`, `phTripPopHtml`): program rows in their kind's colour over their part of the day; the card names
+  the kind and venue + 中文; Plan opens that session (`data-ph-trip-open="id|plan|day|row"`, `phTripOpen(id, pane, day, ses)`).
+- Session photos (`tses`, `phTripPics(..., ses)`); `PH_REN_BACKUP_FIELDS` now carries `trip`, `tday`, `tpart`, `tses`.
+- The night before (`phTripNtfTick`, `phTripNtfSetHtml`, Settings · device "tripntf"): 8 pm trip-city time, page-run like the
+  meal check-in; sw.js notificationclick passes `data.trip` on (`TRIP_OPEN` message, or `#trip=` in the address).
+- New sprite icons: `i-walk`, `i-bus`, `i-train`, `i-nocam`, `i-coat`.
+**Fixed on the way (found 2026-10-31 at her 1220 window):** the strips wrapped to 3–4 lines in a 122px day column: in the grid
+the icon says the way and the word moved to the hover (pictures over words), so "08:25 5 min → Guocui Hall" fits two lines;
+the app-wide field rule (`input:is(...):not(.field-bare)`, !important) drew every trip field and dropdown as a pill, including
+the live Travel and Prepare tabs: one rule after `.ph-trip-sel` puts them back to 6px; the ✕ cells showed a clipped "…";
+session times were cut ("02:00 PI") at 104px, now 128px; on the phone the session's times, venue dropdown and both fold tables
+ran past the card (now stacked).
+**Tested** in the sandbox (made-up owner, her Nanjing program seeded from her pictures, `_trip-seed.js`, now deleted): the grid
+at 1220 (21 cards, 17 strips, weeks Sun 1 · 2–8 Nov · 9–13 Nov), a session's kind / day / venue / time / note saved and
+repainted, a day's Add with the cell's part (an Evening row added, then deleted with Undo), Venues add / edit / Driver card /
+delete, Program notes add / On a kind (the icon reached the Lecture cards) / delete, the Pack chip, week bar, breakfast opens
+her meal card, Today's Next / Then (trip moved to start today), the calendar items and card, the reminder (Date stubbed to
+8:30 pm Nanjing: two notifications, none on the second tick), the `#trip=` address read and cleared, 375 and 360px (no
+sideways scroll, folds stacked), kind tag contrast 5.0–7.4:1, Prescriptions search 1 → 0 → 1, no console errors. Screens checked
+for the fact: Plan, Today, Prepare (Pack), the calendar, the Me drawer's trip row.
+**Not tested:** a real notification on her phone (the sandbox browser blocks them), the service worker's TRIP_OPEN message from
+a real tap, the sandbox's sign-in cover stopped the `#trip=` open from painting (phTripOpen's state was set, as with the meal
+reminder), the Key2 at 360 × 469.
+**Next:** her real program goes in from her signed-in LCM (21 sessions, 5 venues, 3 notes, 4 Pack to-dos, Breakfast 07:00 kept
+on trips, the hotel), only after "push live".

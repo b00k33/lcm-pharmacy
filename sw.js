@@ -52,16 +52,17 @@ self.addEventListener("message", function (e) {
 // Her after-meal check-in (2026-10-27, food-checkin-mock-2026-10-27.html): a tap on the phone's "How did Break Fast sit?" opens
 // that meal's card in LCM -- the LCM window already open is told which meal (only LCM's own: the origin is shared with C22 and
 // C7), else LCM opens with the meal in its address (#rxck=<day>|<meal>), which the app reads once and clears.
+// Her trip program's night-before reminder (2026-10-30) goes the same way with its session (#trip=<trip>|plan|<day>|<row>).
 self.addEventListener("notificationclick", function (e) {
-  var key = e.notification && e.notification.data && e.notification.data.rxck;
+  var data = (e.notification && e.notification.data) || {}, key = data.rxck, trip = data.trip;
   e.notification.close();
-  if (!key) return;
+  if (!key && !trip) return;
   e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(function (list) {
     for (var i = 0; i < list.length; i++) {
       var c = list[i];
-      if (c.url.indexOf(self.registration.scope) === 0 && "focus" in c) { c.postMessage({ type: "RXCK_OPEN", key: key }); return c.focus(); }
+      if (c.url.indexOf(self.registration.scope) === 0 && "focus" in c) { c.postMessage(key ? { type: "RXCK_OPEN", key: key } : { type: "TRIP_OPEN", key: trip }); return c.focus(); }
     }
-    return self.clients.openWindow("./index.html#rxck=" + encodeURIComponent(key));
+    return self.clients.openWindow("./index.html#" + (key ? "rxck=" + encodeURIComponent(key) : "trip=" + encodeURIComponent(trip)));
   }));
 });
 
