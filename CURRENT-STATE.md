@@ -225,7 +225,7 @@ those she took off; Goal = a line per complaint in Compass order (her Goal cell,
 back pain", never bare "Reduce pain"), the plan's own line first when no complaint carries it. **A phase's Watch + Aim too**
 (`phTpFieldView` = the one read): Watch = the template's **Red flags** first, then chips from main complaint, secondaries, cycle
 (women who track one only), findings; Aim = her preset per template phase with `{main}` `{sec}` `{cyc}` tokens. All four derive on
-read, never stored; her typing makes a field hers, with "back to auto". + Watch / + Aim on a finding adds her line after the auto
+read, never stored; her typing makes a field hers; a quiet chip puts the auto wording back ("Template’s words" on Goal and Aim, "Patterns’ words" on Diagnosis; `phTpFgWritePlan` is the one Diagnosis / Goal write, used by the Care Plan’s ✎ editor and the Treatment strip’s fields, her 2026-10-31 "edit where you read"). + Watch / + Aim on a finding adds her line after the auto
 ones (`ph.watchPicks` / `ph.aimPicks`, `phTpFieldPick`); the field keeps following the patient; back to auto keeps those lines.
 Wording: Settings → "Goal wording" / "Watch wording", her lines first, all DRAFT [Watch and Aim write themselves from the
 patient].
@@ -386,12 +386,13 @@ other copies of Watch keep their chips); its Formula cell shows her own formula 
 phase following Fang Bing Ren; the Fang Bing Ren line under Watch keeps the lead); at ≤480 the Phase column is 182px and the table
 32px wider (it scrolls anyway) so a phase name's longest word fits beside the ×.
 
+**A phase’s fields look like fields** (her 2026-10-31 pick "edit where you read"): the Care Plan’s open phase row (`.ph-tpg-ctx-inner .val[data-tp-edit]`: Aim · Points · Formula · Watch) and the Treatment drawer’s Aim are 32px white boxes with the placeholder upright inside, the same `phTpCellEditOpen` editor filling the box; "Template’s words" puts a template Aim back; done-phase cells stay words. The ⋯ menu’s "+ Add phase" (and the band’s "+ Add a phase") draws its picker above the Session ladder (`phTpAddPhaseHtml` in `.ph-tp-cc-course`; this page had no slot for it before, so the picker never showed).
 **Formula on a phase**: a typed name is hers; "→ Fill" fills from Fang Bing Ren's live top formula when blank [Care Plan phase
 Formula].
 
 **The Treatment tab**: session stepper, the visit record as ONE table (`phTpVisitTableHtml` → `phTxVisitsTableHtml`, her 8 picks on
 `visits-table-mock-2026-10-29.html`, 2026-10-29), a band whose **Done · Copy for Cliniko** saves the visit
-(`presAcuLogNow`, the one save; Today's visit has the same button; "Ending a visit" under Visit logging). One session line (phase named once, Current ▾, "Session N · today", Herbs only
+(`presAcuLogNow`, the one save; Today's visit has the same button; "Ending a visit" under Visit logging). **The Diagnosis / Goal strip over the tab is two fields** (her 2026-10-31 pick "edit where you read", `phTsDxStripHtml`, `phTsStripCommit` → `phTpFgWritePlan`): tap, type, Enter or tap away saves (different words = hers, the auto wording or an emptied field = auto, "✓ saved" for a second), Escape restores, a quiet "Template’s words" / "Patterns’ words" chip puts the auto wording back while hers differ; Patterns › is the door; "Edit on Care Plan" is gone. **The band’s phase is a chip** (`.ph-band-ph`, plans with 2+ phases): its menu lists the phases (the live one marked, since · visits; the next one "next"), a tap makes a phase Current with the phase line’s own write (`phTpPhaseStatusData`), "+ Add a phase" opens the Care Plan’s picker. One session line (phase named once, Current ▾, "Session N · today", Herbs only
 today, Change phase), then the table: Visit · CD (cycle patients) · Phase · Response · Tongue · Pulse · Abdomen · Therapies · Herbs
 · Note; today on top (gold tint, a gold top line and left bar), logged visits newest first, one faded italic next row (the next
 booked or planned session: its date, CD on that date, the phase's points and formula). **Today's row:** the Compass score
