@@ -7137,6 +7137,8 @@ file line with its three doors; Delivery step: ✎ edit saves text + label, × a
 in place; Compose: door lands on the list filtered to the patient, 50%+ tap stores `high` and recolours the row, fund change
 stores, clear filter shows all, fold hides the list; Prescriptions search 1 hit for "Zz Audit"; no console errors.
 **Not tested:** her real roster size in the list (the sandbox has one patient), the Key2.
+LIVE 2026-10-31 on her "Push live" (answered in the consistency-audit session's popup, which named this build riding along), build
+20261031-093200 (publish commit 7759572e).
 
 ## Consistency audit (2026-10-30)
 Her words: "audit the whole app for ui design consistencies e.g. button font terse language etc make the app better". Audit
