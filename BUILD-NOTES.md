@@ -7257,3 +7257,28 @@ a real tap, the sandbox's sign-in cover stopped the `#trip=` open from painting 
 reminder), the Key2 at 360 × 469.
 **Next:** her real program goes in from her signed-in LCM (21 sessions, 5 venues, 3 notes, 4 Pack to-dos, Breakfast 07:00 kept
 on trips, the hotel), only after "push live".
+
+## Patient pages audit (2026-10-31)
+Her words: "audit the patient profile pages for consistency too". Audit = apply: every rule-covered finding fixed in one pass
+(commit 13d8aeb7; CSS in one dated block, "Patient pages audit (her 2026-10-31 ...)", at the end of the main `<style>`).
+**Measured** in the sandbox at her 1220px: every rail page of a face-palsy and a cycle patient (22 pages each), read for labels
+(size, weight, spacing), headings, card looks, a box inside a box, and text under 10.5px.
+**Labels (one type scale):** capitals labels ran 9, 9.5, 10, 10.5, 11, 11.5 and 12px at weight 700 or 800 (about 40 looks).
+From 641px up each reads as the section heading does (`.ph-tmpl-sec`: 10.5px, 700, .08em); 313 labels on the 44 pages now
+share it. The phone keeps its own 11px scale (STYLE-LCM.md). The face checklist's muscle names and last scores and the face
+strip's change were 10px: 10.5px. MSK's title "Musculoskeletal Assessments" was 18px capitals: normal case.
+**No box inside a box (Separation & grouping):** the Fang Bing Ren board had four frames deep (card > compare frame > body
+area > row): the compare frame is flat at every width (the phone already had it, 10/27), each body area is a tone
+(`--ph-paper`, 10px) not a lined white box, and the Bing / Ren heads keep their tone and top bar without side lines.
+Treatment's visit table and its summary, the plan band inside Treatment's card and Energy inside a card lose their second
+frame. Card corners and lines to the one card: Energy 16 → 10px, Today's steps 8 → 10px, Today's treat card 1.5 → 1px.
+**Nothing cut (phone):** the Fang Bing Ren energy rows' ten 1–10 boxes ran 83px past the card at 360px; five to a line now.
+**Kept on purpose:** the Session grid (LOCKED: `.ph-tp-ladder`, `.ph-tp-sesstable`, `.ph-tpg` incl. its Aim / Points /
+Formula / Watch row), tags (Main, Red flag, the medical-history Main tag), chart marks (pulse grid, diet nutrient letters, the
+score trend's dates), key hints (`kbd`), a tone panel inside a card (that is tone, not a line), rows.
+**Asked, not built:** the page names. Supplements, Blood tests, Photos, Messages, Ask her, MSK, Pulse and the Care Plan open
+with their own name, which the rail (the tab strip on the phone) already shows; her "No band" pick put the name beside
+the page's facts, so dropping the repeat is her call.
+**Tested:** the scan before and after (above); 360px: no sideways scroll on 8 pages (Fang Bing Ren, Treatment, Energy & sleep,
+Today, Care Plan, Ask her, Checklist, MSK); no console errors. **Not tested:** the Dispense page (no herbs on the sandbox
+patients), the Key2 at 360 × 469.
