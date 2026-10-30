@@ -7208,3 +7208,4 @@ saved items, dispense stock notes), copy-out text for Cliniko, reference notes, 
 0 (one left inside a patient-message mirror, by rule), no sprite icon over 40px, no markup shown as text, no JS errors; the
 Inventory Columns cart icon draws at 13px. **Not tested:** pages the sandbox has no data for (stock order status, the phone
 capture sheet's context lines, prep-check steps, the timeline's Short chip); each is drawn raw, read in the code.
+**LIVE** 2026-10-31 on her "push live" (popup), build 20261031-101100 (publish commit b0f807e5).
