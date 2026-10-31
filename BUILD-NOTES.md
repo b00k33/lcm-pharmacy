@@ -7432,3 +7432,4 @@ CHJLGMLT at $0.34 went to $0.20 on the catch-up, to $0.30 when Dang Shen went to
 formula sync wait until the catch-up (before: ran at 3 s); no console errors; no sideways scroll at 375.
 **Not tested:** her signed-in data (the sandbox catalog's herb prices differ from hers), the Key2 at 360 × 469, Dispense's
 patient price on a real dispense of a recipe-priced formula.
+**LIVE** 2026-11-01 00:27, build 20261101-002700 (publish 1bb85f63, on her "push live").
