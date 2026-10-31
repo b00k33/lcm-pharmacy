@@ -7266,7 +7266,7 @@ Her words: "audit the patient profile pages for consistency too". Audit = apply:
 **Labels (one type scale):** capitals labels ran 9, 9.5, 10, 10.5, 11, 11.5 and 12px at weight 700 or 800 (about 40 looks).
 From 641px up each reads as the section heading does (`.ph-tmpl-sec`: 10.5px, 700, .08em); 313 labels on the 44 pages now
 share it. The phone keeps its own 11px scale (STYLE-LCM.md). The face checklist's muscle names and last scores and the face
-strip's change were 10px: 10.5px. MSK's title "Musculoskeletal Assessments" was 18px capitals: normal case.
+strip's change were 10px: 10.5px. MSK's title "Musculoskeletal Assessments" was 18px capitals (now gone, below).
 **No box inside a box (Separation & grouping):** the Fang Bing Ren board had four frames deep (card > compare frame > body
 area > row): the compare frame is flat at every width (the phone already had it, 10/27), each body area is a tone
 (`--ph-paper`, 10px) not a lined white box, and the Bing / Ren heads keep their tone and top bar without side lines.
@@ -7276,12 +7276,21 @@ frame. Card corners and lines to the one card: Energy 16 → 10px, Today's steps
 **Kept on purpose:** the Session grid (LOCKED: `.ph-tp-ladder`, `.ph-tp-sesstable`, `.ph-tpg` incl. its Aim / Points /
 Formula / Watch row), tags (Main, Red flag, the medical-history Main tag), chart marks (pulse grid, diet nutrient letters, the
 score trend's dates), key hints (`kbd`), a tone panel inside a card (that is tone, not a line), rows.
-**Asked, not built:** the page names. Supplements, Blood tests, Photos, Messages, Ask her, MSK, Pulse and the Care Plan open
-with their own name, which the rail (the tab strip on the phone) already shows; her "No band" pick put the name beside
-the page's facts, so dropping the repeat is her call.
+**Page names (her pick "Drop the repeat", commit 47876dba):** Supplements, Blood tests, Photos, Messages, Ask her, MSK, Pulse
+and the Care Plan opened with their own name, which the side list (the phone's tab strip) already shows ("Say a fact once";
+her "No band" pick had put the name beside the facts, so it was asked). Now: Supplements / Blood tests open with the facts
+row at the left edge; Photos keeps Select / Add (the word and its line go); Messages' composer loses "Message" (the
+follow-up teaser keeps it); Ask her leads with "n of 13 answered" (the title's hover moved onto it); MSK's head row shows
+only when it holds Same as last time; the Care Plan glance line drops its "Care Plan" word (Fang Bing Ren's glance keeps
+its word); Pulse hides its "Pulse chart" label on the Pulse page only (Medical history's constitution keeps it). Ren and
+Today keep their first line: it says something new.
+**LIVE:** the labels, boxes and phone fix (13d8aeb7) in build 20261031-145600 (publish cefa2b92, with Edit where you read).
+The page names wait for her "push live".
 **Tested:** the scan before and after (above); 360px: no sideways scroll on 8 pages (Fang Bing Ren, Treatment, Energy & sleep,
-Today, Care Plan, Ask her, Checklist, MSK); no console errors. **Not tested:** the Dispense page (no herbs on the sandbox
-patients), the Key2 at 360 × 469.
+Today, Care Plan, Ask her, Checklist, MSK); no console errors. Page names: the first thing on all 8 pages at 1220 (no
+errors), and Supplements, Blood tests, Photos, Messages, Care Plan at 360 (no sideways scroll). **Not tested:** the Dispense
+page (no herbs on the sandbox patients), the Key2 at 360 × 469, Ask her / MSK / Pulse at 360 (the reseeded sandbox patients
+had no plan, so those pages had no door; their head markup is the same at every width).
 
 ## 2026-10-31 — Edit where you read: Diagnosis / Goal are fields on the Treatment strip, the phase cells look like fields, the band's phase is a chip
 Idea 3 of her 2026-10-29 patient-profile audit ("Treatment Goal 'Edit on Care Plan' · Care Plan 'What this phase is for…' · the
