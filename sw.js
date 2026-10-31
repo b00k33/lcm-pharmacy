@@ -12,7 +12,7 @@
 // changes). A waiting service worker sits untouched until that same button
 // tells it to go, via postMessage({type:"SKIP_WAITING"}) -- see the
 // "message" listener below and phDoControlledUpdate's STEP 4.
-var CACHE_VERSION = "lcm-20261031-145600";
+var CACHE_VERSION = "lcm-20261031-152700";
 
 var SHELL = ["./", "./index.html", "./manifest.json", "./icons/icon-192-v2.png", "./icons/icon-512-v2.png", "./icons/apple-touch-icon-v2.png", "./icons/favicon-32-v2.png", "./icons/favicon-32-light-v2.png",
   // her 2026-10-30 "i want it to operate without internet including opening": the sign-in library and the PDF reader are kept
