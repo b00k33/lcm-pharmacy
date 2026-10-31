@@ -7327,3 +7327,4 @@ Care Plan editor keeps its booking branch).
 chips); the booking brief and Today's visit journey line read `phTpAutoDx` / `phTpAutoGoal` unchanged. The live phase on the band,
 the Treatment session line (Current ▾), the Care Plan ladder and Today's visit journey line all repaint from the band's move
 (full `renderPresPanel`).
+**LIVE** 2026-10-31, build 20261031-145600 (publish cefa2b92, on her "push live"); the Trip program (7f9c9996) and the Patient pages audit (13d8aeb7) went live in the same push.
