@@ -7377,6 +7377,7 @@ scroll; pictures `shots/e4-build-*.png` (1440 Photos, 375 Photos, IVF empty, IVF
 `addOpen` code path, no photo store in the sandbox), the Key2 at 360 × 469, the Treatment stage (it no longer draws the fold).
 **Pages checked for the fact:** the Photos page (empty, and the + Add path by code); IVF history on its tab (empty, rows); the
 Timeline and Today's visit read the rounds, not the fold state, unchanged.
+**LIVE** 2026-10-31, build 20261031-154600 (publish cd93de70, on her "push live"); the Care Plan page audit (a40dbaa0) went live in the same push.
 
 ## Care Plan page audit (2026-10-31)
 Her words: "audit the treatment care plan page for consistency too". Audit = apply (commit a40dbaa0; CSS in one dated block,
