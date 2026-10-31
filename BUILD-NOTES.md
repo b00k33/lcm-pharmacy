@@ -7469,3 +7469,51 @@ Pages checked for the shared rules: Treatment (both patients), the Care Plan's S
 already 10.5px / .08em on desktop). **Not tested:** a real formula name in the Herbs cell (the seeded one is the template's
 words), a visit with points and a written note, the Key2 at 360 × 469.
 **LIVE:** build 20261101-012200 (publish b101b9a8, on her "push live").
+
+## 2026-10-31 — Ask her gets the body figure; a blood value on a line is a dot on its bar
+Idea 5 of her 2026-10-29 patient-profile audit ("a picture answers the tap", her "both"). Measured on her 27 Oct export first: 670
+patients, **6 with Ask her answers** (4 of them all 13 topics, every one on "Usually", 54 topic answers; Sleep 6, Bowels 5, Head 5,
+Heat 5, Urine 5 lead), **0 blood results**, 21 patients with a Medical history Yes (their figure already lights); of Ask her's 95
+answers only 30 have a spot on the Ren figure (none for sleep, mood, sweat, appetite), which is why the Medical history body won.
+Mock `askher-figure-blood-bars-mock-2026-10-31.html` (pictures `ia/e5-*.png`; the "after" pictures are the real pages drawn by a
+prototype script through the harness); **her 9 picks, all the recommended option:** A, Medical history's body beside Ask her, areas
+lit by the answers; under 1280px the footer's first column; its chips replace the "Ticked on Fang Bing Ren" list; a tap spotlights;
+the small bars go on the Findings line (Care Plan + Treatment) and the Timeline's result line; a small number with ↓↑ beside the dot;
+amber past the line as Blood tests; head to knees; the figure follows the Usually | Right now switch.
+**Ask her's figure** (`phAhFigureHtml(name, S)`, beside `phHxFigureHtml`): `phHxSvg` with the cropped body (`PH_AH_CROP` "30 0 160
+330", front only: every area is on the front) and `lit` for the organs it already draws (stomach, bowel, lungs, heart); the areas it
+has no organ for are soft spots in the page colour on the same figure (`PH_AH_SPOT`: head, mouth, throat, bladder, hands; `.o.lit.ahs`),
+a skin / whole-body answer glows the outline (`aura-own`). `PH_AH_AREA` maps a topic to its area, `phAhAreaOf` the few answers that
+go elsewhere (cold hands or feet = the hands, palpitations = the heart, nausea = the stomach); `phAhAreas(S)` lists what is on in the
+version on screen, so the figure follows the switch. The chips under it (`data-ahf-chip`, Medical history's `.ph-hxf-chip`) are the
+one list of what is on; the old "Ticked on Fang Bing Ren" column and its `.tk` CSS are gone, the heading carries the version word
+("On the body · Right now"). A tap on a lit area or a chip spotlights it (`phAhFigPin`, `phAhFigSpot`, view state), a second tap
+clears; the shared tooltip handler now branches on `.ph-ahf` (pin and spot functions of its own) so hovering never clears the pin.
+`phAhHtml` lays it out: from 1280px up `.ph-ah-split` (cards | a 280px sticky `.ph-ah-side`, the footer keeps Standing alone, `.one`),
+under that `.ph-ah-foot.fig` (figure | Standing; one column ≤760px). Decided at paint from `window.innerWidth`, as Medical history's
+`figureInSide`; every tap repaints the host, so the figure moves with the answers. **Judgment call:** the chip's Ren / Bing tag named in
+the mock is not drawn; with the figure following the switch every chip would carry the same word, so the heading says it once.
+**Blood values on a line** (`phBldMiniHtml(key, e, sex)`, beside `phBldBarHtml`): the Blood tests page's bar shrunk to 44px, the
+typical band, the dot (`var(--ph-low-deep)` past a line, as that page), the name before and the number small after with ↓ ↑; a marker
+with no range keeps name + number. Used by the Findings "Blood tests" line (`phTpFxRows`: the flagged markers, else the first three, as
+`.ph-bld-minis`; the drawer, the phrase and the Cliniko words keep the text) and by the Timeline's result line (`phTlBloodFor` returns
+`resHtml` beside `res`; both `<span class="res">` renderers draw `resHtml` when it is there). The Blood tests page is unchanged.
+**Rule fixes in the same hunk** (the Treatment page audit's findings on the facts rows, left to this session): the 1px top lines on
+`.ph-tx-sum .fx .ph-tp-fr` and `.ph-tx-sum .ph-tp-fxmore` are gone (her separation rule: space and tone, not lines); on the phone
+(≤640px, a block after the `.ph-tx-sum` rules so it wins) the facts "more" chips `.ph-tp-fxmc` / `.ph-tx-pxmore` sit at the 28px /
+6px / 12.5px floor (the `.ph-tx-sum .ph-tp-fxmore .ph-tp-fxmc` rule had pinned them at 24px, so that selector is named too) and the
+"More" label `.ph-tp-fxmore.onlypx` is 11px / 700 / .06em.
+**Tested** in the sandbox (`_ia-shot.html`, Zz Audit Patient, no photos): at 1440 the side column 280px, stage 200 × 412, viewBox
+"30 0 160 330", seven lit parts for eight taps (stomach, bowel, head, throat, bladder, both hands) + the outline, ten chips, no `.tk`,
+footer `one`; chip tap → pin "bowel", svg dim, one spot, one chip on; second tap clears; a tap on the head spot pins "head" and lights
+its three chips; Usually → "Nothing ticked yet." (the seed's ticks are Right now), back → 7 lit; a new answer (Thirst: dry mouth)
+repaints in place, one host, one side, the mouth spot added; Care Plan Findings: 3 minis, 3 flagged dots at 11 / 93 / 10 %, the
+drawer's words unchanged; the Timeline (the plan given "Natural fertility" for the test): two result lines, "AMH 9.8" name + number,
+"TSH 4.6 ↑ Ferritin 12 ↓ Vitamin D 38 ↓" with bars; Treatment: 7 facts rows with 0px top lines, the More line 0px, the Blood tests
+row's minis; Blood tests page: 5 bars, no minis; Prescriptions search "Zz Audit" 1 match; at 375 the footer `fig`, figure first,
+chips 32px / 6px, the "more" chips 28px / 6px / 12.5px, the label 11px / 700, no sideways scroll at 1440 or 375; no console errors.
+Pictures `shots/e5-build-*.png` (Ask her 1440 / 1200 / 375, Care Plan 1440, Treatment 1440 / 375).
+**Not tested:** her records (nobody had answered on "Right now" by 27 Oct), a real hover tooltip on the spots (pointer events do not
+reach the hidden pane), the Timeline's lanes view (layout "b"), the Key2 at 360 × 469.
+**Pages checked for the fact:** Ask her (wide, 1200, phone), Care Plan Findings, Treatment's summary column, the Timeline list view,
+Blood tests (unchanged), Today's visit (its Ask her tile reads `phAhDone`, unchanged).
