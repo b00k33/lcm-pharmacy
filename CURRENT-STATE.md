@@ -492,7 +492,7 @@ typed value beats a phone reading; the coverline uses up to 6 pre-ovulation read
 whole-PERIOD intensity (`PH_CYCLE_FLOW`/`PH_CYCLE_PAIN`, period-start day only) vs a PER-DAY value
 (`PH_CYCLE_DAYFLOW`/`PH_CYCLE_DAYPAIN`). "Cervical mucus" shows as **Discharge**; the key stays `cm`.
 
-**IVF history** shows for every woman, with a quick-log; scans live on `row.scans[]` of the linked round (a RECORD ONLY, never
+**IVF history** shows for every woman, with a quick-log; **it opens on its first action** (her 2026-10-31 pick): the fold open and the round this plan is on (else the latest dated one) open until she closes them (`phIvfFoldOpen`, `phIvfOpenIdsOf`; her closes stick on `rec.ivfHistOpen` / `rec.ivfOpenIds`), with nothing logged the fold shows "+ Egg collection"; scans live on `row.scans[]` of the linked round (a RECORD ONLY, never
 moves a phase); scan bloods show in Blood tests; embryo accounting is always DERIVED; the Timeline reads IVF history, unlinked
 rounds included [IVF history redesign; Fertility timeline: real sync with IVF history]. Starting an IVF Protocol plan opens its
 questionnaire; milestone dates are written BEFORE the start-phase cascade runs. A positive hCG cascades an IVF plan to "Early
@@ -778,7 +778,7 @@ phone). One picture moves at a time; all still under reduced motion. Only Gui Zh
 pictures].
 
 ## Photos
-**The patient's Photos page** opens on the Comparison table (a row per type, a date column each); By visit / By type a tap away;
+**The patient's Photos page** opens on the Comparison table (a row per type, a date column each); By visit / By type a tap away; **with no photo on file it opens on its first action** (her 2026-10-31 pick, idea 4 of the 29 Oct audit): the camera tile (the phone’s own sheet, the computer’s chooser; then a kind per photo, the drop flow) beside the drop zone, the kinds under them, no Add tap and no "Or pick the type first" line; with photos the same block sits behind + Add (`presPhotosSectionInnerHtml`, `.ph-photos-first`, `.ph-photos-cam`); a phone shows the tile alone;
 each tile has one-tap type / shot chips and a date button. **Records → Photos** (whole clinic): label with one tap or a key; it
 rings the next unlabelled photo (a tap never moves the page: it rings one already on screen or none; only the keys scroll to it);
 Select + one label for many. Tongue shots rank natural → unlabelled → side → sublingual → flash (`PH_TONGUE_SHOT_RANK`). The

@@ -7337,3 +7337,43 @@ chips); the booking brief and Today's visit journey line read `phTpAutoDx` / `ph
 the Treatment session line (Current ▾), the Care Plan ladder and Today's visit journey line all repaint from the band's move
 (full `renderPresPanel`).
 **LIVE** 2026-10-31, build 20261031-145600 (publish cefa2b92, on her "push live"); the Trip program (7f9c9996) and the Patient pages audit (13d8aeb7) went live in the same push.
+
+## 2026-10-31 — Empty pages open on their first action: Photos' camera tile + drop zone, IVF history's first round open
+Idea 4 of her 2026-10-29 patient-profile audit ("an empty page opens on its first action", her "all three"; Blood tests was built
+on 29 Oct). Measured on her 27 Oct export first: 670 patients, 167 women, 8 with IVF rounds (9 rounds: seven with one, one with
+two), **0 had ever set `ivfHistOpen` or `ivfOpenIds`**, so the new default overrides nobody's choice; photos are not in the export.
+Mock `empty-first-action-mock-2026-10-31.html` (before pictures `ia/e4-before-*.png`, the IVF "after" pictures are the real page
+with the flags set, `ia/e4-after-*.png`); her two rounds of picks, all the recommended option: camera tile + drop zone side by
+side with the kinds under; the tile = the phone's own sheet / the computer's file chooser, then a kind per photo (the drop flow);
+the kinds stay grouped chips; with photos on file the block stays behind + Add; IVF opens with this plan's round, else the latest;
+her closes still stick per patient; nothing logged = the fold open with + Egg collection showing; the phone's empty Photos page
+= the tile alone. The tile's sub-line drawn on the mock ("camera or library") was NOT built: no how-to text under a control (the
+Terse rule); it is the tile's hover title instead.
+**Photos** (`presPhotosSectionInnerHtml`): `firstOpen = list && !n` draws the block with no Add tap — `.ph-photos-first` = the
+camera tile `.ph-photos-cam` (`data-photo-choose`, the sprite's `#i-camera`, "Add photos", "Take a photo" at ≤640px) beside the
+existing `.ph-photos-drop` (now "Drop photos here · paste Ctrl+V", Choose files, the hidden `#phPhotoDropInput`), then the kinds
+row without the "Or pick the type first" line (gone in both states). The head's Add / Close button is left out while the page is
+empty, and the head line is drawn only when it holds a button. With photos `presPhotosAddOpen` (+ Add) opens the same block.
+Both doors reach the one input (`data-photo-choose` → `#phPhotoDropInput` → `phRenDropFiles`, a kind per photo). CSS beside the
+`.ph-photos-drop` rules; the phone's two rules (one column, drop zone hidden) sit in the PHONE REDESIGN block after its
+`.ph-photos-drop` margin rule.
+**IVF history**: `phIvfFoldOpen(rec)` (open until `rec.ivfHistOpen` is set) and `phIvfOpenIdsOf(rec, rows)` (her array when set,
+else the live round `phIvfIsLiveLink`, else the latest dated round, else the last row) are the two reads; `phIvfHistoryFoldHtml`
+and `phIvfJourneyHtml` use them, and every writer materialises the default first so a close closes what she sees: the
+`data-ivf-fold-toggle` branch (`!phIvfFoldOpen(rec)`), `ivfPhoneSolo`, `data-ivf-hd-edit`'s isOpen and the `data-ivf-row-toggle`
+branch (`phIvfOpenIdsOf(rec).slice()`). An empty page = the fold open, "Nothing logged yet." and + Egg collection. The one caller
+is the IVF history tab (`presAssessSections`), so no other page changed.
+**Seen on the way, not a defect:** the "One egg, through the lab" card's names cross-fade every 2 s (`phIvfeName`, 14 s loop); a
+headless picture caught two mid-fade ("Day 3 · 6–8 cells" over "Mature egg"). In the pane every name but the lit one reads
+opacity 0; under reduced motion the animation is off and `.on` alone shows.
+**Tested** in the sandbox (`_ia-test.html`, Zz Audit Patient, no photos): the tile 180 × 112 and the drop zone 112px side by side,
+18 kind chips in 4 groups, no hint line, no Add button, no empty head line; the tile and Choose files both click
+`#phPhotoDropInput` (spied); IVF with nothing logged: fold expanded, "Nothing logged yet.", + Egg collection; with two seeded
+rounds and no flags: fold expanded, the Sep 2026 round open, the Mar round and both transfers one line each; closing the open
+round → `ivfOpenIds` [] and nothing open; opening the other → ["zzivf1"]; closing the fold → `ivfHistOpen` false, body gone;
+reopening → true with the same round open; Prescriptions search "Zz Audit" 1 → 1 → 1; no console errors; 1440 no sideways
+scroll; pictures `shots/e4-build-*.png` (1440 Photos, 375 Photos, IVF empty, IVF rows).
+**Not tested:** a real camera or file pick (the chooser cannot open headless), the + Add block on a patient WITH photos (same
+`addOpen` code path, no photo store in the sandbox), the Key2 at 360 × 469, the Treatment stage (it no longer draws the fold).
+**Pages checked for the fact:** the Photos page (empty, and the + Add path by code); IVF history on its tab (empty, rows); the
+Timeline and Today's visit read the rounds, not the fold state, unchanged.

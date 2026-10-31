@@ -21354,6 +21354,13 @@
   /* the drop box (her 2026-10-13: drag and drop or paste photos) and the full-page veil shown while a file is dragged over a patient */
   #pharmacyPage .ph-photos-drop { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 10px; padding: 18px 14px; border: 2px dashed var(--ph-herb); border-radius: 10px; background: var(--ph-herb-tint); color: var(--ph-herb-deep); font-size: var(--fs-13); }
   #pharmacyPage .ph-photos-drop b { font-weight: 800; }
+  /* her 2026-10-31 pick (idea 4): an empty Photos page opens on its first action: the camera tile and the drop zone side by
+     side, the kinds under them (phone: the tile alone, in the PHONE REDESIGN block) */
+  #pharmacyPage .ph-photos-first { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 12px; margin: 0 0 14px; }
+  #pharmacyPage .ph-photos-first .ph-photos-drop { margin: 0; flex-direction: column; justify-content: center; gap: 8px; min-height: 112px; box-sizing: border-box; }
+  #pharmacyPage .ph-photos-cam { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 112px; padding: 10px; border: 1px solid var(--ph-line); border-radius: 10px; background: var(--ph-paper); color: var(--ph-herb-deep); font: 800 var(--fs-13) var(--font-body); cursor: pointer; }
+  #pharmacyPage .ph-photos-cam:hover, #pharmacyPage .ph-photos-cam:focus-visible { border-color: var(--ph-herb); background: var(--ph-herb-tint); }
+  #pharmacyPage .ph-photos-cam .icn { width: 28px; height: 28px; color: var(--ph-herb); }
   #phDropVeil { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; background: rgba(11, 59, 75, .6); pointer-events: none; }
   #phDropVeil[hidden] { display: none; }
   #phDropVeil > div { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 28px 40px; border: 3px dashed #fff; border-radius: 16px; color: #fff; font-family: var(--font-body, inherit); text-align: center; }
@@ -26279,6 +26286,9 @@
     #pharmacyPage .ph-gal-grid { grid-template-columns: repeat(auto-fill, minmax(min(var(--ph-gal-th), 42vw), 1fr)); gap: 8px; }
     /* from line 16837 */
     #pharmacyPage .ph-pres-panel .ph-photos-drop { margin-left: 12px; margin-right: 12px; }
+    /* her 2026-10-31 pick (idea 4): on a phone the empty Photos page opens on the camera tile alone (nothing to drag), the kinds under it */
+    #pharmacyPage .ph-pres-panel .ph-photos-first { grid-template-columns: 1fr; }
+    #pharmacyPage .ph-pres-panel .ph-photos-first .ph-photos-drop { display: none; }
     /* from line 17294 */
     /* At phone widths the name/new-name fields have nowhere to shrink to once
        code/price/star/delete (178px combined, all flex-shrink:0) are subtracted
@@ -55278,7 +55288,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
       const ivfFoldToggle = e.target.closest("[data-ivf-fold-toggle]");
       if (ivfFoldToggle) {
         const rec = phCycleTargetRec();
-        if (rec) { rec.ivfHistOpen = !rec.ivfHistOpen; savePharmacy(); }
+        if (rec) { rec.ivfHistOpen = !phIvfFoldOpen(rec); savePharmacy(); }
         phCycleRerender();
         return;
       }
@@ -55550,7 +55560,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
         const rec = phCycleTargetRec();
         if (!rec) return;
         if (window.innerWidth <= 640) rec.ivfOpenIds = [id];
-        else { rec.ivfOpenIds = rec.ivfOpenIds || []; if (!rec.ivfOpenIds.includes(id)) rec.ivfOpenIds.push(id); }
+        else { rec.ivfOpenIds = phIvfOpenIdsOf(rec).slice(); if (!rec.ivfOpenIds.includes(id)) rec.ivfOpenIds.push(id); }
       };
       // her IVF history redesign 2026-10-23 (view state only): a tap outside
       // an open − / + stepper closes it; a tap on a count opens one (pick 2);
@@ -55569,7 +55579,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
       const ivfHdEdit = e.target.closest("[data-ivf-hd-edit]");
       if (ivfHdEdit) {
         const id = ivfHdEdit.dataset.ivfHdEdit, rec = phCycleTargetRec();
-        const isOpen = !!rec && (rec.ivfOpenIds || []).includes(id);
+        const isOpen = !!rec && phIvfOpenIdsOf(rec).includes(id);
         if (isOpen && phIvfHdEdit.has(id)) phIvfHdEdit.delete(id);
         else { phIvfHdEdit.add(id); if (rec && !isOpen) { ivfPhoneSolo(id); savePharmacy(); } }
         phCycleRerender();
@@ -55589,7 +55599,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
         const id = ivfRowToggle.dataset.ivfRowToggle;
         const rec = phCycleTargetRec();
         if (rec) {
-          rec.ivfOpenIds = rec.ivfOpenIds || [];
+          rec.ivfOpenIds = phIvfOpenIdsOf(rec).slice();
           if (rec.ivfOpenIds.includes(id)) rec.ivfOpenIds = rec.ivfOpenIds.filter(x => x !== id);
           else ivfPhoneSolo(id);
           savePharmacy();
@@ -84884,7 +84894,14 @@ or changing anything in Cliniko.
     // the band (Photos · To sort · Tongue over time) now says the count, the
     // last date and what's left to sort -- the head keeps only its actions
     const band = list ? presBandHtml("photos", name) : "";
-    const head = band + `<div class="ph-tmpl-sec ph-sec-line">${selectBtns}${presPhotosSelect ? "" : `<button type="button" class="ph-tmpl-sec-act ph-photos-add" data-pres-photos-add="1" aria-expanded="${presPhotosAddOpen ? "true" : "false"}">${presPhotosAddOpen ? "Close" : "Add"}</button>`}${n && !presPhotosSelect ? `<button type="button" class="ph-tmpl-sec-act ph-photos-toggle" data-pres-photos-toggle="1" aria-expanded="${presPhotosOpen ? "true" : "false"}">${presPhotosOpen ? "Hide ⌃" : "Show all ⌄"}</button>` : ""}</div>`;
+    // her 2026-10-31 pick (idea 4 of the 2026-10-29 audit, "empty pages open on their first action", mock
+    // empty-first-action-mock-2026-10-31.html): with no photo on file the camera tile, the drop zone and the kinds ARE the
+    // page, no Add tap first, so the head's Add / Close button is left out there; with photos the strip leads and + Add
+    // opens the same block. The head line is drawn only when it has a button to hold.
+    const firstOpen = !!list && !n;
+    const addBtn = presPhotosSelect || firstOpen ? "" : `<button type="button" class="ph-tmpl-sec-act ph-photos-add" data-pres-photos-add="1" aria-expanded="${presPhotosAddOpen ? "true" : "false"}">${presPhotosAddOpen ? "Close" : "Add"}</button>`;
+    const toggleBtn = n && !presPhotosSelect ? `<button type="button" class="ph-tmpl-sec-act ph-photos-toggle" data-pres-photos-toggle="1" aria-expanded="${presPhotosOpen ? "true" : "false"}">${presPhotosOpen ? "Hide ⌃" : "Show all ⌄"}</button>` : "";
+    const head = band + (selectBtns || addBtn || toggleBtn ? `<div class="ph-tmpl-sec ph-sec-line">${selectBtns}${addBtn}${toggleBtn}</div>` : "");
     // the Progress letter shows in the gallery's place while it is open (Back returns to the photos)
     if (list && phPrgOpenPk === key) return band + phPrgViewHtml(key, name);
     // select mode is the gallery with tick tiles (the gallery draws its own
@@ -84898,8 +84915,13 @@ or changing anything in Cliniko.
     // and that is exactly the row this excludes here.)
     // her 2026-10-13 ask: a drop box above the type chips -- drop photos on it (or anywhere on the patient), paste with Ctrl+V,
     // or Choose files; every photo gets its own type before anything is saved
-    const dropBox = presPhotosAddOpen ? `<div class="ph-photos-drop" data-photo-drop="1"><span><b>Drop photos here</b> or paste them (Ctrl+V)</span><button type="button" class="ph-tmpl-sec-act" data-photo-choose="1">Choose files</button><input type="file" id="phPhotoDropInput" accept="image/*" multiple hidden></div>` : "";
-    const addRow = presPhotosAddOpen ? `${dropBox}<div class="ph-photos-addrow"><span class="ph-photos-addhint">Or pick the type first</span>${phRenTypeGroupedHtml(phRenRowsFor(() => false), tp => tp.type, tp => `<button type="button" class="ph-ck-chip" data-ren-cap-type="${tp.type}"${tp.shot ? ` data-ren-cap-shot="${tp.shot}"` : ""} data-ren-cap-patient="${esc(key)}" data-ren-cap-name="${esc(name)}">${esc(tp.label)}</button>`)}</div>` : "";
+    // the camera tile: the one file input (phone = its own sheet, camera or library; computer = the file chooser), then every
+    // photo gets its kind in the drop flow (phRenDropFiles), her pick. A phone hides the drop zone (nothing to drag), the
+    // input inside it still works.
+    const addOpen = presPhotosAddOpen || firstOpen;
+    const camTile = `<button type="button" class="ph-photos-cam" data-photo-choose="1" title="Camera or library"><svg class=icn aria-hidden=true><use href=#i-camera></use></svg><b>${window.innerWidth <= 640 ? "Take a photo" : "Add photos"}</b></button>`;
+    const dropBox = addOpen ? `<div class="ph-photos-first">${camTile}<div class="ph-photos-drop" data-photo-drop="1"><span><b>Drop photos here</b> · paste Ctrl+V</span><button type="button" class="ph-tmpl-sec-act" data-photo-choose="1">Choose files</button><input type="file" id="phPhotoDropInput" accept="image/*" multiple hidden></div></div>` : "";
+    const addRow = addOpen ? `${dropBox}<div class="ph-photos-addrow">${phRenTypeGroupedHtml(phRenRowsFor(() => false), tp => tp.type, tp => `<button type="button" class="ph-ck-chip" data-ren-cap-type="${tp.type}"${tp.shot ? ` data-ren-cap-shot="${tp.shot}"` : ""} data-ren-cap-patient="${esc(key)}" data-ren-cap-name="${esc(name)}">${esc(tp.label)}</button>`)}</div>` : "";
     let body;
     if (!list) body = `<div class="ph-photos-empty">Loading photos…</div>`;
     else if (!n) body = "";   // the header now carries "none yet" (her pick 2026-09-09)
@@ -120202,6 +120224,20 @@ or changing anything in Cliniko.
      are now durable per-patient fields instead of session-only globals, so
      a fold or round she's opened stays open on THIS patient across any
      number of reloads, not just for the rest of today's session. */
+  // her 2026-10-31 pick (idea 4, "empty pages open on their first action"): until she has touched them, the fold is open and
+  // the round this plan is on (else the latest dated one) is open. Her own close is still remembered on the patient
+  // (rec.ivfHistOpen / rec.ivfOpenIds, her 2026-10-16 "remember it's open across visits"): once set they win, and a write first
+  // materialises the default so a close closes what she sees. Nobody on her 27 Oct export had set either yet.
+  function phIvfFoldOpen(rec) { return rec && rec.ivfHistOpen != null ? !!rec.ivfHistOpen : true; }
+  function phIvfOpenIdsOf(rec, rows) {
+    if (rec && Array.isArray(rec.ivfOpenIds)) return rec.ivfOpenIds;
+    rows = rows || phIvfCyclesSorted(rec);
+    if (!rows.length) return [];
+    const live = rows.find(r => phIvfIsLiveLink(r));
+    const dated = rows.filter(r => phIvfSortKey(r.when) !== "9999-99-99");
+    const pick = live || (dated.length ? dated[dated.length - 1] : rows[rows.length - 1]);
+    return pick ? [pick.id] : [];
+  }
   function phIvfHistoryFoldHtml(name) {
     const rec = phPatientPeek(name);
     const rows = phIvfCyclesSorted(rec);
@@ -120212,7 +120248,7 @@ or changing anything in Cliniko.
     if (!rows.length && !hasPlan && !phIsFemale(rec)) return "";
     const nTr = rows.reduce((n, r) => n + (r.transfers || []).length, 0);
     const cnt = rows.length ? `· ${rows.length} egg collection${rows.length === 1 ? "" : "s"} · ${nTr} transfer${nTr === 1 ? "" : "s"}` : "· nothing yet";
-    const open = !!rec.ivfHistOpen;
+    const open = phIvfFoldOpen(rec);
     // her IVF redesign 2026-10-16, item 1 ("quick-log by moment"): shown
     // whenever there's at least one round to attach a quick log to, OR a
     // moment is actually due today (which can itself start the first
@@ -120288,7 +120324,7 @@ or changing anything in Cliniko.
     return bits.join(" → ");
   }
   function phIvfJourneyHtml(rec, rows) {
-    const openIds = (rec && rec.ivfOpenIds) || [];
+    const openIds = phIvfOpenIdsOf(rec, rows);
     const nodes = [];
     rows.forEach(r => {
       nodes.push({ k: "c", r, key: phIvfSortKey(r.when), o: 0 });
