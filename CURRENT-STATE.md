@@ -188,7 +188,7 @@ Dispense menus) [Care Plan page "Case | Course"]. Every shown title (band, patie
 Today's visit, Treatment, print record) = `phTpTitleShown(name, plan)`: hers once renamed, else the main concern's words (on the
 plan treating it, or one with no course), else the course name; `plan.title` is never rewritten.
 **Findings**: Came in for, Ren, Tongue, Pulse, Abdomen, Cycle, Ask her, Blood tests, History, Musculoskeletal, each via the app's
-own renderer; purple dot = changed since last visit; tap = its drawer, + Watch / + Aim, lines to the diagnosis it feeds.
+own renderer; purple dot = changed since last visit; tap = its drawer, + Watch / + Aim, lines to the diagnosis it feeds. **Blood tests draws each marker as its small low–high bar with the dot** (her 2026-10-31 pick, idea 5: `phBldMiniHtml`, the flagged markers else the first three; the drawer keeps the words).
 **The plan** writes itself from the visit, in visit order, each part's buttons on its heading line (her picks): **Treat**
 (`phTpTreatHtml`: ONE table, a row per Compass concern: ★ if starred · the concern · first → now + Better / Same / Worse · the bar
 to the gold target mark (Watch's own reading, `phTpWatchData(...).cc`) · target ▾; the Goal words sit in the hover unless she typed
@@ -1337,6 +1337,15 @@ when the parts' last days differ) before + Pain · + Ask her; one tap carries To
 last day, through the pages' own Same as write (`phTodaySameAll` → `phFvSameDo`), only parts not done or skipped today; a failed
 save keeps its warning (no "✓" over it).
 
+**Ask her** (`phAhHtml`, a plan-stage tab: one card per topic, tap-to-pick answers, the Usually | Right now switch, the Top 3
+strip, Standing bars) **carries the body figure** (her 2026-10-31 pick, idea 5 of the 29 Oct audit; BUILD-NOTES "Ask her gets the body
+figure"): `phAhFigureHtml` = Medical history's body (`phHxSvg`, head to knees, front only) lit by the answers on screen: a topic's area
+(`PH_AH_AREA`: bowel, stomach, head, mouth, throat, lungs, bladder, skin, whole body) or an answer's own (`phAhAreaOf`: hands, heart,
+stomach). The organs light as on Medical history, the other areas are soft spots in the page colour, a skin / whole-body answer glows
+the outline. From 1280px up it is a sticky column beside the cards (`.ph-ah-split`), under that the footer's first column
+(`.ph-ah-foot.fig`); its chips are the one list of what is on (the "Ticked on Fang Bing Ren" list is gone), a tap on an area or a chip
+spotlights it (`phAhFigPin`), the heading names the version lit.
+
 **Findings charts** (tongue / abdomen / pulse) are the app's own tappable diagrams with a "brush" (pick a sign, then tap its
 regions). The exam pages are the ONE entry; `phExamMirrorToday` copies today's exam into the dated record. Read every finding
 through `phVisitFndRead`. **Every day is kept (her 2026-10-29 picks, BUILD-NOTES "Findings per visit"):** a chart written on an
@@ -1427,7 +1436,7 @@ is scored none / partial / normal (don't change the scale).
 ## Timeline & intake form
 **Timeline** is a rail item right after Fang Bing Ren, on IVF / Natural fertility / Pregnancy plans only (`phTlKindOf`); since
 2026-10-29 (her audit pick: 1 active patient used it) it sits with Patterns · Diagnosis under the rail's folded "⋯ More" row
-(`presFlowMoreOpen`); "done" = nothing overdue. The Today's visit band's Stims / Egg collection / Transfer facts open it. It reads IVF history, Blood tests and the pregnancy test (nothing asked twice) and takes month/year
+(`presFlowMoreOpen`); "done" = nothing overdue. The Today's visit band's Stims / Egg collection / Transfer facts open it. It reads IVF history, Blood tests (a result on its line is drawn as the small low–high bars with the dot, `phBldMiniHtml`, her 2026-10-31 pick) and the pregnancy test (nothing asked twice) and takes month/year
 dates on Schedule. **The intake form** arrives pre-filled from her file (details, cycle, Yes / No history) and can carry Fang Bing Ren
 questions (`PH_INTAKE_FBR_P` must match `PH_FBR_Q.p`); the link dialogs include a text message to copy. Creating a link never
 depends on the database SQL.
