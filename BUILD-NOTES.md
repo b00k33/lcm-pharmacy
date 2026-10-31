@@ -7285,7 +7285,7 @@ only when it holds Same as last time; the Care Plan glance line drops its "Care 
 its word); Pulse hides its "Pulse chart" label on the Pulse page only (Medical history's constitution keeps it). Ren and
 Today keep their first line: it says something new.
 **LIVE:** the labels, boxes and phone fix (13d8aeb7) in build 20261031-145600 (publish cefa2b92, with Edit where you read).
-The page names wait for her "push live".
+The page names (47876dba) LIVE in build 20261031-152700 (publish 12455f68), on her "push live".
 **Tested:** the scan before and after (above); 360px: no sideways scroll on 8 pages (Fang Bing Ren, Treatment, Energy & sleep,
 Today, Care Plan, Ask her, Checklist, MSK); no console errors. Page names: the first thing on all 8 pages at 1220 (no
 errors), and Supplements, Blood tests, Photos, Messages, Care Plan at 360 (no sideways scroll). **Not tested:** the Dispense
