@@ -1406,6 +1406,7 @@
   /* marks a made-in-house formula's $/g as computed from its recipe (her ask 2026-08-01) */
   /* her call (2026-08-04): she likes this one dark-green -- back to a solid
      pill, unlike the header buttons/tabs which stay quiet-tint */
+  .ph-cost-rcp { margin-left: 4px; }   /* a made formula's price is its recipe's (her 2026-10-31 pick) */
   .ph-cost-computed { display: inline-block; font-size: var(--fs-10-5); font-weight: 800; color: var(--ph-white); background: var(--ph-green); border-radius: 6px; padding: 0 4px; margin-left: 4px; line-height: 1.5; cursor: help; }
   .ph-cart-cell { text-align: center; }
   /* one-touch status menu */
@@ -29855,6 +29856,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
       localStorage.setItem(PHARMACY_KEY, JSON.stringify(PHARMACY));
       phSavedCounts.herbs = PHARMACY.herbs.length; phSavedCounts.log = PHARMACY.log.length;
       phMaybeBackup();
+      phRecipePriceSoon();   // a herb's price may have moved a made formula's (her 2026-10-31 pick)
       return true;
     } catch (e) {
       phShowSaveError("NOT saved — this device's storage is full or blocked (" + ((e && e.name) || "error") +
@@ -30897,6 +30899,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
       localStorage.setItem(PRESC_KEY, JSON.stringify(PRESC));
       phSavedCounts.items = PRESC.items.length;
       phMaybeBackup();
+      phRecipePriceSoon();   // a recipe edit may have moved its formula's price (her 2026-10-31 pick)
       return true;
     } catch (e) {
       phShowSaveError("NOT saved — this device's storage is full or blocked (" + ((e && e.name) || "error") +
@@ -33644,6 +33647,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     // STEP 8h: same order every row, computed once -- Code and Name stay
     // pinned first (matching the header), Actions stays pinned last
     const colOrder = phColOrder("inv");
+    const rcpOf = phRecipeJarMap();   // her 2026-10-31 pick: a formula she makes is priced by its recipe
     tbody.innerHTML = pageRows.map(h => {
       const k = phHerbStatusKey(h);
       // STEP 5 (her ask 2026-08-11): HH is independent of stock status --
@@ -33668,7 +33672,12 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
       // in the other
       const bottleAuto = h.cost ? phRound2(h.cost * phOrderPackFor(h)) : null;
       const bottleEditVal = h.bottleCost != null ? h.bottleCost : (bottleAuto != null ? bottleAuto : "");
-      const bottleCell = phCellEdit && phCellEdit.id === h.id && phCellEdit.field === "bottleCost"
+      // her 2026-10-31 pick ("Its recipe, always"): a formula she makes is priced by its recipe, so its Bottle $ is that
+      // price × the pack, tagged "recipe" and not typed (the price columns she shows differ per device, so both carry it)
+      const rl = rcpOf.has(h.id) ? phRecipePriceLine(rcpOf.get(h.id).r) : "";
+      const bottleCell = rl && bottleAuto != null
+        ? `<span class="ph-rcp-bottle" title="From its recipe: ${esc(rl)}, × ${phOrderPackFor(h)} g pack. A herb's price or the recipe changes it."><span class="ph-cost-computed">$${bottleAuto}</span><span class="ph-sub ph-cost-rcp">recipe</span></span>`
+        : phCellEdit && phCellEdit.id === h.id && phCellEdit.field === "bottleCost"
         ? `<input type="text" inputmode="decimal" class="ph-qty-input" data-ph-edit="${h.id}:bottleCost" value="${bottleEditVal}" placeholder="—" aria-label="Cost of the restocked bottle for ${esc(h.name)} (${phOrderPackFor(h)}g pack) — $/g recalculates from this">`
         : `<button type="button" class="ph-qty-lock" data-ph-unlock="${h.id}:bottleCost" title="Click to edit">${h.bottleCost != null ? "$" + h.bottleCost : bottleAuto != null ? `<span class="ph-cost-computed" title="Estimated from $/g x ${phOrderPackFor(h)}g pack — click to enter the real bottle price">$${bottleAuto}</span>` : "—"}</button>`;
       // her spec (2026-08-17): a code belongs to a supplier -- this cell and
@@ -33717,7 +33726,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
                 : "";
               return `<div class="ph-sup-row">${pick}${codeField}</div>`;
             })()}</td>`,
-        cost: `<td class="ph-num" data-col="cost"><span title="Cost per gram of ${esc(h.name)} — set the Bottle $ to change it">${h.cost ? "$" + h.cost : "—"}</span>${priceMore}</td>`,
+        cost: `<td class="ph-num" data-col="cost"><span title="${rl ? `From its recipe: ${esc(rl)}. A herb's price or the recipe changes it.` : `Cost per gram of ${esc(h.name)} — set the Bottle $ to change it`}">${h.cost ? "$" + h.cost : "—"}</span>${rl ? `<span class="ph-sub ph-cost-rcp">recipe</span>` : ""}${priceMore}</td>`,
         costFlag: `<td class="ph-num" data-col="costFlag"><span title="$/g rounded up to the nearest 10c">${h.cost ? "$" + phRound2(phRoundUp10c(h.cost)) : "—"}</span></td>`,
         bottleCost: `<td class="ph-num" data-col="bottleCost">${bottleCell}</td>`,
         qty: `<td class="ph-num" data-col="qty">${lock("qty", h.qty != null ? h.qty : "—", `Stock of ${esc(h.name)}`)}</td>`,
@@ -56916,9 +56925,12 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
       if (painNb) {
         const dk = painNb.dataset.cycleSignDate, rec = phPatientRec(painNb.dataset.cycleSignName);
         if (rec && dk) {
-          const n0 = Math.round((phCycleSignFor(rec, dk) || {}).painN || 0), n1 = +painNb.dataset.cyclePainn, n = n1 && n1 !== n0 ? n1 : 0;
-          phCycleSignSet(rec, dk, { painN: n || undefined, pain: phCyclePainWord(n) || undefined });
-          phCycSignMark("painN", n, dk, !!n);
+          // her 2026-10-31 pick (tap two numbers): a second number makes a range (4, then 6 = 4–6), a tap on a range is one
+          // score again, 0 or the same score again clears it
+          const s0 = phCycleSignFor(rec, dk) || {}, n0 = Math.round(s0.painN || 0), lo0 = s0.painLo && s0.painLo < n0 ? Math.round(s0.painLo) : 0, n1 = +painNb.dataset.cyclePainn;
+          const hi = !n1 || (!lo0 && n1 === n0) ? 0 : lo0 || !n0 ? n1 : Math.max(n0, n1), lo = hi && !lo0 && n0 && n1 !== n0 ? Math.min(n0, n1) : 0;
+          phCycleSignSet(rec, dk, { painN: hi || undefined, painLo: lo || undefined, pain: phCyclePainWord(hi) || undefined });
+          phCycSignMark("painN", n1, dk, !!hi);
         }
         phCycleRerender();
         return;
@@ -56930,8 +56942,8 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
           const v = painYn.dataset.cyclePainyn, s0 = phCycleSignFor(rec, dk) || {}, was = phCycPainYN(s0);
           if (v === was) phCycleSignSet(rec, dk, v === "no" || !(s0.painN || s0.feels || s0.pain) ? { painYN: undefined } : {});
           else if (v === "no") {
-            const keep = { painN: s0.painN, pain: s0.pain, feels: s0.feels, painYN: s0.painYN };
-            phCycleSignSet(rec, dk, { painYN: "no", painN: undefined, pain: undefined, feels: undefined });
+            const keep = { painN: s0.painN, painLo: s0.painLo, pain: s0.pain, feels: s0.feels, painYN: s0.painYN };
+            phCycleSignSet(rec, dk, { painYN: "no", painN: undefined, painLo: undefined, pain: undefined, feels: undefined });
             if (keep.painN || keep.pain || keep.feels) presSavedToast("Pain cleared", { undo: () => { const r = phPatientRec(nm); if (r) { phCycleSignSet(r, dk, keep); phCycleRerender(); } } });
           } else phCycleSignSet(rec, dk, { painYN: "yes" });
           phCycSignMark("painYN", v, dk, phCycPainYN(phCycleSignFor(rec, dk)) === v);
@@ -56953,11 +56965,13 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
           // no data-cycle-sign-val at all, so they still just toggle.
           const val = signToggle.dataset.cycleSignVal;
           // the older single Clots row (the smaller day popovers) writes `clots`, which then stands for the day's clots again
-          phCycleSignSet(rec, signToggle.dataset.cycleSignDate, Object.assign({ [field]: val !== undefined ? (cur[field] === val ? "" : val) : !cur[field] }, field === "clots" ? { clotSz: undefined, clotAmt: undefined } : {}));
+          // Pain type takes several (her 2026-10-31 pick): a type goes in or out of the day's list, "—" clears them all
+          if (field === "feels") { const fl = phCycFeels(cur), nx = !val ? [] : fl.includes(val) ? fl.filter(f => f !== val) : fl.concat(val), ord = PH_CYCLE_FEELS.map(x => x[0]).filter(f => nx.includes(f)); phCycleSignSet(rec, signToggle.dataset.cycleSignDate, { feels: !ord.length ? undefined : ord.length === 1 ? ord[0] : ord }); }
+          else phCycleSignSet(rec, signToggle.dataset.cycleSignDate, Object.assign({ [field]: val !== undefined ? (cur[field] === val ? "" : val) : !cur[field] }, field === "clots" ? { clotSz: undefined, clotAmt: undefined } : {}));
           // her "Richer" motion pick: remember the change so the next paint pops
           // the chip, shows "Saved" and pulses the ribbon day -- once
           const after = phCycleSignFor(rec, signToggle.dataset.cycleSignDate) || {};
-          phCycSignMark(field, val, signToggle.dataset.cycleSignDate, !!after[field]);
+          phCycSignMark(field, val, signToggle.dataset.cycleSignDate, field === "feels" ? phCycFeels(after).includes(val) : !!after[field]);
         }
         phCycleRerender();
         return;
@@ -77299,7 +77313,7 @@ or changing anything in Cliniko.
     if (t.matches("input[data-cycle-sign-painn]")) {
       const n = Math.min(10, Math.max(0, parseFloat(t.value) || 0));
       const rec = phPatientRec(t.dataset.cycleSignName);
-      if (rec) { phCycleSignSet(rec, t.dataset.cycleSignDate, { painN: n || undefined, pain: phCyclePainWord(n) || undefined }); phCycSignMark("painN", n, t.dataset.cycleSignDate, false); }
+      if (rec) { phCycleSignSet(rec, t.dataset.cycleSignDate, { painN: n || undefined, painLo: undefined, pain: phCyclePainWord(n) || undefined }); phCycSignMark("painN", n, t.dataset.cycleSignDate, false); }
       phCycleRerender();
       return;
     }
@@ -90021,6 +90035,7 @@ or changing anything in Cliniko.
     // her 2026-10-26 picks: clots are a size list + an amount, Painful? a No / Yes (empty ones leave no key)
     if (!(Array.isArray(next.clotSz) && next.clotSz.length)) delete next.clotSz;
     ["clots", "clotAmt", "painYN", "painN", "pain", "feels"].forEach(k => { if (next[k] === undefined) delete next[k]; });
+    if (!(next.painLo > 0 && next.painN > next.painLo)) delete next.painLo;   // a How bad range (her 2026-10-31) needs a top above its bottom
     const hasAny = hasTemp || next.flow || next.pain || next.painN || next.clots || next.clotSz || next.clotAmt || next.painYN || next.looks || next.feels || next.sex || next.cm || next.lh || next.ov || next.mood || next.pms || (next.note && next.note.trim());
     if (hasAny) rec.cycleSigns[dateKey] = next; else delete rec.cycleSigns[dateKey];
     savePharmacy();
@@ -90040,6 +90055,10 @@ or changing anything in Cliniko.
   const phCycClotsTxt = s => phCycClotVals(s).map(v => (PH_CYCLE_CLOT_LABS.find(x => x[0] === v) || [v, v])[1].toLowerCase()).join(", ");
   // Painful? (her order): "no" is her answer; a pain score, pain type or the older pain word means yes
   const phCycPainYN = s => !s ? "" : s.painYN === "no" ? "no" : (s.painYN === "yes" || s.painN || s.feels || s.pain) ? "yes" : "";
+  // her 2026-10-31 picks: Pain type takes several (one is saved as its word, two or more as a list) and How bad takes a range
+  // (tap 4, then 6 = 4–6: `painLo` 4, `painN` 6). The top of a range is the number wherever one number is needed.
+  function phCycFeels(s) { return !s || !s.feels ? [] : Array.isArray(s.feels) ? s.feels.filter(Boolean) : [s.feels]; }
+  function phCycPainTxt(s) { return !s || !s.painN ? "" : (s.painLo && s.painLo < s.painN ? s.painLo + "–" : "") + s.painN; }
   function phCycleSignIcon(s) { return !s ? "" : s.flow ? "🩸" : s.pain ? "⚡" : s.sex ? "💗" : s.cm ? "💧" : s.lh ? "🧪" : s.ov ? "🥚" : s.mood ? "😴" : (typeof s.temp === "number") ? "🌡" : s.note ? "📝" : ""; }
   // her ask 2026-09-25 ("i want an icon indicator in the calendar and
   // horizontal chart... make 3 mocks", picked "b" -- one corner badge icon
@@ -90057,7 +90076,7 @@ or changing anything in Cliniko.
     if (!s) return "";
     const parts = [];
     if (s.flow) { const m = PH_CYCLE_DAYFLOW.find(x => x[0] === s.flow); if (m && m[0]) parts.push("🩸 " + m[1] + " flow"); }
-    if (s.painN) parts.push("⚡ Pain " + s.painN + "/10");
+    if (s.painN) parts.push("⚡ Pain " + phCycPainTxt(s) + "/10");
     else if (s.pain) { const m = PH_CYCLE_DAYPAIN.find(x => x[0] === s.pain); if (m && m[0]) parts.push("⚡ " + m[1] + " pain"); }
     if (phCycHasClots(s)) parts.push("● Clots: " + phCycClotsTxt(s));
     if (s.sex) parts.push("💗 Unprotected sex");
@@ -90111,7 +90130,7 @@ or changing anything in Cliniko.
     // in that set wears a quiet ring (since her 2026-10-28 pick the ring alone, "Her usual" in its hover title) unless it's already today's own pick. Every other
     // caller omits `ghost` and renders exactly as before.
     return `<div class="ph-ck-chips${seg ? " seg" : ""}">${opts.map(([v, l]) => {
-      const on = v === "" ? cur === "" : cur === v;
+      const on = Array.isArray(cur) ? (v === "" ? !cur.length : cur.includes(v)) : v === "" ? cur === "" : cur === v;   // a list = a pick-several row (Pain type)
       const isGhost = !!(ghost && ghost.has(v) && !on);
       return `<button type="button" class="ph-ck-chip${on ? " on" + (cls ? cls(v) : "") : ""}${on && popVal === v ? " pop" : ""}${isGhost ? " ghost" : ""}" data-cycle-sign-field="${field}" data-cycle-sign-val="${esc(v)}" ${attrs}${titles && titles[v] || isGhost ? ` title="${esc([titles && titles[v], isGhost ? "Her usual" : ""].filter(Boolean).join(" · "))}"` : ""}>${ics && ics[v] ? ics[v] : ""}${esc(l)}</button>`;
     }).join("")}</div>`;
@@ -90507,9 +90526,9 @@ or changing anything in Cliniko.
       if (s.looks === "dark" || s.looks === "brown" || s.looks === "darkpale") bump("dark_blood", dk);
       if (s.looks === "bright") bump("bright_blood", dk);
       if (s.looks === "pale" || s.looks === "pink" || s.looks === "watery" || s.looks === "darkpale") bump("pale_flow", dk);
-      if (s.feels === "stabbing") bump("stabbing", dk);
-      if (s.feels === "cramping") bump("cramp", dk);
-      if (s.feels === "dragging") bump("dragging", dk);
+      if (phCycFeels(s).includes("stabbing")) bump("stabbing", dk);
+      if (phCycFeels(s).includes("cramping")) bump("cramp", dk);
+      if (phCycFeels(s).includes("dragging")) bump("dragging", dk);
       if (s.flow === "heavy") bump("heavy_flow", dk);
       if (s.flow === "light") bump("light_flow", dk);
       if (s.cm === "watery") bump("watery_cm", dk);
@@ -99398,7 +99417,7 @@ or changing anything in Cliniko.
     ids.forEach(id => { if (rp[id]) phCycPmsRen(id).forEach(k => add("p", k)); });
     // the day log's clots and dark blood, and its pain types, reach these two Ren signs through their Patterns clues
     if (phCycHasClots(s) || s.looks === "dark" || s.looks === "brown") add("p", "dark_clots_tend");
-    if (s.feels === "stabbing" || s.feels === "cramping" || s.feels === "dragging") add("p", "menstrual_pain_tend");
+    if (phCycFeels(s).some(f => f === "stabbing" || f === "cramping" || f === "dragging")) add("p", "menstrual_pain_tend");
     if (!cand.length) return [];
     const tp = phTriToday(rec);
     const effD = cand.some(c => c.kind === "d") ? phTriEffective(rec, name, "d", tp.d, tp.prevD) : {};
@@ -108387,10 +108406,10 @@ or changing anything in Cliniko.
     const p = [];
     if (kind === "bleed") {
       if (s.flow) p.push(lab(PH_CYCLE_DAYFLOW, s.flow).toLowerCase() + " flow");
-      if (s.painN) p.push("pain " + s.painN + "/10"); else if (s.pain) p.push(lab(PH_CYCLE_DAYPAIN, s.pain).toLowerCase() + " pain");
+      if (s.painN) p.push("pain " + phCycPainTxt(s) + "/10"); else if (s.pain) p.push(lab(PH_CYCLE_DAYPAIN, s.pain).toLowerCase() + " pain");
       if (phCycHasClots(s)) p.push("clots " + phCycClotsTxt(s));
       if (s.looks) p.push(lab(PH_CYCLE_LOOKS, s.looks).toLowerCase());
-      if (s.feels) p.push(lab(PH_CYCLE_FEELS, s.feels).toLowerCase());
+      if (phCycFeels(s).length) p.push(phCycFeels(s).map(f => lab(PH_CYCLE_FEELS, f).toLowerCase()).join(", "));
     } else {
       if (s.cm) p.push(lab(PH_CYCLE_CM, s.cm).toLowerCase() + " discharge");
       if (s.lh) p.push("LH " + lab(PH_CYCLE_LH, s.lh).toLowerCase());
@@ -108459,7 +108478,7 @@ or changing anything in Cliniko.
     // pain /10 (half steps) -- the slider commits on release; the number
     // beside it follows the thumb live (input handler, no repaint)
     const painN = s.painN || 0;
-    const painRow = `<div class="row"><span class="k">Pain</span><span class="ph-cyc-painwrap"><input type="range" class="ph-cyc-painrange" min="0" max="10" step="0.5" value="${painN}" aria-label="Pain out of 10" data-cycle-sign-painn="1" ${attrs}><b class="ph-cyc-painval${painN ? " on" : ""}">${painN ? painN + "/10" : "none"}</b></span></div>`;
+    const painRow = `<div class="row"><span class="k">Pain</span><span class="ph-cyc-painwrap"><input type="range" class="ph-cyc-painrange" min="0" max="10" step="0.5" value="${painN}" aria-label="Pain out of 10" data-cycle-sign-painn="1" ${attrs}><b class="ph-cyc-painval${painN ? " on" : ""}">${painN ? phCycPainTxt(s) + "/10" : "none"}</b></span></div>`;
     const clotsRow = `<div class="row"><span class="k">Clots</span>${phCycleSelectChips("clots", PH_CYCLE_CLOTS, s.clots, attrs)}</div>`;
     // her 2026-10-03 day-log redesign (eight ask28 answers): the whole cycle
     // is the day navigation (ribbon), four plain-fact summary lines, and two
@@ -108475,7 +108494,7 @@ or changing anything in Cliniko.
       ${painRow}
       ${clotsRow}
       <div class="row"><span class="k">Blood looks</span>${phCycleSelectChips("looks", [["", "—"], ...PH_CYCLE_LOOKS], s.looks || "", attrs)}</div>
-      <div class="row"><span class="k">Pain feels</span>${phCycleSelectChips("feels", [["", "—"], ...PH_CYCLE_FEELS], s.feels || "", attrs)}</div>`;
+      <div class="row"><span class="k">Pain feels</span>${phCycleSelectChips("feels", [["", "—"], ...PH_CYCLE_FEELS], phCycFeels(s), attrs)}</div>`;
     // her 2026-10-14 pick: PMS on every day, the Usual period's own list and drawings (phCycPmsOpts). Low mood is the older
     // `mood` field (a plain toggle), the rest live in s.pms (data-cycle-sign-pms toggles one id). "Other" keeps Ovulation twinge.
     const pmsOn = phCycPmsIds(s);
@@ -108605,9 +108624,10 @@ or changing anything in Cliniko.
       // the womb cramps faster as the pain goes up
       const womb = `<svg class="ph-cs-womb${painN ? " cr" : ""}" style="--sp:${(1.6 - painN * .11).toFixed(2)}s" viewBox="0 0 44 38" aria-hidden="true" focusable="false"><g class="w"><path d="M6 6Q12 4 15 9L18 15Q22 12 26 15L29 9Q32 4 38 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path class="wb" d="M14 13Q12 30 22 34Q32 30 30 13Q22 18 14 13z" fill="currentColor" fill-opacity="${(.2 + painN * .06).toFixed(2)}" stroke="currentColor" stroke-width="2"/></g></svg>`;
       // How bad (her 2026-10-28 pick): one joined 0-10 bar, one tap (the app's rule for a 0-10 score), the cells up to her score pale;
-      // her score tapped again clears it. A half step the old slider saved shows on its nearest cell.
-      const painNi = Math.round(painN);
-      const painRowQ = flatRow("How bad", `<div class="ph-ck-chips seg ph-cs-n10" role="group" aria-label="Pain out of 10">${Array.from({ length: 11 }, (_, i) => `<button type="button" class="ph-ck-chip${i && i === painNi ? " on" + (fresh("painN", i) ? " pop" : "") : i && i < painNi ? " lv" : ""}" data-cycle-painn="${i}" ${attrs} aria-pressed="${!!i && i === painNi}">${i}</button>`).join("")}</div>${womb}`);
+      // her score tapped again clears it. A half step the old slider saved shows on its nearest cell. Her 2026-10-31 pick: a
+      // second number makes a range, filled from its bottom to its top (4–6), with nothing pale under it.
+      const painNi = Math.round(painN), painLoI = s.painLo && s.painLo < painN ? Math.round(s.painLo) : 0, inPain = i => !!i && (i === painNi || (!!painLoI && i >= painLoI && i <= painNi));
+      const painRowQ = flatRow("How bad", `<div class="ph-ck-chips seg ph-cs-n10" role="group" aria-label="Pain out of 10">${Array.from({ length: 11 }, (_, i) => `<button type="button" class="ph-ck-chip${inPain(i) ? " on" + (fresh("painN", i) ? " pop" : "") : !painLoI && i && i < painNi ? " lv" : ""}" data-cycle-painn="${i}" ${attrs} aria-pressed="${inPain(i)}">${i}</button>`).join("")}</div>${womb}`);
       const ynBar = `<div class="ph-ck-chips seg">${[["no", "No"], ["yes", "Yes"]].map(([v, l]) => `<button type="button" class="ph-ck-chip${yn === v ? " on" + (fresh("painYN", v) ? " pop" : "") : ""}" data-cycle-painyn="${v}" ${attrs} aria-pressed="${yn === v}">${l}</button>`).join("")}</div>`;
       const q = (n, title, done, head, body, bodyCls) => `<section class="ph-cs-q${done ? " done" : ""}"><span class="ph-cs-qn">${n}</span><div class="ph-cs-qw"><div class="ph-cs-qh"><b class="ph-cs-qt">${esc(title)}</b>${head || ""}</div>${body ? `<div class="ph-cs-grid ph-cs-qb${bodyCls || ""}">${body}</div>` : ""}</div></section>`;
       const q1 = q(1, "Last period", !!cd, phCycDay1RowHtml(rec, name, dateKey, { noTag: true }), "");
@@ -108616,7 +108636,7 @@ or changing anything in Cliniko.
         + icRow("Colour", phCycleSelectChips("looks", shortLooks, s.looks || "", attrs, null, Object.fromEntries(shortLooks), true, ghostSet("col", shortLooks), lookIcs), labOf(shortLooks, s.looks))
         + icRow("Clots", clotsHtml, clotRead));
       const q3 = q(3, "Painful?", !!yn, ynBar, yn === "yes"
-        ? painRowQ + flatRow("Pain type", phCycleSelectChips("feels", PH_CYCLE_FEELS, s.feels || "", attrs, null, null, true, ghostSet("pain", PH_CYCLE_FEELS), feelIcs))
+        ? painRowQ + flatRow("Pain type", phCycleSelectChips("feels", PH_CYCLE_FEELS, phCycFeels(s), attrs, null, null, true, ghostSet("pain", PH_CYCLE_FEELS), feelIcs))
         : "", fresh("painYN", "yes") ? " ph-cs-in" : "");
       const q4 = q(4, "Between periods", !!(phBbtTempFor(rec, dateKey) || s.lh || s.cm || s.sex || s.ov), "",
         phCycBbtRowHtml(rec, dateKey, attrs, true)
@@ -108966,7 +108986,7 @@ or changing anything in Cliniko.
         if (!d || k > todayKey) continue;
         const n = d.painN != null && d.painN !== "" ? +d.painN : PH_CYC_PAIN_NUM[d.pain];
         if (n != null && !isNaN(n) && (worst == null || n > worst)) worst = n;
-        if (d.feels === "cramping" || d.feels === "stabbing") feels = true;
+        if (phCycFeels(d).some(f => f === "cramping" || f === "stabbing")) feels = true;
       }
       const w = logBy[s] && logBy[s].pain;
       if (worst == null && w) worst = w === "none" ? 0 : PH_CYC_PAIN_NUM[w] != null ? PH_CYC_PAIN_NUM[w] : null;
@@ -108991,7 +109011,7 @@ or changing anything in Cliniko.
         if (!d) continue;
         const r = flowRank.indexOf(d.flow);
         if (r > top) top = r;
-        add(per.col, d.looks); phCycClotVals(d).forEach(v => add(per.clot, v)); add(per.pain, d.feels);
+        add(per.col, d.looks); phCycClotVals(d).forEach(v => add(per.clot, v)); phCycFeels(d).forEach(v => add(per.pain, v));
         if (r >= 0 || d.looks || phCycHasClots(d) || d.feels || d.painN || d.pain) any = true;
       }
       if (!any) return;
@@ -136736,13 +136756,17 @@ Dosage: {dosage}
   // app at all. A 0ms timeout runs after every inline script has executed:
   // the flag is then real, the sync branch is finally reachable, and a
   // render can't meet an uninitialised const.
-  setTimeout(() => {
+  // Found 2026-10-31: a 0ms timeout can ALSO fire while the parser is still short of the sync's own <script> (the page is big
+  // enough that the browser pauses mid-parse), so __LCM_SYNC read as unset and the housekeeping wrote 3 s into a boot, before
+  // any pull. DOMContentLoaded comes after every inline script has run, so the test below now waits for it.
+  const phAfterScripts = fn => document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", () => setTimeout(fn, 0), { once: true }) : setTimeout(fn, 0);
+  phAfterScripts(() => {
     if (!window.__LCM_SYNC) phRunBootHousekeeping();
     else {
       window.addEventListener("lcm-sync-caught-up", phRunBootHousekeeping, { once: true });
       setTimeout(phRunBootHousekeeping, 20000);   // offline / not-signed-in fallback
     }
-  }, 0);
+  });
   // a sweep write is safe once boot housekeeping ran AND this tab isn't
   // possibly-stale (backgrounded tabs go unfresh until their next catch-up)
   const phSweepSafe = () => phHousekeepingDone && (!window.__LCM_SYNC || window.__lcmSyncFresh !== false);
@@ -137986,6 +138010,65 @@ Dosage: {dosage}
     // nearest 10c -- never rounds down, so the batch never sells under cost
     return r.totalGrams > 0 && cost > 0 ? phRoundUp10c(cost / r.totalGrams) : null;
   }
+  // her pick 2026-10-31 ("correspond formula refills price to the inventory", then "Its recipe, always"): a formula she
+  // makes carries its recipe's price in the Inventory, live. It is squared after any save and after every pull, but only
+  // while this copy is fresh (the sync's __lcmSyncFresh, the same gate as the boot housekeeping: a stale copy's write would
+  // make its old records look newer). A jar that several recipes point at follows the one made last; a recipe with an
+  // unpriced herb leaves the jar's own price.
+  function phRecipeJarMap() {
+    const by = new Map(), out = new Map();
+    PRESC.items.forEach(r => {
+      if (!presIsFormula(r) || !(r.ingredients || []).length) return;
+      const j = refJarForRecipe(r);
+      if (j && phMadeInHouse(j)) (by.get(j.id) || by.set(j.id, { j, rs: [] }).get(j.id)).rs.push(r);
+    });
+    by.forEach(({ j, rs }, id) => {
+      let r = rs[0];
+      if (rs.length > 1) {
+        const names = new Set(rs.map(x => x.name)), last = (PHARMACY.log || []).find(e => e && e.kind === "refill" && names.has(e.what));
+        if (last) r = rs.find(x => x.name === last.what) || r;
+      }
+      out.set(id, { j, r });
+    });
+    return out;
+  }
+  // "140 g · 11 herbs · $26.88 → $0.20/g", or "" while a herb is unpriced
+  function phRecipePriceLine(r) {
+    const perG = r ? refRecipeCostPerG(r) : null;
+    if (perG == null) return "";
+    const cost = r.ingredients.reduce((a, i) => a + (i.grams || 0) * presFindHerb(i).cost, 0);
+    return `${phFmtG(r.totalGrams)} g · ${r.ingredients.length} herbs · $${cost.toFixed(2)} → $${perG.toFixed(2)}/g`;
+  }
+  // var and function, not let / const: savePharmacy reaches phRecipePriceSoon during boot, before these lines have run
+  var phRecipePriceOk = false, phRecipePriceTid = 0, phRecipePriceBusy = false;
+  function phRecipePriceFresh() { return !!phRecipePriceOk && (!window.__LCM_SYNC || window.__lcmSyncFresh === true); }
+  function phRecipePricesSync() {
+    if (!phRecipePriceFresh() || phRecipePriceBusy) return 0;
+    phRecipePriceBusy = true;
+    let n = 0;
+    try {
+      for (let pass = 0; pass < 3; pass++) {   // a recipe holding another made formula settles on the next pass
+        let ch = 0;
+        phRecipeJarMap().forEach(({ j, r }) => {
+          const perG = refRecipeCostPerG(r);
+          if (perG != null && j.cost !== perG) { j.cost = perG; delete j.restockCostComputed; ch++; }
+        });
+        n += ch;
+        if (!ch) break;
+      }
+      if (n) savePharmacy();
+    } finally { phRecipePriceBusy = false; }
+    return n;
+  }
+  function phRecipePriceSoon() {
+    if (!phRecipePriceFresh() || phRecipePriceBusy) return;
+    clearTimeout(phRecipePriceTid);
+    phRecipePriceTid = setTimeout(phRecipePricesSync, 1200);
+  }
+  phAfterScripts(() => {
+    const go = () => { phRecipePriceOk = true; phRecipePricesSync(); };
+    if (!window.__LCM_SYNC) go(); else window.addEventListener("lcm-sync-caught-up", go);
+  });
   // one-time backfill (her ask 2026-08-13): "In house" as a real supplier
   // option, so existing made-in-house formulas show it in the Supplier
   // column NOW rather than only after their next refMake() batch. Only
