@@ -7402,6 +7402,7 @@ warning), the icon-only circles (Log period, Edit the goal words: 32px circles, 
 sideways scroll, nothing past the edge, the title field tinted, labels 11px; no console errors; the Treatment page's "not yet"
 reads the same. **Not tested:** a plan with scored Compass concerns (the Treat table) and an agreed Fang Bing Ren (the
 Diagnosis bars) on the reseeded patients; the Key2 at 360 × 469.
+**LIVE:** build 20261031-154600 (publish cd93de70, made by the B33 C4 LCM session on her "push live", with its 383a0db0).
 
 ## Period pain: a range and several types; a made formula priced by its recipe (2026-10-31)
 Her synth22 batch: "allow multiple select for pain type, including range for pain e.g. 4-6 etc" and "correspond formula refills
