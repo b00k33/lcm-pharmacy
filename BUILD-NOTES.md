@@ -7463,8 +7463,8 @@ cell's 9px inset (inside the cell, nothing over a neighbour): left. **Left to th
 and is editing them for its idea 5):** three 1px top lines (`.ph-tp-fr.px`, `.ph-tp-fxmore.ph-tp-fxnone`) and, on the phone,
 the `.ph-tp-fxmc` "more" chips (24px pills) and the "More" label (10px).
 **Tested:** the scan before and after on both patients: desktop taps off-rule 3 → 0 (kept cells aside), label looks 2 → 1,
-lines 6 → 4 (the peer's); phone label looks 7 → 2 (the peer's "More"), taps under 28px / 12.5px 14 → 0 outside the peer's
-chips and the shared tab strip; no word wider than its box but the two dates above; nothing past 360; no console errors.
+lines 4 → 3 (the peer's); phone label looks 7 → 2 (the peer's "More"), no tap under 28px / 12.5px left outside the
+peer's chips and the shared tab strip; no word wider than its box but the two dates above; nothing past 360; no console errors.
 Pages checked for the shared rules: Treatment (both patients), the Care Plan's Session grid section lines (`.ph-tp-sec`,
 already 10.5px / .08em on desktop). **Not tested:** a real formula name in the Herbs cell (the seeded one is the template's
 words), a visit with points and a written note, the Key2 at 360 × 469.
