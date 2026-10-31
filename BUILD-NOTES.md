@@ -7468,3 +7468,4 @@ peer's chips and the shared tab strip; no word wider than its box but the two da
 Pages checked for the shared rules: Treatment (both patients), the Care Plan's Session grid section lines (`.ph-tp-sec`,
 already 10.5px / .08em on desktop). **Not tested:** a real formula name in the Herbs cell (the seeded one is the template's
 words), a visit with points and a written note, the Key2 at 360 × 469.
+**LIVE:** build 20261101-012200 (publish b101b9a8, on her "push live").
