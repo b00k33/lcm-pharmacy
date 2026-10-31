@@ -7434,3 +7434,37 @@ formula sync wait until the catch-up (before: ran at 3 s); no console errors; no
 **Not tested:** her signed-in data (the sandbox catalog's herb prices differ from hers), the Key2 at 360 × 469, Dispense's
 patient price on a real dispense of a recipe-priced formula.
 **LIVE** 2026-11-01 00:27, build 20261101-002700 (publish 1bb85f63, on her "push live").
+
+## Treatment page audit (2026-10-31)
+Her words: "audit the treatment page for consistency too". Audit = apply (commit 36764a78; CSS only, one dated block,
+"Treatment page audit (her 2026-10-31 ...)", at the end of the main `<style>`).
+**Measured** in the sandbox (the two made-up patients with a plan and past visits: Bell's palsy, Natural fertility) at her
+1220px and at 360px: every tap against TAPPABLE THINGS, labels, cards and nesting, lines, text under 10.5px, words wider than
+their box.
+**Fixed (desktop):**
+- The Treatment strip's quiet chips by Diagnosis / Goal ("Patterns' words", "Template's words", "Patterns ›", `.ph-ts-dx
+  .ph-ts-chip`) were 28px pills at 12.5px: 6px chips, 32px / 13px from 641px (the phone keeps its 28px). Told the B33 C4 LCM
+  session first (its strip); its rules at ~18826 are untouched.
+- Herbs cell: the formula dropdown (`td.blk .ph-acu-phasechip`) was pinned at 32px by the 10/30 pass's ≥641 rule, so a long
+  name ran over "Herbs · none today" and the Dispense button: it now grows with its words (min 32px).
+- Today's Note box was 45px wide, "Notes" cut to "tes": `td.nt` insets 4px like the Therapies / Herbs cells (box 55px).
+- Visit table: "Session 4 · today" (nowrap from `.ph-vc-tbl th[scope=row]`) ran 46px into Phase, and a cycle phase's one
+  long word ("Menstruation") 24px into Response: the small line wraps, a word breaks inside its cell (`overflow-wrap:
+  break-word`; `anywhere` was tried and broke "Today's" inside the Score chip). Heads .08em like every capitals label.
+- The dashed line between the phase stepper and its panel: gone (space separates them).
+**Fixed (phone, ≤640px):** the phase's Current dropdown (a pill), "Turn on acupuncture" (26px pill), Red flags ▾ and its chips
+(24px), "+ Book it" (26px), "copy the date" (18px, 11px words), "Doesn't apply?" (13px plain words) = 28px, 6px corners,
+12.5px; the phase's × a 28px circle (desktop had 32px); "Save draft" (plain grey words that tap) takes desktop's look; one
+11px / 700 / .06em label for the stepper (it was 9.5 to 10px), Came in for / Findings, Aim / Watch, Herbs, Then, table heads.
+**Kept on purpose:** the Session grid (LOCKED); the visit table's date buttons and `.sm` chips (cells, the first audit's call);
+the Response cell's italic "Nothing to score yet" (the app's empty look, as in the grid's empty cells); the plan's Watch notes
+(data); the shared phone tab strip (11.5px, on every patient page); the Next button. A visit date runs 3 to 4px into its
+cell's 9px inset (inside the cell, nothing over a neighbour): left. **Left to the B33 C4 LCM session (its facts rows, it agreed
+and is editing them for its idea 5):** three 1px top lines (`.ph-tp-fr.px`, `.ph-tp-fxmore.ph-tp-fxnone`) and, on the phone,
+the `.ph-tp-fxmc` "more" chips (24px pills) and the "More" label (10px).
+**Tested:** the scan before and after on both patients: desktop taps off-rule 3 → 0 (kept cells aside), label looks 2 → 1,
+lines 6 → 4 (the peer's); phone label looks 7 → 2 (the peer's "More"), taps under 28px / 12.5px 14 → 0 outside the peer's
+chips and the shared tab strip; no word wider than its box but the two dates above; nothing past 360; no console errors.
+Pages checked for the shared rules: Treatment (both patients), the Care Plan's Session grid section lines (`.ph-tp-sec`,
+already 10.5px / .08em on desktop). **Not tested:** a real formula name in the Herbs cell (the seeded one is the template's
+words), a visit with points and a written note, the Key2 at 360 × 469.
