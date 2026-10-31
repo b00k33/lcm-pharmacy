@@ -7377,3 +7377,27 @@ scroll; pictures `shots/e4-build-*.png` (1440 Photos, 375 Photos, IVF empty, IVF
 `addOpen` code path, no photo store in the sandbox), the Key2 at 360 × 469, the Treatment stage (it no longer draws the fold).
 **Pages checked for the fact:** the Photos page (empty, and the + Add path by code); IVF history on its tab (empty, rows); the
 Timeline and Today's visit read the rounds, not the fold state, unchanged.
+
+## Care Plan page audit (2026-10-31)
+Her words: "audit the treatment care plan page for consistency too". Audit = apply (commit a40dbaa0; CSS in one dated block,
+"Care Plan page audit (her 2026-10-31 ...)", at the end of the main `<style>`).
+**Measured** in the sandbox (two made-up patients reseeded with a plan and past visits: Bell's palsy, Natural fertility) at her
+1220px and at 360px: every tap outside the Session grid against TAPPABLE THINGS, labels, cards and nesting, lines, text under
+10.5px, sentences. Most of the page already passed (the 10/30 and patient pages passes reach it).
+**Fixed:**
+- The plan's name in the band (tap = rename) had a dotted underline: gone (TAPPABLE: never dotted text that taps); it keeps its
+  tint field shape, now on the phone too (it had it only from 641px).
+- The diagnosis words (`.kv > .v[data-tp-fg]`, tap = edit) were plain 12.5px text: the field look the Session grid's Aim /
+  Points cells use (white, 1px line, 6px, 32px, 13px; hover line herb).
+- Labels: Diagnosis / pattern and Watch were 9.5px / 800, Progress 11px in normal case: all read as Treat and Findings do
+  (10.5px / 700 / .08em capitals; the phone's 11px / .06em).
+- Watch sat flush under Progress (0px): 12px, like the card's other parts.
+- The faded "not yet" of an empty part took its parent's size (10.5, 12, 12.5 and 16px) and the patient pages audit's label
+  rule had made it bold: one look on every patient page, 11.5px plain faint (13px on the phone); `.ph-tp-notyet` left the
+  label list.
+**Kept on purpose:** the Session grid (LOCKED: Aim / Points / Formula / Watch row, phase rows, header row), the red flag rows (a
+warning), the icon-only circles (Log period, Edit the goal words: 32px circles, the scanner's only flags).
+**Tested:** the scan before and after (taps off-rule outside the grid 3 → 0 real; label looks 2 → 1); 360px on both patients: no
+sideways scroll, nothing past the edge, the title field tinted, labels 11px; no console errors; the Treatment page's "not yet"
+reads the same. **Not tested:** a plan with scored Compass concerns (the Treat table) and an agreed Fang Bing Ren (the
+Diagnosis bars) on the reseeded patients; the Key2 at 360 × 469.
