@@ -27,6 +27,9 @@ within 10 s (`OPEN_HANG_MS`) then; never the sign-in wall for a sign-in that onl
 "online" event, a refreshed sign-in, or the first good reply) `resumeCloud()` pulls, merges and pushes behind her with no cover.
 The service worker keeps the app, the sign-in library and the PDF reader, so a new build works offline from its first open; the
 photo-text reader stays online-only. Code: `openLocalNow`, `bootFetch`, `netFail`, `openedLocal`, `resumeCloud` above `boot()`.
+**Boot housekeeping waits for the cloud** (fixed 2026-10-31): the app's automatic writes (schedule sweep, migrations, made-formula
+prices) wait for "lcm-sync-caught-up". The "is sync on?" test now runs after DOMContentLoaded (`phAfterScripts`); a 0 ms
+timeout had fired before the sync's own `<script>` was parsed, so the housekeeping wrote 3 s into every boot, before any pull.
 
 ## Appointments & calendar
 The app opens here. It mirrors Cliniko's day view: solid blocks coloured from `PH_CLINIKO_TYPE_COLOURS` (her Settings →
@@ -473,7 +476,11 @@ the Fertility-Friend-style calendar + BBT chart (`phCycFFHtml`), the one cycle v
 period. **Calendar tab** (her pick): a cycle picture (wheel + hormone / lining strip, `phCycDgHtml`) top left, the day
 card ALWAYS under it (today until she taps a day), the two months stacked on the right. The card asks in her order: Last period,
 How was it (Flow, Colour, Clots = Size Small / Large + Amount A few / Many, `clotSz` / `clotAmt`, read via `phCycClots`), Painful?
-No / Yes (`painYN`; Yes opens How bad + Pain type), Between periods, PMS & mood (Mood · Gut · Body). **Its look** (her 2026-10-28
+No / Yes (`painYN`; Yes opens How bad + Pain type), Between periods, PMS & mood (Mood · Gut · Body). **How bad takes a range and
+Pain type takes several** (her 2026-10-31 picks): tap 4, then 6 = 4–6 (`painLo` 4, `painN` 6, filled 4 to 6); a tap on a range
+is one score again; the same score again or 0 clears. The top of a range counts wherever one number is needed (the chart peak,
+the 4+ painful rule, the pain word). `feels` is a word for one type, a list for two or more; every reader goes through
+`phCycFeels`, every pain number shown through `phCycPainTxt` ("4–6"). **Its look** (her 2026-10-28
 "Combine" pick): one label column, every joined bar filling its line (a bar too long folds into an even joined grid, `phCsFit`),
 each option with its picture beside the word (Flow, Colour and Clots the picture alone, the word in its hover title, the pick
 read out at the row's end, her "icon without words for flow color clots"), a line joining the numbered steps (filled once answered), the usual ring alone (a key
@@ -554,6 +561,12 @@ details pop out beside the row; a formula card has "Refill ▾". The phone: band
 Snoozed, sprite icons, 32px Buttons, a row's top opens the edit drawer. Dashboard's Order/Refill cards are TWO PLAIN LISTS,
 empty first then fewest days of cover; a Refill row also shows the formula's next booking (her pick); a long name wraps on both.
 Picking a supplier pulls in that supplier's recorded price.
+**A formula she makes is priced by its recipe** (her 2026-10-31 pick "Its recipe, always"): a made-in-house jar
+(`phMadeInHouse`) with a recipe takes the recipe's herb cost over its grams, rounded up to 10c (`refRecipeCostPerG`), whatever
+supplier is active. Inventory's Cost $/g and Bottle $ (that price × the pack, not typed) carry a quiet "recipe" tag; the hover
+reads "140 g · 11 herbs · $26.88 → $0.20/g". Live: `phRecipePricesSync` runs 1.2 s after any save and after every pull, only
+while the copy is fresh (`__lcmSyncFresh`). A jar several recipes point at follows the one made last; a recipe with an unpriced
+herb leaves the jar's own price. Dispense reads $/g, so patient prices follow from then on; past dispenses keep theirs.
 
 **Stock truth (her picks; built, NOT live yet):** every number the app trusts has a date (`phJarTrustMap`: counted, made or
 received). A made-in-house formula on the Dashboard's **Urgent stock** reads `Made [g] ✓ · Weigh`: the grams pre-fill with the

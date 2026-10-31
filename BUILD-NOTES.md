@@ -7402,3 +7402,33 @@ warning), the icon-only circles (Log period, Edit the goal words: 32px circles, 
 sideways scroll, nothing past the edge, the title field tinted, labels 11px; no console errors; the Treatment page's "not yet"
 reads the same. **Not tested:** a plan with scored Compass concerns (the Treat table) and an agreed Fang Bing Ren (the
 Diagnosis bars) on the reseeded patients; the Key2 at 360 × 469.
+
+## Period pain: a range and several types; a made formula priced by its recipe (2026-10-31)
+Her synth22 batch: "allow multiple select for pain type, including range for pain e.g. 4-6 etc" and "correspond formula refills
+price to the inventory e.g. chai hu jia long go mu li tang". Her picks: How bad = **tap two numbers**; formula price = **its
+recipe, always** (both the recommended options).
+**Pain (the cycle day card, `phCycleSignPopHtml` q3):** tap 4 → 4; tap 6 → 4–6 (`painLo` 4, `painN` 6, cells 4 to 6 filled, none
+pale under a range); a tap on a range → that one score; the same single score again or 0 → cleared. Pain type chips toggle
+in and out: one type is stored as its word, two or more as a list in PH_CYCLE_FEELS order (old days read unchanged). New
+helpers `phCycFeels(s)` and `phCycPainTxt(s)` (hoisted). Readers moved onto them: `phPatClues` (each type its own clue),
+`phCycFbrSigns`, `phCycPeriodPain` (the top of a range is the worst day), `phCycUsual`, `phCycBoxSummary`, `phCycleSignLabel`,
+the older popover's slider (it writes a single score and clears `painLo`) and its "Pain feels" row; `phCycleSelectChips`
+takes a list as `cur` (a pick-several row). Painful? No keeps `painLo` in its Undo; `phCycleSignSet` drops a `painLo` that is
+not below `painN`.
+**Formula price:** her 27 Oct copy has CHAI HU JIA LONG GU MU LI TANG at $0.20/g with Mick active and a recipe (140 g, 11 herbs,
+$26.88 = $0.192 → $0.20), so the numbers already agreed there; the price only ever moved at Make. Now `phRecipePricesSync`
+squares every made-in-house jar with a recipe to `refRecipeCostPerG` after any save (1.2 s debounce, `phRecipePriceSoon` from
+`savePharmacy` / `savePresc`) and after every pull, only while `__lcmSyncFresh` (vars + function declarations: savePharmacy
+reaches it during boot). `phRecipeJarMap` picks the last-made recipe when several point at one jar. Inventory: Cost $/g and
+Bottle $ show a "recipe" tag (Bottle $ = $/g × pack in the computed pill, not an edit button), hover "From its recipe: 140 g ·
+11 herbs · $26.88 → $0.20/g". The To order page's Bottle $ (a supplier's price for buying) is unchanged.
+**Found on the way (fixed):** the boot housekeeping's `setTimeout(…, 0)` read `window.__LCM_SYNC` before the parser had reached
+the sync's `<script>` (measured: housekeeping done 3 s into a boot with no pull). Both it and the formula sync now start from
+`phAfterScripts` (after DOMContentLoaded), so they wait for "lcm-sync-caught-up" as the 2026-08-22 rule meant.
+**Tested** (sandbox, 1220 and 375): the tap sequence 4, 6, 5, 5, 6, 2, 2, 0, 3, 7 gave 4 · 4–6 · 5 · clear · 6 · 2–6 · 2 · clear ·
+3 · 3–7 (word severe); types stabbing, cramping, back/leg in and out (word ↔ list ↔ none); No + Undo restores range and list;
+clues counted each type (stabbing 2 days, cramping 2 days), periods' worst 6 and 7, Fang Bing Ren menstrual_pain_tend; a seeded
+CHJLGMLT at $0.34 went to $0.20 on the catch-up, to $0.30 when Dang Shen went to $0.90, back to $0.20; housekeeping and the
+formula sync wait until the catch-up (before: ran at 3 s); no console errors; no sideways scroll at 375.
+**Not tested:** her signed-in data (the sandbox catalog's herb prices differ from hers), the Key2 at 360 × 469, Dispense's
+patient price on a real dispense of a recipe-priced formula.
