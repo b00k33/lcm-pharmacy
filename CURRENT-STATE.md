@@ -537,7 +537,7 @@ label (calculates first when needed), 3 Log; Log is always its own tap, never au
 · cost · profit. Desktop (≥901px): the one-screen `.ph-dsp-fit` layout, supply-by-days chips (7/10/14/21/28), one Blood-moving
 caution line (`.ph-dsp-caution`), the "Plan formula" pour-in, and the script + label in full in the right column, every herb with
 no inner scroll, the label in full under it, the right column the one scroller (her pick) [Dispense: the script moved into the
-right column]. **Not built:** the per-herb shelf→after-stock bar. Grams follow the herb total, and a manual Grams figure survives
+right column]. **The per-herb shelf → after bar is the herb table's In stock column** (checked 2026-11-02, at 1440 and 375; the OPEN line that called it not built was stale): "50 → 20 g" with a bar whose fill is the share of the shelf left after this bag (`presIngStockCellCore`; green; gold once it lands at or under the low line; red "short N g" when the bag takes more than the shelf holds, "out" at zero), eased in place on every grams / dose change (`presIngStockRefresh`). Grams follow the herb total, and a manual Grams figure survives
 Log [Dispense: Log silently discarded a manual Grams figure]. A substitute picker includes stopped/phasing-out herbs when stock
 allows.
 
@@ -635,6 +635,10 @@ her solid open row (her answer 2026-11-01); Supplements (taking), Blood tests an
 striped field rows, and a right column (`phPdApptsHtml`, ≥1100px; below the cards narrower): Next appointment (2), Book
 another, Previous appointments (5) with All n; Open = the booking on the calendar with its card (`phApptDeepLink`). The
 Appointments page is one table (When · Type · Care Plan · Open); Supplements' table has the same head row and stripes.
+**Medical alert** (her yes 2026-11-01): `rec.alert`, an amber chip after the name on every page of that patient; tap to write
+or change it (`phBandAlertEdit`; empty takes it off); the phone shows it but adds from the computer. Medical history's
+groups, the question cards (`.ph-pfw-card`), IVF history's fold, the Log and Blood tests' table use the same white card +
+pale-blue head + stripes.
 **Patient details** (`phPdPageHtml`) = a hero + 2 cards, Contact and Body (her 2026-10-30 pick; 3 cards from 2026-10-19), every
 control 32px Zanda-style (6px boxes, joined 6px bars, white value boxes, the send-the-form circle): tap to edit in place, age from
 DOB, BMI bar, a filled-in ring (n of 7: name, sex, DOB, phone, email, height, weight), Call / Text / Email chips [Patient details =

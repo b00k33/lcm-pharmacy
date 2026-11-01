@@ -1360,14 +1360,10 @@ origin/main:index.html`; don't trust this list's age.
   and more: the run 20 note). Huang Lian Jie Du Tang, Da Chai Hu Tang, Wen Jing
   Tang, Ling Gui Zhu Gan Tang and Wai Tai Fu Ling Yin are families now.
 
-**Built on my reading — hers to confirm:** Usual period shows Wheel |
-Chart.
-
 **Paused or not built:**
 - Photo organising increments 2+ (the Comparison table's calendar date
   picker and before/after swap, Records → Photos grouping by shot and date
   fixing).
-- The per-herb shelf→after-stock bar on Dispense.
 - Larger work, knowingly parked: a desktop build beyond the PWA; AI intake
   extraction (no backend, no safe place for a key; don't re-raise without an
   architecture change); bulk past-period entry from the patient's phone.
