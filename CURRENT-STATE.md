@@ -69,7 +69,9 @@ has ONE date row (`.ph-apptcal-head.one`): MON over the date in the time column,
 before-hours items: `phC22FoldRowHtml(…, bare)`), the cycle day at the right; 3+ days keep two rows. Time column 64px, hours 11px;
 3px between blocks (a clear 1px top and right edge); the name first (14px), then "10:00 · focus" (12px); her events' names 14px,
 two lines when tall; no card (edge to edge, blocks stop 16px short of the right edge); text inset 7px, 66px an hour. The Saved
-pill stays as it is (it fades after 2 s).
+pill stays as it is (it fades after 2 s). **The page ends with the calendar (her Cliniko phone screenshot, 2026-11-01):** the grid
+runs on past the last booking, whole hours, to the bottom of the screen; nothing sits under it. The Day summary + Quick actions open
+from a tap on the date, as a bottom sheet (`phApptDayOpen`, the computer's card); the old under-calendar widget is gone.
 
 **Appointment popup** (any booking tap): avatar, name (the title, not a door: Full profile is), time/kind/ET pills, a plan picker
 (no plan = "no plan yet" + a "pick a condition" chip), a gold "✦ New to you" flag, Start visit (today; the one solid) and Full
