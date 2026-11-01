@@ -1368,8 +1368,6 @@ Chart.
   picker and before/after swap, Records → Photos grouping by shot and date
   fixing).
 - The per-herb shelf→after-stock bar on Dispense.
-- Whether the standing tongue / abdomen charts carry over day to day
-  (unchecked).
 - Larger work, knowingly parked: a desktop build beyond the PWA; AI intake
   extraction (no backend, no safe place for a key; don't re-raise without an
   architecture change); bulk past-period entry from the patient's phone.
