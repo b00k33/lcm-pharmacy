@@ -8528,3 +8528,41 @@ the row ⋮).
 **LIVE** 2026-11-01: build 20261102-003300 (publish 868755d1, made by the session that shipped the phone Appointments calendar
 f393cc20; af046e67 + notes rode along from the shared branch). Checked on the live copy: the select-bar, `#phInvChips::after`,
 `.ph-rp-mi` 32px, the sheet close, Columns hidden ≤900, the drawer heads, Merge and the phone `#phKindSel` rules are all in it.
+
+## 2026-11-02 — The 6–7 week scan on IVF history: one fact, read in four places (the last parked item)
+
+**Her word:** "continue" after the baked herb list went live; the OPEN list's last parked line was "a heartbeat field on IVF scans".
+Measured first (read only, her live build): 1 patient with IVF rounds (9 rounds, 5 transfers, 1 Pregnant — ongoing with a positive
+test), no scan recorded anywhere, and the two screens disagreed about it: the transfer card's 3rd step said "heartbeat" from the
+outcome alone while the Timeline's Heartbeat row estimated ~transfer + 30. Her 8 picks + 4 look-picks, all the recommended option.
+
+- **The scan lives on the transfer** (picks 1–2): `t.hbDate` (a full date, guarded 1900–2100 like every date input) and `t.hbSeen`
+  (heartbeat · none · twins), with `t.hbPicked` once she tapped a chip herself. A scan line under the test's row in the transfer's edit
+  (`phIvfPregTestHtml`, only once the test is positive): "6–7 wk scan" · date · one joined chip bar (`.ph-tng2-seg.ph-ivf-hbseg`,
+  `[data-ivf-tchip="rowId:tid:hbSeen:value"]`; the same chip again clears; a chip with no date yet dates the scan today). The only writes
+  are the transfer field handler (`[data-ivf-tfield]`, new `hbDate` branch and the outcome branch) and that chip bar.
+- **The card's 3rd step reads it** (`phIvfTransferViewHtml`): "2 Nov · heartbeat"; an undated Pregnant — ongoing reads "heartbeat ·
+  date to add"; the step is a `button.s` door (`data-ivf-t-edit`) once the test is positive: it opens the edit, the line fades in once
+  (`phIvfHbRevealTid`, `.ph-ivf-hbline.in`) and focus lands on the date. A typed date with no chip reads as the outcome says (a loss:
+  no heartbeat; else heartbeat), hers to change.
+- **Outcome rules** (picks 4 and 6): Pregnant — ongoing with no scan pre-fills today + heartbeat and opens the line; a loss
+  (miscarriage · ectopic · biochemical) keeps the scan's date and reads "no heartbeat" unless she picked the chip herself. A scan
+  counts only on a pregnancy that tested positive (`phIvfHbOf` filters on it), so an outcome moved back to awaiting / negative never
+  shows a stale scan and nothing is deleted.
+- **Read in four places, one read each** (picks 3, 5, 7): `phIvfHbOf(row)` = this round's latest dated scan → the Timeline's Heartbeat
+  row (Done · date · what was seen · "from IVF history", `phTlModel` `hb` branch; still "~19 Nov" (transfer + 30) until then) and Today's
+  visit's Journey door ("Scan ~5 Nov" before; "Heartbeat 2 Nov" / "Twins 2 Nov" / "No heartbeat 1 Nov" after, opens the Timeline);
+  `phIvfHbScan(rec)` = the latest across her rounds, never before the pregnancy's start → the Pregnancy plan's Dating scan row.
+- **The embryo beats** (pick 8): `svg.ut.hb` rests the catheter and its glow and sits the embryo in place; `.beat` (once per open,
+  `phIvfHbPulsed`) plays `phIvftBeat` 900 ms × 3 (scale 1.45); none under reduced motion.
+- **Look-picks (all as built):** the undated step's words, the line's label "6–7 wk scan", what was seen leads on Today's visit, the
+  beat stays small. The app's desktop rule makes every joined bar 30px at ≥641px; this bar follows it (32px at phone widths).
+
+**Tested (sandbox, `_ia-page.html` on a clean HEAD copy `_ia-build.html`, a made-up patient, 1440 and 375):** the step tap opens the
+line with focus on the date; a typed date → "2 Nov · heartbeat", `ut.hb.beat`, catheter hidden, 3 iterations; the twins chip → the
+step, the Timeline row ("2 Nov · twins from IVF history") and the Journey door ("Twins 2 Nov") all read it; outcome → ongoing on a
+second transfer pre-filled today + heartbeat with the line's fade-in; → miscarriage read "1 Nov · no heartbeat" (`s no`, no beat) and
+"No heartbeat 1 Nov"; before any scan the Journey said "Scan ~19 Nov" and the Timeline row "~19 Nov" estimated; a Pregnancy plan's
+Dating scan read Done · 2 Nov · twins from IVF history; 375: no overflow, chips 32px, no text cut; the Prescriptions search narrowed
+to the one name and gave the list back; 0 errors over the path. Pictures `shots/hb-after-*.png` (seven; six sent to her as the mock
+round). **Not tested:** her real records, her phone (Key2), the beat by eye in motion (headless pictures are stills).

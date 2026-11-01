@@ -528,7 +528,7 @@ through the lab" (`phIvfEggHtml`, CSS loop, tap a day to start there); a round r
 count, % from the stage before, blasts against fertilised, a dot per egg/embryo, tap a number for − / +; a blank count's − does
 nothing), with date / clinic / egg freeze / delete / "typed" behind the ✎; the bank is straws (`phIvfFrozenBankHtml`); a transfer
 reads first with the uterus drawing + Transfer → blood hCG → 6–7 wk scan (`phIvfTransferViewHtml`), its fields behind its ✎ (open
-by themselves while it has no date); scans drawn as ovaries (`phIvfScanDrawHtml`, counts only). Drawings = the `ivc-*` sprite
+by themselves while it has no date); **The 6–7 wk scan** (her 8 picks, 2026-11-02): the card's 3rd step is a door to the scan line under the test's row (date + heartbeat · no heartbeat · twins as one chip bar; `t.hbDate` / `t.hbSeen`, written only by the transfer field handler and its chips; Pregnant — ongoing pre-fills today + heartbeat, a loss reads no heartbeat unless she picked); an undated ongoing reads "heartbeat · date to add"; the embryo beats once per open; every page reads the scan through `phIvfHbOf` (this round) / `phIvfHbScan` (latest), only on a positive pregnancy; scans drawn as ovaries (`phIvfScanDrawHtml`, counts only). Drawings = the `ivc-*` sprite
 symbols. No "+ transfer from these eggs": Use ▸ and "+ Transfer" stay.
 
 ## Dispense, Refill & To Order
@@ -1490,7 +1490,7 @@ is scored none / partial / normal (don't change the scale).
 ## Timeline & intake form
 **Timeline** is a rail item right after Fang Bing Ren, on IVF / Natural fertility / Pregnancy plans only (`phTlKindOf`); since
 2026-10-29 (her audit pick: 1 active patient used it) it sits with Patterns · Diagnosis under the rail's folded "⋯ More" row
-(`presFlowMoreOpen`); "done" = nothing overdue. The Today's visit band's Stims / Egg collection / Transfer facts open it. It reads IVF history, Blood tests (a result on its line is drawn as the small low–high bars with the dot, `phBldMiniHtml`, her 2026-10-31 pick) and the pregnancy test (nothing asked twice) and takes month/year
+(`presFlowMoreOpen`); "done" = nothing overdue. The Today's visit band's Stims / Egg collection / Transfer / Scan ~date → Heartbeat <date> facts open it. The Heartbeat scan row (and the Pregnancy plan's Dating scan) is Done on IVF history's scan, "from IVF history", estimating ~transfer + 30 until then. It reads IVF history, Blood tests (a result on its line is drawn as the small low–high bars with the dot, `phBldMiniHtml`, her 2026-10-31 pick) and the pregnancy test (nothing asked twice) and takes month/year
 dates on Schedule. **The intake form** arrives pre-filled from her file (details, cycle, Yes / No history) and can carry Fang Bing Ren
 questions (`PH_INTAKE_FBR_P` must match `PH_FBR_Q.p`); the link dialogs include a text message to copy. Creating a link never
 depends on the database SQL.
