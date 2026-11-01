@@ -8772,3 +8772,27 @@ capital in code). Pictures: scratchpad mt-c1-menus, mt-c2-hj, mt-c3-quay, mt-c4-
 **LIVE** 2026-11-02, her "Push live": build 20261102-101600 (publish a7605e63) carries 169e68e2. Checked on the live copy: the
 stamp, the menu rows (hj_whopper, vn_quay), `phMealMenuFill`, `PH_FOOD_NAMED`, `data-meal-srch` and the phone bar rule are in it.
 Her devices need the gold Update.
+
+## Dashboard page audit, second pass (2026-11-02)
+Her "audit the dashboard page for consistency too", asked again after the first pass (7a97d76d) went live. Re-measured at 1220,
+800 and 360 under the light page head, against TAPPABLE THINGS, Terse and Separation & grouping (Audit = apply). Four findings,
+all rule-covered, so no question went to her.
+- **Fix** (Going out today, an address missing) is the Button's red line at 1.5px, as To order's Order now and Undo arrival
+  (`.ph-dash-task-btn[data-ph-dash-fixaddr]`, it was 1px beside Prepare's 1.5px).
+- **"See all 10" and "To order"** under Order these share one line (they stacked, a line of air each); also with the list open
+  ("collapse ▴" + To order). A float inside the card (`.ph-dash-seeall:has(+ .ph-dash-card-link)`), whose own overflow holds it.
+- **Order these / Refill these from 641 to 900px** keep the computer's 14px inner edge. A tablet rule (`.ph-widget`, padding 0
+  !important up to 900px) took it away, so the dark caption band's -14px sides ran past the card: its words sat on the card's
+  edge and its round corners were cut square. The caption words and the rows line up again (both 14px in), as on the computer.
+- **Phone:** See all and To order are chips of their own width (an older phone rule kept them 336px wide).
+- **Kept:** the sections and their order (her 09/15 and 09/18 picks), the dark caption bands, the row lines and Urgent stock's
+  stripes (the first pass kept them), the count grid (Cancel / Done Buttons, tint fields, all 32px), the Plan ▾ menus (32px rows),
+  every word. **Not mine:** the head's quick actions and their badge (Cliniko look); the 641-900px bottom verb bar (app-wide).
+
+**Code:** one dated block "Dashboard page audit, second pass" at the end of the main `<style>` (after the To order second pass),
+CSS only, every selector inside `#phDashboardWrap`; the classes touched are drawn only by the Dashboard. Commit 7616f6f6.
+**Tested** (sandbox on its own port, seeded: herbs empty and low, 4 months of dispenses, a postage with no address, a pickup):
+every control measured at 1220 / 800 / 360 with before / after pictures (the block switched off and on in the page); See all
+open and closed; no sideways scroll (1220 / 785 / 360); console clean after a reload; Prescriptions search 2 → 1 → 2. On a 1x
+screen Chrome draws the 1.5px line as 1px (as Prepare). Pictures: shots/da2-audit-*.jpg / .png (board, tab, phone, fix;
+-before / -after). **Not tested:** her real records, her phone (Key2), the stocktake nudge (no count open in the sandbox).
