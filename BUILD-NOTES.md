@@ -7993,3 +7993,48 @@ top bar's To order / Formula refill; "Address needed before this can go out" (th
 **LIVE** 2026-11-01, build 20261101-184300 (publish 7430eb3b, on her "push live" by popup, the red edge off; the commit list
 matched the dry run). Checked on the live page: the build stamp, the name chip rule, the tablet heading rule, "Nothing to order", the
 Relocation chevron and `phSigWindowSubheadHtml` gone.
+
+## 2026-11-01 · Ling Gui Zhu Gan Tang: integrate33 run 19
+Her Ling Gui Zhu Gan Tang table (18 key symptoms /5 headed "REN", 7 supporting / objective signs /5 headed "BING", conditions, core
+picture) + "integrate33". Matrix: `fbr-integrate33-lingguizhugan-2026-11-01.html` (root until live, then mocks/), published to her as an artifact.
+- **Swap:** her headings run the other way round from the app's, as in run 18 this morning; by her 2026-10-14 swap rule the 18 symptoms are Bing
+  and the objective lines Ren. One exception: "increased retained fluids on endoscopy" is the pool's Bing "Diagnosis: gastric retention" (a finding
+  Wu Ling San already weights 4), so it scores on Bing at 3 (asked).
+- **Family** `PH_FORMULAS.lingguizhugan`, the 37th: Bing 19 lines (ceiling 73), Ren 6 lines (20), her numbers as weights. `or` lines: dizziness /
+  Meniere's-type vertigo; superficial swelling / puffy eyes; floating edema (swelling of the legs / puffy eyes / puffy complexion); pale / sallow /
+  lusterless complexion. "Cough with copious thin, clear sputum" = two lines ("with" = +): cough 4 + thin, clear, watery phlegm 4. "Chest and
+  costal region fullness" is one subject. Aversion to cold = `cold_feel` (the Fu Zi precedent); excessive sweating = `sweat_profuse`; thin, watery
+  stools = `diarrhea` (the Ma Huang precedent). Her conditions had no ratings: notes in `core`, scoring nothing (her run 18 answer). Her table has
+  no differentiation lines, so no minus points (asked).
+- **New rows:** Bing `unsteady_now` "Body: feels unsteady", `saliva_clear_now` "Mouth & throat: keeps spitting clear saliva", `taste_dull_now`
+  "Mouth & throat: reduced sense of taste", `back_cold_now` "Back: cold, very cold-sensitive" (the Bing twin of `back_cold_tend`, which already
+  holds Xiao Qing Long's "cold feeling in the middle of the back"; `PH_FBR_TWINS_DRAFT`); Ren `pulse_sinking_tight` "Pulse: sinking, tight".
+  Board groups: Subjective (unsteady after dizziness; taste and saliva after the sticky mouth), Pain & body (cold back), Ren Pulse (after sinking)
+  and the Tongue & pulse block (`PH_FBR_TP_GROUPS`).
+- **Wired:** pulse chart (`PH_FBR_CHART_PREFILL`): Deep AND Tight → sinking, tight (Deep alone, Tight alone or Deep + Tense do not); the Pulse
+  page strip. Ask her, 9 answers (DRAFT labels): Head & chest "Unsteady" (Right now), "Rush moving upward", "Chest and ribs full"; Phlegm "Thin,
+  clear, watery"; Heat & cold "Cold back"; Thirst & mouth "Spits clear saliva", "Dull taste" (Right now); Upper belly "Sloshing, gurgling",
+  "Throbs" (Right now, abdominal pulsing). Body figure (`PH_BING_SITE`): cold back (back view, the Ren mark's spot), mouth (saliva, taste), head
+  (Meniere's-type vertigo), face (puffy eyes). Patterns: `bt_lingguizhugan` in Damp / phlegm; `PH_FBR_TO_CLUE` sinking, tight → deep + tight.
+  Search words (`PH_BING_ALIAS`) for the new rows, "endoscopy" for gastric retention, "rushing upward" for the rush. Filed under Gui Zhi, last in
+  `PH_REN_FAM_GROUPS` (the others keep their shades). `PH_BTJ.lingguizhugan` (苓桂术甘汤, DRAFT line). Formula picture `SC.lingguizhugan`: water
+  sloshes in the stomach, a throb under the heart and the heart ring pound, chevrons climb to a dizzy head; Fu Ling drains drops to the bladder, Gui
+  Zhi warms and turns the rush down, Bai Zhu and Gan Cao dry and steady the middle; 4 herbs in 3 groups; `PAT` damp; DRAFT labels.
+- **Fixed on the way:** a Bing sign's body spot lives in `PH_BING_SITE`, not `PH_REN_DRAW` (my first try put the cold back there; `phRenSignItems`
+  reads Ren keys only from `PH_REN_DRAW`).
+- **Not wired (no honest source):** Medical history (its links are Ren; no row matches), bloods (anaemia is a condition and scores nothing), the
+  cycle; edema, fatigue and gastric retention stay a tap; abdominal pulsing gets no body spot (other families use the same row for the navel).
+  `PH_FBR_FOR_FAMS` unchanged (no dizziness complaint row; since synth22 a complaint that matches signs reads them directly).
+- **Tested** (sandbox port 8995, a made-up patient, deleted): all 37 families lead their own full picture; her full table 100% (Dang Gui Shao Yao
+  San 26); key picture only 32% (next 9); a fitting patient 57% first (next 12); same symptoms with a yellow greasy coat and a forceful pulse 27%,
+  still first (no minus lines); dizzy and palpitations with no water signs 11th, 7%. Look-alikes: Zhen Wu Tang's full picture puts this one 5th
+  (39), Wu Ling San's 6th (27), Xiao Qing Long's 2nd (20). Pulse chart through a dated visit: Deep + Tight ticks the new row, Deep alone only
+  "sinking". Pages checked: the Fang Bing Ren board (under Gui Zhi, 59%, the new rows in their groups with their points), Ask her (all 9 answers;
+  a tap on "Dull taste" ticked the row and moved 59% → 61%), Patterns (the body-type clue under Damp / phlegm, deep and tight pulse clues), the
+  body figure's sites (`phRenSignItems`), the formula picture's three stops, Prescriptions search 8 → 2 → 0 → 8, 375px no sideways scroll on Fang
+  Bing Ren and Ask her, no console errors.
+- **Not checked:** her real records; the Key2 phone; the body figure's back view by eye.
+- **Needs her word:** the endoscopy line on Bing (gastric retention) or a new Ren row; whether to add "does not fit" lines (none in her table);
+  DRAFT words (card line, four row names, the 9 Ask her answers, picture labels), the Gui Zhi filing, Patterns Damp / phlegm, Meniere's-type
+  vertigo inside "dizziness / vertigo".
+- **Not live:** waits for her "push live".

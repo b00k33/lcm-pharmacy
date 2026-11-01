@@ -1343,8 +1343,8 @@ origin/main:index.html`; don't trust this list's age.
   inventory: recreate it with "+ Add formula" or restore it from a backup
   (no code can bring it back).
 - Fang Bing Ren reference formulas waiting on her tables: Gui Zhi Fu Ling
-  Wan, Chai Hu Gui Zhi Tang, Ling Gui Zhu Gan Tang (Huang Lian Jie Du Tang,
-  Da Chai Hu Tang and Wen Jing Tang are families now).
+  Wan, Chai Hu Gui Zhi Tang (Huang Lian Jie Du Tang, Da Chai Hu Tang, Wen Jing
+  Tang and Ling Gui Zhu Gan Tang are families now).
 
 **Built on my reading — hers to confirm:** Usual period shows Wheel |
 Chart.
