@@ -914,8 +914,8 @@ Her own prescription's doses at clock times SHE types, nothing pre-filled ("i ne
   taken", its Undo and the card's own Undo put the dose back). This week's Herbs column folds until a dose is taken.
 
 ## Meals + the Diet log
-C22's meal prep lives in LCM. Her Breakfast / Lunch / Dinner event (`phMealSlot` reads the title) holds its meal: her usual one, or
-that day's own; prep ticks per dish (`preps`); ingredients (a tap = Shopping); one **Had it** for the whole meal (keeps the list;
+C22's meal prep lives in LCM. Her Breakfast / Lunch / Dinner event (`phMealSlot` reads the title) holds its meal: the foods that repeat
+that day and that day's own (MEAL REPEATS below); prep ticks per dish (`preps`); ingredients (a tap = Shopping); one **Had it** for the whole meal (keeps the list;
 the grid's ✓ IS Had it: band pill, fold chip, card; Undo). A meal she had is edited as what she had (her 2026-10-28 "why cant i edit
 the spicy salmon fishbowl"): its picker and her card list `had.v` (`phMealList` → `phMealHadPut`), with no day line, and her plan
 stays as it was; C22's numbers (`had.nut`) cover its own words, a food or dish added to it counts its own, and they go with the
@@ -926,17 +926,13 @@ nature warm · neutral · cool + nutrients per serve; `d.meals`; `d.shop`). Me d
 Shopping.
 **A meal's list** (her pick 2026-10-27, "too busy"; it replaced the Food / Drinks sections, + Food / + Drink, Eating out and Skipped
 under Food, and Had it | Edit; BUILD-NOTES "A calmer meal"): every meal list (her card, the planner's picker, her usual meal, a patient's Diet sheet) =
-**the day's line** ON TOP (her pick B 2026-10-28, "it is very confusing how to set the daily breakfast vs just breakfast of today";
-the Just <day> | Every <meal> switch is gone): her day's list changes THAT DAY only; it reads "Same as every <meal>" until she
-changes it, then "<Thu> only" + **↺ Undo** (back to her usual), one row. No ✎ Every <Meal> and no Use every day on the line (her
-word 2026-10-28, "i dont need an every lunch and everyday button"; NOT live): her usual meal is changed from the planner's
-**✎ Usual** at each row's head (a sheet), and the picker still opens on her usual list while she has no usual one. Code: "MEAL DAY OR EVERY DAY" · the meal as a small table (name + its mark, a cup on a drink
-· − amount + · kJ in the planner · ✕) · **+ Add food or drink** opens the list UNDER the meal (search or type + New; one bar
+the line ON TOP (hers): **↻ Repeat meal ▾** (every food in it at once) and, once that day has changes of its own, **↺ Undo**
+(back to what repeats) · the meal as a small table (name + its mark, a cup on a drink · − amount + · kJ in the planner · ✕; on
+HER day's meal each food has its **repeat chip** on a line under it, see MEAL REPEATS) · **+ Add food or drink** opens the list UNDER the meal (search or type + New; one bar
 Everyday | Drinks | Thisbowl | My dishes; a row a food with its usual amount and +; Thisbowl R | L, Build your own; a thing in the
 meal is NOT listed; Done adding) · one numbers line, small numbers behind a tap · **Eating out | Skipped** one bar (beside Had it on
 her card, beside + Add in the planner's foot). **Skipped** is on every meal (her 2026-10-28 "give option to skip meals"):
-today or before = she skipped it; a day ahead = that day planned Skipped; on while so, a second tap takes it back; from the
-planner's Every <meal> view (an empty cell opens there) it is the tapped day's (`phMealInstHtml`'s `dc`). Its cell reads Skipped. No sideways scroll; long names wrap, never cut; the cursor goes to Search on the
+today or before = she skipped it; a day ahead = that day planned Skipped; on while so, a second tap takes it back. Its cell reads Skipped. No sideways scroll; long names wrap, never cut; the cursor goes to Search on the
 computer only. The snack picker (Snacks · drinks) is unchanged. Code: "A CALMER MEAL" (`phMealListHtml`, `phMealTblHtml`,
 `phMealAddHtml`, `phMealNumsHtml`, `phMealInstHtml`).
 **Food numbers**: foods from `PH_FOOD` (212 rows: the Australian Food Composition Database Release 3 by FSANZ, CC BY-SA 3.0 AU,
@@ -953,6 +949,19 @@ name, else its typed ingredients matched) and Made of starts filled with that bo
 protein and choline"; `PH_NUT_TOP`): first in the bars (Fat a bar of its own against the fat goal), always shown on a phone,
 first in Targets; a meal's small numbers start with choline. LIVE build 20261028-215100. Thisbowl bowls R | L + Build your own. Code: "FOOD NUMBERS" (`phFood*`,
 `phNut*`, `phTb*`).
+**MEAL REPEATS** (her 2026-11-01 "need an easier way to organise meals based on daily or one day", her 4th report on it; her
+picks [Meal repeats]): what repeats is a FOOD, not a whole meal (her meals change day to day). Each food of her day's meal (her
+card, the planner's picker; not a patient's, not a meal she had) has a dropdown chip: "<Thu> only ▾" or "↻ Every day ▾" /
+Weekdays / Weekends / Every <Thu> / the days; its list: <Thu> only · Every day · Weekdays · Weekends · Every <Thu> · one joined
+day bar M–S (a day on or off; the list stays open). A repeat runs from the day it is set on (earlier days keep theirs). A food
+she adds is that day only. ✕ or − / + on a food that repeats asks first: **Just <Thu> · <Thu> on · Every day · Keep**. ↻ Repeat
+meal sets every food of that meal at once. Her usual meal from before (`def|<sl>`) counts as Every day foods until she changes
+one (it then leaves the usual meal and becomes a repeat of its own); a day kept before (no `ad`) is its whole meal as it was,
+until a repeat of that meal changes (days from today on are then kept the new way, so they follow). Copy a day copies the day's
+foods as they show. Data: `d.meals["rp|<id>"]` {sl, x, r d · w · e · k (wd), fr, to}; a day's entry with `ad: 1` = that day's own
+foods in `v` (a repeat's food at another amount = that day's amount) + `off` [bases]. Code: "MEAL REPEATS" (`phMealRepAll`,
+`phMealRepOn`, `phMealRepOf`, `phMealPlan`, `phMealDayPut`, `phMealRepSet` / `Rm` / `Q`, `phMealRpRowHtml`, `phMealRpMenuHtml`).
+NOT live until her "push live".
 **Shop foods** (her "download woolworth and coles and aldi food database because i buy from them"; her pick "Search as I type"):
 the shops share no product data and FSANZ's Branded Food Database is not public, so the products are Open Food Facts' Australian
 ones (shoppers' label scans, ODbL, credited on Targets) in `foods-au.json`, fetched the first time she types in a meal's add list
@@ -968,7 +977,7 @@ line, ↺ Same as usual on a day of its own. On HER record (the My profile recor
 Patterns (`diet_cool` / `diet_warm`, source Diet, DRAFT wording); Fang Bing Ren has no diet sign (food reactions pre-tick its signs).
 **Meals planner** (her Diet page, her word "change diet to Meals", fasting merged in): the clock bar on top, today's macro rings
 under it, then a week table, days across: Breakfast · Lunch · Dinner · Snacks · drinks · Supplements · herbs · Fast · Macros · More. A cell = its meal's time (a day's own bold) + its things one per
-line (pale = usual, bold = the day's own, ✓ + the time she had it); ✎ Usual on each row. A tap opens the picker under the cell (over
+line (a small ↻ = it repeats, bold = that day only, ✓ + the time she had it); no ✎ Usual (MEAL REPEATS). A tap opens the picker under the cell (over
 it when more room above; fits the window), on the meal (empty = on adding): the meal's list (Eating out | Skipped, any day)
 + Done; on Dinner **Fast this night** (see Fasting). Esc closes the picker only. ⧉ on a day = Copy a day (pick days, Copy to N days);
 **Copy last week**; **Shopping list** = the week's list from the plan (each food added up, a dish's foods; Thisbowl's left out) into
