@@ -7879,7 +7879,8 @@ key pattern, important differentiation) + "add to fang bing ren", through the pa
   Ren side only; "thin physique" stays inside "pale, thin or delicate" at 4; the wording is hers now (card line, row names, "Hard to calm
   down", picture labels, figure marks), read as a yes to the rest of that point too (the Gui Zhi filing, Patterns Qi + Yin deficiency). The
   code's DRAFT comments now read "her yes". Nothing on screen changed. The matrix page shows her answers.
-- **Not live:** waits for her "push live".
+- **LIVE:** build 20261101-181400 (publish 76c694cc, on her "push live", 2026-11-01); checked on the live site (stamp and family). The
+  matrix moved to `mocks/fbr-integrate33-guizhilonggu-2026-11-01.html`.
 
 ## Stocktake page audit (2026-11-01)
 Her words: "audit the stocktake page for consistency too". Audit = apply: measured at 1220, 800 and 360 against TAPPABLE THINGS,
