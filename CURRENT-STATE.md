@@ -1254,7 +1254,11 @@ Cycle — gone quiet" lives on Communications' **Due** tab, never the Dashboard.
 All-templates hub holds message templates, letters and the plan template manager. Message dates carry no year; `{{nextAppt}}`
 reads the date in her words. Compose's **Private health rebates** list (her 2026-10-30 pick) is where a patient's fund and
 None / Low / Good / 50%+ level are set: every active patient a row, good rebates first, a Find a patient box; "+ Add everyone
-with good rebates (N)" reads it. BUILD-NOTES "Patient details extras".
+with good rebates (N)" reads it. BUILD-NOTES "Patient details extras". **One look** (her 2026-11-01 Communications audit,
+BUILD-NOTES "Communications page audit"): Due's filter chips are one joined bar, names are chips, Check in / Review the Button;
+the check-in's They are / Concerns / Next (and, on the phone, the composer's open group) are joined two-across blocks; the
+narrow check-in page opens Change / How did it go as rows; an empty section is two words + the chip that fills it ("Nothing
+prepared" + Compose).
 
 ## Visit logging & findings charts
 **Today's visit** opens with the **complaint compass** (`phCxCardHtml`), the one "how have things been" table [Today's visit = the
