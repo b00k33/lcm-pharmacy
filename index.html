@@ -21451,12 +21451,7 @@
   /* Undo toast (Stage D, 2026-09-15) -- a small fixed strip, independent of
      whichever tab is showing, since a delete + undo can happen from the
      per-patient viewer too, not only this page. */
-  #phRenUndoToast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 90; background: var(--ph-ink); color: var(--ph-white); font-size: var(--fs-13); padding: 10px 16px; border-radius: 999px; box-shadow: 0 6px 20px rgba(0,0,0,.25); display: flex; align-items: center; gap: 12px; }
-  /* her "why is that black oval there" (2026-09-21): `display: flex` above
-     beats the element's own `hidden` attribute, so the EMPTY toast painted
-     as a dark 32×20 pill at the bottom of every page */
-  #phRenUndoToast[hidden] { display: none; }
-  .ph-ren-undo-btn { background: none; border: 1.5px solid currentColor; border-radius: 10px; padding: 2px 9px; font: inherit; font-size: var(--fs-13); font-weight: 700; color: var(--ph-herb-card, #4599B5); cursor: pointer; }
+  /* the photo delete's "Undo" lives in the one toast (presSavedToast) since 2026-11-01; its own #phRenUndoToast pill is gone */
   #pharmacyPage .ph-photos-addrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 10px; }
   #pharmacyPage .ph-photos-addhint { font-size: var(--fs-11-5); color: var(--ph-faint); }
   /* her 2026-10-15 ask: Face / Body group labels inside a wrapping chip row -- flex-basis 100% forces each onto its own line */
@@ -29693,7 +29688,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
          template editor -- see phTplHostRerender() beside renderPhSettingsPage. -->
     <div id="phAllTemplatesWrap" hidden></div>
     <div id="phEndOfDayWrap" hidden></div>
-    <div id="phRenUndoToast" hidden></div>
+    <!-- the photo Undo lives in the one toast (presSavedToast) since 2026-11-01 -->
     <div class="ph-stocktake-backdrop" id="phIntakeReviewBackdrop" hidden></div>
     <div class="ph-hx-modal" id="phIntakeReviewModal" hidden></div>
     <!-- Relocation project page (her spec 2026-08-27, §1+§2+§3 this round) --
@@ -36347,6 +36342,12 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     // the one switcher element has to be re-parented into the fresh slot
     // afterwards (2026-08-25). One element moved, never a second copy.
     phShellRehomeSwitcher();
+    // the page's action cluster lands in the fresh title bar before paint (2026-11-01): renderPharmacy set it before the page
+    // drew its own header, so the disc used to drop in a few ms later (the 0 ms retry) and the bar grew on every repaint
+    // (~19px with the old 44px disc, 7.5px since the 32px one); the same merge again, with the set the pre-render call
+    // remembered (its tab is the normalised one; PHARMACY.activeTab may hold a name renderPharmacy maps to Inventory)
+    const tbm = window.__phTbmArgs;
+    if (tbm) phTitlebarMerge(tbm[0], tbm[1], tbm[2]); else phTopbarActionSet(PHARMACY.activeTab);
   }
   // ---- SIDEBAR TIDY-UP (her 8 picks 2026-10-26, mock lcm-sidebar-declutter-mock.html "A · Fold the rare"): Records,
   // Reference and Admin fold to one line (label · count · chevron), open / shut remembered on this device ("daybook-ph-sb-folds");
@@ -59242,19 +59243,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
         }
         return;
       }
-      if (e.target.closest("[data-ren-undo-delete]") && phRenUndoState) {
-        const { recs, timeoutId } = phRenUndoState;
-        clearTimeout(timeoutId);
-        phRenUndoState = null;
-        // every record goes back exactly as stored; one reload per patient
-        Promise.all(recs.map(r => phRenPhotoPut(r))).then(async () => {
-          const keys = Array.from(new Set(recs.map(r => r.patientKey)));
-          for (const k of keys) { delete phRenPhotoCache[k]; await phRenLoadPhotosFor(k); }
-          phRecPhotosRefresh();
-          phRenUndoToastRefresh();
-        }).catch(() => phFlashShow(`Couldn't restore ${recs.length === 1 ? "that photo" : "those photos"}.`));
-        return;
-      }
+      // the photo delete's Undo is the one toast's Undo now (phRenUndoRestore, 2026-11-01)
       if (phRcClick(e)) return;    // Results that count, on the Guide's Blood tests tab since 2026-10-29 (her pick)
       if (phGdfClick(e)) return;   // the Families tab (study + edit); the tabs, tongue map, pulse and the old notes' edit / delete modals stay below
       const gdTabBtn = e.target.closest("[data-gd-tab]");
@@ -76863,16 +76852,18 @@ or changing anything in Cliniko.
   // 2026-09-19: the slot holds a LIST -- Select-and-delete on the Photos
   // section removes several at once and one Undo brings the lot back.
   let phRenUndoState = null;   // { recs: [stored records], timeoutId } | null
-  function phRenUndoToastHtml() {
-    if (!phRenUndoState) return "";
-    const n = phRenUndoState.recs.length;
-    return `<div class="ph-ren-undo-toast">${n === 1 ? "Photo deleted" : `${n} photos deleted`} <button type="button" class="ph-ren-undo-btn" data-ren-undo-delete="1">Undo</button></div>`;
-  }
-  function phRenUndoToastRefresh() {
-    const el = document.getElementById("phRenUndoToast");
-    if (!el) return;
-    el.innerHTML = phRenUndoToastHtml();
-    el.hidden = !phRenUndoState;
+  // the one toast (presSavedToast) says "Photo deleted · Undo" since 2026-11-01 (★★★ rule 5: one undo, one toast); Undo puts
+  // every record back exactly as stored, one reload per patient
+  function phRenUndoRestore() {
+    if (!phRenUndoState) return;
+    const { recs, timeoutId } = phRenUndoState;
+    clearTimeout(timeoutId);
+    phRenUndoState = null;
+    Promise.all(recs.map(r => phRenPhotoPut(r))).then(async () => {
+      const keys = Array.from(new Set(recs.map(r => r.patientKey)));
+      for (const k of keys) { delete phRenPhotoCache[k]; await phRenLoadPhotosFor(k); }
+      phRecPhotosRefresh();
+    }).catch(() => presSavedToast(`Couldn't restore ${recs.length === 1 ? "that photo" : "those photos"}.`, 3200));
   }
   async function phRenDeletePhotosWithUndo(ids, patientKey) {
     const cached = phRenPhotoCache[patientKey] || [];
@@ -76889,8 +76880,8 @@ or changing anything in Cliniko.
     await phRenLoadPhotosFor(patientKey);   // one reload for the lot -- it repaints every Photos surface
     if (!stored.length) return;
     if (phRenUndoState) clearTimeout(phRenUndoState.timeoutId);
-    phRenUndoState = { recs: stored, timeoutId: setTimeout(() => { phRenUndoState = null; phRenUndoToastRefresh(); }, 8000) };
-    phRenUndoToastRefresh();
+    phRenUndoState = { recs: stored, timeoutId: setTimeout(() => { phRenUndoState = null; }, 8000) };
+    presSavedToast(stored.length === 1 ? "Photo deleted" : `${stored.length} photos deleted`, { undo: phRenUndoRestore, ms: 8000 });
   }
   const phRenDeletePhotoWithUndo = (id, patientKey) => phRenDeletePhotosWithUndo([id], patientKey);
   /* ============================================================
