@@ -8873,3 +8873,5 @@ shot / kind / date tools, the Tongue page's pairs and the BBT strip read `phRenD
 not changed. **Not tested:** her real photos, the Key2, a real native date picker (the hidden input was set by script), a patient
 with photos on one date only (no bar, one column, as before by code).
 Pictures: `shots/ph-before-*.png` and `shots/ph-after-*.png` (table, pair, pair-swap, 375, bytype, records-bytype).
+**LIVE** 2026-11-02, her "Push live": build 20261102-105300 (publish 0c3220b7) carries de9ded80; the live copy holds all 257
+Hungry Jack's rows. Her devices need the gold Update.
