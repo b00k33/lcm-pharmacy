@@ -627,6 +627,14 @@ hover), short condition names (2 then +N), one 18px pill look, 44px rows. Her 9/
 round buttons. The phone keeps its chips and Scheduled line.
 
 ## Patient details & the patient file
+**Cliniko look on the patient pages (her synth22 picks 2026-11-01, stage 3):** the head (`.ph-pres-band`) is the light band of
+every page: "Name · age / Page" (`presBandPageSync` reads the rail's lit row), Book appt. (solid) · Text joined
+(`.ph-band-bar`; the phone keeps search + camera), a Gynae / MSK case as a 3px line under it. The rail keeps her visit order;
+the open row is pale teal with a teal edge bar, and Supplements (taking), Blood tests and Appointments carry a cream count
+badge (filled teal on the open row) that rolls in when the number changes. Patient details' cards have pale-blue heads and
+striped field rows, and a right column (`phPdApptsHtml`, ≥1100px; below the cards narrower): Next appointment (2), Book
+another, Previous appointments (5) with All n; Open = the booking on the calendar with its card (`phApptDeepLink`). The
+Appointments page is one table (When · Type · Care Plan · Open); Supplements' table has the same head row and stripes.
 **Patient details** (`phPdPageHtml`) = a hero + 2 cards, Contact and Body (her 2026-10-30 pick; 3 cards from 2026-10-19), every
 control 32px Zanda-style (6px boxes, joined 6px bars, white value boxes, the send-the-form circle): tap to edit in place, age from
 DOB, BMI bar, a filled-in ring (n of 7: name, sex, DOB, phone, email, height, weight), Call / Text / Email chips [Patient details =
