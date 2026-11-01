@@ -1224,7 +1224,7 @@ and her Fang Bing Ren answers); "Copy message" copies the message only [The Mess
 BUILD-NOTES "Messages: one sent mark"): the Text / Messages / Copy / Email tap writes one entry on the patient's contact log
 (`phMsgSentMark`), closes that patient's due and overdue rows on Communications → Due (the Dashboard count and the menu badge
 follow), leads the Messages band with "✓ Today · Sent · Review by Messages" (`phMsgLastSent`) and offers Undo in the one toast;
-the check-in panel's taps leave the same mark and its row still closes on Done. **The groups fold** (`phMsgGroupsHtml`): the
+the check-in panel's taps leave the same mark and its row still closes on Done. **The page's strip is Due + More â¾** (`phCommSectionStripHtml`, her 2026-11-01 pick): Compose Â· Templates Â· Prepared Â· Sent sit in the More menu with their counts, the one open shows beside Due, and the page always opens on Due. **The groups fold** (`phMsgGroupsHtml`): the
 plan's own groups + Herbs stay open, the rest behind one "All · n ▾" chip (a row on the phone) that unfolds them below. A message offer fires on any phase
 change (manual or cycle/IVF cascade), evaluated at render time; a session-only map (plan + phase + `sinceKey`) stops repeats. "My
 Cycle — gone quiet" lives on Communications' **Due** tab, never the Dashboard. The Check-in panel is its own composer. The
