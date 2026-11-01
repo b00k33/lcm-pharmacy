@@ -8796,3 +8796,28 @@ every control measured at 1220 / 800 / 360 with before / after pictures (the blo
 open and closed; no sideways scroll (1220 / 785 / 360); console clean after a reload; Prescriptions search 2 → 1 → 2. On a 1x
 screen Chrome draws the 1.5px line as 1px (as Prepare). Pictures: shots/da2-audit-*.jpg / .png (board, tab, phone, fix;
 -before / -after). **Not tested:** her real records, her phone (Key2), the stocktake nudge (no count open in the sandbox).
+
+
+## 2026-11-02 — Hungry Jack's whole menu (Menus + dishes, follow-up)
+
+After "Menus + dishes" went live she was asked whether to add the Hungry Jack's items left out to keep the list near 450 rows;
+her answer: **"Yes, add them"**. 179 rows join the 78 (Hungry Jack's 257; `PH_FOOD` 768 → 947), straight after them in the
+"MENUS + DISHES" block, from the same HJ Nutritional Guide PDFs read the same way (per serve ÷ serving × 100, a drink's serving
+g as ml, a count with usual 1; the scratchpad's `hj_raw2.tsv` → `hjcand.pl` → `hjmore.pl`): every drink size (Coke, Coke Zero,
+Vanilla Coke, Sprite, Fanta Orange / Raspberry, Orange Fruit Drink, shakes small / large, Biscoff, Pistachio and Dubai shakes),
+the frozen drinks and Spiders, the large sundaes, Storms, Drumstick Mini, Sticky Date Pudding, Party Cake (whole), the
+Jack's Cafe cappuccino, chai and iced chai in every size with almond, lactose-free, oat, skim and soy milk, Biscoff Latte, Iced
+Long Black, Babycino, Cinnaswirl, the Grill Masters, Whopper Triple, Cheeseburger Triple, Whopper Junior Cheese, the plant-based
+Natural Cheese Whoppers, and the Trial / limited-time items (Stackers, Cheese Lovers, Saucy Burgers, Saucy Tenders a tender of
+70 g, usual 3; Tenders Dippers as 3 / 5 pc packs, which differ; Jack'd Up drinks; the dipper sauces and cups).
+**Still left out:** bundles, Kid's Meals, Hunger Tamers, the NBL Feast, snack boxes, nugget and strip packs (log the piece),
+the Tasmania-only lines, the add-ons (Bursties, sundae sauces, Biscoff crumb), and the small frozen sizes the PDF garbles
+(Coke FCB Small 21 g, Fanta Raspberry FCB Small 2 g, two Spider Smalls).
+**Source slips** (each with its reason in the row's comment): Coke Zero small / large carry Sprite's sugar again (null, as the
+medium); HJ's mayonnaise "kJ" is kcal (744 kcal ≈ 3117 kJ / 100 g, which its 81.6 g fat agrees with); Frozen Fanta Strawberry's
+carbs sit under its sugar (carbs = sugar, which its kJ and its Grape twin give). The Grilled Chicken Saucy Burgers run +30–37%
+on 17P+17C+37F like HJ's other fat-heavy rows (kept as published). Each soft drink has its own search words (a "sprite" search
+no longer finds Coke Zero).
+**Tested** (test copy, 1440): 947 foods, 257 in the Hungry Jack's pane (drawn on opening it, 66 ms on this computer), "1 Whopper
+Triple" lands in Tue dinner, taps 20–40 ms with the pane open, searches "oat milk" (19), "frozen fanta" (44), "storm",
+"mayo", "grill masters", "sprite"; no errors, every inline script parses. Not tested on her Key2.
