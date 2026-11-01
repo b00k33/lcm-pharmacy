@@ -8104,3 +8104,5 @@ results code is written, not driven); the phone's ⋯ path on a real device; Due
 **Integration check:** Stock movements + CSV (maker), Stock statistics (unchanged, by kind), Inventory (⋯ item, header count), the
 herb's own history (`phHerbMovements` reads the re-pointed ids), Communications Due / Dashboard strip / nav badge (one list), Today's
 visit, Patient details and the Start here card (same fields, same handlers), the Log's "all" view.
+
+**LIVE:** build 20261101-185300 (publish e5af3669, 2026-11-01), together with Ling Gui Zhu Gan Tang (integrate33 run 19, 028d9af2) from the bugs session.
