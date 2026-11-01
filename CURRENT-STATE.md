@@ -40,7 +40,8 @@ booking on screen to the last booking's end (half hours; 4 hours at least; nothi
 ticks only while the tab is visible.
 **Seamless (her picks) [Appointments grid: seamless]:** on a computer the hours fill the window (`phApptCalPxm` from the room
 `phPinApptZones` measured, one redraw when it changes; a phone keeps 66px an hour); blocks edge to edge, 6px corners, a 1px white
-seam, no shadow, hour hairlines only, no today wash; hover brightens, nothing grows; overlapping visits nest (a later one over the
+seam, no shadow, hour hairlines only, no today wash; hover brightens, nothing grows and no block changes layer (a later block
+stays over the earlier one; only the open one, `.sel`, rises: 19, a visit's or one of hers); overlapping visits nest (a later one over the
 earlier from 45% across), visits that start together share in halves (`it.same`); her events are solid blocks sharing the time
 with the visits ("My events" below); the day head is a small MON over a big date, today's in a teal circle, no count on it (its hover, `phHubDayTitle`, lists each clinic's hours and patients).
 **Toolbar + Up next buttons (her picks, Zanda as inspiration) [Appointments chips, one height]:** every control 32px; text
