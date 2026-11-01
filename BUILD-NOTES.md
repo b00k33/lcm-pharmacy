@@ -7990,3 +7990,6 @@ top bar's To order / Formula refill; "Address needed before this can go out" (th
 (`phDashOrderQueueHtml`: every door to it now goes to the To order page); her Key2 by hand.
 **Pages checked for the fact:** the Dashboard only (no count or list changed; the To order and refill counts still read
 `phOnOrderList` / `phDashRefillList`).
+**LIVE** 2026-11-01, build 20261101-184300 (publish 7430eb3b, on her "push live" by popup, the red edge off; the commit list
+matched the dry run). Checked on the live page: the build stamp, the name chip rule, the tablet heading rule, "Nothing to order", the
+Relocation chevron and `phSigWindowSubheadHtml` gone.
