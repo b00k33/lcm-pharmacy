@@ -8598,3 +8598,34 @@ The OPEN line "whether the standing tongue / abdomen charts carry over day to da
 rule (phTngStale / phAbdStale, phTngWrite / phAbdWrite): a chart from yesterday reads stale, today draws blank (`phTngToday`, `phAbdToday`),
 and the first write of the new day moves yesterday's chart aside (the tongue's into a dated review flagged `page`, the abdomen's into
 `rec.abdomen.hist`); `phFndDays` then lists both days (today + the kept one). Nothing is lost, nothing carries over. Docs only, no code.
+
+## To order page audit, second pass (2026-11-01)
+Her "audit the to order page for consistency too", asked again the night of the first pass (80fb06d1). Re-measured at 1220 (the
+board), 800 (the list) and 360 (the phone list) under the light page head, against TAPPABLE THINGS, Terse and Separation &
+grouping (Audit = apply). The board measured to the rules; the list (up to 900px) had four findings, and one question went to her.
+- **"+ Add to order" under the stat strip** (`.ph-shell-topblock > .ph-os-addrow > .ph-cc-act`) is the Button: it was a 22px box
+  with 10px corners. From 641 to 900px the head block is pulled 16px out on a 12px page, so the row hung 4px off the screen and
+  touched the head's foot; it now keeps the head's 20px edge with 12px under it (the phone got its edge on 10/30). Phone 28px.
+- **Stage bands** (To order, Arrived in …, Running low): the count sits beside the name, as on the board (it floated mid-band:
+  `.cnt` and the fold `.ph-os-chev` both had `margin-left: auto`); Clear goes to the right end beside the fold. The band icon is
+  its white disc without a line (a shared `#pharmacyPage .ic` rule drew the fold button's ring on it).
+- **Say a fact once:** under a supplier line (To order, On the way) a row no longer repeats that supplier's tag
+  (`.ph-osm-row:is(.toorder, .ordered) .ph-osm-nm > small`); Arrived and Running low have no supplier line and keep it.
+- **Her pick, "Herb line"** (the question: her 10/23 board mock had given the page's acts the chip's grey 1px line, while
+  Inventory, Communications and this page's own All arrived use the Button's herb line; pictures of both sent first): the acts
+  are the Button on the board and the list (Add to order, Arrived, Copy, Copy for email, Unsnooze, + Add to order); Order now and
+  Undo arrival keep their red at 1.5px; Refill ▾, Clear, Snoozed ▾ and Show stay chips; the board's solid All arrived stays.
+- **Kept:** the board as measured (32px everywhere, the joined To order | Running low bar, ⋮ circles, the row details pop with
+  tint fields), the row status stripes, jars, level bars, the stat strip and gold bar, the arrival fix (Save solid, Close a chip),
+  the add box's search look, every word.
+- **Seen, left to the page-head work (Cliniko look):** at 800 the head's Mark all arrived is an icon-only solid square (30px, square
+  corners) and the Pharmacy switch is gold words on white; with Save open in the arrival fix, the head's solid makes two solids.
+
+**Code:** one dated block "To order page audit, second pass" at the end of the main `<style>` (after the Cliniko look block),
+CSS only, every selector inside To order (`#phRestockWrap`, `.ph-osm-*`, the head's `.ph-os-addrow`). Commit 8fdedb84.
+**Tested** (sandbox, its own list: one herb added from Running low, one ordered herb marked arrived): every control measured at
+1220 / 800 / 360 with before / after pictures (the block switched off and on in the page); no sideways scroll (1220 / 785 /
+360); the arrival fix on the board and the list (Undo arrival 1.5px red); menus 32px; the classes touched appear only in To
+order's render; console clean in a fresh tab; Prescriptions search 8 → 2 → 8. On a 1x screen Chrome draws the 1.5px line as
+1px (as every Button). Pictures: shots/to2-audit-*.jpg / .png (board, tab, phone; -before / -after; btn-rule / btn-keep = the
+question). **Not tested:** her real records, her phone (Key2), the Snoozed list (none in the sandbox).
