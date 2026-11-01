@@ -8768,3 +8768,7 @@ close-match hover on congee and toum; the lazy row and the drawn row are the sam
 numbers, the meal's list in the column, the snack picker, Shopping (left out), the reactions hover. **Not tested**: her real Key2
 (timings are this computer's); a dish's Made of was not opened (it draws the same chip picker, and its "From" line keeps a place's
 capital in code). Pictures: scratchpad mt-c1-menus, mt-c2-hj, mt-c3-quay, mt-c4-phone, mt-c6-phhj.
+
+**LIVE** 2026-11-02, her "Push live": build 20261102-101600 (publish a7605e63) carries 169e68e2. Checked on the live copy: the
+stamp, the menu rows (hj_whopper, vn_quay), `phMealMenuFill`, `PH_FOOD_NAMED`, `data-meal-srch` and the phone bar rule are in it.
+Her devices need the gold Update.

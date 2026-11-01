@@ -973,7 +973,7 @@ El Jannah 18, Chagee 10, Chinese 32, Vietnamese 31, each place a group of its ow
 as its closest food, named in its hover ("Close match: … · SG FoodID", `PH_FOOD_SRC`, `phFoodSrcTip`, `phFoodTipAt` with her
 reactions); names as she says them (Phở bò, Quẩy (youtiao)) and search finds either name, accents optional (`phFoodNrm`,
 `phFoodWordsN`, a place's name included); a place's foods keep their capital ("1 Whopper", `PH_FOOD_NAMED`), a dish does not
-("1 bowl phở bò"); never on the shopping list), stored `food:<id>*<q>`, shown in kitchen
+("1 bowl phở bò"); never on the shopping list; LIVE build 20261102-101600), stored `food:<id>*<q>`, shown in kitchen
 words with − / + (each food its own step; a dish `dish:<id>*<q>` steps in serves). A dish's **Made of** adds its numbers itself
 (typed numbers only for what is not on the list); with no Made of a dish counts by itself (`phDishAuto`: the Thisbowl bowl in its
 name, else its typed ingredients matched) and Made of starts filled with that bowl. Nutrients add every item. The time is a small
@@ -1037,7 +1037,7 @@ own), Before (her earlier days); as she types, the supplements list and her LCM 
 she had or as a drink, `phMealWaterMl`), +250 ml, the numbers line, warm ·
 cool, the 17 bars (today's open by itself). Phone: a day at a time (‹ ›), the picker inline. Code: "MEALS PLANNER" (`phMpl*`), "MEALS
 TABLE" (`phMplToolbarHtml`, `phMplSteps`, `phMplFastRingHtml`, `phMplWtHtml`, `phMplGridHtml`, `phMplColHtml`, `phMplStepGo`,
-`phMplCopyMeal`; `phMplPnl` = the column with no meal open). MEALS TABLE: BUILT, not live (waits for her "push live").
+`phMplCopyMeal`; `phMplPnl` = the column with no meal open). MEALS TABLE: LIVE build 20261102-095100.
 **Macros against her goal** (her picks: the Macros row AND today's rings) [Meals macros against goal]: energy, protein, carbs, fat.
 **Goals** (`phDietGoal`): kJ 8000 (her word 2026-10-28, "daily energy goal is 8000kj"), hers to change; water 2000 ml (C22's 8
 glasses; a target typed in glasses reads × 250); protein 50 g and carbs 50 g are hers (her word: "set carbs to 50g a day"); fat is hers,
