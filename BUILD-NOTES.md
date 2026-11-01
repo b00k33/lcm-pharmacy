@@ -8493,6 +8493,7 @@ longer take the timeline's 200px flex basis (dead space under Quick actions). Te
 today · last ended 4:00 pm". **Tested (sandbox, 375 and 1024):** the scripts parse; the phone grid runs 3 PM to 11 PM with
 nothing under it; the date tap opens the sheet (Day summary + Quick actions, fits its content); the computer's card unchanged.
 Pictures: shots/phone-calendar-to-edge-2026-11-01.jpg, shots/phone-day-sheet-2026-11-01.jpg. **Not tested:** her real records.
+**LIVE** 2026-11-01, her "Push live" pick: build 20261102-003300 (with the Inventory second pass, her "Push both").
 
 ## Inventory page audit, second pass (2026-11-01)
 Her "audit the inventory page for consistency too", asked again the night of the first pass (ba7d4eb1 + b7f63442). Re-measured at
