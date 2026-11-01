@@ -8439,3 +8439,44 @@ and gave all three back; no console errors. **Not exercised:** a real brand-new 
 B33 C4 LCM session with its built-in herb list f8aaf07e, on her "Push both"); build 20261101-233900 (9bcff7de) re-stamped the same
 code (this session's publish had waited on the lock and found nothing new). Checked on the live copy: the Not shown break, the
 phone composer block and "Nothing prepared" + Compose.
+
+## 2026-11-01 · Cliniko look, stages 1 + 2: the light page head and the calendar's clear blocks
+
+**Her words (synth22, seven Cliniko screenshots):** "i want you to do a full audit of the appointment app using cliniko
+appointment display - i like clear coloured blocks. show me mock" · "for profiles, i want a clean layout like clinikos
+patient profie display" · "use these consistent ui designs as inspiration for the layout of all pages" · "include an audit for
+terse language throughout whole app" · "include relevant animations and interactive workflow designs relevant for the purpose
+of the app" · "ok done, show mocks first before building".
+**Measured first:** a past booking (`.ph-appt-block.done`) drew at opacity .5 + saturate .7, and every Cliniko colour was toned
+deeper (`phCkTone`, sat x.78, light x.84: mint #07EDB7 painted #1BB28E) where Cliniko paints it clear (#58EDC0); the block read
+the time first, the name 12px / 600. The wording scan: 298 on-screen sentences of six words or more, 55 long toasts / asks, 41
+placeholders of 28+ characters, 3 on-screen "script(s)" (a hover title, Care Plan, Merge).
+**Mock:** `cliniko-look-mock-2026-11-01.html` (artifact BFpMd9tzM6SkBh2SAKgZPg): Plan · Calendar · Patient · Pages · Words ·
+Visit flow, Computer | Phone. **Her 14 picks, all the recommended option:** Clear colours · past days full + ticks · name
+first · page head light + one joined action bar · Inter (no slab) · patient side list = her visit order with counts · card
+heads a pale-blue band · values stay fields · Patient details right column = Next / Previous appointments · chips, never red
+links · Settings home = picture tiles · motion: drops in, ticks pop, counts roll, the visit rail fills · wording: apply all,
+page by page · Yes, build in order (1 frame, 2 Calendar, 3 Patient pages, 4 every other page, 5 pop-ups + box hints).
+**Built (stages 1 + 2):**
+- Page head, every page (`.ph-shell-topblock`): the struct tokens repaint it light (#F2F5F6, ink title 600, a 1px line under,
+  the stat strip's numbers ink, the picked tile a tint with a herb underline). From 641px the actions are one joined bar
+  (`phTitlebarMerge` → `.ph-tbm-bar` / `.ph-tbm-seg`): the main verb first and solid, up to three more with their words, any
+  others in the bar's own ⋯ (`overflow`, read by `restItems`); 641–900px the segments are icons. The phone row is unchanged
+  in shape (☰ · title · main disc · Me · ⋯), its circles now white with a thin line. Refill's "Plan a formula" is the solid
+  segment like every page's main verb (its gold pill stays on the phone only).
+- Calendar: `phCkClear` (PH_CK_CLEAR = seven colours sampled off her Cliniko calendar; the rest saturation x.85 and lightness
+  30% toward .88) replaces the toning in `phCkTypeColour`; Break keeps `phCkTone` (her "deep yellow"); `phCkHsl` is the shared
+  HSL step. A tall block = name (bold) · "10:00 – 11:00" (`phApptEndTime`) · the day's ticks on their own line; a short one =
+  name · start · ticks on one line. Ticks (`phApptBlockTicksHtml`): ✓ a visit saved that day (`acuSessions` date), the jar =
+  a dispense that day (`presDispenseOnDay`), copy = that visit's `copiedAt`. A past day keeps full colour (`.done:not(.dim)`;
+  search / lens dimming still works). Motion only on a change: a tick missing at the last paint pops (`phApptTickSeen`); a
+  booking or one of her events missing at the last paint drops in with a gold ring (`phApptBlkFresh`, `phApptBlkEnter`); a new
+  set of days keeps its rise-in; all of it off under reduced motion.
+**Tested (sandbox, 1280 and 375):** the app boots (all inline scripts parse); 19 pages' heads have no white words left on the
+light band; Patient profile's bar shows New patient · Dosage & markup · Find duplicates · Send intake link · ⋯ (Send chart
+link); Inventory, Refill, To order bars; a pasted booking gets `.drop` once and not on the next repaint; a visit saved after
+the paint pops its ✓ once; Mara Ellison's past block reads ✓ jar copy at full colour; phone Appointments one row, no sideways
+scroll. Pictures: shots/cliniko-look-calendar-2026-11-01.jpg, -head-, -phone-.
+**Not tested:** her real records (live data), the 641–900px tablet band by eye, the Acupreg login's sage blocks.
+**Pages checked for the colour fact:** the grid, the booking card's colour square and the List strip read the same
+`phCkTypeColour`.
