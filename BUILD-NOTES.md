@@ -7559,3 +7559,51 @@ sideways scroll at 360 / 800; no console errors; the drawer open and closed; the
 **Not tested:** a logged or scheduled prescription (Calculate link, Log done states), a mail-order dispense, a formula
 template (isF) page, the Key2 at 360 × 469, her real catalog.
 **LIVE:** build 20261101-124300 (publish 85724340, on her "push live").
+
+## 2026-11-01 — Messages: one "sent today" mark; the template groups fold
+Idea 11 of her 2026-10-29 patient-profile audit, her words: "The Text / Messages / Copy tap leaves one mark, 'sent today', on
+the patient, so the Due list and the band stop asking. The ten template groups fold to this plan's own set, the rest behind
+'All ▾'." Measured on her 27 Oct export first: 670 patients, **3 messages ever prepared** (none sent, none planned), 65
+follow-up records over 34 patients, **41 reviews overdue and never ticked, 9 check-ins due with 0 ticked**, 14 reviews ticked
+done ever, 3 contact outcomes on patient records, 548 phones / 469 emails, 98 patients with an open plan: the text goes out
+from the patient's Messages tab and the ✓ Done on Communications is a second trip she rarely makes. Mock
+`messages-sent-mark-mock-2026-11-01.html` (pictures `ia/e11-*.png`; the "after" pictures are the real pages drawn by a
+prototype through the harness); **her 9 picks, all the recommended option:** the mark = the Messages band's first tile; the
+tap closes every due or overdue row of that patient; Undo in the one toast; Email leaves the mark too; this plan's own groups +
+Herbs stay open; All = a chip under the groups (a row on the phone); All opens the other groups below as rows; the check-in
+panel gets the same fold and the same mark, its row still closing on Done; no plan on file = the row's own kind + All.
+**The mark** (`phMsgSentMark(name, row, via, f, keepRows)`, beside `phMsgMarkSent`): ONE entry on the patient's `contactLog`
+(`{sent: sms | gmsg | copy | email, moment, label, kind, date, going: null, …}`, the shape the phase record and the
+last-outcome reader already read), then every undone check-in / review of that patient due today or earlier (or the record the
+composer is for) is done, an open acupuncture follow-up through `phAcuFuSetDone`, a gone-quiet row through
+`phCommQuietDismiss`; it returns the undo (the mark out, every flag back, `acuFu` / `quietDismissedTouch` restored), null when
+the save failed. `phMsgSentAfter` wraps it for both surfaces: the one toast ("✓ Copied · sent today · Review", "✓ Copied for
+Google Messages · sent today · Review", "✓ Sent today · Review") with Undo, then `presBandsSync` so the band repaints in place
+(the tile's sig is the mark's id). Patient tab (`presMsgClick`): Copy message marks after the copy lands (`phCkCopy`'s
+after-copy fn, so a blocked copy leaves none), Messages marks as it opens, the Text / Email links mark as they go (the link
+still opens: the handler returns false). Check-in panel (`phCkSentMark(via, prefix)`): the same four taps with `keepRows`, so
+the open row stays on Due until her Done; `f.sent` gives "Sent · remind me tomorrow"; `phCkOpenMessages` routes through it (its
+`phFlashShow` is gone, the toast carries Undo). Readers: `phPickLastGoing` skips marks (no outcome ever shadows the last real
+one), the phase record's Check-ins line names a mark "sent · Review", its outcome cell skips them. `phMsgLastSent(key)` +
+`phMsgSentWords` lead `PRES_BANDS.msg` with `{cls: "sent", ic: "check", v: Today | the date, t: "Sent · Review by Messages"}`.
+**The fold** (`phMsgGroupsHtml`): shown = the groups `phCkGroupedMoments` already calls fitting (the active plan's track, a
+second plan's track, Herbs for a herb row) + the group holding her pick; nothing fitting = the row's own kind (Herbs for a
+herb row, Every visit for an acupuncture or gone-quiet one); the rest sit after one `.ph-mc-grp.all` row (`data-mc-all`,
+`f.allOpen` on the form via `phMcFormDefaults`, `PH_MC_HOOKS`, `phMcClick`): "All · 7 ▾", a 32px / 6px chip in the label
+column; open = the rest drawn below as the same rows. CSS beside `.ph-mc-grp .gc` and inside the `@container mc (max-width:
+880px)` block (a plain row there, the chevron at the end). Nothing fitting and nothing to fold = every group, as before.
+**Tested** in the sandbox (`_ia-shot.html` on the built file; Zz Audit Patient + a second made-up patient, a Natural fertility
+plan, a 14-day-old dispense with its review 2 days overdue, an acupuncture follow-up 10 days late): at 1440 Herbs + Gynaecology
++ All · 7 (32px, 6px, 13px, a 1px line); All opens the 7 rows and closes again; the Messages tap → log entry gmsg / Review,
+band "✓ Today · Sent · Review by Messages", Due 3 rows → 1 (Zz's review and acupuncture done), toast with Undo; Undo → log
+empty, Due 3 rows, `acuFu` cleared, the tile gone, toast hidden; the Email link → a mark "by email", its Undo removes it;
+Communications → Due → Review opens the panel with the same fold; its Messages tap → the mark, rows unchanged (3), panel open,
+"Sent · remind me tomorrow"; Done → the row closes, one check-in saved; Prescriptions search "Zz Audit" 4 → 2 → 4; no console
+errors. At 375 the All row sits under the groups, ✓ Today in the band. Pictures `shots/e11-build-*.png`.
+**Not tested:** the real clipboard (the pane blocks it: a blocked copy says "Copy blocked" and leaves no mark, by design), a
+real sms: / mailto: hand-off, her records, the Key2 at 360 × 469, the phone check-in page's dock links (same ids, same
+handler).
+**Pages checked for the fact:** the patient's Messages tab (band + composer, 1440 / 375), Communications → Due (the desktop
+sheet, the phone cards, the check-in panel), the Dashboard count and the menu badge (both read `phCommDueRows`, so they
+follow), the Care Plan phase record (Check-ins line, outcome cell), the Prepared / Sent tabs (untouched: a mark is not a
+prepared message).

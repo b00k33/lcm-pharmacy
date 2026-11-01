@@ -1210,7 +1210,12 @@ Fitness + Exercises), the rest in Life.
 
 ## Communications / messaging
 Tone and voice: code3 above. **One composer** on the patient's Messages page (a bubble + slim band, synced to the plan, its phase
-and her Fang Bing Ren answers); "Copy message" copies the message only [The Messages composer]. A message offer fires on any phase
+and her Fang Bing Ren answers); "Copy message" copies the message only [The Messages composer]. **Each send leaves one "sent today" mark** (her 2026-11-01 picks, idea 11 of the 29 Oct audit;
+BUILD-NOTES "Messages: one sent mark"): the Text / Messages / Copy / Email tap writes one entry on the patient's contact log
+(`phMsgSentMark`), closes that patient's due and overdue rows on Communications → Due (the Dashboard count and the menu badge
+follow), leads the Messages band with "✓ Today · Sent · Review by Messages" (`phMsgLastSent`) and offers Undo in the one toast;
+the check-in panel's taps leave the same mark and its row still closes on Done. **The groups fold** (`phMsgGroupsHtml`): the
+plan's own groups + Herbs stay open, the rest behind one "All · n ▾" chip (a row on the phone) that unfolds them below. A message offer fires on any phase
 change (manual or cycle/IVF cascade), evaluated at render time; a session-only map (plan + phase + `sinceKey`) stops repeats. "My
 Cycle — gone quiet" lives on Communications' **Due** tab, never the Dashboard. The Check-in panel is its own composer. The
 All-templates hub holds message templates, letters and the plan template manager. Message dates carry no year; `{{nextAppt}}`
