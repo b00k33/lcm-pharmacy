@@ -8295,4 +8295,5 @@ live, then mocks/), published to her as an artifact.
 - **Needs her word:** Wai Tai Fu Ling Yin leading any thin patient from one tick (as built, or count it once 2 of its 3 are ticked, or her
   fuller table); the herb lists behind the red caution; bronchiectasis / drug liver damage only from the Medical history note (or their own
   items); DRAFT words (the 20 row names, the Ask her answers, the card line, English name and picture labels, the Ban Xia filing, Damp).
-- **Not live:** waits for her "push live".
+- **LIVE:** build 20261101-220200 (publish 6715e32b, on her "push live"; this commit rode along). The matrix moves to mocks/. The four questions
+  above are still hers.
