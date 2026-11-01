@@ -8630,6 +8630,21 @@ order's render; console clean in a fresh tab; Prescriptions search 8 → 2 → 8
 1px (as every Button). Pictures: shots/to2-audit-*.jpg / .png (board, tab, phone; -before / -after; btn-rule / btn-keep = the
 question). **Not tested:** her real records, her phone (Key2), the Snoozed list (none in the sandbox).
 
+## 2026-11-01 · Cliniko look, stage 3 follow-ups: Medical alert and the other patient pages
+Her popup answers after stage 3 went live: "+ Medical alert" yes; the band heads on the other patient pages yes, all.
+**Medical alert** (266e6fe3): `rec.alert` (80 characters; `phPatientMerge` carries it like sex / DOB), an amber chip after
+the name in the patient head (`phBandAlertHtml`), "+ Medical alert" a dashed chip while none; a tap swaps in a box
+(`phBandAlertEdit`: Enter or leaving saves, Esc keeps, empty takes it off; toast "✓ Alert saved" / "Alert removed"). The
+phone shows a set alert and hides the add chip. **Other patient pages** (CSS only): Medical history's groups white cards
+with a pale-blue head (the title, Main, ✓ All on one line; a main-complaint group's border teal); the question cards
+(`.ph-pfw-card`: Ren, Change of life / Energy & sleep, the period card) a band head; IVF history's fold a card with its head
+band on top (the Partner line under it); the Log one striped list; Blood tests' results table the head row and stripes.
+**Tested** (sandbox, a made-up patient, 1200 and 375): the scripts parse; the alert saves, shows on every page, Esc keeps it,
+an empty Enter takes it off; Medical history, Ren, IVF history, Log by eye; 375 no sideways scroll. **Not tested:** blur-save
+by hand (the test window had no keyboard focus; Enter tested), Blood tests and Messages with data, her real records.
+Pictures: shots/cliniko-medical-alert-2026-11-01.png, cliniko-patient-medhx/-ren/-log-2026-11-01.
+
+
 ## 2026-11-02 — Checked: the per-herb shelf → after bar on Dispense was already built; two waiting lines closed
 
 Her "continue" pick after the heartbeat scan went live was the parked "per-herb shelf→after-stock bar on Dispense". Measured first
