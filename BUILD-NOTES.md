@@ -8589,6 +8589,8 @@ appears and rolls once; phone 375 no sideways scroll, the search icon visible. P
 **Not tested:** her real records, a Gynae / MSK case band, a formula's band, the 641–1099px widths by eye.
 **Her answers (popup, 2026-11-01):** push live; the open row goes back to her solid pill (the pale row + edge bar came out;
 the open row's badge is white on it); "+ Medical alert": yes; the band heads on the other patient pages: yes, all.
+**LIVE** 2026-11-01: build 20261102-010400.
+
 
 ## 2026-11-02 — Checked: the tongue and abdomen charts do not carry over day to day
 
