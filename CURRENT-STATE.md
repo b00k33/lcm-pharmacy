@@ -610,7 +610,11 @@ Level · ⋮; the row opens the edit drawer, the name is plain text; the other c
 saved set was moved once by `phMigrateInvLean`). The ⋮ menu holds Add to order. A Bottle $ worked out from $/g is plain
 faint figures in its field. **The edit drawer** (`#phHerbForm`; her 2026-11-01 audit): Essentials (Formula source only for a
 formula), Suppliers & pricing and Notes folded, Clinical reference, Stock history ("No movements" + Adjust stock); one label
-look, no lines, 32px controls, Kind one joined bar; what a field means sits in its hover, never in its label. **Suppliers:** a row opens its herb list; each
+look, no lines, tint fields, 32px controls and section heads, Kind one joined bar; what a field means sits in its hover, never in its label.
+**The toolbar** (second pass, BUILD-NOTES "Inventory page audit, second pass"): Status ▾ and Columns ▾ are white dropdowns, picked
+or not; Columns hides up to 900px (compact rows ignore it) and Status hides in the sheet (the status strip does it); the count,
+Select and Stocktake (the Button) keep a line of their own; the select bar's actions are the Button, Clear a chip, no line. From
+it, app-wide: menu rows (`.ph-rp-mi`, the row ⋮ and the head's ⋯) 32px / 6px (28px on the phone), the sheet ✕ a 32px circle. **Suppliers:** a row opens its herb list; each
 row ends in **Review prices** (Price review on that supplier); Price review is no longer in the sidebar. **A store with nothing counted yet**
 (every qty null: a brand-new row, or a fresh profile on the built-in list, which is her live inventory baked 2026-11-01 as `PH_HERB_SEED`,
 stock null) opens Inventory with no status filter (`phStatusStart`); one counted jar brings the everyday default back.
