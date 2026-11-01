@@ -8037,7 +8037,8 @@ picture) + "integrate33". Matrix: `fbr-integrate33-lingguizhugan-2026-11-01.html
 - **Needs her word:** the endoscopy line on Bing (gastric retention) or a new Ren row; whether to add "does not fit" lines (none in her table);
   DRAFT words (card line, four row names, the 9 Ask her answers, picture labels), the Gui Zhi filing, Patterns Damp / phlegm, Meniere's-type
   vertigo inside "dizziness / vertigo".
-- **Not live:** waits for her "push live".
+- **LIVE:** build 20261101-192000 (publish c2e456da, her "push live" for the Appointments page audit, which carried this commit); the three
+  questions above are still hers.
 
 
 ## 2026-11-01 — Data check: batch makers, outgrown follow-ups, Twin jars, the missing-details ask
@@ -8235,3 +8236,63 @@ Prescriptions and a stale tab name; the Prescriptions search with three in-memor
 three back when cleared; no console errors. **Not exercised:** a real photo delete on her records;
 her phone; Appointments' own repaint.
 **Appointments page audit LIVE** 2026-11-01, build 20261101-192000 (publish c2e456da, on her "push live" popup pick "Push live (Recommended)"); it also carried the Calendar quick add (cc8f4a17 + 58d15c5f).
+
+## 2026-11-01 · Her pointer list, Ban Xia Hou Po Tang, Wai Tai Fu Ling Yin: integrate33 run 20
+Her "integrate33 BXHPT - antidepressant, reorganise qi, eliminate bloating, wai tai fu ling yin - skinny, dark yellow face, water sounds in
+abdomen 5/5" + a pasted pointer list (Diet, Sleep, Bowel, Haemorrhoids, Urine, Sexual function, Occupation/hobbies, Triggers, Past history,
+Family history, Obstetric history, Other conditions; each line "sign → formula(s)", no numbers). Her four popup answers (all my recommended):
+each line counts **4**; lines for formulas that are not families **wait for their tables**; the "avoid" lines are a **red caution**, ranking
+unchanged; Wai Tai Fu Ling Yin is a **new formula under Ban Xia** at 5 a sign. Matrix: `fbr-integrate33-pointers-2026-11-01.html` (root until
+live, then mocks/), published to her as an artifact.
+- **Weights** (inline in each family table, a comment quoting her line; `fam-weights` script, 64 entries): one side per line, symptoms and
+  diagnoses today (Bing), build, work, tastes and family history usually (Ren); where a family's own table keeps each line on both sides (Ban Xia
+  Hou Po Tang, Da Chai Hu Tang) the twin gets it too. A line already counted on the family stays as it was ("already": Da Chai Hu bloating /
+  pain / vomiting, HTN, acid reflux; Ban Xia Hou Po Tang throat; Xiao Jian Zhong sweet; Wen Dan / Chai Hu Long Gu nightmares; Da Cheng Qi dry
+  constipation; Huang Qin Tang sticky stools; Wu Ling San watery diarrhoea; Shen Qi Wan ED 60-70s). Xiao Chai Hu's poor appetite was already
+  its Ren 5, so its "with emotional flatness" line adds only the low mood. Dang Gui Shao Yao San constipation 3 → 4. Wu Ling San's scanty
+  yellow urine is one `or` line with its reduced output (5). "Waking 1-2am with dry/bitter mouth, chest pain, wheezing: acid reflux, Da Huang
+  formulas" = wakes at 1-2 am + acid reflux on Da Huang, Da Cheng Qi, Yin Chen Hao and Da Chai Hu (filed under Da Huang too); the with-parts
+  stay the rows those families already weigh. "Huang Lian formulas" = the Huang Lian card (Huang Lian, Huang Lian Tang, Huang Lian Jie Du
+  Tang); "Ban Xia, Xie Xin Tang" eczema = Ban Xia + Ban Xia Xie Xin Tang; office work = the 4 Ban Xia + 7 Chai Hu entries; physical work = the
+  7 Gui Zhi, 2 Ma Huang, 3 Huang Qi entries. Ban Xia Hou Po Tang's `core` opens with her three words.
+- **New rows** (20): Bing `wake_1_2am_now`, `bowel_cancer_bleed_now` (her "intestinal cancer bleeding", one line so one row),
+  `premature_ejac_now` (men, `PH_SIGN_ONLY_M`), `after_meal_chest_now`, `period_sx_now`, `breech_now`, `preg_htn_now`, `preg_dm_now` (new
+  subject "Pregnancy": women only via `PH_SIGN_ONLY_F_SUBJ`, area 6, body place pelvis), `postnatal_low_now` (`PH_SIGN_ONLY_F`),
+  `eczema_fingers_now`, `palms_soles_dry_now`, `bedwetting_now`; Ren `appetite_spicy_tend`, `work_arts_tend`, `work_logic_tend`,
+  `work_office_tend`, `work_physical_tend` (new subject "Work & hobbies", area 0, body place Other), `fh_mother_psych_tend`, and two
+  caution-only diagnoses that no family weighs: `dx_bronchiectasis`, `dx_drug_liver` (`PH_FBR_DX_AREA` 3 and 4). Each row in one board group;
+  search words (`PH_BING_ALIAS`); body spots (`PH_BING_SITE`: dry palms and soles, finger eczema, bedwetting, bowel bleeding, period
+  symptoms, breech, the after-meal chest); `PH_FBR_TO_CLUE` wakes at 1-2 am → waking clue, postnatal low → low mood.
+- **Wai Tai Fu Ling Yin** `PH_FORMULAS.waitaifulingyin`, the 38th family: Ren only (thin or slim once 5, dark yellow complexion 5, sloshing 5;
+  ceiling 15; no Bing, so its fit is its Ren match). Filed last under Ban Xia (`PH_REN_FAM_GROUPS`; the others keep their shades). `PH_BTJ`
+  (外台茯苓饮, DRAFT card line from her three signs), Patterns `bt_waitaifulingyin` in Damp / phlegm, picture `SC.waitaifulingyin` (water
+  sloshes, a dark yellow face; Fu Ling drains it, Ren Shen + Bai Zhu build the middle, Zhi Shi + Chen Pi + Sheng Jiang move it down; 6 herbs in
+  3 groups; no tongue or pulse, her lines name none; DRAFT labels).
+- **Red caution** (`PH_FBR_AVOID`, `phFbrAvoidFacts`, `phFbrAvoid`): pregnant (Medical history "Pregnant" yes, or a pregnancy on file at 42
+  weeks or less today) → Ban Xia (10 formulas), Ma Huang (2), Fu Zi (4); bronchiectasis (the "Other lung condition" note, `PH_TRI_PREFILL_HX`)
+  → warm herbs Huang Qi / Gui Zhi / Fu Zi (17); drug liver damage (the "Liver condition" note says drug-induced, DILI, or from a medicine) →
+  Chai Hu (7). The board tile gets a red ring and a warning mark beside its name, its hover an "Avoid:" line; Quick assess and the Ren
+  questions' bars get the mark and the line. Which formulas hold each herb is MY reading of the recipes (asked). Her "Wu Tou, Rou Gui, Gui Zhi
+  Fu Ling Wan" hold no family yet.
+- **Ask her** (DRAFT labels): Appetite "Craves spicy food" (Usually); Sleep "Wakes at 1–2 am", Urine "Wets the bed", Head & chest "Chest or
+  cough after meals" (Right now); a new topic "Work & hobbies" (Usually only) with "None of these" and her four kinds of work.
+- **Waiting for their tables** (her answer 2): Gui Zhi / Si Jun Zi / Bai Hu / Si Wu Jia Ren Shen, Mai Men Dong, Huang Lian E Jiao, Ma Zi Ren,
+  Shao Yao Gan Cao, Li Zhong, Tao Hua, Ma Xing Shi Gan, Yi Zi, Bai Tou Weng, Liu Yi San, Gui Ling Gan Lu Yin, Gan Cao Gan Jiang, Zhu Ling,
+  Fu Zi Li Zhong, Gui Zhi Fu Ling Wan, Huang Qi Gui Zhi Wu Wu, Si Wei Jian Gu, Yin Chen Hu Ling San, Ge Gen Huang Qin Huang Lian, Fang Feng
+  Tong Sheng San, Chai Gui, Gan Cao formulas. Notes only: appetite as vitality, salty food after chemotherapy, the family-resemblance pattern,
+  the damp-heat pattern for spicy food.
+- **Tested** (sandbox port 8995, a made-up patient, deleted): every pool key and `or` key valid, each new row in exactly one group; all 38
+  families lead their own full picture (Wai Tai Fu Ling Yin 100%, next Zhi Gan Cao 7; Ban Xia Hou Po Tang next Wen Dan 44; Xiao Chai Hu next
+  Yu Ping Feng 29; Ling Gui Zhu Gan next Dang Gui Shao Yao 25). Wai Tai Fu Ling Yin: thin + dark yellow 67%, thin alone **33%, first** (no
+  other family gets above 10% from one tick); a thin patient with low mood, throat lump and bloating shows it first at 33%, Ban Xia Hou Po Tang
+  10% (asked). Red caution: pregnant (Medical history) + a bronchiectasis note → 25 tiles marked (Da Chai Hu in two cards), order unchanged; a
+  2025 pregnancy, a "COPD" note and "Fatty liver, takes Chinese medicine" do not mark, "Drug-induced hepatitis" does; Quick assess bars carry
+  the mark. Sex rule (`rec.sex` F / M): a man is not shown the pregnancy, period or postnatal rows, a woman not premature ejaculation. Search:
+  bedwetting, engineer, postnatal depression, gestational diabetes, bowel cancer, wakes at 2am, spicy food, eczema between fingers each find
+  the new row first. Ask her: Usually shows Work & hobbies and Craves spicy food, Right now the other three. Patterns: the body type under Damp
+  / phlegm. The picture's three stops. 375 px: no sideways scroll, every red mark inside its tile. No console errors.
+- **Not checked:** her real records; the Key2 phone; the new body-figure spots by eye; a tap through Ask her (shared code, checked in run 19).
+- **Needs her word:** Wai Tai Fu Ling Yin leading any thin patient from one tick (as built, or count it once 2 of its 3 are ticked, or her
+  fuller table); the herb lists behind the red caution; bronchiectasis / drug liver damage only from the Medical history note (or their own
+  items); DRAFT words (the 20 row names, the Ask her answers, the card line, English name and picture labels, the Ban Xia filing, Damp).
+- **Not live:** waits for her "push live".

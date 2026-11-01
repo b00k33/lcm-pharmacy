@@ -1344,8 +1344,10 @@ origin/main:index.html`; don't trust this list's age.
 - Ma Huang, Da Huang and Fu Zi Ren rows were never checked against her own
   tables (Ren audit 2026-10-13): she needs to re-send them.
 - Fang Bing Ren reference formulas waiting on her tables: Gui Zhi Fu Ling
-  Wan, Chai Hu Gui Zhi Tang (Huang Lian Jie Du Tang, Da Chai Hu Tang, Wen Jing
-  Tang and Ling Gui Zhu Gan Tang are families now).
+  Wan, Chai Hu Gui Zhi Tang, and the formulas her 2026-11-01 pointer list names
+  (Si Jun Zi, Mai Men Dong, Huang Lian E Jiao, Li Zhong, Zhu Ling, Ma Xing Shi Gan
+  and more: the run 20 note). Huang Lian Jie Du Tang, Da Chai Hu Tang, Wen Jing
+  Tang, Ling Gui Zhu Gan Tang and Wai Tai Fu Ling Yin are families now.
 
 **Built on my reading — hers to confirm:** Usual period shows Wheel |
 Chart.
