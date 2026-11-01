@@ -8693,3 +8693,7 @@ Tested on a test copy (sandbox, her week seeded through a temporary `_mt-shot.ht
 meal open, Shopping made from Shop then a tick (4 → 3 to buy), a day's column, Check with two meals, Start fast (ring 0 → 31% at
 5 h), drag Fri → Sat breakfast + Undo, More ▾ open / shut, week back / Today, no console errors. Pictures:
 scratchpad mt-b1-table / mt-b2-grid / mt-b3-check / mt-b4-phone.
+
+**LIVE** 2026-11-02, her "push" then "Push all three": build 20261102-095100 (publish 760a974f) carries the To order page audit,
+second pass (8fdedb84), Medical alert after the name (266e6fe3), the other patient pages in the card language (cceaedd9) and
+Meals as a clean table (4fd3c6e0). Checked on the live copy: all seven To order rules are in it.
