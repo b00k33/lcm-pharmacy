@@ -629,9 +629,9 @@ round buttons. The phone keeps its chips and Scheduled line.
 ## Patient details & the patient file
 **Cliniko look on the patient pages (her synth22 picks 2026-11-01, stage 3):** the head (`.ph-pres-band`) is the light band of
 every page: "Name · age / Page" (`presBandPageSync` reads the rail's lit row), Book appt. (solid) · Text joined
-(`.ph-band-bar`; the phone keeps search + camera), a Gynae / MSK case as a 3px line under it. The rail keeps her visit order;
-the open row is pale teal with a teal edge bar, and Supplements (taking), Blood tests and Appointments carry a cream count
-badge (filled teal on the open row) that rolls in when the number changes. Patient details' cards have pale-blue heads and
+(`.ph-band-bar`; the phone keeps search + camera), a Gynae / MSK case as a 3px line under it. The rail keeps her visit order and
+her solid open row (her answer 2026-11-01); Supplements (taking), Blood tests and Appointments carry a cream count badge
+(white on the open row) that rolls in when the number changes. Patient details' cards have pale-blue heads and
 striped field rows, and a right column (`phPdApptsHtml`, ≥1100px; below the cards narrower): Next appointment (2), Book
 another, Previous appointments (5) with All n; Open = the booking on the calendar with its card (`phApptDeepLink`). The
 Appointments page is one table (When · Type · Care Plan · Open); Supplements' table has the same head row and stripes.
