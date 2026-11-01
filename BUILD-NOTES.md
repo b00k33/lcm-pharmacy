@@ -8493,3 +8493,34 @@ longer take the timeline's 200px flex basis (dead space under Quick actions). Te
 today · last ended 4:00 pm". **Tested (sandbox, 375 and 1024):** the scripts parse; the phone grid runs 3 PM to 11 PM with
 nothing under it; the date tap opens the sheet (Day summary + Quick actions, fits its content); the computer's card unchanged.
 Pictures: shots/phone-calendar-to-edge-2026-11-01.jpg, shots/phone-day-sheet-2026-11-01.jpg. **Not tested:** her real records.
+
+## Inventory page audit, second pass (2026-11-01)
+Her "audit the inventory page for consistency too", asked again the night of the first pass (ba7d4eb1 + b7f63442). Re-measured at
+1220 / 800 / 360 with what joined the page since then (Twin jars, the built-in herb list, the Cliniko page head) against TAPPABLE
+THINGS, Terse and Separation & grouping (Audit = apply).
+- **Toolbar:** Status ▾ and Columns ▾ are dropdowns, white when picked (they went solid, two or three solids on one screen with the
+  head's + Add herb); Columns hides up to 900px (compact rows ignore it: a control that did nothing); in the sheet (>900) Status ▾
+  hides, the status strip above does its job (Used by HH wrapped alone on a second line); Select and Stocktake are the Button
+  (they looked like filters) and, up to 900px, the count, Select and Stocktake keep a line of their own (Stocktake wrapped alone
+  once Columns went). 14px less air between the strip and the search in the sheet (42px sat there).
+- **Status menu:** its options start at the left (a lone label sat right-aligned) and are 28px rows.
+- **Select bar:** no line (tone only); Invert, Stop selected, Activate and Set supplier the Button (three were chips, Stop a second
+  solid beside + Add herb); Clear a chip (grey words that tap).
+- **Herb drawer:** fields tint, no line (they were lined white boxes beside tint ones); section heads (Suppliers & pricing, Notes)
+  32px (were 44px).
+- **App-wide, met here first:** the shared menu row (`.ph-rp-mi`: the row ⋮ and the head's ⋯ on every page) 32px / 6px, 28px on the
+  phone (44px / 10px, the retired tap size); the one sheet shell's ✕ (`.ph-lk-card-hd`, 10 sheets incl. Twin jars) a 32px circle
+  (bare ×); Twin jars' Merge the Button (a solid in a sheet over the head's solid).
+- **Phone:** Herbs & formulas 6px corners (a 999px pill among 6px chips); the search 28px; the select bar's controls 28px.
+- **Kept:** the row status pills, the flags line (Zero / Low / Overstock), the stat strip, the compact rows, every word.
+
+**Code:** one dated block "Inventory page audit, second pass" at the end of the main `<style>` (after Communications, before the
+Cliniko look), `#pharmacyPage#pharmacyPage #phInvWidget …`, `#phHerbForm …`, the shared `.ph-rp-mi`, `.ph-lk-card-hd > button`,
+`.ph-twin-card [data-twin-merge]` and a ≤640 phone media. CSS only. Commit af046e67.
+**Tested** (sandbox, its own seeded list + one seeded twin pair, Bai Zhu (Chao) moved to K585 in the sandbox only): every control
+measured at 1220 / 800 / 360 with before / after pictures (the block switched off and on in the page); no sideways scroll at all
+three (1205 / 785 / 360); the row ⋮ menu rows 32px; Twin jars opened from the new head bar (✕ 32px circle, Merge 1.5px); the
+drawer opened from Edit; the select bar with one row ticked; every inline script parses; console clean in a fresh tab;
+Prescriptions search 8 → 2 → 8. Pictures: shots/inv2-audit-*.jpg / .png (table, tab, phone, drawer, bulk, twin; -before /
+-after). **Not tested:** her real records, her phone (Key2), the head's ⋯ menu on a page with overflow by eye (same rule as
+the row ⋮).
