@@ -247,6 +247,9 @@ do not add one.
   Response (pre-filled). **She declined a flag on the plan** (Phase 3): do
   not add one.
 - Cycle → Fang Bing Ren, Treatment Care Plan (phase by cycle day, IVF), Treatment.
+- IVF history's 6–7 wk scan (one fact on the transfer: `t.hbDate` + `t.hbSeen`, written only there, 2026-11-02) → the Timeline's
+  Heartbeat row, the Pregnancy plan's Dating scan, Today's visit's door; every page reads it through `phIvfHbOf` / `phIvfHbScan`,
+  never its own copy.
 - Treatment saved → files the dated visit (and its dated findings) to the Log.
 - Complaint → reorders the plan picker and picks which question sets show.
 
@@ -1367,7 +1370,6 @@ Chart.
 - The per-herb shelf→after-stock bar on Dispense.
 - Whether the standing tongue / abdomen charts carry over day to day
   (unchecked).
-- A heartbeat field on IVF scans.
 - Larger work, knowingly parked: a desktop build beyond the PWA; AI intake
   extraction (no backend, no safe place for a key; don't re-raise without an
   architecture change); bulk past-period entry from the patient's phone.
