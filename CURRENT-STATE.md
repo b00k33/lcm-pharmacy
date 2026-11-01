@@ -586,6 +586,7 @@ stocktake record + a log line per changed jar, one Undo). Count lines under Urge
 once a week has passed (hidden while the 3-week line shows) and "Herbs last counted <date> · Count herbs" after 6 weeks.
 A row in Urgent stock opens the edit drawer; the name is plain text.
 
+**Twin jars and batch makers (her 2026-11-01 data-check picks; BUILD-NOTES "Data check"):** Inventory's ⋯ shows "Twin jars · n" while a supplier code sits on two jars (`phTwinPairs`); the sheet lists each pair with the keeper by rule (not stopped, then stock on it, then the latest dispense) and Merge moves the twin's grams, its history (`herbId` / `targetId` in the log, stocktakes, price reviews, an open count) and its name (`h.aka`, read by `findHerbByName`) onto the keeper, with Undo in the one toast and one `herb-merge` log line. Stock movements' Source column reads the maker of every batch (`phRefillMaker`: the entry's own source, else the jar's, else In house; the three make paths record it from now); the CSV carries it too.
 **Inventory (her pick "Lean table, the row opens the rest"; LIVE, 81514da3):** Name · Supplier · Bottle $ · Stock (g) ·
 Level · ⋮; the row opens the edit drawer, the name is plain text; the other columns wait in Columns (`PH_INV_LEAN_HIDDEN`; her
 saved set was moved once by `phMigrateInvLean`). The ⋮ menu holds Add to order. A Bottle $ worked out from $/g is plain
@@ -1225,8 +1226,8 @@ and her Fang Bing Ren answers); "Copy message" copies the message only [The Mess
 BUILD-NOTES "Messages: one sent mark"): the Text / Messages / Copy / Email tap writes one entry on the patient's contact log
 (`phMsgSentMark`), closes that patient's due and overdue rows on Communications → Due (the Dashboard count and the menu badge
 follow), leads the Messages band with "✓ Today · Sent · Review by Messages" (`phMsgLastSent`) and offers Undo in the one toast;
-the check-in panel's taps leave the same mark and its row still closes on Done. **The page's strip is Due + More â¾** (`phCommSectionStripHtml`, her 2026-11-01 pick): Compose Â· Templates Â· Prepared Â· Sent sit in the More menu with their counts, the one open shows beside Due, and the page always opens on Due. **The groups fold** (`phMsgGroupsHtml`): the
-plan's own groups + Herbs stay open, the rest behind one "All · n ▾" chip (a row on the phone) that unfolds them below. A message offer fires on any phase
+the check-in panel's taps leave the same mark and its row still closes on Done. **The page's strip is Due + More ▾** (`phCommSectionStripHtml`, her 2026-11-01 pick): Compose · Templates · Prepared · Sent sit in the More menu with their counts, the one open shows beside Due, and the page always opens on Due. **The groups fold** (`phMsgGroupsHtml`): the
+plan's own groups + Herbs stay open, the rest behind one "All · n ▾" chip (a row on the phone) that unfolds them below. **Outgrown rows leave Due** (her 2026-11-01 data-check pick): a review or check-in whose patient got new herbs after it is skipped when `phFuContactRows` builds the list, never written, so the Dashboard strip and the menu badge agree. A message offer fires on any phase
 change (manual or cycle/IVF cascade), evaluated at render time; a session-only map (plan + phase + `sinceKey`) stops repeats. "My
 Cycle — gone quiet" lives on Communications' **Due** tab, never the Dashboard. The Check-in panel is its own composer. The
 All-templates hub holds message templates, letters and the plan template manager. Message dates carry no year; `{{nextAppt}}`
@@ -1338,7 +1339,7 @@ toast after "add another session".
 **Ending a visit (her treatment-session audit picks, 2026-10-29; BUILD-NOTES "Treatment session: one button ends the visit"):**
 Start visit (Up next, the booking popup; `phVisitStart`) opens today's booking where an open lands (Today's visit for a return
 patient with a plan); a herbs-only booking (`phApptHerbsOnly`) opens on Dispense. Worth a look's two checks are one "Still the
-same?" line when both are due (Nothing new stamps both · Changed opens the two). Today's visit's Treat card ends with the visit's one
+same?" line when both are due (Nothing new stamps both · Changed opens the two). A missing sex, birth date or phone is a line there too (`phTodayAskHtml`, the Patient details fields and handlers; her 2026-11-01 data-check pick), and Today's visit opens on that line for a patient without sex and birth date. Today's visit's Treat card ends with the visit's one
 **Note** (`data-visit-note` = `presAcuComment`, the same words as Treatment's Note cell) and **Done · Copy for Cliniko**
 (`phVisitDone`): saves today's visit when nothing is saved for the plan today, copies, marks `session.copiedAt` only after a real
 copy ("today · ✓ copied" on the row, "✓ Copied" on the button), and the toast names the next visit with **Next patient ›**

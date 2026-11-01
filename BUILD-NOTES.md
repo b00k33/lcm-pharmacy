@@ -8038,3 +8038,69 @@ picture) + "integrate33". Matrix: `fbr-integrate33-lingguizhugan-2026-11-01.html
   DRAFT words (card line, four row names, the 9 Ask her answers, picture labels), the Gui Zhi filing, Patterns Damp / phlegm, Meniere's-type
   vertigo inside "dizziness / vertigo".
 - **Not live:** waits for her "push live".
+
+
+## 2026-11-01 — Data check: batch makers, outgrown follow-ups, Twin jars, the missing-details ask
+
+**Her ask:** after the app usage audit closed, her popup pick "LCM data check": every store in the 27 Oct export
+(`backups/LCM-pharmacy-2026-10-27-before-update.json`, read only, loaded in the sandbox pane) read against the app's own rules.
+Report `data-check-2026-11-01.html` (artifact NDVpFzLRcMqgRr2BWNyCmo; counts only, no patient names), mock
+`data-check-mock-2026-11-01.html` (artifact 2eSThohB5gAgVkNA3S3v21; pictures `ia/dc-build-*.png` = the real app through the local
+`_ia-page.html` harness). Both move to `mocks/` once live.
+
+**What the export said (27 Oct):** 96 of this year's 107 batches and every one before 2026 (1,050) record no maker: only
+`phBatchMade` wrote `source`, `refMakeCommit` wrote it only with a jar, `refMakeNoRecipeCommit` wrote null for a jar without a
+supplier; Stock movements showed "—" and nothing else read it. 40 reviews and 9 check-ins overdue, 18 + 4 of them with a later
+dispense to the same patient. Six Koda codes on two jars each (K585 Bai Zhu · Bai Zhu (Chao), K587, K621, K712, K876, K919), the
+"(Chao)" twin mostly dormant, one stopped with 38 g on it. 86 active patients: 18 no sex, 27 no birth date, 7 no phone (the Cliniko
+import writes only phone and email). Left as they are on her word: 30 phase-out jars with stock, 107 active jars never counted,
+110 with no low-at, 1,731 unpriced pre-2026 dispenses, the two past Cliniko blocks ("Break", "Test Guy").
+
+**Her picks (16 questions, every one the recommended option):** show the maker when missing and record it from now, no backfill;
+a dispense closes that patient's older open reviews and check-ins, quietly (no folded line); Merge for twin jars with Undo, the
+jar in use keeps its name, the item in Inventory's ⋯; Today's visit asks once for Sex · Birth date · Phone, whichever are missing,
+one line in Worth a look; the maker of a batch into a jar = the jar's own source (Koda reads Koda); mock round: the label names
+what is missing, keeper left in green, the done line without a new total, a lone Phone field at the right end of its line.
+
+**Built:**
+- `phRefillMaker(e, jar)` beside `phLogMovementInfo`: the entry's own source, else the jar's (by `targetId`, then by name), else
+  `PH_IN_HOUSE_SUP`. Read by the refill branch of `phLogMovementInfo`, so Stock movements and its CSV (`phLogExportCsv`) carry it;
+  Stock statistics still counts refills by kind. The three make paths (`phBatchMade`, `refMakeCommit`, `refMakeNoRecipeCommit`)
+  always set `entry.source` now.
+- `phFuContactRows`: a map of each patient's latest `dispensedAt` over `PHARMACY.followups`; a record older than that is skipped
+  before its rows are built, so Due, the Dashboard strip, the nav badge and `phCommHiddenRows` agree. Nothing is written; the 22
+  rows leave the moment the build opens on her records.
+- Twin jars, before `// ---- the inventory grid ----`: `phTwinPairs` (every supplier row's code, grouped by supplier + code),
+  `phTwinUse` (dispenses per jar: `deducted[].herbId`, the imported items by code or name), `phTwinKeeper` (not stopped, then
+  stock on it, then the latest dispense, then the most), `phTwinPaint` / `phTwinOpen` / `phTwinClose` (the one `.ph-lk-sheet`
+  shell, `.ph-merge-pair` rows from the duplicates finder), `phTwinMerge` (grams onto the keeper; low-at and note filled where the
+  keeper has none; suppliers added; every `herbId` / `targetId` in the log, the stocktake records, the price reviews and an open
+  count session re-pointed; the twin's name kept in `keep.aka`; the twin spliced out; one `herb-merge` log line; caches cleared;
+  `phAfterQtyChange`) and `phTwinUndo` (every change replayed back, the twin at its old index, the log line out).
+  `PH_TOPBAR_ACTIONS.inventory` is a function now: "Twin jars · n" shows only while a code sits on two jars. `findHerbByName`
+  falls back to `h.aka`, so a prescription line or an old log item naming the twin still lands on the one jar (262 of the 264
+  lines naming a twin carry a code anyway). The Log's "all" view leaves `herb-merge` out, like `patient-merge`.
+- The ask: `phTodayAskHtml(rec)` (the Patient details hooks `data-pres-sex` / `data-pres-dob` / `data-pres-phone`, so the existing
+  handlers write them: one door each), `phTodayAskWrap`, `phTodayAskRefresh` (the phone handler never repaints, so it calls this
+  when the field sat in the line). `phTodayNudgesHtml` puts the row first, on a first visit too; `phTodayVisitHtml` and
+  `presTpMainSections` (`todayAsk`) let Today's visit open on the line for a patient without sex and birth date instead of
+  drawing nothing (the exam pages and the landing still wait for both; the profile's Start here card is unchanged). CSS after
+  `.ph-today-nbtn.fill`: the fields 32 px, tinted, wrapping on a phone.
+
+**Judgment calls:** the sheet finds seven pairs on her records, not six: K137 GUI ZHI FU LING WAN (Chi Shao) · (Bai Shao) under
+Mick, two deliberate variants, the Chi Shao one stopped at 0 g; the rule would keep Bai Shao; told her, her row to leave. A merge
+appends the twin's note to the keeper's when it differs. `h.aka` is shown nowhere. The maker is derived for display only: the
+1,146 old entries keep no `source` (her pick, no backfill). The CLAUDE.md fold line from the app usage audit carried mojibake
+("Â·") from a perl write; rewritten in this commit.
+
+**Tested (sandbox, `_ia-page.html` harness, 1440 and 375):** merge of a seeded twin: 6 records re-pointed, 189 + 38 g, alias set,
+the ⋯ item gone, done line and toast with Undo; Undo put every one back, the twin at its old index, no merge line left; makers for
+a jar by name, by id, a nickname, a patient's batch, a logged source; follow-ups: the older of two records for one patient dropped,
+another patient's single record kept, Due agrees; the ask: F → "Birth date · Phone", a typed birth date → the full page with Phone
+in Worth a look, a typed phone → the line gone, the page stays on Today's visit throughout; Prescriptions search "zz f" and "cyc"
+narrow, cleared returns all; no console errors. **Not exercised:** a merge while a real stocktake count is open (the queue /
+results code is written, not driven); the phone's ⋯ path on a real device; Due on her real records (read on the export only).
+
+**Integration check:** Stock movements + CSV (maker), Stock statistics (unchanged, by kind), Inventory (⋯ item, header count), the
+herb's own history (`phHerbMovements` reads the re-pointed ids), Communications Due / Dashboard strip / nav badge (one list), Today's
+visit, Patient details and the Start here card (same fields, same handlers), the Log's "all" view.

@@ -16474,6 +16474,12 @@
   #pharmacyPage .ph-merge-pair-acts { display: flex; align-items: center; gap: 6px; flex: none; }
   #pharmacyPage .ph-merge-pair .btn-save { padding: 0 12px; min-height: 32px; font-size: var(--fs-13); border-radius: 6px; white-space: nowrap; }
   #pharmacyPage .ph-merge-pair.dismissed { opacity: .55; }
+  /* Twin jars (her 2026-11-01 data-check pick): the duplicates finder's pair rows inside the one sheet shell */
+  #pharmacyPage .ph-twin-card { width: min(860px, 100%); }
+  #pharmacyPage .ph-twin-card .ph-merge-pair { margin-bottom: 6px; }
+  #pharmacyPage .ph-twin-card .ph-merge-pair-vs { font-size: var(--fs-15); }
+  #pharmacyPage .ph-twin-card .ph-merge-donebar { margin-bottom: 8px; }
+  @media (max-width: 640px) { #pharmacyPage .ph-twin-card .ph-merge-pair { flex-wrap: wrap; } #pharmacyPage .ph-twin-card .ph-merge-pair-vs { display: none; } #pharmacyPage .ph-twin-card .ph-merge-pair-names { flex: 1 1 100%; } }
   #pharmacyPage .ph-merge-donebar { background: var(--ph-green-tint); border-radius: var(--field-radius-sm, 10px); padding: 8px 12px; margin-bottom: 10px; font-size: var(--fs-12-5); color: var(--ph-green-deep); display: flex; flex-direction: column; gap: 2px; }
   /* ---- End of day (her spec 2026-09-07) ---- */
   #pharmacyPage .ph-eod-lbl { display: flex; align-items: center; gap: 8px; margin: 12px 0 6px; font-size: var(--fs-10-5); font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--ph-faint); }
@@ -18729,6 +18735,11 @@
   #pharmacyPage .ph-today-nudge .t span { font-size: var(--fs-12); color: var(--ph-faint); }
   #pharmacyPage .ph-today-nbtn { flex: none; height: 32px; border: 1.5px solid var(--ph-herb); background: #fff; color: var(--ph-herb); border-radius: 6px; padding: 0 11px; font-family: inherit; font-size: var(--fs-12-5); font-weight: 700; cursor: pointer; white-space: nowrap; }
   #pharmacyPage .ph-today-nbtn.fill { background: var(--ph-herb); color: #fff; }
+  /* the missing-details ask (her 2026-11-01 data-check pick): the Patient details fields at 32px in the Worth a look line */
+  #pharmacyPage .ph-today-ask .b { flex: 0 1 auto; min-width: 0; flex-wrap: wrap; align-items: center; justify-content: flex-end; }   /* shrinks and wraps on a phone instead of running off the card */
+  #pharmacyPage .ph-today-ask .ph-pd-seg button { height: 32px; padding: 0 14px; }
+  #pharmacyPage .ph-today-ask .ph-dobw input.ph-dobt { width: 128px; height: 32px; box-sizing: border-box; border: 0; border-radius: 6px; background: var(--ph-herb-tint); padding: 0 10px; font-size: var(--fs-13); font-weight: 600; }
+  #pharmacyPage .ph-today-ask input.ph-today-ask-tel { height: 32px; width: 150px; border: 0; border-radius: 6px; background: var(--ph-herb-tint); padding: 0 10px; font: inherit; font-size: var(--fs-13); font-variant-numeric: tabular-nums; color: var(--ph-ink); }
   @media (max-width: 520px) {
     #pharmacyPage .ph-today-nudge { flex-wrap: wrap; }
     #pharmacyPage .ph-today-nudge .t { flex: 1 1 100%; }
@@ -31303,8 +31314,12 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     if (m && m[1].trim()) return { name: m[1].trim(), grams: parseFloat(m[2]) };
     return { name: t };
   }
-  const findHerbByName = name =>
-    PHARMACY.herbs.find(h => h.name.trim().toLowerCase() === String(name).trim().toLowerCase());
+  // a jar merged into another (phTwinMerge, her 2026-11-01 data-check pick) leaves its name on the keeper as h.aka, so a
+  // prescription line or an old log item still naming the twin lands on the one jar
+  const findHerbByName = name => {
+    const q = String(name).trim().toLowerCase();
+    return PHARMACY.herbs.find(h => h.name.trim().toLowerCase() === q) || PHARMACY.herbs.find(h => (h.aka || []).some(a => String(a).trim().toLowerCase() === q));
+  };
   // her report (2026-08-17): the same supplier code sometimes covers two
   // processing variants of one herb (e.g. Bai Shao raw vs Chao both carry
   // Koda's "K587") -- a bare code lookup alone can't tell them apart. A
@@ -32313,6 +32328,148 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
   const phHerbByIdGet = () => phHerbById
     || (phHerbById = new Map(PHARMACY.herbs.map(h => [h.id, h])));
 
+  // ---- Twin jars (her 2026-11-01 data-check pick): one supplier code on two jars ----
+  // The 27 Oct export had six Koda codes on two jars each (Bai Zhu and Bai Zhu (Chao) both K585 ...), the twin mostly dormant.
+  // The sheet (Inventory's ⋯ › Twin jars · n) lists each pair with the jar the rule keeps: not stopped, then stock on it, then the
+  // latest dispense, then the most dispenses. Merge moves the twin's grams onto the keeper, re-points every record that named the
+  // twin's id (log herbId / targetId / deducted / added, stocktake adjustments, an open count), keeps the twin's name as an alias
+  // (h.aka, read by findHerbByName) and writes one "herb-merge" log line; the toast's Undo puts every change back.
+  function phTwinPairs() {
+    const byKey = new Map();
+    PHARMACY.herbs.forEach(h => (h.suppliers || []).forEach(s => {
+      if (!s.code) return;
+      const k = `${s.name || ""}|${String(s.code).trim().toUpperCase()}`;
+      if (!byKey.has(k)) byKey.set(k, []);
+      if (!byKey.get(k).includes(h)) byKey.get(k).push(h);
+    }));
+    return [...byKey.entries()].filter(([, hs]) => hs.length > 1).map(([k, hs]) => ({ key: k, code: k.split("|")[1], herbs: hs }));
+  }
+  // dispenses per jar from the log: the app's own entries by herbId, the imported history by code or name (same resolution phHerbMovements uses)
+  function phTwinUse() {
+    const use = new Map(), byName = new Map(), byCode = new Map();
+    PHARMACY.herbs.forEach(h => {
+      byName.set(h.name.trim().toLowerCase(), h);
+      (h.aka || []).forEach(a => { if (!byName.has(String(a).trim().toLowerCase())) byName.set(String(a).trim().toLowerCase(), h); });
+      phHerbCodes(h).forEach(c => { const q = c.trim().toLowerCase(); if (!byCode.has(q)) byCode.set(q, []); byCode.get(q).push(h); });
+    });
+    const hit = (id, date) => { const u = use.get(id) || { n: 0, last: "" }; u.n++; if (date > u.last) u.last = date; use.set(id, u); };
+    PHARMACY.log.forEach(e => {
+      if (e.kind && e.kind !== "dispense") return;
+      const d = e.date || "";
+      if (Array.isArray(e.deducted) && e.deducted.length) { e.deducted.forEach(x => hit(x.herbId, d)); return; }
+      (e.items || []).forEach(i => {
+        const nm = String(i.name || "").trim().toLowerCase();
+        const cands = i.code ? byCode.get(String(i.code).trim().toLowerCase()) : null;
+        const h = (cands && (cands.length > 1 ? cands.find(x => x.name.trim().toLowerCase() === nm) || cands[0] : cands[0])) || byName.get(nm);
+        if (h) hit(h.id, d);
+      });
+    });
+    return use;
+  }
+  function phTwinKeeper(a, b, use) {
+    const sc = h => (h.stopped ? 0 : 4) + ((h.qty || 0) > 0 ? 2 : 0);
+    const ua = use.get(a.id) || { n: 0, last: "" }, ub = use.get(b.id) || { n: 0, last: "" };
+    if (sc(a) !== sc(b)) return sc(a) > sc(b) ? a : b;
+    if (ua.last !== ub.last) return ua.last > ub.last ? a : b;
+    return ua.n >= ub.n ? a : b;
+  }
+  let phTwinDone = [];   // this sitting's merges, each with its undo (the sheet's done lines)
+  function phTwinStat(h, use, code) {
+    const u = use.get(h.id) || { n: 0, last: "" };
+    const last = u.last ? `last ${MON_SHORT[parseKey(u.last).getMonth()]} ${parseKey(u.last).getFullYear()}` : "never dispensed";
+    const g = (h.qty || 0) > 0 ? `${phFmtG(h.qty)} g` : "no stock";
+    return [code, g, h.stopped ? "stopped" : h.phaseOut ? "phasing out" : "", u.n ? `${u.n} dispense${u.n === 1 ? "" : "s"}` : "", last].filter(Boolean).join(" · ");
+  }
+  function phTwinPaint() {
+    let host = document.getElementById("phTwinSheet");
+    if (!host) { host = document.createElement("div"); host.id = "phTwinSheet"; host.className = "ph-lk-sheet"; (document.getElementById("pharmacyPage") || document.body).appendChild(host); }
+    const pairs = phTwinPairs(), use = phTwinUse();
+    const rows = [];
+    pairs.forEach(p => {
+      const keep = p.herbs.reduce((a, b) => phTwinKeeper(a, b, use));
+      p.herbs.filter(h => h !== keep).forEach(go => {
+        rows.push(`<div class="ph-merge-pair" data-twin-row="${esc(go.id)}">
+          <span class="ph-merge-pair-names keep"><b>${esc(phPinyinName(keep))}</b><span class="ph-merge-pair-stat">${esc(phTwinStat(keep, use, p.code))}</span></span>
+          <span class="ph-merge-pair-vs" aria-hidden="true">←</span>
+          <span class="ph-merge-pair-names"><b>${esc(phPinyinName(go))}</b><span class="ph-merge-pair-stat">${esc(phTwinStat(go, use, p.code))}</span></span>
+          <span class="ph-merge-pair-acts"><button type="button" class="btn-save" data-twin-merge="${esc(keep.id)}|${esc(go.id)}" title="Into ${esc(phPinyinName(keep))}">Merge</button></span>
+        </div>`);
+      });
+    });
+    const done = phTwinDone.length ? `<div class="ph-merge-donebar">${phTwinDone.map(d => `<div>✓ <b>${esc(d.goName)}</b> → <b>${esc(d.keepName)}</b>${d.grams ? ` · ${phFmtG(d.grams)} g added` : ""}</div>`).join("")}</div>` : "";
+    host.innerHTML = `<div class="ph-lk-backdrop" data-twin-close="1"></div><div class="ph-lk-card ph-twin-card" role="dialog" aria-label="Twin jars">
+      <div class="ph-lk-card-hd"><h3>Twin jars</h3><button type="button" data-twin-close="1" aria-label="Close">✕</button></div>
+      <div class="ph-lk-card-sub">${rows.length ? `${rows.length} code${rows.length === 1 ? "" : "s"} on two jars` : "No twin jars"}</div>
+      ${done}${rows.join("")}
+    </div>`;
+    host.hidden = false;
+  }
+  function phTwinOpen() { phTwinDone = []; phTwinPaint(); }
+  function phTwinClose() { const host = document.getElementById("phTwinSheet"); if (host) { host.hidden = true; host.innerHTML = ""; } phTwinDone = []; }
+  function phTwinMerge(keepId, goId) {
+    const keep = PHARMACY.herbs.find(h => h.id === keepId), go = PHARMACY.herbs.find(h => h.id === goId);
+    if (!keep || !go || keep === go) return null;
+    const undo = [];
+    const set = (o, k, v) => { undo.push([o, k, o[k], Object.prototype.hasOwnProperty.call(o, k)]); o[k] = v; };
+    const point = (o, k) => { if (o && o[k] === go.id) set(o, k, keep.id); };
+    PHARMACY.log.forEach(e => {
+      point(e, "herbId"); point(e, "targetId");
+      (Array.isArray(e.deducted) ? e.deducted : []).forEach(x => point(x, "herbId"));
+      (Array.isArray(e.added) ? e.added : []).forEach(x => point(x, "herbId"));
+    });
+    (PHARMACY.stocktakes || []).forEach(s => (s.adjustments || []).forEach(a => point(a, "herbId")));
+    (PHARMACY.priceReviews || []).forEach(r => (r.changes || []).forEach(c => point(c, "herbId")));
+    Object.values(phStocktakeSessions()).forEach(s => {
+      if (!s || typeof s !== "object") return;
+      ["results", "ignored"].forEach(k => { if (s[k] && s[k][go.id]) { if (!s[k][keep.id]) set(s[k], keep.id, s[k][go.id]); set(s[k], go.id, undefined); } });
+      if (Array.isArray(s.queue) && s.queue.includes(go.id)) {
+        const at = s.queue.indexOf(go.id);
+        set(s, "queue", s.queue.filter(id => id !== go.id));
+        if (typeof s.pos === "number" && at < s.pos) set(s, "pos", s.pos - 1);
+      }
+    });
+    const grams = (go.qty || 0) > 0 ? go.qty : 0;
+    if (grams) set(keep, "qty", phQty((keep.qty == null ? 0 : keep.qty) + grams));
+    if (keep.low == null && go.low != null) set(keep, "low", go.low);
+    if (go.note && !(keep.note || "").includes(go.note)) set(keep, "note", keep.note ? `${keep.note}; ${go.note}` : go.note);
+    const sups = (keep.suppliers || []).slice();
+    (go.suppliers || []).forEach(s => { if (!sups.some(x => x.name === s.name)) sups.push(Object.assign({}, s, { isDefault: false })); });
+    if (sups.length !== (keep.suppliers || []).length) set(keep, "suppliers", sups);
+    set(keep, "aka", [...(keep.aka || []), go.name, ...(go.aka || [])].filter((a, i, arr) => arr.indexOf(a) === i && a.trim().toLowerCase() !== keep.name.trim().toLowerCase()));
+    const idx = PHARMACY.herbs.indexOf(go);
+    PHARMACY.herbs.splice(idx, 1);
+    const entry = { id: uid(), kind: "herb-merge", date: keyOf(TODAY), name: keep.name, mergedFrom: go.name, mergedInto: keep.name, herbId: keep.id, fromId: go.id, grams };
+    PHARMACY.log.unshift(entry);
+    phHerbById = null; phRecipeCache = null; phIsFormulaCache = null; phAbbrMap = null;
+    phAfterQtyChange(keep);
+    const rec = { undo, go, idx, entry, keepName: phPinyinName(keep), goName: phPinyinName(go), grams };
+    if (savePharmacy() === false) { phTwinUndo(rec, true); presSavedToast("That could not be saved — check the warning at the top and try again.", 3200); return null; }
+    return rec;
+  }
+  function phTwinUndo(rec, quiet) {
+    for (let i = rec.undo.length - 1; i >= 0; i--) { const [o, k, old, had] = rec.undo[i]; if (had) o[k] = old; else delete o[k]; }
+    if (!PHARMACY.herbs.includes(rec.go)) PHARMACY.herbs.splice(Math.min(rec.idx, PHARMACY.herbs.length), 0, rec.go);
+    PHARMACY.log = PHARMACY.log.filter(e => e !== rec.entry);
+    phHerbById = null; phRecipeCache = null; phIsFormulaCache = null; phAbbrMap = null;
+    phTwinDone = phTwinDone.filter(d => d !== rec);
+    if (quiet) return;
+    savePharmacy(); renderPharmacy();
+    if (document.getElementById("phTwinSheet") && !document.getElementById("phTwinSheet").hidden) phTwinPaint();
+  }
+  document.addEventListener("click", e => {
+    const T = e.target; if (!T || !T.closest) return;
+    const host = T.closest("#phTwinSheet"); if (!host) return;
+    if (T.closest("[data-twin-close]")) { phTwinClose(); return; }
+    const m = T.closest("[data-twin-merge]");
+    if (m) {
+      const [keepId, goId] = m.dataset.twinMerge.split("|");
+      const rec = phTwinMerge(keepId, goId);
+      if (!rec) return;
+      phTwinDone.push(rec);
+      renderPharmacy(); phTwinPaint();
+      presSavedToast(`✓ ${rec.goName} → ${rec.keepName}${rec.grams ? ` · ${phFmtG(rec.grams)} g added` : ""}`, { undo: () => phTwinUndo(rec) });
+    }
+  });
   // ---- the inventory grid ----
   // (per-column filter row removed 2026-07-23, her call — phColFilters went with it)
   let phCellEdit = null;   // { id, field } — which cell is unlocked for typing
@@ -35633,8 +35790,10 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     // to peel the emoji off for icon-only mode; that split is gone -- icon and
     // text are now separate fields, which also means a label may start with a
     // word without silently losing it.
-    inventory: [
+    inventory: () => [   // a function: the Twin jars count is read on every render, not once at load
       { icon: "i-plus", label: "Add herb", run: () => document.getElementById("phHerbAddBtn")?.click() },
+      // Twin jars (her 2026-11-01 data-check pick): only while a supplier code sits on two jars
+      ...(() => { const n = phTwinPairs().reduce((a, p) => a + p.herbs.length - 1, 0); return n ? [{ icon: "i-jar", label: `Twin jars · ${n}`, ghost: true, run: () => phTwinOpen() }] : []; })(),
     ],
     // her mockup: mark-all-arrived icon on To Order's topbar -- generalizes
     // the existing per-supplier "✓ All arrived" button (same phArrive()
@@ -51736,7 +51895,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     };
     if (!recipe) {
       const entry = { id: uid(), kind: "refill", date: keyOf(TODAY), what: h.name, madeGrams: grams, cost: 0, items: [], deducted: [], stockNotes: [],
-        targetId: h.id, source: h.supplier || null };
+        targetId: h.id, source: h.supplier || PH_IN_HOUSE_SUP };   // the maker is always recorded (her 2026-11-01 data-check pick)
       h.qty = phQty((h.qty == null ? 0 : h.qty) + grams);
       phRefillClearPlan(h); phAfterQtyChange(h);
       PHARMACY.log.unshift(entry);
@@ -65844,6 +66003,15 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
       </div>`;
     }).join("") : `<div class="fam-empty" style="padding:6px 0">No movements</div>`;
   }
+  // the maker of a batch (her 2026-11-01 data-check pick): the entry's own source where one was logged; otherwise the jar's
+  // source (a Koda jar reads Koda, a Mick jar reads Mick), and In house for a patient's batch or a nickname. Worked out when
+  // drawn, never written into an old entry (96 of this year's 107 batches had none); the three make paths record it from now.
+  function phRefillMaker(e, jar) {
+    if (e.source) return e.source;
+    const w = String(e.what || "").trim().toLowerCase();
+    const j = jar || (e.targetId ? phHerbByIdGet().get(e.targetId) : null) || (w ? PHARMACY.herbs.find(h => h.name.trim().toLowerCase() === w) : null);
+    return (j && j.supplier) || PH_IN_HOUSE_SUP;
+  }
   // PASTE 3 (2026-08-15): one row per log entry, unchanged (NOT expanded to
   // one row per herb/item -- a single prescription's deducted[] can run to
   // 10+ raw herbs, and exploding every dispense into that many rows would
@@ -65858,7 +66026,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
         type: "Made", pill: "make",
         itemCode: jar ? phHerbCode(jar) : "",
         itemName: phDispName(phFixText(e.what), true),
-        source: e.source || "—",
+        source: phRefillMaker(e, jar),
         change: e.madeGrams || 0,
         after: null,   // no reliable historical balance for this kind, see note below
       };
@@ -65940,7 +66108,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     // supplier-change entries (2026-08-16 spec: "every change writes a log
     // entry ... so it's traceable") are the same story -- no grams to show,
     // no dedicated screen asked for, just traceable in the data.
-    return PHARMACY.log.filter(e => (phLogKind === "all" ? (e.kind !== "price-review" && e.kind !== "supplier-change" && e.kind !== "patient-merge")
+    return PHARMACY.log.filter(e => (phLogKind === "all" ? (e.kind !== "price-review" && e.kind !== "supplier-change" && e.kind !== "patient-merge" && e.kind !== "herb-merge")
       : phLogKind === "dispense" ? (!e.kind || e.kind === "dispense") : e.kind === phLogKind)
       && (!cutoff || e.date >= cutoff) && hit(e))
       .sort((a, b) => b.date > a.date ? 1 : b.date < a.date ? -1 : 0);
@@ -69158,8 +69326,13 @@ or changing anything in Cliniko.
     // "Remind me tomorrow" (check-in panel, 2026-09-03): a snoozed contact is
     // due on its snooze date instead -- the original date survives underneath
     const due = c => c.snoozedUntil && c.snoozedUntil > c.on ? c.snoozedUntil : c.on;
+    // her 2026-11-01 data-check pick: a review or check-in the patient outgrew (new herbs went out after it) leaves Due
+    // quietly. Worked out here on read, never written: the patient's latest dispense record marks every earlier one.
+    const latest = new Map();
+    PHARMACY.followups.forEach(r => { const k = r.patientKey || phPatientKey(r.patient), at = r.dispensedAt || 0; if (k && at > (latest.get(k) || 0)) latest.set(k, at); });
     PHARMACY.followups.forEach(rec => {
       if (!rec.review && !rec.checkIn) return;
+      if ((rec.dispensedAt || 0) < (latest.get(rec.patientKey || phPatientKey(rec.patient)) || 0)) return;   // outgrown: new herbs went out after it
       // decision 12, read-side: a record made while herbs were on stops
       // surfacing the moment she turns them off for that patient -- old
       // records aren't deleted (never destroy the record), just no longer due
@@ -71213,6 +71386,7 @@ or changing anything in Cliniko.
     if (el.matches("[data-pres-phone]")) { rec.phone = v || undefined; rec.phoneFrom = ""; rec.phoneSrc = ""; }
     else rec.email = v || undefined;
     savePharmacy();
+    if (el.closest("[data-today-ask]")) phTodayAskRefresh();   // the Today's visit ask line redraws itself (her 2026-11-01 data-check pick)
   });
   // Same date-input trap as [data-pres-dob] above -- see the note there for
   // why the year gate alone is not enough. Fixed together 2026-09-09; this
@@ -99755,7 +99929,8 @@ or changing anything in Cliniko.
     const name = presPatientFor(t) || t.name || "";
     if (!name || presIsFormula(t)) return "";
     const rec = phPatientPeek(name) || {};
-    if (!(rec.sex && rec.dob)) return "";
+    // no sex or birth date yet: the page opens on the ask instead of drawing nothing (her 2026-11-01 data-check pick)
+    if (!(rec.sex && rec.dob)) { const ask = phTodayAskHtml(rec); return ask ? `<div class="ph-today ph-tv" data-today-host="1">${phTodayAskWrap(ask)}</div>` : ""; }
     try { phIvfDaySync(name, plan); } catch (e) { /* the visit never breaks on it */ }   // part 3, step 6
     // plans close themselves: a booking pasted while her file is open reopens a self-closed plan; the visit draws again once
     try { if (phTpSelfCloseSweep(name)) { savePharmacy(); setTimeout(renderPresPanel, 0); } } catch (e) { /* the visit never breaks on it */ }
@@ -99769,13 +99944,34 @@ or changing anything in Cliniko.
     setTimeout(phTodayStickyTop, 0);
     return `<div class="ph-today ph-tv" data-today-host="1">${phTodayJourneyHtml(name, rec, plan)}${phTodayStepsHtml(S)}${phTodaySecHd("ask", S)}${ask}${phTodaySecHd("look", S)}${phTodayLookHtml(name, rec)}${treat && S.treat ? phTodaySecHd("treat", S) + treat : ""}</div>`;
   }
+  // her 2026-11-01 data-check pick (86 active patients: 18 no sex, 27 no birth date, 7 no phone; the Cliniko export carries
+  // neither): Today's visit asks once for what is missing, one line in Worth a look, each a field. The fields are the Patient
+  // details ones (data-pres-sex / data-pres-dob / data-pres-phone, one write door each), so the line goes by itself once filled.
+  function phTodayAskHtml(rec) {
+    const f = [];
+    if (!rec.sex) f.push(`<span class="ph-pd-seg" role="radiogroup" aria-label="Sex">${[["F", "F"], ["M", "M"]].map(([v, l]) => `<button type="button" data-pres-sex="${v}" aria-pressed="false">${l}</button>`).join("")}</span>`);
+    if (!rec.dob) f.push(phDobHtml('data-pres-dob="1"', rec.dob, "presTodayDob"));
+    if (!rec.phone) f.push(`<input type="tel" class="field-bare ph-today-ask-tel" data-pres-phone="1" value="" placeholder="Phone" autocomplete="off" inputmode="tel" aria-label="Phone">`);
+    if (!f.length) return "";
+    const what = [!rec.sex && "Sex", !rec.dob && "Birth date", !rec.phone && "Phone"].filter(Boolean).join(" · ");
+    return `<div class="ph-today-nudge ph-today-ask" data-today-nudge="ask" data-today-ask="1"><div class="t"><b>${what}</b></div><div class="b">${f.join("")}</div></div>`;
+  }
+  const phTodayAskWrap = ask => `<div class="ph-today-nudges" data-today-nudges="1"><div class="cap">Worth a look</div>${ask}</div>`;
+  // the phone field saves without a repaint (its handler's rule), so the line redraws itself here
+  function phTodayAskRefresh() {
+    const row = document.querySelector("#pharmacyPage [data-today-ask]"), name = phPfwName(), rec = name ? phPatientPeek(name) : null;
+    if (!row || !rec) return;
+    const html = phTodayAskHtml(rec), wrap = row.closest("[data-today-nudges]");
+    if (html) row.outerHTML = html; else { row.remove(); if (wrap && !wrap.querySelector("[data-today-nudge]")) wrap.remove(); }
+  }
   // Phase 4 (law 2026-10-10, her picks): quiet one-tap "worth a look" lines on a RETURN visit only.
   // Supplements: still the same? (only when something is switched on). History: anything new? (every
   // return visit). Each is answered in one tap, which stamps today (rec.suppSeenAt / rec.hxSeenAt) and
   // the line goes; changing the supplements or the history today counts as answering it too. They
   // never block anything. (The Ren-photo nudge was offered and she skipped it: do not add it.)
   function phTodayNudgesHtml(name, rec) {
-    if (!phLastVisitKey(rec)) return "";
+    const ask = phTodayAskHtml(rec);
+    if (!phLastVisitKey(rec)) return ask ? phTodayAskWrap(ask) : "";
     const today = keyOf(TODAY), dayOf = ms => ms ? keyOf(new Date(ms)) : "", lbl = ms => phCycShortLbl(dayOf(ms));
     const rows = [];
     const supps = rec.supplements || {};
@@ -99789,8 +99985,8 @@ or changing anything in Cliniko.
       rows.push(`<div class="ph-today-nudge" data-today-nudge="hx"><div class="t"><b>Anything new in ${phProRec(rec).p} history${hxAt ? ` since ${esc(lbl(hxAt))}` : ""}?</b><span>New diagnosis, medicine, surgery, pregnancy</span></div><div class="b"><button type="button" class="ph-today-nbtn fill" data-today-nudge-ok="hx">Nothing new</button><button type="button" class="ph-today-nbtn" data-flow-prof="medhx">Add</button></div></div>`);
     }
     // her pick 6 (treatment-session audit, 2026-10-29): both due = ONE line, one tap answers both; Changed opens the two lines as they were
-    if (rows.length === 2) return `<div class="ph-today-nudges" data-today-nudges="1"><div class="cap">Worth a look</div><div class="ph-today-nudge" data-today-nudge="both"><div class="t"><b>Still the same?</b><span>Supplements · history</span></div><div class="b"><button type="button" class="ph-today-nbtn fill" data-today-nudge-ok="both">Nothing new</button><button type="button" class="ph-today-nbtn" data-today-nudge-split="1">Changed</button></div></div>${rows.map(r => r.replace('<div class="ph-today-nudge" ', '<div class="ph-today-nudge" hidden ')).join("")}</div>`;
-    return rows.length ? `<div class="ph-today-nudges" data-today-nudges="1"><div class="cap">Worth a look</div>${rows.join("")}</div>` : "";
+    if (rows.length === 2) return `<div class="ph-today-nudges" data-today-nudges="1"><div class="cap">Worth a look</div>${ask}<div class="ph-today-nudge" data-today-nudge="both"><div class="t"><b>Still the same?</b><span>Supplements · history</span></div><div class="b"><button type="button" class="ph-today-nbtn fill" data-today-nudge-ok="both">Nothing new</button><button type="button" class="ph-today-nbtn" data-today-nudge-split="1">Changed</button></div></div>${rows.map(r => r.replace('<div class="ph-today-nudge" ', '<div class="ph-today-nudge" hidden ')).join("")}</div>`;
+    return rows.length || ask ? `<div class="ph-today-nudges" data-today-nudges="1"><div class="cap">Worth a look</div>${ask}${rows.join("")}</div>` : "";
   }
   // One page per check (Tongue / Pulse / Abdomen). Same render, write and
   // refresh functions the Today's visit tiles used (phTngHtml,
@@ -119024,11 +119220,13 @@ or changing anything in Cliniko.
     // (its strip + pain map + pain intake live on Today's visit). The exam
     // pages need sex + DOB, same gate Today's visit always had.
     const examOn = !!(name && openT && !presIsFormula(openT) && rec && rec.sex && rec.dob);
+    // no sex or birth date yet: Today's visit still opens, on the ask alone (her 2026-11-01 data-check pick); the exam pages wait
+    const todayAsk = !!(name && openT && !presIsFormula(openT) && rec && !(rec.sex && rec.dob));
     const cycleOn = examOn && phCycleTracked(rec) && !phFastIsMe(name);   // hers is a page in Body on her own record (ONE ME)
     const todayParts = examOn ? phTodayParts(rec) : [];
     const todayN = todayParts.filter(p => phTodayPartOk(rec, p.id)).length;
     return [
-      ...(examOn ? [{ id: "today", label: "Today's visit", sub: todayParts.length ? `${todayN} of ${todayParts.length}` : "", body: () => phTodayVisitHtml(openT, plan) }] : []),
+      ...(examOn || todayAsk ? [{ id: "today", label: "Today's visit", sub: todayParts.length ? `${todayN} of ${todayParts.length}` : "", body: () => phTodayVisitHtml(openT, plan) }] : []),
       // Ask her (her 2026-10-13): smart general questions for the top 3 Fang Bing Ren families; its own count, never in "n of m done"
       ...(examOn ? [{ id: "askher", label: phAskLabel(name), sub: phAhCountText(name), body: () => phAhPageHtml(openT) }] : []),
       ...(cycleOn ? [{ id: "cycle", label: "Cycle", body: () => presCycleSectionBodyHtml(openT) }] : []),
@@ -140594,7 +140792,7 @@ Dosage: {dosage}
     // mixed, tagged with which in-house source it was -- snapshot whichever
     // supplier is active on the jar right now, so a later supplier switch on
     // the herb never retroactively relabels a past batch
-    if (jar) entry.source = jar.supplier || null;
+    entry.source = jar ? (jar.supplier || PH_IN_HOUSE_SUP) : PH_IN_HOUSE_SUP;   // the maker is always recorded (her 2026-11-01 data-check pick); phRefillMaker reads the old entries
     if (jar) {
       jar.qty = phQty((jar.qty == null ? 0 : jar.qty) + entry.madeGrams);   // the finished batch restocks the formula bottle
       entry.targetId = jar.id;                                              // so undo/delete drains the made grams back out
@@ -140641,7 +140839,7 @@ Dosage: {dosage}
       cost: 0, items: [], deducted: [], stockNotes: [] };
     jar.qty = phQty((jar.qty == null ? 0 : jar.qty) + entry.madeGrams);
     entry.targetId = jar.id;
-    entry.source = jar.supplier || null;
+    entry.source = jar.supplier || PH_IN_HOUSE_SUP;   // the maker is always recorded (her 2026-11-01 data-check pick)
     phRefillClearPlan(jar);
     phAfterQtyChange(jar);
     PHARMACY.log.unshift(entry);
