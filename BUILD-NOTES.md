@@ -8235,6 +8235,8 @@ heights above on Inventory, Stock movements, Communications, Settings, Appointme
 Prescriptions and a stale tab name; the Prescriptions search with three in-memory rows narrowed to one on "Beta" and gave all
 three back when cleared; no console errors. **Not exercised:** a real photo delete on her records;
 her phone; Appointments' own repaint.
+
+**LIVE:** build 20261101-220200 (publish 6715e32b, 2026-11-01), together with the Fang Bing Ren pointer list (integrate33 run 20, 4cca90cf) from the Fang Bing Ren session.
 **Appointments page audit LIVE** 2026-11-01, build 20261101-192000 (publish c2e456da, on her "push live" popup pick "Push live (Recommended)"); it also carried the Calendar quick add (cc8f4a17 + 58d15c5f).
 
 ## 2026-11-01 · Her pointer list, Ban Xia Hou Po Tang, Wai Tai Fu Ling Yin: integrate33 run 20
