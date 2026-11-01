@@ -8658,3 +8658,38 @@ column, 68px bar). Nothing to build. The OPEN line and CURRENT-STATE's "Not buil
 bar rule stays the Inventory / To order reading (stock vs the low line), this column is its own reading (shelf → after this bag).
 
 Also off the list on her word tonight: "Usual period shows Wheel | Chart" (her pick: keep). Docs only, no code.
+
+
+## 2026-11-01 — Meals as a clean table (MEALS TABLE): Table | Grid, fasting the first ring, the meal in a column, steps, drag to copy
+
+Her synth22 batch tonight: "help me redesign this page so it fits what i want to see and achieve. i want a table format for meal
+planning and recording. i need to to be clean, like the appointments page. use cliniko zanda and google ui designs as a guide for how
+i like things. show mock." Mock meals-table-mock-2026-11-01.html (her real week); her picks: B Week table + A Week grid (both, a Grid |
+Table switch), 3 Rings, fasting = her word "ring", D Column, then "include interactive animations and workflow elements" (mock v3:
+the step bar, drag to copy, the toast + Undo, motion) and "Yes, build it".
+
+Built (computer): ONE card. The toolbar = ‹ 26 Oct – 1 Nov › · Today (off on this week) · Grid | Table (`lcm-mpl-view`, this
+device's; Table first) · the steps Plan n/7 · Shop n to buy · Eat had/n · Check n to answer (`phMplSteps`; the first not done is
+filled; counts roll) · More ▾ (Copy last week, Recipes, Shopping list, Targets; the shared `.ph-comm-more`). Then today's rings
+with fasting first (`phMplFastRingHtml`: the running fast's arc to its goal, `data-mpl-fring` moved each minute by `phMplLive`, the
+goal select, → the time or "last 14 h ✓"; the gold ring at the goal now goes round it) and Stop / Start / Continue fast + Your fasts ›
+beside them (`phMplRactsHtml`, its own `data-fast-host` so the fast handler hears it). The clock bar (`phMplClockHtml`) and the Fast
+row (`phMplFastHtml`) are gone with their CSS; so is the Macros row (`phMacCellHtml` + `.ph-mac` bars): the numbers are the Table's
+kJ · P · C · F columns and the Grid's Total row (`phMplDayNums`, the MACROS colours). Then `.ph-mpl-body` = the week + the column
+(`phMplColHtml`, 360px, sticky): the meal's picker (inline now, so `phMplPlace` has nothing to place on a computer), or a panel
+(`phMplPnl`): "shop" (the week's list, Make list / Make again), "check" (`phRxCkCardHtml` takes a meal now; one card a meal she had
+1½ h ago with no Fine, reaction or ✕), or a day key (tap a day's name: `phMplMoreHtml` + Copy this day, the strip shared with the
+phone's Copy a day as `phMplCStripHtml`). With the column open the week scrolls inside; the day column and the four number columns
+are sticky (Table), the label column (Grid). Steps' doors (`phMplStepGo`): Plan → next week (phone: the first empty day from today,
+else next Monday) · Shop → the column (made first when none; phone: makes it and scrolls to it) · Eat → today's next meal not had ·
+Check → the column (phone: the meal's own card, `phRxCkOpen`). Drag (`draggable` on a meal with foods, computer only) onto another
+day's same meal = `phMplCopyMeal` (what she had, else its plan, via `phMealDayPut`; a meal she had there stays; "✓ Wed 28 lunch
+copied to Fri 30" + Undo). Grid = `.ph-mpl-t.blk` (days across, had = solid teal block with white words, Total row). A click on
+More ▾ no longer closes an open meal. Phone: the rings five across (52px; the goal select hidden, it is on Your fasts › as the clock
+bar's was; "of" hidden, the goal field stays), Stop · Your fasts a row under them, the steps fill the width with counts only, no
+Fast row.
+
+Tested on a test copy (sandbox, her week seeded through a temporary `_mt-shot.html`): 1220 / 1440 / 360 wide, Table and Grid, a
+meal open, Shopping made from Shop then a tick (4 → 3 to buy), a day's column, Check with two meals, Start fast (ring 0 → 31% at
+5 h), drag Fri → Sat breakfast + Undo, More ▾ open / shut, week back / Today, no console errors. Pictures:
+scratchpad mt-b1-table / mt-b2-grid / mt-b3-check / mt-b4-phone.
