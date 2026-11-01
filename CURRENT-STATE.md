@@ -557,14 +557,14 @@ In that sheet Grams and Name are fields and Type a dropdown, ⋯ is an icon circ
 and Edit as a plain list are chips, the code column is 80px (the phone folds it away, as Dispense does), and the match line says
 "✓ all N ingredients matched" only [Formula refill page audit].
 
-**To Order: two steps (her pick; built, NOT live yet)** [Inventory: stock truth, To order in two steps, lean Inventory, Price
+**To Order: two steps (her pick; LIVE, 81514da3 is on main)** [Inventory: stock truth, To order in two steps, lean Inventory, Price
 review in Suppliers]. Desktop (>900px) = a 2-column board that fills the window: **To order** (a To order | Running low switch;
 per supplier, A to Z in fixed spots, the herbs still to order AND the ordered ones, which read "ordered <date>" with an
 **Arrived** button; Snoozed N ▾) and **Arrived** (last 14 days). **Copy for email is the order**: the supplier's still-to-order
 herbs turn ordered once the copy landed (one toast, Undo; a blocked copy marks nothing). The supplier's bulk button is **All
 arrived** (its whole list, snoozed excepted). No On the way column, no Mark ordered. Nothing scrolls a column on any board move;
 details pop out beside the row; a formula card has "Refill ▾". The phone: bands To order (both stages) · Running low · Arrived ·
-Snoozed, sprite icons, 32px Buttons, a row's top opens the edit drawer. Dashboard's Order/Refill cards are TWO PLAIN LISTS,
+Snoozed, sprite icons, a row's top opens the edit drawer. **Its look (her 2026-11-01 audit):** the phone and tablet rows take the board's buttons from her 10/23 mock (1px line; Order now a red line; no solid button on a row; 32px, the phone 28px), icon-only taps are circles, the add-a-herb box is the 32px search box with the magnifier, the row details and the arrival fix use fields, one label look, and no lines under heads, bands or supplier lines. **Every count of the list** (top bar, side badge, Dashboard, Stock statistics, Mark all arrived) reads `phOnOrderList`, so a snoozed item not yet ordered is left out everywhere, as on the page [To order page audit]. Dashboard's Order/Refill cards are TWO PLAIN LISTS,
 empty first then fewest days of cover; a Refill row also shows the formula's next booking (her pick); a long name wraps on both.
 Picking a supplier pulls in that supplier's recorded price.
 **A formula she makes is priced by its recipe** (her 2026-10-31 pick "Its recipe, always"): a made-in-house jar
@@ -574,7 +574,7 @@ reads "140 g · 11 herbs · $26.88 → $0.20/g". Live: `phRecipePricesSync` runs
 while the copy is fresh (`__lcmSyncFresh`). A jar several recipes point at follows the one made last; a recipe with an unpriced
 herb leaves the jar's own price. Dispense reads $/g, so patient prices follow from then on; past dispenses keep theirs.
 
-**Stock truth (her picks; built, NOT live yet):** every number the app trusts has a date (`phJarTrustMap`: counted, made or
+**Stock truth (her picks; LIVE, 81514da3):** every number the app trusts has a date (`phJarTrustMap`: counted, made or
 received). A made-in-house formula on the Dashboard's **Urgent stock** reads `Made [g] ✓ · Weigh`: the grams pre-fill with the
 recipe's batch, ✓ = `phBatchMade`, the same write as Formula refill's Finish (herbs out, jar up, one refill entry, Undo); Weigh
 opens the weighing panel. A **higher Stock number typed in Inventory** on a made-in-house jar asks "Made N g?" (Yes = a batch;
@@ -585,7 +585,7 @@ stocktake record + a log line per changed jar, one Undo). Count lines under Urge
 once a week has passed (hidden while the 3-week line shows) and "Herbs last counted <date> · Count herbs" after 6 weeks.
 A row in Urgent stock opens the edit drawer; the name is plain text.
 
-**Inventory (her pick "Lean table, the row opens the rest"; built, NOT live yet):** Name · Supplier · Bottle $ · Stock (g) ·
+**Inventory (her pick "Lean table, the row opens the rest"; LIVE, 81514da3):** Name · Supplier · Bottle $ · Stock (g) ·
 Level · ⋮; the row opens the edit drawer, the name is plain text; the other columns wait in Columns (`PH_INV_LEAN_HIDDEN`; her
 saved set was moved once by `phMigrateInvLean`). The ⋮ menu holds Add to order. A Bottle $ worked out from $/g is plain
 faint figures in its field. **The edit drawer** (`#phHerbForm`; her 2026-11-01 audit): Essentials (Formula source only for a

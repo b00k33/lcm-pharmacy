@@ -7730,3 +7730,55 @@ side sheet; the match line's wording is shared with the patient prescription edi
 **LIVE** 2026-11-01, build 20261101-150500 (publish 5fcf19a9, on her "push live" by popup; the commit list matched the dry run). Checked on the
 live page: the build stamp, the week picker and recipe-column rules, the "+ New recipe" chip; the hint function and the "dispensing
 will deduct" tail are gone. The Prescriptions search filters live in the sandbox with this build (12 -> 3 -> 0 -> 12).
+
+## To order page audit (2026-11-01)
+Her words: "audit the to order page for consistency too". Audit = apply: measured at 1220 (the board), 800 (the tablet list)
+and 360 (the phone list) against TAPPABLE THINGS, Terse, Separation & grouping and ★★★ one fact. Code 80fb06d1: one dated CSS
+block, "To order page audit", at the end of the main `<style>` after the Formula refill block, plus one shared count.
+**One count (★★★):** a snoozed item that was not yet ordered leaves the To order count (her 2026-09-02 rule, which the page
+followed). But the top bar's "N on the list", the side badge, the Dashboard's To order button, title bar and order queue, and
+Stock statistics' To order tile all counted it: 6 against the page's 5 in the sandbox. Every one now reads
+`phOnOrderList = h => herbNeedsOrder(h) && (!!h.ordered || phNotSnoozed(h))`, defined after `phSnoozedHerbs`. The same goes for
+`renderPhRestock`'s `toOrder` (so the order total and the gold bar follow the list) and the top bar's **Mark all arrived**, which
+now marks the list she sees, not a snoozed item too. The board's own All arrived already skipped those.
+The Inventory cart mark (`herbNeedsOrder`, "On the order list") was left as it is: it marks the flag, not the count.
+**Board (desktop, her 10/23 chips mock kept):**
+- One label look (10.5px / 700 / .08em caps) for Not on the list (`.ph-osb-grplbl`, 11.5 / 800 / .02em), the row details'
+  Supplier / Size × qty / Bottle $ / Low at (`.ph-osb-f label`, .02em) and the arrival fix's Grams received / Arrived (400 weight).
+- No line under the column heads (`.ph-osb-colhd`) or the To order | Running low bar (`.ph-osb-segrow`).
+- The add-a-herb box (`.ph-os-add input`) is the search box: 32px, 6px corners, 12px words, the magnifier. It was the 36px pill it
+  shares with Came in for; that one is untouched.
+- The row details pop's dropdowns 32px (26px); its count stepper the board's joined bar (a 34px pill); Bottle $ a field with
+  plain faint figures (the estimate was a navy `.ph-cost-computed` pill, as Inventory's was); the older-arrivals `.ph-osb-more`
+  a chip (a dashed 8px box).
+**The phone and tablet list (≤900px, `.ph-osm-*`; her 10/23 block had left it alone):**
+- Arrived / Add to order were solid 26px blocks with 10px corners on every row (up to 22 solid on one screen); they now take
+  the board's buttons from her mock: 1px line, Order now a red line.
+- Copy / Show / Clear also get the 1px line; All arrived keeps the Button's herb line (the phone's one solid is the top bar's disc).
+- Refill ▾ is 13px.
+- The icon-only taps (✕, ↩, ⋯, the snooze clock, the size ✓) are circles with a line (bare 26px glyphs); the stage fold chevron
+  gets its line on the phone.
+- The stepper is the joined bar.
+- No border-top on the stage bands or supplier lines (their tones part them).
+- The size edit's dropdowns are fields.
+- Phone (≤640): 28px / 12.5px, one 11px label; the add box keeps 16px words (the zoom guard).
+**The arrival fix** (`#phRestockWrap .ph-arr-edit`; To order only, the Prescriptions list's dispensed menu keeps its own):
+- It was a pill-shaped tint (`--field-radius` 999px) with white outlined boxes, two solid buttons (Save and Close) and Undo
+  arrival in the browser's own grey box (`.del` had no style).
+- Now it is parted by space on the row's white, with tint fields at 32px and Save the one solid step.
+- Undo arrival has a red line; Close is a chip (its base `.btn-cancel` opacity .8 reset to 1).
+**Kept (her rules or her choices):** her 10/23 board mock (1px-line buttons, the solid All arrived per supplier, the joined stepper,
+⋮ circles), the joined To order | Running low bar, the stat strip and gold bar, supplier tags, the row hairlines (list rows),
+the band tones, menu rows (⋮, Refill ▾, Snoozed ▾), the empty states ("Nothing running low", "Nothing arrived recently").
+**Tested (sandbox, seeded herbs only):**
+- Every control re-measured: 1220 board, pop, arrival fix and Running low view; 800 list with both edits open; 360 list.
+- No off-size control left, no sideways scroll at 360.
+- The top bar, badge, Dashboard button and Stats tile all read 5 with one snoozed item flagged.
+- No console errors.
+- Prescriptions search 12 → 3 → 0 → 12.
+- Pictures: shots/to-audit-{board,arr,phone,low}-{before,after}.png.
+**Not tested:**
+- A real Mark all arrived / Copy for email write: the count change was read, not pressed.
+- The Dashboard's phone order queue rows (same predicate, measured on the desktop button only).
+- The older-arrivals chip (no arrival older than 14 days in the sandbox; CSS only).
+**Pages checked for the fact (the order count):** To order (board, tablet, phone), the side badge, the Dashboard, Stock statistics.
