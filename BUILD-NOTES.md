@@ -8587,3 +8587,5 @@ Log. **Tested:** the scripts parse; the page name follows Supplements, Messages 
 the booking dialog with her name filled; Open lands on Appointments with that booking's card; a ticked supplement's badge
 appears and rolls once; phone 375 no sideways scroll, the search icon visible. Pictures: shots/cliniko-patient-*-2026-11-01.jpg.
 **Not tested:** her real records, a Gynae / MSK case band, a formula's band, the 641–1099px widths by eye.
+**Her answers (popup, 2026-11-01):** push live; the open row goes back to her solid pill (the pale row + edge bar came out;
+the open row's badge is white on it); "+ Medical alert": yes; the band heads on the other patient pages: yes, all.
